@@ -28,17 +28,44 @@ export interface Connection {
 const EMBEDDED = ['pglite', 'pglite://', 'embedded'];
 
 /**
- * Gehostete Anbieter wie Supabase verlangen TLS. node-postgres schaltet es
- * nicht allein aus der Verbindungszeichenfolge ein, deshalb wird es hier
- * ausdruecklich gesetzt.
+ * TLS fuer die Datenbankverbindung.
  *
- * `rejectUnauthorized` bleibt an: Supabase benutzt regulaer ausgestellte
- * Zertifikate. Nur wer wirklich ein selbst signiertes Zertifikat betreibt,
- * haengt `sslmode=no-verify` an — und weiss dann, was er aufgibt.
+ * node-postgres schaltet TLS nicht allein aus der Verbindungszeichenfolge ein,
+ * gehostete Anbieter wie Supabase verlangen es aber. Deshalb wird es hier
+ * ausdruecklich gesetzt — mit drei Ausnahmen:
+ *
+ *   - Private Netze (`*.railway.internal`, `*.internal`) und localhost. Dort
+ *     verlaesst der Verkehr die Umgebung nicht, und die Anbieter benutzen
+ *     selbst signierte Zertifikate. Strenge Pruefung scheitert dann mit
+ *     SELF_SIGNED_CERT_IN_CHAIN, ohne dass es etwas schuetzen wuerde.
+ *   - `sslmode=disable`, wenn jemand es ausdruecklich abschaltet.
+ *   - `sslmode=no-verify` fuer oeffentliche Hosts mit eigenem Zertifikat.
+ *     Wer das setzt, weiss, was er aufgibt.
+ *
+ * Fuer alles andere bleibt `rejectUnauthorized` an. Eine Verbindung uebers
+ * offene Netz ohne Zertifikatspruefung waere gegen einen Angreifer in der
+ * Leitung wertlos.
  */
 function sslFor(url: string): false | { rejectUnauthorized: boolean } {
   if (/[?&]sslmode=disable/.test(url)) return false;
-  if (/localhost|127\.0\.0\.1/.test(url) && !/sslmode=require/.test(url)) return false;
+
+  let host = '';
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    // Unlesbare Zeichenfolge: TLS an und pruefen. Fehlschlag ist hier besser
+    // als eine ungeprueft offene Verbindung.
+    return { rejectUnauthorized: true };
+  }
+
+  const isPrivate =
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host.endsWith('.internal') ||
+    host.endsWith('.local');
+
+  if (isPrivate && !/[?&]sslmode=require/.test(url)) return false;
+
   return { rejectUnauthorized: !/[?&]sslmode=no-verify/.test(url) };
 }
 
