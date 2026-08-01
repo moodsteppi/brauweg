@@ -29,19 +29,35 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
   );
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Fehlerschluessel des Servers, um gezielt einen Ausweg anzubieten. */
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const run = async (action: () => Promise<void>): Promise<void> => {
     setBusy(true);
     setError(null);
+    setErrorCode(null);
     try {
       await action();
     } catch (err) {
-      setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+      if (err instanceof ApiError) {
+        setError(t(err.messageKey));
+        setErrorCode(err.code);
+      } else {
+        setError('Verbindung fehlgeschlagen.');
+      }
     } finally {
       setBusy(false);
     }
   };
+
+  const resend = (): void =>
+    void run(async () => {
+      await api.resendVerification(email);
+      setNote(
+        'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
+      );
+    });
 
   /**
    * Wer den Link aus der Mail oeffnet, hat seine Absicht damit schon erklaert.
@@ -138,18 +154,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             {/* Mails landen im Spam, werden geloescht, und der Link laeuft nach
                 48 Stunden ab. Ohne diesen Knopf braeuchte es dafuer den
                 Betreiber. */}
-            <button
-              type="button"
-              onClick={() =>
-                void run(async () => {
-                  await api.resendVerification(email);
-                  setNote(
-                    'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
-                  );
-                })
-              }
-              disabled={busy || !email}
-            >
+            <button type="button" onClick={resend} disabled={busy || !email}>
               Neuen Link anfordern
             </button>
           </>
@@ -182,6 +187,22 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
 
         {note && <p className="muted">{note}</p>}
         {error && <p className="error">{error}</p>}
+
+        {/*
+          Der Ausweg gehoert genau dorthin, wo man haengenbleibt.
+          "Adresse schon vergeben" trifft, wer sich erneut registriert, weil er
+          seinen Link verloren hat. "Bestaetige zuerst deine Adresse" trifft
+          denselben Fall beim Anmelden. In beiden Faellen ist ein neuer Link
+          die Antwort - ihn hinter der Registrierung zu verstecken, hiesse den
+          Betreiber zu brauchen.
+        */}
+        {(errorCode === 'emailTaken' || errorCode === 'emailNotVerified') && (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <button type="button" onClick={resend} disabled={busy || !email}>
+              Neuen Bestätigungslink anfordern
+            </button>
+          </div>
+        )}
 
         <div className="row">
           <button className="primary" type="submit" disabled={busy}>
