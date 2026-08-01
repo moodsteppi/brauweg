@@ -97,6 +97,13 @@ weil ein Build-Cache unter `node_modules/.cache` eingehängt ist, und der
 Builder setzt die npm-Option `production`, was `tsc` und `vite` weglassen
 würde.
 
+**Watch Paths müssen leer bleiben.** Beim Import erkennt Railway das Monorepo
+und setzt für den Dienst `/packages/server/**`. Das ist hier falsch: Der Dienst
+baut das gesamte Repository und liefert den Client mit aus. Mit dieser
+Einschränkung werden Änderungen am Client stillschweigend mit „No changes to
+watched files" übersprungen und **nie ausgeliefert** — ohne Fehlermeldung, der
+Dienst bleibt einfach auf dem alten Stand.
+
 **Domain.** Die eigentliche Adresse ist `www.brauweg-spielen.de`; die nackte
 Domain leitet per 301 dorthin. Ein CNAME am Zonen-Apex ist nach DNS-Regel nicht
 erlaubt, und Strato bietet weder ALIAS noch CNAME-Flattening — deshalb `www`
