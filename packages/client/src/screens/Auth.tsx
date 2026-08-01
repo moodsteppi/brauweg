@@ -1,9 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
 
 type Mode = 'login' | 'register' | 'verify' | 'reset';
+
+/**
+ * Holt das Token aus dem, was jemand einfuegt.
+ *
+ * Die meisten kopieren den ganzen Link aus der Mail, nicht die Zeichenkette
+ * dahinter. Beides muss gehen, sonst scheitert die Bestaetigung an etwas,
+ * das wie ein Bedienfehler aussieht, aber keiner ist.
+ */
+function extractToken(input: string): string {
+  const trimmed = input.trim();
+  const match = trimmed.match(/[?&]token=([^&\s]+)/);
+  return match ? decodeURIComponent(match[1]!) : trimmed;
+}
 
 export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Element {
   const [mode, setMode] = useState<Mode>('login');
@@ -30,6 +43,36 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
     }
   };
 
+  /**
+   * Wer den Link aus der Mail oeffnet, hat seine Absicht damit schon erklaert.
+   * Also wird sofort bestaetigt, statt ein Formular zu zeigen, in das er das
+   * Token noch einmal von Hand eintragen soll.
+   */
+  const autoRan = useRef(false);
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(location.search).get('token');
+    if (!fromUrl || autoRan.current) return;
+    autoRan.current = true;
+
+    void run(async () => {
+      try {
+        await api.verify(fromUrl);
+        setNote('Adresse bestätigt. Du kannst dich jetzt anmelden.');
+        setMode('login');
+      } catch (err) {
+        // Abgelaufen oder schon benutzt: Formular zeigen, damit ein neuer
+        // Link angefordert werden kann.
+        setMode('verify');
+        throw err;
+      } finally {
+        // Das Token gehoert nicht in den Verlauf und nicht in ein Lesezeichen.
+        history.replaceState(null, '', location.pathname);
+      }
+    });
+    // Genau einmal beim Laden.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const submit = (event: React.FormEvent): void => {
     event.preventDefault();
     void run(async () => {
@@ -47,7 +90,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         return;
       }
       if (mode === 'verify') {
-        await api.verify(token);
+        await api.verify(extractToken(token));
         setNote('Adresse bestätigt. Du kannst dich jetzt anmelden.');
         setMode('login');
         return;
@@ -88,8 +131,9 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         {mode === 'verify' ? (
           <>
             <label>
-              Bestätigungscode aus der E-Mail
+              Bestätigungslink oder Code aus der E-Mail
               <input value={token} onChange={(e) => setToken(e.target.value)} required />
+              <span className="muted">Der ganze Link geht auch.</span>
             </label>
             {/* Mails landen im Spam, werden geloescht, und der Link laeuft nach
                 48 Stunden ab. Ohne diesen Knopf braeuchte es dafuer den
