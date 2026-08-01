@@ -4,7 +4,8 @@ Kartenspiel-Plattform mit **frei konfigurierbaren Regelsätzen**. Mehrere
 klassische Kartenspiele unter einem Dach, eigene Rangliste je Spiel plus
 spielübergreifende Gesamtwertung.
 
-- **Domain:** `brauweg-spielen.de`
+- **Domain:** `www.brauweg-spielen.de` (die nackte Domain leitet per 301 dorthin)
+- **Live:** https://www.brauweg-spielen.de
 - **Paket-Namensraum:** `@brauweg/*`
 - **Stand:** M4 (Server und Persistenz) und ein roher Web-Client stehen. Zwei
   Browser können eine vollständige Doppelkopf-Partie beenden.
@@ -87,9 +88,19 @@ ohne Sonderfall auch für den WebSocket, es braucht kein CORS und keine zweite
 Domain. In der Entwicklung übernimmt Vite diese Rolle und reicht `/api` und
 `/ws` an den Server weiter.
 
-Deployment ist in [railway.json](railway.json) beschrieben: `npm ci && npm run
-build`, gestartet wird `node packages/server/dist/src/index.js`, Health-Check
-auf `/api/health`.
+Deployment ist in [railway.json](railway.json) beschrieben: `npm install
+--include=dev && npm run build`, gestartet wird
+`node packages/server/dist/src/index.js`, Health-Check auf `/api/health`.
+
+Zwei Railway-Eigenheiten stecken darin: `npm ci` scheitert dort mit `EBUSY`,
+weil ein Build-Cache unter `node_modules/.cache` eingehängt ist, und der
+Builder setzt die npm-Option `production`, was `tsc` und `vite` weglassen
+würde.
+
+**Domain.** Die eigentliche Adresse ist `www.brauweg-spielen.de`; die nackte
+Domain leitet per 301 dorthin. Ein CNAME am Zonen-Apex ist nach DNS-Regel nicht
+erlaubt, und Strato bietet weder ALIAS noch CNAME-Flattening — deshalb `www`
+als Ziel und eine Weiterleitung davor.
 
 **Datenbank.** Jeder PostgreSQL-Anbieter geht, auch Supabase. Bei Supabase muss
 es der **Session Pooler** (Port 5432) sein, nicht der Transaction Pooler auf
