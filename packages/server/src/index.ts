@@ -24,7 +24,15 @@ const HOUR = 3600_000;
 const here = dirname(fileURLToPath(import.meta.url));
 /** dist/src -> packages/server/drizzle */
 const MIGRATIONS = resolve(here, '../../drizzle');
-/** dist/src -> packages/client/dist */
+/**
+ * dist/src -> packages/client/dist
+ *
+ * Der Server liefert den gebauten Client mit aus. Daraus folgt eine Regel fuer
+ * das Deployment: Die Watch Paths des Dienstes duerfen NICHT auf
+ * `/packages/server/**` stehen, sonst werden Aenderungen am Client
+ * stillschweigend uebersprungen und nie ausgeliefert. Festgelegt ist das in
+ * `railway.json` unter `build.watchPatterns`.
+ */
 const CLIENT_DIR = resolve(here, '../../../client/dist');
 
 async function main(): Promise<void> {
