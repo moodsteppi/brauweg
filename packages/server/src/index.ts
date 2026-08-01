@@ -50,6 +50,14 @@ async function main(): Promise<void> {
   }
 
   const mailer = createMailer(config.resendApiKey, config.mailFrom);
+  if (!config.resendApiKey) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      'ACHTUNG: RESEND_API_KEY fehlt. Bestaetigungs- und Passwortmails werden ' +
+        'NICHT versendet, sondern nur hier ins Log geschrieben (Suche: "MAIL"). ' +
+        'Fuer die Beta muss ein Versanddienst eingerichtet sein.',
+    );
+  }
   const runtime = new PartyRuntime(db);
 
   const app = buildApp({

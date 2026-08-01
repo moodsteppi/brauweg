@@ -86,10 +86,29 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         )}
 
         {mode === 'verify' ? (
-          <label>
-            Bestätigungscode aus der E-Mail
-            <input value={token} onChange={(e) => setToken(e.target.value)} required />
-          </label>
+          <>
+            <label>
+              Bestätigungscode aus der E-Mail
+              <input value={token} onChange={(e) => setToken(e.target.value)} required />
+            </label>
+            {/* Mails landen im Spam, werden geloescht, und der Link laeuft nach
+                48 Stunden ab. Ohne diesen Knopf braeuchte es dafuer den
+                Betreiber. */}
+            <button
+              type="button"
+              onClick={() =>
+                void run(async () => {
+                  await api.resendVerification(email);
+                  setNote(
+                    'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
+                  );
+                })
+              }
+              disabled={busy || !email}
+            >
+              Neuen Link anfordern
+            </button>
+          </>
         ) : (
           <>
             <label>

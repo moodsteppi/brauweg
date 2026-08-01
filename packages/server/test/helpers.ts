@@ -26,7 +26,14 @@ const MIGRATIONS = resolve(here, '../../drizzle');
 
 /** Sammelt Mails, statt sie zu senden, und schweigt dabei. */
 export class TestMailer extends ConsoleMailer {
+  /** Auf true setzen, um einen Ausfall des Versanddienstes nachzustellen. */
+  failNext = false;
+
   override async send(mail: Mail): Promise<void> {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error('Versanddienst nicht erreichbar');
+    }
     this.sent.push(mail);
   }
 

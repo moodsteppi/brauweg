@@ -26,8 +26,14 @@ export class ConsoleMailer implements Mailer {
 
   async send(mail: Mail): Promise<void> {
     this.sent.push(mail);
+    // Auffaellig gerahmt, damit sich der Link im Betriebslog mit einer Suche
+    // nach "MAIL" finden laesst, solange noch kein Versanddienst haengt.
     // eslint-disable-next-line no-console
-    console.info(`[mail] an ${mail.to}: ${mail.subject}\n${mail.text}`);
+    console.info(
+      `\n=== MAIL an ${mail.to} =======================================\n` +
+        `${mail.subject}\n${mail.text}\n` +
+        `=============================================================\n`,
+    );
   }
 }
 

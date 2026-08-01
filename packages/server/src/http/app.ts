@@ -23,6 +23,7 @@ import {
   logout,
   register,
   requestPasswordReset,
+  requestVerification,
   resetPassword,
   sessionFromToken,
   verifyEmail,
@@ -124,6 +125,13 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     const { token } = z.object({ token: z.string() }).parse(request.body);
     const accountId = await verifyEmail(deps.db, token);
     return reply.send({ ok: true, accountId });
+  });
+
+  /** Bestaetigungslink erneut anfordern. Antwortet immer gleich. */
+  app.post('/api/auth/verification/resend', async (request, reply) => {
+    const { email } = z.object({ email: z.string().email() }).parse(request.body);
+    await requestVerification(deps.auth, email);
+    return reply.send({ ok: true });
   });
 
   app.post('/api/auth/login', async (request, reply) => {

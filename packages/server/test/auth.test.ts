@@ -8,6 +8,7 @@ import {
   logout,
   register,
   requestPasswordReset,
+  requestVerification,
   resetPassword,
   sessionFromToken,
   verifyEmail,
@@ -112,6 +113,109 @@ test('ein Bestaetigungstoken gilt nur einmal', async (t) => {
     () => verifyEmail(ctx.db, token),
     (err: AppError) => err.code === 'tokenInvalid',
   );
+});
+
+test('ein gescheiterter Versand wirft die Registrierung nicht um', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  // Der Versanddienst faellt aus. Genau das passiert im Betrieb bei falschem
+  // Schluessel oder erreichtem Tageslimit.
+  ctx.mailer.failNext = true;
+
+  await register(ctx.auth, {
+    email: 'anna@example.org',
+    password: PASSWORD,
+    displayName: 'Anna',
+    inviteCode: INVITE,
+  });
+
+  // Das Konto ist da. Waere hier durchgeworfen worden, saesse die Person in
+  // der Sackgasse: kein Link, und die Adresse gilt als vergeben.
+  const [acc] = await ctx.db
+    .select()
+    .from(schema.account)
+    .where(eq(schema.account.email, 'anna@example.org'));
+  assert.ok(acc, 'das Konto muss trotz Versandfehler bestehen');
+  assert.equal(acc.emailVerifiedAt, null);
+});
+
+test('der Bestaetigungslink laesst sich erneut anfordern', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  ctx.mailer.failNext = true;
+  await register(ctx.auth, {
+    email: 'anna@example.org',
+    password: PASSWORD,
+    displayName: 'Anna',
+    inviteCode: INVITE,
+  });
+  assert.equal(ctx.mailer.sent.length, 0, 'die erste Mail ging verloren');
+
+  await requestVerification(ctx.auth, 'anna@example.org');
+  assert.equal(ctx.mailer.sent.length, 1);
+
+  await verifyEmail(ctx.db, ctx.mailer.tokenFrom('anna@example.org'));
+  const { token } = await login(ctx.auth, 'anna@example.org', PASSWORD);
+  assert.ok(token, 'nach dem zweiten Link muss die Anmeldung gehen');
+});
+
+test('der neue Link entwertet den alten', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  await register(ctx.auth, {
+    email: 'anna@example.org',
+    password: PASSWORD,
+    displayName: 'Anna',
+    inviteCode: INVITE,
+  });
+  const alt = ctx.mailer.tokenFrom('anna@example.org');
+
+  // Die Sperrfrist zurueckdrehen, damit die zweite Anforderung durchgeht.
+  await ctx.db
+    .update(schema.authToken)
+    .set({ createdAt: new Date(Date.now() - 5 * 60_000) })
+    .where(eq(schema.authToken.purpose, 'email_verify'));
+
+  await requestVerification(ctx.auth, 'anna@example.org');
+  const neu = ctx.mailer.tokenFrom('anna@example.org');
+  assert.notEqual(neu, alt);
+
+  await assert.rejects(
+    () => verifyEmail(ctx.db, alt),
+    (err: AppError) => err.code === 'tokenInvalid',
+  );
+  await verifyEmail(ctx.db, neu);
+});
+
+test('die Sperrfrist verhindert das Zumuellen fremder Postfaecher', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  await register(ctx.auth, {
+    email: 'anna@example.org',
+    password: PASSWORD,
+    displayName: 'Anna',
+    inviteCode: INVITE,
+  });
+  const vorher = ctx.mailer.sent.length;
+
+  for (let i = 0; i < 5; i++) await requestVerification(ctx.auth, 'anna@example.org');
+  assert.equal(ctx.mailer.sent.length, vorher, 'innerhalb der Sperrfrist geht nichts raus');
+});
+
+test('erneut anfordern verraet nicht, welche Adressen es gibt', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  await createVerifiedAccount(ctx, 'Anna');
+  const vorher = ctx.mailer.sent.length;
+
+  // Unbekannte Adresse und bereits bestaetigtes Konto: beide still.
+  await requestVerification(ctx.auth, 'niemand@example.org');
+  await requestVerification(ctx.auth, 'anna@example.org');
+  assert.equal(ctx.mailer.sent.length, vorher);
 });
 
 test('falsches Passwort und unbekannte Adresse melden dasselbe', async (t) => {

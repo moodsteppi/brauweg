@@ -80,6 +80,8 @@ export const api = {
   }) => post<{ ok: true }>('/auth/register', body),
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
+  resendVerification: (email: string) =>
+    post<{ ok: true }>('/auth/verification/resend', { email }),
   login: (email: string, password: string) => post<{ ok: true }>('/auth/login', { email, password }),
   logout: () => post<{ ok: true }>('/auth/logout'),
   me: () => request<Me>('/me'),

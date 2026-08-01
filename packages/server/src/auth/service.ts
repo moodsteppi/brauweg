@@ -20,6 +20,8 @@ import {
 
 const VERIFY_TTL_HOURS = 48;
 const RESET_TTL_HOURS = 2;
+/** Sperrfrist zwischen zwei angeforderten Bestaetigungslinks. */
+const RESEND_COOLDOWN_MS = 60_000;
 
 export interface AuthDeps {
   readonly db: Db;
@@ -109,8 +111,68 @@ export async function register(
     throw err;
   }
 
-  await sendVerification(deps, accountId, email);
+  // Der Versand steht bewusst NACH dem Konto und darf es nicht mehr umwerfen.
+  // Scheitert er - Versanddienst nicht erreichbar, Schluessel falsch,
+  // Tageslimit erreicht -, dann ist das Konto trotzdem angelegt. Wuerde hier
+  // durchgeworfen, saehe die Person einen Fehler, haette keinen Link, und beim
+  // zweiten Versuch hiesse es "Adresse schon vergeben": eine Sackgasse, aus der
+  // sie ohne fremde Hilfe nicht herauskommt.
+  await sendVerification(deps, accountId, email).catch((err: unknown) => {
+    // eslint-disable-next-line no-console
+    console.error(`Bestaetigungsmail an ${email} fehlgeschlagen:`, err);
+  });
+
   return { accountId };
+}
+
+/**
+ * Bestaetigungslink erneut anfordern.
+ *
+ * Braucht es unabhaengig von Versandfehlern: Mails landen im Spam, werden
+ * geloescht, oder der Link ist nach 48 Stunden abgelaufen.
+ *
+ * Antwortet immer gleich, egal ob es die Adresse gibt. Sonst wird das Formular
+ * zum Verzeichnis registrierter Adressen.
+ */
+export async function requestVerification(
+  deps: AuthDeps,
+  email: string,
+): Promise<void> {
+  const [acc] = await deps.db
+    .select()
+    .from(s.account)
+    .where(eq(s.account.email, normalizeEmail(email)));
+
+  if (!acc || acc.anonymizedAt || acc.emailVerifiedAt) return;
+
+  // Sperrfrist: Ohne sie liesse sich ueber dieses Formular ein fremdes
+  // Postfach zumuellen.
+  const [recent] = await deps.db
+    .select({ createdAt: s.authToken.createdAt })
+    .from(s.authToken)
+    .where(
+      and(
+        eq(s.authToken.accountId, acc.id),
+        eq(s.authToken.purpose, 'email_verify'),
+        gt(s.authToken.createdAt, new Date(Date.now() - RESEND_COOLDOWN_MS)),
+      ),
+    )
+    .limit(1);
+  if (recent) return;
+
+  // Aeltere Links entwerten, damit immer nur der neueste gilt.
+  await deps.db
+    .update(s.authToken)
+    .set({ usedAt: new Date() })
+    .where(
+      and(
+        eq(s.authToken.accountId, acc.id),
+        eq(s.authToken.purpose, 'email_verify'),
+        isNull(s.authToken.usedAt),
+      ),
+    );
+
+  await sendVerification(deps, acc.id, acc.email!);
 }
 
 async function sendVerification(
@@ -119,21 +181,32 @@ async function sendVerification(
   email: string,
 ): Promise<void> {
   const token = newToken();
-  await deps.db.insert(s.authToken).values({
-    accountId,
-    purpose: 'email_verify',
-    tokenHash: hashToken(token),
-    expiresAt: hoursFromNow(VERIFY_TTL_HOURS),
-  });
+  const [row] = await deps.db
+    .insert(s.authToken)
+    .values({
+      accountId,
+      purpose: 'email_verify',
+      tokenHash: hashToken(token),
+      expiresAt: hoursFromNow(VERIFY_TTL_HOURS),
+    })
+    .returning({ id: s.authToken.id });
 
-  await deps.mailer.send({
-    to: email,
-    subject: 'Brauweg: E-Mail bestaetigen',
-    text:
-      `Willkommen bei Brauweg.\n\n` +
-      `Bestaetige deine Adresse: ${deps.publicUrl}/verify?token=${token}\n\n` +
-      `Der Link gilt ${VERIFY_TTL_HOURS} Stunden.`,
-  });
+  try {
+    await deps.mailer.send({
+      to: email,
+      subject: 'Brauweg: E-Mail bestaetigen',
+      text:
+        `Willkommen bei Brauweg.\n\n` +
+        `Bestaetige deine Adresse: ${deps.publicUrl}/verify?token=${token}\n\n` +
+        `Der Link gilt ${VERIFY_TTL_HOURS} Stunden.`,
+    });
+  } catch (err) {
+    // Ein Token, dessen Mail nie hinausging, ist wertlos - und schlimmer:
+    // Es wuerde die Sperrfrist ausloesen und damit genau die Wiederholung
+    // blockieren, die jetzt gebraucht wird. Also wieder entfernen.
+    await deps.db.delete(s.authToken).where(eq(s.authToken.id, row!.id));
+    throw err;
+  }
 }
 
 /** Gibt die Konto-Kennung zurueck, damit der Aufrufer direkt anmelden koennte. */
