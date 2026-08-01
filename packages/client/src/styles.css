@@ -1,0 +1,186 @@
+/*
+ * Dunkle, ruhige Tischflaeche, damit die Karten der einzige helle Bereich
+ * sind. Bewusst sparsam: Gestaltet wird erst, wenn zwei Browser eine Partie
+ * beenden koennen.
+ */
+
+:root {
+  --bg: #12181c;
+  --panel: #1b2429;
+  --line: #2c383f;
+  --text: #e8eef1;
+  --muted: #8fa3ad;
+  --accent: #4a9c78;
+  --danger: #c2564c;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+button {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0d1211;
+  font-weight: 600;
+}
+
+input,
+select {
+  font: inherit;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: #0e1417;
+  color: var(--text);
+}
+
+label {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+label input,
+label select {
+  margin-top: 0.25rem;
+  color: var(--text);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.error {
+  color: var(--danger);
+}
+
+/* Karten: gross und kontrastreich, Farbe und Wert am linken Rand, weil auf
+   dem Handy von den meisten Karten nur ein schmaler Streifen sichtbar ist. */
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.card {
+  min-width: 3.2rem;
+  padding: 0.9rem 0.5rem;
+  text-align: left;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: #f2f5f4;
+  color: #10171b;
+  border: 1px solid #cbd5d1;
+  border-radius: 0.35rem;
+}
+
+.card.red {
+  color: #b3231b;
+}
+
+.card:disabled {
+  opacity: 0.28;
+}
+
+.trick {
+  display: flex;
+  gap: 0.5rem;
+  min-height: 4.2rem;
+  align-items: center;
+}
+
+.seat {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.seat.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.timer {
+  height: 0.4rem;
+  border-radius: 0.2rem;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.timer > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+}

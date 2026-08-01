@@ -1,0 +1,14 @@
+{
+  "name": "@brauweg/game-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Spielmodul-Schnittstelle der Plattform. Kennt kein einzelnes Kartenspiel.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "src"],
+  "scripts": { "build": "tsc" },
+  "devDependencies": { "typescript": "^5.5.0" },
+  "license": "ISC"
+}

@@ -1,0 +1,291 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { eq } from 'drizzle-orm';
+
+import { doppelkopf } from '@brauweg/game-doppelkopf';
+
+import { AppError } from '../src/errors.js';
+import { registry } from '../src/games/registry.js';
+import {
+  MAX_ROUNDS,
+  createTable,
+  joinTable,
+  leaveLobby,
+  listTables,
+  saveRuleSet,
+  tableWithSeats,
+} from '../src/tables/service.js';
+import { createTestContext, createVerifiedAccount, schema, seedInvite } from './helpers.js';
+
+const CONFIG = doppelkopf.defaultConfig();
+
+async function ctx() {
+  const context = await createTestContext();
+  await seedInvite(context.db);
+  return context;
+}
+
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, aber nur eines ist spielbar', () => {
+  const all = registry.all();
+  const playable = all.filter((meta) => meta.availability === 'playable');
+  const preview = all.filter((meta) => meta.availability === 'preview');
+
+  assert.deepEqual(
+    playable.map((meta) => meta.id),
+    ['doppelkopf'],
+  );
+  assert.deepEqual(
+    preview.map((meta) => meta.id).sort(),
+    ['maumau', 'romme', 'schafkopf', 'skat'],
+  );
+  assert.equal(registry.get('skat'), undefined, 'Vorschau-Spiele haben kein Modul');
+});
+
+test('die Rundenzahl muss zur Geberrotation des Moduls passen', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  const base = { accountId, gameId: 'doppelkopf' as const, config: CONFIG, seats: 4 };
+
+  await assert.rejects(
+    () => createTable(c.db, { ...base, rounds: 6 }),
+    (err: AppError) => err.code === 'roundsNotMultipleOfRotation',
+  );
+
+  const table = await createTable(c.db, { ...base, rounds: 8 });
+  assert.equal(table.maxRounds, 8);
+});
+
+test('oeffentliche Tische sind auf 20 Runden begrenzt', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  assert.equal(MAX_ROUNDS.public, 20);
+  assert.equal(MAX_ROUNDS.club_only, 100);
+
+  await assert.rejects(
+    () =>
+      createTable(c.db, {
+        accountId,
+        gameId: 'doppelkopf',
+        config: CONFIG,
+        seats: 4,
+        rounds: 24,
+      }),
+    (err: AppError) => err.code === 'roundsTooMany',
+  );
+});
+
+test('ein widerspruechlicher Regelsatz wird beim Speichern abgelehnt', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  // Superschweine ohne Schweinchen: genau der Fall, den der Validator kennt.
+  await assert.rejects(
+    () =>
+      saveRuleSet(c.db, {
+        accountId,
+        gameId: 'doppelkopf',
+        name: 'Kaputt',
+        config: { ...CONFIG, schweinchen: false, superSchweine: true },
+        seats: 4,
+        rounds: 8,
+      }),
+    (err: AppError) => err.code === 'ruleSetInvalid',
+  );
+});
+
+test('ein Regelsatz bekommt beim Aendern eine neue Version, die alte bleibt', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  const erste = await saveRuleSet(c.db, {
+    accountId,
+    gameId: 'doppelkopf',
+    name: 'Vereinsregeln',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  const zweite = await saveRuleSet(c.db, {
+    accountId,
+    gameId: 'doppelkopf',
+    name: 'Vereinsregeln',
+    config: { ...CONFIG, bock: true },
+    seats: 4,
+    rounds: 8,
+    ruleSetId: erste.id,
+  });
+
+  assert.equal(zweite.id, erste.id);
+  assert.equal(zweite.version, 2);
+
+  const versionen = await c.db
+    .select()
+    .from(schema.ruleSet)
+    .where(eq(schema.ruleSet.id, erste.id));
+  assert.equal(versionen.length, 2, 'die alte Version muss erhalten bleiben');
+});
+
+test('ein Tisch haelt die Regelsatz-Version fest, spaetere Aenderungen treffen ihn nicht', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  const table = await createTable(c.db, {
+    accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+
+  await saveRuleSet(c.db, {
+    accountId,
+    gameId: 'doppelkopf',
+    name: 'Tischregeln',
+    config: { ...CONFIG, bock: true },
+    seats: 4,
+    rounds: 8,
+    ruleSetId: table.ruleSetId,
+  });
+
+  const [nachher] = await c.db
+    .select()
+    .from(schema.gameTable)
+    .where(eq(schema.gameTable.id, table.id));
+  assert.equal(nachher!.ruleSetVersion, 1);
+});
+
+test('der Ersteller sitzt auf Platz 0, die uebrigen Plaetze sind frei', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  const table = await createTable(c.db, {
+    accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+
+  const { seats } = await tableWithSeats(c.db, table.id);
+  assert.equal(seats.length, 4);
+  assert.equal(seats[0]!.accountId, accountId);
+  assert.ok(seats.slice(1).every((seat) => seat.accountId === null));
+});
+
+test('Beitritt belegt den naechsten freien Platz, ein voller Tisch weist ab', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+  const cara = await createVerifiedAccount(c, 'Cara');
+
+  const table = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 3,
+    rounds: 4,
+  });
+
+  await joinTable(c.db, table.id, bert.accountId);
+  await joinTable(c.db, table.id, cara.accountId);
+
+  const { seats } = await tableWithSeats(c.db, table.id);
+  assert.deepEqual(
+    seats.map((seat) => seat.accountId),
+    [anna.accountId, bert.accountId, cara.accountId],
+  );
+
+  const dora = await createVerifiedAccount(c, 'Dora');
+  await assert.rejects(
+    () => joinTable(c.db, table.id, dora.accountId),
+    (err: AppError) => err.code === 'tableFull',
+  );
+});
+
+test('blockierte Spieler bleiben nur an oeffentlichen Tischen draussen', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+
+  await c.db
+    .insert(schema.block)
+    .values({ accountId: anna.accountId, blockedAccountId: bert.accountId });
+
+  const oeffentlich = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+    visibility: 'public',
+  });
+  await assert.rejects(
+    () => joinTable(c.db, oeffentlich.id, bert.accountId),
+    (err: AppError) => err.code === 'blockedAtTable',
+  );
+
+  const privat = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+    visibility: 'on_request',
+  });
+  await joinTable(c.db, privat.id, bert.accountId);
+});
+
+test('die Lobby zeigt wartende Tische mit ihrer Belegung', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+
+  const table = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  await joinTable(c.db, table.id, bert.accountId);
+
+  const lobby = await listTables(c.db, { gameId: 'doppelkopf' });
+  assert.equal(lobby.length, 1);
+  assert.equal(lobby[0]!.occupied, 2);
+
+  assert.deepEqual(await listTables(c.db, { gameId: 'doppelkopf', seats: 3 }), []);
+});
+
+test('die Lobby vor Spielstart zu verlassen ist straffrei', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+
+  const table = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  await joinTable(c.db, table.id, bert.accountId);
+  await leaveLobby(c.db, table.id, bert.accountId);
+
+  const { seats } = await tableWithSeats(c.db, table.id);
+  assert.equal(seats.filter((seat) => seat.accountId).length, 1);
+
+  const ledger = await c.db.select().from(schema.trophyLedger);
+  assert.equal(ledger.length, 0, 'kein Abzug fuers Verlassen der Lobby');
+});

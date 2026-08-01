@@ -1,0 +1,218 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { eq } from 'drizzle-orm';
+
+import {
+  anonymizeAccount,
+  login,
+  logout,
+  register,
+  requestPasswordReset,
+  resetPassword,
+  sessionFromToken,
+  verifyEmail,
+} from '../src/auth/service.js';
+import { AppError } from '../src/errors.js';
+import { INVITE, createTestContext, createVerifiedAccount, schema, seedInvite } from './helpers.js';
+
+const PASSWORD = 'geheim-genug-1234';
+
+async function ctxWithInvite(maxUses = 50) {
+  const ctx = await createTestContext();
+  await seedInvite(ctx.db, maxUses);
+  return ctx;
+}
+
+test('Migration legt alle Tabellen an', async (t) => {
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+
+  const rows = await ctx.db.execute(
+    "select table_name from information_schema.tables where table_schema = 'public'",
+  );
+  const names = new Set(
+    (rows.rows as { table_name: string }[]).map((r) => r.table_name),
+  );
+
+  for (const expected of ['account', 'table_', 'party', 'party_snapshot', 'session']) {
+    assert.ok(names.has(expected), `Tabelle ${expected} fehlt`);
+  }
+});
+
+test('Registrierung braucht einen gueltigen Einladungscode', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  await assert.rejects(
+    () =>
+      register(ctx.auth, {
+        email: 'a@example.org',
+        password: PASSWORD,
+        displayName: 'Anna',
+        inviteCode: 'FALSCH',
+      }),
+    (err: AppError) => err.code === 'inviteCodeInvalid',
+  );
+});
+
+test('der Einladungscode gilt nur so oft wie erlaubt', async (t) => {
+  const ctx = await ctxWithInvite(2);
+  t.after(() => ctx.close());
+
+  await createVerifiedAccount(ctx, 'Anna');
+  await createVerifiedAccount(ctx, 'Bert');
+
+  await assert.rejects(
+    () =>
+      register(ctx.auth, {
+        email: 'c@example.org',
+        password: PASSWORD,
+        displayName: 'Cara',
+        inviteCode: INVITE,
+      }),
+    (err: AppError) => err.code === 'inviteCodeInvalid',
+  );
+});
+
+test('vor der Bestaetigung ist keine Anmeldung moeglich', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  await register(ctx.auth, {
+    email: 'anna@example.org',
+    password: PASSWORD,
+    displayName: 'Anna',
+    inviteCode: INVITE,
+  });
+
+  await assert.rejects(
+    () => login(ctx.auth, 'anna@example.org', PASSWORD),
+    (err: AppError) => err.code === 'emailNotVerified',
+  );
+
+  await verifyEmail(ctx.db, ctx.mailer.tokenFrom('anna@example.org'));
+  const { token } = await login(ctx.auth, 'anna@example.org', PASSWORD);
+  assert.ok(token.length > 20);
+});
+
+test('ein Bestaetigungstoken gilt nur einmal', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  await register(ctx.auth, {
+    email: 'anna@example.org',
+    password: PASSWORD,
+    displayName: 'Anna',
+    inviteCode: INVITE,
+  });
+  const token = ctx.mailer.tokenFrom('anna@example.org');
+
+  await verifyEmail(ctx.db, token);
+  await assert.rejects(
+    () => verifyEmail(ctx.db, token),
+    (err: AppError) => err.code === 'tokenInvalid',
+  );
+});
+
+test('falsches Passwort und unbekannte Adresse melden dasselbe', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  await createVerifiedAccount(ctx, 'Anna');
+
+  const codeOf = async (email: string, password: string): Promise<string> => {
+    try {
+      await login(ctx.auth, email, password);
+      return 'kein Fehler';
+    } catch (err) {
+      return (err as AppError).code;
+    }
+  };
+
+  assert.equal(await codeOf('anna@example.org', 'falsch'), 'credentialsInvalid');
+  assert.equal(await codeOf('niemand@example.org', PASSWORD), 'credentialsInvalid');
+});
+
+test('Anzeigename und Adresse sind eindeutig', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  await createVerifiedAccount(ctx, 'Anna');
+
+  await assert.rejects(
+    () =>
+      register(ctx.auth, {
+        email: 'andere@example.org',
+        password: PASSWORD,
+        displayName: 'Anna',
+        inviteCode: INVITE,
+      }),
+    (err: AppError) => err.code === 'displayNameTaken',
+  );
+
+  await assert.rejects(
+    () =>
+      register(ctx.auth, {
+        email: 'anna@example.org',
+        password: PASSWORD,
+        displayName: 'Andere',
+        inviteCode: INVITE,
+      }),
+    (err: AppError) => err.code === 'emailTaken',
+  );
+});
+
+test('Abmelden entwertet die Sitzung sofort', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  await createVerifiedAccount(ctx, 'Anna');
+
+  const { token } = await login(ctx.auth, 'anna@example.org', PASSWORD);
+  const session = await sessionFromToken(ctx.db, token);
+  assert.ok(session);
+
+  await logout(ctx.db, session.sessionId);
+  assert.equal(await sessionFromToken(ctx.db, token), null);
+});
+
+test('Passwort zuruecksetzen beendet alle offenen Sitzungen', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  await createVerifiedAccount(ctx, 'Anna');
+
+  const alt = (await login(ctx.auth, 'anna@example.org', PASSWORD)).token;
+  await requestPasswordReset(ctx.auth, 'anna@example.org');
+  await resetPassword(ctx.db, ctx.mailer.tokenFrom('anna@example.org'), 'neues-passwort-9');
+
+  assert.equal(await sessionFromToken(ctx.db, alt), null);
+  await assert.rejects(() => login(ctx.auth, 'anna@example.org', PASSWORD));
+
+  const neu = await login(ctx.auth, 'anna@example.org', 'neues-passwort-9');
+  assert.ok(neu.token);
+});
+
+test('eine unbekannte Adresse verraet sich beim Zuruecksetzen nicht', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+
+  await requestPasswordReset(ctx.auth, 'niemand@example.org');
+  assert.equal(ctx.mailer.sent.length, 0);
+});
+
+test('Kontoloeschung anonymisiert, statt Zeilen zu entfernen', async (t) => {
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  const { accountId } = await createVerifiedAccount(ctx, 'Anna');
+  const { token } = await login(ctx.auth, 'anna@example.org', PASSWORD);
+
+  await anonymizeAccount(ctx.db, accountId);
+
+  const [acc] = await ctx.db
+    .select()
+    .from(schema.account)
+    .where(eq(schema.account.id, accountId));
+
+  assert.ok(acc, 'die Zeile muss erhalten bleiben');
+  assert.equal(acc.email, null);
+  assert.equal(acc.passwordHash, null);
+  assert.ok(acc.anonymizedAt);
+  assert.equal(await sessionFromToken(ctx.db, token), null);
+});
