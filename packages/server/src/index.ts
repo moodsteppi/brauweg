@@ -6,6 +6,7 @@
  * einen Port braucht und das Sitzungs-Cookie ohne Sonderfall mitkommt.
  */
 
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -20,8 +21,11 @@ import { expireStaleTables } from './tables/service.js';
 
 const HOUR = 3600_000;
 
+const here = dirname(fileURLToPath(import.meta.url));
 /** dist/src -> packages/server/drizzle */
-const MIGRATIONS = resolve(dirname(fileURLToPath(import.meta.url)), '../../drizzle');
+const MIGRATIONS = resolve(here, '../../drizzle');
+/** dist/src -> packages/client/dist */
+const CLIENT_DIR = resolve(here, '../../../client/dist');
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -32,12 +36,16 @@ async function main(): Promise<void> {
     await connection.migrate(MIGRATIONS);
   }
 
-  // In der Entwicklung soll man sich sofort registrieren koennen, ohne erst
-  // von Hand einen Einladungscode anzulegen.
-  if (config.env !== 'production' && process.env.INVITE_CODE) {
+  // Der Beta-Zugang laeuft ueber einen gemeinsamen, mehrfach nutzbaren
+  // Einladungscode. Ihn aus der Umgebung anzulegen ist idempotent und erspart
+  // es, nach jedem Aufsetzen von Hand in die Datenbank zu greifen.
+  if (process.env.INVITE_CODE) {
     await db
       .insert(s.inviteCode)
-      .values({ code: process.env.INVITE_CODE, maxUses: 1000 })
+      .values({
+        code: process.env.INVITE_CODE,
+        maxUses: Number(process.env.INVITE_CODE_MAX_USES ?? 100),
+      })
       .onConflictDoNothing();
   }
 
@@ -55,6 +63,9 @@ async function main(): Promise<void> {
     },
     cookieSecure: config.cookieSecure,
     sessionTtlDays: config.sessionTtlDays,
+    // In der Entwicklung liefert Vite den Client aus, dann gibt es hier nichts
+    // auszuliefern und der Server bleibt reine API.
+    clientDir: existsSync(CLIENT_DIR) ? CLIENT_DIR : undefined,
   });
 
   await app.listen({ port: config.port, host: '0.0.0.0' });

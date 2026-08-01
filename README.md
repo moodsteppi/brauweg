@@ -74,8 +74,28 @@ Klartext.
 | `PUBLIC_URL` | Basis für Links in E-Mails, bestimmt auch das Secure-Flag des Cookies |
 | `RESEND_API_KEY` | Ohne Schlüssel werden Mails nur protokolliert |
 | `MAIL_FROM` | Absenderadresse |
+| `INVITE_CODE` | Legt diesen Einladungscode beim Start an, idempotent |
+| `INVITE_CODE_MAX_USES` | Standard 100 |
 | `SESSION_TTL_DAYS` | Standard 30 |
 | `MIGRATE_ON_BOOT` | In Produktion Migrationen beim Start anwenden |
+
+## Betrieb
+
+**Ein Dienst, eine Domain.** In Produktion liefert der Server den gebauten
+Client selbst aus. Damit gibt es genau einen Ursprung: Das Sitzungs-Cookie gilt
+ohne Sonderfall auch für den WebSocket, es braucht kein CORS und keine zweite
+Domain. In der Entwicklung übernimmt Vite diese Rolle und reicht `/api` und
+`/ws` an den Server weiter.
+
+Deployment ist in [railway.json](railway.json) beschrieben: `npm ci && npm run
+build`, gestartet wird `node packages/server/dist/src/index.js`, Health-Check
+auf `/api/health`.
+
+**Datenbank.** Jeder PostgreSQL-Anbieter geht, auch Supabase. Bei Supabase muss
+es der **Session Pooler** (Port 5432) sein, nicht der Transaction Pooler auf
+6543: Letzterer ist für Serverless gedacht und unterstützt keine Prepared
+Statements. Die Direktverbindung `db.<projekt>.supabase.co` ist ohne Add-on nur
+über IPv6 erreichbar.
 
 ## Grundsätze, die nicht aufgeweicht werden
 

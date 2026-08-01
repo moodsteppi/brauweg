@@ -27,6 +27,21 @@ export interface Connection {
 
 const EMBEDDED = ['pglite', 'pglite://', 'embedded'];
 
+/**
+ * Gehostete Anbieter wie Supabase verlangen TLS. node-postgres schaltet es
+ * nicht allein aus der Verbindungszeichenfolge ein, deshalb wird es hier
+ * ausdruecklich gesetzt.
+ *
+ * `rejectUnauthorized` bleibt an: Supabase benutzt regulaer ausgestellte
+ * Zertifikate. Nur wer wirklich ein selbst signiertes Zertifikat betreibt,
+ * haengt `sslmode=no-verify` an — und weiss dann, was er aufgibt.
+ */
+function sslFor(url: string): false | { rejectUnauthorized: boolean } {
+  if (/[?&]sslmode=disable/.test(url)) return false;
+  if (/localhost|127\.0\.0\.1/.test(url) && !/sslmode=require/.test(url)) return false;
+  return { rejectUnauthorized: !/[?&]sslmode=no-verify/.test(url) };
+}
+
 export async function connect(url: string, env: string): Promise<Connection> {
   if (EMBEDDED.includes(url)) {
     if (env === 'production') {
@@ -35,7 +50,7 @@ export async function connect(url: string, env: string): Promise<Connection> {
     return connectEmbedded();
   }
 
-  const pool = new Pool({ connectionString: url });
+  const pool = new Pool({ connectionString: url, ssl: sslFor(url) });
   const db = drizzle(pool, { schema, casing: 'snake_case' }) as Db;
 
   return {

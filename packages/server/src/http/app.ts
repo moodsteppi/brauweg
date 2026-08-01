@@ -8,6 +8,7 @@
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
+import fastifyStatic from '@fastify/static';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { GameId } from '@brauweg/game-api';
@@ -46,6 +47,8 @@ export interface AppDeps {
   readonly runtime: PartyRuntime;
   readonly cookieSecure: boolean;
   readonly sessionTtlDays: number;
+  /** Verzeichnis des gebauten Clients. Fehlt es, liefert der Server nur die API. */
+  readonly clientDir?: string;
 }
 
 const gameIdSchema = z.enum(['doppelkopf', 'skat', 'schafkopf', 'romme', 'maumau']);
@@ -325,6 +328,31 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   app.get('/api/health', async (_request, reply) => reply.send({ ok: true }));
+
+  // -------------------------------------------------------------------------
+  // Client
+  // -------------------------------------------------------------------------
+
+  /**
+   * Der gebaute Client wird vom selben Server ausgeliefert.
+   *
+   * Damit gibt es genau einen Ursprung: Das Sitzungs-Cookie gilt ohne
+   * Sonderfall auch fuer den WebSocket, es braucht kein CORS und keine zweite
+   * Domain. In der Entwicklung uebernimmt Vite diese Rolle und reicht /api und
+   * /ws hierher weiter.
+   */
+  if (deps.clientDir) {
+    void app.register(fastifyStatic, { root: deps.clientDir });
+
+    app.setNotFoundHandler((request, reply) => {
+      // API und WebSocket bleiben ehrliche 404. Alles andere ist eine Route
+      // der Einzelseiten-Anwendung und bekommt die index.html.
+      if (request.url.startsWith('/api') || request.url.startsWith('/ws')) {
+        return reply.status(404).send({ code: 'notFound', messageKey: 'error.notFound' });
+      }
+      return reply.sendFile('index.html');
+    });
+  }
 
   return app;
 }
