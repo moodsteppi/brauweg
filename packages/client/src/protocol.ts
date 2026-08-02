@@ -39,6 +39,16 @@ export interface RoundView {
   turn: number;
   announcements: { re: boolean; kontra: boolean; reAbsage: number; kontraAbsage: number };
   myParty: string | null;
+  /** Öffentlich bekannte Parteizugehörigkeit, im Solo verrät sie den Solisten. */
+  knownParties: Record<number, string>;
+  /** Was gespielt wird: Normalspiel, Hochzeit, Armut oder ein Solo. */
+  gameType: { kind: string; solo?: string };
+  /**
+   * Rangfolge der Karten. `trumps` enthält die Trumpfkarten als `Farbe+Wert`.
+   * Der Client rechnet daraus nichts aus, er liest nur ab, was Trumpf ist —
+   * welche Karte Trumpf ist, entscheidet allein das Spielmodul.
+   */
+  order: { trumps: string[] };
   standings: Record<number, number>;
   pendingPflichtansage: { seat: number; trickPoints: number; canDecline: boolean } | null;
   result: unknown;
