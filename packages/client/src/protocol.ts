@@ -27,11 +27,28 @@ export interface PlayedCard {
   card: Card;
 }
 
+/**
+ * Rangfolge der Karten in der aktuellen Spielart, wie sie die Engine liefert:
+ * Truempfe stark nach schwach, dann je Fehlfarbe stark nach schwach. Die Werte
+ * sind Kartenschluessel wie "DA" oder "HT".
+ *
+ * Der Client wertet damit KEINE Regeln aus — er ordnet die Hand nur sichtbar.
+ * Weil sich `order` bei einem Solo aendert, sortiert sich die Hand von selbst
+ * um, ohne dass der Client wuesste, was ein Solo ist.
+ */
+export interface CardOrder {
+  trumps: string[];
+  fehl: Record<string, string[]>;
+}
+
 export interface RoundView {
   seat: number;
   phase: string;
   hand: Card[];
   legal: Card[];
+  /** Kartenstaerke der aktuellen Spielart. Kommt mit der Sicht vom Server. */
+  order?: CardOrder;
+  gameType?: { kind: string; solo?: string };
   handCounts: Record<number, number>;
   currentTrick: PlayedCard[];
   /** Feldnamen wie in der Engine: `played` und `winnerSeat`. */
@@ -39,6 +56,8 @@ export interface RoundView {
   turn: number;
   announcements: { re: boolean; kontra: boolean; reAbsage: number; kontraAbsage: number };
   myParty: string | null;
+  /** Bekannte Parteien anderer Sitze (Solo, aufgedeckte Hochzeit, Ansagen). */
+  knownParties?: Record<number, string>;
   standings: Record<number, number>;
   pendingPflichtansage: { seat: number; trickPoints: number; canDecline: boolean } | null;
   result: unknown;
