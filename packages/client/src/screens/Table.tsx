@@ -736,12 +736,22 @@ const HandCard = memo(function HandCard({
   const off = index - mid;
   const rot = off * Math.min(3.2, 22 / Math.max(total, 1));
   const dip = Math.pow(Math.abs(off), 1.6) * (total > 7 ? 1.1 : 2.2);
-  const transform = `translateY(${dip}px) rotate(${rot}deg)`;
+
+  // Position, Senkung und Neigung als CSS-Variablen: Die Karte steht absolut
+  // in der Mitte, das Stylesheet setzt daraus den transform zusammen. Faellt
+  // eine Karte aus der Hand, GLEITEN die uebrigen auf ihre neuen Plaetze
+  // (Compositor-Uebergang) statt per Layout-Sprung umzubrechen.
+  const vars = {
+    '--off': off,
+    '--dip': dip,
+    '--rot': rot,
+    zIndex: playable ? 100 + index : index,
+  } as React.CSSProperties;
 
   return (
     <button
       className={`doko-handcard${playable ? ' is-playable' : ''}${trump ? ' is-trump' : ''}${shaking ? ' is-shake' : ''}`}
-      style={{ transform, zIndex: index }}
+      style={vars}
       // Nicht disabled: Der Tipp auf eine unspielbare Karte soll ankommen und
       // das Schuetteln ausloesen, statt lautlos zu versanden.
       aria-disabled={!playable}
