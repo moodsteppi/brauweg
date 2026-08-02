@@ -408,6 +408,7 @@ export function Table({
             leader={leaderSeat === seat}
             deadline={view.currentActor === seat ? view.turnDeadline : null}
             party={round?.knownParties?.[seat] ?? null}
+            tricksWon={round?.trickCounts?.[seat] ?? 0}
             avatarUrl={avatarOf(seat)}
             deck={deck}
           />
@@ -506,6 +507,9 @@ export function Table({
             {view.seat !== null && leaderSeat === view.seat && ' · Aufspiel'}
           </span>
         </div>
+        {view.seat !== null && (
+          <StichStapel count={round?.trickCounts?.[view.seat] ?? 0} />
+        )}
         {view.currentActor === view.seat && view.turnDeadline !== null && (
           <TurnClock deadline={view.turnDeadline} />
         )}
@@ -639,6 +643,7 @@ const OpponentSeat = memo(function OpponentSeat({
   leader,
   deadline,
   party,
+  tricksWon,
   avatarUrl,
   deck,
 }: {
@@ -656,6 +661,7 @@ const OpponentSeat = memo(function OpponentSeat({
   leader: boolean;
   deadline: number | null;
   party: string | null;
+  tricksWon: number;
   avatarUrl: string | null;
   deck: Deck;
 }): React.JSX.Element {
@@ -695,9 +701,27 @@ const OpponentSeat = memo(function OpponentSeat({
         ))}
       </div>
       <span className="doko-opp-score">{score}</span>
+      <StichStapel count={tricksWon} />
     </div>
   );
 });
+
+/**
+ * Der gewonnene Stichstapel neben dem Spieler: ein kleines Haeufchen
+ * verdeckter Karten, wie am echten Tisch, mit der Anzahl daran.
+ */
+function StichStapel({ count }: { count: number }): React.JSX.Element | null {
+  if (count <= 0) return null;
+  const shown = Math.min(count, 3);
+  return (
+    <span className="doko-stiche" aria-label={`${count} Stiche gewonnen`}>
+      {Array.from({ length: shown }, (_, i) => (
+        <i key={i} />
+      ))}
+      <b>{count}</b>
+    </span>
+  );
+}
 
 function partyLabel(party: string): string {
   return party === 're' ? 'Re' : 'Kontra';

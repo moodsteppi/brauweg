@@ -724,6 +724,11 @@ export interface PlayerView {
   readonly knownParties: Readonly<Record<number, Party>>;
   /** Erspielte Augen je Sitz. Leer, wenn die Regel countPoints aus ist. */
   readonly standings: Readonly<Record<number, number>>;
+  /**
+   * Gewonnene Stiche je Sitz. Anders als die Augen immer gefuellt: Wer wie
+   * viele Stiche vor sich liegen hat, sieht am echten Tisch auch jeder.
+   */
+  readonly trickCounts: Readonly<Record<number, number>>;
   readonly pendingPflichtansage: PendingPflichtansage | null;
   readonly result: RoundResult | null;
 
@@ -756,6 +761,13 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
       standings[t.winnerSeat] += sumValues(t.played.map((p) => p.card));
     }
   }
+
+  // Stichzahl je Sitz ist immer oeffentlich: Der Stapel liegt am echten
+  // Tisch fuer alle sichtbar neben dem Gewinner.
+  const trickCounts: Record<number, number> = Object.fromEntries(
+    state.seats.map((s) => [s, 0]),
+  );
+  for (const t of state.tricks) trickCounts[t.winnerSeat] += 1;
 
   // Oeffentlich ist die Partei nur, wo sie ohnehin sichtbar ist: Solist,
   // geklaerte Hochzeit, Armut-Paar und jeder, der angesagt hat.
@@ -821,6 +833,7 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     myParty,
     knownParties,
     standings,
+    trickCounts,
     pendingPflichtansage: state.pendingPflichtansage,
     result: state.result,
     isMyTurn,
