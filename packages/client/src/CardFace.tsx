@@ -26,12 +26,15 @@ export function CardButton({
   deck,
   disabled,
   selected,
+  trump,
   onClick,
 }: {
   card: Card;
   deck: Deck;
   disabled?: boolean;
   selected?: boolean;
+  /** Trumpf in der laufenden Spielart. Kommt aus der Sicht, nie aus dem Client. */
+  trump?: boolean;
   onClick: () => void;
 }): React.JSX.Element {
   const src = cardImage(deck, card);
@@ -39,14 +42,20 @@ export function CardButton({
   if (src) classes.push('card--image');
   else if (isRed(card)) classes.push('red');
   if (selected) classes.push('selected');
+  if (trump) classes.push('trump');
+
+  // Welche Karte Trumpf ist, haengt an der Spielart: Die Herz-Neun ist im
+  // Herz-Solo Trumpf und im Normalspiel Fehl. Das gehoert an die Karte selbst,
+  // sonst muss man es sich merken - und merkt es sich falsch.
+  const name = trump ? `${cardName(card)}, Trumpf` : cardName(card);
 
   return (
     <button
       className={classes.join(' ')}
       disabled={disabled}
       onClick={onClick}
-      title={cardName(card)}
-      aria-label={cardName(card)}
+      title={name}
+      aria-label={name}
     >
       {src ? (
         <img className="card-img" src={src} alt="" draggable={false} />

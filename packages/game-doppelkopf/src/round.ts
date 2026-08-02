@@ -251,6 +251,16 @@ export function apply(state: RoundState, action: RoundAction): RoundState {
 export function vorbehaltTurn(state: RoundState): number | null {
   if (state.phase !== 'vorbehalt') return null;
   const asked = new Set(state.vorbehalte.map((v) => v.seat));
+
+  // Wird vorgefuehrt, steht die Spielart bereits fest: Der Vorgefuehrte MUSS
+  // ein Solo ansagen, und allen anderen bietet allowedVorbehalte nichts an -
+  // kein Solo, kein Schmeissen, keine Armut, keine Hochzeit. Sie trotzdem der
+  // Reihe nach zu fragen ist eine Frage ohne Antwortmoeglichkeit: Sie koennten
+  // nur passen, und das aendert nichts. Also wird nur der Vorgefuehrte gefragt.
+  if (state.forcedSoloSeat !== null) {
+    return asked.has(state.forcedSoloSeat) ? null : state.forcedSoloSeat;
+  }
+
   for (const seat of seatOrderFrom(state.seats, state.vorhand)) {
     if (!asked.has(seat)) return seat;
   }

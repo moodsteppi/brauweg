@@ -74,6 +74,56 @@ for (const [seats, rounds] of [
   });
 }
 
+test('bei einer Vorfuehrung wird nur der Vorgefuehrte gefragt', () => {
+  // Vier Runden, vier offene Pflichtsoli: Es wird ab Runde 1 vorgefuehrt.
+  // Damit steht die Spielart fest - die uebrigen Sitze haben keine Wahl mehr.
+  // Sie trotzdem der Reihe nach "gesund" klicken zu lassen ist eine Frage
+  // ohne Antwortmoeglichkeit.
+  const party = doppelkopf.createParty({
+    config: makeRuleSet({ ...CONFIG, pflichtsolo: true }),
+    seats: 4,
+    rounds: 4,
+    seed: 12345,
+  });
+
+  const vorgefuehrt = doppelkopf.currentActor(party) as number;
+  for (let seat = 0; seat < 4; seat++) {
+    if (seat === vorgefuehrt) continue;
+    assert.deepEqual(
+      doppelkopf.legalActions(party, seat),
+      [],
+      `Sitz ${seat} darf nicht gefragt werden`,
+    );
+  }
+
+  // Nach der Soloansage geht es direkt ins Spiel, ohne weitere Abfrage.
+  const solo = doppelkopf
+    .legalActions(party, vorgefuehrt)
+    .find((a) => a.type === 'vorbehalt' && a.kind === 'solo');
+  assert.ok(solo);
+
+  const danach = doppelkopf.act(party, vorgefuehrt, solo);
+  assert.equal(danach.current?.phase, 'playing', 'keine weitere Vorbehaltsrunde');
+  assert.equal(danach.current?.gameType.kind, 'solo');
+});
+
+test('ohne Vorfuehrung wird weiterhin jeder Sitz gefragt', () => {
+  // Gegenprobe: Die Abkuerzung darf nur bei einer Vorfuehrung greifen.
+  const party = newParty();
+  const ersterSitz = doppelkopf.currentActor(party) as number;
+
+  const gesund = doppelkopf
+    .legalActions(party, ersterSitz)
+    .find((a) => a.type === 'vorbehalt' && a.kind === null);
+  assert.ok(gesund);
+
+  const danach = doppelkopf.act(party, ersterSitz, gesund);
+  const naechster = doppelkopf.currentActor(danach);
+  assert.notEqual(naechster, null, 'der naechste Sitz muss gefragt werden');
+  assert.notEqual(naechster, ersterSitz);
+  assert.equal(danach.current?.phase, 'vorbehalt');
+});
+
 test('legalActions liefert fuer fremde Sitze in der Vorbehaltsabfrage nichts', () => {
   const party = newParty();
   const seat = doppelkopf.currentActor(party) as number;

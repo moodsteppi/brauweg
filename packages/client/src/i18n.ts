@@ -65,7 +65,32 @@ const de: Record<string, string> = {
   'phase.playing': 'Stiche',
   'phase.finished': 'Abgerechnet',
   'phase.redeal': 'Neu geben',
+
+  'spielart.normal': 'Normalspiel',
+  'spielart.hochzeit': 'Hochzeit',
+  'spielart.armut': 'Armut',
+  'spielart.solo.suitC': 'Kreuz-Solo',
+  'spielart.solo.suitS': 'Pik-Solo',
+  'spielart.solo.suitH': 'Herz-Solo',
+  'spielart.solo.suitD': 'Karo-Solo',
+  'spielart.solo.queens': 'Damensolo',
+  'spielart.solo.jacks': 'Bubensolo',
+  'spielart.solo.fleshless': 'Fleischlos',
 };
+
+/**
+ * Name der Spielart.
+ *
+ * Ohne ihn ist der Tisch unlesbar: Im Herz-Solo ist die Herz-Neun Trumpf, im
+ * Normalspiel eine Fehlkarte. Wer nicht weiss, was laeuft, haelt einen
+ * regelkonformen Bedienzwang fuer einen Fehler.
+ */
+export function gameTypeLabel(gameType: { kind: string; solo?: string }): string {
+  if (gameType.kind === 'solo' && gameType.solo) {
+    return t(`spielart.solo.${gameType.solo}`);
+  }
+  return t(`spielart.${gameType.kind}`);
+}
 
 export function t(key: string): string {
   return de[key] ?? key;

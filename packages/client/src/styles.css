@@ -182,6 +182,13 @@ label select {
   outline: 3px solid var(--accent);
 }
 
+/* Trumpf. Bewusst ein Balken am unteren Rand statt einer Einfaerbung: Die
+   Kartenfarbe darf sich nicht aendern, sonst wird aus einer Lesehilfe eine
+   zweite Bedeutung. Wirkt auf Text- wie auf Bildblatt. */
+.card.trump {
+  box-shadow: inset 0 -0.28rem 0 var(--accent);
+}
+
 .played {
   display: flex;
   flex-direction: column;
