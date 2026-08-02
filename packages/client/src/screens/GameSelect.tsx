@@ -3,14 +3,18 @@ import { useEffect, useState } from 'react';
 import { api, type FriendLists, type GameSummary, type Me, type PlayerRef } from '../api';
 import { DECKS, cardImage, type Deck } from '../decks';
 import { cardLabel, cardName, isRed, t } from '../i18n';
+import { Profile } from './Profile';
 
 /**
- * Erste Ebene ist die Spielauswahl, danach erst die Tischliste.
- *
- * Vorschau-Spiele lassen sich nicht starten, aber man kann fuer sie abstimmen.
- * Die Reihenfolge der naechsten Monate bestimmen damit die Leute, die
- * tatsaechlich spielen.
+ * Startbildschirm im Stil eines Handyspiels: unten eine Tab-Leiste, in der
+ * Mitte prangt "Spielen". Der Hauptschirm zeigt die Trophaeen gross und
+ * darunter die Spielwahl; Freunde und das eigene Profil (samt Kartenblatt
+ * und Abmelden) sind eigene Tabs. Handy ist der Massstab - im breiten
+ * Browser bleibt die Flaeche auf Handybreite begrenzt.
  */
+
+type Tab = 'freunde' | 'spielen' | 'profil';
+
 export function GameSelect({
   me,
   onPick,
@@ -25,6 +29,102 @@ export function GameSelect({
   onAvatarChange: () => void;
   onShowProfile: (accountId: string) => void;
   onSignOut: () => void;
+}): React.JSX.Element {
+  const [tab, setTab] = useState<Tab>('spielen');
+  const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
+
+  return (
+    <div className="front">
+      <header className="front-top">
+        {/* Der eigene Name fuehrt zum Profil-Tab - derselbe Inhalt, den auch
+            andere ueber die Spielersuche sehen, nichts Eigenes zum Lernen. */}
+        <button className="spielername" onClick={() => setTab('profil')}>
+          {me.displayName}
+        </button>
+        <span className="front-trophybadge">
+          <PokalIcon />
+          {trophies}
+        </span>
+      </header>
+
+      <div className="front-body" key={tab}>
+        {tab === 'spielen' && <Spielen me={me} trophies={trophies} onPick={onPick} />}
+        {tab === 'freunde' && <Freunde onShowProfile={onShowProfile} />}
+        {tab === 'profil' && (
+          <>
+            <Profile accountId={me.id} eingebettet />
+            <ProfilePicture me={me} onChanged={onAvatarChange} />
+            <DeckPicker current={me.cardDeck} onChange={onDeckChange} />
+            <button onClick={onSignOut}>Abmelden</button>
+          </>
+        )}
+      </div>
+
+      <nav className="front-tabs" aria-label="Bereiche">
+        <TabButton
+          label="Freunde"
+          active={tab === 'freunde'}
+          onClick={() => setTab('freunde')}
+          icon={<FreundeIcon />}
+        />
+        <TabButton
+          label="Spielen"
+          haupt
+          active={tab === 'spielen'}
+          onClick={() => setTab('spielen')}
+          icon={<KartenIcon />}
+        />
+        <TabButton
+          label="Profil"
+          active={tab === 'profil'}
+          onClick={() => setTab('profil')}
+          icon={<ProfilIcon />}
+        />
+      </nav>
+    </div>
+  );
+}
+
+function TabButton({
+  label,
+  icon,
+  active,
+  haupt = false,
+  onClick,
+}: {
+  label: string;
+  icon: React.JSX.Element;
+  active: boolean;
+  haupt?: boolean;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <button
+      className={`front-tab${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
+      aria-current={active ? 'page' : undefined}
+      onClick={onClick}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/**
+ * Hauptschirm: Trophaeen zuoberst, darunter die Spielwahl.
+ *
+ * Vorschau-Spiele lassen sich nicht starten, aber man kann fuer sie
+ * abstimmen. Die Reihenfolge der naechsten Monate bestimmen damit die
+ * Leute, die tatsaechlich spielen.
+ */
+function Spielen({
+  me,
+  trophies,
+  onPick,
+}: {
+  me: Me;
+  trophies: number;
+  onPick: (gameId: string) => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [voted, setVoted] = useState<Set<string>>(new Set());
@@ -41,55 +141,35 @@ export function GameSelect({
 
   const playable = games.filter((game) => game.availability === 'playable');
   const preview = games.filter((game) => game.availability === 'preview');
-  const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
   const statOf = new Map(me.stats.map((stat) => [stat.gameId, stat]));
 
   return (
-    <main>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h1>Brauweg</h1>
-        <button onClick={onSignOut}>Abmelden</button>
+    <>
+      <div className="front-hero">
+        <PokalIcon />
+        <strong className="front-hero-zahl">{trophies}</strong>
+        <span className="muted">Trophäen</span>
       </div>
-      <p className="muted">
-        {/* Der eigene Name fuehrt zum eigenen Profil - derselbe Weg wie bei
-            jedem anderen Spieler, nichts Eigenes zum Lernen. */}
-        <button className="spielername" onClick={() => onShowProfile(me.id)}>
-          {me.displayName}
-        </button>
-        {' · '}
-        {trophies} Trophäen gesamt
-      </p>
 
-      <ProfilePicture me={me} onChanged={onAvatarChange} />
-
-      <h2>Spielbar</h2>
       {playable.map((game) => {
         const stat = statOf.get(game.id);
         return (
-          <div className="panel" key={game.id}>
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div>
-                <strong>{t(game.nameKey)}</strong>
-                <div className="muted">
-                  {game.seatCounts.join(', ')} Spieler
-                  {stat &&
-                    ` · ${stat.trophies} Trophäen · ${stat.wins} ${stat.wins === 1 ? 'Sieg' : 'Siege'} aus ${stat.parties} gewerteten Partien`}
-                </div>
-              </div>
-              <button className="primary" onClick={() => onPick(game.id)}>
-                Tische ansehen
-              </button>
-            </div>
-          </div>
+          <article className="front-mode" key={game.id}>
+            <h2>{t(game.nameKey)}</h2>
+            <p className="muted">
+              {game.seatCounts.join(', ')} Spieler
+              {stat &&
+                ` · ${stat.wins} ${stat.wins === 1 ? 'Sieg' : 'Siege'} aus ${stat.parties} gewerteten Partien`}
+            </p>
+            <button className="front-play" onClick={() => onPick(game.id)}>
+              Spielen
+            </button>
+          </article>
         );
       })}
 
-      <Freunde onShowProfile={onShowProfile} />
-
       <h2>Demnächst</h2>
-      <p className="muted">
-        Wofür ihr abstimmt, bauen wir als Nächstes.
-      </p>
+      <p className="muted">Wofür ihr abstimmt, bauen wir als Nächstes.</p>
       {preview.map((game) => (
         <div className="panel" key={game.id}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -103,14 +183,12 @@ export function GameSelect({
           </div>
         </div>
       ))}
-
-      <DeckPicker current={me.cardDeck} onChange={onDeckChange} />
-    </main>
+    </>
   );
 }
 
 /**
- * Freunde auf der Startseite.
+ * Freunde-Tab.
  *
  * Anfragen stehen zuoberst, weil sie eine Antwort verlangen. Die Suche
  * arbeitet erst ab zwei Zeichen und auf Knopfdruck - niemand soll beim
@@ -395,5 +473,56 @@ function ProfilePicture({
         {err && <span className="error">{err}</span>}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sinnbilder der Tab-Leiste: von Hand gezeichnete Striche in Textfarbe,
+// keine Emojis - die saehen auf jedem Geraet anders aus.
+// ---------------------------------------------------------------------------
+
+function PokalIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 3h10v5.5a5 5 0 0 1-10 0V3z" />
+      <path d="M7 5H4a3 3 0 0 0 3 4.5" />
+      <path d="M17 5h3a3 3 0 0 1-3 4.5" />
+      <path d="M12 13.5V17" />
+      <path d="M8.5 20c.5-2 1.8-3 3.5-3s3 1 3.5 3" />
+      <path d="M7 21h10" />
+    </svg>
+  );
+}
+
+function KartenIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.5" y="5" width="9" height="13" rx="1.5" transform="rotate(-8 8 11.5)" />
+      <rect x="11.5" y="5.5" width="9" height="13" rx="1.5" transform="rotate(8 16 12)" />
+    </svg>
+  );
+}
+
+function FreundeIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 20c.6-3.3 2.7-5 5.5-5s4.9 1.7 5.5 5" />
+      <circle cx="17" cy="9" r="2.6" />
+      <path d="M15.8 15.3c.4-.2 1-.3 1.7-.3 2.3 0 3.7 1.4 4.3 4.2" />
+    </svg>
+  );
+}
+
+function ProfilIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M5 20.5c.8-4 3.3-6 7-6s6.2 2 7 6" />
+    </svg>
   );
 }

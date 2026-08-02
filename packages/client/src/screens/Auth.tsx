@@ -117,7 +117,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
   };
 
   return (
-    <main>
+    <main className="auth">
       <h1>Brauweg</h1>
       <p className="muted">Spielt nach euren Regeln.</p>
 
