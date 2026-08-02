@@ -630,10 +630,17 @@ td {
   border: none;
   background: none;
   transform-origin: bottom center;
-  transition: transform 0.14s ease;
+  /* Eigene Compositor-Ebene je Karte: Faecher-Umbau und Schuetteln laufen
+     dann ohne Neuzeichnen der Kartenbilder. */
+  will-change: transform;
   margin-left: calc(var(--hw) * -0.58);
 }
 .doko-handcard:first-child { margin-left: 0; }
+/* Kein Dauer-Uebergang auf den Handkarten: Beim Ausspielen springt der
+   Faecher durch das Flex-Layout ohnehin in einem Schritt — ein halb
+   animierter Nachzieher der Neigungen dazu wirkte ruckelig, nicht fluessig.
+   Der Umbau passiert jetzt sauber in einem Frame, und nur die gelegte Karte
+   in der Mitte animiert. */
 /* Alle Karten sehen gleich aus - keine Hervorhebung der spielbaren, kein
    Abdunkeln der uebrigen. Ob eine Karte geht, beantwortet der Tipp darauf:
    Sie faellt, oder sie schuettelt den Kopf. */
@@ -641,6 +648,7 @@ td {
 .doko-handcard.is-playable { cursor: pointer; }
 .doko-handcard.is-selected .pc { outline: 3px solid var(--accent); }
 @media (hover: hover) {
+  .doko-handcard.is-playable { transition: transform 0.12s ease; }
   .doko-handcard.is-playable:hover { transform: translateY(-14px) !important; z-index: 99 !important; }
 }
 
