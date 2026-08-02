@@ -14,10 +14,17 @@ import { t } from '../i18n';
 export function Profile({
   accountId,
   onBack,
+  eingebettet = false,
 }: {
   accountId: string;
-  onBack: () => void;
+  onBack?: () => void;
+  /**
+   * Als Tab-Inhalt statt als eigener Bildschirm: kein <main>-Rahmen, kein
+   * Zurueck-Knopf — die Navigation gehoert dann der Tab-Leiste.
+   */
+  eingebettet?: boolean;
 }): React.JSX.Element {
+  const Rahmen = eingebettet ? 'div' : 'main';
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -47,19 +54,19 @@ export function Profile({
 
   if (error && !profile) {
     return (
-      <main>
+      <Rahmen>
         <p className="error">{error}</p>
-        <button onClick={onBack}>Zurück</button>
-      </main>
+        {!eingebettet && <button onClick={onBack}>Zurück</button>}
+      </Rahmen>
     );
   }
 
   if (!profile) {
     return (
-      <main>
+      <Rahmen>
         <p className="muted">Profil wird geladen…</p>
-        <button onClick={onBack}>Zurück</button>
-      </main>
+        {!eingebettet && <button onClick={onBack}>Zurück</button>}
+      </Rahmen>
     );
   }
 
@@ -69,10 +76,10 @@ export function Profile({
       : null;
 
   return (
-    <main>
+    <Rahmen>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <h1>{profile.displayName}</h1>
-        <button onClick={onBack}>Zurück</button>
+        {!eingebettet && <button onClick={onBack}>Zurück</button>}
       </div>
       <p className="muted">Dabei seit {profile.memberSince}</p>
 
@@ -129,7 +136,7 @@ export function Profile({
           </table>
         )}
       </div>
-    </main>
+    </Rahmen>
   );
 }
 
