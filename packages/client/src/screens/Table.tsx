@@ -61,6 +61,9 @@ export function Table({
    * Knopf einen Kreisel statt gar nichts - sonst tippt man doppelt.
    */
   const [botBusy, setBotBusy] = useState<Record<number, 'add' | 'remove'>>({});
+
+  /** Blatt mit den Tischregeln, aufklappbar im Wartebereich und in der Runde. */
+  const [zeigeRegeln, setZeigeRegeln] = useState(false);
   useEffect(() => {
     if (!table) return;
     setBotBusy((prev) => {
@@ -122,6 +125,15 @@ export function Table({
                 ? 'Alle Plätze belegt, es geht gleich los…'
                 : `${table.missing === 1 ? 'Noch ein Spieler' : `Noch ${table.missing} Spieler`} · ${table.rounds} Runden`}
             </span>
+          </div>
+          <div className="doko-top-right">
+            <button
+              className="doko-icon"
+              onClick={() => setZeigeRegeln(true)}
+              aria-label="Tischregeln ansehen"
+            >
+              §
+            </button>
           </div>
         </header>
         <div className="doko-wait">
@@ -189,6 +201,7 @@ export function Table({
           fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.
         </p>
         {error && <p className="doko-error">{t(error)}</p>}
+        {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
       </div>
     );
   }
@@ -240,6 +253,12 @@ export function Table({
       .map((action) => action.cardId as number),
   );
   const otherActions = view.legalActions.filter((action) => action.type !== 'playCard');
+
+  // Die Vorbehaltsabfrage ist ein eigener Dialog (gesund ja/nein, dann
+  // Auswahl, dann Bestaetigung) - keine Knopfreihe am unteren Rand, auf der
+  // ein Fehltipp eine ganze Runde entscheidet.
+  const vorbehaltActions = otherActions.filter((action) => action.type === 'vorbehalt');
+  const rowActions = otherActions.filter((action) => action.type !== 'vorbehalt');
 
   const opponents = Array.from({ length: seatCount }, (_, s) => s).filter(
     (s) => view.seat === null || s !== view.seat,
@@ -300,6 +319,13 @@ export function Table({
           {view.seat === null && <span className="doko-badge">Zuschauer</span>}
           <button
             className="doko-icon"
+            onClick={() => setZeigeRegeln(true)}
+            aria-label="Tischregeln ansehen"
+          >
+            §
+          </button>
+          <button
+            className="doko-icon"
             onClick={() => changeZoom(-ZOOM_STEP)}
             disabled={zoom <= ZOOM_MIN}
             aria-label="Karten verkleinern"
@@ -317,15 +343,16 @@ export function Table({
         </div>
       </header>
 
-      {/* Spielfläche. Namen sind hier bewusst NICHT klickbar: Mitten im Zug
-          versehentlich ein Profil zu oeffnen risse einen vom Tisch. Der Weg
-          zum Profil fuehrt ueber Wartebereich und Partie-Ende. */}
+      {/* Spielfläche. Namen fuehren auch hier zum Profil - Zurueck bringt
+          einen an den Tisch zurueck, die Partie laeuft derweil weiter. */}
       <div className={`doko-felt seats-${seatCount}`}>
         {opponents.map((seat) => (
           <OpponentSeat
             key={seat}
             slot={slotFor(seat, base, seatCount)}
             name={nameOf(seat)}
+            accountId={seatInfo(seat)?.accountId ?? null}
+            onShowProfile={onShowProfile}
             seatIndex={seat}
             isBot={isBotSeat(seat)}
             hasLeft={view.leftSeats.includes(seat)}
@@ -380,10 +407,10 @@ export function Table({
         />
       )}
 
-      {/* Ansagen und Vorbehalte */}
-      {otherActions.length > 0 && !round?.pendingPflichtansage && (
+      {/* Ansagen und Armut-Antworten bleiben eine Knopfreihe */}
+      {rowActions.length > 0 && !round?.pendingPflichtansage && (
         <div className="doko-actions">
-          {otherActions.map((action, index) => (
+          {rowActions.map((action, index) => (
             <button
               key={index}
               className={`doko-action${action.type === 'announce' ? ' doko-action--call' : ''}`}
@@ -394,6 +421,13 @@ export function Table({
           ))}
         </div>
       )}
+
+      {/* Vorbehaltsabfrage als Dialog mit Bestaetigung */}
+      {vorbehaltActions.length > 0 && !round?.pendingPflichtansage && (
+        <VorbehaltDialog actions={vorbehaltActions} onSend={send} />
+      )}
+
+      {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
 
       {/* Eigener Bereich: Name, Partei, Hand */}
       <div className="doko-me">
@@ -409,6 +443,11 @@ export function Table({
           <strong>{view.seat === null ? 'Zuschauer' : nameOf(view.seat)}</strong>
           <span className="muted">
             {round?.myParty ? partyLabel(round.myParty) : 'Deine Karten'}
+            {/* Zaehlhilfe: eigene Augen, nur wenn die Tischregel sie erlaubt -
+                dann liefert der Server die Staende, sonst bleiben sie leer. */}
+            {view.seat !== null && round?.standings[view.seat] !== undefined
+              ? ` · ${round.standings[view.seat]} Augen`
+              : ''}
             {view.seat !== null && leaderSeat === view.seat && ' · Aufspiel'}
           </span>
         </div>
@@ -527,6 +566,8 @@ function Avatar({
 function OpponentSeat({
   slot,
   name,
+  accountId,
+  onShowProfile,
   seatIndex,
   isBot,
   hasLeft,
@@ -542,6 +583,8 @@ function OpponentSeat({
 }: {
   slot: Slot;
   name: string;
+  accountId: string | null;
+  onShowProfile: (accountId: string) => void;
   seatIndex: number;
   isBot: boolean;
   hasLeft: boolean;
@@ -567,7 +610,15 @@ function OpponentSeat({
         avatarUrl={avatarUrl}
       />
       <div className="doko-opp-name">
-        <span>{isBot ? `Bot ${seatIndex + 1}` : name}</span>
+        {/* Der Name fuehrt zum Profil, wo ein Konto dahintersteht. Bots
+            bleiben Text - sie haben keins. */}
+        {accountId && !isBot ? (
+          <button className="spielername" onClick={() => onShowProfile(accountId)}>
+            {name}
+          </button>
+        ) : (
+          <span>{isBot ? `Bot ${seatIndex + 1}` : name}</span>
+        )}
         {leader && <em className="doko-tag doko-tag--lead">Aufspiel</em>}
         {party && <em className={`doko-party doko-party--${party}`}>{partyLabel(party)}</em>}
         {hasLeft && <em className="doko-tag">ausgestiegen</em>}
@@ -691,6 +742,166 @@ function soloLabel(solo: string): string {
   // Unbekannte Art faellt auf das Spielart-Woerterbuch zurueck, notfalls auf
   // den rohen Schluessel - sichtbar haesslich statt unsichtbar kaputt.
   return map[solo] ?? t(`spielart.solo.${solo}`);
+}
+
+/**
+ * Vorbehaltsabfrage als Dialog.
+ *
+ * Erst die einfache Frage (gesund ja/nein), bei Nein die Auswahl, und in
+ * jedem Fall eine Bestaetigung: Ein einzelner Fehltipp darf keine ganze
+ * Runde entscheiden. Wer vorgefuehrt wird, hat kein "gesund" - dann beginnt
+ * der Dialog direkt bei der Auswahl.
+ */
+function VorbehaltDialog({
+  actions,
+  onSend,
+}: {
+  actions: Action[];
+  onSend: (action: Action) => void;
+}): React.JSX.Element {
+  const gesund = actions.find((action) => action.kind === null) ?? null;
+  const vorbehalte = actions.filter((action) => action.kind !== null);
+
+  const [schritt, setSchritt] = useState<'frage' | 'auswahl' | 'bestaetigen'>(
+    gesund ? 'frage' : 'auswahl',
+  );
+  const [wahl, setWahl] = useState<Action | null>(null);
+  const [gesendet, setGesendet] = useState(false);
+
+  // Weist der Server die Aktion ab, bleibt der Dialog stehen; nach kurzer
+  // Zeit wird der Knopf wieder frei, statt fuer immer tot zu sein.
+  useEffect(() => {
+    if (!gesendet) return;
+    const handle = setTimeout(() => setGesendet(false), 3000);
+    return () => clearTimeout(handle);
+  }, [gesendet]);
+
+  const bestaetigen = (action: Action): void => {
+    setWahl(action);
+    setSchritt('bestaetigen');
+  };
+
+  return (
+    <div className="doko-sheet">
+      <div className="doko-sheet-card">
+        {schritt === 'frage' && gesund && (
+          <>
+            <h2>Bist du gesund?</h2>
+            <div className="doko-sheet-row">
+              <button className="primary" onClick={() => bestaetigen(gesund)}>
+                Ja, gesund
+              </button>
+              {vorbehalte.length > 0 && (
+                <button onClick={() => setSchritt('auswahl')}>Nein, Vorbehalt</button>
+              )}
+            </div>
+          </>
+        )}
+
+        {schritt === 'auswahl' && (
+          <>
+            <h2>Welcher Vorbehalt?</h2>
+            <div className="doko-vorbehalte">
+              {vorbehalte.map((action, index) => (
+                <button key={index} onClick={() => bestaetigen(action)}>
+                  {actionLabel(action)}
+                </button>
+              ))}
+            </div>
+            {gesund && (
+              <button className="doko-sheet-zurueck" onClick={() => setSchritt('frage')}>
+                Zurück
+              </button>
+            )}
+          </>
+        )}
+
+        {schritt === 'bestaetigen' && wahl && (
+          <>
+            <h2>{actionLabel(wahl)} ansagen?</h2>
+            <div className="doko-sheet-row">
+              <button
+                className="primary"
+                disabled={gesendet}
+                onClick={() => {
+                  setGesendet(true);
+                  onSend(wahl);
+                }}
+              >
+                {gesendet ? 'Wird angesagt…' : 'Bestätigen'}
+              </button>
+              <button
+                disabled={gesendet}
+                onClick={() => setSchritt(wahl === gesund ? 'frage' : 'auswahl')}
+              >
+                Zurück
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Die Regeln des Tisches zum Nachlesen, im selben Kachelbild wie beim
+ * Erstellen - nur ohne Schalter. Der Regelsatz ist auf die Version beim
+ * Tischbau festgeschrieben, gezeigt wird also genau das, was gilt.
+ */
+function RegelBlatt({
+  tableId,
+  onClose,
+}: {
+  tableId: string;
+  onClose: () => void;
+}): React.JSX.Element {
+  const [config, setConfig] = useState<Record<string, unknown> | null>(null);
+  const [fehler, setFehler] = useState(false);
+
+  useEffect(() => {
+    api
+      .tableRules(tableId)
+      .then((antwort) => setConfig(antwort.config))
+      .catch(() => setFehler(true));
+  }, [tableId]);
+
+  const flags = config
+    ? Object.entries(config).filter(([, value]) => typeof value === 'boolean')
+    : [];
+  const an = flags.filter(([, value]) => value).length;
+
+  return (
+    <div className="doko-sheet" onClick={onClose}>
+      <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
+        <h2>Regeln an diesem Tisch</h2>
+        {fehler && <p className="error">Die Regeln ließen sich nicht laden.</p>}
+        {!config && !fehler && <p className="muted">Wird geladen…</p>}
+        {config && (
+          <>
+            <p className="muted">
+              {an === 0
+                ? 'Keine Sonderregeln — es gilt das Grundspiel.'
+                : `${an} von ${flags.length} Regeln an.`}
+            </p>
+            <div className="regeln">
+              {flags.map(([key, value]) => (
+                <span key={key} className={`regel${value ? ' is-on' : ''}`}>
+                  {t(`regel.${key}`)}
+                  <span className="regel-check" aria-hidden="true">
+                    ✓
+                  </span>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+        <button className="primary" onClick={onClose}>
+          Schließen
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function Pflichtansage({

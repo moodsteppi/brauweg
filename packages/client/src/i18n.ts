@@ -101,6 +101,7 @@ const de: Record<string, string> = {
   'regel.armutAnnounceReturnedTrumps': 'Armut: Rücktrümpfe ansagen',
   'regel.schmeiss5Luschen': 'Schmeißen bei 5 Luschen',
   'regel.schmeiss7Volle': 'Schmeißen bei 7 Vollen',
+  'regel.countPoints': 'Punkte mitzählen',
   'regel.announcements': 'Re und Kontra',
   'regel.absagen': 'Absagen',
   'regel.pflichtansage': 'Pflichtansage',

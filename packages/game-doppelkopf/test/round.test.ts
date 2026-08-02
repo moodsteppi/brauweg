@@ -276,3 +276,22 @@ test('Automat weist illegale Aktionen zurueck', () => {
     RuleViolation,
   );
 });
+
+test('countPoints steuert die Zaehlhilfe in der Sicht', () => {
+  // Mit Regel: Die Augen der gewonnenen Stiche stehen in der Sicht, und am
+  // Rundenende summieren sie sich auf die vollen 240.
+  const mit = makeRuleSet({ countPoints: true });
+  let state = playRandomRound(createRound(mit, SEATS, 0, 42), makeRng(42));
+  if (state.phase === 'finished') {
+    const sicht = viewFor(state, 0);
+    const summe = Object.values(sicht.standings).reduce((a, b) => a + b, 0);
+    assert.equal(summe, 240);
+  }
+
+  // Ohne Regel bleiben die Staende leer - fuer jeden Sitz, in jeder Phase.
+  const ohne = makeRuleSet({ countPoints: false });
+  state = playRandomRound(createRound(ohne, SEATS, 0, 42), makeRng(42));
+  for (const seat of SEATS) {
+    assert.deepEqual(viewFor(state, seat).standings, {});
+  }
+});

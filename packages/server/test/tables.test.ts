@@ -466,3 +466,23 @@ test('wartende Tische verfallen nach zwei Stunden, laufende erst nach einem Tag'
   await expireStaleTables(c.db);
   assert.equal((await tableWithSeats(c.db, laufend.id)).table.status, 'abandoned');
 });
+
+test('die Tischregeln sind nachlesbar und auf die Erstellversion festgeschrieben', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+
+  const config = { ...CONFIG, schweinchen: true };
+  const table = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config,
+    seats: 4,
+    rounds: 8,
+  });
+
+  const { tableRules } = await import('../src/tables/service.js');
+  const gelesen = await tableRules(c.db, table.id);
+  assert.equal(gelesen.schweinchen, true);
+  assert.equal(gelesen.armut, CONFIG.armut);
+});

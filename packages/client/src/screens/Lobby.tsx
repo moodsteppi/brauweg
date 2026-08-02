@@ -64,6 +64,13 @@ export function Lobby({
         for (const [key, value] of Object.entries(merken.config)) {
           if (key in config && typeof value === typeof config[key]) config[key] = value;
         }
+      } else {
+        // Ohne gemerkte Einstellungen startet der Tisch nackt: keine Regel an.
+        // Wer Hausregeln will, schaltet sie bewusst ein - und ab dann sind sie
+        // ja gemerkt.
+        for (const [key, value] of Object.entries(config)) {
+          if (typeof value === 'boolean') config[key] = false;
+        }
       }
       setConfig(config);
 
