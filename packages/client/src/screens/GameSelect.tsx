@@ -6,14 +6,15 @@ import { cardLabel, cardName, isRed, t } from '../i18n';
 import { Profile } from './Profile';
 
 /**
- * Startbildschirm im Stil eines Handyspiels: unten eine Tab-Leiste, in der
- * Mitte prangt "Spielen". Der Hauptschirm zeigt die Trophaeen gross und
- * darunter die Spielwahl; Freunde und das eigene Profil (samt Kartenblatt
- * und Abmelden) sind eigene Tabs. Handy ist der Massstab - im breiten
- * Browser bleibt die Flaeche auf Handybreite begrenzt.
+ * Startbildschirm im Stil eines Handyspiels: unten die Tab-Leiste mit
+ * "Spielen" in der Mitte, oben die Ressourcen-Leiste mit Level, Muenzen und
+ * VIP. Was es noch nicht gibt - Shop, Muenzen kaufen, Tagesbonus, Level -,
+ * steht trotzdem schon da, mit ehrlichen Nullen und einem "Kommt bald" beim
+ * Antippen: Die Oberflaeche zeigt, wohin die Reise geht. Handy ist der
+ * Massstab - im breiten Browser bleibt die Flaeche auf Handybreite begrenzt.
  */
 
-type Tab = 'freunde' | 'spielen' | 'profil';
+type Tab = 'shop' | 'freunde' | 'spielen' | 'blatt' | 'profil';
 
 export function GameSelect({
   me,
@@ -31,30 +32,60 @@ export function GameSelect({
   onSignOut: () => void;
 }): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('spielen');
+  /** Name des angetippten Noch-nicht-Bereichs, fuer das "Kommt bald"-Blatt. */
+  const [bald, setBald] = useState<string | null>(null);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   return (
     <div className="front">
       <header className="front-top">
-        {/* Der eigene Name fuehrt zum Profil-Tab - derselbe Inhalt, den auch
-            andere ueber die Spielersuche sehen, nichts Eigenes zum Lernen. */}
-        <button className="spielername" onClick={() => setTab('profil')}>
-          {me.displayName}
+        {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
+            das System dahinter kommt noch, der Platz dafuer steht schon. */}
+        <button className="front-spieler" onClick={() => setTab('profil')}>
+          <span className="front-level" aria-label="Level 0">
+            0
+          </span>
+          <span className="front-spieler-info">
+            <strong>{me.displayName}</strong>
+            <span className="front-xp" aria-hidden="true">
+              <span style={{ width: '0%' }} />
+            </span>
+          </span>
         </button>
-        <span className="front-trophybadge">
-          <PokalIcon />
-          {trophies}
-        </span>
+        <div className="front-waehrungen">
+          <button
+            className="front-waehrung front-waehrung--muenzen"
+            onClick={() => setBald('Münzen kaufen')}
+          >
+            <MuenzeIcon />
+            {me.coins}
+            <span className="front-plus" aria-hidden="true">
+              +
+            </span>
+          </button>
+          <button
+            className="front-waehrung front-waehrung--vip"
+            onClick={() => setBald('VIP')}
+          >
+            <KroneIcon />0
+            <span className="front-plus" aria-hidden="true">
+              +
+            </span>
+          </button>
+        </div>
       </header>
 
       <div className="front-body" key={tab}>
-        {tab === 'spielen' && <Spielen me={me} trophies={trophies} onPick={onPick} />}
+        {tab === 'shop' && <Shop onBald={setBald} />}
+        {tab === 'spielen' && (
+          <Spielen me={me} trophies={trophies} onPick={onPick} onBald={setBald} />
+        )}
         {tab === 'freunde' && <Freunde onShowProfile={onShowProfile} />}
+        {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
         {tab === 'profil' && (
           <>
             <Profile accountId={me.id} eingebettet />
             <ProfilePicture me={me} onChanged={onAvatarChange} />
-            <DeckPicker current={me.cardDeck} onChange={onDeckChange} />
             <button onClick={onSignOut}>Abmelden</button>
           </>
         )}
@@ -62,7 +93,15 @@ export function GameSelect({
 
       <nav className="front-tabs" aria-label="Bereiche">
         <TabButton
+          label="Shop"
+          farbe="shop"
+          active={tab === 'shop'}
+          onClick={() => setTab('shop')}
+          icon={<ShopIcon />}
+        />
+        <TabButton
           label="Freunde"
+          farbe="freunde"
           active={tab === 'freunde'}
           onClick={() => setTab('freunde')}
           icon={<FreundeIcon />}
@@ -70,18 +109,88 @@ export function GameSelect({
         <TabButton
           label="Spielen"
           haupt
+          farbe="spielen"
           active={tab === 'spielen'}
           onClick={() => setTab('spielen')}
           icon={<KartenIcon />}
         />
         <TabButton
+          label="Blatt"
+          farbe="blatt"
+          active={tab === 'blatt'}
+          onClick={() => setTab('blatt')}
+          icon={<BlattIcon />}
+        />
+        <TabButton
           label="Profil"
+          farbe="profil"
           active={tab === 'profil'}
           onClick={() => setTab('profil')}
           icon={<ProfilIcon />}
         />
       </nav>
+
+      {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
     </div>
+  );
+}
+
+/**
+ * "Kommt bald"-Blatt fuer alles, das schon in der Oberflaeche steht, aber
+ * noch nicht gebaut ist. Ehrlich statt totem Knopf: Man sieht, dass hier
+ * etwas entsteht.
+ */
+function BaldBlatt({
+  name,
+  onClose,
+}: {
+  name: string;
+  onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <div className="doko-sheet" onClick={onClose}>
+      <div className="doko-sheet-card front-bald" onClick={(event) => event.stopPropagation()}>
+        <span className="front-bald-zeichen" aria-hidden="true">
+          🔨
+        </span>
+        <h2>Kommt bald!</h2>
+        <p className="muted">Daran bauen wir gerade: {name}. Schau bald wieder vorbei.</p>
+        <button className="primary" onClick={onClose}>
+          Alles klar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Shop-Vorschau: Die Regale stehen schon, die Ware kommt noch. */
+function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element {
+  const regale = [
+    { name: 'Kartenblätter', zeichen: '🃏' },
+    { name: 'Tischdesigns', zeichen: '🎨' },
+    { name: 'Münzpakete', zeichen: '🪙' },
+    { name: 'VIP-Pass', zeichen: '👑' },
+  ];
+  return (
+    <>
+      <h2>Shop</h2>
+      <p className="muted">Blätter, Tischdesigns und mehr — der Shop öffnet bald.</p>
+      <div className="front-shop">
+        {regale.map((regal) => (
+          <button
+            key={regal.name}
+            className="front-shop-kachel"
+            onClick={() => onBald(regal.name)}
+          >
+            <span className="front-shop-zeichen" aria-hidden="true">
+              {regal.zeichen}
+            </span>
+            <strong>{regal.name}</strong>
+            <span className="front-bald-tag">Bald</span>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -90,17 +199,20 @@ function TabButton({
   icon,
   active,
   haupt = false,
+  farbe,
   onClick,
 }: {
   label: string;
   icon: React.JSX.Element;
   active: boolean;
   haupt?: boolean;
+  /** Jeder Bereich hat seine eigene Leuchtfarbe, wenn er gewaehlt ist. */
+  farbe: string;
   onClick: () => void;
 }): React.JSX.Element {
   return (
     <button
-      className={`front-tab${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
+      className={`front-tab front-tab--${farbe}${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
       onClick={onClick}
     >
@@ -121,10 +233,12 @@ function Spielen({
   me,
   trophies,
   onPick,
+  onBald,
 }: {
   me: Me;
   trophies: number;
   onPick: (gameId: string) => void;
+  onBald: (name: string) => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [voted, setVoted] = useState<Set<string>>(new Set());
@@ -167,6 +281,14 @@ function Spielen({
           </article>
         );
       })}
+
+      {/* Der Tagesbonus steht schon da, wo er hingehoert - unter dem
+          Spielen-Knopf. Dahinter steckt noch nichts. */}
+      <button className="front-bonus" onClick={() => onBald('Der Tagesbonus')}>
+        <GeschenkIcon />
+        Gratis-Münzen — Tagesbonus
+        <span className="front-bald-tag">Bald</span>
+      </button>
 
       <h2>Demnächst</h2>
       <p className="muted">Wofür ihr abstimmt, bauen wir als Nächstes.</p>
@@ -491,6 +613,58 @@ function PokalIcon(): React.JSX.Element {
       <path d="M12 13.5V17" />
       <path d="M8.5 20c.5-2 1.8-3 3.5-3s3 1 3.5 3" />
       <path d="M7 21h10" />
+    </svg>
+  );
+}
+
+function ShopIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 8h14l-1.2 12a1.5 1.5 0 0 1-1.5 1.3H7.7A1.5 1.5 0 0 1 6.2 20L5 8z" />
+      <path d="M9 11V6.5a3 3 0 0 1 6 0V11" />
+    </svg>
+  );
+}
+
+function BlattIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="6.5" y="3.5" width="11" height="17" rx="1.8" />
+      <path d="M12 9.2c1.4-2.4 4.6-.6 3.2 1.6-.6 1-2 2-3.2 3-1.2-1-2.6-2-3.2-3-1.4-2.2 1.8-4 3.2-1.6z" />
+    </svg>
+  );
+}
+
+function MuenzeIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="5" />
+    </svg>
+  );
+}
+
+function KroneIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 8.5l4 3.5 4-6 4 6 4-3.5-1.2 9a1.5 1.5 0 0 1-1.5 1.3H6.7a1.5 1.5 0 0 1-1.5-1.3L4 8.5z" />
+    </svg>
+  );
+}
+
+function GeschenkIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="9" width="16" height="11" rx="1.5" />
+      <path d="M12 9v11" />
+      <path d="M4 13h16" />
+      <path d="M12 9C10 9 7.5 8.3 7.5 6.4 7.5 4.6 10 4.4 11 6c.6 1 .9 2 1 3z" />
+      <path d="M12 9c2 0 4.5-.7 4.5-2.6 0-1.8-2.5-2-3.5-.4-.6 1-.9 2-1 3z" />
     </svg>
   );
 }
