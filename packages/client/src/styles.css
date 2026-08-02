@@ -857,8 +857,16 @@ td {
 
 /* ---- Kartenlege-Animation ---- */
 /* Die gelegte Karte fliegt aus Richtung ihres Spielers herein. Der aeussere
-   Platzhalter haelt Position und Neigung, der innere Wrapper die Bewegung. */
-.doko-trick-in { animation: tc-drop 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+   Platzhalter haelt Position und Neigung, der innere Wrapper die Bewegung.
+   Fluessig statt ruckelig: will-change hebt die Karte VOR dem ersten Frame
+   auf eine eigene Compositor-Ebene (der Kartenschatten wird einmal
+   gerastert statt in jedem Frame neu gezeichnet), translate3d haelt sie
+   dort, und animiert werden nur transform und opacity. */
+.doko-trick-in {
+  animation: tc-drop 0.34s cubic-bezier(0.22, 0.9, 0.32, 1) both;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
 .at-bottom .doko-trick-in { --fx: 0px; --fy: 64px; }
 .at-top .doko-trick-in { --fx: 0px; --fy: -64px; }
 .at-left .doko-trick-in { --fx: -64px; --fy: 0px; }
@@ -866,8 +874,15 @@ td {
 .at-top-left .doko-trick-in { --fx: -52px; --fy: -44px; }
 .at-top-right .doko-trick-in { --fx: 52px; --fy: -44px; }
 @keyframes tc-drop {
-  from { transform: translate(var(--fx, 0), var(--fy, 0)) scale(0.85); opacity: 0; }
-  to { transform: none; opacity: 1; }
+  from {
+    transform: translate3d(var(--fx, 0px), var(--fy, 0px), 0) scale(0.88);
+    opacity: 0;
+  }
+  60% { opacity: 1; }
+  to {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .doko-trick-in { animation: none; }
