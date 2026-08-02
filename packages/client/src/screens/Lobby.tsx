@@ -8,7 +8,28 @@ import { t } from '../i18n';
  *
  * Welche Spielerzahlen und Rundenzahlen zur Auswahl stehen, liefert der
  * Server aus dem Spielmodul. Der Client verdrahtet nichts davon fest.
+ *
+ * Die Einstellungen des zuletzt erstellten Tisches werden am Geraet gemerkt
+ * und beim naechsten Mal vorgelegt: Wer immer mit denselben Hausregeln
+ * spielt, soll sie nicht jedes Mal neu zusammenklicken.
  */
+
+interface Gemerkt {
+  seats?: number;
+  rounds?: number;
+  config?: Record<string, unknown>;
+}
+
+const merkKey = (gameId: string): string => `tischEinstellungen.${gameId}`;
+
+function gemerkteEinstellungen(gameId: string): Gemerkt | null {
+  try {
+    const raw = localStorage.getItem(merkKey(gameId));
+    return raw ? (JSON.parse(raw) as Gemerkt) : null;
+  } catch {
+    return null;
+  }
+}
 export function Lobby({
   gameId,
   onEnter,
@@ -33,9 +54,30 @@ export function Lobby({
     refresh();
     void api.defaults(gameId).then((d) => {
       setDefaults(d);
-      setConfig(d.config);
-      const first = d.rounds[String(seats)]?.[0];
-      if (first) setRounds(first);
+
+      // Gemerktes ueber die Vorgaben legen - aber nur Schluessel, die es noch
+      // gibt, mit unveraendertem Typ. So uebersteht der Speicher Regelsatz-
+      // Aenderungen, statt einen kaputten Tisch zu bauen.
+      const merken = gemerkteEinstellungen(gameId);
+      const config = { ...d.config };
+      if (merken?.config) {
+        for (const [key, value] of Object.entries(merken.config)) {
+          if (key in config && typeof value === typeof config[key]) config[key] = value;
+        }
+      }
+      setConfig(config);
+
+      const seatWahl =
+        merken?.seats !== undefined && d.seatCounts.includes(merken.seats)
+          ? merken.seats
+          : seats;
+      setSeats(seatWahl);
+      const runden = d.rounds[String(seatWahl)] ?? [];
+      const rundenWahl =
+        merken?.rounds !== undefined && runden.includes(merken.rounds)
+          ? merken.rounds
+          : runden[0];
+      if (rundenWahl) setRounds(rundenWahl);
     });
     const handle = setInterval(refresh, 4000);
     return () => clearInterval(handle);
@@ -53,6 +95,13 @@ export function Lobby({
         seats,
         rounds,
       });
+      // Erst nach dem Erfolg merken: Ein abgelehnter Regelsatz soll nicht
+      // beim naechsten Besuch wieder vorgelegt werden.
+      try {
+        localStorage.setItem(merkKey(gameId), JSON.stringify({ seats, rounds, config }));
+      } catch {
+        // Voller oder gesperrter Speicher ist kein Grund, den Tisch zu verweigern.
+      }
       onEnter(table.id);
     } catch (err) {
       setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
