@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type GameDefaults, type TableRow } from '../api';
 import { t } from '../i18n';
+import { regelBild } from '../regelbilder';
 
 /**
  * Lobby und Tischerstellung.
@@ -45,6 +46,7 @@ export function Lobby({
   const [rounds, setRounds] = useState(8);
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [regelnOffen, setRegelnOffen] = useState(false);
 
   const refresh = (): void => {
     void api.tables(gameId).then(setTables);
@@ -125,115 +127,147 @@ export function Lobby({
     }
   };
 
+  const flags = config
+    ? Object.entries(config).filter(([, value]) => typeof value === 'boolean')
+    : [];
+  const aktiveRegeln = flags.filter(([, value]) => value).length;
+
   return (
-    <main>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h1>Tische</h1>
-        <button onClick={onBack}>Spielauswahl</button>
-      </div>
-
-      {error && <p className="error">{error}</p>}
-
-      <div className="panel">
-        <h2>Neuer Tisch</h2>
-        <div className="row">
-          <label style={{ flex: 1 }}>
-            Spieler
-            <select
-              value={seats}
-              onChange={(e) => {
-                const next = Number(e.target.value);
-                setSeats(next);
-                const first = defaults?.rounds[String(next)]?.[0];
-                if (first) setRounds(first);
-              }}
-            >
-              {(defaults?.seatCounts ?? [4]).map((count) => (
-                <option key={count} value={count}>
-                  {count}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ flex: 1 }}>
-            Runden
-            <select value={rounds} onChange={(e) => setRounds(Number(e.target.value))}>
-              {roundOptions.map((count) => (
-                <option key={count} value={count}>
-                  {count}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <p className="muted" style={{ margin: '0 0 0.75rem' }}>
-          Bots fügst du am Tisch auf die freien Plätze — so könnt ihr auch zu
-          zweit oder zu dritt mit Bots spielen. (Tische mit Bots zählen nicht für
-          die Rangliste.)
-        </p>
-
-        <RuleEditor config={config} onChange={setConfig} />
-
-        <button className="primary" onClick={() => void create()}>
-          Tisch erstellen
+    <div className="doko doko--lobby">
+      <header className="doko-top">
+        <button className="doko-icon" onClick={onBack} aria-label="Zurück zur Spielauswahl">
+          ‹
         </button>
+        <div className="doko-top-mid">
+          <strong>{t(`game.${gameId}`)}</strong>
+          <span className="muted">Tisch erstellen oder beitreten</span>
+        </div>
+      </header>
+
+      <div className="lobby-rolle">
+        {error && <p className="error">{error}</p>}
+
+        <section className="lobby-panel">
+          <h2>Neuer Tisch</h2>
+          <div className="lobby-wahl">
+            <div className="lobby-gruppe">
+              <span className="muted">Spieler</span>
+              <div className="lobby-chips">
+                {(defaults?.seatCounts ?? [4]).map((count) => (
+                  <button
+                    key={count}
+                    className={`lobby-chip${seats === count ? ' is-an' : ''}`}
+                    aria-pressed={seats === count}
+                    onClick={() => {
+                      setSeats(count);
+                      const first = defaults?.rounds[String(count)]?.[0];
+                      if (first) setRounds(first);
+                    }}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="lobby-gruppe">
+              <span className="muted">Runden</span>
+              <div className="lobby-chips">
+                {roundOptions.map((count) => (
+                  <button
+                    key={count}
+                    className={`lobby-chip${rounds === count ? ' is-an' : ''}`}
+                    aria-pressed={rounds === count}
+                    onClick={() => setRounds(count)}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Eine Zeile statt eines aufgeklappten Formulars: Der Stand ist
+              lesbar, die Kacheln kommen als Blatt von unten. */}
+          <button className="lobby-regelzeile" onClick={() => setRegelnOffen(true)}>
+            <span>
+              <strong>Regeln:</strong> {aktiveRegeln} von {flags.length} an
+              {aktiveRegeln === 0 ? ' — Grundspiel' : ''}
+            </span>
+            <span className="muted">ändern ›</span>
+          </button>
+
+          <button className="primary lobby-erstellen" onClick={() => void create()}>
+            Tisch erstellen
+          </button>
+          <p className="muted lobby-fussnote">
+            Bots setzt du am Tisch auf die freien Plätze — Tische mit Bots zählen
+            nicht für die Rangliste.
+          </p>
+        </section>
+
+        <h2 className="lobby-ueberschrift">Offene Tische</h2>
+        {tables.length === 0 && <p className="muted">Gerade ist kein Tisch offen.</p>}
+        {tables.map((row) => (
+          <div className="lobby-tisch" key={row.id}>
+            <span className="lobby-tischinfo">
+              <strong>
+                {row.seats} Plätze · {row.maxRounds} Runden
+              </strong>
+              <span className="muted">
+                {row.occupied} von {row.seats} besetzt
+              </span>
+            </span>
+            {/* Ein Punkt je Platz: voll oder frei, auf einen Blick. */}
+            <span className="lobby-punkte" aria-hidden="true">
+              {Array.from({ length: row.seats }, (_, i) => (
+                <i key={i} className={i < row.occupied ? '' : 'is-frei'} />
+              ))}
+            </span>
+            <button className="doko-seat-btn" onClick={() => void join(row.id)}>
+              Beitreten
+            </button>
+          </div>
+        ))}
       </div>
 
-      <h2>Offene Tische</h2>
-      {tables.length === 0 && <p className="muted">Gerade ist kein Tisch offen.</p>}
-      <table>
-        <tbody>
-          {tables.map((row) => (
-            <tr key={row.id}>
-              <td>
-                {row.seats} Plätze · {row.maxRounds} Runden
-              </td>
-              <td className="muted">
-                {row.occupied}/{row.seats} besetzt
-              </td>
-              <td style={{ textAlign: 'right' }}>
-                <button onClick={() => void join(row.id)}>Beitreten</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+      {regelnOffen && config && (
+        <RegelSheet config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />
+      )}
+    </div>
   );
 }
 
 /**
- * Regelsatz-Editor.
+ * Regelsatz-Editor als Blatt von unten.
  *
  * Er kennt die Optionen nicht: Er zeigt, was defaultConfig liefert. Ein neues
  * Spiel oder eine neue Option braucht deshalb keine Aenderung hier - nur einen
- * `regel.*`-Eintrag im Woerterbuch. Fehlt der, erscheint der rohe Schluessel:
- * sichtbar haesslich statt unsichtbar kaputt.
+ * `regel.*`-Eintrag im Woerterbuch und ein Bild in regelbilder.ts. Fehlt
+ * beides, erscheinen roher Schluessel und Ersatzbild: sichtbar haesslich
+ * statt unsichtbar kaputt.
  *
- * Jede Regel ist eine Kachel, an/aus durch Antippen. Aktive Kacheln tragen
- * einen goldenen Rand mit Haken - der Zustand muss auf einen Blick lesbar
- * sein, nicht erst nach dem Suchen eines Kaestchens.
+ * Jede Regel ist eine Kachel mit Bild, an/aus durch Antippen. Aktive Kacheln
+ * tragen einen goldenen Rand mit Haken.
  */
-function RuleEditor({
+function RegelSheet({
   config,
   onChange,
+  onClose,
 }: {
-  config: Record<string, unknown> | null;
+  config: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
-}): React.JSX.Element | null {
-  const [open, setOpen] = useState(false);
-  if (!config) return null;
-
+  onClose: () => void;
+}): React.JSX.Element {
   const flags = Object.entries(config).filter(([, value]) => typeof value === 'boolean');
   const active = flags.filter(([, value]) => value).length;
 
   return (
-    <div style={{ marginBottom: '0.75rem' }}>
-      <button type="button" onClick={() => setOpen(!open)}>
-        {open ? 'Regeln zuklappen' : `Regeln anpassen (${active} von ${flags.length} an)`}
-      </button>
-      {open && (
+    <div className="doko-sheet" onClick={onClose}>
+      <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
+        <h2>Regeln für diesen Tisch</h2>
+        <p className="muted">
+          {active} von {flags.length} an · Antippen schaltet um
+        </p>
         <div className="regeln">
           {flags.map(([key, value]) => (
             <button
@@ -243,6 +277,9 @@ function RuleEditor({
               aria-pressed={!!value}
               onClick={() => onChange({ ...config, [key]: !value })}
             >
+              <span className="regel-bild" aria-hidden="true">
+                {regelBild(key)}
+              </span>
               {t(`regel.${key}`)}
               <span className="regel-check" aria-hidden="true">
                 ✓
@@ -250,7 +287,10 @@ function RuleEditor({
             </button>
           ))}
         </div>
-      )}
+        <button className="primary" onClick={onClose}>
+          Fertig
+        </button>
+      </div>
     </div>
   );
 }
