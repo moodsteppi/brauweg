@@ -78,9 +78,7 @@ export function GameSelect({
 
       <div className="front-body" key={tab}>
         {tab === 'shop' && <Shop onBald={setBald} />}
-        {tab === 'spielen' && (
-          <Spielen me={me} trophies={trophies} onPick={onPick} onBald={setBald} />
-        )}
+        {tab === 'spielen' && <Spielen trophies={trophies} onPick={onPick} onBald={setBald} />}
         {tab === 'freunde' && <Freunde onShowProfile={onShowProfile} />}
         {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
         {tab === 'profil' && (
@@ -227,23 +225,22 @@ function TabButton({
  * Hauptschirm: der Trophaeenpfad.
  *
  * Die Trophaeen sind eine Reise von Insel zu Insel - jede ein Checkpoint,
- * jede eine eigene Welt. Der Spielen-Knopf klebt am unteren Rand, damit er
- * beim Erkunden des Pfads nie aus der Hand faellt. Darunter (am Ende des
- * Pfads) liegen Tagesbonus und die Abstimmung ueber die naechsten Spiele.
+ * jede eine eigene Welt. Der Spielauswahl-Knopf klebt am unteren Rand und
+ * oeffnet das Vollbild mit allen Spielen samt Bildern; abgestimmt wird
+ * dort, nicht mehr auf dem Startschirm.
  */
 function Spielen({
-  me,
   trophies,
   onPick,
   onBald,
 }: {
-  me: Me;
   trophies: number;
   onPick: (gameId: string) => void;
   onBald: (name: string) => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [voted, setVoted] = useState<Set<string>>(new Set());
+  const [wahlOffen, setWahlOffen] = useState(false);
 
   useEffect(() => {
     void api.games().then(setGames);
@@ -254,10 +251,6 @@ function Spielen({
     setVoted(new Set([...voted, gameId]));
     setGames(await api.games());
   };
-
-  const playable = games.filter((game) => game.availability === 'playable');
-  const preview = games.filter((game) => game.availability === 'preview');
-  const statOf = new Map(me.stats.map((stat) => [stat.gameId, stat]));
 
   return (
     <>
@@ -271,41 +264,202 @@ function Spielen({
         <span className="front-bald-tag">Bald</span>
       </button>
 
-      <h2>Demnächst</h2>
-      <p className="muted">Wofür ihr abstimmt, bauen wir als Nächstes.</p>
-      {preview.map((game) => (
-        <div className="panel" key={game.id}>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <div>
-              <strong>{t(game.nameKey)}</strong>
-              <div className="muted">{game.votes} Stimmen</div>
-            </div>
-            <button onClick={() => void vote(game.id)} disabled={voted.has(game.id)}>
-              {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'}
-            </button>
-          </div>
-        </div>
-      ))}
-
       {/* Klebt am unteren Rand, ueber dem gesamten Pfad. */}
-      {playable.map((game) => {
-        const stat = statOf.get(game.id);
-        return (
+      <button className="front-play is-schwebend" onClick={() => setWahlOffen(true)}>
+        Spielauswahl
+      </button>
+
+      {wahlOffen && (
+        <Spielwahl
+          games={games}
+          voted={voted}
+          onVote={(gameId) => void vote(gameId)}
+          onPick={(gameId) => {
+            setWahlOffen(false);
+            onPick(gameId);
+          }}
+          onBald={onBald}
+          onClose={() => setWahlOffen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * Spielauswahl im Vollbild: ein Bild je Spiel.
+ *
+ * Doppelkopf ist offen und fuehrt ins Tisch-Menue; die anderen tragen die
+ * Bald-Marke, lassen sich anstimmen, und ein Tipp aufs Bild oeffnet das
+ * "Kommt bald"-Blatt. Die Bilder sind gemalte SVGs - nichts laedt nach.
+ */
+function Spielwahl({
+  games,
+  voted,
+  onVote,
+  onPick,
+  onBald,
+  onClose,
+}: {
+  games: GameSummary[];
+  voted: Set<string>;
+  onVote: (gameId: string) => void;
+  onPick: (gameId: string) => void;
+  onBald: (name: string) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const playable = games.filter((game) => game.availability === 'playable');
+  const preview = games.filter((game) => game.availability === 'preview');
+
+  return (
+    <div className="spielwahl">
+      <header className="spielwahl-kopf">
+        <h2>Spielauswahl</h2>
+        <button className="spielwahl-zu" onClick={onClose} aria-label="Schließen">
+          ×
+        </button>
+      </header>
+      <div className="spielwahl-rolle">
+        {playable.map((game) => (
           <button
             key={game.id}
-            className="front-play is-schwebend"
-            title={
-              stat
-                ? `${stat.wins} ${stat.wins === 1 ? 'Sieg' : 'Siege'} aus ${stat.parties} gewerteten Partien`
-                : undefined
-            }
+            className="spielwahl-karte is-offen"
             onClick={() => onPick(game.id)}
           >
-            {t(game.nameKey)} spielen!
+            <SpielBild id={game.id} />
+            <span className="spielwahl-titel">
+              <strong>{t(game.nameKey)}</strong>
+              <span>{game.seatCounts.join(', ')} Spieler</span>
+            </span>
+            <span className="spielwahl-spielen">Spielen</span>
           </button>
-        );
-      })}
-    </>
+        ))}
+        {preview.map((game) => (
+          <div key={game.id} className="spielwahl-karte is-zu">
+            <button className="spielwahl-flaeche" onClick={() => onBald(t(game.nameKey))}>
+              <SpielBild id={game.id} />
+              <span className="spielwahl-titel">
+                <strong>{t(game.nameKey)}</strong>
+                <span className="front-bald-tag">Bald</span>
+              </span>
+            </button>
+            <button
+              className="spielwahl-stimme"
+              disabled={voted.has(game.id)}
+              onClick={() => onVote(game.id)}
+            >
+              {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Gemalte Bilder der Spiele: je ein kleines Stillleben mit den Karten, an
+ * denen man das Spiel erkennt. Ein unbekanntes Spiel bekommt Ruecken -
+ * sichtbar generisch statt unsichtbar kaputt.
+ */
+function SpielBild({ id }: { id: string }): React.JSX.Element {
+  const karte = (
+    x: number,
+    rot: number,
+    text: string,
+    rotFarbe: boolean,
+    breit = 30,
+  ): React.JSX.Element => (
+    <g key={`${x}-${text}`} transform={`translate(${x},14) rotate(${rot})`}>
+      <rect width={breit} height={breit * 1.45} rx="3" fill="#fff" />
+      <text x="5" y="15" fontSize="11" fill={rotFarbe ? '#c22b1e' : '#17181d'} fontWeight="800">
+        {text}
+      </text>
+    </g>
+  );
+
+  if (id === 'doppelkopf') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#1c5138" />
+        <ellipse cx="160" cy="92" rx="190" ry="48" fill="#237a4d" />
+        {karte(112, -14, '♣D', false)}
+        {karte(142, -5, '♠D', false)}
+        {karte(172, 5, '♥10', true)}
+        {karte(202, 14, '♦A', true)}
+      </svg>
+    );
+  }
+  if (id === 'skat') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#1d3a52" />
+        {karte(104, -8, '♠B', false)}
+        {karte(134, 0, '♥B', true)}
+        {karte(164, 8, '♣B', false)}
+        <g transform="translate(216,22) rotate(4)">
+          <rect width="26" height="37" rx="3" fill="#4a6a8a" />
+          <rect x="3" y="3" width="20" height="31" rx="2" fill="#3a5570" />
+        </g>
+        <g transform="translate(240,24) rotate(11)">
+          <rect width="26" height="37" rx="3" fill="#4a6a8a" />
+          <rect x="3" y="3" width="20" height="31" rx="2" fill="#3a5570" />
+        </g>
+      </svg>
+    );
+  }
+  if (id === 'schafkopf') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#3a5f8a" />
+        <g fill="#fff" opacity="0.2">
+          <path d="M0 0 L28 40 L0 80 Z" />
+          <path d="M56 0 L28 40 L56 80 L84 40 Z" />
+          <path d="M112 0 L84 40 L112 80 Z" />
+        </g>
+        {karte(150, -6, '♥O', true)}
+        {karte(182, 7, '♠O', false)}
+      </svg>
+    );
+  }
+  if (id === 'romme') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#5a3a78" />
+        {karte(104, -6, '♦3', true, 28)}
+        {karte(134, 0, '♦4', true, 28)}
+        {karte(164, 0, '♦5', true, 28)}
+        <g transform="translate(196,16) rotate(7)">
+          <rect width="28" height="40" rx="3" fill="#ffe9a8" />
+          <text x="7" y="27" fontSize="16">🃏</text>
+        </g>
+      </svg>
+    );
+  }
+  if (id === 'maumau') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#8a3a4a" />
+        {karte(116, -9, '♣7', false)}
+        {karte(150, 3, '♥7', true)}
+        <text x="204" y="48" fontSize="19" fontWeight="900" fill="#ffd76e" transform="rotate(6 204 48)">
+          Mau!
+        </text>
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 320 80" aria-hidden="true">
+      <rect width="320" height="80" fill="#33266b" />
+      <g transform="translate(132,16) rotate(-6)">
+        <rect width="28" height="40" rx="3" fill="#4a55a8" />
+        <rect x="3" y="3" width="22" height="34" rx="2" fill="#3a4488" />
+      </g>
+      <g transform="translate(162,16) rotate(6)">
+        <rect width="28" height="40" rx="3" fill="#4a55a8" />
+        <rect x="3" y="3" width="22" height="34" rx="2" fill="#3a4488" />
+      </g>
+    </svg>
   );
 }
 
