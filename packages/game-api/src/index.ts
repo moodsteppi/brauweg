@@ -114,8 +114,14 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
   /**
    * Prueft den Regelsatz auf Widersprueche, auch gegen Spielerzahl und
    * Rundenzahl. Leeres Ergebnis bedeutet spielbar.
+   *
+   * Nimmt bewusst `unknown` entgegen und nicht TConfig: Der Regelsatz kommt
+   * als JSON von aussen, aus einem Formular oder aus der Datenbank. Ihn hier
+   * schon als gueltig zu typisieren hiesse anzunehmen, was diese Methode
+   * gerade erst feststellen soll. Ein Modul muss also auch Bruchstuecke und
+   * Unsinn abweisen, nicht nur widerspruechliche Einstellungen.
    */
-  validateConfig(config: TConfig, seats: number, rounds: number): ConfigProblem[];
+  validateConfig(config: unknown, seats: number, rounds: number): ConfigProblem[];
 
   // -- Ablauf ---------------------------------------------------------------
 

@@ -14,9 +14,10 @@ import type { Server } from 'node:http';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { AppError } from '../errors.js';
-import { sessionFromToken } from '../auth/service.js';
+import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
-import { tableWithSeats } from '../tables/service.js';
+import { isReadyToStart, tableWithSeats } from '../tables/service.js';
+import { requireModule } from '../games/registry.js';
 import {
   ENVELOPE_VERSION,
   type ClientMessage,
@@ -41,20 +42,35 @@ function cookieValue(header: string | undefined, name: string): string | undefin
   return undefined;
 }
 
+export interface GatewayOptions {
+  readonly cookieName?: string;
+  /**
+   * Sitzungspruefung. Injizierbar, damit sich im Test deterministisch
+   * nachstellen laesst, dass sie dauert - genau dann entstand die Luecke, in
+   * der eingehende Nachrichten verloren gingen.
+   */
+  readonly lookupSession?: (token: string | undefined) => Promise<SessionInfo | null>;
+}
+
 export class Gateway {
   private readonly wss: WebSocketServer;
   private readonly connections = new Set<Connection>();
   private readonly byTable = new Map<string, Set<Connection>>();
+  private readonly cookieName: string;
+  private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
 
   constructor(
     server: Server,
     private readonly db: Db,
     private readonly runtime: PartyRuntime,
-    private readonly cookieName = 'brauweg_session',
+    options: GatewayOptions = {},
   ) {
+    this.cookieName = options.cookieName ?? 'brauweg_session';
+    this.lookupSession =
+      options.lookupSession ?? ((token) => sessionFromToken(this.db, token));
     this.wss = new WebSocketServer({ server, path: '/ws' });
     this.wss.on('connection', (socket, request) => {
-      void this.accept(socket, request.headers.cookie);
+      this.accept(socket, request.headers.cookie);
     });
     this.runtime.onUpdate((tableId) => {
       void this.broadcast(tableId);
@@ -66,26 +82,56 @@ export class Gateway {
     await new Promise<void>((resolve) => this.wss.close(() => resolve()));
   }
 
-  private async accept(socket: WebSocket, cookieHeader?: string): Promise<void> {
-    const token = cookieValue(cookieHeader, this.cookieName);
-    const session = await sessionFromToken(this.db, token);
-    if (!session) {
-      send(socket, errorMessage('unauthorized'));
-      socket.close();
-      return;
-    }
-
-    const connection: Connection = {
-      socket,
-      accountId: session.accountId,
-      tableId: null,
-    };
-    this.connections.add(connection);
+  /**
+   * Nimmt eine Verbindung an.
+   *
+   * Der Zuhörer für eingehende Nachrichten wird SOFORT angehängt, nicht erst
+   * nach dem Sitzungs-Nachschlag. Jeder vernuenftige Client schickt sein
+   * `join` unmittelbar beim Oeffnen der Verbindung; der Nachschlag geht aber
+   * in die Datenbank und dauert. Was in dieser Luecke ankam, fiel auf den
+   * Boden - ohne Antwort, ohne Fehler. Der Client wartete danach endlos auf
+   * eine Sicht, die nie kam, und ob es klappte, entschied die Tagesform der
+   * Datenbank.
+   *
+   * Nachrichten aus der Luecke werden gepuffert und in Reihenfolge
+   * nachgeholt, sobald die Sitzung steht.
+   */
+  private accept(socket: WebSocket, cookieHeader?: string): void {
+    const queued: string[] = [];
+    let connection: Connection | null = null;
+    let rejected = false;
 
     socket.on('message', (raw) => {
-      void this.handle(connection, raw.toString());
+      if (rejected) return;
+      const text = raw.toString();
+      if (!connection) {
+        queued.push(text);
+        return;
+      }
+      void this.handle(connection, text);
     });
-    socket.on('close', () => this.drop(connection));
+
+    socket.on('close', () => {
+      if (connection) this.drop(connection);
+    });
+
+    void (async () => {
+      const session = await this.lookupSession(cookieValue(cookieHeader, this.cookieName));
+      if (!session) {
+        rejected = true;
+        queued.length = 0;
+        send(socket, errorMessage('unauthorized'));
+        socket.close();
+        return;
+      }
+
+      const accepted: Connection = { socket, accountId: session.accountId, tableId: null };
+      this.connections.add(accepted);
+      connection = accepted;
+
+      for (const text of queued) await this.handle(accepted, text);
+      queued.length = 0;
+    })();
   }
 
   private drop(connection: Connection): void {
@@ -142,19 +188,17 @@ export class Gateway {
   ): Promise<void> {
     const { table } = await tableWithSeats(this.db, message.tableId);
 
-    const party =
-      this.runtime.get(message.tableId) ??
-      (table.status === 'running'
-        ? await this.runtime.resume(message.tableId)
-        : await this.runtime.start(message.tableId));
-
     // Mindestversion wird beim Beitritt erzwungen, nicht mitten in der Partie.
-    if (!moduleVersionAccepted(message.moduleVersion, party.module.protocolVersion)) {
+    const expected = requireModule(table.gameId).protocolVersion;
+    if (!moduleVersionAccepted(message.moduleVersion, expected)) {
       send(connection.socket, errorMessage('clientTooOld'));
       connection.socket.close();
       return;
     }
 
+    // Erst in den Raum, dann alles Weitere. Ein Tisch, der noch auf Mitspieler
+    // wartet, ist kein Fehler: Der Beitretende gehoert dazu und muss
+    // mitbekommen, wenn sich die Plaetze fuellen.
     connection.tableId = message.tableId;
     let room = this.byTable.get(message.tableId);
     if (!room) {
@@ -164,7 +208,27 @@ export class Gateway {
     room.add(connection);
 
     this.runtime.setPresence(message.tableId, connection.accountId, true);
+    await this.ensureStarted(message.tableId);
     await this.sendState(message.tableId, [connection]);
+  }
+
+  /**
+   * Startet die Partie, sobald der Tisch bereit ist, oder holt eine laufende
+   * nach einem Neustart zurueck. Ist der Tisch noch nicht voll, passiert
+   * nichts — dann bleibt es beim Wartebereich.
+   */
+  private async ensureStarted(tableId: string): Promise<void> {
+    if (this.runtime.get(tableId)) return;
+
+    const { table, seats } = await tableWithSeats(this.db, tableId);
+    if (table.status === 'running') {
+      await this.runtime.resume(tableId);
+      return;
+    }
+    if (table.status !== 'waiting') return;
+    if (!isReadyToStart(table, seats)) return;
+
+    await this.runtime.start(tableId);
   }
 
   private leave(connection: Connection): void {
@@ -177,6 +241,8 @@ export class Gateway {
   private async broadcast(tableId: string): Promise<void> {
     const room = this.byTable.get(tableId);
     if (!room || room.size === 0) return;
+    // Ein Beitritt ueber HTTP kann den Tisch vollgemacht haben.
+    await this.ensureStarted(tableId);
     await this.sendState(tableId, [...room]);
   }
 
@@ -185,9 +251,6 @@ export class Gateway {
     tableId: string,
     targets: readonly Connection[],
   ): Promise<void> {
-    const party = this.runtime.get(tableId);
-    if (!party) return;
-
     const [table] = await this.db
       .select()
       .from(s.gameTable)
@@ -203,6 +266,8 @@ export class Gateway {
       .from(s.tableSeat)
       .where(eq(s.tableSeat.tableId, tableId));
 
+    const party = this.runtime.get(tableId);
+
     const accountIds = seatRows.map((row) => row.accountId).filter(Boolean) as string[];
     const names =
       accountIds.length > 0
@@ -213,20 +278,39 @@ export class Gateway {
         : [];
     const nameOf = new Map(names.map((row) => [row.id, row.displayName]));
 
+    const seats = seatRows
+      .slice()
+      .sort((a, b) => a.seatIndex - b.seatIndex)
+      .map((row) => ({
+        seat: row.seatIndex,
+        displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
+        isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+      }));
+
+    // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da
+    // ist und wie viele noch fehlen.
+    const tableMessage: ServerMessage = {
+      v: ENVELOPE_VERSION,
+      game: table.gameId,
+      type: 'table',
+      tableId,
+      status: table.status,
+      seats,
+      missing: Math.max(0, table.seats - seatRows.filter((row) => row.accountId).length),
+      rounds: table.maxRounds,
+    };
+    for (const connection of targets) send(connection.socket, tableMessage);
+
+    // Laeuft noch keine Partie, ist der Wartebereich alles, was es zu sagen gibt.
+    if (!party) return;
+
     const partyMessage: ServerMessage = {
       v: ENVELOPE_VERSION,
       game: party.gameId,
       type: 'party',
       tableId,
       standings: this.runtime.standings(party),
-      seats: seatRows
-        .slice()
-        .sort((a, b) => a.seatIndex - b.seatIndex)
-        .map((row) => ({
-          seat: row.seatIndex,
-          displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
-          isBot: row.isBot || party.botControlled.has(row.seatIndex),
-        })),
+      seats,
     };
 
     for (const connection of targets) {

@@ -105,6 +105,15 @@ export class PartyRuntime {
     return this.live.get(tableId);
   }
 
+  /**
+   * Rundmeldung von aussen anstossen, etwa nachdem jemand ueber HTTP
+   * beigetreten ist. Ohne das saessen die bereits Verbundenen im Wartebereich
+   * und saehen nicht, dass sich der Tisch fuellt.
+   */
+  notify(tableId: string): void {
+    this.emit(tableId);
+  }
+
   /** Beendet alle Timer. Ohne das haelt ein Testlauf den Prozess offen. */
   shutdown(): void {
     for (const party of this.live.values()) {

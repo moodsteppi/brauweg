@@ -78,6 +78,28 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({ logger: false });
   void app.register(cookie);
 
+  /**
+   * Ein leerer Rumpf mit `content-type: application/json` ist fuer Fastify ein
+   * Fehler. Fuer die Aufrufe ohne Daten - beitreten, verlassen, abmelden,
+   * abstimmen - ist er aber das Naheliegende, und jeder Client schickt den
+   * Kopf frueher oder spaeter versehentlich mit. Statt daran zu scheitern,
+   * wird er als "keine Daten" gelesen; ob das reicht, entscheidet danach das
+   * Schema der jeweiligen Route.
+   */
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_request, body, done) => {
+      const text = (body as string).trim();
+      if (text === '') return done(null, undefined);
+      try {
+        done(null, JSON.parse(text));
+      } catch (err) {
+        done(err as Error);
+      }
+    },
+  );
+
   const setSession = (reply: FastifyReply, token: string): void => {
     reply.setCookie(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -95,7 +117,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return session.accountId;
   };
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error, request, reply) => {
     if (error instanceof RuleSetInvalidError) {
       return reply
         .status(error.status)
@@ -104,14 +126,36 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     if (error instanceof AppError) {
       return reply.status(error.status).send({ code: error.code, messageKey: error.messageKey });
     }
-    // Zwei Wege fuehren hierher: Fastifys eigene Schemapruefung setzt
-    // `validation`, unsere zod-Schemata werfen einen ZodError. Ohne den
-    // zweiten Fall wird eine unbrauchbare Eingabe als 500 gemeldet — der
-    // Aufrufer sucht dann den Fehler beim Server statt bei seinen Daten.
-    if (error instanceof ZodError || (error as { validation?: unknown }).validation) {
+    // Zod wirft einen ZodError, keinen Fastify-Validierungsfehler. Ohne diesen
+    // Zweig wurde jede fehlerhafte Eingabe zu einem 500 mit "etwas ist
+    // schiefgelaufen" - eine Meldung, die weder dem Benutzer noch dem
+    // Betreiber sagt, was los ist.
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        code: 'invalidInput',
+        messageKey: 'error.invalidInput',
+        fields: error.issues.map((issue) => issue.path.join('.')),
+      });
+    }
+    if ((error as { validation?: unknown }).validation) {
       return reply.status(400).send({ code: 'invalidInput', messageKey: 'error.invalidInput' });
     }
-    app.log.error(error);
+
+    // Fastify wirft eigene Fehler mit Statuscode - fehlerhaftes JSON, zu
+    // grosser Rumpf, leerer Rumpf bei gesetztem content-type. Sie hier
+    // durchfallen zu lassen machte aus einem 400 einen 500 samt "etwas ist
+    // schiefgelaufen", was weder stimmte noch weiterhalf.
+    const status = (error as { statusCode?: number }).statusCode;
+    if (typeof status === 'number' && status >= 400 && status < 500) {
+      return reply
+        .status(status)
+        .send({ code: 'invalidRequest', messageKey: 'error.invalidRequest' });
+    }
+
+    // Hierher kommt nur, was wirklich unerwartet ist. Es MUSS im Log landen,
+    // sonst sucht man es spaeter vergeblich.
+    // eslint-disable-next-line no-console
+    console.error(`500 bei ${request.method} ${request.url}:`, error);
     return reply.status(500).send({ code: 'internal', messageKey: 'error.internal' });
   });
 
@@ -351,6 +395,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await joinTable(deps.db, tableId, accountId);
+    // Die schon Verbundenen sollen sehen, dass sich der Tisch fuellt - und
+    // wenn er damit voll ist, startet die Partie von selbst.
+    deps.runtime.notify(tableId);
     return reply.send({ ok: true });
   });
 
@@ -359,6 +406,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await leaveLobby(deps.db, tableId, accountId);
+    deps.runtime.notify(tableId);
     return reply.send({ ok: true });
   });
 

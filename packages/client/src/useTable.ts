@@ -13,12 +13,15 @@ import {
   ENVELOPE_VERSION,
   type PartyMessage,
   type ServerMessage,
+  type TableMessage,
   type ViewMessage,
 } from './protocol';
 
 export interface TableConnection {
   view: ViewMessage | null;
   party: PartyMessage | null;
+  /** Zustand des Tisches, auch bevor eine Partie laeuft. */
+  table: TableMessage | null;
   error: string | null;
   connected: boolean;
   send(action: unknown): void;
@@ -27,6 +30,7 @@ export interface TableConnection {
 export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableConnection {
   const [view, setView] = useState<ViewMessage | null>(null);
   const [party, setParty] = useState<PartyMessage | null>(null);
+  const [table, setTable] = useState<TableMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
@@ -38,6 +42,7 @@ export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableCo
     revisionRef.current = -1;
     setView(null);
     setParty(null);
+    setTable(null);
 
     const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${scheme}://${location.host}/ws`);
@@ -64,6 +69,11 @@ export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableCo
       }
       if (message.type === 'party') {
         setParty(message);
+        return;
+      }
+      if (message.type === 'table') {
+        setTable(message);
+        setError(null);
         return;
       }
       // Veraltete Nachricht: Der Server war beim Senden schon weiter.
@@ -98,7 +108,7 @@ export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableCo
     [tableId, gameId],
   );
 
-  return { view, party, error, connected, send };
+  return { view, party, table, error, connected, send };
 }
 
 /** Restzeit des Zugtimers in Sekunden, oder null wenn keiner laeuft. */
