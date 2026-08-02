@@ -48,7 +48,7 @@ export interface RoundView {
    * Der Client rechnet daraus nichts aus, er liest nur ab, was Trumpf ist —
    * welche Karte Trumpf ist, entscheidet allein das Spielmodul.
    */
-  order: { trumps: string[] };
+  order: { trumps: string[]; fehl?: Record<string, string[]> };
   standings: Record<number, number>;
   pendingPflichtansage: { seat: number; trickPoints: number; canDecline: boolean } | null;
   result: unknown;
