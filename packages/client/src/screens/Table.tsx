@@ -298,11 +298,11 @@ export function Table({
 
   const hand = round ? sortByOrder(round.hand, round.order) : [];
   const liveTrick = round?.currentTrick ?? [];
-  // Frisch voller Stich: eine Sekunde liegen lassen (siehe frozenKey oben).
-  const trick =
-    liveTrick.length === 0 && frozenKey !== null && frozenKey === lastKey && lastTrickNow
-      ? lastTrickNow.played
-      : liveTrick;
+  // Frisch voller Stich: eine Sekunde liegen lassen — auch dann, wenn der
+  // naechste Spieler schon die erste Karte des neuen Stichs gelegt hat. Ohne
+  // diese Haerte raeumte der erste schnelle Bot den Stich sofort wieder ab.
+  const frozenActive = frozenKey !== null && frozenKey === lastKey && lastTrickNow !== null;
+  const trick = frozenActive ? lastTrickNow!.played : liveTrick;
   const phaseText = round ? t(`phase.${round.phase}`) : 'Zwischen den Runden';
 
   // Aufspiel: wer den Stich anspielt. Laeuft ein Stich, ist es, wer die erste
@@ -857,6 +857,51 @@ function soloLabel(solo: string): string {
  * Runde entscheiden. Wer vorgefuehrt wird, hat kein "gesund" - dann beginnt
  * der Dialog direkt bei der Auswahl.
  */
+/** Doppelkopf-Symbole fuer die Vorbehalts-Kacheln. */
+function VorbehaltIcon({ kind }: { kind: string }): React.JSX.Element {
+  if (kind === 'hochzeit') {
+    // Die Hochzeit: zwei Ringe — die beiden Kreuz-Damen auf einer Hand.
+    return (
+      <span className="vb-ico" aria-hidden="true">
+        💍💍
+      </span>
+    );
+  }
+  if (kind === 'armut') {
+    // Armut: drei verdeckte Truempfe, mehr sind es nicht.
+    return (
+      <span className="vb-armut" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+    );
+  }
+  if (kind === 'schmeiss') {
+    return (
+      <span className="vb-ico" aria-hidden="true">
+        🔄
+      </span>
+    );
+  }
+  return (
+    <span className="vb-ico" aria-hidden="true">
+      🃏
+    </span>
+  );
+}
+
+/** Damen-/Buben-/Fleischlos-Solo als Kartenpaar-Symbol. */
+function SoloIcon({ solo }: { solo: string }): React.JSX.Element {
+  const letter = solo === 'queens' ? 'D' : solo === 'jacks' ? 'B' : 'A';
+  return (
+    <span className="vb-pair" aria-hidden="true">
+      <i>{letter}</i>
+      <i className="rot">{letter}</i>
+    </span>
+  );
+}
+
 function VorbehaltDialog({
   actions,
   onSend,
@@ -867,9 +912,20 @@ function VorbehaltDialog({
   const gesund = actions.find((action) => action.kind === null) ?? null;
   const vorbehalte = actions.filter((action) => action.kind !== null);
 
+  // Farbsoli buendeln sich zu einer Kachel mit Unterauswahl der vier Farben;
+  // alles andere ist eine eigene Kachel mit Doppelkopf-Symbol.
+  const farbsoli = vorbehalte.filter(
+    (a) => a.kind === 'solo' && String(a.solo).startsWith('suit'),
+  );
+  const andereSoli = vorbehalte.filter(
+    (a) => a.kind === 'solo' && !String(a.solo).startsWith('suit'),
+  );
+  const sonstige = vorbehalte.filter((a) => a.kind !== 'solo');
+
   const [schritt, setSchritt] = useState<'frage' | 'auswahl' | 'bestaetigen'>(
     gesund ? 'frage' : 'auswahl',
   );
+  const [zeigeFarben, setZeigeFarben] = useState(false);
   const [wahl, setWahl] = useState<Action | null>(null);
   const [gesendet, setGesendet] = useState(false);
 
@@ -894,7 +950,7 @@ function VorbehaltDialog({
             <h2>Bist du gesund?</h2>
             <div className="doko-sheet-row">
               <button className="primary" onClick={() => bestaetigen(gesund)}>
-                Ja, gesund
+                ✓ Ja, gesund
               </button>
               {vorbehalte.length > 0 && (
                 <button onClick={() => setSchritt('auswahl')}>Nein, Vorbehalt</button>
@@ -905,14 +961,55 @@ function VorbehaltDialog({
 
         {schritt === 'auswahl' && (
           <>
-            <h2>Welcher Vorbehalt?</h2>
-            <div className="doko-vorbehalte">
-              {vorbehalte.map((action, index) => (
-                <button key={index} onClick={() => bestaetigen(action)}>
-                  {actionLabel(action)}
+            <h2>Dein Vorbehalt</h2>
+            <div className="vb-grid">
+              {sonstige.map((action, index) => (
+                <button className="vb-tile" key={index} onClick={() => bestaetigen(action)}>
+                  <VorbehaltIcon kind={String(action.kind)} />
+                  <span>{actionLabel(action).replace(/^Solo: /, '')}</span>
+                </button>
+              ))}
+              {farbsoli.length > 0 && (
+                <button
+                  className={`vb-tile${zeigeFarben ? ' is-open' : ''}`}
+                  aria-expanded={zeigeFarben}
+                  onClick={() => setZeigeFarben(!zeigeFarben)}
+                >
+                  <span className="vb-suits4" aria-hidden="true">
+                    <b>♣</b>
+                    <b>♠</b>
+                    <b className="rot">♥</b>
+                    <b className="rot">♦</b>
+                  </span>
+                  <span>Farbsolo {zeigeFarben ? '▴' : '▾'}</span>
+                </button>
+              )}
+              {andereSoli.map((action, index) => (
+                <button className="vb-tile" key={`s${index}`} onClick={() => bestaetigen(action)}>
+                  <SoloIcon solo={String(action.solo)} />
+                  <span>{soloLabel(String(action.solo))}</span>
                 </button>
               ))}
             </div>
+            {zeigeFarben && (
+              <div className="vb-farben">
+                {farbsoli.map((action, index) => {
+                  const suit = String(action.solo).slice(4) as 'C' | 'S' | 'H' | 'D';
+                  const rot = suit === 'H' || suit === 'D';
+                  const glyph = { C: '♣', S: '♠', H: '♥', D: '♦' }[suit];
+                  return (
+                    <button
+                      className="vb-farbe"
+                      key={index}
+                      onClick={() => bestaetigen(action)}
+                    >
+                      <b className={rot ? 'rot' : undefined}>{glyph}</b>
+                      <span>{soloLabel(String(action.solo)).replace('-Solo', '')}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {gesund && (
               <button className="doko-sheet-zurueck" onClick={() => setSchritt('frage')}>
                 Zurück
