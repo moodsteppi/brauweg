@@ -1386,3 +1386,15 @@ main.auth > .muted {
   margin-top: 0;
   margin-bottom: 1.3rem;
 }
+
+/* ---- Letzter Stich (Nachschau) ---- */
+.doko-lasttrick {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin: 0.8rem 0 1rem;
+}
+.doko-lasttrick figure { margin: 0; text-align: center; }
+.doko-lasttrick figcaption { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+.doko-lasttrick .is-winner .pc { outline: 2px solid var(--gold, #e2b64f); }
+.doko-lasttrick + .primary { width: 100%; }
