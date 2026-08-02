@@ -624,23 +624,27 @@ td {
   min-height: calc(var(--hw) * var(--pc-ratio) + 18px);
   padding-top: 18px;
 }
+.doko-hand { position: relative; }
+/* Jede Handkarte steht absolut in der Mitte und wird NUR per transform an
+   ihren Platz geschoben (Position, Senkung, Neigung kommen als Variablen
+   --off/--dip/--rot). Faellt eine Karte weg, gleiten die uebrigen auf ihre
+   neuen Plaetze — reiner Compositor-Uebergang, kein Layout-Sprung. */
 .doko-handcard {
-  flex: 0 0 auto;
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  margin-left: calc(var(--hw) / -2);
   padding: 0;
   border: none;
   background: none;
   transform-origin: bottom center;
-  /* Eigene Compositor-Ebene je Karte: Faecher-Umbau und Schuetteln laufen
-     dann ohne Neuzeichnen der Kartenbilder. */
+  transform:
+    translateX(calc(var(--off, 0) * var(--hw) * 0.42))
+    translateY(calc(var(--dip, 0) * 1px - var(--lift, 0px)))
+    rotate(calc(var(--rot, 0) * 1deg));
+  transition: transform 0.28s cubic-bezier(0.22, 0.9, 0.32, 1);
   will-change: transform;
-  margin-left: calc(var(--hw) * -0.58);
 }
-.doko-handcard:first-child { margin-left: 0; }
-/* Kein Dauer-Uebergang auf den Handkarten: Beim Ausspielen springt der
-   Faecher durch das Flex-Layout ohnehin in einem Schritt — ein halb
-   animierter Nachzieher der Neigungen dazu wirkte ruckelig, nicht fluessig.
-   Der Umbau passiert jetzt sauber in einem Frame, und nur die gelegte Karte
-   in der Mitte animiert. */
 /* Alle Karten sehen gleich aus - keine Hervorhebung der spielbaren, kein
    Abdunkeln der uebrigen. Ob eine Karte geht, beantwortet der Tipp darauf:
    Sie faellt, oder sie schuettelt den Kopf. */
@@ -648,8 +652,7 @@ td {
 .doko-handcard.is-playable { cursor: pointer; }
 .doko-handcard.is-selected .pc { outline: 3px solid var(--accent); }
 @media (hover: hover) {
-  .doko-handcard.is-playable { transition: transform 0.12s ease; }
-  .doko-handcard.is-playable:hover { transform: translateY(-14px) !important; z-index: 99 !important; }
+  .doko-handcard.is-playable:hover { --lift: 14px; z-index: 200 !important; }
 }
 
 /* Kurzes Kopfschuetteln beim Tipp auf eine unspielbare Karte. Die Animation
@@ -734,7 +737,7 @@ td {
   justify-content: center;
   margin: 0.6rem 0;
 }
-.doko-pick .doko-handcard { margin-left: 0; transform: none !important; }
+.doko-pick .doko-handcard { position: static; margin-left: 0; transform: none !important; }
 .doko-sheet-card > .primary { width: 100%; }
 
 /* Ladezustand */
@@ -1398,3 +1401,82 @@ main.auth > .muted {
 .doko-lasttrick figcaption { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
 .doko-lasttrick .is-winner .pc { outline: 2px solid var(--gold, #e2b64f); }
 .doko-lasttrick + .primary { width: 100%; }
+
+/* ---- Vorbehalt-Dialog: Doppelkopf-Kacheln ---- */
+.vb-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin: 0.7rem 0;
+}
+.vb-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.8rem 0.5rem;
+  border-radius: 0.8rem;
+  font-weight: 600;
+}
+.vb-tile.is-open { border-color: var(--accent); }
+.vb-ico { font-size: 1.5rem; line-height: 1; letter-spacing: -0.35em; padding-right: 0.35em; }
+.rot { color: #d64545; }
+
+/* Kartenpaar (Damen-/Buben-/Ass-Solo): zwei kleine gefaecherte Karten */
+.vb-pair { display: inline-flex; }
+.vb-pair i {
+  font-style: normal;
+  width: 1.5rem;
+  height: 2.1rem;
+  background: #fff;
+  color: #10171b;
+  border-radius: 0.25rem;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  transform: rotate(-7deg);
+}
+.vb-pair i:last-child { margin-left: -0.45rem; transform: rotate(9deg); }
+.vb-pair i.rot { color: #b3231b; }
+
+/* Armut: drei verdeckte Truempfe */
+.vb-armut { display: inline-flex; align-items: flex-end; }
+.vb-armut i {
+  width: 1.15rem;
+  height: 1.7rem;
+  border-radius: 0.2rem;
+  border: 1px solid #fff;
+  background: repeating-linear-gradient(45deg, #1f4e8c 0 4px, #2a63ad 4px 8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+.vb-armut i:first-child { transform: rotate(-9deg); }
+.vb-armut i:nth-child(2) { z-index: 1; }
+.vb-armut i:last-child { margin-left: -0.4rem; transform: rotate(9deg); }
+.vb-armut i:nth-child(2) { margin-left: -0.4rem; }
+
+/* Vier Farben der Farbsolo-Kachel */
+.vb-suits4 { font-size: 1.25rem; line-height: 1; display: inline-flex; gap: 0.12em; }
+.vb-suits4 b { font-weight: 700; }
+
+/* Unterauswahl: die vier Farben gross */
+.vb-farben {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin: 0 0 0.7rem;
+}
+.vb-farbe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.2rem;
+  border-radius: 0.8rem;
+  background: #f2f5f4;
+  color: #10171b;
+  font-weight: 700;
+}
+.vb-farbe b { font-size: 1.7rem; line-height: 1; }
+.vb-farbe span { font-size: 0.78rem; }
+.vb-farbe:hover:not(:disabled) { border-color: var(--gold, #e2b64f); }
