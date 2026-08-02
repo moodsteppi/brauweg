@@ -340,8 +340,12 @@ td {
     max(0.5rem, env(safe-area-inset-left));
   gap: 0.4rem;
   --pc-ratio: 1.452;
-  --hw: clamp(38px, 12.6vw, 56px);
-  --tw: clamp(40px, 12vw, 58px);
+  /* --zoom kommt als Inline-Stil vom +/-Regler in der Kopfzeile. Er skaliert
+     Hand und Stich; die verdeckten Kartenruecken der Gegner bleiben klein,
+     sonst draengen sie die Namen von den Raendern. */
+  --zoom: 1;
+  --hw: calc(clamp(38px, 12.6vw, 56px) * var(--zoom));
+  --tw: calc(clamp(40px, 12vw, 58px) * var(--zoom));
   --bw: clamp(20px, 6.5vw, 30px);
 }
 
@@ -627,13 +631,28 @@ td {
   margin-left: calc(var(--hw) * -0.58);
 }
 .doko-handcard:first-child { margin-left: 0; }
-.doko-handcard:disabled { cursor: default; }
-.doko-handcard:not(.is-playable) .pc { filter: brightness(0.62) saturate(0.7); }
+/* Alle Karten sehen gleich aus - keine Hervorhebung der spielbaren, kein
+   Abdunkeln der uebrigen. Ob eine Karte geht, beantwortet der Tipp darauf:
+   Sie faellt, oder sie schuettelt den Kopf. */
+.doko-handcard[aria-disabled='true'] { cursor: default; }
 .doko-handcard.is-playable { cursor: pointer; }
-.doko-handcard.is-playable .pc { outline: 2px solid var(--accent); }
 .doko-handcard.is-selected .pc { outline: 3px solid var(--accent); }
 @media (hover: hover) {
   .doko-handcard.is-playable:hover { transform: translateY(-14px) !important; z-index: 99 !important; }
+}
+
+/* Kurzes Kopfschuetteln beim Tipp auf eine unspielbare Karte. Die Animation
+   liegt auf der inneren Karte, damit der Faecher (transform am Knopf) steht. */
+.doko-handcard.is-shake .pc { animation: doko-shake 0.3s ease; }
+@keyframes doko-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px) rotate(-2deg); }
+  40% { transform: translateX(4px) rotate(2deg); }
+  60% { transform: translateX(-3px) rotate(-1deg); }
+  80% { transform: translateX(2px) rotate(1deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doko-handcard.is-shake .pc { animation: none; }
 }
 
 .doko-error {
@@ -837,6 +856,18 @@ td {
   background: rgba(74, 156, 120, 0.16);
   border: 1px solid var(--accent);
   color: #9fe0c1;
+}
+
+/* Kreisel im Bot-Knopf, solange die Antwort des Tisches aussteht. */
+.doko-btn-spinner {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  border: 2px solid rgba(159, 224, 193, 0.35);
+  border-top-color: #9fe0c1;
+  animation: doko-spin 0.7s linear infinite;
+  vertical-align: -0.15rem;
 }
 
 /* ---- Profilbild in der Kontoansicht ---- */
@@ -1056,6 +1087,61 @@ td {
 .front-tab--haupt.is-active {
   color: var(--accent);
   background: rgba(74, 156, 120, 0.12);
+}
+
+/* Regelkacheln der Tischerstellung: an/aus durch Antippen, aktive Regeln
+   tragen einen goldenen Rand mit Haken. */
+.regeln {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.regel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 3.4rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.regel:hover:not(:disabled) {
+  border-color: var(--gold);
+}
+
+.regel.is-on {
+  border-color: var(--gold);
+  color: var(--text);
+  background: rgba(226, 182, 79, 0.08);
+}
+
+.regel-check {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.35rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  display: none;
+  place-items: center;
+  background: var(--gold);
+  color: #161309;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.regel.is-on .regel-check {
+  display: grid;
 }
 
 /* Anmeldung: schmale, mittige Karte - derselbe ruhige Auftritt wie danach. */
