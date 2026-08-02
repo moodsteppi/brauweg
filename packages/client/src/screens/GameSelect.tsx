@@ -15,11 +15,13 @@ export function GameSelect({
   me,
   onPick,
   onDeckChange,
+  onAvatarChange,
   onSignOut,
 }: {
   me: Me;
   onPick: (gameId: string) => void;
   onDeckChange: (cardDeck: string) => void;
+  onAvatarChange: () => void;
   onSignOut: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[]>([]);
@@ -48,6 +50,8 @@ export function GameSelect({
       <p className="muted">
         {me.displayName} · {trophies} Trophäen gesamt
       </p>
+
+      <ProfilePicture me={me} onChanged={onAvatarChange} />
 
       <h2>Spielbar</h2>
       {playable.map((game) => (
@@ -144,5 +148,116 @@ function DeckSample({
   if (src) return <img className="card-img" src={src} alt={cardName(card)} draggable={false} />;
   return (
     <span className={`card${isRed(card) ? ' red' : ''}`}>{cardLabel(card)}</span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Profilbild
+// ---------------------------------------------------------------------------
+
+const AVATAR_PX = 128;
+
+/**
+ * Verkleinert das gewaehlte Bild im Browser auf ein kleines Quadrat und gibt
+ * es als data-URL zurueck. So geht nie ein grosses Foto an den Server, und die
+ * Groesse bleibt weit unter dem serverseitigen Riegel.
+ */
+async function downscale(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = AVATAR_PX;
+  canvas.height = AVATAR_PX;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('kein Canvas');
+  const side = Math.min(bitmap.width, bitmap.height);
+  ctx.drawImage(
+    bitmap,
+    (bitmap.width - side) / 2,
+    (bitmap.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    AVATAR_PX,
+    AVATAR_PX,
+  );
+  bitmap.close?.();
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
+function ProfilePicture({
+  me,
+  onChanged,
+}: {
+  me: Me;
+  onChanged: () => void;
+}): React.JSX.Element {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ver, setVer] = useState(0);
+
+  const pick = async (file: File | undefined): Promise<void> => {
+    if (!file) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await api.setAvatar(await downscale(file));
+      setVer((v) => v + 1);
+      onChanged();
+    } catch {
+      setErr('Das Bild ließ sich nicht speichern. Versuch ein anderes.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (): Promise<void> => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.setAvatar(null);
+      setVer((v) => v + 1);
+      onChanged();
+    } catch {
+      setErr('Konnte nicht entfernt werden.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const src = me.avatarUrl ? `${me.avatarUrl}?v=${ver}` : null;
+
+  return (
+    <div className="panel profile">
+      <div className="profile-pic">
+        {src ? (
+          <img src={src} alt="Profilbild" />
+        ) : (
+          <span>{me.displayName.slice(0, 2).toUpperCase()}</span>
+        )}
+      </div>
+      <div className="profile-actions">
+        <strong>Profilbild</strong>
+        <span className="muted">Sehen die anderen am Tisch.</span>
+        <div className="row" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
+          <label className={`profile-btn${busy ? ' is-busy' : ''}`}>
+            {busy ? 'Einen Moment…' : me.avatarUrl ? 'Ändern' : 'Bild wählen'}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              disabled={busy}
+              onChange={(e) => void pick(e.target.files?.[0])}
+            />
+          </label>
+          {me.avatarUrl && (
+            <button onClick={() => void remove()} disabled={busy}>
+              Entfernen
+            </button>
+          )}
+        </div>
+        {err && <span className="error">{err}</span>}
+      </div>
+    </div>
   );
 }

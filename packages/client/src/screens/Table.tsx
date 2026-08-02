@@ -31,7 +31,7 @@ export function Table({
   deck: Deck;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, connected, send } = useTable(tableId);
+  const { view, party, table, error, connected, send, addBot, removeBot } = useTable(tableId);
   const secondsLeft = useCountdown(view?.turnDeadline ?? null);
 
   // Wartebereich: freie Plaetze sind kein Fehler, sondern der Normalfall. Man
@@ -56,22 +56,38 @@ export function Table({
         <div className="doko-wait">
           {table.seats.map((seat) => (
             <div
-              className={`doko-wait-seat${seat.displayName ? '' : ' is-empty'}`}
+              className={`doko-wait-seat${seat.displayName || seat.isBot ? '' : ' is-empty'}`}
               key={seat.seat}
             >
               <Avatar
-                name={seat.displayName ?? 'frei'}
+                name={seat.displayName ?? (seat.isBot ? 'Bot' : 'frei')}
                 seatIndex={seat.seat}
                 active={false}
                 secondsLeft={null}
                 isBot={seat.isBot}
+                avatarUrl={seat.avatarUrl}
               />
-              <span>{seat.displayName ?? 'frei'}</span>
+              <span className="doko-wait-name">
+                {seat.displayName ?? (seat.isBot ? `Bot ${seat.seat + 1}` : 'frei')}
+              </span>
+              {/* Freie Plaetze lassen sich mit einem Bot fuellen, gesetzte Bots
+                  wieder freigeben — direkt am Tisch, ohne Vorab-Entscheidung. */}
+              {!seat.displayName && !seat.isBot && (
+                <button className="doko-seat-btn" onClick={() => addBot(seat.seat)}>
+                  + Bot
+                </button>
+              )}
+              {!seat.displayName && seat.isBot && (
+                <button className="doko-seat-btn" onClick={() => removeBot(seat.seat)}>
+                  entfernen
+                </button>
+              )}
             </div>
           ))}
         </div>
         <p className="muted doko-wait-hint">
-          Teile die Adresse dieser Seite, dann können andere direkt beitreten.
+          Teile die Adresse dieser Seite, dann können andere direkt beitreten — oder
+          fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.
         </p>
         {error && <p className="doko-error">{t(error)}</p>}
       </div>
@@ -105,6 +121,7 @@ export function Table({
     const entry = seatInfo(seat);
     return (!entry?.displayName || !!entry?.isBot) || view.botSeats.includes(seat);
   };
+  const avatarOf = (seat: number): string | null => seatInfo(seat)?.avatarUrl ?? null;
 
   if (view.finished) {
     return <PartyEnd view={view} party={party} nameOf={nameOf} onLeave={onLeave} />;
@@ -124,6 +141,10 @@ export function Table({
   const hand = round ? sortByOrder(round.hand, round.order) : [];
   const trick = round?.currentTrick ?? [];
   const phaseText = round ? t(`phase.${round.phase}`) : 'Zwischen den Runden';
+
+  // Aufspiel: wer den Stich anspielt. Laeuft ein Stich, ist es, wer die erste
+  // Karte gelegt hat; ist er leer, der, der gerade herauskommt.
+  const leaderSeat = trick.length > 0 ? trick[0]!.seat : view.currentActor;
 
   // Trumpf oder Fehl: nur abgelesen aus der Rangfolge, die das Modul liefert.
   const trumps = new Set(round?.order.trumps ?? []);
@@ -187,8 +208,10 @@ export function Table({
             count={round?.handCounts[seat] ?? 0}
             score={view.view.scores[seat] ?? 0}
             active={view.currentActor === seat}
+            leader={leaderSeat === seat}
             secondsLeft={view.currentActor === seat ? secondsLeft : null}
             party={round?.knownParties?.[seat] ?? null}
+            avatarUrl={avatarOf(seat)}
             deck={deck}
           />
         ))}
@@ -201,8 +224,12 @@ export function Table({
               key={played.card.id}
               className={`doko-trick-card at-${slotFor(played.seat, base, seatCount)}`}
             >
-              <div className="pc pc--trick">
-                <CardFront card={played.card} deck={deck} />
+              {/* Innerer Wrapper traegt die Legeanimation, damit die Platzierung
+                  (aeusseres Element) davon unberuehrt bleibt. */}
+              <div className="doko-trick-in">
+                <div className="pc pc--trick">
+                  <CardFront card={played.card} deck={deck} />
+                </div>
               </div>
             </div>
           ))}
@@ -250,12 +277,14 @@ export function Table({
           seatIndex={view.seat ?? 0}
           active={view.currentActor === view.seat}
           secondsLeft={view.currentActor === view.seat ? secondsLeft : null}
+          avatarUrl={view.seat === null ? null : avatarOf(view.seat)}
           you
         />
         <div className="doko-me-info">
           <strong>{view.seat === null ? 'Zuschauer' : nameOf(view.seat)}</strong>
           <span className="muted">
             {round?.myParty ? partyLabel(round.myParty) : 'Deine Karten'}
+            {view.seat !== null && leaderSeat === view.seat && ' · Aufspiel'}
           </span>
         </div>
         {view.currentActor === view.seat && secondsLeft !== null && (
@@ -339,6 +368,7 @@ function Avatar({
   secondsLeft,
   isBot,
   you,
+  avatarUrl,
 }: {
   name: string;
   seatIndex: number;
@@ -346,6 +376,7 @@ function Avatar({
   secondsLeft: number | null;
   isBot?: boolean;
   you?: boolean;
+  avatarUrl?: string | null;
 }): React.JSX.Element {
   const hue = SEAT_HUES[seatIndex % SEAT_HUES.length]!;
   const ring =
@@ -357,9 +388,13 @@ function Avatar({
       className={`doko-avatar${active ? ' is-active' : ''}${you ? ' is-you' : ''}`}
       style={ring ? { background: ring } : undefined}
     >
-      <span style={{ background: `hsl(${hue} 45% 32%)` }}>
-        {isBot ? 'BOT' : initials(name)}
-      </span>
+      {avatarUrl ? (
+        <img className="doko-avatar-img" src={avatarUrl} alt={name} draggable={false} />
+      ) : (
+        <span style={{ background: `hsl(${hue} 45% 32%)` }}>
+          {isBot ? 'BOT' : initials(name)}
+        </span>
+      )}
     </div>
   );
 }
@@ -374,8 +409,10 @@ function OpponentSeat({
   count,
   score,
   active,
+  leader,
   secondsLeft,
   party,
+  avatarUrl,
   deck,
 }: {
   slot: Slot;
@@ -387,13 +424,13 @@ function OpponentSeat({
   count: number;
   score: number;
   active: boolean;
+  leader: boolean;
   secondsLeft: number | null;
   party: string | null;
+  avatarUrl: string | null;
   deck: Deck;
 }): React.JSX.Element {
   const vertical = slot === 'left' || slot === 'right';
-  // Wenige verdeckte Karten als Faecher, die tatsaechliche Zahl als Plakette.
-  const shown = Math.min(count, 5);
   return (
     <div className={`doko-opp at-${slot}${active ? ' is-active' : ''}`}>
       <Avatar
@@ -402,20 +439,23 @@ function OpponentSeat({
         active={active}
         secondsLeft={secondsLeft}
         isBot={isBot}
+        avatarUrl={avatarUrl}
       />
       <div className="doko-opp-name">
         <span>{isBot ? `Bot ${seatIndex + 1}` : name}</span>
+        {leader && <em className="doko-tag doko-tag--lead">Aufspiel</em>}
         {party && <em className={`doko-party doko-party--${party}`}>{partyLabel(party)}</em>}
         {hasLeft && <em className="doko-tag">ausgestiegen</em>}
         {!hasLeft && botTakeover && !isBot && <em className="doko-tag">Bot übernimmt</em>}
       </div>
+      {/* Genau so viele verdeckte Karten, wie der Spieler haelt. Links und
+          rechts liegen sie quer (siehe CSS is-vertical). */}
       <div className={`doko-backs${vertical ? ' is-vertical' : ''}`}>
-        {Array.from({ length: shown }, (_, i) => (
-          <div className="pc pc--back" key={i}>
+        {Array.from({ length: count }, (_, i) => (
+          <div className={`pc pc--back${vertical ? ' side' : ''}`} key={i}>
             <CardBack deck={deck} />
           </div>
         ))}
-        <span className="doko-count">{count}</span>
       </div>
       <span className="doko-opp-score">{score}</span>
     </div>
@@ -460,7 +500,9 @@ function HandCard({
   return (
     <button
       className={`doko-handcard${playable ? ' is-playable' : ''}${trump ? ' is-trump' : ''}`}
-      style={{ transform, zIndex: index }}
+      // Spielbare (angehobene) Karten liegen ueber ihren Nachbarn, damit sich
+      // im Faecher sicher die richtige treffen laesst.
+      style={{ transform, zIndex: playable ? 100 + index : index }}
       disabled={!playable}
       onClick={onPlay}
       aria-label={trump ? 'Trumpf' : undefined}

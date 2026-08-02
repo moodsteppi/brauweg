@@ -294,15 +294,49 @@ export async function touch(db: Db, tableId: string): Promise<void> {
     .where(eq(s.gameTable.id, tableId));
 }
 
-/** Alle Plaetze besetzt, entweder durch Menschen oder durch gewuenschte Bots. */
+/**
+ * Setzt einen freien Platz auf Bot oder gibt ihn wieder frei.
+ *
+ * Bots werden nicht mehr vorab beim Tischbau gewaehlt, sondern am Tisch auf
+ * die freien Plaetze gesetzt. So kann man zu zweit oder zu dritt beitreten und
+ * den Rest mit Bots auffuellen, ohne dass der Tisch vorher fuer Menschen
+ * gesperrt ist. Nur wer selbst am Tisch sitzt, darf das.
+ */
+export async function setSeatBot(
+  db: Db,
+  tableId: string,
+  seatIndex: number,
+  wantBot: boolean,
+  byAccountId: string,
+): Promise<void> {
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+
+  const target = seats.find((seat) => seat.seatIndex === seatIndex);
+  if (!target) throw notFound('tableUnknown');
+  // Ein von einem Menschen besetzter Platz wird nicht angetastet.
+  if (target.accountId) throw conflict('seatTaken');
+
+  await db
+    .update(s.tableSeat)
+    .set({ isBot: wantBot })
+    .where(and(eq(s.tableSeat.tableId, tableId), eq(s.tableSeat.seatIndex, seatIndex)));
+  await touch(db, tableId);
+}
+
+/** Alle Plaetze besetzt, entweder durch Menschen oder durch gesetzte Bots. */
 export function isReadyToStart(
   table: { seats: number; filters: unknown },
   seats: { accountId: string | null; isBot: boolean }[],
 ): boolean {
   const humans = seats.filter((seat) => seat.accountId).length;
-  if (humans === table.seats) return true;
+  if (humans === 0) return false;
+  // Kein Platz mehr frei: alles ist entweder Mensch oder gesetzter Bot.
+  if (seats.every((seat) => seat.accountId || seat.isBot)) return true;
+  // Alt-Weg fuer Tische, die noch mit dem Vorab-Haken gebaut wurden.
   const fill = (table.filters as { fillWithBots?: boolean } | null)?.fillWithBots;
-  return fill === true && humans >= 1;
+  return fill === true;
 }
 
 /** Zaehlt der Tisch fuer die Rangliste? Bots und Training schliessen das aus. */

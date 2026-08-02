@@ -51,6 +51,14 @@ export type ClientMessage =
       readonly game: GameId;
       readonly type: 'leave';
       readonly tableId: string;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /** Freien Platz mit einem Bot belegen oder den Bot wieder entfernen. */
+      readonly type: 'addBot' | 'removeBot';
+      readonly tableId: string;
+      readonly seat: number;
     };
 
 // ---------------------------------------------------------------------------
@@ -95,6 +103,7 @@ export interface TableMessage {
     readonly seat: number;
     readonly displayName: string | null;
     readonly isBot: boolean;
+    readonly avatarUrl: string | null;
   }[];
   /** Wie viele Menschen noch fehlen, bis automatisch gestartet wird. */
   readonly missing: number;
@@ -111,6 +120,7 @@ export interface PartyMessage {
     readonly seat: number;
     readonly displayName: string | null;
     readonly isBot: boolean;
+    readonly avatarUrl: string | null;
   }[];
 }
 

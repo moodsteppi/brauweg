@@ -22,7 +22,6 @@ export function Lobby({
   const [defaults, setDefaults] = useState<GameDefaults | null>(null);
   const [seats, setSeats] = useState(4);
   const [rounds, setRounds] = useState(8);
-  const [fillWithBots, setFillWithBots] = useState(false);
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +52,6 @@ export function Lobby({
         config: { ...config, tableSize: seats, rounds },
         seats,
         rounds,
-        fillWithBots,
       });
       onEnter(table.id);
     } catch (err) {
@@ -113,15 +111,11 @@ export function Lobby({
           </label>
         </div>
 
-        <label className="row" style={{ gap: '0.5rem' }}>
-          <input
-            type="checkbox"
-            style={{ width: 'auto' }}
-            checked={fillWithBots}
-            onChange={(e) => setFillWithBots(e.target.checked)}
-          />
-          Freie Plätze mit Bots füllen (zählt nicht für die Rangliste)
-        </label>
+        <p className="muted" style={{ margin: '0 0 0.75rem' }}>
+          Bots fügst du am Tisch auf die freien Plätze — so könnt ihr auch zu
+          zweit oder zu dritt mit Bots spielen. (Tische mit Bots zählen nicht für
+          die Rangliste.)
+        </p>
 
         <RuleEditor config={config} onChange={setConfig} />
 

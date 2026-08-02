@@ -224,6 +224,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         coins: s.account.coins,
         premiumUntil: s.account.premiumUntil,
         cardDeck: s.account.cardDeck,
+        // Nur, OB ein Bild vorliegt — die Bytes gehen nie mit /api/me raus,
+        // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
+        hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
       })
       .from(s.account)
       .where(eq(s.account.id, accountId));
@@ -234,7 +237,33 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       .from(s.accountGameStat)
       .where(eq(s.accountGameStat.accountId, accountId));
 
-    return reply.send({ ...account, stats });
+    const { hasAvatar, ...rest } = account;
+    return reply.send({
+      ...rest,
+      avatarUrl: hasAvatar ? `/api/avatars/${account.id}` : null,
+      stats,
+    });
+  });
+
+  /**
+   * Profilbild eines Kontos. Oeffentlich, weil es genau dafuer da ist: die
+   * Mitspieler am Tisch sollen es sehen. Gespeichert ist es als data-URL, hier
+   * wird es in Bytes zurueckuebersetzt und kurz zwischengespeichert.
+   */
+  app.get('/api/avatars/:accountId', async (request, reply) => {
+    const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    const [row] = await deps.db
+      .select({ avatar: s.account.avatar })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+
+    const match = row?.avatar ? /^data:(image\/[a-z+]+);base64,(.+)$/.exec(row.avatar) : null;
+    if (!match) throw notFound('avatarUnknown');
+
+    return reply
+      .header('content-type', match[1]!)
+      .header('cache-control', 'public, max-age=120')
+      .send(Buffer.from(match[2]!, 'base64'));
   });
 
   /**
@@ -246,13 +275,27 @@ export function buildApp(deps: AppDeps): FastifyInstance {
    */
   app.patch('/api/me', async (request, reply) => {
     const accountId = await requireAccount(request);
-    const body = z.object({ cardDeck: z.enum(CARD_DECKS).optional() }).parse(request.body);
+    const body = z
+      .object({
+        cardDeck: z.enum(CARD_DECKS).optional(),
+        // Ein kleines, im Browser verkleinertes Quadrat als data-URL. Die
+        // Groesse ist bewusst hart begrenzt: Die Verkleinerung passiert im
+        // Client, hier steht nur der Riegel, falls sie umgangen wird. null
+        // entfernt das Bild wieder.
+        avatar: z
+          .string()
+          .regex(/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/)
+          .max(60_000)
+          .nullable()
+          .optional(),
+      })
+      .parse(request.body);
 
-    if (body.cardDeck) {
-      await deps.db
-        .update(s.account)
-        .set({ cardDeck: body.cardDeck })
-        .where(eq(s.account.id, accountId));
+    const set: Record<string, unknown> = {};
+    if (body.cardDeck) set.cardDeck = body.cardDeck;
+    if (body.avatar !== undefined) set.avatar = body.avatar;
+    if (Object.keys(set).length > 0) {
+      await deps.db.update(s.account).set(set).where(eq(s.account.id, accountId));
     }
 
     return reply.send({ ok: true });
