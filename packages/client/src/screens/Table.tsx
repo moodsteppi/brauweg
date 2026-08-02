@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
@@ -101,7 +102,17 @@ export function Table({
     return (
       <div className="doko doko--wait">
         <header className="doko-top">
-          <button className="doko-icon" onClick={onLeave} aria-label="Zurück">
+          {/* Zurueck aus dem Wartebereich gibt den Platz frei - sonst bleibt
+              ein Geistertisch in der Lobby stehen. Schlaegt die Meldung fehl,
+              raeumt der Server den Tisch spaeter selbst ab. */}
+          <button
+            className="doko-icon"
+            onClick={() => {
+              void api.leaveTable(tableId).catch(() => undefined);
+              onLeave();
+            }}
+            aria-label="Zurück"
+          >
             ‹
           </button>
           <div className="doko-top-mid">
@@ -675,10 +686,11 @@ function soloLabel(solo: string): string {
     suitD: 'Karo',
     queens: 'Damen',
     jacks: 'Buben',
-    aces: 'Fleischlos',
-    meatless: 'Fleischlos',
+    fleshless: 'Fleischlos',
   };
-  return map[solo] ?? solo;
+  // Unbekannte Art faellt auf das Spielart-Woerterbuch zurueck, notfalls auf
+  // den rohen Schluessel - sichtbar haesslich statt unsichtbar kaputt.
+  return map[solo] ?? t(`spielart.solo.${solo}`);
 }
 
 function Pflichtansage({
