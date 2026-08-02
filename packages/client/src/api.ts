@@ -83,6 +83,35 @@ export interface GameDefaults {
   rounds: Record<string, number[]>;
 }
 
+export interface PlayerRef {
+  id: string;
+  displayName: string;
+}
+
+export type Relationship = 'self' | 'friends' | 'incoming' | 'outgoing' | 'none';
+
+export interface PlayerProfile {
+  id: string;
+  displayName: string;
+  /** Jahr-Monat, mehr gibt ein fremdes Konto nicht preis. */
+  memberSince: string;
+  relationship: Relationship;
+  ranking: {
+    gameId: string;
+    trophies: number;
+    highestCheckpoint: number;
+    parties: number;
+    wins: number;
+  }[];
+  totals: { parties: number; wins: number; trophies: number };
+}
+
+export interface FriendLists {
+  friends: PlayerRef[];
+  incoming: PlayerRef[];
+  outgoing: PlayerRef[];
+}
+
 export const api = {
   register: (body: {
     email: string;
@@ -114,4 +143,13 @@ export const api = {
   }) => post<{ id: string }>('/tables', body),
   joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
+
+  profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
+  searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),
+  friends: () => request<FriendLists>('/friends'),
+  requestFriend: (accountId: string) =>
+    post<{ status: 'pending' | 'accepted' }>(`/friends/${accountId}/request`),
+  acceptFriend: (accountId: string) => post<{ ok: true }>(`/friends/${accountId}/accept`),
+  removeFriend: (accountId: string) =>
+    request<{ ok: true }>(`/friends/${accountId}`, { method: 'DELETE' }),
 };
