@@ -272,3 +272,415 @@ td {
   padding: 0.4rem 0.5rem;
   border-bottom: 1px solid var(--line);
 }
+
+/* =========================================================================
+   Doppelkopf-Tisch — mobile Oberflaeche
+   Rundum-Tisch: eigene Hand unten, Mitspieler an den Raendern, Stich mittig.
+   Alles auf Hochkant-Handy ausgelegt, mit sicheren Raendern.
+   ========================================================================= */
+
+.doko {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 70% at 50% 38%, #1c3b2e 0%, #14211d 55%, #0e1417 100%);
+  color: var(--text);
+  padding:
+    max(0.5rem, env(safe-area-inset-top))
+    max(0.5rem, env(safe-area-inset-right))
+    max(0.5rem, env(safe-area-inset-bottom))
+    max(0.5rem, env(safe-area-inset-left));
+  gap: 0.4rem;
+  --pc-ratio: 1.452;
+  --hw: clamp(38px, 12.6vw, 56px);
+  --tw: clamp(40px, 12vw, 58px);
+  --bw: clamp(20px, 6.5vw, 30px);
+}
+
+/* Kopfzeile */
+.doko-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 0 0 auto;
+}
+.doko-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+.doko-top-mid {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  flex: 1;
+}
+.doko-top-mid strong { font-size: 0.98rem; }
+.doko-top-mid .muted { font-size: 0.78rem; }
+.doko-top-right { display: flex; gap: 0.35rem; }
+.doko-badge {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  align-self: center;
+}
+.doko-badge--bock {
+  background: rgba(224, 123, 0, 0.22);
+  color: #f0b060;
+}
+
+/* Spielfläche */
+.doko-felt {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 1.4rem;
+  background:
+    radial-gradient(80% 60% at 50% 45%, rgba(74, 156, 120, 0.18), transparent 70%);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.35);
+}
+
+/* Mitspieler */
+.doko-opp {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 34%;
+}
+.doko-opp.at-top { top: 0.2rem; left: 50%; transform: translateX(-50%); }
+.doko-opp.at-top-left { top: 0.2rem; left: 4%; }
+.doko-opp.at-top-right { top: 0.2rem; right: 4%; }
+.doko-opp.at-left { left: 0.1rem; top: 44%; transform: translateY(-50%); }
+.doko-opp.at-right { right: 0.1rem; top: 44%; transform: translateY(-50%); }
+
+.doko-opp-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  font-size: 0.76rem;
+  text-align: center;
+}
+.doko-opp-name > span {
+  max-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doko-party { font-style: normal; font-size: 0.66rem; padding: 0 0.35rem; border-radius: 999px; }
+.doko-party--re { background: rgba(74, 156, 120, 0.25); color: #7fd3ab; }
+.doko-party--kontra { background: rgba(194, 86, 76, 0.25); color: #e59a92; }
+.doko-tag {
+  font-style: normal;
+  font-size: 0.64rem;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0 0.35rem;
+  border-radius: 999px;
+}
+.doko-opp-score {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Verdeckte Kartenstapel der Gegner */
+.doko-backs { position: relative; display: flex; padding: 2px; }
+.doko-backs .pc--back { margin-left: calc(var(--bw) * -0.62); }
+.doko-backs .pc--back:first-child { margin-left: 0; }
+.doko-backs.is-vertical { flex-direction: column; }
+.doko-backs.is-vertical .pc--back { margin-left: 0; margin-top: calc(var(--bw) * -1.0); }
+.doko-backs.is-vertical .pc--back:first-child { margin-top: 0; }
+.doko-count {
+  position: absolute;
+  right: -0.5rem;
+  bottom: -0.35rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #0e1417;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+/* Avatar mit Zug-Ring */
+.doko-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  padding: 3px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.2s;
+}
+.doko-avatar > span {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+.doko-avatar.is-active {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 16px rgba(74, 156, 120, 0.6);
+  animation: doko-pulse 1.6s ease-in-out infinite;
+}
+.doko-avatar.is-you { width: 3rem; height: 3rem; }
+@keyframes doko-pulse {
+  50% { box-shadow: 0 0 0 2px var(--accent), 0 0 26px rgba(74, 156, 120, 0.9); }
+}
+
+/* Stich in der Mitte */
+.doko-trick {
+  position: absolute;
+  top: 56%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(46vw, 168px);
+  height: min(46vw, 168px);
+}
+.doko-trick-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+/* Leichte, lässige Neigung statt harter Drehung: die gelegte Karte wirkt
+   hingeworfen, bleibt aber in jedem Blatt lesbar. Die Position zum jeweiligen
+   Spieler zeigt ohnehin, wer sie gelegt hat. */
+.doko-trick-card { position: absolute; }
+.doko-trick-card.at-bottom { bottom: 0; left: 50%; transform: translateX(-50%) rotate(-5deg); }
+.doko-trick-card.at-top { top: 0; left: 50%; transform: translateX(-50%) rotate(6deg); }
+.doko-trick-card.at-left { left: 0; top: 50%; transform: translateY(-50%) rotate(-7deg); }
+.doko-trick-card.at-right { right: 0; top: 50%; transform: translateY(-50%) rotate(7deg); }
+.doko-trick-card.at-top-left { top: 6%; left: 6%; transform: rotate(-6deg); }
+.doko-trick-card.at-top-right { top: 6%; right: 6%; transform: rotate(6deg); }
+
+.doko-last {
+  position: absolute;
+  bottom: 0.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Karten allgemein */
+.pc {
+  border-radius: 0.32rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  display: block;
+}
+.pc-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pc-text {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #10171b;
+}
+.pc-text.pc-red { color: #b3231b; }
+.pc-back {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background:
+    repeating-linear-gradient(45deg, #1f4e8c 0 6px, #2a63ad 6px 12px);
+  border: 2px solid #fff;
+  border-radius: inherit;
+}
+.pc--hand { width: var(--hw); height: calc(var(--hw) * var(--pc-ratio)); }
+.pc--trick { width: var(--tw); height: calc(var(--tw) * var(--pc-ratio)); }
+.pc--back { width: var(--bw); height: calc(var(--bw) * var(--pc-ratio)); }
+
+/* Eigener Bereich */
+.doko-me {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.15rem 0.3rem;
+}
+.doko-me-info { display: flex; flex-direction: column; line-height: 1.15; flex: 1; }
+.doko-me-info strong { font-size: 0.92rem; }
+.doko-me-info .muted { font-size: 0.76rem; }
+.doko-turnclock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Aktionsleiste */
+.doko-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.15rem 0.2rem 0.35rem;
+  scrollbar-width: none;
+}
+.doko-actions::-webkit-scrollbar { display: none; }
+.doko-action {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.doko-action--call {
+  background: rgba(74, 156, 120, 0.18);
+  border-color: var(--accent);
+  color: #9fe0c1;
+}
+
+/* Handkarten */
+.doko-hand {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: calc(var(--hw) * var(--pc-ratio) + 18px);
+  padding-top: 18px;
+}
+.doko-handcard {
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  background: none;
+  transform-origin: bottom center;
+  transition: transform 0.14s ease;
+  margin-left: calc(var(--hw) * -0.58);
+}
+.doko-handcard:first-child { margin-left: 0; }
+.doko-handcard:disabled { cursor: default; }
+.doko-handcard:not(.is-playable) .pc { filter: brightness(0.62) saturate(0.7); }
+.doko-handcard.is-playable { cursor: pointer; }
+.doko-handcard.is-playable .pc { outline: 2px solid var(--accent); }
+.doko-handcard.is-selected .pc { outline: 3px solid var(--accent); }
+@media (hover: hover) {
+  .doko-handcard.is-playable:hover { transform: translateY(-14px) !important; z-index: 99 !important; }
+}
+
+.doko-error {
+  position: absolute;
+  bottom: calc(var(--hw) * var(--pc-ratio) + 3.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--danger);
+  color: #fff;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  z-index: 50;
+}
+
+/* Overlays: Pflichtansage, Kartenauswahl */
+.doko-sheet {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 100;
+  padding: 1rem;
+}
+.doko-sheet-card {
+  width: 100%;
+  max-width: 30rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.1rem;
+  animation: doko-rise 0.2s ease;
+}
+@keyframes doko-rise { from { transform: translateY(16px); opacity: 0; } }
+.doko-sheet-card h2 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.doko-sheet-row { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+.doko-sheet-row .primary { flex: 1; }
+.doko-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin: 0.6rem 0;
+}
+.doko-pick .doko-handcard { margin-left: 0; transform: none !important; }
+.doko-sheet-card > .primary { width: 100%; }
+
+/* Ladezustand */
+.doko--loading {
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+}
+.doko-spinner {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  animation: doko-spin 0.8s linear infinite;
+}
+@keyframes doko-spin { to { transform: rotate(360deg); } }
+
+/* Partie-Ende */
+.doko--end { align-items: center; justify-content: center; }
+.doko-end-card {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  padding: 1.4rem;
+  text-align: center;
+}
+.doko-end-card h1 { margin: 0 0 0.2rem; }
+.doko-standings { list-style: none; margin: 1rem 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.doko-standings li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+.doko-standings li.is-winner {
+  background: rgba(74, 156, 120, 0.16);
+  border: 1px solid rgba(74, 156, 120, 0.4);
+}
+.doko-place { font-size: 1.1rem; min-width: 1.8rem; }
+.doko-standing-name { flex: 1; text-align: left; display: flex; align-items: center; gap: 0.4rem; }
+.doko-standing-points { font-weight: 700; font-variant-numeric: tabular-nums; }
+.doko-fineprint { font-size: 0.72rem; margin: 0.4rem 0 1rem; }
+.doko-end-card .primary { width: 100%; }
