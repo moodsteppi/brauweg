@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { api, type GameSummary, type Me } from '../api';
-import { t } from '../i18n';
+import { DECKS, cardImage, type Deck } from '../decks';
+import { cardLabel, cardName, isRed, t } from '../i18n';
 
 /**
  * Erste Ebene ist die Spielauswahl, danach erst die Tischliste.
@@ -13,10 +14,12 @@ import { t } from '../i18n';
 export function GameSelect({
   me,
   onPick,
+  onDeckChange,
   onSignOut,
 }: {
   me: Me;
   onPick: (gameId: string) => void;
+  onDeckChange: (cardDeck: string) => void;
   onSignOut: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[]>([]);
@@ -78,6 +81,68 @@ export function GameSelect({
           </div>
         </div>
       ))}
+
+      <DeckPicker current={me.cardDeck} onChange={onDeckChange} />
     </main>
+  );
+}
+
+/** Die drei Karten, an denen sich die Blätter am deutlichsten unterscheiden. */
+const SAMPLE = [
+  { id: 1, suit: 'C', rank: 'Q' },
+  { id: 2, suit: 'H', rank: 'T' },
+  { id: 3, suit: 'D', rank: 'A' },
+];
+
+/**
+ * Kartenblatt waehlen.
+ *
+ * Mit Vorschau statt nur mit Namen: Welches Blatt einem liegt, entscheidet
+ * niemand nach einer Beschreibung, sondern nach dem Hinsehen.
+ */
+function DeckPicker({
+  current,
+  onChange,
+}: {
+  current: string;
+  onChange: (cardDeck: string) => void;
+}): React.JSX.Element {
+  return (
+    <>
+      <h2>Kartenblatt</h2>
+      <p className="muted">Gilt für dein Konto, also auch auf jedem anderen Gerät.</p>
+      <div className="decks">
+        {DECKS.map((deck) => (
+          <button
+            className={`deck${deck.id === current ? ' selected' : ''}`}
+            key={deck.id}
+            aria-pressed={deck.id === current}
+            onClick={() => onChange(deck.id)}
+          >
+            <div className="deck-preview">
+              {SAMPLE.map((card) => (
+                <DeckSample card={card} deck={deck} key={card.id} />
+              ))}
+            </div>
+            <strong>{t(deck.nameKey)}</strong>
+            <span className="muted">{t(deck.hintKey)}</span>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function DeckSample({
+  card,
+  deck,
+}: {
+  card: { suit: string; rank: string };
+  deck: Deck;
+}): React.JSX.Element {
+  const src = cardImage(deck, card);
+  if (src) return <img className="card-img" src={src} alt={cardName(card)} draggable={false} />;
+  return (
+    <span className={`card${isRed(card) ? ' red' : ''}`}>{cardLabel(card)}</span>
   );
 }

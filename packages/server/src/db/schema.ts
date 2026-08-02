@@ -108,6 +108,13 @@ export const account = pgTable(
     createdAt: createdAt(),
     premiumUntil: timestamp({ withTimezone: true }),
     coins: integer().notNull().default(0),
+    /**
+     * Gewaehltes Kartenblatt. Reine Darstellung, deshalb bewusst nur eine
+     * Kennung: Wie ein Deck aussieht, weiss allein der Client. Der Server
+     * kennt die zulaessigen Kennungen (src/decks.ts), damit nichts Fremdes in
+     * der Spalte landet, und sonst nichts.
+     */
+    cardDeck: text().notNull().default('text'),
     anonymizedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
