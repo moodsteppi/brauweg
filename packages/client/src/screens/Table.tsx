@@ -1,6 +1,8 @@
 import { useState } from 'react';
 
-import { cardLabel, isRed, t } from '../i18n';
+import { CardButton, CardFace } from '../CardFace';
+import { cardImage, type Deck } from '../decks';
+import { cardLabel, t } from '../i18n';
 import type { Action, Card } from '../protocol';
 import { useCountdown, useTable } from '../useTable';
 
@@ -15,9 +17,11 @@ const TURN_SECONDS = 60;
  */
 export function Table({
   tableId,
+  deck,
   onLeave,
 }: {
   tableId: string;
+  deck: Deck;
   onLeave: () => void;
 }): React.JSX.Element {
   const { view, party, table, error, connected, send } = useTable(tableId);
@@ -139,9 +143,11 @@ export function Table({
         <h2>Stich</h2>
         <div className="trick">
           {(round?.currentTrick ?? []).map((played) => (
-            <div className="card" key={played.card.id}>
-              <div className={isRed(played.card) ? 'red' : undefined}>
-                {cardLabel(played.card)}
+            <div className="played" key={played.card.id}>
+              {/* Beim Bildblatt traegt das Bild den Rand selbst, beim Textblatt
+                  bleibt die gelegte Karte die helle Flaeche wie bisher. */}
+              <div className={cardImage(deck, played.card) ? 'card--image' : 'card'}>
+                <CardFace card={played.card} deck={deck} />
               </div>
               <div className="muted" style={{ fontSize: '0.7rem' }}>
                 {nameOf(played.seat)}
@@ -187,6 +193,7 @@ export function Table({
         <CardPicker
           title={`Gib ${round.armut.handoverSize} Karten zurück`}
           hand={round.hand}
+          deck={deck}
           count={round.armut.handoverSize}
           onPick={(cards) => send({ type: 'armutReturn', seat: view.seat, cards })}
         />
@@ -195,6 +202,7 @@ export function Table({
         <CardPicker
           title={`Gib ${round.armut.handoverSize} Karten ab`}
           hand={round.hand}
+          deck={deck}
           count={round.armut.handoverSize}
           onPick={(cards) => send({ type: 'armutHandover', seat: view.seat, cards })}
         />
@@ -206,14 +214,13 @@ export function Table({
             sichtbar, aber abgedunkelt: Man soll sehen, was man hat. */}
         <div className="hand">
           {(round?.hand ?? []).map((card) => (
-            <button
-              className={`card${isRed(card) ? ' red' : ''}`}
+            <CardButton
+              card={card}
+              deck={deck}
               key={card.id}
               disabled={!playable.has(card.id)}
               onClick={() => send({ type: 'playCard', seat: view.seat, cardId: card.id })}
-            >
-              {cardLabel(card)}
-            </button>
+            />
           ))}
           {(round?.hand.length ?? 0) === 0 && (
             <span className="muted">Keine Karten auf der Hand.</span>
@@ -285,11 +292,13 @@ function Pflichtansage({
 function CardPicker({
   title,
   hand,
+  deck,
   count,
   onPick,
 }: {
   title: string;
   hand: Card[];
+  deck: Deck;
   count: number;
   onPick: (cards: number[]) => void;
 }): React.JSX.Element {
@@ -304,14 +313,13 @@ function CardPicker({
       <h2>{title}</h2>
       <div className="hand">
         {hand.map((card) => (
-          <button
-            className={`card${isRed(card) ? ' red' : ''}`}
+          <CardButton
+            card={card}
+            deck={deck}
             key={card.id}
-            style={picked.includes(card.id) ? { outline: '3px solid var(--accent)' } : undefined}
+            selected={picked.includes(card.id)}
             onClick={() => toggle(card.id)}
-          >
-            {cardLabel(card)}
-          </button>
+          />
         ))}
       </div>
       <button

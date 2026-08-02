@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
+import { deckById } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
@@ -35,10 +36,13 @@ export function App(): React.JSX.Element {
 
   if (!me) return <Auth onSignedIn={() => void reload()} />;
 
+  const deck = deckById(me.cardDeck);
+
   if (screen.name === 'table') {
     return (
       <Table
         tableId={screen.tableId}
+        deck={deck}
         onLeave={() => setScreen({ name: 'lobby', gameId: screen.gameId })}
       />
     );
@@ -58,6 +62,12 @@ export function App(): React.JSX.Element {
     <GameSelect
       me={me}
       onPick={(gameId) => setScreen({ name: 'lobby', gameId })}
+      // Erst umschalten, dann speichern: Das Blatt wechselt ohne Wartezeit,
+      // und schlaegt das Speichern fehl, holt reload() den echten Stand zurueck.
+      onDeckChange={(cardDeck) => {
+        setMe({ ...me, cardDeck });
+        void api.setCardDeck(cardDeck).catch(() => void reload());
+      }}
       onSignOut={async () => {
         await api.logout();
         setMe(null);

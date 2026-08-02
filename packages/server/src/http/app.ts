@@ -28,6 +28,7 @@ import {
   sessionFromToken,
   verifyEmail,
 } from '../auth/service.js';
+import { CARD_DECKS } from '../decks.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
   createTable,
@@ -222,6 +223,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         displayName: s.account.displayName,
         coins: s.account.coins,
         premiumUntil: s.account.premiumUntil,
+        cardDeck: s.account.cardDeck,
       })
       .from(s.account)
       .where(eq(s.account.id, accountId));
@@ -233,6 +235,27 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       .where(eq(s.accountGameStat.accountId, accountId));
 
     return reply.send({ ...account, stats });
+  });
+
+  /**
+   * Persoenliche Einstellungen. Bislang nur das Kartenblatt.
+   *
+   * Es gehoert an das Konto und nicht in den Browser: Wer am Rechner ein Blatt
+   * waehlt, will es am Telefon nicht erneut suchen. Geprueft wird gegen eine
+   * feste Liste — was der Server speichert, muss er auch benennen koennen.
+   */
+  app.patch('/api/me', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z.object({ cardDeck: z.enum(CARD_DECKS).optional() }).parse(request.body);
+
+    if (body.cardDeck) {
+      await deps.db
+        .update(s.account)
+        .set({ cardDeck: body.cardDeck })
+        .where(eq(s.account.id, accountId));
+    }
+
+    return reply.send({ ok: true });
   });
 
   /**

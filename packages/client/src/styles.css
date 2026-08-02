@@ -141,11 +141,99 @@ label select {
   opacity: 0.28;
 }
 
+/* Bildblaetter: Das Bild bringt Rand und Rundung selbst mit, die Schaltflaeche
+   tritt zurueck und liefert nur noch Trefferflaeche und Fokus. Die Breite ist
+   fest, damit eine Hand aus zwoelf Karten auf dem Handy nicht springt. */
+.card--image {
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0.35rem;
+  line-height: 0;
+}
+
+.card-img {
+  display: block;
+  width: 3.6rem;
+  height: auto;
+  border-radius: 0.35rem;
+}
+
+@media (min-width: 40rem) {
+  .card-img {
+    width: 4.6rem;
+  }
+}
+
+.card--image:hover:not(:disabled) {
+  outline: 2px solid var(--accent);
+}
+
+/* Unspielbare Karten bleiben absichtlich sichtbar — man soll sehen, was man
+   hat. Bei einem Bild reicht dafuer weniger Abdunklung als beim Text: Unter
+   0.28 wird aus einer Bildkarte ein grauer Fleck. */
+.card--image:disabled {
+  opacity: 0.5;
+  filter: saturate(0.5);
+}
+
+.card.selected {
+  outline: 3px solid var(--accent);
+}
+
+.played {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: center;
+}
+
 .trick {
   display: flex;
   gap: 0.5rem;
   min-height: 4.2rem;
+  align-items: flex-end;
+}
+
+/* Blattauswahl im Konto. */
+.decks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.deck {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0.8rem;
+  border-radius: 0.6rem;
+}
+
+.deck.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.deck-preview {
+  display: flex;
+  gap: 0.3rem;
   align-items: center;
+  margin-bottom: 0.25rem;
+  min-height: 3.4rem;
+}
+
+.deck-preview .card {
+  padding: 0.6rem 0.4rem;
+  font-size: 1.05rem;
+}
+
+.deck-preview .card-img {
+  width: 2.6rem;
 }
 
 .seat {

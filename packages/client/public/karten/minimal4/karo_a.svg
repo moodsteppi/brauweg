@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="726" viewBox="0 0 500 726">
+<rect x="3" y="3" width="494" height="720" rx="32" ry="32" fill="#ffffff" stroke="#c9d0d8" stroke-width="3"/>
+<text x="52" y="94" font-family="'DejaVu Sans','Helvetica Neue',Helvetica,Arial,sans-serif" font-size="86" font-weight="700" fill="#e07b00" text-anchor="middle">A</text><g transform="translate(29 117) scale(0.460000)" fill="#e07b00"><path d="M50 1 L 91 50 L 50 99 L 9 50 Z"/></g>
+<g transform="rotate(180 250.0 363.0)"><text x="52" y="94" font-family="'DejaVu Sans','Helvetica Neue',Helvetica,Arial,sans-serif" font-size="86" font-weight="700" fill="#e07b00" text-anchor="middle">A</text><g transform="translate(29 117) scale(0.460000)" fill="#e07b00"><path d="M50 1 L 91 50 L 50 99 L 9 50 Z"/></g></g>
+<g transform="translate(109 222) scale(2.820000)" fill="#e07b00"><path d="M50 1 L 91 50 L 50 99 L 9 50 Z"/></g>
+</svg>
