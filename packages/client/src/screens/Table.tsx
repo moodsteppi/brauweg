@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { CardBack, CardFront } from '../CardFace';
 import { sortByOrder } from '../cardsort';
@@ -8,6 +8,12 @@ import type { Action, Card } from '../protocol';
 import { useCountdown, useTable } from '../useTable';
 
 const TURN_SECONDS = 60;
+
+/** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
+    dass die Karten nicht aus dem Faecher wachsen. */
+const ZOOM_MIN = 0.7;
+const ZOOM_MAX = 1.45;
+const ZOOM_STEP = 0.15;
 
 /**
  * Der Doppelkopf-Tisch als mobile Oberflaeche.
@@ -35,6 +41,41 @@ export function Table({
 }): React.JSX.Element {
   const { view, party, table, error, connected, send, addBot, removeBot } = useTable(tableId);
   const secondsLeft = useCountdown(view?.turnDeadline ?? null);
+
+  // Tischgroesse: skaliert Hand- und Stichkarten. Am Geraet gespeichert, weil
+  // sie von Augen und Bildschirm abhaengt, nicht vom Konto.
+  const [zoom, setZoom] = useState<number>(() => {
+    const raw = Number(localStorage.getItem('tischZoom'));
+    return raw >= ZOOM_MIN && raw <= ZOOM_MAX ? raw : 1;
+  });
+  const changeZoom = (delta: number): void => {
+    const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom + delta)) * 100) / 100;
+    setZoom(next);
+    localStorage.setItem('tischZoom', String(next));
+  };
+
+  /**
+   * Bot-Knoepfe, auf die der Tisch noch nicht geantwortet hat. Der Klick geht
+   * ueber den WebSocket; bis die neue Tischnachricht eintrifft, zeigt der
+   * Knopf einen Kreisel statt gar nichts - sonst tippt man doppelt.
+   */
+  const [botBusy, setBotBusy] = useState<Record<number, 'add' | 'remove'>>({});
+  useEffect(() => {
+    if (!table) return;
+    setBotBusy((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const [key, kind] of Object.entries(prev)) {
+        const seat = table.seats.find((s) => s.seat === Number(key));
+        if (!seat) continue;
+        if ((kind === 'add' && seat.isBot) || (kind === 'remove' && !seat.isBot)) {
+          delete next[Number(key)];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [table]);
 
   /**
    * Name als Weg zum Profil, wo ein Konto dahintersteht. Bots und freie
@@ -98,13 +139,35 @@ export function Table({
               {/* Freie Plaetze mit einem Bot fuellen, gesetzte Bots freigeben —
                   direkt am Tisch, ohne Vorab-Entscheidung. */}
               {!seat.displayName && !seat.isBot && (
-                <button className="doko-seat-btn" onClick={() => addBot(seat.seat)}>
-                  + Bot
+                <button
+                  className="doko-seat-btn"
+                  disabled={!!botBusy[seat.seat]}
+                  onClick={() => {
+                    setBotBusy((b) => ({ ...b, [seat.seat]: 'add' }));
+                    addBot(seat.seat);
+                  }}
+                >
+                  {botBusy[seat.seat] ? (
+                    <span className="doko-btn-spinner" aria-label="Bot setzt sich…" />
+                  ) : (
+                    '+ Bot'
+                  )}
                 </button>
               )}
               {!seat.displayName && seat.isBot && (
-                <button className="doko-seat-btn" onClick={() => removeBot(seat.seat)}>
-                  entfernen
+                <button
+                  className="doko-seat-btn"
+                  disabled={!!botBusy[seat.seat]}
+                  onClick={() => {
+                    setBotBusy((b) => ({ ...b, [seat.seat]: 'remove' }));
+                    removeBot(seat.seat);
+                  }}
+                >
+                  {botBusy[seat.seat] ? (
+                    <span className="doko-btn-spinner" aria-label="Bot steht auf…" />
+                  ) : (
+                    'entfernen'
+                  )}
                 </button>
               )}
             </div>
@@ -207,7 +270,7 @@ export function Table({
     !otherActions.some((a) => a.type === 'armutHandover');
 
   return (
-    <div className="doko">
+    <div className="doko" style={{ '--zoom': zoom } as React.CSSProperties}>
       {/* Kopfzeile */}
       <header className="doko-top">
         <button className="doko-icon" onClick={onLeave} aria-label="Tisch verlassen">
@@ -224,6 +287,22 @@ export function Table({
             <span className="doko-badge doko-badge--bock">Bock ×{view.view.nextMultiplier}</span>
           )}
           {view.seat === null && <span className="doko-badge">Zuschauer</span>}
+          <button
+            className="doko-icon"
+            onClick={() => changeZoom(-ZOOM_STEP)}
+            disabled={zoom <= ZOOM_MIN}
+            aria-label="Karten verkleinern"
+          >
+            −
+          </button>
+          <button
+            className="doko-icon"
+            onClick={() => changeZoom(ZOOM_STEP)}
+            disabled={zoom >= ZOOM_MAX}
+            aria-label="Karten vergrößern"
+          >
+            +
+          </button>
         </div>
       </header>
 
@@ -522,6 +601,11 @@ function HandCard({
   trump: boolean;
   onPlay: () => void;
 }): React.JSX.Element {
+  // Nicht spielbare Karten sehen aus wie alle anderen - keine Hervorhebung,
+  // kein Abdunkeln. Wer eine antippt, bekommt ein kurzes Schuetteln als
+  // Antwort: die Karte bleibt liegen, die Hand bleibt lesbar.
+  const [shaking, setShaking] = useState(false);
+
   // Sanfter Faecher: die mittleren Karten stehen etwas hoeher, die aeusseren
   // sind leicht gekippt. Bei vielen Karten faellt beides schwaecher aus, damit
   // zwoelf Blatt auf ein Handy passen.
@@ -529,17 +613,20 @@ function HandCard({
   const off = index - mid;
   const rot = off * Math.min(3.2, 22 / Math.max(total, 1));
   const dip = Math.pow(Math.abs(off), 1.6) * (total > 7 ? 1.1 : 2.2);
-  const lift = playable ? 16 : 0;
-  const transform = `translateY(${dip - lift}px) rotate(${rot}deg)`;
+  const transform = `translateY(${dip}px) rotate(${rot}deg)`;
 
   return (
     <button
-      className={`doko-handcard${playable ? ' is-playable' : ''}${trump ? ' is-trump' : ''}`}
-      // Spielbare (angehobene) Karten liegen ueber ihren Nachbarn, damit sich
-      // im Faecher sicher die richtige treffen laesst.
-      style={{ transform, zIndex: playable ? 100 + index : index }}
-      disabled={!playable}
-      onClick={onPlay}
+      className={`doko-handcard${playable ? ' is-playable' : ''}${trump ? ' is-trump' : ''}${shaking ? ' is-shake' : ''}`}
+      style={{ transform, zIndex: index }}
+      // Nicht disabled: Der Tipp auf eine unspielbare Karte soll ankommen und
+      // das Schuetteln ausloesen, statt lautlos zu versanden.
+      aria-disabled={!playable}
+      onClick={() => {
+        if (playable) onPlay();
+        else setShaking(true);
+      }}
+      onAnimationEnd={() => setShaking(false)}
       aria-label={trump ? 'Trumpf' : undefined}
     >
       <div className="pc pc--hand">

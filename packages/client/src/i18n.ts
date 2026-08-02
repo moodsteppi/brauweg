@@ -80,6 +80,33 @@ const de: Record<string, string> = {
   'spielart.solo.queens': 'Damensolo',
   'spielart.solo.jacks': 'Bubensolo',
   'spielart.solo.fleshless': 'Fleischlos',
+
+  // Regelnamen der Tischerstellung. Der Editor zeigt jede boolesche Option
+  // aus defaultConfig; fehlt hier ein Eintrag, erscheint der rohe Schluessel -
+  // sichtbar haesslich statt unsichtbar kaputt.
+  'regel.secondDulleBeatsFirst': 'Zweite Dulle sticht Erste',
+  'regel.defusedDullen': 'Entschärfte Dullen',
+  'regel.schweinchen': 'Schweinchen',
+  'regel.superSchweine': 'Superschweine',
+  'regel.spFuchsGefangen': 'Fuchs gefangen',
+  'regel.spKarlchen': 'Karlchen',
+  'regel.spDoppelkopf': 'Doppelkopf-Sonderpunkt',
+  'regel.spCharlieGefangen': 'Karlchen gefangen',
+  'regel.spHerzdurchlauf': 'Herzdurchlauf',
+  'regel.spInSolo': 'Sonderpunkte im Solo',
+  'regel.soloLeadsOut': 'Solo kommt raus',
+  'regel.hochzeit': 'Hochzeit',
+  'regel.stilleHochzeit': 'Stille Hochzeit',
+  'regel.armut': 'Armut',
+  'regel.armutAnnounceReturnedTrumps': 'Armut: Rücktrümpfe ansagen',
+  'regel.schmeiss5Luschen': 'Schmeißen bei 5 Luschen',
+  'regel.schmeiss7Volle': 'Schmeißen bei 7 Vollen',
+  'regel.announcements': 'Re und Kontra',
+  'regel.absagen': 'Absagen',
+  'regel.pflichtansage': 'Pflichtansage',
+  'regel.bock': 'Bockrunden',
+  'regel.pflichtsolo': 'Pflichtsolo',
+  'regel.training': 'Training',
 };
 
 /**
