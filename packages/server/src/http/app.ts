@@ -31,6 +31,14 @@ import {
 import { CARD_DECKS } from '../decks.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
+  acceptFriendship,
+  listFriendships,
+  playerProfile,
+  removeFriendship,
+  requestFriendship,
+  searchPlayers,
+} from '../social/service.js';
+import {
   createTable,
   joinTable,
   leaveLobby,
@@ -321,6 +329,49 @@ export function buildApp(deps: AppDeps): FastifyInstance {
 
     await anonymizeAccount(deps.db, accountId);
     void reply.clearCookie(SESSION_COOKIE, { path: '/' });
+    return reply.send({ ok: true });
+  });
+
+  // -------------------------------------------------------------------------
+  // Profile und Freunde
+  // -------------------------------------------------------------------------
+
+  /** Namenssuche zum Anfreunden. Vor der Profilroute, sonst faengt :id "search". */
+  app.get('/api/players', async (request, reply) => {
+    const viewerId = await requireAccount(request);
+    const { q } = z.object({ q: z.string().max(60) }).parse(request.query);
+    return reply.send(await searchPlayers(deps.db, viewerId, q));
+  });
+
+  app.get('/api/players/:accountId', async (request, reply) => {
+    const viewerId = await requireAccount(request);
+    const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    return reply.send(await playerProfile(deps.db, viewerId, accountId));
+  });
+
+  app.get('/api/friends', async (request, reply) => {
+    const meId = await requireAccount(request);
+    return reply.send(await listFriendships(deps.db, meId));
+  });
+
+  app.post('/api/friends/:accountId/request', async (request, reply) => {
+    const meId = await requireAccount(request);
+    const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    return reply.send(await requestFriendship(deps.db, meId, accountId));
+  });
+
+  app.post('/api/friends/:accountId/accept', async (request, reply) => {
+    const meId = await requireAccount(request);
+    const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    await acceptFriendship(deps.db, meId, accountId);
+    return reply.send({ ok: true });
+  });
+
+  /** Entfernt Freundschaft, lehnt eine Anfrage ab oder zieht die eigene zurueck. */
+  app.delete('/api/friends/:accountId', async (request, reply) => {
+    const meId = await requireAccount(request);
+    const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    await removeFriendship(deps.db, meId, accountId);
     return reply.send({ ok: true });
   });
 

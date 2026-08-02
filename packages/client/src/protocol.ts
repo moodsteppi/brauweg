@@ -89,13 +89,23 @@ export interface ViewMessage {
   ruleSetVersion: number;
 }
 
+export interface SeatInfo {
+  seat: number;
+  displayName: string | null;
+  /** Kennung für den Sprung zum Profil. Null bei freien Plätzen und Bots. */
+  accountId: string | null;
+  isBot: boolean;
+  /** Profilbild-URL oder null. */
+  avatarUrl: string | null;
+}
+
 export interface TableMessage {
   v: number;
   game: string;
   type: 'table';
   tableId: string;
   status: 'waiting' | 'running' | 'finished' | 'abandoned';
-  seats: { seat: number; displayName: string | null; isBot: boolean; avatarUrl: string | null }[];
+  seats: SeatInfo[];
   missing: number;
   rounds: number;
 }
@@ -106,7 +116,9 @@ export interface PartyMessage {
   type: 'party';
   tableId: string;
   standings: { seat: number; points: number; place: number; left: boolean }[];
-  seats: { seat: number; displayName: string | null; isBot: boolean; avatarUrl: string | null }[];
+  seats: SeatInfo[];
+  /** Gebuchte Trophäen je Sitz, gefüllt erst nach Partie-Ende. */
+  trophies?: { seat: number; delta: number; reason: string }[];
 }
 
 export interface ErrorMessage {
