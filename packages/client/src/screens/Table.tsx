@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
+import { regelBild } from '../regelbilder';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { gameTypeLabel, t } from '../i18n';
@@ -1123,6 +1124,9 @@ function RegelBlatt({
             <div className="regeln">
               {flags.map(([key, value]) => (
                 <span key={key} className={`regel${value ? ' is-on' : ''}`}>
+                  <span className="regel-bild" aria-hidden="true">
+                    {regelBild(key)}
+                  </span>
                   {t(`regel.${key}`)}
                   <span className="regel-check" aria-hidden="true">
                     ✓

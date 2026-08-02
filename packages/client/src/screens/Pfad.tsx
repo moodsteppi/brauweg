@@ -95,7 +95,7 @@ function Weg(): React.JSX.Element {
 
 function Sternenhafen(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 340 240" aria-hidden="true">
+    <svg viewBox="-80 0 500 240" aria-hidden="true">
       <defs>
         <linearGradient id="pfHimmelStern" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#0a0d28" />
@@ -106,7 +106,7 @@ function Sternenhafen(): React.JSX.Element {
           <stop offset="1" stopColor="#1e2758" />
         </linearGradient>
       </defs>
-      <rect width="340" height="240" fill="url(#pfHimmelStern)" />
+      <rect x="-80" width="500" height="240" fill="url(#pfHimmelStern)" />
       <Weg />
       <circle className="pf-funkelt" cx="36" cy="30" r="1.8" fill="#fff" />
       <circle className="pf-funkelt f2" cx="120" cy="16" r="1.4" fill="#6ee7ff" />
@@ -154,7 +154,7 @@ function Sternenhafen(): React.JSX.Element {
 
 function Glutschlund(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 340 240" aria-hidden="true">
+    <svg viewBox="-80 0 500 240" aria-hidden="true">
       <defs>
         <linearGradient id="pfHimmelLava" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#1a0e20" />
@@ -165,7 +165,7 @@ function Glutschlund(): React.JSX.Element {
           <stop offset="1" stopColor="#ffb040" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <rect width="340" height="240" fill="url(#pfHimmelLava)" />
+      <rect x="-80" width="500" height="240" fill="url(#pfHimmelLava)" />
       <Weg />
       <circle className="pf-funkelt" cx="46" cy="36" r="1.5" fill="#ff9a6e" />
       <circle className="pf-funkelt f2" cx="292" cy="46" r="1.5" fill="#ffb040" />
@@ -199,7 +199,7 @@ function Glutschlund(): React.JSX.Element {
 
 function Frostspitze(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 340 240" aria-hidden="true">
+    <svg viewBox="-80 0 500 240" aria-hidden="true">
       <defs>
         <linearGradient id="pfHimmelEis" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#0e1a3a" />
@@ -210,7 +210,7 @@ function Frostspitze(): React.JSX.Element {
           <stop offset="1" stopColor="#8ac4e8" />
         </linearGradient>
       </defs>
-      <rect width="340" height="240" fill="url(#pfHimmelEis)" />
+      <rect x="-80" width="500" height="240" fill="url(#pfHimmelEis)" />
       <Weg />
       <path className="pf-polar" d="M20 30 Q100 6 180 28 Q260 50 330 22 L330 44 Q250 70 170 48 Q90 28 20 52 Z" fill="#43d17c" opacity="0.4" />
       <path className="pf-polar" style={{ animationDelay: '2.5s' }} d="M0 52 Q90 30 180 52 Q270 72 340 48 L340 64 Q260 88 170 66 Q80 46 0 70 Z" fill="#6ee7ff" opacity="0.3" />
@@ -248,7 +248,7 @@ function Frostspitze(): React.JSX.Element {
 
 function Wuestengrab(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 340 240" aria-hidden="true">
+    <svg viewBox="-80 0 500 240" aria-hidden="true">
       <defs>
         <linearGradient id="pfHimmelSand" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#e88a4a" />
@@ -256,7 +256,7 @@ function Wuestengrab(): React.JSX.Element {
           <stop offset="1" stopColor="#f6d488" />
         </linearGradient>
       </defs>
-      <rect width="340" height="240" fill="url(#pfHimmelSand)" />
+      <rect x="-80" width="500" height="240" fill="url(#pfHimmelSand)" />
       <Weg />
       <circle cx="62" cy="52" r="22" fill="#fff0c0" />
       <circle cx="62" cy="52" r="32" fill="#fff0c0" opacity="0.3" />
@@ -293,14 +293,14 @@ function Wuestengrab(): React.JSX.Element {
 
 function Burgfels(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 340 240" aria-hidden="true">
+    <svg viewBox="-80 0 500 240" aria-hidden="true">
       <defs>
         <linearGradient id="pfHimmelBurg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#4b3ab0" />
           <stop offset="1" stopColor="#8a6fd8" />
         </linearGradient>
       </defs>
-      <rect width="340" height="240" fill="url(#pfHimmelBurg)" />
+      <rect x="-80" width="500" height="240" fill="url(#pfHimmelBurg)" />
       <Weg />
       <circle className="pf-funkelt" cx="40" cy="34" r="1.8" fill="#fff" />
       <circle className="pf-funkelt f2" cx="296" cy="52" r="1.6" fill="#ffe9a8" />
@@ -353,7 +353,7 @@ function Burgfels(): React.JSX.Element {
 
 function Wiesengrund(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 340 240" aria-hidden="true">
+    <svg viewBox="-80 0 500 240" aria-hidden="true">
       <defs>
         <linearGradient id="pfHimmelWiese" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#7ec8f0" />
@@ -364,7 +364,7 @@ function Wiesengrund(): React.JSX.Element {
           <stop offset="1" stopColor="#5e3c22" />
         </linearGradient>
       </defs>
-      <rect width="340" height="240" fill="url(#pfHimmelWiese)" />
+      <rect x="-80" width="500" height="240" fill="url(#pfHimmelWiese)" />
       <path
         d="M170 130 C 110 100, 230 40, 170 0"
         stroke="#ffd76e"

@@ -741,6 +741,295 @@ td {
 .doko-pick .doko-handcard { position: static; margin-left: 0; transform: none !important; }
 .doko-sheet-card > .primary { width: 100%; }
 
+/* =========================================================================
+   Lobby — Tisch erstellen und beitreten, auf dem Filz des Spieltischs
+   ========================================================================= */
+
+.doko--lobby {
+  overflow: hidden;
+}
+
+.lobby-rolle {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.2rem 0.3rem 1rem;
+}
+
+.lobby-panel {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.lobby-panel h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.lobby-wahl {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+.lobby-gruppe {
+  flex: 1;
+  min-width: 0;
+}
+
+.lobby-gruppe > .muted {
+  display: block;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Chips zum Antippen statt Auswahlfeldern: eine Hand, ein Daumen. */
+.lobby-chips {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.lobby-chip {
+  flex: 1;
+  padding: 0.45rem 0;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.lobby-chip.is-an {
+  background: rgba(74, 156, 120, 0.2);
+  border-color: var(--accent);
+  color: #9fe0c1;
+}
+
+.lobby-regelzeile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-bottom: 0.7rem;
+  text-align: left;
+}
+
+.lobby-regelzeile strong {
+  color: var(--text);
+}
+
+.lobby-erstellen {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.05rem;
+  border-radius: 0.65rem;
+}
+
+.lobby-fussnote {
+  font-size: 0.72rem;
+  text-align: center;
+  margin: 0.5rem 0 0;
+}
+
+.lobby-ueberschrift {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.lobby-tisch {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.45rem;
+}
+
+.lobby-tischinfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.lobby-tischinfo strong {
+  font-size: 0.88rem;
+}
+
+.lobby-tischinfo .muted {
+  font-size: 0.72rem;
+}
+
+/* Ein Punkt je Platz: voll oder frei, auf einen Blick. */
+.lobby-punkte {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.lobby-punkte i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.lobby-punkte i.is-frei {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* =========================================================================
+   Spielauswahl — Vollbild mit einem Bild je Spiel
+   ========================================================================= */
+
+.spielwahl {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 30rem;
+  z-index: 130;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(16, 10, 40, 0.98), rgba(22, 18, 54, 0.98));
+  padding-top: env(safe-area-inset-top);
+  animation: doko-rise 0.2s ease;
+}
+
+.spielwahl-kopf {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem 0.4rem;
+}
+
+.spielwahl-kopf h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.spielwahl-zu {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.spielwahl-rolle {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.3rem 0.8rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+.spielwahl-karte {
+  position: relative;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  border: 2px solid rgba(166, 120, 242, 0.55);
+  background: #241a55;
+  padding: 0;
+  text-align: left;
+  flex: 0 0 auto;
+}
+
+.spielwahl-karte.is-offen {
+  border-color: var(--gold);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.spielwahl-karte svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.spielwahl-karte.is-zu svg {
+  filter: saturate(0.55) brightness(0.75);
+}
+
+.spielwahl-flaeche {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+}
+
+.spielwahl-titel {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-items: flex-start;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.spielwahl-titel strong {
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.spielwahl-titel span {
+  font-size: 0.72rem;
+  opacity: 0.9;
+}
+
+.spielwahl-spielen {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 0.4rem 1rem;
+  border-radius: 0.6rem;
+  background: linear-gradient(180deg, #62b96b, #337a42);
+  color: #f2fff0;
+  box-shadow: 0 3px 0 #1d4f28;
+  pointer-events: none;
+}
+
+.spielwahl-stimme {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.32rem 0.7rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  color: #e8e2f8;
+}
+
 /* Ladezustand */
 .doko--loading {
   align-items: center;
@@ -1330,18 +1619,34 @@ td {
 .regel {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.15rem;
   text-align: center;
-  min-height: 3.4rem;
-  padding: 0.5rem 0.6rem;
+  min-height: 3.6rem;
+  padding: 0.45rem 0.5rem;
   border-radius: 0.7rem;
   background: rgba(255, 255, 255, 0.04);
   border: 2px solid var(--line);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.2;
+}
+
+/* Das Bild zur Regel: schneller erkannt als jeder Name. Gesperrte Kacheln
+   lassen es verblassen, aktive zeigen es in voller Farbe. */
+.regel-bild {
+  font-size: 1.25rem;
+  line-height: 1;
+  filter: saturate(0.4);
+  opacity: 0.7;
+}
+
+.regel.is-on .regel-bild {
+  filter: none;
+  opacity: 1;
 }
 
 .regel:hover:not(:disabled) {
