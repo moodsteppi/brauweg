@@ -284,6 +284,7 @@ export class Gateway {
       .map((row) => ({
         seat: row.seatIndex,
         displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
+        accountId: row.accountId,
         isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
       }));
 
@@ -311,6 +312,7 @@ export class Gateway {
       tableId,
       standings: this.runtime.standings(party),
       seats,
+      trophies: party.awards,
     };
 
     for (const connection of targets) {

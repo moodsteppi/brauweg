@@ -25,14 +25,33 @@ const TURN_SECONDS = 60;
 export function Table({
   tableId,
   deck,
+  onShowProfile,
   onLeave,
 }: {
   tableId: string;
   deck: Deck;
+  onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
   const { view, party, table, error, connected, send } = useTable(tableId);
   const secondsLeft = useCountdown(view?.turnDeadline ?? null);
+
+  /**
+   * Name als Weg zum Profil, wo ein Konto dahintersteht. Bots und freie
+   * Plaetze bleiben Text - ein Bot hat kein Profil, und so sieht man nebenbei,
+   * wer echt ist.
+   */
+  const spielerName = (
+    text: string,
+    accountId: string | null | undefined,
+  ): React.JSX.Element =>
+    accountId ? (
+      <button className="spielername" onClick={() => onShowProfile(accountId)}>
+        {text}
+      </button>
+    ) : (
+      <span>{text}</span>
+    );
 
   // Wartebereich: freie Plaetze sind kein Fehler, sondern der Normalfall. Man
   // sieht, wer schon da ist; ist der letzte Platz belegt, geht es von selbst
@@ -66,7 +85,13 @@ export function Table({
                 secondsLeft={null}
                 isBot={seat.isBot}
               />
-              <span>{seat.displayName ?? 'frei'}</span>
+              {/* Jans Optik, meine Verlinkung: Wer schon wartet, kann sich die
+                  Mitspieler vorab ansehen und gleich anfreunden. */}
+              {seat.displayName ? (
+                spielerName(seat.displayName, seat.accountId)
+              ) : (
+                <span>frei</span>
+              )}
             </div>
           ))}
         </div>
@@ -107,7 +132,15 @@ export function Table({
   };
 
   if (view.finished) {
-    return <PartyEnd view={view} party={party} nameOf={nameOf} onLeave={onLeave} />;
+    return (
+      <PartyEnd
+        view={view}
+        party={party}
+        nameOf={nameOf}
+        spielerName={spielerName}
+        onLeave={onLeave}
+      />
+    );
   }
 
   const playable = new Set(
@@ -173,7 +206,9 @@ export function Table({
         </div>
       </header>
 
-      {/* Spielfläche */}
+      {/* Spielfläche. Namen sind hier bewusst NICHT klickbar: Mitten im Zug
+          versehentlich ein Profil zu oeffnen risse einen vom Tisch. Der Weg
+          zum Profil fuehrt ueber Wartebereich und Partie-Ende. */}
       <div className={`doko-felt seats-${seatCount}`}>
         {opponents.map((seat) => (
           <OpponentSeat
@@ -605,15 +640,27 @@ function PartyEnd({
   view,
   party,
   nameOf,
+  spielerName,
   onLeave,
 }: {
   view: NonNullable<ReturnType<typeof useTable>['view']>;
   party: ReturnType<typeof useTable>['party'];
   nameOf: (seat: number) => string;
+  spielerName: (text: string, accountId: string | null | undefined) => React.JSX.Element;
   onLeave: () => void;
 }): React.JSX.Element {
   const standings = [...(party?.standings ?? [])].sort((a, b) => a.place - b.place);
   const medals = ['🥇', '🥈', '🥉'];
+
+  const awards = party?.trophies ?? [];
+  const gewertet = awards.length > 0;
+
+  /** Summe je Sitz: Platzierung und eventuelle Verlassen-Strafe zusammen. */
+  const trophiesOf = (seat: number): number =>
+    awards.filter((a) => a.seat === seat).reduce((sum, a) => sum + a.delta, 0);
+
+  const accountOf = (seat: number): string | null | undefined =>
+    party?.seats.find((s) => s.seat === seat)?.accountId;
 
   return (
     <div className="doko doko--end">
@@ -621,18 +668,32 @@ function PartyEnd({
         <h1>Partie beendet</h1>
         <p className="muted">{view.view.totalRounds} Runden gespielt.</p>
         <ol className="doko-standings">
-          {standings.map((s, i) => (
-            <li key={s.seat} className={i === 0 ? 'is-winner' : undefined}>
-              <span className="doko-place">{medals[s.place - 1] ?? `${s.place}.`}</span>
-              <span className="doko-standing-name">
-                {nameOf(s.seat)}
-                {s.left && <em className="doko-tag">ausgestiegen</em>}
-              </span>
-              <span className="doko-standing-points">{s.points}</span>
-            </li>
-          ))}
+          {standings.map((s, i) => {
+            const delta = trophiesOf(s.seat);
+            return (
+              <li key={s.seat} className={i === 0 ? 'is-winner' : undefined}>
+                <span className="doko-place">{medals[s.place - 1] ?? `${s.place}.`}</span>
+                <span className="doko-standing-name">
+                  {spielerName(nameOf(s.seat), accountOf(s.seat))}
+                  {s.left && <em className="doko-tag">ausgestiegen</em>}
+                  {/* Das Vorzeichen ist die Information: +9 ist ein Gewinn,
+                      -9 ein Verlust, 0 ehrlich eine Null. */}
+                  {gewertet && (
+                    <em className="doko-tag">
+                      {delta > 0 ? `+${delta}` : delta} 🏆
+                    </em>
+                  )}
+                </span>
+                <span className="doko-standing-points">{s.points}</span>
+              </li>
+            );
+          })}
         </ol>
-        <p className="muted doko-fineprint">Trophäen zählen nur an Tischen ohne Bots.</p>
+        <p className="muted doko-fineprint">
+          {gewertet
+            ? 'Trophäen sind gutgeschrieben — dein Stand steht im Profil.'
+            : 'Keine Trophäen: An Tischen mit Bots wird nicht gewertet.'}
+        </p>
         <button className="primary" onClick={onLeave}>
           Zurück zur Lobby
         </button>
