@@ -521,13 +521,42 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   if (deps.clientDir) {
     void app.register(fastifyStatic, { root: deps.clientDir });
 
+    // Caching des Clients steuern.
+    //
+    // index.html traegt keinen Hash und verweist auf die gehashten Bundles.
+    // Wird sie gecacht, zeigt eine alte index.html nach einem Deploy auf ein
+    // Bundle, das es nicht mehr gibt - und die Seite bleibt weiss. Also nie
+    // cachen. Die Assets darunter aendern bei jeder Aenderung ihren Namen und
+    // duerfen deshalb dauerhaft im Cache bleiben.
+    app.addHook('onSend', async (request, reply) => {
+      const path = request.url.split('?')[0] ?? '';
+      if (path.startsWith('/api') || path.startsWith('/ws')) return;
+      if (path.startsWith('/assets/')) {
+        reply.header('cache-control', 'public, max-age=31536000, immutable');
+      } else {
+        // index.html und jede SPA-Route: nie cachen, damit ein Deploy sofort
+        // greift und keine alte Seite auf ein verschwundenes Bundle zeigt.
+        reply.header('cache-control', 'no-cache');
+      }
+    });
+
     app.setNotFoundHandler((request, reply) => {
-      // API und WebSocket bleiben ehrliche 404. Alles andere ist eine Route
-      // der Einzelseiten-Anwendung und bekommt die index.html.
-      if (request.url.startsWith('/api') || request.url.startsWith('/ws')) {
+      const path = request.url.split('?')[0] ?? '';
+
+      // API und WebSocket bleiben ehrliche 404.
+      if (path.startsWith('/api') || path.startsWith('/ws')) {
         return reply.status(404).send({ code: 'notFound', messageKey: 'error.notFound' });
       }
-      return reply.sendFile('index.html');
+
+      // Eine fehlende Datei mit Endung (ein altes Bundle, ein Bild) darf NICHT
+      // die index.html zurueckbekommen: Ein Browser, der ein veraltetes
+      // /assets/index-XXXX.js anfragt, bekaeme sonst HTML als "JavaScript"
+      // geliefert und die Seite bliebe weiss. Nur echte Navigationsrouten der
+      // Einzelseiten-Anwendung erhalten die index.html - und die ungecacht.
+      if (path.startsWith('/assets/') || /\.[a-z0-9]+$/i.test(path)) {
+        return reply.status(404).send({ code: 'notFound', messageKey: 'error.notFound' });
+      }
+      return reply.header('cache-control', 'no-cache').sendFile('index.html');
     });
   }
 
