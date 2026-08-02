@@ -1373,6 +1373,196 @@ td {
   display: grid;
 }
 
+/* =========================================================================
+   Trophaeenpfad — Inseln als Checkpoints
+   Jede Insel eine Welt, oben die Zukunft, unten der Anfang. Nicht erreichte
+   Welten liegen entsaettigt im Halbdunkel.
+   ========================================================================= */
+
+/* Randlos: hebt die Seitenpolsterung des front-body auf. */
+.pfad {
+  display: flex;
+  flex-direction: column;
+  margin: -0.4rem -1rem 1rem;
+}
+
+.insel {
+  position: relative;
+}
+
+.insel svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.insel.is-zu svg {
+  filter: saturate(0.4) brightness(0.65);
+}
+
+.insel-name {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.insel-name em {
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  opacity: 0.75;
+}
+
+.insel-cp {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.8rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--gold);
+  border: 1px solid rgba(226, 182, 79, 0.5);
+}
+
+.insel-cp.is-erreicht {
+  color: #7fe8a8;
+  border-color: rgba(127, 232, 168, 0.5);
+}
+
+/* Der eigene Standort: goldene Plakette am Fuss der aktuellen Insel. */
+.insel-du {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.28rem 0.85rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #2a1d04;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+}
+
+/* Der Spielen-Knopf klebt am unteren Rand des rollbaren Bereichs. */
+.front-play.is-schwebend {
+  position: sticky;
+  bottom: 0.4rem;
+  z-index: 10;
+  margin-top: 0.4rem;
+  box-shadow: 0 4px 0 #245442, 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+
+/* Leben auf den Inseln. Alle Bewegungen sind Zierde und enden bei
+   "weniger Bewegung" ersatzlos. */
+.pf-funkelt { animation: pf-funkeln 2.6s ease-in-out infinite; }
+.pf-funkelt.f2 { animation-delay: 0.9s; }
+.pf-funkelt.f3 { animation-delay: 1.7s; }
+@keyframes pf-funkeln {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+.pf-schwebt { animation: pf-schweben 6s ease-in-out infinite; }
+@keyframes pf-schweben {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.pf-weht {
+  animation: pf-wehen 3.4s ease-in-out infinite;
+  transform-origin: left center;
+  transform-box: fill-box;
+}
+@keyframes pf-wehen {
+  0%, 100% { transform: skewY(0deg) scaleX(1); }
+  50% { transform: skewY(-6deg) scaleX(0.92); }
+}
+
+.pf-glut { animation: pf-gluehen 2.2s ease-in-out infinite; }
+@keyframes pf-gluehen {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.pf-funke { animation: pf-steigen 3.4s linear infinite; opacity: 0; }
+.pf-funke.k2 { animation-delay: 1.1s; }
+.pf-funke.k3 { animation-delay: 2.3s; }
+@keyframes pf-steigen {
+  0% { transform: translateY(0); opacity: 0; }
+  12% { opacity: 0.9; }
+  100% { transform: translateY(-34px); opacity: 0; }
+}
+
+.pf-schnee { animation: pf-fallen 3.8s linear infinite; opacity: 0; }
+.pf-schnee.k2 { animation-delay: 1.3s; }
+.pf-schnee.k3 { animation-delay: 2.5s; }
+@keyframes pf-fallen {
+  0% { transform: translateY(-10px); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translateY(30px); opacity: 0; }
+}
+
+.pf-polar { animation: pf-polarlicht 7s ease-in-out infinite; }
+@keyframes pf-polarlicht {
+  0%, 100% { opacity: 0.35; transform: translateX(0); }
+  50% { opacity: 0.7; transform: translateX(8px); }
+}
+
+.pf-ring {
+  animation: pf-ringen 5s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+@keyframes pf-ringen {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.08); opacity: 0.4; }
+}
+
+.pf-blinkt { animation: pf-blinken 1.8s steps(2) infinite; }
+.pf-blinkt.b2 { animation-delay: 0.7s; }
+@keyframes pf-blinken {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.pf-zieht { animation: pf-ziehen 16s linear infinite; }
+@keyframes pf-ziehen {
+  0% { transform: translateX(-50px); }
+  100% { transform: translateX(390px); }
+}
+
+.pf-flattert { animation: pf-flattern 4.5s ease-in-out infinite; }
+@keyframes pf-flattern {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(6px, -5px); }
+  60% { transform: translate(-4px, -9px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-funkelt, .pf-schwebt, .pf-weht, .pf-glut, .pf-funke, .pf-schnee,
+  .pf-polar, .pf-ring, .pf-blinkt, .pf-zieht, .pf-flattert {
+    animation: none;
+  }
+  .pf-funkelt { opacity: 0.8; }
+  .pf-funke, .pf-schnee { opacity: 0.5; }
+}
+
 /* Anmeldung: schmale, mittige Karte - derselbe ruhige Auftritt wie danach. */
 main.auth {
   max-width: 24rem;
