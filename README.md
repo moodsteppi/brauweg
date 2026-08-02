@@ -43,7 +43,7 @@ npm run build
 npm test
 ```
 
-Erwartet: **109 Tests** im Doppelkopf-Paket, **44** im Server.
+Erwartet: **109 Tests** im Doppelkopf-Paket, **53** im Server.
 
 ### Lokal starten
 
@@ -114,6 +114,40 @@ es der **Session Pooler** (Port 5432) sein, nicht der Transaction Pooler auf
 6543: Letzterer ist für Serverless gedacht und unterstützt keine Prepared
 Statements. Die Direktverbindung `db.<projekt>.supabase.co` ist ohne Add-on nur
 über IPv6 erreichbar.
+
+## Kartenblätter
+
+Jedes Konto wählt sein Blatt selbst (`account.card_deck`, Vorgabe `text`). Die
+Wahl gehört an das Konto und nicht in den Browser: Wer am Rechner ein Blatt
+aussucht, will es am Telefon nicht erneut suchen.
+
+| Kennung | Blatt |
+|---|---|
+| `text` | Farbe und Wert als Zeichen (`♣D`). Lädt nichts nach, Vorgabe |
+| `minimal2` | Flache Bildkarten, klassisch zweifarbig |
+| `minimal4` | Dieselben Karten als Vierfarbenblatt |
+| `klassisch` | Gezeichnete Bildkarten |
+
+Die Bilder liegen unter
+[`packages/client/public/karten/<kennung>/`](packages/client/public/karten) und
+heißen `<farbe>_<rang>` — also `kreuz_9`, `pik_10`, `herz_b`, `karo_d`,
+`kreuz_k`, `herz_a`, dazu `ruecken`. Das Protokoll benennt Karten englisch
+(`H`/`J`); übersetzt wird das an genau einer Stelle, in
+[`packages/client/src/decks.ts`](packages/client/src/decks.ts).
+
+**Der Server kennt nur die Kennungen**
+([`src/decks.ts`](packages/server/src/decks.ts)), damit nichts Fremdes in der
+Spalte landet — wie ein Blatt aussieht, weiß allein der Client. Ein weiteres
+Blatt ist deshalb ein Verzeichnis mit Bildern, ein Eintrag in beiden Listen und
+sonst nichts.
+
+Woher die Bilder stammen und unter welcher Lizenz sie stehen, steht in
+[CREDITS.md](CREDITS.md).
+
+Bei den Bildblättern steht der ausgeschriebene Kartenname im `alt`-Text.
+Vorlesegeräte und ein nicht geladenes Bild ergeben damit dieselbe Ausgabe wie
+das Textblatt; ohne diesen Umweg wäre die Umstellung auf Bilder ein Rückschritt
+für alle, die nicht sehen.
 
 ## Grundsätze, die nicht aufgeweicht werden
 

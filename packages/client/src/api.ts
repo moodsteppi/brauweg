@@ -47,6 +47,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
 
+const patch = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
+
 export interface GameSummary {
   id: string;
   nameKey: string;
@@ -59,6 +62,8 @@ export interface Me {
   id: string;
   displayName: string;
   coins: number;
+  /** Gewaehltes Kartenblatt. Siehe decks.ts. */
+  cardDeck: string;
   stats: { gameId: string; trophies: number; parties: number; wins: number }[];
 }
 
@@ -92,6 +97,7 @@ export const api = {
   login: (email: string, password: string) => post<{ ok: true }>('/auth/login', { email, password }),
   logout: () => post<{ ok: true }>('/auth/logout'),
   me: () => request<Me>('/me'),
+  setCardDeck: (cardDeck: string) => patch<{ ok: true }>('/me', { cardDeck }),
   deleteMe: () => request<{ ok: true }>('/me', { method: 'DELETE' }),
 
   games: () => request<GameSummary[]>('/games'),

@@ -51,6 +51,15 @@ const de: Record<string, string> = {
   'error.invalidRequest': 'Diese Anfrage konnte der Server nicht verarbeiten.',
   'error.internal': 'Da ist etwas schiefgelaufen.',
 
+  'deck.text': 'Text',
+  'deck.text.hint': 'Farbe und Wert als Zeichen. Lädt nichts nach und bleibt auf dem Handy am kompaktesten.',
+  'deck.minimal2': 'Minimal, zweifarbig',
+  'deck.minimal2.hint': 'Klare Bildkarten. Kreuz und Pik schwarz, Herz und Karo rot.',
+  'deck.minimal4': 'Minimal, vierfarbig',
+  'deck.minimal4.hint': 'Jede Farbe hat eine eigene Farbe. Auf kleinen Bildschirmen am schnellsten zu trennen.',
+  'deck.klassisch': 'Klassisch',
+  'deck.klassisch.hint': 'Gezeichnete Bildkarten wie im Kartenspiel aus dem Schrank.',
+
   'phase.vorbehalt': 'Vorbehalte',
   'phase.armutExchange': 'Armut',
   'phase.playing': 'Stiche',
@@ -79,6 +88,33 @@ const RANKS: Record<string, string> = {
  */
 export function cardLabel(card: { suit: string; rank: string }): string {
   return `${SUITS[card.suit] ?? card.suit}${RANKS[card.rank] ?? card.rank}`;
+}
+
+const SUIT_NAMES: Record<string, string> = {
+  C: 'Kreuz',
+  S: 'Pik',
+  H: 'Herz',
+  D: 'Karo',
+};
+const RANK_NAMES: Record<string, string> = {
+  A: 'Ass',
+  T: 'Zehn',
+  K: 'König',
+  Q: 'Dame',
+  J: 'Bube',
+  '9': 'Neun',
+};
+
+/**
+ * Ausgeschriebener Name, z.B. "Kreuz Dame".
+ *
+ * Bei den Bildblaettern ist das der alt-Text: Wer nicht sieht, bekommt dieselbe
+ * Auskunft wie alle anderen, und ein nicht geladenes Bild bleibt lesbar.
+ */
+export function cardName(card: { suit: string; rank: string }): string {
+  const suit = SUIT_NAMES[card.suit] ?? card.suit;
+  const rank = RANK_NAMES[card.rank] ?? card.rank;
+  return `${suit} ${rank}`;
 }
 
 export function isRed(card: { suit: string }): boolean {
