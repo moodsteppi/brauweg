@@ -70,6 +70,14 @@ export interface RuleSet {
   announcements: boolean;
   absagen: boolean;
 
+  // --- Zaehlhilfe ---
+  /**
+   * Erspielte Augen waehrend der Runde anzeigen. Eine Gedaechtnishilfe, kein
+   * Geheimniswissen - alle Stiche liegen ohnehin offen auf dem Tisch. Als
+   * Tischregel, damit alle am Tisch dieselbe Hilfe haben oder keiner.
+   */
+  countPoints: boolean;
+
   // --- Pflichtansage ---
   pflichtansage: boolean;
   pflichtansageThreshold: number; // 30
@@ -125,6 +133,8 @@ export const DEFAULT_RULESET: RuleSet = {
 
   announcements: true,
   absagen: true,
+
+  countPoints: false,
 
   pflichtansage: false,
   pflichtansageThreshold: 30,

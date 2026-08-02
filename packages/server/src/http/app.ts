@@ -45,6 +45,7 @@ import {
   listRuleSets,
   listTables,
   saveRuleSet,
+  tableRules,
   tableWithSeats,
 } from '../tables/service.js';
 import type { PartyRuntime } from '../runtime/party.js';
@@ -483,6 +484,13 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     const { table, seats } = await tableWithSeats(deps.db, tableId);
     return reply.send({ table, seats });
+  });
+
+  /** Wer am Tisch sitzt, muss nachlesen koennen, welche Regeln hier gelten. */
+  app.get('/api/tables/:tableId/rules', async (request, reply) => {
+    await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    return reply.send({ config: await tableRules(deps.db, tableId) });
   });
 
   app.post('/api/tables/:tableId/join', async (request, reply) => {

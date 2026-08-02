@@ -209,6 +209,27 @@ export async function listTables(db: Db, filter: LobbyFilter) {
   }));
 }
 
+/**
+ * Der Regelsatz eines Tisches, festgeschrieben auf die Version beim Erstellen.
+ * Jeder am Tisch (und jeder Angemeldete) darf ihn sehen: Wer mitspielt, muss
+ * nachvollziehen koennen, was hier gilt.
+ */
+export async function tableRules(db: Db, tableId: string): Promise<Record<string, unknown>> {
+  const [table] = await db
+    .select({ ruleSetId: s.gameTable.ruleSetId, ruleSetVersion: s.gameTable.ruleSetVersion })
+    .from(s.gameTable)
+    .where(eq(s.gameTable.id, tableId));
+  if (!table) throw notFound('tableUnknown');
+
+  const [rs] = await db
+    .select({ config: s.ruleSet.config })
+    .from(s.ruleSet)
+    .where(and(eq(s.ruleSet.id, table.ruleSetId), eq(s.ruleSet.version, table.ruleSetVersion)));
+  if (!rs) throw notFound('ruleSetUnknown');
+
+  return rs.config as Record<string, unknown>;
+}
+
 export async function tableWithSeats(db: Db, tableId: string) {
   const [table] = await db.select().from(s.gameTable).where(eq(s.gameTable.id, tableId));
   if (!table) throw notFound('tableUnknown');

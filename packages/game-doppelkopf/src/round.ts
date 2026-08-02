@@ -722,7 +722,7 @@ export interface PlayerView {
   readonly myParty: Party | null;
   /** Oeffentlich bekannte Parteizugehoerigkeit anderer Sitze. */
   readonly knownParties: Readonly<Record<number, Party>>;
-  /** Aktueller Punktestand: erspielte Augen je Sitz. */
+  /** Erspielte Augen je Sitz. Leer, wenn die Regel countPoints aus ist. */
   readonly standings: Readonly<Record<number, number>>;
   readonly pendingPflichtansage: PendingPflichtansage | null;
   readonly result: RoundResult | null;
@@ -746,11 +746,15 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
   const hand = state.hands[seat] ?? [];
   const leadCard = state.currentTrick[0]?.card ?? null;
 
-  const standings: Record<number, number> = Object.fromEntries(
-    state.seats.map((s) => [s, 0]),
-  );
-  for (const t of state.tricks) {
-    standings[t.winnerSeat] += sumValues(t.played.map((p) => p.card));
+  // Zaehlhilfe nur, wenn die Tischregel sie erlaubt. Es ist kein Geheimnis -
+  // alle Stiche liegen offen -, aber ohne die Regel soll auch niemand die
+  // Rechenarbeit abgenommen bekommen.
+  const standings: Record<number, number> = {};
+  if (state.rs.countPoints) {
+    for (const s of state.seats) standings[s] = 0;
+    for (const t of state.tricks) {
+      standings[t.winnerSeat] += sumValues(t.played.map((p) => p.card));
+    }
   }
 
   // Oeffentlich ist die Partei nur, wo sie ohnehin sichtbar ist: Solist,
