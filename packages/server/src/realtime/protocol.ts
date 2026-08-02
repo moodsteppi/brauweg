@@ -93,18 +93,26 @@ export interface ViewMessage {
  * die nie kam. Ein Tisch, der auf Mitspieler wartet, ist aber kein Fehlerfall,
  * sondern der Normalzustand jeder Lobby.
  */
+export interface SeatInfo {
+  readonly seat: number;
+  readonly displayName: string | null;
+  /**
+   * Konto-Kennung des Sitzenden, damit der Client Namen zum Profil verlinken
+   * kann. Kein Geheimnis: Dieselbe Kennung steht in der Profil-Adresse.
+   */
+  readonly accountId: string | null;
+  readonly isBot: boolean;
+  /** Profilbild-URL oder null. Nur eine kurze URL, nie die Bytes. */
+  readonly avatarUrl: string | null;
+}
+
 export interface TableMessage {
   readonly v: number;
   readonly game: GameId;
   readonly type: 'table';
   readonly tableId: string;
   readonly status: 'waiting' | 'running' | 'finished' | 'abandoned';
-  readonly seats: readonly {
-    readonly seat: number;
-    readonly displayName: string | null;
-    readonly isBot: boolean;
-    readonly avatarUrl: string | null;
-  }[];
+  readonly seats: readonly SeatInfo[];
   /** Wie viele Menschen noch fehlen, bis automatisch gestartet wird. */
   readonly missing: number;
   readonly rounds: number;
@@ -116,12 +124,12 @@ export interface PartyMessage {
   readonly type: 'party';
   readonly tableId: string;
   readonly standings: readonly unknown[];
-  readonly seats: readonly {
-    readonly seat: number;
-    readonly displayName: string | null;
-    readonly isBot: boolean;
-    readonly avatarUrl: string | null;
-  }[];
+  readonly seats: readonly SeatInfo[];
+  /**
+   * Gebuchte Trophaeen je Sitz, gefuellt erst nach Partie-Ende. Leer bei
+   * Tischen, die nicht fuer die Rangliste zaehlen. Additive Erweiterung.
+   */
+  readonly trophies: readonly { seat: number; delta: number; reason: string }[];
 }
 
 export interface ErrorMessage {

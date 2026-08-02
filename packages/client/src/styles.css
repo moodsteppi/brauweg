@@ -243,6 +243,43 @@ label select {
   width: 2.6rem;
 }
 
+/* Kennzahlen im Profil. */
+.zahlen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.zahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.zahl strong {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Spielernamen sind Wege zum Profil, keine Schaltflaechen-Kaesten. */
+.spielername {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.spielername:hover:not(:disabled),
+.spielername:focus-visible {
+  text-decoration-color: var(--accent);
+  border-color: transparent;
+}
+
 .seat {
   display: flex;
   justify-content: space-between;

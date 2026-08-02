@@ -67,6 +67,13 @@ export interface LiveParty {
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   finished: boolean;
+  /**
+   * Gebuchte Trophaeen nach Partie-Ende, je Sitz. Leer bei Tischen, die nicht
+   * fuer die Rangliste zaehlen. Bleibt am Objekt, damit der Rundruf sie ans
+   * Partie-Ende haengen kann - gewonnene Trophaeen, die niemand sieht, sind
+   * keine.
+   */
+  awards: readonly { seat: number; delta: number; reason: string }[];
 }
 
 export type RuntimeListener = (tableId: string) => void;
@@ -207,6 +214,7 @@ export class PartyRuntime {
       timer: null,
       offlineTimer: null,
       finished: false,
+      awards: [],
     };
 
     this.live.set(tableId, liveParty);
@@ -268,6 +276,7 @@ export class PartyRuntime {
       timer: null,
       offlineTimer: null,
       finished: module.isFinished(state),
+      awards: [],
     };
 
     this.live.set(tableId, liveParty);
@@ -557,6 +566,7 @@ export class PartyRuntime {
       .where(eq(s.gameTable.id, party.tableId));
 
     await this.awardTrophies(party, standings);
+    await this.countStats(party, standings);
 
     // Die Partie bleibt nach dem Ende noch im Speicher. Wuerde sie hier
     // entfernt, ginge die Schlusssicht verloren: Der Rundruf holt sich den
@@ -564,6 +574,37 @@ export class PartyRuntime {
     // Bildschirm, und die Revanche eine Frist.
     this.emit(party.tableId);
     setTimeout(() => this.live.delete(party.tableId), this.opts.finishedRetentionMs).unref?.();
+  }
+
+  /**
+   * Dauerhafte Zaehler je Konto und Spiel.
+   *
+   * Getrennt von der Wertung, mit Absicht: Die Rangliste zaehlt nur Tische
+   * ohne Bots, das Profil aber jede beendete Partie. Wer fuenfmal gegen Bots
+   * gespielt hat, soll kein leeres Profil sehen - nur in die Rangliste gehoert
+   * das nicht. Die Zaehler sind laut Plan dauerhaft und aggregiert, damit
+   * Statistiken auch dann noch stimmen, wenn alte Partiedetails laengst
+   * geloescht sind.
+   */
+  private async countStats(
+    party: LiveParty,
+    standings: readonly PartyStanding[],
+  ): Promise<void> {
+    for (const standing of standings) {
+      const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
+      if (!accountId) continue;
+
+      const keys = standing.place === 1 ? ['parties', 'wins'] : ['parties'];
+      for (const key of keys) {
+        await this.db
+          .insert(s.statCounter)
+          .values({ accountId, gameId: party.gameId, key, value: 1 })
+          .onConflictDoUpdate({
+            target: [s.statCounter.accountId, s.statCounter.gameId, s.statCounter.key],
+            set: { value: sql`${s.statCounter.value} + 1` },
+          });
+      }
+    }
   }
 
   private async awardTrophies(
@@ -577,6 +618,8 @@ export class PartyRuntime {
       place: standing.place,
       left: standing.left || party.leftSeats.has(standing.seat),
     }));
+
+    const booked: { seat: number; delta: number; reason: string }[] = [];
 
     for (const award of awardForParty(placements)) {
       const accountId = party.seats.find((seat) => seat.index === award.seat)?.accountId;
@@ -633,7 +676,11 @@ export class PartyRuntime {
         delta: Math.round(award.delta),
         reason: award.reason,
       });
+
+      booked.push({ seat: award.seat, delta: Math.round(award.delta), reason: award.reason });
     }
+
+    party.awards = booked;
   }
 
   private requireLive(tableId: string): LiveParty {
