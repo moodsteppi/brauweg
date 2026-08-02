@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api, type FriendLists, type GameSummary, type Me, type PlayerRef } from '../api';
 import { DECKS, cardImage, type Deck } from '../decks';
 import { cardLabel, cardName, isRed, t } from '../i18n';
+import { Trophaeenpfad } from './Pfad';
 import { Profile } from './Profile';
 
 /**
@@ -223,11 +224,12 @@ function TabButton({
 }
 
 /**
- * Hauptschirm: Trophaeen zuoberst, darunter die Spielwahl.
+ * Hauptschirm: der Trophaeenpfad.
  *
- * Vorschau-Spiele lassen sich nicht starten, aber man kann fuer sie
- * abstimmen. Die Reihenfolge der naechsten Monate bestimmen damit die
- * Leute, die tatsaechlich spielen.
+ * Die Trophaeen sind eine Reise von Insel zu Insel - jede ein Checkpoint,
+ * jede eine eigene Welt. Der Spielen-Knopf klebt am unteren Rand, damit er
+ * beim Erkunden des Pfads nie aus der Hand faellt. Darunter (am Ende des
+ * Pfads) liegen Tagesbonus und die Abstimmung ueber die naechsten Spiele.
  */
 function Spielen({
   me,
@@ -259,31 +261,10 @@ function Spielen({
 
   return (
     <>
-      <div className="front-hero">
-        <PokalIcon />
-        <strong className="front-hero-zahl">{trophies}</strong>
-        <span className="muted">Trophäen</span>
-      </div>
+      <Trophaeenpfad trophies={trophies} />
 
-      {playable.map((game) => {
-        const stat = statOf.get(game.id);
-        return (
-          <article className="front-mode" key={game.id}>
-            <h2>{t(game.nameKey)}</h2>
-            <p className="muted">
-              {game.seatCounts.join(', ')} Spieler
-              {stat &&
-                ` · ${stat.wins} ${stat.wins === 1 ? 'Sieg' : 'Siege'} aus ${stat.parties} gewerteten Partien`}
-            </p>
-            <button className="front-play" onClick={() => onPick(game.id)}>
-              Spielen
-            </button>
-          </article>
-        );
-      })}
-
-      {/* Der Tagesbonus steht schon da, wo er hingehoert - unter dem
-          Spielen-Knopf. Dahinter steckt noch nichts. */}
+      {/* Der Tagesbonus steht schon da, wo er hingehoert - am Fuss des
+          Pfads. Dahinter steckt noch nichts. */}
       <button className="front-bonus" onClick={() => onBald('Der Tagesbonus')}>
         <GeschenkIcon />
         Gratis-Münzen — Tagesbonus
@@ -305,6 +286,25 @@ function Spielen({
           </div>
         </div>
       ))}
+
+      {/* Klebt am unteren Rand, ueber dem gesamten Pfad. */}
+      {playable.map((game) => {
+        const stat = statOf.get(game.id);
+        return (
+          <button
+            key={game.id}
+            className="front-play is-schwebend"
+            title={
+              stat
+                ? `${stat.wins} ${stat.wins === 1 ? 'Sieg' : 'Siege'} aus ${stat.parties} gewerteten Partien`
+                : undefined
+            }
+            onClick={() => onPick(game.id)}
+          >
+            {t(game.nameKey)} spielen!
+          </button>
+        );
+      })}
     </>
   );
 }
