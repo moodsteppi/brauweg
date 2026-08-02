@@ -147,6 +147,9 @@ export const api = {
   }) => post<{ id: string }>('/tables', body),
   joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
+  /** Der festgeschriebene Regelsatz eines Tisches, zum Nachlesen am Tisch. */
+  tableRules: (id: string) =>
+    request<{ config: Record<string, unknown> }>(`/tables/${id}/rules`),
 
   profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
   searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),

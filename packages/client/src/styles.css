@@ -422,7 +422,8 @@ td {
   font-size: 0.76rem;
   text-align: center;
 }
-.doko-opp-name > span {
+.doko-opp-name > span,
+.doko-opp-name > .spielername {
   max-width: 6.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -682,11 +683,35 @@ td {
 .doko-sheet-card {
   width: 100%;
   max-width: 30rem;
+  max-height: 85dvh;
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 1rem;
   padding: 1.1rem;
   animation: doko-rise 0.2s ease;
+}
+
+/* Vorbehaltsauswahl: eine Spalte grosser Knoepfe, gut zu treffen. */
+.doko-vorbehalte {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.8rem 0;
+}
+
+.doko-vorbehalte button {
+  padding: 0.7rem;
+  font-weight: 600;
+}
+
+.doko-sheet-zurueck {
+  width: 100%;
+}
+
+/* Regelkacheln im Nachlese-Blatt: gleiche Optik wie beim Erstellen. */
+.doko-sheet-card .regeln {
+  margin: 0.6rem 0 0.9rem;
 }
 @keyframes doko-rise { from { transform: translateY(16px); opacity: 0; } }
 .doko-sheet-card h2 { margin: 0 0 0.5rem; font-size: 1.05rem; }
