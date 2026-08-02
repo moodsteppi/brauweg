@@ -139,6 +139,10 @@ export async function createTable(db: Db, input: CreateTableInput) {
     clubId: input.clubId ?? null,
   });
 
+  // Erst nach allen Pruefungen (auch der des Regelsatzes in saveRuleSet):
+  // Ein abgelehnter Tisch soll den alten nicht kosten.
+  await leaveOtherWaitingTables(db, input.accountId);
+
   const [table] = await db
     .insert(s.gameTable)
     .values({
@@ -230,6 +234,9 @@ export async function joinTable(db: Db, tableId: string, accountId: string) {
   if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
   if (seats.some((seat) => seat.accountId === accountId)) return table;
 
+  // Niemand wartet an zwei Tischen gleichzeitig.
+  await leaveOtherWaitingTables(db, accountId, tableId);
+
   if (table.visibility === 'public') {
     // Blockierte Spieler werden nur an oeffentlichen Tischen ausgeschlossen.
     const occupants = seats.map((seat) => seat.accountId).filter(Boolean) as string[];
@@ -266,6 +273,31 @@ export async function joinTable(db: Db, tableId: string, accountId: string) {
 
   await touch(db, tableId);
   return table;
+}
+
+/**
+ * Niemand wartet an zwei Tischen gleichzeitig: Wer einen neuen Tisch baut oder
+ * woanders beitritt, gibt seine Warteplaetze auf. Tische, an denen danach kein
+ * Mensch mehr sitzt, verfallen - so sammeln sich keine Geistertische in der
+ * Lobby, selbst wenn ein Client das Verlassen nie gemeldet hat.
+ */
+export async function leaveOtherWaitingTables(
+  db: Db,
+  accountId: string,
+  exceptTableId?: string,
+): Promise<void> {
+  const rows = await db
+    .select({ tableId: s.tableSeat.tableId })
+    .from(s.tableSeat)
+    .innerJoin(s.gameTable, eq(s.gameTable.id, s.tableSeat.tableId))
+    .where(and(eq(s.tableSeat.accountId, accountId), eq(s.gameTable.status, 'waiting')));
+
+  for (const row of rows) {
+    if (row.tableId === exceptTableId) continue;
+    // Startet der Tisch genau jetzt, gehoert der Spieler dorthin - dann
+    // greift die normale Verlassen-Logik mit Bot-Uebernahme, nicht diese.
+    await leaveLobby(db, row.tableId, accountId).catch(() => undefined);
+  }
 }
 
 /** Vor dem Start ist Verlassen straffrei und raeumt nur den Platz. */
@@ -357,16 +389,34 @@ export async function countsForRanking(db: Db, tableId: string): Promise<boolean
   return (rs?.config as { training?: boolean } | null)?.training !== true;
 }
 
-/** Tische ohne Aktivitaet verfallen nach 24 Stunden. */
-export async function expireStaleTables(db: Db, olderThanHours = 24): Promise<number> {
-  const cutoff = new Date(Date.now() - olderThanHours * 3600_000);
+/**
+ * Tische ohne Aktivitaet verfallen.
+ *
+ * Wartende deutlich schneller als laufende: Ein Wartetisch, an dem zwei
+ * Stunden nichts passiert, ist aufgegeben und verstopft nur die Lobby. Eine
+ * laufende Partie bekommt einen ganzen Tag - dort haengt ein Spielstand dran,
+ * und Vereinstische sollen pausieren koennen.
+ */
+export async function expireStaleTables(
+  db: Db,
+  waitingHours = 2,
+  runningHours = 24,
+): Promise<number> {
+  const waitingCutoff = new Date(Date.now() - waitingHours * 3600_000);
+  const runningCutoff = new Date(Date.now() - runningHours * 3600_000);
   const rows = await db
     .update(s.gameTable)
     .set({ status: 'abandoned' })
     .where(
-      and(
-        inArray(s.gameTable.status, ['waiting', 'running']),
-        sql`${s.gameTable.lastActivityAt} < ${cutoff}`,
+      or(
+        and(
+          eq(s.gameTable.status, 'waiting'),
+          sql`${s.gameTable.lastActivityAt} < ${waitingCutoff}`,
+        ),
+        and(
+          eq(s.gameTable.status, 'running'),
+          sql`${s.gameTable.lastActivityAt} < ${runningCutoff}`,
+        ),
       ),
     )
     .returning({ id: s.gameTable.id });
