@@ -9,6 +9,7 @@ import { registry } from '../src/games/registry.js';
 import {
   MAX_ROUNDS,
   createTable,
+  expireStaleTables,
   joinTable,
   leaveLobby,
   listTables,
@@ -352,4 +353,116 @@ test('die Lobby vor Spielstart zu verlassen ist straffrei', async (t) => {
 
   const ledger = await c.db.select().from(schema.trophyLedger);
   assert.equal(ledger.length, 0, 'kein Abzug fuers Verlassen der Lobby');
+});
+
+test('wer einen neuen Tisch erstellt, gibt den alten Warteplatz auf', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+
+  const alt = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+
+  // Der alte Tisch ist menschenleer und damit verfallen - die Lobby zeigt
+  // nur noch den neuen.
+  const { table } = await tableWithSeats(c.db, alt.id);
+  assert.equal(table.status, 'abandoned');
+  const lobby = await listTables(c.db, { gameId: 'doppelkopf' });
+  assert.equal(lobby.length, 1);
+});
+
+test('beitreten anderswo raeumt den eigenen Wartetisch, aber nicht den der anderen', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+  const carla = await createVerifiedAccount(c, 'Carla');
+
+  // Anna und Carla warten zusammen; Bert wartet allein.
+  const gemeinsam = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  await joinTable(c.db, gemeinsam.id, carla.accountId);
+  const bertsTisch = await createTable(c.db, {
+    accountId: bert.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+
+  await joinTable(c.db, bertsTisch.id, anna.accountId);
+
+  // Annas Platz am gemeinsamen Tisch ist frei, aber der Tisch lebt weiter -
+  // Carla wartet dort schliesslich noch.
+  const { table, seats } = await tableWithSeats(c.db, gemeinsam.id);
+  assert.equal(table.status, 'waiting');
+  assert.deepEqual(
+    seats.filter((seat) => seat.accountId).map((seat) => seat.accountId),
+    [carla.accountId],
+  );
+});
+
+test('wartende Tische verfallen nach zwei Stunden, laufende erst nach einem Tag', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+
+  const wartend = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  const laufend = await createTable(c.db, {
+    accountId: bert.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  const vorDreiStunden = new Date(Date.now() - 3 * 3600_000);
+  await c.db
+    .update(schema.gameTable)
+    .set({ lastActivityAt: vorDreiStunden })
+    .where(eq(schema.gameTable.id, wartend.id));
+  await c.db
+    .update(schema.gameTable)
+    .set({ status: 'running', lastActivityAt: vorDreiStunden })
+    .where(eq(schema.gameTable.id, laufend.id));
+
+  await expireStaleTables(c.db);
+
+  assert.equal((await tableWithSeats(c.db, wartend.id)).table.status, 'abandoned');
+  assert.equal(
+    (await tableWithSeats(c.db, laufend.id)).table.status,
+    'running',
+    'eine laufende Partie ueberlebt drei Stunden Stille - Vereinstische pausieren',
+  );
+
+  // Nach einem Tag Stille ist auch die laufende Partie verfallen.
+  await c.db
+    .update(schema.gameTable)
+    .set({ lastActivityAt: new Date(Date.now() - 25 * 3600_000) })
+    .where(eq(schema.gameTable.id, laufend.id));
+  await expireStaleTables(c.db);
+  assert.equal((await tableWithSeats(c.db, laufend.id)).table.status, 'abandoned');
 });
