@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
@@ -41,7 +41,6 @@ export function Table({
   onLeave: () => void;
 }): React.JSX.Element {
   const { view, party, table, error, connected, send, addBot, removeBot } = useTable(tableId);
-  const secondsLeft = useCountdown(view?.turnDeadline ?? null);
 
   // Tischgroesse: skaliert Hand- und Stichkarten. Am Geraet gespeichert, weil
   // sie von Augen und Bildschirm abhaengt, nicht vom Konto.
@@ -64,6 +63,39 @@ export function Table({
 
   /** Blatt mit den Tischregeln, aufklappbar im Wartebereich und in der Runde. */
   const [zeigeRegeln, setZeigeRegeln] = useState(false);
+  const [zeigeLetzten, setZeigeLetzten] = useState(false);
+
+  /** Stabile Referenz, damit memoisierte Handkarten nicht mitrendern. */
+  const playCard = useCallback(
+    (cardId: number) => send({ type: 'playCard', seat: view?.seat ?? 0, cardId }),
+    [send, view?.seat],
+  );
+
+  // Der volle Stich bleibt eine Sekunde liegen, bevor er abgeraeumt wird.
+  // Der Server raeumt sofort (currentTrick leer, lastTrick gefuellt); hier
+  // wird der letzte Stich kurz weitergezeigt. seenKey verhindert das
+  // Aufblitzen beim Beitritt mitten in einer Runde.
+  const lastTrickNow = view?.view.round?.lastTrick ?? null;
+  const lastKey = lastTrickNow
+    ? lastTrickNow.played.map((p) => p.card.id).join('.')
+    : null;
+  const [frozenKey, setFrozenKey] = useState<string | null>(null);
+  const seenKey = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (seenKey.current === undefined) {
+      seenKey.current = lastKey;
+      return;
+    }
+    if (lastKey && lastKey !== seenKey.current) {
+      seenKey.current = lastKey;
+      setFrozenKey(lastKey);
+      const handle = setTimeout(
+        () => setFrozenKey((k) => (k === lastKey ? null : k)),
+        1000,
+      );
+      return () => clearTimeout(handle);
+    }
+  }, [lastKey]);
   useEffect(() => {
     if (!table) return;
     setBotBusy((prev) => {
@@ -146,7 +178,7 @@ export function Table({
                 name={seat.displayName ?? (seat.isBot ? 'Bot' : 'frei')}
                 seatIndex={seat.seat}
                 active={false}
-                secondsLeft={null}
+                deadline={null}
                 isBot={seat.isBot}
                 avatarUrl={seat.avatarUrl}
               />
@@ -265,7 +297,12 @@ export function Table({
   );
 
   const hand = round ? sortByOrder(round.hand, round.order) : [];
-  const trick = round?.currentTrick ?? [];
+  const liveTrick = round?.currentTrick ?? [];
+  // Frisch voller Stich: eine Sekunde liegen lassen (siehe frozenKey oben).
+  const trick =
+    liveTrick.length === 0 && frozenKey !== null && frozenKey === lastKey && lastTrickNow
+      ? lastTrickNow.played
+      : liveTrick;
   const phaseText = round ? t(`phase.${round.phase}`) : 'Zwischen den Runden';
 
   // Aufspiel: wer den Stich anspielt. Laeuft ein Stich, ist es, wer die erste
@@ -319,6 +356,14 @@ export function Table({
           {view.seat === null && <span className="doko-badge">Zuschauer</span>}
           <button
             className="doko-icon"
+            onClick={() => setZeigeLetzten(true)}
+            disabled={!round?.lastTrick}
+            aria-label="Letzten Stich ansehen"
+          >
+            ⟲
+          </button>
+          <button
+            className="doko-icon"
             onClick={() => setZeigeRegeln(true)}
             aria-label="Tischregeln ansehen"
           >
@@ -361,7 +406,7 @@ export function Table({
             score={view.view.scores[seat] ?? 0}
             active={view.currentActor === seat}
             leader={leaderSeat === seat}
-            secondsLeft={view.currentActor === seat ? secondsLeft : null}
+            deadline={view.currentActor === seat ? view.turnDeadline : null}
             party={round?.knownParties?.[seat] ?? null}
             avatarUrl={avatarOf(seat)}
             deck={deck}
@@ -429,13 +474,23 @@ export function Table({
 
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
 
+      {zeigeLetzten && round?.lastTrick && (
+        <LetzterStich
+          played={round.lastTrick.played}
+          winnerSeat={round.lastTrick.winnerSeat}
+          nameOf={nameOf}
+          deck={deck}
+          onClose={() => setZeigeLetzten(false)}
+        />
+      )}
+
       {/* Eigener Bereich: Name, Partei, Hand */}
       <div className="doko-me">
         <Avatar
           name={view.seat === null ? 'Du' : nameOf(view.seat)}
           seatIndex={view.seat ?? 0}
           active={view.currentActor === view.seat}
-          secondsLeft={view.currentActor === view.seat ? secondsLeft : null}
+          deadline={view.currentActor === view.seat ? view.turnDeadline : null}
           avatarUrl={view.seat === null ? null : avatarOf(view.seat)}
           you
         />
@@ -451,8 +506,8 @@ export function Table({
             {view.seat !== null && leaderSeat === view.seat && ' · Aufspiel'}
           </span>
         </div>
-        {view.currentActor === view.seat && secondsLeft !== null && (
-          <span className="doko-turnclock">{secondsLeft}s</span>
+        {view.currentActor === view.seat && view.turnDeadline !== null && (
+          <TurnClock deadline={view.turnDeadline} />
         )}
       </div>
 
@@ -467,7 +522,7 @@ export function Table({
               total={hand.length}
               playable={playable.has(card.id)}
               trump={isTrump(card)}
-              onPlay={() => send({ type: 'playCard', seat: view.seat!, cardId: card.id })}
+              onPlay={playCard}
             />
           ))}
           {hand.length === 0 && <span className="muted">Keine Karten auf der Hand.</span>}
@@ -525,11 +580,16 @@ function initials(name: string): string {
   return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
 }
 
+/**
+ * Der Countdown tickt bewusst HIER und nicht am Tisch: Ein Timer an der
+ * Wurzel rendert fuenfmal pro Sekunde den kompletten Tisch neu — genau das
+ * machte jede Animation ruckelig. So tickt nur der eine aktive Avatar.
+ */
 function Avatar({
   name,
   seatIndex,
   active,
-  secondsLeft,
+  deadline,
   isBot,
   you,
   avatarUrl,
@@ -537,11 +597,12 @@ function Avatar({
   name: string;
   seatIndex: number;
   active: boolean;
-  secondsLeft: number | null;
+  deadline: number | null;
   isBot?: boolean;
   you?: boolean;
   avatarUrl?: string | null;
 }): React.JSX.Element {
+  const secondsLeft = useCountdown(active ? deadline : null);
   const hue = SEAT_HUES[seatIndex % SEAT_HUES.length]!;
   const ring =
     active && secondsLeft !== null
@@ -563,7 +624,7 @@ function Avatar({
   );
 }
 
-function OpponentSeat({
+const OpponentSeat = memo(function OpponentSeat({
   slot,
   name,
   accountId,
@@ -576,7 +637,7 @@ function OpponentSeat({
   score,
   active,
   leader,
-  secondsLeft,
+  deadline,
   party,
   avatarUrl,
   deck,
@@ -593,7 +654,7 @@ function OpponentSeat({
   score: number;
   active: boolean;
   leader: boolean;
-  secondsLeft: number | null;
+  deadline: number | null;
   party: string | null;
   avatarUrl: string | null;
   deck: Deck;
@@ -605,7 +666,7 @@ function OpponentSeat({
         name={name}
         seatIndex={seatIndex}
         active={active}
-        secondsLeft={secondsLeft}
+        deadline={deadline}
         isBot={isBot}
         avatarUrl={avatarUrl}
       />
@@ -636,7 +697,7 @@ function OpponentSeat({
       <span className="doko-opp-score">{score}</span>
     </div>
   );
-}
+});
 
 function partyLabel(party: string): string {
   return party === 're' ? 'Re' : 'Kontra';
@@ -646,7 +707,7 @@ function partyLabel(party: string): string {
 // Hand
 // ---------------------------------------------------------------------------
 
-function HandCard({
+const HandCard = memo(function HandCard({
   card,
   deck,
   index,
@@ -661,7 +722,7 @@ function HandCard({
   total: number;
   playable: boolean;
   trump: boolean;
-  onPlay: () => void;
+  onPlay: (cardId: number) => void;
 }): React.JSX.Element {
   // Nicht spielbare Karten sehen aus wie alle anderen - keine Hervorhebung,
   // kein Abdunkeln. Wer eine antippt, bekommt ein kurzes Schuetteln als
@@ -685,7 +746,7 @@ function HandCard({
       // das Schuetteln ausloesen, statt lautlos zu versanden.
       aria-disabled={!playable}
       onClick={() => {
-        if (playable) onPlay();
+        if (playable) onPlay(card.id);
         else setShaking(true);
       }}
       onAnimationEnd={() => setShaking(false)}
@@ -697,6 +758,50 @@ function HandCard({
       </div>
     </button>
   );
+});
+
+/** Der letzte Stich zum Nachschauen — fuer alle am Tisch, auch Zuschauer. */
+function LetzterStich({
+  played,
+  winnerSeat,
+  nameOf,
+  deck,
+  onClose,
+}: {
+  played: { seat: number; card: Card }[];
+  winnerSeat: number;
+  nameOf: (seat: number) => string;
+  deck: Deck;
+  onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <div className="doko-sheet" onClick={onClose}>
+      <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
+        <h2>Letzter Stich</h2>
+        <p className="muted">Ging an {nameOf(winnerSeat)}.</p>
+        <div className="doko-lasttrick">
+          {played.map((p) => (
+            <figure key={p.card.id} className={p.seat === winnerSeat ? 'is-winner' : undefined}>
+              <div className="pc pc--trick">
+                <CardFront card={p.card} deck={deck} />
+              </div>
+              <figcaption>{nameOf(p.seat)}</figcaption>
+            </figure>
+          ))}
+        </div>
+        <button className="primary" onClick={onClose}>
+          Schließen
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Restzeit-Anzeige. Tickt fuer sich allein, nicht der ganze Tisch mit. */
+function TurnClock({ deadline }: { deadline: number | null }): React.JSX.Element | null {
+  const secondsLeft = useCountdown(deadline);
+  if (secondsLeft === null) return null;
+  return <span className="doko-turnclock">{secondsLeft}s</span>;
 }
 
 // ---------------------------------------------------------------------------
