@@ -12,6 +12,8 @@
   --muted: #8fa3ad;
   --accent: #4a9c78;
   --gold: #e2b64f;
+  --lila: #a678f2;
+  --blau: #5ea0f0;
   --danger: #c2564c;
   color-scheme: dark;
 }
@@ -939,8 +941,10 @@ td {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Lila Himmel oben, gruener Filz unten - Spielplatz, kein Buero. */
   background:
-    radial-gradient(130% 55% at 50% 0%, #1c3b2e 0%, #14211d 55%, #0e1417 100%);
+    radial-gradient(120% 45% at 50% -5%, rgba(166, 120, 242, 0.5), transparent 60%),
+    linear-gradient(180deg, #37246b 0%, #2b2560 26%, #1d4a44 62%, #123528 100%);
   padding-top: env(safe-area-inset-top);
 }
 
@@ -999,10 +1003,10 @@ td {
 }
 
 .front-hero > svg {
-  width: 3.4rem;
-  height: 3.4rem;
+  width: 3.6rem;
+  height: 3.6rem;
   color: var(--gold);
-  filter: drop-shadow(0 0 18px rgba(226, 182, 79, 0.35));
+  filter: drop-shadow(0 0 22px rgba(226, 182, 79, 0.55));
 }
 
 .front-hero-zahl {
@@ -1017,13 +1021,14 @@ td {
 /* Spielbare Spiele: eine grosse Karte je Spiel mit dem Spielen-Knopf. */
 .front-mode {
   background:
-    radial-gradient(120% 120% at 50% 0%, rgba(74, 156, 120, 0.2), transparent 60%),
-    var(--panel);
-  border: 1px solid var(--line);
+    radial-gradient(120% 120% at 50% 0%, rgba(74, 156, 120, 0.3), transparent 60%),
+    linear-gradient(180deg, #24304a 0%, #1b2438 100%);
+  border: 1px solid rgba(226, 182, 79, 0.45);
   border-radius: 1rem;
   padding: 1.1rem;
-  margin-bottom: 1.2rem;
+  margin-bottom: 0.8rem;
   text-align: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
 .front-mode h2 {
@@ -1066,11 +1071,11 @@ td {
 .front-tabs {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1.25fr 1fr;
-  gap: 0.25rem;
-  padding: 0.35rem 0.6rem calc(0.4rem + env(safe-area-inset-bottom));
-  background: #0c1114;
-  border-top: 1px solid var(--line);
+  grid-template-columns: 1fr 1fr 1.3fr 1fr 1fr;
+  gap: 0.2rem;
+  padding: 0.35rem 0.45rem calc(0.4rem + env(safe-area-inset-bottom));
+  background: #191233;
+  border-top: 1px solid rgba(166, 120, 242, 0.35);
 }
 
 .front-tab {
@@ -1109,9 +1114,181 @@ td {
   height: 1.95rem;
 }
 
-.front-tab--haupt.is-active {
-  color: var(--accent);
-  background: rgba(74, 156, 120, 0.12);
+/* Jeder Bereich leuchtet in seiner eigenen Farbe, wenn er gewaehlt ist. */
+.front-tab--shop.is-active { color: var(--gold); background: rgba(226, 182, 79, 0.14); }
+.front-tab--freunde.is-active { color: var(--blau); background: rgba(94, 160, 240, 0.14); }
+.front-tab--spielen.is-active { color: #6dd3a4; background: rgba(74, 156, 120, 0.18); }
+.front-tab--blatt.is-active { color: #ef8f8a; background: rgba(194, 86, 76, 0.16); }
+.front-tab--profil.is-active { color: var(--lila); background: rgba(166, 120, 242, 0.16); }
+
+/* Ressourcen-Leiste: Level und Name links, Muenzen und VIP rechts. */
+.front-spieler {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.3rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  min-width: 0;
+}
+
+.front-level {
+  flex: 0 0 auto;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.55rem;
+  background: linear-gradient(180deg, #6ab1f7 0%, #2f6dc0 100%);
+  border: 1px solid #17457f;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 2px 0 #17457f;
+}
+
+.front-spieler-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.front-spieler-info strong {
+  max-width: 8.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+/* Erfahrungsbalken - ehrlich leer, bis das Levelsystem kommt. */
+.front-xp {
+  width: 5.2rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.front-xp > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #6ab1f7, #a678f2);
+}
+
+.front-waehrungen {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.front-waehrung {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.3rem 0.22rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.88rem;
+}
+
+.front-waehrung svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.front-waehrung--muenzen {
+  color: var(--gold);
+  border: 1px solid rgba(226, 182, 79, 0.45);
+}
+
+.front-waehrung--vip {
+  color: var(--lila);
+  border: 1px solid rgba(166, 120, 242, 0.45);
+}
+
+.front-plus {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #0c1310;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Tagesbonus unter dem Spielen-Knopf - Geschenk mit Bald-Marke. */
+.front-bonus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 1.2rem;
+  padding: 0.65rem;
+  border-radius: 0.8rem;
+  background: rgba(226, 182, 79, 0.1);
+  border: 1px dashed rgba(226, 182, 79, 0.55);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.front-bonus svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.front-bald-tag {
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--lila);
+  color: #180f2e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Shop-Regale: schon eingeraeumt, noch zugehaengt. */
+.front-shop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.front-shop-kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1rem 0.6rem;
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(110% 90% at 50% 0%, rgba(166, 120, 242, 0.22), transparent 65%),
+    var(--panel);
+  border: 1px solid rgba(166, 120, 242, 0.4);
+}
+
+.front-shop-zeichen {
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+/* "Kommt bald"-Blatt */
+.front-bald {
+  text-align: center;
+}
+
+.front-bald-zeichen {
+  display: block;
+  font-size: 2.4rem;
+  margin-bottom: 0.3rem;
 }
 
 /* Regelkacheln der Tischerstellung: an/aus durch Antippen, aktive Regeln
