@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { CardButton, CardFace } from '../CardFace';
 import { cardImage, type Deck } from '../decks';
-import { cardLabel, t } from '../i18n';
+import { cardLabel, gameTypeLabel, t } from '../i18n';
 import type { Action, Card } from '../protocol';
 import { useCountdown, useTable } from '../useTable';
 
@@ -93,6 +93,22 @@ export function Table({
   );
   const others = view.legalActions.filter((action) => action.type !== 'playCard');
 
+  // Im Solo spielt genau einer allein: der einzige öffentlich bekannte Re-Sitz.
+  const soloSeat =
+    round && round.gameType.kind === 'solo'
+      ? (Object.entries(round.knownParties).find(([, partei]) => partei === 're')?.[0] ??
+        null)
+      : null;
+
+  /**
+   * Trumpf oder Fehl. Abgelesen aus der Rangfolge, die das Spielmodul
+   * mitliefert — der Client entscheidet das nicht selbst, sonst gäbe es zwei
+   * Wahrheiten darüber, was Trumpf ist.
+   */
+  const trumps = new Set(round?.order.trumps ?? []);
+  const isTrump = (card: Card): boolean => trumps.has(`${card.suit}${card.rank}`);
+  const trumpCount = (round?.hand ?? []).filter(isTrump).length;
+
   return (
     <main>
       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -101,6 +117,30 @@ export function Table({
         </h1>
         <button onClick={onLeave}>Verlassen</button>
       </div>
+
+      {/*
+        Die Spielart gehört sichtbar an den Tisch, nicht ins Gedächtnis.
+        Im Herz-Solo ist die Herz-Neun Trumpf, im Normalspiel eine Fehlkarte:
+        Wer das nicht sieht, hält den Bedienzwang für einen Fehler.
+      */}
+      {round && (
+        <p>
+          {/*
+            Erst nach der Vorbehaltsabfrage steht die Spielart fest. Vorher
+            "Normalspiel" anzuzeigen waere eine Behauptung, die sich gleich als
+            falsch herausstellen kann.
+          */}
+          {round.phase === 'vorbehalt' ? (
+            <span className="muted">Spielart wird noch bestimmt</span>
+          ) : (
+            <>
+              <strong>{gameTypeLabel(round.gameType)}</strong>
+              {soloSeat !== null && ` · ${nameOf(Number(soloSeat))} spielt allein`}
+              {round.myParty && ` · du bist ${round.myParty === 're' ? 'Re' : 'Kontra'}`}
+            </>
+          )}
+        </p>
+      )}
 
       <p className="muted">
         {round ? t(`phase.${round.phase}`) : 'Zwischen den Runden'}
@@ -218,6 +258,7 @@ export function Table({
               card={card}
               deck={deck}
               key={card.id}
+              trump={isTrump(card)}
               disabled={!playable.has(card.id)}
               onClick={() => send({ type: 'playCard', seat: view.seat, cardId: card.id })}
             />
@@ -226,6 +267,12 @@ export function Table({
             <span className="muted">Keine Karten auf der Hand.</span>
           )}
         </div>
+        {trumpCount > 0 && (
+          <p className="muted">
+            {trumpCount === 1 ? 'Ein Trumpf' : `${trumpCount} Trümpfe`} auf der Hand,
+            grün markiert.
+          </p>
+        )}
       </div>
     </main>
   );
