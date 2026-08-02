@@ -11,6 +11,7 @@
   --text: #e8eef1;
   --muted: #8fa3ad;
   --accent: #4a9c78;
+  --gold: #e2b64f;
   --danger: #c2564c;
   color-scheme: dark;
 }
@@ -867,3 +868,210 @@ td {
   margin: 0;
 }
 .profile-btn.is-busy { opacity: 0.6; cursor: default; }
+
+/* =========================================================================
+   Startbildschirm — Tab-Leiste unten, Trophaeen oben
+   Handy ist der Massstab: Die Flaeche bleibt auch im breiten Browser auf
+   Handybreite begrenzt, der Rest der Seite bleibt dunkler Grund.
+   ========================================================================= */
+
+.front {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 30rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(130% 55% at 50% 0%, #1c3b2e 0%, #14211d 55%, #0e1417 100%);
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Breiter Browser: die Handyflaeche hebt sich vom Grund ab. */
+@media (min-width: 30rem) {
+  .front {
+    box-shadow: 0 0 0 1px var(--line), 0 0 70px rgba(0, 0, 0, 0.55);
+  }
+}
+
+.front-top {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem 0.35rem;
+}
+
+.front-top .spielername {
+  font-weight: 600;
+}
+
+/* Trophaeenstand als Abzeichen oben rechts - auf jedem Tab sichtbar. */
+.front-trophybadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(226, 182, 79, 0.35);
+  color: var(--gold);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.front-trophybadge svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.front-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.4rem 1rem 1.2rem;
+}
+
+/* Der Held des Hauptschirms: der Pokal mit der grossen Zahl. */
+.front-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 1.1rem 0 1.3rem;
+}
+
+.front-hero > svg {
+  width: 3.4rem;
+  height: 3.4rem;
+  color: var(--gold);
+  filter: drop-shadow(0 0 18px rgba(226, 182, 79, 0.35));
+}
+
+.front-hero-zahl {
+  font-size: 2.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Spielbare Spiele: eine grosse Karte je Spiel mit dem Spielen-Knopf. */
+.front-mode {
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(74, 156, 120, 0.2), transparent 60%),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.1rem;
+  margin-bottom: 1.2rem;
+  text-align: center;
+}
+
+.front-mode h2 {
+  margin: 0 0 0.15rem;
+  font-size: 1.35rem;
+}
+
+.front-mode p {
+  margin: 0 0 0.9rem;
+}
+
+/* Der Spielen-Knopf traegt den ganzen Bildschirm: gross, satt, mit
+   fuehlbarem Druckpunkt. */
+.front-play {
+  display: block;
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 0.8rem;
+  color: #0c1310;
+  background: linear-gradient(180deg, #5cb98d 0%, #3c8a67 100%);
+  border: 1px solid #2c6a4e;
+  box-shadow: 0 4px 0 #245442, 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+.front-play:hover:not(:disabled) {
+  border-color: #2c6a4e;
+  filter: brightness(1.06);
+}
+
+.front-play:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #245442;
+}
+
+/* Tab-Leiste unten. Flex statt fixed: Sie ist Teil der Spalte und laesst
+   den Inhalt darueber sauber scrollen. */
+.front-tabs {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1fr;
+  gap: 0.25rem;
+  padding: 0.35rem 0.6rem calc(0.4rem + env(safe-area-inset-bottom));
+  background: #0c1114;
+  border-top: 1px solid var(--line);
+}
+
+.front-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.12rem;
+  padding: 0.4rem 0.2rem 0.3rem;
+  background: none;
+  border: none;
+  border-radius: 0.6rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.front-tab svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.front-tab:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--text);
+}
+
+.front-tab.is-active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Der mittlere Tab ist der wichtigste und darf groesser sein. */
+.front-tab--haupt svg {
+  width: 1.95rem;
+  height: 1.95rem;
+}
+
+.front-tab--haupt.is-active {
+  color: var(--accent);
+  background: rgba(74, 156, 120, 0.12);
+}
+
+/* Anmeldung: schmale, mittige Karte - derselbe ruhige Auftritt wie danach. */
+main.auth {
+  max-width: 24rem;
+  padding-top: max(3rem, 12vh);
+}
+
+main.auth h1 {
+  text-align: center;
+  margin-bottom: 0.1rem;
+  font-size: 2rem;
+}
+
+main.auth > .muted {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 1.3rem;
+}
