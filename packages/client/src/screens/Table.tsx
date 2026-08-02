@@ -24,8 +24,42 @@ export function Table({
   deck: Deck;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, error, connected, send } = useTable(tableId);
+  const { view, party, table, error, connected, send } = useTable(tableId);
   const secondsLeft = useCountdown(view?.turnDeadline ?? null);
+
+  // Wartebereich. Ein Tisch mit freien Plätzen ist kein Fehler und kein
+  // Ladezustand, sondern der Normalfall jeder Lobby: Man sieht, wer schon da
+  // ist, und sobald der letzte Platz belegt ist, geht es von selbst los.
+  if (!view && table && table.status === 'waiting') {
+    return (
+      <main>
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <h1>Wartet auf Mitspieler</h1>
+          <button onClick={onLeave}>Zurück</button>
+        </div>
+        <p className="muted">
+          {table.missing === 0
+            ? 'Alle Plätze belegt, es geht gleich los…'
+            : `Es ${table.missing === 1 ? 'fehlt noch ein Spieler' : `fehlen noch ${table.missing} Spieler`}. ` +
+              `${table.rounds} Runden.`}
+        </p>
+
+        <div className="panel">
+          {table.seats.map((seat) => (
+            <div className="seat" key={seat.seat}>
+              <span>{seat.displayName ?? <em className="muted">frei</em>}</span>
+              <span className="muted">Platz {seat.seat + 1}</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="muted">
+          Teile die Adresse dieser Seite, dann können andere direkt beitreten.
+        </p>
+        {error && <p className="error">{t(error)}</p>}
+      </main>
+    );
+  }
 
   if (!view) {
     return (

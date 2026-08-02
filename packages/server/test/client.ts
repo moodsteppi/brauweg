@@ -35,6 +35,7 @@ export class TestClient {
   private socket!: WebSocket;
   private readonly seen: ServerMessage[] = [];
   lastView: ViewMessage | null = null;
+  lastTable: Extract<ServerMessage, { type: 'table' }> | null = null;
   errors: string[] = [];
   /** Auf true setzen, damit der Client nicht mehr selbst zieht. */
   passive = false;
@@ -65,6 +66,10 @@ export class TestClient {
     this.seen.push(message);
     if (message.type === 'error') {
       this.errors.push(message.code);
+      return;
+    }
+    if (message.type === 'table') {
+      this.lastTable = message;
       return;
     }
     if (message.type !== 'view') return;

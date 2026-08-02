@@ -20,7 +20,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...init,
     credentials: 'same-origin',
-    headers: { 'content-type': 'application/json', ...init.headers },
+    headers: {
+      // NUR mit Rumpf. Ein leerer Rumpf mit dieser Kopfzeile ist fuer Fastify
+      // ein Fehler ("Body cannot be empty when content-type is set to
+      // application/json") - und traf damit jeden Aufruf ohne Daten:
+      // beitreten, verlassen, abmelden, abstimmen.
+      ...(init.body ? { 'content-type': 'application/json' } : {}),
+      ...init.headers,
+    },
   });
 
   if (!response.ok) {

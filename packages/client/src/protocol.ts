@@ -79,6 +79,17 @@ export interface ViewMessage {
   ruleSetVersion: number;
 }
 
+export interface TableMessage {
+  v: number;
+  game: string;
+  type: 'table';
+  tableId: string;
+  status: 'waiting' | 'running' | 'finished' | 'abandoned';
+  seats: { seat: number; displayName: string | null; isBot: boolean }[];
+  missing: number;
+  rounds: number;
+}
+
 export interface PartyMessage {
   v: number;
   game: string;
@@ -95,4 +106,4 @@ export interface ErrorMessage {
   messageKey: string;
 }
 
-export type ServerMessage = ViewMessage | PartyMessage | ErrorMessage;
+export type ServerMessage = ViewMessage | PartyMessage | TableMessage | ErrorMessage;

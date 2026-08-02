@@ -15,6 +15,9 @@ import {
   saveRuleSet,
   tableWithSeats,
 } from '../src/tables/service.js';
+import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
+import { PartyRuntime } from '../src/runtime/party.js';
+import { createSession } from '../src/auth/service.js';
 import { createTestContext, createVerifiedAccount, schema, seedInvite } from './helpers.js';
 
 const CONFIG = doppelkopf.defaultConfig();
@@ -265,6 +268,67 @@ test('die Lobby zeigt wartende Tische mit ihrer Belegung', async (t) => {
   assert.equal(lobby[0]!.occupied, 2);
 
   assert.deepEqual(await listTables(c.db, { gameId: 'doppelkopf', seats: 3 }), []);
+});
+
+test('Aufrufe ohne Rumpf funktionieren', async (t) => {
+  // Der Client setzte den JSON-Kopf auf jede Anfrage, auch auf die ohne Daten.
+  // Fastify lehnt einen leeren Rumpf mit gesetztem content-type ab; die
+  // Fehlerbehandlung machte daraus einen 500 mit "etwas ist schiefgelaufen".
+  // Getroffen hat es beitreten, verlassen, abmelden und abstimmen.
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+
+  const table = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+
+  const app = buildApp({
+    db: c.db,
+    runtime: new PartyRuntime(c.db),
+    auth: c.auth,
+    cookieSecure: false,
+    sessionTtlDays: 30,
+  });
+  t.after(() => app.close());
+
+  const token = await createSession(c.auth, bert.accountId);
+  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}`;
+
+  for (const url of [`/api/tables/${table.id}/join`, `/api/tables/${table.id}/leave`]) {
+    const antwort = await app.inject({
+      method: 'POST',
+      url,
+      headers: { cookie, 'content-type': 'application/json' },
+    });
+    assert.equal(antwort.statusCode, 200, `${url} muss ohne Rumpf funktionieren`);
+  }
+});
+
+test('ein unvollstaendiger Regelsatz wird nicht angenommen', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  // Genau das schickte der Client, solange seine Vorbelegung noch nicht
+  // geladen war. Vorher kam darauf eine 201 und ein Tisch, der beim
+  // Spielstart auseinanderfiel.
+  await assert.rejects(
+    () =>
+      createTable(c.db, {
+        accountId,
+        gameId: 'doppelkopf',
+        config: { tableSize: 4, rounds: 4 },
+        seats: 4,
+        rounds: 4,
+      }),
+    (err: AppError) => err.code === 'ruleSetInvalid',
+  );
 });
 
 test('die Lobby vor Spielstart zu verlassen ist straffrei', async (t) => {

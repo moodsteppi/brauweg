@@ -142,6 +142,34 @@ test('jede angebotene Aktion wird von act auch angenommen', () => {
   }
 });
 
+test('ein unvollstaendiger Regelsatz wird abgelehnt', () => {
+  // Genau das kam ueber die Schnittstelle herein, als der Client seine
+  // Vorbelegung noch nicht geladen hatte. Der Validator fand darin keinen
+  // Widerspruch und winkte es durch; der Tisch flog erst beim Spielstart
+  // auseinander.
+  const problems = doppelkopf.validateConfig({ tableSize: 4, rounds: 4 }, 4, 4);
+  assert.ok(problems.length > 0, 'fehlende Felder muessen auffallen');
+  assert.ok(problems.every((p) => p.severity === 'error'));
+  assert.ok(problems.some((p) => p.path === 'deck'));
+});
+
+test('ein Regelsatz mit falschem Feldtyp wird abgelehnt', () => {
+  const kaputt = { ...makeRuleSet(), solos: 'alle' };
+  const problems = doppelkopf.validateConfig(kaputt, 4, 8);
+  assert.ok(problems.some((p) => p.path === 'solos' && p.severity === 'error'));
+});
+
+test('gar kein Regelsatz wird abgelehnt', () => {
+  for (const nichts of [null, undefined, 'Standard', 42]) {
+    const problems = doppelkopf.validateConfig(nichts, 4, 8);
+    assert.ok(problems.length > 0, `${String(nichts)} muss abgelehnt werden`);
+  }
+});
+
+test('der vollstaendige Standardregelsatz geht durch', () => {
+  assert.deepEqual(doppelkopf.validateConfig(makeRuleSet(), 4, 8), []);
+});
+
 test('spectatorView enthaelt keine Hand und keine eigene Partei', () => {
   const party = toPlaying(newParty());
   const view = doppelkopf.spectatorView(party);
