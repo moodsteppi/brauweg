@@ -151,8 +151,13 @@ export function Lobby({
  * Regelsatz-Editor.
  *
  * Er kennt die Optionen nicht: Er zeigt, was defaultConfig liefert. Ein neues
- * Spiel oder eine neue Option braucht deshalb keine Aenderung hier. Die
- * Beschriftungen sind roh — das ist der Ort, an dem die Gestaltung anfaengt.
+ * Spiel oder eine neue Option braucht deshalb keine Aenderung hier - nur einen
+ * `regel.*`-Eintrag im Woerterbuch. Fehlt der, erscheint der rohe Schluessel:
+ * sichtbar haesslich statt unsichtbar kaputt.
+ *
+ * Jede Regel ist eine Kachel, an/aus durch Antippen. Aktive Kacheln tragen
+ * einen goldenen Rand mit Haken - der Zustand muss auf einen Blick lesbar
+ * sein, nicht erst nach dem Suchen eines Kaestchens.
  */
 function RuleEditor({
   config,
@@ -165,24 +170,28 @@ function RuleEditor({
   if (!config) return null;
 
   const flags = Object.entries(config).filter(([, value]) => typeof value === 'boolean');
+  const active = flags.filter(([, value]) => value).length;
 
   return (
-    <div>
+    <div style={{ marginBottom: '0.75rem' }}>
       <button type="button" onClick={() => setOpen(!open)}>
-        {open ? 'Regeln zuklappen' : `Regeln anpassen (${flags.length} Optionen)`}
+        {open ? 'Regeln zuklappen' : `Regeln anpassen (${active} von ${flags.length} an)`}
       </button>
       {open && (
-        <div style={{ marginTop: '0.75rem' }}>
+        <div className="regeln">
           {flags.map(([key, value]) => (
-            <label className="row" key={key} style={{ gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                style={{ width: 'auto' }}
-                checked={value as boolean}
-                onChange={(e) => onChange({ ...config, [key]: e.target.checked })}
-              />
-              {key}
-            </label>
+            <button
+              type="button"
+              key={key}
+              className={`regel${value ? ' is-on' : ''}`}
+              aria-pressed={!!value}
+              onClick={() => onChange({ ...config, [key]: !value })}
+            >
+              {t(`regel.${key}`)}
+              <span className="regel-check" aria-hidden="true">
+                ✓
+              </span>
+            </button>
           ))}
         </div>
       )}
