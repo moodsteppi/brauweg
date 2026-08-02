@@ -25,6 +25,9 @@ export interface TableConnection {
   error: string | null;
   connected: boolean;
   send(action: unknown): void;
+  /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
+  addBot(seat: number): void;
+  removeBot(seat: number): void;
 }
 
 export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableConnection {
@@ -108,7 +111,19 @@ export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableCo
     [tableId, gameId],
   );
 
-  return { view, party, table, error, connected, send };
+  const command = useCallback(
+    (type: 'addBot' | 'removeBot', seat: number) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type, tableId, seat }));
+    },
+    [tableId, gameId],
+  );
+
+  const addBot = useCallback((seat: number) => command('addBot', seat), [command]);
+  const removeBot = useCallback((seat: number) => command('removeBot', seat), [command]);
+
+  return { view, party, table, error, connected, send, addBot, removeBot };
 }
 
 /** Restzeit des Zugtimers in Sekunden, oder null wenn keiner laeuft. */

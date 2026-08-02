@@ -68,6 +68,7 @@ export function App(): React.JSX.Element {
         setMe({ ...me, cardDeck });
         void api.setCardDeck(cardDeck).catch(() => void reload());
       }}
+      onAvatarChange={() => void reload()}
       onSignOut={async () => {
         await api.logout();
         setMe(null);

@@ -64,6 +64,8 @@ export interface Me {
   coins: number;
   /** Gewaehltes Kartenblatt. Siehe decks.ts. */
   cardDeck: string;
+  /** URL des eigenen Profilbilds, oder null. */
+  avatarUrl: string | null;
   stats: { gameId: string; trophies: number; parties: number; wins: number }[];
 }
 
@@ -98,6 +100,8 @@ export const api = {
   logout: () => post<{ ok: true }>('/auth/logout'),
   me: () => request<Me>('/me'),
   setCardDeck: (cardDeck: string) => patch<{ ok: true }>('/me', { cardDeck }),
+  /** Profilbild setzen (data-URL) oder mit null entfernen. */
+  setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
   deleteMe: () => request<{ ok: true }>('/me', { method: 'DELETE' }),
 
   games: () => request<GameSummary[]>('/games'),

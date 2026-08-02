@@ -727,3 +727,106 @@ td {
 }
 .doko-wait-seat.is-empty { color: var(--muted); font-weight: 400; font-style: italic; opacity: 0.7; }
 .doko-wait-hint { text-align: center; max-width: 24rem; margin: 0 auto; }
+
+/* ---- Profilbild im Avatar ---- */
+.doko-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---- Verdeckte Karten: alle zeigen, seitlich quer ---- */
+/* Oben liegen sie hochkant und ueberlappen staerker, damit auch elf Stueck
+   in die Breite passen. */
+.doko-backs .pc--back { margin-left: calc(var(--bw) * -0.72); }
+.doko-backs .pc--back:first-child { margin-left: 0; }
+
+/* Links und rechts liegen die Karten quer (um 90 Grad gedreht) und stapeln
+   sich entlang der Kante. */
+.doko-backs.is-vertical { flex-direction: column; align-items: center; }
+.pc--back.side {
+  width: calc(var(--bw) * var(--pc-ratio));
+  height: var(--bw);
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+  margin-left: 0;
+}
+.pc--back.side > * {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--bw);
+  height: calc(var(--bw) * var(--pc-ratio));
+  transform: translate(-50%, -50%) rotate(90deg);
+  border-radius: 0.3rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.doko-backs.is-vertical .pc--back.side { margin-top: calc(var(--bw) * -0.55); }
+.doko-backs.is-vertical .pc--back.side:first-child { margin-top: 0; }
+
+/* ---- Aufspiel-Plakette ---- */
+.doko-tag--lead { background: rgba(74, 156, 120, 0.28); color: #9fe0c1; }
+
+/* ---- Kartenlege-Animation ---- */
+/* Die gelegte Karte fliegt aus Richtung ihres Spielers herein. Der aeussere
+   Platzhalter haelt Position und Neigung, der innere Wrapper die Bewegung. */
+.doko-trick-in { animation: tc-drop 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.at-bottom .doko-trick-in { --fx: 0px; --fy: 64px; }
+.at-top .doko-trick-in { --fx: 0px; --fy: -64px; }
+.at-left .doko-trick-in { --fx: -64px; --fy: 0px; }
+.at-right .doko-trick-in { --fx: 64px; --fy: 0px; }
+.at-top-left .doko-trick-in { --fx: -52px; --fy: -44px; }
+.at-top-right .doko-trick-in { --fx: 52px; --fy: -44px; }
+@keyframes tc-drop {
+  from { transform: translate(var(--fx, 0), var(--fy, 0)) scale(0.85); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doko-trick-in { animation: none; }
+}
+
+/* ---- Wartebereich: Bots auf freie Plaetze ---- */
+.doko-wait-name { flex: 1; }
+.doko-seat-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: rgba(74, 156, 120, 0.16);
+  border: 1px solid var(--accent);
+  color: #9fe0c1;
+}
+
+/* ---- Profilbild in der Kontoansicht ---- */
+.profile { display: flex; align-items: center; gap: 1rem; }
+.profile-pic {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: hsl(200 45% 32%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+.profile-pic img { width: 100%; height: 100%; object-fit: cover; }
+.profile-actions { display: flex; flex-direction: column; gap: 0.15rem; }
+.profile-btn {
+  display: inline-block;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--accent);
+  background: rgba(74, 156, 120, 0.16);
+  color: #9fe0c1;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0;
+}
+.profile-btn.is-busy { opacity: 0.6; cursor: default; }

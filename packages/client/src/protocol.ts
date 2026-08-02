@@ -95,7 +95,7 @@ export interface TableMessage {
   type: 'table';
   tableId: string;
   status: 'waiting' | 'running' | 'finished' | 'abandoned';
-  seats: { seat: number; displayName: string | null; isBot: boolean }[];
+  seats: { seat: number; displayName: string | null; isBot: boolean; avatarUrl: string | null }[];
   missing: number;
   rounds: number;
 }
@@ -106,7 +106,7 @@ export interface PartyMessage {
   type: 'party';
   tableId: string;
   standings: { seat: number; points: number; place: number; left: boolean }[];
-  seats: { seat: number; displayName: string | null; isBot: boolean }[];
+  seats: { seat: number; displayName: string | null; isBot: boolean; avatarUrl: string | null }[];
 }
 
 export interface ErrorMessage {

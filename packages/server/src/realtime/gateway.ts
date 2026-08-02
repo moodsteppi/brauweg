@@ -7,7 +7,7 @@
  * Partiestand.
  */
 
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Server } from 'node:http';
 
@@ -16,7 +16,7 @@ import * as s from '../db/schema.js';
 import { AppError } from '../errors.js';
 import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
-import { isReadyToStart, tableWithSeats } from '../tables/service.js';
+import { isReadyToStart, setSeatBot, tableWithSeats } from '../tables/service.js';
 import { requireModule } from '../games/registry.js';
 import {
   ENVELOPE_VERSION,
@@ -168,6 +168,12 @@ export class Gateway {
         case 'leave':
           this.leave(connection);
           break;
+        case 'addBot':
+          await this.setBot(connection, message.tableId, message.seat, true);
+          break;
+        case 'removeBot':
+          await this.setBot(connection, message.tableId, message.seat, false);
+          break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
       }
@@ -238,6 +244,21 @@ export class Gateway {
     connection.tableId = null;
   }
 
+  /**
+   * Bot auf einen freien Platz setzen oder wieder entfernen. Danach der
+   * uebliche Rundruf: Fuellt der Bot den letzten Platz, startet die Partie in
+   * ensureStarted von selbst; sonst sehen alle den aktualisierten Wartebereich.
+   */
+  private async setBot(
+    connection: Connection,
+    tableId: string,
+    seat: number,
+    wantBot: boolean,
+  ): Promise<void> {
+    await setSeatBot(this.db, tableId, seat, wantBot, connection.accountId);
+    await this.broadcast(tableId);
+  }
+
   private async broadcast(tableId: string): Promise<void> {
     const room = this.byTable.get(tableId);
     if (!room || room.size === 0) return;
@@ -272,11 +293,16 @@ export class Gateway {
     const names =
       accountIds.length > 0
         ? await this.db
-            .select({ id: s.account.id, displayName: s.account.displayName })
+            .select({
+              id: s.account.id,
+              displayName: s.account.displayName,
+              hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
+            })
             .from(s.account)
             .where(inArray(s.account.id, accountIds))
         : [];
     const nameOf = new Map(names.map((row) => [row.id, row.displayName]));
+    const avatarOf = new Map(names.map((row) => [row.id, row.hasAvatar]));
 
     const seats = seatRows
       .slice()
@@ -285,6 +311,12 @@ export class Gateway {
         seat: row.seatIndex,
         displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
         isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+        // Nur eine kurze URL ueber die Leitung; die Bytes holt der Browser
+        // einmal und behaelt sie im Cache.
+        avatarUrl:
+          row.accountId && avatarOf.get(row.accountId)
+            ? `/api/avatars/${row.accountId}`
+            : null,
       }));
 
     // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da

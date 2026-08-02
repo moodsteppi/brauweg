@@ -15,6 +15,13 @@
       "when": 1785687124194,
       "tag": "0001_card_deck",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785693199431,
+      "tag": "0002_avatar",
+      "breakpoints": true
     }
   ]
 }

@@ -115,6 +115,13 @@ export const account = pgTable(
      * der Spalte landet, und sonst nichts.
      */
     cardDeck: text().notNull().default('text'),
+    /**
+     * Profilbild als data-URL (kleines, im Browser verkleinertes Quadrat).
+     * Bewusst in der Zeile und nicht als Datei-Ablage: fuer die Beta ist das
+     * einfach und ohne zusaetzlichen Dienst. Ausgeliefert wird es ueber
+     * /api/avatars/:id, ueber die Leitung geht nur diese URL, nie die Bytes.
+     */
+    avatar: text(),
     anonymizedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
