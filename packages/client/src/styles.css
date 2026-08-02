@@ -1671,3 +1671,29 @@ main.auth > .muted {
 .vb-farbe b { font-size: 1.7rem; line-height: 1; }
 .vb-farbe span { font-size: 0.78rem; }
 .vb-farbe:hover:not(:disabled) { border-color: var(--gold, #e2b64f); }
+
+/* ---- Gewonnener Stichstapel neben dem Spieler ---- */
+.doko-stiche {
+  display: inline-flex;
+  align-items: flex-end;
+  margin-top: 0.15rem;
+}
+.doko-stiche i {
+  width: 0.95rem;
+  height: 1.35rem;
+  border-radius: 0.16rem;
+  border: 1px solid #dfe5ea;
+  background: repeating-linear-gradient(45deg, #1f4e8c 0 3px, #2a63ad 3px 6px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.doko-stiche i:first-child { transform: rotate(-8deg); }
+.doko-stiche i:nth-child(2) { margin-left: -0.55rem; transform: rotate(2deg); z-index: 1; }
+.doko-stiche i:nth-child(3) { margin-left: -0.55rem; transform: rotate(10deg); }
+.doko-stiche b {
+  margin-left: 0.3rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+/* In der eigenen Leiste sitzt der Stapel neben Name und Uhr. */
+.doko-me .doko-stiche { margin: 0 0.4rem 0.2rem 0; }

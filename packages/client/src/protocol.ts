@@ -50,6 +50,8 @@ export interface RoundView {
    */
   order: { trumps: string[]; fehl?: Record<string, string[]> };
   standings: Record<number, number>;
+  /** Gewonnene Stiche je Sitz, immer gefuellt. */
+  trickCounts?: Record<number, number>;
   pendingPflichtansage: { seat: number; trickPoints: number; canDecline: boolean } | null;
   result: unknown;
   isMyTurn: boolean;
