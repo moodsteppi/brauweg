@@ -48,6 +48,7 @@ const de: Record<string, string> = {
   'error.protocolVersionUnsupported': 'Bitte lade die Seite neu.',
   'error.actionRejected': 'Dieser Zug ist nicht möglich.',
   'error.invalidInput': 'Bitte prüfe deine Eingaben.',
+  'error.invalidRequest': 'Diese Anfrage konnte der Server nicht verarbeiten.',
   'error.internal': 'Da ist etwas schiefgelaufen.',
 
   'phase.vorbehalt': 'Vorbehalte',

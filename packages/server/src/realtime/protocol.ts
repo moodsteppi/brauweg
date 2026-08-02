@@ -77,6 +77,30 @@ export interface ViewMessage {
   readonly ruleSetVersion: number;
 }
 
+/**
+ * Zustand eines Tisches, an dem noch keine Partie laeuft.
+ *
+ * Ohne diese Nachricht sah ein Tisch mit freien Plaetzen aus wie ein Fehler:
+ * Der Server lehnte den Beitritt ab, der Client wartete endlos auf eine Sicht,
+ * die nie kam. Ein Tisch, der auf Mitspieler wartet, ist aber kein Fehlerfall,
+ * sondern der Normalzustand jeder Lobby.
+ */
+export interface TableMessage {
+  readonly v: number;
+  readonly game: GameId;
+  readonly type: 'table';
+  readonly tableId: string;
+  readonly status: 'waiting' | 'running' | 'finished' | 'abandoned';
+  readonly seats: readonly {
+    readonly seat: number;
+    readonly displayName: string | null;
+    readonly isBot: boolean;
+  }[];
+  /** Wie viele Menschen noch fehlen, bis automatisch gestartet wird. */
+  readonly missing: number;
+  readonly rounds: number;
+}
+
 export interface PartyMessage {
   readonly v: number;
   readonly game: GameId;
@@ -97,7 +121,7 @@ export interface ErrorMessage {
   readonly messageKey: string;
 }
 
-export type ServerMessage = ViewMessage | PartyMessage | ErrorMessage;
+export type ServerMessage = ViewMessage | PartyMessage | TableMessage | ErrorMessage;
 
 export function errorMessage(code: string, messageKey?: string): ErrorMessage {
   return {

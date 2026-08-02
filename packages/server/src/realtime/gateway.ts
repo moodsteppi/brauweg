@@ -16,7 +16,8 @@ import * as s from '../db/schema.js';
 import { AppError } from '../errors.js';
 import { sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
-import { tableWithSeats } from '../tables/service.js';
+import { isReadyToStart, tableWithSeats } from '../tables/service.js';
+import { requireModule } from '../games/registry.js';
 import {
   ENVELOPE_VERSION,
   type ClientMessage,
@@ -142,19 +143,17 @@ export class Gateway {
   ): Promise<void> {
     const { table } = await tableWithSeats(this.db, message.tableId);
 
-    const party =
-      this.runtime.get(message.tableId) ??
-      (table.status === 'running'
-        ? await this.runtime.resume(message.tableId)
-        : await this.runtime.start(message.tableId));
-
     // Mindestversion wird beim Beitritt erzwungen, nicht mitten in der Partie.
-    if (!moduleVersionAccepted(message.moduleVersion, party.module.protocolVersion)) {
+    const expected = requireModule(table.gameId).protocolVersion;
+    if (!moduleVersionAccepted(message.moduleVersion, expected)) {
       send(connection.socket, errorMessage('clientTooOld'));
       connection.socket.close();
       return;
     }
 
+    // Erst in den Raum, dann alles Weitere. Ein Tisch, der noch auf Mitspieler
+    // wartet, ist kein Fehler: Der Beitretende gehoert dazu und muss
+    // mitbekommen, wenn sich die Plaetze fuellen.
     connection.tableId = message.tableId;
     let room = this.byTable.get(message.tableId);
     if (!room) {
@@ -164,7 +163,27 @@ export class Gateway {
     room.add(connection);
 
     this.runtime.setPresence(message.tableId, connection.accountId, true);
+    await this.ensureStarted(message.tableId);
     await this.sendState(message.tableId, [connection]);
+  }
+
+  /**
+   * Startet die Partie, sobald der Tisch bereit ist, oder holt eine laufende
+   * nach einem Neustart zurueck. Ist der Tisch noch nicht voll, passiert
+   * nichts — dann bleibt es beim Wartebereich.
+   */
+  private async ensureStarted(tableId: string): Promise<void> {
+    if (this.runtime.get(tableId)) return;
+
+    const { table, seats } = await tableWithSeats(this.db, tableId);
+    if (table.status === 'running') {
+      await this.runtime.resume(tableId);
+      return;
+    }
+    if (table.status !== 'waiting') return;
+    if (!isReadyToStart(table, seats)) return;
+
+    await this.runtime.start(tableId);
   }
 
   private leave(connection: Connection): void {
@@ -177,6 +196,8 @@ export class Gateway {
   private async broadcast(tableId: string): Promise<void> {
     const room = this.byTable.get(tableId);
     if (!room || room.size === 0) return;
+    // Ein Beitritt ueber HTTP kann den Tisch vollgemacht haben.
+    await this.ensureStarted(tableId);
     await this.sendState(tableId, [...room]);
   }
 
@@ -185,9 +206,6 @@ export class Gateway {
     tableId: string,
     targets: readonly Connection[],
   ): Promise<void> {
-    const party = this.runtime.get(tableId);
-    if (!party) return;
-
     const [table] = await this.db
       .select()
       .from(s.gameTable)
@@ -203,6 +221,8 @@ export class Gateway {
       .from(s.tableSeat)
       .where(eq(s.tableSeat.tableId, tableId));
 
+    const party = this.runtime.get(tableId);
+
     const accountIds = seatRows.map((row) => row.accountId).filter(Boolean) as string[];
     const names =
       accountIds.length > 0
@@ -213,20 +233,39 @@ export class Gateway {
         : [];
     const nameOf = new Map(names.map((row) => [row.id, row.displayName]));
 
+    const seats = seatRows
+      .slice()
+      .sort((a, b) => a.seatIndex - b.seatIndex)
+      .map((row) => ({
+        seat: row.seatIndex,
+        displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
+        isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+      }));
+
+    // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da
+    // ist und wie viele noch fehlen.
+    const tableMessage: ServerMessage = {
+      v: ENVELOPE_VERSION,
+      game: table.gameId,
+      type: 'table',
+      tableId,
+      status: table.status,
+      seats,
+      missing: Math.max(0, table.seats - seatRows.filter((row) => row.accountId).length),
+      rounds: table.maxRounds,
+    };
+    for (const connection of targets) send(connection.socket, tableMessage);
+
+    // Laeuft noch keine Partie, ist der Wartebereich alles, was es zu sagen gibt.
+    if (!party) return;
+
     const partyMessage: ServerMessage = {
       v: ENVELOPE_VERSION,
       game: party.gameId,
       type: 'party',
       tableId,
       standings: this.runtime.standings(party),
-      seats: seatRows
-        .slice()
-        .sort((a, b) => a.seatIndex - b.seatIndex)
-        .map((row) => ({
-          seat: row.seatIndex,
-          displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
-          isBot: row.isBot || party.botControlled.has(row.seatIndex),
-        })),
+      seats,
     };
 
     for (const connection of targets) {

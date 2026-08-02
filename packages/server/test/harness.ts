@@ -82,6 +82,19 @@ export async function tableWithTwoHumans(h: Harness) {
   return { anna, bert, table };
 }
 
+/** Vier Sitze, nur ein Mensch, keine Bots: der Tisch wartet auf Mitspieler. */
+export async function waitingTable(h: Harness) {
+  const anna = await createVerifiedAccount(h.ctx, 'Anna');
+  const table = await createTable(h.ctx.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 4,
+  });
+  return { anna, table };
+}
+
 /** Vier Sitze, vier Menschen: nur so zaehlt der Tisch fuer die Rangliste. */
 export async function tableWithFourHumans(h: Harness) {
   const names = ['Anna', 'Bert', 'Cara', 'Dora'];
