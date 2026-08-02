@@ -14,6 +14,27 @@ import { createVerifiedAccount } from './helpers.js';
 import { startHarness, waitingTable } from './harness.js';
 import { TestClient } from './client.js';
 
+test('eine Nachricht direkt beim Verbinden geht nicht verloren', async (t) => {
+  // Der Zuhoerer fuer eingehende Nachrichten hing frueher erst nach dem
+  // Sitzungs-Nachschlag am Socket. Jeder Client schickt sein `join` aber
+  // sofort beim Oeffnen - was in diese Luecke fiel, war weg: keine Antwort,
+  // kein Fehler, endloses Laden. Ob es klappte, entschied die Tagesform der
+  // Datenbank. Die Verzoegerung macht die Luecke hier sicher auf.
+  const h = await startHarness({}, 150);
+  t.after(() => h.close());
+
+  const { anna, table } = await waitingTable(h);
+  const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId));
+  a.passive = true;
+
+  a.join(table.id);
+  await a.waitFor(() => a.lastTable !== null, 'Antwort trotz langsamer Sitzungspruefung');
+  assert.equal(a.lastTable!.status, 'waiting');
+  assert.deepEqual(a.errors, []);
+
+  a.close();
+});
+
 test('ein Tisch mit freien Plaetzen antwortet mit dem Wartebereich, nicht mit einem Fehler', async (t) => {
   const h = await startHarness();
   t.after(() => h.close());

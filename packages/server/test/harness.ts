@@ -9,7 +9,7 @@ import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { Gateway } from '../src/realtime/gateway.js';
 import { PartyRuntime, type RuntimeOptions } from '../src/runtime/party.js';
-import { createSession } from '../src/auth/service.js';
+import { createSession, sessionFromToken } from '../src/auth/service.js';
 import { createTable, joinTable } from '../src/tables/service.js';
 import { createTestContext, createVerifiedAccount, seedInvite, type TestContext } from './helpers.js';
 
@@ -23,7 +23,11 @@ export interface Harness {
   close(): Promise<void>;
 }
 
-export async function startHarness(options: RuntimeOptions = {}): Promise<Harness> {
+export async function startHarness(
+  options: RuntimeOptions = {},
+  /** Verzoegert die Sitzungspruefung, um die Luecke beim Verbinden zu weiten. */
+  sessionDelayMs = 0,
+): Promise<Harness> {
   const ctx = await createTestContext();
   await seedInvite(ctx.db);
 
@@ -42,7 +46,14 @@ export async function startHarness(options: RuntimeOptions = {}): Promise<Harnes
   });
 
   await app.listen({ port: 0, host: '127.0.0.1' });
-  const gateway = new Gateway(app.server, ctx.db, runtime);
+  const gateway = new Gateway(app.server, ctx.db, runtime, {
+    lookupSession: async (token) => {
+      if (sessionDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, sessionDelayMs));
+      }
+      return sessionFromToken(ctx.db, token);
+    },
+  });
 
   const address = app.server.address();
   const port = typeof address === 'object' && address ? address.port : 0;
