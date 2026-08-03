@@ -1437,69 +1437,87 @@ td {
 .front-tab--blatt.is-active { color: #ef8f8a; background: rgba(194, 86, 76, 0.16); }
 .front-tab--profil.is-active { color: var(--lila); background: rgba(166, 120, 242, 0.16); }
 
-.front-clan-kopf {
+/* Clan-Halle (Entwurf B): Banner + Raum-Gitter. */
+.front-clan-halle {
+  margin: 0 0 0.85rem;
+}
+.front-clan-banner {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.9rem;
-  padding: 0.75rem 0.85rem;
-  border-radius: 0.8rem;
-  background: linear-gradient(135deg, rgba(94, 160, 240, 0.16), rgba(26, 40, 56, 0.9));
-  border: 1px solid rgba(94, 160, 240, 0.35);
-}
-.front-clan-kopf strong {
-  display: block;
-  font-size: 1.15rem;
-}
-.front-clan-kopf p {
-  margin: 0.15rem 0 0;
+  gap: 0.35rem;
+  padding: 1.1rem 1rem 0.95rem;
+  text-align: center;
+  border-radius: 1rem;
+  background:
+    radial-gradient(90% 80% at 50% 0%, rgba(94, 160, 240, 0.28), transparent 70%),
+    linear-gradient(180deg, #243448 0%, #1a2430 100%);
+  border: 1px solid rgba(94, 160, 240, 0.4);
+  box-shadow: 0 4px 0 #121a22, inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .front-clan-wappen {
-  font-size: 1.8rem;
+  font-size: 2.4rem;
   line-height: 1;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
 }
-.front-clan-kacheln {
+.front-clan-name {
+  font-size: 1.45rem;
+  letter-spacing: 0.02em;
+}
+.front-clan-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 1.1rem;
+  margin-top: 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+.front-clan-stats em {
+  font-style: normal;
+  margin-right: 0.25rem;
+}
+.front-clan-banner .muted {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+}
+.front-clan-raeume {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.55rem;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
   margin-bottom: 1.25rem;
 }
-.front-clan-kachel {
+.front-clan-raum {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.35rem;
-  padding: 0.7rem 0.65rem;
-  text-align: left;
+  padding: 0.55rem 0.35rem 0.6rem;
+  min-height: 6.4rem;
   border-radius: 0.75rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
   color: var(--text);
-  box-shadow: 0 3px 0 #152025;
+  background:
+    linear-gradient(180deg, #3a2a1c 0%, #2a1f16 40%, #1c1612 100%);
+  border: 1px solid #5a4330;
+  box-shadow: 0 3px 0 #120e0b;
 }
-.front-clan-kachel:active {
+.front-clan-raum:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #152025;
+  box-shadow: 0 1px 0 #120e0b;
+}
+.front-clan-raum-titel {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.15;
+  color: #f0d9a8;
 }
 .front-clan-zeichen {
-  font-size: 1.35rem;
+  font-size: 1.65rem;
   line-height: 1;
-}
-.front-clan-kachel-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-height: 2.4rem;
-}
-.front-clan-kachel-text strong {
-  font-size: 0.92rem;
-}
-.front-clan-kachel-text .muted {
-  font-size: 0.72rem;
-}
-.front-clan-kachel .front-bald-tag {
-  align-self: flex-start;
-  margin-top: 0.15rem;
+  margin: 0.15rem 0;
 }
 
 /* Ressourcen-Leiste: Level und Name links, Muenzen und VIP rechts. */
@@ -1635,41 +1653,165 @@ td {
   text-transform: uppercase;
 }
 
-/* Shop-Regale: schon eingeraeumt, noch zugehaengt. */
+/* Shop (Entwurf C): Wochenangebot-Theater + Vitrinen. Kein Kauf. */
 .front-shop {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.front-shop-titel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.2rem 0 0.1rem;
+  font-size: 1.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-align: center;
+}
+.front-shop-titel span {
+  flex: 1;
+  height: 1px;
+  max-width: 3.5rem;
+  background: linear-gradient(90deg, transparent, rgba(226, 182, 79, 0.7), transparent);
+}
+.front-shop-featured {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  padding: 0.85rem 0.9rem 0.75rem;
+  text-align: left;
+  border-radius: 1rem;
+  color: var(--text);
+  background:
+    radial-gradient(90% 70% at 85% 20%, rgba(226, 182, 79, 0.2), transparent 55%),
+    linear-gradient(165deg, #1e3a2c 0%, #152820 55%, #101c18 100%);
+  border: 1px solid rgba(226, 182, 79, 0.55);
+  box-shadow: 0 4px 0 #0c1812, 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+.front-shop-featured:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #0c1812, 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.front-shop-ribbon {
+  align-self: flex-start;
+  padding: 0.18rem 0.55rem;
+  border-radius: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1a1408;
+  background: linear-gradient(180deg, #f0d07a 0%, #d4a94a 100%);
+  box-shadow: 0 2px 0 #8a6a22;
+}
+.front-shop-featured-body {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+}
+.front-shop-featured-text strong {
+  display: block;
+  font-size: 1.25rem;
+  color: var(--gold);
+  margin-bottom: 0.25rem;
+}
+.front-shop-featured-text p {
+  margin: 0 0 0.45rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.front-shop-featured-text ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #cfe8d8;
+}
+.front-shop-featured-text li::before {
+  content: '✓ ';
+  color: var(--accent);
+}
+.front-shop-featured-zeichen {
+  font-size: 3.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4));
+}
+.front-shop-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.6rem;
-  margin-top: 0.8rem;
 }
-
 .front-shop-kachel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 1rem 0.6rem;
+  gap: 0.3rem;
+  padding: 0.85rem 0.55rem 0.7rem;
   border-radius: 0.9rem;
+  color: var(--text);
   background:
-    radial-gradient(110% 90% at 50% 0%, rgba(166, 120, 242, 0.22), transparent 65%),
+    radial-gradient(110% 80% at 50% 0%, rgba(74, 156, 120, 0.18), transparent 60%),
     var(--panel);
-  border: 1px solid rgba(166, 120, 242, 0.4);
+  border: 1px solid rgba(226, 182, 79, 0.28);
+  box-shadow: 0 3px 0 #152025;
 }
-
+.front-shop-kachel:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #152025;
+}
 .front-shop-zeichen {
   font-size: 1.9rem;
   line-height: 1;
 }
-
-/* "Kommt bald"-Blatt */
-.front-bald {
+.front-shop-kachel strong {
+  font-size: 0.92rem;
+}
+.front-shop-kachel-text {
+  font-size: 0.7rem;
   text-align: center;
+  line-height: 1.25;
+  min-height: 2.1em;
+}
+.front-shop-bald-knopf {
+  margin-top: 0.2rem;
+}
+.front-shop-preis {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gold);
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+  opacity: 0.75;
 }
 
+/* "Kommt bald"-Blatt (Entwurf A): schlicht und zentriert. */
+.front-bald {
+  text-align: center;
+  padding: 0.5rem 0.25rem 0.15rem;
+}
+.front-bald h2 {
+  margin: 0.15rem 0 0.4rem;
+}
+.front-bald p {
+  margin: 0 0 1rem;
+}
+.front-bald .primary {
+  width: 100%;
+}
 .front-bald-zeichen {
   display: block;
-  font-size: 2.4rem;
-  margin-bottom: 0.3rem;
+  font-size: 2.6rem;
+  margin-bottom: 0.35rem;
+  line-height: 1;
 }
 
 /* Regelkacheln der Tischerstellung: an/aus durch Antippen, aktive Regeln

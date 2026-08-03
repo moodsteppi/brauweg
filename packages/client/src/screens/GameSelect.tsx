@@ -164,9 +164,8 @@ export function GameSelect({
 }
 
 /**
- * "Kommt bald"-Blatt fuer alles, das schon in der Oberflaeche steht, aber
- * noch nicht gebaut ist. Ehrlich statt totem Knopf: Man sieht, dass hier
- * etwas entsteht.
+ * "Kommt bald"-Blatt (Entwurf A): schlicht — Zeichen, Titel, ein Satz, CTA.
+ * Kein Fortschritt, keine Feature-Liste. Tip auf Hintergrund schließt.
  */
 function BaldBlatt({
   name,
@@ -182,7 +181,7 @@ function BaldBlatt({
           🔨
         </span>
         <h2>Kommt bald!</h2>
-        <p className="muted">Daran bauen wir gerade: {name}. Schau bald wieder vorbei.</p>
+        <p className="muted">Daran bauen wir gerade: {name}.</p>
         <button className="primary" onClick={onClose}>
           Alles klar
         </button>
@@ -192,11 +191,8 @@ function BaldBlatt({
 }
 
 /**
- * Clan — spielübergreifend, nicht nur Doppelkopf.
- *
- * Wie in Clash Royale: Chat, Krieg, Rangliste und Truhe stehen schon als
- * Kacheln da (mit Bald); Freunde bleiben darunter erreichbar. Der Beta-Clan
- * entsteht automatisch mit dem Einladungscode.
+ * Clan-Halle (Entwurf B): Banner mit ehrlichen Null-Stats, Räume als
+ * Bald-Kacheln, Freunde darunter (funktioniert). Spielübergreifend.
  */
 function Clan({
   clan,
@@ -207,42 +203,45 @@ function Clan({
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
 }): React.JSX.Element {
-  const kacheln = [
-    { name: 'Clanchat', zeichen: '💬', text: 'Nachrichten an alle' },
-    { name: 'Clankrieg', zeichen: '⚔️', text: 'Clan gegen Clan' },
-    { name: 'Clan-Rangliste', zeichen: '🏆', text: 'Trophäen im Clan' },
-    { name: 'Clantruhe', zeichen: '🎁', text: 'Gemeinsame Belohnung' },
-    { name: 'Mitglieder', zeichen: '👥', text: 'Wer ist dabei' },
-    { name: 'Clantische', zeichen: '🃏', text: 'Lange Partien pausierbar' },
+  const raeume = [
+    { name: 'Clanchat', zeichen: '💬' },
+    { name: 'Clankrieg', zeichen: '⚔️' },
+    { name: 'Clan-Rangliste', zeichen: '🏆' },
+    { name: 'Clantruhe', zeichen: '🎁' },
+    { name: 'Mitglieder', zeichen: '👥' },
+    { name: 'Clantische', zeichen: '🃏' },
   ];
 
   return (
     <>
-      <header className="front-clan-kopf">
-        <span className="front-clan-wappen" aria-hidden="true">
-          🛡️
-        </span>
-        <div>
-          <strong>{clan?.name ?? 'Brauweg'}</strong>
-          <p className="muted">
-            Dein Clan — für alle Spiele, nicht nur Doppelkopf.
-          </p>
+      <header className="front-clan-halle">
+        <div className="front-clan-banner">
+          <span className="front-clan-wappen" aria-hidden="true">
+            🛡️
+          </span>
+          <strong className="front-clan-name">{clan?.name ?? 'Brauweg'}</strong>
+          <div className="front-clan-stats">
+            <span>
+              <em aria-hidden="true">👥</em> Mitglieder —
+            </span>
+            <span>
+              <em aria-hidden="true">🏆</em> Trophäen —
+            </span>
+          </div>
+          <p className="muted">Für alle Spiele — nicht nur Doppelkopf.</p>
         </div>
       </header>
 
-      <div className="front-clan-kacheln">
-        {kacheln.map((kachel) => (
+      <div className="front-clan-raeume">
+        {raeume.map((raum) => (
           <button
-            key={kachel.name}
-            className="front-clan-kachel"
-            onClick={() => onBald(kachel.name)}
+            key={raum.name}
+            className="front-clan-raum"
+            onClick={() => onBald(raum.name)}
           >
+            <span className="front-clan-raum-titel">{raum.name}</span>
             <span className="front-clan-zeichen" aria-hidden="true">
-              {kachel.zeichen}
-            </span>
-            <span className="front-clan-kachel-text">
-              <strong>{kachel.name}</strong>
-              <span className="muted">{kachel.text}</span>
+              {raum.zeichen}
             </span>
             <span className="front-bald-tag">Bald</span>
           </button>
@@ -254,19 +253,71 @@ function Clan({
   );
 }
 
-/** Shop-Vorschau: Die Regale stehen schon, die Ware kommt noch. */
+/**
+ * Shop (Entwurf C): Wochenangebot als Held oben, darunter Vitrinen.
+ * Alles nur Vorschau — Tip oeffnet „Kommt bald", kein Kauf.
+ */
 function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element {
+  const vorteile = ['2× Münzen', 'Exklusive Emotes', 'Tägliche Belohnung', 'Werbefrei'];
   const regale = [
-    { name: 'Kartenblätter', zeichen: '🃏' },
-    { name: 'Tischdesigns', zeichen: '🎨' },
-    { name: 'Münzpakete', zeichen: '🪙' },
-    { name: 'VIP-Pass', zeichen: '👑' },
+    {
+      name: 'Kartenblätter',
+      zeichen: '🃏',
+      text: 'Stilvolle Designs für dein Spiel.',
+      preis: '2.500',
+    },
+    {
+      name: 'Tischdesigns',
+      zeichen: '🪵',
+      text: 'Neue Looks für deinen Spieltisch.',
+      preis: '3.500',
+    },
+    {
+      name: 'Münzpakete',
+      zeichen: '🪙',
+      text: 'Mehr Münzen für mehr Möglichkeiten.',
+      preis: '4,99 €',
+    },
+    {
+      name: 'Premium-Decks',
+      zeichen: '📦',
+      text: 'Exklusive Decks mit besonderen Motiven.',
+      preis: '5.000',
+    },
   ];
+
   return (
-    <>
-      <h2>Shop</h2>
-      <p className="muted">Blätter, Tischdesigns und mehr — der Shop öffnet bald.</p>
-      <div className="front-shop">
+    <div className="front-shop">
+      <h2 className="front-shop-titel">
+        <span aria-hidden="true" />
+        Shop
+        <span aria-hidden="true" />
+      </h2>
+
+      <button className="front-shop-featured" onClick={() => onBald('VIP-Pass')}>
+        <span className="front-shop-ribbon">★ Wochenangebot</span>
+        <div className="front-shop-featured-body">
+          <div className="front-shop-featured-text">
+            <strong>
+              <span aria-hidden="true">👑</span> VIP-Pass
+            </strong>
+            <p>7 Tage Premium-Vorteile + exklusives Kartenblatt.</p>
+            <ul>
+              {vorteile.map((v) => (
+                <li key={v}>{v}</li>
+              ))}
+            </ul>
+          </div>
+          <span className="front-shop-featured-zeichen" aria-hidden="true">
+            🃏
+          </span>
+        </div>
+        <span className="front-shop-bald-knopf">
+          <span className="front-bald-tag">Bald</span>
+        </span>
+      </button>
+
+      <div className="front-shop-grid">
         {regale.map((regal) => (
           <button
             key={regal.name}
@@ -277,11 +328,17 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
               {regal.zeichen}
             </span>
             <strong>{regal.name}</strong>
-            <span className="front-bald-tag">Bald</span>
+            <span className="front-shop-kachel-text muted">{regal.text}</span>
+            <span className="front-shop-bald-knopf">
+              <span className="front-bald-tag">🔒 Bald</span>
+            </span>
+            <span className="front-shop-preis" aria-hidden="true">
+              {regal.preis}
+            </span>
           </button>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
