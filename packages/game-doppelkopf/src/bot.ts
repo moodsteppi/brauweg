@@ -24,9 +24,15 @@
  *
  * Zwei Festlegungen:
  *
- * 1. **Keine Ansagen, keine Vorbehalte.** Der Bot erhoeht nie den Einsatz und
- *    waehlt nie eine Spielart. Ausnahme ist die Vorfuehrung: uebernimmt er
- *    einen Sitz mit offenem Pflichtsolo, muss er ein Solo ansagen.
+ * 1. **Keine Ansagen, aber die Vorbehalte, die die Hand vorgibt.** Re und
+ *    Kontra sagt er nie — das verdoppelt den Einsatz und ist eine
+ *    Einschaetzung, die er nicht treffen kann. Ein Solo waehlt er ebenso
+ *    wenig freiwillig; Ausnahme ist die Vorfuehrung, dort ist es Pflicht.
+ *
+ *    Schmeissen, Armut und Hochzeit sagt er dagegen immer an, wenn er sie
+ *    hat. Das ist keine Einschaetzung, sondern liest sich aus dem Blatt ab,
+ *    und wer eine Armut stillschweigend durchspielt, verdirbt vor allem
+ *    seinem Partner die Runde.
  *
  * 2. **Er sieht nur die gefilterte Spielersicht.** Die Signatur nimmt
  *    ausschliesslich eine PlayerView entgegen, nie den vollen Rundenzustand.
@@ -335,6 +341,25 @@ export function botAction(view: PlayerView): RoundAction | null {
     if (view.forcedSolo) {
       // Uebernommener Sitz mit offenem Pflichtsolo: Solo ist Pflicht.
       return { type: 'vorbehalt', seat, kind: 'solo', solo: chooseSolo(view) };
+    }
+
+    /*
+     * Vorbehalte, die die Hand vorgibt, sagt er an. Frueher war er hier
+     * immer "gesund" und spielte eine Armut wie ein normales Blatt durch —
+     * fuer den Partner ein verlorener Abend.
+     *
+     * Ein Solo waehlt er weiterhin nie freiwillig: Das erhoeht den Einsatz
+     * und ist eine Einschaetzung, die er nicht treffen kann.
+     *
+     * Reihenfolge: Schmeissen zuerst. Eine Hand, die man wegwerfen darf,
+     * spielt man nicht. Dass Schmeissen und Hochzeit zusammenfallen, geht
+     * theoretisch (sieben Volle samt beider Kreuz-Damen) und ist der
+     * einzige Fall, in dem diese Reihenfolge diskutabel waere.
+     */
+    for (const kind of ['schmeiss', 'armut', 'hochzeit'] as const) {
+      if (view.allowedVorbehalte.includes(kind)) {
+        return { type: 'vorbehalt', seat, kind };
+      }
     }
     return { type: 'vorbehalt', seat, kind: null };
   }

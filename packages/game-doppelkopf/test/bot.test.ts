@@ -438,3 +438,29 @@ test('Partei: eine einzelne Kreuz-Dame verraet nichts ueber die uebrigen Sitze',
 
   assert.equal(chooseCard(view).id, 3, 'soll nicht schmieren');
 });
+
+test('Vorbehalt: sagt an, was die Hand vorgibt — aber nie freiwillig ein Solo', () => {
+  const base = { seat: 1, isMyTurn: true, phase: 'vorbehalt', forcedSolo: false };
+
+  const faelle: { erlaubt: string[]; erwartet: string | null }[] = [
+    { erlaubt: ['solo', 'schmeiss'], erwartet: 'schmeiss' },
+    { erlaubt: ['solo', 'armut'], erwartet: 'armut' },
+    { erlaubt: ['solo', 'hochzeit'], erwartet: 'hochzeit' },
+    // Nur ein Solo im Angebot heisst: gesundes Blatt. Der Bot bleibt gesund.
+    { erlaubt: ['solo'], erwartet: null },
+    { erlaubt: [], erwartet: null },
+    // Schmeissen geht vor: eine Hand, die man wegwerfen darf, spielt man nicht.
+    { erlaubt: ['schmeiss', 'armut', 'hochzeit'], erwartet: 'schmeiss' },
+  ];
+
+  for (const f of faelle) {
+    const view = { ...base, allowedVorbehalte: f.erlaubt } as unknown as PlayerView;
+    const action = botAction(view)!;
+    assert.equal(action.type, 'vorbehalt');
+    assert.equal(
+      (action as { kind: unknown }).kind,
+      f.erwartet,
+      `bei [${f.erlaubt.join(', ')}]`,
+    );
+  }
+});

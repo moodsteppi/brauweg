@@ -5315,3 +5315,18 @@ main.auth > .muted {
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.82);
 }
+
+/* Nicht moegliche Vorbehalte: sichtbar, aber erkennbar tot, mit Grund. */
+.vb-tile.is-aus {
+  filter: saturate(0.25) brightness(0.72);
+  cursor: default;
+}
+.vb-tile .vb-warum {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 400;
+  line-height: 1.25;
+  opacity: 0.75;
+  white-space: normal;
+}

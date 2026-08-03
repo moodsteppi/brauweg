@@ -1105,6 +1105,20 @@ function SoloIcon({ solo }: { solo: string }): React.JSX.Element {
   );
 }
 
+/**
+ * Die Vorbehalte ausser dem Solo, in fester Reihenfolge.
+ *
+ * Sie werden immer angezeigt, auch wenn das Blatt sie nicht hergibt. Der
+ * Grund steht dann daneben — „nicht moeglich" ohne Begruendung liest sich
+ * wie ein Fehler, und beim naechsten Blatt weiss man immer noch nicht,
+ * worauf man achten muesste.
+ */
+const NICHT_SOLO: readonly { kind: string; label: string; warum: string }[] = [
+  { kind: 'schmeiss', label: 'Schmeißen', warum: 'Dafür brauchst du genug Luschen oder Volle.' },
+  { kind: 'armut', label: 'Armut', warum: 'Dafür darfst du höchstens drei Trümpfe haben.' },
+  { kind: 'hochzeit', label: 'Hochzeit', warum: 'Dafür brauchst du beide Kreuz-Damen.' },
+];
+
 function VorbehaltDialog({
   actions,
   onSend,
@@ -1155,9 +1169,10 @@ function VorbehaltDialog({
               <button className="primary" onClick={() => bestaetigen(gesund)}>
                 ✓ Ja, gesund
               </button>
-              {vorbehalte.length > 0 && (
-                <button onClick={() => setSchritt('auswahl')}>Nein, Vorbehalt</button>
-              )}
+              {/* Immer anwaehlbar, auch ohne moeglichen Vorbehalt: Dahinter
+                  steht jetzt die vollstaendige Liste mit Begruendungen, und
+                  die darf man sich ansehen duerfen. Zurueck geht es von dort. */}
+              <button onClick={() => setSchritt('auswahl')}>Nein, Vorbehalt</button>
             </div>
           </>
         )}
@@ -1166,12 +1181,39 @@ function VorbehaltDialog({
           <>
             <h2>Dein Vorbehalt</h2>
             <div className="vb-grid">
-              {sonstige.map((action, index) => (
-                <button className="vb-tile" key={index} onClick={() => bestaetigen(action)}>
-                  <VorbehaltIcon kind={String(action.kind)} />
-                  <span>{actionLabel(action).replace(/^Solo: /, '')}</span>
-                </button>
-              ))}
+              {/*
+                Schmeissen, Armut und Hochzeit stehen immer da, auch wenn das
+                Blatt sie nicht hergibt — dann ausgegraut mit dem Grund. Wer
+                nur sieht, was gerade geht, lernt nie, dass es sie gibt, und
+                sucht beim ersten passenden Blatt vergeblich danach.
+              */}
+              {NICHT_SOLO.map((eintrag) => {
+                const action = sonstige.find((a) => a.kind === eintrag.kind) ?? null;
+                if (!action) {
+                  return (
+                    <button
+                      className="vb-tile is-aus"
+                      key={eintrag.kind}
+                      disabled
+                      title={eintrag.warum}
+                    >
+                      <VorbehaltIcon kind={eintrag.kind} />
+                      <span>{eintrag.label}</span>
+                      <span className="vb-warum">{eintrag.warum}</span>
+                    </button>
+                  );
+                }
+                return (
+                  <button
+                    className="vb-tile"
+                    key={eintrag.kind}
+                    onClick={() => bestaetigen(action)}
+                  >
+                    <VorbehaltIcon kind={eintrag.kind} />
+                    <span>{actionLabel(action).replace(/^Solo: /, '')}</span>
+                  </button>
+                );
+              })}
               {farbsoli.length > 0 && (
                 <button
                   className={`vb-tile${zeigeFarben ? ' is-open' : ''}`}
