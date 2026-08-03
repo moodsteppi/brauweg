@@ -65,6 +65,16 @@ export function Table({
   /** Blatt mit den Tischregeln, aufklappbar im Wartebereich und in der Runde. */
   const [zeigeRegeln, setZeigeRegeln] = useState(false);
   const [zeigeLetzten, setZeigeLetzten] = useState(false);
+  const [pauseBusy, setPauseBusy] = useState(false);
+
+  const togglePause = (): void => {
+    if (!table || pauseBusy) return;
+    setPauseBusy(true);
+    const call = table.paused ? api.resumeTable(tableId) : api.pauseTable(tableId);
+    void call
+      .catch(() => undefined)
+      .finally(() => setPauseBusy(false));
+  };
 
   /** Stabile Referenz, damit memoisierte Handkarten nicht mitrendern. */
   const playCard = useCallback(
@@ -354,7 +364,19 @@ export function Table({
           {view.view.nextMultiplier > 1 && (
             <span className="doko-badge doko-badge--bock">Bock ×{view.view.nextMultiplier}</span>
           )}
+          {table?.paused && <span className="doko-badge doko-badge--pause">Pausiert</span>}
           {view.seat === null && <span className="doko-badge">Zuschauer</span>}
+          {table?.visibility === 'club_only' && view.seat !== null && (
+            <button
+              className="doko-icon"
+              onClick={togglePause}
+              disabled={pauseBusy}
+              aria-label={table.paused ? 'Tisch fortsetzen' : 'Tisch pausieren'}
+              title={table.paused ? 'Fortsetzen' : 'Pausieren'}
+            >
+              {table.paused ? '▶' : '❚❚'}
+            </button>
+          )}
           <button
             className="doko-icon"
             onClick={() => setZeigeLetzten(true)}
@@ -484,6 +506,23 @@ export function Table({
           deck={deck}
           onClose={() => setZeigeLetzten(false)}
         />
+      )}
+
+      {table?.paused && (
+        <div className="doko-sheet doko-sheet--pause">
+          <div className="doko-sheet-card">
+            <h2>Tisch pausiert</h2>
+            <p className="muted">
+              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen — ideal für
+              Vereinstische über mehrere Abende.
+            </p>
+            {view.seat !== null && (
+              <button className="primary" disabled={pauseBusy} onClick={togglePause}>
+                Fortsetzen
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Eigener Bereich: Name, Partei, Hand */}

@@ -116,6 +116,9 @@ export interface TableMessage {
   /** Wie viele Menschen noch fehlen, bis automatisch gestartet wird. */
   readonly missing: number;
   readonly rounds: number;
+  readonly visibility: 'public' | 'on_request' | 'club_only';
+  /** Vereinstisch bewusst angehalten — Zugtimer und Verfall stehen still. */
+  readonly paused: boolean;
 }
 
 export interface PartyMessage {

@@ -54,6 +54,11 @@ const de: Record<string, string> = {
   'error.invalidInput': 'Bitte prüfe deine Eingaben.',
   'error.invalidRequest': 'Diese Anfrage konnte der Server nicht verarbeiten.',
   'error.internal': 'Da ist etwas schiefgelaufen.',
+  'error.clubRequired': 'Für einen Vereinstisch brauchst du einen Verein.',
+  'error.notClubMember': 'Diesen Tisch sehen nur Vereinsmitglieder.',
+  'error.pauseClubOnly': 'Pausieren geht nur an Vereinstischen.',
+  'error.partyPaused': 'Der Tisch ist pausiert — erst fortsetzen.',
+  'error.clubUnknown': 'Diesen Verein gibt es nicht.',
 
   'deck.text': 'Text',
   'deck.text.hint': 'Farbe und Wert als Zeichen. Lädt nichts nach und bleibt auf dem Handy am kompaktesten.',

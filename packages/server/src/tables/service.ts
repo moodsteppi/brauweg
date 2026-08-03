@@ -10,6 +10,7 @@
 import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { GameId } from '@brauweg/game-api';
 
+import { requireClubMember } from '../clubs/service.js';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { RuleSetInvalidError, badRequest, conflict, forbidden, notFound } from '../errors.js';
@@ -117,6 +118,15 @@ export async function listRuleSets(db: Db, accountId: string, gameId: GameId) {
 export async function createTable(db: Db, input: CreateTableInput) {
   const module = requireModule(input.gameId);
   const visibility = input.visibility ?? 'public';
+  let clubId = input.clubId ?? null;
+
+  if (visibility === 'club_only') {
+    if (!clubId) throw badRequest('clubRequired');
+    await requireClubMember(db, clubId, input.accountId);
+  } else {
+    // Oeffentliche und private Tische gehoeren keinem Verein.
+    clubId = null;
+  }
 
   if (!module.meta.seatCounts.includes(input.seats)) {
     throw badRequest('seatCountUnsupported');
@@ -136,7 +146,7 @@ export async function createTable(db: Db, input: CreateTableInput) {
     config: input.config,
     seats: input.seats,
     rounds: input.rounds,
-    clubId: input.clubId ?? null,
+    clubId,
   });
 
   // Erst nach allen Pruefungen (auch der des Regelsatzes in saveRuleSet):
@@ -150,7 +160,7 @@ export async function createTable(db: Db, input: CreateTableInput) {
       ruleSetId: ruleSet.id,
       ruleSetVersion: ruleSet.version,
       visibility,
-      clubId: input.clubId ?? null,
+      clubId,
       seats: input.seats,
       maxRounds: input.rounds,
       filters: { fillWithBots: input.fillWithBots === true },
@@ -172,7 +182,11 @@ export interface LobbyFilter {
   readonly gameId: GameId;
   readonly seats?: number;
   readonly rounds?: number;
-  readonly clubId?: string | null;
+  /**
+   * Vereine des Aufrufers. Ohne sie sieht man nur oeffentliche Tische;
+   * mit ihnen zusaetzlich die wartenden Vereinstische dieser Vereine.
+   */
+  readonly clubIds?: readonly string[];
 }
 
 export async function listTables(db: Db, filter: LobbyFilter) {
@@ -182,8 +196,18 @@ export async function listTables(db: Db, filter: LobbyFilter) {
   ];
   if (filter.seats) conditions.push(eq(s.gameTable.seats, filter.seats));
   if (filter.rounds) conditions.push(eq(s.gameTable.maxRounds, filter.rounds));
-  if (filter.clubId) conditions.push(eq(s.gameTable.clubId, filter.clubId));
-  else conditions.push(or(isNull(s.gameTable.clubId), eq(s.gameTable.visibility, 'public'))!);
+
+  const clubIds = filter.clubIds ?? [];
+  if (clubIds.length > 0) {
+    conditions.push(
+      or(
+        eq(s.gameTable.visibility, 'public'),
+        and(eq(s.gameTable.visibility, 'club_only'), inArray(s.gameTable.clubId, [...clubIds])),
+      )!,
+    );
+  } else {
+    conditions.push(eq(s.gameTable.visibility, 'public'));
+  }
 
   const tables = await db
     .select()
@@ -254,6 +278,11 @@ export async function joinTable(db: Db, tableId: string, accountId: string) {
   const { table, seats } = await tableWithSeats(db, tableId);
   if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
   if (seats.some((seat) => seat.accountId === accountId)) return table;
+
+  if (table.visibility === 'club_only') {
+    if (!table.clubId) throw forbidden('notClubMember');
+    await requireClubMember(db, table.clubId, accountId);
+  }
 
   // Niemand wartet an zwei Tischen gleichzeitig.
   await leaveOtherWaitingTables(db, accountId, tableId);
@@ -415,8 +444,9 @@ export async function countsForRanking(db: Db, tableId: string): Promise<boolean
  *
  * Wartende deutlich schneller als laufende: Ein Wartetisch, an dem zwei
  * Stunden nichts passiert, ist aufgegeben und verstopft nur die Lobby. Eine
- * laufende Partie bekommt einen ganzen Tag - dort haengt ein Spielstand dran,
- * und Vereinstische sollen pausieren koennen.
+ * laufende Partie bekommt einen ganzen Tag — dort haengt ein Spielstand dran.
+ * Pausierte Vereinstische bleiben stehen: Sie sind bewusst angehalten und
+ * sollen ueber Wochen weiterlaufen koennen.
  */
 export async function expireStaleTables(
   db: Db,
@@ -436,10 +466,105 @@ export async function expireStaleTables(
         ),
         and(
           eq(s.gameTable.status, 'running'),
+          isNull(s.gameTable.pausedAt),
           sql`${s.gameTable.lastActivityAt} < ${runningCutoff}`,
         ),
       ),
     )
     .returning({ id: s.gameTable.id });
   return rows.length;
+}
+
+export interface ActiveTable {
+  readonly tableId: string;
+  readonly gameId: GameId;
+  readonly status: 'waiting' | 'running';
+  readonly paused: boolean;
+  readonly visibility: s.TableVisibility;
+  readonly maxRounds: number;
+  readonly seats: number;
+}
+
+/**
+ * Die Partie, an der das Konto gerade sitzt — Wartetisch oder laufende
+ * (auch pausierte) Partie. Quelle der Wahrheit fuer „Weiterspielen".
+ */
+export async function activeTableFor(
+  db: Db,
+  accountId: string,
+): Promise<ActiveTable | null> {
+  const rows = await db
+    .select({
+      tableId: s.gameTable.id,
+      gameId: s.gameTable.gameId,
+      status: s.gameTable.status,
+      pausedAt: s.gameTable.pausedAt,
+      visibility: s.gameTable.visibility,
+      maxRounds: s.gameTable.maxRounds,
+      seats: s.gameTable.seats,
+      lastActivityAt: s.gameTable.lastActivityAt,
+    })
+    .from(s.tableSeat)
+    .innerJoin(s.gameTable, eq(s.gameTable.id, s.tableSeat.tableId))
+    .where(
+      and(
+        eq(s.tableSeat.accountId, accountId),
+        or(eq(s.gameTable.status, 'waiting'), eq(s.gameTable.status, 'running')),
+      ),
+    )
+    .orderBy(
+      sql`case when ${s.gameTable.status} = 'running' then 0 else 1 end`,
+      desc(s.gameTable.lastActivityAt),
+    )
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    tableId: row.tableId,
+    gameId: row.gameId,
+    status: row.status as 'waiting' | 'running',
+    paused: row.pausedAt !== null,
+    visibility: row.visibility,
+    maxRounds: row.maxRounds,
+    seats: row.seats,
+  };
+}
+
+/**
+ * Pausiert einen Vereinstisch. Oeffentliche Tische duerfen das nicht — sie
+ * sind fuer eine Sitzung gedacht.
+ */
+export async function pauseTable(
+  db: Db,
+  tableId: string,
+  accountId: string,
+): Promise<void> {
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.visibility !== 'club_only') throw forbidden('pauseClubOnly');
+  if (table.status !== 'running') throw conflict('partyNotRunning');
+  if (table.pausedAt) return;
+  if (!seats.some((seat) => seat.accountId === accountId)) throw forbidden('notSeated');
+
+  await db
+    .update(s.gameTable)
+    .set({ pausedAt: new Date(), lastActivityAt: new Date() })
+    .where(eq(s.gameTable.id, tableId));
+}
+
+/** Setzt einen pausierten Vereinstisch fort. */
+export async function resumeTable(
+  db: Db,
+  tableId: string,
+  accountId: string,
+): Promise<void> {
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'running') throw conflict('partyNotRunning');
+  if (!table.pausedAt) return;
+  if (!seats.some((seat) => seat.accountId === accountId)) throw forbidden('notSeated');
+
+  await db
+    .update(s.gameTable)
+    .set({ pausedAt: null, lastActivityAt: new Date() })
+    .where(eq(s.gameTable.id, tableId));
 }

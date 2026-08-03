@@ -20,7 +20,14 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { conflict, forbidden, notFound } from '../errors.js';
 import { requireModule } from '../games/registry.js';
-import { countsForRanking, isReadyToStart, tableWithSeats, touch } from '../tables/service.js';
+import {
+  countsForRanking,
+  isReadyToStart,
+  pauseTable,
+  resumeTable,
+  tableWithSeats,
+  touch,
+} from '../tables/service.js';
 import { applyDelta, awardForParty, type Placement } from '../trophies.js';
 
 export interface RuntimeOptions {
@@ -54,6 +61,8 @@ export interface LiveParty {
   readonly gameId: GameId;
   readonly module: AnyGameModule;
   readonly seats: readonly Seat[];
+  /** Sichtbarkeit des Tisches — Vereinstische werden nicht nach Offline-Zeit aufgeloest. */
+  readonly visibility: s.TableVisibility;
   state: unknown;
   revision: number;
   /** Sitze, fuer die gerade ein Bot uebernimmt. Fuer alle sichtbar. */
@@ -66,6 +75,8 @@ export interface LiveParty {
   turnDeadline: number | null;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
+  /** Gesetzt, solange der Vereinstisch pausiert ist. */
+  paused: boolean;
   finished: boolean;
   /**
    * Gebuchte Trophaeen nach Partie-Ende, je Sitz. Leer bei Tischen, die nicht
@@ -202,6 +213,7 @@ export class PartyRuntime {
         accountId: seat.accountId,
         permanentBot: !seat.accountId,
       })),
+      visibility: table.visibility,
       state,
       revision: 0,
       botControlled: new Set(emptySeats),
@@ -213,6 +225,7 @@ export class PartyRuntime {
       turnDeadline: null,
       timer: null,
       offlineTimer: null,
+      paused: false,
       finished: false,
       awards: [],
     };
@@ -262,6 +275,7 @@ export class PartyRuntime {
         accountId: seat.accountId,
         permanentBot: seat.isBot,
       })),
+      visibility: table.visibility,
       state,
       revision: snapshot.revision,
       botControlled: new Set(
@@ -275,13 +289,46 @@ export class PartyRuntime {
       turnDeadline: null,
       timer: null,
       offlineTimer: null,
+      paused: table.pausedAt !== null,
       finished: module.isFinished(state),
       awards: [],
     };
 
     this.live.set(tableId, liveParty);
-    if (!liveParty.finished) this.schedule(liveParty);
+    if (!liveParty.finished && !liveParty.paused) this.schedule(liveParty);
     return liveParty;
+  }
+
+  /**
+   * Pausiert einen Vereinstisch: Zugtimer aus, Offline-Aufloesung aus,
+   * Verfall gestoppt. Nur club_only.
+   */
+  async pause(tableId: string, accountId: string): Promise<void> {
+    await pauseTable(this.db, tableId, accountId);
+    const party = this.live.get(tableId);
+    if (party) {
+      party.paused = true;
+      if (party.timer) {
+        clearTimeout(party.timer);
+        party.timer = null;
+      }
+      party.turnDeadline = null;
+      if (party.offlineTimer) {
+        clearTimeout(party.offlineTimer);
+        party.offlineTimer = null;
+      }
+      this.emit(tableId);
+    }
+  }
+
+  /** Setzt einen pausierten Vereinstisch fort und startet den Zugtimer neu. */
+  async unpause(tableId: string, accountId: string): Promise<void> {
+    await resumeTable(this.db, tableId, accountId);
+    let party = this.live.get(tableId);
+    if (!party) party = await this.resume(tableId);
+    party.paused = false;
+    if (!party.finished) this.schedule(party);
+    this.emit(tableId);
   }
 
   // -------------------------------------------------------------------------
@@ -332,6 +379,7 @@ export class PartyRuntime {
   async act(tableId: string, accountId: string, action: unknown): Promise<void> {
     const party = this.requireLive(tableId);
     if (party.finished) throw conflict('partyFinished');
+    if (party.paused) throw conflict('partyPaused');
 
     const seat = this.seatOf(party, accountId);
     if (seat === null) throw forbidden('notSeated');
@@ -378,6 +426,12 @@ export class PartyRuntime {
   // -------------------------------------------------------------------------
 
   private schedule(party: LiveParty): void {
+    if (party.paused || party.finished) {
+      if (party.timer) clearTimeout(party.timer);
+      party.timer = null;
+      party.turnDeadline = null;
+      return;
+    }
     if (party.timer) clearTimeout(party.timer);
     party.timer = null;
     party.turnDeadline = null;
@@ -475,6 +529,9 @@ export class PartyRuntime {
    * Verbindungsverlust pausiert nichts, der Zugtimer laeuft weiter. Reconnect
    * ist der Normalfall: iOS trennt die Verbindung bei jedem Sperren des
    * Bildschirms.
+   *
+   * Ausnahme Vereinstische: Die laufen ueber Wochen und werden nicht nach
+   * fuenf Minuten Offline aufgeloest — dort gilt Pause oder die 24h-Schonung.
    */
   setPresence(tableId: string, accountId: string, online: boolean): void {
     const party = this.live.get(tableId);
@@ -492,6 +549,8 @@ export class PartyRuntime {
     }
 
     party.online.delete(seat);
+    if (party.paused || party.visibility === 'club_only') return;
+
     const humansOnline = party.seats.some(
       (seat_) => seat_.accountId && party.online.has(seat_.index),
     );

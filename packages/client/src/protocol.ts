@@ -110,6 +110,9 @@ export interface TableMessage {
   seats: SeatInfo[];
   missing: number;
   rounds: number;
+  visibility: 'public' | 'on_request' | 'club_only';
+  /** Vereinstisch bewusst angehalten. */
+  paused: boolean;
 }
 
 export interface PartyMessage {

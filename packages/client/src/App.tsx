@@ -58,7 +58,12 @@ export function App(): React.JSX.Element {
         tableId={screen.tableId}
         deck={deck}
         onShowProfile={zeigeProfil}
-        onLeave={() => setScreen({ name: 'lobby', gameId: screen.gameId })}
+        // Zurueck zum Start: me neu laden, damit „Weiterspielen" den
+        // echten Stand zeigt (Wartetisch weg / Partie noch offen).
+        onLeave={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
       />
     );
   }
@@ -67,7 +72,10 @@ export function App(): React.JSX.Element {
     return (
       <Lobby
         gameId={screen.gameId}
-        onBack={() => setScreen({ name: 'games' })}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
         onEnter={(tableId) => setScreen({ name: 'table', gameId: screen.gameId, tableId })}
       />
     );
@@ -77,6 +85,7 @@ export function App(): React.JSX.Element {
     <GameSelect
       me={me}
       onPick={(gameId) => setScreen({ name: 'lobby', gameId })}
+      onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
       onShowProfile={zeigeProfil}
       // Erst umschalten, dann speichern: Das Blatt wechselt ohne Wartezeit,
       // und schlaegt das Speichern fehl, holt reload() den echten Stand zurueck.

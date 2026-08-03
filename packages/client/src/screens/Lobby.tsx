@@ -19,6 +19,7 @@ interface Gemerkt {
   seats?: number;
   rounds?: number;
   config?: Record<string, unknown>;
+  visibility?: 'public' | 'club_only';
 }
 
 const merkKey = (gameId: string): string => `tischEinstellungen.${gameId}`;
@@ -44,6 +45,7 @@ export function Lobby({
   const [defaults, setDefaults] = useState<GameDefaults | null>(null);
   const [seats, setSeats] = useState(4);
   const [rounds, setRounds] = useState(8);
+  const [visibility, setVisibility] = useState<'public' | 'club_only'>('public');
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
@@ -87,13 +89,22 @@ export function Lobby({
           ? merken.rounds
           : runden[0];
       if (rundenWahl) setRounds(rundenWahl);
+      if (merken?.visibility === 'club_only' || merken?.visibility === 'public') {
+        setVisibility(merken.visibility);
+      }
     });
     const handle = setInterval(refresh, 4000);
     return () => clearInterval(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
-  const roundOptions = defaults?.rounds[String(seats)] ?? [];
+  const baseRounds = defaults?.rounds[String(seats)] ?? [];
+  // Vereinstische dürfen bis 100 Runden — die kurze Liste vom Modul um die
+  // lange Partie ergänzen, sofern die Geberrotation aufgeht.
+  const roundOptions =
+    visibility === 'club_only' && !baseRounds.includes(100)
+      ? [...baseRounds, 100]
+      : baseRounds;
 
   const create = async (): Promise<void> => {
     setError(null);
@@ -103,11 +114,15 @@ export function Lobby({
         config: { ...config, tableSize: seats, rounds },
         seats,
         rounds,
+        visibility,
       });
       // Erst nach dem Erfolg merken: Ein abgelehnter Regelsatz soll nicht
       // beim naechsten Besuch wieder vorgelegt werden.
       try {
-        localStorage.setItem(merkKey(gameId), JSON.stringify({ seats, rounds, config }));
+        localStorage.setItem(
+          merkKey(gameId),
+          JSON.stringify({ seats, rounds, config, visibility }),
+        );
       } catch {
         // Voller oder gesperrter Speicher ist kein Grund, den Tisch zu verweigern.
       }
@@ -184,6 +199,31 @@ export function Lobby({
                 ))}
               </div>
             </div>
+            <div className="lobby-gruppe">
+              <span className="muted">Für wen</span>
+              <div className="lobby-chips">
+                <button
+                  className={`lobby-chip${visibility === 'public' ? ' is-an' : ''}`}
+                  aria-pressed={visibility === 'public'}
+                  onClick={() => {
+                    setVisibility('public');
+                    if (rounds > 20) {
+                      const first = defaults?.rounds[String(seats)]?.[0];
+                      if (first) setRounds(first);
+                    }
+                  }}
+                >
+                  Offen
+                </button>
+                <button
+                  className={`lobby-chip${visibility === 'club_only' ? ' is-an' : ''}`}
+                  aria-pressed={visibility === 'club_only'}
+                  onClick={() => setVisibility('club_only')}
+                >
+                  Nur Verein
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Eine Zeile statt eines aufgeklappten Formulars: Der Stand ist
@@ -200,8 +240,9 @@ export function Lobby({
             Tisch erstellen
           </button>
           <p className="muted lobby-fussnote">
-            Bots setzt du am Tisch auf die freien Plätze — Tische mit Bots zählen
-            nicht für die Rangliste.
+            {visibility === 'club_only'
+              ? 'Vereinstisch: bis 100 Runden, pausierbar, nur für Vereinsmitglieder.'
+              : 'Bots setzt du am Tisch auf die freien Plätze — Tische mit Bots zählen nicht für die Rangliste.'}
           </p>
         </section>
 
@@ -212,6 +253,7 @@ export function Lobby({
             <span className="lobby-tischinfo">
               <strong>
                 {row.seats} Plätze · {row.maxRounds} Runden
+                {row.visibility === 'club_only' ? ' · Verein' : ''}
               </strong>
               <span className="muted">
                 {row.occupied} von {row.seats} besetzt

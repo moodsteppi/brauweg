@@ -7,6 +7,7 @@
 
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
+import { ensureBetaClubMembership } from '../clubs/service.js';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { badRequest, conflict, forbidden, unauthorized } from '../errors.js';
@@ -110,6 +111,10 @@ export async function register(
     if (constraint === 'account_email_key') throw conflict('emailTaken');
     throw err;
   }
+
+  // Beta: jeder Einladungs-Nutzer landet im gemeinsamen Verein — sonst
+  // gaebe es keine Vereinstische und keine Pause.
+  await ensureBetaClubMembership(db, accountId);
 
   // Der Versand steht bewusst NACH dem Konto und darf es nicht mehr umwerfen.
   // Scheitert er - Versanddienst nicht erreichbar, Schluessel falsch,
