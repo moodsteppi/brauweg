@@ -1,12 +1,12 @@
 /**
  * Trophäen-Weltkarte (Hub-CI, Entwurf C).
  *
- * Eine gemalte Karte als Hintergrund, darauf die Checkpoint-Knoten.
- * Look wie Clash Royale / Brawl Stars — Filz und Wirtshaus kommen erst
- * nach der Spielwahl. Raster-Assets liegen in public/hub/.
- * Die Karte füllt die freie Viewport-Höhe (object-fit: cover) — kein
- * Langscroll auf dem Handy.
+ * Gemalte Karte + Checkpoint-Knoten. Die Kamera rückt mit dem höchsten
+ * erreichten Checkpoint vor; Ambient (Bäume, Wolken, Pinguin) hält die
+ * Szene lebendig. Filz/Wirtshaus erst nach der Spielwahl.
  */
+
+import type { CSSProperties } from 'react';
 
 export interface HubWelt {
   readonly cp: number;
@@ -27,69 +27,124 @@ export const HUB_WELTEN: readonly HubWelt[] = [
   { cp: 0, name: 'Los gehtʼs!', top: '80%', left: '30%', farbe: 'gruen' },
 ];
 
+const HUB_WEG = [...HUB_WELTEN].sort((a, b) => a.cp - b.cp);
+
+/** Kamera: Fokus auf aktuellen Checkpoint, leichter Zoom. */
+function kameraFuer(cp: number): { zoom: number; tx: number; ty: number } {
+  const welt = HUB_WEG.find((w) => w.cp === cp) ?? HUB_WEG[0];
+  const fx = Number.parseFloat(welt.left);
+  const fy = Number.parseFloat(welt.top);
+  const zoom = 1.18 + (cp / 1000) * 0.14;
+  // Fokus leicht unter die Mitte ziehen (Platz für „Du bist hier").
+  const tx = (50 - fx) * 0.62;
+  const ty = (46 - fy) * 0.62;
+  return { zoom, tx, ty };
+}
+
 function knotenNummer(cp: number): number {
   if (cp === 0) return 1;
-  const hoeher = [...HUB_WELTEN]
-    .filter((w) => w.cp > 0)
-    .sort((a, b) => a.cp - b.cp);
+  const hoeher = HUB_WEG.filter((w) => w.cp > 0);
   return hoeher.findIndex((w) => w.cp === cp) + 2;
 }
 
 export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Element {
-  // Kein scrollIntoView: Die Hub-Karte muss in eine Handy-Viewport passen,
-  // ohne die Seite zu verschieben.
   const aktuelleCp = HUB_WELTEN.reduce(
     (beste, welt) => (trophies >= welt.cp && welt.cp > beste ? welt.cp : beste),
     0,
   );
+  const idx = HUB_WEG.findIndex((w) => w.cp === aktuelleCp);
+  const von = HUB_WEG[idx] ?? HUB_WEG[0];
+  const bis = HUB_WEG[Math.min(idx + 1, HUB_WEG.length - 1)] ?? von;
+  const cam = kameraFuer(aktuelleCp);
+
+  const weltStyle = {
+    '--hub-zoom': String(cam.zoom),
+    '--hub-tx': `${cam.tx}%`,
+    '--hub-ty': `${cam.ty}%`,
+    '--pingu-x0': von.left,
+    '--pingu-y0': von.top,
+    '--pingu-x1': bis.left,
+    '--pingu-y1': bis.top,
+  } as CSSProperties;
 
   return (
     <div className="hub-karte" aria-label="Trophäenpfad">
-      <img className="hub-karte-bild" src="/hub/weltkarte.png" alt="" draggable={false} />
+      <div className="hub-karte-welt" style={weltStyle}>
+        <img className="hub-karte-bild" src="/hub/weltkarte.png" alt="" draggable={false} />
 
-      <span className="hub-schild" style={{ top: '72%', left: '8%' }}>
-        Wiesen
-      </span>
-      <span className="hub-schild" style={{ top: '48%', left: '6%' }}>
-        Strand
-      </span>
-      <span className="hub-schild" style={{ top: '30%', left: '68%' }}>
-        Feuerberg
-      </span>
-      <span className="hub-schild" style={{ top: '12%', left: '58%' }}>
-        Schneefeld
-      </span>
+        <div className="hub-ambient" aria-hidden="true">
+          <span className="hub-wolke hub-wolke--a" />
+          <span className="hub-wolke hub-wolke--b" />
+          <span className="hub-baum hub-baum--a" style={{ top: '70%', left: '18%' }} />
+          <span className="hub-baum hub-baum--b" style={{ top: '62%', left: '68%' }} />
+          <span className="hub-baum hub-baum--c" style={{ top: '74%', left: '58%' }} />
+          <span className="hub-gras hub-gras--a" style={{ top: '78%', left: '42%' }} />
+          <span className="hub-gras hub-gras--b" style={{ top: '68%', left: '40%' }} />
+          {aktuelleCp >= 500 && <span className="hub-rauch" style={{ top: '28%', left: '60%' }} />}
+          {aktuelleCp >= 750 && (
+            <>
+              <span className="hub-schnee" style={{ top: '14%', left: '40%' }} />
+              <span className="hub-schnee hub-schnee--b" style={{ top: '10%', left: '55%' }} />
+            </>
+          )}
+        </div>
 
-      {HUB_WELTEN.map((welt) => {
-        const erreicht = trophies >= welt.cp;
-        const aktuell = welt.cp === aktuelleCp;
-        const nr = knotenNummer(welt.cp);
+        <img
+          className="hub-pingu"
+          src="/hub/pinguin.png"
+          alt=""
+          draggable={false}
+          aria-hidden="true"
+        />
 
-        return (
-          <button
-            key={welt.cp}
-            type="button"
-            className={`hub-knoten hub-knoten--${welt.farbe}${erreicht ? ' is-an' : ' is-zu'}${aktuell ? ' is-hier' : ''}`}
-            style={{ top: welt.top, left: welt.left }}
-            aria-label={`${welt.name}, ${welt.cp} Trophäen${erreicht ? ', erreicht' : ', noch gesperrt'}`}
-          >
-            {welt.cp === 0 ? (
-              <>
-                <span className="hub-knoten-pokal" aria-hidden="true">
-                  🏆
+        <span className="hub-schild" style={{ top: '72%', left: '8%' }}>
+          Wiesen
+        </span>
+        <span className="hub-schild" style={{ top: '48%', left: '6%' }}>
+          Strand
+        </span>
+        <span className="hub-schild" style={{ top: '30%', left: '68%' }}>
+          Feuerberg
+        </span>
+        <span className="hub-schild" style={{ top: '12%', left: '58%' }}>
+          Schneefeld
+        </span>
+
+        {HUB_WELTEN.map((welt) => {
+          const erreicht = trophies >= welt.cp;
+          const aktuell = welt.cp === aktuelleCp;
+          const nr = knotenNummer(welt.cp);
+
+          return (
+            <button
+              key={welt.cp}
+              type="button"
+              className={`hub-knoten hub-knoten--${welt.farbe}${erreicht ? ' is-an' : ' is-zu'}${aktuell ? ' is-hier' : ''}`}
+              style={{ top: welt.top, left: welt.left }}
+              aria-label={`${welt.name}, ${welt.cp} Trophäen${erreicht ? ', erreicht' : ', noch gesperrt'}`}
+            >
+              {welt.cp === 0 ? (
+                <>
+                  <span className="hub-knoten-pokal" aria-hidden="true">
+                    🏆
+                  </span>
+                  <span className="hub-knoten-los">Los gehtʼs!</span>
+                </>
+              ) : (
+                <>
+                  <span className="hub-knoten-nr">{erreicht ? nr : '🔒'}</span>
+                  <span className="hub-knoten-cp">{welt.cp}</span>
+                </>
+              )}
+              {aktuell && (
+                <span className="hub-knoten-du">
+                  Du bist hier · {trophies} 🏆
                 </span>
-                <span className="hub-knoten-los">Los gehtʼs!</span>
-              </>
-            ) : (
-              <>
-                <span className="hub-knoten-nr">{erreicht ? nr : '🔒'}</span>
-                <span className="hub-knoten-cp">{welt.cp}</span>
-              </>
-            )}
-            {aktuell && <span className="hub-knoten-du">Du bist hier · {trophies} 🏆</span>}
-          </button>
-        );
-      })}
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
