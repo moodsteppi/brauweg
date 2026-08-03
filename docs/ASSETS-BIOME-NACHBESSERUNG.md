@@ -27,54 +27,22 @@ Anfang. Zu ändern sind nur zwei Dinge:
 
 ---
 
-## Stand
+## Stand: fünf von sechs sind fertig
 
-**Runde 1 ist für fünf Kacheln erledigt.** Die zweite Lieferung hat behoben, was die erste
-falsch hatte: genau ein Weg pro Kachel, gerade durch die Mitte, Ränder in
-Wasser und Nebel auslaufend, der Sternenhafen als Draufsicht, kein Flicken
-mehr in den Wiesen. Vier der sechs Kacheln sind damit fertig —
-`biom-1-heimat`, `biom-2-wiesen`, `biom-3-strand`, `biom-5-schneefeld`.
+| Kachel | Helligkeit | |
+| --- | --- | --- |
+| `biom-1-heimat` | 28 % | **offen** — zwei Wege, gerahmter Rand, siehe oben |
+| `biom-2-wiesen` | 44 % | fertig |
+| `biom-3-strand` | 42 % | fertig |
+| `biom-4-feuerberg` | 29 % | fertig — Vulkan mit Lava wieder da |
+| `biom-5-schneefeld` | 42 % | fertig |
+| `biom-6-sternenhafen` | 38 % | fertig — Hafen mit Lichtern wieder da |
 
-**Zwei sind beim Neumachen gekippt** und brauchen eine dritte Runde. Sie
-sind eingebaut und funktionieren, aber sie haben ihr Motiv verloren.
-
----
-
-## Runde 2 — nur diese zwei
-
-Alles aus [ASSETS-BIOME.md](ASSETS-BIOME.md) gilt weiter, ebenso die
-berichtigte Wegregel weiter unten. **Der Weg ist bei beiden richtig und
-soll genau so bleiben** — es geht ausschließlich um das, was links und
-rechts davon liegt.
-
-### `biom-4-feuerberg.png` — das Feuer fehlt
-
-Mittlere Helligkeit **17 %**. Die Kachel ist ein schwarzes Geröllfeld: kein
-Vulkan, keine Lava, kein Glühen. Sie liest sich als Brandfläche, nicht als
-Feuerberg. Zum Vergleich: Wiesen 49 %, Strand 45 %, Schneefeld 40 %,
-Heimat 30 %.
-
-Gewünscht: **Vulkankegel, glühende Spalten im Gestein, Lavaadern, die sich
-durch die Kachel ziehen.** Warmes oranges Licht, das auf die umliegenden
-Felsen fällt. Bedrohlich, aber nicht düster — der Weg bleibt hell und gut
-sichtbar, und man soll erkennen wollen, wo man da hinläuft. Die erste
-Fassung hatte das richtig; nur der doppelte Weg war ihr Problem.
-
-### `biom-6-sternenhafen.png` — der Hafen fehlt
-
-Mittlere Helligkeit **12 %**, die dunkelste Kachel von allen. Zu sehen sind
-ein Steg, zwei Boote und drei Laternen. Es fehlen die Stadt, die
-erleuchteten Fenster, die Lichterketten, die Spiegelungen im Wasser.
-
-Das wiegt schwerer als beim Feuerberg: **Das ist das Ziel des ganzen
-Weges.** Wer tausend Trophäen sammelt, kommt hier an. Es soll die
-Belohnung sein und die hellste, festlichste Kachel des Satzes — nicht die
-düsterste.
-
-Gewünscht: **Hafenstadt von oben**, Häuser mit warm erleuchteten Fenstern
-rings um das Becken, Boote mit Laternen, Lichterketten zwischen den
-Masten, Sterne und Lichter im Wasser gespiegelt. Nacht, aber eine helle,
-warme Nacht. Draufsicht wie bei den anderen fünf, kein Horizont im Bild.
+Runde 2 hat die doppelten Wege behoben, die Ränder auslaufen lassen, den
+Sternenhafen auf Draufsicht gedreht und den rechteckigen Flicken in den
+Wiesen entfernt. Dabei verloren Feuerberg und Sternenhafen ihr Motiv —
+17 % und 12 % Helligkeit, schwarzes Geröll und ein dunkler Steg. Runde 3
+hat beide zurückgeholt.
 
 ---
 
