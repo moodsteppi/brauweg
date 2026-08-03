@@ -2534,15 +2534,16 @@ td {
   gap: 0;
 }
 /* Logo schwebt über der Karte — klein, damit kein „blaues Schild" entsteht. */
+/* Logo in die obere linke Ecke: Die Mitte gehoert der Karte, und der
+   Knoten der aktuellen Welt sitzt oft genau dort, wo das Logo vorher lag. */
 .hub-logo {
   position: absolute;
   z-index: 5;
   top: 0.2rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0.5rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 0;
   margin: 0;
   width: min(36%, 6.6rem);
@@ -2696,12 +2697,6 @@ td {
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 5px 12px rgba(0, 0, 0, 0.22);
   overflow: visible;
 }
-.hub-knoten--gruen {
-  background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
-  width: 3.6rem;
-  height: 3.6rem;
-  border-radius: 0.85rem;
-}
 .hub-knoten--mint { background: linear-gradient(180deg, #9af0b0 0%, #3cb86a 100%); }
 .hub-knoten--blau { background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%); }
 .hub-knoten--rot { background: linear-gradient(180deg, #ff8a6a 0%, #d04030 100%); }
@@ -2723,37 +2718,64 @@ td {
   font-size: 0.5rem;
   opacity: 0.9;
 }
-.hub-knoten-pokal {
-  font-size: 1rem;
-  line-height: 1;
+@keyframes hub-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.06); }
 }
-.hub-knoten-los {
-  font-size: 0.52rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  margin-top: 0.05rem;
-}
-.hub-knoten-du {
+
+/* =========================================================================
+   Der Pinguin als Spielfigur.
+
+   Er steht auf dem Weg dort, wo der Trophaeenstand ihn hintraegt, und traegt
+   seinen Stand als kleines Schild. Beim Dazugewinnen wandert er weich weiter
+   - deshalb der Uebergang auf top und left.
+   ========================================================================= */
+.hub-figur {
   position: absolute;
-  top: calc(100% + 0.2rem);
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 0.15rem 0.4rem;
+  z-index: 6;
+  transform: translate(-50%, -78%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  transition: top 0.9s ease, left 0.9s ease;
+}
+.hub-figur > img {
+  display: block;
+  width: clamp(2.6rem, 13vw, 3.4rem);
+  height: auto;
+  filter: drop-shadow(0 4px 5px rgba(10, 30, 70, 0.5));
+  animation: hub-huepf 3.4s ease-in-out infinite;
+}
+.hub-figur-stand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-top: -0.3rem;
+  padding: 0.08rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: #3a2a08;
   background: linear-gradient(180deg, #ffe08a 0%, #e2b64f 100%);
   border: 2px solid #fff;
   box-shadow: 0 2px 0 #8a6a1a;
 }
-@keyframes hub-pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.06); }
+.hub-figur-stand img {
+  width: 0.7rem;
+  height: 0.7rem;
+  object-fit: contain;
 }
+@keyframes hub-huepf {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hub-knoten.is-hier { animation: none; }
+  .hub-figur { transition: none; }
+  .hub-figur > img { animation: none; }
   .hub-karte-welt { transition: none; }
   .hub-baum { animation: none !important; }
 }
@@ -2768,8 +2790,12 @@ td {
   top: 14%;
   bottom: auto;
 }
+/* Auf halber Hoehe am linken Rand - darueber sitzt jetzt das Logo, und
+   auf Daumenhoehe sind die drei Knoepfe ohnehin am besten zu treffen. */
 .hub-seite--links {
   left: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .hub-seite--rechts {
   right: 0.35rem;
