@@ -12,6 +12,13 @@ const de: Record<string, string> = {
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
   'game.maumau': 'Mau-Mau',
+  'game.schwimmen': 'Schwimmen',
+  'game.backgammon': 'Backgammon',
+  // "Bauernskat" heisst auch Raeuberskat: Skat zu zweit, ohne Reizen.
+  'game.bauernskat': 'Bauernskat',
+  // Mehrkampf ueber mehrere Spiele. Kein Spielmodul, sondern ein Modus -
+  // deshalb steht er nicht in der Registrierung.
+  'modus.mehrkampf': 'Brauweg-Bock',
 
   'error.unauthorized': 'Bitte melde dich an.',
   'error.credentialsInvalid': 'E-Mail oder Passwort stimmt nicht.',

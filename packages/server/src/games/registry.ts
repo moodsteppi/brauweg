@@ -34,6 +34,10 @@ const PREVIEW: readonly GameMeta[] = (
     ['schafkopf', [4]],
     ['romme', [2, 3, 4, 5, 6]],
     ['maumau', [2, 3, 4, 5]],
+    // Schwimmen ginge zu neunt, aber ein Tisch fasst hoechstens acht.
+    ['schwimmen', [2, 3, 4, 5, 6, 7, 8]],
+    ['backgammon', [2]],
+    ['bauernskat', [2]],
   ] as const
 ).map(([id, seatCounts]) => ({
   id: id as GameId,

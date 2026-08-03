@@ -31,7 +31,10 @@ export type GameId =
   | 'skat'
   | 'schafkopf'
   | 'romme'
-  | 'maumau';
+  | 'maumau'
+  | 'schwimmen'
+  | 'backgammon'
+  | 'bauernskat';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby

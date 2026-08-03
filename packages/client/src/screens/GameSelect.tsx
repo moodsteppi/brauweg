@@ -831,6 +831,36 @@ function Spielwahl({
             </button>
           </div>
         ))}
+
+        {/*
+          Der Mehrkampf steht unter den Spielen, weil er keines ist: Eine
+          Partie besteht aus Runden verschiedener Spiele, gewertet wird die
+          Platzierung ueber alles. Er braucht kein eigenes Spielmodul,
+          sondern nur die Regel, dass Module Platzierungen liefern und die
+          Plattform daraus die Wertung rechnet — genau dafuer ist die
+          Trennung gebaut.
+
+          Deshalb steht er auch nicht in der Spielregistrierung des Servers
+          und bekommt keine Abstimmung: Er konkurriert nicht mit den
+          Spielen, er benutzt sie.
+        */}
+        <h3 className="spielwahl-abschnitt">Modus</h3>
+        <div className="spielwahl-karte is-zu">
+          <button
+            className="spielwahl-flaeche"
+            onClick={() => onBald(`${t('modus.mehrkampf')} — der Mehrkampf über mehrere Spiele`)}
+          >
+            <SpielBild id="mehrkampf" />
+            <span className="spielwahl-titel">
+              <strong>{t('modus.mehrkampf')}</strong>
+              <span className="front-bald-tag">Bald</span>
+            </span>
+          </button>
+          <p className="spielwahl-modus-text">
+            Eine Partie aus Runden verschiedener Spiele. Gewertet wird, wer über alles am besten
+            durchkommt — nicht, wer die meisten Punkte macht.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -923,6 +953,68 @@ function SpielBild({ id }: { id: string }): React.JSX.Element {
         {karte(150, 3, '♥7', true)}
         <text x="204" y="48" fontSize="19" fontWeight="900" fill="#ffd76e" transform="rotate(6 204 48)">
           Mau!
+        </text>
+      </svg>
+    );
+  }
+  if (id === 'mehrkampf') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#3b2a63" />
+        {/* Aus drei Spielen eins: Karte, Wuerfel, Stein. */}
+        {karte(106, -10, '♦A', true, 26)}
+        <g transform="translate(146,22) rotate(6)">
+          <rect width="34" height="34" rx="6" fill="#f4ead8" />
+          <circle cx="11" cy="11" r="3.2" fill="#2a1c12" />
+          <circle cx="23" cy="23" r="3.2" fill="#2a1c12" />
+          <circle cx="17" cy="17" r="3.2" fill="#2a1c12" />
+        </g>
+        <circle cx="204" cy="40" r="14" fill="#e8cba0" stroke="#a8734a" strokeWidth="3" />
+        <text x="228" y="47" fontSize="17" fontWeight="900" fill="#ffd76e">
+          ⇄
+        </text>
+      </svg>
+    );
+  }
+  if (id === 'schwimmen') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#1d5c78" />
+        {/* Drei Karten und die 31 - mehr ist das Spiel nicht. */}
+        {karte(108, -8, '♥A', true, 28)}
+        {karte(138, 0, '♥10', true, 28)}
+        {karte(168, 8, '♥B', true, 28)}
+        <text x="206" y="50" fontSize="22" fontWeight="900" fill="#ffe08a" transform="rotate(5 206 50)">
+          31
+        </text>
+      </svg>
+    );
+  }
+  if (id === 'backgammon') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#6b4326" />
+        {/* Zacken und zwei Steine - das Brett erkennt man an der Form. */}
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <polygon
+            key={i}
+            points={`${110 + i * 20},8 ${120 + i * 20},52 ${130 + i * 20},8`}
+            fill={i % 2 === 0 ? '#e8cba0' : '#a8734a'}
+          />
+        ))}
+        <circle cx="120" cy="62" r="9" fill="#f4ead8" />
+        <circle cx="212" cy="20" r="9" fill="#2a1c12" />
+      </svg>
+    );
+  }
+  if (id === 'bauernskat') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#2f5b46" />
+        {karte(120, -7, '♣B', false)}
+        {karte(158, 7, '♠B', false)}
+        <text x="206" y="48" fontSize="17" fontWeight="900" fill="#ffd76e" transform="rotate(5 206 48)">
+          zu zweit
         </text>
       </svg>
     );

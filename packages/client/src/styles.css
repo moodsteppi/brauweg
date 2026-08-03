@@ -3593,7 +3593,9 @@ td {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  width: 2.55rem;
+  /* So breit wie die Knoepfe darin — sonst steht der Streifen falsch und
+     man rechnet am Rand mit einer Breite, die nicht stimmt. */
+  width: 3.5rem;
   /* Fast oben links / mitte-links — Karte bleibt lesbar. */
   top: 14%;
   bottom: auto;
@@ -3605,10 +3607,18 @@ td {
   top: 50%;
   transform: translateY(-50%);
 }
+/*
+ * Die Truhe ragte rechts aus dem Bild.
+ *
+ * Der Streifen war 2,55 rem breit, der Knopf darin 3,5 rem — fast ein
+ * Zentimeter stand ueber, und die Bald-Marke sitzt nochmal 0,35 rem
+ * weiter aussen. Links fiel es nicht auf, weil der Ueberstand dort ins
+ * Bild hineinragt statt hinaus.
+ */
 .hub-seite--rechts {
-  right: 0.35rem;
+  right: 0.7rem;
   top: 16%;
-  width: 2.55rem;
+  width: 3.5rem;
 }
 .hub-side-btn {
   display: grid;
@@ -5288,4 +5298,20 @@ main.auth > .muted {
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* Abschnitt "Modus" in der Spielauswahl. */
+.spielwahl-abschnitt {
+  margin: 1.2rem 0 0.1rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 233, 189, 0.7);
+}
+.spielwahl-modus-text {
+  margin: 0;
+  padding: 0.5rem 0.7rem 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.82);
 }

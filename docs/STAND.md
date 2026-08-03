@@ -202,6 +202,14 @@ Damit es nicht zweimal passiert:
 - **Bilder vor dem Umwandeln auf den Zeitstempel prüfen.** Eine
   nachgebesserte Kachel lag bereits auf der Platte, während ich noch die
   neun Minuten ältere Fassung beurteilt und ausgeliefert habe.
+- **In einem git-Arbeitsbaum liegt kein eigenes `node_modules`.** Node
+  sucht nach oben und findet `C:\Brauweg\node_modules` — dort zeigt
+  `@brauweg/game-api` auf die Pakete des **Hauptcheckouts**. Eine Änderung
+  am Paket im Arbeitsbaum ist für den Server dort also unsichtbar, und
+  `tsc` meldet Typfehler, die im Quelltext längst behoben sind. Abhilfe:
+  einmalig Verzeichnis-Junctions von `<arbeitsbaum>/node_modules/@brauweg/*`
+  auf die eigenen `packages/*` legen. `node_modules` ist ignoriert, das
+  bleibt lokal.
 
 - **`git add -A` sammelt ein, was gerade im Ordner liegt.** So sind 13,9 MB
   gelieferte Original-PNGs in `public/` gelandet und ausgeliefert worden.

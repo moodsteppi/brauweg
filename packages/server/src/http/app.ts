@@ -95,7 +95,16 @@ export interface AppDeps {
   readonly clientDir?: string;
 }
 
-const gameIdSchema = z.enum(['doppelkopf', 'skat', 'schafkopf', 'romme', 'maumau']);
+const gameIdSchema = z.enum([
+  'doppelkopf',
+  'skat',
+  'schafkopf',
+  'romme',
+  'maumau',
+  'schwimmen',
+  'backgammon',
+  'bauernskat',
+]);
 
 const registerSchema = z.object({
   email: z.string().email(),
