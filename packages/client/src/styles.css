@@ -29,6 +29,32 @@ body {
   font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/*
+ * Vom Homescreen gestartet soll sich Brauweg wie eine App anfuehlen und nicht
+ * wie eine Seite: kein Gummiband am Rand, kein graues Aufblitzen beim Tippen,
+ * kein Lupenfenster beim Halten. Eingabefelder bleiben ausgenommen - dort
+ * muss man markieren und einfuegen koennen.
+ */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable] {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 main {
   max-width: 60rem;
   margin: 0 auto;
