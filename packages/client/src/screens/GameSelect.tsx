@@ -10,6 +10,7 @@ import {
   type RankingEntry,
 } from '../api';
 import { DECKS, cardImage, type Deck } from '../decks';
+import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
 import { cardLabel, cardName, isRed, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
 
@@ -262,71 +263,11 @@ function Clan({
   );
 }
 
-/** Gemalter Tab-Hintergrund wie die Weltkarte — Inhalt darüber. */
-function HubSzene({
-  bg,
-  className,
-  children,
-}: {
-  bg: string;
-  className?: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className={`hub-tab-szene${className ? ` ${className}` : ''}`}>
-      <img className="hub-tab-bg" src={bg} alt="" draggable={false} />
-      <div className="hub-tab-inhalt">{children}</div>
-    </div>
-  );
-}
-
 /**
- * Holztafel: der Baustein aller Hub-Tabs.
+ * Profil-Tab: Kopf, Pokal-Hero, Raster und Je Spiel (Entwurf A).
  *
- * Kleine Ueberschrift auf dem Rahmen, Inhalt darunter. Alle Tabs bestehen aus
- * denselben Tafeln - so wirkt der Hub wie ein Stueck und nicht wie vier
- * getrennte Seiten.
- */
-function Tafel({
-  titel,
-  zusatz,
-  weit,
-  className,
-  children,
-}: {
-  titel: string;
-  /** Kleiner Hinweis rechts in der Kopfzeile (Timer, Zaehler). */
-  zusatz?: React.ReactNode;
-  /** Tafel darf den Rest der Hoehe fuellen und innen rollen. */
-  weit?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <section className={`hub-tafel${weit ? ' is-weit' : ''}${className ? ` ${className}` : ''}`}>
-      <header className="hub-tafel-kopf">
-        <h2>{titel}</h2>
-        {zusatz !== undefined && <span className="hub-tafel-zusatz">{zusatz}</span>}
-      </header>
-      <div className="hub-tafel-inhalt">{children}</div>
-    </section>
-  );
-}
-
-/** Logo-Schild ueber jedem Tab — hält die Bereiche als ein Stueck zusammen. */
-function HubBanner(): React.JSX.Element {
-  return (
-    <div className="hub-banner" aria-hidden="true">
-      <img src="/hub/logo.png" alt="" draggable={false} />
-    </div>
-  );
-}
-
-/**
- * Profil-Tab: Kopf mit Bild und Namen, darunter Zahlen und Einstellungen.
- *
- * Die Zahlen kommen aus dem Konto (me.stats) und sind ehrlich - auch wenn
- * ueberall Null steht. Die Sammlung ist noch Attrappe und sagt das auch.
+ * Die Zahlen kommen aus me.stats und sind ehrlich — auch wenn überall Null
+ * steht. Sammlung bleibt Attrappe und sagt das auch.
  */
 function ProfilTab({
   me,
@@ -344,23 +285,18 @@ function ProfilTab({
   const trophaeen = me.stats.reduce((sum, s) => sum + s.trophies, 0);
   const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '–';
 
-  const zahlen = [
+  const kacheln = [
     { icon: '/hub/tab-spielen.png', name: 'Partien', wert: partien },
     { icon: '/hub/krone.png', name: 'Siege', wert: siege },
-    { icon: '/hub/pokal.png', name: 'Trophäen', wert: trophaeen },
     { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
-  ];
-  const sammlung = [
-    { icon: '/hub/truhe.png', name: 'Truhen', wert: '0' },
-    { icon: '/hub/tab-blatt.png', name: 'Blätter', wert: `${DECKS.length}` },
-    { icon: '/hub/clan-wappen.png', name: 'Abzeichen', wert: '0' },
+    { icon: '/hub/tab-blatt.png', name: 'Blätter', wert: DECKS.length },
   ];
 
   return (
-    <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--b">
+    <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--a">
       <HubBanner />
 
-      <div className="hub-profilkopf">
+      <div className="hub-profilkopf hub-profilkopf--a">
         <ProfilBild me={me} onChanged={onAvatarChange} />
         <div className="hub-profilkopf-text">
           <strong>{me.displayName}</strong>
@@ -371,41 +307,40 @@ function ProfilTab({
         </span>
       </div>
 
-      <Tafel titel="Statistiken">
-        <div className="hub-reihe hub-reihe--vier">
-          {zahlen.map((z) => (
-            <span key={z.name} className="hub-zahl">
-              <img src={z.icon} alt="" aria-hidden="true" />
-              <strong>{z.wert}</strong>
-              <span>{z.name}</span>
-            </span>
-          ))}
-        </div>
-      </Tafel>
+      <StatHero wert={trophaeen} />
 
-      <Tafel titel="Sammlung" zusatz="Wächst mit">
-        <div className="hub-reihe hub-reihe--drei">
-          {sammlung.map((s) => (
-            <span key={s.name} className="hub-zahl">
-              <img src={s.icon} alt="" aria-hidden="true" />
-              <strong>{s.wert}</strong>
-              <span>{s.name}</span>
-            </span>
-          ))}
-        </div>
-      </Tafel>
+      <div className="hub-stat-raster">
+        {kacheln.map((k) => (
+          <StatKachel key={k.name} icon={k.icon} wert={k.wert} name={k.name} />
+        ))}
+      </div>
 
-      <Tafel titel="Einstellungen">
-        <div className="hub-knopfreihe">
-          <button className="hub-knopf" onClick={() => onBald('Benachrichtigungen')}>
-            Benachrichtigungen
-            <span className="front-bald-tag">Bald</span>
-          </button>
-          <button className="hub-knopf hub-knopf--raus" onClick={onSignOut}>
-            Abmelden
-          </button>
-        </div>
-      </Tafel>
+      {me.stats.length === 0 ? (
+        <p className="muted hub-stat-leer">Noch keine Partie gespielt.</p>
+      ) : (
+        me.stats.map((row) => (
+          <StatSpiel
+            key={row.gameId}
+            name={t(`game.${row.gameId}`)}
+            meta={`${row.parties} Partien · ${row.wins} Siege`}
+            cups={row.trophies}
+          />
+        ))
+      )}
+
+      <p className="hub-statistik-hinweis">
+        Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.
+      </p>
+
+      <div className="hub-knopfreihe hub-knopfreihe--a">
+        <button className="hub-knopf hub-knopf--a" onClick={() => onBald('Benachrichtigungen')}>
+          Benachrichtigungen
+          <span className="front-bald-tag">Bald</span>
+        </button>
+        <button className="hub-knopf hub-knopf--a-raus" onClick={onSignOut}>
+          Abmelden
+        </button>
+      </div>
     </HubSzene>
   );
 }
@@ -675,7 +610,10 @@ function RanglisteBlatt({
                 {row.displayName}
                 {row.accountId === meId ? ' · du' : ''}
               </button>
-              <span className="front-ranking-cups">{row.trophies} 🏆</span>
+              <span className="front-ranking-cups">
+                <img src="/hub/pokal.png" alt="" aria-hidden="true" />
+                {row.trophies}
+              </span>
             </li>
           ))}
         </ol>
