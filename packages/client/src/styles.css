@@ -641,11 +641,11 @@ td {
   color: #9fe0c1;
 }
 
-/* Handkarten */
 /*
- * Das Polster unten faengt ab, was noch unter die Grundlinie reicht: die
- * Drehung der aeusseren Karten und das Absinken der gesperrten. Den Faecher
- * selbst haelt HandCard oberhalb der Grundlinie.
+ * Die Hand ist eine gerade Reihe, kein Faecher.
+ *
+ * Alle Karten liegen auf derselben Hoehe und sind nicht gedreht. Das
+ * Polster unten faengt nur ab, was die Legeanimation ueberzeichnet.
  */
 .doko-hand {
   flex: 0 0 auto;
@@ -653,14 +653,29 @@ td {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  min-height: calc(var(--hw) * var(--pc-ratio) + 52px);
-  padding-top: 18px;
-  padding-bottom: 26px;
+  min-height: calc(var(--hw) * var(--pc-ratio) + 24px);
+  padding-top: 12px;
+  padding-bottom: 12px;
+  /*
+   * Abstand zwischen zwei Karten.
+   *
+   * Aus der Bildschirmbreite gerechnet, damit zwoelf Karten - die volle
+   * Hand - von Rand zu Rand reichen. Weil der Schritt fest ist, rueckt die
+   * Reihe mit jeder gespielten Karte von selbst zusammen, bis die letzte
+   * mittig liegt. Nach unten begrenzt, damit sich bei kurzen Haenden nicht
+   * riesige Luecken auftun.
+   */
+  --schritt: min(calc((100vw - var(--hw) - 1.4rem) / 11), calc(var(--hw) * 0.9));
 }
 /* Jede Handkarte steht absolut in der Mitte und wird NUR per transform an
    ihren Platz geschoben (Position, Senkung, Neigung kommen als Variablen
    --off/--dip/--rot). Faellt eine Karte weg, gleiten die uebrigen auf ihre
    neuen Plaetze — reiner Compositor-Uebergang, kein Layout-Sprung. */
+/*
+ * Jede Karte steht absolut in der Mitte und wird nur per transform an ihren
+ * Platz geschoben. Faellt eine weg, GLEITEN die uebrigen auf ihre neuen
+ * Plaetze - reiner Compositor-Uebergang, kein Layout-Sprung.
+ */
 .doko-handcard {
   position: absolute;
   left: 50%;
@@ -670,61 +685,23 @@ td {
   border: none;
   background: none;
   transform-origin: bottom center;
-  transform:
-    translateX(calc(var(--off, 0) * var(--hw) * 0.42))
-    translateY(calc(var(--dip, 0) * 1px - var(--lift, 0px)))
-    rotate(calc(var(--rot, 0) * 1deg));
+  transform: translateX(calc(var(--off, 0) * var(--schritt)));
   transition: transform 0.28s cubic-bezier(0.22, 0.9, 0.32, 1);
   will-change: transform;
-}
-/*
- * Spielbare Karten stehen hoeher und leuchten; gesperrte sitzen tiefer und
- * sind gedaempft.
- *
- * Frueher sahen alle gleich aus - "ob eine Karte geht, beantwortet der Tipp
- * darauf". Das klingt aufgeraeumt, spielt sich aber wie ein Fehler: Man
- * tippt, nichts passiert ausser einem Zittern, und man raet weiter. Beim
- * Doppelkopf ist Bedienzwang eine Regel des Spiels, keine Ueberraschung -
- * am echten Tisch sieht man seine Karten ja auch an und weiss, was geht.
- */
-.doko-handcard {
-  transition:
-    transform 0.28s cubic-bezier(0.22, 0.9, 0.32, 1),
-    filter 0.18s ease,
-    opacity 0.18s ease;
-}
-.doko-handcard[aria-disabled='true'] {
-  cursor: default;
-  filter: brightness(0.58) saturate(0.55);
-  /* Zusaetzlich absinken: Der Hub der spielbaren Karten allein geht im
-     Absenken des Faechers unter. Erst der Abstand macht die Reihe lesbar. */
-  --lift: -6px;
-  opacity: 0.85;
-}
-.doko-handcard.is-playable {
   cursor: pointer;
-  /* Der Sockel-Hub hebt die spielbaren Karten aus der Reihe. */
-  --lift: 12px;
-}
-/*
- * Beim Druecken faehrt die Karte weit heraus. Auf dem Handy gibt es kein
- * Schweben - ohne diese Rueckmeldung weiss man bis zum Loslassen nicht,
- * welche der ueberlappenden Karten man erwischt hat.
- */
-.doko-handcard.is-playable:active {
-  --lift: 34px;
-  z-index: 300 !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .doko-handcard { transition: none; }
 }
 .doko-handcard.is-selected .pc { outline: 3px solid var(--accent); }
+/* Am Rechner hebt sich die Karte unter dem Zeiger — das ersetzt das
+   Fehlen einer Beruehrung, sagt aber nichts ueber Spielbarkeit. */
 @media (hover: hover) {
-  .doko-handcard.is-playable:hover { --lift: 14px; z-index: 200 !important; }
+  .doko-handcard:hover {
+    transform: translateX(calc(var(--off, 0) * var(--schritt))) translateY(-14px);
+    z-index: 200;
+  }
 }
 
 /* Kurzes Kopfschuetteln beim Tipp auf eine unspielbare Karte. Die Animation
-   liegt auf der inneren Karte, damit der Faecher (transform am Knopf) steht. */
+   liegt auf der inneren Karte, damit die Reihe (transform am Knopf) steht. */
 .doko-handcard.is-shake .pc { animation: doko-shake 0.3s ease; }
 @keyframes doko-shake {
   0%, 100% { transform: translateX(0); }
@@ -4733,5 +4710,31 @@ main.auth > .muted {
  */
 .hub-neuhier {
   bottom: 3.9rem;
+}
+
+/*
+ * Legen: Die Karte faehrt nach oben zur Tischmitte und blendet dabei aus.
+ *
+ * Sie wird kurz darauf ohnehin aus der Hand entfernt — die Animation
+ * ueberbrueckt genau diesen Moment, damit die Karte nicht einfach
+ * verschwindet, sondern gelegt aussieht.
+ */
+.doko-handcard.is-legt {
+  animation: doko-legen 0.32s cubic-bezier(0.3, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+@keyframes doko-legen {
+  0% {
+    transform: translateX(calc(var(--off, 0) * var(--schritt)));
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-42vh) scale(0.82);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doko-handcard { transition: none; }
+  .doko-handcard.is-legt { animation: none; opacity: 0; }
 }
 

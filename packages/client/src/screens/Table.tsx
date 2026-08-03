@@ -909,50 +909,48 @@ const HandCard = memo(function HandCard({
   trump: boolean;
   onPlay: (cardId: number) => void;
 }): React.JSX.Element {
-  // Nicht spielbare Karten sehen aus wie alle anderen - keine Hervorhebung,
-  // kein Abdunkeln. Wer eine antippt, bekommt ein kurzes Schuetteln als
-  // Antwort: die Karte bleibt liegen, die Hand bleibt lesbar.
+  /**
+   * Kein Faecher, keine Hervorhebung.
+   *
+   * Die Karten liegen gerade nebeneinander und fuellen am Anfang die volle
+   * Breite; mit jeder gespielten Karte rueckt die Reihe zusammen, bis die
+   * letzte in der Mitte liegt. Der Schritt zwischen zwei Karten ist fest —
+   * genau daraus ergibt sich das Zusammenruecken von selbst.
+   *
+   * Spielbare und gesperrte Karten sehen gleich aus. Wer eine spielt, sieht
+   * sie fliegen; wer eine gesperrte antippt, sieht sie den Kopf schuetteln.
+   * Mehr Auskunft gibt der Tisch nicht — so wie am echten Tisch auch.
+   */
   const [shaking, setShaking] = useState(false);
+  const [legt, setLegt] = useState(false);
 
-  // Sanfter Faecher: die mittleren Karten stehen etwas hoeher, die aeusseren
-  // sind leicht gekippt. Bei vielen Karten faellt beides schwaecher aus, damit
-  // zwoelf Blatt auf ein Handy passen.
   const mid = (total - 1) / 2;
   const off = index - mid;
-  const rot = off * Math.min(3.2, 22 / Math.max(total, 1));
-  /**
-   * Faecherform, aber nach OBEN aufgehaengt.
-   *
-   * Frueher sank jede Karte um ihren Abstand zur Mitte nach unten - die
-   * aeusseren also am weitesten, bis unter den Bildschirmrand. Auf hohen
-   * iPhones war die Hand dadurch sichtbar angeschnitten. Jetzt wird der
-   * groesste Wert abgezogen: Die Aussenkarten liegen auf der Grundlinie, die
-   * mittleren stehen hoeher. Dieselbe Form, nur nichts mehr unter dem Rand.
-   */
-  const bogen = (d: number): number => Math.pow(d, 1.6) * (total > 7 ? 1.1 : 2.2);
-  const dip = bogen(Math.abs(off)) - bogen(mid);
 
-  // Position, Senkung und Neigung als CSS-Variablen: Die Karte steht absolut
-  // in der Mitte, das Stylesheet setzt daraus den transform zusammen. Faellt
-  // eine Karte aus der Hand, GLEITEN die uebrigen auf ihre neuen Plaetze
-  // (Compositor-Uebergang) statt per Layout-Sprung umzubrechen.
   const vars = {
     '--off': off,
-    '--dip': dip,
-    '--rot': rot,
-    zIndex: playable ? 100 + index : index,
+    zIndex: legt ? 400 : index,
   } as React.CSSProperties;
 
   return (
     <button
-      className={`doko-handcard${playable ? ' is-playable' : ''}${trump ? ' is-trump' : ''}${shaking ? ' is-shake' : ''}`}
+      className={`doko-handcard${trump ? ' is-trump' : ''}${shaking ? ' is-shake' : ''}${
+        legt ? ' is-legt' : ''
+      }`}
       style={vars}
       // Nicht disabled: Der Tipp auf eine unspielbare Karte soll ankommen und
       // das Schuetteln ausloesen, statt lautlos zu versanden.
       aria-disabled={!playable}
       onClick={() => {
-        if (playable) onPlay(card.id);
-        else setShaking(true);
+        if (!playable) {
+          setShaking(true);
+          return;
+        }
+        // Erst fliegen lassen, dann melden. Die 170 ms sind kuerzer als jede
+        // Reaktionszeit und sorgen dafuer, dass man die Karte wirklich fallen
+        // sieht, statt dass sie im selben Bild verschwindet.
+        setLegt(true);
+        window.setTimeout(() => onPlay(card.id), 170);
       }}
       onAnimationEnd={() => setShaking(false)}
       aria-label={trump ? 'Trumpf' : undefined}
