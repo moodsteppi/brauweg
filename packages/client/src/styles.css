@@ -2147,15 +2147,17 @@ td {
 }
 .hub-logo-mark {
   display: block;
-  width: min(72%, 14rem);
+  width: min(62%, 11.5rem);
   height: auto;
+  background: transparent;
   filter: drop-shadow(0 3px 6px rgba(10, 30, 70, 0.45));
 }
 .hub-logo-slogan {
   display: block;
-  width: min(58%, 11rem);
+  width: min(52%, 9.5rem);
   height: auto;
-  margin-top: -0.15rem;
+  margin-top: -0.35rem;
+  background: transparent;
   filter: drop-shadow(0 2px 4px rgba(10, 30, 70, 0.35));
 }
 .front-waehrung-icon {
