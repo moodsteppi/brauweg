@@ -68,8 +68,11 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
 - **Clan** ist spielübergreifend (nicht nur Doppelkopf): Clan-Halle mit
   Banner und Raum-Kacheln (Chat, Clankrieg, Rangliste, Truhe …) als
   „Bald"-Attrappen. Freunde hängen am Clan-Tab. Intern: `club_*`.
-- **Shop** ist Vorschau ohne Kauf: Wochenangebot als Held oben, darunter
-  Vitrinen mit durchgestrichenem Preis und Bald-Knopf. Tip → „Kommt bald".
+- **Shop** (Entwurf B): Vorschau ohne Kauf. Oben **Season Pass** als
+  Sonderangebot, darunter Wochenangebot/VIP, dann Vitrinen mit
+  durchgestrichenem Preis und Bald-Knopf. Tip → „Kommt bald".
+  Clan/Blatt/Profil teilen dieselbe warme Holz-/Gold-CI; Startseite und
+  Tab-Leiste bleiben unverändert.
 - Design-Entwürfe für neue Surfaces immer **grafisch in dreien (A/B/C)**;
   gebaut wird erst nach Wahl.
 - Der Hauptschirm ist der **Trophäenpfad** (siehe `Pfad.tsx`): gemalte
