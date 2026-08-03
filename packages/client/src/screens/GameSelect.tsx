@@ -11,6 +11,7 @@ import {
 } from '../api';
 import { DECKS, cardImage, type Deck } from '../decks';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
+import { Clan } from './Clan';
 import { cardLabel, cardName, isRed, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
 
@@ -100,9 +101,10 @@ export function GameSelect({
         {tab === 'shop' && <Shop onBald={setBald} />}
         {tab === 'clan' && (
           <Clan
-            clan={me.clubs[0] ?? null}
+            clanId={me.clubs[0]?.id ?? null}
             onBald={setBald}
             onShowProfile={onShowProfile}
+            onMeChange={onAvatarChange}
           />
         )}
         {tab === 'spielen' && (
@@ -123,6 +125,7 @@ export function GameSelect({
             onMeChange={onAvatarChange}
             onSignOut={onSignOut}
             onBald={setBald}
+            onShowProfile={onShowProfile}
           />
         )}
       </div>
@@ -202,69 +205,6 @@ function BaldBlatt({
 }
 
 /**
- * Clan-Halle (Entwurf B): Banner mit ehrlichen Null-Stats, Räume als
- * Bald-Kacheln, Freunde darunter (funktioniert). Spielübergreifend.
- */
-function Clan({
-  clan,
-  onBald,
-  onShowProfile,
-}: {
-  clan: { id: string; name: string } | null;
-  onBald: (name: string) => void;
-  onShowProfile: (accountId: string) => void;
-}): React.JSX.Element {
-  const raeume = [
-    { name: 'Clanchat', zeichen: '💬' },
-    { name: 'Clankrieg', zeichen: '⚔️' },
-    { name: 'Clantruhe', zeichen: '🎁' },
-    { name: 'Clantische', zeichen: '🃏' },
-  ];
-
-  return (
-    <HubSzene bg="/hub/bg-clan.png" className="front-clan front-clan--b">
-      <HubBanner />
-
-      {/* Wappen, Name und Zahlen - ehrlich leer, solange es keinen Clan gibt. */}
-      <div className="hub-clanschild">
-        <img className="hub-clanschild-wappen" src="/hub/clan-wappen.png" alt="" draggable={false} />
-        <div className="hub-clanschild-text">
-          <strong>{clan?.name ?? 'Kein Clan'}</strong>
-          <span className="muted">
-            {clan ? 'Für alle Spiele' : 'Clans kommen bald — Freunde gehen schon.'}
-          </span>
-          <div className="hub-clanschild-zahlen">
-            <span>
-              <img src="/hub/tab-clan.png" alt="" aria-hidden="true" />0
-            </span>
-            <span>
-              <img src="/hub/pokal.png" alt="" aria-hidden="true" />0
-            </span>
-          </div>
-        </div>
-        <button className="hub-clanschild-knopf" onClick={() => onBald('Clan gründen')}>
-          Gründen
-          <span className="front-bald-tag">Bald</span>
-        </button>
-      </div>
-
-      <div className="hub-reihe hub-reihe--vier">
-        {raeume.map((raum) => (
-          <button key={raum.name} className="hub-vitrine" onClick={() => onBald(raum.name)}>
-            <span className="hub-vitrine-zeichen" aria-hidden="true">
-              {raum.zeichen}
-            </span>
-            <span>{raum.name}</span>
-          </button>
-        ))}
-      </div>
-
-      <Freunde onShowProfile={onShowProfile} />
-    </HubSzene>
-  );
-}
-
-/**
  * Profil-Tab: Kopf, Pokal-Hero, Raster und Je Spiel (Entwurf A).
  *
  * Die Zahlen kommen aus me.stats und sind ehrlich — auch wenn überall Null
@@ -276,6 +216,7 @@ function ProfilTab({
   onMeChange,
   onSignOut,
   onBald,
+  onShowProfile,
 }: {
   me: Me;
   onAvatarChange: () => void;
@@ -283,6 +224,7 @@ function ProfilTab({
   onMeChange: () => void;
   onSignOut: () => void;
   onBald: (name: string) => void;
+  onShowProfile: (accountId: string) => void;
 }): React.JSX.Element {
   const partien = me.stats.reduce((sum, s) => sum + s.parties, 0);
   const siege = me.stats.reduce((sum, s) => sum + s.wins, 0);
@@ -391,6 +333,11 @@ function ProfilTab({
       <p className="hub-statistik-hinweis">
         Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.
       </p>
+
+      {/* Freunde standen frueher im Clan-Tab. Dort fuellt jetzt die
+          Mitgliederliste den Bildschirm, und Freunde sind ohnehin kein
+          Clan: Sie gehoeren zum eigenen Konto. */}
+      <Freunde onShowProfile={onShowProfile} />
 
       <div className="hub-knopfreihe hub-knopfreihe--a">
         <button className="hub-knopf hub-knopf--a" onClick={() => onBald('Benachrichtigungen')}>

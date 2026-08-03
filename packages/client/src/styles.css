@@ -4096,3 +4096,266 @@ main.auth > .muted {
   filter: saturate(0.45) brightness(0.8);
   opacity: 0.85;
 }
+
+/* =========================================================================
+   Clan-Tab.
+
+   Der Tab ist eine Liste, kein Kachelraster: Ein Clan ist die Frage, wer
+   dazugehoert. Deshalb fuellt die Mitgliederliste die Hoehe und rollt in
+   sich, waehrend Wappenschild oben und Austritt unten stehen bleiben —
+   ein Bildschirm, kein langes Scrollen.
+   ========================================================================= */
+
+.clan-liste {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0.35rem;
+}
+.clan-liste-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.clan-liste-kopf h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffe9bd;
+  text-shadow: 0 2px 0 rgba(50, 25, 5, 0.85);
+}
+.clan-adminleiste {
+  display: flex;
+  gap: 0.3rem;
+}
+
+/* Zaehler an den Anfragen: eine Zahl, die etwas verlangt, gehoert hervor. */
+.clan-zaehler {
+  display: inline-block;
+  min-width: 1.1rem;
+  margin-left: 0.3rem;
+  padding: 0 0.2rem;
+  border-radius: 0.6rem;
+  background: #c8392b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2rem;
+  text-align: center;
+}
+
+/* Die rollende Flaeche. Nur sie rollt, damit Kopf und Fuss stehen bleiben. */
+.clan-rollen {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.clan-zeile {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: rgba(28, 16, 6, 0.62);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.clan-zeile:active {
+  transform: translateY(1px);
+}
+.clan-zeile-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clan-zeile-trophaeen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+  color: #ffd98a;
+}
+.clan-zeile-trophaeen img {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.clan-rolle {
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.12);
+  color: #e8dcc6;
+}
+.clan-rolle.is-admin {
+  background: rgba(255, 196, 90, 0.24);
+  color: #ffd98a;
+}
+/* Mitglied ist der Normalfall — er braucht keine Auszeichnung. */
+.clan-rolle.is-member {
+  display: none;
+}
+
+.clan-austritt {
+  align-self: center;
+  margin-top: 0.2rem;
+  padding: 0.3rem 0.7rem;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.clan-fehler {
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  background: rgba(200, 57, 43, 0.9);
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+/* --- Clansuche ---------------------------------------------------------- */
+
+.clan-treffer {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+.clan-treffer-wappen {
+  width: 2.1rem;
+  height: 2.1rem;
+  object-fit: contain;
+}
+.clan-treffer-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.clan-treffer-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clan-treffer-text .muted {
+  font-size: 0.78rem;
+}
+
+/* --- Gruenden und Einstellungen ----------------------------------------- */
+
+.clan-tafel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.clan-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.3rem 0;
+}
+.clan-feld > span {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 233, 189, 0.75);
+}
+.clan-feld input {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.45rem;
+  background: rgba(15, 9, 4, 0.66);
+  color: var(--text);
+  font: inherit;
+}
+
+.clan-wappenwahl {
+  margin: 0.3rem 0;
+  padding: 0;
+  border: none;
+}
+.clan-wappenwahl legend {
+  padding: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 233, 189, 0.75);
+}
+.clan-wappenraster {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+.clan-wappen {
+  padding: 0.2rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.clan-wappen img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.clan-wappen.is-an {
+  border-color: #ffc45a;
+  background: rgba(255, 196, 90, 0.18);
+}
+
+/* --- Blaetter ----------------------------------------------------------- */
+
+.clan-blatt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.clan-blatt h2 {
+  margin: 0;
+}
+.clan-blattknopf {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.clan-blattknopf.is-gefahr {
+  border-color: rgba(200, 57, 43, 0.7);
+  color: #ff9c90;
+}
+.clan-anfrage {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+

@@ -46,7 +46,27 @@ import {
   requestFriendship,
   searchPlayers,
 } from '../social/service.js';
-import { clubsFor, requireClubMember } from '../clubs/service.js';
+import {
+  CRESTS,
+  MOTTO_MAX,
+  NAME_MAX,
+  NAME_MIN,
+  acceptJoinRequest,
+  cancelJoinRequest,
+  clubDetail,
+  clubsFor,
+  createClub,
+  joinClub,
+  kickMember,
+  leaveClub,
+  listClubs,
+  pendingRequestsOf,
+  rejectJoinRequest,
+  releaseClubMemberships,
+  requireClubMember,
+  setMemberRole,
+  updateClub,
+} from '../clubs/service.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
 import {
   activeTableFor,
@@ -365,7 +385,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .from(s.accountGameStat)
       .where(eq(s.accountGameStat.accountId, accountId));
 
-    // Bestehende Konten (vor dem Vereins-Verdrahten) holen wir hier nach.
+    // Reines Lesen: Wer aus seinem Clan austritt, soll draussen bleiben und
+    // nicht beim naechsten Laden wieder im Beta-Clan stehen. Eingetragen wird
+    // nur bei der Registrierung.
     const clubs = await clubsFor(deps.db, accountId);
     const activeTable = await activeTableFor(deps.db, accountId);
 
@@ -493,6 +515,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await deps.runtime.markLeftByAccount(row.tableId, accountId);
     }
 
+    // Vor dem Anonymisieren aus dem Clan austragen: Sonst bliebe ein Clan
+    // zurueck, dessen Admin "geloescht-a1b2c3d4" heisst und den niemand mehr
+    // verwalten kann.
+    await releaseClubMemberships(deps.db, accountId);
     await anonymizeAccount(deps.db, accountId);
     void reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return reply.send({ ok: true });
@@ -588,6 +614,125 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         seatCounts.map((seats) => [seats, module.meta.suggestedRounds(seats)]),
       ),
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // Clans (Plan 9.3)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Clanliste zum Beitreten, mit optionaler Namenssuche.
+   *
+   * Oeffentlich fuer angemeldete Konten — man muss sehen koennen, wohin man
+   * eintreten kann. Mitgliedernamen stehen hier bewusst nicht drin, die gibt
+   * es erst in der Einzelansicht.
+   */
+  app.get('/api/clubs', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const query = z
+      .object({ search: z.string().trim().max(40).optional() })
+      .parse(request.query);
+    const [clubs, pending] = await Promise.all([
+      listClubs(deps.db, { search: query.search }),
+      pendingRequestsOf(deps.db, accountId),
+    ]);
+    return reply.send({ clubs, pending });
+  });
+
+  const createClubSchema = z.object({
+    name: z.string().min(NAME_MIN).max(NAME_MAX),
+    crest: z.enum(CRESTS),
+    motto: z.string().max(MOTTO_MAX).nullish(),
+    joinMode: z.enum(['open', 'on_request']).optional(),
+    minTrophies: z.number().int().min(0).max(100_000).optional(),
+  });
+
+  app.post('/api/clubs', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = createClubSchema.parse(request.body);
+    const created = await createClub(deps.db, accountId, body);
+    return reply.status(201).send(created);
+  });
+
+  const clubParams = z.object({ clubId: z.string().uuid() });
+  const memberParams = z.object({
+    clubId: z.string().uuid(),
+    accountId: z.string().uuid(),
+  });
+
+  app.get('/api/clubs/:clubId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    return reply.send(await clubDetail(deps.db, clubId, accountId));
+  });
+
+  app.patch('/api/clubs/:clubId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    const body = z
+      .object({
+        name: z.string().min(NAME_MIN).max(NAME_MAX).optional(),
+        crest: z.enum(CRESTS).optional(),
+        motto: z.string().max(MOTTO_MAX).nullish(),
+        joinMode: z.enum(['open', 'on_request']).optional(),
+        minTrophies: z.number().int().min(0).max(100_000).optional(),
+        defaultRuleSetId: z.string().uuid().nullish(),
+      })
+      .parse(request.body);
+    await updateClub(deps.db, clubId, accountId, body);
+    return reply.send({ ok: true });
+  });
+
+  /** Beitreten: sofort bei offenen Clans, sonst als Anfrage. */
+  app.post('/api/clubs/:clubId/join', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    return reply.send(await joinClub(deps.db, clubId, accountId));
+  });
+
+  /** Eigene Anfrage zuruecknehmen. */
+  app.delete('/api/clubs/:clubId/join', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    await cancelJoinRequest(deps.db, clubId, accountId);
+    return reply.send({ ok: true });
+  });
+
+  /** Austreten. Beim Admin rueckt das aelteste Mitglied nach. */
+  app.delete('/api/clubs/:clubId/members/me', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    await leaveClub(deps.db, clubId, accountId);
+    return reply.send({ ok: true });
+  });
+
+  app.post('/api/clubs/:clubId/requests/:accountId/accept', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const adminId = await requireAccount(request);
+    const params = memberParams.parse(request.params);
+    await acceptJoinRequest(deps.db, params.clubId, adminId, params.accountId);
+    return reply.send({ ok: true });
+  });
+
+  app.post('/api/clubs/:clubId/requests/:accountId/reject', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const adminId = await requireAccount(request);
+    const params = memberParams.parse(request.params);
+    await rejectJoinRequest(deps.db, params.clubId, adminId, params.accountId);
+    return reply.send({ ok: true });
+  });
+
+  app.patch('/api/clubs/:clubId/members/:accountId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const adminId = await requireAccount(request);
+    const params = memberParams.parse(request.params);
+    const { role } = z.object({ role: z.enum(['admin', 'member', 'guest']) }).parse(request.body);
+    await setMemberRole(deps.db, params.clubId, adminId, params.accountId, role);
+    return reply.send({ ok: true });
+  });
+
+  app.delete('/api/clubs/:clubId/members/:accountId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const adminId = await requireAccount(request);
+    const params = memberParams.parse(request.params);
+    await kickMember(deps.db, params.clubId, adminId, params.accountId);
+    return reply.send({ ok: true });
   });
 
   // -------------------------------------------------------------------------

@@ -270,9 +270,40 @@ export const club = pgTable(
     joinMode: clubJoinMode().notNull().default('on_request'),
     minTrophies: integer().notNull().default(0),
     maxMembers: integer().notNull().default(50),
+    /**
+     * Wappen als Kennung aus einem festen Satz ("wappen-3"), nicht als
+     * hochgeladenes Bild. Ein Upload braucht Moderation — ein Vereinswappen
+     * ist genau die Stelle, an der jemand ein Hakenkreuz hochlaedt.
+     */
+    crest: text().notNull().default('wappen-1'),
+    /** Ein Satz zur Vorstellung in der Clanliste. Keine Formatierung. */
+    motto: text(),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex('club_name_key').on(t.name)],
+);
+
+/**
+ * Beitrittsanfragen fuer `join_mode = 'on_request'`.
+ *
+ * Bewusst eine eigene Tabelle statt einer Rolle "bewerber" in club_member:
+ * Ein Bewerber ist kein Mitglied, und jede Abfrage, die Mitglieder zaehlt
+ * oder Clantische freigibt, muesste ihn sonst eigens ausschliessen. Wird die
+ * Anfrage angenommen, verschwindet die Zeile und eine club_member-Zeile
+ * entsteht.
+ */
+export const clubJoinRequest = pgTable(
+  'club_join_request',
+  {
+    clubId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.clubId, t.accountId] })],
 );
 
 export const clubMember = pgTable(
@@ -608,6 +639,7 @@ export const partyRelations = relations(party, ({ one, many }) => ({
 
 export const clubRelations = relations(club, ({ many, one }) => ({
   members: many(clubMember),
+  joinRequests: many(clubJoinRequest),
   admin: one(account, {
     fields: [club.adminAccountId],
     references: [account.id],

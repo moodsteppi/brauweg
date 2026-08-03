@@ -43,6 +43,13 @@
       "when": 1785901000000,
       "tag": "0005_emil_birthday",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785902000000,
+      "tag": "0006_clan",
+      "breakpoints": true
     }
   ]
 }

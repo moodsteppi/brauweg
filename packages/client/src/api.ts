@@ -148,6 +148,54 @@ export interface FriendLists {
   outgoing: PlayerRef[];
 }
 
+// ---------------------------------------------------------------------------
+// Clans
+// ---------------------------------------------------------------------------
+
+/** Auswaehlbare Wappen. Muss zu CRESTS im Server passen. */
+export const WAPPEN = [
+  'wappen-1',
+  'wappen-2',
+  'wappen-3',
+  'wappen-4',
+  'wappen-5',
+  'wappen-6',
+  'wappen-7',
+  'wappen-8',
+] as const;
+
+export type ClubRole = 'admin' | 'member' | 'guest';
+export type JoinMode = 'open' | 'on_request';
+
+export interface ClubSummary {
+  id: string;
+  name: string;
+  crest: string;
+  motto: string | null;
+  joinMode: JoinMode;
+  minTrophies: number;
+  members: number;
+  maxMembers: number;
+  trophies: number;
+}
+
+export interface ClubMemberView {
+  accountId: string;
+  displayName: string;
+  role: ClubRole;
+  trophies: number;
+  since: string;
+}
+
+export interface ClubDetail extends ClubSummary {
+  /** `null`, wenn man nicht Mitglied ist. */
+  myRole: ClubRole | null;
+  memberList: ClubMemberView[];
+  /** Nur beim Admin gefuellt. */
+  requests: ClubMemberView[];
+  defaultRuleSetId: string | null;
+}
+
 export const api = {
   register: (body: {
     email: string;
@@ -203,4 +251,42 @@ export const api = {
   acceptFriend: (accountId: string) => post<{ ok: true }>(`/friends/${accountId}/accept`),
   removeFriend: (accountId: string) =>
     request<{ ok: true }>(`/friends/${accountId}`, { method: 'DELETE' }),
+
+  /** Clanliste zum Beitreten, dazu die eigenen offenen Anfragen. */
+  clubs: (search?: string) =>
+    request<{ clubs: ClubSummary[]; pending: string[] }>(
+      search ? `/clubs?search=${encodeURIComponent(search)}` : '/clubs',
+    ),
+  club: (clubId: string) => request<ClubDetail>(`/clubs/${clubId}`),
+  createClub: (body: {
+    name: string;
+    crest: string;
+    motto?: string | null;
+    joinMode?: JoinMode;
+    minTrophies?: number;
+  }) => post<{ id: string }>('/clubs', body),
+  updateClub: (
+    clubId: string,
+    body: {
+      name?: string;
+      crest?: string;
+      motto?: string | null;
+      joinMode?: JoinMode;
+      minTrophies?: number;
+    },
+  ) => patch<{ ok: true }>(`/clubs/${clubId}`, body),
+  joinClub: (clubId: string) =>
+    post<{ status: 'joined' | 'requested' }>(`/clubs/${clubId}/join`),
+  cancelClubRequest: (clubId: string) =>
+    request<{ ok: true }>(`/clubs/${clubId}/join`, { method: 'DELETE' }),
+  leaveClub: (clubId: string) =>
+    request<{ ok: true }>(`/clubs/${clubId}/members/me`, { method: 'DELETE' }),
+  acceptClubRequest: (clubId: string, accountId: string) =>
+    post<{ ok: true }>(`/clubs/${clubId}/requests/${accountId}/accept`),
+  rejectClubRequest: (clubId: string, accountId: string) =>
+    post<{ ok: true }>(`/clubs/${clubId}/requests/${accountId}/reject`),
+  setClubRole: (clubId: string, accountId: string, role: ClubRole) =>
+    patch<{ ok: true }>(`/clubs/${clubId}/members/${accountId}`, { role }),
+  kickClubMember: (clubId: string, accountId: string) =>
+    request<{ ok: true }>(`/clubs/${clubId}/members/${accountId}`, { method: 'DELETE' }),
 };
