@@ -1128,7 +1128,7 @@ function VorbehaltDialog({
   };
 
   return (
-    <div className="doko-sheet">
+    <div className="doko-sheet doko-sheet--mitte">
       <div className="doko-sheet-card">
         {schritt === 'frage' && gesund && (
           <>

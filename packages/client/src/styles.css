@@ -743,6 +743,14 @@ td {
   z-index: 300;
   padding: 1rem;
 }
+/* Vorbehalt u. a.: Karte mittig im Bildschirm, nicht am unteren Rand. */
+.doko-sheet--mitte {
+  align-items: center;
+  padding: 1.25rem;
+}
+.doko-sheet--mitte .doko-sheet-card {
+  animation: doko-pop 0.22s cubic-bezier(0.22, 0.9, 0.32, 1);
+}
 .doko-sheet-card {
   width: 100%;
   max-width: 30rem;
@@ -777,6 +785,13 @@ td {
   margin: 0.6rem 0 0.9rem;
 }
 @keyframes doko-rise { from { transform: translateY(16px); opacity: 0; } }
+@keyframes doko-pop {
+  from { transform: translateY(8px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doko-sheet--mitte .doko-sheet-card { animation: none; }
+}
 .doko-sheet-card h2 { margin: 0 0 0.5rem; font-size: 1.05rem; }
 .doko-sheet-row { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
 .doko-sheet-row .primary { flex: 1; }
