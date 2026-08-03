@@ -22,6 +22,12 @@ Grundkomposition. **Grafische Entwürfe und generierte Assets immer als
 Handy-Vollbild (9:16)** anlegen — nichts, was erst „runterscrollen“
 braucht, um vollständig zu wirken.
 
+**Hub-Raster-QA (vor Push):** Generierte PNGs oft mit Schachbrett oder
+Weißmatte statt echtem Alpha. Vor dem Commit lokal prüfen: Ecken müssen
+`alpha=0` sein (`magick identify` / Composites auf Himmelblau), und
+kurz unter `npm run dev -w packages/client` ansehen. Nie Schachbrett-
+„Transparenz“ ausliefern.
+
 ## Farben
 
 Immer über die CSS-Variablen aus `styles.css`, nie als neue Hex-Werte
