@@ -671,11 +671,47 @@ td {
   transition: transform 0.28s cubic-bezier(0.22, 0.9, 0.32, 1);
   will-change: transform;
 }
-/* Alle Karten sehen gleich aus - keine Hervorhebung der spielbaren, kein
-   Abdunkeln der uebrigen. Ob eine Karte geht, beantwortet der Tipp darauf:
-   Sie faellt, oder sie schuettelt den Kopf. */
-.doko-handcard[aria-disabled='true'] { cursor: default; }
-.doko-handcard.is-playable { cursor: pointer; }
+/*
+ * Spielbare Karten stehen hoeher und leuchten; gesperrte sitzen tiefer und
+ * sind gedaempft.
+ *
+ * Frueher sahen alle gleich aus - "ob eine Karte geht, beantwortet der Tipp
+ * darauf". Das klingt aufgeraeumt, spielt sich aber wie ein Fehler: Man
+ * tippt, nichts passiert ausser einem Zittern, und man raet weiter. Beim
+ * Doppelkopf ist Bedienzwang eine Regel des Spiels, keine Ueberraschung -
+ * am echten Tisch sieht man seine Karten ja auch an und weiss, was geht.
+ */
+.doko-handcard {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 0.9, 0.32, 1),
+    filter 0.18s ease,
+    opacity 0.18s ease;
+}
+.doko-handcard[aria-disabled='true'] {
+  cursor: default;
+  filter: brightness(0.58) saturate(0.55);
+  /* Zusaetzlich absinken: Der Hub der spielbaren Karten allein geht im
+     Absenken des Faechers unter. Erst der Abstand macht die Reihe lesbar. */
+  --lift: -10px;
+  opacity: 0.85;
+}
+.doko-handcard.is-playable {
+  cursor: pointer;
+  /* Der Sockel-Hub hebt die spielbaren Karten aus der Reihe. */
+  --lift: 12px;
+}
+/*
+ * Beim Druecken faehrt die Karte weit heraus. Auf dem Handy gibt es kein
+ * Schweben - ohne diese Rueckmeldung weiss man bis zum Loslassen nicht,
+ * welche der ueberlappenden Karten man erwischt hat.
+ */
+.doko-handcard.is-playable:active {
+  --lift: 34px;
+  z-index: 300 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .doko-handcard { transition: none; }
+}
 .doko-handcard.is-selected .pc { outline: 3px solid var(--accent); }
 @media (hover: hover) {
   .doko-handcard.is-playable:hover { --lift: 14px; z-index: 200 !important; }
@@ -1754,7 +1790,9 @@ td {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 0.1rem 0.2rem 0.15rem;
+  /* Keine Polsterung: Die Szene soll den Bildschirm fuellen, nicht darin
+     schweben. Innenabstand setzt .hub-tab-inhalt. */
+  padding: 0;
   color: #fff;
 }
 .front--hub .front-body--scroll .muted {
@@ -1765,17 +1803,21 @@ td {
   text-shadow: 0 2px 0 #1a4a8a, 0 3px 8px rgba(0, 0, 0, 0.25);
 }
 
+/*
+ * Randlos bis an die Bildschirmkante. Die Polsterung von .front-body wird
+ * zurueckgenommen, Rundung und heller Ring fallen weg: Beides liess die
+ * Szene wie ein aufgesetztes Bild wirken statt wie ein Raum.
+ */
 .hub-tab-szene {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 0.7rem;
+  margin: 0;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.28),
-    0 4px 14px rgba(40, 20, 10, 0.35);
+  box-shadow: none;
   background: #3a2a18;
 }
 .hub-tab-bg {
@@ -4023,11 +4065,20 @@ main.auth > .muted {
    bisher gefehlt. Das Bild deckt die Flaeche ab; alles andere liegt
    darueber.
    ========================================================================= */
+/*
+ * Absolut Positioniertes richtet sich an der Polsterkante des Elternteils
+ * aus, nicht an dessen Aussenkante. Mit inset: 0 blieb rundherum ein
+ * Streifen des Farbverlaufs stehen und das Bild sah aufgeklebt aus. Die
+ * negativen Werte nehmen die Polsterung von .doko genau zurueck.
+ */
 .doko-bg {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: calc(-1 * max(0.5rem, env(safe-area-inset-top)));
+  right: calc(-1 * max(0.5rem, env(safe-area-inset-right)));
+  bottom: calc(-1 * max(0.5rem, env(safe-area-inset-bottom)));
+  left: calc(-1 * max(0.5rem, env(safe-area-inset-left)));
+  width: auto;
+  height: auto;
   object-fit: cover;
   object-position: center center;
   z-index: 0;

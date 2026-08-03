@@ -1411,7 +1411,7 @@ function PartyEnd({
 
   return (
     <div className="doko doko--end">
-      <img className="doko-bg" src="/hub/bg-abschluss.png" alt="" draggable={false} />
+      <img className="doko-bg" src="/hub/bg-abschluss.webp" alt="" draggable={false} />
       <div className="doko-end-card">
         <h1>Partie beendet</h1>
         <p className="muted">{view.view.totalRounds} Runden gespielt.</p>
@@ -1427,7 +1427,7 @@ function PartyEnd({
                   {s.place <= 3 ? (
                     <img
                       className="doko-medaille"
-                      src={`/hub/medaille-${s.place}.png`}
+                      src={`/hub/medaille-${s.place}.webp`}
                       alt={`Platz ${s.place}`}
                       draggable={false}
                     />
