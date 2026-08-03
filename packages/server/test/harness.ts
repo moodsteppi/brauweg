@@ -37,7 +37,7 @@ export async function startHarness(
     ...options,
   });
 
-  const app = buildApp({
+  const app = await buildApp({
     db: ctx.db,
     runtime,
     auth: ctx.auth,

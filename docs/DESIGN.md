@@ -87,6 +87,16 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
 
 Vorhandenes wiederverwenden statt neu erfinden:
 
+- **Holztafel** (`hub-tafel` + `hub-tafel-kopf`/`-inhalt`): der Baustein aller
+  Hub-Tabs. Kleine Versalien-Überschrift links, optionaler Hinweis rechts
+  (`hub-tafel-zusatz`), Inhalt darunter. `is-weit` lässt die Tafel den Rest
+  der Höhe füllen und innen rollen (Freundesliste, Blattauswahl). Neue
+  Hub-Inhalte gehören in eine Tafel, nicht in einen eigenen Kasten.
+- **Logo-Schild** (`hub-banner`): steht über jedem Tab-Inhalt und hält die
+  vier Bereiche als ein Stück zusammen.
+- **Reihen** (`hub-reihe--drei` / `--vier`): gleich große Kacheln
+  nebeneinander. Darin `hub-angebot` (großes Angebot mit Bild),
+  `hub-vitrine` (kleine Kachel), `hub-zahl` (reine Anzeige).
 - **Blatt von unten** (`doko-sheet` + `doko-sheet-card`): für alles, was
   eine Entscheidung oder Nachlese ist. Tipp auf den Hintergrund schließt.
 - **Regelkacheln** (`regeln` / `regel`): Bild + Name, aktiv = goldener Rand

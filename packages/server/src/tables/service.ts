@@ -76,10 +76,17 @@ export async function saveRuleSet(
 
   let version = 1;
   if (input.ruleSetId) {
+    // Nur der Eigentuemer darf eine neue Version anlegen. Ohne die Pruefung
+    // konnte jeder in eine fremde Regelsatz-Familie hineinschreiben.
     const [latest] = await db
       .select({ version: s.ruleSet.version })
       .from(s.ruleSet)
-      .where(eq(s.ruleSet.id, input.ruleSetId))
+      .where(
+        and(
+          eq(s.ruleSet.id, input.ruleSetId),
+          eq(s.ruleSet.ownerAccountId, input.accountId),
+        ),
+      )
       .orderBy(desc(s.ruleSet.version))
       .limit(1);
     if (!latest) throw notFound('ruleSetUnknown');

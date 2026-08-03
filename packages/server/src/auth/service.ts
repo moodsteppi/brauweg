@@ -77,40 +77,47 @@ export async function register(
   const email = normalizeEmail(input.email);
   const displayName = input.displayName.trim();
 
-  // Der Einladungscode wird in einem Schritt geprueft und verbraucht. Zwei
-  // getrennte Schritte liessen sich bei gleichzeitigen Anmeldungen ueberholen,
-  // und dann gilt max_uses nicht mehr.
-  const claimed = await db
-    .update(s.inviteCode)
-    .set({ uses: sql`${s.inviteCode.uses} + 1` })
-    .where(
-      and(
-        eq(s.inviteCode.code, input.inviteCode),
-        eq(s.inviteCode.active, true),
-        sql`${s.inviteCode.uses} < ${s.inviteCode.maxUses}`,
-      ),
-    )
-    .returning({ code: s.inviteCode.code });
-
-  if (claimed.length === 0) throw forbidden('inviteCodeInvalid');
-
   const passwordHash = await hashPassword(input.password);
 
-  let accountId: string;
-  try {
-    const [row] = await db
-      .insert(s.account)
-      .values({ email, passwordHash, displayName })
-      .returning({ id: s.account.id });
-    accountId = row!.id;
-  } catch (err) {
-    // Der eindeutige Index hat zugeschlagen. Welcher, steht im Postgres-Fehler
-    // unter der Drizzle-Meldung, nicht in ihr.
-    const constraint = constraintOf(err);
-    if (constraint === 'account_display_name_key') throw conflict('displayNameTaken');
-    if (constraint === 'account_email_key') throw conflict('emailTaken');
-    throw err;
-  }
+  /**
+   * Code verbrauchen und Konto anlegen gehoeren in EINE Transaktion.
+   *
+   * Getrennt kostete jeder gescheiterte Versuch - etwa ein schon vergebener
+   * Anzeigename - eine Nutzung des Einladungscodes. Wer den Beta-Code kennt
+   * (und den kennen alle Beta-Spieler), konnte damit in Sekunden alle
+   * Nutzungen verbrennen und die Registrierung fuer alle sperren. Schlaegt
+   * jetzt etwas fehl, rollt der Zaehler mit zurueck.
+   */
+  const accountId = await db.transaction(async (tx) => {
+    const claimed = await tx
+      .update(s.inviteCode)
+      .set({ uses: sql`${s.inviteCode.uses} + 1` })
+      .where(
+        and(
+          eq(s.inviteCode.code, input.inviteCode),
+          eq(s.inviteCode.active, true),
+          sql`${s.inviteCode.uses} < ${s.inviteCode.maxUses}`,
+        ),
+      )
+      .returning({ code: s.inviteCode.code });
+
+    if (claimed.length === 0) throw forbidden('inviteCodeInvalid');
+
+    try {
+      const [row] = await tx
+        .insert(s.account)
+        .values({ email, passwordHash, displayName })
+        .returning({ id: s.account.id });
+      return row!.id;
+    } catch (err) {
+      // Der eindeutige Index hat zugeschlagen. Welcher, steht im Postgres-Fehler
+      // unter der Drizzle-Meldung, nicht in ihr.
+      const constraint = constraintOf(err);
+      if (constraint === 'account_display_name_key') throw conflict('displayNameTaken');
+      if (constraint === 'account_email_key') throw conflict('emailTaken');
+      throw err;
+    }
+  });
 
   // Beta: jeder Einladungs-Nutzer landet im gemeinsamen Clan — sonst
   // gaebe es keine Clantische und keine Pause.
@@ -336,6 +343,34 @@ export async function requestPasswordReset(
   // Kein Fehler, wenn es die Adresse nicht gibt: Sonst wird das Formular zum
   // Verzeichnis registrierter Adressen.
   if (!acc || acc.anonymizedAt) return;
+
+  // Sperrfrist wie beim Bestaetigungslink. Ohne sie laesst sich jedes bekannte
+  // Postfach in Minuten mit Reset-Mails zuschuetten - auf Kosten unseres
+  // Versandkontingents und des Rufs der Domain.
+  const [kuerzlich] = await deps.db
+    .select({ id: s.authToken.id })
+    .from(s.authToken)
+    .where(
+      and(
+        eq(s.authToken.accountId, acc.id),
+        eq(s.authToken.purpose, 'password_reset'),
+        gt(s.authToken.createdAt, new Date(Date.now() - RESEND_COOLDOWN_MS)),
+      ),
+    )
+    .limit(1);
+  if (kuerzlich) return;
+
+  // Aeltere offene Links entwerten: Es soll immer nur einer gelten.
+  await deps.db
+    .update(s.authToken)
+    .set({ usedAt: new Date() })
+    .where(
+      and(
+        eq(s.authToken.accountId, acc.id),
+        eq(s.authToken.purpose, 'password_reset'),
+        sql`${s.authToken.usedAt} is null`,
+      ),
+    );
 
   const token = newToken();
   await deps.db.insert(s.authToken).values({

@@ -244,3 +244,72 @@ test('Anmeldung ueber HTTP setzt ein Cookie, das der WebSocket akzeptiert', asyn
   client.close();
 });
 
+
+test('ein Fremder kann sich nicht auf einen Clantisch schalten', async (t) => {
+  // Vorher pruefte der Beitritt ueber WebSocket gar nichts: Mit einer
+  // fremden Tisch-Kennung bekam jeder Angemeldete dauerhaft Sitzbelegung
+  // und Spielstand eines privaten Clantisches - und sein Beitritt startete
+  // den Tisch sogar, bevor die Eingeladenen da waren.
+  const h = await startHarness();
+  t.after(() => h.close());
+
+  const anna = await createVerifiedAccount(h.ctx, 'Anna');
+  const fremd = await createVerifiedAccount(h.ctx, 'Fremd');
+
+  const { createTable } = await import('../src/tables/service.js');
+  const { doppelkopf } = await import('@brauweg/game-doppelkopf');
+
+  const [club] = await h.ctx.db
+    .insert(schema.club)
+    .values({ name: 'Annas Clan', adminAccountId: anna.accountId })
+    .returning();
+  await h.ctx.db
+    .insert(schema.clubMember)
+    .values({ clubId: club!.id, accountId: anna.accountId, role: 'admin' });
+  const table = await createTable(h.ctx.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: doppelkopf.defaultConfig(),
+    seats: 4,
+    rounds: 4,
+    visibility: 'club_only',
+    clubId: club!.id,
+  });
+
+  const eindringling = await TestClient.connect(h.wsUrl, await h.cookieFor(fremd.accountId));
+  eindringling.passive = true;
+  eindringling.join(table.id);
+
+  await eindringling.waitFor(
+    () => eindringling.messages('error').length > 0,
+    'Ablehnung',
+    5000,
+  );
+  assert.equal(eindringling.messages('error')[0]!.code, 'notClubMember');
+  assert.equal(eindringling.lastTable, null, 'kein Tischzustand fuer Fremde');
+
+  // Das Clanmitglied selbst kommt weiterhin rein.
+  const drin = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId));
+  drin.passive = true;
+  drin.join(table.id);
+  await drin.waitFor(() => drin.lastTable !== null, 'Tischzustand');
+
+  eindringling.close();
+  drin.close();
+});
+
+test('unsinnige Nachrichten werden abgewiesen, nicht durchgereicht', async (t) => {
+  const h = await startHarness();
+  t.after(() => h.close());
+  const anna = await createVerifiedAccount(h.ctx, 'Anna');
+
+  const client = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId));
+  client.passive = true;
+  // Keine UUID, kein gueltiger Sitz - frueher landete beides als
+  // Datenbankfehler bzw. tief in der Engine.
+  client.raw({ v: 1, game: 'doppelkopf', type: 'join', tableId: 'kein-uuid', moduleVersion: 1 });
+  await client.waitFor(() => client.messages('error').length > 0, 'Ablehnung', 5000);
+  assert.equal(client.messages('error')[0]!.code, 'malformedMessage');
+
+  client.close();
+});

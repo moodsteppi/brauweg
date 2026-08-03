@@ -13,6 +13,7 @@
  * ueber GameModule.
  */
 
+import { randomBytes, randomInt } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import type { AnyGameModule, GameId, PartyStanding } from '@brauweg/game-api';
 
@@ -100,6 +101,8 @@ const DEFAULTS = {
 
 export class PartyRuntime {
   private readonly live = new Map<string, LiveParty>();
+  /** Laufende Start-/Wiederaufnahmeversuche, damit keiner doppelt laeuft. */
+  private readonly starting = new Map<string, Promise<LiveParty>>();
   private readonly listeners = new Set<RuntimeListener>();
   private readonly opts: Required<RuntimeOptions>;
 
@@ -145,9 +148,26 @@ export class PartyRuntime {
   // Start und Wiederaufnahme
   // -------------------------------------------------------------------------
 
+  /**
+   * Startet oder holt eine Partie - hoechstens einmal je Tisch gleichzeitig.
+   *
+   * Zwischen der Pruefung und dem Eintrag in `live` liegen mehrere await.
+   * Zwei gleichzeitige join-Nachrichten liefen frueher beide hindurch und
+   * legten zwei Partien mit eigenen Timern auf denselben Tisch - mit
+   * widerspruechlichen Snapshots und doppelt gebuchten Trophaeen. Der Riegel
+   * wird deshalb VOR dem ersten await gesetzt.
+   */
   async start(tableId: string): Promise<LiveParty> {
     const existing = this.live.get(tableId);
     if (existing) return existing;
+    const laufend = this.starting.get(tableId);
+    if (laufend) return laufend;
+    const versuch = this.startUnsafe(tableId).finally(() => this.starting.delete(tableId));
+    this.starting.set(tableId, versuch);
+    return versuch;
+  }
+
+  private async startUnsafe(tableId: string): Promise<LiveParty> {
 
     const { table, seats } = await tableWithSeats(this.db, tableId);
     if (table.status === 'running') return this.resume(tableId);
@@ -165,13 +185,20 @@ export class PartyRuntime {
 
     // Der Seed bestimmt jedes Geben. Er wird gespeichert, damit die Partie aus
     // Seed und Aktionsfolge exakt nachvollziehbar bleibt.
-    const seed = Math.floor(Math.random() * 2 ** 31);
+    //
+    // Beides kommt aus der kryptografischen Quelle, nie aus Math.random():
+    // Wer die Karten vorhersagen kann, gewinnt jede Partie. Die Hexbasis ist
+    // das, woraus die Gaben wirklich entstehen; 128 Bit lassen sich nicht
+    // durchprobieren, auch nicht mit den eigenen zwoelf Karten als Anhalt.
+    const seed = randomInt(2 ** 31);
+    const seedHex = randomBytes(16).toString('hex');
 
     const state = module.createParty({
       config: rs.config,
       seats: table.seats,
       rounds: table.maxRounds,
       seed,
+      seedHex,
     });
 
     const [party] = await this.db
@@ -246,6 +273,14 @@ export class PartyRuntime {
   async resume(tableId: string): Promise<LiveParty> {
     const existing = this.live.get(tableId);
     if (existing) return existing;
+    const laufend = this.starting.get(tableId);
+    if (laufend) return laufend;
+    const versuch = this.resumeUnsafe(tableId).finally(() => this.starting.delete(tableId));
+    this.starting.set(tableId, versuch);
+    return versuch;
+  }
+
+  private async resumeUnsafe(tableId: string): Promise<LiveParty> {
 
     const { table, seats } = await tableWithSeats(this.db, tableId);
     const module = requireModule(table.gameId);

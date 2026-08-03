@@ -7,6 +7,15 @@ import { validateRuleSet, isValid } from '../src/validator.js';
 import { buildOrder, isTrump, legalCards, detectSchweinchen } from '../src/order.js';
 import { resolveTrick, type PlayedCard } from '../src/trick.js';
 import { deal } from '../src/deal.js';
+import { createParty, startRound } from '../src/party.js';
+import {
+  RuleViolation,
+  allowedVorbehalte,
+  apply,
+  createRound,
+  currentActor,
+} from '../src/round.js';
+import { handoverSize } from '../src/armut.js';
 
 /** Testhelfer: Karte aus Kurzschreibweise, z.B. c('HT'). */
 let nextId = 1000;
@@ -251,4 +260,76 @@ test('Superschwein sticht die Dulle im Stich', () => {
     { secondDulleBeatsFirst: false },
   );
   assert.equal(r.winnerSeat, 2);
+});
+
+test('der Hex-Seed macht jedes Geben unabhaengig', () => {
+  // Mit Hex-Seed gibt jede Runde anders - und aus einer Gabe laesst sich
+  // die naechste nicht ausrechnen.
+  const rs = makeRuleSet();
+  const seats = [0, 1, 2, 3];
+  const basis = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+
+  const eins = createParty(rs, seats, 1, [], basis);
+  const runde1 = startRound(eins).current!;
+  const runde2 = startRound({ ...eins, roundIndex: 1, current: null }).current!;
+
+  const hand = (r: typeof runde1, seat: number) =>
+    r.hands[seat].map((c) => `${c.suit}${c.rank}`).join(',');
+  assert.notEqual(hand(runde1, 0), hand(runde2, 0), 'zwei Runden, zwei Gaben');
+
+  // Gleiche Basis, gleiche Runde: reproduzierbar (Nachspielen bleibt moeglich).
+  const nochmal = startRound(createParty(rs, seats, 999, [], basis)).current!;
+  assert.equal(hand(runde1, 0), hand(nochmal, 0), 'die Basis bestimmt die Gabe');
+
+  // Andere Basis, voellig andere Gabe - der Zahlen-Seed spielt keine Rolle mehr.
+  const andere = startRound(
+    createParty(rs, seats, 1, [], 'ffffffffffffffffffffffffffffffff'),
+  ).current!;
+  assert.notEqual(hand(runde1, 0), hand(andere, 0));
+
+  // Alle Karten genau einmal im Spiel.
+  const alle = seats.flatMap((s) => runde1.hands[s].map((c) => c.id));
+  assert.equal(new Set(alle).size, alle.length);
+});
+
+test('doppelte Karten beim Armut-Tausch werden abgewiesen', () => {
+  // Mit [7,7,7] verlor der Ansager frueher EINE Karte und der Partner bekam
+  // DREI Kopien - die Augenrechnung der Runde war damit manipuliert.
+  const rs = makeRuleSet({ armut: true });
+  const seats = [0, 1, 2, 3];
+
+  // Ein Blatt suchen, das eine Armut ueberhaupt zulaesst.
+  let state = null;
+  for (let seed = 1; seed < 400 && !state; seed++) {
+    const kandidat = createRound(rs, seats, 0, seed);
+    const dran = currentActor(kandidat)!;
+    if (allowedVorbehalte(kandidat, dran).includes('armut')) state = kandidat;
+  }
+  assert.ok(state, 'kein Blatt mit Armut gefunden');
+
+  const armer = currentActor(state)!;
+  state = apply(state, { type: 'vorbehalt', seat: armer, kind: 'armut' });
+  while (state.phase === 'vorbehalt') {
+    state = apply(state, { type: 'vorbehalt', seat: currentActor(state)!, kind: null });
+  }
+  assert.equal(state.phase, 'armutExchange');
+
+  // Annehmen, bis jemand die Armut nimmt.
+  while (state.armut!.partnerSeat === null && state.phase === 'armutExchange') {
+    state = apply(state, { type: 'armutAccept', seat: currentActor(state)! });
+  }
+  assert.notEqual(state.armut!.partnerSeat, null);
+
+  const groesse = handoverSize(state.hands[armer], state.order);
+  const eine = state.hands[armer][0].id;
+  assert.throws(
+    () =>
+      apply(state, {
+        type: 'armutHandover',
+        seat: armer,
+        cards: Array.from({ length: groesse }, () => eine),
+      }),
+    RuleViolation,
+    'dieselbe Karte darf nicht mehrfach abgegeben werden',
+  );
 });
