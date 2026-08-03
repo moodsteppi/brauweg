@@ -383,7 +383,6 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
           >
             <img className="front-shop-zeichen" src={regal.icon} alt="" draggable={false} />
             <strong>{regal.name}</strong>
-            <span className="front-shop-kachel-text muted">{regal.text}</span>
             <span className="front-shop-bald-knopf">
               <span className="front-bald-tag">Bald</span>
             </span>
@@ -480,25 +479,40 @@ function Spielen({
         </header>
 
         <aside className="hub-seite hub-seite--links">
-          <button className="hub-side-btn hub-side-btn--lila" onClick={() => setWahlOffen(true)}>
-            <span aria-hidden="true">🃏</span>
-            Spielauswahl
+          <button
+            type="button"
+            className="hub-side-btn hub-side-btn--lila"
+            aria-label="Spielauswahl"
+            onClick={() => setWahlOffen(true)}
+          >
+            <img src="/hub/tab-spielen.png" alt="" draggable={false} />
           </button>
-          <button className="hub-side-btn hub-side-btn--blau" onClick={onRangliste}>
-            <span aria-hidden="true">🏆</span>
-            Rangliste
+          <button
+            type="button"
+            className="hub-side-btn hub-side-btn--blau"
+            aria-label="Rangliste"
+            onClick={onRangliste}
+          >
+            <img src="/hub/pokal.png" alt="" draggable={false} />
           </button>
-          <button className="hub-side-btn hub-side-btn--grau" onClick={() => onBald('Mehr Features')}>
-            <span aria-hidden="true">🔒</span>
-            Bald
+          <button
+            type="button"
+            className="hub-side-btn hub-side-btn--grau"
+            aria-label="Bald"
+            onClick={() => onBald('Mehr Features')}
+          >
+            <img src="/hub/krone.png" alt="" draggable={false} />
           </button>
         </aside>
 
         <aside className="hub-seite hub-seite--rechts">
-          <button className="hub-truhe" onClick={() => onBald('Der Tagesbonus')}>
+          <button
+            type="button"
+            className="hub-truhe"
+            aria-label="Tägliche Belohnung, bald"
+            onClick={() => onBald('Der Tagesbonus')}
+          >
             <img src="/hub/truhe.png" alt="" draggable={false} />
-            <em>Tägliche Belohnung</em>
-            <span className="hub-truhe-cta">Abholen!</span>
             <span className="front-bald-tag">Bald</span>
           </button>
         </aside>
