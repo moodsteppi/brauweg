@@ -224,20 +224,56 @@ export async function listTables(db: Db, filter: LobbyFilter) {
 
   if (tables.length === 0) return [];
 
+  const ids = tables.map((t) => t.id);
+
   const seats = await db
     .select()
     .from(s.tableSeat)
-    .where(
-      inArray(
-        s.tableSeat.tableId,
-        tables.map((t) => t.id),
-      ),
-    );
+    .where(inArray(s.tableSeat.tableId, ids));
 
-  return tables.map((table) => ({
-    ...table,
-    occupied: seats.filter((seat) => seat.tableId === table.id && seat.accountId).length,
-  }));
+  /**
+   * Namen der Sitzenden.
+   *
+   * Ein Tisch heisst nach dem, der ihn aufgemacht hat - "Runde von Anna"
+   * sagt mehr als "4 Plaetze, 8 Runden" und macht die Suche nuetzlich.
+   * Einen eigenen Tischnamen gibt es bewusst nicht: Er waere ein Feld mehr
+   * beim Erstellen und ein Moderationsfall dazu.
+   */
+  const konten = seats.map((seat) => seat.accountId).filter((id): id is string => !!id);
+  const namen = new Map<string, string>();
+  if (konten.length > 0) {
+    const zeilen = await db
+      .select({ id: s.account.id, displayName: s.account.displayName })
+      .from(s.account)
+      .where(inArray(s.account.id, konten));
+    for (const zeile of zeilen) namen.set(zeile.id, zeile.displayName);
+  }
+
+  /** Wie viele Sonderregeln an sind - fuer die Zeile unter dem Tischnamen. */
+  const regelSaetze = await db
+    .select({ id: s.ruleSet.id, version: s.ruleSet.version, config: s.ruleSet.config })
+    .from(s.ruleSet)
+    .where(inArray(s.ruleSet.id, tables.map((t) => t.ruleSetId)));
+  const regelZahl = new Map<string, number>();
+  for (const rs of regelSaetze) {
+    const config = rs.config as Record<string, unknown>;
+    const an = Object.values(config).filter((wert) => wert === true).length;
+    regelZahl.set(`${rs.id}:${rs.version}`, an);
+  }
+
+  return tables.map((table) => {
+    const eigene = seats
+      .filter((seat) => seat.tableId === table.id)
+      .sort((a, b) => a.seatIndex - b.seatIndex);
+    const gastgeber = eigene.find((seat) => seat.accountId)?.accountId ?? null;
+    return {
+      ...table,
+      occupied: eigene.filter((seat) => seat.accountId).length,
+      host: gastgeber ? (namen.get(gastgeber) ?? null) : null,
+      /** Anzahl aktiver Sonderregeln. 0 heisst Grundspiel. */
+      ruleCount: regelZahl.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? 0,
+    };
+  });
 }
 
 /**

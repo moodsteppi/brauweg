@@ -98,6 +98,10 @@ export interface TableRow {
   maxRounds: number;
   visibility: string;
   occupied: number;
+  /** Anzeigename dessen, der den Tisch aufgemacht hat. Null nur bei Altlasten. */
+  host: string | null;
+  /** Wie viele Sonderregeln an sind. 0 heißt Grundspiel. */
+  ruleCount: number;
 }
 
 export interface GameDefaults {
