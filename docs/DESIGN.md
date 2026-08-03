@@ -39,10 +39,13 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
   Tab-Leiste unten (Shop · Clan · Spielen · Blatt · Profil), Inhalt
   rollt dazwischen. „Spielen" ist mittig und größer; jeder Tab leuchtet
   aktiv in seiner eigenen Farbe.
-- **Clan** ist spielübergreifend (nicht nur Doppelkopf): Chat, Clankrieg,
-  Clan-Rangliste und ähnliche Bausteine stehen schon als Oberfläche mit
-  „Bald"-Marke — wie in Clash Royale. Freunde hängen am Clan-Tab, nicht
-  als eigener Tab. Intern heißt die Tabelle weiter `club_*`.
+- **Clan** ist spielübergreifend (nicht nur Doppelkopf): Clan-Halle mit
+  Banner und Raum-Kacheln (Chat, Clankrieg, Rangliste, Truhe …) als
+  „Bald"-Attrappen. Freunde hängen am Clan-Tab. Intern: `club_*`.
+- **Shop** ist Vorschau ohne Kauf: Wochenangebot als Held oben, darunter
+  Vitrinen mit durchgestrichenem Preis und Bald-Knopf. Tip → „Kommt bald".
+- Design-Entwürfe für neue Surfaces immer **grafisch in dreien (A/B/C)**;
+  gebaut wird erst nach Wahl.
 - Der Hauptschirm ist der **Trophäenpfad** (siehe `Pfad.tsx`): Inseln als
   Checkpoints, jede eine eigene Welt. Neue Welten sind neue SVG-Szenen im
   selben Zuschnitt (`viewBox="-80 0 500 240"`).
