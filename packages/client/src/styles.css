@@ -359,7 +359,8 @@ td {
   flex-direction: column;
   overflow: hidden;
   background:
-    radial-gradient(120% 70% at 50% 38%, #1c3b2e 0%, #14211d 55%, #0e1417 100%);
+    /* Holzstube: dunkle Wand oben und unten, Filztisch dazwischen. */
+    linear-gradient(180deg, #2a1a0e 0%, #221409 12%, #1a1008 100%);
   color: var(--text);
   padding:
     max(0.5rem, env(safe-area-inset-top))
@@ -421,10 +422,32 @@ td {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  border-radius: 1.4rem;
+  border-radius: 1.6rem;
+  /* Satter Filz mit Licht von oben — wie im Entwurf. */
   background:
-    radial-gradient(80% 60% at 50% 45%, rgba(74, 156, 120, 0.18), transparent 70%);
-  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.35);
+    radial-gradient(85% 55% at 50% 12%, rgba(255, 214, 140, 0.22), transparent 62%),
+    radial-gradient(120% 90% at 50% 45%, #2f7a4e 0%, #23603c 55%, #17422a 100%);
+  box-shadow:
+    inset 0 0 70px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 3px rgba(120, 76, 34, 0.9),
+    inset 0 0 0 6px rgba(255, 205, 110, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+}
+/* Warme Lichter am oberen Rand — reine Zierde ueber dem Filz. */
+.doko-felt::before {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  left: 12%;
+  right: 12%;
+  height: 0.5rem;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 50%, rgba(255, 214, 140, 0.9) 0 18%, transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(255, 214, 140, 0.9) 0 18%, transparent 60%),
+    radial-gradient(circle at 92% 50%, rgba(255, 214, 140, 0.9) 0 18%, transparent 60%);
+  filter: blur(1px);
+  opacity: 0.75;
 }
 
 /* Mitspieler */
@@ -767,6 +790,60 @@ td {
 .doko-pick .doko-handcard { position: static; margin-left: 0; transform: none !important; }
 .doko-sheet-card > .primary { width: 100%; }
 
+
+/* =========================================================================
+   Tafeln auf dem Filz (Entwurf Doko).
+
+   Zwei Auskuenfte, die man mitten im Zug braucht und nicht erinnern soll:
+   die eigene Partei samt hoechster Ansage, und was gerade gespielt wird.
+   Beide liegen als kleine Holzschilder auf dem Filz und nehmen den Karten
+   keinen Platz weg.
+   ========================================================================= */
+.doko-tafel {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(30, 20, 8, 0.88) 0%, rgba(18, 12, 4, 0.92) 100%);
+  border: 1.5px solid rgba(255, 205, 110, 0.55);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.doko-tafel strong {
+  font-size: 0.82rem;
+  color: #ffe08a;
+  line-height: 1.15;
+}
+.doko-tafel span {
+  font-size: 0.68rem;
+  color: rgba(240, 235, 220, 0.9);
+  line-height: 1.15;
+}
+.doko-tafel .muted {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(240, 235, 220, 0.6);
+}
+.doko-tafel--partei {
+  top: 26%;
+}
+.doko-tafel--spielart {
+  top: 74%;
+}
+/* Am Fuenfertisch sitzt oben jemand mehr — die Tafeln ruecken enger. */
+.doko-felt.seats-5 .doko-tafel--partei {
+  top: 29%;
+}
+
 /* =========================================================================
    Lobby — Tisch erstellen und beitreten, auf dem Filz des Spieltischs
    ========================================================================= */
@@ -783,35 +860,14 @@ td {
   padding: 0.2rem 0.3rem 1rem;
 }
 
-.lobby-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--line);
-  border-radius: 0.9rem;
-  padding: 0.9rem;
-  margin-bottom: 1rem;
-}
 
 .lobby-panel h2 {
   margin: 0 0 0.6rem;
   font-size: 1.05rem;
 }
 
-.lobby-wahl {
-  display: flex;
-  gap: 0.6rem;
-  margin-bottom: 0.7rem;
-}
 
-.lobby-gruppe {
-  flex: 1;
-  min-width: 0;
-}
 
-.lobby-gruppe > .muted {
-  display: block;
-  font-size: 0.75rem;
-  margin-bottom: 0.25rem;
-}
 
 /* Chips zum Antippen statt Auswahlfeldern: eine Hand, ein Daumen. */
 .lobby-chips {
@@ -837,61 +893,15 @@ td {
   color: #9fe0c1;
 }
 
-.lobby-regelzeile {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed var(--line);
-  color: var(--muted);
-  font-size: 0.88rem;
-  margin-bottom: 0.7rem;
-  text-align: left;
-}
 
 .lobby-regelzeile strong {
   color: var(--text);
 }
 
-.lobby-erstellen {
-  width: 100%;
-  padding: 0.75rem;
-  font-size: 1.05rem;
-  border-radius: 0.65rem;
-}
 
-.lobby-fussnote {
-  font-size: 0.72rem;
-  text-align: center;
-  margin: 0.5rem 0 0;
-}
 
-.lobby-ueberschrift {
-  font-size: 0.95rem;
-  margin: 0 0 0.5rem;
-}
 
-.lobby-tisch {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.7rem;
-  background: rgba(255, 255, 255, 0.05);
-  margin-bottom: 0.45rem;
-}
 
-.lobby-tischinfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.3;
-}
 
 .lobby-tischinfo strong {
   font-size: 0.88rem;
@@ -916,6 +926,245 @@ td {
 
 .lobby-punkte i.is-frei {
   background: rgba(255, 255, 255, 0.16);
+}
+
+
+/* =========================================================================
+   Tischauswahl und Tisch erstellen (Entwurf Doko).
+
+   Dunkles Holz als Grund, Messingschild als Ueberschrift, Filzgruen fuer
+   das Erstellen. Die Liste ist das Herz: Name, Kurzfassung, Sitzpunkte,
+   Zahl — mehr braucht niemand, um sich fuer einen Tisch zu entscheiden.
+   ========================================================================= */
+
+.doko--lobby {
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(120, 78, 34, 0.55), transparent 60%),
+    linear-gradient(180deg, #3b2412 0%, #2a1a0d 55%, #1e130a 100%);
+}
+/* Erstellen liegt auf dem Filz — dort entsteht der Spieltisch. */
+.doko--erstellen {
+  background:
+    radial-gradient(110% 60% at 50% 8%, rgba(70, 150, 100, 0.35), transparent 62%),
+    linear-gradient(180deg, #2c1a0d 0%, #1e5236 22%, #17422b 100%);
+}
+
+/* Messingschild statt Ueberschrift. */
+.lobby-schild {
+  flex: 1;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffe8b0;
+  text-shadow: 0 2px 0 rgba(20, 12, 4, 0.8);
+  border-radius: 0.55rem;
+  background: linear-gradient(180deg, #7a4e22 0%, #4a2c12 100%);
+  border: 2px solid rgba(255, 205, 110, 0.7);
+  box-shadow: 0 3px 0 #1a1006, inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.doko-icon.is-leer {
+  visibility: hidden;
+}
+
+/* Filterreihe */
+.lobby-filter {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.35rem 0.15rem 0.15rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.lobby-filter::-webkit-scrollbar {
+  display: none;
+}
+.lobby-filterchip {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f0dcb4;
+  background: linear-gradient(180deg, rgba(96, 60, 28, 0.9) 0%, rgba(58, 34, 14, 0.95) 100%);
+  border: 1.5px solid rgba(255, 200, 110, 0.45);
+  box-shadow: 0 2px 0 rgba(20, 12, 4, 0.7);
+}
+.lobby-filterchip.is-an {
+  color: #fff;
+  background: linear-gradient(180deg, #62b96b 0%, #337a42 100%);
+  border-color: #8ede96;
+  box-shadow: 0 2px 0 #1d4f28;
+}
+
+.lobby-suchzeile {
+  flex: 0 0 auto;
+  padding: 0.15rem 0.15rem 0.35rem;
+}
+.lobby-suche {
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  border-radius: 0.5rem;
+  color: #f5e6c8;
+  background: rgba(16, 10, 4, 0.6);
+  border: 1.5px solid rgba(255, 200, 110, 0.35);
+}
+.lobby-suche::placeholder {
+  color: rgba(240, 220, 180, 0.5);
+}
+
+.lobby-leer {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+/* Ein Tisch in der Liste. */
+.lobby-tisch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.4rem;
+  text-align: left;
+  border-radius: 0.6rem;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(38, 82, 52, 0.95) 0%, rgba(24, 56, 34, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 110, 0.5);
+  box-shadow: 0 3px 0 rgba(16, 10, 4, 0.8);
+}
+.lobby-tisch:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(16, 10, 4, 0.8);
+}
+.lobby-tischinfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.lobby-tischinfo strong {
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lobby-tischinfo .muted {
+  font-size: 0.68rem;
+  color: rgba(230, 240, 225, 0.75);
+}
+.lobby-schloss {
+  margin-left: 0.3rem;
+  font-size: 0.72rem;
+}
+.lobby-zahl {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #ffe08a;
+}
+.lobby-pfeil {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: rgba(255, 224, 138, 0.8);
+}
+
+/* Fussleiste mit dem grossen Knopf. */
+.lobby-fuss {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.15rem calc(0.2rem + env(safe-area-inset-bottom));
+}
+.lobby-erstellen {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.7rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #f2fff0;
+  background: linear-gradient(180deg, #62b96b 0%, #337a42 100%);
+  border: 1.5px solid #8ede96;
+  box-shadow: 0 4px 0 #1d4f28, 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+.lobby-erstellen:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #1d4f28;
+}
+
+/* Holztafel beim Erstellen. */
+.lobby-tafel {
+  padding: 0.7rem 0.8rem 0.8rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, rgba(104, 66, 30, 0.96) 0%, rgba(62, 38, 16, 0.97) 100%);
+  border: 2px solid rgba(255, 205, 110, 0.6);
+  box-shadow: 0 4px 0 #1a1006, inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.lobby-tafel-titel {
+  margin: 0.7rem 0 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #ffe8b0;
+  text-shadow: 0 2px 0 rgba(20, 12, 4, 0.7);
+}
+.lobby-tafel-titel:first-child {
+  margin-top: 0;
+}
+.lobby-gross {
+  display: flex;
+  gap: 0.5rem;
+}
+.lobby-grossknopf {
+  flex: 1;
+  padding: 0.6rem 0.3rem;
+  border-radius: 0.55rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f0dcb4;
+  background: linear-gradient(180deg, rgba(88, 54, 24, 0.9) 0%, rgba(52, 30, 12, 0.95) 100%);
+  border: 1.5px solid rgba(255, 200, 110, 0.45);
+  box-shadow: 0 3px 0 rgba(16, 10, 4, 0.8);
+}
+.lobby-grossknopf.is-an {
+  color: #fff;
+  background: linear-gradient(180deg, #62b96b 0%, #337a42 100%);
+  border-color: #8ede96;
+  box-shadow: 0 3px 0 #1d4f28;
+}
+.lobby-grossknopf:active,
+.lobby-chip:active,
+.lobby-filterchip:active {
+  transform: translateY(2px);
+}
+.lobby-regelzeile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.55rem;
+  font-size: 0.92rem;
+  color: #f0dcb4;
+  background: rgba(16, 10, 4, 0.45);
+  border: 1.5px solid rgba(255, 200, 110, 0.35);
+  text-align: left;
+}
+.lobby-tafel .lobby-erstellen {
+  margin-top: 0.9rem;
+}
+.lobby-fussnote {
+  font-size: 0.68rem;
+  text-align: center;
+  margin: 0.5rem 0 0;
+  color: rgba(240, 225, 195, 0.75);
 }
 
 /* =========================================================================
