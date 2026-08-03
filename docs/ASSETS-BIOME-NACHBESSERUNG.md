@@ -1,37 +1,25 @@
 # Nachbesserung: Biom-Kacheln
 
-## Offen: `biom-1-heimat.png`
+## Alle sechs Kacheln sind fertig
 
-**Diese eine Kachel fehlt noch.** Sie ist als einzige nie neu gemacht
-worden, weil ich sie irrtümlich für sauber gehalten habe — sie hat
-dieselben **zwei Wege** wie die anderen: den breiten Trampelpfad mit den
-großen Steinen *und* die gerade Ovalkette auf der Mittellinie.
+Die letzte offene, `biom-1-heimat`, ist in der dritten Lieferung richtig
+geworden: genau ein Weg, kein Rahmen mehr, alle vier Raender laufen in
+Nebel aus. Motiv und Abendstimmung sind geblieben. Der Weg weicht im
+Mittel 0,5 Prozent von der Mittellinie ab, hoechstens 2,0 - die Grenze
+lag bei 8.
 
-Der Irrtum kam vom Prüfverfahren: beurteilt wurde an einem 175 Pixel
-breiten Mittelstreifen, und in dieser Größe verschmelzen die beiden Ketten
-zu einer, die bloß unruhig wirkt. **Kacheln in voller Auflösung ansehen**,
-sonst rutscht so etwas wieder durch.
-
-Zweiter Punkt: Sie hat einen **gerahmten Rand** — abgerundete Kante mit
-dunkler Umrandung, wie eine Spielkarte. Die fünf neuen laufen stattdessen
-an allen vier Seiten in Wasser und Nebel aus. Im Stapel steht deshalb an
-ihrem oberen Rand eine harte Linie.
-
-**Gewünscht:** Motiv und Stimmung bleiben, wie sie sind — Wiese, Wirtshaus,
-warmes Abendlicht, das ist genau richtig und die hellste Erinnerung an den
-Anfang. Zu ändern sind nur zwei Dinge:
-
-1. **Genau ein Weg**, nach der berichtigten Wegregel weiter unten.
-2. **Kein Rahmen.** Alle vier Ränder laufen aus, oben und unten in Wasser
-   oder Nebel, wie bei den anderen fünf.
+**Merksatz aus dieser Runde:** Sie war die einzige, die ich zunaechst
+durchgewinkt hatte, weil ich am 175 Pixel breiten Mittelstreifen geprueft
+habe. In der Groesse verschmelzen zwei Wege zu einem, der bloss unruhig
+wirkt. **Kacheln in voller Aufloesung ansehen.**
 
 ---
 
-## Stand: fünf von sechs sind fertig
+## Stand: alle sechs fertig
 
 | Kachel | Helligkeit | |
 | --- | --- | --- |
-| `biom-1-heimat` | 28 % | **offen** — zwei Wege, gerahmter Rand, siehe oben |
+| `biom-1-heimat` | 35 % | fertig — ein Weg, kein Rahmen |
 | `biom-2-wiesen` | 44 % | fertig |
 | `biom-3-strand` | 42 % | fertig |
 | `biom-4-feuerberg` | 29 % | fertig — Vulkan mit Lava wieder da |

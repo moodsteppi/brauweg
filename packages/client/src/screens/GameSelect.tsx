@@ -603,14 +603,12 @@ function Spielen({
       <div className="hub-buehne">
         <Trophaeenpfad trophies={trophies} />
 
+        {/* Nur der Schriftzug, dafuer gross und mittig. Der Slogan
+            "Doppelkopf. Dein Weg." stand als zweites Bild darunter und
+            machte beide klein - dabei ist oben ueber der Karte Platz, und
+            eine Startseite darf ihren Namen deutlich zeigen. */}
         <header className="hub-logo" aria-label="Brauweg">
           <img className="hub-logo-mark" src="/hub/logo.png" alt="Brauweg" draggable={false} />
-          <img
-            className="hub-logo-slogan"
-            src="/hub/slogan.png"
-            alt="Doppelkopf. Dein Weg."
-            draggable={false}
-          />
         </header>
 
         <aside className="hub-seite hub-seite--links">
