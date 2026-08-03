@@ -1,9 +1,8 @@
 /**
  * Trophäen-Weltkarte (Hub-CI).
  *
- * Gemalte Karte + Checkpoint-Knoten. Kamera folgt dem höchsten Checkpoint.
- * Biome-Namen sitzen am Knoten (hohe z-index), damit UI die Karte verdecken
- * darf — aber nie die Namen. Filz/Wirtshaus erst nach der Spielwahl.
+ * Gemalte Karte bleibt die Szene. Ambient nur: kleiner Pinguin auf dem Weg,
+ * Bäume wiegen im Wind. Kamera folgt dem Checkpoint; Namen am Knoten.
  */
 
 import type { CSSProperties } from 'react';
@@ -73,10 +72,12 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
       <div className="hub-karte-welt" style={weltStyle}>
         <img className="hub-karte-bild" src="/hub/weltkarte.png" alt="" draggable={false} />
 
-        {/* Nur leichte Wolken — keine CSS-Bäume (wirkten falsch auf der Malerei). */}
+        {/* Ambient bewusst minimal: Bäume wiegen, kleiner Pinguin auf dem Weg. */}
         <div className="hub-ambient" aria-hidden="true">
-          <span className="hub-wolke hub-wolke--a" />
-          <span className="hub-wolke hub-wolke--b" />
+          <img className="hub-baum hub-baum--a" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '72%', left: '14%' }} />
+          <img className="hub-baum hub-baum--b" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '64%', left: '78%' }} />
+          <img className="hub-baum hub-baum--c" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '48%', left: '22%' }} />
+          <img className="hub-baum hub-baum--d" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '56%', left: '8%' }} />
         </div>
 
         <div className="hub-pingu-wrap" aria-hidden="true">
