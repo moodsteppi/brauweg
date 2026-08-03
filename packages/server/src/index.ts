@@ -68,7 +68,7 @@ async function main(): Promise<void> {
   }
   const runtime = new PartyRuntime(db);
 
-  const app = buildApp({
+  const app = await buildApp({
     db,
     runtime,
     auth: {
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
   });
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
-  new Gateway(app.server, db, runtime);
+  new Gateway(app.server, db, runtime, { allowedOrigin: config.publicUrl });
 
   // Tische ohne Aktivitaet verfallen nach 24 Stunden.
   const sweeper = setInterval(() => {

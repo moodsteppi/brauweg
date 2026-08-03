@@ -20,7 +20,7 @@ async function setup() {
   const ctx = await createTestContext();
   await seedInvite(ctx.db);
   const runtime = new PartyRuntime(ctx.db, { botDelayMs: 0 });
-  const app = buildApp({
+  const app = await buildApp({
     db: ctx.db,
     runtime,
     auth: ctx.auth,

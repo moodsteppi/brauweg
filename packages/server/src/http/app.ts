@@ -8,6 +8,8 @@
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import { and, eq, sql } from 'drizzle-orm';
 import { ZodError, z } from 'zod';
@@ -15,7 +17,7 @@ import type { GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
-import { AppError, RuleSetInvalidError, notFound, unauthorized } from '../errors.js';
+import { AppError, RuleSetInvalidError, badRequest, notFound, unauthorized } from '../errors.js';
 import {
   type AuthDeps,
   anonymizeAccount,
@@ -38,7 +40,7 @@ import {
   requestFriendship,
   searchPlayers,
 } from '../social/service.js';
-import { clubsFor } from '../clubs/service.js';
+import { clubsFor, requireClubMember } from '../clubs/service.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
 import {
   activeTableFor,
@@ -87,9 +89,104 @@ const createTableSchema = z.object({
   fillWithBots: z.boolean().optional(),
 });
 
-export function buildApp(deps: AppDeps): FastifyInstance {
-  const app = Fastify({ logger: false });
-  void app.register(cookie);
+/**
+ * Grenzen gegen Missbrauch.
+ *
+ * Ohne sie steht jede Anmeldung offen zum Durchprobieren, jede Mailadresse
+ * zum Zuschuetten und jeder Endpunkt zum Fluten. Die Zahlen sind so gewaehlt,
+ * dass ein Mensch sie im Alltag nie erreicht.
+ */
+/**
+ * Anmelden, Registrieren, Mails anfordern.
+ *
+ * 30 Versuche je Viertelstunde: Ein ganzer Verein sitzt oft hinter einer
+ * einzigen Adresse und muss sich reihum anmelden koennen. Zum Durchprobieren
+ * von Passwoertern reicht es trotzdem nicht - zwei Versuche pro Minute, jeder
+ * mit Argon2 belegt.
+ */
+const LIMIT_AUTH = { max: 30, timeWindow: '15 minutes' };
+const LIMIT_SCHREIBEN = { max: 60, timeWindow: '1 minute' };
+const LIMIT_ALLGEMEIN = { max: 300, timeWindow: '1 minute' };
+
+/** Rumpfgrenze: Der groesste erlaubte Rumpf ist das Profilbild (~60 kB). */
+const BODY_LIMIT = 128 * 1024;
+
+/**
+ * Prueft die ersten Bytes einer Bild-data-URL.
+ *
+ * Der angegebene Typ sagt nichts: Wer HTML als `image/png` hinterlegt,
+ * bekaeme es unter unserer eigenen Herkunft ausgeliefert. Also wird
+ * nachgesehen, ob wirklich PNG, JPEG oder WebP dahintersteht.
+ */
+function istEchtesBild(dataUrl: string): boolean {
+  const komma = dataUrl.indexOf(',');
+  if (komma < 0) return false;
+  let kopf: Buffer;
+  try {
+    kopf = Buffer.from(dataUrl.slice(komma + 1, komma + 41), 'base64');
+  } catch {
+    return false;
+  }
+  if (kopf.length < 12) return false;
+  const png = kopf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const jpeg = kopf[0] === 0xff && kopf[1] === 0xd8 && kopf[2] === 0xff;
+  const webp =
+    kopf.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    kopf.subarray(8, 12).toString('ascii') === 'WEBP';
+  return png || jpeg || webp;
+}
+
+export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
+  const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
+  await app.register(cookie);
+
+  // Sicherheits-Kopfzeilen. Ohne frame-ancestors laesst sich die Seite in
+  // einen fremden Rahmen setzen und per Clickjacking bedienen; ohne CSP wird
+  // aus jedem kuenftigen XSS sofort eine Sitzungsuebernahme.
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        fontSrc: ["'self'"],
+        connectSrc: ["'self'", 'ws:', 'wss:'],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
+    // Die Seite laeuft ausschliesslich ueber HTTPS.
+    hsts: { maxAge: 31_536_000, includeSubDomains: true },
+    crossOriginEmbedderPolicy: false,
+  });
+
+  /**
+   * Ratengrenzen.
+   *
+   * Bewusst global: Nur so haengt die Grenze an einem onRequest-Haken und
+   * gilt fuer alle Routen, unabhaengig davon, wann sie angemeldet wurden.
+   * Ohne global griffe sie nur fuer Routen, die NACH dem Plugin entstehen -
+   * und das waere hier keine einzige. Die Grundgrenze ist grosszuegig
+   * (ein ganzer Verein hinter einer Adresse), die scharfen Werte stehen an
+   * den einzelnen Routen.
+   */
+  // Vor den Routen: Das Plugin haengt seine Grenzen beim Anmelden JEDER
+  // Route an. Wird es erst danach geladen, sieht es keine einzige - genau
+  // deshalb muss hier gewartet werden.
+  await app.register(rateLimit, {
+    global: true,
+    max: 1200,
+    timeWindow: '1 minute',
+    // Hinter Railways Proxy ist die echte Adresse die erste in x-forwarded-for.
+    keyGenerator: (request) => {
+      const weiter = request.headers['x-forwarded-for'];
+      const kette = Array.isArray(weiter) ? weiter[0] : weiter;
+      return (kette?.split(',')[0]?.trim() || request.ip) ?? 'unbekannt';
+    },
+  });
 
   /**
    * Ein leerer Rumpf mit `content-type: application/json` ist fuer Fastify ein
@@ -158,7 +255,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     // grosser Rumpf, leerer Rumpf bei gesetztem content-type. Sie hier
     // durchfallen zu lassen machte aus einem 400 einen 500 samt "etwas ist
     // schiefgelaufen", was weder stimmte noch weiterhalf.
+    // Ratengrenze: eigener Schluessel, damit der Client sagen kann, was los
+    // ist - 'ungueltige Anfrage' waere hier schlicht falsch.
     const status = (error as { statusCode?: number }).statusCode;
+    if (status === 429) {
+      return reply
+        .status(429)
+        .send({ code: 'tooManyRequests', messageKey: 'error.tooManyRequests' });
+    }
     if (typeof status === 'number' && status >= 400 && status < 500) {
       return reply
         .status(status)
@@ -176,27 +280,27 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // Konten
   // -------------------------------------------------------------------------
 
-  app.post('/api/auth/register', async (request, reply) => {
+  app.post('/api/auth/register', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
     await register(deps.auth, body);
     // Bewusst ohne Sitzung: Erst bestaetigen, dann anmelden.
     return reply.status(201).send({ ok: true });
   });
 
-  app.post('/api/auth/verify', async (request, reply) => {
+  app.post('/api/auth/verify', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const { token } = z.object({ token: z.string() }).parse(request.body);
     const accountId = await verifyEmail(deps.db, token);
     return reply.send({ ok: true, accountId });
   });
 
   /** Bestaetigungslink erneut anfordern. Antwortet immer gleich. */
-  app.post('/api/auth/verification/resend', async (request, reply) => {
+  app.post('/api/auth/verification/resend', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestVerification(deps.auth, email);
     return reply.send({ ok: true });
   });
 
-  app.post('/api/auth/login', async (request, reply) => {
+  app.post('/api/auth/login', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = z
       .object({ email: z.string().email(), password: z.string() })
       .parse(request.body);
@@ -205,14 +309,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.send({ ok: true, accountId });
   });
 
-  app.post('/api/auth/logout', async (request, reply) => {
+  app.post('/api/auth/logout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const session = await sessionFromToken(deps.db, request.cookies[SESSION_COOKIE]);
     if (session) await logout(deps.db, session.sessionId);
     void reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return reply.send({ ok: true });
   });
 
-  app.post('/api/auth/reset-request', async (request, reply) => {
+  app.post('/api/auth/reset-request', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestPasswordReset(deps.auth, email);
     // Immer dieselbe Antwort, damit sich registrierte Adressen nicht abfragen
@@ -220,7 +324,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.send({ ok: true });
   });
 
-  app.post('/api/auth/reset', async (request, reply) => {
+  app.post('/api/auth/reset', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = z
       .object({ token: z.string(), password: z.string().min(12).max(200) })
       .parse(request.body);
@@ -269,7 +373,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
    * Mitspieler am Tisch sollen es sehen. Gespeichert ist es als data-URL, hier
    * wird es in Bytes zurueckuebersetzt und kurz zwischengespeichert.
    */
-  app.get('/api/avatars/:accountId', async (request, reply) => {
+  app.get('/api/avatars/:accountId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
     const [row] = await deps.db
       .select({ avatar: s.account.avatar })
@@ -292,7 +396,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
    * waehlt, will es am Telefon nicht erneut suchen. Geprueft wird gegen eine
    * feste Liste — was der Server speichert, muss er auch benennen koennen.
    */
-  app.patch('/api/me', async (request, reply) => {
+  app.patch('/api/me', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = z
       .object({
@@ -312,7 +416,15 @@ export function buildApp(deps: AppDeps): FastifyInstance {
 
     const set: Record<string, unknown> = {};
     if (body.cardDeck) set.cardDeck = body.cardDeck;
-    if (body.avatar !== undefined) set.avatar = body.avatar;
+    if (body.avatar !== undefined) {
+      // Der Kopf einer data-URL ist nur eine Behauptung. Ohne Blick auf die
+      // ersten Bytes liesse sich HTML als "image/png" ablegen und danach von
+      // unserer eigenen Herkunft ausliefern - der kurze Weg zu XSS.
+      if (body.avatar !== null && !istEchtesBild(body.avatar)) {
+        throw badRequest('avatarInvalid');
+      }
+      set.avatar = body.avatar;
+    }
     if (Object.keys(set).length > 0) {
       await deps.db.update(s.account).set(set).where(eq(s.account.id, accountId));
     }
@@ -325,7 +437,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
    * Zeilen, sondern anonymisiert: Sonst zerfielen die Partiehistorien aller
    * Mitspieler.
    */
-  app.delete('/api/me', async (request, reply) => {
+  app.delete('/api/me', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
 
     // Waehrend laufender Partie gilt die Loeschung als Verlassen.
@@ -348,7 +460,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // -------------------------------------------------------------------------
 
   /** Namenssuche zum Anfreunden. Vor der Profilroute, sonst faengt :id "search". */
-  app.get('/api/players', async (request, reply) => {
+  app.get('/api/players', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const viewerId = await requireAccount(request);
     const { q } = z.object({ q: z.string().max(60) }).parse(request.query);
     return reply.send(await searchPlayers(deps.db, viewerId, q));
@@ -365,13 +477,13 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.send(await listFriendships(deps.db, meId));
   });
 
-  app.post('/api/friends/:accountId/request', async (request, reply) => {
+  app.post('/api/friends/:accountId/request', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const meId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
     return reply.send(await requestFriendship(deps.db, meId, accountId));
   });
 
-  app.post('/api/friends/:accountId/accept', async (request, reply) => {
+  app.post('/api/friends/:accountId/accept', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const meId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
     await acceptFriendship(deps.db, meId, accountId);
@@ -379,7 +491,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   /** Entfernt Freundschaft, lehnt eine Anfrage ab oder zieht die eigene zurueck. */
-  app.delete('/api/friends/:accountId', async (request, reply) => {
+  app.delete('/api/friends/:accountId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const meId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
     await removeFriendship(deps.db, meId, accountId);
@@ -409,7 +521,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   /** Vorschau-Spiele: Abstimmung, welches zuerst kommt. */
-  app.post('/api/games/:gameId/vote', async (request, reply) => {
+  app.post('/api/games/:gameId/vote', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
     if (isPlayable(gameId)) {
@@ -445,7 +557,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.send(await listRuleSets(deps.db, accountId, game));
   });
 
-  app.post('/api/rulesets', async (request, reply) => {
+  app.post('/api/rulesets', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = z
       .object({
@@ -486,7 +598,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     );
   });
 
-  app.post('/api/tables', async (request, reply) => {
+  app.post('/api/tables', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
     // Clantisch ohne clubId: den ersten (und in der Beta einzigen) Clan nehmen.
@@ -500,7 +612,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   /** Clantisch pausieren — Zugtimer und 24h-Verfall stehen still. */
-  app.post('/api/tables/:tableId/pause', async (request, reply) => {
+  app.post('/api/tables/:tableId/pause', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await deps.runtime.pause(tableId, accountId);
@@ -509,7 +621,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   /** Pausierten Clantisch fortsetzen. */
-  app.post('/api/tables/:tableId/resume', async (request, reply) => {
+  app.post('/api/tables/:tableId/resume', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await deps.runtime.unpause(tableId, accountId);
@@ -518,8 +630,19 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   app.get('/api/tables/:tableId', async (request, reply) => {
+    // Anmeldepflicht wie bei allen Nachbarrouten. Ohne sie konnte jeder
+    // anonym die Konto-Kennungen aller Sitze eines privaten Clantisches
+    // abfragen und ueber die Profilsuche mit Namen verknuepfen.
+    const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     const { table, seats } = await tableWithSeats(deps.db, tableId);
+    if (
+      table.visibility === 'club_only' &&
+      !seats.some((seat) => seat.accountId === accountId)
+    ) {
+      if (!table.clubId) throw notFound('tableUnknown');
+      await requireClubMember(deps.db, table.clubId, accountId);
+    }
     return reply.send({ table, seats });
   });
 
@@ -530,7 +653,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.send({ config: await tableRules(deps.db, tableId) });
   });
 
-  app.post('/api/tables/:tableId/join', async (request, reply) => {
+  app.post('/api/tables/:tableId/join', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await joinTable(deps.db, tableId, accountId);
@@ -541,7 +664,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   /** Vor dem Start straffrei. Danach greift die Verlassen-Logik am Tisch. */
-  app.post('/api/tables/:tableId/leave', async (request, reply) => {
+  app.post('/api/tables/:tableId/leave', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await leaveLobby(deps.db, tableId, accountId);
@@ -553,7 +676,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // Ranglisten
   // -------------------------------------------------------------------------
 
-  app.get('/api/rankings/:gameId', async (request, reply) => {
+  app.get('/api/rankings/:gameId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
     const query = z
@@ -565,7 +688,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.send(await rankingForGame(deps.db, gameId, query.limit, query.offset));
   });
 
-  app.get('/api/rankings', async (request, reply) => {
+  app.get('/api/rankings', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     await requireAccount(request);
     const query = z
       .object({

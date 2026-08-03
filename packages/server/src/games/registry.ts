@@ -18,6 +18,7 @@ import type {
   GameRegistry,
 } from '@brauweg/game-api';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { notFound } from '../errors.js';
 
 const MODULES: readonly AnyGameModule[] = [doppelkopf as unknown as AnyGameModule];
 
@@ -52,10 +53,17 @@ export const registry: GameRegistry = {
   get: (id) => byId.get(id),
 };
 
-/** Wirft, statt undefined zurueckzugeben. Fuer Aufrufer, die ein Modul brauchen. */
+/**
+ * Wirft, statt undefined zurueckzugeben. Fuer Aufrufer, die ein Modul
+ * brauchen.
+ *
+ * Bewusst ein AppError und kein blanker Error: Ein Vorschau-Spiel anzufragen
+ * ist eine gewoehnliche Fehlbedienung und ergab frueher einen 500 samt
+ * Eintrag im Fehlerprotokoll.
+ */
 export function requireModule(id: GameId): AnyGameModule {
   const module = byId.get(id);
-  if (!module) throw new Error(`Spiel ${id} ist nicht spielbar`);
+  if (!module) throw notFound('gameNotPlayable');
   return module;
 }
 

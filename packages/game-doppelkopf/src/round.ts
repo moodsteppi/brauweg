@@ -16,7 +16,7 @@
  */
 
 import { type Card, isClubQueen, sumValues } from './cards.js';
-import { deal } from './deal.js';
+import { type Seed, deal } from './deal.js';
 import {
   type CardOrder,
   type GameType,
@@ -84,7 +84,7 @@ export interface RoundOptions {
 
 export interface RoundState {
   readonly rs: RuleSet;
-  readonly seed: number;
+  readonly seed: Seed;
   readonly multiplier: number;
   readonly forcedSoloSeat: number | null;
   readonly soloPlayed: readonly number[];
@@ -154,7 +154,7 @@ export function createRound(
   rs: RuleSet,
   seats: readonly number[],
   vorhand: number,
-  seed: number,
+  seed: Seed,
   opts: RoundOptions = {},
 ): RoundState {
   if (seats.length !== 4) fail('Eine Runde wird immer zu viert gespielt');
@@ -244,6 +244,11 @@ export function apply(state: RoundState, action: RoundAction): RoundState {
       return applyAnnounce(state, action);
     case 'confirmPflichtansage':
       return applyPflichtansage(state, action);
+    default:
+      // Ohne diesen Zweig gab die Funktion bei einer erfundenen Aktion
+      // stillschweigend undefined zurueck; der Fehler tauchte erst eine
+      // Ebene hoeher als TypeError auf, weit weg von der Ursache.
+      fail('Unbekannte Aktion');
   }
 }
 
@@ -449,6 +454,12 @@ function applyArmutHandover(
   const size = handoverSize(poorHand, state.order);
   if (a.cards.length !== size) fail(`Es muessen genau ${size} Karten abgegeben werden`);
 
+  // Jede Karte hoechstens einmal. Die Laengenpruefung zaehlt Eintraege, das
+  // Entnehmen arbeitet ueber IDs - mit [7,7,7] verlor der Ansager EINE Karte,
+  // der Partner bekam DREI Kopien, und die Augenrechnung der Runde war
+  // manipuliert.
+  if (new Set(a.cards).size !== a.cards.length) fail('Jede Karte nur einmal');
+
   const given = a.cards.map((id) => {
     const card = poorHand.find((c) => c.id === id);
     if (!card) fail('Karte nicht auf der Hand des Ansagers');
@@ -486,6 +497,12 @@ function applyArmutReturn(
 
   const size = armut.given.length;
   if (a.cards.length !== size) fail(`Es muessen genau ${size} Karten zurueckgegeben werden`);
+
+  // Jede Karte hoechstens einmal. Die Laengenpruefung zaehlt Eintraege, das
+  // Entnehmen arbeitet ueber IDs - mit [7,7,7] verlor der Ansager EINE Karte,
+  // der Partner bekam DREI Kopien, und die Augenrechnung der Runde war
+  // manipuliert.
+  if (new Set(a.cards).size !== a.cards.length) fail('Jede Karte nur einmal');
 
   const partnerHand = state.hands[armut.partnerSeat];
   const back = a.cards.map((id) => {

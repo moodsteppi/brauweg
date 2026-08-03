@@ -289,7 +289,7 @@ test('Aufrufe ohne Rumpf funktionieren', async (t) => {
     rounds: 8,
   });
 
-  const app = buildApp({
+  const app = await buildApp({
     db: c.db,
     runtime: new PartyRuntime(c.db),
     auth: c.auth,
