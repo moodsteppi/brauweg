@@ -72,9 +72,11 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
   Vitrinen mit durchgestrichenem Preis und Bald-Knopf. Tip → „Kommt bald".
 - Design-Entwürfe für neue Surfaces immer **grafisch in dreien (A/B/C)**;
   gebaut wird erst nach Wahl.
-- Der Hauptschirm ist der **Trophäenpfad** (siehe `Pfad.tsx`): Inseln als
-  Checkpoints, jede eine eigene Welt. Neue Welten sind neue SVG-Szenen im
-  selben Zuschnitt (`viewBox="-80 0 500 240"`).
+- Der Hauptschirm ist der **Trophäenpfad** (siehe `Pfad.tsx`): gemalte
+  Weltkarte mit Checkpoints. Die **Kamera** pannt/zoomt auf den höchsten
+  erreichten Checkpoint (0 → 100 → 250 → …). Ambient (Bäume, Wolken,
+  Pinguin auf dem Weg) hält die Karte lebendig — ohne die Lesbarkeit
+  der Knoten zu stören.
 - Was es noch nicht gibt, steht trotzdem in der Oberfläche — mit ehrlicher
   Null und **„Bald"-Marke** (lila). Antippen öffnet das „Kommt bald"-Blatt,
   nie einen toten Knopf.
@@ -110,8 +112,10 @@ Vorhandenes wiederverwenden statt neu erfinden:
 
 ## Bewegung
 
-- Bewegung ist **Zierde**: Flaggen wehen, Lichter blinken, Lava glüht —
+- Bewegung ist **Zierde**: Bäume wehen, Wolken ziehen, Pinguin läuft —
   dezent, langsam (≥ 2s Zyklen), nie informationstragend.
+- Die Kamerafahrt beim Checkpoint-Wechsel ist die Ausnahme: sie trägt
+  Fortschritt, bleibt aber weich (~1s) und ohne Scroll der Seite.
 - Jede Animation endet ersatzlos unter
   `@media (prefers-reduced-motion: reduce)`. Keine Ausnahme.
 - Knöpfe haben **Druckpunkt**: harter Schlagschatten unten
