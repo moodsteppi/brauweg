@@ -1,41 +1,57 @@
-# Nachbesserung: fünf Biom-Kacheln
+# Nachbesserung: Biom-Kacheln
 
-Die sechs Kacheln aus [ASSETS-BIOME.md](ASSETS-BIOME.md) sind geliefert und
-eingebaut. **Fünf davon müssen neu**, und der Fehler liegt an der
-Bestellung, nicht an der Ausführung.
+## Stand
 
-## Was schiefging
+**Runde 1 ist erledigt.** Die zweite Lieferung hat behoben, was die erste
+falsch hatte: genau ein Weg pro Kachel, gerade durch die Mitte, Ränder in
+Wasser und Nebel auslaufend, der Sternenhafen als Draufsicht, kein Flicken
+mehr in den Wiesen. Vier der sechs Kacheln sind damit fertig —
+`biom-1-heimat`, `biom-2-wiesen`, `biom-3-strand`, `biom-5-schneefeld`.
 
-In der Bestellung standen zwei Anforderungen nebeneinander:
+**Zwei sind beim Neumachen gekippt** und brauchen eine dritte Runde. Sie
+sind eingebaut und funktionieren, aber sie haben ihr Motiv verloren.
 
-1. Der Weg darf sich schlängeln, ausholen, an Hindernissen vorbei.
-2. Er kreuzt Ober- und Unterkante bei **genau 50 %** der Breite, und läuft
-   dort auf den letzten 5 % senkrecht.
+---
 
-Erfüllt wurden beide — mit **zwei** Wegen: einem malerischen, der sich
-schlängelt, und zusätzlich einer kerzengeraden Kette kleiner Ovale exakt
-auf der Mittellinie, die die Geometrie einhält. Übereinander sieht das aus
-wie ein Darstellungsfehler.
+## Runde 2 — nur diese zwei
 
-**Betroffen sind fünf Kacheln:**
+Alles aus [ASSETS-BIOME.md](ASSETS-BIOME.md) gilt weiter, ebenso die
+berichtigte Wegregel weiter unten. **Der Weg ist bei beiden richtig und
+soll genau so bleiben** — es geht ausschließlich um das, was links und
+rechts davon liegt.
 
-| Kachel | Befund |
-| --- | --- |
-| `biom-1-heimat` | **In Ordnung, bitte nicht neu machen.** Genau ein Weg |
-| `biom-2-wiesen` | Zwei Wege. Dazu ein **rechteckiger Flicken** mit harten Kanten im unteren Drittel — unscharfes Gras, hineinkopiert |
-| `biom-3-strand` | Zwei Wege |
-| `biom-4-feuerberg` | Zwei Wege: breiter Steinweg plus Ovalkette an seinem linken Rand |
-| `biom-5-schneefeld` | Die dunklen Steine bilden zwei verschlungene Ketten statt einer |
-| `biom-6-sternenhafen` | Zwei Wege — und der deutlichste Fall: Die gerade Ovalkette läuft in der oberen Bildhälfte **durch den Nachthimmel**, Trittsteine schweben über dem Hafen zwischen den Sternen. Dazu die falsche Perspektive, siehe unten |
+### `biom-4-feuerberg.png` — das Feuer fehlt
 
-**`biom-1-heimat.png` ist die Vorlage.** Wie dort der Weg liegt — eine
-einzige Kette, leicht versetzt, ruhig — so soll es überall aussehen.
+Mittlere Helligkeit **17 %**. Die Kachel ist ein schwarzes Geröllfeld: kein
+Vulkan, keine Lava, kein Glühen. Sie liest sich als Brandfläche, nicht als
+Feuerberg. Zum Vergleich: Wiesen 49 %, Strand 45 %, Schneefeld 40 %,
+Heimat 30 %.
 
-## Die berichtigte Regel
+Gewünscht: **Vulkankegel, glühende Spalten im Gestein, Lavaadern, die sich
+durch die Kachel ziehen.** Warmes oranges Licht, das auf die umliegenden
+Felsen fällt. Bedrohlich, aber nicht düster — der Weg bleibt hell und gut
+sichtbar, und man soll erkennen wollen, wo man da hinläuft. Die erste
+Fassung hatte das richtig; nur der doppelte Weg war ihr Problem.
 
-Alles aus [ASSETS-BIOME.md](ASSETS-BIOME.md) gilt weiter — Maße, Format,
-Ablage, Stil, Beschnitt, „was nicht ins Bild gehört". **Ersetzt wird nur
-der Abschnitt zum Wegverlauf**, und zwar durch:
+### `biom-6-sternenhafen.png` — der Hafen fehlt
+
+Mittlere Helligkeit **12 %**, die dunkelste Kachel von allen. Zu sehen sind
+ein Steg, zwei Boote und drei Laternen. Es fehlen die Stadt, die
+erleuchteten Fenster, die Lichterketten, die Spiegelungen im Wasser.
+
+Das wiegt schwerer als beim Feuerberg: **Das ist das Ziel des ganzen
+Weges.** Wer tausend Trophäen sammelt, kommt hier an. Es soll die
+Belohnung sein und die hellste, festlichste Kachel des Satzes — nicht die
+düsterste.
+
+Gewünscht: **Hafenstadt von oben**, Häuser mit warm erleuchteten Fenstern
+rings um das Becken, Boote mit Laternen, Lichterketten zwischen den
+Masten, Sterne und Lichter im Wasser gespiegelt. Nacht, aber eine helle,
+warme Nacht. Draufsicht wie bei den anderen fünf, kein Horizont im Bild.
+
+---
+
+## Die berichtigte Wegregel (gilt weiter)
 
 > **Genau ein Weg pro Kachel.** Eine einzige Kette von Trittsteinen, sonst
 > nichts Wegähnliches: kein zweiter Pfad, keine Trampelspur daneben, keine
@@ -45,48 +61,28 @@ der Abschnitt zum Wegverlauf**, und zwar durch:
 > **Der Weg läuft senkrecht durch die Mitte.** Er darf leicht pendeln, wie
 > eine von Hand gezeichnete Linie — aber er weicht **nirgends mehr als
 > 8 % der Bildbreite** von der Mittellinie ab, und an Ober- und Unterkante
-> steht er bei 50 %. Er soll nicht ausholen und keine Bögen schlagen; die
-> Landschaft liegt links und rechts davon.
+> steht er bei 50 %.
+>
+> **Beide Ränder** laufen auf mindestens den äußeren 8 % der Höhe in Wasser
+> oder Nebel aus, damit die Kachelstöße nicht als scharfe waagerechte Linie
+> im Bild stehen.
 
-Die Lockerung ist inzwischen gedeckt: Die App braucht die genaue
-Wegführung nicht mehr. Sie zeichnet die Figur auf die Mittellinie, und
-nachgemessen liegt der Weg auf den gelieferten Kacheln ohnehin im Mittel
-nur 1,4 bis 2,9 % daneben. Ein Weg, der weit ausholt, wäre sogar falsch —
-dann liefe der Pinguin am Weg vorbei.
+---
 
-## Zwei weitere Punkte, die am Gerät auffallen
+## Was in Runde 1 schiefging, zum Nachlesen
 
-**Der Sternenhafen hat die falsche Perspektive.** Die anderen fünf sind
-Draufsicht aus leichter Schräge, wie eine Schatzkarte. Der Sternenhafen ist
-ein Frontalblick: Man schaut vom Wasser aus auf den Hafen, mit Horizont und
-Himmel im oberen Drittel. Im Stapel ist der Bruch sofort sichtbar, und er
-ist auch die Ursache dafür, dass die Ovalkette dort in den Himmel läuft —
-in einer Frontalansicht gibt es oben schlicht keinen Boden mehr.
+Die erste Lieferung hatte auf fünf Kacheln **zwei** Wege: einen
+malerischen und zusätzlich eine kerzengerade Kette kleiner Ovale auf der
+Mittellinie. Beim Sternenhafen lief diese Kette sogar durch den
+Nachthimmel, weil die Kachel damals Frontalansicht statt Draufsicht war —
+in einer Frontalansicht gibt es oben keinen Boden mehr.
 
-Bitte auch den Sternenhafen als **Draufsicht**: der Hafen von oben gesehen,
-Anleger und Boote von oben, Wasser ringsum. Nachthimmel und Sterne dürfen
-sich im Wasser spiegeln — aber es gibt keinen Horizont im Bild.
+**Die Ursache lag in der Bestellung, nicht in der Ausführung.** Dort
+standen zwei Anforderungen nebeneinander: „der Weg darf sich schlängeln,
+ausholen, an Hindernissen vorbei" und „er kreuzt Ober- und Unterkante bei
+genau 50 % der Breite". Erfüllt wurde beides — mit je einem eigenen Weg.
 
-**Die Kachelstöße sind harte Kanten.** In der Bestellung stand, Ober- und
-Unterkante seien Wasser oder Dunst. Beim Sternenhafen ist die Unterkante
-Dunst, die Oberkante des Schneefelds darunter aber fester Schnee — an der
-Naht steht deshalb eine scharfe waagerechte Linie quer durchs Bild. Bitte
-bei allen Kacheln **beide** Ränder als Wasser oder Nebel auslaufen lassen,
-und zwar auf mindestens den äußeren 8 % der Höhe. Dann verschwimmen die
-Stöße, statt sich abzuzeichnen.
-
-## Zum Flicken in `biom-2-wiesen`
-
-Im unteren Drittel sitzt ein Rechteck mit harten Kanten, in dem das Gras
-unscharf und anders belichtet ist. Das ist kein Motiv, sondern ein
-Bildfehler. Bitte darauf achten, dass die neue Fassung keine solchen
-Flicken hat — bei ganzflächigen Kacheln fällt so etwas sofort auf, weil
-nichts drüberliegt, das es verdecken könnte.
-
-## Bis dahin
-
-Die vorhandenen Kacheln bleiben eingebaut. Sie sind unschön, aber sie
-funktionieren, und ein leerer Platzhalter an ihrer Stelle wäre schlechter —
-bei bildschirmfüllenden Kacheln besonders auffällig. Die neuen Dateien
-kommen unter **denselben Namen** nach `packages/client/art/`, dann tausche
-ich die Auslieferungsfassung aus; im Code ändert sich nichts.
+Die Lockerung auf „höchstens 8 % Abweichung" ist gedeckt: Die App braucht
+die genaue Wegführung nicht mehr. Sie setzt die Figur auf die Mittellinie,
+und ein Weg, der weit ausholt, wäre sogar falsch — dann liefe der Pinguin
+daneben.
