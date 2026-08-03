@@ -728,6 +728,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       if (path.startsWith('/api') || path.startsWith('/ws')) return;
       if (path.startsWith('/assets/')) {
         reply.header('cache-control', 'public, max-age=31536000, immutable');
+      } else if (/\.(png|jpe?g|webp|svg|webmanifest)$/.test(path)) {
+        // Bilder und Manifest tragen keinen Hash im Namen, aendern sich aber
+        // selten. Eine Stunde Cache spart beim Start vom Homescreen ein paar
+        // Dutzend Rueckfragen, ohne dass ein neues Icon lange alt bleibt.
+        reply.header('cache-control', 'public, max-age=3600');
       } else {
         // index.html und jede SPA-Route: nie cachen, damit ein Deploy sofort
         // greift und keine alte Seite auf ein verschwundenes Bundle zeigt.
