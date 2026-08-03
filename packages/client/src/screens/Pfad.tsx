@@ -1,207 +1,210 @@
 /**
- * Trophäen-Weltkarte (Hub-CI).
+ * Trophäenpfad.
  *
- * Die gemalte Karte hat einen Weg mit runden Trittsteinen — auf denen sitzen
- * die Checkpoints, und auf ihm läuft der Pinguin. Seine Stelle folgt dem
- * echten Trophäenstand: Zwischen zwei Checkpoints wandert er anteilig weiter,
- * und zwar der Wegkrümmung nach, nicht auf einer geraden Linie.
+ * Sechs gemalte Biome, senkrecht gestapelt: unten die Heimat, oben der
+ * Sternenhafen. Der Pinguin steht dort, wohin ihn sein Trophäenstand
+ * trägt. Angetippt öffnet sich der Pfad im Vollbild und lässt sich
+ * abrollen.
  *
- * Die Stützpunkte sind am Kartenbild ausgemessen (Prozent der Karte, von
- * links oben). Wird die Karte je ersetzt, müssen sie neu vermessen werden —
- * sonst läuft der Pinguin durchs Gebüsch.
+ * Vorher war das eine einzige Karte mit zwanzig von Hand am Bild
+ * ausgemessenen Stützpunkten — mit dem Hinweis im Kopf, dass beim
+ * Kartenwechsel alles neu vermessen werden muss. Genau das ist jetzt
+ * überflüssig: Die Kacheln sind so bestellt, dass der Weg jede Kachel
+ * unten und oben bei 50 % der Breite kreuzt. Nachgemessen weicht er im
+ * Mittel 1,4 bis 2,9 Prozent von der Mitte ab, im schlimmsten Fall 9,8 —
+ * auf einem Handy sind das wenige Pixel, schmaler als die Figur. Der Weg
+ * ist also die Mittellinie, und ein siebtes Biom ist ein Bild plus eine
+ * Zeile in BIOME.
  */
 
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 
-interface Punkt {
-  readonly x: number;
-  readonly y: number;
-}
-
-/** Wegverlauf von unten (Start) nach oben (Ziel), am Bild ausgemessen. */
-const WEG: readonly Punkt[] = [
-  { x: 27.5, y: 91 }, // Trittstein 1 — Start
-  { x: 33, y: 86 },
-  { x: 41, y: 81 },
-  { x: 50, y: 77 }, // Trittstein 2
-  { x: 54, y: 70 },
-  { x: 52.5, y: 67 },
-  { x: 50, y: 64 },
-  { x: 47.5, y: 62 }, // Trittstein 3
-  { x: 52.5, y: 57 },
-  { x: 58, y: 51.5 }, // Trittstein 4 — ohne Checkpoint
-  { x: 65, y: 45 },
-  { x: 64, y: 39.5 }, // Trittstein 5
-  { x: 58, y: 36.5 },
-  { x: 56, y: 33.3 },
-  { x: 60, y: 30 },
-  { x: 61, y: 27.5 }, // Trittstein 6 — ohne Checkpoint
-  { x: 67.5, y: 22.5 },
-  { x: 71, y: 19 }, // Trittstein 7
-  { x: 69, y: 16.5 },
-  { x: 66, y: 14 }, // Trittstein 8 — Ziel
-];
-
-export interface HubWelt {
-  readonly cp: number;
+export interface Biom {
+  /** Dateiname ohne Endung unter /hub/. */
+  readonly datei: string;
   readonly name: string;
-  /** Stützpunkt auf dem Weg, auf dem dieser Checkpoint sitzt. */
-  readonly stelle: number;
+  /** Trophäen, mit denen man am unteren Rand dieser Kachel ankommt. */
+  readonly cp: number;
   readonly farbe: 'gruen' | 'mint' | 'blau' | 'rot' | 'lila' | 'gold';
-  readonly nameSeite: 'links' | 'rechts' | 'oben' | 'unten';
 }
 
-/**
- * Checkpoints auf den Trittsteinen. Der Start (0 Trophäen) bekommt keinen
- * eigenen Knoten — dort steht der Pinguin.
- */
-export const HUB_WELTEN: readonly HubWelt[] = [
-  { cp: 1000, name: 'Sternenhafen', stelle: 19, farbe: 'gold', nameSeite: 'links' },
-  { cp: 750, name: 'Schneefeld', stelle: 17, farbe: 'lila', nameSeite: 'links' },
-  { cp: 500, name: 'Feuerberg', stelle: 11, farbe: 'rot', nameSeite: 'links' },
-  { cp: 250, name: 'Strand', stelle: 7, farbe: 'blau', nameSeite: 'rechts' },
-  { cp: 100, name: 'Wiesen', stelle: 3, farbe: 'mint', nameSeite: 'rechts' },
+/** Von unten nach oben. Die Reihenfolge ist der Weg. */
+export const BIOME: readonly Biom[] = [
+  { datei: 'biom-1-heimat', name: 'Heimat', cp: 0, farbe: 'gruen' },
+  { datei: 'biom-2-wiesen', name: 'Wiesen', cp: 100, farbe: 'mint' },
+  { datei: 'biom-3-strand', name: 'Strand', cp: 250, farbe: 'blau' },
+  { datei: 'biom-4-feuerberg', name: 'Feuerberg', cp: 500, farbe: 'rot' },
+  { datei: 'biom-5-schneefeld', name: 'Schneefeld', cp: 750, farbe: 'lila' },
+  { datei: 'biom-6-sternenhafen', name: 'Sternenhafen', cp: 1000, farbe: 'gold' },
 ];
 
-/** Start und Checkpoints in Wegrichtung — Grundlage für die Pinguinstelle. */
-const HALTE: readonly { cp: number; stelle: number }[] = [
-  { cp: 0, stelle: 0 },
-  ...[...HUB_WELTEN].sort((a, b) => a.cp - b.cp).map((w) => ({ cp: w.cp, stelle: w.stelle })),
-];
-
-/** Länge eines Wegstücks. x und y sind Prozent, das reicht als Maß. */
-function laenge(a: Punkt, b: Punkt): number {
-  return Math.hypot(b.x - a.x, b.y - a.y);
-}
-
 /**
- * Punkt zwischen zwei Stützpunkt-Nummern, anteilig nach Weglänge.
+ * Stelle des Pinguins, gemessen in Kacheln vom unteren Rand des Stapels.
  *
- * Anteilig nach Länge und nicht nach Anzahl der Stützpunkte: Sonst huschte
- * der Pinguin durch enge Kurven und kröche über gerade Stücke.
+ * 0 heißt "ganz unten in der Heimat", 5 heißt "am Fuß des Sternenhafens".
+ * Über 1000 Trophäen läuft er in den Sternenhafen hinein, aber nie ganz
+ * hinaus: Oben ist Schluss, und eine Figur, die halb aus dem Bild ragt,
+ * sähe nach Fehler aus.
  */
-function aufDemWeg(vonStelle: number, bisStelle: number, anteil: number): Punkt {
-  if (vonStelle === bisStelle) return WEG[vonStelle]!;
-  const stuecke: number[] = [];
-  let gesamt = 0;
-  for (let i = vonStelle; i < bisStelle; i++) {
-    const l = laenge(WEG[i]!, WEG[i + 1]!);
-    stuecke.push(l);
-    gesamt += l;
+export function stelleFuer(trophies: number): number {
+  const letzte = BIOME.length - 1;
+  const oben = BIOME[letzte]!;
+  if (trophies >= oben.cp) {
+    return Math.min(letzte + (trophies - oben.cp) / 1000, letzte + 0.85);
   }
-  let rest = gesamt * Math.min(Math.max(anteil, 0), 1);
-  for (let i = 0; i < stuecke.length; i++) {
-    if (rest <= stuecke[i]! || i === stuecke.length - 1) {
-      const f = stuecke[i]! === 0 ? 0 : Math.min(rest / stuecke[i]!, 1);
-      const a = WEG[vonStelle + i]!;
-      const b = WEG[vonStelle + i + 1]!;
-      return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
-    }
-    rest -= stuecke[i]!;
-  }
-  return WEG[bisStelle]!;
-}
-
-/** Wo steht der Pinguin bei diesem Trophäenstand? */
-function pinguinStelle(trophies: number): Punkt {
-  const letzte = HALTE[HALTE.length - 1]!;
-  if (trophies >= letzte.cp) return WEG[letzte.stelle]!;
-
-  for (let i = HALTE.length - 2; i >= 0; i--) {
-    const hier = HALTE[i]!;
+  for (let i = BIOME.length - 2; i >= 0; i--) {
+    const hier = BIOME[i]!;
     if (trophies < hier.cp) continue;
-    const naechste = HALTE[i + 1]!;
+    const naechste = BIOME[i + 1]!;
     const spanne = naechste.cp - hier.cp;
-    const anteil = spanne === 0 ? 0 : (trophies - hier.cp) / spanne;
-    return aufDemWeg(hier.stelle, naechste.stelle, anteil);
+    return i + (spanne === 0 ? 0 : (trophies - hier.cp) / spanne);
   }
-  return WEG[0]!;
+  return 0;
 }
 
-/**
- * Kamera: Sie folgt dem Pinguin, nicht dem Checkpoint. Sonst spränge das
- * Bild erst, wenn eine ganze Welt geschafft ist, obwohl die Figur längst
- * unterwegs war.
- */
-function kameraFuer(stelle: Punkt, trophies: number): { zoom: number; tx: number; ty: number } {
-  const zoom = 1.06 + Math.min(trophies / 1000, 1) * 0.16;
-  return {
-    zoom,
-    tx: (50 - stelle.x) * 0.4,
-    ty: (54 - stelle.y) * 0.42,
-  };
-}
-
-function knotenNummer(cp: number): number {
-  const auf = [...HUB_WELTEN].sort((a, b) => a.cp - b.cp);
-  return auf.findIndex((w) => w.cp === cp) + 2;
+/** Das zuletzt erreichte Biom — für die Beschriftung „du bist hier". */
+function aktuellesBiom(trophies: number): Biom {
+  return [...BIOME].reverse().find((b) => trophies >= b.cp) ?? BIOME[0]!;
 }
 
 export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Element {
-  const aktuelleCp = HUB_WELTEN.reduce(
-    (beste, welt) => (trophies >= welt.cp && welt.cp > beste ? welt.cp : beste),
-    0,
-  );
-  const figur = pinguinStelle(trophies);
-  const cam = kameraFuer(figur, trophies);
-
-  const weltStyle = {
-    '--hub-zoom': String(cam.zoom),
-    '--hub-tx': `${cam.tx}%`,
-    '--hub-ty': `${cam.ty}%`,
-  } as CSSProperties;
+  const [voll, setVoll] = useState(false);
+  const stelle = stelleFuer(trophies);
+  const hier = aktuellesBiom(trophies);
 
   return (
-    <div className="hub-karte" aria-label="Trophäenpfad">
-      <div className="hub-karte-welt" style={weltStyle}>
-        <img className="hub-karte-bild" src="/hub/weltkarte.webp" alt="" draggable={false} />
+    <>
+      <button
+        type="button"
+        className="hub-karte hub-karte--klein"
+        onClick={() => setVoll(true)}
+        aria-label={`Trophäenpfad öffnen. Du bist in ${hier.name} mit ${trophies} Trophäen.`}
+      >
+        <Stapel trophies={trophies} stelle={stelle} klein />
+        <span className="pfad-lupe" aria-hidden="true">
+          {hier.name} · Pfad ansehen
+        </span>
+      </button>
 
-        {/* Bäume nur auf Land — Palmen am Strand, Kiefern an der Wiese. */}
-        <div className="hub-ambient" aria-hidden="true">
-          <img className="hub-baum hub-baum--a" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '84%', left: '10%' }} />
-          <img className="hub-baum hub-baum--b" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '71%', left: '70%' }} />
-          <img className="hub-baum hub-baum--c" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '59%', left: '20%' }} />
-          <img className="hub-baum hub-baum--d" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '61%', left: '30%' }} />
-        </div>
+      {voll && <PfadVollbild trophies={trophies} stelle={stelle} onClose={() => setVoll(false)} />}
+    </>
+  );
+}
 
-        {HUB_WELTEN.map((welt) => {
-          const erreicht = trophies >= welt.cp;
-          const aktuell = welt.cp === aktuelleCp;
-          const stelle = WEG[welt.stelle]!;
+/**
+ * Der Stapel selbst.
+ *
+ * Klein zeigt nur den Ausschnitt um den Pinguin — dafür wird derselbe
+ * Stapel verschoben, statt eine zweite, kleinere Darstellung zu bauen. So
+ * können die beiden Ansichten nicht auseinanderlaufen.
+ */
+function Stapel({
+  trophies,
+  stelle,
+  klein = false,
+}: {
+  trophies: number;
+  stelle: number;
+  klein?: boolean;
+}): React.JSX.Element {
+  const anzahl = BIOME.length;
+  /** Anteil von unten, 0 bis 1, über den ganzen Stapel. */
+  const anteil = stelle / anzahl;
 
-          return (
-            <button
-              key={welt.cp}
-              type="button"
-              className={`hub-knoten hub-knoten--${welt.farbe}${erreicht ? ' is-an' : ' is-zu'}${aktuell ? ' is-hier' : ''}`}
-              style={{ top: `${stelle.y}%`, left: `${stelle.x}%` }}
-              aria-label={`${welt.name}, ${welt.cp} Trophäen${erreicht ? ', erreicht' : ', noch gesperrt'}`}
-            >
-              {/* Gesperrt zeigt kein Zeichen: Das Schloss ist auf der grauen
-                  Scheibe gemalt, und ein Emoji obendrauf waere doppelt. */}
-              {erreicht && <span className="hub-knoten-nr">{knotenNummer(welt.cp)}</span>}
-              <span className="hub-knoten-cp">{welt.cp}</span>
-              {/* Namen über allem — UI darf die Karte verdecken, nicht die Namen. */}
-              <span className={`hub-knoten-name hub-knoten-name--${welt.nameSeite}`}>
-                {welt.name}
-              </span>
-            </button>
-          );
-        })}
+  const stil = klein
+    ? ({ '--pfad-schub': `${50 - (1 - anteil) * 100}%` } as CSSProperties)
+    : undefined;
 
-        {/* Der Pinguin ist die Spielfigur: Er steht dort, wo der Stand ihn
-            hinträgt, und trägt seinen Trophäenstand als kleines Schild. */}
-        <div
-          className="hub-figur"
-          style={{ top: `${figur.y}%`, left: `${figur.x}%` }}
-          aria-label={`Du: ${trophies} Trophäen`}
-        >
-          <img src="/hub/pinguin.png" alt="" draggable={false} />
-          <span className="hub-figur-stand">
-            <img src="/hub/pokal.png" alt="" aria-hidden="true" />
-            {trophies}
-          </span>
-        </div>
+  return (
+    <div className={`pfad-stapel${klein ? ' pfad-stapel--klein' : ''}`} style={stil}>
+      {[...BIOME].reverse().map((biom) => (
+        <img
+          className="pfad-kachel"
+          key={biom.datei}
+          src={`/hub/${biom.datei}.webp`}
+          alt=""
+          draggable={false}
+          /* Sechs Kacheln sind zusammen 1,1 MB. Wer den Pfad nur streift,
+             soll nicht alle sechs bezahlen. */
+          loading="lazy"
+          decoding="async"
+        />
+      ))}
+
+      {/* Checkpoints sitzen am unteren Rand ihrer Kachel — dort kommt man an. */}
+      {BIOME.map((biom, i) => {
+        const erreicht = trophies >= biom.cp;
+        return (
+          <div
+            className={`pfad-knoten hub-knoten--${biom.farbe}${erreicht ? ' is-an' : ' is-zu'}`}
+            key={biom.cp}
+            style={{ bottom: `${(i / anzahl) * 100}%` }}
+          >
+            <span className="pfad-knoten-name">{biom.name}</span>
+            <span className="pfad-knoten-cp">{biom.cp}</span>
+          </div>
+        );
+      })}
+
+      <div className="pfad-figur" style={{ bottom: `${anteil * 100}%` }}>
+        <img src="/hub/pinguin.png" alt="" draggable={false} />
+        <span className="pfad-figur-stand">
+          <img src="/hub/pokal.png" alt="" aria-hidden="true" />
+          {trophies}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Vollbild.
+ *
+ * Beim Öffnen wird an die Stelle des Pinguins gesprungen, nicht an den
+ * Anfang: Wer 600 Trophäen hat, will nicht erst durch drei Biome rollen.
+ * Ohne Animation — eine Rollbewegung über sechs Bildschirmhöhen wäre
+ * Selbstzweck und kostet nur Zeit.
+ */
+function PfadVollbild({
+  trophies,
+  stelle,
+  onClose,
+}: {
+  trophies: number;
+  stelle: number;
+  onClose: () => void;
+}): React.JSX.Element {
+  const rolle = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = rolle.current;
+    if (!el) return;
+    const anteilVonUnten = stelle / BIOME.length;
+    el.scrollTop = Math.max(0, el.scrollHeight * (1 - anteilVonUnten) - el.clientHeight / 2);
+  }, [stelle]);
+
+  useEffect(() => {
+    const taste = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', taste);
+    return () => window.removeEventListener('keydown', taste);
+  }, [onClose]);
+
+  return (
+    <div className="pfad-voll">
+      <header className="pfad-voll-kopf">
+        <button className="hub-zurueck" onClick={onClose} type="button">
+          ← Zurück
+        </button>
+        <span className="pfad-voll-stand">
+          <img src="/hub/pokal.png" alt="" aria-hidden="true" />
+          {trophies}
+        </span>
+      </header>
+      <div className="pfad-voll-rolle" ref={rolle}>
+        <Stapel trophies={trophies} stelle={stelle} />
       </div>
     </div>
   );

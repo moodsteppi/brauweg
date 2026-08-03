@@ -4934,8 +4934,11 @@ main.auth > .muted {
     max(1rem, env(safe-area-inset-right))
     max(1rem, env(safe-area-inset-bottom))
     max(1rem, env(safe-area-inset-left));
+  /* Der Verlauf bleibt unter dem Bild liegen: Laedt es nicht - erster
+     Aufruf, schlechtes Netz -, steht der Text trotzdem auf dunklem Grund
+     und nicht auf Weiss. */
   background:
-    radial-gradient(120% 70% at 50% 0%, #2a1a0e 0%, rgba(42, 26, 14, 0) 60%),
+    url(/hub/bg-anmeldung.webp) center center / cover no-repeat,
     linear-gradient(180deg, #1c1208 0%, #140d06 55%, #0e0904 100%);
   color: var(--text);
 }
@@ -5066,4 +5069,176 @@ main.auth > .muted {
 }
 .auth .row button:not(.primary):active {
   transform: none;
+}
+
+/* =========================================================================
+   Trophaeenpfad aus Biom-Kacheln.
+
+   Sechs Bilder senkrecht gestapelt. Klein auf dem Hauptschirm ein Fenster
+   um die Figur, angetippt das scrollbare Vollbild.
+
+   Diese Regeln stehen nach den alten hub-karte-Regeln und ueberschreiben
+   sie dort, wo sie sich ueberschneiden - der Stapel ersetzt die eine
+   grosse Weltkarte.
+   ========================================================================= */
+.hub-karte--klein {
+  display: block;
+  padding: 0;
+  border: none;
+  background: #14212c;
+  cursor: pointer;
+}
+
+.pfad-stapel {
+  position: relative;
+  width: 100%;
+  /* Sechs quadratische Kacheln uebereinander. */
+  display: flex;
+  flex-direction: column;
+  line-height: 0;
+}
+.pfad-kachel {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+/* Kleines Fenster: derselbe Stapel, nur verschoben. Die Hoehe kommt vom
+   Elternteil (hub-karte), der Stapel ist sechsmal so hoch wie breit und
+   ragt oben und unten hinaus - das Fenster schneidet ihn zu. */
+.pfad-stapel--klein {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(var(--pfad-schub, 0%));
+}
+
+/* Checkpoint-Marke. Sie sitzt auf der Mittellinie, weil dort der Weg
+   laeuft - nachgemessen auf allen sechs Kacheln. */
+.pfad-knoten {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(10, 16, 22, 0.72);
+  line-height: 1.1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.pfad-knoten.is-zu {
+  filter: saturate(0.25) brightness(0.75);
+}
+.pfad-knoten-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.pfad-knoten-cp {
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 233, 189, 0.9);
+}
+
+.pfad-figur {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 30%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.pfad-figur img {
+  width: clamp(38px, 13vw, 58px);
+  height: auto;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
+}
+.pfad-figur-stand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: -0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(10, 16, 22, 0.85);
+  border: 1px solid rgba(255, 220, 120, 0.5);
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #ffe9bd;
+  line-height: 1.4;
+}
+.pfad-figur-stand img {
+  width: 0.85rem;
+  filter: none;
+}
+
+/* Der Hinweis, dass hier etwas zu holen ist. Ohne ihn sieht das Fenster
+   aus wie ein Bild und nicht wie ein Knopf. */
+.pfad-lupe {
+  position: absolute;
+  left: 50%;
+  bottom: 0.5rem;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(10, 16, 22, 0.8);
+  border: 1px solid rgba(255, 220, 120, 0.4);
+  color: #ffe9bd;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+/* Vollbild. */
+.pfad-voll {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  background: #0d1319;
+  padding-top: env(safe-area-inset-top);
+}
+.pfad-voll-kopf {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  background: rgba(10, 16, 22, 0.9);
+  border-bottom: 1px solid var(--line);
+}
+.pfad-voll-stand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #ffe9bd;
+}
+.pfad-voll-stand img {
+  width: 1.1rem;
+}
+.pfad-voll-rolle {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Auf dem Handy soll es sich anfuehlen wie eine Karte, nicht wie eine
+     Webseite - also Schwung behalten. */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }

@@ -13,6 +13,7 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { badRequest, conflict, forbidden, unauthorized } from '../errors.js';
 import type { Mailer } from '../mail/index.js';
+import { baueHtml } from '../mail/vorlage.js';
 import {
   hashPassword,
   hashToken,
@@ -208,13 +209,24 @@ async function sendVerification(
     .returning({ id: s.authToken.id });
 
   try {
+    const link = `${deps.publicUrl}/verify?token=${token}`;
     await deps.mailer.send({
       to: email,
       subject: 'Brauweg: E-Mail bestaetigen',
       text:
         `Willkommen bei Brauweg.\n\n` +
-        `Bestaetige deine Adresse: ${deps.publicUrl}/verify?token=${token}\n\n` +
+        `Bestaetige deine Adresse: ${link}\n\n` +
         `Der Link gilt ${VERIFY_TTL_HOURS} Stunden.`,
+      html: baueHtml({
+        publicUrl: deps.publicUrl,
+        ueberschrift: 'Willkommen bei Brauweg',
+        absaetze: [
+          'Schön, dass du dabei bist. Bestätige einmal kurz deine Adresse, dann kann es losgehen.',
+        ],
+        knopfText: 'Adresse bestätigen',
+        knopfLink: link,
+        fussnote: `Der Link gilt ${VERIFY_TTL_HOURS} Stunden. Hast du dich nicht angemeldet, ignoriere diese Mail einfach.`,
+      }),
     });
   } catch (err) {
     // Ein Token, dessen Mail nie hinausging, ist wertlos - und schlimmer:
@@ -384,13 +396,22 @@ export async function requestPasswordReset(
     expiresAt: hoursFromNow(RESET_TTL_HOURS),
   });
 
+  const link = `${deps.publicUrl}/reset?token=${token}`;
   await deps.mailer.send({
     to: acc.email!,
     subject: 'Brauweg: Passwort zuruecksetzen',
     text:
-      `Neues Passwort setzen: ${deps.publicUrl}/reset?token=${token}\n\n` +
+      `Neues Passwort setzen: ${link}\n\n` +
       `Der Link gilt ${RESET_TTL_HOURS} Stunden. Warst du das nicht, ` +
       `ignoriere diese Mail.`,
+    html: baueHtml({
+      publicUrl: deps.publicUrl,
+      ueberschrift: 'Neues Passwort setzen',
+      absaetze: ['Du hast ein neues Passwort angefordert. Mit dem Knopf unten setzt du es.'],
+      knopfText: 'Passwort ändern',
+      knopfLink: link,
+      fussnote: `Der Link gilt ${RESET_TTL_HOURS} Stunden. Warst du das nicht, ignoriere diese Mail — dein Passwort bleibt dann unverändert.`,
+    }),
   });
 }
 

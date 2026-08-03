@@ -14,6 +14,13 @@ export interface Mail {
   readonly to: string;
   readonly subject: string;
   readonly text: string;
+  /**
+   * Gestaltete Fassung. Optional, und der Textteil bleibt Pflicht: Er ist
+   * die Rueckfallebene fuer Programme ohne HTML, er landet im Log, solange
+   * kein Versanddienst haengt, und eine Mail ganz ohne Textteil bewerten
+   * Spamfilter schlechter.
+   */
+  readonly html?: string;
 }
 
 export interface Mailer {
@@ -55,6 +62,7 @@ export class ResendMailer implements Mailer {
         to: [mail.to],
         subject: mail.subject,
         text: mail.text,
+        ...(mail.html ? { html: mail.html } : {}),
       }),
     });
     if (!res.ok) {
