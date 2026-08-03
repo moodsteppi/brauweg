@@ -54,17 +54,31 @@ export function GameSelect({
         {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
-          <span className="front-level" aria-label="Level 0">
-            0
-          </span>
+          {tab === 'spielen' ? (
+            <img className="front-avatar" src="/hub/koenig.png" alt="" />
+          ) : (
+            <span className="front-level" aria-label="Level 0">
+              0
+            </span>
+          )}
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
             <span className="front-xp" aria-hidden="true">
               <span style={{ width: '0%' }} />
             </span>
           </span>
+          {tab === 'spielen' && (
+            <span className="front-level front-level--hub" aria-label="Level 0">
+              0
+            </span>
+          )}
         </button>
         <div className="front-waehrungen">
+          {tab === 'spielen' && (
+            <span className="front-waehrung front-waehrung--cups" aria-hidden="true">
+              🏆 {trophies}
+            </span>
+          )}
           <button
             className="front-waehrung front-waehrung--muenzen"
             onClick={() => setBald('Münzen kaufen')}
@@ -409,28 +423,39 @@ function Spielen({
 
   return (
     <div className="front-hub">
-      <p className="front-hub-slogan">
+      <header className="hub-logo" aria-label="Brauweg">
         <strong>Brauweg</strong>
-        <span>Dein Weg · Trophäenpfad</span>
-      </p>
+        <span>Doppelkopf. Dein Weg.</span>
+      </header>
 
-      <Trophaeenpfad trophies={trophies} />
+      <div className="hub-buehne">
+        <Trophaeenpfad trophies={trophies} />
 
-      <div className="front-hub-aktionen">
-        <button className="front-rangliste" onClick={onRangliste}>
-          🏆 Rangliste
-        </button>
+        <aside className="hub-seite hub-seite--links">
+          <button className="hub-side-btn hub-side-btn--lila" onClick={() => setWahlOffen(true)}>
+            <span aria-hidden="true">🃏</span>
+            Spielauswahl
+          </button>
+          <button className="hub-side-btn hub-side-btn--blau" onClick={onRangliste}>
+            <span aria-hidden="true">🏆</span>
+            Rangliste
+          </button>
+          <button className="hub-side-btn hub-side-btn--grau" onClick={() => onBald('Mehr Features')}>
+            <span aria-hidden="true">🔒</span>
+            Bald
+          </button>
+        </aside>
 
-        {/* Der Tagesbonus steht schon da — dahinter steckt noch nichts. */}
-        <button className="front-bonus" onClick={() => onBald('Der Tagesbonus')}>
-          <GeschenkIcon />
-          Tägliche Belohnung
-          <span className="front-bald-tag">Bald</span>
-        </button>
+        <aside className="hub-seite hub-seite--rechts">
+          <button className="hub-truhe" onClick={() => onBald('Der Tagesbonus')}>
+            <img src="/hub/truhe.png" alt="" draggable={false} />
+            <em>Tägliche Belohnung</em>
+            <span className="hub-truhe-cta">Abholen!</span>
+            <span className="front-bald-tag">Bald</span>
+          </button>
+        </aside>
       </div>
 
-      {/* Klebt am unteren Rand. Läuft noch eine Partie, ist Weiterspielen
-          der Hauptknopf — Spielauswahl bleibt darunter erreichbar. */}
       <div className={`front-play-stack${activeTable ? ' has-resume' : ''}`}>
         {activeTable && (
           <button
@@ -444,12 +469,16 @@ function Spielen({
                 : 'Weiterspielen'}
           </button>
         )}
-        <button
-          className={activeTable ? 'front-play-neben' : 'front-play'}
-          onClick={() => setWahlOffen(true)}
-        >
-          Spielauswahl
-        </button>
+        {!activeTable && (
+          <button className="front-play" onClick={() => setWahlOffen(true)}>
+            Spielauswahl
+          </button>
+        )}
+        {activeTable && (
+          <button className="front-play-neben" onClick={() => setWahlOffen(true)}>
+            Spielauswahl
+          </button>
+        )}
       </div>
 
       {wahlOffen && (
