@@ -422,33 +422,10 @@ td {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  border-radius: 1.6rem;
-  /* Satter Filz mit Licht von oben — wie im Entwurf. */
-  background:
-    radial-gradient(85% 55% at 50% 12%, rgba(255, 214, 140, 0.22), transparent 62%),
-    radial-gradient(120% 90% at 50% 45%, #2f7a4e 0%, #23603c 55%, #17422a 100%);
-  box-shadow:
-    inset 0 0 70px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 3px rgba(120, 76, 34, 0.9),
-    inset 0 0 0 6px rgba(255, 205, 110, 0.35),
-    0 6px 18px rgba(0, 0, 0, 0.45);
+  /* Filz und Rahmen malt bg-spieltisch.png. Hier bleibt nur die Flaeche,
+     auf der Mitspieler, Stich und Schilder liegen. */
 }
 /* Warme Lichter am oberen Rand — reine Zierde ueber dem Filz. */
-.doko-felt::before {
-  content: '';
-  position: absolute;
-  top: 0.5rem;
-  left: 12%;
-  right: 12%;
-  height: 0.5rem;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 8% 50%, rgba(255, 214, 140, 0.9) 0 18%, transparent 60%),
-    radial-gradient(circle at 50% 50%, rgba(255, 214, 140, 0.9) 0 18%, transparent 60%),
-    radial-gradient(circle at 92% 50%, rgba(255, 214, 140, 0.9) 0 18%, transparent 60%);
-  filter: blur(1px);
-  opacity: 0.75;
-}
 
 /* Mitspieler */
 .doko-opp {
@@ -806,6 +783,7 @@ td {
 .doko-sheet-card > .primary { width: 100%; }
 
 
+
 /* =========================================================================
    Tafeln auf dem Filz (Entwurf Doko).
 
@@ -965,22 +943,6 @@ td {
 }
 
 /* Messingschild statt Ueberschrift. */
-.lobby-schild {
-  flex: 1;
-  margin: 0;
-  padding: 0.35rem 0.5rem;
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #ffe8b0;
-  text-shadow: 0 2px 0 rgba(20, 12, 4, 0.8);
-  border-radius: 0.55rem;
-  background: linear-gradient(180deg, #7a4e22 0%, #4a2c12 100%);
-  border: 2px solid rgba(255, 205, 110, 0.7);
-  box-shadow: 0 3px 0 #1a1006, inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
 .doko-icon.is-leer {
   visibility: hidden;
 }
@@ -4051,3 +4013,104 @@ main.auth > .muted {
 }
 /* In der eigenen Leiste sitzt der Stapel neben Name und Uhr. */
 .doko-me .doko-stiche { margin: 0 0.4rem 0.2rem 0; }
+
+/* =========================================================================
+   Gemalte Hintergruende (Bestellung docs/ASSETS-DOKO.md).
+
+   Jeder Bildschirm liegt auf einer gemalten Szene statt auf einem
+   Farbverlauf — so verlangt es docs/DESIGN.md, und genau daran hatte es
+   bisher gefehlt. Das Bild deckt die Flaeche ab; alles andere liegt
+   darueber.
+   ========================================================================= */
+.doko-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* Alles ausser dem Bild liegt darueber. */
+.doko > *:not(.doko-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Holzschild als Ueberschrift. Die Schrift steht in der leeren Mitte. */
+.lobby-schild {
+  flex: 1;
+  margin: 0;
+  padding: 0.55rem 1.6rem 0.6rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff2d0;
+  text-shadow: 0 2px 0 rgba(60, 30, 6, 0.9), 0 1px 6px rgba(0, 0, 0, 0.5);
+  background: url('/hub/schild.png') center / 100% 100% no-repeat;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/*
+ * Holztafel als dehnbarer Rahmen.
+ *
+ * border-image schneidet das Bild in neun Teile: Die Ecken bleiben, die
+ * Kanten und die Mitte werden gedehnt. Die 64 sind am Bild gemessen — dort
+ * endet die Maserung des Rahmens und die ruhige Innenflaeche beginnt.
+ */
+/*
+ * Holztafel als dehnbarer Rahmen.
+ *
+ * border-image schneidet das Bild in neun Teile: Die Ecken bleiben, Kanten
+ * und Mitte werden gedehnt. Die 64 sind am Bild gemessen — dort endet die
+ * Maserung des Rahmens. Die Rahmenbreite darf kleiner sein als der Schnitt;
+ * dann wird das Holz mitverkleinert. Deshalb hat jede Groesse ihren eigenen
+ * Wert: Ein 64 Pixel breiter Rahmen um eine Listenzeile waere doppelt so
+ * hoch wie die Zeile selbst.
+ */
+.lobby-tafel,
+.lobby-tisch,
+.doko-tafel {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  border-style: solid;
+  border-color: transparent;
+}
+.lobby-tafel {
+  border-width: 26px;
+  border-image: url('/hub/tafel.png') 32 fill / 26px / 0 round;
+  padding: 0 0.15rem 0.3rem;
+  margin: -10px -10px 0;
+}
+.lobby-tisch {
+  border-width: 14px;
+  border-image: url('/hub/tafel.png') 32 fill / 14px / 0 round;
+  padding: 0.1rem 0.35rem;
+  margin: -2px -2px 0.15rem;
+}
+.lobby-tisch:active {
+  transform: translateY(2px);
+}
+.doko-tafel {
+  border-width: 12px;
+  border-image: url('/hub/tafel.png') 32 fill / 12px / 0 round;
+  padding: 0 0.3rem;
+  margin: 0;
+  min-width: 8.5rem;
+  transform: translateX(-50%);
+}
+
+/* Bots bekommen denselben Pinguin wie Menschen, nur zurueckgenommen: Der
+   Platz sieht besetzt aus, bleibt aber vom Mitspieler unterscheidbar. */
+.doko-avatar-img.is-bot {
+  filter: saturate(0.45) brightness(0.8);
+  opacity: 0.85;
+}

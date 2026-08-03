@@ -400,6 +400,7 @@ export function Table({
 
   return (
     <div className="doko" style={{ '--zoom': zoom } as React.CSSProperties}>
+      <img className="doko-bg" src="/hub/bg-spieltisch.png" alt="" draggable={false} />
       {/* Kopfzeile */}
       <header className="doko-top">
         <button className="doko-icon" onClick={onLeave} aria-label="Tisch verlassen">
@@ -701,7 +702,6 @@ function slotFor(seat: number, base: number, seatCount: number): Slot {
 }
 
 /** Warme, je Sitz feste Farbe fuer die Avatare. */
-const SEAT_HUES = [16, 200, 140, 275, 45];
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -733,7 +733,6 @@ function Avatar({
   avatarUrl?: string | null;
 }): React.JSX.Element {
   const secondsLeft = useCountdown(active ? deadline : null);
-  const hue = SEAT_HUES[seatIndex % SEAT_HUES.length]!;
   const ring =
     active && secondsLeft !== null
       ? `conic-gradient(var(--accent) ${(secondsLeft / TURN_SECONDS) * 360}deg, rgba(255,255,255,0.08) 0)`
@@ -745,12 +744,19 @@ function Avatar({
     >
       {avatarUrl ? (
         <img className="doko-avatar-img" src={avatarUrl} alt={name} draggable={false} />
-      ) : isBot ? (
-        <span style={{ background: `hsl(${hue} 45% 32%)` }}>BOT</span>
       ) : (
         /* Ohne eigenes Bild sitzt der Pinguin am Tisch - er ist unser
-           Maskottchen, und vier Buchstabenkreise wirken wie ein Formular. */
-        <img className="doko-avatar-img" src="/hub/pinguin.png" alt={name} draggable={false} />
+           Maskottchen, und vier Buchstabenkreise wirken wie ein Formular.
+           Je Sitz ein anderer Schal, damit vier Pinguine auseinanderzuhalten
+           sind. Bots bekommen denselben Pinguin, nur blasser: Dass es ein Bot
+           ist, steht ohnehin als Name darunter, und ein Kreis mit "BOT" laesst
+           den Platz leer wirken statt besetzt. */
+        <img
+          className={`doko-avatar-img${isBot ? ' is-bot' : ''}`}
+          src={`/hub/pinguin-${(seatIndex % 4) + 1}.png`}
+          alt={name}
+          draggable={false}
+        />
       )}
     </div>
   );
