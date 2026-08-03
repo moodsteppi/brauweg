@@ -642,15 +642,21 @@ td {
 }
 
 /* Handkarten */
+/*
+ * Das Polster unten faengt ab, was noch unter die Grundlinie reicht: die
+ * Drehung der aeusseren Karten und das Absinken der gesperrten. Den Faecher
+ * selbst haelt HandCard oberhalb der Grundlinie.
+ */
 .doko-hand {
   flex: 0 0 auto;
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  min-height: calc(var(--hw) * var(--pc-ratio) + 18px);
+  min-height: calc(var(--hw) * var(--pc-ratio) + 52px);
   padding-top: 18px;
+  padding-bottom: 26px;
 }
-.doko-hand { position: relative; }
 /* Jede Handkarte steht absolut in der Mitte und wird NUR per transform an
    ihren Platz geschoben (Position, Senkung, Neigung kommen als Variablen
    --off/--dip/--rot). Faellt eine Karte weg, gleiten die uebrigen auf ihre
@@ -692,7 +698,7 @@ td {
   filter: brightness(0.58) saturate(0.55);
   /* Zusaetzlich absinken: Der Hub der spielbaren Karten allein geht im
      Absenken des Faechers unter. Erst der Abstand macht die Reihe lesbar. */
-  --lift: -10px;
+  --lift: -6px;
   opacity: 0.85;
 }
 .doko-handcard.is-playable {
@@ -4066,19 +4072,21 @@ main.auth > .muted {
    darueber.
    ========================================================================= */
 /*
- * Absolut Positioniertes richtet sich an der Polsterkante des Elternteils
- * aus, nicht an dessen Aussenkante. Mit inset: 0 blieb rundherum ein
- * Streifen des Farbverlaufs stehen und das Bild sah aufgeklebt aus. Die
- * negativen Werte nehmen die Polsterung von .doko genau zurueck.
+ * Vollbild-Hintergrund.
+ *
+ * position: fixed statt absolute. Absolut Positioniertes richtet sich an
+ * der Polsterkante von .doko aus, nicht am Bildschirm - dort blieb rundum
+ * ein Streifen des Farbverlaufs stehen und das Bild sah aufgeklebt aus.
+ * Negative Abstaende halfen nicht: Ein <img> ist ein ersetztes Element und
+ * behaelt bei width/height auto seine Naturgroesse, hier 1024x1536.
+ * .doko ist selbst fixed und ohne transform, also deckt sich fixed inset:0
+ * genau mit dem Bildschirm.
  */
 .doko-bg {
-  position: absolute;
-  top: calc(-1 * max(0.5rem, env(safe-area-inset-top)));
-  right: calc(-1 * max(0.5rem, env(safe-area-inset-right)));
-  bottom: calc(-1 * max(0.5rem, env(safe-area-inset-bottom)));
-  left: calc(-1 * max(0.5rem, env(safe-area-inset-left)));
-  width: auto;
-  height: auto;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: center center;
   z-index: 0;

@@ -281,7 +281,11 @@ test('der Admin kann sich nicht selbst rauswerfen oder herabstufen', async (t) =
   );
 });
 
-test('das Amt zu uebergeben macht genau einen neuen Admin', async (t) => {
+test('befoerdern macht einen zweiten Admin - der erste bleibt es', async (t) => {
+  // Admins sind gleichberechtigt: Befoerdern gibt das Amt nicht ab, es
+  // kommt einer dazu. Vorher wanderte es weiter und der Verein hatte
+  // immer genau einen Verantwortlichen - fuer einen Doppelkopfverein mit
+  // zwei, drei Organisatoren war das zu eng.
   const c = await ctx();
   t.after(() => c.close());
   const anna = await createVerifiedAccount(c, 'Anna');
@@ -295,10 +299,91 @@ test('das Amt zu uebergeben macht genau einen neuen Admin', async (t) => {
 
   const detail = await clubDetail(c.db, clubId, bert.accountId);
   assert.equal(detail.myRole, 'admin');
+  assert.equal(detail.memberList.find((m) => m.accountId === anna.accountId)?.role, 'admin');
+});
+
+test('Admins duerfen einander herabstufen und rauswerfen', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+  const cora = await createVerifiedAccount(c, 'Cora');
+
+  const clubId = await gruende(c, anna.accountId, 'Stammtisch', { joinMode: 'open' });
+  for (const wer of [bert, cora]) {
+    await austreten(c, wer.accountId);
+    await joinClub(c.db, clubId, wer.accountId);
+    await setMemberRole(c.db, clubId, anna.accountId, wer.accountId, 'admin');
+  }
+
+  // Bert stuft Anna herab - unter Gleichen ist das erlaubt.
+  await setMemberRole(c.db, clubId, bert.accountId, anna.accountId, 'member');
+  let detail = await clubDetail(c.db, clubId, bert.accountId);
   assert.equal(detail.memberList.find((m) => m.accountId === anna.accountId)?.role, 'member');
 
-  const [row] = await c.db.select().from(schema.club).where(eq(schema.club.id, clubId));
-  assert.equal(row?.adminAccountId, bert.accountId);
+  // Und Cora wirft Bert raus, obwohl er Admin ist.
+  await kickMember(c.db, clubId, cora.accountId, bert.accountId);
+  detail = await clubDetail(c.db, clubId, cora.accountId);
+  assert.equal(detail.members, 2);
+  assert.equal(detail.myRole, 'admin');
+});
+
+test('der letzte Admin laesst sich weder herabstufen noch rauswerfen', async (t) => {
+  // Sonst bliebe ein Clan zurueck, den niemand mehr verwalten kann: kein
+  // Aufnehmen, kein Rauswerfen, keine Regelaenderung.
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+
+  const clubId = await gruende(c, anna.accountId, 'Stammtisch', { joinMode: 'open' });
+  await austreten(c, bert.accountId);
+  await joinClub(c.db, clubId, bert.accountId);
+  await setMemberRole(c.db, clubId, anna.accountId, bert.accountId, 'admin');
+  // Anna herabstufen geht noch - Bert ist ja auch Admin.
+  await setMemberRole(c.db, clubId, bert.accountId, anna.accountId, 'member');
+
+  // Jetzt ist Bert der einzige. Anna kann ihn nicht antasten, weil sie
+  // selbst kein Admin mehr ist; und Bert kann sich nicht selbst herabstufen.
+  await assert.rejects(
+    () => setMemberRole(c.db, clubId, bert.accountId, bert.accountId, 'member'),
+    (e: AppError) => e.code === 'cannotChangeOwnRole',
+  );
+
+  // Ueber einen dritten Admin laesst es sich pruefen: kommt Cora dazu und
+  // wird Admin, darf sie Bert herabstufen - danach ist sie die letzte.
+  const cora = await createVerifiedAccount(c, 'Cora');
+  await austreten(c, cora.accountId);
+  await joinClub(c.db, clubId, cora.accountId);
+  await setMemberRole(c.db, clubId, bert.accountId, cora.accountId, 'admin');
+  await setMemberRole(c.db, clubId, cora.accountId, bert.accountId, 'member');
+
+  await assert.rejects(
+    () => kickMember(c.db, clubId, cora.accountId, cora.accountId),
+    (e: AppError) => e.code === 'cannotKickSelf',
+  );
+});
+
+test('geht ein Admin, rueckt niemand nach solange ein anderer bleibt', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+  const cora = await createVerifiedAccount(c, 'Cora');
+
+  const clubId = await gruende(c, anna.accountId, 'Stammtisch', { joinMode: 'open' });
+  for (const wer of [bert, cora]) {
+    await austreten(c, wer.accountId);
+    await joinClub(c.db, clubId, wer.accountId);
+  }
+  await setMemberRole(c.db, clubId, anna.accountId, bert.accountId, 'admin');
+
+  await leaveClub(c.db, clubId, anna.accountId);
+
+  const detail = await clubDetail(c.db, clubId, bert.accountId);
+  assert.equal(detail.myRole, 'admin');
+  // Cora bleibt Mitglied - sie rueckt nicht nach, weil Bert noch da ist.
+  assert.equal(detail.memberList.find((m) => m.accountId === cora.accountId)?.role, 'member');
 });
 
 test('tritt der Admin aus, rueckt das aelteste Mitglied nach', async (t) => {

@@ -192,6 +192,12 @@ function fehlertext(e: unknown): string {
       return 'Dafür fehlen dir noch Trophäen.';
     case 'notClubAdmin':
       return 'Das darf nur der Admin.';
+    case 'lastAdmin':
+      return 'Das ist der letzte Admin — der Clan braucht mindestens einen.';
+    case 'cannotChangeOwnRole':
+      return 'Die eigene Rolle kann man nicht ändern. Lass es einen anderen Admin tun.';
+    case 'cannotKickSelf':
+      return 'Dich selbst wirfst du nicht raus — dafür gibt es „Clan verlassen“.';
     default:
       return 'Hat nicht geklappt. Versuch es nochmal.';
   }
@@ -383,13 +389,15 @@ function MitgliedBlatt({
         <button className="clan-blattknopf" onClick={() => onShowProfile(mitglied.accountId)}>
           Profil ansehen
         </button>
-        {mitglied.role !== 'admin' && (
+        {/* Admins sind gleichberechtigt: Befoerdern gibt das eigene Amt nicht
+            ab, es kommt einer dazu. Deshalb geht auch der Weg zurueck. */}
+        {mitglied.role !== 'admin' ? (
           <button
             className="clan-blattknopf"
             onClick={() => {
               if (
                 !window.confirm(
-                  `${mitglied.displayName} zum Admin machen? Du gibst das Amt damit ab.`,
+                  `${mitglied.displayName} zum Admin machen? Admins können aufnehmen, rauswerfen und die Clanregeln ändern.`,
                 )
               ) {
                 return;
@@ -398,6 +406,16 @@ function MitgliedBlatt({
             }}
           >
             Zum Admin machen
+          </button>
+        ) : (
+          <button
+            className="clan-blattknopf"
+            onClick={() => {
+              if (!window.confirm(`${mitglied.displayName} die Adminrechte entziehen?`)) return;
+              onAktion(api.setClubRole(clubId, mitglied.accountId, 'member'), onClose);
+            }}
+          >
+            Adminrechte entziehen
           </button>
         )}
         <button

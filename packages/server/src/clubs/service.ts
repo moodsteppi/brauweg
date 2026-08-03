@@ -507,6 +507,21 @@ export async function leaveClub(db: Db, clubId: string, accountId: string): Prom
  * aus club_member entfernt wurde.
  */
 async function nachfolgeOderLoeschen(tx: Db, clubId: string): Promise<void> {
+  // Ist noch ein Admin da, ist nichts zu tun: Admins sind gleichberechtigt,
+  // und der Clan bleibt verwaltbar. Nachrueckt nur, wenn der letzte ging.
+  const [verbliebene] = await tx
+    .select({ n: count() })
+    .from(s.clubMember)
+    .innerJoin(s.account, eq(s.account.id, s.clubMember.accountId))
+    .where(
+      and(
+        eq(s.clubMember.clubId, clubId),
+        eq(s.clubMember.role, 'admin'),
+        isNull(s.account.anonymizedAt),
+      ),
+    );
+  if (Number(verbliebene?.n ?? 0) > 0) return;
+
   const [naechster] = await tx
     .select({ accountId: s.clubMember.accountId })
     .from(s.clubMember)
@@ -684,21 +699,43 @@ export async function setMemberRole(
       .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, accountId)));
     if (!ziel) throw notFound('memberUnknown');
 
+    // Den letzten Admin herabzustufen macht den Clan unverwaltbar: Niemand
+    // koennte mehr aufnehmen, rauswerfen oder die Regeln aendern. Da der
+    // Herabstufende selbst Admin ist, kann das nur passieren, wenn er sich
+    // und das Ziel verwechselt - die Pruefung faengt es trotzdem ab.
+    if (ziel.role === 'admin' && role !== 'admin') {
+      await pruefeLetzterAdmin(tx, clubId, accountId);
+    }
+
     await tx
       .update(s.clubMember)
       .set({ role })
       .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, accountId)));
 
+    // adminAccountId ist nur noch Buchhaltung: Die Spalte ist NOT NULL und
+    // muss auf irgendeinen Admin zeigen. Wer wirklich darf, steht in
+    // club_member.role - es gibt beliebig viele Admins, alle gleichberechtigt.
     if (role === 'admin') {
-      await tx
-        .update(s.clubMember)
-        .set({ role: 'member' })
-        .where(
-          and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, adminAccountId)),
-        );
       await tx.update(s.club).set({ adminAccountId: accountId }).where(eq(s.club.id, clubId));
     }
   });
+}
+
+/** Wirft, wenn `accountId` der einzige verbliebene Admin des Clans ist. */
+async function pruefeLetzterAdmin(tx: Db, clubId: string, accountId: string): Promise<void> {
+  const [zahl] = await tx
+    .select({ n: count() })
+    .from(s.clubMember)
+    .innerJoin(s.account, eq(s.account.id, s.clubMember.accountId))
+    .where(
+      and(
+        eq(s.clubMember.clubId, clubId),
+        eq(s.clubMember.role, 'admin'),
+        ne(s.clubMember.accountId, accountId),
+        isNull(s.account.anonymizedAt),
+      ),
+    );
+  if (Number(zahl?.n ?? 0) === 0) throw badRequest('lastAdmin');
 }
 
 export async function kickMember(
@@ -710,11 +747,51 @@ export async function kickMember(
   await requireAdmin(db, clubId, adminAccountId);
   if (accountId === adminAccountId) throw badRequest('cannotKickSelf');
 
-  const geloescht = await db
-    .delete(s.clubMember)
-    .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, accountId)))
-    .returning({ accountId: s.clubMember.accountId });
-  if (geloescht.length === 0) throw notFound('memberUnknown');
+  await db.transaction(async (tx) => {
+    const [ziel] = await tx
+      .select({ role: s.clubMember.role })
+      .from(s.clubMember)
+      .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, accountId)));
+    if (!ziel) throw notFound('memberUnknown');
+
+    // Admins duerfen einander rauswerfen - sie sind gleichberechtigt. Nur der
+    // letzte darf nicht gehen, sonst bleibt ein Clan ohne Verwaltung zurueck.
+    if (ziel.role === 'admin') await pruefeLetzterAdmin(tx, clubId, accountId);
+
+    await tx
+      .delete(s.clubMember)
+      .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, accountId)));
+
+    await richteAdminSpalte(tx, clubId, accountId);
+  });
+}
+
+/**
+ * Haelt `club.adminAccountId` auf einem existierenden Admin.
+ *
+ * Die Spalte ist NOT NULL und zeigte frueher auf "den" Admin. Bei mehreren
+ * gleichberechtigten ist sie nur noch Buchhaltung - sie darf aber nicht auf
+ * jemanden zeigen, der den Clan verlassen hat.
+ */
+async function richteAdminSpalte(tx: Db, clubId: string, ausgeschieden: string): Promise<void> {
+  const [club] = await tx
+    .select({ adminAccountId: s.club.adminAccountId })
+    .from(s.club)
+    .where(eq(s.club.id, clubId));
+  if (!club || club.adminAccountId !== ausgeschieden) return;
+
+  const [ersatz] = await tx
+    .select({ accountId: s.clubMember.accountId })
+    .from(s.clubMember)
+    .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.role, 'admin')))
+    .orderBy(asc(s.clubMember.joinedAt))
+    .limit(1);
+  if (ersatz) {
+    await tx
+      .update(s.club)
+      .set({ adminAccountId: ersatz.accountId })
+      .where(eq(s.club.id, clubId));
+  }
 }
 
 /** Namen mehrerer Clans auf einmal — fuer Listen, die Clans nur erwaehnen. */

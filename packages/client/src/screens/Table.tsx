@@ -916,7 +916,17 @@ const HandCard = memo(function HandCard({
   const mid = (total - 1) / 2;
   const off = index - mid;
   const rot = off * Math.min(3.2, 22 / Math.max(total, 1));
-  const dip = Math.pow(Math.abs(off), 1.6) * (total > 7 ? 1.1 : 2.2);
+  /**
+   * Faecherform, aber nach OBEN aufgehaengt.
+   *
+   * Frueher sank jede Karte um ihren Abstand zur Mitte nach unten - die
+   * aeusseren also am weitesten, bis unter den Bildschirmrand. Auf hohen
+   * iPhones war die Hand dadurch sichtbar angeschnitten. Jetzt wird der
+   * groesste Wert abgezogen: Die Aussenkarten liegen auf der Grundlinie, die
+   * mittleren stehen hoeher. Dieselbe Form, nur nichts mehr unter dem Rand.
+   */
+  const bogen = (d: number): number => Math.pow(d, 1.6) * (total > 7 ? 1.1 : 2.2);
+  const dip = bogen(Math.abs(off)) - bogen(mid);
 
   // Position, Senkung und Neigung als CSS-Variablen: Die Karte steht absolut
   // in der Mitte, das Stylesheet setzt daraus den transform zusammen. Faellt
