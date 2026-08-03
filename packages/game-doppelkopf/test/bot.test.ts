@@ -353,3 +353,88 @@ test('Bot verschenkt weniger Augen als reiner Zufall', () => {
     `Heuristik kaum besser als Zufall: ${botPoints} gegen ${randomPoints}`,
   );
 });
+
+test('Partei: erkennt den Partner an der gespielten Kreuz-Dame', () => {
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  // Sitz 1 hat im letzten Stich eine Kreuz-Dame gelegt - damit ist er Re,
+  // und das sieht am Tisch jeder. Der Bot ist selbst Re, also ist Sitz 1
+  // sein Partner. Er fuehrt jetzt mit dem Pik-Ass: darauf wird geschmiert.
+  const view = {
+    seat: 2,
+    order,
+    gameType: { kind: 'normal' },
+    myParty: 're',
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    lastTrick: {
+      played: [
+        { card: mk('CQ', 10), seat: 1 },
+        { card: mk('D9', 11), seat: 2 },
+      ],
+      winnerSeat: 1,
+    },
+    currentTrick: [{ card: mk('SA', 1), seat: 1 }],
+    legal: [mk('ST', 2), mk('S9', 3)],
+    hand: [mk('ST', 2), mk('S9', 3)],
+  } as unknown as PlayerView;
+
+  const gewaehlt = chooseCard(view);
+  assert.equal(gewaehlt.id, 2, 'soll die Pik-Zehn schmieren');
+  assert.equal(cardValue(gewaehlt), 10);
+});
+
+test('Partei: schmiert nicht auf den Gegner, der die Kreuz-Dame zeigte', () => {
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  // Gleiche Lage, aber der Bot ist Kontra. Sitz 1 ist damit Gegner, und
+  // sein Ass bekommt die billigste Karte statt der Zehn.
+  const view = {
+    seat: 2,
+    order,
+    gameType: { kind: 'normal' },
+    myParty: 'kontra',
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    lastTrick: {
+      played: [
+        { card: mk('CQ', 10), seat: 1 },
+        { card: mk('D9', 11), seat: 2 },
+      ],
+      winnerSeat: 1,
+    },
+    currentTrick: [{ card: mk('SA', 1), seat: 1 }],
+    legal: [mk('ST', 2), mk('S9', 3)],
+    hand: [mk('ST', 2), mk('S9', 3)],
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 3, 'soll die Pik-Neun abwerfen');
+});
+
+test('Partei: eine einzelne Kreuz-Dame verraet nichts ueber die uebrigen Sitze', () => {
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  // Sitz 1 zeigte eine Kreuz-Dame, ist also Re. Ueber Sitz 3 folgt daraus
+  // nichts: Sitz 1 koennte beide Damen halten und still allein spielen.
+  // Also wird auf Sitz 3 nicht geschmiert.
+  const view = {
+    seat: 2,
+    order,
+    gameType: { kind: 'normal' },
+    myParty: 'kontra',
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    lastTrick: {
+      played: [{ card: mk('CQ', 10), seat: 1 }],
+      winnerSeat: 1,
+    },
+    currentTrick: [{ card: mk('SA', 1), seat: 3 }],
+    legal: [mk('ST', 2), mk('S9', 3)],
+    hand: [mk('ST', 2), mk('S9', 3)],
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 3, 'soll nicht schmieren');
+});

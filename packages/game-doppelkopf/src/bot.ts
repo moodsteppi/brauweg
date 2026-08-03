@@ -39,6 +39,7 @@
 import { type Card, cardKey, cardValue } from './cards.js';
 import { type CardOrder, servingSuit, strength } from './order.js';
 import type { PlayerView, RoundAction } from './round.js';
+import type { Party } from './scoring.js';
 
 /** Ist die Karte in dieser Spielart Trumpf? */
 function istTrumpf(card: Card, order: CardOrder): boolean {
@@ -76,6 +77,54 @@ function sicherGenug(card: Card, order: CardOrder): boolean {
  * Absturz waere hier die schlechteste Antwort, denn der Bot laeuft im
  * Server und ein Wurf hier liesse den Tisch stehen.
  */
+/**
+ * Parteien, soweit sie am Tisch erkennbar sind.
+ *
+ * Im Normalspiel ist Re, wer eine Kreuz-Dame haelt. Wird eine gespielt,
+ * liegt sie offen — ab da weiss jeder am Tisch, dass dieser Sitz Re ist.
+ * Genau das leitet der Bot hier ab, und keinen Deut mehr: Gesehen werden
+ * nur der laufende und der letzte Stich, also dasselbe, was ein Mensch
+ * nachschauen kann. Frueher kannte er die Parteien nur dort, wo die Regeln
+ * sie ohnehin aufdecken — im Solo, bei geklaerter Hochzeit, beim
+ * Armut-Paar — und schmierte im Normalspiel deshalb nie.
+ *
+ * Zwei Schluesse sind sicher und werden gezogen:
+ *
+ * - Zeigen ZWEI verschiedene Sitze je eine Kreuz-Dame, sind alle uebrigen
+ *   Kontra.
+ * - Zeigt EIN Sitz beide, ist es eine stille Hochzeit: Er spielt allein,
+ *   alle anderen sind Kontra.
+ *
+ * Aus einer einzelnen Kreuz-Dame folgt dagegen nichts ueber die uebrigen
+ * Sitze — es koennte eine stille Hochzeit sein, und dann haette der
+ * Zeigende gar keinen Partner.
+ */
+function parteien(view: PlayerView): Record<number, Party> {
+  const bekannt: Record<number, Party> = { ...view.knownParties };
+  if (view.myParty !== null) bekannt[view.seat] = view.myParty;
+  if (view.gameType?.kind !== 'normal') return bekannt;
+
+  const gesehen = [...(view.lastTrick?.played ?? []), ...view.currentTrick];
+  const damenJeSitz: Record<number, number> = {};
+  for (const p of gesehen) {
+    if (cardKey(p.card) !== 'CQ') continue;
+    damenJeSitz[p.seat] = (damenJeSitz[p.seat] ?? 0) + 1;
+    bekannt[p.seat] = 're';
+  }
+
+  const reSitze = Object.keys(bekannt)
+    .map(Number)
+    .filter((s) => bekannt[s] === 're');
+  const stilleHochzeit = Object.values(damenJeSitz).some((n) => n >= 2);
+
+  if (reSitze.length >= 2 || stilleHochzeit) {
+    for (const s of Object.keys(view.handCounts ?? {}).map(Number)) {
+      if (bekannt[s] === undefined) bekannt[s] = 'kontra';
+    }
+  }
+  return bekannt;
+}
+
 function sitzzahl(view: PlayerView): number {
   const n = view.handCounts ? Object.keys(view.handCounts).length : 0;
   return n > 0 ? n : 4;
@@ -200,9 +249,13 @@ export function chooseCard(view: PlayerView): Card {
   if (!best) return chooseLead(view);
 
   const lead = servingSuit(view.currentTrick[0].card, view.order);
-  const winnerParty = view.knownParties[best.seat];
+  const bekannt = parteien(view);
+  const winnerParty = bekannt[best.seat];
   const partnerLeads =
-    winnerParty !== undefined && view.myParty !== null && winnerParty === view.myParty;
+    winnerParty !== undefined &&
+    view.myParty !== null &&
+    winnerParty === view.myParty &&
+    best.seat !== view.seat;
 
   /*
    * Der Partner haelt den Stich: Augen drauflegen — aber nur, wenn er ihn
