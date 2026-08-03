@@ -121,6 +121,15 @@ Vorhandenes wiederverwenden statt neu erfinden:
 - Frei nutzbare Pakete, wenn echte Zeichnungen gebraucht werden:
   Kenney (CC0, keine Auflagen), game-icons.net (CC BY — Namensnennung auf
   der Über-Seite), Lucide/Tabler (ISC/MIT).
+- **Vor dem Ablegen unter `public/` verkleinern.** Ein gemaltes Bild kommt
+  als 1024er PNG vom Zeichner, wird aber oft 40 Pixel groß angezeigt. Wer
+  das Original ablegt, schickt das Hundertfache an jedes Handy — der
+  `hub`-Ordner war so auf 30 MB gewachsen. Faustregel: dreifache
+  Anzeigegröße, Vollbilder als PNG8 mit 200 Farben und Fehlerstreuung.
+  Ganzseitige Szenen landen damit bei 200–450 kB, Symbole unter 100 kB.
+- **Was niemand anzeigt, gehört nicht nach `public/`.** Vorlagen und
+  Rohfassungen liegen unter `packages/client/art/` — alles unter `public/`
+  wird ausgeliefert, auch wenn es nirgends eingebunden ist.
 
 ## Bewegung
 

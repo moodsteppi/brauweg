@@ -166,6 +166,7 @@ export function Lobby({
   if (ansicht === 'erstellen') {
     return (
       <div className="doko doko--lobby doko--erstellen">
+        <img className="doko-bg" src="/hub/bg-tisch-erstellen.png" alt="" draggable={false} />
         <header className="doko-top">
           <button
             className="doko-icon"
@@ -268,6 +269,7 @@ export function Lobby({
 
   return (
     <div className="doko doko--lobby">
+      <img className="doko-bg" src="/hub/bg-tischauswahl.png" alt="" draggable={false} />
       <header className="doko-top">
         <button className="doko-icon" onClick={onBack} aria-label="Zurück zur Spielauswahl">
           ‹
