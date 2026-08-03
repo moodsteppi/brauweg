@@ -1254,6 +1254,8 @@ td {
   inset: 0;
   margin: 0 auto;
   max-width: 30rem;
+  height: 100dvh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1267,13 +1269,19 @@ td {
 /**
  * Startseite / Hub: Clash/Brawl-CI mit gemalter Weltkarte.
  * Filz und Wirtshaus kommen erst NACH der Spielwahl (Doko-Tisch).
+ * Alles muss in eine Handy-Viewport (100dvh) passen — kein Langscroll.
  */
 .front--hub {
   background: #3db4f0;
   color: #fff;
 }
 .front--hub .front-body {
-  padding: 0.2rem 0.55rem 0.8rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0.15rem 0.45rem 0.35rem;
 }
 .front--hub .front-top {
   background: linear-gradient(180deg, #1a3f7a 0%, #2458a8 100%);
@@ -1286,9 +1294,9 @@ td {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 .front--hub .front-avatar {
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 0.65rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
   object-fit: cover;
   border: 2px solid #ffe08a;
   box-shadow: 0 2px 0 #8a6a1a;
@@ -1349,7 +1357,14 @@ td {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem 0.35rem;
+  padding: 0.55rem 0.75rem 0.3rem;
+}
+.front--hub .front-top {
+  padding: 0.4rem 0.55rem 0.28rem;
+}
+.front--hub .front-avatar {
+  width: 2rem;
+  height: 2rem;
 }
 
 .front-top .spielername {
@@ -2046,32 +2061,35 @@ td {
 /* ---- Hub-Startseite: gemalte Weltkarte + Overlay-UI ---- */
 .front-hub {
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.25rem;
 }
 .hub-logo {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.12rem;
-  margin: 0.1rem 0 0.15rem;
+  gap: 0.08rem;
+  margin: 0;
   pointer-events: none;
 }
 .hub-logo strong {
-  font-size: 1.7rem;
+  font-size: 1.25rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #fff;
   text-shadow:
     0 2px 0 #1a4a8a,
-    0 4px 0 #123560,
-    0 6px 14px rgba(0, 0, 0, 0.35);
+    0 3px 0 #123560,
+    0 4px 10px rgba(0, 0, 0, 0.35);
 }
 .hub-logo span {
-  padding: 0.16rem 0.7rem;
+  padding: 0.1rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: #12301c;
@@ -2081,38 +2099,42 @@ td {
 }
 .hub-buehne {
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .hub-karte {
   position: relative;
   width: 100%;
-  border-radius: 1rem;
+  height: 100%;
+  border-radius: 0.85rem;
   overflow: hidden;
   box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.35),
-    0 10px 28px rgba(10, 40, 80, 0.4);
+    0 0 0 2px rgba(255, 255, 255, 0.35),
+    0 6px 18px rgba(10, 40, 80, 0.35);
   background: #3db4f0;
 }
 .hub-karte-bild {
   display: block;
   width: 100%;
-  height: auto;
-  vertical-align: top;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 45%;
   user-select: none;
   -webkit-user-drag: none;
 }
 .hub-schild {
   position: absolute;
   z-index: 2;
-  padding: 0.28rem 0.55rem;
-  font-size: 0.68rem;
+  padding: 0.18rem 0.4rem;
+  font-size: 0.58rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #fff;
   background: linear-gradient(180deg, #a06a38 0%, #6b4220 100%);
   border: 1px solid #d4a06a;
-  border-radius: 0.35rem;
-  box-shadow: 0 3px 0 #3a2410;
+  border-radius: 0.3rem;
+  box-shadow: 0 2px 0 #3a2410;
   pointer-events: none;
 }
 .hub-knoten {
@@ -2123,16 +2145,21 @@ td {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 3.4rem;
-  height: 3.4rem;
+  width: 2.55rem;
+  height: 2.55rem;
   padding: 0;
   border-radius: 50%;
-  border: 3px solid #fff;
+  border: 2px solid #fff;
   color: #fff;
   font-weight: 800;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 8px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 5px 12px rgba(0, 0, 0, 0.22);
 }
-.hub-knoten--gruen { background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%); width: 5.2rem; height: 5.2rem; border-radius: 1.1rem; }
+.hub-knoten--gruen {
+  background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 0.85rem;
+}
 .hub-knoten--mint { background: linear-gradient(180deg, #9af0b0 0%, #3cb86a 100%); }
 .hub-knoten--blau { background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%); }
 .hub-knoten--rot { background: linear-gradient(180deg, #ff8a6a 0%, #d04030 100%); }
@@ -2147,37 +2174,37 @@ td {
   animation: hub-pulse 2.2s ease-in-out infinite;
 }
 .hub-knoten-nr {
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 .hub-knoten-cp {
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   opacity: 0.9;
 }
 .hub-knoten-pokal {
-  font-size: 1.35rem;
+  font-size: 1rem;
   line-height: 1;
 }
 .hub-knoten-los {
-  font-size: 0.62rem;
+  font-size: 0.52rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  margin-top: 0.1rem;
+  margin-top: 0.05rem;
 }
 .hub-knoten-du {
   position: absolute;
-  top: calc(100% + 0.35rem);
+  top: calc(100% + 0.2rem);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  padding: 0.22rem 0.55rem;
+  padding: 0.15rem 0.4rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 800;
   color: #3a2a08;
   background: linear-gradient(180deg, #ffe08a 0%, #e2b64f 100%);
   border: 2px solid #fff;
-  box-shadow: 0 3px 0 #8a6a1a;
+  box-shadow: 0 2px 0 #8a6a1a;
 }
 @keyframes hub-pulse {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
@@ -2191,36 +2218,36 @@ td {
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  width: 5.6rem;
+  gap: 0.28rem;
+  width: 4.4rem;
 }
 .hub-seite--links {
-  left: 0.35rem;
-  top: 18%;
+  left: 0.25rem;
+  top: 14%;
 }
 .hub-seite--rechts {
-  right: 0.35rem;
-  top: 12%;
-  width: 5.8rem;
+  right: 0.25rem;
+  top: 10%;
+  width: 4.6rem;
 }
 .hub-side-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.55rem 0.3rem;
-  border-radius: 0.85rem;
+  gap: 0.1rem;
+  padding: 0.4rem 0.22rem;
+  border-radius: 0.7rem;
   border: 2px solid rgba(255, 255, 255, 0.7);
   color: #fff;
-  font-size: 0.62rem;
+  font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  line-height: 1.15;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.28), 0 6px 14px rgba(0, 0, 0, 0.2);
+  line-height: 1.1;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28), 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 .hub-side-btn span {
-  font-size: 1.25rem;
+  font-size: 1rem;
   line-height: 1;
 }
 .hub-side-btn:active {
@@ -2241,34 +2268,34 @@ td {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.45rem 0.35rem 0.55rem;
-  border-radius: 0.9rem;
+  gap: 0.12rem;
+  padding: 0.3rem 0.25rem 0.4rem;
+  border-radius: 0.75rem;
   border: 2px solid #ffe08a;
   background: linear-gradient(180deg, rgba(20, 40, 80, 0.55), rgba(10, 24, 50, 0.72));
   color: #fff;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3), 0 0 18px rgba(255, 200, 80, 0.35);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), 0 0 14px rgba(255, 200, 80, 0.3);
 }
 .hub-truhe img {
-  width: 3.4rem;
-  height: 3.4rem;
+  width: 2.4rem;
+  height: 2.4rem;
   object-fit: contain;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 .hub-truhe em {
   font-style: normal;
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 .hub-truhe-cta {
-  margin-top: 0.1rem;
-  padding: 0.2rem 0.55rem;
+  margin-top: 0.05rem;
+  padding: 0.14rem 0.4rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 800;
   color: #0d3a1c;
   background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
@@ -2280,22 +2307,30 @@ td {
   top: -0.35rem;
   right: -0.25rem;
 }
+.front--hub .front-play-stack {
+  flex: 0 0 auto;
+  position: static;
+  margin-top: 0.15rem;
+  gap: 0.3rem;
+}
 .front--hub .front-play {
-  font-size: 1.2rem;
-  border-radius: 1rem;
+  font-size: 1.05rem;
+  padding: 0.7rem;
+  border-radius: 0.85rem;
   border: 3px solid rgba(255, 255, 255, 0.8);
   background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
-  box-shadow: 0 5px 0 #1f6b40, 0 10px 22px rgba(20, 80, 40, 0.35);
+  box-shadow: 0 4px 0 #1f6b40, 0 6px 14px rgba(20, 80, 40, 0.3);
 }
 .front--hub .front-play:active {
   transform: translateY(3px);
-  box-shadow: 0 2px 0 #1f6b40;
+  box-shadow: 0 1px 0 #1f6b40;
 }
 .front--hub .front-play-neben {
   border: 2px solid rgba(255, 255, 255, 0.55);
   background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%);
   color: #fff;
   box-shadow: 0 3px 0 #1a4f8c;
+  padding: 0.55rem;
 }
 
 /* Der Spielen-Knopf klebt am unteren Rand des rollbaren Bereichs. */

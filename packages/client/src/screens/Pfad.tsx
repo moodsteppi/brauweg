@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
-
 /**
  * Trophäen-Weltkarte (Hub-CI, Entwurf C).
  *
  * Eine gemalte Karte als Hintergrund, darauf die Checkpoint-Knoten.
  * Look wie Clash Royale / Brawl Stars — Filz und Wirtshaus kommen erst
  * nach der Spielwahl. Raster-Assets liegen in public/hub/.
+ * Die Karte füllt die freie Viewport-Höhe (object-fit: cover) — kein
+ * Langscroll auf dem Handy.
  */
 
 export interface HubWelt {
@@ -36,12 +36,8 @@ function knotenNummer(cp: number): number {
 }
 
 export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Element {
-  const hier = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    hier.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, []);
-
+  // Kein scrollIntoView: Die Hub-Karte muss in eine Handy-Viewport passen,
+  // ohne die Seite zu verschieben.
   const aktuelleCp = HUB_WELTEN.reduce(
     (beste, welt) => (trophies >= welt.cp && welt.cp > beste ? welt.cp : beste),
     0,
@@ -72,7 +68,6 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
         return (
           <button
             key={welt.cp}
-            ref={aktuell ? hier : undefined}
             type="button"
             className={`hub-knoten hub-knoten--${welt.farbe}${erreicht ? ' is-an' : ' is-zu'}${aktuell ? ' is-hier' : ''}`}
             style={{ top: welt.top, left: welt.left }}

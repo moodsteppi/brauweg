@@ -12,6 +12,14 @@ Druckpunkt und Augenzwinkern — aber nie auf Kosten der Lesbarkeit.
 Browser bleibt die Fläche auf Handybreite begrenzt (`max-width: 30rem`,
 zentriert). Eine Hand, ein Daumen: Alles Wichtige ist unten erreichbar.
 
+**Eine Viewport-Höhe:** Hub-Screens (Start, Shop, Clan, …) müssen auf
+einem typischen iPhone (inkl. Pro Max) **ohne langes Scrollen** nutzbar
+sein — Ziel: Top-Leiste + Inhalt + Tab-Leiste in `100dvh`. Scroll nur
+für Listen mit vielen Einträgen (Freunde, Rangliste), nie für die
+Grundkomposition. **Grafische Entwürfe und generierte Assets immer als
+Handy-Vollbild (9:16)** anlegen — nichts, was erst „runterscrollen“
+braucht, um vollständig zu wirken.
+
 ## Farben
 
 Immer über die CSS-Variablen aus `styles.css`, nie als neue Hex-Werte
