@@ -4529,3 +4529,55 @@ main.auth > .muted {
   right: 0.35rem;
 }
 
+/* =========================================================================
+   Abschluss einer Partie.
+
+   Der Bildschirm stand auf einem Farbverlauf mit flacher Karte — der
+   Moment, in dem sich die Partie auszahlt, sah aus wie ein Fehlerdialog.
+   Jetzt liegt er auf einer gemalten Szene, die Karte auf Holz, und die
+   Plaetze tragen gemalte Medaillen statt Emojis (docs/ASSETS-ABSCHLUSS.md).
+   ========================================================================= */
+.doko--end .doko-end-card {
+  position: relative;
+  z-index: 1;
+  max-width: 22rem;
+  padding: 0.4rem 0.6rem 0.8rem;
+  border: 26px solid transparent;
+  border-image: url('/hub/tafel.png') 32 fill / 26px / 0 round;
+  background: none;
+  border-radius: 0;
+}
+.doko--end .doko-end-card h1 {
+  font-size: 1.35rem;
+  color: #ffe9bd;
+  text-shadow: 0 2px 0 rgba(50, 25, 5, 0.9);
+}
+.doko--end .doko-standings li {
+  background: rgba(20, 11, 4, 0.55);
+}
+.doko--end .doko-standings li.is-winner {
+  background: rgba(255, 196, 90, 0.18);
+  border-color: rgba(255, 196, 90, 0.5);
+}
+/* Die Medaille traegt den Platz — die Spalte bleibt so breit wie vorher,
+   damit die Namen aller Zeilen buendig stehen. */
+.doko-medaille {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+}
+.doko-place {
+  display: flex;
+  justify-content: center;
+}
+/* Pokal im Trophaeen-Schild: gemalt statt Emoji. */
+.doko-tag-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  object-fit: contain;
+  vertical-align: -0.12em;
+  margin-left: 0.15rem;
+}
+

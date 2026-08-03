@@ -1398,7 +1398,6 @@ function PartyEnd({
   onLeave: () => void;
 }): React.JSX.Element {
   const standings = [...(party?.standings ?? [])].sort((a, b) => a.place - b.place);
-  const medals = ['🥇', '🥈', '🥉'];
 
   const awards = party?.trophies ?? [];
   const gewertet = awards.length > 0;
@@ -1412,6 +1411,7 @@ function PartyEnd({
 
   return (
     <div className="doko doko--end">
+      <img className="doko-bg" src="/hub/bg-abschluss.png" alt="" draggable={false} />
       <div className="doko-end-card">
         <h1>Partie beendet</h1>
         <p className="muted">{view.view.totalRounds} Runden gespielt.</p>
@@ -1420,7 +1420,21 @@ function PartyEnd({
             const delta = trophiesOf(s.seat);
             return (
               <li key={s.seat} className={i === 0 ? 'is-winner' : undefined}>
-                <span className="doko-place">{medals[s.place - 1] ?? `${s.place}.`}</span>
+                {/* Gemalte Medaille bis Platz drei, sonst die Zahl. Bei
+                    Gleichstand haengen bewusst zwei gleiche Medaillen
+                    nebeneinander - sie sind ja wirklich gleich weit. */}
+                <span className="doko-place">
+                  {s.place <= 3 ? (
+                    <img
+                      className="doko-medaille"
+                      src={`/hub/medaille-${s.place}.png`}
+                      alt={`Platz ${s.place}`}
+                      draggable={false}
+                    />
+                  ) : (
+                    `${s.place}.`
+                  )}
+                </span>
                 <span className="doko-standing-name">
                   {spielerName(nameOf(s.seat), accountOf(s.seat))}
                   {s.left && <em className="doko-tag">ausgestiegen</em>}
@@ -1428,7 +1442,8 @@ function PartyEnd({
                       -9 ein Verlust, 0 ehrlich eine Null. */}
                   {gewertet && (
                     <em className="doko-tag">
-                      {delta > 0 ? `+${delta}` : delta} 🏆
+                      {delta > 0 ? `+${delta}` : delta}
+                      <img src="/hub/pokal.png" alt="Trophäen" className="doko-tag-icon" />
                     </em>
                   )}
                 </span>
