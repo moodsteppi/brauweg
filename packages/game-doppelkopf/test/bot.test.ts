@@ -358,23 +358,16 @@ test('Partei: erkennt den Partner an der gespielten Kreuz-Dame', () => {
   const rs = makeRuleSet();
   const order = buildOrder({ kind: 'normal' }, rs);
 
-  // Sitz 1 hat im letzten Stich eine Kreuz-Dame gelegt - damit ist er Re,
-  // und das sieht am Tisch jeder. Der Bot ist selbst Re, also ist Sitz 1
-  // sein Partner. Er fuehrt jetzt mit dem Pik-Ass: darauf wird geschmiert.
+  // Sitz 1 hat irgendwann eine Kreuz-Dame gelegt. Die Runde fuehrt ihn
+  // seitdem als Re - dauerhaft, auch viele Stiche spaeter. Der Bot ist
+  // selbst Re, also ist Sitz 1 sein Partner und sein Ass wird geschmiert.
   const view = {
     seat: 2,
     order,
     gameType: { kind: 'normal' },
     myParty: 're',
-    knownParties: {},
+    knownParties: { 1: 're' },
     handCounts: VOLLE_HAENDE,
-    lastTrick: {
-      played: [
-        { card: mk('CQ', 10), seat: 1 },
-        { card: mk('D9', 11), seat: 2 },
-      ],
-      winnerSeat: 1,
-    },
     currentTrick: [{ card: mk('SA', 1), seat: 1 }],
     legal: [mk('ST', 2), mk('S9', 3)],
     hand: [mk('ST', 2), mk('S9', 3)],
@@ -396,15 +389,8 @@ test('Partei: schmiert nicht auf den Gegner, der die Kreuz-Dame zeigte', () => {
     order,
     gameType: { kind: 'normal' },
     myParty: 'kontra',
-    knownParties: {},
+    knownParties: { 1: 're' },
     handCounts: VOLLE_HAENDE,
-    lastTrick: {
-      played: [
-        { card: mk('CQ', 10), seat: 1 },
-        { card: mk('D9', 11), seat: 2 },
-      ],
-      winnerSeat: 1,
-    },
     currentTrick: [{ card: mk('SA', 1), seat: 1 }],
     legal: [mk('ST', 2), mk('S9', 3)],
     hand: [mk('ST', 2), mk('S9', 3)],
@@ -425,12 +411,8 @@ test('Partei: eine einzelne Kreuz-Dame verraet nichts ueber die uebrigen Sitze',
     order,
     gameType: { kind: 'normal' },
     myParty: 'kontra',
-    knownParties: {},
+    knownParties: { 1: 're' },
     handCounts: VOLLE_HAENDE,
-    lastTrick: {
-      played: [{ card: mk('CQ', 10), seat: 1 }],
-      winnerSeat: 1,
-    },
     currentTrick: [{ card: mk('SA', 1), seat: 3 }],
     legal: [mk('ST', 2), mk('S9', 3)],
     hand: [mk('ST', 2), mk('S9', 3)],

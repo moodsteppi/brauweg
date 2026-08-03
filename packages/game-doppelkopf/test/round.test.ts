@@ -295,3 +295,47 @@ test('countPoints steuert die Zaehlhilfe in der Sicht', () => {
     assert.deepEqual(viewFor(state, seat).standings, {});
   }
 });
+
+test('eine gespielte Kreuz-Dame deckt die Partei dauerhaft auf', () => {
+  const rs = makeRuleSet({ pflichtsolo: false, armut: false, hochzeit: false });
+  let state = createRound(rs, SEATS, 0, 4242);
+
+  // Alle gesund, damit ein Normalspiel zustande kommt.
+  while (state.phase === 'vorbehalt') {
+    const seat = currentActor(state)!;
+    state = apply(state, { type: 'vorbehalt', seat, kind: null });
+  }
+  if (state.gameType.kind !== 'normal') return; // stille Hochzeit: anderer Fall
+
+  // Vor der ersten Kreuz-Dame weiss niemand etwas ueber fremde Parteien.
+  for (const seat of SEATS) {
+    const fremde = Object.keys(viewFor(state, seat).knownParties).map(Number);
+    assert.deepEqual(fremde, [], `Sitz ${seat} sieht zu frueh eine Partei`);
+  }
+
+  // Bis zur ersten gespielten Kreuz-Dame durchspielen.
+  let leger: number | null = null;
+  let steps = 0;
+  while (state.phase === 'playing' && leger === null && steps++ < 200) {
+    const seat = currentActor(state)!;
+    const view = viewFor(state, seat);
+    const dame = view.legal.find((c) => c.suit === 'C' && c.rank === 'Q');
+    const card = dame ?? view.legal[0];
+    state = apply(state, { type: 'playCard', seat, cardId: card.id });
+    if (dame) leger = seat;
+  }
+  assert.notEqual(leger, null, 'In dieser Verteilung wurde keine Kreuz-Dame gespielt');
+
+  // Ab jetzt gilt sie als aufgedeckt - und bleibt es, egal wie viele
+  // Stiche noch folgen. Genau das war vorher nicht so.
+  const merke = () =>
+    SEATS.every((seat) => viewFor(state, seat).knownParties[leger!] === 're');
+  assert.ok(merke(), 'direkt nach dem Legen nicht aufgedeckt');
+
+  while (state.phase === 'playing' && steps++ < 400) {
+    const seat = currentActor(state)!;
+    const view = viewFor(state, seat);
+    state = apply(state, { type: 'playCard', seat, cardId: view.legal[0].id });
+    assert.ok(merke(), 'die Kreuz-Dame wurde spaeter wieder vergessen');
+  }
+});

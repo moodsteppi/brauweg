@@ -800,6 +800,24 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     reveal(state.armut.seat);
     if (state.armut.partnerSeat !== null) reveal(state.armut.partnerSeat);
   }
+  /*
+   * Eine gespielte Kreuz-Dame deckt die Partei auf — und zwar dauerhaft.
+   *
+   * Im Normalspiel ist Re, wer eine Kreuz-Dame haelt. Liegt eine auf dem
+   * Tisch, hat es jeder gesehen, und niemand am echten Tisch vergisst das
+   * wieder. Vorher stand das nirgends: Die Oberflaeche zeigte die Partei
+   * nicht an, und ein Bot konnte sie hoechstens aus dem letzten Stich
+   * ablesen und im uebernaechsten wieder vergessen.
+   *
+   * Das ist keine zusaetzliche Auskunft, sondern eine, die bisher gefehlt
+   * hat: gespielte Karten sind oeffentlich.
+   */
+  if (state.gameType.kind === 'normal') {
+    const gelegt = [...state.tricks.flatMap((t) => t.played), ...state.currentTrick];
+    for (const p of gelegt) {
+      if (isClubQueen(p.card)) reveal(p.seat);
+    }
+  }
   if (state.phase === 'finished') state.seats.forEach(reveal);
 
   const myParty: Party | null =

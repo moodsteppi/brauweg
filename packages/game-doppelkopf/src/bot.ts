@@ -84,46 +84,27 @@ function sicherGenug(card: Card, order: CardOrder): boolean {
  * Server und ein Wurf hier liesse den Tisch stehen.
  */
 /**
- * Parteien, soweit sie am Tisch erkennbar sind.
+ * Parteien: was bekannt ist, plus den einen sicheren Schluss.
  *
- * Im Normalspiel ist Re, wer eine Kreuz-Dame haelt. Wird eine gespielt,
- * liegt sie offen — ab da weiss jeder am Tisch, dass dieser Sitz Re ist.
- * Genau das leitet der Bot hier ab, und keinen Deut mehr: Gesehen werden
- * nur der laufende und der letzte Stich, also dasselbe, was ein Mensch
- * nachschauen kann. Frueher kannte er die Parteien nur dort, wo die Regeln
- * sie ohnehin aufdecken — im Solo, bei geklaerter Hochzeit, beim
- * Armut-Paar — und schmierte im Normalspiel deshalb nie.
+ * Beobachtet wird nicht hier, sondern in der Runde: `knownParties` fuehrt
+ * jeden Sitz, der eine Kreuz-Dame gelegt hat, und zwar dauerhaft bis zum
+ * Rundenende. Der Bot muss sich also nichts merken — und kann es auch gar
+ * nicht, denn er bekommt bei jedem Zug nur eine Sicht und kein Gedaechtnis.
  *
- * Zwei Schluesse sind sicher und werden gezogen:
- *
- * - Zeigen ZWEI verschiedene Sitze je eine Kreuz-Dame, sind alle uebrigen
- *   Kontra.
- * - Zeigt EIN Sitz beide, ist es eine stille Hochzeit: Er spielt allein,
- *   alle anderen sind Kontra.
- *
- * Aus einer einzelnen Kreuz-Dame folgt dagegen nichts ueber die uebrigen
- * Sitze — es koennte eine stille Hochzeit sein, und dann haette der
- * Zeigende gar keinen Partner.
+ * Bleibt der Schluss: Sind ZWEI Sitze als Re bekannt, sind alle uebrigen
+ * Kontra. Aus einem einzelnen folgt nichts — es koennte eine stille
+ * Hochzeit sein, und dann hat der Zeigende gar keinen Partner.
  */
 function parteien(view: PlayerView): Record<number, Party> {
   const bekannt: Record<number, Party> = { ...view.knownParties };
   if (view.myParty !== null) bekannt[view.seat] = view.myParty;
   if (view.gameType?.kind !== 'normal') return bekannt;
 
-  const gesehen = [...(view.lastTrick?.played ?? []), ...view.currentTrick];
-  const damenJeSitz: Record<number, number> = {};
-  for (const p of gesehen) {
-    if (cardKey(p.card) !== 'CQ') continue;
-    damenJeSitz[p.seat] = (damenJeSitz[p.seat] ?? 0) + 1;
-    bekannt[p.seat] = 're';
-  }
-
   const reSitze = Object.keys(bekannt)
     .map(Number)
     .filter((s) => bekannt[s] === 're');
-  const stilleHochzeit = Object.values(damenJeSitz).some((n) => n >= 2);
 
-  if (reSitze.length >= 2 || stilleHochzeit) {
+  if (reSitze.length >= 2) {
     for (const s of Object.keys(view.handCounts ?? {}).map(Number)) {
       if (bekannt[s] === undefined) bekannt[s] = 'kontra';
     }
