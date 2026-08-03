@@ -522,6 +522,22 @@ function Spielen({
             <span className="front-bald-tag">Bald</span>
           </button>
         </aside>
+
+        {/* Einstieg fuer Neue, wie im Entwurf unten rechts. Die Anleitung
+            selbst gibt es noch nicht — der Platz dafuer steht schon, und beim
+            Antippen sagt sie das auch. */}
+        <button
+          type="button"
+          className="hub-neuhier"
+          onClick={() => onBald('Die Doppelkopf-Anleitung')}
+        >
+          <span className="hub-neuhier-text">
+            <strong>Neu hier?</strong>
+            <span>So spielst du Doppelkopf</span>
+          </span>
+          <img src="/hub/pinguin.png" alt="" draggable={false} />
+          <span className="front-bald-tag">Bald</span>
+        </button>
       </div>
 
       <div className={`front-play-stack${activeTable ? ' has-resume' : ''}`}>

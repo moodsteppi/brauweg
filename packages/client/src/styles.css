@@ -4416,9 +4416,8 @@ main.auth > .muted {
 /* --- Mitgliederzeile ---------------------------------------------------- */
 
 /*
- * Holzband je Zeile — dieselbe Tafel wie in der Lobby, nur schmal
- * geschnitten. Kommt spaeter mitgliederband.png (docs/ASSETS-CLAN.md),
- * wird hier eine Zeile getauscht.
+ * Holzband je Zeile mit runder Fassung links fuer das Bild — genau dafuer
+ * bestellt (docs/ASSETS-CLAN.md).
  */
 .clan-zeile {
   display: grid;
@@ -4427,8 +4426,8 @@ main.auth > .muted {
   gap: 0.4rem;
   width: 100%;
   padding: 0.15rem 0.3rem;
-  border: 10px solid transparent;
-  border-image: url('/hub/tafel.png') 32 fill / 10px / 0 round;
+  border: 14px solid transparent;
+  border-image: url('/hub/mitgliederband.webp') 40 fill / 14px / 0 round;
   margin: 0 0 -2px;
   color: var(--text);
   font: inherit;
@@ -4458,5 +4457,61 @@ main.auth > .muted {
   grid-template-columns: auto 1fr auto auto auto;
   align-items: center;
   gap: 0.35rem;
+}
+
+/*
+ * Einstiegskarte fuer Neue, unten rechts auf der Karte.
+ *
+ * Sie liegt ueber der Weltkarte, aber ueber dem Spielen-Knopf endet sie —
+ * der ist die Hauptsache und darf nie verdeckt sein. Deshalb sitzt sie am
+ * unteren Rand der Buehne und nicht am Bildschirmrand.
+ */
+.hub-neuhier {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 11rem;
+  padding: 0.3rem 0.45rem;
+  border: 2px solid #ffe08a;
+  border-radius: 0.7rem;
+  background: linear-gradient(180deg, rgba(20, 40, 80, 0.82), rgba(10, 24, 50, 0.9));
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), 0 0 14px rgba(255, 200, 80, 0.25);
+  cursor: pointer;
+}
+.hub-neuhier:active {
+  transform: translateY(2px);
+}
+.hub-neuhier-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hub-neuhier-text strong {
+  font-size: 0.82rem;
+  color: #ffe08a;
+  line-height: 1.15;
+}
+.hub-neuhier-text span {
+  font-size: 0.66rem;
+  line-height: 1.15;
+  color: rgba(255, 255, 255, 0.86);
+}
+.hub-neuhier img {
+  width: 2.1rem;
+  height: 2.1rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.hub-neuhier .front-bald-tag {
+  position: absolute;
+  top: -0.4rem;
+  right: 0.35rem;
 }
 

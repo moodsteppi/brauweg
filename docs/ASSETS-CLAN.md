@@ -169,11 +169,11 @@ dann wirkt die Liste nur etwas schwerer.
 
 Alles nach `packages/client/public/hub/` unter genau diesen Namen.
 
-**Es liegen bereits Platzhalter unter diesen Namen.** Die acht Wappen sind
-farbverschobene Kopien von `clan-wappen.png`, die beiden Hintergründe sind
-Kopien von `bg-clan.png` — damit der Clan-Tab schon jetzt vollständig
-funktioniert. Die echten Bilder überschreiben sie einfach; am Code ist dafür
-nichts zu ändern.
+**Geliefert und eingebaut:** die acht Wappen, die fuenf Knopf-Icons und das
+Mitgliederband. **Noch offen:** `bg-clan-suche.png` und
+`bg-clan-gruenden.png` — dort laeuft weiter `bg-clan` als Platzhalter.
+
+
 
 **Bitte in voller Auflösung liefern — ich verkleinere selbst.** Nicht
 vorher herunterrechnen: Was einmal weich ist, wird nicht wieder scharf.

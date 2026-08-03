@@ -34,7 +34,7 @@ type Ansicht = 'halle' | 'suche' | 'gruenden';
 /** Bild zu einer Wappenkennung. Unbekanntes faellt auf das Brauweg-Wappen. */
 function wappenBild(crest: string | null | undefined): string {
   return crest && (WAPPEN as readonly string[]).includes(crest)
-    ? `/hub/${crest}.png`
+    ? `/hub/${crest}.webp`
     : '/hub/clan-wappen.png';
 }
 
@@ -75,7 +75,7 @@ function IconKnopf({
   return (
     <button className={`clan-icon${bald ? ' is-bald' : ''}`} onClick={onClick}>
       <span className="clan-icon-scheibe">
-        <img src={`/hub/icon-${icon}.png`} alt="" draggable={false} />
+        <img src={`/hub/icon-${icon}.webp`} alt="" draggable={false} />
         {zaehler !== undefined && zaehler > 0 && (
           <span className="clan-zaehler">{zaehler}</span>
         )}
