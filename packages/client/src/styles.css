@@ -1291,12 +1291,67 @@ td {
   color: #fff;
   text-shadow: 0 1px 2px rgba(8, 28, 60, 0.35);
 }
+/* Shop/Clan/Blatt/Profil: gemalte Szene füllt die Bühne wie die Weltkarte. */
+.front--hub .front-body--szene {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0.1rem 0.2rem 0.15rem;
+  color: #fff;
+}
 .front--hub .front-body--scroll .muted {
   color: rgba(230, 242, 255, 0.78);
 }
 .front--hub .front-body--scroll h2 {
   color: #fff;
   text-shadow: 0 2px 0 #1a4a8a, 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+
+.hub-tab-szene {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.28),
+    0 4px 14px rgba(40, 20, 10, 0.35);
+  background: #3a2a18;
+}
+.hub-tab-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.hub-tab-inhalt {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.55rem 0.5rem 0.65rem;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 12, 6, 0.18) 0%,
+    rgba(20, 12, 6, 0.08) 35%,
+    rgba(20, 12, 6, 0.28) 100%
+  );
+}
+.hub-tab-inhalt .muted {
+  color: rgba(255, 240, 210, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 .front--hub .front-top {
   background: linear-gradient(180deg, #1a3f7a 0%, #2458a8 100%);
@@ -1565,11 +1620,9 @@ td {
   padding: 0.75rem 0.85rem 0.7rem;
   text-align: center;
   border-radius: 1rem;
-  background:
-    radial-gradient(90% 80% at 50% 0%, rgba(255, 210, 90, 0.35), transparent 70%),
-    linear-gradient(180deg, #8a6a28 0%, #4a3810 55%, #2a200c 100%);
+  background: linear-gradient(180deg, rgba(96, 62, 28, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
   border: 2px solid rgba(255, 220, 120, 0.75);
-  box-shadow: 0 4px 0 #1a1408, inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 0 #1a1208, inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 .front-clan-wappen {
   display: block;
@@ -1614,13 +1667,13 @@ td {
   min-height: 5.6rem;
   border-radius: 0.75rem;
   color: #fff;
-  background: linear-gradient(180deg, #4a6f3a 0%, #2a4520 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.55);
-  box-shadow: 0 3px 0 #1a2e12;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 100, 0.6);
+  box-shadow: 0 3px 0 #1a1208;
 }
 .front-clan-raum:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #1a2e12;
+  box-shadow: 0 1px 0 #1a1208;
 }
 .front-clan-raum-titel {
   font-size: 0.66rem;
@@ -1803,18 +1856,18 @@ td {
   text-align: left;
   border-radius: 1rem;
   color: #fff;
+  /* Holztafel über gemaltem Hintergrund (Entwurf B / Screen-Go). */
   background:
-    radial-gradient(90% 70% at 85% 20%, rgba(255, 210, 90, 0.35), transparent 55%),
-    linear-gradient(165deg, #4a6f3a 0%, #2a4520 55%, #1a2e12 100%);
-  border: 2px solid rgba(255, 200, 100, 0.65);
-  box-shadow: 0 4px 0 #1a2e12, 0 8px 18px rgba(0, 0, 0, 0.25);
+    linear-gradient(180deg, rgba(92, 58, 28, 0.92) 0%, rgba(52, 32, 14, 0.94) 100%);
+  border: 2px solid rgba(255, 200, 100, 0.7);
+  box-shadow: 0 4px 0 #1a1208, 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 .front-shop-featured--season {
   background:
-    radial-gradient(90% 70% at 85% 20%, rgba(255, 230, 120, 0.5), transparent 55%),
-    linear-gradient(165deg, #8a6a28 0%, #5a4214 55%, #4a3810 100%);
-  border-color: rgba(255, 220, 120, 0.85);
-  box-shadow: 0 4px 0 #2a200c, 0 10px 22px rgba(0, 0, 0, 0.28);
+    radial-gradient(90% 70% at 85% 20%, rgba(255, 230, 120, 0.28), transparent 55%),
+    linear-gradient(165deg, rgba(120, 78, 28, 0.95) 0%, rgba(72, 44, 12, 0.96) 100%);
+  border-color: rgba(255, 220, 120, 0.9);
+  box-shadow: 0 4px 0 #2a1808, 0 10px 22px rgba(0, 0, 0, 0.38);
 }
 .front-shop-featured:active {
   transform: translateY(2px);
@@ -1893,11 +1946,9 @@ td {
   padding: 0.6rem 0.4rem 0.5rem;
   border-radius: 0.9rem;
   color: #fff;
-  background:
-    radial-gradient(110% 80% at 50% 0%, rgba(255, 220, 120, 0.22), transparent 60%),
-    linear-gradient(180deg, #4a6f3a 0%, #2a4520 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.55);
-  box-shadow: 0 3px 0 #1a2e12;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 100, 0.6);
+  box-shadow: 0 3px 0 #1a1208;
 }
 .front-shop-kachel:active {
   transform: translateY(2px);
@@ -1939,13 +1990,13 @@ td {
 }
 .front--hub .front-blatt--b .deck {
   color: #fff;
-  background: linear-gradient(180deg, #4a6f3a 0%, #2a4520 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.55);
-  box-shadow: 0 3px 0 #1a2e12;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 100, 0.6);
+  box-shadow: 0 3px 0 #1a1208;
 }
 .front--hub .front-blatt--b .deck.selected {
   border-color: #ffe08a;
-  box-shadow: 0 3px 0 #1a2e12, inset 0 0 0 2px rgba(255, 224, 138, 0.7);
+  box-shadow: 0 3px 0 #1a1208, inset 0 0 0 2px rgba(255, 224, 138, 0.7);
 }
 .front--hub .front-blatt--b .deck strong {
   color: #fff;
@@ -1957,9 +2008,9 @@ td {
 }
 .front--hub .front-profil--b .panel,
 .front--hub .front-profil--b .panel.profile {
-  background: linear-gradient(180deg, #4a6f3a 0%, #2a4520 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.55);
-  box-shadow: 0 3px 0 #1a2e12;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 100, 0.6);
+  box-shadow: 0 3px 0 #1a1208;
   color: #fff;
 }
 .front--hub .front-profil--b .muted {
@@ -1978,9 +2029,9 @@ td {
   font-weight: 800;
 }
 .front--hub .front-clan--b .panel {
-  background: linear-gradient(180deg, #4a6f3a 0%, #2a4520 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.55);
-  box-shadow: 0 3px 0 #1a2e12;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 100, 0.6);
+  box-shadow: 0 3px 0 #1a1208;
   color: #fff;
 }
 
