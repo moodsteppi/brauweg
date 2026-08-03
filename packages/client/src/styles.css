@@ -2243,119 +2243,6 @@ td {
   0%, 100% { transform: translate(-50%, -88%) rotate(-2.2deg); }
   50% { transform: translate(-50%, -88%) rotate(2.8deg); }
 }
-/*
- * Pinguin-Loop entlang der Knoten (Haus → Weg → Haus).
- * Positionen = Tür + HUB_WELTEN-Checkpoints (0…1000) und zurück.
- */
-.hub-pingu-wrap {
-  position: absolute;
-  z-index: 2;
-  top: 90%;
-  left: 20%;
-  width: 1.45rem;
-  height: 1.65rem;
-  pointer-events: none;
-  opacity: 0;
-  animation: hub-pingu-tour 42s linear infinite;
-  will-change: top, left, transform, opacity;
-}
-.hub-pingu {
-  display: block;
-  position: relative;
-  z-index: 1;
-  width: 1.45rem;
-  height: 1.45rem;
-  object-fit: contain;
-  background: transparent;
-  filter: drop-shadow(0 1px 1px rgba(20, 40, 20, 0.28));
-}
-.hub-pingu-schatten {
-  position: absolute;
-  left: 50%;
-  bottom: 0.02rem;
-  width: 0.8rem;
-  height: 0.2rem;
-  margin-left: -0.4rem;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(20, 40, 20, 0.38), transparent 70%);
-  z-index: 0;
-}
-@keyframes hub-pingu-tour {
-  /* In der Tür / unsichtbar */
-  0% {
-    top: 90%; left: 20%; opacity: 0;
-    transform: translate(-50%, -90%) scaleX(1) scale(0.7);
-  }
-  /* Kommt aus dem Haus */
-  4% {
-    top: 88%; left: 22%; opacity: 1;
-    transform: translate(-50%, -90%) scaleX(1) scale(1);
-  }
-  /* Los geht's (0) */
-  10% {
-    top: 80%; left: 30%; opacity: 1;
-    transform: translate(-50%, -90%) scaleX(1);
-  }
-  /* Wiesen (100) */
-  18% {
-    top: 66%; left: 52%;
-    transform: translate(-50%, -90%) scaleX(1);
-  }
-  /* Strand (250) */
-  26% {
-    top: 50%; left: 38%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  /* Feuerberg (500) */
-  34% {
-    top: 34%; left: 58%;
-    transform: translate(-50%, -90%) scaleX(1);
-  }
-  /* Schneefeld (750) */
-  42% {
-    top: 18%; left: 48%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  /* Sternenhafen (1000) — wenden */
-  48% {
-    top: 6%; left: 62%;
-    transform: translate(-50%, -90%) scaleX(1);
-  }
-  52% {
-    top: 6%; left: 62%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  /* Rückweg */
-  58% {
-    top: 18%; left: 48%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  66% {
-    top: 34%; left: 58%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  74% {
-    top: 50%; left: 38%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  82% {
-    top: 66%; left: 52%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  90% {
-    top: 80%; left: 30%;
-    transform: translate(-50%, -90%) scaleX(-1);
-  }
-  /* Zurück zur Tür und rein */
-  95% {
-    top: 88%; left: 22%; opacity: 1;
-    transform: translate(-50%, -90%) scaleX(-1) scale(1);
-  }
-  100% {
-    top: 90%; left: 20%; opacity: 0;
-    transform: translate(-50%, -90%) scaleX(-1) scale(0.7);
-  }
-}
 /* Biome-Name am Knoten — bewusst weg von Seiten-Buttons. */
 .hub-knoten-name {
   position: absolute;
@@ -2471,14 +2358,7 @@ td {
 @media (prefers-reduced-motion: reduce) {
   .hub-knoten.is-hier { animation: none; }
   .hub-karte-welt { transition: none; }
-  .hub-baum,
-  .hub-pingu-wrap { animation: none !important; }
-  .hub-pingu-wrap {
-    top: 80%;
-    left: 30%;
-    opacity: 1;
-    transform: translate(-50%, -90%);
-  }
+  .hub-baum { animation: none !important; }
 }
 .hub-seite {
   position: absolute;
