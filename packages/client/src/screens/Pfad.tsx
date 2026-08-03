@@ -109,11 +109,30 @@ function Stapel({
   klein?: boolean;
 }): React.JSX.Element {
   const anzahl = BIOME.length;
-  /** Anteil von unten, 0 bis 1, über den ganzen Stapel. */
-  const anteil = stelle / anzahl;
+  /**
+   * Anteil von unten, 0 bis 1, über den ganzen Stapel.
+   *
+   * Nach unten begrenzt: Bei null Trophäen stünde die Figur sonst exakt
+   * auf der Unterkante des Stapels und ragte zur Hälfte heraus — und der
+   * unterste Streifen der Heimat ist ohnehin Wasser. Zwei Prozent des
+   * Stapels sind gut ein Achtel Kachel: der erste Trittstein.
+   */
+  const anteil = Math.max(stelle / anzahl, 0.02);
 
+  /*
+   * Den Stapel so schieben, dass die Figur in der Fenstermitte steht.
+   *
+   * Der Stapel sitzt mit top:50% mit seiner OBERKANTE in der Fenstermitte.
+   * Die Figur steht (1 - anteil) mal Stapelhoehe unter dieser Oberkante,
+   * also muss der Stapel um genau diesen Betrag nach oben — Prozente bei
+   * translateY beziehen sich auf die eigene Hoehe.
+   *
+   * Vorher stand hier ein zusaetzliches "50 -", und damit wurde der
+   * Stapel mittig gestellt statt die Figur: Wer null Trophaeen hatte,
+   * schaute auf den Feuerberg statt auf sich selbst.
+   */
   const stil = klein
-    ? ({ '--pfad-schub': `${50 - (1 - anteil) * 100}%` } as CSSProperties)
+    ? ({ '--pfad-schub': `${-(1 - anteil) * 100}%` } as CSSProperties)
     : undefined;
 
   return (
