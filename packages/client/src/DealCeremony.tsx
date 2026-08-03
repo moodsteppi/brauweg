@@ -1,62 +1,61 @@
 /**
  * Misch- und Austeilzeremonie am Filztisch.
  *
- * Rein clientseitig: Der Server hat die Hand schon ausgeteilt. Hier wird kurz
- * gemischt und dann in Wellen (je drei Karten) an die Plaetze gefaechert —
- * wie am echten Tisch. Unter prefers-reduced-motion laeuft nichts.
+ * Einmal pro vollem Geben (48 Karten mit Neunen, 40 ohne) — nicht nach
+ * einzelnen Kartenwechseln. Der Server hat die Haende schon, hier nur Show.
+ * Unter prefers-reduced-motion laeuft nichts.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 import { CardBack } from './CardFace';
 import type { Deck } from './decks';
 
 export type DealSlot = 'bottom' | 'left' | 'top' | 'right' | 'top-left' | 'top-right';
 
-const SHUFFLE_MS = 850;
-const WAVE_MS = 300;
-const FINISH_PAD_MS = 220;
-const CARDS_PER_WAVE = 3;
-const SHUFFLE_BACKS = 9;
+/** Volle Doppelkopf-Decks: mit Neunen 48, ohne (Scharfer Doko) 40. */
+export const VOLLE_DECKS = new Set([40, 48]);
 
-export function dealDurationMs(cardsPerSeat: number): number {
-  const waves = Math.max(1, Math.ceil(cardsPerSeat / CARDS_PER_WAVE));
-  return SHUFFLE_MS + waves * WAVE_MS + FINISH_PAD_MS;
+const SHUFFLE_MS = 900;
+const DEAL_MS = 700;
+const FINISH_PAD_MS = 180;
+const SHUFFLE_BACKS = 10;
+/** Pro Platz ein kleiner Faecher beim Austeilen (kein Karten-fuer-Karte). */
+const FAN_PER_SEAT = 3;
+
+export function dealDurationMs(): number {
+  return SHUFFLE_MS + DEAL_MS + FINISH_PAD_MS;
+}
+
+/**
+ * true, wenn gerade ein volles Blatt auf dem Tisch liegt und die Runde
+ * noch in der Vorbehaltsphase ist — also genau nach dem Geben.
+ */
+export function isVollesGeben(
+  phase: string | undefined,
+  handCounts: Record<number, number> | undefined,
+  trickLength: number,
+): { ok: boolean; deckSize: number } {
+  if (phase !== 'vorbehalt' || !handCounts || trickLength > 0) {
+    return { ok: false, deckSize: 0 };
+  }
+  const deckSize = Object.values(handCounts).reduce((sum, n) => sum + n, 0);
+  return { ok: VOLLE_DECKS.has(deckSize), deckSize };
 }
 
 export function DealCeremony({
   slots,
-  cardsPerSeat,
+  deckSize,
   deck,
   onDone,
 }: {
-  /** Mitspieler-Plaetze inkl. eigener Hand (bottom), im Uhrzeigersinn. */
   slots: DealSlot[];
-  cardsPerSeat: number;
+  /** 48 mit Neunen, 40 ohne. */
+  deckSize: number;
   deck: Deck;
   onDone: () => void;
 }): React.JSX.Element {
-  const waves = Math.max(1, Math.ceil(cardsPerSeat / CARDS_PER_WAVE));
-  const duration = dealDurationMs(cardsPerSeat);
-
-  const flies = useMemo(() => {
-    const out: { key: string; slot: DealSlot; wave: number; inWave: number }[] = [];
-    for (let w = 0; w < waves; w++) {
-      const remaining = cardsPerSeat - w * CARDS_PER_WAVE;
-      const n = Math.min(CARDS_PER_WAVE, remaining);
-      for (const slot of slots) {
-        for (let i = 0; i < n; i++) {
-          out.push({
-            key: `${w}-${slot}-${i}`,
-            slot,
-            wave: w,
-            inWave: i,
-          });
-        }
-      }
-    }
-    return out;
-  }, [slots, cardsPerSeat, waves]);
+  const duration = dealDurationMs();
 
   useEffect(() => {
     const handle = window.setTimeout(onDone, duration);
@@ -66,10 +65,13 @@ export function DealCeremony({
   return (
     <div className="doko-deal" aria-hidden="true">
       <div className="doko-deal-glow" />
-      <p className="doko-deal-label">Wird gemischt…</p>
+      <p className="doko-deal-label">
+        <span className="doko-deal-label-mix">Mischen · {deckSize} Karten</span>
+        <span className="doko-deal-label-deal">Austeilen…</span>
+      </p>
 
       <div className="doko-deal-stage">
-        {/* Stapel, der sich mischt, bevor die Wellen starten. */}
+        {/* Ein Stapel = das ganze Blatt, einmal durchmischen. */}
         {Array.from({ length: SHUFFLE_BACKS }, (_, i) => (
           <div
             key={`mix-${i}`}
@@ -78,7 +80,7 @@ export function DealCeremony({
               {
                 '--i': i,
                 '--n': SHUFFLE_BACKS,
-                '--delay': `${i * 35}ms`,
+                '--delay': `${i * 28}ms`,
               } as React.CSSProperties
             }
           >
@@ -88,25 +90,25 @@ export function DealCeremony({
           </div>
         ))}
 
-        {/* Austeil-Wellen: drei Karten je Platz, reihum. */}
-        {flies.map((fly) => (
-          <div
-            key={fly.key}
-            className={`doko-deal-fly to-${fly.slot}`}
-            style={
-              {
-                '--wave': fly.wave,
-                '--in': fly.inWave,
-                '--delay': `${SHUFFLE_MS + fly.wave * WAVE_MS + fly.inWave * 40}ms`,
-                '--spread': `${(fly.inWave - 1) * 14}px`,
-              } as React.CSSProperties
-            }
-          >
-            <div className="pc pc--back doko-deal-pc">
-              <CardBack deck={deck} />
+        {/* Ein Austeil-Schub: je Platz ein kleiner Faecher, alle zugleich. */}
+        {slots.flatMap((slot) =>
+          Array.from({ length: FAN_PER_SEAT }, (_, i) => (
+            <div
+              key={`fly-${slot}-${i}`}
+              className={`doko-deal-fly to-${slot}`}
+              style={
+                {
+                  '--delay': `${SHUFFLE_MS + i * 45}ms`,
+                  '--spread': `${(i - 1) * 16}px`,
+                } as React.CSSProperties
+              }
+            >
+              <div className="pc pc--back doko-deal-pc">
+                <CardBack deck={deck} />
+              </div>
             </div>
-          </div>
-        ))}
+          )),
+        )}
       </div>
     </div>
   );

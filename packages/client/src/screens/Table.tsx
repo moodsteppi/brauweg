@@ -4,6 +4,7 @@ import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
 import {
   DealCeremony,
+  isVollesGeben,
   prefersReducedMotion,
   type DealSlot,
 } from '../DealCeremony';
@@ -114,18 +115,26 @@ export function Table({
   }, [lastKey]);
 
   /**
-   * Misch- und Austeilzeremonie: bei neuer Hand (Rundenstart oder Neugabe)
-   * kurz in der Mitte mischen, dann Wellen an die Plaetze. Der Server ist
-   * schon fertig — nur die Darstellung wartet. Erster Snapshot (Beitritt
+   * Misch-/Austeilzeremonie: genau einmal nach einem vollen Geben
+   * (48 Karten mit Neunen, 40 ohne) in der Vorbehaltsphase — nicht nach
+   * einzelnen Karten, nicht bei Armut/Stich. Erster Snapshot (Beitritt
    * mitten in der Runde) wird uebersprungen.
    */
-  const handPrint = view?.view.round?.hand.map((c) => c.id).slice().sort((a, b) => a - b).join('.') ?? '';
-  const dealKey =
-    view?.view.round && handPrint
-      ? `${view.view.roundIndex}:${handPrint}`
-      : null;
+  const geben = isVollesGeben(
+    view?.view.round?.phase,
+    view?.view.round?.handCounts,
+    view?.view.round?.currentTrick?.length ?? 0,
+  );
+  const dealKey = geben.ok
+    ? `${view!.view.roundIndex}:${geben.deckSize}:${view!.view.round!.hand
+        .map((c) => c.id)
+        .slice()
+        .sort((a, b) => a - b)
+        .join('.')}`
+    : null;
   const seenDeal = useRef<string | null | undefined>(undefined);
   const [dealing, setDealing] = useState(false);
+  const [dealDeckSize, setDealDeckSize] = useState(48);
   const [handJustDealt, setHandJustDealt] = useState(false);
   const endDeal = useCallback(() => {
     setDealing(false);
@@ -133,16 +142,19 @@ export function Table({
     window.setTimeout(() => setHandJustDealt(false), 450);
   }, []);
   useEffect(() => {
-    if (!dealKey) return;
-    if (seenDeal.current === undefined) {
-      seenDeal.current = dealKey;
+    if (!dealKey) {
+      // Mitten in der Runde beigetreten: vormerken, ohne zu animieren.
+      if (seenDeal.current === undefined && view?.view.round) {
+        seenDeal.current = null;
+      }
       return;
     }
     if (dealKey === seenDeal.current) return;
     seenDeal.current = dealKey;
     if (prefersReducedMotion()) return;
+    setDealDeckSize(geben.deckSize);
     setDealing(true);
-  }, [dealKey]);
+  }, [dealKey, geben.deckSize, view?.view.round]);
 
   useEffect(() => {
     if (!table) return;
@@ -345,11 +357,6 @@ export function Table({
   );
 
   const hand = round ? sortByOrder(round.hand, round.order) : [];
-  const cardsPerSeat = round
-    ? view.seat !== null
-      ? hand.length || Math.max(...Object.values(round.handCounts), 0)
-      : Math.max(...Object.values(round.handCounts), 0)
-    : 0;
   const dealSlots: DealSlot[] = LAYOUTS[seatCount] ?? ['bottom', 'left', 'top', 'right'];
   const liveTrick = round?.currentTrick ?? [];
   // Frisch voller Stich: eine Sekunde liegen lassen — auch dann, wenn der
@@ -510,10 +517,10 @@ export function Table({
             ))}
         </div>
 
-        {dealing && cardsPerSeat > 0 && (
+        {dealing && (
           <DealCeremony
             slots={dealSlots}
-            cardsPerSeat={cardsPerSeat}
+            deckSize={dealDeckSize}
             deck={deck}
             onDone={endDeal}
           />
