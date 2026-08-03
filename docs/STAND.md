@@ -175,6 +175,28 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
 
 Damit es nicht zweimal passiert:
 
+- **Railway lieferte stundenlang einen alten Stand aus, ohne zu meckern.**
+  Ins Feld „Watch Paths" im Dienst war der komplette Inhalt von
+  `railway.json` hineinkopiert worden. Das Feld erwartet Glob-Muster, eine
+  Zeile je Pfad — es bekam `{`, `"$schema": …`, `"builder": "NIXPACKS"`.
+  Keines dieser „Muster" trifft je auf eine Datei zu, also fand Railway
+  bei jedem Push null Änderungen und übersprang still mit „No changes to
+  watched files". **Das Feld gehört leer**; dann greift `watchPatterns`
+  aus `railway.json`, und dort steht `["**"]` bereits richtig.
+- **Ein Redeploy holt keinen neuen Commit.** Er wiederholt die bestehende
+  Auslieferung — im Zweifel also genau den alten Stand, den man loswerden
+  wollte. Er meldet trotzdem „Deployment successful". Nach einer solchen
+  Panne hilft ein frischer Push, nicht der Redeploy-Knopf.
+- **Woran man es von außen erkennt**, ohne Zugang zu Railway: Die
+  ausgelieferte `index.html` nennt die gehashten Bundlenamen. Weichen sie
+  von denen aus dem eigenen `npm run build` ab, läuft dort ein anderer
+  Stand — und die Dateigrößen unter `/hub/` lassen sich genauso
+  vergleichen. Das beantwortet in zehn Sekunden, ob es am Server liegt
+  oder am Browser.
+- **Bilder vor dem Umwandeln auf den Zeitstempel prüfen.** Eine
+  nachgebesserte Kachel lag bereits auf der Platte, während ich noch die
+  neun Minuten ältere Fassung beurteilt und ausgeliefert habe.
+
 - **`git add -A` sammelt ein, was gerade im Ordner liegt.** So sind 13,9 MB
   gelieferte Original-PNGs in `public/` gelandet und ausgeliefert worden.
   `.gitignore` kennt jetzt `tmp-*/`; die Regel steht in `docs/DESIGN.md`.
