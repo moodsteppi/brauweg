@@ -437,6 +437,15 @@ export function Table({
           />
         ))}
 
+        {/* Partei- und Ansagetafel ueber dem Stich: Woran man ist, muss man
+            am Tisch ablesen koennen und nicht erst erinnern. */}
+        {round?.myParty && (
+          <div className="doko-tafel doko-tafel--partei">
+            {ansageText(round) && <strong>{ansageText(round)}</strong>}
+            <span>Wir spielen: {partyLabel(round.myParty)}</span>
+          </div>
+        )}
+
         {/* Stich in der Mitte */}
         <div className="doko-trick">
           {trick.length === 0 && <span className="doko-trick-hint">{phaseText}</span>}
@@ -455,6 +464,19 @@ export function Table({
             </div>
           ))}
         </div>
+
+        {/* Spielart unter dem Stich. Im Herz-Solo ist die Herz-Neun Trumpf,
+            im Normalspiel eine Fehlkarte - wer das nicht sieht, haelt einen
+            regelkonformen Bedienzwang fuer einen Fehler. */}
+        {round && round.phase !== 'vorbehalt' && (
+          <div className="doko-tafel doko-tafel--spielart">
+            <span className="muted">Es läuft</span>
+            <strong>
+              {gameTypeLabel(round.gameType)}
+              {soloName ? ` · ${soloName}` : ''}
+            </strong>
+          </div>
+        )}
 
         {round?.lastTrick && trick.length === 0 && (
           <p className="doko-last">
@@ -659,10 +681,12 @@ function Avatar({
     >
       {avatarUrl ? (
         <img className="doko-avatar-img" src={avatarUrl} alt={name} draggable={false} />
+      ) : isBot ? (
+        <span style={{ background: `hsl(${hue} 45% 32%)` }}>BOT</span>
       ) : (
-        <span style={{ background: `hsl(${hue} 45% 32%)` }}>
-          {isBot ? 'BOT' : initials(name)}
-        </span>
+        /* Ohne eigenes Bild sitzt der Pinguin am Tisch - er ist unser
+           Maskottchen, und vier Buchstabenkreise wirken wie ein Formular. */
+        <img className="doko-avatar-img" src="/hub/pinguin.png" alt={name} draggable={false} />
       )}
     </div>
   );
@@ -761,6 +785,29 @@ function StichStapel({ count }: { count: number }): React.JSX.Element | null {
       <b>{count}</b>
     </span>
   );
+}
+
+/**
+ * Hoechste Ansage am Tisch, als kurzer Text.
+ *
+ * Die Absagestufen bauen aufeinander auf, also zaehlt immer nur die
+ * hoechste. Ohne Ansage bleibt die Tafel leer statt "keine Ansage" zu
+ * behaupten - das waere eine Aussage, die sich noch aendern kann.
+ */
+function ansageText(round: {
+  announcements: { re: boolean; kontra: boolean; reAbsage: number; kontraAbsage: number };
+}): string | null {
+  const stufen = ['Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'];
+  const teile: string[] = [];
+  if (round.announcements.re) {
+    const absage = round.announcements.reAbsage;
+    teile.push(absage > 0 ? `Re · ${stufen[absage - 1] ?? ''}`.trim() : 'Re');
+  }
+  if (round.announcements.kontra) {
+    const absage = round.announcements.kontraAbsage;
+    teile.push(absage > 0 ? `Kontra · ${stufen[absage - 1] ?? ''}`.trim() : 'Kontra');
+  }
+  return teile.length > 0 ? teile.join('  ·  ') : null;
 }
 
 function partyLabel(party: string): string {

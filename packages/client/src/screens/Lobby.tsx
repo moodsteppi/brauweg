@@ -49,6 +49,10 @@ export function Lobby({
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
+  /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
+  const [ansicht, setAnsicht] = useState<'liste' | 'erstellen'>('liste');
+  const [filter, setFilter] = useState<'alle' | '4er' | '3er' | 'offen' | 'clan'>('alle');
+  const [suche, setSuche] = useState('');
 
   const refresh = (): void => {
     void api.tables(gameId).then(setTables);
@@ -147,118 +151,187 @@ export function Lobby({
     : [];
   const aktiveRegeln = flags.filter(([, value]) => value).length;
 
+  // Filter und Suche laufen auf der geladenen Liste: Sie ist kurz, und so
+  // reagiert die Auswahl ohne Rueckfrage beim Server.
+  const gefiltert = tables.filter((row) => {
+    if (filter === '4er' && row.seats !== 4) return false;
+    if (filter === '3er' && row.seats !== 3) return false;
+    if (filter === 'offen' && row.occupied >= row.seats) return false;
+    if (filter === 'clan' && row.visibility !== 'club_only') return false;
+    const s = suche.trim().toLowerCase();
+    if (s.length > 0 && !(row.host ?? '').toLowerCase().includes(s)) return false;
+    return true;
+  });
+
+  if (ansicht === 'erstellen') {
+    return (
+      <div className="doko doko--lobby doko--erstellen">
+        <header className="doko-top">
+          <button
+            className="doko-icon"
+            onClick={() => setAnsicht('liste')}
+            aria-label="Zurück zur Tischauswahl"
+          >
+            ‹
+          </button>
+          <h1 className="lobby-schild">Tisch erstellen</h1>
+          <span className="doko-icon is-leer" aria-hidden="true" />
+        </header>
+
+        <div className="lobby-rolle">
+          {error && <p className="error">{error}</p>}
+
+          <section className="lobby-tafel">
+            <h2 className="lobby-tafel-titel">Spieler</h2>
+            <div className="lobby-gross">
+              {(defaults?.seatCounts ?? [4]).map((count) => (
+                <button
+                  key={count}
+                  className={`lobby-grossknopf${seats === count ? ' is-an' : ''}`}
+                  aria-pressed={seats === count}
+                  onClick={() => {
+                    setSeats(count);
+                    const first = defaults?.rounds[String(count)]?.[0];
+                    if (first) setRounds(first);
+                  }}
+                >
+                  {count} Spieler
+                </button>
+              ))}
+            </div>
+
+            <h2 className="lobby-tafel-titel">Runden</h2>
+            <div className="lobby-chips">
+              {roundOptions.map((count) => (
+                <button
+                  key={count}
+                  className={`lobby-chip${rounds === count ? ' is-an' : ''}`}
+                  aria-pressed={rounds === count}
+                  onClick={() => setRounds(count)}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
+
+            <h2 className="lobby-tafel-titel">Für wen</h2>
+            <div className="lobby-chips">
+              <button
+                className={`lobby-chip${visibility === 'public' ? ' is-an' : ''}`}
+                aria-pressed={visibility === 'public'}
+                onClick={() => {
+                  setVisibility('public');
+                  if (rounds > 20) {
+                    const first = defaults?.rounds[String(seats)]?.[0];
+                    if (first) setRounds(first);
+                  }
+                }}
+              >
+                Offen
+              </button>
+              <button
+                className={`lobby-chip${visibility === 'club_only' ? ' is-an' : ''}`}
+                aria-pressed={visibility === 'club_only'}
+                onClick={() => setVisibility('club_only')}
+              >
+                Nur Clan
+              </button>
+            </div>
+
+            <h2 className="lobby-tafel-titel">Regeln</h2>
+            {/* Eine Zeile statt eines aufgeklappten Formulars: Der Stand ist
+                lesbar, die Kacheln kommen als Blatt von unten. */}
+            <button className="lobby-regelzeile" onClick={() => setRegelnOffen(true)}>
+              <span>{aktiveRegeln === 0 ? 'Standard' : `${aktiveRegeln} Sonderregeln`}</span>
+              <span aria-hidden="true">›</span>
+            </button>
+
+            <button className="lobby-erstellen" onClick={() => void create()}>
+              Tisch erstellen
+            </button>
+            <p className="muted lobby-fussnote">
+              {visibility === 'club_only'
+                ? 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.'
+                : seats === 3
+                  ? 'Am Dreiertisch spielt immer ein Bot als Vierter mit — der Tisch zählt trotzdem für die Rangliste.'
+                  : 'Freie Plätze füllst du am Tisch mit Bots — dann zählt der Tisch nicht für die Rangliste.'}
+            </p>
+          </section>
+        </div>
+
+        {regelnOffen && config && (
+          <RegelSheet config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="doko doko--lobby">
       <header className="doko-top">
         <button className="doko-icon" onClick={onBack} aria-label="Zurück zur Spielauswahl">
           ‹
         </button>
-        <div className="doko-top-mid">
-          <strong>{t(`game.${gameId}`)}</strong>
-          <span className="muted">Tisch erstellen oder beitreten</span>
-        </div>
+        <h1 className="lobby-schild">Tischauswahl</h1>
+        <span className="doko-icon is-leer" aria-hidden="true" />
       </header>
+
+      <div className="lobby-filter">
+        {(
+          [
+            ['alle', 'Alle'],
+            ['4er', '4er'],
+            ['3er', '3er'],
+            ['offen', 'Offen'],
+            ['clan', 'Clan'],
+          ] as const
+        ).map(([wert, text]) => (
+          <button
+            key={wert}
+            className={`lobby-filterchip${filter === wert ? ' is-an' : ''}`}
+            aria-pressed={filter === wert}
+            onClick={() => setFilter(wert)}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+
+      <div className="lobby-suchzeile">
+        <input
+          className="lobby-suche"
+          placeholder="Spieler suchen…"
+          value={suche}
+          onChange={(event) => setSuche(event.target.value)}
+          aria-label="Tisch nach Gastgeber suchen"
+        />
+      </div>
 
       <div className="lobby-rolle">
         {error && <p className="error">{error}</p>}
 
-        <section className="lobby-panel">
-          <h2>Neuer Tisch</h2>
-          <div className="lobby-wahl">
-            <div className="lobby-gruppe">
-              <span className="muted">Spieler</span>
-              <div className="lobby-chips">
-                {(defaults?.seatCounts ?? [4]).map((count) => (
-                  <button
-                    key={count}
-                    className={`lobby-chip${seats === count ? ' is-an' : ''}`}
-                    aria-pressed={seats === count}
-                    onClick={() => {
-                      setSeats(count);
-                      const first = defaults?.rounds[String(count)]?.[0];
-                      if (first) setRounds(first);
-                    }}
-                  >
-                    {count}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="lobby-gruppe">
-              <span className="muted">Runden</span>
-              <div className="lobby-chips">
-                {roundOptions.map((count) => (
-                  <button
-                    key={count}
-                    className={`lobby-chip${rounds === count ? ' is-an' : ''}`}
-                    aria-pressed={rounds === count}
-                    onClick={() => setRounds(count)}
-                  >
-                    {count}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="lobby-gruppe">
-              <span className="muted">Für wen</span>
-              <div className="lobby-chips">
-                <button
-                  className={`lobby-chip${visibility === 'public' ? ' is-an' : ''}`}
-                  aria-pressed={visibility === 'public'}
-                  onClick={() => {
-                    setVisibility('public');
-                    if (rounds > 20) {
-                      const first = defaults?.rounds[String(seats)]?.[0];
-                      if (first) setRounds(first);
-                    }
-                  }}
-                >
-                  Offen
-                </button>
-                <button
-                  className={`lobby-chip${visibility === 'club_only' ? ' is-an' : ''}`}
-                  aria-pressed={visibility === 'club_only'}
-                  onClick={() => setVisibility('club_only')}
-                >
-                  Nur Clan
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Eine Zeile statt eines aufgeklappten Formulars: Der Stand ist
-              lesbar, die Kacheln kommen als Blatt von unten. */}
-          <button className="lobby-regelzeile" onClick={() => setRegelnOffen(true)}>
-            <span>
-              <strong>Regeln:</strong> {aktiveRegeln} von {flags.length} an
-              {aktiveRegeln === 0 ? ' — Grundspiel' : ''}
-            </span>
-            <span className="muted">ändern ›</span>
-          </button>
-
-          <button className="primary lobby-erstellen" onClick={() => void create()}>
-            Tisch erstellen
-          </button>
-          <p className="muted lobby-fussnote">
-            {visibility === 'club_only'
-              ? 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder — für alle Spiele.'
-              : seats === 3
-                ? 'Am Dreiertisch spielt immer ein Bot als Vierter mit — der Tisch zählt trotzdem für die Rangliste. Füllst du weitere Plätze mit Bots, zählt er nicht mehr.'
-                : 'Freie Plätze füllst du am Tisch mit Bots — dann zählt der Tisch nicht für die Rangliste.'}
+        {gefiltert.length === 0 && (
+          <p className="muted lobby-leer">
+            {tables.length === 0
+              ? 'Gerade ist kein Tisch offen. Mach den ersten auf.'
+              : 'Kein Tisch passt zu diesem Filter.'}
           </p>
-        </section>
+        )}
 
-        <h2 className="lobby-ueberschrift">Offene Tische</h2>
-        {tables.length === 0 && <p className="muted">Gerade ist kein Tisch offen.</p>}
-        {tables.map((row) => (
-          <div className="lobby-tisch" key={row.id}>
+        {gefiltert.map((row) => (
+          <button className="lobby-tisch" key={row.id} onClick={() => void join(row.id)}>
             <span className="lobby-tischinfo">
               <strong>
-                {row.seats} Plätze · {row.maxRounds} Runden
-                {row.visibility === 'club_only' ? ' · Clan' : ''}
+                {row.host ? `Runde von ${row.host}` : 'Offener Tisch'}
+                {row.visibility === 'club_only' && (
+                  <span className="lobby-schloss" aria-label="Clantisch">
+                    🔒
+                  </span>
+                )}
               </strong>
               <span className="muted">
-                {row.occupied} von {row.seats} besetzt
+                {row.seats}er · {row.maxRounds} Runden ·{' '}
+                {row.ruleCount === 0 ? 'Standard' : `${row.ruleCount} Sonderregeln`}
               </span>
             </span>
             {/* Ein Punkt je Platz: voll oder frei, auf einen Blick. */}
@@ -267,16 +340,21 @@ export function Lobby({
                 <i key={i} className={i < row.occupied ? '' : 'is-frei'} />
               ))}
             </span>
-            <button className="doko-seat-btn" onClick={() => void join(row.id)}>
-              Beitreten
-            </button>
-          </div>
+            <span className="lobby-zahl">
+              {row.occupied}/{row.seats}
+            </span>
+            <span className="lobby-pfeil" aria-hidden="true">
+              ›
+            </span>
+          </button>
         ))}
       </div>
 
-      {regelnOffen && config && (
-        <RegelSheet config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />
-      )}
+      <div className="lobby-fuss">
+        <button className="lobby-erstellen" onClick={() => setAnsicht('erstellen')}>
+          Tisch erstellen
+        </button>
+      </div>
     </div>
   );
 }
