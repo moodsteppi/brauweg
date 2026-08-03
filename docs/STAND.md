@@ -84,7 +84,24 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
 - **Bildbestellung `docs/ASSETS-MENUE.md`:** sieben dehnbare Bausteine für
   alle Menüblätter — Blattgrund, Eingabefeld, drei Knöpfe, Umschalter an
   und aus. Bewusst **ohne** Platzhalter, siehe die Begründung am Ende der
-  Bestellung.
+  Bestellung. Geliefert und eingebaut: `border-image` mit `fill`, das
+  Randmaß im Bild wird über `border-image-width: 1` auf die tatsächliche
+  `border-width` heruntergerechnet.
+- **Anmeldung gestaltet.** Sie war der einzige Bildschirm ohne eine
+  einzige CSS-Regel. Erbt jetzt den gemalten Satz aus den Menüblättern,
+  dazu der bestellte Hintergrund. Der zweite Knopf ist eine Textzeile — er
+  wechselt den Modus und ist keine Handlung wie „Anmelden".
+- **Trophäenpfad aus sechs Biom-Kacheln**, angetippt scrollbar im
+  Vollbild, öffnet an der Stelle des Pinguins. Die zwanzig von Hand
+  vermessenen Stützpunkte sind **weg**: Nachgemessen weicht der Weg auf
+  den gelieferten Kacheln im Mittel 1,4 bis 2,9 % von der Mittellinie ab,
+  höchstens 9,8 % — auf einem Handy wenige Pixel. Der Weg ist die Mitte.
+  Ein siebtes Biom ist ein Bild plus eine Zeile in `BIOME`.
+- **Mails mit HTML-Fassung** (`src/mail/vorlage.ts`). Tabellen und Stile
+  am Element, weil Outlook über die Word-Engine rendert. Kopfbild als
+  **JPEG**, nicht WebP — Outlook zeigt WebP nicht an. Überschrift und Link
+  stehen zusätzlich als Text da, weil viele Programme Bilder erst nach
+  Bestätigung laden.
 
 ---
 
@@ -96,12 +113,24 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
    unten, kleiner Textknopf unter „Abmelden", dann ein Blatt mit Warnung
    und Passwortabfrage. Das Passwort ist Absicht: Die Sitzung hält dreißig
    Tage, ohne die Frage genügte ein kurz aus der Hand gelegtes Handy.
-2. **Versanddienst für E-Mail.** Code-seitig fertig — `ResendMailer` steht,
-   `MAIL_FROM` hat den richtigen Standard, „neuen Link anfordern" gibt es
-   im Client. **Es fehlt nur noch DNS bei Strato und `RESEND_API_KEY` in
-   Railway**, Klickstrecke in `docs/RESEND.md`. Bis dahin stehen die
-   Bestätigungslinks nur im Railway-Protokoll und niemand aus dem Verein
-   kann sich selbst registrieren.
+2. ~~Versanddienst für E-Mail~~ — **erledigt, läuft.** Resend über die
+   verifizierte Domain `brauweg-spielen.de`, DKIM und SPF als TXT bei
+   Strato, der MX für den Return-Path auf der eigens angelegten Subdomain
+   `send`.
+
+   **Zwei Strato-Eigenheiten, die Zeit gekostet haben:** Die MX-Maske der
+   Hauptdomain kennt kein Präfix und keine Zahl als Priorität, nur
+   „niedrig"/„hoch". Deshalb die Subdomain `send` mit eigener
+   MX-Einstellung — der MX der Hauptdomain darf **nicht** angefasst
+   werden, dort hängt eine aktive Mailbox. Und Resend wollte Priorität 10,
+   Strato macht daraus 20; das stört nicht, bei einem einzigen MX-Eintrag
+   ist die Zahl bedeutungslos. Die Meldung „Invalid SPF MX" verschwand von
+   selbst, sobald der MX propagiert war.
+
+   **Merke fürs nächste Mal:** Steht im Log `=== MAIL an …`, läuft der
+   Server ohne Versanddienst — das ist der `ConsoleMailer`. Fehlt
+   `RESEND_API_KEY`, schreibt der Start außerdem eine Zeile mit `ACHTUNG`.
+   Diese beiden Suchen beantworten die Frage in einer Sekunde.
 3. **Rechtstexte: Gerüst steht, Angaben fehlen.** `/rechtliches/impressum.html`
    und `/rechtliches/datenschutz.html` sind angelegt und aus Anmeldung und
    Profil verlinkt. Die offenen Stellen sind **rot umrandet** — Name,
