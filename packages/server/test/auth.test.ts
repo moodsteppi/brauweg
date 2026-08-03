@@ -320,3 +320,72 @@ test('Kontoloeschung anonymisiert, statt Zeilen zu entfernen', async (t) => {
   assert.ok(acc.anonymizedAt);
   assert.equal(await sessionFromToken(ctx.db, token), null);
 });
+
+test('eine gescheiterte Registrierung verbraucht keine Einladung', async (t) => {
+  // Frueher zaehlte jeder Fehlversuch eine Nutzung hoch. Wer den Beta-Code
+  // kannte, konnte damit in Sekunden alle Nutzungen verbrennen und die
+  // Registrierung fuer alle sperren.
+  const ctx = await ctxWithInvite(3);
+  t.after(() => ctx.close());
+
+  await register(ctx.auth, {
+    email: 'erste@example.com',
+    password: PASSWORD,
+    displayName: 'Anna',
+    inviteCode: INVITE,
+  });
+
+  // Derselbe Anzeigename: schlaegt fehl, darf aber nichts kosten.
+  for (let i = 0; i < 5; i++) {
+    await assert.rejects(
+      () =>
+        register(ctx.auth, {
+          email: `spam${i}@example.com`,
+          password: PASSWORD,
+          displayName: 'Anna',
+          inviteCode: INVITE,
+        }),
+      (err: AppError) => err.code === 'displayNameTaken',
+    );
+  }
+
+  const [code] = await ctx.db
+    .select()
+    .from(schema.inviteCode)
+    .where(eq(schema.inviteCode.code, INVITE));
+  assert.equal(code?.uses, 1, 'nur die erfolgreiche Registrierung zaehlt');
+
+  // Und die verbleibenden Nutzungen stehen echten Leuten noch zur Verfuegung.
+  await register(ctx.auth, {
+    email: 'zweite@example.com',
+    password: PASSWORD,
+    displayName: 'Bert',
+    inviteCode: INVITE,
+  });
+});
+
+test('die Anmeldung verraet ueber die Dauer nicht, ob es das Konto gibt', async (t) => {
+  // Ohne Blindvergleich kehrte die Pruefung bei unbekannter Adresse sofort
+  // zurueck, waehrend ein echtes Konto Argon2 kostet - der Unterschied war
+  // ueber das Netz messbar.
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  await createVerifiedAccount(ctx, 'Anna');
+
+  const messen = async (email: string): Promise<number> => {
+    const start = process.hrtime.bigint();
+    await login(ctx.auth, email, 'falsches-passwort-123').catch(() => undefined);
+    return Number(process.hrtime.bigint() - start) / 1e6;
+  };
+
+  // Aufwaermen, damit der erste Argon2-Lauf die Messung nicht verzerrt.
+  await messen('anna@example.com');
+  const bekannt = await messen('anna@example.com');
+  const unbekannt = await messen('gibtesnicht@example.com');
+
+  // Beide Wege muessen rechnen. Ein Faktor 5 waere ein klares Leck.
+  assert.ok(
+    unbekannt > bekannt / 5,
+    `unbekannt ${unbekannt.toFixed(1)}ms darf nicht viel schneller sein als bekannt ${bekannt.toFixed(1)}ms`,
+  );
+});

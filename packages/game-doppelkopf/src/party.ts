@@ -8,6 +8,7 @@
  * neuer Zustand raus.
  */
 
+import { type Seed, dealSeed } from './deal.js';
 import { BockState } from './bock.js';
 import { PflichtsoloState } from './pflichtsolo.js';
 import { type RuleSet, rotationSize } from './ruleset.js';
@@ -40,6 +41,16 @@ export interface PartyState {
   /** Sitze, die dauerhaft von einem Bot besetzt sind (3er-Tisch). */
   readonly botSeats: readonly number[];
   readonly seed: number;
+  /**
+   * Geheime 128-Bit-Basis fuer jedes Geben, als Hexkette.
+   *
+   * Ohne sie faellt die Partie auf den Zahlen-Seed zurueck - das ist nur fuer
+   * Tests gedacht. Im Betrieb kommt die Basis aus einer kryptografischen
+   * Quelle des Servers: Ein Zahlen-Seed hat 32 Bit, und wer seine eigenen
+   * zwoelf Karten kennt, kann die alle durchprobieren und damit jede Hand am
+   * Tisch berechnen.
+   */
+  readonly seedHex: string | null;
 
   readonly roundIndex: number;
   /** Zaehlt Neugaben derselben Runde, damit der Seed sich aendert. */
@@ -64,6 +75,7 @@ export function createParty(
   seats: readonly number[],
   seed: number,
   botSeats: readonly number[] = [],
+  seedHex: string | null = null,
 ): PartyState {
   const expected = rotationSize(rs.tableSize);
   if (seats.length !== expected) {
@@ -82,6 +94,7 @@ export function createParty(
     seats,
     botSeats,
     seed,
+    seedHex,
     roundIndex: 0,
     attempt: 0,
     dealerIndex: 0,
@@ -150,7 +163,12 @@ export function startRound(party: PartyState): PartyState {
   if (party.current) throw new Error('Es laeuft bereits eine Runde');
 
   const { active, vorhand } = seating(party);
-  const seed = party.seed * 1000 + party.roundIndex * 10 + party.attempt;
+  // Jedes Geben bekommt einen eigenen Seed aus der geheimen Basis. Frueher
+  // stand hier eine Rechnung aus dem Partie-Seed - wer ein Geben erriet,
+  // kannte damit die ganze Partie.
+  const seed: Seed = party.seedHex
+    ? dealSeed(party.seedHex, party.roundIndex * 16 + Math.min(party.attempt, 15))
+    : party.seed * 1000 + party.roundIndex * 10 + party.attempt;
 
   const current = createRound(party.rs, active, vorhand, seed, {
     multiplier: party.bock.multiplier(party.roundIndex),

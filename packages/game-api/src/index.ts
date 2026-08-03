@@ -85,6 +85,15 @@ export interface CreatePartyOptions<TConfig> {
   readonly rounds: number;
   /** Bestimmt jedes Geben. Gleicher Seed ergibt dieselbe Partie. */
   readonly seed: number;
+  /**
+   * Geheime Zufallsbasis als Hexkette, aus einer kryptografischen Quelle.
+   *
+   * Ein Zahlen-Seed ist klein genug, dass ein Mitspieler ihn aus den eigenen
+   * Karten durchprobieren und danach jede Hand am Tisch berechnen kann.
+   * Module, die daraus ihre Gaben ableiten, muessen diese Basis benutzen;
+   * fehlt sie (Tests), bleibt nur der reproduzierbare Zahlen-Seed.
+   */
+  readonly seedHex?: string;
 }
 
 // ---------------------------------------------------------------------------

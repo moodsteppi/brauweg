@@ -12,7 +12,6 @@ import {
 import { DECKS, cardImage, type Deck } from '../decks';
 import { cardLabel, cardName, isRed, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
-import { Profile } from './Profile';
 
 /**
  * Startbildschirm im Stil eines Handyspiels: unten die Tab-Leiste mit
@@ -117,18 +116,12 @@ export function GameSelect({
         )}
         {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
         {tab === 'profil' && (
-          <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--b">
-            <h2 className="front-shop-titel">
-              <span aria-hidden="true" />
-              Profil
-              <span aria-hidden="true" />
-            </h2>
-            <Profile accountId={me.id} eingebettet />
-            <ProfilePicture me={me} onChanged={onAvatarChange} />
-            <button className="front-profil-abmelden" onClick={onSignOut}>
-              Abmelden
-            </button>
-          </HubSzene>
+          <ProfilTab
+            me={me}
+            onAvatarChange={onAvatarChange}
+            onSignOut={onSignOut}
+            onBald={setBald}
+          />
         )}
       </div>
 
@@ -222,38 +215,44 @@ function Clan({
   const raeume = [
     { name: 'Clanchat', zeichen: '💬' },
     { name: 'Clankrieg', zeichen: '⚔️' },
-    { name: 'Clan-Rangliste', zeichen: '🏆' },
     { name: 'Clantruhe', zeichen: '🎁' },
-    { name: 'Mitglieder', zeichen: '👥' },
     { name: 'Clantische', zeichen: '🃏' },
   ];
 
   return (
     <HubSzene bg="/hub/bg-clan.png" className="front-clan front-clan--b">
-      <header className="front-clan-halle">
-        <div className="front-clan-banner">
-          <img className="front-clan-wappen" src="/hub/clan-wappen.png" alt="" draggable={false} />
-          <strong className="front-clan-name">{clan?.name ?? 'Brauweg'}</strong>
-          <div className="front-clan-stats">
-            <span>Mitglieder —</span>
-            <span>Trophäen —</span>
-          </div>
-          <p className="muted">Für alle Spiele — nicht nur Doppelkopf.</p>
-        </div>
-      </header>
+      <HubBanner />
 
-      <div className="front-clan-raeume">
+      {/* Wappen, Name und Zahlen - ehrlich leer, solange es keinen Clan gibt. */}
+      <div className="hub-clanschild">
+        <img className="hub-clanschild-wappen" src="/hub/clan-wappen.png" alt="" draggable={false} />
+        <div className="hub-clanschild-text">
+          <strong>{clan?.name ?? 'Kein Clan'}</strong>
+          <span className="muted">
+            {clan ? 'Für alle Spiele' : 'Clans kommen bald — Freunde gehen schon.'}
+          </span>
+          <div className="hub-clanschild-zahlen">
+            <span>
+              <img src="/hub/tab-clan.png" alt="" aria-hidden="true" />0
+            </span>
+            <span>
+              <img src="/hub/pokal.png" alt="" aria-hidden="true" />0
+            </span>
+          </div>
+        </div>
+        <button className="hub-clanschild-knopf" onClick={() => onBald('Clan gründen')}>
+          Gründen
+          <span className="front-bald-tag">Bald</span>
+        </button>
+      </div>
+
+      <div className="hub-reihe hub-reihe--vier">
         {raeume.map((raum) => (
-          <button
-            key={raum.name}
-            className="front-clan-raum"
-            onClick={() => onBald(raum.name)}
-          >
-            <span className="front-clan-raum-titel">{raum.name}</span>
-            <span className="front-clan-zeichen" aria-hidden="true">
+          <button key={raum.name} className="hub-vitrine" onClick={() => onBald(raum.name)}>
+            <span className="hub-vitrine-zeichen" aria-hidden="true">
               {raum.zeichen}
             </span>
-            <span className="front-bald-tag">Bald</span>
+            <span>{raum.name}</span>
           </button>
         ))}
       </div>
@@ -282,116 +281,181 @@ function HubSzene({
 }
 
 /**
+ * Holztafel: der Baustein aller Hub-Tabs.
+ *
+ * Kleine Ueberschrift auf dem Rahmen, Inhalt darunter. Alle Tabs bestehen aus
+ * denselben Tafeln - so wirkt der Hub wie ein Stueck und nicht wie vier
+ * getrennte Seiten.
+ */
+function Tafel({
+  titel,
+  zusatz,
+  weit,
+  className,
+  children,
+}: {
+  titel: string;
+  /** Kleiner Hinweis rechts in der Kopfzeile (Timer, Zaehler). */
+  zusatz?: React.ReactNode;
+  /** Tafel darf den Rest der Hoehe fuellen und innen rollen. */
+  weit?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <section className={`hub-tafel${weit ? ' is-weit' : ''}${className ? ` ${className}` : ''}`}>
+      <header className="hub-tafel-kopf">
+        <h2>{titel}</h2>
+        {zusatz !== undefined && <span className="hub-tafel-zusatz">{zusatz}</span>}
+      </header>
+      <div className="hub-tafel-inhalt">{children}</div>
+    </section>
+  );
+}
+
+/** Logo-Schild ueber jedem Tab — hält die Bereiche als ein Stueck zusammen. */
+function HubBanner(): React.JSX.Element {
+  return (
+    <div className="hub-banner" aria-hidden="true">
+      <img src="/hub/logo.png" alt="" draggable={false} />
+    </div>
+  );
+}
+
+/**
+ * Profil-Tab: Kopf mit Bild und Namen, darunter Zahlen und Einstellungen.
+ *
+ * Die Zahlen kommen aus dem Konto (me.stats) und sind ehrlich - auch wenn
+ * ueberall Null steht. Die Sammlung ist noch Attrappe und sagt das auch.
+ */
+function ProfilTab({
+  me,
+  onAvatarChange,
+  onSignOut,
+  onBald,
+}: {
+  me: Me;
+  onAvatarChange: () => void;
+  onSignOut: () => void;
+  onBald: (name: string) => void;
+}): React.JSX.Element {
+  const partien = me.stats.reduce((sum, s) => sum + s.parties, 0);
+  const siege = me.stats.reduce((sum, s) => sum + s.wins, 0);
+  const trophaeen = me.stats.reduce((sum, s) => sum + s.trophies, 0);
+  const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '–';
+
+  const zahlen = [
+    { icon: '/hub/tab-spielen.png', name: 'Partien', wert: partien },
+    { icon: '/hub/krone.png', name: 'Siege', wert: siege },
+    { icon: '/hub/pokal.png', name: 'Trophäen', wert: trophaeen },
+    { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
+  ];
+  const sammlung = [
+    { icon: '/hub/truhe.png', name: 'Truhen', wert: '0' },
+    { icon: '/hub/tab-blatt.png', name: 'Blätter', wert: `${DECKS.length}` },
+    { icon: '/hub/clan-wappen.png', name: 'Abzeichen', wert: '0' },
+  ];
+
+  return (
+    <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--b">
+      <HubBanner />
+
+      <div className="hub-profilkopf">
+        <ProfilBild me={me} onChanged={onAvatarChange} />
+        <div className="hub-profilkopf-text">
+          <strong>{me.displayName}</strong>
+          <span className="muted">Spieler seit dem ersten Spiel</span>
+        </div>
+        <span className="front-level front-level--hub" aria-label="Level 0">
+          0
+        </span>
+      </div>
+
+      <Tafel titel="Statistiken">
+        <div className="hub-reihe hub-reihe--vier">
+          {zahlen.map((z) => (
+            <span key={z.name} className="hub-zahl">
+              <img src={z.icon} alt="" aria-hidden="true" />
+              <strong>{z.wert}</strong>
+              <span>{z.name}</span>
+            </span>
+          ))}
+        </div>
+      </Tafel>
+
+      <Tafel titel="Sammlung" zusatz="Wächst mit">
+        <div className="hub-reihe hub-reihe--drei">
+          {sammlung.map((s) => (
+            <span key={s.name} className="hub-zahl">
+              <img src={s.icon} alt="" aria-hidden="true" />
+              <strong>{s.wert}</strong>
+              <span>{s.name}</span>
+            </span>
+          ))}
+        </div>
+      </Tafel>
+
+      <Tafel titel="Einstellungen">
+        <div className="hub-knopfreihe">
+          <button className="hub-knopf" onClick={() => onBald('Benachrichtigungen')}>
+            Benachrichtigungen
+            <span className="front-bald-tag">Bald</span>
+          </button>
+          <button className="hub-knopf hub-knopf--raus" onClick={onSignOut}>
+            Abmelden
+          </button>
+        </div>
+      </Tafel>
+    </HubSzene>
+  );
+}
+
+/**
  * Shop (Entwurf B): Season Pass als Sonderangebot oben, darunter
  * Wochenangebot/VIP, dann Vitrinen. Alles nur Vorschau — kein Kauf.
  */
 function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element {
-  const seasonVorteile = ['Belohnungspfad', 'Exklusives Blatt', 'Clan-Bonus', 'Saison-Emotes'];
-  const vipVorteile = ['2× Münzen', 'Exklusive Emotes', 'Tägliche Belohnung', 'Werbefrei'];
-  const regale = [
-    {
-      name: 'Kartenblätter',
-      icon: '/hub/tab-blatt.png',
-      text: 'Stilvolle Designs für dein Spiel.',
-      preis: '2.500',
-    },
-    {
-      name: 'Tischdesigns',
-      icon: '/hub/truhe.png',
-      text: 'Neue Looks für deinen Spieltisch.',
-      preis: '3.500',
-    },
-    {
-      name: 'Münzpakete',
-      icon: '/hub/muenze.png',
-      text: 'Mehr Münzen für mehr Möglichkeiten.',
-      preis: '4,99 €',
-    },
-    {
-      name: 'Premium-Decks',
-      icon: '/hub/tab-spielen.png',
-      text: 'Exklusive Decks mit besonderen Motiven.',
-      preis: '5.000',
-    },
+  /** Die grossen Angebote: drei nebeneinander, wie im Entwurf. */
+  const angebote = [
+    { name: 'Season Pass', art: '/hub/season-pass.png', preis: 'Saison' },
+    { name: 'VIP-Pass', art: '/hub/shop-vip.png', preis: '7 Tage' },
+    { name: 'Münzpaket', art: '/hub/muenze.png', preis: 'Paket' },
+  ];
+  /** Kleine Vitrine darunter - alles noch Attrappe, ehrlich ohne Preis. */
+  const auswahl = [
+    { name: 'Blätter', icon: '/hub/tab-blatt.png' },
+    { name: 'Tische', icon: '/hub/truhe.png' },
+    { name: 'Wappen', icon: '/hub/clan-wappen.png' },
+    { name: 'Emotes', icon: '/hub/tab-spielen.png' },
   ];
 
   return (
     <HubSzene bg="/hub/bg-shop.png" className="front-shop front-shop--b">
-      <h2 className="front-shop-titel">
-        <span aria-hidden="true" />
-        Shop
-        <span aria-hidden="true" />
-      </h2>
+      <HubBanner />
 
-      <button
-        className="front-shop-featured front-shop-featured--season"
-        onClick={() => onBald('Season Pass')}
-      >
-        <span className="front-shop-ribbon front-shop-ribbon--sonder">★ Sonderangebot</span>
-        <div className="front-shop-featured-body">
-          <div className="front-shop-featured-text">
-            <strong>Season Pass</strong>
-            <p>Saison-Belohnungen, exklusives Blatt und Clan-Bonus.</p>
-            <ul>
-              {seasonVorteile.map((v) => (
-                <li key={v}>{v}</li>
-              ))}
-            </ul>
-          </div>
-          <img
-            className="front-shop-featured-art"
-            src="/hub/season-pass.png"
-            alt=""
-            draggable={false}
-          />
-        </div>
-        <span className="front-shop-bald-knopf">
-          <span className="front-bald-tag">Bald</span>
-        </span>
-      </button>
-
-      <button className="front-shop-featured" onClick={() => onBald('VIP-Pass')}>
-        <span className="front-shop-ribbon">★ Wochenangebot</span>
-        <div className="front-shop-featured-body">
-          <div className="front-shop-featured-text">
-            <strong>VIP-Pass</strong>
-            <p>7 Tage Premium-Vorteile + exklusives Kartenblatt.</p>
-            <ul>
-              {vipVorteile.map((v) => (
-                <li key={v}>{v}</li>
-              ))}
-            </ul>
-          </div>
-          <img
-            className="front-shop-featured-art"
-            src="/hub/shop-vip.png"
-            alt=""
-            draggable={false}
-          />
-        </div>
-        <span className="front-shop-bald-knopf">
-          <span className="front-bald-tag">Bald</span>
-        </span>
-      </button>
-
-      <div className="front-shop-grid">
-        {regale.map((regal) => (
-          <button
-            key={regal.name}
-            className="front-shop-kachel"
-            onClick={() => onBald(regal.name)}
-          >
-            <img className="front-shop-zeichen" src={regal.icon} alt="" draggable={false} />
-            <strong>{regal.name}</strong>
-            <span className="front-shop-bald-knopf">
+      <Tafel titel="Angebote">
+        <div className="hub-reihe hub-reihe--drei">
+          {angebote.map((a) => (
+            <button key={a.name} className="hub-angebot" onClick={() => onBald(a.name)}>
+              <img className="hub-angebot-art" src={a.art} alt="" draggable={false} />
+              <strong>{a.name}</strong>
+              <span className="hub-preis">{a.preis}</span>
               <span className="front-bald-tag">Bald</span>
-            </span>
-            <span className="front-shop-preis" aria-hidden="true">
-              {regal.preis}
-            </span>
-          </button>
-        ))}
-      </div>
+            </button>
+          ))}
+        </div>
+      </Tafel>
+
+      <Tafel titel="Tägliche Auswahl" zusatz="Kommt bald">
+        <div className="hub-reihe hub-reihe--vier">
+          {auswahl.map((k) => (
+            <button key={k.name} className="hub-vitrine" onClick={() => onBald(k.name)}>
+              <img className="hub-vitrine-icon" src={k.icon} alt="" draggable={false} />
+              <span>{k.name}</span>
+            </button>
+          ))}
+        </div>
+      </Tafel>
     </HubSzene>
   );
 }
@@ -824,94 +888,87 @@ function Freunde({
     void api.searchPlayers(query).then(setResults);
   };
 
-  return (
-    <>
-      <h2>Freunde</h2>
+  const anzahl = lists ? lists.friends.length : 0;
 
-      {lists && lists.incoming.length > 0 && (
-        <div className="panel">
-          <h3>Anfragen an dich</h3>
-          {lists.incoming.map((player) => (
-            <div className="seat" key={player.id}>
-              <button className="spielername" onClick={() => onShowProfile(player.id)}>
-                {player.displayName}
-              </button>
-              <span className="row" style={{ gap: '0.4rem' }}>
-                <button
-                  className="primary"
-                  onClick={() => void api.acceptFriend(player.id).then(reload)}
-                >
-                  Annehmen
-                </button>
-                <button onClick={() => void api.removeFriend(player.id).then(reload)}>
-                  Ablehnen
-                </button>
-              </span>
-            </div>
-          ))}
+  return (
+    <Tafel titel="Freunde" zusatz={lists ? `${anzahl}` : '…'} weit>
+      {/* Anfragen zuoberst: sie verlangen eine Antwort. */}
+      {lists?.incoming.map((player) => (
+        <div className="hub-freund is-anfrage" key={player.id}>
+          <button className="hub-freund-name" onClick={() => onShowProfile(player.id)}>
+            {player.displayName}
+          </button>
+          <button
+            className="hub-mini hub-mini--ja"
+            onClick={() => void api.acceptFriend(player.id).then(reload)}
+          >
+            Annehmen
+          </button>
+          <button
+            className="hub-mini"
+            onClick={() => void api.removeFriend(player.id).then(reload)}
+          >
+            Nein
+          </button>
         </div>
+      ))}
+
+      {lists === null && <p className="muted">Wird geladen…</p>}
+      {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
+        <p className="muted">Noch keine Freunde. Such unten nach einem Namen.</p>
       )}
 
-      <div className="panel">
-        {lists === null && <p className="muted">Wird geladen…</p>}
-        {lists !== null && lists.friends.length === 0 && (
-          <p className="muted">
-            Noch keine Freunde. Such unten nach dem Namen, den dir jemand genannt hat.
-          </p>
-        )}
-        {lists !== null &&
-          lists.friends.map((player) => (
-            <div className="seat" key={player.id}>
-              <button className="spielername" onClick={() => onShowProfile(player.id)}>
-                {player.displayName}
-              </button>
-            </div>
-          ))}
-        {lists !== null && lists.outgoing.length > 0 && (
-          <p className="muted">
-            Angefragt: {lists.outgoing.map((player) => player.displayName).join(', ')}
-          </p>
-        )}
-
-        <form className="row" onSubmit={search} style={{ marginTop: '0.75rem' }}>
-          <input
-            placeholder="Spieler suchen…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            style={{ flex: 1 }}
-            aria-label="Spieler suchen"
-          />
-          <button type="submit" disabled={query.trim().length < 2}>
-            Suchen
+      {lists?.friends.map((player) => (
+        <div className="hub-freund" key={player.id}>
+          <button className="hub-freund-name" onClick={() => onShowProfile(player.id)}>
+            {player.displayName}
           </button>
-        </form>
+        </div>
+      ))}
 
-        {results !== null && results.length === 0 && (
-          <p className="muted">Niemand mit diesem Namen gefunden.</p>
-        )}
-        {results !== null &&
-          results.map((player) => (
-            <div className="seat" key={player.id}>
-              <button className="spielername" onClick={() => onShowProfile(player.id)}>
-                {player.displayName}
-              </button>
-              <button
-                onClick={() =>
-                  void api
-                    .requestFriend(player.id)
-                    .then(() => {
-                      setResults(results.filter((entry) => entry.id !== player.id));
-                      reload();
-                    })
-                    .catch(() => undefined)
-                }
-              >
-                Anfragen
-              </button>
-            </div>
-          ))}
-      </div>
-    </>
+      {lists !== null && lists.outgoing.length > 0 && (
+        <p className="muted">
+          Angefragt: {lists.outgoing.map((player) => player.displayName).join(', ')}
+        </p>
+      )}
+
+      <form className="hub-suche" onSubmit={search}>
+        <input
+          placeholder="Spieler suchen…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="Spieler suchen"
+        />
+        <button className="hub-mini" type="submit" disabled={query.trim().length < 2}>
+          Suchen
+        </button>
+      </form>
+
+      {results !== null && results.length === 0 && (
+        <p className="muted">Niemand mit diesem Namen gefunden.</p>
+      )}
+      {results?.map((player) => (
+        <div className="hub-freund" key={player.id}>
+          <button className="hub-freund-name" onClick={() => onShowProfile(player.id)}>
+            {player.displayName}
+          </button>
+          <button
+            className="hub-mini hub-mini--ja"
+            onClick={() =>
+              void api
+                .requestFriend(player.id)
+                .then(() => {
+                  setResults(results.filter((entry) => entry.id !== player.id));
+                  reload();
+                })
+                .catch(() => undefined)
+            }
+          >
+            Anfragen
+          </button>
+        </div>
+      ))}
+    </Tafel>
   );
 }
 
@@ -937,30 +994,33 @@ function DeckPicker({
 }): React.JSX.Element {
   return (
     <HubSzene bg="/hub/bg-blatt.png" className="front-blatt front-blatt--b">
-      <h2 className="front-shop-titel">
-        <span aria-hidden="true" />
-        Blatt
-        <span aria-hidden="true" />
-      </h2>
-      <p className="muted">Gilt für dein Konto, also auch auf jedem anderen Gerät.</p>
-      <div className="decks">
-        {DECKS.map((deck) => (
-          <button
-            className={`deck${deck.id === current ? ' selected' : ''}`}
-            key={deck.id}
-            aria-pressed={deck.id === current}
-            onClick={() => onChange(deck.id)}
-          >
-            <div className="deck-preview">
-              {SAMPLE.map((card) => (
-                <DeckSample card={card} deck={deck} key={card.id} />
-              ))}
-            </div>
-            <strong>{t(deck.nameKey)}</strong>
-            <span className="muted">{t(deck.hintKey)}</span>
-          </button>
-        ))}
-      </div>
+      <HubBanner />
+
+      <Tafel
+        titel="Kartenblatt"
+        zusatz="Gilt auf allen Geräten"
+        weit
+        className="hub-tafel--blatt"
+      >
+        <div className="hub-blaetter">
+          {DECKS.map((deck) => (
+            <button
+              className={`hub-blatt${deck.id === current ? ' is-an' : ''}`}
+              key={deck.id}
+              aria-pressed={deck.id === current}
+              onClick={() => onChange(deck.id)}
+            >
+              <div className="hub-blatt-probe">
+                {SAMPLE.map((card) => (
+                  <DeckSample card={card} deck={deck} key={card.id} />
+                ))}
+              </div>
+              <strong>{t(deck.nameKey)}</strong>
+              {deck.id === current && <span className="hub-blatt-haken">✓</span>}
+            </button>
+          ))}
+        </div>
+      </Tafel>
     </HubSzene>
   );
 }
@@ -1013,7 +1073,14 @@ async function downscale(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.82);
 }
 
-function ProfilePicture({
+/**
+ * Profilbild im Kopf des Profil-Tabs.
+ *
+ * Das Bild IST der Knopf: antippen oeffnet die Dateiwahl, ein kleines
+ * Stiftzeichen sagt das an. Kein eigener Kasten mehr - im Hub zaehlt jede
+ * Zeile Hoehe.
+ */
+function ProfilBild({
   me,
   onChanged,
 }: {
@@ -1033,21 +1100,7 @@ function ProfilePicture({
       setVer((v) => v + 1);
       onChanged();
     } catch {
-      setErr('Das Bild ließ sich nicht speichern. Versuch ein anderes.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async (): Promise<void> => {
-    setBusy(true);
-    setErr(null);
-    try {
-      await api.setAvatar(null);
-      setVer((v) => v + 1);
-      onChanged();
-    } catch {
-      setErr('Konnte nicht entfernt werden.');
+      setErr('Bild ließ sich nicht speichern.');
     } finally {
       setBusy(false);
     }
@@ -1056,37 +1109,25 @@ function ProfilePicture({
   const src = me.avatarUrl ? `${me.avatarUrl}?v=${ver}` : null;
 
   return (
-    <div className="panel profile">
-      <div className="profile-pic">
-        {src ? (
-          <img src={src} alt="Profilbild" />
-        ) : (
-          <span>{me.displayName.slice(0, 2).toUpperCase()}</span>
-        )}
-      </div>
-      <div className="profile-actions">
-        <strong>Profilbild</strong>
-        <span className="muted">Sehen die anderen am Tisch.</span>
-        <div className="row" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
-          <label className={`profile-btn${busy ? ' is-busy' : ''}`}>
-            {busy ? 'Einen Moment…' : me.avatarUrl ? 'Ändern' : 'Bild wählen'}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              disabled={busy}
-              onChange={(e) => void pick(e.target.files?.[0])}
-            />
-          </label>
-          {me.avatarUrl && (
-            <button onClick={() => void remove()} disabled={busy}>
-              Entfernen
-            </button>
-          )}
-        </div>
-        {err && <span className="error">{err}</span>}
-      </div>
-    </div>
+    <label className={`hub-profilbild${busy ? ' is-busy' : ''}`} title="Profilbild ändern">
+      {src ? (
+        <img src={src} alt="Profilbild" draggable={false} />
+      ) : (
+        <img src="/hub/pinguin.png" alt="Profilbild" draggable={false} />
+      )}
+      <span className="hub-profilbild-stift" aria-hidden="true">
+        ✎
+      </span>
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        disabled={busy}
+        onChange={(e) => void pick(e.target.files?.[0])}
+        aria-label="Profilbild ändern"
+      />
+      {err && <span className="error">{err}</span>}
+    </label>
   );
 }
 

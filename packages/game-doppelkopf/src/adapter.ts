@@ -196,13 +196,15 @@ export const doppelkopf: GameModule<PartyState, RoundAction, DokoView, RuleSet> 
     return problems;
   },
 
-  createParty({ config, seats, rounds, seed }: CreatePartyOptions<RuleSet>) {
+  createParty({ config, seats, rounds, seed, seedHex }: CreatePartyOptions<RuleSet>) {
     const rot = rotationSize(seats as 3 | 4 | 5);
     const rotationSeats = Array.from({ length: rot }, (_, i) => i);
     // 3er-Tisch: der vierte Rotationssitz ist ein Dauerbot.
     const botSeats = seats === 3 ? [3] : [];
     const rs: RuleSet = { ...config, tableSize: seats as 3 | 4 | 5, rounds };
-    return startRound(engineCreateParty(rs, rotationSeats, seed, botSeats));
+    return startRound(
+      engineCreateParty(rs, rotationSeats, seed, botSeats, seedHex ?? null),
+    );
   },
 
   act(party, seat, action) {

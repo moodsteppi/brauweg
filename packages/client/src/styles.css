@@ -1353,6 +1353,478 @@ td {
   color: rgba(255, 240, 210, 0.88);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
+
+/* =========================================================================
+   Hub-Tafeln — der gemeinsame Baustein von Shop, Clan, Blatt und Profil.
+   Alle vier Tabs bestehen aus denselben Tafeln, damit der Hub wie ein
+   Stueck wirkt. Alles muss ohne Langscroll in eine Handy-Hoehe passen.
+   ========================================================================= */
+
+/* Logo-Schild ueber jedem Tab. */
+.hub-banner {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0.05rem 0 0.15rem;
+}
+.hub-banner img {
+  display: block;
+  height: 2.6rem;
+  width: auto;
+  max-width: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45));
+}
+
+.hub-tafel {
+  flex: 0 0 auto;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, rgba(92, 58, 28, 0.9) 0%, rgba(50, 31, 13, 0.93) 100%);
+  border: 2px solid rgba(255, 200, 100, 0.62);
+  box-shadow: 0 3px 0 #1a1208, 0 6px 14px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+/* Tafel, die den Rest der Hoehe fuellt und innen rollt (Freunde, Blaetter). */
+.hub-tafel.is-weit {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.hub-tafel.is-weit .hub-tafel-inhalt {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.hub-tafel-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem 0.28rem;
+  background: linear-gradient(180deg, rgba(140, 92, 40, 0.85), rgba(96, 60, 24, 0.7));
+  border-bottom: 1px solid rgba(255, 200, 100, 0.35);
+}
+.hub-tafel-kopf h2 {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffe08a;
+  text-shadow: 0 1px 0 rgba(20, 12, 4, 0.7);
+}
+.hub-tafel-zusatz {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(255, 240, 210, 0.8);
+  white-space: nowrap;
+}
+.hub-tafel-inhalt {
+  padding: 0.45rem 0.5rem 0.5rem;
+}
+
+/* Gleichmaessige Reihen: drei oder vier Kacheln nebeneinander. */
+.hub-reihe {
+  display: grid;
+  gap: 0.4rem;
+}
+.hub-reihe--drei {
+  grid-template-columns: repeat(3, 1fr);
+}
+.hub-reihe--vier {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Grosses Angebot (Shop). */
+.hub-angebot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  padding: 0.45rem 0.25rem 0.4rem;
+  border-radius: 0.65rem;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(120, 78, 30, 0.95) 0%, rgba(66, 40, 16, 0.96) 100%);
+  border: 1.5px solid rgba(255, 210, 110, 0.7);
+  box-shadow: 0 3px 0 #1a1208;
+}
+.hub-angebot:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #1a1208;
+}
+.hub-angebot-art {
+  width: 100%;
+  max-width: 3.2rem;
+  height: 2.6rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.hub-angebot strong {
+  font-size: 0.68rem;
+  line-height: 1.15;
+  text-align: center;
+  color: #fff;
+}
+.hub-preis {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #ffe08a;
+}
+
+/* Kleine Vitrine (Shop, Clan-Räume). */
+.hub-vitrine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.15rem 0.35rem;
+  min-height: 3.4rem;
+  border-radius: 0.6rem;
+  color: #fff7e2;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.92) 0%, rgba(46, 28, 11, 0.94) 100%);
+  border: 1.5px solid rgba(255, 200, 100, 0.5);
+  box-shadow: 0 2px 0 #1a1208;
+}
+.hub-vitrine:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #1a1208;
+}
+.hub-vitrine-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+.hub-vitrine-zeichen {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* Zahlkachel (Profil). Keine Schaltflaeche - reine Anzeige. */
+.hub-zahl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.35rem 0.15rem 0.3rem;
+  border-radius: 0.6rem;
+  background: rgba(20, 12, 5, 0.42);
+  border: 1px solid rgba(255, 200, 100, 0.35);
+}
+.hub-zahl img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+.hub-zahl strong {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: #ffe08a;
+  line-height: 1.1;
+}
+.hub-zahl > span {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: rgba(255, 240, 210, 0.85);
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Clan-Schild: Wappen, Name, Zahlen, Knopf. */
+.hub-clanschild {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, rgba(96, 62, 28, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+  border: 2px solid rgba(255, 220, 120, 0.7);
+  box-shadow: 0 3px 0 #1a1208;
+}
+.hub-clanschild-wappen {
+  width: 2.9rem;
+  height: 2.9rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.hub-clanschild-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.hub-clanschild-text strong {
+  font-size: 0.95rem;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(20, 12, 4, 0.6);
+}
+.hub-clanschild-text .muted {
+  font-size: 0.62rem;
+}
+.hub-clanschild-zahlen {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffe08a;
+}
+.hub-clanschild-zahlen span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.hub-clanschild-zahlen img {
+  width: 0.85rem;
+  height: 0.85rem;
+  object-fit: contain;
+}
+.hub-clanschild-knopf {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #1a1408;
+  background: linear-gradient(180deg, #ffe08a 0%, #f0b84a 100%);
+  border: 1px solid #a07020;
+  box-shadow: 0 3px 0 #8a6a22;
+}
+.hub-clanschild-knopf:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8a6a22;
+}
+
+/* Blatt-Tab: Kartenblaetter als Kacheln mit Probe. */
+.hub-blaetter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+.hub-blatt {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.45rem 0.3rem 0.4rem;
+  border-radius: 0.65rem;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(46, 28, 11, 0.96) 100%);
+  border: 2px solid rgba(255, 200, 100, 0.45);
+  box-shadow: 0 3px 0 #1a1208;
+}
+.hub-blatt.is-an {
+  border-color: #ffe08a;
+  box-shadow: 0 3px 0 #1a1208, inset 0 0 0 1px rgba(255, 224, 138, 0.6);
+}
+.hub-blatt strong {
+  font-size: 0.72rem;
+  color: #fff7e2;
+}
+.hub-blatt-probe {
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+}
+.hub-blatt-probe .card-img {
+  width: 1.85rem;
+}
+.hub-blatt-probe .card {
+  min-width: 0;
+  padding: 0.35rem 0.3rem;
+  font-size: 0.78rem;
+}
+.hub-blatt-haken {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.3rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffe08a;
+  color: #2a1d04;
+  font-size: 0.7rem;
+  font-weight: 900;
+  box-shadow: 0 2px 0 #8a6a22;
+}
+
+/* Profil-Kopf: Bild, Name, Level. */
+.hub-profilkopf {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, rgba(96, 62, 28, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+  border: 2px solid rgba(255, 220, 120, 0.7);
+  box-shadow: 0 3px 0 #1a1208;
+}
+.hub-profilkopf-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.hub-profilkopf-text strong {
+  font-size: 1.05rem;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(20, 12, 4, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hub-profilkopf-text .muted {
+  font-size: 0.62rem;
+}
+.hub-profilbild {
+  position: relative;
+  flex: 0 0 auto;
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  border: 2px solid #ffe08a;
+  box-shadow: 0 2px 0 #8a6a1a;
+  background: #2a6fb8;
+  cursor: pointer;
+  margin: 0;
+}
+.hub-profilbild img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hub-profilbild.is-busy {
+  opacity: 0.6;
+}
+.hub-profilbild-stift {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+  color: #2a1d04;
+  background: #ffe08a;
+  border-top-left-radius: 0.35rem;
+}
+
+/* Knopfreihe (Einstellungen). */
+.hub-knopfreihe {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+.hub-knopf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.3rem;
+  border-radius: 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff7e2;
+  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(46, 28, 11, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 100, 0.5);
+  box-shadow: 0 2px 0 #1a1208;
+}
+.hub-knopf:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #1a1208;
+}
+.hub-knopf--raus {
+  color: #ffd4cc;
+  border-color: rgba(226, 120, 100, 0.55);
+}
+
+/* Freundesliste im Clan-Tab. */
+.hub-freund {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.1rem;
+  border-bottom: 1px solid rgba(255, 200, 100, 0.18);
+}
+.hub-freund.is-anfrage {
+  background: rgba(255, 200, 100, 0.1);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.35rem;
+}
+.hub-freund-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff7e2;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 200, 100, 0.4);
+  text-underline-offset: 0.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hub-mini {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.55rem;
+  border-radius: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff7e2;
+  background: rgba(20, 12, 5, 0.5);
+  border: 1px solid rgba(255, 200, 100, 0.45);
+}
+.hub-mini--ja {
+  color: #0d1211;
+  background: linear-gradient(180deg, #ffe08a, #f0b84a);
+  border-color: #a07020;
+}
+.hub-suche {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+.hub-suche input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  border-radius: 0.45rem;
+  background: rgba(12, 8, 3, 0.55);
+  border: 1px solid rgba(255, 200, 100, 0.4);
+  color: #fff7e2;
+}
+.hub-tafel .muted {
+  margin: 0.25rem 0;
+  font-size: 0.72rem;
+}
 .front--hub .front-top {
   background: linear-gradient(180deg, #1a3f7a 0%, #2458a8 100%);
   border-bottom: 2px solid rgba(255, 210, 90, 0.45);
@@ -1614,86 +2086,6 @@ td {
   flex-direction: column;
   gap: 0.55rem;
 }
-.front-clan-halle {
-  margin: 0;
-}
-.front-clan-banner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.55rem 0.7rem 0.55rem;
-  text-align: center;
-  border-radius: 0.85rem;
-  background: linear-gradient(180deg, rgba(96, 62, 28, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
-  border: 2px solid rgba(255, 220, 120, 0.75);
-  box-shadow: 0 4px 0 #1a1208, inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-.front-clan-wappen {
-  display: block;
-  width: 3.2rem;
-  height: 3.2rem;
-  object-fit: contain;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
-}
-.front-clan-name {
-  font-size: 1.15rem;
-  letter-spacing: 0.02em;
-  color: #fff;
-  text-shadow: 0 2px 0 #2a200c;
-}
-.front-clan-stats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.55rem 1rem;
-  margin-top: 0.1rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #ffe08a;
-}
-.front-clan-banner .muted {
-  margin: 0.1rem 0 0;
-  font-size: 0.75rem;
-  color: rgba(255, 240, 210, 0.85);
-}
-.front-clan-raeume {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.35rem;
-  margin-bottom: 0.25rem;
-}
-.front-clan-raum {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  padding: 0.4rem 0.25rem 0.4rem;
-  min-height: 4.4rem;
-  border-radius: 0.7rem;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.6);
-  box-shadow: 0 3px 0 #1a1208;
-}
-.front-clan-raum:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #1a1208;
-}
-.front-clan-raum-titel {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-align: center;
-  line-height: 1.15;
-  color: #fff7d6;
-}
-.front-clan-zeichen {
-  font-size: 1.15rem;
-  line-height: 1;
-  margin: 0.05rem 0;
-}
 
 /* Ressourcen-Leiste: Level und Name links, Muenzen und VIP rechts. */
 .front-spieler {
@@ -1834,40 +2226,6 @@ td {
   flex-direction: column;
   gap: 0.4rem;
 }
-.front-shop-titel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  margin: 0;
-  font-size: 1.1rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #ffe08a;
-  text-align: center;
-  text-shadow: 0 2px 0 #5a3a08, 0 3px 8px rgba(0, 0, 0, 0.25);
-}
-.front-shop-titel span {
-  flex: 1;
-  height: 2px;
-  max-width: 3.5rem;
-  background: linear-gradient(90deg, transparent, rgba(255, 224, 138, 0.85), transparent);
-}
-.front-shop-featured {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.3rem;
-  padding: 0.5rem 0.6rem 0.45rem;
-  text-align: left;
-  border-radius: 0.85rem;
-  color: #fff;
-  /* Holztafel über gemaltem Hintergrund (Entwurf B / Screen-Go). */
-  background:
-    linear-gradient(180deg, rgba(92, 58, 28, 0.92) 0%, rgba(52, 32, 14, 0.94) 100%);
-  border: 2px solid rgba(255, 200, 100, 0.7);
-  box-shadow: 0 3px 0 #1a1208, 0 6px 14px rgba(0, 0, 0, 0.3);
-}
 .front-shop-featured--season {
   background:
     radial-gradient(90% 70% at 85% 20%, rgba(255, 230, 120, 0.28), transparent 55%),
@@ -1875,24 +2233,8 @@ td {
   border-color: rgba(255, 220, 120, 0.9);
   box-shadow: 0 4px 0 #2a1808, 0 10px 22px rgba(0, 0, 0, 0.38);
 }
-.front-shop-featured:active {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0 #1a2e12, 0 6px 14px rgba(0, 0, 0, 0.22);
-}
 .front-shop-featured--season:active {
   box-shadow: 0 2px 0 #2a200c, 0 6px 14px rgba(0, 0, 0, 0.22);
-}
-.front-shop-ribbon {
-  align-self: flex-start;
-  padding: 0.18rem 0.55rem;
-  border-radius: 0.35rem;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #1a1408;
-  background: linear-gradient(180deg, #ffe08a 0%, #f0b84a 100%);
-  box-shadow: 0 2px 0 #8a6a22;
 }
 .front-shop-ribbon--sonder {
   background: linear-gradient(180deg, #fff0b0 0%, #ffc14a 100%);
@@ -1939,51 +2281,6 @@ td {
   object-fit: contain;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
 }
-.front-shop-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
-}
-.front-shop-kachel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  padding: 0.55rem 0.35rem 0.45rem;
-  min-height: 5.2rem;
-  border-radius: 0.8rem;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.6);
-  box-shadow: 0 3px 0 #1a1208;
-}
-.front-shop-kachel:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #1a2e12;
-}
-.front-shop-zeichen {
-  width: 1.7rem;
-  height: 1.7rem;
-  object-fit: contain;
-  margin: 0.15rem 0 0.2rem;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
-}
-.front-shop-kachel strong {
-  font-size: 0.78rem;
-  color: #fff;
-}
-.front-shop-bald-knopf {
-  margin-top: 0.1rem;
-}
-.front-shop-preis {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #ffe08a;
-  text-decoration: line-through;
-  text-decoration-color: #ff6b6b;
-  opacity: 0.8;
-}
 
 .front--hub .front-blatt--b .decks {
   grid-template-columns: 1fr;
@@ -2022,19 +2319,6 @@ td {
   color: #2a200c;
   background: linear-gradient(180deg, #ffe08a 0%, #f0b84a 100%);
   border-color: #c9962a;
-}
-.front--hub .front-profil--b .front-profil-abmelden {
-  color: #fff;
-  background: linear-gradient(180deg, #ef6b6b 0%, #c94444 100%);
-  border: 1.5px solid rgba(255, 220, 220, 0.45);
-  box-shadow: 0 3px 0 #7a2222;
-  font-weight: 800;
-}
-.front--hub .front-clan--b .panel {
-  background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
-  border: 1.5px solid rgba(255, 200, 100, 0.6);
-  box-shadow: 0 3px 0 #1a1208;
-  color: #fff;
 }
 
 /* "Kommt bald"-Blatt (Entwurf A): schlicht und zentriert. */
