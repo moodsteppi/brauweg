@@ -1340,8 +1340,8 @@ td {
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.55rem 0.5rem 0.65rem;
+  gap: 0.4rem;
+  padding: 0.45rem 0.55rem 0.55rem;
   background: linear-gradient(
     180deg,
     rgba(20, 12, 6, 0.18) 0%,
@@ -1408,15 +1408,20 @@ td {
 .front--hub .front-tab {
   color: rgba(230, 242, 255, 0.78);
 }
+.front--hub .front-tab {
+  padding: 0.35rem 0.15rem 0.28rem;
+  gap: 0.08rem;
+  font-size: 0.62rem;
+}
 .front--hub .front-tab-icon {
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 1.45rem;
+  height: 1.45rem;
   object-fit: contain;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
 }
 .front--hub .front-tab--haupt .front-tab-icon {
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 1.85rem;
+  height: 1.85rem;
 }
 .front--hub .front-tab.is-active {
   color: #fff;
@@ -1616,23 +1621,23 @@ td {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.75rem 0.85rem 0.7rem;
+  gap: 0.2rem;
+  padding: 0.55rem 0.7rem 0.55rem;
   text-align: center;
-  border-radius: 1rem;
+  border-radius: 0.85rem;
   background: linear-gradient(180deg, rgba(96, 62, 28, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
   border: 2px solid rgba(255, 220, 120, 0.75);
   box-shadow: 0 4px 0 #1a1208, inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 .front-clan-wappen {
   display: block;
-  width: 4.2rem;
-  height: 4.2rem;
+  width: 3.2rem;
+  height: 3.2rem;
   object-fit: contain;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
 }
 .front-clan-name {
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   letter-spacing: 0.02em;
   color: #fff;
   text-shadow: 0 2px 0 #2a200c;
@@ -1655,17 +1660,18 @@ td {
 .front-clan-raeume {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.45rem;
-  margin-bottom: 0.35rem;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
 }
 .front-clan-raum {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.45rem 0.3rem 0.5rem;
-  min-height: 5.6rem;
-  border-radius: 0.75rem;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.25rem 0.4rem;
+  min-height: 4.4rem;
+  border-radius: 0.7rem;
   color: #fff;
   background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
   border: 1.5px solid rgba(255, 200, 100, 0.6);
@@ -1684,9 +1690,9 @@ td {
   color: #fff7d6;
 }
 .front-clan-zeichen {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   line-height: 1;
-  margin: 0.1rem 0;
+  margin: 0.05rem 0;
 }
 
 /* Ressourcen-Leiste: Level und Name links, Muenzen und VIP rechts. */
@@ -1826,16 +1832,16 @@ td {
 .front-shop {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.4rem;
 }
 .front-shop-titel {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  margin: 0.1rem 0 0;
-  font-size: 1.35rem;
-  letter-spacing: 0.12em;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #ffe08a;
   text-align: center;
@@ -1851,16 +1857,16 @@ td {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.4rem;
-  padding: 0.65rem 0.75rem 0.6rem;
+  gap: 0.3rem;
+  padding: 0.5rem 0.6rem 0.45rem;
   text-align: left;
-  border-radius: 1rem;
+  border-radius: 0.85rem;
   color: #fff;
   /* Holztafel über gemaltem Hintergrund (Entwurf B / Screen-Go). */
   background:
     linear-gradient(180deg, rgba(92, 58, 28, 0.92) 0%, rgba(52, 32, 14, 0.94) 100%);
   border: 2px solid rgba(255, 200, 100, 0.7);
-  box-shadow: 0 4px 0 #1a1208, 0 8px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 3px 0 #1a1208, 0 6px 14px rgba(0, 0, 0, 0.3);
 }
 .front-shop-featured--season {
   background:
@@ -1894,20 +1900,20 @@ td {
 }
 .front-shop-featured-body {
   display: grid;
-  grid-template-columns: 1fr min(38%, 7.5rem);
-  gap: 0.5rem;
+  grid-template-columns: 1fr min(32%, 5.8rem);
+  gap: 0.4rem;
   align-items: center;
 }
 .front-shop-featured-text strong {
   display: block;
-  font-size: 1.15rem;
+  font-size: 1rem;
   color: #ffe08a;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
   text-shadow: 0 2px 0 rgba(20, 20, 10, 0.45);
 }
 .front-shop-featured-text p {
-  margin: 0 0 0.35rem;
-  font-size: 0.76rem;
+  margin: 0 0 0.25rem;
+  font-size: 0.7rem;
   color: rgba(255, 245, 220, 0.92);
 }
 .front-shop-featured-text ul {
@@ -1916,8 +1922,8 @@ td {
   list-style: none;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.2rem 0.4rem;
-  font-size: 0.68rem;
+  gap: 0.15rem 0.35rem;
+  font-size: 0.62rem;
   font-weight: 700;
   color: #fff6d8;
 }
@@ -1929,22 +1935,24 @@ td {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 6.6rem;
+  max-height: 4.6rem;
   object-fit: contain;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
 }
 .front-shop-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 .front-shop-kachel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.6rem 0.4rem 0.5rem;
-  border-radius: 0.9rem;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.55rem 0.35rem 0.45rem;
+  min-height: 5.2rem;
+  border-radius: 0.8rem;
   color: #fff;
   background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
   border: 1.5px solid rgba(255, 200, 100, 0.6);
@@ -1955,21 +1963,15 @@ td {
   box-shadow: 0 1px 0 #1a2e12;
 }
 .front-shop-zeichen {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 1.7rem;
+  height: 1.7rem;
   object-fit: contain;
+  margin: 0.15rem 0 0.2rem;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
 }
 .front-shop-kachel strong {
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   color: #fff;
-}
-.front-shop-kachel-text {
-  font-size: 0.66rem;
-  text-align: center;
-  line-height: 1.25;
-  min-height: 2em;
-  color: rgba(255, 240, 210, 0.88);
 }
 .front-shop-bald-knopf {
   margin-top: 0.1rem;
@@ -2225,7 +2227,7 @@ td {
 .hub-logo {
   position: absolute;
   z-index: 5;
-  top: 0.15rem;
+  top: 0.2rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -2233,7 +2235,7 @@ td {
   align-items: center;
   gap: 0;
   margin: 0;
-  width: min(42%, 7.6rem);
+  width: min(36%, 6.6rem);
   pointer-events: none;
   line-height: 0;
   background: none;
@@ -2450,39 +2452,36 @@ td {
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 0.18rem;
-  width: 3.6rem;
-  /* Nur obere Ecken — nicht in die Biome-Namen der Wegmitte ragen. */
-  top: 0.2rem;
+  gap: 0.35rem;
+  width: 2.55rem;
+  /* Fast oben links / mitte-links — Karte bleibt lesbar. */
+  top: 14%;
   bottom: auto;
-  max-height: 38%;
 }
 .hub-seite--links {
-  left: 0.15rem;
+  left: 0.35rem;
 }
 .hub-seite--rechts {
-  right: 0.15rem;
-  width: 4rem;
+  right: 0.35rem;
+  top: 16%;
+  width: 2.55rem;
 }
 .hub-side-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.08rem;
-  padding: 0.32rem 0.18rem;
-  border-radius: 0.65rem;
+  display: grid;
+  place-items: center;
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0.45rem;
+  border-radius: 0.7rem;
   border: 2px solid rgba(255, 255, 255, 0.7);
   color: #fff;
-  font-size: 0.48rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  line-height: 1.1;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28), 0 4px 10px rgba(0, 0, 0, 0.2);
 }
-.hub-side-btn span {
-  font-size: 0.9rem;
-  line-height: 1;
+.hub-side-btn img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }
 .hub-side-btn:active {
   transform: translateY(2px);
@@ -2499,11 +2498,11 @@ td {
 }
 .hub-truhe {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.08rem;
-  padding: 0.25rem 0.2rem 0.32rem;
+  display: grid;
+  place-items: center;
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0.4rem;
   border-radius: 0.7rem;
   border: 2px solid #ffe08a;
   background: linear-gradient(180deg, rgba(20, 40, 80, 0.55), rgba(10, 24, 50, 0.72));
@@ -2511,51 +2510,32 @@ td {
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), 0 0 14px rgba(255, 200, 80, 0.3);
 }
 .hub-truhe img {
-  width: 2rem;
-  height: 2rem;
+  width: 1.35rem;
+  height: 1.35rem;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-}
-.hub-truhe em {
-  font-style: normal;
-  font-size: 0.46rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  text-align: center;
-  line-height: 1.1;
-}
-.hub-truhe-cta {
-  margin-top: 0.05rem;
-  padding: 0.14rem 0.4rem;
-  border-radius: 999px;
-  font-size: 0.58rem;
-  font-weight: 800;
-  color: #0d3a1c;
-  background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 2px 0 #1f6b40;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
 }
 .hub-truhe .front-bald-tag {
   position: absolute;
-  top: -0.35rem;
-  right: -0.25rem;
+  top: -0.3rem;
+  right: -0.35rem;
+  font-size: 0.52rem;
+  padding: 0.04rem 0.3rem;
 }
 .front--hub .front-play-stack {
   flex: 0 0 auto;
   position: static;
-  margin-top: 0.2rem;
-  gap: 0.25rem;
-  /* Kein Himmelblau-Spalt: Stack sitzt dicht unter der Karte. */
+  margin-top: 0.15rem;
+  gap: 0.2rem;
   background: transparent;
 }
 .front--hub .front-play {
-  font-size: 1.05rem;
-  padding: 0.7rem;
-  border-radius: 0.85rem;
-  border: 3px solid rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  padding: 0.55rem;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.8);
   background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
-  box-shadow: 0 4px 0 #1f6b40, 0 6px 14px rgba(20, 80, 40, 0.3);
+  box-shadow: 0 3px 0 #1f6b40, 0 5px 12px rgba(20, 80, 40, 0.28);
 }
 .front--hub .front-play:active {
   transform: translateY(3px);
