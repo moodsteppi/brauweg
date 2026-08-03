@@ -117,11 +117,18 @@ export function GameSelect({
         )}
         {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
         {tab === 'profil' && (
-          <>
+          <div className="front-profil front-profil--b">
+            <h2 className="front-shop-titel">
+              <span aria-hidden="true" />
+              Profil
+              <span aria-hidden="true" />
+            </h2>
             <Profile accountId={me.id} eingebettet />
             <ProfilePicture me={me} onChanged={onAvatarChange} />
-            <button onClick={onSignOut}>Abmelden</button>
-          </>
+            <button className="front-profil-abmelden" onClick={onSignOut}>
+              Abmelden
+            </button>
+          </div>
         )}
       </div>
 
@@ -222,7 +229,7 @@ function Clan({
   ];
 
   return (
-    <>
+    <div className="front-clan front-clan--b">
       <header className="front-clan-halle">
         <div className="front-clan-banner">
           <img className="front-clan-wappen" src="/hub/clan-wappen.png" alt="" draggable={false} />
@@ -252,16 +259,17 @@ function Clan({
       </div>
 
       <Freunde onShowProfile={onShowProfile} />
-    </>
+    </div>
   );
 }
 
 /**
- * Shop (Entwurf C): Wochenangebot als Held oben, darunter Vitrinen.
- * Alles nur Vorschau — Tip oeffnet „Kommt bald", kein Kauf.
+ * Shop (Entwurf B): Season Pass als Sonderangebot oben, darunter
+ * Wochenangebot/VIP, dann Vitrinen. Alles nur Vorschau — kein Kauf.
  */
 function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element {
-  const vorteile = ['2× Münzen', 'Exklusive Emotes', 'Tägliche Belohnung', 'Werbefrei'];
+  const seasonVorteile = ['Belohnungspfad', 'Exklusives Blatt', 'Clan-Bonus', 'Saison-Emotes'];
+  const vipVorteile = ['2× Münzen', 'Exklusive Emotes', 'Tägliche Belohnung', 'Werbefrei'];
   const regale = [
     {
       name: 'Kartenblätter',
@@ -290,12 +298,39 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
   ];
 
   return (
-    <div className="front-shop">
+    <div className="front-shop front-shop--b">
       <h2 className="front-shop-titel">
         <span aria-hidden="true" />
         Shop
         <span aria-hidden="true" />
       </h2>
+
+      <button
+        className="front-shop-featured front-shop-featured--season"
+        onClick={() => onBald('Season Pass')}
+      >
+        <span className="front-shop-ribbon front-shop-ribbon--sonder">★ Sonderangebot</span>
+        <div className="front-shop-featured-body">
+          <div className="front-shop-featured-text">
+            <strong>Season Pass</strong>
+            <p>Saison-Belohnungen, exklusives Blatt und Clan-Bonus.</p>
+            <ul>
+              {seasonVorteile.map((v) => (
+                <li key={v}>{v}</li>
+              ))}
+            </ul>
+          </div>
+          <img
+            className="front-shop-featured-art"
+            src="/hub/season-pass.png"
+            alt=""
+            draggable={false}
+          />
+        </div>
+        <span className="front-shop-bald-knopf">
+          <span className="front-bald-tag">Bald</span>
+        </span>
+      </button>
 
       <button className="front-shop-featured" onClick={() => onBald('VIP-Pass')}>
         <span className="front-shop-ribbon">★ Wochenangebot</span>
@@ -304,7 +339,7 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
             <strong>VIP-Pass</strong>
             <p>7 Tage Premium-Vorteile + exklusives Kartenblatt.</p>
             <ul>
-              {vorteile.map((v) => (
+              {vipVorteile.map((v) => (
                 <li key={v}>{v}</li>
               ))}
             </ul>
@@ -869,7 +904,7 @@ function DeckPicker({
   onChange: (cardDeck: string) => void;
 }): React.JSX.Element {
   return (
-    <div className="front-blatt">
+    <div className="front-blatt front-blatt--b">
       <h2 className="front-shop-titel">
         <span aria-hidden="true" />
         Blatt
