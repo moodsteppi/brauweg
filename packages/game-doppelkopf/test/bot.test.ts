@@ -167,28 +167,99 @@ test('Bot lehnt die moralische Pflichtansage ab und bestaetigt die zwingende', (
   });
 });
 
-test('Kartenwahl: sticht knapp statt mit der staerksten Karte', () => {
+const mk = (key: string, id: number) => ({
+  suit: key[0] as 'C' | 'S' | 'H' | 'D',
+  rank: key.slice(1) as 'A' | 'T' | 'K' | 'Q' | 'J' | '9',
+  id,
+});
+const VOLLE_HAENDE = { 0: 9, 1: 9, 2: 9, 3: 9 };
+
+test('Kartenwahl: verheizt das Karo-Ass nicht, wenn noch zwei drueberkommen', () => {
   const rs = makeRuleSet();
   const order = buildOrder({ kind: 'normal' }, rs);
-  const mk = (key: string, id: number) => ({
-    suit: key[0] as 'C' | 'S' | 'H' | 'D',
-    rank: key.slice(1) as 'A' | 'T' | 'K' | 'Q' | 'J' | '9',
-    id,
-  });
 
-  // Gegner fuehrt mit Karo-Koenig. Der Bot koennte mit Dulle oder Karo-Ass
-  // stechen; er soll das billigere, knapper reichende Karo-Ass nehmen.
+  // Gegner fuehrt mit Karo-Koenig, der Bot sitzt an zweiter Stelle. Er
+  // koennte mit Dulle oder Karo-Ass stechen. Beides waere falsch: Das Ass
+  // schlagen achtzehn von sechsundzwanzig Truempfen, und fuer vier Augen
+  // gibt niemand die Dulle her. Also ziehen lassen.
   const view = {
     seat: 2,
     order,
     myParty: 're',
     knownParties: {},
+    handCounts: VOLLE_HAENDE,
     currentTrick: [{ card: mk('DK', 1), seat: 1 }],
     legal: [mk('HT', 2), mk('DA', 3), mk('D9', 4)],
     hand: [mk('HT', 2), mk('DA', 3), mk('D9', 4)],
   } as unknown as PlayerView;
 
-  assert.equal(chooseCard(view).id, 3);
+  assert.equal(chooseCard(view).id, 4, 'soll die Karo-Neun abwerfen');
+});
+
+test('Kartenwahl: als Letzter nimmt er den Stich auch mit dem Ass', () => {
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  // Derselbe Stich, nur sitzt der Bot als Letzter. Jetzt kann niemand mehr
+  // drueber, und die knappste ausreichende Karte ist genau richtig.
+  const view = {
+    seat: 3,
+    order,
+    myParty: 're',
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    currentTrick: [
+      { card: mk('DT', 1), seat: 0 },
+      { card: mk('D9', 5), seat: 1 },
+      { card: mk('DK', 6), seat: 2 },
+    ],
+    legal: [mk('HT', 2), mk('DA', 3)],
+    hand: [mk('HT', 2), mk('DA', 3)],
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 3, 'soll mit dem Karo-Ass nehmen');
+});
+
+test('Kartenwahl: muss er stechen, nimmt er die billigste Gewinnkarte', () => {
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  // Karo-Zehn angespielt, Bot an zweiter Stelle, und beide seiner Trumpf-
+  // karten gewinnen. Dann die Kreuz-Dame: Sie haelt den Stich und kostet
+  // drei Augen statt elf.
+  const view = {
+    seat: 2,
+    order,
+    myParty: 're',
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    currentTrick: [{ card: mk('DT', 1), seat: 1 }],
+    legal: [mk('DA', 2), mk('CQ', 3)],
+    hand: [mk('DA', 2), mk('CQ', 3), mk('S9', 4)],
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 3, 'soll die Kreuz-Dame nehmen');
+});
+
+test('Anspiel: Fehl-Ass statt der billigsten Karte', () => {
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  // Frueher legte der Bot hier die Karo-Neun ab - also einen Trumpf,
+  // verschenkt. Ein Ass, das man aufhebt, wird spaeter gestochen.
+  const hand = [mk('D9', 1), mk('SA', 2), mk('S9', 3), mk('H9', 4)];
+  const view = {
+    seat: 0,
+    order,
+    myParty: 're',
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    currentTrick: [],
+    legal: hand,
+    hand,
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 2, 'soll das Pik-Ass anspielen');
 });
 
 test('Kartenwahl: schmiert, wenn ein bekannter Partner den Stich haelt', () => {
@@ -205,6 +276,7 @@ test('Kartenwahl: schmiert, wenn ein bekannter Partner den Stich haelt', () => {
     order,
     myParty: 'kontra',
     knownParties: { 0: 're', 1: 'kontra', 2: 'kontra', 3: 'kontra' },
+    handCounts: VOLLE_HAENDE,
     currentTrick: [{ card: mk('SA', 1), seat: 1 }],
     legal: [mk('ST', 2), mk('S9', 3), mk('SK', 4)],
     hand: [mk('ST', 2), mk('S9', 3), mk('SK', 4)],
