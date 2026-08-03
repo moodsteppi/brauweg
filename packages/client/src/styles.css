@@ -1259,10 +1259,8 @@ td {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* Andere Tabs vorerst dunkler — die Hub-CI gilt erst auf der Startseite. */
-  background:
-    radial-gradient(120% 45% at 50% -5%, rgba(166, 120, 242, 0.5), transparent 60%),
-    linear-gradient(180deg, #37246b 0%, #2b2560 26%, #1d4a44 62%, #123528 100%);
+  /* Fallback hinter front--hub (Hub gilt fuer alle Tabs vor der Spielwahl). */
+  background: linear-gradient(180deg, #2eb8ff 0%, #3dd0ff 40%, #4ae0a8 100%);
   padding-top: env(safe-area-inset-top);
 }
 
@@ -1284,6 +1282,20 @@ td {
   display: flex;
   flex-direction: column;
   padding: 0.15rem 0.45rem 0.35rem;
+}
+.front--hub .front-body--scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  gap: 0.65rem;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(8, 28, 60, 0.35);
+}
+.front--hub .front-body--scroll .muted {
+  color: rgba(230, 242, 255, 0.78);
+}
+.front--hub .front-body--scroll h2 {
+  color: #fff;
+  text-shadow: 0 2px 0 #1a4a8a, 0 3px 8px rgba(0, 0, 0, 0.25);
 }
 .front--hub .front-top {
   background: linear-gradient(180deg, #1a3f7a 0%, #2458a8 100%);
@@ -1338,13 +1350,27 @@ td {
   box-shadow: 0 -8px 24px rgba(10, 30, 70, 0.35);
 }
 .front--hub .front-tab {
-  color: rgba(230, 242, 255, 0.72);
+  color: rgba(230, 242, 255, 0.78);
+}
+.front--hub .front-tab-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+.front--hub .front-tab--haupt .front-tab-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+}
+.front--hub .front-tab.is-active {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(78, 184, 255, 0.45) 0%, rgba(42, 127, 212, 0.55) 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 224, 138, 0.85);
+  border-radius: 0.75rem;
 }
 .front--hub .front-tab--spielen.is-active {
-  color: #fff;
   background: linear-gradient(180deg, #4eb8ff 0%, #2a7fd4 100%);
   box-shadow: inset 0 0 0 2px #ffe08a, 0 0 16px rgba(80, 200, 255, 0.45);
-  border-radius: 0.75rem;
 }
 
 /* Breiter Browser: die Handyflaeche hebt sich vom Grund ab. */
@@ -1499,9 +1525,10 @@ td {
   font-weight: 600;
 }
 
-.front-tab svg {
+.front-tab-icon {
   width: 1.5rem;
   height: 1.5rem;
+  object-fit: contain;
 }
 
 .front-tab:hover:not(:disabled) {
@@ -1515,99 +1542,93 @@ td {
 }
 
 /* Der mittlere Tab ist der wichtigste und darf groesser sein. */
-.front-tab--haupt svg {
+.front-tab--haupt .front-tab-icon {
   width: 1.95rem;
   height: 1.95rem;
 }
 
-/* Jeder Bereich leuchtet in seiner eigenen Farbe, wenn er gewaehlt ist. */
-.front-tab--shop.is-active { color: var(--gold); background: rgba(226, 182, 79, 0.14); }
-.front-tab--clan.is-active { color: var(--blau); background: rgba(94, 160, 240, 0.14); }
-.front-tab--spielen.is-active { color: #6dd3a4; background: rgba(74, 156, 120, 0.18); }
-.front-tab--blatt.is-active { color: #ef8f8a; background: rgba(194, 86, 76, 0.16); }
-.front-tab--profil.is-active { color: var(--lila); background: rgba(166, 120, 242, 0.16); }
-
 /* Clan-Halle (Entwurf B): Banner + Raum-Gitter. */
 .front-clan-halle {
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.65rem;
 }
 .front-clan-banner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 1.1rem 1rem 0.95rem;
+  gap: 0.25rem;
+  padding: 0.75rem 0.85rem 0.7rem;
   text-align: center;
   border-radius: 1rem;
   background:
-    radial-gradient(90% 80% at 50% 0%, rgba(94, 160, 240, 0.28), transparent 70%),
-    linear-gradient(180deg, #243448 0%, #1a2430 100%);
-  border: 1px solid rgba(94, 160, 240, 0.4);
-  box-shadow: 0 4px 0 #121a22, inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    radial-gradient(90% 80% at 50% 0%, rgba(120, 200, 255, 0.45), transparent 70%),
+    linear-gradient(180deg, #2a6fd4 0%, #1a4a9a 55%, #123570 100%);
+  border: 2px solid rgba(255, 220, 120, 0.65);
+  box-shadow: 0 4px 0 #0d2a58, inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .front-clan-wappen {
-  font-size: 2.4rem;
-  line-height: 1;
-  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+  display: block;
+  width: 4.2rem;
+  height: 4.2rem;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
 }
 .front-clan-name {
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 0 #123570;
 }
 .front-clan-stats {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.75rem 1.1rem;
-  margin-top: 0.15rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--gold);
-}
-.front-clan-stats em {
-  font-style: normal;
-  margin-right: 0.25rem;
+  gap: 0.55rem 1rem;
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffe08a;
 }
 .front-clan-banner .muted {
-  margin: 0.15rem 0 0;
-  font-size: 0.8rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(230, 242, 255, 0.82);
 }
 .front-clan-raeume {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
 }
 .front-clan-raum {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.55rem 0.35rem 0.6rem;
-  min-height: 6.4rem;
+  gap: 0.25rem;
+  padding: 0.45rem 0.3rem 0.5rem;
+  min-height: 5.6rem;
   border-radius: 0.75rem;
-  color: var(--text);
+  color: #fff;
   background:
-    linear-gradient(180deg, #3a2a1c 0%, #2a1f16 40%, #1c1612 100%);
-  border: 1px solid #5a4330;
-  box-shadow: 0 3px 0 #120e0b;
+    linear-gradient(180deg, #4a7fd4 0%, #2a5aab 45%, #1a4088 100%);
+  border: 1.5px solid rgba(255, 220, 120, 0.45);
+  box-shadow: 0 3px 0 #0d2a58;
 }
 .front-clan-raum:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #120e0b;
+  box-shadow: 0 1px 0 #0d2a58;
 }
 .front-clan-raum-titel {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-align: center;
   line-height: 1.15;
-  color: #f0d9a8;
+  color: #fff7d6;
 }
 .front-clan-zeichen {
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   line-height: 1;
-  margin: 0.15rem 0;
+  margin: 0.1rem 0;
 }
 
 /* Ressourcen-Leiste: Level und Name links, Muenzen und VIP rechts. */
@@ -1747,44 +1768,45 @@ td {
 .front-shop {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.65rem;
 }
 .front-shop-titel {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  margin: 0.2rem 0 0.1rem;
-  font-size: 1.55rem;
+  margin: 0.1rem 0 0;
+  font-size: 1.4rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: #ffe08a;
   text-align: center;
+  text-shadow: 0 2px 0 #8a5a10, 0 3px 8px rgba(0, 0, 0, 0.25);
 }
 .front-shop-titel span {
   flex: 1;
-  height: 1px;
+  height: 2px;
   max-width: 3.5rem;
-  background: linear-gradient(90deg, transparent, rgba(226, 182, 79, 0.7), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 224, 138, 0.85), transparent);
 }
 .front-shop-featured {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.55rem;
-  padding: 0.85rem 0.9rem 0.75rem;
+  gap: 0.45rem;
+  padding: 0.7rem 0.8rem 0.65rem;
   text-align: left;
   border-radius: 1rem;
-  color: var(--text);
+  color: #fff;
   background:
-    radial-gradient(90% 70% at 85% 20%, rgba(226, 182, 79, 0.2), transparent 55%),
-    linear-gradient(165deg, #1e3a2c 0%, #152820 55%, #101c18 100%);
-  border: 1px solid rgba(226, 182, 79, 0.55);
-  box-shadow: 0 4px 0 #0c1812, 0 10px 24px rgba(0, 0, 0, 0.35);
+    radial-gradient(90% 70% at 85% 20%, rgba(255, 210, 90, 0.45), transparent 55%),
+    linear-gradient(165deg, #2a8a5a 0%, #1a6a48 55%, #0f4a34 100%);
+  border: 2px solid rgba(255, 220, 120, 0.7);
+  box-shadow: 0 4px 0 #0a3a28, 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 .front-shop-featured:active {
   transform: translateY(2px);
-  box-shadow: 0 2px 0 #0c1812, 0 6px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 0 #0a3a28, 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 .front-shop-ribbon {
   align-self: flex-start;
@@ -1795,25 +1817,26 @@ td {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #1a1408;
-  background: linear-gradient(180deg, #f0d07a 0%, #d4a94a 100%);
+  background: linear-gradient(180deg, #ffe08a 0%, #f0b84a 100%);
   box-shadow: 0 2px 0 #8a6a22;
 }
 .front-shop-featured-body {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.6rem;
+  grid-template-columns: 1fr min(38%, 7.5rem);
+  gap: 0.5rem;
   align-items: center;
 }
 .front-shop-featured-text strong {
   display: block;
-  font-size: 1.25rem;
-  color: var(--gold);
-  margin-bottom: 0.25rem;
+  font-size: 1.2rem;
+  color: #ffe08a;
+  margin-bottom: 0.2rem;
+  text-shadow: 0 2px 0 #0a3a28;
 }
 .front-shop-featured-text p {
-  margin: 0 0 0.45rem;
-  font-size: 0.82rem;
-  color: var(--muted);
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  color: rgba(230, 255, 240, 0.9);
 }
 .front-shop-featured-text ul {
   margin: 0;
@@ -1821,66 +1844,109 @@ td {
   list-style: none;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.25rem 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #cfe8d8;
+  gap: 0.2rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #e8fff2;
 }
 .front-shop-featured-text li::before {
   content: '✓ ';
-  color: var(--accent);
+  color: #ffe08a;
 }
-.front-shop-featured-zeichen {
-  font-size: 3.2rem;
-  line-height: 1;
-  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4));
+.front-shop-featured-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 7.2rem;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
 }
 .front-shop-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 .front-shop-kachel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.85rem 0.55rem 0.7rem;
+  gap: 0.25rem;
+  padding: 0.65rem 0.45rem 0.55rem;
   border-radius: 0.9rem;
-  color: var(--text);
+  color: #fff;
   background:
-    radial-gradient(110% 80% at 50% 0%, rgba(74, 156, 120, 0.18), transparent 60%),
-    var(--panel);
-  border: 1px solid rgba(226, 182, 79, 0.28);
-  box-shadow: 0 3px 0 #152025;
+    radial-gradient(110% 80% at 50% 0%, rgba(255, 220, 120, 0.28), transparent 60%),
+    linear-gradient(180deg, #3a7fd4 0%, #2458a8 100%);
+  border: 1.5px solid rgba(255, 220, 120, 0.5);
+  box-shadow: 0 3px 0 #123570;
 }
 .front-shop-kachel:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #152025;
+  box-shadow: 0 1px 0 #123570;
 }
 .front-shop-zeichen {
-  font-size: 1.9rem;
-  line-height: 1;
+  width: 2.6rem;
+  height: 2.6rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
 }
 .front-shop-kachel strong {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
+  color: #fff;
 }
 .front-shop-kachel-text {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-align: center;
   line-height: 1.25;
-  min-height: 2.1em;
+  min-height: 2em;
+  color: rgba(230, 242, 255, 0.85);
 }
 .front-shop-bald-knopf {
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
 }
 .front-shop-preis {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--gold);
+  color: #ffe08a;
   text-decoration: line-through;
-  text-decoration-color: var(--danger);
-  opacity: 0.75;
+  text-decoration-color: #ff6b6b;
+  opacity: 0.8;
+}
+
+.front--hub .front-blatt .decks {
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.front--hub .front-blatt .deck {
+  color: #fff;
+  background: linear-gradient(180deg, #3a7fd4 0%, #2458a8 100%);
+  border: 1.5px solid rgba(255, 220, 120, 0.45);
+  box-shadow: 0 3px 0 #123570;
+}
+.front--hub .front-blatt .deck.selected {
+  border-color: #ffe08a;
+  box-shadow: 0 3px 0 #123570, inset 0 0 0 2px rgba(255, 224, 138, 0.7);
+}
+.front--hub .front-blatt .deck strong {
+  color: #fff;
+}
+.front--hub .front-body--scroll .panel.profile {
+  background: linear-gradient(180deg, #3a7fd4 0%, #2458a8 100%);
+  border: 1.5px solid rgba(255, 220, 120, 0.45);
+  box-shadow: 0 3px 0 #123570;
+  color: #fff;
+}
+.front--hub .front-body--scroll .profile-btn {
+  color: #123570;
+  background: linear-gradient(180deg, #ffe08a 0%, #f0b84a 100%);
+  border-color: #c9962a;
+}
+.front--hub .front-body--scroll > button {
+  color: #fff;
+  background: linear-gradient(180deg, #ef6b6b 0%, #c94444 100%);
+  border: 1.5px solid rgba(255, 220, 220, 0.45);
+  box-shadow: 0 3px 0 #7a2222;
 }
 
 /* "Kommt bald"-Blatt (Entwurf A): schlicht und zentriert. */

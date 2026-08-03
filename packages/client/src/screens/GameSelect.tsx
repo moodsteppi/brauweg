@@ -49,37 +49,27 @@ export function GameSelect({
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   return (
-    <div className={`front${tab === 'spielen' ? ' front--hub' : ''}`}>
+    <div className="front front--hub">
       <header className="front-top">
         {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
-          {tab === 'spielen' ? (
-            <img className="front-avatar" src="/hub/pinguin.png" alt="" />
-          ) : (
-            <span className="front-level" aria-label="Level 0">
-              0
-            </span>
-          )}
+          <img className="front-avatar" src="/hub/pinguin.png" alt="" />
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
             <span className="front-xp" aria-hidden="true">
               <span style={{ width: '0%' }} />
             </span>
           </span>
-          {tab === 'spielen' && (
-            <span className="front-level front-level--hub" aria-label="Level 0">
-              0
-            </span>
-          )}
+          <span className="front-level front-level--hub" aria-label="Level 0">
+            0
+          </span>
         </button>
         <div className="front-waehrungen">
-          {tab === 'spielen' && (
-            <span className="front-waehrung front-waehrung--cups">
-              <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
-              {trophies}
-            </span>
-          )}
+          <span className="front-waehrung front-waehrung--cups">
+            <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
+            {trophies}
+          </span>
           <button
             className="front-waehrung front-waehrung--muenzen"
             onClick={() => setBald('Münzen kaufen')}
@@ -103,7 +93,10 @@ export function GameSelect({
         </div>
       </header>
 
-      <div className="front-body" key={tab}>
+      <div
+        className={`front-body${tab === 'spielen' ? '' : ' front-body--scroll'}`}
+        key={tab}
+      >
         {tab === 'shop' && <Shop onBald={setBald} />}
         {tab === 'clan' && (
           <Clan
@@ -138,14 +131,14 @@ export function GameSelect({
           farbe="shop"
           active={tab === 'shop'}
           onClick={() => setTab('shop')}
-          icon={<ShopIcon />}
+          iconSrc="/hub/tab-shop.png"
         />
         <TabButton
           label="Clan"
           farbe="clan"
           active={tab === 'clan'}
           onClick={() => setTab('clan')}
-          icon={<ClanIcon />}
+          iconSrc="/hub/tab-clan.png"
         />
         <TabButton
           label="Spielen"
@@ -153,21 +146,21 @@ export function GameSelect({
           farbe="spielen"
           active={tab === 'spielen'}
           onClick={() => setTab('spielen')}
-          icon={<KartenIcon />}
+          iconSrc="/hub/tab-spielen.png"
         />
         <TabButton
           label="Blatt"
           farbe="blatt"
           active={tab === 'blatt'}
           onClick={() => setTab('blatt')}
-          icon={<BlattIcon />}
+          iconSrc="/hub/tab-blatt.png"
         />
         <TabButton
           label="Profil"
           farbe="profil"
           active={tab === 'profil'}
           onClick={() => setTab('profil')}
-          icon={<ProfilIcon />}
+          iconSrc="/hub/tab-profil.png"
         />
       </nav>
 
@@ -232,17 +225,11 @@ function Clan({
     <>
       <header className="front-clan-halle">
         <div className="front-clan-banner">
-          <span className="front-clan-wappen" aria-hidden="true">
-            🛡️
-          </span>
+          <img className="front-clan-wappen" src="/hub/clan-wappen.png" alt="" draggable={false} />
           <strong className="front-clan-name">{clan?.name ?? 'Brauweg'}</strong>
           <div className="front-clan-stats">
-            <span>
-              <em aria-hidden="true">👥</em> Mitglieder —
-            </span>
-            <span>
-              <em aria-hidden="true">🏆</em> Trophäen —
-            </span>
+            <span>Mitglieder —</span>
+            <span>Trophäen —</span>
           </div>
           <p className="muted">Für alle Spiele — nicht nur Doppelkopf.</p>
         </div>
@@ -278,25 +265,25 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
   const regale = [
     {
       name: 'Kartenblätter',
-      zeichen: '🃏',
+      icon: '/hub/tab-blatt.png',
       text: 'Stilvolle Designs für dein Spiel.',
       preis: '2.500',
     },
     {
       name: 'Tischdesigns',
-      zeichen: '🪵',
+      icon: '/hub/truhe.png',
       text: 'Neue Looks für deinen Spieltisch.',
       preis: '3.500',
     },
     {
       name: 'Münzpakete',
-      zeichen: '🪙',
+      icon: '/hub/muenze.png',
       text: 'Mehr Münzen für mehr Möglichkeiten.',
       preis: '4,99 €',
     },
     {
       name: 'Premium-Decks',
-      zeichen: '📦',
+      icon: '/hub/tab-spielen.png',
       text: 'Exklusive Decks mit besonderen Motiven.',
       preis: '5.000',
     },
@@ -314,9 +301,7 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
         <span className="front-shop-ribbon">★ Wochenangebot</span>
         <div className="front-shop-featured-body">
           <div className="front-shop-featured-text">
-            <strong>
-              <span aria-hidden="true">👑</span> VIP-Pass
-            </strong>
+            <strong>VIP-Pass</strong>
             <p>7 Tage Premium-Vorteile + exklusives Kartenblatt.</p>
             <ul>
               {vorteile.map((v) => (
@@ -324,9 +309,12 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
               ))}
             </ul>
           </div>
-          <span className="front-shop-featured-zeichen" aria-hidden="true">
-            🃏
-          </span>
+          <img
+            className="front-shop-featured-art"
+            src="/hub/shop-vip.png"
+            alt=""
+            draggable={false}
+          />
         </div>
         <span className="front-shop-bald-knopf">
           <span className="front-bald-tag">Bald</span>
@@ -340,13 +328,11 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
             className="front-shop-kachel"
             onClick={() => onBald(regal.name)}
           >
-            <span className="front-shop-zeichen" aria-hidden="true">
-              {regal.zeichen}
-            </span>
+            <img className="front-shop-zeichen" src={regal.icon} alt="" draggable={false} />
             <strong>{regal.name}</strong>
             <span className="front-shop-kachel-text muted">{regal.text}</span>
             <span className="front-shop-bald-knopf">
-              <span className="front-bald-tag">🔒 Bald</span>
+              <span className="front-bald-tag">Bald</span>
             </span>
             <span className="front-shop-preis" aria-hidden="true">
               {regal.preis}
@@ -360,14 +346,14 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
 
 function TabButton({
   label,
-  icon,
+  iconSrc,
   active,
   haupt = false,
   farbe,
   onClick,
 }: {
   label: string;
-  icon: React.JSX.Element;
+  iconSrc: string;
   active: boolean;
   haupt?: boolean;
   /** Jeder Bereich hat seine eigene Leuchtfarbe, wenn er gewaehlt ist. */
@@ -380,7 +366,7 @@ function TabButton({
       aria-current={active ? 'page' : undefined}
       onClick={onClick}
     >
-      {icon}
+      <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
       <span>{label}</span>
     </button>
   );
@@ -881,8 +867,12 @@ function DeckPicker({
   onChange: (cardDeck: string) => void;
 }): React.JSX.Element {
   return (
-    <>
-      <h2>Kartenblatt</h2>
+    <div className="front-blatt">
+      <h2 className="front-shop-titel">
+        <span aria-hidden="true" />
+        Blatt
+        <span aria-hidden="true" />
+      </h2>
       <p className="muted">Gilt für dein Konto, also auch auf jedem anderen Gerät.</p>
       <div className="decks">
         {DECKS.map((deck) => (
@@ -902,7 +892,7 @@ function DeckPicker({
           </button>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1031,104 +1021,3 @@ function ProfilePicture({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sinnbilder der Tab-Leiste: von Hand gezeichnete Striche in Textfarbe,
-// keine Emojis - die saehen auf jedem Geraet anders aus.
-// ---------------------------------------------------------------------------
-
-function PokalIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M7 3h10v5.5a5 5 0 0 1-10 0V3z" />
-      <path d="M7 5H4a3 3 0 0 0 3 4.5" />
-      <path d="M17 5h3a3 3 0 0 1-3 4.5" />
-      <path d="M12 13.5V17" />
-      <path d="M8.5 20c.5-2 1.8-3 3.5-3s3 1 3.5 3" />
-      <path d="M7 21h10" />
-    </svg>
-  );
-}
-
-function ShopIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 8h14l-1.2 12a1.5 1.5 0 0 1-1.5 1.3H7.7A1.5 1.5 0 0 1 6.2 20L5 8z" />
-      <path d="M9 11V6.5a3 3 0 0 1 6 0V11" />
-    </svg>
-  );
-}
-
-function BlattIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="6.5" y="3.5" width="11" height="17" rx="1.8" />
-      <path d="M12 9.2c1.4-2.4 4.6-.6 3.2 1.6-.6 1-2 2-3.2 3-1.2-1-2.6-2-3.2-3-1.4-2.2 1.8-4 3.2-1.6z" />
-    </svg>
-  );
-}
-
-function MuenzeIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="8.5" />
-      <circle cx="12" cy="12" r="5" />
-    </svg>
-  );
-}
-
-function KroneIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 8.5l4 3.5 4-6 4 6 4-3.5-1.2 9a1.5 1.5 0 0 1-1.5 1.3H6.7a1.5 1.5 0 0 1-1.5-1.3L4 8.5z" />
-    </svg>
-  );
-}
-
-function GeschenkIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="9" width="16" height="11" rx="1.5" />
-      <path d="M12 9v11" />
-      <path d="M4 13h16" />
-      <path d="M12 9C10 9 7.5 8.3 7.5 6.4 7.5 4.6 10 4.4 11 6c.6 1 .9 2 1 3z" />
-      <path d="M12 9c2 0 4.5-.7 4.5-2.6 0-1.8-2.5-2-3.5-.4-.6 1-.9 2-1 3z" />
-    </svg>
-  );
-}
-
-function KartenIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3.5" y="5" width="9" height="13" rx="1.5" transform="rotate(-8 8 11.5)" />
-      <rect x="11.5" y="5.5" width="9" height="13" rx="1.5" transform="rotate(8 16 12)" />
-    </svg>
-  );
-}
-
-function ClanIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 3.5 19 7v5.2c0 4.3-2.9 7.3-7 8.8-4.1-1.5-7-4.5-7-8.8V7l7-3.5z" />
-      <circle cx="12" cy="10" r="2.2" />
-      <path d="M8.5 16.2c.7-1.6 2-2.4 3.5-2.4s2.8.8 3.5 2.4" />
-    </svg>
-  );
-}
-
-function ProfilIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="8" r="3.6" />
-      <path d="M5 20.5c.8-4 3.3-6 7-6s6.2 2 7 6" />
-    </svg>
-  );
-}
