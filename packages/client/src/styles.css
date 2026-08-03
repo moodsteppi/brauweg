@@ -1564,6 +1564,66 @@ td {
   line-height: 1.1;
 }
 
+/* Statistik: Hinweis zu den zwei Zahlenwelten. */
+.hub-statistik-hinweis {
+  margin: 0.4rem 0 0;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.45rem;
+  background: rgba(12, 8, 3, 0.35);
+  font-size: 0.62rem;
+  line-height: 1.3;
+  color: rgba(255, 240, 210, 0.8);
+}
+
+/* Je-Spiel-Zeile (Profil / Fremdprofil). */
+.hub-spielzeile {
+  display: grid;
+  grid-template-columns: 1.35rem 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.4rem 0.15rem;
+  border-bottom: 1px solid rgba(255, 200, 100, 0.18);
+}
+.hub-spielzeile:last-child {
+  border-bottom: 0;
+}
+.hub-spielzeile > img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+.hub-spielzeile-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.hub-spielzeile-text strong {
+  font-size: 0.8rem;
+  color: #fff7e2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hub-spielzeile-text .muted {
+  font-size: 0.6rem;
+  margin: 0;
+}
+.hub-spielzeile-cups {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #ffe08a;
+  font-size: 0.85rem;
+}
+.hub-spielzeile-cups img {
+  width: 0.85rem;
+  height: 0.85rem;
+  object-fit: contain;
+}
+
 /* Clan-Schild: Wappen, Name, Zahlen, Knopf. */
 .hub-clanschild {
   flex: 0 0 auto;
@@ -1785,6 +1845,47 @@ td {
 .hub-knopf--raus {
   color: #ffd4cc;
   border-color: rgba(226, 120, 100, 0.55);
+}
+.hub-knopf--gold {
+  width: 100%;
+  color: #2a200c;
+  background: linear-gradient(180deg, #ffe08a 0%, #f0b84a 100%);
+  border-color: #c9962a;
+  box-shadow: 0 2px 0 #8a6a22;
+}
+.hub-knopf--gold:active {
+  box-shadow: 0 1px 0 #8a6a22;
+}
+.hub-knopf:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Fremdprofil als eigener Screen (gleiche Hub-Schale). */
+.front-top--zurueck {
+  justify-content: flex-start;
+}
+.hub-zurueck {
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(12, 32, 70, 0.45);
+  border: 1.5px solid rgba(255, 224, 138, 0.55);
+  box-shadow: 0 2px 0 #123570;
+}
+.hub-zurueck:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #123570;
+}
+.hub-profilbild--nur {
+  cursor: default;
+  display: block;
+  object-fit: cover;
+}
+.hub-profil-fremd {
+  gap: 0.55rem;
 }
 
 /* Freundesliste im Clan-Tab. */
@@ -2330,6 +2431,185 @@ td {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+}
+/* Eigenes Profil: Je Spiel + Sammlung müssen in 100dvh passen — Inhalt rollt. */
+.front-profil--b .hub-tab-inhalt {
+  overflow-y: auto;
+}
+
+/* —— Statistik Entwurf A: knallig, Pokal-Hero —— */
+.front-profil--a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.front-profil--a .hub-tab-inhalt {
+  overflow-y: auto;
+  gap: 0.4rem;
+}
+.hub-profilkopf--a {
+  background: linear-gradient(165deg, #2a8a5a, #0f4a34);
+  border: 2px solid rgba(255, 220, 120, 0.75);
+  box-shadow: 0 4px 0 #0a2e22;
+}
+.hub-stat-hero {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 0.65rem 0.5rem 0.5rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, #3a7fd4, #2458a8);
+  border: 2px solid rgba(255, 220, 120, 0.65);
+  box-shadow: 0 4px 0 #123570;
+}
+.hub-stat-hero > img {
+  width: 2.6rem;
+  height: 2.6rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+.hub-stat-hero-zahl {
+  display: block;
+  margin: 0.1rem 0;
+  font-size: 1.85rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #ffe08a;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(18, 53, 112, 0.55);
+}
+.hub-stat-hero-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 240, 210, 0.92);
+}
+.hub-stat-raster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+.hub-stat-kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.45rem 0.25rem 0.4rem;
+  border-radius: 0.7rem;
+  text-align: center;
+  background: linear-gradient(180deg, #3a7fd4, #2458a8);
+  border: 1.5px solid rgba(255, 220, 120, 0.5);
+  box-shadow: 0 3px 0 #123570;
+}
+.hub-stat-kachel img {
+  width: 1.35rem;
+  height: 1.35rem;
+  object-fit: contain;
+}
+.hub-stat-kachel strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: #ffe08a;
+  line-height: 1.1;
+}
+.hub-stat-kachel > span {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: rgba(255, 240, 210, 0.9);
+  line-height: 1.1;
+}
+.hub-stat-spiel {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(180deg, #3a7fd4, #2458a8);
+  border: 1.5px solid rgba(255, 220, 120, 0.45);
+  box-shadow: 0 3px 0 #123570;
+}
+.hub-stat-spiel > img {
+  width: 1.55rem;
+  height: 1.55rem;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.hub-stat-spiel-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.hub-stat-spiel-text strong {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hub-stat-spiel-text .muted {
+  font-size: 0.6rem;
+  margin: 0;
+  color: rgba(230, 242, 255, 0.85);
+}
+.hub-stat-spiel-cups {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #ffe08a;
+  font-size: 0.9rem;
+  flex: 0 0 auto;
+}
+.hub-stat-spiel-cups img {
+  width: 0.9rem;
+  height: 0.9rem;
+  object-fit: contain;
+}
+.hub-stat-leer {
+  margin: 0.15rem 0;
+  text-align: center;
+}
+.front-profil--a .hub-statistik-hinweis {
+  background: rgba(12, 32, 70, 0.45);
+  border: 1px solid rgba(255, 220, 120, 0.28);
+  color: rgba(230, 242, 255, 0.88);
+}
+.hub-knopfreihe--a {
+  margin-top: 0.1rem;
+}
+.hub-knopf--a {
+  background: linear-gradient(180deg, #3a7fd4, #2458a8);
+  border: 1.5px solid rgba(255, 220, 120, 0.5);
+  box-shadow: 0 3px 0 #123570;
+  color: #fff;
+}
+.hub-knopf--a:active {
+  box-shadow: 0 1px 0 #123570;
+}
+.hub-knopf--a-raus {
+  color: #fff;
+  font-weight: 800;
+  background: linear-gradient(180deg, #ef6b6b, #c94444);
+  border: 1.5px solid rgba(255, 200, 180, 0.45);
+  box-shadow: 0 3px 0 #7a2222;
+}
+.hub-knopf--a-raus:active {
+  box-shadow: 0 1px 0 #7a2222;
+}
+.hub-knopf--a-gold {
+  width: 100%;
+  color: #2a200c;
+  background: linear-gradient(180deg, #ffe08a 0%, #f0b84a 100%);
+  border: 1.5px solid #c9962a;
+  box-shadow: 0 3px 0 #8a6a22;
+}
+.hub-knopf--a-gold:active {
+  box-shadow: 0 1px 0 #8a6a22;
 }
 .front--hub .front-profil--b .panel,
 .front--hub .front-profil--b .panel.profile {
@@ -2979,9 +3259,17 @@ td {
   padding: 0;
 }
 .front-ranking-cups {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   color: var(--gold);
   font-weight: 700;
   white-space: nowrap;
+}
+.front-ranking-cups img {
+  width: 0.95rem;
+  height: 0.95rem;
+  object-fit: contain;
 }
 
 .doko-badge--pause {

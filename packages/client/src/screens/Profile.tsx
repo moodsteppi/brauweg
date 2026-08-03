@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 
 import { ApiError, api, type PlayerProfile, type Relationship } from '../api';
+import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel } from '../hub';
 import { t } from '../i18n';
 
 /**
- * Spielerprofil.
+ * Spielerprofil (Entwurf A — knallig, Pokal-Hero).
  *
  * Zwei getrennte Zahlenwelten, bewusst nebeneinander: Die Wertung zaehlt nur
  * Tische ohne Bots (sonst waere die Rangliste eine Bot-Farm), "gespielt"
@@ -19,12 +20,11 @@ export function Profile({
   accountId: string;
   onBack?: () => void;
   /**
-   * Als Tab-Inhalt statt als eigener Bildschirm: kein <main>-Rahmen, kein
+   * Als Tab-Inhalt statt als eigener Bildschirm: kein Rahmen, kein
    * Zurueck-Knopf — die Navigation gehoert dann der Tab-Leiste.
    */
   eingebettet?: boolean;
 }): React.JSX.Element {
-  const Rahmen = eingebettet ? 'div' : 'main';
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -54,97 +54,112 @@ export function Profile({
 
   if (error && !profile) {
     return (
-      <Rahmen>
+      <ProfilRahmen eingebettet={eingebettet} onBack={onBack}>
         <p className="error">{error}</p>
-        {!eingebettet && <button onClick={onBack}>Zurück</button>}
-      </Rahmen>
+      </ProfilRahmen>
     );
   }
 
   if (!profile) {
     return (
-      <Rahmen>
+      <ProfilRahmen eingebettet={eingebettet} onBack={onBack}>
         <p className="muted">Profil wird geladen…</p>
-        {!eingebettet && <button onClick={onBack}>Zurück</button>}
-      </Rahmen>
+      </ProfilRahmen>
     );
   }
 
   const quote =
     profile.totals.parties > 0
-      ? Math.round((profile.totals.wins / profile.totals.parties) * 100)
-      : null;
+      ? `${Math.round((profile.totals.wins / profile.totals.parties) * 100)} %`
+      : '–';
+  const checkpoint =
+    profile.ranking.length > 0
+      ? Math.max(...profile.ranking.map((row) => row.highestCheckpoint))
+      : 0;
+
+  const kacheln = [
+    { icon: '/hub/tab-spielen.png', name: 'Partien', wert: profile.totals.parties },
+    { icon: '/hub/krone.png', name: 'Siege', wert: profile.totals.wins },
+    { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
+    { icon: '/hub/truhe.png', name: 'Checkpoint', wert: checkpoint },
+  ];
 
   return (
-    <Rahmen>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h1>{profile.displayName}</h1>
-        {!eingebettet && <button onClick={onBack}>Zurück</button>}
-      </div>
-      <p className="muted">Dabei seit {profile.memberSince}</p>
+    <ProfilRahmen eingebettet={eingebettet} onBack={onBack}>
+      <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--a hub-profil-fremd">
+        <HubBanner />
 
-      <FriendButton
-        relationship={profile.relationship}
-        busy={busy}
-        onRequest={() => act(() => api.requestFriend(profile.id))}
-        onAccept={() => act(() => api.acceptFriend(profile.id))}
-        onRemove={() => act(() => api.removeFriend(profile.id))}
-      />
-
-      {error && <p className="error">{error}</p>}
-
-      <div className="panel">
-        <h2>Gesamt</h2>
-        <div className="zahlen">
-          <Zahl wert={profile.totals.trophies} name="Trophäen" />
-          <Zahl wert={profile.totals.parties} name="Partien" />
-          <Zahl wert={profile.totals.wins} name="Siege" />
-          <Zahl wert={quote === null ? '–' : `${quote} %`} name="Siegquote" />
+        <div className="hub-profilkopf hub-profilkopf--a">
+          <img
+            className="hub-profilbild hub-profilbild--nur"
+            src="/hub/pinguin.png"
+            alt=""
+            draggable={false}
+          />
+          <div className="hub-profilkopf-text">
+            <strong>{profile.displayName}</strong>
+            <span className="muted">Dabei seit {profile.memberSince}</span>
+          </div>
         </div>
-        <p className="muted">
-          Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege zählen alles.
-        </p>
-      </div>
 
-      <div className="panel">
-        <h2>Je Spiel</h2>
-        {profile.ranking.length === 0 && (
-          <p className="muted">Noch keine gewertete Partie gespielt.</p>
+        {error && <p className="error">{error}</p>}
+
+        <StatHero wert={profile.totals.trophies} label="Trophäen" />
+
+        <div className="hub-stat-raster">
+          {kacheln.map((k) => (
+            <StatKachel key={k.name} icon={k.icon} wert={k.wert} name={k.name} />
+          ))}
+        </div>
+
+        {profile.ranking.length === 0 ? (
+          <p className="muted hub-stat-leer">Noch keine gewertete Partie gespielt.</p>
+        ) : (
+          profile.ranking.map((row) => (
+            <StatSpiel
+              key={row.gameId}
+              name={t(`game.${row.gameId}`)}
+              meta={`Checkpoint ${row.highestCheckpoint} · ${row.parties} gewertet · ${row.wins} Siege`}
+              cups={row.trophies}
+            />
+          ))
         )}
-        {profile.ranking.length > 0 && (
-          <table>
-            <thead>
-              <tr>
-                <th>Spiel</th>
-                <th>Trophäen</th>
-                <th>Checkpoint</th>
-                <th>Gewertet</th>
-                <th>Siege</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profile.ranking.map((row) => (
-                <tr key={row.gameId}>
-                  <td>{t(`game.${row.gameId}`)}</td>
-                  <td>{row.trophies}</td>
-                  <td>{row.highestCheckpoint}</td>
-                  <td>{row.parties}</td>
-                  <td>{row.wins}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </Rahmen>
+
+        <p className="hub-statistik-hinweis">
+          Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.
+        </p>
+
+        <FriendButton
+          relationship={profile.relationship}
+          busy={busy}
+          onRequest={() => act(() => api.requestFriend(profile.id))}
+          onAccept={() => act(() => api.acceptFriend(profile.id))}
+          onRemove={() => act(() => api.removeFriend(profile.id))}
+        />
+      </HubSzene>
+    </ProfilRahmen>
   );
 }
 
-function Zahl({ wert, name }: { wert: number | string; name: string }): React.JSX.Element {
+/** Eigenständiger Screen: Hub-Shell mit Zurück; eingebettet nur Inhalt. */
+function ProfilRahmen({
+  eingebettet,
+  onBack,
+  children,
+}: {
+  eingebettet: boolean;
+  onBack?: () => void;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  if (eingebettet) return <>{children}</>;
   return (
-    <div className="zahl">
-      <strong>{wert}</strong>
-      <span className="muted">{name}</span>
+    <div className="front front--hub">
+      <header className="front-top front-top--zurueck">
+        <button className="hub-zurueck" onClick={onBack} type="button">
+          ← Zurück
+        </button>
+      </header>
+      <div className="front-body front-body--szene">{children}</div>
     </div>
   );
 }
@@ -162,43 +177,41 @@ function FriendButton({
   onRequest: () => void;
   onAccept: () => void;
   onRemove: () => void;
-}): React.JSX.Element | null {
+}): React.JSX.Element {
   switch (relationship) {
     case 'self':
       return <p className="muted">Das bist du.</p>;
     case 'none':
       return (
-        <div className="row">
-          <button className="primary" onClick={onRequest} disabled={busy}>
-            Freund hinzufügen
-          </button>
-        </div>
+        <button className="hub-knopf hub-knopf--a-gold" onClick={onRequest} disabled={busy}>
+          Freund hinzufügen
+        </button>
       );
     case 'outgoing':
       return (
-        <div className="row">
+        <div className="hub-knopfreihe hub-knopfreihe--a">
           <span className="muted">Anfrage gesendet.</span>
-          <button onClick={onRemove} disabled={busy}>
+          <button className="hub-knopf hub-knopf--a" onClick={onRemove} disabled={busy}>
             Zurückziehen
           </button>
         </div>
       );
     case 'incoming':
       return (
-        <div className="row">
-          <button className="primary" onClick={onAccept} disabled={busy}>
+        <div className="hub-knopfreihe hub-knopfreihe--a">
+          <button className="hub-knopf hub-knopf--a-gold" onClick={onAccept} disabled={busy}>
             Anfrage annehmen
           </button>
-          <button onClick={onRemove} disabled={busy}>
+          <button className="hub-knopf hub-knopf--a-raus" onClick={onRemove} disabled={busy}>
             Ablehnen
           </button>
         </div>
       );
     case 'friends':
       return (
-        <div className="row">
-          <span>✓ Ihr seid Freunde.</span>
-          <button onClick={onRemove} disabled={busy}>
+        <div className="hub-knopfreihe hub-knopfreihe--a">
+          <span className="muted">✓ Ihr seid Freunde.</span>
+          <button className="hub-knopf hub-knopf--a-raus" onClick={onRemove} disabled={busy}>
             Freundschaft beenden
           </button>
         </div>
