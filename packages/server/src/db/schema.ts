@@ -67,7 +67,16 @@ export const partyStatus = pgEnum('party_status', [
 
 export const clubJoinMode = pgEnum('club_join_mode', ['open', 'on_request']);
 
-export const clubRole = pgEnum('club_role', ['admin', 'member', 'guest']);
+/**
+ * Rangstufen im Clan.
+ *
+ *  ist der Anfuehrer,  der Vizeanfuehrer — beide duerfen
+ * dasselbe.  (Aeltester) ist bisher eine Auszeichnung ohne
+ * Sonderrechte; die Stufe steht schon da, damit ein Verein sie vergeben kann.
+ * Die Kennungen bleiben englisch wie das uebrige Schema, die Anzeige
+ * uebersetzt der Client.
+ */
+export const clubRole = pgEnum('club_role', ['admin', 'vize', 'elder', 'member', 'guest']);
 
 export const friendshipStatus = pgEnum('friendship_status', [
   'pending',

@@ -50,7 +50,21 @@ export const NAME_MIN = 3;
 export const NAME_MAX = 24;
 export const MOTTO_MAX = 120;
 
-export type ClubRole = 'admin' | 'member' | 'guest';
+export type ClubRole = 'admin' | 'vize' | 'elder' | 'member' | 'guest';
+
+/**
+ * Wer den Clan verwalten darf.
+ *
+ * Anfuehrer und Vizeanfuehrer duerfen dasselbe — aufnehmen, rauswerfen,
+ * Raenge vergeben, Regeln aendern. Ein Verein hat selten nur einen, der sich
+ * kuemmert, und wer sich kuemmert, soll nicht auf einen einzigen warten.
+ * "Aeltester" ist bisher eine Auszeichnung ohne Sonderrechte.
+ */
+export const LEITUNG: readonly ClubRole[] = ['admin', 'vize'];
+
+export function istLeitung(rolle: ClubRole | null | undefined): boolean {
+  return rolle === 'admin' || rolle === 'vize';
+}
 
 export interface ClubSummary {
   readonly id: string;
@@ -258,14 +272,14 @@ export async function requireClubExists(db: Db, clubId: string): Promise<void> {
   if (!row) throw notFound('clubUnknown');
 }
 
-/** Wirft, wenn das Konto nicht Admin des Clans ist. */
-async function requireAdmin(db: Db, clubId: string, accountId: string): Promise<void> {
+/** Wirft, wenn das Konto nicht zur Leitung des Clans gehoert. */
+async function requireLeitung(db: Db, clubId: string, accountId: string): Promise<void> {
   const [row] = await db
     .select({ role: s.clubMember.role })
     .from(s.clubMember)
     .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, accountId)));
   if (!row) throw forbidden('notClubMember');
-  if (row.role !== 'admin') throw forbidden('notClubAdmin');
+  if (!istLeitung(row.role)) throw forbidden('notClubAdmin');
 }
 
 // ---------------------------------------------------------------------------
@@ -516,7 +530,7 @@ async function nachfolgeOderLoeschen(tx: Db, clubId: string): Promise<void> {
     .where(
       and(
         eq(s.clubMember.clubId, clubId),
-        eq(s.clubMember.role, 'admin'),
+        inArray(s.clubMember.role, [...LEITUNG]),
         isNull(s.account.anonymizedAt),
       ),
     );
@@ -590,7 +604,7 @@ export async function updateClub(
   accountId: string,
   input: UpdateClubInput,
 ): Promise<void> {
-  await requireAdmin(db, clubId, accountId);
+  await requireLeitung(db, clubId, accountId);
 
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = pruefeName(input.name);
@@ -621,7 +635,7 @@ export async function acceptJoinRequest(
   adminAccountId: string,
   accountId: string,
 ): Promise<void> {
-  await requireAdmin(db, clubId, adminAccountId);
+  await requireLeitung(db, clubId, adminAccountId);
 
   await db.transaction(async (tx) => {
     const [anfrage] = await tx
@@ -669,7 +683,7 @@ export async function rejectJoinRequest(
   adminAccountId: string,
   accountId: string,
 ): Promise<void> {
-  await requireAdmin(db, clubId, adminAccountId);
+  await requireLeitung(db, clubId, adminAccountId);
   await db
     .delete(s.clubJoinRequest)
     .where(and(eq(s.clubJoinRequest.clubId, clubId), eq(s.clubJoinRequest.accountId, accountId)));
@@ -689,7 +703,7 @@ export async function setMemberRole(
   accountId: string,
   role: ClubRole,
 ): Promise<void> {
-  await requireAdmin(db, clubId, adminAccountId);
+  await requireLeitung(db, clubId, adminAccountId);
   if (accountId === adminAccountId) throw badRequest('cannotChangeOwnRole');
 
   await db.transaction(async (tx) => {
@@ -699,12 +713,11 @@ export async function setMemberRole(
       .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.accountId, accountId)));
     if (!ziel) throw notFound('memberUnknown');
 
-    // Den letzten Admin herabzustufen macht den Clan unverwaltbar: Niemand
-    // koennte mehr aufnehmen, rauswerfen oder die Regeln aendern. Da der
-    // Herabstufende selbst Admin ist, kann das nur passieren, wenn er sich
-    // und das Ziel verwechselt - die Pruefung faengt es trotzdem ab.
-    if (ziel.role === 'admin' && role !== 'admin') {
-      await pruefeLetzterAdmin(tx, clubId, accountId);
+    // Wer die Leitung verlaesst, darf nicht der letzte darin sein: Ein Clan
+    // ohne Anfuehrer und Vize ist unverwaltbar - niemand koennte mehr
+    // aufnehmen, rauswerfen oder die Regeln aendern.
+    if (istLeitung(ziel.role) && !istLeitung(role)) {
+      await pruefeLetzteLeitung(tx, clubId, accountId);
     }
 
     await tx
@@ -722,7 +735,7 @@ export async function setMemberRole(
 }
 
 /** Wirft, wenn `accountId` der einzige verbliebene Admin des Clans ist. */
-async function pruefeLetzterAdmin(tx: Db, clubId: string, accountId: string): Promise<void> {
+async function pruefeLetzteLeitung(tx: Db, clubId: string, accountId: string): Promise<void> {
   const [zahl] = await tx
     .select({ n: count() })
     .from(s.clubMember)
@@ -730,7 +743,7 @@ async function pruefeLetzterAdmin(tx: Db, clubId: string, accountId: string): Pr
     .where(
       and(
         eq(s.clubMember.clubId, clubId),
-        eq(s.clubMember.role, 'admin'),
+        inArray(s.clubMember.role, [...LEITUNG]),
         ne(s.clubMember.accountId, accountId),
         isNull(s.account.anonymizedAt),
       ),
@@ -744,7 +757,7 @@ export async function kickMember(
   adminAccountId: string,
   accountId: string,
 ): Promise<void> {
-  await requireAdmin(db, clubId, adminAccountId);
+  await requireLeitung(db, clubId, adminAccountId);
   if (accountId === adminAccountId) throw badRequest('cannotKickSelf');
 
   await db.transaction(async (tx) => {
@@ -756,7 +769,7 @@ export async function kickMember(
 
     // Admins duerfen einander rauswerfen - sie sind gleichberechtigt. Nur der
     // letzte darf nicht gehen, sonst bleibt ein Clan ohne Verwaltung zurueck.
-    if (ziel.role === 'admin') await pruefeLetzterAdmin(tx, clubId, accountId);
+    if (istLeitung(ziel.role)) await pruefeLetzteLeitung(tx, clubId, accountId);
 
     await tx
       .delete(s.clubMember)
@@ -783,7 +796,7 @@ async function richteAdminSpalte(tx: Db, clubId: string, ausgeschieden: string):
   const [ersatz] = await tx
     .select({ accountId: s.clubMember.accountId })
     .from(s.clubMember)
-    .where(and(eq(s.clubMember.clubId, clubId), eq(s.clubMember.role, 'admin')))
+    .where(and(eq(s.clubMember.clubId, clubId), inArray(s.clubMember.role, [...LEITUNG])))
     .orderBy(asc(s.clubMember.joinedAt))
     .limit(1);
   if (ersatz) {

@@ -166,7 +166,7 @@ export const WAPPEN = [
   'wappen-8',
 ] as const;
 
-export type ClubRole = 'admin' | 'member' | 'guest';
+export type ClubRole = 'admin' | 'vize' | 'elder' | 'member' | 'guest';
 export type JoinMode = 'open' | 'on_request';
 
 export interface ClubSummary {

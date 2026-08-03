@@ -1781,8 +1781,9 @@ td {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* Kein blauer Luftspalt zwischen Karte und Spielauswahl. */
-  padding: 0 0.3rem 0.15rem;
+  /* Randlos: Jede Polsterung hier wird als blauer Rahmen um die Weltkarte
+     sichtbar, und zwar je nach Geraet unterschiedlich breit. */
+  padding: 0;
 }
 .front--hub .front-body--scroll {
   overflow: auto;
@@ -4722,5 +4723,15 @@ main.auth > .muted {
 .hub-szene-karten .card-img {
   width: 1.5rem;
   height: 2.18rem;
+}
+
+/*
+ * Die Einstiegskarte weicht der Knopfleiste aus.
+ *
+ * Seit die Knoepfe ueber dem Bild liegen statt darunter, lagen beide
+ * uebereinander und "Neu hier?" war zur Haelfte verdeckt.
+ */
+.hub-neuhier {
+  bottom: 3.9rem;
 }
 

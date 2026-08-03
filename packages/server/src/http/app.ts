@@ -727,7 +727,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.patch('/api/clubs/:clubId/members/:accountId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const adminId = await requireAccount(request);
     const params = memberParams.parse(request.params);
-    const { role } = z.object({ role: z.enum(['admin', 'member', 'guest']) }).parse(request.body);
+    const { role } = z.object({ role: z.enum(['admin', 'vize', 'elder', 'member', 'guest']) }).parse(request.body);
     await setMemberRole(deps.db, params.clubId, adminId, params.accountId, role);
     return reply.send({ ok: true });
   });

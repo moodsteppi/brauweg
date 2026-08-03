@@ -6,6 +6,7 @@ import {
   api,
   type ClubDetail,
   type ClubMemberView,
+  type ClubRole,
   type ClubSummary,
   type JoinMode,
 } from '../api';
@@ -38,11 +39,25 @@ function wappenBild(crest: string | null | undefined): string {
     : '/hub/clan-wappen.png';
 }
 
+/**
+ * Rangstufen im Clan.
+ *
+ * Die Kennungen bleiben englisch wie im Schema; hier stehen die Woerter,
+ * die am Tisch fallen. "Aeltester" ist bisher eine Auszeichnung ohne
+ * Sonderrechte — vergeben laesst sie sich trotzdem.
+ */
 const ROLLE: Record<string, string> = {
-  admin: 'Admin',
+  admin: 'Anführer',
+  vize: 'Vizeanführer',
+  elder: 'Ältester',
   member: 'Mitglied',
   guest: 'Gast',
 };
+
+/** Anfuehrer und Vize duerfen dasselbe. */
+function istLeitung(rolle: string | null | undefined): boolean {
+  return rolle === 'admin' || rolle === 'vize';
+}
 
 /**
  * Bild eines Mitglieds: das eigene, sonst ein Pinguin.
@@ -224,7 +239,7 @@ function Halle({
   const [gewaehlt, setGewaehlt] = useState<ClubMemberView | null>(null);
   const [blatt, setBlatt] = useState<'anfragen' | 'einstellungen' | null>(null);
 
-  const istAdmin = detail?.myRole === 'admin';
+  const darfVerwalten = istLeitung(detail?.myRole);
   const offen = detail?.requests.length ?? 0;
 
   return (
@@ -261,13 +276,14 @@ function Halle({
         drei ersten sind ehrliche Platzhalter: Sie sagen beim Antippen, dass
         es sie noch nicht gibt — die Halle soll aber schon aussehen wie eine
         Halle und nicht wie eine Baustelle. Die beiden letzten arbeiten und
-        stehen nur beim Admin.
+        arbeiten; Anfragen bleiben der Leitung vorbehalten.
       */}
       <div className="clan-icons">
         <IconKnopf icon="chat" label="Chat" bald onClick={() => onBald('Clanchat')} />
         <IconKnopf icon="truhe" label="Truhe" bald onClick={() => onBald('Clantruhe')} />
         <IconKnopf icon="krieg" label="Krieg" bald onClick={() => onBald('Clankrieg')} />
-        {istAdmin && (
+        {/* Anfragen sind Bewerberdaten - die sieht nur die Leitung. */}
+        {darfVerwalten && (
           <IconKnopf
             icon="anfragen"
             label="Anfragen"
@@ -275,13 +291,13 @@ function Halle({
             onClick={() => setBlatt('anfragen')}
           />
         )}
-        {istAdmin && (
-          <IconKnopf
-            icon="einstellungen"
-            label="Clan"
-            onClick={() => setBlatt('einstellungen')}
-          />
-        )}
+        {/* Die Clanregeln sieht jeder: Wer beitritt, soll nachlesen koennen,
+            was hier gilt. Aendern duerfen sie nur Anfuehrer und Vize. */}
+        <IconKnopf
+          icon="einstellungen"
+          label="Clan"
+          onClick={() => setBlatt('einstellungen')}
+        />
       </div>
 
       {fehler && <p className="clan-fehler">{fehler}</p>}
@@ -302,7 +318,7 @@ function Halle({
             <button
               key={m.accountId}
               className="clan-zeile"
-              onClick={() => (istAdmin ? setGewaehlt(m) : onShowProfile(m.accountId))}
+              onClick={() => (darfVerwalten ? setGewaehlt(m) : onShowProfile(m.accountId))}
             >
               {/* Die Liste steht nach Trophaeen — dann ist die Position eine
                   Aussage und kein Zierrat. */}
@@ -356,6 +372,7 @@ function Halle({
       )}
       {blatt === 'einstellungen' && detail && (
         <EinstellungenBlatt
+          darfAendern={darfVerwalten}
           detail={detail}
           onClose={() => setBlatt(null)}
           onAktion={onAktion}
@@ -379,6 +396,20 @@ function MitgliedBlatt({
   onShowProfile: (accountId: string) => void;
   onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
 }): React.JSX.Element {
+  /**
+   * Die Raenge zur Auswahl.
+   *
+   * Anfuehrer und Vize duerfen dasselbe; "Aeltester" ist eine Auszeichnung
+   * ohne Sonderrechte. Der aktuelle Rang steht nicht als Knopf da — man
+   * waehlt einen anderen, nicht denselben.
+   */
+  const RAENGE: { id: ClubRole; wort: string; hinweis: string }[] = [
+    { id: 'admin', wort: 'Anführer', hinweis: 'Darf alles' },
+    { id: 'vize', wort: 'Vizeanführer', hinweis: 'Darf alles' },
+    { id: 'elder', wort: 'Ältester', hinweis: 'Auszeichnung, keine Rechte' },
+    { id: 'member', wort: 'Mitglied', hinweis: '' },
+  ];
+
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
@@ -389,35 +420,31 @@ function MitgliedBlatt({
         <button className="clan-blattknopf" onClick={() => onShowProfile(mitglied.accountId)}>
           Profil ansehen
         </button>
-        {/* Admins sind gleichberechtigt: Befoerdern gibt das eigene Amt nicht
-            ab, es kommt einer dazu. Deshalb geht auch der Weg zurueck. */}
-        {mitglied.role !== 'admin' ? (
+
+        <h3 className="hub-abschnitt">Rang</h3>
+        {RAENGE.filter((r) => r.id !== mitglied.role).map((r) => (
           <button
+            key={r.id}
             className="clan-blattknopf"
             onClick={() => {
               if (
                 !window.confirm(
-                  `${mitglied.displayName} zum Admin machen? Admins können aufnehmen, rauswerfen und die Clanregeln ändern.`,
+                  `${mitglied.displayName} zum ${r.wort} machen?` +
+                    (istLeitung(r.id)
+                      ? ' Damit darf er aufnehmen, rauswerfen und die Clanregeln ändern.'
+                      : ''),
                 )
               ) {
                 return;
               }
-              onAktion(api.setClubRole(clubId, mitglied.accountId, 'admin'), onClose);
+              onAktion(api.setClubRole(clubId, mitglied.accountId, r.id), onClose);
             }}
           >
-            Zum Admin machen
+            {r.wort}
+            {r.hinweis && <span className="muted"> — {r.hinweis}</span>}
           </button>
-        ) : (
-          <button
-            className="clan-blattknopf"
-            onClick={() => {
-              if (!window.confirm(`${mitglied.displayName} die Adminrechte entziehen?`)) return;
-              onAktion(api.setClubRole(clubId, mitglied.accountId, 'member'), onClose);
-            }}
-          >
-            Adminrechte entziehen
-          </button>
-        )}
+        ))}
+
         <button
           className="clan-blattknopf is-gefahr"
           onClick={() => {
@@ -484,11 +511,20 @@ function AnfragenBlatt({
 }
 
 function EinstellungenBlatt({
+  darfAendern,
   detail,
   onClose,
   onAktion,
 }: {
   detail: ClubDetail;
+  /**
+   * Aendern duerfen nur Anfuehrer und Vize — sehen darf jeder.
+   *
+   * Wer in einem Clan ist, soll nachlesen koennen, was dort gilt:
+   * Beitrittsart, Trophaeenschwelle, Name. Diese Angaben zu verstecken,
+   * weil man sie nicht aendern darf, waere unnoetige Heimlichtuerei.
+   */
+  darfAendern: boolean;
   onClose: () => void;
   onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
 }): React.JSX.Element {
@@ -503,6 +539,7 @@ function EinstellungenBlatt({
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
         <h2>Einstellungen</h2>
         <ClanFelder
+          gesperrt={!darfAendern}
           name={name}
           setName={setName}
           motto={motto}
@@ -514,6 +551,10 @@ function EinstellungenBlatt({
           minTrophies={minTrophies}
           setMinTrophies={setMinTrophies}
         />
+        {!darfAendern && (
+          <p className="muted">Ändern dürfen das nur Anführer und Vize.</p>
+        )}
+        {darfAendern && (
         <button
           className="primary"
           onClick={() =>
@@ -531,6 +572,7 @@ function EinstellungenBlatt({
         >
           Speichern
         </button>
+        )}
         <button className="hub-mini" onClick={onClose}>
           Abbrechen
         </button>
@@ -713,6 +755,7 @@ function Gruenden({
 
 /** Die Felder, die Gruenden und Einstellungen gemeinsam haben. */
 function ClanFelder({
+  gesperrt,
   name,
   setName,
   motto,
@@ -724,6 +767,8 @@ function ClanFelder({
   minTrophies,
   setMinTrophies,
 }: {
+  /** Nur-Lesen-Ansicht: Felder stehen da, lassen sich aber nicht aendern. */
+  gesperrt?: boolean;
   name: string;
   setName: (v: string) => void;
   motto: string;
@@ -740,6 +785,7 @@ function ClanFelder({
       <label className="clan-feld">
         <span>Name</span>
         <input
+          disabled={gesperrt}
           value={name}
           maxLength={24}
           onChange={(e) => setName(e.target.value)}
@@ -750,6 +796,7 @@ function ClanFelder({
       <label className="clan-feld">
         <span>Spruch</span>
         <input
+          disabled={gesperrt}
           value={motto}
           maxLength={120}
           onChange={(e) => setMotto(e.target.value)}
@@ -765,6 +812,7 @@ function ClanFelder({
               key={w}
               type="button"
               className={`clan-wappen${crest === w ? ' is-an' : ''}`}
+              disabled={gesperrt}
               aria-pressed={crest === w}
               onClick={() => setCrest(w)}
             >
@@ -779,6 +827,7 @@ function ClanFelder({
         <div className="lobby-chips">
           <button
             type="button"
+            disabled={gesperrt}
             className={`lobby-chip${joinMode === 'open' ? ' is-an' : ''}`}
             aria-pressed={joinMode === 'open'}
             onClick={() => setJoinMode('open')}
@@ -787,6 +836,7 @@ function ClanFelder({
           </button>
           <button
             type="button"
+            disabled={gesperrt}
             className={`lobby-chip${joinMode === 'on_request' ? ' is-an' : ''}`}
             aria-pressed={joinMode === 'on_request'}
             onClick={() => setJoinMode('on_request')}
@@ -800,6 +850,7 @@ function ClanFelder({
         <span>Ab Trophäen</span>
         <input
           type="number"
+          disabled={gesperrt}
           min={0}
           inputMode="numeric"
           value={minTrophies}
