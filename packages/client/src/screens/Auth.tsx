@@ -232,32 +232,6 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
           </button>
         </div>
       </form>
-
-      {/* Impressum und Datenschutz muessen erreichbar sein, ohne dass man ein
-          Konto hat - sonst haette gerade der sie nicht, der vor der
-          Registrierung wissen will, wem er seine Adresse gibt. */}
-      <Rechtliches />
     </main>
-  );
-}
-
-/**
- * Rechtliche Adressen.
- *
- * Bewusst echte Dateien statt eines Blattes in der App: App Store Connect
- * verlangt eine aufrufbare Datenschutz-Adresse, und ein Impressum, das man
- * nur im angemeldeten Zustand findet, erfuellt die Pflicht nicht.
- */
-export function Rechtliches(): React.JSX.Element {
-  return (
-    <p className="rechtliches">
-      <a href="/rechtliches/impressum.html" target="_blank" rel="noreferrer">
-        Impressum
-      </a>
-      <span aria-hidden="true"> · </span>
-      <a href="/rechtliches/datenschutz.html" target="_blank" rel="noreferrer">
-        Datenschutz
-      </a>
-    </p>
   );
 }
