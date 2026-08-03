@@ -3110,24 +3110,6 @@ td {
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
 }
-.hub-geburtstag-platzhalter {
-  position: absolute;
-  left: 50%;
-  bottom: -0.15rem;
-  transform: translateX(-50%);
-  padding: 0.05rem 0.3rem;
-  border-radius: 999px;
-  font-size: 0.48rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #2a1d04;
-  background: #ffe08a;
-  white-space: nowrap;
-}
-.hub-geburtstag.is-besitz .hub-geburtstag-platzhalter {
-  background: #9fe0c1;
-}
 .hub-geburtstag-text {
   flex: 1;
   min-width: 0;

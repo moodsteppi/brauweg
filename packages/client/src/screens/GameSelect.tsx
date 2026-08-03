@@ -341,10 +341,9 @@ function ProfilTab({
         <div className="hub-geburtstag-art">
           <img
             src="/hub/pinguin-geburtstag.png"
-            alt=""
+            alt="Geburtstags-Pinguin"
             draggable={false}
           />
-          <span className="hub-geburtstag-platzhalter">Platzhalter</span>
         </div>
         <div className="hub-geburtstag-text">
           <strong>Geburtstags-Pinguin</strong>
