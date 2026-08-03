@@ -1,8 +1,35 @@
 # Nachbesserung: Biom-Kacheln
 
+## Offen: `biom-1-heimat.png`
+
+**Diese eine Kachel fehlt noch.** Sie ist als einzige nie neu gemacht
+worden, weil ich sie irrtümlich für sauber gehalten habe — sie hat
+dieselben **zwei Wege** wie die anderen: den breiten Trampelpfad mit den
+großen Steinen *und* die gerade Ovalkette auf der Mittellinie.
+
+Der Irrtum kam vom Prüfverfahren: beurteilt wurde an einem 175 Pixel
+breiten Mittelstreifen, und in dieser Größe verschmelzen die beiden Ketten
+zu einer, die bloß unruhig wirkt. **Kacheln in voller Auflösung ansehen**,
+sonst rutscht so etwas wieder durch.
+
+Zweiter Punkt: Sie hat einen **gerahmten Rand** — abgerundete Kante mit
+dunkler Umrandung, wie eine Spielkarte. Die fünf neuen laufen stattdessen
+an allen vier Seiten in Wasser und Nebel aus. Im Stapel steht deshalb an
+ihrem oberen Rand eine harte Linie.
+
+**Gewünscht:** Motiv und Stimmung bleiben, wie sie sind — Wiese, Wirtshaus,
+warmes Abendlicht, das ist genau richtig und die hellste Erinnerung an den
+Anfang. Zu ändern sind nur zwei Dinge:
+
+1. **Genau ein Weg**, nach der berichtigten Wegregel weiter unten.
+2. **Kein Rahmen.** Alle vier Ränder laufen aus, oben und unten in Wasser
+   oder Nebel, wie bei den anderen fünf.
+
+---
+
 ## Stand
 
-**Runde 1 ist erledigt.** Die zweite Lieferung hat behoben, was die erste
+**Runde 1 ist für fünf Kacheln erledigt.** Die zweite Lieferung hat behoben, was die erste
 falsch hatte: genau ein Weg pro Kachel, gerade durch die Mitte, Ränder in
 Wasser und Nebel auslaufend, der Sternenhafen als Draufsicht, kein Flicken
 mehr in den Wiesen. Vier der sechs Kacheln sind damit fertig —
