@@ -8,6 +8,8 @@ sich daran — wer davon abweichen will, ändert erst diese Datei.
 
 Brauweg ist ein **Spiel**, kein Verwaltungsprogramm: bunt, warm, mit
 Druckpunkt und Augenzwinkern — aber nie auf Kosten der Lesbarkeit.
+**Kein Alkohol-Marketing:** Keine Bier-, Hopfen- oder Glas-Motive in Logo,
+Maskottchen, Shop oder Werbung — auch nicht als „Brauweg"-Wortspiel.
 **Handy zuerst:** Alles wird für Hochkant-Handys entworfen; im breiten
 Browser bleibt die Fläche auf Handybreite begrenzt (`max-width: 30rem`,
 zentriert). Eine Hand, ein Daumen: Alles Wichtige ist unten erreichbar.

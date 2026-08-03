@@ -55,7 +55,7 @@ export function GameSelect({
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
           {tab === 'spielen' ? (
-            <img className="front-avatar" src="/hub/koenig.png" alt="" />
+            <img className="front-avatar" src="/hub/pinguin.png" alt="" />
           ) : (
             <span className="front-level" aria-label="Level 0">
               0
@@ -75,15 +75,16 @@ export function GameSelect({
         </button>
         <div className="front-waehrungen">
           {tab === 'spielen' && (
-            <span className="front-waehrung front-waehrung--cups" aria-hidden="true">
-              🏆 {trophies}
+            <span className="front-waehrung front-waehrung--cups">
+              <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
+              {trophies}
             </span>
           )}
           <button
             className="front-waehrung front-waehrung--muenzen"
             onClick={() => setBald('Münzen kaufen')}
           >
-            <MuenzeIcon />
+            <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
             {me.coins}
             <span className="front-plus" aria-hidden="true">
               +
@@ -93,7 +94,8 @@ export function GameSelect({
             className="front-waehrung front-waehrung--vip"
             onClick={() => setBald('VIP')}
           >
-            <KroneIcon />0
+            <img className="front-waehrung-icon" src="/hub/krone.png" alt="" />
+            0
             <span className="front-plus" aria-hidden="true">
               +
             </span>
@@ -424,8 +426,13 @@ function Spielen({
   return (
     <div className="front-hub">
       <header className="hub-logo" aria-label="Brauweg">
-        <strong>Brauweg</strong>
-        <span>Doppelkopf. Dein Weg.</span>
+        <img className="hub-logo-mark" src="/hub/logo.png" alt="Brauweg" draggable={false} />
+        <img
+          className="hub-logo-slogan"
+          src="/hub/slogan.png"
+          alt="Doppelkopf. Dein Weg."
+          draggable={false}
+        />
       </header>
 
       <div className="hub-buehne">
