@@ -175,6 +175,7 @@ export async function clubDetail(
       role: s.clubMember.role,
       since: s.clubMember.joinedAt,
       trophies: trophySum,
+      hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
     })
     .from(s.clubMember)
     .innerJoin(s.account, eq(s.account.id, s.clubMember.accountId))
@@ -192,6 +193,7 @@ export async function clubDetail(
             accountId: s.clubJoinRequest.accountId,
             displayName: s.account.displayName,
             since: s.clubJoinRequest.createdAt,
+            hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
             trophies: sql<number>`coalesce((
               select sum(${s.accountGameStat.trophies})
               from ${s.accountGameStat}
@@ -221,6 +223,7 @@ export async function clubDetail(
       role: m.role,
       trophies: Number(m.trophies),
       since: m.since.toISOString(),
+      hasAvatar: Boolean(m.hasAvatar),
     })),
     requests: requests.map((r) => ({
       accountId: r.accountId,
@@ -228,6 +231,7 @@ export async function clubDetail(
       role: 'guest' as const,
       trophies: Number(r.trophies),
       since: r.since.toISOString(),
+      hasAvatar: Boolean(r.hasAvatar),
     })),
     defaultRuleSetId: row.defaultRuleSetId,
   };

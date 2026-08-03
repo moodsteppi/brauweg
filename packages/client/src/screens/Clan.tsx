@@ -44,6 +44,48 @@ const ROLLE: Record<string, string> = {
   guest: 'Gast',
 };
 
+/**
+ * Bild eines Mitglieds: das eigene, sonst ein Pinguin.
+ *
+ * `hasAvatar` kommt vom Server, damit nicht je Mitglied eine Anfrage auf
+ * /api/avatars ins Leere laeuft — bei 50 Mitgliedern waeren das 50 Fehler.
+ * Der Pinguin wechselt mit der Position, damit vier Zeilen untereinander
+ * nicht viermal dasselbe Bild zeigen.
+ */
+function bildFuer(m: { accountId: string; hasAvatar: boolean }, i: number): string {
+  return m.hasAvatar ? `/api/avatars/${m.accountId}` : `/hub/pinguin-${(i % 4) + 1}.png`;
+}
+
+/** Runder Knopf mit gemaltem Zeichen und Wort darunter. */
+function IconKnopf({
+  icon,
+  label,
+  bald,
+  zaehler,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  /** Zeigt das Bald-Schild und daempft das Bild. */
+  bald?: boolean;
+  /** Rote Zahl an der Ecke, wenn etwas auf Antwort wartet. */
+  zaehler?: number;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <button className={`clan-icon${bald ? ' is-bald' : ''}`} onClick={onClick}>
+      <span className="clan-icon-scheibe">
+        <img src={`/hub/icon-${icon}.png`} alt="" draggable={false} />
+        {zaehler !== undefined && zaehler > 0 && (
+          <span className="clan-zaehler">{zaehler}</span>
+        )}
+        {bald && <span className="front-bald-tag">Bald</span>}
+      </span>
+      <span className="clan-icon-wort">{label}</span>
+    </button>
+  );
+}
+
 export function Clan({
   clanId,
   onBald,
@@ -206,12 +248,34 @@ function Halle({
             </span>
           </div>
         </div>
-        {/* Der Chat steht schon da, damit die Halle nicht halb leer wirkt —
-            und sagt beim Antippen ehrlich, dass er noch nicht da ist. */}
-        <button className="hub-clanschild-knopf" onClick={() => onBald('Clanchat')}>
-          Chat
-          <span className="front-bald-tag">Bald</span>
-        </button>
+      </div>
+
+      {/*
+        Eine Reihe gleich grosser Knoepfe statt Text hier und Text dort. Die
+        drei ersten sind ehrliche Platzhalter: Sie sagen beim Antippen, dass
+        es sie noch nicht gibt — die Halle soll aber schon aussehen wie eine
+        Halle und nicht wie eine Baustelle. Die beiden letzten arbeiten und
+        stehen nur beim Admin.
+      */}
+      <div className="clan-icons">
+        <IconKnopf icon="chat" label="Chat" bald onClick={() => onBald('Clanchat')} />
+        <IconKnopf icon="truhe" label="Truhe" bald onClick={() => onBald('Clantruhe')} />
+        <IconKnopf icon="krieg" label="Krieg" bald onClick={() => onBald('Clankrieg')} />
+        {istAdmin && (
+          <IconKnopf
+            icon="anfragen"
+            label="Anfragen"
+            zaehler={offen}
+            onClick={() => setBlatt('anfragen')}
+          />
+        )}
+        {istAdmin && (
+          <IconKnopf
+            icon="einstellungen"
+            label="Clan"
+            onClick={() => setBlatt('einstellungen')}
+          />
+        )}
       </div>
 
       {fehler && <p className="clan-fehler">{fehler}</p>}
@@ -219,27 +283,30 @@ function Halle({
       <section className="clan-liste">
         <header className="clan-liste-kopf">
           <h2>Mitglieder</h2>
-          {istAdmin && (
-            <div className="clan-adminleiste">
-              <button className="hub-mini" onClick={() => setBlatt('anfragen')}>
-                Anfragen
-                {offen > 0 && <span className="clan-zaehler">{offen}</span>}
-              </button>
-              <button className="hub-mini" onClick={() => setBlatt('einstellungen')}>
-                Einstellungen
-              </button>
-            </div>
+          {detail && (
+            <span className="clan-liste-zahl">
+              {detail.members}/{detail.maxMembers}
+            </span>
           )}
         </header>
 
         <div className="clan-rollen">
           {detail === null && <p className="muted">Wird geladen…</p>}
-          {detail?.memberList.map((m) => (
+          {detail?.memberList.map((m, i) => (
             <button
               key={m.accountId}
               className="clan-zeile"
               onClick={() => (istAdmin ? setGewaehlt(m) : onShowProfile(m.accountId))}
             >
+              {/* Die Liste steht nach Trophaeen — dann ist die Position eine
+                  Aussage und kein Zierrat. */}
+              <span className="clan-platz">{i + 1}</span>
+              <img
+                className="clan-avatar"
+                src={bildFuer(m, i)}
+                alt=""
+                draggable={false}
+              />
               <span className="clan-zeile-name">{m.displayName}</span>
               <span className={`clan-rolle is-${m.role}`}>{ROLLE[m.role]}</span>
               <span className="clan-zeile-trophaeen">
@@ -366,8 +433,9 @@ function AnfragenBlatt({
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
         <h2>Anfragen</h2>
         {detail.requests.length === 0 && <p className="muted">Gerade will niemand rein.</p>}
-        {detail.requests.map((r) => (
+        {detail.requests.map((r, i) => (
           <div className="clan-anfrage" key={r.accountId}>
+            <img className="clan-avatar" src={bildFuer(r, i)} alt="" draggable={false} />
             <button className="clan-zeile-name" onClick={() => onShowProfile(r.accountId)}>
               {r.displayName}
             </button>

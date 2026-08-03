@@ -116,6 +116,55 @@ Der Raum wartet darauf, dass jemand einzieht.
 
 ---
 
+## 11 bis 15 — Knopf-Icons (freigestellt)
+
+**Wozu:** Die Knöpfe in der Clanhalle tragen keine Wörter mehr, sondern
+Bilder. Fünf gleich große runde Knöpfe nebeneinander, darunter jeweils ein
+kurzes Wort in der App-Schrift — das Wort setzt die App, **nicht das Bild.**
+
+**Format:** PNG mit Alpha, **256 × 256**, Gegenstand mittig, gleicher
+Randabstand bei allen fünf.
+
+**Vorbild — bitte genau daran halten:** `truhe.png`, `pokal.png`,
+`tab-clan.png`, `tab-shop.png`. Also gemalte, plastische Gegenstände mit
+kräftigem Gold, Blau und Violett, weichem Licht von oben links, ohne
+Comic-Umriss und ohne Schlagschatten auf den Boden. Sie liegen später in
+einer Reihe nebeneinander — **gleiche Größe im Bild, gleiche Blickrichtung,
+gleiche Lichtquelle**, sonst wirkt die Reihe unruhig.
+
+| Datei | Gegenstand | Bedeutung |
+| --- | --- | --- |
+| `icon-chat.png` | Sprechblase aus Holz mit Goldrand, oder eine gerollte Nachricht mit Siegel | Clanchat |
+| `icon-truhe.png` | Kleine Truhe, leicht geöffnet, Goldschimmer heraus | Clantruhe |
+| `icon-krieg.png` | Zwei gekreuzte Turnierlanzen mit Wimpeln, oder Schild und Fahne | Clankrieg |
+| `icon-anfragen.png` | Aufgeklappter Brief mit Siegel, oder ein Handschlag | Beitrittsanfragen |
+| `icon-einstellungen.png` | Messingzahnrad mit Holzkern | Clan-Einstellungen |
+
+**Bitte keine Waffen mit Klinge** bei `icon-krieg.png` — Turnier statt
+Schlacht, das passt zum Ton und vermeidet Ärger bei der Altersfreigabe im
+App Store.
+
+**Wichtig:** Die Gegenstände werden auch **44 Pixel klein** angezeigt. Ein
+Zahnrad mit zwölf feinen Zähnen wird dort zu Matsch — lieber sechs kräftige.
+
+---
+
+## 16 — `mitgliederband.png` (freigestellt, dehnbar)
+
+**Wozu:** Die Mitgliederliste ist derzeit eine Reihe schmuckloser Zeilen.
+Jede Zeile bekommt ein Band als Unterlage.
+**Format:** PNG mit Alpha, **600 × 200**.
+**Aufbau:** Ein waagerechtes Band aus dunklem Holz mit dünner Messingkante
+oben und unten. Der Rahmen ist **exakt 40 Pixel** an allen vier Seiten, die
+innere Fläche ist ruhig und gleichmäßig — sie wird in die Breite gedehnt.
+Links darf eine angedeutete runde Einfassung sitzen, in der später das
+Profilbild liegt; sie muss aber ohne Bild ebenfalls gut aussehen.
+
+Wenn das zu aufwendig ist: Das vorhandene `tafel.png` tut es zur Not auch,
+dann wirkt die Liste nur etwas schwerer.
+
+---
+
 ## Ablage
 
 Alles nach `packages/client/public/hub/` unter genau diesen Namen.

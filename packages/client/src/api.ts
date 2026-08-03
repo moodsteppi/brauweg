@@ -185,6 +185,8 @@ export interface ClubMemberView {
   role: ClubRole;
   trophies: number;
   since: string;
+  /** Ob ein eigenes Bild hinterlegt ist — sonst sitzt dort ein Pinguin. */
+  hasAvatar: boolean;
 }
 
 export interface ClubDetail extends ClubSummary {
