@@ -49,7 +49,7 @@ export function GameSelect({
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   return (
-    <div className="front">
+    <div className={`front${tab === 'spielen' ? ' front--hub' : ''}`}>
       <header className="front-top">
         {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
@@ -408,20 +408,26 @@ function Spielen({
   };
 
   return (
-    <>
+    <div className="front-hub">
+      <p className="front-hub-slogan">
+        <strong>Brauweg</strong>
+        <span>Dein Weg · Trophäenpfad</span>
+      </p>
+
       <Trophaeenpfad trophies={trophies} />
 
-      <button className="front-rangliste" onClick={onRangliste}>
-        Rangliste
-      </button>
+      <div className="front-hub-aktionen">
+        <button className="front-rangliste" onClick={onRangliste}>
+          🏆 Rangliste
+        </button>
 
-      {/* Der Tagesbonus steht schon da, wo er hingehoert - am Fuss des
-          Pfads. Dahinter steckt noch nichts. */}
-      <button className="front-bonus" onClick={() => onBald('Der Tagesbonus')}>
-        <GeschenkIcon />
-        Gratis-Münzen — Tagesbonus
-        <span className="front-bald-tag">Bald</span>
-      </button>
+        {/* Der Tagesbonus steht schon da — dahinter steckt noch nichts. */}
+        <button className="front-bonus" onClick={() => onBald('Der Tagesbonus')}>
+          <GeschenkIcon />
+          Tägliche Belohnung
+          <span className="front-bald-tag">Bald</span>
+        </button>
+      </div>
 
       {/* Klebt am unteren Rand. Läuft noch eine Partie, ist Weiterspielen
           der Hauptknopf — Spielauswahl bleibt darunter erreichbar. */}
@@ -459,7 +465,7 @@ function Spielen({
           onClose={() => setWahlOffen(false)}
         />
       )}
-    </>
+    </div>
   );
 }
 

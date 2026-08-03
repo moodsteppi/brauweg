@@ -33,6 +33,15 @@ mitten im Code:
 Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
 **Rot = Vorsicht**. Nicht mischen (kein goldener Abbrechen-Knopf).
 
+## Zwei Welten (CI)
+
+1. **Hub / Plattform** (Startseite und alles bis zur Spielauswahl): hell,
+   bunt, verspielt — Clash Royale / Brawl Stars / Monopoly-Go-Feeling.
+   Klasse `front--hub` auf dem Spielen-Tab. Filz und Wirtshaus gehören
+   **nicht** hierher.
+2. **Spielwelt** (nach Wahl, z. B. Doppelkopf): eigenes Design laut
+   [DESIGN-DOKO.md](DESIGN-DOKO.md) — dunkler Filz, Tisch, Blätter.
+
 ## Startbereich (`front-*`)
 
 - Fester Rahmen: Ressourcen-Leiste oben (Level, Name, Münzen, VIP),
