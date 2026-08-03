@@ -77,6 +77,18 @@ export function Table({
   const [zeigeLetzten, setZeigeLetzten] = useState(false);
   const [pauseBusy, setPauseBusy] = useState(false);
 
+  /**
+   * Zurufe: kurze Sprechblasen am Sitz, wenn jemand etwas sagt.
+   *
+   * Am echten Tisch hoert man "gesund" oder "Re" — hier stand es bisher
+   * nirgends, und wer gerade auf seine Karten sah, bekam es nie mit. Der
+   * bleibende Vermerk steht danach am Namen; die Blase ist nur der Moment.
+   */
+  const [blasen, setBlasen] = useState<Record<number, string>>({});
+  const gesehenVorbehalte = useRef<number | null>(null);
+  const gesehenAnsagen = useRef<number | null>(null);
+  const blasenTimer = useRef<number[]>([]);
+
   const togglePause = (): void => {
     if (!table || pauseBusy) return;
     setPauseBusy(true);
@@ -159,6 +171,60 @@ export function Table({
     setDealDeckSize(geben.deckSize);
     setDealing(true);
   }, [dealKey, geben.deckSize, view?.view.round]);
+
+  /*
+   * Neue Zurufe aus dem Zuwachs der beiden Protokolle ableiten.
+   *
+   * Beim ersten Anblick wird nur der Stand gemerkt und nichts gezeigt: Wer
+   * mitten in der Runde beitritt, soll nicht acht alte Ansagen um die Ohren
+   * geschleudert bekommen.
+   */
+  const rundeJetzt = view?.view.round ?? null;
+  useEffect(() => {
+    if (!rundeJetzt) return;
+    const vb = rundeJetzt.vorbehalte ?? [];
+    const an = rundeJetzt.ansagen ?? [];
+
+    if (gesehenVorbehalte.current === null || gesehenAnsagen.current === null) {
+      gesehenVorbehalte.current = vb.length;
+      gesehenAnsagen.current = an.length;
+      return;
+    }
+
+    const neu: Record<number, string> = {};
+    for (const e of vb.slice(gesehenVorbehalte.current)) {
+      neu[e.seat] = e.kind === null ? 'Gesund' : vorbehaltRuf(e.kind);
+    }
+    for (const e of an.slice(gesehenAnsagen.current)) {
+      neu[e.seat] = ansageRuf(e.level, rundeJetzt.knownParties?.[e.seat] ?? null);
+    }
+    gesehenVorbehalte.current = vb.length;
+    gesehenAnsagen.current = an.length;
+    if (Object.keys(neu).length === 0) return;
+
+    setBlasen((prev) => ({ ...prev, ...neu }));
+    /*
+     * Der Timer haengt bewusst an einer Referenz und nicht am Aufraeumen
+     * des Effekts: Der laeuft bei jeder Tischnachricht neu, und React
+     * raeumt den vorigen Durchlauf vorher auf. Die naechste gespielte
+     * Karte haette den Timer also geloescht - und die Blase waere bis zum
+     * Rundenende stehengeblieben.
+     */
+    blasenTimer.current.push(
+      window.setTimeout(() => {
+        setBlasen((prev) => {
+          const rest = { ...prev };
+          for (const key of Object.keys(neu)) {
+            if (rest[Number(key)] === neu[Number(key)]) delete rest[Number(key)];
+          }
+          return rest;
+        });
+      }, 2600),
+    );
+  }, [rundeJetzt]);
+
+  // Beim Verlassen des Tisches alle noch offenen Blasen-Timer abraeumen.
+  useEffect(() => () => blasenTimer.current.forEach(clearTimeout), []);
 
   useEffect(() => {
     if (!table) return;
@@ -487,6 +553,8 @@ export function Table({
             leader={leaderSeat === seat}
             deadline={view.currentActor === seat ? view.turnDeadline : null}
             party={round?.knownParties?.[seat] ?? null}
+            ansage={ansageVon(round, seat)}
+            sagt={blasen[seat] ?? null}
             tricksWon={round?.trickCounts?.[seat] ?? 0}
             avatarUrl={avatarOf(seat)}
             deck={deck}
@@ -764,6 +832,8 @@ const OpponentSeat = memo(function OpponentSeat({
   leader,
   deadline,
   party,
+  ansage,
+  sagt,
   tricksWon,
   avatarUrl,
   deck,
@@ -782,6 +852,10 @@ const OpponentSeat = memo(function OpponentSeat({
   leader: boolean;
   deadline: number | null;
   party: string | null;
+  /** Hoechste Absage dieses Sitzes. Bleibt stehen. */
+  ansage: string | null;
+  /** Kurzer Zuruf, verschwindet nach ein paar Sekunden von selbst. */
+  sagt: string | null;
   tricksWon: number;
   avatarUrl: string | null;
   deck: Deck;
@@ -789,6 +863,10 @@ const OpponentSeat = memo(function OpponentSeat({
   const vertical = slot === 'left' || slot === 'right';
   return (
     <div className={`doko-opp at-${slot}${active ? ' is-active' : ''}`}>
+      {/* Der Zuruf im Moment des Sagens. Am echten Tisch hoert man "gesund"
+          oder "Re"; hier stand es bisher nirgends, und wer gerade auf seine
+          Karten sah, bekam es nie mit. */}
+      {sagt && <span className="doko-blase">{sagt}</span>}
       <Avatar
         name={name}
         seatIndex={seatIndex}
@@ -809,6 +887,9 @@ const OpponentSeat = memo(function OpponentSeat({
         )}
         {leader && <em className="doko-tag doko-tag--lead">Aufspiel</em>}
         {party && <em className={`doko-party doko-party--${party}`}>{partyLabel(party)}</em>}
+        {/* Der Vermerk bleibt stehen: Wer eine Absage gesagt hat, soll
+            daran auch in der zehnten Runde noch erkennbar sein. */}
+        {ansage && <em className="doko-tag doko-tag--ansage">{ansage}</em>}
         {hasLeft && <em className="doko-tag">ausgestiegen</em>}
         {!hasLeft && botTakeover && !isBot && <em className="doko-tag">Bot übernimmt</em>}
       </div>
@@ -1500,4 +1581,35 @@ function PartyEnd({
       </div>
     </div>
   );
+}
+
+const ABSAGE_NAMEN = ['Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'];
+
+/** Zuruf einer Ansage. Stufe 0 ist Re oder Kontra, darueber die Absagen. */
+function ansageRuf(level: number, party: string | null): string {
+  if (level > 0) return ABSAGE_NAMEN[level - 1] ?? 'Ansage';
+  return party ? partyLabel(party) : 'Ansage';
+}
+
+/** Zuruf eines Vorbehalts. Das Solo nennt seine Art erst bei der Auflösung. */
+function vorbehaltRuf(kind: string): string {
+  return (
+    { solo: 'Solo', schmeiss: 'Ich schmeiße', armut: 'Armut', hochzeit: 'Hochzeit' }[kind] ??
+    'Vorbehalt'
+  );
+}
+
+/**
+ * Bleibender Vermerk am Sitz: die höchste Absage.
+ *
+ * Re und Kontra stehen schon als Partei daneben — sie hier zu wiederholen
+ * wäre doppelt. Erst ab „Keine 90" gibt es etwas Eigenes zu zeigen.
+ */
+function ansageVon(
+  round: { ansagen?: readonly { seat: number; level: number }[] } | null,
+  seat: number,
+): string | null {
+  const meine = (round?.ansagen ?? []).filter((a) => a.seat === seat);
+  const hoechste = meine.reduce((m, a) => Math.max(m, a.level), 0);
+  return hoechste > 0 ? (ABSAGE_NAMEN[hoechste - 1] ?? null) : null;
 }

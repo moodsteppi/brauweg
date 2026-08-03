@@ -56,6 +56,19 @@ export interface VorbehaltEntry {
   readonly solo?: SoloKind;
 }
 
+/**
+ * Wer was angesagt hat, in der Reihenfolge der Ansagen.
+ *
+ * Die Announcements-Struktur haelt nur fest, OB Re und Kontra gefallen
+ * sind — nicht, wer sie gesagt hat. Am Tisch hoert das aber jeder, und
+ * ohne diese Angabe kann die Oberflaeche eine Ansage weder anzeigen noch
+ * dem Ansagenden zuordnen.
+ */
+export interface AnsageEntry {
+  readonly seat: number;
+  readonly level: AbsageLevel;
+}
+
 export interface ArmutStage {
   readonly seat: number;
   /** Sitze, die bereits abgelehnt haben, in Reihenfolge der Abfrage. */
@@ -112,6 +125,8 @@ export interface RoundState {
   readonly cardsPlayed: Readonly<Record<number, number>>;
 
   readonly announcements: Announcements;
+  /** Protokoll der Ansagen mit Sitz, fuer Anzeige und Zuordnung. */
+  readonly ansagen: readonly AnsageEntry[];
   readonly pendingPflichtansage: PendingPflichtansage | null;
 
   readonly result: RoundResult | null;
@@ -185,6 +200,7 @@ export function createRound(
     order: buildOrder(gameType, rs),
     reSeats: [],
     vorbehalte: [],
+    ansagen: [],
     armut: null,
     hochzeitBride: null,
     hochzeitResolved: false,
@@ -649,11 +665,12 @@ function applyAnnounce(
   if (!mayAnnounce(a.level, state.cardsPlayed[a.seat])) fail('Ansagefrist abgelaufen');
 
   const party = partyOf(state, a.seat);
-  return setAnnouncement(state, party, a.level);
+  return setAnnouncement(state, a.seat, party, a.level);
 }
 
 function setAnnouncement(
   state: RoundState,
+  seat: number,
   party: Party,
   level: AbsageLevel,
 ): RoundState {
@@ -685,7 +702,11 @@ function setAnnouncement(
     }
   }
 
-  return { ...state, announcements: ann };
+  return {
+    ...state,
+    announcements: ann,
+    ansagen: [...state.ansagen, { seat, level }],
+  };
 }
 
 function applyPflichtansage(
@@ -699,7 +720,7 @@ function applyPflichtansage(
 
   const cleared = { ...state, pendingPflichtansage: null };
   return a.accept
-    ? setAnnouncement(cleared, partyOf(state, a.seat), 0)
+    ? setAnnouncement(cleared, a.seat, partyOf(state, a.seat), 0)
     : cleared;
 }
 
@@ -747,6 +768,15 @@ export interface PlayerView {
   readonly gameType: GameType;
   readonly order: CardOrder;
   readonly announcements: Announcements;
+  /**
+   * Wer was gesagt hat — beides oeffentlich, beides am Tisch zu hoeren.
+   *
+   * `vorbehalte` fuehrt auch das "gesund" (kind null). Ohne diese beiden
+   * Listen kann die Oberflaeche eine Ansage niemandem zuordnen: Die
+   * Announcements-Struktur haelt nur fest, OB Re gefallen ist.
+   */
+  readonly vorbehalte: readonly VorbehaltEntry[];
+  readonly ansagen: readonly AnsageEntry[];
   /** Eigene Partei. Bei ungeklaerter Hochzeit null. */
   readonly myParty: Party | null;
   /** Oeffentlich bekannte Parteizugehoerigkeit anderer Sitze. */
@@ -830,6 +860,9 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
       if (isClubQueen(p.card)) reveal(p.seat);
     }
   }
+  // Wer "Re" sagt, sagt damit auch, dass er Re ist. Das gilt in jeder
+  // Spielart und ist der offenkundigste Fall von oeffentlicher Partei.
+  for (const a of state.ansagen) reveal(a.seat);
   if (state.phase === 'finished') state.seats.forEach(reveal);
 
   const myParty: Party | null =
@@ -877,6 +910,8 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     gameType: state.gameType,
     order: state.order,
     announcements: state.announcements,
+    vorbehalte: state.vorbehalte,
+    ansagen: state.ansagen,
     myParty,
     knownParties,
     standings,

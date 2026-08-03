@@ -38,6 +38,13 @@ export interface RoundView {
   lastTrick: { winnerSeat: number; played: PlayedCard[] } | null;
   turn: number;
   announcements: { re: boolean; kontra: boolean; reAbsage: number; kontraAbsage: number };
+  /**
+   * Wer was gesagt hat. Beides öffentlich und am Tisch zu hören — die
+   * `announcements` oben halten nur fest, OB Re gefallen ist, nicht von wem.
+   * `vorbehalte` führt auch das „gesund" mit `kind: null`.
+   */
+  vorbehalte: { seat: number; kind: string | null; solo?: string }[];
+  ansagen: { seat: number; level: number }[];
   myParty: string | null;
   /** Öffentlich bekannte Parteizugehörigkeit, im Solo verrät sie den Solisten. */
   knownParties: Record<number, string>;

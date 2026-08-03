@@ -5330,3 +5330,35 @@ main.auth > .muted {
   opacity: 0.75;
   white-space: normal;
 }
+
+/* Zuruf am Sitz: kurz sichtbar, dann weg. */
+.doko-blase {
+  position: absolute;
+  left: 50%;
+  top: -0.2rem;
+  transform: translate(-50%, -100%);
+  z-index: 6;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 246, 224, 0.96);
+  color: #23180c;
+  border: 1px solid rgba(120, 90, 40, 0.5);
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  animation: doko-blase 0.22s ease;
+  pointer-events: none;
+}
+@keyframes doko-blase {
+  from { transform: translate(-50%, -80%) scale(0.85); opacity: 0; }
+}
+.doko-opp { position: relative; }
+.doko-tag--ansage {
+  background: rgba(226, 182, 79, 0.22);
+  border-color: rgba(226, 182, 79, 0.6);
+  color: #ffe9bd;
+}
+@media (prefers-reduced-motion: reduce) {
+  .doko-blase { animation: none; }
+}
