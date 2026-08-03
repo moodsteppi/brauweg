@@ -111,7 +111,7 @@ export interface TableMessage {
   missing: number;
   rounds: number;
   visibility: 'public' | 'on_request' | 'club_only';
-  /** Vereinstisch bewusst angehalten. */
+  /** Clantisch bewusst angehalten. */
   paused: boolean;
 }
 

@@ -23,7 +23,7 @@ import { Profile } from './Profile';
  * Massstab - im breiten Browser bleibt die Flaeche auf Handybreite begrenzt.
  */
 
-type Tab = 'shop' | 'freunde' | 'spielen' | 'blatt' | 'profil';
+type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil';
 
 export function GameSelect({
   me,
@@ -89,6 +89,13 @@ export function GameSelect({
 
       <div className="front-body" key={tab}>
         {tab === 'shop' && <Shop onBald={setBald} />}
+        {tab === 'clan' && (
+          <Clan
+            clan={me.clubs[0] ?? null}
+            onBald={setBald}
+            onShowProfile={onShowProfile}
+          />
+        )}
         {tab === 'spielen' && (
           <Spielen
             trophies={trophies}
@@ -99,7 +106,6 @@ export function GameSelect({
             onRangliste={() => setRanglisteOffen(true)}
           />
         )}
-        {tab === 'freunde' && <Freunde onShowProfile={onShowProfile} />}
         {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
         {tab === 'profil' && (
           <>
@@ -119,11 +125,11 @@ export function GameSelect({
           icon={<ShopIcon />}
         />
         <TabButton
-          label="Freunde"
-          farbe="freunde"
-          active={tab === 'freunde'}
-          onClick={() => setTab('freunde')}
-          icon={<FreundeIcon />}
+          label="Clan"
+          farbe="clan"
+          active={tab === 'clan'}
+          onClick={() => setTab('clan')}
+          icon={<ClanIcon />}
         />
         <TabButton
           label="Spielen"
@@ -182,6 +188,69 @@ function BaldBlatt({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Clan — spielübergreifend, nicht nur Doppelkopf.
+ *
+ * Wie in Clash Royale: Chat, Krieg, Rangliste und Truhe stehen schon als
+ * Kacheln da (mit Bald); Freunde bleiben darunter erreichbar. Der Beta-Clan
+ * entsteht automatisch mit dem Einladungscode.
+ */
+function Clan({
+  clan,
+  onBald,
+  onShowProfile,
+}: {
+  clan: { id: string; name: string } | null;
+  onBald: (name: string) => void;
+  onShowProfile: (accountId: string) => void;
+}): React.JSX.Element {
+  const kacheln = [
+    { name: 'Clanchat', zeichen: '💬', text: 'Nachrichten an alle' },
+    { name: 'Clankrieg', zeichen: '⚔️', text: 'Clan gegen Clan' },
+    { name: 'Clan-Rangliste', zeichen: '🏆', text: 'Trophäen im Clan' },
+    { name: 'Clantruhe', zeichen: '🎁', text: 'Gemeinsame Belohnung' },
+    { name: 'Mitglieder', zeichen: '👥', text: 'Wer ist dabei' },
+    { name: 'Clantische', zeichen: '🃏', text: 'Lange Partien pausierbar' },
+  ];
+
+  return (
+    <>
+      <header className="front-clan-kopf">
+        <span className="front-clan-wappen" aria-hidden="true">
+          🛡️
+        </span>
+        <div>
+          <strong>{clan?.name ?? 'Brauweg'}</strong>
+          <p className="muted">
+            Dein Clan — für alle Spiele, nicht nur Doppelkopf.
+          </p>
+        </div>
+      </header>
+
+      <div className="front-clan-kacheln">
+        {kacheln.map((kachel) => (
+          <button
+            key={kachel.name}
+            className="front-clan-kachel"
+            onClick={() => onBald(kachel.name)}
+          >
+            <span className="front-clan-zeichen" aria-hidden="true">
+              {kachel.zeichen}
+            </span>
+            <span className="front-clan-kachel-text">
+              <strong>{kachel.name}</strong>
+              <span className="muted">{kachel.text}</span>
+            </span>
+            <span className="front-bald-tag">Bald</span>
+          </button>
+        ))}
+      </div>
+
+      <Freunde onShowProfile={onShowProfile} />
+    </>
   );
 }
 
@@ -944,14 +1013,13 @@ function KartenIcon(): React.JSX.Element {
   );
 }
 
-function FreundeIcon(): React.JSX.Element {
+function ClanIcon(): React.JSX.Element {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 20c.6-3.3 2.7-5 5.5-5s4.9 1.7 5.5 5" />
-      <circle cx="17" cy="9" r="2.6" />
-      <path d="M15.8 15.3c.4-.2 1-.3 1.7-.3 2.3 0 3.7 1.4 4.3 4.2" />
+      <path d="M12 3.5 19 7v5.2c0 4.3-2.9 7.3-7 8.8-4.1-1.5-7-4.5-7-8.8V7l7-3.5z" />
+      <circle cx="12" cy="10" r="2.2" />
+      <path d="M8.5 16.2c.7-1.6 2-2.4 3.5-2.4s2.8.8 3.5 2.4" />
     </svg>
   );
 }

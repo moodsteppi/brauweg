@@ -239,7 +239,7 @@ export const gameVote = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// Vereine
+// Clans (Tabellen heissen club_* — historische Kennung)
 // ---------------------------------------------------------------------------
 
 export const club = pgTable(
@@ -327,13 +327,13 @@ export const gameTable = pgTable(
     clubId: uuid().references(() => club.id, { onDelete: 'cascade' }),
     status: tableStatus().notNull().default('waiting'),
     seats: integer().notNull(),
-    /** Oeffentlich und privat hoechstens 20, Vereinstisch hoechstens 100. */
+    /** Oeffentlich und privat hoechstens 20, Clantisch hoechstens 100. */
     maxRounds: integer().notNull(),
     createdAt: createdAt(),
     /** Ein Tisch ohne Aktivitaet verfaellt nach 24 Stunden. */
     lastActivityAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     /**
-     * Vereinstische duerfen pausieren: Solange gesetzt, laufen keine Zugtimer
+     * Clantische duerfen pausieren: Solange gesetzt, laufen keine Zugtimer
      * und der Tisch verfaellt nicht nach 24 Stunden. Oeffentliche Tische
      * setzen das Feld nie.
      */

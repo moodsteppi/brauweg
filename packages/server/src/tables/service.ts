@@ -18,7 +18,7 @@ import { requireModule } from '../games/registry.js';
 
 /**
  * Oeffentliche und private Tische muessen in einer Sitzung durchlaufen, daher
- * die niedrigere Grenze. Vereinstische duerfen pausieren.
+ * die niedrigere Grenze. Clantische duerfen pausieren.
  */
 export const MAX_ROUNDS: Record<s.TableVisibility, number> = {
   public: 20,
@@ -183,8 +183,8 @@ export interface LobbyFilter {
   readonly seats?: number;
   readonly rounds?: number;
   /**
-   * Vereine des Aufrufers. Ohne sie sieht man nur oeffentliche Tische;
-   * mit ihnen zusaetzlich die wartenden Vereinstische dieser Vereine.
+   * Clans des Aufrufers. Ohne sie sieht man nur oeffentliche Tische;
+   * mit ihnen zusaetzlich die wartenden Clantische dieser Clans.
    */
   readonly clubIds?: readonly string[];
 }
@@ -445,7 +445,7 @@ export async function countsForRanking(db: Db, tableId: string): Promise<boolean
  * Wartende deutlich schneller als laufende: Ein Wartetisch, an dem zwei
  * Stunden nichts passiert, ist aufgegeben und verstopft nur die Lobby. Eine
  * laufende Partie bekommt einen ganzen Tag — dort haengt ein Spielstand dran.
- * Pausierte Vereinstische bleiben stehen: Sie sind bewusst angehalten und
+ * Pausierte Clantische bleiben stehen: Sie sind bewusst angehalten und
  * sollen ueber Wochen weiterlaufen koennen.
  */
 export async function expireStaleTables(
@@ -532,7 +532,7 @@ export async function activeTableFor(
 }
 
 /**
- * Pausiert einen Vereinstisch. Oeffentliche Tische duerfen das nicht — sie
+ * Pausiert einen Clantisch. Oeffentliche Tische duerfen das nicht — sie
  * sind fuer eine Sitzung gedacht.
  */
 export async function pauseTable(
@@ -552,7 +552,7 @@ export async function pauseTable(
     .where(eq(s.gameTable.id, tableId));
 }
 
-/** Setzt einen pausierten Vereinstisch fort. */
+/** Setzt einen pausierten Clantisch fort. */
 export async function resumeTable(
   db: Db,
   tableId: string,

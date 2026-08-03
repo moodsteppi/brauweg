@@ -36,9 +36,13 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
 ## Startbereich (`front-*`)
 
 - Fester Rahmen: Ressourcen-Leiste oben (Level, Name, Münzen, VIP),
-  Tab-Leiste unten (Shop · Freunde · Spielen · Blatt · Profil), Inhalt
+  Tab-Leiste unten (Shop · Clan · Spielen · Blatt · Profil), Inhalt
   rollt dazwischen. „Spielen" ist mittig und größer; jeder Tab leuchtet
   aktiv in seiner eigenen Farbe.
+- **Clan** ist spielübergreifend (nicht nur Doppelkopf): Chat, Clankrieg,
+  Clan-Rangliste und ähnliche Bausteine stehen schon als Oberfläche mit
+  „Bald"-Marke — wie in Clash Royale. Freunde hängen am Clan-Tab, nicht
+  als eigener Tab. Intern heißt die Tabelle weiter `club_*`.
 - Der Hauptschirm ist der **Trophäenpfad** (siehe `Pfad.tsx`): Inseln als
   Checkpoints, jede eine eigene Welt. Neue Welten sind neue SVG-Szenen im
   selben Zuschnitt (`viewBox="-80 0 500 240"`).
