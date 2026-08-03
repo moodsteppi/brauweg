@@ -1,9 +1,12 @@
 /**
- * Vereine — schlank fuer die Beta.
+ * Clans — schlank fuer die Beta.
  *
- * Alle, die mit dem Einladungscode reinkommen, landen im gemeinsamen
- * Brauweg-Verein. Darueber laufen Vereinstische (club_only) und Pause.
- * Volle Vereinsverwaltung (Rollen, Beitrittsanfragen, Saison) kommt spaeter.
+ * Spieluebergreifend (nicht nur Doppelkopf): Alle mit dem Einladungscode
+ * landen im gemeinsamen Brauweg-Clan. Darueber laufen Clantische
+ * (club_only) und Pause. Chat, Clankrieg und Clan-Rangliste kommen spaeter;
+ * die Oberflaeche zeigt sie schon als Platzhalter.
+ *
+ * Schema-Tabellen heissen weiter club_* — Umbenennen waere reine Kosmetik.
  */
 
 import { and, eq } from 'drizzle-orm';
@@ -15,8 +18,8 @@ import { forbidden, notFound } from '../errors.js';
 export const BETA_CLUB_NAME = 'Brauweg';
 
 /**
- * Stellt sicher, dass das Konto Mitglied im Beta-Verein ist, und legt den
- * Verein bei Bedarf an. Der erste Beitretende wird Admin.
+ * Stellt sicher, dass das Konto Mitglied im Beta-Clan ist, und legt den
+ * Clan bei Bedarf an. Der erste Beitretende wird Admin.
  */
 export async function ensureBetaClubMembership(
   db: Db,
@@ -60,7 +63,7 @@ export async function ensureBetaClubMembership(
   return found;
 }
 
-/** Vereine des Kontos — in der Beta typischerweise genau einer. */
+/** Clans des Kontos — in der Beta typischerweise genau einer. */
 export async function clubsFor(
   db: Db,
   accountId: string,

@@ -61,7 +61,7 @@ export interface LiveParty {
   readonly gameId: GameId;
   readonly module: AnyGameModule;
   readonly seats: readonly Seat[];
-  /** Sichtbarkeit des Tisches — Vereinstische werden nicht nach Offline-Zeit aufgeloest. */
+  /** Sichtbarkeit des Tisches — Clantische werden nicht nach Offline-Zeit aufgeloest. */
   readonly visibility: s.TableVisibility;
   state: unknown;
   revision: number;
@@ -75,7 +75,7 @@ export interface LiveParty {
   turnDeadline: number | null;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
-  /** Gesetzt, solange der Vereinstisch pausiert ist. */
+  /** Gesetzt, solange der Clantisch pausiert ist. */
   paused: boolean;
   finished: boolean;
   /**
@@ -300,7 +300,7 @@ export class PartyRuntime {
   }
 
   /**
-   * Pausiert einen Vereinstisch: Zugtimer aus, Offline-Aufloesung aus,
+   * Pausiert einen Clantisch: Zugtimer aus, Offline-Aufloesung aus,
    * Verfall gestoppt. Nur club_only.
    */
   async pause(tableId: string, accountId: string): Promise<void> {
@@ -321,7 +321,7 @@ export class PartyRuntime {
     }
   }
 
-  /** Setzt einen pausierten Vereinstisch fort und startet den Zugtimer neu. */
+  /** Setzt einen pausierten Clantisch fort und startet den Zugtimer neu. */
   async unpause(tableId: string, accountId: string): Promise<void> {
     await resumeTable(this.db, tableId, accountId);
     let party = this.live.get(tableId);
@@ -530,7 +530,7 @@ export class PartyRuntime {
    * ist der Normalfall: iOS trennt die Verbindung bei jedem Sperren des
    * Bildschirms.
    *
-   * Ausnahme Vereinstische: Die laufen ueber Wochen und werden nicht nach
+   * Ausnahme Clantische: Die laufen ueber Wochen und werden nicht nach
    * fuenf Minuten Offline aufgeloest — dort gilt Pause oder die 24h-Schonung.
    */
   setPresence(tableId: string, accountId: string, online: boolean): void {

@@ -1432,10 +1432,75 @@ td {
 
 /* Jeder Bereich leuchtet in seiner eigenen Farbe, wenn er gewaehlt ist. */
 .front-tab--shop.is-active { color: var(--gold); background: rgba(226, 182, 79, 0.14); }
-.front-tab--freunde.is-active { color: var(--blau); background: rgba(94, 160, 240, 0.14); }
+.front-tab--clan.is-active { color: var(--blau); background: rgba(94, 160, 240, 0.14); }
 .front-tab--spielen.is-active { color: #6dd3a4; background: rgba(74, 156, 120, 0.18); }
 .front-tab--blatt.is-active { color: #ef8f8a; background: rgba(194, 86, 76, 0.16); }
 .front-tab--profil.is-active { color: var(--lila); background: rgba(166, 120, 242, 0.16); }
+
+.front-clan-kopf {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, rgba(94, 160, 240, 0.16), rgba(26, 40, 56, 0.9));
+  border: 1px solid rgba(94, 160, 240, 0.35);
+}
+.front-clan-kopf strong {
+  display: block;
+  font-size: 1.15rem;
+}
+.front-clan-kopf p {
+  margin: 0.15rem 0 0;
+}
+.front-clan-wappen {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.front-clan-kacheln {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-bottom: 1.25rem;
+}
+.front-clan-kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.7rem 0.65rem;
+  text-align: left;
+  border-radius: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: 0 3px 0 #152025;
+}
+.front-clan-kachel:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #152025;
+}
+.front-clan-zeichen {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.front-clan-kachel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-height: 2.4rem;
+}
+.front-clan-kachel-text strong {
+  font-size: 0.92rem;
+}
+.front-clan-kachel-text .muted {
+  font-size: 0.72rem;
+}
+.front-clan-kachel .front-bald-tag {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+}
 
 /* Ressourcen-Leiste: Level und Name links, Muenzen und VIP rechts. */
 .front-spieler {

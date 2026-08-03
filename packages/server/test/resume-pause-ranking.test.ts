@@ -78,7 +78,7 @@ test('Weiterspielen: /api/me liefert den laufenden Tisch', async (t) => {
   assert.equal(body.clubs[0]!.name, 'Brauweg');
 });
 
-test('Vereinstisch: nur Mitglieder sehen und betreten ihn', async (t) => {
+test('Clantisch: nur Mitglieder sehen und betreten ihn', async (t) => {
   const c = await ctx();
   t.after(() => c.close());
   const anna = await createVerifiedAccount(c, 'Anna');
@@ -105,7 +105,7 @@ test('Vereinstisch: nur Mitglieder sehen und betreten ihn', async (t) => {
   await joinTable(c.db, table.id, bert.accountId);
 });
 
-test('Pause: nur Vereinstische, und pausierte verfallen nicht', async (t) => {
+test('Pause: nur Clantische, und pausierte verfallen nicht', async (t) => {
   const c = await ctx();
   t.after(() => c.close());
   const anna = await createVerifiedAccount(c, 'Anna');

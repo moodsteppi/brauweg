@@ -112,8 +112,8 @@ export async function register(
     throw err;
   }
 
-  // Beta: jeder Einladungs-Nutzer landet im gemeinsamen Verein — sonst
-  // gaebe es keine Vereinstische und keine Pause.
+  // Beta: jeder Einladungs-Nutzer landet im gemeinsamen Clan — sonst
+  // gaebe es keine Clantische und keine Pause.
   await ensureBetaClubMembership(db, accountId);
 
   // Der Versand steht bewusst NACH dem Konto und darf es nicht mehr umwerfen.

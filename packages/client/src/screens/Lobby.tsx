@@ -99,7 +99,7 @@ export function Lobby({
   }, [gameId]);
 
   const baseRounds = defaults?.rounds[String(seats)] ?? [];
-  // Vereinstische dürfen bis 100 Runden — die kurze Liste vom Modul um die
+  // Clantische dürfen bis 100 Runden — die kurze Liste vom Modul um die
   // lange Partie ergänzen, sofern die Geberrotation aufgeht.
   const roundOptions =
     visibility === 'club_only' && !baseRounds.includes(100)
@@ -220,7 +220,7 @@ export function Lobby({
                   aria-pressed={visibility === 'club_only'}
                   onClick={() => setVisibility('club_only')}
                 >
-                  Nur Verein
+                  Nur Clan
                 </button>
               </div>
             </div>
@@ -241,7 +241,7 @@ export function Lobby({
           </button>
           <p className="muted lobby-fussnote">
             {visibility === 'club_only'
-              ? 'Vereinstisch: bis 100 Runden, pausierbar, nur für Vereinsmitglieder.'
+              ? 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder — für alle Spiele.'
               : 'Bots setzt du am Tisch auf die freien Plätze — Tische mit Bots zählen nicht für die Rangliste.'}
           </p>
         </section>
@@ -253,7 +253,7 @@ export function Lobby({
             <span className="lobby-tischinfo">
               <strong>
                 {row.seats} Plätze · {row.maxRounds} Runden
-                {row.visibility === 'club_only' ? ' · Verein' : ''}
+                {row.visibility === 'club_only' ? ' · Clan' : ''}
               </strong>
               <span className="muted">
                 {row.occupied} von {row.seats} besetzt

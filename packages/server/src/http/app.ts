@@ -489,7 +489,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.post('/api/tables', async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
-    // Vereinstisch ohne clubId: den ersten (und in der Beta einzigen) Verein nehmen.
+    // Clantisch ohne clubId: den ersten (und in der Beta einzigen) Clan nehmen.
     let clubId = body.clubId;
     if (body.visibility === 'club_only' && !clubId) {
       const clubs = await clubsFor(deps.db, accountId);
@@ -499,7 +499,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.status(201).send(table);
   });
 
-  /** Vereinstisch pausieren — Zugtimer und 24h-Verfall stehen still. */
+  /** Clantisch pausieren — Zugtimer und 24h-Verfall stehen still. */
   app.post('/api/tables/:tableId/pause', async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
@@ -508,7 +508,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.send({ ok: true });
   });
 
-  /** Pausierten Vereinstisch fortsetzen. */
+  /** Pausierten Clantisch fortsetzen. */
   app.post('/api/tables/:tableId/resume', async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);

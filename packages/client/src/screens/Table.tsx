@@ -514,7 +514,7 @@ export function Table({
             <h2>Tisch pausiert</h2>
             <p className="muted">
               Der Zugtimer steht still. Jeder am Tisch kann fortsetzen — ideal für
-              Vereinstische über mehrere Abende.
+              Clantische über mehrere Abende.
             </p>
             {view.seat !== null && (
               <button className="primary" disabled={pauseBusy} onClick={togglePause}>
