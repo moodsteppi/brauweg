@@ -493,15 +493,6 @@ export function Table({
           />
         ))}
 
-        {/* Partei- und Ansagetafel ueber dem Stich: Woran man ist, muss man
-            am Tisch ablesen koennen und nicht erst erinnern. */}
-        {round?.myParty && (
-          <div className="doko-tafel doko-tafel--partei">
-            {ansageText(round) && <strong>{ansageText(round)}</strong>}
-            <span>Wir spielen: {partyLabel(round.myParty)}</span>
-          </div>
-        )}
-
         {/* Stich in der Mitte */}
         <div className="doko-trick">
           {!dealing && trick.length === 0 && <span className="doko-trick-hint">{phaseText}</span>}
@@ -531,18 +522,10 @@ export function Table({
           />
         )}
 
-        {/* Spielart unter dem Stich. Im Herz-Solo ist die Herz-Neun Trumpf,
-            im Normalspiel eine Fehlkarte - wer das nicht sieht, haelt einen
-            regelkonformen Bedienzwang fuer einen Fehler. */}
-        {round && round.phase !== 'vorbehalt' && (
-          <div className="doko-tafel doko-tafel--spielart">
-            <span className="muted">Es läuft</span>
-            <strong>
-              {gameTypeLabel(round.gameType)}
-              {soloName ? ` · ${soloName}` : ''}
-            </strong>
-          </div>
-        )}
+        {/* Die beiden Holztafeln - eigene Partei und laufende Spielart -
+            standen frueher hier auf dem Filz. Beides steht schon in der
+            Kopfzeile oben links und unter dem eigenen Namen; zweimal
+            dasselbe nimmt nur Platz weg, den die Karten brauchen. */}
 
         {round?.lastTrick && trick.length === 0 && (
           <p className="doko-last">

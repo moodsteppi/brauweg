@@ -659,13 +659,25 @@ function setAnnouncement(
 ): RoundState {
   const ann = { ...state.announcements };
 
+  /*
+   * Die Staffel wird von unten geklettert: Erst Re beziehungsweise Kontra,
+   * dann Keine 90 und so weiter.
+   *
+   * Nach dem offiziellen Regelwerk schliesst eine hoehere Ansage die
+   * niedrigeren ein - "Keine 90" ohne vorheriges Re waere dort erlaubt und
+   * zaehlte als beides. Hier gilt es bewusst nicht: Wer "Keine 90" sagen
+   * will, muss vorher Re gesagt haben. Das haelt die Ansagen fuer alle am
+   * Tisch nachvollziehbar und macht die Fristen zu echten Entscheidungen.
+   */
   if (party === 're') {
+    if (level > 0 && !ann.re) fail('Erst Re, dann eine Absage');
     ann.re = true;
     if (level > 0) {
       if (level > ann.reAbsage + 1) fail('Absagestufe muss aufeinander aufbauen');
       ann.reAbsage = level;
     }
   } else {
+    if (level > 0 && !ann.kontra) fail('Erst Kontra, dann eine Absage');
     ann.kontra = true;
     if (level > 0) {
       if (level > ann.kontraAbsage + 1) fail('Absagestufe muss aufeinander aufbauen');

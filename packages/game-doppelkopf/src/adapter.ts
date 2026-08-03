@@ -253,9 +253,11 @@ export const doppelkopf: GameModule<PartyState, RoundAction, DokoView, RuleSet> 
         actions.push({ type: 'announce', seat, level: 0 });
       }
       // Jede Absage setzt die vorherige Stufe voraus, also gibt es immer
-      // hoechstens eine naechste Stufe.
+      // hoechstens eine naechste Stufe - und ueberhaupt erst, wenn Re
+      // beziehungsweise Kontra gesagt ist. Vorher stand "Keine 90" neben
+      // "Re / Kontra", obwohl es ohne die Ansage gar nicht geht.
       const next = (absage + 1) as AbsageLevel;
-      if (st.rs.absagen && next <= 4 && mayAnnounce(next, own)) {
+      if (made && st.rs.absagen && next <= 4 && mayAnnounce(next, own)) {
         actions.push({ type: 'announce', seat, level: next });
       }
     }

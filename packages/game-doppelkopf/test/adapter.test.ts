@@ -168,16 +168,33 @@ test('ohne aktivierte Ansagen gibt es keine Ansage-Aktionen', () => {
   }
 });
 
-test('es wird immer hoechstens eine naechste Absagestufe angeboten', () => {
+test('eine Absage gibt es erst nach Re oder Kontra, und dann nur die naechste', () => {
   const party = toPlaying(newParty());
   const seat = doppelkopf.currentActor(party) as number;
-  const levels = doppelkopf
-    .legalActions(party, seat)
-    .filter((a) => a.type === 'announce')
-    .map((a) => (a as { level: number }).level);
 
-  // Re (0) und die erste Absage (1), mehr nicht.
-  assert.deepEqual(levels, [0, 1]);
+  const stufen = (p: typeof party, s: number): number[] =>
+    doppelkopf
+      .legalActions(p, s)
+      .filter((a) => a.type === 'announce')
+      .map((a) => (a as { level: number }).level);
+
+  // Vorher: nur Re beziehungsweise Kontra. "Keine 90" stand hier frueher
+  // daneben, obwohl es ohne die Ansage gar nicht geht.
+  assert.deepEqual(stufen(party, seat), [0], 'ohne Ansage darf nur Stufe 0 offen sein');
+
+  const nachRe = doppelkopf.act(party, seat, { type: 'announce', seat, level: 0 });
+
+  // Danach genau eine Stufe weiter, nicht die ganze Leiter.
+  assert.deepEqual(stufen(nachRe, seat), [1], 'nach der Ansage genau die naechste Stufe');
+});
+
+test('eine Absage ohne vorherige Ansage weist die Engine ab', () => {
+  const party = toPlaying(newParty());
+  const seat = doppelkopf.currentActor(party) as number;
+
+  // Die Regel steht in der Engine, nicht im Knopf: Wer die Aktion an der
+  // Oberflaeche vorbei schickt, kommt genauso wenig durch.
+  assert.throws(() => doppelkopf.act(party, seat, { type: 'announce', seat, level: 1 }));
 });
 
 test('jede angebotene Aktion wird von act auch angenommen', () => {
