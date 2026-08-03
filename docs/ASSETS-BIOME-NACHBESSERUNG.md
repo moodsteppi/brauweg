@@ -1,5 +1,27 @@
 # Nachbesserung: Biom-Kacheln
 
+## Für den nächsten Satz vorgemerkt: der Nebel oben
+
+Alle Kacheln laufen an **beiden** Rändern in Nebel aus. Am unteren Rand
+stimmt das — dort liegt Wasser, und Dunst über Wasser ist selbstverständlich.
+**Am oberen Rand ergibt es keinen Sinn**: Dort schaut man von oben auf
+Land, und Nebel, der genau an der Bildkante beginnt, sieht nach
+Bildbegrenzung aus statt nach Landschaft.
+
+Die Regel kam aus der Nachbesserung und war gegen die harten Schnittkanten
+an den Kachelstößen gedacht. Das Ziel war richtig, das Mittel zu grob.
+
+**Besser beim nächsten Mal:** Der obere Rand geht in *Wasser* über, nicht
+in Nebel — dieselbe Küste, dasselbe Meer wie unten. Dann passt der
+Übergang zur darüberliegenden Kachel, ohne dass eine Nebelbank in der Luft
+hängt. Nebel bleibt nur dort, wo er zum Motiv gehört: über dem Wasser des
+Feuerbergs, in der Kälte des Schneefelds.
+
+**Kein Grund, jetzt sechs Kacheln neu zu machen.** Es fällt auf, aber es
+stört nicht — vorgemerkt für den Tag, an dem ohnehin daran gearbeitet wird.
+
+---
+
 ## Alle sechs Kacheln sind fertig
 
 Die letzte offene, `biom-1-heimat`, ist in der dritten Lieferung richtig

@@ -3343,7 +3343,7 @@ td {
   /* Die Mitte zwischen den beiden Versuchen: 36 % war zu klein, 66 %
      mittig verdeckte die Checkpoint-Marke. Links bleibt es, weil rechts
      daneben die Einstiegskarte Platz braucht. */
-  width: min(50%, 11rem);
+  width: min(45%, 9.9rem);
   pointer-events: none;
   line-height: 0;
   background: none;
@@ -4537,9 +4537,9 @@ main.auth > .muted {
   z-index: 7;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  max-width: 9.6rem;
-  padding: 0.4rem 0.5rem;
+  gap: 0.31rem;
+  max-width: 8.65rem;
+  padding: 0.36rem 0.45rem;
   border: 2px solid #ffe08a;
   border-radius: 0.7rem;
   background: linear-gradient(180deg, rgba(20, 40, 80, 0.82), rgba(10, 24, 50, 0.9));
@@ -4558,18 +4558,18 @@ main.auth > .muted {
   min-width: 0;
 }
 .hub-neuhier-text strong {
-  font-size: 0.88rem;
+  font-size: 0.79rem;
   color: #ffe08a;
   line-height: 1.15;
 }
 .hub-neuhier-text span {
-  font-size: 0.7rem;
+  font-size: 0.63rem;
   line-height: 1.15;
   color: rgba(255, 255, 255, 0.86);
 }
 .hub-neuhier img {
-  width: 2.3rem;
-  height: 2.3rem;
+  width: 2.07rem;
+  height: 2.07rem;
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
 }
