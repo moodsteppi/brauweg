@@ -2,6 +2,11 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
+import {
+  DealCeremony,
+  prefersReducedMotion,
+  type DealSlot,
+} from '../DealCeremony';
 import { regelBild } from '../regelbilder';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
@@ -107,6 +112,38 @@ export function Table({
       return () => clearTimeout(handle);
     }
   }, [lastKey]);
+
+  /**
+   * Misch- und Austeilzeremonie: bei neuer Hand (Rundenstart oder Neugabe)
+   * kurz in der Mitte mischen, dann Wellen an die Plaetze. Der Server ist
+   * schon fertig — nur die Darstellung wartet. Erster Snapshot (Beitritt
+   * mitten in der Runde) wird uebersprungen.
+   */
+  const handPrint = view?.view.round?.hand.map((c) => c.id).slice().sort((a, b) => a - b).join('.') ?? '';
+  const dealKey =
+    view?.view.round && handPrint
+      ? `${view.view.roundIndex}:${handPrint}`
+      : null;
+  const seenDeal = useRef<string | null | undefined>(undefined);
+  const [dealing, setDealing] = useState(false);
+  const [handJustDealt, setHandJustDealt] = useState(false);
+  const endDeal = useCallback(() => {
+    setDealing(false);
+    setHandJustDealt(true);
+    window.setTimeout(() => setHandJustDealt(false), 450);
+  }, []);
+  useEffect(() => {
+    if (!dealKey) return;
+    if (seenDeal.current === undefined) {
+      seenDeal.current = dealKey;
+      return;
+    }
+    if (dealKey === seenDeal.current) return;
+    seenDeal.current = dealKey;
+    if (prefersReducedMotion()) return;
+    setDealing(true);
+  }, [dealKey]);
+
   useEffect(() => {
     if (!table) return;
     setBotBusy((prev) => {
@@ -308,6 +345,12 @@ export function Table({
   );
 
   const hand = round ? sortByOrder(round.hand, round.order) : [];
+  const cardsPerSeat = round
+    ? view.seat !== null
+      ? hand.length || Math.max(...Object.values(round.handCounts), 0)
+      : Math.max(...Object.values(round.handCounts), 0)
+    : 0;
+  const dealSlots: DealSlot[] = LAYOUTS[seatCount] ?? ['bottom', 'left', 'top', 'right'];
   const liveTrick = round?.currentTrick ?? [];
   // Frisch voller Stich: eine Sekunde liegen lassen — auch dann, wenn der
   // naechste Spieler schon die erste Karte des neuen Stichs gelegt hat. Ohne
@@ -315,6 +358,7 @@ export function Table({
   const frozenActive = frozenKey !== null && frozenKey === lastKey && lastTrickNow !== null;
   const trick = frozenActive ? lastTrickNow!.played : liveTrick;
   const phaseText = round ? t(`phase.${round.phase}`) : 'Zwischen den Runden';
+  const showHands = !dealing;
 
   // Aufspiel: wer den Stich anspielt. Laeuft ein Stich, ist es, wer die erste
   // Karte gelegt hat; ist er leer, der, der gerade herauskommt.
@@ -425,7 +469,7 @@ export function Table({
             isBot={isBotSeat(seat)}
             hasLeft={view.leftSeats.includes(seat)}
             botTakeover={view.botSeats.includes(seat) && !view.leftSeats.includes(seat)}
-            count={round?.handCounts[seat] ?? 0}
+            count={showHands ? (round?.handCounts[seat] ?? 0) : 0}
             score={view.view.scores[seat] ?? 0}
             active={view.currentActor === seat}
             leader={leaderSeat === seat}
@@ -448,22 +492,32 @@ export function Table({
 
         {/* Stich in der Mitte */}
         <div className="doko-trick">
-          {trick.length === 0 && <span className="doko-trick-hint">{phaseText}</span>}
-          {trick.map((played) => (
-            <div
-              key={played.card.id}
-              className={`doko-trick-card at-${slotFor(played.seat, base, seatCount)}`}
-            >
-              {/* Innerer Wrapper traegt die Legeanimation, damit die Platzierung
+          {!dealing && trick.length === 0 && <span className="doko-trick-hint">{phaseText}</span>}
+          {!dealing &&
+            trick.map((played) => (
+              <div
+                key={played.card.id}
+                className={`doko-trick-card at-${slotFor(played.seat, base, seatCount)}`}
+              >
+                {/* Innerer Wrapper traegt die Legeanimation, damit die Platzierung
                   (aeusseres Element) davon unberuehrt bleibt. */}
-              <div className="doko-trick-in">
-                <div className="pc pc--trick">
-                  <CardFront card={played.card} deck={deck} />
+                <div className="doko-trick-in">
+                  <div className="pc pc--trick">
+                    <CardFront card={played.card} deck={deck} />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
+
+        {dealing && cardsPerSeat > 0 && (
+          <DealCeremony
+            slots={dealSlots}
+            cardsPerSeat={cardsPerSeat}
+            deck={deck}
+            onDone={endDeal}
+          />
+        )}
 
         {/* Spielart unter dem Stich. Im Herz-Solo ist die Herz-Neun Trumpf,
             im Normalspiel eine Fehlkarte - wer das nicht sieht, haelt einen
@@ -513,8 +567,8 @@ export function Table({
         </div>
       )}
 
-      {/* Vorbehaltsabfrage als Dialog mit Bestaetigung */}
-      {vorbehaltActions.length > 0 && !round?.pendingPflichtansage && (
+      {/* Vorbehaltsabfrage als Dialog mit Bestaetigung — erst nach dem Geben. */}
+      {vorbehaltActions.length > 0 && !round?.pendingPflichtansage && !dealing && (
         <VorbehaltDialog actions={vorbehaltActions} onSend={send} />
       )}
 
@@ -578,20 +632,23 @@ export function Table({
       </div>
 
       {view.seat !== null && (
-        <div className="doko-hand">
-          {hand.map((card, index) => (
-            <HandCard
-              key={card.id}
-              card={card}
-              deck={deck}
-              index={index}
-              total={hand.length}
-              playable={playable.has(card.id)}
-              trump={isTrump(card)}
-              onPlay={playCard}
-            />
-          ))}
-          {hand.length === 0 && <span className="muted">Keine Karten auf der Hand.</span>}
+        <div className={`doko-hand${dealing ? ' is-dealing' : ''}${handJustDealt ? ' is-dealt' : ''}`}>
+          {showHands &&
+            hand.map((card, index) => (
+              <HandCard
+                key={card.id}
+                card={card}
+                deck={deck}
+                index={index}
+                total={hand.length}
+                playable={playable.has(card.id)}
+                trump={isTrump(card)}
+                onPlay={playCard}
+              />
+            ))}
+          {showHands && hand.length === 0 && (
+            <span className="muted">Keine Karten auf der Hand.</span>
+          )}
         </div>
       )}
 

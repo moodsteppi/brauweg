@@ -1464,6 +1464,191 @@ td {
   .doko-trick-in { animation: none; }
 }
 
+/* ---- Misch- und Austeilzeremonie ---- */
+.doko-deal {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.doko-deal-glow {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: 9rem;
+  height: 9rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(226, 182, 79, 0.35) 0%,
+    rgba(74, 156, 120, 0.18) 42%,
+    transparent 72%
+  );
+  animation: doko-deal-glow 1.1s ease-in-out infinite alternate;
+}
+.doko-deal-label {
+  position: absolute;
+  top: calc(52% + 4.6rem);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #e8eef1;
+  background: rgba(18, 24, 28, 0.55);
+  border: 1px solid rgba(226, 182, 79, 0.35);
+  white-space: nowrap;
+  animation: doko-deal-label 2.2s ease both;
+}
+.doko-deal-stage {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+.doko-deal-pc {
+  width: calc(var(--bw, 2.2rem) * 1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+.doko-deal-mix {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  animation: doko-deal-mix 0.85s cubic-bezier(0.22, 0.8, 0.28, 1) both;
+  animation-delay: var(--delay, 0ms);
+  will-change: transform, opacity;
+}
+.doko-deal-fly {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.92);
+  animation: doko-deal-fly 0.55s cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  animation-delay: var(--delay, 0ms);
+  will-change: transform, opacity;
+}
+.doko-deal-fly.to-bottom {
+  --tx: var(--spread, 0px);
+  --ty: 11.5rem;
+  --spin: -12deg;
+}
+.doko-deal-fly.to-top {
+  --tx: var(--spread, 0px);
+  --ty: -9.5rem;
+  --spin: 10deg;
+}
+.doko-deal-fly.to-left {
+  --tx: calc(-9.2rem + var(--spread, 0px));
+  --ty: 0.4rem;
+  --spin: -18deg;
+}
+.doko-deal-fly.to-right {
+  --tx: calc(9.2rem + var(--spread, 0px));
+  --ty: 0.4rem;
+  --spin: 18deg;
+}
+.doko-deal-fly.to-top-left {
+  --tx: calc(-6.5rem + var(--spread, 0px));
+  --ty: -7.2rem;
+  --spin: -14deg;
+}
+.doko-deal-fly.to-top-right {
+  --tx: calc(6.5rem + var(--spread, 0px));
+  --ty: -7.2rem;
+  --spin: 14deg;
+}
+
+@keyframes doko-deal-glow {
+  from { opacity: 0.55; transform: translate(-50%, -50%) scale(0.92); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+}
+@keyframes doko-deal-label {
+  0%, 35% { opacity: 1; }
+  55%, 100% { opacity: 0; transform: translateX(-50%) translateY(0.35rem); }
+}
+@keyframes doko-deal-mix {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.7);
+  }
+  18% { opacity: 1; }
+  40% {
+    transform:
+      translate(
+        calc(-50% + (var(--i) - (var(--n) - 1) / 2) * 7px),
+        calc(-50% + (var(--i) % 3 - 1) * 5px)
+      )
+      rotate(calc((var(--i) - 4) * 11deg))
+      scale(1);
+  }
+  70% {
+    transform:
+      translate(
+        calc(-50% + (4 - var(--i)) * 5px),
+        calc(-50% + ((var(--i) % 2) * 2 - 1) * 8px)
+      )
+      rotate(calc((4 - var(--i)) * 9deg));
+  }
+  100% {
+    opacity: 0.15;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.94);
+  }
+}
+@keyframes doko-deal-fly {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.85);
+  }
+  12% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--tx, 0px)), calc(-50% + var(--ty, 0px)))
+      rotate(var(--spin, 0deg))
+      scale(0.72);
+  }
+}
+
+.doko-hand.is-dealing {
+  min-height: 4.5rem;
+}
+
+/* Nach dem Geben: innere Karte blendet ein, der Faecher-Transform bleibt am Knopf. */
+.doko-hand.is-dealt .doko-handcard .pc {
+  animation: doko-hand-reveal 0.4s cubic-bezier(0.22, 0.9, 0.32, 1) both;
+}
+@keyframes doko-hand-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doko-deal,
+  .doko-deal-glow,
+  .doko-deal-mix,
+  .doko-deal-fly,
+  .doko-hand.is-dealt .doko-handcard .pc {
+    animation: none !important;
+  }
+  .doko-deal { display: none; }
+}
+
 /* ---- Wartebereich: Bots auf freie Plaetze ---- */
 .doko-wait-name { flex: 1; }
 .doko-seat-btn {
