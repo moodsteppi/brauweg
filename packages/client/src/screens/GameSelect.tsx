@@ -94,7 +94,7 @@ export function GameSelect({
       </header>
 
       <div
-        className={`front-body${tab === 'spielen' ? '' : ' front-body--scroll'}`}
+        className={`front-body${tab === 'spielen' ? '' : ' front-body--szene'}`}
         key={tab}
       >
         {tab === 'shop' && <Shop onBald={setBald} />}
@@ -117,7 +117,7 @@ export function GameSelect({
         )}
         {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
         {tab === 'profil' && (
-          <div className="front-profil front-profil--b">
+          <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--b">
             <h2 className="front-shop-titel">
               <span aria-hidden="true" />
               Profil
@@ -128,7 +128,7 @@ export function GameSelect({
             <button className="front-profil-abmelden" onClick={onSignOut}>
               Abmelden
             </button>
-          </div>
+          </HubSzene>
         )}
       </div>
 
@@ -229,7 +229,7 @@ function Clan({
   ];
 
   return (
-    <div className="front-clan front-clan--b">
+    <HubSzene bg="/hub/bg-clan.png" className="front-clan front-clan--b">
       <header className="front-clan-halle">
         <div className="front-clan-banner">
           <img className="front-clan-wappen" src="/hub/clan-wappen.png" alt="" draggable={false} />
@@ -259,6 +259,24 @@ function Clan({
       </div>
 
       <Freunde onShowProfile={onShowProfile} />
+    </HubSzene>
+  );
+}
+
+/** Gemalter Tab-Hintergrund wie die Weltkarte — Inhalt darüber. */
+function HubSzene({
+  bg,
+  className,
+  children,
+}: {
+  bg: string;
+  className?: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div className={`hub-tab-szene${className ? ` ${className}` : ''}`}>
+      <img className="hub-tab-bg" src={bg} alt="" draggable={false} />
+      <div className="hub-tab-inhalt">{children}</div>
     </div>
   );
 }
@@ -298,7 +316,7 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
   ];
 
   return (
-    <div className="front-shop front-shop--b">
+    <HubSzene bg="/hub/bg-shop.png" className="front-shop front-shop--b">
       <h2 className="front-shop-titel">
         <span aria-hidden="true" />
         Shop
@@ -375,7 +393,7 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
           </button>
         ))}
       </div>
-    </div>
+    </HubSzene>
   );
 }
 
@@ -904,7 +922,7 @@ function DeckPicker({
   onChange: (cardDeck: string) => void;
 }): React.JSX.Element {
   return (
-    <div className="front-blatt front-blatt--b">
+    <HubSzene bg="/hub/bg-blatt.png" className="front-blatt front-blatt--b">
       <h2 className="front-shop-titel">
         <span aria-hidden="true" />
         Blatt
@@ -929,7 +947,7 @@ function DeckPicker({
           </button>
         ))}
       </div>
-    </div>
+    </HubSzene>
   );
 }
 
