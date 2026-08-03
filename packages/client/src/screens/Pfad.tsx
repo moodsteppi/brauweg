@@ -1,8 +1,8 @@
 /**
  * Trophäen-Weltkarte (Hub-CI).
  *
- * Gemalte Karte bleibt die Szene. Ambient nur: kleiner Pinguin auf dem Weg,
- * Bäume wiegen im Wind. Kamera folgt dem Checkpoint; Namen am Knoten.
+ * Gemalte Karte bleibt die Szene. Ambient: Bäume wiegen im Wind.
+ * Kamera folgt dem Checkpoint; Namen am Knoten.
  */
 
 import type { CSSProperties } from 'react';
@@ -71,12 +71,6 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
           <img className="hub-baum hub-baum--b" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '71%', left: '70%' }} />
           <img className="hub-baum hub-baum--c" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '59%', left: '20%' }} />
           <img className="hub-baum hub-baum--d" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '61%', left: '30%' }} />
-        </div>
-
-        {/* Loop: aus dem Haus → Weg entlang → zurück ins Haus. */}
-        <div className="hub-pingu-wrap" aria-hidden="true">
-          <img className="hub-pingu" src="/hub/pinguin.png" alt="" draggable={false} />
-          <span className="hub-pingu-schatten" />
         </div>
 
         {HUB_WELTEN.map((welt) => {
