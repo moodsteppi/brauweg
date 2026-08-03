@@ -9,7 +9,8 @@ import {
   type PlayerRef,
   type RankingEntry,
 } from '../api';
-import { DECKS, cardImage, type Deck } from '../decks';
+import { DECKS, cardImage, deckById, type Deck } from '../decks';
+import { SZENEN, szeneBild } from '../szenen';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
 import { Clan } from './Clan';
 import { cardLabel, cardName, isRed, t } from '../i18n';
@@ -31,6 +32,7 @@ export function GameSelect({
   onPick,
   onResume,
   onDeckChange,
+  onSzeneChange,
   onAvatarChange,
   onShowProfile,
   onSignOut,
@@ -39,6 +41,7 @@ export function GameSelect({
   onPick: (gameId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
   onDeckChange: (cardDeck: string) => void;
+  onSzeneChange: (tableScene: string) => void;
   onAvatarChange: () => void;
   onShowProfile: (accountId: string) => void;
   onSignOut: () => void;
@@ -117,7 +120,12 @@ export function GameSelect({
             onRangliste={() => setRanglisteOffen(true)}
           />
         )}
-        {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
+        {tab === 'blatt' && <DeckPicker
+            current={me.cardDeck}
+            onChange={onDeckChange}
+            szene={me.tableScene}
+            onSzeneChange={onSzeneChange}
+          />}
         {tab === 'profil' && (
           <ProfilTab
             me={me}
@@ -949,9 +957,13 @@ const SAMPLE = [
 function DeckPicker({
   current,
   onChange,
+  szene,
+  onSzeneChange,
 }: {
   current: string;
   onChange: (cardDeck: string) => void;
+  szene: string;
+  onSzeneChange: (tableScene: string) => void;
 }): React.JSX.Element {
   return (
     <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
@@ -978,6 +990,39 @@ function DeckPicker({
               </div>
               <strong>{t(deck.nameKey)}</strong>
               {deck.id === current && <span className="hub-blatt-haken">✓</span>}
+            </button>
+          ))}
+        </div>
+
+        {/*
+          Die Szenerie steht beim Kartenblatt, weil beides dieselbe Frage
+          beantwortet: Wie sieht mein Tisch aus? Sie ist persoenlich — jeder
+          am Tisch sieht seine eigene, niemand entscheidet fuer alle.
+
+          Die Vorschau zeigt echte Karten darauf, denn genau darauf kommt es
+          an: Auf einem zu dunklen Untergrund verschwinden Kreuz und Pik.
+          Das soll man vor dem Spiel sehen und nicht mittendrin.
+        */}
+        <h3 className="hub-abschnitt">Tisch</h3>
+        <div className="hub-szenen">
+          {SZENEN.map((s) => (
+            <button
+              className={`hub-szene${s.id === szene ? ' is-an' : ''}`}
+              key={s.id}
+              aria-pressed={s.id === szene}
+              onClick={() => onSzeneChange(s.id)}
+            >
+              <span className="hub-szene-probe">
+                <img src={szeneBild(s.id)} alt="" draggable={false} />
+                <span className="hub-szene-karten">
+                  {SAMPLE.slice(0, 2).map((card) => (
+                    <DeckSample card={card} deck={deckById(current)} key={card.id} />
+                  ))}
+                </span>
+              </span>
+              <strong>{s.name}</strong>
+              <span className="muted">{s.hinweis}</span>
+              {s.id === szene && <span className="hub-blatt-haken">✓</span>}
             </button>
           ))}
         </div>

@@ -117,6 +117,15 @@ export const account = pgTable(
      */
     cardDeck: text().notNull().default('text'),
     /**
+     * Gewaehlte Tischszenerie — der Untergrund, auf dem gespielt wird.
+     *
+     * Persoenlich wie das Kartenblatt und nicht am Tisch: Sonst muesste
+     * einer fuer alle entscheiden, und wer die Karten auf dunklem Grund
+     * schlecht sieht, muesste damit leben. Wie beim Blatt kennt der Server
+     * nur die zulaessigen Kennungen (src/scenes.ts), nicht ihr Aussehen.
+     */
+    tableScene: text().notNull().default('stube'),
+    /**
      * Profilbild als data-URL (kleines, im Browser verkleinertes Quadrat).
      * Bewusst in der Zeile und nicht als Datei-Ablage: fuer die Beta ist das
      * einfach und ohne zusaetzlichen Dienst. Ausgeliefert wird es ueber

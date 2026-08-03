@@ -74,6 +74,8 @@ export interface Me {
   coins: number;
   /** Gewaehltes Kartenblatt. Siehe decks.ts. */
   cardDeck: string;
+  /** Gewaehlte Tischszenerie — persoenlich wie das Kartenblatt. */
+  tableScene: string;
   /** URL des eigenen Profilbilds, oder null. */
   avatarUrl: string | null;
   /** ISO-Kalendertag oder null bei Altkonten. */
@@ -214,6 +216,7 @@ export const api = {
   logout: () => post<{ ok: true }>('/auth/logout'),
   me: () => request<Me>('/me'),
   setCardDeck: (cardDeck: string) => patch<{ ok: true }>('/me', { cardDeck }),
+  setTableScene: (tableScene: string) => patch<{ ok: true }>('/me', { tableScene }),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */

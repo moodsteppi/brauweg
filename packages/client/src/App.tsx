@@ -57,6 +57,7 @@ export function App(): React.JSX.Element {
       <Table
         tableId={screen.tableId}
         deck={deck}
+        szene={me.tableScene}
         onShowProfile={zeigeProfil}
         // Zurueck zum Start: me neu laden, damit „Weiterspielen" den
         // echten Stand zeigt (Wartetisch weg / Partie noch offen).
@@ -92,6 +93,10 @@ export function App(): React.JSX.Element {
       onDeckChange={(cardDeck) => {
         setMe({ ...me, cardDeck });
         void api.setCardDeck(cardDeck).catch(() => void reload());
+      }}
+      onSzeneChange={(tableScene) => {
+        setMe({ ...me, tableScene });
+        void api.setTableScene(tableScene).catch(() => void reload());
       }}
       onAvatarChange={() => void reload()}
       onSignOut={async () => {

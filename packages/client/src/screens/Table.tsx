@@ -11,6 +11,7 @@ import {
 import { regelBild } from '../regelbilder';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
+import { szeneBild } from '../szenen';
 import { gameTypeLabel, t } from '../i18n';
 import type { Action, Card } from '../protocol';
 import { useCountdown, useTable } from '../useTable';
@@ -39,11 +40,14 @@ const ZOOM_STEP = 0.15;
 export function Table({
   tableId,
   deck,
+  szene,
   onShowProfile,
   onLeave,
 }: {
   tableId: string;
   deck: Deck;
+  /** Gewaehlte Tischszenerie des Kontos. */
+  szene: string;
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
@@ -400,7 +404,7 @@ export function Table({
 
   return (
     <div className="doko" style={{ '--zoom': zoom } as React.CSSProperties}>
-      <img className="doko-bg" src="/hub/bg-spieltisch.png" alt="" draggable={false} />
+      <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
       {/* Kopfzeile */}
       <header className="doko-top">
         <button className="doko-icon" onClick={onLeave} aria-label="Tisch verlassen">

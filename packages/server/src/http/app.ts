@@ -37,6 +37,7 @@ import {
   isBirthdayToday,
 } from '../birthday.js';
 import { CARD_DECKS } from '../decks.js';
+import { TABLE_SCENES } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
   acceptFriendship,
@@ -369,6 +370,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         coins: s.account.coins,
         premiumUntil: s.account.premiumUntil,
         cardDeck: s.account.cardDeck,
+        tableScene: s.account.tableScene,
         birthday: s.account.birthday,
         hasBirthdayOutfit: s.account.hasBirthdayOutfit,
         birthdayRewardYear: s.account.birthdayRewardYear,
@@ -466,6 +468,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const body = z
       .object({
         cardDeck: z.enum(CARD_DECKS).optional(),
+        tableScene: z.enum(TABLE_SCENES).optional(),
         // Ein kleines, im Browser verkleinertes Quadrat als data-URL. Die
         // Groesse ist bewusst hart begrenzt: Die Verkleinerung passiert im
         // Client, hier steht nur der Riegel, falls sie umgangen wird. null
@@ -481,6 +484,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
     const set: Record<string, unknown> = {};
     if (body.cardDeck) set.cardDeck = body.cardDeck;
+    if (body.tableScene) set.tableScene = body.tableScene;
     if (body.avatar !== undefined) {
       // Der Kopf einer data-URL ist nur eine Behauptung. Ohne Blick auf die
       // ersten Bytes liesse sich HTML als "image/png" ablegen und danach von
