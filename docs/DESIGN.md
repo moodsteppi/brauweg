@@ -47,9 +47,9 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
 
 1. **Hub / Plattform** (Startseite und alles bis zur Spielauswahl): hell,
    bunt, verspielt — Clash Royale / Brawl Stars / Monopoly-Go-Feeling.
-   Klasse `front--hub` auf dem Spielen-Tab. Die Weltkarte und Hub-Icons
-   liegen als Raster in `public/hub/` (Freigabe-Look). Filz/Wirtshaus
-   gehören **nicht** hierher.
+   Klasse `front--hub` auf dem ganzen Start-Shell (alle Tabs). Die Weltkarte
+   und Hub-Icons liegen als Raster in `public/hub/` (Freigabe-Look).
+   Filz/Wirtshaus gehören **nicht** hierher. Keine Alkohol-/Hopfen-/Bier-Motive.
 2. **Spielwelt** (nach Wahl, z. B. Doppelkopf): eigenes Design laut
    [DESIGN-DOKO.md](DESIGN-DOKO.md) — dunkler Filz, Tisch, Blätter.
 
