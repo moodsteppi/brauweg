@@ -1265,53 +1265,76 @@ td {
 }
 
 /**
- * Startseite / Hub (Entwurf C — Weltkarte): hell, bunt, Clash/Brawl-Feeling.
+ * Startseite / Hub: Clash/Brawl-CI mit gemalter Weltkarte.
  * Filz und Wirtshaus kommen erst NACH der Spielwahl (Doko-Tisch).
  */
 .front--hub {
-  background:
-    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.55) 0 0.9rem, transparent 1.2rem),
-    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.4) 0 0.55rem, transparent 0.8rem),
-    radial-gradient(circle at 88% 28%, rgba(255, 236, 150, 0.45) 0 0.35rem, transparent 0.55rem),
-    radial-gradient(ellipse 120% 55% at 50% -8%, #7fd4ff 0%, #4eb8f5 38%, transparent 70%),
-    linear-gradient(180deg, #5ec8f7 0%, #7ed9c2 42%, #8fdf8a 72%, #6bc46a 100%);
-  color: #16301f;
+  background: #3db4f0;
+  color: #fff;
+}
+.front--hub .front-body {
+  padding: 0.2rem 0.55rem 0.8rem;
 }
 .front--hub .front-top {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, #1a3f7a 0%, #2458a8 100%);
+  border-bottom: 2px solid rgba(255, 210, 90, 0.45);
+  box-shadow: 0 4px 14px rgba(10, 30, 70, 0.35);
 }
 .front--hub .front-spieler,
 .front--hub .front-spieler-info strong {
-  color: #12301c;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.front--hub .front-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.65rem;
+  object-fit: cover;
+  border: 2px solid #ffe08a;
+  box-shadow: 0 2px 0 #8a6a1a;
+  background: #2a6fb8;
+}
+.front--hub .front-level--hub {
+  width: 1.45rem;
+  height: 1.45rem;
+  font-size: 0.72rem;
+  margin-left: 0.15rem;
 }
 .front--hub .front-level {
   background: linear-gradient(180deg, #7ec8ff 0%, #3a8fe0 100%);
   border-color: #1f5fa8;
-  box-shadow: 0 3px 0 #1a4f8c, 0 4px 10px rgba(20, 60, 120, 0.35);
+  box-shadow: 0 3px 0 #1a4f8c;
 }
 .front--hub .front-xp {
-  background: rgba(0, 40, 20, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.front--hub .front-xp > span {
+  background: linear-gradient(90deg, #5ec8ff, #7ef0ff);
 }
 .front--hub .front-waehrung {
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 2px 0 rgba(0, 40, 30, 0.18);
+  background: rgba(12, 32, 70, 0.55);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+.front--hub .front-waehrung--cups {
+  color: var(--gold);
+  border-color: rgba(226, 182, 79, 0.55);
 }
 .front--hub .front-tabs {
-  background: linear-gradient(180deg, #2a6fb8 0%, #1e4f8c 100%);
-  border-top: 2px solid rgba(255, 220, 120, 0.55);
-  box-shadow: 0 -6px 20px rgba(20, 60, 120, 0.25);
+  background: linear-gradient(180deg, #1e4f8c 0%, #163a68 100%);
+  border-top: 2px solid rgba(255, 210, 90, 0.5);
+  box-shadow: 0 -8px 24px rgba(10, 30, 70, 0.35);
 }
 .front--hub .front-tab {
-  color: rgba(230, 242, 255, 0.75);
+  color: rgba(230, 242, 255, 0.72);
 }
 .front--hub .front-tab--spielen.is-active {
   color: #fff;
-  background: rgba(80, 200, 255, 0.35);
-  box-shadow: inset 0 0 0 2px rgba(255, 220, 100, 0.65);
+  background: linear-gradient(180deg, #4eb8ff 0%, #2a7fd4 100%);
+  box-shadow: inset 0 0 0 2px #ffe08a, 0 0 16px rgba(80, 200, 255, 0.45);
+  border-radius: 0.75rem;
 }
 
 /* Breiter Browser: die Handyflaeche hebt sich vom Grund ab. */
@@ -2020,123 +2043,259 @@ td {
   white-space: nowrap;
 }
 
-/* ---- Hub-Startseite: Weltkarten-Pfad ---- */
+/* ---- Hub-Startseite: gemalte Weltkarte + Overlay-UI ---- */
 .front-hub {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
-.front-hub-slogan {
+.hub-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  margin: 0.1rem 0 0.15rem;
+  pointer-events: none;
+}
+.hub-logo strong {
+  font-size: 1.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow:
+    0 2px 0 #1a4a8a,
+    0 4px 0 #123560,
+    0 6px 14px rgba(0, 0, 0, 0.35);
+}
+.hub-logo span {
+  padding: 0.16rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #12301c;
+  background: linear-gradient(180deg, #5fd4c8 0%, #2ea89c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 0 #1a6a62;
+}
+.hub-buehne {
+  position: relative;
+}
+.hub-karte {
+  position: relative;
+  width: 100%;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.35),
+    0 10px 28px rgba(10, 40, 80, 0.4);
+  background: #3db4f0;
+}
+.hub-karte-bild {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: top;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.hub-schild {
+  position: absolute;
+  z-index: 2;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(180deg, #a06a38 0%, #6b4220 100%);
+  border: 1px solid #d4a06a;
+  border-radius: 0.35rem;
+  box-shadow: 0 3px 0 #3a2410;
+  pointer-events: none;
+}
+.hub-knoten {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 8px 16px rgba(0, 0, 0, 0.25);
+}
+.hub-knoten--gruen { background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%); width: 5.2rem; height: 5.2rem; border-radius: 1.1rem; }
+.hub-knoten--mint { background: linear-gradient(180deg, #9af0b0 0%, #3cb86a 100%); }
+.hub-knoten--blau { background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%); }
+.hub-knoten--rot { background: linear-gradient(180deg, #ff8a6a 0%, #d04030 100%); }
+.hub-knoten--lila { background: linear-gradient(180deg, #c49aff 0%, #7a48d4 100%); }
+.hub-knoten--gold { background: linear-gradient(180deg, #ffe08a 0%, #d4a94a 100%); color: #3a2a08; }
+.hub-knoten.is-zu {
+  filter: grayscale(0.35) brightness(0.78);
+  opacity: 0.92;
+}
+.hub-knoten.is-hier {
+  outline: 3px solid #ffe08a;
+  animation: hub-pulse 2.2s ease-in-out infinite;
+}
+.hub-knoten-nr {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.hub-knoten-cp {
+  font-size: 0.58rem;
+  opacity: 0.9;
+}
+.hub-knoten-pokal {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.hub-knoten-los {
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-top: 0.1rem;
+}
+.hub-knoten-du {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #3a2a08;
+  background: linear-gradient(180deg, #ffe08a 0%, #e2b64f 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 3px 0 #8a6a1a;
+}
+@keyframes hub-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hub-knoten.is-hier { animation: none; }
+}
+.hub-seite {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 5.6rem;
+}
+.hub-seite--links {
+  left: 0.35rem;
+  top: 18%;
+}
+.hub-seite--rechts {
+  right: 0.35rem;
+  top: 12%;
+  width: 5.8rem;
+}
+.hub-side-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
-  margin: 0.15rem 0 0.55rem;
-  text-align: center;
-}
-.front-hub-slogan strong {
-  font-size: 1.55rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  padding: 0.55rem 0.3rem;
+  border-radius: 0.85rem;
+  border: 2px solid rgba(255, 255, 255, 0.7);
   color: #fff;
-  text-shadow:
-    0 2px 0 #1a5a9a,
-    0 4px 0 #134570,
-    0 6px 12px rgba(10, 40, 80, 0.35);
-}
-.front-hub-slogan span {
-  display: inline-block;
-  padding: 0.18rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #12301c;
-  background: linear-gradient(180deg, #ffe08a 0%, #e2b64f 100%);
-  border: 1px solid #c49a2e;
-  box-shadow: 0 2px 0 #8a6a1a;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.15;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.28), 0 6px 14px rgba(0, 0, 0, 0.2);
 }
-.front--hub .pfad {
-  margin-bottom: 0.6rem;
-  filter: drop-shadow(0 8px 16px rgba(20, 60, 40, 0.22));
+.hub-side-btn span {
+  font-size: 1.25rem;
+  line-height: 1;
 }
-.front--hub .insel.is-zu svg {
-  filter: saturate(0.55) brightness(0.82);
+.hub-side-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
 }
-.front--hub .insel-name {
-  padding: 0.28rem 0.55rem 0.32rem;
-  border-radius: 0.45rem 0.45rem 0.55rem 0.35rem;
-  background: linear-gradient(180deg, #8b5a2b 0%, #5c3a18 100%);
-  border: 1px solid #c49a5a;
-  box-shadow: 0 3px 0 #3a2410, 0 4px 10px rgba(0, 0, 0, 0.25);
-  letter-spacing: 0.04em;
+.hub-side-btn--lila {
+  background: linear-gradient(180deg, #c49aff 0%, #7a48d4 100%);
 }
-.front--hub .insel-cp {
-  background: linear-gradient(180deg, #fff6d0 0%, #f0d070 100%);
-  color: #5a3a08;
-  border: 2px solid #fff;
-  box-shadow: 0 3px 0 #b89028, 0 4px 10px rgba(0, 0, 0, 0.25);
+.hub-side-btn--blau {
+  background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%);
 }
-.front--hub .insel-cp.is-erreicht {
-  background: linear-gradient(180deg, #b8f5c8 0%, #5fd48a 100%);
-  color: #0d3a1c;
-  border-color: #fff;
-  box-shadow: 0 3px 0 #2a8a4e, 0 4px 10px rgba(0, 0, 0, 0.25);
+.hub-side-btn--grau {
+  background: linear-gradient(180deg, #9aa8b8 0%, #5a6674 100%);
 }
-.front--hub .insel-du {
-  font-size: 0.85rem;
-  padding: 0.35rem 1rem;
-  border: 2px solid #fff;
-  box-shadow: 0 4px 0 #a07a20, 0 8px 18px rgba(0, 0, 0, 0.3);
-  animation: hub-pulse 2.4s ease-in-out infinite;
-}
-@keyframes hub-pulse {
-  0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.04); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .front--hub .insel-du { animation: none; }
-}
-.front-hub-aktionen {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-.front--hub .front-rangliste,
-.front--hub .front-bonus {
-  margin: 0;
-  width: 100%;
-  min-height: 3.1rem;
+.hub-truhe {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.45rem 0.35rem 0.55rem;
   border-radius: 0.9rem;
+  border: 2px solid #ffe08a;
+  background: linear-gradient(180deg, rgba(20, 40, 80, 0.55), rgba(10, 24, 50, 0.72));
+  color: #fff;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3), 0 0 18px rgba(255, 200, 80, 0.35);
+}
+.hub-truhe img {
+  width: 3.4rem;
+  height: 3.4rem;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+}
+.hub-truhe em {
+  font-style: normal;
+  font-size: 0.58rem;
   font-weight: 800;
-  box-shadow: 0 4px 0 rgba(20, 50, 80, 0.25);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.15;
 }
-.front--hub .front-rangliste {
-  color: #12301c;
-  background: linear-gradient(180deg, #7ec8ff 0%, #3a8fe0 100%);
-  border: 2px solid rgba(255, 255, 255, 0.65);
+.hub-truhe-cta {
+  margin-top: 0.1rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #0d3a1c;
+  background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 2px 0 #1f6b40;
 }
-.front--hub .front-bonus {
-  color: #3a2a08;
-  background: linear-gradient(180deg, #ffe08a 0%, #e2b64f 100%);
-  border: 2px solid rgba(255, 255, 255, 0.65);
+.hub-truhe .front-bald-tag {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.25rem;
 }
 .front--hub .front-play {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   border-radius: 1rem;
-  border: 3px solid rgba(255, 255, 255, 0.75);
+  border: 3px solid rgba(255, 255, 255, 0.8);
   background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
   box-shadow: 0 5px 0 #1f6b40, 0 10px 22px rgba(20, 80, 40, 0.35);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
 }
 .front--hub .front-play:active {
   transform: translateY(3px);
-  box-shadow: 0 2px 0 #1f6b40, 0 4px 10px rgba(20, 80, 40, 0.3);
+  box-shadow: 0 2px 0 #1f6b40;
 }
 .front--hub .front-play-neben {
   border: 2px solid rgba(255, 255, 255, 0.55);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.28));
-  color: #12301c;
-  box-shadow: 0 3px 0 rgba(20, 50, 40, 0.2);
+  background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%);
+  color: #fff;
+  box-shadow: 0 3px 0 #1a4f8c;
 }
 
 /* Der Spielen-Knopf klebt am unteren Rand des rollbaren Bereichs. */
