@@ -4740,13 +4740,27 @@ main.auth > .muted {
 
 
 /* =========================================================================
-   Kontoloeschung.
+   Rechtliches und Kontoloeschung.
 
-   Sie gehoert ans Ende des Profils: noetig, aber nichts, wonach jemand
+   Beides gehoert ans Ende des Profils: noetig, aber nichts, wonach jemand
    sucht, der spielen will. Der Loeschknopf sieht bewusst nicht aus wie die
    Hub-Knoepfe darueber - er liegt eine Zeile unter "Abmelden", und ein
    Fehlgriff dort waere unumkehrbar.
    ========================================================================= */
+.rechtliches {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.rechtliches a {
+  color: var(--muted);
+  text-decoration: underline;
+}
+.rechtliches a:hover {
+  color: var(--text);
+}
+
 .hub-konto-loeschen {
   display: block;
   margin: 0.35rem auto 0.5rem;

@@ -76,10 +76,11 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
 - **Kontolöschung** in der Oberfläche, mit Passwortabfrage. `DELETE /api/me`
   verlangt jetzt das Passwort im Rumpf; vier neue Servertests decken
   richtig, falsch, fehlend und nicht angemeldet ab.
-- **Impressum und Datenschutzerklärung** als Entwürfe geschrieben und
-  unter `docs/rechtstexte-entwurf/` abgelegt. Waren kurz ausgeliefert und
-  sind wieder herausgenommen worden, weil die Firma noch nicht gegründet
-  ist — siehe „Was offen ist".
+- **Impressum und Datenschutzerklärung** als eigenständige Seiten unter
+  `packages/client/public/rechtliches/`, verlinkt aus Anmeldung und Profil.
+  Echte Adressen statt eines Blattes in der App, weil App Store Connect
+  eine aufrufbare Datenschutz-Adresse verlangt und die Impressumspflicht
+  auch den trifft, der sich nie anmeldet.
 - **Bildbestellung `docs/ASSETS-MENUE.md`:** sieben dehnbare Bausteine für
   alle Menüblätter — Blattgrund, Eingabefeld, drei Knöpfe, Umschalter an
   und aus. Bewusst **ohne** Platzhalter, siehe die Begründung am Ende der
@@ -101,20 +102,13 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
    Railway**, Klickstrecke in `docs/RESEND.md`. Bis dahin stehen die
    Bestätigungslinks nur im Railway-Protokoll und niemand aus dem Verein
    kann sich selbst registrieren.
-3. **Rechtstexte: zurückgestellt, bis die Firma gegründet ist.** Die
-   Entwürfe für Impressum und Datenschutzerklärung liegen fertig unter
-   `docs/rechtstexte-entwurf/`. Sie werden **bewusst nicht ausgeliefert**:
-   Ohne Rechtsträger gibt es keinen Namen und keine Anschrift, die
-   hineingehören, und ein öffentliches Impressum mit Platzhaltern ist
-   schlechter als keins. Die offenen Stellen sind in den Entwürfen rot
-   umrandet — Name, Anschrift, Support-Adresse, Datenbankanbieter,
-   Aufbewahrungsdauer der Protokolle.
-
-   **Zum Ausliefern nötig:** die beiden Dateien nach
-   `packages/client/public/rechtliches/` zurückschieben und die Links in
-   `Auth.tsx` und im Profil-Tab wieder setzen (waren einmal da, Commit
-   `045b342`). Der Datenschutztext beschreibt, was die Anwendung
-   tatsächlich tut — am Code geprüft —, ersetzt aber keine Rechtsberatung.
+3. **Rechtstexte: Gerüst steht, Angaben fehlen.** `/rechtliches/impressum.html`
+   und `/rechtliches/datenschutz.html` sind angelegt und aus Anmeldung und
+   Profil verlinkt. Die offenen Stellen sind **rot umrandet** — Name,
+   Anschrift, Support-Adresse, Datenbankanbieter, Aufbewahrungsdauer der
+   Protokolle. **Solange Platzhalter drinstehen, erfüllen die Seiten die
+   Pflicht nicht.** Der Datenschutztext beschreibt, was die Anwendung
+   tatsächlich tut (am Code geprüft), ersetzt aber keine Rechtsberatung.
 4. Demokonto für die Prüfer — Einzelheiten in `docs/APPSTORE.md`.
 5. Capacitor-Hülle und getrennte API-Adresse.
 

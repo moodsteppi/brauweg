@@ -30,9 +30,9 @@ Wichtig zu wissen:
 | Punkt | Was fehlt | Wo |
 | --- | --- | --- |
 | ~~**Konto löschen**~~ | ✅ **Erledigt.** Profil-Tab ganz unten, mit Passwortabfrage. Gelöscht wird als Anonymisierung. | `GameSelect.tsx` |
-| **Datenschutzerklärung** | Entwurf fertig, **noch nicht ausgeliefert**. Wartet auf die Firmengründung: ohne Rechtsträger keine Anschrift. | `docs/rechtstexte-entwurf/` |
-| **Impressum** | Ebenso. Mit Platzhaltern öffentlich wäre es schlechter als keins. | `docs/rechtstexte-entwurf/` |
-| **Support-Adresse** | Pflichtfeld in App Store Connect — dieselbe Adresse gehört in beide Rechtstexte. Kommt mit der Firma. | — |
+| **Datenschutzerklärung** | Seite steht unter `/rechtliches/datenschutz.html`, verlinkt aus Anmeldung und Profil. **Offen: die rot markierten Lücken ausfüllen** — Name, Anschrift, Support-Adresse, Datenbankanbieter, Aufbewahrungsdauer der Protokolle. | `public/rechtliches/` |
+| **Impressum** | Seite steht unter `/rechtliches/impressum.html`. **Offen: dieselben Lücken.** Mit Platzhaltern erfüllt es die Pflicht nicht und ist abmahnfähig. | `public/rechtliches/` |
+| **Support-Adresse** | Pflichtfeld in App Store Connect — dieselbe Adresse gehört in beide Rechtstexte. | — |
 | **Testzugang für die Prüfer** | Der Einladungscode sperrt die Prüfer aus. Es muss ein fertiges Konto samt Code in den Prüfhinweisen stehen. | App Store Connect |
 | **Shop** | „Bald"-Attrappen mit Paketangaben gelten als unfertig. Bis zum Release entweder fertig (dann zwingend über Apples Bezahlweg, 30 %) oder ausgeblendet. | `GameSelect.tsx` |
 
@@ -89,11 +89,9 @@ Zwei Dinge, die dabei zu klären sind:
 ## Reihenfolge
 
 1. ✅ Homescreen-Fassung (fertig — heute testbar)
-2. ✅ Konto löschen (fertig, mit Passwortabfrage)
-3. Firma gründen — hängt davor: Datenschutz, Impressum, Support-Adresse
-   sind geschrieben, aber ohne Rechtsträger nicht ausfüllbar
-4. Entscheidung Shop: fertig bauen oder ausblenden
-5. Capacitor-Rahmen + getrennte API-Adresse
-6. TestFlight für die drei Geräte
-7. Einreichung App Store
-8. Später: Play Store (baut auch auf Windows, deutlich einfacher)
+2. Konto löschen, Datenschutz, Impressum, Support-Adresse
+3. Entscheidung Shop: fertig bauen oder ausblenden
+4. Capacitor-Rahmen + getrennte API-Adresse
+5. TestFlight für die drei Geräte
+6. Einreichung App Store
+7. Später: Play Store (baut auch auf Windows, deutlich einfacher)

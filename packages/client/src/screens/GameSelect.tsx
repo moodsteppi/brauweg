@@ -13,6 +13,7 @@ import { DECKS, cardImage, deckById, type Deck } from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
 import { Clan } from './Clan';
+import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
 
@@ -364,6 +365,8 @@ function ProfilTab({
           Abmelden
         </button>
       </div>
+
+      <Rechtliches />
 
       {/* Klein und unten, aber vorhanden: Apple lehnt Apps mit Konten ohne
           diesen Weg zuverlaessig ab, und die DSGVO verlangt ihn ohnehin. Als
