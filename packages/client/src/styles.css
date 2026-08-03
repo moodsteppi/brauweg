@@ -1772,6 +1772,102 @@ td {
   box-shadow: 0 4px 0 #245442, 0 10px 26px rgba(0, 0, 0, 0.6);
 }
 
+/* Weiterspielen + Spielauswahl kleben gemeinsam unten. */
+.front-play-stack {
+  position: sticky;
+  bottom: 0.4rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+.front-play-stack .front-play {
+  box-shadow: 0 4px 0 #245442, 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+.front-play-neben {
+  display: block;
+  width: 100%;
+  padding: 0.7rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.8rem;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 0 #152025;
+}
+.front-play-neben:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #152025;
+}
+
+.front-rangliste {
+  display: block;
+  width: 100%;
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.45rem;
+  font-weight: 700;
+  color: var(--gold);
+  background: rgba(226, 182, 79, 0.08);
+  border: 1px solid rgba(226, 182, 79, 0.35);
+  border-radius: 0.7rem;
+}
+
+.front-ranking-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.front-ranking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.front-ranking-list li {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+.front-ranking-list li.is-du {
+  background: rgba(226, 182, 79, 0.12);
+  border: 1px solid rgba(226, 182, 79, 0.35);
+}
+.front-ranking-rang {
+  color: var(--muted);
+  font-weight: 700;
+  text-align: center;
+}
+.front-ranking-name {
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-weight: 600;
+  padding: 0;
+}
+.front-ranking-cups {
+  color: var(--gold);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.doko-badge--pause {
+  background: rgba(166, 120, 242, 0.2);
+  color: var(--lila);
+  border-color: rgba(166, 120, 242, 0.45);
+}
+
 /* Leben auf den Inseln. Alle Bewegungen sind Zierde und enden bei
    "weniger Bewegung" ersatzlos. */
 .pf-funkelt { animation: pf-funkeln 2.6s ease-in-out infinite; }

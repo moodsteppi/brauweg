@@ -38,7 +38,10 @@ import {
   requestFriendship,
   searchPlayers,
 } from '../social/service.js';
+import { clubsFor } from '../clubs/service.js';
+import { overallRanking, rankingForGame } from '../rankings/service.js';
 import {
+  activeTableFor,
   createTable,
   joinTable,
   leaveLobby,
@@ -80,6 +83,7 @@ const createTableSchema = z.object({
   seats: z.number().int().min(2).max(8),
   rounds: z.number().int().min(1).max(100),
   visibility: z.enum(['public', 'on_request', 'club_only']).optional(),
+  clubId: z.string().uuid().optional(),
   fillWithBots: z.boolean().optional(),
 });
 
@@ -246,11 +250,17 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       .from(s.accountGameStat)
       .where(eq(s.accountGameStat.accountId, accountId));
 
+    // Bestehende Konten (vor dem Vereins-Verdrahten) holen wir hier nach.
+    const clubs = await clubsFor(deps.db, accountId);
+    const activeTable = await activeTableFor(deps.db, accountId);
+
     const { hasAvatar, ...rest } = account;
     return reply.send({
       ...rest,
       avatarUrl: hasAvatar ? `/api/avatars/${account.id}` : null,
       stats,
+      clubs,
+      activeTable,
     });
   });
 
@@ -456,6 +466,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // -------------------------------------------------------------------------
 
   app.get('/api/tables', async (request, reply) => {
+    const accountId = await requireAccount(request);
     const query = z
       .object({
         game: gameIdSchema,
@@ -464,11 +475,13 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       })
       .parse(request.query);
 
+    const clubs = await clubsFor(deps.db, accountId);
     return reply.send(
       await listTables(deps.db, {
         gameId: query.game,
         seats: query.seats,
         rounds: query.rounds,
+        clubIds: clubs.map((c) => c.id),
       }),
     );
   });
@@ -476,8 +489,32 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.post('/api/tables', async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
-    const table = await createTable(deps.db, { accountId, ...body });
+    // Vereinstisch ohne clubId: den ersten (und in der Beta einzigen) Verein nehmen.
+    let clubId = body.clubId;
+    if (body.visibility === 'club_only' && !clubId) {
+      const clubs = await clubsFor(deps.db, accountId);
+      clubId = clubs[0]?.id;
+    }
+    const table = await createTable(deps.db, { accountId, ...body, clubId });
     return reply.status(201).send(table);
+  });
+
+  /** Vereinstisch pausieren — Zugtimer und 24h-Verfall stehen still. */
+  app.post('/api/tables/:tableId/pause', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    await deps.runtime.pause(tableId, accountId);
+    deps.runtime.notify(tableId);
+    return reply.send({ ok: true });
+  });
+
+  /** Pausierten Vereinstisch fortsetzen. */
+  app.post('/api/tables/:tableId/resume', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    await deps.runtime.unpause(tableId, accountId);
+    deps.runtime.notify(tableId);
+    return reply.send({ ok: true });
   });
 
   app.get('/api/tables/:tableId', async (request, reply) => {
@@ -510,6 +547,33 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     await leaveLobby(deps.db, tableId, accountId);
     deps.runtime.notify(tableId);
     return reply.send({ ok: true });
+  });
+
+  // -------------------------------------------------------------------------
+  // Ranglisten
+  // -------------------------------------------------------------------------
+
+  app.get('/api/rankings/:gameId', async (request, reply) => {
+    await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    const query = z
+      .object({
+        limit: z.coerce.number().int().optional(),
+        offset: z.coerce.number().int().optional(),
+      })
+      .parse(request.query);
+    return reply.send(await rankingForGame(deps.db, gameId, query.limit, query.offset));
+  });
+
+  app.get('/api/rankings', async (request, reply) => {
+    await requireAccount(request);
+    const query = z
+      .object({
+        limit: z.coerce.number().int().optional(),
+        offset: z.coerce.number().int().optional(),
+      })
+      .parse(request.query);
+    return reply.send(await overallRanking(deps.db, query.limit, query.offset));
   });
 
   app.get('/api/health', async (_request, reply) => reply.send({ ok: true }));

@@ -331,6 +331,8 @@ export class Gateway {
       seats,
       missing: Math.max(0, table.seats - seatRows.filter((row) => row.accountId).length),
       rounds: table.maxRounds,
+      visibility: table.visibility,
+      paused: table.pausedAt !== null || (party?.paused ?? false),
     };
     for (const connection of targets) send(connection.socket, tableMessage);
 

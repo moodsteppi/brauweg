@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 
-import { api, type FriendLists, type GameSummary, type Me, type PlayerRef } from '../api';
+import {
+  ApiError,
+  api,
+  type FriendLists,
+  type GameSummary,
+  type Me,
+  type PlayerRef,
+  type RankingEntry,
+} from '../api';
 import { DECKS, cardImage, type Deck } from '../decks';
 import { cardLabel, cardName, isRed, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
@@ -20,6 +28,7 @@ type Tab = 'shop' | 'freunde' | 'spielen' | 'blatt' | 'profil';
 export function GameSelect({
   me,
   onPick,
+  onResume,
   onDeckChange,
   onAvatarChange,
   onShowProfile,
@@ -27,6 +36,7 @@ export function GameSelect({
 }: {
   me: Me;
   onPick: (gameId: string) => void;
+  onResume: (gameId: string, tableId: string) => void;
   onDeckChange: (cardDeck: string) => void;
   onAvatarChange: () => void;
   onShowProfile: (accountId: string) => void;
@@ -35,6 +45,7 @@ export function GameSelect({
   const [tab, setTab] = useState<Tab>('spielen');
   /** Name des angetippten Noch-nicht-Bereichs, fuer das "Kommt bald"-Blatt. */
   const [bald, setBald] = useState<string | null>(null);
+  const [ranglisteOffen, setRanglisteOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   return (
@@ -78,7 +89,16 @@ export function GameSelect({
 
       <div className="front-body" key={tab}>
         {tab === 'shop' && <Shop onBald={setBald} />}
-        {tab === 'spielen' && <Spielen trophies={trophies} onPick={onPick} onBald={setBald} />}
+        {tab === 'spielen' && (
+          <Spielen
+            trophies={trophies}
+            activeTable={me.activeTable}
+            onPick={onPick}
+            onResume={onResume}
+            onBald={setBald}
+            onRangliste={() => setRanglisteOffen(true)}
+          />
+        )}
         {tab === 'freunde' && <Freunde onShowProfile={onShowProfile} />}
         {tab === 'blatt' && <DeckPicker current={me.cardDeck} onChange={onDeckChange} />}
         {tab === 'profil' && (
@@ -130,6 +150,9 @@ export function GameSelect({
       </nav>
 
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
+      {ranglisteOffen && (
+        <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
+      )}
     </div>
   );
 }
@@ -231,12 +254,18 @@ function TabButton({
  */
 function Spielen({
   trophies,
+  activeTable,
   onPick,
+  onResume,
   onBald,
+  onRangliste,
 }: {
   trophies: number;
+  activeTable: Me['activeTable'];
   onPick: (gameId: string) => void;
+  onResume: (gameId: string, tableId: string) => void;
   onBald: (name: string) => void;
+  onRangliste: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [voted, setVoted] = useState<Set<string>>(new Set());
@@ -256,6 +285,10 @@ function Spielen({
     <>
       <Trophaeenpfad trophies={trophies} />
 
+      <button className="front-rangliste" onClick={onRangliste}>
+        Rangliste
+      </button>
+
       {/* Der Tagesbonus steht schon da, wo er hingehoert - am Fuss des
           Pfads. Dahinter steckt noch nichts. */}
       <button className="front-bonus" onClick={() => onBald('Der Tagesbonus')}>
@@ -264,10 +297,28 @@ function Spielen({
         <span className="front-bald-tag">Bald</span>
       </button>
 
-      {/* Klebt am unteren Rand, ueber dem gesamten Pfad. */}
-      <button className="front-play is-schwebend" onClick={() => setWahlOffen(true)}>
-        Spielauswahl
-      </button>
+      {/* Klebt am unteren Rand. Läuft noch eine Partie, ist Weiterspielen
+          der Hauptknopf — Spielauswahl bleibt darunter erreichbar. */}
+      <div className={`front-play-stack${activeTable ? ' has-resume' : ''}`}>
+        {activeTable && (
+          <button
+            className="front-play"
+            onClick={() => onResume(activeTable.gameId, activeTable.tableId)}
+          >
+            {activeTable.paused
+              ? 'Weiterspielen — pausiert'
+              : activeTable.status === 'waiting'
+                ? 'Zurück zum Tisch'
+                : 'Weiterspielen'}
+          </button>
+        )}
+        <button
+          className={activeTable ? 'front-play-neben' : 'front-play'}
+          onClick={() => setWahlOffen(true)}
+        >
+          Spielauswahl
+        </button>
+      </div>
 
       {wahlOffen && (
         <Spielwahl
@@ -283,6 +334,66 @@ function Spielen({
         />
       )}
     </>
+  );
+}
+
+function RanglisteBlatt({
+  meId,
+  onClose,
+  onShowProfile,
+}: {
+  meId: string;
+  onClose: () => void;
+  onShowProfile: (accountId: string) => void;
+}): React.JSX.Element {
+  const [rows, setRows] = useState<RankingEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void api
+      .ranking('doppelkopf')
+      .then(setRows)
+      .catch((err: unknown) => {
+        setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+      });
+  }, []);
+
+  return (
+    <div className="doko-sheet" onClick={onClose} role="presentation">
+      <div
+        className="doko-sheet-card front-ranking"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Rangliste Doppelkopf"
+      >
+        <header className="front-ranking-head">
+          <strong>Rangliste · Doppelkopf</strong>
+          <button className="doko-icon" onClick={onClose} aria-label="Schließen">
+            ×
+          </button>
+        </header>
+        {error && <p className="error">{error}</p>}
+        {!error && rows.length === 0 && <p className="muted">Noch niemand auf der Liste.</p>}
+        <ol className="front-ranking-list">
+          {rows.map((row) => (
+            <li key={row.accountId} className={row.accountId === meId ? 'is-du' : undefined}>
+              <span className="front-ranking-rang">{row.rank}</span>
+              <button
+                className="front-ranking-name"
+                onClick={() => {
+                  onClose();
+                  onShowProfile(row.accountId);
+                }}
+              >
+                {row.displayName}
+                {row.accountId === meId ? ' · du' : ''}
+              </button>
+              <span className="front-ranking-cups">{row.trophies} 🏆</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
   );
 }
 

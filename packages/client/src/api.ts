@@ -58,6 +58,16 @@ export interface GameSummary {
   votes: number;
 }
 
+export interface ActiveTable {
+  tableId: string;
+  gameId: string;
+  status: 'waiting' | 'running';
+  paused: boolean;
+  visibility: string;
+  maxRounds: number;
+  seats: number;
+}
+
 export interface Me {
   id: string;
   displayName: string;
@@ -67,6 +77,18 @@ export interface Me {
   /** URL des eigenen Profilbilds, oder null. */
   avatarUrl: string | null;
   stats: { gameId: string; trophies: number; parties: number; wins: number }[];
+  clubs: { id: string; name: string }[];
+  activeTable: ActiveTable | null;
+}
+
+export interface RankingEntry {
+  rank: number;
+  accountId: string;
+  displayName: string;
+  trophies: number;
+  parties: number;
+  wins: number;
+  highestCheckpoint: number;
 }
 
 export interface TableRow {
@@ -143,13 +165,20 @@ export const api = {
     config: unknown;
     seats: number;
     rounds: number;
+    visibility?: 'public' | 'on_request' | 'club_only';
+    clubId?: string;
     fillWithBots?: boolean;
   }) => post<{ id: string }>('/tables', body),
   joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
+  pauseTable: (id: string) => post<{ ok: true }>(`/tables/${id}/pause`),
+  resumeTable: (id: string) => post<{ ok: true }>(`/tables/${id}/resume`),
   /** Der festgeschriebene Regelsatz eines Tisches, zum Nachlesen am Tisch. */
   tableRules: (id: string) =>
     request<{ config: Record<string, unknown> }>(`/tables/${id}/rules`),
+
+  ranking: (gameId: string) => request<RankingEntry[]>(`/rankings/${gameId}`),
+  overallRanking: () => request<RankingEntry[]>('/rankings'),
 
   profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
   searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),

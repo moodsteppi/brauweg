@@ -333,6 +333,12 @@ export const gameTable = pgTable(
     /** Ein Tisch ohne Aktivitaet verfaellt nach 24 Stunden. */
     lastActivityAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     /**
+     * Vereinstische duerfen pausieren: Solange gesetzt, laufen keine Zugtimer
+     * und der Tisch verfaellt nicht nach 24 Stunden. Oeffentliche Tische
+     * setzen das Feld nie.
+     */
+    pausedAt: timestamp({ withTimezone: true }),
+    /**
      * Lobby-Filter. Welche Filter es gibt, liefert das Spielmodul, nicht eine
      * feste Verdrahtung im Server. Deshalb jsonb.
      */
