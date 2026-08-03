@@ -37,8 +37,8 @@ import {
   daysUntilBirthday,
   isBirthdayToday,
 } from '../birthday.js';
-import { CARD_DECKS } from '../decks.js';
-import { TABLE_SCENES } from '../scenes.js';
+import { CARD_DECKS, DEFAULT_CARD_DECK } from '../decks.js';
+import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
   acceptFriendship,
@@ -370,8 +370,6 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         displayName: s.account.displayName,
         coins: s.account.coins,
         premiumUntil: s.account.premiumUntil,
-        cardDeck: s.account.cardDeck,
-        tableScene: s.account.tableScene,
         birthday: s.account.birthday,
         hasBirthdayOutfit: s.account.hasBirthdayOutfit,
         birthdayRewardYear: s.account.birthdayRewardYear,
@@ -394,10 +392,35 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const clubs = await clubsFor(deps.db, accountId);
     const activeTable = await activeTableFor(deps.db, accountId);
 
+    /*
+     * Aussehen je Spiel. Zurueck geht eine vollstaendige Tabelle ueber alle
+     * bekannten Spiele — auch ueber die, die es noch nicht zu spielen gibt
+     * und fuer die nichts gespeichert ist. Sonst muesste der Client die
+     * Vorgaben kennen und doppelt pflegen, und ein fehlender Eintrag saehe
+     * aus wie ein Fehler statt wie "noch nie umgestellt".
+     */
+    const gespeicherte = await deps.db
+      .select()
+      .from(s.accountGameTheme)
+      .where(eq(s.accountGameTheme.accountId, accountId));
+    const themes = Object.fromEntries(
+      registry.all().map((meta) => {
+        const zeile = gespeicherte.find((z) => z.gameId === meta.id);
+        return [
+          meta.id,
+          {
+            cardDeck: zeile?.cardDeck ?? DEFAULT_CARD_DECK,
+            tableScene: zeile?.tableScene ?? DEFAULT_TABLE_SCENE,
+          },
+        ];
+      }),
+    );
+
     const { hasAvatar, birthdayRewardYear, ...rest } = account;
     const birthday = account.birthday ?? null;
     return reply.send({
       ...rest,
+      themes,
       birthday,
       daysUntilBirthday: birthday ? daysUntilBirthday(birthday) : null,
       birthdayToday: birthday ? isBirthdayToday(birthday) : false,
@@ -468,8 +491,6 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const accountId = await requireAccount(request);
     const body = z
       .object({
-        cardDeck: z.enum(CARD_DECKS).optional(),
-        tableScene: z.enum(TABLE_SCENES).optional(),
         // Ein kleines, im Browser verkleinertes Quadrat als data-URL. Die
         // Groesse ist bewusst hart begrenzt: Die Verkleinerung passiert im
         // Client, hier steht nur der Riegel, falls sie umgangen wird. null
@@ -484,8 +505,6 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .parse(request.body);
 
     const set: Record<string, unknown> = {};
-    if (body.cardDeck) set.cardDeck = body.cardDeck;
-    if (body.tableScene) set.tableScene = body.tableScene;
     if (body.avatar !== undefined) {
       // Der Kopf einer data-URL ist nur eine Behauptung. Ohne Blick auf die
       // ersten Bytes liesse sich HTML als "image/png" ablegen und danach von
@@ -501,6 +520,61 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
     return reply.send({ ok: true });
   });
+
+  /**
+   * Aussehen eines Spiels: Kartenblatt und Tischszenerie.
+   *
+   * Je Spiel, weil ein Blatt nur zu seinem Spiel passt. Geprueft wird gegen
+   * feste Listen — was der Server speichert, muss er auch benennen koennen.
+   *
+   * Die Spielkennung muss bekannt sein, aber das Spiel muss noch nicht
+   * spielbar sein: Wer sich sein Skat-Blatt schon zurechtlegt, waehrend Skat
+   * noch Vorschau ist, soll das duerfen. Es kostet nichts und geht nicht
+   * verloren.
+   */
+  app.patch(
+    '/api/me/themes/:gameId',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { gameId } = z
+        .object({ gameId: z.string() })
+        .parse(request.params);
+      // all() statt get(): Auch Vorschau-Spiele duerfen eingestellt werden,
+      // get() kennt nur die spielbaren.
+      if (!registry.all().some((m) => m.id === gameId)) throw notFound('gameNotPlayable');
+
+      const body = z
+        .object({
+          cardDeck: z.enum(CARD_DECKS).optional(),
+          tableScene: z.enum(TABLE_SCENES).optional(),
+        })
+        .parse(request.body);
+      if (body.cardDeck === undefined && body.tableScene === undefined) {
+        throw badRequest('invalidInput');
+      }
+
+      // Einfuegen oder aendern in einem Zug: Es gibt keine Zeile, solange
+      // nichts umgestellt wurde, und der erste Klick soll nicht scheitern.
+      await deps.db
+        .insert(s.accountGameTheme)
+        .values({
+          accountId,
+          gameId: gameId as GameId,
+          ...(body.cardDeck ? { cardDeck: body.cardDeck } : {}),
+          ...(body.tableScene ? { tableScene: body.tableScene } : {}),
+        })
+        .onConflictDoUpdate({
+          target: [s.accountGameTheme.accountId, s.accountGameTheme.gameId],
+          set: {
+            ...(body.cardDeck ? { cardDeck: body.cardDeck } : {}),
+            ...(body.tableScene ? { tableScene: body.tableScene } : {}),
+          },
+        });
+
+      return reply.send({ ok: true });
+    },
+  );
 
   /**
    * Kontoloeschung. Sie MUSS in der App funktionieren, und sie loescht keine

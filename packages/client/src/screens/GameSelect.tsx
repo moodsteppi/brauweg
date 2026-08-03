@@ -32,8 +32,7 @@ export function GameSelect({
   me,
   onPick,
   onResume,
-  onDeckChange,
-  onSzeneChange,
+  onThemeChange,
   onAvatarChange,
   onShowProfile,
   onSignOut,
@@ -42,8 +41,7 @@ export function GameSelect({
   me: Me;
   onPick: (gameId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
-  onDeckChange: (cardDeck: string) => void;
-  onSzeneChange: (tableScene: string) => void;
+  onThemeChange: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) => void;
   onAvatarChange: () => void;
   onShowProfile: (accountId: string) => void;
   onSignOut: () => void;
@@ -124,12 +122,7 @@ export function GameSelect({
             onRangliste={() => setRanglisteOffen(true)}
           />
         )}
-        {tab === 'blatt' && <DeckPicker
-            current={me.cardDeck}
-            onChange={onDeckChange}
-            szene={me.tableScene}
-            onSzeneChange={onSzeneChange}
-          />}
+        {tab === 'blatt' && <ThemenTab me={me} onThemeChange={onThemeChange} />}
         {tab === 'profil' && (
           <ProfilTab
             me={me}
@@ -167,7 +160,7 @@ export function GameSelect({
           iconSrc="/hub/tab-spielen.webp"
         />
         <TabButton
-          label="Blatt"
+          label="Themen"
           farbe="blatt"
           active={tab === 'blatt'}
           onClick={() => setTab('blatt')}
@@ -1073,12 +1066,90 @@ const SAMPLE = [
  * Mit Vorschau statt nur mit Namen: Welches Blatt einem liegt, entscheidet
  * niemand nach einer Beschreibung, sondern nach dem Hinsehen.
  */
+/**
+ * Themen-Tab: erst das Spiel, dann sein Aussehen.
+ *
+ * Der Schritt davor ist noetig, weil ein Kartenblatt nur zu seinem Spiel
+ * passt — ein Doppelkopfblatt hat keine Acht, ein Rommeblatt zwei Joker.
+ * Was danach kommt, ist unveraendert die bisherige Ansicht.
+ *
+ * Auch die noch nicht spielbaren Spiele lassen sich einstellen. Das kostet
+ * nichts, geht nicht verloren, und wer sich sein Skat-Blatt vorab
+ * zurechtlegt, soll das duerfen.
+ */
+function ThemenTab({
+  me,
+  onThemeChange,
+}: {
+  me: Me;
+  onThemeChange: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) => void;
+}): React.JSX.Element {
+  const [spiele, setSpiele] = useState<GameSummary[] | null>(null);
+  const [gewaehlt, setGewaehlt] = useState<string | null>(null);
+
+  useEffect(() => {
+    void api.games().then(setSpiele).catch(() => setSpiele([]));
+  }, []);
+
+  const thema = gewaehlt ? (me.themes[gewaehlt] ?? { cardDeck: 'text', tableScene: 'stube' }) : null;
+
+  return (
+    <>
+      {gewaehlt && thema ? (
+        <DeckPicker
+          spielName={t(`game.${gewaehlt}`)}
+          onSpielWechseln={() => setGewaehlt(null)}
+          current={thema.cardDeck}
+          onChange={(cardDeck) => onThemeChange(gewaehlt, { cardDeck })}
+          szene={thema.tableScene}
+          onSzeneChange={(tableScene) => onThemeChange(gewaehlt, { tableScene })}
+        />
+      ) : (
+        <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
+          <HubBanner />
+          <Tafel titel="Für welches Spiel?" zusatz="Jedes Spiel hat sein eigenes Aussehen" weit>
+            <div className="hub-themenwahl">
+              {(spiele ?? []).map((spiel) => {
+                const t2 = me.themes[spiel.id];
+                return (
+                  <button
+                    key={spiel.id}
+                    className="hub-themenspiel"
+                    onClick={() => setGewaehlt(spiel.id)}
+                  >
+                    <strong>{t(spiel.nameKey)}</strong>
+                    {/* Was eingestellt ist, steht daneben - sonst muesste man
+                        jedes Spiel oeffnen, um es zu sehen. */}
+                    <span className="muted">
+                      {t(`deck.${t2?.cardDeck ?? 'text'}`)}
+                      {' · '}
+                      {SZENEN.find((s) => s.id === (t2?.tableScene ?? 'stube'))?.name ?? 'Stube'}
+                    </span>
+                    {spiel.availability !== 'playable' && (
+                      <span className="front-bald-tag">Bald</span>
+                    )}
+                  </button>
+                );
+              })}
+              {spiele === null && <p className="muted">Spiele werden geladen…</p>}
+            </div>
+          </Tafel>
+        </HubSzene>
+      )}
+    </>
+  );
+}
+
 function DeckPicker({
+  spielName,
+  onSpielWechseln,
   current,
   onChange,
   szene,
   onSzeneChange,
 }: {
+  spielName: string;
+  onSpielWechseln: () => void;
   current: string;
   onChange: (cardDeck: string) => void;
   szene: string;
@@ -1087,6 +1158,12 @@ function DeckPicker({
   return (
     <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
       <HubBanner />
+
+      {/* Welches Spiel gerade eingestellt wird, muss dabeistehen - sonst
+          weiss man nach dem Blaettern nicht mehr, wofuer man waehlt. */}
+      <button className="hub-themen-zurueck" onClick={onSpielWechseln} type="button">
+        ← {spielName}
+      </button>
 
       <Tafel
         titel="Kartenblatt"

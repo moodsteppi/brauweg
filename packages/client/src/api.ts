@@ -72,10 +72,14 @@ export interface Me {
   id: string;
   displayName: string;
   coins: number;
-  /** Gewaehltes Kartenblatt. Siehe decks.ts. */
-  cardDeck: string;
-  /** Gewaehlte Tischszenerie — persoenlich wie das Kartenblatt. */
-  tableScene: string;
+  /**
+   * Aussehen je Spiel: Kartenblatt und Tischszenerie.
+   *
+   * Je Spiel, weil ein Blatt nur zu seinem Spiel passt. Der Server liefert
+   * immer alle bekannten Spiele mit, auch die noch nicht spielbaren —
+   * sonst muesste der Client die Vorgaben ein zweites Mal pflegen.
+   */
+  themes: Record<string, { cardDeck: string; tableScene: string }>;
   /** URL des eigenen Profilbilds, oder null. */
   avatarUrl: string | null;
   /** ISO-Kalendertag oder null bei Altkonten. */
@@ -215,8 +219,9 @@ export const api = {
   login: (email: string, password: string) => post<{ ok: true }>('/auth/login', { email, password }),
   logout: () => post<{ ok: true }>('/auth/logout'),
   me: () => request<Me>('/me'),
-  setCardDeck: (cardDeck: string) => patch<{ ok: true }>('/me', { cardDeck }),
-  setTableScene: (tableScene: string) => patch<{ ok: true }>('/me', { tableScene }),
+  /** Kartenblatt oder Szenerie eines Spiels setzen. */
+  setTheme: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) =>
+    patch<{ ok: true }>(`/me/themes/${gameId}`, teil),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */

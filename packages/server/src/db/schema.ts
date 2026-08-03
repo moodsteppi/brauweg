@@ -231,6 +231,35 @@ export const accountGameStat = pgTable(
   ],
 );
 
+/**
+ * Aussehen je Spiel: Kartenblatt und Tischszenerie.
+ *
+ * Je Spiel und nicht je Konto, weil ein Blatt nur zu seinem Spiel passt —
+ * ein Doppelkopfblatt hat keine Acht, ein Rommeblatt zwei Joker. Wer beides
+ * spielt, will nicht bei jedem Wechsel neu waehlen.
+ *
+ * Fehlt eine Zeile, gelten die Vorgaben aus decks.ts und scenes.ts. Es wird
+ * also nichts angelegt, solange niemand etwas umstellt.
+ *
+ * Die alten Spalten account.card_deck und account.table_scene sind beim
+ * Anlegen dieser Tabelle nach 'doppelkopf' uebernommen worden und werden
+ * nicht mehr gelesen. Sie stehen bewusst noch da: Faellt ein Deploy zurueck,
+ * laeuft die vorige Fassung damit weiter. Sie duerfen weg, sobald dieser
+ * Stand eine Weile stabil laeuft.
+ */
+export const accountGameTheme = pgTable(
+  'account_game_theme',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    gameId: gameId(),
+    cardDeck: text().notNull().default('text'),
+    tableScene: text().notNull().default('stube'),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.gameId] })],
+);
+
 /** Dauerhaft und aggregiert, damit Premium-Statistiken lange zurueckreichen. */
 export const statCounter = pgTable(
   'stat_counter',

@@ -44,14 +44,19 @@ async function setup() {
   };
 }
 
-test('ein neues Konto beginnt mit dem Textblatt', async (t) => {
+test('ein neues Konto beginnt bei jedem Spiel mit dem Textblatt', async (t) => {
   const s = await setup();
   t.after(() => s.close());
 
   const res = await s.app.inject({ method: 'GET', url: '/api/me', headers: { cookie: s.cookie } });
 
   assert.equal(res.statusCode, 200);
-  assert.equal(res.json().cardDeck, DEFAULT_CARD_DECK);
+  // Alle bekannten Spiele stehen drin, auch die noch nicht spielbaren:
+  // Sonst muesste der Client die Vorgaben ein zweites Mal pflegen.
+  const themes = res.json().themes;
+  assert.ok(themes.doppelkopf, 'Doppelkopf fehlt');
+  assert.ok(themes.skat, 'Skat fehlt, obwohl es die Kennung gibt');
+  assert.equal(themes.doppelkopf.cardDeck, DEFAULT_CARD_DECK);
 });
 
 test('jedes bekannte Blatt laesst sich waehlen und kommt zurueck', async (t) => {
@@ -61,15 +66,43 @@ test('jedes bekannte Blatt laesst sich waehlen und kommt zurueck', async (t) => 
   for (const deck of CARD_DECKS) {
     const patch = await s.app.inject({
       method: 'PATCH',
-      url: '/api/me',
+      url: '/api/me/themes/doppelkopf',
       headers: { cookie: s.cookie },
       payload: { cardDeck: deck },
     });
     assert.equal(patch.statusCode, 200, `${deck} wurde abgelehnt`);
 
     const me = await s.app.inject({ method: 'GET', url: '/api/me', headers: { cookie: s.cookie } });
-    assert.equal(me.json().cardDeck, deck);
+    assert.equal(me.json().themes.doppelkopf.cardDeck, deck);
   }
+});
+
+test('die Spiele halten ihr Blatt auseinander', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  await s.app.inject({
+    method: 'PATCH',
+    url: '/api/me/themes/doppelkopf',
+    headers: { cookie: s.cookie },
+    payload: { cardDeck: 'klassisch' },
+  });
+  // Auch ein noch nicht spielbares Spiel darf eingestellt werden - es kostet
+  // nichts und geht nicht verloren.
+  await s.app.inject({
+    method: 'PATCH',
+    url: '/api/me/themes/skat',
+    headers: { cookie: s.cookie },
+    payload: { cardDeck: 'minimal4' },
+  });
+
+  const themes = (
+    await s.app.inject({ method: 'GET', url: '/api/me', headers: { cookie: s.cookie } })
+  ).json().themes;
+  assert.equal(themes.doppelkopf.cardDeck, 'klassisch');
+  assert.equal(themes.skat.cardDeck, 'minimal4');
+  // Unberuehrte Spiele bleiben auf der Vorgabe.
+  assert.equal(themes.maumau.cardDeck, DEFAULT_CARD_DECK);
 });
 
 test('ein unbekanntes Blatt wird abgewiesen und aendert nichts', async (t) => {
@@ -78,14 +111,14 @@ test('ein unbekanntes Blatt wird abgewiesen und aendert nichts', async (t) => {
 
   await s.app.inject({
     method: 'PATCH',
-    url: '/api/me',
+    url: '/api/me/themes/doppelkopf',
     headers: { cookie: s.cookie },
     payload: { cardDeck: 'klassisch' },
   });
 
   const res = await s.app.inject({
     method: 'PATCH',
-    url: '/api/me',
+    url: '/api/me/themes/doppelkopf',
     headers: { cookie: s.cookie },
     payload: { cardDeck: '../../etc/passwd' },
   });
@@ -93,10 +126,24 @@ test('ein unbekanntes Blatt wird abgewiesen und aendert nichts', async (t) => {
   assert.equal(res.statusCode, 400);
 
   const [row] = await s.ctx.db
-    .select({ cardDeck: schema.account.cardDeck })
-    .from(schema.account)
-    .where(eq(schema.account.id, s.account.accountId));
+    .select({ cardDeck: schema.accountGameTheme.cardDeck })
+    .from(schema.accountGameTheme)
+    .where(eq(schema.accountGameTheme.accountId, s.account.accountId));
   assert.equal(row!.cardDeck, 'klassisch');
+});
+
+test('ein unbekanntes Spiel wird abgewiesen', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const res = await s.app.inject({
+    method: 'PATCH',
+    url: '/api/me/themes/schachnochwas',
+    headers: { cookie: s.cookie },
+    payload: { cardDeck: 'klassisch' },
+  });
+
+  assert.equal(res.statusCode, 404);
 });
 
 test('ohne Anmeldung laesst sich kein Blatt setzen', async (t) => {

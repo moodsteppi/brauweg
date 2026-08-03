@@ -51,7 +51,13 @@ Originalauflösung unter `public/`.
 gesetzt). Die Drizzle-Snapshots sind nicht durchgängig gepflegt —
 `db:generate` erzeugt deshalb Anweisungen für längst vorhandene Spalten.
 Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
-`0008_clan_raenge`.
+`0009_themen_je_spiel`.
+
+Die 0009 legt `account_game_theme` an und übernimmt die bisherigen Werte
+aus `account.card_deck` und `account.table_scene` nach `doppelkopf`. **Die
+beiden alten Spalten stehen absichtlich noch da** und werden nicht mehr
+gelesen: Fällt ein Deploy zurück, läuft die vorige Fassung damit weiter.
+Sie dürfen weg, sobald dieser Stand eine Weile stabil läuft.
 
 ---
 

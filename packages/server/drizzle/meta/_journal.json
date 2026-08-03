@@ -64,6 +64,13 @@
       "when": 1785904000000,
       "tag": "0008_clan_raenge",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785905000000,
+      "tag": "0009_themen_je_spiel",
+      "breakpoints": true
     }
   ]
 }

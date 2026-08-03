@@ -44,7 +44,14 @@ export function App(): React.JSX.Element {
 
   if (!me) return <Auth onSignedIn={() => void reload()} />;
 
-  const deck = deckById(me.cardDeck);
+  /**
+   * Aussehen eines Spiels. Der Server liefert alle bekannten Spiele mit;
+   * die Rueckfallwerte greifen nur, falls ein Spiel dazukommt, das dieser
+   * Client noch nicht kennt.
+   */
+  const themeFuer = (gameId: string): { cardDeck: string; tableScene: string } =>
+    me.themes[gameId] ?? { cardDeck: 'text', tableScene: 'stube' };
+
   const zeigeProfil = (accountId: string): void =>
     setScreen({ name: 'profil', accountId, vorher: screen });
 
@@ -56,8 +63,8 @@ export function App(): React.JSX.Element {
     return (
       <Table
         tableId={screen.tableId}
-        deck={deck}
-        szene={me.tableScene}
+        deck={deckById(themeFuer(screen.gameId).cardDeck)}
+        szene={themeFuer(screen.gameId).tableScene}
         onShowProfile={zeigeProfil}
         // Zurueck zum Start: me neu laden, damit „Weiterspielen" den
         // echten Stand zeigt (Wartetisch weg / Partie noch offen).
@@ -90,13 +97,9 @@ export function App(): React.JSX.Element {
       onShowProfile={zeigeProfil}
       // Erst umschalten, dann speichern: Das Blatt wechselt ohne Wartezeit,
       // und schlaegt das Speichern fehl, holt reload() den echten Stand zurueck.
-      onDeckChange={(cardDeck) => {
-        setMe({ ...me, cardDeck });
-        void api.setCardDeck(cardDeck).catch(() => void reload());
-      }}
-      onSzeneChange={(tableScene) => {
-        setMe({ ...me, tableScene });
-        void api.setTableScene(tableScene).catch(() => void reload());
+      onThemeChange={(gameId, teil) => {
+        setMe({ ...me, themes: { ...me.themes, [gameId]: { ...themeFuer(gameId), ...teil } } });
+        void api.setTheme(gameId, teil).catch(() => void reload());
       }}
       onAvatarChange={() => void reload()}
       onSignOut={async () => {

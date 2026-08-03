@@ -5242,3 +5242,50 @@ main.auth > .muted {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
+
+/* Themen-Tab: erst die Spielauswahl, dann das Aussehen. */
+.hub-themenwahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.hub-themenspiel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 220, 120, 0.28);
+  background: rgba(12, 32, 70, 0.45);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hub-themenspiel strong {
+  font-size: 1rem;
+  color: #ffe9bd;
+}
+.hub-themenspiel .muted {
+  font-size: 0.78rem;
+}
+.hub-themenspiel .front-bald-tag {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+}
+.hub-themen-zurueck {
+  align-self: flex-start;
+  margin: 0 0 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 220, 120, 0.35);
+  background: rgba(10, 16, 22, 0.6);
+  color: #ffe9bd;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
