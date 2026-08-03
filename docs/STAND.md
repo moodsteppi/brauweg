@@ -130,9 +130,15 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
   „Mitglied" und ist bisher nur eine Auszeichnung.
 - **`pinguin-geburtstag.png`** und die Symbolvorlage liegen unter
   `packages/client/art/`.
-- Ob die **Tab-Leiste am Spieltisch** stehen soll, ist offen. Der Entwurf
-  zeigt sie; dagegen spricht, dass ein Wegtippen mitten im Spiel drei
-  Mitspieler sitzen lässt.
+- **Tab-Leiste am Spieltisch: entschieden — sie kommt nicht.** Der Entwurf
+  zeigte sie, der Tisch bleibt trotzdem Vollbild. Drei Gründe: Ein
+  Fehlgriff mitten im Stich lässt drei Leute sitzen und kostet nach drei
+  Zeitüberschreitungen zehn Trophäen; der Tisch ist ein konzentrierter
+  Modus, der Weg hinaus soll eine Entscheidung sein; und die Handkarten
+  reichen seit „gerade Reihe von Rand zu Rand" bis an die untere Kante —
+  eine Leiste dort schnitte genau in die Fläche, deren Abschneiden erst
+  kürzlich als Fehler behoben wurde. Wer zwischendurch in den Clan will,
+  nimmt Zurück; der Server schickt beim Zurückkommen die volle Sicht.
 
 ---
 
