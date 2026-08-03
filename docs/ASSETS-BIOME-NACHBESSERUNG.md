@@ -26,7 +26,7 @@ wie ein Darstellungsfehler.
 | `biom-3-strand` | Zwei Wege |
 | `biom-4-feuerberg` | Zwei Wege: breiter Steinweg plus Ovalkette an seinem linken Rand |
 | `biom-5-schneefeld` | Die dunklen Steine bilden zwei verschlungene Ketten statt einer |
-| `biom-6-sternenhafen` | Zwei Wege: Steg plus versetzte Ovalkette rechts daneben |
+| `biom-6-sternenhafen` | Zwei Wege — und der deutlichste Fall: Die gerade Ovalkette läuft in der oberen Bildhälfte **durch den Nachthimmel**, Trittsteine schweben über dem Hafen zwischen den Sternen. Dazu die falsche Perspektive, siehe unten |
 
 **`biom-1-heimat.png` ist die Vorlage.** Wie dort der Weg liegt — eine
 einzige Kette, leicht versetzt, ruhig — so soll es überall aussehen.
@@ -53,6 +53,27 @@ Wegführung nicht mehr. Sie zeichnet die Figur auf die Mittellinie, und
 nachgemessen liegt der Weg auf den gelieferten Kacheln ohnehin im Mittel
 nur 1,4 bis 2,9 % daneben. Ein Weg, der weit ausholt, wäre sogar falsch —
 dann liefe der Pinguin am Weg vorbei.
+
+## Zwei weitere Punkte, die am Gerät auffallen
+
+**Der Sternenhafen hat die falsche Perspektive.** Die anderen fünf sind
+Draufsicht aus leichter Schräge, wie eine Schatzkarte. Der Sternenhafen ist
+ein Frontalblick: Man schaut vom Wasser aus auf den Hafen, mit Horizont und
+Himmel im oberen Drittel. Im Stapel ist der Bruch sofort sichtbar, und er
+ist auch die Ursache dafür, dass die Ovalkette dort in den Himmel läuft —
+in einer Frontalansicht gibt es oben schlicht keinen Boden mehr.
+
+Bitte auch den Sternenhafen als **Draufsicht**: der Hafen von oben gesehen,
+Anleger und Boote von oben, Wasser ringsum. Nachthimmel und Sterne dürfen
+sich im Wasser spiegeln — aber es gibt keinen Horizont im Bild.
+
+**Die Kachelstöße sind harte Kanten.** In der Bestellung stand, Ober- und
+Unterkante seien Wasser oder Dunst. Beim Sternenhafen ist die Unterkante
+Dunst, die Oberkante des Schneefelds darunter aber fester Schnee — an der
+Naht steht deshalb eine scharfe waagerechte Linie quer durchs Bild. Bitte
+bei allen Kacheln **beide** Ränder als Wasser oder Nebel auslaufen lassen,
+und zwar auf mindestens den äußeren 8 % der Höhe. Dann verschwimmen die
+Stöße, statt sich abzuzeichnen.
 
 ## Zum Flicken in `biom-2-wiesen`
 
