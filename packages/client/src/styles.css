@@ -1257,11 +1257,61 @@ td {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* Lila Himmel oben, gruener Filz unten - Spielplatz, kein Buero. */
+  /* Andere Tabs vorerst dunkler — die Hub-CI gilt erst auf der Startseite. */
   background:
     radial-gradient(120% 45% at 50% -5%, rgba(166, 120, 242, 0.5), transparent 60%),
     linear-gradient(180deg, #37246b 0%, #2b2560 26%, #1d4a44 62%, #123528 100%);
   padding-top: env(safe-area-inset-top);
+}
+
+/**
+ * Startseite / Hub (Entwurf C — Weltkarte): hell, bunt, Clash/Brawl-Feeling.
+ * Filz und Wirtshaus kommen erst NACH der Spielwahl (Doko-Tisch).
+ */
+.front--hub {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.55) 0 0.9rem, transparent 1.2rem),
+    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.4) 0 0.55rem, transparent 0.8rem),
+    radial-gradient(circle at 88% 28%, rgba(255, 236, 150, 0.45) 0 0.35rem, transparent 0.55rem),
+    radial-gradient(ellipse 120% 55% at 50% -8%, #7fd4ff 0%, #4eb8f5 38%, transparent 70%),
+    linear-gradient(180deg, #5ec8f7 0%, #7ed9c2 42%, #8fdf8a 72%, #6bc46a 100%);
+  color: #16301f;
+}
+.front--hub .front-top {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+}
+.front--hub .front-spieler,
+.front--hub .front-spieler-info strong {
+  color: #12301c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.front--hub .front-level {
+  background: linear-gradient(180deg, #7ec8ff 0%, #3a8fe0 100%);
+  border-color: #1f5fa8;
+  box-shadow: 0 3px 0 #1a4f8c, 0 4px 10px rgba(20, 60, 120, 0.35);
+}
+.front--hub .front-xp {
+  background: rgba(0, 40, 20, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.front--hub .front-waehrung {
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 0 rgba(0, 40, 30, 0.18);
+}
+.front--hub .front-tabs {
+  background: linear-gradient(180deg, #2a6fb8 0%, #1e4f8c 100%);
+  border-top: 2px solid rgba(255, 220, 120, 0.55);
+  box-shadow: 0 -6px 20px rgba(20, 60, 120, 0.25);
+}
+.front--hub .front-tab {
+  color: rgba(230, 242, 255, 0.75);
+}
+.front--hub .front-tab--spielen.is-active {
+  color: #fff;
+  background: rgba(80, 200, 255, 0.35);
+  box-shadow: inset 0 0 0 2px rgba(255, 220, 100, 0.65);
 }
 
 /* Breiter Browser: die Handyflaeche hebt sich vom Grund ab. */
@@ -1968,6 +2018,125 @@ td {
   color: #2a1d04;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
   white-space: nowrap;
+}
+
+/* ---- Hub-Startseite: Weltkarten-Pfad ---- */
+.front-hub {
+  position: relative;
+}
+.front-hub-slogan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.55rem;
+  text-align: center;
+}
+.front-hub-slogan strong {
+  font-size: 1.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow:
+    0 2px 0 #1a5a9a,
+    0 4px 0 #134570,
+    0 6px 12px rgba(10, 40, 80, 0.35);
+}
+.front-hub-slogan span {
+  display: inline-block;
+  padding: 0.18rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #12301c;
+  background: linear-gradient(180deg, #ffe08a 0%, #e2b64f 100%);
+  border: 1px solid #c49a2e;
+  box-shadow: 0 2px 0 #8a6a1a;
+}
+.front--hub .pfad {
+  margin-bottom: 0.6rem;
+  filter: drop-shadow(0 8px 16px rgba(20, 60, 40, 0.22));
+}
+.front--hub .insel.is-zu svg {
+  filter: saturate(0.55) brightness(0.82);
+}
+.front--hub .insel-name {
+  padding: 0.28rem 0.55rem 0.32rem;
+  border-radius: 0.45rem 0.45rem 0.55rem 0.35rem;
+  background: linear-gradient(180deg, #8b5a2b 0%, #5c3a18 100%);
+  border: 1px solid #c49a5a;
+  box-shadow: 0 3px 0 #3a2410, 0 4px 10px rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.04em;
+}
+.front--hub .insel-cp {
+  background: linear-gradient(180deg, #fff6d0 0%, #f0d070 100%);
+  color: #5a3a08;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 0 #b89028, 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+.front--hub .insel-cp.is-erreicht {
+  background: linear-gradient(180deg, #b8f5c8 0%, #5fd48a 100%);
+  color: #0d3a1c;
+  border-color: #fff;
+  box-shadow: 0 3px 0 #2a8a4e, 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+.front--hub .insel-du {
+  font-size: 0.85rem;
+  padding: 0.35rem 1rem;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 0 #a07a20, 0 8px 18px rgba(0, 0, 0, 0.3);
+  animation: hub-pulse 2.4s ease-in-out infinite;
+}
+@keyframes hub-pulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .front--hub .insel-du { animation: none; }
+}
+.front-hub-aktionen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.front--hub .front-rangliste,
+.front--hub .front-bonus {
+  margin: 0;
+  width: 100%;
+  min-height: 3.1rem;
+  border-radius: 0.9rem;
+  font-weight: 800;
+  box-shadow: 0 4px 0 rgba(20, 50, 80, 0.25);
+}
+.front--hub .front-rangliste {
+  color: #12301c;
+  background: linear-gradient(180deg, #7ec8ff 0%, #3a8fe0 100%);
+  border: 2px solid rgba(255, 255, 255, 0.65);
+}
+.front--hub .front-bonus {
+  color: #3a2a08;
+  background: linear-gradient(180deg, #ffe08a 0%, #e2b64f 100%);
+  border: 2px solid rgba(255, 255, 255, 0.65);
+}
+.front--hub .front-play {
+  font-size: 1.25rem;
+  border-radius: 1rem;
+  border: 3px solid rgba(255, 255, 255, 0.75);
+  background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
+  box-shadow: 0 5px 0 #1f6b40, 0 10px 22px rgba(20, 80, 40, 0.35);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+.front--hub .front-play:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #1f6b40, 0 4px 10px rgba(20, 80, 40, 0.3);
+}
+.front--hub .front-play-neben {
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.28));
+  color: #12301c;
+  box-shadow: 0 3px 0 rgba(20, 50, 40, 0.2);
 }
 
 /* Der Spielen-Knopf klebt am unteren Rand des rollbaren Bereichs. */
