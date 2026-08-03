@@ -29,9 +29,10 @@ Wichtig zu wissen:
 
 | Punkt | Was fehlt | Wo |
 | --- | --- | --- |
-| **Konto löschen** | Der Server kann es (`DELETE /api/me`), es gibt aber keinen Knopf in der App. Apple verlangt das zwingend, sobald man Konten anlegen kann. | Profil-Tab |
-| **Datenschutzerklärung** | Pflichtfeld in App Store Connect. Dazu deutsche Impressumspflicht. | Neue Seite + Link im Profil |
-| **Support-Adresse** | Pflichtfeld in App Store Connect. | — |
+| ~~**Konto löschen**~~ | ✅ **Erledigt.** Profil-Tab ganz unten, mit Passwortabfrage. Gelöscht wird als Anonymisierung. | `GameSelect.tsx` |
+| **Datenschutzerklärung** | Seite steht unter `/rechtliches/datenschutz.html`, verlinkt aus Anmeldung und Profil. **Offen: die rot markierten Lücken ausfüllen** — Name, Anschrift, Support-Adresse, Datenbankanbieter, Aufbewahrungsdauer der Protokolle. | `public/rechtliches/` |
+| **Impressum** | Seite steht unter `/rechtliches/impressum.html`. **Offen: dieselben Lücken.** Mit Platzhaltern erfüllt es die Pflicht nicht und ist abmahnfähig. | `public/rechtliches/` |
+| **Support-Adresse** | Pflichtfeld in App Store Connect — dieselbe Adresse gehört in beide Rechtstexte. | — |
 | **Testzugang für die Prüfer** | Der Einladungscode sperrt die Prüfer aus. Es muss ein fertiges Konto samt Code in den Prüfhinweisen stehen. | App Store Connect |
 | **Shop** | „Bald"-Attrappen mit Paketangaben gelten als unfertig. Bis zum Release entweder fertig (dann zwingend über Apples Bezahlweg, 30 %) oder ausgeblendet. | `GameSelect.tsx` |
 

@@ -12,7 +12,7 @@ Brauweg läuft unter **www.brauweg-spielen.de**. Doppelkopf ist spielbar,
 der Hub steht, Clans funktionieren. Der Deploy hängt an `main`: Was dorthin
 gemerged wird, ist nach etwa zwei Minuten live.
 
-**Prüfstand:** 118 Engine-Tests, 111 Servertests, `tsc --noEmit` sauber.
+**Prüfstand:** 118 Engine-Tests, 115 Servertests, `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 **Bilder:** `packages/client/public/hub/` liegt bei 6,2 MB — zu Tagesbeginn
@@ -73,6 +73,18 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
 - **Fehler behoben:** Der Erstellen-Bildschirm schaltete jede Regel ab, auch
   Hochzeit und Armut — wer zwei Kreuz-Damen hielt, bekam sie nicht
   angeboten.
+- **Kontolöschung** in der Oberfläche, mit Passwortabfrage. `DELETE /api/me`
+  verlangt jetzt das Passwort im Rumpf; vier neue Servertests decken
+  richtig, falsch, fehlend und nicht angemeldet ab.
+- **Impressum und Datenschutzerklärung** als eigenständige Seiten unter
+  `packages/client/public/rechtliches/`, verlinkt aus Anmeldung und Profil.
+  Echte Adressen statt eines Blattes in der App, weil App Store Connect
+  eine aufrufbare Datenschutz-Adresse verlangt und die Impressumspflicht
+  auch den trifft, der sich nie anmeldet.
+- **Bildbestellung `docs/ASSETS-MENUE.md`:** sieben dehnbare Bausteine für
+  alle Menüblätter — Blattgrund, Eingabefeld, drei Knöpfe, Umschalter an
+  und aus. Bewusst **ohne** Platzhalter, siehe die Begründung am Ende der
+  Bestellung.
 
 ---
 
@@ -80,15 +92,25 @@ Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
 
 ### Vor dem App-Store-Release zwingend
 
-1. **Kontolöschung in der Oberfläche.** `api.deleteMe` gibt es im Server,
-   aber keinen Weg dorthin. Apple lehnt Apps mit Konten deswegen
-   zuverlässig ab. Das ist der größte Einzelposten.
-2. **Versanddienst für E-Mail.** Bestätigungslinks stehen bisher nur im
-   Railway-Protokoll (`docs/RESEND.md`). Ohne das kann sich niemand aus dem
-   Verein selbst registrieren.
-3. Datenschutzerklärung, Impressum, Support-Adresse, Demokonto für die
-   Prüfung — Einzelheiten in `docs/APPSTORE.md`.
-4. Capacitor-Hülle und getrennte API-Adresse.
+1. ~~Kontolöschung in der Oberfläche~~ — **erledigt.** Profil-Tab ganz
+   unten, kleiner Textknopf unter „Abmelden", dann ein Blatt mit Warnung
+   und Passwortabfrage. Das Passwort ist Absicht: Die Sitzung hält dreißig
+   Tage, ohne die Frage genügte ein kurz aus der Hand gelegtes Handy.
+2. **Versanddienst für E-Mail.** Code-seitig fertig — `ResendMailer` steht,
+   `MAIL_FROM` hat den richtigen Standard, „neuen Link anfordern" gibt es
+   im Client. **Es fehlt nur noch DNS bei Strato und `RESEND_API_KEY` in
+   Railway**, Klickstrecke in `docs/RESEND.md`. Bis dahin stehen die
+   Bestätigungslinks nur im Railway-Protokoll und niemand aus dem Verein
+   kann sich selbst registrieren.
+3. **Rechtstexte: Gerüst steht, Angaben fehlen.** `/rechtliches/impressum.html`
+   und `/rechtliches/datenschutz.html` sind angelegt und aus Anmeldung und
+   Profil verlinkt. Die offenen Stellen sind **rot umrandet** — Name,
+   Anschrift, Support-Adresse, Datenbankanbieter, Aufbewahrungsdauer der
+   Protokolle. **Solange Platzhalter drinstehen, erfüllen die Seiten die
+   Pflicht nicht.** Der Datenschutztext beschreibt, was die Anwendung
+   tatsächlich tut (am Code geprüft), ersetzt aber keine Rechtsberatung.
+4. Demokonto für die Prüfer — Einzelheiten in `docs/APPSTORE.md`.
+5. Capacitor-Hülle und getrennte API-Adresse.
 
 ### Aus dem Plan noch nicht gebaut
 

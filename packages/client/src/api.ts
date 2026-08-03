@@ -221,7 +221,9 @@ export const api = {
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
-  deleteMe: () => request<{ ok: true }>('/me', { method: 'DELETE' }),
+  /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */
+  deleteMe: (password: string) =>
+    request<{ ok: true }>('/me', { method: 'DELETE', body: JSON.stringify({ password }) }),
 
   games: () => request<GameSummary[]>('/games'),
   vote: (gameId: string) => post<{ ok: true }>(`/games/${gameId}/vote`),

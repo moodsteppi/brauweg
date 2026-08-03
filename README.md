@@ -43,7 +43,7 @@ npm run build
 npm test
 ```
 
-Erwartet: **109 Tests** im Doppelkopf-Paket, **53** im Server.
+Erwartet: **118 Tests** im Doppelkopf-Paket, **115** im Server.
 
 ### Lokal starten
 

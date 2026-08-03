@@ -111,3 +111,92 @@ test('ohne Anmeldung laesst sich kein Blatt setzen', async (t) => {
 
   assert.equal(res.statusCode, 401);
 });
+
+/**
+ * Kontoloeschung ueber die Schnittstelle.
+ *
+ * Der Weg dorthin ist neu (Profil-Tab), und ohne ihn lehnt Apple die App ab.
+ * Geprueft wird die Passwortabfrage: Sie ist der einzige Schutz davor, dass
+ * ein kurz aus der Hand gelegtes Handy genuegt, um ein Konto endgueltig zu
+ * loeschen - die Sitzung selbst haelt dreissig Tage.
+ */
+const PASSWORD = 'geheim-genug-1234';
+
+test('mit richtigem Passwort loescht sich das Konto und wird anonymisiert', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const res = await s.app.inject({
+    method: 'DELETE',
+    url: '/api/me',
+    headers: { cookie: s.cookie },
+    payload: { password: PASSWORD },
+  });
+
+  assert.equal(res.statusCode, 200);
+
+  const [row] = await s.ctx.db
+    .select()
+    .from(schema.account)
+    .where(eq(schema.account.id, s.account.accountId));
+
+  assert.ok(row, 'die Zeile muss erhalten bleiben');
+  assert.equal(row!.email, null);
+  assert.equal(row!.passwordHash, null);
+  assert.ok(row!.anonymizedAt);
+  assert.ok(row!.displayName.startsWith('geloescht-'));
+});
+
+test('mit falschem Passwort bleibt das Konto bestehen', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const res = await s.app.inject({
+    method: 'DELETE',
+    url: '/api/me',
+    headers: { cookie: s.cookie },
+    payload: { password: 'das-ist-es-nicht' },
+  });
+
+  assert.equal(res.statusCode, 401);
+
+  const [row] = await s.ctx.db
+    .select({ email: schema.account.email, anonymizedAt: schema.account.anonymizedAt })
+    .from(schema.account)
+    .where(eq(schema.account.id, s.account.accountId));
+  assert.equal(row!.anonymizedAt, null);
+  assert.ok(row!.email, 'die Adresse muss stehenbleiben');
+});
+
+test('ohne Passwort im Rumpf wird die Loeschung abgewiesen', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const res = await s.app.inject({
+    method: 'DELETE',
+    url: '/api/me',
+    headers: { cookie: s.cookie },
+    payload: {},
+  });
+
+  assert.equal(res.statusCode, 400);
+
+  const [row] = await s.ctx.db
+    .select({ anonymizedAt: schema.account.anonymizedAt })
+    .from(schema.account)
+    .where(eq(schema.account.id, s.account.accountId));
+  assert.equal(row!.anonymizedAt, null);
+});
+
+test('ohne Anmeldung laesst sich kein Konto loeschen', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const res = await s.app.inject({
+    method: 'DELETE',
+    url: '/api/me',
+    payload: { password: PASSWORD },
+  });
+
+  assert.equal(res.statusCode, 401);
+});

@@ -30,6 +30,7 @@ import {
   sessionFromToken,
   verifyEmail,
 } from '../auth/service.js';
+import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
   birthdayRewardClaimable,
@@ -505,9 +506,24 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Kontoloeschung. Sie MUSS in der App funktionieren, und sie loescht keine
    * Zeilen, sondern anonymisiert: Sonst zerfielen die Partiehistorien aller
    * Mitspieler.
+   *
+   * Das Passwort wird erneut verlangt. Der Schritt ist unumkehrbar, und die
+   * Sitzung haelt dreissig Tage: Ohne diese Frage genuegt ein kurz aus der
+   * Hand gelegtes Handy, um ein fremdes Konto endgueltig zu loeschen.
    */
   app.delete('/api/me', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
+    const { password } = z.object({ password: z.string().min(1) }).parse(request.body);
+
+    const [acc] = await deps.db
+      .select({ passwordHash: s.account.passwordHash })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    // Derselbe Schluessel wie bei der Anmeldung: Wer das Passwort nicht kennt,
+    // erfaehrt hier nichts, was er nicht schon wusste.
+    if (!acc || !(await verifyPassword(acc.passwordHash, password))) {
+      throw unauthorized('credentialsInvalid');
+    }
 
     // Waehrend laufender Partie gilt die Loeschung als Verlassen.
     const running = await deps.db

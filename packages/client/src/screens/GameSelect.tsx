@@ -13,6 +13,7 @@ import { DECKS, cardImage, deckById, type Deck } from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
 import { Clan } from './Clan';
+import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
 
@@ -36,6 +37,7 @@ export function GameSelect({
   onAvatarChange,
   onShowProfile,
   onSignOut,
+  onDeleted,
 }: {
   me: Me;
   onPick: (gameId: string) => void;
@@ -45,6 +47,8 @@ export function GameSelect({
   onAvatarChange: () => void;
   onShowProfile: (accountId: string) => void;
   onSignOut: () => void;
+  /** Nach der Kontoloeschung: zurueck zur Anmeldung. */
+  onDeleted: () => void;
 }): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('spielen');
   /** Name des angetippten Noch-nicht-Bereichs, fuer das "Kommt bald"-Blatt. */
@@ -132,6 +136,7 @@ export function GameSelect({
             onAvatarChange={onAvatarChange}
             onMeChange={onAvatarChange}
             onSignOut={onSignOut}
+            onDeleted={onDeleted}
             onBald={setBald}
             onShowProfile={onShowProfile}
           />
@@ -223,6 +228,7 @@ function ProfilTab({
   onAvatarChange,
   onMeChange,
   onSignOut,
+  onDeleted,
   onBald,
   onShowProfile,
 }: {
@@ -231,6 +237,8 @@ function ProfilTab({
   /** Nach Claim u. a. /api/me neu laden. */
   onMeChange: () => void;
   onSignOut: () => void;
+  /** Nach der Loeschung: zurueck zur Anmeldung, ohne Abmelde-Aufruf. */
+  onDeleted: () => void;
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
 }): React.JSX.Element {
@@ -240,6 +248,7 @@ function ProfilTab({
   const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '–';
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
+  const [loeschenOffen, setLoeschenOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
@@ -356,7 +365,119 @@ function ProfilTab({
           Abmelden
         </button>
       </div>
+
+      <Rechtliches />
+
+      {/* Klein und unten, aber vorhanden: Apple lehnt Apps mit Konten ohne
+          diesen Weg zuverlaessig ab, und die DSGVO verlangt ihn ohnehin. Als
+          Textzeile statt als Knopf, damit er nicht neben "Abmelden" liegt und
+          im Vorbeitippen erwischt wird. */}
+      <button className="hub-konto-loeschen" onClick={() => setLoeschenOffen(true)}>
+        Konto löschen
+      </button>
+
+      {loeschenOffen && (
+        <KontoLoeschenBlatt
+          name={me.displayName}
+          onClose={() => setLoeschenOffen(false)}
+          onDeleted={onDeleted}
+        />
+      )}
     </HubSzene>
+  );
+}
+
+/**
+ * Kontoloeschung — zweiter Schritt mit Passwort.
+ *
+ * Geloescht wird als Anonymisierung: Der Personenbezug verschwindet, die
+ * Partien der Mitspieler bleiben nachvollziehbar. Das steht auch so im Blatt,
+ * denn "alles weg" waere gelogen und "anonymisiert" ohne Erklaerung
+ * beunruhigend.
+ *
+ * Das Passwort wird erneut verlangt, weil die Sitzung dreissig Tage haelt:
+ * Sonst genuegte ein kurz aus der Hand gelegtes Handy.
+ */
+function KontoLoeschenBlatt({
+  name,
+  onClose,
+  onDeleted,
+}: {
+  name: string;
+  onClose: () => void;
+  onDeleted: () => void;
+}): React.JSX.Element {
+  const [passwort, setPasswort] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  const loeschen = (event: React.FormEvent): void => {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setFehler(null);
+    void api.deleteMe(passwort).then(onDeleted, (err: unknown) => {
+      // Der allgemeine Schluessel nennt E-Mail und Passwort. Hier wurde nur
+      // ein Passwort eingegeben - also auch nur davon sprechen.
+      setFehler(
+        err instanceof ApiError
+          ? err.code === 'credentialsInvalid'
+            ? 'Das Passwort stimmt nicht.'
+            : t(err.messageKey)
+          : 'Verbindung fehlgeschlagen.',
+      );
+      setBusy(false);
+    });
+    // Kein finally: Bei Erfolg ist dieses Blatt weg, bevor es etwas zu setzen
+    // gaebe.
+  };
+
+  return (
+    <div className="doko-sheet" onClick={onClose}>
+      <form
+        className="doko-sheet-card hub-loeschen"
+        onClick={(event) => event.stopPropagation()}
+        onSubmit={loeschen}
+      >
+        <h2>Konto löschen</h2>
+        <p className="muted">
+          Das lässt sich nicht rückgängig machen. Dein Name, deine E-Mail-Adresse und dein
+          Geburtstag werden entfernt, du wirst aus deinem Clan ausgetragen — führst du ihn,
+          rückt das älteste Mitglied nach.
+        </p>
+        <p className="muted">
+          Deine gespielten Partien bleiben als anonyme Einträge stehen, damit die Abrechnungen
+          deiner Mitspieler nicht zerfallen. Läuft gerade eine Partie, zählt die Löschung als
+          Verlassen.
+        </p>
+
+        <label>
+          Passwort von {name}
+          <input
+            type="password"
+            value={passwort}
+            onChange={(event) => setPasswort(event.target.value)}
+            autoFocus
+            required
+          />
+        </label>
+
+        {fehler && <p className="error">{fehler}</p>}
+
+        <div className="hub-knopfreihe hub-knopfreihe--a">
+          <button type="button" className="hub-knopf hub-knopf--a" onClick={onClose}>
+            Behalten
+          </button>
+          <button
+            type="submit"
+            className="hub-knopf hub-knopf--a-raus"
+            disabled={busy || passwort.length === 0}
+          >
+            {busy ? 'Wird gelöscht…' : 'Endgültig löschen'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

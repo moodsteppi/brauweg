@@ -513,12 +513,21 @@ Hintergrundverhalten und Reconnect gründlich testen.
 
 ```
 M4  Server und Persistenz       erledigt
-M5  Client Web                  roh vorhanden, Gestaltung offen  <- hier weiter
-M6  Beta mit dem Verein (nur Doppelkopf spielbar)
-M7  Trophaeen, Ranglisten, Vereine
+M5  Client Web                  weit gediehen: Hub, alle Doko-Bildschirme,
+                                gemalte Szenen, Profil, Freundesliste,
+                                Kontoloeschung. Offen: Emotes (7.5),
+                                Zuschauen (7.6), Regelsatz-Editor, Revanche
+M7  Vereine (9.3)               vorgezogen und erledigt: Clans mit Raengen
+M6  Beta mit dem Verein         <- naechstes Ziel, sobald der Mailversand
+                                haengt und der Regelsatz-Editor steht
+M7  Trophaeen und Ranglisten    Rest offen
 M8  Moderation
 M9  Release Web
     danach: naechstes Spielmodul, Monetarisierung, iOS
+
+Vereine sind vor M6 gebaut worden, weil der Verein als Clan der natuerliche
+Rahmen fuer die Beta ist. Der Plan zaehlt sie weiter unter M7; die
+Reihenfolge hier ist die tatsaechliche.
 ```
 
 Innerhalb von M4: Datenmodell und Migrationen, dann Auth mit E-Mail-Bestätigung

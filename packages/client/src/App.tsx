@@ -103,6 +103,9 @@ export function App(): React.JSX.Element {
         await api.logout();
         setMe(null);
       }}
+      // Kein api.logout(): Die Loeschung hat die Sitzung schon widerrufen und
+      // das Cookie geraeumt - ein Abmelden danach liefe in ein 401.
+      onDeleted={() => setMe(null)}
     />
   );
 }
