@@ -411,18 +411,20 @@ function Spielen({
 
   return (
     <div className="front-hub">
-      <header className="hub-logo" aria-label="Brauweg">
-        <img className="hub-logo-mark" src="/hub/logo.png" alt="Brauweg" draggable={false} />
-        <img
-          className="hub-logo-slogan"
-          src="/hub/slogan.png"
-          alt="Doppelkopf. Dein Weg."
-          draggable={false}
-        />
-      </header>
-
+      {/* Karte füllt die Bühne; Logo und Seiten-UI liegen als Overlay drauf,
+          damit kein blauer Streifen die oberen Arenen verdeckt. */}
       <div className="hub-buehne">
         <Trophaeenpfad trophies={trophies} />
+
+        <header className="hub-logo" aria-label="Brauweg">
+          <img className="hub-logo-mark" src="/hub/logo.png" alt="Brauweg" draggable={false} />
+          <img
+            className="hub-logo-slogan"
+            src="/hub/slogan.png"
+            alt="Doppelkopf. Dein Weg."
+            draggable={false}
+          />
+        </header>
 
         <aside className="hub-seite hub-seite--links">
           <button className="hub-side-btn hub-side-btn--lila" onClick={() => setWahlOffen(true)}>

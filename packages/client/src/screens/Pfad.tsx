@@ -29,15 +29,15 @@ export const HUB_WELTEN: readonly HubWelt[] = [
 
 const HUB_WEG = [...HUB_WELTEN].sort((a, b) => a.cp - b.cp);
 
-/** Kamera: Fokus auf aktuellen Checkpoint, leichter Zoom. */
+/** Kamera: Fokus auf aktuellen Checkpoint; oben bleibt unter dem Logo lesbar. */
 function kameraFuer(cp: number): { zoom: number; tx: number; ty: number } {
   const welt = HUB_WEG.find((w) => w.cp === cp) ?? HUB_WEG[0];
   const fx = Number.parseFloat(welt.left);
   const fy = Number.parseFloat(welt.top);
-  const zoom = 1.18 + (cp / 1000) * 0.14;
-  // Fokus leicht unter die Mitte ziehen (Platz für „Du bist hier").
-  const tx = (50 - fx) * 0.62;
-  const ty = (46 - fy) * 0.62;
+  // Weniger Zoom am Start, damit Schneefeld/Feuerberg nicht komplett weg sind.
+  const zoom = 1.08 + (cp / 1000) * 0.18;
+  const tx = (50 - fx) * 0.45;
+  const ty = (52 - fy) * 0.48;
   return { zoom, tx, ty };
 }
 
@@ -97,16 +97,17 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
           aria-hidden="true"
         />
 
-        <span className="hub-schild" style={{ top: '72%', left: '8%' }}>
+        {/* Schilder in der Kartenmitte — weg von Logo und Eck-Buttons. */}
+        <span className="hub-schild" style={{ top: '70%', left: '70%' }}>
           Wiesen
         </span>
-        <span className="hub-schild" style={{ top: '48%', left: '6%' }}>
+        <span className="hub-schild" style={{ top: '53%', left: '62%' }}>
           Strand
         </span>
-        <span className="hub-schild" style={{ top: '30%', left: '68%' }}>
+        <span className="hub-schild" style={{ top: '33%', left: '18%' }}>
           Feuerberg
         </span>
-        <span className="hub-schild" style={{ top: '12%', left: '58%' }}>
+        <span className="hub-schild" style={{ top: '17%', left: '52%' }}>
           Schneefeld
         </span>
 
