@@ -127,7 +127,7 @@ export function StatSpiel({
 }): React.JSX.Element {
   return (
     <div className="hub-stat-spiel">
-      <img src="/hub/tab-spielen.png" alt="" aria-hidden="true" />
+      <img src="/hub/tab-spielen.webp" alt="" aria-hidden="true" />
       <div className="hub-stat-spiel-text">
         <strong>{name}</strong>
         {meta !== undefined && <span className="muted">{meta}</span>}

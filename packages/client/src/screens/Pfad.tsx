@@ -154,7 +154,7 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
   return (
     <div className="hub-karte" aria-label="Trophäenpfad">
       <div className="hub-karte-welt" style={weltStyle}>
-        <img className="hub-karte-bild" src="/hub/weltkarte.png" alt="" draggable={false} />
+        <img className="hub-karte-bild" src="/hub/weltkarte.webp" alt="" draggable={false} />
 
         {/* Bäume nur auf Land — Palmen am Strand, Kiefern an der Wiese. */}
         <div className="hub-ambient" aria-hidden="true">
@@ -177,7 +177,9 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
               style={{ top: `${stelle.y}%`, left: `${stelle.x}%` }}
               aria-label={`${welt.name}, ${welt.cp} Trophäen${erreicht ? ', erreicht' : ', noch gesperrt'}`}
             >
-              <span className="hub-knoten-nr">{erreicht ? knotenNummer(welt.cp) : '🔒'}</span>
+              {/* Gesperrt zeigt kein Zeichen: Das Schloss ist auf der grauen
+                  Scheibe gemalt, und ein Emoji obendrauf waere doppelt. */}
+              {erreicht && <span className="hub-knoten-nr">{knotenNummer(welt.cp)}</span>}
               <span className="hub-knoten-cp">{welt.cp}</span>
               {/* Namen über allem — UI darf die Karte verdecken, nicht die Namen. */}
               <span className={`hub-knoten-name hub-knoten-name--${welt.nameSeite}`}>

@@ -78,7 +78,7 @@ export function Profile({
       : 0;
 
   const kacheln = [
-    { icon: '/hub/tab-spielen.png', name: 'Partien', wert: profile.totals.parties },
+    { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: profile.totals.parties },
     { icon: '/hub/krone.png', name: 'Siege', wert: profile.totals.wins },
     { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
     { icon: '/hub/truhe.png', name: 'Checkpoint', wert: checkpoint },
@@ -86,7 +86,7 @@ export function Profile({
 
   return (
     <ProfilRahmen eingebettet={eingebettet} onBack={onBack}>
-      <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--a hub-profil-fremd">
+      <HubSzene bg="/hub/bg-profil.webp" className="front-profil front-profil--a hub-profil-fremd">
         <HubBanner />
 
         <div className="hub-profilkopf hub-profilkopf--a">

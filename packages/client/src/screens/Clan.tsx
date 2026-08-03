@@ -222,7 +222,7 @@ function Halle({
   const offen = detail?.requests.length ?? 0;
 
   return (
-    <HubSzene bg="/hub/bg-clan.png" className="front-clan">
+    <HubSzene bg="/hub/bg-clan.webp" className="front-clan">
       <HubBanner />
 
       <div className="hub-clanschild">
@@ -239,7 +239,7 @@ function Halle({
           </span>
           <div className="hub-clanschild-zahlen">
             <span>
-              <img src="/hub/tab-clan.png" alt="" aria-hidden="true" />
+              <img src="/hub/tab-clan.webp" alt="" aria-hidden="true" />
               {detail ? `${detail.members}/${detail.maxMembers}` : '–'}
             </span>
             <span>
@@ -556,7 +556,7 @@ function Suche({
   }, [suche]);
 
   return (
-    <HubSzene bg="/hub/bg-clan-suche.png" className="front-clan">
+    <HubSzene bg="/hub/bg-clan-suche.webp" className="front-clan">
       <HubBanner />
 
       <h1 className="lobby-schild">Clans</h1>
@@ -656,7 +656,7 @@ function Gruenden({
   };
 
   return (
-    <HubSzene bg="/hub/bg-clan-gruenden.png" className="front-clan">
+    <HubSzene bg="/hub/bg-clan-gruenden.webp" className="front-clan">
       <HubBanner />
 
       <h1 className="lobby-schild">Clan gründen</h1>

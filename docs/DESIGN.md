@@ -125,8 +125,14 @@ Vorhandenes wiederverwenden statt neu erfinden:
   als 1024er PNG vom Zeichner, wird aber oft 40 Pixel groß angezeigt. Wer
   das Original ablegt, schickt das Hundertfache an jedes Handy — der
   `hub`-Ordner war so auf 30 MB gewachsen. Faustregel: dreifache
-  Anzeigegröße, Vollbilder als PNG8 mit 200 Farben und Fehlerstreuung.
-  Ganzseitige Szenen landen damit bei 200–450 kB, Symbole unter 100 kB.
+  Anzeigegröße.
+- **Gemaltes als WebP mit Qualität 85, nicht als PNG8.** Die Weltkarte auf
+  200 Farben zu quantisieren kostete sichtbar Tiefe in Himmel und Lava —
+  gemessen 4 % mittlere Abweichung. WebP war bei **halber Dateigröße
+  doppelt so genau** (1,9 %). Ganzseitige Szenen landen damit bei
+  100–300 kB. Freigestellte Kleinteile dürfen PNG bleiben; die App-Symbole
+  direkt unter `public/` **müssen** PNG bleiben, das verlangt das
+  Web-Manifest.
 - **Was niemand anzeigt, gehört nicht nach `public/`.** Vorlagen und
   Rohfassungen liegen unter `packages/client/art/` — alles unter `public/`
   wird ausgeliefert, auch wenn es nirgends eingebunden ist.

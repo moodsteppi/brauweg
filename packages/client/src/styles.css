@@ -3409,19 +3409,23 @@ td {
   50% { transform: translate(-50%, -88%) rotate(2.8deg); }
 }
 /* Biome-Name am Knoten — bewusst weg von Seiten-Buttons. */
+/*
+ * Ortsschild: gemaltes Holzbrett als dehnbarer Rahmen, Name als Text
+ * darueber. Vorher war das ein Farbverlauf mit Rahmenlinie - genau die
+ * Sorte Attrappe, die docs/DESIGN.md ausschliesst.
+ */
 .hub-knoten-name {
   position: absolute;
   z-index: 6;
-  padding: 0.14rem 0.35rem;
+  border: 12px solid transparent;
+  border-image: url('/hub/wegschild.png') 40 fill / 12px / 0 round;
+  padding: 0 0.1rem;
   font-size: 0.55rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #fff;
-  background: linear-gradient(180deg, #a06a38 0%, #6b4220 100%);
-  border: 1px solid #d4a06a;
-  border-radius: 0.3rem;
-  box-shadow: 0 2px 0 #3a2410;
+  color: #fff5e0;
+  text-shadow: 0 1px 0 rgba(40, 20, 4, 0.95);
   pointer-events: none;
   white-space: nowrap;
   line-height: 1.1;
@@ -3454,24 +3458,25 @@ td {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 2.55rem;
-  height: 2.55rem;
-  padding: 0;
-  border-radius: 50%;
-  border: 2px solid #fff;
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0 0 0.35rem;
+  border: none;
+  background: center / 100% 100% no-repeat;
   color: #fff;
   font-weight: 800;
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 5px 12px rgba(0, 0, 0, 0.22);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   overflow: visible;
 }
-.hub-knoten--mint { background: linear-gradient(180deg, #9af0b0 0%, #3cb86a 100%); }
-.hub-knoten--blau { background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%); }
-.hub-knoten--rot { background: linear-gradient(180deg, #ff8a6a 0%, #d04030 100%); }
-.hub-knoten--lila { background: linear-gradient(180deg, #c49aff 0%, #7a48d4 100%); }
-.hub-knoten--gold { background: linear-gradient(180deg, #ffe08a 0%, #d4a94a 100%); color: #3a2a08; }
+.hub-knoten--mint { background-image: url('/hub/knoten-mint.png'); }
+.hub-knoten--blau { background-image: url('/hub/knoten-blau.png'); }
+.hub-knoten--rot { background-image: url('/hub/knoten-rot.png'); }
+.hub-knoten--lila { background-image: url('/hub/knoten-lila.png'); }
+.hub-knoten--gold { background-image: url('/hub/knoten-gold.png'); color: #3a2a08; }
+/* Gesperrt: eigene graue Scheibe mit gemaltem Schloss statt Graufilter. */
 .hub-knoten.is-zu {
-  filter: grayscale(0.35) brightness(0.78);
-  opacity: 0.92;
+  background-image: url('/hub/knoten-zu.png');
+  color: rgba(255, 255, 255, 0.75);
 }
 .hub-knoten.is-hier {
   outline: 3px solid #ffe08a;

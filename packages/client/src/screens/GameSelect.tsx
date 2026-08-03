@@ -136,14 +136,14 @@ export function GameSelect({
           farbe="shop"
           active={tab === 'shop'}
           onClick={() => setTab('shop')}
-          iconSrc="/hub/tab-shop.png"
+          iconSrc="/hub/tab-shop.webp"
         />
         <TabButton
           label="Clan"
           farbe="clan"
           active={tab === 'clan'}
           onClick={() => setTab('clan')}
-          iconSrc="/hub/tab-clan.png"
+          iconSrc="/hub/tab-clan.webp"
         />
         <TabButton
           label="Spielen"
@@ -151,21 +151,21 @@ export function GameSelect({
           farbe="spielen"
           active={tab === 'spielen'}
           onClick={() => setTab('spielen')}
-          iconSrc="/hub/tab-spielen.png"
+          iconSrc="/hub/tab-spielen.webp"
         />
         <TabButton
           label="Blatt"
           farbe="blatt"
           active={tab === 'blatt'}
           onClick={() => setTab('blatt')}
-          iconSrc="/hub/tab-blatt.png"
+          iconSrc="/hub/tab-blatt.webp"
         />
         <TabButton
           label="Profil"
           farbe="profil"
           active={tab === 'profil'}
           onClick={() => setTab('profil')}
-          iconSrc="/hub/tab-profil.png"
+          iconSrc="/hub/tab-profil.webp"
         />
       </nav>
 
@@ -234,10 +234,10 @@ function ProfilTab({
   const [claimError, setClaimError] = useState<string | null>(null);
 
   const kacheln = [
-    { icon: '/hub/tab-spielen.png', name: 'Partien', wert: partien },
+    { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
     { icon: '/hub/krone.png', name: 'Siege', wert: siege },
     { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
-    { icon: '/hub/tab-blatt.png', name: 'Blätter', wert: DECKS.length },
+    { icon: '/hub/tab-blatt.webp', name: 'Blätter', wert: DECKS.length },
   ];
 
   const geburtstagText = (() => {
@@ -263,7 +263,7 @@ function ProfilTab({
   };
 
   return (
-    <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--a">
+    <HubSzene bg="/hub/bg-profil.webp" className="front-profil front-profil--a">
       <HubBanner />
 
       <div className="hub-profilkopf hub-profilkopf--a">
@@ -360,19 +360,19 @@ function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element
   /** Die grossen Angebote: drei nebeneinander, wie im Entwurf. */
   const angebote = [
     { name: 'Season Pass', art: '/hub/season-pass.png', preis: 'Saison' },
-    { name: 'VIP-Pass', art: '/hub/shop-vip.png', preis: '7 Tage' },
+    { name: 'VIP-Pass', art: '/hub/shop-vip.webp', preis: '7 Tage' },
     { name: 'Münzpaket', art: '/hub/muenze.png', preis: 'Paket' },
   ];
   /** Kleine Vitrine darunter - alles noch Attrappe, ehrlich ohne Preis. */
   const auswahl = [
-    { name: 'Blätter', icon: '/hub/tab-blatt.png' },
+    { name: 'Blätter', icon: '/hub/tab-blatt.webp' },
     { name: 'Tische', icon: '/hub/truhe.png' },
     { name: 'Wappen', icon: '/hub/clan-wappen.png' },
-    { name: 'Emotes', icon: '/hub/tab-spielen.png' },
+    { name: 'Emotes', icon: '/hub/tab-spielen.webp' },
   ];
 
   return (
-    <HubSzene bg="/hub/bg-shop.png" className="front-shop front-shop--b">
+    <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
       <HubBanner />
 
       <Tafel titel="Angebote">
@@ -491,7 +491,7 @@ function Spielen({
             aria-label="Spielauswahl"
             onClick={() => setWahlOffen(true)}
           >
-            <img src="/hub/tab-spielen.png" alt="" draggable={false} />
+            <img src="/hub/tab-spielen.webp" alt="" draggable={false} />
           </button>
           <button
             type="button"
@@ -938,7 +938,7 @@ function DeckPicker({
   onChange: (cardDeck: string) => void;
 }): React.JSX.Element {
   return (
-    <HubSzene bg="/hub/bg-blatt.png" className="front-blatt front-blatt--b">
+    <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
       <HubBanner />
 
       <Tafel
