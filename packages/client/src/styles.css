@@ -422,7 +422,7 @@ td {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  /* Filz und Rahmen malt bg-spieltisch.png. Hier bleibt nur die Flaeche,
+  /* Filz und Rahmen malt die gewaehlte Szenerie. Hier bleibt nur die Flaeche,
      auf der Mitspieler, Stich und Schilder liegen. */
 }
 /* Warme Lichter am oberen Rand — reine Zierde ueber dem Filz. */

@@ -169,9 +169,8 @@ dann wirkt die Liste nur etwas schwerer.
 
 Alles nach `packages/client/public/hub/` unter genau diesen Namen.
 
-**Geliefert und eingebaut:** die acht Wappen, die fuenf Knopf-Icons und das
-Mitgliederband. **Noch offen:** `bg-clan-suche.png` und
-`bg-clan-gruenden.png` — dort laeuft weiter `bg-clan` als Platzhalter.
+**Vollständig geliefert und eingebaut:** die acht Wappen, die fünf
+Knopf-Icons, das Mitgliederband und die beiden Hintergründe.
 
 
 

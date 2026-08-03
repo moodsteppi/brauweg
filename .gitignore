@@ -18,3 +18,6 @@ coverage/
 # Uebergabe-Archive, Inhalt liegt entpackt im Repository
 /files.zip
 /plattform-uebergabe.zip
+
+# Arbeitsordner der Bildaufbereitung — nichts davon gehoert ins Repository.
+tmp-*/

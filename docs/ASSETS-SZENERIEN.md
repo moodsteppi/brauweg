@@ -78,9 +78,10 @@ anderen sieben bitte in derselben Machart — gemalt, warm, plastisch.
 
 Alles nach `packages/client/public/hub/` unter genau diesen Namen.
 
-**Es liegen Platzhalter unter diesen Namen** — farbverschobene Kopien der
-Stube, damit die Auswahl schon jetzt funktioniert. Die echten Bilder
-überschreiben sie einfach; am Code ist dafür nichts zu ändern.
+**Alle acht sind geliefert und eingebaut.** Ausgeliefert wird
+`szene-*.webp` (zusammen 1,2 MB), die Originale liegen unter
+`packages/client/art/szenerien/`. Die Kartenprobe haben alle bestanden:
+gemessene Helligkeit der Spielfläche 29 bis 57 Prozent.
 
 ## Prüfung vor der Übergabe
 
