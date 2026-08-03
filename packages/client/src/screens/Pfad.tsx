@@ -52,19 +52,12 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
     (beste, welt) => (trophies >= welt.cp && welt.cp > beste ? welt.cp : beste),
     0,
   );
-  const idx = HUB_WEG.findIndex((w) => w.cp === aktuelleCp);
-  const von = HUB_WEG[idx] ?? HUB_WEG[0];
-  const bis = HUB_WEG[Math.min(idx + 1, HUB_WEG.length - 1)] ?? von;
   const cam = kameraFuer(aktuelleCp);
 
   const weltStyle = {
     '--hub-zoom': String(cam.zoom),
     '--hub-tx': `${cam.tx}%`,
     '--hub-ty': `${cam.ty}%`,
-    '--pingu-x0': von.left,
-    '--pingu-y0': von.top,
-    '--pingu-x1': bis.left,
-    '--pingu-y1': bis.top,
   } as CSSProperties;
 
   return (
@@ -72,14 +65,15 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
       <div className="hub-karte-welt" style={weltStyle}>
         <img className="hub-karte-bild" src="/hub/weltkarte.png" alt="" draggable={false} />
 
-        {/* Ambient bewusst minimal: Bäume wiegen, kleiner Pinguin auf dem Weg. */}
+        {/* Bäume nur auf Land — Palmen am Strand, Kiefern an der Wiese/beim Haus. */}
         <div className="hub-ambient" aria-hidden="true">
-          <img className="hub-baum hub-baum--a" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '72%', left: '14%' }} />
-          <img className="hub-baum hub-baum--b" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '64%', left: '78%' }} />
-          <img className="hub-baum hub-baum--c" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '48%', left: '22%' }} />
-          <img className="hub-baum hub-baum--d" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '56%', left: '8%' }} />
+          <img className="hub-baum hub-baum--a" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '84%', left: '10%' }} />
+          <img className="hub-baum hub-baum--b" src="/hub/baum-kiefer.png" alt="" draggable={false} style={{ top: '71%', left: '70%' }} />
+          <img className="hub-baum hub-baum--c" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '59%', left: '20%' }} />
+          <img className="hub-baum hub-baum--d" src="/hub/baum-palme.png" alt="" draggable={false} style={{ top: '61%', left: '30%' }} />
         </div>
 
+        {/* Loop: aus dem Haus → Weg entlang → zurück ins Haus. */}
         <div className="hub-pingu-wrap" aria-hidden="true">
           <img className="hub-pingu" src="/hub/pinguin.png" alt="" draggable={false} />
           <span className="hub-pingu-schatten" />
