@@ -4902,3 +4902,168 @@ main.auth > .muted {
   .hub-knopf--a-gold:active,
   .hub-knopf--a-raus:active { transform: none; }
 }
+
+/* =========================================================================
+   Anmeldung.
+
+   Der einzige Bildschirm, fuer den es bisher keine einzige Regel gab -
+   nackte Browser-Vorgaben vor einer gemalten Welt. Seit der Mailversand
+   steht, ist er die Eingangstuer: Jeder aus dem Verein sieht ihn zuerst.
+
+   Neue Bilder braucht das nicht. Formular, Felder und Knoepfe erben den
+   gemalten Satz aus den Menueblaettern; der gemalte Schriftzug lag schon
+   als logo.png vor. Fehlt nur der Hintergrund - bis er geliefert ist,
+   bleibt der dunkle Verlauf. Absichtlich kein Platzhalterbild.
+   ========================================================================= */
+.auth {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Bei der Registrierung ist das Formular hoeher als der Bildschirm.
+     Zentriertes Flex schiebt den Ueberlauf dann nach oben aus dem Kasten,
+     und der Kopf ist nicht mehr erreichbar - in Safari zuverlaessig, und
+     dort laeuft die Beta. "safe" faellt in dem Fall auf Anfang zurueck. */
+  justify-content: safe center;
+  align-items: center;
+  gap: 0.2rem;
+  overflow-y: auto;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  background:
+    radial-gradient(120% 70% at 50% 0%, #2a1a0e 0%, rgba(42, 26, 14, 0) 60%),
+    linear-gradient(180deg, #1c1208 0%, #140d06 55%, #0e0904 100%);
+  color: var(--text);
+}
+
+.auth-marke {
+  margin: 0;
+  flex: 0 0 auto;
+}
+.auth-marke img {
+  display: block;
+  width: min(62vw, 15rem);
+  height: auto;
+}
+.auth-spruch {
+  margin: 0 0 0.9rem;
+  color: rgba(255, 233, 189, 0.72);
+  font-size: 0.92rem;
+}
+
+/* Das Formular ist ein Menueblatt wie jedes andere. */
+.auth .panel {
+  width: 100%;
+  max-width: 22rem;
+  margin: 0;
+  background: none;
+  border: 20px solid transparent;
+  border-image: url(/hub/menue-blatt.webp) 96 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.4rem 0.6rem 0.7rem;
+}
+.auth .panel label {
+  display: block;
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 233, 189, 0.75);
+}
+/* Der Hinweistext unter einem Feld ist ein Satz, keine Feldbeschriftung -
+   also nicht in Versalien und nicht gesperrt. */
+.auth .panel label .muted {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.auth .panel input {
+  width: 100%;
+  margin-top: 0.25rem;
+  background: none;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.15rem 0.2rem;
+  color: var(--text);
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.auth .panel input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.auth .row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+.auth button {
+  background: none;
+  border: 14px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.1rem 0.3rem;
+  color: #f4e9d4;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.auth button.primary {
+  border-image-source: url(/hub/menue-knopf-gruen.webp);
+  color: #eafaf0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.auth button:active {
+  transform: translateY(1px) scale(0.985);
+}
+.auth button:disabled {
+  filter: saturate(0.5) brightness(0.75);
+  cursor: default;
+}
+
+.auth .error,
+.auth .panel > .muted {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth button:active { transform: none; }
+}
+
+/* Der zweite Knopf der Anmeldung ist ein Moduswechsel, keine Handlung.
+   Als gleich grosser gemalter Knopf neben "Anmelden" sah es aus, als
+   muesse man sich zwischen zwei gleichwertigen Wegen entscheiden - dabei
+   gibt es genau eine Handlung auf diesem Bildschirm, und der Rest ist
+   Navigation. Also Textzeile, wie "Konto loeschen" im Profil.
+
+   Gilt nur fuer die Knopfreihe unten: "Neuen Link anfordern" steht im
+   Formular selbst, ist eine echte Handlung und bleibt ein Knopf. */
+.auth .row button:not(.primary) {
+  border: none;
+  border-image: none;
+  padding: 0.5rem 0.4rem 0.1rem;
+  background: none;
+  color: rgba(255, 233, 189, 0.72);
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.auth .row button:not(.primary):hover {
+  color: var(--gold);
+}
+.auth .row button:not(.primary):active {
+  transform: none;
+}

@@ -119,8 +119,13 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
 
   return (
     <main className="auth">
-      <h1>Brauweg</h1>
-      <p className="muted">Spielt nach euren Regeln.</p>
+      {/* Der Schriftzug ist gemalt und liegt schon vor - eine <h1> mit
+          Systemschrift daneben waere der Bruch, den man hier zuerst sieht.
+          Die Ueberschrift bleibt als unsichtbarer Text fuer Vorlesegeraete. */}
+      <h1 className="auth-marke">
+        <img src="/hub/logo.png" alt="Brauweg" draggable={false} />
+      </h1>
+      <p className="auth-spruch">Spielt nach euren Regeln.</p>
 
       <form className="panel" onSubmit={submit}>
         {mode === 'register' && (
