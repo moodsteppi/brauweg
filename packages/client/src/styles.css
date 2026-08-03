@@ -5105,14 +5105,15 @@ main.auth > .muted {
   object-fit: cover;
 }
 
-/* Kleines Fenster: derselbe Stapel, nur verschoben. Die Hoehe kommt vom
-   Elternteil (hub-karte), der Stapel ist sechsmal so hoch wie breit und
-   ragt oben und unten hinaus - das Fenster schneidet ihn zu. */
-.pfad-stapel--klein {
+/* Kleines Fenster: derselbe Stapel, nur ein Ausschnitt. Es ist ein
+   eigener Rollbereich - nicht mit dem Finger zu bewegen, aber der Browser
+   begrenzt die Ansicht darin von selbst auf das Bild. Genau das fehlte
+   vorher: Bei null Trophaeen stand die Figur mittig, und darunter war
+   nur noch Fuellfarbe. */
+.pfad-fenster {
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(var(--pfad-schub, 0%));
+  inset: 0;
+  overflow: hidden;
 }
 
 /* Checkpoint-Marke. Sie sitzt auf der Mittellinie, weil dort der Weg

@@ -9,16 +9,16 @@
  * Vorher war das eine einzige Karte mit zwanzig von Hand am Bild
  * ausgemessenen Stützpunkten — mit dem Hinweis im Kopf, dass beim
  * Kartenwechsel alles neu vermessen werden muss. Genau das ist jetzt
- * überflüssig: Die Kacheln sind so bestellt, dass der Weg jede Kachel
- * unten und oben bei 50 % der Breite kreuzt. Nachgemessen weicht er im
- * Mittel 1,4 bis 2,9 Prozent von der Mitte ab, im schlimmsten Fall 9,8 —
- * auf einem Handy sind das wenige Pixel, schmaler als die Figur. Der Weg
- * ist also die Mittellinie, und ein siebtes Biom ist ein Bild plus eine
- * Zeile in BIOME.
+ * überflüssig: Die Kacheln sind so bestellt, dass der Weg senkrecht durch
+ * die Mitte läuft und höchstens 8 % der Breite davon abweicht.
+ * Nachgemessen bleiben die Kacheln im Mittel unter 2 %, das sind auf einem
+ * Handy wenige Pixel — schmaler als die Figur.
+ *
+ * Der Weg IST also die Mittellinie. Ein siebtes Biom ist damit ein Bild
+ * plus eine Zeile in BIOME, und nichts muss vermessen werden.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
 
 export interface Biom {
   /** Dateiname ohne Endung unter /hub/. */
@@ -63,15 +63,61 @@ export function stelleFuer(trophies: number): number {
   return 0;
 }
 
+/**
+ * Stelle der Figur als Anteil von unten, 0 bis 1, über den ganzen Stapel.
+ *
+ * Nach unten begrenzt: Bei null Trophäen stünde die Figur sonst exakt auf
+ * der Unterkante des Stapels und ragte zur Hälfte heraus — und der
+ * unterste Streifen der Heimat ist ohnehin Wasser. Zwei Prozent des
+ * Stapels sind gut ein Achtel Kachel: der erste Trittstein.
+ */
+function anteilFuer(stelle: number): number {
+  return Math.max(stelle / BIOME.length, 0.02);
+}
+
 /** Das zuletzt erreichte Biom — für die Beschriftung „du bist hier". */
 function aktuellesBiom(trophies: number): Biom {
   return [...BIOME].reverse().find((b) => trophies >= b.cp) ?? BIOME[0]!;
+}
+
+/**
+ * Die Ansicht auf die Figur ausrichten.
+ *
+ * Bewusst über `scrollTop` und nicht über eine eigene Rechnung mit
+ * `transform`: Der Browser begrenzt `scrollTop` von selbst auf den
+ * gültigen Bereich. Vorher wurde der Stapel verschoben, und bei null
+ * Trophäen stand die Figur zwar mittig im Fenster — dafür lag unter ihr
+ * nichts mehr als die Füllfarbe, weil die Kamera über den unteren Rand
+ * des Bildes hinausgefahren war. Dieselbe Falle gäbe es oben.
+ *
+ * Kleines Fenster und Vollbild teilen sich diesen Weg, damit sie nicht
+ * auseinanderlaufen können.
+ */
+function useAufFigurRichten(
+  ziel: React.RefObject<HTMLDivElement | null>,
+  anteilVonUnten: number,
+): void {
+  useEffect(() => {
+    const el = ziel.current;
+    if (!el) return;
+    const richten = (): void => {
+      el.scrollTop = el.scrollHeight * (1 - anteilVonUnten) - el.clientHeight / 2;
+    };
+    richten();
+    // Nach dem Laden der Kacheln nochmal: Vorher steht die Höhe des
+    // Stapels noch nicht fest, und die Ausrichtung ginge ins Leere.
+    const beobachter = new ResizeObserver(richten);
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, [ziel, anteilVonUnten]);
 }
 
 export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Element {
   const [voll, setVoll] = useState(false);
   const stelle = stelleFuer(trophies);
   const hier = aktuellesBiom(trophies);
+  const fenster = useRef<HTMLDivElement>(null);
+  useAufFigurRichten(fenster, anteilFuer(stelle));
 
   return (
     <>
@@ -81,7 +127,12 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
         onClick={() => setVoll(true)}
         aria-label={`Trophäenpfad öffnen. Du bist in ${hier.name} mit ${trophies} Trophäen.`}
       >
-        <Stapel trophies={trophies} stelle={stelle} klein />
+        {/* Eigener Rollbereich, auch wenn man ihn nicht mit dem Finger
+            bewegen kann: Nur so begrenzt der Browser die Ansicht auf das
+            Bild und laesst keine leere Flaeche stehen. */}
+        <div className="pfad-fenster" ref={fenster}>
+          <Stapel trophies={trophies} stelle={stelle} />
+        </div>
         <span className="pfad-lupe" aria-hidden="true">
           {hier.name} · Pfad ansehen
         </span>
@@ -95,48 +146,16 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
 /**
  * Der Stapel selbst.
  *
- * Klein zeigt nur den Ausschnitt um den Pinguin — dafür wird derselbe
- * Stapel verschoben, statt eine zweite, kleinere Darstellung zu bauen. So
- * können die beiden Ansichten nicht auseinanderlaufen.
+ * Genau derselbe im kleinen Fenster wie im Vollbild — den Ausschnitt
+ * bestimmt allein der umgebende Rollbereich. Eine zweite, kleinere
+ * Darstellung zu bauen hieße, zwei Sachen gleich halten zu müssen.
  */
-function Stapel({
-  trophies,
-  stelle,
-  klein = false,
-}: {
-  trophies: number;
-  stelle: number;
-  klein?: boolean;
-}): React.JSX.Element {
+function Stapel({ trophies, stelle }: { trophies: number; stelle: number }): React.JSX.Element {
   const anzahl = BIOME.length;
-  /**
-   * Anteil von unten, 0 bis 1, über den ganzen Stapel.
-   *
-   * Nach unten begrenzt: Bei null Trophäen stünde die Figur sonst exakt
-   * auf der Unterkante des Stapels und ragte zur Hälfte heraus — und der
-   * unterste Streifen der Heimat ist ohnehin Wasser. Zwei Prozent des
-   * Stapels sind gut ein Achtel Kachel: der erste Trittstein.
-   */
-  const anteil = Math.max(stelle / anzahl, 0.02);
-
-  /*
-   * Den Stapel so schieben, dass die Figur in der Fenstermitte steht.
-   *
-   * Der Stapel sitzt mit top:50% mit seiner OBERKANTE in der Fenstermitte.
-   * Die Figur steht (1 - anteil) mal Stapelhoehe unter dieser Oberkante,
-   * also muss der Stapel um genau diesen Betrag nach oben — Prozente bei
-   * translateY beziehen sich auf die eigene Hoehe.
-   *
-   * Vorher stand hier ein zusaetzliches "50 -", und damit wurde der
-   * Stapel mittig gestellt statt die Figur: Wer null Trophaeen hatte,
-   * schaute auf den Feuerberg statt auf sich selbst.
-   */
-  const stil = klein
-    ? ({ '--pfad-schub': `${-(1 - anteil) * 100}%` } as CSSProperties)
-    : undefined;
+  const anteil = anteilFuer(stelle);
 
   return (
-    <div className={`pfad-stapel${klein ? ' pfad-stapel--klein' : ''}`} style={stil}>
+    <div className="pfad-stapel">
       {[...BIOME].reverse().map((biom) => (
         <img
           className="pfad-kachel"
@@ -195,13 +214,7 @@ function PfadVollbild({
   onClose: () => void;
 }): React.JSX.Element {
   const rolle = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = rolle.current;
-    if (!el) return;
-    const anteilVonUnten = stelle / BIOME.length;
-    el.scrollTop = Math.max(0, el.scrollHeight * (1 - anteilVonUnten) - el.clientHeight / 2);
-  }, [stelle]);
+  useAufFigurRichten(rolle, anteilFuer(stelle));
 
   useEffect(() => {
     const taste = (e: KeyboardEvent): void => {
