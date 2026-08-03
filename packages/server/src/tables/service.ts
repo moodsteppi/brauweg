@@ -249,7 +249,17 @@ export async function listTables(db: Db, filter: LobbyFilter) {
     for (const zeile of zeilen) namen.set(zeile.id, zeile.displayName);
   }
 
-  /** Wie viele Sonderregeln an sind - fuer die Zeile unter dem Tischnamen. */
+  /**
+   * Wie weit der Tisch von der Vorgabe abweicht - fuer die Zeile unter dem
+   * Tischnamen.
+   *
+   * Gezaehlt werden **Abweichungen**, nicht eingeschaltete Regeln. Die
+   * Vorgabe des Moduls hat selbst schon ein Dutzend Regeln an (Hochzeit,
+   * Armut, Absagen); wer die zaehlt, schreibt unter jeden Tisch "12
+   * Sonderregeln" und sagt damit nichts. Interessant ist, was jemand
+   * bewusst anders eingestellt hat - egal ob an oder aus.
+   */
+  const vorgabe = requireModule(filter.gameId).defaultConfig() as Record<string, unknown>;
   const regelSaetze = await db
     .select({ id: s.ruleSet.id, version: s.ruleSet.version, config: s.ruleSet.config })
     .from(s.ruleSet)
@@ -257,8 +267,12 @@ export async function listTables(db: Db, filter: LobbyFilter) {
   const regelZahl = new Map<string, number>();
   for (const rs of regelSaetze) {
     const config = rs.config as Record<string, unknown>;
-    const an = Object.values(config).filter((wert) => wert === true).length;
-    regelZahl.set(`${rs.id}:${rs.version}`, an);
+    let anders = 0;
+    for (const [schluessel, wert] of Object.entries(vorgabe)) {
+      if (typeof wert !== 'boolean') continue;
+      if (config[schluessel] !== wert) anders += 1;
+    }
+    regelZahl.set(`${rs.id}:${rs.version}`, anders);
   }
 
   return tables.map((table) => {

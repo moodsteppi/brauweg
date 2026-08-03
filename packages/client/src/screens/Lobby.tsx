@@ -22,7 +22,15 @@ interface Gemerkt {
   visibility?: 'public' | 'club_only';
 }
 
-const merkKey = (gameId: string): string => `tischEinstellungen.${gameId}`;
+/**
+ * Der Zaehler am Schluessel verwirft alte Staende.
+ *
+ * Version 1 hat beim ersten Tisch jede Boolesche Regel auf aus gesetzt und
+ * das dann gemerkt — auch Hochzeit und Armut. Diese Werte hat nie jemand
+ * gewaehlt, sie waren ein Fehler. Sie zu behalten hiesse, ihn jedem
+ * bestehenden Konto dauerhaft mitzugeben.
+ */
+const merkKey = (gameId: string): string => `tischEinstellungen2.${gameId}`;
 
 function gemerkteEinstellungen(gameId: string): Gemerkt | null {
   try {
@@ -72,14 +80,16 @@ export function Lobby({
         for (const [key, value] of Object.entries(merken.config)) {
           if (key in config && typeof value === typeof config[key]) config[key] = value;
         }
-      } else {
-        // Ohne gemerkte Einstellungen startet der Tisch nackt: keine Regel an.
-        // Wer Hausregeln will, schaltet sie bewusst ein - und ab dann sind sie
-        // ja gemerkt.
-        for (const [key, value] of Object.entries(config)) {
-          if (typeof value === 'boolean') config[key] = false;
-        }
       }
+      // Ohne gemerkte Einstellungen gilt die Vorgabe des Spielmoduls, also
+      // `d.config` unveraendert.
+      //
+      // Frueher wurde hier jede Boolesche Regel auf false gesetzt - "der Tisch
+      // startet nackt". Das hat aber nicht nur Hausregeln abgeschaltet,
+      // sondern auch Hochzeit und Armut: Wer zwei Kreuz-Damen hielt, bekam
+      // keine Hochzeit angeboten. Das ist kein nackter Tisch mehr, das ist
+      // kein Doppelkopf. Was aus ist, sagt der Regelsatz des Moduls - dort
+      // stehen Schmeissen und die Sonderpunkte schon auf aus.
       setConfig(config);
 
       const seatWahl =
@@ -149,7 +159,18 @@ export function Lobby({
   const flags = config
     ? Object.entries(config).filter(([, value]) => typeof value === 'boolean')
     : [];
-  const aktiveRegeln = flags.filter(([, value]) => value).length;
+  /**
+   * Gezaehlt werden Abweichungen von der Vorgabe, nicht eingeschaltete
+   * Regeln. Die Vorgabe hat selbst ein Dutzend Regeln an; "12 Sonderregeln"
+   * unter jedem Tisch sagt nichts. Interessant ist, was jemand bewusst
+   * anders eingestellt hat — egal ob an oder aus.
+   */
+  const aktiveRegeln =
+    defaults && config
+      ? flags.filter(
+          ([key, value]) => (defaults.config as Record<string, unknown>)[key] !== value,
+        ).length
+      : 0;
 
   // Filter und Suche laufen auf der geladenen Liste: Sie ist kurz, und so
   // reagiert die Auswahl ohne Rueckfrage beim Server.
