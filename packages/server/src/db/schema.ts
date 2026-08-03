@@ -23,6 +23,7 @@ import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  date,
   foreignKey,
   index,
   integer,
@@ -122,6 +123,15 @@ export const account = pgTable(
      * /api/avatars/:id, ueber die Leitung geht nur diese URL, nie die Bytes.
      */
     avatar: text(),
+    /**
+     * Geburtstag (nur Kalendertag). Pflicht bei neuen Konten; aeltere Zeilen
+     * koennen null sein, bis nachgepflegt. Fuer Countdown und Jaahresbelohnung.
+     */
+    birthday: date(),
+    /** true, sobald das Geburtstags-Pinguin-Outfit mindestens einmal geholt wurde. */
+    hasBirthdayOutfit: boolean().notNull().default(false),
+    /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
+    birthdayRewardYear: integer(),
     anonymizedAt: timestamp({ withTimezone: true }),
   },
   (t) => [

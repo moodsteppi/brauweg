@@ -3081,6 +3081,79 @@ td {
 .hub-knopf--a-gold:active {
   box-shadow: 0 1px 0 #8a6a22;
 }
+
+/* Geburtstagsbelohnung im Profil. */
+.hub-geburtstag {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #3a7fd4, #2458a8);
+  border: 2px solid rgba(255, 220, 120, 0.55);
+  box-shadow: 0 3px 0 #123570;
+}
+.hub-geburtstag.is-heute {
+  border-color: rgba(255, 224, 138, 0.95);
+  box-shadow: 0 3px 0 #8a6a22, 0 0 18px rgba(255, 210, 90, 0.35);
+}
+.hub-geburtstag-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 3.6rem;
+  height: 3.6rem;
+}
+.hub-geburtstag-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+}
+.hub-geburtstag-platzhalter {
+  position: absolute;
+  left: 50%;
+  bottom: -0.15rem;
+  transform: translateX(-50%);
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #2a1d04;
+  background: #ffe08a;
+  white-space: nowrap;
+}
+.hub-geburtstag.is-besitz .hub-geburtstag-platzhalter {
+  background: #9fe0c1;
+}
+.hub-geburtstag-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.hub-geburtstag-text strong {
+  font-size: 0.88rem;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.hub-geburtstag-text .muted {
+  font-size: 0.62rem;
+  margin: 0;
+  color: rgba(230, 242, 255, 0.88);
+}
+.hub-geburtstag-text .hub-knopf--a-gold {
+  margin-top: 0.2rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.72rem;
+}
+.hub-geburtstag-text .error {
+  margin: 0.15rem 0 0;
+  font-size: 0.65rem;
+}
 .front--hub .front-profil--b .panel,
 .front--hub .front-profil--b .panel.profile {
   background: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);

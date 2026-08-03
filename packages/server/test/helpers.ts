@@ -103,6 +103,7 @@ export async function createVerifiedAccount(
     password: 'geheim-genug-1234',
     displayName,
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
   const accountId = await verifyEmail(ctx.db, ctx.mailer.tokenFrom(email));
   return { accountId, email };

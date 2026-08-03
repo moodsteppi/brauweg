@@ -120,6 +120,7 @@ export function GameSelect({
           <ProfilTab
             me={me}
             onAvatarChange={onAvatarChange}
+            onMeChange={onAvatarChange}
             onSignOut={onSignOut}
             onBald={setBald}
           />
@@ -267,16 +268,19 @@ function Clan({
  * Profil-Tab: Kopf, Pokal-Hero, Raster und Je Spiel (Entwurf A).
  *
  * Die Zahlen kommen aus me.stats und sind ehrlich — auch wenn überall Null
- * steht. Sammlung bleibt Attrappe und sagt das auch.
+ * steht. Geburtstag: Countdown und einmal im Jahr die Outfit-Belohnung.
  */
 function ProfilTab({
   me,
   onAvatarChange,
+  onMeChange,
   onSignOut,
   onBald,
 }: {
   me: Me;
   onAvatarChange: () => void;
+  /** Nach Claim u. a. /api/me neu laden. */
+  onMeChange: () => void;
   onSignOut: () => void;
   onBald: (name: string) => void;
 }): React.JSX.Element {
@@ -284,6 +288,8 @@ function ProfilTab({
   const siege = me.stats.reduce((sum, s) => sum + s.wins, 0);
   const trophaeen = me.stats.reduce((sum, s) => sum + s.trophies, 0);
   const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '–';
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.png', name: 'Partien', wert: partien },
@@ -291,6 +297,28 @@ function ProfilTab({
     { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
     { icon: '/hub/tab-blatt.png', name: 'Blätter', wert: DECKS.length },
   ];
+
+  const geburtstagText = (() => {
+    if (me.daysUntilBirthday === null) return 'Geburtstag noch nicht hinterlegt';
+    if (me.daysUntilBirthday === 0) return 'Heute ist dein Geburtstag!';
+    if (me.daysUntilBirthday === 1) return 'Noch 1 Tag bis zum Geburtstag';
+    return `Noch ${me.daysUntilBirthday} Tage bis zum Geburtstag`;
+  })();
+
+  const claimReward = (): void => {
+    if (claimBusy) return;
+    setClaimBusy(true);
+    setClaimError(null);
+    void api
+      .claimBirthdayReward()
+      .then(() => onMeChange())
+      .catch((err: unknown) => {
+        setClaimError(
+          err instanceof ApiError ? t(err.messageKey) : 'Belohnung konnte nicht geholt werden.',
+        );
+      })
+      .finally(() => setClaimBusy(false));
+  };
 
   return (
     <HubSzene bg="/hub/bg-profil.png" className="front-profil front-profil--a">
@@ -300,12 +328,45 @@ function ProfilTab({
         <ProfilBild me={me} onChanged={onAvatarChange} />
         <div className="hub-profilkopf-text">
           <strong>{me.displayName}</strong>
-          <span className="muted">Spieler seit dem ersten Spiel</span>
+          <span className="muted">{geburtstagText}</span>
         </div>
         <span className="front-level front-level--hub" aria-label="Level 0">
           0
         </span>
       </div>
+
+      <section
+        className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
+      >
+        <div className="hub-geburtstag-art">
+          <img
+            src="/hub/pinguin-geburtstag.png"
+            alt=""
+            draggable={false}
+          />
+          <span className="hub-geburtstag-platzhalter">Platzhalter</span>
+        </div>
+        <div className="hub-geburtstag-text">
+          <strong>Geburtstags-Pinguin</strong>
+          {me.birthdayRewardClaimable ? (
+            <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
+          ) : me.hasBirthdayOutfit ? (
+            <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
+          ) : (
+            <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
+          )}
+          {me.birthdayRewardClaimable ? (
+            <button
+              className="hub-knopf hub-knopf--a-gold"
+              disabled={claimBusy}
+              onClick={claimReward}
+            >
+              {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
+            </button>
+          ) : null}
+          {claimError && <p className="error">{claimError}</p>}
+        </div>
+      </section>
 
       <StatHero wert={trophaeen} />
 

@@ -76,6 +76,14 @@ export interface Me {
   cardDeck: string;
   /** URL des eigenen Profilbilds, oder null. */
   avatarUrl: string | null;
+  /** ISO-Kalendertag oder null bei Altkonten. */
+  birthday: string | null;
+  /** Tage bis zum naechsten Geburtstag; 0 = heute. */
+  daysUntilBirthday: number | null;
+  birthdayToday: boolean;
+  birthdayRewardClaimable: boolean;
+  /** Geburtstags-Pinguin schon mindestens einmal geholt. */
+  hasBirthdayOutfit: boolean;
   stats: { gameId: string; trophies: number; parties: number; wins: number }[];
   clubs: { id: string; name: string }[];
   activeTable: ActiveTable | null;
@@ -146,6 +154,7 @@ export const api = {
     password: string;
     displayName: string;
     inviteCode: string;
+    birthday: string;
   }) => post<{ ok: true }>('/auth/register', body),
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
@@ -157,6 +166,8 @@ export const api = {
   setCardDeck: (cardDeck: string) => patch<{ ok: true }>('/me', { cardDeck }),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
+  /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */
+  claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   deleteMe: () => request<{ ok: true }>('/me', { method: 'DELETE' }),
 
   games: () => request<GameSummary[]>('/games'),

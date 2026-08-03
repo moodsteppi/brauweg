@@ -24,6 +24,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [birthday, setBirthday] = useState('');
   const [token, setToken] = useState(
     () => new URLSearchParams(location.search).get('token') ?? '',
   );
@@ -98,7 +99,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         return;
       }
       if (mode === 'register') {
-        await api.register({ email, password, displayName, inviteCode });
+        await api.register({ email, password, displayName, inviteCode, birthday });
         setNote(
           'Wir haben dir eine E-Mail geschickt. Bestätige die Adresse, dann kannst du dich anmelden.',
         );
@@ -140,6 +141,17 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
                 onChange={(e) => setInviteCode(e.target.value)}
                 required
               />
+            </label>
+            <label>
+              Geburtstag
+              <input
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                required
+                max={new Date().toISOString().slice(0, 10)}
+              />
+              <span className="muted">Mindestens 16 Jahre. Für Countdown und Belohnung.</span>
             </label>
           </>
         )}

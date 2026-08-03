@@ -51,6 +51,7 @@ test('Registrierung braucht einen gueltigen Einladungscode', async (t) => {
         password: PASSWORD,
         displayName: 'Anna',
         inviteCode: 'FALSCH',
+        birthday: '1990-06-15',
       }),
     (err: AppError) => err.code === 'inviteCodeInvalid',
   );
@@ -70,6 +71,7 @@ test('der Einladungscode gilt nur so oft wie erlaubt', async (t) => {
         password: PASSWORD,
         displayName: 'Cara',
         inviteCode: INVITE,
+        birthday: '1990-06-15',
       }),
     (err: AppError) => err.code === 'inviteCodeInvalid',
   );
@@ -84,6 +86,7 @@ test('vor der Bestaetigung ist keine Anmeldung moeglich', async (t) => {
     password: PASSWORD,
     displayName: 'Anna',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
 
   await assert.rejects(
@@ -105,6 +108,7 @@ test('ein Bestaetigungstoken gilt nur einmal', async (t) => {
     password: PASSWORD,
     displayName: 'Anna',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
   const token = ctx.mailer.tokenFrom('anna@example.org');
 
@@ -128,6 +132,7 @@ test('ein gescheiterter Versand wirft die Registrierung nicht um', async (t) => 
     password: PASSWORD,
     displayName: 'Anna',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
 
   // Das Konto ist da. Waere hier durchgeworfen worden, saesse die Person in
@@ -150,6 +155,7 @@ test('der Bestaetigungslink laesst sich erneut anfordern', async (t) => {
     password: PASSWORD,
     displayName: 'Anna',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
   assert.equal(ctx.mailer.sent.length, 0, 'die erste Mail ging verloren');
 
@@ -170,6 +176,7 @@ test('der neue Link entwertet den alten', async (t) => {
     password: PASSWORD,
     displayName: 'Anna',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
   const alt = ctx.mailer.tokenFrom('anna@example.org');
 
@@ -199,6 +206,7 @@ test('die Sperrfrist verhindert das Zumuellen fremder Postfaecher', async (t) =>
     password: PASSWORD,
     displayName: 'Anna',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
   const vorher = ctx.mailer.sent.length;
 
@@ -248,6 +256,7 @@ test('Anzeigename und Adresse sind eindeutig', async (t) => {
         password: PASSWORD,
         displayName: 'Anna',
         inviteCode: INVITE,
+        birthday: '1990-06-15',
       }),
     (err: AppError) => err.code === 'displayNameTaken',
   );
@@ -259,6 +268,7 @@ test('Anzeigename und Adresse sind eindeutig', async (t) => {
         password: PASSWORD,
         displayName: 'Andere',
         inviteCode: INVITE,
+        birthday: '1990-06-15',
       }),
     (err: AppError) => err.code === 'emailTaken',
   );
@@ -333,6 +343,7 @@ test('eine gescheiterte Registrierung verbraucht keine Einladung', async (t) => 
     password: PASSWORD,
     displayName: 'Anna',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
 
   // Derselbe Anzeigename: schlaegt fehl, darf aber nichts kosten.
@@ -344,6 +355,7 @@ test('eine gescheiterte Registrierung verbraucht keine Einladung', async (t) => 
           password: PASSWORD,
           displayName: 'Anna',
           inviteCode: INVITE,
+          birthday: '1990-06-15',
         }),
       (err: AppError) => err.code === 'displayNameTaken',
     );
@@ -361,6 +373,7 @@ test('eine gescheiterte Registrierung verbraucht keine Einladung', async (t) => 
     password: PASSWORD,
     displayName: 'Bert',
     inviteCode: INVITE,
+    birthday: '1990-06-15',
   });
 });
 

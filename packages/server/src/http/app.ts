@@ -17,7 +17,7 @@ import type { GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
-import { AppError, RuleSetInvalidError, badRequest, notFound, unauthorized } from '../errors.js';
+import { AppError, RuleSetInvalidError, badRequest, conflict, notFound, unauthorized } from '../errors.js';
 import {
   type AuthDeps,
   anonymizeAccount,
@@ -30,6 +30,12 @@ import {
   sessionFromToken,
   verifyEmail,
 } from '../auth/service.js';
+import {
+  berlinToday,
+  birthdayRewardClaimable,
+  daysUntilBirthday,
+  isBirthdayToday,
+} from '../birthday.js';
 import { CARD_DECKS } from '../decks.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
@@ -76,6 +82,8 @@ const registerSchema = z.object({
   password: z.string().min(12).max(200),
   displayName: z.string().min(2).max(30),
   inviteCode: z.string().min(1),
+  /** Kalendertag YYYY-MM-DD — Mindestalter prueft der Auth-Service. */
+  birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
 const createTableSchema = z.object({
@@ -341,6 +349,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         coins: s.account.coins,
         premiumUntil: s.account.premiumUntil,
         cardDeck: s.account.cardDeck,
+        birthday: s.account.birthday,
+        hasBirthdayOutfit: s.account.hasBirthdayOutfit,
+        birthdayRewardYear: s.account.birthdayRewardYear,
         // Nur, OB ein Bild vorliegt — die Bytes gehen nie mit /api/me raus,
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
@@ -358,14 +369,46 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const clubs = await clubsFor(deps.db, accountId);
     const activeTable = await activeTableFor(deps.db, accountId);
 
-    const { hasAvatar, ...rest } = account;
+    const { hasAvatar, birthdayRewardYear, ...rest } = account;
+    const birthday = account.birthday ?? null;
     return reply.send({
       ...rest,
+      birthday,
+      daysUntilBirthday: birthday ? daysUntilBirthday(birthday) : null,
+      birthdayToday: birthday ? isBirthdayToday(birthday) : false,
+      birthdayRewardClaimable: birthdayRewardClaimable(birthday, birthdayRewardYear),
       avatarUrl: hasAvatar ? `/api/avatars/${account.id}` : null,
       stats,
       clubs,
       activeTable,
     });
+  });
+
+  /**
+   * Geburtstagsbelohnung einsammeln: Pinguin im Geburtstagsoutfit.
+   * Nur am eigenen Geburtstag, einmal pro Kalenderjahr.
+   */
+  app.post('/api/me/birthday-reward', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const [account] = await deps.db
+      .select({
+        birthday: s.account.birthday,
+        birthdayRewardYear: s.account.birthdayRewardYear,
+      })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!account) throw notFound('accountUnknown');
+    if (!account.birthday) throw badRequest('birthdayMissing');
+    if (!isBirthdayToday(account.birthday)) throw badRequest('birthdayNotToday');
+    const year = berlinToday().y;
+    if (account.birthdayRewardYear === year) throw conflict('birthdayAlreadyClaimed');
+
+    await deps.db
+      .update(s.account)
+      .set({ hasBirthdayOutfit: true, birthdayRewardYear: year })
+      .where(eq(s.account.id, accountId));
+
+    return reply.send({ ok: true, item: 'pinguin_geburtstag' });
   });
 
   /**

@@ -7,6 +7,7 @@
 
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
+import { assertValidBirthday } from '../birthday.js';
 import { ensureBetaClubMembership } from '../clubs/service.js';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
@@ -36,6 +37,8 @@ export interface RegisterInput {
   readonly password: string;
   readonly displayName: string;
   readonly inviteCode: string;
+  /** ISO-Kalendertag YYYY-MM-DD. */
+  readonly birthday: string;
 }
 
 export interface SessionInfo {
@@ -76,6 +79,7 @@ export async function register(
   const { db } = deps;
   const email = normalizeEmail(input.email);
   const displayName = input.displayName.trim();
+  const birthday = assertValidBirthday(input.birthday);
 
   const passwordHash = await hashPassword(input.password);
 
@@ -106,7 +110,7 @@ export async function register(
     try {
       const [row] = await tx
         .insert(s.account)
-        .values({ email, passwordHash, displayName })
+        .values({ email, passwordHash, displayName, birthday })
         .returning({ id: s.account.id });
       return row!.id;
     } catch (err) {
@@ -444,6 +448,7 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
       passwordHash: null,
       emailVerifiedAt: null,
       displayName: `geloescht-${accountId.slice(0, 8)}`,
+      birthday: null,
       anonymizedAt: now,
     })
     .where(eq(s.account.id, accountId));
