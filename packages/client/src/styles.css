@@ -4811,3 +4811,94 @@ main.auth > .muted {
 .hub-loeschen .hub-knopfreihe {
   margin-top: 1rem;
 }
+
+/* =========================================================================
+   Gemalte Menueblaetter.
+
+   Sieben Bilder tragen ab hier jedes Blatt, jeden Knopf, jedes Eingabefeld
+   und den Umschalter. Technik: border-image mit "fill", damit auch die
+   Mitte gemalt ist und nicht nur der Rahmen.
+
+   Das Randmass im Bild (96 px beim Blatt, 40 px bei den Knoepfen) wird ueber
+   border-image-width: 1 auf die tatsaechliche border-width heruntergerechnet.
+   Ohne diese Skalierung sae/e auf einem 340 px breiten Blatt ein 96 px
+   dicker Rahmen - also fast nur noch Rahmen.
+
+   Diese Regeln stehen bewusst am Dateiende: Sie sollen die flachen
+   Farbflaechen weiter oben ueberschreiben, und genau das tut die spaetere
+   Regel bei gleicher Spezifitaet.
+   ========================================================================= */
+
+.doko-sheet-card {
+  background: none;
+  border: 20px solid transparent;
+  border-image: url(/hub/menue-blatt.webp) 96 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.6rem 0.7rem 0.8rem;
+}
+
+/* Die Knoepfe: gleiche Form, drei Bedeutungen. Farbe und Schatten kommen
+   jetzt aus dem Bild, nicht mehr aus Verlauf und box-shadow. */
+.hub-knopf--a,
+.hub-knopf {
+  background: none;
+  border: 14px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  box-shadow: none;
+  color: #f4e9d4;
+}
+.hub-knopf--a-gold,
+.hub-knopf--gold {
+  border-image-source: url(/hub/menue-knopf-gruen.webp);
+  color: #eafaf0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.hub-knopf--a-raus,
+.hub-knopf--raus {
+  border-image-source: url(/hub/menue-knopf-rot.webp);
+  color: #ffe9e4;
+}
+/* Gedrueckt: ein Hauch kleiner statt eines wandernden Schattens - der
+   Schatten steckt jetzt im Bild und kann nicht mehr verschoben werden. */
+.hub-knopf:active,
+.hub-knopf--a:active,
+.hub-knopf--a-gold:active,
+.hub-knopf--a-raus:active {
+  box-shadow: none;
+  transform: translateY(1px) scale(0.985);
+}
+.hub-knopf:disabled {
+  filter: saturate(0.5) brightness(0.75);
+}
+
+/* Eingabefelder: die eingelassene Rille. */
+.clan-feld input,
+.hub-loeschen input {
+  background: none;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.15rem 0.2rem;
+}
+
+/* Der Umschalter mit zwei Seiten. */
+.lobby-chip {
+  background: none;
+  border: 14px solid transparent;
+  border-image: url(/hub/menue-schalter-aus.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.1rem 0;
+  color: rgba(240, 232, 214, 0.7);
+}
+.lobby-chip.is-an {
+  border-image-source: url(/hub/menue-schalter-an.webp);
+  color: #fff3d6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-knopf:active,
+  .hub-knopf--a:active,
+  .hub-knopf--a-gold:active,
+  .hub-knopf--a-raus:active { transform: none; }
+}
