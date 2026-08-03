@@ -14,16 +14,32 @@ export async function hashPassword(plain: string): Promise<string> {
   return argonHash(plain);
 }
 
+/**
+ * Vergleichshash fuer den Fall "Konto gibt es nicht".
+ *
+ * Ohne ihn kehrt die Pruefung sofort zurueck, waehrend ein echtes Konto rund
+ * eine Zehntelsekunde Argon2 kostet. Dieser Unterschied ist ueber das Netz
+ * messbar und macht die Anmeldung zum Verzeichnis aller registrierten
+ * Adressen. Also wird auch dann gerechnet - nur eben gegen einen Hash, der
+ * zu keinem Passwort passt.
+ */
+let blindHash: Promise<string> | null = null;
+function blindvergleich(): Promise<string> {
+  blindHash ??= hashPassword(randomBytes(32).toString('base64url'));
+  return blindHash;
+}
+
 export async function verifyPassword(
   stored: string | null,
   plain: string,
 ): Promise<boolean> {
   // Anonymisierte Konten haben keinen Hash mehr. Sie duerfen sich nicht
-  // anmelden, aber der Aufrufer soll nicht am Fehlertyp erkennen, ob es das
-  // Konto gibt.
-  if (!stored) return false;
+  // anmelden, aber der Aufrufer soll weder am Fehlertyp noch an der Dauer
+  // erkennen, ob es das Konto gibt.
+  const ziel = stored ?? (await blindvergleich());
   try {
-    return await argonVerify(stored, plain);
+    const passt = await argonVerify(ziel, plain);
+    return stored === null ? false : passt;
   } catch {
     return false;
   }

@@ -10,14 +10,16 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Server } from 'node:http';
+import { z } from 'zod';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
-import { AppError } from '../errors.js';
+import { AppError, forbidden } from '../errors.js';
 import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
 import { isReadyToStart, setSeatBot, tableWithSeats } from '../tables/service.js';
 import { requireModule } from '../games/registry.js';
+import { requireClubMember } from '../clubs/service.js';
 import {
   ENVELOPE_VERSION,
   type ClientMessage,
@@ -30,7 +32,52 @@ interface Connection {
   readonly socket: WebSocket;
   readonly accountId: string;
   tableId: string | null;
+  /** Beginn des laufenden Ratenfensters. */
+  fensterStart: number;
+  imFenster: number;
 }
+
+/** Hoechstens so viele offene Verbindungen je Konto. */
+const VERBINDUNGEN_JE_KONTO = 8;
+const NACHRICHTEN_FENSTER_MS = 10_000;
+const NACHRICHTEN_JE_FENSTER = 120;
+
+/**
+ * Form jeder eingehenden Nachricht.
+ *
+ * Vorher wurde nur die Versionsnummer geprueft und alles andere
+ * durchgereicht - eine erfundene tableId landete so als Datenbankfehler im
+ * Log, ein erfundener Sitz als Regelverstoss tief in der Engine.
+ */
+const clientMessageSchema = z.discriminatedUnion('type', [
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('join'),
+    tableId: z.string().uuid(),
+    moduleVersion: z.number().int().min(0).max(1000),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('action'),
+    tableId: z.string().uuid(),
+    action: z.unknown(),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('leave'),
+    tableId: z.string().uuid().optional(),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.enum(['addBot', 'removeBot']),
+    tableId: z.string().uuid(),
+    seat: z.number().int().min(0).max(7),
+  }),
+]);
 
 /** Liest das Sitzungs-Cookie aus dem Handshake. */
 function cookieValue(header: string | undefined, name: string): string | undefined {
@@ -44,6 +91,12 @@ function cookieValue(header: string | undefined, name: string): string | undefin
 
 export interface GatewayOptions {
   readonly cookieName?: string;
+  /**
+   * Erlaubte Herkunft des Handshakes. Das Sitzungs-Cookie ist `sameSite:
+   * lax`, deshalb schicken heutige Browser es bei fremder Herkunft ohnehin
+   * nicht mit - diese Pruefung ist die zweite Schicht.
+   */
+  readonly allowedOrigin?: string;
   /**
    * Sitzungspruefung. Injizierbar, damit sich im Test deterministisch
    * nachstellen laesst, dass sie dauert - genau dann entstand die Luecke, in
@@ -68,8 +121,17 @@ export class Gateway {
     this.cookieName = options.cookieName ?? 'brauweg_session';
     this.lookupSession =
       options.lookupSession ?? ((token) => sessionFromToken(this.db, token));
-    this.wss = new WebSocketServer({ server, path: '/ws' });
+    // maxPayload: ohne Grenze nimmt ws bis 100 MiB je Nachricht an - ein
+    // Dutzend davon beendet den Prozess. Der groesste echte Zug bleibt weit
+    // unter einem Kilobyte.
+    this.wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
+    const erlaubt = options.allowedOrigin;
     this.wss.on('connection', (socket, request) => {
+      const herkunft = request.headers.origin;
+      if (erlaubt && herkunft && herkunft !== erlaubt) {
+        socket.close();
+        return;
+      }
       this.accept(socket, request.headers.cookie);
     });
     this.runtime.onUpdate((tableId) => {
@@ -125,7 +187,28 @@ export class Gateway {
         return;
       }
 
-      const accepted: Connection = { socket, accountId: session.accountId, tableId: null };
+      // Ein Konto, ein paar Geraete - mehr braucht niemand. Ohne Grenze
+      // konnte ein einziges Konto tausende Verbindungen offenhalten und
+      // damit Speicher und Datenbankpool belegen.
+      let offen = 0;
+      for (const vorhanden of this.connections) {
+        if (vorhanden.accountId === session.accountId) offen += 1;
+      }
+      if (offen >= VERBINDUNGEN_JE_KONTO) {
+        rejected = true;
+        queued.length = 0;
+        send(socket, errorMessage('tooManyConnections'));
+        socket.close();
+        return;
+      }
+
+      const accepted: Connection = {
+        socket,
+        accountId: session.accountId,
+        tableId: null,
+        fensterStart: Date.now(),
+        imFenster: 0,
+      };
       this.connections.add(accepted);
       connection = accepted;
 
@@ -144,18 +227,45 @@ export class Gateway {
   }
 
   private async handle(connection: Connection, raw: string): Promise<void> {
-    let message: ClientMessage;
+    // Nachrichtenrate je Verbindung. Ohne sie kann eine einzige Verbindung
+    // mit join-Nachrichten den Datenbankpool auslasten.
+    const jetzt = Date.now();
+    if (jetzt - connection.fensterStart > NACHRICHTEN_FENSTER_MS) {
+      connection.fensterStart = jetzt;
+      connection.imFenster = 0;
+    }
+    connection.imFenster += 1;
+    if (connection.imFenster > NACHRICHTEN_JE_FENSTER) {
+      send(connection.socket, errorMessage('tooManyMessages'));
+      connection.socket.close();
+      return;
+    }
+
+    let roh: unknown;
     try {
-      message = JSON.parse(raw) as ClientMessage;
+      roh = JSON.parse(raw);
     } catch {
       send(connection.socket, errorMessage('malformedMessage'));
       return;
     }
 
-    if (message.v !== ENVELOPE_VERSION) {
-      send(connection.socket, errorMessage('protocolVersionUnsupported'));
+    // Erst pruefen, dann anfassen: Frueher ging jedes Feld ungeprueft in die
+    // Tischverwaltung, und eine erfundene tableId landete als Datenbankfehler
+    // im Log statt als saubere Ablehnung.
+    const geprueft = clientMessageSchema.safeParse(roh);
+    if (!geprueft.success) {
+      const v = (roh as { v?: unknown } | null)?.v;
+      send(
+        connection.socket,
+        errorMessage(
+          v !== undefined && v !== ENVELOPE_VERSION
+            ? 'protocolVersionUnsupported'
+            : 'malformedMessage',
+        ),
+      );
       return;
     }
+    const message: ClientMessage = geprueft.data as ClientMessage;
 
     try {
       switch (message.type) {
@@ -192,7 +302,7 @@ export class Gateway {
     connection: Connection,
     message: Extract<ClientMessage, { type: 'join' }>,
   ): Promise<void> {
-    const { table } = await tableWithSeats(this.db, message.tableId);
+    const { table, seats } = await tableWithSeats(this.db, message.tableId);
 
     // Mindestversion wird beim Beitritt erzwungen, nicht mitten in der Partie.
     const expected = requireModule(table.gameId).protocolVersion;
@@ -200,6 +310,35 @@ export class Gateway {
       send(connection.socket, errorMessage('clientTooOld'));
       connection.socket.close();
       return;
+    }
+
+    /**
+     * Wer darf zusehen?
+     *
+     * Vorher niemand geprueft: Mit einer fremden Tisch-Kennung bekam jeder
+     * Angemeldete dauerhaft Sitzbelegung, Spielstand und Stiche eines
+     * privaten Clantisches - und sein Beitritt startete den Tisch sogar,
+     * bevor die Eingeladenen da waren. Handkarten waren nie betroffen, die
+     * Zuschauersicht entfernt sie.
+     */
+    const sitzt = seats.some((seat) => seat.accountId === connection.accountId);
+    if (!sitzt) {
+      if (table.visibility === 'club_only') {
+        if (!table.clubId) throw forbidden('notSeated');
+        await requireClubMember(this.db, table.clubId, connection.accountId);
+      } else if (table.visibility === 'on_request') {
+        throw forbidden('notSeated');
+      }
+    }
+
+    // Alten Raum verlassen. Ohne das blieb die Verbindung nach einem
+    // Tischwechsel im vorherigen Raum eingetragen, bekam dessen Rundrufe
+    // weiter und hinterliess bei jedem Wechsel einen Eintrag mehr.
+    if (connection.tableId && connection.tableId !== message.tableId) {
+      const alt = this.byTable.get(connection.tableId);
+      alt?.delete(connection);
+      if (alt && alt.size === 0) this.byTable.delete(connection.tableId);
+      this.runtime.setPresence(connection.tableId, connection.accountId, false);
     }
 
     // Erst in den Raum, dann alles Weitere. Ein Tisch, der noch auf Mitspieler
@@ -214,7 +353,8 @@ export class Gateway {
     room.add(connection);
 
     this.runtime.setPresence(message.tableId, connection.accountId, true);
-    await this.ensureStarted(message.tableId);
+    // Nur wer selbst sitzt, darf einen Tisch anlaufen lassen.
+    if (sitzt) await this.ensureStarted(message.tableId);
     await this.sendState(message.tableId, [connection]);
   }
 
