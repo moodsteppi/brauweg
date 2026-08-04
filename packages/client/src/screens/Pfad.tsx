@@ -93,6 +93,15 @@ function aktuellesBiom(trophies: number): Biom {
  * Kleines Fenster und Vollbild teilen sich diesen Weg, damit sie nicht
  * auseinanderlaufen können.
  */
+/**
+ * Wo die Figur im Fenster sitzt, gemessen von oben. 2/3 heisst: unteres
+ * Drittel. Bewusst NICHT die Mitte - der Pinguin soll unten stehen und
+ * hoechstens bis an die Grenze des unteren Drittels steigen, nie in die
+ * Mitte. Am Anfang (wenig Troph.) begrenzt der Browser den Rollstand ohnehin
+ * so, dass er ganz unten steht.
+ */
+const FIGUR_VON_OBEN = 2 / 3;
+
 function useAufFigurRichten(
   ziel: React.RefObject<HTMLDivElement | null>,
   anteilVonUnten: number,
@@ -101,7 +110,7 @@ function useAufFigurRichten(
     const el = ziel.current;
     if (!el) return;
     const richten = (): void => {
-      el.scrollTop = el.scrollHeight * (1 - anteilVonUnten) - el.clientHeight / 2;
+      el.scrollTop = el.scrollHeight * (1 - anteilVonUnten) - el.clientHeight * FIGUR_VON_OBEN;
     };
     richten();
     // Nach dem Laden der Kacheln nochmal: Vorher steht die Höhe des
