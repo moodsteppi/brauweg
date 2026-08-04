@@ -12,7 +12,7 @@ import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
 import { gameTypeLabel, t } from '../i18n';
-import type { Action, Card } from '../protocol';
+import type { Action, Card, RoundResult } from '../protocol';
 import {
   Avatar,
   HandCard,
@@ -157,7 +157,7 @@ export function Table({
       setFrozenKey(lastKey);
       const handle = setTimeout(
         () => setFrozenKey((k) => (k === lastKey ? null : k)),
-        1000,
+        1600,
       );
       return () => clearTimeout(handle);
     }
@@ -258,6 +258,50 @@ export function Table({
 
   // Beim Verlassen des Tisches alle noch offenen Blasen-Timer abraeumen.
   useEffect(() => () => blasenTimer.current.forEach(clearTimeout), []);
+
+  /**
+   * Rundenabschluss auf dem Filz:
+   * 1) kurzer Stichstapel-Blick, 2) Auswertung, 3) Zwischenstand.
+   *
+   * Alles rein clientseitig aus `round.phase === 'finished'`, `round.result`
+   * und `view.scores`.
+   */
+  const finishedKey = (() => {
+    const r = view?.view.round;
+    if (!r || r.phase !== 'finished' || !r.result) return null;
+    return `${view.view.roundIndex}:${r.result.value}:${Object.values(r.result.scores).join('.')}`;
+  })();
+  const [showTrickPeek, setShowTrickPeek] = useState(false);
+  const [abschlussStep, setAbschlussStep] = useState<'none' | 'abrechnung' | 'zwischenstand'>('none');
+  const gesehenAbschluss = useRef<string | null>(null);
+  useEffect(() => {
+    if (!finishedKey) {
+      setShowTrickPeek(false);
+      setAbschlussStep('none');
+      return;
+    }
+    if (gesehenAbschluss.current === finishedKey) return;
+    gesehenAbschluss.current = finishedKey;
+
+    if (prefersReducedMotion()) {
+      setAbschlussStep('abrechnung');
+      return;
+    }
+
+    setShowTrickPeek(true);
+    const peek = window.setTimeout(() => {
+      setShowTrickPeek(false);
+      setAbschlussStep('abrechnung');
+    }, 1500);
+    return () => window.clearTimeout(peek);
+  }, [finishedKey, view?.view.round]);
+
+  // Fallback-Autofluss, falls niemand auf "Weiter" tippt.
+  useEffect(() => {
+    if (abschlussStep !== 'abrechnung') return;
+    const t = window.setTimeout(() => setAbschlussStep('zwischenstand'), 10_000);
+    return () => window.clearTimeout(t);
+  }, [abschlussStep]);
 
   /**
    * Name als Weg zum Profil, wo ein Konto dahintersteht. Bots und freie
@@ -406,6 +450,9 @@ export function Table({
   const needHandover =
     round?.armut.awaiting === 'handover' &&
     !otherActions.some((a) => a.type === 'armutHandover');
+  const roundResult = round?.phase === 'finished' && round.result ? round.result : null;
+  const abrechnungOffen = abschlussStep === 'abrechnung' && roundResult !== null;
+  const zwischenstandOffen = abschlussStep === 'zwischenstand' && roundResult !== null;
 
   return (
     <div className="doko" style={{ '--zoom': zoom } as React.CSSProperties}>
@@ -505,6 +552,7 @@ export function Table({
             ansage={ansageVon(round, seat)}
             sagt={blasen[seat] ?? null}
             tricksWon={round?.trickCounts?.[seat] ?? 0}
+            showTrickPeek={showTrickPeek}
             avatarUrl={avatarOf(seat)}
             deck={deck}
           />
@@ -584,6 +632,24 @@ export function Table({
         <VorbehaltDialog actions={vorbehaltActions} onSend={send} />
       )}
 
+      {abrechnungOffen && roundResult && (
+        <RundenAbrechnung
+          result={roundResult}
+          seats={seatList.map((s) => ({ seat: s.seat, name: nameOf(s.seat), avatarUrl: avatarOf(s.seat) }))}
+          knownParties={round?.knownParties ?? {}}
+          onWeiter={() => setAbschlussStep('zwischenstand')}
+        />
+      )}
+
+      {zwischenstandOffen && (
+        <ZwischenstandBlatt
+          seats={seatList.map((s) => ({ seat: s.seat, name: nameOf(s.seat), avatarUrl: avatarOf(s.seat) }))}
+          scores={view.view.scores}
+          restRunden={Math.max(0, view.view.totalRounds - view.view.roundIndex - 1)}
+          onWeiter={() => setAbschlussStep('none')}
+        />
+      )}
+
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
 
       {zeigeLetzten && round?.lastTrick && (
@@ -636,7 +702,9 @@ export function Table({
           </span>
         </div>
         {view.seat !== null && (
-          <StichStapel count={round?.trickCounts?.[view.seat] ?? 0} />
+          <span className={showTrickPeek ? 'doko-stiche-wrap is-peek' : 'doko-stiche-wrap'}>
+            <StichStapel count={round?.trickCounts?.[view.seat] ?? 0} />
+          </span>
         )}
         {view.currentActor === view.seat && view.turnDeadline !== null && (
           <TurnClock deadline={view.turnDeadline} />
@@ -709,6 +777,7 @@ const OpponentSeat = memo(function OpponentSeat({
   ansage,
   sagt,
   tricksWon,
+  showTrickPeek,
   avatarUrl,
   deck,
 }: {
@@ -731,6 +800,7 @@ const OpponentSeat = memo(function OpponentSeat({
   /** Kurzer Zuruf, verschwindet nach ein paar Sekunden von selbst. */
   sagt: string | null;
   tricksWon: number;
+  showTrickPeek: boolean;
   avatarUrl: string | null;
   deck: Deck;
 }): React.JSX.Element {
@@ -771,7 +841,9 @@ const OpponentSeat = memo(function OpponentSeat({
           rechts liegen sie quer (siehe CSS is-vertical). */}
       <Ruecken count={count} vertical={vertical} deck={deck} />
       <span className="doko-opp-score">{score}</span>
-      <StichStapel count={tricksWon} />
+      <span className={showTrickPeek ? 'doko-stiche-wrap is-peek' : 'doko-stiche-wrap'}>
+        <StichStapel count={tricksWon} />
+      </span>
     </div>
   );
 });
@@ -1201,4 +1273,176 @@ function ansageVon(
   const meine = (round?.ansagen ?? []).filter((a) => a.seat === seat);
   const hoechste = meine.reduce((m, a) => Math.max(m, a.level), 0);
   return hoechste > 0 ? (ABSAGE_NAMEN[hoechste - 1] ?? null) : null;
+}
+
+type SitzInfo = { seat: number; name: string; avatarUrl: string | null };
+
+function RundenAbrechnung({
+  result,
+  seats,
+  knownParties,
+  onWeiter,
+}: {
+  result: RoundResult;
+  seats: SitzInfo[];
+  knownParties: Record<number, string>;
+  onWeiter: () => void;
+}): React.JSX.Element {
+  const reSeats = seats.filter((s) => knownParties[s.seat] === 're');
+  const kontraSeats = seats.filter((s) => knownParties[s.seat] !== 're');
+  const reGewinnt = result.winner === 're';
+  const kontraGewinnt = result.winner === 'kontra';
+  return (
+    <div className="doko-sheet doko-sheet--mitte doko-sheet--abrechnung">
+      <div className="doko-sheet-card doko-abrechnung">
+        <h2>Auswertung</h2>
+        <div className="doko-abrechnung-spalten">
+          <ParteiSpalte
+            title="Re"
+            klasse="re"
+            members={reSeats}
+            points={result.rePoints}
+            specialRows={specialRowsOf(result, 're')}
+            total={roundValueOf(result, reSeats, true)}
+            isWinner={reGewinnt}
+          />
+          <ParteiSpalte
+            title="Kontra"
+            klasse="kontra"
+            members={kontraSeats}
+            points={result.kontraPoints}
+            specialRows={specialRowsOf(result, 'kontra')}
+            total={roundValueOf(result, kontraSeats, false)}
+            isWinner={kontraGewinnt}
+          />
+        </div>
+        <button className="primary" onClick={onWeiter}>
+          Weiter
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ParteiSpalte({
+  title,
+  klasse,
+  members,
+  points,
+  specialRows,
+  total,
+  isWinner,
+}: {
+  title: string;
+  klasse: 're' | 'kontra';
+  members: SitzInfo[];
+  points: number;
+  specialRows: string[];
+  total: number;
+  isWinner: boolean;
+}): React.JSX.Element {
+  return (
+    <section className={`doko-abr-partei is-${klasse}${isWinner ? ' is-winner' : ''}`}>
+      <header>{title}</header>
+      <div className="doko-abr-team">
+        {members.map((s) => (
+          <span key={s.seat} className={`doko-abr-spieler is-${klasse}`}>
+            <Avatar
+              name={s.name}
+              seatIndex={s.seat}
+              active={false}
+              deadline={null}
+              avatarUrl={s.avatarUrl}
+            />
+            <b>{s.name}</b>
+          </span>
+        ))}
+      </div>
+      <div className="doko-abr-rows">
+        <div>
+          <span>Kartenpunkte</span>
+          <span>{points}</span>
+        </div>
+        {specialRows.map((row) => (
+          <div key={row}>
+            <span>{row}</span>
+            <span>+1</span>
+          </div>
+        ))}
+      </div>
+      <footer>
+        <span>Gesamt</span>
+        <strong>{total > 0 ? `+${total}` : total}</strong>
+      </footer>
+    </section>
+  );
+}
+
+function ZwischenstandBlatt({
+  seats,
+  scores,
+  restRunden,
+  onWeiter,
+}: {
+  seats: SitzInfo[];
+  scores: Record<number, number>;
+  restRunden: number;
+  onWeiter: () => void;
+}): React.JSX.Element {
+  const sortiert = [...seats].sort((a, b) => a.seat - b.seat);
+  return (
+    <div className="doko-sheet doko-sheet--mitte doko-sheet--zwischenstand">
+      <div className="doko-sheet-card doko-zwischenstand">
+        <h2>Zwischenstand</h2>
+        <div className="doko-zwischenstand-grid">
+          {sortiert.map((s) => {
+            const value = scores[s.seat] ?? 0;
+            return (
+              <article key={s.seat} className="doko-zwischenstand-card">
+                <Avatar
+                  name={s.name}
+                  seatIndex={s.seat}
+                  active={false}
+                  deadline={null}
+                  avatarUrl={s.avatarUrl}
+                />
+                <b>{s.name}</b>
+                <strong className={value < 0 ? 'is-minus' : 'is-plus'}>
+                  {value > 0 ? `+${value}` : value}
+                </strong>
+              </article>
+            );
+          })}
+        </div>
+        <p className="muted doko-zwischenstand-rest">Verbleibende Runden: {restRunden}</p>
+        <button className="primary" onClick={onWeiter}>
+          Weiter
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function roundValueOf(result: RoundResult, seats: SitzInfo[], isRe: boolean): number {
+  const seatValues = seats.map((s) => result.scores[s.seat] ?? 0);
+  if (seatValues.length === 0) return 0;
+  if (result.isSolo) {
+    // Solist bekommt ±3*value, Gegner ±value — beide Seiten zeigen je Kopf.
+    if (isRe) return result.winner === 're' ? result.value * 3 : -result.value * 3;
+    return result.winner === 'kontra' ? result.value : -result.value;
+  }
+  return seatValues[0] ?? 0;
+}
+
+function specialRowsOf(result: RoundResult, party: 're' | 'kontra'): string[] {
+  const map: Record<string, string> = {
+    fuchs: 'Fuchs',
+    karlchen: 'Karlchen',
+    doppelkopf: 'Doppelkopf',
+    charlie: 'Charlie',
+    herzdurchlauf: 'Herzdurchlauf',
+  };
+  return result.specials
+    .filter((s) => s.party === party)
+    .map((s) => map[s.kind] ?? s.kind);
 }

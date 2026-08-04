@@ -1527,6 +1527,34 @@ td {
   width: 0;
   height: 0;
 }
+.doko-deal-gather {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0;
+  transform: translate(calc(-50% + var(--gx, 0px)), calc(-50% + var(--gy, 0px)));
+  animation: doko-deal-gather 0.42s cubic-bezier(0.24, 0.86, 0.33, 1) both;
+}
+.doko-deal-gather i {
+  display: block;
+  width: calc(var(--bw, 2.2rem) * 0.35);
+  height: calc(var(--bw, 2.2rem) * 0.35 * var(--pc-ratio));
+  margin-left: -0.24rem;
+  border-radius: 0.16rem;
+  background: linear-gradient(180deg, #445d88, #31456a);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.doko-deal-gather i:first-child { margin-left: 0; }
+.doko-deal-gather.at-bottom { --gx: 0px; --gy: 11.5rem; }
+.doko-deal-gather.at-top { --gx: 0px; --gy: -9.5rem; }
+.doko-deal-gather.at-left { --gx: -9.2rem; --gy: 0.4rem; }
+.doko-deal-gather.at-right { --gx: 9.2rem; --gy: 0.4rem; }
+.doko-deal-gather.at-top-left { --gx: -6.5rem; --gy: -7.2rem; }
+.doko-deal-gather.at-top-right { --gx: 6.5rem; --gy: -7.2rem; }
+.doko-deal-gather.at-left-high { --gx: -9.2rem; --gy: -6.2rem; }
+.doko-deal-gather.at-right-high { --gx: 9.2rem; --gy: -6.2rem; }
 .doko-deal-pc {
   width: calc(var(--bw, 2.2rem) * 1.05);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
@@ -1584,6 +1612,13 @@ td {
 @keyframes doko-deal-glow {
   from { opacity: 0.55; transform: translate(-50%, -50%) scale(0.92); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+}
+@keyframes doko-deal-gather {
+  0% { opacity: 0.95; }
+  100% {
+    opacity: 0.1;
+    transform: translate(-50%, -50%) scale(0.82);
+  }
 }
 @keyframes doko-deal-label-swap {
   0%, 45% { opacity: 1; }
@@ -1658,6 +1693,7 @@ td {
 @media (prefers-reduced-motion: reduce) {
   .doko-deal,
   .doko-deal-glow,
+  .doko-deal-gather,
   .doko-deal-mix,
   .doko-deal-fly,
   .doko-hand.is-dealt .doko-handcard .pc {
@@ -4039,6 +4075,13 @@ main.auth > .muted {
   align-items: flex-end;
   margin-top: 0.15rem;
 }
+.doko-stiche-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+.doko-stiche-wrap.is-peek .doko-stiche {
+  animation: doko-stiche-peek 1.5s ease both;
+}
 .doko-stiche i {
   width: 0.95rem;
   height: 1.35rem;
@@ -4058,6 +4101,10 @@ main.auth > .muted {
 }
 /* In der eigenen Leiste sitzt der Stapel neben Name und Uhr. */
 .doko-me .doko-stiche { margin: 0 0.4rem 0.2rem 0; }
+@keyframes doko-stiche-peek {
+  0%, 100% { transform: scale(1); filter: none; }
+  45% { transform: scale(1.12); filter: drop-shadow(0 0 10px rgba(226, 182, 79, 0.45)); }
+}
 
 /* =========================================================================
    Gemalte Hintergruende (Bestellung docs/ASSETS-DOKO.md).
@@ -5375,6 +5422,122 @@ main.auth > .muted {
 }
 @media (prefers-reduced-motion: reduce) {
   .doko-blase { animation: none; }
+}
+
+/* Rundenende: Auswertung A + Zwischenstand C */
+.doko-sheet--abrechnung .doko-sheet-card,
+.doko-sheet--zwischenstand .doko-sheet-card {
+  width: min(46rem, 96vw);
+  background:
+    linear-gradient(180deg, rgba(13, 22, 27, 0.96), rgba(10, 16, 20, 0.98)),
+    radial-gradient(circle at top, rgba(71, 147, 104, 0.18), transparent 45%);
+}
+.doko-abrechnung-spalten {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+.doko-abr-partei {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  padding: 0.6rem 0.65rem;
+  background: rgba(12, 18, 21, 0.76);
+}
+.doko-abr-partei > header {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 0.45rem;
+}
+.doko-abr-partei.is-re > header { color: #7ed1a5; }
+.doko-abr-partei.is-kontra > header { color: #de715e; }
+.doko-abr-team {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+.doko-abr-spieler {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-width: 0;
+}
+.doko-abr-spieler b {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doko-abr-spieler .doko-avatar {
+  width: 2.05rem;
+  height: 2.05rem;
+  padding: 0.09rem;
+}
+.doko-abr-spieler.is-re .doko-avatar { box-shadow: 0 0 0 1px rgba(126, 209, 165, 0.55); }
+.doko-abr-spieler.is-kontra .doko-avatar { box-shadow: 0 0 0 1px rgba(222, 113, 94, 0.55); }
+.doko-abr-rows {
+  border-top: 1px solid rgba(255, 255, 255, 0.11);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+  padding: 0.45rem 0;
+  margin-bottom: 0.5rem;
+}
+.doko-abr-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  padding: 0.12rem 0;
+}
+.doko-abr-partei footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.doko-abr-partei footer strong {
+  color: var(--gold, #e2b64f);
+  font-size: 1.45rem;
+}
+.doko-zwischenstand {
+  width: min(35rem, 96vw);
+}
+.doko-zwischenstand h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.doko-zwischenstand-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.9rem;
+  overflow: hidden;
+}
+.doko-zwischenstand-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.75rem 0.3rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 17, 23, 0.68);
+}
+.doko-zwischenstand-card:nth-child(2n) { border-right: 0; }
+.doko-zwischenstand-card:nth-last-child(-n + 2) { border-bottom: 0; }
+.doko-zwischenstand-card b { font-size: 0.92rem; }
+.doko-zwischenstand-card strong {
+  font-size: 1.95rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.doko-zwischenstand-card .is-plus { color: var(--gold, #e2b64f); }
+.doko-zwischenstand-card .is-minus { color: var(--danger, #df5f54); }
+.doko-zwischenstand-rest {
+  margin: 0.7rem 0;
+  text-align: center;
+}
+@media (max-width: 640px) {
+  .doko-abrechnung-spalten { grid-template-columns: 1fr; }
 }
 
 /* ==========================================================================

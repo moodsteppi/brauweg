@@ -23,6 +23,7 @@ export type DealSlot = Slot;
 export const VOLLE_DECKS = new Set([40, 48]);
 
 const SHUFFLE_MS = 900;
+const GATHER_MS = 420;
 const DEAL_MS = 700;
 const FINISH_PAD_MS = 180;
 const SHUFFLE_BACKS = 10;
@@ -30,7 +31,7 @@ const SHUFFLE_BACKS = 10;
 const FAN_PER_SEAT = 3;
 
 export function dealDurationMs(): number {
-  return SHUFFLE_MS + DEAL_MS + FINISH_PAD_MS;
+  return GATHER_MS + SHUFFLE_MS + DEAL_MS + FINISH_PAD_MS;
 }
 
 /**
@@ -72,11 +73,20 @@ export function DealCeremony({
     <div className="doko-deal" aria-hidden="true">
       <div className="doko-deal-glow" />
       <p className="doko-deal-label">
-        <span className="doko-deal-label-mix">Mischen · {deckSize} Karten</span>
+        <span className="doko-deal-label-mix">Sammeln · Mischen · {deckSize} Karten</span>
         <span className="doko-deal-label-deal">Austeilen…</span>
       </p>
 
       <div className="doko-deal-stage">
+        {/* Vorrunden-Stapel laufen zur Mitte und werden zum Mischstapel. */}
+        {slots.map((slot) => (
+          <div key={`g-${slot}`} className={`doko-deal-gather at-${slot}`}>
+            <i />
+            <i />
+            <i />
+          </div>
+        ))}
+
         {/* Ein Stapel = das ganze Blatt, einmal durchmischen. */}
         {Array.from({ length: SHUFFLE_BACKS }, (_, i) => (
           <div
@@ -86,7 +96,7 @@ export function DealCeremony({
               {
                 '--i': i,
                 '--n': SHUFFLE_BACKS,
-                '--delay': `${i * 28}ms`,
+                '--delay': `${GATHER_MS + i * 28}ms`,
               } as React.CSSProperties
             }
           >
@@ -104,7 +114,7 @@ export function DealCeremony({
               className={`doko-deal-fly to-${slot}`}
               style={
                 {
-                  '--delay': `${SHUFFLE_MS + i * 45}ms`,
+                  '--delay': `${GATHER_MS + SHUFFLE_MS + i * 45}ms`,
                   '--spread': `${(i - 1) * 16}px`,
                 } as React.CSSProperties
               }
