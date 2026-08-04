@@ -79,6 +79,42 @@ export function stufenstand(xp: number): Stufenstand {
   };
 }
 
+export interface Stufe {
+  readonly stufe: number;
+  /** Punktestand, ab dem diese Stufe gilt. */
+  readonly ab: number;
+  /** Punkte von hier bis zur naechsten Stufe. */
+  readonly kosten: number;
+  readonly erreicht: boolean;
+  readonly aktuell: boolean;
+}
+
+/**
+ * Ein Ausschnitt der Leiter um den eigenen Stand herum.
+ *
+ * Bewusst nicht die ganze Liste: Die Stufen sind nach oben offen, eine
+ * vollstaendige Leiter gibt es nicht. Und bewusst vom Server: Der Client
+ * soll die Kurve nicht nachbauen, sonst gaebe es sie zweimal und eine
+ * Nachjustierung wirkte erst nach dem naechsten App-Update.
+ */
+export function leiterUm(xp: number, zurueck = 4, vor = 30): readonly Stufe[] {
+  const jetzt = stufeFuerPunkte(Math.max(0, Math.floor(xp)));
+  const von = Math.max(1, jetzt - zurueck);
+  const bis = jetzt + vor;
+
+  const out: Stufe[] = [];
+  for (let stufe = von; stufe <= bis; stufe++) {
+    out.push({
+      stufe,
+      ab: punkteFuerStufe(stufe),
+      kosten: kostenFuerStufe(stufe),
+      erreicht: stufe <= jetzt,
+      aktuell: stufe === jetzt,
+    });
+  }
+  return out;
+}
+
 /**
  * Punkte fuer eine Partie.
  *

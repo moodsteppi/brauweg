@@ -39,7 +39,7 @@ import {
   isBirthdayToday,
 } from '../birthday.js';
 import { CARD_DECKS, DEFAULT_CARD_DECK } from '../decks.js';
-import { stufenstand } from '../level.js';
+import { leiterUm, stufenstand } from '../level.js';
 import { coinsFor, entitlementsFor } from '../entitlements.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
@@ -531,6 +531,26 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Geburtstagsbelohnung einsammeln: Pinguin im Geburtstagsoutfit.
    * Nur am eigenen Geburtstag, einmal pro Kalenderjahr.
    */
+  /**
+   * Die Stufenleiter um den eigenen Stand herum.
+   *
+   * Eigener Endpunkt statt an /api/me gehaengt: Gebraucht wird sie nur,
+   * wenn jemand die Stufe antippt, und /api/me laeuft bei jedem Laden.
+   */
+  app.get('/api/me/levels', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const [account] = await deps.db
+      .select({ xp: s.account.xp })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!account) throw notFound('accountUnknown');
+
+    return reply.send({
+      ...stufenstand(account.xp),
+      leiter: leiterUm(account.xp),
+    });
+  });
+
   app.post('/api/me/birthday-reward', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const [account] = await deps.db

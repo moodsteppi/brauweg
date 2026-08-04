@@ -14,6 +14,7 @@ import { DECKS, cardImage, deckBack, deckById, decksFor, type Deck } from '../de
 import { SZENEN, szeneBild } from '../szenen';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
 import { Clan } from './Clan';
+import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
@@ -68,6 +69,7 @@ export function GameSelect({
   /** Name des angetippten Noch-nicht-Bereichs, fuer das "Kommt bald"-Blatt. */
   const [bald, setBald] = useState<string | null>(null);
   const [ranglisteOffen, setRanglisteOffen] = useState(false);
+  const [stufenOffen, setStufenOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -242,6 +244,7 @@ export function GameSelect({
             onMeChange={onAvatarChange}
             onSignOut={onSignOut}
             onDeleted={onDeleted}
+            onStufen={() => setStufenOffen(true)}
             onBald={setBald}
             onShowProfile={onShowProfile}
           />
@@ -277,13 +280,15 @@ export function GameSelect({
           </span>
         </button>
         <div className="front-waehrungen">
-          {/* Dezente Kennzeichnung: ein kleines Schild, kein Band. Wer auf dem
-              Testsystem sitzt, soll es sehen, ohne dass die App danach
-              aussieht. Ein Testkonto in der Produktion (Demokonto der
-              App-Store-Prüfung) bekommt dasselbe Schild. */}
-          {(me.stage !== 'production' || me.entitlements.staff) && (
-            <span className="front-stufe" title="Testsystem — hier wird nichts gewertet">
-              {me.stage === 'production' ? 'Test' : me.stage === 'staging' ? 'Staging' : 'Dev'}
+          {/* Nur noch das Testkonto in der Produktion bekommt ein Schild —
+              das braucht die App-Store-Prüfung, damit die Prüfer sehen, dass
+              sie auf einem Demokonto sitzen.
+
+              Auf staging hing es dauerhaft im Bild und stand beim Prüfen der
+              Optik im Weg. Wer dort ist, weiß es an der Adresse. */}
+          {me.stage === 'production' && me.entitlements.staff && (
+            <span className="front-stufe" title="Testkonto — hier wird nichts gewertet">
+              Test
             </span>
           )}
           <span className="front-waehrung front-waehrung--cups">
@@ -384,6 +389,7 @@ export function GameSelect({
         />
       </nav>
 
+      {stufenOffen && <Stufenleiter onClose={() => setStufenOffen(false)} />}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
         <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
@@ -431,6 +437,7 @@ function ProfilTab({
   onMeChange,
   onSignOut,
   onDeleted,
+  onStufen,
   onBald,
   onShowProfile,
 }: {
@@ -441,6 +448,8 @@ function ProfilTab({
   onSignOut: () => void;
   /** Nach der Loeschung: zurueck zur Anmeldung, ohne Abmelde-Aufruf. */
   onDeleted: () => void;
+  /** Oeffnet die Stufenleiter. */
+  onStufen: () => void;
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
 }): React.JSX.Element {
@@ -485,6 +494,15 @@ function ProfilTab({
     <HubSzene bg="/hub/bg-profil.webp" className="front-profil front-profil--a">
       <HubBanner />
 
+      {/* Als Erstes im Profil: Wo stehe ich, und wie weit ist es noch bis
+          zur naechsten Stufe? Angetippt oeffnet sich die ganze Leiter. */}
+      <Stufenbalken
+        stufe={me.level.stufe}
+        imLevel={me.level.imLevel}
+        fuerLevel={me.level.fuerLevel}
+        onClick={onStufen}
+      />
+
       <div className="hub-profilkopf hub-profilkopf--a">
         <ProfilBild me={me} onChanged={onAvatarChange} />
         <div className="hub-profilkopf-text">
@@ -499,13 +517,6 @@ function ProfilTab({
         </span>
       </div>
 
-      {/* Im Profil steht der Fortschritt ausgeschrieben. Ein Balken allein
-          beantwortet nicht, wie weit es noch ist. */}
-      <p className="hub-stufe-text">
-        Stufe {me.level.stufe} · {me.level.imLevel} von {me.level.fuerLevel} Punkten
-        {' · '}
-        <span className="muted">{me.level.xp} insgesamt</span>
-      </p>
 
       <section
         className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
