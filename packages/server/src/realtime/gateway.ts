@@ -89,14 +89,39 @@ function cookieValue(header: string | undefined, name: string): string | undefin
   return undefined;
 }
 
+/**
+ * Marke, hinter der die App ihr Sitzungstoken als Unterprotokoll mitschickt.
+ *
+ * Die iOS-Huelle laedt den Client aus dem App-Paket und ist damit eine
+ * fremde Herkunft; WebKit gibt ihr das Sitzungs-Cookie nicht mit (siehe
+ * `APP_ORIGIN` in `http/app.ts`). Eigene Kopfzeilen kann ein WebSocket im
+ * Browser nicht setzen — die Liste der Unterprotokolle ist das Einzige, was
+ * beim Handshake mitgeht. Bewusst nicht in der Adresse: Adressen landen in
+ * Zugriffsprotokollen und Fehlerberichten, Kopfzeilen nicht.
+ *
+ * Das Token ist Base64url (`auth/secrets.ts: newToken`) und damit ohne
+ * Umweg ein gueltiger Protokollname.
+ */
+export const TOKEN_PROTOKOLL = 'brauweg-token';
+
+/** Token aus `Sec-WebSocket-Protocol`, oder undefined. */
+function protokollToken(header: string | string[] | undefined): string | undefined {
+  const zeile = Array.isArray(header) ? header.join(',') : header;
+  if (!zeile) return undefined;
+  const teile = zeile.split(',').map((teil) => teil.trim());
+  if (teile[0] !== TOKEN_PROTOKOLL) return undefined;
+  return teile[1] || undefined;
+}
+
 export interface GatewayOptions {
   readonly cookieName?: string;
   /**
-   * Erlaubte Herkunft des Handshakes. Das Sitzungs-Cookie ist `sameSite:
-   * lax`, deshalb schicken heutige Browser es bei fremder Herkunft ohnehin
-   * nicht mit - diese Pruefung ist die zweite Schicht.
+   * Erlaubte Herkuenfte des Handshakes: die eigene Adresse und die der
+   * iOS-Huelle. Das Sitzungs-Cookie ist `sameSite: lax`, deshalb schicken
+   * heutige Browser es bei fremder Herkunft ohnehin nicht mit - diese
+   * Pruefung ist die zweite Schicht. Leer heisst: keine Pruefung (Tests).
    */
-  readonly allowedOrigin?: string;
+  readonly allowedOrigins?: readonly string[];
   /**
    * Sitzungspruefung. Injizierbar, damit sich im Test deterministisch
    * nachstellen laesst, dass sie dauert - genau dann entstand die Luecke, in
@@ -124,15 +149,31 @@ export class Gateway {
     // maxPayload: ohne Grenze nimmt ws bis 100 MiB je Nachricht an - ein
     // Dutzend davon beendet den Prozess. Der groesste echte Zug bleibt weit
     // unter einem Kilobyte.
-    this.wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
-    const erlaubt = options.allowedOrigin;
+    this.wss = new WebSocketServer({
+      server,
+      path: '/ws',
+      maxPayload: 64 * 1024,
+      /**
+       * Bietet ein Client Unterprotokolle an, MUSS der Server eines davon
+       * bestaetigen - sonst bricht der Browser die Verbindung ab. Bestaetigt
+       * wird nur die Marke, nie das Token dahinter: Es hat im
+       * Antwortkopf nichts verloren.
+       */
+      handleProtocols: (protocols) =>
+        protocols.has(TOKEN_PROTOKOLL) ? TOKEN_PROTOKOLL : false,
+    });
+    const erlaubt = options.allowedOrigins ?? [];
     this.wss.on('connection', (socket, request) => {
       const herkunft = request.headers.origin;
-      if (erlaubt && herkunft && herkunft !== erlaubt) {
+      if (erlaubt.length > 0 && herkunft && !erlaubt.includes(herkunft)) {
         socket.close();
         return;
       }
-      this.accept(socket, request.headers.cookie);
+      // Cookie zuerst: Der Browser ist der Normalfall, die App der Sonderweg.
+      const token =
+        cookieValue(request.headers.cookie, this.cookieName) ??
+        protokollToken(request.headers['sec-websocket-protocol']);
+      this.accept(socket, token);
     });
     this.runtime.onUpdate((tableId) => {
       void this.broadcast(tableId);
@@ -158,7 +199,7 @@ export class Gateway {
    * Nachrichten aus der Luecke werden gepuffert und in Reihenfolge
    * nachgeholt, sobald die Sitzung steht.
    */
-  private accept(socket: WebSocket, cookieHeader?: string): void {
+  private accept(socket: WebSocket, sessionToken?: string): void {
     const queued: string[] = [];
     let connection: Connection | null = null;
     let rejected = false;
@@ -178,7 +219,7 @@ export class Gateway {
     });
 
     void (async () => {
-      const session = await this.lookupSession(cookieValue(cookieHeader, this.cookieName));
+      const session = await this.lookupSession(sessionToken);
       if (!session) {
         rejected = true;
         queued.length = 0;

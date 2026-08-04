@@ -8,6 +8,7 @@
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
+import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
@@ -84,6 +85,24 @@ import {
 import type { PartyRuntime } from '../runtime/party.js';
 
 export const SESSION_COOKIE = 'brauweg_session';
+
+/**
+ * Herkunft der iOS-Huelle.
+ *
+ * Die App laedt den Client aus dem eigenen Paket, ausgeliefert unter
+ * `brauweg://app`. Fuer den Server ist das eine fremde Herkunft: Das
+ * Sitzungs-Cookie waere ein Drittanbieter-Cookie, und WebKit verwirft die.
+ * Deshalb bekommt die App ihr Sitzungstoken einmal beim Anmelden in die Hand
+ * und schickt es danach selbst mit - im `Authorization`-Kopf, am WebSocket
+ * als Unterprotokoll.
+ *
+ * Dass das Token ueberhaupt herausgegeben wird, haengt an genau dieser
+ * Herkunft. Eine Kopfzeile koennte sich jede Seite selbst setzen; die
+ * Herkunft setzt der Browser, und faelschen kann sie niemand von einer
+ * Webseite aus. Fuer den Browser bleibt es deshalb beim HttpOnly-Cookie,
+ * das kein Skript je zu sehen bekommt.
+ */
+export const APP_ORIGIN = 'brauweg://app';
 
 export interface AppDeps {
   readonly db: Db;
@@ -204,6 +223,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   /**
+   * Herkunftsfreigabe - ausschliesslich fuer die iOS-Huelle.
+   *
+   * Der Browser bleibt same-origin (der Server liefert den Client selbst
+   * aus), er braucht das hier nicht. Bewusst `credentials: false`: Die App
+   * schickt ihr Token im Kopf, nicht als Cookie. Wer Cookies ueber die
+   * Herkunftsgrenze erlaubt, oeffnet CSRF - genau das soll nicht passieren.
+   */
+  await app.register(cors, {
+    origin: [APP_ORIGIN],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['content-type', 'authorization'],
+    credentials: false,
+    maxAge: 86_400,
+  });
+
+  /**
    * Ratengrenzen.
    *
    * Bewusst global: Nur so haengt die Grenze an einem onRequest-Haken und
@@ -260,9 +295,27 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   };
 
+  /**
+   * Sitzungstoken einer Anfrage: erst das Cookie, dann der
+   * `Authorization`-Kopf.
+   *
+   * Das Cookie bleibt der Weg des Browsers, weil es HttpOnly ist und ein
+   * Skript es damit nie zu Gesicht bekommt. Den Kopf nutzt nur die
+   * iOS-Huelle, die kein Cookie bekommen kann (siehe `APP_ORIGIN`).
+   */
+  const sessionToken = (request: FastifyRequest): string | undefined => {
+    const ausCookie = request.cookies[SESSION_COOKIE];
+    if (ausCookie) return ausCookie;
+
+    const kopf = request.headers.authorization;
+    if (!kopf) return undefined;
+    const [art, wert] = kopf.split(' ');
+    return art?.toLowerCase() === 'bearer' && wert ? wert : undefined;
+  };
+
   /** Wirft, wenn niemand angemeldet ist. */
   const requireAccount = async (request: FastifyRequest): Promise<string> => {
-    const session = await sessionFromToken(deps.db, request.cookies[SESSION_COOKIE]);
+    const session = await sessionFromToken(deps.db, sessionToken(request));
     if (!session) throw unauthorized();
     return session.accountId;
   };
@@ -346,11 +399,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .parse(request.body);
     const { token, accountId } = await login(deps.auth, body.email, body.password);
     setSession(reply, token);
+    // Nur die App bekommt das Token in die Hand, und nur, weil ihre Herkunft
+    // sich nicht faelschen laesst. Siehe APP_ORIGIN.
+    if (request.headers.origin === APP_ORIGIN) {
+      return reply.send({ ok: true, accountId, token });
+    }
     return reply.send({ ok: true, accountId });
   });
 
   app.post('/api/auth/logout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
-    const session = await sessionFromToken(deps.db, request.cookies[SESSION_COOKIE]);
+    const session = await sessionFromToken(deps.db, sessionToken(request));
     if (session) await logout(deps.db, session.sessionId);
     void reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return reply.send({ ok: true });

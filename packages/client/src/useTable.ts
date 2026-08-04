@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { wsProtokolle, wsUrl } from './laufzeit';
 import {
   ENVELOPE_VERSION,
   type GameView,
@@ -51,8 +52,10 @@ export function useTable<V = GameView>(
     setParty(null);
     setTable(null);
 
-    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-    const socket = new WebSocket(`${scheme}://${location.host}/ws`);
+    // Adresse und Unterprotokolle kommen aus der Laufzeit: im Browser
+    // dieselbe Herkunft und das Cookie, in der App der Server im Netz und
+    // das Token als Unterprotokoll. Siehe laufzeit.ts.
+    const socket = new WebSocket(wsUrl(), wsProtokolle());
     socketRef.current = socket;
 
     socket.onopen = () => {

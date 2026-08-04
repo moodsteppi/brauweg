@@ -184,6 +184,36 @@ Regel ändern, nicht diese Dateien einzeln löschen.
 
 ---
 
+## iOS
+
+**Die App steht und läuft im Simulator.** Eigenes Repository
+`Brauweg-spiel-ios` neben diesem: eine SwiftUI-Hülle um einen `WKWebView`,
+die den gebauten Client aus dem App-Paket ausliefert. **Kein Capacitor** —
+die Begründung und alle Einzelheiten stehen in `docs/APPSTORE.md`.
+
+Der eine Eingriff hier im Repository ist die **Anmeldung**: Für den Server ist
+die App eine fremde Herkunft und bekommt kein Cookie. Sie trägt ihr Token
+selbst, per `Authorization`-Kopf und am WebSocket als Unterprotokoll. Die
+frühere Empfehlung `sameSite: none` trägt nicht — für `fetch` ließe sie sich
+noch retten, für den WebSocket nicht, und dort hängt der Spieltisch. Siehe
+`docs/SICHERHEIT.md`.
+
+**Im Browser ändert sich dadurch nichts.** `packages/client/src/laufzeit.ts`
+fällt ohne `window.BRAUWEG_APP` auf das bisherige Verhalten zurück.
+
+**Der Shop erscheint im App-Paket nicht** (`zeigeKaufbares` in
+`GameSelect.tsx`) — im Browser bleibt er sichtbar, dort gilt weiter die Regel
+aus `DESIGN.md`.
+
+**Vor jedem Bauen der App einmal `./scripts/web-uebernehmen.sh` im
+iOS-Repository laufen lassen.** Ohne das liegt kein Client im Paket; die App
+sagt das dann im Klartext, statt weiß zu bleiben.
+
+**Prüfstand jetzt: 118 Engine-Tests, 125 Servertests** (acht neue für die
+Token-Anmeldung, `test/app-huelle.test.ts`).
+
+---
+
 ## Was offen ist
 
 ### Vor dem App-Store-Release zwingend
@@ -217,8 +247,12 @@ Regel ändern, nicht diese Dateien einzeln löschen.
    Protokolle. **Solange Platzhalter drinstehen, erfüllen die Seiten die
    Pflicht nicht.** Der Datenschutztext beschreibt, was die Anwendung
    tatsächlich tut (am Code geprüft), ersetzt aber keine Rechtsberatung.
-4. Demokonto für die Prüfer — Einzelheiten in `docs/APPSTORE.md`.
-5. Capacitor-Hülle und getrennte API-Adresse.
+4. Demokonto für die Prüfer — Einzelheiten in `docs/APPSTORE.md`. Wichtig
+   ist der Hinweis, dass die Prüfer freie Plätze mit Bots füllen können; wer
+   allein in einer leeren Lobby steht, meldet „App funktioniert nicht".
+5. ~~Capacitor-Hülle und getrennte API-Adresse~~ — **erledigt**, aber anders
+   als geplant: eigene Swift-Hülle statt Capacitor. Siehe oben und
+   `docs/APPSTORE.md`.
 
 ### Aus dem Plan noch nicht gebaut
 
