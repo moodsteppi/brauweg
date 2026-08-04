@@ -65,6 +65,12 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
   Tab-Leiste unten (Shop · Clan · Spielen · Blatt · Profil), Inhalt
   rollt dazwischen. „Spielen" ist mittig und größer; jeder Tab leuchtet
   aktiv in seiner eigenen Farbe.
+- **Zwischen den Tabs wird auch gewischt**, nicht nur über die Leiste
+  getippt: ein deutlich waagerechter Wisch auf dem Inhalt geht einen Tab
+  weiter, in derselben Reihenfolge wie die Leiste. Nur klar horizontale
+  Wische zählen (senkrechtes Rollen bleibt Rollen), und in einer
+  Vollbild-Auswahl (Spielwahl, Blatt-Vorschau, Kommt-bald) steuert der
+  Wisch die Auswahl, nicht den Tab.
 - **Clan** ist spielübergreifend (nicht nur Doppelkopf): Clan-Halle mit
   Banner und Raum-Kacheln (Chat, Clankrieg, Rangliste, Truhe …) als
   „Bald"-Attrappen. Freunde hängen am Clan-Tab. Intern: `club_*`.

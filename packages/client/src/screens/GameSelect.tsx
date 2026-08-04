@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   ApiError,
@@ -70,6 +70,46 @@ export function GameSelect({
   const [ranglisteOffen, setRanglisteOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
+  /**
+   * Wischen zwischen den Tabs — dieselbe Reihenfolge wie die Leiste unten.
+   * Im App-Paket faellt der Shop weg, deshalb aus derselben Bedingung gebaut,
+   * damit gewischt genau dorthin fuehrt, wo auch ein Tippen hinfuehrt.
+   */
+  const tabFolge: Tab[] = [
+    ...(zeigeKaufbares ? (['shop'] as const) : []),
+    'clan',
+    'spielen',
+    'blatt',
+    'profil',
+  ];
+  const wischStart = useRef<{ x: number; y: number } | null>(null);
+
+  const onWischStart = (e: React.TouchEvent): void => {
+    // In einer Vollbild-Auswahl (Spielwahl, Blatt-Vorschau, Kommt-bald) darf
+    // ein Wisch die Wahl steuern, nicht den Tab wechseln.
+    if ((e.target as HTMLElement).closest('.spielwahl, .hub-vorschau, .doko-sheet, .front-bald')) {
+      wischStart.current = null;
+      return;
+    }
+    const t = e.touches[0]!;
+    wischStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const onWischEnde = (e: React.TouchEvent): void => {
+    const start = wischStart.current;
+    wischStart.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0]!;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    // Nur ein deutlich waagerechter Wisch zaehlt: Wer senkrecht rollt, soll
+    // nicht aus Versehen den Tab wechseln.
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    const jetzt = tabFolge.indexOf(tab);
+    const ziel = jetzt + (dx < 0 ? 1 : -1);
+    if (ziel >= 0 && ziel < tabFolge.length) setTab(tabFolge[ziel]!);
+  };
+
   return (
     <div className="front front--hub">
       <header className="front-top">
@@ -138,6 +178,8 @@ export function GameSelect({
       <div
         className={`front-body${tab === 'spielen' ? '' : ' front-body--szene'}`}
         key={tab}
+        onTouchStart={onWischStart}
+        onTouchEnd={onWischEnde}
       >
         {tab === 'shop' && zeigeKaufbares && <Shop onBald={setBald} />}
         {tab === 'clan' && (

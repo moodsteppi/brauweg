@@ -5155,6 +5155,13 @@ main.auth > .muted {
 .pfad-knoten.is-zu {
   filter: saturate(0.25) brightness(0.75);
 }
+/* Steht der Pinguin genau darauf, tritt die Marke zurueck, damit ihre Zahl
+   nicht unter der Figur hervorschaut. Weich ausgeblendet, nicht entfernt -
+   so springt beim Weiterlaufen nichts. */
+.pfad-knoten.is-verdeckt {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
 .pfad-knoten-name {
   font-size: 0.72rem;
   font-weight: 800;

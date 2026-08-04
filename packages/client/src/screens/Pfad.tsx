@@ -173,9 +173,17 @@ function Stapel({ trophies, stelle }: { trophies: number; stelle: number }): Rea
       {/* Checkpoints sitzen am unteren Rand ihrer Kachel — dort kommt man an. */}
       {BIOME.map((biom, i) => {
         const erreicht = trophies >= biom.cp;
+        // Steht die Figur genau auf diesem Knoten, verdeckt sie ihn: Beide
+        // liegen mittig auf derselben Hoehe (bei 500 etwa Pinguin und
+        // Feuerberg-Marke), und die Zahl der Marke schaut unter der Figur
+        // hervor. Dann tritt die Marke zurueck — der Pinguin traegt seinen
+        // Stand ohnehin selbst, und wo er steht, ist "du bist hier".
+        const verdeckt = Math.abs(stelle - i) < 0.34;
         return (
           <div
-            className={`pfad-knoten hub-knoten--${biom.farbe}${erreicht ? ' is-an' : ' is-zu'}`}
+            className={`pfad-knoten hub-knoten--${biom.farbe}${erreicht ? ' is-an' : ' is-zu'}${
+              verdeckt ? ' is-verdeckt' : ''
+            }`}
             key={biom.cp}
             style={{ bottom: `${(i / anzahl) * 100}%` }}
           >
