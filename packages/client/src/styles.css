@@ -1460,6 +1460,25 @@ td {
   .doko-trick-in { animation: none; }
 }
 
+/* Stich gleitet nach dem Liegen zum Gewinner auf den Stapel. Die Offsets
+   zeigen zum Sitz (wie doko-deal-gather); die Karten schrumpfen und verblassen. */
+.doko-trick-in.is-sweep {
+  animation: tc-sweep 0.44s cubic-bezier(0.4, 0, 0.5, 1) forwards;
+}
+.doko-trick-in.sweep-bottom { --sx: 0; --sy: 11rem; }
+.doko-trick-in.sweep-top { --sx: 0; --sy: -9rem; }
+.doko-trick-in.sweep-left { --sx: -9.2rem; --sy: 0; }
+.doko-trick-in.sweep-right { --sx: 9.2rem; --sy: 0; }
+.doko-trick-in.sweep-top-left { --sx: -6.5rem; --sy: -7.2rem; }
+.doko-trick-in.sweep-top-right { --sx: 6.5rem; --sy: -7.2rem; }
+@keyframes tc-sweep {
+  from { transform: translate(0, 0) scale(1); opacity: 1; }
+  to { transform: translate(var(--sx, 0), var(--sy, 0)) scale(0.5); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doko-trick-in.is-sweep { animation: none; opacity: 0; }
+}
+
 /* ---- Misch- und Austeilzeremonie ---- */
 .doko-deal {
   position: absolute;
@@ -4785,7 +4804,7 @@ main.auth > .muted {
  * verschwindet, sondern gelegt aussieht.
  */
 .doko-handcard.is-legt {
-  animation: doko-legen 0.32s cubic-bezier(0.3, 0, 0.2, 1) forwards;
+  animation: doko-legen 0.4s cubic-bezier(0.3, 0, 0.25, 1) forwards;
   pointer-events: none;
 }
 @keyframes doko-legen {
@@ -4793,8 +4812,11 @@ main.auth > .muted {
     transform: translateX(calc(var(--off, 0) * var(--schritt)));
     opacity: 1;
   }
+  60% {
+    opacity: 1;
+  }
   100% {
-    transform: translateY(-42vh) scale(0.82);
+    transform: translate(0, -34vh) scale(0.9);
     opacity: 0;
   }
 }

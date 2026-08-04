@@ -146,6 +146,8 @@ export function Table({
     ? lastTrickNow.played.map((p) => p.card.id).join('.')
     : null;
   const [frozenKey, setFrozenKey] = useState<string | null>(null);
+  // Nach dem Liegen gleitet der Stich zum Gewinner: kurze Sweep-Phase.
+  const [sweeping, setSweeping] = useState(false);
   const seenKey = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     if (seenKey.current === undefined) {
@@ -155,11 +157,25 @@ export function Table({
     if (lastKey && lastKey !== seenKey.current) {
       seenKey.current = lastKey;
       setFrozenKey(lastKey);
-      const handle = setTimeout(
-        () => setFrozenKey((k) => (k === lastKey ? null : k)),
-        1600,
-      );
-      return () => clearTimeout(handle);
+      setSweeping(false);
+      const reduce = prefersReducedMotion();
+      let sweepHandle: ReturnType<typeof setTimeout> | undefined;
+      const handle = setTimeout(() => {
+        if (reduce) {
+          setFrozenKey((k) => (k === lastKey ? null : k));
+          return;
+        }
+        // Lange genug gelegen: jetzt zum Gewinner gleiten, dann abraeumen.
+        setSweeping(true);
+        sweepHandle = setTimeout(() => {
+          setSweeping(false);
+          setFrozenKey((k) => (k === lastKey ? null : k));
+        }, 440);
+      }, 1600);
+      return () => {
+        clearTimeout(handle);
+        if (sweepHandle) clearTimeout(sweepHandle);
+      };
     }
   }, [lastKey]);
 
@@ -569,7 +585,13 @@ export function Table({
               >
                 {/* Innerer Wrapper traegt die Legeanimation, damit die Platzierung
                   (aeusseres Element) davon unberuehrt bleibt. */}
-                <div className="doko-trick-in">
+                <div
+                  className={`doko-trick-in${
+                    sweeping && lastTrickNow
+                      ? ` is-sweep sweep-${slotFor(lastTrickNow.winnerSeat, base, seatCount)}`
+                      : ''
+                  }`}
+                >
                   <div className="pc pc--trick">
                     <CardFront card={played.card} deck={deck} />
                   </div>
