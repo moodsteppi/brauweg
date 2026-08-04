@@ -6040,10 +6040,125 @@ main.auth > .muted {
   }
 }
 
-/* Stufe im Profil, ausgeschrieben unter dem Kopf. */
-.hub-stufe-text {
-  margin: 0.2rem 0 0.6rem;
+
+/* =========================================================================
+   Stufe: Balken im Profil und die Leiter dahinter.
+   ========================================================================= */
+.stufe-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0 0 0.7rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(255, 220, 120, 0.35);
+  background: rgba(10, 16, 22, 0.55);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.stufe-block--knopf {
+  cursor: pointer;
+}
+.stufe-block--knopf:active {
+  transform: translateY(1px);
+}
+.stufe-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.stufe-kopf strong {
+  font-size: 1rem;
+  color: #ffe9bd;
+}
+.stufe-kopf .muted {
+  font-size: 0.76rem;
+}
+.stufe-balken {
+  display: block;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.stufe-balken > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6ab1f7, #ffe08a);
+}
+.stufe-zahl {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stufe-rolle {
+  padding: 0.8rem 0.9rem 2rem;
+}
+.stufe-hinweis {
+  margin: 0 0 0.9rem;
   font-size: 0.8rem;
-  color: rgba(255, 233, 189, 0.85);
-  text-align: center;
+  line-height: 1.45;
+}
+.stufe-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.stufe-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  /* Nicht erreichte Stufen treten zurueck, statt zu verschwinden: Man soll
+     sehen, was kommt, ohne dass es mit dem Erreichten konkurriert. */
+  opacity: 0.55;
+}
+.stufe-zeile.is-an {
+  opacity: 1;
+  border-color: rgba(255, 220, 120, 0.4);
+}
+.stufe-zeile.is-hier {
+  border-color: var(--gold);
+  background: rgba(226, 182, 79, 0.14);
+}
+.stufe-marke {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.5rem;
+  background: linear-gradient(180deg, #6ab1f7 0%, #2f6dc0 100%);
+  border: 1px solid #17457f;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.stufe-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.stufe-text .muted {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+.stufe-hier {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--gold);
+  white-space: nowrap;
 }

@@ -278,6 +278,16 @@ export const api = {
     patch<{ ok: true }>(`/me/themes/${gameId}`, teil),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
+  /** Die Stufenleiter um den eigenen Stand herum. Nur beim Antippen geladen. */
+  levels: () =>
+    request<{
+      stufe: number;
+      xp: number;
+      imLevel: number;
+      fuerLevel: number;
+      leiter: { stufe: number; ab: number; kosten: number; erreicht: boolean; aktuell: boolean }[];
+    }>('/me/levels'),
+
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */

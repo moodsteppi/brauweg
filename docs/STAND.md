@@ -88,6 +88,53 @@ Sie dürfen weg, sobald dieser Stand eine Weile stabil läuft.
 
 ---
 
+## Stufen und Erfahrungspunkte
+
+Steht seit dem 4. August. Zwei Regeln, mehr nicht:
+
+1. **Eine gelegte Karte, ein Punkt.** Belohnt wird Mitspielen, nicht
+   Gewinnen — wer verliert, geht nie leer aus.
+2. **Doppelt für jeden mit positivem Trophäengewinn.** Bewusst am
+   Vorzeichen festgemacht und nicht am Platz: Damit braucht die Plattform
+   kein Spielwissen. Beim Doppelkopf trifft es die Plätze eins und zwei,
+   beim Skat den Sieger, beim Zauberer jeden mit positivem Ergebnis.
+
+**Keine Tabelle, eine Formel** (`packages/server/src/level.ts`). Der
+Aufwand je Stufe wächst linear, die Summe damit quadratisch: 40, 60, 80 …
+1000 für Stufe 50, insgesamt 25.480 Punkte. Eine Doppelkopf-Partie über
+vier Runden gibt 48 Punkte, 96 für die vordere Hälfte — Stufe 50 sind also
+rund 350 Partien. Die Kurve ist nach oben offen; eine Tabelle bis 50 wäre
+bis Stufe 50 richtig und danach falsch.
+
+**Die Stufe wird gerechnet, nicht gespeichert.** Sonst gäbe es zwei
+Wahrheiten. In der Datenbank steht nur `account.xp` (Migration
+`0011_erfahrung`). Der Client bekommt Stufe und Fortschritt fertig — wird
+die Kurve nachjustiert, gilt das sofort und nicht erst nach dem nächsten
+App-Update.
+
+**Wie viele Karten eine Partie hatte, weiß nur das Modul.** Dafür gibt es
+`GameModule.xpBasis`: Doppelkopf rechnet Blattgröße mal abgerechnete
+Runden, der Zauberer die Summe der Rundennummern. Fehlt der Haken, gibt es
+keine Punkte statt geratener. Nur abgerechnete Runden zählen — sonst wäre
+Abbrechen kurz vor Schluss eine Rechenaufgabe statt einer Entscheidung.
+
+Angezeigt wird es als Balken oben im Profil; angetippt öffnet sich die
+Leiter (`/api/me/levels`, eigener Endpunkt, weil `/api/me` bei jedem Laden
+läuft). Bildbestellung dafür: `docs/ASSETS-STUFEN.md` — bis dahin sind
+Plakette und Balken einfache Farbflächen.
+
+**Zum Ausprobieren einen Punktestand setzen** (es gibt bewusst keinen
+Endpunkt dafür — ein Weg, sich selbst Punkte zu geben, wäre der lohnendste
+Angriffspunkt der App):
+
+```sql
+UPDATE account SET xp = 330 WHERE email = 'DEINE-ADRESSE';
+```
+
+330 ergibt Stufe 5 mit 50 von 120 Punkten, also einem halb gefüllten
+Balken. Die Grenzen: Stufe 2 ab 40, Stufe 3 ab 100, Stufe 4 ab 180,
+Stufe 5 ab 280, Stufe 6 ab 400.
+
 ## Am 4. August fertig geworden
 
 **Das zweite Spiel: Zauberer** (intern `wizard`, das international als
