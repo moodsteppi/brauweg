@@ -13,7 +13,7 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 128 Doppelkopf-Tests, 117 Zauberer-Tests, **236 Servertests**,
+**Prüfstand:** 128 Doppelkopf-Tests, 117 Zauberer-Tests, **259 Servertests**,
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
 
@@ -66,6 +66,11 @@ von dort — das Projekt bleibt unberührt.
 ---
 
 ## Wie hier gearbeitet wird
+
+> **Kurzfassung steht in [`CLAUDE.md`](../CLAUDE.md) im Wurzelverzeichnis.**
+> Sechs Regeln auf einer Seite — Agenten lesen die Datei automatisch, diesen
+> Abschnitt hier findet nur, wer 800 Zeilen weit kommt. Wer eine Regel
+> aendert, aendert beide Stellen.
 
 **Gearbeitet wird gegen `staging`, nicht gegen `main`** (seit 4. August
 2026): Zweig von `origin/staging`, Änderung, Zweig pushen, nach `staging`
@@ -133,16 +138,16 @@ Truhe geöffnet, Aufgabenstand gelesen, Hut für 120 Münzen und Krone für 40
 Edelsteine gekauft, angezogen, ausgezogen — dazu die Fehlerpfade (zweimal
 öffnen, gesperrte Stufentruhe, zu wenig Münzen, Geschenk kaufen).
 
-**Zwei Währungen, ohne Wechselkurs.** **Münzen** (`account.coins`) fallen aus
-Truhen und Tagesaufgaben, **Edelsteine** (`account.gems`, neu) nur aus Kauf
-oder Geschenk. Gäbe es einen Kurs, wäre jede Truhe indirekt eine Geldquelle und
-der Kurs die einzige Zahl, die noch zählt. Was mit Edelsteinen zu haben ist,
-ist mit Münzen nicht zu haben.
+**Zwei Währungen, einseitiger Umtausch.** **Münzen** (`account.coins`) fallen
+aus Truhen und Tagesaufgaben, **Edelsteine** (`account.gems`) nur aus Kauf oder
+Geschenk. Seit dem Edelstein-Umbau gilt: **Geld kauft nur Edelsteine,
+Edelsteine kaufen alles andere** — zum Kurs von 15 Münzen je Edelstein.
 
-> **Dieser Absatz ist im Umbau.** Genau diese Regel wird gerade
-> zurückgenommen — einseitig, siehe „Der Edelstein als universelle Währung"
-> unten. Was hier steht, beschreibt den Stand auf `staging`; wer am Preisgefüge
-> arbeitet, liest zuerst den anderen Abschnitt.
+**Der Umtausch läuft nur in eine Richtung, und das ist keine Regel in einem
+Kommentar, sondern eine fehlende Funktion:** Es gibt `edelsteineZuMuenzen()`
+und bewusst nichts daneben. Solange aus Münzen keine Edelsteine werden, ist
+keine Truhe und keine Tagesaufgabe ein Weg zu etwas, das Geld kostet. **Wer
+`muenzenZuEdelsteinen()` ergänzt, bricht das Wirtschaftsmodell.**
 
 **Jede Buchung läuft über `src/waehrung.ts`** — die einzige Stelle, an der ein
 Guthaben sich ändert. Die Deckungsprüfung steht in der WHERE-Klausel und nicht
