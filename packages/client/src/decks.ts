@@ -30,6 +30,13 @@ export interface Deck {
    * Acht. Wer das falsche waehlt, saesse vor lauter kaputten Bildern.
    */
   readonly games?: readonly string[];
+  /**
+   * Die App zeichnet die Ecken-Anzeige (Wert + Farbe) selbst als Chip, statt
+   * sie im Bild zu erwarten. Fuer das Zauberwald-Blatt: dort liegt ein flaches
+   * weisses Kaestchen im Bild, das der Chip verdeckt; auf spaeteren
+   * kaestchenfreien Bildern sitzt derselbe Chip einfach auf der Malerei.
+   */
+  readonly eigeneEcke?: boolean;
 }
 
 export const DECKS: readonly Deck[] = [
@@ -67,6 +74,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'zauberwald',
     ext: 'webp',
     games: ['wizard'],
+    eigeneEcke: true,
   },
 ];
 

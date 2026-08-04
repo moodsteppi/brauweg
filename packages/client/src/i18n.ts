@@ -301,6 +301,11 @@ export function cardLabel(card: { suit: string; rank: string }): string {
   return `${SUITS[card.suit] ?? card.suit}${RANKS[card.rank] ?? card.rank}`;
 }
 
+/** Nur der Wert, ohne Farbzeichen (für die gezeichnete Ecken-Anzeige). */
+export function rankLabel(rank: string): string {
+  return RANKS[rank] ?? rank;
+}
+
 const SUIT_NAMES: Record<string, string> = {
   C: 'Kreuz',
   S: 'Pik',

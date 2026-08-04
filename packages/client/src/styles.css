@@ -584,11 +584,46 @@ td {
 
 /* Karten allgemein */
 .pc {
+  position: relative;
   border-radius: 0.32rem;
   overflow: hidden;
   background: #fff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   display: block;
+}
+
+/* Gezeichnete Ecken-Anzeige (Blaetter mit `eigeneEcke`). Ein opaker
+   Pergament-Chip oben links; beim Zauberwald verdeckt er das flache weisse
+   Kaestchen im Bild. Etwas groesser als jenes Kaestchen, damit nichts weiss
+   hervorlugt. Das `overflow: hidden` von .pc rundet die obere Ecke mit. */
+.pc-ecke {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 29%;
+  height: 28%;
+  border-radius: 0.32rem 0.12rem 0.5rem 0.12rem;
+  background: linear-gradient(152deg, #f8f0da 0%, #ecdcb4 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(150, 120, 55, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+.pc-ecke svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* Schwarze Farben tief waldgruen statt Tinte, damit der Chip zum Blatt passt. */
+.pc-ecke-tinte {
+  fill: #26402c;
+}
+.pc-ecke--rot .pc-ecke-tinte {
+  fill: #b2382c;
+}
+.pc-ecke--z .pc-ecke-tinte {
+  fill: #c1962f;
+}
+.pc-ecke--n .pc-ecke-tinte {
+  fill: #6b4a9e;
 }
 .pc-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .pc-text {
