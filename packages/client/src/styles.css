@@ -5353,7 +5353,12 @@ main.auth > .muted {
 @keyframes doko-blase {
   from { transform: translate(-50%, -80%) scale(0.85); opacity: 0; }
 }
-.doko-opp { position: relative; }
+/* Hier stand einmal `.doko-opp { position: relative; }`, damit die Blase
+   einen Bezugsrahmen hat. Das war doppelt falsch: `.doko-opp` ist weiter
+   oben schon `position: absolute` - und weil diese Regel spaeter kommt,
+   hat sie die Positionierung ueberschrieben. Alle Mitspieler fielen aus
+   ihren Ecken in den Textfluss. Ein absolut positioniertes Element ist
+   ohnehin ein Bezugsrahmen; es braucht gar nichts. */
 .doko-tag--ansage {
   background: rgba(226, 182, 79, 0.22);
   border-color: rgba(226, 182, 79, 0.6);
