@@ -25,6 +25,10 @@ export const SZENEN: readonly Szene[] = [
   { id: 'winter', name: 'Winter', hinweis: 'Raureif am Fenster' },
   { id: 'sommer', name: 'Sommer', hinweis: 'Unterm Sonnensegel' },
   { id: 'nacht', name: 'Spät', hinweis: 'Nur die Lampen brennen' },
+  // Mit dem Zauberer gekommen, aber fuer jedes Spiel waehlbar: Eine Szenerie
+  // ist der Untergrund, keine Regel.
+  { id: 'zauberturm', name: 'Zauberturm', hinweis: 'Kerzen, Bücher, Nachtfenster' },
+  { id: 'sternenwiese', name: 'Sternenwiese', hinweis: 'Draußen, unter Lichterketten' },
 ];
 
 export const STANDARD_SZENE = 'stube';

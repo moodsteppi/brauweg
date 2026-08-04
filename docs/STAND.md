@@ -109,10 +109,28 @@ Gestaltung in `docs/DESIGN-WIZARD.md`.
   alles auf dem Textblatt — **kein Platzhalter nötig**, weil `cardImage`
   unbekannte Karten von selbst als Text zeigt.
 
-**Der einzige Stolperstein beim Einbau der Lieferung** steht am Ende der
-Bestellung: Der Blatt-Wähler zeigt heute jedes Blatt für jedes Spiel. Ein
-Zauberblatt an einem Doppelkopftisch hätte für Bube, Dame und König keine
-Dateien. `Deck` braucht dafür ein Feld `games?: string[]`.
+**Die Bilder sind geliefert und eingebaut** (noch am selben Tag):
+
+- **Blatt „Zauberwald"** unter `public/karten/zauberwald/`, 61 WebP-Dateien
+  bei 360 × 523, zusammen 1,8 MB. Originale in `art/zauberwald/`.
+- **Zwei Szenerien** (`zauberturm`, `sternenwiese`) — bewusst für **alle**
+  Spiele wählbar: Eine Szenerie ist der Untergrund, keine Regel.
+- **Trumpf-Plakette** als Hintergrundbild von `.wiz-trumpf`.
+- **Blätter sind jetzt spielgebunden** (`Deck.games`). Der Wähler zeigt nur
+  Passendes, und `deckForGame()` fällt auf Text zurück, falls im Konto ein
+  unpassendes Blatt steht. Beides ist nötig: Ein Zauberblatt hat keine Dame,
+  ein Doppelkopfblatt keine Sieben — auch die Minimal-Blätter nicht, die
+  deshalb ebenfalls auf Doppelkopf beschränkt sind.
+- **Themen werden jetzt groß vorgeführt.** Ein Tipp auf Blatt oder Szenerie
+  übernimmt die Wahl **und** öffnet eine Vorschau im Tischformat: gewählte
+  Szenerie, ein Stich in der Mitte, die eigene Hand am unteren Rand, alles in
+  den Größen des echten Tisches. Der Grund: Auf zu dunklem Untergrund
+  verschwinden Kreuz und Pik, und ein Daumennagel verrät das nicht.
+
+**Was das kostet:** `packages/client/art/` wächst um 25 MB (die gelieferten
+PNG-Originale). Das folgt der Regel aus `DESIGN.md` — Originale gehören ins
+Repository, nicht unter `public/`. Wer den Klon klein halten will, muss diese
+Regel ändern, nicht diese Dateien einzeln löschen.
 
 ---
 

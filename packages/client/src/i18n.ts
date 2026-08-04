@@ -91,6 +91,9 @@ const de: Record<string, string> = {
   'deck.minimal4.hint': 'Jede Farbe hat eine eigene Farbe. Auf kleinen Bildschirmen am schnellsten zu trennen.',
   'deck.klassisch': 'Klassisch',
   'deck.klassisch.hint': 'Gezeichnete Bildkarten wie im Kartenspiel aus dem Schrank.',
+  'deck.zauberwald': 'Zauberwald',
+  'deck.zauberwald.hint':
+    'Gemalt, vier Reiche: Kreuz im Wald, Pik am Berg, Herz im Feuer, Karo im Wasser. Jeder Zauberer und jeder Narr hat ein eigenes Bild.',
 
   'phase.vorbehalt': 'Vorbehalte',
   'phase.armutExchange': 'Armut',

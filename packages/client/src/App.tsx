@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
-import { deckById } from './decks';
+import { deckForGame } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
@@ -71,7 +71,7 @@ export function App(): React.JSX.Element {
     return (
       <Spieltisch
         tableId={screen.tableId}
-        deck={deckById(themeFuer(screen.gameId).cardDeck)}
+        deck={deckForGame(screen.gameId, themeFuer(screen.gameId).cardDeck)}
         szene={themeFuer(screen.gameId).tableScene}
         onShowProfile={zeigeProfil}
         // Zurueck zum Start: me neu laden, damit „Weiterspielen" den

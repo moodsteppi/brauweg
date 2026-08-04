@@ -9,7 +9,7 @@ import {
   type PlayerRef,
   type RankingEntry,
 } from '../api';
-import { DECKS, cardImage, deckById, type Deck } from '../decks';
+import { DECKS, cardImage, deckBack, deckById, decksFor, type Deck } from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
 import { Clan } from './Clan';
@@ -1175,12 +1175,53 @@ function Freunde({
   );
 }
 
-/** Die drei Karten, an denen sich die Blätter am deutlichsten unterscheiden. */
-const SAMPLE = [
-  { id: 1, suit: 'C', rank: 'Q' },
-  { id: 2, suit: 'H', rank: 'T' },
-  { id: 3, suit: 'D', rank: 'A' },
-];
+/**
+ * Die Karten, an denen sich die Blätter am deutlichsten unterscheiden — je
+ * Spiel andere, weil jedes Spiel ein anderes Blatt hat. Ein Doppelkopfblatt
+ * hat keine Sieben, ein Zauberblatt keine Dame.
+ */
+const PROBEN: Record<string, { id: number; suit: string; rank: string }[]> = {
+  doppelkopf: [
+    { id: 1, suit: 'C', rank: 'Q' },
+    { id: 2, suit: 'H', rank: 'T' },
+    { id: 3, suit: 'D', rank: 'A' },
+  ],
+  wizard: [
+    { id: 1, suit: 'Z', rank: '1' },
+    { id: 2, suit: 'H', rank: '13' },
+    { id: 3, suit: 'N', rank: '2' },
+  ],
+};
+
+const SAMPLE = PROBEN.doppelkopf!;
+
+function probenFuer(gameId: string): { id: number; suit: string; rank: string }[] {
+  return PROBEN[gameId] ?? SAMPLE;
+}
+
+/** Eine ganze Hand für die große Vorschau. */
+const VORSCHAU_HAND: Record<string, { id: number; suit: string; rank: string }[]> = {
+  doppelkopf: [
+    { id: 11, suit: 'C', rank: 'Q' },
+    { id: 12, suit: 'S', rank: 'Q' },
+    { id: 13, suit: 'H', rank: 'T' },
+    { id: 14, suit: 'D', rank: 'A' },
+    { id: 15, suit: 'C', rank: 'J' },
+    { id: 16, suit: 'S', rank: '9' },
+  ],
+  wizard: [
+    { id: 11, suit: 'Z', rank: '1' },
+    { id: 12, suit: 'H', rank: '13' },
+    { id: 13, suit: 'H', rank: '7' },
+    { id: 14, suit: 'C', rank: '11' },
+    { id: 15, suit: 'D', rank: '3' },
+    { id: 16, suit: 'N', rank: '2' },
+  ],
+};
+
+function handFuer(gameId: string): { id: number; suit: string; rank: string }[] {
+  return VORSCHAU_HAND[gameId] ?? VORSCHAU_HAND.doppelkopf!;
+}
 
 /**
  * Kartenblatt waehlen.
@@ -1219,6 +1260,7 @@ function ThemenTab({
     <>
       {gewaehlt && thema ? (
         <DeckPicker
+          gameId={gewaehlt}
           spielName={t(`game.${gewaehlt}`)}
           onSpielWechseln={() => setGewaehlt(null)}
           current={thema.cardDeck}
@@ -1263,6 +1305,7 @@ function ThemenTab({
 }
 
 function DeckPicker({
+  gameId,
   spielName,
   onSpielWechseln,
   current,
@@ -1270,6 +1313,7 @@ function DeckPicker({
   szene,
   onSzeneChange,
 }: {
+  gameId: string;
   spielName: string;
   onSpielWechseln: () => void;
   current: string;
@@ -1277,6 +1321,15 @@ function DeckPicker({
   szene: string;
   onSzeneChange: (tableScene: string) => void;
 }): React.JSX.Element {
+  /**
+   * Angetippt wird die Wahl sofort übernommen UND groß gezeigt: Ein Blatt in
+   * Daumennagelgröße sagt nichts darüber, wie es am Tisch aussieht — und
+   * genau dort wird es gebraucht. Schließen bestätigt nichts und macht nichts
+   * rückgängig; gewählt ist, was man angetippt hat.
+   */
+  const [vorschau, setVorschau] = useState(false);
+  const proben = probenFuer(gameId);
+
   return (
     <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
       <HubBanner />
@@ -1294,15 +1347,20 @@ function DeckPicker({
         className="hub-tafel--blatt"
       >
         <div className="hub-blaetter">
-          {DECKS.map((deck) => (
+          {/* Nur Blätter, die zu diesem Spiel passen: Ein Zauberblatt hat
+              keine Dame, ein Doppelkopfblatt keine Sieben. */}
+          {decksFor(gameId).map((deck) => (
             <button
               className={`hub-blatt${deck.id === current ? ' is-an' : ''}`}
               key={deck.id}
               aria-pressed={deck.id === current}
-              onClick={() => onChange(deck.id)}
+              onClick={() => {
+                onChange(deck.id);
+                setVorschau(true);
+              }}
             >
               <div className="hub-blatt-probe">
-                {SAMPLE.map((card) => (
+                {proben.map((card) => (
                   <DeckSample card={card} deck={deck} key={card.id} />
                 ))}
               </div>
@@ -1328,12 +1386,15 @@ function DeckPicker({
               className={`hub-szene${s.id === szene ? ' is-an' : ''}`}
               key={s.id}
               aria-pressed={s.id === szene}
-              onClick={() => onSzeneChange(s.id)}
+              onClick={() => {
+                onSzeneChange(s.id);
+                setVorschau(true);
+              }}
             >
               <span className="hub-szene-probe">
                 <img src={szeneBild(s.id)} alt="" draggable={false} />
                 <span className="hub-szene-karten">
-                  {SAMPLE.slice(0, 2).map((card) => (
+                  {proben.slice(0, 2).map((card) => (
                     <DeckSample card={card} deck={deckById(current)} key={card.id} />
                   ))}
                 </span>
@@ -1345,8 +1406,99 @@ function DeckPicker({
           ))}
         </div>
       </Tafel>
+
+      {vorschau && (
+        <TischVorschau
+          gameId={gameId}
+          spielName={spielName}
+          deck={deckById(current)}
+          szene={szene}
+          onClose={() => setVorschau(false)}
+        />
+      )}
     </HubSzene>
   );
+}
+
+/**
+ * Große Vorschau: so sieht der Tisch mit dieser Wahl aus.
+ *
+ * Kein Bildschirmfoto und keine Nachbildung des ganzen Tisches — nur die drei
+ * Dinge, an denen sich eine Wahl entscheidet: die gewählte Szenerie als
+ * Untergrund, ein Stich in der Mitte und die eigene Hand am unteren Rand, in
+ * denselben Größen wie am echten Tisch.
+ *
+ * Der Grund für diesen Bildschirm: Auf einem zu dunklen Untergrund
+ * verschwinden Kreuz und Pik, und ein Blatt in Daumennagelgröße verrät das
+ * nicht. Das soll man vor dem Spiel sehen, nicht mittendrin.
+ */
+function TischVorschau({
+  gameId,
+  spielName,
+  deck,
+  szene,
+  onClose,
+}: {
+  gameId: string;
+  spielName: string;
+  deck: Deck;
+  szene: string;
+  onClose: () => void;
+}): React.JSX.Element {
+  const hand = handFuer(gameId);
+  const stich = hand.slice(0, 3);
+  const szeneName = SZENEN.find((s) => s.id === szene)?.name ?? szene;
+
+  return (
+    <div className="hub-vorschau" onClick={onClose}>
+      <div className="hub-vorschau-tisch" onClick={(event) => event.stopPropagation()}>
+        <img className="hub-vorschau-bg" src={szeneBild(szene)} alt="" draggable={false} />
+
+        <div className="hub-vorschau-kopf">
+          <strong>
+            {t(deck.nameKey)} · {szeneName}
+          </strong>
+          <span className="muted">So sieht dein {spielName}-Tisch aus</span>
+        </div>
+
+        {/* Mitspieler oben: verdeckte Karten zeigen den Rücken des Blatts. */}
+        <div className="hub-vorschau-gegner">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span className="hub-vorschau-ruecken" key={i}>
+              {deckRuecken(deck)}
+            </span>
+          ))}
+        </div>
+
+        <div className="hub-vorschau-stich">
+          {stich.map((card, i) => (
+            <span className={`hub-vorschau-karte at-${i}`} key={card.id}>
+              <DeckSample card={card} deck={deck} />
+            </span>
+          ))}
+        </div>
+
+        <div className="hub-vorschau-hand">
+          {hand.map((card) => (
+            <span className="hub-vorschau-karte" key={card.id}>
+              <DeckSample card={card} deck={deck} />
+            </span>
+          ))}
+        </div>
+
+        <button className="primary hub-vorschau-fertig" onClick={onClose}>
+          Passt
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Rückseite des Blattes, oder das gezeichnete Muster beim Textblatt. */
+function deckRuecken(deck: Deck): React.JSX.Element {
+  const src = deckBack(deck);
+  if (src) return <img className="card-img" src={src} alt="" draggable={false} />;
+  return <span className="card card--back" aria-hidden="true" />;
 }
 
 function DeckSample({

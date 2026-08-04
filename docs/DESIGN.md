@@ -106,6 +106,12 @@ Vorhandenes wiederverwenden statt neu erfinden:
   und Zustände.
 - **Vollbild-Auswahl** (`spielwahl`): Listen mit einem gemalten Bild je
   Eintrag.
+- **Themen-Vorschau** (`hub-vorschau`): Wer ein Kartenblatt oder eine
+  Szenerie antippt, bekommt sie sofort groß im Tischformat gezeigt —
+  Untergrund, ein Stich, die eigene Hand, in den Größen des echten Tisches.
+  Die Wahl gilt dabei schon; die Vorschau bestätigt nichts, sie zeigt nur.
+  **Regel für alles Optische:** Was am Tisch wirkt, wird in Tischgröße
+  gezeigt, nicht als Daumennagel.
 - **Kommt-bald-Blatt** (`BaldBlatt` in `GameSelect.tsx`): einheitliche
   Antwort auf alles Unfertige.
 

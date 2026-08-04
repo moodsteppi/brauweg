@@ -5540,3 +5540,138 @@ main.auth > .muted {
   font-size: 0.66rem;
   color: var(--muted);
 }
+
+/* ==========================================================================
+   Themen-Vorschau: so sieht der Tisch mit dieser Wahl aus.
+
+   Kein Nachbau des ganzen Tisches — nur die drei Dinge, an denen sich eine
+   Wahl entscheidet: Untergrund, ein Stich in der Mitte, die eigene Hand am
+   unteren Rand. In denselben Größen wie am echten Tisch, sonst hilft die
+   Vorschau nicht.
+   ========================================================================== */
+.hub-vorschau {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 0.8rem;
+  background: rgba(6, 10, 12, 0.72);
+  backdrop-filter: blur(2px);
+}
+.hub-vorschau-tisch {
+  position: relative;
+  width: min(100%, 26rem);
+  aspect-ratio: 3 / 4;
+  max-height: 88dvh;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+.hub-vorschau-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hub-vorschau-kopf {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  padding: 0.5rem 0.7rem;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  color: #f4ecdc;
+  font-size: 0.82rem;
+}
+.hub-vorschau-kopf .muted { font-size: 0.72rem; }
+
+/* Verdeckte Karten der Mitspieler — sie zeigen den Rücken des Blattes. */
+.hub-vorschau-gegner {
+  position: absolute;
+  top: 3.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+}
+.hub-vorschau-ruecken { line-height: 0; margin-left: -0.9rem; }
+.hub-vorschau-ruecken:first-child { margin-left: 0; }
+.hub-vorschau-ruecken .card-img,
+.hub-vorschau-ruecken .card--back {
+  display: block;
+  width: 1.6rem;
+  height: 2.32rem;
+  border-radius: 0.25rem;
+}
+/* Textblatt hat kein Rückenbild — dann dasselbe gezeichnete Muster wie am
+   Tisch, damit die Vorschau auch dort ehrlich ist. */
+.hub-vorschau-ruecken .card--back {
+  min-width: 0;
+  padding: 0;
+  background: repeating-linear-gradient(45deg, #1f4e8c 0 5px, #2a63ad 5px 10px);
+  border: 2px solid #fff;
+}
+
+.hub-vorschau-stich {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 9rem;
+  height: 7rem;
+}
+.hub-vorschau-stich .hub-vorschau-karte { position: absolute; }
+.hub-vorschau-stich .at-0 { left: 0; top: 1.2rem; transform: rotate(-7deg); }
+.hub-vorschau-stich .at-1 { left: 2.9rem; top: 0; transform: rotate(4deg); }
+.hub-vorschau-stich .at-2 { left: 5.8rem; top: 1.4rem; transform: rotate(9deg); }
+
+.hub-vorschau-hand {
+  position: absolute;
+  bottom: 3.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+}
+.hub-vorschau-hand .hub-vorschau-karte { margin-left: -0.7rem; }
+.hub-vorschau-hand .hub-vorschau-karte:first-child { margin-left: 0; }
+
+.hub-vorschau-karte { line-height: 0; }
+.hub-vorschau-karte .card-img {
+  display: block;
+  width: 2.9rem;
+  height: 4.21rem;
+  border-radius: 0.3rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+/* Textblatt: dieselbe Fläche, damit die Vorschau nicht die Form ändert. */
+.hub-vorschau-karte .card {
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 4.21rem;
+  min-width: 0;
+  padding: 0;
+  font-size: 1rem;
+  border-radius: 0.3rem;
+}
+
+.hub-vorschau-fertig {
+  position: absolute;
+  bottom: 0.7rem;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 8rem;
+}
+
+/* Die gemalte Plakette hält die aufgedeckte Trumpfkarte. Das Bild trägt den
+   Rahmen, die Karte liegt im freien Feld darin. */
+.wiz-trumpf {
+  padding: 0.55rem 0.6rem 1.1rem;
+  background: url('/hub/plakette-trumpf.webp') no-repeat center / 100% 100%;
+}
+.wiz-trumpf-text { margin-top: -0.5rem; }

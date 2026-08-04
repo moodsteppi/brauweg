@@ -11,7 +11,13 @@
  * funktioniert auch dort, wo die Leitung schmal ist.
  */
 
-export const CARD_DECKS = ['text', 'minimal2', 'minimal4', 'klassisch'] as const;
+export const CARD_DECKS = [
+  'text',
+  'minimal2',
+  'minimal4',
+  'klassisch',
+  'zauberwald',
+] as const;
 
 export type CardDeck = (typeof CARD_DECKS)[number];
 

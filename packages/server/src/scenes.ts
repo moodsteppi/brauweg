@@ -19,6 +19,8 @@ export const TABLE_SCENES = [
   'winter',
   'sommer',
   'nacht',
+  'zauberturm',
+  'sternenwiese',
 ] as const;
 
 export type TableScene = (typeof TABLE_SCENES)[number];

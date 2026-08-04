@@ -1,5 +1,15 @@
 # Bildbestellung: Zauberer
 
+> **Geliefert und eingebaut am 4. August 2026.** Alle 61 Kartendateien, beide
+> Szenerien und die Plakette lagen maßhaltig vor (420 × 610, 1024 × 1536,
+> 240 × 300 mit echtem Alphakanal) — nichts musste nachgebessert werden.
+> Ausgeliefert wird als WebP Qualität 85: das Blatt bei 360 × 523 (1,8 MB für
+> 61 Karten), die Szenerien bei 21 und 85 kB. Die Originale liegen unter
+> `packages/client/art/zauberwald/`.
+>
+> Was unten steht, bleibt als Beschreibung des Bestellten stehen — für
+> Nachlieferungen und als Maßstab, falls ein zweites Blatt dazukommt.
+
 Das zweite Spiel der Plattform ist gebaut und **vollständig spielbar** — es
 läuft auf dem Textblatt und den vorhandenen Tischszenerien. Diese Bestellung
 gibt ihm sein eigenes Gesicht: ein gemaltes 60-Karten-Blatt, zwei
@@ -195,9 +205,10 @@ deshalb nicht in einer Spitze auslaufen.
 
 ---
 
-## 5 — Einbau nach der Lieferung
+## 5 — Einbau nach der Lieferung — **erledigt**
 
-Damit die Bilder nicht nur herumliegen, hier der Weg — drei Schritte:
+Damit die Bilder nicht nur herumliegen, hier der Weg — drei Schritte, alle
+gegangen:
 
 1. **Verkleinern und umwandeln.** Karten auf dreifache Anzeigegröße, dann WebP
    Qualität 85. Originale nach `packages/client/art/`, **niemals** unter
@@ -216,3 +227,14 @@ Damit die Bilder nicht nur herumliegen, hier der Weg — drei Schritte:
 
 Danach: Szenerien in `szenen.ts` und `packages/server/src/scenes.ts`
 eintragen, Plakette in `styles.css` an `.wiz-trumpf` hängen.
+
+**Zwei Dinge, die beim Einbau dazukamen und nicht in der Bestellung standen:**
+
+- **Auch die beiden Minimal-Blätter mussten auf `doppelkopf` beschränkt
+  werden.** Sie haben nur Neun bis Ass — an einem Zaubertisch wären sie
+  genauso kaputt wie ein Zauberblatt am Doppelkopftisch. Aufgefallen ist es
+  erst in der Oberfläche, weil beide Blätter dort weiter auftauchten.
+- **Ein Riegel für gespeicherte Altwerte:** `deckForGame()` fällt auf das
+  Textblatt zurück, wenn das im Konto gespeicherte Blatt nicht zum Spiel
+  passt. Der Filter im Wähler allein genügt nicht — die Einstellung kann aus
+  der Zeit vor der Zuordnung stammen oder über die API kommen.

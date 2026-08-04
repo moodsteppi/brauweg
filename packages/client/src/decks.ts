@@ -13,7 +13,7 @@
  * nur an einer Stelle steht.
  */
 
-export type DeckId = 'text' | 'minimal2' | 'minimal4' | 'klassisch';
+export type DeckId = 'text' | 'minimal2' | 'minimal4' | 'klassisch' | 'zauberwald';
 
 export interface Deck {
   readonly id: DeckId;
@@ -21,17 +21,27 @@ export interface Deck {
   readonly hintKey: string;
   /** Ohne Verzeichnis wird der Kartenname gesetzt statt ein Bild geladen. */
   readonly dir?: string;
-  readonly ext?: 'svg' | 'png';
+  readonly ext?: 'svg' | 'png' | 'webp';
+  /**
+   * Spiele, zu denen dieses Blatt passt. Fehlt die Angabe, passt es ueberall.
+   *
+   * Notwendig, seit es zwei Blattarten gibt: Ein Zauberblatt hat keine Karte
+   * fuer Bube, Dame und Koenig, ein Doppelkopfblatt keine fuer die Zwei bis
+   * Acht. Wer das falsche waehlt, saesse vor lauter kaputten Bildern.
+   */
+  readonly games?: readonly string[];
 }
 
 export const DECKS: readonly Deck[] = [
   { id: 'text', nameKey: 'deck.text', hintKey: 'deck.text.hint' },
+  // Die beiden Minimal-Blaetter haben nur Neun bis Ass - ein Doppelkopfblatt.
   {
     id: 'minimal2',
     nameKey: 'deck.minimal2',
     hintKey: 'deck.minimal2.hint',
     dir: 'minimal2',
     ext: 'svg',
+    games: ['doppelkopf'],
   },
   {
     id: 'minimal4',
@@ -39,6 +49,7 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.minimal4.hint',
     dir: 'minimal4',
     ext: 'svg',
+    games: ['doppelkopf'],
   },
   {
     id: 'klassisch',
@@ -46,6 +57,16 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.klassisch.hint',
     dir: 'klassisch',
     ext: 'png',
+    // Kein Zauberblatt: keine Karte fuer Eins bis Acht, kein Zauberer, kein Narr.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'zauberwald',
+    nameKey: 'deck.zauberwald',
+    hintKey: 'deck.zauberwald.hint',
+    dir: 'zauberwald',
+    ext: 'webp',
+    games: ['wizard'],
   },
 ];
 
@@ -55,7 +76,33 @@ export function deckById(id: string | null | undefined): Deck {
   return DECKS.find((deck) => deck.id === id) ?? DECKS[0]!;
 }
 
-const SUIT_DIR: Record<string, string> = { C: 'kreuz', S: 'pik', H: 'herz', D: 'karo' };
+/** Blaetter, die zu diesem Spiel passen. Das Textblatt passt immer. */
+export function decksFor(gameId: string): Deck[] {
+  return DECKS.filter((deck) => !deck.games || deck.games.includes(gameId));
+}
+
+/**
+ * Blatt fuer einen Tisch dieses Spiels.
+ *
+ * Faellt auf Text zurueck, wenn das gespeicherte Blatt nicht zum Spiel passt.
+ * Der Fall ist selten, aber real: Ein Konto kann ein Blatt gespeichert haben,
+ * bevor es die Zuordnung gab, und die Einstellung geht auch ueber die API. Ein
+ * Tisch voller kaputter Bilder waere die schlechteste aller Antworten.
+ */
+export function deckForGame(gameId: string, id: string | null | undefined): Deck {
+  const deck = deckById(id);
+  return !deck.games || deck.games.includes(gameId) ? deck : DECKS[0]!;
+}
+
+const SUIT_DIR: Record<string, string> = {
+  C: 'kreuz',
+  S: 'pik',
+  H: 'herz',
+  D: 'karo',
+  // Zauberer und Narr haben keine Farbe; ihr Name IST das Verzeichnisstueck.
+  Z: 'zauberer',
+  N: 'narr',
+};
 const RANK_DIR: Record<string, string> = {
   '9': '9',
   T: '10',
@@ -64,6 +111,10 @@ const RANK_DIR: Record<string, string> = {
   K: 'k',
   A: 'a',
 };
+
+// Zahlenwerte 1 bis 13 heissen im Dateinamen wie im Protokoll. Sie stehen
+// hier zusaetzlich, damit die Tabelle die einzige Wahrheit bleibt.
+for (let wert = 1; wert <= 13; wert++) RANK_DIR[String(wert)] = String(wert);
 
 /** Null, wenn das Blatt ohne Bilder auskommt oder die Karte unbekannt ist. */
 export function cardImage(deck: Deck, card: { suit: string; rank: string }): string | null {
