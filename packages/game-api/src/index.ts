@@ -157,6 +157,22 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
 
   isFinished(party: TParty): boolean;
 
+  /**
+   * Schaupause: Die Partie zeigt gerade etwas (z.B. die Rundenabrechnung),
+   * niemand ist am Zug, und es soll trotzdem von selbst weitergehen.
+   *
+   * Liefert die Solldauer der Pause in Millisekunden, sonst null. Das Modul
+   * bleibt uhrlos: Es nennt nur die Dauer, die Zeit misst die Plattform und
+   * ruft nach Ablauf advanceInterlude auf. Spieler koennen die Pause vorher
+   * ueber normale Aktionen beenden (z.B. "Weiter" je Sitz).
+   *
+   * Optional: Ein Spiel ohne solche Pausen laesst beide Methoden weg.
+   */
+  interludeMs?(party: TParty): number | null;
+
+  /** Beendet die laufende Schaupause nach Ablauf der Zeit. */
+  advanceInterlude?(party: TParty): TParty;
+
   standings(party: TParty): PartyStanding[];
 
   /** Markiert einen Sitz als ausgestiegen. Die Partie laeuft mit Bot weiter. */

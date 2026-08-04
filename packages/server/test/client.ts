@@ -84,6 +84,19 @@ export class TestClient {
   private autoPlay(view: ViewMessage): void {
     if (view.finished || view.seat === null) return;
 
+    // Rundenpause: Das "Weiter" haengt nicht am Zugrecht, denn waehrend der
+    // Abrechnung ist niemand am Zug. Der Automat tippt sofort weiter, wie es
+    // ein ungeduldiger Spieler taete.
+    const weiter = view.legalActions.find(
+      (candidate) => (candidate as { type: string }).type === 'weiter',
+    );
+    if (weiter) {
+      if (this.actedAt === view.revision) return;
+      this.actedAt = view.revision;
+      this.send(weiter);
+      return;
+    }
+
     // Nur handeln, wenn dieser Sitz wirklich dran ist. Ansagen waeren auch
     // ausserhalb des Zugrechts erlaubt, aber ein Automat, der jede angebotene
     // Ansage macht, sagt sich durch alle Stufen und laesst die Partie nicht

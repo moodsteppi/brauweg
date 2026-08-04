@@ -131,11 +131,64 @@ export function Table({
       .finally(() => setPauseBusy(false));
   };
 
+  /**
+   * Eigene gelegte Karte ohne Luecke: Die Gleitanimation der Handkarte endet
+   * nach 0,4 s in der Tischmitte - genau dann soll die Karte im Stich liegen,
+   * egal wie lange der Server braucht. Dazu wird sie optimistisch gelegt
+   * (pendingPlay) und ihr Eintreffen im Serverstand nicht noch einmal
+   * animiert (selbstGelegt -> is-direkt).
+   */
+  const selbstGelegt = useRef<Set<number>>(new Set());
+  const [pendingPlay, setPendingPlay] = useState<{ seat: number; card: Card } | null>(null);
+  const handRef = useRef<readonly Card[]>([]);
+  useEffect(() => {
+    handRef.current = view?.view.round?.hand ?? [];
+  });
+  /** Bricht den Stich-Freeze ab: sofort zum Gewinner gleiten statt liegen. */
+  const skipFreeze = useRef<(() => void) | null>(null);
+
   /** Stabile Referenz, damit memoisierte Handkarten nicht mitrendern. */
   const playCard = useCallback(
-    (cardId: number) => send({ type: 'playCard', seat: view?.seat ?? 0, cardId }),
+    (cardId: number) => {
+      const seat = view?.seat ?? 0;
+      selbstGelegt.current.add(cardId);
+      // Liegt noch der volle letzte Stich, raeumt er sofort ab - sonst
+      // landete die eigene Karte erst nach dessen Pause auf dem Tisch.
+      skipFreeze.current?.();
+      send({ type: 'playCard', seat, cardId });
+
+      const card = handRef.current.find((c) => c.id === cardId);
+      if (card) {
+        // onPlay feuert 170 ms nach dem Tipp, die Gleitanimation endet bei
+        // 400 ms - nach weiteren 210 ms liegt die Karte also nahtlos da.
+        const reveal = prefersReducedMotion() ? 0 : 210;
+        window.setTimeout(() => {
+          setPendingPlay((p) => p ?? { seat, card });
+        }, reveal);
+        // Sicherheitsnetz: Lehnte der Server den Zug doch ab, verschwindet
+        // die optimistische Karte wieder.
+        window.setTimeout(() => {
+          setPendingPlay((p) => (p && p.card.id === cardId ? null : p));
+        }, 4000);
+      }
+    },
     [send, view?.seat],
   );
+
+  // Sobald der Serverstand die Karte fuehrt (im laufenden oder im letzten
+  // Stich), ist die optimistische Kopie erledigt.
+  const liveTrickIds = (view?.view.round?.currentTrick ?? [])
+    .map((p) => p.card.id)
+    .join('.');
+  useEffect(() => {
+    if (!pendingPlay) return;
+    const id = pendingPlay.card.id;
+    const imStich = (view?.view.round?.currentTrick ?? []).some((p) => p.card.id === id);
+    const imLetzten =
+      view?.view.round?.lastTrick?.played.some((p) => p.card.id === id) ?? false;
+    if (imStich || imLetzten) setPendingPlay(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlay, liveTrickIds]);
 
   // Der volle Stich bleibt eine Sekunde liegen, bevor er abgeraeumt wird.
   // Der Server raeumt sofort (currentTrick leer, lastTrick gefuellt); hier
@@ -160,19 +213,29 @@ export function Table({
       setSweeping(false);
       const reduce = prefersReducedMotion();
       let sweepHandle: ReturnType<typeof setTimeout> | undefined;
-      const handle = setTimeout(() => {
+      const abraeumen = (): void => {
+        setSweeping(false);
+        setFrozenKey((k) => (k === lastKey ? null : k));
+      };
+      // Lange genug gelegen: jetzt zum Gewinner gleiten, dann abraeumen.
+      const gleiten = (): void => {
+        if (sweepHandle) return; // schon unterwegs
         if (reduce) {
-          setFrozenKey((k) => (k === lastKey ? null : k));
+          abraeumen();
           return;
         }
-        // Lange genug gelegen: jetzt zum Gewinner gleiten, dann abraeumen.
         setSweeping(true);
-        sweepHandle = setTimeout(() => {
-          setSweeping(false);
-          setFrozenKey((k) => (k === lastKey ? null : k));
-        }, 440);
-      }, 1600);
+        sweepHandle = setTimeout(abraeumen, 440);
+      };
+      const handle = setTimeout(gleiten, 1600);
+      // Wer waehrend des Liegens schon die naechste Karte legt, will nicht
+      // warten: Der Stich gleitet sofort zum Gewinner.
+      skipFreeze.current = () => {
+        clearTimeout(handle);
+        gleiten();
+      };
       return () => {
+        skipFreeze.current = null;
         clearTimeout(handle);
         if (sweepHandle) clearTimeout(sweepHandle);
       };
@@ -206,6 +269,14 @@ export function Table({
     setHandJustDealt(true);
     window.setTimeout(() => setHandJustDealt(false), 450);
   }, []);
+
+  // Neues Geben: Die Kartennummern werden neu vergeben; Marker und
+  // optimistische Karte der alten Runde waeren dann falsch.
+  useEffect(() => {
+    if (!dealKey) return;
+    selbstGelegt.current.clear();
+    setPendingPlay(null);
+  }, [dealKey]);
   useEffect(() => {
     if (!dealKey) {
       // Mitten in der Runde beigetreten: vormerken, ohne zu animieren.
@@ -289,15 +360,20 @@ export function Table({
   })();
   const [showTrickPeek, setShowTrickPeek] = useState(false);
   const [abschlussStep, setAbschlussStep] = useState<'none' | 'abrechnung' | 'zwischenstand'>('none');
+  // Eigenes "Weiter" ist beim Server angekommen; jetzt heisst es warten,
+  // bis die anderen durch sind oder die Rundenpause ablaeuft.
+  const [weiterGesendet, setWeiterGesendet] = useState(false);
   const gesehenAbschluss = useRef<string | null>(null);
   useEffect(() => {
     if (!finishedKey) {
       setShowTrickPeek(false);
       setAbschlussStep('none');
+      setWeiterGesendet(false);
       return;
     }
     if (gesehenAbschluss.current === finishedKey) return;
     gesehenAbschluss.current = finishedKey;
+    setWeiterGesendet(false);
 
     if (prefersReducedMotion()) {
       setAbschlussStep('abrechnung');
@@ -312,10 +388,12 @@ export function Table({
     return () => window.clearTimeout(peek);
   }, [finishedKey, view?.view.round]);
 
-  // Fallback-Autofluss, falls niemand auf "Weiter" tippt.
+  // Fallback-Autofluss, falls niemand auf "Weiter" tippt. Der Server haelt
+  // die Rundenpause 15 s; mit 1,5 s Stapel-Blick und 7 s Auswertung bleiben
+  // dem Zwischenstand gut 6 s, bevor das neue Geben die Blaetter ersetzt.
   useEffect(() => {
     if (abschlussStep !== 'abrechnung') return;
-    const t = window.setTimeout(() => setAbschlussStep('zwischenstand'), 10_000);
+    const t = window.setTimeout(() => setAbschlussStep('zwischenstand'), 7_000);
     return () => window.clearTimeout(t);
   }, [abschlussStep]);
 
@@ -419,7 +497,11 @@ export function Table({
   // Auswahl, dann Bestaetigung) - keine Knopfreihe am unteren Rand, auf der
   // ein Fehltipp eine ganze Runde entscheidet.
   const vorbehaltActions = otherActions.filter((action) => action.type === 'vorbehalt');
-  const rowActions = otherActions.filter((action) => action.type !== 'vorbehalt');
+  // "Weiter" gehoert aufs Zwischenstand-Blatt, nicht in die Knopfreihe.
+  const weiterAction = otherActions.find((action) => action.type === 'weiter');
+  const rowActions = otherActions.filter(
+    (action) => action.type !== 'vorbehalt' && action.type !== 'weiter',
+  );
 
   const opponents = Array.from({ length: seatCount }, (_, s) => s).filter(
     (s) => view.seat === null || s !== view.seat,
@@ -432,7 +514,15 @@ export function Table({
   // naechste Spieler schon die erste Karte des neuen Stichs gelegt hat. Ohne
   // diese Haerte raeumte der erste schnelle Bot den Stich sofort wieder ab.
   const frozenActive = frozenKey !== null && frozenKey === lastKey && lastTrickNow !== null;
-  const trick = frozenActive ? lastTrickNow!.played : liveTrick;
+  const serverTrick = frozenActive ? lastTrickNow!.played : liveTrick;
+  // Optimistisch: Die eigene Karte liegt schon da, waehrend die Antwort des
+  // Servers noch unterwegs ist. Nie doppelt, nie waehrend des Stich-Freeze.
+  const trick =
+    !frozenActive &&
+    pendingPlay &&
+    !serverTrick.some((p) => p.card.id === pendingPlay.card.id)
+      ? [...serverTrick, pendingPlay]
+      : serverTrick;
   const phaseText = round ? t(`phase.${round.phase}`) : 'Zwischen den Runden';
   const showHands = !dealing;
 
@@ -584,9 +674,12 @@ export function Table({
                 className={`doko-trick-card at-${slotFor(played.seat, base, seatCount)}`}
               >
                 {/* Innerer Wrapper traegt die Legeanimation, damit die Platzierung
-                  (aeusseres Element) davon unberuehrt bleibt. */}
+                  (aeusseres Element) davon unberuehrt bleibt. Die eigene Karte
+                  kam schon per Gleitflug an und faellt nicht noch einmal ein. */}
                 <div
                   className={`doko-trick-in${
+                    selbstGelegt.current.has(played.card.id) ? ' is-direkt' : ''
+                  }${
                     sweeping && lastTrickNow
                       ? ` is-sweep sweep-${slotFor(lastTrickNow.winnerSeat, base, seatCount)}`
                       : ''
@@ -667,8 +760,17 @@ export function Table({
         <ZwischenstandBlatt
           seats={seatList.map((s) => ({ seat: s.seat, name: nameOf(s.seat), avatarUrl: avatarOf(s.seat) }))}
           scores={view.view.scores}
-          restRunden={Math.max(0, view.view.totalRounds - view.view.roundIndex - 1)}
-          onWeiter={() => setAbschlussStep('none')}
+          /* Waehrend der Rundenpause zaehlt roundIndex schon die naechste
+             Runde; verbleibend ist also die Differenz ohne Abzug. */
+          restRunden={Math.max(0, view.view.totalRounds - view.view.roundIndex)}
+          warten={weiterGesendet || !weiterAction}
+          onWeiter={() => {
+            // Das "Weiter" geht an den Server: Die naechste Runde beginnt,
+            // sobald alle anwesenden Sitze durch sind - oder die Pause
+            // ablaeuft. Das Blatt bleibt solange stehen.
+            if (weiterAction) send(weiterAction);
+            setWeiterGesendet(true);
+          }}
         />
       )}
 
@@ -1404,11 +1506,14 @@ function ZwischenstandBlatt({
   seats,
   scores,
   restRunden,
+  warten,
   onWeiter,
 }: {
   seats: SitzInfo[];
   scores: Record<number, number>;
   restRunden: number;
+  /** Eigenes "Weiter" ist raus (oder es gibt keines, etwa als Zuschauer). */
+  warten: boolean;
   onWeiter: () => void;
 }): React.JSX.Element {
   const sortiert = [...seats].sort((a, b) => a.seat - b.seat);
@@ -1437,8 +1542,8 @@ function ZwischenstandBlatt({
           })}
         </div>
         <p className="muted doko-zwischenstand-rest">Verbleibende Runden: {restRunden}</p>
-        <button className="primary" onClick={onWeiter}>
-          Weiter
+        <button className="primary" disabled={warten} onClick={onWeiter}>
+          {warten ? 'Warte auf die anderen …' : 'Weiter'}
         </button>
       </div>
     </div>

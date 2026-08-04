@@ -26,12 +26,14 @@ import type {
 import {
   type AbsageLevel,
   type BockWindow,
+  type PartyAction,
   type PartyState,
-  type RoundAction,
   type RuleSet,
   type PlayerView,
   BockState,
   DEFAULT_RULESET,
+  endeRundenpause,
+  inRundenpause,
   isTrump,
   mayAnnounce,
   act as partyAct,
@@ -40,6 +42,7 @@ import {
   currentActor as roundCurrentActor,
   finishParty,
   markLeft as engineMarkLeft,
+  pauseSeats,
   rotationSize,
   startRound,
   upcomingMultiplier,
@@ -59,9 +62,11 @@ import {
  */
 const SNAPSHOT_VERSION = 1;
 
-type SerializedParty = Omit<PartyState, 'bock'> & {
+type SerializedParty = Omit<PartyState, 'bock' | 'weiter'> & {
   readonly v: number;
   readonly bock: readonly BockWindow[];
+  /** Fehlt in Snapshots von vor der Rundenpause; dann gilt ein leerer Stand. */
+  readonly weiter?: readonly number[];
 };
 
 export interface DokoView {
@@ -162,7 +167,7 @@ function wrap(party: PartyState, round: PlayerView | null, spectator: boolean): 
 // Modul
 // ---------------------------------------------------------------------------
 
-export const doppelkopf: GameModule<PartyState, RoundAction, DokoView, RuleSet> = {
+export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> = {
   meta,
   protocolVersion: 1,
 
@@ -225,8 +230,16 @@ export const doppelkopf: GameModule<PartyState, RoundAction, DokoView, RuleSet> 
     const st = party.current;
     if (!st) return [];
 
+    // Rundenpause: Es gibt genau eine Aktion, das eigene "Weiter" - und auch
+    // das nur fuer anwesende Menschen, die noch nicht getippt haben.
+    if (inRundenpause(party)) {
+      return pauseSeats(party).includes(seat) && !party.weiter.includes(seat)
+        ? [{ type: 'weiter', seat }]
+        : [];
+    }
+
     const v = roundViewFor(st, seat);
-    const actions: RoundAction[] = [];
+    const actions: PartyAction[] = [];
 
     // Die Pflichtansage blockiert alles andere: Solange sie offen ist, ist sie
     // die einzige Aktion des betroffenen Sitzes. Ab 30 Augen gibt es nur
@@ -312,6 +325,19 @@ export const doppelkopf: GameModule<PartyState, RoundAction, DokoView, RuleSet> 
 
   isFinished: (party) => party.finished,
 
+  /**
+   * Rundenpause als Schaupause der Plattform: lang genug fuer Abrechnung
+   * und Zwischenstand, kurz genug, dass der Tisch nie an einem AFK-Spieler
+   * haengt. Wer frueher weiterspielen will, tippt "Weiter".
+   */
+  interludeMs: (party) => (inRundenpause(party) ? 15_000 : null),
+
+  advanceInterlude(party) {
+    if (!inRundenpause(party)) return party;
+    const next = endeRundenpause(party);
+    return next.finished ? next : startRound(next);
+  },
+
   standings(party): PartyStanding[] {
     const done = party.finished ? party : finishParty(party);
     const sorted = [...done.seats].sort((a, b) => (done.scores[b] ?? 0) - (done.scores[a] ?? 0));
@@ -387,6 +413,10 @@ export const doppelkopf: GameModule<PartyState, RoundAction, DokoView, RuleSet> 
       );
     }
     const { v: _v, bock, ...rest } = snap;
-    return { ...rest, bock: BockState.restore(rest.rs, bock) } as PartyState;
+    return {
+      ...rest,
+      weiter: rest.weiter ?? [],
+      bock: BockState.restore(rest.rs, bock),
+    } as PartyState;
   },
 };

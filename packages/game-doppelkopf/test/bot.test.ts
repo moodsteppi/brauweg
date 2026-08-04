@@ -10,6 +10,8 @@ import {
   type PartyState,
   act,
   createParty,
+  inRundenpause,
+  pauseSeats,
   startRound,
 } from '../src/party.js';
 import {
@@ -39,6 +41,13 @@ function botParty(party: PartyState): PartyState {
         `Bot hat keine Aktion in Phase ${party.current.phase}`,
       );
       party = act(party, action!);
+    }
+
+    // Rundenpause: Alle tippen "Weiter", wie am echten Tisch.
+    let warten = 0;
+    while (inRundenpause(party) && warten++ < 10) {
+      const offen = pauseSeats(party).filter((s) => !party.weiter.includes(s));
+      party = act(party, { type: 'weiter', seat: offen[0]! });
     }
   }
   return party;
@@ -335,7 +344,8 @@ test('Bot verschenkt weniger Augen als reiner Zufall', () => {
         continue;
       }
       const action = botAction(view);
-      if (!action) break;
+      // "weiter" gehoert zur Partie-Maschine; auf Rundenebene ist Schluss.
+      if (!action || action.type === 'weiter') break;
       state = applyRound(state, action);
     }
 

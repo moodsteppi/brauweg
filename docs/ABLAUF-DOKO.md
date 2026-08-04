@@ -145,16 +145,18 @@ Danach zurück zu Takt 1 (Geben) — der Loop.
 
 **Der Tisch darf nie an einem AFK-Spieler hängen.** Auswertung und
 Zwischenstand sind Blätter mit „Weiter", aber sie **blockieren nicht**: Der
-Server hält eine kurze **Zwischenrunden-Pause** (Vorschlag: 10 s bzw. sobald
-alle anwesenden Sitze „Weiter" getippt haben, je nachdem was zuerst kommt)
-und startet dann die nächste Runde von selbst. Der Client zeigt in dieser
-Pause nacheinander Auswertung → Zwischenstand; startet der Server die neue
-Runde, ersetzt das Geben die Blätter.
+Server hält eine **Rundenpause** von 15 s — oder kürzer, sobald alle
+anwesenden Sitze „Weiter" getippt haben — und startet dann die nächste
+Runde von selbst. Der Client zeigt in dieser Pause nacheinander Auswertung
+(Auto-Fluss nach 7 s) → Zwischenstand; startet der Server die neue Runde,
+ersetzt das Geben die Blätter.
 
-> **Server-Notiz (offen):** Dafür braucht der Zwischenzustand einen eigenen
-> Takt („zwischen den Runden") mit optionalem „Weiter" je Sitz und einem
-> Timeout. Die reine Anzeige (dieses Doc) steht; die Engine-Seite ist ein
-> eigener Umsetzungsschritt.
+> **Server-Notiz (umgesetzt):** Die fertige Runde bleibt als `current`
+> liegen (`phase === 'finished'`), die Engine kennt die Aktion
+> `{ type: 'weiter', seat }` und `pauseSeats` (anwesende Menschen). Die
+> Plattform hält den Takt über die Schaupause des Moduls
+> (`interludeMs`/`advanceInterlude` in `GameModule`); Botsitze tippen ihr
+> „Weiter" selbst im Bot-Takt.
 
 ## Sprechblasen (`doko-blase`)
 
