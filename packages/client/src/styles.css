@@ -731,8 +731,11 @@ td {
   color: #fff;
   padding: 0.35rem 0.8rem;
   border-radius: 999px;
+  /* Ueber den Blaettern (doko-sheet, 300): Eine abgelehnte Aktion muss auch
+     dann zu sehen sein, wenn gerade ein Auswahl-Blatt offen ist - sonst
+     tippt man ins Leere und raetselt. */
+  z-index: 400;
   font-size: 0.82rem;
-  z-index: 50;
 }
 
 /* Overlays: Pflichtansage, Kartenauswahl */

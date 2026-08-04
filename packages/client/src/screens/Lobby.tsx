@@ -174,7 +174,12 @@ export function Lobby({
     defaults && config
       ? flags.filter(
           ([key, value]) => (defaults.config as Record<string, unknown>)[key] !== value,
-        ).length
+        ).length +
+        // Die Blattwahl (Scharfer Doppelkopf) zaehlt wie jede andere Abweichung.
+        (config.deck !== undefined &&
+        config.deck !== (defaults.config as Record<string, unknown>).deck
+          ? 1
+          : 0)
       : 0;
 
   // Filter und Suche laufen auf der geladenen Liste: Sie ist kurz, und so
@@ -410,16 +415,39 @@ function RegelSheet({
   onClose: () => void;
 }): React.JSX.Element {
   const flags = Object.entries(config).filter(([, value]) => typeof value === 'boolean');
-  const active = flags.filter(([, value]) => value).length;
+
+  // Scharfer Doppelkopf ist keine Ja/Nein-Regel im Regelsatz, sondern die
+  // Blattwahl (deck: without9 = ohne Neunen, 40 Karten). Als Kachel fuehlt
+  // sie sich trotzdem wie ein Schalter an - also steht sie hier vorneweg.
+  const hatBlattwahl = typeof config.deck === 'string';
+  const scharf = config.deck === 'without9';
+  const active = flags.filter(([, value]) => value).length + (scharf ? 1 : 0);
+  const gesamt = flags.length + (hatBlattwahl ? 1 : 0);
 
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
         <h2>Regeln für diesen Tisch</h2>
         <p className="muted">
-          {active} von {flags.length} an · Antippen schaltet um
+          {active} von {gesamt} an · Antippen schaltet um
         </p>
         <div className="regeln">
+          {hatBlattwahl && (
+            <button
+              type="button"
+              className={`regel${scharf ? ' is-on' : ''}`}
+              aria-pressed={scharf}
+              onClick={() => onChange({ ...config, deck: scharf ? 'with9' : 'without9' })}
+            >
+              <span className="regel-bild" aria-hidden="true">
+                {regelBild('scharf')}
+              </span>
+              {t('regel.scharf')}
+              <span className="regel-check" aria-hidden="true">
+                ✓
+              </span>
+            </button>
+          )}
           {flags.map(([key, value]) => (
             <button
               type="button"

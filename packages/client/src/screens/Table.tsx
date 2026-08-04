@@ -1421,6 +1421,19 @@ function CardPicker({
   onPick: (cards: number[]) => void;
 }): React.JSX.Element {
   const [picked, setPicked] = useState<number[]>([]);
+  /**
+   * Abgeschickt: Der Knopf zeigt es und sperrt sich, statt stumm zu bleiben.
+   * Nimmt der Server an, verschwindet das Blatt von selbst (awaiting kippt).
+   * Kommt nichts zurueck (Funkloch, Ablehnung), oeffnet sich der Knopf nach
+   * kurzer Zeit wieder - man kann es erneut versuchen.
+   */
+  const [gesendet, setGesendet] = useState(false);
+  useEffect(() => {
+    if (!gesendet) return;
+    const t = window.setTimeout(() => setGesendet(false), 2500);
+    return () => window.clearTimeout(t);
+  }, [gesendet]);
+
   const toggle = (id: number): void => {
     setPicked(picked.includes(id) ? picked.filter((c) => c !== id) : [...picked, id]);
   };
@@ -1448,10 +1461,17 @@ function CardPicker({
         </div>
         <button
           className="primary"
-          disabled={picked.length !== count}
-          onClick={() => onPick(picked)}
+          disabled={gesendet || picked.length !== count}
+          onClick={() => {
+            setGesendet(true);
+            onPick(picked);
+          }}
         >
-          {picked.length} von {count} gewählt
+          {gesendet
+            ? 'Wird übergeben …'
+            : picked.length === count
+              ? 'Karten übergeben'
+              : `${picked.length} von ${count} gewählt`}
         </button>
       </div>
     </div>

@@ -71,7 +71,7 @@ test('zwei Clients beenden eine vollstaendige Partie', async (t) => {
   b.close();
 });
 
-test('ein Tisch mit Bots zaehlt nicht fuer die Rangliste', async (t) => {
+test('auch ein Tisch mit Bots zaehlt fuer die Rangliste', async (t) => {
   const h = await startHarness();
   t.after(() => h.close());
 
@@ -83,8 +83,11 @@ test('ein Tisch mit Bots zaehlt nicht fuer die Rangliste', async (t) => {
   b.join(table.id);
   await a.waitFor(() => a.lastView?.finished === true, 'Partie-Ende', 60_000);
 
+  // Solange es zu wenige Mitspieler gibt, sollen auch Partien mit
+  // aufgefuellten Plaetzen Trophaeen bringen. Gebucht wird nur auf Sitze
+  // mit Konto: zwei Menschen, zwei Botplaetze.
   const ledger = await h.ctx.db.select().from(schema.trophyLedger);
-  assert.equal(ledger.length, 0, 'Bots am Tisch schliessen die Wertung aus');
+  assert.equal(ledger.length, 2, 'je eine Buchung fuer Anna und Bert');
 
   a.close();
   b.close();

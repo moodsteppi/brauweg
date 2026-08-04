@@ -478,10 +478,15 @@ export function isReadyToStart(
   return fill === true;
 }
 
-/** Zaehlt der Tisch fuer die Rangliste? Bots und Training schliessen das aus. */
+/**
+ * Zaehlt der Tisch fuer die Rangliste? Nur die Trainingsregel schliesst das
+ * aus. Bots tun es NICHT mehr: Solange es zu wenige Mitspieler gibt, sollen
+ * auch Partien mit aufgefuellten Plaetzen Trophaeen bringen - gebucht wird
+ * ohnehin nur auf Sitze mit Konto. Wer ohne Wertung spielen will, stellt
+ * Training an.
+ */
 export async function countsForRanking(db: Db, tableId: string): Promise<boolean> {
-  const { table, seats } = await tableWithSeats(db, tableId);
-  if (seats.some((seat) => seat.isBot || !seat.accountId)) return false;
+  const { table } = await tableWithSeats(db, tableId);
 
   const [rs] = await db
     .select({ config: s.ruleSet.config })

@@ -15,7 +15,7 @@ import { schema } from './helpers.js';
 import { startHarness, tableWithFourHumans, tableWithTwoHumans } from './harness.js';
 import { TestClient } from './client.js';
 
-test('eine Partie mit Bots fuellt das Profil, aber nicht die Rangliste', async (t) => {
+test('eine Partie mit Bots fuellt Profil und Rangliste', async (t) => {
   const h = await startHarness();
   t.after(() => h.close());
 
@@ -28,15 +28,18 @@ test('eine Partie mit Bots fuellt das Profil, aber nicht die Rangliste', async (
 
   const profil = await playerProfile(h.ctx.db, anna.accountId, anna.accountId);
   assert.equal(profil.totals.parties, 1, 'die Partie zaehlt im Profil');
-  assert.equal(profil.totals.trophies, 0, 'aber nicht in der Rangliste');
-  assert.equal(profil.ranking.length, 0);
 
   // Genau einer der Sitze hat gewonnen; wins muss zur Platzierung passen.
   const standings = a.messages('party').at(-1)!.standings as { place: number }[];
   assert.ok(standings.filter((s) => s.place === 1).length >= 1);
 
-  // Am Partie-Ende gab es keine Trophaeen-Buchungen.
-  assert.deepEqual(a.messages('party').at(-1)!.trophies, []);
+  // Bots schliessen die Wertung nicht mehr aus: gebucht wird auf die beiden
+  // Konten-Sitze. Nullsummig ist das nicht - die Botplaetze bekommen ihren
+  // Anteil schlicht nicht gutgeschrieben.
+  const gemeldet = a.messages('party').at(-1)!.trophies!;
+  assert.equal(gemeldet.length, 2, 'je eine Buchung fuer Anna und Bert');
+  const buchungen = await h.ctx.db.select().from(schema.trophyLedger);
+  assert.equal(buchungen.length, 2);
 
   a.close();
   b.close();

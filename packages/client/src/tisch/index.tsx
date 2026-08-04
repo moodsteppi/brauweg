@@ -346,7 +346,12 @@ export function RegelBlatt({
   const flags = config
     ? Object.entries(config).filter(([, value]) => typeof value === 'boolean')
     : [];
-  const an = flags.filter(([, value]) => value).length;
+  // Die Blattwahl (Scharfer Doppelkopf = ohne Neunen) ist keine Ja/Nein-Regel,
+  // gehoert aber sichtbar dazu - wie in der Tischerstellung.
+  const hatBlattwahl = typeof config?.deck === 'string';
+  const scharf = config?.deck === 'without9';
+  const an = flags.filter(([, value]) => value).length + (scharf ? 1 : 0);
+  const gesamt = flags.length + (hatBlattwahl ? 1 : 0);
 
   return (
     <div className="doko-sheet" onClick={onClose}>
@@ -359,9 +364,20 @@ export function RegelBlatt({
             <p className="muted">
               {an === 0
                 ? 'Keine Sonderregeln — es gilt das Grundspiel.'
-                : `${an} von ${flags.length} Regeln an.`}
+                : `${an} von ${gesamt} Regeln an.`}
             </p>
             <div className="regeln">
+              {hatBlattwahl && (
+                <span className={`regel${scharf ? ' is-on' : ''}`}>
+                  <span className="regel-bild" aria-hidden="true">
+                    {regelBild('scharf')}
+                  </span>
+                  {t('regel.scharf')}
+                  <span className="regel-check" aria-hidden="true">
+                    ✓
+                  </span>
+                </span>
+              )}
               {flags.map(([key, value]) => (
                 <span key={key} className={`regel${value ? ' is-on' : ''}`}>
                   <span className="regel-bild" aria-hidden="true">

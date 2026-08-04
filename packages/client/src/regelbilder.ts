@@ -32,6 +32,7 @@ const BILDER: Record<string, string> = {
   pflichtsolo: '☝️',
   countPoints: '🔢',
   training: '🎓',
+  scharf: '🌶️',
 
   // Zauberer
   lastSpecialWins: '🏁',

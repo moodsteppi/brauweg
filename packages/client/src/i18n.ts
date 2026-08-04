@@ -142,6 +142,7 @@ const de: Record<string, string> = {
   'regel.bock': 'Bockrunden',
   'regel.pflichtsolo': 'Pflichtsolo',
   'regel.training': 'Training',
+  'regel.scharf': 'Scharfer Doppelkopf',
 
   // Hausregeln des Zauberers.
   'regel.lastSpecialWins': 'Der letzte sticht',

@@ -40,6 +40,8 @@ export class TestClient {
   /** Auf true setzen, damit der Client nicht mehr selbst zieht. */
   passive = false;
   private actedAt = -1;
+  /** Rundenpause, fuer die schon "Weiter" gesendet wurde (roundIndex). */
+  private weiterFuer = -1;
 
   private constructor(
     readonly name: string,
@@ -86,13 +88,16 @@ export class TestClient {
 
     // Rundenpause: Das "Weiter" haengt nicht am Zugrecht, denn waehrend der
     // Abrechnung ist niemand am Zug. Der Automat tippt sofort weiter, wie es
-    // ein ungeduldiger Spieler taete.
+    // ein ungeduldiger Spieler taete - aber wie der echte Client nur EINMAL
+    // je Pause: Ein zweiter Tipp aus einer veralteten Sicht landete sonst
+    // nach dem letzten Rundenende auf der schon beendeten Partie.
     const weiter = view.legalActions.find(
       (candidate) => (candidate as { type: string }).type === 'weiter',
     );
     if (weiter) {
-      if (this.actedAt === view.revision) return;
-      this.actedAt = view.revision;
+      const pause = (view.view as { roundIndex?: number }).roundIndex ?? view.revision;
+      if (this.weiterFuer === pause) return;
+      this.weiterFuer = pause;
       this.send(weiter);
       return;
     }

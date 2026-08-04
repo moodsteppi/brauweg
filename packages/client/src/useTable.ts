@@ -86,6 +86,12 @@ export function useTable<V = GameView>(
   const lastResync = useRef(0);
   /** Absicht: Unmount oder Tischwechsel. Dann NICHT neu verbinden. */
   const closingRef = useRef(false);
+  /**
+   * Aktionen, die waehrend einer Funkstille getippt wurden. Sie werden nach
+   * dem Wiederverbinden nachgereicht statt stumm verschluckt - mit kurzer
+   * Frist, denn ein uralter Zug richtet mehr Verwirrung an als sein Verlust.
+   */
+  const outboxRef = useRef<{ payload: string; bis: number }[]>([]);
 
   const clearRetry = (): void => {
     if (retryTimer.current) {
@@ -150,6 +156,13 @@ export function useTable<V = GameView>(
       attemptRef.current = 0;
       setStatus('open');
       socket.send(joinPayload());
+      // Waehrend der Funkstille getippte Aktionen nachreichen. Veraltete
+      // verfallen; was der Server nicht mehr brauchen kann, lehnt er ab -
+      // das ist sichtbar, ein stilles Verschlucken war es nicht.
+      const jetzt = Date.now();
+      const offen = outboxRef.current.filter((e) => e.bis > jetzt);
+      outboxRef.current = [];
+      for (const eintrag of offen) socket.send(eintrag.payload);
     };
 
     socket.onmessage = (event) => {
@@ -252,6 +265,7 @@ export function useTable<V = GameView>(
     closingRef.current = false;
     revisionRef.current = -1;
     attemptRef.current = 0;
+    outboxRef.current = [];
     setView(null);
     setParty(null);
     setTable(null);
@@ -306,19 +320,27 @@ export function useTable<V = GameView>(
 
   const send = useCallback(
     (action: unknown) => {
+      if (!tableId) return;
+      const payload = JSON.stringify({
+        v: ENVELOPE_VERSION,
+        game: gameId,
+        type: 'action',
+        tableId,
+        action,
+      });
       const socket = socketRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
-      socket.send(
-        JSON.stringify({
-          v: ENVELOPE_VERSION,
-          game: gameId,
-          type: 'action',
-          tableId,
-          action,
-        }),
-      );
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(payload);
+        return;
+      }
+      // Keine Verbindung: Die Aktion wird NICHT stumm verschluckt, sondern
+      // kurz aufgehoben und nach dem Wiederverbinden nachgereicht. Genau so
+      // verschwand die Armut-Abgabe: Handy kurz weg, Funk tot, Tipp ins
+      // Leere - und niemand hat etwas gemerkt.
+      outboxRef.current.push({ payload, bis: Date.now() + 6000 });
+      resync();
     },
-    [tableId, gameId],
+    [tableId, gameId, resync],
   );
 
   const command = useCallback(
