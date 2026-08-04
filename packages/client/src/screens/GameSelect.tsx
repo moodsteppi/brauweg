@@ -218,6 +218,7 @@ export function GameSelect({
         return (
           <Clan
             clanId={me.clubs[0]?.id ?? null}
+            meId={me.id}
             onBald={setBald}
             onShowProfile={onShowProfile}
             onMeChange={onAvatarChange}

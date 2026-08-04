@@ -235,6 +235,56 @@ export interface ClubDetail extends ClubSummary {
   defaultRuleSetId: string | null;
 }
 
+/**
+ * Eine Zeile im Clanchat.
+ *
+ * `system` schreibt der Server selbst (Kriegsbeginn, Ergebnis) und traegt
+ * kein Konto — daran erkennt der Client sie, ohne den Text zu deuten.
+ */
+export interface ChatMessage {
+  id: string;
+  kind: 'text' | 'system';
+  accountId: string | null;
+  displayName: string | null;
+  hasAvatar: boolean;
+  /** `null`, wenn geloescht. */
+  body: string | null;
+  deleted: boolean;
+  createdAt: string;
+}
+
+export interface WarSide {
+  clubId: string;
+  name: string;
+  crest: string;
+  score: number;
+}
+
+export interface WarContributor {
+  accountId: string;
+  displayName: string;
+  points: number;
+  games: number;
+}
+
+export interface WarView {
+  id: string;
+  status: 'suche' | 'angefragt' | 'laeuft' | 'beendet' | 'abgesagt';
+  wir: WarSide;
+  gegner: WarSide | null;
+  wirHabenGefordert: boolean;
+  endsAt: string | null;
+  ergebnis: 'wir' | 'gegner' | 'unentschieden' | null;
+  beitraege: WarContributor[];
+}
+
+export interface WarState {
+  aktuell: WarView | null;
+  offeneAnfragen: WarView[];
+  letzter: WarView | null;
+  darfFuehren: boolean;
+}
+
 export const api = {
   register: (body: {
     email: string;
@@ -373,4 +423,31 @@ export const api = {
     patch<{ ok: true }>(`/clubs/${clubId}/members/${accountId}`, { role }),
   kickClubMember: (clubId: string, accountId: string) =>
     request<{ ok: true }>(`/clubs/${clubId}/members/${accountId}`, { method: 'DELETE' }),
+
+  /**
+   * Clanchat. `seit` holt nur Neueres — der offene Chat fragt im
+   * Sekundentakt nach, und die volle Seite bei jedem Abgleich waere
+   * Verschwendung auf einer Mobilfunkleitung.
+   */
+  clubMessages: (clubId: string, seit?: string) =>
+    request<{ messages: ChatMessage[] }>(
+      seit
+        ? `/clubs/${clubId}/messages?seit=${encodeURIComponent(seit)}`
+        : `/clubs/${clubId}/messages`,
+    ),
+  postClubMessage: (clubId: string, body: string) =>
+    post<ChatMessage>(`/clubs/${clubId}/messages`, { body }),
+  deleteClubMessage: (clubId: string, messageId: string) =>
+    request<{ ok: true }>(`/clubs/${clubId}/messages/${messageId}`, { method: 'DELETE' }),
+
+  /** Clankrieg: Stand, Gegnersuche, Herausforderung. */
+  clubWar: (clubId: string) => request<WarState>(`/clubs/${clubId}/war`),
+  searchWar: (clubId: string) =>
+    post<{ status: 'gepaart' | 'sucht' }>(`/clubs/${clubId}/war/search`),
+  challengeWar: (clubId: string, gegnerId: string) =>
+    post<{ ok: true }>(`/clubs/${clubId}/war/challenge`, { gegnerId }),
+  acceptWar: (clubId: string, warId: string) =>
+    post<{ ok: true }>(`/clubs/${clubId}/war/${warId}/accept`),
+  cancelWar: (clubId: string, warId: string) =>
+    request<{ ok: true }>(`/clubs/${clubId}/war/${warId}`, { method: 'DELETE' }),
 };

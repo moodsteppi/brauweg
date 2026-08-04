@@ -72,6 +72,19 @@ import {
   setMemberRole,
   updateClub,
 } from '../clubs/service.js';
+import {
+  MAX_LAENGE,
+  deleteMessage,
+  listMessages,
+  postMessage,
+} from '../clubs/chat.js';
+import {
+  acceptWar,
+  cancelWar,
+  challengeWar,
+  searchWar,
+  warState,
+} from '../clubs/war.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
 import {
   activeTableFor,
@@ -868,6 +881,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     clubId: z.string().uuid(),
     accountId: z.string().uuid(),
   });
+  const warParams = z.object({
+    clubId: z.string().uuid(),
+    warId: z.string().uuid(),
+  });
 
   app.get('/api/clubs/:clubId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
@@ -941,6 +958,84 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const adminId = await requireAccount(request);
     const params = memberParams.parse(request.params);
     await kickMember(deps.db, params.clubId, adminId, params.accountId);
+    return reply.send({ ok: true });
+  });
+
+  // -------------------------------------------------------------------------
+  // Clanchat
+  // -------------------------------------------------------------------------
+
+  /**
+   * Nachrichten lesen. `seit` holt nur Neueres — der Client fragt im
+   * Sekundentakt nach und schickt den Zeitstempel seiner juengsten Zeile mit.
+   */
+  app.get('/api/clubs/:clubId/messages', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    const { seit } = z.object({ seit: z.string().datetime().optional() }).parse(request.query);
+    const messages = await listMessages(
+      deps.db,
+      clubId,
+      accountId,
+      seit ? new Date(seit) : undefined,
+    );
+    return reply.send({ messages });
+  });
+
+  app.post('/api/clubs/:clubId/messages', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    const { body } = z.object({ body: z.string().min(1).max(MAX_LAENGE) }).parse(request.body);
+    return reply.send(await postMessage(deps.db, clubId, accountId, body));
+  });
+
+  app.delete('/api/clubs/:clubId/messages/:messageId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const params = z
+      .object({ clubId: z.string().uuid(), messageId: z.string().uuid() })
+      .parse(request.params);
+    await deleteMessage(deps.db, params.clubId, params.messageId, accountId);
+    return reply.send({ ok: true });
+  });
+
+  // -------------------------------------------------------------------------
+  // Clankrieg
+  // -------------------------------------------------------------------------
+
+  app.get('/api/clubs/:clubId/war', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    return reply.send(await warState(deps.db, clubId, accountId));
+  });
+
+  /** Gegner suchen. Wartet schon einer, sind beide sofort im Krieg. */
+  app.post('/api/clubs/:clubId/war/search', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    return reply.send(await searchWar(deps.db, clubId, accountId));
+  });
+
+  /** Einen bestimmten Clan herausfordern. */
+  app.post('/api/clubs/:clubId/war/challenge', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { clubId } = clubParams.parse(request.params);
+    const { gegnerId } = z.object({ gegnerId: z.string().uuid() }).parse(request.body);
+    await challengeWar(deps.db, clubId, gegnerId, accountId);
+    return reply.send({ ok: true });
+  });
+
+  app.post('/api/clubs/:clubId/war/:warId/accept', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { warId } = warParams.parse(request.params);
+    await acceptWar(deps.db, warId, accountId);
+    return reply.send({ ok: true });
+  });
+
+  /** Suche beenden oder Herausforderung ablehnen. Laufende Kriege nicht. */
+  app.delete('/api/clubs/:clubId/war/:warId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { warId } = warParams.parse(request.params);
+    await cancelWar(deps.db, warId, accountId);
     return reply.send({ ok: true });
   });
 

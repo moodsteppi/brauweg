@@ -83,6 +83,21 @@ export const friendshipStatus = pgEnum('friendship_status', [
   'accepted',
 ]);
 
+/**
+ * Stand eines Clankriegs.
+ *
+ * `suche` ist ein Krieg mit nur einer Seite: Der Clan wartet auf einen
+ * Gegner. `angefragt` ist eine gezielte Herausforderung, die der andere
+ * Clan noch annehmen muss. Erst `laeuft` zaehlt Punkte.
+ */
+export const clubWarStatus = pgEnum('club_war_status', [
+  'suche',
+  'angefragt',
+  'laeuft',
+  'beendet',
+  'abgesagt',
+]);
+
 export const authTokenPurpose = pgEnum('auth_token_purpose', [
   'email_verify',
   'password_reset',
@@ -386,6 +401,94 @@ export const clubMember = pgTable(
     joinedAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.clubId, t.accountId] })],
+);
+
+/**
+ * Clanchat.
+ *
+ * `accountId` ist bei Systemmeldungen leer (Beitritt, Kriegsergebnis) — die
+ * schreibt der Server selbst, und niemand soll sie einem Mitglied zuordnen
+ * koennen. `kind` unterscheidet die beiden Sorten, damit der Client sie
+ * verschieden darstellt, ohne den Text auszuwerten.
+ *
+ * Geloeschte Nachrichten werden nicht entfernt, sondern mit `deletedAt`
+ * versehen: So bleibt die Reihenfolge stabil, und die Leitung kann eine
+ * Loeschung nicht als Zensur bestreiten.
+ */
+export const clubMessageKind = pgEnum('club_message_kind', ['text', 'system']);
+
+export const clubMessage = pgTable(
+  'club_message',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    clubId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    /** Leer bei Systemmeldungen. */
+    accountId: uuid().references(() => account.id, { onDelete: 'set null' }),
+    kind: clubMessageKind().notNull().default('text'),
+    body: text().notNull(),
+    createdAt: createdAt(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index('club_message_club_idx').on(t.clubId, t.createdAt)],
+);
+
+/**
+ * Clankrieg: zwei Clans, achtundvierzig Stunden, Punkte aus echten Partien.
+ *
+ * `clubB` ist leer, solange der Krieg in der Suche haengt. Beide Seiten
+ * stehen bewusst in EINER Zeile und nicht als zwei Teilnehmerzeilen: Ein
+ * Krieg hat genau zwei Seiten, und ein Stand ohne Gegenstand waere keiner.
+ */
+export const clubWar = pgTable(
+  'club_war',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    clubAId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    /** Leer, solange gesucht wird. */
+    clubBId: uuid().references(() => club.id, { onDelete: 'cascade' }),
+    status: clubWarStatus().notNull().default('suche'),
+    scoreA: integer().notNull().default(0),
+    scoreB: integer().notNull().default(0),
+    /** Gesetzt, sobald ein Gegner feststeht. */
+    startedAt: timestamp({ withTimezone: true }),
+    endsAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('club_war_a_idx').on(t.clubAId, t.status),
+    index('club_war_b_idx').on(t.clubBId, t.status),
+  ],
+);
+
+/**
+ * Beitrag eines Mitglieds zu einem Krieg.
+ *
+ * Traegt den Deckel: `games` zaehlt die gewerteten Partien, und ab dem
+ * Hoechstwert bringt eine weitere Partie nichts mehr. Ohne diese Zeile
+ * muesste dafuer jede Partie des Kriegs nachgezaehlt werden.
+ */
+export const clubWarScore = pgTable(
+  'club_war_score',
+  {
+    warId: uuid()
+      .notNull()
+      .references(() => clubWar.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    /** Fuer welche Seite gezaehlt wurde. Ein Clanwechsel mitten im Krieg
+        soll die schon erspielten Punkte nicht umhaengen. */
+    clubId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    points: integer().notNull().default(0),
+    games: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.warId, t.accountId] })],
 );
 
 // ---------------------------------------------------------------------------
