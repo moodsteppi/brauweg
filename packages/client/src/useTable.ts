@@ -28,6 +28,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { wsProtokolle, wsUrl } from './laufzeit';
+import { EMOTE_DAUER_MS, EMOTE_PAUSE_MS } from './emotes';
 import {
   ENVELOPE_VERSION,
   type GameView,
@@ -51,6 +52,13 @@ export interface TableConnection<V = GameView> {
   /** Fuer Statusanzeige und den „Neu verbinden"-Hinweis. */
   status: ConnectionStatus;
   send(action: unknown): void;
+  /**
+   * Zurufe, die gerade ueber dem Tisch stehen — je Sitz hoechstens einer.
+   * Sie verschwinden von selbst; der Tisch muss nichts aufraeumen.
+   */
+  emotes: Record<number, string>;
+  /** Einen Zuruf absetzen. Zu schnell hintereinander verpufft still. */
+  sendEmote(emote: string): void;
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
@@ -92,6 +100,39 @@ export function useTable<V = GameView>(
    * Frist, denn ein uralter Zug richtet mehr Verwirrung an als sein Verlust.
    */
   const outboxRef = useRef<{ payload: string; bis: number }[]>([]);
+
+  /**
+   * Zurufe ueber dem Tisch, je Sitz hoechstens einer.
+   *
+   * Die Timer haengen an einer Referenz und nicht am Aufraeumen eines
+   * Effekts: Der liefe bei jeder Tischnachricht neu, und der naechste
+   * gespielte Zug loeschte den Timer — der Zuruf bliebe bis zum Rundenende
+   * stehen. Dieselbe Falle wie bei den Ansage-Blasen.
+   */
+  const emoteTimer = useRef<Record<number, number>>({});
+  const [emotes, setEmotes] = useState<Record<number, string>>({});
+  /** Wann zuletzt selbst gerufen wurde — die Bremse vor dem Absenden. */
+  const letzterEmote = useRef(0);
+
+  const zeigeEmote = useCallback((seat: number, emote: string): void => {
+    setEmotes((alt) => ({ ...alt, [seat]: emote }));
+    window.clearTimeout(emoteTimer.current[seat]);
+    emoteTimer.current[seat] = window.setTimeout(() => {
+      setEmotes((alt) => {
+        const rest = { ...alt };
+        delete rest[seat];
+        return rest;
+      });
+    }, EMOTE_DAUER_MS);
+  }, []);
+
+  // Beim Verlassen des Tisches alle offenen Zuruf-Timer abraeumen.
+  useEffect(
+    () => () => {
+      for (const handle of Object.values(emoteTimer.current)) window.clearTimeout(handle);
+    },
+    [],
+  );
 
   const clearRetry = (): void => {
     if (retryTimer.current) {
@@ -181,6 +222,10 @@ export function useTable<V = GameView>(
       if (message.type === 'table') {
         setTable(message);
         setError(null);
+        return;
+      }
+      if (message.type === 'emote') {
+        zeigeEmote(message.seat, message.emote);
         return;
       }
       // Veraltete Nachricht: Der Server war beim Senden schon weiter.
@@ -343,6 +388,36 @@ export function useTable<V = GameView>(
     [tableId, gameId, resync],
   );
 
+  /**
+   * Zuruf absetzen.
+   *
+   * Die Bremse steht auch hier, nicht nur im Server: Was ohnehin verworfen
+   * wuerde, muss die Leitung gar nicht erst belasten. Ein zu schneller Tipp
+   * verpufft still — eine Meldung "zu schnell" waere Laerm um nichts.
+   *
+   * Nicht in die Warteschlange: Ein Zuruf, der nach dem Wiederverbinden
+   * nachkaeme, gehoerte zu einem Moment, den es nicht mehr gibt.
+   */
+  const sendEmote = useCallback(
+    (emote: string) => {
+      const jetzt = Date.now();
+      if (jetzt - letzterEmote.current < EMOTE_PAUSE_MS) return;
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      letzterEmote.current = jetzt;
+      socket.send(
+        JSON.stringify({
+          v: ENVELOPE_VERSION,
+          game: gameId,
+          type: 'emote',
+          tableId,
+          emote,
+        }),
+      );
+    },
+    [tableId, gameId],
+  );
+
   const command = useCallback(
     (type: 'addBot' | 'removeBot', seat: number) => {
       const socket = socketRef.current;
@@ -363,6 +438,8 @@ export function useTable<V = GameView>(
     connected: status === 'open',
     status,
     send,
+    emotes,
+    sendEmote,
     addBot,
     removeBot,
     reconnect,

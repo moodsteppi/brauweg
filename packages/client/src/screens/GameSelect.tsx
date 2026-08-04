@@ -14,8 +14,18 @@ import {
   type Shop as ShopDaten,
 } from '../api';
 import { inApp } from '../laufzeit';
-import { DECKS, cardImage, deckBack, deckById, decksFor, type Deck } from '../decks';
+import {
+  DECKS,
+  RUECKEN,
+  cardImage,
+  deckBack,
+  deckById,
+  decksFor,
+  rueckenBild,
+  type Deck,
+} from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
+import { emoteBild, emoteMit } from '../emotes';
 import {
   EdelsteinIcon,
   HubBanner,
@@ -73,7 +83,10 @@ export function GameSelect({
   me: Me;
   onPick: (gameId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
-  onThemeChange: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) => void;
+  onThemeChange: (
+    gameId: string,
+    teil: { cardDeck?: string; tableScene?: string; cardBack?: string },
+  ) => void;
   onAvatarChange: () => void;
   onShowProfile: (accountId: string) => void;
   onSignOut: () => void;
@@ -912,8 +925,35 @@ function Shop({
   const fehlend = (slot: string): number =>
     shop?.regale.find((r) => r.slot === slot)?.stuecke.filter((s) => !s.besessen).length ?? 0;
 
-  /** Szenerien und Blaetter, die es noch zu holen gibt. */
-  const offeneWare = (shop?.tischware ?? []).filter((w) => !w.besessen).length;
+  /** Szenerien, die es noch zu holen gibt — nur die, denn nur die liegen dort. */
+  const offeneWare = (shop?.tischware ?? []).filter(
+    (w) => w.art === 'szene' && !w.besessen,
+  ).length;
+
+  /** Ware einer Sorte, kostenlose zuletzt — Neues gehoert nach vorn. */
+  const ware = (art: RegalWare['art']): RegalWare[] =>
+    (shop?.tischware ?? [])
+      .filter((w) => w.art === art)
+      .sort((a, b) => Number(a.besessen) - Number(b.besessen));
+
+  const [kauft, setKauft] = useState<string | null>(null);
+  const kaufeWare = (w: RegalWare, name: string): void => {
+    if (kauft) return;
+    if (!window.confirm(`„${name}" für ${w.preis} Münzen kaufen?`)) return;
+    setKauft(w.id);
+    setFehler(null);
+    void api
+      .buyItem(w.id)
+      .then(() => onGuthaben())
+      .catch((e: unknown) =>
+        setFehler(
+          (e as { code?: string })?.code === 'coinsInsufficient'
+            ? 'Dafür fehlen dir Münzen.'
+            : 'Der Kauf hat nicht geklappt.',
+        ),
+      )
+      .finally(() => setKauft(null));
+  };
 
   return (
     <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
@@ -983,33 +1023,123 @@ function Shop({
         </p>
       </Tafel>
 
+      {/*
+        Drei Regale, drei Sorten. Szenerien stehen bewusst NICHT hier: Sie
+        wollen in Tischgroesse gesehen werden, mit Karten darauf — das kann
+        nur die Themenauswahl, und dort wird auch gekauft. Ein zweiter
+        Kaufweg fuer dieselbe Ware waere eine Stelle mehr, die auseinander
+        laufen kann.
+      */}
+      <WareRegal
+        titel="Zurufe"
+        zusatz="Gelten an jedem Tisch"
+        waren={ware('emote')}
+        bild={(w) => emoteBild(w.wert)}
+        name={(w) => emoteMit(w.wert)?.name ?? w.wert}
+        kauft={kauft}
+        onKaufen={kaufeWare}
+      />
+
+      <WareRegal
+        titel="Kartenrückseiten"
+        zusatz="Was die anderen sehen"
+        waren={ware('ruecken')}
+        bild={(w) => rueckenBild(w.wert) ?? '/hub/tab-blatt.webp'}
+        name={(w) => RUECKEN.find((r) => r.id === w.wert)?.name ?? w.wert}
+        kauft={kauft}
+        onKaufen={kaufeWare}
+      />
+
+      <WareRegal
+        titel="Clanwappen"
+        zusatz="Für deinen Verein"
+        waren={ware('wappen')}
+        bild={(w) => `/hub/${w.wert}.webp`}
+        name={(w) => `Wappen ${w.wert.replace('wappen-', '')}`}
+        kauft={kauft}
+        onKaufen={kaufeWare}
+      />
+
       <Tafel titel="Sonst noch">
-        <div className="hub-reihe hub-reihe--vier">
-          {/* Blaetter und Tische fuehren dorthin, wo es sie schon gibt. */}
-          <button className="hub-vitrine" onClick={onThemen}>
-            <img className="hub-vitrine-icon" src="/hub/tab-blatt.webp" alt="" draggable={false} />
-            <span>Blätter</span>
-          </button>
-          {/* Die Zahl treibt den Besuch: Sie sagt, dass es dort etwas Neues
-              gibt, ohne dass man erst hingehen muss. */}
+        <div className="hub-reihe hub-reihe--drei">
+          {/* Szenerien fuehren dorthin, wo man sie gross sieht. Die Zahl sagt,
+              dass es dort etwas Neues gibt, ohne dass man erst hingeht. */}
           <button className="hub-vitrine" onClick={onThemen}>
             <img className="hub-vitrine-icon" src="/hub/tab-spielen.webp" alt="" draggable={false} />
-            <span>Tische</span>
+            <span>Szenerien</span>
             {offeneWare > 0 && <span className="hub-vitrine-zahl">{offeneWare}</span>}
           </button>
-          <button className="hub-vitrine" onClick={() => onBald('Clan-Wappen')}>
-            <img className="hub-vitrine-icon" src="/hub/clan-wappen.png" alt="" draggable={false} />
-            <span>Wappen</span>
+          <button className="hub-vitrine" onClick={() => onBald('Namensschilder')}>
+            <img className="hub-vitrine-icon" src="/hub/krone.png" alt="" draggable={false} />
+            <span>Namen</span>
             <span className="front-bald-tag">Bald</span>
           </button>
-          <button className="hub-vitrine" onClick={() => onBald('Emotes')}>
-            <img className="hub-vitrine-icon" src="/hub/krone.png" alt="" draggable={false} />
-            <span>Emotes</span>
+          <button className="hub-vitrine" onClick={() => onBald('Der Kartentisch')}>
+            <img className="hub-vitrine-icon" src="/hub/tab-blatt.webp" alt="" draggable={false} />
+            <span>Blätter</span>
             <span className="front-bald-tag">Bald</span>
           </button>
         </div>
       </Tafel>
     </HubSzene>
+  );
+}
+
+/**
+ * Ein Regal mit gleichartiger Ware.
+ *
+ * Gekauft wird hier und angelegt woanders — das ist Absicht: Eine Rueckseite
+ * waehlt man beim Blatt, ein Wappen im Clan, einen Zuruf am Tisch. Der Shop
+ * ist der Ort, an dem etwas dazukommt, nicht der, an dem man sich einrichtet.
+ */
+function WareRegal({
+  titel,
+  zusatz,
+  waren,
+  bild,
+  name,
+  kauft,
+  onKaufen,
+}: {
+  titel: string;
+  zusatz: string;
+  waren: RegalWare[];
+  bild: (w: RegalWare) => string;
+  name: (w: RegalWare) => string;
+  /** Kennung, die gerade gekauft wird — der Knopf sperrt sich so lange. */
+  kauft: string | null;
+  onKaufen: (w: RegalWare, name: string) => void;
+}): React.JSX.Element | null {
+  // Ist alles kostenlos und gehoert ohnehin allen, waere das Regal ein
+  // leeres Schaufenster. Dann lieber gar keins.
+  if (waren.every((w) => w.preis === 0)) return null;
+
+  const offen = waren.filter((w) => !w.besessen).length;
+  return (
+    <Tafel titel={titel} zusatz={offen > 0 ? `Noch ${offen}` : zusatz}>
+      <div className="shop-ware">
+        {waren.map((w) => (
+          <button
+            key={w.id}
+            className={`shop-ware-stueck is-${w.seltenheit}${w.besessen ? ' is-mein' : ''}`}
+            disabled={w.besessen || kauft !== null}
+            onClick={() => onKaufen(w, name(w))}
+            title={name(w)}
+          >
+            <img src={bild(w)} alt="" draggable={false} />
+            <span className="shop-ware-name">{name(w)}</span>
+            {w.besessen ? (
+              <span className="shop-ware-hab">✓</span>
+            ) : (
+              <span className="shop-ware-preis">
+                <img src="/hub/muenze.png" alt="" aria-hidden="true" />
+                {w.preis}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </Tafel>
   );
 }
 
@@ -1819,7 +1949,10 @@ function ThemenTab({
   onGekauft,
 }: {
   me: Me;
-  onThemeChange: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) => void;
+  onThemeChange: (
+    gameId: string,
+    teil: { cardDeck?: string; tableScene?: string; cardBack?: string },
+  ) => void;
   /** Nach einem Kauf muss der Muenzstand oben neu geladen werden. */
   onGekauft: () => void;
 }): React.JSX.Element {
@@ -1830,7 +1963,9 @@ function ThemenTab({
     void api.games().then(setSpiele).catch(() => setSpiele([]));
   }, []);
 
-  const thema = gewaehlt ? (me.themes[gewaehlt] ?? { cardDeck: 'text', tableScene: 'stube' }) : null;
+  const thema = gewaehlt
+    ? (me.themes[gewaehlt] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' })
+    : null;
 
   return (
     <>
@@ -1843,6 +1978,8 @@ function ThemenTab({
           onChange={(cardDeck) => onThemeChange(gewaehlt, { cardDeck })}
           szene={thema.tableScene}
           onSzeneChange={(tableScene) => onThemeChange(gewaehlt, { tableScene })}
+          ruecken={thema.cardBack}
+          onRueckenChange={(cardBack) => onThemeChange(gewaehlt, { cardBack })}
           onGekauft={onGekauft}
         />
       ) : (
@@ -1889,6 +2026,8 @@ function DeckPicker({
   onChange,
   szene,
   onSzeneChange,
+  ruecken,
+  onRueckenChange,
   onGekauft,
 }: {
   gameId: string;
@@ -1898,6 +2037,8 @@ function DeckPicker({
   onChange: (cardDeck: string) => void;
   szene: string;
   onSzeneChange: (tableScene: string) => void;
+  ruecken: string;
+  onRueckenChange: (cardBack: string) => void;
   onGekauft: () => void;
 }): React.JSX.Element {
   /**
@@ -1925,11 +2066,11 @@ function DeckPicker({
   }, []);
   useEffect(ladeWare, [ladeWare]);
 
-  const wareZu = (art: 'szene' | 'blatt', wert: string): RegalWare | undefined =>
+  const wareZu = (art: RegalWare['art'], wert: string): RegalWare | undefined =>
     ware.find((w) => w.art === art && w.wert === wert);
 
   /** Gehoert es mir? Unbekanntes gilt als frei — siehe tischware.ts. */
-  const gehoert = (art: 'szene' | 'blatt', wert: string): boolean =>
+  const gehoert = (art: RegalWare['art'], wert: string): boolean =>
     wareZu(art, wert)?.besessen ?? true;
 
   const kaufen = (w: RegalWare, danach: () => void): void => {
@@ -2001,6 +2142,54 @@ function DeckPicker({
           an: Auf einem zu dunklen Untergrund verschwinden Kreuz und Pik.
           Das soll man vor dem Spiel sehen und nicht mittendrin.
         */}
+        {/* Die Rueckseite ist das, was die anderen sehen — deshalb steht sie
+            beim Blatt und nicht bei der Szenerie. */}
+        <h3 className="hub-abschnitt">Rückseite</h3>
+        <div className="hub-ruecken">
+          {RUECKEN.map((r) => {
+            const w = wareZu('ruecken', r.id);
+            const mein = gehoert('ruecken', r.id);
+            return (
+              <button
+                className={`hub-ruecken-knopf${r.id === ruecken ? ' is-an' : ''}${
+                  mein ? '' : ' is-zu'
+                }`}
+                key={r.id}
+                aria-pressed={r.id === ruecken}
+                disabled={kauft === w?.id}
+                onClick={() => {
+                  if (mein) {
+                    onRueckenChange(r.id);
+                    return;
+                  }
+                  if (!w) return;
+                  if (!window.confirm(`„${r.name}" für ${w.preis} Münzen kaufen?`)) return;
+                  kaufen(w, () => onRueckenChange(r.id));
+                }}
+              >
+                <span className="pc pc--hand">
+                  {/* „Zum Blatt passend" zeigt die Rueckseite des gewaehlten
+                      Blattes — beim Textblatt das gezeichnete Muster. */}
+                  <img
+                    className="pc-img"
+                    src={rueckenBild(r.id) ?? deckBack(deckById(current)) ?? '/hub/tab-blatt.webp'}
+                    alt=""
+                    draggable={false}
+                  />
+                </span>
+                <strong>{r.name}</strong>
+                {r.id === ruecken && mein && <span className="hub-blatt-haken">✓</span>}
+                {!mein && w && (
+                  <span className="hub-szene-preis">
+                    <img src="/hub/muenze.png" alt="" aria-hidden="true" />
+                    {w.preis}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
         <h3 className="hub-abschnitt">Tisch</h3>
         {kaufFehler && <p className="clan-fehler">{kaufFehler}</p>}
         <div className="hub-szenen">

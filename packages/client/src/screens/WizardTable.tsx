@@ -5,6 +5,7 @@ import { CardBack, CardFront } from '../CardFace';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
+import { EmoteBlase, EmoteLeiste } from '../tisch/emote';
 import { suitName, suitSymbol, t } from '../i18n';
 import type {
   Action,
@@ -67,8 +68,22 @@ export function WizardTable({
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, connected, send, addBot, removeBot } =
+  const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot } =
     useTable<WizardGameView>(tableId, 'wizard');
+
+  /** Welche Zurufe mir gehoeren — dieselbe Frage wie am Doppelkopftisch. */
+  const [meineEmotes, setMeineEmotes] = useState<Set<string>>(new Set());
+  const [zeigeEmoteHinweis, setZeigeEmoteHinweis] = useState(false);
+  useEffect(() => {
+    void api
+      .shop()
+      .then((s) =>
+        setMeineEmotes(
+          new Set(s.tischware.filter((w) => w.art === 'emote' && w.besessen).map((w) => w.wert)),
+        ),
+      )
+      .catch(() => undefined);
+  }, []);
 
   const [zoom, setZoom] = useState<number>(() => {
     const raw = Number(localStorage.getItem('tischZoom'));
@@ -354,6 +369,14 @@ export function WizardTable({
               {table.paused ? '▶' : '❚❚'}
             </button>
           )}
+          {/* Zurufe nur fuer Mitspieler — dieselbe Regel wie am Doppelkopftisch. */}
+          {view.seat !== null && (
+            <EmoteLeiste
+              besessen={meineEmotes}
+              onSenden={sendEmote}
+              onKaufen={() => setZeigeEmoteHinweis(true)}
+            />
+          )}
           <button
             className="doko-icon"
             onClick={() => setZeigeTafel(true)}
@@ -418,6 +441,7 @@ export function WizardTable({
             deadline={view.currentActor === seat ? view.turnDeadline : null}
             avatarUrl={seatInfo(seat)?.avatarUrl ?? null}
             deck={deck}
+            emote={emotes[seat] ?? null}
           />
         ))}
 
@@ -568,6 +592,21 @@ export function WizardTable({
       )}
 
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
+
+      {zeigeEmoteHinweis && (
+        <div className="doko-sheet" onClick={() => setZeigeEmoteHinweis(false)}>
+          <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Diesen Zuruf hast du noch nicht</h2>
+            <p className="muted">
+              Im Shop unter „Zurufe" gibt es ihn gegen Münzen. Er steht dir dann an jedem
+              Tisch zur Verfügung.
+            </p>
+            <button className="primary" onClick={() => setZeigeEmoteHinweis(false)}>
+              Weiter spielen
+            </button>
+          </div>
+        </div>
+      )}
 
       {zeigeLetzten && runde?.lastTrick && (
         <LetzterStich
@@ -750,6 +789,7 @@ function GegnerSitz({
   offeneKarten,
   score,
   gebot,
+  emote,
   stiche,
   active,
   leader,
@@ -778,11 +818,14 @@ function GegnerSitz({
   deadline: number | null;
   avatarUrl: string | null;
   deck: Deck;
+  /** Zuruf ueber diesem Sitz, oder null. */
+  emote: string | null;
 }): React.JSX.Element {
   const vertical = istSeitlich(slot as never);
 
   return (
     <div className={`doko-opp at-${slot}${active ? ' is-active' : ''}`}>
+      {emote && <EmoteBlase emote={emote} />}
       <Avatar
         name={name}
         seatIndex={seatIndex}

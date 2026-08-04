@@ -37,6 +37,15 @@ export interface Deck {
    * kaestchenfreien Bildern sitzt derselbe Chip einfach auf der Malerei.
    */
   readonly eigeneEcke?: boolean;
+  /**
+   * Abweichende Rueckseite, ueberschreibt die des Blattes.
+   *
+   * Steht am Deck-Objekt und nicht als zweiter Prop an jeder Karte: Die
+   * Rueckseite wird an einem halben Dutzend Stellen gezeichnet (Haende der
+   * Gegner, Austeilzeremonie, Zaubertisch), und jede einzelne haette sonst
+   * einen weiteren Durchreiche-Prop bekommen.
+   */
+  readonly backSrc?: string;
 }
 
 export const DECKS: readonly Deck[] = [
@@ -137,5 +146,59 @@ export function cardImage(deck: Deck, card: { suit: string; rank: string }): str
 }
 
 export function deckBack(deck: Deck): string | null {
+  if (deck.backSrc) return deck.backSrc;
   return deck.dir ? `/karten/${deck.dir}/ruecken.${deck.ext}` : null;
+}
+
+/**
+ * Kartenrueckseiten, getrennt vom Blatt.
+ *
+ * Die Rueckseite ist das, was alle am Tisch sehen; die Vorderseiten sieht
+ * nur die eigene Hand. Wer eine schoene Rueckseite kauft, will sie herzeigen,
+ * ohne dafuer sein gewohntes Blatt aufzugeben — deshalb ist das ein eigener
+ * Schalter und keine Eigenschaft des Blattes.
+ *
+ * `standard` heisst: die Rueckseite des gewaehlten Blattes.
+ */
+export interface Ruecken {
+  readonly id: string;
+  readonly name: string;
+}
+
+export const RUECKEN: readonly Ruecken[] = [
+  { id: 'standard', name: 'Zum Blatt passend' },
+  { id: 'eiche', name: 'Eiche' },
+  { id: 'winterhof', name: 'Winterhof' },
+  { id: 'sommerwiese', name: 'Sommerwiese' },
+  { id: 'nachthimmel', name: 'Nachthimmel' },
+  { id: 'rubin', name: 'Rubin' },
+  { id: 'smaragd', name: 'Smaragd' },
+  { id: 'kupferstich', name: 'Kupferstich' },
+  { id: 'koeniglich', name: 'Königlich' },
+  { id: 'schiefer', name: 'Schiefer' },
+  { id: 'pinguin', name: 'Pinguin' },
+];
+
+export const STANDARD_RUECKEN = 'standard';
+
+/**
+ * Bild der gewaehlten Rueckseite, oder null fuer "zum Blatt passend".
+ *
+ * Null heisst nicht "kein Bild": Der Aufrufer faellt dann auf `deckBack`
+ * zurueck, und beim Textblatt auf das gezeichnete Muster.
+ */
+export function rueckenBild(id: string | null | undefined): string | null {
+  if (!id || id === STANDARD_RUECKEN) return null;
+  return RUECKEN.some((r) => r.id === id) ? `/karten/${id}/ruecken.png` : null;
+}
+
+/**
+ * Blatt mit der gewaehlten Rueckseite.
+ *
+ * Bei `standard` kommt dasselbe Objekt zurueck — dann aendert sich nichts,
+ * und React rendert nicht unnoetig neu.
+ */
+export function deckMitRuecken(deck: Deck, ruecken: string | null | undefined): Deck {
+  const src = rueckenBild(ruecken);
+  return src ? { ...deck, backSrc: src } : deck;
 }

@@ -7378,3 +7378,246 @@ main.auth > .muted {
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
+
+/* =========================================================================
+   Zurufe am Tisch.
+
+   Ein Zuruf ist ein Moment: Er erscheint ueber dem Sitz, steht kurz und
+   verschwindet. Deshalb keine Blase mit Zipfel wie bei den Ansagen — die
+   gehoert zum Spielstand, dies hier gehoert zum Abend.
+   ========================================================================= */
+
+.tisch-emote {
+  position: absolute;
+  top: -1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  pointer-events: none;
+  animation: tisch-emote-auf 0.28s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.tisch-emote img {
+  display: block;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+}
+.tisch-emote.is-gesicht img {
+  width: 3.2rem;
+  height: 3.2rem;
+}
+/* Sprueche sind quer und tragen Text — sie brauchen mehr Breite und
+   duerfen den Sitz ueberragen. */
+.tisch-emote.is-spruch img {
+  width: 7rem;
+  height: auto;
+}
+@keyframes tisch-emote-auf {
+  from { opacity: 0; transform: translateX(-50%) translateY(0.5rem) scale(0.7); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tisch-emote { animation: none; }
+}
+
+/* Der Knopf sitzt in der Kopfzeile bei den anderen Werkzeugen und traegt
+   ein Gesicht statt eines Zeichens — er ist der einzige dort, der Spass
+   verspricht statt Verwaltung. */
+.tisch-emote-knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+.tisch-emote-knopf img {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+.tisch-emote-knopf:active {
+  transform: translateY(1px);
+}
+
+.tisch-emote-wahl {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+}
+.tisch-emote-blatt {
+  width: 100%;
+  max-width: 26rem;
+  padding: 0.8rem;
+  border-radius: 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.tisch-emote-blatt h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.tisch-emote-raster {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+}
+.tisch-emote-wahlknopf {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  aspect-ratio: 1;
+}
+.tisch-emote-wahlknopf img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+/* Sprueche sind quer: Sie bekommen zwei Spalten, sonst waeren sie
+   briefmarkengross und unlesbar. */
+.tisch-emote-wahlknopf.is-spruch {
+  grid-column: span 2;
+  aspect-ratio: auto;
+  min-height: 2.6rem;
+}
+.tisch-emote-wahlknopf.is-zu img {
+  filter: grayscale(1) brightness(0.6);
+}
+.tisch-emote-schloss {
+  position: absolute;
+  right: 0.15rem;
+  bottom: 0.15rem;
+  font-size: 0.7rem;
+}
+.tisch-emote-hinweis {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* Regal im Shop: gleichartige Ware nebeneinander, Preis oder Haken dran.
+   Der Rahmen sagt die Seltenheit — dieselbe Sprache wie beim Kleiderschrank. */
+.shop-ware {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr));
+  gap: 0.4rem;
+}
+.shop-ware-stueck {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.25rem 0.3rem;
+  border-radius: 0.6rem;
+  border: 2px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.shop-ware-stueck img {
+  width: 100%;
+  height: 2.8rem;
+  object-fit: contain;
+}
+.shop-ware-name {
+  font-size: 0.66rem;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.shop-ware-preis {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffe9bd;
+  font-variant-numeric: tabular-nums;
+}
+.shop-ware-preis img {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+.shop-ware-hab {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+/* Was gehoert, tritt zurueck: Der Shop zeigt, was noch fehlt. */
+.shop-ware-stueck.is-mein {
+  opacity: 0.55;
+  cursor: default;
+}
+.shop-ware-stueck.is-selten { border-color: #5ea0f0; }
+.shop-ware-stueck.is-episch { border-color: #a678f2; }
+.shop-ware-stueck.is-legendaer { border-color: var(--gold); }
+
+/* Rueckseiten-Auswahl: dieselbe Machart wie die Blattauswahl, nur kleiner —
+   eine Rueckseite hat kein Innenleben, das man vergleichen muesste. */
+.hub-ruecken {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr));
+  gap: 0.4rem;
+}
+.hub-ruecken-knopf {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.25rem;
+  border-radius: 0.6rem;
+  border: 2px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.hub-ruecken-knopf .pc--hand {
+  width: 2.6rem;
+  height: calc(2.6rem * var(--pc-ratio));
+}
+.hub-ruecken-knopf strong {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.15;
+}
+.hub-ruecken-knopf.is-an {
+  border-color: var(--accent);
+}
+.hub-ruecken-knopf.is-zu .pc--hand {
+  filter: saturate(0.5) brightness(0.72);
+}
+
+/* Gesperrtes Wappen: sichtbar, aber erkennbar noch nicht deins. */
+.clan-wappen {
+  position: relative;
+}
+.clan-wappen.is-zu img {
+  filter: grayscale(1) brightness(0.6);
+}
+.clan-wappen-schloss {
+  position: absolute;
+  right: 0.15rem;
+  bottom: 0.15rem;
+  font-size: 0.7rem;
+}

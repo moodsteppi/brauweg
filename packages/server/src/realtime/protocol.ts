@@ -55,6 +55,17 @@ export type ClientMessage =
   | {
       readonly v: number;
       readonly game: GameId;
+      /**
+       * Zuruf an den Tisch. Aus einer festen Liste, nie Freitext — siehe
+       * src/emotes.ts.
+       */
+      readonly type: 'emote';
+      readonly tableId: string;
+      readonly emote: string;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
       /** Freien Platz mit einem Bot belegen oder den Bot wieder entfernen. */
       readonly type: 'addBot' | 'removeBot';
       readonly tableId: string;
@@ -142,7 +153,29 @@ export interface ErrorMessage {
   readonly messageKey: string;
 }
 
-export type ServerMessage = ViewMessage | PartyMessage | TableMessage | ErrorMessage;
+/**
+ * Ein Zuruf, weitergereicht an alle am Tisch.
+ *
+ * Traegt bewusst keine Revision: Emotes sind kein Zustand, sondern ein
+ * Moment. Ein Client, der sie verpasst, hat nichts zu holen — deshalb wird
+ * hier auch nichts nachgeliefert.
+ */
+export interface EmoteMessage {
+  readonly v: number;
+  readonly game: GameId;
+  readonly type: 'emote';
+  readonly tableId: string;
+  /** Wer gerufen hat. */
+  readonly seat: number;
+  readonly emote: string;
+}
+
+export type ServerMessage =
+  | ViewMessage
+  | PartyMessage
+  | TableMessage
+  | EmoteMessage
+  | ErrorMessage;
 
 export function errorMessage(code: string, messageKey?: string): ErrorMessage {
   return {

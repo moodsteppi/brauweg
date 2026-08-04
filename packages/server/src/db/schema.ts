@@ -303,6 +303,16 @@ export const accountGameTheme = pgTable(
     gameId: gameId(),
     cardDeck: text().notNull().default('text'),
     tableScene: text().notNull().default('stube'),
+    /**
+     * Rueckseite der Karten — bewusst getrennt vom Blatt.
+     *
+     * Die Rueckseite ist das, was alle am Tisch sehen; die Vorderseiten
+     * sieht nur die eigene Hand. Wer eine schoene Rueckseite kauft, will sie
+     * herzeigen, ohne dafuer sein gewohntes Blatt aufzugeben.
+     *
+     * `standard` heisst: die Rueckseite des gewaehlten Blattes.
+     */
+    cardBack: text().notNull().default('standard'),
   },
   (t) => [primaryKey({ columns: [t.accountId, t.gameId] })],
 );

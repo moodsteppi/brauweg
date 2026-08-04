@@ -26,6 +26,8 @@ import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, sql } from 'driz
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { badRequest, conflict, forbidden, notFound } from '../errors.js';
+import { entitlementsFor } from '../entitlements.js';
+import { darfBenutzen } from '../tischware.js';
 
 export const BETA_CLUB_NAME = 'Brauweg';
 
@@ -373,6 +375,30 @@ function pruefeCrest(crest: string): Crest {
   return crest as Crest;
 }
 
+/**
+ * Wappen sind kaeuflich, das Setzen aber eine Vereinssache.
+ *
+ * Geprueft wird deshalb, ob DER SETZENDE es besitzt — nicht der Verein. Ein
+ * Wappen gehoert einem Menschen, ein Verein hat kein Konto. Wer ein schoenes
+ * Zeichen gekauft hat, darf es seinem Clan geben; verlaesst er ihn, bleibt es
+ * dem Clan, denn ein Verein, dem beim Austritt eines Mitglieds das Wappen
+ * abhandenkommt, waere ein Aergernis ohne Gewinn.
+ */
+async function requireCrestBesitz(
+  db: Db,
+  accountId: string,
+  crest: string,
+): Promise<void> {
+  const [konto] = await db
+    .select({ premiumUntil: s.account.premiumUntil, isStaff: s.account.isStaff })
+    .from(s.account)
+    .where(eq(s.account.id, accountId));
+  const alles = konto ? entitlementsFor(konto).ownsEverything : false;
+  if (!(await darfBenutzen(db, accountId, 'wappen', crest, alles))) {
+    throw forbidden('itemNotOwned');
+  }
+}
+
 export interface CreateClubInput {
   readonly name: string;
   readonly crest: string;
@@ -395,6 +421,7 @@ export async function createClub(
 ): Promise<{ id: string }> {
   const name = pruefeName(input.name);
   const crest = pruefeCrest(input.crest);
+  await requireCrestBesitz(db, accountId, input.crest);
   const motto = pruefeMotto(input.motto);
   const minTrophies = Math.max(0, Math.trunc(input.minTrophies ?? 0));
 
@@ -621,7 +648,10 @@ export async function updateClub(
 
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = pruefeName(input.name);
-  if (input.crest !== undefined) patch.crest = pruefeCrest(input.crest);
+  if (input.crest !== undefined) {
+    patch.crest = pruefeCrest(input.crest);
+    await requireCrestBesitz(db, accountId, input.crest);
+  }
   if (input.motto !== undefined) patch.motto = pruefeMotto(input.motto);
   if (input.joinMode !== undefined) patch.joinMode = input.joinMode;
   if (input.minTrophies !== undefined) {
