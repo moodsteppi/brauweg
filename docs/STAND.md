@@ -35,12 +35,11 @@ Der Grund: `main` löst den Deploy aus. Bis dahin lag jede Änderung nach
 zwei Minuten auf dem Produktivsystem, auch die, die man erst noch ansehen
 wollte.
 
-**Den Zweig gibt es, den Dienst noch nicht.** Bis in Railway ein
-Testsystem auf dem Zweig `staging` steht, sammelt er nur Arbeit, die
-niemand sieht. Wie er angelegt wird, steht in
-[STAGING.md](STAGING.md) — samt der Frage, ob er eine eigene Datenbank
-bekommt (aus der Sitzung heraus nicht beantwortbar, es gibt kein
-`railway`-CLI auf dem Rechner).
+**Das Testsystem läuft** unter **staging.brauweg-spielen.de** — als eigene
+Railway-*Umgebung* im selben Projekt, mit eigenem Postgres. Einzelheiten in
+[STAGING.md](STAGING.md). Wichtigste Falle: Variablen gehören in Railway
+je Umgebung; wer `STAGE` in der Produktion setzt, hat es auf staging nicht
+gesetzt.
 
 **Testkonten** (`account.is_staff`) haben alles: Premium, vollen
 Münzstand, alles Kaufbare. Gesetzt wird das ausschließlich über

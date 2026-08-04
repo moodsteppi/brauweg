@@ -2,74 +2,64 @@
 
 Zwei getrennte Dinge, die oft verwechselt werden:
 
-- **`staging` ist ein Zweig.** Er existiert seit dem 4. August 2026 und ist der
-  Zweig, gegen den gearbeitet wird. `main` löst den Deploy der echten App aus
-  und wird aus Sitzungen heraus nicht mehr angefasst.
-- **Ein Testsystem ist ein Dienst.** Den gibt es noch nicht — er muss in
-  Railway angelegt werden. Bis dahin läuft der Zweig ins Leere: Er sammelt
-  Arbeit, aber niemand sieht sie.
-
-Diese Datei sagt, wie der Dienst angelegt wird und was Testkonten sind.
-
----
-
-## 1 — Hat staging schon eine eigene Datenbank?
-
-**Aus der Sitzung heraus lässt sich das nicht beantworten.** Es gibt kein
-`railway`-CLI auf dem Rechner und keinen API-Schlüssel; ich sehe nur das
-Repository, nicht das Hosting. Die Antwort steht in Railway, an zwei Stellen:
-
-1. **Dienste zählen.** Im Projekt Brauweg: Steht dort außer dem App-Dienst und
-   einem Postgres noch ein zweites Paar, ist das Testsystem schon da.
-2. **`DATABASE_URL` vergleichen.** Zeigen App- und Testdienst auf dieselbe
-   Datenbank, ist es **keine** getrennte Umgebung — dann liegen Testpartien in
-   denselben Tabellen wie die echten.
-
-Wer das im Terminal sehen will:
-
-```bash
-npm i -g @railway/cli
-```
-
-Danach `railway login`, `railway link` (Projekt Brauweg wählen) und:
-
-```bash
-railway status
-```
-
-Das listet Dienste und Umgebungen. `railway variables --service <name>` zeigt
-die Variablen eines Dienstes, dort steht die `DATABASE_URL`.
+- **`staging` ist ein Zweig.** Seit dem 4. August 2026 der Zweig, gegen den
+  gearbeitet wird. `main` löst den Deploy der echten App aus und wird aus
+  Sitzungen heraus nicht mehr angefasst.
+- **`staging` ist außerdem eine Railway-Umgebung.** Nicht ein zweites Paar
+  Dienste neben der Produktion, sondern eine eigene *Environment* im selben
+  Projekt — mit eigenem `@brauweg/server`, eigenem Postgres und eigener
+  Adresse. Der Umschalter dafür steht oben in der Kopfzeile, neben dem
+  Projektnamen.
 
 ---
 
-## 2 — Testsystem anlegen (Railway, einmalig)
+## 1 — Stand (geprüft am 4. August 2026)
 
-1. **Postgres hinzufügen:** *New → Database → Add PostgreSQL*. Der Dienst heißt
-   sinnvollerweise `postgres-staging`.
-2. **App-Dienst hinzufügen:** *New → GitHub Repo → moodsteppi/brauweg*, danach
-   in den Einstellungen **Branch auf `staging`** stellen.
-3. **Variablen setzen** (Tab *Variables* des neuen App-Dienstes):
+**Beides steht und läuft.**
 
-   | Variable | Wert |
-   | --- | --- |
-   | `DATABASE_URL` | Referenz auf `postgres-staging` (`${{postgres-staging.DATABASE_URL}}`) |
-   | `PUBLIC_URL` | die Adresse des Testsystems, z. B. `https://brauweg-staging.up.railway.app` |
-   | `STAGE` | `staging` |
-   | `MIGRATE_ON_BOOT` | `true` |
-   | `INVITE_CODE` | ein eigener Code, **nicht** derselbe wie in der Produktion |
-   | `STAFF_EMAILS` | Adressen der Testkonten, mit Komma getrennt |
-   | `NODE_ENV` | `production` (es ist ein echter Build, keine Entwicklungsausgabe) |
-   | `RESEND_API_KEY` | **weglassen** — dann landen Bestätigungsmails nur im Log |
+| | |
+| --- | --- |
+| Umgebung | `staging` im Projekt `brauweg` |
+| Adresse | **staging.brauweg-spielen.de** |
+| Datenbank | **eigener Postgres in der Umgebung** — die Produktion wird nicht berührt |
+| Zweig | `staging`, Deploy bei jedem Push |
 
-4. **Watch Paths leer lassen.** Das Feld erwartet Glob-Muster, eine Zeile je
-   Pfad. Steht dort etwas anderes (schon einmal passiert: der Inhalt von
-   `railway.json`), findet Railway bei jedem Push null Änderungen und
-   überspringt still mit „No changes to watched files". Leer gelassen greift
-   `watchPatterns` aus `railway.json`, und dort steht `["**"]`.
+Die Trennung ist damit sauber: Testpartien, Testkonten und Trophäen liegen in
+der Staging-Datenbank; die echten Listen sehen nichts davon.
 
-**Ohne `RESEND_API_KEY` kommt keine Bestätigungsmail an.** Der Link steht im
-Log des Dienstes (Suche: `MAIL`). Das ist beabsichtigt: Ein Testsystem, das
-echte Mails verschickt, schickt sie irgendwann an echte Leute.
+**Wichtig für alles Weitere:** Variablen gehören in Railway **je Umgebung**.
+Wer `STAGE` in der Produktion setzt, hat es auf staging nicht gesetzt — und
+umgekehrt. Vor jeder Änderung also erst den Umschalter oben prüfen.
+
+Wer den Stand im Terminal sehen will, braucht das Railway-CLI. **Auf dem
+Windows-Rechner geht das derzeit nicht:** Die Binärdatei wird von Windows
+Smart App Control geblockt („Eine Anwendungssteuerungsrichtlinie hat diese
+Datei blockiert. Bösartige Binärreputation"). Der Weg läuft deshalb über die
+Oberfläche.
+
+---
+
+## 2 — Variablen der Staging-Umgebung
+
+Gesetzt sind (Stand 4. August 2026): `NODE_ENV`, `MIGRATE_ON_BOOT`,
+`INVITE_CODE`, `INVITE_CODE_MAX_USES`, `MAIL_FROM`, `PORT`, `PUBLIC_URL`,
+`DATABASE_URL`, `RESEND_API_KEY`, dazu neu:
+
+| Variable | Wert | Wofür |
+| --- | --- | --- |
+| `STAGE` | `staging` | Das kleine graue Schild in der Kopfzeile |
+| `STAFF_EMAILS` | `robin.hellmut@gmail.com` | Testkonten, siehe Abschnitt 3 |
+
+**`RESEND_API_KEY` ist auf staging gesetzt** — Bestätigungsmails gehen also
+wirklich raus, über dieselbe verifizierte Domain wie in der Produktion. Wer
+das nicht will, entfernt die Variable in der Staging-Umgebung; dann steht der
+Bestätigungslink im Log des Dienstes (Suche: `MAIL`).
+
+**Watch Paths leer lassen.** Das Feld erwartet Glob-Muster, eine Zeile je
+Pfad. Steht dort etwas anderes (schon einmal passiert: der Inhalt von
+`railway.json`), findet Railway bei jedem Push null Änderungen und überspringt
+still mit „No changes to watched files". Leer gelassen greift `watchPatterns`
+aus `railway.json`, und dort steht `["**"]`.
 
 ---
 
@@ -110,7 +100,20 @@ Bestätigungslink geht an das Postfach, und nur wer ihn hat, kommt an das
 Merkmal.
 
 Also: erst registrieren, dann bestätigen, dann die Adresse eintragen, dann den
-Dienst neu starten. Das Log unterscheidet die Fälle:
+Dienst neu starten.
+
+**Genau da steht es gerade** (Log des Staging-Dienstes, 4. August 2026):
+
+```
+Testkonten: 0 gesetzt, ohne Konto: robin.hellmut@gmail.com
+```
+
+Die Staging-Datenbank ist frisch, dort hat sich noch niemand registriert. Der
+nächste Schritt ist deshalb: auf **staging.brauweg-spielen.de** mit dieser
+Adresse ein Konto anlegen, die Mail bestätigen — und beim nächsten Deploy (oder
+einem Neustart des Dienstes) steht `1 gesetzt` im Log.
+
+Das Log unterscheidet die Fälle:
 
 ```
 Testkonten: 1 gesetzt, ohne Konto: neu@example.org,
