@@ -5829,6 +5829,29 @@ main.auth > .muted {
 }
 .wiz-trumpf-text b { color: var(--gold); font-size: 0.8rem; }
 
+/* Die gewählte Trumpffarbe auf dem aufgedeckten Zauberer.
+   Ohne sie zeigt die Plakette bei jeder der vier Wahlen dasselbe Bild, und die
+   Farbe steht nur klein als Zeichen darunter. Der Chip sitzt UNTEN RECHTS —
+   oben links liegt bei Blättern mit `eigeneEcke` schon der Pergament-Chip mit
+   dem „Z". Das `overflow: hidden` von .pc rundet die Kartenecke mit. */
+.wiz-trumpf-farbe {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  min-width: 42%;
+  padding: 0.02em 0.12em 0.06em;
+  border-radius: 0.4rem 0 0.32rem 0;
+  background: rgba(12, 10, 8, 0.82);
+  border-top: 1px solid var(--gold);
+  border-left: 1px solid var(--gold);
+  color: #f4ead2;
+  font-size: calc(var(--tw) * 0.3);
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.wiz-trumpf-farbe.is-rot { color: #ff8a7c; }
+
 /* Gebot und Stiche am Sitz: die wichtigste Zahl des Spiels. Stimmt beides
    überein, leuchtet sie grün — das ist der Zustand, den alle anstreben. */
 .wiz-gebot {
@@ -5863,20 +5886,32 @@ main.auth > .muted {
 }
 .wiz-blind { padding-bottom: 1.4rem; }
 
+/* Ansage und Trumpfwahl liegen mitten auf dem Tisch, über der eigenen Hand.
+   Je größer das Blatt, desto weniger sieht man von genau den Karten, über die
+   man gerade entscheidet — bei zwanzig Handkarten verdeckte die volle Breite
+   die halbe Reihe. Deshalb schmaler und knapper als die übrigen Blätter.
+   Die Chips bleiben trotzdem über 40 px hoch und damit daumentauglich. */
+.wiz-knapp {
+  max-width: 23rem;
+  padding: 0.8rem 0.9rem;
+}
+.wiz-knapp h2 { font-size: 0.95rem; margin: 0 0 0.25rem; }
+.wiz-knapp p.muted { font-size: 0.74rem; line-height: 1.35; }
+
 /* Gebotsblatt: Zahlen als große Chips, damit der Daumen trifft. Eine
    gesperrte Zahl bleibt sichtbar — eine Zahl, die kommentarlos fehlt, sieht
    aus wie ein Fehler. */
 .wiz-gebote {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.32rem;
   justify-content: center;
-  margin: 0.6rem 0 0.8rem;
+  margin: 0.5rem 0 0.6rem;
 }
 .wiz-gebot-chip {
-  min-width: 2.6rem;
-  padding: 0.55rem 0.2rem;
-  font-size: 1.05rem;
+  min-width: 2.25rem;
+  padding: 0.45rem 0.2rem;
+  font-size: 0.95rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   border-radius: 10px;
@@ -5896,27 +5931,29 @@ main.auth > .muted {
   box-shadow: none;
 }
 
-/* Trumpfwahl des Gebers: vier Farben, sonst nichts. */
+/* Trumpfwahl des Gebers: vier Farben, sonst nichts. Alle vier nebeneinander —
+   sie stehen gleichrangig zur Wahl, und in zwei Reihen war das Blatt hoch
+   genug, um die halbe Hand zu verdecken. */
 .wiz-farben {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin: 0.7rem 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  margin: 0.55rem 0 0.2rem;
 }
 .wiz-farbe {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.7rem 0.4rem;
-  font-size: 0.8rem;
+  gap: 0.1rem;
+  padding: 0.5rem 0.2rem;
+  font-size: 0.68rem;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
 }
-.wiz-farbe span { font-size: 1.6rem; line-height: 1; }
+.wiz-farbe span { font-size: 1.3rem; line-height: 1; }
 .wiz-farbe.is-rot span { color: #e06a5e; }
 
 /* Abrechnung und Punktetafel */
