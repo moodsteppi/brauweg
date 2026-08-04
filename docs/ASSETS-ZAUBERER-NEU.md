@@ -1,5 +1,28 @@
 # Bildbestellung: drei Zauberer-Motive nachliefern
 
+> **Geliefert und eingebaut am 4. August 2026.** Alle drei Motive lagen
+> maßhaltig vor (420 × 610, 454–506 kB) und sind als WebP unter
+> `karten/zauberwald/` eingebaut (360 × 523, 29–41 kB — vorher 5–13 kB).
+> Berg, Feuer und Wasser, alle drei mit dem Sternkranz des Waldzauberers.
+> Die Abnahme unten ist Punkt für Punkt durchgegangen worden:
+>
+> - Auf 60 px verkleinert ist auf jeder Karte eine Figur zu erkennen. Die
+>   mittlere Helligkeit liegt bei 56–92 (vorher 5–12), der fast schwarze
+>   Flächenanteil bei 0–19 % statt über 90 %.
+> - Auf knallrotem Grund kein Saum, kein Schachbrett, kein Durchscheinen.
+> - Oben links liegt der Pergament-Chip auf ruhiger Malerei, unten rechts
+>   verdeckt der Trumpf-Chip weder Gesicht noch Hand.
+> - Neben Narr und Zahlenkarte sind alle drei sofort zu unterscheiden.
+>
+> **Eine Abweichung, bewusst stehen gelassen:** `zauberer_2` (Berg) ist mit
+> einer mittleren Helligkeit von 92 deutlich heller als die übrigen drei
+> (56–63) — helles Eis vor hellem Himmel. „Gleich hell" ist damit nicht
+> erfüllt; die Karte fällt aber nach oben aus der Reihe, verschwindet also
+> nicht. Für das Spiel ist es ohne Belang: Alle vier Zauberer sind
+> gleichwertig, es zählt nur, wer zuerst legt.
+>
+> Was unten steht, bleibt als Beschreibung des Bestellten stehen.
+
 **Stand: 4. August 2026.** Diese Bestellung ersetzt drei der vier
 Zauberer-Karten aus [ASSETS-WIZARD.md](ASSETS-WIZARD.md), Abschnitt 1b. Alles
 andere aus jener Lieferung ist in Ordnung und bleibt, wie es ist — auch die
