@@ -99,6 +99,8 @@ const de: Record<string, string> = {
   'error.itemAlreadyOwned': 'Das hast du schon.',
   'error.itemNotOwned': 'Das gehört dir noch nicht.',
   'error.itemWrongSlot': 'Das gehört an eine andere Stelle.',
+  'error.packUnknown': 'Dieses Angebot gibt es nicht.',
+  'error.packNotForSale': 'Das ist noch nicht zu kaufen.',
 
   // --- Waehrungen ---------------------------------------------------------
   'waehrung.coins': 'Münzen',

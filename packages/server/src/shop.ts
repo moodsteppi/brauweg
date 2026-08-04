@@ -1,18 +1,32 @@
 /**
  * Shop.
  *
- * Zwei Sorten Angebot, streng getrennt:
+ * **Echtes Geld kauft nur Edelsteine. Edelsteine kaufen alles andere.** Das ist
+ * seit dem 4. August die Ordnung des Shops, und sie hat einen einzigen Grund:
+ * Es gibt genau eine Stelle, an der Geld ins Spiel kommt. Wer wissen will, was
+ * etwas wirklich kostet, muss nur einen Kurs kennen und nicht fuenf Preislisten
+ * vergleichen.
  *
- *  1. **Kaufbar** — Kosmetik gegen Muenzen oder Edelsteine. Das laeuft
- *     wirklich: `kaufen()` bucht ab und traegt den Besitz ein.
- *  2. **Bald** — alles, was echtes Geld kostet (Muenz- und Edelsteinpakete,
- *     VIP, Season Pass). Preis steht dran, gekauft wird nichts.
+ * Daraus folgen drei Sorten Angebot:
  *
- * Warum die zweite Sorte trotzdem schon dasteht: DESIGN.md verlangt es —
+ *  1. **Gegen Edelsteine, laeuft wirklich** — Muenzpakete (`paketKaufen`) und
+ *     Kauftruhen (`truheKaufen` in `truhen.ts`).
+ *  2. **Gegen Muenzen ODER Edelsteine, laeuft wirklich** — die Kosmetik
+ *     (`kaufen`). Jedes Stueck hat beide Preise, der Kaeufer waehlt.
+ *  3. **Bald** — die Edelsteinpakete und der VIP-Pass (beide gegen Geld) und
+ *     der Season Pass (gegen Edelsteine). Preis steht dran, gekauft wird
+ *     nichts: Fuer Geld fehlt der Bezahlweg, fuer den Season Pass das Modell.
+ *
+ * Warum die dritte Sorte trotzdem schon dasteht: DESIGN.md verlangt es —
  * „Was es noch nicht gibt, steht trotzdem in der Oberflaeche, mit ehrlicher
  * Null und Bald-Marke." Und der Shop muss seine endgueltige Form haben, bevor
  * ein Bezahlweg dazukommt: Ein Regal, das erst mit dem Zahlungsdienst
  * entworfen wird, wird nach dem Zahlungsdienst entworfen.
+ *
+ * **Muenzen sind kein Ziel eines Geldkaufs mehr.** Die drei Muenzpakete kosteten
+ * bis dahin Cent-Betraege; sie kosten jetzt Edelsteine. Der Cent-Preis ist damit
+ * nicht verschwunden, sondern nur eine Stufe weiter gerueckt — er steht am
+ * Edelsteinpaket.
  *
  * **Die Euro-Preise sind Platzhalter.** Sie stehen als ganze Cent da, nie als
  * Gleitkomma, und sind bewusst noch nicht entschieden — Plan 13 fuehrt
@@ -23,7 +37,9 @@
  * **Im App-Paket bleibt der ganze Bereich draussen** (`zeigeKaufbares` im
  * Client). Angebote mit Paketangabe, die nichts verkaufen, gelten Apple als
  * unfertige App; sobald sie etwas verkaufen, muessen sie ueber Apples
- * Bezahlweg. Siehe docs/APPSTORE.md.
+ * Bezahlweg. Dass jetzt ein Teil des Regals nur virtuelle Waehrung kostet und
+ * damit unbedenklich waere, aendert daran vorerst nichts — die Trennung im
+ * Client ist grob und laeuft ueber den ganzen Tab. Siehe docs/APPSTORE.md.
  */
 
 import { and, eq } from 'drizzle-orm';
@@ -34,17 +50,26 @@ import { conflict, forbidden, notFound } from './errors.js';
 import { entitlementsFor } from './entitlements.js';
 import {
   type Garderobe,
+  type Preis,
   type Slot,
   SLOTS,
   besitzt,
   garderobeVon,
   KATALOG,
+  preisIn,
   requireStueck,
 } from './kosmetik.js';
-import { abbuchen, type Waehrung } from './waehrung.js';
+import { KAUFTRUHEN, type Kauftruhe } from './truhen.js';
+import {
+  abbuchen,
+  edelsteineZuMuenzen,
+  MUENZEN_JE_EDELSTEIN,
+  type Stand,
+  type Waehrung,
+} from './waehrung.js';
 
 // ---------------------------------------------------------------------------
-// Angebote gegen echtes Geld — heute alle "bald"
+// Pakete und Paesse
 // ---------------------------------------------------------------------------
 
 export interface Paket {
@@ -52,36 +77,81 @@ export interface Paket {
   readonly nameKey: string;
   /** Was drin ist. Null bei Paessen, die kein Guthaben geben. */
   readonly gibt: { readonly waehrung: Waehrung; readonly betrag: number } | null;
-  /** Anzeigepreis in ganzen Cent. Platzhalter, siehe Kopf der Datei. */
-  readonly cents: number;
+  /**
+   * Anzeigepreis in ganzen Cent, oder null.
+   *
+   * Null heisst: kostet kein Geld. Genau ein Angebot darf beides tragen — und
+   * heute tut es keines: Was Geld kostet, kostet keine Edelsteine, und
+   * umgekehrt. Zwei Preise am selben Paket waeren ein Wechselkurs an der
+   * Oberflaeche, und den fuehrt `waehrung.ts`.
+   */
+  readonly cents: number | null;
+  /** Preis in Edelsteinen, oder null, wenn es dafuer nicht zu haben ist. */
+  readonly gems: number | null;
   /** Prozent Aufschlag gegenueber dem kleinsten Paket — der "Spartipp". */
   readonly bonus: number | null;
+  /**
+   * Laeuft der Kauf wirklich?
+   *
+   * Steht am Paket und nicht als Liste woanders: Ein Angebot, dessen Preis hier
+   * steht und dessen Verkaeuflichkeit dort, ist eines, bei dem irgendwann das
+   * eine ohne das andere geaendert wird.
+   */
+  readonly kaufbar: boolean;
 }
 
 /**
- * Muenzpakete.
+ * Muenzpakete — **gegen Edelsteine**.
  *
- * Die Staffelung ist die uebliche: Je groesser das Paket, desto mehr Muenzen
- * je Euro. Sie ist hier nur Beispiel — was sie taugt, entscheidet sich erst,
- * wenn feststeht, was ein Hut kosten soll.
+ * Die Staffelung ist die uebliche: Je groesser das Paket, desto mehr Muenzen je
+ * Edelstein. Der Kurs (`MUENZEN_JE_EDELSTEIN`, 15) ist die Mitte, an der sich
+ * die Staffelung messen laesst — das kleine Paket liegt mit 14,3 knapp
+ * darunter, das mittlere genau darauf, das grosse mit 16 darueber. Ein Test
+ * haelt diese Spanne fest, damit kein spaeteres Nachjustieren aus dem grossen
+ * Paket eine Muenzquelle macht, gegen die sich Spielen nicht mehr lohnt.
  */
 export const MUENZPAKETE: readonly Paket[] = [
-  { id: 'muenzen-klein', nameKey: 'shop.muenzen-klein', gibt: { waehrung: 'coins', betrag: 500 }, cents: 199, bonus: null },
-  { id: 'muenzen-mittel', nameKey: 'shop.muenzen-mittel', gibt: { waehrung: 'coins', betrag: 1_500 }, cents: 499, bonus: 20 },
-  { id: 'muenzen-gross', nameKey: 'shop.muenzen-gross', gibt: { waehrung: 'coins', betrag: 4_000 }, cents: 999, bonus: 60 },
+  { id: 'muenzen-klein', nameKey: 'shop.muenzen-klein', gibt: { waehrung: 'coins', betrag: 500 }, cents: null, gems: 35, bonus: null, kaufbar: true },
+  { id: 'muenzen-mittel', nameKey: 'shop.muenzen-mittel', gibt: { waehrung: 'coins', betrag: 1_500 }, cents: null, gems: 100, bonus: 5, kaufbar: true },
+  { id: 'muenzen-gross', nameKey: 'shop.muenzen-gross', gibt: { waehrung: 'coins', betrag: 4_000 }, cents: null, gems: 250, bonus: 12, kaufbar: true },
 ];
 
+/**
+ * Edelsteinpakete — **gegen Geld, und das bleibt so.**
+ *
+ * Die einzige Stelle im ganzen Shop, an der echtes Geld eine Waehrung kauft.
+ * Deshalb `kaufbar: false`: Hier fehlt nicht das Modell, hier fehlt der
+ * Bezahlweg.
+ */
 export const EDELSTEINPAKETE: readonly Paket[] = [
-  { id: 'edelsteine-klein', nameKey: 'shop.edelsteine-klein', gibt: { waehrung: 'gems', betrag: 50 }, cents: 299, bonus: null },
-  { id: 'edelsteine-mittel', nameKey: 'shop.edelsteine-mittel', gibt: { waehrung: 'gems', betrag: 150 }, cents: 799, bonus: 12 },
-  { id: 'edelsteine-gross', nameKey: 'shop.edelsteine-gross', gibt: { waehrung: 'gems', betrag: 400 }, cents: 1_899, bonus: 26 },
+  { id: 'edelsteine-klein', nameKey: 'shop.edelsteine-klein', gibt: { waehrung: 'gems', betrag: 50 }, cents: 299, gems: null, bonus: null, kaufbar: false },
+  { id: 'edelsteine-mittel', nameKey: 'shop.edelsteine-mittel', gibt: { waehrung: 'gems', betrag: 150 }, cents: 799, gems: null, bonus: 12, kaufbar: false },
+  { id: 'edelsteine-gross', nameKey: 'shop.edelsteine-gross', gibt: { waehrung: 'gems', betrag: 400 }, cents: 1_899, gems: null, bonus: 26, kaufbar: false },
 ];
 
-/** Paesse. Kein Guthaben, sondern ein Zeitraum — deshalb `gibt: null`. */
+/**
+ * Paesse. Kein Guthaben, sondern ein Zeitraum — deshalb `gibt: null`.
+ *
+ * **Der VIP-Pass kostet Geld, der Season Pass Edelsteine.** Das ist bewusst
+ * ungleich: VIP ist die laufende Mitgliedschaft und gehoert damit dorthin, wo
+ * ein Abo hingehoert — an den Bezahlweg. Der Season Pass ist ein Gegenstand mit
+ * Anfang und Ende, den man sich auch erspielen koennen soll, sobald es ihn gibt.
+ *
+ * **Beide sind noch nicht kaufbar**, aus zwei verschiedenen Gruenden: dem VIP
+ * fehlt der Bezahlweg, dem Season Pass das Modell (Stufen, Belohnungen,
+ * Laufzeit). Der Edelsteinpreis von 150 ist aus dem mittleren Edelsteinpaket
+ * genommen, damit die Zahl nicht aus der Luft kommt — ausbalanciert ist daran
+ * so wenig wie an allem Preislichen hier.
+ */
 export const PAESSE: readonly Paket[] = [
-  { id: 'vip-pass', nameKey: 'shop.vip-pass', gibt: null, cents: 499, bonus: null },
-  { id: 'season-pass', nameKey: 'shop.season-pass', gibt: null, cents: 899, bonus: null },
+  { id: 'vip-pass', nameKey: 'shop.vip-pass', gibt: null, cents: 499, gems: null, bonus: null, kaufbar: false },
+  { id: 'season-pass', nameKey: 'shop.season-pass', gibt: null, cents: null, gems: 150, bonus: null, kaufbar: false },
 ];
+
+/** Alle Pakete an einer Stelle, damit `paketKaufen` eine Kennung findet. */
+const PAKET_NACH_ID = new Map(
+  [...MUENZPAKETE, ...EDELSTEINPAKETE, ...PAESSE].map((paket) => [paket.id, paket]),
+);
 
 // ---------------------------------------------------------------------------
 // Ansicht
@@ -92,8 +162,8 @@ export interface RegalStueck {
   readonly slot: Slot;
   readonly nameKey: string;
   readonly seltenheit: string;
-  readonly preis: number;
-  readonly waehrung: Waehrung;
+  /** Beide Preise. Bezahlt wird mit einer der beiden, der Kaeufer waehlt. */
+  readonly preis: Preis;
   /** Gehoert schon. Dann ist der Knopf "Anziehen", nicht "Kaufen". */
   readonly besessen: boolean;
   /** Nur zu bekommen, nicht zu kaufen (Geburtstagsoutfit). */
@@ -104,6 +174,16 @@ export interface ShopAnsicht {
   readonly paesse: readonly Paket[];
   readonly muenzpakete: readonly Paket[];
   readonly edelsteinpakete: readonly Paket[];
+  /** Truhen, die Edelsteine kosten. Spanne inklusive — sie steht dran. */
+  readonly truhen: readonly Kauftruhe[];
+  /**
+   * Muenzen je Edelstein.
+   *
+   * Der Kurs geht mit, statt in der Oberflaeche noch einmal zu stehen: Wer zwei
+   * Preise nebeneinander sieht, rechnet ohnehin — dann soll er richtig rechnen,
+   * auch nachdem die Zahl am Server einmal geaendert wurde.
+   */
+  readonly kurs: number;
   /** Kosmetik, nach Platz gruppiert und in Katalogreihenfolge. */
   readonly regale: readonly { readonly slot: Slot; readonly stuecke: readonly RegalStueck[] }[];
 }
@@ -122,6 +202,8 @@ export async function shopFuer(db: Db, accountId: string): Promise<ShopAnsicht> 
     paesse: PAESSE,
     muenzpakete: MUENZPAKETE,
     edelsteinpakete: EDELSTEINPAKETE,
+    truhen: KAUFTRUHEN,
+    kurs: MUENZEN_JE_EDELSTEIN,
     regale: SLOTS.map((slot) => ({
       slot,
       stuecke: KATALOG.filter((stueck) => stueck.slot === slot).map((stueck) => ({
@@ -130,7 +212,6 @@ export async function shopFuer(db: Db, accountId: string): Promise<ShopAnsicht> 
         nameKey: stueck.nameKey,
         seltenheit: stueck.seltenheit,
         preis: stueck.preis,
-        waehrung: stueck.waehrung,
         besessen: besitzt(stueck, garderobe, rechte.ownsEverything),
         geschenk: stueck.herkunft === 'geschenk',
       })),
@@ -151,18 +232,28 @@ export interface Kauf {
 }
 
 /**
- * Kosmetik kaufen.
+ * Kosmetik kaufen, in Muenzen oder Edelsteinen.
  *
  * Reihenfolge wie bei den Truhen: **erst abbuchen, dann eintragen.** Bricht
  * das Eintragen ab, ist Geld weg und die Ware nicht da — das ist
  * unangenehm, aber reparierbar. Andersherum waere die Ware da und das Geld
  * noch vorhanden, und das ist der Fehler, den niemand meldet.
  *
- * Der Preis kommt aus dem Katalog und nie aus der Anfrage. Ein Client, der
- * `{"preis":0}` mitschickt, aendert damit nichts — er schickt es an eine
- * Stelle, die nicht hinsieht.
+ * **Der Preis kommt aus dem Katalog, die Waehrung aus der Anfrage.** Das ist
+ * der ganze Unterschied und die Grenze dazwischen ist wichtig: Welche der
+ * beiden Zahlen gilt, darf der Kaeufer entscheiden — wie hoch sie ist, nicht.
+ * Ein Client, der `{"preis":0}` mitschickt, aendert nichts; er schickt es an
+ * eine Stelle, die nicht hinsieht.
+ *
+ * Ohne Angabe wird in **Muenzen** bezahlt. Das ist die Waehrung, die man nicht
+ * kaufen muss — wer sich vertippt, verliert damit nichts, was Geld gekostet hat.
  */
-export async function kaufen(db: Db, accountId: string, itemId: string): Promise<Kauf> {
+export async function kaufen(
+  db: Db,
+  accountId: string,
+  itemId: string,
+  waehrung: Waehrung = 'coins',
+): Promise<Kauf> {
   const stueck = requireStueck(itemId);
   if (stueck.herkunft === 'geschenk') throw forbidden('itemNotForSale');
 
@@ -178,14 +269,60 @@ export async function kaufen(db: Db, accountId: string, itemId: string): Promise
     throw conflict('itemAlreadyOwned');
   }
 
-  const stand = await abbuchen(db, accountId, stueck.waehrung, stueck.preis);
+  const preis = preisIn(stueck, waehrung);
+  const stand = await abbuchen(db, accountId, waehrung, preis);
 
   await db
     .insert(s.accountCosmetic)
     .values({ accountId, itemId: stueck.id })
     .onConflictDoNothing();
 
-  return { itemId: stueck.id, bezahlt: stueck.preis, waehrung: stueck.waehrung, stand };
+  return { itemId: stueck.id, bezahlt: preis, waehrung, stand };
+}
+
+// ---------------------------------------------------------------------------
+// Pakete kaufen
+// ---------------------------------------------------------------------------
+
+export interface Paketkauf {
+  readonly paketId: string;
+  /** Was es gekostet hat, in Edelsteinen. */
+  readonly bezahlt: number;
+  /** Was es gebracht hat. */
+  readonly gibt: { readonly waehrung: Waehrung; readonly betrag: number };
+  /** Beide Staende danach — es haben sich beide geaendert. */
+  readonly stand: Stand;
+}
+
+/**
+ * Ein Paket gegen Edelsteine kaufen. Heute sind das die drei Muenzpakete.
+ *
+ * Drei Riegel, alle gegen dieselbe Art von Anfrage — eine Kennung aus einer
+ * Liste, in die sie nicht gehoert:
+ *
+ *  - Unbekannte Kennung: `packUnknown`.
+ *  - Bekannt, aber `kaufbar: false` (Edelsteinpakete, VIP, Season Pass):
+ *    `packNotForSale`. **Das ist der wichtigste** — ohne ihn waere
+ *    `edelsteine-gross` der Weg, 400 Edelsteine gegen 0 zu bekommen, weil dort
+ *    kein Edelsteinpreis steht.
+ *  - Kaufbar, gibt aber keine Muenzen: `packNotForSale`. Ein Paket, das
+ *    Edelsteine gegen Edelsteine taeuscht, oder ein Pass ohne Guthaben, laeuft
+ *    nicht durch den Umtausch — der geht ausdruecklich nur eine Richtung.
+ */
+export async function paketKaufen(
+  db: Db,
+  accountId: string,
+  paketId: string,
+): Promise<Paketkauf> {
+  const paket = PAKET_NACH_ID.get(paketId);
+  if (!paket) throw notFound('packUnknown');
+  if (!paket.kaufbar || paket.gems === null) throw forbidden('packNotForSale');
+  if (paket.gibt === null || paket.gibt.waehrung !== 'coins') {
+    throw forbidden('packNotForSale');
+  }
+
+  const stand = await edelsteineZuMuenzen(db, accountId, paket.gems, paket.gibt.betrag);
+  return { paketId: paket.id, bezahlt: paket.gems, gibt: paket.gibt, stand };
 }
 
 // ---------------------------------------------------------------------------

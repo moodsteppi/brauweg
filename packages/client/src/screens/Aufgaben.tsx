@@ -36,8 +36,18 @@ import { t } from '../i18n';
  * Truhenbild im Ordner (`truhe.png`), und vier weisse Kaesten waeren der
  * Fehler, der laut STAND.md schon zweimal live gegangen ist. Die Farbe traegt
  * den Grad, der Deckel steht offen, sobald sie geholt ist.
+ *
+ * **Wird auch im Shop-Regal benutzt** (`TruheKachel` in `GameSelect.tsx`).
+ * Deshalb exportiert: Eine zweite gezeichnete Truhe waere zwei Truhen, die sich
+ * ab der ersten Bildlieferung unterscheiden.
  */
-function TruhenBild({ grad, offen }: { grad: Truhe['grad']; offen: boolean }): React.JSX.Element {
+export function TruhenBild({
+  grad,
+  offen,
+}: {
+  grad: Truhe['grad'];
+  offen: boolean;
+}): React.JSX.Element {
   const farben: Record<Truhe['grad'], [string, string, string]> = {
     holz: ['#8a6a3c', '#6f5230', '#c89a5c'],
     bronze: ['#b5763c', '#8c5628', '#e0a060'],
@@ -177,8 +187,18 @@ function AufgabenZeile({
  *
  * Ohne diesen Moment ist eine Truhe ein Knopf, der eine Zahl oben rechts um
  * zwei erhoeht — und das sieht niemand. Tipp auf den Hintergrund schliesst.
+ *
+ * **Nimmt nur Grad und Betrag**, nicht den ganzen `Fund`: Damit passt auch der
+ * Kauffund aus dem Shop-Regal hier durch, und der Moment sieht in beiden Faellen
+ * gleich aus. Exportiert aus demselben Grund.
  */
-function FundBlatt({ fund, onClose }: { fund: Fund; onClose: () => void }): React.JSX.Element {
+export function FundBlatt({
+  fund,
+  onClose,
+}: {
+  fund: { grad: Truhe['grad']; coins: number };
+  onClose: () => void;
+}): React.JSX.Element {
   return (
     <div className="doko-sheet" onClick={onClose} role="presentation">
       <div

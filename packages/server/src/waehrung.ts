@@ -10,12 +10,19 @@
  * Waehrung des Mitspielens: Wer regelmaessig spielt, kommt an alles Bunte.
  *
  * **Edelsteine** (`gems`) entstehen nur aus Kauf oder Geschenk. Sie sind die
- * Waehrung des Ungeduldigen.
+ * Waehrung des Ungeduldigen — und die einzige, die echtes Geld kostet.
  *
- * Getrennt und ohne Wechselkurs, mit Absicht: Gaebe es einen, waere jede
- * Truhe indirekt eine Geldquelle, und der Kurs waere die einzige Zahl, die
- * noch zaehlt. Was mit Edelsteinen zu haben ist, ist mit Muenzen nicht zu
- * haben — und umgekehrt.
+ * **Der Umtausch laeuft nur in eine Richtung: aus Edelsteinen werden Muenzen,
+ * aus Muenzen nie Edelsteine.**
+ *
+ * Hier stand bis zum 4. August „getrennt und ohne Wechselkurs", begruendet
+ * damit, dass sonst jede Truhe indirekt eine Geldquelle waere. Die Begruendung
+ * gilt unveraendert weiter — sie trifft aber nur die Gegenrichtung. Solange aus
+ * Muenzen keine Edelsteine werden, ist keine Truhe und keine Tagesaufgabe ein
+ * Weg zu etwas, das Geld kostet; erspieltes Guthaben bleibt erspielt. Deshalb
+ * gibt es hier `edelsteineZuMuenzen()` und bewusst keine zweite Funktion
+ * daneben: Die Einseitigkeit ist keine Regel in einer Doku, sondern eine
+ * fehlende Funktion.
  *
  * Bewusst kein Einsatz- und Topfsystem (Plan 11): Verwettete virtuelle
  * Waehrung ist in Deutschland gluecksspielrechtlich eine Grauzone.
@@ -175,6 +182,75 @@ export async function abbuchen(
 
   if (!row) throw conflict(waehrung === 'gems' ? 'gemsInsufficient' : 'coinsInsufficient');
   return row.stand;
+}
+
+// ---------------------------------------------------------------------------
+// Umtausch — nur in eine Richtung
+// ---------------------------------------------------------------------------
+
+/**
+ * Der Kurs: so viele Muenzen gibt ein Edelstein.
+ *
+ * Abgeleitet aus den Cent-Platzhaltern der kleinsten Pakete, damit der Umtausch
+ * sich nicht gegen einen spaeteren echten Preis stellt: Die kleine Handvoll
+ * Edelsteine lag bei 299 Cent fuer 50 Stueck (5,98 Cent je Edelstein), die
+ * kleine Handvoll Muenzen bei 199 Cent fuer 500 Stueck (0,398 Cent je Muenze).
+ * 5,98 / 0,398 ergibt genau 15.
+ *
+ * **Vorlaeufig wie alles Preisliche hier** (Plan 13 fuehrt „Konkrete Preise fuer
+ * Abo und Muenzpakete" als offenen Punkt). Wer ihn aendert, aendert diese Zahl
+ * und nichts weiter: Die Kosmetikpreise und die Truhenspannen leiten ihren
+ * zweiten Preis daraus ab, statt ihn doppelt zu fuehren.
+ */
+export const MUENZEN_JE_EDELSTEIN = 15;
+
+/** Was ein Edelsteinbetrag in Muenzen wert ist. */
+export function inMuenzen(edelsteine: number): number {
+  return Math.trunc(edelsteine) * MUENZEN_JE_EDELSTEIN;
+}
+
+/**
+ * Was ein Muenzbetrag in Edelsteinen kostet. **Aufgerundet.**
+ *
+ * Die Richtung der Rundung ist der ganze Punkt: Wuerde abgerundet, waere der
+ * direkte Edelsteinpreis eines Stuecks billiger als derselbe Betrag ueber den
+ * Umtausch — ein Rabatt, den niemand entschieden hat, und bei genug Stuecken
+ * eine Rechenaufgabe statt einer Kaufentscheidung.
+ */
+export function inEdelsteine(muenzen: number): number {
+  return Math.ceil(Math.trunc(muenzen) / MUENZEN_JE_EDELSTEIN);
+}
+
+/**
+ * Edelsteine ausgeben, Muenzen dafuer bekommen.
+ *
+ * Die einzige Bruecke zwischen den beiden Staenden, und sie fuehrt nur hierhin:
+ * Es gibt keine Funktion, die Muenzen zu Edelsteinen macht, und es soll auch
+ * keine geben (siehe Kopf der Datei).
+ *
+ * **Erst abbuchen, dann gutschreiben** — dieselbe Reihenfolge wie beim Kauf in
+ * `shop.ts`. Bricht es dazwischen ab, sind Edelsteine weg und Muenzen nicht da:
+ * unangenehm und reparierbar. Andersherum waeren die Muenzen da und die
+ * Edelsteine auch, und das ist der Fehler, den niemand meldet.
+ *
+ * Beide Betraege kommen vom Aufrufer und nicht aus dem Kurs, weil die Pakete
+ * bewusst nicht kursgenau sind: Das kleine gibt etwas weniger je Edelstein, das
+ * grosse etwas mehr — der uebliche Mengenrabatt. Der Kurs ist die Mitte, an der
+ * sich die Staffelung messen laesst, keine Formel zur Laufzeit.
+ */
+export async function edelsteineZuMuenzen(
+  db: Db,
+  accountId: string,
+  edelsteine: number,
+  muenzen: number,
+): Promise<Stand> {
+  const preis = ganzzahlig(edelsteine);
+  const ertrag = ganzzahlig(muenzen);
+  if (preis <= 0 || ertrag <= 0) throw badRequest('invalidInput');
+
+  await abbuchen(db, accountId, 'gems', preis);
+  await gutschreiben(db, accountId, 'coins', ertrag);
+  return standVon(db, accountId);
 }
 
 /**

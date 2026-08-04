@@ -6709,6 +6709,40 @@ main.auth > .muted {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Die Waehrungsfrage im Kaufblatt.
+ *
+ * Wo vorher der grosse goldene Preis stand, steht jetzt eine kleine Frage: Der
+ * Preis ist auf die Knoepfe gewandert, weil es zwei davon gibt. Ein grosser
+ * Preis darueber waere die Frage, welcher der beiden gemeint ist.
+ */
+.ks-kauf-womit {
+  margin: 0.3rem 0 0.1rem;
+  font-size: 0.78rem;
+}
+
+/* Zwei Kaufknoepfe nebeneinander, darunter "Später" auf ganzer Breite. */
+.ks-kauf-waehl {
+  margin-bottom: 0.35rem;
+}
+
+.ks-kauf-waehl .hub-knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  font-size: 0.78rem;
+}
+
+/* Muenze und Edelstein auf den Kaufknoepfen: klein, weil der Text die Aussage
+   traegt - das Symbol sagt nur, welche der beiden Zahlen gemeint ist. */
+.ks-kauf-icon,
+.ks-kauf-icon.front-waehrung-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+}
+
 /* ---------------------------------------------------------------------------
  * Garderobe im Profil
  * ------------------------------------------------------------------------- */
@@ -6833,6 +6867,36 @@ main.auth > .muted {
 .shop-paket-stein.front-waehrung-icon {
   width: 2.6rem;
   height: 2.6rem;
+}
+
+/*
+ * Preisschild mit Symbol.
+ *
+ * Seit die Muenzpakete Edelsteine kosten, steht im Preisschild nicht mehr nur
+ * Text: „35 €" und „35 Edelsteine" duerfen sich nicht verwechseln lassen, und
+ * das Wort ausgeschrieben sprengt die Kachel. Also die Zahl und der Stein.
+ */
+.hub-preis {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.14rem;
+}
+
+.shop-preis-stein.front-waehrung-icon {
+  width: 0.72rem;
+  height: 0.72rem;
+  flex: 0 0 auto;
+}
+
+/*
+ * Die Truhenkachel im Regal.
+ *
+ * Sie nutzt `hub-angebot` wie die Pakete; neu ist nur, dass ihr Bild ein SVG
+ * statt einer Grafik ist. `.truhe-bild` bringt 2,9 × 2,6 rem mit — dieselbe
+ * Hoehe wie `.hub-angebot-art`, die Reihe bleibt also gleich hoch.
+ */
+.shop-truhe .truhe-bild {
+  margin-bottom: 0.06rem;
 }
 
 /* Der Spartipp. Gruen, weil es ein Vorteil ist - nicht gold, das ist der

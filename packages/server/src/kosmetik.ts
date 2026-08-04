@@ -11,6 +11,16 @@
  * sechster Platz ist ein Eintrag in `SLOTS` und keine Migration — die
  * Zuordnung steht in `account_avatar` als Zeile, nicht als Spalte.
  *
+ * **Jedes Stueck hat zwei Preise**, einen in Muenzen und einen in Edelsteinen;
+ * bezahlt wird mit einer der beiden, und der Kaeufer waehlt. Gefuehrt wird
+ * trotzdem nur eine Zahl je Stueck — die zweite leitet `waehrung.ts` aus dem
+ * Kurs ab. Zwei von Hand gepflegte Preise waeren zwei Wahrheiten, und die
+ * zweite faellt erst auf, wenn jemand den billigeren Weg gefunden hat.
+ *
+ * Dass damit auch die legendaeren Stuecke erspielbar sind, ist die Folge und
+ * gewollt: Sie kosten in Muenzen das Fuenfzehnfache, sind also weit teurer als
+ * alles andere im Regal, aber nicht mehr unerreichbar fuer den, der nicht zahlt.
+ *
  * **Preis 0 heisst "gehoert allen".** Dafuer entsteht keine Besitzzeile: Sonst
  * bekaeme jedes neue Konto fuenf Zeilen geschenkt, nur damit es einen Pulli
  * anziehen darf. Besitz wird deshalb immer ueber `besitzt()` gefragt und nie
@@ -27,7 +37,7 @@ import { eq } from 'drizzle-orm';
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
 import { notFound } from './errors.js';
-import type { Waehrung } from './waehrung.js';
+import { inEdelsteine, inMuenzen, type Waehrung } from './waehrung.js';
 
 // ---------------------------------------------------------------------------
 // Plaetze
@@ -61,15 +71,25 @@ export type Seltenheit = (typeof SELTENHEITEN)[number];
  */
 export type Herkunft = 'shop' | 'geschenk';
 
+/**
+ * Was ein Stueck kostet — in beiden Waehrungen.
+ *
+ * Beide Zahlen stehen gleichberechtigt da, damit die Oberflaeche nicht rechnen
+ * muss und der Server nicht zweimal: Der Client zeigt, was hier steht.
+ */
+export interface Preis {
+  readonly coins: number;
+  readonly gems: number;
+}
+
 export interface Stueck {
   readonly id: string;
   readonly slot: Slot;
   readonly nameKey: string;
   readonly seltenheit: Seltenheit;
   readonly herkunft: Herkunft;
-  /** 0 heisst: gehoert allen, kein Kauf noetig. */
-  readonly preis: number;
-  readonly waehrung: Waehrung;
+  /** 0 in beiden Waehrungen heisst: gehoert allen, kein Kauf noetig. */
+  readonly preis: Preis;
 }
 
 /**
@@ -77,9 +97,14 @@ export interface Stueck {
  *
  * Je Platz ein Stueck zum Preis 0, damit der Kleiderschrank ohne eine einzige
  * Muenze benutzbar ist — ein Editor, der beim ersten Oeffnen nur Schloesser
- * zeigt, erklaert sich nicht. Darueber je Platz eine Reihe fuer Muenzen und
- * genau ein Stueck fuer Edelsteine: Der teuerste Platz ist die Aura, weil sie
- * am weitesten sichtbar ist.
+ * zeigt, erklaert sich nicht.
+ *
+ * Darueber je Platz eine Reihe, deren Preis in **Muenzen** gefuehrt wird, und
+ * genau ein legendaeres Stueck, dessen Preis in **Edelsteinen** gefuehrt wird.
+ * Welche Waehrung hier steht, sagt nur, worin die Zahl gepflegt ist — kaufen
+ * kann man jedes Stueck in beiden (siehe Kopf der Datei). Das legendaere ist
+ * je Platz eines, und der teuerste Platz ist die Aura, weil sie am weitesten
+ * sichtbar ist.
  */
 export const KATALOG: readonly Stueck[] = [
   // --- Kopf ---------------------------------------------------------------
@@ -127,22 +152,37 @@ function frei(id: string, slot: Slot): Stueck {
     nameKey: `kosmetik.${id}`,
     seltenheit: 'gewoehnlich',
     herkunft: 'shop',
-    preis: 0,
-    waehrung: 'coins',
+    preis: { coins: 0, gems: 0 },
   };
 }
 
+/** Preis in Muenzen gefuehrt, der Edelsteinpreis kommt aus dem Kurs. */
 function muenzen(
   id: string,
   slot: Slot,
-  preis: number,
+  coins: number,
   seltenheit: Seltenheit = 'gewoehnlich',
 ): Stueck {
-  return { id, slot, nameKey: `kosmetik.${id}`, seltenheit, herkunft: 'shop', preis, waehrung: 'coins' };
+  return {
+    id,
+    slot,
+    nameKey: `kosmetik.${id}`,
+    seltenheit,
+    herkunft: 'shop',
+    preis: { coins, gems: inEdelsteine(coins) },
+  };
 }
 
-function edelsteine(id: string, slot: Slot, preis: number, seltenheit: Seltenheit): Stueck {
-  return { id, slot, nameKey: `kosmetik.${id}`, seltenheit, herkunft: 'shop', preis, waehrung: 'gems' };
+/** Preis in Edelsteinen gefuehrt, der Muenzpreis kommt aus dem Kurs. */
+function edelsteine(id: string, slot: Slot, gems: number, seltenheit: Seltenheit): Stueck {
+  return {
+    id,
+    slot,
+    nameKey: `kosmetik.${id}`,
+    seltenheit,
+    herkunft: 'shop',
+    preis: { coins: inMuenzen(gems), gems },
+  };
 }
 
 /** Nur zu bekommen, nicht zu kaufen. Der Preis ist bewusst unerreichbar. */
@@ -153,8 +193,7 @@ function geschenk(id: string, slot: Slot, seltenheit: Seltenheit): Stueck {
     nameKey: `kosmetik.${id}`,
     seltenheit,
     herkunft: 'geschenk',
-    preis: 0,
-    waehrung: 'coins',
+    preis: { coins: 0, gems: 0 },
   };
 }
 
@@ -169,6 +208,17 @@ export function requireStueck(id: string): Stueck {
   const stueck = NACH_ID.get(id);
   if (!stueck) throw notFound('itemUnknown');
   return stueck;
+}
+
+/**
+ * Was das Stueck in dieser Waehrung kostet.
+ *
+ * Eine Funktion und kein `stueck.preis[waehrung]` an den Aufrufstellen: Der
+ * Zugriff soll durch eine Stelle laufen, die sich anpassen laesst, falls je ein
+ * Stueck nur in einer Waehrung zu haben sein soll.
+ */
+export function preisIn(stueck: Stueck, waehrung: Waehrung): number {
+  return waehrung === 'gems' ? stueck.preis.gems : stueck.preis.coins;
 }
 
 /** Das Geburtstagsoutfit — was der Geburtstags-Pinguin einbringt. */
@@ -239,7 +289,11 @@ export function besitzt(
   ownsEverything = false,
 ): boolean {
   if (ownsEverything) return true;
-  if (stueck.preis === 0 && stueck.herkunft === 'shop') return true;
+  // Frei ist nur, was in BEIDEN Waehrungen nichts kostet. Ein Stueck mit
+  // `{ coins: 0, gems: 3 }` waere sonst gratis statt guenstig.
+  if (stueck.preis.coins === 0 && stueck.preis.gems === 0 && stueck.herkunft === 'shop') {
+    return true;
+  }
   return garderobe.besitz.has(stueck.id);
 }
 
