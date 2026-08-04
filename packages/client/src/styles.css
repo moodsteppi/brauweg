@@ -7917,3 +7917,161 @@ main.auth > .muted {
     transform: translate(-50%, -12px) scale(1);
   }
 }
+
+/* =========================================================================
+   Einstellungen.
+
+   Zwei Regler und ein Schalter. Der gemalte Satz aus den Menueblaettern
+   traegt das Blatt schon; hier steht nur, was ein Schieberegler braucht -
+   und den gibt es sonst nirgends in der Anwendung.
+
+   Der Regler ist bewusst dick: Er wird mit dem Daumen bedient, waehrend das
+   Handy in einer Hand liegt. Die 28 px Griffbreite sind kein Geschmack,
+   sondern die Untergrenze, unter der man beim Ziehen abrutscht.
+   ========================================================================= */
+
+.einstellungen-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.einstellungen-zeile:last-of-type { border-bottom: none; }
+
+.einstellungen-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+.einstellungen-text .muted { font-size: 0.76rem; line-height: 1.25; }
+
+/* Abgeblendet, aber lesbar: Der Satz daneben erklaert ja gerade, warum der
+   Schalter nicht geht. Ganz ausgrauen hiesse, die Erklaerung zu verstecken. */
+.einstellungen-zeile.is-aus .einstellungen-text strong { opacity: 0.55; }
+.einstellungen-zeile.is-aus .lobby-chip { opacity: 0.45; }
+
+.einstellungen-regler {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+/* Die Zahl bekommt feste Breite und Ziffern gleicher Laufweite, sonst
+   zappelt der Regler beim Ziehen hin und her, weil "5" schmaler ist
+   als "100". */
+.einstellungen-wert {
+  font-variant-numeric: tabular-nums;
+  width: 2.2rem;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #f0e6d2;
+}
+
+.einstellungen-regler input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8.5rem;
+  height: 28px;
+  background: none;
+  margin: 0;
+}
+.einstellungen-regler input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.25));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.einstellungen-regler input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.einstellungen-regler input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f6e3b4, #c99a48 70%, #8d6626);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+.einstellungen-regler input[type='range']::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f6e3b4, #c99a48 70%, #8d6626);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+.einstellungen-regler input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #f6e3b4;
+  outline-offset: 2px;
+}
+
+.einstellungen-fussnote {
+  margin: 0.7rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+/* Der Schalter in der Zeile ist schmaler als der in der Lobby - dort steht
+   er in einer Reihe gleich breiter Chips, hier allein am rechten Rand. */
+.einstellungen-zeile .lobby-chip {
+  flex: 0 0 auto;
+  min-width: 4.2rem;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+}
+
+/* Der Einstieg im Profil: eine Zeile ueber dem Pinguin, mit dem Zahnrad,
+   das es als Bild schon gibt. */
+.hub-einstellungen-knopf {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.hub-einstellungen-knopf img {
+  width: 1.1rem;
+  height: 1.1rem;
+  object-fit: contain;
+}
+
+/* Kachel ohne Bild: ein Zeichen statt eines weissen Kastens. Gilt fuer
+   Klangpakete und Musik, solange dafuer keine Grafik gemalt ist. */
+.shop-ware-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: #f2dfae;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  aspect-ratio: 1;
+}
+
+/* Die Auswahlzeile bricht um: Vier Paketnamen passen nicht neben den Text. */
+.einstellungen-zeile--auswahl {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.einstellungen-chips {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+.einstellungen-chips .lobby-chip {
+  flex: 0 1 auto;
+  min-width: 5rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}

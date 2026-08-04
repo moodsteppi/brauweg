@@ -29,6 +29,8 @@ import {
 } from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
 import { emoteBild, emoteMit } from '../emotes';
+import { PAKET_NAMEN, spiele } from '../klang';
+import { EinstellungenBlatt } from './Einstellungen';
 import {
   EdelsteinIcon,
   HubBanner,
@@ -545,6 +547,7 @@ function ProfilTab({
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [loeschenOffen, setLoeschenOffen] = useState(false);
+  const [einstellungenOffen, setEinstellungenOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
@@ -602,6 +605,19 @@ function ProfilTab({
         </span>
       </div>
 
+      {/* Einstellungen stehen hier oben und nicht unten bei "Abmelden":
+          Lautstaerke sucht man, waehrend einen etwas stoert, und dann will
+          man nicht erst an Statistik und Freundesliste vorbeiscrollen. */}
+      <button
+        className="hub-knopf hub-knopf--a hub-einstellungen-knopf"
+        onClick={() => {
+          spiele('blatt-auf');
+          setEinstellungenOffen(true);
+        }}
+      >
+        <img src="/hub/icon-einstellungen.webp" alt="" aria-hidden="true" />
+        Einstellungen
+      </button>
 
       {/*
         Der Pinguin und die zwei Einstiege, die zusammengehoeren: anziehen und
@@ -721,6 +737,15 @@ function ProfilTab({
       <button className="hub-konto-loeschen" onClick={() => setLoeschenOffen(true)}>
         Konto löschen
       </button>
+
+      {einstellungenOffen && (
+        <EinstellungenBlatt
+          onClose={() => {
+            spiele('blatt-zu');
+            setEinstellungenOffen(false);
+          }}
+        />
+      )}
 
       {loeschenOffen && (
         <KontoLoeschenBlatt
@@ -948,7 +973,7 @@ type Kaufwunsch =
   | { art: 'paket'; paket: Paket }
   | { art: 'truhe'; truhe: Kauftruhe }
   /** Szenerie, Rueckseite, Zuruf oder Wappen — mit Wahl der Waehrung. */
-  | { art: 'ware'; ware: RegalWare; name: string; bild: string };
+  | { art: 'ware'; ware: RegalWare; name: string; bild: string | null };
 
 /**
  * Rueckfrage vor dem Abbuchen.
@@ -989,7 +1014,11 @@ function KaufFrage({
       >
         {frage.art === 'ware' ? (
           <>
-            <img className="ks-kauf-ware" src={frage.bild} alt="" draggable={false} />
+            {/* Ware ohne Grafik (Klang, Musik) zeigt hier nichts statt eines
+                kaputten Bildes — der Name darunter traegt die Rueckfrage. */}
+            {frage.bild && (
+              <img className="ks-kauf-ware" src={frage.bild} alt="" draggable={false} />
+            )}
             <h2>{frage.name}</h2>
           </>
         ) : frage.art === 'truhe' ? (
@@ -1162,6 +1191,7 @@ function Shop({
     void api
       .buyChest(truhe.id)
       .then((ergebnis) => {
+        spiele('truhe');
         setFrage(null);
         setFund(ergebnis);
         onGuthaben();
@@ -1193,6 +1223,7 @@ function Shop({
     void api
       .buyItem(w.id, waehrung)
       .then(() => {
+        spiele('kauf');
         setFrage(null);
         onGuthaben();
       })
@@ -1308,6 +1339,31 @@ function Shop({
         kauft={kauft}
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
+      {/* Klang und Musik. Beides wird hier gekauft und in den Einstellungen
+          gewaehlt — dieselbe Trennung wie ueberall: Der Shop legt zu, das
+          Einrichten passiert dort, wo man es benutzt. */}
+      <WareRegal
+        titel="Klangpakete"
+        zusatz="Wie sich der Tisch anhört"
+        waren={ware('klang')}
+        bild={() => null}
+        glyph="♪"
+        name={(w) => PAKET_NAMEN[w.wert] ?? w.wert}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+
+      <WareRegal
+        titel="Musik"
+        zusatz="Im Menü und am Tisch"
+        waren={ware('musik')}
+        bild={() => null}
+        glyph="♫"
+        name={(w) => w.wert}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+
       <Tafel titel="Pässe" zusatz="Kommt bald">
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.paesse ?? []).map((paket) => (
@@ -1352,6 +1408,7 @@ function WareRegal({
   zusatz,
   waren,
   bild,
+  glyph,
   name,
   kauft,
   onKaufen,
@@ -1359,12 +1416,22 @@ function WareRegal({
   titel: string;
   zusatz: string;
   waren: RegalWare[];
-  bild: (w: RegalWare) => string;
+  /**
+   * Bild der Kachel — oder null, wenn es fuer diese Sorte noch keins gibt.
+   *
+   * Dann steht `glyph` an seiner Stelle. Der Umweg ist Absicht: Ein `<img>`
+   * auf eine Datei, die es nicht gibt, ist ein weisser Kasten, und genau das
+   * ist beim Clan-Krieg schon einmal fast live gegangen. Ein Zeichen ist
+   * ehrlicher als ein kaputtes Bild und laesst sich austauschen, sobald die
+   * Grafik da ist.
+   */
+  bild: (w: RegalWare) => string | null;
+  glyph?: string;
   name: (w: RegalWare) => string;
   /** Kennung, die gerade gekauft wird — der Knopf sperrt sich so lange. */
   kauft: string | null;
   /** Oeffnet die Rueckfrage. Gekauft wird erst dort. */
-  onKaufen: (w: RegalWare, name: string, bild: string) => void;
+  onKaufen: (w: RegalWare, name: string, bild: string | null) => void;
 }): React.JSX.Element | null {
   // Ist alles kostenlos und gehoert ohnehin allen, waere das Regal ein
   // leeres Schaufenster. Dann lieber gar keins.
@@ -1382,7 +1449,13 @@ function WareRegal({
             onClick={() => onKaufen(w, name(w), bild(w))}
             title={name(w)}
           >
-            <img src={bild(w)} alt="" draggable={false} />
+            {bild(w) ? (
+              <img src={bild(w) ?? undefined} alt="" draggable={false} />
+            ) : (
+              <span className="shop-ware-glyph" aria-hidden="true">
+                {glyph ?? '?'}
+              </span>
+            )}
             <span className="shop-ware-name">{name(w)}</span>
             {w.besessen ? (
               <span className="shop-ware-hab">✓</span>
@@ -1419,7 +1492,13 @@ function TabButton({
     <button
       className={`front-tab front-tab--${farbe}${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
-      onClick={onClick}
+      // Der Klang haengt an der Leiste und nicht an jedem einzelnen Knopf im
+      // Haus: Das hier ist die Bewegung, die man hundertmal am Abend macht.
+      // Wer jeden Knopf verklanglicht, baut eine Klapperkiste.
+      onClick={() => {
+        if (!active) spiele('tipp');
+        onClick();
+      }}
     >
       <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
       <span>{label}</span>

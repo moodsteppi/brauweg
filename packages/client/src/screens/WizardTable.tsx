@@ -29,6 +29,7 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
+import { useTischklang } from '../tisch/klangtisch';
 import { DealCeremony, prefersReducedMotion } from '../DealCeremony';
 import { useTable } from '../useTable';
 
@@ -298,6 +299,29 @@ export function WizardTable({
     ) : (
       <span>{text}</span>
     );
+
+  /**
+   * Ton am Tisch — derselbe Haken wie beim Doppelkopf, nur mit den Werten,
+   * die dieses Spiel dafuer hat. Die Rundenabrechnung heisst hier
+   * `abrechnung` statt `finishedKey`; als Schluessel dient die Rundennummer,
+   * denn genau die ist neu, wenn ein Blatt erscheint.
+   *
+   * Vor jedem bedingten `return`, aus demselben Grund wie dort.
+   */
+  const meinPlatz =
+    view?.seat != null
+      ? (party?.standings?.find((s) => s.seat === view.seat)?.place ?? null)
+      : null;
+  useTischklang({
+    stichKarten: view?.view.round?.currentTrick.length ?? 0,
+    letzterStich: lastKey,
+    binDran: view?.view.round?.isMyTurn ?? false,
+    gibtGerade: dealing,
+    abschluss: abrechnung ? `runde-${abrechnung.roundNumber}` : null,
+    partieFertig: view?.finished ?? false,
+    gewonnen: meinPlatz === null ? null : meinPlatz === 1,
+    fehler: error,
+  });
 
   if (!view && table && table.status === 'waiting') {
     return (

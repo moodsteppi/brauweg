@@ -404,6 +404,53 @@ Mit `xp = 330` stehen zugleich drei Stufentruhen offen (Stufe 2, 3 und 5).
 Wer alles auf einmal sehen will, nimmt lieber ein Testkonto: `STAFF_EMAILS`
 setzen und neu starten — dann ist alles besessen und nichts wird abgebucht.
 
+## Am 5. August fertig geworden: Ton
+
+**Ausführlich in `docs/KLANG.md`** — hier nur, was man beim Weiterbauen
+wissen muss. Keine Migration; die Warenarten `klang` und `musik` sind eine
+Datei, wie es `tischware.ts` verspricht.
+
+**Einstellungen gibt es jetzt als eigenes Blatt** im Profil-Tab, oben mit dem
+Zahnrad. Darin: Sounds 0–100, Musik 0–100, Vibration an/aus, dazu die Auswahl
+des Klangpakets, sobald man mehr als eines besitzt. Bisher gab es überhaupt
+keinen Ort für Einstellungen — Sprache und Benachrichtigungen können dort
+nachrücken.
+
+**23 Töne, 123 kB zusammen**, alle CC0 von Kenney, plus ein zweites Paket
+„Glas" mit 8 Dateien. Die Originale liegen im Archivrepo unter `klang/`.
+Gewandelt wird mit `~/klangwerkzeug/wandeln.mjs` — auf diesem Mac ist weder
+`ffmpeg` noch `lame` noch `sox` installiert, und `afconvert` kann kein MP3.
+
+**Was am Tisch klingt, steht in `tisch/klangtisch.ts`, nicht in den Tischen.**
+Derselbe Grundsatz wie bei den Emotes: Der Haken bekommt nur Zahlen und
+Wahrheitswerte, kennt kein Spiel, und ein neuer Klang gilt sofort für beide.
+Wer einen Klang in `Table.tsx` einbaut, hat ihn beim Zauberer vergessen.
+
+> **Die eine Zeile, um die es beim Ton wirklich ging:**
+> `navigator.audioSession.type = 'ambient'`. Ohne sie hält iOS beim ersten
+> eigenen Ton die Musik in jeder anderen App an — man startet eine Partie,
+> und Spotify ist weg. Der Preis steht auch in den Einstellungen, weil man es
+> sonst für kaputt hält: Am iPhone schaltet der Klingelschalter uns mit stumm.
+
+**Vibration ist gebaut, aber das iPhone kann sie nicht.** Safari kennt
+`navigator.vibrate` nicht, weder am Handy noch am Rechner, und es gibt keinen
+Ersatzweg. Der Schalter bleibt sichtbar, abgeblendet, mit einem Satz dazu.
+
+**Drei Dinge sind bewusst offen und keine Vergesslichkeit:**
+
+- **Musik gibt es noch nicht.** Kenney hat keine Schleifen, FreePD ist
+  geschlossen. Der Katalog steht bei `musik` leer — aus demselben Grund, aus
+  dem die Kartenblätter dort lange leer standen. **Ab der fünften Schleife
+  gehört Musik nicht mehr ins Repo**; `VITE_KLANG_BASIS` ist dafür schon
+  eingebaut und kostet keine Codeänderung.
+- **`sieg`, `niederlage`, `stufe`** sind nach Länge und Instrument gewählt,
+  nicht nach Gehör — in keinem Dateinamen steht, welcher Jingle nach Sieg
+  klingt. Einmal anhören, notfalls Datei desselben Namens drüberlegen.
+- **Klang und Musik haben keine Grafik.** Im Shop steht ♪ beziehungsweise ♫
+  statt eines Bildes. `WareRegal` nimmt dafür jetzt `bild: () => null` — ein
+  `<img>` auf eine fehlende Datei wäre ein weißer Kasten, und genau das ging
+  beim Clan-Krieg schon einmal fast live.
+
 ## Am 4. August später fertig geworden (zweite Sitzung)
 
 Alles auf `staging`, Stand `66b6d25`. Migrationen **0013** (Clanchat und

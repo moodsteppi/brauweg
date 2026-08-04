@@ -5,9 +5,11 @@ ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln in
 `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
-schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/plattform-plan.md`
-(das große Ganze) · **`docs/JETZT-AUSFUEHREN.md` (Bilder einbauen, Schritt
-für Schritt — die Werkzeuge stehen auf dem Rechner bereit)**.
+schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne,
+Musik, Vibration — Herkunft, Lizenzen, Auslagerungsgrenze) ·
+`docs/plattform-plan.md` (das große Ganze) · **`docs/JETZT-AUSFUEHREN.md`
+(Bilder einbauen, Schritt für Schritt — die Werkzeuge stehen auf dem Rechner
+bereit)**.
 
 ---
 
@@ -39,6 +41,12 @@ nicht bei 1,7 MB. Genau das ist zweimal live gegangen. Auf diesem Mac ist
 kein WebP-Werkzeug installiert; gewandelt wird mit
 `node ~/bildwerkzeug/wandeln.mjs <quelle> <ziel> [karten|szene|wappen]` —
 der ganze Ablauf steht in `docs/JETZT-AUSFUEHREN.md`.
+
+**Für Klänge gilt dasselbe** mit `node ~/klangwerkzeug/wandeln.mjs <quelle>
+<ziel.mp3> [sfx|musik]`. MP3, nicht Ogg — Safari spielt kein Ogg, und dort
+läuft die Beta. Alle 23 Töne zusammen wiegen 123 kB und bleiben im Repo;
+**Musik ab der fünften Schleife nicht mehr** — dafür steht
+`VITE_KLANG_BASIS` bereit, siehe `docs/KLANG.md`.
 
 **5. Neue Grafik wird bestellt, nicht beschrieben.** Eine Datei
 `docs/ASSETS-*.md` mit Maßen, Freihalte-Zonen, Abnahmekriterien und einer
@@ -114,3 +122,6 @@ Wirtschaftsmodell.
   lokalen Stand.** Beim Historien-Schnitt am 4. August stand das lokale `main`
   auf einem uralten Commit — ein Spiegel-Push hätte die Produktion
   zurückgerollt.
+- **Kein `<img>` auf eine Datei, die es noch nicht gibt.** Lieber ein Zeichen
+  oder gar nichts: Ein weißer Kasten sieht nach Fehler aus, ein Notenzeichen
+  nach Absicht. Beim Clan-Krieg ging das einmal fast so live.

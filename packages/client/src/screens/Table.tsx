@@ -29,6 +29,7 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
+import { useTischklang } from '../tisch/klangtisch';
 import { type ConnectionStatus, useTable } from '../useTable';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
@@ -510,6 +511,31 @@ export function Table({
     ) : (
       <span>{text}</span>
     );
+
+  /**
+   * Ton am Tisch — dieselben sieben Anlaesse wie beim Zauberer.
+   *
+   * Der Aufruf steht bewusst VOR jedem bedingten `return`: Ein Haken, der nur
+   * manchmal laeuft, ist keiner. Waehrend des Wartebereichs sind die Werte
+   * schlicht leer, und `useTischklang` klingt beim ersten Blick ohnehin nie.
+   *
+   * Musik bleibt hier absichtlich aussen vor: Welches Stueck am Tisch laeuft,
+   * haengt am gewaehlten Ton aus dem Shop und wird eine Ebene hoeher gesetzt.
+   */
+  const meinPlatz =
+    view?.seat != null
+      ? (party?.standings?.find((s) => s.seat === view.seat)?.place ?? null)
+      : null;
+  useTischklang({
+    stichKarten: view?.view.round?.currentTrick.length ?? 0,
+    letzterStich: lastKey,
+    binDran: view?.view.round?.isMyTurn ?? false,
+    gibtGerade: dealing,
+    abschluss: finishedKey,
+    partieFertig: view?.finished ?? false,
+    gewonnen: meinPlatz === null ? null : meinPlatz === 1,
+    fehler: error,
+  });
 
   // Wartebereich: freie Plaetze sind kein Fehler, sondern der Normalfall. Man
   // sieht, wer schon da ist; ist der letzte Platz belegt, geht es von selbst
