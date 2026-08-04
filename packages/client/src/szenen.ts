@@ -29,6 +29,19 @@ export const SZENEN: readonly Szene[] = [
   // ist der Untergrund, keine Regel.
   { id: 'zauberturm', name: 'Zauberturm', hinweis: 'Kerzen, Bücher, Nachtfenster' },
   { id: 'sternenwiese', name: 'Sternenwiese', hinweis: 'Draußen, unter Lichterketten' },
+
+  // Zweiter Satz, im Shop zu haben. Was sie kosten, sagt der Server
+  // (tischware.ts) — hier steht nur, wie sie heissen.
+  { id: 'wirtshaus', name: 'Wirtsstube', hinweis: 'Dunkles Holz, Butzenscheiben' },
+  { id: 'kaminzimmer', name: 'Kaminzimmer', hinweis: 'Glut im Rücken' },
+  { id: 'bibliothek', name: 'Bibliothek', hinweis: 'Bücherwand und Leselampe' },
+  { id: 'berghuette', name: 'Almhütte', hinweis: 'Kiefernholz, ruhig' },
+  { id: 'gartenlaube', name: 'Gartenlaube', hinweis: 'Licht durchs Blätterdach' },
+  { id: 'herbst', name: 'Herbstfenster', hinweis: 'Laub hinter der Scheibe' },
+  { id: 'marmor', name: 'Marmorsalon', hinweis: 'Heller Stein, feine Äderung' },
+  { id: 'samt-blau', name: 'Blauer Samt', hinweis: 'Weicher Schimmer, Goldkante' },
+  { id: 'kapitaen', name: 'Kajüte', hinweis: 'Schiffsholz und Messing' },
+  { id: 'basar', name: 'Basar', hinweis: 'Teppichmuster am Rand' },
 ];
 
 export const STANDARD_SZENE = 'stube';

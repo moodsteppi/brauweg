@@ -21,6 +21,18 @@ export const TABLE_SCENES = [
   'nacht',
   'zauberturm',
   'sternenwiese',
+  // Zweiter Satz, kaufbar. Was sie kosten, steht in tischware.ts — hier steht
+  // nur, dass es sie gibt.
+  'wirtshaus',
+  'kaminzimmer',
+  'bibliothek',
+  'berghuette',
+  'gartenlaube',
+  'herbst',
+  'marmor',
+  'samt-blau',
+  'kapitaen',
+  'basar',
 ] as const;
 
 export type TableScene = (typeof TABLE_SCENES)[number];

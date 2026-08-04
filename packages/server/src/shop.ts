@@ -42,6 +42,7 @@ import {
   requireStueck,
 } from './kosmetik.js';
 import { abbuchen, type Waehrung } from './waehrung.js';
+import { type Ware, WAREN, besitzVon, wareMit } from './tischware.js';
 
 // ---------------------------------------------------------------------------
 // Angebote gegen echtes Geld — heute alle "bald"
@@ -100,10 +101,24 @@ export interface RegalStueck {
   readonly geschenk: boolean;
 }
 
+/** Eine Szenerie oder ein Blatt, wie der Shop sie zeigt. */
+export interface RegalWare {
+  readonly id: string;
+  readonly art: 'szene' | 'blatt';
+  readonly wert: string;
+  readonly nameKey: string;
+  readonly seltenheit: string;
+  readonly preis: number;
+  readonly waehrung: Waehrung;
+  readonly besessen: boolean;
+}
+
 export interface ShopAnsicht {
   readonly paesse: readonly Paket[];
   readonly muenzpakete: readonly Paket[];
   readonly edelsteinpakete: readonly Paket[];
+  /** Szenerien und Blaetter, inklusive der kostenlosen. */
+  readonly tischware: readonly RegalWare[];
   /** Kosmetik, nach Platz gruppiert und in Katalogreihenfolge. */
   readonly regale: readonly { readonly slot: Slot; readonly stuecke: readonly RegalStueck[] }[];
 }
@@ -117,11 +132,27 @@ export async function shopFuer(db: Db, accountId: string): Promise<ShopAnsicht> 
 
   const rechte = entitlementsFor(konto);
   const garderobe = await garderobeVon(db, accountId);
+  const eigeneWare = await besitzVon(db, accountId, rechte.ownsEverything);
 
   return {
     paesse: PAESSE,
     muenzpakete: MUENZPAKETE,
     edelsteinpakete: EDELSTEINPAKETE,
+    /**
+     * Ware fuer den Tisch. Kostenlose Stuecke bleiben in der Liste, damit die
+     * Auswahl im Client vollstaendig ist — sie tragen Preis 0 und gelten als
+     * besessen.
+     */
+    tischware: WAREN.map((ware) => ({
+      id: ware.id,
+      art: ware.art,
+      wert: ware.wert,
+      nameKey: ware.nameKey,
+      seltenheit: ware.seltenheit,
+      preis: ware.preis,
+      waehrung: ware.waehrung,
+      besessen: eigeneWare.has(ware.id),
+    })),
     regale: SLOTS.map((slot) => ({
       slot,
       stuecke: KATALOG.filter((stueck) => stueck.slot === slot).map((stueck) => ({
@@ -163,6 +194,12 @@ export interface Kauf {
  * Stelle, die nicht hinsieht.
  */
 export async function kaufen(db: Db, accountId: string, itemId: string): Promise<Kauf> {
+  // Ware fuer den Tisch (Szenerien, spaeter Blaetter) liegt in einem eigenen
+  // Katalog, teilt sich aber die Besitztabelle. Sie wird zuerst gefragt,
+  // damit `requireStueck` nicht ueber eine Kennung stolpert, die es kennt.
+  const ware = wareMit(itemId);
+  if (ware) return kaufeWare(db, accountId, ware);
+
   const stueck = requireStueck(itemId);
   if (stueck.herkunft === 'geschenk') throw forbidden('itemNotForSale');
 
@@ -186,6 +223,32 @@ export async function kaufen(db: Db, accountId: string, itemId: string): Promise
     .onConflictDoNothing();
 
   return { itemId: stueck.id, bezahlt: stueck.preis, waehrung: stueck.waehrung, stand };
+}
+
+/** Wie oben, aber fuer Szenerien und Blaetter. */
+async function kaufeWare(db: Db, accountId: string, ware: Ware): Promise<Kauf> {
+  // Was allen gehoert, laesst sich nicht kaufen. Sonst koennte man Muenzen
+  // fuer die Stube ausgeben, die man ohnehin hat.
+  if (ware.preis === 0) throw conflict('itemAlreadyOwned');
+
+  const [konto] = await db
+    .select({ premiumUntil: s.account.premiumUntil, isStaff: s.account.isStaff })
+    .from(s.account)
+    .where(eq(s.account.id, accountId));
+  if (!konto) throw notFound('accountUnknown');
+
+  const rechte = entitlementsFor(konto);
+  const eigen = await besitzVon(db, accountId, rechte.ownsEverything);
+  if (eigen.has(ware.id)) throw conflict('itemAlreadyOwned');
+
+  const stand = await abbuchen(db, accountId, ware.waehrung, ware.preis);
+
+  await db
+    .insert(s.accountCosmetic)
+    .values({ accountId, itemId: ware.id })
+    .onConflictDoNothing();
+
+  return { itemId: ware.id, bezahlt: ware.preis, waehrung: ware.waehrung, stand };
 }
 
 // ---------------------------------------------------------------------------

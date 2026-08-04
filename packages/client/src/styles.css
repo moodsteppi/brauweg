@@ -6918,3 +6918,463 @@ main.auth > .muted {
     animation: none;
   }
 }
+
+/* =========================================================================
+   Clanchat und Clankrieg.
+
+   Beide fuellen den Bildschirm statt als Blatt darueberzuliegen: Ein Chat,
+   den man wegtippen kann, ohne es zu wollen, ist keiner — und der Krieg
+   traegt genug Zahlen, dass er den Platz braucht.
+   ========================================================================= */
+
+.clan-voll {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  background: #0d1319;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.clan-voll-kopf {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  background: rgba(10, 16, 22, 0.9);
+  border-bottom: 1px solid var(--line);
+}
+.clan-voll-kopf h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+/* --- Chat ---------------------------------------------------------------- */
+
+.clan-chat-spur {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.7rem 0.6rem;
+}
+.clan-chat-hinweis {
+  margin: auto;
+  text-align: center;
+  max-width: 18rem;
+}
+
+/* Systemzeilen sind die Chronik: mittig, klein, ohne Blase — sie sprechen
+   niemanden an, sie halten fest. */
+.clan-chat-system {
+  align-self: center;
+  margin: 0.35rem 0;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.clan-chat-zeile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  max-width: 85%;
+}
+.clan-chat-zeile.is-eigen {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.clan-chat-wer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.clan-chat-wer img {
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.clan-chat-blase {
+  position: relative;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.85rem;
+  border-bottom-left-radius: 0.2rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  /* Zeilenumbrueche des Verfassers bleiben stehen: Wer einen Absatz setzt,
+     meint ihn. */
+  white-space: pre-wrap;
+}
+.is-eigen .clan-chat-blase {
+  border-bottom-left-radius: 0.85rem;
+  border-bottom-right-radius: 0.2rem;
+  background: #1d3b32;
+  border-color: #2c5a4b;
+}
+.clan-chat-blase.is-geloescht {
+  color: var(--muted);
+  font-style: italic;
+  background: transparent;
+  border-style: dashed;
+}
+
+/* Der Loeschknopf sitzt an der Blase und bleibt klein — er ist die Ausnahme,
+   nicht die Regel. */
+.clan-chat-weg {
+  margin-left: 0.45rem;
+  padding: 0 0.2rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.clan-chat-weg:hover {
+  color: var(--danger);
+}
+
+.clan-chat-zeit {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.clan-chat-eingabe {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border-top: 1px solid var(--line);
+  background: rgba(10, 16, 22, 0.95);
+}
+.clan-chat-eingabe input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+.clan-chat-eingabe input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.clan-chat-eingabe .primary {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+}
+
+/* --- Krieg --------------------------------------------------------------- */
+
+.clan-krieg-inhalt {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.8rem 0.7rem 1.2rem;
+}
+
+.clan-krieg-schlacht,
+.clan-krieg-warten,
+.clan-krieg-start,
+.clan-krieg-regel,
+.clan-krieg-letzter,
+.clan-krieg-anfrage {
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.clan-krieg-schlacht h3,
+.clan-krieg-start h3,
+.clan-krieg-regel h3,
+.clan-krieg-letzter h3,
+.clan-krieg-warten h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+/* Die Restzeit steht oben und gross: Sie ist der Grund, jetzt zu spielen. */
+.clan-krieg-uhr {
+  text-align: center;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.5rem;
+}
+
+.clan-krieg-seiten {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.clan-krieg-gegen {
+  color: var(--muted);
+  font-size: 0.8rem;
+  flex: 0 0 auto;
+}
+.clan-krieg-seite {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.clan-krieg-seite img {
+  width: 3.2rem;
+  height: 3.2rem;
+  object-fit: contain;
+}
+.clan-krieg-punkte {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.clan-krieg-seite.is-fuehrt .clan-krieg-punkte {
+  color: var(--gold);
+}
+.clan-krieg-name {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Ein Balken statt zweier Zahlenreihen: Wer fuehrt, sieht man ohne zu lesen. */
+.clan-krieg-balken {
+  margin-top: 0.6rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #7a3b34;
+  overflow: hidden;
+}
+.clan-krieg-balken-wir {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4a9c78, #6ee09a);
+  transition: width 0.4s ease;
+}
+
+.clan-krieg-untertitel {
+  margin: 0.9rem 0 0.3rem !important;
+}
+.clan-krieg-beitraege {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.clan-krieg-beitraege li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+}
+.clan-krieg-beitrag-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clan-krieg-beitraege strong {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.clan-krieg-start,
+.clan-krieg-warten {
+  text-align: center;
+}
+.clan-krieg-bild {
+  width: 4.5rem;
+  margin: 0 auto 0.4rem;
+  display: block;
+}
+.clan-krieg-startknoepfe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+.clan-krieg-startknoepfe button {
+  padding: 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.clan-krieg-startknoepfe .primary {
+  border-color: transparent;
+}
+
+/* Pulsierender Punkt, solange gesucht wird — die einzige Bewegung auf dem
+   Bildschirm, und deshalb genug. */
+.clan-krieg-punkt {
+  display: block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin: 0 auto 0.5rem;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: clan-puls 1.6s ease-in-out infinite;
+}
+@keyframes clan-puls {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .clan-krieg-punkt { animation: none; opacity: 1; }
+  .clan-krieg-balken-wir { transition: none; }
+}
+
+.clan-krieg-anfrage {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  border-color: var(--gold);
+}
+.clan-krieg-anfrage img {
+  width: 2.6rem;
+  height: 2.6rem;
+  object-fit: contain;
+}
+.clan-krieg-anfrage > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+.clan-krieg-anfrage-knoepfe {
+  display: flex;
+  gap: 0.35rem;
+}
+.clan-krieg-anfrage-knoepfe button {
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clan-krieg-regel ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.clan-krieg-regel strong {
+  color: var(--text);
+}
+
+.clan-krieg-letzter.is-wir {
+  border-color: var(--accent);
+}
+.clan-krieg-letzter.is-gegner {
+  border-color: var(--danger);
+}
+.clan-krieg-letzter p {
+  margin: 0;
+}
+
+.clan-krieg-gegnerliste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+/* Szenerie im Shop: Was noch nicht gehoert, traegt seinen Preis und ist
+   gedaempft — sichtbar, aber erkennbar noch nicht deins. Ausgegraut wird
+   nichts: Man soll sehen, was man bekommt. */
+.hub-szene.is-zu .hub-szene-probe {
+  filter: saturate(0.5) brightness(0.72);
+}
+.hub-szene-preis {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(10, 16, 22, 0.85);
+  border: 1px solid var(--gold);
+  color: #ffe9bd;
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.hub-szene-preis img {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+/* Zahl an einer Vitrine: wie viel es dort noch zu holen gibt. */
+.hub-vitrine {
+  position: relative;
+}
+.hub-vitrine-zahl {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  min-width: 1.2rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #2a1e05;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}

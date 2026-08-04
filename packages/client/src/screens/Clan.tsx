@@ -11,6 +11,8 @@ import {
   type JoinMode,
 } from '../api';
 import { HubBanner, HubSzene } from '../hub';
+import { ClanChat } from './ClanChat';
+import { ClanKrieg } from './ClanKrieg';
 
 /**
  * Clan-Tab (Plan 9.3).
@@ -103,12 +105,15 @@ function IconKnopf({
 
 export function Clan({
   clanId,
+  meId,
   onBald,
   onShowProfile,
   onMeChange,
 }: {
   /** Der eine Clan des Kontos, oder `null`. */
   clanId: string | null;
+  /** Eigenes Konto — im Chat stehen die eigenen Zeilen rechts. */
+  meId: string | null;
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
   onMeChange: () => void;
@@ -181,6 +186,7 @@ export function Clan({
   return (
     <Halle
       detail={detail}
+      meId={meId}
       fehler={fehler}
       onBald={onBald}
       onShowProfile={onShowProfile}
@@ -224,12 +230,14 @@ function fehlertext(e: unknown): string {
 
 function Halle({
   detail,
+  meId,
   fehler,
   onBald,
   onShowProfile,
   onAktion,
 }: {
   detail: ClubDetail | null;
+  meId: string | null;
   fehler: string | null;
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
@@ -238,9 +246,27 @@ function Halle({
   /** Angetipptes Mitglied — oeffnet die Aktionen des Admins. */
   const [gewaehlt, setGewaehlt] = useState<ClubMemberView | null>(null);
   const [blatt, setBlatt] = useState<'anfragen' | 'einstellungen' | null>(null);
+  /** Chat und Krieg fuellen den Bildschirm, sie sind kein Blatt darueber. */
+  const [voll, setVoll] = useState<'chat' | 'krieg' | null>(null);
 
   const darfVerwalten = istLeitung(detail?.myRole);
   const offen = detail?.requests.length ?? 0;
+
+  if (voll === 'chat' && detail) {
+    return (
+      <ClanChat
+        clubId={detail.id}
+        meId={meId}
+        darfLoeschen={darfVerwalten}
+        onClose={() => setVoll(null)}
+        onShowProfile={onShowProfile}
+      />
+    );
+  }
+
+  if (voll === 'krieg' && detail) {
+    return <ClanKrieg clubId={detail.id} onClose={() => setVoll(null)} />;
+  }
 
   return (
     <HubSzene bg="/hub/bg-clan.webp" className="front-clan">
@@ -273,15 +299,15 @@ function Halle({
 
       {/*
         Eine Reihe gleich grosser Knoepfe statt Text hier und Text dort. Die
-        drei ersten sind ehrliche Platzhalter: Sie sagen beim Antippen, dass
+        Truhe ist noch ein ehrlicher Platzhalter: Sie sagt beim Antippen, dass
         es sie noch nicht gibt — die Halle soll aber schon aussehen wie eine
-        Halle und nicht wie eine Baustelle. Die beiden letzten arbeiten und
-        arbeiten; Anfragen bleiben der Leitung vorbehalten.
+        Halle und nicht wie eine Baustelle. Alles andere arbeitet; Anfragen
+        bleiben der Leitung vorbehalten.
       */}
       <div className="clan-icons">
-        <IconKnopf icon="chat" label="Chat" bald onClick={() => onBald('Clanchat')} />
+        <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />
         <IconKnopf icon="truhe" label="Truhe" bald onClick={() => onBald('Clantruhe')} />
-        <IconKnopf icon="krieg" label="Krieg" bald onClick={() => onBald('Clankrieg')} />
+        <IconKnopf icon="krieg" label="Krieg" onClick={() => setVoll('krieg')} />
         {/* Anfragen sind Bewerberdaten - die sieht nur die Leitung. */}
         {darfVerwalten && (
           <IconKnopf

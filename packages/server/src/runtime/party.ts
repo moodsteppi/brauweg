@@ -31,6 +31,7 @@ import {
 } from '../tables/service.js';
 import { applyDelta, awardForParty, type Placement } from '../trophies.js';
 import { xpFuerPartie } from '../level.js';
+import { recordPartyResult } from '../clubs/war.js';
 import { fortschreiben } from '../quests.js';
 
 export interface RuntimeOptions {
@@ -739,6 +740,7 @@ export class PartyRuntime {
 
     await this.awardTrophies(party, standings);
     await this.countStats(party, standings);
+    await this.recordWar(party, standings);
     await this.countQuests(party, standings);
 
     // Die Partie bleibt nach dem Ende noch im Speicher. Wuerde sie hier
@@ -778,6 +780,28 @@ export class PartyRuntime {
           });
       }
     }
+  }
+
+  /**
+   * Kriegspunkte, falls der Clan eines Sitzes gerade Krieg fuehrt.
+   *
+   * Die Regel liegt im Kriegsdienst, nicht hier: Diese Datei kennt kein
+   * einzelnes Spiel und soll auch keine Wettbewerbsregel kennen. Sie liefert
+   * nur, was am Tisch geschehen ist — wer wo landete und wie viele Menschen
+   * mitgespielt haben.
+   */
+  private async recordWar(
+    party: LiveParty,
+    standings: readonly PartyStanding[],
+  ): Promise<void> {
+    const menschen = party.seats.filter((seat) => seat.accountId).length;
+
+    const placements = standings.flatMap((standing) => {
+      const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
+      return accountId ? [{ accountId, place: standing.place }] : [];
+    });
+
+    await recordPartyResult(this.db, placements, menschen);
   }
 
   /**
