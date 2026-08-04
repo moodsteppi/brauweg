@@ -15,8 +15,14 @@ import { STAFF_COINS, coinsFor, entitlementsFor } from '../src/entitlements.js';
 import { applyStaffEmails, parseStaffEmails } from '../src/staff.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
-import { createSession } from '../src/auth/service.js';
-import { createTestContext, createVerifiedAccount, schema, seedInvite } from './helpers.js';
+import { createSession, register, verifyEmail } from '../src/auth/service.js';
+import {
+  INVITE,
+  createTestContext,
+  createVerifiedAccount,
+  schema,
+  seedInvite,
+} from './helpers.js';
 
 // --- Rechte -----------------------------------------------------------------
 
@@ -144,8 +150,54 @@ test('Eine Adresse ohne Konto wird gemeldet, nicht angelegt', async (t) => {
 
   const ergebnis = await applyStaffEmails(ctx.db, ['niemand@example.org']);
   assert.deepEqual(ergebnis.unbekannt, ['niemand@example.org']);
+  assert.deepEqual(ergebnis.unbestaetigt, []);
   const alle = await ctx.db.select({ id: schema.account.id }).from(schema.account);
   assert.equal(alle.length, 0);
+});
+
+test('Ein Konto mit unbestaetigter Adresse bekommt das Merkmal NICHT', async (t) => {
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+  await seedInvite(ctx.db);
+
+  // Registriert, aber den Bestaetigungslink nie angetippt. Genau so saehe der
+  // Versuch aus, sich mit einer Adresse aus der Liste Rechte zu erschleichen.
+  await register(ctx.auth, {
+    email: 'fremd@example.org',
+    password: 'geheim-genug-1234',
+    displayName: 'Fremd',
+    inviteCode: INVITE,
+    birthday: '1990-06-15',
+  });
+
+  const ergebnis = await applyStaffEmails(ctx.db, ['fremd@example.org']);
+  assert.deepEqual(ergebnis.gesetzt, []);
+  assert.deepEqual(ergebnis.unbestaetigt, ['fremd@example.org']);
+  assert.deepEqual(ergebnis.unbekannt, [], 'ein Konto gibt es ja - nur unbestaetigt');
+
+  const alle = await ctx.db.select({ isStaff: schema.account.isStaff }).from(schema.account);
+  assert.equal(alle.filter((z) => z.isStaff).length, 0);
+});
+
+test('Nach der Bestaetigung greift die Liste beim naechsten Start', async (t) => {
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+  await seedInvite(ctx.db);
+
+  await register(ctx.auth, {
+    email: 'spaet@example.org',
+    password: 'geheim-genug-1234',
+    displayName: 'Spaet',
+    inviteCode: INVITE,
+    birthday: '1990-06-15',
+  });
+  assert.deepEqual((await applyStaffEmails(ctx.db, ['spaet@example.org'])).gesetzt, []);
+
+  await verifyEmail(ctx.db, ctx.mailer.tokenFrom('spaet@example.org'));
+
+  assert.deepEqual((await applyStaffEmails(ctx.db, ['spaet@example.org'])).gesetzt, [
+    'spaet@example.org',
+  ]);
 });
 
 // --- Was der Client sieht ---------------------------------------------------

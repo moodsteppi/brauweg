@@ -70,6 +70,11 @@ async function main(): Promise<void> {
         (staff.entzogen.length > 0 ? `, ${staff.entzogen.length} entzogen` : '') +
         (staff.unbekannt.length > 0
           ? `, ohne Konto: ${staff.unbekannt.join(', ')}`
+          : '') +
+        // Getrennt gemeldet: Hier fehlt nur der Tipp auf den
+        // Bestaetigungslink, kein Konto.
+        (staff.unbestaetigt.length > 0
+          ? `, E-Mail noch nicht bestaetigt: ${staff.unbestaetigt.join(', ')}`
           : ''),
     );
   }

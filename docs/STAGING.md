@@ -98,9 +98,28 @@ nächsten Start. **Es gibt bewusst keinen Endpunkt und keine Oberfläche dafür*
 — ein Weg, sich aus der laufenden Anwendung heraus Rechte zu geben, ist der
 lohnendste Angriffspunkt einer App.
 
-Das Konto muss vorher existieren: erst registrieren, dann die Adresse
-eintragen, dann den Dienst neu starten. Steht eine Adresse ohne Konto in der
-Liste, schreibt der Start eine Zeile `Testkonten: … ohne Konto: …` ins Log.
+**Wie erkennt der Server ein Testkonto?** Gar nicht — er bekommt es gesagt.
+Es gibt kein Muster, keine Domain, keine Erkennung. Beim Start vergleicht er
+`lower(account.email)` mit der Liste; wer darin steht **und eine bestätigte
+E-Mail-Adresse hat**, bekommt `is_staff = true`, alle anderen `false`.
+
+Die Bestätigung ist die eigentliche Sicherung. Ohne sie genügte es, sich mit
+einer Adresse aus der Liste zu registrieren, um beim nächsten Start alle
+Rechte zu haben — ohne je Zugriff auf das Postfach gehabt zu haben. Der
+Bestätigungslink geht an das Postfach, und nur wer ihn hat, kommt an das
+Merkmal.
+
+Also: erst registrieren, dann bestätigen, dann die Adresse eintragen, dann den
+Dienst neu starten. Das Log unterscheidet die Fälle:
+
+```
+Testkonten: 1 gesetzt, ohne Konto: neu@example.org,
+            E-Mail noch nicht bestaetigt: fremd@example.org
+```
+
+„Ohne Konto" heißt: Da muss sich noch jemand registrieren. „Noch nicht
+bestätigt" heißt: Da fehlt nur der Tipp auf den Link — auf staging steht er im
+Log des Dienstes (Suche: `MAIL`).
 
 **Von Hand in der Datenbank** (falls einmal kein Neustart möglich ist):
 

@@ -39,6 +39,14 @@ export interface StaffResult {
   readonly entzogen: string[];
   /** Adressen aus der Liste, zu denen es (noch) kein Konto gibt. */
   readonly unbekannt: string[];
+  /**
+   * Adressen mit Konto, aber ohne bestaetigte E-Mail. Sie bekommen das
+   * Merkmal NICHT - sonst genuegte es, sich mit einer Adresse aus der Liste
+   * zu registrieren, um beim naechsten Start alle Rechte zu haben. Wer die
+   * Adresse wirklich besitzt, kommt an den Bestaetigungslink und danach an
+   * das Merkmal.
+   */
+  readonly unbestaetigt: string[];
 }
 
 /**
@@ -57,12 +65,24 @@ export async function applyStaffEmails(
     emails.length === 0
       ? []
       : await db
-          .select({ id: s.account.id, email: s.account.email })
+          .select({
+            id: s.account.id,
+            email: s.account.email,
+            verifiziert: s.account.emailVerifiedAt,
+          })
           .from(s.account)
           .where(inArray(sql`lower(${s.account.email})`, emails));
 
-  const ids = treffer.map((zeile) => zeile.id);
-  const gefunden = new Set(treffer.map((zeile) => (zeile.email ?? '').toLowerCase()));
+  // Nur bestaetigte Adressen. Ohne diese Bedingung genuegte es, sich mit einer
+  // Adresse aus der Liste zu registrieren, um beim naechsten Start alle Rechte
+  // zu haben - ohne je Zugriff auf das Postfach gehabt zu haben.
+  const berechtigt = treffer.filter((zeile) => zeile.verifiziert !== null);
+
+  const ids = berechtigt.map((zeile) => zeile.id);
+  const gefunden = new Set(berechtigt.map((zeile) => (zeile.email ?? '').toLowerCase()));
+  const offen = treffer
+    .filter((zeile) => zeile.verifiziert === null)
+    .map((zeile) => (zeile.email ?? '?').toLowerCase());
 
   const entzogen = await db
     .update(s.account)
@@ -81,6 +101,12 @@ export async function applyStaffEmails(
   return {
     gesetzt: [...gefunden],
     entzogen: entzogen.map((zeile) => zeile.email ?? '?'),
-    unbekannt: emails.filter((adresse) => !gefunden.has(adresse)),
+    // Kein Konto ist etwas anderes als ein unbestaetigtes Konto: Im ersten
+    // Fall muss sich jemand noch registrieren, im zweiten nur auf den Link im
+    // Postfach tippen. Wer beides gleich meldet, sucht an der falschen Stelle.
+    unbekannt: emails.filter(
+      (adresse) => !gefunden.has(adresse) && !offen.includes(adresse),
+    ),
+    unbestaetigt: offen,
   };
 }
