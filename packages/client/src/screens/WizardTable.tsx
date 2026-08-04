@@ -93,10 +93,54 @@ export function WizardTable({
       .finally(() => setPauseBusy(false));
   };
 
-  const playCard = useCallback(
-    (cardId: number) => send({ type: 'playCard', seat: view?.seat ?? 0, cardId }),
+  /**
+   * Genau EINE eigene Karte darf unterwegs sein. Ohne die Sperre schob ein
+   * schneller zweiter Tipp eine weitere Karte in denselben Takt: Der Server
+   * lehnte sie ab, und sie hing danach unsichtbar in der Hand. Dieselbe Sperre
+   * wie am Doppelkopf-Tisch (`flug` + `locked`); der Zauberer hatte sie noch
+   * nicht, weil er die Handkarte selbstverwaltet fliegen liess.
+   */
+  const [flug, setFlugState] = useState<number | null>(null);
+  const flugRef = useRef<number | null>(null);
+  const handRef = useRef<readonly Card[]>([]);
+  useEffect(() => {
+    handRef.current = view?.view.round?.hand ?? [];
+  });
+
+  const startPlay = useCallback(
+    (cardId: number) => {
+      if (flugRef.current !== null) return;
+      flugRef.current = cardId;
+      setFlugState(cardId);
+      const seat = view?.seat ?? 0;
+      // Erst fliegen lassen, dann melden: 170 ms, damit man die Karte fallen
+      // sieht.
+      window.setTimeout(() => send({ type: 'playCard', seat, cardId }), 170);
+      // Sicherheitsnetz: Lehnte der Server den Zug doch ab, loest sich die
+      // Sperre nach 4 s und die Karte kehrt sichtbar in die Hand zurueck.
+      window.setTimeout(() => {
+        if (flugRef.current === cardId) {
+          flugRef.current = null;
+          setFlugState(null);
+        }
+      }, 4000);
+    },
     [send, view?.seat],
   );
+
+  // Sobald die Karte die Hand verlaesst, hat der Server den Zug uebernommen:
+  // Sperre loesen.
+  const handKey = (view?.view.round?.hand ?? []).map((c) => c.id).join('.');
+  useEffect(() => {
+    if (
+      flugRef.current !== null &&
+      !handRef.current.some((c) => c.id === flugRef.current)
+    ) {
+      flugRef.current = null;
+      setFlugState(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handKey]);
 
   // Der volle Stich bleibt eine Sekunde liegen, bevor er abgeraeumt wird. Der
   // Server raeumt sofort; hier wird der letzte Stich kurz weitergezeigt.
@@ -464,8 +508,10 @@ export function WizardTable({
               index={index}
               total={hand.length}
               playable={playable.has(card.id)}
+              locked={flug !== null}
               trump={sticht.has(`${card.suit}${card.rank}`)}
-              onPlay={playCard}
+              legt={card.id === flug}
+              onPlay={startPlay}
             />
           ))}
           {hand.length === 0 && <span className="muted">Keine Karten auf der Hand.</span>}
@@ -672,6 +718,9 @@ function BlindKarte({
       aria-disabled={!action}
       aria-label="Deine verdeckte Karte legen"
       onClick={() => {
+        // Schon unterwegs: ein zweiter Tipp darf die eine Karte nicht noch
+        // einmal senden.
+        if (legt) return;
         if (!action) {
           setShaking(true);
           return;
