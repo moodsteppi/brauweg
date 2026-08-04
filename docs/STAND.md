@@ -57,11 +57,16 @@ in der README des Archivrepos.
 > Eine Spielkarte liegt bei ~80 kB. Kommt sie mit 1,7 MB, ist es das
 > Original und gehört gewandelt — genau das ist zweimal live gegangen.
 
+**Der Ablauf steht in [JETZT-AUSFUEHREN.md](JETZT-AUSFUEHREN.md)** — von der
+Lieferung bis zum Push, mit dem eingerichteten Werkzeug und den drei Fehlern,
+die dabei schon passiert sind.
+
 **Kein WebP-Werkzeug auf diesem Mac.** Weder `cwebp` noch `magick` noch
 `sharp` ist installiert, und `sips` kann WebP zwar lesen, aber nicht
-schreiben. Wer umwandeln muss, installiert `sharp` in einem
-Scratchpad-Verzeichnis (`npm i sharp` außerhalb des Projekts) und ruft es
-von dort — das Projekt bleibt unberührt.
+schreiben. Eingerichtet ist es unter `~/bildwerkzeug/`, samt Skript:
+`node ~/bildwerkzeug/wandeln.mjs <quelle> <ziel> [karten|szene|wappen]`.
+Es liegt außerhalb beider Repositories, weil es zum Rechner gehört und nicht
+zum Projekt; eine Kopie liegt im Archivrepo.
 
 ---
 

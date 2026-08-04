@@ -6,7 +6,8 @@ ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln in
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/plattform-plan.md`
-(das große Ganze).
+(das große Ganze) · **`docs/JETZT-AUSFUEHREN.md` (Bilder einbauen, Schritt
+für Schritt — die Werkzeuge stehen auf dem Rechner bereit)**.
 
 ---
 
@@ -35,8 +36,9 @@ Repository [`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art)
 ausschließlich WebP unter `packages/client/public/`. **Beim Einbauen einer
 Lieferung zuerst die Dateigröße ansehen** — eine Spielkarte liegt bei 80 kB,
 nicht bei 1,7 MB. Genau das ist zweimal live gegangen. Auf diesem Mac ist
-kein WebP-Werkzeug installiert; der Weg läuft über `sharp` außerhalb des
-Projekts (Anleitung in der README des Archivrepos).
+kein WebP-Werkzeug installiert; gewandelt wird mit
+`node ~/bildwerkzeug/wandeln.mjs <quelle> <ziel> [karten|szene|wappen]` —
+der ganze Ablauf steht in `docs/JETZT-AUSFUEHREN.md`.
 
 **5. Neue Grafik wird bestellt, nicht beschrieben.** Eine Datei
 `docs/ASSETS-*.md` mit Maßen, Freihalte-Zonen, Abnahmekriterien und einer
