@@ -147,33 +147,93 @@ export function Table({
   /** Bricht den Stich-Freeze ab: sofort zum Gewinner gleiten statt liegen. */
   const skipFreeze = useRef<(() => void) | null>(null);
 
-  /** Stabile Referenz, damit memoisierte Handkarten nicht mitrendern. */
-  const playCard = useCallback(
+  /**
+   * Genau EINE eigene Karte darf unterwegs sein. Ohne die Sperre schob ein
+   * schneller zweiter Tipp eine weitere Karte in denselben Takt: Entweder
+   * spielte sie ungewollt mit (wer den Stich gewinnt, ist sofort wieder
+   * dran), oder der Server lehnte ab und die Karte hing unsichtbar in der
+   * Hand.
+   */
+  const [flug, setFlugState] = useState<number | null>(null);
+  const flugRef = useRef<number | null>(null);
+  /** Vorgemerkte Karte: spielt von selbst, sobald der Sitz am Zug ist. */
+  const [vorgemerkt, setVorgemerkt] = useState<number | null>(null);
+
+  /** Stabile Referenzen, damit memoisierte Handkarten nicht mitrendern. */
+  const toggleVormerken = useCallback((cardId: number) => {
+    setVorgemerkt((v) => (v === cardId ? null : cardId));
+  }, []);
+
+  const startPlay = useCallback(
     (cardId: number) => {
+      if (flugRef.current !== null) return;
+      flugRef.current = cardId;
+      setFlugState(cardId);
+      setVorgemerkt(null);
+
       const seat = view?.seat ?? 0;
-      selbstGelegt.current.add(cardId);
-      // Liegt noch der volle letzte Stich, raeumt er sofort ab - sonst
-      // landete die eigene Karte erst nach dessen Pause auf dem Tisch.
-      skipFreeze.current?.();
-      send({ type: 'playCard', seat, cardId });
+      // Erst fliegen lassen, dann melden. Die 170 ms sind kuerzer als jede
+      // Reaktionszeit und sorgen dafuer, dass man die Karte fallen sieht.
+      window.setTimeout(() => {
+        selbstGelegt.current.add(cardId);
+        // Liegt noch der volle letzte Stich, raeumt er sofort ab - sonst
+        // landete die eigene Karte erst nach dessen Pause auf dem Tisch.
+        skipFreeze.current?.();
+        send({ type: 'playCard', seat, cardId });
+      }, 170);
 
       const card = handRef.current.find((c) => c.id === cardId);
       if (card) {
-        // onPlay feuert 170 ms nach dem Tipp, die Gleitanimation endet bei
-        // 400 ms - nach weiteren 210 ms liegt die Karte also nahtlos da.
-        const reveal = prefersReducedMotion() ? 0 : 210;
+        // Die Gleitanimation endet 400 ms nach dem Tipp - dann liegt die
+        // Karte nahtlos im Stich, egal wie lange der Server braucht.
+        const reveal = prefersReducedMotion() ? 0 : 380;
         window.setTimeout(() => {
           setPendingPlay((p) => p ?? { seat, card });
         }, reveal);
-        // Sicherheitsnetz: Lehnte der Server den Zug doch ab, verschwindet
-        // die optimistische Karte wieder.
-        window.setTimeout(() => {
-          setPendingPlay((p) => (p && p.card.id === cardId ? null : p));
-        }, 4000);
       }
+      // Sicherheitsnetz: Lehnte der Server den Zug doch ab, loest sich die
+      // Sperre, die Karte kehrt sichtbar in die Hand zurueck und die
+      // optimistische Kopie verschwindet.
+      window.setTimeout(() => {
+        if (flugRef.current === cardId) {
+          flugRef.current = null;
+          setFlugState(null);
+        }
+        setPendingPlay((p) => (p && p.card.id === cardId ? null : p));
+      }, 4000);
     },
     [send, view?.seat],
   );
+
+  // Der Server hat den Zug uebernommen, sobald die Karte aus der Hand
+  // verschwindet: Sperre loesen. Und eine Vormerkung, deren Karte die Hand
+  // verlaesst (Armut-Tausch), verfaellt.
+  const handKey = (view?.view.round?.hand ?? []).map((c) => c.id).join('.');
+  useEffect(() => {
+    const inHand = (id: number | null): boolean =>
+      id !== null && handRef.current.some((c) => c.id === id);
+    if (flugRef.current !== null && !inHand(flugRef.current)) {
+      flugRef.current = null;
+      setFlugState(null);
+    }
+    setVorgemerkt((v) => (v !== null && !inHand(v) ? null : v));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handKey]);
+
+  // Vormerkung einloesen: Sobald die Karte zulaessig spielbar ist, fliegt
+  // sie von selbst. Ist der Sitz am Zug und die Karte NICHT dabei (Bedienen
+  // unmoeglich), verfaellt die Vormerkung.
+  const playableKey = (view?.legalActions ?? [])
+    .filter((action) => action.type === 'playCard')
+    .map((action) => action.cardId as number)
+    .join('.');
+  useEffect(() => {
+    if (vorgemerkt === null || playableKey === '') return;
+    const spielbar = new Set(playableKey.split('.').map(Number));
+    if (spielbar.has(vorgemerkt)) startPlay(vorgemerkt);
+    else setVorgemerkt(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vorgemerkt, playableKey]);
 
   // Sobald der Serverstand die Karte fuehrt (im laufenden oder im letzten
   // Stich), ist die optimistische Kopie erledigt.
@@ -270,12 +330,15 @@ export function Table({
     window.setTimeout(() => setHandJustDealt(false), 450);
   }, []);
 
-  // Neues Geben: Die Kartennummern werden neu vergeben; Marker und
-  // optimistische Karte der alten Runde waeren dann falsch.
+  // Neues Geben: Die Kartennummern werden neu vergeben; Marker, Vormerkung
+  // und optimistische Karte der alten Runde waeren dann falsch.
   useEffect(() => {
     if (!dealKey) return;
     selbstGelegt.current.clear();
     setPendingPlay(null);
+    setVorgemerkt(null);
+    flugRef.current = null;
+    setFlugState(null);
   }, [dealKey]);
   useEffect(() => {
     if (!dealKey) {
@@ -386,7 +449,11 @@ export function Table({
       setAbschlussStep('abrechnung');
     }, 1500);
     return () => window.clearTimeout(peek);
-  }, [finishedKey, view?.view.round]);
+    // NUR finishedKey: Waehrend der Rundenpause funkt der Server weiter
+    // (Bot-"Weiter" u.a.). Hinge das Objekt view.round mit in der Liste,
+    // raeumte jeder Funkspruch den Peek-Timer ab, der Fruehausstieg oben
+    // stellte ihn nie neu - und Auswertung wie Zwischenstand blieben aus.
+  }, [finishedKey]);
 
   // Fallback-Autofluss, falls niemand auf "Weiter" tippt. Der Server haelt
   // die Rundenpause 15 s; mit 1,5 s Stapel-Blick und 7 s Auswertung bleiben
@@ -492,6 +559,11 @@ export function Table({
       .map((action) => action.cardId as number),
   );
   const otherActions = view.legalActions.filter((action) => action.type !== 'playCard');
+
+  // Vormerken geht nur mitten im Spiel, wenn man gerade NICHT dran ist: Der
+  // Tipp legt die Karte bereit, gespielt wird von selbst, sobald der Zug
+  // kommt und die Karte dann zulaessig ist.
+  const darfVormerken = playable.size === 0 && round?.phase === 'playing';
 
   // Die Vorbehaltsabfrage ist ein eigener Dialog (gesund ja/nein, dann
   // Auswahl, dann Bestaetigung) - keine Knopfreihe am unteren Rand, auf der
@@ -837,19 +909,37 @@ export function Table({
 
       {view.seat !== null && (
         <div className={`doko-hand${dealing ? ' is-dealing' : ''}${handJustDealt ? ' is-dealt' : ''}`}>
+          {/* Die Reihe rueckt schon zusammen, WAEHREND die Karte fliegt -
+              nicht erst, wenn der Server sie aus der Hand nimmt. Sonst gaebe
+              es nach dem Landen einen zweiten Ruck. Die fliegende Karte
+              selbst behaelt ihren alten Platz als Startpunkt. Hat der Server
+              sie schon aus der Hand genommen (flugIndex -1), liegt die Reihe
+              bereits richtig. */}
           {showHands &&
-            hand.map((card, index) => (
-              <HandCard
-                key={card.id}
-                card={card}
-                deck={deck}
-                index={index}
-                total={hand.length}
-                playable={playable.has(card.id)}
-                trump={isTrump(card)}
-                onPlay={playCard}
-              />
-            ))}
+            hand.map((card, index) => {
+              const flugIndex = flug === null ? -1 : hand.findIndex((c) => c.id === flug);
+              const fliegt = card.id === flug;
+              const layoutIndex =
+                fliegt || flugIndex === -1 ? index : index - (flugIndex < index ? 1 : 0);
+              const layoutTotal = fliegt || flugIndex === -1 ? hand.length : hand.length - 1;
+              return (
+                <HandCard
+                  key={card.id}
+                  card={card}
+                  deck={deck}
+                  index={layoutIndex}
+                  total={layoutTotal}
+                  playable={playable.has(card.id)}
+                  locked={flug !== null}
+                  markable={darfVormerken}
+                  marked={vorgemerkt === card.id}
+                  trump={isTrump(card)}
+                  legt={fliegt}
+                  onPlay={startPlay}
+                  onMark={toggleVormerken}
+                />
+              );
+            })}
           {showHands && hand.length === 0 && (
             <span className="muted">Keine Karten auf der Hand.</span>
           )}

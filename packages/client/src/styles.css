@@ -700,6 +700,14 @@ td {
   }
 }
 
+/* Vorgemerkt: Die Karte steht sichtbar bereit und spielt sich von selbst,
+   sobald der Sitz am Zug ist. Gold heisst Wert, nicht Partei - und die Regel
+   steht NACH :hover, damit die Karte auch unterm Zeiger oben bleibt. */
+.doko-handcard.is-vorgemerkt {
+  transform: translateX(calc(var(--off, 0) * var(--schritt))) translateY(-14px);
+}
+.doko-handcard.is-vorgemerkt .pc { outline: 3px solid var(--gold); }
+
 /* Kurzes Kopfschuetteln beim Tipp auf eine unspielbare Karte. Die Animation
    liegt auf der inneren Karte, damit die Reihe (transform am Knopf) steht. */
 .doko-handcard.is-shake .pc { animation: doko-shake 0.3s ease; }
