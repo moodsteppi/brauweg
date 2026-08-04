@@ -1,22 +1,34 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
-import { CardBack, CardFront } from '../CardFace';
+import { CardFront } from '../CardFace';
 import {
   DealCeremony,
   isVollesGeben,
   prefersReducedMotion,
   type DealSlot,
 } from '../DealCeremony';
-import { regelBild } from '../regelbilder';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
 import { gameTypeLabel, t } from '../i18n';
 import type { Action, Card } from '../protocol';
-import { useCountdown, useTable } from '../useTable';
-
-const TURN_SECONDS = 60;
+import {
+  Avatar,
+  HandCard,
+  LAYOUTS,
+  LetzterStich,
+  PartyEnd,
+  RegelBlatt,
+  Ruecken,
+  type Slot,
+  StichStapel,
+  TurnClock,
+  Wartebereich,
+  istSeitlich,
+  slotFor,
+} from '../tisch';
+import { useTable } from '../useTable';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
     dass die Karten nicht aus dem Faecher wachsen. */
@@ -64,13 +76,6 @@ export function Table({
     setZoom(next);
     localStorage.setItem('tischZoom', String(next));
   };
-
-  /**
-   * Bot-Knoepfe, auf die der Tisch noch nicht geantwortet hat. Der Klick geht
-   * ueber den WebSocket; bis die neue Tischnachricht eintrifft, zeigt der
-   * Knopf einen Kreisel statt gar nichts - sonst tippt man doppelt.
-   */
-  const [botBusy, setBotBusy] = useState<Record<number, 'add' | 'remove'>>({});
 
   /** Blatt mit den Tischregeln, aufklappbar im Wartebereich und in der Runde. */
   const [zeigeRegeln, setZeigeRegeln] = useState(false);
@@ -226,23 +231,6 @@ export function Table({
   // Beim Verlassen des Tisches alle noch offenen Blasen-Timer abraeumen.
   useEffect(() => () => blasenTimer.current.forEach(clearTimeout), []);
 
-  useEffect(() => {
-    if (!table) return;
-    setBotBusy((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const [key, kind] of Object.entries(prev)) {
-        const seat = table.seats.find((s) => s.seat === Number(key));
-        if (!seat) continue;
-        if ((kind === 'add' && seat.isBot) || (kind === 'remove' && !seat.isBot)) {
-          delete next[Number(key)];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [table]);
-
   /**
    * Name als Weg zum Profil, wo ein Konto dahintersteht. Bots und freie
    * Plaetze bleiben Text - ein Bot hat kein Profil, und so sieht man nebenbei,
@@ -265,106 +253,15 @@ export function Table({
   // los und die Sicht ersetzt diesen Bildschirm.
   if (!view && table && table.status === 'waiting') {
     return (
-      <div className="doko doko--wait">
-        <header className="doko-top">
-          {/* Zurueck aus dem Wartebereich gibt den Platz frei - sonst bleibt
-              ein Geistertisch in der Lobby stehen. Schlaegt die Meldung fehl,
-              raeumt der Server den Tisch spaeter selbst ab. */}
-          <button
-            className="doko-icon"
-            onClick={() => {
-              void api.leaveTable(tableId).catch(() => undefined);
-              onLeave();
-            }}
-            aria-label="Zurück"
-          >
-            ‹
-          </button>
-          <div className="doko-top-mid">
-            <strong>Wartet auf Mitspieler</strong>
-            <span className="muted">
-              {table.missing === 0
-                ? 'Alle Plätze belegt, es geht gleich los…'
-                : `${table.missing === 1 ? 'Noch ein Spieler' : `Noch ${table.missing} Spieler`} · ${table.rounds} Runden`}
-            </span>
-          </div>
-          <div className="doko-top-right">
-            <button
-              className="doko-icon"
-              onClick={() => setZeigeRegeln(true)}
-              aria-label="Tischregeln ansehen"
-            >
-              §
-            </button>
-          </div>
-        </header>
-        <div className="doko-wait">
-          {table.seats.map((seat) => (
-            <div
-              className={`doko-wait-seat${seat.displayName || seat.isBot ? '' : ' is-empty'}`}
-              key={seat.seat}
-            >
-              <Avatar
-                name={seat.displayName ?? (seat.isBot ? 'Bot' : 'frei')}
-                seatIndex={seat.seat}
-                active={false}
-                deadline={null}
-                isBot={seat.isBot}
-                avatarUrl={seat.avatarUrl}
-              />
-              {/* Name als Weg zum Profil, wo ein Konto dahintersteht; freie
-                  Plaetze und Bots bleiben Text. */}
-              <div className="doko-wait-name">
-                {seat.displayName
-                  ? spielerName(seat.displayName, seat.accountId)
-                  : seat.isBot
-                    ? `Bot ${seat.seat + 1}`
-                    : 'frei'}
-              </div>
-              {/* Freie Plaetze mit einem Bot fuellen, gesetzte Bots freigeben —
-                  direkt am Tisch, ohne Vorab-Entscheidung. */}
-              {!seat.displayName && !seat.isBot && (
-                <button
-                  className="doko-seat-btn"
-                  disabled={!!botBusy[seat.seat]}
-                  onClick={() => {
-                    setBotBusy((b) => ({ ...b, [seat.seat]: 'add' }));
-                    addBot(seat.seat);
-                  }}
-                >
-                  {botBusy[seat.seat] ? (
-                    <span className="doko-btn-spinner" aria-label="Bot setzt sich…" />
-                  ) : (
-                    '+ Bot'
-                  )}
-                </button>
-              )}
-              {!seat.displayName && seat.isBot && (
-                <button
-                  className="doko-seat-btn"
-                  disabled={!!botBusy[seat.seat]}
-                  onClick={() => {
-                    setBotBusy((b) => ({ ...b, [seat.seat]: 'remove' }));
-                    removeBot(seat.seat);
-                  }}
-                >
-                  {botBusy[seat.seat] ? (
-                    <span className="doko-btn-spinner" aria-label="Bot steht auf…" />
-                  ) : (
-                    'entfernen'
-                  )}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="muted doko-wait-hint">
-          Teile die Adresse dieser Seite, dann können andere direkt beitreten — oder
-          fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.
-        </p>
-        {error && <p className="doko-error">{t(error)}</p>}
-        {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
-      </div>
+      <Wartebereich
+        tableId={tableId}
+        table={table}
+        error={error}
+        spielerName={spielerName}
+        addBot={addBot}
+        removeBot={removeBot}
+        onLeave={onLeave}
+      />
     );
   }
 
@@ -742,81 +639,6 @@ export function Table({
 // Spieler
 // ---------------------------------------------------------------------------
 
-type Slot = 'bottom' | 'left' | 'top' | 'right' | 'top-left' | 'top-right';
-
-const LAYOUTS: Record<number, Slot[]> = {
-  3: ['bottom', 'left', 'right'],
-  4: ['bottom', 'left', 'top', 'right'],
-  5: ['bottom', 'left', 'top-left', 'top-right', 'right'],
-};
-
-/** Absoluter Sitz -> Platz am Bildschirm, relativ zum eigenen Sitz. */
-function slotFor(seat: number, base: number, seatCount: number): Slot {
-  const rel = (seat - base + seatCount) % seatCount;
-  return LAYOUTS[seatCount]?.[rel] ?? 'top';
-}
-
-/** Warme, je Sitz feste Farbe fuer die Avatare. */
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
-}
-
-/**
- * Der Countdown tickt bewusst HIER und nicht am Tisch: Ein Timer an der
- * Wurzel rendert fuenfmal pro Sekunde den kompletten Tisch neu — genau das
- * machte jede Animation ruckelig. So tickt nur der eine aktive Avatar.
- */
-function Avatar({
-  name,
-  seatIndex,
-  active,
-  deadline,
-  isBot,
-  you,
-  avatarUrl,
-}: {
-  name: string;
-  seatIndex: number;
-  active: boolean;
-  deadline: number | null;
-  isBot?: boolean;
-  you?: boolean;
-  avatarUrl?: string | null;
-}): React.JSX.Element {
-  const secondsLeft = useCountdown(active ? deadline : null);
-  const ring =
-    active && secondsLeft !== null
-      ? `conic-gradient(var(--accent) ${(secondsLeft / TURN_SECONDS) * 360}deg, rgba(255,255,255,0.08) 0)`
-      : undefined;
-  return (
-    <div
-      className={`doko-avatar${active ? ' is-active' : ''}${you ? ' is-you' : ''}`}
-      style={ring ? { background: ring } : undefined}
-    >
-      {avatarUrl ? (
-        <img className="doko-avatar-img" src={avatarUrl} alt={name} draggable={false} />
-      ) : (
-        /* Ohne eigenes Bild sitzt der Pinguin am Tisch - er ist unser
-           Maskottchen, und vier Buchstabenkreise wirken wie ein Formular.
-           Je Sitz ein anderer Schal, damit vier Pinguine auseinanderzuhalten
-           sind. Bots bekommen denselben Pinguin, nur blasser: Dass es ein Bot
-           ist, steht ohnehin als Name darunter, und ein Kreis mit "BOT" laesst
-           den Platz leer wirken statt besetzt. */
-        <img
-          className={`doko-avatar-img${isBot ? ' is-bot' : ''}`}
-          src={`/hub/pinguin-${(seatIndex % 4) + 1}.png`}
-          alt={name}
-          draggable={false}
-        />
-      )}
-    </div>
-  );
-}
-
 const OpponentSeat = memo(function OpponentSeat({
   slot,
   name,
@@ -860,7 +682,7 @@ const OpponentSeat = memo(function OpponentSeat({
   avatarUrl: string | null;
   deck: Deck;
 }): React.JSX.Element {
-  const vertical = slot === 'left' || slot === 'right';
+  const vertical = istSeitlich(slot);
   return (
     <div className={`doko-opp at-${slot}${active ? ' is-active' : ''}`}>
       {/* Der Zuruf im Moment des Sagens. Am echten Tisch hoert man "gesund"
@@ -895,35 +717,13 @@ const OpponentSeat = memo(function OpponentSeat({
       </div>
       {/* Genau so viele verdeckte Karten, wie der Spieler haelt. Links und
           rechts liegen sie quer (siehe CSS is-vertical). */}
-      <div className={`doko-backs${vertical ? ' is-vertical' : ''}`}>
-        {Array.from({ length: count }, (_, i) => (
-          <div className={`pc pc--back${vertical ? ' side' : ''}`} key={i}>
-            <CardBack deck={deck} />
-          </div>
-        ))}
-      </div>
+      <Ruecken count={count} vertical={vertical} deck={deck} />
       <span className="doko-opp-score">{score}</span>
       <StichStapel count={tricksWon} />
     </div>
   );
 });
 
-/**
- * Der gewonnene Stichstapel neben dem Spieler: ein kleines Haeufchen
- * verdeckter Karten, wie am echten Tisch, mit der Anzahl daran.
- */
-function StichStapel({ count }: { count: number }): React.JSX.Element | null {
-  if (count <= 0) return null;
-  const shown = Math.min(count, 3);
-  return (
-    <span className="doko-stiche" aria-label={`${count} Stiche gewonnen`}>
-      {Array.from({ length: shown }, (_, i) => (
-        <i key={i} />
-      ))}
-      <b>{count}</b>
-    </span>
-  );
-}
 
 /**
  * Hoechste Ansage am Tisch, als kurzer Text.
@@ -950,125 +750,6 @@ function ansageText(round: {
 
 function partyLabel(party: string): string {
   return party === 're' ? 'Re' : 'Kontra';
-}
-
-// ---------------------------------------------------------------------------
-// Hand
-// ---------------------------------------------------------------------------
-
-const HandCard = memo(function HandCard({
-  card,
-  deck,
-  index,
-  total,
-  playable,
-  trump,
-  onPlay,
-}: {
-  card: Card;
-  deck: Deck;
-  index: number;
-  total: number;
-  playable: boolean;
-  trump: boolean;
-  onPlay: (cardId: number) => void;
-}): React.JSX.Element {
-  /**
-   * Kein Faecher, keine Hervorhebung.
-   *
-   * Die Karten liegen gerade nebeneinander und fuellen am Anfang die volle
-   * Breite; mit jeder gespielten Karte rueckt die Reihe zusammen, bis die
-   * letzte in der Mitte liegt. Der Schritt zwischen zwei Karten ist fest —
-   * genau daraus ergibt sich das Zusammenruecken von selbst.
-   *
-   * Spielbare und gesperrte Karten sehen gleich aus. Wer eine spielt, sieht
-   * sie fliegen; wer eine gesperrte antippt, sieht sie den Kopf schuetteln.
-   * Mehr Auskunft gibt der Tisch nicht — so wie am echten Tisch auch.
-   */
-  const [shaking, setShaking] = useState(false);
-  const [legt, setLegt] = useState(false);
-
-  const mid = (total - 1) / 2;
-  const off = index - mid;
-
-  const vars = {
-    '--off': off,
-    zIndex: legt ? 400 : index,
-  } as React.CSSProperties;
-
-  return (
-    <button
-      className={`doko-handcard${trump ? ' is-trump' : ''}${shaking ? ' is-shake' : ''}${
-        legt ? ' is-legt' : ''
-      }`}
-      style={vars}
-      // Nicht disabled: Der Tipp auf eine unspielbare Karte soll ankommen und
-      // das Schuetteln ausloesen, statt lautlos zu versanden.
-      aria-disabled={!playable}
-      onClick={() => {
-        if (!playable) {
-          setShaking(true);
-          return;
-        }
-        // Erst fliegen lassen, dann melden. Die 170 ms sind kuerzer als jede
-        // Reaktionszeit und sorgen dafuer, dass man die Karte wirklich fallen
-        // sieht, statt dass sie im selben Bild verschwindet.
-        setLegt(true);
-        window.setTimeout(() => onPlay(card.id), 170);
-      }}
-      onAnimationEnd={() => setShaking(false)}
-      aria-label={trump ? 'Trumpf' : undefined}
-    >
-      <div className="pc pc--hand">
-        <CardFront card={card} deck={deck} />
-        {trump && <span className="doko-trump-bar" aria-hidden="true" />}
-      </div>
-    </button>
-  );
-});
-
-/** Der letzte Stich zum Nachschauen — fuer alle am Tisch, auch Zuschauer. */
-function LetzterStich({
-  played,
-  winnerSeat,
-  nameOf,
-  deck,
-  onClose,
-}: {
-  played: { seat: number; card: Card }[];
-  winnerSeat: number;
-  nameOf: (seat: number) => string;
-  deck: Deck;
-  onClose: () => void;
-}): React.JSX.Element {
-  return (
-    <div className="doko-sheet" onClick={onClose}>
-      <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
-        <h2>Letzter Stich</h2>
-        <p className="muted">Ging an {nameOf(winnerSeat)}.</p>
-        <div className="doko-lasttrick">
-          {played.map((p) => (
-            <figure key={p.card.id} className={p.seat === winnerSeat ? 'is-winner' : undefined}>
-              <div className="pc pc--trick">
-                <CardFront card={p.card} deck={deck} />
-              </div>
-              <figcaption>{nameOf(p.seat)}</figcaption>
-            </figure>
-          ))}
-        </div>
-        <button className="primary" onClick={onClose}>
-          Schließen
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Restzeit-Anzeige. Tickt fuer sich allein, nicht der ganze Tisch mit. */
-function TurnClock({ deadline }: { deadline: number | null }): React.JSX.Element | null {
-  const secondsLeft = useCountdown(deadline);
-  if (secondsLeft === null) return null;
-  return <span className="doko-turnclock">{secondsLeft}s</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -1355,69 +1036,6 @@ function VorbehaltDialog({
   );
 }
 
-/**
- * Die Regeln des Tisches zum Nachlesen, im selben Kachelbild wie beim
- * Erstellen - nur ohne Schalter. Der Regelsatz ist auf die Version beim
- * Tischbau festgeschrieben, gezeigt wird also genau das, was gilt.
- */
-function RegelBlatt({
-  tableId,
-  onClose,
-}: {
-  tableId: string;
-  onClose: () => void;
-}): React.JSX.Element {
-  const [config, setConfig] = useState<Record<string, unknown> | null>(null);
-  const [fehler, setFehler] = useState(false);
-
-  useEffect(() => {
-    api
-      .tableRules(tableId)
-      .then((antwort) => setConfig(antwort.config))
-      .catch(() => setFehler(true));
-  }, [tableId]);
-
-  const flags = config
-    ? Object.entries(config).filter(([, value]) => typeof value === 'boolean')
-    : [];
-  const an = flags.filter(([, value]) => value).length;
-
-  return (
-    <div className="doko-sheet" onClick={onClose}>
-      <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
-        <h2>Regeln an diesem Tisch</h2>
-        {fehler && <p className="error">Die Regeln ließen sich nicht laden.</p>}
-        {!config && !fehler && <p className="muted">Wird geladen…</p>}
-        {config && (
-          <>
-            <p className="muted">
-              {an === 0
-                ? 'Keine Sonderregeln — es gilt das Grundspiel.'
-                : `${an} von ${flags.length} Regeln an.`}
-            </p>
-            <div className="regeln">
-              {flags.map(([key, value]) => (
-                <span key={key} className={`regel${value ? ' is-on' : ''}`}>
-                  <span className="regel-bild" aria-hidden="true">
-                    {regelBild(key)}
-                  </span>
-                  {t(`regel.${key}`)}
-                  <span className="regel-check" aria-hidden="true">
-                    ✓
-                  </span>
-                </span>
-              ))}
-            </div>
-          </>
-        )}
-        <button className="primary" onClick={onClose}>
-          Schließen
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function Pflichtansage({
   points,
   canDecline,
@@ -1496,87 +1114,6 @@ function CardPicker({
           onClick={() => onPick(picked)}
         >
           {picked.length} von {count} gewählt
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function PartyEnd({
-  view,
-  party,
-  nameOf,
-  spielerName,
-  onLeave,
-}: {
-  view: NonNullable<ReturnType<typeof useTable>['view']>;
-  party: ReturnType<typeof useTable>['party'];
-  nameOf: (seat: number) => string;
-  spielerName: (text: string, accountId: string | null | undefined) => React.JSX.Element;
-  onLeave: () => void;
-}): React.JSX.Element {
-  const standings = [...(party?.standings ?? [])].sort((a, b) => a.place - b.place);
-
-  const awards = party?.trophies ?? [];
-  const gewertet = awards.length > 0;
-
-  /** Summe je Sitz: Platzierung und eventuelle Verlassen-Strafe zusammen. */
-  const trophiesOf = (seat: number): number =>
-    awards.filter((a) => a.seat === seat).reduce((sum, a) => sum + a.delta, 0);
-
-  const accountOf = (seat: number): string | null | undefined =>
-    party?.seats.find((s) => s.seat === seat)?.accountId;
-
-  return (
-    <div className="doko doko--end">
-      <img className="doko-bg" src="/hub/bg-abschluss.webp" alt="" draggable={false} />
-      <div className="doko-end-card">
-        <h1>Partie beendet</h1>
-        <p className="muted">{view.view.totalRounds} Runden gespielt.</p>
-        <ol className="doko-standings">
-          {standings.map((s, i) => {
-            const delta = trophiesOf(s.seat);
-            return (
-              <li key={s.seat} className={i === 0 ? 'is-winner' : undefined}>
-                {/* Gemalte Medaille bis Platz drei, sonst die Zahl. Bei
-                    Gleichstand haengen bewusst zwei gleiche Medaillen
-                    nebeneinander - sie sind ja wirklich gleich weit. */}
-                <span className="doko-place">
-                  {s.place <= 3 ? (
-                    <img
-                      className="doko-medaille"
-                      src={`/hub/medaille-${s.place}.webp`}
-                      alt={`Platz ${s.place}`}
-                      draggable={false}
-                    />
-                  ) : (
-                    `${s.place}.`
-                  )}
-                </span>
-                <span className="doko-standing-name">
-                  {spielerName(nameOf(s.seat), accountOf(s.seat))}
-                  {s.left && <em className="doko-tag">ausgestiegen</em>}
-                  {/* Das Vorzeichen ist die Information: +9 ist ein Gewinn,
-                      -9 ein Verlust, 0 ehrlich eine Null. */}
-                  {gewertet && (
-                    <em className="doko-tag">
-                      {delta > 0 ? `+${delta}` : delta}
-                      <img src="/hub/pokal.png" alt="Trophäen" className="doko-tag-icon" />
-                    </em>
-                  )}
-                </span>
-                <span className="doko-standing-points">{s.points}</span>
-              </li>
-            );
-          })}
-        </ol>
-        <p className="muted doko-fineprint">
-          {gewertet
-            ? 'Trophäen sind gutgeschrieben — dein Stand steht im Profil.'
-            : 'Keine Trophäen: An Tischen mit Bots wird nicht gewertet.'}
-        </p>
-        <button className="primary" onClick={onLeave}>
-          Zurück zur Lobby
         </button>
       </div>
     </div>

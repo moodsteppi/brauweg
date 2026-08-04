@@ -58,6 +58,23 @@ Client kennen **nur** diese Schnittstelle und wissen nicht, dass es Doppelkopf
 gibt. Ein weiteres Spiel ist damit ein neues Paket, kein Eingriff in Server
 oder Client.
 
+### Zauberer-Modul (`game-wizard`)
+
+Das zweite Spiel, seit dem 04.08.2026 spielbar. Eigene Engine mit 111 Tests,
+Adapter, Bot, sieben schaltbare Hausregeln, drei bis sechs Sitze. Regelwerk in
+[wizard-spec.md](wizard-spec.md).
+
+**Der Beweis für die Architektur:** Am Server war dafür eine Zeile in der
+Spielregistrierung nötig, dazu `'wizard'` in der `GameId`-Union. Keine
+Migration — `game_id` ist eine Textspalte. Was zusätzlich gebaut werden musste,
+war Plattformarbeit, die jedes weitere Spiel jetzt geschenkt bekommt:
+Trophäenverteilung für sechs Sitze, Sitz-Filter aus `seatCounts`, und die
+gemeinsamen Tischbausteine unter `packages/client/src/tisch/`.
+
+**Eine Abweichung ist dabei entstanden:** `rotationSize` meldet 1 statt der
+Sitzzahl, weil die kanonische Rundenzahl (60 Karten / Spieler) durch keine
+Sitzzahl aufgeht. Die Begründung steht in `wizard-spec.md`, Abschnitt 8.
+
 ### Doppelkopf-Adapter
 
 Erfüllt die Schnittstelle mit der bestehenden Engine. **Prüft typfehlerfrei
@@ -93,10 +110,12 @@ Diese Punkte sind der Grund, warum jetzt umgebaut wird und nicht später:
 ```
 packages/
   game-api/            Schnittstelle, kennt kein einzelnes Spiel
-  game-doppelkopf/     bestehende Engine + Adapter
+  game-doppelkopf/     Engine + Adapter
+  game-wizard/         Engine + Adapter (Zauberer)
   game-skat/           spaeter
   server/              Tische, Konten, Ranglisten, WebSocket
   client/              React PWA
+                       src/tisch/  gemeinsame Bausteine aller Spieltische
 ```
 
 ---
@@ -111,8 +130,9 @@ Spielauswahl, Lobby mit Filtern, Regelsatz-Editor, Spieltisch,
 Rundenabrechnung, Partie-Ende, Revanche, Bot und Timeouts, Emotes,
 Freundesliste.
 
-**Spielbar ist nur Doppelkopf.** Skat, Schafkopf, Rommé und Mau-Mau erscheinen
-in der Spielauswahl als Vorschau, **mit Abstimmung, welches zuerst kommt.**
+**Spielbar sind Doppelkopf und Zauberer.** Skat, Schafkopf, Rommé und Mau-Mau
+erscheinen in der Spielauswahl als Vorschau, **mit Abstimmung, welches zuerst
+kommt.**
 
 Das ist zugleich der günstigste Marktforschungsmoment, den du bekommst: Die
 Reihenfolge der nächsten Monate wird von den Leuten bestimmt, die tatsächlich

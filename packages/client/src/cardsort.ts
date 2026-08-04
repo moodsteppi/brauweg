@@ -14,8 +14,15 @@ import type { Card } from './protocol';
 /** Teilmenge von RoundView.order, die fuer die Sortierung reicht. */
 type CardOrder = { trumps: string[]; fehl?: Record<string, string[]> };
 
-/** Reihenfolge der Fehlfarben untereinander, nur fuer eine stabile Anzeige. */
-const SUIT_SEQUENCE = ['C', 'S', 'H', 'D'];
+/**
+ * Reihenfolge der Gruppen untereinander, nur fuer eine stabile Anzeige.
+ *
+ * 'Z' und 'N' gibt es erst beim Zauberer (Zauberer und Narren). Beim
+ * Doppelkopf sind diese Gruppen schlicht leer, die Eintraege stoeren dort
+ * also nicht - und die Narren liegen ueberall dort, wo sie hingehoeren: ganz
+ * am Ende, hinter der letzten Fehlfarbe.
+ */
+const SUIT_SEQUENCE = ['Z', 'C', 'S', 'H', 'D', 'N'];
 
 function cardKey(card: Card): string {
   return `${card.suit}${card.rank}`;

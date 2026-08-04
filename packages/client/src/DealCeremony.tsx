@@ -10,8 +10,14 @@ import { useEffect } from 'react';
 
 import { CardBack } from './CardFace';
 import type { Deck } from './decks';
+import type { Slot } from './tisch';
 
-export type DealSlot = 'bottom' | 'left' | 'top' | 'right' | 'top-left' | 'top-right';
+/**
+ * Dieselben Plaetze wie am Tisch. Eigener Name, weil die Zeremonie nur die
+ * Flugrichtung braucht - aber derselbe Typ, damit ein neuer Sitzplan nicht an
+ * zwei Stellen gepflegt werden muss.
+ */
+export type DealSlot = Slot;
 
 /** Volle Doppelkopf-Decks: mit Neunen 48, ohne (Scharfer Doko) 40. */
 export const VOLLE_DECKS = new Set([40, 48]);

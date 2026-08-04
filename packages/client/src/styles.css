@@ -5362,3 +5362,176 @@ main.auth > .muted {
 @media (prefers-reduced-motion: reduce) {
   .doko-blase { animation: none; }
 }
+
+/* ==========================================================================
+   Zauberer-Tisch (wiz-*)
+
+   Der Aufbau ist der des Doppelkopftisches — hier steht nur, was dieses Spiel
+   zusätzlich braucht: sechs Sitze, die aufgedeckte Trumpfkarte, Gebot/Stiche
+   am Sitz, das Gebotsblatt und die Punktetafel.
+   ========================================================================== */
+
+/* Sechs Plätze: links und rechts sitzen je zwei übereinander. Drei Plätze
+   nebeneinander an den oberen Rand passen auf einem Hochkant-Handy nicht,
+   ohne dass die Namen abschneiden. */
+.doko-opp.at-left-high { left: 0.1rem; top: 20%; transform: translateY(-50%); }
+.doko-opp.at-right-high { right: 0.1rem; top: 20%; transform: translateY(-50%); }
+.doko-felt.seats-6 .doko-opp.at-left,
+.doko-felt.seats-6 .doko-opp.at-right { top: 62%; }
+.doko-felt.seats-6 .doko-opp { max-width: 30%; }
+
+.doko-trick-card.at-left-high { left: 4%; top: 12%; transform: rotate(-7deg); }
+.doko-trick-card.at-right-high { right: 4%; top: 12%; transform: rotate(7deg); }
+.at-left-high .doko-trick-in { --fx: -56px; --fy: -40px; }
+.at-right-high .doko-trick-in { --fx: 56px; --fy: -40px; }
+
+/* Die aufgedeckte Trumpfkarte liegt am Tisch, oben links neben der Mitte —
+   nicht in der Kopfzeile: Wer den Trumpf sucht, sucht eine Karte. */
+.wiz-trumpf {
+  position: absolute;
+  top: 34%;
+  left: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  pointer-events: none;
+}
+.wiz-trumpf-leer {
+  width: var(--tw);
+  height: calc(var(--tw) * var(--pc-ratio));
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+}
+.wiz-trumpf-text {
+  font-size: 0.66rem;
+  color: #f0e4c8;
+  background: rgba(0, 0, 0, 0.42);
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.wiz-trumpf-text b { color: var(--gold); font-size: 0.85rem; }
+
+/* Gebot und Stiche am Sitz: die wichtigste Zahl des Spiels. Stimmt beides
+   überein, leuchtet sie grün — das ist der Zustand, den alle anstreben. */
+.wiz-gebot {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: #f0e4c8;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--line);
+  padding: 0.02rem 0.42rem;
+  border-radius: 999px;
+}
+.wiz-gebot i { font-style: normal; color: var(--muted); margin: 0 0.12rem; }
+.wiz-gebot.is-genau {
+  color: #8fe0b8;
+  border-color: rgba(74, 156, 120, 0.7);
+  background: rgba(74, 156, 120, 0.22);
+}
+
+/* Blinde erste Runde: fremde Karten liegen offen, die eigene bleibt verdeckt. */
+.wiz-offen .pc--back { margin-left: calc(var(--bw) * -0.45); }
+.wiz-blind {
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+}
+.wiz-blind p { margin: 0; font-size: 0.76rem; text-align: center; }
+
+/* Gebotsblatt: Zahlen als große Chips, damit der Daumen trifft. Eine
+   gesperrte Zahl bleibt sichtbar — eine Zahl, die kommentarlos fehlt, sieht
+   aus wie ein Fehler. */
+.wiz-gebote {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin: 0.6rem 0 0.8rem;
+}
+.wiz-gebot-chip {
+  min-width: 2.6rem;
+  padding: 0.55rem 0.2rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+.wiz-gebot-chip.is-an {
+  border-color: var(--gold);
+  background: rgba(226, 182, 79, 0.2);
+  color: #ffe9bd;
+}
+.wiz-gebot-chip.is-aus {
+  opacity: 0.32;
+  text-decoration: line-through;
+  box-shadow: none;
+}
+
+/* Trumpfwahl des Gebers: vier Farben, sonst nichts. */
+.wiz-farben {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin: 0.7rem 0;
+}
+.wiz-farbe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.7rem 0.4rem;
+  font-size: 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+.wiz-farbe span { font-size: 1.6rem; line-height: 1; }
+.wiz-farbe.is-rot span { color: #e06a5e; }
+
+/* Abrechnung und Punktetafel */
+.wiz-tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.wiz-tabelle th {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 700;
+  text-align: right;
+  padding: 0.2rem 0.3rem;
+}
+.wiz-tabelle th:first-child,
+.wiz-tabelle td:first-child { text-align: left; }
+.wiz-tabelle td {
+  text-align: right;
+  padding: 0.28rem 0.3rem;
+  border-top: 1px solid var(--line);
+}
+.wiz-tabelle tr.is-treffer td { color: #8fe0b8; }
+.wiz-tabelle td.is-minus { color: #e59a92; }
+.wiz-tabelle td.is-treffer { color: #8fe0b8; }
+.wiz-tabelle tfoot td { border-top: 2px solid var(--line); color: var(--text); }
+
+/* Bei zwanzig Runden rollt die Tafel in sich — die Seite selbst nie. */
+.wiz-tafel-rolle { max-height: 52vh; overflow: auto; }
+.wiz-tafel .wiz-zelle {
+  display: block;
+  font-size: 0.66rem;
+  color: var(--muted);
+}

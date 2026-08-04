@@ -7,6 +7,7 @@ import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
+import { WizardTable } from './screens/WizardTable';
 
 type Screen =
   | { name: 'games' }
@@ -60,8 +61,15 @@ export function App(): React.JSX.Element {
   }
 
   if (screen.name === 'table') {
+    /**
+     * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
+     * Vorbehalte und Ansagen, der Zaubertisch Gebote und Trumpfwahl. Die
+     * gemeinsamen Bausteine liegen in `src/tisch/` — verzweigt wird genau
+     * hier, an einer einzigen Stelle.
+     */
+    const Spieltisch = screen.gameId === 'wizard' ? WizardTable : Table;
     return (
-      <Table
+      <Spieltisch
         tableId={screen.tableId}
         deck={deckById(themeFuer(screen.gameId).cardDeck)}
         szene={themeFuer(screen.gameId).tableScene}

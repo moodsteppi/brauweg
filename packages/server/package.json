@@ -15,6 +15,7 @@
   "dependencies": {
     "@brauweg/game-api": "*",
     "@brauweg/game-doppelkopf": "*",
+    "@brauweg/game-wizard": "*",
     "@fastify/cookie": "^11.1.2",
     "@fastify/helmet": "^13.1.0",
     "@fastify/rate-limit": "^10.3.0",

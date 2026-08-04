@@ -957,6 +957,36 @@ function SpielBild({ id }: { id: string }): React.JSX.Element {
       </svg>
     );
   }
+  if (id === 'wizard') {
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#2e2258" />
+        {/* Nachthimmel: der Zauberer ist das Spiel mit den Sternen drauf. */}
+        <g fill="#ffe08a" opacity="0.5">
+          <circle cx="34" cy="20" r="2" />
+          <circle cx="72" cy="46" r="1.6" />
+          <circle cx="20" cy="58" r="1.4" />
+          <circle cx="292" cy="24" r="1.8" />
+        </g>
+        {karte(108, -12, '♠13', false, 28)}
+        {karte(140, -2, '♥7', true, 28)}
+        {/* Zauberer und Narr: die beiden Karten, an denen man das Spiel
+            erkennt. Der Zauberer sticht alles, der Narr verliert alles. */}
+        <g transform="translate(174,12) rotate(6)">
+          <rect width="30" height="43" rx="3" fill="#fdf3d8" />
+          <text x="8" y="27" fontSize="17" fontWeight="900" fill="#5b3fa8">
+            Z
+          </text>
+        </g>
+        <g transform="translate(208,18) rotate(14)">
+          <rect width="30" height="43" rx="3" fill="#fdf3d8" />
+          <text x="8" y="27" fontSize="17" fontWeight="900" fill="#c2564c">
+            N
+          </text>
+        </g>
+      </svg>
+    );
+  }
   if (id === 'mehrkampf') {
     return (
       <svg viewBox="0 0 320 80" aria-hidden="true">

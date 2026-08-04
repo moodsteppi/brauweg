@@ -9,16 +9,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  DOPPELKOPF_MODULE_VERSION,
   ENVELOPE_VERSION,
+  type GameView,
   type PartyMessage,
   type ServerMessage,
   type TableMessage,
   type ViewMessage,
+  moduleVersionFor,
 } from './protocol';
 
-export interface TableConnection {
-  view: ViewMessage | null;
+export interface TableConnection<V = GameView> {
+  view: ViewMessage<V> | null;
   party: PartyMessage | null;
   /** Zustand des Tisches, auch bevor eine Partie laeuft. */
   table: TableMessage | null;
@@ -30,8 +31,11 @@ export interface TableConnection {
   removeBot(seat: number): void;
 }
 
-export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableConnection {
-  const [view, setView] = useState<ViewMessage | null>(null);
+export function useTable<V = GameView>(
+  tableId: string | null,
+  gameId = 'doppelkopf',
+): TableConnection<V> {
+  const [view, setView] = useState<ViewMessage<V> | null>(null);
   const [party, setParty] = useState<PartyMessage | null>(null);
   const [table, setTable] = useState<TableMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,13 +63,13 @@ export function useTable(tableId: string | null, gameId = 'doppelkopf'): TableCo
           game: gameId,
           type: 'join',
           tableId,
-          moduleVersion: DOPPELKOPF_MODULE_VERSION,
+          moduleVersion: moduleVersionFor(gameId),
         }),
       );
     };
 
     socket.onmessage = (event) => {
-      const message = JSON.parse(event.data as string) as ServerMessage;
+      const message = JSON.parse(event.data as string) as ServerMessage<V>;
       if (message.type === 'error') {
         setError(message.messageKey);
         return;

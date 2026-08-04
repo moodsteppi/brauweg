@@ -10,11 +10,25 @@
 export const ENVELOPE_VERSION = 1;
 
 /**
- * Protokollversion des Doppelkopf-Moduls, die dieser Client beherrscht. Steigt
- * sie serverseitig um mehr als eine Stufe, weist der Server den Beitritt ab —
- * beim Beitritt, nie mitten in der Partie.
+ * Protokollversion je Spielmodul, die dieser Client beherrscht. Steigt sie
+ * serverseitig um mehr als eine Stufe, weist der Server den Beitritt ab — beim
+ * Beitritt, nie mitten in der Partie.
+ *
+ * Jedes Modul hat seine eigene Version: Ein Zauberer-Update darf einen
+ * Doppelkopf-Tisch nicht aussperren.
  */
 export const DOPPELKOPF_MODULE_VERSION = 1;
+export const WIZARD_MODULE_VERSION = 1;
+
+const MODULE_VERSIONS: Record<string, number> = {
+  doppelkopf: DOPPELKOPF_MODULE_VERSION,
+  wizard: WIZARD_MODULE_VERSION,
+};
+
+/** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */
+export function moduleVersionFor(gameId: string): number {
+  return MODULE_VERSIONS[gameId] ?? 1;
+}
 
 export interface Card {
   id: number;
@@ -65,14 +79,78 @@ export interface RoundView {
   armut: { role: string | null; awaiting: string | null; handoverSize: number };
 }
 
-export interface GameView {
-  round: RoundView | null;
+/** Was jede Partiesicht hat, egal welches Spiel. */
+export interface BaseGameView {
   roundIndex: number;
   totalRounds: number;
   scores: Record<number, number>;
-  nextMultiplier: number;
   finished: boolean;
   spectator: boolean;
+}
+
+export interface GameView extends BaseGameView {
+  round: RoundView | null;
+  nextMultiplier: number;
+}
+
+// ---------------------------------------------------------------------------
+// Zauberer
+// ---------------------------------------------------------------------------
+
+export interface WizardRoundView {
+  seat: number | null;
+  /** 'trump' | 'bidding' | 'playing' | 'finished' */
+  phase: string;
+  roundNumber: number;
+  handSize: number;
+  seats: number[];
+  dealer: number;
+  hand: Card[];
+  legal: Card[];
+  legalBids: number[];
+  /** Blinde erste Runde: fremde Karten sichtbar, die eigene nicht. */
+  blind: boolean;
+  blindHands: Record<number, Card[]> | null;
+  handCounts: Record<number, number>;
+  /** Solange verdeckt angesagt wird, steht hier höchstens die eigene Ansage. */
+  bids: Record<number, number>;
+  bidsRevealed: boolean;
+  /** Summe aller Ansagen — null, solange verdeckt. */
+  bidTotal: number | null;
+  tricks: Record<number, number>;
+  currentTrick: PlayedCard[];
+  lastTrick: { winnerSeat: number; played: PlayedCard[] } | null;
+  turn: number;
+  isMyTurn: boolean;
+  /** Aufgedeckte Karte des Rests. Null heißt: kein Trumpf. */
+  upcard: Card | null;
+  trump: string | null;
+  /** Sitz, der gerade die Trumpffarbe nennen muss. */
+  awaitingTrump: number | null;
+  order: { trumps: string[]; fehl?: Record<string, string[]> };
+  result: {
+    bids: Record<number, number>;
+    tricks: Record<number, number>;
+    scores: Record<number, number>;
+  } | null;
+}
+
+/** Eine abgerechnete Runde, wie sie in der Punktetafel steht. */
+export interface WizardRoundSummary {
+  roundIndex: number;
+  roundNumber: number;
+  dealer: number;
+  upcard: Card | null;
+  trump: string | null;
+  bids: Record<number, number>;
+  tricks: Record<number, number>;
+  scores: Record<number, number>;
+  totals: Record<number, number>;
+}
+
+export interface WizardGameView extends BaseGameView {
+  round: WizardRoundView | null;
+  history: WizardRoundSummary[];
 }
 
 export interface Action {
@@ -81,14 +159,19 @@ export interface Action {
   [key: string]: unknown;
 }
 
-export interface ViewMessage {
+/**
+ * Der Typparameter ist die Sicht des jeweiligen Spiels. Vorgabe ist die des
+ * Doppelkopfs, damit bestehender Code unveraendert bleibt; der Zauberer-Tisch
+ * setzt `ViewMessage<WizardGameView>` ein.
+ */
+export interface ViewMessage<V = GameView> {
   v: number;
   game: string;
   type: 'view';
   tableId: string;
   revision: number;
   seat: number | null;
-  view: GameView;
+  view: V;
   legalActions: Action[];
   currentActor: number | null;
   turnDeadline: number | null;
@@ -140,4 +223,8 @@ export interface ErrorMessage {
   messageKey: string;
 }
 
-export type ServerMessage = ViewMessage | PartyMessage | TableMessage | ErrorMessage;
+export type ServerMessage<V = GameView> =
+  | ViewMessage<V>
+  | PartyMessage
+  | TableMessage
+  | ErrorMessage;

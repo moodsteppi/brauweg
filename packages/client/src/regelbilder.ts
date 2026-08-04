@@ -32,6 +32,15 @@ const BILDER: Record<string, string> = {
   pflichtsolo: '☝️',
   countPoints: '🔢',
   training: '🎓',
+
+  // Zauberer
+  bidSumForbidden: '⚖️',
+  zeroBonus: '⭕',
+  hiddenBids: '🙈',
+  blindFirstRound: '🫥',
+  dealerPicksBlind: '🎲',
+  noTrump: '🚱',
+  jesterPicksTrump: '🤡',
 };
 
 export function regelBild(key: string): string {

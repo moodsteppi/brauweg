@@ -1,6 +1,6 @@
 # Stand der Arbeit
 
-Übergabe für eine neue Sitzung. Was hier steht, ist am 3. August 2026
+Übergabe für eine neue Sitzung. Was hier steht, ist am 4. August 2026
 geprüft — Zahlen und Zustände stammen aus tatsächlichen Läufen, nicht aus
 der Erinnerung.
 
@@ -8,12 +8,14 @@ der Erinnerung.
 
 ## Wo das Projekt steht
 
-Brauweg läuft unter **www.brauweg-spielen.de**. Doppelkopf ist spielbar,
-der Hub steht, Clans funktionieren. Der Deploy hängt an `main`: Was dorthin
-gemerged wird, ist nach etwa zwei Minuten live.
+Brauweg läuft unter **www.brauweg-spielen.de**. **Zwei Spiele sind
+spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
+Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
+Minuten live.
 
-**Prüfstand:** 118 Engine-Tests, 115 Servertests, `tsc --noEmit` sauber.
-`npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
+**Prüfstand:** 127 Doppelkopf-Tests, 111 Zauberer-Tests, 126 Servertests,
+`tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
+decken beides ab.
 
 **Bilder:** `packages/client/public/hub/` liegt bei 6,2 MB — zu Tagesbeginn
 waren es 30. Gemaltes wird als **WebP mit Qualität 85** ausgeliefert;
@@ -61,7 +63,55 @@ Sie dürfen weg, sobald dieser Stand eine Weile stabil läuft.
 
 ---
 
-## Heute fertig geworden
+## Am 4. August fertig geworden
+
+**Das zweite Spiel: Zauberer** (intern `wizard`, das international als
+„Wizard" bekannte Stichspiel). Vollständig — Engine, Adapter, Server,
+eigener Tisch, Bildbestellung. Regelwerk in `docs/wizard-spec.md`,
+Gestaltung in `docs/DESIGN-WIZARD.md`.
+
+- **Der Name ist Absicht.** „Wizard" ist eine eingetragene Marke (Ken
+  Fisher / US Games Systems, hier Amigo). Regeln sind nicht schützbar, ein
+  Produktname schon — und die App soll in den App Store. Die interne
+  Kennung bleibt `wizard`, weil sie in Datenbankzeilen steht.
+- **Die Trennung hat gehalten.** Für das zweite Spiel war am Server genau
+  eine Zeile in der Registrierung nötig. Kein Schema, keine Migration:
+  `game_id` ist eine Textspalte.
+- **Zwei Plattform-Lücken sind dabei aufgefallen** und behoben:
+  `PLACEMENT_TROPHIES` kannte nur drei bis fünf Sitze und hätte am Ende
+  jeder Sechserpartie geworfen; und die Filterknöpfe der Tischauswahl waren
+  fest auf „3er/4er" verdrahtet — sie kommen jetzt aus `seatCounts` des
+  Moduls.
+- **`rotationSize` ist beim Zauberer 1.** Die kanonische Rundenzahl
+  (60 Karten / Spieler = 20/15/12/10) geht durch keine Sitzzahl auf, die
+  Plattform verlangt aber ein Vielfaches der Geberrotation. Es weicht die
+  Gleichverteilung, nicht die Spiellänge; die Begründung steht ausführlich
+  in `ruleset.ts` und im Spec.
+- **Der Spieltisch ist zerlegt.** Was jedes Kartenspiel braucht — Sitzplan,
+  Avatar, Handkarte, Stichstapel, Zugtimer, letzter Stich, Regelblatt,
+  Wartebereich, Partie-Ende — liegt jetzt in `packages/client/src/tisch/`.
+  `Table.tsx` (Doppelkopf) und `WizardTable.tsx` bauen darauf auf.
+  Doppelkopf blieb dabei unverändert: dieselben 127 Tests, gleicher Ablauf.
+- **Sieben Hausregeln** sind schaltbar: Es darf nicht aufgehen, Bonus für
+  angesagte Null, verdeckt ansagen, blinde erste Runde, Geber wählt blind,
+  trumpffrei, Narr = Geber wählt. Der Kern (Bedienpflicht, Zauberer sticht,
+  20 + 10 / −10) ist fest.
+- **Am laufenden Server geprüft**, nicht nur in Tests: Sechsertisch mit
+  fünf Bots, komplette Runden, Punktetafel, und die blinde erste Runde.
+- **Bildbestellung `docs/ASSETS-WIZARD.md`:** volles gemaltes Blatt
+  (52 Zahlenkarten, vier verschiedene Zauberer, vier verschiedene Narren,
+  Rücken), zwei Zauber-Szenerien, Trumpf-Plakette. Bis zur Lieferung läuft
+  alles auf dem Textblatt — **kein Platzhalter nötig**, weil `cardImage`
+  unbekannte Karten von selbst als Text zeigt.
+
+**Der einzige Stolperstein beim Einbau der Lieferung** steht am Ende der
+Bestellung: Der Blatt-Wähler zeigt heute jedes Blatt für jedes Spiel. Ein
+Zauberblatt an einem Doppelkopftisch hätte für Bube, Dame und König keine
+Dateien. `Deck` braucht dafür ein Feld `games?: string[]`.
+
+---
+
+## Am 3. August fertig geworden
 
 - **Gemalte Hintergründe** für Tischauswahl, Tisch erstellen und Spieltisch.
 - **Clans vollständig** (Plan 9.3): gründen, suchen, beitreten — offen oder

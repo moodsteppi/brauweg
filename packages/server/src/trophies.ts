@@ -20,6 +20,9 @@ export const PLACEMENT_TROPHIES: Readonly<Record<number, readonly number[]>> = {
   3: [6, 0, -6],
   4: [9, 3, -3, -9],
   5: [12, 6, 0, -6, -12],
+  // Sechs Sitze gibt es seit Zauberer. Der Abstand bleibt konstant, damit die
+  // Mittelwertbildung bei Gleichstand ganzzahlig bleibt.
+  6: [15, 9, 3, -3, -9, -15],
 };
 
 export const LEAVE_PENALTY = -10;

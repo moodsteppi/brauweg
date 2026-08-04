@@ -8,6 +8,11 @@
 
 const de: Record<string, string> = {
   'game.doppelkopf': 'Doppelkopf',
+  // Das Spiel heisst international "Wizard" und ist als Marke eingetragen
+  // (Ken Fisher / US Games Systems, hier Amigo). Regeln sind frei, ein
+  // Produktname nicht - deshalb der deutsche Name. Die interne Kennung bleibt
+  // `wizard`, sie steht in Datenbankzeilen und Nachrichten.
+  'game.wizard': 'Zauberer',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -92,6 +97,9 @@ const de: Record<string, string> = {
   'phase.playing': 'Stiche',
   'phase.finished': 'Abgerechnet',
   'phase.redeal': 'Neu geben',
+  // Zauberer
+  'phase.trump': 'Trumpf wird bestimmt',
+  'phase.bidding': 'Ansagen',
 
   'spielart.normal': 'Normalspiel',
   'spielart.hochzeit': 'Hochzeit',
@@ -131,6 +139,22 @@ const de: Record<string, string> = {
   'regel.bock': 'Bockrunden',
   'regel.pflichtsolo': 'Pflichtsolo',
   'regel.training': 'Training',
+
+  // Hausregeln des Zauberers.
+  'regel.bidSumForbidden': 'Es darf nicht aufgehen',
+  'regel.zeroBonus': 'Bonus für angesagte Null',
+  'regel.hiddenBids': 'Verdeckt ansagen',
+  'regel.blindFirstRound': 'Blinde erste Runde',
+  'regel.dealerPicksBlind': 'Geber wählt blind',
+  'regel.noTrump': 'Trumpffrei',
+  'regel.jesterPicksTrump': 'Narr: Geber wählt',
+
+  // Meldungen des Zauberer-Regelsatzes.
+  'ruleset.noTrumpVsJesterPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
+  'ruleset.noTrumpVsDealerPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
+  'ruleset.hiddenBidsVsBidSum': 'Verdeckt angesagt gibt es keinen letzten Ansager.',
+  'ruleset.roundsOutOfRange': 'So viele Runden gibt das Blatt nicht her.',
+  'ruleset.tableSizeUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
 };
 
 /**
@@ -165,8 +189,14 @@ const RANKS: Record<string, string> = {
  * Auf dem Handy liegen zwoelf Karten nebeneinander, von den meisten ist nur
  * ein schmaler Streifen sichtbar. Farbe und Wert muessen in diesem Streifen
  * stehen, deshalb steht das Zeichen vorn.
+ *
+ * Zauberer und Narr haben keine Farbe und keinen Wert - sie sind, was sie
+ * sind. Ihr Zeichen steht deshalb allein, ohne Rangziffer: Die vier Exemplare
+ * unterscheiden sich nur im Bild, nie in der Staerke.
  */
 export function cardLabel(card: { suit: string; rank: string }): string {
+  if (card.suit === 'Z') return 'Z';
+  if (card.suit === 'N') return 'N';
   return `${SUITS[card.suit] ?? card.suit}${RANKS[card.rank] ?? card.rank}`;
 }
 
@@ -192,6 +222,8 @@ const RANK_NAMES: Record<string, string> = {
  * Auskunft wie alle anderen, und ein nicht geladenes Bild bleibt lesbar.
  */
 export function cardName(card: { suit: string; rank: string }): string {
+  if (card.suit === 'Z') return 'Zauberer';
+  if (card.suit === 'N') return 'Narr';
   const suit = SUIT_NAMES[card.suit] ?? card.suit;
   const rank = RANK_NAMES[card.rank] ?? card.rank;
   return `${suit} ${rank}`;
@@ -199,4 +231,13 @@ export function cardName(card: { suit: string; rank: string }): string {
 
 export function isRed(card: { suit: string }): boolean {
   return card.suit === 'H' || card.suit === 'D';
+}
+
+/** Name einer Trumpffarbe fuer die Kopfzeile, oder null ohne Trumpf. */
+export function suitName(suit: string | null): string | null {
+  return suit ? (SUIT_NAMES[suit] ?? suit) : null;
+}
+
+export function suitSymbol(suit: string): string {
+  return SUITS[suit] ?? suit;
 }

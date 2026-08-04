@@ -6,7 +6,7 @@ import { applyDelta, awardForParty, checkpointFor } from '../src/trophies.js';
 const place = (seat: number, place: number, left = false) => ({ seat, place, left });
 
 test('die Grundverteilung ist nullsummig', () => {
-  for (const seats of [3, 4, 5]) {
+  for (const seats of [3, 4, 5, 6]) {
     const placements = Array.from({ length: seats }, (_, i) => place(i, i + 1));
     const total = awardForParty(placements).reduce((sum, a) => sum + a.delta, 0);
     assert.equal(total, 0, `${seats} Sitze ergeben ${total} statt 0`);
@@ -43,6 +43,25 @@ test('Verlassen kostet zusaetzlich zehn Trophaeen', () => {
   assert.ok(penalty);
   assert.equal(penalty.delta, -10);
   assert.equal(penalty.seat, 3);
+});
+
+test('Sechs Sitze: die Verteilung setzt die Reihe fort und bleibt ganzzahlig', () => {
+  const alle = awardForParty(Array.from({ length: 6 }, (_, i) => place(i, i + 1)));
+  assert.deepEqual(
+    alle.map((a) => a.delta),
+    [15, 9, 3, -3, -9, -15],
+  );
+
+  // Jede zusammenhaengende Platzgruppe teilt sich ganze Zahlen.
+  for (let gruppe = 2; gruppe <= 6; gruppe++) {
+    const placements = Array.from({ length: 6 }, (_, i) => place(i, i < gruppe ? 1 : i + 1));
+    const awards = awardForParty(placements);
+    assert.ok(
+      awards.every((a) => Number.isInteger(a.delta)),
+      `Gruppe von ${gruppe} ergibt Bruchteile`,
+    );
+    assert.equal(awards.reduce((sum, a) => sum + a.delta, 0), 0);
+  }
 });
 
 test('Checkpoints stehen alle 100 bis 1000, danach alle 250', () => {

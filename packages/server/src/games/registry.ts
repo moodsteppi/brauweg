@@ -18,9 +18,13 @@ import type {
   GameRegistry,
 } from '@brauweg/game-api';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
 
-const MODULES: readonly AnyGameModule[] = [doppelkopf as unknown as AnyGameModule];
+const MODULES: readonly AnyGameModule[] = [
+  doppelkopf as unknown as AnyGameModule,
+  wizard as unknown as AnyGameModule,
+];
 
 /**
  * Spiele ohne Modul. Sie erscheinen in der Spielauswahl, lassen sich aber nicht

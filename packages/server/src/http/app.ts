@@ -97,6 +97,7 @@ export interface AppDeps {
 
 const gameIdSchema = z.enum([
   'doppelkopf',
+  'wizard',
   'skat',
   'schafkopf',
   'romme',

@@ -59,7 +59,12 @@ export function Lobby({
   const [regelnOffen, setRegelnOffen] = useState(false);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
   const [ansicht, setAnsicht] = useState<'liste' | 'erstellen'>('liste');
-  const [filter, setFilter] = useState<'alle' | '4er' | '3er' | 'offen' | 'clan'>('alle');
+  /**
+   * Filter als Zeichenkette, weil die Sitz-Filter aus dem Spielmodul kommen:
+   * Doppelkopf hat drei bis fünf Plätze, Zauberer drei bis sechs. Fest
+   * verdrahtete Knöpfe müssten bei jedem neuen Spiel nachgezogen werden.
+   */
+  const [filter, setFilter] = useState<string>('alle');
   const [suche, setSuche] = useState('');
 
   const refresh = (): void => {
@@ -174,9 +179,9 @@ export function Lobby({
 
   // Filter und Suche laufen auf der geladenen Liste: Sie ist kurz, und so
   // reagiert die Auswahl ohne Rueckfrage beim Server.
+  const sitzFilter = /^(\d+)er$/.exec(filter);
   const gefiltert = tables.filter((row) => {
-    if (filter === '4er' && row.seats !== 4) return false;
-    if (filter === '3er' && row.seats !== 3) return false;
+    if (sitzFilter && row.seats !== Number(sitzFilter[1])) return false;
     if (filter === 'offen' && row.occupied >= row.seats) return false;
     if (filter === 'clan' && row.visibility !== 'club_only') return false;
     const s = suche.trim().toLowerCase();
@@ -300,15 +305,16 @@ export function Lobby({
       </header>
 
       <div className="lobby-filter">
-        {(
-          [
-            ['alle', 'Alle'],
-            ['4er', '4er'],
-            ['3er', '3er'],
-            ['offen', 'Offen'],
-            ['clan', 'Clan'],
-          ] as const
-        ).map(([wert, text]) => (
+        {/* Die Sitz-Filter liefert das Spielmodul über `defaults.seatCounts` —
+            fest verdrahtet wären sie beim zweiten Spiel schon falsch. */}
+        {[
+          ['alle', 'Alle'] as [string, string],
+          ...(defaults?.seatCounts ?? []).map(
+            (count) => [`${count}er`, `${count}er`] as [string, string],
+          ),
+          ['offen', 'Offen'] as [string, string],
+          ['clan', 'Clan'] as [string, string],
+        ].map(([wert, text]) => (
           <button
             key={wert}
             className={`lobby-filterchip${filter === wert ? ' is-an' : ''}`}

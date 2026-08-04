@@ -28,6 +28,7 @@
 
 export type GameId =
   | 'doppelkopf'
+  | 'wizard'
   | 'skat'
   | 'schafkopf'
   | 'romme'
