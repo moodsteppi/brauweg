@@ -40,7 +40,12 @@ import {
 } from '../birthday.js';
 import { CARD_DECKS, DEFAULT_CARD_DECK } from '../decks.js';
 import { leiterUm, stufenstand } from '../level.js';
-import { coinsFor, entitlementsFor } from '../entitlements.js';
+import { entitlementsFor } from '../entitlements.js';
+import { sichtbarerStand } from '../waehrung.js';
+import { GEBURTSTAGS_OUTFIT, SLOTS, istSlot, schenken } from '../kosmetik.js';
+import { anziehen, getragenVon, kaufen, shopFuer } from '../shop.js';
+import { offeneTruhen, truheOeffnen, truhenFuer } from '../truhen.js';
+import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
@@ -444,6 +449,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         id: s.account.id,
         displayName: s.account.displayName,
         coins: s.account.coins,
+        gems: s.account.gems,
         xp: s.account.xp,
         premiumUntil: s.account.premiumUntil,
         isStaff: s.account.isStaff,
@@ -493,14 +499,35 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       }),
     );
 
-    const { hasAvatar, birthdayRewardYear, isStaff, ...rest } = account;
+    const { hasAvatar, birthdayRewardYear, isStaff, gems, ...rest } = account;
     const birthday = account.birthday ?? null;
     // Rechte kommen aus einer einzigen Stelle (entitlements.ts). Der Client
     // rechnet nichts aus Ablaufdaten aus - er zeigt, was hier steht.
     const rechte = entitlementsFor(account);
+    // Beide Waehrungen aus einer Hand: Fuer Testkonten meldet die Funktion
+    // einen Festwert, deshalb nicht die Spalten direkt.
+    const stand = sichtbarerStand(account);
+    // Was der Pinguin traegt. Gehoert an /api/me und nicht in einen eigenen
+    // Aufruf: Der Mini-Pinguin steht auf dem Startbildschirm, also braucht
+    // ihn jeder Ladevorgang ohnehin.
+    const getragen = await getragenVon(deps.db, accountId);
+
+    /*
+     * Was bereitliegt — zwei Zahlen, damit der Startbildschirm einen Punkt an
+     * die Truhe haengen kann. Bewusst nur die Zaehler und nicht die ganzen
+     * Listen: Die stehen an /api/chests und /api/quests, und die ruft nur auf,
+     * wer den Bildschirm wirklich oeffnet.
+     */
+    const [truhenOffen, belohnungenOffen] = await Promise.all([
+      offeneTruhen(deps.db, accountId, account.xp),
+      offeneBelohnungen(deps.db, accountId),
+    ]);
     return reply.send({
       ...rest,
-      coins: coinsFor(account),
+      coins: stand.coins,
+      gems: stand.gems,
+      avatar: getragen,
+      bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen },
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
        * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das
@@ -571,8 +598,137 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .set({ hasBirthdayOutfit: true, birthdayRewardYear: year })
       .where(eq(s.account.id, accountId));
 
-    return reply.send({ ok: true, item: 'pinguin_geburtstag' });
+    /*
+     * Seit es einen Kleiderschrank gibt, ist das Geburtstagsoutfit nicht mehr
+     * nur ein Merkmal, sondern zwei tragbare Stuecke. `hasBirthdayOutfit`
+     * bleibt trotzdem stehen: Die Spalte traegt die Anzeige im Profil, und
+     * sie zu entfernen waere eine Migration ohne Gewinn.
+     *
+     * Die beiden Stuecke sind `herkunft: 'geschenk'` und stehen deshalb in
+     * keinem Regal — es gibt genau diesen einen Weg hinein. Waeren sie
+     * kaufbar, waere der Geburtstag belanglos.
+     */
+    await schenken(deps.db, accountId, GEBURTSTAGS_OUTFIT);
+
+    return reply.send({ ok: true, item: 'pinguin_geburtstag', items: GEBURTSTAGS_OUTFIT });
   });
+
+  // -------------------------------------------------------------------------
+  // Truhen
+  // -------------------------------------------------------------------------
+
+  /**
+   * Alle Truhen: die heutige und die Stufentruhen, auch die gesperrten.
+   *
+   * Vollstaendig mit Absicht. Nach DESIGN.md steht das, was es noch nicht
+   * gibt, trotzdem in der Oberflaeche — bei Truhen ist das sogar der Kern:
+   * Wer nicht sieht, dass bei Stufe 5 eine Bronzetruhe wartet, hat keinen
+   * Grund, dorthin zu wollen.
+   */
+  app.get('/api/chests', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await truhenFuer(deps.db, accountId));
+  });
+
+  /**
+   * Truhe oeffnen.
+   *
+   * Was drin war, steht in der Antwort und danach dauerhaft in `chest_claim`.
+   * Gewuerfelt wird genau einmal; ein zweiter Aufruf bekommt einen Konflikt und
+   * keinen zweiten Wurf.
+   */
+  app.post(
+    '/api/chests/:chestId/open',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      // Die Kennung wird nur in der Form geprueft; ob es sie gibt und ob sie
+      // offen ist, entscheidet truheOeffnen gegen die eigenen Listen.
+      const { chestId } = z
+        .object({ chestId: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/) })
+        .parse(request.params);
+      return reply.send(await truheOeffnen(deps.db, accountId, chestId));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Tagesaufgaben
+  // -------------------------------------------------------------------------
+
+  app.get('/api/quests', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await aufgabenFuer(deps.db, accountId));
+  });
+
+  app.post(
+    '/api/quests/:questId/claim',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { questId } = z
+        .object({ questId: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/) })
+        .parse(request.params);
+      return reply.send(await aufgabeAbholen(deps.db, accountId, questId));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Shop und Kleiderschrank
+  // -------------------------------------------------------------------------
+
+  /**
+   * Der Shop: Paesse und Pakete (alle noch "bald"), dazu die Kosmetikregale
+   * mit Preisen und dem Besitzstand des Kontos.
+   */
+  app.get('/api/shop', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await shopFuer(deps.db, accountId));
+  });
+
+  /**
+   * Kosmetik kaufen — gegen Muenzen oder Edelsteine, nicht gegen Geld.
+   *
+   * Der Preis kommt aus dem Katalog und nie aus der Anfrage. Deshalb traegt
+   * der Rumpf hier auch nichts: Es gibt nichts zu verhandeln.
+   */
+  app.post(
+    '/api/shop/:itemId/buy',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { itemId } = z
+        .object({ itemId: z.string().min(1).max(60).regex(/^[a-z0-9-]+$/) })
+        .parse(request.params);
+      return reply.send(await kaufen(deps.db, accountId, itemId));
+    },
+  );
+
+  /**
+   * Anziehen. Ein Platz je Aufruf, `null` macht ihn leer.
+   *
+   * Am Server und nicht im Browser, weil hier der Besitz geprueft wird — sonst
+   * waere ein Aufruf mit fremder Kennung der Weg, ein legendaeres Stueck zu
+   * tragen, ohne es zu haben.
+   */
+  app.patch(
+    '/api/me/avatar',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const body = z
+        .object({
+          slot: z.enum(SLOTS),
+          itemId: z.string().min(1).max(60).regex(/^[a-z0-9-]+$/).nullable(),
+        })
+        .parse(request.body);
+      // Der Zod-Enum prueft schon; istSlot ist der Riegel dagegen, dass beide
+      // Listen auseinanderlaufen, falls SLOTS je erweitert wird.
+      if (!istSlot(body.slot)) throw badRequest('invalidInput');
+
+      await anziehen(deps.db, accountId, body.slot, body.itemId);
+      return reply.send({ ok: true, avatar: await getragenVon(deps.db, accountId) });
+    },
+  );
 
   /**
    * Profilbild eines Kontos. Oeffentlich, weil es genau dafuer da ist: die

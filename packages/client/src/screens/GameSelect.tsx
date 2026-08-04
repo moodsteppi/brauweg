@@ -2,18 +2,32 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
   ApiError,
+  SLOTS,
   api,
   type FriendLists,
   type GameSummary,
   type Me,
+  type Paket,
   type PlayerRef,
   type RankingEntry,
+  type Shop as ShopDaten,
 } from '../api';
 import { inApp } from '../laufzeit';
 import { DECKS, cardImage, deckBack, deckById, decksFor, type Deck } from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
-import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
+import {
+  EdelsteinIcon,
+  HubBanner,
+  HubSzene,
+  StatHero,
+  StatKachel,
+  StatSpiel,
+  Tafel,
+} from '../hub';
+import { Pinguin } from '../pinguin';
 import { Clan } from './Clan';
+import { Aufgabenblatt } from './Aufgaben';
+import { Kleiderschrank } from './Kleiderschrank';
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -70,6 +84,15 @@ export function GameSelect({
   const [bald, setBald] = useState<string | null>(null);
   const [ranglisteOffen, setRanglisteOffen] = useState(false);
   const [stufenOffen, setStufenOffen] = useState(false);
+  /**
+   * Tagesaufgaben und Truhen.
+   *
+   * Als Vollbild und nicht als sechster Tab: Die Tab-Leiste hat laut DESIGN.md
+   * fuenf Plaetze mit "Spielen" mittig und groesser — ein sechster nimmt die
+   * Mitte weg, und damit die einzige Stelle, die man ohne Hinsehen trifft.
+   */
+  const [aufgabenOffen, setAufgabenOffen] = useState(false);
+  const [schrankOffen, setSchrankOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -213,7 +236,15 @@ export function GameSelect({
   const renderTab = (tt: Tab): React.JSX.Element | null => {
     switch (tt) {
       case 'shop':
-        return zeigeKaufbares ? <Shop onBald={setBald} /> : null;
+        return zeigeKaufbares ? (
+          <Shop
+            me={me}
+            onBald={setBald}
+            onSchrank={() => setSchrankOffen(true)}
+            onThemen={() => setTab('blatt')}
+            onGuthaben={onAvatarChange}
+          />
+        ) : null;
       case 'clan':
         return (
           <Clan
@@ -232,6 +263,8 @@ export function GameSelect({
             onResume={onResume}
             onBald={setBald}
             onRangliste={() => setRanglisteOffen(true)}
+            onAufgaben={() => setAufgabenOffen(true)}
+            bereit={me.bereit.truhen + me.bereit.aufgaben}
           />
         );
       case 'blatt':
@@ -245,6 +278,8 @@ export function GameSelect({
             onSignOut={onSignOut}
             onDeleted={onDeleted}
             onStufen={() => setStufenOffen(true)}
+            onSchrank={() => setSchrankOffen(true)}
+            onAufgaben={() => setAufgabenOffen(true)}
             onBald={setBald}
             onShowProfile={onShowProfile}
           />
@@ -258,7 +293,10 @@ export function GameSelect({
         {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
-          <img className="front-avatar" src="/hub/pinguin.png" alt="" />
+          {/* Der Mini-Pinguin traegt, was im Kleiderschrank gewaehlt ist. Er
+              steht hier und nicht nur im Profil, weil eine Anpassung, die man
+              nie sieht, keine ist. */}
+          <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
             {/* Der Balken zeigt den Fortschritt IN der Stufe, nicht die
@@ -295,13 +333,23 @@ export function GameSelect({
             <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
             {kompakteZahl(trophies)}
           </span>
-          {/* Ohne Kaufbares bleiben Muenzen und VIP reine Anzeigen: Das Plus
-              verspricht einen Kauf, den es in der App nicht gibt. */}
+          {/*
+            Die beiden Waehrungen. Der VIP-Platz mit der Krone stand hier als
+            Attrappe und ist jetzt der Edelstein: VIP ist kein Guthaben, sondern
+            ein Zeitraum, und gehoert damit ins Shop-Regal und nicht in die
+            Ressourcen-Leiste. So bleiben es drei Pillen wie bisher — vier waeren
+            auf einem Hochkant-Handy eine zu viel.
+
+            Das Plus fuehrt in den Shop, wo Pakete mit Preis stehen und beim
+            Antippen "Kommt bald" sagen. Ohne Kaufbares (App-Paket) bleiben es
+            reine Anzeigen: Ein Plus, das nirgendwohin fuehrt, ist ein Versprechen.
+          */}
           {zeigeKaufbares ? (
             <>
               <button
                 className="front-waehrung front-waehrung--muenzen"
-                onClick={() => setBald('Münzen kaufen')}
+                onClick={() => setTab('shop')}
+                aria-label={`${me.coins} Münzen, zum Shop`}
               >
                 <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
                 {kompakteZahl(me.coins)}
@@ -310,21 +358,28 @@ export function GameSelect({
                 </span>
               </button>
               <button
-                className="front-waehrung front-waehrung--vip"
-                onClick={() => setBald('VIP')}
+                className="front-waehrung front-waehrung--edelsteine"
+                onClick={() => setTab('shop')}
+                aria-label={`${me.gems} Edelsteine, zum Shop`}
               >
-                <img className="front-waehrung-icon" src="/hub/krone.png" alt="" />
-                0
+                <EdelsteinIcon />
+                {kompakteZahl(me.gems)}
                 <span className="front-plus" aria-hidden="true">
                   +
                 </span>
               </button>
             </>
           ) : (
-            <span className="front-waehrung front-waehrung--muenzen">
-              <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
-              {kompakteZahl(me.coins)}
-            </span>
+            <>
+              <span className="front-waehrung front-waehrung--muenzen">
+                <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
+                {kompakteZahl(me.coins)}
+              </span>
+              <span className="front-waehrung front-waehrung--edelsteine">
+                <EdelsteinIcon />
+                {kompakteZahl(me.gems)}
+              </span>
+            </>
           )}
         </div>
       </header>
@@ -390,6 +445,17 @@ export function GameSelect({
       </nav>
 
       {stufenOffen && <Stufenleiter onClose={() => setStufenOffen(false)} />}
+      {aufgabenOffen && (
+        <Aufgabenblatt onClose={() => setAufgabenOffen(false)} onGuthaben={onAvatarChange} />
+      )}
+      {schrankOffen && (
+        <Kleiderschrank
+          getragen={me.avatar}
+          onClose={() => setSchrankOffen(false)}
+          onGetragen={onAvatarChange}
+          onGuthaben={onAvatarChange}
+        />
+      )}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
         <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
@@ -438,6 +504,8 @@ function ProfilTab({
   onSignOut,
   onDeleted,
   onStufen,
+  onSchrank,
+  onAufgaben,
   onBald,
   onShowProfile,
 }: {
@@ -450,6 +518,10 @@ function ProfilTab({
   onDeleted: () => void;
   /** Oeffnet die Stufenleiter. */
   onStufen: () => void;
+  /** Oeffnet den Kleiderschrank. */
+  onSchrank: () => void;
+  /** Oeffnet Tagesaufgaben und Truhen. */
+  onAufgaben: () => void;
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
 }): React.JSX.Element {
@@ -517,6 +589,43 @@ function ProfilTab({
         </span>
       </div>
 
+
+      {/*
+        Der Pinguin und die zwei Einstiege, die zusammengehoeren: anziehen und
+        verdienen. Sie stehen hier oben, weil das Profil der Ort ist, an dem man
+        sich um sich selbst kuemmert — die Statistik darunter ist Nachlese.
+
+        Der Pinguin IST der Knopf, wie das Profilbild daneben: Ein eigener
+        "Kleiderschrank oeffnen"-Knopf waere eine Zeile Hoehe fuer eine
+        Auskunft, die das Bild schon gibt.
+      */}
+      <section className="hub-garderobe">
+        <button className="hub-garderobe-pinguin" onClick={onSchrank} title="Kleiderschrank">
+          <Pinguin getragen={me.avatar} groesse={7} titel="Dein Pinguin" />
+          <span className="hub-profilbild-stift" aria-hidden="true">
+            ✎
+          </span>
+        </button>
+        <div className="hub-garderobe-text">
+          <strong>Dein Pinguin</strong>
+          <span className="muted">
+            {Object.keys(me.avatar).length === 0
+              ? 'Noch nichts an — fünf Plätze warten.'
+              : `${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen belegt.`}
+          </span>
+          <div className="hub-knopfreihe hub-knopfreihe--a">
+            <button className="hub-knopf hub-knopf--a" onClick={onSchrank}>
+              Kleiderschrank
+            </button>
+            <button className="hub-knopf hub-knopf--a-gold" onClick={onAufgaben}>
+              Aufgaben
+              {me.bereit.truhen + me.bereit.aufgaben > 0 && (
+                <span className="hub-punkt hub-punkt--klein" aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section
         className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
@@ -705,50 +814,191 @@ function KontoLoeschenBlatt({
   );
 }
 
+/** Euro-Preis aus ganzen Cent. Nie Gleitkomma, nie gerundet. */
+function euro(cents: number): string {
+  return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')} €`;
+}
+
 /**
- * Shop (Entwurf B): Season Pass als Sonderangebot oben, darunter
- * Wochenangebot/VIP, dann Vitrinen. Alles nur Vorschau — kein Kauf.
+ * Ein Paket gegen echtes Geld.
+ *
+ * Preis und Inhalt stehen dran, gekauft wird nichts: Es gibt keinen
+ * Bezahlweg, und deshalb auch keinen Endpunkt dafuer. Das Antippen sagt das
+ * ehrlich, statt in einen toten Knopf zu laufen (DESIGN.md).
  */
-function Shop({ onBald }: { onBald: (name: string) => void }): React.JSX.Element {
-  /** Die grossen Angebote: drei nebeneinander, wie im Entwurf. */
-  const angebote = [
-    { name: 'Season Pass', art: '/hub/season-pass.png', preis: 'Saison' },
-    { name: 'VIP-Pass', art: '/hub/shop-vip.webp', preis: '7 Tage' },
-    { name: 'Münzpaket', art: '/hub/muenze.png', preis: 'Paket' },
-  ];
-  /** Kleine Vitrine darunter - alles noch Attrappe, ehrlich ohne Preis. */
-  const auswahl = [
-    { name: 'Blätter', icon: '/hub/tab-blatt.webp' },
-    { name: 'Tische', icon: '/hub/truhe.png' },
-    { name: 'Wappen', icon: '/hub/clan-wappen.png' },
-    { name: 'Emotes', icon: '/hub/tab-spielen.webp' },
-  ];
+function PaketKachel({
+  paket,
+  onBald,
+}: {
+  paket: Paket;
+  onBald: (name: string) => void;
+}): React.JSX.Element {
+  return (
+    <button className="hub-angebot shop-paket" onClick={() => onBald(t(paket.nameKey))}>
+      {paket.gibt ? (
+        paket.gibt.waehrung === 'coins' ? (
+          <img className="hub-angebot-art" src="/hub/muenze.png" alt="" draggable={false} />
+        ) : (
+          <EdelsteinIcon className="hub-angebot-art shop-paket-stein" />
+        )
+      ) : (
+        <img
+          className="hub-angebot-art"
+          src={paket.id === 'vip-pass' ? '/hub/shop-vip.webp' : '/hub/season-pass.png'}
+          alt=""
+          draggable={false}
+        />
+      )}
+      <strong>{t(paket.nameKey)}</strong>
+      {paket.gibt && (
+        <span className="shop-paket-inhalt">
+          {paket.gibt.betrag} {t(`waehrung.${paket.gibt.waehrung}`)}
+        </span>
+      )}
+      <span className="hub-preis">{euro(paket.cents)}</span>
+      {paket.bonus !== null && <span className="shop-bonus">+{paket.bonus} %</span>}
+      <span className="front-bald-tag">Bald</span>
+    </button>
+  );
+}
+
+/**
+ * Shop.
+ *
+ * Zwei Sorten Regal, streng getrennt und in dieser Reihenfolge:
+ *
+ *  1. **Was wirklich geht:** Pinguin-Ausstattung gegen Muenzen und Edelsteine.
+ *     Sie steht oben, weil sie der einzige Teil ist, den man heute benutzen
+ *     kann — ein Shop, dessen erste drei Reihen "Bald" sagen, ist kein Shop.
+ *  2. **Was noch nicht geht:** Paesse und Pakete gegen echtes Geld. Mit Preis
+ *     und Inhalt, aber ohne Kauf.
+ *
+ * Kartenblaetter und Szenerien stehen hier bewusst nur als Wegweiser in den
+ * Themen-Tab: Dort gibt es sie schon, mit Vorschau in Tischgroesse. Sie ein
+ * zweites Mal als Shop-Kachel zu fuehren waere ein zweiter Weg zum selben
+ * Regal — und der eine davon ohne Vorschau.
+ */
+function Shop({
+  me,
+  onBald,
+  onSchrank,
+  onThemen,
+  onGuthaben,
+}: {
+  me: Me;
+  onBald: (name: string) => void;
+  onSchrank: () => void;
+  onThemen: () => void;
+  onGuthaben: () => void;
+}): React.JSX.Element {
+  const [shop, setShop] = useState<ShopDaten | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  useEffect(() => {
+    void api
+      .shop()
+      .then(setShop)
+      .catch(() => setFehler('Der Shop ließ sich nicht laden.'));
+  }, [
+    // Nach einem Kauf im Kleiderschrank muss das Regal neu geladen werden,
+    // sonst steht dort weiter ein Preis auf etwas, das schon gehoert.
+    me.coins,
+    me.gems,
+  ]);
+
+  /** Wie viele Stuecke je Platz noch fehlen — die Zahl treibt den Besuch. */
+  const fehlend = (slot: string): number =>
+    shop?.regale.find((r) => r.slot === slot)?.stuecke.filter((s) => !s.besessen).length ?? 0;
 
   return (
     <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
       <HubBanner />
 
-      <Tafel titel="Angebote">
-        <div className="hub-reihe hub-reihe--drei">
-          {angebote.map((a) => (
-            <button key={a.name} className="hub-angebot" onClick={() => onBald(a.name)}>
-              <img className="hub-angebot-art" src={a.art} alt="" draggable={false} />
-              <strong>{a.name}</strong>
-              <span className="hub-preis">{a.preis}</span>
-              <span className="front-bald-tag">Bald</span>
+      {fehler && <p className="error">{fehler}</p>}
+
+      {/* Der eigene Pinguin steht im Shop, weil hier seine Sachen liegen. Ein
+          Tipp fuehrt in den Kleiderschrank, wo gekauft und angezogen wird. */}
+      <Tafel titel="Dein Pinguin" zusatz={shop ? `${SLOTS.length} Plätze` : '…'}>
+        <button className="shop-pinguin" onClick={onSchrank}>
+          <Pinguin getragen={me.avatar} groesse={6} />
+          <span className="shop-pinguin-text">
+            <strong>Kleiderschrank</strong>
+            <span className="muted">
+              {shop
+                ? `${SLOTS.filter((s) => fehlend(s) > 0).length} von ${SLOTS.length} Plätzen haben noch Neues`
+                : 'Anziehen und kaufen'}
+            </span>
+          </span>
+        </button>
+
+        <div className="hub-reihe shop-plaetze">
+          {SLOTS.map((slot) => (
+            <button key={slot} className="hub-vitrine" onClick={onSchrank}>
+              <Pinguin
+                getragen={{ [slot]: me.avatar[slot] }}
+                groesse={2.8}
+                className="pinguin--probe"
+              />
+              <span>{t(`slot.${slot}`)}</span>
+              {fehlend(slot) > 0 && <span className="shop-zaehler">{fehlend(slot)}</span>}
             </button>
           ))}
         </div>
       </Tafel>
 
-      <Tafel titel="Tägliche Auswahl" zusatz="Kommt bald">
-        <div className="hub-reihe hub-reihe--vier">
-          {auswahl.map((k) => (
-            <button key={k.name} className="hub-vitrine" onClick={() => onBald(k.name)}>
-              <img className="hub-vitrine-icon" src={k.icon} alt="" draggable={false} />
-              <span>{k.name}</span>
-            </button>
+      <Tafel titel="Pässe" zusatz="Kommt bald">
+        <div className="hub-reihe hub-reihe--drei">
+          {(shop?.paesse ?? []).map((paket) => (
+            <PaketKachel key={paket.id} paket={paket} onBald={onBald} />
           ))}
+        </div>
+      </Tafel>
+
+      <Tafel titel="Münzen" zusatz="Kommt bald">
+        <div className="hub-reihe hub-reihe--drei">
+          {(shop?.muenzpakete ?? []).map((paket) => (
+            <PaketKachel key={paket.id} paket={paket} onBald={onBald} />
+          ))}
+        </div>
+        <p className="shop-hinweis muted">
+          Münzen gibt es auch fürs Spielen: aus der Tagestruhe, den Stufentruhen und den
+          Tagesaufgaben.
+        </p>
+      </Tafel>
+
+      <Tafel titel="Edelsteine" zusatz="Kommt bald">
+        <div className="hub-reihe hub-reihe--drei">
+          {(shop?.edelsteinpakete ?? []).map((paket) => (
+            <PaketKachel key={paket.id} paket={paket} onBald={onBald} />
+          ))}
+        </div>
+        <p className="shop-hinweis muted">
+          Edelsteine fallen nicht aus Truhen. Was es dafür gibt, gibt es nicht für Münzen — und
+          umgekehrt.
+        </p>
+      </Tafel>
+
+      <Tafel titel="Sonst noch">
+        <div className="hub-reihe hub-reihe--vier">
+          {/* Blaetter und Tische fuehren dorthin, wo es sie schon gibt. */}
+          <button className="hub-vitrine" onClick={onThemen}>
+            <img className="hub-vitrine-icon" src="/hub/tab-blatt.webp" alt="" draggable={false} />
+            <span>Blätter</span>
+          </button>
+          <button className="hub-vitrine" onClick={onThemen}>
+            <img className="hub-vitrine-icon" src="/hub/tab-spielen.webp" alt="" draggable={false} />
+            <span>Tische</span>
+          </button>
+          <button className="hub-vitrine" onClick={() => onBald('Clan-Wappen')}>
+            <img className="hub-vitrine-icon" src="/hub/clan-wappen.png" alt="" draggable={false} />
+            <span>Wappen</span>
+            <span className="front-bald-tag">Bald</span>
+          </button>
+          <button className="hub-vitrine" onClick={() => onBald('Emotes')}>
+            <img className="hub-vitrine-icon" src="/hub/krone.png" alt="" draggable={false} />
+            <span>Emotes</span>
+            <span className="front-bald-tag">Bald</span>
+          </button>
         </div>
       </Tafel>
     </HubSzene>
@@ -798,13 +1048,19 @@ function Spielen({
   onResume,
   onBald,
   onRangliste,
+  onAufgaben,
+  bereit,
 }: {
   trophies: number;
   activeTable: Me['activeTable'];
+  /** Wie viel bereitliegt (Truhen plus fertige Aufgaben). 0 = kein Punkt. */
+  bereit: number;
   onPick: (gameId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
   onBald: (name: string) => void;
   onRangliste: () => void;
+  /** Oeffnet Tagesaufgaben und Truhen. */
+  onAufgaben: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [voted, setVoted] = useState<Set<string>>(new Set());
@@ -862,15 +1118,24 @@ function Spielen({
           </button>
         </aside>
 
+        {/*
+          Die Truhe ist der Weg zu Tagesaufgaben und Truhen. Sie stand hier
+          schon als "Bald"-Attrappe — jetzt fuehrt sie irgendwohin.
+
+          Der Punkt daran verraet, dass etwas bereitliegt; ohne ihn muesste man
+          nachsehen, um festzustellen, dass es nichts zu holen gibt. Die Zahl
+          selbst steht drinnen, nicht hier: Eine Ziffer auf einem 44-Pixel-Knopf
+          ist auf einem Handy nicht lesbar.
+        */}
         <aside className="hub-seite hub-seite--rechts">
           <button
             type="button"
             className="hub-truhe"
-            aria-label="Tägliche Belohnung, bald"
-            onClick={() => onBald('Der Tagesbonus')}
+            aria-label="Tagesaufgaben und Truhen"
+            onClick={onAufgaben}
           >
             <img src="/hub/truhe.png" alt="" draggable={false} />
-            <span className="front-bald-tag">Bald</span>
+            {bereit > 0 && <span className="hub-punkt" aria-label={`${bereit} bereit`} />}
           </button>
         </aside>
 

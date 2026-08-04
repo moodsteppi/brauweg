@@ -78,10 +78,37 @@ export interface ActiveTable {
   seats: number;
 }
 
+/**
+ * Die fuenf Plaetze der Pinguin-Ausstattung.
+ *
+ * Muss zu SLOTS in `packages/server/src/kosmetik.ts` passen. Der Server prueft
+ * die Kennungen, das Aussehen kennt nur diese Seite — dieselbe Trennung wie bei
+ * Kartenblatt und Szenerie.
+ */
+export const SLOTS = ['hut', 'oberteil', 'schuhe', 'hand', 'aura'] as const;
+export type Slot = (typeof SLOTS)[number];
+
+/** Was der Pinguin traegt. Ein leerer Platz fehlt schlicht. */
+export type Getragen = Partial<Record<Slot, string>>;
+
 export interface Me {
   id: string;
   displayName: string;
   coins: number;
+  /**
+   * Edelsteine — die zweite Waehrung. Sie entstehen nur aus Kauf oder
+   * Geschenk, nie aus Truhen: sonst waere jede Truhe eine Geldquelle.
+   */
+  gems: number;
+  /** Was der Pinguin gerade traegt, je Platz. */
+  avatar: Getragen;
+  /**
+   * Was bereitliegt: offene Truhen und fertige, noch nicht abgeholte Aufgaben.
+   *
+   * Nur die Zahlen — die Listen stehen an `/chests` und `/quests`. Sie treiben
+   * den Punkt an der Truhe auf dem Startbildschirm.
+   */
+  bereit: { truhen: number; aufgaben: number };
   /**
    * Stufe und Fortschritt, fertig gerechnet vom Server.
    *
@@ -134,6 +161,93 @@ export interface RankingEntry {
   parties: number;
   wins: number;
   highestCheckpoint: number;
+}
+
+// ---------------------------------------------------------------------------
+// Waehrungen, Truhen, Tagesaufgaben, Kosmetik
+// ---------------------------------------------------------------------------
+
+export type Waehrung = 'coins' | 'gems';
+
+export type Grad = 'holz' | 'bronze' | 'silber' | 'gold' | 'diamant';
+
+export interface Truhe {
+  id: string;
+  art: 'tag' | 'stufe';
+  grad: Grad;
+  /** Spanne, die drinsteckt. Sie wird angezeigt, damit nichts geraten wird. */
+  von: number;
+  bis: number;
+  offen: boolean;
+  geholt: boolean;
+  /** Was drin war — erst gesetzt, wenn `geholt`. */
+  coins: number | null;
+  abStufe: number | null;
+  fehltStufen: number | null;
+}
+
+export interface Truhen {
+  tag: Truhe;
+  stufen: Truhe[];
+}
+
+export interface Fund {
+  chestId: string;
+  grad: Grad;
+  coins: number;
+  /** Muenzstand nach der Gutschrift. */
+  stand: number;
+}
+
+export interface Aufgabe {
+  id: string;
+  nameKey: string;
+  hinweisKey: string;
+  ziel: number;
+  fortschritt: number;
+  fertig: boolean;
+  abgeholt: boolean;
+  belohnung: { waehrung: Waehrung; betrag: number };
+}
+
+export interface Aufgaben {
+  /** Kalendertag in Europe/Berlin, auf den sich der Fortschritt bezieht. */
+  tag: string;
+  aufgaben: Aufgabe[];
+  /** Summe der fertigen, noch nicht abgeholten Belohnungen. */
+  offeneBelohnung: number;
+}
+
+export type Seltenheit = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer';
+
+export interface RegalStueck {
+  id: string;
+  slot: Slot;
+  nameKey: string;
+  seltenheit: Seltenheit;
+  /** 0 heißt: gehört allen. */
+  preis: number;
+  waehrung: Waehrung;
+  besessen: boolean;
+  /** Nur zu bekommen, nicht zu kaufen (Geburtstagsoutfit). */
+  geschenk: boolean;
+}
+
+export interface Paket {
+  id: string;
+  nameKey: string;
+  gibt: { waehrung: Waehrung; betrag: number } | null;
+  /** Anzeigepreis in ganzen Cent. Platzhalter — es gibt keinen Kaufweg. */
+  cents: number;
+  /** Aufschlag gegenüber dem kleinsten Paket, in Prozent. */
+  bonus: number | null;
+}
+
+export interface Shop {
+  paesse: Paket[];
+  muenzpakete: Paket[];
+  edelsteinpakete: Paket[];
+  regale: { slot: Slot; stuecke: RegalStueck[] }[];
 }
 
 export interface TableRow {
@@ -287,6 +401,37 @@ export const api = {
       fuerLevel: number;
       leiter: { stufe: number; ab: number; kosten: number; erreicht: boolean; aktuell: boolean }[];
     }>('/me/levels'),
+
+  // --- Truhen ---------------------------------------------------------------
+
+  /** Alle Truhen: die heutige und die Stufentruhen, auch die gesperrten. */
+  chests: () => request<Truhen>('/chests'),
+  /**
+   * Truhe öffnen. Gewürfelt wird am Server, genau einmal — was zurückkommt,
+   * steht danach fest.
+   */
+  openChest: (chestId: string) => post<Fund>(`/chests/${chestId}/open`),
+
+  // --- Tagesaufgaben --------------------------------------------------------
+
+  quests: () => request<Aufgaben>('/quests'),
+  claimQuest: (questId: string) =>
+    post<{ betrag: number; waehrung: Waehrung; stand: number }>(`/quests/${questId}/claim`),
+
+  // --- Shop und Kleiderschrank ---------------------------------------------
+
+  shop: () => request<Shop>('/shop'),
+  /**
+   * Kosmetik kaufen — gegen Münzen oder Edelsteine. Der Preis kommt vom
+   * Server; hier geht bewusst kein Betrag mit.
+   */
+  buyItem: (itemId: string) =>
+    post<{ itemId: string; bezahlt: number; waehrung: Waehrung; stand: number }>(
+      `/shop/${itemId}/buy`,
+    ),
+  /** Ein Stück anziehen, oder mit `null` den Platz leer machen. */
+  wear: (slot: Slot, itemId: string | null) =>
+    patch<{ ok: true; avatar: Getragen }>('/me/avatar', { slot, itemId }),
 
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),

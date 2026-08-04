@@ -31,6 +31,7 @@ import {
 } from '../tables/service.js';
 import { applyDelta, awardForParty, type Placement } from '../trophies.js';
 import { xpFuerPartie } from '../level.js';
+import { fortschreiben } from '../quests.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -738,6 +739,7 @@ export class PartyRuntime {
 
     await this.awardTrophies(party, standings);
     await this.countStats(party, standings);
+    await this.countQuests(party, standings);
 
     // Die Partie bleibt nach dem Ende noch im Speicher. Wuerde sie hier
     // entfernt, ginge die Schlusssicht verloren: Der Rundruf holt sich den
@@ -774,6 +776,46 @@ export class PartyRuntime {
             target: [s.statCounter.accountId, s.statCounter.gameId, s.statCounter.key],
             set: { value: sql`${s.statCounter.value} + 1` },
           });
+      }
+    }
+  }
+
+  /**
+   * Tagesaufgaben fortschreiben.
+   *
+   * Wie `countStats` und bewusst NICHT wie `awardTrophies`: Gezaehlt wird jede
+   * beendete Partie, auch die gegen Bots. Tagesaufgaben sind eine Belohnung
+   * fuers Spielen, keine Wertung — wer zum Ueben allein mit drei Bots sitzt,
+   * soll seine Muenzen bekommen. Die Rangliste bleibt davon unberuehrt.
+   *
+   * Die gelegten Karten kommen aus `GameModule.xpBasis`, derselben Quelle wie
+   * die Erfahrungspunkte. Liefert ein Modul nichts, bleibt die Kartenaufgabe
+   * bei null statt bei einer geratenen Zahl.
+   *
+   * Fehler werden protokolliert und verschluckt: Eine verpasste Tagesaufgabe
+   * ist ein Aergernis, ein am Partie-Ende haengender Tisch ein Ausfall. Der
+   * Aufruf steht deshalb zuletzt und niemals vor der Wertung.
+   */
+  private async countQuests(
+    party: LiveParty,
+    standings: readonly PartyStanding[],
+  ): Promise<void> {
+    const karten = party.module.xpBasis?.(party.state) ?? {};
+
+    for (const standing of standings) {
+      const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
+      if (!accountId) continue;
+
+      try {
+        await fortschreiben(this.db, {
+          accountId,
+          gameId: party.gameId,
+          platz: standing.place,
+          karten: karten[standing.seat] ?? 0,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(`Tagesaufgaben an Tisch ${party.tableId}, Sitz ${standing.seat}:`, err);
       }
     }
   }

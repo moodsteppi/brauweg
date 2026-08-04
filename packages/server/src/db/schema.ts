@@ -119,6 +119,18 @@ export const account = pgTable(
     premiumUntil: timestamp({ withTimezone: true }),
     coins: integer().notNull().default(0),
     /**
+     * Edelsteine — die zweite Waehrung.
+     *
+     * Getrennt von den Muenzen, weil sie verschieden entstehen: Muenzen fallen
+     * aus Truhen und Tagesaufgaben, Edelsteine nur aus Kauf oder Geschenk.
+     * Waere es eine Spalte mit einem Kurs dazwischen, waere jede Truhe indirekt
+     * eine Geldquelle — und der Kurs die einzige Zahl, die noch zaehlt.
+     *
+     * Beide Waehrungen sind ganzzahlig und laufen ueber src/waehrung.ts. Kein
+     * Gleitkomma: Ein halber Edelstein ist nichts, was jemand erklaeren will.
+     */
+    gems: integer().notNull().default(0),
+    /**
      * Erfahrungspunkte, spieluebergreifend. Die Stufe wird daraus gerechnet
      * und nicht gespeichert (src/level.ts): Sonst gaebe es zwei Wahrheiten,
      * und eine Aenderung an der Kurve muesste jede Zeile anfassen.
@@ -278,6 +290,129 @@ export const accountGameTheme = pgTable(
     tableScene: text().notNull().default('stube'),
   },
   (t) => [primaryKey({ columns: [t.accountId, t.gameId] })],
+);
+
+// ---------------------------------------------------------------------------
+// Truhen, Tagesaufgaben, Kosmetik
+// ---------------------------------------------------------------------------
+
+/**
+ * Gradstufen einer Truhe.
+ *
+ * Als Enum und nicht als Text, anders als `game_id`: Ein neuer Grad ist keine
+ * neue Datei, sondern eine Aenderung an der Oekonomie — die soll auffallen und
+ * durch eine Migration gehen.
+ */
+export const chestGrade = pgEnum('chest_grade', [
+  'holz',
+  'bronze',
+  'silber',
+  'gold',
+  'diamant',
+]);
+
+/**
+ * Geoeffnete Truhen.
+ *
+ * Die Zeile ist Beweis und Ergebnis in einem: Sie verhindert das zweite
+ * Oeffnen (Primaerschluessel) und haelt fest, was dabei herauskam. Der Inhalt
+ * MUSS gespeichert werden — sonst wuerde jede Anzeige neu wuerfeln, und
+ * derselbe Fund saehe bei jedem Laden anders aus.
+ *
+ * `chest_id` traegt bei Tagestruhen den Kalendertag (`tag-2026-08-04`), bei
+ * Stufentruhen die Stufe (`stufe-5`). Damit ist die Sperre gegen das zweite
+ * Oeffnen derselbe Mechanismus fuer beide Arten, und die Truhen von gestern
+ * bleiben als Verlauf stehen.
+ */
+export const chestClaim = pgTable(
+  'chest_claim',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    chestId: text().notNull(),
+    grade: chestGrade().notNull(),
+    /** Was tatsaechlich gutgeschrieben wurde, nicht die Spanne. */
+    coins: integer().notNull(),
+    claimedAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.chestId] }),
+    index('chest_claim_account_idx').on(t.accountId, t.claimedAt),
+  ],
+);
+
+/**
+ * Fortschritt der Tagesaufgaben.
+ *
+ * Je Konto, Aufgabe und Kalendertag. Der Tag steht als Spalte und nicht als
+ * "wird nachts geloescht": Ein naechtlicher Aufraeumlauf, der ausfaellt,
+ * verschenkt Belohnungen doppelt — eine Zeile mit Datum kann das nicht.
+ *
+ * Gezaehlt wird in Europe/Berlin (src/birthday.ts), damit der Tag nicht je
+ * nach Server-UTC um Mitternacht falsch kippt.
+ */
+export const questProgress = pgTable(
+  'quest_progress',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    questId: text().notNull(),
+    /** Kalendertag in Europe/Berlin. */
+    day: date().notNull(),
+    progress: integer().notNull().default(0),
+    /** Gesetzt, sobald die Belohnung abgeholt ist. Verhindert das zweite Mal. */
+    claimedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.questId, t.day] }),
+    index('quest_progress_tag_idx').on(t.accountId, t.day),
+  ],
+);
+
+/**
+ * Besitz an Kosmetik (Pinguin-Ausstattung).
+ *
+ * Nur die Kennung, kein Preis und kein Aussehen: Was ein Stueck kostet, steht
+ * im Katalog (src/kosmetik.ts) und darf sich aendern, ohne dass alte Zeilen
+ * unstimmig werden. Wie es aussieht, weiss allein der Client — dieselbe
+ * Trennung wie bei Kartenblatt und Szenerie.
+ *
+ * Es gibt bewusst keine Zeile fuer "gehoert allen": Freie Stuecke (Preis 0)
+ * kann jeder anlegen, ohne dass fuer jedes Konto Zeilen entstehen. Der Besitz
+ * wird deshalb immer ueber den Katalog gefragt, nie allein ueber diese Tabelle.
+ */
+export const accountCosmetic = pgTable(
+  'account_cosmetic',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    itemId: text().notNull(),
+    acquiredAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.itemId] })],
+);
+
+/**
+ * Was der Pinguin gerade traegt: je Platz ein Stueck.
+ *
+ * Eine Zeile je belegtem Platz statt fuenf Spalten. Ein sechster Platz ist
+ * damit ein Eintrag im Katalog und keine Migration — und ein leerer Platz ist
+ * schlicht keine Zeile, nicht ein `null`, das man ueberall mitpruefen muesste.
+ */
+export const accountAvatar = pgTable(
+  'account_avatar',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    /** Kennung aus SLOTS in src/kosmetik.ts. */
+    slot: text().notNull(),
+    itemId: text().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.slot] })],
 );
 
 /** Dauerhaft und aggregiert, damit Premium-Statistiken lange zurueckreichen. */

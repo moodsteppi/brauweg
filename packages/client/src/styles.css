@@ -2832,10 +2832,22 @@ td {
   align-items: flex-start;
   gap: 0.2rem;
   min-width: 0;
+  /*
+   * Schrumpfen UND abschneiden.
+   *
+   * `min-width: 0` allein laesst die Spalte schmal werden, ihre Kinder malen
+   * aber weiter in ihrer Wunschbreite - der Name schob sich dann unter die
+   * Stufen-Plakette. Sichtbar wurde das erst mit einem siebenstelligen
+   * Muenzstand rechts, gelegen hat es immer daran, dass hier nichts
+   * beschnitten wurde.
+   */
+  overflow: hidden;
 }
 
 .front-spieler-info strong {
-  max-width: 8.5rem;
+  /* Nicht mehr fest 8.5rem: Die Grenze ist der Platz, der tatsaechlich da
+     ist. Sonst bleibt der Name breit, waehrend die Spalte schon schmal ist. */
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2845,6 +2857,9 @@ td {
 /* Erfahrungsbalken - ehrlich leer, bis das Levelsystem kommt. */
 .front-xp {
   width: 5.2rem;
+  /* Der Balken gibt bei Enge mit nach, statt die Spalte aufzuspannen: 5.2rem
+     ist der Wunsch, nicht die Vorschrift. */
+  max-width: 100%;
   height: 0.32rem;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.45);
@@ -6189,4 +6204,593 @@ main.auth > .muted {
   font-weight: 800;
   color: var(--gold);
   white-space: nowrap;
+}
+
+/* ===========================================================================
+ * Waehrungen, Truhen, Tagesaufgaben, Kleiderschrank
+ *
+ * Angeschlossen an die vorhandenen Bausteine: Tafeln tragen den Inhalt,
+ * `pfad-voll` das Vollbild, `hub-knopf--a*` die Knoepfe. Neu ist nur, was es
+ * vorher nicht gab.
+ * =========================================================================== */
+
+/* Der Edelstein sitzt dort, wo vorher die VIP-Krone stand. Blaugruen und
+   bewusst nicht lila: Lila heisst laut DESIGN.md "kommt bald". */
+.front-waehrung--edelsteine {
+  color: #7ee0ee;
+  border: 1px solid rgba(94, 200, 216, 0.45);
+}
+
+/*
+ * Die Pillen im Hub etwas enger.
+ *
+ * Der VIP-Platz trug eine fest verdrahtete "0", der Edelstein trägt eine echte
+ * Zahl — dreistellig ist der Normalfall. Damit war die Leiste rechts breiter als
+ * vorher, und links blieben dem Namen 28 Pixel: aus "Probe" wurde "P…".
+ *
+ * Der Name gibt bei Enge weiterhin zuerst nach (so ist es gedacht), aber erst,
+ * wenn es wirklich eng ist. Die Werte sind so gewählt, dass ein Name aus acht
+ * Zeichen neben zwei dreistelligen Ständen vollständig steht.
+ */
+.front--hub .front-waehrungen {
+  gap: 0.28rem;
+}
+
+.front--hub .front-waehrung {
+  padding: 0.22rem 0.26rem 0.22rem 0.4rem;
+  gap: 0.22rem;
+}
+
+.front--hub .front-waehrung .front-waehrung-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.front--hub .front-plus {
+  width: 1rem;
+  height: 1rem;
+  font-size: 0.8rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Der Pinguin
+ * ------------------------------------------------------------------------- */
+
+.pinguin {
+  display: block;
+  flex: 0 0 auto;
+  /* Der Schatten macht aus dem Stapel eine Figur - ohne ihn klebt sie auf dem
+     Hintergrund, weil alle Ebenen genau denselben Rahmen haben. */
+  filter: drop-shadow(0 3px 5px rgba(8, 20, 40, 0.45));
+}
+
+/* Als Kachelbild in Schrank und Shop: kleiner Schatten, damit vierzig Kacheln
+   nebeneinander nicht flimmern. */
+.pinguin--probe {
+  filter: drop-shadow(0 1px 2px rgba(8, 20, 40, 0.35));
+}
+
+/* Der Mini-Pinguin in der Kopfzeile ersetzt ein rundes Bild - deshalb keine
+   Maske und kein Rand, er ist freigestellt. */
+.front-spieler .pinguin.front-avatar {
+  width: auto;
+  border-radius: 0;
+  background: none;
+  border: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Bereitschaftspunkt
+ *
+ * Sagt "hier liegt was", ohne eine Zahl auf einen 3,5rem-Knopf zu setzen.
+ * ------------------------------------------------------------------------- */
+
+.hub-punkt {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 2px solid #12181c;
+  box-shadow: 0 0 8px rgba(194, 86, 76, 0.8);
+}
+
+.hub-punkt--klein {
+  position: static;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.35rem;
+  border-width: 0;
+  vertical-align: middle;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tagesaufgaben und Truhen
+ * ------------------------------------------------------------------------- */
+
+.aufgaben-rolle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.6rem;
+}
+
+.truhe-zeile,
+.quest-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.6rem;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--line);
+}
+
+/* Offen heisst: hier ist etwas zu tun. Gold, weil es etwas wert ist. */
+.truhe-zeile.is-offen,
+.quest-zeile.is-fertig:not(.is-geholt) {
+  border-color: rgba(226, 182, 79, 0.7);
+  background: rgba(226, 182, 79, 0.1);
+}
+
+/* Geholt tritt zurueck, verschwindet aber nicht: Der Verlauf ist die Auskunft,
+   dass es gestern etwas gab und heute wieder etwas geben wird. */
+.truhe-zeile.is-geholt,
+.quest-zeile.is-geholt {
+  opacity: 0.6;
+}
+
+.truhe-bild {
+  width: 2.9rem;
+  height: 2.6rem;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+}
+
+.truhe-text,
+.quest-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.truhe-text .muted,
+.quest-text .muted {
+  font-size: 0.74rem;
+}
+
+/*
+ * Knöpfe in einer Zeile behalten ihre eigene Breite.
+ *
+ * `.hub-knopf--a-gold` trägt `width: 100%` — richtig in einer Knopfreihe, wo
+ * zwei Knöpfe sich die Zeile teilen, falsch hier: Der Knopf schob sich über
+ * den Truhennamen. Höhere Spezifität statt `!important`, und bewusst am
+ * Dateiende, damit auch die spätere border-image-Regel überschrieben wird.
+ */
+.truhe-zeile .hub-knopf,
+.quest-lohn .hub-knopf,
+.hub-tafel-zusatz .hub-mini {
+  width: auto;
+  flex: 0 0 auto;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  white-space: nowrap;
+}
+
+.truhe-haken {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.truhe-schloss,
+.ks-schloss {
+  flex: 0 0 auto;
+  font-size: 0.95rem;
+  opacity: 0.55;
+}
+
+/* Der Fund: gross, mittig, mit der Zahl als Hauptsache. */
+.truhe-fund {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.truhe-fund .truhe-bild {
+  width: 6rem;
+  height: 5.4rem;
+}
+
+.truhe-fund-zahl {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Aufgaben: Balken plus Zahl. Der Balken zeigt es, die Zahl beweist es. */
+.quest-balken {
+  display: block;
+  height: 0.4rem;
+  margin-top: 0.3rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.quest-balken > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c79a34 0%, var(--gold) 100%);
+  transition: width 0.3s ease;
+}
+
+.quest-zahl {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.15rem;
+}
+
+.quest-lohn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+}
+
+.quest-lohn-wert {
+  font-weight: 800;
+  color: var(--gold);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.quest-lohn-wert .muted {
+  font-weight: 600;
+  font-size: 0.68rem;
+}
+
+.quest-hinweis {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  padding: 0.15rem 0.1rem 0.3rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-balken > span {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Kleiderschrank
+ * ------------------------------------------------------------------------- */
+
+.kleiderschrank {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Die Buehne bleibt stehen, nur die Liste darunter rollt: Wer die Aura
+   durchblaettert, muss den Pinguin dabei sehen. */
+.ks-buehne {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0.5rem 0 0.2rem;
+  background: radial-gradient(60% 70% at 50% 45%, rgba(94, 160, 240, 0.22), transparent 70%);
+}
+
+.ks-probe-marke {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.8rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--blau);
+  color: #06182f;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ks-plaetze {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.4rem 0.6rem 0;
+  flex: 0 0 auto;
+}
+
+.ks-platz {
+  flex: 1 1 0;
+  padding: 0.45rem 0.2rem;
+  border-radius: 0.55rem 0.55rem 0 0;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.76rem;
+}
+
+.ks-platz.is-an {
+  background: var(--panel);
+  color: var(--text);
+  border-color: rgba(226, 182, 79, 0.6);
+}
+
+/* Ein Punkt sagt: hier sitzt schon etwas. Sonst muesste man jeden Platz
+   oeffnen, um zu sehen, was angezogen ist. */
+.ks-platz.is-belegt::after {
+  content: '';
+  display: block;
+  width: 0.3rem;
+  height: 0.3rem;
+  margin: 0.2rem auto 0;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.ks-rolle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.6rem 0.6rem;
+}
+
+.ks-gitter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+}
+
+.ks-stueck {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding: 0.4rem 0.25rem 0.5rem;
+  border-radius: 0.6rem;
+  border: 2px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.ks-stueck strong {
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+.ks-preis {
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ks-stueck:active {
+  transform: translateY(2px);
+}
+
+/* Der Rahmen traegt die Seltenheit. Sie ist eine Aussage ueber den Preis und
+   keine ueber die Wirkung: Kosmetik veraendert nie das Spiel. */
+.ks-stueck.is-selten {
+  border-color: rgba(94, 160, 240, 0.55);
+}
+.ks-stueck.is-episch {
+  border-color: rgba(166, 120, 242, 0.6);
+}
+.ks-stueck.is-legendaer {
+  border-color: rgba(226, 182, 79, 0.75);
+  background: rgba(226, 182, 79, 0.09);
+}
+
+/* Was gerade sitzt: goldener Rahmen mit Haken, wie bei den Regelkacheln. */
+.ks-stueck.is-an {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(226, 182, 79, 0.5);
+}
+
+/* Fremdes bleibt sichtbar und anprobierbar, tritt aber zurueck. */
+.ks-stueck.is-fremd .pinguin {
+  opacity: 0.75;
+}
+
+.ks-stueck .hub-blatt-haken {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.3rem;
+}
+
+.ks-stueck .ks-schloss {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.3rem;
+  font-size: 0.7rem;
+}
+
+.ks-stueck .front-bald-tag {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.2rem;
+  font-size: 0.55rem;
+  padding: 0.04rem 0.32rem;
+}
+
+/* Kaufbestaetigung: ein Tipp darf keine 380 Muenzen ausgeben. */
+.ks-kauf {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.ks-kauf h2 {
+  margin: 0.2rem 0 0;
+}
+
+.ks-kauf-preis {
+  margin: 0.2rem 0 0.4rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * Garderobe im Profil
+ * ------------------------------------------------------------------------- */
+
+.hub-garderobe {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.8rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+}
+
+.hub-garderobe-pinguin {
+  position: relative;
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.hub-garderobe-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hub-garderobe-text .muted {
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.hub-garderobe .hub-knopfreihe {
+  margin-top: 0.25rem;
+}
+
+.hub-garderobe .hub-knopf {
+  position: relative;
+}
+
+/* ---------------------------------------------------------------------------
+ * Shop
+ * ------------------------------------------------------------------------- */
+
+/* Der eigene Pinguin oben im Shop: hier liegen seine Sachen. */
+.shop-pinguin {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(226, 182, 79, 0.45);
+  background: rgba(226, 182, 79, 0.08);
+  color: var(--text);
+  text-align: left;
+}
+
+.shop-pinguin-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.shop-pinguin-text .muted {
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+/* Fünf Plätze, fünf Spalten.
+   In `hub-reihe--vier` bräche die Aura in eine zweite Zeile und stünde dort
+   allein — das liest sich wie ein Nachtrag statt wie der fünfte von fünf. */
+.shop-plaetze.hub-reihe {
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 0.45rem;
+  gap: 0.25rem;
+}
+
+.shop-plaetze .hub-vitrine {
+  padding-left: 0.1rem;
+  padding-right: 0.1rem;
+  font-size: 0.66rem;
+}
+
+.shop-plaetze .hub-vitrine {
+  position: relative;
+}
+
+/* Wie viel es je Platz noch nicht gibt. Die Zahl treibt den Besuch. */
+.shop-zaehler {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.25rem;
+  min-width: 1.05rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: var(--blau);
+  border: 2px solid #12181c;
+  color: #06182f;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.15rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-paket {
+  position: relative;
+}
+
+.shop-paket-inhalt {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Der Edelstein als Paketbild: dasselbe Maß wie die Muenzgrafik daneben. */
+.shop-paket-stein.front-waehrung-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+/* Der Spartipp. Gruen, weil es ein Vorteil ist - nicht gold, das ist der
+   Wert selbst. */
+.shop-bonus {
+  position: absolute;
+  top: -0.35rem;
+  left: -0.25rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0c1310;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.shop-hinweis {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  padding: 0.35rem 0.1rem 0.1rem;
 }
