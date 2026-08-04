@@ -243,10 +243,28 @@ export interface Paket {
   bonus: number | null;
 }
 
+/**
+ * Eine Szenerie oder ein Kartenblatt im Regal.
+ *
+ * `wert` ist die Kennung ohne Praefix — so heisst sie in den Themen-
+ * Einstellungen. `id` traegt das Praefix und ist die Kennung fuer den Kauf.
+ */
+export interface RegalWare {
+  id: string;
+  art: 'szene' | 'blatt';
+  wert: string;
+  nameKey: string;
+  seltenheit: string;
+  preis: number;
+  waehrung: Waehrung;
+  besessen: boolean;
+}
+
 export interface Shop {
   paesse: Paket[];
   muenzpakete: Paket[];
   edelsteinpakete: Paket[];
+  tischware: RegalWare[];
   regale: { slot: Slot; stuecke: RegalStueck[] }[];
 }
 
@@ -313,6 +331,18 @@ export const WAPPEN = [
   'wappen-6',
   'wappen-7',
   'wappen-8',
+  // Zweiter Satz. Wappen kosten nichts: Das Zeichen eines Vereins soll nicht
+  // daran haengen, ob sein Anfuehrer Muenzen uebrig hat.
+  'wappen-9',
+  'wappen-10',
+  'wappen-11',
+  'wappen-12',
+  'wappen-13',
+  'wappen-14',
+  'wappen-15',
+  'wappen-16',
+  'wappen-17',
+  'wappen-18',
 ] as const;
 
 export type ClubRole = 'admin' | 'vize' | 'elder' | 'member' | 'guest';

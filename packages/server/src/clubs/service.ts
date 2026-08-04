@@ -39,6 +39,19 @@ export const CRESTS = [
   'wappen-6',
   'wappen-7',
   'wappen-8',
+  // Zweiter Satz. Wappen sind Sache des ganzen Vereins und deshalb nicht
+  // kaeuflich: Sonst haengte das Zeichen eines Clans daran, ob sein Anfuehrer
+  // Muenzen uebrig hat.
+  'wappen-9',
+  'wappen-10',
+  'wappen-11',
+  'wappen-12',
+  'wappen-13',
+  'wappen-14',
+  'wappen-15',
+  'wappen-16',
+  'wappen-17',
+  'wappen-18',
 ] as const;
 
 export type Crest = (typeof CRESTS)[number];

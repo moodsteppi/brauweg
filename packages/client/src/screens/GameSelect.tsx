@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
   ApiError,
@@ -10,6 +10,7 @@ import {
   type Paket,
   type PlayerRef,
   type RankingEntry,
+  type RegalWare,
   type Shop as ShopDaten,
 } from '../api';
 import { inApp } from '../laufzeit';
@@ -269,7 +270,7 @@ export function GameSelect({
           />
         );
       case 'blatt':
-        return <ThemenTab me={me} onThemeChange={onThemeChange} />;
+        return <ThemenTab me={me} onThemeChange={onThemeChange} onGekauft={onAvatarChange} />;
       case 'profil':
         return (
           <ProfilTab
@@ -911,6 +912,9 @@ function Shop({
   const fehlend = (slot: string): number =>
     shop?.regale.find((r) => r.slot === slot)?.stuecke.filter((s) => !s.besessen).length ?? 0;
 
+  /** Szenerien und Blaetter, die es noch zu holen gibt. */
+  const offeneWare = (shop?.tischware ?? []).filter((w) => !w.besessen).length;
+
   return (
     <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
       <HubBanner />
@@ -986,9 +990,12 @@ function Shop({
             <img className="hub-vitrine-icon" src="/hub/tab-blatt.webp" alt="" draggable={false} />
             <span>Blätter</span>
           </button>
+          {/* Die Zahl treibt den Besuch: Sie sagt, dass es dort etwas Neues
+              gibt, ohne dass man erst hingehen muss. */}
           <button className="hub-vitrine" onClick={onThemen}>
             <img className="hub-vitrine-icon" src="/hub/tab-spielen.webp" alt="" draggable={false} />
             <span>Tische</span>
+            {offeneWare > 0 && <span className="hub-vitrine-zahl">{offeneWare}</span>}
           </button>
           <button className="hub-vitrine" onClick={() => onBald('Clan-Wappen')}>
             <img className="hub-vitrine-icon" src="/hub/clan-wappen.png" alt="" draggable={false} />
@@ -1809,9 +1816,12 @@ function handFuer(gameId: string): { id: number; suit: string; rank: string }[] 
 function ThemenTab({
   me,
   onThemeChange,
+  onGekauft,
 }: {
   me: Me;
   onThemeChange: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) => void;
+  /** Nach einem Kauf muss der Muenzstand oben neu geladen werden. */
+  onGekauft: () => void;
 }): React.JSX.Element {
   const [spiele, setSpiele] = useState<GameSummary[] | null>(null);
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
@@ -1833,6 +1843,7 @@ function ThemenTab({
           onChange={(cardDeck) => onThemeChange(gewaehlt, { cardDeck })}
           szene={thema.tableScene}
           onSzeneChange={(tableScene) => onThemeChange(gewaehlt, { tableScene })}
+          onGekauft={onGekauft}
         />
       ) : (
         <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
@@ -1878,6 +1889,7 @@ function DeckPicker({
   onChange,
   szene,
   onSzeneChange,
+  onGekauft,
 }: {
   gameId: string;
   spielName: string;
@@ -1886,6 +1898,7 @@ function DeckPicker({
   onChange: (cardDeck: string) => void;
   szene: string;
   onSzeneChange: (tableScene: string) => void;
+  onGekauft: () => void;
 }): React.JSX.Element {
   /**
    * Angetippt wird die Wahl sofort übernommen UND groß gezeigt: Ein Blatt in
@@ -1895,6 +1908,49 @@ function DeckPicker({
    */
   const [vorschau, setVorschau] = useState(false);
   const proben = probenFuer(gameId);
+
+  /**
+   * Was schon gehoert. Steht hier und nicht in `me`, weil es sich mit jedem
+   * Kauf aendert und nur dieser Bildschirm es braucht.
+   */
+  const [ware, setWare] = useState<RegalWare[]>([]);
+  const [kauft, setKauft] = useState<string | null>(null);
+  const [kaufFehler, setKaufFehler] = useState<string | null>(null);
+
+  const ladeWare = useCallback(() => {
+    void api
+      .shop()
+      .then((s) => setWare(s.tischware))
+      .catch(() => setWare([]));
+  }, []);
+  useEffect(ladeWare, [ladeWare]);
+
+  const wareZu = (art: 'szene' | 'blatt', wert: string): RegalWare | undefined =>
+    ware.find((w) => w.art === art && w.wert === wert);
+
+  /** Gehoert es mir? Unbekanntes gilt als frei — siehe tischware.ts. */
+  const gehoert = (art: 'szene' | 'blatt', wert: string): boolean =>
+    wareZu(art, wert)?.besessen ?? true;
+
+  const kaufen = (w: RegalWare, danach: () => void): void => {
+    setKauft(w.id);
+    setKaufFehler(null);
+    void api
+      .buyItem(w.id)
+      .then(() => {
+        ladeWare();
+        onGekauft();
+        danach();
+      })
+      .catch((e: unknown) =>
+        setKaufFehler(
+          (e as { code?: string })?.code === 'coinsInsufficient'
+            ? 'Dafür fehlen dir Münzen.'
+            : 'Der Kauf hat nicht geklappt.',
+        ),
+      )
+      .finally(() => setKauft(null));
+  };
 
   return (
     <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
@@ -1946,30 +2002,56 @@ function DeckPicker({
           Das soll man vor dem Spiel sehen und nicht mittendrin.
         */}
         <h3 className="hub-abschnitt">Tisch</h3>
+        {kaufFehler && <p className="clan-fehler">{kaufFehler}</p>}
         <div className="hub-szenen">
-          {SZENEN.map((s) => (
-            <button
-              className={`hub-szene${s.id === szene ? ' is-an' : ''}`}
-              key={s.id}
-              aria-pressed={s.id === szene}
-              onClick={() => {
-                onSzeneChange(s.id);
-                setVorschau(true);
-              }}
-            >
-              <span className="hub-szene-probe">
-                <img src={szeneBild(s.id)} alt="" draggable={false} />
-                <span className="hub-szene-karten">
-                  {proben.slice(0, 2).map((card) => (
-                    <DeckSample card={card} deck={deckById(current)} key={card.id} />
-                  ))}
+          {SZENEN.map((s) => {
+            const w = wareZu('szene', s.id);
+            const mein = gehoert('szene', s.id);
+            return (
+              <button
+                className={`hub-szene${s.id === szene ? ' is-an' : ''}${
+                  mein ? '' : ' is-zu'
+                }`}
+                key={s.id}
+                aria-pressed={s.id === szene}
+                disabled={kauft === w?.id}
+                onClick={() => {
+                  // Was mir gehoert, wird sofort eingestellt. Was nicht,
+                  // wird gekauft — und danach eingestellt, denn genau das
+                  // war die Absicht des Tipps.
+                  if (mein) {
+                    onSzeneChange(s.id);
+                    setVorschau(true);
+                    return;
+                  }
+                  if (!w) return;
+                  if (!window.confirm(`„${s.name}" für ${w.preis} Münzen kaufen?`)) return;
+                  kaufen(w, () => {
+                    onSzeneChange(s.id);
+                    setVorschau(true);
+                  });
+                }}
+              >
+                <span className="hub-szene-probe">
+                  <img src={szeneBild(s.id)} alt="" draggable={false} />
+                  <span className="hub-szene-karten">
+                    {proben.slice(0, 2).map((card) => (
+                      <DeckSample card={card} deck={deckById(current)} key={card.id} />
+                    ))}
+                  </span>
                 </span>
-              </span>
-              <strong>{s.name}</strong>
-              <span className="muted">{s.hinweis}</span>
-              {s.id === szene && <span className="hub-blatt-haken">✓</span>}
-            </button>
-          ))}
+                <strong>{s.name}</strong>
+                <span className="muted">{s.hinweis}</span>
+                {s.id === szene && mein && <span className="hub-blatt-haken">✓</span>}
+                {!mein && w && (
+                  <span className="hub-szene-preis">
+                    <img src="/hub/muenze.png" alt="" aria-hidden="true" />
+                    {w.preis}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </Tafel>
 

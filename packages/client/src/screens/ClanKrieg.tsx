@@ -322,13 +322,14 @@ function Gegnerwahl({
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
         <h2>Clan herausfordern</h2>
-        <input
-          className="clan-suchfeld"
-          value={suche}
-          onChange={(e) => setSuche(e.target.value)}
-          placeholder="Clan suchen…"
-          aria-label="Clan suchen"
-        />
+        <div className="lobby-suche">
+          <input
+            value={suche}
+            onChange={(e) => setSuche(e.target.value)}
+            placeholder="Clan suchen…"
+            aria-label="Clan suchen"
+          />
+        </div>
         <div className="clan-krieg-gegnerliste">
           {clans === null && <p className="muted">Wird geladen…</p>}
           {clans?.length === 0 && <p className="muted">Kein anderer Clan gefunden.</p>}

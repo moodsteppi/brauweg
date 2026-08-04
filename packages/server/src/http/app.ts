@@ -18,7 +18,8 @@ import type { GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
-import { AppError, RuleSetInvalidError, badRequest, conflict, notFound, unauthorized } from '../errors.js';
+import { AppError, RuleSetInvalidError, badRequest, conflict, forbidden, notFound, unauthorized } from '../errors.js';
+import { darfBenutzen } from '../tischware.js';
 import {
   type AuthDeps,
   anonymizeAccount,
@@ -836,6 +837,33 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .parse(request.body);
       if (body.cardDeck === undefined && body.tableScene === undefined) {
         throw badRequest('invalidInput');
+      }
+
+      /*
+       * Besitz pruefen — hier und nicht im Client.
+       *
+       * Die Kennung hat die Liste in scenes.ts/decks.ts schon passiert, das
+       * sagt aber nur, dass es sie gibt. Ohne diese zweite Frage waere ein
+       * Aufruf mit fremder Kennung der Weg, eine gekaufte Szenerie zu
+       * benutzen, ohne sie zu haben.
+       */
+      const [konto] = await deps.db
+        .select({ premiumUntil: s.account.premiumUntil, isStaff: s.account.isStaff })
+        .from(s.account)
+        .where(eq(s.account.id, accountId));
+      const alles = konto ? entitlementsFor(konto).ownsEverything : false;
+
+      if (
+        body.tableScene &&
+        !(await darfBenutzen(deps.db, accountId, 'szene', body.tableScene, alles))
+      ) {
+        throw forbidden('itemNotOwned');
+      }
+      if (
+        body.cardDeck &&
+        !(await darfBenutzen(deps.db, accountId, 'blatt', body.cardDeck, alles))
+      ) {
+        throw forbidden('itemNotOwned');
       }
 
       // Einfuegen oder aendern in einem Zug: Es gibt keine Zeile, solange
