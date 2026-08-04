@@ -658,6 +658,13 @@ td {
   gap: 0.6rem;
   padding: 0.15rem 0.3rem;
 }
+/* Enger Wrapper um den eigenen Avatar, damit der eigene Zuruf (absolut,
+   ueber der Mitte) genau ueber ihm sitzt und nicht ueber der ganzen Zeile. */
+.doko-me-avatar {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
 .doko-me-info { display: flex; flex-direction: column; line-height: 1.15; flex: 1; }
 .doko-me-info strong { font-size: 0.92rem; }
 .doko-me-info .muted { font-size: 0.76rem; }
