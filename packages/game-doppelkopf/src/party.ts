@@ -62,6 +62,14 @@ export interface PartyState {
   readonly history: readonly RoundSummary[];
   readonly soloPlayed: readonly number[];
   readonly leftSeats: readonly number[];
+  /**
+   * Rundenpause: Nach der letzten Karte bleibt die fertige Runde als
+   * `current` liegen (Phase 'finished'), damit alle die Abrechnung sehen.
+   * Hier stehen die Sitze, die schon "Weiter" getippt haben. Erst wenn alle
+   * anwesenden Menschen durch sind - oder die Plattform die Pause beendet -
+   * wird die naechste Runde gegeben.
+   */
+  readonly weiter: readonly number[];
 
   readonly finished: boolean;
   readonly trophies: readonly TrophyResult[] | null;
@@ -103,6 +111,7 @@ export function createParty(
     history: [],
     soloPlayed: [],
     leftSeats: [],
+    weiter: [],
     finished: false,
     trophies: null,
     bock: new BockState(rs),
@@ -179,14 +188,55 @@ export function startRound(party: PartyState): PartyState {
   return { ...party, current };
 }
 
-export function act(party: PartyState, action: RoundAction): PartyState {
+/** Aktionen der Partie: alles aus der Runde plus das "Weiter" der Pause. */
+export type PartyAction = RoundAction | { type: 'weiter'; seat: number };
+
+export function act(party: PartyState, action: PartyAction): PartyState {
+  if (action.type === 'weiter') return weiter(party, action.seat);
   if (!party.current) throw new Error('Es laeuft keine Runde');
+  if (inRundenpause(party)) {
+    throw new Error('Rundenpause: Es geht erst mit Weiter voran');
+  }
   const next = applyRound(party.current, action);
   const updated = { ...party, current: next };
 
   if (next.phase === 'redeal') return finalizeRedeal(updated);
   if (next.phase === 'finished') return finalizeRound(updated);
   return updated;
+}
+
+/** Laeuft gerade die Rundenpause mit Abrechnung und Zwischenstand? */
+export function inRundenpause(party: PartyState): boolean {
+  return party.current?.phase === 'finished';
+}
+
+/** Sitze, deren "Weiter" zaehlt: Menschen, die noch am Tisch sind. */
+export function pauseSeats(party: PartyState): number[] {
+  return party.seats.filter(
+    (s) => !party.botSeats.includes(s) && !party.leftSeats.includes(s),
+  );
+}
+
+/** Ein Sitz tippt "Weiter". Sind alle durch, endet die Pause. */
+export function weiter(party: PartyState, seat: number): PartyState {
+  // Zu spaet getippt - die Pause ist im selben Moment abgelaufen - ist kein
+  // Verstoss: Der Tisch ist schon da, wo der Tipper hinwollte. Und doppeltes
+  // Tippen (Reconnect, Ungeduld) ebensowenig.
+  if (!inRundenpause(party)) return party;
+  if (party.weiter.includes(seat)) return party;
+  const next: PartyState = { ...party, weiter: [...party.weiter, seat] };
+  const offen = pauseSeats(next).filter((s) => !next.weiter.includes(s));
+  return offen.length === 0 ? endeRundenpause(next) : next;
+}
+
+/**
+ * Beendet die Rundenpause: Die fertige Runde wird abgeraeumt, danach ist
+ * die Partie entweder zu Ende oder bereit fuer das naechste Geben.
+ */
+export function endeRundenpause(party: PartyState): PartyState {
+  if (!inRundenpause(party)) throw new Error('Es laeuft keine Rundenpause');
+  const cleared: PartyState = { ...party, current: null, weiter: [] };
+  return party.roundIndex >= party.rs.rounds ? finishParty(cleared) : cleared;
 }
 
 /** Neugabe: gleiche Runde, gleicher Geber, neuer Seed. */
@@ -258,24 +308,25 @@ function finalizeRound(party: PartyState): PartyState {
     triggeredBock,
   };
 
-  const roundIndex = party.roundIndex + 1;
-  const done = roundIndex >= party.rs.rounds;
-
+  // Die fertige Runde bleibt als `current` liegen (Rundenpause): Der Tisch
+  // haelt fuer Abrechnung und Zwischenstand an, bis alle anwesenden Menschen
+  // "Weiter" getippt haben oder die Plattform die Pause beendet. Erst
+  // endeRundenpause raeumt ab und stellt gegebenenfalls das Partie-Ende fest.
   const next: PartyState = {
     ...party,
-    current: null,
     scores,
     soloPlayed,
     history: [...party.history, summary],
-    roundIndex,
+    roundIndex: party.roundIndex + 1,
     attempt: 0,
     dealerIndex: party.dealerIndex + 1,
     bock,
-    finished: done,
+    weiter: [],
     trophies: null,
   };
 
-  return done ? finishParty(next) : next;
+  // Ohne Menschen gibt es niemanden, der die Abrechnung liest.
+  return pauseSeats(next).length === 0 ? endeRundenpause(next) : next;
 }
 
 /** Meldet einen Aussteiger. Er wird am Ende als Letzter gewertet. */

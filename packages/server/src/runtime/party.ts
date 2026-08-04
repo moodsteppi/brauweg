@@ -74,6 +74,12 @@ export interface LiveParty {
   segmentsWritten: number;
   graceRoundsLeft: number | null;
   turnDeadline: number | null;
+  /**
+   * Ende der laufenden Schaupause (interludeMs des Moduls), z.B. der
+   * Rundenabrechnung. Bleibt ueber Zwischen-Aktionen wie "Weiter" stehen,
+   * sonst schoebe jeder Tipp die Frist wieder auf.
+   */
+  interludeDeadline: number | null;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   /** Gesetzt, solange der Clantisch pausiert ist. */
@@ -92,7 +98,9 @@ export type RuntimeListener = (tableId: string) => void;
 
 const DEFAULTS = {
   turnTimeoutMs: 60_000,
-  botDelayMs: 250,
+  // 0,8 s zwischen den Botzuegen: schnell genug, dass der Tisch fliesst,
+  // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt.
+  botDelayMs: 800,
   timeoutsUntilLeave: 3,
   graceRounds: 1,
   allOfflineMs: 5 * 60_000,
@@ -250,6 +258,7 @@ export class PartyRuntime {
       segmentsWritten: 0,
       graceRoundsLeft: null,
       turnDeadline: null,
+      interludeDeadline: null,
       timer: null,
       offlineTimer: null,
       paused: false,
@@ -322,6 +331,7 @@ export class PartyRuntime {
       segmentsWritten: (module.completedSegments?.(state) ?? []).length,
       graceRoundsLeft: null,
       turnDeadline: null,
+      interludeDeadline: null,
       timer: null,
       offlineTimer: null,
       paused: table.pausedAt !== null,
@@ -424,8 +434,15 @@ export class PartyRuntime {
       party.botControlled.delete(seat);
     }
 
-    party.state = party.module.act(party.state, seat, action);
+    const next = party.module.act(party.state, seat, action);
     party.consecutiveTimeouts.set(seat, 0);
+
+    // Eine Aktion ohne Wirkung - etwa ein doppeltes oder knapp zu spaetes
+    // "Weiter" - wird nicht verbucht: kein Snapshot, kein Rundruf. Sonst
+    // bekaeme jeder Client denselben Stand unter neuer Revision noch einmal
+    // und hielte ihn fuer eine Aenderung.
+    if (next === party.state) return;
+    party.state = next;
 
     await this.afterAction(party);
   }
@@ -465,6 +482,7 @@ export class PartyRuntime {
       if (party.timer) clearTimeout(party.timer);
       party.timer = null;
       party.turnDeadline = null;
+      party.interludeDeadline = null;
       return;
     }
     if (party.timer) clearTimeout(party.timer);
@@ -472,7 +490,11 @@ export class PartyRuntime {
     party.turnDeadline = null;
 
     const actor = party.module.currentActor(party.state);
-    if (actor === null) return;
+    if (actor === null) {
+      this.scheduleInterlude(party);
+      return;
+    }
+    party.interludeDeadline = null;
 
     const seat = party.seats.find((candidate) => candidate.index === actor);
 
@@ -494,6 +516,60 @@ export class PartyRuntime {
     party.timer = setTimeout(() => {
       void this.onTimeout(party, actor);
     }, this.opts.turnTimeoutMs);
+  }
+
+  /**
+   * Schaupause des Moduls (z.B. Rundenabrechnung): Niemand ist am Zug, aber
+   * nach Ablauf der Frist geht es von selbst weiter. Die Frist steht ab dem
+   * Beginn der Pause fest — Aktionen wie "Weiter" planen zwar neu, schieben
+   * sie aber nicht auf.
+   */
+  private scheduleInterlude(party: LiveParty): void {
+    const ms = party.module.interludeMs?.(party.state) ?? null;
+    if (ms === null) {
+      party.interludeDeadline = null;
+      return;
+    }
+    if (party.interludeDeadline === null) {
+      party.interludeDeadline = Date.now() + ms;
+    }
+
+    // Auch in der Pause koennen Sitze eine Aktion offen haben (etwa das
+    // "Weiter" der Rundenabrechnung). Botsitze erledigen ihre wie einen
+    // normalen Zug; Menschen entscheiden selbst, und nach Ablauf der Frist
+    // geht es ohnehin weiter.
+    const botSeat = party.seats.find(
+      (seat) =>
+        (!seat.accountId || party.leftSeats.has(seat.index)) &&
+        party.module.legalActions(party.state, seat.index).length > 0,
+    );
+    if (botSeat) {
+      party.timer = setTimeout(() => {
+        void this.playBot(party, botSeat.index);
+      }, this.opts.botDelayMs);
+      return;
+    }
+
+    const wait = Math.max(0, party.interludeDeadline - Date.now());
+    party.timer = setTimeout(() => {
+      void this.advanceInterlude(party);
+    }, wait);
+  }
+
+  private async advanceInterlude(party: LiveParty): Promise<void> {
+    if (party.finished || party.paused || !this.live.has(party.tableId)) return;
+    const advance = party.module.advanceInterlude;
+    // Zwischen Timerstellung und -ablauf kann die Pause schon zu Ende sein
+    // (alle haben "Weiter" getippt); dann gibt es nichts mehr zu tun.
+    if (!advance || party.module.interludeMs?.(party.state) === null) return;
+    party.interludeDeadline = null;
+    try {
+      party.state = advance.call(party.module, party.state);
+      await this.afterAction(party);
+    } catch (err) {
+      // Wie beim Bot: Ein Fehler hier darf den Tisch nicht einfrieren.
+      console.error(`Schaupause an Tisch ${party.tableId}:`, err);
+    }
   }
 
   private async playBot(party: LiveParty, seat: number): Promise<void> {

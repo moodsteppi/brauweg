@@ -745,7 +745,12 @@ function finish(state: RoundState): RoundState {
     multiplier: state.multiplier,
   });
 
-  return { ...state, phase: 'finished', result };
+  // Eine auf dem letzten Stich sitzengebliebene Pflichtansage ist
+  // gegenstandslos: Ansagen sind nach der letzten Karte ohnehin unmoeglich,
+  // und die Wertung steht fest. Bliebe sie stehen, hielte sie die
+  // Rundenpause auf - currentActor zeigte auf einen Sitz, der nichts mehr
+  // tun kann.
+  return { ...state, phase: 'finished', pendingPflichtansage: null, result };
 }
 
 // --- Sichtbarkeitsfilter ----------------------------------------------------

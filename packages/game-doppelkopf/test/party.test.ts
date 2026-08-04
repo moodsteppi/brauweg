@@ -10,7 +10,9 @@ import {
   act,
   createParty,
   forcedSoloSeat,
+  inRundenpause,
   markLeft,
+  pauseSeats,
   seating,
   startRound,
   upcomingMultiplier,
@@ -86,11 +88,22 @@ function finishRound(party: PartyState, rng: () => number): PartyState {
   return party;
 }
 
+/** Beendet die Rundenpause, wie es Spieler taeten: jeder tippt "Weiter". */
+function alleWeiter(party: PartyState): PartyState {
+  let guard = 0;
+  while (inRundenpause(party) && guard++ < 10) {
+    const offen = pauseSeats(party).filter((s) => !party.weiter.includes(s));
+    party = act(party, { type: 'weiter', seat: offen[0]! });
+  }
+  return party;
+}
+
 function playParty(party: PartyState, rng: () => number): PartyState {
   let guard = 0;
   while (!party.finished && guard++ < 200) {
     party = startRound(party);
     party = finishRound(party, rng);
+    party = alleWeiter(party);
   }
   return party;
 }

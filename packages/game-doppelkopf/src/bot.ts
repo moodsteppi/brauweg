@@ -45,6 +45,7 @@
 import { type Card, cardKey, cardValue } from './cards.js';
 import { type CardOrder, servingSuit, strength } from './order.js';
 import type { PlayerView, RoundAction } from './round.js';
+import type { PartyAction } from './party.js';
 import type { Party } from './scoring.js';
 
 /** Ist die Karte in dieser Spielart Trumpf? */
@@ -303,8 +304,14 @@ export function chooseCard(view: PlayerView): Card {
  *
  * Gibt null zurueck, wenn der Bot gerade nicht am Zug ist.
  */
-export function botAction(view: PlayerView): RoundAction | null {
+export function botAction(view: PlayerView): PartyAction | null {
   const seat = view.seat;
+
+  // Rundenpause: Ein Bot gruebelt nicht ueber der Abrechnung, er tippt
+  // "Weiter". Ob sein Tipp zaehlt, entscheidet die Partie-Maschine.
+  if (view.phase === 'finished') {
+    return { type: 'weiter', seat };
+  }
 
   // Pflichtansage: verpflichtend bestaetigen, freiwillig ablehnen. Der Bot
   // erhoeht nie freiwillig den Einsatz.

@@ -1460,6 +1460,11 @@ td {
   .doko-trick-in { animation: none; }
 }
 
+/* Die eigene Karte ist schon per Gleitflug angekommen: Sie faellt nicht noch
+   einmal ein, sie liegt einfach da. (is-sweep weiter unten gewinnt trotzdem,
+   damit sie beim Abraeumen mitgleitet.) */
+.doko-trick-in.is-direkt { animation: none; }
+
 /* Stich gleitet nach dem Liegen zum Gewinner auf den Stapel. Die Offsets
    zeigen zum Sitz (wie doko-deal-gather); die Karten schrumpfen und verblassen. */
 .doko-trick-in.is-sweep {
