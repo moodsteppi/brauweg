@@ -167,9 +167,37 @@ Vorhandenes wiederverwenden statt neu erfinden:
   100–300 kB. Freigestellte Kleinteile dürfen PNG bleiben; die App-Symbole
   direkt unter `public/` **müssen** PNG bleiben, das verlangt das
   Web-Manifest.
-- **Was niemand anzeigt, gehört nicht nach `public/`.** Vorlagen und
-  Rohfassungen liegen unter `packages/client/art/` — alles unter `public/`
-  wird ausgeliefert, auch wenn es nirgends eingebunden ist.
+- **Was niemand anzeigt, gehört nicht nach `public/`.** Alles dort wird
+  ausgeliefert, auch was nirgends eingebunden ist.
+
+### Wo die Originale liegen — verbindlich
+
+**Originale gehören ins Archivrepo [`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art),
+nicht in dieses Repository.** `packages/client/art/` ist deshalb in
+`.gitignore` eingetragen.
+
+Der Grund ist der Deploy, nicht der Platz: Railway lädt bei **jedem** Bauen
+das ganze Repository. Die Originale waren zusammen über 800 MB und wurden
+jedes Mal mitgeschleppt, obwohl weder der Build noch ein Nutzer sie je
+anfasst.
+
+Der Weg für neue Bilder, in dieser Reihenfolge:
+
+1. **Original ins Archivrepo**, in voller Auflösung, so wie geliefert.
+   Nichts vorher herunterrechnen — was einmal weich ist, wird nicht wieder
+   scharf.
+2. **Nach WebP wandeln** und die Fassung unter `packages/client/public/`
+   ablegen. Anleitung samt Richtwerten steht in der README des Archivrepos;
+   auf diesem Mac ist **kein WebP-Werkzeug installiert**, es läuft über
+   `sharp` in einem Verzeichnis außerhalb beider Repositories.
+3. **Das Original nicht unter `public/` liegen lassen.**
+
+> **Das ist zweimal schiefgegangen.** Erst lagen die Szenerien in voller
+> Auflösung unter `public/` (13,9 statt 1,2 MB), dann die Spielkarten:
+> 1,7 MB **je Karte**, 408 MB zusammen. Jedes Handy hätte das beim
+> Blattwechsel gezogen. Wer eine Lieferung einbaut, prüft als Erstes die
+> Dateigröße — eine Spielkarte liegt bei 80 kB, nicht bei anderthalb
+> Megabyte.
 
 ## Bewegung
 

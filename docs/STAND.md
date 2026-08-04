@@ -41,10 +41,21 @@ Cursors Rundenabschluss und die Doppelkopf-Nachbesserungen gemeinsam auf dem
 Produktivsystem zu sehen sind. **Das war eine Ausnahme** — die Regel unten gilt
 weiter: `main` wird aus einer Sitzung heraus nicht angefasst.
 
-**Bilder:** `packages/client/public/hub/` liegt bei 10 MB, `karten/` bei
-16 MB. Gemaltes wird als **WebP** ausgeliefert; Originale in voller
-Auflösung gehören nach `packages/client/art/`, niemals unter `public/`
-(siehe `docs/DESIGN.md`).
+**Bilder:** `packages/client/public/` liegt bei 39 MB — `karten/` 24 MB,
+`hub/` 10 MB. Gemaltes wird als **WebP** ausgeliefert.
+
+**Die Originale liegen seit dem 4. August in einem eigenen Repository:
+[`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art).**
+`packages/client/art/` steht in `.gitignore` und gehört hier nicht mehr
+hinein. Grund war der Deploy: Railway lädt bei jedem Bauen das ganze
+Repository, und die Originale waren über 800 MB, die weder der Build noch
+ein Nutzer je anfasst. Der Weg für neue Bilder steht in `docs/DESIGN.md`
+unter „Wo die Originale liegen"; die Umwandlungsanleitung samt Richtwerten
+in der README des Archivrepos.
+
+> **Achtung beim Einbauen einer Lieferung:** Zuerst die Dateigröße ansehen.
+> Eine Spielkarte liegt bei ~80 kB. Kommt sie mit 1,7 MB, ist es das
+> Original und gehört gewandelt — genau das ist zweimal live gegangen.
 
 **Kein WebP-Werkzeug auf diesem Mac.** Weder `cwebp` noch `magick` noch
 `sharp` ist installiert, und `sips` kann WebP zwar lesen, aber nicht
