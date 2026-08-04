@@ -11,17 +11,20 @@ import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
 import {
+  KAUFTRUHEN,
   SPANNE,
   STUFENTRUHEN,
   heute,
   stufenTruheId,
   tagesTruheId,
+  truheKaufen,
   truheOeffnen,
   truhenFuer,
   wuerfeln,
+  wuerfelnIn,
 } from '../src/truhen.js';
 import { punkteFuerStufe } from '../src/level.js';
-import { standVon } from '../src/waehrung.js';
+import { gutschreiben, standVon } from '../src/waehrung.js';
 import { AppError } from '../src/errors.js';
 import {
   createTestContext,
@@ -196,6 +199,137 @@ test('Die Stufentruhen steigen im Grad und wiederholen keine Stufe', () => {
     const jetzt = rang.indexOf(truhe.grad);
     assert.ok(jetzt >= letzter, `Grad faellt bei Stufe ${truhe.stufe}`);
     letzter = jetzt;
+  }
+});
+
+// --- Kauftruhen -------------------------------------------------------------
+
+test('Der Wurf einer Kauftruhe bleibt in ihrer eigenen Spanne', () => {
+  for (const truhe of KAUFTRUHEN) {
+    assert.equal(wuerfelnIn(truhe, () => 0), truhe.von);
+    assert.equal(wuerfelnIn(truhe, () => 0.999_999), truhe.bis);
+    // Die Kauftruhen tragen dieselben Grade wie die Stufentruhen, schuetten aber
+    // ein Vielfaches aus. Genau deshalb haengt ihre Spanne an ihnen selbst und
+    // nicht an SPANNE[grad] - dieser Test ist der Riegel dagegen, dass das
+    // wieder zusammengelegt wird.
+    assert.ok(
+      truhe.von > SPANNE[truhe.grad].bis,
+      `${truhe.id}: schuettet nicht mehr aus als die Stufentruhe desselben Grades`,
+    );
+  }
+});
+
+test('Eine Kauftruhe kostet Edelsteine, schuettet Muenzen aus und laesst sich wiederholen', async () => {
+  const { ctx, accountId } = await konto();
+  try {
+    await gutschreiben(ctx.db, accountId, 'gems', 60);
+    const truhe = KAUFTRUHEN.find((t) => t.id === 'truhe-silber')!;
+
+    const erster = await truheKaufen(ctx.db, accountId, truhe.id);
+    assert.equal(erster.truheId, 'truhe-silber');
+    assert.equal(erster.grad, 'silber');
+    assert.equal(erster.bezahlt, truhe.gems);
+    assert.ok(erster.coins >= truhe.von && erster.coins <= truhe.bis);
+    assert.equal(erster.stand.gems, 60 - truhe.gems);
+    assert.equal(erster.stand.coins, erster.coins);
+
+    // Zweimal kaufen muss gehen — eine Kauftruhe ist kein Fund, der sich
+    // erschoepft. Und die Kennungen muessen sich unterscheiden, sonst sperrt
+    // der Primaerschluessel den zweiten Kauf.
+    const zweiter = await truheKaufen(ctx.db, accountId, truhe.id);
+    assert.notEqual(zweiter.chestId, erster.chestId);
+    assert.equal(zweiter.stand.coins, erster.coins + zweiter.coins);
+    assert.equal(zweiter.stand.gems, 60 - 2 * truhe.gems);
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('Ohne Edelsteine keine Truhe — und kein Wurf', async () => {
+  const { ctx, accountId } = await konto();
+  try {
+    await gutschreiben(ctx.db, accountId, 'gems', 24);
+
+    await assert.rejects(
+      () => truheKaufen(ctx.db, accountId, 'truhe-silber'),
+      (err: unknown) => err instanceof AppError && err.code === 'gemsInsufficient',
+    );
+
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 24 });
+    const zeilen = await ctx.db
+      .select({ chestId: schema.chestClaim.chestId })
+      .from(schema.chestClaim)
+      .where(eq(schema.chestClaim.accountId, accountId));
+    assert.equal(zeilen.length, 0, 'ein gescheiterter Kauf darf keine Truhe eintragen');
+  } finally {
+    await ctx.close();
+  }
+});
+
+/**
+ * Der Riegel, ohne den derselbe Fund zweimal zaehlen wuerde.
+ *
+ * Die Kaufantwort nennt die Kennung. Ohne diese Sperre waere sie an
+ * `/chests/:id/open` weitergegeben der Weg, den Wurf ein zweites Mal
+ * gutzuschreiben.
+ */
+test('Eine gekaufte Truhe laesst sich nicht noch einmal oeffnen', async () => {
+  const { ctx, accountId } = await konto(punkteFuerStufe(50));
+  try {
+    await gutschreiben(ctx.db, accountId, 'gems', 25);
+    const kauf = await truheKaufen(ctx.db, accountId, 'truhe-silber');
+    const nachKauf = await standVon(ctx.db, accountId);
+
+    await assert.rejects(
+      () => truheOeffnen(ctx.db, accountId, kauf.chestId),
+      (err: unknown) => err instanceof AppError && err.code === 'chestUnknown',
+    );
+    // Auch eine frei erfundene Kaufkennung darf nichts ausschuetten.
+    await assert.rejects(
+      () => truheOeffnen(ctx.db, accountId, 'kauf-egal'),
+      (err: unknown) => err instanceof AppError && err.code === 'chestUnknown',
+    );
+
+    assert.deepEqual(await standVon(ctx.db, accountId), nachKauf);
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('Eine Kauftruhe steht nicht in der Truhenansicht und nicht im Bereitschaftspunkt', async () => {
+  const { ctx, accountId } = await konto();
+  try {
+    await gutschreiben(ctx.db, accountId, 'gems', 25);
+    await truheKaufen(ctx.db, accountId, 'truhe-silber');
+
+    // Gekauft ist geoeffnet: Sie wartet auf nichts, also taucht sie auch
+    // nirgends als offene Truhe auf.
+    const ansicht = await truhenFuer(ctx.db, accountId);
+    assert.equal(ansicht.tag.geholt, false, 'die Tagestruhe bleibt unberuehrt');
+    assert.equal(
+      ansicht.stufen.some((t) => t.geholt),
+      false,
+      'keine Stufentruhe darf durch einen Kauf als geholt gelten',
+    );
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('Eine erfundene Kauftruhe gibt es nicht', async () => {
+  const { ctx, accountId } = await konto();
+  try {
+    await gutschreiben(ctx.db, accountId, 'gems', 10_000);
+    for (const id of ['truhe-holz', 'truhe-platin', 'stufe-5']) {
+      await assert.rejects(
+        () => truheKaufen(ctx.db, accountId, id),
+        (err: unknown) => err instanceof AppError && err.code === 'chestUnknown',
+        `${id} haette abgelehnt werden muessen`,
+      );
+    }
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 10_000 });
+  } finally {
+    await ctx.close();
   }
 });
 

@@ -220,14 +220,19 @@ export interface Aufgaben {
 
 export type Seltenheit = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer';
 
+/** Was ein Stück kostet — in beiden Währungen, bezahlt wird mit einer. */
+export interface Preis {
+  coins: number;
+  gems: number;
+}
+
 export interface RegalStueck {
   id: string;
   slot: Slot;
   nameKey: string;
   seltenheit: Seltenheit;
-  /** 0 heißt: gehört allen. */
-  preis: number;
-  waehrung: Waehrung;
+  /** 0 in beiden heißt: gehört allen. */
+  preis: Preis;
   besessen: boolean;
   /** Nur zu bekommen, nicht zu kaufen (Geburtstagsoutfit). */
   geschenk: boolean;
@@ -237,10 +242,24 @@ export interface Paket {
   id: string;
   nameKey: string;
   gibt: { waehrung: Waehrung; betrag: number } | null;
-  /** Anzeigepreis in ganzen Cent. Platzhalter — es gibt keinen Kaufweg. */
-  cents: number;
+  /** Anzeigepreis in ganzen Cent, oder null: kostet kein Geld. */
+  cents: number | null;
+  /** Preis in Edelsteinen, oder null: dafür nicht zu haben. */
+  gems: number | null;
   /** Aufschlag gegenüber dem kleinsten Paket, in Prozent. */
   bonus: number | null;
+  /** Läuft der Kauf wirklich, oder ist es ein Schaufenster? */
+  kaufbar: boolean;
+}
+
+/** Eine Truhe aus dem Shop. Die Spanne steht dran, gewürfelt wird beim Kauf. */
+export interface Kauftruhe {
+  id: string;
+  grad: Grad;
+  nameKey: string;
+  gems: number;
+  von: number;
+  bis: number;
 }
 
 /**
@@ -257,8 +276,8 @@ export interface RegalWare {
   wert: string;
   nameKey: string;
   seltenheit: string;
-  preis: number;
-  waehrung: Waehrung;
+  /** Beide Preise — der Käufer wählt, wie bei der Kosmetik. */
+  preis: Preis;
   besessen: boolean;
 }
 
@@ -267,7 +286,28 @@ export interface Shop {
   muenzpakete: Paket[];
   edelsteinpakete: Paket[];
   tischware: RegalWare[];
+  truhen: Kauftruhe[];
+  /** Münzen je Edelstein. Kommt vom Server, damit niemand falsch rechnet. */
+  kurs: number;
   regale: { slot: Slot; stuecke: RegalStueck[] }[];
+}
+
+/** Was ein Paketkauf gebracht hat. */
+export interface Paketkauf {
+  paketId: string;
+  bezahlt: number;
+  gibt: { waehrung: Waehrung; betrag: number };
+  stand: { coins: number; gems: number };
+}
+
+/** Was in einer gekauften Truhe war. */
+export interface Kauffund {
+  chestId: string;
+  truheId: string;
+  grad: Grad;
+  coins: number;
+  bezahlt: number;
+  stand: { coins: number; gems: number };
 }
 
 export interface TableRow {
@@ -507,13 +547,23 @@ export const api = {
 
   shop: () => request<Shop>('/shop'),
   /**
-   * Kosmetik kaufen — gegen Münzen oder Edelsteine. Der Preis kommt vom
-   * Server; hier geht bewusst kein Betrag mit.
+   * Kosmetik kaufen — gegen Münzen oder Edelsteine.
+   *
+   * Mit geht nur, **welche** Währung es sein soll. Der Betrag kommt vom Server;
+   * ihn mitzuschicken wäre die Einladung, ihn zu ändern.
    */
-  buyItem: (itemId: string) =>
+  buyItem: (itemId: string, waehrung: Waehrung) =>
     post<{ itemId: string; bezahlt: number; waehrung: Waehrung; stand: number }>(
       `/shop/${itemId}/buy`,
+      { waehrung },
     ),
+  /** Ein Paket gegen Edelsteine kaufen — heute die drei Münzpakete. */
+  buyPack: (paketId: string) => post<Paketkauf>(`/shop/pakete/${paketId}/buy`),
+  /**
+   * Eine Truhe gegen Edelsteine kaufen. Gekauft ist geöffnet: Was drin war,
+   * steht in der Antwort, es gibt kein zweites Antippen.
+   */
+  buyChest: (truheId: string) => post<Kauffund>(`/shop/truhen/${truheId}/buy`),
   /** Ein Stück anziehen, oder mit `null` den Platz leer machen. */
   wear: (slot: Slot, itemId: string | null) =>
     patch<{ ok: true; avatar: Getragen }>('/me/avatar', { slot, itemId }),

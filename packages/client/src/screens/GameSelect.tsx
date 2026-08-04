@@ -6,11 +6,14 @@ import {
   api,
   type FriendLists,
   type GameSummary,
+  type Kauffund,
+  type Kauftruhe,
   type Me,
   type Paket,
   type PlayerRef,
   type RankingEntry,
   type RegalWare,
+  type Waehrung,
   type Shop as ShopDaten,
 } from '../api';
 import { inApp } from '../laufzeit';
@@ -37,7 +40,7 @@ import {
 } from '../hub';
 import { Pinguin } from '../pinguin';
 import { Clan } from './Clan';
-import { Aufgabenblatt } from './Aufgaben';
+import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
@@ -835,21 +838,36 @@ function euro(cents: number): string {
 }
 
 /**
- * Ein Paket gegen echtes Geld.
+ * Ein Paket im Regal.
  *
- * Preis und Inhalt stehen dran, gekauft wird nichts: Es gibt keinen
- * Bezahlweg, und deshalb auch keinen Endpunkt dafuer. Das Antippen sagt das
- * ehrlich, statt in einen toten Knopf zu laufen (DESIGN.md).
+ * Zwei Sorten in einer Kachel, weil sie sich nur im Preisschild und im Tipp
+ * unterscheiden:
+ *
+ *  - **Gegen Edelsteine und wirklich kaufbar** (die Muenzpakete): Der Tipp
+ *    fuehrt in die Rueckfrage, nicht in die Abbuchung.
+ *  - **Bald** (Edelsteinpakete und VIP gegen Geld, Season Pass gegen
+ *    Edelsteine): Preis und Inhalt stehen dran, gekauft wird nichts. Das
+ *    Antippen sagt das ehrlich, statt in einen toten Knopf zu laufen
+ *    (DESIGN.md).
  */
 function PaketKachel({
   paket,
+  laeuft,
   onBald,
+  onKaufen,
 }: {
   paket: Paket;
+  /** Ein Kauf laeuft — dann nimmt keine Kachel einen zweiten Tipp an. */
+  laeuft: boolean;
   onBald: (name: string) => void;
+  onKaufen: (paket: Paket) => void;
 }): React.JSX.Element {
   return (
-    <button className="hub-angebot shop-paket" onClick={() => onBald(t(paket.nameKey))}>
+    <button
+      className="hub-angebot shop-paket"
+      disabled={laeuft}
+      onClick={() => (paket.kaufbar ? onKaufen(paket) : onBald(t(paket.nameKey)))}
+    >
       {paket.gibt ? (
         paket.gibt.waehrung === 'coins' ? (
           <img className="hub-angebot-art" src="/hub/muenze.png" alt="" draggable={false} />
@@ -870,10 +888,187 @@ function PaketKachel({
           {paket.gibt.betrag} {t(`waehrung.${paket.gibt.waehrung}`)}
         </span>
       )}
-      <span className="hub-preis">{euro(paket.cents)}</span>
+      <span className="hub-preis">{preisSchild(paket)}</span>
       {paket.bonus !== null && <span className="shop-bonus">+{paket.bonus} %</span>}
-      <span className="front-bald-tag">Bald</span>
+      {!paket.kaufbar && <span className="front-bald-tag">Bald</span>}
     </button>
+  );
+}
+
+/**
+ * Das Preisschild eines Pakets: Euro oder Edelsteine, nie beides.
+ *
+ * Beides waere ein Wechselkurs an der Kachel, und den fuehrt der Server. Faellt
+ * ein Paket ohne jeden Preis herein, steht ein Strich da statt „0 €" — eine
+ * Null waere ein Versprechen.
+ */
+function preisSchild(paket: Paket): React.JSX.Element | string {
+  if (paket.cents !== null) return euro(paket.cents);
+  if (paket.gems === null) return '—';
+  return (
+    <>
+      {paket.gems}
+      <EdelsteinIcon className="shop-preis-stein" />
+    </>
+  );
+}
+
+/**
+ * Eine Truhe im Regal.
+ *
+ * **Die Spanne steht dran, nicht der Erwartungswert.** Wer 60 Edelsteine
+ * ausgibt, soll vorher wissen, dass 650 herauskommen koennen und 1.150 auch —
+ * eine mittlere Zahl waere die einzige, die nie herauskommt.
+ */
+function TruheKachel({
+  truhe,
+  laeuft,
+  onKaufen,
+}: {
+  truhe: Kauftruhe;
+  laeuft: boolean;
+  onKaufen: (truhe: Kauftruhe) => void;
+}): React.JSX.Element {
+  return (
+    <button className="hub-angebot shop-truhe" disabled={laeuft} onClick={() => onKaufen(truhe)}>
+      {/* Dieselbe gezeichnete Truhe wie im Aufgaben-Vollbild — eine zweite waere
+          eine, die sich ab der ersten Bildlieferung unterscheidet. */}
+      <TruhenBild grad={truhe.grad} offen={false} />
+      <strong>{t(truhe.nameKey)}</strong>
+      {/* Ohne Tausenderpunkt, wie die Truhenzeile im Aufgaben-Vollbild: zwei
+          Schreibweisen fuer dieselbe Zahl waeren zwei Zahlen. */}
+      <span className="shop-paket-inhalt">
+        {truhe.von} bis {truhe.bis} Münzen
+      </span>
+      <span className="hub-preis">
+        {truhe.gems}
+        <EdelsteinIcon className="shop-preis-stein" />
+      </span>
+    </button>
+  );
+}
+
+/** Was gekauft werden soll — Paket oder Truhe, beides gegen Edelsteine. */
+type Kaufwunsch =
+  | { art: 'paket'; paket: Paket }
+  | { art: 'truhe'; truhe: Kauftruhe }
+  /** Szenerie, Rueckseite, Zuruf oder Wappen — mit Wahl der Waehrung. */
+  | { art: 'ware'; ware: RegalWare; name: string; bild: string };
+
+/**
+ * Rueckfrage vor dem Abbuchen.
+ *
+ * Ein Tipp auf die Kachel oeffnet diese Frage, erst ein Tipp hier kauft. Die
+ * Begruendung steht im Kleiderschrank: Ein Fehlgriff darf nichts kosten — und
+ * hier ist die Waehrung die, die am Ende Geld kostet.
+ */
+function KaufFrage({
+  frage,
+  laeuft,
+  onAbbrechen,
+  onPaket,
+  onTruhe,
+  onWare,
+}: {
+  frage: Kaufwunsch;
+  laeuft: boolean;
+  onAbbrechen: () => void;
+  onPaket: (paket: Paket) => void;
+  onTruhe: (truhe: Kauftruhe) => void;
+  onWare: (ware: RegalWare, waehrung: Waehrung) => void;
+}): React.JSX.Element {
+  const gems =
+    frage.art === 'truhe'
+      ? frage.truhe.gems
+      : frage.art === 'ware'
+        ? frage.ware.preis.gems
+        : (frage.paket.gems ?? 0);
+
+  return (
+    <div className="doko-sheet" onClick={onAbbrechen} role="presentation">
+      <div
+        className="doko-sheet-card ks-kauf"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-label="Kauf bestätigen"
+      >
+        {frage.art === 'ware' ? (
+          <>
+            <img className="ks-kauf-ware" src={frage.bild} alt="" draggable={false} />
+            <h2>{frage.name}</h2>
+          </>
+        ) : frage.art === 'truhe' ? (
+          <>
+            <TruhenBild grad={frage.truhe.grad} offen={false} />
+            <h2>{t(frage.truhe.nameKey)}</h2>
+            <p className="muted">
+              {frage.truhe.von} bis {frage.truhe.bis} Münzen, ausgewürfelt beim Öffnen
+            </p>
+          </>
+        ) : (
+          <>
+            <img className="hub-angebot-art" src="/hub/muenze.png" alt="" draggable={false} />
+            <h2>{t(frage.paket.nameKey)}</h2>
+            <p className="muted">
+              {frage.paket.gibt
+                ? `${frage.paket.gibt.betrag} ${t(`waehrung.${frage.paket.gibt.waehrung}`)}`
+                : 'Ohne Guthaben'}
+            </p>
+          </>
+        )}
+        {frage.art === 'ware' ? (
+          <>
+            {/* Zwei Wege, wie im Kleiderschrank: Der Kaeufer waehlt die
+                Waehrung, nicht der Shop. */}
+            <p className="muted ks-kauf-womit">Womit?</p>
+            <div className="hub-knopfreihe hub-knopfreihe--a ks-kauf-waehl">
+              <button
+                type="button"
+                className="hub-knopf hub-knopf--a-gold"
+                disabled={laeuft}
+                onClick={() => onWare(frage.ware, 'coins')}
+              >
+                <img className="ks-kauf-icon" src="/hub/muenze.png" alt="" />
+                {frage.ware.preis.coins}
+              </button>
+              <button
+                type="button"
+                className="hub-knopf hub-knopf--a-gold"
+                disabled={laeuft}
+                onClick={() => onWare(frage.ware, 'gems')}
+              >
+                <EdelsteinIcon className="ks-kauf-icon" />
+                {frage.ware.preis.gems}
+              </button>
+            </div>
+            <button type="button" className="hub-knopf hub-knopf--a" onClick={onAbbrechen}>
+              Später
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="ks-kauf-preis">
+              {gems} {gems === 1 ? t('waehrung.gems.eins') : t('waehrung.gems')}
+            </p>
+            <div className="hub-knopfreihe hub-knopfreihe--a">
+              <button type="button" className="hub-knopf hub-knopf--a" onClick={onAbbrechen}>
+                Später
+              </button>
+              <button
+                type="button"
+                className="hub-knopf hub-knopf--a-gold"
+                disabled={laeuft}
+                onClick={() =>
+                  frage.art === 'truhe' ? onTruhe(frage.truhe) : onPaket(frage.paket)
+                }
+              >
+                {laeuft ? 'Kauft…' : frage.art === 'truhe' ? 'Öffnen' : 'Kaufen'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -882,11 +1077,16 @@ function PaketKachel({
  *
  * Zwei Sorten Regal, streng getrennt und in dieser Reihenfolge:
  *
- *  1. **Was wirklich geht:** Pinguin-Ausstattung gegen Muenzen und Edelsteine.
- *     Sie steht oben, weil sie der einzige Teil ist, den man heute benutzen
- *     kann — ein Shop, dessen erste drei Reihen "Bald" sagen, ist kein Shop.
- *  2. **Was noch nicht geht:** Paesse und Pakete gegen echtes Geld. Mit Preis
- *     und Inhalt, aber ohne Kauf.
+ *  1. **Was mit Erspieltem geht:** Pinguin-Ausstattung — gegen Muenzen oder
+ *     Edelsteine, der Kaeufer waehlt. Steht oben, weil es der einzige Teil ist,
+ *     fuer den man nichts kaufen muss.
+ *  2. **Was Edelsteine kostet und wirklich laeuft:** Muenzpakete und Truhen.
+ *  3. **Was noch nicht geht:** Edelsteinpakete und VIP gegen Geld, Season Pass
+ *     gegen Edelsteine. Mit Preis und Inhalt, aber ohne Kauf.
+ *
+ * Die Reihenfolge ist die Rangfolge: Erst was man hat, dann was man dafuer
+ * bekommt, zuletzt was noch kommt. Ein Shop, dessen erste Reihe „Bald" sagt,
+ * ist kein Shop.
  *
  * Kartenblaetter und Szenerien stehen hier bewusst nur als Wegweiser in den
  * Themen-Tab: Dort gibt es sie schon, mit Vorschau in Tischgroesse. Sie ein
@@ -908,6 +1108,22 @@ function Shop({
 }): React.JSX.Element {
   const [shop, setShop] = useState<ShopDaten | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
+  /**
+   * Was bestaetigt werden soll.
+   *
+   * Ein Tipp darf nichts abbuchen — dieselbe Regel wie im Kleiderschrank, und
+   * hier waere ein Fehlgriff teurer: 250 Edelsteine sind das groesste Angebot
+   * im Regal, und Edelsteine kosten am Ende Geld.
+   */
+  const [frage, setFrage] = useState<Kaufwunsch | null>(null);
+  const [laeuft, setLaeuft] = useState(false);
+  /**
+   * Was in der gekauften Truhe war.
+   *
+   * Das Ergebnis MUSS gezeigt werden: Eine Truhe, die man kauft und deren Wurf
+   * nur im Muenzstand auftaucht, ist eine Zahl, die sich unerklaert aendert.
+   */
+  const [fund, setFund] = useState<Kauffund | null>(null);
 
   useEffect(() => {
     void api
@@ -920,6 +1136,41 @@ function Shop({
     me.coins,
     me.gems,
   ]);
+
+  const meldung = (err: unknown): void => {
+    setFehler(err instanceof ApiError ? t(err.messageKey) : 'Der Kauf ging nicht durch.');
+  };
+
+  const kaufePaket = (paket: Paket): void => {
+    if (laeuft) return;
+    setLaeuft(true);
+    setFehler(null);
+    void api
+      .buyPack(paket.id)
+      .then(() => {
+        setFrage(null);
+        // Neu laden statt von Hand nachziehen: Der Server ist die Wahrheit, und
+        // er weiss auch, was der Kauf sonst noch bewegt hat.
+        onGuthaben();
+      })
+      .catch(meldung)
+      .finally(() => setLaeuft(false));
+  };
+
+  const kaufeTruhe = (truhe: Kauftruhe): void => {
+    if (laeuft) return;
+    setLaeuft(true);
+    setFehler(null);
+    void api
+      .buyChest(truhe.id)
+      .then((ergebnis) => {
+        setFrage(null);
+        setFund(ergebnis);
+        onGuthaben();
+      })
+      .catch(meldung)
+      .finally(() => setLaeuft(false));
+  };
 
   /** Wie viele Stuecke je Platz noch fehlen — die Zahl treibt den Besuch. */
   const fehlend = (slot: string): number =>
@@ -937,21 +1188,35 @@ function Shop({
       .sort((a, b) => Number(a.besessen) - Number(b.besessen));
 
   const [kauft, setKauft] = useState<string | null>(null);
-  const kaufeWare = (w: RegalWare, name: string): void => {
+
+  /**
+   * Kaufen mit gewaehlter Waehrung.
+   *
+   * Ein Tipp auf die Kachel oeffnet nur die Rueckfrage; erst dort wird
+   * abgebucht. Dieselbe Regel wie bei Paketen und Truhen — ein Fehlgriff
+   * darf nichts kosten.
+   */
+  const kaufeWare = (w: RegalWare, waehrung: Waehrung): void => {
     if (kauft) return;
-    if (!window.confirm(`„${name}" für ${w.preis} Münzen kaufen?`)) return;
     setKauft(w.id);
     setFehler(null);
     void api
-      .buyItem(w.id)
-      .then(() => onGuthaben())
-      .catch((e: unknown) =>
+      .buyItem(w.id, waehrung)
+      .then(() => {
+        setFrage(null);
+        onGuthaben();
+      })
+      .catch((e: unknown) => {
+        const code = (e as { code?: string })?.code;
+        setFrage(null);
         setFehler(
-          (e as { code?: string })?.code === 'coinsInsufficient'
+          code === 'coinsInsufficient'
             ? 'Dafür fehlen dir Münzen.'
-            : 'Der Kauf hat nicht geklappt.',
-        ),
-      )
+            : code === 'gemsInsufficient'
+              ? 'Dafür fehlen dir Edelsteine.'
+              : 'Der Kauf hat nicht geklappt.',
+        );
+      })
       .finally(() => setKauft(null));
   };
 
@@ -991,35 +1256,57 @@ function Shop({
         </div>
       </Tafel>
 
-      <Tafel titel="Pässe" zusatz="Kommt bald">
-        <div className="hub-reihe hub-reihe--drei">
-          {(shop?.paesse ?? []).map((paket) => (
-            <PaketKachel key={paket.id} paket={paket} onBald={onBald} />
-          ))}
-        </div>
-      </Tafel>
-
-      <Tafel titel="Münzen" zusatz="Kommt bald">
+      <Tafel titel="Münzen" zusatz={shop ? `${shop.kurs} je Edelstein` : '…'}>
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.muenzpakete ?? []).map((paket) => (
-            <PaketKachel key={paket.id} paket={paket} onBald={onBald} />
+            <PaketKachel
+              key={paket.id}
+              paket={paket}
+              laeuft={laeuft}
+              onBald={onBald}
+              onKaufen={(p) => setFrage({ art: 'paket', paket: p })}
+            />
           ))}
         </div>
         <p className="shop-hinweis muted">
           Münzen gibt es auch fürs Spielen: aus der Tagestruhe, den Stufentruhen und den
-          Tagesaufgaben.
+          Tagesaufgaben. Gekaufte sind derselbe Stand, nur früher da.
+        </p>
+      </Tafel>
+
+      <Tafel titel="Truhen" zusatz="Gegen Edelsteine">
+        <div className="hub-reihe hub-reihe--drei">
+          {(shop?.truhen ?? []).map((truhe) => (
+            <TruheKachel
+              key={truhe.id}
+              truhe={truhe}
+              laeuft={laeuft}
+              onKaufen={(t2) => setFrage({ art: 'truhe', truhe: t2 })}
+            />
+          ))}
+        </div>
+        <p className="shop-hinweis muted">
+          Die Spanne steht dran und wird beim Kauf ausgewürfelt. Ihre Mitte ist genau der Kurs —
+          das Würfeln kostet im Schnitt nichts, es verteilt nur. Wer die feste Zahl will, nimmt
+          ein Paket.
         </p>
       </Tafel>
 
       <Tafel titel="Edelsteine" zusatz="Kommt bald">
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.edelsteinpakete ?? []).map((paket) => (
-            <PaketKachel key={paket.id} paket={paket} onBald={onBald} />
+            <PaketKachel
+              key={paket.id}
+              paket={paket}
+              laeuft={laeuft}
+              onBald={onBald}
+              onKaufen={(p) => setFrage({ art: 'paket', paket: p })}
+            />
           ))}
         </div>
         <p className="shop-hinweis muted">
-          Edelsteine fallen nicht aus Truhen. Was es dafür gibt, gibt es nicht für Münzen — und
-          umgekehrt.
+          Edelsteine fallen nicht aus Truhen und nicht aus Aufgaben — sie sind das Einzige, was
+          echtes Geld kostet. Dafür ist mit ihnen alles andere hier zu haben.
         </p>
       </Tafel>
 
@@ -1037,7 +1324,7 @@ function Shop({
         bild={(w) => emoteBild(w.wert)}
         name={(w) => emoteMit(w.wert)?.name ?? w.wert}
         kauft={kauft}
-        onKaufen={kaufeWare}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
 
       <WareRegal
@@ -1047,7 +1334,7 @@ function Shop({
         bild={(w) => rueckenBild(w.wert) ?? '/hub/tab-blatt.webp'}
         name={(w) => RUECKEN.find((r) => r.id === w.wert)?.name ?? w.wert}
         kauft={kauft}
-        onKaufen={kaufeWare}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
 
       <WareRegal
@@ -1057,8 +1344,21 @@ function Shop({
         bild={(w) => `/hub/${w.wert}.webp`}
         name={(w) => `Wappen ${w.wert.replace('wappen-', '')}`}
         kauft={kauft}
-        onKaufen={kaufeWare}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
+      <Tafel titel="Pässe" zusatz="Kommt bald">
+        <div className="hub-reihe hub-reihe--drei">
+          {(shop?.paesse ?? []).map((paket) => (
+            <PaketKachel
+              key={paket.id}
+              paket={paket}
+              laeuft={laeuft}
+              onBald={onBald}
+              onKaufen={(p) => setFrage({ art: 'paket', paket: p })}
+            />
+          ))}
+        </div>
+      </Tafel>
 
       <Tafel titel="Sonst noch">
         <div className="hub-reihe hub-reihe--drei">
@@ -1081,6 +1381,21 @@ function Shop({
           </button>
         </div>
       </Tafel>
+
+      {frage && (
+        <KaufFrage
+          frage={frage}
+          laeuft={laeuft}
+          onAbbrechen={() => setFrage(null)}
+          onPaket={kaufePaket}
+          onTruhe={kaufeTruhe}
+          onWare={kaufeWare}
+        />
+      )}
+
+      {/* Derselbe Fund-Moment wie im Aufgaben-Vollbild. Eine gekaufte Truhe, die
+          nur den Muenzstand aendert, ist eine Zahl ohne Erklaerung. */}
+      {fund && <FundBlatt fund={fund} onClose={() => setFund(null)} />}
     </HubSzene>
   );
 }
@@ -1108,11 +1423,12 @@ function WareRegal({
   name: (w: RegalWare) => string;
   /** Kennung, die gerade gekauft wird — der Knopf sperrt sich so lange. */
   kauft: string | null;
-  onKaufen: (w: RegalWare, name: string) => void;
+  /** Oeffnet die Rueckfrage. Gekauft wird erst dort. */
+  onKaufen: (w: RegalWare, name: string, bild: string) => void;
 }): React.JSX.Element | null {
   // Ist alles kostenlos und gehoert ohnehin allen, waere das Regal ein
   // leeres Schaufenster. Dann lieber gar keins.
-  if (waren.every((w) => w.preis === 0)) return null;
+  if (waren.every((w) => w.preis.coins === 0 && w.preis.gems === 0)) return null;
 
   const offen = waren.filter((w) => !w.besessen).length;
   return (
@@ -1123,7 +1439,7 @@ function WareRegal({
             key={w.id}
             className={`shop-ware-stueck is-${w.seltenheit}${w.besessen ? ' is-mein' : ''}`}
             disabled={w.besessen || kauft !== null}
-            onClick={() => onKaufen(w, name(w))}
+            onClick={() => onKaufen(w, name(w), bild(w))}
             title={name(w)}
           >
             <img src={bild(w)} alt="" draggable={false} />
@@ -1133,7 +1449,7 @@ function WareRegal({
             ) : (
               <span className="shop-ware-preis">
                 <img src="/hub/muenze.png" alt="" aria-hidden="true" />
-                {w.preis}
+                {w.preis.coins}
               </span>
             )}
           </button>
@@ -2077,7 +2393,9 @@ function DeckPicker({
     setKauft(w.id);
     setKaufFehler(null);
     void api
-      .buyItem(w.id)
+      // Hier wird in Muenzen gekauft. Wer mit Edelsteinen zahlen will,
+      // findet dieselbe Ware im Shop-Regal mit beiden Knoepfen.
+      .buyItem(w.id, 'coins')
       .then(() => {
         ladeWare();
         onGekauft();
@@ -2163,7 +2481,7 @@ function DeckPicker({
                     return;
                   }
                   if (!w) return;
-                  if (!window.confirm(`„${r.name}" für ${w.preis} Münzen kaufen?`)) return;
+                  if (!window.confirm(`„${r.name}" für ${w.preis.coins} Münzen kaufen?`)) return;
                   kaufen(w, () => onRueckenChange(r.id));
                 }}
               >
@@ -2182,7 +2500,7 @@ function DeckPicker({
                 {!mein && w && (
                   <span className="hub-szene-preis">
                     <img src="/hub/muenze.png" alt="" aria-hidden="true" />
-                    {w.preis}
+                    {w.preis.coins}
                   </span>
                 )}
               </button>
@@ -2214,7 +2532,7 @@ function DeckPicker({
                     return;
                   }
                   if (!w) return;
-                  if (!window.confirm(`„${s.name}" für ${w.preis} Münzen kaufen?`)) return;
+                  if (!window.confirm(`„${s.name}" für ${w.preis.coins} Münzen kaufen?`)) return;
                   kaufen(w, () => {
                     onSzeneChange(s.id);
                     setVorschau(true);
@@ -2235,7 +2553,7 @@ function DeckPicker({
                 {!mein && w && (
                   <span className="hub-szene-preis">
                     <img src="/hub/muenze.png" alt="" aria-hidden="true" />
-                    {w.preis}
+                    {w.preis.coins}
                   </span>
                 )}
               </button>
