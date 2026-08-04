@@ -9,6 +9,7 @@
  */
 
 import { test } from 'node:test';
+import { SLOTS } from '../src/kosmetik.js';
 import assert from 'node:assert/strict';
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
@@ -202,7 +203,9 @@ test('Der Shop liefert Regale, Pakete und den Besitzstand', async () => {
   const a = await aufbau();
   try {
     const shop = (await a.app.inject({ method: 'GET', url: '/api/shop', cookies: a.cookie })).json();
-    assert.equal(shop.regale.length, 5);
+    // An SLOTS gebunden und nicht als Zahl: Ein sechster Platz ist ein
+    // Eintrag im Katalog und soll diesen Test nicht brechen.
+    assert.equal(shop.regale.length, SLOTS.length);
     assert.ok(shop.muenzpakete.length >= 3);
     assert.ok(shop.edelsteinpakete.length >= 3);
     assert.ok(shop.paesse.length >= 2);

@@ -1,15 +1,30 @@
 # Bildbestellung: Pinguin und Ausstattung
 
-Der Pinguin ist anpassbar geworden: fünf Plätze, siebenundzwanzig Stücke,
-Kleiderschunter unter Profil, Shop-Regal, Mini-Pinguin in der Kopfzeile. **Alles
+Der Pinguin ist anpassbar: **sechs Plätze, dreiunddreißig Stücke**,
+Kleiderschrank unter Profil, Shop-Regal, Mini-Pinguin in der Kopfzeile. **Alles
 davon funktioniert schon** — es läuft auf gezeichneten SVGs im Bundle
 (`packages/client/src/pinguin.tsx`). Diese Bestellung tauscht sie gegen gemalte
 Bilder.
 
-**Nichts davon blockiert etwas.** Bis zur Lieferung bleiben die Zeichnungen. Sie
-sind schlicht, aber sie sitzen maßhaltig und sind vollständig.
+## Der Stil — das Entscheidende an dieser Bestellung
 
-Die Gestaltungsregeln stehen in [DESIGN.md](DESIGN.md).
+**Vorbild ist `pinguin.png`, der Ritter-Pinguin.** Gemalt, plastisch, warm,
+mit weichem Licht und satten Farben — so, wie er auf dem Trophäenweg und als
+Profilbild steht. **Genau dieser Stil ist gemeint, und nur dieser.**
+
+Was jetzt im Kleiderschrank steht, ist ausdrücklich **nicht** der Zielzustand:
+flache Vektorformen, harte Flächen, keine Tiefe. Sie sind ein Platzhalter, der
+maßhaltig sitzt und funktioniert — mehr nicht. Wer die Lieferung beurteilt,
+vergleicht sie mit dem Ritter, nicht mit dem, was gerade zu sehen ist.
+
+Konkret heißt das: modellierte Formen statt Flächen, ein erkennbarer
+Lichteinfall von oben links, weiche Schatten in den Falten, Materialien, die
+man unterscheidet — Wolle ist flauschig, Metall glänzt, Leder ist matt. Kein
+Fotorealismus, kein Comic-Umriss, keine Vektoroptik.
+
+**Nichts davon blockiert etwas.** Bis zur Lieferung bleiben die Zeichnungen.
+
+Die übrigen Gestaltungsregeln stehen in [DESIGN.md](DESIGN.md).
 
 ---
 
@@ -24,8 +39,10 @@ schlicht übereinander — kein Ausrichten, kein Skalieren, keine Ankerpunkte je
 Stück. Ein Hut, der auf eigener Leinwand geliefert wird, müsste von Hand
 positioniert werden, und zwar siebenundzwanzig Mal.
 
-**Die Passvorlage liegt bei:** `packages/client/art/pinguin/pinguin-zonen.png`
-(dazu die Quelle `pinguin-zonen.svg`). Sie zeigt den Pinguin in genau der Lage,
+**Die Passvorlage liegt im Archivrepo:**
+[`brauweg-art`](https://github.com/moodsteppi/brauweg-art) unter
+`pinguin/pinguin-zonen.png` (dazu die Quelle `pinguin-zonen.svg`), örtlich also
+`~/Desktop/BroCode/brauweg-art/pinguin/pinguin-zonen.png`. Sie zeigt den Pinguin in genau der Lage,
 die er im Spiel hat, und die fünf Zonen als gestrichelte Kästen. **Diese Vorlage
 gehört als Referenzbild in jede Bildgenerierung** — sie ist der Unterschied
 zwischen „ein Hut" und „ein Hut, der sitzt".
@@ -40,6 +57,7 @@ Koordinaten im Rahmen 240 × 256 (also **× 2** für die Lieferung auf 480 × 51
 | Platz | Zone (x, y – x, y) | Was dort sitzt |
 | --- | --- | --- |
 | `hut` | 58, 8 – 182, 74 | Kopfbedeckung, sitzt auf der Kalotte |
+| `brille` | 78, 66 – 162, 96 | vor den Augen, **unter** dem Hut |
 | `oberteil` | 52, 104 – 188, 214 | Rumpf, über der weißen Bauchfläche |
 | `schuhe` | 72, 212 – 168, 254 | beide Füße |
 | `hand` | 166, 112 – 238, 214 | rechte Flosse (aus Sicht des Betrachters rechts) |
@@ -55,9 +73,11 @@ hineinragen**, sonst überdecken sich zwei Stücke, die zusammen getragen werden
 
 **Format**
 - PNG mit **echtem Alphakanal**, **480 × 512** px, sRGB.
-- Originale nach `packages/client/art/pinguin/`. Die Auslieferungsfassung als
-  WebP erzeuge ich daraus — **Originale gehören nicht nach `public/`**. So sind
-  schon einmal 13,9 MB mitgeliefert und ausgeliefert worden.
+- Originale ins **Archivrepo** `brauweg-art`, Ordner `pinguin/`. Die
+  Auslieferungsfassung als WebP entsteht daraus — **Originale gehören nie nach
+  `public/`**. Das ist zweimal live gegangen, zuletzt mit Spielkarten zu
+  1,7 MB je Stück. Der ganze Weg steht in
+  [JETZT-AUSFUEHREN.md](JETZT-AUSFUEHREN.md).
 
 **Echte Transparenz — der häufigste Fehler**
 Kein Schachbrett-Muster und keine weiße oder schwarze Fläche als
@@ -139,7 +159,33 @@ Fleck. Auf knallrotem und auf weißem Grund gleich hell, ohne Saum.
 
 ---
 
-## 3 — Oberteil (5 Stücke)
+## 3 — Augen (6 Stücke)
+
+**Zone:** 78, 66 – 162, 96. Die Augen liegen bei (101, 80) und (139, 80) mit
+Radius 8,5 — **jedes Stück muss beide decken**. Nach unten ist bei y = 96
+Schluss: Ab y = 92 beginnt der Schnabel, und eine Brille, die darauf liegt,
+sieht aus wie ein Fehler.
+
+**Dieser Platz ist neu.** Er ist entstanden, weil eine Sonnenbrille sonst am
+Hut hinge — wer sie aufsetzt, müsste seine Mütze abnehmen. Beim Zeichnen liegt
+die Brille **unter** dem Hut, damit ein breiter Hutrand darüberfallen kann.
+
+| Datei | Motiv |
+| --- | --- |
+| `brille-keine.png` | **Leeres Bild.** Nur Alpha, kein Motiv — der Platz „ohne Brille". Wird trotzdem geliefert, damit die Lieferung vollständig ist; die App zeigt ihn als leere Kachel. |
+| `brille-sonnenbrille.png` | Dunkle Sonnenbrille, breite Bügel, leichter Glanz auf den Gläsern. Das Alltagsstück. |
+| `brille-lesebrille.png` | Feine Goldrandbrille, runde Gläser, dünne Bügel zu den Ohren. |
+| `brille-taucherbrille.png` | Taucherbrille mit Gummiband, türkis getöntes Glas, Riemen bis zum Rand der Zone. |
+| `brille-skibrille.png` | Skibrille mit breitem Band, orange verspiegelt. Sitzt höher als die anderen. |
+| `brille-monokel.png` | Einzelnes Monokel am **rechten** Auge (Betrachter rechts, x = 139), mit Goldkette nach unten. Legendär — vornehm, nicht albern. |
+
+**Besonders hier gilt die Kleinprobe:** Eine Brille ist das kleinste
+Ausstattungsstück. Auf 40 Pixel Höhe ist sie ein dunkler Strich über dem
+Gesicht — sie muss als Brille erkennbar bleiben, nicht als Fleck.
+
+---
+
+## 4 — Oberteil (5 Stücke)
 
 **Zone:** 52, 104 – 188, 214. Deckt die weiße Bauchfläche, lässt Kopf und Füße
 frei. Der Halsausschnitt liegt bei y ≈ 112.
@@ -154,7 +200,7 @@ frei. Der Halsausschnitt liegt bei y ≈ 112.
 
 ---
 
-## 4 — Schuhe (5 Stücke)
+## 5 — Schuhe (5 Stücke)
 
 **Zone:** 72, 212 – 168, 254. **Immer beide Füße**, Mittelpunkte bei x = 97 und
 x = 143. Die Füße stehen auf y ≈ 248; ein Schuh darf bis y = 254 reichen, tiefer
@@ -170,7 +216,7 @@ nicht — dort endet der Rahmen.
 
 ---
 
-## 5 — Flosse (5 Stücke)
+## 6 — Flosse (5 Stücke)
 
 **Zone:** 166, 112 – 238, 214. Der Gegenstand wird von der **rechten Flosse**
 gehalten (Betrachter rechts), Griffpunkt bei etwa (188, 180). Er darf über die
@@ -187,7 +233,7 @@ links in die Bauchzone.
 
 ---
 
-## 6 — Aura (6 Stücke)
+## 7 — Aura (6 Stücke)
 
 **Zone:** der ganze Rahmen — aber **nur der Rand**. Die Aura liegt *hinter* dem
 Pinguin; was hinter seinem Körper läge, ist unsichtbar und verschwendet.
@@ -212,16 +258,24 @@ nach Fehler aus.
 
 ## Abnahme, gesamt
 
-1. **Alle 28 Dateien vorhanden**, exakt so benannt, alle 480 × 512.
-2. **Stapelprobe:** Basis + `hut-zylinder` + `oberteil-frack` +
-   `schuhe-goldstiefel` + `hand-zauberstab` + `aura-sterne` übereinandergelegt
-   ergibt einen vollständig gekleideten Pinguin — nichts überdeckt Augen oder
-   Schnabel, nichts schwebt, nichts schneidet ins Nachbarstück.
-3. **Kleinprobe:** dasselbe auf 40 px Höhe. Jedes Stück ist noch als solches zu
-   erkennen.
-4. **Alphaprobe:** jede Datei auf knallrotem und auf weißem Grund, gleich hell,
+1. **Alle 34 Dateien vorhanden**, exakt so benannt, alle 480 × 512.
+2. **Stilprobe:** Ein geliefertes Stück neben `pinguin.png` (den Ritter)
+   gelegt — wirkt es wie aus derselben Hand? Gemalt, plastisch, Licht von oben
+   links? Wenn es flach aussieht wie die jetzigen Platzhalter, ist es nicht
+   fertig.
+3. **Stapelprobe:** Basis + `hut-zylinder` + `brille-monokel` +
+   `oberteil-frack` + `schuhe-goldstiefel` + `hand-zauberstab` +
+   `aura-sterne` übereinandergelegt ergibt einen vollständig gekleideten
+   Pinguin — nichts überdeckt Augen oder Schnabel, nichts schwebt, nichts
+   schneidet ins Nachbarstück.
+4. **Hut-über-Brille-Probe:** `hut-strohhut` zusammen mit
+   `brille-sonnenbrille`. Der breite Hutrand darf die Brille überlappen, aber
+   die Brille darf nicht über dem Hut liegen.
+5. **Kleinprobe:** dasselbe auf 40 px Höhe. Jedes Stück ist noch als solches zu
+   erkennen — auch die Brille.
+6. **Alphaprobe:** jede Datei auf knallrotem und auf weißem Grund, gleich hell,
    ohne Saum.
-5. Kein Bild enthält Schrift, Zonenkästen oder einen zweiten Pinguin.
+7. Kein Bild enthält Schrift, Zonenkästen oder einen zweiten Pinguin.
 
 ---
 
@@ -237,11 +291,20 @@ dazu, wird es statt der Zeichnung gelegt:
 
 Der Weg für die Lieferung selbst:
 
-1. **Umwandeln:** auf dreifache Anzeigegröße verkleinern, dann WebP Qualität 85.
-   Die Ausstattung wird höchstens 11 rem hoch gezeigt (Kleiderschrank), also
-   reichen 528 px — die 480 der Lieferung passen damit unverändert.
-2. **Ablegen** unter `packages/client/public/hub/pinguin/`, Originale nach
-   `packages/client/art/pinguin/`.
+1. **Originale ins Archivrepo** `brauweg-art`, Ordner `pinguin/`, und dort
+   committen. Zuerst dorthin — so liegt das Original nie nur an einer Stelle.
+2. **Umwandeln** mit dem eingerichteten Werkzeug; die Auflösung bleibt, nur
+   das Format ändert sich:
+
+   ```bash
+   node ~/bildwerkzeug/wandeln.mjs \
+     ~/Desktop/BroCode/brauweg-art/pinguin \
+     ~/Desktop/BroCode/Brauweg-spielen/brauweg/packages/client/public/hub/pinguin \
+     wappen
+   ```
+
+   `wappen` ist hier richtig: Es schützt den Alphakanal, und darauf kommt es
+   bei gestapelten Ebenen besonders an.
 3. **`bild` eintragen**, Stück für Stück. Die Zeichnung darf dabei stehen
    bleiben: Sie ist der Rückfall, wenn ein Bild fehlt.
 

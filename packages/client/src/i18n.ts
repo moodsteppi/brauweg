@@ -118,6 +118,7 @@ const de: Record<string, string> = {
 
   // --- Plaetze der Pinguin-Ausstattung ------------------------------------
   'slot.hut': 'Kopf',
+  'slot.brille': 'Augen',
   'slot.oberteil': 'Oberteil',
   'slot.schuhe': 'Schuhe',
   'slot.hand': 'Flosse',
@@ -135,6 +136,12 @@ const de: Record<string, string> = {
   'kosmetik.hut-bergsteiger': 'Bergsteigerhelm',
   'kosmetik.hut-krone': 'Krone',
   'kosmetik.hut-partyhut': 'Partyhut',
+  'kosmetik.brille-keine': 'Ohne Brille',
+  'kosmetik.brille-sonnenbrille': 'Sonnenbrille',
+  'kosmetik.brille-lesebrille': 'Lesebrille',
+  'kosmetik.brille-taucherbrille': 'Taucherbrille',
+  'kosmetik.brille-skibrille': 'Skibrille',
+  'kosmetik.brille-monokel': 'Monokel',
   'kosmetik.oberteil-pulli': 'Strickpulli',
   'kosmetik.oberteil-trikot': 'Vereinstrikot',
   'kosmetik.oberteil-weste': 'Lederweste',

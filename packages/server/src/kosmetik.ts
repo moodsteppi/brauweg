@@ -43,7 +43,7 @@ import { inEdelsteine, inMuenzen, type Waehrung } from './waehrung.js';
 // Plaetze
 // ---------------------------------------------------------------------------
 
-export const SLOTS = ['hut', 'oberteil', 'schuhe', 'hand', 'aura'] as const;
+export const SLOTS = ['hut', 'brille', 'oberteil', 'schuhe', 'hand', 'aura'] as const;
 export type Slot = (typeof SLOTS)[number];
 
 export function istSlot(wert: string): wert is Slot {
@@ -114,6 +114,17 @@ export const KATALOG: readonly Stueck[] = [
   muenzen('hut-bergsteiger', 'hut', 400, 'episch'),
   edelsteine('hut-krone', 'hut', 40, 'legendaer'),
   geschenk('hut-partyhut', 'hut', 'episch'),
+
+  // --- Augen ----------------------------------------------------------------
+  // Eigener Platz und nicht Teil des Hutes: Wer eine Sonnenbrille aufsetzt,
+  // soll seine Muetze behalten duerfen. Die Brille liegt beim Zeichnen unter
+  // dem Hut, damit ein breiter Hutrand darueber faellt.
+  frei('brille-keine', 'brille'),
+  muenzen('brille-sonnenbrille', 'brille', 140),
+  muenzen('brille-lesebrille', 'brille', 140),
+  muenzen('brille-taucherbrille', 'brille', 220, 'selten'),
+  muenzen('brille-skibrille', 'brille', 320, 'selten'),
+  edelsteine('brille-monokel', 'brille', 45, 'legendaer'),
 
   // --- Rumpf --------------------------------------------------------------
   frei('oberteil-pulli', 'oberteil'),
