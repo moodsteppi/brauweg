@@ -240,6 +240,19 @@ export const wizard: GameModule<PartyState, RoundAction, WizardView, RuleSet> = 
   completedSegments: (party) => party.history,
 
   /**
+   * Gelegte Karten je Sitz: die Summe der Rundennummern, denn die
+   * Rundennummer ist zugleich die Handgroesse. Eine Partie ueber fuenfzehn
+   * Runden gibt also 120 Karten, eine ueber zehn nur 55 — laenger gespielt
+   * heisst mehr Punkte, und das ist so gewollt.
+   *
+   * Gezaehlt werden nur abgerechnete Runden; die angefangene zaehlt nicht.
+   */
+  xpBasis: (party) => {
+    const karten = party.history.reduce((summe, runde) => summe + runde.roundNumber, 0);
+    return Object.fromEntries(party.seats.map((seat) => [seat, karten]));
+  },
+
+  /**
    * PartyState ist reines JSON - keine Klasse, keine Methode, kein Datum.
    * Die Version kommt trotzdem mit: Ein Snapshot aus einer aelteren Fassung
    * soll als Fehler auffallen und nicht stillschweigend falsch gedeutet werden.

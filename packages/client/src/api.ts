@@ -83,6 +83,14 @@ export interface Me {
   displayName: string;
   coins: number;
   /**
+   * Stufe und Fortschritt, fertig gerechnet vom Server.
+   *
+   * Bewusst nicht die Punkte allein: Die Kurve gehoert an eine Stelle, und
+   * das ist der Server. Wird sie nachjustiert, gilt das sofort — der
+   * Client zeigt nur an, was hier steht.
+   */
+  level: { stufe: number; xp: number; imLevel: number; fuerLevel: number };
+  /**
    * Aussehen je Spiel: Kartenblatt und Tischszenerie.
    *
    * Je Spiel, weil ein Blatt nur zu seinem Spiel passt. Der Server liefert

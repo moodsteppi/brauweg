@@ -291,3 +291,18 @@ test('serialize und deserialize erhalten den Zustand', () => {
     doppelkopf.viewFor(party, 0).round?.hand,
   );
 });
+
+test('xpBasis zaehlt die gelegten Karten je Sitz', () => {
+  const party = newParty();
+
+  // Vor der ersten abgerechneten Runde gibt es nichts - eine angefangene
+  // Runde zaehlt nicht, sonst waere Abbrechen eine Rechenaufgabe.
+  const leer = doppelkopf.xpBasis!(party);
+  assert.deepEqual(Object.values(leer), [0, 0, 0, 0]);
+
+  // Mit Neunen sind es 48 Karten, also zwoelf je Sitz und Runde. Die
+  // Zusammenfassungen werden hier nicht gebraucht, nur ihre Anzahl.
+  const mitRunde = { ...party, history: [{}, {}] } as unknown as PartyState;
+  const zwei = doppelkopf.xpBasis!(mitRunde);
+  assert.deepEqual(Object.values(zwei), [24, 24, 24, 24], 'zwei Runden zu je zwoelf');
+});

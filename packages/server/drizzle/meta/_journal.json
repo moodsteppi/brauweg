@@ -78,6 +78,13 @@
       "when": 1785906000000,
       "tag": "0010_testkonten",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785907000000,
+      "tag": "0011_erfahrung",
+      "breakpoints": true
     }
   ]
 }

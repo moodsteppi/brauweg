@@ -39,6 +39,7 @@ import {
   isBirthdayToday,
 } from '../birthday.js';
 import { CARD_DECKS, DEFAULT_CARD_DECK } from '../decks.js';
+import { stufenstand } from '../level.js';
 import { coinsFor, entitlementsFor } from '../entitlements.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
@@ -443,6 +444,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         id: s.account.id,
         displayName: s.account.displayName,
         coins: s.account.coins,
+        xp: s.account.xp,
         premiumUntil: s.account.premiumUntil,
         isStaff: s.account.isStaff,
         birthday: s.account.birthday,
@@ -499,6 +501,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({
       ...rest,
       coins: coinsFor(account),
+      /*
+       * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
+       * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das
+       * sofort fuer alle und nicht erst nach dem naechsten App-Update.
+       */
+      level: stufenstand(account.xp),
       entitlements: rechte,
       /**
        * Welche Ausgabe hier laeuft, fuer die dezente Kennzeichnung. Ohne
