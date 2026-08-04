@@ -270,6 +270,7 @@ export function GameSelect({
         return (
           <Spielen
             trophies={trophies}
+            getragen={me.avatar}
             activeTable={me.activeTable}
             onPick={onPick}
             onResume={onResume}
@@ -1436,6 +1437,7 @@ function TabButton({
  */
 function Spielen({
   trophies,
+  getragen,
   activeTable,
   onPick,
   onResume,
@@ -1445,6 +1447,7 @@ function Spielen({
   bereit,
 }: {
   trophies: number;
+  getragen: Me['avatar'];
   activeTable: Me['activeTable'];
   /** Wie viel bereitliegt (Truhen plus fertige Aufgaben). 0 = kein Punkt. */
   bereit: number;
@@ -1474,7 +1477,7 @@ function Spielen({
       {/* Karte füllt die Bühne; Logo und Seiten-UI liegen als Overlay drauf,
           damit kein blauer Streifen die oberen Arenen verdeckt. */}
       <div className="hub-buehne">
-        <Trophaeenpfad trophies={trophies} />
+          <Trophaeenpfad trophies={trophies} getragen={getragen} />
 
         {/* Nur der Schriftzug, dafuer gross und mittig. Der Slogan
             "Doppelkopf. Dein Weg." stand als zweites Bild darunter und
@@ -1545,7 +1548,7 @@ function Spielen({
             <strong>Neu hier?</strong>
             <span>So funktioniert Brauweg</span>
           </span>
-          <img src="/hub/pinguin.png" alt="" draggable={false} />
+          <img src="/hub/pinguin/pinguin-basis.webp" alt="" draggable={false} />
           <span className="front-bald-tag">Bald</span>
         </button>
       </div>
@@ -2711,7 +2714,7 @@ function ProfilBild({
       {src ? (
         <img src={src} alt="Profilbild" draggable={false} />
       ) : (
-        <img src="/hub/pinguin.png" alt="Profilbild" draggable={false} />
+        <Pinguin getragen={me.avatar} groesse={3.2} titel="Profilbild" />
       )}
       <span className="hub-profilbild-stift" aria-hidden="true">
         ✎

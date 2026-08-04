@@ -108,4 +108,9 @@ Wirtschaftsmodell.
   toter Verbindung; am Handy stirbt sie genau dann, wenn man kurz woanders
   hinsieht. Jetzt hält eine Warteschlange sie kurz fest.
 - **Bilder mit Alpha auf rotem Grund prüfen.** Schachbrett statt Alphakanal
-  ist hier dreimal passiert.
+  ist hier dreimal passiert. Bei **gestapelten** Ebenen (Pinguin) zusätzlich
+  die Ecken prüfen: Eine undurchsichtige Ecke löscht alles darunter.
+- **Vor einem `push --force` gegen `git ls-remote` prüfen, nie gegen den
+  lokalen Stand.** Beim Historien-Schnitt am 4. August stand das lokale `main`
+  auf einem uralten Commit — ein Spiegel-Push hätte die Produktion
+  zurückgerollt.

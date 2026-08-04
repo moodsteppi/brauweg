@@ -24,9 +24,24 @@ fehlend, die im Quelltext längst stehen (`xpBasis`, `interludeMs`).
 
 **Stand der Zweige am Ende des 4. August 2026:** `staging` trägt jetzt auch
 den Edelstein-Umbau. Auf `staging` und noch **nicht in der Produktion**
-liegen: Währungen, Truhen, Tagesaufgaben, anziehbarer Pinguin, Clanchat,
-Clankrieg, Zurufe am Tisch, der erweiterte Shop und der Edelstein als
-universelle Währung. Ob und wann das nach `main` geht, entscheidet Jan.
+liegen: Währungen, Truhen, Tagesaufgaben, der **gemalte** anziehbare Pinguin,
+Clanchat, Clankrieg, Zurufe am Tisch, der erweiterte Shop und der Edelstein
+als universelle Währung. Ob und wann das nach `main` geht, entscheidet Nils.
+
+**Die Historie ist am 4. August umgeschrieben worden** (`git filter-repo`),
+um die Bildoriginale aus der Vergangenheit zu entfernen: 977 MB → 143 MB, ein
+frischer Klon dauert 7 statt vieler Sekunden. **Alte Klone von vor diesem Tag
+sind unbrauchbar — neu klonen, nicht pullen.** Erhalten sind alle 194 Commits
+und alle 51 Zweige; `staging` ist dateiweise unverändert geblieben, auf `main`
+sind nur die Originale verschwunden.
+
+> **Was dabei fast schiefging, zum Nachlesen:** Der erste Spiegel kam vom
+> *lokalen* Repo, dessen `main` auf einem uralten Commit stand — ein
+> Spiegel-Push hätte die Produktion zurückgerollt. Und der erste Schnittplan
+> hätte die Kartenrückseiten mitgenommen, die `main` noch als PNG
+> referenziert. Beides fiel nur auf, weil vor dem Push Zweigstände und
+> Dateibäume verglichen wurden. **Vor einem `push --force --mirror` immer
+> gegen `git ls-remote` prüfen, nie gegen den lokalen Stand.**
 
 **Der Edelstein-Umbau ist eingearbeitet.** Er entstand in einer Sitzung auf
 einer Windows-Maschine ohne Node und war dort nie übersetzt oder getestet;
@@ -183,8 +198,8 @@ Tag. Gezählt wird am **Partie-Ende** (`countQuests` in `runtime/party.ts`),
 auch an Tischen mit Bots — Aufgaben sind eine Belohnung fürs Spielen, keine
 Wertung. Der Tag läuft in Europe/Berlin.
 
-**Der Pinguin ist anpassbar:** fünf Plätze (Kopf, Oberteil, Schuhe, Flosse,
-Aura), 27 Stücke, je Platz eines zum Preis 0. Der Server kennt Kennung, Platz
+**Der Pinguin ist anpassbar:** **sechs Plätze** (Kopf, Augen, Oberteil,
+Schuhe, Flosse, Aura), **33 Stücke**, je Platz eines zum Preis 0. Der Server kennt Kennung, Platz
 und Preis (`src/kosmetik.ts`), das Aussehen kennt nur der Client — dieselbe
 Trennung wie bei Kartenblatt und Szenerie. Getragen wird über
 `account_avatar` (eine Zeile je belegtem Platz, kein Spaltensatz: ein sechster
@@ -210,26 +225,42 @@ Startbildschirms — dort stand vorher „Der Tagesbonus, bald". Ein roter Punkt
 daran sagt, dass etwas bereitliegt; die Zahlen dafür kommen als `bereit` aus
 `/api/me`, mit zwei schlanken Zählabfragen statt der vollen Listen.
 
-**Alles Gemalte fehlt noch und blockiert nichts.** Pinguin, Ausstattung,
-Truhen, Edelstein und Aufgaben-Zeichen sind **SVGs im Bundle** — nach DESIGN.md
-(„Alles gemalt, nichts geladen") und weil 27 nicht gelieferte PNGs 27 weiße
-Kästen wären. Vier Bestellungen liegen bereit: `ASSETS-PINGUIN.md`,
-`ASSETS-TRUHEN.md`, `ASSETS-WAEHRUNGEN.md`, `ASSETS-AUFGABEN.md`. Der Einbau
-ist je Stück eine Zeile (`bild:` im Katalog `AUSSEHEN`).
+**Der Pinguin ist gemalt — geliefert und eingebaut.** Alle 34 Bilder (Basis
+und 33 Stücke) liegen als 3D-Render im Stil des Ritter-Pinguins vor, gewandelt
+532 kB für alles, im Schnitt 14 kB je Stück. Die **Zeichnungen bleiben als
+Rückfall** stehen, auch die der Basis (`PinguinBasisGezeichnet`): Fällt eine
+Datei aus, ist der Pinguin schlicht statt weg.
+
+**Der sechste Platz „Augen" ist neu.** Eine Sonnenbrille hätte sonst am Hut
+gehangen — wer sie aufsetzt, müsste die Mütze abnehmen. Beim Zeichnen liegt
+die Brille **unter** dem Hut, damit ein breiter Hutrand darüberfällt.
+
+**Was bei der Abnahme wirklich zählt** (die Prüfungen sind in
+`ASSETS-PINGUIN.md` festgehalten und haben sich bewährt): alle 480 × 512 mit
+echtem Alpha und **durchsichtigen Ecken** — eine undurchsichtige Ecke löscht
+beim Stapeln alles darunter; jedes Stück in seiner Zone; die **Stapelprobe**
+mit sieben Ebenen; die **Hut-über-Brille-Probe**. Ein Skript dafür steht nicht
+im Repo, die Prüfung lief über `sharp` (Maße, Alphakanal, Eckentransparenz,
+Begrenzungsrahmen je Stück).
 
 **Der Basis-Pinguin ist bewusst nicht `pinguin.png`.** Der ist ein Ritter mit
-Helm, Schwert, Panzer und Umhang — also mit vier von fünf Plätzen belegt, und
+Helm, Schwert, Panzer und Umhang — also mit vier von sechs Plätzen belegt, und
 ein Hut auf einem Helm sieht aus wie ein Fehler. Der Ritter bleibt, wo er steht
-(Trophäenweg, Vorgabe fürs Profilbild). Die **Passvorlage** für die Lieferung
-liegt unter `packages/client/art/pinguin/pinguin-zonen.png` samt Quelle; sie
-gehört als Referenzbild in jede Bildgenerierung.
+(Trophäenweg, Vorgabe fürs Profilbild); der Basis-Pinguin ist **dieselbe
+Figur ohne alles**. Die **Passvorlage** liegt im Archivrepo unter
+`pinguin/pinguin-zonen.png` samt Quelle; sie gehört als Referenzbild in jede
+Bildgenerierung — zusammen mit `pinguin.png` als Stilvorgabe.
+
+**Noch nicht gemalt:** Truhen, Edelstein und Aufgaben-Zeichen. Sie bleiben
+SVGs im Bundle; die Bestellungen `ASSETS-TRUHEN.md`, `ASSETS-WAEHRUNGEN.md`
+und `ASSETS-AUFGABEN.md` liegen bereit.
 
 **Was bewusst nicht gebaut ist:** Kartenblätter und Szenerien bleiben im
 Themen-Tab und sind nicht ins Shop-Regal kopiert — dort gibt es sie schon, mit
 Vorschau in Tischgröße, und ein zweiter Weg dorthin wäre einer ohne Vorschau.
 Der Shop verlinkt sie deshalb nur.
 
-**Prüfstand: 211 Servertests** (54 neue in `waehrung`, `truhen`, `quests`,
+**Prüfstand damals: 211 Servertests** (54 neue in `waehrung`, `truhen`, `quests`,
 `shop`, `waehrung-http`), Doppelkopf und Zauberer unverändert bei 128 und 117.
 
 ---

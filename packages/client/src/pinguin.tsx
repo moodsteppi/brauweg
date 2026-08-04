@@ -68,7 +68,17 @@ const SCHNABEL_DUNKEL = '#d4832a';
 export function PinguinBasis(): React.JSX.Element {
   // Das gemalte Bild liegt vor; die Zeichnung darunter bleibt als Rueckfall
   // stehen, falls die Datei einmal fehlt. Sie ist massgleich.
-  return <image href={BASIS_BILD} x="0" y="0" width={RAHMEN.breite} height={RAHMEN.hoehe} />;
+  return (
+    <image
+      href={BASIS_BILD}
+      xlinkHref={BASIS_BILD}
+      x="0"
+      y="0"
+      width={RAHMEN.breite}
+      height={RAHMEN.hoehe}
+      preserveAspectRatio="xMidYMid meet"
+    />
+  );
 }
 
 /** Der gezeichnete Rueckfall. Wird heute nicht gebraucht, bleibt aber massgleich. */
@@ -612,7 +622,16 @@ function Ebene({ itemId }: { itemId: string | undefined }): React.JSX.Element | 
   if (!aussehen) return null;
   if (aussehen.bild) {
     return (
-      <image href={aussehen.bild} x="0" y="0" width={RAHMEN.breite} height={RAHMEN.hoehe} />
+      <image
+        href={aussehen.bild}
+        // xlinkHref: aeltere WebViews (Capacitor) kennen href am SVG-image noch nicht.
+        xlinkHref={aussehen.bild}
+        x="0"
+        y="0"
+        width={RAHMEN.breite}
+        height={RAHMEN.hoehe}
+        preserveAspectRatio="xMidYMid meet"
+      />
     );
   }
   return aussehen.zeichnung;

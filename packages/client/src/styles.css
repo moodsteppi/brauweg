@@ -5449,9 +5449,8 @@ main.auth > .muted {
   pointer-events: none;
   z-index: 2;
 }
-.pfad-figur img {
-  width: clamp(38px, 13vw, 58px);
-  height: auto;
+.pfad-figur .pinguin {
+  /* Groesse kommt aus dem Pinguin-Prop; Schatten schon am .pinguin. */
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
 }
 .pfad-figur-stand {
