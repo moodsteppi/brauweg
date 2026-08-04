@@ -14,7 +14,7 @@ import { loadConfig } from './config.js';
 import { connect } from './db/connect.js';
 import * as s from './db/schema.js';
 import { createMailer } from './mail/index.js';
-import { buildApp } from './http/app.js';
+import { APP_ORIGIN, buildApp } from './http/app.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
 import { expireStaleTables } from './tables/service.js';
@@ -85,7 +85,9 @@ async function main(): Promise<void> {
   });
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
-  new Gateway(app.server, db, runtime, { allowedOrigin: config.publicUrl });
+  new Gateway(app.server, db, runtime, {
+    allowedOrigins: [config.publicUrl, APP_ORIGIN],
+  });
 
   // Tische ohne Aktivitaet verfallen nach 24 Stunden.
   const sweeper = setInterval(() => {

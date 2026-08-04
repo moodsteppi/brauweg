@@ -9,6 +9,7 @@ import {
   type PlayerRef,
   type RankingEntry,
 } from '../api';
+import { inApp } from '../laufzeit';
 import { DECKS, cardImage, deckBack, deckById, decksFor, type Deck } from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
@@ -27,6 +28,21 @@ import { Trophaeenpfad } from './Pfad';
  */
 
 type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil';
+
+/**
+ * Im App-Store-Paket bleibt alles Kaufbare draussen.
+ *
+ * Nicht aus Vorsicht, sondern weil es ein sicherer Ablehnungsgrund ist:
+ * Angebote mit Paketangabe ("Season Pass", "VIP-Pass, 7 Tage"), die nichts
+ * verkaufen, gelten Apple als unfertige App — und sobald sie etwas
+ * verkaufen, muessen sie ueber Apples Bezahlweg laufen. Beides ist heute
+ * nicht der Fall, also zeigt die App den Bereich gar nicht erst.
+ *
+ * Im Browser bleibt er sichtbar. Dort gilt DESIGN.md: Was es noch nicht
+ * gibt, steht trotzdem da, mit ehrlicher Null und "Bald"-Marke.
+ * Siehe docs/APPSTORE.md.
+ */
+const zeigeKaufbares = !inApp;
 
 export function GameSelect({
   me,
@@ -76,26 +92,37 @@ export function GameSelect({
             <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
             {trophies}
           </span>
-          <button
-            className="front-waehrung front-waehrung--muenzen"
-            onClick={() => setBald('Münzen kaufen')}
-          >
-            <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
-            {me.coins}
-            <span className="front-plus" aria-hidden="true">
-              +
+          {/* Ohne Kaufbares bleiben Muenzen und VIP reine Anzeigen: Das Plus
+              verspricht einen Kauf, den es in der App nicht gibt. */}
+          {zeigeKaufbares ? (
+            <>
+              <button
+                className="front-waehrung front-waehrung--muenzen"
+                onClick={() => setBald('Münzen kaufen')}
+              >
+                <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
+                {me.coins}
+                <span className="front-plus" aria-hidden="true">
+                  +
+                </span>
+              </button>
+              <button
+                className="front-waehrung front-waehrung--vip"
+                onClick={() => setBald('VIP')}
+              >
+                <img className="front-waehrung-icon" src="/hub/krone.png" alt="" />
+                0
+                <span className="front-plus" aria-hidden="true">
+                  +
+                </span>
+              </button>
+            </>
+          ) : (
+            <span className="front-waehrung front-waehrung--muenzen">
+              <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
+              {me.coins}
             </span>
-          </button>
-          <button
-            className="front-waehrung front-waehrung--vip"
-            onClick={() => setBald('VIP')}
-          >
-            <img className="front-waehrung-icon" src="/hub/krone.png" alt="" />
-            0
-            <span className="front-plus" aria-hidden="true">
-              +
-            </span>
-          </button>
+          )}
         </div>
       </header>
 
@@ -103,7 +130,7 @@ export function GameSelect({
         className={`front-body${tab === 'spielen' ? '' : ' front-body--szene'}`}
         key={tab}
       >
-        {tab === 'shop' && <Shop onBald={setBald} />}
+        {tab === 'shop' && zeigeKaufbares && <Shop onBald={setBald} />}
         {tab === 'clan' && (
           <Clan
             clanId={me.clubs[0]?.id ?? null}
@@ -137,13 +164,15 @@ export function GameSelect({
       </div>
 
       <nav className="front-tabs" aria-label="Bereiche">
-        <TabButton
-          label="Shop"
-          farbe="shop"
-          active={tab === 'shop'}
-          onClick={() => setTab('shop')}
-          iconSrc="/hub/tab-shop.webp"
-        />
+        {zeigeKaufbares && (
+          <TabButton
+            label="Shop"
+            farbe="shop"
+            active={tab === 'shop'}
+            onClick={() => setTab('shop')}
+            iconSrc="/hub/tab-shop.webp"
+          />
+        )}
         <TabButton
           label="Clan"
           farbe="clan"

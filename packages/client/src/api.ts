@@ -4,7 +4,13 @@
  * Die Sitzung liegt in einem HttpOnly-Cookie; der Client sieht sie nie und
  * schickt sie nur mit. Fehler kommen als Schluessel zurueck und werden erst
  * beim Anzeigen uebersetzt.
+ *
+ * In der iOS-Huelle geht das nicht — dort ist der Server eine fremde
+ * Herkunft und bekommt kein Cookie. Sie traegt ihr Token selbst; siehe
+ * `laufzeit.ts`. Im Browser bleibt alles wie bisher.
  */
+
+import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 
 export class ApiError extends Error {
   constructor(
@@ -17,15 +23,19 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api${path}`, {
+  const token = sessionToken();
+  const response = await fetch(`${apiBase}/api${path}`, {
     ...init,
-    credentials: 'same-origin',
+    // In der App gibt es keine Cookies ueber die Herkunftsgrenze. `omit`
+    // sagt das ausdruecklich, statt es dem Browser zu ueberlassen.
+    credentials: inApp ? 'omit' : 'same-origin',
     headers: {
       // NUR mit Rumpf. Ein leerer Rumpf mit dieser Kopfzeile ist fuer Fastify
       // ein Fehler ("Body cannot be empty when content-type is set to
       // application/json") - und traf damit jeden Aufruf ohne Daten:
       // beitreten, verlassen, abmelden, abstimmen.
       ...(init.body ? { 'content-type': 'application/json' } : {}),
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
   });
@@ -216,8 +226,31 @@ export const api = {
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>
     post<{ ok: true }>('/auth/verification/resend', { email }),
-  login: (email: string, password: string) => post<{ ok: true }>('/auth/login', { email, password }),
-  logout: () => post<{ ok: true }>('/auth/logout'),
+  /**
+   * Anmelden. Der Browser bekommt sein Cookie, die App zusaetzlich das
+   * Token im Rumpf — sie hat keinen anderen Weg, ihre Sitzung zu halten.
+   */
+  login: async (email: string, password: string) => {
+    const antwort = await post<{ ok: true; token?: string }>('/auth/login', {
+      email,
+      password,
+    });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+
+  /**
+   * Abmelden. Das Token faellt hier auch dann, wenn der Server nicht
+   * erreichbar war: Wer sich abmeldet, will abgemeldet sein — und die
+   * Sitzung laeuft serverseitig ohnehin ab.
+   */
+  logout: async () => {
+    try {
+      return await post<{ ok: true }>('/auth/logout');
+    } finally {
+      setSessionToken(null);
+    }
+  },
   me: () => request<Me>('/me'),
   /** Kartenblatt oder Szenerie eines Spiels setzen. */
   setTheme: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) =>
@@ -227,8 +260,16 @@ export const api = {
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */
-  deleteMe: (password: string) =>
-    request<{ ok: true }>('/me', { method: 'DELETE', body: JSON.stringify({ password }) }),
+  deleteMe: async (password: string) => {
+    const antwort = await request<{ ok: true }>('/me', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    });
+    // Die Loeschung hat die Sitzung schon widerrufen. Bliebe das Token
+    // liegen, liefe jeder Start in ein 401 statt auf die Anmeldung.
+    setSessionToken(null);
+    return antwort;
+  },
 
   games: () => request<GameSummary[]>('/games'),
   vote: (gameId: string) => post<{ ok: true }>(`/games/${gameId}/vote`),

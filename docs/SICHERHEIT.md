@@ -29,6 +29,29 @@ mit Rangliste ist das der schwerwiegendste denkbare Fehler.
   (`auth/secrets.ts: blindvergleich`). Test: *„die Anmeldung verraet ueber
   die Dauer nicht, ob es das Konto gibt"*.
 
+## Sitzung: Cookie im Browser, Token in der App
+
+Der Browser hält seine Sitzung in einem **HttpOnly-Cookie** — kein Skript
+bekommt sie je zu sehen. Dabei bleibt es.
+
+Die iOS-Huelle kann das nicht: Sie laedt den Client aus dem App-Paket und ist
+fuer den Server eine fremde Herkunft, deren Cookie WebKit verwirft. Sie traegt
+ihr Token deshalb selbst — `Authorization: Bearer` und am WebSocket als
+Unterprotokoll `brauweg-token`.
+
+- **Herausgegeben wird das Token nur an die Herkunft `brauweg://app`**
+  (`APP_ORIGIN`). Eine Kopfzeile koennte sich jede Seite selbst setzen; die
+  Herkunft setzt der Browser. Ohne diese Bedingung koennte ein XSS im Web das
+  Token abgreifen und dauerhaft weiterverwenden — genau das verhindert
+  HttpOnly.
+- **Die Herkunftsfreigabe laeuft ohne Anmeldedaten** (`credentials: false`).
+  Cookies ueber die Herkunftsgrenze zu erlauben oeffnete CSRF.
+- Das Token steht **nicht in der Adresse** des WebSockets: Adressen landen in
+  Zugriffsprotokollen, Kopfzeilen nicht.
+- Tests: *„das Login gibt das Token nur an die App heraus"*, *„eine fremde
+  Herkunft bekommt keine Freigabe"*, *„ein erfundenes Token oeffnet nichts"*
+  (`test/app-huelle.test.ts`).
+
 ## Berechtigung
 
 Jede Route und **jede WebSocket-Nachricht** prüft, ob der Handelnde darf:

@@ -25,7 +25,13 @@ packages/
 docs/
   plattform-plan.md    Umsetzungsplan der Plattform
   doppelkopf-spec.md   Fachliche Spezifikation des Doppelkopf-Regelwerks
+  APPSTORE.md          Die iOS-App
 ```
+
+Die **iOS-App** liegt in einem eigenen Repository, `Brauweg-spiel-ios`. Sie
+ist eine Hülle um einen `WKWebView` und liefert genau diesen Client aus dem
+App-Paket aus — keine zweite Oberfläche. Einzelheiten in
+[docs/APPSTORE.md](docs/APPSTORE.md).
 
 **Server, Lobby und Client programmieren ausschließlich gegen
 `@brauweg/game-api`.** Im Server gibt es genau eine Ausnahme:
@@ -87,6 +93,12 @@ Client selbst aus. Damit gibt es genau einen Ursprung: Das Sitzungs-Cookie gilt
 ohne Sonderfall auch für den WebSocket, es braucht kein CORS und keine zweite
 Domain. In der Entwicklung übernimmt Vite diese Rolle und reicht `/api` und
 `/ws` an den Server weiter.
+
+**Eine Ausnahme: die iOS-App.** Sie lädt den Client aus dem App-Paket und ist
+damit eine zweite Herkunft (`brauweg://app`). Cookies gehen dorthin nicht, sie
+trägt ihr Sitzungstoken selbst — per `Authorization`-Kopf und am WebSocket als
+Unterprotokoll. Der Browserweg bleibt davon unberührt; siehe
+[docs/SICHERHEIT.md](docs/SICHERHEIT.md).
 
 Deployment ist in [railway.json](railway.json) beschrieben: `npm install
 --include=dev && npm run build`, gestartet wird
