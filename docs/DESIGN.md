@@ -61,10 +61,23 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
 
 ## Startbereich (`front-*`)
 
-- Fester Rahmen: Ressourcen-Leiste oben (Level, Name, Münzen, VIP),
-  Tab-Leiste unten (Shop · Clan · Spielen · Blatt · Profil), Inhalt
-  rollt dazwischen. „Spielen" ist mittig und größer; jeder Tab leuchtet
+- Fester Rahmen: Ressourcen-Leiste oben (Level, Name, Trophäen, **Münzen,
+  Edelsteine**), Tab-Leiste unten (Shop · Clan · Spielen · Blatt · Profil),
+  Inhalt rollt dazwischen. „Spielen" ist mittig und größer; jeder Tab leuchtet
   aktiv in seiner eigenen Farbe.
+- **Die Tab-Leiste hat fünf Plätze, und dabei bleibt es.** Ein sechster nimmt
+  die Mitte weg — und damit die einzige Stelle, die ein Daumen ohne Hinsehen
+  trifft. Was einen eigenen Bereich braucht, wird ein Vollbild über allem
+  (wie Stufenleiter, Spielauswahl, Aufgaben), erreichbar über einen Knopf am
+  Rand des Startbildschirms.
+- **Zwei Währungen, getrennte Bedeutung.** **Münzen** (gold) verdient man:
+  Truhen, Tagesaufgaben. **Edelsteine** (blaugrün) gibt es nur zu kaufen oder
+  geschenkt. Es gibt keinen Wechselkurs — gäbe es einen, wäre jede Truhe
+  indirekt eine Geldquelle. Der Edelstein ist bewusst **nicht lila**: Lila
+  heißt hier „kommt bald", und beides nebeneinander wäre die eine
+  Verwechslung, die man sich nicht leisten kann. **VIP ist keine Währung,**
+  sondern ein Zeitraum, und steht deshalb im Shop-Regal und nicht in der
+  Leiste.
 - **Zwischen den Tabs wird auch gewischt**, nicht nur über die Leiste
   getippt: ein deutlich waagerechter Wisch auf dem Inhalt geht einen Tab
   weiter, in derselben Reihenfolge wie die Leiste. Nur klar horizontale
@@ -120,6 +133,15 @@ Vorhandenes wiederverwenden statt neu erfinden:
   gezeigt, nicht als Daumennagel.
 - **Kommt-bald-Blatt** (`BaldBlatt` in `GameSelect.tsx`): einheitliche
   Antwort auf alles Unfertige.
+- **Der Pinguin** (`Pinguin` in `pinguin.tsx`): das Maskottchen mit dem, was es
+  trägt. Ein einziges SVG auf dem Rahmen **240 × 256**, fünf Ebenen darin
+  (Aura hinten; Oberteil, Schuhe, Hut, Flosse vorn). Wer ihn irgendwo einsetzt,
+  gibt nur `getragen` und eine Höhe in `rem` — die Ebenen verrutschen dabei
+  nie, weil alle dasselbe Koordinatensystem haben. Bestellung und Passvorlage:
+  `docs/ASSETS-PINGUIN.md`.
+- **Bereitschaftspunkt** (`hub-punkt`): roter Punkt an einem Knopf, wenn dahinter
+  etwas zu holen ist. Nie eine Zahl — auf einem 3,5-rem-Knopf ist sie nicht
+  lesbar. Die Zahl steht drinnen.
 
 ## Bilder und Icons
 

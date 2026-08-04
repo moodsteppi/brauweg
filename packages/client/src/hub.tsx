@@ -51,6 +51,35 @@ export function Tafel({
   );
 }
 
+/**
+ * Edelstein — das Zeichen der zweiten Waehrung.
+ *
+ * Gezeichnet und nicht geladen, weil es noch kein Bild dafuer gibt: Für die
+ * Münze liegt `muenze.png` im Ordner, für den Edelstein kommt das Bild erst mit
+ * `docs/ASSETS-WAEHRUNGEN.md`. Ein Platzhalter unter dem künftigen Namen wäre
+ * ein weißer Kasten in der Kopfzeile — genau der Fehler, der laut STAND.md
+ * schon zweimal live gegangen ist.
+ *
+ * Die Farben sind Zeichnung, keine Bedeutung: Lila steht laut DESIGN.md für
+ * „kommt bald", der Edelstein ist deshalb bewusst blaugrün und nicht lila.
+ */
+export function EdelsteinIcon({ className }: { className?: string }): React.JSX.Element {
+  return (
+    <svg
+      className={`front-waehrung-icon${className ? ` ${className}` : ''}`}
+      viewBox="0 0 32 32"
+      aria-hidden="true"
+    >
+      <path d="M9 6 L23 6 L29 14 L16 29 L3 14 Z" fill="#5ec8d8" />
+      <path d="M9 6 L16 14 L3 14 Z" fill="#8fe4ee" />
+      <path d="M23 6 L29 14 L16 14 Z" fill="#3da8bc" />
+      <path d="M3 14 L16 14 L16 29 Z" fill="#49b4c8" />
+      <path d="M16 14 L29 14 L16 29 Z" fill="#2e93a8" />
+      <path d="M9 6 L23 6 L16 14 Z" fill="#c8f2f8" />
+    </svg>
+  );
+}
+
 /** Logo-Schild ueber jedem Tab — hält die Bereiche als ein Stueck zusammen. */
 export function HubBanner(): React.JSX.Element {
   return (

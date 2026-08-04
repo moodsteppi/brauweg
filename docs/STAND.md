@@ -13,15 +13,25 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 127 Doppelkopf-Tests, 117 Zauberer-Tests, 147 Servertests,
+**Prüfstand:** 128 Doppelkopf-Tests, 117 Zauberer-Tests, 211 Servertests,
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
 
-**`main` und `staging` stehen aktuell auf demselben Commit** (`d51f77d`,
-4. August 2026). Der Zweig war zusammengeführt: die Startbildschirm-Arbeit
-von hier plus Cursors Rundenabschluss (`20f66cc` — Auswertungs-Blätter,
-Ansage-Blasen, Verbindungsbanner). Der einzige Konflikt lag in `styles.css`,
-wo beide ans Dateiende angehängt hatten; beide Blöcke stehen jetzt drin.
+**Vorsicht beim ersten Bauen in einem frischen Arbeitsbaum:** `npm run build`
+im Wurzelverzeichnis, nicht `--workspace @brauweg/server`. Die `.d.ts` von
+`@brauweg/game-api` ist sonst der alte Stand, und `tsc` meldet Felder als
+fehlend, die im Quelltext längst stehen (`xpBasis`, `interludeMs`).
+
+**Stand der Zweige am 4. August 2026:** `main` auf `903ec05`, `staging` auf
+`93438ef` — die Währungen, Truhen, Tagesaufgaben und der anziehbare Pinguin
+liegen also auf `staging` und noch nicht in der Produktion. Ob und wann sie
+dorthin gehen, entscheidet Jan.
+
+`staging` ist an diesem Tag einmal auf ausdrückliche Anweisung nach `main`
+gebracht worden (Fast-Forward über 17 Commits), damit Stufen, Testkonten,
+Cursors Rundenabschluss und die Doppelkopf-Nachbesserungen gemeinsam auf dem
+Produktivsystem zu sehen sind. **Das war eine Ausnahme** — die Regel unten gilt
+weiter: `main` wird aus einer Sitzung heraus nicht angefasst.
 
 **Bilder:** `packages/client/public/hub/` liegt bei 6,2 MB — zu Tagesbeginn
 waren es 30. Gemaltes wird als **WebP mit Qualität 85** ausgeliefert;
@@ -77,14 +87,110 @@ Originalauflösung unter `public/`.
 gesetzt). Die Drizzle-Snapshots sind nicht durchgängig gepflegt —
 `db:generate` erzeugt deshalb Anweisungen für längst vorhandene Spalten.
 Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
-`0010_testkonten` (eine Spalte `account.is_staff`, mit
-`ADD COLUMN IF NOT EXISTS` — sie darf zweimal laufen, ohne zu brechen).
+`0012_waehrungen_truhen_aufgaben` (`account.gems` plus vier Tabellen:
+`chest_claim`, `quest_progress`, `account_cosmetic`, `account_avatar`).
+Durchgehend mit `IF NOT EXISTS` und einem `DO $$`-Block für den Enum-Typ — sie
+darf zweimal laufen, ohne zu brechen. Davor `0011_erfahrung` (`account.xp`) und
+`0010_testkonten` (`account.is_staff`).
 
 Die 0009 legt `account_game_theme` an und übernimmt die bisherigen Werte
 aus `account.card_deck` und `account.table_scene` nach `doppelkopf`. **Die
 beiden alten Spalten stehen absichtlich noch da** und werden nicht mehr
 gelesen: Fällt ein Deploy zurück, läuft die vorige Fassung damit weiter.
 Sie dürfen weg, sobald dieser Stand eine Weile stabil läuft.
+
+---
+
+## Zwei Währungen, Truhen, Tagesaufgaben, Pinguin
+
+Steht seit dem 4. August auf `staging`, geprüft an der laufenden Anwendung:
+Truhe geöffnet, Aufgabenstand gelesen, Hut für 120 Münzen und Krone für 40
+Edelsteine gekauft, angezogen, ausgezogen — dazu die Fehlerpfade (zweimal
+öffnen, gesperrte Stufentruhe, zu wenig Münzen, Geschenk kaufen).
+
+**Zwei Währungen, ohne Wechselkurs.** **Münzen** (`account.coins`) fallen aus
+Truhen und Tagesaufgaben, **Edelsteine** (`account.gems`, neu) nur aus Kauf
+oder Geschenk. Gäbe es einen Kurs, wäre jede Truhe indirekt eine Geldquelle und
+der Kurs die einzige Zahl, die noch zählt. Was mit Edelsteinen zu haben ist,
+ist mit Münzen nicht zu haben.
+
+**Jede Buchung läuft über `src/waehrung.ts`** — die einzige Stelle, an der ein
+Guthaben sich ändert. Die Deckungsprüfung steht in der WHERE-Klausel und nicht
+davor: `select` und danach `update` sind zwei Schritte, und zwischen ihnen passt
+ein zweiter Kauf. So kann ein Stand bauartbedingt nie unter Null geraten.
+Testkonten (`is_staff`) zahlen nicht, und ihr Stand schrumpft dabei nicht.
+
+**Der VIP-Platz oben rechts ist jetzt der Edelstein.** VIP ist kein Guthaben,
+sondern ein Zeitraum, und steht deshalb im Shop-Regal. So bleiben es drei
+Pillen wie bisher — vier wären auf einem Hochkant-Handy eine zu viel.
+
+**Truhen** (`src/truhen.ts`): eine **Tagestruhe** je Kalendertag (Holz, 1 bis 3
+Münzen) und **elf Stufentruhen** bei den Stufen 2, 3, 5, 8, 12, 16, 20, 25, 30,
+40, 50, in fünf Graden bis Diamant (60 bis 100 Münzen). **Nur Münzen drin** —
+Truhen mit Kosmetik wären Zufallsboxen, und die schließt Plan 11 aus.
+
+Zwei Dinge sind dort Absicht: **Gewürfelt wird genau einmal**, das Ergebnis
+steht in `chest_claim` — würde die Anzeige neu würfeln, bekäme jeder mit genug
+Neuladen die 3. Und der Eintrag kommt **vor** der Gutschrift, mit
+`onConflictDoNothing`: Nur wer die Zeile wirklich angelegt hat, schreibt Münzen.
+Andersherum zahlt ein doppelter Tipp zweimal.
+
+**Tagesaufgaben** (`src/quests.ts`): sechs, **jeden Tag dieselben**. Ein
+täglich wechselnder Satz bräuchte eine Auswahlregel, eine Verteilung über
+Schwierigkeiten und eine Antwort darauf, was um Mitternacht mit halb erledigten
+Aufgaben passiert; feste Aufgaben brauchen davon nichts. Zusammen 50 Münzen am
+Tag. Gezählt wird am **Partie-Ende** (`countQuests` in `runtime/party.ts`),
+auch an Tischen mit Bots — Aufgaben sind eine Belohnung fürs Spielen, keine
+Wertung. Der Tag läuft in Europe/Berlin.
+
+**Der Pinguin ist anpassbar:** fünf Plätze (Kopf, Oberteil, Schuhe, Flosse,
+Aura), 27 Stücke, je Platz eines zum Preis 0. Der Server kennt Kennung, Platz
+und Preis (`src/kosmetik.ts`), das Aussehen kennt nur der Client — dieselbe
+Trennung wie bei Kartenblatt und Szenerie. Getragen wird über
+`account_avatar` (eine Zeile je belegtem Platz, kein Spaltensatz: ein sechster
+Platz ist damit ein Katalogeintrag und keine Migration).
+
+**Der Kauf gegen Münzen und Edelsteine läuft wirklich.** Alles, was echtes Geld
+kostet — Münz- und Edelsteinpakete, VIP, Season Pass —, zeigt Preis und Inhalt
+und sagt beim Antippen „Kommt bald": **Es gibt dafür keinen Endpunkt.** Die
+Cent-Beträge in `src/shop.ts` sind Platzhalter; Plan 13 führt die Preise noch
+als offenen Punkt.
+
+**Das Geburtstagsoutfit ist jetzt tragbar.** `hut-partyhut` und
+`aura-konfetti` sind `herkunft: 'geschenk'`, stehen in keinem Regal und sind
+nur über die Geburtstagsbelohnung zu bekommen. Wären sie kaufbar, wäre der
+Geburtstag belanglos. `account.hasBirthdayOutfit` bleibt stehen — die Spalte
+trägt die Anzeige im Profil.
+
+**Aufgaben und Truhen liegen auf einem Vollbild, nicht in einem sechsten Tab.**
+Die Tab-Leiste hat laut DESIGN.md fünf Plätze mit „Spielen" mittig und größer;
+ein sechster nimmt die Mitte weg und damit die einzige Stelle, die ein Daumen
+ohne Hinsehen trifft. Der Weg hinein ist die Truhe am rechten Rand des
+Startbildschirms — dort stand vorher „Der Tagesbonus, bald". Ein roter Punkt
+daran sagt, dass etwas bereitliegt; die Zahlen dafür kommen als `bereit` aus
+`/api/me`, mit zwei schlanken Zählabfragen statt der vollen Listen.
+
+**Alles Gemalte fehlt noch und blockiert nichts.** Pinguin, Ausstattung,
+Truhen, Edelstein und Aufgaben-Zeichen sind **SVGs im Bundle** — nach DESIGN.md
+(„Alles gemalt, nichts geladen") und weil 27 nicht gelieferte PNGs 27 weiße
+Kästen wären. Vier Bestellungen liegen bereit: `ASSETS-PINGUIN.md`,
+`ASSETS-TRUHEN.md`, `ASSETS-WAEHRUNGEN.md`, `ASSETS-AUFGABEN.md`. Der Einbau
+ist je Stück eine Zeile (`bild:` im Katalog `AUSSEHEN`).
+
+**Der Basis-Pinguin ist bewusst nicht `pinguin.png`.** Der ist ein Ritter mit
+Helm, Schwert, Panzer und Umhang — also mit vier von fünf Plätzen belegt, und
+ein Hut auf einem Helm sieht aus wie ein Fehler. Der Ritter bleibt, wo er steht
+(Trophäenweg, Vorgabe fürs Profilbild). Die **Passvorlage** für die Lieferung
+liegt unter `packages/client/art/pinguin/pinguin-zonen.png` samt Quelle; sie
+gehört als Referenzbild in jede Bildgenerierung.
+
+**Was bewusst nicht gebaut ist:** Kartenblätter und Szenerien bleiben im
+Themen-Tab und sind nicht ins Shop-Regal kopiert — dort gibt es sie schon, mit
+Vorschau in Tischgröße, und ein zweiter Weg dorthin wäre einer ohne Vorschau.
+Der Shop verlinkt sie deshalb nur.
+
+**Prüfstand: 211 Servertests** (54 neue in `waehrung`, `truhen`, `quests`,
+`shop`, `waehrung-http`), Doppelkopf und Zauberer unverändert bei 128 und 117.
 
 ---
 
@@ -134,6 +240,17 @@ UPDATE account SET xp = 330 WHERE email = 'DEINE-ADRESSE';
 330 ergibt Stufe 5 mit 50 von 120 Punkten, also einem halb gefüllten
 Balken. Die Grenzen: Stufe 2 ab 40, Stufe 3 ab 100, Stufe 4 ab 180,
 Stufe 5 ab 280, Stufe 6 ab 400.
+
+**Zum Ausprobieren Guthaben setzen** — auch dafür gibt es bewusst keinen
+Endpunkt, aus demselben Grund:
+
+```sql
+UPDATE account SET coins = 2000, gems = 200 WHERE email = 'DEINE-ADRESSE';
+```
+
+Mit `xp = 330` stehen zugleich drei Stufentruhen offen (Stufe 2, 3 und 5).
+Wer alles auf einmal sehen will, nimmt lieber ein Testkonto: `STAFF_EMAILS`
+setzen und neu starten — dann ist alles besessen und nichts wird abgebucht.
 
 ## Am 4. August fertig geworden
 
