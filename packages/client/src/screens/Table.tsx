@@ -634,6 +634,8 @@ export function Table({
   // Aufspiel: wer den Stich anspielt. Laeuft ein Stich, ist es, wer die erste
   // Karte gelegt hat; ist er leer, der, der gerade herauskommt.
   const leaderSeat = trick.length > 0 ? trick[0]!.seat : view.currentActor;
+  // Der eigene Zuruf, damit der Sender ihn ueber sich selbst aufblitzen sieht.
+  const meinEmote = view.seat !== null ? emotes[view.seat] : undefined;
 
   // Trumpf oder Fehl: nur abgelesen aus der Rangfolge, die das Modul liefert.
   const trumps = new Set(round?.order.trumps ?? []);
@@ -941,14 +943,17 @@ export function Table({
 
       {/* Eigener Bereich: Name, Partei, Hand */}
       <div className="doko-me">
-        <Avatar
-          name={view.seat === null ? 'Du' : nameOf(view.seat)}
-          seatIndex={view.seat ?? 0}
-          active={view.currentActor === view.seat}
-          deadline={view.currentActor === view.seat ? view.turnDeadline : null}
-          avatarUrl={view.seat === null ? null : avatarOf(view.seat)}
-          you
-        />
+        <span className="doko-me-avatar">
+          {meinEmote && <EmoteBlase emote={meinEmote} />}
+          <Avatar
+            name={view.seat === null ? 'Du' : nameOf(view.seat)}
+            seatIndex={view.seat ?? 0}
+            active={view.currentActor === view.seat}
+            deadline={view.currentActor === view.seat ? view.turnDeadline : null}
+            avatarUrl={view.seat === null ? null : avatarOf(view.seat)}
+            you
+          />
+        </span>
         <div className="doko-me-info">
           <strong>{view.seat === null ? 'Zuschauer' : nameOf(view.seat)}</strong>
           <span className="muted">

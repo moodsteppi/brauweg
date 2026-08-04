@@ -341,6 +341,9 @@ export function WizardTable({
         : view.currentActor;
 
   const gegner = seats.filter((seat) => view.seat === null || seat !== view.seat);
+  // Der eigene Zuruf, damit der Sender ihn ueber sich selbst aufblitzen sieht -
+  // sonst tippt man einen Zuruf und bei einem selbst passiert scheinbar nichts.
+  const meinEmote = view.seat !== null ? emotes[view.seat] : undefined;
 
   return (
     <div className="doko wiz" style={{ '--zoom': zoom } as React.CSSProperties}>
@@ -494,14 +497,17 @@ export function WizardTable({
 
       {/* Die eigene Lage in einem Satz: Gebot, Stiche, Aufspiel. */}
       <div className="doko-me">
-        <Avatar
-          name={view.seat === null ? 'Du' : nameOf(view.seat)}
-          seatIndex={view.seat ?? 0}
-          active={view.currentActor === view.seat}
-          deadline={view.currentActor === view.seat ? view.turnDeadline : null}
-          avatarUrl={view.seat === null ? null : (seatInfo(view.seat)?.avatarUrl ?? null)}
-          you
-        />
+        <span className="doko-me-avatar">
+          {meinEmote && <EmoteBlase emote={meinEmote} />}
+          <Avatar
+            name={view.seat === null ? 'Du' : nameOf(view.seat)}
+            seatIndex={view.seat ?? 0}
+            active={view.currentActor === view.seat}
+            deadline={view.currentActor === view.seat ? view.turnDeadline : null}
+            avatarUrl={view.seat === null ? null : (seatInfo(view.seat)?.avatarUrl ?? null)}
+            you
+          />
+        </span>
         <div className="doko-me-info">
           <strong>{view.seat === null ? 'Zuschauer' : nameOf(view.seat)}</strong>
           <span className="muted">
