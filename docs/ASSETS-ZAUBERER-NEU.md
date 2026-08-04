@@ -69,7 +69,7 @@ inzwischen selbst etwas hin. Was dort gemalt wird, verschwindet darunter.
 gemaltes „Z" mehr** — anders als in der ersten Bestellung. Der Chip ist opak
 und deckt es ohnehin zu. Ruhige Malerei genügt.
 
-**Unten rechts, etwa 42 % Breite × 20 % Höhe:** Liegt der Zauberer als
+**Unten rechts, 42 % Breite × 28 % Höhe** (nachgemessen): Liegt der Zauberer als
 aufgedeckte Trumpfkarte und nennt der Geber danach eine Farbe, blendet der
 Client dort das Farbzeichen ein (`wiz-trumpf-farbe`). Kein Gesicht, keine
 Hand, kein Schriftzug in diese Ecke.

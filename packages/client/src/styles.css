@@ -5890,7 +5890,10 @@ main.auth > .muted {
    Je größer das Blatt, desto weniger sieht man von genau den Karten, über die
    man gerade entscheidet — bei zwanzig Handkarten verdeckte die volle Breite
    die halbe Reihe. Deshalb schmaler und knapper als die übrigen Blätter.
-   Die Chips bleiben trotzdem über 40 px hoch und damit daumentauglich. */
+   Gemessen auf 390 px Breite: das Ansageblatt nimmt bei zwanzig Stichen 43 %
+   der Höhe ein, die Trumpfwahl 24 %, die Hand bleibt in beiden Fällen frei.
+   Kleiner dürfen die Chips nicht werden — sie liegen mit 36 × 39 px schon am
+   unteren Rand dessen, was ein Daumen sicher trifft. */
 .wiz-knapp {
   max-width: 23rem;
   padding: 0.8rem 0.9rem;
