@@ -145,7 +145,7 @@ export const DEFAULT_RULESET: RuleSet = {
   bockWindowLength: 4,
   bockFactor: 2,
 
-  pflichtsolo: true,
+  pflichtsolo: false,
 
   tableSize: 4,
   rounds: 8,

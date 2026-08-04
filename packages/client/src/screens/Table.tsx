@@ -12,7 +12,7 @@ import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
 import { gameTypeLabel, t } from '../i18n';
-import type { Action, Card } from '../protocol';
+import type { Action, Card, RoundResult } from '../protocol';
 import {
   Avatar,
   HandCard,
@@ -28,13 +28,40 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
-import { useTable } from '../useTable';
+import { type ConnectionStatus, useTable } from '../useTable';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
     dass die Karten nicht aus dem Faecher wachsen. */
 const ZOOM_MIN = 0.7;
 const ZOOM_MAX = 1.45;
 const ZOOM_STEP = 0.15;
+
+/**
+ * Schmaler Hinweis samt Knopf, wenn die Leitung gerade nicht steht. Beim
+ * ersten Verbinden bleibt er weg - dafuer gibt es den Ladebildschirm.
+ */
+function ConnectionBanner({
+  status,
+  onReconnect,
+}: {
+  status: ConnectionStatus;
+  onReconnect: () => void;
+}): React.JSX.Element | null {
+  if (status === 'open' || status === 'connecting') return null;
+  return (
+    <div className={`doko-conn doko-conn--${status}`} role="status" aria-live="polite">
+      <span className="doko-conn-dot" aria-hidden="true" />
+      <span className="doko-conn-text">
+        {status === 'reconnecting'
+          ? 'Verbindung wird wiederhergestellt…'
+          : 'Keine Verbindung'}
+      </span>
+      <button className="doko-conn-btn" onClick={onReconnect}>
+        Neu verbinden
+      </button>
+    </div>
+  );
+}
 
 /**
  * Der Doppelkopf-Tisch als mobile Oberflaeche.
@@ -63,7 +90,8 @@ export function Table({
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, connected, send, addBot, removeBot } = useTable(tableId);
+  const { view, party, table, error, status, send, addBot, removeBot, reconnect } =
+    useTable(tableId);
 
   // Tischgroesse: skaliert Hand- und Stichkarten. Am Geraet gespeichert, weil
   // sie von Augen und Bildschirm abhaengt, nicht vom Konto.
@@ -118,6 +146,8 @@ export function Table({
     ? lastTrickNow.played.map((p) => p.card.id).join('.')
     : null;
   const [frozenKey, setFrozenKey] = useState<string | null>(null);
+  // Nach dem Liegen gleitet der Stich zum Gewinner: kurze Sweep-Phase.
+  const [sweeping, setSweeping] = useState(false);
   const seenKey = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     if (seenKey.current === undefined) {
@@ -127,11 +157,25 @@ export function Table({
     if (lastKey && lastKey !== seenKey.current) {
       seenKey.current = lastKey;
       setFrozenKey(lastKey);
-      const handle = setTimeout(
-        () => setFrozenKey((k) => (k === lastKey ? null : k)),
-        1000,
-      );
-      return () => clearTimeout(handle);
+      setSweeping(false);
+      const reduce = prefersReducedMotion();
+      let sweepHandle: ReturnType<typeof setTimeout> | undefined;
+      const handle = setTimeout(() => {
+        if (reduce) {
+          setFrozenKey((k) => (k === lastKey ? null : k));
+          return;
+        }
+        // Lange genug gelegen: jetzt zum Gewinner gleiten, dann abraeumen.
+        setSweeping(true);
+        sweepHandle = setTimeout(() => {
+          setSweeping(false);
+          setFrozenKey((k) => (k === lastKey ? null : k));
+        }, 440);
+      }, 1600);
+      return () => {
+        clearTimeout(handle);
+        if (sweepHandle) clearTimeout(sweepHandle);
+      };
     }
   }, [lastKey]);
 
@@ -232,6 +276,50 @@ export function Table({
   useEffect(() => () => blasenTimer.current.forEach(clearTimeout), []);
 
   /**
+   * Rundenabschluss auf dem Filz:
+   * 1) kurzer Stichstapel-Blick, 2) Auswertung, 3) Zwischenstand.
+   *
+   * Alles rein clientseitig aus `round.phase === 'finished'`, `round.result`
+   * und `view.scores`.
+   */
+  const finishedKey = (() => {
+    const r = view?.view.round;
+    if (!r || r.phase !== 'finished' || !r.result) return null;
+    return `${view.view.roundIndex}:${r.result.value}:${Object.values(r.result.scores).join('.')}`;
+  })();
+  const [showTrickPeek, setShowTrickPeek] = useState(false);
+  const [abschlussStep, setAbschlussStep] = useState<'none' | 'abrechnung' | 'zwischenstand'>('none');
+  const gesehenAbschluss = useRef<string | null>(null);
+  useEffect(() => {
+    if (!finishedKey) {
+      setShowTrickPeek(false);
+      setAbschlussStep('none');
+      return;
+    }
+    if (gesehenAbschluss.current === finishedKey) return;
+    gesehenAbschluss.current = finishedKey;
+
+    if (prefersReducedMotion()) {
+      setAbschlussStep('abrechnung');
+      return;
+    }
+
+    setShowTrickPeek(true);
+    const peek = window.setTimeout(() => {
+      setShowTrickPeek(false);
+      setAbschlussStep('abrechnung');
+    }, 1500);
+    return () => window.clearTimeout(peek);
+  }, [finishedKey, view?.view.round]);
+
+  // Fallback-Autofluss, falls niemand auf "Weiter" tippt.
+  useEffect(() => {
+    if (abschlussStep !== 'abrechnung') return;
+    const t = window.setTimeout(() => setAbschlussStep('zwischenstand'), 10_000);
+    return () => window.clearTimeout(t);
+  }, [abschlussStep]);
+
+  /**
    * Name als Weg zum Profil, wo ein Konto dahintersteht. Bots und freie
    * Plaetze bleiben Text - ein Bot hat kein Profil, und so sieht man nebenbei,
    * wer echt ist.
@@ -253,25 +341,39 @@ export function Table({
   // los und die Sicht ersetzt diesen Bildschirm.
   if (!view && table && table.status === 'waiting') {
     return (
-      <Wartebereich
-        tableId={tableId}
-        table={table}
-        error={error}
-        spielerName={spielerName}
-        addBot={addBot}
-        removeBot={removeBot}
-        onLeave={onLeave}
-      />
+      <>
+        <ConnectionBanner status={status} onReconnect={reconnect} />
+        <Wartebereich
+          tableId={tableId}
+          table={table}
+          error={error}
+          spielerName={spielerName}
+          addBot={addBot}
+          removeBot={removeBot}
+          onLeave={onLeave}
+        />
+      </>
     );
   }
 
   if (!view) {
+    const ladeText =
+      status === 'open'
+        ? 'Tisch wird geladen…'
+        : status === 'reconnecting'
+          ? 'Verbindung wird wiederhergestellt…'
+          : 'Verbinde…';
     return (
       <div className="doko doko--loading">
         <div className="doko-spinner" aria-hidden="true" />
-        <p className="muted">{connected ? 'Tisch wird geladen…' : 'Verbinde…'}</p>
+        <p className="muted">{ladeText}</p>
         {error && <p className="error">{t(error)}</p>}
-        <button onClick={onLeave}>Zurück</button>
+        <div className="doko-loading-actions">
+          <button className="primary" onClick={reconnect}>
+            Neu verbinden
+          </button>
+          <button onClick={onLeave}>Zurück</button>
+        </div>
       </div>
     );
   }
@@ -364,6 +466,9 @@ export function Table({
   const needHandover =
     round?.armut.awaiting === 'handover' &&
     !otherActions.some((a) => a.type === 'armutHandover');
+  const roundResult = round?.phase === 'finished' && round.result ? round.result : null;
+  const abrechnungOffen = abschlussStep === 'abrechnung' && roundResult !== null;
+  const zwischenstandOffen = abschlussStep === 'zwischenstand' && roundResult !== null;
 
   return (
     <div className="doko" style={{ '--zoom': zoom } as React.CSSProperties}>
@@ -380,6 +485,14 @@ export function Table({
           <span className="muted">{gameLine}</span>
         </div>
         <div className="doko-top-right">
+          <button
+            className={`doko-icon${status !== 'open' ? ' is-syncing' : ''}`}
+            onClick={reconnect}
+            aria-label="Neu verbinden / aktualisieren"
+            title="Neu verbinden"
+          >
+            ⟳
+          </button>
           {view.view.nextMultiplier > 1 && (
             <span className="doko-badge doko-badge--bock">Bock ×{view.view.nextMultiplier}</span>
           )}
@@ -432,6 +545,8 @@ export function Table({
 
       {/* Spielfläche. Namen fuehren auch hier zum Profil - Zurueck bringt
           einen an den Tisch zurueck, die Partie laeuft derweil weiter. */}
+      <ConnectionBanner status={status} onReconnect={reconnect} />
+
       <div className={`doko-felt seats-${seatCount}`}>
         {opponents.map((seat) => (
           <OpponentSeat
@@ -453,6 +568,7 @@ export function Table({
             ansage={ansageVon(round, seat)}
             sagt={blasen[seat] ?? null}
             tricksWon={round?.trickCounts?.[seat] ?? 0}
+            showTrickPeek={showTrickPeek}
             avatarUrl={avatarOf(seat)}
             deck={deck}
           />
@@ -469,7 +585,13 @@ export function Table({
               >
                 {/* Innerer Wrapper traegt die Legeanimation, damit die Platzierung
                   (aeusseres Element) davon unberuehrt bleibt. */}
-                <div className="doko-trick-in">
+                <div
+                  className={`doko-trick-in${
+                    sweeping && lastTrickNow
+                      ? ` is-sweep sweep-${slotFor(lastTrickNow.winnerSeat, base, seatCount)}`
+                      : ''
+                  }`}
+                >
                   <div className="pc pc--trick">
                     <CardFront card={played.card} deck={deck} />
                   </div>
@@ -532,6 +654,24 @@ export function Table({
         <VorbehaltDialog actions={vorbehaltActions} onSend={send} />
       )}
 
+      {abrechnungOffen && roundResult && (
+        <RundenAbrechnung
+          result={roundResult}
+          seats={seatList.map((s) => ({ seat: s.seat, name: nameOf(s.seat), avatarUrl: avatarOf(s.seat) }))}
+          knownParties={round?.knownParties ?? {}}
+          onWeiter={() => setAbschlussStep('zwischenstand')}
+        />
+      )}
+
+      {zwischenstandOffen && (
+        <ZwischenstandBlatt
+          seats={seatList.map((s) => ({ seat: s.seat, name: nameOf(s.seat), avatarUrl: avatarOf(s.seat) }))}
+          scores={view.view.scores}
+          restRunden={Math.max(0, view.view.totalRounds - view.view.roundIndex - 1)}
+          onWeiter={() => setAbschlussStep('none')}
+        />
+      )}
+
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
 
       {zeigeLetzten && round?.lastTrick && (
@@ -584,7 +724,9 @@ export function Table({
           </span>
         </div>
         {view.seat !== null && (
-          <StichStapel count={round?.trickCounts?.[view.seat] ?? 0} />
+          <span className={showTrickPeek ? 'doko-stiche-wrap is-peek' : 'doko-stiche-wrap'}>
+            <StichStapel count={round?.trickCounts?.[view.seat] ?? 0} />
+          </span>
         )}
         {view.currentActor === view.seat && view.turnDeadline !== null && (
           <TurnClock deadline={view.turnDeadline} />
@@ -657,6 +799,7 @@ const OpponentSeat = memo(function OpponentSeat({
   ansage,
   sagt,
   tricksWon,
+  showTrickPeek,
   avatarUrl,
   deck,
 }: {
@@ -679,6 +822,7 @@ const OpponentSeat = memo(function OpponentSeat({
   /** Kurzer Zuruf, verschwindet nach ein paar Sekunden von selbst. */
   sagt: string | null;
   tricksWon: number;
+  showTrickPeek: boolean;
   avatarUrl: string | null;
   deck: Deck;
 }): React.JSX.Element {
@@ -719,7 +863,9 @@ const OpponentSeat = memo(function OpponentSeat({
           rechts liegen sie quer (siehe CSS is-vertical). */}
       <Ruecken count={count} vertical={vertical} deck={deck} />
       <span className="doko-opp-score">{score}</span>
-      <StichStapel count={tricksWon} />
+      <span className={showTrickPeek ? 'doko-stiche-wrap is-peek' : 'doko-stiche-wrap'}>
+        <StichStapel count={tricksWon} />
+      </span>
     </div>
   );
 });
@@ -1149,4 +1295,176 @@ function ansageVon(
   const meine = (round?.ansagen ?? []).filter((a) => a.seat === seat);
   const hoechste = meine.reduce((m, a) => Math.max(m, a.level), 0);
   return hoechste > 0 ? (ABSAGE_NAMEN[hoechste - 1] ?? null) : null;
+}
+
+type SitzInfo = { seat: number; name: string; avatarUrl: string | null };
+
+function RundenAbrechnung({
+  result,
+  seats,
+  knownParties,
+  onWeiter,
+}: {
+  result: RoundResult;
+  seats: SitzInfo[];
+  knownParties: Record<number, string>;
+  onWeiter: () => void;
+}): React.JSX.Element {
+  const reSeats = seats.filter((s) => knownParties[s.seat] === 're');
+  const kontraSeats = seats.filter((s) => knownParties[s.seat] !== 're');
+  const reGewinnt = result.winner === 're';
+  const kontraGewinnt = result.winner === 'kontra';
+  return (
+    <div className="doko-sheet doko-sheet--mitte doko-sheet--abrechnung">
+      <div className="doko-sheet-card doko-abrechnung">
+        <h2>Auswertung</h2>
+        <div className="doko-abrechnung-spalten">
+          <ParteiSpalte
+            title="Re"
+            klasse="re"
+            members={reSeats}
+            points={result.rePoints}
+            specialRows={specialRowsOf(result, 're')}
+            total={roundValueOf(result, reSeats, true)}
+            isWinner={reGewinnt}
+          />
+          <ParteiSpalte
+            title="Kontra"
+            klasse="kontra"
+            members={kontraSeats}
+            points={result.kontraPoints}
+            specialRows={specialRowsOf(result, 'kontra')}
+            total={roundValueOf(result, kontraSeats, false)}
+            isWinner={kontraGewinnt}
+          />
+        </div>
+        <button className="primary" onClick={onWeiter}>
+          Weiter
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ParteiSpalte({
+  title,
+  klasse,
+  members,
+  points,
+  specialRows,
+  total,
+  isWinner,
+}: {
+  title: string;
+  klasse: 're' | 'kontra';
+  members: SitzInfo[];
+  points: number;
+  specialRows: string[];
+  total: number;
+  isWinner: boolean;
+}): React.JSX.Element {
+  return (
+    <section className={`doko-abr-partei is-${klasse}${isWinner ? ' is-winner' : ''}`}>
+      <header>{title}</header>
+      <div className="doko-abr-team">
+        {members.map((s) => (
+          <span key={s.seat} className={`doko-abr-spieler is-${klasse}`}>
+            <Avatar
+              name={s.name}
+              seatIndex={s.seat}
+              active={false}
+              deadline={null}
+              avatarUrl={s.avatarUrl}
+            />
+            <b>{s.name}</b>
+          </span>
+        ))}
+      </div>
+      <div className="doko-abr-rows">
+        <div>
+          <span>Kartenpunkte</span>
+          <span>{points}</span>
+        </div>
+        {specialRows.map((row) => (
+          <div key={row}>
+            <span>{row}</span>
+            <span>+1</span>
+          </div>
+        ))}
+      </div>
+      <footer>
+        <span>Gesamt</span>
+        <strong>{total > 0 ? `+${total}` : total}</strong>
+      </footer>
+    </section>
+  );
+}
+
+function ZwischenstandBlatt({
+  seats,
+  scores,
+  restRunden,
+  onWeiter,
+}: {
+  seats: SitzInfo[];
+  scores: Record<number, number>;
+  restRunden: number;
+  onWeiter: () => void;
+}): React.JSX.Element {
+  const sortiert = [...seats].sort((a, b) => a.seat - b.seat);
+  return (
+    <div className="doko-sheet doko-sheet--mitte doko-sheet--zwischenstand">
+      <div className="doko-sheet-card doko-zwischenstand">
+        <h2>Zwischenstand</h2>
+        <div className="doko-zwischenstand-grid">
+          {sortiert.map((s) => {
+            const value = scores[s.seat] ?? 0;
+            return (
+              <article key={s.seat} className="doko-zwischenstand-card">
+                <Avatar
+                  name={s.name}
+                  seatIndex={s.seat}
+                  active={false}
+                  deadline={null}
+                  avatarUrl={s.avatarUrl}
+                />
+                <b>{s.name}</b>
+                <strong className={value < 0 ? 'is-minus' : 'is-plus'}>
+                  {value > 0 ? `+${value}` : value}
+                </strong>
+              </article>
+            );
+          })}
+        </div>
+        <p className="muted doko-zwischenstand-rest">Verbleibende Runden: {restRunden}</p>
+        <button className="primary" onClick={onWeiter}>
+          Weiter
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function roundValueOf(result: RoundResult, seats: SitzInfo[], isRe: boolean): number {
+  const seatValues = seats.map((s) => result.scores[s.seat] ?? 0);
+  if (seatValues.length === 0) return 0;
+  if (result.isSolo) {
+    // Solist bekommt ±3*value, Gegner ±value — beide Seiten zeigen je Kopf.
+    if (isRe) return result.winner === 're' ? result.value * 3 : -result.value * 3;
+    return result.winner === 'kontra' ? result.value : -result.value;
+  }
+  return seatValues[0] ?? 0;
+}
+
+function specialRowsOf(result: RoundResult, party: 're' | 'kontra'): string[] {
+  const map: Record<string, string> = {
+    fuchs: 'Fuchs',
+    karlchen: 'Karlchen',
+    doppelkopf: 'Doppelkopf',
+    charlie: 'Charlie',
+    herzdurchlauf: 'Herzdurchlauf',
+  };
+  return result.specials
+    .filter((s) => s.party === party)
+    .map((s) => map[s.kind] ?? s.kind);
 }
