@@ -48,7 +48,22 @@ Gesetzt sind (Stand 4. August 2026): `NODE_ENV`, `MIGRATE_ON_BOOT`,
 | Variable | Wert | Wofür |
 | --- | --- | --- |
 | `STAGE` | `staging` | Das kleine graue Schild in der Kopfzeile |
-| `STAFF_EMAILS` | `robin.hellmut@gmail.com` | Testkonten, siehe Abschnitt 3 |
+| `STAFF_EMAILS` | `robin.hellmut+staging@gmail.com` | Testkonten, siehe Abschnitt 3 |
+
+**Warum eine Plus-Adresse und nicht die normale?** Nötig wäre es nicht —
+staging hat eine eigene Datenbank, dieselbe Adresse dort wäre ohnehin ein
+anderes Konto. Zwei Gründe sprechen trotzdem dafür:
+
+1. **Das Postfach.** Bestätigungs- und Passwortmails beider Systeme kämen sonst
+   vom selben Absender mit fast gleichem Text. Beim dritten Mal klickt man auf
+   den falschen Link.
+2. **Das Demokonto der App-Store-Prüfung.** Es braucht später `STAFF_EMAILS`
+   **in der Produktion**. Stünde dort die normale Adresse, hätte das echte
+   Spielkonto plötzlich Premium und alles freigeschaltet — und wäre als
+   Referenzkonto wertlos.
+
+Alles hinter dem `+` ignoriert Gmail beim Zustellen: Die Mail landet im selben
+Fach, für Brauweg ist es aber eine andere Adresse und damit ein anderes Konto.
 
 **`RESEND_API_KEY` ist auf staging gesetzt** — Bestätigungsmails gehen also
 wirklich raus, über dieselbe verifizierte Domain wie in der Produktion. Wer
@@ -105,13 +120,14 @@ Dienst neu starten.
 **Genau da steht es gerade** (Log des Staging-Dienstes, 4. August 2026):
 
 ```
-Testkonten: 0 gesetzt, ohne Konto: robin.hellmut@gmail.com
+Testkonten: 0 gesetzt, ohne Konto: robin.hellmut+staging@gmail.com
 ```
 
 Die Staging-Datenbank ist frisch, dort hat sich noch niemand registriert. Der
-nächste Schritt ist deshalb: auf **staging.brauweg-spielen.de** mit dieser
-Adresse ein Konto anlegen, die Mail bestätigen — und beim nächsten Deploy (oder
-einem Neustart des Dienstes) steht `1 gesetzt` im Log.
+nächste Schritt ist deshalb: auf **staging.brauweg-spielen.de** mit
+`robin.hellmut+staging@gmail.com` ein Konto anlegen, die Mail bestätigen — und
+beim nächsten Deploy (oder einem Neustart des Dienstes) steht `1 gesetzt` im
+Log.
 
 Das Log unterscheidet die Fälle:
 
