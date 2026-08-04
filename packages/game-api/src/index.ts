@@ -216,6 +216,19 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * Optional: Ein Spiel ohne Zwischenabrechnung laesst die Methode weg.
    */
   completedSegments?(party: TParty): readonly unknown[];
+
+  /**
+   * Grundlage der Erfahrungspunkte: gelegte Karten je Sitz.
+   *
+   * Die Plattform vergibt einen Punkt je Karte und verdoppelt fuer jeden
+   * mit positivem Trophaeengewinn. Wie viele Karten eine Partie hatte,
+   * weiss aber nur das Modul — beim Doppelkopf sind es Blattgroesse mal
+   * Runden, beim Zauberer die Summe der Rundennummern.
+   *
+   * Fehlt die Methode, gibt es fuer dieses Spiel keine Punkte. Das ist
+   * Absicht: Lieber gar keine als geratene.
+   */
+  xpBasis?(party: TParty): Readonly<Record<number, number>>;
 }
 
 // ---------------------------------------------------------------------------

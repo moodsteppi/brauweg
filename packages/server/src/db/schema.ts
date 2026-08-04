@@ -119,6 +119,12 @@ export const account = pgTable(
     premiumUntil: timestamp({ withTimezone: true }),
     coins: integer().notNull().default(0),
     /**
+     * Erfahrungspunkte, spieluebergreifend. Die Stufe wird daraus gerechnet
+     * und nicht gespeichert (src/level.ts): Sonst gaebe es zwei Wahrheiten,
+     * und eine Aenderung an der Kurve muesste jede Zeile anfassen.
+     */
+    xp: integer().notNull().default(0),
+    /**
      * Testkonto: hat alles, was man haben kann.
      *
      * Am KONTO und nicht an der Umgebung, weil es an beiden Orten gebraucht

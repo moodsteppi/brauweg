@@ -30,6 +30,7 @@ import {
   touch,
 } from '../tables/service.js';
 import { applyDelta, awardForParty, type Placement } from '../trophies.js';
+import { xpFuerPartie } from '../level.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -848,6 +849,27 @@ export class PartyRuntime {
       });
 
       booked.push({ seat: award.seat, delta: Math.round(award.delta), reason: award.reason });
+
+      /*
+       * Erfahrungspunkte, spieluebergreifend: einer je gelegter Karte,
+       * doppelt fuer jeden mit positivem Trophaeengewinn.
+       *
+       * Das Vorzeichen entscheidet, nicht der Platz — damit braucht die
+       * Plattform kein Spielwissen. Beim Doppelkopf trifft es die Plaetze
+       * eins und zwei, beim Skat den Sieger, beim Zauberer jeden mit
+       * positivem Ergebnis.
+       *
+       * Wie viele Karten gelegt wurden, weiss nur das Modul. Liefert es
+       * nichts, gibt es keine Punkte statt geratener.
+       */
+      const karten = party.module.xpBasis?.(party.state)?.[award.seat] ?? 0;
+      const xp = xpFuerPartie(karten, award.delta);
+      if (xp > 0) {
+        await this.db
+          .update(s.account)
+          .set({ xp: sql`${s.account.xp} + ${xp}` })
+          .where(eq(s.account.id, accountId));
+      }
     }
 
     party.awards = booked;

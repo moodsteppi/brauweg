@@ -378,6 +378,22 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
   completedSegments: (party) => party.history,
 
   /**
+   * Gelegte Karten je Sitz: Blattgroesse durch vier, mal abgerechnete
+   * Runden. Beim Doppelkopf legt jeder gleich viele Karten, deshalb ist
+   * die Zahl fuer alle Sitze dieselbe.
+   *
+   * Gezaehlt werden nur abgerechnete Runden. Eine abgebrochene Partie gibt
+   * also Punkte fuer alles, was fertig gespielt wurde, und nichts fuer die
+   * angefangene Runde — sonst waere Abbrechen kurz vor Schluss eine
+   * Rechenaufgabe statt einer Entscheidung.
+   */
+  xpBasis: (party) => {
+    const jeRunde = party.rs.deck === 'with9' ? 12 : 10;
+    const karten = party.history.length * jeRunde;
+    return Object.fromEntries(party.seats.map((seat) => [seat, karten]));
+  },
+
+  /**
    * PartyState ist bis auf ein Feld reines JSON. `bock` ist eine BockState mit
    * Methoden; ginge sie durch JSON, kaeme ein Objekt ohne multiplier() zurueck
    * und der naechste Rundenstart wuerde scheitern. Genau dieser Weg wird nach

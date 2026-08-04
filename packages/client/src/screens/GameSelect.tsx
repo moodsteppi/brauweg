@@ -258,12 +258,22 @@ export function GameSelect({
           <img className="front-avatar" src="/hub/pinguin.png" alt="" />
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
+            {/* Der Balken zeigt den Fortschritt IN der Stufe, nicht die
+                Gesamtpunkte — sonst stuende er ab Stufe zehn dauerhaft
+                fast am Anschlag. */}
             <span className="front-xp" aria-hidden="true">
-              <span style={{ width: '0%' }} />
+              <span
+                style={{
+                  width: `${Math.min(100, Math.round((me.level.imLevel / Math.max(1, me.level.fuerLevel)) * 100))}%`,
+                }}
+              />
             </span>
           </span>
-          <span className="front-level front-level--hub" aria-label="Level 0">
-            0
+          <span
+            className="front-level front-level--hub"
+            aria-label={`Stufe ${me.level.stufe}, ${me.level.imLevel} von ${me.level.fuerLevel} Punkten`}
+          >
+            {me.level.stufe}
           </span>
         </button>
         <div className="front-waehrungen">
@@ -481,10 +491,21 @@ function ProfilTab({
           <strong>{me.displayName}</strong>
           <span className="muted">{geburtstagText}</span>
         </div>
-        <span className="front-level front-level--hub" aria-label="Level 0">
-          0
+        <span
+          className="front-level front-level--hub"
+          aria-label={`Stufe ${me.level.stufe}`}
+        >
+          {me.level.stufe}
         </span>
       </div>
+
+      {/* Im Profil steht der Fortschritt ausgeschrieben. Ein Balken allein
+          beantwortet nicht, wie weit es noch ist. */}
+      <p className="hub-stufe-text">
+        Stufe {me.level.stufe} · {me.level.imLevel} von {me.level.fuerLevel} Punkten
+        {' · '}
+        <span className="muted">{me.level.xp} insgesamt</span>
+      </p>
 
       <section
         className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}

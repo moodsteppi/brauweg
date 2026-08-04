@@ -6028,3 +6028,11 @@ main.auth > .muted {
     animation: none;
   }
 }
+
+/* Stufe im Profil, ausgeschrieben unter dem Kopf. */
+.hub-stufe-text {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.8rem;
+  color: rgba(255, 233, 189, 0.85);
+  text-align: center;
+}
