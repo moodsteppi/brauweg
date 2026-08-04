@@ -579,6 +579,9 @@ export function Table({
     (s) => view.seat === null || s !== view.seat,
   );
 
+  // Die eigene Ansage - dieselbe Herleitung wie bei den Mitspielern.
+  const meineAnsage = view.seat !== null ? ansageVon(round, view.seat) : null;
+
   const hand = round ? sortByOrder(round.hand, round.order) : [];
   const dealSlots: DealSlot[] = LAYOUTS[seatCount] ?? ['bottom', 'left', 'top', 'right'];
   const liveTrick = round?.currentTrick ?? [];
@@ -805,10 +808,14 @@ export function Table({
           {rowActions.map((action, index) => (
             <button
               key={index}
-              className={`doko-action${action.type === 'announce' ? ' doko-action--call' : ''}`}
+              className={`doko-action${action.type === 'announce' ? ' doko-action--call' : ''}${
+                action.type === 'announce' && round?.myParty
+                  ? ` doko-action--${round.myParty}`
+                  : ''
+              }`}
               onClick={() => send(action)}
             >
-              {actionLabel(action)}
+              {actionLabel(action, round?.myParty)}
             </button>
           ))}
         </div>
@@ -896,6 +903,12 @@ export function Table({
               : ''}
             {view.seat !== null && leaderSeat === view.seat && ' · Aufspiel'}
           </span>
+          {/* Was ICH angesagt habe, bleibt deutlich stehen - dieselbe
+              goldene Marke wie bei den Mitspielern, damit man den eigenen
+              Ruf wiedererkennt. */}
+          {view.seat !== null && meineAnsage && (
+            <em className="doko-tag doko-tag--ansage doko-tag--eigen">{meineAnsage}</em>
+          )}
         </div>
         {view.seat !== null && (
           <span className={showTrickPeek ? 'doko-stiche-wrap is-peek' : 'doko-stiche-wrap'}>
@@ -1086,7 +1099,13 @@ function ansageText(round: {
   return teile.length > 0 ? teile.join('  ·  ') : null;
 }
 
+/** Teamzugehoerigkeit unter dem Namen: "Team Re" / "Team Kontra". */
 function partyLabel(party: string): string {
+  return party === 're' ? 'Team Re' : 'Team Kontra';
+}
+
+/** Der blosse Parteiname ohne "Team" - fuer Ansagen und Rufe. */
+function parteiName(party: string): string {
   return party === 're' ? 'Re' : 'Kontra';
 }
 
@@ -1094,7 +1113,7 @@ function partyLabel(party: string): string {
 // Aktionen und Overlays
 // ---------------------------------------------------------------------------
 
-function actionLabel(action: Action): string {
+function actionLabel(action: Action, myParty?: string | null): string {
   switch (action.type) {
     case 'vorbehalt':
       if (action.kind === null) return 'Gesund';
@@ -1105,7 +1124,12 @@ function actionLabel(action: Action): string {
       return String(action.kind);
     case 'announce': {
       const level = action.level as number;
-      return ['Re / Kontra', 'Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'][level] ?? 'Ansage';
+      // Stufe 0 ist die eigene Partei-Ansage. Sie heisst nach der eigenen
+      // Partei - die Re-Partei sagt "Re ansagen", die Kontra-Partei
+      // "Kontra ansagen". "Re / Kontra" liess offen, was man da eigentlich
+      // tut.
+      if (level === 0) return myParty ? `${parteiName(myParty)} ansagen` : 'Ansagen';
+      return ['', 'Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'][level] ?? 'Ansage';
     }
     case 'armutAccept':
       return 'Armut annehmen';
@@ -1483,7 +1507,7 @@ const ABSAGE_NAMEN = ['Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'];
 /** Zuruf einer Ansage. Stufe 0 ist Re oder Kontra, darueber die Absagen. */
 function ansageRuf(level: number, party: string | null): string {
   if (level > 0) return ABSAGE_NAMEN[level - 1] ?? 'Ansage';
-  return party ? partyLabel(party) : 'Ansage';
+  return party ? parteiName(party) : 'Ansage';
 }
 
 /** Zuruf eines Vorbehalts. Das Solo nennt seine Art erst bei der Auflösung. */
@@ -1495,18 +1519,27 @@ function vorbehaltRuf(kind: string): string {
 }
 
 /**
- * Bleibender Vermerk am Sitz: die höchste Absage.
+ * Bleibender Vermerk am Sitz: was dieser Spieler ANGESAGT hat.
  *
- * Re und Kontra stehen schon als Partei daneben — sie hier zu wiederholen
- * wäre doppelt. Erst ab „Keine 90" gibt es etwas Eigenes zu zeigen.
+ * Das ist bewusst etwas anderes als die Teamzugehoerigkeit daneben: "Team
+ * Re" sagt, zu welcher Partei jemand gehoert (auch wenn er nur die
+ * Kreuz-Dame gelegt hat); dieser Vermerk erscheint nur, wenn er selbst "Re"
+ * bzw. "Kontra" gerufen hat - und das soll man ihm dauerhaft ansehen, samt
+ * hoechster Absage. Ohne Ansage bleibt er leer.
  */
 function ansageVon(
-  round: { ansagen?: readonly { seat: number; level: number }[] } | null,
+  round: {
+    ansagen?: readonly { seat: number; level: number }[];
+    knownParties?: Record<number, string>;
+  } | null,
   seat: number,
 ): string | null {
   const meine = (round?.ansagen ?? []).filter((a) => a.seat === seat);
+  if (meine.length === 0) return null;
+  const partei = round?.knownParties?.[seat];
+  const basis = partei ? parteiName(partei) : 'Angesagt';
   const hoechste = meine.reduce((m, a) => Math.max(m, a.level), 0);
-  return hoechste > 0 ? (ABSAGE_NAMEN[hoechste - 1] ?? null) : null;
+  return hoechste > 0 ? `${basis} · ${ABSAGE_NAMEN[hoechste - 1] ?? ''}`.trim() : basis;
 }
 
 type SitzInfo = { seat: number; name: string; avatarUrl: string | null };

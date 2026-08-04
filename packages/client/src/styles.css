@@ -457,7 +457,14 @@ td {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.doko-party { font-style: normal; font-size: 0.66rem; padding: 0 0.35rem; border-radius: 999px; }
+.doko-party {
+  font-style: normal;
+  font-size: 0.66rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-weight: 700;
+}
 .doko-party--re { background: rgba(74, 156, 120, 0.25); color: #7fd3ab; }
 .doko-party--kontra { background: rgba(194, 86, 76, 0.25); color: #e59a92; }
 .doko-tag {
@@ -467,6 +474,14 @@ td {
   background: rgba(255, 255, 255, 0.06);
   padding: 0 0.35rem;
   border-radius: 999px;
+  white-space: nowrap;
+}
+/* Die eigene Ansage sitzt in einer Flex-Spalte - sie soll sich nicht ueber
+   die ganze Breite ziehen, sondern nur so breit sein wie ihr Text. */
+.doko-tag--eigen {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  font-weight: 700;
 }
 .doko-opp-score {
   font-size: 0.72rem;
@@ -639,6 +654,19 @@ td {
   background: rgba(74, 156, 120, 0.18);
   border-color: var(--accent);
   color: #9fe0c1;
+}
+/* Die Partei-Ansage traegt die Farbe der eigenen Partei: Wer Re ist, sieht
+   einen gruenen "Re ansagen"-Knopf, wer Kontra ist, einen roten. Das nimmt
+   dem Ruf die Zweideutigkeit schon vor dem Tippen. */
+.doko-action--re {
+  background: rgba(74, 156, 120, 0.22);
+  border-color: var(--accent);
+  color: #9fe0c1;
+}
+.doko-action--kontra {
+  background: rgba(194, 86, 76, 0.22);
+  border-color: #c2564c;
+  color: #e59a92;
 }
 
 /*
