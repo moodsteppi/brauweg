@@ -511,17 +511,36 @@ Token-Anmeldung, `test/app-huelle.test.ts`).
 
 ### Rund um das zweite Spiel noch offen
 
-- **Die Rangliste zeigt nur Doppelkopf.** Der Rangliste-Knopf im Hub ist fest
-  auf `doppelkopf` verdrahtet (`GameSelect.tsx`, Überschrift „Rangliste ·
-  Doppelkopf"). Der Server kann längst mehr — `/api/rankings/wizard` antwortet,
-  Zauberer-Trophäen werden gebucht. Es fehlt nur eine Spielwahl über der Liste.
-  Kleine, aber sichtbare Lücke: Wer eine Zauberer-Partie gewinnt, sieht die
-  Trophäen im Profil, aber nicht in der Liste. **Guter nächster Schritt.**
-- **„Neu hier?" erklärt nur Doppelkopf** und ist eine Bald-Attrappe. Mit zwei
-  Spielen fällt auf, dass eine Anleitung für beide fehlt.
+- ~~Die Rangliste zeigt nur Doppelkopf.~~ **Erledigt.** Das Ranglisten-Blatt
+  hat jetzt Reiter: „Gesamt" (Summe über alle Spiele, `/api/rankings`) und je
+  spielbarem Spiel einen (`/api/rankings/:gameId`). Die Reiter kommen aus den
+  spielbaren Spielen, nicht aus fester Verdrahtung — ein drittes Spiel steht
+  von selbst dort; bei nur einem Spiel bleiben sie weg (`RanglisteBlatt` in
+  `GameSelect.tsx`, `.front-ranking-tabs`).
+- **„Neu hier?" bleibt eine Bald-Attrappe** — bewusst so: Die Beta-Spieler
+  kennen alle Spiele, ein Tutorial braucht es dafür nicht. Der frühere feste
+  Doppelkopf-Text ist raus, der Knopf ist jetzt spielneutral („So funktioniert
+  Brauweg").
 - **Bot mit Kartengedächtnis** für den Zauberer ist bewusst zurückgestellt
   (Spec Abschnitt 14). Der jetzige Bot spielt solide auf sein Soll, merkt sich
   aber keine gespielten Zauberer/Trümpfe.
+
+### Zauberer-Tisch: dieselben Animationen wie Doppelkopf
+
+Der Zauberer-Tisch teilt Bausteine und CSS mit dem Doppelkopf, hatte aber drei
+Tisch-Bewegungen noch nicht. Jetzt angeglichen:
+
+- **Austeil-Zeremonie, verkürzt.** `DealCeremony` gibt es jetzt in zwei
+  Taktungen (`VOLL`/`KURZ`); der Zauberer nutzt die kurze, weil er jede der bis
+  zu zwanzig Runden neu gibt. Ausgelöst am Rundenbeginn (volle Hände, kein
+  Stich, `roundNumber` als Schlüssel), einmal je Runde, Beitritt mitten in der
+  Runde zeigt sie nicht. Die zwei hohen Sechser-Sitze (`to-left-high`/
+  `to-right-high`) fehlten in den Flugbahnen und sind ergänzt.
+- **Trumpf dreht sich auf.** Solange ausgeteilt wird, liegt an der Plakette ein
+  Rücken; danach dreht sich die aufgedeckte Karte einmal auf (`wiz-trumpf-auf`).
+- **Stich zieht zum Gewinner.** Nutzt Cursors `tc-sweep` (auf staging schon für
+  Doppelkopf gebaut), erweitert um die zwei hohen Sechser-Sitze
+  (`sweep-left-high`/`sweep-right-high`).
 
 ### Kleinkram
 
