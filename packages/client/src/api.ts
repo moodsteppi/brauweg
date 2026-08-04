@@ -85,7 +85,7 @@ export interface ActiveTable {
  * die Kennungen, das Aussehen kennt nur diese Seite — dieselbe Trennung wie bei
  * Kartenblatt und Szenerie.
  */
-export const SLOTS = ['hut', 'oberteil', 'schuhe', 'hand', 'aura'] as const;
+export const SLOTS = ['hut', 'brille', 'oberteil', 'schuhe', 'hand', 'aura'] as const;
 export type Slot = (typeof SLOTS)[number];
 
 /** Was der Pinguin traegt. Ein leerer Platz fehlt schlicht. */

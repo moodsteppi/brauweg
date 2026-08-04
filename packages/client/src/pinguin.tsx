@@ -44,7 +44,7 @@ const BOX = `0 0 ${RAHMEN.breite} ${RAHMEN.hoehe}`;
  * eine davon irgendwann der anderen folgen.
  */
 const HINTEN: readonly Slot[] = ['aura'];
-const VORN: readonly Slot[] = ['oberteil', 'schuhe', 'hut', 'hand'];
+const VORN: readonly Slot[] = ['oberteil', 'schuhe', 'brille', 'hut', 'hand'];
 
 // ---------------------------------------------------------------------------
 // Grundgestalt
@@ -113,6 +113,68 @@ const goldDunkel = '#b78c2c';
 
 /** Zeichnungen aller Katalogstuecke. Die Kennungen kommen aus dem Server. */
 const AUSSEHEN: Record<string, Aussehen> = {
+  // --- Augen: sitzt auf der Gesichtsmaske, y 66..96, x 78..162 -------------
+  // Die Augen liegen bei (101, 80) und (139, 80) mit Radius 8,5 - jede Brille
+  // muss sie decken, ohne den Schnabel (ab y 92) zu beruehren.
+  'brille-keine': {
+    // Der leere Platz. Er MUSS im Katalog stehen: Ohne ihn liesse sich eine
+    // Brille nur tauschen, nicht abnehmen.
+    zeichnung: <g />,
+  },
+  'brille-sonnenbrille': {
+    zeichnung: (
+      <g>
+        <rect x="80" y="70" width="80" height="4" rx="2" fill="#2b2b2b" />
+        <rect x="82" y="70" width="34" height="20" rx="7" fill="#1f2933" />
+        <rect x="124" y="70" width="34" height="20" rx="7" fill="#1f2933" />
+        <rect x="116" y="76" width="8" height="4" fill="#2b2b2b" />
+        <path d="M86 74 L96 74 L88 84 Z" fill="#ffffff" opacity="0.28" />
+        <path d="M128 74 L138 74 L130 84 Z" fill="#ffffff" opacity="0.28" />
+      </g>
+    ),
+  },
+  'brille-lesebrille': {
+    zeichnung: (
+      <g fill="none" stroke="#c9a227" strokeWidth="3">
+        <circle cx="101" cy="80" r="14" />
+        <circle cx="139" cy="80" r="14" />
+        <path d="M115 80 L125 80" />
+        <path d="M87 76 L76 70" />
+        <path d="M153 76 L164 70" />
+      </g>
+    ),
+  },
+  'brille-taucherbrille': {
+    zeichnung: (
+      <g>
+        <rect x="76" y="66" width="88" height="30" rx="14" fill="#1b6f8a" />
+        <rect x="82" y="70" width="76" height="22" rx="11" fill="#8fd4e8" opacity="0.85" />
+        <path d="M88 74 L104 74 L92 88 Z" fill="#ffffff" opacity="0.45" />
+        <rect x="66" y="76" width="12" height="8" rx="3" fill="#15586e" />
+        <rect x="162" y="76" width="12" height="8" rx="3" fill="#15586e" />
+      </g>
+    ),
+  },
+  'brille-skibrille': {
+    zeichnung: (
+      <g>
+        <rect x="72" y="64" width="96" height="32" rx="16" fill="#c2564c" />
+        <rect x="78" y="69" width="84" height="22" rx="11" fill="#3a2f2a" />
+        <rect x="80" y="71" width="80" height="18" rx="9" fill="#f0a03c" opacity="0.75" />
+        <path d="M86 74 L102 74 L90 86 Z" fill="#ffffff" opacity="0.4" />
+      </g>
+    ),
+  },
+  'brille-monokel': {
+    zeichnung: (
+      <g>
+        <circle cx="139" cy="80" r="16" fill="#dff1f7" opacity="0.5" />
+        <circle cx="139" cy="80" r="16" fill="none" stroke="#e2b64f" strokeWidth="3.5" />
+        <path d="M139 96 L136 118" stroke="#e2b64f" strokeWidth="2" fill="none" />
+        <path d="M130 70 L136 66" stroke="#ffffff" strokeWidth="2.5" opacity="0.6" fill="none" />
+      </g>
+    ),
+  },
   // --- Kopf: sitzt auf der Kalotte, y 8..74, x 58..182 --------------------
   'hut-wollmuetze': {
     zeichnung: (
