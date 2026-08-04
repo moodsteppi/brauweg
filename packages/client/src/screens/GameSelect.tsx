@@ -876,15 +876,16 @@ function Spielen({
 
         {/* Einstieg fuer Neue, wie im Entwurf unten rechts. Die Anleitung
             selbst gibt es noch nicht — der Platz dafuer steht schon, und beim
-            Antippen sagt sie das auch. */}
+            Antippen sagt sie das auch. Spielneutral: mit zwei Spielen waere
+            ein fester Spielname hier falsch. */}
         <button
           type="button"
           className="hub-neuhier"
-          onClick={() => onBald('Die Doppelkopf-Anleitung')}
+          onClick={() => onBald('Die Anleitung')}
         >
           <span className="hub-neuhier-text">
             <strong>Neu hier?</strong>
-            <span>So spielst du Doppelkopf</span>
+            <span>So funktioniert Brauweg</span>
           </span>
           <img src="/hub/pinguin.png" alt="" draggable={false} />
           <span className="front-bald-tag">Bald</span>
@@ -933,6 +934,16 @@ function Spielen({
   );
 }
 
+/**
+ * Rangliste im Blatt, mit Spielwahl obenauf.
+ *
+ * „Gesamt" summiert die Trophäen über alle Spiele (der Kopf der Gesamtliste
+ * aus dem Plan), die einzelnen Reiter zeigen je Spiel. Die Reiter kommen aus
+ * den spielbaren Spielen, nicht aus fester Verdrahtung — ein drittes Spiel
+ * steht damit von selbst hier. Bei nur einem Spiel bleiben die Reiter weg.
+ */
+type RangWahl = 'gesamt' | string;
+
 function RanglisteBlatt({
   meId,
   onClose,
@@ -942,17 +953,45 @@ function RanglisteBlatt({
   onClose: () => void;
   onShowProfile: (accountId: string) => void;
 }): React.JSX.Element {
+  const [spiele, setSpiele] = useState<GameSummary[]>([]);
+  const [wahl, setWahl] = useState<RangWahl>('gesamt');
   const [rows, setRows] = useState<RankingEntry[]>([]);
+  const [laedt, setLaedt] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Spielbare Spiele einmal holen — sie bestimmen die Reiter.
   useEffect(() => {
     void api
-      .ranking('doppelkopf')
-      .then(setRows)
-      .catch((err: unknown) => {
-        setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
-      });
+      .games()
+      .then((liste) => setSpiele(liste.filter((g) => g.availability === 'playable')))
+      .catch(() => setSpiele([]));
   }, []);
+
+  // Liste je Auswahl neu holen. Der Wächter verwirft eine überholte Antwort,
+  // falls schnell umgeschaltet wird.
+  useEffect(() => {
+    let aktuell = true;
+    setLaedt(true);
+    setError(null);
+    const holen = wahl === 'gesamt' ? api.overallRanking() : api.ranking(wahl);
+    void holen
+      .then((liste) => {
+        if (!aktuell) return;
+        setRows(liste);
+        setLaedt(false);
+      })
+      .catch((err: unknown) => {
+        if (!aktuell) return;
+        setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+        setRows([]);
+        setLaedt(false);
+      });
+    return () => {
+      aktuell = false;
+    };
+  }, [wahl]);
+
+  const titel = wahl === 'gesamt' ? 'Gesamt' : t(`game.${wahl}`);
 
   return (
     <div className="doko-sheet" onClick={onClose} role="presentation">
@@ -960,37 +999,67 @@ function RanglisteBlatt({
         className="doko-sheet-card front-ranking"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Rangliste Doppelkopf"
+        aria-label={`Rangliste ${titel}`}
       >
         <header className="front-ranking-head">
-          <strong>Rangliste · Doppelkopf</strong>
+          <strong>Rangliste · {titel}</strong>
           <button className="doko-icon" onClick={onClose} aria-label="Schließen">
             ×
           </button>
         </header>
-        {error && <p className="error">{error}</p>}
-        {!error && rows.length === 0 && <p className="muted">Noch niemand auf der Liste.</p>}
-        <ol className="front-ranking-list">
-          {rows.map((row) => (
-            <li key={row.accountId} className={row.accountId === meId ? 'is-du' : undefined}>
-              <span className="front-ranking-rang">{row.rank}</span>
+
+        {spiele.length > 1 && (
+          <div className="front-ranking-tabs" role="tablist" aria-label="Wertung wählen">
+            <button
+              role="tab"
+              aria-selected={wahl === 'gesamt'}
+              className={`front-ranking-tab${wahl === 'gesamt' ? ' is-active' : ''}`}
+              onClick={() => setWahl('gesamt')}
+            >
+              Gesamt
+            </button>
+            {spiele.map((g) => (
               <button
-                className="front-ranking-name"
-                onClick={() => {
-                  onClose();
-                  onShowProfile(row.accountId);
-                }}
+                key={g.id}
+                role="tab"
+                aria-selected={wahl === g.id}
+                className={`front-ranking-tab${wahl === g.id ? ' is-active' : ''}`}
+                onClick={() => setWahl(g.id)}
               >
-                {row.displayName}
-                {row.accountId === meId ? ' · du' : ''}
+                {t(g.nameKey)}
               </button>
-              <span className="front-ranking-cups">
-                <img src="/hub/pokal.png" alt="" aria-hidden="true" />
-                {row.trophies}
-              </span>
-            </li>
-          ))}
-        </ol>
+            ))}
+          </div>
+        )}
+
+        {error && <p className="error">{error}</p>}
+        {!error && laedt && <p className="muted">Wird geladen…</p>}
+        {!error && !laedt && rows.length === 0 && (
+          <p className="muted">Noch niemand auf der Liste.</p>
+        )}
+        {!laedt && rows.length > 0 && (
+          <ol className="front-ranking-list">
+            {rows.map((row) => (
+              <li key={row.accountId} className={row.accountId === meId ? 'is-du' : undefined}>
+                <span className="front-ranking-rang">{row.rank}</span>
+                <button
+                  className="front-ranking-name"
+                  onClick={() => {
+                    onClose();
+                    onShowProfile(row.accountId);
+                  }}
+                >
+                  {row.displayName}
+                  {row.accountId === meId ? ' · du' : ''}
+                </button>
+                <span className="front-ranking-cups">
+                  <img src="/hub/pokal.png" alt="" aria-hidden="true" />
+                  {row.trophies}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import type {
 import {
   Avatar,
   HandCard,
+  LAYOUTS,
   LetzterStich,
   PartyEnd,
   RegelBlatt,
@@ -27,6 +28,7 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
+import { DealCeremony, prefersReducedMotion } from '../DealCeremony';
 import { useTable } from '../useTable';
 
 const ZOOM_MIN = 0.7;
@@ -101,6 +103,9 @@ export function WizardTable({
   const lastTrickNow = view?.view.round?.lastTrick ?? null;
   const lastKey = lastTrickNow ? lastTrickNow.played.map((p) => p.card.id).join('.') : null;
   const [frozenKey, setFrozenKey] = useState<string | null>(null);
+  // Nach dem Liegen gleitet der Stich zum Gewinner — dieselbe Sweep-Phase wie
+  // am Doppelkopf-Tisch, damit beide Tische gleich abraeumen.
+  const [sweeping, setSweeping] = useState(false);
   const seenKey = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     if (seenKey.current === undefined) {
@@ -110,10 +115,59 @@ export function WizardTable({
     if (lastKey && lastKey !== seenKey.current) {
       seenKey.current = lastKey;
       setFrozenKey(lastKey);
-      const handle = setTimeout(() => setFrozenKey((k) => (k === lastKey ? null : k)), 1000);
-      return () => clearTimeout(handle);
+      setSweeping(false);
+      const reduce = prefersReducedMotion();
+      let sweepHandle: ReturnType<typeof setTimeout> | undefined;
+      const handle = setTimeout(() => {
+        if (reduce) {
+          setFrozenKey((k) => (k === lastKey ? null : k));
+          return;
+        }
+        setSweeping(true);
+        sweepHandle = setTimeout(() => {
+          setSweeping(false);
+          setFrozenKey((k) => (k === lastKey ? null : k));
+        }, 440);
+      }, 1000);
+      return () => {
+        clearTimeout(handle);
+        if (sweepHandle) clearTimeout(sweepHandle);
+      };
     }
   }, [lastKey]);
+
+  /**
+   * Misch-/Austeilzeremonie, verkuerzt — der Zauberer gibt jede Runde neu.
+   *
+   * Der Ausloeser ist der Rundenbeginn: volle Haende, kein Stich, noch in der
+   * Trumpf- oder Ansagephase. Das `roundNumber` haelt die Zeremonie auf genau
+   * ein Mal je Runde fest. Wer mitten in einer Runde beitritt, sieht sie nicht
+   * (erster Anblick wird nur gemerkt).
+   */
+  const geberRunde = view?.view.round ?? null;
+  const istGeben =
+    !!geberRunde &&
+    (geberRunde.phase === 'trump' || geberRunde.phase === 'bidding') &&
+    (geberRunde.currentTrick?.length ?? 0) === 0 &&
+    Object.values(geberRunde.tricks ?? {}).every((n) => n === 0);
+  const dealKey = istGeben ? `${geberRunde!.roundNumber}` : null;
+  const seenDeal = useRef<string | null | undefined>(undefined);
+  const [dealing, setDealing] = useState(false);
+  const [dealSize, setDealSize] = useState(1);
+  const endDeal = useCallback(() => setDealing(false), []);
+  useEffect(() => {
+    if (!dealKey) {
+      // Mitten in der Runde beigetreten: vormerken, ohne zu animieren.
+      if (seenDeal.current === undefined && geberRunde) seenDeal.current = null;
+      return;
+    }
+    if (dealKey === seenDeal.current) return;
+    const ersterAnblick = seenDeal.current === undefined;
+    seenDeal.current = dealKey;
+    if (ersterAnblick || prefersReducedMotion()) return;
+    setDealSize(geberRunde!.handSize);
+    setDealing(true);
+  }, [dealKey, geberRunde]);
 
   /**
    * Rundenabrechnung: Sobald eine Runde in der Geschichte dazukommt, kommt sie
@@ -324,28 +378,46 @@ export function WizardTable({
         ))}
 
         {/* Trumpf liegt am Tisch, nicht in einer Zeile: Wer ihn sucht, sucht
-            eine Karte. */}
-        <TrumpfPlakette runde={runde} deck={deck} />
+            eine Karte. Aufgedeckt wird er erst, wenn das Austeilen vorbei ist. */}
+        <TrumpfPlakette runde={runde} deck={deck} enthuellt={!dealing} />
 
         <div className="doko-trick">
-          {trick.length === 0 && (
+          {!dealing && trick.length === 0 && (
             <span className="doko-trick-hint">{t(`phase.${runde?.phase ?? 'playing'}`)}</span>
           )}
-          {trick.map((played) => (
-            <div
-              key={played.card.id}
-              className={`doko-trick-card at-${slotFor(played.seat, base, seatCount)}`}
-            >
-              <div className="doko-trick-in">
-                <div className="pc pc--trick">
-                  <CardFront card={played.card} deck={deck} />
+          {!dealing &&
+            trick.map((played) => (
+              <div
+                key={played.card.id}
+                className={`doko-trick-card at-${slotFor(played.seat, base, seatCount)}`}
+              >
+                {/* Beim Abraeumen gleitet die Karte zum Sitz des Gewinners. */}
+                <div
+                  className={`doko-trick-in${
+                    sweeping && lastTrickNow
+                      ? ` is-sweep sweep-${slotFor(lastTrickNow.winnerSeat, base, seatCount)}`
+                      : ''
+                  }`}
+                >
+                  <div className="pc pc--trick">
+                    <CardFront card={played.card} deck={deck} />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
 
-        {runde?.lastTrick && trick.length === 0 && (
+        {dealing && (
+          <DealCeremony
+            slots={LAYOUTS[seatCount] ?? ['bottom', 'left', 'top', 'right']}
+            deckSize={dealSize}
+            deck={deck}
+            kurz
+            onDone={endDeal}
+          />
+        )}
+
+        {!dealing && runde?.lastTrick && trick.length === 0 && (
           <p className="doko-last">Letzter Stich an {nameOf(runde.lastTrick.winnerSeat)}</p>
         )}
       </div>
@@ -531,9 +603,12 @@ function eigeneLage(runde: WizardRoundView | null, seat: number | null): string 
 function TrumpfPlakette({
   runde,
   deck,
+  enthuellt,
 }: {
   runde: WizardRoundView | null;
   deck: Deck;
+  /** Erst nach dem Austeilen aufdecken; vorher liegt ein Ruecken da. */
+  enthuellt: boolean;
 }): React.JSX.Element | null {
   if (!runde) return null;
 
@@ -541,9 +616,17 @@ function TrumpfPlakette({
     <div className="wiz-trumpf">
       <div className="wiz-trumpf-rahmen">
         {runde.upcard ? (
-          <div className="pc pc--trumpf">
-            <CardFront card={runde.upcard} deck={deck} />
-          </div>
+          enthuellt ? (
+            // Neuer Schluessel je Karte: die Aufdeck-Drehung laeuft genau
+            // einmal, wenn die Karte erscheint.
+            <div className="pc pc--trumpf wiz-trumpf-auf" key={runde.upcard.id}>
+              <CardFront card={runde.upcard} deck={deck} />
+            </div>
+          ) : (
+            <div className="pc pc--trumpf" aria-hidden="true">
+              <CardBack deck={deck} />
+            </div>
+          )
         ) : (
           <div className="pc pc--trumpf wiz-trumpf-leer" aria-hidden="true" />
         )}

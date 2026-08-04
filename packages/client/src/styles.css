@@ -1487,6 +1487,9 @@ td {
 .doko-trick-in.sweep-right { --sx: 9.2rem; --sy: 0; }
 .doko-trick-in.sweep-top-left { --sx: -6.5rem; --sy: -7.2rem; }
 .doko-trick-in.sweep-top-right { --sx: 6.5rem; --sy: -7.2rem; }
+/* Die zwei hohen Seitenplaetze gibt es erst am Zauberer-Sechstisch. */
+.doko-trick-in.sweep-left-high { --sx: -9.2rem; --sy: -6.2rem; }
+.doko-trick-in.sweep-right-high { --sx: 9.2rem; --sy: -6.2rem; }
 @keyframes tc-sweep {
   from { transform: translate(0, 0) scale(1); opacity: 1; }
   to { transform: translate(var(--sx, 0), var(--sy, 0)) scale(0.5); opacity: 0; }
@@ -1642,6 +1645,34 @@ td {
   --tx: calc(6.5rem + var(--spread, 0px));
   --ty: -7.2rem;
   --spin: 14deg;
+}
+/* Die zwei hohen Seitenplaetze gibt es erst seit dem Zauberer-Sechstisch;
+   der Doppelkopf mit vier Sitzen kennt sie nicht. */
+.doko-deal-fly.to-left-high {
+  --tx: calc(-9.2rem + var(--spread, 0px));
+  --ty: -6.2rem;
+  --spin: -16deg;
+}
+.doko-deal-fly.to-right-high {
+  --tx: calc(9.2rem + var(--spread, 0px));
+  --ty: -6.2rem;
+  --spin: 16deg;
+}
+
+/* Verkuerzte Taktung fuer Spiele, die jede Runde neu geben (Zauberer). Nur
+   die Dauern werden gestrafft; die Flugbahnen bleiben. */
+.doko-deal--kurz .doko-deal-gather {
+  animation-duration: 0.3s;
+}
+.doko-deal--kurz .doko-deal-mix {
+  animation-duration: 0.46s;
+}
+.doko-deal--kurz .doko-deal-fly {
+  animation-duration: 0.5s;
+}
+.doko-deal--kurz .doko-deal-label-mix,
+.doko-deal--kurz .doko-deal-label-deal {
+  animation-duration: 1.15s;
 }
 
 @keyframes doko-deal-glow {
@@ -3876,6 +3907,33 @@ td {
   justify-content: space-between;
   margin-bottom: 0.75rem;
 }
+.front-ranking-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.front-ranking-tabs::-webkit-scrollbar {
+  display: none;
+}
+.front-ranking-tab {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.front-ranking-tab.is-active {
+  color: #17181d;
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
 .front-ranking-list {
   list-style: none;
   margin: 0;
@@ -6161,4 +6219,33 @@ main.auth > .muted {
   font-weight: 800;
   color: var(--gold);
   white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------
+   Trumpf aufdecken (Zauberer)
+   -------------------------------------------------------------------------
+   Die aufgedeckte Karte dreht sich einmal auf, sobald das Austeilen vorbei
+   ist. Vorher liegt an ihrer Stelle ein Ruecken. */
+.wiz-trumpf-auf {
+  animation: wiz-trumpf-auf 0.52s cubic-bezier(0.22, 0.7, 0.28, 1) both;
+  transform-origin: center;
+  backface-visibility: hidden;
+}
+@keyframes wiz-trumpf-auf {
+  0% {
+    transform: rotateY(88deg) scale(0.9);
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wiz-trumpf-auf {
+    animation: none;
+  }
 }
