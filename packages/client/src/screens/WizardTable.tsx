@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
-import { CardFront } from '../CardFace';
+import { CardBack, CardFront } from '../CardFace';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
@@ -375,18 +375,15 @@ export function WizardTable({
         )}
       </div>
 
-      {/* Blind gespielt: Die eigene Karte bleibt verdeckt, es gibt nichts zu
-          waehlen - nur zu legen. */}
-      {blindLegen && (
-        <div className="doko-actions">
-          <button className="doko-action doko-action--call" onClick={() => send(blindLegen)}>
-            Karte legen
-          </button>
-        </div>
-      )}
-
       {view.seat !== null && !runde?.blind && (
-        <div className="doko-hand">
+        <div
+          className="doko-hand"
+          /* Der Abstand zwischen zwei Karten haengt hier an der Handgroesse:
+             Beim Doppelkopf sind es immer zwoelf, beim Zauberer eine bis
+             zwanzig. Mit festem Schritt lagen drei Karten uebereinander, von
+             denen nur Streifen zu sehen waren. */
+          style={{ '--luecken': Math.max(1, hand.length - 1) } as React.CSSProperties}
+        >
           {hand.map((card, index) => (
             <HandCard
               key={card.id}
@@ -404,12 +401,12 @@ export function WizardTable({
       )}
 
       {/* In der blinden Runde haelt man seine Karte an die Stirn: Man sieht
-          alle anderen, nur sich selbst nicht. */}
+          alle anderen, nur sich selbst nicht. Gelegt wird sie wie jede andere
+          Karte - durch Antippen. Ein eigener Knopf dafuer war ein Fremdkoerper:
+          Am Tisch spielt man Karten, man drueckt keine Schaltflaechen. */}
       {view.seat !== null && runde?.blind && (
         <div className="doko-hand wiz-blind">
-          <div className="pc pc--hand">
-            <span className="pc-back" aria-hidden="true" />
-          </div>
+          <BlindKarte deck={deck} action={blindLegen} onPlay={send} />
           <p className="muted">Deine Karte kennst du nicht — die der anderen schon.</p>
         </div>
       )}
@@ -493,7 +490,10 @@ function rundenzeile(runde: WizardRoundView | null): string {
   if (!runde) return 'Zwischen den Runden';
 
   const karten = `${runde.handSize} ${runde.handSize === 1 ? 'Karte' : 'Karten'}`;
-  const trumpf = runde.trump ? `Trumpf ${suitName(runde.trump)}` : 'ohne Trumpf';
+  // Das Farbzeichen statt des Namens: Die Zeile steht neben fuenf Knoepfen und
+  // brach mit "Trumpf Karo" in die zweite Zeile. Was Trumpf ist, steht ohnehin
+  // gross an der Plakette.
+  const trumpf = runde.trump ? suitSymbol(runde.trump) : 'kein Trumpf';
 
   if (runde.phase === 'trump') return `${karten} · Trumpf wird bestimmt`;
   if (runde.phase === 'bidding') return `${karten} · ${trumpf} · Ansagen`;
@@ -501,10 +501,7 @@ function rundenzeile(runde: WizardRoundView | null): string {
   // Im Spiel ist die Summe der Ansagen die wichtigste Zahl am Tisch: Sie sagt,
   // ob die Stiche knapp sind oder ueberzaehlig.
   const summe = runde.bidTotal;
-  const lage =
-    summe === null
-      ? ''
-      : ` · ${summe} auf ${runde.handSize}${summe > runde.handSize ? ' (knapp)' : summe < runde.handSize ? ' (frei)' : ''}`;
+  const lage = summe === null ? '' : ` · ${summe} auf ${runde.handSize}`;
   return `${karten} · ${trumpf}${lage}`;
 }
 
@@ -524,6 +521,13 @@ function eigeneLage(runde: WizardRoundView | null, seat: number | null): string 
 // Tisch
 // ---------------------------------------------------------------------------
 
+/**
+ * Die aufgedeckte Trumpfkarte in ihrem gemalten Rahmen.
+ *
+ * Sie haengt unten links am Filz - dort ist in jeder Sitzverteilung Platz.
+ * Der erste Anlauf setzte sie auf halbe Hoehe und legte sie damit genau ueber
+ * den linken Mitspieler: Avatar, Gebot und Punktestand verschwanden dahinter.
+ */
 function TrumpfPlakette({
   runde,
   deck,
@@ -535,15 +539,15 @@ function TrumpfPlakette({
 
   return (
     <div className="wiz-trumpf">
-      {runde.upcard ? (
-        <div className="pc pc--trick">
-          <CardFront card={runde.upcard} deck={deck} />
-        </div>
-      ) : (
-        <div className="wiz-trumpf-leer" aria-hidden="true">
-          —
-        </div>
-      )}
+      <div className="wiz-trumpf-rahmen">
+        {runde.upcard ? (
+          <div className="pc pc--trumpf">
+            <CardFront card={runde.upcard} deck={deck} />
+          </div>
+        ) : (
+          <div className="pc pc--trumpf wiz-trumpf-leer" aria-hidden="true" />
+        )}
+      </div>
       <span className="wiz-trumpf-text">
         {runde.trump ? (
           <>
@@ -554,6 +558,50 @@ function TrumpfPlakette({
         )}
       </span>
     </div>
+  );
+}
+
+/**
+ * Die eigene, verdeckte Karte in der blinden Runde.
+ *
+ * Sieht aus wie eine Handkarte und verhaelt sich auch so: Antippen legt sie,
+ * ein Tipp ausserhalb des eigenen Zuges schuettelt nur. Der Ruecken kommt aus
+ * dem gewaehlten Blatt - sonst laege am Zaubertisch ploetzlich eine fremde
+ * Karte.
+ */
+function BlindKarte({
+  deck,
+  action,
+  onPlay,
+}: {
+  deck: Deck;
+  /** Null, solange dieser Sitz nicht am Zug ist. */
+  action: Action | null;
+  onPlay: (action: Action) => void;
+}): React.JSX.Element {
+  const [shaking, setShaking] = useState(false);
+  const [legt, setLegt] = useState(false);
+
+  return (
+    <button
+      className={`doko-handcard${shaking ? ' is-shake' : ''}${legt ? ' is-legt' : ''}`}
+      style={{ '--off': 0 } as React.CSSProperties}
+      aria-disabled={!action}
+      aria-label="Deine verdeckte Karte legen"
+      onClick={() => {
+        if (!action) {
+          setShaking(true);
+          return;
+        }
+        setLegt(true);
+        window.setTimeout(() => onPlay(action), 170);
+      }}
+      onAnimationEnd={() => setShaking(false)}
+    >
+      <div className="pc pc--hand">
+        <CardBack deck={deck} />
+      </div>
+    </button>
   );
 }
 

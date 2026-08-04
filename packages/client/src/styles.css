@@ -4090,8 +4090,17 @@ main.auth > .muted {
   user-select: none;
   -webkit-user-drag: none;
 }
-/* Alles ausser dem Bild liegt darueber. */
-.doko > *:not(.doko-bg) {
+/*
+ * Alles ausser dem Bild liegt darueber.
+ *
+ * Blaetter sind ausgenommen: Sie sind `position: fixed` und liegen ueber dem
+ * ganzen Bildschirm. Diese Regel hat sie in den Fluss zurueckgeholt — als
+ * Flex-Kind nahmen sie dann Hoehe weg, und der Filz schrumpfte um ein Drittel,
+ * solange ein Blatt offen war. Am Zaubertisch faellt es sofort auf, weil dort
+ * fast durchgehend eines offen ist (Ansage); beim Doppelkopf blieb es
+ * unbemerkt, weil Vorbehalt und Pflichtansage nur Sekunden stehen.
+ */
+.doko > *:not(.doko-bg):not(.doko-sheet) {
   position: relative;
   z-index: 1;
 }
@@ -5390,36 +5399,48 @@ main.auth > .muted {
 .at-left-high .doko-trick-in { --fx: -56px; --fy: -40px; }
 .at-right-high .doko-trick-in { --fx: 56px; --fy: -40px; }
 
-/* Die aufgedeckte Trumpfkarte liegt am Tisch, oben links neben der Mitte —
-   nicht in der Kopfzeile: Wer den Trumpf sucht, sucht eine Karte. */
+/*
+ * Die aufgedeckte Trumpfkarte hängt UNTEN LINKS am Filz — nicht auf halber
+ * Höhe: Dort sitzt in jeder Verteilung ein Mitspieler, und die Plakette lag
+ * genau über Avatar, Gebot und Punktestand.
+ *
+ * Der gemalte Rahmen kommt als Hintergrund; die Karte liegt in seinem Fenster.
+ * Die Prozentwerte sind die Ränder des Bildes (22 von 240 seitlich, 10 von 300
+ * oben und unten) — deshalb sitzt die Karte im Fenster und nicht darüber.
+ */
 .wiz-trumpf {
   position: absolute;
-  top: 34%;
-  left: 0.6rem;
+  left: 0.35rem;
+  bottom: 0.3rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.12rem;
   pointer-events: none;
 }
+.wiz-trumpf-rahmen {
+  padding: 4.2% 9.2%;
+  background: url('/hub/plakette-trumpf.webp') no-repeat center / 100% 100%;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+}
+.pc--trumpf {
+  width: calc(var(--tw) * 0.86);
+  height: calc(var(--tw) * 0.86 * var(--pc-ratio));
+}
 .wiz-trumpf-leer {
-  width: var(--tw);
-  height: calc(var(--tw) * var(--pc-ratio));
-  display: grid;
-  place-items: center;
-  border: 1px dashed var(--line);
-  border-radius: 6px;
-  color: var(--muted);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
 }
 .wiz-trumpf-text {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   color: #f0e4c8;
-  background: rgba(0, 0, 0, 0.42);
-  padding: 0.05rem 0.35rem;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.02rem 0.35rem;
   border-radius: 999px;
   white-space: nowrap;
 }
-.wiz-trumpf-text b { color: var(--gold); font-size: 0.85rem; }
+.wiz-trumpf-text b { color: var(--gold); font-size: 0.8rem; }
 
 /* Gebot und Stiche am Sitz: die wichtigste Zahl des Spiels. Stimmt beides
    überein, leuchtet sie grün — das ist der Zustand, den alle anstreben. */
@@ -5441,13 +5462,19 @@ main.auth > .muted {
 
 /* Blinde erste Runde: fremde Karten liegen offen, die eigene bleibt verdeckt. */
 .wiz-offen .pc--back { margin-left: calc(var(--bw) * -0.45); }
-.wiz-blind {
-  flex-direction: column;
-  gap: 0.4rem;
-  align-items: center;
-  justify-content: center;
+/* Blinde Runde: die eigene verdeckte Karte steht wie jede Handkarte in der
+   Mitte, der Hinweis darunter. Die Karte selbst wird angetippt. */
+.wiz-blind { --schritt: var(--hw); }
+.wiz-blind p {
+  position: absolute;
+  bottom: -0.1rem;
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.7rem;
+  text-align: center;
 }
-.wiz-blind p { margin: 0; font-size: 0.76rem; text-align: center; }
+.wiz-blind { padding-bottom: 1.4rem; }
 
 /* Gebotsblatt: Zahlen als große Chips, damit der Daumen trifft. Eine
    gesperrte Zahl bleibt sichtbar — eine Zahl, die kommentarlos fehlt, sieht
@@ -5668,10 +5695,18 @@ main.auth > .muted {
   min-width: 8rem;
 }
 
-/* Die gemalte Plakette hält die aufgedeckte Trumpfkarte. Das Bild trägt den
-   Rahmen, die Karte liegt im freien Feld darin. */
-.wiz-trumpf {
-  padding: 0.55rem 0.6rem 1.1rem;
-  background: url('/hub/plakette-trumpf.webp') no-repeat center / 100% 100%;
+/*
+ * Handkarten des Zauberers: Der Schritt zwischen zwei Karten richtet sich nach
+ * der Handgröße, nicht nach einer festen Zwölf.
+ *
+ * Beim Doppelkopf sind es immer zwölf Karten, hier eine bis zwanzig. Mit dem
+ * festen Schritt lagen drei Karten zu zwei Dritteln übereinander — sichtbar
+ * blieb ein Streifen, obwohl die halbe Breite frei war. `--luecken` (Anzahl
+ * der Zwischenräume) setzt der Tisch je Runde.
+ */
+.wiz .doko-hand {
+  --schritt: min(
+    calc(var(--hw) + 5px),
+    calc((100vw - var(--hw) - 1.4rem) / var(--luecken, 11))
+  );
 }
-.wiz-trumpf-text { margin-top: -0.5rem; }

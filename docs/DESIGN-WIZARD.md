@@ -27,7 +27,10 @@ keine Zusatzanzeige, sondern Teil des Tisches.
   wäre eine Aussage, die noch niemand gemacht hat.
 - **Trumpf-Plakette** (`wiz-trumpf`): die aufgedeckte Karte liegt am Tisch,
   nicht in der Kopfzeile. Wer den Trumpf sucht, sucht eine Karte. Ohne Trumpf
-  steht dort ein leerer Rahmen und „kein Trumpf" — nicht nichts.
+  steht dort ein leerer Rahmen und „kein Trumpf" — nicht nichts. Sie hängt
+  **unten links** am Filz: Auf halber Höhe sitzt in jeder Verteilung ein
+  Mitspieler, und dort lag sie zuerst — über Avatar, Gebot und Punktestand.
+  Wer sie verschiebt, prüft das mit drei **und** mit sechs Sitzen.
 - **Gebotsblatt** (`wiz-gebote`): Zahlen als große Chips, damit der Daumen
   trifft. **Verbotene Zahlen bleiben sichtbar**, durchgestrichen und mit
   Begründung am Tooltip: Eine Zahl, die kommentarlos fehlt, sieht aus wie ein
@@ -50,12 +53,22 @@ abschneiden. Deshalb sitzen **links und rechts je zwei übereinander**
 ## Zwei Blätter, die es hier gibt
 
 - **Blinde erste Runde:** Die eigene Karte bleibt verdeckt, die der anderen
-  liegen offen am jeweiligen Sitz. Gespielt wird über einen Knopf („Karte
-  legen"), nicht über die Hand — es gibt nichts auszuwählen. Der Satz „Deine
-  Karte kennst du nicht — die der anderen schon" steht dabei, sonst liest sich
-  die leere Hand wie ein Fehler.
+  liegen offen am jeweiligen Sitz. **Gespielt wird sie wie jede andere Karte —
+  durch Antippen**, mit demselben Schütteln, wenn man nicht dran ist. Ein
+  eigener Knopf dafür war ein Fremdkörper: Am Tisch spielt man Karten, man
+  drückt keine Schaltflächen. Der Satz „Deine Karte kennst du nicht — die der
+  anderen schon" steht darunter, sonst liest sich die verdeckte Hand wie ein
+  Fehler.
 - **Geber wählt blind:** Während der Trumpfwahl sieht der Geber seine eigene
   Hand nicht. Das ist Regel, nicht Anzeige — es kommt so aus `viewFor`.
+
+## Handkarten: der Abstand hängt an der Handgröße
+
+Beim Doppelkopf sind es immer zwölf Karten, hier eine bis zwanzig. Der feste
+Schritt aus `styles.css` legte drei Karten zu zwei Dritteln übereinander,
+obwohl die halbe Breite frei war. Der Zaubertisch setzt deshalb `--luecken`
+(Zahl der Zwischenräume) je Runde, und der Schritt wächst bis zur vollen
+Kartenbreite plus 5 px. Wer das ändert, prüft **eine** Karte und **zwanzig**.
 
 ## Was hier NICHT hingehört
 

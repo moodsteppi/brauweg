@@ -127,6 +127,30 @@ Gestaltung in `docs/DESIGN-WIZARD.md`.
   den Größen des echten Tisches. Der Grund: Auf zu dunklem Untergrund
   verschwinden Kreuz und Pik, und ein Daumennagel verrät das nicht.
 
+**Nach den ersten echten Runden am Handy nachgebessert** — vier Sachen fielen
+sofort auf, eine davon war größer als sie aussah:
+
+1. **Blätter stahlen dem Filz ein Drittel der Höhe.** `.doko > *:not(.doko-bg)`
+   setzte `position: relative` und holte damit auch die Blätter zurück in den
+   Fluss; als Flex-Kind nahm ein offenes Blatt Höhe weg. Am Zaubertisch ist
+   fast durchgehend eines offen (Ansage), deshalb fiel es dort auf — **beim
+   Doppelkopf war derselbe Fehler nur unsichtbar**, weil Vorbehalt und
+   Pflichtansage nur Sekunden stehen. Gemessen: Filz 285 statt 585 Pixel.
+2. **Die Trumpf-Plakette lag auf dem linken Mitspieler.** Sie stand auf halber
+   Höhe — genau dort sitzt in jeder Verteilung jemand. Jetzt unten links, wo
+   in keiner Sitzverteilung etwas liegt.
+3. **Der Plakettenrahmen passte nicht zur Karte.** Das Bild wurde auf eine
+   Fläche gezogen, deren Seitenverhältnis nicht stimmte, und die Beschriftung
+   lag auf der Karte. Jetzt trägt der Rahmen die Bildränder als Polsterung
+   (9,2 % seitlich, 4,2 % oben) und die Karte sitzt in seinem Fenster.
+4. **Drei Handkarten lagen übereinander**, obwohl die halbe Breite frei war.
+   Der Kartenabstand hing an der festen Zwölf des Doppelkopfs; er hängt jetzt
+   an der Handgröße.
+
+Dazu: In der blinden Runde wird die verdeckte Karte **angetippt** statt über
+einen Knopf gespielt, und sie zeigt den Rücken des gewählten Blattes statt des
+Textblatt-Musters.
+
 **Was das kostet:** `packages/client/art/` wächst um 25 MB (die gelieferten
 PNG-Originale). Das folgt der Regel aus `DESIGN.md` — Originale gehören ins
 Repository, nicht unter `public/`. Wer den Klon klein halten will, muss diese
