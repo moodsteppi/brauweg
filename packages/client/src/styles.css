@@ -2598,6 +2598,32 @@ td {
   padding: 0.4rem 1rem 1.2rem;
 }
 
+/*
+ * Zieh-Pager zwischen den Tabs.
+ *
+ * Das Fenster begrenzt die Sicht, der Track traegt die Seiten nebeneinander
+ * und wird verschoben. Waehrend eines Zugs folgt er dem Finger (transform per
+ * JS, keine Transition); beim Einrasten setzt das Skript eine kurze Transition.
+ * Jede Seite bleibt ein eigener Rollbereich, damit senkrechtes Rollen bleibt,
+ * was es war.
+ */
+.front-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.front-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+.front-track > .front-body {
+  flex: 0 0 100%;
+  min-width: 0;
+  height: 100%;
+}
+
 /* Der Held des Hauptschirms: der Pokal mit der grossen Zahl. */
 .front-hero {
   display: flex;
@@ -2736,6 +2762,9 @@ td {
   background: none;
   border: none;
   color: var(--text);
+  /* Der Name gibt bei Enge zuerst nach: Er schrumpft und schneidet ab, statt
+     die Anzeigen rechts ineinanderzuschieben. */
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -2787,6 +2816,10 @@ td {
 .front-waehrungen {
   display: flex;
   gap: 0.4rem;
+  /* Die Anzeigen behalten ihre Breite - sie tragen Zahlen, die stimmen
+     muessen. Nachgeben ist Sache des Namens links. */
+  flex: 0 0 auto;
+  align-items: center;
 }
 
 .front-waehrung {
@@ -5223,6 +5256,13 @@ main.auth > .muted {
 }
 .pfad-knoten.is-zu {
   filter: saturate(0.25) brightness(0.75);
+}
+/* Steht der Pinguin genau darauf, tritt die Marke zurueck, damit ihre Zahl
+   nicht unter der Figur hervorschaut. Weich ausgeblendet, nicht entfernt -
+   so springt beim Weiterlaufen nichts. */
+.pfad-knoten.is-verdeckt {
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 .pfad-knoten-name {
   font-size: 0.72rem;

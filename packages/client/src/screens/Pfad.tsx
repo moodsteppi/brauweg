@@ -93,6 +93,15 @@ function aktuellesBiom(trophies: number): Biom {
  * Kleines Fenster und Vollbild teilen sich diesen Weg, damit sie nicht
  * auseinanderlaufen können.
  */
+/**
+ * Wo die Figur im Fenster sitzt, gemessen von oben. 2/3 heisst: unteres
+ * Drittel. Bewusst NICHT die Mitte - der Pinguin soll unten stehen und
+ * hoechstens bis an die Grenze des unteren Drittels steigen, nie in die
+ * Mitte. Am Anfang (wenig Troph.) begrenzt der Browser den Rollstand ohnehin
+ * so, dass er ganz unten steht.
+ */
+const FIGUR_VON_OBEN = 2 / 3;
+
 function useAufFigurRichten(
   ziel: React.RefObject<HTMLDivElement | null>,
   anteilVonUnten: number,
@@ -101,7 +110,7 @@ function useAufFigurRichten(
     const el = ziel.current;
     if (!el) return;
     const richten = (): void => {
-      el.scrollTop = el.scrollHeight * (1 - anteilVonUnten) - el.clientHeight / 2;
+      el.scrollTop = el.scrollHeight * (1 - anteilVonUnten) - el.clientHeight * FIGUR_VON_OBEN;
     };
     richten();
     // Nach dem Laden der Kacheln nochmal: Vorher steht die Höhe des
@@ -173,9 +182,17 @@ function Stapel({ trophies, stelle }: { trophies: number; stelle: number }): Rea
       {/* Checkpoints sitzen am unteren Rand ihrer Kachel — dort kommt man an. */}
       {BIOME.map((biom, i) => {
         const erreicht = trophies >= biom.cp;
+        // Steht die Figur genau auf diesem Knoten, verdeckt sie ihn: Beide
+        // liegen mittig auf derselben Hoehe (bei 500 etwa Pinguin und
+        // Feuerberg-Marke), und die Zahl der Marke schaut unter der Figur
+        // hervor. Dann tritt die Marke zurueck — der Pinguin traegt seinen
+        // Stand ohnehin selbst, und wo er steht, ist "du bist hier".
+        const verdeckt = Math.abs(stelle - i) < 0.34;
         return (
           <div
-            className={`pfad-knoten hub-knoten--${biom.farbe}${erreicht ? ' is-an' : ' is-zu'}`}
+            className={`pfad-knoten hub-knoten--${biom.farbe}${erreicht ? ' is-an' : ' is-zu'}${
+              verdeckt ? ' is-verdeckt' : ''
+            }`}
             key={biom.cp}
             style={{ bottom: `${(i / anzahl) * 100}%` }}
           >

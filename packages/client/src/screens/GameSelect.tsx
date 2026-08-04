@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
   ApiError,
@@ -15,7 +15,7 @@ import { SZENEN, szeneBild } from '../szenen';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel, Tafel } from '../hub';
 import { Clan } from './Clan';
 import { Rechtliches } from './Auth';
-import { cardLabel, cardName, isRed, t } from '../i18n';
+import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
 import { Trophaeenpfad } from './Pfad';
 
 /**
@@ -70,6 +70,185 @@ export function GameSelect({
   const [ranglisteOffen, setRanglisteOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
+  /**
+   * Zwischen den Tabs wird gezogen, nicht nur getippt.
+   *
+   * Beim waagerechten Ziehen folgt der Inhalt dem Finger, und die Nachbarseite
+   * schaut schon herein — man zieht ein Stueck, haelt, sieht die naechste, und
+   * beim Loslassen rastet sie ein oder federt zurueck. Die Reihenfolge ist die
+   * der Leiste unten (im App-Paket ohne Shop), damit Ziehen und Tippen zum
+   * selben Ort fuehren.
+   *
+   * Der laufende Zug steuert den Track direkt ueber `trackRef` (kein Rendern je
+   * Fingerbewegung, sonst ruckelt es); React rendert nur bei Zugbeginn (um die
+   * Nachbarn zu haengen) und beim Einrasten.
+   */
+  const tabFolge: Tab[] = [
+    ...(zeigeKaufbares ? (['shop'] as const) : []),
+    'clan',
+    'spielen',
+    'blatt',
+    'profil',
+  ];
+  const [ziehen, setZiehen] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const geste = useRef<{
+    x: number;
+    y: number;
+    achse: '?' | 'h' | 'v';
+    dx: number;
+    breite: number;
+    mitte: number;
+    hatPrev: boolean;
+    hatNext: boolean;
+  } | null>(null);
+  const schnappRef = useRef<number | undefined>(undefined);
+
+  const idx = tabFolge.indexOf(tab);
+  const prevTab = idx > 0 ? tabFolge[idx - 1]! : null;
+  const nextTab = idx < tabFolge.length - 1 ? tabFolge[idx + 1]! : null;
+  // Nachbarn haengen nur waehrend eines Zugs am Baum - sonst laedt der
+  // Startbildschirm alle Tabs auf einmal.
+  const fenster: Tab[] = ziehen
+    ? ([prevTab, tab, nextTab].filter(Boolean) as Tab[])
+    : [tab];
+  const mitteIdx = fenster.indexOf(tab);
+
+  // Grundstand des Tracks, wenn gerade nicht gezogen oder eingerastet wird.
+  // Der Zug selbst setzt den transform direkt; deshalb hier ausgespart.
+  useLayoutEffect(() => {
+    const el = trackRef.current;
+    if (!el || geste.current || schnappRef.current) return;
+    el.style.transition = 'none';
+    el.style.transform = `translateX(${-mitteIdx * 100}%)`;
+  }, [ziehen, tab, mitteIdx]);
+
+  const onZiehStart = (e: React.TouchEvent): void => {
+    if (geste.current || schnappRef.current) return;
+    // In einer Vollbild-Auswahl steuert der Zug die Auswahl, nicht den Tab.
+    if (
+      (e.target as HTMLElement).closest(
+        '.spielwahl, .hub-vorschau, .doko-sheet, .front-bald, .pfad-voll',
+      )
+    ) {
+      return;
+    }
+    const t = e.touches[0]!;
+    geste.current = {
+      x: t.clientX,
+      y: t.clientY,
+      achse: '?',
+      dx: 0,
+      breite: e.currentTarget.clientWidth || window.innerWidth,
+      mitte: idx > 0 ? 1 : 0,
+      hatPrev: idx > 0,
+      hatNext: idx < tabFolge.length - 1,
+    };
+  };
+
+  const onZiehen = (e: React.TouchEvent): void => {
+    const g = geste.current;
+    if (!g) return;
+    const t = e.touches[0]!;
+    let dx = t.clientX - g.x;
+    const dy = t.clientY - g.y;
+    if (g.achse === '?') {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      // Klar waagerecht? Sonst ist es ein senkrechtes Rollen und wird in Ruhe
+      // gelassen.
+      g.achse = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'v';
+      if (g.achse === 'h') setZiehen(true);
+    }
+    if (g.achse !== 'h') return;
+    // Am Rand ohne Nachbarseite: Gummiband, damit man nicht ins Leere zieht.
+    if ((dx < 0 && !g.hatNext) || (dx > 0 && !g.hatPrev)) dx *= 0.32;
+    g.dx = dx;
+    const el = trackRef.current;
+    if (el) {
+      el.style.transition = 'none';
+      el.style.transform = `translateX(calc(${-g.mitte * 100}% + ${dx}px))`;
+    }
+  };
+
+  const onZiehEnde = (): void => {
+    const g = geste.current;
+    geste.current = null;
+    if (!g || g.achse !== 'h') {
+      if (g) setZiehen(false);
+      return;
+    }
+    const schwelle = Math.min(72, g.breite * 0.22);
+    let richtung = 0;
+    if (g.dx <= -schwelle && g.hatNext) richtung = 1;
+    else if (g.dx >= schwelle && g.hatPrev) richtung = -1;
+    schnappen(g.mitte, richtung);
+  };
+
+  const schnappen = (mitte: number, richtung: number): void => {
+    const el = trackRef.current;
+    const fertig = (): void => {
+      schnappRef.current = undefined;
+      if (el) el.style.transition = 'none';
+      setZiehen(false);
+      if (richtung !== 0) {
+        const jetzt = tabFolge.indexOf(tab);
+        const ziel = jetzt + richtung;
+        if (ziel >= 0 && ziel < tabFolge.length) setTab(tabFolge[ziel]!);
+      }
+    };
+    const wenigerBewegung =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!el || wenigerBewegung) {
+      fertig();
+      return;
+    }
+    el.style.transition = 'transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1)';
+    el.style.transform = `translateX(${-(mitte + richtung) * 100}%)`;
+    schnappRef.current = window.setTimeout(fertig, 250);
+  };
+
+  const renderTab = (tt: Tab): React.JSX.Element | null => {
+    switch (tt) {
+      case 'shop':
+        return zeigeKaufbares ? <Shop onBald={setBald} /> : null;
+      case 'clan':
+        return (
+          <Clan
+            clanId={me.clubs[0]?.id ?? null}
+            onBald={setBald}
+            onShowProfile={onShowProfile}
+            onMeChange={onAvatarChange}
+          />
+        );
+      case 'spielen':
+        return (
+          <Spielen
+            trophies={trophies}
+            activeTable={me.activeTable}
+            onPick={onPick}
+            onResume={onResume}
+            onBald={setBald}
+            onRangliste={() => setRanglisteOffen(true)}
+          />
+        );
+      case 'blatt':
+        return <ThemenTab me={me} onThemeChange={onThemeChange} />;
+      case 'profil':
+        return (
+          <ProfilTab
+            me={me}
+            onAvatarChange={onAvatarChange}
+            onMeChange={onAvatarChange}
+            onSignOut={onSignOut}
+            onDeleted={onDeleted}
+            onBald={setBald}
+            onShowProfile={onShowProfile}
+          />
+        );
+    }
+  };
+
   return (
     <div className="front front--hub">
       <header className="front-top">
@@ -99,7 +278,7 @@ export function GameSelect({
           )}
           <span className="front-waehrung front-waehrung--cups">
             <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
-            {trophies}
+            {kompakteZahl(trophies)}
           </span>
           {/* Ohne Kaufbares bleiben Muenzen und VIP reine Anzeigen: Das Plus
               verspricht einen Kauf, den es in der App nicht gibt. */}
@@ -110,7 +289,7 @@ export function GameSelect({
                 onClick={() => setBald('Münzen kaufen')}
               >
                 <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
-                {me.coins}
+                {kompakteZahl(me.coins)}
                 <span className="front-plus" aria-hidden="true">
                   +
                 </span>
@@ -129,47 +308,29 @@ export function GameSelect({
           ) : (
             <span className="front-waehrung front-waehrung--muenzen">
               <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
-              {me.coins}
+              {kompakteZahl(me.coins)}
             </span>
           )}
         </div>
       </header>
 
       <div
-        className={`front-body${tab === 'spielen' ? '' : ' front-body--szene'}`}
-        key={tab}
+        className="front-viewport"
+        onTouchStart={onZiehStart}
+        onTouchMove={onZiehen}
+        onTouchEnd={onZiehEnde}
+        onTouchCancel={onZiehEnde}
       >
-        {tab === 'shop' && zeigeKaufbares && <Shop onBald={setBald} />}
-        {tab === 'clan' && (
-          <Clan
-            clanId={me.clubs[0]?.id ?? null}
-            onBald={setBald}
-            onShowProfile={onShowProfile}
-            onMeChange={onAvatarChange}
-          />
-        )}
-        {tab === 'spielen' && (
-          <Spielen
-            trophies={trophies}
-            activeTable={me.activeTable}
-            onPick={onPick}
-            onResume={onResume}
-            onBald={setBald}
-            onRangliste={() => setRanglisteOffen(true)}
-          />
-        )}
-        {tab === 'blatt' && <ThemenTab me={me} onThemeChange={onThemeChange} />}
-        {tab === 'profil' && (
-          <ProfilTab
-            me={me}
-            onAvatarChange={onAvatarChange}
-            onMeChange={onAvatarChange}
-            onSignOut={onSignOut}
-            onDeleted={onDeleted}
-            onBald={setBald}
-            onShowProfile={onShowProfile}
-          />
-        )}
+        <div className="front-track" ref={trackRef}>
+          {fenster.map((tt) => (
+            <div
+              className={`front-body${tt === 'spielen' ? '' : ' front-body--szene'}`}
+              key={tt}
+            >
+              {renderTab(tt)}
+            </div>
+          ))}
+        </div>
       </div>
 
       <nav className="front-tabs" aria-label="Bereiche">
