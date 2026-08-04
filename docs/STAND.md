@@ -22,11 +22,18 @@ im Wurzelverzeichnis, nicht `--workspace @brauweg/server`. Die `.d.ts` von
 `@brauweg/game-api` ist sonst der alte Stand, und `tsc` meldet Felder als
 fehlend, die im Quelltext längst stehen (`xpBasis`, `interludeMs`).
 
-**Stand der Zweige am Ende des 4. August 2026:** `staging` auf `66b6d25`.
-Auf `staging` und noch **nicht in der Produktion** liegen: Währungen,
-Truhen, Tagesaufgaben, anziehbarer Pinguin, Clanchat, Clankrieg, Zurufe am
-Tisch und der erweiterte Shop. Ob und wann das nach `main` geht, entscheidet
-Jan.
+**Stand der Zweige am Ende des 4. August 2026:** `staging` trägt jetzt auch
+den Edelstein-Umbau. Auf `staging` und noch **nicht in der Produktion**
+liegen: Währungen, Truhen, Tagesaufgaben, anziehbarer Pinguin, Clanchat,
+Clankrieg, Zurufe am Tisch, der erweiterte Shop und der Edelstein als
+universelle Währung. Ob und wann das nach `main` geht, entscheidet Jan.
+
+**Der Edelstein-Umbau ist eingearbeitet.** Er entstand in einer Sitzung auf
+einer Windows-Maschine ohne Node und war dort nie übersetzt oder getestet;
+beim Übernehmen lief beides nach und war grün. Die Einzelheiten und die
+Begründungen stehen in [UEBERGABE-EDELSTEINE.md](UEBERGABE-EDELSTEINE.md) —
+lesenswert vor allem der Abschnitt über die gewürfelten Kauftruhen, der vor
+einem echten Bezahlweg noch einmal auf den Tisch gehört.
 
 `staging` ist an diesem Tag einmal auf ausdrückliche Anweisung nach `main`
 gebracht worden (Fast-Forward über 17 Commits), damit Stufen, Testkonten,
@@ -121,6 +128,11 @@ oder Geschenk. Gäbe es einen Kurs, wäre jede Truhe indirekt eine Geldquelle un
 der Kurs die einzige Zahl, die noch zählt. Was mit Edelsteinen zu haben ist,
 ist mit Münzen nicht zu haben.
 
+> **Dieser Absatz ist im Umbau.** Genau diese Regel wird gerade
+> zurückgenommen — einseitig, siehe „Der Edelstein als universelle Währung"
+> unten. Was hier steht, beschreibt den Stand auf `staging`; wer am Preisgefüge
+> arbeitet, liest zuerst den anderen Abschnitt.
+
 **Jede Buchung läuft über `src/waehrung.ts`** — die einzige Stelle, an der ein
 Guthaben sich ändert. Die Deckungsprüfung steht in der WHERE-Klausel und nicht
 davor: `select` und danach `update` sind zwei Schritte, und zwischen ihnen passt
@@ -198,6 +210,87 @@ Der Shop verlinkt sie deshalb nur.
 
 **Prüfstand: 211 Servertests** (54 neue in `waehrung`, `truhen`, `quests`,
 `shop`, `waehrung-http`), Doppelkopf und Zauberer unverändert bei 128 und 117.
+
+---
+
+## Der Edelstein als universelle Währung — angefangen, NICHT fertig
+
+**Nichts davon liegt auf einem Zweig.** Der Umbau ist als nicht committete
+Arbeitskopie in einem zweiten Klon entstanden (`Documents\Claude\brauweg` auf
+dem Windows-Rechner), 13 Dateien, +1.386/−138. Alle Einzelheiten,
+Aufrufstellen und die noch fehlenden Tests stehen in
+[UEBERGABE-EDELSTEINE.md](UEBERGABE-EDELSTEINE.md) — hier nur, was man wissen
+muss, um es nicht zweimal zu bauen oder versehentlich dagegen zu arbeiten.
+
+**Die neue Ordnung:** Echtes Geld kauft **nur Edelsteine**. Edelsteine kaufen
+**alles andere** — Münzpakete, Truhen, Kosmetik. Der Kurs ist **15 Münzen je
+Edelstein** (`MUENZEN_JE_EDELSTEIN` in `src/waehrung.ts`), abgeleitet aus den
+Cent-Platzhaltern der kleinsten Pakete.
+
+**Der Umtausch läuft einseitig: Edelsteine werden zu Münzen, Münzen nie zu
+Edelsteinen.** Die alte Begründung gegen einen Wechselkurs — sonst wäre jede
+Truhe indirekt eine Geldquelle — gilt weiter, trifft aber nur die
+Gegenrichtung. Erspieltes bleibt erspielt. Im Code ist die Einseitigkeit
+deshalb keine Regel in einem Kommentar, sondern eine **fehlende Funktion**: es
+gibt `edelsteineZuMuenzen()` und bewusst nichts daneben. **Wer
+`muenzenZuEdelsteinen()` ergänzt, bricht das Modell.**
+
+Was sich sonst ändert:
+
+- **Kosmetik hat zwei Preise**, Münzen und Edelsteine; bezahlt wird mit einer,
+  der Käufer wählt. Gepflegt wird nur eine Zahl je Stück, die zweite leitet der
+  Kurs ab — aufgerundet, damit der direkte Edelsteinpreis nie billiger ist als
+  derselbe Betrag über den Umtausch. `Stueck.preis` ist damit ein Objekt
+  (`{coins, gems}`) statt einer Zahl, und `Stueck.waehrung` fällt weg. **Das
+  ist die einzige wirklich brechende Änderung.**
+- **Die legendären Stücke sind dadurch erspielbar** (Krone 40 Edelsteine = 600
+  Münzen). Bewusst hingenommen: teuer, aber nicht mehr unerreichbar für den,
+  der nicht zahlt.
+- **Die Münzpakete kosten Edelsteine** (500/1.500/4.000 für 35/100/250) und
+  laufen wirklich, über `POST /api/shop/pakete/:paketId/buy`.
+- **Drei Kauftruhen** gegen Edelsteine (`truhe-silber/-gold/-diamant`, 25/60/150
+  Edelsteine, Spannen 250–500 / 650–1.150 / 1.700–2.800), über
+  `POST /api/shop/truhen/:truheId/buy`. Gekauft ist geöffnet.
+- **Season Pass bekommt einen Edelsteinpreis** (150), der VIP-Pass behält den
+  Geldpreis. Beide bleiben „bald".
+- **Keine Migration.** Der Doppelpreis lebt im Katalog, die Kauftruhen benutzen
+  `chest_claim` samt bestehender `chest_grade`-Aufzählung unverändert. Wer eine
+  `0015` dafür anlegt, hat etwas anders gebaut als beschrieben.
+
+**Die Kauftruhen würfeln** — ausdrücklicher Wunsch, nachdem der Einwand vorlag.
+Entschärft ist es an zwei Stellen: Die Spanne steht dran, und ihre Mitte ist
+genau der Kurs, das Würfeln kostet im Erwartungswert also nichts; daneben steht
+ein Münzpaket mit fester Zahl. **Vor dem Anschluss eines echten Bezahlwegs
+gehört das trotzdem noch einmal auf den Tisch:** Eine gewürfelte Ausschüttung
+auf eine mit Geld gekaufte Währung ist derselbe Grenzbereich, wegen dem Plan 11
+Einsätze und Zufallsboxen schon ausschließt. Der Hinweis steht auch im Kopf von
+`src/truhen.ts`.
+
+### Was dem Einarbeiten im Weg steht
+
+**Es ist nicht gebaut und nicht getestet.** Auf dem Rechner, auf dem der Umbau
+entstand, ist **kein Node.js installiert** — kein `npm install`, kein
+`npm run build`, kein `tsc`. Jede Aufrufstelle der geänderten Signaturen ist
+von Hand durchsucht, aber Handarbeit ist kein Compiler. Erwartbar sind
+Kleinigkeiten, die eine Übersetzung in Sekunden findet.
+
+**Sechs Dateien überschneiden sich mit der zweiten Sitzung dieses Tages:**
+`server/src/shop.ts`, `server/src/http/app.ts`, `client/src/api.ts`,
+`client/src/i18n.ts`, `client/src/screens/GameSelect.tsx`,
+`client/src/styles.css`. Ein Merge ohne Nacharbeit gibt es hier nicht.
+
+**Die schwerste Stelle ist `tischware.ts`.** Der neue Katalog für Szenerien,
+Rückseiten, Wappen und Zurufe trägt das **alte Ein-Währungs-Modell**
+(`preis: number` plus `waehrung`) und läuft durch dasselbe `kaufen()`, das der
+Umbau um einen Währungsparameter erweitert. Beides zusammen heißt: **Tischware
+braucht denselben Doppelpreis wie die Pinguin-Kosmetik**, sonst gilt „mit
+Edelsteinen ist alles zu haben" für die halbe Auslage nicht. Das ist der Teil,
+der in der Übergabe noch fehlt — sie wurde geschrieben, bevor `tischware.ts`
+existierte.
+
+Reihenfolge, die sich daraus ergibt: erst Node installieren und den Umbau für
+sich übersetzen und testen, dann `tischware.ts` auf `Preis` umstellen, dann auf
+`origin/staging` mergen — nicht umgekehrt.
 
 ---
 

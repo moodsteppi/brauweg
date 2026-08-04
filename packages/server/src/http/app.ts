@@ -42,10 +42,10 @@ import {
 import { CARD_BACKS, CARD_DECKS, DEFAULT_CARD_BACK, DEFAULT_CARD_DECK } from '../decks.js';
 import { leiterUm, stufenstand } from '../level.js';
 import { entitlementsFor } from '../entitlements.js';
-import { sichtbarerStand } from '../waehrung.js';
+import { WAEHRUNGEN, sichtbarerStand } from '../waehrung.js';
 import { GEBURTSTAGS_OUTFIT, SLOTS, istSlot, schenken } from '../kosmetik.js';
-import { anziehen, getragenVon, kaufen, shopFuer } from '../shop.js';
-import { offeneTruhen, truheOeffnen, truhenFuer } from '../truhen.js';
+import { anziehen, getragenVon, kaufen, paketKaufen, shopFuer } from '../shop.js';
+import { offeneTruhen, truheKaufen, truheOeffnen, truhenFuer } from '../truhen.js';
 import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
@@ -698,8 +698,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // -------------------------------------------------------------------------
 
   /**
-   * Der Shop: Paesse und Pakete (alle noch "bald"), dazu die Kosmetikregale
-   * mit Preisen und dem Besitzstand des Kontos.
+   * Der Shop: Paesse, Pakete, Kauftruhen und die Kosmetikregale mit beiden
+   * Preisen, dem Kurs und dem Besitzstand des Kontos.
    */
   app.get('/api/shop', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
@@ -709,8 +709,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   /**
    * Kosmetik kaufen — gegen Muenzen oder Edelsteine, nicht gegen Geld.
    *
-   * Der Preis kommt aus dem Katalog und nie aus der Anfrage. Deshalb traegt
-   * der Rumpf hier auch nichts: Es gibt nichts zu verhandeln.
+   * Der Rumpf traegt genau eine Angabe: **welche** der beiden Waehrungen es
+   * sein soll. Wie hoch der Preis ist, steht im Katalog — daran gibt es nichts
+   * zu verhandeln. Fehlt die Angabe, wird in Muenzen bezahlt.
    */
   app.post(
     '/api/shop/:itemId/buy',
@@ -720,7 +721,51 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const { itemId } = z
         .object({ itemId: z.string().min(1).max(60).regex(/^[a-z0-9-]+$/) })
         .parse(request.params);
-      return reply.send(await kaufen(deps.db, accountId, itemId));
+      // Der Rumpf darf ganz fehlen: Ein Kauf ohne Angabe ist ein Kauf in
+      // Muenzen, und die alten Aufrufe ohne Rumpf bleiben damit gueltig.
+      const { waehrung } = z
+        .object({ waehrung: z.enum(WAEHRUNGEN).default('coins') })
+        .parse(request.body ?? {});
+      return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
+    },
+  );
+
+  /**
+   * Ein Paket gegen Edelsteine kaufen — heute die drei Muenzpakete.
+   *
+   * Eigener Weg und nicht `/api/shop/:itemId/buy` mit einer Paketkennung: Ein
+   * Paket schuettet Guthaben aus, ein Kosmetikstueck traegt sich ins Eigentum
+   * ein. Dieselbe Route fuer beides waere eine Verzweigung nach Kennungsform,
+   * und die trifft irgendwann falsch.
+   */
+  app.post(
+    '/api/shop/pakete/:paketId/buy',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { paketId } = z
+        .object({ paketId: z.string().min(1).max(60).regex(/^[a-z0-9-]+$/) })
+        .parse(request.params);
+      return reply.send(await paketKaufen(deps.db, accountId, paketId));
+    },
+  );
+
+  /**
+   * Eine Truhe gegen Edelsteine kaufen.
+   *
+   * **Gekauft ist geoeffnet:** Der Wurf steht in der Antwort, es gibt kein
+   * zweites Antippen. Ein Zwischenzustand „gekauft, noch zu" waere eine Truhe,
+   * die auf etwas wartet, was schon bezahlt ist.
+   */
+  app.post(
+    '/api/shop/truhen/:truheId/buy',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { truheId } = z
+        .object({ truheId: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/) })
+        .parse(request.params);
+      return reply.send(await truheKaufen(deps.db, accountId, truheId));
     },
   );
 

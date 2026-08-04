@@ -128,7 +128,10 @@ export function ClanKrieg({
         {/* Kein Krieg, keine Anfrage: der Einstieg. */}
         {stand && !stand.aktuell && (
           <section className="clan-krieg-start">
-            <img className="clan-krieg-bild" src="/hub/icon-krieg.png" alt="" draggable={false} />
+            {/* Dasselbe Zeichen wie auf dem Knopf in der Halle — und als
+                .webp, so heisst die Datei. Ein .png-Verweis darauf war ein
+                weisser Kasten. */}
+            <img className="clan-krieg-bild" src="/hub/icon-krieg.webp" alt="" draggable={false} />
             <h3>Kein Krieg im Gange</h3>
             <p className="muted">
               Zwei Clans, 48 Stunden, Punkte aus euren Partien. Sucht euch einen Gegner —

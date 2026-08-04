@@ -16,6 +16,18 @@ export const CARD_DECKS = [
   'minimal2',
   'minimal4',
   'klassisch',
+  // Zweiter Satz Doppelkopfblaetter, im Shop zu haben. Was sie kosten, steht
+  // in tischware.ts - hier steht nur, dass es sie gibt.
+  'eiche',
+  'winterhof',
+  'sommerwiese',
+  'nachthimmel',
+  'rubin',
+  'smaragd',
+  'kupferstich',
+  'koeniglich',
+  'schiefer',
+  'pinguin',
   'zauberwald',
 ] as const;
 

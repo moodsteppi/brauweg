@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
 import { CARD_DECKS, DEFAULT_CARD_DECK } from '../src/decks.js';
+import { WAREN, istFrei } from '../src/tischware.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { createSession } from '../src/auth/service.js';
@@ -59,11 +60,18 @@ test('ein neues Konto beginnt bei jedem Spiel mit dem Textblatt', async (t) => {
   assert.equal(themes.doppelkopf.cardDeck, DEFAULT_CARD_DECK);
 });
 
-test('jedes bekannte Blatt laesst sich waehlen und kommt zurueck', async (t) => {
+test('jedes freie Blatt laesst sich waehlen und kommt zurueck', async (t) => {
   const s = await setup();
   t.after(() => s.close());
 
-  for (const deck of CARD_DECKS) {
+  // Nur die kostenlosen. Die gekauften pruefen die beiden Tests darunter -
+  // seit es Blaetter gegen Muenzen gibt, ist "jedes bekannte" keine Aussage
+  // mehr ueber das, was ein frisches Konto einstellen darf.
+  const frei = new Set(
+    WAREN.filter((w) => w.art === 'blatt' && istFrei(w)).map((w) => w.wert),
+  );
+
+  for (const deck of CARD_DECKS.filter((d) => frei.has(d))) {
     const patch = await s.app.inject({
       method: 'PATCH',
       url: '/api/me/themes/doppelkopf',
@@ -75,6 +83,33 @@ test('jedes bekannte Blatt laesst sich waehlen und kommt zurueck', async (t) => 
     const me = await s.app.inject({ method: 'GET', url: '/api/me', headers: { cookie: s.cookie } });
     assert.equal(me.json().themes.doppelkopf.cardDeck, deck);
   }
+});
+
+test('ein gekauftes Blatt bleibt gesperrt, bis es gehoert', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const abgelehnt = await s.app.inject({
+    method: 'PATCH',
+    url: '/api/me/themes/doppelkopf',
+    headers: { cookie: s.cookie },
+    payload: { cardDeck: 'pinguin' },
+  });
+  assert.equal(abgelehnt.statusCode, 403, 'ungekauft muss es scheitern');
+  assert.equal(abgelehnt.json().code, 'itemNotOwned');
+
+  // Gekauft ist gekauft.
+  await s.ctx.db
+    .insert(schema.accountCosmetic)
+    .values({ accountId: s.account.accountId, itemId: 'blatt-pinguin' });
+
+  const angenommen = await s.app.inject({
+    method: 'PATCH',
+    url: '/api/me/themes/doppelkopf',
+    headers: { cookie: s.cookie },
+    payload: { cardDeck: 'pinguin' },
+  });
+  assert.equal(angenommen.statusCode, 200);
 });
 
 test('die Spiele halten ihr Blatt auseinander', async (t) => {

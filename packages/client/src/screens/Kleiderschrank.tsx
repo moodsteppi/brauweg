@@ -27,18 +27,30 @@ import {
   type RegalStueck,
   type Shop,
   type Slot,
+  type Waehrung,
 } from '../api';
 import { Pinguin, StueckBild } from '../pinguin';
-import { Tafel } from '../hub';
+import { EdelsteinIcon, Tafel } from '../hub';
 import { t } from '../i18n';
 
-/** Preis als lesbare Zeile, oder „Gehört dir" / „Geschenk". */
+/** Betrag mit Einheit, Einzahl beachtet: „1 Münze", „8 Edelsteine". */
+function betragText(betrag: number, waehrung: Waehrung): string {
+  const einheit = betrag === 1 ? t(`waehrung.${waehrung}.eins`) : t(`waehrung.${waehrung}`);
+  return `${betrag} ${einheit}`;
+}
+
+/**
+ * Preis als lesbare Zeile, oder „Gehört dir" / „Geschenk".
+ *
+ * **Beide Preise stehen dran, nicht nur einer.** Ein Stück, das für Münzen
+ * ausgezeichnet ist und heimlich auch für Edelsteine zu haben wäre, macht aus
+ * dem Kleiderschrank ein Ratespiel — und wer nur Edelsteine hat, hielte das
+ * halbe Regal für gesperrt.
+ */
 function preisText(stueck: RegalStueck): string {
   if (stueck.besessen) return 'Gehört dir';
   if (stueck.geschenk) return 'Nur zu bekommen';
-  const einheit =
-    stueck.preis === 1 ? t(`waehrung.${stueck.waehrung}.eins`) : t(`waehrung.${stueck.waehrung}`);
-  return `${stueck.preis} ${einheit}`;
+  return `${betragText(stueck.preis.coins, 'coins')} oder ${betragText(stueck.preis.gems, 'gems')}`;
 }
 
 export function Kleiderschrank({
@@ -66,6 +78,14 @@ export function Kleiderschrank({
    * Durchblaettern versehentlich 380 davon ausgibt, kommt nicht zurueck.
    */
   const [kaufen, setKaufen] = useState<RegalStueck | null>(null);
+  /**
+   * Welche Waehrung gerade abgebucht wird.
+   *
+   * Getrennt von `laeuft`, weil das die Kennung traegt und auch das Anziehen
+   * damit arbeitet. Hier geht es nur darum, welcher der zwei Kaufknoepfe
+   * „Kauft…" zeigt — beide gleichzeitig waere gelogen.
+   */
+  const [kauftMit, setKauftMit] = useState<Waehrung | null>(null);
 
   /**
    * Vorschau: Was der Pinguin zeigen soll, waehrend man ein Stueck antippt,
@@ -118,11 +138,12 @@ export function Kleiderschrank({
       .finally(() => setLaeuft(null));
   };
 
-  const jetztKaufen = (stueck: RegalStueck): void => {
+  const jetztKaufen = (stueck: RegalStueck, waehrung: Waehrung): void => {
     setLaeuft(stueck.id);
+    setKauftMit(waehrung);
     setFehler(null);
     void api
-      .buyItem(stueck.id)
+      .buyItem(stueck.id, waehrung)
       .then(() => {
         setKaufen(null);
         onGuthaben();
@@ -135,7 +156,10 @@ export function Kleiderschrank({
         setKaufen(null);
         meldung(err, 'Der Kauf ging nicht durch.');
       })
-      .finally(() => setLaeuft(null));
+      .finally(() => {
+        setLaeuft(null);
+        setKauftMit(null);
+      });
   };
 
   const regal = shop?.regale.find((r) => r.slot === slot);
@@ -246,7 +270,10 @@ export function Kleiderschrank({
             onClick={(e) => e.stopPropagation()}
             onSubmit={(e) => {
               e.preventDefault();
-              jetztKaufen(kaufen);
+              // Die Eingabetaste kauft in Muenzen. Sie ist die Waehrung, die man
+              // nicht kaufen muss — ein versehentliches Ja kostet damit nichts,
+              // was Geld gekostet hat.
+              jetztKaufen(kaufen, 'coins');
             }}
           >
             <StueckBild itemId={kaufen.id} slot={kaufen.slot} groesse={7} />
@@ -254,19 +281,52 @@ export function Kleiderschrank({
             <p className="muted">
               {t(`seltenheit.${kaufen.seltenheit}`)} · {t(`slot.${kaufen.slot}`)}
             </p>
-            <p className="ks-kauf-preis">{preisText(kaufen)}</p>
-            <div className="hub-knopfreihe hub-knopfreihe--a">
-              <button type="button" className="hub-knopf hub-knopf--a" onClick={() => setKaufen(null)}>
-                Später
-              </button>
+            <p className="ks-kauf-womit muted">Womit bezahlen?</p>
+            {/*
+              Zwei Knoepfe statt eines Umschalters: Ein Umschalter waere ein
+              Zustand, den man erst setzt und dann bestaetigt — zwei Tipps fuer
+              eine Entscheidung, und dazwischen die Frage, welcher gerade steht.
+              Hier steht der Preis auf dem Knopf, und der Tipp ist der Kauf.
+
+              Beide tragen denselben gruenen Knopf: Die gemalten Knopfbilder sind
+              Holz, Gruen und Rot — ein blaugruener waere eine Bildbestellung und
+              kein CSS. Unterschieden werden sie ueber Symbol und Zahl, und die
+              sind der Unterschied, auf den es ankommt.
+            */}
+            <div className="hub-knopfreihe hub-knopfreihe--a ks-kauf-waehl">
               <button
                 type="submit"
                 className="hub-knopf hub-knopf--a-gold"
                 disabled={laeuft !== null}
               >
-                {laeuft === kaufen.id ? 'Kauft…' : 'Kaufen und anziehen'}
+                {kauftMit === 'coins' ? (
+                  'Kauft…'
+                ) : (
+                  <>
+                    <img className="ks-kauf-icon" src="/hub/muenze.png" alt="" draggable={false} />
+                    {betragText(kaufen.preis.coins, 'coins')}
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                className="hub-knopf hub-knopf--a-gold"
+                disabled={laeuft !== null}
+                onClick={() => jetztKaufen(kaufen, 'gems')}
+              >
+                {kauftMit === 'gems' ? (
+                  'Kauft…'
+                ) : (
+                  <>
+                    <EdelsteinIcon className="ks-kauf-icon" />
+                    {betragText(kaufen.preis.gems, 'gems')}
+                  </>
+                )}
               </button>
             </div>
+            <button type="button" className="hub-knopf hub-knopf--a" onClick={() => setKaufen(null)}>
+              Später
+            </button>
           </form>
         </div>
       )}

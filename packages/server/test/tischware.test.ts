@@ -11,7 +11,8 @@ import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
 import { kaufen } from '../src/shop.js';
-import { WAREN, besitzVon, darfBenutzen } from '../src/tischware.js';
+import { WAREN, besitzVon, darfBenutzen, istFrei } from '../src/tischware.js';
+import { MUENZEN_JE_EDELSTEIN, inEdelsteine } from '../src/waehrung.js';
 import { AppError } from '../src/errors.js';
 import * as s from '../src/db/schema.js';
 import { createTestContext, createVerifiedAccount, seedInvite } from './helpers.js';
@@ -109,4 +110,50 @@ test('eine Kennung ausserhalb des Katalogs wird nicht gesperrt', async (t) => {
   // Blaetter stehen noch in keinem Katalog — sie duerfen deshalb nicht
   // versehentlich unbenutzbar werden.
   assert.equal(await darfBenutzen(c.db, anna.accountId, 'blatt', 'klassisch', false), true);
+});
+
+// ---------------------------------------------------------------------------
+// Doppelpreis
+// ---------------------------------------------------------------------------
+
+test('jede Ware traegt beide Preise, aufgerundet nach Kurs', () => {
+  // Sonst gaelte "mit Edelsteinen ist alles zu haben" fuer die halbe Auslage
+  // nicht — und genau das war der Auftrag.
+  for (const ware of WAREN) {
+    if (istFrei(ware)) {
+      assert.equal(ware.preis.coins, 0, `${ware.id} muenzfrei`);
+      assert.equal(ware.preis.gems, 0, `${ware.id} edelsteinfrei`);
+      continue;
+    }
+    assert.ok(ware.preis.coins > 0, `${ware.id} hat keinen Muenzpreis`);
+    assert.ok(ware.preis.gems > 0, `${ware.id} hat keinen Edelsteinpreis`);
+    assert.equal(
+      ware.preis.gems,
+      inEdelsteine(ware.preis.coins),
+      `${ware.id} folgt nicht dem Kurs`,
+    );
+  }
+});
+
+test('der Edelsteinpreis ist nie billiger als der Umweg ueber den Umtausch', () => {
+  // Abgerundet waere der direkte Kauf ein Rabatt, den niemand entschieden hat.
+  for (const ware of WAREN) {
+    if (istFrei(ware)) continue;
+    assert.ok(
+      ware.preis.gems * MUENZEN_JE_EDELSTEIN >= ware.preis.coins,
+      `${ware.id}: ${ware.preis.gems} Edelsteine sind weniger wert als ${ware.preis.coins} Muenzen`,
+    );
+  }
+});
+
+test('eine Szenerie laesst sich auch mit Edelsteinen kaufen', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  await c.db.update(s.account).set({ gems: 100 }).where(eq(s.account.id, anna.accountId));
+
+  const kauf = await kaufen(c.db, anna.accountId, 'szene-wirtshaus', 'gems');
+  assert.equal(kauf.waehrung, 'gems');
+  assert.equal(kauf.bezahlt, inEdelsteine(250));
+  assert.equal(await darfBenutzen(c.db, anna.accountId, 'szene', 'wirtshaus', false), true);
 });

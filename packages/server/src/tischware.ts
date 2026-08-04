@@ -24,8 +24,8 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
 import { notFound } from './errors.js';
-import type { Seltenheit } from './kosmetik.js';
-import type { Waehrung } from './waehrung.js';
+import { type Preis, type Seltenheit } from './kosmetik.js';
+import { inEdelsteine, inMuenzen } from './waehrung.js';
 
 /**
  * Warensorten.
@@ -46,28 +46,37 @@ export interface Ware {
   readonly wert: string;
   readonly nameKey: string;
   readonly seltenheit: Seltenheit;
-  readonly preis: number;
-  readonly waehrung: Waehrung;
+  /**
+   * Beide Preise, wie bei der Pinguin-Kosmetik. Gepflegt wird EINE Zahl,
+   * die zweite leitet der Kurs ab — sonst gaebe es zwei Wahrheiten, die
+   * beim naechsten Kursschritt auseinanderlaufen.
+   */
+  readonly preis: Preis;
 }
 
+/**
+ * Warenbauer. Der Muenzpreis wird gepflegt, der Edelsteinpreis folgt dem
+ * Kurs — **aufgerundet**, wie in `kosmetik.ts`: Abgerundet waere der direkte
+ * Edelsteinpreis billiger als derselbe Betrag ueber den Umtausch, ein Rabatt,
+ * den niemand entschieden hat. Preis 0 bleibt auf beiden Seiten 0.
+ */
 function ware(art: WareArt, praefix: string) {
   return (
     wert: string,
-    preis: number,
+    muenzen: number,
     seltenheit: Seltenheit = 'gewoehnlich',
-    waehrung: Waehrung = 'coins',
   ): Ware => ({
     id: `${praefix}-${wert}`,
     art,
     wert,
     nameKey: `${praefix}.${wert}`,
     seltenheit,
-    preis,
-    waehrung,
+    preis: { coins: muenzen, gems: muenzen === 0 ? 0 : inEdelsteine(muenzen) },
   });
 }
 
 const szene = ware('szene', 'szene');
+const blatt = ware('blatt', 'blatt');
 const ruecken = ware('ruecken', 'ruecken');
 const emote = ware('emote', 'emote');
 /**
@@ -111,6 +120,26 @@ export const WAREN: readonly Ware[] = [
   szene('samt-blau', 600, 'episch'),
   szene('kapitaen', 600, 'episch'),
   szene('basar', 900, 'legendaer'),
+
+  // --- Kartenblaetter -----------------------------------------------------
+  // Wer ein Blatt hat, hat auch dessen Rueckseite - sie steckt darin. Die
+  // Rueckseite allein bleibt trotzdem einzeln zu haben: Sie ist billiger und
+  // das, was die anderen sehen.
+  blatt('text', 0),
+  blatt('minimal2', 0),
+  blatt('minimal4', 0),
+  blatt('klassisch', 0),
+  blatt('zauberwald', 0),
+  blatt('eiche', 600),
+  blatt('winterhof', 600),
+  blatt('sommerwiese', 600),
+  blatt('kupferstich', 800, 'selten'),
+  blatt('schiefer', 800, 'selten'),
+  blatt('nachthimmel', 1000, 'selten'),
+  blatt('rubin', 1200, 'episch'),
+  blatt('smaragd', 1200, 'episch'),
+  blatt('koeniglich', 1600, 'episch'),
+  blatt('pinguin', 2000, 'legendaer'),
 
   // --- Kartenrueckseiten --------------------------------------------------
   // `standard` ist die Rueckseite des jeweils gewaehlten Blattes und damit
@@ -169,6 +198,15 @@ const NACH_ID = new Map(WAREN.map((ware) => [ware.id, ware]));
 /** Nach Art und Wert, fuer die Pruefung beim Einstellen. */
 const NACH_WERT = new Map(WAREN.map((ware) => [`${ware.art}:${ware.wert}`, ware]));
 
+/**
+ * Kostenlos heisst: in BEIDEN Waehrungen null. Ein Stueck mit
+ * `{coins: 0, gems: 3}` waere sonst gratis statt guenstig — derselbe Riegel
+ * wie in `besitzt()` fuer die Kosmetik.
+ */
+export function istFrei(ware: Ware): boolean {
+  return ware.preis.coins === 0 && ware.preis.gems === 0;
+}
+
 export function wareMit(id: string): Ware | undefined {
   return NACH_ID.get(id);
 }
@@ -201,7 +239,7 @@ export async function besitzVon(
     );
 
   const eigen = new Set(gekauft.map((z) => z.itemId));
-  for (const ware of WAREN) if (ware.preis === 0) eigen.add(ware.id);
+  for (const ware of WAREN) if (istFrei(ware)) eigen.add(ware.id);
   return eigen;
 }
 
@@ -226,7 +264,7 @@ export async function darfBenutzen(
 ): Promise<boolean> {
   const ware = NACH_WERT.get(`${art}:${wert}`);
   if (!ware) return true;
-  if (ware.preis === 0 || ownsEverything) return true;
+  if (istFrei(ware) || ownsEverything) return true;
 
   const [zeile] = await db
     .select({ itemId: s.accountCosmetic.itemId })
