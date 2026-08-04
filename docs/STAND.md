@@ -13,9 +13,15 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 127 Doppelkopf-Tests, 117 Zauberer-Tests, 126 Servertests,
+**Prüfstand:** 127 Doppelkopf-Tests, 117 Zauberer-Tests, 147 Servertests,
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
+
+**`main` und `staging` stehen aktuell auf demselben Commit** (`d51f77d`,
+4. August 2026). Der Zweig war zusammengeführt: die Startbildschirm-Arbeit
+von hier plus Cursors Rundenabschluss (`20f66cc` — Auswertungs-Blätter,
+Ansage-Blasen, Verbindungsbanner). Der einzige Konflikt lag in `styles.css`,
+wo beide ans Dateiende angehängt hatten; beide Blöcke stehen jetzt drin.
 
 **Bilder:** `packages/client/public/hub/` liegt bei 6,2 MB — zu Tagesbeginn
 waren es 30. Gemaltes wird als **WebP mit Qualität 85** ausgeliefert;
@@ -175,6 +181,39 @@ PNG-Originale). Das folgt der Regel aus `DESIGN.md` — Originale gehören ins
 Repository, nicht unter `public/`. Wer den Klon klein halten will, muss diese
 Regel ändern, nicht diese Dateien einzeln löschen.
 
+### Startbildschirm nachgebessert (nach Handy-Rückmeldung)
+
+- **Zwischen den Tabs wird gezogen, nicht nur getippt** (`GameSelect.tsx`,
+  `.front-viewport`/`.front-track` in `styles.css`). Beim waagerechten Ziehen
+  folgt der Inhalt dem Finger, die Nachbarseite schaut herein, beim Loslassen
+  rastet sie ein oder federt zurück. Der laufende Zug steuert den Track
+  **direkt über eine Referenz** — kein Rendern je Fingerbewegung, sonst
+  ruckelt es; gerendert wird nur bei Zugbeginn (um die Nachbarn zu hängen) und
+  beim Einrasten. **Nachbarn hängen nur während eines Zugs am Baum**, damit
+  der Startbildschirm nicht alle fünf Tabs auf einmal lädt. Nur klar
+  waagerechte Züge zählen, am Rand ohne Nachbar gibt es Gummiband, und in
+  einer Vollbild-Auswahl (Spielwahl, Vorschau, Kommt-bald) steuert der Zug die
+  Auswahl statt den Tab. Zwei Stellschrauben, falls das Gefühl am Gerät nicht
+  stimmt: die Einrast-Schwelle (`Math.min(72, breite * 0.22)`) und die
+  Rand-Dämpfung (`* 0.32`).
+- **Der Pinguin steht im unteren Drittel, nicht mittig** (`Pfad.tsx`,
+  `FIGUR_VON_OBEN = 2/3`). Er startet unten und steigt höchstens bis an die
+  Grenze des unteren Drittels — gemessen 63 % von oben bei 550 Trophäen.
+- **Große Zahlen in der Kopfzeile abgekürzt** (`kompakteZahl` in `i18n.ts`):
+  `550 · 1,5K · 12K · 10M`. Der siebenstellige Testkonto-Münzstand (9.999.999)
+  schob sonst Name und Level ineinander. Zusätzlich gibt der Name bei Enge
+  zuerst nach (`front-spieler { flex: 1 1 auto }`), die Anzeigen rechts
+  behalten ihre Breite.
+- **Checkpoint-Marke tritt zurück, wenn der Pinguin darauf steht.** Bei genau
+  500 saßen Pinguin und Feuerberg-Marke auf derselben Mittellinie; jetzt
+  blendet sich die Marke aus, solange die Figur näher als eine Drittelkachel
+  darauf steht (`is-verdeckt`).
+
+Alles am laufenden Server mit einem Staff-Konto (550 Trophäen, 9.999.999
+Münzen) durchgemessen: Münzen „10M+" ohne Überlappung, Pinguin bei 63 %,
+Zug mit Nachbar-Vorschau, Einrasten, Zurückfedern, senkrechtes Ziehen ohne
+Wechsel, Rand-Gummiband, Guard in der Spielauswahl.
+
 ---
 
 ## Am 3. August fertig geworden
@@ -308,6 +347,20 @@ Token-Anmeldung, `test/app-huelle.test.ts`).
   „kommt bald" — so gewollt. Chat braucht Moderation (M8).
 - **Bild-Upload für Szenerien.** Bewusst zurückgestellt: ein hochgeladenes
   Vollbild braucht Moderation, und die steht aus.
+
+### Rund um das zweite Spiel noch offen
+
+- **Die Rangliste zeigt nur Doppelkopf.** Der Rangliste-Knopf im Hub ist fest
+  auf `doppelkopf` verdrahtet (`GameSelect.tsx`, Überschrift „Rangliste ·
+  Doppelkopf"). Der Server kann längst mehr — `/api/rankings/wizard` antwortet,
+  Zauberer-Trophäen werden gebucht. Es fehlt nur eine Spielwahl über der Liste.
+  Kleine, aber sichtbare Lücke: Wer eine Zauberer-Partie gewinnt, sieht die
+  Trophäen im Profil, aber nicht in der Liste. **Guter nächster Schritt.**
+- **„Neu hier?" erklärt nur Doppelkopf** und ist eine Bald-Attrappe. Mit zwei
+  Spielen fällt auf, dass eine Anleitung für beide fehlt.
+- **Bot mit Kartengedächtnis** für den Zauberer ist bewusst zurückgestellt
+  (Spec Abschnitt 14). Der jetzige Bot spielt solide auf sein Soll, merkt sich
+  aber keine gespielten Zauberer/Trümpfe.
 
 ### Kleinkram
 
