@@ -22,16 +22,18 @@ export type DealSlot = Slot;
 /** Volle Doppelkopf-Decks: mit Neunen 48, ohne (Scharfer Doko) 40. */
 export const VOLLE_DECKS = new Set([40, 48]);
 
-const SHUFFLE_MS = 900;
-const GATHER_MS = 420;
-const DEAL_MS = 700;
-const FINISH_PAD_MS = 180;
-const SHUFFLE_BACKS = 10;
-/** Pro Platz ein kleiner Faecher beim Austeilen (kein Karten-fuer-Karte). */
-const FAN_PER_SEAT = 3;
+/**
+ * Zwei Taktungen: die volle beim Doppelkopf (einmal je Partie ein Blatt), die
+ * kurze beim Zauberer, wo jede Runde neu gegeben wird — dort soll das Mischen
+ * nicht bei jeder der bis zu zwanzig Runden zaeh werden. Die CSS-Dauern
+ * stehen unter `.doko-deal--kurz` passend kuerzer.
+ */
+const VOLL = { gather: 420, shuffle: 900, deal: 700, pad: 180, backs: 10, fan: 3 };
+const KURZ = { gather: 300, shuffle: 440, deal: 480, pad: 120, backs: 6, fan: 2 };
 
-export function dealDurationMs(): number {
-  return GATHER_MS + SHUFFLE_MS + DEAL_MS + FINISH_PAD_MS;
+export function dealDurationMs(kurz = false): number {
+  const z = kurz ? KURZ : VOLL;
+  return z.gather + z.shuffle + z.deal + z.pad;
 }
 
 /**
@@ -54,15 +56,19 @@ export function DealCeremony({
   slots,
   deckSize,
   deck,
+  kurz = false,
   onDone,
 }: {
   slots: DealSlot[];
-  /** 48 mit Neunen, 40 ohne. */
+  /** Doppelkopf: das ganze Blatt (48/40). Zauberer: die Handgroesse der Runde. */
   deckSize: number;
   deck: Deck;
+  /** Kurze Taktung fuer Spiele, die jede Runde neu geben. */
+  kurz?: boolean;
   onDone: () => void;
 }): React.JSX.Element {
-  const duration = dealDurationMs();
+  const z = kurz ? KURZ : VOLL;
+  const duration = dealDurationMs(kurz);
 
   useEffect(() => {
     const handle = window.setTimeout(onDone, duration);
@@ -70,10 +76,12 @@ export function DealCeremony({
   }, [duration, onDone]);
 
   return (
-    <div className="doko-deal" aria-hidden="true">
+    <div className={`doko-deal${kurz ? ' doko-deal--kurz' : ''}`} aria-hidden="true">
       <div className="doko-deal-glow" />
       <p className="doko-deal-label">
-        <span className="doko-deal-label-mix">Sammeln · Mischen · {deckSize} Karten</span>
+        <span className="doko-deal-label-mix">
+          Sammeln · Mischen · {deckSize} {deckSize === 1 ? 'Karte' : 'Karten'}
+        </span>
         <span className="doko-deal-label-deal">Austeilen…</span>
       </p>
 
@@ -88,15 +96,15 @@ export function DealCeremony({
         ))}
 
         {/* Ein Stapel = das ganze Blatt, einmal durchmischen. */}
-        {Array.from({ length: SHUFFLE_BACKS }, (_, i) => (
+        {Array.from({ length: z.backs }, (_, i) => (
           <div
             key={`mix-${i}`}
             className="doko-deal-mix"
             style={
               {
                 '--i': i,
-                '--n': SHUFFLE_BACKS,
-                '--delay': `${GATHER_MS + i * 28}ms`,
+                '--n': z.backs,
+                '--delay': `${z.gather + i * (kurz ? 22 : 28)}ms`,
               } as React.CSSProperties
             }
           >
@@ -108,13 +116,13 @@ export function DealCeremony({
 
         {/* Ein Austeil-Schub: je Platz ein kleiner Faecher, alle zugleich. */}
         {slots.flatMap((slot) =>
-          Array.from({ length: FAN_PER_SEAT }, (_, i) => (
+          Array.from({ length: z.fan }, (_, i) => (
             <div
               key={`fly-${slot}-${i}`}
               className={`doko-deal-fly to-${slot}`}
               style={
                 {
-                  '--delay': `${GATHER_MS + SHUFFLE_MS + i * 45}ms`,
+                  '--delay': `${z.gather + z.shuffle + i * (kurz ? 34 : 45)}ms`,
                   '--spread': `${(i - 1) * 16}px`,
                 } as React.CSSProperties
               }
