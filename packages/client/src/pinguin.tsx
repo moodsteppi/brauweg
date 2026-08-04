@@ -50,6 +50,8 @@ const VORN: readonly Slot[] = ['oberteil', 'schuhe', 'brille', 'hut', 'hand'];
 // Grundgestalt
 // ---------------------------------------------------------------------------
 
+const BASIS_BILD = '/hub/pinguin/pinguin-basis.webp';
+
 const DUNKEL = '#2b3a45';
 const DUNKLER = '#1e2a33';
 const BAUCH = '#f4f7f8';
@@ -64,6 +66,13 @@ const SCHNABEL_DUNKEL = '#d4832a';
  * die Angabe, gegen die eine Nachlieferung gemalt wird.
  */
 export function PinguinBasis(): React.JSX.Element {
+  // Das gemalte Bild liegt vor; die Zeichnung darunter bleibt als Rueckfall
+  // stehen, falls die Datei einmal fehlt. Sie ist massgleich.
+  return <image href={BASIS_BILD} x="0" y="0" width={RAHMEN.breite} height={RAHMEN.hoehe} />;
+}
+
+/** Der gezeichnete Rueckfall. Wird heute nicht gebraucht, bleibt aber massgleich. */
+export function PinguinBasisGezeichnet(): React.JSX.Element {
   return (
     <g>
       {/* Koerper */}
@@ -117,11 +126,13 @@ const AUSSEHEN: Record<string, Aussehen> = {
   // Die Augen liegen bei (101, 80) und (139, 80) mit Radius 8,5 - jede Brille
   // muss sie decken, ohne den Schnabel (ab y 92) zu beruehren.
   'brille-keine': {
+    bild: '/hub/pinguin/brille-keine.webp',
     // Der leere Platz. Er MUSS im Katalog stehen: Ohne ihn liesse sich eine
     // Brille nur tauschen, nicht abnehmen.
     zeichnung: <g />,
   },
   'brille-sonnenbrille': {
+    bild: '/hub/pinguin/brille-sonnenbrille.webp',
     zeichnung: (
       <g>
         <rect x="80" y="70" width="80" height="4" rx="2" fill="#2b2b2b" />
@@ -134,6 +145,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'brille-lesebrille': {
+    bild: '/hub/pinguin/brille-lesebrille.webp',
     zeichnung: (
       <g fill="none" stroke="#c9a227" strokeWidth="3">
         <circle cx="101" cy="80" r="14" />
@@ -145,6 +157,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'brille-taucherbrille': {
+    bild: '/hub/pinguin/brille-taucherbrille.webp',
     zeichnung: (
       <g>
         <rect x="76" y="66" width="88" height="30" rx="14" fill="#1b6f8a" />
@@ -156,6 +169,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'brille-skibrille': {
+    bild: '/hub/pinguin/brille-skibrille.webp',
     zeichnung: (
       <g>
         <rect x="72" y="64" width="96" height="32" rx="16" fill="#c2564c" />
@@ -166,6 +180,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'brille-monokel': {
+    bild: '/hub/pinguin/brille-monokel.webp',
     zeichnung: (
       <g>
         <circle cx="139" cy="80" r="16" fill="#dff1f7" opacity="0.5" />
@@ -177,6 +192,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
   },
   // --- Kopf: sitzt auf der Kalotte, y 8..74, x 58..182 --------------------
   'hut-wollmuetze': {
+    bild: '/hub/pinguin/hut-wollmuetze.webp',
     zeichnung: (
       <g>
         <path d="M74 52 A46 46 0 0 1 166 52 L166 60 L74 60 Z" fill="#7b5ea7" />
@@ -186,6 +202,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hut-strohhut': {
+    bild: '/hub/pinguin/hut-strohhut.webp',
     zeichnung: (
       <g>
         <ellipse cx="120" cy="58" rx="76" ry="17" fill="#e0bd77" />
@@ -196,6 +213,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hut-zylinder': {
+    bild: '/hub/pinguin/hut-zylinder.webp',
     zeichnung: (
       <g>
         <ellipse cx="120" cy="58" rx="62" ry="14" fill="#22262e" />
@@ -206,6 +224,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hut-bergsteiger': {
+    bild: '/hub/pinguin/hut-bergsteiger.webp',
     zeichnung: (
       <g>
         <path d="M76 54 A44 44 0 0 1 164 54 Z" fill="#d8543f" />
@@ -216,6 +235,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hut-krone': {
+    bild: '/hub/pinguin/hut-krone.webp',
     zeichnung: (
       <g>
         <path d="M78 56 L78 22 L98 40 L120 14 L142 40 L162 22 L162 56 Z" fill={gold} />
@@ -227,6 +247,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hut-partyhut': {
+    bild: '/hub/pinguin/hut-partyhut.webp',
     zeichnung: (
       <g>
         <path d="M120 4 L152 58 L88 58 Z" fill="#e0576b" />
@@ -239,6 +260,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
 
   // --- Rumpf: Bauchflaeche, y 104..214, x 54..186 -------------------------
   'oberteil-pulli': {
+    bild: '/hub/pinguin/oberteil-pulli.webp',
     zeichnung: (
       <g>
         <path d="M76 122 Q120 108 164 122 L170 200 Q120 214 70 200 Z" fill="#4a9c78" />
@@ -256,6 +278,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'oberteil-trikot': {
+    bild: '/hub/pinguin/oberteil-trikot.webp',
     zeichnung: (
       <g>
         <path d="M76 122 Q120 108 164 122 L168 198 Q120 210 72 198 Z" fill="#f4f7f8" />
@@ -266,6 +289,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'oberteil-weste': {
+    bild: '/hub/pinguin/oberteil-weste.webp',
     zeichnung: (
       <g>
         <path d="M78 120 Q98 110 110 116 L112 200 Q90 200 74 194 Z" fill="#8a6a3c" />
@@ -278,6 +302,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'oberteil-regenjacke': {
+    bild: '/hub/pinguin/oberteil-regenjacke.webp',
     zeichnung: (
       <g>
         <path d="M74 124 Q120 106 166 124 L172 202 Q120 216 68 202 Z" fill="#f0b93c" />
@@ -289,6 +314,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'oberteil-frack': {
+    bild: '/hub/pinguin/oberteil-frack.webp',
     zeichnung: (
       <g>
         <path d="M74 122 Q120 108 166 122 L170 200 Q120 212 70 200 Z" fill="#22262e" />
@@ -303,6 +329,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
 
   // --- Fuesse: y 214..254, x 72..168 -------------------------------------
   'schuhe-flossen': {
+    bild: '/hub/pinguin/schuhe-flossen.webp',
     zeichnung: (
       <g>
         {/* Nackte Fuesse: nur ein Glanzlicht, damit "nichts an" nicht wie ein
@@ -313,6 +340,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'schuhe-gummistiefel': {
+    bild: '/hub/pinguin/schuhe-gummistiefel.webp',
     zeichnung: (
       <g>
         {[97, 143].map((x) => (
@@ -326,6 +354,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'schuhe-turnschuhe': {
+    bild: '/hub/pinguin/schuhe-turnschuhe.webp',
     zeichnung: (
       <g>
         {[97, 143].map((x) => (
@@ -344,6 +373,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'schuhe-schlittschuhe': {
+    bild: '/hub/pinguin/schuhe-schlittschuhe.webp',
     zeichnung: (
       <g>
         {[97, 143].map((x) => (
@@ -358,6 +388,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'schuhe-goldstiefel': {
+    bild: '/hub/pinguin/schuhe-goldstiefel.webp',
     zeichnung: (
       <g>
         {[97, 143].map((x) => (
@@ -374,6 +405,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
 
   // --- Flosse: rechte Seite, y 112..214, x 166..238 -----------------------
   'hand-kakao': {
+    bild: '/hub/pinguin/hand-kakao.webp',
     zeichnung: (
       <g>
         <rect x="184" y="150" width="38" height="32" rx="5" fill="#f4f7f8" />
@@ -384,6 +416,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hand-kartenfaecher': {
+    bild: '/hub/pinguin/hand-kartenfaecher.webp',
     zeichnung: (
       <g>
         {[-18, 0, 18].map((rot, i) => (
@@ -398,6 +431,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hand-wanderstab': {
+    bild: '/hub/pinguin/hand-wanderstab.webp',
     zeichnung: (
       <g>
         <rect x="196" y="96" width="8" height="126" rx="4" fill="#8a6a3c" transform="rotate(6 200 160)" />
@@ -407,6 +441,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hand-laterne': {
+    bild: '/hub/pinguin/hand-laterne.webp',
     zeichnung: (
       <g>
         <path d="M200 118 A12 12 0 0 1 212 130" stroke="#5a6670" strokeWidth="3" fill="none" />
@@ -418,6 +453,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'hand-zauberstab': {
+    bild: '/hub/pinguin/hand-zauberstab.webp',
     zeichnung: (
       <g>
         <rect x="198" y="130" width="7" height="86" rx="3.5" fill="#3a2f4a" transform="rotate(10 201 173)" />
@@ -433,6 +469,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
 
   // --- Ringsum: der ganze Rahmen, hinter dem Pinguin ---------------------
   'aura-glitzer': {
+    bild: '/hub/pinguin/aura-glitzer.webp',
     zeichnung: (
       <g fill="#f6e0a0" opacity="0.9">
         {[
@@ -449,6 +486,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'aura-blaetter': {
+    bild: '/hub/pinguin/aura-blaetter.webp',
     zeichnung: (
       <g>
         {[
@@ -470,6 +508,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'aura-schneeflocken': {
+    bild: '/hub/pinguin/aura-schneeflocken.webp',
     zeichnung: (
       <g stroke="#dceaf4" strokeWidth="2.5" strokeLinecap="round">
         {[
@@ -488,6 +527,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'aura-funken': {
+    bild: '/hub/pinguin/aura-funken.webp',
     zeichnung: (
       <g>
         {[
@@ -505,6 +545,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'aura-sterne': {
+    bild: '/hub/pinguin/aura-sterne.webp',
     zeichnung: (
       <g fill={gold}>
         {[
@@ -526,6 +567,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
   'aura-konfetti': {
+    bild: '/hub/pinguin/aura-konfetti.webp',
     zeichnung: (
       <g>
         {[
