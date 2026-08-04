@@ -179,6 +179,11 @@ export const HandCard = memo(function HandCard({
   playable,
   trump,
   onPlay,
+  legt,
+  locked = false,
+  markable = false,
+  marked = false,
+  onMark,
 }: {
   card: Card;
   deck: Deck;
@@ -188,6 +193,19 @@ export const HandCard = memo(function HandCard({
   /** Karte, die sticht. Bekommt den schmalen gruenen Balken. */
   trump: boolean;
   onPlay: (cardId: number) => void;
+  /**
+   * Gesteuerter Flug: Der Tisch sagt, ob die Karte gerade fliegt, und
+   * bekommt onPlay sofort beim Tipp - er taktet Animation und Meldung
+   * selbst (Doppelkopf). Ohne dieses Feld fliegt die Karte selbstverwaltet
+   * und onPlay kommt nach 170 ms (Zauberer).
+   */
+  legt?: boolean;
+  /** Ein eigener Zug ist schon unterwegs: Tipps schuetteln nur. */
+  locked?: boolean;
+  /** Nicht am Zug: Der Tipp merkt die Karte vor, statt zu schuetteln. */
+  markable?: boolean;
+  marked?: boolean;
+  onMark?: (cardId: number) => void;
 }): React.JSX.Element {
   /**
    * Kein Faecher, keine Hervorhebung.
@@ -197,40 +215,58 @@ export const HandCard = memo(function HandCard({
    * letzte in der Mitte liegt.
    *
    * Spielbare und gesperrte Karten sehen gleich aus. Wer eine spielt, sieht
-   * sie fliegen; wer eine gesperrte antippt, sieht sie den Kopf schuetteln.
+   * sie fliegen; wer eine gesperrte antippt, sieht sie den Kopf schuetteln -
+   * ausser er darf sie vormerken.
    */
   const [shaking, setShaking] = useState(false);
-  const [legt, setLegt] = useState(false);
+  const [eigenerFlug, setEigenerFlug] = useState(false);
+  const controlled = legt !== undefined;
+  const fliegt = controlled ? legt : eigenerFlug;
 
   const mid = (total - 1) / 2;
   const off = index - mid;
 
   const vars = {
     '--off': off,
-    zIndex: legt ? 400 : index,
+    // Fliegende Karte ueber allem, vorgemerkte ueber ihren Nachbarinnen.
+    zIndex: fliegt ? 400 : marked ? 300 : index,
   } as React.CSSProperties;
 
   return (
     <button
       className={`doko-handcard${trump ? ' is-trump' : ''}${shaking ? ' is-shake' : ''}${
-        legt ? ' is-legt' : ''
-      }`}
+        fliegt ? ' is-legt' : ''
+      }${marked ? ' is-vorgemerkt' : ''}`}
       style={vars}
       // Nicht disabled: Der Tipp auf eine unspielbare Karte soll ankommen und
       // das Schuetteln ausloesen, statt lautlos zu versanden.
       aria-disabled={!playable}
+      aria-pressed={markable || marked ? marked : undefined}
       onClick={() => {
-        if (!playable) {
+        if (locked) {
           setShaking(true);
           return;
         }
-        // Erst fliegen lassen, dann melden. Die 170 ms sind kuerzer als jede
-        // Reaktionszeit und sorgen dafuer, dass man die Karte fallen sieht.
-        setLegt(true);
-        window.setTimeout(() => onPlay(card.id), 170);
+        if (playable) {
+          if (controlled) {
+            onPlay(card.id);
+            return;
+          }
+          // Erst fliegen lassen, dann melden. Die 170 ms sind kuerzer als
+          // jede Reaktionszeit und sorgen dafuer, dass man die Karte fallen
+          // sieht.
+          setEigenerFlug(true);
+          window.setTimeout(() => onPlay(card.id), 170);
+          return;
+        }
+        if (markable && onMark) {
+          onMark(card.id);
+          return;
+        }
+        setShaking(true);
       }}
       onAnimationEnd={() => setShaking(false)}
-      aria-label={trump ? 'Sticht' : undefined}
+      aria-label={marked ? 'Vorgemerkt' : trump ? 'Sticht' : undefined}
     >
       <div className="pc pc--hand">
         <CardFront card={card} deck={deck} />
