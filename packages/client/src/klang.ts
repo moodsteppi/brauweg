@@ -73,6 +73,14 @@ export const PAKET_NAMEN: Record<string, string> = {
   glas: 'Glas',
 };
 
+/** Und wie die Musikstücke heißen. Dateiname ist `musik-<kennung>.mp3`. */
+export const MUSIK_NAMEN: Record<string, string> = {
+  stube: 'Wirtsstube',
+  wiese: 'Wiesenlied',
+  traeume: 'Traumfeld',
+  dorf: 'Dorfruinen',
+};
+
 /**
  * Woher die Dateien kommen.
  *
@@ -89,7 +97,6 @@ export type Einstellungen = {
   sounds: number;
   /** 0–100. */
   musik: number;
-  vibration: boolean;
   /**
    * Gekauftes Klangpaket, oder null für den Grundsatz.
    *
@@ -114,13 +121,18 @@ export type Einstellungen = {
  */
 const SCHLUESSEL = 'brauweg.klang';
 
-/** Musik "einfach normal" an — wer sie nicht will, dreht sie in zwei Tipps weg. */
+/**
+ * Musik "einfach normal" an — wer sie nicht will, dreht sie in zwei Tipps weg.
+ *
+ * `stueck` steht bewusst auf einem echten Namen und nicht auf null: Ein Regler
+ * auf 50, aus dem nichts kommt, weil noch nichts ausgewählt ist, sieht nach
+ * Fehler aus. `stube` ist kostenlos und gehört damit jedem.
+ */
 const VORGABE: Einstellungen = {
   sounds: 80,
   musik: 50,
-  vibration: true,
   paket: null,
-  stueck: null,
+  stueck: 'stube',
 };
 
 function lies(): Einstellungen {
@@ -131,7 +143,6 @@ function lies(): Einstellungen {
     return {
       sounds: zahlImRahmen(teil.sounds, VORGABE.sounds),
       musik: zahlImRahmen(teil.musik, VORGABE.musik),
-      vibration: typeof teil.vibration === 'boolean' ? teil.vibration : VORGABE.vibration,
       paket: typeof teil.paket === 'string' ? teil.paket : null,
       stueck: typeof teil.stueck === 'string' ? teil.stueck : null,
     };
@@ -257,16 +268,21 @@ function weckeAuf(): AudioContext | null {
  * Der Schlüssel im Zwischenspeicher trägt das Paket mit, sonst hörte man nach
  * einem Paketwechsel weiter die alten Puffer.
  */
-const wege = (datei: string): { schluessel: string; pfade: string[] } => {
-  const paket = einstellungen.paket;
+const wege = (
+  datei: string,
+  paket: string | null = einstellungen.paket,
+): { schluessel: string; pfade: string[] } => {
   return {
     schluessel: paket ? `${paket}/${datei}` : datei,
     pfade: paket ? [`/klang/${paket}/${datei}.mp3`, `/klang/${datei}.mp3`] : [`/klang/${datei}.mp3`],
   };
 };
 
-async function holePuffer(datei: string): Promise<AudioBuffer | null> {
-  const { schluessel, pfade } = wege(datei);
+async function holePuffer(
+  datei: string,
+  ausPaket: string | null = einstellungen.paket,
+): Promise<AudioBuffer | null> {
+  const { schluessel, pfade } = wege(datei, ausPaket);
   const da = puffer.get(schluessel);
   if (da !== undefined) return da;
   // Platzhalter setzen, damit zwei gleichzeitige Anfragen nicht zweimal laden.
@@ -397,7 +413,7 @@ function spieleStueck(stueck: string | null): void {
       // nicht des Codes.
       musik.crossOrigin = 'anonymous';
     }
-    musik.src = `${MUSIK_BASIS}/klang/${stueck}.mp3`;
+    musik.src = `${MUSIK_BASIS}/klang/musik-${stueck}.mp3`;
     musik.volume = verstaerkung(einstellungen.musik);
     // Fehlt das Stück, lehnt play() ab — dann bleibt es eben still.
     void musik.play().catch(() => undefined);
@@ -423,28 +439,82 @@ export function musikAn(gewuenscht: boolean): void {
 export const laufendesStueck = (): string | null => musikStueck;
 
 // ---------------------------------------------------------------------------
-// Vibration
+// Vorhören
 // ---------------------------------------------------------------------------
 
 /**
- * Kann dieses Gerät überhaupt vibrieren?
+ * Anhören, bevor man kauft — und bevor man umstellt.
  *
- * Android sagt hier ja, das iPhone nein — Safari kennt die Schnittstelle
- * schlicht nicht, weder am Handy noch am Rechner, und es gibt auch keinen
- * Ersatzweg. Die Einstellung wird deshalb nicht versteckt, sondern abgeblendet
- * mit einem Satz dazu: Ein Schalter, der nichts tut, ist ärgerlicher als ein
- * Schalter, der erklärt, warum er nichts tut.
+ * Ein eigenes Element neben der Hintergrundmusik, nicht dasselbe: Die Probe
+ * soll die laufende Musik unterbrechen und danach zurückgeben, ohne dass die
+ * Einstellung sich ändert. Wer eine Probe hört und den Kauf abbricht, hat
+ * nichts umgestellt.
  */
-export const kannVibrieren = (): boolean =>
-  typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+let probe: HTMLAudioElement | null = null;
+let probeStueck: string | null = null;
 
-export function vibriere(muster: number | number[] = 12): void {
-  if (!einstellungen.vibration || !kannVibrieren()) return;
-  try {
-    navigator.vibrate(muster);
-  } catch {
-    /* Manche Browser verbieten es je nach Zustand der Seite. */
+/** Was gerade zur Probe läuft — für den Knopf, der dann "Stopp" heißt. */
+export const laufendeProbe = (): string | null => probeStueck;
+
+export function probeMusik(stueck: string | null): void {
+  // Nochmal auf denselben Knopf heißt: aus.
+  if (stueck === null || stueck === probeStueck) {
+    probe?.pause();
+    probeStueck = null;
+    // Die Hintergrundmusik bekommt ihren Platz zurück.
+    richteMusik();
+    for (const ruf of horcher) ruf();
+    return;
   }
+
+  meldeTonsitzungAn();
+  if (!probe) {
+    probe = new Audio();
+    probe.crossOrigin = 'anonymous';
+    // Läuft die Probe aus, ist sie vorbei — nicht in einer Schleife hängen.
+    probe.addEventListener('ended', () => {
+      probeStueck = null;
+      richteMusik();
+      for (const ruf of horcher) ruf();
+    });
+  }
+  // Erst die Hintergrundmusik anhalten, sonst laufen zwei Stücke übereinander.
+  musik?.pause();
+  musikStueck = null;
+
+  probeStueck = stueck;
+  probe.src = `${MUSIK_BASIS}/klang/musik-${stueck}.mp3`;
+  // Der Regler kann auf 0 stehen: Wer vorhört, will hören. Deshalb ein fester,
+  // gemäßigter Wert statt der Musiklautstärke.
+  probe.volume = 0.55;
+  void probe.play().catch(() => {
+    probeStueck = null;
+    for (const ruf of horcher) ruf();
+  });
+  for (const ruf of horcher) ruf();
+}
+
+/**
+ * Ein Klangpaket vorhören: derselbe Klang, aber aus dem angefragten Paket
+ * statt aus dem eingestellten. Genau dafür nimmt `holePuffer` das Paket als
+ * Übergabewert und nicht aus den Einstellungen.
+ */
+export function probePaket(paket: string | null, name: Klangname = 'karte-legen'): void {
+  const varianten = DATEIEN[name];
+  const datei = varianten[Math.floor(Math.random() * varianten.length)];
+  const ktx = weckeAuf();
+  if (!ktx || !tonWeg) return;
+  void holePuffer(datei, paket === 'grund' ? null : paket).then((buf) => {
+    if (!buf || !kontext || !tonWeg) return;
+    const quelle = kontext.createBufferSource();
+    quelle.buffer = buf;
+    const regler = kontext.createGain();
+    // Auch hier fest: Beim Vorhören mit Regler auf 0 dazustehen wäre absurd.
+    regler.gain.value = Math.max(0.45, verstaerkung(einstellungen.sounds));
+    quelle.connect(regler);
+    regler.connect(tonWeg);
+    quelle.start();
+  });
 }
 
 // ---------------------------------------------------------------------------

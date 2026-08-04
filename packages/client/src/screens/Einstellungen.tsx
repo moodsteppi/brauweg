@@ -1,30 +1,29 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 
-import { api, type RegalWare } from '../api';
 import {
-  PAKET_NAMEN,
   abonniere,
   holeEinstellungen,
-  kannVibrieren,
   setzeEinstellungen,
   spiele,
-  vibriere,
   type Einstellungen,
 } from '../klang';
 
 /**
- * Einstellungen — bisher genau das, was klingt und spürbar ist.
+ * Einstellungen — wie laut, und sonst nichts.
  *
  * Ein eigenes Blatt statt eines weiteren Abschnitts im Profil: Der Profil-Tab
  * ist schon lang (Pinguin, Geburtstag, Statistik, Freunde), und Einstellungen
  * wären dort ganz unten gelandet — also da, wo niemand sie sucht. Als Blatt
  * hat es außerdem Platz für das, was später dazukommt: Sprache,
  * Benachrichtigungen, Kartensortierung.
+ *
+ * **Was man hört, steht hier nicht — das ist der Klangschrank.** Zwei Regler
+ * sind eine Einstellung, die Auswahl unter gekaufter Musik ist Besitz. Beides
+ * in dasselbe Blatt zu legen hieße, dass eine wachsende Sammlung eine
+ * Lautstärkeeinstellung immer weiter nach unten schiebt.
  */
 export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   const werte = useKlang();
-  const vibrationMoeglich = kannVibrieren();
-  const meins = useMeineKlangware();
 
   return (
     <div className="doko-sheet" onClick={onClose}>
@@ -44,25 +43,6 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
           onFertig={() => spiele('karte-legen')}
         />
 
-        {/* Nur wenn es überhaupt etwas zu wählen gibt: Wer ein einziges Paket
-            hat, braucht keine Liste mit einem Eintrag. */}
-        {meins.pakete.length > 1 && (
-          <Auswahl
-            name="Klangpaket"
-            hinweis="Weitere gibt es im Shop"
-            wert={werte.paket ?? 'grund'}
-            stuecke={meins.pakete.map((w) => ({
-              wert: w.wert,
-              name: PAKET_NAMEN[w.wert] ?? w.wert,
-            }))}
-            onWahl={(wahl) => {
-              setzeEinstellungen({ paket: wahl === 'grund' ? null : wahl });
-              // Sofort hörbar machen, worauf man gerade umgestellt hat.
-              spiele('karte-legen');
-            }}
-          />
-        )}
-
         <Regler
           name="Musik"
           hinweis="Im Menü und am Spieltisch"
@@ -70,43 +50,10 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
           onChange={(musik) => setzeEinstellungen({ musik })}
         />
 
-        {meins.stuecke.length > 0 && (
-          <Auswahl
-            name="Musikstück"
-            hinweis="Was im Hintergrund läuft"
-            wert={werte.stueck ?? ''}
-            stuecke={[
-              { wert: '', name: 'Keins' },
-              ...meins.stuecke.map((w) => ({ wert: w.wert, name: w.wert })),
-            ]}
-            onWahl={(wahl) => setzeEinstellungen({ stueck: wahl === '' ? null : wahl })}
-          />
-        )}
-
-        <div className={`einstellungen-zeile${vibrationMoeglich ? '' : ' is-aus'}`}>
-          <div className="einstellungen-text">
-            <strong>Vibration</strong>
-            <span className="muted">
-              {vibrationMoeglich
-                ? 'Kurzer Stups beim Legen und bei Fehlern'
-                : 'Dieser Browser kann nicht vibrieren — am iPhone gibt es dafür keinen Weg'}
-            </span>
-          </div>
-          <button
-            className={`lobby-chip${werte.vibration && vibrationMoeglich ? ' is-an' : ''}`}
-            disabled={!vibrationMoeglich}
-            aria-pressed={werte.vibration && vibrationMoeglich}
-            onClick={() => {
-              const an = !werte.vibration;
-              setzeEinstellungen({ vibration: an });
-              spiele('schalter');
-              // Beim Einschalten einmal spüren lassen, worum es geht.
-              if (an) vibriere(20);
-            }}
-          >
-            {werte.vibration && vibrationMoeglich ? 'An' : 'Aus'}
-          </button>
-        </div>
+        <p className="einstellungen-fussnote muted">
+          Welches Stück läuft und welches Klangpaket gilt, steht im
+          Klangschrank in deinem Profil.
+        </p>
 
         {/*
           Der Satz zum Klingelschalter steht hier, weil sonst genau eine
@@ -172,65 +119,6 @@ function Regler({
       </div>
     </div>
   );
-}
-
-/** Eine Liste zum Durchtippen — für zwei bis fünf Stücke besser als ein Menü. */
-function Auswahl({
-  name,
-  hinweis,
-  wert,
-  stuecke,
-  onWahl,
-}: {
-  name: string;
-  hinweis: string;
-  wert: string;
-  stuecke: { wert: string; name: string }[];
-  onWahl: (wert: string) => void;
-}): React.JSX.Element {
-  return (
-    <div className="einstellungen-zeile einstellungen-zeile--auswahl">
-      <div className="einstellungen-text">
-        <strong>{name}</strong>
-        <span className="muted">{hinweis}</span>
-      </div>
-      <div className="lobby-chips einstellungen-chips">
-        {stuecke.map((s) => (
-          <button
-            key={s.wert}
-            className={`lobby-chip${s.wert === wert ? ' is-an' : ''}`}
-            aria-pressed={s.wert === wert}
-            onClick={() => onWahl(s.wert)}
-          >
-            {s.name}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Was mir an Klangware gehört.
- *
- * Der Shop entscheidet über Besitz, nicht dieses Blatt: Gefragt wird der
- * Server, und was nicht zurückkommt, steht auch nicht zur Wahl. Schlägt der
- * Aufruf fehl, bleibt die Liste leer und die Auswahl verschwindet — das ist
- * richtig so, denn ohne Auskunft über den Besitz wäre jede angebotene Wahl
- * geraten.
- */
-function useMeineKlangware(): { pakete: RegalWare[]; stuecke: RegalWare[] } {
-  const [ware, setWare] = useState<RegalWare[]>([]);
-  useEffect(() => {
-    void api
-      .shop()
-      .then((s) => setWare(s.tischware.filter((w) => w.besessen)))
-      .catch(() => undefined);
-  }, []);
-  return {
-    pakete: ware.filter((w) => w.art === 'klang'),
-    stuecke: ware.filter((w) => w.art === 'musik'),
-  };
 }
 
 /**

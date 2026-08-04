@@ -411,10 +411,19 @@ wissen muss. Keine Migration; die Warenarten `klang` und `musik` sind eine
 Datei, wie es `tischware.ts` verspricht.
 
 **Einstellungen gibt es jetzt als eigenes Blatt** im Profil-Tab, oben mit dem
-Zahnrad. Darin: Sounds 0–100, Musik 0–100, Vibration an/aus, dazu die Auswahl
-des Klangpakets, sobald man mehr als eines besitzt. Bisher gab es überhaupt
-keinen Ort für Einstellungen — Sprache und Benachrichtigungen können dort
-nachrücken.
+Zahnrad. Darin nur die zwei Regler: Sounds 0–100, Musik 0–100. Bisher gab es
+überhaupt keinen Ort für Einstellungen — Sprache und Benachrichtigungen können
+dort nachrücken.
+
+**Was man hört, steht im Klangschrank**, einem eigenen Bildschirm neben dem
+Kleiderschrank im Profil. Dort liegen die gekauften Musikstücke und
+Klangpakete, jedes mit einem Abspielknopf. Die Trennung ist Absicht: Zwei
+Regler sind eine Einstellung, eine wachsende Sammlung ist Besitz — läge beides
+im selben Blatt, schöbe die Sammlung die Lautstärke immer weiter nach unten.
+
+**Vorgehört wird auch im Shop**, an der Kaufrückfrage. Klang und Musik kauft
+man nach Gehör und nicht nach Namen; der Knopf steht deshalb vor der
+Währungsfrage.
 
 **23 Töne, 123 kB zusammen**, alle CC0 von Kenney, plus ein zweites Paket
 „Glas" mit 8 Dateien. Die Originale liegen im Archivrepo unter `klang/`.
@@ -432,17 +441,21 @@ Wer einen Klang in `Table.tsx` einbaut, hat ihn beim Zauberer vergessen.
 > und Spotify ist weg. Der Preis steht auch in den Einstellungen, weil man es
 > sonst für kaputt hält: Am iPhone schaltet der Klingelschalter uns mit stumm.
 
-**Vibration ist gebaut, aber das iPhone kann sie nicht.** Safari kennt
-`navigator.vibrate` nicht, weder am Handy noch am Rechner, und es gibt keinen
-Ersatzweg. Der Schalter bleibt sichtbar, abgeblendet, mit einem Satz dazu.
+**Vibration war kurz gebaut und ist am selben Tag wieder herausgeflogen.**
+Safari kennt `navigator.vibrate` nicht, weder am Handy noch am Rechner. Ein
+Schalter, den die halbe Beta nur abgeblendet sieht, wirft Fragen auf, statt
+etwas einzustellen. Wie er zurückkäme, steht in `docs/KLANG.md`.
 
-**Drei Dinge sind bewusst offen und keine Vergesslichkeit:**
+**Vier Musikstücke**, alle CC0 von OpenGameArt, zusammen 5,2 MB. `stube` ist
+kostenlos, die anderen drei kosten. Die Lizenz wurde auf jeder Einzelseite
+nachgesehen und nicht der Sammlung geglaubt, in der sie stehen.
 
-- **Musik gibt es noch nicht.** Kenney hat keine Schleifen, FreePD ist
-  geschlossen. Der Katalog steht bei `musik` leer — aus demselben Grund, aus
-  dem die Kartenblätter dort lange leer standen. **Ab der fünften Schleife
-  gehört Musik nicht mehr ins Repo**; `VITE_KLANG_BASIS` ist dafür schon
-  eingebaut und kostet keine Codeänderung.
+**Zwei Dinge sind bewusst offen und keine Vergesslichkeit:**
+
+- **Beim fünften Musikstück steht der Umzug an.** 5,2 MB sind die Obergrenze
+  dessen, was ich noch im Repo lassen würde; `VITE_KLANG_BASIS` ist dafür
+  eingebaut und kostet keine Codeänderung, weil Musik über ein einfaches
+  `<audio>` läuft und deshalb keine CORS-Kopfzeilen braucht.
 - **`sieg`, `niederlage`, `stufe`** sind nach Länge und Instrument gewählt,
   nicht nach Gehör — in keinem Dateinamen steht, welcher Jingle nach Sieg
   klingt. Einmal anhören, notfalls Datei desselben Namens drüberlegen.

@@ -5,8 +5,8 @@ ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln in
 `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
-schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne,
-Musik, Vibration — Herkunft, Lizenzen, Auslagerungsgrenze) ·
+schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und
+Musik — Herkunft, Lizenzen, Auslagerungsgrenze) ·
 `docs/plattform-plan.md` (das große Ganze) · **`docs/JETZT-AUSFUEHREN.md`
 (Bilder einbauen, Schritt für Schritt — die Werkzeuge stehen auf dem Rechner
 bereit)**.

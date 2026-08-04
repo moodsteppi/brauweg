@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 import {
   ApiError,
@@ -29,7 +36,15 @@ import {
 } from '../decks';
 import { SZENEN, szeneBild } from '../szenen';
 import { emoteBild, emoteMit } from '../emotes';
-import { PAKET_NAMEN, spiele } from '../klang';
+import {
+  MUSIK_NAMEN,
+  PAKET_NAMEN,
+  abonniere,
+  laufendeProbe,
+  probeMusik,
+  probePaket,
+  spiele,
+} from '../klang';
 import { EinstellungenBlatt } from './Einstellungen';
 import {
   EdelsteinIcon,
@@ -44,6 +59,7 @@ import { Pinguin } from '../pinguin';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
+import { Klangschrank } from './Klangschrank';
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -112,6 +128,7 @@ export function GameSelect({
    */
   const [aufgabenOffen, setAufgabenOffen] = useState(false);
   const [schrankOffen, setSchrankOffen] = useState(false);
+  const [klangschrankOffen, setKlangschrankOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -294,6 +311,10 @@ export function GameSelect({
             onDeleted={onDeleted}
             onStufen={() => setStufenOffen(true)}
             onSchrank={() => setSchrankOffen(true)}
+            onKlangschrank={() => {
+              spiele('blatt-auf');
+              setKlangschrankOffen(true);
+            }}
             onAufgaben={() => setAufgabenOffen(true)}
             onBald={setBald}
             onShowProfile={onShowProfile}
@@ -471,6 +492,7 @@ export function GameSelect({
           onGuthaben={onAvatarChange}
         />
       )}
+      {klangschrankOffen && <Klangschrank onClose={() => setKlangschrankOffen(false)} />}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
         <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
@@ -520,6 +542,7 @@ function ProfilTab({
   onDeleted,
   onStufen,
   onSchrank,
+  onKlangschrank,
   onAufgaben,
   onBald,
   onShowProfile,
@@ -535,6 +558,8 @@ function ProfilTab({
   onStufen: () => void;
   /** Oeffnet den Kleiderschrank. */
   onSchrank: () => void;
+  /** Oeffnet den Klangschrank — Musik und Klangpakete auswaehlen. */
+  onKlangschrank: () => void;
   /** Oeffnet Tagesaufgaben und Truhen. */
   onAufgaben: () => void;
   onBald: (name: string) => void;
@@ -645,6 +670,9 @@ function ProfilTab({
           <div className="hub-knopfreihe hub-knopfreihe--a">
             <button className="hub-knopf hub-knopf--a" onClick={onSchrank}>
               Kleiderschrank
+            </button>
+            <button className="hub-knopf hub-knopf--a" onClick={onKlangschrank}>
+              Klangschrank
             </button>
             <button className="hub-knopf hub-knopf--a-gold" onClick={onAufgaben}>
               Aufgaben
@@ -1020,6 +1048,10 @@ function KaufFrage({
               <img className="ks-kauf-ware" src={frage.bild} alt="" draggable={false} />
             )}
             <h2>{frage.name}</h2>
+            {/* Klang und Musik kauft man nach Gehör, nicht nach Namen. Der
+                Knopf steht deshalb VOR der Waehrungsfrage — erst hoeren,
+                dann entscheiden. */}
+            <Vorhoeren ware={frage.ware} />
           </>
         ) : frage.art === 'truhe' ? (
           <>
@@ -1359,7 +1391,7 @@ function Shop({
         waren={ware('musik')}
         bild={() => null}
         glyph="♫"
-        name={(w) => w.wert}
+        name={(w) => MUSIK_NAMEN[w.wert] ?? w.wert}
         kauft={kauft}
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
@@ -1469,6 +1501,36 @@ function WareRegal({
         ))}
       </div>
     </Tafel>
+  );
+}
+
+/**
+ * Anhören, bevor man kauft.
+ *
+ * Nur fuer Klang und Musik — bei einer Szenerie taete ein Knopf nichts. Bei
+ * Musik laeuft das Stueck an und der Knopf wird zum Stopp; bei einem
+ * Klangpaket ist es ein einzelner Kartenklick aus genau diesem Paket, und
+ * dafuer braucht es keinen Stoppknopf.
+ *
+ * Der Aufraeumer haengt am Element: Wer die Rueckfrage schliesst, waehrend
+ * die Probe laeuft, soll nicht mit der Musik im Ruecken weitergehen.
+ */
+function Vorhoeren({ ware }: { ware: RegalWare }): React.JSX.Element | null {
+  const laeuftProbe = useSyncExternalStore(abonniere, laufendeProbe, laufendeProbe);
+  useEffect(() => () => probeMusik(null), []);
+
+  if (ware.art !== 'klang' && ware.art !== 'musik') return null;
+  const istMusik = ware.art === 'musik';
+  const an = istMusik && laeuftProbe === ware.wert;
+
+  return (
+    <button
+      type="button"
+      className="hub-knopf hub-knopf--a ks-kauf-hoeren"
+      onClick={() => (istMusik ? probeMusik(ware.wert) : probePaket(ware.wert))}
+    >
+      {an ? '■ Stopp' : '▶ Anhören'}
+    </button>
   );
 }
 

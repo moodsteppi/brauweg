@@ -1,6 +1,6 @@
 # Klang
 
-Töne, Musik und Vibration. Diese Datei sagt, **woher jeder Klang kommt**, was
+Töne und Musik. Diese Datei sagt, **woher jeder Klang kommt**, was
 er kosten darf und ab wann Musik nicht mehr ins Repo gehört.
 
 Gebaut: 5. August 2026. Code: `packages/client/src/klang.ts` (das System),
@@ -11,10 +11,12 @@ Gebaut: 5. August 2026. Code: `packages/client/src/klang.ts` (das System),
 
 ## Herkunft und Lizenz
 
-Alles Vorhandene stammt von **Kenney** und steht unter **CC0** — gemeinfrei,
-für kommerzielle Nutzung frei, **keine Namensnennung verpflichtend**. Die
-Lizenztexte liegen jedem Paket bei; Kenney schreibt dazu wörtlich, ein Hinweis
-sei nett, aber nicht erforderlich.
+**Alles steht unter CC0** — gemeinfrei, für kommerzielle Nutzung frei,
+**keine Namensnennung verpflichtend**. Bei den Kenney-Paketen liegt der
+Lizenztext bei; bei den Musikstücken wurde die Lizenz auf jeder einzelnen
+Seite nachgesehen, nicht der Sammlung geglaubt, in der sie stehen.
+
+### Töne — Kenney
 
 | Paket | Woher | Lizenz | Was daraus wurde |
 |---|---|---|---|
@@ -22,7 +24,19 @@ sei nett, aber nicht erforderlich.
 | Interface Sounds | <https://kenney.nl/assets/interface-sounds> | CC0 | Dran, Ansage, Zuruf, Rundenende, Fehler, Tipp, Blatt auf/zu, Schalter, das ganze Paket „Glas" |
 | Music Jingles | <https://kenney.nl/assets/music-jingles> | CC0 | Stufenaufstieg, Sieg, Niederlage |
 
+### Musik — OpenGameArt
+
+| Datei | Stück | Urheber | Woher | Lizenz |
+|---|---|---|---|---|
+| `musik-stube.mp3` | Wirtsstube (*Tavern*) | yd | <https://opengameart.org/content/tavern-0> | CC0 |
+| `musik-wiese.mp3` | Wiesenlied (*Meadow Thoughts*) | Écrivain | <https://opengameart.org/content/meadow-thoughts> | CC0 |
+| `musik-traeume.mp3` | Traumfeld (*The Field Of Dreams*) | pauliuw | <https://opengameart.org/content/the-field-of-dreams> | CC0 |
+| `musik-dorf.mp3` | Dorfruinen (*Village Ruins*) | isaiah658 | <https://opengameart.org/content/village-ruins> | CC0 |
+
 Lizenzhinweis: <https://creativecommons.org/publicdomain/zero/1.0/>
+
+> Kenney und isaiah658 schreiben beide, ein Hinweis sei nett, aber nicht
+> erforderlich. Wenn im Impressum ohnehin Platz ist, kostet ein Dank nichts.
 
 Die **Originale** (die entpackten `.ogg` samt Lizenztexten) gehören ins
 Archivrepo [`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art)
@@ -38,13 +52,22 @@ unter `klang/`, nicht ins Hauptrepo — dieselbe Regel wie bei den Bildern.
 
 ## Was es gibt
 
-23 Klänge, **123 kB zusammen** — weniger als zwei Kartenbilder. Dazu ein
-zweites Klangpaket „Glas" mit 8 Dateien und 19 kB.
+23 Klänge und vier Musikstücke.
 
 ```
 public/klang/           23 Dateien   123 kB   Grundsatz
 public/klang/glas/       8 Dateien    19 kB   gekauftes Paket
+public/klang/musik-*     4 Dateien  5162 kB   Hintergrundmusik
 ```
+
+Die Töne sind zusammen leichter als zwei Kartenbilder. Die Musik ist der
+schwere Teil und damit auch der, den man im Blick behalten muss — siehe die
+Grenze weiter unten.
+
+**`stube` ist kostenlos**, aus demselben Grund wie die zwei freien Zurufe: Ein
+Spiel, in dem nur zahlende Gäste Musik haben, ist für alle anderen ein stummes
+Spiel. Es ist zugleich das kürzeste Stück (62 s) — wer nichts kauft, hört es
+am häufigsten, und deshalb ist es das unaufdringlichste.
 
 **Mehrere Dateien je Anlass sind Absicht.** Beim Kartenlegen gibt es drei
 Varianten, und das System würfelt. In einer Doppelkopfpartie fällt vierzigmal
@@ -91,23 +114,25 @@ ist kein Randfall — dort läuft die Beta.
 
 ---
 
-## Musik: was fehlt und wo sie hingehört
+## Musik
 
-**Es gibt noch kein einziges Musikstück.** Kenney hat keine Schleifen, nur
-Jingles, und FreePD ist inzwischen dauerhaft geschlossen. Der Katalog in
-`packages/server/src/tischware.ts` ist bei `musik` deshalb bewusst leer — aus
-demselben Grund, aus dem die Kartenblätter dort lange leer standen: **Ein
-gekauftes Stück, das nicht spielt, ist schlimmer als eines, das man noch nicht
-kaufen kann.**
+Vier Stücke, alle CC0 von OpenGameArt, zusammen 5,2 MB. Ausgesucht nach dem,
+was zu einem Kartenabend passt: Harfe, ruhig, ohne Gesang und ohne Bogen, der
+irgendwo hin will. Wer sie tauschen möchte, legt eine Datei desselben Namens
+hin.
 
-Der Weg ist eine Zeile je Stück und eine Datei:
+Ein neues Stück ist eine Zeile und eine Datei:
 
 ```
 musik('stube', 400)        →  public/klang/musik-stube.mp3
 ```
 
-Welches Stück am Tisch läuft, ist Geschmack. Das sollte gehört und nicht
-zugeteilt werden.
+**Kenney hat keine Schleifen**, nur Jingles, und FreePD ist inzwischen
+dauerhaft geschlossen — die Suche führt also nicht dorthin zurück.
+OpenGameArt hat eine CC0-Sammlung unter
+<https://opengameart.org/content/cc0-music-0>; sie ist nutzergepflegt,
+**deshalb die Lizenz immer auf der Einzelseite nachsehen** und nicht der
+Sammlung glauben.
 
 ### Ab wann Musik nicht mehr ins Repo gehört
 
@@ -116,9 +141,11 @@ sechs plus zwei, und damit kippt die Rechnung.
 
 | Umfang | Größe | Wo |
 |---|---|---|
-| 1–2 Schleifen | bis 3 MB | Repo, `public/klang/` |
-| 3–4 Schleifen | bis 6 MB | Repo, noch vertretbar |
-| **ab 5 Schleifen** | **8 MB und mehr** | **eigener Ort** |
+| 1–2 Stücke | bis 3 MB | Repo, `public/klang/` |
+| **3–4 Stücke** | **bis 6 MB** | **Repo — hier stehen wir gerade, bei 5,2 MB** |
+| ab 5 Stücken | 8 MB und mehr | eigener Ort |
+
+**Das nächste Stück ist also das, bei dem der Umzug ansteht.** Nicht später.
 
 Der Grund ist derselbe wie bei den Bildern: Railway lädt bei jedem Deploy das
 ganze Repo. 8 MB Musik, die kein Build anfasst und die die meisten Spieler nie
@@ -168,21 +195,18 @@ im Weg haben.
 
 ---
 
-## Vibration
+## Vibration — bewusst wieder ausgebaut
 
-`navigator.vibrate()`. **Android kann es, das iPhone nicht** — Safari kennt
-die Schnittstelle schlicht nicht, weder am Handy noch am Rechner, und es gibt
-keinen Ersatzweg.
+Es gab sie kurz, am 5. August, und sie ist am selben Tag wieder herausgeflogen.
+Der Grund: **Android kann `navigator.vibrate()`, das iPhone nicht.** Safari
+kennt die Schnittstelle schlicht nicht, weder am Handy noch am Rechner, und
+es gibt keinen Ersatzweg. Ein Schalter, den die Hälfte der Beta-Geräte nur
+abgeblendet zu sehen bekommt, ist eine Einstellung, die Fragen aufwirft statt
+etwas einzustellen.
 
-Der Schalter steht trotzdem in den Einstellungen, aber abgeblendet und mit
-einem Satz dazu. Ein Schalter, der nichts tut, ist ärgerlicher als einer, der
-erklärt, warum er nichts tut.
-
-Vibriert wird an genau zwei Stellen: **wenn man am Zug ist** und **wenn der
-Server eine Aktion ablehnt**. Beides sind Momente, in denen man gerade
-woanders hinsieht. Mehr wäre Zappeln.
-
----
+Wer sie zurückholen will, braucht drei Dinge: ein Feld `vibration` in
+`Einstellungen`, ein `vibriere()` neben `spiele()`, und Aufrufe in
+`tisch/klangtisch.ts` bei „am Zug" und „abgelehnt" — mehr wäre Zappeln.
 
 ## Wo etwas dazukommt
 
@@ -203,9 +227,10 @@ zuerst den Ablageort einrichten.
 
 ## Offen
 
-- **Musik gibt es noch nicht.** Quelle finden, Stücke aussuchen, dann Katalog
-  und Ablageort.
+- **Der Umzug der Musik steht als Nächstes an** — siehe die Grenze oben. Beim
+  fünften Stück, nicht danach.
 - **`sieg`, `niederlage`, `stufe`** einmal anhören und gegebenenfalls tauschen.
+  In keinem Dateinamen steht, welcher Jingle nach Sieg klingt.
 - **Klangpakete und Musik haben keine Grafik.** Im Shop steht deshalb ein
   Zeichen (♪ und ♫) statt eines Bildes — bewusst, nicht vergessen: Ein `<img>`
   auf eine Datei, die es nicht gibt, wäre ein weißer Kasten. Sobald
@@ -213,8 +238,13 @@ zuerst den Ablageort einrichten.
   `GameSelect.tsx`.
 - **Die Auswahl steht am Gerät, nicht am Konto.** Lautstärke ist eine
   Eigenschaft des Kopfhörers und des Raums; wer abends leise spielt, will
-  morgens in der Bahn nicht dieselbe Zahl. Paket und Musikstück stehen aus
+  morgens in der Bahn nicht dieselbe Zahl. Musikstück und Klangpaket stehen aus
   demselben Grund daneben — und weil beides nur zu hören und nie zu sehen ist,
   geht es keinen Mitspieler etwas an. **Gekauft** wird trotzdem am Server,
   sonst wäre der Kauf keiner. Wer das Gerät wechselt, behält den Besitz und
-  stellt einmal neu ein.
+  wählt einmal neu.
+- **Die Stücke sind keine echten Schleifen.** Sie laufen mit `loop` und setzen
+  am Ende neu an; MP3 hat vorn und hinten etwas Stille vom Wandler, also ist
+  die Naht hörbar. Bei einem Stück, das eine Minute läuft, fällt das selten
+  auf — bei einem kurzen Motiv würde es. Wer das loswerden will, braucht
+  entschlüsselte Puffer statt `<audio>` und zahlt es mit Arbeitsspeicher.

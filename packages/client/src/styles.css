@@ -8075,3 +8075,83 @@ main.auth > .muted {
   padding-left: 0.4rem;
   padding-right: 0.4rem;
 }
+
+/* =========================================================================
+   Klangschrank — Musik und Klangpakete auswaehlen.
+
+   Eine Liste statt eines Rasters: Musik hat kein Bild, und ein Raster aus
+   Textkacheln ist schwerer zu lesen als Zeilen untereinander. Die Zeile
+   traegt Name, Zustand, ein Ohr und einen Haken - in dieser Reihenfolge,
+   weil man von links nach rechts entscheidet.
+   ========================================================================= */
+
+.klangschrank {
+  max-height: 82vh;
+  overflow-y: auto;
+}
+
+.klangschrank-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.klangschrank-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.15rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.klangschrank-zeile:last-child { border-bottom: none; }
+.klangschrank-zeile.is-gewaehlt .klangschrank-text strong { color: #ffe9b0; }
+
+.klangschrank-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1;
+  min-width: 0;
+}
+.klangschrank-text .muted { font-size: 0.72rem; }
+
+/* Der Abspielknopf ist rund und klein, aber nicht kleiner als ein Daumen:
+   44 px ist die Untergrenze, unter der man daneben tippt. */
+.klangschrank-hoeren {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  background: radial-gradient(circle at 35% 30%, #4a3f30, #2b241b);
+  color: #f2dfae;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.klangschrank-hoeren:active { transform: scale(0.94); }
+
+.klangschrank-zeile .lobby-chip {
+  flex: 0 0 auto;
+  min-width: 5.2rem;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+}
+/* Das Gewaehlte bleibt lesbar, obwohl der Knopf gesperrt ist - er sagt ja
+   gerade aus, dass dieses Stueck laeuft. */
+.klangschrank-zeile .lobby-chip:disabled { opacity: 1; }
+
+.klangschrank-fuss {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  margin: 0.6rem 0 0;
+}
+
+/* Der Anhoerknopf in der Kaufrueckfrage steht ueber der Waehrungsfrage. */
+.ks-kauf-hoeren {
+  margin: 0.4rem 0 0.2rem;
+  min-width: 8rem;
+}
+
+/* Drei Knoepfe unter dem Pinguin passen nicht mehr nebeneinander. */
+.hub-garderobe-text .hub-knopfreihe { flex-wrap: wrap; }

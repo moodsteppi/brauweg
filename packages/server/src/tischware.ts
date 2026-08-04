@@ -219,11 +219,17 @@ export const WAREN: readonly Ware[] = [
   klang('glas', 300),
 
   // --- Musik --------------------------------------------------------------
-  // Noch leer, und zwar aus demselben Grund wie bei den Kartenblaettern
-  // weiter oben: Es gibt die Stuecke noch nicht. Ein gekauftes Musikstueck,
-  // das dann nicht spielt, ist schlimmer als eines, das man noch nicht kaufen
-  // kann. Der Weg dorthin ist eine Zeile je Stueck (`musik('stube', 400)`)
-  // und die Datei unter `public/klang/musik-stube.mp3` — sonst nichts.
+  // `stube` ist frei, aus demselben Grund wie die zwei freien Zurufe: Ein
+  // Spiel, in dem nur zahlende Gaeste Musik haben, ist fuer alle anderen ein
+  // stummes Spiel. Es ist zugleich das kuerzeste Stueck (62 s) — wer nichts
+  // kauft, hoert es also am oeftesten, und deshalb ist es das unaufdringlichste.
+  //
+  // Vier Stuecke sind 5,2 MB. Das ist die Grenze: Ab dem fuenften gehoert
+  // Musik auf einen eigenen Ort, siehe `docs/KLANG.md`.
+  musik('stube', 0),
+  musik('wiese', 300),
+  musik('traeume', 350, 'selten'),
+  musik('dorf', 400, 'selten'),
 ];
 
 const NACH_ID = new Map(WAREN.map((ware) => [ware.id, ware]));

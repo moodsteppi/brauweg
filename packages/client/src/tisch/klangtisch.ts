@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { spiele, vibriere } from '../klang';
+import { spiele } from '../klang';
 
 /**
  * Was am Spieltisch klingt — einmal für beide Spiele.
@@ -67,21 +67,15 @@ export function useTischklang(zustand: {
   }, [letzterStich]);
 
   /**
-   * Man ist am Zug.
-   *
-   * Der einzige Klang mit einem Stups dazu: Wer nebenbei etwas anderes macht,
-   * merkt sonst nicht, dass drei Leute auf ihn warten. Genau dafür ist
-   * Vibration da, und für sonst fast nichts.
+   * Man ist am Zug — der wichtigste Klang am ganzen Tisch. Wer nebenbei etwas
+   * anderes macht, merkt sonst nicht, dass drei Leute auf ihn warten.
    */
   const warDran = useRef<boolean | undefined>(undefined);
   useEffect(() => {
     const vorher = warDran.current;
     warDran.current = binDran;
     if (vorher === undefined) return;
-    if (binDran && !vorher) {
-      spiele('dran');
-      vibriere(14);
-    }
+    if (binDran && !vorher) spiele('dran');
   }, [binDran]);
 
   // Geben.
@@ -112,16 +106,13 @@ export function useTischklang(zustand: {
     if (partieFertig && !vorher) spiele(gewonnen === false ? 'niederlage' : 'sieg');
   }, [partieFertig, gewonnen]);
 
-  // Abgelehnte Aktion. Klang und Stups, weil die Meldung schnell wieder weg
-  // ist und man sie am Handy leicht übersieht.
+  // Abgelehnte Aktion. Bekommt einen eigenen Klang, weil die Meldung schnell
+  // wieder weg ist und man sie am Handy leicht übersieht.
   const vorigerFehler = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     const vorher = vorigerFehler.current;
     vorigerFehler.current = fehler;
     if (vorher === undefined) return;
-    if (fehler && fehler !== vorher) {
-      spiele('fehler');
-      vibriere([18, 40, 18]);
-    }
+    if (fehler && fehler !== vorher) spiele('fehler');
   }, [fehler]);
 }
