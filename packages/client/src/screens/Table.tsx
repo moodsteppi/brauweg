@@ -28,13 +28,40 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
-import { useTable } from '../useTable';
+import { type ConnectionStatus, useTable } from '../useTable';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
     dass die Karten nicht aus dem Faecher wachsen. */
 const ZOOM_MIN = 0.7;
 const ZOOM_MAX = 1.45;
 const ZOOM_STEP = 0.15;
+
+/**
+ * Schmaler Hinweis samt Knopf, wenn die Leitung gerade nicht steht. Beim
+ * ersten Verbinden bleibt er weg - dafuer gibt es den Ladebildschirm.
+ */
+function ConnectionBanner({
+  status,
+  onReconnect,
+}: {
+  status: ConnectionStatus;
+  onReconnect: () => void;
+}): React.JSX.Element | null {
+  if (status === 'open' || status === 'connecting') return null;
+  return (
+    <div className={`doko-conn doko-conn--${status}`} role="status" aria-live="polite">
+      <span className="doko-conn-dot" aria-hidden="true" />
+      <span className="doko-conn-text">
+        {status === 'reconnecting'
+          ? 'Verbindung wird wiederhergestellt…'
+          : 'Keine Verbindung'}
+      </span>
+      <button className="doko-conn-btn" onClick={onReconnect}>
+        Neu verbinden
+      </button>
+    </div>
+  );
+}
 
 /**
  * Der Doppelkopf-Tisch als mobile Oberflaeche.
@@ -63,7 +90,8 @@ export function Table({
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, connected, send, addBot, removeBot } = useTable(tableId);
+  const { view, party, table, error, status, send, addBot, removeBot, reconnect } =
+    useTable(tableId);
 
   // Tischgroesse: skaliert Hand- und Stichkarten. Am Geraet gespeichert, weil
   // sie von Augen und Bildschirm abhaengt, nicht vom Konto.
@@ -253,25 +281,39 @@ export function Table({
   // los und die Sicht ersetzt diesen Bildschirm.
   if (!view && table && table.status === 'waiting') {
     return (
-      <Wartebereich
-        tableId={tableId}
-        table={table}
-        error={error}
-        spielerName={spielerName}
-        addBot={addBot}
-        removeBot={removeBot}
-        onLeave={onLeave}
-      />
+      <>
+        <ConnectionBanner status={status} onReconnect={reconnect} />
+        <Wartebereich
+          tableId={tableId}
+          table={table}
+          error={error}
+          spielerName={spielerName}
+          addBot={addBot}
+          removeBot={removeBot}
+          onLeave={onLeave}
+        />
+      </>
     );
   }
 
   if (!view) {
+    const ladeText =
+      status === 'open'
+        ? 'Tisch wird geladen…'
+        : status === 'reconnecting'
+          ? 'Verbindung wird wiederhergestellt…'
+          : 'Verbinde…';
     return (
       <div className="doko doko--loading">
         <div className="doko-spinner" aria-hidden="true" />
-        <p className="muted">{connected ? 'Tisch wird geladen…' : 'Verbinde…'}</p>
+        <p className="muted">{ladeText}</p>
         {error && <p className="error">{t(error)}</p>}
-        <button onClick={onLeave}>Zurück</button>
+        <div className="doko-loading-actions">
+          <button className="primary" onClick={reconnect}>
+            Neu verbinden
+          </button>
+          <button onClick={onLeave}>Zurück</button>
+        </div>
       </div>
     );
   }
@@ -380,6 +422,14 @@ export function Table({
           <span className="muted">{gameLine}</span>
         </div>
         <div className="doko-top-right">
+          <button
+            className={`doko-icon${status !== 'open' ? ' is-syncing' : ''}`}
+            onClick={reconnect}
+            aria-label="Neu verbinden / aktualisieren"
+            title="Neu verbinden"
+          >
+            ⟳
+          </button>
           {view.view.nextMultiplier > 1 && (
             <span className="doko-badge doko-badge--bock">Bock ×{view.view.nextMultiplier}</span>
           )}
@@ -432,6 +482,8 @@ export function Table({
 
       {/* Spielfläche. Namen fuehren auch hier zum Profil - Zurueck bringt
           einen an den Tisch zurueck, die Partie laeuft derweil weiter. */}
+      <ConnectionBanner status={status} onReconnect={reconnect} />
+
       <div className={`doko-felt seats-${seatCount}`}>
         {opponents.map((seat) => (
           <OpponentSeat

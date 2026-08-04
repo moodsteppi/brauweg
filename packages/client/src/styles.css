@@ -5710,3 +5710,76 @@ main.auth > .muted {
     calc((100vw - var(--hw) - 1.4rem) / var(--luecken, 11))
   );
 }
+
+/* Verbindungsstatus: Hinweis samt „Neu verbinden", wenn die Leitung wackelt.
+   Am Handy reisst ein kurzer Tabwechsel die WebSocket ab; der Client verbindet
+   von selbst neu - dieser Streifen zeigt es an, der Knopf erzwingt es. */
+.doko-conn {
+  position: absolute;
+  top: 3.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.4rem 0.45rem 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(27, 36, 41, 0.96);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.doko-conn-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doko-conn-dot {
+  flex: 0 0 auto;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: doko-conn-blink 1.1s ease-in-out infinite;
+}
+.doko-conn--closed .doko-conn-dot {
+  background: var(--danger);
+  animation: none;
+}
+.doko-conn-btn {
+  flex: 0 0 auto;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+@keyframes doko-conn-blink {
+  50% { opacity: 0.3; }
+}
+
+/* Das Aktualisieren-Icon dreht sich, solange nachverbunden wird. */
+.doko-icon.is-syncing {
+  animation: doko-spin 1s linear infinite;
+  color: var(--gold);
+}
+
+/* Zwei Knoepfe nebeneinander im Ladebildschirm. */
+.doko-loading-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doko-conn-dot,
+  .doko-icon.is-syncing {
+    animation: none;
+  }
+}
