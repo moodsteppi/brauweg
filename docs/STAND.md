@@ -22,16 +22,16 @@ im Wurzelverzeichnis, nicht `--workspace @brauweg/server`. Die `.d.ts` von
 `@brauweg/game-api` ist sonst der alte Stand, und `tsc` meldet Felder als
 fehlend, die im Quelltext längst stehen (`xpBasis`, `interludeMs`).
 
-**`main` und `staging` stehen auf demselben Commit** (`77edd7e`, 4. August
-2026). `staging` ist an diesem Tag auf ausdrückliche Anweisung nach `main`
-gebracht worden — per Fast-Forward, 17 Commits, damit alles gemeinsam auf dem
-Produktivsystem zu sehen ist. Darin stecken Stufen und Erfahrungspunkte, die
-Testkonten, Cursors Rundenabschluss (Auswertungs-Blätter, Ansage-Blasen,
-Verbindungsbanner) und die Doppelkopf-Nachbesserungen (Armut-Abgabe, Scharfer
-Doppelkopf, Team Re/Kontra).
+**Stand der Zweige am 4. August 2026:** `main` auf `903ec05`, `staging` auf
+`93438ef` — die Währungen, Truhen, Tagesaufgaben und der anziehbare Pinguin
+liegen also auf `staging` und noch nicht in der Produktion. Ob und wann sie
+dorthin gehen, entscheidet Jan.
 
-**Das war eine Ausnahme.** Die Regel unten gilt weiter: `main` wird aus einer
-Sitzung heraus nicht angefasst.
+`staging` ist an diesem Tag einmal auf ausdrückliche Anweisung nach `main`
+gebracht worden (Fast-Forward über 17 Commits), damit Stufen, Testkonten,
+Cursors Rundenabschluss und die Doppelkopf-Nachbesserungen gemeinsam auf dem
+Produktivsystem zu sehen sind. **Das war eine Ausnahme** — die Regel unten gilt
+weiter: `main` wird aus einer Sitzung heraus nicht angefasst.
 
 **Bilder:** `packages/client/public/hub/` liegt bei 6,2 MB — zu Tagesbeginn
 waren es 30. Gemaltes wird als **WebP mit Qualität 85** ausgeliefert;
@@ -103,7 +103,10 @@ Sie dürfen weg, sobald dieser Stand eine Weile stabil läuft.
 
 ## Zwei Währungen, Truhen, Tagesaufgaben, Pinguin
 
-Steht seit dem 4. August, auf dem Zweig `waehrungen-truhen-quests`.
+Steht seit dem 4. August auf `staging`, geprüft an der laufenden Anwendung:
+Truhe geöffnet, Aufgabenstand gelesen, Hut für 120 Münzen und Krone für 40
+Edelsteine gekauft, angezogen, ausgezogen — dazu die Fehlerpfade (zweimal
+öffnen, gesperrte Stufentruhe, zu wenig Münzen, Geschenk kaufen).
 
 **Zwei Währungen, ohne Wechselkurs.** **Münzen** (`account.coins`) fallen aus
 Truhen und Tagesaufgaben, **Edelsteine** (`account.gems`, neu) nur aus Kauf
