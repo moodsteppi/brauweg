@@ -169,6 +169,88 @@ allein in einer leeren Lobby steht, meldet „App funktioniert nicht".
 
 ---
 
+## TestFlight: privat testen, ohne Release
+
+Ziel dieser Stufe: die App **untereinander aufs iPhone laden und testen**, ohne
+sie je öffentlich zu veröffentlichen. Das geht heute — ohne Firma, ohne Shop.
+
+### Strategie: privater Account jetzt, Firma später
+
+Entschieden im Gespräch am 5. August 2026.
+
+- **Jetzt ein privater (Individual-)Account**, 99 $/Jahr, **ohne D-U-N-S-Nummer
+  und ohne Firma**. Für TestFlight reicht das vollständig.
+- **Free-to-play, keine In-App-Käufe.** Der Shop ist im App-Paket ohnehin
+  ausgeblendet (`zeigeKaufbares`). Käufe brauchen den „Paid Apps"-Vertrag mit
+  Bank- und Steuerdaten und kommen erst mit der gegründeten Firma.
+- **Umstieg auf den Firmen-Account später ist unkritisch**, weil **alle echten
+  Nutzerdaten auf unserem Server liegen, nicht bei Apple**. Ein Accountwechsel
+  verliert kein Level, keine Trophäe. Wir laden später denselben Code in den
+  neuen Account.
+  - **Ein Haken: die Bundle-ID** (`de.brauweg.app`) ist weltweit eindeutig und
+    an einen Account gebunden. Für den neuen Account entweder im alten Account
+    freigeben (App-Eintrag löschen — bei einer nie veröffentlichten App ein
+    Zwei-Klick-Ding) **oder** eine neue ID nehmen. Beides ist folgenlos, solange
+    nichts öffentlich releast ist.
+  - Ob Apple stattdessen eine **Konten-Umwandlung** Individual → Organization
+    anbietet, ändert sich von Zeit zu Zeit — **vor dem Umstieg direkt bei Apple
+    bestätigen**, nicht darauf verlassen.
+
+### Was TestFlight *nicht* braucht
+
+Die offenen Store-Punkte oben (Rechtstexte ausfüllen, Prüferkonto, volle
+Store-Angaben) sind für die **Einreichung** nötig, **nicht** fürs interne
+Testen. Zum Laden untereinander genügt ein Build und ein App-Eintrag.
+
+- **Internes Testen** (bis 100 Personen, die App-Store-Connect-Zugang haben):
+  **keine Prüfung, keine Rechtstexte, kein Datenschutz-Link nötig.** Genau das
+  für „wir aufs eigene Handy".
+- **Externes Testen** (bis 10.000 per E-Mail/öffentlichem Link, z. B. der
+  Verein): braucht eine **leichte Beta-App-Review** und einen
+  **Datenschutz-Link** (`/rechtliches/datenschutz.html` genügt formal, sollte
+  bis dahin aber die roten Lücken gefüllt haben).
+
+### Schrittfolge (macOS + Xcode)
+
+1. **Programm beitreten:** developer.apple.com → Account → *Individual*
+   einschreiben (99 $). Nach Freischaltung erscheint das persönliche Team in
+   Xcode.
+2. **Signierung in Xcode:** Ziel `Brauweg-spiel-ios` → *Signing & Capabilities*
+   → „Automatically manage signing", Team wählen, Bundle-ID `de.brauweg.app`
+   bestätigen.
+3. **Client ins Paket:** `cd Brauweg-spiel-ios && ./scripts/web-uebernehmen.sh`
+   (siehe oben). **Release**-Konfiguration nehmen — dann zeigt die App auf den
+   Produktionsserver, nicht auf `127.0.0.1`.
+4. **Archiv bauen:** in Xcode als Ziel „Any iOS Device (arm64)" wählen,
+   *Product → Archive*.
+5. **Hochladen:** im Organizer *Distribute App → TestFlight & App Store →
+   Upload*. (Alternativ IPA exportieren und mit **Transporter** laden.)
+   Ausfuhrfrage entfällt — `ITSAppUsesNonExemptEncryption = false` steht in der
+   Info.plist.
+6. **App-Eintrag:** in App Store Connect einmalig die App anlegen (Bundle-ID,
+   Name, Hauptsprache). Der Build erscheint nach ~10–30 Min Verarbeitung im
+   Reiter **TestFlight**.
+7. **Intern einladen:** unter *Users and Access* die Mitspieler als Benutzer
+   hinzufügen, in TestFlight der internen Gruppe zuordnen. Sie installieren die
+   **TestFlight-App** aus dem Store und sehen Brauweg darin. Fertig.
+8. **Später extern** (Verein): eigene Gruppe, Build zuordnen, zur Beta-Review
+   einreichen, öffentlichen Link teilen.
+
+### Fallstricke fürs Testen
+
+- **Einladungscode:** Neue Tester müssen sich im Spiel weiterhin mit dem
+  `INVITE_CODE` registrieren. Den Code in die TestFlight-Notizen („What to
+  Test") schreiben, sonst stehen sie an der Anmeldung.
+- **Bots:** dazuschreiben, dass man freie Plätze am Tisch mit Bots füllt —
+  sonst wartet ein einzelner Tester vergeblich auf Mitspieler.
+- **Build-Ablauf:** TestFlight-Builds verfallen nach **90 Tagen**; einfach neu
+  hochladen.
+- **Serveradresse:** Release zeigt auf `www.brauweg-spielen.de` (Produktion).
+  Wer gegen `staging` testen will, braucht eine eigene Konfiguration mit
+  `BRAUWEG_API_BASE = https://staging.brauweg-spielen.de`.
+
+---
+
 ## Reihenfolge
 
 1. ✅ Homescreen-Fassung
@@ -181,5 +263,8 @@ allein in einer leeren Lobby steht, meldet „App funktioniert nicht".
 8. Einreichung App Store
 9. Später: Play Store (baut auch auf Windows, deutlich einfacher)
 
-Für Schritt 7 fehlt nur noch die Signierung in Xcode; das Team steht bereits
-im Projekt.
+Schritt 7 (TestFlight) geht **vor** den Schritten 5 und 6 los, sobald ein
+privater Account eingeschrieben ist — internes Testen braucht die Rechtstexte
+und das Prüferkonto nicht. Die volle Schrittfolge und die Account-Strategie
+stehen oben unter „TestFlight: privat testen, ohne Release". Für den ersten
+Upload fehlt nur die Signierung in Xcode.
