@@ -258,7 +258,6 @@ export function GameSelect({
             me={me}
             onBald={setBald}
             onSchrank={() => setSchrankOffen(true)}
-            onThemen={() => setTab('blatt')}
             onGuthaben={onAvatarChange}
           />
         ) : null;
@@ -1097,13 +1096,11 @@ function Shop({
   me,
   onBald,
   onSchrank,
-  onThemen,
   onGuthaben,
 }: {
   me: Me;
   onBald: (name: string) => void;
   onSchrank: () => void;
-  onThemen: () => void;
   onGuthaben: () => void;
 }): React.JSX.Element {
   const [shop, setShop] = useState<ShopDaten | null>(null);
@@ -1175,11 +1172,6 @@ function Shop({
   /** Wie viele Stuecke je Platz noch fehlen — die Zahl treibt den Besuch. */
   const fehlend = (slot: string): number =>
     shop?.regale.find((r) => r.slot === slot)?.stuecke.filter((s) => !s.besessen).length ?? 0;
-
-  /** Szenerien, die es noch zu holen gibt — nur die, denn nur die liegen dort. */
-  const offeneWare = (shop?.tischware ?? []).filter(
-    (w) => w.art === 'szene' && !w.besessen,
-  ).length;
 
   /** Ware einer Sorte, kostenlose zuletzt — Neues gehoert nach vorn. */
   const ware = (art: RegalWare['art']): RegalWare[] =>
@@ -1357,28 +1349,6 @@ function Shop({
               onKaufen={(p) => setFrage({ art: 'paket', paket: p })}
             />
           ))}
-        </div>
-      </Tafel>
-
-      <Tafel titel="Sonst noch">
-        <div className="hub-reihe hub-reihe--drei">
-          {/* Szenerien fuehren dorthin, wo man sie gross sieht. Die Zahl sagt,
-              dass es dort etwas Neues gibt, ohne dass man erst hingeht. */}
-          <button className="hub-vitrine" onClick={onThemen}>
-            <img className="hub-vitrine-icon" src="/hub/tab-spielen.webp" alt="" draggable={false} />
-            <span>Szenerien</span>
-            {offeneWare > 0 && <span className="hub-vitrine-zahl">{offeneWare}</span>}
-          </button>
-          <button className="hub-vitrine" onClick={() => onBald('Namensschilder')}>
-            <img className="hub-vitrine-icon" src="/hub/krone.png" alt="" draggable={false} />
-            <span>Namen</span>
-            <span className="front-bald-tag">Bald</span>
-          </button>
-          <button className="hub-vitrine" onClick={() => onBald('Der Kartentisch')}>
-            <img className="hub-vitrine-icon" src="/hub/tab-blatt.webp" alt="" draggable={false} />
-            <span>Blätter</span>
-            <span className="front-bald-tag">Bald</span>
-          </button>
         </div>
       </Tafel>
 
@@ -2430,25 +2400,53 @@ function DeckPicker({
         <div className="hub-blaetter">
           {/* Nur Blätter, die zu diesem Spiel passen: Ein Zauberblatt hat
               keine Dame, ein Doppelkopfblatt keine Sieben. */}
-          {decksFor(gameId).map((deck) => (
-            <button
-              className={`hub-blatt${deck.id === current ? ' is-an' : ''}`}
-              key={deck.id}
-              aria-pressed={deck.id === current}
-              onClick={() => {
-                onChange(deck.id);
-                setVorschau(true);
-              }}
-            >
-              <div className="hub-blatt-probe">
-                {proben.map((card) => (
-                  <DeckSample card={card} deck={deck} key={card.id} />
-                ))}
-              </div>
-              <strong>{t(deck.nameKey)}</strong>
-              {deck.id === current && <span className="hub-blatt-haken">✓</span>}
-            </button>
-          ))}
+          {decksFor(gameId).map((deck) => {
+            const w = wareZu('blatt', deck.id);
+            const mein = gehoert('blatt', deck.id);
+            return (
+              <button
+                className={`hub-blatt${deck.id === current ? ' is-an' : ''}${
+                  mein ? '' : ' is-zu'
+                }`}
+                key={deck.id}
+                aria-pressed={deck.id === current}
+                disabled={kauft === w?.id}
+                onClick={() => {
+                  if (mein) {
+                    onChange(deck.id);
+                    setVorschau(true);
+                    return;
+                  }
+                  if (!w) return;
+                  if (
+                    !window.confirm(
+                      `„${t(deck.nameKey)}" für ${w.preis.coins} Münzen kaufen?`,
+                    )
+                  ) {
+                    return;
+                  }
+                  kaufen(w, () => {
+                    onChange(deck.id);
+                    setVorschau(true);
+                  });
+                }}
+              >
+                <div className="hub-blatt-probe">
+                  {proben.map((card) => (
+                    <DeckSample card={card} deck={deck} key={card.id} />
+                  ))}
+                </div>
+                <strong>{t(deck.nameKey)}</strong>
+                {deck.id === current && mein && <span className="hub-blatt-haken">✓</span>}
+                {!mein && w && (
+                  <span className="hub-szene-preis">
+                    <img src="/hub/muenze.png" alt="" aria-hidden="true" />
+                    {w.preis.coins}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/*

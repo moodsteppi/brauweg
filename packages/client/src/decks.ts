@@ -13,7 +13,22 @@
  * nur an einer Stelle steht.
  */
 
-export type DeckId = 'text' | 'minimal2' | 'minimal4' | 'klassisch' | 'zauberwald';
+export type DeckId =
+  | 'text'
+  | 'minimal2'
+  | 'minimal4'
+  | 'klassisch'
+  | 'eiche'
+  | 'winterhof'
+  | 'sommerwiese'
+  | 'nachthimmel'
+  | 'rubin'
+  | 'smaragd'
+  | 'kupferstich'
+  | 'koeniglich'
+  | 'schiefer'
+  | 'pinguin'
+  | 'zauberwald';
 
 export interface Deck {
   readonly id: DeckId;
@@ -74,6 +89,96 @@ export const DECKS: readonly Deck[] = [
     dir: 'klassisch',
     ext: 'png',
     // Kein Zauberblatt: keine Karte fuer Eins bis Acht, kein Zauberer, kein Narr.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'eiche',
+    nameKey: 'deck.eiche',
+    hintKey: 'deck.eiche.hint',
+    dir: 'eiche',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'winterhof',
+    nameKey: 'deck.winterhof',
+    hintKey: 'deck.winterhof.hint',
+    dir: 'winterhof',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'sommerwiese',
+    nameKey: 'deck.sommerwiese',
+    hintKey: 'deck.sommerwiese.hint',
+    dir: 'sommerwiese',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'nachthimmel',
+    nameKey: 'deck.nachthimmel',
+    hintKey: 'deck.nachthimmel.hint',
+    dir: 'nachthimmel',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'rubin',
+    nameKey: 'deck.rubin',
+    hintKey: 'deck.rubin.hint',
+    dir: 'rubin',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'smaragd',
+    nameKey: 'deck.smaragd',
+    hintKey: 'deck.smaragd.hint',
+    dir: 'smaragd',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'kupferstich',
+    nameKey: 'deck.kupferstich',
+    hintKey: 'deck.kupferstich.hint',
+    dir: 'kupferstich',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'koeniglich',
+    nameKey: 'deck.koeniglich',
+    hintKey: 'deck.koeniglich.hint',
+    dir: 'koeniglich',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'schiefer',
+    nameKey: 'deck.schiefer',
+    hintKey: 'deck.schiefer.hint',
+    dir: 'schiefer',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
+    games: ['doppelkopf'],
+  },
+  {
+    id: 'pinguin',
+    nameKey: 'deck.pinguin',
+    hintKey: 'deck.pinguin.hint',
+    dir: 'pinguin',
+    ext: 'webp',
+    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
     games: ['doppelkopf'],
   },
   {

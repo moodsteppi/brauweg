@@ -76,6 +76,7 @@ function ware(art: WareArt, praefix: string) {
 }
 
 const szene = ware('szene', 'szene');
+const blatt = ware('blatt', 'blatt');
 const ruecken = ware('ruecken', 'ruecken');
 const emote = ware('emote', 'emote');
 /**
@@ -119,6 +120,26 @@ export const WAREN: readonly Ware[] = [
   szene('samt-blau', 600, 'episch'),
   szene('kapitaen', 600, 'episch'),
   szene('basar', 900, 'legendaer'),
+
+  // --- Kartenblaetter -----------------------------------------------------
+  // Wer ein Blatt hat, hat auch dessen Rueckseite - sie steckt darin. Die
+  // Rueckseite allein bleibt trotzdem einzeln zu haben: Sie ist billiger und
+  // das, was die anderen sehen.
+  blatt('text', 0),
+  blatt('minimal2', 0),
+  blatt('minimal4', 0),
+  blatt('klassisch', 0),
+  blatt('zauberwald', 0),
+  blatt('eiche', 600),
+  blatt('winterhof', 600),
+  blatt('sommerwiese', 600),
+  blatt('kupferstich', 800, 'selten'),
+  blatt('schiefer', 800, 'selten'),
+  blatt('nachthimmel', 1000, 'selten'),
+  blatt('rubin', 1200, 'episch'),
+  blatt('smaragd', 1200, 'episch'),
+  blatt('koeniglich', 1600, 'episch'),
+  blatt('pinguin', 2000, 'legendaer'),
 
   // --- Kartenrueckseiten --------------------------------------------------
   // `standard` ist die Rueckseite des jeweils gewaehlten Blattes und damit
