@@ -254,12 +254,7 @@ export function GameSelect({
     switch (tt) {
       case 'shop':
         return zeigeKaufbares ? (
-          <Shop
-            me={me}
-            onBald={setBald}
-            onSchrank={() => setSchrankOffen(true)}
-            onGuthaben={onAvatarChange}
-          />
+          <Shop coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
         ) : null;
       case 'clan':
         return (
@@ -1076,31 +1071,36 @@ function KaufFrage({
  *
  * Zwei Sorten Regal, streng getrennt und in dieser Reihenfolge:
  *
- *  1. **Was mit Erspieltem geht:** Pinguin-Ausstattung — gegen Muenzen oder
- *     Edelsteine, der Kaeufer waehlt. Steht oben, weil es der einzige Teil ist,
- *     fuer den man nichts kaufen muss.
- *  2. **Was Edelsteine kostet und wirklich laeuft:** Muenzpakete und Truhen.
+ *  1. **Was Edelsteine kostet und wirklich laeuft:** Muenzpakete und Truhen.
+ *  2. **Was hier gekauft und anderswo angelegt wird:** Zurufe, Rueckseiten,
+ *     Wappen. Der Shop ist der Ort, an dem etwas dazukommt, nicht der, an dem
+ *     man sich einrichtet.
  *  3. **Was noch nicht geht:** Edelsteinpakete und VIP gegen Geld, Season Pass
  *     gegen Edelsteine. Mit Preis und Inhalt, aber ohne Kauf.
  *
- * Die Reihenfolge ist die Rangfolge: Erst was man hat, dann was man dafuer
- * bekommt, zuletzt was noch kommt. Ein Shop, dessen erste Reihe „Bald" sagt,
- * ist kein Shop.
+ * Ein Shop, dessen erste Reihe „Bald" sagt, ist kein Shop — deshalb steht das
+ * Ungebaute zuletzt.
  *
- * Kartenblaetter und Szenerien stehen hier bewusst nur als Wegweiser in den
- * Themen-Tab: Dort gibt es sie schon, mit Vorschau in Tischgroesse. Sie ein
- * zweites Mal als Shop-Kachel zu fuehren waere ein zweiter Weg zum selben
- * Regal — und der eine davon ohne Vorschau.
+ * **Der Pinguin steht hier nicht.** Er und sein Kleiderschrank gehoeren ins
+ * Profil, wo man sich um sich selbst kuemmert; im Shop waeren sie ein zweiter
+ * Weg zu derselben Tuer. Blaetter und Szenerien stehen aus demselben Grund
+ * nur im Themen-Tab: Dort sieht man sie in Tischgroesse, und dort wird auch
+ * gekauft.
  */
 function Shop({
-  me,
+  coins,
+  gems,
   onBald,
-  onSchrank,
   onGuthaben,
 }: {
-  me: Me;
+  /**
+   * Der Guthabenstand — nur als Ausloeser zum Neuladen, nicht zur Anzeige.
+   * Bewusst die zwei Zahlen statt des ganzen Kontos: Der Shop liest sonst
+   * nichts davon, und ein `me` im Prop-Typ verspraeche mehr als er braucht.
+   */
+  coins: number;
+  gems: number;
   onBald: (name: string) => void;
-  onSchrank: () => void;
   onGuthaben: () => void;
 }): React.JSX.Element {
   const [shop, setShop] = useState<ShopDaten | null>(null);
@@ -1128,10 +1128,10 @@ function Shop({
       .then(setShop)
       .catch(() => setFehler('Der Shop ließ sich nicht laden.'));
   }, [
-    // Nach einem Kauf im Kleiderschrank muss das Regal neu geladen werden,
-    // sonst steht dort weiter ein Preis auf etwas, das schon gehoert.
-    me.coins,
-    me.gems,
+    // Nach einem Kauf muss das Regal neu geladen werden, sonst steht dort
+    // weiter ein Preis auf etwas, das schon gehoert.
+    coins,
+    gems,
   ]);
 
   const meldung = (err: unknown): void => {
@@ -1169,9 +1169,6 @@ function Shop({
       .finally(() => setLaeuft(false));
   };
 
-  /** Wie viele Stuecke je Platz noch fehlen — die Zahl treibt den Besuch. */
-  const fehlend = (slot: string): number =>
-    shop?.regale.find((r) => r.slot === slot)?.stuecke.filter((s) => !s.besessen).length ?? 0;
 
   /** Ware einer Sorte, kostenlose zuletzt — Neues gehoert nach vorn. */
   const ware = (art: RegalWare['art']): RegalWare[] =>
@@ -1220,34 +1217,6 @@ function Shop({
 
       {/* Der eigene Pinguin steht im Shop, weil hier seine Sachen liegen. Ein
           Tipp fuehrt in den Kleiderschrank, wo gekauft und angezogen wird. */}
-      <Tafel titel="Dein Pinguin" zusatz={shop ? `${SLOTS.length} Plätze` : '…'}>
-        <button className="shop-pinguin" onClick={onSchrank}>
-          <Pinguin getragen={me.avatar} groesse={6} />
-          <span className="shop-pinguin-text">
-            <strong>Kleiderschrank</strong>
-            <span className="muted">
-              {shop
-                ? `${SLOTS.filter((s) => fehlend(s) > 0).length} von ${SLOTS.length} Plätzen haben noch Neues`
-                : 'Anziehen und kaufen'}
-            </span>
-          </span>
-        </button>
-
-        <div className="hub-reihe shop-plaetze">
-          {SLOTS.map((slot) => (
-            <button key={slot} className="hub-vitrine" onClick={onSchrank}>
-              <Pinguin
-                getragen={{ [slot]: me.avatar[slot] }}
-                groesse={2.8}
-                className="pinguin--probe"
-              />
-              <span>{t(`slot.${slot}`)}</span>
-              {fehlend(slot) > 0 && <span className="shop-zaehler">{fehlend(slot)}</span>}
-            </button>
-          ))}
-        </div>
-      </Tafel>
-
       <Tafel titel="Münzen" zusatz={shop ? `${shop.kurs} je Edelstein` : '…'}>
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.muenzpakete ?? []).map((paket) => (
