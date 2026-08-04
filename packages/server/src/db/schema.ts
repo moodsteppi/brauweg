@@ -119,6 +119,20 @@ export const account = pgTable(
     premiumUntil: timestamp({ withTimezone: true }),
     coins: integer().notNull().default(0),
     /**
+     * Testkonto: hat alles, was man haben kann.
+     *
+     * Am KONTO und nicht an der Umgebung, weil es an beiden Orten gebraucht
+     * wird: auf staging fuer alle, die dort ausprobieren, und in der
+     * Produktion fuer das Demokonto, das App Store Connect verlangt - die
+     * Pruefer muessen jede Funktion sehen koennen, ohne etwas zu kaufen.
+     *
+     * Gesetzt wird das Merkmal ausschliesslich ueber die Umgebungsvariable
+     * STAFF_EMAILS beim Start (siehe src/staff.ts). Es gibt bewusst keinen
+     * Weg, es aus der laufenden Anwendung heraus zu setzen: Ein Endpunkt, der
+     * Rechte vergibt, ist der lohnendste Angriffspunkt einer jeden App.
+     */
+    isStaff: boolean().notNull().default(false),
+    /**
      * Gewaehltes Kartenblatt. Reine Darstellung, deshalb bewusst nur eine
      * Kennung: Wie ein Deck aussieht, weiss allein der Client. Der Server
      * kennt die zulaessigen Kennungen (src/decks.ts), damit nichts Fremdes in

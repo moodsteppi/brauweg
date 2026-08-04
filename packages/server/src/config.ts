@@ -6,8 +6,17 @@
  * als einer, der gar nicht startet.
  */
 
+import { parseStaffEmails } from './staff.js';
+
 export interface Config {
   readonly env: 'development' | 'test' | 'production';
+  /**
+   * Welche Ausgabe hier laeuft. Rein zur Kennzeichnung in der Oberflaeche —
+   * Rechte haengen NICHT daran, sondern am Konto (siehe entitlements.ts).
+   * Sonst waere ein falsch gesetzter Dienst gleichbedeutend mit einem
+   * geschenkten Premium fuer alle.
+   */
+  readonly stage: 'production' | 'staging' | 'development';
   readonly port: number;
   readonly databaseUrl: string;
   /** Basis fuer Links in E-Mails, z.B. https://brauweg-spielen.de */
@@ -17,6 +26,11 @@ export interface Config {
   /** Absender und Schluessel des Versanddienstes. Fehlt er, wird protokolliert. */
   readonly resendApiKey: string | null;
   readonly mailFrom: string;
+  /**
+   * Adressen, die als Testkonto gelten (Komma-getrennt in STAFF_EMAILS).
+   * Beim Start abgeglichen; wer heruntergenommen wird, verliert das Merkmal.
+   */
+  readonly staffEmails: readonly string[];
 }
 
 function required(name: string, fallbackInDev?: string): string {
@@ -32,8 +46,17 @@ export function loadConfig(): Config {
   const env = (process.env.NODE_ENV ?? 'development') as Config['env'];
   const publicUrl = required('PUBLIC_URL', 'http://localhost:5173');
 
+  const stage = ((): Config['stage'] => {
+    const gesetzt = process.env.STAGE;
+    if (gesetzt === 'production' || gesetzt === 'staging' || gesetzt === 'development') {
+      return gesetzt;
+    }
+    return env === 'production' ? 'production' : 'development';
+  })();
+
   return {
     env,
+    stage,
     port: Number(process.env.PORT ?? 3000),
     databaseUrl: required('DATABASE_URL'),
     publicUrl,
@@ -41,5 +64,6 @@ export function loadConfig(): Config {
     sessionTtlDays: Number(process.env.SESSION_TTL_DAYS ?? 30),
     resendApiKey: process.env.RESEND_API_KEY ?? null,
     mailFrom: process.env.MAIL_FROM ?? 'Brauweg <noreply@brauweg-spielen.de>',
+    staffEmails: parseStaffEmails(process.env.STAFF_EMAILS),
   };
 }

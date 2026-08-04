@@ -17,6 +17,7 @@ import { createMailer } from './mail/index.js';
 import { APP_ORIGIN, buildApp } from './http/app.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
+import { applyStaffEmails } from './staff.js';
 import { expireStaleTables } from './tables/service.js';
 
 const HOUR = 3600_000;
@@ -57,6 +58,22 @@ async function main(): Promise<void> {
       .onConflictDoNothing();
   }
 
+  // Testkonten aus der Umgebung. Idempotent, und die Variable ist die einzige
+  // Wahrheit: Wer heruntergenommen wird, verliert das Merkmal beim naechsten
+  // Start. Auf staging steht hier die Liste der Erprober, in der Produktion
+  // hoechstens das Demokonto fuer die App-Store-Pruefung.
+  const staff = await applyStaffEmails(db, config.staffEmails);
+  if (config.staffEmails.length > 0) {
+    // eslint-disable-next-line no-console
+    console.info(
+      `Testkonten: ${staff.gesetzt.length} gesetzt` +
+        (staff.entzogen.length > 0 ? `, ${staff.entzogen.length} entzogen` : '') +
+        (staff.unbekannt.length > 0
+          ? `, ohne Konto: ${staff.unbekannt.join(', ')}`
+          : ''),
+    );
+  }
+
   const mailer = createMailer(config.resendApiKey, config.mailFrom);
   if (!config.resendApiKey) {
     // eslint-disable-next-line no-console
@@ -79,6 +96,7 @@ async function main(): Promise<void> {
     },
     cookieSecure: config.cookieSecure,
     sessionTtlDays: config.sessionTtlDays,
+    stage: config.stage,
     // In der Entwicklung liefert Vite den Client aus, dann gibt es hier nichts
     // auszuliefern und der Server bleibt reine API.
     clientDir: existsSync(CLIENT_DIR) ? CLIENT_DIR : undefined,

@@ -35,6 +35,18 @@ Der Grund: `main` löst den Deploy aus. Bis dahin lag jede Änderung nach
 zwei Minuten auf dem Produktivsystem, auch die, die man erst noch ansehen
 wollte.
 
+**Den Zweig gibt es, den Dienst noch nicht.** Bis in Railway ein
+Testsystem auf dem Zweig `staging` steht, sammelt er nur Arbeit, die
+niemand sieht. Wie er angelegt wird, steht in
+[STAGING.md](STAGING.md) — samt der Frage, ob er eine eigene Datenbank
+bekommt (aus der Sitzung heraus nicht beantwortbar, es gibt kein
+`railway`-CLI auf dem Rechner).
+
+**Testkonten** (`account.is_staff`) haben alles: Premium, vollen
+Münzstand, alles Kaufbare. Gesetzt wird das ausschließlich über
+`STAFF_EMAILS` beim Start — kein Endpunkt, keine Oberfläche. Gefragt wird
+an einer einzigen Stelle: `src/entitlements.ts`.
+
 Vor dem Mergen immer `git fetch` — auf den Zweigen landen auch Commits aus
 Cursor.
 
@@ -60,7 +72,8 @@ Originalauflösung unter `public/`.
 gesetzt). Die Drizzle-Snapshots sind nicht durchgängig gepflegt —
 `db:generate` erzeugt deshalb Anweisungen für längst vorhandene Spalten.
 Migrationen werden von Hand geschrieben und im Journal eingetragen; zuletzt
-`0009_themen_je_spiel`.
+`0010_testkonten` (eine Spalte `account.is_staff`, mit
+`ADD COLUMN IF NOT EXISTS` — sie darf zweimal laufen, ohne zu brechen).
 
 Die 0009 legt `account_game_theme` an und übernimmt die bisherigen Werte
 aus `account.card_deck` und `account.table_scene` nach `doppelkopf`. **Die

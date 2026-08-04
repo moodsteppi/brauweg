@@ -88,6 +88,15 @@ export function GameSelect({
           </span>
         </button>
         <div className="front-waehrungen">
+          {/* Dezente Kennzeichnung: ein kleines Schild, kein Band. Wer auf dem
+              Testsystem sitzt, soll es sehen, ohne dass die App danach
+              aussieht. Ein Testkonto in der Produktion (Demokonto der
+              App-Store-Prüfung) bekommt dasselbe Schild. */}
+          {(me.stage !== 'production' || me.entitlements.staff) && (
+            <span className="front-stufe" title="Testsystem — hier wird nichts gewertet">
+              {me.stage === 'production' ? 'Test' : me.stage === 'staging' ? 'Staging' : 'Dev'}
+            </span>
+          )}
           <span className="front-waehrung front-waehrung--cups">
             <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
             {trophies}

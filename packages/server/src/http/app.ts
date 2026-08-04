@@ -39,6 +39,7 @@ import {
   isBirthdayToday,
 } from '../birthday.js';
 import { CARD_DECKS, DEFAULT_CARD_DECK } from '../decks.js';
+import { coinsFor, entitlementsFor } from '../entitlements.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
@@ -112,6 +113,11 @@ export interface AppDeps {
   readonly sessionTtlDays: number;
   /** Verzeichnis des gebauten Clients. Fehlt es, liefert der Server nur die API. */
   readonly clientDir?: string;
+  /**
+   * Welche Ausgabe hier laeuft. Geht nur zur Kennzeichnung an den Client —
+   * Rechte haengen am Konto, nicht an der Umgebung.
+   */
+  readonly stage?: 'production' | 'staging' | 'development';
 }
 
 const gameIdSchema = z.enum([
@@ -438,6 +444,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         displayName: s.account.displayName,
         coins: s.account.coins,
         premiumUntil: s.account.premiumUntil,
+        isStaff: s.account.isStaff,
         birthday: s.account.birthday,
         hasBirthdayOutfit: s.account.hasBirthdayOutfit,
         birthdayRewardYear: s.account.birthdayRewardYear,
@@ -484,10 +491,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       }),
     );
 
-    const { hasAvatar, birthdayRewardYear, ...rest } = account;
+    const { hasAvatar, birthdayRewardYear, isStaff, ...rest } = account;
     const birthday = account.birthday ?? null;
+    // Rechte kommen aus einer einzigen Stelle (entitlements.ts). Der Client
+    // rechnet nichts aus Ablaufdaten aus - er zeigt, was hier steht.
+    const rechte = entitlementsFor(account);
     return reply.send({
       ...rest,
+      coins: coinsFor(account),
+      entitlements: rechte,
+      /**
+       * Welche Ausgabe hier laeuft, fuer die dezente Kennzeichnung. Ohne
+       * Angabe die Produktion: Ein vergessener Schalter soll kein Schild in
+       * die echte App haengen, sondern hoechstens eines auf dem Testsystem
+       * fehlen lassen.
+       */
+      stage: deps.stage ?? 'production',
       themes,
       birthday,
       daysUntilBirthday: birthday ? daysUntilBirthday(birthday) : null,

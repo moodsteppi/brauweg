@@ -71,6 +71,13 @@
       "when": 1785905000000,
       "tag": "0009_themen_je_spiel",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785906000000,
+      "tag": "0010_testkonten",
+      "breakpoints": true
     }
   ]
 }

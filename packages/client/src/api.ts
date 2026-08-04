@@ -103,6 +103,19 @@ export interface Me {
   stats: { gameId: string; trophies: number; parties: number; wins: number }[];
   clubs: { id: string; name: string }[];
   activeTable: ActiveTable | null;
+  /**
+   * Was dieses Konto darf. Kommt fertig vom Server — der Client rechnet
+   * nichts aus Ablaufdaten aus, sonst gäbe es zwei Wahrheiten.
+   */
+  entitlements: {
+    premium: boolean;
+    unlimitedCoins: boolean;
+    ownsEverything: boolean;
+    /** Testkonto: hat alles. Wird dezent gekennzeichnet. */
+    staff: boolean;
+  };
+  /** Welche Ausgabe läuft: `production`, `staging` oder `development`. */
+  stage: 'production' | 'staging' | 'development';
 }
 
 export interface RankingEntry {
