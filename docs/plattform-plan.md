@@ -550,6 +550,54 @@ Rahmen fuer die Beta ist. Der Plan zaehlt sie weiter unter M7; die
 Reihenfolge hier ist die tatsaechliche.
 ```
 
+### Reihenfolge der Hub-Bausteine
+
+Auf der Tafel standen acht Punkte in dieser Folge: Shop, Clan-Chat,
+Clan-Krieg, Level-System, Münzen und VIP, Truhensystem, Themen-Tab,
+Profil-Tab. Sie beschreiben den Stand richtig — die meisten Teile stehen
+schon und brauchen Feinschliff, keinen Aufbau.
+
+**Umsortiert nach Abhängigkeit statt nach Wunsch.** Drei der acht hängen
+nicht an Arbeit, sondern an einer Entscheidung, die außerhalb des Codes
+fällt:
+
+| Baustein | wartet auf |
+| --- | --- |
+| Shop, Münzen und VIP | die **Firmengründung** — ohne Rechtsträger kein Bezahlweg. §11 setzt Monetarisierung ohnehin hinter die Beta |
+| Clan-Chat | die **Moderation (M8)** — Melden, Blockieren, Stummschalten. Bei Mindestalter 16 kein Formalismus |
+| Clan-Krieg | die **Formel für Vereinspunkte**, die unter §13 noch offen ist |
+
+Zwei sind erledigt: Der **Themen-Tab** steht (Spielauswahl davor, Blatt und
+Szenerie je Spiel), der **Profil-Tab** trägt Statistik, Geburtstag,
+Freundesliste, Profilbild und Kontolöschung.
+
+Daraus folgt diese Reihenfolge:
+
+```
+0  Regelsatz-Editor     steht NICHT auf der Tafel, ist aber der groesste
+                        Posten vor der Beta. Der Server kann Regelsaetze
+                        versionieren und speichern, der Client zeigt sie
+                        nur als Haekchenliste beim Tischbau. Ohne ihn
+                        beantwortet die Beta ihre eigene Frage nicht.
+1  Level-System         billig, haengt an nichts, behebt einen sichtbaren
+                        Makel: "Level 0" steht fest im Code. Ein Hub, der
+                        ueberall Null zeigt, sieht kaputt aus.
+2  Profil-Tab           Feinschliff, kann waehrend der Beta laufen
+3  Shop                 als ENTSCHEIDUNG, nicht als Feature: fertig bauen
+                        (dann zwingend ueber Apples Bezahlweg) oder vor der
+                        Einreichung ausblenden. Siehe APPSTORE.md, dort
+                        steht er als Ablehnungsgrund.
+4  Muenzen und VIP      sobald die Firma steht
+5  Truhensystem         direkt danach - eine Truhe ohne Muenzen hat nichts
+                        auszuschuetten
+6  Clan-Chat            nach der Moderation
+7  Clan-Krieg           zuletzt, er braucht die Vereinspunkte
+```
+
+Die Tafel begann mit dem Shop — dem Punkt, der am weitesten weg ist — und
+endete mit den beiden, die schon stehen. Nach Abhängigkeit sortiert dreht
+sich das fast um.
+
 Innerhalb von M4: Datenmodell und Migrationen, dann Auth mit E-Mail-Bestätigung
 und Einladungscode, dann Spielregistrierung und Tischverwaltung gegen
 `GameModule`, dann die WebSocket-Schicht **mit Versionierung von Anfang an**,
