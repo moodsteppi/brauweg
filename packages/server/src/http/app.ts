@@ -39,7 +39,7 @@ import {
   daysUntilBirthday,
   isBirthdayToday,
 } from '../birthday.js';
-import { CARD_DECKS, DEFAULT_CARD_DECK } from '../decks.js';
+import { CARD_BACKS, CARD_DECKS, DEFAULT_CARD_BACK, DEFAULT_CARD_DECK } from '../decks.js';
 import { leiterUm, stufenstand } from '../level.js';
 import { entitlementsFor } from '../entitlements.js';
 import { sichtbarerStand } from '../waehrung.js';
@@ -306,6 +306,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       try {
         done(null, JSON.parse(text));
       } catch (err) {
+        // Ein roher SyntaxError traegt keinen Statuscode. Ohne ihn faellt er
+        // in der Fehlerbehandlung an allen 4xx-Zweigen vorbei in den 500er -
+        // samt console.error, das damit von gewoehnlichen Client-Fehlern
+        // volllief. Mit 400 greift der bestehende Zweig, und der Aufrufer
+        // bekommt 'invalidRequest' statt 'etwas ist schiefgelaufen'.
+        (err as { statusCode?: number }).statusCode = 400;
         done(err as Error);
       }
     },
@@ -508,6 +514,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           {
             cardDeck: zeile?.cardDeck ?? DEFAULT_CARD_DECK,
             tableScene: zeile?.tableScene ?? DEFAULT_TABLE_SCENE,
+            cardBack: zeile?.cardBack ?? DEFAULT_CARD_BACK,
           },
         ];
       }),
@@ -833,9 +840,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .object({
           cardDeck: z.enum(CARD_DECKS).optional(),
           tableScene: z.enum(TABLE_SCENES).optional(),
+          cardBack: z.enum(CARD_BACKS).optional(),
         })
         .parse(request.body);
-      if (body.cardDeck === undefined && body.tableScene === undefined) {
+      if (
+        body.cardDeck === undefined &&
+        body.tableScene === undefined &&
+        body.cardBack === undefined
+      ) {
         throw badRequest('invalidInput');
       }
 
@@ -865,6 +877,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       ) {
         throw forbidden('itemNotOwned');
       }
+      if (
+        body.cardBack &&
+        !(await darfBenutzen(deps.db, accountId, 'ruecken', body.cardBack, alles))
+      ) {
+        throw forbidden('itemNotOwned');
+      }
 
       // Einfuegen oder aendern in einem Zug: Es gibt keine Zeile, solange
       // nichts umgestellt wurde, und der erste Klick soll nicht scheitern.
@@ -875,12 +893,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           gameId: gameId as GameId,
           ...(body.cardDeck ? { cardDeck: body.cardDeck } : {}),
           ...(body.tableScene ? { tableScene: body.tableScene } : {}),
+          ...(body.cardBack ? { cardBack: body.cardBack } : {}),
         })
         .onConflictDoUpdate({
           target: [s.accountGameTheme.accountId, s.accountGameTheme.gameId],
           set: {
             ...(body.cardDeck ? { cardDeck: body.cardDeck } : {}),
             ...(body.tableScene ? { tableScene: body.tableScene } : {}),
+            ...(body.cardBack ? { cardBack: body.cardBack } : {}),
           },
         });
 

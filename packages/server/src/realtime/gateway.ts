@@ -23,10 +23,12 @@ import { requireClubMember } from '../clubs/service.js';
 import {
   ENVELOPE_VERSION,
   type ClientMessage,
+  type EmoteMessage,
   type ServerMessage,
   errorMessage,
   moduleVersionAccepted,
 } from './protocol.js';
+import { EMOTE_PAUSE_MS, besitztEmote, istEmote } from '../emotes.js';
 
 interface Connection {
   readonly socket: WebSocket;
@@ -35,6 +37,8 @@ interface Connection {
   /** Beginn des laufenden Ratenfensters. */
   fensterStart: number;
   imFenster: number;
+  /** Wann diese Verbindung zuletzt einen Zuruf abgesetzt hat. */
+  letzterEmote: number;
 }
 
 /** Hoechstens so viele offene Verbindungen je Konto. */
@@ -76,6 +80,15 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.enum(['addBot', 'removeBot']),
     tableId: z.string().uuid(),
     seat: z.number().int().min(0).max(7),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('emote'),
+    tableId: z.string().uuid(),
+    // Die Laenge deckelt hier nur grob; welche Kennungen es gibt, entscheidet
+    // istEmote — eine erfundene faellt still durch.
+    emote: z.string().min(1).max(40),
   }),
 ]);
 
@@ -249,6 +262,7 @@ export class Gateway {
         tableId: null,
         fensterStart: Date.now(),
         imFenster: 0,
+        letzterEmote: 0,
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -318,6 +332,9 @@ export class Gateway {
           break;
         case 'leave':
           this.leave(connection);
+          break;
+        case 'emote':
+          await this.emote(connection, message);
           break;
         case 'addBot':
           await this.setBot(connection, message.tableId, message.seat, true);
@@ -423,6 +440,51 @@ export class Gateway {
     this.byTable.get(connection.tableId)?.delete(connection);
     this.runtime.setPresence(connection.tableId, connection.accountId, false);
     connection.tableId = null;
+  }
+
+  /**
+   * Zuruf an den Tisch.
+   *
+   * Weitergereicht wird nur, was aus der festen Liste kommt, von einem Sitz
+   * kommt und nicht zu schnell kommt. Alle drei Faelle enden still: Ein
+   * Zuruf, der nicht durchgeht, ist kein Fehler, den der Absender ausbaden
+   * muesste — und eine Fehlermeldung waere genau die Aufmerksamkeit, auf die
+   * es der Dauerklicker abgesehen hat.
+   *
+   * Zuschauer duerfen nicht rufen. Am echten Tisch redet mit, wer mitspielt.
+   */
+  private async emote(
+    connection: Connection,
+    message: Extract<ClientMessage, { type: 'emote' }>,
+  ): Promise<void> {
+    if (connection.tableId !== message.tableId) return;
+    if (!istEmote(message.emote)) return;
+
+    const jetzt = Date.now();
+    if (jetzt - connection.letzterEmote < EMOTE_PAUSE_MS) return;
+
+    const party = this.runtime.get(message.tableId);
+    if (!party) return;
+    const seat = this.runtime.seatOf(party, connection.accountId);
+    if (seat === null) return;
+
+    // Gekauft sein muss er auch. Sonst waere ein Aufruf mit fremder Kennung
+    // der Weg, einen Zuruf zu benutzen, ohne ihn zu haben.
+    if (!(await besitztEmote(this.db, connection.accountId, message.emote))) return;
+
+    connection.letzterEmote = jetzt;
+
+    const nachricht: EmoteMessage = {
+      v: ENVELOPE_VERSION,
+      game: party.gameId,
+      type: 'emote',
+      tableId: message.tableId,
+      seat,
+      emote: message.emote,
+    };
+    for (const ziel of this.byTable.get(message.tableId) ?? []) {
+      send(ziel.socket, nachricht);
+    }
   }
 
   /**

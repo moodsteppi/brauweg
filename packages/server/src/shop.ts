@@ -42,7 +42,7 @@ import {
   requireStueck,
 } from './kosmetik.js';
 import { abbuchen, type Waehrung } from './waehrung.js';
-import { type Ware, WAREN, besitzVon, wareMit } from './tischware.js';
+import { type Ware, type WareArt, WAREN, besitzVon, wareMit } from './tischware.js';
 
 // ---------------------------------------------------------------------------
 // Angebote gegen echtes Geld — heute alle "bald"
@@ -104,7 +104,7 @@ export interface RegalStueck {
 /** Eine Szenerie oder ein Blatt, wie der Shop sie zeigt. */
 export interface RegalWare {
   readonly id: string;
-  readonly art: 'szene' | 'blatt';
+  readonly art: WareArt;
   readonly wert: string;
   readonly nameKey: string;
   readonly seltenheit: string;

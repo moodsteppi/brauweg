@@ -124,7 +124,7 @@ export interface Me {
    * immer alle bekannten Spiele mit, auch die noch nicht spielbaren —
    * sonst muesste der Client die Vorgaben ein zweites Mal pflegen.
    */
-  themes: Record<string, { cardDeck: string; tableScene: string }>;
+  themes: Record<string, { cardDeck: string; tableScene: string; cardBack: string }>;
   /** URL des eigenen Profilbilds, oder null. */
   avatarUrl: string | null;
   /** ISO-Kalendertag oder null bei Altkonten. */
@@ -249,9 +249,11 @@ export interface Paket {
  * `wert` ist die Kennung ohne Praefix — so heisst sie in den Themen-
  * Einstellungen. `id` traegt das Praefix und ist die Kennung fuer den Kauf.
  */
+export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen';
+
 export interface RegalWare {
   id: string;
-  art: 'szene' | 'blatt';
+  art: WareArt;
   wert: string;
   nameKey: string;
   seltenheit: string;
@@ -468,7 +470,10 @@ export const api = {
   },
   me: () => request<Me>('/me'),
   /** Kartenblatt oder Szenerie eines Spiels setzen. */
-  setTheme: (gameId: string, teil: { cardDeck?: string; tableScene?: string }) =>
+  setTheme: (
+    gameId: string,
+    teil: { cardDeck?: string; tableScene?: string; cardBack?: string },
+  ) =>
     patch<{ ok: true }>(`/me/themes/${gameId}`, teil),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),

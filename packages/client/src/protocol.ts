@@ -241,8 +241,22 @@ export interface ErrorMessage {
   messageKey: string;
 }
 
+/**
+ * Ein Zuruf vom Tisch. Traegt keine Revision — ein Zuruf ist ein Moment,
+ * kein Zustand, und wer ihn verpasst, hat nichts zu holen.
+ */
+export interface EmoteMessage {
+  v: number;
+  game: string;
+  type: 'emote';
+  tableId: string;
+  seat: number;
+  emote: string;
+}
+
 export type ServerMessage<V = GameView> =
   | ViewMessage<V>
   | PartyMessage
   | TableMessage
+  | EmoteMessage
   | ErrorMessage;

@@ -73,6 +73,29 @@ function bildFuer(m: { accountId: string; hasAvatar: boolean }, i: number): stri
   return m.hasAvatar ? `/api/avatars/${m.accountId}` : `/hub/pinguin-${(i % 4) + 1}.png`;
 }
 
+/**
+ * Wappen, die dem Konto gehoeren.
+ *
+ * `null`, solange nichts geladen ist — dann gilt alles als erlaubt. Ein
+ * Raster, das beim Oeffnen kurz komplett gesperrt aussieht, waere schlimmer
+ * als eines, das eine Sekunde zu freundlich ist; die Wahrheit steht ohnehin
+ * beim Speichern im Server.
+ */
+function useMeineWappen(): Set<string> | null {
+  const [wappen, setWappen] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    void api
+      .shop()
+      .then((s) =>
+        setWappen(
+          new Set(s.tischware.filter((w) => w.art === 'wappen' && w.besessen).map((w) => w.wert)),
+        ),
+      )
+      .catch(() => setWappen(null));
+  }, []);
+  return wappen;
+}
+
 /** Runder Knopf mit gemaltem Zeichen und Wort darunter. */
 function IconKnopf({
   icon,
@@ -554,6 +577,7 @@ function EinstellungenBlatt({
   onClose: () => void;
   onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
 }): React.JSX.Element {
+  const meineWappen = useMeineWappen();
   const [name, setName] = useState(detail.name);
   const [motto, setMotto] = useState(detail.motto ?? '');
   const [crest, setCrest] = useState(detail.crest);
@@ -576,6 +600,7 @@ function EinstellungenBlatt({
           setJoinMode={setJoinMode}
           minTrophies={minTrophies}
           setMinTrophies={setMinTrophies}
+          meineWappen={meineWappen}
         />
         {!darfAendern && (
           <p className="muted">Ändern dürfen das nur Anführer und Vize.</p>
@@ -718,6 +743,7 @@ function Gruenden({
   onAbbruch: () => void;
   onFertig: () => void;
 }): React.JSX.Element {
+  const meineWappen = useMeineWappen();
   const [name, setName] = useState('');
   const [motto, setMotto] = useState('');
   const [crest, setCrest] = useState<string>(WAPPEN[0]);
@@ -759,6 +785,7 @@ function Gruenden({
           setJoinMode={setJoinMode}
           minTrophies={minTrophies}
           setMinTrophies={setMinTrophies}
+          meineWappen={meineWappen}
         />
         {fehler && <p className="clan-fehler">{fehler}</p>}
       </div>
@@ -792,6 +819,7 @@ function ClanFelder({
   setJoinMode,
   minTrophies,
   setMinTrophies,
+  meineWappen,
 }: {
   /** Nur-Lesen-Ansicht: Felder stehen da, lassen sich aber nicht aendern. */
   gesperrt?: boolean;
@@ -805,6 +833,8 @@ function ClanFelder({
   setJoinMode: (v: JoinMode) => void;
   minTrophies: string;
   setMinTrophies: (v: string) => void;
+  /** Wappen, die dem Konto gehoeren. `null` = noch nicht geladen. */
+  meineWappen: Set<string> | null;
 }): React.JSX.Element {
   return (
     <>
@@ -833,18 +863,32 @@ function ClanFelder({
       <fieldset className="clan-wappenwahl">
         <legend>Wappen</legend>
         <div className="clan-wappenraster">
-          {WAPPEN.map((w) => (
-            <button
-              key={w}
-              type="button"
-              className={`clan-wappen${crest === w ? ' is-an' : ''}`}
-              disabled={gesperrt}
-              aria-pressed={crest === w}
-              onClick={() => setCrest(w)}
-            >
-              <img src={wappenBild(w)} alt="" draggable={false} />
-            </button>
-          ))}
+          {WAPPEN.map((w) => {
+            // Gesperrte Wappen stehen trotzdem da — sonst erfaehrt niemand,
+            // dass es sie gibt. Antippen fuehrt nicht ins Leere, sondern
+            // sagt, wo man sie bekommt.
+            const mein = meineWappen === null || meineWappen.has(w);
+            return (
+              <button
+                key={w}
+                type="button"
+                className={`clan-wappen${crest === w ? ' is-an' : ''}${mein ? '' : ' is-zu'}`}
+                disabled={gesperrt}
+                aria-pressed={crest === w}
+                title={mein ? undefined : 'Im Shop erhältlich'}
+                onClick={() => {
+                  if (!mein) {
+                    window.alert('Dieses Wappen gibt es im Shop unter „Clanwappen".');
+                    return;
+                  }
+                  setCrest(w);
+                }}
+              >
+                <img src={wappenBild(w)} alt="" draggable={false} />
+                {!mein && <span className="clan-wappen-schloss">🔒</span>}
+              </button>
+            );
+          })}
         </div>
       </fieldset>
 

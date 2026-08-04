@@ -27,7 +27,16 @@ import { notFound } from './errors.js';
 import type { Seltenheit } from './kosmetik.js';
 import type { Waehrung } from './waehrung.js';
 
-export type WareArt = 'szene' | 'blatt';
+/**
+ * Warensorten.
+ *
+ * `ruecken` ist bewusst getrennt vom `blatt`: Die Rueckseite ist das, was
+ * alle am Tisch sehen, die Vorderseiten sieht nur die eigene Hand. Damit ist
+ * eine Rueckseite fuer sich verkaufbar — und genau deshalb sind die zehn neuen
+ * Blaetter schon jetzt brauchbar, obwohl von ihnen erst die Rueckseite gemalt
+ * ist.
+ */
+export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen';
 
 export interface Ware {
   /** Kennung MIT Praefix, so wie sie in `account_cosmetic` steht. */
@@ -41,22 +50,33 @@ export interface Ware {
   readonly waehrung: Waehrung;
 }
 
-function szene(
-  wert: string,
-  preis: number,
-  seltenheit: Seltenheit = 'gewoehnlich',
-  waehrung: Waehrung = 'coins',
-): Ware {
-  return {
-    id: `szene-${wert}`,
-    art: 'szene',
+function ware(art: WareArt, praefix: string) {
+  return (
+    wert: string,
+    preis: number,
+    seltenheit: Seltenheit = 'gewoehnlich',
+    waehrung: Waehrung = 'coins',
+  ): Ware => ({
+    id: `${praefix}-${wert}`,
+    art,
     wert,
-    nameKey: `szene.${wert}`,
+    nameKey: `${praefix}.${wert}`,
     seltenheit,
     preis,
     waehrung,
-  };
+  });
 }
+
+const szene = ware('szene', 'szene');
+const ruecken = ware('ruecken', 'ruecken');
+const emote = ware('emote', 'emote');
+/**
+ * Wappen tragen ihre Kennung schon im Wert (`wappen-3`), damit sie ohne
+ * Umrechnung in `club.crest` passt. Die Warenkennung heisst deshalb
+ * `wappen-wappen-3` — haesslich, aber sie steht nirgends in der Oberflaeche,
+ * und ein Sonderfall im Praefix waere schlimmer als ein haesslicher Schluessel.
+ */
+const wappen = ware('wappen', 'wappen');
 
 /**
  * Der Katalog.
@@ -91,6 +111,58 @@ export const WAREN: readonly Ware[] = [
   szene('samt-blau', 600, 'episch'),
   szene('kapitaen', 600, 'episch'),
   szene('basar', 900, 'legendaer'),
+
+  // --- Kartenrueckseiten --------------------------------------------------
+  // `standard` ist die Rueckseite des jeweils gewaehlten Blattes und damit
+  // das, was ohne Zutun gilt.
+  ruecken('standard', 0),
+  ruecken('eiche', 200),
+  ruecken('winterhof', 200),
+  ruecken('sommerwiese', 200),
+  ruecken('kupferstich', 300, 'selten'),
+  ruecken('schiefer', 300, 'selten'),
+  ruecken('nachthimmel', 400, 'selten'),
+  ruecken('rubin', 500, 'episch'),
+  ruecken('smaragd', 500, 'episch'),
+  ruecken('koeniglich', 700, 'episch'),
+  ruecken('pinguin', 900, 'legendaer'),
+
+  // --- Emotes -------------------------------------------------------------
+  // Zwei sind frei: Wer noch nie etwas gekauft hat, soll trotzdem einmal
+  // lachen und einmal loben koennen. Ein Tisch, an dem nur zahlende Gaeste
+  // reagieren duerfen, ist ein stiller Tisch.
+  emote('grinsen', 0),
+  emote('gut-gespielt', 0),
+  emote('lachtraenen', 80),
+  emote('schmunzeln', 80),
+  emote('guter-stich', 100),
+  emote('na-sowas', 100),
+  emote('wird-eng', 100),
+  emote('nochmal', 100),
+  emote('prusten', 150, 'selten'),
+  emote('verlegen', 150, 'selten'),
+
+  // --- Wappen -------------------------------------------------------------
+  // Die acht der ersten Stunde bleiben frei, damit jeder Clan ein Zeichen
+  // hat. Die zehn neuen kosten.
+  wappen('wappen-1', 0),
+  wappen('wappen-2', 0),
+  wappen('wappen-3', 0),
+  wappen('wappen-4', 0),
+  wappen('wappen-5', 0),
+  wappen('wappen-6', 0),
+  wappen('wappen-7', 0),
+  wappen('wappen-8', 0),
+  wappen('wappen-9', 250),
+  wappen('wappen-10', 250),
+  wappen('wappen-11', 250),
+  wappen('wappen-12', 350, 'selten'),
+  wappen('wappen-13', 350, 'selten'),
+  wappen('wappen-14', 450, 'selten'),
+  wappen('wappen-15', 450, 'selten'),
+  wappen('wappen-16', 550, 'episch'),
+  wappen('wappen-17', 550, 'episch'),
+  wappen('wappen-18', 800, 'legendaer'),
 ];
 
 const NACH_ID = new Map(WAREN.map((ware) => [ware.id, ware]));

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
-import { deckForGame } from './decks';
+import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
@@ -50,8 +50,10 @@ export function App(): React.JSX.Element {
    * die Rueckfallwerte greifen nur, falls ein Spiel dazukommt, das dieser
    * Client noch nicht kennt.
    */
-  const themeFuer = (gameId: string): { cardDeck: string; tableScene: string } =>
-    me.themes[gameId] ?? { cardDeck: 'text', tableScene: 'stube' };
+  const themeFuer = (
+    gameId: string,
+  ): { cardDeck: string; tableScene: string; cardBack: string } =>
+    me.themes[gameId] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' };
 
   const zeigeProfil = (accountId: string): void =>
     setScreen({ name: 'profil', accountId, vorher: screen });
@@ -71,7 +73,13 @@ export function App(): React.JSX.Element {
     return (
       <Spieltisch
         tableId={screen.tableId}
-        deck={deckForGame(screen.gameId, themeFuer(screen.gameId).cardDeck)}
+        /* Blatt und Rueckseite sind zwei Einstellungen, aber ein Objekt:
+           So bleiben alle Stellen, die eine Kartenrueckseite zeichnen,
+           unveraendert. */
+        deck={deckMitRuecken(
+          deckForGame(screen.gameId, themeFuer(screen.gameId).cardDeck),
+          themeFuer(screen.gameId).cardBack,
+        )}
         szene={themeFuer(screen.gameId).tableScene}
         onShowProfile={zeigeProfil}
         // Zurueck zum Start: me neu laden, damit „Weiterspielen" den

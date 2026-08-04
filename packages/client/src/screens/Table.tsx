@@ -11,6 +11,7 @@ import {
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
+import { EmoteBlase, EmoteLeiste } from '../tisch/emote';
 import { gameTypeLabel, t } from '../i18n';
 import type { Action, Card, RoundResult } from '../protocol';
 import {
@@ -90,8 +91,37 @@ export function Table({
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, status, send, addBot, removeBot, reconnect } =
-    useTable(tableId);
+  const {
+    view,
+    party,
+    table,
+    error,
+    status,
+    send,
+    emotes,
+    sendEmote,
+    addBot,
+    removeBot,
+    reconnect,
+  } = useTable(tableId);
+
+  /**
+   * Welche Zurufe mir gehoeren. Einmal beim Betreten geholt; im Shop kann
+   * sich das aendern, aber nicht waehrend einer Partie.
+   */
+  const [meineEmotes, setMeineEmotes] = useState<Set<string>>(new Set());
+  /** Ein gesperrter Zuruf wurde angetippt — der Weg dorthin fuehrt ueber den Hub. */
+  const [zeigeEmoteHinweis, setZeigeEmoteHinweis] = useState(false);
+  useEffect(() => {
+    void api
+      .shop()
+      .then((s) =>
+        setMeineEmotes(
+          new Set(s.tischware.filter((w) => w.art === 'emote' && w.besessen).map((w) => w.wert)),
+        ),
+      )
+      .catch(() => undefined);
+  }, []);
 
   // Tischgroesse: skaliert Hand- und Stichkarten. Am Geraet gespeichert, weil
   // sie von Augen und Bildschirm abhaengt, nicht vom Konto.
@@ -674,6 +704,15 @@ export function Table({
               {table.paused ? '▶' : '❚❚'}
             </button>
           )}
+          {/* Zurufe nur fuer Mitspieler: Am echten Tisch redet mit, wer
+              mitspielt. */}
+          {view.seat !== null && (
+            <EmoteLeiste
+              besessen={meineEmotes}
+              onSenden={sendEmote}
+              onKaufen={() => setZeigeEmoteHinweis(true)}
+            />
+          )}
           <button
             className="doko-icon"
             onClick={() => setZeigeLetzten(true)}
@@ -732,6 +771,7 @@ export function Table({
             party={round?.knownParties?.[seat] ?? null}
             ansage={ansageVon(round, seat)}
             sagt={blasen[seat] ?? null}
+            emote={emotes[seat] ?? null}
             tricksWon={round?.trickCounts?.[seat] ?? 0}
             showTrickPeek={showTrickPeek}
             avatarUrl={avatarOf(seat)}
@@ -854,6 +894,23 @@ export function Table({
       )}
 
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
+
+      {/* Kein Weg in den Shop mitten aus der Partie: Wer hier sitzt, spielt.
+          Der Hinweis sagt, wo es sie gibt, und laesst den Tisch in Ruhe. */}
+      {zeigeEmoteHinweis && (
+        <div className="doko-sheet" onClick={() => setZeigeEmoteHinweis(false)}>
+          <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Diesen Zuruf hast du noch nicht</h2>
+            <p className="muted">
+              Im Shop unter „Zurufe" gibt es ihn gegen Münzen. Er steht dir dann an jedem
+              Tisch zur Verfügung.
+            </p>
+            <button className="primary" onClick={() => setZeigeEmoteHinweis(false)}>
+              Weiter spielen
+            </button>
+          </div>
+        </div>
+      )}
 
       {zeigeLetzten && round?.lastTrick && (
         <LetzterStich
@@ -1003,6 +1060,7 @@ const OpponentSeat = memo(function OpponentSeat({
   party,
   ansage,
   sagt,
+  emote,
   tricksWon,
   showTrickPeek,
   avatarUrl,
@@ -1026,6 +1084,8 @@ const OpponentSeat = memo(function OpponentSeat({
   ansage: string | null;
   /** Kurzer Zuruf, verschwindet nach ein paar Sekunden von selbst. */
   sagt: string | null;
+  /** Zuruf ueber diesem Sitz, oder null. */
+  emote: string | null;
   tricksWon: number;
   showTrickPeek: boolean;
   avatarUrl: string | null;
@@ -1038,6 +1098,7 @@ const OpponentSeat = memo(function OpponentSeat({
           oder "Re"; hier stand es bisher nirgends, und wer gerade auf seine
           Karten sah, bekam es nie mit. */}
       {sagt && <span className="doko-blase">{sagt}</span>}
+      {emote && <EmoteBlase emote={emote} />}
       <Avatar
         name={name}
         seatIndex={seatIndex}

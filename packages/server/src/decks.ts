@@ -22,3 +22,28 @@ export const CARD_DECKS = [
 export type CardDeck = (typeof CARD_DECKS)[number];
 
 export const DEFAULT_CARD_DECK: CardDeck = 'text';
+
+/**
+ * Zulaessige Kartenrueckseiten.
+ *
+ * Getrennt vom Blatt, weil die Rueckseite das ist, was alle am Tisch sehen —
+ * die Vorderseiten sieht nur die eigene Hand. `standard` heisst: die
+ * Rueckseite des gewaehlten Blattes.
+ */
+export const CARD_BACKS = [
+  'standard',
+  'eiche',
+  'winterhof',
+  'sommerwiese',
+  'nachthimmel',
+  'rubin',
+  'smaragd',
+  'kupferstich',
+  'pinguin',
+  'koeniglich',
+  'schiefer',
+] as const;
+
+export type CardBack = (typeof CARD_BACKS)[number];
+
+export const DEFAULT_CARD_BACK: CardBack = 'standard';
