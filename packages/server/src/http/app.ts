@@ -306,6 +306,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       try {
         done(null, JSON.parse(text));
       } catch (err) {
+        // Ein roher SyntaxError traegt keinen Statuscode. Ohne ihn faellt er
+        // in der Fehlerbehandlung an allen 4xx-Zweigen vorbei in den 500er -
+        // samt console.error, das damit von gewoehnlichen Client-Fehlern
+        // volllief. Mit 400 greift der bestehende Zweig, und der Aufrufer
+        // bekommt 'invalidRequest' statt 'etwas ist schiefgelaufen'.
+        (err as { statusCode?: number }).statusCode = 400;
         done(err as Error);
       }
     },
