@@ -26,9 +26,16 @@ unter `public/` (siehe `docs/DESIGN.md`).
 
 ## Wie hier gearbeitet wird
 
-**Zweig, PR, selbst mergen.** Nie direkt auf `main` arbeiten: Zweig von
-`origin/main`, Änderung, Zweig pushen, nach `main` mergen, `main` pushen.
-Vor dem Mergen immer `git fetch` — auf `main` landen auch Commits aus
+**Gearbeitet wird gegen `staging`, nicht gegen `main`** (seit 4. August
+2026): Zweig von `origin/staging`, Änderung, Zweig pushen, nach `staging`
+mergen, `staging` pushen. **`main` wird aus der Sitzung heraus nicht mehr
+angefasst** — was von `staging` nach `main` geht, entscheidet Jan.
+
+Der Grund: `main` löst den Deploy aus. Bis dahin lag jede Änderung nach
+zwei Minuten auf dem Produktivsystem, auch die, die man erst noch ansehen
+wollte.
+
+Vor dem Mergen immer `git fetch` — auf den Zweigen landen auch Commits aus
 Cursor.
 
 **`gh` ist nicht installiert**, und das Remote läuft über SSH. Pull
