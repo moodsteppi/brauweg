@@ -58,17 +58,28 @@ export function legalCards(
  * In dieser Reihenfolge: erster gespielter Zauberer, sonst hoechster Trumpf,
  * sonst hoechste Karte der zu bedienenden Farbe, sonst - wenn nur Narren
  * liegen - der erste Narr.
+ *
+ * `lastSpecialWins` dreht die erste und die letzte Zeile um: Dann gewinnt der
+ * zuletzt gelegte Zauberer, und bei einem Stich aus lauter Narren der letzte
+ * Narr. Trumpf und Farbe bleiben davon unberuehrt - dort entscheidet die
+ * Hoehe, nicht die Reihenfolge.
  */
-export function winnerOf(played: readonly Played[], trump: Suit | null): number {
+export function winnerOf(
+  played: readonly Played[],
+  trump: Suit | null,
+  lastSpecialWins = false,
+): number {
   if (played.length === 0) throw new Error('Leerer Stich hat keinen Gewinner');
 
-  const zauberer = played.find((entry) => isWizard(entry.card));
+  const zauberer = lastSpecialWins
+    ? [...played].reverse().find((entry) => isWizard(entry.card))
+    : played.find((entry) => isWizard(entry.card));
   if (zauberer) return zauberer.seat;
 
   const lead = leadSuit(played);
-  // Nur Narren: der erste gewinnt. Er ist die schwaechste Karte des Spiels,
-  // aber irgendwer muss den Stich bekommen.
-  if (lead === null) return played[0]!.seat;
+  // Nur Narren: einer muss den Stich bekommen, obwohl keiner ihn gewinnen
+  // will. Der Standard gibt ihn dem ersten, die Hausregel dem letzten.
+  if (lead === null) return (lastSpecialWins ? played[played.length - 1]! : played[0]!).seat;
 
   const hoechste = (farbe: Suit): Played | undefined =>
     played

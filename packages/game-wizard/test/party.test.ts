@@ -124,6 +124,7 @@ test('Alle Hausregeln zusammen, soweit sie sich vertragen', () => {
     blindFirstRound: true,
     bidSumForbidden: true,
     dealerPicksBlind: true,
+    lastSpecialWins: true,
     rounds: 6,
   });
   assert.deepEqual(validateRuleSet(rs), []);

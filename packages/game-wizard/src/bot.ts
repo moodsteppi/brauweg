@@ -149,7 +149,7 @@ function trumpFor(view: PlayerView): Suit {
 /** Wuerde diese Karte den Stich gewinnen, wenn er jetzt endete? */
 function gewinnt(view: PlayerView, card: Card): boolean {
   const stich: Played[] = [...view.currentTrick, { seat: view.seat ?? -1, card }];
-  return winnerOf(stich, view.trump) === (view.seat ?? -1);
+  return winnerOf(stich, view.trump, view.lastSpecialWins) === (view.seat ?? -1);
 }
 
 function cardFor(view: PlayerView): Card {

@@ -34,6 +34,7 @@ const BILDER: Record<string, string> = {
   training: '🎓',
 
   // Zauberer
+  lastSpecialWins: '🏁',
   bidSumForbidden: '⚖️',
   zeroBonus: '⭕',
   hiddenBids: '🙈',

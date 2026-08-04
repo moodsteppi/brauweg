@@ -106,6 +106,15 @@ In dieser Reihenfolge:
 
 Der Gewinner spielt den nächsten Stich an.
 
+**Hausregel „Der letzte sticht" (`lastSpecialWins`, Vorgabe aus)** dreht die
+Zeilen 1 und 4 um: Dann gewinnt der **zuletzt** gelegte Zauberer, und bei
+einem Stich aus lauter Narren der **letzte** Narr. Zeile 2 und 3 bleiben
+unberührt — bei Trumpf und Farbe entscheidet die Höhe, nie die Reihenfolge.
+
+Der Unterschied ist kein Detail: Im Standard lohnt es, früh zuzustechen; mit
+der Hausregel lohnt es, abzuwarten. Beides ist verbreitet, deshalb ein
+Schalter und keine Entscheidung.
+
 ---
 
 ## 6. Wertung
@@ -131,10 +140,11 @@ verliert, Trumpf per aufgedeckter Karte, 20 + 10 / −10. Ohne diese Regeln
 ist es nicht mehr dieses Spiel, und ein Regeleditor, mit dem man den Tisch
 unspielbar machen kann, ist kein Vorteil.
 
-Schaltbar sind sieben Hausregeln, alle mit **Vorgabe aus**:
+Schaltbar sind acht Hausregeln, alle mit **Vorgabe aus**:
 
 | Schlüssel | Name in der Oberfläche | Wirkung |
 | --- | --- | --- |
+| `lastSpecialWins` | Der letzte sticht | Der **zuletzt** gelegte Zauberer gewinnt statt des ersten; bei lauter Narren gewinnt der letzte Narr. Siehe Abschnitt 5. |
 | `bidSumForbidden` | Es darf nicht aufgehen | Der letzte Ansager (der Geber) darf die Summe aller Ansagen nicht auf die Stichzahl bringen. Es liegt immer jemand daneben. |
 | `zeroBonus` | Bonus für angesagte Null | Wer 0 ansagt und hält, bekommt `10 × Rundennummer` statt der festen 20. Macht späte Runden mit großen Händen interessanter. |
 | `hiddenBids` | Gebote gleichzeitig verdeckt | Alle sagen zugleich an statt reihum. Nimmt dem Geber seinen Positionsvorteil. |
@@ -331,7 +341,7 @@ Zielmarke: mindestens 80 Tests, Adapter und Server zusätzlich.
 
 | Teil | Stand |
 | --- | --- |
-| Engine `packages/game-wizard` | 111 Tests, keine Laufzeitabhängigkeit |
+| Engine `packages/game-wizard` | 117 Tests, keine Laufzeitabhängigkeit |
 | Adapter gegen `GameModule` | inkl. Snapshot, Zuschauersicht, Bot |
 | Server | in der Registrierung, Trophäen für sechs Sitze, 12 eigene Tests |
 | Client | eigener Tisch `WizardTable.tsx`, Punktetafel, Rundenblatt |

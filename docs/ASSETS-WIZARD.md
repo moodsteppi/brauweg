@@ -189,7 +189,7 @@ deshalb nicht in einer Spitze auslaufen.
 
 - **Kein Bild für die Spielauswahl.** Die Kachel ist ein gemaltes SVG im Code
   (`SpielBild` in `GameSelect.tsx`), so wie bei allen anderen Spielen.
-- **Keine Regelkacheln.** Die sieben Hausregeln tragen Zeichen aus
+- **Keine Regelkacheln.** Die acht Hausregeln tragen Zeichen aus
   `regelbilder.ts`.
 - **Keine Symbole für Gebote.** Die Zahlen setzt die App.
 

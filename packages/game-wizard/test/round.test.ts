@@ -221,6 +221,30 @@ test('Nach dem letzten Stich ist die Runde abgerechnet', () => {
   );
 });
 
+test('Hausregel "Der letzte sticht" gilt auch am Tisch, nicht nur in der Funktion', () => {
+  const rs = makeRuleSet({ lastSpecialWins: true });
+  let state = gespielteRunde(
+    {
+      0: [c('Z1'), c('D3')],
+      1: [c('D9'), c('D4')],
+      2: [c('Z2'), c('D5')],
+      3: [c('D2'), c('S6')],
+    },
+    rs,
+  );
+
+  // Sitz 1 spielt an, Sitz 2 legt einen Zauberer, Sitz 0 einen zweiten.
+  state = apply(state, { type: 'playCard', seat: 1, cardId: state.hands[1]![0]!.id });
+  state = apply(state, { type: 'playCard', seat: 2, cardId: state.hands[2]![0]!.id });
+  // Sitz 3 haelt Karo und muss bedienen.
+  state = apply(state, { type: 'playCard', seat: 3, cardId: state.hands[3]![0]!.id });
+  state = apply(state, { type: 'playCard', seat: 0, cardId: state.hands[0]![0]!.id });
+
+  // Der spaetere Zauberer (Sitz 0) nimmt den Stich.
+  assert.equal(state.lastTrick?.winnerSeat, 0);
+  assert.equal(state.tricks[0], 1);
+});
+
 // --- Blinde erste Runde -----------------------------------------------------
 
 test('Blinde erste Runde: gespielt wird ohne Kartenwahl', () => {

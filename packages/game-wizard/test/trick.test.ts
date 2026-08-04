@@ -66,6 +66,40 @@ test('Leerer Stich hat keinen Gewinner', () => {
   assert.throws(() => winnerOf([], 'H'));
 });
 
+// --- Hausregel "Der letzte sticht" -----------------------------------------
+
+test('Hausregel: der zuletzt gelegte Zauberer gewinnt', () => {
+  const played = stich([0, 'H13'], [1, 'Z3'], [2, 'Z1'], [3, 'H12']);
+  assert.equal(winnerOf(played, 'H', true), 2);
+  // Gegenprobe: ohne die Regel gewinnt der erste.
+  assert.equal(winnerOf(played, 'H', false), 1);
+});
+
+test('Hausregel: bei lauter Narren gewinnt der letzte', () => {
+  const played = stich([2, 'N1'], [3, 'N4'], [0, 'N2']);
+  assert.equal(winnerOf(played, 'H', true), 0);
+  assert.equal(winnerOf(played, 'H', false), 2);
+});
+
+test('Hausregel: ein einzelner Zauberer gewinnt so oder so', () => {
+  const played = stich([0, 'H13'], [1, 'Z1'], [2, 'H12']);
+  assert.equal(winnerOf(played, 'H', true), 1);
+  assert.equal(winnerOf(played, 'H', false), 1);
+});
+
+test('Hausregel laesst Trumpf und Farbe unberuehrt', () => {
+  // Bei Trumpf und Fehlfarbe entscheidet die Hoehe, nie die Reihenfolge.
+  const truempfe = stich([0, 'C9'], [1, 'C13'], [2, 'C2']);
+  assert.equal(winnerOf(truempfe, 'C', true), 1);
+  const farbe = stich([0, 'H7'], [1, 'H13'], [2, 'H9']);
+  assert.equal(winnerOf(farbe, 'D', true), 1);
+});
+
+test('Hausregel: Narr und Zauberer im selben Stich - der Zauberer schlaegt', () => {
+  const played = stich([0, 'N1'], [1, 'Z1'], [2, 'N2']);
+  assert.equal(winnerOf(played, null, true), 1);
+});
+
 // --- Bedienpflicht ----------------------------------------------------------
 
 const hand = [c('H5'), c('H12'), c('D3'), c('Z1'), c('N1')];

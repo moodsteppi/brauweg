@@ -7,7 +7,7 @@
  * Regeleditor, mit dem sich der Tisch unspielbar stellen laesst, ist kein
  * Vorteil, sondern eine Falle.
  *
- * Schaltbar sind sieben Hausregeln, alle mit Vorgabe aus - so wie Schmeissen
+ * Schaltbar sind acht Hausregeln, alle mit Vorgabe aus - so wie Schmeissen
  * beim Doppelkopf.
  *
  * Bewusst NICHT enthalten: Einsatz, Topf, Preise. Regelwerk und Waehrung
@@ -50,6 +50,18 @@ export interface RuleSet {
    */
   blindFirstRound: boolean;
 
+  // --- Stich ---
+
+  /**
+   * Der ZULETZT gelegte Zauberer gewinnt den Stich statt des ersten - und
+   * ebenso gewinnt bei einem Stich aus lauter Narren der letzte Narr.
+   *
+   * Der Standard belohnt, wer zuerst zusticht; diese Regel belohnt, wer
+   * abwartet. Beides ist verbreitet, deshalb ein Schalter und keine
+   * Entscheidung.
+   */
+  lastSpecialWins: boolean;
+
   // --- Trumpf ---
 
   /**
@@ -82,6 +94,8 @@ export const DEFAULT_RULESET: RuleSet = {
   zeroBonus: false,
   hiddenBids: false,
   blindFirstRound: false,
+
+  lastSpecialWins: false,
 
   dealerPicksBlind: false,
   noTrump: false,

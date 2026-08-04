@@ -141,6 +141,7 @@ const de: Record<string, string> = {
   'regel.training': 'Training',
 
   // Hausregeln des Zauberers.
+  'regel.lastSpecialWins': 'Der letzte sticht',
   'regel.bidSumForbidden': 'Es darf nicht aufgehen',
   'regel.zeroBonus': 'Bonus für angesagte Null',
   'regel.hiddenBids': 'Verdeckt ansagen',

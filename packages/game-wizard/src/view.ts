@@ -58,6 +58,12 @@ export interface PlayerView {
   readonly trump: Suit | null;
   /** Sitz, der gerade die Trumpffarbe nennen muss, sonst null. */
   readonly awaitingTrump: number | null;
+  /**
+   * Hausregel "Der letzte sticht". Gehoert in die Sicht, weil ohne sie kein
+   * Spieler und kein Bot beurteilen kann, wem der laufende Stich gerade
+   * gehoert.
+   */
+  readonly lastSpecialWins: boolean;
 
   readonly order: CardOrder;
   readonly result: RoundResult | null;
@@ -117,6 +123,7 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     upcard: state.upcard,
     trump: state.trump,
     awaitingTrump: state.phase === 'trump' ? state.dealer : null,
+    lastSpecialWins: state.rs.lastSpecialWins,
 
     order: buildOrder(state.trump),
     result: state.result,

@@ -248,7 +248,7 @@ function afterPlay(state: RoundState, seat: number, card: Card): RoundState {
     return { ...state, hands, currentTrick, turn: nextSeat(state.seats, seat) };
   }
 
-  const winnerSeat = winnerOf(currentTrick, state.trump);
+  const winnerSeat = winnerOf(currentTrick, state.trump, state.rs.lastSpecialWins);
   const tricks = { ...state.tricks, [winnerSeat]: (state.tricks[winnerSeat] ?? 0) + 1 };
   const fertig = state.seats.every((s) => (hands[s] ?? []).length === 0);
 

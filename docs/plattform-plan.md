@@ -60,7 +60,7 @@ oder Client.
 
 ### Zauberer-Modul (`game-wizard`)
 
-Das zweite Spiel, seit dem 04.08.2026 spielbar. Eigene Engine mit 111 Tests,
+Das zweite Spiel, seit dem 04.08.2026 spielbar. Eigene Engine mit 117 Tests,
 Adapter, Bot, sieben schaltbare Hausregeln, drei bis sechs Sitze. Regelwerk in
 [wizard-spec.md](wizard-spec.md).
 

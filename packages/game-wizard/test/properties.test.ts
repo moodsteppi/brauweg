@@ -47,6 +47,7 @@ test('Invariante: jede gespielte Partie rechnet nach der Formel ab', () => {
     makeRuleSet({ rounds: 5, noTrump: true }),
     makeRuleSet({ rounds: 5, blindFirstRound: true, dealerPicksBlind: true }),
     makeRuleSet({ rounds: 5, jesterPicksTrump: true }),
+    makeRuleSet({ rounds: 5, lastSpecialWins: true }),
   ];
 
   for (const rs of varianten) {

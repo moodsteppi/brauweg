@@ -13,7 +13,7 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 127 Doppelkopf-Tests, 111 Zauberer-Tests, 126 Servertests,
+**Prüfstand:** 127 Doppelkopf-Tests, 117 Zauberer-Tests, 126 Servertests,
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
 
@@ -92,10 +92,15 @@ Gestaltung in `docs/DESIGN-WIZARD.md`.
   Wartebereich, Partie-Ende — liegt jetzt in `packages/client/src/tisch/`.
   `Table.tsx` (Doppelkopf) und `WizardTable.tsx` bauen darauf auf.
   Doppelkopf blieb dabei unverändert: dieselben 127 Tests, gleicher Ablauf.
-- **Sieben Hausregeln** sind schaltbar: Es darf nicht aufgehen, Bonus für
-  angesagte Null, verdeckt ansagen, blinde erste Runde, Geber wählt blind,
-  trumpffrei, Narr = Geber wählt. Der Kern (Bedienpflicht, Zauberer sticht,
-  20 + 10 / −10) ist fest.
+- **Acht Hausregeln** sind schaltbar: Der letzte sticht, Es darf nicht
+  aufgehen, Bonus für angesagte Null, verdeckt ansagen, blinde erste Runde,
+  Geber wählt blind, trumpffrei, Narr = Geber wählt. Der Kern (Bedienpflicht,
+  Zauberer schlägt alles, 20 + 10 / −10) ist fest.
+- **„Der letzte sticht"** dreht die Reihenfolge um: Dann gewinnt der zuletzt
+  gelegte Zauberer statt des ersten, und ein Stich aus lauter Narren geht an
+  den letzten Narren. Trumpf und Farbe bleiben unberührt — dort entscheidet
+  die Höhe. Im Standard lohnt es, früh zuzustechen; mit der Regel lohnt es,
+  abzuwarten.
 - **Am laufenden Server geprüft**, nicht nur in Tests: Sechsertisch mit
   fünf Bots, komplette Runden, Punktetafel, und die blinde erste Runde.
 - **Bildbestellung `docs/ASSETS-WIZARD.md`:** volles gemaltes Blatt
