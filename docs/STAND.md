@@ -13,7 +13,7 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 128 Doppelkopf-Tests, 117 Zauberer-Tests, 211 Servertests,
+**Prüfstand:** 128 Doppelkopf-Tests, 117 Zauberer-Tests, **236 Servertests**,
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
 
@@ -22,10 +22,11 @@ im Wurzelverzeichnis, nicht `--workspace @brauweg/server`. Die `.d.ts` von
 `@brauweg/game-api` ist sonst der alte Stand, und `tsc` meldet Felder als
 fehlend, die im Quelltext längst stehen (`xpBasis`, `interludeMs`).
 
-**Stand der Zweige am 4. August 2026:** `main` auf `903ec05`, `staging` auf
-`93438ef` — die Währungen, Truhen, Tagesaufgaben und der anziehbare Pinguin
-liegen also auf `staging` und noch nicht in der Produktion. Ob und wann sie
-dorthin gehen, entscheidet Jan.
+**Stand der Zweige am Ende des 4. August 2026:** `staging` auf `66b6d25`.
+Auf `staging` und noch **nicht in der Produktion** liegen: Währungen,
+Truhen, Tagesaufgaben, anziehbarer Pinguin, Clanchat, Clankrieg, Zurufe am
+Tisch und der erweiterte Shop. Ob und wann das nach `main` geht, entscheidet
+Jan.
 
 `staging` ist an diesem Tag einmal auf ausdrückliche Anweisung nach `main`
 gebracht worden (Fast-Forward über 17 Commits), damit Stufen, Testkonten,
@@ -33,10 +34,16 @@ Cursors Rundenabschluss und die Doppelkopf-Nachbesserungen gemeinsam auf dem
 Produktivsystem zu sehen sind. **Das war eine Ausnahme** — die Regel unten gilt
 weiter: `main` wird aus einer Sitzung heraus nicht angefasst.
 
-**Bilder:** `packages/client/public/hub/` liegt bei 6,2 MB — zu Tagesbeginn
-waren es 30. Gemaltes wird als **WebP mit Qualität 85** ausgeliefert;
-Originale in voller Auflösung gehören nach `packages/client/art/`, niemals
-unter `public/` (siehe `docs/DESIGN.md`).
+**Bilder:** `packages/client/public/hub/` liegt bei 10 MB, `karten/` bei
+16 MB. Gemaltes wird als **WebP** ausgeliefert; Originale in voller
+Auflösung gehören nach `packages/client/art/`, niemals unter `public/`
+(siehe `docs/DESIGN.md`).
+
+**Kein WebP-Werkzeug auf diesem Mac.** Weder `cwebp` noch `magick` noch
+`sharp` ist installiert, und `sips` kann WebP zwar lesen, aber nicht
+schreiben. Wer umwandeln muss, installiert `sharp` in einem
+Scratchpad-Verzeichnis (`npm i sharp` außerhalb des Projekts) und ruft es
+von dort — das Projekt bleibt unberührt.
 
 ---
 
@@ -251,6 +258,126 @@ UPDATE account SET coins = 2000, gems = 200 WHERE email = 'DEINE-ADRESSE';
 Mit `xp = 330` stehen zugleich drei Stufentruhen offen (Stufe 2, 3 und 5).
 Wer alles auf einmal sehen will, nimmt lieber ein Testkonto: `STAFF_EMAILS`
 setzen und neu starten — dann ist alles besessen und nichts wird abgebucht.
+
+## Am 4. August später fertig geworden (zweite Sitzung)
+
+Alles auf `staging`, Stand `66b6d25`. Migrationen **0013** (Clanchat und
+Clankrieg) und **0014** (Kartenrückseiten).
+
+### Clanchat
+
+Nachrichten, Systemzeilen, Löschen. `packages/server/src/clubs/chat.ts`,
+Ansicht in `packages/client/src/screens/ClanChat.tsx`.
+
+- **Zwei Sorten Zeile:** was Mitglieder schreiben (`text`) und was der
+  Server selbst vermerkt (`system` — Beitritt, Kriegsbeginn, Kriegsergebnis).
+  Die Systemzeilen tragen kein Konto; damit kann sie niemand einem Mitglied
+  unterschieben, und der Chat ist nebenbei die Chronik des Clans.
+- **Gelöscht wird nie wirklich.** `deletedAt` markiert, der Text bleibt in
+  der Zeile stehen, ausgeliefert wird er nicht mehr. Das hält die
+  Reihenfolge stabil und macht eine Löschung nachvollziehbar. Löschen darf
+  der Verfasser und die Leitung; **Systemzeilen lassen sich nicht löschen** —
+  eine Chronik, die sich frisieren lässt, ist keine.
+- **Abgleich per Polling, alle 3 s, mit `seit`-Parameter** — es kommt nur
+  Neues über die Leitung. Ein WebSocket wäre sparsamer, aber der bestehende
+  hängt an einem Tisch; ihn dafür umzubauen hieße, die Zustellung am
+  Spieltisch anzufassen, und die funktioniert.
+
+### Clankrieg
+
+`packages/server/src/clubs/war.ts`, Ansicht in `ClanKrieg.tsx`. Die Regel
+steht sichtbar auf dem Bildschirm, nicht in einer Hilfe:
+
+1. **Platz 1 = 3 Punkte, Platz 2 = 1**, sonst nichts.
+2. **Je Mitglied zählen höchstens 10 Partien.** Ohne Deckel entschiede der
+   Vielspieler den Krieg allein.
+3. **Nur Partien mit mindestens zwei Menschen am Tisch.** Trophäen gibt es
+   inzwischen auch gegen Bots — einen Krieg gegen drei Bots zu farmen wäre
+   das Gegenteil dessen, wofür ein Clankrieg da ist.
+
+Dauer **48 Stunden**. Ein Krieg entsteht auf zwei Wegen: Gegnersuche (der
+Server paart zwei suchende Clans) oder gezielte Herausforderung, die der
+andere annehmen muss. Ein laufender Krieg lässt sich nicht absagen — sonst
+zöge die unterlegene Seite kurz vor Schluss den Stecker.
+
+- **Kein Hintergrunddienst.** Fällige Kriege werden **beim Lesen und beim
+  Punkteschreiben** abgerechnet (`settleDueWars`). Ein Zeitgeber im
+  Arbeitsspeicher überlebt keinen Neustart, und Railway startet den
+  Container bei jedem Deploy neu.
+- Angebunden am Partie-Ende über `recordWar` in `runtime/party.ts`. Die
+  Regel liegt im Kriegsdienst, nicht dort: Die Datei kennt kein einzelnes
+  Spiel und soll auch keine Wettbewerbsregel kennen.
+
+### Zurufe (Emotes) an beiden Tischen
+
+Gab es vorher an **keinem** Tisch. Jetzt an beiden, mit derselben Mechanik:
+`server/src/emotes.ts`, `client/src/emotes.ts`, Bausteine in
+`client/src/tisch/emote.tsx`.
+
+- **Ein Zuruf ist kein Zustand.** Nicht gespeichert, in keiner Sicht,
+  überlebt kein Neuladen. Wer zu spät hinsieht, hat ihn verpasst — wie am
+  echten Tisch. Die `EmoteMessage` trägt deshalb auch keine Revision.
+- **Feste Liste statt Freitext** ist der ganze Grund, warum es Zurufe gibt
+  und keinen Tischchat: Aus fünf Sprüchen lässt sich niemand beleidigen.
+  Damit braucht dieser Weg **keine Moderation**.
+- **Doppelt gebremst**, Client und Server je 2 s, und **still**. Eine
+  Fehlermeldung wäre genau die Aufmerksamkeit, auf die es der Dauerklicker
+  abgesehen hat. Zuschauer dürfen nicht rufen.
+
+### Shop: Szenerien, Rückseiten, Zurufe, Wappen
+
+Neuer Katalog `packages/server/src/tischware.ts` — eine Datei, ein Kaufweg,
+vier Sorten (`szene`, `ruecken`, `emote`, `wappen`; `blatt` steht bereit).
+
+- **Besitz liegt in `account_cosmetic`**, derselben Tabelle wie die
+  Pinguin-Kosmetik. Sie trägt eine freie Kennung und keinen Fremdschlüssel
+  auf einen Katalog — deshalb war für die vier neuen Sorten **keine
+  Migration** nötig. Die Präfixe (`szene-`, `ruecken-`, `emote-`, `wappen-`)
+  halten die Kennungen auseinander.
+- **Preis 0 heißt „gehört allen"** und erzeugt keine Besitzzeile. Die zehn
+  Szenerien und acht Wappen der ersten Stunde bleiben kostenlos: Wer sich an
+  seinen Filz gewöhnt hat, soll ihn nicht plötzlich kaufen müssen. Zwei
+  Zurufe sind frei, damit auch ein neues Konto lachen und loben kann.
+- **Geprüft wird beim Benutzen, nicht nur beim Kaufen** (`darfBenutzen`).
+  Sonst wäre ein Aufruf mit fremder Kennung der Weg, eine gekaufte Szenerie
+  zu benutzen, ohne sie zu haben.
+- **Unbekannte Kennungen gelten als erlaubt.** Sie sind schon durch die
+  Liste in `scenes.ts`/`decks.ts` gegangen; sperren hieße, dass ein
+  vergessener Katalogeintrag eine bestehende Einstellung unbrauchbar macht.
+
+**Kartenrückseiten sind eine eigene Kosmetik, getrennt vom Blatt.** Die
+Rückseite sehen alle am Tisch, die Vorderseiten nur die eigene Hand. Damit
+sind die zehn gelieferten Blätter schon verkaufbar, obwohl von ihnen erst
+die Rückseite gemalt ist. Technisch hängt sie am **Deck-Objekt**
+(`deckMitRuecken`, Feld `backSrc`) und nicht als Prop an jeder Karte — sonst
+hätte jede der sechs Zeichenstellen einen weiteren Durchreiche-Prop
+bekommen.
+
+**Wappen kosten, aber geprüft wird der Besitz des Setzenden, nicht des
+Vereins.** Ein Wappen gehört einem Menschen, ein Verein hat kein Konto. Wer
+austritt, nimmt es dem Clan nicht wieder weg.
+
+**Preise (vorläufig, alle in `tischware.ts`):** Szenerien 250–900, Rückseiten
+200–900, Wappen 250–800, Zurufe 80–150.
+
+### Doppelkopf-Nachbesserungen
+
+- **Scharfer Doppelkopf** (ohne Neunen) ist als Regelkachel schaltbar. Die
+  Engine konnte das Blatt längst (`deck: 'without9'`), es war nur nirgends
+  einstellbar. 50 volle Partien ohne Neunen laufen sauber durch.
+- **Botzüge im 0,8-Sekunden-Takt** statt 250 ms — man sieht jede Karte
+  einzeln fallen.
+- **Rundenpause**: Die fertige Runde bleibt liegen, bis alle anwesenden
+  Sitze „Weiter" getippt haben oder 15 s um sind. Erst dadurch erscheinen
+  Auswertung und Zwischenstand überhaupt.
+- **Karten vormerken:** Wer nicht am Zug ist, tippt eine Karte an (goldener
+  Rand); sobald er dran und die Karte zulässig ist, spielt sie von selbst.
+- **Trophäen auch an Bot-Tischen.** Die alte Sperre ist raus — solange es
+  wenige Mitspieler gibt, sollen auch aufgefüllte Tische zählen. Gebucht
+  wird ohnehin nur auf Sitze mit Konto; wer ohne Wertung spielen will,
+  stellt Training an.
+
+---
 
 ## Am 4. August fertig geworden
 
@@ -545,6 +672,25 @@ Tisch-Bewegungen noch nicht. Jetzt angeglichen:
   Doppelkopf gebaut), erweitert um die zwei hohen Sechser-Sitze
   (`sweep-left-high`/`sweep-right-high`).
 
+### Rund um Shop und Clan noch offen
+
+- **Die 24 Vorderseiten je Blatt fehlen.** Von den zehn neuen Blättern ist
+  nur die Rückseite gemalt; die wird als „Kartenrückseite" verkauft und
+  funktioniert. Als **Blatt** stehen sie noch nicht zur Wahl — ohne
+  Vorderseiten wäre die eigene Hand ein Feld aus kaputten Bildern.
+  Bestellung liegt fertig: `docs/ASSETS-BLATT-VORDERSEITEN.md`.
+  **Blattweise liefern lassen**, nicht kartenweise: Ein halbes Blatt lässt
+  sich nicht freischalten. Einbauen ist danach je Blatt eine Zeile in
+  `client/src/decks.ts`, `server/src/decks.ts` und `server/src/tischware.ts`.
+- **Die Clantruhe** ist weiter eine ehrliche Bald-Attrappe — der einzige
+  verbliebene Platzhalter in der Clanhalle.
+- **Chat und Krieg haben keine eigenen Bilder.** Beide kommen mit dem aus,
+  was da ist (Wappen, `icon-krieg`). Wenn sie eigene bekommen sollen,
+  braucht es eine Bestellung; nötig ist sie nicht.
+- **Kriegspunkte sind nirgends historisch.** Nach dem Ende steht nur der
+  letzte Krieg im Chat und auf dem Kriegsbildschirm. Eine Chronik über
+  mehrere Kriege gibt es nicht.
+
 ### Kleinkram
 
 - Die Rolle **„Ältester"** hat noch keine Sonderrechte; sie verhält sich wie
@@ -566,6 +712,30 @@ Tisch-Bewegungen noch nicht. Jetzt angeglichen:
 ## Was in der letzten Sitzung schieflief
 
 Damit es nicht zweimal passiert:
+
+- **`drizzle-kit generate` erzeugt Migrationen, die auf der echten Datenbank
+  scheitern.** Der Schnappschuss unter `drizzle/meta/` ist veraltet — es
+  liegen nur `0001`, `0002` und `0006` dort, alles seither wurde von Hand
+  geschrieben. `generate` diffft deshalb gegen einen Stand von vor zehn
+  Migrationen und schreibt `CREATE TABLE`/`ADD COLUMN` für Dinge, die längst
+  existieren. **Migrationen in diesem Projekt von Hand schreiben** und den
+  Eintrag in `drizzle/meta/_journal.json` selbst ergänzen. Wer `generate`
+  benutzt, muss die Ausgabe auf das wirklich Neue zusammenstreichen.
+- **Zwei Sitzungen vergaben dieselbe Migrationsnummer.** Beim Merge lagen
+  `0012_clan_chat_krieg` und `0012_waehrungen_truhen_aufgaben` nebeneinander.
+  Vor dem Anlegen einer Migration prüfen, was auf `origin/staging` schon
+  liegt — nicht nur, was lokal da ist.
+- **Ein React-Effekt mit dem Sichten-Objekt in der Abhängigkeitsliste hat
+  den Rundenabschluss unsichtbar gemacht.** Der Effekt lief bei jedem
+  Serverfunk neu, räumte seinen Timer ab, und der Frühausstieg oben stellte
+  ihn nie wieder. Auswertung und Zwischenstand erschienen deshalb nie. **An
+  einen Schlüssel hängen, nicht an das Objekt** — dieselbe Falle steht schon
+  bei den Ansage-Blasen im Quelltext beschrieben.
+- **`send()` im Client verwarf Aktionen stumm, wenn die Verbindung gerade
+  weg war.** Am Handy stirbt sie genau dann, wenn man kurz woanders
+  hinschaut — die Armut-Abgabe ging so verloren, ohne dass es jemand merkte.
+  Jetzt hält eine kurze Warteschlange sie fest und reicht sie nach dem
+  Wiederverbinden nach.
 
 - **Railway lieferte stundenlang einen alten Stand aus, ohne zu meckern.**
   Ins Feld „Watch Paths" im Dienst war der komplette Inhalt von
