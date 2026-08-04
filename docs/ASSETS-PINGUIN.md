@@ -8,19 +8,31 @@ Bilder.
 
 ## Der Stil — das Entscheidende an dieser Bestellung
 
-**Vorbild ist `pinguin.png`, der Ritter-Pinguin.** Gemalt, plastisch, warm,
-mit weichem Licht und satten Farben — so, wie er auf dem Trophäenweg und als
-Profilbild steht. **Genau dieser Stil ist gemeint, und nur dieser.**
+**Vorbild ist `pinguin.png`, der Ritter-Pinguin — und zwar seine
+Dreidimensionalität.** Er sieht aus wie eine **gerenderte Spielfigur**: runde,
+modellierte Formen mit echtem Volumen, weiche Verläufe über die Wölbung,
+Glanzlichter auf Metall und Augen, weiche Schlagschatten dort, wo ein Teil
+über dem anderen liegt. So, wie Figuren in Clash Royale oder Brawl Stars
+aussehen.
 
-Was jetzt im Kleiderschrank steht, ist ausdrücklich **nicht** der Zielzustand:
-flache Vektorformen, harte Flächen, keine Tiefe. Sie sind ein Platzhalter, der
-maßhaltig sitzt und funktioniert — mehr nicht. Wer die Lieferung beurteilt,
-vergleicht sie mit dem Ritter, nicht mit dem, was gerade zu sehen ist.
+**Das ist der Kern dieser Bestellung.** Was jetzt im Kleiderschrank steht,
+sind flache Vektorformen ohne jede Tiefe — ein Platzhalter, der maßhaltig
+sitzt und sonst nichts. Wer die Lieferung beurteilt, vergleicht sie mit dem
+Ritter, **nicht** mit dem, was gerade zu sehen ist.
 
-Konkret heißt das: modellierte Formen statt Flächen, ein erkennbarer
-Lichteinfall von oben links, weiche Schatten in den Falten, Materialien, die
-man unterscheidet — Wolle ist flauschig, Metall glänzt, Leder ist matt. Kein
-Fotorealismus, kein Comic-Umriss, keine Vektoroptik.
+Konkret:
+
+- **Volumen statt Fläche.** Jede Form ist ein Körper, keine Silhouette. Der
+  Bauch wölbt sich, ein Hut hat eine Innenseite, ein Stiefel eine Sohle.
+- **Ein Lichteinfall von oben links**, durchgehend über alle Stücke. Daraus
+  folgen weiche Verläufe auf der Wölbung und ein sanfter Schatten auf der
+  abgewandten Seite.
+- **Materialien sind unterscheidbar:** Wolle flauschig und matt, Metall mit
+  hartem Glanzlicht, Leder matt mit weichem Schimmer, Glas durchscheinend.
+- **Kein Fotorealismus** — die Figur bleibt stilisiert und freundlich, mit
+  großen Augen und weichen Kanten. Aber eben **dreidimensional stilisiert**,
+  nicht flach.
+- **Kein Comic-Umriss**, keine schwarze Konturlinie, keine Vektoroptik.
 
 **Nichts davon blockiert etwas.** Bis zur Lieferung bleiben die Zeichnungen.
 
@@ -98,9 +110,11 @@ mit Hut, nicht ein Pinguin hinter einer Scheibe.
   Das betrifft besonders den Platz `hand`: Der Becher dort ist **Kakao**.
 
 **Ton und Stil**
-Wie die vorhandenen Hub-Bilder (`weltkarte.webp`, `bg-shop.webp`,
-`pinguin.png`): gemalt, warm, satt, freundlich — Handyspiel, kein
-Fotorealismus, kein Comic-Umriss.
+Wie `pinguin.png` (der Ritter) und die übrigen Hub-Bilder: **dreidimensional
+wirkend**, warm, satt, freundlich — Handyspiel im Stil von Clash Royale, kein
+Fotorealismus, kein Comic-Umriss, keine flachen Vektorformen. Siehe den
+Abschnitt „Der Stil" ganz oben; er ist bei dieser Bestellung das
+Entscheidende.
 
 **Lesbar bei 40 Pixeln.** Der Mini-Pinguin in der Kopfzeile ist 2,6 rem hoch,
 die Shop-Kacheln 2,8 rem. Ein Stück, das erst in Großansicht erkennbar wird,
@@ -115,16 +129,28 @@ Form, klare Silhouette, wenige Farben.
 
 **Wozu:** Die Grundgestalt, auf die alles andere gelegt wird.
 
-**Warum überhaupt:** `pinguin.png` liegt schon im Ordner, ist aber ein **Ritter
-mit Helm, Schwert, Brustpanzer und Umhang** — damit vier der fünf Plätze belegt.
-Ein Hut auf einem Helm sieht aus wie ein Fehler. Der Ritter bleibt, wo er heute
-steht (Trophäenweg, Vorgabe fürs Profilbild); der Kleiderschrank braucht einen
-nackten Pinguin.
+**Warum überhaupt ein neuer:** `pinguin.png` liegt schon im Ordner, ist aber
+ein **Ritter mit Helm, Schwert, Brustpanzer und Umhang** — damit sind vier der
+sechs Plätze schon belegt. Ein Hut auf einem Helm sieht aus wie ein Fehler.
+Der Ritter bleibt, wo er heute steht (Trophäenweg, Vorgabe fürs Profilbild);
+der Kleiderschrank braucht denselben Pinguin **ohne alles**.
+
+**„Derselbe Pinguin" ist wörtlich gemeint.** Es ist dieselbe Figur, nur
+ausgezogen: gleiche Kopfform, gleiche großen runden Augen mit dem hellen
+Glanzpunkt, gleicher orangefarbener Schnabel, gleiche Körperproportionen,
+gleiche Machart. Wer Basis und Ritter nebeneinanderlegt, muss sagen können:
+Das ist derselbe, einmal in Rüstung und einmal ohne. **Nicht** ein zweiter
+Pinguin, der zufällig ähnlich aussieht.
 
 **Motiv:** Aufrecht stehender Pinguin, freundlich, frontal, symmetrisch, **ohne
-jede Kleidung und ohne Gegenstände**. Dunkler Rücken, helle Bauch- und
-Gesichtsmaske, orangefarbener Schnabel und orangefarbene Füße. Beide Flossen
-hängen seitlich am Körper.
+jede Kleidung und ohne Gegenstände** — kein Helm, kein Schwert, kein Schild,
+kein Umhang. Dunkler Rücken, helle Bauch- und Gesichtsmaske, orangefarbener
+Schnabel und orangefarbene Füße. Beide Flossen hängen seitlich am Körper.
+Dreidimensional modelliert wie der Ritter, mit demselben Lichteinfall.
+
+**Kein Hintergrund.** Der Ritter steht auf blauem Grund — der gehört zum
+Profilbild, nicht zur Figur. Hier ist ringsum alles transparent, sonst löscht
+die Fläche beim Stapeln alles darunter.
 
 **Lage:** Genau wie in der Passvorlage. Der Kopfmittelpunkt liegt bei
 (120, 80), die Kalotte endet oben bei y ≈ 26; der Körper bei (120, 150); die
@@ -138,8 +164,10 @@ zwanzig nicht — dann sitzt kein Hut mehr.
 - Die **rechte Flosse** (Betrachter rechts) hält später Dinge. Sie zeigt leicht
   nach vorn, mit einer greifbaren Spitze bei etwa (188, 180).
 
-**Abnahme:** Auf 40 px Höhe verkleinert ist es ein Pinguin und kein dunkler
-Fleck. Auf knallrotem und auf weißem Grund gleich hell, ohne Saum.
+**Abnahme:** Neben `pinguin.png` gelegt — erkennbar dieselbe Figur, gleiche
+Machart, gleiche Tiefe? Auf 40 px Höhe verkleinert ein Pinguin und kein
+dunkler Fleck. Auf knallrotem und auf weißem Grund gleich hell, ohne Saum und
+ohne Hintergrundfläche.
 
 ---
 
