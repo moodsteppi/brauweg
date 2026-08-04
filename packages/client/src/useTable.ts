@@ -4,6 +4,25 @@
  * Der Client haelt keinen eigenen Verlauf: Beim Verbinden schickt der Server
  * die vollstaendige Sicht. Nachrichten mit kleinerer Revisionsnummer sind
  * ueberholt und werden verworfen.
+ *
+ * Die Leitung haelt sich selbst am Leben. Handybrowser kappen die WebSocket,
+ * sobald der Tab in den Hintergrund geht - fuer den Nutzer ist das nur ein
+ * kurzer Blick auf eine Nachricht. Frueher kam er dann auf einen toten Tisch
+ * zurueck: keine neue Karte, kein Zug, nichts. Jetzt gilt:
+ *
+ *   1. Bricht die Leitung unerwartet ab, verbindet der Client von selbst neu -
+ *      mit wachsender Wartezeit, damit ein Serverhuepfer nicht in einen Sturm
+ *      ausartet.
+ *   2. Kommt der Tab zurueck (sichtbar, Fokus, Netz zurueck, Ruecksprung aus
+ *      dem Verlauf), wird sofort abgeglichen. Steht die Leitung noch, kostet
+ *      das nur ein erneutes `join` und bringt die volle Sicht zurueck; ist sie
+ *      still gestorben, meldet ein Wachhund das und baut neu auf.
+ *   3. `reconnect()` macht dasselbe auf Knopfdruck - fuer den Fall, dass doch
+ *      einmal etwas haengt.
+ *
+ * Weil der Server beim `join` ohnehin die ganze Sicht schickt, ist jeder
+ * Wiederaufbau zugleich ein sauberer Abgleich. Der Client muss nichts
+ * zwischenspeichern.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -19,6 +38,9 @@ import {
   moduleVersionFor,
 } from './protocol';
 
+/** Verbindungszustand, feiner aufgeloest als ein bloßes „verbunden ja/nein". */
+export type ConnectionStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
+
 export interface TableConnection<V = GameView> {
   view: ViewMessage<V> | null;
   party: PartyMessage | null;
@@ -26,11 +48,22 @@ export interface TableConnection<V = GameView> {
   table: TableMessage | null;
   error: string | null;
   connected: boolean;
+  /** Fuer Statusanzeige und den „Neu verbinden"-Hinweis. */
+  status: ConnectionStatus;
   send(action: unknown): void;
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
+  /** Von Hand neu verbinden und die volle Sicht neu anfordern. */
+  reconnect(): void;
 }
+
+/** Groesste Wartezeit zwischen zwei automatischen Versuchen. */
+const MAX_BACKOFF_MS = 15_000;
+/** Kommt nach einem Abgleich in dieser Zeit kein Wort, gilt die Leitung als tot. */
+const RESYNC_WATCHDOG_MS = 3_000;
+/** Nicht oefter als so abgleichen - Sicht-/Fokus-Ereignisse feuern oft im Doppel. */
+const RESYNC_THROTTLE_MS = 800;
 
 export function useTable<V = GameView>(
   tableId: string | null,
@@ -40,17 +73,71 @@ export function useTable<V = GameView>(
   const [party, setParty] = useState<PartyMessage | null>(null);
   const [table, setTable] = useState<TableMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [status, setStatus] = useState<ConnectionStatus>('connecting');
+
   const socketRef = useRef<WebSocket | null>(null);
   const revisionRef = useRef(-1);
+  /** Zaehlt bei jedem Aufbau hoch; Rueckläufer alter Sockets werden verworfen. */
+  const genRef = useRef(0);
+  /** Fehlversuche in Folge - bestimmt die Wartezeit. */
+  const attemptRef = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchdogTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastResync = useRef(0);
+  /** Absicht: Unmount oder Tischwechsel. Dann NICHT neu verbinden. */
+  const closingRef = useRef(false);
 
-  useEffect(() => {
+  const clearRetry = (): void => {
+    if (retryTimer.current) {
+      clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+    }
+  };
+  const clearWatchdog = (): void => {
+    if (watchdogTimer.current) {
+      clearTimeout(watchdogTimer.current);
+      watchdogTimer.current = null;
+    }
+  };
+
+  const joinPayload = useCallback(
+    (): string =>
+      JSON.stringify({
+        v: ENVELOPE_VERSION,
+        game: gameId,
+        type: 'join',
+        tableId,
+        moduleVersion: moduleVersionFor(gameId),
+      }),
+    [gameId, tableId],
+  );
+
+  /**
+   * Baut eine frische Verbindung auf. Ein noch offener Socket wird vorher still
+   * gelegt - seine Rueckläufer werden ueber die Generationsnummer verworfen -,
+   * damit nie zwei Leitungen um dieselbe Sicht streiten.
+   */
+  const connect = useCallback((): void => {
     if (!tableId) return;
+    clearRetry();
+    clearWatchdog();
 
-    revisionRef.current = -1;
-    setView(null);
-    setParty(null);
-    setTable(null);
+    const previous = socketRef.current;
+    if (previous) {
+      previous.onopen = null;
+      previous.onmessage = null;
+      previous.onclose = null;
+      previous.onerror = null;
+      try {
+        previous.close();
+      } catch {
+        /* schon zu, egal */
+      }
+      socketRef.current = null;
+    }
+
+    const gen = ++genRef.current;
+    setStatus(attemptRef.current === 0 ? 'connecting' : 'reconnecting');
 
     // Adresse und Unterprotokolle kommen aus der Laufzeit: im Browser
     // dieselbe Herkunft und das Cookie, in der App der Server im Netz und
@@ -59,19 +146,16 @@ export function useTable<V = GameView>(
     socketRef.current = socket;
 
     socket.onopen = () => {
-      setConnected(true);
-      socket.send(
-        JSON.stringify({
-          v: ENVELOPE_VERSION,
-          game: gameId,
-          type: 'join',
-          tableId,
-          moduleVersion: moduleVersionFor(gameId),
-        }),
-      );
+      if (genRef.current !== gen) return;
+      attemptRef.current = 0;
+      setStatus('open');
+      socket.send(joinPayload());
     };
 
     socket.onmessage = (event) => {
+      if (genRef.current !== gen) return;
+      // Ein Lebenszeichen: ein etwaiger Wachhund darf einschlafen.
+      clearWatchdog();
       const message = JSON.parse(event.data as string) as ServerMessage<V>;
       if (message.type === 'error') {
         setError(message.messageKey);
@@ -93,13 +177,132 @@ export function useTable<V = GameView>(
       setView(message);
     };
 
-    socket.onclose = () => setConnected(false);
+    socket.onclose = () => {
+      if (genRef.current !== gen) return;
+      socketRef.current = null;
+      clearWatchdog();
+      if (closingRef.current) {
+        setStatus('closed');
+        return;
+      }
+      // Von selbst neu verbinden, mit wachsender Wartezeit und etwas Zufall,
+      // damit nicht alle Clients im selben Moment zurueckstuermen.
+      setStatus('reconnecting');
+      const delay =
+        Math.min(MAX_BACKOFF_MS, 500 * 2 ** attemptRef.current) +
+        Math.floor(Math.random() * 400);
+      attemptRef.current += 1;
+      retryTimer.current = setTimeout(() => {
+        if (genRef.current === gen) connect();
+      }, delay);
+    };
+
+    socket.onerror = () => {
+      // Ein Fehler zieht ein close nach sich; die Neuverbindung haengt dort.
+    };
+  }, [tableId, joinPayload]);
+
+  /**
+   * Bringt die Sicht auf den neuesten Stand - nach Rueckkehr in den Tab.
+   * Steht die Leitung, genuegt ein erneutes `join`, und ein Wachhund faengt
+   * den Fall ab, dass sie in Wahrheit tot ist. Steht sie nicht, wird sofort
+   * neu verbunden - ohne Wartezeit, denn der Nutzer schaut gerade hin.
+   */
+  const resync = useCallback((): void => {
+    if (!tableId || closingRef.current) return;
+    const socket = socketRef.current;
+    const open = socket !== null && socket.readyState === WebSocket.OPEN;
+
+    if (open) {
+      const now = Date.now();
+      if (now - lastResync.current < RESYNC_THROTTLE_MS) return;
+      lastResync.current = now;
+      try {
+        socket.send(joinPayload());
+      } catch {
+        attemptRef.current = 0;
+        connect();
+        return;
+      }
+      clearWatchdog();
+      watchdogTimer.current = setTimeout(() => {
+        // Kein Lebenszeichen auf den Abgleich: Leitung tot, frisch aufbauen.
+        attemptRef.current = 0;
+        connect();
+      }, RESYNC_WATCHDOG_MS);
+      return;
+    }
+
+    // Nicht offen (geschlossen, im Schließen oder gar keiner): sofort aufbauen.
+    // Nur ein CONNECTING lassen wir in Ruhe - der laeuft schon.
+    if (!socket || socket.readyState !== WebSocket.CONNECTING) {
+      attemptRef.current = 0;
+      connect();
+    }
+  }, [tableId, joinPayload, connect]);
+
+  const reconnect = useCallback((): void => {
+    attemptRef.current = 0;
+    connect();
+  }, [connect]);
+
+  // Auf-/Abbau am Tisch. Wechselt der Tisch, faengt alles von vorne an.
+  useEffect(() => {
+    if (!tableId) return;
+    closingRef.current = false;
+    revisionRef.current = -1;
+    attemptRef.current = 0;
+    setView(null);
+    setParty(null);
+    setTable(null);
+    setError(null);
+    connect();
 
     return () => {
-      socket.close();
-      socketRef.current = null;
+      closingRef.current = true;
+      clearRetry();
+      clearWatchdog();
+      const socket = socketRef.current;
+      if (socket) {
+        socket.onopen = null;
+        socket.onmessage = null;
+        socket.onclose = null;
+        socket.onerror = null;
+        try {
+          socket.close();
+        } catch {
+          /* egal */
+        }
+        socketRef.current = null;
+      }
     };
-  }, [tableId, gameId]);
+  }, [tableId, connect]);
+
+  // Rueckkehr in den Tab. Am Handy ist das der eigentliche Ausloeser: Sicht
+  // zurueck, Fenster im Fokus, Netz wieder da, oder ein Ruecksprung aus dem
+  // Verlauf (pageshow - iOS holt die Seite aus dem Cache, ganz ohne Neuladen).
+  useEffect(() => {
+    if (!tableId) return;
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') resync();
+    };
+    const onPageShow = (): void => resync();
+    const onFocus = (): void => resync();
+    const onOnline = (): void => {
+      attemptRef.current = 0;
+      resync();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [tableId, resync]);
 
   const send = useCallback(
     (action: unknown) => {
@@ -130,7 +333,18 @@ export function useTable<V = GameView>(
   const addBot = useCallback((seat: number) => command('addBot', seat), [command]);
   const removeBot = useCallback((seat: number) => command('removeBot', seat), [command]);
 
-  return { view, party, table, error, connected, send, addBot, removeBot };
+  return {
+    view,
+    party,
+    table,
+    error,
+    connected: status === 'open',
+    status,
+    send,
+    addBot,
+    removeBot,
+    reconnect,
+  };
 }
 
 /** Restzeit des Zugtimers in Sekunden, oder null wenn keiner laeuft. */

@@ -41,6 +41,24 @@ export interface PlayedCard {
   card: Card;
 }
 
+export interface RoundSpecialPoint {
+  kind: 'fuchs' | 'karlchen' | 'doppelkopf' | 'charlie' | 'herzdurchlauf';
+  party: 're' | 'kontra';
+  trickIndex: number;
+}
+
+/** Abrechnung einer Doppelkopf-Runde (kommt aus der Engine, wird nur gezeigt). */
+export interface RoundResult {
+  rePoints: number;
+  kontraPoints: number;
+  winner: 're' | 'kontra' | null;
+  value: number;
+  specials: RoundSpecialPoint[];
+  scores: Record<number, number>;
+  isSolo: boolean;
+  soloSeat: number | null;
+}
+
 export interface RoundView {
   seat: number;
   phase: string;
@@ -74,7 +92,7 @@ export interface RoundView {
   /** Gewonnene Stiche je Sitz, immer gefuellt. */
   trickCounts?: Record<number, number>;
   pendingPflichtansage: { seat: number; trickPoints: number; canDecline: boolean } | null;
-  result: unknown;
+  result: RoundResult | null;
   isMyTurn: boolean;
   armut: { role: string | null; awaiting: string | null; handoverSize: number };
 }
