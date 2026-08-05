@@ -52,6 +52,27 @@ export function Tafel({
 }
 
 /**
+ * Das gemalte Banner eines Spiels.
+ *
+ * Zwei Bildschirme zeigen dieselbe Auswahl: der Themen-Tab („für welches
+ * Spiel stelle ich das Aussehen ein?") und die Spielauswahl unter „Spielen".
+ * Beide zeigen dieselben Bilder — deshalb steht die Zuordnung hier und nicht
+ * zweimal im Quelltext. Kommt ein Banner dazu, wird es an EINER Stelle
+ * eingetragen.
+ *
+ * Geliefert sind bisher Doppelkopf und Zauberer (`docs/ASSETS-SPIELWAHL.md`),
+ * die uebrigen bekommen das gemeinsame „Bald"-Banner. Das ist kein Notbehelf,
+ * sondern die Regel aus CLAUDE.md: Ein `<img>` auf eine Datei, die es noch
+ * nicht gibt, ist ein weisser Kasten — und der sieht nach Fehler aus, wo ein
+ * erkennbarer Platzhalter nach Absicht aussieht.
+ */
+const GEMALTE_BANNER = new Set(['doppelkopf', 'wizard']);
+
+export function spielBanner(gameId: string): string {
+  return `/hub/spielwahl-${GEMALTE_BANNER.has(gameId) ? gameId : 'bald'}.webp`;
+}
+
+/**
  * Edelstein — das Zeichen der zweiten Waehrung.
  *
  * Gezeichnet und nicht geladen, weil es noch kein Bild dafuer gibt: Für die

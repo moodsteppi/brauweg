@@ -131,3 +131,10 @@ Wirtschaftsmodell.
 - **Kein `<img>` auf eine Datei, die es noch nicht gibt.** Lieber ein Zeichen
   oder gar nichts: Ein weißer Kasten sieht nach Fehler aus, ein Notenzeichen
   nach Absicht. Beim Clan-Krieg ging das einmal fast so live.
+- **Bei `border-image` zählt nicht das Bild, sondern wo das Motiv darin
+  liegt.** Die drei Knopfplatten sind alle 512 × 160, das Motiv belegt aber
+  92 % (Holz), 77 % (Rot) und 63 % (Gold) der Breite. Mit demselben Randmaß
+  fällt die Luft in die gestreckte Mitte: Der Knopf sieht schmaler aus als
+  seine Nachbarn, obwohl alle `width: 100%` haben, und die Schrift steht über
+  die Platte hinaus. Gemessen wird der Alphakanal auf der Mittelzeile, nicht
+  die Dateigröße. Bestellung und Sollmaße: `docs/ASSETS-KNOEPFE.md`.

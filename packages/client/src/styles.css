@@ -1246,7 +1246,17 @@ td {
 }
 
 /* =========================================================================
-   Spielauswahl — Vollbild mit einem Bild je Spiel
+   Spielauswahl — derselbe Bau wie der Themen-Tab.
+
+   Vorher: lila Verlauf, gezeichnete SVG-Stillleben, gruene Spielen-Pille.
+   Der Themen-Tab beantwortet dieselbe Frage ("welches Spiel?") mit gemalten
+   Bannern auf einer Holztafel in einer Szene — zwei Antworten, zwei
+   Gestaltungen, und dazwischen ein Tab-Wechsel.
+
+   Jetzt teilen sich beide die Bausteine: `.hub-tafel`, `.hub-themenwahl`,
+   `.hub-themenspiel`. Hier stehen nur noch die drei Dinge, die die
+   Spielauswahl eigen hat: Sie ist ein Vollbild ueber dem Hub, sie traegt ihre
+   Szene selbst, und sie hat den Spielen-Knopf.
    ========================================================================= */
 
 .spielwahl {
@@ -1257,22 +1267,46 @@ td {
   z-index: 130;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, rgba(16, 10, 40, 0.98), rgba(22, 18, 54, 0.98));
+  /* Derselbe Ton wie .hub-tab-szene: Er traegt die eine Sekunde, bis das
+     Szenenbild da ist, und er faerbt die Raender, falls es nicht passt. */
+  background: #3a2a18;
   padding-top: env(safe-area-inset-top);
   animation: doko-rise 0.2s ease;
+  overflow: hidden;
 }
 
+/* Als Bild und nicht als CSS-Hintergrund — wie in `HubSzene`: `object-fit`
+   fuellt jedes Seitenverhaeltnis, ohne die Szene zu stauchen. */
+.spielwahl-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Kopf und Rolle liegen ueber dem Bild. Ohne `position` waeren sie darunter
+   und die Szene deckte den ganzen Bildschirm ab. */
 .spielwahl-kopf {
+  position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.8rem 1rem 0.4rem;
+  padding: 0.7rem 0.8rem 0.35rem;
 }
 
 .spielwahl-kopf h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  color: #ffe08a;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.65);
 }
 
 .spielwahl-zu {
@@ -1283,50 +1317,29 @@ td {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
+  background: rgba(10, 16, 22, 0.6);
+  border: 1px solid rgba(255, 220, 120, 0.35);
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text);
+  color: #ffe9bd;
 }
 
 .spielwahl-rolle {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.3rem 0.8rem calc(1rem + env(safe-area-inset-bottom));
+  gap: 0.8rem;
+  padding: 0.2rem 0.55rem calc(1rem + env(safe-area-inset-bottom));
 }
 
-.spielwahl-karte {
-  position: relative;
-  border-radius: 0.9rem;
-  overflow: hidden;
-  border: 2px solid rgba(166, 120, 242, 0.55);
-  background: #241a55;
-  padding: 0;
-  text-align: left;
-  flex: 0 0 auto;
-}
-
-.spielwahl-karte.is-offen {
-  border-color: var(--gold);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-}
-
-.spielwahl-karte svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.spielwahl-karte.is-zu svg {
-  filter: saturate(0.55) brightness(0.75);
-}
-
+/* Die Bildflaeche eines Bald-Spiels ist der Knopf. Kein eigenes Aussehen -
+   das Banner darunter ist das Aussehen. */
 .spielwahl-flaeche {
   display: block;
   width: 100%;
@@ -1334,55 +1347,60 @@ td {
   border: none;
   background: none;
   text-align: left;
+  cursor: pointer;
 }
 
-.spielwahl-titel {
-  position: absolute;
-  left: 0.75rem;
-  bottom: 0.55rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  align-items: flex-start;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  pointer-events: none;
-}
+/*
+  Der Spielen-Knopf: dieselbe Goldplatte wie der Hauptknopf im Menue.
 
-.spielwahl-titel strong {
-  font-size: 1.05rem;
-  line-height: 1.15;
-}
-
-.spielwahl-titel span {
-  font-size: 0.72rem;
-  opacity: 0.9;
-}
-
+  Er war gruen — als Einziges auf einem Bildschirm aus Holz und Messing, und
+  ausgerechnet an der Stelle, auf die man tippt. Jetzt ist es dasselbe Bild
+  wie ueberall sonst, wo es weitergeht, nur kleiner. `pointer-events: none`
+  bleibt: Der Knopf ist Beschriftung, gedrueckt wird die ganze Karte — sonst
+  gaebe es einen toten Rand um ihn herum.
+*/
 .spielwahl-spielen {
   position: absolute;
-  right: 0.6rem;
-  bottom: 0.55rem;
-  font-size: 0.85rem;
+  right: 0.5rem;
+  bottom: 0.45rem;
+  z-index: 2;
+  font-size: 0.82rem;
   font-weight: 800;
-  padding: 0.4rem 1rem;
-  border-radius: 0.6rem;
-  background: linear-gradient(180deg, #62b96b, #337a42);
-  color: #f2fff0;
-  box-shadow: 0 3px 0 #1d4f28;
+  padding: 0 0.5rem;
+  border: 9px solid transparent;
+  /* Randmass 30 wie beim Hauptknopf — das Goldbild ist auf die Platte
+     beschnitten und schmaler als Holz und Rot (siehe dort). */
+  border-image: url(/hub/menue-knopf-gold.webp) 30 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
   pointer-events: none;
 }
 
+/* Abstimmen ist eine Nebenhandlung und bekommt deshalb Holz, nicht Gold. */
 .spielwahl-stimme {
   position: absolute;
-  right: 0.6rem;
-  bottom: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.32rem 0.7rem;
-  border-radius: 0.55rem;
-  background: rgba(255, 255, 255, 0.14);
-  border: none;
-  color: #e8e2f8;
+  right: 0.5rem;
+  bottom: 0.45rem;
+  z-index: 2;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0 0.4rem;
+  border: 8px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #f4e9d4;
+  cursor: pointer;
+}
+.spielwahl-stimme:active {
+  border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
+  transform: translateY(1px);
+}
+.spielwahl-stimme:disabled {
+  filter: saturate(0.5) brightness(0.75);
+  cursor: default;
 }
 
 /* Ladezustand */
@@ -2651,13 +2669,41 @@ td {
   color: var(--gold);
   border-color: rgba(226, 182, 79, 0.55);
 }
+/*
+  Die Tab-Leiste: Holz und Messing statt Flachblau.
+
+  Sie war die letzte blaue Flaeche im Hub. Darueber liegen gemalte Szenen,
+  Holztafeln mit Messingnieten und geschnitzte Knoepfe — und darunter eine
+  flache, knallblaue Leiste. Zwei Gestaltungen auf einem Bildschirm lesen
+  sich wie zwei Programme, und die Naht lag ausgerechnet an der Stelle, an
+  der das Auge ohnehin haengenbleibt: der Kante zwischen Bild und Leiste.
+
+  Aufgebaut wie eine Holzleiste unter dem Bild und nicht wie eine Flaeche
+  mit einer Linie obendrauf — deshalb vier Schichten im `box-shadow` statt
+  eines `border-top`:
+
+    innen oben  Lichtkante — die Oberkante des Bretts faengt Licht
+    innen weich warmer Schein, damit das Holz nicht wie Pappe wirkt
+    aussen hart die Fuge zur Szene: erst Schatten, dann Brett
+    aussen weich das Brett wirft Schatten auf die Szene darueber
+
+  Ohne die harte Fuge stossen Bild und Leiste ohne Uebergang aneinander, und
+  genau das sah aus, als waeren zwei Bauteile zusammengesteckt.
+*/
 .front--hub .front-tabs {
-  background: linear-gradient(180deg, #1e4f8c 0%, #163a68 100%);
-  border-top: 2px solid rgba(255, 210, 90, 0.5);
-  box-shadow: 0 -8px 24px rgba(10, 30, 70, 0.35);
+  background: linear-gradient(180deg, #6b431f 0%, #4a2c12 45%, #2c1a0a 100%);
+  border-top: none;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 214, 138, 0.5),
+    inset 0 7px 10px rgba(255, 196, 104, 0.1),
+    0 -2px 0 rgba(24, 14, 5, 0.95),
+    0 -10px 22px rgba(12, 6, 2, 0.45);
 }
+/* Warmes Elfenbein statt kuehlem Blaugrau: Auf Holz sieht ein blaustichiges
+   Grau schmutzig aus, nicht ruhig. */
 .front--hub .front-tab {
-  color: rgba(230, 242, 255, 0.78);
+  color: rgba(255, 236, 198, 0.74);
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.8);
 }
 .front--hub .front-tab {
   padding: 0.35rem 0.15rem 0.28rem;
@@ -2674,15 +2720,25 @@ td {
   width: 1.85rem;
   height: 1.85rem;
 }
+/* Der offene Tab ist ein eingelassenes Feld im Brett: heller als das Holz,
+   mit Messingfassung. */
 .front--hub .front-tab.is-active {
-  color: #fff;
-  background: linear-gradient(180deg, rgba(78, 184, 255, 0.45) 0%, rgba(42, 127, 212, 0.55) 100%);
-  box-shadow: inset 0 0 0 2px rgba(255, 224, 138, 0.85);
+  color: #fff3d4;
+  background: linear-gradient(180deg, rgba(176, 116, 46, 0.9) 0%, rgba(116, 71, 25, 0.92) 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 214, 138, 0.85);
   border-radius: 0.75rem;
 }
+/*
+  "Spielen" ist der Weg zum Spiel und darf der einzige goldene Punkt der
+  Leiste sein — dieselbe Platte wie der Hauptknopf, damit "hier geht es
+  weiter" ueberall gleich aussieht. Auf hellem Gold muss die Schrift dunkel
+  werden, sonst verschwindet sie.
+*/
 .front--hub .front-tab--spielen.is-active {
-  background: linear-gradient(180deg, #4eb8ff 0%, #2a7fd4 100%);
-  box-shadow: inset 0 0 0 2px #ffe08a, 0 0 16px rgba(80, 200, 255, 0.45);
+  background: linear-gradient(180deg, #f2c85f 0%, #b8801f 100%);
+  color: #38220a;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.55);
+  box-shadow: inset 0 0 0 2px #ffeab4, 0 0 16px rgba(255, 190, 80, 0.4);
 }
 
 /* Breiter Browser: die Handyflaeche hebt sich vom Grund ab. */
@@ -5215,11 +5271,42 @@ main.auth > .muted {
   box-shadow: none;
   color: #f4e9d4;
 }
+/*
+  Der Hauptknopf heisst `--gold` und war gemalt gruen.
+
+  Das war der letzte Fremdkoerper im Hub: Holz, Messing und Gold ueberall,
+  und mittendrin eine gruene Tafel. Der Knopf davor (vor den gemalten
+  Bildern) war ein Goldverlauf mit dunkler Schrift — die Absicht stand also
+  im Klassennamen, nur das Bild kam gruen.
+
+  `menue-knopf-gold.webp` ist dasselbe Bild mit vergoldetem Feld: Nur was im
+  Gruenen lag, wurde umgefaerbt, der Messingrahmen und die Eckbeschlaege
+  blieben unangetastet (`~/bildwerkzeug/vergolden.mjs`). Das ist ein
+  Zwischenstand; die Bestellung fuer eine richtig gemalte Fassung steht in
+  docs/ASSETS-SPIELAUSWAHL.md.
+
+  Die Schrift muss dabei mitwandern: Auf hellem Gold ist Creme nicht mehr
+  lesbar. Dunkelbraun mit hellem Lichtsaum liest sich wie graviert.
+*/
 .hub-knopf--a-gold,
 .hub-knopf--gold {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
-  color: #eafaf0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
+  /*
+    Eigenes Randmass, weil das Bild schmaler ist als die anderen.
+
+    Gemessen: Die gemalte Platte lag im gruenen Bild nur zwischen x=93 und
+    x=417 von 512 — der Rest war Luft. Beim Holzknopf sind es 21..490. Mit
+    demselben Randmass von 40 fiel der ganze Freiraum in die gestreckte
+    Mitte, und die Platte deckte nur noch zwei Drittel des Knopfes ab: Die
+    Schrift stand rechts und links darueber hinaus.
+
+    Das Bild ist jetzt auf die Platte beschnitten (325x160). Beschneiden
+    aendert nur die Luft, nicht den Rahmen — der bleibt rund 30 px dick, und
+    genau das steht hier.
+  */
+  border-image-slice: 30 fill;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
 }
 .hub-knopf--a-raus,
 .hub-knopf--raus {
@@ -5389,9 +5476,10 @@ main.auth > .muted {
   cursor: pointer;
 }
 .auth button.primary {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
-  color: #eafaf0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
+  border-image-slice: 30 fill;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
 }
 .auth button:active {
   transform: translateY(1px) scale(0.985);
@@ -5684,7 +5772,10 @@ main.auth > .muted {
   border-radius: 0.7rem;
   overflow: hidden;
   border: 2px solid rgba(255, 220, 120, 0.3);
-  background: #0c2046;
+  /* Warmes Holzbraun statt Marineblau: Man sieht es nur, solange das Banner
+     laedt — aber genau dann blitzte auf einem Holzbildschirm ein blauer
+     Kasten auf. */
+  background: #2a1a0c;
   color: var(--text);
   font: inherit;
   text-align: left;
@@ -5747,20 +5838,15 @@ main.auth > .muted {
   cursor: pointer;
 }
 
-/* Abschnitt "Modus" in der Spielauswahl. */
-.spielwahl-abschnitt {
-  margin: 1.2rem 0 0.1rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 233, 189, 0.7);
-}
+/* Erklaerung unter dem Mehrkampf-Banner. Die Ueberschrift dazu ist jetzt der
+   Tafelkopf ("Modus") — die eigene Zwischenzeile ist damit weggefallen. */
 .spielwahl-modus-text {
-  margin: 0;
-  padding: 0.5rem 0.7rem 0.7rem;
-  font-size: 0.82rem;
+  margin: 0.15rem 0 0;
+  padding: 0 0.15rem;
+  font-size: 0.8rem;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 240, 210, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 /* Nicht moegliche Vorbehalte: sichtbar, aber erkennbar tot, mit Grund. */
@@ -8394,9 +8480,10 @@ main.auth > .muted {
   cursor: pointer;
 }
 .profil-kachel.is-gold {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
-  color: #eafaf0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
+  border-image-slice: 30 fill;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
 }
 .profil-kachel img {
   width: 1.6rem;
@@ -8440,6 +8527,38 @@ main.auth > .muted {
 .profil-konto .hub-konto-loeschen {
   align-self: center;
   margin-top: 0.1rem;
+}
+
+/*
+  Lesbarkeit von "Konto loeschen" und den Rechtstexten auf dem Holz.
+
+  Beide erbten `var(--muted)` — ein kuehles Blaugrau (#8fa3ad). Das stammt
+  aus der flachen dunklen Grundgestaltung, in der es richtig ist, und stand
+  hier auf dunkelbraunem Holz: rechnerisch gerade noch im Rahmen, in der
+  Hand aber ein grauer Fleck auf braunem Grund, der so aussieht, als waere
+  er ausgegraut und gar nicht antippbar.
+
+  Es bleibt bewusst Text und wird kein Knopf. Der Grund steht weiter oben:
+  Loeschen ist unumkehrbar und soll sich nicht anfuehlen wie "Abmelden" eine
+  Zeile darueber. Gefixt wird der Kontrast, nicht das Gewicht — warmes Rot
+  statt kaltem Grau, dazu ein dunkler Saum, weil das Holz nicht ueberall
+  gleich hell ist.
+*/
+.hub-tab-inhalt .hub-konto-loeschen {
+  color: #f0a08f;
+  text-shadow: 0 1px 2px rgba(20, 8, 2, 0.85);
+}
+.hub-tab-inhalt .hub-konto-loeschen:hover,
+.hub-tab-inhalt .hub-konto-loeschen:active {
+  color: #ff8f7a;
+}
+.hub-tab-inhalt .rechtliches,
+.hub-tab-inhalt .rechtliches a {
+  color: rgba(255, 232, 196, 0.82);
+  text-shadow: 0 1px 2px rgba(20, 8, 2, 0.8);
+}
+.hub-tab-inhalt .rechtliches a:hover {
+  color: #ffe9bd;
 }
 
 /* —— 3D-Avatar-Ausrichter (/?dev=avatar) —— */
@@ -8636,12 +8755,12 @@ main.auth > .muted {
   border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
   transform: translateY(1px);
 }
-/* Gruen und Rot behalten beim Druecken ihre Farbe - ein gruener Knopf, der
+/* Gold und Rot behalten beim Druecken ihre Farbe - ein goldener Knopf, der
    beim Antippen braun wird, sieht nach Fehler aus. */
 .hub-knopf--a-gold:active,
 .hub-knopf--gold:active,
 .profil-kachel.is-gold:active {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
   filter: brightness(0.88);
 }
 .hub-knopf--a-raus:active,

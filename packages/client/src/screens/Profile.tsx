@@ -127,8 +127,13 @@ export function Profile({
           ))
         )}
 
+        {/* „zählen alles" war eine Verkürzung, die niemand so sagt — und sie
+            liess offen, was denn alles. Gemeint ist der Gegensatz zur Zeile
+            davor: Trophäen sind an Tische ohne Bots gebunden, die Zählung von
+            Partien und Siegen ist es nicht. */}
         <p className="hub-statistik-hinweis">
-          Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.
+          Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege werden
+          überall gezählt, auch gegen Bots.
         </p>
 
         <FriendButton
