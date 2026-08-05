@@ -29,7 +29,12 @@ import {
   tableWithSeats,
   touch,
 } from '../tables/service.js';
-import { applyDelta, awardForParty, type Placement } from '../trophies.js';
+import {
+  PLACEMENT_TROPHIES,
+  applyDelta,
+  awardForParty,
+  type Placement,
+} from '../trophies.js';
 import { xpFuerPartie } from '../level.js';
 import { recordPartyResult } from '../clubs/war.js';
 import { fortschreiben } from '../quests.js';
@@ -824,7 +829,11 @@ export class PartyRuntime {
     party: LiveParty,
     standings: readonly PartyStanding[],
   ): Promise<void> {
-    const karten = party.module.xpBasis?.(party.state) ?? {};
+    // Bei Feldherr ist xpBasis die Partiedauer — als "gelegte Karten"
+    // gezaehlt fuellte jedes Gefecht die Kartenaufgabe. Das Modul sagt
+    // selbst, ob seine Basis Karten zaehlt (GameMeta.xpBasisZaehltKarten).
+    const zaehltKarten = party.module.meta.xpBasisZaehltKarten ?? true;
+    const karten = zaehltKarten ? (party.module.xpBasis?.(party.state) ?? {}) : {};
 
     for (const standing of standings) {
       const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
@@ -855,6 +864,32 @@ export class PartyRuntime {
       place: standing.place,
       left: standing.left || party.leftSeats.has(standing.seat),
     }));
+
+    /**
+     * Spiele ohne Trophaeenverteilung (Feldherr: zwei Sitze, bewusst keine
+     * Rangliste — Entscheidung in docs/FELDHERR-PLAN.md) bekommen trotzdem
+     * ihre Erfahrung aus xpBasis. Ohne diesen Zweig warf awardForParty fuer
+     * zwei Sitze eine Ausnahme und riss die GANZE Schlussabrechnung ab:
+     * keine Stats, keine Tagesaufgaben, keine Erfahrung — still, denn der
+     * Fehler landete als actionRejected beim meldenden Client.
+     */
+    if (!PLACEMENT_TROPHIES[placements.length]) {
+      for (const standing of standings) {
+        const accountId = party.seats.find(
+          (seat) => seat.index === standing.seat,
+        )?.accountId;
+        if (!accountId) continue;
+        const basis = party.module.xpBasis?.(party.state)?.[standing.seat] ?? 0;
+        const xp = xpFuerPartie(basis, 0);
+        if (xp > 0) {
+          await this.db
+            .update(s.account)
+            .set({ xp: sql`${s.account.xp} + ${xp}` })
+            .where(eq(s.account.id, accountId));
+        }
+      }
+      return;
+    }
 
     const booked: { seat: number; delta: number; reason: string }[] = [];
 
