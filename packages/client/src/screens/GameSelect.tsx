@@ -350,27 +350,21 @@ export function GameSelect({
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
           {/*
-            Die Figur im Kopfband — dieselbe, die im Profil steht, nur klein.
-            Sie ist auf jedem Tab zu sehen: Eine Anpassung, die man nie sieht,
-            ist keine.
+            Oben links das Profilbild. Die Figur steht schon vorne auf dem
+            Pfad — sie ein zweites Mal ins Kopfband zu setzen war dieselbe
+            Figur zweimal. Ist ein Bild hochgeladen, steht es hier.
 
-            **Das kostet einen zweiten WebGL-Bereich**, auf dem Profil-Tab
-            also zwei gleichzeitig. Vertretbar, weil beide winzig sind und
-            `three` ohnehin nur einmal geladen wird — aber wer hier einen
-            dritten ergaenzt, sollte vorher messen.
-
-            Bis das Modell da ist, steht der gemalte Pinguin. Ein leerer Kasten
-            im Kopfband waere auf jedem Bildschirm zu sehen.
-          */}
-          <span className="front-avatar front-avatar--3d">
-            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={2.6} />}>
-              <Avatar3D
-                muetze={false}
-                bemalung={me.figur ?? LEERE_BEMALUNG}
-                drehbar={false}
-              />
-            </Suspense>
-          </span>
+            Ohne hochgeladenes Bild der gemalte Pinguin als Rueckfall, NICHT
+            der 3D-Avatar: Das Kopfband ist auf jedem Tab zu sehen, ein zweiter
+            WebGL-Bereich nur fuer den Rueckfall waere teuer — und der 3D-Avatar
+            braucht WASM, das die Content-Security-Policy am ausgelieferten
+            Stand blockiert (scriptSrc 'self', ohne 'wasm-unsafe-eval'). Der
+            gemalte Pinguin laedt nichts nach und kann nicht scheitern. */}
+          {me.avatarUrl ? (
+            <img className="front-avatar" src={me.avatarUrl} alt="" draggable={false} />
+          ) : (
+            <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
+          )}
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
             {/* Der Balken zeigt den Fortschritt IN der Stufe, nicht die
