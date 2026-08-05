@@ -34,6 +34,7 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
         <h2>Einstellungen</h2>
 
         <Regler
+          symbol="/hub/icon-einstellung-sounds.webp"
           name="Sounds"
           hinweis="Karten, Knöpfe, Abrechnung"
           wert={werte.sounds}
@@ -44,6 +45,7 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
         />
 
         <Regler
+          symbol="/hub/icon-einstellung-musik.webp"
           name="Musik"
           hinweis="Im Menü und am Spieltisch"
           wert={werte.musik}
@@ -85,12 +87,15 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
  * keine Einstellung, die man am nächsten Tag wiederfindet.
  */
 function Regler({
+  symbol,
   name,
   hinweis,
   wert,
   onChange,
   onFertig,
 }: {
+  /** Gemaltes Symbol vor dem Namen — Lautsprecher bzw. Note. */
+  symbol?: string;
   name: string;
   hinweis: string;
   wert: number;
@@ -99,6 +104,9 @@ function Regler({
 }): React.JSX.Element {
   return (
     <div className="einstellungen-zeile">
+      {symbol && (
+        <img className="einstellungen-symbol" src={symbol} alt="" aria-hidden="true" />
+      )}
       <div className="einstellungen-text">
         <strong>{name}</strong>
         <span className="muted">{hinweis}</span>

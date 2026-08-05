@@ -3157,9 +3157,6 @@ td {
   text-align: center;
   padding: 0.65rem 0.5rem 0.5rem;
   border-radius: 0.9rem;
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 2px solid rgba(255, 220, 120, 0.65);
-  box-shadow: 0 4px 0 #123570;
 }
 .hub-stat-hero > img {
   width: 2.6rem;
@@ -3198,9 +3195,6 @@ td {
   padding: 0.45rem 0.25rem 0.4rem;
   border-radius: 0.7rem;
   text-align: center;
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 1.5px solid rgba(255, 220, 120, 0.5);
-  box-shadow: 0 3px 0 #123570;
 }
 .hub-stat-kachel img {
   width: 1.35rem;
@@ -3225,9 +3219,6 @@ td {
   gap: 0.45rem;
   padding: 0.45rem 0.5rem;
   border-radius: 0.7rem;
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 1.5px solid rgba(255, 220, 120, 0.45);
-  box-shadow: 0 3px 0 #123570;
 }
 .hub-stat-spiel > img {
   width: 1.55rem;
@@ -3283,9 +3274,6 @@ td {
   margin-top: 0.1rem;
 }
 .hub-knopf--a {
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 1.5px solid rgba(255, 220, 120, 0.5);
-  box-shadow: 0 3px 0 #123570;
   color: #fff;
 }
 .hub-knopf--a:active {
@@ -8695,25 +8683,25 @@ main.auth > .muted {
 }
 
 /* =========================================================================
-   Die 3D-Figur im Profil.
+   Die 3D-Figur.
 
-   Sie steht da, wo frueher der gemalte Pinguin als Daumennagel sass — nur
-   deutlich groesser: Eine Figur, die man drehen und anmalen kann, will
-   gesehen werden. DESIGN.md sagt das schon fuer Blaetter und Szenerien:
-   Was am Ende wirkt, wird in seiner Groesse gezeigt, nicht als Miniatur.
+   Zwei Groessen: gross in ihrer eigenen Tafel im Profil, winzig im Kopfband
+   auf jedem Tab. Beide Male ein WebGL-Bereich, und der hat KEINE eigene
+   Inhaltsgroesse — er fuellt, was man ihm gibt, und wird sonst null hoch.
+   Deshalb steht hier ueberall eine feste Hoehe.
+
+   Genau daran ist die erste Fassung gescheitert: Die Figur stand neben dem
+   Text in derselben Tafel, hatte 11 rem Hoehe, und weil die Tafel Ueberstand
+   durchlaesst (noetig fuer die Messingnieten), ragte sie quer ueber das
+   Namensschild darueber.
    ========================================================================= */
-
-.hub-figur {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
 
 .hub-figur-buehne {
   position: relative;
-  flex: 0 0 auto;
-  width: 9.5rem;
-  height: 11rem;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 13rem;
   padding: 0;
   border: 10px solid transparent;
   border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
@@ -8721,8 +8709,6 @@ main.auth > .muted {
   background: none;
   cursor: pointer;
   overflow: hidden;
-  /* Ohne das faengt die Seite jedes Wischen ab. Gedreht wird hier zwar
-     nicht, aber ein Tipp soll auch am Handy sicher ankommen. */
   touch-action: manipulation;
 }
 .hub-figur-buehne canvas {
@@ -8732,20 +8718,36 @@ main.auth > .muted {
 }
 /* Der gemalte Pinguin als Rueckfall, solange three noch laedt. */
 .hub-figur-buehne > .pinguin {
-  margin: auto;
+  display: block;
+  margin: 0 auto;
 }
-.hub-figur-buehne:active {
-  transform: scale(0.985);
-}
+.hub-figur-buehne:active { transform: scale(0.99); }
 .hub-figur-buehne .hub-profilbild-stift {
   position: absolute;
-  right: 0.2rem;
-  bottom: 0.2rem;
+  right: 0.3rem;
+  bottom: 0.3rem;
 }
 
-.hub-figur .hub-garderobe-text {
-  flex: 1;
-  min-width: 0;
+.hub-figur-hinweis {
+  margin: 0.35rem 0 0;
+  text-align: center;
+  font-size: 0.72rem;
+}
+
+/* Im Kopfband: so gross wie der alte gemalte Mini-Pinguin, damit die Zeile
+   ihre Hoehe behaelt. */
+.front-avatar--3d {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  overflow: hidden;
+}
+.front-avatar--3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* =========================================================================
@@ -8799,4 +8801,138 @@ main.auth > .muted {
 
 .werkstatt-muetze {
   margin-top: 0.2rem;
+}
+
+/* =========================================================================
+   Trophaeen, Einstellungen, Benachrichtigungen — gemaltes Holz statt Blau.
+
+   Der ganze Block hier ersetzt die blauen Verlaeufe (#3a7fd4 → #2458a8), die
+   den Profil-Tab bisher getragen haben. DESIGN.md kennt Blau als Farbe fuer
+   Level und Freunde, nicht als Flaeche fuer halbe Bildschirme - und neben
+   gemaltem Holz sah es aus wie aus einer anderen App.
+
+   Randmasse aus docs/ASSETS-PROFIL-TROPHAEEN.md: Hero 48, Kachel 40,
+   Spielzeile 32, Benachrichtigungszeile 32, Reglertrog 24.
+   ========================================================================= */
+
+.hub-stat-hero {
+  background: none;
+  border: 16px solid transparent;
+  border-image: url(/hub/stat-hero-grund.webp) 48 fill / 1 / 0 stretch;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.5rem 0.5rem 0.45rem;
+}
+/* Der grosse Pokal ersetzt das alte pokal.png: eigens fuer diese Groesse
+   gemalt, statt ein Zeilensymbol hochzuskalieren. */
+.hub-stat-hero > img {
+  width: 3.2rem;
+  height: 3.2rem;
+}
+
+.hub-stat-kachel {
+  background: none;
+  border: 13px solid transparent;
+  border-image: url(/hub/stat-kachel-grund.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  box-shadow: none;
+}
+.hub-stat-kachel img {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.hub-stat-spiel {
+  background: none;
+  border: 11px solid transparent;
+  border-image: url(/hub/stat-spiel-grund.webp) 32 fill / 1 / 0 stretch;
+  border-radius: 0;
+  box-shadow: none;
+}
+.hub-stat-spiel > img {
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+/* Die Regler in den Einstellungen: eingelassene Rinne, Messingknopf. Beides
+   gemalt statt aus Verlauf und Schatten gebaut. */
+.einstellungen-regler input[type='range']::-webkit-slider-runnable-track {
+  height: 14px;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-trog.webp) center / 100% 100% no-repeat;
+  box-shadow: none;
+}
+.einstellungen-regler input[type='range']::-moz-range-track {
+  height: 14px;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-trog.webp) center / 100% 100% no-repeat;
+  box-shadow: none;
+}
+.einstellungen-regler input[type='range']::-webkit-slider-thumb {
+  width: 26px;
+  height: 26px;
+  margin-top: -6px;
+  border: none;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-knopf.webp) center / contain no-repeat;
+  box-shadow: none;
+}
+.einstellungen-regler input[type='range']::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-knopf.webp) center / contain no-repeat;
+  box-shadow: none;
+}
+
+/* Symbol vor dem Namen in der Einstellungszeile — Lautsprecher und Note. */
+.einstellungen-text {
+  position: relative;
+}
+.einstellungen-zeile > img.einstellungen-symbol {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+/* Die Truhe in 3D. Feste Groesse, weil ein WebGL-Bereich keine eigene
+   Inhaltsgroesse hat — dieselbe Regel wie bei der Figur. Der farbige Grund
+   traegt die Zeile, solange three noch laedt: In einer Liste mit fuenf
+   Truhen soll nichts zappeln. */
+.truhe-bild--3d {
+  display: block;
+  width: 4.2rem;
+  height: 4.2rem;
+  flex: 0 0 auto;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.truhe-bild--3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+.truhe-bild--holz    { background: rgba(138, 106, 60, 0.18); }
+.truhe-bild--bronze  { background: rgba(181, 118, 60, 0.18); }
+.truhe-bild--silber  { background: rgba(174, 188, 196, 0.18); }
+.truhe-bild--gold    { background: rgba(226, 182, 79, 0.18); }
+.truhe-bild--diamant { background: rgba(126, 200, 224, 0.18); }
+
+/* Im Shop und in der Kaufrueckfrage steht sie groesser. */
+.shop-truhe .truhe-bild--3d { width: 5.4rem; height: 5.4rem; }
+.ks-kauf .truhe-bild--3d { width: 7rem; height: 7rem; margin: 0 auto; }
+
+/* Das Warnschild vor "Konto loeschen" — klein, aber es macht aus einer
+   Textzeile eine Handlung mit Gewicht. */
+.hub-konto-loeschen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.hub-konto-loeschen img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
 }

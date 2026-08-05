@@ -347,10 +347,28 @@ export function GameSelect({
         {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
-          {/* Der Mini-Pinguin traegt, was im Kleiderschrank gewaehlt ist. Er
-              steht hier und nicht nur im Profil, weil eine Anpassung, die man
-              nie sieht, keine ist. */}
-          <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
+          {/*
+            Die Figur im Kopfband — dieselbe, die im Profil steht, nur klein.
+            Sie ist auf jedem Tab zu sehen: Eine Anpassung, die man nie sieht,
+            ist keine.
+
+            **Das kostet einen zweiten WebGL-Bereich**, auf dem Profil-Tab
+            also zwei gleichzeitig. Vertretbar, weil beide winzig sind und
+            `three` ohnehin nur einmal geladen wird — aber wer hier einen
+            dritten ergaenzt, sollte vorher messen.
+
+            Bis das Modell da ist, steht der gemalte Pinguin. Ein leerer Kasten
+            im Kopfband waere auf jedem Bildschirm zu sehen.
+          */}
+          <span className="front-avatar front-avatar--3d">
+            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={2.6} />}>
+              <Avatar3D
+                muetze={false}
+                bemalung={me.figur ?? LEERE_BEMALUNG}
+                drehbar={false}
+              />
+            </Suspense>
+          </span>
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
             {/* Der Balken zeigt den Fortschritt IN der Stufe, nicht die
@@ -674,53 +692,35 @@ function ProfilTab({
         Leute — und ganz zum Schluss die Konto-Sachen, die man ein Mal im Jahr
         braucht.
       */}
-      <Tafel titel="Deine Sachen" zusatz={`Stufe ${me.level.stufe}`}>
-        {/*
-          Die Figur steht hier gross und in drei Dimensionen — an der Stelle,
-          an der frueher der gemalte Pinguin als Daumennagel sass.
+      {/*
+        Die Figur bekommt eine eigene Tafel ueber die volle Breite.
 
-          Sie IST der Knopf, wie das Profilbild darueber: Ein eigener
-          "Werkstatt oeffnen"-Knopf waere eine Zeile Hoehe fuer eine Auskunft,
-          die das Bild schon gibt.
+        Vorher stand sie neben dem Text in derselben Tafel — und ragte dort
+        oben heraus, quer ueber das Namensschild. Der Grund war die Hoehe: Ein
+        WebGL-Bereich hat keine Inhaltsgroesse, an der sich die Zeile
+        ausrichten koennte, und die Tafel laesst Ueberstand durch (`overflow:
+        visible`, noetig fuer die Messingnieten). Ueber die volle Breite kann
+        das nicht passieren.
+      */}
+      <Tafel titel="Deine Figur" zusatz={me.figur?.design === 'bemalt' ? 'Selbst angemalt' : 'Antippen zum Bearbeiten'}>
+        <button className="hub-figur-buehne" onClick={onWerkstatt} title="Figur bearbeiten">
+          <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
+            <Avatar3D
+              muetze={false}
+              bemalung={me.figur ?? LEERE_BEMALUNG}
+              drehbar={false}
+            />
+          </Suspense>
+          <span className="hub-profilbild-stift" aria-hidden="true">
+            ✎
+          </span>
+        </button>
+        <p className="muted hub-figur-hinweis">
+          Drehen, anmalen, Mütze aufsetzen — antippen.
+        </p>
+      </Tafel>
 
-          **Das kostet.** Wer den Profil-Tab oeffnet, laedt damit `three` nach
-          — rund 900 kB, einmal je Sitzung und danach aus dem Zwischenspeicher.
-          Der gemalte Pinguin steht so lange da und wird abgeloest, sobald die
-          Figur bereit ist; ein leerer Kasten waere schlimmer als ein Bild, das
-          eine Sekunde spaeter ein anderes wird.
-        */}
-        <section className="hub-figur">
-          <button
-            className="hub-figur-buehne"
-            onClick={onWerkstatt}
-            title="Figur bearbeiten"
-          >
-            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
-              <Avatar3D
-                muetze={false}
-                bemalung={me.figur ?? LEERE_BEMALUNG}
-                drehbar={false}
-              />
-            </Suspense>
-            <span className="hub-profilbild-stift" aria-hidden="true">
-              ✎
-            </span>
-          </button>
-          <div className="hub-garderobe-text">
-            <strong>Deine Figur</strong>
-            <span className="muted">
-              {me.figur?.design === 'bemalt'
-                ? 'Selbst angemalt — antippen zum Weitermalen.'
-                : 'Antippen: drehen, anmalen, Mütze aufsetzen.'}
-            </span>
-            <span className="muted">
-              {Object.keys(me.avatar).length === 0
-                ? `Kleiderschrank: noch nichts an — ${SLOTS.length} Plätze warten.`
-                : `Kleiderschrank: ${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen belegt.`}
-            </span>
-          </div>
-        </section>
-
+      <Tafel titel="Deine Sachen" zusatz={`${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen`}>
         {/* Drei Einstiege in das, was einem gehoert: anziehen, hoeren,
             verdienen. Als Kachelreihe mit Symbol, nicht als Textknopfreihe —
             drei Woerter nebeneinander sind auf einem Handy zu schmal, um
@@ -863,6 +863,7 @@ function ProfilTab({
           {/* Klein, aber vorhanden: Apple lehnt Apps mit Konten ohne diesen
               Weg zuverlaessig ab, und die DSGVO verlangt ihn ohnehin. */}
           <button className="hub-konto-loeschen" onClick={() => setLoeschenOffen(true)}>
+            <img src="/hub/icon-konto-loeschen.webp" alt="" aria-hidden="true" />
             Konto löschen
           </button>
         </div>

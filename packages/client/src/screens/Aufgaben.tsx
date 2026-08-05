@@ -15,8 +15,15 @@
  * Anfang, siehe `packages/server/src/quests.ts`.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
+
+/**
+ * Die 3D-Truhe wird nachgeladen: `three` und `drei` wiegen rund 900 kB.
+ * Steht hier und nicht im Bauteil, damit alle Truhen auf einem Bildschirm
+ * dasselbe Stueck teilen.
+ */
+const Truhe3D = lazy(() => import('../Truhe3D'));
 
 import {
   ApiError,
@@ -49,27 +56,26 @@ export function TruhenBild({
   grad: Truhe['grad'];
   offen: boolean;
 }): React.JSX.Element {
-  const farben: Record<Truhe['grad'], [string, string, string]> = {
-    holz: ['#8a6a3c', '#6f5230', '#c89a5c'],
-    bronze: ['#b5763c', '#8c5628', '#e0a060'],
-    silber: ['#aebcc4', '#8494a0', '#dce6ec'],
-    gold: ['#e2b64f', '#b78c2c', '#f6e0a0'],
-    diamant: ['#7ec8e0', '#4a9cbc', '#d0f0fa'],
-  };
-  const [koerper, dunkel, hell] = farben[grad];
-
+  /**
+   * Die Truhe in drei Dimensionen.
+   *
+   * Ersetzt das gezeichnete SVG, das hier stand. Aufrufer merken nichts davon
+   * — dieselben zwei Eigenschaften, dieselbe Stelle.
+   *
+   * `sofort`: In Shop und Aufgabenliste steht die Truhe still, dort soll
+   * nichts aufklappen. Die Bewegung gehoert in die Oeffnung
+   * (`TruhenOeffnung.tsx`), und nur dort.
+   *
+   * Der Rueckfall ist ein Kasten in der Farbe des Grades und kein Platzhalter-
+   * bild: In einer Liste mit fuenf Truhen laedt `three` einmal, und bis dahin
+   * soll die Zeile ihre Hoehe behalten, ohne zu zappeln.
+   */
   return (
-    <svg className="truhe-bild" viewBox="0 0 64 56" aria-hidden="true">
-      {/* Deckel: geschlossen liegt er auf, geholt steht er nach hinten offen. */}
-      <g transform={offen ? 'translate(0 -8) rotate(-14 8 20)' : ''}>
-        <path d="M8 24 A24 14 0 0 1 56 24 L56 28 L8 28 Z" fill={koerper} />
-        <path d="M8 24 A24 14 0 0 1 56 24 L56 26 L8 26 Z" fill={hell} opacity="0.5" />
-      </g>
-      <rect x="8" y="28" width="48" height="24" rx="3" fill={koerper} />
-      <rect x="8" y="34" width="48" height="5" fill={dunkel} />
-      <rect x="28" y="30" width="8" height="12" rx="2" fill={hell} />
-      <circle cx="32" cy="36" r="2" fill={dunkel} />
-    </svg>
+    <span className={`truhe-bild truhe-bild--3d truhe-bild--${grad}`}>
+      <Suspense fallback={null}>
+        <Truhe3D grad={grad} offen={offen} sofort />
+      </Suspense>
+    </span>
   );
 }
 
