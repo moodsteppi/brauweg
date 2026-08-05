@@ -18,10 +18,21 @@
  * plus eine Zeile in BIOME, und nichts muss vermessen werden.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
 import type { Getragen } from '../api';
 import { Pinguin } from '../pinguin';
+import { LEERE_BEMALUNG, type Bemalung } from '../bemalung';
+
+/**
+ * Die 3D-Figur auf dem Pfad — nachgeladen wie überall.
+ *
+ * Der gemalte Pinguin bleibt als Rückfall, solange `three` unterwegs ist: Der
+ * Pfad ist das Erste, was man im Tab „Spielen" sieht, und ein leerer Fleck an
+ * der Stelle „du bist hier" wäre schlimmer als ein Bild, das eine Sekunde
+ * später ein anderes wird.
+ */
+const Avatar3D = lazy(() => import('../Avatar3D'));
 
 export interface Biom {
   /** Dateiname ohne Endung unter /hub/. */
@@ -127,10 +138,13 @@ function useAufFigurRichten(
 export function Trophaeenpfad({
   trophies,
   getragen = {},
+  bemalung,
 }: {
   trophies: number;
   /** Was der Pinguin traegt — derselbe Satz wie im Kleiderschrank. */
   getragen?: Getragen;
+  /** Bemalung der 3D-Figur. `null`/fehlend heisst: Standardoptik. */
+  bemalung?: Bemalung | null;
 }): React.JSX.Element {
   const [voll, setVoll] = useState(false);
   const stelle = stelleFuer(trophies);
@@ -150,7 +164,7 @@ export function Trophaeenpfad({
             bewegen kann: Nur so begrenzt der Browser die Ansicht auf das
             Bild und laesst keine leere Flaeche stehen. */}
         <div className="pfad-fenster" ref={fenster}>
-          <Stapel trophies={trophies} stelle={stelle} getragen={getragen} />
+          <Stapel trophies={trophies} stelle={stelle} getragen={getragen} bemalung={bemalung} />
         </div>
         <span className="pfad-lupe" aria-hidden="true">
           {hier.name} · Pfad ansehen
@@ -162,6 +176,7 @@ export function Trophaeenpfad({
           trophies={trophies}
           stelle={stelle}
           getragen={getragen}
+          bemalung={bemalung}
           onClose={() => setVoll(false)}
         />
       )}
@@ -180,10 +195,12 @@ function Stapel({
   trophies,
   stelle,
   getragen,
+  bemalung,
 }: {
   trophies: number;
   stelle: number;
   getragen: Getragen;
+  bemalung?: Bemalung | null;
 }): React.JSX.Element {
   const anzahl = BIOME.length;
   const anteil = anteilFuer(stelle);
@@ -228,7 +245,27 @@ function Stapel({
       })}
 
       <div className="pfad-figur" style={{ bottom: `${anteil * 100}%` }}>
-        <Pinguin getragen={getragen} groesse={2.8} />
+        {/*
+          Die Figur in drei Dimensionen, mit Eigenbewegung: Sie steht lange
+          still im Bild, und ohne das leise Wippen sieht sie dort aus wie ein
+          Aufkleber.
+
+          Deutlich größer als der gemalte Daumennagel vorher (2,8 rem) — auf
+          dem Pfad ist sie das „du bist hier", und das war kaum zu erkennen.
+        */}
+        <div className="pfad-figur-buehne">
+          {/* Der Rückfall wird mitgezogen: Wäre er kleiner als die Figur,
+              hüpfte das Bild in dem Moment, in dem `three` fertig geladen
+              ist. Die Zahl passt zur Bühne in `styles.css`. */}
+          <Suspense fallback={<Pinguin getragen={getragen} groesse={10} />}>
+            <Avatar3D
+              muetze={false}
+              bemalung={bemalung ?? LEERE_BEMALUNG}
+              drehbar={false}
+              lebendig
+            />
+          </Suspense>
+        </div>
         <span className="pfad-figur-stand">
           <img src="/hub/pokal.png" alt="" aria-hidden="true" />
           {trophies}
@@ -250,11 +287,13 @@ function PfadVollbild({
   trophies,
   stelle,
   getragen,
+  bemalung,
   onClose,
 }: {
   trophies: number;
   stelle: number;
   getragen: Getragen;
+  bemalung?: Bemalung | null;
   onClose: () => void;
 }): React.JSX.Element {
   const rolle = useRef<HTMLDivElement>(null);
@@ -280,7 +319,7 @@ function PfadVollbild({
         </span>
       </header>
       <div className="pfad-voll-rolle" ref={rolle}>
-        <Stapel trophies={trophies} stelle={stelle} getragen={getragen} />
+        <Stapel trophies={trophies} stelle={stelle} getragen={getragen} bemalung={bemalung} />
       </div>
     </div>
   );
