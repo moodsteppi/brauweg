@@ -1,5 +1,5 @@
 /**
- * Klangschrank — hier wird ausgesucht, was man hört.
+ * Klanghalle — hier wird ausgesucht, was man hört.
  *
  * Das Gegenstück zum Kleiderschrank, und aus demselben Grund ein eigener
  * Bildschirm: Musik und Klangpakete sind Besitz, und Besitz will man ansehen
@@ -30,7 +30,7 @@ import {
   spiele,
 } from '../klang';
 
-export function Klangschrank({ onClose }: { onClose: () => void }): React.JSX.Element {
+export function Klanghalle({ onClose }: { onClose: () => void }): React.JSX.Element {
   const werte = useSyncExternalStore(abonniere, holeEinstellungen, holeEinstellungen);
   const probeLaeuft = useSyncExternalStore(abonniere, laufendeProbe, laufendeProbe);
   const [ware, setWare] = useState<RegalWare[] | null>(null);
@@ -58,17 +58,17 @@ export function Klangschrank({ onClose }: { onClose: () => void }): React.JSX.El
   return (
     <div className="doko-sheet doko-sheet--mitte" onClick={schliessen}>
       <div
-        className="doko-sheet-card klangschrank"
+        className="doko-sheet-card klanghalle"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2>Klangschrank</h2>
+        <h2>Klanghalle</h2>
 
         {ware === null ? (
           <p className="muted">Einen Moment…</p>
         ) : (
           <>
             <Tafel titel="Musik" zusatz={`${stuecke.length} im Besitz`}>
-              <div className="klangschrank-liste">
+              <div className="klanghalle-liste">
                 {/*
                   "Keine Musik" ist eine Wahl und kein Fehlen — deshalb steht
                   sie als Zeile da und nicht als leerer Zustand. Wer Podcasts
@@ -101,7 +101,7 @@ export function Klangschrank({ onClose }: { onClose: () => void }): React.JSX.El
             </Tafel>
 
             <Tafel titel="Klangpakete" zusatz={`${pakete.length} im Besitz`}>
-              <div className="klangschrank-liste">
+              <div className="klanghalle-liste">
                 {pakete.map((w) => {
                   // Der Grundsatz steht in den Einstellungen als `null`, im
                   // Katalog aber als 'grund'. Beides meint dasselbe.
@@ -125,7 +125,7 @@ export function Klangschrank({ onClose }: { onClose: () => void }): React.JSX.El
               </div>
             </Tafel>
 
-            <p className="muted klangschrank-fuss">
+            <p className="muted klanghalle-fuss">
               Neue Stücke und Pakete gibt es im Shop — dort lassen sie sich vor
               dem Kauf anhören. Wie laut es ist, steht in den Einstellungen.
             </p>
@@ -165,14 +165,14 @@ function Zeile({
   onWaehlen: () => void;
 }): React.JSX.Element {
   return (
-    <div className={`klangschrank-zeile${gewaehlt ? ' is-gewaehlt' : ''}`}>
-      <div className="klangschrank-text">
+    <div className={`klanghalle-zeile${gewaehlt ? ' is-gewaehlt' : ''}`}>
+      <div className="klanghalle-text">
         <strong>{name}</strong>
         <span className="muted">{hinweis}</span>
       </div>
       {onHoeren && (
         <button
-          className="klangschrank-hoeren"
+          className="klanghalle-hoeren"
           onClick={onHoeren}
           aria-label={spielt ? `${name} anhalten` : `${name} anhören`}
         >

@@ -8032,19 +8032,6 @@ main.auth > .muted {
   padding-right: 0.2rem;
 }
 
-/* Der Einstieg im Profil: eine Zeile ueber dem Pinguin, mit dem Zahnrad,
-   das es als Bild schon gibt. */
-.hub-einstellungen-knopf {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
-}
-.hub-einstellungen-knopf img {
-  width: 1.1rem;
-  height: 1.1rem;
-  object-fit: contain;
-}
 
 /* Kachel ohne Bild: ein Zeichen statt eines weissen Kastens. Gilt fuer
    Klangpakete und Musik, solange dafuer keine Grafik gemalt ist. */
@@ -8077,7 +8064,7 @@ main.auth > .muted {
 }
 
 /* =========================================================================
-   Klangschrank — Musik und Klangpakete auswaehlen.
+   Klanghalle — Musik und Klangpakete auswaehlen.
 
    Eine Liste statt eines Rasters: Musik hat kein Bild, und ein Raster aus
    Textkacheln ist schwerer zu lesen als Zeilen untereinander. Die Zeile
@@ -8085,39 +8072,39 @@ main.auth > .muted {
    weil man von links nach rechts entscheidet.
    ========================================================================= */
 
-.klangschrank {
+.klanghalle {
   max-height: 82vh;
   overflow-y: auto;
 }
 
-.klangschrank-liste {
+.klanghalle-liste {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
 }
 
-.klangschrank-zeile {
+.klanghalle-zeile {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.45rem 0.15rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
-.klangschrank-zeile:last-child { border-bottom: none; }
-.klangschrank-zeile.is-gewaehlt .klangschrank-text strong { color: #ffe9b0; }
+.klanghalle-zeile:last-child { border-bottom: none; }
+.klanghalle-zeile.is-gewaehlt .klanghalle-text strong { color: #ffe9b0; }
 
-.klangschrank-text {
+.klanghalle-text {
   display: flex;
   flex-direction: column;
   gap: 0.05rem;
   flex: 1;
   min-width: 0;
 }
-.klangschrank-text .muted { font-size: 0.72rem; }
+.klanghalle-text .muted { font-size: 0.72rem; }
 
 /* Der Abspielknopf ist rund und klein, aber nicht kleiner als ein Daumen:
    44 px ist die Untergrenze, unter der man daneben tippt. */
-.klangschrank-hoeren {
+.klanghalle-hoeren {
   flex: 0 0 auto;
   width: 44px;
   height: 44px;
@@ -8129,9 +8116,9 @@ main.auth > .muted {
   line-height: 1;
   cursor: pointer;
 }
-.klangschrank-hoeren:active { transform: scale(0.94); }
+.klanghalle-hoeren:active { transform: scale(0.94); }
 
-.klangschrank-zeile .lobby-chip {
+.klanghalle-zeile .lobby-chip {
   flex: 0 0 auto;
   min-width: 5.2rem;
   padding-left: 0.3rem;
@@ -8139,9 +8126,9 @@ main.auth > .muted {
 }
 /* Das Gewaehlte bleibt lesbar, obwohl der Knopf gesperrt ist - er sagt ja
    gerade aus, dass dieses Stueck laeuft. */
-.klangschrank-zeile .lobby-chip:disabled { opacity: 1; }
+.klanghalle-zeile .lobby-chip:disabled { opacity: 1; }
 
-.klangschrank-fuss {
+.klanghalle-fuss {
   font-size: 0.74rem;
   line-height: 1.35;
   margin: 0.6rem 0 0;
@@ -8155,3 +8142,106 @@ main.auth > .muted {
 
 /* Drei Knoepfe unter dem Pinguin passen nicht mehr nebeneinander. */
 .hub-garderobe-text .hub-knopfreihe { flex-wrap: wrap; }
+
+/* =========================================================================
+   Profil-Tab.
+
+   Der Tab war der einzige, der den Tafel-Baustein nicht benutzt hat: jeder
+   Abschnitt ein eigener Kasten aus CSS-Verlauf mit goldenem Rand und
+   0-4px-Schatten. Nebeneinander sahen die Kaesten aus wie eine Systemapp,
+   nicht wie eine gemalte Welt - und das lag nicht an den Farben, sondern
+   daran, dass es ueberhaupt kein Material gab, nur Flaechen.
+
+   Die Regeln hier raeumen das auf, so weit es ohne neue Bilder geht. Was
+   wirklich fehlt, sind gemalte Knoepfe: docs/ASSETS-PROFIL.md.
+   ========================================================================= */
+
+/* Innerhalb einer Tafel braucht kein Abschnitt mehr seinen eigenen Rahmen -
+   die Tafel IST der Rahmen. Doppelte Raender waren der halbe Kastenlook. */
+.hub-tafel .hub-garderobe,
+.hub-tafel .hub-geburtstag {
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+.hub-tafel .hub-geburtstag.is-heute {
+  /* Der Geburtstag darf leuchten, aber ohne Kasten drumherum. */
+  box-shadow: none;
+  filter: drop-shadow(0 0 10px rgba(255, 210, 90, 0.35));
+}
+
+.profil-einstiege {
+  margin-top: 0.55rem;
+}
+
+/* Die drei Einstiege: Symbol oben, ein Wort darunter. */
+.profil-kachel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.2rem 0.45rem;
+  min-height: 4.4rem;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #f4e9d4;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  cursor: pointer;
+}
+.profil-kachel.is-gold {
+  border-image-source: url(/hub/menue-knopf-gruen.webp);
+  color: #eafaf0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.profil-kachel img {
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+.profil-kachel:active {
+  transform: translateY(1px) scale(0.985);
+}
+.profil-kachel .hub-punkt {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+}
+
+/* Konto: alles untereinander und gleich breit. Eine Reihe nebeneinander
+   haette "Benachrichtigungen" auf drei Zeilen umgebrochen. */
+.profil-konto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.profil-konto-knopf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+}
+.profil-konto-knopf img {
+  width: 1.05rem;
+  height: 1.05rem;
+  object-fit: contain;
+}
+.profil-konto .rechtliches {
+  margin: 0.3rem 0 0;
+  text-align: center;
+  font-size: 0.68rem;
+}
+.profil-konto .hub-konto-loeschen {
+  align-self: center;
+  margin-top: 0.1rem;
+}
