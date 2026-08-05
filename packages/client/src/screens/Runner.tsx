@@ -116,15 +116,20 @@ interface BiomLook {
   readonly rand: string;
   readonly linie: string;
   readonly himmel: string;
+  /** Bordstein-Bloecke am Streckenrand, im Wechsel. */
+  readonly kanteA: string;
+  readonly kanteB: string;
+  /** Flecken auf dem Boden — Erde, Sand, Glut, Eis, je nach Zone. */
+  readonly fleck: string;
 }
 
 const BIOME_LOOK: readonly BiomLook[] = [
-  { name: 'Heimat', grasA: '#4a7c3f', grasB: '#3d6b35', rand: '#5c4030', linie: '#c9b896', himmel: '#87b8d8' },
-  { name: 'Wiesen', grasA: '#58a06a', grasB: '#4a8f5c', rand: '#4a5c30', linie: '#d8cfa8', himmel: '#8fd0e8' },
-  { name: 'Strand', grasA: '#d8c48a', grasB: '#cbb578', rand: '#8a6f4a', linie: '#a8dce4', himmel: '#9adcf0' },
-  { name: 'Feuerberg', grasA: '#6d4a3a', grasB: '#5c3a2c', rand: '#3a2620', linie: '#e8a05a', himmel: '#d8906a' },
-  { name: 'Schneefeld', grasA: '#e4ecf2', grasB: '#d4e0ea', rand: '#7a8ca0', linie: '#b0c4d4', himmel: '#c8dcec' },
-  { name: 'Sternenhafen', grasA: '#3a3a5c', grasB: '#30304c', rand: '#26263a', linie: '#e2b64f', himmel: '#2e2e50' },
+  { name: 'Heimat', grasA: '#4a7c3f', grasB: '#3d6b35', rand: '#5c4030', linie: '#c9b896', himmel: '#87b8d8', kanteA: '#c9b896', kanteB: '#8a6f4a', fleck: '#365a2c' },
+  { name: 'Wiesen', grasA: '#58a06a', grasB: '#4a8f5c', rand: '#4a5c30', linie: '#d8cfa8', himmel: '#8fd0e8', kanteA: '#d8cfa8', kanteB: '#7a9a5a', fleck: '#3f7a4d' },
+  { name: 'Strand', grasA: '#d8c48a', grasB: '#cbb578', rand: '#8a6f4a', linie: '#a8dce4', himmel: '#9adcf0', kanteA: '#e8dcb0', kanteB: '#b09468', fleck: '#c0a86a' },
+  { name: 'Feuerberg', grasA: '#6d4a3a', grasB: '#5c3a2c', rand: '#3a2620', linie: '#e8a05a', himmel: '#d8906a', kanteA: '#8a5a3a', kanteB: '#4a2c20', fleck: '#e86a3a' },
+  { name: 'Schneefeld', grasA: '#e4ecf2', grasB: '#d4e0ea', rand: '#7a8ca0', linie: '#b0c4d4', himmel: '#c8dcec', kanteA: '#ffffff', kanteB: '#a0b4c8', fleck: '#b8d0e4' },
+  { name: 'Sternenhafen', grasA: '#3a3a5c', grasB: '#30304c', rand: '#26263a', linie: '#e2b64f', himmel: '#2e2e50', kanteA: '#e2b64f', kanteB: '#3a3a6c', fleck: '#4a4a7c' },
 ];
 
 const BIOM_LAENGE = 220;
@@ -1162,29 +1167,86 @@ function WeltChunk({
   const kraft = kraftRef.current;
   const plaetze = plaetzeRef.current;
 
+  /**
+   * Bodenflecken — je Recycle neu gewuerfelt, damit die Strecke nicht als
+   * Muster auffliegt. Am Rand der Fahrbahn, nie mittig unter der Figur:
+   * Dort wuerden sie wie ein Hindernis lesen, das keines ist.
+   */
+  const flecken = useMemo(() => {
+    void layoutMarke;
+    return Array.from({ length: 5 }, () => ({
+      x: (Math.random() < 0.5 ? -1 : 1) * (1.2 + Math.random() * 2.2),
+      z: (Math.random() - 0.5) * (CHUNK_LAENGE - 3),
+      r: 0.35 + Math.random() * 0.55,
+      dreh: Math.random() * Math.PI,
+    }));
+  }, [layoutMarke]);
+
+  /** Bordstein-Bloecke: 2 m Raster, Farben im Wechsel — das Lauftempo
+      liest man an ihnen ab, nicht an der leeren Flaeche. */
+  const kanten = Array.from({ length: Math.floor(CHUNK_LAENGE / 2) }, (_, i) => i);
+
   return (
     <group ref={gruppeRef}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[SPUR_BREITE * 3 + 2, CHUNK_LAENGE]} />
         <meshStandardMaterial color={gras} />
       </mesh>
-      {([-1, 0, 1] as const).map((spur) => (
+
+      {/* Flecken knapp ueber dem Boden gegen Z-Flimmern. */}
+      {flecken.map((f, i) => (
         <mesh
-          key={spur}
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[spur * SPUR_BREITE, 0.02, 0]}
-          receiveShadow
+          key={`fleck-${layoutMarke}-${i}`}
+          rotation={[-Math.PI / 2, 0, f.dreh]}
+          position={[f.x, 0.012, f.z]}
         >
-          <planeGeometry args={[0.12, CHUNK_LAENGE]} />
-          <meshStandardMaterial color={look.linie} />
+          <circleGeometry args={[f.r, 7]} />
+          <meshStandardMaterial color={look.fleck} transparent opacity={0.5} />
         </mesh>
       ))}
-      <mesh position={[-(SPUR_BREITE * 1.5 + 0.6), 0.7, 0]} castShadow>
-        <boxGeometry args={[0.4, 1.4, CHUNK_LAENGE]} />
+
+      {/*
+        Gestrichelte Trennlinien ZWISCHEN den Spuren statt durchgezogener
+        Linien AUF den Spuren. Zweierlei gewonnen: Die Spurmitte gehoert
+        wieder der Figur und den Muenzen, und die vorbeiziehenden Striche
+        machen das Tempo sichtbar — eine durchgezogene Linie bewegt sich
+        fuers Auge nicht.
+      */}
+      {([-0.5, 0.5] as const).map((seite) =>
+        Array.from({ length: Math.floor(CHUNK_LAENGE / 2.4) }, (_, i) => (
+          <mesh
+            key={`strich-${seite}-${i}`}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[seite * SPUR_BREITE, 0.02, -CHUNK_LAENGE / 2 + 1 + i * 2.4]}
+            receiveShadow
+          >
+            <planeGeometry args={[0.14, 1.3]} />
+            <meshStandardMaterial color={look.linie} />
+          </mesh>
+        )),
+      )}
+
+      {/* Bordsteine, dann eine niedrigere Hecke dahinter: Zwei Kanten mit
+          Versatz lesen sich als Strassenrand, ein hoher brauner Block las
+          sich als Betonwand. */}
+      {[-1, 1].map((seite) =>
+        kanten.map((i) => (
+          <mesh
+            key={`kante-${seite}-${i}`}
+            position={[seite * (SPUR_BREITE * 1.5 + 0.42), 0.09, -CHUNK_LAENGE / 2 + 1 + i * 2]}
+            castShadow
+          >
+            <boxGeometry args={[0.34, 0.18, 1.9]} />
+            <meshStandardMaterial color={i % 2 === 0 ? look.kanteA : look.kanteB} />
+          </mesh>
+        )),
+      )}
+      <mesh position={[-(SPUR_BREITE * 1.5 + 0.85), 0.45, 0]} castShadow>
+        <boxGeometry args={[0.45, 0.9, CHUNK_LAENGE]} />
         <meshStandardMaterial color={look.rand} />
       </mesh>
-      <mesh position={[SPUR_BREITE * 1.5 + 0.6, 0.7, 0]} castShadow>
-        <boxGeometry args={[0.4, 1.4, CHUNK_LAENGE]} />
+      <mesh position={[SPUR_BREITE * 1.5 + 0.85, 0.45, 0]} castShadow>
+        <boxGeometry args={[0.45, 0.9, CHUNK_LAENGE]} />
         <meshStandardMaterial color={look.rand} />
       </mesh>
 
@@ -1310,6 +1372,17 @@ export function Runner({
   const muenzenRef = useRef(0);
   const beruehrX = useRef<number | null>(null);
   const beruehrY = useRef<number | null>(null);
+  /**
+   * Eine Geste, eine Aktion.
+   *
+   * Der erste Wurf setzte nach jedem Auslöser den Startpunkt auf die
+   * aktuelle Fingerposition — gedacht als "durchziehen wechselt weiter".
+   * In der Hand war das ein Doppelsprung: Ein normaler Wisch ist 100 bis
+   * 200 Pixel lang und reißt die zweite 24-Pixel-Schwelle gleich mit, von
+   * ganz links landete man ganz rechts. Jetzt verbraucht die erste Aktion
+   * die Geste; die nächste beginnt erst, wenn der Finger abhebt.
+   */
+  const beruehrVerbraucht = useRef(false);
 
   const spielstand = useRef<Spielstand>(frischerStand('menu'));
 
@@ -1586,6 +1659,7 @@ export function Runner({
       onTouchStart={(e) => {
         beruehrX.current = e.touches[0]?.clientX ?? null;
         beruehrY.current = e.touches[0]?.clientY ?? null;
+        beruehrVerbraucht.current = false;
       }}
       onTouchMove={(e) => {
         /**
@@ -1598,23 +1672,21 @@ export function Runner({
          * Finger weiterzieht, wechselt flüssig noch eine Spur, ohne
          * abzusetzen.
          */
-        if (phase !== 'run' || beruehrX.current === null || beruehrY.current === null) return;
+        if (phase !== 'run' || beruehrVerbraucht.current) return;
+        if (beruehrX.current === null || beruehrY.current === null) return;
         const x = e.touches[0]?.clientX ?? 0;
         const y = e.touches[0]?.clientY ?? 0;
         const dx = x - beruehrX.current;
         const dy = y - beruehrY.current;
         if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) {
           wechsleSpur(dx > 0 ? 1 : -1);
-          beruehrX.current = x;
-          beruehrY.current = y;
+          beruehrVerbraucht.current = true;
         } else if (dy < -30) {
           springe();
-          beruehrX.current = x;
-          beruehrY.current = y;
+          beruehrVerbraucht.current = true;
         } else if (dy > 30) {
           rutsche();
-          beruehrX.current = x;
-          beruehrY.current = y;
+          beruehrVerbraucht.current = true;
         }
       }}
       onTouchEnd={() => {
@@ -1622,6 +1694,7 @@ export function Runner({
         // nicht ungefragt den nächsten Lauf starten.
         beruehrX.current = null;
         beruehrY.current = null;
+        beruehrVerbraucht.current = false;
       }}
     >
       <Canvas

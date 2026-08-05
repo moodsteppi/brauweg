@@ -114,9 +114,25 @@ Der große Feel-/Logik-Pass. Was aus Abschnitt 2 und 3 damit **erledigt** ist:
 - **Servertests**: `test/runner.test.ts` — Kappen, Aufgaben (auch 0-Münzen-
   Lauf), Bestwert-Semantik, Listenreihenfolge, Punkte-Obergrenze.
 
+### Nachtrag: Wisch-Fix und Boden-Design
+
+- **Ein Wisch = eine Spur.** Der Kettenwisch (Startpunkt wandert mit) sprang
+  bei normalen 100–200-px-Wischen zwei Spuren auf einmal — von ganz links
+  nach ganz rechts. Jetzt verbraucht die erste Aktion die Geste; die
+  nächste beginnt erst, wenn der Finger abhebt.
+- **Boden als Strecke statt Farbfläche:** gestrichelte Trennlinien ZWISCHEN
+  den Spuren (Tempo wird sichtbar, die Spurmitte gehört Figur und Münzen),
+  Bordstein-Blöcke im 2-m-Wechsel je Biom, gewürfelte Bodenflecken am
+  Fahrbahnrand, niedrigere Hecke statt Betonwand. Alles Geometrie, kein
+  Ladegewicht.
+- **Bestellung für gemalte Böden:** `docs/ASSETS-RUNNER-BODEN.md` — je Biom
+  eine kachelbare Bodenkachel (1024²) und eine Randleiste (1024×256), mit
+  Nahtlos-Prüfschritt und Einbauanleitung (`map` + `RepeatWrapping` statt
+  `color`).
+
 **Noch offen aus Abschnitt 2/3:** echte Jump-/Slide-Clips im Mixer (weiter
 Tween), Kästen am Gerät nachstimmen (`hitbox=1`), Banner PNG→WebP,
-Ghost-Läufe/Koop-Challenge.
+Ghost-Läufe/Koop-Challenge, gemalte Böden einbauen sobald geliefert.
 
 ---
 
