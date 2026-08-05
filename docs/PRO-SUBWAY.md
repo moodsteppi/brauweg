@@ -194,6 +194,22 @@ Reise wie der Trophäenpfad, nur im Vorbeirennen.
   obwohl schon das naechste Tor kam. Beim Aufsetzen hat der Rutschwunsch
   Vorrang vor einem gepufferten Sprung: Er ist der juengere.
 
+### Nachtrag: Countdown und die sitzende Blase
+
+- **Countdown 3 – 2 – 1 – LOS!** zwischen Flucht und Lauf (je 700 ms, eigene
+  Phase `countdown`). Vorher ging es ansatzlos los: Die Flucht endete, und im
+  selben Augenblick rollte die Welt mit vollem Tempo — man verlor die ersten
+  Meter, weil man nicht wusste, dass es losgegangen war. Die Strecke steht
+  dabei schon sichtbar da, rollt aber nicht: Ein Countdown über einer
+  laufenden Bahn wäre keiner. Über einen Zähler statt vier gestaffelter
+  Timer — vier Timer sind vier Dinge zum Aufräumen, und eines vergisst man.
+- **Die Schildblase umschließt die Figur.** Sie hing zu hoch: `passeHoehe`
+  allein setzt nur die Größe, die Unterkante blieb, wo das Modell sie hatte.
+  Jetzt zusätzlich `erdeFuesse` und kein Versatz mehr im JSX — die Kugel
+  steht auf dem Boden statt um den Kopf zu schweben. Das Pulsieren
+  kompensiert seinen eigenen Versatz, sonst wüchse sie nur nach oben und
+  sähe aus, als hüpfe sie.
+
 **Noch offen aus Abschnitt 2/3:** echte Jump-/Slide-Clips im Mixer (weiter
 Tween), Kästen am Gerät nachstimmen (`hitbox=1`), Banner PNG→WebP,
 Ghost-Läufe/Koop-Challenge, gemalte Böden einbauen sobald geliefert.

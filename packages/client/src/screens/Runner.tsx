@@ -132,6 +132,21 @@ const PLATZ_Z = [-10, -5, 0, 5, 10] as const;
 const ANLAUF_M = 34;
 /** Punkte je Münze — die eine Zahl, die die Rechnung erklärt. */
 const PUNKTE_JE_MUENZE = 10;
+/**
+ * Der Countdown zwischen Flucht und Lauf.
+ *
+ * Vorher ging der Lauf ansatzlos los: Die Flucht endete, und im selben
+ * Augenblick rollte die Welt mit vollem Tempo los. Man verlor die ersten
+ * Meter, weil man noch nicht wusste, dass es losgegangen war.
+ *
+ * Drei Zahlen und ein LOS, je 700 ms — lang genug, um sich zu sammeln, kurz
+ * genug, dass man beim dritten Lauf nicht wartet. Die Welt steht dabei
+ * still: Ein Countdown ueber einer schon rollenden Bahn waere kein
+ * Countdown, sondern eine Beschriftung.
+ */
+const COUNTDOWN_SCHRITT_MS = 700;
+const COUNTDOWN_SCHRITTE = ['3', '2', '1', 'LOS!'] as const;
+
 /** Schlüssel für den Geräterekord. */
 const REKORD_SCHLUESSEL = 'brauweg.prosubway.rekord';
 
@@ -222,7 +237,7 @@ interface KraftPlatz {
   aktiv: boolean;
 }
 
-type Phase = 'menu' | 'flee' | 'run' | 'pause' | 'dead';
+type Phase = 'menu' | 'flee' | 'countdown' | 'run' | 'pause' | 'dead';
 type Pose = 'flee' | 'run' | 'idle';
 type FahrzeugArt = 'scooter' | 'silver' | 'bmw';
 /** jump/bush = drüber, slide = drunter, vehicle = kommt entgegen. */
@@ -1381,7 +1396,18 @@ function Kraftzeichen({
       mesh.castShadow = false;
       mesh.frustumCulled = false;
     });
-    passeHoehe(kopie, 1.55);
+    /**
+     * Gross genug, dass die ganze Figur drinsteckt, und tief genug, dass
+     * sie in der Mitte sitzt.
+     *
+     * `passeHoehe` setzt die Hoehe, `erdeFuesse` schiebt die Unterkante auf
+     * y = 0 — beides zusammen heisst: Die Kugel steht auf dem Boden statt
+     * um den Kopf zu schweben. Der Pinguin ist 1,15 hoch, die Kugel 1,7:
+     * oben und unten bleibt eine Handbreit Luft, seitlich reicht es fuer
+     * die Flossen.
+     */
+    passeHoehe(kopie, 1.7);
+    erdeFuesse(kopie);
     return kopie;
   }, [schildGltf.scene]);
 
@@ -1416,7 +1442,12 @@ function Kraftzeichen({
       if (gs.schild) {
         // Atmen statt Blinken: Eine Kugel, die pulsiert, liest sich als
         // Schutz; eine, die blinkt, als Warnung.
-        s.scale.setScalar(1 + Math.sin(zeit.current * 2.6) * 0.045);
+        // Um die Mitte pulsieren, nicht um die Fusssohle: Ohne den
+        // Gegenversatz wuechse die Kugel nur nach oben und saehe aus, als
+        // huepfe sie.
+        const puls = 1 + Math.sin(zeit.current * 2.6) * 0.045;
+        s.scale.setScalar(puls);
+        s.position.y = (1 - puls) * 0.85;
         s.rotation.y += delta * 0.6;
       }
     }
@@ -1436,7 +1467,10 @@ function Kraftzeichen({
 
   return (
     <group>
-      <group ref={schild} visible={false} position={[0, 0.58, 0]}>
+      {/* Ohne Versatz: Die Kugel ist schon geerdet, sie sitzt also von
+          selbst um die Figur. Ein zusaetzliches y hier hob sie an — genau
+          das war der Fehler, die Blase schwebte ueber dem Pinguin. */}
+      <group ref={schild} visible={false}>
         <primitive object={schildSzene} />
       </group>
       <group ref={magnet} visible={false} position={[0.46, 0.6, 0.05]}>
@@ -1770,7 +1804,13 @@ function WeltChunk({
     if (!gruppe) return;
 
     const rollt = gs.phase === 'run';
-    const sichtbar = gs.phase === 'run' || gs.phase === 'pause' || gs.phase === 'dead';
+    const sichtbar =
+      gs.phase === 'run' ||
+      gs.phase === 'pause' ||
+      gs.phase === 'dead' ||
+      // Im Countdown steht die Strecke schon da: Man soll sehen, worauf man
+      // sich einstellt, bevor es losgeht.
+      gs.phase === 'countdown';
     const plaetze = plaetzeRef.current;
     const dt = Math.min(delta, 0.05);
 
@@ -2214,6 +2254,8 @@ export function Runner({
     doppelS: 0,
     schild: false,
   });
+  /** Welcher Countdown-Schritt gerade steht (0..3, danach laeuft es). */
+  const [countdown, setZaehler] = useState(0);
   const [rangHeuteLauf, setRangHeuteLauf] = useState(0);
   const [ranglisteOffen, setRanglisteOffen] = useState(false);
   const [rangliste, setRangliste] = useState<Awaited<
@@ -2288,6 +2330,7 @@ export function Runner({
     spiele('tipp');
     muenzenRef.current = 0;
     setAnzeige({ meter: 0, muenzen: 0, plus: 1, magnetS: 0, doppelS: 0, schild: false });
+    setZaehler(0);
     setRangHeuteLauf(0);
     setRanglisteOffen(false);
     setHubMuenzen(null);
@@ -2300,15 +2343,33 @@ export function Runner({
   }, []);
 
   const beiFleeFertig = useCallback(() => {
-    setPhase((p) => (p === 'flee' ? 'run' : p));
+    setPhase((p) => (p === 'flee' ? 'countdown' : p));
   }, []);
 
-  // Falls das Animationsende nie feuert (leerer Clip): nach 2,9 s los.
+  // Falls das Animationsende nie feuert (leerer Clip): nach 2,9 s weiter.
   useEffect(() => {
     if (phase !== 'flee') return;
-    const t = window.setTimeout(() => setPhase((p) => (p === 'flee' ? 'run' : p)), 2900);
+    const t = window.setTimeout(() => setPhase((p) => (p === 'flee' ? 'countdown' : p)), 2900);
     return () => window.clearTimeout(t);
   }, [phase]);
+
+  /**
+   * Der Countdown laeuft ueber einen Zaehler, nicht ueber vier Timer.
+   *
+   * Vier gestaffelte `setTimeout` waeren vier Dinge, die beim Verlassen
+   * aufzuraeumen sind — und eines vergisst man. Ein Schritt je 700 ms, und
+   * der letzte startet den Lauf.
+   */
+  useEffect(() => {
+    if (phase !== 'countdown') return;
+    if (countdown >= COUNTDOWN_SCHRITTE.length) {
+      setPhase('run');
+      return;
+    }
+    spiele(countdown === COUNTDOWN_SCHRITTE.length - 1 ? 'stufe' : 'tipp');
+    const t = window.setTimeout(() => setZaehler((n) => n + 1), COUNTDOWN_SCHRITT_MS);
+    return () => window.clearTimeout(t);
+  }, [phase, countdown]);
 
   const springe = useCallback(() => {
     const gs = spielstand.current;
@@ -2517,7 +2578,12 @@ export function Runner({
     return () => window.removeEventListener('keydown', beiTaste);
   }, [phase, start, springe, rutsche, wechsleSpur, pausiere, weiter]);
 
-  const pose: Pose = phase === 'flee' ? 'flee' : phase === 'run' || phase === 'pause' ? 'run' : 'idle';
+  const pose: Pose =
+    phase === 'flee'
+      ? 'flee'
+      : phase === 'run' || phase === 'pause' || phase === 'countdown'
+        ? 'run'
+        : 'idle';
 
   const meter = anzeige.meter;
   const muenzen = anzeige.muenzen;
@@ -2633,9 +2699,19 @@ export function Runner({
         </div>
       )}
 
-      {phase === 'flee' && (
-        <div className="runner-banner">
-          <span>Los!</span>
+      {/*
+        Der Countdown. Jede Zahl bekommt einen eigenen `key` — damit startet
+        die Animation neu, statt dass CSS die alte Zahl weiterlaufen laesst
+        und nur der Text wechselt.
+      */}
+      {phase === 'countdown' && countdown < COUNTDOWN_SCHRITTE.length && (
+        <div className="runner-countdown" aria-live="assertive">
+          <span
+            key={countdown}
+            className={countdown === COUNTDOWN_SCHRITTE.length - 1 ? 'ist-los' : undefined}
+          >
+            {COUNTDOWN_SCHRITTE[countdown]}
+          </span>
         </div>
       )}
 
