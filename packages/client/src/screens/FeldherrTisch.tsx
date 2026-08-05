@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { api } from '../api';
 import { HUELLE, STIL, starteFeldherr } from '../minispiele/feldherr/kern.js';
 
 /**
@@ -37,7 +36,6 @@ export function FeldherrTisch({ onBack }: { onBack: () => void }): React.JSX.Ele
   const [modus, setModus] = useState<Modus | null>(null);
   const [stufe, setStufe] = useState<Stufe>('normal');
   const [feld, setFeld] = useState<Feld>('mittel');
-  const [lohn, setLohn] = useState<{ muenzen: number; xp: number; gedeckelt: boolean } | null>(null);
 
   const buehne = useRef<HTMLDivElement | null>(null);
 
@@ -58,9 +56,16 @@ export function FeldherrTisch({ onBack }: { onBack: () => void }): React.JSX.Ele
       // Saatkorn aus der Uhr. Im Netzspiel kommt es spaeter vom Server, damit
       // beide Geraete dieselbe Partie rechnen.
       saat: (Date.now() ^ 0x9e3779b9) >>> 0,
-      aufEnde: (a: Ausgang) => {
-        void melde(a).then(setLohn).catch(() => setLohn(null));
-      },
+      /**
+       * Der Ausgang wird bewusst nicht gemeldet.
+       *
+       * Gegen die KI und zu zweit an einem Geraet gibt es keine Muenzen und
+       * keine Erfahrung: Beides laesst sich in Sekunden beliebig oft
+       * herbeifuehren, und ein Endpunkt, den nur der Client fuellt, ist eine
+       * Muenzquelle. Belohnt wird ausschliesslich das Netzspiel, und dort
+       * rechnet die Plattform aus Ausgang und Dauer (game-feldherr).
+       */
+      aufEnde: () => {},
     });
     return () => {
       sitzung.beenden();
@@ -85,13 +90,6 @@ export function FeldherrTisch({ onBack }: { onBack: () => void }): React.JSX.Ele
           ‹ Zurück
         </button>
         <div ref={buehne} />
-        {lohn && (
-          <div className="feldherr-lohn" role="status">
-            {lohn.gedeckelt
-              ? 'Heute schon genug verdient — gespielt wird trotzdem weiter.'
-              : `+${lohn.muenzen} Münzen · +${lohn.xp} Erfahrung`}
-          </div>
-        )}
       </main>
     );
   }
@@ -154,11 +152,3 @@ export function FeldherrTisch({ onBack }: { onBack: () => void }): React.JSX.Ele
  * Client meldet, ist eine Behauptung. Ohne Deckel waere jede geschlossene
  * Runde eine Muenzquelle.
  */
-async function melde(a: Ausgang): Promise<{ muenzen: number; xp: number; gedeckelt: boolean }> {
-  return api.feldherrEnde({
-    gewonnen: a.gewonnen === true,
-    gegenKI: a.gegenKI,
-    stufe: a.stufe,
-    dauer: a.dauer,
-  });
-}

@@ -104,7 +104,6 @@ import {
   tableRules,
   tableWithSeats,
 } from '../tables/service.js';
-import { feldherrBelohnen } from '../minispiele/feldherr.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
 export const SESSION_COOKIE = 'brauweg_session';
@@ -624,30 +623,6 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   });
 
-  /**
-   * Feldherr — Minispiel, das im Browser laeuft.
-   *
-   * Der Server rechnet die Partie nicht mit (Echtzeit, siehe
-   * docs/FELDHERR-PLAN.md), er bucht nur die Belohnung. Was hier ankommt, ist
-   * deshalb eine Behauptung — die Deckelung steht in minispiele/feldherr.ts
-   * und nicht hier, damit sie an einer Stelle bleibt.
-   */
-  app.post('/api/minispiele/feldherr/ende', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
-    const accountId = await requireAccount(request);
-    const body = (request.body ?? {}) as Record<string, unknown>;
-    const dauer = Number(body.dauer);
-    if (!Number.isFinite(dauer) || dauer < 0 || dauer > 60 * 60) throw badRequest('invalidInput');
-    const lohn = await feldherrBelohnen(deps.db, accountId, {
-      gewonnen: body.gewonnen === true,
-      gegenKI: body.gegenKI === true,
-      stufe:
-        body.stufe === 'leicht' || body.stufe === 'normal' || body.stufe === 'schwer'
-          ? body.stufe
-          : null,
-      dauer: Math.floor(dauer),
-    });
-    return reply.send(lohn);
-  });
 
   app.post('/api/me/birthday-reward', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
