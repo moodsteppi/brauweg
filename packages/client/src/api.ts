@@ -10,6 +10,7 @@
  * `laufzeit.ts`. Im Browser bleibt alles wie bisher.
  */
 
+import type { Bemalung } from './bemalung';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 
 export class ApiError extends Error {
@@ -93,6 +94,11 @@ export type Getragen = Partial<Record<Slot, string>>;
 
 export interface Me {
   id: string;
+  /**
+   * Bemalung der 3D-Figur. `null` heißt: nie bemalt, es gilt die
+   * Standardoptik. Der Server hat sie schon geprüft.
+   */
+  figur?: Bemalung | null;
   displayName: string;
   coins: number;
   /**
@@ -515,6 +521,10 @@ export const api = {
     teil: { cardDeck?: string; tableScene?: string; cardBack?: string },
   ) =>
     patch<{ ok: true }>(`/me/themes/${gameId}`, teil),
+
+  /** Die Bemalung der 3D-Figur speichern. Der Server prüft Form und Größe. */
+  setFigur: (bemalung: Bemalung) =>
+    patch<{ ok: true; figur: Bemalung }>('/me/figur', bemalung),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
   /** Die Stufenleiter um den eigenen Stand herum. Nur beim Antippen geladen. */

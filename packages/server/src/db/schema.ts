@@ -189,6 +189,22 @@ export const account = pgTable(
      */
     avatar: text(),
     /**
+     * Bemalung der 3D-Figur — als Striche, nicht als Bild.
+     *
+     * `{ design, striche }` (siehe `packages/client/src/bemalung.ts`), roh als
+     * Text. Bewusst KEIN fertiges PNG: Selbst in 512 x 512 waeren das hundert
+     * Kilobyte je Konto, die bei jedem Laden des Profils mitkaemen. Ein
+     * Strichzug sind ein paar Zahlen, und daraus entsteht das Bild jedes Mal
+     * neu - auch wenn die Figur spaeter ein feineres Netz bekommt.
+     *
+     * Der Server prueft Form und Obergrenzen (src/bemalung.ts) und kennt
+     * sonst nichts davon: Wie eine Farbe aussieht, weiss allein der Client -
+     * dieselbe Trennung wie bei Blatt und Szenerie.
+     *
+     * null heisst: noch nie bemalt, es gilt die Standardoptik.
+     */
+    figurBemalung: text(),
+    /**
      * Geburtstag (nur Kalendertag). Pflicht bei neuen Konten; aeltere Zeilen
      * koennen null sein, bis nachgepflegt. Fuer Countdown und Jaahresbelohnung.
      */
