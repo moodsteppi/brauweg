@@ -42,6 +42,20 @@ Originale (unverändert): `cute penguin 3d model.glb`,
 **Noch nicht im Produkt:** Der 2D-Pinguin (`pinguin.tsx` + WebPs) läuft weiter.
 3D ersetzt ihn erst, wenn Ausrichtung + Einbau fertig sind.
 
+### Truhe (Deckel + Korpus)
+
+| Datei | Ort |
+|---|---|
+| `chest_bottom.glb` / `chest_top.glb` | `brauweg-art/3d/chest/` und `public/3d/chest/` |
+
+Ausrichten im Browser: `http://localhost:5173/?dev=chest`  
+Deckel-Posen (eingestellt im Ausrichter):
+
+```json
+"lid_open":   { "position": [0.004, 0.423, -0.083], "rotation": [0, 0, 0], "scale": [1.02, 1.02, 1.02] }
+"lid_closed": { "position": [0.006, 0.291, -0.098], "rotation": [0.3984, 0, 0], "scale": [1.02, 1.02, 1.02] }
+```
+
 ---
 
 ## 2. Was schon erstellt wurde (Grafik-Bestellungen)
@@ -114,5 +128,7 @@ Holz-Tafeln/Knöpfen + 3D-Pinguin mit erster Mütze.
 - [ ] Profil-PNGs aus `art/` → Archiv → WebP → Hub verdrahten
 - [ ] Offen: Deck-Registrierung der neuen Vorderseiten
 - [ ] Später: 2D-Pinguin durch 3D-Komponente ersetzen (gleiche Slots: Hut, …)
+- [ ] Profil-Trophäen weg vom Blau: Bestellung `ASSETS-PROFIL-TROPHAEEN.md`,
+      Einbau-Hinweis `FUER-CLAUDE-PROFIL-TROPHAEEN.md`
 
 Fragen oder fehlende Dateien → Emile / dieses Repo (`docs/` + `brauweg-art/3d/`).

@@ -122,6 +122,12 @@ Wirtschaftsmodell.
   lokalen Stand.** Beim Historien-Schnitt am 4. August stand das lokale `main`
   auf einem uralten Commit — ein Spiegel-Push hätte die Produktion
   zurückgerollt.
+- **WebGL-Leinwand in einem Blatt: nach dem Aufbau ein `resize` am `window`
+  feuern.** Sonst bleibt die Bühne beim ersten Öffnen leer und füllt sich
+  erst, wenn der Nutzer die Fenstergröße ändert. Die Höhe des Containers zu
+  verstellen genügt **nicht** — R3F horcht über `react-use-measure` sowohl am
+  Element als auch am Fenster, und nur der zweite Weg wirkt. Steht als
+  `anstossen()` in `Avatarwerkstatt.tsx`.
 - **Kein `<img>` auf eine Datei, die es noch nicht gibt.** Lieber ein Zeichen
   oder gar nichts: Ein weißer Kasten sieht nach Fehler aus, ein Notenzeichen
   nach Absicht. Beim Clan-Krieg ging das einmal fast so live.

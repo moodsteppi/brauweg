@@ -607,26 +607,84 @@ Hand eingestellt und im Browser gegengeprüft. **Nicht** der rechnerische
 Kopfansatz aus `avatar_normalize.json` (y = 0,988) — damit schwebt sie
 sichtbar über dem Kopf.
 
-> **Offen und der Grund, warum die 3D-Kachel noch nicht im Profil steht:**
-> Die Bühne bleibt beim **ersten** Aufbau leer. Die Figur erscheint erst,
-> wenn sich die Fenstergröße einmal ändert — dann läuft alles, Drehen und
-> Mütze inklusive.
->
-> Nachweislich **nicht** die Ursache, alles einzeln geprüft: `frameloop`
+**Die Werkstatt steht im Profil** — vierte Kachel unter dem Pinguin: Figur
+drehen, Mütze auf und ab.
+
+> **Der schwarze Kasten und wie er weg ist.** Die Bühne blieb beim ersten
+> Aufbau leer; die Figur kam erst, wenn sich die Fenstergröße änderte. Fünf
+> Erklärungen waren einzeln geprüft und **alle falsch**: `frameloop`
 > (`demand` wie `always`), von Hand nachgeforderte Bilder, R3Fs Vermessung
 > (`resize={{scroll:false}}`), die Modelle vor der Leinwand laden, die
-> Einblend-Animation des Blattes. Modell, Kamera, Material, Lichter und
-> Leinwandgröße sind über die Konsole als richtig belegt.
+> Einblend-Animation des Blattes.
 >
-> **Ein Fund am Rande, der bleibt:** Die Lichtwerte waren zusätzlich viel zu
-> niedrig. three rechnet seit r155 mit physikalischen Einheiten; die Werte
-> stehen jetzt bei 2,2 / 1,6 / 3,2 / 1,2. Der Ausrichter täuscht dabei — er
-> hat niedrige Werte und sieht trotzdem gut aus, weil dort `<Environment>`
-> die eigentliche Beleuchtung macht.
+> Es half genau eines: **nach dem Aufbau ein echtes `resize` am `window`
+> feuern.** Der entscheidende Unterschied zu meinem Fehlversuch — ich hatte
+> die *Höhe des Containers* verstellt, was nur den `ResizeObserver` am
+> Element anspricht. R3F vermisst über `react-use-measure`, und das horcht an
+> **beidem**: am Element und am Fenster. Nur der zweite Weg wirkt.
 >
-> Zu sehen ist die Werkstatt unter `/?dev=werkstatt` (ohne Anmeldung). Sobald
-> das erste Bild steht, sind es vier Zeilen in `GameSelect.tsx` — die Stelle
-> ist dort auskommentiert markiert.
+> Steht als `anstossen()` in `Avatarwerkstatt.tsx`, ausdrücklich als Notnagel
+> benannt. Die eigentliche Ursache im Zusammenspiel von Leinwandaufbau und
+> Layout ist damit nicht erklärt, nur umgangen.
+
+**Ein Fund am Rande:** Die Lichtwerte waren zusätzlich zu niedrig — mit
+Werten um 1 ist die Figur kaum zu erkennen. Jetzt 2,2 / 1,6 / 3,2 / 1,2.
+**Nicht zu verwechseln mit der r155-Umstellung von three:** Die betrifft
+Punkt- und Spotlichter (Candela, vierstellige Werte). Umgebungs-, Halbraum-
+und Richtungslichter bleiben einstellig. Der Ausrichter täuscht auch hier —
+er hat niedrige Werte und sieht gut aus, weil dort `<Environment>` die
+Beleuchtung macht.
+
+## Am 5. August, abends: die Figur wird bemalbar
+
+**Der weiße Pinguin auf staging war eine Zeile in der Sicherheitsrichtlinie.**
+`img-src` stand auf `'self' data:` — ohne `blob:`. Die Texturen stecken als
+JPEG **im** GLB; three packt sie aus und lädt sie über eine `blob:`-Adresse,
+und genau die war gesperrt. Die Datei war völlig in Ordnung: 200, gültiges
+glTF, und `createImageBitmap` konnte sie von Hand entpacken. Auf dem
+Entwicklungsserver fällt das nie auf, weil es dort diese Kopfzeile nicht gibt.
+**Was mit Bildern zu tun hat, gehört am ausgelieferten Stand geprüft.**
+
+**Die Figur steht jetzt groß im Profil**, an der Stelle des gemalten
+Daumennagels, und ist selbst der Knopf in die Werkstatt. Preis: Wer den
+Profil-Tab öffnet, lädt `three` nach — rund 900 kB, einmal je Sitzung. Bis es
+da ist, steht der gemalte Pinguin als Rückfall.
+
+**Zwei Designs und ein Pinsel.** „Original" ist der Pinguin wie gemalt,
+„Anmalen" gibt ihm einen hellen Grundton zum Arbeiten. Zwölf Farben, drei
+Breiten, Zurücknehmen und Alles-weg. **Zubehör bleibt immer in seinen
+Originalfarben** — angefasst wird nur das Material der Figur.
+
+**Gespeichert werden Striche, kein Bild.** `{design, striche}` als Text in
+`account.figur_bemalung` (Migration 0015). Ein bemaltes PNG wären selbst in
+512 × 512 hundert Kilobyte je Konto bei jedem Laden des Profils; ein Strichzug
+sind ein paar Zahlen, und daraus entsteht das Bild jedes Mal neu. Der Server
+prüft Form und Obergrenzen (`src/bemalung.ts`), kennt aber keine Farbe — wie
+sie aussieht, weiß allein der Client.
+
+> **Zwei Fallen, die viel Zeit gekostet haben, und beide sind Fallen für
+> jeden, der hier weiterbaut:**
+>
+> **1. Malen in Texturkoordinaten springt über Nahtstellen.** Die Oberfläche
+> der Figur liegt in der Textur nicht am Stück, sondern in Inseln. Wer mit dem
+> Finger über eine Naht fährt, springt von einer Insel zur anderen, und eine
+> gerade Linie dazwischen zieht quer über alles, was dazwischenliegt — der Zug
+> landet gleichzeitig auf Kopf, Bauch und Flanke. Abgefangen über `SPRUNG` in
+> `bemalung.ts`: Verbunden wird nur, was auch auf der Figur nebeneinanderliegt.
+>
+> **2. Der Anstoß muss AUSSERHALB der Leinwand stehen.** Als Bauteil innerhalb
+> von `<Canvas>` läuft er im Reconciler von R3F und damit vor dem Moment, in
+> dem der Browser die Leinwand zusammensetzt — die Bühne bleibt schwarz.
+> Dazu hat die Bühne jetzt eine **feste Höhe**: Klappte der Pinselkasten auf,
+> änderte sich ihre Größe, und derselbe Fehler traf erneut. Eine Leinwand,
+> deren Größe sich nie ändert, kann ihn gar nicht erst haben.
+
+**Was NICHT am gebauten Stand geprüft ist:** die Figur im Profil selbst (dafür
+braucht es eine Anmeldung) und ob ein Zug mit einem echten Finger sauber
+durchzieht. Das Browserwerkzeug erzeugt beim Ziehen nur drei, vier
+Zeigerereignisse; die liegen weiter auseinander als `SPRUNG` und bleiben
+deshalb Tupfer. Ein Finger liefert sechzig je Sekunde. **Sollte ein Strich in
+der Hand zerfallen, ist `SPRUNG` die Zahl, an der man dreht.**
 
 ## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
 

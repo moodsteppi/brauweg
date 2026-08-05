@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { CardFront } from '../CardFace';
+import { Ladekreis } from '../Ladekreis';
 import {
   DealCeremony,
   isVollesGeben,
@@ -586,8 +587,7 @@ export function Table({
           : 'Verbinde…';
     return (
       <div className="doko doko--loading">
-        <div className="doko-spinner" aria-hidden="true" />
-        <p className="muted">{ladeText}</p>
+        <Ladekreis bild="/hub/lade-pinguin.webp" text={ladeText} />
         {error && <p className="error">{t(error)}</p>}
         <div className="doko-loading-actions">
           <button className="primary" onClick={reconnect}>

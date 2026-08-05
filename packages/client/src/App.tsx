@@ -52,8 +52,8 @@ export function App(): React.JSX.Element {
 
   if (loading) {
     return (
-      <main>
-        <Ladekreis text="Einen Moment…" />
+      <main className="app-laden">
+        <Ladekreis bild="/hub/lade-pinguin.webp" text="Einen Moment…" />
       </main>
     );
   }

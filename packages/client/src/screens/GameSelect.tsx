@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -62,6 +64,15 @@ import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Klanghalle } from './Klanghalle';
+import { Avatarwerkstatt } from './Avatarwerkstatt';
+import { LEERE_BEMALUNG } from '../bemalung';
+
+/**
+ * Die 3D-Figur wird nachgeladen: `three` und `drei` wiegen rund 900 kB. Bis
+ * sie da ist, steht der gemalte Pinguin als Rueckfall — siehe die Stelle im
+ * Profil-Tab.
+ */
+const Avatar3D = lazy(() => import('../Avatar3D'));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -131,6 +142,7 @@ export function GameSelect({
   const [aufgabenOffen, setAufgabenOffen] = useState(false);
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
+  const [werkstattOffen, setWerkstattOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -317,6 +329,10 @@ export function GameSelect({
               spiele('blatt-auf');
               setKlanghalleOffen(true);
             }}
+            onWerkstatt={() => {
+              spiele('blatt-auf');
+              setWerkstattOffen(true);
+            }}
             onAufgaben={() => setAufgabenOffen(true)}
             onBald={setBald}
             onShowProfile={onShowProfile}
@@ -331,15 +347,30 @@ export function GameSelect({
         {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
-          {/* Oben links das Profilbild — der angezogene Pinguin steht schon
-              vorne auf dem Pfad, ein zweiter hier daneben war dieselbe Figur
-              zweimal. Ist noch kein Bild hochgeladen, bleibt der Pinguin als
-              Rueckfall stehen (wie im Profil-Kopf), sonst haette ein neues
-              Konto oben links ein Loch. */}
+          {/*
+            Oben links das Profilbild. Die Figur (der 3D-Pinguin) steht schon
+            vorne auf dem Pfad — sie ein zweites Mal ins Kopfband zu setzen war
+            dieselbe Figur zweimal. Ist ein Bild hochgeladen, steht es hier.
+
+            Ohne hochgeladenes Bild bleibt als Rueckfall die Figur (nicht der
+            alte Flach-Pinguin): ein leerer Kasten im Kopfband waere auf jedem
+            Bildschirm zu sehen, und bis das WebGL-Modell da ist, faengt der
+            gemalte Pinguin im Suspense-Fallback ab. Der zweite WebGL-Bereich
+            entsteht nur in diesem Rueckfall — wer ein Bild hat, zahlt ihn im
+            Kopfband nicht.
+          */}
           {me.avatarUrl ? (
             <img className="front-avatar" src={me.avatarUrl} alt="" draggable={false} />
           ) : (
-            <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
+            <span className="front-avatar front-avatar--3d">
+              <Suspense fallback={<Pinguin getragen={me.avatar} groesse={2.6} />}>
+                <Avatar3D
+                  muetze={false}
+                  bemalung={me.figur ?? LEERE_BEMALUNG}
+                  drehbar={false}
+                />
+              </Suspense>
+            </span>
           )}
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
@@ -501,6 +532,15 @@ export function GameSelect({
         />
       )}
       {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
+      {werkstattOffen && (
+        <Avatarwerkstatt
+          bemalung={me.figur ?? null}
+          onClose={() => setWerkstattOffen(false)}
+          // Neu laden, damit die Figur im Profil sofort so aussieht wie
+          // gerade gespeichert.
+          onGespeichert={() => onAvatarChange()}
+        />
+      )}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
         <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
@@ -551,6 +591,7 @@ function ProfilTab({
   onStufen,
   onSchrank,
   onKlanghalle,
+  onWerkstatt,
   onAufgaben,
   onBald,
   onShowProfile,
@@ -568,6 +609,8 @@ function ProfilTab({
   onSchrank: () => void;
   /** Oeffnet die Klanghalle — Musik und Klangpakete auswaehlen. */
   onKlanghalle: () => void;
+  /** Oeffnet die Avatar-Werkstatt: drehen, anmalen, Muetze. */
+  onWerkstatt: () => void;
   /** Oeffnet Tagesaufgaben und Truhen. */
   onAufgaben: () => void;
   onBald: (name: string) => void;
@@ -652,27 +695,35 @@ function ProfilTab({
         Leute — und ganz zum Schluss die Konto-Sachen, die man ein Mal im Jahr
         braucht.
       */}
-      <Tafel titel="Deine Sachen" zusatz={`Stufe ${me.level.stufe}`}>
-        <section className="hub-garderobe">
-          {/* Der Pinguin IST der Knopf, wie das Profilbild darueber: Ein
-              eigener "Kleiderschrank oeffnen"-Knopf waere eine Zeile Hoehe
-              fuer eine Auskunft, die das Bild schon gibt. */}
-          <button className="hub-garderobe-pinguin" onClick={onSchrank} title="Kleiderschrank">
-            <Pinguin getragen={me.avatar} groesse={7} titel="Dein Pinguin" />
-            <span className="hub-profilbild-stift" aria-hidden="true">
-              ✎
-            </span>
-          </button>
-          <div className="hub-garderobe-text">
-            <strong>Dein Pinguin</strong>
-            <span className="muted">
-              {Object.keys(me.avatar).length === 0
-                ? `Noch nichts an — ${SLOTS.length} Plätze warten.`
-                : `${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen belegt.`}
-            </span>
-          </div>
-        </section>
+      {/*
+        Die Figur bekommt eine eigene Tafel ueber die volle Breite.
 
+        Vorher stand sie neben dem Text in derselben Tafel — und ragte dort
+        oben heraus, quer ueber das Namensschild. Der Grund war die Hoehe: Ein
+        WebGL-Bereich hat keine Inhaltsgroesse, an der sich die Zeile
+        ausrichten koennte, und die Tafel laesst Ueberstand durch (`overflow:
+        visible`, noetig fuer die Messingnieten). Ueber die volle Breite kann
+        das nicht passieren.
+      */}
+      <Tafel titel="Deine Figur" zusatz={me.figur?.design === 'bemalt' ? 'Selbst angemalt' : 'Antippen zum Bearbeiten'}>
+        <button className="hub-figur-buehne" onClick={onWerkstatt} title="Figur bearbeiten">
+          <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
+            <Avatar3D
+              muetze={false}
+              bemalung={me.figur ?? LEERE_BEMALUNG}
+              drehbar={false}
+            />
+          </Suspense>
+          <span className="hub-profilbild-stift" aria-hidden="true">
+            ✎
+          </span>
+        </button>
+        <p className="muted hub-figur-hinweis">
+          Drehen, anmalen, Mütze aufsetzen — antippen.
+        </p>
+      </Tafel>
+
+      <Tafel titel="Deine Sachen" zusatz={`${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen`}>
         {/* Drei Einstiege in das, was einem gehoert: anziehen, hoeren,
             verdienen. Als Kachelreihe mit Symbol, nicht als Textknopfreihe —
             drei Woerter nebeneinander sind auf einem Handy zu schmal, um
@@ -695,19 +746,6 @@ function ProfilTab({
             punkt={me.bereit.truhen + me.bereit.aufgaben > 0}
             onClick={onAufgaben}
           />
-          {/*
-            HIER FEHLT ABSICHTLICH DIE KACHEL "Figur in 3D".
-
-            Die Werkstatt ist gebaut (`Avatarwerkstatt.tsx`, `Avatar3D.tsx`)
-            und ueber `/?dev=werkstatt` zu sehen, aber ihre Buehne bleibt
-            beim ERSTEN Aufbau leer — sichtbar wird die Figur erst, wenn
-            sich die Fenstergroesse einmal aendert. Modell, Kamera, Material
-            und Lichter sind nachweislich richtig; die Ursache ist noch
-            offen. Ein schwarzer Kasten gehoert nicht vor Spieler.
-
-            Sobald das sitzt, ist es genau diese Kachel und die vier
-            Zeilen — sonst nichts. Naeheres in docs/STAND.md.
-          */}
         </div>
       </Tafel>
 
@@ -828,6 +866,7 @@ function ProfilTab({
           {/* Klein, aber vorhanden: Apple lehnt Apps mit Konten ohne diesen
               Weg zuverlaessig ab, und die DSGVO verlangt ihn ohnehin. */}
           <button className="hub-konto-loeschen" onClick={() => setLoeschenOffen(true)}>
+            <img src="/hub/icon-konto-loeschen.webp" alt="" aria-hidden="true" />
             Konto löschen
           </button>
         </div>

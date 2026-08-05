@@ -1390,6 +1390,25 @@ td {
   align-items: center;
   justify-content: center;
   gap: 0.9rem;
+  /* Gemalter Ladehintergrund; faellt auf den Stuben-Verlauf zurueck, falls das
+     Bild (noch) nicht geliefert ist — dann dunkel statt kaputt (CSS-url blendet
+     sanft weg, kein weisser Kasten). */
+  background:
+    url(/hub/bg-laden.webp) center center / cover no-repeat,
+    linear-gradient(180deg, #2a1a0e 0%, #221409 12%, #1a1008 100%);
+}
+
+/* App-Start-Ladescreen: Vollbild, mittig, derselbe gemalte Hintergrund. */
+.app-laden {
+  min-height: 100dvh;
+  max-width: none;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    url(/hub/bg-laden.webp) center center / cover no-repeat,
+    linear-gradient(180deg, #1c1208 0%, #140d06 55%, #0e0904 100%);
 }
 .doko-spinner {
   width: 2.4rem;
@@ -1999,7 +2018,7 @@ td {
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.8rem;
   padding: 0.45rem 0.55rem 0.55rem;
   background: linear-gradient(
     180deg,
@@ -3119,14 +3138,22 @@ td {
 }
 
 /* —— Statistik Entwurf A: knallig, Pokal-Hero —— */
+/*
+  Abstand zwischen den Tafeln.
+
+  0,4 rem stammen aus der Zeit, als eine Tafel ein Kasten mit 2 px Rand war.
+  Jetzt traegt sie einen gemalten Holzrahmen von 18 px, und zwei davon stossen
+  bei so wenig Luft fast aneinander — im Profil sah es aus, als schoeben sich
+  die Abschnitte ineinander. 0,8 rem laesst den Rahmen als Rahmen erkennen.
+*/
 .front-profil--a {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.8rem;
 }
 .front-profil--a .hub-tab-inhalt {
   overflow-y: auto;
-  gap: 0.4rem;
+  gap: 0.8rem;
 }
 .hub-profilkopf--a {
   background: linear-gradient(165deg, #2a8a5a, #0f4a34);
@@ -3138,9 +3165,6 @@ td {
   text-align: center;
   padding: 0.65rem 0.5rem 0.5rem;
   border-radius: 0.9rem;
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 2px solid rgba(255, 220, 120, 0.65);
-  box-shadow: 0 4px 0 #123570;
 }
 .hub-stat-hero > img {
   width: 2.6rem;
@@ -3179,9 +3203,6 @@ td {
   padding: 0.45rem 0.25rem 0.4rem;
   border-radius: 0.7rem;
   text-align: center;
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 1.5px solid rgba(255, 220, 120, 0.5);
-  box-shadow: 0 3px 0 #123570;
 }
 .hub-stat-kachel img {
   width: 1.35rem;
@@ -3206,9 +3227,6 @@ td {
   gap: 0.45rem;
   padding: 0.45rem 0.5rem;
   border-radius: 0.7rem;
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 1.5px solid rgba(255, 220, 120, 0.45);
-  box-shadow: 0 3px 0 #123570;
 }
 .hub-stat-spiel > img {
   width: 1.55rem;
@@ -3264,9 +3282,6 @@ td {
   margin-top: 0.1rem;
 }
 .hub-knopf--a {
-  background: linear-gradient(180deg, #3a7fd4, #2458a8);
-  border: 1.5px solid rgba(255, 220, 120, 0.5);
-  box-shadow: 0 3px 0 #123570;
   color: #fff;
 }
 .hub-knopf--a:active {
@@ -6653,24 +6668,9 @@ main.auth > .muted {
 }
 
 /* Der Fund: gross, mittig, mit der Zahl als Hauptsache. */
-.truhe-fund {
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
-  text-align: center;
-}
-
-.truhe-fund .truhe-bild {
-  width: 6rem;
-  height: 5.4rem;
-}
-
-.truhe-fund-zahl {
-  font-size: 1.9rem;
-  font-weight: 800;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
-}
+/* Die Regeln fuer das alte Fundblatt sind weg: Der Fund IST jetzt die
+   Oeffnung (siehe FundBlatt in Aufgaben.tsx), es gibt kein zweites Blatt
+   mehr mit Truhe, Betrag und "Einsammeln". */
 
 /* Aufgaben: Balken plus Zahl. Der Balken zeigt es, die Zahl beweist es. */
 .quest-balken {
@@ -7873,25 +7873,40 @@ main.auth > .muted {
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
+/*
+  Die Buehne fuellt den Bildschirm, die Truhe steht in der Mitte.
+
+  Vorher waren es feste 220 x 240 px in einem sonst leeren Vollbild — auf
+  einem Handy ein Briefmarkenbild mitten in viel Schwarz. Jetzt bemisst sie
+  sich am Bildschirm und deckelt bei 30 rem, damit sie auf einem Tablet nicht
+  ins Absurde waechst.
+*/
 .truhe-buehne {
   position: relative;
-  width: 220px;
-  height: 240px;
+  width: min(88vw, 30rem);
+  height: min(62vh, 32rem);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  perspective: 700px;
+  perspective: 900px;
 }
 
 /* Zwei Wrapper, damit Drehung (rotateY) und Wackeln (rotateZ) sich nicht
    überschreiben — beide setzen sonst dieselbe transform-Eigenschaft. */
+/*
+  Mittig statt am unteren Rand: Die Truhe IST der Bildschirm, sie steht nicht
+  auf einem Sockel darunter.
+
+  Zentriert wird ueber das Flex der Buehne und NICHT ueber `translate` — die
+  Drehung (`truhe-drehen`) setzt `transform` und wuerde ein `translate` hier
+  einfach ueberschreiben. Die Truhe spraenge dann beim Start der Bewegung in
+  die linke obere Ecke.
+*/
 .truhe-dreh {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  width: 176px;
-  height: 150px;
-  margin-left: -88px;
+  position: relative;
+  z-index: 2;
+  width: min(72vw, 22rem);
+  height: min(40vh, 18rem);
   transform-style: preserve-3d;
   animation: truhe-drehen 1.5s ease-in-out 0.85s both;
 }
@@ -7900,6 +7915,13 @@ main.auth > .muted {
   inset: 0;
   transform-style: preserve-3d;
   animation: truhe-wackeln 0.85s ease-in-out;
+}
+/* Die Leinwand fuellt den Wackel-Wrapper. Ein WebGL-Bereich hat keine eigene
+   Groesse — ohne diese Zeile ist er null hoch und man sieht nichts. */
+.truhe-schuettel canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 .truhe-koerper {
   position: absolute;
@@ -7918,24 +7940,34 @@ main.auth > .muted {
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.4));
 }
 
+/*
+  Gluehen und Strahlen sind am Bildschirm bemessen, nicht in festen Pixeln.
+
+  Die alten 170 bzw. 330 px stammen aus der Zeit, als die Buehne 220 x 240 px
+  gross war — im Vollbild war davon nur noch ein Fleckchen unter der Truhe zu
+  sehen. Und die Verzoegerungen (0,9 s) galten fuer den festen Ablauf; jetzt
+  loest der Tipp aus, also fangen beide sofort an.
+*/
 .truhe-glut {
   position: absolute;
-  top: 42%;
+  top: 45%;
   left: 50%;
-  width: 170px;
-  height: 170px;
+  width: min(80vw, 26rem);
+  height: min(80vw, 26rem);
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(circle, var(--glut, #ffe0a0) 0%, transparent 66%);
   opacity: 0;
-  animation: truhe-glut 2.2s ease-out 0.9s forwards;
+  animation: truhe-glut 2.2s ease-out forwards;
+  /* Hinter der Truhe, aber vor dem Hintergrund. */
+  z-index: 0;
 }
 .truhe-strahlen {
   position: absolute;
-  top: 42%;
+  top: 45%;
   left: 50%;
-  width: 330px;
-  height: 330px;
+  width: min(150vw, 44rem);
+  height: min(150vw, 44rem);
   transform: translate(-50%, -50%) scale(0.3);
   border-radius: 50%;
   background: repeating-conic-gradient(
@@ -7946,12 +7978,23 @@ main.auth > .muted {
   -webkit-mask: radial-gradient(circle, transparent 22%, #000 32%, #000 54%, transparent 68%);
   mask: radial-gradient(circle, transparent 22%, #000 32%, #000 54%, transparent 68%);
   opacity: 0;
-  animation: truhe-strahlen 2.4s ease-out 0.95s forwards;
+  animation: truhe-strahlen 2.4s ease-out forwards;
+  z-index: 0;
 }
 
+/* Die Belohnung schwebt UEBER der Truhe.
+   Die 22 % stammten aus der Zeit des flachen SVG, das den Platz anders
+   ausfuellte — mit dem 3D-Modell lag die Muenze mitten auf dem Deckel.
+   Muenze UND Zahl muessen frei liegen, nicht nur die Muenze.
+
+   UNTER der Truhe und nicht darueber: Gemessen bleiben ueber der Truhe 71 px,
+   die Belohnung braucht 94 — sie lag deshalb auf dem Deckel. Darunter sind
+   112 px frei. Und es liest sich ohnehin natuerlicher: Die Truhe geht auf,
+   der Betrag steigt darunter herauf. */
 .truhe-belohnung {
   position: absolute;
-  top: 22%;
+  top: auto;
+  bottom: 2%;
   left: 50%;
   display: flex;
   flex-direction: column;
@@ -7997,9 +8040,9 @@ main.auth > .muted {
   100% { transform: rotateX(-118deg); }
 }
 @keyframes truhe-glut {
-  0% { opacity: 0; }
-  25% { opacity: 0.9; }
-  100% { opacity: 0.28; }
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  22% { opacity: 0.95; transform: translate(-50%, -50%) scale(1.08); }
+  100% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
 }
 @keyframes truhe-strahlen {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0); }
@@ -8499,13 +8542,23 @@ main.auth > .muted {
 
 /* Die Kopfleiste sitzt IN der Tafel und braucht deshalb keinen eigenen
    Rahmen an den Seiten - nur das geschnitzte Querbrett. */
+/*
+  Der Tafelkopf sitzt IN der Tafel, nicht darueber.
+
+  Er hatte negative Raender (-0.35rem/-0.2rem) und schob sich damit auf den
+  Holzrahmen der eigenen Tafel — im Profil sah es aus, als ueberlappten sich
+  "FREUNDE" und "KONTO" mit den Tafeln darueber. Der Grund war harmlos und
+  die Wirkung haesslich: Solange der Kopf nur eine flache Farbflaeche war,
+  fiel der Ueberstand nicht auf; seit er selbst ein gemaltes Brett ist, liegen
+  zwei Hoelzer uebereinander.
+*/
 .hub-tafel-kopf {
   background: none;
-  border: 14px solid transparent;
+  border: 12px solid transparent;
   border-image: url(/hub/menue-tafel-kopf.webp) 32 fill / 1 / 0 stretch;
   border-bottom: none;
-  padding: 0.1rem 0.2rem;
-  margin: -0.35rem -0.2rem 0.15rem;
+  padding: 0.05rem 0.15rem;
+  margin: 0 0 0.3rem;
 }
 
 /* Der Erfahrungsbalken: eingelassene Rinne, darin warmes Gold. Die Fuellung
@@ -8573,9 +8626,17 @@ main.auth > .muted {
 
 .werkstatt-buehne {
   position: relative;
-  height: 42vh;
-  min-height: 15rem;
-  max-height: 22rem;
+  /*
+    Feste Hoehe, kein vh und kein Schrumpfen.
+    -------------------------------------------------------------------
+    Der Pinselkasten klappt auf und zu. Haengt die Hoehe der Buehne am
+    Bildschirm oder am uebrigen Inhalt, aendert sie sich dabei — und genau
+    dann blieb die Figur schwarz, bis irgendetwas ein Groessenereignis
+    ausloeste. Eine Leinwand, deren Groesse sich nie aendert, kann diesen
+    Fehler gar nicht erst haben.
+  */
+  flex: 0 0 auto;
+  height: 17rem;
   margin: 0.2rem 0 0.3rem;
   border: 12px solid transparent;
   border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
@@ -8634,19 +8695,6 @@ main.auth > .muted {
   filter: brightness(1.12);
 }
 
-/* Die Werkstatt faehrt nicht ein.
-   -----------------------------------------------------------------------
-   Jedes andere Blatt bekommt eine kurze Einblend-Animation (`doko-pop`).
-   Hier steht aber eine WebGL-Leinwand drin, und die entsteht mitten in
-   dieser Animation - waehrend das Elternelement noch transformiert wird.
-   Genau dann bleibt sie leer, und zwar dauerhaft: Erst eine spaetere
-   Groessenaenderung brachte die Figur zum Vorschein.
-
-   Ohne Animation entsteht die Leinwand auf einem stehenden Element. */
-.doko-sheet--mitte .doko-sheet-card.werkstatt {
-  animation: none;
-}
-
 /* Ladekreis — der gemeinsame Ladeindikator (Ladekreis.tsx). Derselbe Ring wie
    der doko-spinner an den Tischen, damit ueberall dasselbe dreht. */
 .ladekreis {
@@ -8678,4 +8726,369 @@ main.auth > .muted {
   .ladekreis-ring {
     animation: none;
   }
+}
+
+/* =========================================================================
+   Die 3D-Figur.
+
+   Zwei Groessen: gross in ihrer eigenen Tafel im Profil, winzig im Kopfband
+   auf jedem Tab. Beide Male ein WebGL-Bereich, und der hat KEINE eigene
+   Inhaltsgroesse — er fuellt, was man ihm gibt, und wird sonst null hoch.
+   Deshalb steht hier ueberall eine feste Hoehe.
+
+   Genau daran ist die erste Fassung gescheitert: Die Figur stand neben dem
+   Text in derselben Tafel, hatte 11 rem Hoehe, und weil die Tafel Ueberstand
+   durchlaesst (noetig fuer die Messingnieten), ragte sie quer ueber das
+   Namensschild darueber.
+   ========================================================================= */
+
+.hub-figur-buehne {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 13rem;
+  padding: 0;
+  border: 10px solid transparent;
+  border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+.hub-figur-buehne canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+/* Der gemalte Pinguin als Rueckfall, solange three noch laedt. */
+.hub-figur-buehne > .pinguin {
+  display: block;
+  margin: 0 auto;
+}
+.hub-figur-buehne:active { transform: scale(0.99); }
+.hub-figur-buehne .hub-profilbild-stift {
+  position: absolute;
+  right: 0.3rem;
+  bottom: 0.3rem;
+}
+
+.hub-figur-hinweis {
+  margin: 0.35rem 0 0;
+  text-align: center;
+  font-size: 0.72rem;
+}
+
+/* Im Kopfband: so gross wie der alte gemalte Mini-Pinguin, damit die Zeile
+   ihre Hoehe behaelt. */
+.front-avatar--3d {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  overflow: hidden;
+}
+.front-avatar--3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* =========================================================================
+   Der Pinselkasten in der Werkstatt.
+   ========================================================================= */
+
+.werkstatt-pinsel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.45rem 0;
+  padding: 0.5rem;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
+}
+
+/* Zwoelf Farben in zwei Reihen zu sechs. Die Punkte sind 40 px gross: Alles
+   darunter trifft man mit dem Daumen nicht zuverlaessig. */
+.werkstatt-farben {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.35rem;
+}
+.werkstatt-farbe {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 2.2rem;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  padding: 0;
+}
+/* Gewaehlt: ein goldener Ring aussen herum, nicht eine andere Form — die
+   Farbe selbst muss sichtbar bleiben. */
+.werkstatt-farbe.is-gewaehlt {
+  outline: 3px solid rgba(255, 216, 130, 0.95);
+  outline-offset: 2px;
+}
+.werkstatt-farbe:active { transform: scale(0.92); }
+
+.werkstatt-breiten {
+  display: flex;
+  gap: 0.35rem;
+}
+.werkstatt-breiten .lobby-chip {
+  flex: 1 1 0;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+}
+
+.werkstatt-muetze {
+  margin-top: 0.2rem;
+}
+
+/* =========================================================================
+   Trophaeen, Einstellungen, Benachrichtigungen — gemaltes Holz statt Blau.
+
+   Der ganze Block hier ersetzt die blauen Verlaeufe (#3a7fd4 → #2458a8), die
+   den Profil-Tab bisher getragen haben. DESIGN.md kennt Blau als Farbe fuer
+   Level und Freunde, nicht als Flaeche fuer halbe Bildschirme - und neben
+   gemaltem Holz sah es aus wie aus einer anderen App.
+
+   Randmasse aus docs/ASSETS-PROFIL-TROPHAEEN.md: Hero 48, Kachel 40,
+   Spielzeile 32, Benachrichtigungszeile 32, Reglertrog 24.
+   ========================================================================= */
+
+.hub-stat-hero {
+  background: none;
+  border: 16px solid transparent;
+  border-image: url(/hub/stat-hero-grund.webp) 48 fill / 1 / 0 stretch;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.5rem 0.5rem 0.45rem;
+}
+/* Der grosse Pokal ersetzt das alte pokal.png: eigens fuer diese Groesse
+   gemalt, statt ein Zeilensymbol hochzuskalieren. */
+.hub-stat-hero > img {
+  width: 3.2rem;
+  height: 3.2rem;
+}
+
+.hub-stat-kachel {
+  background: none;
+  border: 13px solid transparent;
+  border-image: url(/hub/stat-kachel-grund.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  box-shadow: none;
+}
+.hub-stat-kachel img {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.hub-stat-spiel {
+  background: none;
+  border: 11px solid transparent;
+  border-image: url(/hub/stat-spiel-grund.webp) 32 fill / 1 / 0 stretch;
+  border-radius: 0;
+  box-shadow: none;
+}
+.hub-stat-spiel > img {
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+/* Die Regler in den Einstellungen: eingelassene Rinne, Messingknopf. Beides
+   gemalt statt aus Verlauf und Schatten gebaut. */
+.einstellungen-regler input[type='range']::-webkit-slider-runnable-track {
+  height: 14px;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-trog.webp) center / 100% 100% no-repeat;
+  box-shadow: none;
+}
+.einstellungen-regler input[type='range']::-moz-range-track {
+  height: 14px;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-trog.webp) center / 100% 100% no-repeat;
+  box-shadow: none;
+}
+.einstellungen-regler input[type='range']::-webkit-slider-thumb {
+  width: 26px;
+  height: 26px;
+  margin-top: -6px;
+  border: none;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-knopf.webp) center / contain no-repeat;
+  box-shadow: none;
+}
+.einstellungen-regler input[type='range']::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 0;
+  background: url(/hub/einstellung-regler-knopf.webp) center / contain no-repeat;
+  box-shadow: none;
+}
+
+/* Symbol vor dem Namen in der Einstellungszeile — Lautsprecher und Note. */
+.einstellungen-text {
+  position: relative;
+}
+.einstellungen-zeile > img.einstellungen-symbol {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+/* Die Truhe in 3D. Feste Groesse, weil ein WebGL-Bereich keine eigene
+   Inhaltsgroesse hat — dieselbe Regel wie bei der Figur. Der farbige Grund
+   traegt die Zeile, solange three noch laedt: In einer Liste mit fuenf
+   Truhen soll nichts zappeln. */
+.truhe-bild--3d {
+  display: block;
+  width: 4.2rem;
+  height: 4.2rem;
+  flex: 0 0 auto;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.truhe-bild--3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+.truhe-bild--holz    { background: rgba(138, 106, 60, 0.18); }
+.truhe-bild--bronze  { background: rgba(181, 118, 60, 0.18); }
+.truhe-bild--silber  { background: rgba(174, 188, 196, 0.18); }
+.truhe-bild--gold    { background: rgba(226, 182, 79, 0.18); }
+.truhe-bild--diamant { background: rgba(126, 200, 224, 0.18); }
+
+/* Im Shop und in der Kaufrueckfrage steht sie groesser. */
+.shop-truhe .truhe-bild--3d { width: 5.4rem; height: 5.4rem; }
+.ks-kauf .truhe-bild--3d { width: 7rem; height: 7rem; margin: 0 auto; }
+
+/* Das Warnschild vor "Konto loeschen" — klein, aber es macht aus einer
+   Textzeile eine Handlung mit Gewicht. */
+.hub-konto-loeschen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.hub-konto-loeschen img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+}
+
+/* =========================================================================
+   Truhenoeffnung, zweiter Anlauf: Antippen oeffnet.
+
+   Vorher lief alles nach einer Zeitschaltung ab. Jetzt steht die Truhe
+   geschlossen da und wartet — und alles, was zum Oeffnen gehoert, haengt an
+   der Phase. Der Grund ist nicht technisch: Das Oeffnen ist der Moment, um
+   den es geht, und der gehoert dem Spieler.
+   ========================================================================= */
+
+/* Geschlossen: kein Gluehen, keine Strahlen, keine Zahl. Nur die Truhe, die
+   leise atmet und darauf wartet, angetippt zu werden. */
+.truhe-oeffnung.ist-zu .truhe-glut,
+.truhe-oeffnung.ist-zu .truhe-strahlen,
+.truhe-oeffnung.ist-zu .truhe-belohnung {
+  opacity: 0;
+  animation: none;
+}
+/* Das Wackeln beim Aufbau gehoert zum Oeffnen und nicht zum Warten. */
+.truhe-oeffnung.ist-zu .truhe-schuettel,
+.truhe-oeffnung.ist-zu .truhe-dreh {
+  animation: none;
+}
+/* Stattdessen ein ruhiges Heben und Senken — die Truhe lebt, ohne zu
+   zappeln. Wer eine Sekunde zoegert, soll nicht auf ein Standbild sehen. */
+.truhe-oeffnung.ist-zu .truhe-dreh {
+  animation: truhe-atmen 2.6s ease-in-out infinite;
+}
+@keyframes truhe-atmen {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.012); }
+}
+
+/* Der Hinweis lockt, solange zu ist. */
+.truhe-oeffnung.ist-zu .truhe-hinweis {
+  animation: truhe-locken 1.8s ease-in-out infinite;
+}
+@keyframes truhe-locken {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* -------------------------------------------------------------------------
+   Der Muenzschwall.
+
+   Liegt UEBER der Truhe (z-index) und ueber dem Gluehen: Die Muenzen kommen
+   aus ihr heraus, sie liegen nicht dahinter. Ausgangspunkt ist der obere
+   Rand der Truhe, nicht ihre Mitte — dort ist die Oeffnung.
+   ------------------------------------------------------------------------- */
+.truhe-schwall {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.truhe-schwall img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2rem;
+  height: 2rem;
+  margin: -1rem 0 0 -1rem;
+  opacity: 0;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+  animation: truhe-muenze-fliegt 1.5s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+/*
+  Steigen, auffaechern, fallen — in einer Bewegung.
+
+  Die Kurve macht den Bogen: schnell hoch, oben langsam, dann faellt sie
+  wieder. Ohne den Abfall am Ende schweben zwoelf Muenzen aus dem Bild und es
+  sieht aus, als waeren sie weggezaubert worden.
+*/
+@keyframes truhe-muenze-fliegt {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0) scale(0.4);
+  }
+  12% { opacity: 1; }
+  60% {
+    opacity: 1;
+    transform: translate(var(--weite), var(--hoehe)) rotate(var(--dreh)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--weite) * 1.6), calc(var(--hoehe) * 0.25))
+      rotate(calc(var(--dreh) * 1.4)) scale(0.85);
+  }
+}
+
+/* Das Gluehen kraeftiger und warm in der Farbe des Grades — es soll aus der
+   Truhe kommen und nicht wie ein Nebel darueber liegen. */
+.truhe-oeffnung.ist-auf .truhe-glut,
+.truhe-oeffnung.ist-fertig .truhe-glut {
+  filter: blur(6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .truhe-oeffnung.ist-zu .truhe-dreh,
+  .truhe-oeffnung.ist-zu .truhe-hinweis,
+  .truhe-schwall img {
+    animation: none;
+  }
+  /* Ohne Bewegung bleiben die Muenzen ganz weg — ein Standbild aus zwoelf
+     uebereinanderliegenden Muenzen waere nur ein Klumpen. */
+  .truhe-schwall { display: none; }
 }

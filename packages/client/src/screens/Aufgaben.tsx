@@ -15,8 +15,20 @@
  * Anfang, siehe `packages/server/src/quests.ts`.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
+
+/**
+ * Die 3D-Truhe wird nachgeladen: `three` und `drei` wiegen rund 900 kB.
+ * Steht hier und nicht im Bauteil, damit alle Truhen auf einem Bildschirm
+ * dasselbe Stueck teilen.
+ */
+const Truhe3D = lazy(() => import('../Truhe3D'));
+
+/** Die Öffnungs-Choreografie — ebenfalls nachgeladen, sie zieht `three` mit. */
+const TruhenOeffnung = lazy(() =>
+  import('../TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
+);
 
 import {
   ApiError,
@@ -49,27 +61,26 @@ export function TruhenBild({
   grad: Truhe['grad'];
   offen: boolean;
 }): React.JSX.Element {
-  const farben: Record<Truhe['grad'], [string, string, string]> = {
-    holz: ['#8a6a3c', '#6f5230', '#c89a5c'],
-    bronze: ['#b5763c', '#8c5628', '#e0a060'],
-    silber: ['#aebcc4', '#8494a0', '#dce6ec'],
-    gold: ['#e2b64f', '#b78c2c', '#f6e0a0'],
-    diamant: ['#7ec8e0', '#4a9cbc', '#d0f0fa'],
-  };
-  const [koerper, dunkel, hell] = farben[grad];
-
+  /**
+   * Die Truhe in drei Dimensionen.
+   *
+   * Ersetzt das gezeichnete SVG, das hier stand. Aufrufer merken nichts davon
+   * — dieselben zwei Eigenschaften, dieselbe Stelle.
+   *
+   * `sofort`: In Shop und Aufgabenliste steht die Truhe still, dort soll
+   * nichts aufklappen. Die Bewegung gehoert in die Oeffnung
+   * (`TruhenOeffnung.tsx`), und nur dort.
+   *
+   * Der Rueckfall ist ein Kasten in der Farbe des Grades und kein Platzhalter-
+   * bild: In einer Liste mit fuenf Truhen laedt `three` einmal, und bis dahin
+   * soll die Zeile ihre Hoehe behalten, ohne zu zappeln.
+   */
   return (
-    <svg className="truhe-bild" viewBox="0 0 64 56" aria-hidden="true">
-      {/* Deckel: geschlossen liegt er auf, geholt steht er nach hinten offen. */}
-      <g transform={offen ? 'translate(0 -8) rotate(-14 8 20)' : ''}>
-        <path d="M8 24 A24 14 0 0 1 56 24 L56 28 L8 28 Z" fill={koerper} />
-        <path d="M8 24 A24 14 0 0 1 56 24 L56 26 L8 26 Z" fill={hell} opacity="0.5" />
-      </g>
-      <rect x="8" y="28" width="48" height="24" rx="3" fill={koerper} />
-      <rect x="8" y="34" width="48" height="5" fill={dunkel} />
-      <rect x="28" y="30" width="8" height="12" rx="2" fill={hell} />
-      <circle cx="32" cy="36" r="2" fill={dunkel} />
-    </svg>
+    <span className={`truhe-bild truhe-bild--3d truhe-bild--${grad}`}>
+      <Suspense fallback={null}>
+        <Truhe3D grad={grad} offen={offen} sofort />
+      </Suspense>
+    </span>
   );
 }
 
@@ -200,24 +211,27 @@ export function FundBlatt({
   fund: { grad: Truhe['grad']; coins: number };
   onClose: () => void;
 }): React.JSX.Element {
+  /**
+   * Der Fund IST die Öffnung.
+   *
+   * **Die Choreografie war gebaut und nirgends angeschlossen.** Wer eine Truhe
+   * kaufte oder einsammelte, bekam sofort „+787 Münzen" zu sehen — die Truhe
+   * ging nie auf. Hier ist der Ort dafür: Beide Wege, Kauf im Shop und Abholen
+   * bei den Aufgaben, kommen durch dieses Blatt.
+   *
+   * Und es ist EIN Bildschirm, nicht zwei. Vorher stand hier ein Blatt mit
+   * Truhe, Betrag und „Einsammeln" — die Öffnung zeigt den Betrag aber selbst,
+   * am Ende der Bewegung. Ein zweites Blatt danach wäre dieselbe Auskunft ein
+   * zweites Mal und ein Tipp mehr.
+   *
+   * Wer die Bewegung nicht sehen will, tippt sofort — `onFertig` hängt am
+   * ganzen Bildschirm. Und wer `prefers-reduced-motion` gesetzt hat, sieht das
+   * Ergebnis ohne Umweg: Die Regeln dafür stehen in `styles.css`.
+   */
   return (
-    <div className="doko-sheet" onClick={onClose} role="presentation">
-      <div
-        className="doko-sheet-card truhe-fund"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-label={`${fund.coins} Münzen aus der Truhe`}
-      >
-        <TruhenBild grad={fund.grad} offen />
-        <strong className="truhe-fund-zahl">
-          +{fund.coins} {fund.coins === 1 ? 'Münze' : 'Münzen'}
-        </strong>
-        <p className="muted">{t(`truhe.${fund.grad}`)} geöffnet.</p>
-        <button className="primary" onClick={onClose}>
-          Einsammeln
-        </button>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <TruhenOeffnung grad={fund.grad} muenzen={fund.coins} onFertig={onClose} />
+    </Suspense>
   );
 }
 
