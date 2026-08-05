@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { Ladekreis } from '../Ladekreis';
 
 import {
   ApiError,
@@ -324,7 +325,7 @@ export function Aufgabenblatt({
 
       <div className="pfad-voll-rolle aufgaben-rolle">
         {fehler && <p className="error">{fehler}</p>}
-        {!truhen && !aufgaben && !fehler && <p className="muted">Wird geladen…</p>}
+        {!truhen && !aufgaben && !fehler && <Ladekreis />}
 
         {aufgaben && (
           <Tafel

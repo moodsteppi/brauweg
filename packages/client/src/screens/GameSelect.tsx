@@ -7,6 +7,8 @@ import {
   useSyncExternalStore,
 } from 'react';
 
+import { Ladekreis } from '../Ladekreis';
+
 import {
   ApiError,
   SLOTS,
@@ -1835,7 +1837,7 @@ function RanglisteBlatt({
         )}
 
         {error && <p className="error">{error}</p>}
-        {!error && laedt && <p className="muted">Wird geladen…</p>}
+        {!error && laedt && <Ladekreis />}
         {!error && !laedt && rows.length === 0 && (
           <p className="muted">Noch niemand auf der Liste.</p>
         )}
@@ -2218,7 +2220,7 @@ function Freunde({
         </div>
       ))}
 
-      {lists === null && <p className="muted">Wird geladen…</p>}
+      {lists === null && <Ladekreis />}
       {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
         <p className="muted">Noch keine Freunde. Such unten nach einem Namen.</p>
       )}
@@ -2408,7 +2410,7 @@ function ThemenTab({
                   </button>
                 );
               })}
-              {spiele === null && <p className="muted">Spiele werden geladen…</p>}
+              {spiele === null && <Ladekreis text="Spiele werden geladen…" />}
             </div>
           </Tafel>
         </HubSzene>

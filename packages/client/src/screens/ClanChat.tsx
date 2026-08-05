@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Ladekreis } from '../Ladekreis';
 
 import { type ChatMessage, api } from '../api';
 import { MAX_NACHRICHT, avatarBild } from './ClanTeile';
@@ -130,7 +131,7 @@ export function ClanChat({
       </header>
 
       <div className="clan-chat-spur" ref={spur}>
-        {laedt && <p className="muted clan-chat-hinweis">Wird geladen…</p>}
+        {laedt && <Ladekreis />}
         {!laedt && zeilen.length === 0 && (
           <p className="muted clan-chat-hinweis">
             Noch nichts gesagt. Fang an — die anderen sehen es sofort.
