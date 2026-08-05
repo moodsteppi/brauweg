@@ -1,1 +1,0 @@
-ALTER TABLE "account" ADD COLUMN "card_deck" text DEFAULT 'text' NOT NULL;

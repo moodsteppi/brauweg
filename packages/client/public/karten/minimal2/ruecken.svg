@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="726" viewBox="0 0 500 726">
-<defs><pattern id="p" width="46" height="46" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="46" height="46" fill="#1f4e8c"/><rect x="0" y="0" width="23" height="23" fill="#2a63ad"/><rect x="23" y="23" width="23" height="23" fill="#2a63ad"/></pattern></defs>
-<rect x="3" y="3" width="494" height="720" rx="32" ry="32" fill="#ffffff" stroke="#c9d0d8" stroke-width="3"/>
-<rect x="26" y="26" width="448" height="674" rx="18" ry="18" fill="url(#p)"/>
-<rect x="26" y="26" width="448" height="674" rx="18" ry="18" fill="none" stroke="#ffffff" stroke-width="10"/>
-</svg>
