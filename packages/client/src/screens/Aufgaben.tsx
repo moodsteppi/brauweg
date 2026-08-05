@@ -25,6 +25,11 @@ import { Ladekreis } from '../Ladekreis';
  */
 const Truhe3D = lazy(() => import('../Truhe3D'));
 
+/** Die Öffnungs-Choreografie — ebenfalls nachgeladen, sie zieht `three` mit. */
+const TruhenOeffnung = lazy(() =>
+  import('../TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
+);
+
 import {
   ApiError,
   api,
@@ -206,24 +211,27 @@ export function FundBlatt({
   fund: { grad: Truhe['grad']; coins: number };
   onClose: () => void;
 }): React.JSX.Element {
+  /**
+   * Der Fund IST die Öffnung.
+   *
+   * **Die Choreografie war gebaut und nirgends angeschlossen.** Wer eine Truhe
+   * kaufte oder einsammelte, bekam sofort „+787 Münzen" zu sehen — die Truhe
+   * ging nie auf. Hier ist der Ort dafür: Beide Wege, Kauf im Shop und Abholen
+   * bei den Aufgaben, kommen durch dieses Blatt.
+   *
+   * Und es ist EIN Bildschirm, nicht zwei. Vorher stand hier ein Blatt mit
+   * Truhe, Betrag und „Einsammeln" — die Öffnung zeigt den Betrag aber selbst,
+   * am Ende der Bewegung. Ein zweites Blatt danach wäre dieselbe Auskunft ein
+   * zweites Mal und ein Tipp mehr.
+   *
+   * Wer die Bewegung nicht sehen will, tippt sofort — `onFertig` hängt am
+   * ganzen Bildschirm. Und wer `prefers-reduced-motion` gesetzt hat, sieht das
+   * Ergebnis ohne Umweg: Die Regeln dafür stehen in `styles.css`.
+   */
   return (
-    <div className="doko-sheet" onClick={onClose} role="presentation">
-      <div
-        className="doko-sheet-card truhe-fund"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-label={`${fund.coins} Münzen aus der Truhe`}
-      >
-        <TruhenBild grad={fund.grad} offen />
-        <strong className="truhe-fund-zahl">
-          +{fund.coins} {fund.coins === 1 ? 'Münze' : 'Münzen'}
-        </strong>
-        <p className="muted">{t(`truhe.${fund.grad}`)} geöffnet.</p>
-        <button className="primary" onClick={onClose}>
-          Einsammeln
-        </button>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <TruhenOeffnung grad={fund.grad} muenzen={fund.coins} onFertig={onClose} />
+    </Suspense>
   );
 }
 

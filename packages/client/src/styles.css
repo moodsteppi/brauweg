@@ -6668,24 +6668,9 @@ main.auth > .muted {
 }
 
 /* Der Fund: gross, mittig, mit der Zahl als Hauptsache. */
-.truhe-fund {
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
-  text-align: center;
-}
-
-.truhe-fund .truhe-bild {
-  width: 6rem;
-  height: 5.4rem;
-}
-
-.truhe-fund-zahl {
-  font-size: 1.9rem;
-  font-weight: 800;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
-}
+/* Die Regeln fuer das alte Fundblatt sind weg: Der Fund IST jetzt die
+   Oeffnung (siehe FundBlatt in Aufgaben.tsx), es gibt kein zweites Blatt
+   mehr mit Truhe, Betrag und "Einsammeln". */
 
 /* Aufgaben: Balken plus Zahl. Der Balken zeigt es, die Zahl beweist es. */
 .quest-balken {
@@ -7888,25 +7873,39 @@ main.auth > .muted {
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
+/*
+  Die Buehne fuellt den Bildschirm, die Truhe steht in der Mitte.
+
+  Vorher waren es feste 220 x 240 px in einem sonst leeren Vollbild — auf
+  einem Handy ein Briefmarkenbild mitten in viel Schwarz. Jetzt bemisst sie
+  sich am Bildschirm und deckelt bei 30 rem, damit sie auf einem Tablet nicht
+  ins Absurde waechst.
+*/
 .truhe-buehne {
   position: relative;
-  width: 220px;
-  height: 240px;
+  width: min(88vw, 30rem);
+  height: min(62vh, 32rem);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  perspective: 700px;
+  perspective: 900px;
 }
 
 /* Zwei Wrapper, damit Drehung (rotateY) und Wackeln (rotateZ) sich nicht
    überschreiben — beide setzen sonst dieselbe transform-Eigenschaft. */
+/*
+  Mittig statt am unteren Rand: Die Truhe IST der Bildschirm, sie steht nicht
+  auf einem Sockel darunter.
+
+  Zentriert wird ueber das Flex der Buehne und NICHT ueber `translate` — die
+  Drehung (`truhe-drehen`) setzt `transform` und wuerde ein `translate` hier
+  einfach ueberschreiben. Die Truhe spraenge dann beim Start der Bewegung in
+  die linke obere Ecke.
+*/
 .truhe-dreh {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  width: 176px;
-  height: 150px;
-  margin-left: -88px;
+  position: relative;
+  width: min(72vw, 22rem);
+  height: min(40vh, 18rem);
   transform-style: preserve-3d;
   animation: truhe-drehen 1.5s ease-in-out 0.85s both;
 }
@@ -7974,10 +7973,16 @@ main.auth > .muted {
 /* Die Belohnung schwebt UEBER der Truhe.
    Die 22 % stammten aus der Zeit des flachen SVG, das den Platz anders
    ausfuellte — mit dem 3D-Modell lag die Muenze mitten auf dem Deckel.
-   Muenze UND Zahl muessen darueber liegen, nicht nur die Muenze. */
+   Muenze UND Zahl muessen frei liegen, nicht nur die Muenze.
+
+   UNTER der Truhe und nicht darueber: Gemessen bleiben ueber der Truhe 71 px,
+   die Belohnung braucht 94 — sie lag deshalb auf dem Deckel. Darunter sind
+   112 px frei. Und es liest sich ohnehin natuerlicher: Die Truhe geht auf,
+   der Betrag steigt darunter herauf. */
 .truhe-belohnung {
   position: absolute;
-  top: 0;
+  top: auto;
+  bottom: 2%;
   left: 50%;
   display: flex;
   flex-direction: column;
