@@ -2474,23 +2474,37 @@ function ThemenTab({
             <div className="hub-themenwahl">
               {(spiele ?? []).map((spiel) => {
                 const t2 = me.themes[spiel.id];
+                const bald = spiel.availability !== 'playable';
                 return (
                   <button
                     key={spiel.id}
-                    className="hub-themenspiel"
+                    className={`hub-themenspiel${bald ? ' is-bald' : ''}`}
                     onClick={() => setGewaehlt(spiel.id)}
                   >
-                    <strong>{t(spiel.nameKey)}</strong>
-                    {/* Was eingestellt ist, steht daneben - sonst muesste man
-                        jedes Spiel oeffnen, um es zu sehen. */}
-                    <span className="muted">
-                      {t(`deck.${t2?.cardDeck ?? 'text'}`)}
-                      {' · '}
-                      {SZENEN.find((s) => s.id === (t2?.tableScene ?? 'stube'))?.name ?? 'Stube'}
+                    {/*
+                      Das gemalte Stillleben des Spiels als Banner. Es ist ein
+                      SVG und laedt nichts nach — die Bestellung fuer gemalte
+                      Banner steht in docs/ASSETS-SPIELWAHL.md. Erst wenn die
+                      Datei wirklich liegt, wird hier ein <img> daraus; ein
+                      <img> auf eine noch fehlende Datei waere ein weisser
+                      Kasten (CLAUDE.md).
+                    */}
+                    <span className="hub-themenspiel-bild" aria-hidden="true">
+                      <SpielBild id={spiel.id} />
                     </span>
-                    {spiel.availability !== 'playable' && (
-                      <span className="front-bald-tag">Bald</span>
-                    )}
+                    {/* Name und was eingestellt ist, auf einem Verlauf unten -
+                        sonst muesste man jedes Spiel oeffnen, um seine Wahl zu
+                        sehen. Der Verlauf haelt den Text lesbar, egal wie hell
+                        das Banner an der Stelle ist. */}
+                    <span className="hub-themenspiel-text">
+                      <strong>{t(spiel.nameKey)}</strong>
+                      <span className="muted">
+                        {t(`deck.${t2?.cardDeck ?? 'text'}`)}
+                        {' · '}
+                        {SZENEN.find((s) => s.id === (t2?.tableScene ?? 'stube'))?.name ?? 'Stube'}
+                      </span>
+                    </span>
+                    {bald && <span className="front-bald-tag">Bald</span>}
                   </button>
                 );
               })}
