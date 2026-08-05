@@ -607,26 +607,33 @@ Hand eingestellt und im Browser gegengeprüft. **Nicht** der rechnerische
 Kopfansatz aus `avatar_normalize.json` (y = 0,988) — damit schwebt sie
 sichtbar über dem Kopf.
 
-> **Offen und der Grund, warum die 3D-Kachel noch nicht im Profil steht:**
-> Die Bühne bleibt beim **ersten** Aufbau leer. Die Figur erscheint erst,
-> wenn sich die Fenstergröße einmal ändert — dann läuft alles, Drehen und
-> Mütze inklusive.
->
-> Nachweislich **nicht** die Ursache, alles einzeln geprüft: `frameloop`
+**Die Werkstatt steht im Profil** — vierte Kachel unter dem Pinguin: Figur
+drehen, Mütze auf und ab.
+
+> **Der schwarze Kasten und wie er weg ist.** Die Bühne blieb beim ersten
+> Aufbau leer; die Figur kam erst, wenn sich die Fenstergröße änderte. Fünf
+> Erklärungen waren einzeln geprüft und **alle falsch**: `frameloop`
 > (`demand` wie `always`), von Hand nachgeforderte Bilder, R3Fs Vermessung
 > (`resize={{scroll:false}}`), die Modelle vor der Leinwand laden, die
-> Einblend-Animation des Blattes. Modell, Kamera, Material, Lichter und
-> Leinwandgröße sind über die Konsole als richtig belegt.
+> Einblend-Animation des Blattes.
 >
-> **Ein Fund am Rande, der bleibt:** Die Lichtwerte waren zusätzlich viel zu
-> niedrig. three rechnet seit r155 mit physikalischen Einheiten; die Werte
-> stehen jetzt bei 2,2 / 1,6 / 3,2 / 1,2. Der Ausrichter täuscht dabei — er
-> hat niedrige Werte und sieht trotzdem gut aus, weil dort `<Environment>`
-> die eigentliche Beleuchtung macht.
+> Es half genau eines: **nach dem Aufbau ein echtes `resize` am `window`
+> feuern.** Der entscheidende Unterschied zu meinem Fehlversuch — ich hatte
+> die *Höhe des Containers* verstellt, was nur den `ResizeObserver` am
+> Element anspricht. R3F vermisst über `react-use-measure`, und das horcht an
+> **beidem**: am Element und am Fenster. Nur der zweite Weg wirkt.
 >
-> Zu sehen ist die Werkstatt unter `/?dev=werkstatt` (ohne Anmeldung). Sobald
-> das erste Bild steht, sind es vier Zeilen in `GameSelect.tsx` — die Stelle
-> ist dort auskommentiert markiert.
+> Steht als `anstossen()` in `Avatarwerkstatt.tsx`, ausdrücklich als Notnagel
+> benannt. Die eigentliche Ursache im Zusammenspiel von Leinwandaufbau und
+> Layout ist damit nicht erklärt, nur umgangen.
+
+**Ein Fund am Rande:** Die Lichtwerte waren zusätzlich zu niedrig — mit
+Werten um 1 ist die Figur kaum zu erkennen. Jetzt 2,2 / 1,6 / 3,2 / 1,2.
+**Nicht zu verwechseln mit der r155-Umstellung von three:** Die betrifft
+Punkt- und Spotlichter (Candela, vierstellige Werte). Umgebungs-, Halbraum-
+und Richtungslichter bleiben einstellig. Der Ausrichter täuscht auch hier —
+er hat niedrige Werte und sieht gut aus, weil dort `<Environment>` die
+Beleuchtung macht.
 
 ## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
 

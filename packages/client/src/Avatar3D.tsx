@@ -51,20 +51,15 @@ export default function Avatar3D({
   /**
    * Geladen wird hier oben, **außerhalb** der Leinwand.
    *
-   * Standen die `useGLTF`-Aufrufe in einem Bauteil innerhalb von `<Canvas>`
-   * hinter einem `<Suspense>`, blieb die Bühne beim ersten Öffnen schwarz:
-   * Die Leinwand entstand mit leerem Inhalt, und wenn die Modelle ankamen,
-   * wurde nicht mehr neu gezeichnet. Sichtbar wurde es erst, wenn man das
-   * Fenster um einen einzigen Pixel veränderte.
+   * `useGLTF` braucht den Leinwand-Kontext nicht. Hier aufgerufen hält es
+   * die **äußere** Suspense-Grenze in `Avatarwerkstatt.tsx` an ("Figur wird
+   * geladen…"), und die Leinwand entsteht erst, wenn beide Modelle da sind.
+   * Damit ist schon das erste Bild vollständig — und die Ladeanzeige steht
+   * dort, wo der Nutzer sie erwartet, statt als leerer Kasten.
    *
-   * Das hat lange gekostet, weil davor drei plausible Fährten lagen, die
-   * alle nichts brachten: `frameloop="demand"` abschalten, die Vermessung im
-   * rollbaren Blatt umstellen, und Bilder von Hand nachfordern.
-   *
-   * `useGLTF` braucht den Leinwand-Kontext nicht. Hier oben aufgerufen hält
-   * es die **äußere** Suspense-Grenze in `Avatarwerkstatt.tsx` an ("Figur
-   * wird geladen…"), und die Leinwand entsteht erst, wenn beide Modelle da
-   * sind. Damit ist schon das erste Bild vollständig.
+   * Das allein hat den schwarzen Kasten übrigens **nicht** behoben; das tut
+   * der Anstoß in `Avatarwerkstatt.tsx`. Es ist trotzdem die richtige
+   * Reihenfolge und bleibt so.
    */
   const pinguin = useGLTF(PINGUIN);
   const hut = useGLTF(MUETZE);
@@ -99,13 +94,21 @@ export default function Avatar3D({
       {/*
         Die Zahlen sehen hoch aus und sind es nicht.
         ------------------------------------------------------------------
-        three rechnet seit r155 mit physikalischen Lichteinheiten. Werte um
-        1, wie sie in jeder älteren Anleitung stehen, ergeben ein sehr
-        dunkles Bild.
+        Mit Werten um 1 — wie sie in älteren Anleitungen stehen — war die
+        Figur kaum zu erkennen. Gemessen: Erst ab etwa dem Doppelten bis
+        Dreifachen sieht sie aus wie eine Spielfigur und nicht wie ein
+        Schemen. Die ACES-Tonwertkurve, die R3F von Haus aus setzt, nimmt
+        zusätzlich Helligkeit heraus.
 
-        Der Ausrichter unter `?dev=avatar` täuscht dabei: Er hat genau solche
-        niedrigen Werte, sieht aber gut aus, weil `<Environment>` dort die
-        eigentliche Beleuchtung macht. Wer sich daran orientiert, sucht lange.
+        **Nicht zu verwechseln mit der Umstellung in three r155:** Die
+        betrifft Punkt- und Spotlichter, die seither in Candela rechnen und
+        vierstellige Werte brauchen. Hier stehen nur Umgebungs-, Halbraum-
+        und Richtungslichter — die bleiben bei einstelligen Zahlen. Wer hier
+        3000 einträgt, blendet alles weiß.
+
+        Der Ausrichter unter `?dev=avatar` täuscht: Er hat niedrige Werte und
+        sieht trotzdem gut aus, weil `<Environment>` dort die eigentliche
+        Beleuchtung macht. Wer sich daran orientiert, sucht lange.
       */}
       <ambientLight intensity={2.2} />
       <hemisphereLight args={['#ffe6bd', '#3a2a1c', 1.6]} />

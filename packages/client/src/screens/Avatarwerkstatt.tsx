@@ -39,30 +39,20 @@ export function Avatarwerkstatt({ onClose }: { onClose: () => void }): React.JSX
   /**
    * Der Anstoß — ein Notnagel, und als solcher benannt.
    *
-   * Nachweislich hilft nur eines: dass sich die Größe der Bühne einmal
-   * ändert. Dann zeichnet R3F die Figur, und danach läuft alles. Warum das
-   * erste Bild ohne diese Änderung leer bleibt, habe ich nicht gefunden —
-   * `frameloop`, nachgeforderte Bilder, R3Fs eigene Vermessung und das Laden
-   * der Modelle vor der Leinwand waren alle nicht die Ursache.
+   * Nachweislich hilft nur eines: dass die Seite ein Größenereignis sieht.
+   * Dann zeichnet R3F die Figur, und danach läuft alles.
    *
-   * Also wird die Höhe für ein Bild um einen Pixel verstellt und sofort
-   * wieder zurückgenommen. Man sieht es nicht, es kostet nichts, und es tut
-   * genau das, was von Hand auch funktioniert.
+   * Ein echtes `resize` am `window` und nicht das Verstellen der eigenen
+   * Höhe: R3F vermisst über `react-use-measure`, und das horcht **beides** —
+   * am Element über einen `ResizeObserver` und am Fenster. Die Höhe zu
+   * verstellen hat den Beobachter am Element angesprochen und nichts
+   * bewirkt; das Fensterereignis ist der zweite, andere Weg.
    *
    * **Wer die Ursache findet, wirft das hier raus** — der Rest der Datei
    * hängt nicht daran.
    */
   const anstossen = (): void => {
-    const el = buehne.current;
-    if (!el) return;
-    const hoehe = el.clientHeight;
-    el.style.height = `${hoehe + 1}px`;
-    // Lange genug halten, dass der ResizeObserver zwei verschiedene Größen
-    // sieht. Innerhalb eines Bildes fasst er beide zusammen, und dann ist
-    // unterm Strich nichts passiert.
-    window.setTimeout(() => {
-      el.style.height = '';
-    }, 120);
+    window.dispatchEvent(new Event('resize'));
   };
   const [vermessen, setVermessen] = useState(false);
   useEffect(() => {

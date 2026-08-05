@@ -60,6 +60,7 @@ import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Klanghalle } from './Klanghalle';
+import { Avatarwerkstatt } from './Avatarwerkstatt';
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -129,6 +130,7 @@ export function GameSelect({
   const [aufgabenOffen, setAufgabenOffen] = useState(false);
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
+  const [werkstattOffen, setWerkstattOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -315,6 +317,10 @@ export function GameSelect({
               spiele('blatt-auf');
               setKlanghalleOffen(true);
             }}
+            onWerkstatt={() => {
+              spiele('blatt-auf');
+              setWerkstattOffen(true);
+            }}
             onAufgaben={() => setAufgabenOffen(true)}
             onBald={setBald}
             onShowProfile={onShowProfile}
@@ -493,6 +499,7 @@ export function GameSelect({
         />
       )}
       {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
+      {werkstattOffen && <Avatarwerkstatt onClose={() => setWerkstattOffen(false)} />}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
         <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
@@ -543,6 +550,7 @@ function ProfilTab({
   onStufen,
   onSchrank,
   onKlanghalle,
+  onWerkstatt,
   onAufgaben,
   onBald,
   onShowProfile,
@@ -560,6 +568,8 @@ function ProfilTab({
   onSchrank: () => void;
   /** Oeffnet die Klanghalle — Musik und Klangpakete auswaehlen. */
   onKlanghalle: () => void;
+  /** Oeffnet die Avatar-Werkstatt mit der 3D-Figur. */
+  onWerkstatt: () => void;
   /** Oeffnet Tagesaufgaben und Truhen. */
   onAufgaben: () => void;
   onBald: (name: string) => void;
@@ -669,7 +679,7 @@ function ProfilTab({
             verdienen. Als Kachelreihe mit Symbol, nicht als Textknopfreihe —
             drei Woerter nebeneinander sind auf einem Handy zu schmal, um
             lesbar zu bleiben. */}
-        <div className="hub-reihe hub-reihe--drei profil-einstiege">
+        <div className="hub-reihe hub-reihe--vier profil-einstiege">
           <ProfilKachel
             icon="/hub/icon-kleiderschrank.webp"
             name="Kleiderschrank"
@@ -687,19 +697,14 @@ function ProfilTab({
             punkt={me.bereit.truhen + me.bereit.aufgaben > 0}
             onClick={onAufgaben}
           />
-          {/*
-            HIER FEHLT ABSICHTLICH DIE KACHEL "Figur in 3D".
-
-            Die Werkstatt ist gebaut (`Avatarwerkstatt.tsx`, `Avatar3D.tsx`)
-            und ueber `/?dev=werkstatt` zu sehen, aber ihre Buehne bleibt
-            beim ERSTEN Aufbau leer — sichtbar wird die Figur erst, wenn
-            sich die Fenstergroesse einmal aendert. Modell, Kamera, Material
-            und Lichter sind nachweislich richtig; die Ursache ist noch
-            offen. Ein schwarzer Kasten gehoert nicht vor Spieler.
-
-            Sobald das sitzt, ist es genau diese Kachel und die vier
-            Zeilen — sonst nichts. Naeheres in docs/STAND.md.
-          */}
+          {/* Die Werkstatt steht neben dem Kleiderschrank und nicht darin:
+              In 3D gibt es bisher genau ein Stueck, im Kleiderschrank
+              dreiunddreissig. Siehe Avatarwerkstatt.tsx. */}
+          <ProfilKachel
+            icon="/hub/icon-freunde.webp"
+            name="Figur in 3D"
+            onClick={onWerkstatt}
+          />
         </div>
       </Tafel>
 
