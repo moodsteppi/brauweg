@@ -4072,6 +4072,21 @@ td {
   object-fit: contain;
 }
 
+/* Die Rangliste bleibt fast vollflaechig, auch wenn die Liste kurz ist -
+   sonst wirkt sie bei wenigen Eintraegen wie ein kleiner Zettel statt wie
+   ein eigenes Blatt. Feste statt maximale Hoehe, die Liste waechst per Flex
+   in den Rest hinein. */
+.doko-sheet-card.front-ranking {
+  display: flex;
+  flex-direction: column;
+  height: 90dvh;
+  max-height: 90dvh;
+}
+.front-ranking-list {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
 .doko-badge--pause {
   background: rgba(166, 120, 242, 0.2);
   color: var(--lila);
@@ -5378,6 +5393,13 @@ main.auth > .muted {
   display: flex;
   flex-direction: column;
   line-height: 0;
+  /* Die unterste Checkpoint-Marke (Heimat) sitzt auf der Kante bei bottom:0
+     und ragt per translateY(50%) zur Haelfte unter den Stapel. Ohne Deckel
+     zaehlt der Ueberstand zur scrollbaren Flaeche des Fensters dazu - beim
+     Anfangsstand (Pinguin auf Heimat, Marke deshalb unsichtbar) scrollt die
+     Ansicht dann so weit, dass am unteren Rand die Fuellfarbe des Knopfes
+     statt Bild steht, teils vom Spielauswahl-Knopf verdeckt. */
+  overflow: hidden;
 }
 .pfad-kachel {
   display: block;
