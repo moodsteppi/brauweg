@@ -115,6 +115,13 @@ nachgewiesen (zwei Partien, zwei Browser, ein Tisch):
 * **Alle Handlungen sind Züge:** `muenze`, `haus` (fehlte in der Liste — das
   Setzen des Haupthauses wurde nie gemeldet!), `karte`, `halt`, `abriss`,
   `drehen`. Details und Fallstricke: Nachtrag in `FELDHERR-PLAN.md`.
+* **Das Brett ist für Sitz 0 gespiegelt:** Jeder verteidigt unten, auch die
+  eigene Kartenleiste wandert nach unten. Gespiegelt wird die Brettebene in
+  der Projektion `P()` — einmal für alles Gezeichnete, Höhen und Schrift
+  bleiben aufrecht. Regeln dazu im Kopf der Spieldatei (Abschnitt
+  Koordinaten); mitspiegeln müssen nur Malersortierung, Facettenfolge und
+  Zeigereingabe. Die Spiegelung ist reine Darstellung — die
+  Gleichlauf-Probe belegt, dass beide Sitze denselben Zustand rechnen.
 * **Takt-Herzschlag** als flüchtige `takt`-Relais-Nachricht im Gateway (wie
   Zurufe, nichts läuft durchs Modul oder die Datenbank), Wissensgrenze im
   Kern, Aufholen ohne Uhr, Web-Worker-Antrieb für verdeckte Tabs.
@@ -130,9 +137,35 @@ nachgewiesen (zwei Partien, zwei Browser, ein Tisch):
 
 ### Was noch offen ist
 
-* **Brett für Sitz 0 nicht gedreht:** Wer online Sitz 0 zieht, spielt „von
-  oben" (eigene Hälfte oben, eigenes HUD oben — lesbar, aber ungewohnt).
-  Eine gespiegelte Darstellung wäre der nächste Schliff.
+* **Wiedereinstieg gegen ein weiterlaufendes Gerät wird strittig.** Der
+  haarige Rest. Befund, Stand 5. August abends:
+  - Der Kern selbst ist nachweislich deterministisch: Das Werkzeug
+    `packages/game-feldherr/werkzeug/gleichlauf-probe.mjs` fährt dieselbe
+    Zugliste als Live-Lauf, als Wiedereinstieg und für beide Sitze
+    (gespiegelt und nicht) — alle Grenzproben stimmen überein.
+  - Im Browser wurde die Partie trotzdem mehrfach strittig, sobald ein
+    Gerät neu lud, während das andere weiterlief. Muster: Die strittige
+    Grenze ist IMMER die erste 40er-Grenze nach dem letzten Zug, und die
+    gemeldete Summe entspricht exakt einem Lauf, der diesen Zug drei bis
+    zehn Takte VERSCHOBEN ausführte (Versatz-Suche im Werkzeug). Das ist
+    der Notnagel in zugAnnehmen: Der Zug kam nach seinem Takt an.
+  - Drei Gegenmittel sind schon drin: ein Meldepuffer beim Einplanen
+    (zwölf statt sechs Takte Vorlauf), die Zustellung der Zuege am
+    React-State vorbei direkt in den Kern (der Umweg ueber setState und
+    Effekt verspaetet sich, besonders im verdeckten Tab), und eine laute
+    Konsolenwarnung `feldherr: Zug fuer Takt … kam erst bei … an`, wenn
+    der Notnagel doch feuert.
+  - Der Testaufbau hier hat eine harte Grenze: zwei Tabs in EINEM
+    Browserfenster, nur einer je sichtbar. Der verdeckte haengt an
+    Web-Worker-Antrieb und gedrosselten Timern — Aufhol- und
+    Verdeckungsmomente, die zwei echte Geraete so nicht haben. **Naechster
+    Schritt: einmal mit zwei getrennten Browsern/Geraeten spielen und auf
+    die Warnung achten.** Feuert sie dort auch, den Meldepuffer erhoehen
+    oder die Ausfuehrungstakte serverseitig festschreiben.
+* **Strittig stoppt das Geraet still.** Wer die Abweichung entdeckt, meldet
+  und friert ein — das Banner erscheint aber erst, wenn BEIDE gemeldet
+  haben. Bis dahin sieht der Spieler nur „Warte auf den Gegner". Der
+  Bildschirm sollte die eigene Strittig-Meldung sofort zeigen.
 * **HUD-Hinweistexte** („Setze dein Haupthaus" / „Gleich bist du dran…")
   stehen im Netz noch mit der Duo-Logik in den Leisten; der große Hinweis
   auf dem Brett stimmt.
