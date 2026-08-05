@@ -304,6 +304,7 @@ export function GameSelect({
           <Spielen
             trophies={trophies}
             getragen={me.avatar}
+            bemalung={me.figur ?? null}
             activeTable={me.activeTable}
             onPick={onPick}
             onResume={onResume}
@@ -1724,6 +1725,7 @@ function TabButton({
 function Spielen({
   trophies,
   getragen,
+  bemalung,
   activeTable,
   onPick,
   onResume,
@@ -1734,6 +1736,8 @@ function Spielen({
 }: {
   trophies: number;
   getragen: Me['avatar'];
+  /** Bemalung der 3D-Figur, fuer den Pfad. */
+  bemalung: Me['figur'];
   activeTable: Me['activeTable'];
   /** Wie viel bereitliegt (Truhen plus fertige Aufgaben). 0 = kein Punkt. */
   bereit: number;
@@ -1763,7 +1767,7 @@ function Spielen({
       {/* Karte füllt die Bühne; Logo und Seiten-UI liegen als Overlay drauf,
           damit kein blauer Streifen die oberen Arenen verdeckt. */}
       <div className="hub-buehne">
-          <Trophaeenpfad trophies={trophies} getragen={getragen} />
+          <Trophaeenpfad trophies={trophies} getragen={getragen} bemalung={bemalung} />
 
         {/* Nur der Schriftzug, dafuer gross und mittig. Der Slogan
             "Doppelkopf. Dein Weg." stand als zweites Bild darunter und

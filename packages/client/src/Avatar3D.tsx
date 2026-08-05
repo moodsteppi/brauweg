@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Canvas, type ThreeEvent } from '@react-three/fiber';
+import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { ContactShadows, OrbitControls, useGLTF } from '@react-three/drei';
-import { CanvasTexture, Mesh, MeshStandardMaterial, SRGBColorSpace, type Texture } from 'three';
+import { CanvasTexture, Group, Mesh, MeshStandardMaterial, SRGBColorSpace, type Texture } from 'three';
 
 import { MAX_PUNKTE_JE_STRICH, zeichne, type Bemalung, type Strich } from './bemalung';
 
@@ -54,6 +54,16 @@ export interface Avatar3DProps {
   onStrich?: (strich: Strich) => void;
   /** Aus für die kleine Ansicht im Profil: Dort wird nur geschaut. */
   drehbar?: boolean;
+  /**
+   * Eigenbewegung: Die Figur wippt und schaut sich langsam um.
+   *
+   * Das Modell bringt keine Animation mit — es ist ein starres Netz. „Lebendig"
+   * heißt hier deshalb nicht abgespielt, sondern gerechnet: ein Wippen auf und
+   * ab und ein leises Pendeln um die eigene Achse. Auf dem Trophäenpfad steht
+   * die Figur lange still im Bild, und eine Figur, die sich gar nicht regt,
+   * sieht dort aus wie ein Aufkleber.
+   */
+  lebendig?: boolean;
   /** Wird einmal gerufen, sobald die Figur steht — siehe `anstossen`. */
   onBereit?: () => void;
 }
@@ -66,6 +76,7 @@ export default function Avatar3D({
   breite = 0.045,
   onStrich,
   drehbar = true,
+  lebendig = false,
   onBereit,
 }: Avatar3DProps): React.JSX.Element {
   /**
@@ -228,6 +239,7 @@ export default function Avatar3D({
           Hintergrund abhebt. Ohne das verschwindet ein dunkler Pinguin. */}
       <directionalLight intensity={1.2} position={[-2, 1.5, -2]} />
 
+      <Wippe an={lebendig}>
       <group
         onPointerDown={(e) => {
           if (!malen) return;
@@ -255,6 +267,7 @@ export default function Avatar3D({
           </group>
         )}
       </group>
+      </Wippe>
 
       <ContactShadows position={[0, 0.001, 0]} opacity={0.45} scale={3} blur={2.4} />
 
@@ -278,4 +291,35 @@ export default function Avatar3D({
 
     </Canvas>
   );
+}
+
+/**
+ * Die Eigenbewegung.
+ *
+ * Ein Wippen auf und ab und ein leises Pendeln um die Hochachse — beides aus
+ * derselben Uhr, aber mit verschiedenen Perioden, damit es nicht im Takt
+ * zusammenfällt und mechanisch wirkt.
+ *
+ * Als eigenes Bauteil, weil `useFrame` nur innerhalb der Leinwand läuft. Ist
+ * die Bewegung aus, hängt die Gruppe still da und kostet nichts.
+ */
+function Wippe({
+  an,
+  children,
+}: {
+  an: boolean;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  const gruppe = useRef<Group>(null);
+  const zeit = useRef(0);
+
+  useFrame((_, delta) => {
+    const g = gruppe.current;
+    if (!g || !an) return;
+    zeit.current += delta;
+    g.position.y = Math.sin(zeit.current * 1.6) * 0.022;
+    g.rotation.y = Math.sin(zeit.current * 0.55) * 0.22;
+  });
+
+  return <group ref={gruppe}>{children}</group>;
 }

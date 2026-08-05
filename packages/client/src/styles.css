@@ -5545,6 +5545,33 @@ main.auth > .muted {
   /* Groesse kommt aus dem Pinguin-Prop; Schatten schon am .pinguin. */
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
 }
+
+/*
+  Die Buehne der 3D-Figur auf dem Pfad.
+
+  Feste Groesse, weil ein WebGL-Bereich keine eigene Inhaltsgroesse hat.
+  Deutlich groesser als der gemalte Daumennagel vorher (2,8 rem): Auf dem
+  Pfad ist die Figur das "du bist hier", und in Daumennagelgroesse war das
+  zwischen sechs Biomkacheln kaum zu finden.
+
+  Der Hintergrund bleibt frei — die Leinwand ist durchsichtig, die Kachel
+  darunter soll durchscheinen.
+*/
+.pfad-figur-buehne {
+  width: 7.5rem;
+  height: 8.5rem;
+  pointer-events: none;
+}
+.pfad-figur-buehne canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+/* Der Rueckfall waehrend des Ladens sitzt mittig in derselben Flaeche. */
+.pfad-figur-buehne > .pinguin {
+  display: block;
+  margin: 0 auto;
+}
 .pfad-figur-stand {
   display: inline-flex;
   align-items: center;
