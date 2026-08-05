@@ -59,7 +59,12 @@ export const VORLAUF_TAKTE = 6;
  */
 export interface Zug {
   readonly takt: number;
-  readonly art: 'karte' | 'halt' | 'abriss' | 'drehen' | 'muenze';
+  /**
+   * `haus` ist das Setzen des Haupthauses am Partieanfang. Es ist ein eigener
+   * Zug und keine `karte`: Das Haus steht in keinem Kartenkontingent und wird
+   * nicht bezahlt — es faellt nur einmal, nach dem Muenzwurf.
+   */
+  readonly art: 'karte' | 'haus' | 'halt' | 'abriss' | 'drehen' | 'muenze';
   /** Kartenkennung bei `karte`, sonst leer. */
   readonly karte?: string;
   readonly r?: number;

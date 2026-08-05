@@ -69,6 +69,13 @@ const meta: GameMeta = {
    */
   rotationSize: () => 1,
   suggestedRounds: () => [1],
+  /**
+   * xpBasis ist hier die Partiedauer, keine Kartenzahl. Die Tagesaufgaben
+   * partie-spielen und partie-gewinnen zaehlen Feldherr ueber die Plaetze
+   * mit; die Kartenaufgabe bleibt den Kartenspielen (Entscheidung 5 in
+   * docs/FELDHERR-PLAN.md).
+   */
+  xpBasisZaehltKarten: false,
 };
 
 function istRegeln(x: unknown): x is FeldherrRegeln {
