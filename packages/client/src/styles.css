@@ -1390,6 +1390,25 @@ td {
   align-items: center;
   justify-content: center;
   gap: 0.9rem;
+  /* Gemalter Ladehintergrund; faellt auf den Stuben-Verlauf zurueck, falls das
+     Bild (noch) nicht geliefert ist — dann dunkel statt kaputt (CSS-url blendet
+     sanft weg, kein weisser Kasten). */
+  background:
+    url(/hub/bg-laden.webp) center center / cover no-repeat,
+    linear-gradient(180deg, #2a1a0e 0%, #221409 12%, #1a1008 100%);
+}
+
+/* App-Start-Ladescreen: Vollbild, mittig, derselbe gemalte Hintergrund. */
+.app-laden {
+  min-height: 100dvh;
+  max-width: none;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    url(/hub/bg-laden.webp) center center / cover no-repeat,
+    linear-gradient(180deg, #1c1208 0%, #140d06 55%, #0e0904 100%);
 }
 .doko-spinner {
   width: 2.4rem;

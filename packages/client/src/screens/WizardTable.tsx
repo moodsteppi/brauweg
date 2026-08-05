@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
+import { Ladekreis } from '../Ladekreis';
 import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
@@ -340,8 +341,10 @@ export function WizardTable({
   if (!view) {
     return (
       <div className="doko doko--loading">
-        <div className="doko-spinner" aria-hidden="true" />
-        <p className="muted">{connected ? 'Tisch wird geladen…' : 'Verbinde…'}</p>
+        <Ladekreis
+          bild="/hub/lade-pinguin.webp"
+          text={connected ? 'Tisch wird geladen…' : 'Verbinde…'}
+        />
         {error && <p className="error">{t(error)}</p>}
         <button onClick={onLeave}>Zurück</button>
       </div>
