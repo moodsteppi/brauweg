@@ -5554,12 +5554,16 @@ main.auth > .muted {
   Pfad ist die Figur das "du bist hier", und in Daumennagelgroesse war das
   zwischen sechs Biomkacheln kaum zu finden.
 
+  Die Leinwand bemisst das Bild, nicht das Modell: Das Sichtfeld der Kamera
+  ist senkrecht und fest, also waechst die Figur genau mit der Hoehe hier.
+  Wer sie groesser haben will, aendert diese zwei Zahlen und sonst nichts.
+
   Der Hintergrund bleibt frei — die Leinwand ist durchsichtig, die Kachel
   darunter soll durchscheinen.
 */
 .pfad-figur-buehne {
-  width: 7.5rem;
-  height: 8.5rem;
+  width: 15rem;
+  height: 17rem;
   pointer-events: none;
 }
 .pfad-figur-buehne canvas {
@@ -5572,11 +5576,19 @@ main.auth > .muted {
   display: block;
   margin: 0 auto;
 }
+/*
+  Der Trophaeenstand haengt an den Fuessen der Figur.
+
+  Der negative Abstand ist kein Feinschliff, sondern noetig: Die Figur sitzt
+  mittig in ihrer Leinwand und laesst unten Luft. Waechst die Leinwand,
+  waechst diese Luft mit — ohne Gegenzug schwebt die Zahl irgendwo unter der
+  Figur statt an ihr.
+*/
 .pfad-figur-stand {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  margin-top: -0.3rem;
+  margin-top: -1.4rem;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
   background: rgba(10, 16, 22, 0.85);

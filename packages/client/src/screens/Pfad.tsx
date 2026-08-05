@@ -254,7 +254,10 @@ function Stapel({
           dem Pfad ist sie das „du bist hier", und das war kaum zu erkennen.
         */}
         <div className="pfad-figur-buehne">
-          <Suspense fallback={<Pinguin getragen={getragen} groesse={5} />}>
+          {/* Der Rückfall wird mitgezogen: Wäre er kleiner als die Figur,
+              hüpfte das Bild in dem Moment, in dem `three` fertig geladen
+              ist. Die Zahl passt zur Bühne in `styles.css`. */}
+          <Suspense fallback={<Pinguin getragen={getragen} groesse={10} />}>
             <Avatar3D
               muetze={false}
               bemalung={bemalung ?? LEERE_BEMALUNG}
