@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
 import { Ladekreis } from './Ladekreis';
@@ -53,7 +53,7 @@ export function App(): React.JSX.Element {
   if (loading) {
     return (
       <main>
-        <Ladekreis text="Einen Moment…" />
+        <Ladekreis bild="/hub/lade-pinguin.webp" text="Einen Moment…" />
       </main>
     );
   }
