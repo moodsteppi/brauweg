@@ -348,29 +348,20 @@ export function GameSelect({
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
           {/*
-            Oben links das Profilbild. Die Figur (der 3D-Pinguin) steht schon
-            vorne auf dem Pfad — sie ein zweites Mal ins Kopfband zu setzen war
-            dieselbe Figur zweimal. Ist ein Bild hochgeladen, steht es hier.
+            Oben links das Profilbild. Die Figur steht schon vorne auf dem
+            Pfad — sie ein zweites Mal ins Kopfband zu setzen war dieselbe
+            Figur zweimal. Ist ein Bild hochgeladen, steht es hier.
 
-            Ohne hochgeladenes Bild bleibt als Rueckfall die Figur (nicht der
-            alte Flach-Pinguin): ein leerer Kasten im Kopfband waere auf jedem
-            Bildschirm zu sehen, und bis das WebGL-Modell da ist, faengt der
-            gemalte Pinguin im Suspense-Fallback ab. Der zweite WebGL-Bereich
-            entsteht nur in diesem Rueckfall — wer ein Bild hat, zahlt ihn im
-            Kopfband nicht.
-          */}
+            Ohne hochgeladenes Bild der gemalte Pinguin als Rueckfall, NICHT
+            der 3D-Avatar: Das Kopfband ist auf jedem Tab zu sehen, ein zweiter
+            WebGL-Bereich nur fuer den Rueckfall waere teuer — und der 3D-Avatar
+            braucht WASM, das die Content-Security-Policy am ausgelieferten
+            Stand blockiert (scriptSrc 'self', ohne 'wasm-unsafe-eval'). Der
+            gemalte Pinguin laedt nichts nach und kann nicht scheitern. */}
           {me.avatarUrl ? (
             <img className="front-avatar" src={me.avatarUrl} alt="" draggable={false} />
           ) : (
-            <span className="front-avatar front-avatar--3d">
-              <Suspense fallback={<Pinguin getragen={me.avatar} groesse={2.6} />}>
-                <Avatar3D
-                  muetze={false}
-                  bemalung={me.figur ?? LEERE_BEMALUNG}
-                  drehbar={false}
-                />
-              </Suspense>
-            </span>
+            <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
           )}
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
