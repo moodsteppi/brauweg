@@ -100,6 +100,10 @@ export function designFuer(grad: Grad): TruhenDesign {
   return { koerper: koerperUri(f), deckel: deckelUri(f), glut: f.glut };
 }
 
+/** Wie viele Münzen aus der Truhe fliegen. Genug für einen Schwall, wenig
+ *  genug, dass es keine Wolke wird und man die Zahl noch liest. */
+const MUENZEN_IM_SCHWALL = 12;
+
 export function TruhenOeffnung({
   grad,
   muenzen,
@@ -111,25 +115,44 @@ export function TruhenOeffnung({
   onFertig: () => void;
 }): React.JSX.Element {
   const design = designFuer(grad);
-  const [fertig, setFertig] = useState(false);
-  const [offen, setOffen] = useState(false);
+
+  /**
+   * Drei Zustände, und der erste ist neu: **Die Truhe geht nicht von allein
+   * auf.**
+   *
+   * Vorher lief die ganze Bewegung nach einer Zeitschaltung ab, und der Tipp
+   * beendete sie nur. Damit war das Öffnen etwas, das einem zustösst. Jetzt
+   * steht die Truhe geschlossen da und wartet — der Tipp IST das Öffnen. Das
+   * ist der Moment, um den es geht.
+   *
+   *   'zu'     — steht da, wackelt leise, wartet auf den Tipp
+   *   'auf'    — Deckel klappt, Glühen, Münzen fliegen
+   *   'fertig' — der Betrag steht, der nächste Tipp führt zurück
+   */
+  const [phase, setPhase] = useState<'zu' | 'auf' | 'fertig'>('zu');
 
   useEffect(() => {
-    const auf = window.setTimeout(() => setOffen(true), DECKEL_AUF_MS);
-    const handle = window.setTimeout(() => setFertig(true), TRUHE_DAUER_MS);
-    return () => {
-      window.clearTimeout(auf);
-      window.clearTimeout(handle);
-    };
-  }, []);
+    if (phase !== 'auf') return;
+    const handle = window.setTimeout(() => setPhase('fertig'), TRUHE_DAUER_MS);
+    return () => window.clearTimeout(handle);
+  }, [phase]);
+
+  const tippen = (): void => {
+    if (phase === 'zu') setPhase('auf');
+    else if (phase === 'fertig') onFertig();
+    // Waehrend 'auf' tut ein Tipp nichts: Wer waehrend der Bewegung
+    // danebentippt, soll sie nicht abbrechen und die Muenzen verpassen.
+  };
+
+  const offen = phase !== 'zu';
 
   return (
     <div
-      className={`truhe-oeffnung grad-${grad}`}
+      className={`truhe-oeffnung grad-${grad} ist-${phase}`}
       style={{ '--glut': design.glut } as React.CSSProperties}
-      onClick={onFertig}
+      onClick={tippen}
       role="dialog"
-      aria-label="Truhe wird geöffnet"
+      aria-label={phase === 'zu' ? 'Truhe öffnen' : `${muenzen} Münzen aus der Truhe`}
     >
       <div className="truhe-buehne">
         <div className="truhe-strahlen" aria-hidden="true" />
@@ -140,10 +163,9 @@ export function TruhenOeffnung({
 
           **Beides bleibt in CSS, der Deckel nicht.** Wackeln und Drehen
           bewegen die ganze Truhe, und dafür ist eine Transformation auf dem
-          Element genau richtig — sie kostet nichts und läuft auf der
-          Grafikkarte. Der Deckel dagegen klappt auf: Das ist eine Lage im
-          Raum und keine Verzerrung eines Bildes. Er wandert deshalb im Modell
-          zwischen den beiden Posen aus `chest_normalize.json`.
+          Element genau richtig. Der Deckel dagegen klappt auf: Das ist eine
+          Lage im Raum und keine Verzerrung eines Bildes. Er wandert deshalb
+          im Modell zwischen den beiden Posen aus `chest_normalize.json`.
         */}
         <div className="truhe-dreh">
           <div className="truhe-schuettel">
@@ -152,12 +174,55 @@ export function TruhenOeffnung({
             </Suspense>
           </div>
         </div>
+
+        {/*
+          Der Münzschwall.
+          ------------------------------------------------------------------
+          Zwölf Münzen, die oben aus der Truhe steigen und zur Seite
+          auseinanderfallen. Bewusst in CSS und nicht im Modell: Sie sollen
+          VOR der Truhe und vor dem Glühen liegen, und eine Handvoll Bilder
+          mit einer Animation ist dafür billiger als Teilchen im Raum.
+
+          Jede bekommt ihren eigenen Winkel, ihre eigene Höhe und einen
+          eigenen Startversatz — ohne das steigen zwölf Münzen im Gleichschritt
+          auf, und das sieht aus wie ein Fehler, nicht wie ein Schwall. Die
+          Werte sind gerechnet und nicht gewürfelt: Sie sollen bei jeder Truhe
+          gleich aussehen.
+        */}
+        {offen && (
+          <div className="truhe-schwall" aria-hidden="true">
+            {Array.from({ length: MUENZEN_IM_SCHWALL }, (_, i) => {
+              const seite = i % 2 === 0 ? 1 : -1;
+              const weite = 18 + ((i * 37) % 62);
+              const hoehe = 120 + ((i * 53) % 90);
+              return (
+                <img
+                  key={i}
+                  src="/hub/muenze.png"
+                  alt=""
+                  draggable={false}
+                  style={
+                    {
+                      '--weite': `${seite * weite}px`,
+                      '--hoehe': `-${hoehe}px`,
+                      '--dreh': `${seite * (180 + ((i * 71) % 360))}deg`,
+                      animationDelay: `${(i % 6) * 55}ms`,
+                    } as React.CSSProperties
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+
         <div className="truhe-belohnung" aria-live="polite">
           <img src="/hub/muenze.png" alt="" draggable={false} />
           <strong>{muenzen}</strong>
         </div>
       </div>
-      <p className="truhe-hinweis">{fertig ? 'Tippen zum Weiter' : ' '}</p>
+      <p className="truhe-hinweis">
+        {phase === 'zu' ? 'Tippen zum Öffnen' : phase === 'fertig' ? 'Tippen zum Weiter' : ' '}
+      </p>
     </div>
   );
 }

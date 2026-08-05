@@ -166,7 +166,18 @@ export default function Truhe3D({
   }, [onBereit]);
 
   return (
-    <Canvas camera={{ position: [0, 0.75, 2.2], fov: 30 }} dpr={[1, 2]} shadows>
+    <Canvas
+      /*
+        Abstand nach dem Ergebnis bemessen, nicht nach Gefuehl: Bei 2,2 stand
+        die Kamera so nah, dass die Truhe im Vollbild links und rechts
+        angeschnitten wurde. Die Truhe ist eine Einheit breit und mit offenem
+        Deckel gut eine hoch — 3,1 laesst rundherum Luft, auch auf einem
+        schmalen Handy.
+      */
+      camera={{ position: [0, 0.6, 3.1], fov: 30 }}
+      dpr={[1, 2]}
+      shadows
+    >
       {/* Physikalische Einheiten — siehe die ausführliche Begründung in
           `Avatar3D.tsx`. Werte um 1 ergeben ein sehr dunkles Bild. */}
       <ambientLight intensity={2.4} />

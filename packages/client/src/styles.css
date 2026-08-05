@@ -7904,6 +7904,7 @@ main.auth > .muted {
 */
 .truhe-dreh {
   position: relative;
+  z-index: 2;
   width: min(72vw, 22rem);
   height: min(40vh, 18rem);
   transform-style: preserve-3d;
@@ -7939,24 +7940,34 @@ main.auth > .muted {
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.4));
 }
 
+/*
+  Gluehen und Strahlen sind am Bildschirm bemessen, nicht in festen Pixeln.
+
+  Die alten 170 bzw. 330 px stammen aus der Zeit, als die Buehne 220 x 240 px
+  gross war — im Vollbild war davon nur noch ein Fleckchen unter der Truhe zu
+  sehen. Und die Verzoegerungen (0,9 s) galten fuer den festen Ablauf; jetzt
+  loest der Tipp aus, also fangen beide sofort an.
+*/
 .truhe-glut {
   position: absolute;
-  top: 42%;
+  top: 45%;
   left: 50%;
-  width: 170px;
-  height: 170px;
+  width: min(80vw, 26rem);
+  height: min(80vw, 26rem);
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(circle, var(--glut, #ffe0a0) 0%, transparent 66%);
   opacity: 0;
-  animation: truhe-glut 2.2s ease-out 0.9s forwards;
+  animation: truhe-glut 2.2s ease-out forwards;
+  /* Hinter der Truhe, aber vor dem Hintergrund. */
+  z-index: 0;
 }
 .truhe-strahlen {
   position: absolute;
-  top: 42%;
+  top: 45%;
   left: 50%;
-  width: 330px;
-  height: 330px;
+  width: min(150vw, 44rem);
+  height: min(150vw, 44rem);
   transform: translate(-50%, -50%) scale(0.3);
   border-radius: 50%;
   background: repeating-conic-gradient(
@@ -7967,7 +7978,8 @@ main.auth > .muted {
   -webkit-mask: radial-gradient(circle, transparent 22%, #000 32%, #000 54%, transparent 68%);
   mask: radial-gradient(circle, transparent 22%, #000 32%, #000 54%, transparent 68%);
   opacity: 0;
-  animation: truhe-strahlen 2.4s ease-out 0.95s forwards;
+  animation: truhe-strahlen 2.4s ease-out forwards;
+  z-index: 0;
 }
 
 /* Die Belohnung schwebt UEBER der Truhe.
@@ -8028,9 +8040,9 @@ main.auth > .muted {
   100% { transform: rotateX(-118deg); }
 }
 @keyframes truhe-glut {
-  0% { opacity: 0; }
-  25% { opacity: 0.9; }
-  100% { opacity: 0.28; }
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  22% { opacity: 0.95; transform: translate(-50%, -50%) scale(1.08); }
+  100% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
 }
 @keyframes truhe-strahlen {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0); }
@@ -8969,4 +8981,114 @@ main.auth > .muted {
   width: 1rem;
   height: 1rem;
   object-fit: contain;
+}
+
+/* =========================================================================
+   Truhenoeffnung, zweiter Anlauf: Antippen oeffnet.
+
+   Vorher lief alles nach einer Zeitschaltung ab. Jetzt steht die Truhe
+   geschlossen da und wartet — und alles, was zum Oeffnen gehoert, haengt an
+   der Phase. Der Grund ist nicht technisch: Das Oeffnen ist der Moment, um
+   den es geht, und der gehoert dem Spieler.
+   ========================================================================= */
+
+/* Geschlossen: kein Gluehen, keine Strahlen, keine Zahl. Nur die Truhe, die
+   leise atmet und darauf wartet, angetippt zu werden. */
+.truhe-oeffnung.ist-zu .truhe-glut,
+.truhe-oeffnung.ist-zu .truhe-strahlen,
+.truhe-oeffnung.ist-zu .truhe-belohnung {
+  opacity: 0;
+  animation: none;
+}
+/* Das Wackeln beim Aufbau gehoert zum Oeffnen und nicht zum Warten. */
+.truhe-oeffnung.ist-zu .truhe-schuettel,
+.truhe-oeffnung.ist-zu .truhe-dreh {
+  animation: none;
+}
+/* Stattdessen ein ruhiges Heben und Senken — die Truhe lebt, ohne zu
+   zappeln. Wer eine Sekunde zoegert, soll nicht auf ein Standbild sehen. */
+.truhe-oeffnung.ist-zu .truhe-dreh {
+  animation: truhe-atmen 2.6s ease-in-out infinite;
+}
+@keyframes truhe-atmen {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.012); }
+}
+
+/* Der Hinweis lockt, solange zu ist. */
+.truhe-oeffnung.ist-zu .truhe-hinweis {
+  animation: truhe-locken 1.8s ease-in-out infinite;
+}
+@keyframes truhe-locken {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* -------------------------------------------------------------------------
+   Der Muenzschwall.
+
+   Liegt UEBER der Truhe (z-index) und ueber dem Gluehen: Die Muenzen kommen
+   aus ihr heraus, sie liegen nicht dahinter. Ausgangspunkt ist der obere
+   Rand der Truhe, nicht ihre Mitte — dort ist die Oeffnung.
+   ------------------------------------------------------------------------- */
+.truhe-schwall {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.truhe-schwall img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2rem;
+  height: 2rem;
+  margin: -1rem 0 0 -1rem;
+  opacity: 0;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+  animation: truhe-muenze-fliegt 1.5s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+/*
+  Steigen, auffaechern, fallen — in einer Bewegung.
+
+  Die Kurve macht den Bogen: schnell hoch, oben langsam, dann faellt sie
+  wieder. Ohne den Abfall am Ende schweben zwoelf Muenzen aus dem Bild und es
+  sieht aus, als waeren sie weggezaubert worden.
+*/
+@keyframes truhe-muenze-fliegt {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0) scale(0.4);
+  }
+  12% { opacity: 1; }
+  60% {
+    opacity: 1;
+    transform: translate(var(--weite), var(--hoehe)) rotate(var(--dreh)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--weite) * 1.6), calc(var(--hoehe) * 0.25))
+      rotate(calc(var(--dreh) * 1.4)) scale(0.85);
+  }
+}
+
+/* Das Gluehen kraeftiger und warm in der Farbe des Grades — es soll aus der
+   Truhe kommen und nicht wie ein Nebel darueber liegen. */
+.truhe-oeffnung.ist-auf .truhe-glut,
+.truhe-oeffnung.ist-fertig .truhe-glut {
+  filter: blur(6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .truhe-oeffnung.ist-zu .truhe-dreh,
+  .truhe-oeffnung.ist-zu .truhe-hinweis,
+  .truhe-schwall img {
+    animation: none;
+  }
+  /* Ohne Bewegung bleiben die Muenzen ganz weg — ein Standbild aus zwoelf
+     uebereinanderliegenden Muenzen waere nur ein Klumpen. */
+  .truhe-schwall { display: none; }
 }
