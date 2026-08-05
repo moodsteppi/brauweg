@@ -2044,6 +2044,20 @@ function Spielwahl({
         </button>
       </header>
       <div className="spielwahl-rolle">
+        {/*
+          Feldherr ist kein Kartenspiel und kein Spielmodul: Es laeuft im
+          Browser, in Echtzeit, zu zweit. Deshalb steht es hier fest und kommt
+          nicht aus der Spielliste des Servers — die kennt nur GameModule.
+          Siehe docs/FELDHERR-PLAN.md.
+        */}
+        <button className="spielwahl-karte is-offen" onClick={() => onPick('feldherr')}>
+          <SpielBild id="feldherr" />
+          <span className="spielwahl-titel">
+            <strong>Feldherr</strong>
+            <span>2 Spieler · Echtzeit</span>
+          </span>
+          <span className="spielwahl-spielen">Spielen</span>
+        </button>
         {playable.map((game) => (
           <button
             key={game.id}
@@ -2279,6 +2293,31 @@ function SpielBild({ id }: { id: string }): React.JSX.Element {
         ))}
         <circle cx="120" cy="62" r="9" fill="#f4ead8" />
         <circle cx="212" cy="20" r="9" fill="#2a1c12" />
+      </svg>
+    );
+  }
+  if (id === 'feldherr') {
+    // Zwei Haelften, Mittellinie, je ein Haus — das Brett erkennt man an der Form.
+    return (
+      <svg viewBox="0 0 320 80" aria-hidden="true">
+        <rect width="320" height="80" fill="#2c4a32" />
+        <rect y="38" width="320" height="4" fill="#8fa89a" opacity=".55" />
+        <g fill="#e8433c">
+          <rect x="128" y="8" width="26" height="18" rx="2" />
+          <polygon points="126,8 156,8 141,-1" />
+        </g>
+        <g fill="#3d86ff">
+          <rect x="166" y="54" width="26" height="18" rx="2" />
+          <polygon points="164,54 194,54 179,45" />
+        </g>
+        <circle cx="196" cy="20" r="6" fill="#e8433c" />
+        <circle cx="212" cy="26" r="6" fill="#e8433c" />
+        <circle cx="112" cy="60" r="6" fill="#3d86ff" />
+        <circle cx="96" cy="54" r="6" fill="#3d86ff" />
+        <g fill="#6f8f74">
+          <polygon points="60,26 70,44 50,44" />
+          <polygon points="250,50 262,70 238,70" />
+        </g>
       </svg>
     );
   }

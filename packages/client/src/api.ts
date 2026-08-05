@@ -579,6 +579,21 @@ export const api = {
     patch<{ ok: true; avatar: Getragen }>('/me/avatar', { slot, itemId }),
 
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */
+  /**
+   * Feldherr meldet seinen Ausgang. Der Server deckelt je Tag; was
+   * zurueckkommt, ist das tatsaechlich Gebuchte, nicht das Erhoffte.
+   */
+  feldherrEnde: (body: {
+    gewonnen: boolean;
+    gegenKI: boolean;
+    stufe: 'leicht' | 'normal' | 'schwer' | null;
+    dauer: number;
+  }) =>
+    post<{ muenzen: number; xp: number; gedeckelt: boolean; stand: number }>(
+      '/minispiele/feldherr/ende',
+      body,
+    ),
+
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */
   deleteMe: async (password: string) => {

@@ -92,7 +92,40 @@ Nachprüfung auf dem Server.
 
 ---
 
-## Was für Weg A zu tun ist
+## Was am 5. August gebaut wurde (Weg A steht)
+
+* **`packages/client/src/minispiele/feldherr/kern.js`** — der Spielkern als
+  Modul. Exportiert `STIL`, `HUELLE` und `starteFeldherr({modus, stufe, feld,
+  saat, aufEnde})`; die Sitzung lässt sich über `beenden()` abräumen, sonst
+  liefe die Bildschleife nach dem Verlassen weiter.
+* **`screens/FeldherrTisch.tsx`** — Auswahl von Stärke und Feldgröße, „Gegen
+  die KI", „Zu zweit an einem Gerät", darunter „Online spielen" als gesperrte
+  Schaltfläche (sichtbar, damit klar ist, dass sie kommt).
+* **Kachel in `GameSelect.tsx`** samt gezeichnetem Bild — kein `<img>` auf eine
+  Datei, die es noch nicht gibt. Die Kachel steht fest im Client und nicht in
+  der Spielliste des Servers: Die kennt nur `GameModule`.
+* **`POST /api/minispiele/feldherr/ende`** mit `minispiele/feldherr.ts`:
+  3 Münzen je Sieg, 1 je Niederlage, 12 bzw. 6 Erfahrung, Tagesdeckel 20
+  Münzen, Partien unter einer Minute zählen nicht. Testkonten bekommen nichts
+  gebucht.
+
+`npm run build` im Wurzelverzeichnis läuft damit sauber durch.
+
+**Noch offen:** `npm test` konnte in dieser Sitzung nicht abschließen — der
+flache Klon hat keine `packages/server/drizzle/meta/_journal.json`, weshalb
+jeder Test scheitert, der eine Testdatenbank hochfährt. Das passiert auch ohne
+diese Änderungen (geprüft mit `git stash`). Vor dem Mergen bitte in einem
+vollständigen Arbeitsbaum einmal `npm test` laufen lassen.
+
+**Der Tagesdeckel liegt im Arbeitsspeicher**, nicht in der Datenbank. Grund
+steht im Kopf von `minispiele/feldherr.ts`: Alle vorhandenen Zähler hängen am
+Spiel-Enum, und ein Eintrag dort hieße Enum-Wert, Migration und
+Registrierungseintrag — also die halbe Aufnahme als vollwertiges Spiel. Das
+gehört an die Entscheidung aus Frage 1, nicht davor.
+
+---
+
+## Was für Weg B noch zu tun ist
 
 1. **Paket `packages/game-feldherr`** mit dem Spielkern als ES-Modul. Der
    heutige Code hängt an `document.getElementById` für Leiste und Overlays;
@@ -112,7 +145,7 @@ Nachprüfung auf dem Server.
    `partie-spielen` auch für Minispiele zählen lassen — das ist eine
    Produktentscheidung, keine technische.
 
-## Was für Weg B dazukommt
+### Bausteine für Weg B
 
 6. **Tischart ohne Runden.** `rounds` ist heute Pflicht und wird gegen
    `rotationSize` geprüft. Für Echtzeitspiele braucht es einen Zweig, der das

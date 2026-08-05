@@ -5,6 +5,7 @@ import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
+import { FeldherrTisch } from './screens/FeldherrTisch';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
@@ -13,6 +14,8 @@ import { WizardTable } from './screens/WizardTable';
 
 type Screen =
   | { name: 'games' }
+  /** Minispiel: laeuft im Browser, kein Tisch, kein Spielmodul. */
+  | { name: 'feldherr' }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
   /**
@@ -107,6 +110,10 @@ export function App(): React.JSX.Element {
     );
   }
 
+  if (screen.name === 'feldherr') {
+    return <FeldherrTisch onBack={() => setScreen({ name: 'games' })} />;
+  }
+
   if (screen.name === 'lobby') {
     return (
       <Lobby
@@ -123,7 +130,10 @@ export function App(): React.JSX.Element {
   return (
     <GameSelect
       me={me}
-      onPick={(gameId) => setScreen({ name: 'lobby', gameId })}
+      // Feldherr hat keine Lobby: kein Tisch, keine Sitze, keine Rundenzahl.
+      onPick={(gameId) =>
+        setScreen(gameId === 'feldherr' ? { name: 'feldherr' } : { name: 'lobby', gameId })
+      }
       onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
       onShowProfile={zeigeProfil}
       // Erst umschalten, dann speichern: Das Blatt wechselt ohne Wartezeit,
