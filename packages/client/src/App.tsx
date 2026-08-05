@@ -5,6 +5,7 @@ import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
+import { FeldherrTisch } from './screens/FeldherrTisch';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
@@ -15,6 +16,8 @@ const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.R
 
 type Screen =
   | { name: 'games' }
+  /** Minispiel: laeuft im Browser, kein Tisch, kein Spielmodul. */
+  | { name: 'feldherr' }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
   /** Solo-Endless-Runner aus der Spielauswahl. */
@@ -101,6 +104,30 @@ export function App(): React.JSX.Element {
     );
   }
 
+  /**
+   * Feldherr laeuft nicht am Kartentisch.
+   *
+   * Es ist ein Echtzeitspiel: Der Kern zeichnet selbst, und die Partie
+   * rechnen beide Geraete im Gleichschritt. Ein Kartentisch mit Blatt,
+   * Stichanzeige und Zugtimer waere hier nur im Weg.
+   */
+  if (screen.name === 'table' && screen.gameId === 'feldherr') {
+    return (
+      <FeldherrTisch
+        tableId={screen.tableId}
+        onBack={() => setScreen({ name: 'lobby', gameId: screen.gameId })}
+      />
+    );
+  }
+  if (screen.name === 'lobby' && screen.gameId === 'feldherr') {
+    return (
+      <FeldherrTisch
+        onBack={() => setScreen({ name: 'games' })}
+        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+      />
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -131,6 +158,15 @@ export function App(): React.JSX.Element {
     );
   }
 
+  if (screen.name === 'feldherr') {
+    return (
+      <FeldherrTisch
+        onBack={() => setScreen({ name: 'games' })}
+        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+      />
+    );
+  }
+
   if (screen.name === 'lobby') {
     return (
       <Lobby
@@ -147,7 +183,11 @@ export function App(): React.JSX.Element {
   return (
     <GameSelect
       me={me}
-      onPick={(gameId) => setScreen({ name: 'lobby', gameId })}
+      // Feldherr hat keine Kartenlobby: Tisch erstellen und beitreten
+      // erledigt der eigene Bildschirm, fest mit zwei Sitzen und einer Runde.
+      onPick={(gameId) =>
+        setScreen(gameId === 'feldherr' ? { name: 'feldherr' } : { name: 'lobby', gameId })
+      }
       onSolo={(modusId) => {
         if (modusId === 'prosubway') setScreen({ name: 'prosubway' });
       }}

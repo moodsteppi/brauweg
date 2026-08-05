@@ -286,9 +286,29 @@ export interface EmoteMessage {
   emote: string;
 }
 
+/**
+ * Takt-Herzschlag eines Echtzeitspiels (Feldherr), weitergereicht wie ein
+ * Zuruf: keine Revision, kein Zustand. Wer einen verpasst, bekommt in 200 ms
+ * den naechsten.
+ */
+export interface TaktMessage {
+  v: number;
+  game: string;
+  type: 'takt';
+  tableId: string;
+  /** Sitz des Absenders, vom Server gestempelt. */
+  seat: number;
+  /** Takt, bis zu dem das andere Geraet gerechnet hat. */
+  takt: number;
+  /** 40er-Taktgrenze, zu der die Pruefsumme gehoert. */
+  grenzTakt: number;
+  pruef: string;
+}
+
 export type ServerMessage<V = GameView> =
   | ViewMessage<V>
   | PartyMessage
   | TableMessage
   | EmoteMessage
+  | TaktMessage
   | ErrorMessage;

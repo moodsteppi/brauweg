@@ -29,14 +29,14 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind zwei', () => {
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind drei', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
 
   assert.deepEqual(
     playable.map((meta) => meta.id),
-    ['doppelkopf', 'wizard'],
+    ['doppelkopf', 'wizard', 'feldherr'],
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),

@@ -2118,7 +2118,13 @@ function Spielwahl({
                 </span>
                 <span className="hub-themenspiel-text">
                   <strong>{t(game.nameKey)}</strong>
-                  <span className="muted">{game.seatCounts.join(', ')} Spieler</span>
+                  {/* Nur der Untertitel weiss mehr als der Server: Feldherr
+                      ist das einzige Echtzeitspiel, und das gehoert aufs
+                      Banner. */}
+                  <span className="muted">
+                    {game.seatCounts.join(', ')} Spieler
+                    {game.id === 'feldherr' ? ' · Echtzeit' : ''}
+                  </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>
               </button>

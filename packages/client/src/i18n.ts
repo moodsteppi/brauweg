@@ -13,6 +13,10 @@ const de: Record<string, string> = {
   // Produktname nicht - deshalb der deutsche Name. Die interne Kennung bleibt
   // `wizard`, sie steht in Datenbankzeilen und Nachrichten.
   'game.wizard': 'Zauberer',
+  // Feldherr ist kein Kartenspiel, sondern ein Echtzeitduell zu zweit. Es
+  // laeuft ueber dieselbe Modulschnittstelle, hat aber weder Runden noch
+  // Zugfolge — siehe docs/FELDHERR-PLAN.md.
+  'game.feldherr': 'Feldherr',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
