@@ -12,5 +12,5 @@ CREATE TABLE IF NOT EXISTS "runner_day" (
     FOREIGN KEY ("account_id") REFERENCES "public"."account"("id") ON DELETE cascade ON UPDATE no action,
   CONSTRAINT "runner_day_pkey" PRIMARY KEY ("account_id", "day")
 );
-
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "runner_day_tag_idx" ON "runner_day" ("account_id", "day");
