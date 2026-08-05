@@ -234,7 +234,23 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:'],
+        /**
+         * `blob:` ist fuer die 3D-Figur noetig, und der Fehler war teuer zu
+         * finden: Die Texturen stecken als JPEG **im** GLB. Der Lader von
+         * three packt sie aus und laedt sie ueber eine `blob:`-Adresse — die
+         * Richtlinie hat genau das geblockt. Ergebnis war ein schneeweisser
+         * Pinguin, ohne dass an der Datei etwas falsch war: Sie kam mit 200
+         * an, war gueltig, und `createImageBitmap` konnte sie von Hand auch
+         * entpacken. Nur der Weg ueber `<img src="blob:…">` war zu.
+         *
+         * Auf dem Entwicklungsserver faellt das nie auf — dort gibt es diese
+         * Kopfzeile gar nicht. **Was mit Bildern zu tun hat, gehoert am
+         * ausgelieferten Stand geprueft.**
+         *
+         * `blob:` erlaubt nur Daten, die die Seite selbst erzeugt hat; es
+         * oeffnet keine fremde Herkunft.
+         */
+        imgSrc: ["'self'", 'data:', 'blob:'],
         fontSrc: ["'self'"],
         connectSrc: ["'self'", 'ws:', 'wss:'],
         frameAncestors: ["'none'"],
