@@ -528,6 +528,7 @@ export function GameSelect({
       {werkstattOffen && (
         <Avatarwerkstatt
           bemalung={me.figur ?? null}
+          getragen={me.avatar}
           onClose={() => setWerkstattOffen(false)}
           // Neu laden, damit die Figur im Profil sofort so aussieht wie
           // gerade gespeichert.
@@ -701,8 +702,10 @@ function ProfilTab({
       <Tafel titel="Deine Figur" zusatz={me.figur?.design === 'bemalt' ? 'Selbst angemalt' : 'Antippen zum Bearbeiten'}>
         <button className="hub-figur-buehne" onClick={onWerkstatt} title="Figur bearbeiten">
           <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
+            {/* `me.avatar` ist genau das, was der Kleiderschrank anzieht —
+                dieselbe Quelle wie beim gemalten Rückfall darüber. */}
             <Avatar3D
-              muetze={false}
+              getragen={me.avatar}
               bemalung={me.figur ?? LEERE_BEMALUNG}
               drehbar={false}
             />

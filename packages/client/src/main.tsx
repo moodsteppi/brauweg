@@ -18,6 +18,7 @@ if (!root) throw new Error('Kein Wurzelelement gefunden');
  * - /?dev=avatar — Mütze auf Pinguin
  * - /?dev=chest — Deckel auf Truhe
  * - /?dev=werkstatt — Avatar-Vorschau wie im Spiel
+ * - /?dev=runner — Endless-Runner-Platzhalter
  * Manche Browser/Embeds liefern fälschlich ?dev%3D… — das fangen wir ab.
  */
 function isDevFlag(name: string): boolean {
@@ -35,6 +36,7 @@ function isDevFlag(name: string): boolean {
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
 const devWerkstatt = isDevFlag('werkstatt');
+const devRunner = isDevFlag('runner');
 /**
  * Die Truhenoeffnung so, wie der Spieler sie sieht — ohne Anmeldung.
  * Oeffnen: `/?dev=truhe`
@@ -45,10 +47,18 @@ const devWerkstatt = isDevFlag('werkstatt');
 const devTruhe = isDevFlag('truhe');
 
 if (
-  (devAvatar || devChest || devWerkstatt) &&
+  (devAvatar || devChest || devWerkstatt || devRunner || devTruhe) &&
   (window.location.search.includes('%3D') || window.location.pathname.includes('/dev/'))
 ) {
-  const flag = devAvatar ? 'avatar' : devChest ? 'chest' : 'werkstatt';
+  const flag = devAvatar
+    ? 'avatar'
+    : devChest
+      ? 'chest'
+      : devWerkstatt
+        ? 'werkstatt'
+        : devRunner
+          ? 'runner'
+          : 'truhe';
   window.history.replaceState(null, '', `/?dev=${flag}`);
 }
 
@@ -67,6 +77,7 @@ const ChestAligner = lazy(() =>
 const Avatarwerkstatt = lazy(() =>
   import('./screens/Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
 );
+const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
@@ -76,7 +87,15 @@ const werkzeug = devAvatar ? (
 ) : devChest ? (
   <ChestAligner />
 ) : devWerkstatt ? (
-  <Avatarwerkstatt onClose={() => window.history.back()} />
+  /* Mit Wollmütze, weil die Strecke genau dafür da ist: die Figur samt
+     Zubehör ansehen, ohne sich anzumelden. Ohne sie prüft man hier nur den
+     nackten Pinguin und hält die Mütze für kaputt. */
+  <Avatarwerkstatt
+    getragen={{ hut: 'hut-wollmuetze' }}
+    onClose={() => window.history.back()}
+  />
+) : devRunner ? (
+  <Runner />
 ) : devTruhe ? (
   <TruhenOeffnung grad="gold" muenzen={120} onFertig={() => window.location.reload()} />
 ) : null;
