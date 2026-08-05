@@ -6,6 +6,7 @@ import {
   AnimationMixer,
   Box3,
   Color,
+  DoubleSide,
   Group,
   RepeatWrapping,
   SRGBColorSpace,
@@ -14,6 +15,7 @@ import {
   LoopOnce,
   LoopRepeat,
   MathUtils,
+  MeshStandardMaterial,
   Vector3,
   type AnimationAction,
   type Mesh as MeshType,
@@ -56,6 +58,20 @@ import { spiele } from '../klang';
  */
 
 const ANIM = '/3d/subway/penguin_anim.glb';
+/**
+ * Sprung und Hechtsprung — zweites Modell, gleiches Skelett.
+ *
+ * Die Clips liegen in einer eigenen Datei (`jump+and+dive` aus dem
+ * Archivrepo), nicht im Laufmodell. Geladen werden deshalb zwei GLBs, aber
+ * bespielt wird nur EIN Netz: Der Mixer haengt am Laufmodell, die beiden
+ * neuen Clips werden ihm untergeschoben. Das geht, weil beide Dateien
+ * dieselben 43 Knochen mit denselben Namen haben — sonst liefen die Spuren
+ * ins Leere und die Figur bliebe stehen.
+ */
+const ANIM_SPRUNG = '/3d/subway/penguin_sprung_hecht.glb';
+/** Die beiden Kraftzeichen an der Figur. */
+const KRAFT_SCHILD_GLB = '/3d/subway/kraft_schild.glb';
+const KRAFT_MAGNET_GLB = '/3d/subway/kraft_magnet.glb';
 const PROP = '/3d/subway';
 
 const SPUR_BREITE = 2.5;
@@ -73,6 +89,14 @@ const SPRUNGKRAFT = 9;
 const SCHWERKRAFT = -26;
 /** Rutschdauer — lang genug für ein Tor, kurz genug zum Verpassen. */
 const RUTSCH_MS = 780;
+/**
+ * Wie schnell der abgebrochene Sprung zu Boden geht.
+ *
+ * Deutlich mehr als die freie Fallgeschwindigkeit: Der Abbruch soll sich
+ * anfuehlen wie ein Hechtsprung nach unten, nicht wie Loslassen. Aus dem
+ * Scheitel (1,56 m) dauert es damit rund 0,09 s statt 0,35 s.
+ */
+const SCHNELLFALL = -18;
 /** Stehende Figur (Füße = Ursprung nach dem Erden). */
 const PINGUIN_HOEHE = 1.15;
 const RUTSCH_SKALA_Y = 0.48;
@@ -89,8 +113,19 @@ const SPIELER_BREIT = 0.34;
  */
 const NACHSICHT = 0.9;
 
-/** Füße müssen beim Sprung über diese Kante (Prop-Oberkante + Luft). */
-const SPRUNG_FREI_PROP = 0.7;
+/**
+ * Luft, die die Fuesse ueber der Prop-Oberkante haben muessen.
+ *
+ * Frueher stand hier eine Pauschale von 0,7 fuer alles — richtig, solange
+ * jedes Sprung-Prop unter 0,62 lag. Fahrrad und Wagen sind jetzt doppelt
+ * so hoch; mit der Pauschale waere man ueber sie hinweg "gesprungen",
+ * waehrend die Figur sichtbar mittendurch geht. Die Kante kommt deshalb
+ * aus der Hoehe des Stuecks (`sprungFrei()`).
+ *
+ * Der Sprungscheitel liegt bei v²/(2g) = 1,56 — ueber 1,32 (Fahrrad plus
+ * Luft) ist man rund 0,27 s, das reicht bequem.
+ */
+const SPRUNG_LUFT = 0.08;
 /** Feste Z-Plätze im Chunk — die Hindernisse selbst stehen still. */
 const PLATZ_Z = [-10, -5, 0, 5, 10] as const;
 /** Erst nach so vielen Metern Anlauf kommt das erste Hindernis an. */
@@ -231,7 +266,7 @@ const SPRUNG_PROPS: SprungProp[] = [
 const BUSCH_PROPS: BuschProp[] = ['bush', 'planter'];
 const RUTSCH_PROPS: RutschProp[] = ['banner', 'scaffold', 'garland'];
 
-/** Sichthöhe je Prop (Skalierung des Modells). Alle unter SPRUNG_FREI_PROP. */
+/** Sichthöhe je Prop (Skalierung des Modells). Die Sprungkante folgt daraus. */
 const SPRUNG_H: Record<SprungProp, number> = {
   crate: 0.58,
   suitcase: 0.48,
@@ -242,9 +277,12 @@ const SPRUNG_H: Record<SprungProp, number> = {
   bench: 0.5,
   planter: 0.58,
   keg: 0.62,
-  bike: 0.62,
+  // Fahrrad und Einkaufswagen doppelt: Bei 0,62 lagen sie da wie
+  // Spielzeug. Jetzt stehen sie — und man springt ueber etwas, das so
+  // gross ist wie man selbst.
+  bike: 1.24,
   barrier: 0.5,
-  cart: 0.62,
+  cart: 1.24,
 };
 const BUSCH_H: Record<BuschProp, number> = { bush: 0.6, planter: 0.58 };
 /** Tore: Gesamthöhe des Modells; der Durchlass steht in TOR_LUECKE. */
@@ -281,9 +319,11 @@ const KASTEN: Record<SprungProp | BuschProp | RutschProp, { x: number; z: number
   bench: { x: 0.85, z: 0.3 },
   planter: { x: 0.5, z: 0.35 },
   keg: { x: 0.38, z: 0.38 },
-  bike: { x: 0.55, z: 0.22 },
+  // Aus den Modellen gerechnet (getBounds, je Einheit Hoehe): Fahrrad
+  // B/H 1,42 L/H 1,10, Wagen 0,98/0,63 — mal 1,24, halbiert.
+  bike: { x: 0.88, z: 0.68 },
   barrier: { x: 0.8, z: 0.18 },
-  cart: { x: 0.55, z: 0.42 },
+  cart: { x: 0.61, z: 0.39 },
   bush: { x: 0.5, z: 0.45 },
   // Tore spannen die ganze Spur.
   banner: { x: 1.15, z: 0.22 },
@@ -333,6 +373,13 @@ function propGlb(name: string): string {
   return `${PROP}/prop_${name}.glb`;
 }
 
+/** Ab welcher Fusshoehe man ueber dieses Stueck hinweg ist. */
+function sprungFrei(h: Hindernis): number {
+  if (h.rolle === 'jump') return SPRUNG_H[h.sprungProp] + SPRUNG_LUFT;
+  if (h.rolle === 'bush') return BUSCH_H[h.buschProp] + SPRUNG_LUFT;
+  return FAHRZEUG[h.fahrzeug].frei;
+}
+
 /**
  * Vorladen in zwei Wellen: Pinguin und Fahrzeuge sofort (die braucht der
  * erste Bildschirm), die sechzehn Props gestaffelt im Leerlauf. Alles auf
@@ -341,6 +388,9 @@ function propGlb(name: string): string {
  */
 function ladeRunnerModelle(): void {
   useGLTF.preload(ANIM);
+  useGLTF.preload(ANIM_SPRUNG);
+  useGLTF.preload(KRAFT_SCHILD_GLB);
+  useGLTF.preload(KRAFT_MAGNET_GLB);
   for (const art of Object.keys(FAHRZEUG_URL) as FahrzeugArt[]) {
     useGLTF.preload(FAHRZEUG_URL[art]);
   }
@@ -550,6 +600,16 @@ interface Spielstand {
   sprungV: number;
   /** Sprungwunsch kurz vor der Landung — wird beim Aufsetzen eingelöst. */
   sprungPuffer: number;
+  /**
+   * Rutschwunsch aus der Luft: bricht den Sprung ab.
+   *
+   * Wer im Flug nach unten wischt, will nicht warten, bis die Schwerkraft
+   * fertig ist. Der Wunsch schaltet auf Schnellfall und wird beim Aufsetzen
+   * eingeloest — daher ein Zeitstempel und kein Schalter: Ein Schalter, der
+   * beim Landen noch stuende, loeste auch eine halbe Sekunde spaeter noch
+   * eine Rutschpartie aus, die niemand mehr wollte.
+   */
+  rutschPuffer: number;
   tempo: number;
   distanz: number;
   phase: Phase;
@@ -577,6 +637,7 @@ function frischerStand(phase: Phase): Spielstand {
     rutschtBis: 0,
     sprungV: 0,
     sprungPuffer: 0,
+    rutschPuffer: 0,
     tempo: TEMPO_BASIS,
     distanz: 0,
     phase,
@@ -655,6 +716,9 @@ interface PinguinBausatz {
   mixer: AnimationMixer;
   flee: AnimationAction;
   run: AnimationAction;
+  /** Einmalige Clips aus dem zweiten Modell. Null, wenn es fehlt. */
+  sprung: AnimationAction | null;
+  hecht: AnimationAction | null;
   hip: Object3D | null;
   hipRuhe: Vector3;
   /** Lokale Y nach einmaligem Erden — nie per Welt-BBox nachjustieren. */
@@ -674,7 +738,11 @@ function ohneWurzelbewegung(clip: AnimationClip): AnimationClip {
   return new AnimationClip(clip.name, clip.duration, spuren);
 }
 
-function bauePinguin(quelle: Object3D, clips: AnimationClip[]): PinguinBausatz {
+function bauePinguin(
+  quelle: Object3D,
+  clips: AnimationClip[],
+  extraClips: AnimationClip[] = [],
+): PinguinBausatz {
   const wurzel = new Group();
   const richt = new Group();
   richt.rotation.x = Math.PI / 2 - Math.PI / 4;
@@ -700,7 +768,17 @@ function bauePinguin(quelle: Object3D, clips: AnimationClip[]): PinguinBausatz {
     passeHoehe(wurzel, PINGUIN_HOEHE);
     erdeFuesse(wurzel);
     const leer = mixer.clipAction(new AnimationClip('leer', 0, []));
-    return { wurzel, mixer, flee: leer, run: leer, hip, hipRuhe, bodenY: wurzel.position.y };
+    return {
+      wurzel,
+      mixer,
+      flee: leer,
+      run: leer,
+      sprung: null,
+      hecht: null,
+      hip,
+      hipRuhe,
+      bodenY: wurzel.position.y,
+    };
   }
   const flee = mixer.clipAction(ohneWurzelbewegung(clips[0]));
   flee.setLoop(LoopOnce, 1);
@@ -715,7 +793,34 @@ function bauePinguin(quelle: Object3D, clips: AnimationClip[]): PinguinBausatz {
   erdeFuesse(wurzel);
   flee.stop();
 
-  return { wurzel, mixer, flee, run, hip, hipRuhe, bodenY: wurzel.position.y };
+  /**
+   * Die beiden einmaligen Clips. Beide `LoopOnce` mit `clampWhenFinished`:
+   * Ein Sprung, der sich wiederholt, sieht aus wie ein Fehler, und ohne
+   * Klemmen schnappt die Figur im letzten Bild in die Ruhelage zurueck.
+   *
+   * `zeitSkala` streckt sie auf die Dauer, die das SPIEL vorgibt — der
+   * Hechtsprung dauert im Modell 3,5 s, das Rutschen aber 0,78 s. Ohne
+   * Streckung waere die Figur beim Wiederaufstehen noch mitten im Sprung.
+   */
+  const macheEinmal = (clip: AnimationClip | undefined): AnimationAction | null => {
+    if (!clip) return null;
+    const aktion = mixer.clipAction(ohneWurzelbewegung(clip));
+    aktion.setLoop(LoopOnce, 1);
+    aktion.clampWhenFinished = true;
+    return aktion;
+  };
+
+  return {
+    wurzel,
+    mixer,
+    flee,
+    run,
+    sprung: macheEinmal(extraClips[0]),
+    hecht: macheEinmal(extraClips[1]),
+    hip,
+    hipRuhe,
+    bodenY: wurzel.position.y,
+  };
 }
 
 function AnimierterPinguin({
@@ -728,11 +833,26 @@ function AnimierterPinguin({
   onFleeFertig: () => void;
 }): React.JSX.Element {
   const gltf = useGLTF(ANIM);
+  const extra = useGLTF(ANIM_SPRUNG);
   const bausatz = useMemo(
-    () => bauePinguin(gltf.scene, gltf.animations),
-    [gltf.scene, gltf.animations],
+    () => bauePinguin(gltf.scene, gltf.animations, extra.animations),
+    [gltf.scene, gltf.animations, extra.animations],
   );
   const fleeFertig = useRef(false);
+
+  /**
+   * Sprung und Hechtsprung anstossen, sobald der Zustand es sagt.
+   *
+   * Angestossen wird an der FLANKE, nicht am Zustand: Wir merken uns, was
+   * beim letzten Bild galt, und starten den Clip nur beim Wechsel von
+   * "nicht" auf "doch". Ohne das setzte `reset()` den Clip in jedem Bild
+   * neu an, und die Figur zuckte im ersten Einzelbild fest.
+   *
+   * Der Lauf laeuft darunter weiter und wird nur ueberblendet — beim Landen
+   * ist er dann sofort wieder da, ohne Anlaufzeit.
+   */
+  const warSprung = useRef(false);
+  const warHecht = useRef(false);
 
   useEffect(() => {
     fleeFertig.current = false;
@@ -769,6 +889,39 @@ function AnimierterPinguin({
     // In der Pause friert auch die Lauf-Animation ein — eine strampelnde
     // Figur unter einem Pause-Blatt sieht aus, als liefe das Spiel weiter.
     if (spielstand.current.phase === 'pause') return;
+
+    const gs = spielstand.current;
+    const { sprung, hecht, run } = bausatz;
+
+    if (gs.springt !== warSprung.current) {
+      warSprung.current = gs.springt;
+      if (gs.springt && sprung) {
+        // Auf die Flugdauer strecken: hoch und runter dauern bei
+        // v = 9 und g = 26 zusammen 2v/g ≈ 0,69 s.
+        const flug = (2 * SPRUNGKRAFT) / -SCHWERKRAFT;
+        sprung.reset();
+        sprung.timeScale = sprung.getClip().duration / flug;
+        sprung.fadeIn(0.06).play();
+        run.fadeOut(0.06);
+      } else if (!gs.springt && sprung) {
+        sprung.fadeOut(0.12);
+        run.reset().fadeIn(0.12).play();
+      }
+    }
+
+    if (gs.rutscht !== warHecht.current) {
+      warHecht.current = gs.rutscht;
+      if (gs.rutscht && hecht) {
+        hecht.reset();
+        hecht.timeScale = hecht.getClip().duration / (RUTSCH_MS / 1000);
+        hecht.fadeIn(0.05).play();
+        run.fadeOut(0.05);
+      } else if (!gs.rutscht && hecht) {
+        hecht.fadeOut(0.12);
+        run.reset().fadeIn(0.12).play();
+      }
+    }
+
     bausatz.mixer.update(dt);
     if (bausatz.hip) bausatz.hip.position.copy(bausatz.hipRuhe);
     bausatz.wurzel.position.y = bausatz.bodenY;
@@ -1186,6 +1339,113 @@ function BiomStimmung({
   return null;
 }
 
+/**
+ * Was man an der Figur sieht, wenn eine Kraft laeuft.
+ *
+ * **An der Figur, nicht im HUD.** Die Chips oben sagen, wie lange noch; sie
+ * sagen nicht, dass gerade etwas mit DIR passiert. Wer rennt, schaut auf
+ * die Figur — dort gehoert das Zeichen hin.
+ *
+ * Geschaltet wird in `useFrame` und nicht ueber React: Die Kraefte leben im
+ * Spielstand-Ref und aendern sich mitten im Lauf; ein setState je Aufnahme
+ * waere ein Rendern des ganzen Menuebaums fuer eine Kugel.
+ */
+function Kraftzeichen({
+  spielstand,
+}: {
+  spielstand: React.MutableRefObject<Spielstand>;
+}): React.JSX.Element {
+  const schildGltf = useGLTF(KRAFT_SCHILD_GLB);
+  const magnetGltf = useGLTF(KRAFT_MAGNET_GLB);
+
+  /**
+   * Die Kugel wird durchsichtig gemacht — im Modell ist sie es nicht.
+   *
+   * Geliefert wurde sie mit `alphaMode: OPAQUE`; die Durchsichtigkeit steht
+   * deshalb hier und nicht in der Datei. Das ist auch die bessere Stelle:
+   * `depthWrite = false` gehoert zwingend dazu, sonst verdeckt die
+   * Vorderseite der Kugel die Figur darin, und man rennt in einer
+   * milchigen Murmel. `side = DoubleSide`, damit auch die Rueckwand steht.
+   */
+  const schildSzene = useMemo(() => {
+    const kopie = schildGltf.scene.clone(true);
+    kopie.traverse((o: Object3D) => {
+      const mesh = o as MeshType;
+      if (!mesh.isMesh) return;
+      const m = (mesh.material as MeshStandardMaterial).clone();
+      m.transparent = true;
+      m.opacity = 0.5;
+      m.depthWrite = false;
+      m.side = DoubleSide;
+      mesh.material = m;
+      mesh.castShadow = false;
+      mesh.frustumCulled = false;
+    });
+    passeHoehe(kopie, 1.55);
+    return kopie;
+  }, [schildGltf.scene]);
+
+  const magnetSzene = useMemo(() => {
+    const kopie = magnetGltf.scene.clone(true);
+    kopie.traverse((o: Object3D) => {
+      const mesh = o as MeshType;
+      if (!mesh.isMesh) return;
+      mesh.castShadow = false;
+      mesh.frustumCulled = false;
+    });
+    // Das Modell liegt flach (Hoehe 0,15 bei Breite 1,0) — aufrichten,
+    // sonst schwebt eine Scheibe neben der Flosse.
+    kopie.rotation.x = -Math.PI / 2;
+    passeHoehe(kopie, 0.34);
+    return kopie;
+  }, [magnetGltf.scene]);
+
+  const schild = useRef<Group>(null);
+  const magnet = useRef<Group>(null);
+  const zeit = useRef(0);
+
+  useFrame((_, delta) => {
+    const gs = spielstand.current;
+    if (gs.phase === 'pause') return;
+    zeit.current += delta;
+    const jetzt = performance.now();
+
+    const s = schild.current;
+    if (s) {
+      s.visible = gs.schild;
+      if (gs.schild) {
+        // Atmen statt Blinken: Eine Kugel, die pulsiert, liest sich als
+        // Schutz; eine, die blinkt, als Warnung.
+        s.scale.setScalar(1 + Math.sin(zeit.current * 2.6) * 0.045);
+        s.rotation.y += delta * 0.6;
+      }
+    }
+
+    const m = magnet.current;
+    if (m) {
+      const an = jetzt < gs.magnetBis;
+      m.visible = an;
+      if (an) {
+        // An der Flosse, leicht schwebend und mitwippend — so sieht man,
+        // dass die Figur ihn traegt, statt dass er im Raum klebt.
+        m.position.y = 0.6 + Math.sin(zeit.current * 4) * 0.04;
+        m.rotation.z = Math.sin(zeit.current * 2) * 0.22;
+      }
+    }
+  });
+
+  return (
+    <group>
+      <group ref={schild} visible={false} position={[0, 0.58, 0]}>
+        <primitive object={schildSzene} />
+      </group>
+      <group ref={magnet} visible={false} position={[0.46, 0.6, 0.05]}>
+        <primitive object={magnetSzene} />
+      </group>
+    </group>
+  );
+}
+
 function Spieler({
   spielstand,
   pose,
@@ -1237,8 +1497,20 @@ function Spieler({
         gs.springt = false;
         gs.sprungV = 0;
         gs.gelandetUm = performance.now();
-        // Gepufferter Sprungwunsch von kurz vor der Landung — jetzt einlösen.
-        if (performance.now() - gs.sprungPuffer < 140) {
+        const jetzt = performance.now();
+        /**
+         * Beim Aufsetzen zuerst der Rutschwunsch, dann der Sprungwunsch.
+         *
+         * Die Reihenfolge ist Absicht: Wer im Flug nach unten gewischt hat,
+         * meinte diesen Boden hier — ein gleichzeitig gepufferter Sprung
+         * waere ein aelterer Wunsch und wuerde den Abbruch aufheben.
+         */
+        if (jetzt - gs.rutschPuffer < 400) {
+          gs.rutschPuffer = 0;
+          gs.sprungPuffer = 0;
+          gs.rutscht = true;
+          gs.rutschtBis = jetzt + RUTSCH_MS;
+        } else if (jetzt - gs.sprungPuffer < 140) {
           gs.sprungPuffer = 0;
           gs.springt = true;
           gs.sprungV = SPRUNGKRAFT;
@@ -1282,6 +1554,13 @@ function Spieler({
           <AnimierterPinguin pose={pose} spielstand={spielstand} onFleeFertig={onFleeFertig} />
         </Suspense>
       </group>
+      {/* Ausserhalb von `koerperRef`: Die Kugel soll nicht mitducken, wenn
+          die Figur rutscht, und beim Umfallen nicht mitkippen. Eigene
+          Suspense-Grenze, weil `useGLTF` anhaelt — ohne sie haengt der
+          ganze Spieler am Laden zweier Zierteile. */}
+      <Suspense fallback={null}>
+        <Kraftzeichen spielstand={spielstand} />
+      </Suspense>
       <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={2.6} blur={2.2} />
     </group>
   );
@@ -1636,7 +1915,7 @@ function WeltChunk({
 
         let getroffen = false;
         if (hindernis.rolle === 'jump' || hindernis.rolle === 'bush') {
-          getroffen = pos.y < SPRUNG_FREI_PROP;
+          getroffen = pos.y < sprungFrei(hindernis);
         } else if (hindernis.rolle === 'slide') {
           getroffen = gs.kopfY > TOR_LUECKE[hindernis.rutschProp];
         } else {
@@ -2048,7 +2327,21 @@ export function Runner({
 
   const rutsche = useCallback(() => {
     const gs = spielstand.current;
-    if (gs.phase !== 'run' || gs.springt) return;
+    if (gs.phase !== 'run') return;
+    if (gs.springt) {
+      /**
+       * Sprungabbruch: runterwischen im Flug zieht die Figur zu Boden und
+       * geht dort sofort in die Rolle ueber.
+       *
+       * Vorher wurde das Wischen im Sprung schlicht verworfen — man sah
+       * einen Fehlgriff und musste die ganze Flugkurve abwarten, obwohl
+       * schon das naechste Tor kam. Der Abbruch ist keine Abkuerzung: Man
+       * verliert die Hoehe und braucht die Rolle dann auch.
+       */
+      gs.sprungV = Math.min(gs.sprungV, SCHNELLFALL);
+      gs.rutschPuffer = performance.now();
+      return;
+    }
     gs.rutscht = true;
     gs.rutschtBis = performance.now() + RUTSCH_MS;
   }, []);

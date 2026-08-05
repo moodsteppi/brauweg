@@ -169,6 +169,31 @@ Reise wie der Trophäenpfad, nur im Vorbeirennen.
   wird, toetet nicht mehr — sonst stuerbe man an einer Kiste, die sichtbar
   schon umfaellt.
 
+### Nachtrag: Sprung-/Rollclips, groessere Props, Kraftzeichen
+
+- **Echte Clips fuer Sprung und Rolle** (`penguin_sprung_hecht.glb`, aus
+  `jump+and+dive` im Archivrepo, 3,47 → 0,48 MB). Zweites GLB, gleiches
+  Skelett: Der Mixer haengt am Laufmodell, die beiden neuen Clips werden ihm
+  untergeschoben — geht nur, weil beide Dateien dieselben 43 Knochen mit
+  denselben Namen haben. `LoopOnce` + `clampWhenFinished`, angestossen an
+  der **Flanke** (nicht am Zustand), sonst setzt `reset()` in jedem Bild neu
+  an. `timeScale` streckt sie auf die Dauer, die das Spiel vorgibt: Der
+  Hechtsprung dauert im Modell 3,5 s, das Rutschen 0,78 s.
+  **Damit ist Punkt 1 der Must-haves erledigt.**
+- **Fahrrad und Einkaufswagen doppelt** (0,62 → 1,24). Damit fiel die
+  pauschale Sprungkante (0,7 fuer alles) — sie stimmte nur, solange jedes
+  Prop unter 0,62 lag. Jetzt kommt sie aus der Hoehe des Stuecks
+  (`sprungFrei()`); Kaesten wie ueblich aus den Modellmassen gerechnet.
+- **Kraefte sieht man an der Figur**, nicht nur im HUD: Schild als blaue,
+  atmende Kugel um den Pinguin (Zwischenloesung — ein gemaltes Modell kommt
+  noch), Magnet als Hufeisen an der Flosse. Beide ausserhalb von
+  `koerperRef`, damit sie beim Rutschen nicht mitducken.
+- **Sprungabbruch:** Runterwischen im Flug zieht die Figur zu Boden
+  (Schnellfall −18) und geht dort sofort in die Rolle. Vorher wurde das
+  Wischen im Sprung verworfen — man musste die ganze Flugkurve abwarten,
+  obwohl schon das naechste Tor kam. Beim Aufsetzen hat der Rutschwunsch
+  Vorrang vor einem gepufferten Sprung: Er ist der juengere.
+
 **Noch offen aus Abschnitt 2/3:** echte Jump-/Slide-Clips im Mixer (weiter
 Tween), Kästen am Gerät nachstimmen (`hitbox=1`), Banner PNG→WebP,
 Ghost-Läufe/Koop-Challenge, gemalte Böden einbauen sobald geliefert.
