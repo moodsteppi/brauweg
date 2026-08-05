@@ -813,6 +813,13 @@ vorgerechnet, Geräterekord, Pause (auch automatisch bei verstecktem Tab),
 Anlauf statt Geisterlobby, Treffer-/Münz-/Rekord-Feedback, Menüs als
 Holztafeln, **GLBs 62 → 5,9 MB**.
 
+**Nachschlag derselben Nacht:** Biome-Zonen alle 220 m (Pfad-Reihe, Himmel
+gleitet), drei Kräfte (Magnet/Schild/Doppel) als Fund auf der freien Spur,
+Tagesliste (`runner_best`, Migration 0017, `POST /api/runner/lauf` +
+`GET /api/runner/rangliste`), zwei neue Tagesaufgaben (Messarten
+`runnerLaeufe`/`runnerMuenzen`), Steuerung: Wisch beim Ziehen +
+170-ms-Spurkurve. Sechs neue Servertests (jetzt 265).
+
 Zwei Fallen für später:
 
 - **Lerp-Faktoren immer mit gekapptem `delta`.** Nach einem Tab-Wechsel ist
