@@ -62,6 +62,21 @@ Originalauflösung unter `public/`.
 **6. Fragen vorab bündeln, dann bis fertig durchbauen.** Nicht mittendrin
 nachfragen.
 
+**7. Vor jedem Commit `git diff --cached --stat` lesen — die Zahl, nicht die
+Liste.** Am 5. August hat ein Commit 932 Dateien mitgelöscht (halber Server,
+Migrationen, Doku) und ging so auf `staging`. Aufgefallen ist es erst danach:
+**Build und alle 541 Tests liefen grün durch**, weil sie von der Platte lesen
+und nicht aus dem Index. Auslöser war ein `git add` auf einen ignorierten Pfad
+(`packages/client/art/`); danach stand fast alles als gelöscht im Index. Und
+weil hier mehrere Sitzungen im **selben Arbeitsbaum** arbeiten, kann der Index
+sich zwischen zwei Befehlen ändern — Index aufbauen und committen deshalb in
+**einem** Aufruf, mit einer Plausibilitätsschwelle davor:
+
+```bash
+git diff --cached --stat | tail -1        # "N files changed" gegen die Erwartung
+git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
+```
+
 ---
 
 ## Bauen und prüfen
