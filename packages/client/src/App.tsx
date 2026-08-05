@@ -96,7 +96,12 @@ export function App(): React.JSX.Element {
     );
   }
   if (screen.name === 'lobby' && screen.gameId === 'feldherr') {
-    return <FeldherrTisch onBack={() => setScreen({ name: 'games' })} />;
+    return (
+      <FeldherrTisch
+        onBack={() => setScreen({ name: 'games' })}
+        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+      />
+    );
   }
 
   if (screen.name === 'table') {
@@ -130,7 +135,12 @@ export function App(): React.JSX.Element {
   }
 
   if (screen.name === 'feldherr') {
-    return <FeldherrTisch onBack={() => setScreen({ name: 'games' })} />;
+    return (
+      <FeldherrTisch
+        onBack={() => setScreen({ name: 'games' })}
+        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+      />
+    );
   }
 
   if (screen.name === 'lobby') {

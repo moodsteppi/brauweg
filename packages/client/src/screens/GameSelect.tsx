@@ -2045,19 +2045,11 @@ function Spielwahl({
       </header>
       <div className="spielwahl-rolle">
         {/*
-          Feldherr ist kein Kartenspiel und kein Spielmodul: Es laeuft im
-          Browser, in Echtzeit, zu zweit. Deshalb steht es hier fest und kommt
-          nicht aus der Spielliste des Servers — die kennt nur GameModule.
-          Siehe docs/FELDHERR-PLAN.md.
+          Auch Feldherr kommt seit der Modulregistrierung aus der Spielliste
+          des Servers — eine feste Kachel daneben stand hier einmal doppelt.
+          Nur der Untertitel weiss mehr als der Server: Es ist das einzige
+          Echtzeitspiel, und das gehoert auf die Kachel.
         */}
-        <button className="spielwahl-karte is-offen" onClick={() => onPick('feldherr')}>
-          <SpielBild id="feldherr" />
-          <span className="spielwahl-titel">
-            <strong>Feldherr</strong>
-            <span>2 Spieler · Echtzeit</span>
-          </span>
-          <span className="spielwahl-spielen">Spielen</span>
-        </button>
         {playable.map((game) => (
           <button
             key={game.id}
@@ -2067,7 +2059,10 @@ function Spielwahl({
             <SpielBild id={game.id} />
             <span className="spielwahl-titel">
               <strong>{t(game.nameKey)}</strong>
-              <span>{game.seatCounts.join(', ')} Spieler</span>
+              <span>
+                {game.seatCounts.join(', ')} Spieler
+                {game.id === 'feldherr' ? ' · Echtzeit' : ''}
+              </span>
             </span>
             <span className="spielwahl-spielen">Spielen</span>
           </button>

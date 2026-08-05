@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { api, type TableRow } from '../api';
 import {
   HUELLE,
   STIL,
@@ -7,77 +8,72 @@ import {
   type FeldherrZug,
   starteFeldherr,
 } from '../minispiele/feldherr/kern.js';
+import type { TaktMessage } from '../protocol';
 import { useTable } from '../useTable';
 
 /**
- * Feldherr — Minispiel.
+ * Feldherr — Echtzeitspiel im Browser.
  *
- * Anders als Doppelkopf und Zauberer laeuft dieses Spiel im Browser und nicht
- * im Server: Es ist ein Echtzeitspiel, und `GameModule` ist zugbasiert und
- * ausdruecklich uhrlos. Die Begruendung samt Wegen zu einem Netzspiel steht in
- * `docs/FELDHERR-PLAN.md`.
+ * Anders als Doppelkopf und Zauberer rechnet der Server hier nicht mit: Es
+ * ist ein Echtzeitspiel, und `GameModule` ist zugbasiert und ausdruecklich
+ * uhrlos. Oertlich (gegen die KI, zu zweit an einem Geraet) laeuft alles im
+ * Kern; im Netzspiel rechnen beide Geraete dieselbe Partie im Gleichschritt
+ * aus Saatkorn und Zugliste (Weg B in `docs/FELDHERR-PLAN.md`).
  *
- * Der Kern bringt seine eigene Huelle mit (Leisten, Overlays, Leinwand). Sie
- * wird hier einmal in den Baum gehaengt; anschliessend findet der Kern seine
- * Teile ueber getElementById, genau wie in der eigenstaendigen Datei.
- *
- * Das eingebaute Startmenue des Spiels bleibt aus — welchen Modus es wird,
- * entscheidet der Bildschirm hier, damit die Auswahl aussieht wie im Rest der
- * Anwendung.
+ * Die Arbeitsteilung mit dem Kern ist bewusst schmal: Der Kern entscheidet,
+ * WAS gesendet wird (fertige Zuege samt Takt, Herzschlaege, Ergebnis samt
+ * Pruefsumme); dieser Bildschirm entscheidet nur, WOHIN — er reicht alles
+ * unveraendert an den Tisch weiter und umgekehrt. Wer hier Spiellogik
+ * ergaenzt, baut sie am Gleichschritt vorbei.
  */
 
-type Modus = 'ki' | 'zuZweit' | 'netz';
+type Modus = 'ki' | 'zuZweit';
 type Stufe = 'leicht' | 'normal' | 'schwer';
 type Feld = 'klein' | 'mittel' | 'gross';
 
-interface Ausgang {
-  readonly sieger: number;
-  readonly gewonnen: boolean | null;
-  readonly gegenKI: boolean;
-  readonly stufe: Stufe | null;
-  readonly dauer: number;
-  readonly feld: Feld;
+/** Sicht des Feldherr-Moduls, siehe packages/game-feldherr/src/adapter.ts. */
+interface FeldherrSicht {
+  saat: number;
+  regeln: { feld: Feld };
+  zuege: (FeldherrZug & { sitz: number })[];
+  ausgang: { sieger: number | null; strittig: boolean; aufgegeben: boolean } | null;
 }
 
 /**
- * Gleichschritt am Tisch.
- *
- * Der Kern rechnet, der Tisch verteilt. Zwei Regeln halten beide Geraete
- * zusammen:
- *
- *   1. Eine eigene Eingabe wird nicht ausgefuehrt, sondern fuer einen
- *      kuenftigen Takt gemeldet — auch beim Absender. Nur so legen beide
- *      dieselbe Karte im selben Takt.
- *   2. Gerechnet wird hoechstens bis zum sicheren Takt: so weit, wie die
- *      Zuege beider Seiten bekannt sind. Wer vorauslaeuft, muesste
- *      zurueckrechnen, und das kann der Kern nicht.
+ * Im Netzspiel darf das obere HUD nicht auf dem Kopf stehen: Die Drehung
+ * stammt aus dem Modus »zu zweit an einem Geraet«, wo sich zwei Menschen
+ * gegenuebersitzen. Wer online Sitz 0 zieht, bedient das obere HUD selbst.
  */
-function netzBruecke(
-  sitz: number,
-  send: (aktion: unknown) => void,
-  taktJetzt: () => number,
-): FeldherrNetz & { setzeSicher(t: number): void } {
-  let sicher = VORLAUF;
-  return {
-    melde(zug) {
-      const takt = taktJetzt() + VORLAUF;
-      send({ art: 'zug', zug: { ...zug, takt } });
-    },
-    sichererTakt: () => sicher,
-    setzeSicher(t) {
-      sicher = t;
-    },
-  };
-}
+const NETZ_STIL = '\n.hud.top .inner{transform:none}\n';
 
-/** Muss mit VORLAUF_TAKTE aus @brauweg/game-feldherr uebereinstimmen. */
-const VORLAUF = 6;
+/**
+ * Eigene Zutaten dieses Bildschirms, im selben Stil wie der Kern. Sie leben
+ * im eingeschleusten <style> und nicht in styles.css, weil sie ohne den Kern
+ * (dessen Farben und Overlays) nirgends auftauchen.
+ */
+const SCREEN_STIL = `
+.feldherr-zurueck{position:fixed;left:10px;top:10px;z-index:60;padding:8px 14px;border:0;
+  border-radius:9px;color:#dfd6c2;background:rgba(16,25,32,.85);
+  box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui}
+.feldherr-hinweis{position:fixed;left:50%;bottom:16%;transform:translateX(-50%);z-index:60;
+  max-width:min(420px,90vw);padding:12px 16px;border-radius:12px;text-align:center;
+  color:#dfd6c2;background:rgba(12,20,26,.92);box-shadow:0 0 0 1px #2a3b46;
+  font:600 13px/1.5 system-ui}
+.feldherr-ende{z-index:120;bottom:auto;top:50%;transform:translate(-50%,-50%)}
+.feldherr-ende .btn{margin-top:12px}
+.feldherr-online{margin-top:18px}
+.feldherr-online h2{margin:0 0 8px}
+.feldherr-fehler{color:#ff8b80}
+`;
 
 export function FeldherrTisch({
   onBack,
+  onEnter,
   tableId = null,
 }: {
   onBack: () => void;
+  /** Wechsel an einen Netz-Tisch (nach Erstellen oder Beitreten). */
+  onEnter?: (tableId: string) => void;
   /** Gesetzt heisst Netzspiel; sonst laeuft alles oertlich. */
   tableId?: string | null;
 }): React.JSX.Element {
@@ -85,63 +81,78 @@ export function FeldherrTisch({
   const [stufe, setStufe] = useState<Stufe>('normal');
   const [feld, setFeld] = useState<Feld>('mittel');
 
+  /** Offene Netz-Tische; null heisst noch nie geladen. */
+  const [tische, setTische] = useState<TableRow[] | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+  /** Der Gegner meldet sich nicht mehr — Takt steht. */
+  const [stockt, setStockt] = useState(false);
+
   const buehne = useRef<HTMLDivElement | null>(null);
   const sitzungRef = useRef<ReturnType<typeof starteFeldherr> | null>(null);
-  const bruecke = useRef<ReturnType<typeof netzBruecke> | null>(null);
-
-  /** Nur im Netzspiel verbunden; oertlich bleibt der Tisch null. */
-  const tisch = useTable<{ saat: number; zuege: unknown[] }>(tableId, 'feldherr');
-  const sicht = tableId ? tisch.view?.view : null;
-  /** Zuschauer bekommen keinen Sitz; sie sehen zu und melden nichts. */
-  const meinSitz = tisch.view?.seat ?? 1;
 
   /**
-   * Der Effekt haengt bewusst nur an Modus, Stufe und Feld — nicht an einem
-   * Objekt. Ein Effekt mit Objekt in der Abhaengigkeitsliste laeuft bei jedem
-   * Neuzeichnen und wuerde die Partie mitten im Spiel neu starten.
+   * Herzschlaege der Gegenseite gehen am React-State vorbei direkt in den
+   * Kern: Sie kommen fuenfmal je Sekunde, und ein setState je Puls zeichnete
+   * den ganzen Bildschirm mit.
+   */
+  const beiTakt = useCallback((m: TaktMessage) => {
+    sitzungRef.current?.pulsAnnehmen(m.seat, {
+      takt: m.takt,
+      grenzTakt: m.grenzTakt,
+      pruef: m.pruef,
+    });
+  }, []);
+
+  /** Nur im Netzspiel verbunden; oertlich bleibt der Tisch still. */
+  const tisch = useTable<FeldherrSicht>(tableId, 'feldherr', beiTakt);
+  const sicht = tableId ? (tisch.view?.view ?? null) : null;
+  /** Zuschauer bekommen keinen Sitz; sie sehen zu und melden nichts. */
+  const meinSitz = tisch.view?.seat ?? null;
+  const ausgang = sicht?.ausgang ?? null;
+
+  /**
+   * Der Kern lebt laenger als jeder Render, seine Rueckrufe muessen deshalb
+   * immer die JUENGSTE Fassung von send und Co. treffen. Ohne diese
+   * Referenzen hielte die Sitzung fuer immer die Funktionen ihres ersten
+   * Renders fest — samt deren veralteter Verbindung.
+   */
+  const sendRef = useRef(tisch.send);
+  sendRef.current = tisch.send;
+  const sendTaktRef = useRef(tisch.sendTakt);
+  sendTaktRef.current = tisch.sendTakt;
+  const onBackRef = useRef(onBack);
+  onBackRef.current = onBack;
+
+  /** Der Stil des Spiels gilt nur, solange dieser Bildschirm offen ist. */
+  useEffect(() => {
+    const el = document.createElement('style');
+    el.textContent = STIL + SCREEN_STIL + (tableId ? NETZ_STIL : '');
+    document.head.appendChild(el);
+    return () => {
+      el.remove();
+    };
+  }, [tableId]);
+
+  /**
+   * Oertliche Partie. Der Effekt haengt bewusst nur an Modus, Stufe und
+   * Feld — nicht an einem Objekt. Ein Effekt mit Objekt in der
+   * Abhaengigkeitsliste laeuft bei jedem Neuzeichnen und wuerde die Partie
+   * mitten im Spiel neu starten.
    */
   useEffect(() => {
-    if (!modus || !buehne.current) return;
+    if (tableId || !modus || !buehne.current) return;
     const wurzel = buehne.current;
     wurzel.innerHTML = HUELLE;
-
-    const netz =
-      modus === 'netz' && tisch
-        ? netzBruecke(meinSitz, tisch.send, () => sitzungRef.current?.takt() ?? 0)
-        : null;
-    bruecke.current = netz;
-
     const sitzung = starteFeldherr({
       modus,
       stufe,
       feld,
+      saat: (Date.now() ^ 0x9e3779b9) >>> 0,
       /**
-       * Saatkorn: oertlich aus der Uhr, im Netzspiel vom Server.
-       *
-       * Es ist die Grundlage von allem — Gelaende, KI, Muenzwurf. Zwei
-       * Geraete mit verschiedenem Saatkorn spielen zwei verschiedene Partien
-       * und merken es erst am Ende.
+       * Oertliche Partien melden nichts: Gegen die KI und zu zweit an einem
+       * Geraet gibt es keine Muenzen und keine Erfahrung — beides laesst
+       * sich in Sekunden beliebig oft herbeifuehren.
        */
-      saat: modus === 'netz' ? (sicht?.saat ?? 1) : (Date.now() ^ 0x9e3779b9) >>> 0,
-      netz,
-      sitz: meinSitz,
-      /**
-       * Oertliche Partien melden nichts.
-       *
-       * Gegen die KI und zu zweit an einem Geraet gibt es keine Muenzen und
-       * keine Erfahrung: Beides laesst sich in Sekunden beliebig oft
-       * herbeifuehren. Im Netzspiel meldet jedes Geraet seinen Ausgang samt
-       * Pruefsumme; die Plattform rechnet daraus Belohnung und Ergebnis.
-       */
-      aufEnde: (a) => {
-        if (modus !== 'netz' || !tisch) return;
-        tisch.send({
-          art: 'ergebnis',
-          sieger: a.sieger ?? 0,
-          takt: a.takt,
-          pruef: a.pruef,
-        });
-      },
     });
     sitzungRef.current = sitzung;
     return () => {
@@ -149,45 +160,242 @@ export function FeldherrTisch({
       sitzungRef.current = null;
       wurzel.innerHTML = '';
     };
-  }, [modus, stufe, feld, tisch, meinSitz, sicht?.saat]);
+  }, [tableId, modus, stufe, feld]);
+
+  /**
+   * Netzpartie. Startet, sobald die erste Sicht da ist — sie bringt das
+   * Saatkorn, den eigenen Sitz und die Feldgroesse des Tisches. Alle drei
+   * sind je Partie unveraenderlich, der Effekt laeuft also genau einmal.
+   */
+  const netzSaat = sicht?.saat;
+  const netzFeld = sicht?.regeln?.feld;
+  const gereicht = useRef(0);
+  useEffect(() => {
+    if (!tableId || netzSaat === undefined || !buehne.current) return;
+    const wurzel = buehne.current;
+    wurzel.innerHTML = HUELLE;
+
+    const netz: FeldherrNetz = {
+      melde: (zug) => sendRef.current({ art: 'zug', zug }),
+      puls: (daten) => sendTaktRef.current(daten),
+      aufgabe: () => sendRef.current({ art: 'aufgabe' }),
+      verlassen: () => onBackRef.current(),
+    };
+
+    gereicht.current = 0;
+    const sitzung = starteFeldherr({
+      modus: 'netz',
+      feld: netzFeld ?? 'mittel',
+      /**
+       * Saatkorn vom Server: die Grundlage von allem — Gelaende, KI, Muenze.
+       * Zwei Geraete mit verschiedenem Saatkorn spielen zwei verschiedene
+       * Partien; das faellt dank der Probe an Taktgrenze 0 sofort auf.
+       */
+      saat: netzSaat,
+      sitz: meinSitz ?? -1,
+      netz,
+      /** Jedes Geraet meldet seinen Ausgang getrennt, samt Pruefsumme. */
+      aufEnde: (a) =>
+        sendRef.current({
+          art: 'ergebnis',
+          sieger: a.sieger ?? 0,
+          takt: a.takt,
+          pruef: a.pruef,
+        }),
+      /**
+       * Die Laeufe sind nachweislich auseinander. Beide Geraete melden
+       * ihre eigene Summe; die Meldungen widersprechen sich, und das Modul
+       * wertet die Partie als strittig — niemand gewinnt.
+       */
+      aufStrittig: (probe) =>
+        sendRef.current({
+          art: 'ergebnis',
+          sieger: -1,
+          takt: probe.takt,
+          pruef: probe.pruef,
+        }),
+    });
+    sitzungRef.current = sitzung;
+    return () => {
+      sitzung.beenden();
+      sitzungRef.current = null;
+      wurzel.innerHTML = '';
+    };
+  }, [tableId, netzSaat, netzFeld, meinSitz]);
 
   /**
    * Zuege vom Server in den Kern reichen.
    *
-   * Der Effekt haengt an der Zahl der Zuege, nicht an der Liste: Ein Effekt
+   * Der Effekt haengt an der ZAHL der Zuege, nicht an der Liste: Ein Effekt
    * mit dem Sichten-Objekt in der Abhaengigkeitsliste laeuft bei jedem
    * Serverfunk neu — genau der Fehler, der am Kartentisch schon einmal den
-   * Rundenabschluss verschluckt hat.
+   * Rundenabschluss verschluckt hat. Beim Wiederverbinden kommt die volle
+   * Liste erneut; `gereicht` sorgt dafuer, dass nichts doppelt ausgefuehrt
+   * wird.
    */
-  const gereicht = useRef(0);
   useEffect(() => {
     const sitzung = sitzungRef.current;
     const zuege = sicht?.zuege;
     if (!sitzung || !zuege) return;
     for (let i = gereicht.current; i < zuege.length; i += 1) {
-      const z = zuege[i] as FeldherrZug & { sitz: number };
+      const z = zuege[i];
       sitzung.zugAnnehmen(z, z.sitz);
     }
     gereicht.current = zuege.length;
-    /**
-     * Sicherer Takt: bis hierher darf gerechnet werden.
-     *
-     * Der Server hat alle Zuege bis zum letzten empfangenen; alles davor ist
-     * vollstaendig. Ohne Nachricht laeuft die Uhr trotzdem weiter — sonst
-     * stuende die Partie still, solange niemand etwas tut.
-     */
-    bruecke.current?.setzeSicher(sitzung.takt() + VORLAUF);
   }, [sicht?.zuege?.length]);
 
-  /** Der Stil des Spiels gilt nur, solange dieser Bildschirm offen ist. */
+  /**
+   * Serverseitiges Partie-Ende (Aufgabe, Verlassen, strittige Meldungen):
+   * Der Kern erfaehrt davon nichts von selbst — sein eigenes Endbild kennt
+   * nur das gefallene Haupthaus. Hier wird er angehalten; das Banner unten
+   * erklaert den Ausgang.
+   */
+  const fremdesEnde =
+    ausgang !== null && (ausgang.aufgegeben || ausgang.strittig || ausgang.sieger === null);
   useEffect(() => {
-    const el = document.createElement('style');
-    el.textContent = STIL;
-    document.head.appendChild(el);
-    return () => {
-      el.remove();
+    if (fremdesEnde) sitzungRef.current?.beenden();
+  }, [fremdesEnde]);
+
+  /**
+   * Wachhund gegen die stille Leitung: Steht der Takt laenger, meldet sich
+   * der Gegner nicht mehr (Tab zu, Funkloch). Die Partie stockt dann mit
+   * Absicht — weiterrechnen hiesse auseinanderlaufen.
+   */
+  useEffect(() => {
+    if (!tableId) return;
+    let letzter = -1;
+    const wachhund = window.setInterval(() => {
+      const sitzung = sitzungRef.current;
+      if (!sitzung) return;
+      const t = sitzung.takt();
+      setStockt(t > 0 && t === letzter);
+      letzter = t;
+    }, 1500);
+    return () => window.clearInterval(wachhund);
+  }, [tableId]);
+
+  /** Offene Tische, solange die Auswahl offen ist. */
+  useEffect(() => {
+    if (tableId) return;
+    let aktiv = true;
+    const lade = (): void => {
+      void api
+        .tables('feldherr')
+        .then((zeilen) => {
+          if (aktiv) setTische(zeilen);
+        })
+        .catch(() => {
+          /* Naechster Versuch in vier Sekunden — die Liste ist kein Muss. */
+        });
     };
-  }, []);
+    lade();
+    const takt = window.setInterval(lade, 4000);
+    return () => {
+      aktiv = false;
+      window.clearInterval(takt);
+    };
+  }, [tableId]);
+
+  const erstelleTisch = async (): Promise<void> => {
+    setFehler(null);
+    try {
+      const { id } = await api.createTable({
+        gameId: 'feldherr',
+        config: { feld },
+        seats: 2,
+        rounds: 1,
+      });
+      onEnter?.(id);
+    } catch {
+      setFehler('Der Tisch ließ sich nicht erstellen.');
+    }
+  };
+
+  const tretebei = async (id: string): Promise<void> => {
+    setFehler(null);
+    try {
+      await api.joinTable(id);
+      onEnter?.(id);
+    } catch {
+      setFehler('Beitritt fehlgeschlagen — vielleicht ist der Tisch schon voll.');
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Netzspiel
+  // -------------------------------------------------------------------------
+
+  if (tableId) {
+    /** Noch keine Partie: Wartebereich mit Sitzliste. */
+    if (!sicht) {
+      const sitze = tisch.table?.seats ?? [];
+      return (
+        <main className="hub">
+          <header className="hub-kopf">
+            <button
+              className="hub-zurueck"
+              onClick={() => {
+                /**
+                 * Wer den Wartebereich verlaesst, gibt den Platz frei —
+                 * sonst bliebe der Tisch fuer immer halb besetzt und der
+                 * naechste Gast staende vor einer Geistersitzung.
+                 */
+                void api.leaveTable(tableId).catch(() => {});
+                onBack();
+              }}
+            >
+              ‹ Zurück
+            </button>
+            <h1>Feldherr — Tisch</h1>
+          </header>
+          <p className="hub-text">
+            {tisch.error
+              ? 'Der Tisch ist nicht erreichbar.'
+              : 'Warte auf den zweiten Feldherrn…'}
+          </p>
+          <section className="feldherr-wahl">
+            {sitze.map((platz) => (
+              <div key={platz.seat} className="feldherr-zeile">
+                <span>Sitz {platz.seat + 1}</span>
+                <span>{platz.displayName ?? '— frei —'}</span>
+              </div>
+            ))}
+          </section>
+        </main>
+      );
+    }
+
+    return (
+      <main className="feldherr-buehne">
+        <button className="feldherr-zurueck" onClick={onBack}>
+          ‹ Zurück
+        </button>
+        <div ref={buehne} />
+        {stockt && !fremdesEnde && (
+          <div className="feldherr-hinweis">
+            Warte auf den Gegner … die Partie rechnet erst weiter, wenn sich
+            sein Gerät wieder meldet.
+          </div>
+        )}
+        {fremdesEnde && ausgang && (
+          <div className="feldherr-hinweis feldherr-ende">
+            {ausgang.strittig || ausgang.sieger === null
+              ? 'Die Partie ist strittig: Die Geräte haben verschiedene Stände gemeldet. Niemand gewinnt.'
+              : ausgang.sieger === meinSitz
+                ? 'Dein Gegner hat aufgegeben — du gewinnst.'
+                : 'Die Partie ist beendet.'}
+            <button className="btn pri" onClick={onBack}>
+              Zurück zur Auswahl
+            </button>
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Oertlich
+  // -------------------------------------------------------------------------
 
   if (modus) {
     return (
@@ -239,22 +447,26 @@ export function FeldherrTisch({
       <button className="btn" onClick={() => setModus('zuZweit')}>
         Zu zweit an einem Gerät
       </button>
-      {/*
-        Online steht bewusst als gesperrte Schaltflaeche da und nicht als
-        stiller Platzhalter: Wer den Knopf sucht, soll sehen, dass er kommt.
-        Was dahinter noch fehlt, steht in docs/FELDHERR-PLAN.md, Weg B.
-      */}
-      <button className="btn gho" disabled title="In Vorbereitung">
-        Online spielen
-      </button>
+
+      <section className="feldherr-online">
+        <h2>Online spielen</h2>
+        <button className="btn" onClick={() => void erstelleTisch()}>
+          Tisch erstellen ({feld})
+        </button>
+        {fehler && <p className="hub-text feldherr-fehler">{fehler}</p>}
+        {tische !== null && tische.length === 0 && (
+          <p className="hub-text">Gerade wartet niemand — erstell einen Tisch.</p>
+        )}
+        {(tische ?? []).map((zeile) => (
+          <button
+            key={zeile.id}
+            className="btn gho"
+            onClick={() => void tretebei(zeile.id)}
+          >
+            Beitreten: {zeile.host ?? 'Unbekannt'} ({zeile.occupied}/{zeile.seats})
+          </button>
+        ))}
+      </section>
     </main>
   );
 }
-
-/**
- * Meldet den Ausgang und holt die Belohnung.
- *
- * Der Server rechnet nach seinen eigenen Regeln und deckelt je Tag — was der
- * Client meldet, ist eine Behauptung. Ohne Deckel waere jede geschlossene
- * Runde eine Muenzquelle.
- */
