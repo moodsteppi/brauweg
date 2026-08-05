@@ -18,12 +18,14 @@ import type {
   GameRegistry,
 } from '@brauweg/game-api';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { feldherr } from '@brauweg/game-feldherr';
 import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
 
 const MODULES: readonly AnyGameModule[] = [
   doppelkopf as unknown as AnyGameModule,
   wizard as unknown as AnyGameModule,
+  feldherr as unknown as AnyGameModule,
 ];
 
 /**

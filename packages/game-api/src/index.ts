@@ -29,6 +29,12 @@
 export type GameId =
   | 'doppelkopf'
   | 'wizard'
+  /**
+   * Feldherr ist kein Kartenspiel, sondern ein Echtzeitduell. Es erfuellt
+   * dieselbe Schnittstelle, nutzt aber weder Zugfolge noch Runden: siehe
+   * docs/FELDHERR-PLAN.md.
+   */
+  | 'feldherr'
   | 'skat'
   | 'schafkopf'
   | 'romme'
