@@ -1,59 +1,57 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
+import { api } from '../api';
 import { spiele } from '../klang';
+import {
+  BREITEN,
+  FARBEN,
+  LEERE_BEMALUNG,
+  mitStrich,
+  ohneLetzten,
+  type Bemalung,
+  type Strich,
+} from '../bemalung';
 
 /**
- * Avatar-Werkstatt — der Pinguin in drei Dimensionen, zum Drehen und Anziehen.
+ * Avatar-Werkstatt — die Figur drehen, anziehen und anmalen.
  *
- * **Warum ein eigener Bildschirm und nicht der Kleiderschrank.** Der
- * Kleiderschrank zieht den gemalten Pinguin an, und der kann heute
- * dreiunddreißig Stücke auf sechs Plätzen. In drei Dimensionen gibt es genau
- * eines: die lila Mütze. Den Kleiderschrank jetzt umzustellen hieße,
- * zweiunddreißig Stücke aus der Oberfläche zu nehmen, damit eines neu ist.
+ * **Warum ein eigenes Blatt und nicht der Kleiderschrank.** Der Kleiderschrank
+ * zieht den gemalten 2D-Pinguin an und kann dreiunddreißig Stücke auf sechs
+ * Plätzen. In 3D gibt es bisher eines. Beides zusammenzulegen hieße,
+ * zweiunddreißig Stücke aus der Oberfläche zu nehmen, damit eines neu ist. Der
+ * Weg dorthin steht in `docs/UEBERGABE-ANNI.md`: dieselben Plätze, dieselben
+ * Kennungen, dann tauscht man die Darstellung und sonst nichts.
  *
- * Also steht 3D daneben, bis es den gemalten Pinguin einholt. Der Weg dorthin
- * steht in `docs/UEBERGABE-ANNI.md`: dieselben Plätze, dieselben Kennungen,
- * dann tauscht man die Darstellung und sonst nichts.
- *
- * **Das Ganze wird nachgeladen.** `three` und `drei` wiegen rund 900 kB —
- * mehr als das ganze übrige Bündel. Wer nie hierherkommt, lädt sie nie.
+ * **Das Ganze wird nachgeladen.** `three` und `drei` wiegen rund 900 kB — mehr
+ * als das übrige Bündel zusammen.
  */
 
 const Avatar3D = lazy(() => import('../Avatar3D'));
 
-export function Avatarwerkstatt({ onClose }: { onClose: () => void }): React.JSX.Element {
+export function Avatarwerkstatt({
+  bemalung: gespeichert,
+  onClose,
+  onGespeichert,
+}: {
+  /** Was am Konto steht. `null` heißt: nie bemalt. */
+  bemalung?: Bemalung | null;
+  onClose: () => void;
+  /** Nach dem Speichern, damit das Profil die neue Figur zeigt. */
+  onGespeichert?: (bemalung: Bemalung) => void;
+}): React.JSX.Element {
   const [muetze, setMuetze] = useState(false);
+  const [bemalung, setBemalung] = useState<Bemalung>(gespeichert ?? LEERE_BEMALUNG);
+  const [malen, setMalen] = useState(false);
+  const [farbe, setFarbe] = useState(FARBEN[0].wert);
+  const [breite, setBreite] = useState(BREITEN[1].wert);
+  const [speichert, setSpeichert] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
 
   /**
    * Die Leinwand entsteht erst, wenn die Bühne einmal vermessen ist.
-   *
-   * Ohne das blieb sie beim ersten Öffnen schwarz — und zwar hartnäckig:
-   * `frameloop`, Bilder von Hand nachfordern, R3Fs eigene Vermessung
-   * umstellen, die Modelle vor der Leinwand laden — nichts davon half.
-   * Sichtbar wurde die Figur nur, wenn sich das Fenster um einen Pixel
-   * änderte. Also bekommt die Leinwand einen Platz, der schon steht, statt
-   * einen, der sich unter ihr noch einrichtet.
+   * Verhindert eine Leinwand der Größe null, wenn das Blatt noch einfährt.
    */
   const buehne = useRef<HTMLDivElement>(null);
-
-  /**
-   * Der Anstoß — ein Notnagel, und als solcher benannt.
-   *
-   * Nachweislich hilft nur eines: dass die Seite ein Größenereignis sieht.
-   * Dann zeichnet R3F die Figur, und danach läuft alles.
-   *
-   * Ein echtes `resize` am `window` und nicht das Verstellen der eigenen
-   * Höhe: R3F vermisst über `react-use-measure`, und das horcht **beides** —
-   * am Element über einen `ResizeObserver` und am Fenster. Die Höhe zu
-   * verstellen hat den Beobachter am Element angesprochen und nichts
-   * bewirkt; das Fensterereignis ist der zweite, andere Weg.
-   *
-   * **Wer die Ursache findet, wirft das hier raus** — der Rest der Datei
-   * hängt nicht daran.
-   */
-  const anstossen = (): void => {
-    window.dispatchEvent(new Event('resize'));
-  };
   const [vermessen, setVermessen] = useState(false);
   useEffect(() => {
     const el = buehne.current;
@@ -65,10 +63,53 @@ export function Avatarwerkstatt({ onClose }: { onClose: () => void }): React.JSX
     return () => beobachter.disconnect();
   }, []);
 
+  /**
+   * Der Anstoß — ein Notnagel, und als solcher benannt.
+   *
+   * Nachweislich hilft nur eines: dass die Seite ein Größenereignis sieht.
+   * Dann zeichnet R3F die Figur, und danach läuft alles. Ein echtes `resize`
+   * am `window` und nicht das Verstellen der eigenen Höhe: R3F vermisst über
+   * `react-use-measure`, und das horcht an **beidem** — am Element über einen
+   * `ResizeObserver` und am Fenster. Nur der zweite Weg wirkt.
+   *
+   * **Wer die Ursache findet, wirft das hier raus.**
+   */
+  const anstossen = (): void => {
+    window.dispatchEvent(new Event('resize'));
+  };
+
   const schliessen = (): void => {
     spiele('blatt-zu');
     onClose();
   };
+
+  /**
+   * Speichern ist ausdrücklich und nicht nebenbei.
+   *
+   * Jeden Strich sofort zu schicken wäre ein Aufruf je Fingerzug — beim Malen
+   * also dutzende in der Minute. Und wer sich vermalt hat, will das Blatt
+   * verlassen können, ohne dass es schon am Konto klebt.
+   */
+  const speichern = (): void => {
+    if (speichert) return;
+    setSpeichert(true);
+    setFehler(null);
+    void api
+      .setFigur(bemalung)
+      .then(() => {
+        spiele('kauf');
+        onGespeichert?.(bemalung);
+        onClose();
+      })
+      .catch(() => setFehler('Konnte nicht gespeichert werden.'))
+      .finally(() => setSpeichert(false));
+  };
+
+  const neuerStrich = (strich: Strich): void => {
+    setBemalung((b) => mitStrich(b, strich));
+  };
+
+  const bemalbar = bemalung.design === 'bemalt';
 
   return (
     <div className="doko-sheet doko-sheet--mitte" onClick={schliessen}>
@@ -79,28 +120,139 @@ export function Avatarwerkstatt({ onClose }: { onClose: () => void }): React.JSX
         <h2>Deine Figur</h2>
 
         <div className="werkstatt-buehne" ref={buehne}>
-          {/*
-            Der Rückfall ist bewusst ein Text und kein Platzhalterbild: Die
-            Modelle sind 700 kB, das dauert im Zug einen Moment, und ein
-            stehender grauer Kasten sieht in dieser Zeit nach Fehler aus.
-          */}
           <Suspense
             fallback={<p className="muted werkstatt-laedt">Figur wird geladen…</p>}
           >
-            {vermessen && <Avatar3D muetze={muetze} onBereit={anstossen} />}
+            {vermessen && (
+              <Avatar3D
+                muetze={muetze}
+                bemalung={bemalung}
+                malen={malen}
+                farbe={farbe}
+                breite={breite}
+                onStrich={neuerStrich}
+                onBereit={anstossen}
+              />
+            )}
           </Suspense>
         </div>
 
-        <p className="muted werkstatt-hinweis">Zum Drehen wischen</p>
+        <p className="muted werkstatt-hinweis">
+          {malen ? 'Mit dem Finger malen' : 'Zum Drehen wischen'}
+        </p>
 
+        {/* Design. „Original" ist der Pinguin, wie er gemalt wurde; „Anmalen"
+            gibt ihm einen hellen Grundton, auf dem man arbeitet. Zubehör wie
+            die Mütze behält in beiden Fällen seine Farben. */}
         <div className="werkstatt-wahl">
-          {/*
-            Holzknoepfe statt `lobby-chip`: Der Umschalter der Lobby haengt an
-            `menue-schalter-an/aus.webp`, und die sind noch aus der alten
-            flachen Lieferung. Neben dem gemalten Rahmen sehen sie aus wie
-            vergessen. Gewaehlt zeigt hier ein goldener Ring statt einer
-            anderen Farbe — gruen hiesse "tun", und ausgesucht ist nicht getan.
-          */}
+          <button
+            className={`hub-knopf hub-knopf--a werkstatt-knopf${!bemalbar ? ' is-gewaehlt' : ''}`}
+            aria-pressed={!bemalbar}
+            onClick={() => {
+              spiele('tipp');
+              setMalen(false);
+              setBemalung((b) => ({ ...b, design: 'standard' }));
+            }}
+          >
+            Original
+          </button>
+          <button
+            className={`hub-knopf hub-knopf--a werkstatt-knopf${bemalbar ? ' is-gewaehlt' : ''}`}
+            aria-pressed={bemalbar}
+            onClick={() => {
+              spiele('schalter');
+              setBemalung((b) => ({ ...b, design: 'bemalt' }));
+            }}
+          >
+            Anmalen
+          </button>
+        </div>
+
+        {/* Der Pinselkasten erscheint nur beim bemalbaren Design — im Original
+            gäbe es nichts zu bemalen, und ein abgeblendeter Kasten wäre nur
+            Platz für eine Auskunft, die der Umschalter schon gibt. */}
+        {bemalbar && (
+          <div className="werkstatt-pinsel">
+            <div className="werkstatt-wahl">
+              <button
+                className={`hub-knopf hub-knopf--a werkstatt-knopf${!malen ? ' is-gewaehlt' : ''}`}
+                aria-pressed={!malen}
+                onClick={() => {
+                  spiele('tipp');
+                  setMalen(false);
+                }}
+              >
+                Drehen
+              </button>
+              <button
+                className={`hub-knopf hub-knopf--a werkstatt-knopf${malen ? ' is-gewaehlt' : ''}`}
+                aria-pressed={malen}
+                onClick={() => {
+                  spiele('tipp');
+                  setMalen(true);
+                }}
+              >
+                Pinsel
+              </button>
+            </div>
+
+            <div className="werkstatt-farben">
+              {FARBEN.map((f) => (
+                <button
+                  key={f.wert}
+                  className={`werkstatt-farbe${f.wert === farbe ? ' is-gewaehlt' : ''}`}
+                  style={{ background: f.wert }}
+                  aria-label={f.name}
+                  aria-pressed={f.wert === farbe}
+                  onClick={() => {
+                    setFarbe(f.wert);
+                    // Eine Farbe zu wählen heißt, malen zu wollen — den
+                    // Umschalter gleich mit umzulegen spart einen Tipp.
+                    setMalen(true);
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="werkstatt-breiten">
+              {BREITEN.map((b) => (
+                <button
+                  key={b.wert}
+                  className={`lobby-chip${b.wert === breite ? ' is-an' : ''}`}
+                  aria-pressed={b.wert === breite}
+                  onClick={() => setBreite(b.wert)}
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="hub-knopfreihe hub-knopfreihe--a">
+              <button
+                className="hub-knopf hub-knopf--a"
+                disabled={bemalung.striche.length === 0}
+                onClick={() => {
+                  spiele('blatt-zu');
+                  setBemalung(ohneLetzten);
+                }}
+              >
+                Zurück
+              </button>
+              <button
+                className="hub-knopf hub-knopf--a-raus"
+                disabled={bemalung.striche.length === 0}
+                onClick={() => {
+                  spiele('fehler');
+                  setBemalung((b) => ({ ...b, striche: [] }));
+                }}
+              >
+                Alles weg
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="werkstatt-wahl werkstatt-muetze">
           <button
             className={`hub-knopf hub-knopf--a werkstatt-knopf${!muetze ? ' is-gewaehlt' : ''}`}
             aria-pressed={!muetze}
@@ -123,14 +275,18 @@ export function Avatarwerkstatt({ onClose }: { onClose: () => void }): React.JSX
           </button>
         </div>
 
-        <p className="muted werkstatt-fuss">
-          Erste Anprobe in 3D. Deine gemalten Sachen liegen weiter im
-          Kleiderschrank — sie ziehen nach.
-        </p>
+        {fehler && <p className="error">{fehler}</p>}
 
         <div className="hub-knopfreihe hub-knopfreihe--a">
           <button className="hub-knopf hub-knopf--a" onClick={schliessen}>
-            Fertig
+            Abbrechen
+          </button>
+          <button
+            className="hub-knopf hub-knopf--a-gold"
+            disabled={speichert}
+            onClick={speichern}
+          >
+            {speichert ? 'Wird gespeichert…' : 'Speichern'}
           </button>
         </div>
       </div>

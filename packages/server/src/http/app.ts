@@ -20,6 +20,7 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { AppError, RuleSetInvalidError, badRequest, conflict, forbidden, notFound, unauthorized } from '../errors.js';
 import { darfBenutzen } from '../tischware.js';
+import { leseBemalung, pruefeBemalung } from '../bemalung.js';
 import {
   type AuthDeps,
   anonymizeAccount,
@@ -495,6 +496,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         // Nur, OB ein Bild vorliegt — die Bytes gehen nie mit /api/me raus,
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
+        figurBemalung: s.account.figurBemalung,
       })
       .from(s.account)
       .where(eq(s.account.id, accountId));
@@ -536,7 +538,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       }),
     );
 
-    const { hasAvatar, birthdayRewardYear, isStaff, gems, ...rest } = account;
+    const { hasAvatar, birthdayRewardYear, isStaff, gems, figurBemalung, ...rest } = account;
     const birthday = account.birthday ?? null;
     // Rechte kommen aus einer einzigen Stelle (entitlements.ts). Der Client
     // rechnet nichts aus Ablaufdaten aus - er zeigt, was hier steht.
@@ -564,6 +566,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       coins: stand.coins,
       gems: stand.gems,
       avatar: getragen,
+      /**
+       * Die Bemalung der 3D-Figur, schon geprueft. `null` heisst: nie bemalt,
+       * es gilt die Standardoptik. Kaputter Inhalt gibt ebenfalls null — eine
+       * einmal falsch geschriebene Zeile darf nicht das ganze Profil sperren.
+       */
+      figur: leseBemalung(figurBemalung),
       bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen },
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
@@ -809,6 +817,35 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
       await anziehen(deps.db, accountId, body.slot, body.itemId);
       return reply.send({ ok: true, avatar: await getragenVon(deps.db, accountId) });
+    },
+  );
+
+  /**
+   * Die Bemalung der 3D-Figur speichern.
+   *
+   * Die Pruefung liegt in `src/bemalung.ts` und ist bewusst streng: Ein Aufruf
+   * mit einem Strich zu viel wird abgelehnt und nicht stillschweigend
+   * beschnitten. Wer beschneidet, bekommt spaeter die Frage, warum die Haelfte
+   * der Bemalung fehlt.
+   *
+   * Kein Besitzriegel wie beim Anziehen: Malen kostet nichts, und was jemand
+   * auf seine eigene Figur malt, geht niemanden etwas an. Begrenzt wird nur
+   * die Groesse.
+   */
+  app.patch(
+    '/api/me/figur',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const bemalung = pruefeBemalung(request.body);
+      if (!bemalung) throw badRequest('invalidInput');
+
+      await deps.db
+        .update(s.account)
+        .set({ figurBemalung: JSON.stringify(bemalung) })
+        .where(eq(s.account.id, accountId));
+
+      return reply.send({ ok: true, figur: bemalung });
     },
   );
 

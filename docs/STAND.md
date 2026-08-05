@@ -635,6 +635,57 @@ und Richtungslichter bleiben einstellig. Der Ausrichter täuscht auch hier —
 er hat niedrige Werte und sieht gut aus, weil dort `<Environment>` die
 Beleuchtung macht.
 
+## Am 5. August, abends: die Figur wird bemalbar
+
+**Der weiße Pinguin auf staging war eine Zeile in der Sicherheitsrichtlinie.**
+`img-src` stand auf `'self' data:` — ohne `blob:`. Die Texturen stecken als
+JPEG **im** GLB; three packt sie aus und lädt sie über eine `blob:`-Adresse,
+und genau die war gesperrt. Die Datei war völlig in Ordnung: 200, gültiges
+glTF, und `createImageBitmap` konnte sie von Hand entpacken. Auf dem
+Entwicklungsserver fällt das nie auf, weil es dort diese Kopfzeile nicht gibt.
+**Was mit Bildern zu tun hat, gehört am ausgelieferten Stand geprüft.**
+
+**Die Figur steht jetzt groß im Profil**, an der Stelle des gemalten
+Daumennagels, und ist selbst der Knopf in die Werkstatt. Preis: Wer den
+Profil-Tab öffnet, lädt `three` nach — rund 900 kB, einmal je Sitzung. Bis es
+da ist, steht der gemalte Pinguin als Rückfall.
+
+**Zwei Designs und ein Pinsel.** „Original" ist der Pinguin wie gemalt,
+„Anmalen" gibt ihm einen hellen Grundton zum Arbeiten. Zwölf Farben, drei
+Breiten, Zurücknehmen und Alles-weg. **Zubehör bleibt immer in seinen
+Originalfarben** — angefasst wird nur das Material der Figur.
+
+**Gespeichert werden Striche, kein Bild.** `{design, striche}` als Text in
+`account.figur_bemalung` (Migration 0015). Ein bemaltes PNG wären selbst in
+512 × 512 hundert Kilobyte je Konto bei jedem Laden des Profils; ein Strichzug
+sind ein paar Zahlen, und daraus entsteht das Bild jedes Mal neu. Der Server
+prüft Form und Obergrenzen (`src/bemalung.ts`), kennt aber keine Farbe — wie
+sie aussieht, weiß allein der Client.
+
+> **Zwei Fallen, die viel Zeit gekostet haben, und beide sind Fallen für
+> jeden, der hier weiterbaut:**
+>
+> **1. Malen in Texturkoordinaten springt über Nahtstellen.** Die Oberfläche
+> der Figur liegt in der Textur nicht am Stück, sondern in Inseln. Wer mit dem
+> Finger über eine Naht fährt, springt von einer Insel zur anderen, und eine
+> gerade Linie dazwischen zieht quer über alles, was dazwischenliegt — der Zug
+> landet gleichzeitig auf Kopf, Bauch und Flanke. Abgefangen über `SPRUNG` in
+> `bemalung.ts`: Verbunden wird nur, was auch auf der Figur nebeneinanderliegt.
+>
+> **2. Der Anstoß muss AUSSERHALB der Leinwand stehen.** Als Bauteil innerhalb
+> von `<Canvas>` läuft er im Reconciler von R3F und damit vor dem Moment, in
+> dem der Browser die Leinwand zusammensetzt — die Bühne bleibt schwarz.
+> Dazu hat die Bühne jetzt eine **feste Höhe**: Klappte der Pinselkasten auf,
+> änderte sich ihre Größe, und derselbe Fehler traf erneut. Eine Leinwand,
+> deren Größe sich nie ändert, kann ihn gar nicht erst haben.
+
+**Was NICHT am gebauten Stand geprüft ist:** die Figur im Profil selbst (dafür
+braucht es eine Anmeldung) und ob ein Zug mit einem echten Finger sauber
+durchzieht. Das Browserwerkzeug erzeugt beim Ziehen nur drei, vier
+Zeigerereignisse; die liegen weiter auseinander als `SPRUNG` und bleiben
+deshalb Tupfer. Ein Finger liefert sechzig je Sekunde. **Sollte ein Strich in
+der Hand zerfallen, ist `SPRUNG` die Zahl, an der man dreht.**
+
 ## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
 
 **Der Profil-Tab war der einzige, der den Tafel-Baustein nicht benutzt hat.**

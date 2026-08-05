@@ -8573,9 +8573,17 @@ main.auth > .muted {
 
 .werkstatt-buehne {
   position: relative;
-  height: 42vh;
-  min-height: 15rem;
-  max-height: 22rem;
+  /*
+    Feste Hoehe, kein vh und kein Schrumpfen.
+    -------------------------------------------------------------------
+    Der Pinselkasten klappt auf und zu. Haengt die Hoehe der Buehne am
+    Bildschirm oder am uebrigen Inhalt, aendert sie sich dabei — und genau
+    dann blieb die Figur schwarz, bis irgendetwas ein Groessenereignis
+    ausloeste. Eine Leinwand, deren Groesse sich nie aendert, kann diesen
+    Fehler gar nicht erst haben.
+  */
+  flex: 0 0 auto;
+  height: 17rem;
   margin: 0.2rem 0 0.3rem;
   border: 12px solid transparent;
   border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
@@ -8665,4 +8673,111 @@ main.auth > .muted {
   .ladekreis-ring {
     animation: none;
   }
+}
+
+/* =========================================================================
+   Die 3D-Figur im Profil.
+
+   Sie steht da, wo frueher der gemalte Pinguin als Daumennagel sass — nur
+   deutlich groesser: Eine Figur, die man drehen und anmalen kann, will
+   gesehen werden. DESIGN.md sagt das schon fuer Blaetter und Szenerien:
+   Was am Ende wirkt, wird in seiner Groesse gezeigt, nicht als Miniatur.
+   ========================================================================= */
+
+.hub-figur {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.hub-figur-buehne {
+  position: relative;
+  flex: 0 0 auto;
+  width: 9.5rem;
+  height: 11rem;
+  padding: 0;
+  border: 10px solid transparent;
+  border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+  /* Ohne das faengt die Seite jedes Wischen ab. Gedreht wird hier zwar
+     nicht, aber ein Tipp soll auch am Handy sicher ankommen. */
+  touch-action: manipulation;
+}
+.hub-figur-buehne canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+/* Der gemalte Pinguin als Rueckfall, solange three noch laedt. */
+.hub-figur-buehne > .pinguin {
+  margin: auto;
+}
+.hub-figur-buehne:active {
+  transform: scale(0.985);
+}
+.hub-figur-buehne .hub-profilbild-stift {
+  position: absolute;
+  right: 0.2rem;
+  bottom: 0.2rem;
+}
+
+.hub-figur .hub-garderobe-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* =========================================================================
+   Der Pinselkasten in der Werkstatt.
+   ========================================================================= */
+
+.werkstatt-pinsel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.45rem 0;
+  padding: 0.5rem;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
+}
+
+/* Zwoelf Farben in zwei Reihen zu sechs. Die Punkte sind 40 px gross: Alles
+   darunter trifft man mit dem Daumen nicht zuverlaessig. */
+.werkstatt-farben {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.35rem;
+}
+.werkstatt-farbe {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 2.2rem;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  padding: 0;
+}
+/* Gewaehlt: ein goldener Ring aussen herum, nicht eine andere Form — die
+   Farbe selbst muss sichtbar bleiben. */
+.werkstatt-farbe.is-gewaehlt {
+  outline: 3px solid rgba(255, 216, 130, 0.95);
+  outline-offset: 2px;
+}
+.werkstatt-farbe:active { transform: scale(0.92); }
+
+.werkstatt-breiten {
+  display: flex;
+  gap: 0.35rem;
+}
+.werkstatt-breiten .lobby-chip {
+  flex: 1 1 0;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+}
+
+.werkstatt-muetze {
+  margin-top: 0.2rem;
 }

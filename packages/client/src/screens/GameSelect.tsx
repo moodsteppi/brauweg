@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -63,6 +65,14 @@ import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Klanghalle } from './Klanghalle';
 import { Avatarwerkstatt } from './Avatarwerkstatt';
+import { LEERE_BEMALUNG } from '../bemalung';
+
+/**
+ * Die 3D-Figur wird nachgeladen: `three` und `drei` wiegen rund 900 kB. Bis
+ * sie da ist, steht der gemalte Pinguin als Rueckfall — siehe die Stelle im
+ * Profil-Tab.
+ */
+const Avatar3D = lazy(() => import('../Avatar3D'));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -501,7 +511,15 @@ export function GameSelect({
         />
       )}
       {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
-      {werkstattOffen && <Avatarwerkstatt onClose={() => setWerkstattOffen(false)} />}
+      {werkstattOffen && (
+        <Avatarwerkstatt
+          bemalung={me.figur ?? null}
+          onClose={() => setWerkstattOffen(false)}
+          // Neu laden, damit die Figur im Profil sofort so aussieht wie
+          // gerade gespeichert.
+          onGespeichert={() => onAvatarChange()}
+        />
+      )}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
         <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
@@ -570,7 +588,7 @@ function ProfilTab({
   onSchrank: () => void;
   /** Oeffnet die Klanghalle — Musik und Klangpakete auswaehlen. */
   onKlanghalle: () => void;
-  /** Oeffnet die Avatar-Werkstatt mit der 3D-Figur. */
+  /** Oeffnet die Avatar-Werkstatt: drehen, anmalen, Muetze. */
   onWerkstatt: () => void;
   /** Oeffnet Tagesaufgaben und Truhen. */
   onAufgaben: () => void;
@@ -657,22 +675,48 @@ function ProfilTab({
         braucht.
       */}
       <Tafel titel="Deine Sachen" zusatz={`Stufe ${me.level.stufe}`}>
-        <section className="hub-garderobe">
-          {/* Der Pinguin IST der Knopf, wie das Profilbild darueber: Ein
-              eigener "Kleiderschrank oeffnen"-Knopf waere eine Zeile Hoehe
-              fuer eine Auskunft, die das Bild schon gibt. */}
-          <button className="hub-garderobe-pinguin" onClick={onSchrank} title="Kleiderschrank">
-            <Pinguin getragen={me.avatar} groesse={7} titel="Dein Pinguin" />
+        {/*
+          Die Figur steht hier gross und in drei Dimensionen — an der Stelle,
+          an der frueher der gemalte Pinguin als Daumennagel sass.
+
+          Sie IST der Knopf, wie das Profilbild darueber: Ein eigener
+          "Werkstatt oeffnen"-Knopf waere eine Zeile Hoehe fuer eine Auskunft,
+          die das Bild schon gibt.
+
+          **Das kostet.** Wer den Profil-Tab oeffnet, laedt damit `three` nach
+          — rund 900 kB, einmal je Sitzung und danach aus dem Zwischenspeicher.
+          Der gemalte Pinguin steht so lange da und wird abgeloest, sobald die
+          Figur bereit ist; ein leerer Kasten waere schlimmer als ein Bild, das
+          eine Sekunde spaeter ein anderes wird.
+        */}
+        <section className="hub-figur">
+          <button
+            className="hub-figur-buehne"
+            onClick={onWerkstatt}
+            title="Figur bearbeiten"
+          >
+            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
+              <Avatar3D
+                muetze={false}
+                bemalung={me.figur ?? LEERE_BEMALUNG}
+                drehbar={false}
+              />
+            </Suspense>
             <span className="hub-profilbild-stift" aria-hidden="true">
               ✎
             </span>
           </button>
           <div className="hub-garderobe-text">
-            <strong>Dein Pinguin</strong>
+            <strong>Deine Figur</strong>
+            <span className="muted">
+              {me.figur?.design === 'bemalt'
+                ? 'Selbst angemalt — antippen zum Weitermalen.'
+                : 'Antippen: drehen, anmalen, Mütze aufsetzen.'}
+            </span>
             <span className="muted">
               {Object.keys(me.avatar).length === 0
-                ? `Noch nichts an — ${SLOTS.length} Plätze warten.`
-                : `${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen belegt.`}
+                ? `Kleiderschrank: noch nichts an — ${SLOTS.length} Plätze warten.`
+                : `Kleiderschrank: ${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen belegt.`}
             </span>
           </div>
         </section>
@@ -681,7 +725,7 @@ function ProfilTab({
             verdienen. Als Kachelreihe mit Symbol, nicht als Textknopfreihe —
             drei Woerter nebeneinander sind auf einem Handy zu schmal, um
             lesbar zu bleiben. */}
-        <div className="hub-reihe hub-reihe--vier profil-einstiege">
+        <div className="hub-reihe hub-reihe--drei profil-einstiege">
           <ProfilKachel
             icon="/hub/icon-kleiderschrank.webp"
             name="Kleiderschrank"
@@ -698,14 +742,6 @@ function ProfilTab({
             gold
             punkt={me.bereit.truhen + me.bereit.aufgaben > 0}
             onClick={onAufgaben}
-          />
-          {/* Die Werkstatt steht neben dem Kleiderschrank und nicht darin:
-              In 3D gibt es bisher genau ein Stueck, im Kleiderschrank
-              dreiunddreissig. Siehe Avatarwerkstatt.tsx. */}
-          <ProfilKachel
-            icon="/hub/icon-freunde.webp"
-            name="Figur in 3D"
-            onClick={onWerkstatt}
           />
         </div>
       </Tafel>

@@ -128,5 +128,7 @@ Holz-Tafeln/Knöpfen + 3D-Pinguin mit erster Mütze.
 - [ ] Profil-PNGs aus `art/` → Archiv → WebP → Hub verdrahten
 - [ ] Offen: Deck-Registrierung der neuen Vorderseiten
 - [ ] Später: 2D-Pinguin durch 3D-Komponente ersetzen (gleiche Slots: Hut, …)
+- [ ] Profil-Trophäen weg vom Blau: Bestellung `ASSETS-PROFIL-TROPHAEEN.md`,
+      Einbau-Hinweis `FUER-CLAUDE-PROFIL-TROPHAEEN.md`
 
 Fragen oder fehlende Dateien → Emile / dieses Repo (`docs/` + `brauweg-art/3d/`).
