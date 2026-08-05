@@ -331,10 +331,16 @@ export function GameSelect({
         {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
             das System dahinter kommt noch, der Platz dafuer steht schon. */}
         <button className="front-spieler" onClick={() => setTab('profil')}>
-          {/* Der Mini-Pinguin traegt, was im Kleiderschrank gewaehlt ist. Er
-              steht hier und nicht nur im Profil, weil eine Anpassung, die man
-              nie sieht, keine ist. */}
-          <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
+          {/* Oben links das Profilbild — der angezogene Pinguin steht schon
+              vorne auf dem Pfad, ein zweiter hier daneben war dieselbe Figur
+              zweimal. Ist noch kein Bild hochgeladen, bleibt der Pinguin als
+              Rueckfall stehen (wie im Profil-Kopf), sonst haette ein neues
+              Konto oben links ein Loch. */}
+          {me.avatarUrl ? (
+            <img className="front-avatar" src={me.avatarUrl} alt="" draggable={false} />
+          ) : (
+            <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
+          )}
           <span className="front-spieler-info">
             <strong>{me.displayName}</strong>
             {/* Der Balken zeigt den Fortschritt IN der Stufe, nicht die
