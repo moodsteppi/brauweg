@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brauweg Hub-Entwürfe (echte Assets)</title>
+    <style>
+      :root {
+        --sky: linear-gradient(180deg, #2eb8ff 0%, #3dd0ff 40%, #4ae0a8 100%);
+        --top: linear-gradient(180deg, #1a3f7a 0%, #2458a8 100%);
+        --tabs: linear-gradient(180deg, #1e4f8c 0%, #163a68 100%);
+        --gold: #ffe08a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #0b1a30;
+        color: #fff;
+        padding: 1rem;
+      }
+      h1 { font-size: 1.1rem; margin: 0 0 0.35rem; }
+      .hint { color: #9eb6d4; font-size: 0.85rem; margin-bottom: 1rem; max-width: 52rem; }
+      .wahl {
+        display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;
+      }
+      .wahl button {
+        border: 2px solid rgba(255,255,255,0.35);
+        background: #1a3f7a;
+        color: #fff;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .wahl button.is-on {
+        border-color: var(--gold);
+        background: linear-gradient(180deg, #4eb8ff, #2a7fd4);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+        gap: 1rem;
+      }
+      .phone {
+        width: min(100%, 20rem);
+        height: 40rem;
+        margin: 0 auto;
+        border-radius: 1.1rem;
+        overflow: hidden;
+        border: 3px solid rgba(255,255,255,0.35);
+        background: var(--sky);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+      }
+      .phone h2 {
+        margin: 0;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: rgba(0,0,0,0.35);
+        text-align: center;
+      }
+      .top {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.35rem 0.45rem;
+        background: var(--top);
+        border-bottom: 2px solid rgba(255,210,90,0.45);
+      }
+      .spieler { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 700; }
+      .spieler img { width: 1.7rem; height: 1.7rem; object-fit: contain; }
+      .waehrungen { display: flex; gap: 0.25rem; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 0.2rem;
+        padding: 0.15rem 0.35rem; border-radius: 999px;
+        background: rgba(12,32,70,0.55); border: 1px solid rgba(255,255,255,0.28);
+        font-size: 0.72rem; font-weight: 800;
+      }
+      .pill img { width: 1rem; height: 1rem; object-fit: contain; }
+      .body { flex: 1; min-height: 0; overflow: auto; padding: 0.45rem; }
+      .tabs {
+        display: grid; grid-template-columns: 1fr 1fr 1.25fr 1fr 1fr;
+        gap: 0.15rem; padding: 0.3rem 0.25rem 0.4rem;
+        background: var(--tabs);
+        border-top: 2px solid rgba(255,210,90,0.5);
+      }
+      .tab {
+        display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+        font-size: 0.55rem; font-weight: 700; color: rgba(230,242,255,0.78);
+      }
+      .tab img { width: 1.55rem; height: 1.55rem; object-fit: contain; }
+      .tab.is-on {
+        color: #fff;
+        background: linear-gradient(180deg, rgba(78,184,255,0.45), rgba(42,127,212,0.55));
+        border-radius: 0.55rem;
+        box-shadow: inset 0 0 0 2px rgba(255,224,138,0.85);
+      }
+      .tab.haupt img { width: 1.95rem; height: 1.95rem; }
+
+      /* --- Inhalt A: knallig wie Start --- */
+      .a .card {
+        background: linear-gradient(180deg, #3a7fd4, #2458a8);
+        border: 1.5px solid rgba(255,220,120,0.5);
+        box-shadow: 0 3px 0 #123570;
+        border-radius: 0.8rem;
+        padding: 0.55rem;
+        margin-bottom: 0.45rem;
+      }
+      .a .hero {
+        background: linear-gradient(165deg, #2a8a5a, #0f4a34);
+        border: 2px solid rgba(255,220,120,0.7);
+      }
+      .a .titel { color: var(--gold); text-align: center; letter-spacing: 0.1em; text-transform: uppercase; margin: 0.2rem 0 0.5rem; font-size: 1rem; }
+      .a .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+      .a .tile { text-align: center; font-size: 0.72rem; }
+      .a .tile img { width: 2.2rem; height: 2.2rem; object-fit: contain; }
+      .bald {
+        display: inline-block; margin-top: 0.25rem; padding: 0.05rem 0.4rem;
+        border-radius: 999px; background: #a678f2; color: #180f2e;
+        font-size: 0.58rem; font-weight: 800; text-transform: uppercase;
+      }
+
+      /* --- Inhalt B: etwas wärmer, gleiche Chrom-Schale --- */
+      .b .card {
+        background: linear-gradient(180deg, #4a6f3a, #2a4520);
+        border: 1.5px solid rgba(255,200,100,0.55);
+        box-shadow: 0 3px 0 #1a2e12;
+        border-radius: 0.8rem;
+        padding: 0.55rem;
+        margin-bottom: 0.45rem;
+      }
+      .b .hero {
+        background: linear-gradient(165deg, #8a6a28, #4a3810);
+        border: 2px solid rgba(255,220,120,0.75);
+      }
+      .b .titel { color: var(--gold); text-align: center; letter-spacing: 0.1em; text-transform: uppercase; margin: 0.2rem 0 0.5rem; font-size: 1rem; }
+      .b .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+      .b .tile { text-align: center; font-size: 0.72rem; }
+      .b .tile img { width: 2.2rem; height: 2.2rem; object-fit: contain; }
+
+      /* --- Inhalt C: ruhiger, gleiche Chrom-Schale --- */
+      .c .card {
+        background: rgba(20, 50, 90, 0.55);
+        border: 1px solid rgba(255,255,255,0.35);
+        border-radius: 0.75rem;
+        padding: 0.55rem;
+        margin-bottom: 0.45rem;
+      }
+      .c .hero {
+        background: rgba(12, 40, 70, 0.65);
+        border: 1.5px solid rgba(255,210,90,0.45);
+      }
+      .c .titel { color: #fff; text-align: center; margin: 0.15rem 0 0.45rem; font-size: 1.05rem; }
+      .c .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+      .c .tile { text-align: center; font-size: 0.72rem; }
+      .c .tile img { width: 2.1rem; height: 2.1rem; object-fit: contain; opacity: 0.95; }
+
+      .muted { color: rgba(230,242,255,0.8); font-size: 0.72rem; }
+      .row { display: flex; gap: 0.5rem; align-items: center; }
+      .wappen { width: 3.2rem; height: 3.2rem; object-fit: contain; }
+      .deck { display: flex; gap: 0.2rem; margin: 0.35rem 0; }
+      .deck img { width: 2.1rem; height: auto; border-radius: 0.2rem; background: #fff; }
+      strong { display: block; }
+      .phone[hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <h1>Hub-Entwürfe mit echter Leiste + echten Icons</h1>
+    <p class="hint">
+      Startseite (Weltkarte) und untere Tab-Leiste bleiben wie live.
+      Hier variiert nur der <b>Inhalt</b> von Shop / Clan / Blatt / Profil.
+      Chrome = dieselben PNGs aus <code>/hub/</code>.
+      <br />
+      Neu: <a href="./statistiken.html" style="color:#ffe08a;font-weight:800">Statistik-Entwürfe A/B/C</a>
+      (Gesamt + Je Spiel, Eigen- und Fremdprofil).
+    </p>
+    <div class="wahl">
+      <button type="button" class="is-on" data-v="a">A — knallig wie Start</button>
+      <button type="button" data-v="b">B — etwas wärmer</button>
+      <button type="button" data-v="c">C — ruhiger / klarer</button>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <template id="shell">
+      <article class="phone">
+        <h2></h2>
+        <header class="top">
+          <div class="spieler">
+            <img src="/hub/pinguin.png" alt="" />
+            <span>Mood</span>
+            <span class="pill">0</span>
+          </div>
+          <div class="waehrungen">
+            <span class="pill"><img src="/hub/pokal.png" alt="" />0</span>
+            <span class="pill"><img src="/hub/muenze.png" alt="" />0</span>
+            <span class="pill"><img src="/hub/krone.png" alt="" />0</span>
+          </div>
+        </header>
+        <div class="body"></div>
+        <nav class="tabs" aria-label="Bereiche">
+          <div class="tab" data-tab="shop"><img src="/hub/tab-shop.webp" alt="" /><span>Shop</span></div>
+          <div class="tab" data-tab="clan"><img src="/hub/tab-clan.webp" alt="" /><span>Clan</span></div>
+          <div class="tab haupt" data-tab="spielen"><img src="/hub/tab-spielen.webp" alt="" /><span>Spielen</span></div>
+          <div class="tab" data-tab="blatt"><img src="/hub/tab-blatt.webp" alt="" /><span>Blatt</span></div>
+          <div class="tab" data-tab="profil"><img src="/hub/tab-profil.webp" alt="" /><span>Profil</span></div>
+        </nav>
+      </article>
+    </template>
+
+    <script>
+      const screens = [
+        {
+          id: 'shop',
+          title: 'Shop',
+          html: `
+            <h3 class="titel">Shop</h3>
+            <div class="card hero">
+              <strong>VIP-Pass</strong>
+              <p class="muted">7 Tage Vorteile + Kartenblatt. Kein Kauf — nur Vorschau.</p>
+              <img src="/hub/shop-vip.webp" alt="" style="width:40%;float:right;margin-left:.4rem" />
+              <span class="bald">Bald</span>
+            </div>
+            <div class="grid2">
+              <div class="card tile"><img src="/hub/tab-blatt.webp" alt="" /><strong>Kartenblätter</strong><span class="bald">Bald</span></div>
+              <div class="card tile"><img src="/hub/truhe.png" alt="" /><strong>Tischdesigns</strong><span class="bald">Bald</span></div>
+              <div class="card tile"><img src="/hub/muenze.png" alt="" /><strong>Münzpakete</strong><span class="bald">Bald</span></div>
+              <div class="card tile"><img src="/hub/tab-spielen.webp" alt="" /><strong>Premium-Decks</strong><span class="bald">Bald</span></div>
+            </div>`
+        },
+        {
+          id: 'clan',
+          title: 'Clan',
+          html: `
+            <div class="card hero" style="text-align:center">
+              <img class="wappen" src="/hub/clan-wappen.png" alt="" />
+              <strong style="font-size:1.2rem">Brauweg</strong>
+              <p class="muted">Mitglieder — · Trophäen —</p>
+              <p class="muted">Für alle Spiele — nicht nur Doppelkopf.</p>
+            </div>
+            <div class="grid2">
+              <div class="card tile"><strong>Clanchat</strong><span class="bald">Bald</span></div>
+              <div class="card tile"><strong>Clankrieg</strong><span class="bald">Bald</span></div>
+              <div class="card tile"><strong>Rangliste</strong><span class="bald">Bald</span></div>
+              <div class="card tile"><strong>Clantruhe</strong><span class="bald">Bald</span></div>
+            </div>
+            <div class="card"><strong>Freunde</strong><p class="muted">Liste wie bisher darunter.</p></div>`
+        },
+        {
+          id: 'blatt',
+          title: 'Blatt',
+          html: `
+            <h3 class="titel">Blatt</h3>
+            <p class="muted">Gilt für dein Konto, auch auf anderen Geräten.</p>
+            <div class="card">
+              <strong>Klassisch</strong>
+              <div class="deck">
+                <img src="/hub/tab-spielen.webp" alt="" />
+                <img src="/hub/tab-blatt.webp" alt="" />
+                <img src="/hub/tab-spielen.webp" alt="" />
+              </div>
+              <span class="muted">Aktuell gewählt</span>
+            </div>
+            <div class="card">
+              <strong>Weiteres Blatt</strong>
+              <div class="deck">
+                <img src="/hub/tab-blatt.webp" alt="" />
+                <img src="/hub/tab-spielen.webp" alt="" />
+              </div>
+            </div>`
+        },
+        {
+          id: 'profil',
+          title: 'Profil',
+          html: `
+            <h3 class="titel">Profil</h3>
+            <div class="card row">
+              <img src="/hub/pinguin.png" alt="" style="width:3.6rem;height:3.6rem;object-fit:contain" />
+              <div>
+                <strong>Mood</strong>
+                <span class="muted">Profilbild · sehen die anderen am Tisch.</span>
+                <div style="margin-top:.35rem"><span class="bald" style="background:#ffe08a;color:#3a2a08">Bild wählen</span></div>
+              </div>
+            </div>
+            <div class="card"><strong>Statistik</strong><p class="muted">Trophäen / Spiele wie bisher.</p></div>
+            <div class="card" style="background:linear-gradient(180deg,#ef6b6b,#c94444);text-align:center;font-weight:800">Abmelden</div>`
+        }
+      ];
+
+      const grid = document.getElementById('grid');
+      const tpl = document.getElementById('shell');
+
+      function render(variant) {
+        grid.innerHTML = '';
+        grid.className = 'grid ' + variant;
+        for (const s of screens) {
+          const node = tpl.content.firstElementChild.cloneNode(true);
+          node.classList.add(variant);
+          node.querySelector('h2').textContent = 'Entwurf ' + variant.toUpperCase() + ' · ' + s.title;
+          node.querySelector('.body').innerHTML = s.html;
+          node.querySelectorAll('.tab').forEach((t) => {
+            t.classList.toggle('is-on', t.dataset.tab === s.id);
+          });
+          grid.appendChild(node);
+        }
+      }
+
+      document.querySelectorAll('.wahl button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.wahl button').forEach((b) => b.classList.remove('is-on'));
+          btn.classList.add('is-on');
+          render(btn.dataset.v);
+        });
+      });
+      render('a');
+    </script>
+  </body>
+</html>

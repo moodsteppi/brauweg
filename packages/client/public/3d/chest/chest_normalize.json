@@ -1,0 +1,39 @@
+{
+  "convention": {
+    "units": "meters (chest width ≈ 1.0)",
+    "bottom_origin": "floor of chest, Y=0, X/Z centered",
+    "top_origin": "underside of lid, Y=0 of lid mesh, X/Z centered",
+    "attach": "Parent top under bottom; switch between lid_open and lid_closed"
+  },
+  "source": {
+    "bottom": "pirate chest bottom 3d model.glb",
+    "top": "chest 3d  top model.glb"
+  },
+  "output": {
+    "chest_bottom": "chest_bottom.glb",
+    "chest_top": "chest_top.glb"
+  },
+  "measures": {
+    "bottom_height": 0.4550781846046448,
+    "bottom_width": 0.9980469942092896,
+    "top_width_source": 0.998046875,
+    "top_scale_applied": 1.0,
+    "top_height": 0.4707031846046448
+  },
+  "lid_open": {
+    "position": [0.004, 0.423, -0.083],
+    "rotation": [0, 0, 0],
+    "scale": [1.02, 1.02, 1.02]
+  },
+  "lid_closed": {
+    "position": [0.006, 0.291, -0.098],
+    "rotation": [0.3984, 0, 0],
+    "scale": [1.02, 1.02, 1.02]
+  },
+  "lid_default": {
+    "position": [0.006, 0.291, -0.098],
+    "rotation": [0.3984, 0, 0],
+    "scale": [1.02, 1.02, 1.02],
+    "note": "Alias für lid_closed — Truhe startet geschlossen"
+  }
+}

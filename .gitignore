@@ -1,0 +1,30 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+
+coverage/
+*.log
+
+# Eingebettete Entwicklungsdatenbank
+.pglite/
+
+# Uebergabe-Archive, Inhalt liegt entpackt im Repository
+/files.zip
+/plattform-uebergabe.zip
+
+# Arbeitsordner der Bildaufbereitung — nichts davon gehoert ins Repository.
+tmp-*/
+
+# Bildquellen in voller Aufloesung liegen im Archivrepo moodsteppi/brauweg-art.
+#
+# Sie sind zusammen ueber 800 MB und wurden hier bei jedem Deploy mitgeladen,
+# obwohl weder der Build noch ein Nutzer sie je anfasst. Ausgeliefert wird
+# ausschliesslich die WebP-Fassung unter packages/client/public/.
+packages/client/art/

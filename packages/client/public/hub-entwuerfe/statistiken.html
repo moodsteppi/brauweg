@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brauweg — Statistik-Entwürfe A/B/C</title>
+    <style>
+      :root {
+        --sky: linear-gradient(180deg, #2eb8ff 0%, #3dd0ff 40%, #4ae0a8 100%);
+        --top: linear-gradient(180deg, #1a3f7a 0%, #2458a8 100%);
+        --tabs: linear-gradient(180deg, #1e4f8c 0%, #163a68 100%);
+        --gold: #ffe08a;
+        --accent: #4a9c78;
+        --lila: #a678f2;
+        --holz: linear-gradient(180deg, rgba(96, 62, 28, 0.94) 0%, rgba(48, 30, 12, 0.96) 100%);
+        --holz-tief: linear-gradient(180deg, rgba(86, 54, 26, 0.94) 0%, rgba(46, 28, 11, 0.96) 100%);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        background: #0b1a30;
+        color: #fff;
+        padding: 1rem;
+      }
+      h1 { font-size: 1.15rem; margin: 0 0 0.35rem; }
+      .hint { color: #9eb6d4; font-size: 0.85rem; margin-bottom: 1rem; max-width: 54rem; line-height: 1.45; }
+      .wahl { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+      .wahl button {
+        border: 2px solid rgba(255,255,255,0.35);
+        background: #1a3f7a;
+        color: #fff;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .wahl button.is-on {
+        border-color: var(--gold);
+        background: linear-gradient(180deg, #4eb8ff, #2a7fd4);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+        gap: 1.1rem;
+        align-items: start;
+      }
+      .phone {
+        width: min(100%, 20rem);
+        height: 40rem;
+        margin: 0 auto;
+        border-radius: 1.1rem;
+        overflow: hidden;
+        border: 3px solid rgba(255,255,255,0.35);
+        background: var(--sky);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+        position: relative;
+      }
+      .phone h2 {
+        margin: 0;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: rgba(0,0,0,0.4);
+        text-align: center;
+        position: relative;
+        z-index: 2;
+      }
+      .top {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.35rem 0.45rem;
+        background: var(--top);
+        border-bottom: 2px solid rgba(255,210,90,0.45);
+        position: relative; z-index: 2;
+      }
+      .spieler { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 700; }
+      .spieler img { width: 1.7rem; height: 1.7rem; object-fit: contain; }
+      .waehrungen { display: flex; gap: 0.25rem; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 0.2rem;
+        padding: 0.15rem 0.35rem; border-radius: 999px;
+        background: rgba(12,32,70,0.55); border: 1px solid rgba(255,255,255,0.28);
+        font-size: 0.72rem; font-weight: 800;
+      }
+      .pill img { width: 1rem; height: 1rem; object-fit: contain; }
+      .body {
+        flex: 1; min-height: 0; overflow: auto; padding: 0.45rem;
+        position: relative; z-index: 1;
+        display: flex; flex-direction: column; gap: 0.45rem;
+      }
+      .body-bg {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; pointer-events: none; z-index: 0;
+      }
+      .tabs {
+        display: grid; grid-template-columns: 1fr 1fr 1.25fr 1fr 1fr;
+        gap: 0.15rem; padding: 0.3rem 0.25rem 0.4rem;
+        background: var(--tabs);
+        border-top: 2px solid rgba(255,210,90,0.5);
+        position: relative; z-index: 2;
+      }
+      .tab {
+        display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+        font-size: 0.55rem; font-weight: 700; color: rgba(230,242,255,0.78);
+      }
+      .tab img { width: 1.55rem; height: 1.55rem; object-fit: contain; }
+      .tab.is-on {
+        color: #fff;
+        background: linear-gradient(180deg, rgba(78,184,255,0.45), rgba(42,127,212,0.55));
+        border-radius: 0.55rem;
+        box-shadow: inset 0 0 0 2px rgba(255,224,138,0.85);
+      }
+      .tab.haupt img { width: 1.95rem; height: 1.95rem; }
+      .banner {
+        flex: 0 0 auto; text-align: center; margin: 0.1rem 0 0.15rem;
+      }
+      .banner img { height: 2.4rem; width: auto; object-fit: contain; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4)); }
+      .muted { color: rgba(255,240,210,0.85); font-size: 0.68rem; margin: 0; }
+      .note {
+        margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.7rem;
+        background: rgba(20,40,70,0.55); border: 1px solid rgba(255,255,255,0.15);
+        color: #c5d6ea; font-size: 0.82rem; max-width: 54rem; line-height: 1.45;
+      }
+      .note strong { color: var(--gold); }
+
+      /* —— A: knallig, Pokal-Hero —— */
+      .a .kopf {
+        display: flex; align-items: center; gap: 0.55rem;
+        padding: 0.5rem 0.55rem; border-radius: 0.85rem;
+        background: linear-gradient(165deg, #2a8a5a, #0f4a34);
+        border: 2px solid rgba(255,220,120,0.75);
+        box-shadow: 0 4px 0 #0a2e22;
+      }
+      .a .kopf img.avatar { width: 3.2rem; height: 3.2rem; border-radius: 0.65rem; border: 2px solid var(--gold); object-fit: cover; background: #2a6fb8; }
+      .a .kopf strong { display: block; font-size: 1.05rem; }
+      .a .hero {
+        text-align: center; padding: 0.7rem 0.5rem 0.55rem; border-radius: 0.9rem;
+        background: linear-gradient(180deg, #3a7fd4, #2458a8);
+        border: 2px solid rgba(255,220,120,0.65);
+        box-shadow: 0 4px 0 #123570;
+      }
+      .a .hero img { width: 2.8rem; height: 2.8rem; object-fit: contain; }
+      .a .hero .zahl { font-size: 2rem; font-weight: 900; color: var(--gold); line-height: 1; margin: 0.15rem 0; }
+      .a .hero .label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,240,210,0.9); }
+      .a .grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+      .a .tile {
+        text-align: center; padding: 0.45rem 0.25rem; border-radius: 0.7rem;
+        background: linear-gradient(180deg, #3a7fd4, #2458a8);
+        border: 1.5px solid rgba(255,220,120,0.5);
+        box-shadow: 0 3px 0 #123570;
+      }
+      .a .tile img { width: 1.4rem; height: 1.4rem; object-fit: contain; }
+      .a .tile strong { display: block; font-size: 1.05rem; color: var(--gold); }
+      .a .tile span { font-size: 0.58rem; font-weight: 700; color: rgba(255,240,210,0.9); }
+      .a .spiel {
+        display: flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.5rem;
+        border-radius: 0.7rem; margin-bottom: 0.35rem;
+        background: linear-gradient(180deg, #3a7fd4, #2458a8);
+        border: 1.5px solid rgba(255,220,120,0.45);
+        box-shadow: 0 3px 0 #123570;
+      }
+      .a .spiel img { width: 1.6rem; height: 1.6rem; }
+      .a .spiel .name { flex: 1; font-weight: 800; font-size: 0.82rem; }
+      .a .spiel .cups { color: var(--gold); font-weight: 900; font-size: 0.9rem; }
+
+      /* —— B: Holztafeln (wie live Hub) —— */
+      .b .kopf {
+        display: flex; align-items: center; gap: 0.55rem;
+        padding: 0.4rem 0.55rem; border-radius: 0.8rem;
+        background: var(--holz);
+        border: 2px solid rgba(255,220,120,0.7);
+        box-shadow: 0 3px 0 #1a1208;
+      }
+      .b .kopf img.avatar { width: 3.1rem; height: 3.1rem; border-radius: 0.7rem; border: 2px solid var(--gold); object-fit: cover; background: #2a6fb8; }
+      .b .kopf strong { display: block; font-size: 1.05rem; text-shadow: 0 2px 0 rgba(20,12,4,0.6); }
+      .b .level {
+        width: 1.85rem; height: 1.85rem; border-radius: 999px;
+        display: grid; place-items: center; font-weight: 900; font-size: 0.72rem;
+        color: #2a1d04; background: linear-gradient(180deg, #ffe08a, #f0b84a);
+        border: 2px solid #c9962a; box-shadow: 0 2px 0 #8a6a22;
+      }
+      .b .tafel {
+        border-radius: 0.85rem; overflow: hidden;
+        background: var(--holz-tief);
+        border: 1.5px solid rgba(255,200,100,0.55);
+        box-shadow: 0 3px 0 #1a1208;
+      }
+      .b .tafel-kopf {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 0.35rem 0.55rem 0.15rem;
+      }
+      .b .tafel-kopf h3 {
+        margin: 0; font-size: 0.62rem; letter-spacing: 0.08em;
+        text-transform: uppercase; color: rgba(255,224,138,0.95); font-weight: 800;
+      }
+      .b .tafel-kopf .zusatz { font-size: 0.58rem; color: rgba(255,240,210,0.7); }
+      .b .tafel-inhalt { padding: 0.25rem 0.45rem 0.5rem; }
+      .b .reihe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; }
+      .b .zahl {
+        display: flex; flex-direction: column; align-items: center; gap: 0.05rem;
+        padding: 0.35rem 0.1rem 0.3rem; border-radius: 0.55rem;
+        background: rgba(20,12,5,0.42); border: 1px solid rgba(255,200,100,0.35);
+      }
+      .b .zahl img { width: 1.2rem; height: 1.2rem; object-fit: contain; }
+      .b .zahl strong { font-size: 0.92rem; color: var(--gold); font-variant-numeric: tabular-nums; }
+      .b .zahl span { font-size: 0.55rem; font-weight: 700; color: rgba(255,240,210,0.85); text-align: center; }
+      .b .spielzeile {
+        display: grid; grid-template-columns: 1.4rem 1fr auto auto;
+        gap: 0.4rem; align-items: center;
+        padding: 0.4rem 0.35rem;
+        border-bottom: 1px solid rgba(255,200,100,0.18);
+      }
+      .b .spielzeile:last-child { border-bottom: 0; }
+      .b .spielzeile img { width: 1.25rem; height: 1.25rem; }
+      .b .spielzeile .name { font-weight: 700; font-size: 0.78rem; color: #fff7e2; }
+      .b .spielzeile .meta { font-size: 0.62rem; color: rgba(255,240,210,0.75); }
+      .b .spielzeile .cups {
+        display: inline-flex; align-items: center; gap: 0.2rem;
+        font-weight: 800; color: var(--gold); font-size: 0.82rem;
+      }
+      .b .spielzeile .cups img { width: 0.85rem; height: 0.85rem; }
+      .b .hinweis {
+        margin: 0.35rem 0 0; padding: 0.35rem 0.4rem; border-radius: 0.45rem;
+        background: rgba(12,8,3,0.35); font-size: 0.62rem; color: rgba(255,240,210,0.8);
+      }
+
+      /* —— C: ruhig / klar —— */
+      .c .kopf {
+        display: flex; align-items: center; gap: 0.55rem;
+        padding: 0.5rem 0.55rem; border-radius: 0.75rem;
+        background: rgba(12,40,70,0.65);
+        border: 1.5px solid rgba(255,210,90,0.45);
+      }
+      .c .kopf img.avatar { width: 3rem; height: 3rem; border-radius: 999px; border: 2px solid rgba(255,224,138,0.8); object-fit: cover; background: #2a6fb8; }
+      .c .kopf strong { display: block; font-size: 1.05rem; }
+      .c .card {
+        background: rgba(20,50,90,0.55);
+        border: 1px solid rgba(255,255,255,0.35);
+        border-radius: 0.75rem;
+        padding: 0.55rem 0.6rem;
+      }
+      .c .card h3 { margin: 0 0 0.45rem; font-size: 0.95rem; font-weight: 700; }
+      .c .zeile {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.35rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.12);
+        font-size: 0.82rem;
+      }
+      .c .zeile:last-child { border-bottom: 0; }
+      .c .zeile .lbl { color: rgba(230,242,255,0.85); display: inline-flex; align-items: center; gap: 0.35rem; }
+      .c .zeile .lbl img { width: 1rem; height: 1rem; }
+      .c .zeile .wert { font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+      .c .spiel {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.12);
+      }
+      .c .spiel:last-child { border-bottom: 0; }
+      .c .spiel .name { font-weight: 700; font-size: 0.85rem; }
+      .c .spiel .detail { font-size: 0.65rem; color: rgba(230,242,255,0.75); }
+      .c .spiel .right { text-align: right; }
+      .c .spiel .cups { color: var(--gold); font-weight: 800; }
+
+      /* Fremdprofil-Sheet (gemeinsam) */
+      .sheet-label {
+        text-align: center; font-size: 0.65rem; font-weight: 800;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        color: rgba(255,224,138,0.9); margin-bottom: 0.15rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Statistik-Entwürfe A / B / C</h1>
+    <p class="hint">
+      Gleiche Hub-Schale (Top-Leiste, Tabs, <code>bg-profil.png</code>), drei Lesarten für
+      <b>Gesamt-Statistik</b> und <b>Je Spiel</b>. Chrome und Icons aus <code>/hub/</code>.
+      Entwurf&nbsp;B entspricht der live gebauten Holztafel-Sprache (Shop/Clan/Profil&nbsp;B).
+    </p>
+    <div class="wahl">
+      <button type="button" class="is-on" data-v="a">A — knallig / Pokal-Hero</button>
+      <button type="button" data-v="b">B — Holztafeln (wie live)</button>
+      <button type="button" data-v="c">C — ruhig / klar</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="note">
+      <strong>Gewählt: A</strong> — knalliger Pokal-Hero, 2×2-Raster, blaue Spielkarten.
+      Live umgesetzt im Profil-Tab und Fremdprofil.
+    </p>
+
+    <template id="shell">
+      <article class="phone">
+        <h2></h2>
+        <img class="body-bg" src="/hub/bg-profil.webp" alt="" />
+        <header class="top">
+          <div class="spieler">
+            <img src="/hub/pinguin.png" alt="" />
+            <span>Mood</span>
+            <span class="pill">0</span>
+          </div>
+          <div class="waehrungen">
+            <span class="pill"><img src="/hub/pokal.png" alt="" />420</span>
+            <span class="pill"><img src="/hub/muenze.png" alt="" />0</span>
+            <span class="pill"><img src="/hub/krone.png" alt="" />0</span>
+          </div>
+        </header>
+        <div class="body"></div>
+        <nav class="tabs" aria-label="Bereiche">
+          <div class="tab"><img src="/hub/tab-shop.webp" alt="" /><span>Shop</span></div>
+          <div class="tab"><img src="/hub/tab-clan.webp" alt="" /><span>Clan</span></div>
+          <div class="tab haupt"><img src="/hub/tab-spielen.webp" alt="" /><span>Spielen</span></div>
+          <div class="tab"><img src="/hub/tab-blatt.webp" alt="" /><span>Blatt</span></div>
+          <div class="tab is-on"><img src="/hub/tab-profil.webp" alt="" /><span>Profil</span></div>
+        </nav>
+      </article>
+    </template>
+
+    <script>
+      const variants = {
+        a: {
+          profil: `
+            <div class="banner"><img src="/hub/logo.png" alt="" /></div>
+            <div class="kopf">
+              <img class="avatar" src="/hub/pinguin.png" alt="" />
+              <div>
+                <strong>Mood</strong>
+                <span class="muted">Dabei seit Jan 2026</span>
+              </div>
+            </div>
+            <div class="hero">
+              <img src="/hub/pokal.png" alt="" />
+              <div class="zahl">420</div>
+              <div class="label">Trophäen gesamt</div>
+            </div>
+            <div class="grid4">
+              <div class="tile"><img src="/hub/tab-spielen.webp" alt="" /><strong>48</strong><span>Partien</span></div>
+              <div class="tile"><img src="/hub/krone.png" alt="" /><strong>19</strong><span>Siege</span></div>
+              <div class="tile"><img src="/hub/muenze.png" alt="" /><strong>40 %</strong><span>Siegquote</span></div>
+              <div class="tile"><img src="/hub/truhe.png" alt="" /><strong>250</strong><span>Checkpoint</span></div>
+            </div>
+            <div class="spiel">
+              <img src="/hub/tab-spielen.webp" alt="" />
+              <span class="name">Doppelkopf</span>
+              <span class="cups">420 🏆</span>
+            </div>
+            <p class="muted">Trophäen nur ohne Bots. Partien zählen alles.</p>
+          `,
+          fremd: `
+            <p class="sheet-label">Fremdprofil</p>
+            <div class="banner"><img src="/hub/logo.png" alt="" /></div>
+            <div class="kopf">
+              <img class="avatar" src="/hub/pinguin.png" alt="" />
+              <div>
+                <strong>Emil</strong>
+                <span class="muted">Dabei seit Mär 2026</span>
+              </div>
+            </div>
+            <div class="hero">
+              <img src="/hub/pokal.png" alt="" />
+              <div class="zahl">180</div>
+              <div class="label">Trophäen</div>
+            </div>
+            <div class="grid4">
+              <div class="tile"><img src="/hub/tab-spielen.webp" alt="" /><strong>22</strong><span>Partien</span></div>
+              <div class="tile"><img src="/hub/krone.png" alt="" /><strong>9</strong><span>Siege</span></div>
+              <div class="tile"><img src="/hub/muenze.png" alt="" /><strong>41 %</strong><span>Quote</span></div>
+              <div class="tile"><img src="/hub/tab-clan.webp" alt="" /><strong>+</strong><span>Freund</span></div>
+            </div>
+            <div class="spiel">
+              <img src="/hub/tab-spielen.webp" alt="" />
+              <span class="name">Doppelkopf</span>
+              <span class="cups">180 🏆</span>
+            </div>
+          `
+        },
+        b: {
+          profil: `
+            <div class="banner"><img src="/hub/logo.png" alt="" /></div>
+            <div class="kopf">
+              <img class="avatar" src="/hub/pinguin.png" alt="" />
+              <div style="flex:1;min-width:0">
+                <strong>Mood</strong>
+                <span class="muted">Dabei seit Jan 2026</span>
+              </div>
+              <span class="level">0</span>
+            </div>
+            <section class="tafel">
+              <header class="tafel-kopf"><h3>Statistiken</h3><span class="zusatz">Gesamt</span></header>
+              <div class="tafel-inhalt">
+                <div class="reihe">
+                  <span class="zahl"><img src="/hub/tab-spielen.webp" alt="" /><strong>48</strong><span>Partien</span></span>
+                  <span class="zahl"><img src="/hub/krone.png" alt="" /><strong>19</strong><span>Siege</span></span>
+                  <span class="zahl"><img src="/hub/pokal.png" alt="" /><strong>420</strong><span>Trophäen</span></span>
+                  <span class="zahl"><img src="/hub/muenze.png" alt="" /><strong>40 %</strong><span>Quote</span></span>
+                </div>
+                <p class="hinweis">Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.</p>
+              </div>
+            </section>
+            <section class="tafel">
+              <header class="tafel-kopf"><h3>Je Spiel</h3><span class="zusatz">Gewertet</span></header>
+              <div class="tafel-inhalt">
+                <div class="spielzeile">
+                  <img src="/hub/tab-spielen.webp" alt="" />
+                  <div>
+                    <div class="name">Doppelkopf</div>
+                    <div class="meta">Checkpoint 250 · 12 gewertet · 7 Siege</div>
+                  </div>
+                  <span class="cups"><img src="/hub/pokal.png" alt="" />420</span>
+                </div>
+              </div>
+            </section>
+            <section class="tafel">
+              <header class="tafel-kopf"><h3>Sammlung</h3><span class="zusatz">Wächst mit</span></header>
+              <div class="tafel-inhalt">
+                <div class="reihe" style="grid-template-columns:repeat(3,1fr)">
+                  <span class="zahl"><img src="/hub/truhe.png" alt="" /><strong>0</strong><span>Truhen</span></span>
+                  <span class="zahl"><img src="/hub/tab-blatt.webp" alt="" /><strong>4</strong><span>Blätter</span></span>
+                  <span class="zahl"><img src="/hub/clan-wappen.png" alt="" /><strong>0</strong><span>Abzeichen</span></span>
+                </div>
+              </div>
+            </section>
+          `,
+          fremd: `
+            <p class="sheet-label">Fremdprofil</p>
+            <div class="banner"><img src="/hub/logo.png" alt="" /></div>
+            <div class="kopf">
+              <img class="avatar" src="/hub/pinguin.png" alt="" />
+              <div style="flex:1;min-width:0">
+                <strong>Emil</strong>
+                <span class="muted">Dabei seit Mär 2026</span>
+              </div>
+            </div>
+            <section class="tafel">
+              <header class="tafel-kopf"><h3>Gesamt</h3></header>
+              <div class="tafel-inhalt">
+                <div class="reihe">
+                  <span class="zahl"><img src="/hub/pokal.png" alt="" /><strong>180</strong><span>Trophäen</span></span>
+                  <span class="zahl"><img src="/hub/tab-spielen.webp" alt="" /><strong>22</strong><span>Partien</span></span>
+                  <span class="zahl"><img src="/hub/krone.png" alt="" /><strong>9</strong><span>Siege</span></span>
+                  <span class="zahl"><img src="/hub/muenze.png" alt="" /><strong>41 %</strong><span>Quote</span></span>
+                </div>
+                <p class="hinweis">Trophäen nur ohne Bots. Partien zählen alles.</p>
+              </div>
+            </section>
+            <section class="tafel">
+              <header class="tafel-kopf"><h3>Je Spiel</h3></header>
+              <div class="tafel-inhalt">
+                <div class="spielzeile">
+                  <img src="/hub/tab-spielen.webp" alt="" />
+                  <div>
+                    <div class="name">Doppelkopf</div>
+                    <div class="meta">Checkpoint 100 · 8 gewertet · 4 Siege</div>
+                  </div>
+                  <span class="cups"><img src="/hub/pokal.png" alt="" />180</span>
+                </div>
+              </div>
+            </section>
+            <section class="tafel">
+              <header class="tafel-kopf"><h3>Freundschaft</h3></header>
+              <div class="tafel-inhalt">
+                <div style="display:grid;grid-template-columns:1fr;gap:.35rem">
+                  <button style="padding:.5rem;border-radius:.55rem;font-weight:800;border:1.5px solid #c9962a;background:linear-gradient(180deg,#ffe08a,#f0b84a);color:#2a200c;box-shadow:0 2px 0 #8a6a22">Freund hinzufügen</button>
+                </div>
+              </div>
+            </section>
+          `
+        },
+        c: {
+          profil: `
+            <div class="banner"><img src="/hub/logo.png" alt="" /></div>
+            <div class="kopf">
+              <img class="avatar" src="/hub/pinguin.png" alt="" />
+              <div>
+                <strong>Mood</strong>
+                <span class="muted">Dabei seit Jan 2026</span>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Gesamt</h3>
+              <div class="zeile"><span class="lbl"><img src="/hub/pokal.png" alt="" />Trophäen</span><span class="wert">420</span></div>
+              <div class="zeile"><span class="lbl"><img src="/hub/tab-spielen.webp" alt="" />Partien</span><span class="wert">48</span></div>
+              <div class="zeile"><span class="lbl"><img src="/hub/krone.png" alt="" />Siege</span><span class="wert">19</span></div>
+              <div class="zeile"><span class="lbl"><img src="/hub/muenze.png" alt="" />Siegquote</span><span class="wert">40 %</span></div>
+            </div>
+            <div class="card">
+              <h3>Je Spiel</h3>
+              <div class="spiel">
+                <div>
+                  <div class="name">Doppelkopf</div>
+                  <div class="detail">Checkpoint 250 · 12 gewertet</div>
+                </div>
+                <div class="right">
+                  <div class="cups">420</div>
+                  <div class="detail">7 Siege</div>
+                </div>
+              </div>
+            </div>
+            <p class="muted">Trophäen nur ohne Bots. Partien zählen alles.</p>
+          `,
+          fremd: `
+            <p class="sheet-label">Fremdprofil</p>
+            <div class="banner"><img src="/hub/logo.png" alt="" /></div>
+            <div class="kopf">
+              <img class="avatar" src="/hub/pinguin.png" alt="" />
+              <div>
+                <strong>Emil</strong>
+                <span class="muted">Dabei seit Mär 2026</span>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Gesamt</h3>
+              <div class="zeile"><span class="lbl"><img src="/hub/pokal.png" alt="" />Trophäen</span><span class="wert">180</span></div>
+              <div class="zeile"><span class="lbl"><img src="/hub/tab-spielen.webp" alt="" />Partien</span><span class="wert">22</span></div>
+              <div class="zeile"><span class="lbl"><img src="/hub/krone.png" alt="" />Siege</span><span class="wert">9</span></div>
+              <div class="zeile"><span class="lbl"><img src="/hub/muenze.png" alt="" />Siegquote</span><span class="wert">41 %</span></div>
+            </div>
+            <div class="card">
+              <h3>Je Spiel</h3>
+              <div class="spiel">
+                <div>
+                  <div class="name">Doppelkopf</div>
+                  <div class="detail">Checkpoint 100 · 8 gewertet</div>
+                </div>
+                <div class="right">
+                  <div class="cups">180</div>
+                  <div class="detail">4 Siege</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="text-align:center;font-weight:800;border-color:rgba(255,224,138,.55)">
+              Freund hinzufügen
+            </div>
+          `
+        }
+      };
+
+      const screens = [
+        { id: 'profil', title: 'Eigenes Profil · Statistiken' },
+        { id: 'fremd', title: 'Fremdprofil · Statistiken' }
+      ];
+
+      const grid = document.getElementById('grid');
+      const tpl = document.getElementById('shell');
+
+      function render(v) {
+        grid.innerHTML = '';
+        for (const s of screens) {
+          const node = tpl.content.firstElementChild.cloneNode(true);
+          node.classList.add(v);
+          node.querySelector('h2').textContent = 'Entwurf ' + v.toUpperCase() + ' · ' + s.title;
+          node.querySelector('.body').innerHTML = variants[v][s.id];
+          grid.appendChild(node);
+        }
+      }
+
+      document.querySelectorAll('.wahl button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.wahl button').forEach((b) => b.classList.remove('is-on'));
+          btn.classList.add('is-on');
+          render(btn.dataset.v);
+        });
+      });
+      render('b');
+    </script>
+  </body>
+</html>
