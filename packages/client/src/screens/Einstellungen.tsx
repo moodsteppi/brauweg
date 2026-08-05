@@ -17,7 +17,7 @@ import {
  * hat es außerdem Platz für das, was später dazukommt: Sprache,
  * Benachrichtigungen, Kartensortierung.
  *
- * **Was man hört, steht hier nicht — das ist der Klangschrank.** Zwei Regler
+ * **Was man hört, steht hier nicht — das ist die Klanghalle.** Zwei Regler
  * sind eine Einstellung, die Auswahl unter gekaufter Musik ist Besitz. Beides
  * in dasselbe Blatt zu legen hieße, dass eine wachsende Sammlung eine
  * Lautstärkeeinstellung immer weiter nach unten schiebt.
@@ -51,8 +51,8 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
         />
 
         <p className="einstellungen-fussnote muted">
-          Welches Stück läuft und welches Klangpaket gilt, steht im
-          Klangschrank in deinem Profil.
+          Welches Stück läuft und welches Klangpaket gilt, steht in der
+          Klanghalle in deinem Profil.
         </p>
 
         {/*

@@ -532,7 +532,7 @@ Zahnrad. Darin nur die zwei Regler: Sounds 0–100, Musik 0–100. Bisher gab es
 überhaupt keinen Ort für Einstellungen — Sprache und Benachrichtigungen können
 dort nachrücken.
 
-**Was man hört, steht im Klangschrank**, einem eigenen Bildschirm neben dem
+**Was man hört, steht in der Klanghalle**, einem eigenen Bildschirm neben dem
 Kleiderschrank im Profil. Dort liegen die gekauften Musikstücke und
 Klangpakete, jedes mit einem Abspielknopf. Die Trennung ist Absicht: Zwei
 Regler sind eine Einstellung, eine wachsende Sammlung ist Besitz — läge beides
@@ -580,6 +580,89 @@ nachgesehen und nicht der Sammlung geglaubt, in der sie stehen.
   statt eines Bildes. `WareRegal` nimmt dafür jetzt `bild: () => null` — ein
   `<img>` auf eine fehlende Datei wäre ein weißer Kasten, und genau das ging
   beim Clan-Krieg schon einmal fast live.
+
+## Am 5. August, nachmittags: gemaltes Holz und 3D
+
+**Die sechzehn bestellten Bilder sind drin.** Knöpfe, Tafel, Kopfleiste,
+Erfahrungsbalken, Namensschild und sieben Symbole — 1,7 MB PNG wurden 0,2 MB
+WebP. Der Hub besteht damit erstmals aus Material und nicht aus
+CSS-Verläufen. Der Abnahmepunkt hat diesmal gehalten: neben `menue-blatt.webp`
+gelegt sieht es nach demselben Haus aus.
+
+**Die 3D-Modelle wogen 7,9 MB und wiegen jetzt 0,7 MB** (−92 %). Der Ballast
+waren zwei 4096×4096-Texturen für eine Figur, die auf dem Handy 200 px hoch
+ist. Gewandelt mit dem neuen `~/modellwerkzeug/schrumpfen.mjs` — dasselbe
+Muster wie Bild- und Klangwerkzeug. **Als JPEG, nicht als WebP:**
+WebP-Texturen setzen `EXT_texture_webp` als *Pflicht* in die Datei, und ein
+Ladeprogramm, das die Erweiterung nicht kennt, lädt dann gar nichts mehr.
+
+**`three` liegt nicht mehr im Hauptbündel.** Es kam als gewöhnlicher Import
+über `main.tsx` herein und hätte jeden Spieler 900 kB gekostet, auch die, die
+nie 3D sehen. Jetzt lädt es über `React.lazy` in ein eigenes Stück; das
+Hauptbündel bleibt bei 408 kB. `leva` war als Abhängigkeit eingetragen und
+wurde nirgends benutzt — entfernt.
+
+**Die Mütze sitzt.** `-0,007 / 0,736 / 0,013`, Größe 1,09, im Ausrichter von
+Hand eingestellt und im Browser gegengeprüft. **Nicht** der rechnerische
+Kopfansatz aus `avatar_normalize.json` (y = 0,988) — damit schwebt sie
+sichtbar über dem Kopf.
+
+> **Offen und der Grund, warum die 3D-Kachel noch nicht im Profil steht:**
+> Die Bühne bleibt beim **ersten** Aufbau leer. Die Figur erscheint erst,
+> wenn sich die Fenstergröße einmal ändert — dann läuft alles, Drehen und
+> Mütze inklusive.
+>
+> Nachweislich **nicht** die Ursache, alles einzeln geprüft: `frameloop`
+> (`demand` wie `always`), von Hand nachgeforderte Bilder, R3Fs Vermessung
+> (`resize={{scroll:false}}`), die Modelle vor der Leinwand laden, die
+> Einblend-Animation des Blattes. Modell, Kamera, Material, Lichter und
+> Leinwandgröße sind über die Konsole als richtig belegt.
+>
+> **Ein Fund am Rande, der bleibt:** Die Lichtwerte waren zusätzlich viel zu
+> niedrig. three rechnet seit r155 mit physikalischen Einheiten; die Werte
+> stehen jetzt bei 2,2 / 1,6 / 3,2 / 1,2. Der Ausrichter täuscht dabei — er
+> hat niedrige Werte und sieht trotzdem gut aus, weil dort `<Environment>`
+> die eigentliche Beleuchtung macht.
+>
+> Zu sehen ist die Werkstatt unter `/?dev=werkstatt` (ohne Anmeldung). Sobald
+> das erste Bild steht, sind es vier Zeilen in `GameSelect.tsx` — die Stelle
+> ist dort auskommentiert markiert.
+
+## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
+
+**Der Profil-Tab war der einzige, der den Tafel-Baustein nicht benutzt hat.**
+Jeder Abschnitt ein eigener Kasten aus CSS-Verlauf mit goldenem Strich und
+`box-shadow: 0 4px 0`. `DESIGN.md` sagt seit jeher „Neue Hub-Inhalte gehören
+in eine Tafel, nicht in einen eigenen Kasten"; der Shop hält sich daran, das
+Profil hielt sich nicht daran. Jetzt schon: Deine Sachen, Geburtstag,
+Trophäen, Freunde, Konto.
+
+**Alles Konto-artige liegt jetzt an einem Ort und als richtige Knöpfe.**
+Vorher standen Einstellungen ganz oben allein, Benachrichtigungen und Abmelden
+irgendwo unter der Freundesliste, und „Konto löschen" war eine nackte
+Textzeile — drei Bauformen für dieselbe Art Sache. Reihenfolge in der Tafel
+ist Absicht: harmlos oben, endgültig unten, Löschen allein in der letzten
+Zeile.
+
+**Der Klangschrank heißt jetzt Klanghalle.** Datei, Bauteil, CSS-Klassen,
+Texte.
+
+> **Die eigentliche Ursache steht in `docs/ASSETS-PROFIL.md`:**
+> `menue-knopf-holz.webp` heißt Holz, ist aber eine flache blassolive Pille
+> mit dünnem Strich — keine Maserung, keine Standfläche, keine Tiefe. Die
+> Bestellung dafür (`ASSETS-MENUE.md`) hatte „gemaltes Holz, warme Töne"
+> verlangt; geliefert wurde etwas anderes, und es ist so eingebaut worden.
+> `menue-blatt.webp` und `menue-feld.webp` aus derselben Bestellung **sind**
+> richtig gemaltes Holz mit Messingnieten. Die Knöpfe sind die Ausreißer, und
+> sie stehen auf jedem Bildschirm der App.
+>
+> Der Abnahmepunkt, der das verhindert hätte und jetzt in jeder Bestellung
+> steht: **das neue Bild neben `menue-blatt.webp` legen und fragen, ob es nach
+> demselben Haus aussieht.**
+
+Bis die neuen Bilder da sind, leihen sich die drei Profilkacheln vorhandene
+Symbole. Das sieht ungenau aus, aber nicht kaputt — ein `<img>` auf eine
+Datei, die es nicht gibt, wäre ein weißer Kasten.
 
 ## Am 4. August später fertig geworden (zweite Sitzung)
 
