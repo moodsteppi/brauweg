@@ -9242,7 +9242,15 @@ main.auth > .muted {
   .truhe-schwall { display: none; }
 }
 
-/* —— Endless-Runner Dev-Tool (/?dev=runner) —— */
+/* =========================================================================
+   Pro-Subway — der Endlos-Lauf.
+
+   Die Menüs sind Holztafeln aus dem Hub-Baukasten (`.hub-tafel`,
+   `.hub-knopf`); hier steht nur, was der Lauf eigen hat: die Anzeige oben,
+   der Schleier unter den Tafeln und die Rückmeldungen (Blitz, +1, Rekord).
+   Vorher war das ein grauer Systemkasten mit blauen Knöpfen — das einzige
+   Stück der Anwendung, das nicht aus dem Haus kam.
+   ========================================================================= */
 .runner {
   position: relative;
   width: 100%;
@@ -9250,7 +9258,6 @@ main.auth > .muted {
   overflow: hidden;
   background: #87b8d8;
   color: #f4e9d4;
-  font-family: "Segoe UI", system-ui, sans-serif;
   touch-action: none;
   user-select: none;
 }
@@ -9259,6 +9266,8 @@ main.auth > .muted {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* Anzeige oben: Messingkapseln wie im Hub-Kopfband. */
 .runner-hud {
   position: absolute;
   top: 0;
@@ -9266,97 +9275,227 @@ main.auth > .muted {
   right: 0;
   z-index: 2;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
   align-items: center;
-  gap: 0.4rem 0.75rem;
-  padding: 0.85rem 1rem;
+  gap: 0.4rem;
+  padding: calc(0.6rem + env(safe-area-inset-top)) 0.7rem 0;
+}
+.runner-kapsel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 4px 9px;
+  border-image: url(/hub/waehrung-kapsel-grund.webp) 14 45 fill / 1 / 0 stretch;
+  padding: 0.14rem 0.3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+  color: #ffe08a;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.8);
+}
+.runner-kapsel img {
+  width: 1.05rem;
+  height: 1.05rem;
+  object-fit: contain;
+}
+/* Das "+1" steigt aus der Münzkapsel auf. Der key-Wechsel im Markup startet
+   die Animation bei jeder Münze neu. */
+.runner-plus {
+  position: absolute;
+  right: -0.2rem;
+  top: -0.4rem;
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #ffe9a0;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.9);
+  animation: runner-plus-flug 0.6s ease-out forwards;
   pointer-events: none;
-  text-shadow: 0 1px 4px #000a;
 }
-.runner-hud strong {
-  font-size: 1.05rem;
-  letter-spacing: 0.02em;
+@keyframes runner-plus-flug {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-1.1rem);
+  }
 }
-.runner-back {
-  pointer-events: auto;
-  border: 0;
-  border-radius: 999px;
-  padding: 0.35rem 0.85rem;
-  background: rgba(0, 0, 0, 0.35);
-  color: inherit;
-  font: inherit;
+.runner-pause {
+  margin-left: auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 0;
+  background: url(/hub/side-btn-grund.webp) center / 100% 100% no-repeat;
+  color: #ffe9bd;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: -0.08em;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
   cursor: pointer;
 }
-.runner-start--neben {
-  margin-top: 0.35rem;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.55);
+.runner-pause:active {
+  transform: translateY(1px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) brightness(0.9);
 }
-.runner-hub-coins {
-  margin: 0;
-  font-weight: 600;
-  color: #f0d78c;
-}
-.runner-overlay {
+
+/* Der Schleier unter jeder Tafel: dunkelt die Szene, hält den Blick vorn. */
+.runner-schleier {
   position: absolute;
   inset: 0;
   z-index: 3;
   display: grid;
-  place-content: center;
-  gap: 0.75rem;
-  padding: 1.5rem;
-  text-align: center;
-  background: linear-gradient(180deg, #1a3048cc 0%, #122838ee 40%, #0e1e2cf2 100%);
+  place-items: center;
+  padding: 1rem;
+  background: rgba(12, 7, 2, 0.55);
 }
-.runner-overlay h1 {
+.runner-tafel {
+  width: min(100%, 21rem);
+}
+.runner-tafel-inhalt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.runner-text {
   margin: 0;
-  font-size: clamp(1.8rem, 6vw, 2.6rem);
-  font-weight: 700;
-}
-.runner-overlay p {
-  margin: 0;
-  opacity: 0.85;
-}
-.runner-start {
-  justify-self: center;
-  margin-top: 0.5rem;
-  padding: 0.75rem 2.2rem;
-  border: 0;
-  border-radius: 999px;
-  background: #e8b84a;
-  color: #1a1008;
-  font-size: 1.1rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.runner-start:active {
-  transform: scale(0.97);
-}
-.runner-hint {
-  margin-top: 0.75rem !important;
-  font-size: 0.85rem;
-  opacity: 0.65 !important;
+  font-size: 0.88rem;
   line-height: 1.45;
+  color: #ffeccb;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.7);
 }
+.runner-text--klein {
+  font-size: 0.76rem;
+  color: rgba(255, 232, 196, 0.85);
+}
+.runner-knopf {
+  width: 100%;
+  font-size: 0.95rem;
+  padding: 0.3rem 0.5rem;
+}
+
+/* Steuerungszeile im Startblatt: Tasten als kleine Holzplaettchen. */
+.runner-steuerung {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  color: #ffeccb;
+}
+.runner-steuerung span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.runner-steuerung kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.2rem;
+  border-radius: 0.3rem;
+  background: rgba(30, 18, 8, 0.85);
+  border: 1px solid rgba(255, 214, 138, 0.5);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  font: inherit;
+  font-size: 0.72rem;
+  color: #ffe08a;
+}
+
+/* Endstand: die offene Rechnung — Strecke, Muenzen, Summe. */
+.runner-endstand {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.runner-endstand > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  color: #ffeccb;
+}
+.runner-endstand dt {
+  font-weight: 600;
+}
+.runner-endstand dd {
+  margin: 0;
+  font-weight: 800;
+}
+.runner-endstand-summe {
+  margin-top: 0.15rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 214, 138, 0.4);
+  font-size: 1rem !important;
+  color: #ffe08a !important;
+}
+
+/* "Neuer Rekord!" — einmal gross pulsieren, dann stehen. */
+.runner-rekord {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #ffe08a;
+  text-shadow: 0 1px 0 rgba(20, 10, 2, 0.8), 0 0 14px rgba(255, 190, 80, 0.45);
+  animation: runner-rekord-puls 0.7s ease-out;
+}
+@keyframes runner-rekord-puls {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Der rote Blitz beim Aufprall — kurz, dann weg. Kein Dauerrot: Das
+   Endblatt soll lesbar sein, nicht dramatisch. */
+.runner-blitz {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(200, 40, 20, 0) 40%, rgba(200, 40, 20, 0.55) 100%);
+  animation: runner-blitz-ab 0.55s ease-out forwards;
+}
+@keyframes runner-blitz-ab {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .runner-banner {
   position: absolute;
-  top: 18%;
-  left: 0;
-  right: 0;
+  inset: 0;
   z-index: 2;
-  text-align: center;
+  display: grid;
+  place-items: center;
   pointer-events: none;
 }
 .runner-banner span {
-  display: inline-block;
-  padding: 0.4rem 1.2rem;
-  border-radius: 999px;
-  background: #e8b84acc;
-  color: #1a1008;
-  font-weight: 800;
-  font-size: 1.4rem;
-  letter-spacing: 0.08em;
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffe08a;
+  text-shadow: 0 2px 0 rgba(20, 10, 2, 0.85), 0 6px 18px rgba(0, 0, 0, 0.5);
   animation: runner-banner-pop 0.45s ease-out;
 }
 @keyframes runner-banner-pop {
@@ -9369,6 +9508,7 @@ main.auth > .muted {
     transform: scale(1);
   }
 }
+
 
 /* =========================================================================
    Der grosse Spielen-Knopf im Hub — gemalte Platte statt CSS-Gruen.

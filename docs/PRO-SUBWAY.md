@@ -40,6 +40,52 @@ Kunst-Originale: `brauweg-art/3d/Subway/` (außerhalb des Client-Repos).
 
 ---
 
+## 1b. Umbau vom 5. August, abends (Claude)
+
+Der große Feel-/Logik-Pass. Was aus Abschnitt 2 und 3 damit **erledigt** ist:
+
+- **Hitboxen je Prop** — Tabelle `KASTEN` (Halbmaße x/z je Prop), je Tor eine
+  eigene Durchlass-Unterkante (`TOR_LUECKE`), je Fahrzeug Kasten + Sprungkante.
+  Dazu Nachsicht-Faktor 0,9: Streifschüsse sind kein Tod. **Debug:**
+  `/?dev=runner&hitbox=1` zeichnet alle Kästen als rotes Drahtgitter (Ticket 1).
+- **Faire Muster** — die freie Spur wandert je belegtem Platz um höchstens
+  eine Spur (`pfadSpur`), unlösbare Wände kann der Zufall nicht mehr bauen.
+  Dichte steigt mit der Strecke; ab 240 m Doppel-Hindernisse (freie Spur
+  bleibt frei); Fahrzeuge erst ab 120 m und **fahren einem jetzt wirklich
+  entgegen** (eigener Vortrieb je Art).
+- **Meter sind Meter** — Tempo wird je Bild aufintegriert (`Laufuhr`), statt
+  +1 je 200 ms Wanduhr. Tempo hängt an der Strecke: 15 → 30 m/s bis ~525 m.
+- **Score-Wirrwarr weg** — Münzen zählen 1:1, Punkte = Meter + 10 je Münze,
+  die Rechnung steht offen auf dem Endblatt. Cashout schickt die Münzzahl.
+- **Rekord am Gerät** (localStorage `brauweg.prosubway.rekord`), „Neuer
+  Rekord!" mit Fanfare auf dem Endblatt, Rekord im Startblatt.
+- **Pause** — Knopf im HUD, Escape/P, Tafel mit Weiter/Neustart/Zurück; bei
+  `visibilitychange → hidden` pausiert der Lauf von selbst (sonst stirbt man
+  gedrosselt im Hintergrund).
+- **Geisterlobby raus** — statt 5 s „Hindernisse ohne Kollision" (lehrt genau
+  das Falsche) gibt es einen Anlauf: die ersten Hindernisse kommen erst nach
+  34 m an.
+- **Feedback** — Münzton (`kauf`, leise), Treffer (`fehler` + roter Blitz +
+  Kamera-Wackler + Umfaller nach vorn), Rekord (`sieg`), Knöpfe (`tipp`),
+  „+1" steigt aus der Münzkapsel. Sprung mit Streck/Stauch, Spurwechsel mit
+  Kurvenlage, Sprung-Eingabepuffer (140 ms vor der Landung).
+- **Menüs als Holztafeln** — dieselben Klassen wie im Hub (`hub-tafel`,
+  `hub-knopf--a/-a-gold`), HUD als Messingkapseln, Pause-Knopf auf
+  `side-btn-grund`. Der graue Systemkasten ist raus.
+- **Assets geschrumpft** — alle 20 GLBs mit `~/modellwerkzeug/schrumpfen.mjs`:
+  **62 MB → 5,9 MB** (Props 512er-Texturen, Pinguin 1024). Animationen
+  geprüft, beide Clips intakt. Props laden gestaffelt im Leerlauf nach,
+  Pinguin + Fahrzeuge sofort (Ticket 3).
+- **Kamera-Explosion gefixt** — `KameraFuehrung` lerpte mit ungekapptem
+  `delta`; nach einem Tab-Wechsel (rAF gedrosselt, delta sekundengroß) schoss
+  der Lerp-Faktor über 1 und die Kamera ins Nichts. `dt`-Deckel 0,05.
+
+**Noch offen aus Abschnitt 2/3:** echte Jump-/Slide-Clips im Mixer (weiter
+Tween), Kästen am Gerät nachstimmen (`hitbox=1`), Biome-Optik, Power-ups,
+Rangliste, Quest-Anbindung, Banner PNG→WebP.
+
+---
+
 ## 2. Bekannte Bugs / Baustellen (zuerst fixen)
 
 ### Gameplay / Physik
