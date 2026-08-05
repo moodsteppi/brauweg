@@ -57,6 +57,12 @@ export interface RoundResult {
   scores: Record<number, number>;
   isSolo: boolean;
   soloSeat: number | null;
+  /**
+   * Der Sieg ist wegen zu niedriger Ansage gedreht worden (Hausregel Feigling).
+   * `winner` ist dann NICHT die Partei mit den meisten Augen — ohne diesen
+   * Hinweis sieht die Abrechnung wie ein Rechenfehler aus.
+   */
+  feigling?: boolean;
 }
 
 export interface RoundView {
@@ -91,7 +97,33 @@ export interface RoundView {
   standings: Record<number, number>;
   /** Gewonnene Stiche je Sitz, immer gefuellt. */
   trickCounts?: Record<number, number>;
-  pendingPflichtansage: { seat: number; trickPoints: number; canDecline: boolean } | null;
+  /**
+   * `reason` benennt den Anlass: `trick`, `hochzeit`, `armut` oder `schweine`.
+   * Ohne ihn stand im Blatt immer "Der erste Stich hatte N Augen" — bei einer
+   * Hochzeit ist es der Klaerungsstich, und bei Schweinen oder Armut gibt es
+   * ueberhaupt keinen Stich.
+   */
+  pendingPflichtansage: {
+    seat: number;
+    trickPoints: number;
+    canDecline: boolean;
+    reason?: string;
+  } | null;
+  /**
+   * Sitze, die die Schweine halten. Nur gefuellt, wenn der Schweine-Ausloeser
+   * aktiv ist — sonst waere es Geheimwissen, das der Server nicht herausgibt.
+   */
+  schweineSeats?: number[];
+  /**
+   * Kartenordnung je waehlbarem Solo, nur in der Vorbehaltsabfrage.
+   *
+   * Damit sortiert der Client die Hand vorab um, wenn ein Solo angetippt aber
+   * noch nicht bestaetigt ist. Die Ordnung kommt vom Server — welche Karte
+   * Trumpf ist, rechnet der Client nie selbst aus.
+   */
+  soloVorschau?: Record<string, { trumps: string[]; fehl?: Record<string, string[]> }>;
+  /** Sitze mit noch offenem Pflichtsolo. Leer, wenn die Regel aus ist. */
+  pflichtsoloOffen?: number[];
   result: RoundResult | null;
   isMyTurn: boolean;
   armut: { role: string | null; awaiting: string | null; handoverSize: number };

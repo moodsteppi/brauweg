@@ -58,14 +58,26 @@ test('Bot: 1000 Partien laufen ohne Regelverstoss durch', () => {
   let soloParties = 0;
 
   for (let i = 0; i < 1000; i++) {
+    /*
+     * Die Ausloeser haengen an ihrer Grundregel — der Validator weist einen
+     * Schweine-Ausloeser ohne Schweinchen ab. Deshalb werden die Wuerfel hier
+     * vorher geworfen und dann verknuepft, statt sie im Objekt zu streuen.
+     */
+    const pflichtansage = rng() < 0.5;
+    const schweinchen = rng() < 0.5;
     const rs = makeRuleSet({
       deck: rng() < 0.5 ? 'with9' : 'without9',
       rounds: 4,
       pflichtsolo: rng() < 0.7,
-      pflichtansage: rng() < 0.5,
+      pflichtansage,
+      pflichtansageFolge: pflichtansage && rng() < 0.5,
+      pflichtansageHochzeit: pflichtansage && rng() < 0.5,
+      pflichtansageArmut: pflichtansage && rng() < 0.5,
+      pflichtansageSchweine: pflichtansage && schweinchen && rng() < 0.5,
+      feigling: rng() < 0.4,
       bock: true,
       bockTriggers: ['zeroResult', 'reAndKontra', 'solo'],
-      schweinchen: rng() < 0.5,
+      schweinchen,
       superSchweine: rng() < 0.3,
       secondDulleBeatsFirst: rng() < 0.5,
       defusedDullen: rng() < 0.3,
@@ -87,9 +99,30 @@ test('Bot: 1000 Partien laufen ohne Regelverstoss durch', () => {
       if (!rs.pflichtansage) {
         assert.equal(summary.announcements.re, false);
         assert.equal(summary.announcements.kontra, false);
+        assert.equal(summary.announcements.reAbsage, 0);
+        assert.equal(summary.announcements.kontraAbsage, 0);
+      } else {
+        /*
+         * Mit Pflichtansage entstehen Absagen, ohne dass der Bot etwas gewollt
+         * haette — jeder Ausloeser hebt die Stufe um eins. Mehr als VIER
+         * koennen eine Partei nicht treffen: Schweine und Armut vor dem ersten
+         * Stich, dazu der Bezugsstich und der Folgestich. Das ergibt Re plus
+         * drei Absagen, also hoechstens Keine 30.
+         *
+         * Diese Obergrenze ist der eigentliche Riegel: Ein hoeherer Wert heisst,
+         * dass eine Pflicht nachfeuert, statt genau einmal zu greifen. Genau
+         * dieser Fehler steckte in der Hochzeit-Pruefung.
+         */
+        const grenze = 3;
+        assert.ok(
+          summary.announcements.reAbsage <= grenze,
+          `Partie ${i}, Runde ${summary.roundIndex}: reAbsage ${summary.announcements.reAbsage} — hoechstens ${grenze} Stufen sind erzwingbar`,
+        );
+        assert.ok(
+          summary.announcements.kontraAbsage <= grenze,
+          `Partie ${i}, Runde ${summary.roundIndex}: kontraAbsage ${summary.announcements.kontraAbsage} — hoechstens ${grenze} Stufen sind erzwingbar`,
+        );
       }
-      assert.equal(summary.announcements.reAbsage, 0);
-      assert.equal(summary.announcements.kontraAbsage, 0);
     }
 
     if (rs.pflichtsolo) {

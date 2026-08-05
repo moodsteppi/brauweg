@@ -58,6 +58,37 @@ export function validateRuleSet(rs: RuleSet): ValidationIssue[] {
       'Die moralische Schwelle muss unter der Pflichtschwelle liegen.',
     );
   }
+  if (rs.feigling && !rs.announcements) {
+    err('FEIGLING_NEEDS_ANNOUNCEMENTS', 'Feigling setzt aktivierte Ansagen voraus.');
+  }
+
+  /*
+   * Die drei zusaetzlichen Ausloeser brauchen zweierlei: die Pflichtansage
+   * selbst und die Regel, an der sie haengen. Ein Ausloeser fuer eine Hochzeit,
+   * die es am Tisch nicht gibt, ist kein strengeres Regelwerk, sondern ein
+   * Haken, der nie greift — und damit eine Falle beim Tischbau.
+   */
+  if (rs.pflichtansageFolge && !rs.pflichtansage) {
+    err('PFLICHT_FOLGE_NEEDS_PFLICHT', 'Die Folgeansage setzt die Pflichtansage voraus.');
+  }
+  if (rs.pflichtansageHochzeit && !rs.pflichtansage) {
+    err('PFLICHT_HOCHZEIT_NEEDS_PFLICHT', 'Der Hochzeit-Ausloeser setzt die Pflichtansage voraus.');
+  }
+  if (rs.pflichtansageHochzeit && !rs.hochzeit) {
+    err('PFLICHT_HOCHZEIT_NEEDS_HOCHZEIT', 'Der Hochzeit-Ausloeser setzt erlaubte Hochzeiten voraus.');
+  }
+  if (rs.pflichtansageArmut && !rs.pflichtansage) {
+    err('PFLICHT_ARMUT_NEEDS_PFLICHT', 'Der Armut-Ausloeser setzt die Pflichtansage voraus.');
+  }
+  if (rs.pflichtansageArmut && !rs.armut) {
+    err('PFLICHT_ARMUT_NEEDS_ARMUT', 'Der Armut-Ausloeser setzt erlaubte Armut voraus.');
+  }
+  if (rs.pflichtansageSchweine && !rs.pflichtansage) {
+    err('PFLICHT_SCHWEINE_NEEDS_PFLICHT', 'Der Schweine-Ausloeser setzt die Pflichtansage voraus.');
+  }
+  if (rs.pflichtansageSchweine && !rs.schweinchen) {
+    err('PFLICHT_SCHWEINE_NEEDS_SCHWEINCHEN', 'Der Schweine-Ausloeser setzt aktivierte Schweinchen voraus.');
+  }
 
   // --- Solo und Pflichtsolo ---
   if (rs.pflichtsolo && rs.solos.length === 0) {

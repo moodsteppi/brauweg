@@ -4366,6 +4366,61 @@ main.auth > .muted {
   z-index: 1;
 }
 
+/*
+ * Die Kopfzeile steht hoeher als ihre Geschwister.
+ *
+ * Der Grund liegt im Zuruf-Blatt: Es haengt am Knopf in der Kopfzeile, ist
+ * `position: fixed` und will ueber dem ganzen Bildschirm liegen. Die Regel
+ * darueber macht `.doko-top` aber zum Stapelkontext, und damit gilt der
+ * z-index des Blattes (320) nur INNERHALB der Kopfzeile. `.doko-me` und
+ * `.doko-hand` tragen dasselbe `z-index: 1`, stehen jedoch spaeter im Baum —
+ * sie malten deshalb ueber das offene Blatt, und die unterste Zuruf-Reihe war
+ * nicht antippbar.
+ *
+ * Die Ausnahmeliste oben hilft hier nicht: Sie greift nur fuer direkte Kinder,
+ * das Blatt liegt eine Ebene tiefer. Also steigt der Kontext selbst. Sichtbar
+ * aendert das nichts, weil Kopfzeile und Handkarten sich nie ueberlappen.
+ *
+ * Die Selektorlaenge ist Absicht — sie muss die Spezifitaet der Regel darueber
+ * erreichen, sonst greift sie nicht.
+ */
+.doko > .doko-top:not(.doko-bg):not(.doko-sheet) {
+  z-index: 40;
+}
+
+/*
+ * Feigling-Hinweis in der Auswertung. Warnfarbe, nicht Fehlerfarbe: Die Regel
+ * hat funktioniert, das Ergebnis ist nur ueberraschend.
+ */
+.doko-feigling {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  background: rgba(224, 123, 0, 0.16);
+  border: 1px solid rgba(224, 123, 0, 0.4);
+  color: #f0b060;
+}
+.doko-feigling strong { color: #ffcf8a; }
+
+/* Schweine-Abzeichen: rosa statt grau, damit es sich von "ausgestiegen" und
+   "Bot uebernimmt" abhebt — es sagt etwas ueber das Blatt, nicht ueber den
+   Spieler. */
+.doko-tag--schweine {
+  background: rgba(226, 130, 160, 0.22);
+  color: #f0a8c0;
+  font-weight: 700;
+}
+
+/* Wer sein Pflichtsolo noch offen hat — eine Zeile im Vorbehaltsblatt, keine
+   eigene Tafel. Sie beantwortet eine Frage, sie ist nicht das Thema. */
+.vb-pflichtsolo {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
 /* Holzschild als Ueberschrift. Die Schrift steht in der leeren Mitte. */
 .lobby-schild {
   flex: 1;

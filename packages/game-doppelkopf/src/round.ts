@@ -37,7 +37,12 @@ import {
   NO_ANNOUNCEMENTS,
   scoreRound,
 } from './scoring.js';
-import { checkPflichtansage, mayAnnounce } from './pflichtansage.js';
+import {
+  checkPflichtansage,
+  mayAnnounce,
+  nextOpenLevel,
+  type PflichtansageReason,
+} from './pflichtansage.js';
 import { type VorbehaltKind, resolveVorbehalte } from './vorbehalte.js';
 import { canAnnounceArmut, handoverSize } from './armut.js';
 import { schmeissOption } from './schmeiss.js';
@@ -84,6 +89,12 @@ export interface PendingPflichtansage {
   readonly seat: number;
   readonly trickPoints: number;
   readonly canDecline: boolean;
+  /**
+   * Woher die Pflicht kommt. Die Oberflaeche benennt damit den Grund — "30
+   * Augen im ersten Stich" ist etwas anderes als "du haeltst die Schweine",
+   * und nur die Stich-Pflicht verlaengert die Kette auf den zweiten Stich.
+   */
+  readonly reason: PflichtansageReason;
 }
 
 export interface RoundOptions {
@@ -128,6 +139,30 @@ export interface RoundState {
   /** Protokoll der Ansagen mit Sitz, fuer Anzeige und Zuordnung. */
   readonly ansagen: readonly AnsageEntry[];
   readonly pendingPflichtansage: PendingPflichtansage | null;
+  /**
+   * Im Bezugsstich ist eine Pflicht- oder eine zugestimmte moralische Ansage
+   * zustande gekommen. Nur dann wird auch der Stich danach geprueft.
+   */
+  readonly pflichtansageKette: boolean;
+  /**
+   * Der Bezugsstich der Pflichtansage.
+   *
+   * Normalerweise der erste Stich. Bei einer Hochzeit dagegen der
+   * Klaerungsstich: Vorher stehen die Parteien nicht fest, und eine Pflicht
+   * ohne bekannte Partei waere nicht zuzuordnen. Weil die Klaerung bis zum
+   * dritten Stich dauern kann, ist die Nummer nicht vorhersagbar und muss
+   * mitgeschrieben werden — an ihr haengt, welcher Stich als naechster zaehlt.
+   */
+  readonly pflichtansageRefTrick: number | null;
+  /**
+   * Weitere offene Pflichten hinter der sichtbaren.
+   *
+   * Armut und Schweine schlagen beide vor dem ersten Stich zu, es koennen also
+   * zwei Pflichten gleichzeitig offen sein. Sichtbar ist immer nur der Kopf
+   * (`pendingPflichtansage`) — Protokoll, Adapter und Client bleiben dadurch
+   * unveraendert und sehen weiter genau eine Abfrage auf einmal.
+   */
+  readonly pflichtansageWarteschlange: readonly PendingPflichtansage[];
 
   readonly result: RoundResult | null;
   readonly triggersBock: boolean;
@@ -211,6 +246,9 @@ export function createRound(
     cardsPlayed: Object.fromEntries(seats.map((s) => [s, 0])),
     announcements: { ...NO_ANNOUNCEMENTS },
     pendingPflichtansage: null,
+    pflichtansageKette: false,
+    pflichtansageRefTrick: null,
+    pflichtansageWarteschlange: [],
     result: null,
     triggersBock: false,
     schweinchen,
@@ -335,14 +373,14 @@ function resolveVorbehaltPhase(state: RoundState): RoundState {
       const entry = state.vorbehalte.find((v) => v.seat === winner.seat)!;
       const gameType: GameType = { kind: 'solo', solo: entry.solo! };
       const order = buildOrder(gameType, state.rs, schweinCtx(state, winner.seat, gameType));
-      return {
+      return mitRundenbeginnPflichten({
         ...state,
         phase: 'playing',
         gameType,
         order,
         reSeats: [winner.seat],
         turn: soloLead(state, winner.seat),
-      };
+      });
     }
 
     case 'armut':
@@ -361,7 +399,7 @@ function resolveVorbehaltPhase(state: RoundState): RoundState {
 
     case 'hochzeit': {
       const gameType: GameType = { kind: 'hochzeit' };
-      return {
+      return mitRundenbeginnPflichten({
         ...state,
         phase: 'playing',
         gameType,
@@ -370,9 +408,65 @@ function resolveVorbehaltPhase(state: RoundState): RoundState {
         hochzeitBride: winner.seat,
         hochzeitResolved: false,
         turn: state.vorhand,
-      };
+      });
     }
   }
+}
+
+/**
+ * Pflichten, die schon vor dem ersten Stich feststehen: Armut und Schweine.
+ *
+ * Beide haengen am TATSAECHLICH GESPIELTEN Spieltyp, nicht an einer Ansage.
+ * Sagt einer Hochzeit und einer Armut an, wird Armut gespielt — der
+ * Hochzeit-Ansager spielt seine Hochzeit gar nicht und bekommt deshalb keine
+ * Pflicht. Genau dieser Fehler ist damit ausgeschlossen: Hier steht nur, was
+ * die Runde geworden ist.
+ *
+ * Die Hochzeit fehlt in dieser Liste mit Absicht — sie loest erst am
+ * Klaerungsstich aus, weil vorher die Parteien nicht feststehen.
+ */
+function mitRundenbeginnPflichten(state: RoundState): RoundState {
+  if (!state.rs.pflichtansage) return state;
+
+  let next = state;
+  if (state.rs.pflichtansageSchweine) {
+    for (const seat of state.seats) {
+      if (state.schweinchen[seat]) next = pflichtEinreihen(next, seat, 'schweine');
+    }
+  }
+  if (state.rs.pflichtansageArmut && state.armut) {
+    next = pflichtEinreihen(next, state.armut.seat, 'armut');
+  }
+  return next;
+}
+
+/**
+ * Haengt eine Pflicht an. Ist noch keine offen, wird sie sofort sichtbar,
+ * sonst wartet sie hinter der laufenden.
+ *
+ * Kein `canDecline`: Diese Pflichten haengen nicht an einer Augenzahl, sondern
+ * an einer Tatsache auf der Hand. Es gibt keine moralische Zwischenstufe, an
+ * der man abwaegen koennte.
+ */
+function pflichtEinreihen(
+  state: RoundState,
+  seat: number,
+  reason: PflichtansageReason,
+): RoundState {
+  if (nextOpenLevel(state.announcements, partyOf(state, seat)) === null) return state;
+
+  const entry: PendingPflichtansage = {
+    seat,
+    trickPoints: 0,
+    canDecline: false,
+    reason,
+  };
+  return state.pendingPflichtansage === null
+    ? { ...state, pendingPflichtansage: entry }
+    : {
+        ...state,
+        pflichtansageWarteschlange: [...state.pflichtansageWarteschlange, entry],
+      };
 }
 
 function schweinCtx(state: RoundState, seat: number, gameType: GameType) {
@@ -411,14 +505,14 @@ function startNormalGame(state: RoundState): RoundState {
     ? schweinCtx(state, holder, state.gameType)
     : {};
 
-  return {
+  return mitRundenbeginnPflichten({
     ...state,
     phase: 'playing',
     reSeats,
     stilleHochzeit: stille,
     order: buildOrder(state.gameType, state.rs, ctx),
     turn: state.vorhand,
-  };
+  });
 }
 
 // --- Armut ------------------------------------------------------------------
@@ -534,7 +628,7 @@ function applyArmutReturn(
     [armut.seat]: [...state.hands[armut.seat], ...back],
   };
 
-  return {
+  return mitRundenbeginnPflichten({
     ...state,
     phase: 'playing',
     hands,
@@ -545,7 +639,7 @@ function applyArmutReturn(
       handoverDone: true,
       returnedTrumps: back.filter((c) => isTrump(c, state.order)).length,
     },
-  };
+  });
 }
 
 // --- Spielphase -------------------------------------------------------------
@@ -595,8 +689,16 @@ function applyPlayCard(
     turn: res.winnerSeat,
   };
 
+  /*
+   * Ob die Hochzeit GERADE JETZT geklaert wurde, laesst sich nur am Uebergang
+   * ablesen. `hochzeitResolved` allein taugt nicht: Das Flag bleibt bis zum
+   * Rundenende wahr, und genau daran hing der Fehler, dass die Pflichtansage
+   * bei jedem weiteren fetten Stich erneut ausloeste.
+   */
+  const warGeklaert = next.hochzeitResolved;
   next = maybeResolveHochzeit(next);
-  next = maybeCheckPflichtansage(next, trick, tricks.length);
+  const jetztGeklaert = !warGeklaert && next.hochzeitResolved;
+  next = maybeCheckPflichtansage(next, trick, tricks.length, jetztGeklaert);
 
   const done = state.seats.every((s) => next.hands[s].length === 0);
   return done ? finish(next) : next;
@@ -628,25 +730,52 @@ function maybeCheckPflichtansage(
   state: RoundState,
   trick: TrickRecord,
   trickNumber: number,
+  hochzeitJetztGeklaert: boolean,
 ): RoundState {
   if (!state.rs.pflichtansage) return state;
 
-  // Bei Hochzeit zaehlt der Klaerungsstich, sonst der erste Stich.
-  const relevant =
-    state.gameType.kind === 'hochzeit'
-      ? state.hochzeitResolved && trick.winnerSeat !== state.hochzeitBride
-      : trickNumber === 1;
-  if (!relevant) return state;
+  /*
+   * Bezugsstich ist der erste Stich — bei einer Hochzeit dagegen der
+   * Klaerungsstich. Der Grund liegt nicht in der Augenzahl, sondern in den
+   * Parteien: Bis zur Klaerung ist nicht bekannt, wen eine Pflicht ueberhaupt
+   * trifft. Weil die Klaerung bis zum dritten Stich dauern kann, ist die Nummer
+   * nicht vorhersagbar, und der Stich DANACH haengt an ihr statt an einer
+   * festen Zwei.
+   *
+   * Geprueft wird ausschliesslich der Bezugsstich und der eine danach — und der
+   * nur, wenn im Bezugsstich wirklich angesagt wurde. Vorher stand hier
+   * `hochzeitResolved`, das bis zum Rundenende wahr bleibt; jeder weitere fette
+   * Stich loeste deshalb erneut aus.
+   */
+  const istHochzeit = state.gameType.kind === 'hochzeit';
+  const istBezug = istHochzeit ? hochzeitJetztGeklaert : trickNumber === 1;
+  const istFolgestich =
+    state.rs.pflichtansageFolge &&
+    state.pflichtansageKette &&
+    state.pflichtansageRefTrick !== null &&
+    trickNumber === state.pflichtansageRefTrick + 1;
+  if (!istBezug && !istFolgestich) return state;
 
-  const check = checkPflichtansage(state.rs, trick);
-  if (check.kind === 'none' || check.seat === null) return state;
+  // Der Bezugsstich wird auch dann vermerkt, wenn er zu mager fuer eine Pflicht
+  // ist: Ohne ihn waere spaeter nicht zu sagen, welcher Stich der naechste war.
+  const merk: RoundState = istBezug
+    ? { ...state, pflichtansageRefTrick: trickNumber }
+    : state;
+
+  const check = checkPflichtansage(merk.rs, trick);
+  if (check.kind === 'none' || check.seat === null) return merk;
+
+  // Steht die Partei schon auf schwarz, ist nichts mehr zu fordern.
+  const party = partyOf(merk, check.seat);
+  if (nextOpenLevel(merk.announcements, party) === null) return merk;
 
   return {
-    ...state,
+    ...merk,
     pendingPflichtansage: {
       seat: check.seat,
       trickPoints: check.trickPoints,
       canDecline: check.canDecline,
+      reason: istHochzeit && istBezug ? 'hochzeit' : 'trick',
     },
   };
 }
@@ -686,7 +815,14 @@ function setAnnouncement(
    * will, muss vorher Re gesagt haben. Das haelt die Ansagen fuer alle am
    * Tisch nachvollziehbar und macht die Fristen zu echten Entscheidungen.
    */
+  /*
+   * Re gehoert der Partei, nicht dem Sitz: Steht es, kann der Partner es nicht
+   * noch einmal sagen. Vorher ging das — zwei Spieler sagten Re, die Anzeige
+   * zeigte es zweimal, und der Spielwert verdoppelte sich trotzdem nur einmal.
+   * Wer nachlegen will, nimmt die naechste Stufe.
+   */
   if (party === 're') {
+    if (level === 0 && ann.re) fail('Re steht schon');
     if (level > 0 && !ann.re) fail('Erst Re, dann eine Absage');
     ann.re = true;
     if (level > 0) {
@@ -694,6 +830,7 @@ function setAnnouncement(
       ann.reAbsage = level;
     }
   } else {
+    if (level === 0 && ann.kontra) fail('Kontra steht schon');
     if (level > 0 && !ann.kontra) fail('Erst Kontra, dann eine Absage');
     ann.kontra = true;
     if (level > 0) {
@@ -718,10 +855,40 @@ function applyPflichtansage(
   if (pending.seat !== a.seat) fail('Falscher Sitz');
   if (!a.accept && !pending.canDecline) fail('Diese Ansage ist verpflichtend');
 
-  const cleared = { ...state, pendingPflichtansage: null };
-  return a.accept
-    ? setAnnouncement(cleared, a.seat, partyOf(state, a.seat), 0)
-    : cleared;
+  /*
+   * Verlaengert wird die Kette nur von einer ZUGESTIMMTEN Pflicht am
+   * Bezugsstich — also aus dem Stich selbst oder aus der Hochzeit, die den
+   * Bezugsstich ja verschiebt. Armut und Schweine schlagen vor dem ersten Stich
+   * zu und verschieben nichts: Sie heben die Stufe, aber der Bezugsstich bleibt
+   * der erste. Wer eine moralische Pflicht ablehnt, hat nichts angesagt — dann
+   * gibt es auch keinen Grund, den Stich danach noch zu pruefen.
+   */
+  const amBezugsstich =
+    pending.reason === 'trick' || pending.reason === 'hochzeit';
+  const kette = state.pflichtansageKette || (a.accept && amBezugsstich);
+
+  // Die naechste wartende Pflicht rueckt nach und wird damit sichtbar.
+  const [naechste, ...rest] = state.pflichtansageWarteschlange;
+  const cleared: RoundState = {
+    ...state,
+    pendingPflichtansage: naechste ?? null,
+    pflichtansageWarteschlange: rest,
+    pflichtansageKette: kette,
+  };
+  if (!a.accept) return cleared;
+
+  /*
+   * Die Pflicht ist die naechste OFFENE Stufe der Partei, nicht stur Re.
+   *
+   * Vorher stand hier eine feste 0. Hatte die Partei schon Re gesagt, lief die
+   * Pflichtansage damit in "Re steht schon" — die Ansage wurde nicht
+   * hochgehandelt, sondern verfiel. Steht die Partei schon auf schwarz, gibt es
+   * nichts mehr zu fordern und die Pflicht verfaellt still.
+   */
+  const party = partyOf(state, a.seat);
+  const level = nextOpenLevel(state.announcements, party);
+  if (level === null) return cleared;
+  return setAnnouncement(cleared, a.seat, party, level);
 }
 
 function finish(state: RoundState): RoundState {
@@ -750,7 +917,13 @@ function finish(state: RoundState): RoundState {
   // und die Wertung steht fest. Bliebe sie stehen, hielte sie die
   // Rundenpause auf - currentActor zeigte auf einen Sitz, der nichts mehr
   // tun kann.
-  return { ...state, phase: 'finished', pendingPflichtansage: null, result };
+  return {
+    ...state,
+    phase: 'finished',
+    pendingPflichtansage: null,
+    pflichtansageWarteschlange: [],
+    result,
+  };
 }
 
 // --- Sichtbarkeitsfilter ----------------------------------------------------
@@ -794,6 +967,15 @@ export interface PlayerView {
    */
   readonly trickCounts: Readonly<Record<number, number>>;
   readonly pendingPflichtansage: PendingPflichtansage | null;
+  /**
+   * Sitze, die die Schweine halten — dauerhaft, nicht als kurze Meldung.
+   *
+   * Gefuellt nur, wenn der Schweine-Ausloeser aktiv ist. Sonst waere es
+   * Geheimwissen: Wer beide Karo-Asse haelt, sagt es ohne diese Regel niemandem.
+   * Mit ihr muss er ansagen, der Tisch weiss es also ohnehin — und dann gehoert
+   * es an den Sitz und nicht in eine Blase, die nach drei Sekunden weg ist.
+   */
+  readonly schweineSeats: readonly number[];
   readonly result: RoundResult | null;
 
   /** Ist dieser Sitz gerade dran? */
@@ -803,6 +985,30 @@ export interface PlayerView {
   /** Wird dieser Sitz vorgefuehrt und muss ein Solo ansagen? */
   readonly forcedSolo: boolean;
   readonly soloOptions: readonly SoloKind[];
+  /**
+   * Kartenordnung je waehlbarem Solo — fuer die Vorschau in der
+   * Vorbehaltsabfrage.
+   *
+   * Wer ein Solo antippt, soll seine Hand sofort nach DESSEN Trumpfordnung
+   * sortiert sehen, bevor er bestaetigt. Ohne diese Vorschau muss man sich die
+   * Umsortierung im Kopf vorstellen, und genau das ist bei Damen- oder
+   * Bubensolo die eigentliche Entscheidung.
+   *
+   * Der Server liefert die Ordnung, nicht der Client: Welche Karte Trumpf ist,
+   * entscheidet allein das Spielmodul (`DESIGN.md`, Grundsatz 6). Ein Client,
+   * der Solo-Trumpfordnungen selbst nachbaut, waere die zweite Wahrheit.
+   *
+   * Nur in der Vorbehaltsabfrage gefuellt und nur fuer den Sitz, der dran ist.
+   */
+  readonly soloVorschau: Readonly<Record<string, CardOrder>>;
+  /**
+   * Sitze, die ihr Pflichtsolo noch offen haben. Leer, wenn die Regel aus ist.
+   *
+   * Ohne diese Angabe ist am Tisch nicht zu sehen, wen die Vorfuehrung noch
+   * treffen kann — und wer selbst noch dran ist. Die Zahl steht in der Partie,
+   * nicht in der Runde; sichtbar war sie bisher nirgends.
+   */
+  readonly pflichtsoloOffen: readonly number[];
   /** Eigene Rolle im Armut-Ablauf und was gerade von mir erwartet wird. */
   readonly armut: {
     readonly role: 'poor' | 'candidate' | 'partner' | null;
@@ -922,14 +1128,47 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     standings,
     trickCounts,
     pendingPflichtansage: state.pendingPflichtansage,
+    schweineSeats: state.rs.pflichtansageSchweine
+      ? state.seats.filter((s) => state.schweinchen[s])
+      : [],
     result: state.result,
     isMyTurn,
     allowedVorbehalte:
       state.phase === 'vorbehalt' && isMyTurn ? allowedVorbehalte(state, seat) : [],
     forcedSolo: state.forcedSoloSeat === seat,
     soloOptions: state.rs.solos,
+    soloVorschau: soloVorschauFuer(state, seat, isMyTurn),
+    pflichtsoloOffen: state.rs.pflichtsolo
+      ? state.seats.filter((s) => !state.soloPlayed.includes(s))
+      : [],
     armut: { role, awaiting, handoverSize },
   };
+}
+
+/**
+ * Kartenordnung je waehlbarem Solo, fuer die Vorschau vor dem Bestaetigen.
+ *
+ * Gerechnet wird sie nur in der Vorbehaltsabfrage und nur fuer den Sitz, der
+ * dran ist: Sie kostet eine Ordnung je Solovariante, und ausserhalb der Abfrage
+ * kann sie niemand brauchen.
+ *
+ * Die Schweinchen des eigenen Blattes gehen mit ein — sie haengen am Spieltyp,
+ * und eine Vorschau, die sie weglaesst, zeigte im Damensolo einen Karo-Ass-Platz
+ * an, den es dort nicht gibt.
+ */
+function soloVorschauFuer(
+  state: RoundState,
+  seat: number,
+  isMyTurn: boolean,
+): Record<string, CardOrder> {
+  if (state.phase !== 'vorbehalt' || !isMyTurn) return {};
+
+  const out: Record<string, CardOrder> = {};
+  for (const solo of state.rs.solos) {
+    const gameType: GameType = { kind: 'solo', solo };
+    out[solo] = buildOrder(gameType, state.rs, schweinCtx(state, seat, gameType));
+  }
+  return out;
 }
 
 function handoverSizeFor(state: RoundState, seat: number): number {

@@ -13,7 +13,7 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 128 Doppelkopf-Tests, 117 Zauberer-Tests, **259 Servertests**,
+**Prüfstand:** 146 Doppelkopf-Tests, 117 Zauberer-Tests, **259 Servertests**,
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
 
@@ -343,6 +343,123 @@ existierte.
 Reihenfolge, die sich daraus ergibt: erst Node installieren und den Umbau für
 sich übersetzen und testen, dann `tischware.ts` auf `Preis` umstellen, dann auf
 `origin/staging` mergen — nicht umgekehrt.
+
+---
+
+## Am 5. August: Ansageregeln, Feigling und die Zuruf-Überdeckung
+
+Alles im Doppelkopf-Modul und im Client, **keine Migration**, keine Änderung am
+Schema. Prüfstand danach: **146 Doppelkopf**, 117 Zauberer, 259 Server.
+
+### Die Pflichtansage ist eine Kette geworden
+
+Vollständig in [doppelkopf-spec.md](doppelkopf-spec.md) 3.7. Das Wichtigste:
+
+**Jeder Auslöser hebt um genau eine Stufe**, gefordert wird die *nächste offene
+Stufe der Partei*. Damit ergibt sich die Kette von selbst — Hochzeit + Schweine +
+zwei fette Stiche sind Re, keine 90, keine 60, keine 30 —, ohne dass irgendwo
+eine Zahlenfolge gepflegt werden muss.
+
+**Vier neue Schalter:** `pflichtansageFolge` (der Stich nach dem Bezugsstich),
+`pflichtansageHochzeit`, `pflichtansageArmut`, `pflichtansageSchweine`. Alle aus
+in der Vorgabe. Der Validator verlangt zu jedem die Grundregel, an der er hängt —
+ein Schweine-Auslöser ohne Schweinchen ist ein Haken, der nie greift, und damit
+eine Falle beim Tischbau.
+
+**Drei Fehler dabei behoben:**
+
+1. **Die Pflichtansage feuerte bei Hochzeit mehrfach.** `hochzeitResolved` bleibt
+   bis zum Rundenende wahr; die alte Bedingung löste deshalb bei *jedem* weiteren
+   fetten Stich erneut aus. Geprüft wird jetzt der **Übergang** — „wurde gerade
+   jetzt geklärt" —, nicht der Dauerzustand.
+2. **Die Pflicht handelte die Stufe nicht hoch.** In `applyPflichtansage` stand
+   eine feste `0`. Hatte die Partei schon Re gesagt, lief die Pflicht in „Re steht
+   schon" und **verfiel**.
+3. **Der Partner konnte ein zweites Re sagen.** `legalActions` bot es nie an
+   (`made` fragt die Partei ab), die Engine nahm es aber an: Es stand doppelt in
+   der Anzeige und verdoppelte den Spielwert nur einmal.
+
+**Gefunden hat das der Bot-Fuzz, nicht ein Mensch.** Nach dem Hochhandeln stand
+`reAbsage` auf 1 statt 0, und daran hing das Mehrfach-Feuern. Der Test über 1000
+Partien schaltet die neuen Regeln jetzt mit zu und hält eine Obergrenze fest:
+höchstens vier Auslöser je Partei, also nie mehr als keine 30. Ein höherer Wert
+heißt, dass eine Pflicht wieder nachfeuert.
+
+### Feigling
+
+Neue Hausregel `feigling`, Vorgabe aus. Wer hoch gewinnt, ohne es angesagt zu
+haben, verliert stattdessen. Tabelle und Begründung in der Spec (3.7a).
+
+Zwei Festlegungen, die nicht aufgeweicht werden sollten: Der **Abstand ist
+durchgehend zwei Stufen** (ein knapper Sieg verlangt nichts, schwarz verlangt
+keine 60), und die **Sonderpunkte bleiben beim Erspieler** — dreht der Sieg,
+dreht ihr Vorzeichen mit, statt mitzuwandern. Ein gefangener Fuchs ist gefangen,
+auch wenn die Ansage zu leise war.
+
+`RoundResult.feigling` trägt den Hinweis, und die Auswertung benennt ihn. Ohne
+diesen Satz sieht ein Ergebnis, das dem Augenstand widerspricht, wie ein
+Rechenfehler aus.
+
+### Das Zuruf-Blatt lag unter den Handkarten
+
+Dieselbe Falle wie bei den Blättern, nur eine Ebene tiefer.
+`.doko > *:not(.doko-bg):not(.doko-sheet)` setzt `position: relative; z-index: 1`
+und macht damit **jedes direkte Kind zum Stapelkontext**. Der Zuruf-Knopf sitzt in
+der Kopfzeile, das Blatt liegt also in `.doko-top` — sein `z-index: 320` galt nur
+*innerhalb* der Kopfzeile. `.doko-me` und `.doko-hand` tragen dasselbe `1`, stehen
+aber später im Baum und malten darüber; die unterste Zuruf-Reihe war nicht
+antippbar.
+
+Die Ausnahmeliste half nicht, sie greift nur für direkte Kinder. Also steigt der
+Kontext selbst: `.doko-top` liegt jetzt auf 40. Sichtbar ändert das nichts, weil
+Kopfzeile und Handkarten sich nie überlappen. **Der Selektor ist absichtlich so
+lang** — er muss die Spezifität der Regel darüber erreichen, sonst greift er nicht.
+
+### Solo-Vorschau und Pflichtsolo-Anzeige
+
+Wer beim Vorbehalt ein Solo antippt, sieht seine Hand **schon nach dessen
+Trumpfordnung**, bevor er bestätigt; Zurück stellt sie wieder her. Bei Damen- oder
+Bubensolo ist genau diese Umsortierung die Entscheidung, und sie im Kopf
+vorzustellen ist die eigentliche Hürde.
+
+**Die Ordnung kommt vom Server** (`soloVorschau` in der Sicht, je wählbarem Solo
+eine `CardOrder`), nicht aus dem Client. Ein Client, der Solo-Trumpfordnungen
+selbst nachbaut, wäre die zweite Wahrheit — Grundsatz 6. Gerechnet wird sie nur in
+der Vorbehaltsabfrage und nur für den Sitz, der dran ist.
+
+Dazu `pflichtsoloOffen`: welche Sitze ihr Pflichtsolo noch offen haben. Stand
+bisher nirgends, obwohl es mitentscheidet, ob man freiwillig ein Solo wählt oder
+auf die Vorführung wartet.
+
+### Trophäen: die Untergrenze bei 0 ist gewollt
+
+Gemeldet als „kein Abzug, obwohl 9 Trophäen da sind". Kein Fehler:
+[`trophies.ts:104`](../packages/server/src/trophies.ts) klemmt mit
+`Math.max(floor, raw, 0)`. Trophäen liegen **je Spiel** in `account_game_stat`,
+die Kopfzeile zeigt die **Summe** — beim Zauberer stand der Zähler auf 0, der
+Abzug hatte nichts zum Abziehen.
+
+**Bleibt so.** Anfänger sollen keine roten Zahlen sehen. Die Nebenwirkung gehört
+aber gewusst: **Wer bei 0 steht, verliert in einem Zweitspiel nichts.** Wer viel
+verloren hat, kann also gefahrlos weiterspielen. Das ist der Preis der
+Untergrenze; wer ihn nicht zahlen will, muss gegen den Gesamtstand rechnen und
+verliert dafür die spielweise Rangliste.
+
+### Offen geblieben
+
+- **Die Feigling-Kachel hat kein gemaltes Bild**, sie läuft auf dem Emoji `🙈`
+  wie die übrigen Regelkacheln ohne Lieferung.
+- **Die neuen Ansagen klingen nicht.** Der Ton ist am selben Tag in einer anderen
+  Sitzung gebaut worden (Abschnitt „Ton" weiter unten, Einzelheiten in
+  `docs/KLANG.md`) — die Pflichtansage-Kette und der gedrehte Feigling-Sieg haben
+  dort aber noch keinen Klang. Beides gehört nach `tisch/klangtisch.ts` und
+  **nicht** in `Table.tsx`: Wer einen Klang dort einbaut, hat ihn beim Zauberer
+  vergessen.
+
+> **Achtung beim Lesen dieses Abschnitts:** Er ist vor dem Ton geschrieben worden
+> und stand kurz mit „es gibt keinen einzigen Sound" darin — falsch, sobald die
+> beiden Zweige zusammenlagen. Für den Ton gilt ausschließlich der Abschnitt
+> weiter unten.
 
 ---
 

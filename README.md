@@ -49,7 +49,14 @@ npm run build
 npm test
 ```
 
-Erwartet: **118 Tests** im Doppelkopf-Paket, **115** im Server.
+Erwartet: **128 Tests** im Doppelkopf-Paket, **117** im Zauberer-Paket,
+**259** im Server.
+
+`npm run build` und `npm test` gehören ins **Wurzelverzeichnis**, nicht
+`--workspace @brauweg/server`: Sonst ist die `.d.ts` von `@brauweg/game-api`
+der alte Stand und `tsc` meldet Felder als fehlend, die längst da sind. Nach
+einem Zweigwechsel `packages/*/dist` löschen, sonst laufen Tests aus einem
+alten Übersetzerstand mit.
 
 ### Lokal starten
 
