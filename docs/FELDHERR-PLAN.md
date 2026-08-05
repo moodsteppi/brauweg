@@ -168,7 +168,42 @@ gehört an die Entscheidung aus Frage 1, nicht davor.
 
 ---
 
-## Offene Fragen (gebündelt, wie Regel 6 verlangt)
+## Entschieden am 5. August
+
+1. **Weg B.** Gleichschritt über den vorhandenen Tisch.
+2. **Keine Belohnung für örtliche Partien** — weder gegen die KI noch zu zweit
+   an einem Gerät. Beides lässt sich beliebig oft herbeiführen; ein Endpunkt,
+   den nur der Client füllt, ist eine Münzquelle, und ein Tagesdeckel macht
+   daraus nur eine langsamere.
+3. **Keine Rangliste** vorerst. Damit wird Weg C nicht gebraucht.
+4. **Erfahrung nach Dauer mit fallendem Ertrag:** 20 Punkte je Minute für die
+   ersten drei, danach halbiert sich jede weitere. Hinziehen lohnt nicht.
+5. **Tagesaufgaben:** `partie-spielen`, `drei-partien` und `partie-gewinnen`
+   zählen Feldherr mit, die kartenspezifischen nicht. Das braucht keine neue
+   Aufgabe und keine Migration — gezählt wird ohnehin am Partie-Ende.
+6. **Eigenes Paket** `game-feldherr`, das `GameModule` erfüllt.
+
+### Was daraus fertig ist
+
+* `packages/game-feldherr` mit 13 Tests, grün. Saatkorn aus
+  `CreatePartyOptions.seed`, Takte zu 50 ms, sechs Takte Vorlauf.
+* Beide Geräte melden den Ausgang getrennt mit Prüfsumme; bei Abweichung gilt
+  die Partie als strittig und niemand gewinnt.
+* `currentActor` immer null, `legalActions` leer — in Echtzeit ist niemand am
+  Zug. **Die Partie-Laufzeit darf daraus keinen Zugtimer ableiten.**
+* Spielkern als ES-Modul im Client, Bildschirm mit den Modi.
+
+### Was noch fehlt
+
+* Die Gleichschritt-Brücke: Aktionen über den Tisch senden und empfangen,
+  Takt- und Nachzügler-Behandlung, Abgleichprobe alle 40 Takte.
+* Tisch erstellen und beitreten für zwei Sitze; die Lobby fragt heute nach
+  Rundenzahlen, die es hier nicht gibt.
+* Kachel in `GameSelect.tsx` und die Weiche in `App.tsx`.
+
+---
+
+## Offene Fragen (beantwortet, hier zur Nachvollziehbarkeit)
 
 1. **Welcher Weg?** A jetzt und B als nächstes, oder gleich B?
 2. **Rangliste und Trophäen für ein Echtzeitspiel — ja oder nein?** Davon
