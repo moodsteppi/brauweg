@@ -27,7 +27,7 @@ const ANIM = '/3d/subway/penguin_anim.glb';
 const OBS_SCOOTER = '/3d/subway/obstacle_scooter.glb';
 const OBS_SILVER = '/3d/subway/obstacle_silver.glb';
 const OBS_BMW = '/3d/subway/obstacle_bmw.glb';
-const PROP = '/3d/subway/props';
+const PROP = '/3d/subway';
 
 const LANE_WIDTH = 2.5;
 const CHUNK_LENGTH = 28;
@@ -47,11 +47,6 @@ const CLEAR_JUMP_Y = 0.95;
 const CLEAR_VEHICLE_Y = 1.15;
 /** Feste Z-Positionen im Chunk — Hindernisse bewegen sich nicht selbst */
 const SLOT_Z = [-10, -5, 0, 5, 10] as const;
-
-useGLTF.preload(ANIM);
-useGLTF.preload(OBS_SCOOTER);
-useGLTF.preload(OBS_SILVER);
-useGLTF.preload(OBS_BMW);
 
 type Phase = 'menu' | 'flee' | 'lobby' | 'run' | 'dead';
 type Pose = 'flee' | 'run' | 'idle';
@@ -151,9 +146,16 @@ function propGlb(name: string): string {
   return `${PROP}/prop_${name}.glb`;
 }
 
-for (const p of JUMP_PROPS) useGLTF.preload(propGlb(p));
-for (const p of BUSH_PROPS) useGLTF.preload(propGlb(p));
-for (const p of SLIDE_PROPS) useGLTF.preload(propGlb(p));
+/** Nicht alle Props beim Modulstart vorladen — sonst knallt ein 404 die ganze Seite. */
+function preloadRunnerAssets(): void {
+  useGLTF.preload(ANIM);
+  useGLTF.preload(OBS_SCOOTER);
+  useGLTF.preload(OBS_SILVER);
+  useGLTF.preload(OBS_BMW);
+  for (const p of JUMP_PROPS) useGLTF.preload(propGlb(p));
+  for (const p of BUSH_PROPS) useGLTF.preload(propGlb(p));
+  for (const p of SLIDE_PROPS) useGLTF.preload(propGlb(p));
+}
 
 function randomLane(): -1 | 0 | 1 {
   return (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
@@ -748,6 +750,10 @@ export function Runner({
     phase: 'menu',
     playerPosition: new Vector3(0, GROUND_Y, PLAYER_Z),
   });
+
+useEffect(() => {
+    preloadRunnerAssets();
+  }, []);
 
   useEffect(() => {
     gameState.current.phase = phase;
