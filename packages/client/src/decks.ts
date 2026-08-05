@@ -294,7 +294,13 @@ export const STANDARD_RUECKEN = 'standard';
  */
 export function rueckenBild(id: string | null | undefined): string | null {
   if (!id || id === STANDARD_RUECKEN) return null;
-  return RUECKEN.some((r) => r.id === id) ? `/karten/${id}/ruecken.png` : null;
+  // Die Endung folgt dem Blatt, sie ist NICHT fest ".png". Seit die Blaetter
+  // auf WebP liefen, lud jede Rueckseite ausser der klassischen ins Leere:
+  // im Themen-Waehler blieb nur Preis und Name stehen, und am Tisch bekam der
+  // eingestellte Ruecken gar kein Bild. Die Rueckseiten-Kennungen sind
+  // zugleich Blatt-Kennungen, also liefert das Blatt die richtige Endung.
+  const deck = DECKS.find((d) => d.id === id);
+  return deck?.dir ? `/karten/${deck.dir}/ruecken.${deck.ext}` : null;
 }
 
 /**

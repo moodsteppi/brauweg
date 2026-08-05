@@ -13,7 +13,7 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 128 Doppelkopf-Tests, 117 Zauberer-Tests, **259 Servertests**,
+**Prüfstand:** 146 Doppelkopf-Tests, 117 Zauberer-Tests, **259 Servertests**,
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
 
@@ -24,9 +24,24 @@ fehlend, die im Quelltext längst stehen (`xpBasis`, `interludeMs`).
 
 **Stand der Zweige am Ende des 4. August 2026:** `staging` trägt jetzt auch
 den Edelstein-Umbau. Auf `staging` und noch **nicht in der Produktion**
-liegen: Währungen, Truhen, Tagesaufgaben, anziehbarer Pinguin, Clanchat,
-Clankrieg, Zurufe am Tisch, der erweiterte Shop und der Edelstein als
-universelle Währung. Ob und wann das nach `main` geht, entscheidet Jan.
+liegen: Währungen, Truhen, Tagesaufgaben, der **gemalte** anziehbare Pinguin,
+Clanchat, Clankrieg, Zurufe am Tisch, der erweiterte Shop und der Edelstein
+als universelle Währung. Ob und wann das nach `main` geht, entscheidet Nils.
+
+**Die Historie ist am 4. August umgeschrieben worden** (`git filter-repo`),
+um die Bildoriginale aus der Vergangenheit zu entfernen: 977 MB → 143 MB, ein
+frischer Klon dauert 7 statt vieler Sekunden. **Alte Klone von vor diesem Tag
+sind unbrauchbar — neu klonen, nicht pullen.** Erhalten sind alle 194 Commits
+und alle 51 Zweige; `staging` ist dateiweise unverändert geblieben, auf `main`
+sind nur die Originale verschwunden.
+
+> **Was dabei fast schiefging, zum Nachlesen:** Der erste Spiegel kam vom
+> *lokalen* Repo, dessen `main` auf einem uralten Commit stand — ein
+> Spiegel-Push hätte die Produktion zurückgerollt. Und der erste Schnittplan
+> hätte die Kartenrückseiten mitgenommen, die `main` noch als PNG
+> referenziert. Beides fiel nur auf, weil vor dem Push Zweigstände und
+> Dateibäume verglichen wurden. **Vor einem `push --force --mirror` immer
+> gegen `git ls-remote` prüfen, nie gegen den lokalen Stand.**
 
 **Der Edelstein-Umbau ist eingearbeitet.** Er entstand in einer Sitzung auf
 einer Windows-Maschine ohne Node und war dort nie übersetzt oder getestet;
@@ -183,8 +198,8 @@ Tag. Gezählt wird am **Partie-Ende** (`countQuests` in `runtime/party.ts`),
 auch an Tischen mit Bots — Aufgaben sind eine Belohnung fürs Spielen, keine
 Wertung. Der Tag läuft in Europe/Berlin.
 
-**Der Pinguin ist anpassbar:** fünf Plätze (Kopf, Oberteil, Schuhe, Flosse,
-Aura), 27 Stücke, je Platz eines zum Preis 0. Der Server kennt Kennung, Platz
+**Der Pinguin ist anpassbar:** **sechs Plätze** (Kopf, Augen, Oberteil,
+Schuhe, Flosse, Aura), **33 Stücke**, je Platz eines zum Preis 0. Der Server kennt Kennung, Platz
 und Preis (`src/kosmetik.ts`), das Aussehen kennt nur der Client — dieselbe
 Trennung wie bei Kartenblatt und Szenerie. Getragen wird über
 `account_avatar` (eine Zeile je belegtem Platz, kein Spaltensatz: ein sechster
@@ -210,26 +225,42 @@ Startbildschirms — dort stand vorher „Der Tagesbonus, bald". Ein roter Punkt
 daran sagt, dass etwas bereitliegt; die Zahlen dafür kommen als `bereit` aus
 `/api/me`, mit zwei schlanken Zählabfragen statt der vollen Listen.
 
-**Alles Gemalte fehlt noch und blockiert nichts.** Pinguin, Ausstattung,
-Truhen, Edelstein und Aufgaben-Zeichen sind **SVGs im Bundle** — nach DESIGN.md
-(„Alles gemalt, nichts geladen") und weil 27 nicht gelieferte PNGs 27 weiße
-Kästen wären. Vier Bestellungen liegen bereit: `ASSETS-PINGUIN.md`,
-`ASSETS-TRUHEN.md`, `ASSETS-WAEHRUNGEN.md`, `ASSETS-AUFGABEN.md`. Der Einbau
-ist je Stück eine Zeile (`bild:` im Katalog `AUSSEHEN`).
+**Der Pinguin ist gemalt — geliefert und eingebaut.** Alle 34 Bilder (Basis
+und 33 Stücke) liegen als 3D-Render im Stil des Ritter-Pinguins vor, gewandelt
+532 kB für alles, im Schnitt 14 kB je Stück. Die **Zeichnungen bleiben als
+Rückfall** stehen, auch die der Basis (`PinguinBasisGezeichnet`): Fällt eine
+Datei aus, ist der Pinguin schlicht statt weg.
+
+**Der sechste Platz „Augen" ist neu.** Eine Sonnenbrille hätte sonst am Hut
+gehangen — wer sie aufsetzt, müsste die Mütze abnehmen. Beim Zeichnen liegt
+die Brille **unter** dem Hut, damit ein breiter Hutrand darüberfällt.
+
+**Was bei der Abnahme wirklich zählt** (die Prüfungen sind in
+`ASSETS-PINGUIN.md` festgehalten und haben sich bewährt): alle 480 × 512 mit
+echtem Alpha und **durchsichtigen Ecken** — eine undurchsichtige Ecke löscht
+beim Stapeln alles darunter; jedes Stück in seiner Zone; die **Stapelprobe**
+mit sieben Ebenen; die **Hut-über-Brille-Probe**. Ein Skript dafür steht nicht
+im Repo, die Prüfung lief über `sharp` (Maße, Alphakanal, Eckentransparenz,
+Begrenzungsrahmen je Stück).
 
 **Der Basis-Pinguin ist bewusst nicht `pinguin.png`.** Der ist ein Ritter mit
-Helm, Schwert, Panzer und Umhang — also mit vier von fünf Plätzen belegt, und
+Helm, Schwert, Panzer und Umhang — also mit vier von sechs Plätzen belegt, und
 ein Hut auf einem Helm sieht aus wie ein Fehler. Der Ritter bleibt, wo er steht
-(Trophäenweg, Vorgabe fürs Profilbild). Die **Passvorlage** für die Lieferung
-liegt unter `packages/client/art/pinguin/pinguin-zonen.png` samt Quelle; sie
-gehört als Referenzbild in jede Bildgenerierung.
+(Trophäenweg, Vorgabe fürs Profilbild); der Basis-Pinguin ist **dieselbe
+Figur ohne alles**. Die **Passvorlage** liegt im Archivrepo unter
+`pinguin/pinguin-zonen.png` samt Quelle; sie gehört als Referenzbild in jede
+Bildgenerierung — zusammen mit `pinguin.png` als Stilvorgabe.
+
+**Noch nicht gemalt:** Truhen, Edelstein und Aufgaben-Zeichen. Sie bleiben
+SVGs im Bundle; die Bestellungen `ASSETS-TRUHEN.md`, `ASSETS-WAEHRUNGEN.md`
+und `ASSETS-AUFGABEN.md` liegen bereit.
 
 **Was bewusst nicht gebaut ist:** Kartenblätter und Szenerien bleiben im
 Themen-Tab und sind nicht ins Shop-Regal kopiert — dort gibt es sie schon, mit
 Vorschau in Tischgröße, und ein zweiter Weg dorthin wäre einer ohne Vorschau.
 Der Shop verlinkt sie deshalb nur.
 
-**Prüfstand: 211 Servertests** (54 neue in `waehrung`, `truhen`, `quests`,
+**Prüfstand damals: 211 Servertests** (54 neue in `waehrung`, `truhen`, `quests`,
 `shop`, `waehrung-http`), Doppelkopf und Zauberer unverändert bei 128 und 117.
 
 ---
@@ -315,6 +346,123 @@ sich übersetzen und testen, dann `tischware.ts` auf `Preis` umstellen, dann auf
 
 ---
 
+## Am 5. August: Ansageregeln, Feigling und die Zuruf-Überdeckung
+
+Alles im Doppelkopf-Modul und im Client, **keine Migration**, keine Änderung am
+Schema. Prüfstand danach: **146 Doppelkopf**, 117 Zauberer, 259 Server.
+
+### Die Pflichtansage ist eine Kette geworden
+
+Vollständig in [doppelkopf-spec.md](doppelkopf-spec.md) 3.7. Das Wichtigste:
+
+**Jeder Auslöser hebt um genau eine Stufe**, gefordert wird die *nächste offene
+Stufe der Partei*. Damit ergibt sich die Kette von selbst — Hochzeit + Schweine +
+zwei fette Stiche sind Re, keine 90, keine 60, keine 30 —, ohne dass irgendwo
+eine Zahlenfolge gepflegt werden muss.
+
+**Vier neue Schalter:** `pflichtansageFolge` (der Stich nach dem Bezugsstich),
+`pflichtansageHochzeit`, `pflichtansageArmut`, `pflichtansageSchweine`. Alle aus
+in der Vorgabe. Der Validator verlangt zu jedem die Grundregel, an der er hängt —
+ein Schweine-Auslöser ohne Schweinchen ist ein Haken, der nie greift, und damit
+eine Falle beim Tischbau.
+
+**Drei Fehler dabei behoben:**
+
+1. **Die Pflichtansage feuerte bei Hochzeit mehrfach.** `hochzeitResolved` bleibt
+   bis zum Rundenende wahr; die alte Bedingung löste deshalb bei *jedem* weiteren
+   fetten Stich erneut aus. Geprüft wird jetzt der **Übergang** — „wurde gerade
+   jetzt geklärt" —, nicht der Dauerzustand.
+2. **Die Pflicht handelte die Stufe nicht hoch.** In `applyPflichtansage` stand
+   eine feste `0`. Hatte die Partei schon Re gesagt, lief die Pflicht in „Re steht
+   schon" und **verfiel**.
+3. **Der Partner konnte ein zweites Re sagen.** `legalActions` bot es nie an
+   (`made` fragt die Partei ab), die Engine nahm es aber an: Es stand doppelt in
+   der Anzeige und verdoppelte den Spielwert nur einmal.
+
+**Gefunden hat das der Bot-Fuzz, nicht ein Mensch.** Nach dem Hochhandeln stand
+`reAbsage` auf 1 statt 0, und daran hing das Mehrfach-Feuern. Der Test über 1000
+Partien schaltet die neuen Regeln jetzt mit zu und hält eine Obergrenze fest:
+höchstens vier Auslöser je Partei, also nie mehr als keine 30. Ein höherer Wert
+heißt, dass eine Pflicht wieder nachfeuert.
+
+### Feigling
+
+Neue Hausregel `feigling`, Vorgabe aus. Wer hoch gewinnt, ohne es angesagt zu
+haben, verliert stattdessen. Tabelle und Begründung in der Spec (3.7a).
+
+Zwei Festlegungen, die nicht aufgeweicht werden sollten: Der **Abstand ist
+durchgehend zwei Stufen** (ein knapper Sieg verlangt nichts, schwarz verlangt
+keine 60), und die **Sonderpunkte bleiben beim Erspieler** — dreht der Sieg,
+dreht ihr Vorzeichen mit, statt mitzuwandern. Ein gefangener Fuchs ist gefangen,
+auch wenn die Ansage zu leise war.
+
+`RoundResult.feigling` trägt den Hinweis, und die Auswertung benennt ihn. Ohne
+diesen Satz sieht ein Ergebnis, das dem Augenstand widerspricht, wie ein
+Rechenfehler aus.
+
+### Das Zuruf-Blatt lag unter den Handkarten
+
+Dieselbe Falle wie bei den Blättern, nur eine Ebene tiefer.
+`.doko > *:not(.doko-bg):not(.doko-sheet)` setzt `position: relative; z-index: 1`
+und macht damit **jedes direkte Kind zum Stapelkontext**. Der Zuruf-Knopf sitzt in
+der Kopfzeile, das Blatt liegt also in `.doko-top` — sein `z-index: 320` galt nur
+*innerhalb* der Kopfzeile. `.doko-me` und `.doko-hand` tragen dasselbe `1`, stehen
+aber später im Baum und malten darüber; die unterste Zuruf-Reihe war nicht
+antippbar.
+
+Die Ausnahmeliste half nicht, sie greift nur für direkte Kinder. Also steigt der
+Kontext selbst: `.doko-top` liegt jetzt auf 40. Sichtbar ändert das nichts, weil
+Kopfzeile und Handkarten sich nie überlappen. **Der Selektor ist absichtlich so
+lang** — er muss die Spezifität der Regel darüber erreichen, sonst greift er nicht.
+
+### Solo-Vorschau und Pflichtsolo-Anzeige
+
+Wer beim Vorbehalt ein Solo antippt, sieht seine Hand **schon nach dessen
+Trumpfordnung**, bevor er bestätigt; Zurück stellt sie wieder her. Bei Damen- oder
+Bubensolo ist genau diese Umsortierung die Entscheidung, und sie im Kopf
+vorzustellen ist die eigentliche Hürde.
+
+**Die Ordnung kommt vom Server** (`soloVorschau` in der Sicht, je wählbarem Solo
+eine `CardOrder`), nicht aus dem Client. Ein Client, der Solo-Trumpfordnungen
+selbst nachbaut, wäre die zweite Wahrheit — Grundsatz 6. Gerechnet wird sie nur in
+der Vorbehaltsabfrage und nur für den Sitz, der dran ist.
+
+Dazu `pflichtsoloOffen`: welche Sitze ihr Pflichtsolo noch offen haben. Stand
+bisher nirgends, obwohl es mitentscheidet, ob man freiwillig ein Solo wählt oder
+auf die Vorführung wartet.
+
+### Trophäen: die Untergrenze bei 0 ist gewollt
+
+Gemeldet als „kein Abzug, obwohl 9 Trophäen da sind". Kein Fehler:
+[`trophies.ts:104`](../packages/server/src/trophies.ts) klemmt mit
+`Math.max(floor, raw, 0)`. Trophäen liegen **je Spiel** in `account_game_stat`,
+die Kopfzeile zeigt die **Summe** — beim Zauberer stand der Zähler auf 0, der
+Abzug hatte nichts zum Abziehen.
+
+**Bleibt so.** Anfänger sollen keine roten Zahlen sehen. Die Nebenwirkung gehört
+aber gewusst: **Wer bei 0 steht, verliert in einem Zweitspiel nichts.** Wer viel
+verloren hat, kann also gefahrlos weiterspielen. Das ist der Preis der
+Untergrenze; wer ihn nicht zahlen will, muss gegen den Gesamtstand rechnen und
+verliert dafür die spielweise Rangliste.
+
+### Offen geblieben
+
+- **Die Feigling-Kachel hat kein gemaltes Bild**, sie läuft auf dem Emoji `🙈`
+  wie die übrigen Regelkacheln ohne Lieferung.
+- **Die neuen Ansagen klingen nicht.** Der Ton ist am selben Tag in einer anderen
+  Sitzung gebaut worden (Abschnitt „Ton" weiter unten, Einzelheiten in
+  `docs/KLANG.md`) — die Pflichtansage-Kette und der gedrehte Feigling-Sieg haben
+  dort aber noch keinen Klang. Beides gehört nach `tisch/klangtisch.ts` und
+  **nicht** in `Table.tsx`: Wer einen Klang dort einbaut, hat ihn beim Zauberer
+  vergessen.
+
+> **Achtung beim Lesen dieses Abschnitts:** Er ist vor dem Ton geschrieben worden
+> und stand kurz mit „es gibt keinen einzigen Sound" darin — falsch, sobald die
+> beiden Zweige zusammenlagen. Für den Ton gilt ausschließlich der Abschnitt
+> weiter unten.
+
+---
+
 ## Stufen und Erfahrungspunkte
 
 Steht seit dem 4. August. Zwei Regeln, mehr nicht:
@@ -372,6 +520,102 @@ UPDATE account SET coins = 2000, gems = 200 WHERE email = 'DEINE-ADRESSE';
 Mit `xp = 330` stehen zugleich drei Stufentruhen offen (Stufe 2, 3 und 5).
 Wer alles auf einmal sehen will, nimmt lieber ein Testkonto: `STAFF_EMAILS`
 setzen und neu starten — dann ist alles besessen und nichts wird abgebucht.
+
+## Am 5. August fertig geworden: Ton
+
+**Ausführlich in `docs/KLANG.md`** — hier nur, was man beim Weiterbauen
+wissen muss. Keine Migration; die Warenarten `klang` und `musik` sind eine
+Datei, wie es `tischware.ts` verspricht.
+
+**Einstellungen gibt es jetzt als eigenes Blatt** im Profil-Tab, oben mit dem
+Zahnrad. Darin nur die zwei Regler: Sounds 0–100, Musik 0–100. Bisher gab es
+überhaupt keinen Ort für Einstellungen — Sprache und Benachrichtigungen können
+dort nachrücken.
+
+**Was man hört, steht in der Klanghalle**, einem eigenen Bildschirm neben dem
+Kleiderschrank im Profil. Dort liegen die gekauften Musikstücke und
+Klangpakete, jedes mit einem Abspielknopf. Die Trennung ist Absicht: Zwei
+Regler sind eine Einstellung, eine wachsende Sammlung ist Besitz — läge beides
+im selben Blatt, schöbe die Sammlung die Lautstärke immer weiter nach unten.
+
+**Vorgehört wird auch im Shop**, an der Kaufrückfrage. Klang und Musik kauft
+man nach Gehör und nicht nach Namen; der Knopf steht deshalb vor der
+Währungsfrage.
+
+**23 Töne, 123 kB zusammen**, alle CC0 von Kenney, plus ein zweites Paket
+„Glas" mit 8 Dateien. Die Originale liegen im Archivrepo unter `klang/`.
+Gewandelt wird mit `~/klangwerkzeug/wandeln.mjs` — auf diesem Mac ist weder
+`ffmpeg` noch `lame` noch `sox` installiert, und `afconvert` kann kein MP3.
+
+**Was am Tisch klingt, steht in `tisch/klangtisch.ts`, nicht in den Tischen.**
+Derselbe Grundsatz wie bei den Emotes: Der Haken bekommt nur Zahlen und
+Wahrheitswerte, kennt kein Spiel, und ein neuer Klang gilt sofort für beide.
+Wer einen Klang in `Table.tsx` einbaut, hat ihn beim Zauberer vergessen.
+
+> **Die eine Zeile, um die es beim Ton wirklich ging:**
+> `navigator.audioSession.type = 'ambient'`. Ohne sie hält iOS beim ersten
+> eigenen Ton die Musik in jeder anderen App an — man startet eine Partie,
+> und Spotify ist weg. Der Preis steht auch in den Einstellungen, weil man es
+> sonst für kaputt hält: Am iPhone schaltet der Klingelschalter uns mit stumm.
+
+**Vibration war kurz gebaut und ist am selben Tag wieder herausgeflogen.**
+Safari kennt `navigator.vibrate` nicht, weder am Handy noch am Rechner. Ein
+Schalter, den die halbe Beta nur abgeblendet sieht, wirft Fragen auf, statt
+etwas einzustellen. Wie er zurückkäme, steht in `docs/KLANG.md`.
+
+**Vier Musikstücke**, alle CC0 von OpenGameArt, zusammen 5,2 MB. `stube` ist
+kostenlos, die anderen drei kosten. Die Lizenz wurde auf jeder Einzelseite
+nachgesehen und nicht der Sammlung geglaubt, in der sie stehen.
+
+**Zwei Dinge sind bewusst offen und keine Vergesslichkeit:**
+
+- **Beim fünften Musikstück steht der Umzug an.** 5,2 MB sind die Obergrenze
+  dessen, was ich noch im Repo lassen würde; `VITE_KLANG_BASIS` ist dafür
+  eingebaut und kostet keine Codeänderung, weil Musik über ein einfaches
+  `<audio>` läuft und deshalb keine CORS-Kopfzeilen braucht.
+- **`sieg`, `niederlage`, `stufe`** sind nach Länge und Instrument gewählt,
+  nicht nach Gehör — in keinem Dateinamen steht, welcher Jingle nach Sieg
+  klingt. Einmal anhören, notfalls Datei desselben Namens drüberlegen.
+- **Klang und Musik haben keine Grafik.** Im Shop steht ♪ beziehungsweise ♫
+  statt eines Bildes. `WareRegal` nimmt dafür jetzt `bild: () => null` — ein
+  `<img>` auf eine fehlende Datei wäre ein weißer Kasten, und genau das ging
+  beim Clan-Krieg schon einmal fast live.
+
+## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
+
+**Der Profil-Tab war der einzige, der den Tafel-Baustein nicht benutzt hat.**
+Jeder Abschnitt ein eigener Kasten aus CSS-Verlauf mit goldenem Strich und
+`box-shadow: 0 4px 0`. `DESIGN.md` sagt seit jeher „Neue Hub-Inhalte gehören
+in eine Tafel, nicht in einen eigenen Kasten"; der Shop hält sich daran, das
+Profil hielt sich nicht daran. Jetzt schon: Deine Sachen, Geburtstag,
+Trophäen, Freunde, Konto.
+
+**Alles Konto-artige liegt jetzt an einem Ort und als richtige Knöpfe.**
+Vorher standen Einstellungen ganz oben allein, Benachrichtigungen und Abmelden
+irgendwo unter der Freundesliste, und „Konto löschen" war eine nackte
+Textzeile — drei Bauformen für dieselbe Art Sache. Reihenfolge in der Tafel
+ist Absicht: harmlos oben, endgültig unten, Löschen allein in der letzten
+Zeile.
+
+**Der Klangschrank heißt jetzt Klanghalle.** Datei, Bauteil, CSS-Klassen,
+Texte.
+
+> **Die eigentliche Ursache steht in `docs/ASSETS-PROFIL.md`:**
+> `menue-knopf-holz.webp` heißt Holz, ist aber eine flache blassolive Pille
+> mit dünnem Strich — keine Maserung, keine Standfläche, keine Tiefe. Die
+> Bestellung dafür (`ASSETS-MENUE.md`) hatte „gemaltes Holz, warme Töne"
+> verlangt; geliefert wurde etwas anderes, und es ist so eingebaut worden.
+> `menue-blatt.webp` und `menue-feld.webp` aus derselben Bestellung **sind**
+> richtig gemaltes Holz mit Messingnieten. Die Knöpfe sind die Ausreißer, und
+> sie stehen auf jedem Bildschirm der App.
+>
+> Der Abnahmepunkt, der das verhindert hätte und jetzt in jeder Bestellung
+> steht: **das neue Bild neben `menue-blatt.webp` legen und fragen, ob es nach
+> demselben Haus aussieht.**
+
+Bis die neuen Bilder da sind, leihen sich die drei Profilkacheln vorhandene
+Symbole. Das sieht ungenau aus, aber nicht kaputt — ein `<img>` auf eine
+Datei, die es nicht gibt, wäre ein weißer Kasten.
 
 ## Am 4. August später fertig geworden (zweite Sitzung)
 

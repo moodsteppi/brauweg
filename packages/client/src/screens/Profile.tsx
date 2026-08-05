@@ -92,7 +92,7 @@ export function Profile({
         <div className="hub-profilkopf hub-profilkopf--a">
           <img
             className="hub-profilbild hub-profilbild--nur"
-            src="/hub/pinguin.png"
+            src="/hub/pinguin/pinguin-basis.webp"
             alt=""
             draggable={false}
           />

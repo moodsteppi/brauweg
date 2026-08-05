@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
+import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
@@ -34,6 +35,19 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     void reload();
   }, []);
+
+  /**
+   * Musik laeuft, solange jemand angemeldet ist.
+   *
+   * An genau einer Stelle statt in jedem Bildschirm: Welches Stueck spielt,
+   * steht ohnehin in den Einstellungen, und ein An-Aus je Bildschirm haette
+   * beim Wechsel Hub -> Tisch -> Hub jedes Mal neu angefangen. Vor der
+   * Anmeldung bleibt es still — wer noch tippt, wer er ist, will keine Musik.
+   */
+  useEffect(() => {
+    musikAn(me !== null);
+    return () => musikAn(false);
+  }, [me !== null]);
 
   if (loading) {
     return (

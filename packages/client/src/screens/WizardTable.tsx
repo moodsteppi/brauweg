@@ -29,6 +29,7 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
+import { useTischklang } from '../tisch/klangtisch';
 import { DealCeremony, prefersReducedMotion } from '../DealCeremony';
 import { useTable } from '../useTable';
 
@@ -122,11 +123,20 @@ export function WizardTable({
     handRef.current = view?.view.round?.hand ?? [];
   });
 
+  /** Vorgemerkte Karte: spielt von selbst, sobald der Sitz am Zug ist. */
+  const [vorgemerkt, setVorgemerkt] = useState<number | null>(null);
+
+  /** Stabile Referenz, damit memoisierte Handkarten nicht mitrendern. */
+  const toggleVormerken = useCallback((cardId: number) => {
+    setVorgemerkt((v) => (v === cardId ? null : cardId));
+  }, []);
+
   const startPlay = useCallback(
     (cardId: number) => {
       if (flugRef.current !== null) return;
       flugRef.current = cardId;
       setFlugState(cardId);
+      setVorgemerkt(null);
       const seat = view?.seat ?? 0;
       // Erst fliegen lassen, dann melden: 170 ms, damit man die Karte fallen
       // sieht.
@@ -144,18 +154,42 @@ export function WizardTable({
   );
 
   // Sobald die Karte die Hand verlaesst, hat der Server den Zug uebernommen:
-  // Sperre loesen.
+  // Sperre loesen. Und eine Vormerkung, deren Karte gar nicht mehr auf der
+  // Hand liegt, verfaellt - sonst zeigte die naechste Runde eine Vormerkung
+  // auf eine Kartennummer, die inzwischen jemand anderem gehoert.
   const handKey = (view?.view.round?.hand ?? []).map((c) => c.id).join('.');
   useEffect(() => {
-    if (
-      flugRef.current !== null &&
-      !handRef.current.some((c) => c.id === flugRef.current)
-    ) {
+    const aufDerHand = (id: number | null): boolean =>
+      id !== null && handRef.current.some((c) => c.id === id);
+    if (flugRef.current !== null && !aufDerHand(flugRef.current)) {
       flugRef.current = null;
       setFlugState(null);
     }
+    setVorgemerkt((v) => (v !== null && !aufDerHand(v) ? null : v));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handKey]);
+
+  /**
+   * Vormerkung einloesen: Sobald die Karte zulaessig spielbar ist, fliegt sie
+   * von selbst. Ist der Sitz am Zug und die Karte NICHT dabei, verfaellt die
+   * Vormerkung - beim Zauberer trifft das oefter zu als beim Doppelkopf, denn
+   * hier zwingt jede angespielte Farbe zum Bedienen, und ein aufgedeckter
+   * Zauberer aendert nichts daran.
+   *
+   * Der Effekt haengt am Schluessel, nicht am Sichten-Objekt: Sonst liefe er
+   * bei jedem Serverfunk neu.
+   */
+  const playableKey = (view?.legalActions ?? [])
+    .filter((action) => action.type === 'playCard')
+    .map((action) => action.cardId as number)
+    .join('.');
+  useEffect(() => {
+    if (vorgemerkt === null || playableKey === '') return;
+    const spielbar = new Set(playableKey.split('.').map(Number));
+    if (spielbar.has(vorgemerkt)) startPlay(vorgemerkt);
+    else setVorgemerkt(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vorgemerkt, playableKey]);
 
   // Der volle Stich bleibt eine Sekunde liegen, bevor er abgeraeumt wird. Der
   // Server raeumt sofort; hier wird der letzte Stich kurz weitergezeigt.
@@ -266,6 +300,29 @@ export function WizardTable({
       <span>{text}</span>
     );
 
+  /**
+   * Ton am Tisch — derselbe Haken wie beim Doppelkopf, nur mit den Werten,
+   * die dieses Spiel dafuer hat. Die Rundenabrechnung heisst hier
+   * `abrechnung` statt `finishedKey`; als Schluessel dient die Rundennummer,
+   * denn genau die ist neu, wenn ein Blatt erscheint.
+   *
+   * Vor jedem bedingten `return`, aus demselben Grund wie dort.
+   */
+  const meinPlatz =
+    view?.seat != null
+      ? (party?.standings?.find((s) => s.seat === view.seat)?.place ?? null)
+      : null;
+  useTischklang({
+    stichKarten: view?.view.round?.currentTrick.length ?? 0,
+    letzterStich: lastKey,
+    binDran: view?.view.round?.isMyTurn ?? false,
+    gibtGerade: dealing,
+    abschluss: abrechnung ? `runde-${abrechnung.roundNumber}` : null,
+    partieFertig: view?.finished ?? false,
+    gewonnen: meinPlatz === null ? null : meinPlatz === 1,
+    fehler: error,
+  });
+
   if (!view && table && table.status === 'waiting') {
     return (
       <Wartebereich
@@ -326,6 +383,12 @@ export function WizardTable({
 
   const hand = runde ? sortByOrder(runde.hand, runde.order) : [];
   const sticht = new Set(runde?.order.trumps ?? []);
+
+  // Vormerken geht nur mitten im Stichspiel, wenn man gerade NICHT dran ist.
+  // In der Ansagephase gibt es nichts vorzumerken, und in der blinden Runde
+  // kennt man die eigene Karte nicht - eine Vormerkung waere dort blanker
+  // Zufall statt einer Entscheidung.
+  const darfVormerken = playable.size === 0 && runde?.phase === 'playing' && !runde.blind;
 
   const liveTrick = runde?.currentTrick ?? [];
   const frozenActive = frozenKey !== null && frozenKey === lastKey && lastTrickNow !== null;
@@ -539,9 +602,12 @@ export function WizardTable({
               total={hand.length}
               playable={playable.has(card.id)}
               locked={flug !== null}
+              markable={darfVormerken}
+              marked={vorgemerkt === card.id}
               trump={sticht.has(`${card.suit}${card.rank}`)}
               legt={card.id === flug}
               onPlay={startPlay}
+              onMark={toggleVormerken}
             />
           ))}
           {hand.length === 0 && <span className="muted">Keine Karten auf der Hand.</span>}
@@ -703,6 +769,16 @@ function TrumpfPlakette({
 }): React.JSX.Element | null {
   if (!runde) return null;
 
+  /**
+   * Der aufgedeckte Zauberer sagt selbst nicht, welche Farbe der Geber
+   * gewaehlt hat: Das Bild ist fuer alle vier Wahlen dasselbe. Wer den Trumpf
+   * sucht, sucht die Karte - und fand einen Zauberer, dessen Farbe nur klein
+   * als Zeichen darunter stand. Deshalb traegt die Karte das Farbzeichen
+   * selbst, gross und im Farbton der Trumpffarbe.
+   */
+  const zaubererMitFarbe = runde.upcard?.suit === 'Z' && runde.trump !== null;
+  const farbeRot = runde.trump === 'H' || runde.trump === 'D';
+
   return (
     <div className="wiz-trumpf">
       <div className="wiz-trumpf-rahmen">
@@ -712,6 +788,14 @@ function TrumpfPlakette({
             // einmal, wenn die Karte erscheint.
             <div className="pc pc--trumpf wiz-trumpf-auf" key={runde.upcard.id}>
               <CardFront card={runde.upcard} deck={deck} />
+              {zaubererMitFarbe && (
+                <span
+                  className={`wiz-trumpf-farbe${farbeRot ? ' is-rot' : ''}`}
+                  aria-hidden="true"
+                >
+                  {suitSymbol(runde.trump!)}
+                </span>
+              )}
             </div>
           ) : (
             <div className="pc pc--trumpf" aria-hidden="true">
@@ -922,7 +1006,7 @@ function Gebotsblatt({
 
   return (
     <div className="doko-sheet doko-sheet--mitte">
-      <div className="doko-sheet-card">
+      <div className="doko-sheet-card wiz-knapp">
         <h2>Wie viele Stiche machst du?</h2>
         <p className="muted">
           {verdeckt
@@ -987,7 +1071,7 @@ function Trumpfwahl({
 
   return (
     <div className="doko-sheet doko-sheet--mitte">
-      <div className="doko-sheet-card">
+      <div className="doko-sheet-card wiz-knapp">
         <h2>Du bestimmst den Trumpf</h2>
         <p className="muted">Aufgedeckt wurde ein Zauberer — du wählst die Farbe.</p>
         <div className="wiz-farben">

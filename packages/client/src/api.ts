@@ -268,7 +268,7 @@ export interface Kauftruhe {
  * `wert` ist die Kennung ohne Praefix — so heisst sie in den Themen-
  * Einstellungen. `id` traegt das Praefix und ist die Kennung fuer den Kauf.
  */
-export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen';
+export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik';
 
 export interface RegalWare {
   id: string;

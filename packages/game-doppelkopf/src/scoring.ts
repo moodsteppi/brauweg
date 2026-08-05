@@ -64,6 +64,10 @@ export interface SpecialPoint {
 export interface RoundResult {
   readonly rePoints: number;
   readonly kontraPoints: number;
+  /**
+   * Partei, die die Punkte bekommt. Bei Feigling ist das NICHT die Partei mit
+   * den meisten Augen — `feigling` sagt, dass gedreht wurde.
+   */
   readonly winner: Party | null;
   /** Spielwert vor Verteilung, bereits mit Multiplikator. */
   readonly value: number;
@@ -72,6 +76,12 @@ export interface RoundResult {
   readonly scores: Record<number, number>;
   readonly isSolo: boolean;
   readonly soloSeat: number | null;
+  /**
+   * Der Sieg ist wegen zu niedriger Ansage gedreht worden. Die Oberflaeche muss
+   * das benennen — ein Ergebnis, das dem Augenstand widerspricht, sieht sonst
+   * wie ein Rechenfehler aus.
+   */
+  readonly feigling: boolean;
 }
 
 /** Punktzahl, die eine Absagestufe von der ansagenden Partei verlangt. */
@@ -110,6 +120,33 @@ function requiredPoints(ann: Announcements): { re: number; kontra: number } {
 
 function partyOf(seat: number, reSeats: readonly number[]): Party {
   return reSeats.includes(seat) ? 're' : 'kontra';
+}
+
+/**
+ * Feigling: Mindestansage, die ein Ergebnis verlangt.
+ *
+ * Gemessen an den Augen der Verliererpartei, auf derselben Leiter wie
+ * `angesagteStufe`. Der Abstand ist durchgehend zwei Stufen — ein knapper Sieg
+ * verlangt deshalb nichts, und schwarz verlangt Keine 60 und nicht Keine 30.
+ */
+function feiglingVerlangt(loserPoints: number): number {
+  if (loserPoints === 0) return 3; // schwarz -> mindestens Keine 60
+  if (loserPoints < 30) return 2; // -> mindestens Keine 90
+  if (loserPoints < 60) return 1; // -> mindestens Re/Kontra
+  return 0; // 60 und mehr: keine Pflicht
+}
+
+/**
+ * Angesagte Stufe auf einer durchgehenden Leiter.
+ *
+ * Nichts 0, Re/Kontra 1, Keine 90 = 2, Keine 60 = 3, Keine 30 = 4, schwarz 5.
+ * Bewusst eine eigene Zaehlung und nicht `AbsageLevel`: Dort ist 0 schon "Re
+ * ohne Absage", hier braucht es eine Stufe fuer "gar nichts gesagt".
+ */
+function angesagteStufe(ann: Announcements, party: Party): number {
+  const gesagt = party === 're' ? ann.re : ann.kontra;
+  if (!gesagt) return 0;
+  return 1 + (party === 're' ? ann.reAbsage : ann.kontraAbsage);
 }
 
 function collectSpecials(input: RoundInput): SpecialPoint[] {
@@ -222,6 +259,8 @@ export function scoreRound(input: RoundInput): RoundResult {
       scores,
       isSolo,
       soloSeat,
+      // Ohne Sieger gibt es nichts zu drehen.
+      feigling: false,
     };
   }
 
@@ -246,16 +285,33 @@ export function scoreRound(input: RoundInput): RoundResult {
   }
 
   // Sonderpunkte, netto aus Sicht des Gewinners. Additiv.
+  let specialsNet = 0;
   for (const sp of specials) {
-    value += sp.party === winner ? 1 : -1;
+    specialsNet += sp.party === winner ? 1 : -1;
   }
+
+  /*
+   * Feigling: Wer zu niedrig angesagt hat, verliert die Runde, die er
+   * gewonnen hat.
+   *
+   * Der Spielwert bleibt, was er ist — er beschreibt die Runde, nicht den
+   * Gewinner. Es wechselt nur, wer ihn bekommt. Die Sonderpunkte bleiben
+   * dagegen bei dem, der sie erspielt hat: Ein gefangener Fuchs ist gefangen,
+   * auch wenn die Ansage zu leise war. Deshalb dreht ihr Vorzeichen mit dem
+   * Sieg um, statt einfach mitzuwandern.
+   */
+  const feigling =
+    rs.feigling && angesagteStufe(ann, winner) < feiglingVerlangt(loserPoints);
+  const nimmt: Party = feigling ? (winner === 're' ? 'kontra' : 're') : winner;
+
+  value += feigling ? -specialsNet : specialsNet;
 
   // Reihenfolge: erst alle additiven Punkte, dann Ansagen, dann Bock.
   value *= announcementFactor;
   value *= multiplier;
 
   if (isSolo && soloSeat !== null) {
-    const soloWins = winner === 're';
+    const soloWins = nimmt === 're';
     const sign = soloWins ? 1 : -1;
     for (const s of seats) {
       scores[s] = s === soloSeat ? sign * value * 3 : -sign * value;
@@ -263,18 +319,19 @@ export function scoreRound(input: RoundInput): RoundResult {
   } else {
     for (const s of seats) {
       const p = partyOf(s, reSeats);
-      scores[s] = p === winner ? value : -value;
+      scores[s] = p === nimmt ? value : -value;
     }
   }
 
   return {
     rePoints,
     kontraPoints,
-    winner,
+    winner: nimmt,
     value,
     specials,
     scores,
     isSolo,
     soloSeat,
+    feigling,
   };
 }

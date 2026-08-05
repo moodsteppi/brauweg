@@ -4381,6 +4381,61 @@ main.auth > .muted {
   z-index: 1;
 }
 
+/*
+ * Die Kopfzeile steht hoeher als ihre Geschwister.
+ *
+ * Der Grund liegt im Zuruf-Blatt: Es haengt am Knopf in der Kopfzeile, ist
+ * `position: fixed` und will ueber dem ganzen Bildschirm liegen. Die Regel
+ * darueber macht `.doko-top` aber zum Stapelkontext, und damit gilt der
+ * z-index des Blattes (320) nur INNERHALB der Kopfzeile. `.doko-me` und
+ * `.doko-hand` tragen dasselbe `z-index: 1`, stehen jedoch spaeter im Baum —
+ * sie malten deshalb ueber das offene Blatt, und die unterste Zuruf-Reihe war
+ * nicht antippbar.
+ *
+ * Die Ausnahmeliste oben hilft hier nicht: Sie greift nur fuer direkte Kinder,
+ * das Blatt liegt eine Ebene tiefer. Also steigt der Kontext selbst. Sichtbar
+ * aendert das nichts, weil Kopfzeile und Handkarten sich nie ueberlappen.
+ *
+ * Die Selektorlaenge ist Absicht — sie muss die Spezifitaet der Regel darueber
+ * erreichen, sonst greift sie nicht.
+ */
+.doko > .doko-top:not(.doko-bg):not(.doko-sheet) {
+  z-index: 40;
+}
+
+/*
+ * Feigling-Hinweis in der Auswertung. Warnfarbe, nicht Fehlerfarbe: Die Regel
+ * hat funktioniert, das Ergebnis ist nur ueberraschend.
+ */
+.doko-feigling {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  background: rgba(224, 123, 0, 0.16);
+  border: 1px solid rgba(224, 123, 0, 0.4);
+  color: #f0b060;
+}
+.doko-feigling strong { color: #ffcf8a; }
+
+/* Schweine-Abzeichen: rosa statt grau, damit es sich von "ausgestiegen" und
+   "Bot uebernimmt" abhebt — es sagt etwas ueber das Blatt, nicht ueber den
+   Spieler. */
+.doko-tag--schweine {
+  background: rgba(226, 130, 160, 0.22);
+  color: #f0a8c0;
+  font-weight: 700;
+}
+
+/* Wer sein Pflichtsolo noch offen hat — eine Zeile im Vorbehaltsblatt, keine
+   eigene Tafel. Sie beantwortet eine Frage, sie ist nicht das Thema. */
+.vb-pflichtsolo {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
 /* Holzschild als Ueberschrift. Die Schrift steht in der leeren Mitte. */
 .lobby-schild {
   flex: 1;
@@ -5471,9 +5526,8 @@ main.auth > .muted {
   pointer-events: none;
   z-index: 2;
 }
-.pfad-figur img {
-  width: clamp(38px, 13vw, 58px);
-  height: auto;
+.pfad-figur .pinguin {
+  /* Groesse kommt aus dem Pinguin-Prop; Schatten schon am .pinguin. */
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
 }
 .pfad-figur-stand {
@@ -5559,29 +5613,66 @@ main.auth > .muted {
 .hub-themenwahl {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
+/*
+ * Jedes Spiel als Banner statt als leere Textzeile: das gemalte Stillleben
+ * fuellt die Kachel, Name und eingestellte Wahl liegen auf einem Verlauf unten.
+ * Feste Hoehe ueber das Seitenverhaeltnis des Banners (SVG 320x80 = 4:1),
+ * damit alle Kacheln gleich hoch sind und die Reihe gerade steht - vorher
+ * waren es unterschiedlich hohe Textkaesten.
+ */
 .hub-themenspiel {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
-  padding: 0.6rem 0.7rem;
-  border-radius: 0.55rem;
-  border: 1px solid rgba(255, 220, 120, 0.28);
-  background: rgba(12, 32, 70, 0.45);
+  display: block;
+  width: 100%;
+  padding: 0;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  border: 2px solid rgba(255, 220, 120, 0.3);
+  background: #0c2046;
   color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.32);
+}
+.hub-themenspiel-bild {
+  display: block;
+}
+/* SVG jetzt (Platzhalter), <img> nach der Banner-Lieferung - beide auf volle
+   Breite, damit der Austausch (docs/ASSETS-SPIELWAHL.md) ohne CSS auskommt. */
+.hub-themenspiel-bild svg,
+.hub-themenspiel-bild img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Noch nicht spielbar: das Banner tritt zurueck, die Bald-Marke traegt die
+   Aussage. */
+.hub-themenspiel.is-bald .hub-themenspiel-bild svg,
+.hub-themenspiel.is-bald .hub-themenspiel-bild img {
+  filter: saturate(0.72) brightness(0.8);
+}
+.hub-themenspiel-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.02rem;
+  padding: 1.1rem 0.75rem 0.5rem;
+  background: linear-gradient(180deg, rgba(6, 10, 20, 0) 0%, rgba(6, 10, 20, 0.88) 78%);
 }
 .hub-themenspiel strong {
-  font-size: 1rem;
-  color: #ffe9bd;
+  font-size: 1.02rem;
+  color: #fff7e6;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 .hub-themenspiel .muted {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  color: #dbe3ec;
 }
 .hub-themenspiel .front-bald-tag {
   position: absolute;
@@ -5851,6 +5942,29 @@ main.auth > .muted {
 }
 .wiz-trumpf-text b { color: var(--gold); font-size: 0.8rem; }
 
+/* Die gewählte Trumpffarbe auf dem aufgedeckten Zauberer.
+   Ohne sie zeigt die Plakette bei jeder der vier Wahlen dasselbe Bild, und die
+   Farbe steht nur klein als Zeichen darunter. Der Chip sitzt UNTEN RECHTS —
+   oben links liegt bei Blättern mit `eigeneEcke` schon der Pergament-Chip mit
+   dem „Z". Das `overflow: hidden` von .pc rundet die Kartenecke mit. */
+.wiz-trumpf-farbe {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  min-width: 42%;
+  padding: 0.02em 0.12em 0.06em;
+  border-radius: 0.4rem 0 0.32rem 0;
+  background: rgba(12, 10, 8, 0.82);
+  border-top: 1px solid var(--gold);
+  border-left: 1px solid var(--gold);
+  color: #f4ead2;
+  font-size: calc(var(--tw) * 0.3);
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.wiz-trumpf-farbe.is-rot { color: #ff8a7c; }
+
 /* Gebot und Stiche am Sitz: die wichtigste Zahl des Spiels. Stimmt beides
    überein, leuchtet sie grün — das ist der Zustand, den alle anstreben. */
 .wiz-gebot {
@@ -5885,20 +5999,35 @@ main.auth > .muted {
 }
 .wiz-blind { padding-bottom: 1.4rem; }
 
+/* Ansage und Trumpfwahl liegen mitten auf dem Tisch, über der eigenen Hand.
+   Je größer das Blatt, desto weniger sieht man von genau den Karten, über die
+   man gerade entscheidet — bei zwanzig Handkarten verdeckte die volle Breite
+   die halbe Reihe. Deshalb schmaler und knapper als die übrigen Blätter.
+   Gemessen auf 390 px Breite: das Ansageblatt nimmt bei zwanzig Stichen 43 %
+   der Höhe ein, die Trumpfwahl 24 %, die Hand bleibt in beiden Fällen frei.
+   Kleiner dürfen die Chips nicht werden — sie liegen mit 36 × 39 px schon am
+   unteren Rand dessen, was ein Daumen sicher trifft. */
+.wiz-knapp {
+  max-width: 23rem;
+  padding: 0.8rem 0.9rem;
+}
+.wiz-knapp h2 { font-size: 0.95rem; margin: 0 0 0.25rem; }
+.wiz-knapp p.muted { font-size: 0.74rem; line-height: 1.35; }
+
 /* Gebotsblatt: Zahlen als große Chips, damit der Daumen trifft. Eine
    gesperrte Zahl bleibt sichtbar — eine Zahl, die kommentarlos fehlt, sieht
    aus wie ein Fehler. */
 .wiz-gebote {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.32rem;
   justify-content: center;
-  margin: 0.6rem 0 0.8rem;
+  margin: 0.5rem 0 0.6rem;
 }
 .wiz-gebot-chip {
-  min-width: 2.6rem;
-  padding: 0.55rem 0.2rem;
-  font-size: 1.05rem;
+  min-width: 2.25rem;
+  padding: 0.45rem 0.2rem;
+  font-size: 0.95rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   border-radius: 10px;
@@ -5918,27 +6047,29 @@ main.auth > .muted {
   box-shadow: none;
 }
 
-/* Trumpfwahl des Gebers: vier Farben, sonst nichts. */
+/* Trumpfwahl des Gebers: vier Farben, sonst nichts. Alle vier nebeneinander —
+   sie stehen gleichrangig zur Wahl, und in zwei Reihen war das Blatt hoch
+   genug, um die halbe Hand zu verdecken. */
 .wiz-farben {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin: 0.7rem 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  margin: 0.55rem 0 0.2rem;
 }
 .wiz-farbe {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.7rem 0.4rem;
-  font-size: 0.8rem;
+  gap: 0.1rem;
+  padding: 0.5rem 0.2rem;
+  font-size: 0.68rem;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
 }
-.wiz-farbe span { font-size: 1.6rem; line-height: 1; }
+.wiz-farbe span { font-size: 1.3rem; line-height: 1; }
 .wiz-farbe.is-rot span { color: #e06a5e; }
 
 /* Abrechnung und Punktetafel */
@@ -7899,4 +8030,332 @@ main.auth > .muted {
     opacity: 1;
     transform: translate(-50%, -12px) scale(1);
   }
+}
+
+/* =========================================================================
+   Einstellungen.
+
+   Zwei Regler und ein Schalter. Der gemalte Satz aus den Menueblaettern
+   traegt das Blatt schon; hier steht nur, was ein Schieberegler braucht -
+   und den gibt es sonst nirgends in der Anwendung.
+
+   Der Regler ist bewusst dick: Er wird mit dem Daumen bedient, waehrend das
+   Handy in einer Hand liegt. Die 28 px Griffbreite sind kein Geschmack,
+   sondern die Untergrenze, unter der man beim Ziehen abrutscht.
+   ========================================================================= */
+
+.einstellungen-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.einstellungen-zeile:last-of-type { border-bottom: none; }
+
+.einstellungen-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+.einstellungen-text .muted { font-size: 0.76rem; line-height: 1.25; }
+
+/* Abgeblendet, aber lesbar: Der Satz daneben erklaert ja gerade, warum der
+   Schalter nicht geht. Ganz ausgrauen hiesse, die Erklaerung zu verstecken. */
+.einstellungen-zeile.is-aus .einstellungen-text strong { opacity: 0.55; }
+.einstellungen-zeile.is-aus .lobby-chip { opacity: 0.45; }
+
+.einstellungen-regler {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+/* Die Zahl bekommt feste Breite und Ziffern gleicher Laufweite, sonst
+   zappelt der Regler beim Ziehen hin und her, weil "5" schmaler ist
+   als "100". */
+.einstellungen-wert {
+  font-variant-numeric: tabular-nums;
+  width: 2.2rem;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #f0e6d2;
+}
+
+.einstellungen-regler input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8.5rem;
+  height: 28px;
+  background: none;
+  margin: 0;
+}
+.einstellungen-regler input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.25));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.einstellungen-regler input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.einstellungen-regler input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f6e3b4, #c99a48 70%, #8d6626);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+.einstellungen-regler input[type='range']::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f6e3b4, #c99a48 70%, #8d6626);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+.einstellungen-regler input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #f6e3b4;
+  outline-offset: 2px;
+}
+
+.einstellungen-fussnote {
+  margin: 0.7rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+/* Der Schalter in der Zeile ist schmaler als der in der Lobby - dort steht
+   er in einer Reihe gleich breiter Chips, hier allein am rechten Rand. */
+.einstellungen-zeile .lobby-chip {
+  flex: 0 0 auto;
+  min-width: 4.2rem;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+}
+
+
+/* Kachel ohne Bild: ein Zeichen statt eines weissen Kastens. Gilt fuer
+   Klangpakete und Musik, solange dafuer keine Grafik gemalt ist. */
+.shop-ware-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: #f2dfae;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  aspect-ratio: 1;
+}
+
+/* Die Auswahlzeile bricht um: Vier Paketnamen passen nicht neben den Text. */
+.einstellungen-zeile--auswahl {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.einstellungen-chips {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+.einstellungen-chips .lobby-chip {
+  flex: 0 1 auto;
+  min-width: 5rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+/* =========================================================================
+   Klanghalle — Musik und Klangpakete auswaehlen.
+
+   Eine Liste statt eines Rasters: Musik hat kein Bild, und ein Raster aus
+   Textkacheln ist schwerer zu lesen als Zeilen untereinander. Die Zeile
+   traegt Name, Zustand, ein Ohr und einen Haken - in dieser Reihenfolge,
+   weil man von links nach rechts entscheidet.
+   ========================================================================= */
+
+.klanghalle {
+  max-height: 82vh;
+  overflow-y: auto;
+}
+
+.klanghalle-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.klanghalle-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.15rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.klanghalle-zeile:last-child { border-bottom: none; }
+.klanghalle-zeile.is-gewaehlt .klanghalle-text strong { color: #ffe9b0; }
+
+.klanghalle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1;
+  min-width: 0;
+}
+.klanghalle-text .muted { font-size: 0.72rem; }
+
+/* Der Abspielknopf ist rund und klein, aber nicht kleiner als ein Daumen:
+   44 px ist die Untergrenze, unter der man daneben tippt. */
+.klanghalle-hoeren {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  background: radial-gradient(circle at 35% 30%, #4a3f30, #2b241b);
+  color: #f2dfae;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.klanghalle-hoeren:active { transform: scale(0.94); }
+
+.klanghalle-zeile .lobby-chip {
+  flex: 0 0 auto;
+  min-width: 5.2rem;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+}
+/* Das Gewaehlte bleibt lesbar, obwohl der Knopf gesperrt ist - er sagt ja
+   gerade aus, dass dieses Stueck laeuft. */
+.klanghalle-zeile .lobby-chip:disabled { opacity: 1; }
+
+.klanghalle-fuss {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  margin: 0.6rem 0 0;
+}
+
+/* Der Anhoerknopf in der Kaufrueckfrage steht ueber der Waehrungsfrage. */
+.ks-kauf-hoeren {
+  margin: 0.4rem 0 0.2rem;
+  min-width: 8rem;
+}
+
+/* Drei Knoepfe unter dem Pinguin passen nicht mehr nebeneinander. */
+.hub-garderobe-text .hub-knopfreihe { flex-wrap: wrap; }
+
+/* =========================================================================
+   Profil-Tab.
+
+   Der Tab war der einzige, der den Tafel-Baustein nicht benutzt hat: jeder
+   Abschnitt ein eigener Kasten aus CSS-Verlauf mit goldenem Rand und
+   0-4px-Schatten. Nebeneinander sahen die Kaesten aus wie eine Systemapp,
+   nicht wie eine gemalte Welt - und das lag nicht an den Farben, sondern
+   daran, dass es ueberhaupt kein Material gab, nur Flaechen.
+
+   Die Regeln hier raeumen das auf, so weit es ohne neue Bilder geht. Was
+   wirklich fehlt, sind gemalte Knoepfe: docs/ASSETS-PROFIL.md.
+   ========================================================================= */
+
+/* Innerhalb einer Tafel braucht kein Abschnitt mehr seinen eigenen Rahmen -
+   die Tafel IST der Rahmen. Doppelte Raender waren der halbe Kastenlook. */
+.hub-tafel .hub-garderobe,
+.hub-tafel .hub-geburtstag {
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+.hub-tafel .hub-geburtstag.is-heute {
+  /* Der Geburtstag darf leuchten, aber ohne Kasten drumherum. */
+  box-shadow: none;
+  filter: drop-shadow(0 0 10px rgba(255, 210, 90, 0.35));
+}
+
+.profil-einstiege {
+  margin-top: 0.55rem;
+}
+
+/* Die drei Einstiege: Symbol oben, ein Wort darunter. */
+.profil-kachel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.2rem 0.45rem;
+  min-height: 4.4rem;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #f4e9d4;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  cursor: pointer;
+}
+.profil-kachel.is-gold {
+  border-image-source: url(/hub/menue-knopf-gruen.webp);
+  color: #eafaf0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.profil-kachel img {
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+.profil-kachel:active {
+  transform: translateY(1px) scale(0.985);
+}
+.profil-kachel .hub-punkt {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+}
+
+/* Konto: alles untereinander und gleich breit. Eine Reihe nebeneinander
+   haette "Benachrichtigungen" auf drei Zeilen umgebrochen. */
+.profil-konto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.profil-konto-knopf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+}
+.profil-konto-knopf img {
+  width: 1.05rem;
+  height: 1.05rem;
+  object-fit: contain;
+}
+.profil-konto .rechtliches {
+  margin: 0.3rem 0 0;
+  text-align: center;
+  font-size: 0.68rem;
+}
+.profil-konto .hub-konto-loeschen {
+  align-self: center;
+  margin-top: 0.1rem;
 }

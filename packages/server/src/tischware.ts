@@ -36,7 +36,7 @@ import { inEdelsteine, inMuenzen } from './waehrung.js';
  * Blaetter schon jetzt brauchbar, obwohl von ihnen erst die Rueckseite gemalt
  * ist.
  */
-export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen';
+export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik';
 
 export interface Ware {
   /** Kennung MIT Praefix, so wie sie in `account_cosmetic` steht. */
@@ -86,6 +86,23 @@ const emote = ware('emote', 'emote');
  * und ein Sonderfall im Praefix waere schlimmer als ein haesslicher Schluessel.
  */
 const wappen = ware('wappen', 'wappen');
+
+/**
+ * Klang und Musik.
+ *
+ * Zwei Arten und nicht eine, weil sie verschieden schwer sind: Ein Klangpaket
+ * sind ein paar Kilobyte und liegt beim eigenen Ursprung, ein Musikstueck ist
+ * ein Megabyte und zieht irgendwann um (siehe `docs/KLANG.md`). Wer sie in
+ * einen Topf wirft, kann sie spaeter nicht getrennt ausliefern.
+ *
+ * **Beides ist nur zu hoeren, nie zu sehen.** Deshalb gibt es hier — anders
+ * als bei Szenerie, Blatt und Rueckseite — keine Pruefung beim Einstellen:
+ * Welches Paket jemand hoert, geht keinen Mitspieler etwas an, und die Wahl
+ * steht am Geraet statt am Konto. Gekauft wird trotzdem am Server, sonst
+ * waere der Kauf keiner.
+ */
+const klang = ware('klang', 'klang');
+const musik = ware('musik', 'musik');
 
 /**
  * Der Katalog.
@@ -192,6 +209,27 @@ export const WAREN: readonly Ware[] = [
   wappen('wappen-16', 550, 'episch'),
   wappen('wappen-17', 550, 'episch'),
   wappen('wappen-18', 800, 'legendaer'),
+
+  // --- Klangpakete --------------------------------------------------------
+  // `grund` ist der Satz, der immer da ist — er steht hier nur, damit die
+  // Auswahl in den Einstellungen vollstaendig ist und man zurueckwechseln
+  // kann. Ein Paket muss nicht alle Klaenge mitbringen: Was fehlt, kommt aus
+  // dem Grundsatz. `glas` tauscht acht Stueck aus und wiegt 19 kB.
+  klang('grund', 0),
+  klang('glas', 300),
+
+  // --- Musik --------------------------------------------------------------
+  // `stube` ist frei, aus demselben Grund wie die zwei freien Zurufe: Ein
+  // Spiel, in dem nur zahlende Gaeste Musik haben, ist fuer alle anderen ein
+  // stummes Spiel. Es ist zugleich das kuerzeste Stueck (62 s) — wer nichts
+  // kauft, hoert es also am oeftesten, und deshalb ist es das unaufdringlichste.
+  //
+  // Vier Stuecke sind 5,2 MB. Das ist die Grenze: Ab dem fuenften gehoert
+  // Musik auf einen eigenen Ort, siehe `docs/KLANG.md`.
+  musik('stube', 0),
+  musik('wiese', 300),
+  musik('traeume', 350, 'selten'),
+  musik('dorf', 400, 'selten'),
 ];
 
 const NACH_ID = new Map(WAREN.map((ware) => [ware.id, ware]));

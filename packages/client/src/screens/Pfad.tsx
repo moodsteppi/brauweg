@@ -20,6 +20,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import type { Getragen } from '../api';
+import { Pinguin } from '../pinguin';
+
 export interface Biom {
   /** Dateiname ohne Endung unter /hub/. */
   readonly datei: string;
@@ -121,7 +124,14 @@ function useAufFigurRichten(
   }, [ziel, anteilVonUnten]);
 }
 
-export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Element {
+export function Trophaeenpfad({
+  trophies,
+  getragen = {},
+}: {
+  trophies: number;
+  /** Was der Pinguin traegt — derselbe Satz wie im Kleiderschrank. */
+  getragen?: Getragen;
+}): React.JSX.Element {
   const [voll, setVoll] = useState(false);
   const stelle = stelleFuer(trophies);
   const hier = aktuellesBiom(trophies);
@@ -140,14 +150,21 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
             bewegen kann: Nur so begrenzt der Browser die Ansicht auf das
             Bild und laesst keine leere Flaeche stehen. */}
         <div className="pfad-fenster" ref={fenster}>
-          <Stapel trophies={trophies} stelle={stelle} />
+          <Stapel trophies={trophies} stelle={stelle} getragen={getragen} />
         </div>
         <span className="pfad-lupe" aria-hidden="true">
           {hier.name} · Pfad ansehen
         </span>
       </button>
 
-      {voll && <PfadVollbild trophies={trophies} stelle={stelle} onClose={() => setVoll(false)} />}
+      {voll && (
+        <PfadVollbild
+          trophies={trophies}
+          stelle={stelle}
+          getragen={getragen}
+          onClose={() => setVoll(false)}
+        />
+      )}
     </>
   );
 }
@@ -159,7 +176,15 @@ export function Trophaeenpfad({ trophies }: { trophies: number }): React.JSX.Ele
  * bestimmt allein der umgebende Rollbereich. Eine zweite, kleinere
  * Darstellung zu bauen hieße, zwei Sachen gleich halten zu müssen.
  */
-function Stapel({ trophies, stelle }: { trophies: number; stelle: number }): React.JSX.Element {
+function Stapel({
+  trophies,
+  stelle,
+  getragen,
+}: {
+  trophies: number;
+  stelle: number;
+  getragen: Getragen;
+}): React.JSX.Element {
   const anzahl = BIOME.length;
   const anteil = anteilFuer(stelle);
 
@@ -203,7 +228,7 @@ function Stapel({ trophies, stelle }: { trophies: number; stelle: number }): Rea
       })}
 
       <div className="pfad-figur" style={{ bottom: `${anteil * 100}%` }}>
-        <img src="/hub/pinguin.png" alt="" draggable={false} />
+        <Pinguin getragen={getragen} groesse={2.8} />
         <span className="pfad-figur-stand">
           <img src="/hub/pokal.png" alt="" aria-hidden="true" />
           {trophies}
@@ -224,10 +249,12 @@ function Stapel({ trophies, stelle }: { trophies: number; stelle: number }): Rea
 function PfadVollbild({
   trophies,
   stelle,
+  getragen,
   onClose,
 }: {
   trophies: number;
   stelle: number;
+  getragen: Getragen;
   onClose: () => void;
 }): React.JSX.Element {
   const rolle = useRef<HTMLDivElement>(null);
@@ -253,7 +280,7 @@ function PfadVollbild({
         </span>
       </header>
       <div className="pfad-voll-rolle" ref={rolle}>
-        <Stapel trophies={trophies} stelle={stelle} />
+        <Stapel trophies={trophies} stelle={stelle} getragen={getragen} />
       </div>
     </div>
   );

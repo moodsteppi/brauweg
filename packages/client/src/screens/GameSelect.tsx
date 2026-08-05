@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 import {
   ApiError,
@@ -30,6 +37,16 @@ import {
 import { SZENEN, szeneBild } from '../szenen';
 import { emoteBild, emoteMit } from '../emotes';
 import {
+  MUSIK_NAMEN,
+  PAKET_NAMEN,
+  abonniere,
+  laufendeProbe,
+  probeMusik,
+  probePaket,
+  spiele,
+} from '../klang';
+import { EinstellungenBlatt } from './Einstellungen';
+import {
   EdelsteinIcon,
   HubBanner,
   HubSzene,
@@ -42,6 +59,7 @@ import { Pinguin } from '../pinguin';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
+import { Klanghalle } from './Klanghalle';
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -110,6 +128,7 @@ export function GameSelect({
    */
   const [aufgabenOffen, setAufgabenOffen] = useState(false);
   const [schrankOffen, setSchrankOffen] = useState(false);
+  const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -270,6 +289,7 @@ export function GameSelect({
         return (
           <Spielen
             trophies={trophies}
+            getragen={me.avatar}
             activeTable={me.activeTable}
             onPick={onPick}
             onResume={onResume}
@@ -291,6 +311,10 @@ export function GameSelect({
             onDeleted={onDeleted}
             onStufen={() => setStufenOffen(true)}
             onSchrank={() => setSchrankOffen(true)}
+            onKlanghalle={() => {
+              spiele('blatt-auf');
+              setKlanghalleOffen(true);
+            }}
             onAufgaben={() => setAufgabenOffen(true)}
             onBald={setBald}
             onShowProfile={onShowProfile}
@@ -468,6 +492,7 @@ export function GameSelect({
           onGuthaben={onAvatarChange}
         />
       )}
+      {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
         <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
@@ -517,6 +542,7 @@ function ProfilTab({
   onDeleted,
   onStufen,
   onSchrank,
+  onKlanghalle,
   onAufgaben,
   onBald,
   onShowProfile,
@@ -532,6 +558,8 @@ function ProfilTab({
   onStufen: () => void;
   /** Oeffnet den Kleiderschrank. */
   onSchrank: () => void;
+  /** Oeffnet den Klanghalle — Musik und Klangpakete auswaehlen. */
+  onKlanghalle: () => void;
   /** Oeffnet Tagesaufgaben und Truhen. */
   onAufgaben: () => void;
   onBald: (name: string) => void;
@@ -544,6 +572,7 @@ function ProfilTab({
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [loeschenOffen, setLoeschenOffen] = useState(false);
+  const [einstellungenOffen, setEinstellungenOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
@@ -601,125 +630,195 @@ function ProfilTab({
         </span>
       </div>
 
-
       {/*
-        Der Pinguin und die zwei Einstiege, die zusammengehoeren: anziehen und
-        verdienen. Sie stehen hier oben, weil das Profil der Ort ist, an dem man
-        sich um sich selbst kuemmert — die Statistik darunter ist Nachlese.
+        Ab hier: Tafeln, und zwar durchgehend.
 
-        Der Pinguin IST der Knopf, wie das Profilbild daneben: Ein eigener
-        "Kleiderschrank oeffnen"-Knopf waere eine Zeile Hoehe fuer eine
-        Auskunft, die das Bild schon gibt.
+        Der Profil-Tab war der einzige, der den Tafel-Baustein NICHT benutzt
+        hat — jeder Abschnitt war ein eigener Kasten aus CSS-Verlauf mit
+        goldenem Rand. Genau daran sah man, dass er nicht dazugehoert:
+        DESIGN.md sagt seit jeher "Neue Hub-Inhalte gehoeren in eine Tafel,
+        nicht in einen eigenen Kasten", und der Shop haelt sich daran.
+
+        Die Tafeln geben zugleich die Rangfolge, die vorher fehlte: erst wer
+        ich bin, dann was mir gehoert, dann was ich geleistet habe, dann meine
+        Leute — und ganz zum Schluss die Konto-Sachen, die man ein Mal im Jahr
+        braucht.
       */}
-      <section className="hub-garderobe">
-        <button className="hub-garderobe-pinguin" onClick={onSchrank} title="Kleiderschrank">
-          <Pinguin getragen={me.avatar} groesse={7} titel="Dein Pinguin" />
-          <span className="hub-profilbild-stift" aria-hidden="true">
-            ✎
-          </span>
-        </button>
-        <div className="hub-garderobe-text">
-          <strong>Dein Pinguin</strong>
-          <span className="muted">
-            {Object.keys(me.avatar).length === 0
-              ? 'Noch nichts an — fünf Plätze warten.'
-              : `${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen belegt.`}
-          </span>
-          <div className="hub-knopfreihe hub-knopfreihe--a">
-            <button className="hub-knopf hub-knopf--a" onClick={onSchrank}>
-              Kleiderschrank
-            </button>
-            <button className="hub-knopf hub-knopf--a-gold" onClick={onAufgaben}>
-              Aufgaben
-              {me.bereit.truhen + me.bereit.aufgaben > 0 && (
-                <span className="hub-punkt hub-punkt--klein" aria-hidden="true" />
-              )}
-            </button>
+      <Tafel titel="Deine Sachen" zusatz={`Stufe ${me.level.stufe}`}>
+        <section className="hub-garderobe">
+          {/* Der Pinguin IST der Knopf, wie das Profilbild darueber: Ein
+              eigener "Kleiderschrank oeffnen"-Knopf waere eine Zeile Hoehe
+              fuer eine Auskunft, die das Bild schon gibt. */}
+          <button className="hub-garderobe-pinguin" onClick={onSchrank} title="Kleiderschrank">
+            <Pinguin getragen={me.avatar} groesse={7} titel="Dein Pinguin" />
+            <span className="hub-profilbild-stift" aria-hidden="true">
+              ✎
+            </span>
+          </button>
+          <div className="hub-garderobe-text">
+            <strong>Dein Pinguin</strong>
+            <span className="muted">
+              {Object.keys(me.avatar).length === 0
+                ? `Noch nichts an — ${SLOTS.length} Plätze warten.`
+                : `${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen belegt.`}
+            </span>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section
-        className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
+        {/* Drei Einstiege in das, was einem gehoert: anziehen, hoeren,
+            verdienen. Als Kachelreihe mit Symbol, nicht als Textknopfreihe —
+            drei Woerter nebeneinander sind auf einem Handy zu schmal, um
+            lesbar zu bleiben. */}
+        <div className="hub-reihe hub-reihe--drei profil-einstiege">
+          <ProfilKachel
+            icon="/hub/tab-profil.webp"
+            name="Kleiderschrank"
+            onClick={onSchrank}
+          />
+          <ProfilKachel
+            icon="/hub/icon-einstellungen.webp"
+            name="Klanghalle"
+            onClick={onKlanghalle}
+          />
+          <ProfilKachel
+            icon="/hub/icon-truhe.webp"
+            name="Aufgaben"
+            gold
+            punkt={me.bereit.truhen + me.bereit.aufgaben > 0}
+            onClick={onAufgaben}
+          />
+        </div>
+      </Tafel>
+
+      <Tafel
+        titel="Geburtstag"
+        zusatz={me.birthdayRewardClaimable ? 'Heute!' : geburtstagText}
       >
-        <div className="hub-geburtstag-art">
-          <img
-            src="/hub/pinguin-geburtstag.png"
-            alt="Geburtstags-Pinguin"
-            draggable={false}
-          />
+        <section
+          className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
+        >
+          <div className="hub-geburtstag-art">
+            <img
+              src="/hub/pinguin-geburtstag.png"
+              alt="Geburtstags-Pinguin"
+              draggable={false}
+            />
+          </div>
+          <div className="hub-geburtstag-text">
+            <strong>Geburtstags-Pinguin</strong>
+            {me.birthdayRewardClaimable ? (
+              <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
+            ) : me.hasBirthdayOutfit ? (
+              <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
+            ) : (
+              <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
+            )}
+            {me.birthdayRewardClaimable ? (
+              <button
+                className="hub-knopf hub-knopf--a-gold"
+                disabled={claimBusy}
+                onClick={claimReward}
+              >
+                {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
+              </button>
+            ) : null}
+            {claimError && <p className="error">{claimError}</p>}
+          </div>
+        </section>
+      </Tafel>
+
+      <Tafel titel="Trophäen" zusatz={`${partien} Partien`}>
+        <StatHero wert={trophaeen} />
+
+        <div className="hub-stat-raster">
+          {kacheln.map((k) => (
+            <StatKachel key={k.name} icon={k.icon} wert={k.wert} name={k.name} />
+          ))}
         </div>
-        <div className="hub-geburtstag-text">
-          <strong>Geburtstags-Pinguin</strong>
-          {me.birthdayRewardClaimable ? (
-            <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
-          ) : me.hasBirthdayOutfit ? (
-            <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
-          ) : (
-            <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
-          )}
-          {me.birthdayRewardClaimable ? (
-            <button
-              className="hub-knopf hub-knopf--a-gold"
-              disabled={claimBusy}
-              onClick={claimReward}
-            >
-              {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
-            </button>
-          ) : null}
-          {claimError && <p className="error">{claimError}</p>}
-        </div>
-      </section>
 
-      <StatHero wert={trophaeen} />
+        {me.stats.length === 0 ? (
+          <p className="muted hub-stat-leer">Noch keine Partie gespielt.</p>
+        ) : (
+          me.stats.map((row) => (
+            <StatSpiel
+              key={row.gameId}
+              name={t(`game.${row.gameId}`)}
+              meta={`${row.parties} Partien · ${row.wins} Siege`}
+              cups={row.trophies}
+            />
+          ))
+        )}
 
-      <div className="hub-stat-raster">
-        {kacheln.map((k) => (
-          <StatKachel key={k.name} icon={k.icon} wert={k.wert} name={k.name} />
-        ))}
-      </div>
-
-      {me.stats.length === 0 ? (
-        <p className="muted hub-stat-leer">Noch keine Partie gespielt.</p>
-      ) : (
-        me.stats.map((row) => (
-          <StatSpiel
-            key={row.gameId}
-            name={t(`game.${row.gameId}`)}
-            meta={`${row.parties} Partien · ${row.wins} Siege`}
-            cups={row.trophies}
-          />
-        ))
-      )}
-
-      <p className="hub-statistik-hinweis">
-        Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.
-      </p>
+        <p className="hub-statistik-hinweis">
+          Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.
+        </p>
+      </Tafel>
 
       {/* Freunde standen frueher im Clan-Tab. Dort fuellt jetzt die
           Mitgliederliste den Bildschirm, und Freunde sind ohnehin kein
           Clan: Sie gehoeren zum eigenen Konto. */}
       <Freunde onShowProfile={onShowProfile} />
 
-      <div className="hub-knopfreihe hub-knopfreihe--a">
-        <button className="hub-knopf hub-knopf--a" onClick={() => onBald('Benachrichtigungen')}>
-          Benachrichtigungen
-          <span className="front-bald-tag">Bald</span>
-        </button>
-        <button className="hub-knopf hub-knopf--a-raus" onClick={onSignOut}>
-          Abmelden
-        </button>
-      </div>
+      {/*
+        Konto — alles, was man selten braucht, an einem Ort und als richtige
+        Knoepfe.
 
-      <Rechtliches />
+        Vorher lagen Einstellungen ganz oben allein, Benachrichtigungen und
+        Abmelden irgendwo unter der Freundesliste, und "Konto loeschen" war
+        eine nackte Textzeile darunter. Drei verschiedene Bauformen fuer
+        dieselbe Art Sache.
 
-      {/* Klein und unten, aber vorhanden: Apple lehnt Apps mit Konten ohne
-          diesen Weg zuverlaessig ab, und die DSGVO verlangt ihn ohnehin. Als
-          Textzeile statt als Knopf, damit er nicht neben "Abmelden" liegt und
-          im Vorbeitippen erwischt wird. */}
-      <button className="hub-konto-loeschen" onClick={() => setLoeschenOffen(true)}>
-        Konto löschen
-      </button>
+        Die Reihenfolge ist Absicht: harmlos nach oben, endgueltig nach unten.
+        Loeschen bleibt rot und steht allein in der letzten Zeile — nicht
+        neben "Abmelden", sonst erwischt man es im Vorbeitippen.
+      */}
+      <Tafel titel="Konto" zusatz={me.displayName}>
+        <div className="profil-konto">
+          <button
+            className="hub-knopf hub-knopf--a profil-konto-knopf"
+            onClick={() => {
+              spiele('blatt-auf');
+              setEinstellungenOffen(true);
+            }}
+          >
+            <img src="/hub/icon-einstellungen.webp" alt="" aria-hidden="true" />
+            Einstellungen
+          </button>
+
+          <button
+            className="hub-knopf hub-knopf--a profil-konto-knopf"
+            onClick={() => onBald('Benachrichtigungen')}
+          >
+            <img src="/hub/icon-chat.webp" alt="" aria-hidden="true" />
+            Benachrichtigungen
+            <span className="front-bald-tag">Bald</span>
+          </button>
+
+          <button
+            className="hub-knopf hub-knopf--a-raus profil-konto-knopf"
+            onClick={onSignOut}
+          >
+            Abmelden
+          </button>
+
+          <Rechtliches />
+
+          {/* Klein, aber vorhanden: Apple lehnt Apps mit Konten ohne diesen
+              Weg zuverlaessig ab, und die DSGVO verlangt ihn ohnehin. */}
+          <button className="hub-konto-loeschen" onClick={() => setLoeschenOffen(true)}>
+            Konto löschen
+          </button>
+        </div>
+      </Tafel>
+
+      {einstellungenOffen && (
+        <EinstellungenBlatt
+          onClose={() => {
+            spiele('blatt-zu');
+            setEinstellungenOffen(false);
+          }}
+        />
+      )}
 
       {loeschenOffen && (
         <KontoLoeschenBlatt
@@ -947,7 +1046,7 @@ type Kaufwunsch =
   | { art: 'paket'; paket: Paket }
   | { art: 'truhe'; truhe: Kauftruhe }
   /** Szenerie, Rueckseite, Zuruf oder Wappen — mit Wahl der Waehrung. */
-  | { art: 'ware'; ware: RegalWare; name: string; bild: string };
+  | { art: 'ware'; ware: RegalWare; name: string; bild: string | null };
 
 /**
  * Rueckfrage vor dem Abbuchen.
@@ -988,8 +1087,16 @@ function KaufFrage({
       >
         {frage.art === 'ware' ? (
           <>
-            <img className="ks-kauf-ware" src={frage.bild} alt="" draggable={false} />
+            {/* Ware ohne Grafik (Klang, Musik) zeigt hier nichts statt eines
+                kaputten Bildes — der Name darunter traegt die Rueckfrage. */}
+            {frage.bild && (
+              <img className="ks-kauf-ware" src={frage.bild} alt="" draggable={false} />
+            )}
             <h2>{frage.name}</h2>
+            {/* Klang und Musik kauft man nach Gehör, nicht nach Namen. Der
+                Knopf steht deshalb VOR der Waehrungsfrage — erst hoeren,
+                dann entscheiden. */}
+            <Vorhoeren ware={frage.ware} />
           </>
         ) : frage.art === 'truhe' ? (
           <>
@@ -1161,6 +1268,7 @@ function Shop({
     void api
       .buyChest(truhe.id)
       .then((ergebnis) => {
+        spiele('truhe');
         setFrage(null);
         setFund(ergebnis);
         onGuthaben();
@@ -1192,6 +1300,7 @@ function Shop({
     void api
       .buyItem(w.id, waehrung)
       .then(() => {
+        spiele('kauf');
         setFrage(null);
         onGuthaben();
       })
@@ -1307,6 +1416,31 @@ function Shop({
         kauft={kauft}
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
+      {/* Klang und Musik. Beides wird hier gekauft und in den Einstellungen
+          gewaehlt — dieselbe Trennung wie ueberall: Der Shop legt zu, das
+          Einrichten passiert dort, wo man es benutzt. */}
+      <WareRegal
+        titel="Klangpakete"
+        zusatz="Wie sich der Tisch anhört"
+        waren={ware('klang')}
+        bild={() => null}
+        glyph="♪"
+        name={(w) => PAKET_NAMEN[w.wert] ?? w.wert}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+
+      <WareRegal
+        titel="Musik"
+        zusatz="Im Menü und am Tisch"
+        waren={ware('musik')}
+        bild={() => null}
+        glyph="♫"
+        name={(w) => MUSIK_NAMEN[w.wert] ?? w.wert}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+
       <Tafel titel="Pässe" zusatz="Kommt bald">
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.paesse ?? []).map((paket) => (
@@ -1351,6 +1485,7 @@ function WareRegal({
   zusatz,
   waren,
   bild,
+  glyph,
   name,
   kauft,
   onKaufen,
@@ -1358,12 +1493,22 @@ function WareRegal({
   titel: string;
   zusatz: string;
   waren: RegalWare[];
-  bild: (w: RegalWare) => string;
+  /**
+   * Bild der Kachel — oder null, wenn es fuer diese Sorte noch keins gibt.
+   *
+   * Dann steht `glyph` an seiner Stelle. Der Umweg ist Absicht: Ein `<img>`
+   * auf eine Datei, die es nicht gibt, ist ein weisser Kasten, und genau das
+   * ist beim Clan-Krieg schon einmal fast live gegangen. Ein Zeichen ist
+   * ehrlicher als ein kaputtes Bild und laesst sich austauschen, sobald die
+   * Grafik da ist.
+   */
+  bild: (w: RegalWare) => string | null;
+  glyph?: string;
   name: (w: RegalWare) => string;
   /** Kennung, die gerade gekauft wird — der Knopf sperrt sich so lange. */
   kauft: string | null;
   /** Oeffnet die Rueckfrage. Gekauft wird erst dort. */
-  onKaufen: (w: RegalWare, name: string, bild: string) => void;
+  onKaufen: (w: RegalWare, name: string, bild: string | null) => void;
 }): React.JSX.Element | null {
   // Ist alles kostenlos und gehoert ohnehin allen, waere das Regal ein
   // leeres Schaufenster. Dann lieber gar keins.
@@ -1381,7 +1526,13 @@ function WareRegal({
             onClick={() => onKaufen(w, name(w), bild(w))}
             title={name(w)}
           >
-            <img src={bild(w)} alt="" draggable={false} />
+            {bild(w) ? (
+              <img src={bild(w) ?? undefined} alt="" draggable={false} />
+            ) : (
+              <span className="shop-ware-glyph" aria-hidden="true">
+                {glyph ?? '?'}
+              </span>
+            )}
             <span className="shop-ware-name">{name(w)}</span>
             {w.besessen ? (
               <span className="shop-ware-hab">✓</span>
@@ -1395,6 +1546,77 @@ function WareRegal({
         ))}
       </div>
     </Tafel>
+  );
+}
+
+/**
+ * Ein Einstieg im Profil: Symbol oben, ein Wort darunter.
+ *
+ * Bewusst eine Kachel und kein breiter Knopf mit Text: Drei Woerter
+ * nebeneinander in einer Knopfreihe sind auf einem Handy so schmal, dass
+ * "Kleiderschrank" umbricht oder abgeschnitten wird. Ein Symbol traegt die
+ * halbe Bedeutung, dann reicht der Platz.
+ *
+ * Die Symbole sind vorlaeufig aus dem vorhandenen Bestand geliehen — eigene
+ * sind bestellt, siehe `docs/ASSETS-PROFIL.md`. Geliehen und passend ist
+ * besser als ein weisser Kasten.
+ */
+function ProfilKachel({
+  icon,
+  name,
+  gold = false,
+  punkt = false,
+  onClick,
+}: {
+  icon: string;
+  name: string;
+  gold?: boolean;
+  /** Roter Punkt: dahinter ist etwas zu holen. Nie eine Zahl — siehe DESIGN.md. */
+  punkt?: boolean;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <button
+      className={`profil-kachel${gold ? ' is-gold' : ''}`}
+      onClick={() => {
+        spiele('tipp');
+        onClick();
+      }}
+    >
+      <img src={icon} alt="" aria-hidden="true" draggable={false} />
+      <span>{name}</span>
+      {punkt && <span className="hub-punkt hub-punkt--klein" aria-hidden="true" />}
+    </button>
+  );
+}
+
+/**
+ * Anhören, bevor man kauft.
+ *
+ * Nur fuer Klang und Musik — bei einer Szenerie taete ein Knopf nichts. Bei
+ * Musik laeuft das Stueck an und der Knopf wird zum Stopp; bei einem
+ * Klangpaket ist es ein einzelner Kartenklick aus genau diesem Paket, und
+ * dafuer braucht es keinen Stoppknopf.
+ *
+ * Der Aufraeumer haengt am Element: Wer die Rueckfrage schliesst, waehrend
+ * die Probe laeuft, soll nicht mit der Musik im Ruecken weitergehen.
+ */
+function Vorhoeren({ ware }: { ware: RegalWare }): React.JSX.Element | null {
+  const laeuftProbe = useSyncExternalStore(abonniere, laufendeProbe, laufendeProbe);
+  useEffect(() => () => probeMusik(null), []);
+
+  if (ware.art !== 'klang' && ware.art !== 'musik') return null;
+  const istMusik = ware.art === 'musik';
+  const an = istMusik && laeuftProbe === ware.wert;
+
+  return (
+    <button
+      type="button"
+      className="hub-knopf hub-knopf--a ks-kauf-hoeren"
+      onClick={() => (istMusik ? probeMusik(ware.wert) : probePaket(ware.wert))}
+    >
+      {an ? '■ Stopp' : '▶ Anhören'}
+    </button>
   );
 }
 
@@ -1418,7 +1640,13 @@ function TabButton({
     <button
       className={`front-tab front-tab--${farbe}${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
-      onClick={onClick}
+      // Der Klang haengt an der Leiste und nicht an jedem einzelnen Knopf im
+      // Haus: Das hier ist die Bewegung, die man hundertmal am Abend macht.
+      // Wer jeden Knopf verklanglicht, baut eine Klapperkiste.
+      onClick={() => {
+        if (!active) spiele('tipp');
+        onClick();
+      }}
     >
       <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
       <span>{label}</span>
@@ -1436,6 +1664,7 @@ function TabButton({
  */
 function Spielen({
   trophies,
+  getragen,
   activeTable,
   onPick,
   onResume,
@@ -1445,6 +1674,7 @@ function Spielen({
   bereit,
 }: {
   trophies: number;
+  getragen: Me['avatar'];
   activeTable: Me['activeTable'];
   /** Wie viel bereitliegt (Truhen plus fertige Aufgaben). 0 = kein Punkt. */
   bereit: number;
@@ -1474,7 +1704,7 @@ function Spielen({
       {/* Karte füllt die Bühne; Logo und Seiten-UI liegen als Overlay drauf,
           damit kein blauer Streifen die oberen Arenen verdeckt. */}
       <div className="hub-buehne">
-        <Trophaeenpfad trophies={trophies} />
+          <Trophaeenpfad trophies={trophies} getragen={getragen} />
 
         {/* Nur der Schriftzug, dafuer gross und mittig. Der Slogan
             "Doppelkopf. Dein Weg." stand als zweites Bild darunter und
@@ -1545,7 +1775,7 @@ function Spielen({
             <strong>Neu hier?</strong>
             <span>So funktioniert Brauweg</span>
           </span>
-          <img src="/hub/pinguin.png" alt="" draggable={false} />
+          <img src="/hub/pinguin/pinguin-basis.webp" alt="" draggable={false} />
           <span className="front-bald-tag">Bald</span>
         </button>
       </div>
@@ -2244,23 +2474,37 @@ function ThemenTab({
             <div className="hub-themenwahl">
               {(spiele ?? []).map((spiel) => {
                 const t2 = me.themes[spiel.id];
+                const bald = spiel.availability !== 'playable';
                 return (
                   <button
                     key={spiel.id}
-                    className="hub-themenspiel"
+                    className={`hub-themenspiel${bald ? ' is-bald' : ''}`}
                     onClick={() => setGewaehlt(spiel.id)}
                   >
-                    <strong>{t(spiel.nameKey)}</strong>
-                    {/* Was eingestellt ist, steht daneben - sonst muesste man
-                        jedes Spiel oeffnen, um es zu sehen. */}
-                    <span className="muted">
-                      {t(`deck.${t2?.cardDeck ?? 'text'}`)}
-                      {' · '}
-                      {SZENEN.find((s) => s.id === (t2?.tableScene ?? 'stube'))?.name ?? 'Stube'}
+                    {/*
+                      Das gemalte Stillleben des Spiels als Banner. Es ist ein
+                      SVG und laedt nichts nach — die Bestellung fuer gemalte
+                      Banner steht in docs/ASSETS-SPIELWAHL.md. Erst wenn die
+                      Datei wirklich liegt, wird hier ein <img> daraus; ein
+                      <img> auf eine noch fehlende Datei waere ein weisser
+                      Kasten (CLAUDE.md).
+                    */}
+                    <span className="hub-themenspiel-bild" aria-hidden="true">
+                      <SpielBild id={spiel.id} />
                     </span>
-                    {spiel.availability !== 'playable' && (
-                      <span className="front-bald-tag">Bald</span>
-                    )}
+                    {/* Name und was eingestellt ist, auf einem Verlauf unten -
+                        sonst muesste man jedes Spiel oeffnen, um seine Wahl zu
+                        sehen. Der Verlauf haelt den Text lesbar, egal wie hell
+                        das Banner an der Stelle ist. */}
+                    <span className="hub-themenspiel-text">
+                      <strong>{t(spiel.nameKey)}</strong>
+                      <span className="muted">
+                        {t(`deck.${t2?.cardDeck ?? 'text'}`)}
+                        {' · '}
+                        {SZENEN.find((s) => s.id === (t2?.tableScene ?? 'stube'))?.name ?? 'Stube'}
+                      </span>
+                    </span>
+                    {bald && <span className="front-bald-tag">Bald</span>}
                   </button>
                 );
               })}
@@ -2711,7 +2955,7 @@ function ProfilBild({
       {src ? (
         <img src={src} alt="Profilbild" draggable={false} />
       ) : (
-        <img src="/hub/pinguin.png" alt="Profilbild" draggable={false} />
+        <Pinguin getragen={me.avatar} groesse={3.2} titel="Profilbild" />
       )}
       <span className="hub-profilbild-stift" aria-hidden="true">
         ✎

@@ -29,6 +29,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { wsProtokolle, wsUrl } from './laufzeit';
 import { EMOTE_DAUER_MS, EMOTE_PAUSE_MS } from './emotes';
+import { spiele } from './klang';
 import {
   ENVELOPE_VERSION,
   type GameView,
@@ -115,6 +116,11 @@ export function useTable<V = GameView>(
   const letzterEmote = useRef(0);
 
   const zeigeEmote = useCallback((seat: number, emote: string): void => {
+    // Der Klang haengt an dieser einen Stelle und nicht an den Tischen: Beide
+    // Spiele bekommen Zurufe ueber denselben Weg, und was hier steht, gilt
+    // damit fuer beide. Auch fuer den eigenen Zuruf - man will hoeren, dass
+    // er rausgegangen ist.
+    spiele('emote');
     setEmotes((alt) => ({ ...alt, [seat]: emote }));
     window.clearTimeout(emoteTimer.current[seat]);
     emoteTimer.current[seat] = window.setTimeout(() => {
