@@ -33,18 +33,32 @@ const LANE_WIDTH = 2.5;
 const CHUNK_LENGTH = 28;
 const NUM_CHUNKS = 6;
 const BASE_SPEED = 16;
-/** Klarer Sprungbogen — Peak ~2,5 m */
-const JUMP_FORCE = 11;
-const GRAVITY = -24;
-/** Rutschen lang genug für Slide-Tore */
-const SLIDE_MS = 1200;
-const PINGUIN_HOEHE = 1.2;
+/** Sprung: Peak ≈ v²/(2g) ≈ 1,6 m — klar über Jump-Props */
+const JUMP_FORCE = 9;
+const GRAVITY = -26;
+/** Rutschdauer — lang genug für ein Tor */
+const SLIDE_MS = 900;
+/** Stehende Figur (Füße = Origin nach groundFeet) */
+const PINGUIN_HOEHE = 1.15;
+/** Beim Rutschen: nur zusammenducken, Füße bleiben am Boden */
+const SLIDE_SCALE_Y = 0.48;
+/** Kopfhöhe beim Rutschen ≈ PINGUIN_HOEHE * SLIDE_SCALE_Y */
+const SLIDE_HEAD_Y = PINGUIN_HOEHE * SLIDE_SCALE_Y;
 const PLAYER_Z = 2.4;
 const GROUND_Y = 0;
-/** Füße darüber → Jump-Hindernis klar */
-const CLEAR_JUMP_Y = 0.95;
-/** Füße darüber → Fahrzeug klar */
-const CLEAR_VEHICLE_Y = 1.15;
+/**
+ * Sprung-Hindernisse: Füße müssen darüber.
+ * Props sind ≤ JUMP_PROP_MAX; etwas Luft nach oben.
+ */
+const JUMP_PROP_MAX = 0.62;
+const CLEAR_JUMP_Y = JUMP_PROP_MAX + 0.08;
+/** Fahrzeuge etwas höher — Sprung muss höher tragen */
+const CLEAR_VEHICLE_Y = 0.88;
+/**
+ * Slide-Tore: Querbalken-Unterkante (logisch).
+ * Stehend (Kopf ~1,15) trifft; geduckt (Kopf ~0,55) passt darunter.
+ */
+const SLIDE_CLEARANCE = 0.72;
 /** Feste Z-Positionen im Chunk — Hindernisse bewegen sich nicht selbst */
 const SLOT_Z = [-10, -5, 0, 5, 10] as const;
 
@@ -81,7 +95,10 @@ type GameState = {
   speed: number;
   distance: number;
   phase: Phase;
+  /** Füße (Boden / Sprung) */
   playerPosition: Vector3;
+  /** Aktuelle Kopfhöhe für Kollision (steht / rutscht) */
+  headY: number;
 };
 
 const OBSTACLE_URLS: Record<VehicleKind, string> = {
@@ -92,9 +109,9 @@ const OBSTACLE_URLS: Record<VehicleKind, string> = {
 
 /** Niedrig genug, dass der Sprung klar drüber geht */
 const VEHICLE_H: Record<VehicleKind, number> = {
-  scooter: 0.78,
-  silver: 0.72,
-  bmw: 0.68,
+  scooter: 0.72,
+  silver: 0.68,
+  bmw: 0.64,
 };
 
 const JUMP_PROPS: JumpProp[] = [
@@ -114,32 +131,35 @@ const JUMP_PROPS: JumpProp[] = [
 const BUSH_PROPS: BushProp[] = ['bush', 'planter'];
 const SLIDE_PROPS: SlideProp[] = ['banner', 'scaffold', 'garland'];
 
-/** Zielhöhe der 3D-Props — niedrig genug zum Springen */
+/** Jump-Props: alle unter CLEAR_JUMP_Y */
 const JUMP_H: Record<JumpProp, number> = {
-  crate: 0.85,
-  suitcase: 0.7,
-  trashbags: 0.8,
-  cone: 0.85,
-  barrel: 0.95,
-  boxes: 0.9,
-  bench: 0.75,
-  planter: 0.9,
-  keg: 0.95,
-  bike: 0.95,
-  barrier: 0.75,
-  cart: 0.95,
+  crate: 0.58,
+  suitcase: 0.48,
+  trashbags: 0.55,
+  cone: 0.58,
+  barrel: 0.62,
+  boxes: 0.6,
+  bench: 0.5,
+  planter: 0.58,
+  keg: 0.62,
+  bike: 0.62,
+  barrier: 0.5,
+  cart: 0.62,
 };
 
 const BUSH_H: Record<BushProp, number> = {
-  bush: 0.95,
-  planter: 0.9,
+  bush: 0.6,
+  planter: 0.58,
 };
 
-/** Overhead-Tore — darunter rutschen */
+/**
+ * Overhead-Tore: Gesamtmodell hoch, damit der freie Durchlass
+ * (Unterkante ≈ SLIDE_CLEARANCE) zum geduckt Rutschen passt.
+ */
 const SLIDE_H: Record<SlideProp, number> = {
-  banner: 1.85,
-  scaffold: 1.9,
-  garland: 1.8,
+  banner: 2.15,
+  scaffold: 2.2,
+  garland: 2.1,
 };
 
 function propGlb(name: string): string {
@@ -487,16 +507,24 @@ function Player({
     }
 
     if (bodyRef.current) {
-      // Tief ducken + nach vorne lehnen — klar unter Slide-Toren
-      const duck = gs.isSliding ? 0.26 : 1;
-      const bodyY = gs.isSliding ? -0.58 : 0;
-      const lean = gs.isSliding ? 1.05 : gs.isJumping ? -0.2 : 0;
-      bodyRef.current.scale.y = MathUtils.lerp(bodyRef.current.scale.y, duck, 18 * dt);
-      bodyRef.current.position.y = MathUtils.lerp(bodyRef.current.position.y, bodyY, 18 * dt);
+      /**
+       * Rutschen = ducken am Boden (Scale Y), kein Versenken.
+       * Origin sitzt an den Füßen → scale.y schrumpft nach oben, Füße bleiben.
+       * Leichte Vorwärtsneigung, kein Purzelbaum durch den Boden.
+       */
+      const duck = gs.isSliding ? SLIDE_SCALE_Y : 1;
+      const lean = gs.isSliding ? 0.42 : gs.isJumping ? -0.18 : 0;
+      bodyRef.current.scale.y = MathUtils.lerp(bodyRef.current.scale.y, duck, 16 * dt);
+      bodyRef.current.scale.x = MathUtils.lerp(bodyRef.current.scale.x, 1, 16 * dt);
+      bodyRef.current.scale.z = MathUtils.lerp(bodyRef.current.scale.z, 1, 16 * dt);
+      bodyRef.current.position.y = MathUtils.lerp(bodyRef.current.position.y, 0, 16 * dt);
       bodyRef.current.rotation.x = MathUtils.lerp(bodyRef.current.rotation.x, lean, 14 * dt);
     }
 
     gs.playerPosition.copy(playerRef.current.position);
+    const standHead = gs.playerPosition.y + PINGUIN_HOEHE;
+    const slideHead = gs.playerPosition.y + SLIDE_HEAD_Y;
+    gs.headY = gs.isSliding ? slideHead : standHead;
   });
 
   return (
@@ -506,7 +534,7 @@ function Player({
           <AnimatedPenguin pose={pose} onFleeDone={onFleeDone} />
         </Suspense>
       </group>
-      <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={3} blur={2.2} />
+      <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={2.6} blur={2.2} />
     </group>
   );
 }
@@ -612,9 +640,11 @@ function WorldChunk({
 
         let hit = false;
         if (cfg.role === 'jump' || cfg.role === 'bush') {
+          // Füße müssen über die Prop-Oberkante
           hit = playerPos.y < CLEAR_JUMP_Y;
         } else if (cfg.role === 'slide') {
-          hit = !gs.isSliding;
+          // Stehend zu hoch für den Durchlass; geduckt passt der Kopf darunter
+          hit = gs.headY > SLIDE_CLEARANCE;
         } else {
           hit = playerPos.y < CLEAR_VEHICLE_Y;
         }
@@ -749,9 +779,10 @@ export function Runner({
     distance: 0,
     phase: 'menu',
     playerPosition: new Vector3(0, GROUND_Y, PLAYER_Z),
+    headY: PINGUIN_HOEHE,
   });
 
-useEffect(() => {
+  useEffect(() => {
     preloadRunnerAssets();
   }, []);
 
@@ -787,6 +818,7 @@ useEffect(() => {
       distance: 0,
       phase: 'flee',
       playerPosition: new Vector3(0, GROUND_Y, PLAYER_Z),
+      headY: PINGUIN_HOEHE,
     };
     setPhase('flee');
   }, []);
