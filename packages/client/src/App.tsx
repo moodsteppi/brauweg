@@ -80,6 +80,25 @@ export function App(): React.JSX.Element {
     return <Profile accountId={screen.accountId} onBack={() => setScreen(screen.vorher)} />;
   }
 
+  /**
+   * Feldherr laeuft nicht am Kartentisch.
+   *
+   * Es ist ein Echtzeitspiel: Der Kern zeichnet selbst, und die Partie
+   * rechnen beide Geraete im Gleichschritt. Ein Kartentisch mit Blatt,
+   * Stichanzeige und Zugtimer waere hier nur im Weg.
+   */
+  if (screen.name === 'table' && screen.gameId === 'feldherr') {
+    return (
+      <FeldherrTisch
+        tableId={screen.tableId}
+        onBack={() => setScreen({ name: 'lobby', gameId: screen.gameId })}
+      />
+    );
+  }
+  if (screen.name === 'lobby' && screen.gameId === 'feldherr') {
+    return <FeldherrTisch onBack={() => setScreen({ name: 'games' })} />;
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt

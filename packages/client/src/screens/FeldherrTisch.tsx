@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { HUELLE, STIL, starteFeldherr } from '../minispiele/feldherr/kern.js';
+import {
+  HUELLE,
+  STIL,
+  type FeldherrNetz,
+  type FeldherrZug,
+  starteFeldherr,
+} from '../minispiele/feldherr/kern.js';
+import { useTable } from '../useTable';
 
 /**
  * Feldherr — Minispiel.
@@ -19,7 +26,7 @@ import { HUELLE, STIL, starteFeldherr } from '../minispiele/feldherr/kern.js';
  * Anwendung.
  */
 
-type Modus = 'ki' | 'zuZweit';
+type Modus = 'ki' | 'zuZweit' | 'netz';
 type Stufe = 'leicht' | 'normal' | 'schwer';
 type Feld = 'klein' | 'mittel' | 'gross';
 
@@ -32,12 +39,61 @@ interface Ausgang {
   readonly feld: Feld;
 }
 
-export function FeldherrTisch({ onBack }: { onBack: () => void }): React.JSX.Element {
+/**
+ * Gleichschritt am Tisch.
+ *
+ * Der Kern rechnet, der Tisch verteilt. Zwei Regeln halten beide Geraete
+ * zusammen:
+ *
+ *   1. Eine eigene Eingabe wird nicht ausgefuehrt, sondern fuer einen
+ *      kuenftigen Takt gemeldet — auch beim Absender. Nur so legen beide
+ *      dieselbe Karte im selben Takt.
+ *   2. Gerechnet wird hoechstens bis zum sicheren Takt: so weit, wie die
+ *      Zuege beider Seiten bekannt sind. Wer vorauslaeuft, muesste
+ *      zurueckrechnen, und das kann der Kern nicht.
+ */
+function netzBruecke(
+  sitz: number,
+  send: (aktion: unknown) => void,
+  taktJetzt: () => number,
+): FeldherrNetz & { setzeSicher(t: number): void } {
+  let sicher = VORLAUF;
+  return {
+    melde(zug) {
+      const takt = taktJetzt() + VORLAUF;
+      send({ art: 'zug', zug: { ...zug, takt } });
+    },
+    sichererTakt: () => sicher,
+    setzeSicher(t) {
+      sicher = t;
+    },
+  };
+}
+
+/** Muss mit VORLAUF_TAKTE aus @brauweg/game-feldherr uebereinstimmen. */
+const VORLAUF = 6;
+
+export function FeldherrTisch({
+  onBack,
+  tableId = null,
+}: {
+  onBack: () => void;
+  /** Gesetzt heisst Netzspiel; sonst laeuft alles oertlich. */
+  tableId?: string | null;
+}): React.JSX.Element {
   const [modus, setModus] = useState<Modus | null>(null);
   const [stufe, setStufe] = useState<Stufe>('normal');
   const [feld, setFeld] = useState<Feld>('mittel');
 
   const buehne = useRef<HTMLDivElement | null>(null);
+  const sitzungRef = useRef<ReturnType<typeof starteFeldherr> | null>(null);
+  const bruecke = useRef<ReturnType<typeof netzBruecke> | null>(null);
+
+  /** Nur im Netzspiel verbunden; oertlich bleibt der Tisch null. */
+  const tisch = useTable<{ saat: number; zuege: unknown[] }>(tableId, 'feldherr');
+  const sicht = tableId ? tisch.view?.view : null;
+  /** Zuschauer bekommen keinen Sitz; sie sehen zu und melden nichts. */
+  const meinSitz = tisch.view?.seat ?? 1;
 
   /**
    * Der Effekt haengt bewusst nur an Modus, Stufe und Feld — nicht an einem
@@ -49,29 +105,79 @@ export function FeldherrTisch({ onBack }: { onBack: () => void }): React.JSX.Ele
     const wurzel = buehne.current;
     wurzel.innerHTML = HUELLE;
 
+    const netz =
+      modus === 'netz' && tisch
+        ? netzBruecke(meinSitz, tisch.send, () => sitzungRef.current?.takt() ?? 0)
+        : null;
+    bruecke.current = netz;
+
     const sitzung = starteFeldherr({
       modus,
       stufe,
       feld,
-      // Saatkorn aus der Uhr. Im Netzspiel kommt es spaeter vom Server, damit
-      // beide Geraete dieselbe Partie rechnen.
-      saat: (Date.now() ^ 0x9e3779b9) >>> 0,
       /**
-       * Der Ausgang wird bewusst nicht gemeldet.
+       * Saatkorn: oertlich aus der Uhr, im Netzspiel vom Server.
+       *
+       * Es ist die Grundlage von allem — Gelaende, KI, Muenzwurf. Zwei
+       * Geraete mit verschiedenem Saatkorn spielen zwei verschiedene Partien
+       * und merken es erst am Ende.
+       */
+      saat: modus === 'netz' ? (sicht?.saat ?? 1) : (Date.now() ^ 0x9e3779b9) >>> 0,
+      netz,
+      sitz: meinSitz,
+      /**
+       * Oertliche Partien melden nichts.
        *
        * Gegen die KI und zu zweit an einem Geraet gibt es keine Muenzen und
        * keine Erfahrung: Beides laesst sich in Sekunden beliebig oft
-       * herbeifuehren, und ein Endpunkt, den nur der Client fuellt, ist eine
-       * Muenzquelle. Belohnt wird ausschliesslich das Netzspiel, und dort
-       * rechnet die Plattform aus Ausgang und Dauer (game-feldherr).
+       * herbeifuehren. Im Netzspiel meldet jedes Geraet seinen Ausgang samt
+       * Pruefsumme; die Plattform rechnet daraus Belohnung und Ergebnis.
        */
-      aufEnde: () => {},
+      aufEnde: (a) => {
+        if (modus !== 'netz' || !tisch) return;
+        tisch.send({
+          art: 'ergebnis',
+          sieger: a.sieger ?? 0,
+          takt: a.takt,
+          pruef: a.pruef,
+        });
+      },
     });
+    sitzungRef.current = sitzung;
     return () => {
       sitzung.beenden();
+      sitzungRef.current = null;
       wurzel.innerHTML = '';
     };
-  }, [modus, stufe, feld]);
+  }, [modus, stufe, feld, tisch, meinSitz, sicht?.saat]);
+
+  /**
+   * Zuege vom Server in den Kern reichen.
+   *
+   * Der Effekt haengt an der Zahl der Zuege, nicht an der Liste: Ein Effekt
+   * mit dem Sichten-Objekt in der Abhaengigkeitsliste laeuft bei jedem
+   * Serverfunk neu — genau der Fehler, der am Kartentisch schon einmal den
+   * Rundenabschluss verschluckt hat.
+   */
+  const gereicht = useRef(0);
+  useEffect(() => {
+    const sitzung = sitzungRef.current;
+    const zuege = sicht?.zuege;
+    if (!sitzung || !zuege) return;
+    for (let i = gereicht.current; i < zuege.length; i += 1) {
+      const z = zuege[i] as FeldherrZug & { sitz: number };
+      sitzung.zugAnnehmen(z, z.sitz);
+    }
+    gereicht.current = zuege.length;
+    /**
+     * Sicherer Takt: bis hierher darf gerechnet werden.
+     *
+     * Der Server hat alle Zuege bis zum letzten empfangenen; alles davor ist
+     * vollstaendig. Ohne Nachricht laeuft die Uhr trotzdem weiter — sonst
+     * stuende die Partie still, solange niemand etwas tut.
+     */
+    bruecke.current?.setzeSicher(sitzung.takt() + VORLAUF);
+  }, [sicht?.zuege?.length]);
 
   /** Der Stil des Spiels gilt nur, solange dieser Bildschirm offen ist. */
   useEffect(() => {

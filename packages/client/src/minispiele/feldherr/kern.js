@@ -1,13 +1,14 @@
 /**
- * Feldherr — Spielkern.
+ * Feldherr — Spielkern des Clients.
  *
- * MASCHINELL AUS feldherr.html ERZEUGT. Nicht von Hand aendern, sondern die
- * Quelle anpassen und neu erzeugen (packages/game-feldherr/werkzeug/).
+ * MASCHINELL ERZEUGT aus feldherr.html durch
+ * packages/game-feldherr/werkzeug/kern-erzeugen.mjs.
+ * Nicht von Hand aendern — die Quelle anpassen und neu erzeugen.
  *
  * Der Kern zeichnet auf eine Leinwand und findet seine Teile ueber
  * getElementById. Er kennt kein React und soll es nicht kennen: Er muss auf
- * beiden Geraeten Zeichen fuer Zeichen gleich rechnen (Gleichschritt, siehe
- * docs/FELDHERR-PLAN.md). Sein Zufall kommt ausschliesslich aus saat().
+ * beiden Geraeten Zeichen fuer Zeichen gleich rechnen. Sein Zufall kommt
+ * ausschliesslich aus saat().
  */
 
 export const STIL = "\n:root{\n  --nacht:#070c11; --linie:#1e2c36; --sand:#dfd6c2; --tinte:#8397a4;\n  --p1:#e8433c; --p2:#3d86ff; --ring:#dff2ff;\n}\n*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}\nhtml,body{height:100%;overflow:hidden;background:#05080b;\n  font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;color:var(--sand);\n  touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}\n#app{position:fixed;inset:0;display:flex;flex-direction:column}\n\n.hud{flex:0 0 auto;position:relative;z-index:5;\n  background:linear-gradient(180deg,#0e161c 0%,#0a1116 100%);\n  box-shadow:0 0 0 1px #1a262e, 0 8px 26px -14px #000 inset}\n.hud.top{background:linear-gradient(0deg,#0e161c 0%,#0a1116 100%)}\n.hud::after{content:\"\";position:absolute;left:0;right:0;height:1px;\n  background:linear-gradient(90deg,transparent,#2c3d48 20%,#2c3d48 80%,transparent)}\n.hud.bot::after{top:0}.hud.top::after{bottom:0}\n.inner{padding:7px 9px 8px}\n.hud.top .inner{transform:rotate(180deg)}\n.bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}\n.tag{font:700 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;\n  padding:4px 7px;border-radius:3px;color:#080c10}\n.p1 .tag{background:linear-gradient(180deg,#ff6f62,var(--p1));color:#fff}\n.p2 .tag{background:linear-gradient(180deg,#71a8ff,var(--p2));color:#fff}\n.res{font:700 16px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em;\n  text-shadow:0 0 14px currentColor}\n.res .cap{font-size:10px;opacity:.5}\n.res.full{animation:pulse 1.1s ease-in-out infinite}\n@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}\n.p1 .res{color:#ff9c92}.p2 .res{color:#a8caff}\n.rate{font:600 9px/1 ui-monospace,Menlo,monospace;color:var(--tinte);letter-spacing:.06em}\n.dreh{margin-left:auto;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.dreh svg{display:block;opacity:.8;transition:transform .16s ease}\n.dreh.hoch svg{transform:rotate(90deg)}\n.dreh.an{background:linear-gradient(180deg,#7fd8b4,#3aa87e);box-shadow:0 0 14px -4px #3aa87e}\n.dreh.an svg{opacity:1}\n.raze{margin-left:6px;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.raze svg{display:block;opacity:.75}\n.raze.on{background:linear-gradient(180deg,#ff7a5e,#e8433c);box-shadow:0 0 16px -4px #e8433c}\n.raze.on svg{opacity:1}\n.raze.on svg path{fill:#fff}\n.hint{margin-left:6px;font:500 9px/1.3 system-ui;color:#93a7b3;text-align:right;max-width:38%}\n.cards{display:flex;gap:4px}\n.card{flex:1 1 0;min-width:0;position:relative;overflow:hidden;padding:5px 2px 6px;\n  border-radius:8px;text-align:center;\n  background:linear-gradient(180deg,#1b2831 0%,#131d24 100%);\n  box-shadow:0 0 0 1px #26363f, 0 1px 0 #2f4250 inset, 0 6px 12px -8px #000;\n  transition:transform .1s ease,box-shadow .14s,opacity .14s}\n.card .cost{font:800 11.5px/1 ui-monospace,Menlo,monospace;padding-right:14px;padding-left:14px}\n.p1 .card .cost{color:#ff8b80}.p2 .card .cost{color:#8fbaff}\n.card svg{display:block;margin:3px auto 2px;opacity:.92}\n.card .nm{font:700 8px/1 system-ui;letter-spacing:.04em;text-transform:uppercase;color:#d5e4ee}\n.card .st{font:500 6.8px/1.4 ui-monospace,Menlo,monospace;color:#7b8e9a;margin-top:2px;white-space:nowrap}\n.card .fill{position:absolute;left:0;bottom:0;height:2px;width:0%;transition:width .18s linear;opacity:.75}\n.card .lim{position:absolute;top:0;right:0;min-width:17px;height:15px;padding:0 3px;\n  display:grid;place-items:center;box-sizing:border-box;\n  font:800 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;\n  color:#e2eef6;background:#22333d;border-radius:0 8px 0 7px;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.07)}\n.card .lim.voll{color:#fff;background:#b8332c;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.14)}\n.p1 .card .fill{background:var(--p1)}.p2 .card .fill{background:var(--p2)}\n.card.off{opacity:.36}\n.card.drag{opacity:.35;transform:scale(.94)}\n.card.leer{opacity:.9;background:linear-gradient(180deg,#2a1418,#1d0e11);\n  box-shadow:0 0 0 1px #6d2a2f, 0 1px 0 #4a1e22 inset}\n.card.leer .nm,.card.leer .st{color:#a9737a}\n.card.leer .cost{color:#ff7a72}\n.card.leer .lim{color:#fff;background:#8e2c2c}\n.card.leer::after{content:\"\";position:absolute;left:-12%;top:50%;width:124%;height:2px;\n  background:#e8433c;transform:rotate(-24deg);box-shadow:0 0 8px #e8433c}\n.card.leer svg{opacity:.4}\n.card.rdy{box-shadow:0 0 0 1px #3d5464, 0 1px 0 #3b5265 inset, 0 6px 14px -8px #000}\n.card.arm{transform:translateY(-4px)}\n.p1 .card.arm{box-shadow:0 0 0 1.5px var(--p1),0 0 20px -4px var(--p1),0 1px 0 #4a3a1e inset}\n.p2 .card.arm{box-shadow:0 0 0 1.5px var(--p2),0 0 20px -4px var(--p2),0 1px 0 #3a2a4e inset}\n\n#stage{flex:1 1 auto;position:relative;min-height:0}\ncanvas{position:absolute;inset:0;width:100%;height:100%;display:block}\n\n#ghost{position:fixed;pointer-events:none;z-index:60;transform:translate(-50%,-50%);display:none}\n#ghost .gg{padding:7px 11px;border-radius:9px;font:700 10px/1 system-ui;letter-spacing:.08em;\n  text-transform:uppercase;background:rgba(20,32,40,.92);color:#e6f0f6;\n  box-shadow:0 0 0 1px #3f5665,0 10px 20px -8px #000}\n\n#uhr{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:19;\n  padding:3px 10px;border-radius:8px;pointer-events:none;\n  font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;\n  color:#cfe0ea;background:rgba(12,20,26,.72);box-shadow:0 0 0 1px #24343d}\n#uhr[hidden]{display:none}\n#menuBtn{position:absolute;right:3px;top:2px;z-index:20;opacity:.86;\n  width:28px;height:28px;border-radius:9px;color:#96aab7;font:700 13px/1 system-ui;\n  background:rgba(16,25,32,.8);border:0;box-shadow:0 0 0 1px #26363f;display:grid;place-items:center}\n\n.ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;\n  padding:22px;background:radial-gradient(120% 80% at 50% 0%,rgba(20,34,44,.92),rgba(4,7,10,.96));\n  backdrop-filter:blur(4px)}\n.ov[hidden]{display:none}\n.sheet{width:min(430px,100%);max-height:100%;overflow:auto;padding:22px 19px;border-radius:16px;\n  background:linear-gradient(180deg,#111c23,#0b1318);\n  box-shadow:0 0 0 1px #22323c,0 30px 60px -30px #000, 0 1px 0 #2b3d49 inset}\n.eyebrow{font:700 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.34em;color:#7b8e9a;text-transform:uppercase}\nh1{font:900 34px/.92 system-ui;letter-spacing:-.035em;margin:10px 0 4px}\nh1 em{font-style:normal;background:linear-gradient(180deg,#ff8b80,var(--p1));\n  -webkit-background-clip:text;background-clip:text;color:transparent}\nh2{font:800 18px/1.15 system-ui;letter-spacing:-.015em;margin-bottom:9px}\n.sub{font:500 12px/1.55 system-ui;color:#93a7b3;margin-bottom:18px}\np.tx{font:400 13px/1.6 system-ui;color:#c8d7e0;margin-bottom:9px}\np.tx b{color:#eae2d0;font-weight:650}\nul.tx{margin:0 0 10px 16px;font:400 12.5px/1.6 system-ui;color:#c8d7e0}\nul.tx li{margin-bottom:5px}\n.btn{display:block;width:100%;padding:13px;border-radius:10px;border:0;margin-top:9px;\n  font:700 13px/1 system-ui;letter-spacing:.03em;color:var(--sand);\n  background:linear-gradient(180deg,#1c2932,#141f26);box-shadow:0 0 0 1px #2a3b46,0 1px 0 #324754 inset}\n.btn.pri{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 24px -8px var(--p1)}\n.btn.gho{background:none;box-shadow:none;color:#7b8e9a}\n.hilfe{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;\n  font:800 17px/1 system-ui;color:#9fb3c0;background:#16222a;box-shadow:0 0 0 1px #2a3b46;\n  display:grid;place-items:center;z-index:2}\n.hilfe:active{background:#1e2d38}\n.seglbl{font:600 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.26em;color:#7b8e9a;\n  text-transform:uppercase;margin-bottom:6px}\n.seg{display:flex;gap:6px;margin-bottom:12px}\n.seg button{flex:1;padding:10px 0;border:0;border-radius:9px;color:#7b8e9a;\n  font:700 11px/1 system-ui;letter-spacing:.05em;background:#141f26;box-shadow:0 0 0 1px #24343d}\n.seg button.on{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}\n.hud.top .inner.ai{transform:none;padding-bottom:7px}\n.inner.ai .bar{margin-bottom:0}\n.pips{display:flex;gap:5px;margin-bottom:15px}\n.pip{width:24px;height:3px;border-radius:2px;background:#22323c}\n.pip.on{background:var(--p1)}\n.win{font:900 28px/1.05 system-ui;letter-spacing:-.03em;margin-bottom:7px}\ntable.bal{width:100%;border-collapse:collapse;font:500 11px/1.45 ui-monospace,Menlo,monospace;margin-bottom:12px}\ntable.bal th{text-align:left;color:#7b8e9a;font-weight:700;padding:4px;border-bottom:1px solid #22323c}\ntable.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}\n";
@@ -17,13 +18,30 @@ export const HUELLE = "\n<div id=\"app\">\n  <div class=\"hud top p1\" id=\"hud0
 /**
  * Startet eine Partie in der bereits eingehaengten Huelle.
  *
- * `aufEnde` bekommt den Ausgang, sobald eine Partie entschieden ist; der
- * Bildschirm meldet ihn weiter. Der Rueckgabewert haelt die Schleife an —
- * ohne ihn liefe sie nach dem Verlassen des Bildschirms weiter.
+ * Oertlich (`netz` fehlt) rechnet der Kern wie bisher mit der Bildzeit.
+ * Im Netzspiel uebernimmt der Gleichschritt: feste Takte, Eingaben als Zuege.
  */
 export function starteFeldherr(optionen = {}) {
-  const { modus = 'ki', stufe = 'normal', feld = 'mittel', saat: korn, aufEnde } = optionen;
+  const {
+    modus = 'ki',
+    stufe = 'normal',
+    feld = 'mittel',
+    saat: korn,
+    aufEnde,
+    netz = null,
+    sitz = 1,
+  } = optionen;
+
   let laeuft = true;
+  const NETZ = netz;
+  const MEIN_SITZ = sitz;
+
+  /** Warteschlange: Takt -> Zuege, die in diesem Takt auszufuehren sind. */
+  const geplant = new Map();
+  let taktZaehler = 0;
+  let restMs = 0;
+  /** Muss mit TAKT_MS aus @brauweg/game-feldherr uebereinstimmen. */
+  const TAKT_MS = 50;
 
 
 "use strict";
@@ -3308,7 +3326,8 @@ window.addEventListener('pointerup', ev=>{
     const e = peek.ent, kurz = peek.t < 0.2;
     peek = null;
     if(kurz && e && G.ents.includes(e) && canMove(e) && !(AI && e.owner===AI.owner)){
-      const g = gruppeVon(e);
+      if (NETZ && e.owner === MEIN_SITZ) { NETZ.melde({ art: 'halt', r: e.r, c: e.c }); return; }
+    const g = gruppeVon(e);
       if(!e.halt && stellungen(e.owner,g) >= STELLUNGEN){
         e.nudge = 1; fxText(e.r,e.c,'3 / 3','#ffa06e',0);   // Stellungen ausgeschöpft
       } else {
@@ -3582,12 +3601,62 @@ requestAnimationFrame(loop);
 window.addEventListener('orientationchange', ()=>setTimeout(resize,220));
 
 
+  // ---- Anbindung ----------------------------------------------------------
+
   if (typeof korn === 'number') saat(korn);
   feldKey = feld;
   aiLevel = stufe;
-  // Das eingebaute Startmenue bleibt zu: Der Bildschirm hat schon gefragt.
-  ovMenu.hidden = true;
+  ovMenu.hidden = true;                 // der Bildschirm hat schon gefragt
+
+  /**
+   * Im Netzspiel wird nicht sofort gelegt, sondern gemeldet.
+   *
+   * Auch der Absender wartet: Nur wenn beide Geraete dieselbe Karte im
+   * selben Takt legen, bleiben die Laeufe gleich.
+   */
+  const legeSofort = playCard;
+  playCard = function (own, k, r, c) {
+    if (NETZ && own === MEIN_SITZ) {
+      NETZ.melde({ art: 'karte', karte: k, r, c });
+      return;
+    }
+    legeSofort(own, k, r, c);
+  };
+
+  function fuehreAus(zug, wer) {
+    if (zug.art === 'karte') legeSofort(wer, zug.karte, zug.r, zug.c);
+    else if (zug.art === 'halt') {
+      const e = entAt(zug.r, zug.c);
+      if (e && canMove(e)) { e.halt = !e.halt; e.nudge = 0.8; }
+    } else if (zug.art === 'muenze') {
+      coinWahl(zug.wahl);
+    }
+  }
+
   startRound(modus === 'ki');
+
+  /**
+   * Zustandsprobe.
+   *
+   * Absichtlich grob und billig: Ressourcen, Objektzahl und die Kernwerte
+   * jedes Objekts. Feiner waere teurer, ohne mehr zu finden — was
+   * auseinanderlaeuft, laeuft in diesen Zahlen auseinander.
+   */
+  function pruefsumme() {
+    if (!G) return '0';
+    let h = 2166136261;
+    const misch = (s) => {
+      for (let i = 0; i < s.length; i += 1) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+    };
+    misch(Math.round(G.res[0]) + ':' + Math.round(G.res[1]) + ':' + G.ents.length);
+    for (const e of G.ents) {
+      misch(e.type + e.owner + e.r + ',' + e.c + ':' + e.lvl + ':' + Math.round(e.hp));
+    }
+    return (h >>> 0).toString(36);
+  }
 
   const alterSchluss = showWin;
   showWin = function () {
@@ -3600,13 +3669,44 @@ window.addEventListener('orientationchange', ()=>setTimeout(resize,220));
         stufe: modus === 'ki' ? stufe : null,
         dauer: G ? G.t : 0,
         feld,
+        takt: taktZaehler,
+        pruef: pruefsumme(),
       });
     }
   };
 
+  /**
+   * Bildschleife.
+   *
+   * Oertlich wie gehabt. Im Netzspiel wird die verstrichene Zeit in feste
+   * Takte zerlegt; gerechnet wird nur bis zum sicheren Takt, also so weit,
+   * wie die Zuege beider Seiten bekannt sind. Wer zurueckfaellt, holt in
+   * derselben Schleife auf — bis zu zehn Takte je Bild, damit ein kurzer
+   * Aussetzer nicht in Zeitlupe endet.
+   */
+  let letzte = 0;
   const schleife = (t) => {
     if (!laeuft) return;
-    loop(t);
+    if (!NETZ) { loop(t); requestAnimationFrame(schleife); return; }
+
+    const dt = letzte ? Math.min(500, t - letzte) : 0;
+    letzte = t;
+    restMs += dt;
+    let schritte = 0;
+    while (restMs >= TAKT_MS && schritte < 10 && taktZaehler < NETZ.sichererTakt()) {
+      restMs -= TAKT_MS;
+      taktZaehler += 1;
+      schritte += 1;
+      const faellig = geplant.get(taktZaehler);
+      if (faellig) {
+        for (const { zug, sitz: wer } of faellig) fuehreAus(zug, wer);
+        geplant.delete(taktZaehler);
+      }
+      update(TAKT_MS / 1000);
+      animate(TAKT_MS / 1000);
+    }
+    render();
+    requestAnimationFrame(schleife);
   };
   requestAnimationFrame(schleife);
 
@@ -3615,5 +3715,13 @@ window.addEventListener('orientationchange', ()=>setTimeout(resize,220));
       laeuft = false;
       paused = true;
     },
+    /** Ein Zug vom Server — eigener wie fremder. */
+    zugAnnehmen(zug, wer) {
+      const takt = Math.max(zug.takt, taktZaehler + 1);
+      if (!geplant.has(takt)) geplant.set(takt, []);
+      geplant.get(takt).push({ zug, sitz: wer });
+    },
+    takt: () => taktZaehler,
+    pruefsumme,
   };
 }
