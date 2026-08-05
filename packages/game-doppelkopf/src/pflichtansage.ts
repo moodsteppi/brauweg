@@ -1,11 +1,21 @@
 /**
  * Pflichtansage.
  *
- * Ausloeser: der erste Stich enthaelt mindestens `pflichtansageThreshold`
- * Augen. Verpflichtet ist ausschliesslich der Gewinner dieses Stichs.
+ * Mehrere Ausloeser, und jeder hebt die Pflicht um GENAU EINE Stufe:
  *
- * Bei Hochzeit erfolgt die Pruefung nach dem Klaerungsstich, nicht nach dem
- * ersten Stich. Der Aufrufer uebergibt daher den relevanten Stich.
+ * - der erste Stich ab `pflichtansageThreshold` Augen (Gewinner dieses Stichs),
+ * - der zweite Stich ebenso, aber nur wenn im ersten wirklich angesagt wurde,
+ * - Hochzeit, Armut und Schweine, je als eigene Regel schaltbar.
+ *
+ * Die verlangte Stufe wird NICHT beim Anlegen festgeschrieben, sondern erst
+ * beim Beantworten aus dem aktuellen Ansagestand gerechnet — siehe
+ * `nextOpenLevel`. Nur so summiert sich die Kette unabhaengig davon, in welcher
+ * Reihenfolge die Ausloeser zuschlagen: Hochzeit und Schweine treffen beide am
+ * Rundenbeginn ein, die Stiche kommen spaeter.
+ *
+ * Ausdruecklich am gespielten Spieltyp festgemacht, nicht an der Ansage: Sagt
+ * einer Hochzeit und einer Armut an, wird Armut gespielt — der Hochzeit-Ansager
+ * spielt seine Hochzeit gar nicht und darf deshalb auch nichts ansagen muessen.
  *
  * Verhalten in der UI: Popup mit Bestaetigen-Button. Ablehnen ist ausgegraut,
  * die Ansage erfolgt zwingend. Bei der moralischen Schwelle ist Ablehnen
@@ -14,9 +24,37 @@
 
 import { sumValues } from './cards.js';
 import type { RuleSet } from './ruleset.js';
-import type { TrickRecord } from './scoring.js';
+import type { AbsageLevel, Announcements, Party, TrickRecord } from './scoring.js';
 
 export type PflichtansageKind = 'mandatory' | 'moral' | 'none';
+
+/** Woher die Pflicht kommt. Die UI benennt sie damit, statt "Pflichtansage". */
+export type PflichtansageReason = 'trick' | 'hochzeit' | 'armut' | 'schweine';
+
+/**
+ * Naechste offene Stufe der Partei — das ist die Stufe, die eine Pflicht
+ * verlangt.
+ *
+ * Hat die Partei noch nichts gesagt, ist es Re beziehungsweise Kontra (Stufe 0
+ * im Sinne von `AbsageLevel`, also "Ansage ohne Absage"). Sonst eine Stufe
+ * hoeher als die hoechste bisherige Absage. Oben ist Schluss: Wer bei schwarz
+ * steht, kann nichts mehr draufsetzen, und eine weitere Pflicht verfaellt.
+ *
+ * Genau hier entsteht das "Hochhandeln": Hochzeit, Schweine und zwei fette
+ * Stiche ergeben so Re, Keine 90, Keine 60, Keine 30 — ohne dass irgendwo eine
+ * Zahlenfolge steht, die man synchron halten muesste.
+ */
+export function nextOpenLevel(
+  ann: Announcements,
+  party: Party,
+): AbsageLevel | null {
+  const gesagt = party === 're' ? ann.re : ann.kontra;
+  if (!gesagt) return 0;
+
+  const absage = party === 're' ? ann.reAbsage : ann.kontraAbsage;
+  if (absage >= 4) return null;
+  return (absage + 1) as AbsageLevel;
+}
 
 export interface PflichtansageCheck {
   readonly kind: PflichtansageKind;

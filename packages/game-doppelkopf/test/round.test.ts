@@ -296,6 +296,166 @@ test('countPoints steuert die Zaehlhilfe in der Sicht', () => {
   }
 });
 
+// --- Pflichtansage: die zusaetzlichen Ausloeser ---
+
+/**
+ * Sucht einen Seed, bei dem ein Sitz die Schweine haelt, und bringt die Runde
+ * in die Spielphase (alle gesund).
+ *
+ * Ueber einen Seed statt ueber eine gestellte Hand: `createRound` gibt selbst,
+ * und eine von Hand gesetzte Hand wuerde am Automaten vorbeigehen — genau das
+ * soll hier aber mitgeprueft werden.
+ */
+function rundeMitSchweinen(patch = {}) {
+  const rs = makeRuleSet({
+    schweinchen: true,
+    pflichtansage: true,
+    pflichtansageSchweine: true,
+    hochzeit: false,
+    armut: false,
+    pflichtsolo: false,
+    ...patch,
+  });
+  for (let seed = 0; seed < 4000; seed++) {
+    let state = createRound(rs, SEATS, 0, seed);
+    if (!SEATS.some((s) => state.schweinchen[s])) continue;
+    while (state.phase === 'vorbehalt') {
+      const seat = currentActor(state) as number;
+      state = apply(state, { type: 'vorbehalt', seat, kind: null });
+    }
+    if (state.phase === 'playing') return state;
+  }
+  throw new Error('Kein Seed mit Schweinen gefunden');
+}
+
+test('Pflichtansage: Schweine verpflichten den Halter schon vor dem ersten Stich', () => {
+  const state = rundeMitSchweinen();
+  const halter = SEATS.find((s) => state.schweinchen[s])!;
+
+  assert.notEqual(state.pendingPflichtansage, null, 'Die Pflicht muss offen sein');
+  assert.equal(state.pendingPflichtansage!.seat, halter);
+  assert.equal(state.pendingPflichtansage!.reason, 'schweine');
+  assert.equal(
+    state.pendingPflichtansage!.canDecline,
+    false,
+    'Eine Tatsache auf der Hand kennt keine moralische Zwischenstufe',
+  );
+  assert.equal(currentActor(state), halter, 'Er ist am Zug, nicht die Vorhand');
+});
+
+test('Pflichtansage: Schweine ohne den Ausloeser verpflichten niemanden', () => {
+  const state = rundeMitSchweinen({ pflichtansageSchweine: false });
+  assert.equal(state.pendingPflichtansage, null);
+});
+
+test('Pflichtansage: der Schweine-Halter steht dauerhaft in der Sicht', () => {
+  const state = rundeMitSchweinen();
+  const halter = SEATS.find((s) => state.schweinchen[s])!;
+  for (const seat of SEATS) {
+    assert.deepEqual(
+      viewFor(state, seat).schweineSeats,
+      [halter],
+      `Sitz ${seat} muss den Halter sehen`,
+    );
+  }
+});
+
+test('Pflichtansage: ohne den Ausloeser bleibt der Halter geheim', () => {
+  const state = rundeMitSchweinen({ pflichtansageSchweine: false });
+  for (const seat of SEATS) {
+    assert.deepEqual(viewFor(state, seat).schweineSeats, []);
+  }
+});
+
+test('Pflichtansage: die Schweine-Pflicht sagt Re oder Kontra an', () => {
+  let state = rundeMitSchweinen();
+  const halter = state.pendingPflichtansage!.seat;
+  const party = state.reSeats.includes(halter) ? 're' : 'kontra';
+
+  state = apply(state, { type: 'confirmPflichtansage', seat: halter, accept: true });
+  assert.equal(state.pendingPflichtansage, null, 'Danach ist nichts mehr offen');
+  assert.equal(
+    party === 're' ? state.announcements.re : state.announcements.kontra,
+    true,
+  );
+  assert.equal(
+    party === 're' ? state.announcements.reAbsage : state.announcements.kontraAbsage,
+    0,
+    'Der erste Ausloeser ergibt Re, keine Absage',
+  );
+});
+
+test('Vorbehalt: die Sicht liefert je Solo eine Vorschau-Ordnung', () => {
+  const rs = makeRuleSet({ solos: ['suitH', 'queens', 'jacks'] });
+  const state = createRound(rs, SEATS, 0, 77);
+  const dran = currentActor(state) as number;
+
+  const sicht = viewFor(state, dran);
+  assert.deepEqual(
+    Object.keys(sicht.soloVorschau).sort(),
+    ['jacks', 'queens', 'suitH'],
+    'Je waehlbares Solo eine Ordnung',
+  );
+
+  // Die Ordnungen muessen sich wirklich unterscheiden — sonst zeigt die
+  // Vorschau ueberall dasselbe und ist wertlos.
+  assert.equal(sicht.soloVorschau.queens!.trumps[0], 'CQ');
+  assert.equal(sicht.soloVorschau.jacks!.trumps[0], 'CJ');
+  assert.notDeepEqual(
+    sicht.soloVorschau.queens!.trumps,
+    sicht.soloVorschau.jacks!.trumps,
+  );
+
+  // Wer nicht dran ist, braucht keine Vorschau und bekommt keine.
+  const anderer = SEATS.find((s) => s !== dran)!;
+  assert.deepEqual(viewFor(state, anderer).soloVorschau, {});
+});
+
+test('Vorbehalt: nach der Abfrage gibt es keine Vorschau mehr', () => {
+  const rs = makeRuleSet({ pflichtsolo: false, armut: false, hochzeit: false });
+  let state = createRound(rs, SEATS, 0, 77);
+  while (state.phase === 'vorbehalt') {
+    const seat = currentActor(state) as number;
+    state = apply(state, { type: 'vorbehalt', seat, kind: null });
+  }
+  assert.deepEqual(viewFor(state, 0).soloVorschau, {});
+});
+
+test('Pflichtsolo: die Sicht sagt, wer es noch offen hat', () => {
+  const rs = makeRuleSet({ pflichtsolo: true });
+  const offen = createRound(rs, SEATS, 0, 5, { soloPlayed: [1, 3] });
+  assert.deepEqual(viewFor(offen, 0).pflichtsoloOffen, [0, 2]);
+
+  // Ohne die Regel gibt es keine Pflicht und deshalb auch keine Liste.
+  const ohne = createRound(makeRuleSet({ pflichtsolo: false }), SEATS, 0, 5, {
+    soloPlayed: [1, 3],
+  });
+  assert.deepEqual(viewFor(ohne, 0).pflichtsoloOffen, []);
+});
+
+test('Pflichtansage: die Folgeansage ist ein eigener Schalter', () => {
+  const rs = makeRuleSet({ pflichtansage: true });
+  assert.equal(
+    rs.pflichtansageFolge,
+    false,
+    'Wer die Pflichtansage anschaltet, bekommt die Kette nicht ungefragt dazu',
+  );
+
+  const mit = makeRuleSet({ pflichtansage: true, pflichtansageFolge: true });
+  assert.equal(mit.pflichtansageFolge, true);
+});
+
+test('Pflichtansage: Schweine verlaengern die Kette nicht', () => {
+  let state = rundeMitSchweinen();
+  const halter = state.pendingPflichtansage!.seat;
+  state = apply(state, { type: 'confirmPflichtansage', seat: halter, accept: true });
+  assert.equal(
+    state.pflichtansageKette,
+    false,
+    'Nur eine Pflicht am Bezugsstich verlaengert — Schweine liegen davor',
+  );
+});
+
 test('eine gespielte Kreuz-Dame deckt die Partei dauerhaft auf', () => {
   const rs = makeRuleSet({ pflichtsolo: false, armut: false, hochzeit: false });
   let state = createRound(rs, SEATS, 0, 4242);

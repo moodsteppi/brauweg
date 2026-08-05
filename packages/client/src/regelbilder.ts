@@ -28,6 +28,15 @@ const BILDER: Record<string, string> = {
   announcements: '📣',
   absagen: '🚫',
   pflichtansage: '❗',
+  /* Die drei Ausloeser tragen das Zeichen ihrer Regel, nicht dreimal dasselbe
+     Ausrufezeichen: Auf der Kachel steht der Anlass, nicht die Folge. */
+  /* Die Folge ist eine Kette: eine Ansage zieht die naechste nach sich. */
+  pflichtansageFolge: '⛓️',
+  pflichtansageHochzeit: '💍',
+  pflichtansageArmut: '💸',
+  pflichtansageSchweine: '🐷',
+  /* Der Feigling ist der, der sich nicht traut — nicht der, der verliert. */
+  feigling: '🙈',
   bock: '🐐',
   pflichtsolo: '☝️',
   countPoints: '🔢',

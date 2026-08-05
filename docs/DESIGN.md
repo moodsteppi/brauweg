@@ -72,12 +72,27 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
   Rand des Startbildschirms.
 - **Zwei Währungen, getrennte Bedeutung.** **Münzen** (gold) verdient man:
   Truhen, Tagesaufgaben. **Edelsteine** (blaugrün) gibt es nur zu kaufen oder
-  geschenkt. Es gibt keinen Wechselkurs — gäbe es einen, wäre jede Truhe
-  indirekt eine Geldquelle. Der Edelstein ist bewusst **nicht lila**: Lila
+  geschenkt. **Der Umtausch läuft einseitig:** Edelsteine werden zu Münzen,
+  Münzen nie zu Edelsteinen. Die Begründung gegen die Gegenrichtung gilt
+  unverändert — gäbe es sie, wäre jede Truhe indirekt eine Geldquelle. In diese
+  Richtung ist nichts zu befürchten: Erspieltes bleibt erspielt. Der Edelstein
+  ist bewusst **nicht lila**: Lila
   heißt hier „kommt bald", und beides nebeneinander wäre die eine
   Verwechslung, die man sich nicht leisten kann. **VIP ist keine Währung,**
   sondern ein Zeitraum, und steht deshalb im Shop-Regal und nicht in der
   Leiste.
+- **Wer zwei Preise hat, zeigt zwei.** Was in beiden Währungen zu haben ist —
+  Kosmetik, Szenerien, Rückseiten, Wappen, Zurufe — trägt an der Kachel „120
+  Münzen oder 8 Edelsteine", und im Kaufblatt stehen zwei Knöpfe, je einer mit
+  Symbol und Betrag. Ein einzelner Preis plus Umschalter wäre die Frage „womit"
+  an einer Stelle, an der noch niemand „ob" beantwortet hat. Was es nur in
+  **einer** Währung gibt — Münzpakete, Truhen, Edelsteinpakete, die Pässe —
+  trägt genau einen Preis (`preisSchild()`).
+- **Jeder Kauf hat eine Rückfrage, auch Pakete und Truhen.** Ein Tipp bucht
+  nirgends ab. Bei Edelsteinen wäre ein Fehlgriff teurer als bei Münzen, weil
+  Edelsteine am Ende Geld kosten; und nach einem Truhenkauf zeigt das Fundblatt,
+  was drin war — eine gekaufte Truhe, die nur den Münzstand ändert, wäre eine
+  Zahl ohne Erklärung.
 - **Zwischen den Tabs wird auch gewischt**, nicht nur über die Leiste
   getippt: ein deutlich waagerechter Wisch auf dem Inhalt geht einen Tab
   weiter, in derselben Reihenfolge wie die Leiste. Nur klar horizontale

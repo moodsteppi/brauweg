@@ -69,6 +69,18 @@ export interface RuleSet {
   // --- Ansagen ---
   announcements: boolean;
   absagen: boolean;
+  /**
+   * Feigling: Wer hoch gewinnt, ohne es angesagt zu haben, verliert stattdessen.
+   *
+   * Verlangt wird nach Augen der Verliererpartei: ab 60 nichts, 30 bis 59
+   * mindestens Re/Kontra, 1 bis 29 mindestens Keine 90, schwarz mindestens
+   * Keine 60. Wird das verfehlt, wechselt der Sieg zur Gegenpartei — die
+   * Sonderpunkte bleiben bei dem, der sie erspielt hat.
+   *
+   * Sinn der Regel: Sie bestraft das Sitzenlassen einer sicheren Hand. Ohne sie
+   * ist Schweigen bei guten Karten die risikoloseste Wahl.
+   */
+  feigling: boolean;
 
   // --- Zaehlhilfe ---
   /**
@@ -82,6 +94,29 @@ export interface RuleSet {
   pflichtansage: boolean;
   pflichtansageThreshold: number; // 30
   pflichtansageMoralThreshold: number; // 29
+  /**
+   * Die Folgeansage: Kam am Bezugsstich eine Ansage zustande, wird auch der
+   * Stich DANACH geprueft.
+   *
+   * Eigener Schalter, nicht Teil von `pflichtansage`: Eine einzelne Pflicht ist
+   * eine Regel, eine Kette ist eine andere. Wer nur den fetten ersten Stich
+   * bestrafen will, soll nicht ungefragt eine Runde bekommen, in der Re, Keine
+   * 90 und Keine 60 hintereinander erzwungen werden.
+   */
+  pflichtansageFolge: boolean;
+  /**
+   * Weitere Ausloeser. Jeder hebt die Pflicht um genau eine Stufe — gerechnet
+   * als naechste offene Stufe der Partei, nicht als feste Zahl.
+   *
+   * Sie haengen am TATSAECHLICH GESPIELTEN Spieltyp, nicht an der Ansage: Sagt
+   * einer Hochzeit und einer Armut an, wird Armut gespielt (Armut sticht
+   * Hochzeit), und der Hochzeit-Ansager bekommt nichts. Beide Regeln duerfen
+   * deshalb gleichzeitig an sein.
+   */
+  pflichtansageHochzeit: boolean;
+  pflichtansageArmut: boolean;
+  /** Verpflichtet ist, wer die Schweine haelt — nicht, wer sie spielt. */
+  pflichtansageSchweine: boolean;
 
   // --- Bockrunden ---
   bock: boolean;
@@ -133,12 +168,17 @@ export const DEFAULT_RULESET: RuleSet = {
 
   announcements: true,
   absagen: true,
+  feigling: false,
 
   countPoints: false,
 
   pflichtansage: false,
   pflichtansageThreshold: 30,
   pflichtansageMoralThreshold: 29,
+  pflichtansageFolge: false,
+  pflichtansageHochzeit: false,
+  pflichtansageArmut: false,
+  pflichtansageSchweine: false,
 
   bock: false,
   bockTriggers: ['zeroResult', 'reAndKontra'],

@@ -171,17 +171,94 @@ gespielt hat (also bis unmittelbar vor seiner zweiten Karte).
 
 Jede Absage setzt die vorherige Stufe voraus.
 
+**Re gehört der Partei, nicht dem Sitz.** Steht Re, kann der Partner es nicht
+noch einmal sagen — wer nachlegen will, nimmt die nächste Stufe. Vorher nahm die
+Engine ein zweites Re an: Es stand doppelt in der Anzeige, verdoppelte den
+Spielwert aber nur einmal.
+
 ### 3.7 Pflichtansage
 
-- **Auslöser:** Der erste Stich enthält 30 oder mehr Augen.
-- **Verpflichtet:** ausschließlich der Gewinner dieses Stichs.
-- **Verhalten:** Popup, Bestätigen-Button. **Ablehnen ist ausgegraut**, die
-  Ansage erfolgt zwingend. Das Popup ist reine Information, kein
-  Entscheidungspunkt.
-- **Bei genau 29 Augen:** Popup mit Hinweis auf die moralische Pflichtansage.
-  Hier ist Ablehnen möglich.
-- **Bei Hochzeit:** Die Prüfung erfolgt nach dem Klärungsstich, nicht nach dem
-  ersten Stich.
+Mehrere Auslöser, und **jeder hebt die Pflicht um genau eine Stufe.** Gefordert
+wird nicht eine feste Ansage, sondern die *nächste offene Stufe der Partei*: Hat
+sie nichts gesagt, ist es Re beziehungsweise Kontra, sonst eine Stufe über ihrer
+höchsten Absage. Steht die Partei auf schwarz, verfällt eine weitere Pflicht.
+
+Daraus ergibt sich die Kette von selbst, ohne dass irgendwo eine Zahlenfolge
+gepflegt werden muss: Hochzeit + Schweine + zwei fette Stiche ergeben Re,
+keine 90, keine 60, keine 30.
+
+**Der Bezugsstich:**
+
+- **Normal:** der **erste** Stich.
+- **Bei Hochzeit:** der **Klärungsstich** — vorher stehen die Parteien nicht
+  fest, und eine Pflicht ohne bekannte Partei wäre nicht zuzuordnen. Weil die
+  Klärung bis zum dritten Stich dauern kann, ist die Nummer nicht vorhersagbar.
+
+**Auslöser:**
+
+| Auslöser | Bedingung | Regel |
+|---|---|---|
+| Bezugsstich | 30 Augen oder mehr | `pflichtansage` |
+| Bezugsstich | genau 29 Augen → **moralisch**, Ablehnen möglich | `pflichtansage` |
+| Folgestich | der Stich **nach** dem Bezugsstich, ab 30 Augen — nur wenn im Bezugsstich eine Pflicht oder eine *zugestimmte* moralische Ansage zustande kam | `pflichtansageFolge` |
+| Hochzeit | die Runde **ist** eine Hochzeit | `pflichtansageHochzeit` |
+| Armut | die Runde **ist** eine Armut | `pflichtansageArmut` |
+| Schweine | wer sie **hält** — nicht, wer sie spielt | `pflichtansageSchweine` |
+
+**Die Folgeansage ist ein eigener Schalter.** Eine einzelne Pflicht ist eine
+Regel, eine Kette eine andere: Wer nur den fetten ersten Stich bestrafen will,
+soll nicht ungefragt eine Runde bekommen, in der Re, keine 90 und keine 60
+hintereinander erzwungen werden.
+
+**Hochzeit und Armut hängen am tatsächlich gespielten Spieltyp, nicht an der
+Ansage.** Beide Regeln dürfen gleichzeitig an sein. Sagt einer Hochzeit und einer
+Armut an, wird Armut gespielt (Armut sticht Hochzeit, 3.4) — der
+Hochzeit-Ansager spielt seine Hochzeit gar nicht und bekommt deshalb **keine**
+Pflicht.
+
+**Nur der Bezugsstich verlängert die Kette.** Armut und Schweine schlagen vor dem
+ersten Stich zu und verschieben nichts; die Hochzeit verlängert, weil sie den
+Bezugsstich selbst verschiebt. Wer eine moralische Pflicht **ablehnt**, hat
+nichts angesagt — dann wird der Folgestich nicht geprüft.
+
+**Verhalten:** Popup mit Bestätigen-Button, der Grund steht dabei („Du hältst die
+Schweine", „Der Klärungsstich hatte 34 Augen"). Bei 30 Augen und mehr sowie bei
+Hochzeit, Armut und Schweinen ist **Ablehnen ausgegraut**; nur die moralische
+Stufe bei 29 Augen lässt sich ablehnen. Mehrere gleichzeitig offene Pflichten
+werden **hintereinander** abgefragt, nie zwei Blätter auf einmal.
+
+**Der Schweine-Halter steht dauerhaft am Sitz**, solange `pflichtansageSchweine`
+an ist — nicht als kurze Blase. Ohne die Regel bleibt es Geheimwissen und wird
+nicht ausgeliefert.
+
+### 3.7a Feigling (Hausregel, `feigling`)
+
+Wer hoch gewinnt, ohne es angesagt zu haben, **verliert stattdessen**. Die Regel
+bestraft das Sitzenlassen einer sicheren Hand; ohne sie ist Schweigen bei guten
+Karten die risikoloseste Wahl.
+
+Verlangt wird nach den Augen der **Verlierer**partei:
+
+| Verliererpartei | Mindestansage |
+|---|---|
+| 60 und mehr | keine Pflicht |
+| 30 bis 59 | Re / Kontra |
+| 1 bis 29 | keine 90 |
+| 0 (schwarz) | keine 60 |
+
+Der Abstand ist durchgehend **zwei Stufen** auf der Leiter *nichts 0 · Re 1 ·
+keine 90 = 2 · keine 60 = 3 · keine 30 = 4 · schwarz 5*. Ein knapper Sieg
+verlangt deshalb nichts, und schwarz verlangt keine 60 statt keine 30.
+
+Wird das verfehlt, **wechselt der Sieg zur Gegenpartei.** Der Spielwert bleibt,
+was er ist — er beschreibt die Runde, nicht den Gewinner. Die **Sonderpunkte
+bleiben bei dem, der sie erspielt hat:** Ein gefangener Fuchs ist gefangen, auch
+wenn die Ansage zu leise war; aus Sicht des neuen Empfängers senken sie den Wert
+deshalb, statt mitzuwandern.
+
+`RoundResult.feigling` sagt, dass gedreht wurde. Die Oberfläche **muss** das
+benennen: Ein Ergebnis, das dem Augenstand widerspricht, sieht sonst wie ein
+Rechenfehler aus.
 
 ### 3.8 Bockrunden
 

@@ -289,6 +289,13 @@ export function Table({
   const lastKey = lastTrickNow
     ? lastTrickNow.played.map((p) => p.card.id).join('.')
     : null;
+  /**
+   * Solo, das gerade zur Bestaetigung steht — null, wenn keines.
+   *
+   * Steuert nur die Sortierung der eigenen Hand als Vorschau. Bestaetigt wird
+   * damit nichts; abgeschickt wird erst im Dialog.
+   */
+  const [soloVorschau, setSoloVorschau] = useState<string | null>(null);
   const [frozenKey, setFrozenKey] = useState<string | null>(null);
   // Nach dem Liegen gleitet der Stich zum Gewinner: kurze Sweep-Phase.
   const [sweeping, setSweeping] = useState(false);
@@ -638,7 +645,27 @@ export function Table({
   // Die eigene Ansage - dieselbe Herleitung wie bei den Mitspielern.
   const meineAnsage = view.seat !== null ? ansageVon(round, view.seat) : null;
 
-  const hand = round ? sortByOrder(round.hand, round.order) : [];
+  /*
+   * Solange ein Solo zur Bestaetigung steht, liegt die Hand nach DESSEN
+   * Trumpfordnung. Die Ordnung kommt vom Server (`soloVorschau`) — der Client
+   * rechnet keine Trumpfordnung aus, das bleibt Sache des Spielmoduls.
+   * Bestaetigt man nicht, faellt sie auf die echte Ordnung zurueck.
+   */
+  const vorschauOrder = soloVorschau ? round?.soloVorschau?.[soloVorschau] : undefined;
+  const hand = round ? sortByOrder(round.hand, vorschauOrder ?? round.order) : [];
+
+  /*
+   * Ist die Abfrage vorbei, ist die Vorschau vorbei. Ohne dieses Aufraeumen
+   * bliebe eine Hand nach der Ordnung eines Solos liegen, das nie zustande kam
+   * — sortiert nach einem Trumpf, den es in dieser Runde nicht gibt.
+   *
+   * An der Phase aufgehaengt, nicht am Sichten-Objekt: Der Effekt soll beim
+   * Phasenwechsel laufen, nicht bei jedem Serverfunk.
+   */
+  const phase = round?.phase;
+  useEffect(() => {
+    if (phase !== 'vorbehalt') setSoloVorschau(null);
+  }, [phase]);
   const dealSlots: DealSlot[] = LAYOUTS[seatCount] ?? ['bottom', 'left', 'top', 'right'];
   const liveTrick = round?.currentTrick ?? [];
   // Frisch voller Stich: eine Sekunde liegen lassen — auch dann, wenn der
@@ -798,6 +825,7 @@ export function Table({
             deadline={view.currentActor === seat ? view.turnDeadline : null}
             party={round?.knownParties?.[seat] ?? null}
             ansage={ansageVon(round, seat)}
+            schweine={round?.schweineSeats?.includes(seat) ?? false}
             sagt={blasen[seat] ?? null}
             emote={emotes[seat] ?? null}
             tricksWon={round?.trickCounts?.[seat] ?? 0}
@@ -864,6 +892,7 @@ export function Table({
         <Pflichtansage
           points={round.pendingPflichtansage.trickPoints}
           canDecline={round.pendingPflichtansage.canDecline}
+          reason={round.pendingPflichtansage.reason}
           onDecide={(accept) =>
             send({ type: 'confirmPflichtansage', seat: view.seat!, accept })
           }
@@ -891,7 +920,14 @@ export function Table({
 
       {/* Vorbehaltsabfrage als Dialog mit Bestaetigung — erst nach dem Geben. */}
       {vorbehaltActions.length > 0 && !round?.pendingPflichtansage && !dealing && (
-        <VorbehaltDialog actions={vorbehaltActions} onSend={send} />
+        <VorbehaltDialog
+          actions={vorbehaltActions}
+          onSend={send}
+          onVorschau={setSoloVorschau}
+          pflichtsoloOffen={round?.pflichtsoloOffen}
+          eigenerSitz={view.seat}
+          nameOf={nameOf}
+        />
       )}
 
       {abrechnungOffen && roundResult && (
@@ -1090,6 +1126,7 @@ const OpponentSeat = memo(function OpponentSeat({
   deadline,
   party,
   ansage,
+  schweine,
   sagt,
   emote,
   tricksWon,
@@ -1113,6 +1150,14 @@ const OpponentSeat = memo(function OpponentSeat({
   party: string | null;
   /** Hoechste Absage dieses Sitzes. Bleibt stehen. */
   ansage: string | null;
+  /**
+   * Haelt dieser Sitz die Schweine? Bleibt dauerhaft stehen.
+   *
+   * Der Server liefert das nur, wenn die Regel es zur Pflichtansage macht —
+   * dann weiss der Tisch es ohnehin. Eine Blase, die nach drei Sekunden weg
+   * ist, hilft niemandem, der den Trumpfwechsel noch einordnen muss.
+   */
+  schweine: boolean;
   /** Kurzer Zuruf, verschwindet nach ein paar Sekunden von selbst. */
   sagt: string | null;
   /** Zuruf ueber diesem Sitz, oder null. */
@@ -1153,6 +1198,11 @@ const OpponentSeat = memo(function OpponentSeat({
         {/* Der Vermerk bleibt stehen: Wer eine Absage gesagt hat, soll
             daran auch in der zehnten Runde noch erkennbar sein. */}
         {ansage && <em className="doko-tag doko-tag--ansage">{ansage}</em>}
+        {schweine && (
+          <em className="doko-tag doko-tag--schweine" title="Hält die Schweine">
+            🐷 Schweine
+          </em>
+        )}
         {hasLeft && <em className="doko-tag">ausgestiegen</em>}
         {!hasLeft && botTakeover && !isBot && <em className="doko-tag">Bot übernimmt</em>}
       </div>
@@ -1321,9 +1371,25 @@ const NICHT_SOLO: readonly { kind: string; label: string; warum: string }[] = [
 function VorbehaltDialog({
   actions,
   onSend,
+  onVorschau,
+  pflichtsoloOffen,
+  eigenerSitz,
+  nameOf,
 }: {
   actions: Action[];
   onSend: (action: Action) => void;
+  /**
+   * Meldet, welches Solo gerade zur Bestaetigung steht — oder null.
+   *
+   * Der Tisch sortiert die Hand daraufhin nach der Trumpfordnung dieses Solos,
+   * solange nicht bestaetigt ist. Wer bei einem Damensolo nicht sieht, dass
+   * seine vier Damen oben stehen, muss sich die Umsortierung im Kopf vorstellen
+   * — und das ist die eigentliche Entscheidung.
+   */
+  onVorschau?: (solo: string | null) => void;
+  pflichtsoloOffen?: number[];
+  eigenerSitz: number | null;
+  nameOf: (seat: number) => string;
 }): React.JSX.Element {
   const gesund = actions.find((action) => action.kind === null) ?? null;
   const vorbehalte = actions.filter((action) => action.kind !== null);
@@ -1356,7 +1422,19 @@ function VorbehaltDialog({
   const bestaetigen = (action: Action): void => {
     setWahl(action);
     setSchritt('bestaetigen');
+    onVorschau?.(action.kind === 'solo' ? String(action.solo) : null);
   };
+
+  /** Zurueck heisst auch: Vorschau weg, die Hand liegt wieder normal. */
+  const zurueck = (ziel: 'frage' | 'auswahl'): void => {
+    onVorschau?.(null);
+    setSchritt(ziel);
+  };
+
+  // Die Vorfuehrung trifft nur, wer sein Pflichtsolo noch offen hat. Ohne diese
+  // Zeile ist am Tisch nicht zu sehen, wer das ist — und wer selbst dazugehoert.
+  const offen = pflichtsoloOffen ?? [];
+  const ichOffen = eigenerSitz !== null && offen.includes(eigenerSitz);
 
   return (
     <div className="doko-sheet doko-sheet--mitte">
@@ -1455,16 +1533,36 @@ function VorbehaltDialog({
               </div>
             )}
             {gesund && (
-              <button className="doko-sheet-zurueck" onClick={() => setSchritt('frage')}>
+              <button className="doko-sheet-zurueck" onClick={() => zurueck('frage')}>
                 Zurück
               </button>
             )}
           </>
         )}
 
+        {/* Wer sein Pflichtsolo noch offen hat, steht hier — auch der eigene
+            Sitz. Das entscheidet mit, ob man freiwillig ein Solo waehlt oder
+            darauf wartet, vorgefuehrt zu werden. */}
+        {offen.length > 0 && (
+          <p className="muted vb-pflichtsolo">
+            Pflichtsolo offen:{' '}
+            {offen.map((s) => (s === eigenerSitz ? 'du' : nameOf(s))).join(', ')}
+            {ichOffen ? ' — dich kann es noch treffen.' : ''}
+          </p>
+        )}
+
         {schritt === 'bestaetigen' && wahl && (
           <>
             <h2>{actionLabel(wahl)} ansagen?</h2>
+            {/* Die Hand im Hintergrund liegt jetzt nach der Trumpfordnung
+                dieses Solos. Ohne diesen Hinweis wirkt die Umsortierung wie
+                ein Fehler. */}
+            {wahl.kind === 'solo' && (
+              <p className="muted">
+                Deine Karten liegen zur Probe schon in der Reihenfolge dieses
+                Solos. Zurück stellt sie wieder her.
+              </p>
+            )}
             <div className="doko-sheet-row">
               <button
                 className="primary"
@@ -1478,7 +1576,7 @@ function VorbehaltDialog({
               </button>
               <button
                 disabled={gesendet}
-                onClick={() => setSchritt(wahl === gesund ? 'frage' : 'auswahl')}
+                onClick={() => zurueck(wahl === gesund ? 'frage' : 'auswahl')}
               >
                 Zurück
               </button>
@@ -1490,13 +1588,36 @@ function VorbehaltDialog({
   );
 }
 
+/**
+ * Der Anlass gehoert in den Text.
+ *
+ * "Der erste Stich hatte 32 Augen" stand hier fest verdrahtet — falsch, sobald
+ * es mehr als einen Ausloeser gibt: Bei einer Hochzeit zaehlt der
+ * Klaerungsstich, und Schweine oder Armut haben mit Augen gar nichts zu tun.
+ * Wer nicht weiss, warum er ansagen muss, haelt es fuer einen Fehler.
+ */
+function pflichtGrund(reason: string | undefined, points: number): string {
+  switch (reason) {
+    case 'hochzeit':
+      return `Der Klärungsstich hatte ${points} Augen.`;
+    case 'schweine':
+      return 'Du hältst die Schweine.';
+    case 'armut':
+      return 'Du spielst die Armut.';
+    default:
+      return `Der Stich hatte ${points} Augen.`;
+  }
+}
+
 function Pflichtansage({
   points,
   canDecline,
+  reason,
   onDecide,
 }: {
   points: number;
   canDecline: boolean;
+  reason?: string;
   onDecide: (accept: boolean) => void;
 }): React.JSX.Element {
   return (
@@ -1504,7 +1625,7 @@ function Pflichtansage({
       <div className="doko-sheet-card">
         <h2>Pflichtansage</h2>
         <p>
-          Der erste Stich hatte {points} Augen.{' '}
+          {pflichtGrund(reason, points)}{' '}
           {canDecline
             ? 'Die Ansage ist erwartet, aber freiwillig.'
             : 'Die Ansage erfolgt zwingend.'}
@@ -1675,6 +1796,16 @@ function RundenAbrechnung({
             isWinner={kontraGewinnt}
           />
         </div>
+        {/* Ohne diesen Satz sieht die Auswertung wie ein Rechenfehler aus: Die
+            Augenspalte zeigt einen klaren Sieger, gewonnen hat die andere
+            Seite. Der Grund muss dastehen, wo das Ergebnis steht. */}
+        {result.feigling && (
+          <p className="doko-feigling">
+            <strong>Feigling.</strong> {reGewinnt ? 'Kontra' : 'Re'} hatte die
+            Augen, aber zu niedrig angesagt — die Punkte gehen an die
+            Gegenpartei. Sonderpunkte bleiben, wo sie erspielt wurden.
+          </p>
+        )}
         <button className="primary" onClick={onWeiter}>
           Weiter
         </button>
