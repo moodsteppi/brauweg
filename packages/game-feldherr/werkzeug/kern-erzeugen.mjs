@@ -82,6 +82,7 @@ for (const anker of [
   'function coinWahl(',
   'let darfBedienen',
   'let ueberKopf',
+  'let SPIEGEL',
   'function coinTick(',
 ]) {
   if (!skript.includes(anker)) throw new Error(`Befehlsfunktion fehlt in der Quelle: ${anker}`);
@@ -134,6 +135,19 @@ export function starteFeldherr(optionen = {}) {
   /** Muessen mit TAKT_MS und VORLAUF_TAKTE aus @brauweg/game-feldherr uebereinstimmen. */
   const TAKT_MS = 50;
   const VORLAUF = 6;
+  /**
+   * Sicherheitsabstand beim Einplanen eigener Zuege, zusaetzlich zum Vorlauf.
+   *
+   * Der gemeldete Gegnerstand hinkt dem echten um bis zu einen Pulsabstand
+   * plus Leitungszeit hinterher. Wer nur den Vorlauf draufschlaegt, plant
+   * seinen Zug damit gelegentlich fuer einen Takt, den die Gegenseite beim
+   * Eintreffen schon gerechnet hat — deren Notnagel verschiebt ihn dann
+   * still, und die Partie laeuft unbemerkt auseinander, bis die
+   * Zustandsprobe sie fuer strittig erklaert. Genau so ist ein Haus-Zug
+   * nach einem Tabwechsel zerbrochen. Zwoelf Takte statt sechs kosten eine
+   * knappe Drittelsekunde Reaktionszeit und kaufen dafuer Gleichlauf.
+   */
+  const MELDE_PUFFER = 6;
   /** Herzschlag-Abstand nach Wanduhr. Deutlich unter VORLAUF * TAKT_MS, sonst
    *  stockt die Gegenseite zwischen zwei Pulsen. */
   const PULS_MS = 200;
@@ -161,7 +175,7 @@ export function starteFeldherr(optionen = {}) {
   function planTakt() {
     let basis = taktZaehler;
     for (const s of [0, 1]) if (s !== MEIN_SITZ) basis = Math.max(basis, gegnerStand[s]);
-    const t = Math.max(basis + VORLAUF, letzterMeldeTakt + 1);
+    const t = Math.max(basis + VORLAUF + MELDE_PUFFER, letzterMeldeTakt + 1);
     letzterMeldeTakt = t;
     return t;
   }
@@ -261,6 +275,17 @@ const fuss = `
     darfBedienen = (own) => own === MEIN_SITZ;
     /** Niemand sitzt gegenueber — kopfstehende Hinweise gibt es nur am geteilten Geraet. */
     ueberKopf = () => false;
+
+    /**
+     * Sitz 0 bekommt das Brett gespiegelt: Jeder verteidigt unten. Muss vor
+     * startRound stehen, denn resize und bakeStatic backen die Buehne mit
+     * der Spiegelung; die Klasse tauscht zusaetzlich die Kartenleisten.
+     */
+    if (MEIN_SITZ === 0) {
+      SPIEGEL = true;
+      const app = document.getElementById('app');
+      if (app) app.classList.add('gespiegelt');
+    }
 
     /**
      * Pause gibt es im Netz nicht: update() stuende still, waehrend der Takt
@@ -453,15 +478,24 @@ const fuss = `
     /** Ein Zug vom Server — eigener wie fremder. */
     zugAnnehmen(zug, wer) {
       // Ein fremder Zug verraet nebenbei, wo die Gegenseite mindestens steht:
-      // eingeplant hat sie ihn bei ihrem Takt plus Vorlauf.
+      // eingeplant hat sie ihn bei ihrem Takt plus Vorlauf und Puffer. Mehr
+      // abzuleiten waere gefaehrlich — eine Ueberschaetzung hier weitet die
+      // eigene Wissensgrenze ueber den echten Gegnerstand hinaus.
       if (wer !== MEIN_SITZ && (wer === 0 || wer === 1)) {
-        gegnerStand[wer] = Math.max(gegnerStand[wer], zug.takt - VORLAUF);
+        gegnerStand[wer] = Math.max(gegnerStand[wer], zug.takt - VORLAUF - MELDE_PUFFER);
       }
-      // Notnagel: Ein Zug fuer einen schon gerechneten Takt duerfte dank der
-      // Wissensgrenze nie eintreffen. Faellt er doch (Serverneustart mitten
-      // in der Partie), wird er verspaetet ausgefuehrt — die Zustandsprobe
-      // deckt die Abweichung dann auf, statt sie still zu lassen.
+      // Notnagel: Ein Zug fuer einen schon gerechneten Takt duerfte dank
+      // Wissensgrenze und Meldepuffer nie eintreffen. Faellt er doch, wird er
+      // verspaetet ausgefuehrt und die Zustandsprobe deckt die Abweichung in
+      // Sekunden auf — aber laut, nicht still: Die Warnung nennt die Ursache,
+      // die im Strittig-Banner sonst unsichtbar bliebe.
       const takt = Math.max(zug.takt, taktZaehler + 1);
+      if (takt !== zug.takt) {
+        console.warn(
+          'feldherr: Zug fuer Takt ' + zug.takt + ' kam erst bei ' + taktZaehler +
+            ' an — verschoben ausgefuehrt, die Laeufe gehen auseinander.',
+        );
+      }
       if (!geplant.has(takt)) geplant.set(takt, []);
       geplant.get(takt).push({ zug, sitz: wer });
     },

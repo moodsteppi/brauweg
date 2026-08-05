@@ -134,6 +134,14 @@ PBASE ist ein globaler Sockel, der P() zusätzlich anhebt. Er wird für
 Stellungen auf dem Fels gesetzt und MUSS unmittelbar danach wieder auf 0
 zurückgesetzt werden, sonst schwebt der Rest des Bildes.
 
+SPIEGEL (Netzspiel, Sitz 0) stellt das Brett kopfüber dar: P() spiegelt die
+Brettebene vertikal, bevor die Kamera rechnet. Wer zeichnet, merkt davon
+nichts — solange jede Zeichnung ihre Punkte in Ebenenkoordinaten rechnet und
+durch P() projiziert. Rohe Bildschirmkoordinaten (ohne P) spiegelt niemand.
+Mitgespiegelt werden die Malersortierung in render(), die Flächenfolge in
+facet() und die Zeigereingabe in cellFromClient(); die Kartenleisten tauscht
+die CSS-Klasse .gespiegelt am #app.
+
 
 6. ZEICHENSCHICHTEN
 --------------------------------------------------------------------------------
@@ -281,6 +289,14 @@ html,body{height:100%;overflow:hidden;background:#05080b;
 .hud::after{content:"";position:absolute;left:0;right:0;height:1px;
   background:linear-gradient(90deg,transparent,#2c3d48 20%,#2c3d48 80%,transparent)}
 .hud.bot::after{top:0}.hud.top::after{bottom:0}
+/* Netzspiel, Sitz 0: Brett gespiegelt (siehe SPIEGEL bei der Projektion) —
+   dann wandert auch die eigene Leiste nach unten. Die Klasse setzt die
+   Netzanbindung; örtlich kommt sie nie vor. */
+#app.gespiegelt .hud.top{order:3}
+#app.gespiegelt #stage{order:2}
+#app.gespiegelt .hud.bot{order:1}
+#app.gespiegelt .hud.top::after{bottom:auto;top:0}
+#app.gespiegelt .hud.bot::after{top:auto;bottom:0}
 .inner{padding:7px 9px 8px}
 .hud.top .inner{transform:rotate(180deg)}
 .bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
@@ -1372,7 +1388,21 @@ const HS = 0.76;                                  // Höhenmaßstab aller Aufbau
 const SHX = 0.46, SHY = 0.28;                     // Schattenwurf pro Höheneinheit
 
 let PBASE = 0;                                    // Sockelhöhe für Stellungen auf dem Fels
+
+/* Netzspiel, Sitz 0: Das Brett steht kopf, damit jeder die eigene Hälfte
+ * unten hat. Gespiegelt wird die BRETTEBENE genau hier in der Projektion —
+ * einmal für alles Gezeichnete: Höhen heben weiter nach oben, Schrift bleibt
+ * lesbar, und Richtungen (Kanonenrohre, Ausfallschritte) stimmen von selbst,
+ * weil jede Zeichnung ihre Punkte in Ebenenkoordinaten rechnet und erst dann
+ * projiziert. Wer eine Bildschirmdrehung versucht, dreht den Höhenlift mit,
+ * und die Gebäude hängen nach unten. Die Netzanbindung setzt das Flag vor
+ * dem Rundenstart; örtlich bleibt es aus. Drei Stellen müssen mitspiegeln:
+ * die Malersortierung in render(), die Flächenfolge in facet() und die
+ * Zeigereingabe in cellFromClient(). */
+let SPIEGEL = false;
+
 function P(x,y,h){
+  if(SPIEGEL) y = 2*OY + ROWS*TH - y;
   const z = (h+PBASE)*HS;
   return [CX + (x-CX)*(1+z*KPX), CY + (y-CY)*(1+z*KPY) - z*KLIFT];
 }
@@ -1470,7 +1500,9 @@ function facet(cx,cy,h0,h1,rb,rt,offx,offy,col,N,seedv,jag){
     const mx=(bp[i][0]+bp[j][0])/2-cx, my=(bp[i][1]+bp[j][1])/2-cy;
     const len=Math.hypot(mx,my)||1;
     const dot=(mx/len)*(-0.62)+(my/len)*(-0.78);
-    faces.push({i,j,k:0.52+0.62*Math.max(0,dot+0.35), depth:my});
+    // Im Spiegel liegt "hinten" auf der anderen Seite — sonst übermalen die
+    // Rückflächen des Felsens die vorderen.
+    faces.push({i,j,k:0.52+0.62*Math.max(0,dot+0.35), depth:SPIEGEL ? -my : my});
   }
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces){
@@ -3122,7 +3154,9 @@ function render(){
     const key = env ? gy(Math.max(...env.cells.map(q=>q.r))+1)+0.5 : midY(z.r);
     items.push({y:key, f:()=>drawWrack(z)});
   }
-  items.sort((a,b)=>a.y-b.y);
+  // Gespiegelt kehrt sich die Tiefe um: Was in der Ebene weiter unten liegt,
+  // steht auf dem Bild dann weiter OBEN — der Maler malt es zuerst.
+  items.sort((a,b)=>SPIEGEL ? b.y-a.y : a.y-b.y);
   for(const it of items) it.f();
 
   drawFx();
@@ -3768,7 +3802,9 @@ function playCard(own,k,r,c){
 }
 function cellFromClient(clientX,clientY){
   const b=cv.getBoundingClientRect();
-  const c=Math.floor((clientX-b.left-OX)/TW), r=Math.floor((clientY-b.top-OY)/TH);
+  const c=Math.floor((clientX-b.left-OX)/TW);
+  let r=Math.floor((clientY-b.top-OY)/TH);
+  if(SPIEGEL) r = ROWS-1-r;              // die Leinwand zeigt das Brett kopfüber
   return inBoard(r,c) ? {r,c} : null;
 }
 
