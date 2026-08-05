@@ -581,6 +581,53 @@ nachgesehen und nicht der Sammlung geglaubt, in der sie stehen.
   `<img>` auf eine fehlende Datei wäre ein weißer Kasten, und genau das ging
   beim Clan-Krieg schon einmal fast live.
 
+## Am 5. August, nachmittags: gemaltes Holz und 3D
+
+**Die sechzehn bestellten Bilder sind drin.** Knöpfe, Tafel, Kopfleiste,
+Erfahrungsbalken, Namensschild und sieben Symbole — 1,7 MB PNG wurden 0,2 MB
+WebP. Der Hub besteht damit erstmals aus Material und nicht aus
+CSS-Verläufen. Der Abnahmepunkt hat diesmal gehalten: neben `menue-blatt.webp`
+gelegt sieht es nach demselben Haus aus.
+
+**Die 3D-Modelle wogen 7,9 MB und wiegen jetzt 0,7 MB** (−92 %). Der Ballast
+waren zwei 4096×4096-Texturen für eine Figur, die auf dem Handy 200 px hoch
+ist. Gewandelt mit dem neuen `~/modellwerkzeug/schrumpfen.mjs` — dasselbe
+Muster wie Bild- und Klangwerkzeug. **Als JPEG, nicht als WebP:**
+WebP-Texturen setzen `EXT_texture_webp` als *Pflicht* in die Datei, und ein
+Ladeprogramm, das die Erweiterung nicht kennt, lädt dann gar nichts mehr.
+
+**`three` liegt nicht mehr im Hauptbündel.** Es kam als gewöhnlicher Import
+über `main.tsx` herein und hätte jeden Spieler 900 kB gekostet, auch die, die
+nie 3D sehen. Jetzt lädt es über `React.lazy` in ein eigenes Stück; das
+Hauptbündel bleibt bei 408 kB. `leva` war als Abhängigkeit eingetragen und
+wurde nirgends benutzt — entfernt.
+
+**Die Mütze sitzt.** `-0,007 / 0,736 / 0,013`, Größe 1,09, im Ausrichter von
+Hand eingestellt und im Browser gegengeprüft. **Nicht** der rechnerische
+Kopfansatz aus `avatar_normalize.json` (y = 0,988) — damit schwebt sie
+sichtbar über dem Kopf.
+
+> **Offen und der Grund, warum die 3D-Kachel noch nicht im Profil steht:**
+> Die Bühne bleibt beim **ersten** Aufbau leer. Die Figur erscheint erst,
+> wenn sich die Fenstergröße einmal ändert — dann läuft alles, Drehen und
+> Mütze inklusive.
+>
+> Nachweislich **nicht** die Ursache, alles einzeln geprüft: `frameloop`
+> (`demand` wie `always`), von Hand nachgeforderte Bilder, R3Fs Vermessung
+> (`resize={{scroll:false}}`), die Modelle vor der Leinwand laden, die
+> Einblend-Animation des Blattes. Modell, Kamera, Material, Lichter und
+> Leinwandgröße sind über die Konsole als richtig belegt.
+>
+> **Ein Fund am Rande, der bleibt:** Die Lichtwerte waren zusätzlich viel zu
+> niedrig. three rechnet seit r155 mit physikalischen Einheiten; die Werte
+> stehen jetzt bei 2,2 / 1,6 / 3,2 / 1,2. Der Ausrichter täuscht dabei — er
+> hat niedrige Werte und sieht trotzdem gut aus, weil dort `<Environment>`
+> die eigentliche Beleuchtung macht.
+>
+> Zu sehen ist die Werkstatt unter `/?dev=werkstatt` (ohne Anmeldung). Sobald
+> das erste Bild steht, sind es vier Zeilen in `GameSelect.tsx` — die Stelle
+> ist dort auskommentiert markiert.
+
 ## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
 
 **Der Profil-Tab war der einzige, der den Tafel-Baustein nicht benutzt hat.**
