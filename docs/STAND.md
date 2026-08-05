@@ -802,6 +802,29 @@ Knopffarben, Spielauswahl mit beiden Bannern und beiden Bald-Zuständen.
 > Versehen — auf dem Holz sticht sie trotzdem heraus. Wenn sie weg soll,
 > braucht es erst eine neue Festlegung in `DESIGN.md`.
 
+## Am 5. August, nachts: Pro-Subway-Generalpass
+
+Der Endlos-Lauf (Cursors Rohbau) hat den großen Logik- und Feel-Pass
+bekommen — Einzelheiten und offene Reste stehen in **docs/PRO-SUBWAY.md,
+Abschnitt 1b**. Kurzfassung: Hitboxen je Prop mit Drahtgitter-Debug
+(`?dev=runner&hitbox=1`), faire Muster über eine wandernde freie Spur,
+Meter aus aufintegriertem Tempo, Punkte = Meter + 10·Münzen offen
+vorgerechnet, Geräterekord, Pause (auch automatisch bei verstecktem Tab),
+Anlauf statt Geisterlobby, Treffer-/Münz-/Rekord-Feedback, Menüs als
+Holztafeln, **GLBs 62 → 5,9 MB**.
+
+Zwei Fallen für später:
+
+- **Lerp-Faktoren immer mit gekapptem `delta`.** Nach einem Tab-Wechsel ist
+  `delta` sekundengroß, `8 × delta` liegt über 1, und `MathUtils.lerp`
+  schießt dann über das Ziel hinaus statt zu dämpfen — die Kamera flog ins
+  Nichts. Gilt für jede `useFrame`-Glättung, nicht nur die Kamera.
+- **Der eingebettete Prüf-Browser versteckt die Seite zwischen den
+  Werkzeugaufrufen** („Browser pane is currently hidden"): rAF steht, Läufe
+  kriechen, Screenshots zeigen alte Bilder. Spielgefühl und Tod/Pause-Blätter
+  lassen sich dort nicht ehrlich prüfen — nur am echten Gerät. Genau diese
+  Drosselung hat aber den Lerp-Fehler sichtbar gemacht.
+
 ## Am 4. August später fertig geworden (zweite Sitzung)
 
 Alles auf `staging`, Stand `66b6d25`. Migrationen **0013** (Clanchat und

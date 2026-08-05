@@ -30,7 +30,12 @@ Anweisungen für längst vorhandene Spalten — die Snapshots unter
 `packages/server/drizzle/meta/` sind veraltet (nur `0001`, `0002`, `0006`).
 Selbst schreiben, Eintrag in `_journal.json` selbst ergänzen, und **vorher
 prüfen, welche Nummer auf `origin/staging` schon vergeben ist.** Zwei
-Sitzungen haben schon dieselbe `0012` benutzt.
+Sitzungen haben schon dieselbe `0012` benutzt. **Mehrere Befehle in einer
+Datei brauchen zwischen sich die Drizzle-Trennzeile (Pfeil-Kommentar, siehe
+`0016`).** Der PGlite-Prüfstand nimmt je Abschnitt nur einen Befehl; der
+Server-Migrator ist nachsichtiger — `0016` lief deshalb im Deploy durch,
+während 215 Tests rot waren. Und den Trenner nie im Kommentar zitieren:
+gesplittet wird auf die wörtliche Zeichenkette, auch mitten im Kommentar.
 
 **4. Bilder: Original ins Archiv, WebP ins Repo.** Originale liegen im
 Repository [`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art),
