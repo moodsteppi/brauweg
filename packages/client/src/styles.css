@@ -3935,15 +3935,6 @@ td {
   transform: translateY(2px);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
 }
-.hub-side-btn--lila {
-  background: linear-gradient(180deg, #c49aff 0%, #7a48d4 100%);
-}
-.hub-side-btn--blau {
-  background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%);
-}
-.hub-side-btn--grau {
-  background: linear-gradient(180deg, #9aa8b8 0%, #5a6674 100%);
-}
 .hub-truhe {
   position: relative;
   display: grid;
@@ -9420,4 +9411,104 @@ main.auth > .muted {
   border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
   transform: translateY(1px);
   box-shadow: none;
+}
+
+/* =========================================================================
+   Seitenknoepfe und Waehrungskapseln — gemaltes Holz statt Verlaeufen.
+
+   Die drei Knoepfe links standen als Lila-, Cyan- und Grauverlauf mit weissem
+   Rand auf dem Vulkan; die Staende oben als dunkelblaue Pillen. Beides ist die
+   Formsprache eines anderen Spiels. Die Karte erzaehlt Abenteuer am Vulkan,
+   die Knoepfe erzaehlten Systemeinstellungen.
+
+   Ab hier tragen sie dieselben gemalten Gruende wie Tafeln und Knoepfe.
+   ========================================================================= */
+
+/*
+  Der Seitenknopf ist quadratisch, das Bild auch (256x256) — deshalb reicht
+  ein Hintergrundbild auf 100 % / 100 % und es braucht kein `border-image`:
+  Ohne Formaenderung gibt es nichts zu strecken, und die Messingbeschlaege in
+  den Ecken bleiben rund.
+
+  Der weisse Rand faellt weg. Er war da, um den Knopf vom bunten Grund
+  abzuheben; das macht jetzt der gemalte Rahmen. Ein Schlagschatten bleibt,
+  aber als `drop-shadow` und nicht als `box-shadow` — das Bild hat
+  durchsichtige Ecken, und ein Kastenschatten zeichnete brav das Quadrat
+  darum nach.
+*/
+.hub-side-btn {
+  border: none;
+  border-radius: 0;
+  background: url(/hub/side-btn-grund.webp) center / 100% 100% no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45));
+}
+/* Etwas kleiner als vorher: Der gemalte Rahmen braucht Platz, sonst sitzt das
+   Symbol auf den Messingbeschlaegen. */
+.hub-side-btn img {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+.hub-side-btn:active {
+  transform: translateY(2px);
+  box-shadow: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) brightness(0.9);
+}
+
+/*
+  Die Waehrungskapsel streckt sich nur in die Breite — dafuer ist
+  `border-image` gebaut: Die Messingkappen links und rechts bleiben, das Holz
+  dazwischen wird gezogen.
+
+  Die Randmasse sind gemessen, nicht geraten. Im Bild (512x128) reichen die
+  Kappen bis x = 45, der Rahmen oben und unten ist rund 14 px dick. Die
+  Kapsel im Hub ist rund 26 px hoch, die Kappe darf also gut 9 px breit sein —
+  daher `border-width: 4px 9px` bei `border-image-slice: 14 45`.
+
+  Waagerecht und senkrecht verschieden, weil die Kapsel es auch ist: Ein
+  gleichmaessiges Randmass haette entweder die Kappen zu Stummeln gequetscht
+  oder die duenne Oberkante zum Balken aufgeblasen.
+*/
+.front--hub .front-waehrung {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 4px 9px;
+  border-image: url(/hub/waehrung-kapsel-grund.webp) 14 45 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #ffeccb;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.8);
+}
+/* Die Zahl behaelt ihre Bedeutungsfarbe, nur waermer: Gold fuer Pokale und
+   Muenzen, Blaugruen fuer Edelsteine (Lila heisst laut DESIGN.md "bald"). */
+.front--hub .front-waehrung--cups,
+.front--hub .front-waehrung--muenzen {
+  color: #ffe08a;
+}
+.front--hub .front-waehrung--edelsteine {
+  color: #9ef0ff;
+}
+
+/*
+  Das Band ueber der Karte — die letzte blaue Flaeche im Hub.
+
+  Die Kapseln waren warm, das Brett darunter war Himmelblau: Es sah aus, als
+  laegen Holzschilder auf einer Systemleiste. Der Grund ist alt und war einmal
+  richtig — der Hub hatte einen knalligen Himmel, bevor gemalte Szenen die
+  Flaeche fuellten. Sichtbar ist davon heute nur noch dieser Streifen samt dem
+  Stueck unter der Notch.
+
+  Aufgebaut wie die Tab-Leiste, nur gespiegelt: Lichtkante oben, Fuge nach
+  unten zur Szene. Oben und unten dasselbe Holz — dazwischen die Welt.
+*/
+.front--hub {
+  background: linear-gradient(180deg, #6b431f 0%, #4a2c12 40%, #2c1a0a 100%);
+}
+.front--hub .front-top {
+  background: linear-gradient(180deg, #6b431f 0%, #4a2c12 60%, #33200d 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 214, 138, 0.4),
+    0 2px 0 rgba(24, 14, 5, 0.95),
+    0 8px 18px rgba(12, 6, 2, 0.4);
 }

@@ -398,7 +398,10 @@ export function GameSelect({
             </span>
           )}
           <span className="front-waehrung front-waehrung--cups">
-            <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
+            {/* `pokal-zeile` statt `pokal.png`: derselbe Pokal, aber fuer
+                Zeilenhoehe gemalt — der alte war ein Bild fuer grosse Flaechen
+                und wurde in der Kopfleiste matschig. */}
+            <img className="front-waehrung-icon" src="/hub/pokal-zeile.webp" alt="" />
             {kompakteZahl(trophies)}
           </span>
           {/*
@@ -1784,27 +1787,27 @@ function Spielen({
         <aside className="hub-seite hub-seite--links">
           <button
             type="button"
-            className="hub-side-btn hub-side-btn--lila"
+            className="hub-side-btn"
             aria-label="Spielauswahl"
             onClick={() => setWahlOffen(true)}
           >
-            <img src="/hub/tab-spielen.webp" alt="" draggable={false} />
+            <img src="/hub/side-icon-spielwahl.webp" alt="" draggable={false} />
           </button>
           <button
             type="button"
-            className="hub-side-btn hub-side-btn--blau"
+            className="hub-side-btn"
             aria-label="Rangliste"
             onClick={onRangliste}
           >
-            <img src="/hub/pokal.png" alt="" draggable={false} />
+            <img src="/hub/side-icon-rangliste.webp" alt="" draggable={false} />
           </button>
           <button
             type="button"
-            className="hub-side-btn hub-side-btn--grau"
+            className="hub-side-btn"
             aria-label="Bald"
             onClick={() => onBald('Mehr Features')}
           >
-            <img src="/hub/krone.png" alt="" draggable={false} />
+            <img src="/hub/side-icon-bald.webp" alt="" draggable={false} />
           </button>
         </aside>
 
