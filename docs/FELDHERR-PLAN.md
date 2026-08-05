@@ -193,13 +193,37 @@ gehört an die Entscheidung aus Frage 1, nicht davor.
   Zug. **Die Partie-Laufzeit darf daraus keinen Zugtimer ableiten.**
 * Spielkern als ES-Modul im Client, Bildschirm mit den Modi.
 
-### Was noch fehlt
+### Die Gleichschritt-Brücke
 
-* Die Gleichschritt-Brücke: Aktionen über den Tisch senden und empfangen,
-  Takt- und Nachzügler-Behandlung, Abgleichprobe alle 40 Takte.
-* Tisch erstellen und beitreten für zwei Sitze; die Lobby fragt heute nach
-  Rundenzahlen, die es hier nicht gibt.
-* Kachel in `GameSelect.tsx` und die Weiche in `App.tsx`.
+Steht. Vier Dinge halten beide Geräte zusammen:
+
+1. **Feste Takte von 50 ms.** Örtlich rechnet der Kern mit der Bildzeit; im
+   Netzspiel geht das nicht, weil zwei Geräte nie dieselbe Bildfolge haben und
+   schon die dritte Nachkommastelle beide Läufe trennt.
+2. **Eingaben werden gemeldet statt ausgeführt** — auch beim Absender. Wer eine
+   Karte legt, schickt sie für einen Takt sechs Schritte in der Zukunft; erst
+   dort führen beide sie aus.
+3. **Gerechnet wird höchstens bis zum sicheren Takt**, also so weit, wie die
+   Züge beider Seiten bekannt sind. Wer vorausläuft, müsste zurückrechnen, und
+   das kann der Kern nicht. Ein Rückstand wird mit bis zu zehn Takten je Bild
+   aufgeholt.
+4. **Prüfsumme** über Ressourcen und alle Objekte, die mit der Ergebnismeldung
+   geht. Weichen beide ab, ist die Partie strittig und niemand gewinnt.
+
+Der Kern wird dafür **maschinell erzeugt**
+(`packages/game-feldherr/werkzeug/kern-erzeugen.mjs`). Zwei getrennt gepflegte
+Fassungen liefen unweigerlich auseinander, und zwar unbemerkt.
+
+### Was noch offen ist
+
+* **Tisch erstellen und beitreten:** Die Lobby fragt nach Sitzen und
+  Rundenzahlen. Für Feldherr sind beide festgelegt (2 und 1) und sollten gar
+  nicht erst erscheinen.
+* **Abgleichprobe während der Partie.** Die Prüfsumme geht heute nur mit dem
+  Ergebnis. Alle 40 Takte gesendet, fiele ein Auseinanderlaufen früher auf.
+* **Ergebnis nachrechnen.** Der Server glaubt der übereinstimmenden Meldung
+  beider Geräte. Wer die Züge am Ende selbst nachrechnen will, kann denselben
+  Kern ohne Zeichnen laufen lassen — das ist der Weg zu einer Rangliste.
 
 ---
 
