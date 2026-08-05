@@ -2490,7 +2490,11 @@ function ThemenTab({
                       Kasten (CLAUDE.md).
                     */}
                     <span className="hub-themenspiel-bild" aria-hidden="true">
-                      <SpielBild id={spiel.id} />
+                      <img
+                        src={`/hub/spielwahl-${spiel.id === 'doppelkopf' || spiel.id === 'wizard' ? spiel.id : 'bald'}.webp`}
+                        alt=""
+                        draggable={false}
+                      />
                     </span>
                     {/* Name und was eingestellt ist, auf einem Verlauf unten -
                         sonst muesste man jedes Spiel oeffnen, um seine Wahl zu
