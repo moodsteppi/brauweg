@@ -7,6 +7,8 @@ import {
   useSyncExternalStore,
 } from 'react';
 
+import { Ladekreis } from '../Ladekreis';
+
 import {
   ApiError,
   SLOTS,
@@ -558,7 +560,7 @@ function ProfilTab({
   onStufen: () => void;
   /** Oeffnet den Kleiderschrank. */
   onSchrank: () => void;
-  /** Oeffnet den Klanghalle — Musik und Klangpakete auswaehlen. */
+  /** Oeffnet die Klanghalle — Musik und Klangpakete auswaehlen. */
   onKlanghalle: () => void;
   /** Oeffnet Tagesaufgaben und Truhen. */
   onAufgaben: () => void;
@@ -671,22 +673,35 @@ function ProfilTab({
             lesbar zu bleiben. */}
         <div className="hub-reihe hub-reihe--drei profil-einstiege">
           <ProfilKachel
-            icon="/hub/tab-profil.webp"
+            icon="/hub/icon-kleiderschrank.webp"
             name="Kleiderschrank"
             onClick={onSchrank}
           />
           <ProfilKachel
-            icon="/hub/icon-einstellungen.webp"
+            icon="/hub/icon-klanghalle.webp"
             name="Klanghalle"
             onClick={onKlanghalle}
           />
           <ProfilKachel
-            icon="/hub/icon-truhe.webp"
+            icon="/hub/icon-aufgaben.webp"
             name="Aufgaben"
             gold
             punkt={me.bereit.truhen + me.bereit.aufgaben > 0}
             onClick={onAufgaben}
           />
+          {/*
+            HIER FEHLT ABSICHTLICH DIE KACHEL "Figur in 3D".
+
+            Die Werkstatt ist gebaut (`Avatarwerkstatt.tsx`, `Avatar3D.tsx`)
+            und ueber `/?dev=werkstatt` zu sehen, aber ihre Buehne bleibt
+            beim ERSTEN Aufbau leer — sichtbar wird die Figur erst, wenn
+            sich die Fenstergroesse einmal aendert. Modell, Kamera, Material
+            und Lichter sind nachweislich richtig; die Ursache ist noch
+            offen. Ein schwarzer Kasten gehoert nicht vor Spieler.
+
+            Sobald das sitzt, ist es genau diese Kachel und die vier
+            Zeilen — sonst nichts. Naeheres in docs/STAND.md.
+          */}
         </div>
       </Tafel>
 
@@ -789,7 +804,7 @@ function ProfilTab({
             className="hub-knopf hub-knopf--a profil-konto-knopf"
             onClick={() => onBald('Benachrichtigungen')}
           >
-            <img src="/hub/icon-chat.webp" alt="" aria-hidden="true" />
+            <img src="/hub/icon-benachrichtigung.webp" alt="" aria-hidden="true" />
             Benachrichtigungen
             <span className="front-bald-tag">Bald</span>
           </button>
@@ -798,6 +813,7 @@ function ProfilTab({
             className="hub-knopf hub-knopf--a-raus profil-konto-knopf"
             onClick={onSignOut}
           >
+            <img src="/hub/icon-abmelden.webp" alt="" aria-hidden="true" />
             Abmelden
           </button>
 
@@ -1557,9 +1573,10 @@ function WareRegal({
  * "Kleiderschrank" umbricht oder abgeschnitten wird. Ein Symbol traegt die
  * halbe Bedeutung, dann reicht der Platz.
  *
- * Die Symbole sind vorlaeufig aus dem vorhandenen Bestand geliehen — eigene
- * sind bestellt, siehe `docs/ASSETS-PROFIL.md`. Geliehen und passend ist
- * besser als ein weisser Kasten.
+ * Die Symbole sind gemalte Gegenstaende, keine Piktogramme: ein offener
+ * Schrank, ein Grammofon, eine Schriftrolle. Bestellt in
+ * `docs/ASSETS-PROFIL.md`, Bedingung war, dass jedes bei 32 px noch
+ * erkennbar ist — bei einer Strichzeichnung waere es das nicht.
  */
 function ProfilKachel({
   icon,
@@ -1921,7 +1938,7 @@ function RanglisteBlatt({
         )}
 
         {error && <p className="error">{error}</p>}
-        {!error && laedt && <p className="muted">Wird geladen…</p>}
+        {!error && laedt && <Ladekreis />}
         {!error && !laedt && rows.length === 0 && (
           <p className="muted">Noch niemand auf der Liste.</p>
         )}
@@ -2304,7 +2321,7 @@ function Freunde({
         </div>
       ))}
 
-      {lists === null && <p className="muted">Wird geladen…</p>}
+      {lists === null && <Ladekreis />}
       {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
         <p className="muted">Noch keine Freunde. Such unten nach einem Namen.</p>
       )}
@@ -2490,7 +2507,11 @@ function ThemenTab({
                       Kasten (CLAUDE.md).
                     */}
                     <span className="hub-themenspiel-bild" aria-hidden="true">
-                      <SpielBild id={spiel.id} />
+                      <img
+                        src={`/hub/spielwahl-${spiel.id === 'doppelkopf' || spiel.id === 'wizard' ? spiel.id : 'bald'}.webp`}
+                        alt=""
+                        draggable={false}
+                      />
                     </span>
                     {/* Name und was eingestellt ist, auf einem Verlauf unten -
                         sonst muesste man jedes Spiel oeffnen, um seine Wahl zu
@@ -2508,7 +2529,7 @@ function ThemenTab({
                   </button>
                 );
               })}
-              {spiele === null && <p className="muted">Spiele werden geladen…</p>}
+              {spiele === null && <Ladekreis text="Spiele werden geladen…" />}
             </div>
           </Tafel>
         </HubSzene>

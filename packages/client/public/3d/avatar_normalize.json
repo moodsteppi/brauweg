@@ -1,0 +1,57 @@
+{
+  "convention": {
+    "units": "meters (penguin height \u2248 1.0)",
+    "penguin_origin": "feet on Y=0, X/Z centered",
+    "beanie_origin": "bottom-center of brim (hat contact), X/Z centered",
+    "attach": "Parent beanie under penguin; set local transform to beanie_default (fine-tune later in the R3F levelling panel)."
+  },
+  "source": {
+    "penguin": "cute penguin 3d model.glb",
+    "beanie": "assets/purple knitted beanie 3d model.glb"
+  },
+  "output": {
+    "penguin_base": "penguin_base.glb",
+    "beanie": "beanie.glb"
+  },
+  "measures": {
+    "penguin_height": 0.998046875,
+    "head_width_at_sit": 0.4980468899011612,
+    "beanie_source_width": 0.978515625,
+    "beanie_scale_applied": 0.5497006152489943,
+    "beanie_target_brim_width": 0.5378906410932541
+  },
+  "head_socket": {
+    "position": [
+      0.0019530802965164185,
+      0.988046875,
+      0.044921841472387314
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "beanie_default": {
+    "position": [
+      0.0019530802965164185,
+      0.988046875,
+      0.044921841472387314
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  }
+}

@@ -17,6 +17,7 @@
  */
 
 import { memo, useEffect, useState } from 'react';
+import { Ladekreis } from '../Ladekreis';
 
 import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
@@ -358,7 +359,7 @@ export function RegelBlatt({
       <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
         <h2>Regeln an diesem Tisch</h2>
         {fehler && <p className="error">Die Regeln ließen sich nicht laden.</p>}
-        {!config && !fehler && <p className="muted">Wird geladen…</p>}
+        {!config && !fehler && <Ladekreis />}
         {config && (
           <>
             <p className="muted">

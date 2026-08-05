@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { Ladekreis } from '../Ladekreis';
 
 import {
   ApiError,
@@ -202,7 +203,7 @@ export function Kleiderschrank({
 
       <div className="pfad-voll-rolle ks-rolle">
         {fehler && <p className="error">{fehler}</p>}
-        {!shop && !fehler && <p className="muted">Wird geladen…</p>}
+        {!shop && !fehler && <Ladekreis />}
 
         {regal && (
           <Tafel
