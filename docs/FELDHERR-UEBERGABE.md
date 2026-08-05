@@ -1,46 +1,10 @@
 # Feldherr — Übergabe
 
-Stand: 5. August 2026, aus einer Chat-Sitzung ohne Zugriff auf das Remote.
-Alles liegt als Patch bei; der Zweig existiert **nirgends auf GitHub**, nur in
-diesen sieben Commits.
+Stand: 5. August 2026, abends. Das Netzspiel **ist gelaufen**: zwei Browser,
+ein Tisch, zwei vollständige Partien, Abrechnung geprüft. Der Zweig ist in
+`staging` gemergt.
 
 **Repo:** https://github.com/moodsteppi/brauweg
-**Grundlage:** `origin/staging` bei `abab4dc` („3D-Truhenoeffnung, Ueberlappungen
-im Profil weg"). Ist `staging` inzwischen weiter, siehe *Wenn `git am` klemmt*.
-
----
-
-## 1. Einspielen
-
-```bash
-cd brauweg
-git fetch origin staging
-git checkout -b feldherr origin/staging
-git am /pfad/zu/feldherr-komplett.patch
-npm run build          # im WURZELVERZEICHNIS, nie --workspace
-npm test
-```
-
-Dann wie üblich: Zweig pushen, `git pull --no-rebase origin staging`, mergen,
-`staging` pushen. **`main` bleibt unangetastet** — dort hängt der Deploy.
-
-### Wenn `git am` klemmt
-
-`git am --3way` nimmt die meisten Verschiebungen. Bei einem Konflikt in
-`package-lock.json` genügt `npm install`, dann `git am --continue`. Der einzige
-Eingriff in bestehende Dateien ist klein und gut lokalisiert:
-
-| Datei | Änderung |
-|---|---|
-| `packages/game-api/src/index.ts` | `GameId` um `'feldherr'` |
-| `packages/server/src/games/registry.ts` | Modul in `MODULES` |
-| `packages/server/package.json` | Abhängigkeit `@brauweg/game-feldherr` |
-| `packages/server/test/tables.test.ts` | erwartet drei spielbare Spiele statt zwei |
-| `packages/client/src/i18n.ts` | `'game.feldherr'` |
-| `packages/client/src/App.tsx` | Weiche vor Lobby und Kartentisch |
-| `packages/client/src/screens/GameSelect.tsx` | Kachel |
-
-Alles andere sind neue Dateien.
 
 ---
 
@@ -106,16 +70,21 @@ die KI lebt im Spielkern auf den Geräten.
 **Maschinell erzeugt**, nicht von Hand ändern:
 
 ```bash
-node packages/game-feldherr/werkzeug/kern-erzeugen.mjs <feldherr.html>
+node packages/game-feldherr/werkzeug/kern-erzeugen.mjs
 ```
 
 Zwei getrennt gepflegte Fassungen liefen unweigerlich auseinander. Das Werkzeug
 bricht ab, wenn es seine Ankerstellen in der Quelle nicht findet, statt
 stillschweigend Halbes zu liefern.
 
-Die eigenständige Spieldatei (`feldherr.html`, 185 kB, läuft per Doppelklick)
-liegt bei und ist die Quelle. Sie trägt ihre eigene Dokumentation im Kopf —
-Aufbau, Zustand, Zeichenschichten, die Regeln beim Ändern.
+Die Quelle liegt jetzt **im Repo**: `packages/game-feldherr/quelle/feldherr.html`
+(läuft weiterhin per Doppelklick — der Duo-Münzwurf hing übrigens auch dort,
+coinTick lief nur mit KI). Sie lag zuvor nur einem Übergabezettel bei; eine
+Quelle, die nirgends eingecheckt ist, kann niemand neu erzeugen. Sie trägt
+ihre eigene Dokumentation im Kopf — Aufbau, Zustand, Zeichenschichten, die
+Regeln beim Ändern, darunter zwei neue: `zufall()` nur für Spielrelevantes,
+`deko()` für alles Sichtbare; und jede Spielerhandlung läuft durch eine
+Befehlsfunktion, nie direkt in den Zustand.
 
 ### Der Gleichschritt
 
@@ -138,41 +107,66 @@ Vier Dinge halten beide Geräte zusammen:
 
 ---
 
-## 5. Was offen ist — in dieser Reihenfolge
+## 5. Erledigt am Abend des 5. August — und was blieb
 
-### a) Netzspiel im Browser ausprobieren **(zuerst)**
+Die Punkte a–d der ursprünglichen Liste sind umgesetzt und im Browser
+nachgewiesen (zwei Partien, zwei Browser, ein Tisch):
 
-**Der Netzmodus ist nie in einem Browser gelaufen.** Er ist aus der
-Chat-Umgebung heraus entstanden: übersetzt sauber, Modul getestet, aber zwei
-echte Geräte an einem Tisch hat nie jemand gesehen. Erwartbare Stolpersteine:
+* **Alle Handlungen sind Züge:** `muenze`, `haus` (fehlte in der Liste — das
+  Setzen des Haupthauses wurde nie gemeldet!), `karte`, `halt`, `abriss`,
+  `drehen`. Details und Fallstricke: Nachtrag in `FELDHERR-PLAN.md`.
+* **Takt-Herzschlag** als flüchtige `takt`-Relais-Nachricht im Gateway (wie
+  Zurufe, nichts läuft durchs Modul oder die Datenbank), Wissensgrenze im
+  Kern, Aufholen ohne Uhr, Web-Worker-Antrieb für verdeckte Tabs.
+* **Abgleichprobe alle 40 Takte** fährt mit dem Herzschlag; bei Abweichung
+  endet die Partie sofort strittig. Grenze 0 entlarvt ein falsches Saatkorn.
+* **Tisch erstellen/beitreten** im Feldherr-Bildschirm selbst (fest 2 Sitze,
+  1 Runde), samt Wartebereich und Liste der offenen Tische.
+* **Tagesaufgaben:** partie-spielen/drei-partien/partie-gewinnen zählen mit,
+  die Kartenaufgabe nicht (`GameMeta.xpBasisZaehltKarten: false`).
+* **Erfahrung nach Dauer** wird gebucht (beide 77 XP nach ≈5 Minuten,
+  fallender Ertrag sichtbar). Trophäen gibt es keine — und die Abrechnung
+  reißt dabei nicht mehr ab (siehe Fallstricke).
 
-* Der sichere Takt wird heute nur nachgezogen, wenn eine Nachricht kommt. Tut
-  eine Weile niemand etwas, stockt die Partie. Wahrscheinlich braucht es einen
-  Takt-Herzschlag oder eine Zeitgrenze.
-* Der Münzwurf am Partieanfang läuft im Kern und ist noch **nicht** als Zug
-  über die Leitung geführt — beide Geräte würfeln ihn aus demselben Saatkorn,
-  aber die *Wahl* (Kopf oder Zahl) muss gemeldet werden. Zugart `muenze` ist im
-  Modul und im Kern vorgesehen, aber nicht verdrahtet.
-* Abriss und Drehen sind ebenfalls noch nicht als Züge geführt.
+### Was noch offen ist
 
-### b) Tisch erstellen und beitreten
-
-Die Lobby fragt nach Sitzen und Rundenzahlen. Bei Feldherr sind beide
-festgelegt (2 und 1) und sollten gar nicht erst erscheinen. Der Ablauf soll
-sein: „Online spielen" → Tisch erstellen oder aus den offenen wählen. Der
-Freundesweg besteht schon (`social/service.ts`), es genügt derselbe Filter.
-
-### c) Abgleichprobe während der Partie
-
-Die Prüfsumme geht heute nur mit dem Ergebnis. Alle 40 Takte gesendet, fiele
-ein Auseinanderlaufen früher auf statt erst am unterschiedlichen Sieger.
-
-### d) Tagesaufgaben verdrahten (Entscheidung 5)
+* **Brett für Sitz 0 nicht gedreht:** Wer online Sitz 0 zieht, spielt „von
+  oben" (eigene Hälfte oben, eigenes HUD oben — lesbar, aber ungewohnt).
+  Eine gespiegelte Darstellung wäre der nächste Schliff.
+* **HUD-Hinweistexte** („Setze dein Haupthaus" / „Gleich bist du dran…")
+  stehen im Netz noch mit der Duo-Logik in den Leisten; der große Hinweis
+  auf dem Brett stimmt.
+* **Zurück während der Partie** trennt nur die Verbindung (Partie läuft
+  serverseitig weiter, Wiedereinstieg über „Weiterspielen"). Aufgeben geht
+  über Menü → „Partie beenden". Ein echtes „Verlassen = Aufgabe" braucht
+  eine bewusste Entscheidung.
+* **Ergebnis nachrechnen** (Weg zur Rangliste) — unverändert offen, siehe
+  Plan.
+* **Freundes-Einladung** an den Feldherr-Tisch: Der Freundesweg besteht
+  (`social/service.ts`), der Filter ist noch nicht verdrahtet.
 
 ---
 
 ## 6. Fallstricke, die schon Zeit gekostet haben
 
+* **Der Zeichenpfad verbrauchte Spielzufall.** Rauch, Funken, Wackeln zogen
+  aus `zufall()` je Bild — Gleichlauf-Tod durch bloßes Zuschauen, und kein
+  Headless-Nachweis kann es finden, weil er nicht zeichnet. Regel steht im
+  Kopf der Spieldatei: `deko()` für alles Sichtbare.
+* **`awardForParty` kennt keine zwei Sitze** und warf bei der ersten
+  Feldherr-Abrechnung — still, als `actionRejected` beim meldenden Client:
+  keine Stats, keine Aufgaben, keine Erfahrung. Jetzt: ohne
+  Trophäenverteilung keine Trophäen, aber Erfahrung aus `xpBasis`.
+* **`gameIdSchema` in `http/app.ts` kannte `feldherr` nicht** — Tisch
+  erstellen und auflisten liefen in ein 400, obwohl das Modul registriert
+  war. Wer ein Spiel einbaut: Registry UND HTTP-Enum.
+* **`hidden` verliert gegen `.btn{display:block}`.** Der „Neue Runde"-Knopf
+  blieb im Netz-Endbild sichtbar; Autorenregeln schlagen das UA-Stylesheet
+  für `[hidden]`. `style.display='none'` statt Attribut.
+* **Verdeckte Tabs:** `requestAnimationFrame` steht, `setInterval` tropft
+  einmal je Sekunde — nur Worker-Timer laufen ungedrosselt. Ohne den
+  Worker-Antrieb fror die Partie für beide ein, sobald ein Tab in den
+  Hintergrund ging.
 * **Der Kern war einmal falsch geschnitten:** Das Extraktionsskript traf auf
   `<style>` und `<body>` **im Dokumentationskommentar** der Spieldatei. Stil
   und Hülle enthielten Fließtext. Das Werkzeug entfernt den Kommentar jetzt
@@ -195,7 +189,12 @@ ein Auseinanderlaufen früher auf statt erst am unterschiedlichen Sieger.
 
 ## 7. Erster Befehl für die neue Sitzung
 
-> Lies `docs/FELDHERR-PLAN.md` und `docs/FELDHERR-UEBERGABE.md`, dann bring das
-> Netzspiel zum Laufen: Münzwurf, Abriss und Drehen als Züge führen, den
-> sicheren Takt auch ohne eingehende Nachricht nachziehen, und zwei Browser an
-> einem Tisch ausprobieren.
+> Lies `docs/FELDHERR-PLAN.md` und `docs/FELDHERR-UEBERGABE.md`. Das Netzspiel
+> läuft; offen sind die Punkte unter „Was noch offen ist": Brett für Sitz 0
+> spiegeln, HUD-Hinweise im Netz, Verlassen-Regel entscheiden,
+> Freundes-Einladung an den Tisch.
+>
+> Zum örtlichen Ausprobieren: zwei Konten, zwei Ursprünge (localhost und
+> app.localhost, getrennte Cookies), Server mit
+> `DATABASE_URL=pglite INVITE_CODE=x` starten — in der Entwicklung ist die
+> WS-Herkunftsprüfung dafür offen.

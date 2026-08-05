@@ -216,14 +216,47 @@ Fassungen liefen unweigerlich auseinander, und zwar unbemerkt.
 
 ### Was noch offen ist
 
-* **Tisch erstellen und beitreten:** Die Lobby fragt nach Sitzen und
-  Rundenzahlen. Für Feldherr sind beide festgelegt (2 und 1) und sollten gar
-  nicht erst erscheinen.
-* **Abgleichprobe während der Partie.** Die Prüfsumme geht heute nur mit dem
-  Ergebnis. Alle 40 Takte gesendet, fiele ein Auseinanderlaufen früher auf.
 * **Ergebnis nachrechnen.** Der Server glaubt der übereinstimmenden Meldung
   beider Geräte. Wer die Züge am Ende selbst nachrechnen will, kann denselben
   Kern ohne Zeichnen laufen lassen — das ist der Weg zu einer Rangliste.
+
+### Nachtrag vom Abend des 5. August: Das Netzspiel läuft
+
+Zwei Browser haben an einem Tisch zwei vollständige Partien gespielt — samt
+Wiedereinstieg nach Serverneustart (Saatkorn + Zugliste spielen die Partie
+deterministisch nach). Dabei sind die letzten Lücken zugegangen:
+
+* **Alle Spielerhandlungen sind Züge:** `muenze`, `haus` (das Setzen des
+  Haupthauses war zuvor gar nicht gemeldet worden), `karte`, `halt`,
+  `abriss`, `drehen`. Die Spieldatei bündelt jede Handlung in einer
+  Befehlsfunktion; die Netzanbindung lenkt genau diese um.
+* **Der Zeichenpfad zog aus dem Spielzufall.** Rauch, Funken und Wackeln
+  verbrauchten `zufall()` je *Bild* — zwei Geräte mit verschiedener Bildrate
+  wären allein durchs Zuschauen auseinandergelaufen. Der 90-Sekunden-Nachweis
+  konnte das nie sehen, denn er zeichnet nicht. Alles Sichtbare ohne
+  Spielwirkung zieht jetzt aus `deko()` (ungeseedet).
+* **Takt-Herzschlag als Relais-Nachricht** (`takt` im Gateway, wie die
+  Zurufe): kein Partiestand, kein Schnappschuss, kein Sicht-Rundruf. Liefe er
+  als Aktion durchs Modul, schriebe jeder Tisch fünfmal je Sekunde in die
+  Datenbank. Gerechnet wird strikt bis zur Wissensgrenze (letzter gemeldeter
+  Gegnertakt + Vorlauf − 1) — die einzige Grenze, die Divergenz wirklich
+  ausschließt. Rückstand wird ohne Uhr aufgeholt.
+* **Die Abgleichprobe fährt mit dem Herzschlag:** Prüfsumme an jeder
+  40er-Taktgrenze; weichen die Summen derselben Grenze ab, endet die Partie
+  sofort als strittig. Die Probe an Grenze 0 entlarvt ein falsches Saatkorn
+  nach 200 ms.
+* **Verdeckte Tabs treibt ein Web Worker weiter** — dort feuert
+  `requestAnimationFrame` nicht, und ohne Herzschlag fröre die Partie für
+  BEIDE Geräte ein. Am Handy passiert genau das bei jedem Blick woandershin.
+* **Die erste Zwei-Sitze-Abrechnung riss die Schlusswertung ab:**
+  `awardForParty` kennt keine Verteilung für zwei Sitze und warf — still,
+  denn der Fehler landete als `actionRejected` beim meldenden Client. Jetzt
+  gilt: keine Trophäen ohne Verteilung (gewollt, Entscheidung 3), Erfahrung
+  aus `xpBasis` trotzdem. Und `GameMeta.xpBasisZaehltKarten: false` hält die
+  Dauer-Punkte aus der Kartenaufgabe des Tages heraus (Entscheidung 5).
+* **Tisch erstellen und beitreten** hat Feldherr jetzt selbst: Der
+  Bildschirm erstellt den Tisch fest mit 2 Sitzen und 1 Runde und listet die
+  offenen — die Kartenlobby mit Sitz- und Rundenwahl bleibt außen vor.
 
 ---
 
