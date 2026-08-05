@@ -447,14 +447,19 @@ verliert dafür die spielweise Rangliste.
 
 ### Offen geblieben
 
-- **Ton am Tisch.** Es gibt bisher **keinen einzigen Sound**. Ausdrücklich als
-  To-do zurückgestellt, nicht vergessen. Wenn es kommt: Ereignisse (Karte legen,
-  Stich einziehen, Ansage, Truhe, Partie-Ende), ein Schalter im Profil mit **Ton
-  aus als Vorgabe** — ein Kartenspiel, das ungefragt Geräusche macht, ist im Bus
-  unbenutzbar — und die Dateien als Bestellung `docs/ASSETS-SOUNDS.md` nach dem
-  Muster der Bildbestellungen.
 - **Die Feigling-Kachel hat kein gemaltes Bild**, sie läuft auf dem Emoji `🙈`
   wie die übrigen Regelkacheln ohne Lieferung.
+- **Die neuen Ansagen klingen nicht.** Der Ton ist am selben Tag in einer anderen
+  Sitzung gebaut worden (Abschnitt „Ton" weiter unten, Einzelheiten in
+  `docs/KLANG.md`) — die Pflichtansage-Kette und der gedrehte Feigling-Sieg haben
+  dort aber noch keinen Klang. Beides gehört nach `tisch/klangtisch.ts` und
+  **nicht** in `Table.tsx`: Wer einen Klang dort einbaut, hat ihn beim Zauberer
+  vergessen.
+
+> **Achtung beim Lesen dieses Abschnitts:** Er ist vor dem Ton geschrieben worden
+> und stand kurz mit „es gibt keinen einzigen Sound" darin — falsch, sobald die
+> beiden Zweige zusammenlagen. Für den Ton gilt ausschließlich der Abschnitt
+> weiter unten.
 
 ---
 
