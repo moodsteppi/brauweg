@@ -24,6 +24,8 @@ const de: Record<string, string> = {
   // Mehrkampf ueber mehrere Spiele. Kein Spielmodul, sondern ein Modus -
   // deshalb steht er nicht in der Registrierung.
   'modus.mehrkampf': 'Brauweg-Bock',
+  'modus.prosubway': 'Pro-Subway',
+  'modus.prosubway.hint': 'Alleine · Münzen fürs Hub',
 
   'error.unauthorized': 'Bitte melde dich an.',
   'error.credentialsInvalid': 'E-Mail oder Passwort stimmt nicht.',

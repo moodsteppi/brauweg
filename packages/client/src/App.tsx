@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
 import { Ladekreis } from './Ladekreis';
@@ -11,10 +11,14 @@ import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
 import { WizardTable } from './screens/WizardTable';
 
+const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
+
 type Screen =
   | { name: 'games' }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
+  /** Solo-Endless-Runner aus der Spielauswahl. */
+  | { name: 'prosubway' }
   /**
    * `vorher` merkt sich den Absprungpunkt: Wer vom Spieltisch aus ein Profil
    * oeffnet, muss an den Tisch zurueck - nicht auf die Startseite. Die
@@ -77,6 +81,26 @@ export function App(): React.JSX.Element {
     return <Profile accountId={screen.accountId} onBack={() => setScreen(screen.vorher)} />;
   }
 
+  if (screen.name === 'prosubway') {
+    return (
+      <Suspense
+        fallback={
+          <main className="app-laden">
+            <Ladekreis bild="/hub/lade-pinguin.webp" text="Pro-Subway…" />
+          </main>
+        }
+      >
+        <Runner
+          hubMode
+          onBack={() => {
+            setScreen({ name: 'games' });
+            void reload();
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -124,6 +148,9 @@ export function App(): React.JSX.Element {
     <GameSelect
       me={me}
       onPick={(gameId) => setScreen({ name: 'lobby', gameId })}
+      onSolo={(modusId) => {
+        if (modusId === 'prosubway') setScreen({ name: 'prosubway' });
+      }}
       onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
       onShowProfile={zeigeProfil}
       // Erst umschalten, dann speichern: Das Blatt wechselt ohne Wartezeit,

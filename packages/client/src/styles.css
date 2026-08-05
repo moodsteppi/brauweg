@@ -9266,8 +9266,10 @@ main.auth > .muted {
   right: 0;
   z-index: 2;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
   padding: 0.85rem 1rem;
   pointer-events: none;
   text-shadow: 0 1px 4px #000a;
@@ -9275,6 +9277,26 @@ main.auth > .muted {
 .runner-hud strong {
   font-size: 1.05rem;
   letter-spacing: 0.02em;
+}
+.runner-back {
+  pointer-events: auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.runner-start--neben {
+  margin-top: 0.35rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+.runner-hub-coins {
+  margin: 0;
+  font-weight: 600;
+  color: #f0d78c;
 }
 .runner-overlay {
   position: absolute;

@@ -48,6 +48,7 @@ import { GEBURTSTAGS_OUTFIT, SLOTS, istSlot, schenken } from '../kosmetik.js';
 import { anziehen, getragenVon, kaufen, paketKaufen, shopFuer } from '../shop.js';
 import { offeneTruhen, truheKaufen, truheOeffnen, truhenFuer } from '../truhen.js';
 import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
+import { runnerCashout, runnerTagesstand } from '../runner.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
@@ -716,6 +717,30 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       return reply.send(await aufgabeAbholen(deps.db, accountId, questId));
     },
   );
+
+  // -------------------------------------------------------------------------
+  // Pro-Subway (Solo-Runner)
+  // -------------------------------------------------------------------------
+
+  /** Wie viele Hub-Muenzen heute noch aus dem Runner kommen koennen. */
+  app.get('/api/runner/today', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await runnerTagesstand(deps.db, accountId));
+  });
+
+  /**
+   * Lauf beendet: eingesammelte Runner-Muenzen in Hub-Muenzen umwandeln.
+   * Kappen: pro Lauf und pro Kalendertag (siehe runner.ts).
+   */
+  app.post('/api/runner/cashout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z
+      .object({
+        coins: z.number().int().min(0).max(500),
+      })
+      .parse(request.body);
+    return reply.send(await runnerCashout(deps.db, accountId, body.coins));
+  });
 
   // -------------------------------------------------------------------------
   // Shop und Kleiderschrank

@@ -66,9 +66,10 @@ export function Tafel({
  * nicht gibt, ist ein weisser Kasten — und der sieht nach Fehler aus, wo ein
  * erkennbarer Platzhalter nach Absicht aussieht.
  */
-const GEMALTE_BANNER = new Set(['doppelkopf', 'wizard']);
+const GEMALTE_BANNER = new Set(['doppelkopf', 'wizard', 'prosubway']);
 
 export function spielBanner(gameId: string): string {
+  if (gameId === 'prosubway') return '/hub/spielwahl-prosubway.png';
   return `/hub/spielwahl-${GEMALTE_BANNER.has(gameId) ? gameId : 'bald'}.webp`;
 }
 

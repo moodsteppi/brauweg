@@ -108,6 +108,7 @@ const zeigeKaufbares = !inApp;
 export function GameSelect({
   me,
   onPick,
+  onSolo,
   onResume,
   onThemeChange,
   onAvatarChange,
@@ -117,6 +118,8 @@ export function GameSelect({
 }: {
   me: Me;
   onPick: (gameId: string) => void;
+  /** Solo-Minispiele aus der Spielauswahl (z. B. Pro-Subway). */
+  onSolo: (modusId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
   onThemeChange: (
     gameId: string,
@@ -308,6 +311,7 @@ export function GameSelect({
             bemalung={me.figur ?? null}
             activeTable={me.activeTable}
             onPick={onPick}
+            onSolo={onSolo}
             onResume={onResume}
             onBald={setBald}
             onRangliste={() => setRanglisteOffen(true)}
@@ -1735,6 +1739,7 @@ function Spielen({
   bemalung,
   activeTable,
   onPick,
+  onSolo,
   onResume,
   onBald,
   onRangliste,
@@ -1749,6 +1754,7 @@ function Spielen({
   /** Wie viel bereitliegt (Truhen plus fertige Aufgaben). 0 = kein Punkt. */
   bereit: number;
   onPick: (gameId: string) => void;
+  onSolo: (modusId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
   onBald: (name: string) => void;
   onRangliste: () => void;
@@ -1883,6 +1889,10 @@ function Spielen({
           onPick={(gameId) => {
             setWahlOffen(false);
             onPick(gameId);
+          }}
+          onSolo={(modusId) => {
+            setWahlOffen(false);
+            onSolo(modusId);
           }}
           onBald={onBald}
           onClose={() => setWahlOffen(false)}
@@ -2045,6 +2055,7 @@ function Spielwahl({
   voted,
   onVote,
   onPick,
+  onSolo,
   onBald,
   onClose,
 }: {
@@ -2052,6 +2063,7 @@ function Spielwahl({
   voted: Set<string>;
   onVote: (gameId: string) => void;
   onPick: (gameId: string) => void;
+  onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -2074,6 +2086,25 @@ function Spielwahl({
       </header>
 
       <div className="spielwahl-rolle">
+        <Tafel titel="Alleine" zusatz="Minispiel">
+          <div className="hub-themenwahl">
+            <button
+              type="button"
+              className="hub-themenspiel"
+              onClick={() => onSolo('prosubway')}
+            >
+              <span className="hub-themenspiel-bild" aria-hidden="true">
+                <img src={spielBanner('prosubway')} alt="" draggable={false} />
+              </span>
+              <span className="hub-themenspiel-text">
+                <strong>{t('modus.prosubway')}</strong>
+                <span className="muted">{t('modus.prosubway.hint')}</span>
+              </span>
+              <span className="spielwahl-spielen">Spielen</span>
+            </button>
+          </div>
+        </Tafel>
+
         <Tafel titel="Jetzt spielbar" zusatz={`${playable.length} von ${games.length}`}>
           <div className="hub-themenwahl">
             {playable.map((game) => (

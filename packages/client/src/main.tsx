@@ -18,6 +18,8 @@ if (!root) throw new Error('Kein Wurzelelement gefunden');
  * - /?dev=avatar — Mütze auf Pinguin
  * - /?dev=chest — Deckel auf Truhe
  * - /?dev=werkstatt — Avatar-Vorschau wie im Spiel
+ * - /?dev=runner — Endless-Runner-Platzhalter
+ * - /?dev=truhe — Truhenöffnung
  * Manche Browser/Embeds liefern fälschlich ?dev%3D… — das fangen wir ab.
  */
 function isDevFlag(name: string): boolean {
@@ -35,6 +37,7 @@ function isDevFlag(name: string): boolean {
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
 const devWerkstatt = isDevFlag('werkstatt');
+const devRunner = isDevFlag('runner');
 /**
  * Die Truhenoeffnung so, wie der Spieler sie sieht — ohne Anmeldung.
  * Oeffnen: `/?dev=truhe`
@@ -45,7 +48,7 @@ const devWerkstatt = isDevFlag('werkstatt');
 const devTruhe = isDevFlag('truhe');
 
 if (
-  (devAvatar || devChest || devWerkstatt || devTruhe) &&
+  (devAvatar || devChest || devWerkstatt || devRunner || devTruhe) &&
   (window.location.search.includes('%3D') || window.location.pathname.includes('/dev/'))
 ) {
   const flag = devAvatar
@@ -54,7 +57,9 @@ if (
       ? 'chest'
       : devWerkstatt
         ? 'werkstatt'
-        : 'truhe';
+        : devRunner
+          ? 'runner'
+          : 'truhe';
   window.history.replaceState(null, '', `/?dev=${flag}`);
 }
 
@@ -73,6 +78,7 @@ const ChestAligner = lazy(() =>
 const Avatarwerkstatt = lazy(() =>
   import('./screens/Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
 );
+const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
@@ -89,6 +95,8 @@ const werkzeug = devAvatar ? (
     getragen={{ hut: 'hut-wollmuetze' }}
     onClose={() => window.history.back()}
   />
+) : devRunner ? (
+  <Runner />
 ) : devTruhe ? (
   <TruhenOeffnung grad="gold" muenzen={120} onFertig={() => window.location.reload()} />
 ) : null;

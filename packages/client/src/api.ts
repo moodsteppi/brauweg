@@ -553,6 +553,23 @@ export const api = {
   claimQuest: (questId: string) =>
     post<{ betrag: number; waehrung: Waehrung; stand: number }>(`/quests/${questId}/claim`),
 
+  // --- Pro-Subway -----------------------------------------------------------
+
+  /** Tagesstand: wie viele Hub-Münzen heute noch aus dem Runner kommen. */
+  runnerToday: () =>
+    request<{ verdient: number; restHeute: number; limitTag: number }>('/runner/today'),
+  /**
+   * Lauf beendet: Runner-Münzen (Anzahl Pickups) in Hub-Münzen umwandeln.
+   * Server kappt pro Lauf und pro Tag.
+   */
+  runnerCashout: (coins: number) =>
+    post<{
+      gutgeschrieben: number;
+      stand: number;
+      restHeute: number;
+      limitTag: number;
+    }>('/runner/cashout', { coins }),
+
   // --- Shop und Kleiderschrank ---------------------------------------------
 
   shop: () => request<Shop>('/shop'),

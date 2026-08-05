@@ -413,6 +413,28 @@ export const questProgress = pgTable(
 );
 
 /**
+ * Pro-Subway: Hub-Muenzen, die heute schon aus dem Runner kamen.
+ *
+ * Kalendertag in Europe/Berlin (wie bei quest_progress). Ohne diese Kappe
+ * koennte ein Client den Cashout beliebig oft aufrufen.
+ */
+export const runnerDay = pgTable(
+  'runner_day',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    /** Kalendertag in Europe/Berlin. */
+    day: date().notNull(),
+    coins: integer().notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.day] }),
+    index('runner_day_tag_idx').on(t.accountId, t.day),
+  ],
+);
+
+/**
  * Besitz an Kosmetik (Pinguin-Ausstattung).
  *
  * Nur die Kennung, kein Preis und kein Aussehen: Was ein Stueck kostet, steht
