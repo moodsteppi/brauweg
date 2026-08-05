@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
 import { Ladekreis } from './Ladekreis';
