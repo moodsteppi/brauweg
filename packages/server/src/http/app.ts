@@ -145,6 +145,7 @@ export interface AppDeps {
 const gameIdSchema = z.enum([
   'doppelkopf',
   'wizard',
+  'feldherr',
   'skat',
   'schafkopf',
   'romme',
@@ -623,6 +624,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       leiter: leiterUm(account.xp),
     });
   });
+
 
   app.post('/api/me/birthday-reward', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);

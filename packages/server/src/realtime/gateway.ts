@@ -25,6 +25,7 @@ import {
   type ClientMessage,
   type EmoteMessage,
   type ServerMessage,
+  type TaktMessage,
   errorMessage,
   moduleVersionAccepted,
 } from './protocol.js';
@@ -39,6 +40,8 @@ interface Connection {
   imFenster: number;
   /** Wann diese Verbindung zuletzt einen Zuruf abgesetzt hat. */
   letzterEmote: number;
+  /** Wann diese Verbindung zuletzt einen Takt-Herzschlag abgesetzt hat. */
+  letzterTakt: number;
 }
 
 /** Hoechstens so viele offene Verbindungen je Konto. */
@@ -89,6 +92,16 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     // Die Laenge deckelt hier nur grob; welche Kennungen es gibt, entscheidet
     // istEmote — eine erfundene faellt still durch.
     emote: z.string().min(1).max(40),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('takt'),
+    tableId: z.string().uuid(),
+    takt: z.number().int().min(0).max(10_000_000),
+    grenzTakt: z.number().int().min(0).max(10_000_000),
+    // Pruefsumme ist eine Basis-36-Zahl; 16 Zeichen sind mehr als genug.
+    pruef: z.string().max(16),
   }),
 ]);
 
@@ -263,6 +276,7 @@ export class Gateway {
         fensterStart: Date.now(),
         imFenster: 0,
         letzterEmote: 0,
+        letzterTakt: 0,
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -335,6 +349,9 @@ export class Gateway {
           break;
         case 'emote':
           await this.emote(connection, message);
+          break;
+        case 'takt':
+          this.takt(connection, message);
           break;
         case 'addBot':
           await this.setBot(connection, message.tableId, message.seat, true);
@@ -484,6 +501,51 @@ export class Gateway {
     };
     for (const ziel of this.byTable.get(message.tableId) ?? []) {
       send(ziel.socket, nachricht);
+    }
+  }
+
+  /**
+   * Takt-Herzschlag eines Echtzeitspiels, weitergereicht wie ein Zuruf.
+   *
+   * Der Server versteht ihn nicht und soll es nicht: Er stempelt den Sitz
+   * und verteilt. Kein Partiestand, kein Schnappschuss, kein Sicht-Rundruf —
+   * genau deshalb ist er keine Aktion (siehe protocol.ts). Was nicht
+   * durchgeht, endet still: Ein Puls ist in 200 ms ohnehin wieder da.
+   *
+   * Nur wer selbst sitzt, darf pulsen — der Sitz im Umschlag ist die
+   * Wahrheit fuer die Gegenseite, und ein Zuschauer haette hier nichts zu
+   * melden.
+   */
+  private takt(
+    connection: Connection,
+    message: Extract<ClientMessage, { type: 'takt' }>,
+  ): void {
+    if (connection.tableId !== message.tableId) return;
+
+    // Bremse gegen Dauerfeuer: Der Kern pulst alle 200 ms; was schneller
+    // kommt, ist kein Herzschlag.
+    const jetzt = Date.now();
+    if (jetzt - connection.letzterTakt < 80) return;
+    connection.letzterTakt = jetzt;
+
+    const party = this.runtime.get(message.tableId);
+    if (!party) return;
+    const seat = this.runtime.seatOf(party, connection.accountId);
+    if (seat === null) return;
+
+    const nachricht: TaktMessage = {
+      v: ENVELOPE_VERSION,
+      game: party.gameId,
+      type: 'takt',
+      tableId: message.tableId,
+      seat,
+      takt: message.takt,
+      grenzTakt: message.grenzTakt,
+      pruef: message.pruef,
+    };
+    for (const ziel of this.byTable.get(message.tableId) ?? []) {
+      // Der Absender kennt seinen eigenen Takt — zurueckspiegeln waere Laerm.
+      if (ziel !== connection) send(ziel.socket, nachricht);
     }
   }
 

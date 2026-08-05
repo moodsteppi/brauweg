@@ -70,6 +70,26 @@ export type ClientMessage =
       readonly type: 'addBot' | 'removeBot';
       readonly tableId: string;
       readonly seat: number;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /**
+       * Takt-Herzschlag eines Echtzeitspiels (Feldherr). Bewusst KEINE
+       * Aktion: Er aendert keinen Partiestand, wird nicht gespeichert und
+       * loest keinen Sicht-Rundruf aus — er wird nur an die anderen am Tisch
+       * weitergereicht, wie ein Zuruf. Liefe er durch das Spielmodul, schriebe
+       * jeder Feldherr-Tisch fuenfmal je Sekunde einen Schnappschuss in die
+       * Datenbank und funkte jedes Mal die volle Zugliste an alle.
+       */
+      readonly type: 'takt';
+      readonly tableId: string;
+      /** Takt, bis zu dem dieses Geraet gerechnet hat. */
+      readonly takt: number;
+      /** 40er-Taktgrenze, zu der die Pruefsumme gehoert. */
+      readonly grenzTakt: number;
+      /** Zustandsprobe an dieser Grenze, fuer den Abgleich beider Laeufe. */
+      readonly pruef: string;
     };
 
 // ---------------------------------------------------------------------------
@@ -170,11 +190,28 @@ export interface EmoteMessage {
   readonly emote: string;
 }
 
+/**
+ * Weitergereichter Takt-Herzschlag. Wie der Zuruf ohne Revision: Er ist ein
+ * Moment, kein Zustand. Wer ihn verpasst, bekommt in 200 ms den naechsten.
+ */
+export interface TaktMessage {
+  readonly v: number;
+  readonly game: GameId;
+  readonly type: 'takt';
+  readonly tableId: string;
+  /** Sitz des Absenders — vom Server gestempelt, nie vom Client behauptet. */
+  readonly seat: number;
+  readonly takt: number;
+  readonly grenzTakt: number;
+  readonly pruef: string;
+}
+
 export type ServerMessage =
   | ViewMessage
   | PartyMessage
   | TableMessage
   | EmoteMessage
+  | TaktMessage
   | ErrorMessage;
 
 export function errorMessage(code: string, messageKey?: string): ErrorMessage {

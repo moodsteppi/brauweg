@@ -29,6 +29,12 @@
 export type GameId =
   | 'doppelkopf'
   | 'wizard'
+  /**
+   * Feldherr ist kein Kartenspiel, sondern ein Echtzeitduell. Es erfuellt
+   * dieselbe Schnittstelle, nutzt aber weder Zugfolge noch Runden: siehe
+   * docs/FELDHERR-PLAN.md.
+   */
+  | 'feldherr'
   | 'skat'
   | 'schafkopf'
   | 'romme'
@@ -57,6 +63,13 @@ export interface GameMeta {
   rotationSize(seats: number): number;
   /** Empfohlene Rundenzahlen zur Auswahl in der Lobby. */
   suggestedRounds(seats: number): readonly number[];
+  /**
+   * xpBasis zaehlt gelegte Karten — nur dann speist sie die Kartenaufgaben
+   * des Tages. Fehlt das Feld, gilt ja (alle Kartenspiele). Feldherr setzt
+   * nein: Seine xpBasis ist die Partiedauer, und die als "gelegte Karten"
+   * zu zaehlen hiesse, die Kartenaufgabe mit jedem Gefecht zu fuellen.
+   */
+  readonly xpBasisZaehltKarten?: boolean;
 }
 
 // ---------------------------------------------------------------------------
