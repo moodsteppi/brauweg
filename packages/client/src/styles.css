@@ -9250,3 +9250,174 @@ main.auth > .muted {
      uebereinanderliegenden Muenzen waere nur ein Klumpen. */
   .truhe-schwall { display: none; }
 }
+
+/* —— Endless-Runner Dev-Tool (/?dev=runner) —— */
+.runner {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #87b8d8;
+  color: #f4e9d4;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  touch-action: none;
+  user-select: none;
+}
+.runner canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+.runner-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.85rem 1rem;
+  pointer-events: none;
+  text-shadow: 0 1px 4px #000a;
+}
+.runner-hud strong {
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+.runner-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: linear-gradient(180deg, #1a3048cc 0%, #122838ee 40%, #0e1e2cf2 100%);
+}
+.runner-overlay h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  font-weight: 700;
+}
+.runner-overlay p {
+  margin: 0;
+  opacity: 0.85;
+}
+.runner-start {
+  justify-self: center;
+  margin-top: 0.5rem;
+  padding: 0.75rem 2.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #e8b84a;
+  color: #1a1008;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.runner-start:active {
+  transform: scale(0.97);
+}
+.runner-hint {
+  margin-top: 0.75rem !important;
+  font-size: 0.85rem;
+  opacity: 0.65 !important;
+  line-height: 1.45;
+}
+.runner-banner {
+  position: absolute;
+  top: 18%;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  text-align: center;
+  pointer-events: none;
+}
+.runner-banner span {
+  display: inline-block;
+  padding: 0.4rem 1.2rem;
+  border-radius: 999px;
+  background: #e8b84acc;
+  color: #1a1008;
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+  animation: runner-banner-pop 0.45s ease-out;
+}
+@keyframes runner-banner-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* =========================================================================
+   Der grosse Spielen-Knopf im Hub — gemalte Platte statt CSS-Gruen.
+
+   Er stand als knallgruener Verlauf mit weissem 2-px-Rand ueber der gemalten
+   Weltkarte und war damit das letzte Bauteil im alten Flach-Stil. Weiss
+   umrandetes Gruen auf Lava sieht aus wie eine Schaltflaeche, die jemand
+   darauf geklebt hat.
+
+   Er bekommt dieselbe Goldplatte wie jeder Hauptknopf: "hier geht es weiter"
+   sieht ueberall gleich aus. Der zweite Knopf daneben ("Spielauswahl", wenn
+   ein Tisch laeuft) bekommt Holz — er ist die Nebenhandlung, "Weiterspielen"
+   ist die Hauptsache.
+
+   Steht am Dateiende, damit es die flachen Flaechen weiter oben ueberschreibt
+   — dieselbe Anordnung wie bei den Menueblaettern und Tafeln.
+   ========================================================================= */
+
+.front--hub .front-play {
+  padding: 0.22rem 0.5rem;
+  border: 14px solid transparent;
+  /* Randmass 30 statt 40: Das Goldbild ist auf die Platte beschnitten und
+     schmaler als Holz und Rot — siehe docs/ASSETS-KNOEPFE.md. */
+  border-image: url(/hub/menue-knopf-gold.webp) 30 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
+}
+/*
+  Alle drei Schattenregeln zurueckgenommen — die Basis, der Stapel unten und
+  der klebende Knopf setzten je einen gruenen Sockelschatten (#245442,
+  #1f6b40). Der Sockel steckt jetzt im Bild; ein zweiter darunter waere ein
+  gruener Streifen unter einer Goldplatte.
+*/
+.front--hub .front-play,
+.front--hub .front-play-stack .front-play,
+.front--hub .front-play.is-schwebend {
+  box-shadow: none;
+}
+.front--hub .front-play:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+.front--hub .front-play:active {
+  transform: translateY(1px);
+  box-shadow: none;
+  filter: brightness(0.88);
+}
+
+/* Der Knopf daneben, wenn ein Tisch laeuft: Holz. Er war blau. */
+.front--hub .front-play-neben {
+  padding: 0.18rem 0.5rem;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #f4e9d4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.front--hub .front-play-neben:active {
+  border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
+  transform: translateY(1px);
+  box-shadow: none;
+}
