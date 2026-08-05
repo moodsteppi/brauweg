@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { Ladekreis } from '../Ladekreis';
 
 import { api } from '../api';
 
@@ -120,7 +121,7 @@ export function Stufenleiter({ onClose }: { onClose: () => void }): React.JSX.El
 
       <div className="pfad-voll-rolle stufe-rolle" ref={rolle}>
         {fehler && <p className="error">Die Stufen ließen sich nicht laden.</p>}
-        {!daten && !fehler && <p className="muted">Wird geladen…</p>}
+        {!daten && !fehler && <Ladekreis />}
 
         {daten && (
           <>

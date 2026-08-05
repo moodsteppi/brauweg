@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Ladekreis } from '../Ladekreis';
 
 import {
   ApiError,
@@ -362,7 +363,7 @@ function Halle({
         </header>
 
         <div className="clan-rollen">
-          {detail === null && <p className="muted">Wird geladen…</p>}
+          {detail === null && <Ladekreis />}
           {detail?.memberList.map((m, i) => (
             <button
               key={m.accountId}
@@ -684,7 +685,7 @@ function Suche({
       {fehler && <p className="clan-fehler">{fehler}</p>}
 
       <div className="clan-rollen clan-rollen--suche">
-        {clubs === null && <p className="muted">Wird geladen…</p>}
+        {clubs === null && <Ladekreis />}
         {clubs?.length === 0 && (
           <p className="muted">
             {suche.trim()

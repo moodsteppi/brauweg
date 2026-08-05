@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { Ladekreis } from '../Ladekreis';
+
 import { ApiError, api, type PlayerProfile, type Relationship } from '../api';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel } from '../hub';
 import { t } from '../i18n';
@@ -63,7 +65,7 @@ export function Profile({
   if (!profile) {
     return (
       <ProfilRahmen eingebettet={eingebettet} onBack={onBack}>
-        <p className="muted">Profil wird geladen…</p>
+        <Ladekreis text="Profil wird geladen…" />
       </ProfilRahmen>
     );
   }

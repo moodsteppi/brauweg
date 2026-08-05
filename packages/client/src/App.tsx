@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
+import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
@@ -52,7 +53,7 @@ export function App(): React.JSX.Element {
   if (loading) {
     return (
       <main>
-        <p className="muted">Einen Moment…</p>
+        <Ladekreis text="Einen Moment…" />
       </main>
     );
   }

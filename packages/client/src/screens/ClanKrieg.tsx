@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { Ladekreis } from '../Ladekreis';
 
 import { type ClubSummary, type WarState, type WarView, api } from '../api';
 import { restzeit } from './ClanTeile';
@@ -71,7 +72,7 @@ export function ClanKrieg({
       </header>
 
       <div className="clan-krieg-inhalt">
-        {stand === null && <p className="muted">Wird geladen…</p>}
+        {stand === null && <Ladekreis />}
         {fehler && <p className="clan-fehler">{fehler}</p>}
 
         {stand?.aktuell?.status === 'laeuft' && <Schlacht krieg={stand.aktuell} />}
@@ -334,7 +335,7 @@ function Gegnerwahl({
           />
         </div>
         <div className="clan-krieg-gegnerliste">
-          {clans === null && <p className="muted">Wird geladen…</p>}
+          {clans === null && <Ladekreis />}
           {clans?.length === 0 && <p className="muted">Kein anderer Clan gefunden.</p>}
           {clans?.map((c) => (
             <button key={c.id} className="clan-zeile" onClick={() => onWaehlen(c.id)}>
