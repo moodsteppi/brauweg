@@ -8,7 +8,7 @@ import {
   type FeldherrZug,
   starteFeldherr,
 } from '../minispiele/feldherr/kern.js';
-import type { TaktMessage } from '../protocol';
+import type { TaktMessage, ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
 
 /**
@@ -103,8 +103,28 @@ export function FeldherrTisch({
     });
   }, []);
 
+  /**
+   * Zuege gehen wie die Herzschlaege am React-State vorbei direkt in den
+   * Kern — SOFORT beim Eintreffen der Sicht. Der Weg ueber setState und
+   * Effekt verspaetet sich sonst um hunderte Millisekunden (besonders im
+   * verdeckten Tab, wo der Web Worker den Kern weitertreibt), der Kern
+   * rechnet ueber den Takt des Zuges hinweg und fuehrt ihn verschoben aus:
+   * stille Divergenz, Partie strittig. Der Effekt unten bleibt als
+   * Nachzuegler-Faenger; `gereicht` haelt beide Wege doppelfrei.
+   */
+  const gereicht = useRef(0);
+  const beiSicht = useCallback((m: ViewMessage<FeldherrSicht>) => {
+    const sitzung = sitzungRef.current;
+    const zuege = m.view?.zuege;
+    if (!sitzung || !zuege) return;
+    for (let i = gereicht.current; i < zuege.length; i += 1) {
+      sitzung.zugAnnehmen(zuege[i], zuege[i].sitz);
+    }
+    gereicht.current = zuege.length;
+  }, []);
+
   /** Nur im Netzspiel verbunden; oertlich bleibt der Tisch still. */
-  const tisch = useTable<FeldherrSicht>(tableId, 'feldherr', beiTakt);
+  const tisch = useTable<FeldherrSicht>(tableId, 'feldherr', beiTakt, beiSicht);
   const sicht = tableId ? (tisch.view?.view ?? null) : null;
   /** Zuschauer bekommen keinen Sitz; sie sehen zu und melden nichts. */
   const meinSitz = tisch.view?.seat ?? null;
@@ -169,7 +189,6 @@ export function FeldherrTisch({
    */
   const netzSaat = sicht?.saat;
   const netzFeld = sicht?.regeln?.feld;
-  const gereicht = useRef(0);
   useEffect(() => {
     if (!tableId || netzSaat === undefined || !buehne.current) return;
     const wurzel = buehne.current;
