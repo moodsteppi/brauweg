@@ -179,6 +179,10 @@ const de: Record<string, string> = {
   'quest.zauberer-am-tag.hint': 'Eine Zauberer-Partie zu Ende spielen.',
   'quest.karten-legen': 'Leg 60 Karten',
   'quest.karten-legen.hint': 'Gezählt werden Karten aus abgerechneten Runden.',
+  'quest.pro-subway-laufen': 'Lauf eine Runde Pro-Subway',
+  'quest.pro-subway-laufen.hint': 'Spielauswahl → Alleine. Wie weit, ist egal.',
+  'quest.pro-subway-muenzen': 'Sammle 15 Münzen im Lauf',
+  'quest.pro-subway-muenzen.hint': 'Über alle Läufe des Tages zusammen.',
 
   // --- Shop ---------------------------------------------------------------
   'shop.muenzen-klein': 'Handvoll Münzen',

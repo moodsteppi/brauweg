@@ -80,9 +80,43 @@ Der große Feel-/Logik-Pass. Was aus Abschnitt 2 und 3 damit **erledigt** ist:
   `delta`; nach einem Tab-Wechsel (rAF gedrosselt, delta sekundengroß) schoss
   der Lerp-Faktor über 1 und die Kamera ins Nichts. `dt`-Deckel 0,05.
 
+### Nachschlag, gleiche Nacht: Biome, Kräfte, Tagesliste, Aufgaben
+
+- **Biome-Optik** — alle 220 m wechselt die Strecke die Zone, dieselbe Reihe
+  wie der Trophäenpfad (Heimat → Wiesen → Strand → Feuerberg → Schneefeld →
+  Sternenhafen, dann von vorn). Boden, Randmauern, Spurlinien je Zone;
+  Himmel und Nebel gleiten weich hinterher (`BiomStimmung`). Kein neues
+  Bildmaterial — nur Töne.
+- **Kräfte** — Magnet (12 s, Münzen fliegen einem zu), Schild (verzeiht
+  einen Treffer, Hindernis verschwindet), Doppel (12 s, jede Münze zählt
+  zwei). Als Fund am Wegesrand (16 % je Chunk, immer auf der freien Spur),
+  einfache leuchtende Geometrie statt fehlender Modelle, HUD-Chips mit
+  Restzeit. Kein Turbo: mehr Tempo wäre in dieser Wertung Punkte fürs
+  Nichtstun.
+- **Tagesliste** — `runner_best` (Migration 0017): bester Lauf des Tages je
+  Konto, Meter/Münzen gehören zum besten Lauf (kein Flickenteppich aus
+  Maxima). `GET /api/runner/rangliste`: beste zehn plus eigener Platz.
+  Startblatt-Knopf „Tagesliste" (nur Hub-Modus), Endblatt zeigt „Platz N".
+- **Aufgaben** — zwei neue Tagesaufgaben: „Lauf eine Runde Pro-Subway" (5)
+  und „Sammle 15 Münzen im Lauf" (10). Eigene Messarten `runnerLaeufe` /
+  `runnerMuenzen` + `fortschreibeRunner()` — der Runner hat keine Partien,
+  Plätze oder Karten, also läuft er nicht durch `Ereignis`.
+- **Ein Aufruf statt drei** — `POST /api/runner/lauf` macht Münzen (Kappen),
+  Aufgaben und Bestwert zusammen und liefert den Tagesplatz zurück. Wird
+  auch bei 0 Münzen gerufen (die Lauf-Aufgabe zählt das Laufen). `/cashout`
+  bleibt für Clients von vor dem Deploy. Punkte-Obergrenze 100 000 gegen
+  Skript-Rekorde; fürs Geld kappen ohnehin Lauf- und Tageslimit.
+- **Steuerung geschmeidiger** — Wisch löst beim ZIEHEN aus, nicht erst beim
+  Loslassen, und der Startpunkt wandert mit (durchziehen = zwei Spuren ohne
+  abzusetzen). Spurwechsel als feste 170-ms-Ease-Out-Kurve statt
+  Exponentialjagd, die nie ankommt. Gehaltenes ↓ verlängert das Rutschen;
+  Auto-Repeat für Spur/Sprung aus.
+- **Servertests**: `test/runner.test.ts` — Kappen, Aufgaben (auch 0-Münzen-
+  Lauf), Bestwert-Semantik, Listenreihenfolge, Punkte-Obergrenze.
+
 **Noch offen aus Abschnitt 2/3:** echte Jump-/Slide-Clips im Mixer (weiter
-Tween), Kästen am Gerät nachstimmen (`hitbox=1`), Biome-Optik, Power-ups,
-Rangliste, Quest-Anbindung, Banner PNG→WebP.
+Tween), Kästen am Gerät nachstimmen (`hitbox=1`), Banner PNG→WebP,
+Ghost-Läufe/Koop-Challenge.
 
 ---
 

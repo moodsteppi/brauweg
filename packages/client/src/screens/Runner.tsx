@@ -5,6 +5,7 @@ import {
   AnimationClip,
   AnimationMixer,
   Box3,
+  Color,
   Group,
   LoopOnce,
   LoopRepeat,
@@ -94,6 +95,63 @@ const ANLAUF_M = 34;
 const PUNKTE_JE_MUENZE = 10;
 /** Schlüssel für den Geräterekord. */
 const REKORD_SCHLUESSEL = 'brauweg.prosubway.rekord';
+
+/**
+ * Die Biome der Strecke — dieselbe Reihe wie auf dem Trophäenpfad.
+ *
+ * Alle 220 m wechselt die Welt die Farbe: Boden, Randmauern, Spurlinien und
+ * Himmel/Nebel. Nach dem Sternenhafen beginnt die Reihe von vorn — die
+ * Strecke ist endlos, die Welt auch. Kein neues Bildmaterial: Es sind
+ * dieselben Flächen wie vorher, nur trägt jede Zone ihre eigenen Töne.
+ *
+ * Der Wechsel passiert je Chunk beim Recyceln. Ein Chunk ist 28 m lang —
+ * die Naht zwischen zwei Zonen ist damit eine Kachelkante weit hinten im
+ * Nebel, kein Umschlag mitten im Bild. Himmel und Nebel gleiten weich
+ * (`BiomStimmung`), sonst blitzte der Himmel beim Zonenwechsel.
+ */
+interface BiomLook {
+  readonly name: string;
+  readonly grasA: string;
+  readonly grasB: string;
+  readonly rand: string;
+  readonly linie: string;
+  readonly himmel: string;
+}
+
+const BIOME_LOOK: readonly BiomLook[] = [
+  { name: 'Heimat', grasA: '#4a7c3f', grasB: '#3d6b35', rand: '#5c4030', linie: '#c9b896', himmel: '#87b8d8' },
+  { name: 'Wiesen', grasA: '#58a06a', grasB: '#4a8f5c', rand: '#4a5c30', linie: '#d8cfa8', himmel: '#8fd0e8' },
+  { name: 'Strand', grasA: '#d8c48a', grasB: '#cbb578', rand: '#8a6f4a', linie: '#a8dce4', himmel: '#9adcf0' },
+  { name: 'Feuerberg', grasA: '#6d4a3a', grasB: '#5c3a2c', rand: '#3a2620', linie: '#e8a05a', himmel: '#d8906a' },
+  { name: 'Schneefeld', grasA: '#e4ecf2', grasB: '#d4e0ea', rand: '#7a8ca0', linie: '#b0c4d4', himmel: '#c8dcec' },
+  { name: 'Sternenhafen', grasA: '#3a3a5c', grasB: '#30304c', rand: '#26263a', linie: '#e2b64f', himmel: '#2e2e50' },
+];
+
+const BIOM_LAENGE = 220;
+
+function biomIdxFuer(distanz: number): number {
+  return Math.floor(Math.max(0, distanz) / BIOM_LAENGE) % BIOME_LOOK.length;
+}
+
+/**
+ * Kräfte am Wegesrand.
+ *
+ * Drei, und jede ändert die Rechnung, nicht die Regeln: Der Magnet holt die
+ * Münzen, der Schild verzeiht einen Treffer, Doppel zählt jede Münze
+ * doppelt. Kein Turbo — mehr Tempo wäre in dieser Wertung einfach mehr
+ * Punkte fürs Nichtstun und obendrein schwerer zu überleben.
+ */
+type KraftArt = 'magnet' | 'schild' | 'doppel';
+const KRAFT_DAUER_MS = 12_000;
+/** Wie oft ein Chunk eine Kraft trägt. Selten — sie sollen ein Fund sein. */
+const KRAFT_CHANCE = 0.16;
+
+interface KraftPlatz {
+  art: KraftArt;
+  spur: -1 | 0 | 1;
+  z: number;
+  aktiv: boolean;
+}
 
 type Phase = 'menu' | 'flee' | 'run' | 'pause' | 'dead';
 type Pose = 'flee' | 'run' | 'idle';
@@ -363,6 +421,18 @@ function baueChunk(chunkZ: number, distanz: number): Platz[] {
 
 interface Spielstand {
   spur: -1 | 0 | 1;
+  /**
+   * Der Spurwechsel ist eine feste, kurze Kurve statt einer Exponentialjagd.
+   *
+   * `lerp(x, ziel, 12·dt)` startet schnell und kriecht am Ende — die Figur
+   * "kommt nie an", und weil die Kollision an der echten X-Position rechnet,
+   * hängt man länger zwischen den Spuren als nötig. Jetzt: 170 ms
+   * Ease-Out-Kurve von `spurVonX` zum Ziel. Kommt mitten im Wechsel die
+   * nächste Eingabe, startet die Kurve an der aktuellen Position neu —
+   * Doppelwechsel fühlen sich an wie einer in lang, nicht wie zwei Rucke.
+   */
+  spurVonX: number;
+  spurWechselUm: number;
   springt: boolean;
   rutscht: boolean;
   rutschtBis: number;
@@ -380,11 +450,17 @@ interface Spielstand {
   umgeranntUm: number;
   /** Zeitpunkt der letzten Landung — für den Stauch-Effekt. */
   gelandetUm: number;
+  /** Kräfte: Magnet und Doppel als Ablaufzeit, Schild als Vorrat. */
+  magnetBis: number;
+  doppelBis: number;
+  schild: boolean;
 }
 
 function frischerStand(phase: Phase): Spielstand {
   return {
     spur: 0,
+    spurVonX: 0,
+    spurWechselUm: 0,
     springt: false,
     rutscht: false,
     rutschtBis: 0,
@@ -397,6 +473,9 @@ function frischerStand(phase: Phase): Spielstand {
     kopfY: PINGUIN_HOEHE,
     umgeranntUm: 0,
     gelandetUm: 0,
+    magnetBis: 0,
+    doppelBis: 0,
+    schild: false,
   };
 }
 
@@ -727,6 +806,29 @@ function Laufuhr({ spielstand }: { spielstand: React.MutableRefObject<Spielstand
   return null;
 }
 
+/**
+ * Himmel und Nebel gleiten dem Biom hinterher.
+ *
+ * `<color>` und `<fog>` sind einmal gesetzt; hier werden ihre Farben je Bild
+ * ein Stück Richtung Zielton gezogen. Gleiten statt Springen, weil der
+ * Zonenwechsel sonst als Farbblitz über den ganzen Bildschirm ginge.
+ */
+function BiomStimmung({
+  spielstand,
+}: {
+  spielstand: React.MutableRefObject<Spielstand>;
+}): null {
+  const ziele = useMemo(() => BIOME_LOOK.map((b) => new Color(b.himmel)), []);
+  useFrame(({ scene }, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const ziel = ziele[biomIdxFuer(spielstand.current.distanz)]!;
+    const takt = Math.min(1, 1.2 * dt);
+    if (scene.fog) scene.fog.color.lerp(ziel, takt);
+    if (scene.background instanceof Color) scene.background.lerp(ziel, takt);
+  });
+  return null;
+}
+
 function Spieler({
   spielstand,
   pose,
@@ -761,7 +863,10 @@ function Spieler({
     }
 
     const zielX = gs.spur * SPUR_BREITE;
-    lauf.position.x = MathUtils.lerp(lauf.position.x, zielX, 12 * dt);
+    const wechselDauer = 170;
+    const fortschritt = Math.min(1, (performance.now() - gs.spurWechselUm) / wechselDauer);
+    const kurve = 1 - Math.pow(1 - fortschritt, 3);
+    lauf.position.x = gs.spurVonX + (zielX - gs.spurVonX) * kurve;
 
     if (gs.rutscht && performance.now() >= gs.rutschtBis) {
       gs.rutscht = false;
@@ -834,21 +939,39 @@ function WeltChunk({
   spielstand,
   onMuenze,
   onTreffer,
+  onKraft,
   neustartMarke,
 }: {
   index: number;
   spielstand: React.MutableRefObject<Spielstand>;
   onMuenze: () => void;
   onTreffer: () => void;
+  onKraft: (art: KraftArt) => void;
   neustartMarke: number;
 }): React.JSX.Element {
   const gruppeRef = useRef<Group>(null);
   const plaetzeRef = useRef<Platz[]>(baueChunk(index * -CHUNK_LAENGE, 0));
   const hindernisGruppen = useRef<(Group | null)[]>([]);
   const muenzenRef = useRef<(MeshType | null)[]>([]);
+  const kraftRef = useRef<KraftPlatz>({ art: 'magnet', spur: 0, z: 0, aktiv: false });
+  const kraftGruppe = useRef<Group>(null);
   const trefferSperre = useRef(false);
   const neuaufbauLaeuft = useRef(false);
   const [layoutMarke, setLayoutMarke] = useState(0);
+  const [biom, setBiom] = useState(0);
+
+  /** Würfelt die Kraft dieses Chunks — auf der freien Spur, nie im Hindernis. */
+  const legeKraft = useCallback((chunkZ: number) => {
+    const arten: readonly KraftArt[] = ['magnet', 'schild', 'doppel'];
+    const z = (Math.random() - 0.5) * (CHUNK_LAENGE - 8);
+    const nochHin = SPIELER_Z - (chunkZ + z);
+    kraftRef.current = {
+      art: zufall(arten),
+      spur: pfadSpur,
+      z,
+      aktiv: Math.random() < KRAFT_CHANCE && nochHin >= ANLAUF_M,
+    };
+  }, []);
 
   /**
    * Münzen liegen als Dreierreihe auf dem begehbaren Pfad — nie in einem
@@ -876,15 +999,19 @@ function WeltChunk({
   const recycle = useCallback(() => {
     trefferSperre.current = false;
     const z = gruppeRef.current?.position.z ?? index * -CHUNK_LAENGE;
-    plaetzeRef.current = baueChunk(z, spielstand.current.distanz);
+    const distanz = spielstand.current.distanz;
+    plaetzeRef.current = baueChunk(z, distanz);
     legeMuenzen(z);
+    legeKraft(z);
+    const neuesBiom = biomIdxFuer(distanz);
     if (neuaufbauLaeuft.current) return;
     neuaufbauLaeuft.current = true;
     queueMicrotask(() => {
       neuaufbauLaeuft.current = false;
+      setBiom(neuesBiom);
       setLayoutMarke((k) => k + 1);
     });
-  }, [index, legeMuenzen, spielstand]);
+  }, [index, legeMuenzen, legeKraft, spielstand]);
 
   useEffect(() => {
     const z = index * -CHUNK_LAENGE;
@@ -892,8 +1019,10 @@ function WeltChunk({
     trefferSperre.current = false;
     plaetzeRef.current = baueChunk(z, 0);
     legeMuenzen(z);
+    legeKraft(z);
+    setBiom(0);
     setLayoutMarke((k) => k + 1);
-  }, [index, neustartMarke, legeMuenzen]);
+  }, [index, neustartMarke, legeMuenzen, legeKraft]);
 
   useFrame((_, delta) => {
     const gs = spielstand.current;
@@ -920,6 +1049,18 @@ function WeltChunk({
       }
     }
 
+    // Die Kraft dreht und schwebt — auch in der Pause sichtbar, nur eingefroren.
+    const kraft = kraftRef.current;
+    const kg = kraftGruppe.current;
+    if (kg) {
+      kg.visible = sichtbar && kraft.aktiv;
+      if (rollt) {
+        kg.rotation.y += 2.2 * dt;
+        kg.userData.t = ((kg.userData.t as number) ?? 0) + dt;
+        kg.position.y = 0.62 + Math.sin((kg.userData.t as number) * 3) * 0.07;
+      }
+    }
+
     if (!rollt) return;
 
     gruppe.position.z += gs.tempo * dt;
@@ -930,6 +1071,15 @@ function WeltChunk({
     }
 
     const pos = gs.pos;
+
+    if (kraft.aktiv && kg) {
+      const kraftWeltZ = gruppe.position.z + kraft.z;
+      if (Math.abs(pos.x - kraft.spur * SPUR_BREITE) < 0.9 && Math.abs(pos.z - kraftWeltZ) < 1.1) {
+        kraft.aktiv = false;
+        kg.visible = false;
+        onKraft(kraft.art);
+      }
+    }
 
     for (let p = 0; p < plaetze.length; p++) {
       const platz = plaetze[p]!;
@@ -954,12 +1104,27 @@ function WeltChunk({
         }
 
         if (getroffen && !trefferSperre.current) {
+          if (gs.schild) {
+            /**
+             * Der Schild nimmt den Treffer: Hindernis verschwindet, der Lauf
+             * geht weiter. Verschwinden statt Durchlaufen, weil ein Hindernis,
+             * in dem man drinsteht, sonst im nächsten Bild gleich nochmal
+             * trifft.
+             */
+            gs.schild = false;
+            hindernis.aktiv = false;
+            const g = hindernisGruppen.current[p * 2 + h];
+            if (g) g.visible = false;
+            spiele('schalter');
+            continue;
+          }
           trefferSperre.current = true;
           onTreffer();
         }
       }
     }
 
+    const magnetAn = performance.now() < gs.magnetBis;
     for (const muenze of muenzenRef.current) {
       if (!muenze) continue;
       const lebt = muenze.userData.lebt !== false;
@@ -967,8 +1132,22 @@ function WeltChunk({
       if (!lebt) continue;
       muenze.rotation.y += 3 * dt;
       const weltZ = gruppe.position.z + muenze.position.z;
+      /**
+       * Magnet: Münzen im Umkreis fliegen dem Spieler entgegen. Lokal
+       * verschoben — die Chunk-Gruppe steht im Bild fest, also ist ein
+       * lokales Delta dasselbe wie ein Welt-Delta.
+       */
+      if (magnetAn) {
+        const zugX = pos.x - muenze.position.x;
+        const zugZ = pos.z - weltZ;
+        if (Math.hypot(zugX, zugZ) < 7) {
+          const takt = Math.min(1, 9 * dt);
+          muenze.position.x += zugX * takt;
+          muenze.position.z += zugZ * takt;
+        }
+      }
       const dx = Math.abs(pos.x - muenze.position.x);
-      const dz = Math.abs(pos.z - weltZ);
+      const dz = Math.abs(pos.z - (gruppe.position.z + muenze.position.z));
       const dy = Math.abs(pos.y + 0.55 - muenze.position.y);
       if (dx < 0.9 && dz < 1.0 && dy < 0.95) {
         muenze.userData.lebt = false;
@@ -978,7 +1157,9 @@ function WeltChunk({
     }
   });
 
-  const gras = index % 2 === 0 ? '#4a7c3f' : '#3d6b35';
+  const look = BIOME_LOOK[biom]!;
+  const gras = index % 2 === 0 ? look.grasA : look.grasB;
+  const kraft = kraftRef.current;
   const plaetze = plaetzeRef.current;
 
   return (
@@ -995,16 +1176,16 @@ function WeltChunk({
           receiveShadow
         >
           <planeGeometry args={[0.12, CHUNK_LAENGE]} />
-          <meshStandardMaterial color="#c9b896" />
+          <meshStandardMaterial color={look.linie} />
         </mesh>
       ))}
       <mesh position={[-(SPUR_BREITE * 1.5 + 0.6), 0.7, 0]} castShadow>
         <boxGeometry args={[0.4, 1.4, CHUNK_LAENGE]} />
-        <meshStandardMaterial color="#5c4030" />
+        <meshStandardMaterial color={look.rand} />
       </mesh>
       <mesh position={[SPUR_BREITE * 1.5 + 0.6, 0.7, 0]} castShadow>
         <boxGeometry args={[0.4, 1.4, CHUNK_LAENGE]} />
-        <meshStandardMaterial color="#5c4030" />
+        <meshStandardMaterial color={look.rand} />
       </mesh>
 
       {[-1, 1].map((seite) =>
@@ -1029,6 +1210,44 @@ function WeltChunk({
           </group>
         )),
       )}
+
+      {/*
+        Der Kraft-Token: einfache Geometrie mit klarer Farbsprache statt
+        eines Modells, das es nicht gibt. Rot-Ring = Magnet, blaues Achteck
+        = Schild, zwei Goldscheiben = Doppel. Leichtes Eigenleuchten, damit
+        er auch im Sternenhafen-Dunkel lesbar bleibt.
+      */}
+      <group
+        key={`kraft-${layoutMarke}`}
+        ref={kraftGruppe}
+        position={[kraft.spur * SPUR_BREITE, 0.62, kraft.z]}
+        visible={false}
+      >
+        {kraft.art === 'magnet' && (
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.32, 0.11, 10, 20]} />
+            <meshStandardMaterial color="#e8433a" emissive="#8a1f18" emissiveIntensity={0.5} />
+          </mesh>
+        )}
+        {kraft.art === 'schild' && (
+          <mesh>
+            <octahedronGeometry args={[0.36, 0]} />
+            <meshStandardMaterial color="#5ea0f0" emissive="#1f4a8a" emissiveIntensity={0.55} />
+          </mesh>
+        )}
+        {kraft.art === 'doppel' && (
+          <group>
+            <mesh rotation={[Math.PI / 2, 0, 0]} position={[-0.12, 0, 0]}>
+              <cylinderGeometry args={[0.28, 0.28, 0.07, 16]} />
+              <meshStandardMaterial color="#e8b84a" emissive="#9a6b10" emissiveIntensity={0.4} />
+            </mesh>
+            <mesh rotation={[Math.PI / 2, 0, 0]} position={[0.14, 0.1, 0]}>
+              <cylinderGeometry args={[0.28, 0.28, 0.07, 16]} />
+              <meshStandardMaterial color="#ffd873" emissive="#9a6b10" emissiveIntensity={0.4} />
+            </mesh>
+          </group>
+        )}
+      </group>
 
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <mesh
@@ -1067,7 +1286,20 @@ export function Runner({
   onBack?: () => void;
 } = {}): React.JSX.Element {
   const [phase, setPhase] = useState<Phase>('menu');
-  const [anzeige, setAnzeige] = useState({ meter: 0, muenzen: 0 });
+  const [anzeige, setAnzeige] = useState({
+    meter: 0,
+    muenzen: 0,
+    /** Was das letzte "+x" wert war — 2 bei aktivem Doppel. */
+    plus: 1,
+    magnetS: 0,
+    doppelS: 0,
+    schild: false,
+  });
+  const [rangHeuteLauf, setRangHeuteLauf] = useState(0);
+  const [ranglisteOffen, setRanglisteOffen] = useState(false);
+  const [rangliste, setRangliste] = useState<Awaited<
+    ReturnType<typeof api.runnerRangliste>
+  > | null>(null);
   const [neustartMarke, setNeustartMarke] = useState(0);
   const [rekord, setRekord] = useState<Rekord | null>(() => liesRekord());
   const [neuerRekord, setNeuerRekord] = useState(false);
@@ -1107,10 +1339,16 @@ export function Runner({
   useEffect(() => {
     if (phase !== 'run') return;
     const id = window.setInterval(() => {
-      setAnzeige({
-        meter: Math.floor(spielstand.current.distanz),
+      const gs = spielstand.current;
+      const jetzt = performance.now();
+      setAnzeige((a) => ({
+        ...a,
+        meter: Math.floor(gs.distanz),
         muenzen: muenzenRef.current,
-      });
+        magnetS: Math.max(0, Math.ceil((gs.magnetBis - jetzt) / 1000)),
+        doppelS: Math.max(0, Math.ceil((gs.doppelBis - jetzt) / 1000)),
+        schild: gs.schild,
+      }));
     }, 150);
     return () => window.clearInterval(id);
   }, [phase]);
@@ -1118,7 +1356,9 @@ export function Runner({
   const start = useCallback(() => {
     spiele('tipp');
     muenzenRef.current = 0;
-    setAnzeige({ meter: 0, muenzen: 0 });
+    setAnzeige({ meter: 0, muenzen: 0, plus: 1, magnetS: 0, doppelS: 0, schild: false });
+    setRangHeuteLauf(0);
+    setRanglisteOffen(false);
     setHubMuenzen(null);
     setNeuerRekord(false);
     abgerechnet.current = false;
@@ -1165,7 +1405,12 @@ export function Runner({
     const gs = spielstand.current;
     if (gs.phase !== 'run') return;
     const naechste = gs.spur + richtung;
-    if (naechste >= -1 && naechste <= 1) gs.spur = naechste as -1 | 0 | 1;
+    if (naechste < -1 || naechste > 1) return;
+    // Kurve an der AKTUELLEN Position neu starten — gs.pos hält das echte X
+    // aus dem letzten Bild. So kettet sich ein Doppelwechsel weich.
+    gs.spurVonX = gs.pos.x;
+    gs.spurWechselUm = performance.now();
+    gs.spur = naechste as -1 | 0 | 1;
   }, []);
 
   const beiTreffer = useCallback(() => {
@@ -1178,10 +1423,27 @@ export function Runner({
   }, []);
 
   const beiMuenze = useCallback(() => {
-    muenzenRef.current += 1;
+    const doppelt = performance.now() < spielstand.current.doppelBis;
+    const wert = doppelt ? 2 : 1;
+    muenzenRef.current += wert;
     spiele('kauf', 0.45);
     // Anzeige sofort — auf die 150-ms-Uhr zu warten, ließe das "+1" hinken.
-    setAnzeige((a) => ({ ...a, muenzen: muenzenRef.current }));
+    setAnzeige((a) => ({ ...a, muenzen: muenzenRef.current, plus: wert }));
+  }, []);
+
+  const beiKraft = useCallback((art: KraftArt) => {
+    const gs = spielstand.current;
+    const jetzt = performance.now();
+    if (art === 'magnet') gs.magnetBis = jetzt + KRAFT_DAUER_MS;
+    else if (art === 'doppel') gs.doppelBis = jetzt + KRAFT_DAUER_MS;
+    else gs.schild = true;
+    spiele('stufe');
+    setAnzeige((a) => ({
+      ...a,
+      magnetS: art === 'magnet' ? Math.ceil(KRAFT_DAUER_MS / 1000) : a.magnetS,
+      doppelS: art === 'doppel' ? Math.ceil(KRAFT_DAUER_MS / 1000) : a.doppelS,
+      schild: art === 'schild' ? true : a.schild,
+    }));
   }, []);
 
   const pausiere = useCallback(() => {
@@ -1217,7 +1479,7 @@ export function Runner({
     if (phase !== 'dead') return;
     const meter = Math.floor(spielstand.current.distanz);
     const muenzen = muenzenRef.current;
-    setAnzeige({ meter, muenzen });
+    setAnzeige((a) => ({ ...a, meter, muenzen }));
     const punkte = meter + muenzen * PUNKTE_JE_MUENZE;
     if (punkte > (rekord?.punkte ?? 0)) {
       const neu = { punkte, meter, muenzen };
@@ -1231,25 +1493,40 @@ export function Runner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  /** Nach dem Lauf: Münzen ins Hub-Konto — Münzen sind Münzen, kein /10. */
+  /**
+   * Nach dem Lauf: EIN Aufruf meldet alles — Münzen (Server kappt),
+   * Tagesaufgaben, Tagesbestwert, Platz in der Tagesliste.
+   *
+   * Auch bei 0 Münzen: Die Aufgabe "lauf eine Runde Pro-Subway" zählt das
+   * Laufen, nicht das Sammeln.
+   */
   useEffect(() => {
     if (phase !== 'dead' || !hubMode || abgerechnet.current) return;
     abgerechnet.current = true;
+    const meter = Math.floor(spielstand.current.distanz);
     const muenzen = muenzenRef.current;
-    if (muenzen <= 0) {
-      setHubMuenzen(0);
-      return;
-    }
+    const punkte = meter + muenzen * PUNKTE_JE_MUENZE;
     setGutschriftLaeuft(true);
     void api
-      .runnerCashout(muenzen)
+      .runnerLauf({ muenzen, punkte, meter })
       .then((r) => {
         setHubMuenzen(r.gutgeschrieben);
         setRestHeute(r.restHeute);
+        setRangHeuteLauf(r.rangHeute);
       })
       .catch(() => setHubMuenzen(0))
       .finally(() => setGutschriftLaeuft(false));
   }, [phase, hubMode]);
+
+  const oeffneRangliste = useCallback(() => {
+    spiele('blatt-auf');
+    setRanglisteOffen(true);
+    setRangliste(null);
+    void api
+      .runnerRangliste()
+      .then(setRangliste)
+      .catch(() => setRangliste(null));
+  }, []);
 
   useEffect(() => {
     const beiTaste = (e: KeyboardEvent): void => {
@@ -1273,6 +1550,13 @@ export function Runner({
         pausiere();
         return;
       }
+      /**
+       * Auto-Repeat: nur beim Rutschen erwünscht. Gehaltenes ↓ verlängert
+       * die Rutschpartie (rutsche() setzt die Frist jedes Mal neu) — wer
+       * unter einem langen Tor liegt, will nicht im Takt nachtippen.
+       * Für Spur und Sprung wäre Repeat dagegen ein Zittern.
+       */
+      if (e.repeat && e.key !== 'ArrowDown' && e.key !== 's') return;
       if (e.key === 'ArrowLeft' || e.key === 'a') wechsleSpur(-1);
       if (e.key === 'ArrowRight' || e.key === 'd') wechsleSpur(1);
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') {
@@ -1303,19 +1587,39 @@ export function Runner({
         beruehrX.current = e.touches[0]?.clientX ?? null;
         beruehrY.current = e.touches[0]?.clientY ?? null;
       }}
-      onTouchEnd={(e) => {
+      onTouchMove={(e) => {
+        /**
+         * Der Wisch zählt beim ZIEHEN, nicht erst beim Loslassen.
+         *
+         * Vorher wertete erst onTouchEnd aus — zwischen Fingerbewegung und
+         * Reaktion lag das Abheben des Fingers, und genau diese Lücke fühlt
+         * sich träge an. Jetzt löst die Schwelle mitten in der Bewegung aus,
+         * und der Startpunkt wird auf die aktuelle Stelle gesetzt: Wer den
+         * Finger weiterzieht, wechselt flüssig noch eine Spur, ohne
+         * abzusetzen.
+         */
+        if (phase !== 'run' || beruehrX.current === null || beruehrY.current === null) return;
+        const x = e.touches[0]?.clientX ?? 0;
+        const y = e.touches[0]?.clientY ?? 0;
+        const dx = x - beruehrX.current;
+        const dy = y - beruehrY.current;
+        if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) {
+          wechsleSpur(dx > 0 ? 1 : -1);
+          beruehrX.current = x;
+          beruehrY.current = y;
+        } else if (dy < -30) {
+          springe();
+          beruehrX.current = x;
+          beruehrY.current = y;
+        } else if (dy > 30) {
+          rutsche();
+          beruehrX.current = x;
+          beruehrY.current = y;
+        }
+      }}
+      onTouchEnd={() => {
         // Menüs bedient man über ihre Knöpfe — ein Tipp irgendwohin soll
         // nicht ungefragt den nächsten Lauf starten.
-        if (phase !== 'run' || beruehrX.current === null || beruehrY.current === null) return;
-        const dx = (e.changedTouches[0]?.clientX ?? 0) - beruehrX.current;
-        const dy = (e.changedTouches[0]?.clientY ?? 0) - beruehrY.current;
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 26) {
-          wechsleSpur(dx > 0 ? 1 : -1);
-        } else if (dy < -36) {
-          springe();
-        } else if (dy > 36) {
-          rutsche();
-        }
         beruehrX.current = null;
         beruehrY.current = null;
       }}
@@ -1345,6 +1649,7 @@ export function Runner({
 
         <KameraFuehrung spielstand={spielstand} />
         <Laufuhr spielstand={spielstand} />
+        <BiomStimmung spielstand={spielstand} />
         <Spieler spielstand={spielstand} pose={pose} onFleeFertig={beiFleeFertig} />
 
         {Array.from({ length: ANZAHL_CHUNKS }, (_, i) => (
@@ -1355,6 +1660,7 @@ export function Runner({
             neustartMarke={neustartMarke}
             onMuenze={beiMuenze}
             onTreffer={beiTreffer}
+            onKraft={beiKraft}
           />
         ))}
       </Canvas>
@@ -1368,10 +1674,13 @@ export function Runner({
             {muenzen}
             {muenzen > 0 && (
               <em key={muenzen} className="runner-plus" aria-hidden="true">
-                +1
+                +{anzeige.plus}
               </em>
             )}
           </span>
+          {anzeige.magnetS > 0 && <span className="runner-chip">Magnet {anzeige.magnetS}s</span>}
+          {anzeige.doppelS > 0 && <span className="runner-chip">×2 {anzeige.doppelS}s</span>}
+          {anzeige.schild && <span className="runner-chip runner-chip--schild">Schild</span>}
           <button type="button" className="runner-pause" onClick={pausiere} aria-label="Pause">
             ❙❙
           </button>
@@ -1387,7 +1696,50 @@ export function Runner({
       {/* Roter Blitz beim Aufprall — einmalige CSS-Animation. */}
       {phase === 'dead' && <div className="runner-blitz" aria-hidden="true" />}
 
-      {phase === 'menu' && (
+      {phase === 'menu' && ranglisteOffen && (
+        <div className="runner-schleier">
+          <section className="hub-tafel runner-tafel">
+            <header className="hub-tafel-kopf">
+              <h2>Tagesliste</h2>
+              <span className="hub-tafel-zusatz">Beste Läufe heute</span>
+            </header>
+            <div className="hub-tafel-inhalt runner-tafel-inhalt">
+              {rangliste === null && <p className="runner-text">Wird geladen…</p>}
+              {rangliste !== null && rangliste.eintraege.length === 0 && (
+                <p className="runner-text">Heute ist noch niemand gelaufen — sei du es.</p>
+              )}
+              {rangliste !== null && rangliste.eintraege.length > 0 && (
+                <ol className="runner-rang">
+                  {rangliste.eintraege.map((e) => (
+                    <li key={e.rang} className={e.du ? 'is-du' : undefined}>
+                      <span className="runner-rang-nr">{e.rang}</span>
+                      <span className="runner-rang-name">{e.displayName}</span>
+                      <span className="runner-rang-punkte">{e.punkte}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {rangliste !== null && rangliste.rang > rangliste.eintraege.length && (
+                <p className="runner-text runner-text--klein">
+                  Du: Platz {rangliste.rang} · {rangliste.punkte} Punkte
+                </p>
+              )}
+              <button
+                type="button"
+                className="hub-knopf hub-knopf--a runner-knopf"
+                onClick={() => {
+                  spiele('blatt-zu');
+                  setRanglisteOffen(false);
+                }}
+              >
+                Zurück
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {phase === 'menu' && !ranglisteOffen && (
         <div className="runner-schleier">
           <section className="hub-tafel runner-tafel">
             <header className="hub-tafel-kopf">
@@ -1421,6 +1773,15 @@ export function Runner({
               <button type="button" className="hub-knopf hub-knopf--a-gold runner-knopf" onClick={start}>
                 Los geht's!
               </button>
+              {hubMode && (
+                <button
+                  type="button"
+                  className="hub-knopf hub-knopf--a runner-knopf"
+                  onClick={oeffneRangliste}
+                >
+                  Tagesliste
+                </button>
+              )}
               {zurueck && (
                 <button
                   type="button"
@@ -1512,6 +1873,11 @@ export function Runner({
                         : restHeute === 0
                           ? 'Tageslimit erreicht — morgen wieder'
                           : 'Keine Hub-Münzen diesmal'}
+                </p>
+              )}
+              {hubMode && rangHeuteLauf > 0 && (
+                <p className="runner-text runner-text--klein">
+                  Platz {rangHeuteLauf} in der heutigen Tagesliste
                 </p>
               )}
               <button type="button" className="hub-knopf hub-knopf--a-gold runner-knopf" onClick={start}>

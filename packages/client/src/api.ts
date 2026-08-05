@@ -569,6 +569,32 @@ export const api = {
       restHeute: number;
       limitTag: number;
     }>('/runner/cashout', { coins }),
+  /**
+   * Lauf beendet — der eine Aufruf am Lebensende des Laufs: Münzen (mit
+   * Kappen), Tagesaufgaben, Tagesbestwert und Platz in der Tagesliste.
+   */
+  runnerLauf: (lauf: { muenzen: number; punkte: number; meter: number }) =>
+    post<{
+      gutgeschrieben: number;
+      stand: number;
+      restHeute: number;
+      limitTag: number;
+      rangHeute: number;
+    }>('/runner/lauf', lauf),
+  /** Die heutige Tagesliste: beste zehn plus eigener Platz. */
+  runnerRangliste: () =>
+    request<{
+      eintraege: {
+        rang: number;
+        displayName: string;
+        punkte: number;
+        meter: number;
+        muenzen: number;
+        du: boolean;
+      }[];
+      rang: number;
+      punkte: number;
+    }>('/runner/rangliste'),
 
   // --- Shop und Kleiderschrank ---------------------------------------------
 

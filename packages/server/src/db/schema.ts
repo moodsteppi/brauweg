@@ -435,6 +435,36 @@ export const runnerDay = pgTable(
 );
 
 /**
+ * Pro-Subway: der beste Lauf des Tages je Konto — die Tagesrangliste.
+ *
+ * Eine Zeile je Konto und Tag, ueberschrieben nur von einem besseren Lauf.
+ * Meter und Muenzen gehoeren zum BESTEN Lauf und sind keine getrennten
+ * Maxima — sonst stuende da ein Lauf, den es nie gab.
+ *
+ * Taeglich statt ewig, aus demselben Grund wie das Muenz-Tageslimit: Eine
+ * ewige Liste gehoert dem, der einmal einen guten Tag hatte; eine
+ * Tagesliste gehoert dem, der heute laeuft.
+ */
+export const runnerBest = pgTable(
+  'runner_best',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    /** Kalendertag in Europe/Berlin. */
+    day: date().notNull(),
+    punkte: integer().notNull().default(0),
+    meter: integer().notNull().default(0),
+    muenzen: integer().notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.day] }),
+    /** Fuer die Tagesliste: ein Tag, sortiert nach Punkten. */
+    index('runner_best_tag_idx').on(t.day, t.punkte),
+  ],
+);
+
+/**
  * Besitz an Kosmetik (Pinguin-Ausstattung).
  *
  * Nur die Kennung, kein Preis und kein Aussehen: Was ein Stueck kostet, steht
