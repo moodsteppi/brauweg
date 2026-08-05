@@ -35,6 +35,14 @@ function isDevFlag(name: string): boolean {
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
 const devWerkstatt = isDevFlag('werkstatt');
+/**
+ * Die Truhenoeffnung so, wie der Spieler sie sieht — ohne Anmeldung.
+ * Oeffnen: `/?dev=truhe`
+ *
+ * Aus demselben Grund wie `?dev=werkstatt`: An die fertige Bewegung kaeme man
+ * sonst nur ueber Anmeldung, Datenbank und eine tatsaechlich offene Truhe.
+ */
+const devTruhe = isDevFlag('truhe');
 
 if (
   (devAvatar || devChest || devWerkstatt) &&
@@ -59,6 +67,9 @@ const ChestAligner = lazy(() =>
 const Avatarwerkstatt = lazy(() =>
   import('./screens/Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
 );
+const TruhenOeffnung = lazy(() =>
+  import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
+);
 
 const werkzeug = devAvatar ? (
   <AvatarAligner />
@@ -66,6 +77,8 @@ const werkzeug = devAvatar ? (
   <ChestAligner />
 ) : devWerkstatt ? (
   <Avatarwerkstatt onClose={() => window.history.back()} />
+) : devTruhe ? (
+  <TruhenOeffnung grad="gold" muenzen={120} onFertig={() => window.location.reload()} />
 ) : null;
 
 createRoot(root).render(

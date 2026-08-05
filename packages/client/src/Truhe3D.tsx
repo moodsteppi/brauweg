@@ -143,10 +143,25 @@ export default function Truhe3D({
   drehbar?: boolean;
   onBereit?: () => void;
 }): React.JSX.Element {
-  // Derselbe Anstoß wie bei der Figur — und aus demselben Grund im Rumpf und
-  // nicht als Bauteil innerhalb der Leinwand. Siehe `Avatar3D.tsx`.
+  /**
+   * Der Anstoß — hier IM Bauteil und nicht beim Aufrufer.
+   *
+   * Ohne ihn bleibt die Leinwand beim ersten Aufbau leer; sichtbar wird sie
+   * erst, wenn die Seite ein Größenereignis sieht. Warum, ist offen (siehe
+   * `Avatarwerkstatt.tsx`) — sicher ist nur, was hilft.
+   *
+   * Die Truhe steht an drei Stellen: im Shop, in der Aufgabenliste und in der
+   * Öffnung. Der Anstoß gehört deshalb hierher und nicht dreimal nach außen —
+   * sonst vergisst ihn die vierte Stelle.
+   *
+   * Im Rumpf und ausdrücklich nicht als Bauteil innerhalb von `<Canvas>`:
+   * Dort liefe er im Reconciler von R3F und damit zu früh.
+   */
   useEffect(() => {
-    const id = requestAnimationFrame(() => onBereit?.());
+    const id = requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+      onBereit?.();
+    });
     return () => cancelAnimationFrame(id);
   }, [onBereit]);
 

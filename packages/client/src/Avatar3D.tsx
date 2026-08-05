@@ -182,7 +182,12 @@ export default function Avatar3D({
    * `Avatarwerkstatt.tsx`).
    */
   useEffect(() => {
-    const id = requestAnimationFrame(() => onBereit?.());
+    const id = requestAnimationFrame(() => {
+      // Der Anstoss selbst, damit auch Aufrufer ohne `onBereit` eine
+      // sichtbare Figur bekommen — im Kopfband und im Profil zum Beispiel.
+      window.dispatchEvent(new Event('resize'));
+      onBereit?.();
+    });
     return () => cancelAnimationFrame(id);
   }, [onBereit]);
 

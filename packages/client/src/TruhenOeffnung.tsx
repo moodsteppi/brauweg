@@ -14,7 +14,25 @@
  * nichts.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
+
+/**
+ * Die 3D-Truhe wird nachgeladen — `three` und `drei` wiegen rund 900 kB.
+ * Bis sie da ist, bleibt die Buehne leer; die Oeffnung dauert ohnehin drei
+ * Sekunden, und ein Platzhalter, der eine halbe Sekunde spaeter durch etwas
+ * anderes ersetzt wird, waere unruhiger als nichts.
+ */
+const Truhe3D = lazy(() => import('./Truhe3D'));
+
+/**
+ * Wann der Deckel aufgeht.
+ *
+ * Muss zum Wackeln in `styles.css` passen: `truhe-wackeln` laeuft 0,85 s,
+ * danach klappt der Deckel auf. Vorher stand diese Zahl als Verzoegerung in
+ * der CSS-Animation `truhe-deckel-auf` — jetzt bewegt sich der Deckel im
+ * Raum, und die Zahl steht hier.
+ */
+const DECKEL_AUF_MS = 900;
 
 export type Grad = 'holz' | 'bronze' | 'silber' | 'gold' | 'diamant';
 
@@ -94,10 +112,15 @@ export function TruhenOeffnung({
 }): React.JSX.Element {
   const design = designFuer(grad);
   const [fertig, setFertig] = useState(false);
+  const [offen, setOffen] = useState(false);
 
   useEffect(() => {
+    const auf = window.setTimeout(() => setOffen(true), DECKEL_AUF_MS);
     const handle = window.setTimeout(() => setFertig(true), TRUHE_DAUER_MS);
-    return () => window.clearTimeout(handle);
+    return () => {
+      window.clearTimeout(auf);
+      window.clearTimeout(handle);
+    };
   }, []);
 
   return (
@@ -111,12 +134,22 @@ export function TruhenOeffnung({
       <div className="truhe-buehne">
         <div className="truhe-strahlen" aria-hidden="true" />
         <div className="truhe-glut" aria-hidden="true" />
-        {/* Zwei Wrapper: der äußere dreht die Truhe im Raum, der innere wackelt.
-            So stören sich Drehung (rotateY) und Wackeln (rotateZ) nicht. */}
+        {/*
+          Zwei Wrapper: der äußere dreht die Truhe im Raum, der innere wackelt.
+          So stören sich Drehung (rotateY) und Wackeln (rotateZ) nicht.
+
+          **Beides bleibt in CSS, der Deckel nicht.** Wackeln und Drehen
+          bewegen die ganze Truhe, und dafür ist eine Transformation auf dem
+          Element genau richtig — sie kostet nichts und läuft auf der
+          Grafikkarte. Der Deckel dagegen klappt auf: Das ist eine Lage im
+          Raum und keine Verzerrung eines Bildes. Er wandert deshalb im Modell
+          zwischen den beiden Posen aus `chest_normalize.json`.
+        */}
         <div className="truhe-dreh">
           <div className="truhe-schuettel">
-            <img className="truhe-koerper" src={design.koerper} alt="" draggable={false} />
-            <img className="truhe-deckel" src={design.deckel} alt="" draggable={false} />
+            <Suspense fallback={null}>
+              <Truhe3D grad={grad} offen={offen} />
+            </Suspense>
           </div>
         </div>
         <div className="truhe-belohnung" aria-live="polite">
