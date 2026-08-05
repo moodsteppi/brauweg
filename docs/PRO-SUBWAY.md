@@ -130,6 +130,17 @@ Der große Feel-/Logik-Pass. Was aus Abschnitt 2 und 3 damit **erledigt** ist:
   Nahtlos-Prüfschritt und Einbauanleitung (`map` + `RepeatWrapping` statt
   `color`).
 
+### Nachtrag: Randdeko je Biom
+
+Leben neben der Bahn, alles einfache Geometrie ohne Ladegewicht: Heimat
+Laubbäume und Büsche, Wiesen helle Bäume/Blumen, Strand **Palmen und
+Kakteen**, Feuerberg Glutfelsen und Dürrbäume, Schneefeld verschneite
+Tannen, Sternenhafen leuchtende Laternen und Goldfelsen. Je Seite vier
+Plätze pro Chunk, je Recycle gewürfelt (Stelle, Sorte, Größe, Drehung),
+ohne Schlagschatten — zweihundert Schattenwerfer außerhalb der Spielfläche
+kosten Bildrate und erzählen nichts. Die Strecke erzählt damit dieselbe
+Reise wie der Trophäenpfad, nur im Vorbeirennen.
+
 **Noch offen aus Abschnitt 2/3:** echte Jump-/Slide-Clips im Mixer (weiter
 Tween), Kästen am Gerät nachstimmen (`hitbox=1`), Banner PNG→WebP,
 Ghost-Läufe/Koop-Challenge, gemalte Böden einbauen sobald geliefert.

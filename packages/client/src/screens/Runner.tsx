@@ -686,23 +686,269 @@ function PropModell({ url, hoehe }: { url: string; hoehe: number }): React.JSX.E
   return <primitive object={modell} />;
 }
 
-/** Deko-Busch am Rand (einfache Geometrie, kein Ladegewicht). */
-function RandBusch(): React.JSX.Element {
+/**
+ * Die Randdeko — Leben neben der Bahn, je Biom eigenes.
+ *
+ * Alles einfache Geometrie: kein Ladegewicht, keine Bestellung, und auf
+ * Lauftempo zaehlt die Silhouette, nicht das Detail. Ohne Schlagschatten —
+ * zweihundert Schattenwerfer ausserhalb der Spielflaeche kosten Bildrate
+ * und erzaehlen nichts.
+ */
+function DekoBusch({ farbe = '#2f6b2f' }: { farbe?: string }): React.JSX.Element {
   return (
     <group>
-      <mesh position={[0, 0.28, 0]} castShadow>
-        <sphereGeometry args={[0.55, 12, 10]} />
-        <meshStandardMaterial color="#2f6b2f" />
+      <mesh position={[0, 0.28, 0]}>
+        <sphereGeometry args={[0.55, 10, 8]} />
+        <meshStandardMaterial color={farbe} />
       </mesh>
-      <mesh position={[-0.35, 0.22, 0.15]} castShadow>
-        <sphereGeometry args={[0.38, 10, 8]} />
-        <meshStandardMaterial color="#3a7a35" />
+      <mesh position={[-0.35, 0.22, 0.15]}>
+        <sphereGeometry args={[0.38, 8, 7]} />
+        <meshStandardMaterial color={farbe} />
       </mesh>
-      <mesh position={[0.32, 0.2, -0.1]} castShadow>
-        <sphereGeometry args={[0.34, 10, 8]} />
+      <mesh position={[0.32, 0.2, -0.1]}>
+        <sphereGeometry args={[0.34, 8, 7]} />
         <meshStandardMaterial color="#275c28" />
       </mesh>
     </group>
+  );
+}
+
+/** Laubbaum: Stamm und zwei Kronenkugeln. */
+function DekoBaum({ krone, stamm = '#5c4030' }: { krone: string; stamm?: string }): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0, 0.7, 0]}>
+        <cylinderGeometry args={[0.1, 0.15, 1.4, 7]} />
+        <meshStandardMaterial color={stamm} />
+      </mesh>
+      <mesh position={[0, 1.65, 0]}>
+        <sphereGeometry args={[0.72, 10, 8]} />
+        <meshStandardMaterial color={krone} />
+      </mesh>
+      <mesh position={[0.42, 1.25, 0.18]}>
+        <sphereGeometry args={[0.45, 8, 7]} />
+        <meshStandardMaterial color={krone} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Tanne: drei Kegel uebereinander, oben heller (Schnee im Schneefeld). */
+function DekoTanne({ unten, oben }: { unten: string; oben: string }): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[0.08, 0.11, 0.5, 6]} />
+        <meshStandardMaterial color="#4a3626" />
+      </mesh>
+      <mesh position={[0, 0.85, 0]}>
+        <coneGeometry args={[0.62, 1.0, 8]} />
+        <meshStandardMaterial color={unten} />
+      </mesh>
+      <mesh position={[0, 1.5, 0]}>
+        <coneGeometry args={[0.46, 0.85, 8]} />
+        <meshStandardMaterial color={unten} />
+      </mesh>
+      <mesh position={[0, 2.05, 0]}>
+        <coneGeometry args={[0.3, 0.7, 8]} />
+        <meshStandardMaterial color={oben} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Palme: geneigter Stamm, Wedel als flache Kegel rundum. */
+function DekoPalme(): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0.12, 0.9, 0]} rotation={[0, 0, -0.16]}>
+        <cylinderGeometry args={[0.09, 0.14, 1.8, 7]} />
+        <meshStandardMaterial color="#8a6f4a" />
+      </mesh>
+      {[0, 1, 2, 3, 4].map((i) => {
+        const winkel = (i / 5) * Math.PI * 2;
+        return (
+          <mesh
+            key={i}
+            position={[0.24 + Math.cos(winkel) * 0.34, 1.82, Math.sin(winkel) * 0.34]}
+            rotation={[Math.sin(winkel) * 0.9, 0, -0.5 - Math.cos(winkel) * 0.9]}
+          >
+            <coneGeometry args={[0.13, 0.95, 4]} />
+            <meshStandardMaterial color="#3f8a4d" />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Kaktus: Saeule mit zwei Armen. */
+function DekoKaktus(): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0, 0.75, 0]}>
+        <cylinderGeometry args={[0.18, 0.22, 1.5, 8]} />
+        <meshStandardMaterial color="#4a8a4d" />
+      </mesh>
+      <mesh position={[-0.34, 0.95, 0]} rotation={[0, 0, 0.9]}>
+        <cylinderGeometry args={[0.11, 0.12, 0.55, 7]} />
+        <meshStandardMaterial color="#4a8a4d" />
+      </mesh>
+      <mesh position={[-0.48, 1.25, 0]}>
+        <cylinderGeometry args={[0.1, 0.11, 0.5, 7]} />
+        <meshStandardMaterial color="#549457" />
+      </mesh>
+      <mesh position={[0.32, 0.7, 0]} rotation={[0, 0, -0.9]}>
+        <cylinderGeometry args={[0.1, 0.11, 0.5, 7]} />
+        <meshStandardMaterial color="#549457" />
+      </mesh>
+    </group>
+  );
+}
+
+/** Fels: gedrungenes Zwoelfflach, wahlweise mit Glut- oder Goldsprenkeln. */
+function DekoFels({
+  farbe,
+  sprenkel,
+}: {
+  farbe: string;
+  sprenkel?: string;
+}): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0, 0.32, 0]} scale={[1, 0.68, 1]} rotation={[0.2, 0.7, 0]}>
+        <dodecahedronGeometry args={[0.55, 0]} />
+        <meshStandardMaterial color={farbe} />
+      </mesh>
+      {sprenkel && (
+        <mesh position={[0.22, 0.5, 0.2]}>
+          <sphereGeometry args={[0.09, 6, 5]} />
+          <meshStandardMaterial color={sprenkel} emissive={sprenkel} emissiveIntensity={0.9} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/** Toter Baum: kahler Stamm mit zwei Aststummeln (Feuerberg). */
+function DekoDuerrbaum(): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0, 0.8, 0]} rotation={[0, 0, 0.06]}>
+        <cylinderGeometry args={[0.07, 0.13, 1.6, 6]} />
+        <meshStandardMaterial color="#3a2620" />
+      </mesh>
+      <mesh position={[-0.25, 1.25, 0]} rotation={[0, 0, 1.0]}>
+        <cylinderGeometry args={[0.04, 0.06, 0.6, 5]} />
+        <meshStandardMaterial color="#3a2620" />
+      </mesh>
+      <mesh position={[0.22, 0.95, 0.08]} rotation={[0.2, 0, -1.1]}>
+        <cylinderGeometry args={[0.035, 0.05, 0.5, 5]} />
+        <meshStandardMaterial color="#31201a" />
+      </mesh>
+    </group>
+  );
+}
+
+/** Blumenbusch: Gruen mit drei Farbtupfern (Wiesen). */
+function DekoBlumen(): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0, 0.22, 0]}>
+        <sphereGeometry args={[0.4, 8, 7]} />
+        <meshStandardMaterial color="#4a8f5c" />
+      </mesh>
+      {[
+        ['#e86a8a', -0.18, 0.44, 0.1],
+        ['#f0d05a', 0.16, 0.5, -0.08],
+        ['#ffffff', 0.02, 0.38, 0.24],
+      ].map(([farbe, x, y, z], i) => (
+        <mesh key={i} position={[x as number, y as number, z as number]}>
+          <sphereGeometry args={[0.09, 6, 5]} />
+          <meshStandardMaterial color={farbe as string} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Laterne: dunkler Pfosten, goldenes Licht (Sternenhafen). */
+function DekoLaterne(): React.JSX.Element {
+  return (
+    <group>
+      <mesh position={[0, 0.8, 0]}>
+        <cylinderGeometry args={[0.05, 0.07, 1.6, 6]} />
+        <meshStandardMaterial color="#26263a" />
+      </mesh>
+      <mesh position={[0, 1.68, 0]}>
+        <octahedronGeometry args={[0.2, 0]} />
+        <meshStandardMaterial color="#ffd873" emissive="#e2b64f" emissiveIntensity={1.1} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Welche Deko in welcher Zone waechst.
+ *
+ * Drei Varianten je Biom, gewuerfelt je Platz: Heimat traegt Laubbaeume,
+ * die Wiesen Blumen, der Strand Palmen und Kakteen, der Feuerberg
+ * Glutfelsen und Duerrbaeume, das Schneefeld Tannen, der Sternenhafen
+ * Laternen. Die Strecke erzaehlt damit dieselbe Reise wie der
+ * Trophaeenpfad — nur im Vorbeirennen.
+ */
+function RandDeko({ biom, variante }: { biom: number; variante: number }): React.JSX.Element {
+  if (biom === 0) {
+    return variante === 0 ? (
+      <DekoBaum krone="#3d6b35" />
+    ) : variante === 1 ? (
+      <DekoBusch />
+    ) : (
+      <DekoBaum krone="#4a7c3f" />
+    );
+  }
+  if (biom === 1) {
+    return variante === 0 ? (
+      <DekoBaum krone="#58a06a" stamm="#8a7a5a" />
+    ) : variante === 1 ? (
+      <DekoBlumen />
+    ) : (
+      <DekoBusch farbe="#4a8f5c" />
+    );
+  }
+  if (biom === 2) {
+    return variante === 0 ? (
+      <DekoPalme />
+    ) : variante === 1 ? (
+      <DekoKaktus />
+    ) : (
+      <DekoFels farbe="#b09468" />
+    );
+  }
+  if (biom === 3) {
+    return variante === 0 ? (
+      <DekoFels farbe="#4a2c20" sprenkel="#e86a3a" />
+    ) : variante === 1 ? (
+      <DekoDuerrbaum />
+    ) : (
+      <DekoFels farbe="#5c3a2c" />
+    );
+  }
+  if (biom === 4) {
+    return variante === 0 ? (
+      <DekoTanne unten="#3f6b52" oben="#e8f0f4" />
+    ) : variante === 1 ? (
+      <DekoFels farbe="#c8dcec" />
+    ) : (
+      <DekoTanne unten="#35594a" oben="#d4e0ea" />
+    );
+  }
+  return variante === 0 ? (
+    <DekoLaterne />
+  ) : variante === 1 ? (
+    <DekoFels farbe="#30304c" sprenkel="#e2b64f" />
+  ) : (
+    <DekoLaterne />
   );
 }
 
@@ -1186,6 +1432,36 @@ function WeltChunk({
       liest man an ihnen ab, nicht an der leeren Flaeche. */
   const kanten = Array.from({ length: Math.floor(CHUNK_LAENGE / 2) }, (_, i) => i);
 
+  /**
+   * Randdeko: je Seite vier Plaetze mit Wuerfel-Zutat — Stelle, Abstand,
+   * Sorte, Groesse, Drehung. Je Recycle neu, damit kein Muster entsteht;
+   * der Abstand haelt alles klar hinter Bordstein und Hecke.
+   */
+  const deko = useMemo(() => {
+    void layoutMarke;
+    const plaetze: {
+      seite: -1 | 1;
+      z: number;
+      abstand: number;
+      variante: number;
+      gr: number;
+      dreh: number;
+    }[] = [];
+    for (const seite of [-1, 1] as const) {
+      for (let i = 0; i < 4; i++) {
+        plaetze.push({
+          seite,
+          z: -CHUNK_LAENGE / 2 + 2.5 + i * 6.5 + (Math.random() - 0.5) * 3.5,
+          abstand: Math.random() * 1.9,
+          variante: Math.floor(Math.random() * 3),
+          gr: 0.8 + Math.random() * 0.55,
+          dreh: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+    return plaetze;
+  }, [layoutMarke]);
+
   return (
     <group ref={gruppeRef}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -1250,13 +1526,16 @@ function WeltChunk({
         <meshStandardMaterial color={look.rand} />
       </mesh>
 
-      {[-1, 1].map((seite) =>
-        [-8, -2, 5].map((z) => (
-          <group key={`${seite}-${z}`} position={[seite * (SPUR_BREITE * 1.5 + 1.1), 0, z]}>
-            <RandBusch />
-          </group>
-        )),
-      )}
+      {deko.map((d, i) => (
+        <group
+          key={`deko-${layoutMarke}-${i}`}
+          position={[d.seite * (SPUR_BREITE * 1.5 + 1.35 + d.abstand), 0, d.z]}
+          rotation={[0, d.dreh, 0]}
+          scale={[d.gr, d.gr, d.gr]}
+        >
+          <RandDeko biom={biom} variante={d.variante} />
+        </group>
+      ))}
 
       {plaetze.map((platz, p) =>
         platz.hindernisse.map((hindernis, h) => (
