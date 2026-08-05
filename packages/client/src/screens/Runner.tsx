@@ -220,7 +220,15 @@ const SPRUNG_H: Record<SprungProp, number> = {
 const BUSCH_H: Record<BuschProp, number> = { bush: 0.6, planter: 0.58 };
 /** Tore: Gesamthöhe des Modells; der Durchlass steht in TOR_LUECKE. */
 const RUTSCH_H: Record<RutschProp, number> = { banner: 2.15, scaffold: 2.2, garland: 2.1 };
-const FAHRZEUG_H: Record<FahrzeugArt, number> = { scooter: 0.72, silver: 0.68, bmw: 0.64 };
+/**
+ * Fahrzeuge: das Dreifache der ersten Fassung.
+ *
+ * Bei 0,64 bis 0,72 waren es Spielzeugautos, ueber die der Sprung
+ * (Scheitel 1,55 m) locker trug — und genau das sollen Fahrzeuge nicht
+ * sein. Jetzt ueberragen alle drei den Scheitel: Ein Auto weicht man aus,
+ * man springt nicht drueber.
+ */
+const FAHRZEUG_H: Record<FahrzeugArt, number> = { scooter: 2.16, silver: 2.04, bmw: 1.92 };
 
 /**
  * Die Kollisionskästen — **das** Stück, das den Lauf gerecht macht.
@@ -265,11 +273,31 @@ const TOR_LUECKE: Record<RutschProp, number> = {
   garland: 0.72,
 };
 
-/** Fahrzeuge: Kasten, Sprungkante und wie schnell sie einem entgegenkommen. */
+/**
+ * Fahrzeuge: Kasten, Sprungkante und wie schnell sie einem entgegenkommen.
+ *
+ * Die Kaesten sind aus den MODELLEN gerechnet, nicht geschaetzt (gemessen
+ * mit getBounds, je Einheit Hoehe): Scooter B/H 0,64 · L/H 1,24, Silber
+ * 0,89/1,94, BMW 1,44/2,99. Mal Zielhoehe, halbiert:
+ *
+ *   Scooter 0,69/1,34 · Silber 0,91/1,98 · BMW 1,38/2,87
+ *
+ * Zwei Deckel darauf, beide mit Absicht:
+ * - quer hoechstens 1,25 (halbe Spurbreite): Der BMW ist breiter als seine
+ *   Spur und ragt sichtbar hinueber — toedlich ist aber nur, was in DEINER
+ *   Spur steht. Der Ueberhang ist Schauwert, keine Falle.
+ * - laengs hoechstens 2,2: Der BMW ist laenger als der halbe Platzabstand.
+ *   Ohne Deckel koennte der freie Pfad in eine Spur fuehren, in der das
+ *   Heck rechnerisch noch steht — man stuerbe an einem Kofferraum, den man
+ *   laengst passiert glaubt.
+ *
+ * `frei` liegt ueber dem Sprungscheitel (1,55): Fahrzeuge sind bewusst
+ * nicht ueberspringbar.
+ */
 const FAHRZEUG: Record<FahrzeugArt, { x: number; z: number; frei: number; tempo: number }> = {
-  scooter: { x: 0.42, z: 0.6, frei: 0.82, tempo: 7 },
-  silver: { x: 0.88, z: 1.1, frei: 0.94, tempo: 5.5 },
-  bmw: { x: 0.92, z: 1.15, frei: 0.96, tempo: 5.5 },
+  scooter: { x: 0.69, z: 1.34, frei: 1.7, tempo: 7 },
+  silver: { x: 0.91, z: 1.98, frei: 1.7, tempo: 5.5 },
+  bmw: { x: 1.25, z: 2.2, frei: 1.7, tempo: 5.5 },
 };
 
 function propGlb(name: string): string {
