@@ -296,6 +296,19 @@ export function Table({
    * damit nichts; abgeschickt wird erst im Dialog.
    */
   const [soloVorschau, setSoloVorschau] = useState<string | null>(null);
+  /*
+   * Ist die Vorbehaltsphase vorbei, ist die Solo-Vorschau vorbei — sonst bliebe
+   * die Hand nach der Ordnung eines Solos liegen, das nie zustande kam.
+   *
+   * MUSS vor den fruehen Returns stehen (Regel der Hooks): Ein useEffect nach
+   * `if (!view) return` liefe nur bei laufendem Spiel und aenderte die Hook-Zahl
+   * zwischen Wartebereich und Tisch — genau der React-#310-Freeze beim Start mit
+   * Bots. An der Phase aufgehaengt, nicht am Sichten-Objekt.
+   */
+  const vorbehaltPhase = view?.view.round?.phase;
+  useEffect(() => {
+    if (vorbehaltPhase !== 'vorbehalt') setSoloVorschau(null);
+  }, [vorbehaltPhase]);
   const [frozenKey, setFrozenKey] = useState<string | null>(null);
   // Nach dem Liegen gleitet der Stich zum Gewinner: kurze Sweep-Phase.
   const [sweeping, setSweeping] = useState(false);
@@ -654,18 +667,6 @@ export function Table({
   const vorschauOrder = soloVorschau ? round?.soloVorschau?.[soloVorschau] : undefined;
   const hand = round ? sortByOrder(round.hand, vorschauOrder ?? round.order) : [];
 
-  /*
-   * Ist die Abfrage vorbei, ist die Vorschau vorbei. Ohne dieses Aufraeumen
-   * bliebe eine Hand nach der Ordnung eines Solos liegen, das nie zustande kam
-   * — sortiert nach einem Trumpf, den es in dieser Runde nicht gibt.
-   *
-   * An der Phase aufgehaengt, nicht am Sichten-Objekt: Der Effekt soll beim
-   * Phasenwechsel laufen, nicht bei jedem Serverfunk.
-   */
-  const phase = round?.phase;
-  useEffect(() => {
-    if (phase !== 'vorbehalt') setSoloVorschau(null);
-  }, [phase]);
   const dealSlots: DealSlot[] = LAYOUTS[seatCount] ?? ['bottom', 'left', 'top', 'right'];
   const liveTrick = round?.currentTrick ?? [];
   // Frisch voller Stich: eine Sekunde liegen lassen — auch dann, wenn der
