@@ -137,8 +137,14 @@ nachgewiesen (zwei Partien, zwei Browser, ein Tisch):
 
 ### Was noch offen ist
 
-* **Wiedereinstieg gegen ein weiterlaufendes Gerät wird strittig.** Der
-  haarige Rest. Befund, Stand 5. August abends:
+* **Strittige Partien — Stand 6. August abends: Wurzeln gefunden.** Auf
+  echten Geräten (iPhone gegen Desktop) sind nacheinander vier Ursachen
+  gefallen: der Doppelstart der Bildschleife, die Gegnerstand-Überschätzung
+  aus Zügen, die Engine-abhängige Zufalls-Sortierung im Gefecht und
+  `Math.pow` in der Preisformel (alle unter *Fallstricke*). Seither offen:
+  mit zwei Geräten verschiedener Browser eine lange Kampfpartie spielen und
+  bestätigen, dass nichts mehr strittig wird. Der ältere Befund darunter
+  bleibt als Lesehilfe stehen:
   - Der Kern selbst ist nachweislich deterministisch: Das Werkzeug
     `packages/game-feldherr/werkzeug/gleichlauf-probe.mjs` fährt dieselbe
     Zugliste als Live-Lauf, als Wiedereinstieg und für beide Sitze
@@ -182,6 +188,29 @@ nachgewiesen (zwei Partien, zwei Browser, ein Tisch):
 
 ## 6. Fallstricke, die schon Zeit gekostet haben
 
+* **`sort(()=>zufall()-0.5)` frisst je Browser-Engine verschieden viel
+  Zufall.** Wie oft `sort()` seinen Vergleicher ruft, entscheidet die
+  Engine — Safari (JSC) sortiert anders als Chrome (V8). Die Angriffs- und
+  Marschreihenfolge mischten so, jeder Vergleich zog aus dem Saatkorn:
+  iPhone gegen Desktop trennte sich mit dem ersten Gefecht, gleiche Engine
+  gegen gleiche Engine blieb synchron — deshalb fanden es weder die
+  Desktop-Tests noch der Headless-Prüfstand. Jetzt mischt `mische()`
+  (Fisher-Yates, exakt n−1 Züge). Gleiches Kaliber: `Math.pow` ist
+  zwischen Engines nicht bitgenau festgelegt und stand in der
+  Preisformel — jetzt Bit-Schub. Nur `sqrt` und die Grundrechenarten sind
+  exakt spezifiziert; `sin/cos/pow/atan2/hypot` gehören NIE in den
+  Zustandspfad.
+* **Der Kern-Erzeuger entfernte von zwei `requestAnimationFrame(loop)`
+  nur die erste Fundstelle** — der Eigenstart blieb, und jede Sitzung
+  feuerte EIN Bildzeit-update mit gerätseigenem dt: winzige, je Gerät
+  verschiedene Verschiebung, „manchmal strittig". Headless unsichtbar,
+  weil der Zusatzschritt dort deterministisch gleich war. Der Erzeuger
+  erzwingt jetzt genau zwei Fundstellen und entfernt beide.
+* **Aus fremden Zügen den Gegnerstand abzuleiten überschätzt ihn** (geplant
+  wird bei `max(eigener Takt, Gegnerstand)+Vorlauf`): Beide Geräte „holten"
+  aufeinander auf, die Partie rannte der Echtzeit davon (Ressourcen
+  schneller als die Rate!), ruckelte im Dauersprint und wurde strittig.
+  Den Gegnerstand kennen allein die Herzschläge.
 * **Der Zeichenpfad verbrauchte Spielzufall.** Rauch, Funken, Wackeln zogen
   aus `zufall()` je Bild — Gleichlauf-Tod durch bloßes Zuschauen, und kein
   Headless-Nachweis kann es finden, weil er nicht zeichnet. Regel steht im

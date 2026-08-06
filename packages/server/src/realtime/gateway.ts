@@ -296,26 +296,33 @@ export class Gateway {
   }
 
   private async handle(connection: Connection, raw: string): Promise<void> {
-    // Nachrichtenrate je Verbindung. Ohne sie kann eine einzige Verbindung
-    // mit join-Nachrichten den Datenbankpool auslasten.
-    const jetzt = Date.now();
-    if (jetzt - connection.fensterStart > NACHRICHTEN_FENSTER_MS) {
-      connection.fensterStart = jetzt;
-      connection.imFenster = 0;
-    }
-    connection.imFenster += 1;
-    if (connection.imFenster > NACHRICHTEN_JE_FENSTER) {
-      send(connection.socket, errorMessage('tooManyMessages'));
-      connection.socket.close();
-      return;
-    }
-
     let roh: unknown;
     try {
       roh = JSON.parse(raw);
     } catch {
       send(connection.socket, errorMessage('malformedMessage'));
       return;
+    }
+
+    // Nachrichtenrate je Verbindung. Ohne sie kann eine einzige Verbindung
+    // mit join-Nachrichten den Datenbankpool auslasten. Takt-Herzschlaege
+    // zaehlen nicht mit: Sie kommen planmaessig zehnmal je Sekunde, beruehren
+    // weder Datenbank noch Partie und haben in this.takt ihre eigene Bremse —
+    // im Fenster erschoepften sie das Budget und die Verbindung fiele mitten
+    // in der Partie.
+    const zaehlt = (roh as { type?: unknown } | null)?.type !== 'takt';
+    if (zaehlt) {
+      const jetzt = Date.now();
+      if (jetzt - connection.fensterStart > NACHRICHTEN_FENSTER_MS) {
+        connection.fensterStart = jetzt;
+        connection.imFenster = 0;
+      }
+      connection.imFenster += 1;
+      if (connection.imFenster > NACHRICHTEN_JE_FENSTER) {
+        send(connection.socket, errorMessage('tooManyMessages'));
+        connection.socket.close();
+        return;
+      }
     }
 
     // Erst pruefen, dann anfassen: Frueher ging jedes Feld ungeprueft in die
@@ -522,10 +529,10 @@ export class Gateway {
   ): void {
     if (connection.tableId !== message.tableId) return;
 
-    // Bremse gegen Dauerfeuer: Der Kern pulst alle 200 ms; was schneller
-    // kommt, ist kein Herzschlag.
+    // Bremse gegen Dauerfeuer: Der Kern pulst alle 100 ms; was deutlich
+    // schneller kommt, ist kein Herzschlag.
     const jetzt = Date.now();
-    if (jetzt - connection.letzterTakt < 80) return;
+    if (jetzt - connection.letzterTakt < 60) return;
     connection.letzterTakt = jetzt;
 
     const party = this.runtime.get(message.tableId);

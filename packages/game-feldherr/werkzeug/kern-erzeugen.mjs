@@ -153,13 +153,22 @@ export function starteFeldherr(optionen = {}) {
    * Eintreffen schon gerechnet hat — deren Notnagel verschiebt ihn dann
    * still, und die Partie laeuft unbemerkt auseinander, bis die
    * Zustandsprobe sie fuer strittig erklaert. Genau so ist ein Haus-Zug
-   * nach einem Tabwechsel zerbrochen. Zwoelf Takte statt sechs kosten eine
-   * knappe Drittelsekunde Reaktionszeit und kaufen dafuer Gleichlauf.
+   * nach einem Tabwechsel zerbrochen.
+   *
+   * Die Rechnung hinter der Groesse: Die Gegenseite rechnet hoechstens bis
+   * zu meinem letzten gemeldeten Takt plus VORLAUF-1; mein Zug liegt bei
+   * meinem Takt plus VORLAUF plus PUFFER. Die Luft dazwischen ist also
+   * PUFFER+1 Takte — unabhaengig von der Leitungszeit, denn beides haengt
+   * an MEINEN Meldungen. Vier Takte Puffer geben fuenf Takte Luft und
+   * eine halbe Sekunde Reaktionszeit aufs eigene Legen.
    */
-  const MELDE_PUFFER = 6;
+  const MELDE_PUFFER = 4;
   /** Herzschlag-Abstand nach Wanduhr. Deutlich unter VORLAUF * TAKT_MS, sonst
-   *  stockt die Gegenseite zwischen zwei Pulsen. */
-  const PULS_MS = 200;
+   *  stockt die Gegenseite zwischen zwei Pulsen. 100 ms statt 200: Je
+   *  frischer der gemeldete Stand, desto enger folgt die Gegenseite — und
+   *  desto kuerzer darf der Meldepuffer sein. Das Gateway nimmt die Pulse
+   *  dafuer aus seinem Nachrichtenfenster aus. */
+  const PULS_MS = 100;
   /** Abstand der Zustandsproben in Takten. */
   const PROBE_TAKTE = 40;
 

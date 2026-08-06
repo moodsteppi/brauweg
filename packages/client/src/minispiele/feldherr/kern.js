@@ -54,13 +54,22 @@ export function starteFeldherr(optionen = {}) {
    * Eintreffen schon gerechnet hat — deren Notnagel verschiebt ihn dann
    * still, und die Partie laeuft unbemerkt auseinander, bis die
    * Zustandsprobe sie fuer strittig erklaert. Genau so ist ein Haus-Zug
-   * nach einem Tabwechsel zerbrochen. Zwoelf Takte statt sechs kosten eine
-   * knappe Drittelsekunde Reaktionszeit und kaufen dafuer Gleichlauf.
+   * nach einem Tabwechsel zerbrochen.
+   *
+   * Die Rechnung hinter der Groesse: Die Gegenseite rechnet hoechstens bis
+   * zu meinem letzten gemeldeten Takt plus VORLAUF-1; mein Zug liegt bei
+   * meinem Takt plus VORLAUF plus PUFFER. Die Luft dazwischen ist also
+   * PUFFER+1 Takte — unabhaengig von der Leitungszeit, denn beides haengt
+   * an MEINEN Meldungen. Vier Takte Puffer geben fuenf Takte Luft und
+   * eine halbe Sekunde Reaktionszeit aufs eigene Legen.
    */
-  const MELDE_PUFFER = 6;
+  const MELDE_PUFFER = 4;
   /** Herzschlag-Abstand nach Wanduhr. Deutlich unter VORLAUF * TAKT_MS, sonst
-   *  stockt die Gegenseite zwischen zwei Pulsen. */
-  const PULS_MS = 200;
+   *  stockt die Gegenseite zwischen zwei Pulsen. 100 ms statt 200: Je
+   *  frischer der gemeldete Stand, desto enger folgt die Gegenseite — und
+   *  desto kuerzer darf der Meldepuffer sein. Das Gateway nimmt die Pulse
+   *  dafuer aus seinem Nachrichtenfenster aus. */
+  const PULS_MS = 100;
   /** Abstand der Zustandsproben in Takten. */
   const PROBE_TAKTE = 40;
 
@@ -123,6 +132,21 @@ saat((Date.now() ^ 0x9E3779B9) >>> 0);
  * ohne Spielwirkung (Partikel, Wackeln, Flackern). */
 const deko = Math.random;
 
+/* Eine Liste mit dem Spielzufall mischen — NIEMALS über
+ * sort(()=>zufall()-0.5): Wie oft sort() seinen Vergleicher ruft, entscheidet
+ * die Browser-Engine, und Safari sortiert anders als Chrome. Jeder Aufruf
+ * zieht aus dem Saatkorn — iPhone gegen Desktop verbrauchte darum
+ * verschieden viel Zufall, die Läufe trennten sich mit dem ersten Gefecht,
+ * und die Partie wurde strittig. Fisher-Yates zieht exakt (n-1)-mal, auf
+ * jeder Engine gleich. */
+function mische(liste){
+  for(let i=liste.length-1;i>0;i--){
+    const j=Math.floor(zufall()*(i+1));
+    const t=liste[i]; liste[i]=liste[j]; liste[j]=t;
+  }
+  return liste;
+}
+
 let COLS = 6, ROWS = 12, MID = 6;        // obere Hälfte Spieler 1, untere Spieler 2
 const FELDER = {
   klein:  {nm:'Klein',  c:5, r:10},
@@ -161,7 +185,9 @@ function costOf(type, toLvl){             // was die Karte an dieser Stelle kost
   return (u && toLvl>1) ? u[Math.min(toLvl,u.length)-1] : DEFS[type].cost;
 }
 function investOf(e){                     // was insgesamt hineingeflossen ist
-  if(DEFS[e.type].unit) return DEFS[e.type].cost * Math.pow(2, e.lvl-1);
+  // Bit-Schub statt Math.pow: pow ist zwischen Engines nicht bitgenau
+  // festgelegt, und der Preis fließt in den Spielzustand.
+  if(DEFS[e.type].unit) return DEFS[e.type].cost * (1 << (e.lvl-1));
   let sum=0; for(let l=1;l<=e.lvl;l++) sum += costOf(e.type,l);
   return sum;
 }
@@ -845,7 +871,7 @@ function update(dt){
     if(canMove(e) && e.mtimer < mcdOf(e)) e.mtimer = Math.min(mcdOf(e), e.mtimer+dt);
   const order = G.ents.filter(canAtt);
   for(const e of order) if(e.timer < cdOf(e)) e.timer = Math.min(cdOf(e), e.timer+dt);
-  order.sort(()=>zufall()-0.5);           // keine Seite schlägt systematisch zuerst
+  mische(order);                          // keine Seite schlägt systematisch zuerst
   for(const e of order){
     if(!G.ents.includes(e) || !attReady(e)) continue;
     const tg = attackTargets(e);
@@ -862,7 +888,7 @@ function update(dt){
   fuseWerke();
   const marschierer = G.ents.filter(e=>canMove(e) && ready(e));
   if(marschierer.length){
-    marschierer.sort(()=>zufall()-0.5);
+    mische(marschierer);
     for(const e of marschierer){
       if(!G.ents.includes(e) || !ready(e)) continue;
       if(e.halt) continue;                                        // angehalten: nur noch verteidigen
