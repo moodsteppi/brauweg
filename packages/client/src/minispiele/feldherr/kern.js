@@ -1134,7 +1134,13 @@ let seed=1;
 const sr = ()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
 
 function resize(){
-  const st = document.getElementById('stage').getBoundingClientRect();
+  // Nach dem Ende einer eingebetteten Sitzung kann ein schon gestellter
+  // Timer (orientationchange wartet 220 ms) noch hierher feuern — dann gibt
+  // es die Bühne nicht mehr, und der Griff ins Leere stünde als Fehlerbox
+  // über dem Hub.
+  const buehnenrest = document.getElementById('stage');
+  if(!buehnenrest) return;
+  const st = buehnenrest.getBoundingClientRect();
   W = Math.max(120, st.width); H = Math.max(120, st.height);
   DPR = Math.min(2.5, window.devicePixelRatio||1);
   cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
@@ -1148,7 +1154,22 @@ function resize(){
   CX = OX + TW*COLS/2; CY = OY + TH*ROWS/2;
   bakeStatic();
 }
-window.addEventListener('resize', resize);
+/* Fenster-Horcher laufen über diese Hilfe, damit eine eingebettete Sitzung
+ * sie beim Beenden wieder abhängen kann. Ohne das feuerte nach dem Verlassen
+ * des Tisches ein resize auf eine Bühne, die es nicht mehr gibt — die
+ * Fehlerbox stand dann mitten im Hub. Standalone ändert sich nichts: Dort
+ * lebt die Seite genau so lange wie ihre Horcher. */
+const fensterHorcher = [];
+function horchen(art, fn){
+  window.addEventListener(art, fn);
+  fensterHorcher.push([art, fn]);
+}
+function horcherAbhaengen(){
+  for(const [art, fn] of fensterHorcher) window.removeEventListener(art, fn);
+  fensterHorcher.length = 0;
+}
+
+horchen('resize', resize);
 
 function bakeStatic(){
   const real = ctx; ctx = bgx;
@@ -3433,7 +3454,7 @@ function bindHUD(){
     });
   }
 }
-window.addEventListener('pointermove', ev=>{
+horchen('pointermove', ev=>{
   const d=drags.get(ev.pointerId); if(!d) return;
   if(Math.abs(ev.clientX-d.x)>4 || Math.abs(ev.clientY-d.y)>4) d.moved=true;
   if(!d.moved) return;
@@ -3455,7 +3476,7 @@ window.addEventListener('pointermove', ev=>{
     if(!d.prev.cells.length) d.prev=null;
   } else d.prev=null;
 });
-window.addEventListener('pointerup', ev=>{
+horchen('pointerup', ev=>{
   if(peek && peek.id===ev.pointerId){
     const e = peek.ent, kurz = peek.t < 0.2;
     peek = null;
@@ -3476,7 +3497,7 @@ window.addEventListener('pointerup', ev=>{
   // kurzes Antippen lässt die Karte gewählt: dann genügt ein Tippen aufs Feld
   syncHUD();
 });
-window.addEventListener('pointercancel', ev=>{
+horchen('pointercancel', ev=>{
   if(peek && peek.id===ev.pointerId) peek=null;
   const d=drags.get(ev.pointerId);
   if(d){ if(d.el) d.el.classList.remove('drag'); G.armed[d.own]=null; }
@@ -3701,7 +3722,7 @@ on('bMenu2',   ()=>{
 });
 
 /* ---------- Start ---------- */
-window.addEventListener('error', ev=>{
+horchen('error', ev=>{
   let box=document.getElementById('errbox');
   if(!box){
     box=document.createElement('div'); box.id='errbox';
@@ -3721,10 +3742,10 @@ function loop(t){
   if(G) aiTick(dt);
   if(!paused) animate(dt);
   render();
-  requestAnimationFrame(loop);
+  
 }
-requestAnimationFrame(loop);
-window.addEventListener('orientationchange', ()=>setTimeout(resize,220));
+
+horchen('orientationchange', ()=>setTimeout(resize,220));
 
 
   // ---- Anbindung ----------------------------------------------------------
@@ -4020,13 +4041,17 @@ window.addEventListener('orientationchange', ()=>setTimeout(resize,220));
     },
     /** Ein Zug vom Server — eigener wie fremder. */
     zugAnnehmen(zug, wer) {
-      // Ein fremder Zug verraet nebenbei, wo die Gegenseite mindestens steht:
-      // eingeplant hat sie ihn bei ihrem Takt plus Vorlauf und Puffer. Mehr
-      // abzuleiten waere gefaehrlich — eine Ueberschaetzung hier weitet die
-      // eigene Wissensgrenze ueber den echten Gegnerstand hinaus.
-      if (wer !== MEIN_SITZ && (wer === 0 || wer === 1)) {
-        gegnerStand[wer] = Math.max(gegnerStand[wer], zug.takt - VORLAUF - MELDE_PUFFER);
-      }
+      // Aus einem fremden Zug wird BEWUSST kein Gegnerstand abgeleitet.
+      // Geplant wird er bei max(eigener Takt, Gegnerstand) plus Vorlauf —
+      // zug.takt minus Vorlauf ist also KEINE Untergrenze der Gegnerposition,
+      // sondern oft eine Ueberschaetzung. Die hat auf Produktion einen
+      // Teufelskreis gedreht: Beide Geraete "holten" auf den jeweils
+      // ueberschaetzten Stand des anderen auf, die Partie rannte der
+      // Echtzeit davon (Ressourcen schneller als die angezeigte Rate), der
+      // Dauersprint mit zehn Takten je Bild ruckelte, und am Ende kamen
+      // Zuege zu spaet an und die Partie wurde strittig. Den Gegnerstand
+      // kennen allein die Herzschlaege — die melden den echten Taktzaehler.
+      //
       // Notnagel: Ein Zug fuer einen schon gerechneten Takt duerfte dank
       // Wissensgrenze und Meldepuffer nie eintreffen. Faellt er doch, wird er
       // verspaetet ausgefuehrt und die Zustandsprobe deckt die Abweichung in

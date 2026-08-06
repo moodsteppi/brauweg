@@ -86,6 +86,13 @@ export function FeldherrTisch({
   const [fehler, setFehler] = useState<string | null>(null);
   /** Der Gegner meldet sich nicht mehr — Takt steht. */
   const [stockt, setStockt] = useState(false);
+  /**
+   * Die EIGENE Strittig-Erkennung, sofort sichtbar. Der Server meldet einen
+   * Ausgang erst, wenn BEIDE Geraete gemeldet haben — bis dahin staende der
+   * Spieler sonst vor einem still eingefrorenen Brett mit "Warte auf den
+   * Gegner", waehrend sein Kern laengst angehalten hat.
+   */
+  const [strittigLokal, setStrittigLokal] = useState(false);
 
   const buehne = useRef<HTMLDivElement | null>(null);
   const sitzungRef = useRef<ReturnType<typeof starteFeldherr> | null>(null);
@@ -191,6 +198,13 @@ export function FeldherrTisch({
   const netzFeld = sicht?.regeln?.feld;
   useEffect(() => {
     if (!tableId || netzSaat === undefined || !buehne.current) return;
+    /**
+     * Eine beendete Partie startet keinen Kern mehr. Wer nach dem Ende
+     * zurueckkommt ("Weiterspielen" auf einen strittigen Tisch), bekam
+     * sonst das Ende-Banner UND darunter ein Replay, das die Partie
+     * sichtbar nachspielte — stehende Figuren liefen ploetzlich wieder los.
+     */
+    if (tisch.view?.view?.ausgang) return;
     const wurzel = buehne.current;
     wurzel.innerHTML = HUELLE;
 
@@ -226,14 +240,17 @@ export function FeldherrTisch({
        * ihre eigene Summe; die Meldungen widersprechen sich, und das Modul
        * wertet die Partie als strittig — niemand gewinnt.
        */
-      aufStrittig: (probe) =>
+      aufStrittig: (probe) => {
+        setStrittigLokal(true);
         sendRef.current({
           art: 'ergebnis',
           sieger: -1,
           takt: probe.takt,
           pruef: probe.pruef,
-        }),
+        });
+      },
     });
+    setStrittigLokal(false);
     sitzungRef.current = sitzung;
     return () => {
       sitzung.beenden();
@@ -390,17 +407,17 @@ export function FeldherrTisch({
           ‹ Zurück
         </button>
         <div ref={buehne} />
-        {stockt && !fremdesEnde && (
+        {stockt && !fremdesEnde && !strittigLokal && (
           <div className="feldherr-hinweis">
             Warte auf den Gegner … die Partie rechnet erst weiter, wenn sich
             sein Gerät wieder meldet.
           </div>
         )}
-        {fremdesEnde && ausgang && (
+        {(fremdesEnde || strittigLokal) && (
           <div className="feldherr-hinweis feldherr-ende">
-            {ausgang.strittig || ausgang.sieger === null
+            {strittigLokal || (ausgang && (ausgang.strittig || ausgang.sieger === null))
               ? 'Die Partie ist strittig: Die Geräte haben verschiedene Stände gemeldet. Niemand gewinnt.'
-              : ausgang.sieger === meinSitz
+              : ausgang && ausgang.sieger === meinSitz
                 ? 'Dein Gegner hat aufgegeben — du gewinnst.'
                 : 'Die Partie ist beendet.'}
             <button className="btn pri" onClick={onBack}>

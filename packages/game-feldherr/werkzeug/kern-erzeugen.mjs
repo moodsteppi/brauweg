@@ -63,12 +63,20 @@ if (!stil || !huelle || skripte.length === 0) throw new Error('Aufbau der Quelle
 
 let skript = skripte[skripte.length - 1];
 
-// Der Eigenstart muss weg: Die Schleife darf erst laufen, wenn die Huelle im
-// Baum haengt und der Modus feststeht.
-if (!skript.includes('requestAnimationFrame(loop);')) {
-  throw new Error('Eigenstart nicht gefunden — Quelle geaendert?');
+// Der Eigenstart muss weg — und die Selbst-Fortpflanzung in loop() ebenso:
+// Eingebettet treibt die Anbindung loop je Bild; eine sich selbst
+// fortpflanzende loop liefe doppelt und kennte kein Sitzungsende. Es sind
+// GENAU zwei Fundstellen (in loop und am Skriptende). Ein einzelnes
+// replace() traf frueher nur die erste — der Eigenstart blieb drin und
+// feuerte je Sitzung EIN zusaetzliches Bildzeit-update mit geraetseigenem
+// dt: eine winzige, je Geraet verschiedene Zustandsverschiebung, die
+// Partien "manchmal" strittig machte. Der Headless-Pruefstand fand sie
+// nicht, denn dort war der Zusatzschritt deterministisch gleich.
+const loopStarts = skript.split('requestAnimationFrame(loop);').length - 1;
+if (loopStarts !== 2) {
+  throw new Error(`Erwarte genau 2 loop-Anstoesse, gefunden: ${loopStarts} — Quelle geaendert?`);
 }
-skript = skript.replace('requestAnimationFrame(loop);\n', '');
+skript = skript.split('requestAnimationFrame(loop);').join('');
 
 // Die Anbindung haengt sich an die Befehlsfunktionen der Quelle. Fehlt eine,
 // lieber sofort abbrechen als einen halben Kern liefern, der im Netz stumm
@@ -477,13 +485,17 @@ const fuss = `
     },
     /** Ein Zug vom Server — eigener wie fremder. */
     zugAnnehmen(zug, wer) {
-      // Ein fremder Zug verraet nebenbei, wo die Gegenseite mindestens steht:
-      // eingeplant hat sie ihn bei ihrem Takt plus Vorlauf und Puffer. Mehr
-      // abzuleiten waere gefaehrlich — eine Ueberschaetzung hier weitet die
-      // eigene Wissensgrenze ueber den echten Gegnerstand hinaus.
-      if (wer !== MEIN_SITZ && (wer === 0 || wer === 1)) {
-        gegnerStand[wer] = Math.max(gegnerStand[wer], zug.takt - VORLAUF - MELDE_PUFFER);
-      }
+      // Aus einem fremden Zug wird BEWUSST kein Gegnerstand abgeleitet.
+      // Geplant wird er bei max(eigener Takt, Gegnerstand) plus Vorlauf —
+      // zug.takt minus Vorlauf ist also KEINE Untergrenze der Gegnerposition,
+      // sondern oft eine Ueberschaetzung. Die hat auf Produktion einen
+      // Teufelskreis gedreht: Beide Geraete "holten" auf den jeweils
+      // ueberschaetzten Stand des anderen auf, die Partie rannte der
+      // Echtzeit davon (Ressourcen schneller als die angezeigte Rate), der
+      // Dauersprint mit zehn Takten je Bild ruckelte, und am Ende kamen
+      // Zuege zu spaet an und die Partie wurde strittig. Den Gegnerstand
+      // kennen allein die Herzschlaege — die melden den echten Taktzaehler.
+      //
       // Notnagel: Ein Zug fuer einen schon gerechneten Takt duerfte dank
       // Wissensgrenze und Meldepuffer nie eintreffen. Faellt er doch, wird er
       // verspaetet ausgefuehrt und die Zustandsprobe deckt die Abweichung in
