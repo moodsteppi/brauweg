@@ -92,6 +92,7 @@ for (const anker of [
   'let ueberKopf',
   'let SPIEGEL',
   'function coinTick(',
+  'function horcherAbhaengen(',
 ]) {
   if (!skript.includes(anker)) throw new Error(`Befehlsfunktion fehlt in der Quelle: ${anker}`);
 }
@@ -482,6 +483,12 @@ const fuss = `
       laeuft = false;
       paused = true;
       if (werker) werker.terminate();
+      // Die Fenster-Horcher der Spieldatei muessen mit der Sitzung sterben:
+      // Ein zurueckgebliebenes resize griff nach dem Verlassen auf die
+      // abgeraeumte Buehne, und die Fehlerbox der Spieldatei stand im Hub.
+      horcherAbhaengen();
+      const box = document.getElementById('errbox');
+      if (box) box.remove();
     },
     /** Ein Zug vom Server — eigener wie fremder. */
     zugAnnehmen(zug, wer) {

@@ -4038,6 +4038,12 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
       laeuft = false;
       paused = true;
       if (werker) werker.terminate();
+      // Die Fenster-Horcher der Spieldatei muessen mit der Sitzung sterben:
+      // Ein zurueckgebliebenes resize griff nach dem Verlassen auf die
+      // abgeraeumte Buehne, und die Fehlerbox der Spieldatei stand im Hub.
+      horcherAbhaengen();
+      const box = document.getElementById('errbox');
+      if (box) box.remove();
     },
     /** Ein Zug vom Server — eigener wie fremder. */
     zugAnnehmen(zug, wer) {
