@@ -155,12 +155,13 @@ export function starteFeldherr(optionen = {}) {
    * Zustandsprobe sie fuer strittig erklaert. Genau so ist ein Haus-Zug
    * nach einem Tabwechsel zerbrochen.
    *
-   * Die Rechnung hinter der Groesse: Die Gegenseite rechnet hoechstens bis
-   * zu meinem letzten gemeldeten Takt plus VORLAUF-1; mein Zug liegt bei
-   * meinem Takt plus VORLAUF plus PUFFER. Die Luft dazwischen ist also
-   * PUFFER+1 Takte — unabhaengig von der Leitungszeit, denn beides haengt
-   * an MEINEN Meldungen. Vier Takte Puffer geben fuenf Takte Luft und
-   * eine halbe Sekunde Reaktionszeit aufs eigene Legen.
+   * Die Sicherheit haengt an zwei Zusagen, beide vom ABSENDER und damit
+   * unabhaengig von der Leitungszeit: Geplant wird bei mindestens
+   * Stand+VORLAUF+PUFFER, und solange ein eigener Zug schwebt, meldet der
+   * Herzschlag hoechstens den Stand seiner Planung (siehe melden). Die
+   * Gegenseite (Grenze: gemeldeter Stand+VORLAUF+PUFFER-1) wartet dadurch
+   * exakt VOR jedem schwebenden Zug. Vier Takte Puffer bedeuten eine halbe
+   * Sekunde Reaktionszeit aufs eigene Legen.
    */
   const MELDE_PUFFER = 4;
   /** Herzschlag-Abstand nach Wanduhr. Deutlich unter VORLAUF * TAKT_MS, sonst
@@ -198,6 +199,28 @@ export function starteFeldherr(optionen = {}) {
     return t;
   }
 
+  /**
+   * Eigene Zuege schweben, bis der Server sie zurueckgespielt hat. Solange
+   * einer schwebt, meldet der Herzschlag hoechstens den Stand seiner
+   * Planung. Ohne den Deckel ueberholt der Puls den Zug im Server — der
+   * Zug wartet dort auf die Datenbank, der Puls nicht —, die Gegenseite
+   * laeuft ueber den Zugtakt hinaus, und der Zug kommt zu spaet an: genau
+   * der Notnagel-Fall, der Partien strittig machte. Mit dem Deckel wartet
+   * die Gegenseite exakt VOR dem schwebenden Zug, bis die Sicht ihn
+   * bringt; da jede Leitung ihre Reihenfolge wahrt, kommt kein spaeter
+   * gemeldeter Stand vor dem Zug an.
+   *
+   * Der Verfall deckt den Fall, dass der Server einen Zug ablehnt: Ein
+   * Geisterzug froere den gemeldeten Stand sonst fuer immer ein.
+   */
+  const schwebend = [];
+  const SCHWEBE_VERFALL_MS = 4000;
+  function melden(zug) {
+    const takt = planTakt();
+    schwebend.push({ takt, seit: performance.now() });
+    NETZ.melde({ ...zug, takt });
+  }
+
 `;
 
 const fuss = `
@@ -218,7 +241,7 @@ const fuss = `
   const legeSofort = playCard;
   playCard = function (own, k, r, c) {
     if (NETZ && own === MEIN_SITZ) {
-      NETZ.melde({ art: 'karte', karte: k, r, c, takt: planTakt() });
+      melden({ art: 'karte', karte: k, r, c });
       return;
     }
     legeSofort(own, k, r, c);
@@ -227,7 +250,7 @@ const fuss = `
   const hausSofort = setzeHaus;
   setzeHaus = function (own, r, c) {
     if (NETZ && own === MEIN_SITZ) {
-      NETZ.melde({ art: 'haus', r, c, takt: planTakt() });
+      melden({ art: 'haus', r, c });
       return;
     }
     hausSofort(own, r, c);
@@ -236,7 +259,7 @@ const fuss = `
   const haltSofort = haltBefehl;
   haltBefehl = function (own, r, c) {
     if (NETZ && own === MEIN_SITZ) {
-      NETZ.melde({ art: 'halt', r, c, takt: planTakt() });
+      melden({ art: 'halt', r, c });
       return;
     }
     haltSofort(own, r, c);
@@ -245,7 +268,7 @@ const fuss = `
   const abrissSofort = abrissBefehl;
   abrissBefehl = function (own, r, c) {
     if (NETZ && own === MEIN_SITZ) {
-      NETZ.melde({ art: 'abriss', r, c, takt: planTakt() });
+      melden({ art: 'abriss', r, c });
       return;
     }
     abrissSofort(own, r, c);
@@ -254,7 +277,7 @@ const fuss = `
   const drehSofort = drehBefehl;
   drehBefehl = function (own) {
     if (NETZ && own === MEIN_SITZ) {
-      NETZ.melde({ art: 'drehen', takt: planTakt() });
+      melden({ art: 'drehen' });
       return;
     }
     drehSofort(own);
@@ -268,7 +291,7 @@ const fuss = `
   const wahlSofort = coinWahl;
   coinWahl = function (w) {
     if (NETZ && G && G.coin && G.coin.stufe === 'wahl' && G.coin.waehler === MEIN_SITZ) {
-      NETZ.melde({ art: 'muenze', wahl: w, takt: planTakt() });
+      melden({ art: 'muenze', wahl: w });
       coinAus();
       return;
     }
@@ -421,16 +444,30 @@ const fuss = `
     // Wissensgrenze wartet, muss sich melden — sonst warten am Ende beide.
     if (t - letzterPuls >= PULS_MS) {
       letzterPuls = t;
+      // Vom Server abgelehnte Zuege kommen nie zurueck — nach dem Verfall
+      // geben sie den Stand wieder frei, statt ihn fuer immer einzufrieren.
+      while (schwebend.length && t - schwebend[0].seit > SCHWEBE_VERFALL_MS) {
+        schwebend.shift();
+      }
+      let stand = taktZaehler;
+      if (schwebend.length) {
+        stand = Math.max(0, Math.min(stand, schwebend[0].takt - VORLAUF - MELDE_PUFFER));
+      }
       let grenze = Math.floor(taktZaehler / PROBE_TAKTE) * PROBE_TAKTE;
       while (grenze > 0 && !proben.has(grenze)) grenze -= PROBE_TAKTE;
-      NETZ.puls({ takt: taktZaehler, grenzTakt: grenze, pruef: proben.get(grenze) ?? '0' });
+      NETZ.puls({ takt: stand, grenzTakt: grenze, pruef: proben.get(grenze) ?? '0' });
     }
 
+    // Die Grenze nutzt Vorlauf UND Meldepuffer: Die Gegenseite plant ihre
+    // Zuege bei mindestens Stand+VORLAUF+MELDE_PUFFER, und der Puls-Deckel
+    // oben garantiert, dass kein gemeldeter Stand einen noch schwebenden
+    // Zug ueberholt. Eine engere Grenze verschenkte vier Takte und liess
+    // die Simulation im Netz spuerbar stottern.
     let wissen = Infinity;
     let ziel = Infinity;
     for (const s of [0, 1]) {
       if (s === MEIN_SITZ) continue;
-      wissen = Math.min(wissen, gegnerStand[s] + VORLAUF - 1);
+      wissen = Math.min(wissen, gegnerStand[s] + VORLAUF + MELDE_PUFFER - 1);
       ziel = Math.min(ziel, gegnerStand[s]);
     }
 
@@ -501,6 +538,12 @@ const fuss = `
     },
     /** Ein Zug vom Server — eigener wie fremder. */
     zugAnnehmen(zug, wer) {
+      // Der eigene Zug ist zurueck: Er schwebt nicht mehr, der Herzschlag
+      // darf wieder den vollen Stand melden.
+      if (wer === MEIN_SITZ) {
+        const i = schwebend.findIndex((s) => s.takt === zug.takt);
+        if (i >= 0) schwebend.splice(i, 1);
+      }
       // Aus einem fremden Zug wird BEWUSST kein Gegnerstand abgeleitet.
       // Geplant wird er bei max(eigener Takt, Gegnerstand) plus Vorlauf —
       // zug.takt minus Vorlauf ist also KEINE Untergrenze der Gegnerposition,
