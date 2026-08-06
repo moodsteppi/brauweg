@@ -116,9 +116,21 @@ export function starteFeldherr(optionen = {}) {
    */
   const schwebend = [];
   const SCHWEBE_VERFALL_MS = 4000;
+  /**
+   * Sofortige Lege-Vorschau: Zwischen Fingertipp und Ausfuehrung liegt eine
+   * halbe Sekunde Gleichschritt — ohne sichtbare Reaktion fuehlt sich das
+   * wie Eingabe-Lag an, obwohl alles planmaessig laeuft. Der pulsierende
+   * Rahmen auf dem Zielfeld erscheint im selben Bild wie der Tipp und
+   * verschwindet, sobald der Takt den Zug ausfuehrt. Reine Zeichnung,
+   * beruehrt den Zustand nicht.
+   */
+  let vorschau = [];
   function melden(zug) {
     const takt = planTakt();
     schwebend.push({ takt, seit: performance.now() });
+    if (zug.r !== undefined && zug.c !== undefined) {
+      vorschau.push({ takt, r: zug.r, c: zug.c });
+    }
     NETZ.melde({ ...zug, takt });
   }
 
@@ -4044,7 +4056,13 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     }
 
     let schritte = 0;
-    while (schritte < 10 && taktZaehler < wissen && laeuft) {
+    // Drei Takte Vorrat hinter der Wissensgrenze: Kommt ein Puls einen
+    // Wimpernschlag zu spaet (Funkjitter), zehrt die Schleife vom Polster,
+    // statt sichtbar stehenzubleiben. Ohne Polster stotterte die Partie im
+    // Rhythmus des Netzes — als Eingabe-Lag gefuehlt, obwohl es die
+    // Simulation war, die klemmte.
+    const POLSTER = 3;
+    while (schritte < 10 && taktZaehler < wissen - POLSTER && laeuft) {
       if (taktZaehler < ziel) {
         // Rueckstand: aufholen, ohne die Uhr zu fragen.
       } else if (restMs >= TAKT_MS) {
@@ -4066,7 +4084,11 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
         pruefeProbe(taktZaehler);
       }
     }
-    if (!document.hidden) render();
+    if (vorschau.length) vorschau = vorschau.filter((v) => v.takt > taktZaehler);
+    if (!document.hidden) {
+      render();
+      for (const v of vorschau) tileMark(v.r, v.c, sh(COL.p[MEIN_SITZ], 1), 0.3, true);
+    }
     naechstesBild();
   };
   naechstesBild();
