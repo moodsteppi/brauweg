@@ -165,6 +165,28 @@ der `G.fx`-Effekte: Schadenszahlen als Leinwand-Sprites, Ringe,
 Explosionen, Leichen-Ausblenden. Das Lesefenster reicht dafür
 `maxLeben`/`marschDauer`/`beweglich` durch — die Formeln bleiben im Kern.
 
+**Gelände blockweise, Feldmarken, Stellungen (7. August 2026):**
+
+* **Ein Vulkan ist EIN Berg**, kein Kegel je Feld: `BLOCKWEISE` (Vulkan,
+  Krater, See) bekommt ein Modell über den ganzen Block, aus `cells`
+  gemessen und auf die Blockmaße skaliert — so wird später auch das
+  bestellte `vulkan.glb` eingesetzt. Wald und Gebirge bleiben feldweise;
+  das sind Flächen aus vielen Einzelstücken, keine Einzelkörper. Der
+  Geländestempel enthält die Typen, damit der Ausbruch (Vulkan → Krater)
+  den Neubau auslöst.
+* **Feldoverlays** (Bauplätze, Panikzone, Erdwärme, Reichweitengewinn,
+  Abriss, Aufstellungsfelder): `drawMarks` ist in `markenListe()` +
+  Zeichnen zerlegt. Welche Felder hervorgehoben gehören, ist eine
+  **Regelfrage** und bleibt im Kern; 2D und 3D lesen dieselbe Liste
+  (`lesen().feldMarken`). Ohne diese Trennung müsste die 3D-Bühne die
+  Bauregeln nachbauen — der sichere Weg zu zwei Ansichten, die
+  verschiedene Felder anbieten.
+* **Stellungen sichtbar:** Steht eine Truppe (`halt` oder Turm), wird aus
+  dem Marsch-Füllbogen ein **dickes volles Band in kräftigem Orange**, der
+  Schlagring färbt wärmer mit, und darüber schwebt die Gruppenzahl
+  **„n/max"** (dieselbe Zahl wie das Stellungsschild in 2D, über
+  `lesen().stellungsStand`).
+
 **Offen in Stufe 2:** Marsch-Interpolation über `restAnteil` und `e.mt`
 statt Nachzieh-Glättung, Kanonenkugel-Flugbahn (der `ball`-Effekt trägt
 2D-Pixelkoordinaten — braucht Brettkoordinaten im fx-Eintrag), Münzflug

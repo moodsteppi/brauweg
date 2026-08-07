@@ -110,9 +110,17 @@ function ringSatz(innen: number, aussen: number): THREE.RingGeometry[] {
 }
 const GEO_MARSCH = ringSatz(0.3, 0.37);
 const GEO_SCHLAG = ringSatz(0.4, 0.46);
+/** Steht die Truppe, wird aus dem Fuellbogen ein dickes volles Band — das
+ *  ist der auffaelligste Unterschied, den eine Ringform hergibt. */
+const GEO_HALT = new THREE.RingGeometry(0.24, 0.44, 32);
+/** Bodenmarke: ein Feld gross, wird je Marke skaliert. */
+const GEO_MARKE = new THREE.PlaneGeometry(1, 1);
 /** Farben aus dem 2D-Renderer, damit beide Ansichten dasselbe erzaehlen. */
 const RING_FARBE = {
-  marsch: '#cfe9fa', marschVoll: '#f0faff', halt: '#ff966e',
+  marsch: '#cfe9fa', marschVoll: '#f0faff',
+  /* Stellung: kraeftiges Orange statt des hellen Marschtons — auf einen
+   * Blick unterscheidbar, auch am kleinen Handybild. */
+  halt: '#ff7a2e', haltSchlag: '#ffb15e',
   schlag: '#f0bc68', schlagVoll: '#ffce78',
 };
 
@@ -155,12 +163,16 @@ interface ObjektOverlays {
   marschStufe: number;
   schlag: THREE.Mesh | null;
   schlagStufe: number;
+  /** Schwebende Stellungszahl "n/max" — nur bei stehenden Truppen. */
+  stand: THREE.Sprite | null;
+  standText: string;
 }
 function baueOverlays(
   gruppe: THREE.Group,
   art: string,
   laeuft: boolean,
   schlaegt: boolean,
+  mitStand: boolean,
 ): ObjektOverlays {
   const hoehe = (HOEHE[art] ?? 0.9) + 0.3;
   const balkenBg = new THREE.Sprite(spriteStoff('#0a1116', 0.75));
@@ -183,12 +195,21 @@ function baueOverlays(
     gruppe.add(m);
     return m;
   };
+  let stand: THREE.Sprite | null = null;
+  if (mitStand) {
+    stand = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+    stand.scale.set(0.62, 0.24, 1);
+    stand.position.y = hoehe + 0.26;
+    stand.visible = false;
+    gruppe.add(stand);
+  }
   return {
     balkenBg, balkenFill,
     marsch: laeuft ? ring(GEO_MARSCH, RING_FARBE.marsch, 0.03) : null,
     marschStufe: -1,
     schlag: schlaegt ? ring(GEO_SCHLAG, RING_FARBE.schlag, 0.028) : null,
     schlagStufe: -1,
+    stand, standText: '',
   };
 }
 
@@ -312,7 +333,15 @@ function baueObjekt(art: string, owner: number, lvl: number, ritter: THREE.Group
   return gruppe;
 }
 
-function baueGelaende(art: string): THREE.Object3D {
+/**
+ * Gelaende, das als EIN Stueck je Block steht statt je Feld: Ein Vulkan ist
+ * EIN Berg, kein Kegel auf jedem seiner vier Felder — und spaeter ein
+ * einziges Modell (docs/ASSETS-FELDHERR-3D.md). Wald und Gebirge bleiben
+ * feldweise: Das sind Flaechen aus vielen Einzelstuecken, keine Einzelkoerper.
+ */
+const BLOCKWEISE = new Set(['vulkan', 'krater', 'see']);
+
+function baueGelaende(art: string, bw = 1, bh = 1): THREE.Object3D {
   const gruppe = new THREE.Group();
   if (art === 'gebirge') {
     const f1 = kloetzchen(FARBE.fels, 0.55, 0.9, 0.5, GEO.kegel);
@@ -329,17 +358,23 @@ function baueGelaende(art: string): THREE.Object3D {
       gruppe.add(stamm, krone);
     }
   } else if (art === 'see') {
-    const wasser = kloetzchen(FARBE.wasser, 0.98, 0.05, 0.98);
+    // Eine Wasserflaeche fuer den ganzen Block, nicht eine Pfuetze je Feld.
+    const wasser = kloetzchen(FARBE.wasser, bw * 0.99, 0.05, bh * 0.99);
     wasser.position.y = 0.025;
     gruppe.add(wasser);
-  } else if (art === 'vulkan' || art === 'krater') {
-    const kegel = kloetzchen(art === 'vulkan' ? FARBE.basalt : '#1d1815', 0.9, art === 'vulkan' ? 0.7 : 0.2, 0.9, GEO.kegel);
-    gruppe.add(kegel);
-    if (art === 'vulkan') {
-      const glut = kloetzchen(FARBE.lava, 0.3, 0.06, 0.3, GEO.walze);
-      glut.position.y = 0.71;
-      gruppe.add(glut);
-    }
+  } else if (art === 'vulkan') {
+    // Ein Kegel ueber dem gesamten Block; die Hoehe waechst mit der Grundflaeche.
+    const hoch = 0.45 * Math.min(bw, bh) + 0.25;
+    gruppe.add(kloetzchen(FARBE.basalt, bw * 0.94, hoch, bh * 0.94, GEO.kegel));
+    const glut = kloetzchen(FARBE.lava, Math.min(bw, bh) * 0.3, 0.06, Math.min(bw, bh) * 0.3, GEO.walze);
+    glut.position.y = hoch + 0.01;
+    gruppe.add(glut);
+  } else if (art === 'krater') {
+    const senke = kloetzchen('#1d1815', bw * 0.94, 0.16, bh * 0.94, GEO.kegel);
+    gruppe.add(senke);
+    const glut = kloetzchen('#7a2a18', Math.min(bw, bh) * 0.45, 0.04, Math.min(bw, bh) * 0.45, GEO.walze);
+    glut.position.y = 0.17;
+    gruppe.add(glut);
   }
   return gruppe;
 }
@@ -381,6 +416,8 @@ function Szene({
   const objekte = useRef(new THREE.Group());
   const gelaende = useRef(new THREE.Group());
   const effekte = useRef(new THREE.Group());
+  const marken = useRef(new THREE.Group());
+  const markenVorrat = useRef<THREE.Mesh[]>([]);
   const imBild = useRef(new Map<number, {
     obj: THREE.Group; art: string; lvl: number;
     ueber: ObjektOverlays; bx: number; bz: number;
@@ -476,14 +513,31 @@ function Szene({
     const zVon = (r: number, h: number) => (spiegel ? zeilen - (r + h / 2) : r + h / 2);
 
     // Gelaende steht je Partie fest — einmal bauen, bei neuer Partie neu.
-    if (gelaendeQuelle.current !== G.envs) {
-      gelaendeQuelle.current = G.envs;
+    // Der Vulkan wird beim Ausbruch zum Krater: Dann aendert sich der Typ,
+    // ohne dass envs getauscht wird — deshalb faellt auch das in die Probe.
+    const gelaendeStempel = G.envs.map((e) => e.type).join('|') + '#' + G.envs.length;
+    if (gelaendeQuelle.current !== gelaendeStempel) {
+      gelaendeQuelle.current = gelaendeStempel;
       gelaende.current.clear();
       for (const env of G.envs) {
-        for (const zelle of env.cells) {
-          const stueck = baueGelaende(env.type);
-          stueck.position.set(xVon(zelle.c, 1), 0, zVon(zelle.r, 1));
+        if (BLOCKWEISE.has(env.type)) {
+          // Blockmasse aus den Feldern lesen — cells ist die Wahrheit ueber
+          // die Belegung, w/h nur die umschliessende Box.
+          let r0 = Infinity, c0 = Infinity, r1 = -Infinity, c1 = -Infinity;
+          for (const p of env.cells) {
+            r0 = Math.min(r0, p.r); c0 = Math.min(c0, p.c);
+            r1 = Math.max(r1, p.r); c1 = Math.max(c1, p.c);
+          }
+          const bw = c1 - c0 + 1, bh = r1 - r0 + 1;
+          const stueck = baueGelaende(env.type, bw, bh);
+          stueck.position.set(xVon(c0, bw), 0, zVon(r0, bh));
           gelaende.current.add(stueck);
+        } else {
+          for (const zelle of env.cells) {
+            const stueck = baueGelaende(env.type);
+            stueck.position.set(xVon(zelle.c, 1), 0, zVon(zelle.r, 1));
+            gelaende.current.add(stueck);
+          }
         }
       }
     }
@@ -503,7 +557,8 @@ function Szene({
         const zielZ = zVon(e.r, e.h ?? 1);
         eintrag = {
           obj, art: e.type, lvl: e.lvl,
-          ueber: baueOverlays(obj, e.type, blick.beweglich(e), blick.kannSchlagen(e)),
+          ueber: baueOverlays(obj, e.type, blick.beweglich(e), blick.kannSchlagen(e),
+            !!blick.stellungsStand(e)),
           bx: zielX, bz: zielZ,
         };
         imBild.current.set(e.id, eintrag);
@@ -548,19 +603,22 @@ function Szene({
       // Aktionsringe wie in 2D: innen Marsch, aussen Schlag. Der Puls beim
       // vollen Ring ist reine Optik und zieht keinen Spielzufall.
       const puls = 0.6 + 0.35 * Math.sin(drei.clock.elapsedTime * 4);
+      const steht = !!e.halt || !!e.turm;
       const marsch = eintrag.ueber.marsch;
       if (marsch) {
-        const prog = e.halt ? 1 : Math.max(0, Math.min(1, (e.mtimer ?? 0) / (blick.marschDauer(e) || 1)));
-        const stufe = Math.round(prog * RING_STUFEN);
+        const prog = steht ? 1 : Math.max(0, Math.min(1, (e.mtimer ?? 0) / (blick.marschDauer(e) || 1)));
+        // Stellung: dickes volles Band in kraeftigem Orange statt Fuellbogen —
+        // -2 merkt sich diese Sonderform, damit die Geometrie nicht je Bild
+        // neu gesetzt wird.
+        const stufe = steht ? -2 : Math.round(prog * RING_STUFEN);
         if (stufe !== eintrag.ueber.marschStufe) {
           eintrag.ueber.marschStufe = stufe;
-          marsch.geometry = GEO_MARSCH[stufe];
+          marsch.geometry = steht ? GEO_HALT : GEO_MARSCH[stufe];
         }
-        marsch.visible = stufe > 0;
+        marsch.visible = steht || stufe > 0;
         const stoff2 = marsch.material as THREE.MeshBasicMaterial;
-        // Haltebefehl: voller Ring, stumpfes Orange — die Truppe steht bewusst.
-        stoff2.color.set(e.halt ? RING_FARBE.halt : prog >= 1 ? RING_FARBE.marschVoll : RING_FARBE.marsch);
-        stoff2.opacity = e.halt ? 0.7 : prog >= 1 ? 0.55 + 0.3 * puls : 0.85;
+        stoff2.color.set(steht ? RING_FARBE.halt : prog >= 1 ? RING_FARBE.marschVoll : RING_FARBE.marsch);
+        stoff2.opacity = steht ? 0.9 : prog >= 1 ? 0.55 + 0.3 * puls : 0.85;
       }
       const schlag = eintrag.ueber.schlag;
       if (schlag) {
@@ -572,8 +630,25 @@ function Szene({
         }
         schlag.visible = stufe > 0;
         const stoff2 = schlag.material as THREE.MeshBasicMaterial;
-        stoff2.color.set(prog >= 1 ? RING_FARBE.schlagVoll : RING_FARBE.schlag);
+        // Steht die Truppe, faerbt sich auch der Schlagring waermer mit —
+        // beide Ringe erzaehlen dann dasselbe: diese Truppe haelt Stellung.
+        stoff2.color.set(steht ? RING_FARBE.haltSchlag : prog >= 1 ? RING_FARBE.schlagVoll : RING_FARBE.schlag);
         stoff2.opacity = prog >= 1 ? 0.5 + 0.35 * puls : 0.66;
+      }
+      // Schwebende Stellungszahl "n/max" ueber stehenden Truppen — dieselbe
+      // Zahl wie das Stellungsschild in 2D (Gruppe, nicht Einzeltruppe).
+      const stand = eintrag.ueber.stand;
+      if (stand) {
+        const info = steht ? blick.stellungsStand(e) : null;
+        stand.visible = !!info;
+        if (info) {
+          const text = info.n + '/' + info.max;
+          if (text !== eintrag.ueber.standText) {
+            eintrag.ueber.standText = text;
+            stand.material.map = textTextur(text, info.gruppe === 'schuetze' ? '#8ff0cc' : '#ffc09a');
+            stand.material.needsUpdate = true;
+          }
+        }
       }
     }
     for (const [id, eintrag] of imBild.current) {
@@ -581,6 +656,35 @@ function Szene({
         objekte.current.remove(eintrag.obj);
         imBild.current.delete(id);
       }
+    }
+
+    // Bodenmarken: welche Felder hervorgehoben gehoeren, entscheidet der
+    // Kern (feldMarken) — dieselbe Liste zeichnet der 2D-Renderer. Die
+    // Meshes liegen in einem Vorrat und werden wiederverwendet; die Liste
+    // wechselt je Bild (Karte gewaehlt, Ziehen, Abriss).
+    const markenListe3D = blick.feldMarken ? blick.feldMarken() : [];
+    const markenPuls = 0.75 + 0.25 * Math.sin(drei.clock.elapsedTime * 3.4);
+    for (let i = 0; i < markenListe3D.length; i++) {
+      let feld = markenVorrat.current[i];
+      if (!feld) {
+        feld = new THREE.Mesh(GEO_MARKE, new THREE.MeshBasicMaterial({
+          transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        }));
+        feld.rotation.x = -Math.PI / 2;
+        markenVorrat.current[i] = feld;
+        marken.current.add(feld);
+      }
+      const m = markenListe3D[i];
+      feld.visible = true;
+      feld.position.set(m.c + 0.5, 0.012, (spiegel ? zeilen - 1 - m.r : m.r) + 0.5);
+      feld.scale.setScalar(m.ecken ? 0.92 : 0.86);
+      const stoff2 = feld.material as THREE.MeshBasicMaterial;
+      stoff2.color.set(m.col);
+      // Flaechen wirken flach in 3D schwaecher als auf der 2D-Leinwand.
+      stoff2.opacity = Math.min(0.9, m.a * (m.ecken ? 2.4 : 1.9) * markenPuls);
+    }
+    for (let i = markenListe3D.length; i < markenVorrat.current.length; i++) {
+      markenVorrat.current[i].visible = false;
     }
 
     // Kampf-Effekte aus G.fx spiegeln (Schadenszahlen, Ringe, Explosionen,
@@ -637,6 +741,7 @@ function Szene({
           <meshBasicMaterial color="#dfd6c2" transparent opacity={0.55} />
         </mesh>
         <primitive object={gelaende.current} />
+        <primitive object={marken.current} />
         <primitive object={objekte.current} />
         <primitive object={effekte.current} />
         {/* Zielfeld-Marker unter dem Zeiger */}

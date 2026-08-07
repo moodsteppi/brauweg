@@ -1342,23 +1342,31 @@ function drawSperrBalken(){                        // Restzeit über dem Trümme
     ctx.strokeRect(q[0]-w/2-1.2, q[1]-h/2-1.2, w+2.4, h+2.4);
   }
 }
-function drawMarks(){
-  drawSperren();
+/* Die Bodenmarkierungen als LISTE — welche Felder gerade hervorgehoben
+ * gehören, ist eine Regelfrage (Bauplätze, Panikzone, Erdwärme, Reichweite)
+ * und keine Zeichenfrage. Beide Ansichten lesen dieselbe Liste: der
+ * 2D-Renderer unten in drawMarks, die 3D-Bühne über das Lesefenster
+ * (sitzung.lesen().feldMarken). Ohne diese Trennung müsste die 3D-Bühne die
+ * Regeln nachbauen — der sichere Weg, dass beide Ansichten verschiedene
+ * Felder anbieten. */
+function markenListe(){
+  const liste = [];
+  const mark = (r,c,col,a,ecken)=>{ liste.push({r, c, col, a, ecken:!!ecken}); };
   if(phase==='place'){
     const who = drankommt();
     const col = sh(COL.p[who],1);
     for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++){
       if(!freeCell(r,c) || envAt(r,c)==='vulkan') continue;
-      tileMark(r,c,col,.12,false);
-      if(nebenVulkan(r,c)) tileMark(r,c,'#ffbe5e',.30,true);   // Erdwärme am Kraterrand
+      mark(r,c,col,.12,false);
+      if(nebenVulkan(r,c)) mark(r,c,'#ffbe5e',.30,true);   // Erdwärme am Kraterrand
     }
-    return;
+    return liste;
   }
   for(const own of [0,1]){
     if(G.raze[own]){                                   // Abriss: eigene Objekte anbieten
       for(const e of G.ents){
         if(e.owner!==own || e.type==='haus') continue;
-        for(const p of e.cells) tileMark(p.r,p.c,'#ff8a5e',.22,true);
+        for(const p of e.cells) mark(p.r,p.c,'#ff8a5e',.22,true);
       }
       continue;
     }
@@ -1366,22 +1374,22 @@ function drawMarks(){
     if(a){
       const col=sh(COL.p[own],1);
       for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-        if(placeSpot(own,a,r,c)) tileMark(r,c,col,.14,false);
+        if(placeSpot(own,a,r,c)) mark(r,c,col,.14,false);
       if(a==='werk'){                              // Panikzone hervorheben
         const r0 = own===0 ? MID-PANIK : MID, r1 = own===0 ? MID-1 : MID+PANIK-1;
-        for(let r=r0;r<=r1;r++) for(let c=0;c<COLS;c++) tileMark(r,c,'#5fe0a8',.24,true);
+        for(let r=r0;r<=r1;r++) for(let c=0;c<COLS;c++) mark(r,c,'#5fe0a8',.24,true);
         for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-          if(nebenVulkan(r,c) && !entAt(r,c) && walkable(r,c)) tileMark(r,c,'#ffbe5e',.30,true);
+          if(nebenVulkan(r,c) && !entAt(r,c) && walkable(r,c)) mark(r,c,'#ffbe5e',.30,true);
       }
       if(DEFS[a].unit)                             // Wald deckt jede Truppe
         for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-          if(envAt(r,c)==='wald' && !entAt(r,c)) tileMark(r,c,'#5fe0a8',.26,true);
+          if(envAt(r,c)==='wald' && !entAt(r,c)) mark(r,c,'#5fe0a8',.26,true);
       if(a==='kanone')                             // Wald deckt die Kanone
         for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-          if(envAt(r,c)==='wald' && !entAt(r,c)) tileMark(r,c,'#5fe0a8',.26,true);
+          if(envAt(r,c)==='wald' && !entAt(r,c)) mark(r,c,'#5fe0a8',.26,true);
       if(a==='bogen' || a==='kanone')              // Felsen als Stellung zeigen
         for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-          if(envAt(r,c)==='gebirge' && !entAt(r,c)) tileMark(r,c,'#7fe8c0',.34,true);
+          if(envAt(r,c)==='gebirge' && !entAt(r,c)) mark(r,c,'#7fe8c0',.34,true);
     }
   }
   for(const d of drags.values()){
@@ -1399,12 +1407,17 @@ function drawMarks(){
         if(!inBoard(r,c) || (r===hr && c===hc)) continue;
         const dist = Math.max(Math.abs(r-hr), Math.abs(c-hc));
         if(dist>neuR) continue;
-        if(dist>altR) tileMark(r,c,'#8ef0b8',.17, dist===neuR);   // kommt neu hinzu
-        else tileMark(r,c,'#bfe6ff',.10,false);                   // reicht schon jetzt
+        if(dist>altR) mark(r,c,'#8ef0b8',.17, dist===neuR);   // kommt neu hinzu
+        else mark(r,c,'#bfe6ff',.10,false);                   // reicht schon jetzt
       }
     }
-    for(const p of d.prev.cells) tileMark(p.r,p.c,col,.34,true);
+    for(const p of d.prev.cells) mark(p.r,p.c,col,.34,true);
   }
+  return liste;
+}
+function drawMarks(){
+  drawSperren();
+  for(const m of markenListe()) tileMark(m.r, m.c, m.col, m.a, m.ecken);
 }
 
 /* ---------- Vordergrund: alles, was der Finger nicht verdecken darf ---------- */

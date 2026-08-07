@@ -403,6 +403,15 @@
       beweglich: canMove,
       schlagDauer: cdOf,
       kannSchlagen: canAtt,
+      /* Bodenmarkierungen als Liste — welche Felder hervorgehoben gehoeren,
+       * ist eine Regelfrage. 2D und 3D lesen dieselbe Quelle (markenListe). */
+      feldMarken: markenListe,
+      /* Stellungen der Gruppe, zu der dieses Objekt gehoert: n von max.
+       * Truppen ohne Gruppe (Bauten) liefern null. */
+      stellungsStand: (e) => {
+        const gruppe = gruppeVon(e);
+        return gruppe ? { n: stellungen(e.owner, gruppe), max: STELLUNGEN, gruppe } : null;
+      },
     }),
     /**
      * Zeiger-Abbildung der 3D-Ansicht setzen (oder mit null loesen): Sie

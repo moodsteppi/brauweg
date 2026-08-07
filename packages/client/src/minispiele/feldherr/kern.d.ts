@@ -124,6 +124,16 @@ export interface FeldherrLeseblick {
   schlagDauer(e: FeldherrObjekt): number;
   /** Kann zuschlagen (Einheit oder Geschuetz). */
   kannSchlagen(e: FeldherrObjekt): boolean;
+  /**
+   * Bodenmarkierungen des Augenblicks (Bauplaetze, Panikzone, Erdwaerme,
+   * Reichweite, Abriss, Aufstellung). Dieselbe Liste zeichnet der
+   * 2D-Renderer — die Regeln bleiben im Kern.
+   */
+  feldMarken(): {
+    r: number; c: number; col: string; a: number; ecken: boolean;
+  }[];
+  /** Stellungen der Gruppe (n von max) oder null bei Bauten. */
+  stellungsStand(e: FeldherrObjekt): { n: number; max: number; gruppe: string } | null;
 }
 
 export interface FeldherrSitzung {
