@@ -57,71 +57,13 @@ function setzeFeld(){
 }
 const MAXLVL = 4, MOVE_T = 0.34;
 
-/* ---------- Kartenkatalog ----------
- * Die Grundwerte ALLER Karten, die es im Spiel gibt. Welche davon eine
- * Partie benutzt und mit welchen Werten, entscheidet der gewählte
- * Charakter (siehe CHARAKTERE weiter unten) — das Haupthaus ist immer
- * dabei, es steht in keinem Kartenkontingent. */
-const GRUNDKARTEN = {
-  schwert:  {nm:'Schwert', cost:8, unit:true, hp:7,  dmg:4, cd:8,  mcd:3.0, rng:1,
-             up:{cd:-2, mcd:-0.4, hp:6, dmg:2}},
-  mauer:    {nm:'Mauer',   cost:15, blocks:true, cardLimit:3,
-             /* Stufe 3 = 3,2 × Stufe 1 (Entscheid vom 7. August 2026) —
-              * derselbe Wert speist Stapel UND Mauerverbund. */
-             lvls:[{hp:50},{hp:85},{hp:160}]},
-  bogen:    {nm:'Bogen',   cost:12, unit:true, hp:5,  dmg:3, cd:7, mcd:4.2, rng:3, ueberMauer:true,
-             up:{cd:-1.5, mcd:-0.4, hp:2, dmg:5}},
-  werk:     {nm:'Werk',    cost:25, size:2, cardLimit:4, fuseAt:2, laufzeit:15, knall:10,
-             lvls:[{hp:15,income:1,laufzeit:15},{hp:23,income:2,laufzeit:20},
-                   {hp:34,income:5,laufzeit:25}]},
-  ritter:    {nm:'Ritter',   cost:30, unit:true, hp:26, dmg:4, cd:17, mcd:5.6, rng:1,
-             up:{cd:-3.8, mcd:-0.7, hp:10, dmg:4}},
-  kanone:   {nm:'Kanone',  cost:35, att:true, rng:4, siege:2, cardLimit:2,
-             lvls:[{hp:25,dmg:10,cd:8},{hp:25,dmg:8,cd:8, rng:7, arc:true, splash:0.3}]},
-  haus:     {nm:'Haupthaus', cost:0, limit:1, lvls:[{hp:36,income:2}]}
-};
-const GRUNDPREISE = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
-
-/* ---------- Charaktere ----------
- * Jeder Charakter bringt seine EIGENE Kartenhand mit: welche Karten er
- * hat, wie sie heißen und mit welchen Werten sie spielen. `werte` und
- * `preise` überschreiben dabei nur einzelne Felder des Katalogs — so
- * steht jede Abweichung schwarz auf weiß an einer Stelle, statt sich im
- * Katalog zu verstecken.
- *
- * Der ENGINEER (erster Charakter, 7. August 2026) spielt die bisherigen
- * sechs Karten mit den Anpassungen des Auftraggebers:
- *
- *   Schwert     unverändert — das Arbeitspferd bleibt, wie es war.
- *   Bogen       eine Reichweite weniger, dafür zäher (5 → 7 Leben):
- *               der Engineer schießt kürzer und hält länger.
- *   Werkstatt   heißt jetzt so und ist mehr als Wirtschaft: auf Fels
- *               gebaut mauert sie von allein (mauerbau, siehe update).
- *   Ritter      billiger (30 → 20) und zäher (26 → 32), dafür schwächer
- *               im Schlag (4 → 3) — und er reißt Bauten ein
- *               (bauSchaden ×2). Aus dem teuren Panzer wird der
- *               Rammbock des Baumeisters.
- *   Kanone      teurer (35 → 50): Belagerung ist jetzt die Entscheidung
- *               einer ganzen Bauphase, nicht ein Nebenbei-Kauf.
+/* ---------- Kartenhand des Charakters ----------
+ * Katalog, Charaktere und die Werte-Rechnung stehen in teile/karten.js —
+ * im Modulrahmen, damit die Auswahl im Bildschirm dieselben Zahlen liest,
+ * ohne eine Partie zu starten. Hier steht nur, was daraus fuer DIESE
+ * Partie gilt.
  */
-const CHARAKTERE = {
-  engineer: {
-    nm: 'Engineer',
-    karten: ['schwert','bogen','mauer','werk','ritter','kanone'],
-    werte: {
-      bogen:  {rng:2, hp:7},
-      werk:   {nm:'Werkstatt',
-               /* Sekunden je Mauer, nach Stufe. Nur auf Fels (siehe
-                * werkstattMauer): Der Steinbruch liefert das Material. */
-               mauerbau:[30, 25, 25]},
-      ritter: {cost:20, hp:32, dmg:3, bauSchaden:2},
-      kanone: {cost:50}
-    },
-    preise: {kanone:[50,50]}
-  }
-};
-const CHARAKTER_STANDARD = 'engineer';
-let CHARAKTER = CHARAKTER_STANDARD;
+let CHARAKTER = 'engineer';
 let DEFS = {};
 let CARD_ORDER = [];
 let UPCOST = {};
@@ -133,18 +75,13 @@ let UPCOST = {};
  * Quelle wie das Saatkorn).
  */
 function setzeCharakter(id){
-  const c = CHARAKTERE[id] || CHARAKTERE[CHARAKTER_STANDARD];
-  CHARAKTER = CHARAKTERE[id] ? id : CHARAKTER_STANDARD;
-  CARD_ORDER = c.karten.slice();
-  DEFS = {};
-  for(const k of CARD_ORDER.concat(['haus'])){
-    DEFS[k] = Object.assign({}, GRUNDKARTEN[k], (c.werte && c.werte[k]) || {});
-  }
-  UPCOST = {};
-  for(const k in GRUNDPREISE) if(DEFS[k]) UPCOST[k] = GRUNDPREISE[k].slice();
-  if(c.preise) for(const k in c.preise) if(DEFS[k]) UPCOST[k] = c.preise[k].slice();
+  const hand = handVon(id);
+  CHARAKTER = hand.charakter === HELDEN[id] ? id : 'engineer';
+  CARD_ORDER = hand.reihe;
+  DEFS = hand.defs;
+  UPCOST = hand.preise;
 }
-setzeCharakter(CHARAKTER_STANDARD);
+setzeCharakter(CHARAKTER);
 const RES_CAP = 50;                       // mehr als 50 Ressourcen lassen sich nicht horten
 const REFUND  = 0.2;                      // Abriss bringt ein Fünftel zurück
 function costOf(type, toLvl){             // was die Karte an dieser Stelle kostet
@@ -172,7 +109,12 @@ function restOf(own,type){                       // verbrauchte Karten kommen ni
   if(!lim) return null;
   return Math.max(0, lim - (G.used[own][type]||0));
 }
-function atLimit(own,type){ const r=restOf(own,type); return r!==null && r<=0; }
+/* Geschenkte Karten liegen NEBEN dem Kontingent: Wer eine auf der Hand
+ * hat, darf legen, auch wenn seine drei Mauern längst verbaut sind. */
+function atLimit(own,type){
+  if(gratisRest(own,type) > 0) return false;
+  const r=restOf(own,type); return r!==null && r<=0;
+}
 function verbrauche(own,type){
   if(DEFS[type].cardLimit) G.used[own][type] = (G.used[own][type]||0) + 1;
 }
@@ -201,20 +143,10 @@ function rngOf(e){
 }
 const canAtt  = e => !!(DEFS[e.type].unit || DEFS[e.type].att);
 
-function statsOf(type, lvl){
-  const d = DEFS[type];
-  if(d.unit){
-    const n = lvl-1;
-    return {hp:d.hp + d.up.hp*n, dmg:d.dmg + d.up.dmg*n,
-            cd:Math.max(2, +(d.cd + d.up.cd*n).toFixed(1)),
-            mcd:Math.max(1.2, +(d.mcd + d.up.mcd*n).toFixed(2)),
-            rng:d.rng, income:0};
-  }
-  const L = d.lvls[Math.min(lvl, d.lvls.length)-1];
-  return {hp:L.hp, dmg:L.dmg||0, cd:L.cd||0, mcd:0, rng:L.rng||d.rng||0,
-          income:L.income||0, arc:!!L.arc, splash:L.splash||0,
-          laufzeit:L.laufzeit||d.laufzeit||0};
-}
+/* Die Formel steht in teile/karten.js (werteVon) — dieselbe, aus der die
+ * Werteseite der Auswahl ihre Zahlen zieht. Zwei Formeln wären zwei
+ * Wahrheiten, und die Anzeige löge beim ersten Balance-Schritt. */
+const statsOf = (type, lvl) => werteVon(DEFS[type], lvl);
 const sizeOf   = type => DEFS[type].size || 1;
 const maxLvlOf = type => DEFS[type].unit ? MAXLVL : DEFS[type].lvls.length;
 
@@ -229,6 +161,10 @@ function newState(){
     res: [0,0], placed:[false,false], erst:0, coin:null, t:0, nextId:1,
     sel: [null,null], armed:[null,null], orient:[false,false], raze:[false,false],
     hb:[1,1], sperren:[],
+    /* Geschenkte Karten auf der Hand (Werkstatt im Fels): je Spieler und
+     * Kartenart ein Vorrat. Sie kosten nichts und zaehlen nicht gegen das
+     * Kartenlimit. */
+    gratis: [{},{}],
     used: [{},{}], winner:null
   };
 }
@@ -622,21 +558,22 @@ function fuseWerke(still){
   }
 }
 
-/* ---------- Werkstatt im Fels: sie mauert selbst ----------
+/* ---------- Werkstatt im Fels: sie liefert Mauern ----------
  * Regel des Auftraggebers (7. August 2026, Engineer): Eine Werkstatt auf
- * Stein hat den Steinbruch gleich vor der Tür und setzt alle 30 Sekunden
- * eine Mauer daneben; ab Stufe 2 alle 25 (DEFS.werk.mauerbau).
+ * Stein hat den Steinbruch gleich vor der Tür und legt alle 30 Sekunden
+ * eine Mauer auf die HAND; ab Stufe 2 alle 25 (DEFS.werk.mauerbau).
  *
- * Die Mauer ist GESCHENKT: Sie kostet nichts, verbraucht keine Karte aus
- * dem Kontingent — und bringt beim Abriss nichts zurück (e.frei, siehe
- * refundOf), sonst wäre die Werkstatt eine Geldquelle. Im Verbund zählt
- * sie wie jede andere Mauer mit (mauerNetz).
+ * Auf die Hand, nicht aufs Brett: Wo die Mauer hingehört, weiß der
+ * Spieler besser als jede Regel — eine selbstgesetzte Mauer stünde
+ * zwangsläufig neben der Werkstatt, also weit hinten, wo sie niemanden
+ * aufhält.
+ *
+ * Die Karte ist GESCHENKT: Sie kostet nichts, zählt nicht gegen das
+ * Kartenlimit — und bringt beim Abriss nichts zurück (e.frei, siehe
+ * refundOf), sonst wäre die Werkstatt eine Geldquelle.
  *
  * Zustandspfad, also streng deterministisch: kein zufall(), keine
- * Bildzeit. Das Zielfeld ist das erste freie in fester Reihenfolge
- * (Felder der Werkstatt, dann DIRS) — beide Geräte wählen dasselbe.
- * Findet sich keines, sammelt die Werkstatt weiter an und mauert, sobald
- * wieder Platz ist.
+ * Bildzeit. Der Vorrat sammelt sich an, wenn gerade nicht gelegt wird.
  */
 function mauerwerkTakt(w, dt){
   const bau = DEFS[w.type] && DEFS[w.type].mauerbau;
@@ -646,30 +583,22 @@ function mauerwerkTakt(w, dt){
   // eine Werkstatt ist nach 15 s erschöpft, die erste Mauer käme erst
   // nach 30.
   if(!bau || !w.berg) return;
-  if(!DEFS.mauer) return;                              // Charakter ohne Mauer: nichts zu bauen
+  if(!DEFS.mauer) return;                              // Charakter ohne Mauer: nichts zu liefern
   const dauer = bau[Math.min(w.lvl, bau.length)-1];
   w.mauerT = (w.mauerT||0) + dt;
   if(w.mauerT < dauer) return;
   w.mauerT -= dauer;
-  werkstattMauer(w);
+  schenkeKarte(w.owner, 'mauer');
+  fxText(w.r, w.c, '+1 MAUER', '#9be8c0', 0);
+  fxRing(w.r, w.c, '#9be8c0');
+  HAKEN.syncHUD();
 }
-function werkstattMauer(w){
-  for(const p of w.cells) for(const [dr,dc] of DIRS){
-    const r=p.r+dr, c=p.c+dc;
-    if(!inBoard(r,c) || sideOf(r)!==w.owner) continue;  // nur auf der eigenen Hälfte
-    if(!freeCell(r,c)) continue;                       // Wasser, Fels, Belegtes: nein
-    if(envAt(r,c)==='vulkan') continue;                // auf glühenden Fels baut niemand
-    if(G.sperren.some(z=>z.r===r && z.c===c)) continue; // Trümmerfeld blockiert
-    const neu = addEnt('mauer', w.owner, r, c, 1);
-    neu.karten = 1;
-    neu.frei = true;                                   // nie bezahlt, kein Abrissgeld
-    mauerNetz(w.owner);
-    fxRing(r, c, HAKEN.spielerFarbe(w.owner));
-    HAKEN.bauStaub([{r, c}]);
-    HAKEN.syncHUD();
-    return;
-  }
+/* Geschenkte Karten auf der Hand: Vorrat je Spieler und Kartenart. Sie
+ * kosten nichts und gehen nicht ans Kontingent — beides prüft playCard. */
+function schenkeKarte(own, k){
+  G.gratis[own][k] = (G.gratis[own][k]||0) + 1;
 }
+const gratisRest = (own, k) => (G.gratis && G.gratis[own] && G.gratis[own][k]) || 0;
 
 /* ---------- Wegekarte: Entfernung zu einem Ziel, eigene Truppen sind durchlässig ---------- */
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -1134,10 +1063,15 @@ function affordable(own,k,r,c){                       // Platz frei UND bezahlba
 function playCard(own,k,r,c){
   const sp = placeSpot(own,k,r,c);
   if(!sp) return;
-  const preis = preisFuer(k,sp);
+  /* Geschenkte Karte auf der Hand (Werkstatt im Fels): Sie gilt nur für
+   * einen NEUBAU — aufwerten und stapeln bleibt Sache der Ressourcen,
+   * sonst verschöbe man den Vorrat still in eine Stufe-3-Mauer. */
+  const geschenkt = !sp.merge && gratisRest(own,k) > 0;
+  const preis = geschenkt ? 0 : preisFuer(k,sp);
   if(G.res[own]<preis) return;
   G.res[own]-=preis;
-  verbrauche(own,k);                           // die Karte ist damit endgültig aufgebraucht
+  if(geschenkt) G.gratis[own][k] -= 1;         // eine Karte weniger auf der Hand
+  else verbrauche(own,k);                      // die Karte ist damit endgültig aufgebraucht
   if(sp.merge && k==='mauer'){
     // Stapeln erhöht das GEWICHT, nicht die Stufe: Die Stufe rechnet
     // mauerNetz aus der ganzen Gruppe (und meldet den Aufstieg selbst).
@@ -1159,6 +1093,7 @@ function playCard(own,k,r,c){
     HAKEN.stufenFunken(rr,cc);
   } else {
     const neu = addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
+    if(geschenkt) neu.frei = true;              // nie bezahlt, kein Abrissgeld
     HAKEN.bauStaub(sp.cells);
     fxRing(sp.r0,sp.c0, HAKEN.spielerFarbe(own));
     if(DEFS[k].fuseAt) fuseWerke();

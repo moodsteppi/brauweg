@@ -17,31 +17,20 @@ export const STIL = "<<STIL>>";
 export const HUELLE = "<<HUELLE>>";
 
 /**
- * Die spielbaren Charaktere fuer die Auswahl im Bildschirm.
+ * Die spielbaren Charaktere samt Werteseite jeder Karte.
  *
- * Absichtlich reine Anzeigedaten: Die WERTE der Karten stehen im Kern
- * (CHARAKTERE in quelle/teile/simulation.js) und nirgends sonst — hier
- * liegt nur, was der Bildschirm zeigen muss, damit er den Kern nicht
- * starten muss, um eine Liste zu haben. Die Kennungen muessen zu denen
- * im Kern passen; eine unbekannte Kennung faellt dort auf den ersten
- * Charakter zurueck.
+ * Die Daten kommen aus teile/karten.js — DERSELBEN Quelle, aus der der
+ * Spielkern seine Werte zieht. Deshalb steht dieser Teil als einziger vor
+ * der Spielfunktion: Die Auswahl zeigt die Werteseite, bevor eine Partie
+ * laeuft, und muesste die Zahlen sonst ein zweites Mal pflegen — beim
+ * ersten Balance-Schritt loege die Anzeige.
  */
-export const CHARAKTERE = [
-  {
-    id: 'engineer',
-    nm: 'Engineer',
-    kurz: 'Baumeister. Seine Werkstatt im Fels mauert von allein, sein Ritter rennt Bauten ein.',
-    karten: ['Schwert', 'Bogen', 'Mauer', 'Werkstatt', 'Ritter', 'Kanone'],
-    /** Was diesen Charakter von der Grundhand unterscheidet — fuer die Auswahl. */
-    eigenheiten: [
-      'Werkstatt auf Fels setzt alle 30 s eine Mauer (ab Stufe 2 alle 25 s)',
-      'Bogen: eine Reichweite weniger, dafür zäher',
-      'Ritter: billiger und zäher, schwächerer Schlag, doppelter Schaden an Bauten',
-      'Kanone kostet 50',
-      'Schützentürme: einer je Stufe des Haupthauses',
-    ],
-  },
-];
+export const CHARAKTERE = Object.keys(HELDEN).map(charakterBlatt);
+
+/** Werteseite einer einzelnen Karte (fuer das Halten auf einer Karte). */
+export function kartenSeite(charakterId, karte) {
+  return kartenBlatt(charakterId, karte);
+}
 
 /**
  * Startet eine Partie in der bereits eingehaengten Huelle.

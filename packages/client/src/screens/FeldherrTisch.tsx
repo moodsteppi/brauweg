@@ -6,6 +6,7 @@ import {
   CHARAKTERE,
   HUELLE,
   STIL,
+  type FeldherrKarte,
   type FeldherrNetz,
   type FeldherrZug,
   starteFeldherr,
@@ -78,8 +79,37 @@ const SCREEN_STIL = `
 .feldherr-held[disabled]{opacity:.45;cursor:default}
 .feldherr-held .nm{font:800 15px/1.2 system-ui;margin-bottom:3px}
 .feldherr-held .kurz{font:500 12px/1.45 system-ui;opacity:.85}
-.feldherr-held ul{margin:7px 0 0;padding-left:16px;font:500 11px/1.5 system-ui;opacity:.78}
 .feldherr-held .bald{font:700 11px/1 system-ui;letter-spacing:.06em;opacity:.7}
+/* Kartenhand des gewaehlten Charakters */
+.feldherr-hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
+  gap:8px;margin:2px 0 6px}
+.feldherr-karte{position:relative;padding:9px 8px 8px;border:0;border-radius:11px;
+  color:#dfd6c2;background:rgba(16,25,32,.85);box-shadow:0 0 0 1px #26363f;
+  font:inherit;text-align:left;cursor:pointer;touch-action:none;
+  -webkit-user-select:none;user-select:none}
+.feldherr-karte:active{background:rgba(30,44,54,.95)}
+.feldherr-karte .kn{font:800 12px/1.2 system-ui}
+.feldherr-karte .kp{position:absolute;top:7px;right:8px;font:800 12px/1 system-ui;color:#ffd977}
+.feldherr-karte .kw{margin-top:4px;font:600 10px/1.35 system-ui;opacity:.72}
+.feldherr-handhinweis{font:500 11px/1.4 system-ui;opacity:.6;margin:0 0 14px}
+/* Werteseite einer Karte */
+.feldherr-blatt{position:fixed;inset:0;z-index:200;display:flex;align-items:center;
+  justify-content:center;padding:16px;background:rgba(6,10,14,.72)}
+.feldherr-blatt-inner{width:min(430px,100%);max-height:82vh;overflow:auto;
+  padding:18px;border-radius:16px;color:#dfd6c2;background:#101922;
+  box-shadow:0 0 0 1px #2a3b46,0 18px 50px rgba(0,0,0,.5)}
+.feldherr-blatt h3{margin:0;font:800 19px/1.2 system-ui}
+.feldherr-blatt .art{font:700 11px/1 system-ui;letter-spacing:.06em;opacity:.6;
+  margin:5px 0 9px;text-transform:uppercase}
+.feldherr-blatt .satz{margin:0 0 12px;font:500 13px/1.5 system-ui}
+.feldherr-blatt table{width:100%;border-collapse:collapse;font:600 11px/1.3 system-ui}
+.feldherr-blatt th,.feldherr-blatt td{padding:5px 4px;text-align:right;
+  border-bottom:1px solid #22323c}
+.feldherr-blatt th:first-child,.feldherr-blatt td:first-child{text-align:left}
+.feldherr-blatt thead th{opacity:.6;font-weight:700}
+.feldherr-blatt h4{margin:14px 0 5px;font:800 12px/1 system-ui;opacity:.75}
+.feldherr-blatt ul{margin:0;padding-left:16px;font:500 12px/1.55 system-ui}
+.feldherr-blatt .fuss{margin-top:12px;font:500 11px/1.4 system-ui;opacity:.6}
 `;
 
 /**
@@ -90,6 +120,150 @@ const SCREEN_STIL = `
  * anderen Kartenwerten und die Partie wird strittig.
  */
 const HELD_STANDARD = CHARAKTERE[0]?.id ?? 'engineer';
+
+/**
+ * Werteseite einer Karte — erscheint, wenn man die Karte gedrueckt haelt
+ * (oder antippt). Zahlen und Wechselwirkungen kommen aus dem Kern; hier
+ * wird nur entschieden, WIE sie dastehen.
+ */
+function Kartenblatt({
+  karte,
+  onClose,
+}: {
+  karte: FeldherrKarte;
+  onClose: () => void;
+}): React.JSX.Element {
+  /* Nur Spalten zeigen, die diese Karte ueberhaupt fuellt — eine Mauer
+   * hat keinen Schaden, ein Werk keine Reichweite. Leere Spalten sind
+   * Rauschen, durch das man beim Lesen erst hindurch muss. */
+  const hat = (feld: keyof (typeof karte.stufen)[number]): boolean =>
+    karte.stufen.some((s) => typeof s[feld] === 'number' && (s[feld] as number) > 0);
+  const spalten: { kopf: string; wert: (s: (typeof karte.stufen)[number]) => string }[] = [
+    { kopf: 'Preis', wert: (s) => (s.preis === null ? '—' : String(s.preis)) },
+    { kopf: 'Leben', wert: (s) => String(s.hp) },
+  ];
+  if (hat('dmg')) spalten.push({ kopf: 'Schaden', wert: (s) => String(s.dmg) });
+  if (hat('rng')) spalten.push({ kopf: 'Reichw.', wert: (s) => String(s.rng) });
+  if (hat('schlag')) spalten.push({ kopf: 'Schlag', wert: (s) => s.schlag + ' s' });
+  if (hat('marsch')) spalten.push({ kopf: 'Schritt', wert: (s) => s.marsch + ' s' });
+  if (hat('ertrag')) spalten.push({ kopf: 'Ertrag', wert: (s) => '+' + s.ertrag + '/s' });
+  if (hat('laufzeit')) spalten.push({ kopf: 'Laufzeit', wert: (s) => s.laufzeit + ' s' });
+
+  return (
+    <div
+      className="feldherr-blatt"
+      role="dialog"
+      aria-label={'Werte: ' + karte.nm}
+      onClick={onClose}
+    >
+      {/* Klick im Blatt schliesst nicht — nur der Rand ringsum. */}
+      <div className="feldherr-blatt-inner" onClick={(e) => e.stopPropagation()}>
+        <h3>{karte.nm}</h3>
+        <div className="art">
+          {karte.art} · {karte.feld}
+          {karte.kartenGrenze ? ' · ' + karte.kartenGrenze + ' je Partie' : ''}
+        </div>
+        <p className="satz">{karte.satz}</p>
+        <div style={{ overflowX: 'auto' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Stufe</th>
+                {spalten.map((s) => (
+                  <th key={s.kopf}>{s.kopf}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {karte.stufen.map((st) => (
+                <tr key={st.stufe}>
+                  <td>{st.stufe}</td>
+                  {spalten.map((s) => (
+                    <td key={s.kopf}>{s.wert(st)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {karte.beweglich && (
+          <p className="fuss">
+            Ab Stufe 2 entsteht sie nur durch Verschmelzen zweier gleicher
+            Karten — kaufen lässt sich nur Stufe 1.
+          </p>
+        )}
+        {karte.wirkt.length > 0 && (
+          <>
+            <h4>Zusammenspiel</h4>
+            <ul>
+              {karte.wirkt.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </>
+        )}
+        <button className="btn" onClick={onClose}>
+          Schließen
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Eine Karte in der Hand. Gedrueckt halten (oder antippen) oeffnet die
+ * Werteseite; das Halten meldet sich nach 350 ms, damit ein Wischen ueber
+ * die Liste sie nicht aufreisst.
+ */
+function Handkarte({
+  karte,
+  onOeffnen,
+}: {
+  karte: FeldherrKarte;
+  onOeffnen: () => void;
+}): React.JSX.Element {
+  const halten = useRef<number | null>(null);
+  const stop = (): void => {
+    if (halten.current !== null) {
+      window.clearTimeout(halten.current);
+      halten.current = null;
+    }
+  };
+  useEffect(() => stop, []);
+  const s1 = karte.stufen[0];
+  const zeile = [
+    s1.hp + ' HP',
+    s1.dmg ? s1.dmg + ' DMG' : null,
+    s1.rng > 1 ? 'RW ' + s1.rng : null,
+    s1.ertrag ? '+' + s1.ertrag + '/s' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <button
+      type="button"
+      className="feldherr-karte"
+      onPointerDown={() => {
+        stop();
+        halten.current = window.setTimeout(() => {
+          halten.current = null;
+          onOeffnen();
+        }, 350);
+      }}
+      onPointerUp={stop}
+      onPointerLeave={stop}
+      onPointerCancel={stop}
+      onClick={() => {
+        stop();
+        onOeffnen();
+      }}
+    >
+      <div className="kn">{karte.nm}</div>
+      {s1.preis !== null && <div className="kp">{s1.preis}</div>}
+      <div className="kw">{zeile}</div>
+    </button>
+  );
+}
 
 export function FeldherrTisch({
   onBack,
@@ -115,6 +289,9 @@ export function FeldherrTisch({
   const [dreiD, setDreiD] = useState(false);
   /** Gewaehlter Charakter — seine Kartenhand spielt die Partie. */
   const [held, setHeld] = useState(HELD_STANDARD);
+  /** Offene Werteseite einer Karte, oder null. */
+  const [blatt, setBlatt] = useState<FeldherrKarte | null>(null);
+  const gewaehlt = CHARAKTERE.find((c) => c.id === held) ?? CHARAKTERE[0];
 
   /** Offene Netz-Tische; null heisst noch nie geladen. */
   const [tische, setTische] = useState<TableRow[] | null>(null);
@@ -575,12 +752,6 @@ export function FeldherrTisch({
           >
             <div className="nm">{c.nm}</div>
             <div className="kurz">{c.kurz}</div>
-            <div className="kurz">{c.karten.join(' · ')}</div>
-            <ul>
-              {c.eigenheiten.map((e) => (
-                <li key={e}>{e}</li>
-              ))}
-            </ul>
           </button>
         ))}
         {/* Platzhalter, damit die Auswahl zeigt, dass hier noch mehr kommt. */}
@@ -589,6 +760,21 @@ export function FeldherrTisch({
           <div className="bald">BALD</div>
         </button>
       </div>
+
+      {/* Die Kartenhand des gewaehlten Charakters. Halten oeffnet die Werte. */}
+      {gewaehlt && (
+        <>
+          <div className="feldherr-hand">
+            {gewaehlt.karten.map((k) => (
+              <Handkarte key={k.id} karte={k} onOeffnen={() => setBlatt(k)} />
+            ))}
+          </div>
+          <p className="feldherr-handhinweis">
+            Karte gedrückt halten für alle Werte und das Zusammenspiel.
+          </p>
+        </>
+      )}
+      {blatt && <Kartenblatt karte={blatt} onClose={() => setBlatt(null)} />}
 
       <section className="feldherr-wahl">
         <label className="feldherr-zeile">

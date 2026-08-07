@@ -80,6 +80,14 @@ html,body{height:100%;overflow:hidden;background:#05080b;
 .card.leer::after{content:"";position:absolute;left:-12%;top:50%;width:124%;height:2px;
   background:#e8433c;transform:rotate(-24deg);box-shadow:0 0 8px #e8433c}
 .card.leer svg{opacity:.4}
+/* Geschenkte Karte auf der Hand (Werkstatt im Fels): gruener Rand und
+   gruene Zahl — sie kostet nichts und geht nicht ans Kontingent. Der
+   Zaehler zeigt "Rest+Geschenk", etwa 1+2. */
+.card.gratis{background:linear-gradient(180deg,#14261d,#0e1a15);
+  box-shadow:0 0 0 1px #2f7a55, 0 1px 0 #24503a inset}
+.card.gratis .cost{color:#9be8c0}
+.card .lim.extra{color:#0d1f16;background:#7fe0aa;
+  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.2)}
 .card.rdy{box-shadow:0 0 0 1px #3d5464, 0 1px 0 #3b5265 inset, 0 6px 14px -8px #000}
 .card.arm{transform:translateY(-4px)}
 .p1 .card.arm{box-shadow:0 0 0 1.5px var(--p1),0 0 20px -4px var(--p1),0 1px 0 #4a3a1e inset}

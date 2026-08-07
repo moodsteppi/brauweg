@@ -1,3 +1,255 @@
+"use strict";
+/* ============================================================
+   FELDHERR — Teil 0: Karten und Charaktere
+   ============================================================
+
+   Reine Daten und reine Rechnung, kein Zustand: Was eine Karte kostet,
+   was sie aushält, was sie anrichtet — und was sie mit dem Gelände und
+   den anderen Karten treibt.
+
+   Dieser Teil steht als EINZIGER vor der Spielfunktion, im Modulrahmen.
+   Der Grund ist die Auswahl im Bildschirm: Sie zeigt die Werteseite
+   jeder Karte, bevor überhaupt eine Partie läuft, und darf sie deshalb
+   nicht aus einem laufenden Kern abgreifen. Stünden die Zahlen zweimal
+   im Haus — einmal hier, einmal in der Anzeige —, liefen sie mit dem
+   ersten Balance-Schritt auseinander, und die Werteseite löge.
+
+   Regel beim Ändern: Hier gibt es keinen Zufall, keine Uhr, kein DOM.
+   Die Werte fließen in den Spielzustand; jede Rechnung muss auf beiden
+   Geräten Zeichen für Zeichen dasselbe ergeben (nur Grundrechenarten
+   und sqrt sind dafür bitgenau festgelegt).
+*/
+
+/* ---------- Kartenkatalog ----------
+ * Die Grundwerte ALLER Karten, die es im Spiel gibt. Welche davon eine
+ * Partie benutzt und mit welchen Werten, entscheidet der gewählte
+ * Charakter (CHARAKTERE weiter unten) — das Haupthaus ist immer dabei,
+ * es steht in keinem Kartenkontingent. */
+const GRUNDKARTEN = {
+  schwert:  {nm:'Schwert', cost:8, unit:true, hp:7,  dmg:4, cd:8,  mcd:3.0, rng:1,
+             up:{cd:-2, mcd:-0.4, hp:6, dmg:2}},
+  mauer:    {nm:'Mauer',   cost:15, blocks:true, cardLimit:3,
+             /* Stufe 3 = 3,2 × Stufe 1 (Entscheid vom 7. August 2026) —
+              * derselbe Wert speist Stapel UND Mauerverbund. */
+             lvls:[{hp:50},{hp:85},{hp:160}]},
+  bogen:    {nm:'Bogen',   cost:12, unit:true, hp:5,  dmg:3, cd:7, mcd:4.2, rng:3, ueberMauer:true,
+             up:{cd:-1.5, mcd:-0.4, hp:2, dmg:5}},
+  werk:     {nm:'Werk',    cost:25, size:2, cardLimit:4, fuseAt:2, laufzeit:15, knall:10,
+             lvls:[{hp:15,income:1,laufzeit:15},{hp:23,income:2,laufzeit:20},
+                   {hp:34,income:5,laufzeit:25}]},
+  ritter:   {nm:'Ritter',  cost:30, unit:true, hp:26, dmg:4, cd:17, mcd:5.6, rng:1,
+             up:{cd:-3.8, mcd:-0.7, hp:10, dmg:4}},
+  kanone:   {nm:'Kanone',  cost:35, att:true, rng:4, siege:2, cardLimit:2,
+             lvls:[{hp:25,dmg:10,cd:8},{hp:25,dmg:8,cd:8, rng:7, arc:true, splash:0.3}]},
+  haus:     {nm:'Haupthaus', cost:0, limit:1, lvls:[{hp:36,income:2}]}
+};
+const GRUNDPREISE = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
+
+/* ---------- Werteseite: was auf der Karte steht ----------
+ * Ein Satz, der die Karte erklärt, und die Wechselwirkungen, die man
+ * sonst erst im Spiel entdeckt. Die ZAHLEN stehen hier bewusst nicht —
+ * die rechnet kartenBlatt() aus den Werten oben, damit ein
+ * Balance-Schritt nicht zwei Stellen braucht. Hier steht nur, was Zahlen
+ * nicht sagen können. */
+const KARTENTEXT = {
+  schwert: {
+    satz: 'Billig, schnell, in Masse gefährlich — das Arbeitspferd jedes Angriffs.',
+    wirkt: [
+      'Zwei gleiche Schwerter derselben Stufe legen sich beim Treffen von allein zusammen',
+      'Im Wald: mehr Leben und härterer Schlag, dafür kürzere Sicht',
+      'Kurzes Antippen hält die Truppe an: sie verteidigt und steckt weniger ein'
+    ]
+  },
+  bogen: {
+    satz: 'Trifft aus der Distanz und über eine Mauer direkt vor ihm hinweg.',
+    wirkt: [
+      'Gegen Mauerwerk fast wirkungslos — Pfeile richten an Stein halben Schaden an',
+      'Ab Stufe 2 spannt er eine Reichweite weiter',
+      'Auf Fels oder im Wald wird er zum Turm: unbeweglich, erhöhte Sicht, weniger Schaden',
+      'Türme sind knapp: einer je Ausbaustufe des Haupthauses'
+    ]
+  },
+  mauer: {
+    satz: 'Versperrt den Weg. Truppen gehen drumherum, wenn sie eine Lücke sehen.',
+    wirkt: [
+      'Verbundene Mauern teilen sich eine Stufe: zwei ergeben Stufe 2, drei Stufe 3',
+      'Das Leben der Stufe gehört der GRUPPE und verteilt sich nach eingesetzten Karten',
+      'Fällt ein Stück, stuft sich der Rest neu ein',
+      'Eine Mauer auf Stufe 2 am Haupthaus ist ein Stützpunkt und hebt es'
+    ]
+  },
+  werk: {
+    satz: 'Wirtschaft auf Zeit: volle Kraft nur für seine Laufzeit, danach Sparflamme.',
+    wirkt: [
+      'Zwei Werke auf Stufe 2 nebeneinander verschmelzen zu einem größeren',
+      'In den vordersten zwei Reihen bringt es mehr — ist dort aber schwer zu halten',
+      'Am Kraterrand zapft es Erdwärme an: zusätzlicher Ertrag',
+      'Fällt es im Kampf, explodiert der Kessel und reißt die Nachbarschaft mit',
+      'In den Fels gebaut: voller Panzer, aber der Fels frisst einen Ertrag',
+      'Jeder Treffer kostet es eine Sekunde Laufzeit'
+    ]
+  },
+  ritter: {
+    satz: 'Schwer gepanzert, langsam im Schlag. Er hält aus, was andere umwirft.',
+    wirkt: [
+      'Zwei Ritter derselben Stufe legen sich beim Treffen zusammen',
+      'Im Wald: mehr Leben und härterer Schlag',
+      'Kurzes Antippen hält ihn an: er verteidigt und steckt weniger ein'
+    ]
+  },
+  kanone: {
+    satz: 'Belagerung. Trifft weit und richtet an Bauwerken doppelten Schaden an.',
+    wirkt: [
+      'Ausgebaut wird sie zum Mörser: Steilfeuer über Mauern hinweg, dazu Splitter',
+      'Eine feindliche Mauer auf der Flugbahn fängt den Schuss ab',
+      'Ein Gebirge dazwischen schluckt ihn ganz',
+      'Im Wald steckt sie weniger ein, auf Fels sieht und trifft sie weiter',
+      'Sie marschiert nicht — wo sie steht, steht sie'
+    ]
+  },
+  haus: {
+    satz: 'Deine Lebensader. Fällt es, ist die Partie vorbei.',
+    wirkt: [
+      'Ausgebaute Nachbarn heben es: ein Stützpunkt auf Stufe 3, oder zwei auf Stufe 2',
+      'Stufe 4 verlangt beides am Haus: eine Mauer auf Stufe 3 UND eine Werkstatt auf Stufe 3',
+      'Jede Stufe bringt mehr Leben, mehr Ertrag, ein größeres Lager — und einen Turm mehr',
+      'Im Wald steht es geschützt: ein Fünftel weniger Schaden'
+    ]
+  }
+};
+
+/* ---------- Charaktere ----------
+ * Jeder Charakter bringt seine EIGENE Kartenhand mit: welche Karten er
+ * hat, wie sie heißen und mit welchen Werten sie spielen. `werte` und
+ * `preise` überschreiben dabei nur einzelne Felder des Katalogs — so
+ * steht jede Abweichung schwarz auf weiß an einer Stelle, statt sich im
+ * Katalog zu verstecken. `texte` ergänzt die Werteseite um das, was nur
+ * für diesen Charakter gilt.
+ */
+const HELDEN = {
+  engineer: {
+    nm: 'Engineer',
+    kurz: 'Baumeister. Seine Werkstatt im Fels mauert von allein, sein Ritter rennt Bauten ein.',
+    karten: ['schwert','bogen','mauer','werk','ritter','kanone'],
+    werte: {
+      bogen:  {rng:2, hp:7},
+      werk:   {nm:'Werkstatt',
+               /* Sekunden je Mauer, nach Stufe. Nur auf Fels (siehe
+                * werkstattMauer): Der Steinbruch liefert das Material. */
+               mauerbau:[30, 25, 25]},
+      ritter: {cost:20, hp:32, dmg:3, bauSchaden:2},
+      kanone: {cost:50}
+    },
+    preise: {kanone:[50,50]},
+    texte: {
+      bogen:  {satz:'Kürzere Sicht als anderswo, dafür hält er mehr aus.'},
+      werk:   {satz:'Wirtschaft auf Zeit — und im Fels eine Mauerfabrik.',
+               wirkt:['Auf Fels legt sie dir alle 30 Sekunden eine Mauer auf die Hand (ab Stufe 2 alle 25)',
+                      'Diese Mauer ist geschenkt: kostet nichts, zählt nicht gegen dein Kartenlimit',
+                      'Wohin sie kommt, entscheidest du — und beim Abriss gibt es nichts zurück',
+                      'Das Mauern läuft weiter, auch wenn die Laufzeit erschöpft ist']},
+      ritter: {satz:'Der Rammbock des Baumeisters: billig, zäh, und er reißt Bauten ein.',
+               wirkt:['Doppelter Schaden an allem, was gebaut ist']}
+    }
+  }
+};
+
+/* ---------- Rechnung ----------
+ * Reine Funktionen über einer Kartendefinition. Der Kern rechnet damit
+ * (statsOf), die Werteseite ebenfalls — dieselbe Formel, eine Quelle. */
+
+/** Kartenhand eines Charakters: Definitionen, Reihenfolge, Ausbaupreise. */
+function handVon(id){
+  const c = HELDEN[id] || HELDEN.engineer;
+  const reihe = c.karten.slice();
+  const defs = {};
+  for(const k of reihe.concat(['haus'])){
+    defs[k] = Object.assign({}, GRUNDKARTEN[k], (c.werte && c.werte[k]) || {});
+  }
+  const preise = {};
+  for(const k in GRUNDPREISE) if(defs[k]) preise[k] = GRUNDPREISE[k].slice();
+  if(c.preise) for(const k in c.preise) if(defs[k]) preise[k] = c.preise[k].slice();
+  return {charakter: c, reihe, defs, preise};
+}
+
+/** Werte einer Karte auf einer Stufe. Formel des Spiels, an einer Stelle. */
+function werteVon(d, lvl){
+  if(!d) return {hp:0, dmg:0, cd:0, mcd:0, rng:0, income:0};
+  if(d.unit){
+    const n = lvl-1;
+    return {hp:d.hp + d.up.hp*n, dmg:d.dmg + d.up.dmg*n,
+            cd:Math.max(2, +(d.cd + d.up.cd*n).toFixed(1)),
+            mcd:Math.max(1.2, +(d.mcd + d.up.mcd*n).toFixed(2)),
+            rng:d.rng, income:0};
+  }
+  const L = d.lvls[Math.min(lvl, d.lvls.length)-1];
+  return {hp:L.hp, dmg:L.dmg||0, cd:L.cd||0, mcd:0, rng:L.rng||d.rng||0,
+          income:L.income||0, arc:!!L.arc, splash:L.splash||0,
+          laufzeit:L.laufzeit||d.laufzeit||0};
+}
+/** Höchste Stufe einer Karte. */
+function stufenVon(d){ return d.unit ? 4 : d.lvls.length; }
+/** Was die Karte auf dem Weg zu dieser Stufe kostet. */
+function preisVon(preise, k, d, toLvl){
+  const u = preise[k];
+  return (u && toLvl>1) ? u[Math.min(toLvl,u.length)-1] : d.cost;
+}
+
+/**
+ * Werteseite einer Karte: alles, was die Anzeige braucht — Name, Rolle,
+ * Zahlen je Stufe, Wechselwirkungen. Kein DOM, keine Formatierung: WAS
+ * dasteht, entscheidet hier; WIE es aussieht, der Bildschirm.
+ */
+function kartenBlatt(charakterId, k){
+  const hand = handVon(charakterId);
+  const d = hand.defs[k];
+  if(!d) return null;
+  const grund = KARTENTEXT[k] || {};
+  const eigen = (hand.charakter.texte && hand.charakter.texte[k]) || {};
+  const stufen = [];
+  for(let l=1; l<=stufenVon(d); l++){
+    const w = werteVon(d, l);
+    stufen.push({
+      stufe: l,
+      /* Truppen kauft man nur auf Stufe 1 — höher kommen sie allein
+       * durchs Verschmelzen zweier Gleicher. Ein Preis stünde da nur
+       * herum und wäre gelogen. */
+      preis: (d.unit && l > 1) ? null : preisVon(hand.preise, k, d, l),
+      hp: w.hp,
+      dmg: w.dmg || 0,
+      rng: w.rng || 0,
+      schlag: w.cd || 0,
+      marsch: w.mcd || 0,
+      ertrag: w.income || 0,
+      laufzeit: w.laufzeit || 0,
+      steilfeuer: !!w.arc,
+      splitter: w.splash || 0
+    });
+  }
+  return {
+    id: k,
+    nm: d.nm,
+    art: d.unit ? 'Truppe' : d.att ? 'Geschütz' : d.blocks ? 'Sperre' : 'Bau',
+    satz: eigen.satz || grund.satz || '',
+    /* Wechselwirkungen: die des Charakters zuerst, dann die allgemeinen. */
+    wirkt: (eigen.wirkt || []).concat(grund.wirkt || []),
+    feld: d.size === 2 ? '1 × 2 Felder' : '1 Feld',
+    kartenGrenze: d.cardLimit || null,
+    beweglich: !!d.unit,
+    stufen
+  };
+}
+
+/** Alles, was die Auswahl über einen Charakter zeigen muss. */
+function charakterBlatt(id){
+  const hand = handVon(id);
+  return {
+    id: HELDEN[id] ? id : 'engineer',
+    nm: hand.charakter.nm,
+    kurz: hand.charakter.kurz,
+    karten: hand.reihe.map((k) => kartenBlatt(id, k))
+  };
+}
 /**
  * Feldherr — Spielkern des Clients.
  *
@@ -12,36 +264,25 @@
  * deko().
  */
 
-export const STIL = "\n:root{\n  --nacht:#070c11; --linie:#1e2c36; --sand:#dfd6c2; --tinte:#8397a4;\n  --p1:#e8433c; --p2:#3d86ff; --ring:#dff2ff;\n}\n*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}\nhtml,body{height:100%;overflow:hidden;background:#05080b;\n  font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;color:var(--sand);\n  touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}\n#app{position:fixed;inset:0;display:flex;flex-direction:column}\n\n.hud{flex:0 0 auto;position:relative;z-index:5;\n  background:linear-gradient(180deg,#0e161c 0%,#0a1116 100%);\n  box-shadow:0 0 0 1px #1a262e, 0 8px 26px -14px #000 inset}\n.hud.top{background:linear-gradient(0deg,#0e161c 0%,#0a1116 100%)}\n.hud::after{content:\"\";position:absolute;left:0;right:0;height:1px;\n  background:linear-gradient(90deg,transparent,#2c3d48 20%,#2c3d48 80%,transparent)}\n.hud.bot::after{top:0}.hud.top::after{bottom:0}\n/* Netzspiel, Sitz 0: Brett gespiegelt (siehe SPIEGEL bei der Projektion) —\n   dann wandert auch die eigene Leiste nach unten. Die Klasse setzt die\n   Netzanbindung; örtlich kommt sie nie vor. */\n#app.gespiegelt .hud.top{order:3}\n#app.gespiegelt #stage{order:2}\n#app.gespiegelt .hud.bot{order:1}\n#app.gespiegelt .hud.top::after{bottom:auto;top:0}\n#app.gespiegelt .hud.bot::after{top:auto;bottom:0}\n.inner{padding:7px 9px 8px}\n.hud.top .inner{transform:rotate(180deg)}\n.bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}\n.tag{font:700 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;\n  padding:4px 7px;border-radius:3px;color:#080c10}\n.p1 .tag{background:linear-gradient(180deg,#ff6f62,var(--p1));color:#fff}\n.p2 .tag{background:linear-gradient(180deg,#71a8ff,var(--p2));color:#fff}\n.res{font:700 16px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em;\n  text-shadow:0 0 14px currentColor}\n.res .cap{font-size:10px;opacity:.5}\n.res.full{animation:pulse 1.1s ease-in-out infinite}\n@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}\n.p1 .res{color:#ff9c92}.p2 .res{color:#a8caff}\n.rate{font:600 9px/1 ui-monospace,Menlo,monospace;color:var(--tinte);letter-spacing:.06em}\n.dreh{margin-left:auto;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.dreh svg{display:block;opacity:.8;transition:transform .16s ease}\n.dreh.hoch svg{transform:rotate(90deg)}\n.dreh.an{background:linear-gradient(180deg,#7fd8b4,#3aa87e);box-shadow:0 0 14px -4px #3aa87e}\n.dreh.an svg{opacity:1}\n.raze{margin-left:6px;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.raze svg{display:block;opacity:.75}\n.raze.on{background:linear-gradient(180deg,#ff7a5e,#e8433c);box-shadow:0 0 16px -4px #e8433c}\n.raze.on svg{opacity:1}\n.raze.on svg path{fill:#fff}\n.hint{margin-left:6px;font:500 9px/1.3 system-ui;color:#93a7b3;text-align:right;max-width:38%}\n.cards{display:flex;gap:4px}\n.card{flex:1 1 0;min-width:0;position:relative;overflow:hidden;padding:5px 2px 6px;\n  border-radius:8px;text-align:center;\n  background:linear-gradient(180deg,#1b2831 0%,#131d24 100%);\n  box-shadow:0 0 0 1px #26363f, 0 1px 0 #2f4250 inset, 0 6px 12px -8px #000;\n  transition:transform .1s ease,box-shadow .14s,opacity .14s}\n.card .cost{font:800 11.5px/1 ui-monospace,Menlo,monospace;padding-right:14px;padding-left:14px}\n.p1 .card .cost{color:#ff8b80}.p2 .card .cost{color:#8fbaff}\n.card svg{display:block;margin:3px auto 2px;opacity:.92}\n.card .nm{font:700 8px/1 system-ui;letter-spacing:.04em;text-transform:uppercase;color:#d5e4ee}\n.card .st{font:500 6.8px/1.4 ui-monospace,Menlo,monospace;color:#7b8e9a;margin-top:2px;white-space:nowrap}\n.card .fill{position:absolute;left:0;bottom:0;height:2px;width:0%;transition:width .18s linear;opacity:.75}\n.card .lim{position:absolute;top:0;right:0;min-width:17px;height:15px;padding:0 3px;\n  display:grid;place-items:center;box-sizing:border-box;\n  font:800 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;\n  color:#e2eef6;background:#22333d;border-radius:0 8px 0 7px;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.07)}\n.card .lim.voll{color:#fff;background:#b8332c;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.14)}\n.p1 .card .fill{background:var(--p1)}.p2 .card .fill{background:var(--p2)}\n.card.off{opacity:.36}\n.card.drag{opacity:.35;transform:scale(.94)}\n.card.leer{opacity:.9;background:linear-gradient(180deg,#2a1418,#1d0e11);\n  box-shadow:0 0 0 1px #6d2a2f, 0 1px 0 #4a1e22 inset}\n.card.leer .nm,.card.leer .st{color:#a9737a}\n.card.leer .cost{color:#ff7a72}\n.card.leer .lim{color:#fff;background:#8e2c2c}\n.card.leer::after{content:\"\";position:absolute;left:-12%;top:50%;width:124%;height:2px;\n  background:#e8433c;transform:rotate(-24deg);box-shadow:0 0 8px #e8433c}\n.card.leer svg{opacity:.4}\n.card.rdy{box-shadow:0 0 0 1px #3d5464, 0 1px 0 #3b5265 inset, 0 6px 14px -8px #000}\n.card.arm{transform:translateY(-4px)}\n.p1 .card.arm{box-shadow:0 0 0 1.5px var(--p1),0 0 20px -4px var(--p1),0 1px 0 #4a3a1e inset}\n.p2 .card.arm{box-shadow:0 0 0 1.5px var(--p2),0 0 20px -4px var(--p2),0 1px 0 #3a2a4e inset}\n\n#stage{flex:1 1 auto;position:relative;min-height:0}\ncanvas{position:absolute;inset:0;width:100%;height:100%;display:block}\n\n#ghost{position:fixed;pointer-events:none;z-index:60;transform:translate(-50%,-50%);display:none}\n#ghost .gg{padding:7px 11px;border-radius:9px;font:700 10px/1 system-ui;letter-spacing:.08em;\n  text-transform:uppercase;background:rgba(20,32,40,.92);color:#e6f0f6;\n  box-shadow:0 0 0 1px #3f5665,0 10px 20px -8px #000}\n\n#uhr{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:19;\n  padding:3px 10px;border-radius:8px;pointer-events:none;\n  font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;\n  color:#cfe0ea;background:rgba(12,20,26,.72);box-shadow:0 0 0 1px #24343d}\n#uhr[hidden]{display:none}\n#menuBtn{position:absolute;right:3px;top:2px;z-index:20;opacity:.86;\n  width:28px;height:28px;border-radius:9px;color:#96aab7;font:700 13px/1 system-ui;\n  background:rgba(16,25,32,.8);border:0;box-shadow:0 0 0 1px #26363f;display:grid;place-items:center}\n\n.ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;\n  padding:22px;background:radial-gradient(120% 80% at 50% 0%,rgba(20,34,44,.92),rgba(4,7,10,.96));\n  backdrop-filter:blur(4px)}\n.ov[hidden]{display:none}\n.sheet{width:min(430px,100%);max-height:100%;overflow:auto;padding:22px 19px;border-radius:16px;\n  background:linear-gradient(180deg,#111c23,#0b1318);\n  box-shadow:0 0 0 1px #22323c,0 30px 60px -30px #000, 0 1px 0 #2b3d49 inset}\n.eyebrow{font:700 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.34em;color:#7b8e9a;text-transform:uppercase}\nh1{font:900 34px/.92 system-ui;letter-spacing:-.035em;margin:10px 0 4px}\nh1 em{font-style:normal;background:linear-gradient(180deg,#ff8b80,var(--p1));\n  -webkit-background-clip:text;background-clip:text;color:transparent}\nh2{font:800 18px/1.15 system-ui;letter-spacing:-.015em;margin-bottom:9px}\n.sub{font:500 12px/1.55 system-ui;color:#93a7b3;margin-bottom:18px}\np.tx{font:400 13px/1.6 system-ui;color:#c8d7e0;margin-bottom:9px}\np.tx b{color:#eae2d0;font-weight:650}\nul.tx{margin:0 0 10px 16px;font:400 12.5px/1.6 system-ui;color:#c8d7e0}\nul.tx li{margin-bottom:5px}\n.btn{display:block;width:100%;padding:13px;border-radius:10px;border:0;margin-top:9px;\n  font:700 13px/1 system-ui;letter-spacing:.03em;color:var(--sand);\n  background:linear-gradient(180deg,#1c2932,#141f26);box-shadow:0 0 0 1px #2a3b46,0 1px 0 #324754 inset}\n.btn.pri{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 24px -8px var(--p1)}\n.btn.gho{background:none;box-shadow:none;color:#7b8e9a}\n.hilfe{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;\n  font:800 17px/1 system-ui;color:#9fb3c0;background:#16222a;box-shadow:0 0 0 1px #2a3b46;\n  display:grid;place-items:center;z-index:2}\n.hilfe:active{background:#1e2d38}\n.seglbl{font:600 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.26em;color:#7b8e9a;\n  text-transform:uppercase;margin-bottom:6px}\n.seg{display:flex;gap:6px;margin-bottom:12px}\n.seg button{flex:1;padding:10px 0;border:0;border-radius:9px;color:#7b8e9a;\n  font:700 11px/1 system-ui;letter-spacing:.05em;background:#141f26;box-shadow:0 0 0 1px #24343d}\n.seg button.on{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}\n.hud.top .inner.ai{transform:none;padding-bottom:7px}\n.inner.ai .bar{margin-bottom:0}\n.pips{display:flex;gap:5px;margin-bottom:15px}\n.pip{width:24px;height:3px;border-radius:2px;background:#22323c}\n.pip.on{background:var(--p1)}\n.win{font:900 28px/1.05 system-ui;letter-spacing:-.03em;margin-bottom:7px}\ntable.bal{width:100%;border-collapse:collapse;font:500 11px/1.45 ui-monospace,Menlo,monospace;margin-bottom:12px}\ntable.bal th{text-align:left;color:#7b8e9a;font-weight:700;padding:4px;border-bottom:1px solid #22323c}\ntable.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}\n";
+export const STIL = "\n:root{\n  --nacht:#070c11; --linie:#1e2c36; --sand:#dfd6c2; --tinte:#8397a4;\n  --p1:#e8433c; --p2:#3d86ff; --ring:#dff2ff;\n}\n*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}\nhtml,body{height:100%;overflow:hidden;background:#05080b;\n  font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;color:var(--sand);\n  touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}\n#app{position:fixed;inset:0;display:flex;flex-direction:column}\n\n.hud{flex:0 0 auto;position:relative;z-index:5;\n  background:linear-gradient(180deg,#0e161c 0%,#0a1116 100%);\n  box-shadow:0 0 0 1px #1a262e, 0 8px 26px -14px #000 inset}\n.hud.top{background:linear-gradient(0deg,#0e161c 0%,#0a1116 100%)}\n.hud::after{content:\"\";position:absolute;left:0;right:0;height:1px;\n  background:linear-gradient(90deg,transparent,#2c3d48 20%,#2c3d48 80%,transparent)}\n.hud.bot::after{top:0}.hud.top::after{bottom:0}\n/* Netzspiel, Sitz 0: Brett gespiegelt (siehe SPIEGEL bei der Projektion) —\n   dann wandert auch die eigene Leiste nach unten. Die Klasse setzt die\n   Netzanbindung; örtlich kommt sie nie vor. */\n#app.gespiegelt .hud.top{order:3}\n#app.gespiegelt #stage{order:2}\n#app.gespiegelt .hud.bot{order:1}\n#app.gespiegelt .hud.top::after{bottom:auto;top:0}\n#app.gespiegelt .hud.bot::after{top:auto;bottom:0}\n.inner{padding:7px 9px 8px}\n.hud.top .inner{transform:rotate(180deg)}\n.bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}\n.tag{font:700 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;\n  padding:4px 7px;border-radius:3px;color:#080c10}\n.p1 .tag{background:linear-gradient(180deg,#ff6f62,var(--p1));color:#fff}\n.p2 .tag{background:linear-gradient(180deg,#71a8ff,var(--p2));color:#fff}\n.res{font:700 16px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em;\n  text-shadow:0 0 14px currentColor}\n.res .cap{font-size:10px;opacity:.5}\n.res.full{animation:pulse 1.1s ease-in-out infinite}\n@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}\n.p1 .res{color:#ff9c92}.p2 .res{color:#a8caff}\n.rate{font:600 9px/1 ui-monospace,Menlo,monospace;color:var(--tinte);letter-spacing:.06em}\n.dreh{margin-left:auto;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.dreh svg{display:block;opacity:.8;transition:transform .16s ease}\n.dreh.hoch svg{transform:rotate(90deg)}\n.dreh.an{background:linear-gradient(180deg,#7fd8b4,#3aa87e);box-shadow:0 0 14px -4px #3aa87e}\n.dreh.an svg{opacity:1}\n.raze{margin-left:6px;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.raze svg{display:block;opacity:.75}\n.raze.on{background:linear-gradient(180deg,#ff7a5e,#e8433c);box-shadow:0 0 16px -4px #e8433c}\n.raze.on svg{opacity:1}\n.raze.on svg path{fill:#fff}\n.hint{margin-left:6px;font:500 9px/1.3 system-ui;color:#93a7b3;text-align:right;max-width:38%}\n.cards{display:flex;gap:4px}\n.card{flex:1 1 0;min-width:0;position:relative;overflow:hidden;padding:5px 2px 6px;\n  border-radius:8px;text-align:center;\n  background:linear-gradient(180deg,#1b2831 0%,#131d24 100%);\n  box-shadow:0 0 0 1px #26363f, 0 1px 0 #2f4250 inset, 0 6px 12px -8px #000;\n  transition:transform .1s ease,box-shadow .14s,opacity .14s}\n.card .cost{font:800 11.5px/1 ui-monospace,Menlo,monospace;padding-right:14px;padding-left:14px}\n.p1 .card .cost{color:#ff8b80}.p2 .card .cost{color:#8fbaff}\n.card svg{display:block;margin:3px auto 2px;opacity:.92}\n.card .nm{font:700 8px/1 system-ui;letter-spacing:.04em;text-transform:uppercase;color:#d5e4ee}\n.card .st{font:500 6.8px/1.4 ui-monospace,Menlo,monospace;color:#7b8e9a;margin-top:2px;white-space:nowrap}\n.card .fill{position:absolute;left:0;bottom:0;height:2px;width:0%;transition:width .18s linear;opacity:.75}\n.card .lim{position:absolute;top:0;right:0;min-width:17px;height:15px;padding:0 3px;\n  display:grid;place-items:center;box-sizing:border-box;\n  font:800 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;\n  color:#e2eef6;background:#22333d;border-radius:0 8px 0 7px;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.07)}\n.card .lim.voll{color:#fff;background:#b8332c;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.14)}\n.p1 .card .fill{background:var(--p1)}.p2 .card .fill{background:var(--p2)}\n.card.off{opacity:.36}\n.card.drag{opacity:.35;transform:scale(.94)}\n.card.leer{opacity:.9;background:linear-gradient(180deg,#2a1418,#1d0e11);\n  box-shadow:0 0 0 1px #6d2a2f, 0 1px 0 #4a1e22 inset}\n.card.leer .nm,.card.leer .st{color:#a9737a}\n.card.leer .cost{color:#ff7a72}\n.card.leer .lim{color:#fff;background:#8e2c2c}\n.card.leer::after{content:\"\";position:absolute;left:-12%;top:50%;width:124%;height:2px;\n  background:#e8433c;transform:rotate(-24deg);box-shadow:0 0 8px #e8433c}\n.card.leer svg{opacity:.4}\n/* Geschenkte Karte auf der Hand (Werkstatt im Fels): gruener Rand und\n   gruene Zahl — sie kostet nichts und geht nicht ans Kontingent. Der\n   Zaehler zeigt \"Rest+Geschenk\", etwa 1+2. */\n.card.gratis{background:linear-gradient(180deg,#14261d,#0e1a15);\n  box-shadow:0 0 0 1px #2f7a55, 0 1px 0 #24503a inset}\n.card.gratis .cost{color:#9be8c0}\n.card .lim.extra{color:#0d1f16;background:#7fe0aa;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.2)}\n.card.rdy{box-shadow:0 0 0 1px #3d5464, 0 1px 0 #3b5265 inset, 0 6px 14px -8px #000}\n.card.arm{transform:translateY(-4px)}\n.p1 .card.arm{box-shadow:0 0 0 1.5px var(--p1),0 0 20px -4px var(--p1),0 1px 0 #4a3a1e inset}\n.p2 .card.arm{box-shadow:0 0 0 1.5px var(--p2),0 0 20px -4px var(--p2),0 1px 0 #3a2a4e inset}\n\n#stage{flex:1 1 auto;position:relative;min-height:0}\ncanvas{position:absolute;inset:0;width:100%;height:100%;display:block}\n\n#ghost{position:fixed;pointer-events:none;z-index:60;transform:translate(-50%,-50%);display:none}\n#ghost .gg{padding:7px 11px;border-radius:9px;font:700 10px/1 system-ui;letter-spacing:.08em;\n  text-transform:uppercase;background:rgba(20,32,40,.92);color:#e6f0f6;\n  box-shadow:0 0 0 1px #3f5665,0 10px 20px -8px #000}\n\n#uhr{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:19;\n  padding:3px 10px;border-radius:8px;pointer-events:none;\n  font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;\n  color:#cfe0ea;background:rgba(12,20,26,.72);box-shadow:0 0 0 1px #24343d}\n#uhr[hidden]{display:none}\n#menuBtn{position:absolute;right:3px;top:2px;z-index:20;opacity:.86;\n  width:28px;height:28px;border-radius:9px;color:#96aab7;font:700 13px/1 system-ui;\n  background:rgba(16,25,32,.8);border:0;box-shadow:0 0 0 1px #26363f;display:grid;place-items:center}\n\n.ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;\n  padding:22px;background:radial-gradient(120% 80% at 50% 0%,rgba(20,34,44,.92),rgba(4,7,10,.96));\n  backdrop-filter:blur(4px)}\n.ov[hidden]{display:none}\n.sheet{width:min(430px,100%);max-height:100%;overflow:auto;padding:22px 19px;border-radius:16px;\n  background:linear-gradient(180deg,#111c23,#0b1318);\n  box-shadow:0 0 0 1px #22323c,0 30px 60px -30px #000, 0 1px 0 #2b3d49 inset}\n.eyebrow{font:700 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.34em;color:#7b8e9a;text-transform:uppercase}\nh1{font:900 34px/.92 system-ui;letter-spacing:-.035em;margin:10px 0 4px}\nh1 em{font-style:normal;background:linear-gradient(180deg,#ff8b80,var(--p1));\n  -webkit-background-clip:text;background-clip:text;color:transparent}\nh2{font:800 18px/1.15 system-ui;letter-spacing:-.015em;margin-bottom:9px}\n.sub{font:500 12px/1.55 system-ui;color:#93a7b3;margin-bottom:18px}\np.tx{font:400 13px/1.6 system-ui;color:#c8d7e0;margin-bottom:9px}\np.tx b{color:#eae2d0;font-weight:650}\nul.tx{margin:0 0 10px 16px;font:400 12.5px/1.6 system-ui;color:#c8d7e0}\nul.tx li{margin-bottom:5px}\n.btn{display:block;width:100%;padding:13px;border-radius:10px;border:0;margin-top:9px;\n  font:700 13px/1 system-ui;letter-spacing:.03em;color:var(--sand);\n  background:linear-gradient(180deg,#1c2932,#141f26);box-shadow:0 0 0 1px #2a3b46,0 1px 0 #324754 inset}\n.btn.pri{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 24px -8px var(--p1)}\n.btn.gho{background:none;box-shadow:none;color:#7b8e9a}\n.hilfe{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;\n  font:800 17px/1 system-ui;color:#9fb3c0;background:#16222a;box-shadow:0 0 0 1px #2a3b46;\n  display:grid;place-items:center;z-index:2}\n.hilfe:active{background:#1e2d38}\n.seglbl{font:600 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.26em;color:#7b8e9a;\n  text-transform:uppercase;margin-bottom:6px}\n.seg{display:flex;gap:6px;margin-bottom:12px}\n.seg button{flex:1;padding:10px 0;border:0;border-radius:9px;color:#7b8e9a;\n  font:700 11px/1 system-ui;letter-spacing:.05em;background:#141f26;box-shadow:0 0 0 1px #24343d}\n.seg button.on{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}\n.hud.top .inner.ai{transform:none;padding-bottom:7px}\n.inner.ai .bar{margin-bottom:0}\n.pips{display:flex;gap:5px;margin-bottom:15px}\n.pip{width:24px;height:3px;border-radius:2px;background:#22323c}\n.pip.on{background:var(--p1)}\n.win{font:900 28px/1.05 system-ui;letter-spacing:-.03em;margin-bottom:7px}\ntable.bal{width:100%;border-collapse:collapse;font:500 11px/1.45 ui-monospace,Menlo,monospace;margin-bottom:12px}\ntable.bal th{text-align:left;color:#7b8e9a;font-weight:700;padding:4px;border-bottom:1px solid #22323c}\ntable.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}\n";
 
 export const HUELLE = "\n<div id=\"app\">\n  <div class=\"hud top p1\" id=\"hud0\"></div>\n  <div id=\"stage\"><canvas id=\"cv\"></canvas><div id=\"uhr\" hidden>0:00</div><button id=\"menuBtn\">≡</button></div>\n  <div class=\"hud bot p2\" id=\"hud1\"></div>\n</div>\n<div id=\"ghost\"><div class=\"gg\">—</div></div>\n\n<div class=\"ov\" id=\"ovMenu\">\n  <div class=\"sheet\" style=\"position:relative\">\n    <button class=\"hilfe\" id=\"bTut\" title=\"Regeln\">?</button>\n    <div class=\"eyebrow\">Taktikduell · ein Gerät · zwei Feldherren</div>\n    <h1>FELD<em>HERR</em></h1>\n    <div class=\"sub\">Ein Brett, mittig geteilt. Echtzeit. Wer das gegnerische Haupthaus einreißt, gewinnt. Auf den Karten steht der Zug- und der Schlagtakt.</div>\n    <div class=\"seglbl\">Stärke der KI</div>\n    <div class=\"seg\" id=\"segLvl\">\n      <button data-l=\"leicht\">Leicht</button>\n      <button data-l=\"normal\" class=\"on\">Normal</button>\n      <button data-l=\"schwer\">Schwer</button>\n    </div>\n    <button class=\"btn pri\" id=\"bAI\">Gegen die KI spielen</button>\n    <button class=\"btn\" id=\"bDuo\">Zu zweit an einem Gerät</button>\n    <button class=\"btn gho\" id=\"bTab\">Einheitenwerte</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovCoin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Münzwurf</div>\n    <h2 id=\"coinWer\">Du wählst</h2>\n    <div class=\"sub\">Wer richtig tippt, setzt sein Haupthaus zuerst.</div>\n    <div class=\"seg\" id=\"segCoin\">\n      <button data-w=\"kopf\">Kopf</button>\n      <button data-w=\"zahl\">Zahl</button>\n    </div>\n  </div>\n</div>\n<div class=\"ov\" id=\"ovTut\" hidden>\n  <div class=\"sheet\">\n    <div class=\"pips\" id=\"pips\"></div>\n    <div id=\"tutBody\"></div>\n    <button class=\"btn pri\" id=\"bNext\">Weiter</button>\n    <button class=\"btn gho\" id=\"bSkip\">Überspringen</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovTab\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Werte</div><h2>Truppen</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>HP</th><th>DMG</th><th>Zug</th><th>Schlag</th><th>Reichw.</th></tr></thead>\n    <tbody>\n      <tr><td>Schwert</td><td>8</td><td>7</td><td>4</td><td>3,0 s</td><td>8 s</td><td>1</td></tr>\n      <tr><td>Bogen</td><td>12</td><td>5</td><td>3</td><td>4,2 s</td><td>7 s</td><td>3</td></tr>\n      <tr><td>Ritter</td><td>30</td><td>26</td><td>4</td><td>5,6 s</td><td>17 s</td><td>1</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Geschlagen wird auch über Eck, gezogen nur waagerecht und senkrecht. Bogenschützen brauchen freie Sicht, treffen aber über eine Mauer <b>direkt vor sich</b> hinweg — und ab Stufe 2 ein Feld weiter. Gegen <b>Mauern</b> richten ihre Pfeile nur <b>halben Schaden</b> an, im Turm ebenso.</p>\n    <div class=\"eyebrow\">Je Ausbaustufe</div>\n    <table class=\"bal\"><tbody>\n      <tr><td>Schwert</td><td>HP +6</td><td>DMG +2</td><td>Schlag −2 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td>Bogen</td><td>HP +2</td><td>DMG +5</td><td>Schlag −1,5 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td></td><td colspan=\"4\">ab Stufe 2 zusätzlich +1 Reichweite</td></tr>\n      <tr><td>Ritter</td><td>HP +10</td><td>DMG +4</td><td>Schlag −3,8 s</td><td>Zug −0,7 s</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Truppen steigen bis Stufe 4 (Kupfer, Silber, Gold, Diamant), indem zwei gleiche derselben Stufe aufeinandertreffen; eine frische Karte auf eine Stufe-1-Truppe wirkt genauso. Wer aufsteigt, schlägt sofort einmal zu.</p>\n\n    <h2>Bauten</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>Karten</th><th>Stufe 1 / 2 / 3</th></tr></thead>\n    <tbody>\n      <tr><td>Mauer</td><td>15 / 15 / 25</td><td>3</td><td>50 / 85 / 160 HP</td></tr>\n      <tr><td>Werk 1×2</td><td>25 je Karte</td><td>4</td><td>15 / 23 / 34 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+1 / +2 / +5 Res je s</td></tr>\n      <tr><td></td><td></td><td></td><td>15 / 20 / 25 s Laufzeit</td></tr>\n      <tr><td>Kanone</td><td>35 je Karte</td><td>2</td><td>25 HP · 10 / 8 DMG</td></tr>\n      <tr><td></td><td></td><td></td><td>Reichweite 4 / 7 · 8 s</td></tr>\n      <tr><td>Haupthaus</td><td>—</td><td>1</td><td>36 / 43 / 54 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+2 / +3 / +4 Res je s</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Kartenkontingent:</b> Werk 4, Mauer 3, Kanone 2 — einmal gesetzt zählt eine Karte für immer, auch wenn das Bauwerk fällt oder du es abreißt (20 % Rückerstattung). Die Zahl in der Kartenecke zeigt den Rest.</p>\n    <p class=\"tx\"><b>Mauer:</b> Mauern werden durch <b>Verbinden</b> stärker. Jede Mauer wiegt so viel, wie Karten in ihr stecken; die Stufe ist das <b>Gewicht der ganzen verbundenen Gruppe</b>: allein Stufe 1, <b>zwei verbunden</b> Stufe 2, <b>drei verbunden</b> Stufe 3. Drei Karten auf dasselbe Feld gestapelt ergeben ebenfalls Stufe 3. Das Leben der Stufe gehört der Gruppe und wird <b>nach Gewicht verteilt</b> — eine Stufe-2-Mauer neben einer frischen Mauer ergibt Stufe 3 mit 107 und 53 HP (2/3 zu 1/3). Jedes Stück fällt einzeln; die übrigen stufen sich danach neu ein.</p>\n    <p class=\"tx\"><b>Werk:</b> belegt 1×2 Felder, Drehung über den Knopf in der Leiste. Eine zweite Karte hebt es auf Stufe 2; liegen zwei Stufe-2-Werke aneinander, verschmelzen sie zu Stufe 3 und bleiben dabei stehen, wo sie sind. Jeder Treffer kostet <b>1 s Laufzeit</b>. Nach Ablauf läuft es auf Sparflamme weiter (+1 / +2 / +2). Fällt es im Kampf, wird alles auf den <b>vier angrenzenden Feldern zerstört</b>, über Eck und zwei Felder weiter 55 %, drei Felder 25 %.</p>\n    <p class=\"tx\"><b>Kanone:</b> unbeweglich, doppelter Schaden an Bauwerken. Stufe 1 zielt erst auf Kanonen, dann Werke; eine Mauer in der Bahn fängt den Schuss ab. Stufe 2 ist ein <b>Mörser</b>: weiter, Steilfeuer über alles hinweg, ein Viertel weniger Schaden, Ziele zuerst Werke, dann Kanonen, dann Haupthaus — dazu 30 % Splitterschaden an Bauten direkt über, unter und neben dem Einschlag.</p>\n    <p class=\"tx\"><b>Haupthaus:</b> Ein eigener <b>Stützpunkt</b> auf Stufe 2 in einem der acht Nachbarfelder hebt es auf Stufe 2 (+20 % HP, +1 Res, Vorrat 50 → 60); Stützpunkte sind Mauer, Werk, Kanone und der Schützenturm. Stufe 3 (+50 % HP, +2 Res) gibt es auf zwei Wegen: ein <b>Werk oder eine Mauer auf Stufe 3</b> daneben — oder <b>zwei Stützpunkte auf Stufe 2</b>, etwa Mauer und Schützenturm. Fallen die Stützpunkte, verschwindet der Ausbau.</p>\n\n    <p class=\"tx\"><b>Rundenbeginn:</b> Eine Münze entscheidet die Reihenfolge. Ein Spieler ruft Kopf oder Zahl, der andere bekommt die zweite Seite; wer richtig liegt, setzt sein Haupthaus zuerst.</p>\n    <h2>Gelände</h2>\n    <table class=\"bal\"><tbody>\n      <tr><td>See</td><td>unpassierbar</td></tr>\n      <tr><td>Gebirge</td><td>unpassierbar, sichtdicht</td></tr>\n      <tr><td>Wald</td><td>Truppen +50 % HP, +25 % DMG</td></tr>\n      <tr><td></td><td>Fernkämpfer −1 Reichweite</td></tr>\n      <tr><td></td><td>Kanone −25 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Haupthaus −20 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Bogen wird Turm: −1/3 erlittener Schaden</td></tr>\n      <tr><td>Vulkan</td><td>Ausbruch: Krater und Rand zerstört</td></tr>\n      <tr><td></td><td>zwei Felder weiter −30 % HP</td></tr>\n      <tr><td></td><td>2,5 % je 10 s, ab 2 min +5 Punkte</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Schützentürme</b> entstehen an zwei Orten. <b>Auf dem Fels</b> (Unterbau <b>+5</b>) sieht der Schütze weiter: +1 Reichweite, +1 Schaden. <b>Im Wald</b> (Gerüst <b>+4</b>) steht er in Deckung: <b>−1/3 erlittener Schaden</b>, dazu die Waldwerte (+50 % Leben, +25 % Schaden), aber −1 Reichweite. Beides gilt auch beim Ausbau. Ein Turm bewegt sich nie wieder, bleibt bei Stufe 2 und zählt zu den drei Schützen-Stellungen.</p>\n    <p class=\"tx\"><b>Auf dem Fels</b> dürfen außerdem Kanone und Werk bauen; der Unterbau kostet jedes Mal <b>+5</b>. Die Kanone bekommt dort +1 Reichweite und +1 Schaden. Ein <b>Werk im Fels</b> muss mit beiden Feldern darauf stehen: −1 Ressource, +50 % HP, kein Kessel, höchstens Stufe 2. Fällt eine Fels-Stellung, blockiert 15 s lang ein brennendes Wrack das Feld.</p>\n    <p class=\"tx\"><b>Erdwärme:</b> Haupthaus oder Werk direkt am Vulkan geben dauerhaft +1 Ressource, ein Werk auf Stufe 3 sogar +2. <b>Panik-Faktor:</b> ein Werk in den beiden vordersten Reihen deiner Hälfte gibt +1.</p>\n\n    <h2>Stellungen</h2>\n    <p class=\"tx\">Ein kurzes Antippen hält eine Truppe an: Sie marschiert nicht mehr, verteidigt ihre Umgebung und nimmt <b>12,5 % weniger Schaden</b>. Von Schützen und von Kämpfern dürfen jeweils höchstens <b>drei</b> gleichzeitig stehen; Schützentürme zählen bei den Schützen mit. Das Schild an der Figur zeigt den Stand der ganzen Gruppe.</p>\n    <p class=\"tx\"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt.</p>\n    <button class=\"btn\" id=\"bTabClose\">Zurück</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovPause\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Pause</div><h2>Partie angehalten</h2>\n    <button class=\"btn pri\" id=\"bResume\">Weiterspielen</button>\n    <button class=\"btn\" id=\"bNeustart\" style=\"display:none\">Neu starten</button>\n    <button class=\"btn\" id=\"bTut2\">Regeln ansehen</button>\n    <button class=\"btn gho\" id=\"bQuit\">Partie beenden</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovWin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Entscheidung</div>\n    <div class=\"win\" id=\"winTx\">—</div>\n    <div class=\"sub\" id=\"winSub\">—</div>\n    <button class=\"btn pri\" id=\"bAgain\">Neue Runde</button>\n    <button class=\"btn gho\" id=\"bMenu2\">Hauptmenü</button>\n  </div>\n</div>\n\n";
 
 /**
- * Die spielbaren Charaktere fuer die Auswahl im Bildschirm.
+ * Die spielbaren Charaktere samt Werteseite jeder Karte.
  *
- * Absichtlich reine Anzeigedaten: Die WERTE der Karten stehen im Kern
- * (CHARAKTERE in quelle/teile/simulation.js) und nirgends sonst — hier
- * liegt nur, was der Bildschirm zeigen muss, damit er den Kern nicht
- * starten muss, um eine Liste zu haben. Die Kennungen muessen zu denen
- * im Kern passen; eine unbekannte Kennung faellt dort auf den ersten
- * Charakter zurueck.
+ * Die Daten kommen aus teile/karten.js — DERSELBEN Quelle, aus der der
+ * Spielkern seine Werte zieht. Deshalb steht dieser Teil als einziger vor
+ * der Spielfunktion: Die Auswahl zeigt die Werteseite, bevor eine Partie
+ * laeuft, und muesste die Zahlen sonst ein zweites Mal pflegen — beim
+ * ersten Balance-Schritt loege die Anzeige.
  */
-export const CHARAKTERE = [
-  {
-    id: 'engineer',
-    nm: 'Engineer',
-    kurz: 'Baumeister. Seine Werkstatt im Fels mauert von allein, sein Ritter rennt Bauten ein.',
-    karten: ['Schwert', 'Bogen', 'Mauer', 'Werkstatt', 'Ritter', 'Kanone'],
-    /** Was diesen Charakter von der Grundhand unterscheidet — fuer die Auswahl. */
-    eigenheiten: [
-      'Werkstatt auf Fels setzt alle 30 s eine Mauer (ab Stufe 2 alle 25 s)',
-      'Bogen: eine Reichweite weniger, dafür zäher',
-      'Ritter: billiger und zäher, schwächerer Schlag, doppelter Schaden an Bauten',
-      'Kanone kostet 50',
-      'Schützentürme: einer je Stufe des Haupthauses',
-    ],
-  },
-];
+export const CHARAKTERE = Object.keys(HELDEN).map(charakterBlatt);
+
+/** Werteseite einer einzelnen Karte (fuer das Halten auf einer Karte). */
+export function kartenSeite(charakterId, karte) {
+  return kartenBlatt(charakterId, karte);
+}
 
 /**
  * Startet eine Partie in der bereits eingehaengten Huelle.
@@ -232,71 +473,13 @@ function setzeFeld(){
 }
 const MAXLVL = 4, MOVE_T = 0.34;
 
-/* ---------- Kartenkatalog ----------
- * Die Grundwerte ALLER Karten, die es im Spiel gibt. Welche davon eine
- * Partie benutzt und mit welchen Werten, entscheidet der gewählte
- * Charakter (siehe CHARAKTERE weiter unten) — das Haupthaus ist immer
- * dabei, es steht in keinem Kartenkontingent. */
-const GRUNDKARTEN = {
-  schwert:  {nm:'Schwert', cost:8, unit:true, hp:7,  dmg:4, cd:8,  mcd:3.0, rng:1,
-             up:{cd:-2, mcd:-0.4, hp:6, dmg:2}},
-  mauer:    {nm:'Mauer',   cost:15, blocks:true, cardLimit:3,
-             /* Stufe 3 = 3,2 × Stufe 1 (Entscheid vom 7. August 2026) —
-              * derselbe Wert speist Stapel UND Mauerverbund. */
-             lvls:[{hp:50},{hp:85},{hp:160}]},
-  bogen:    {nm:'Bogen',   cost:12, unit:true, hp:5,  dmg:3, cd:7, mcd:4.2, rng:3, ueberMauer:true,
-             up:{cd:-1.5, mcd:-0.4, hp:2, dmg:5}},
-  werk:     {nm:'Werk',    cost:25, size:2, cardLimit:4, fuseAt:2, laufzeit:15, knall:10,
-             lvls:[{hp:15,income:1,laufzeit:15},{hp:23,income:2,laufzeit:20},
-                   {hp:34,income:5,laufzeit:25}]},
-  ritter:    {nm:'Ritter',   cost:30, unit:true, hp:26, dmg:4, cd:17, mcd:5.6, rng:1,
-             up:{cd:-3.8, mcd:-0.7, hp:10, dmg:4}},
-  kanone:   {nm:'Kanone',  cost:35, att:true, rng:4, siege:2, cardLimit:2,
-             lvls:[{hp:25,dmg:10,cd:8},{hp:25,dmg:8,cd:8, rng:7, arc:true, splash:0.3}]},
-  haus:     {nm:'Haupthaus', cost:0, limit:1, lvls:[{hp:36,income:2}]}
-};
-const GRUNDPREISE = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
-
-/* ---------- Charaktere ----------
- * Jeder Charakter bringt seine EIGENE Kartenhand mit: welche Karten er
- * hat, wie sie heißen und mit welchen Werten sie spielen. `werte` und
- * `preise` überschreiben dabei nur einzelne Felder des Katalogs — so
- * steht jede Abweichung schwarz auf weiß an einer Stelle, statt sich im
- * Katalog zu verstecken.
- *
- * Der ENGINEER (erster Charakter, 7. August 2026) spielt die bisherigen
- * sechs Karten mit den Anpassungen des Auftraggebers:
- *
- *   Schwert     unverändert — das Arbeitspferd bleibt, wie es war.
- *   Bogen       eine Reichweite weniger, dafür zäher (5 → 7 Leben):
- *               der Engineer schießt kürzer und hält länger.
- *   Werkstatt   heißt jetzt so und ist mehr als Wirtschaft: auf Fels
- *               gebaut mauert sie von allein (mauerbau, siehe update).
- *   Ritter      billiger (30 → 20) und zäher (26 → 32), dafür schwächer
- *               im Schlag (4 → 3) — und er reißt Bauten ein
- *               (bauSchaden ×2). Aus dem teuren Panzer wird der
- *               Rammbock des Baumeisters.
- *   Kanone      teurer (35 → 50): Belagerung ist jetzt die Entscheidung
- *               einer ganzen Bauphase, nicht ein Nebenbei-Kauf.
+/* ---------- Kartenhand des Charakters ----------
+ * Katalog, Charaktere und die Werte-Rechnung stehen in teile/karten.js —
+ * im Modulrahmen, damit die Auswahl im Bildschirm dieselben Zahlen liest,
+ * ohne eine Partie zu starten. Hier steht nur, was daraus fuer DIESE
+ * Partie gilt.
  */
-const CHARAKTERE = {
-  engineer: {
-    nm: 'Engineer',
-    karten: ['schwert','bogen','mauer','werk','ritter','kanone'],
-    werte: {
-      bogen:  {rng:2, hp:7},
-      werk:   {nm:'Werkstatt',
-               /* Sekunden je Mauer, nach Stufe. Nur auf Fels (siehe
-                * werkstattMauer): Der Steinbruch liefert das Material. */
-               mauerbau:[30, 25, 25]},
-      ritter: {cost:20, hp:32, dmg:3, bauSchaden:2},
-      kanone: {cost:50}
-    },
-    preise: {kanone:[50,50]}
-  }
-};
-const CHARAKTER_STANDARD = 'engineer';
-let CHARAKTER = CHARAKTER_STANDARD;
+let CHARAKTER = 'engineer';
 let DEFS = {};
 let CARD_ORDER = [];
 let UPCOST = {};
@@ -308,18 +491,13 @@ let UPCOST = {};
  * Quelle wie das Saatkorn).
  */
 function setzeCharakter(id){
-  const c = CHARAKTERE[id] || CHARAKTERE[CHARAKTER_STANDARD];
-  CHARAKTER = CHARAKTERE[id] ? id : CHARAKTER_STANDARD;
-  CARD_ORDER = c.karten.slice();
-  DEFS = {};
-  for(const k of CARD_ORDER.concat(['haus'])){
-    DEFS[k] = Object.assign({}, GRUNDKARTEN[k], (c.werte && c.werte[k]) || {});
-  }
-  UPCOST = {};
-  for(const k in GRUNDPREISE) if(DEFS[k]) UPCOST[k] = GRUNDPREISE[k].slice();
-  if(c.preise) for(const k in c.preise) if(DEFS[k]) UPCOST[k] = c.preise[k].slice();
+  const hand = handVon(id);
+  CHARAKTER = hand.charakter === HELDEN[id] ? id : 'engineer';
+  CARD_ORDER = hand.reihe;
+  DEFS = hand.defs;
+  UPCOST = hand.preise;
 }
-setzeCharakter(CHARAKTER_STANDARD);
+setzeCharakter(CHARAKTER);
 const RES_CAP = 50;                       // mehr als 50 Ressourcen lassen sich nicht horten
 const REFUND  = 0.2;                      // Abriss bringt ein Fünftel zurück
 function costOf(type, toLvl){             // was die Karte an dieser Stelle kostet
@@ -347,7 +525,12 @@ function restOf(own,type){                       // verbrauchte Karten kommen ni
   if(!lim) return null;
   return Math.max(0, lim - (G.used[own][type]||0));
 }
-function atLimit(own,type){ const r=restOf(own,type); return r!==null && r<=0; }
+/* Geschenkte Karten liegen NEBEN dem Kontingent: Wer eine auf der Hand
+ * hat, darf legen, auch wenn seine drei Mauern längst verbaut sind. */
+function atLimit(own,type){
+  if(gratisRest(own,type) > 0) return false;
+  const r=restOf(own,type); return r!==null && r<=0;
+}
 function verbrauche(own,type){
   if(DEFS[type].cardLimit) G.used[own][type] = (G.used[own][type]||0) + 1;
 }
@@ -376,20 +559,10 @@ function rngOf(e){
 }
 const canAtt  = e => !!(DEFS[e.type].unit || DEFS[e.type].att);
 
-function statsOf(type, lvl){
-  const d = DEFS[type];
-  if(d.unit){
-    const n = lvl-1;
-    return {hp:d.hp + d.up.hp*n, dmg:d.dmg + d.up.dmg*n,
-            cd:Math.max(2, +(d.cd + d.up.cd*n).toFixed(1)),
-            mcd:Math.max(1.2, +(d.mcd + d.up.mcd*n).toFixed(2)),
-            rng:d.rng, income:0};
-  }
-  const L = d.lvls[Math.min(lvl, d.lvls.length)-1];
-  return {hp:L.hp, dmg:L.dmg||0, cd:L.cd||0, mcd:0, rng:L.rng||d.rng||0,
-          income:L.income||0, arc:!!L.arc, splash:L.splash||0,
-          laufzeit:L.laufzeit||d.laufzeit||0};
-}
+/* Die Formel steht in teile/karten.js (werteVon) — dieselbe, aus der die
+ * Werteseite der Auswahl ihre Zahlen zieht. Zwei Formeln wären zwei
+ * Wahrheiten, und die Anzeige löge beim ersten Balance-Schritt. */
+const statsOf = (type, lvl) => werteVon(DEFS[type], lvl);
 const sizeOf   = type => DEFS[type].size || 1;
 const maxLvlOf = type => DEFS[type].unit ? MAXLVL : DEFS[type].lvls.length;
 
@@ -404,6 +577,10 @@ function newState(){
     res: [0,0], placed:[false,false], erst:0, coin:null, t:0, nextId:1,
     sel: [null,null], armed:[null,null], orient:[false,false], raze:[false,false],
     hb:[1,1], sperren:[],
+    /* Geschenkte Karten auf der Hand (Werkstatt im Fels): je Spieler und
+     * Kartenart ein Vorrat. Sie kosten nichts und zaehlen nicht gegen das
+     * Kartenlimit. */
+    gratis: [{},{}],
     used: [{},{}], winner:null
   };
 }
@@ -797,21 +974,22 @@ function fuseWerke(still){
   }
 }
 
-/* ---------- Werkstatt im Fels: sie mauert selbst ----------
+/* ---------- Werkstatt im Fels: sie liefert Mauern ----------
  * Regel des Auftraggebers (7. August 2026, Engineer): Eine Werkstatt auf
- * Stein hat den Steinbruch gleich vor der Tür und setzt alle 30 Sekunden
- * eine Mauer daneben; ab Stufe 2 alle 25 (DEFS.werk.mauerbau).
+ * Stein hat den Steinbruch gleich vor der Tür und legt alle 30 Sekunden
+ * eine Mauer auf die HAND; ab Stufe 2 alle 25 (DEFS.werk.mauerbau).
  *
- * Die Mauer ist GESCHENKT: Sie kostet nichts, verbraucht keine Karte aus
- * dem Kontingent — und bringt beim Abriss nichts zurück (e.frei, siehe
- * refundOf), sonst wäre die Werkstatt eine Geldquelle. Im Verbund zählt
- * sie wie jede andere Mauer mit (mauerNetz).
+ * Auf die Hand, nicht aufs Brett: Wo die Mauer hingehört, weiß der
+ * Spieler besser als jede Regel — eine selbstgesetzte Mauer stünde
+ * zwangsläufig neben der Werkstatt, also weit hinten, wo sie niemanden
+ * aufhält.
+ *
+ * Die Karte ist GESCHENKT: Sie kostet nichts, zählt nicht gegen das
+ * Kartenlimit — und bringt beim Abriss nichts zurück (e.frei, siehe
+ * refundOf), sonst wäre die Werkstatt eine Geldquelle.
  *
  * Zustandspfad, also streng deterministisch: kein zufall(), keine
- * Bildzeit. Das Zielfeld ist das erste freie in fester Reihenfolge
- * (Felder der Werkstatt, dann DIRS) — beide Geräte wählen dasselbe.
- * Findet sich keines, sammelt die Werkstatt weiter an und mauert, sobald
- * wieder Platz ist.
+ * Bildzeit. Der Vorrat sammelt sich an, wenn gerade nicht gelegt wird.
  */
 function mauerwerkTakt(w, dt){
   const bau = DEFS[w.type] && DEFS[w.type].mauerbau;
@@ -821,30 +999,22 @@ function mauerwerkTakt(w, dt){
   // eine Werkstatt ist nach 15 s erschöpft, die erste Mauer käme erst
   // nach 30.
   if(!bau || !w.berg) return;
-  if(!DEFS.mauer) return;                              // Charakter ohne Mauer: nichts zu bauen
+  if(!DEFS.mauer) return;                              // Charakter ohne Mauer: nichts zu liefern
   const dauer = bau[Math.min(w.lvl, bau.length)-1];
   w.mauerT = (w.mauerT||0) + dt;
   if(w.mauerT < dauer) return;
   w.mauerT -= dauer;
-  werkstattMauer(w);
+  schenkeKarte(w.owner, 'mauer');
+  fxText(w.r, w.c, '+1 MAUER', '#9be8c0', 0);
+  fxRing(w.r, w.c, '#9be8c0');
+  HAKEN.syncHUD();
 }
-function werkstattMauer(w){
-  for(const p of w.cells) for(const [dr,dc] of DIRS){
-    const r=p.r+dr, c=p.c+dc;
-    if(!inBoard(r,c) || sideOf(r)!==w.owner) continue;  // nur auf der eigenen Hälfte
-    if(!freeCell(r,c)) continue;                       // Wasser, Fels, Belegtes: nein
-    if(envAt(r,c)==='vulkan') continue;                // auf glühenden Fels baut niemand
-    if(G.sperren.some(z=>z.r===r && z.c===c)) continue; // Trümmerfeld blockiert
-    const neu = addEnt('mauer', w.owner, r, c, 1);
-    neu.karten = 1;
-    neu.frei = true;                                   // nie bezahlt, kein Abrissgeld
-    mauerNetz(w.owner);
-    fxRing(r, c, HAKEN.spielerFarbe(w.owner));
-    HAKEN.bauStaub([{r, c}]);
-    HAKEN.syncHUD();
-    return;
-  }
+/* Geschenkte Karten auf der Hand: Vorrat je Spieler und Kartenart. Sie
+ * kosten nichts und gehen nicht ans Kontingent — beides prüft playCard. */
+function schenkeKarte(own, k){
+  G.gratis[own][k] = (G.gratis[own][k]||0) + 1;
 }
+const gratisRest = (own, k) => (G.gratis && G.gratis[own] && G.gratis[own][k]) || 0;
 
 /* ---------- Wegekarte: Entfernung zu einem Ziel, eigene Truppen sind durchlässig ---------- */
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -1309,10 +1479,15 @@ function affordable(own,k,r,c){                       // Platz frei UND bezahlba
 function playCard(own,k,r,c){
   const sp = placeSpot(own,k,r,c);
   if(!sp) return;
-  const preis = preisFuer(k,sp);
+  /* Geschenkte Karte auf der Hand (Werkstatt im Fels): Sie gilt nur für
+   * einen NEUBAU — aufwerten und stapeln bleibt Sache der Ressourcen,
+   * sonst verschöbe man den Vorrat still in eine Stufe-3-Mauer. */
+  const geschenkt = !sp.merge && gratisRest(own,k) > 0;
+  const preis = geschenkt ? 0 : preisFuer(k,sp);
   if(G.res[own]<preis) return;
   G.res[own]-=preis;
-  verbrauche(own,k);                           // die Karte ist damit endgültig aufgebraucht
+  if(geschenkt) G.gratis[own][k] -= 1;         // eine Karte weniger auf der Hand
+  else verbrauche(own,k);                      // die Karte ist damit endgültig aufgebraucht
   if(sp.merge && k==='mauer'){
     // Stapeln erhöht das GEWICHT, nicht die Stufe: Die Stufe rechnet
     // mauerNetz aus der ganzen Gruppe (und meldet den Aufstieg selbst).
@@ -1334,6 +1509,7 @@ function playCard(own,k,r,c){
     HAKEN.stufenFunken(rr,cc);
   } else {
     const neu = addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
+    if(geschenkt) neu.frei = true;              // nie bezahlt, kein Abrissgeld
     HAKEN.bauStaub(sp.cells);
     fxRing(sp.r0,sp.c0, HAKEN.spielerFarbe(own));
     if(DEFS[k].fuseAt) fuseWerke();
@@ -3927,23 +4103,30 @@ function syncHUD(){
     for(const el of box.children){
       const k=el.dataset.k;
       const rest = restOf(own,k);
-      const voll = rest!==null && rest<=0;
+      // Geschenkte Karten (Werkstatt im Fels) liegen NEBEN dem Kontingent:
+      // Wer eine hat, kann legen, auch wenn seine drei Mauern verbaut sind
+      // — und sie kostet nichts.
+      const gratis = gratisRest(own,k);
+      const voll = rest!==null && rest<=0 && !gratis;
       // ist die Grenze erreicht, taugt die Karte nur noch zum Aufwerten
       const grenze = DEFS[k].fuseAt || maxLvlOf(k);
-      const ausbau = rest===0 ? null : G.ents.find(e=>e.owner===own && e.type===k &&
+      const ausbau = (rest===0 && !gratis) ? null : G.ents.find(e=>e.owner===own && e.type===k &&
                      (DEFS[k].unit ? e.lvl===1 : e.lvl<grenze));
-      const cost = (voll && ausbau) ? costOf(k, ausbau.lvl+1) : costOf(k,1);
+      const cost = gratis ? 0 : (voll && ausbau) ? costOf(k, ausbau.lvl+1) : costOf(k,1);
       const usable = phase==='war' && r>=cost && (!voll || !!ausbau);
       el.querySelector('.cost').textContent = cost;
       el.classList.toggle('off', !usable);
       el.classList.toggle('rdy', usable);
-      el.classList.toggle('leer', rest===0);
+      el.classList.toggle('leer', rest===0 && !gratis);
+      el.classList.toggle('gratis', gratis>0);
       el.classList.toggle('arm', G.armed[own]===k);
-      el.querySelector('.fill').style.width = Math.min(100, r/cost*100)+'%';
+      el.querySelector('.fill').style.width = cost ? Math.min(100, r/cost*100)+'%' : '100%';
       const le=el.querySelector('.lim');
       if(le){
-        le.textContent = rest;
+        // Vorrat sichtbar: "2" ist das Kontingent, "+1" die geschenkte Karte.
+        le.textContent = gratis ? rest+'+'+gratis : rest;
         le.classList.toggle('voll', !!voll);
+        le.classList.toggle('extra', gratis>0);
       }
     }
     if(phase==='place') h.textContent = G.placed[own] ? 'Bereit' :
@@ -4003,10 +4186,15 @@ function cellFromClient(clientX,clientY){
   return inBoard(r,c) ? {r,c} : null;
 }
 
+/* Was das Legen HIER kostet — dieselbe Regel wie in playCard: eine
+ * geschenkte Karte (Werkstatt im Fels) gilt nur fuer den Neubau. */
+function legePreis(own, k, sp){
+  return (!sp.merge && gratisRest(own,k) > 0) ? 0 : preisFuer(k, sp);
+}
 function berechnePrev(d, r, c){                    // Zustand des Zielfelds, jederzeit neu bewertet
   const sp = placeSpot(d.own, d.k, r, c);
   if(sp){
-    const bezahlbar = G.res[d.own] >= preisFuer(d.k, sp);
+    const bezahlbar = G.res[d.own] >= legePreis(d.own, d.k, sp);
     return {cells:sp.cells, ok:!!bezahlbar, r:sp.r0, c:sp.c0, merge:sp.merge, sp, hr:r, hc:c};
   }
   const cells = entCells(d.k, r, c, !!G.orient[d.own]).filter(p=>inBoard(p.r,p.c));
@@ -4057,12 +4245,12 @@ horchen('pointermove', ev=>{
   let lbl=DEFS[d.k].nm+' · '+costOf(d.k,1);
   if(cl){
     const sp0=placeSpot(d.own,d.k,cl.r,cl.c);
-    if(sp0) lbl = (sp0.merge ? 'Stufe '+(sp0.merge.lvl+1) : DEFS[d.k].nm)+' · '+preisFuer(d.k,sp0);
+    if(sp0) lbl = (sp0.merge ? 'Stufe '+(sp0.merge.lvl+1) : DEFS[d.k].nm)+' · '+legePreis(d.own,d.k,sp0);
   }
   ghost.firstElementChild.textContent=lbl;
   if(cl){
     const sp=placeSpot(d.own,d.k,cl.r,cl.c);
-    const bezahlbar = sp && G.res[d.own] >= preisFuer(d.k, sp);
+    const bezahlbar = sp && G.res[d.own] >= legePreis(d.own, d.k, sp);
     d.prev = sp ? {cells:sp.cells, ok:!!bezahlbar, r:sp.r0, c:sp.c0, merge:sp.merge, sp, hr:cl.r, hc:cl.c}
                 : {cells:entCells(d.k,cl.r,cl.c,!!G.orient[d.own]).filter(p=>inBoard(p.r,p.c)),
                    ok:false, r:cl.r, c:cl.c, merge:null, hr:cl.r, hc:cl.c};

@@ -20,6 +20,14 @@
  *   kopf.html         Dokumentationskopf und <head> der Spieldatei
  *   stil.css          Gestaltung von HUD, Karten, Overlays, Menue
  *   huelle.html       Buehne, Kartenleisten, alle Overlays
+ *   karten.js         Teil 0: Kartenkatalog, Charaktere und die reine
+ *                     Werte-Rechnung. Steht als EINZIGER Teil VOR der
+ *                     Spielfunktion, im Modulrahmen: Die Auswahl im
+ *                     Bildschirm zeigt die Werteseite jeder Karte, bevor
+ *                     eine Partie laeuft, und darf die Zahlen deshalb
+ *                     nicht aus einem laufenden Kern abgreifen. Zweimal
+ *                     gepflegte Zahlen liefen mit dem ersten
+ *                     Balance-Schritt auseinander.
  *   simulation.js     Teil 1: Regeln und Zustand G, update(dt), Saatkorn-
  *                     Zufall — OHNE DOM, ohne Canvas, ohne Uhr. Der
  *                     Waechter unten erzwingt das bei jedem Bau.
@@ -53,6 +61,7 @@ const lf = (s) => s.replace(/\r\n/g, '\n');
 const teil = (name) => lf(readFileSync(pfad('../quelle/teile/' + name), 'utf8'));
 
 const kopf = teil('kopf.html');
+const karten = teil('karten.js');
 const stil = teil('stil.css');
 const huelle = teil('huelle.html');
 const simulation = teil('simulation.js');
@@ -78,7 +87,7 @@ const erlaubteZeilen = [
   'saat((Date.now() ^ 0x9E3779B9) >>> 0);',
   'const deko = Math.random;',
 ];
-for (const [name, quelle] of [['simulation.js', simulation], ['ki.js', ki]]) {
+for (const [name, quelle] of [['karten.js', karten], ['simulation.js', simulation], ['ki.js', ki]]) {
   let bereinigt = quelle;
   if (name === 'simulation.js') {
     for (const zeile of erlaubteZeilen) {
@@ -110,18 +119,25 @@ for (const [name, quelle] of [['simulation.js', simulation], ['ki.js', ki]]) {
   // faellt sie hier aus dem Sandkasten und der Bau bricht.
   const funktionen = ['saat', 'zufall', 'mische', 'newState', 'update',
     'placeSpot', 'preisFuer', 'playCard', 'setzeHaus', 'haltBefehl',
-    'abrissBefehl', 'drehBefehl', 'coinAuslosen', 'coinWahl', 'coinTick'];
+    'abrissBefehl', 'drehBefehl', 'coinAuslosen', 'coinWahl', 'coinTick',
+    // aus karten.js — Katalog und Werte-Rechnung, gemeinsame Quelle von
+    // Spielkern und Werteseite der Auswahl
+    'handVon', 'werteVon', 'kartenBlatt', 'charakterBlatt'];
   const befund = runInNewContext(
-    simulation + '\n;[' + funktionen.map((f) => 'typeof ' + f).join(', ') +
+    // karten.js gehoert dazu: simulation.js liest daraus handVon und werteVon.
+    karten + simulation + '\n;[' + funktionen.map((f) => 'typeof ' + f).join(', ') +
       ', typeof HAKEN].join(",");',
     {},
   );
   const soll = funktionen.map(() => 'function').join(',') + ',object';
   if (befund !== soll) {
-    throw new Error('simulation.js unvollstaendig im Sandkasten: ' + befund);
+    throw new Error('karten.js + simulation.js unvollstaendig im Sandkasten: ' + befund);
   }
 }
 
+// Die Spieldatei traegt alles in EINEM Skript; im Client-Kern wandert
+// karten.js dagegen VOR die Spielfunktion (Modulrahmen), damit die
+// Auswahl im Bildschirm die Werte ohne laufende Partie lesen kann.
 const js = simulation + darstellung + ki + oberflaeche;
 
 // ---------------------------------------------------------------------------
@@ -176,7 +192,7 @@ const kernKopf = anbindungKopf
   .replace('"<<HUELLE>>"', JSON.stringify('\n' + huelle));
 if (kernKopf.includes('<<')) throw new Error('Platzhalter in anbindung-kopf.js nicht gefuellt');
 const kernSkript = ('\n' + js).split('requestAnimationFrame(loop);').join('');
-const kern = kernKopf + kernSkript + anbindungFuss;
+const kern = karten + kernKopf + kernSkript + anbindungFuss;
 const kernZiel = pfad('../../client/src/minispiele/feldherr/kern.js');
 writeFileSync(kernZiel, kern, 'utf8');
 

@@ -11,20 +11,53 @@
 export declare const STIL: string;
 export declare const HUELLE: string;
 
+/** Eine Stufe einer Karte auf ihrer Werteseite. */
+export interface FeldherrKartenStufe {
+  readonly stufe: number;
+  /** Kaufpreis; null bei Truppen ab Stufe 2 (die entstehen durch Verschmelzen). */
+  readonly preis: number | null;
+  readonly hp: number;
+  readonly dmg: number;
+  readonly rng: number;
+  /** Sekunden zwischen zwei Schlaegen. */
+  readonly schlag: number;
+  /** Sekunden zwischen zwei Schritten (0 bei Bauten). */
+  readonly marsch: number;
+  readonly ertrag: number;
+  readonly laufzeit: number;
+  readonly steilfeuer: boolean;
+  readonly splitter: number;
+}
+
+/** Werteseite einer Karte: Zahlen und Wechselwirkungen. */
+export interface FeldherrKarte {
+  readonly id: string;
+  readonly nm: string;
+  /** Truppe, Geschuetz, Sperre oder Bau. */
+  readonly art: string;
+  readonly satz: string;
+  readonly wirkt: readonly string[];
+  readonly feld: string;
+  /** Wie oft die Karte je Partie gelegt werden darf; null heisst unbegrenzt. */
+  readonly kartenGrenze: number | null;
+  readonly beweglich: boolean;
+  readonly stufen: readonly FeldherrKartenStufe[];
+}
+
 /**
- * Ein spielbarer Charakter — Anzeigedaten fuer die Auswahl. Die WERTE
- * seiner Karten stehen im Kern (CHARAKTERE in
- * packages/game-feldherr/quelle/teile/simulation.js).
+ * Ein spielbarer Charakter mit seiner Kartenhand. Die Zahlen kommen aus
+ * derselben Quelle wie die des Spielkerns
+ * (packages/game-feldherr/quelle/teile/karten.js).
  */
 export interface FeldherrCharakter {
   readonly id: string;
   readonly nm: string;
   readonly kurz: string;
-  readonly karten: readonly string[];
-  readonly eigenheiten: readonly string[];
+  readonly karten: readonly FeldherrKarte[];
 }
 
 export declare const CHARAKTERE: readonly FeldherrCharakter[];
+export declare function kartenSeite(charakterId: string, karte: string): FeldherrKarte | null;
 
 export interface FeldherrAusgang {
   readonly sieger: number | null;

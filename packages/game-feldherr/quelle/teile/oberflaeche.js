@@ -82,23 +82,30 @@ function syncHUD(){
     for(const el of box.children){
       const k=el.dataset.k;
       const rest = restOf(own,k);
-      const voll = rest!==null && rest<=0;
+      // Geschenkte Karten (Werkstatt im Fels) liegen NEBEN dem Kontingent:
+      // Wer eine hat, kann legen, auch wenn seine drei Mauern verbaut sind
+      // — und sie kostet nichts.
+      const gratis = gratisRest(own,k);
+      const voll = rest!==null && rest<=0 && !gratis;
       // ist die Grenze erreicht, taugt die Karte nur noch zum Aufwerten
       const grenze = DEFS[k].fuseAt || maxLvlOf(k);
-      const ausbau = rest===0 ? null : G.ents.find(e=>e.owner===own && e.type===k &&
+      const ausbau = (rest===0 && !gratis) ? null : G.ents.find(e=>e.owner===own && e.type===k &&
                      (DEFS[k].unit ? e.lvl===1 : e.lvl<grenze));
-      const cost = (voll && ausbau) ? costOf(k, ausbau.lvl+1) : costOf(k,1);
+      const cost = gratis ? 0 : (voll && ausbau) ? costOf(k, ausbau.lvl+1) : costOf(k,1);
       const usable = phase==='war' && r>=cost && (!voll || !!ausbau);
       el.querySelector('.cost').textContent = cost;
       el.classList.toggle('off', !usable);
       el.classList.toggle('rdy', usable);
-      el.classList.toggle('leer', rest===0);
+      el.classList.toggle('leer', rest===0 && !gratis);
+      el.classList.toggle('gratis', gratis>0);
       el.classList.toggle('arm', G.armed[own]===k);
-      el.querySelector('.fill').style.width = Math.min(100, r/cost*100)+'%';
+      el.querySelector('.fill').style.width = cost ? Math.min(100, r/cost*100)+'%' : '100%';
       const le=el.querySelector('.lim');
       if(le){
-        le.textContent = rest;
+        // Vorrat sichtbar: "2" ist das Kontingent, "+1" die geschenkte Karte.
+        le.textContent = gratis ? rest+'+'+gratis : rest;
         le.classList.toggle('voll', !!voll);
+        le.classList.toggle('extra', gratis>0);
       }
     }
     if(phase==='place') h.textContent = G.placed[own] ? 'Bereit' :
@@ -158,10 +165,15 @@ function cellFromClient(clientX,clientY){
   return inBoard(r,c) ? {r,c} : null;
 }
 
+/* Was das Legen HIER kostet — dieselbe Regel wie in playCard: eine
+ * geschenkte Karte (Werkstatt im Fels) gilt nur fuer den Neubau. */
+function legePreis(own, k, sp){
+  return (!sp.merge && gratisRest(own,k) > 0) ? 0 : preisFuer(k, sp);
+}
 function berechnePrev(d, r, c){                    // Zustand des Zielfelds, jederzeit neu bewertet
   const sp = placeSpot(d.own, d.k, r, c);
   if(sp){
-    const bezahlbar = G.res[d.own] >= preisFuer(d.k, sp);
+    const bezahlbar = G.res[d.own] >= legePreis(d.own, d.k, sp);
     return {cells:sp.cells, ok:!!bezahlbar, r:sp.r0, c:sp.c0, merge:sp.merge, sp, hr:r, hc:c};
   }
   const cells = entCells(d.k, r, c, !!G.orient[d.own]).filter(p=>inBoard(p.r,p.c));
@@ -212,12 +224,12 @@ horchen('pointermove', ev=>{
   let lbl=DEFS[d.k].nm+' · '+costOf(d.k,1);
   if(cl){
     const sp0=placeSpot(d.own,d.k,cl.r,cl.c);
-    if(sp0) lbl = (sp0.merge ? 'Stufe '+(sp0.merge.lvl+1) : DEFS[d.k].nm)+' · '+preisFuer(d.k,sp0);
+    if(sp0) lbl = (sp0.merge ? 'Stufe '+(sp0.merge.lvl+1) : DEFS[d.k].nm)+' · '+legePreis(d.own,d.k,sp0);
   }
   ghost.firstElementChild.textContent=lbl;
   if(cl){
     const sp=placeSpot(d.own,d.k,cl.r,cl.c);
-    const bezahlbar = sp && G.res[d.own] >= preisFuer(d.k, sp);
+    const bezahlbar = sp && G.res[d.own] >= legePreis(d.own, d.k, sp);
     d.prev = sp ? {cells:sp.cells, ok:!!bezahlbar, r:sp.r0, c:sp.c0, merge:sp.merge, sp, hr:cl.r, hc:cl.c}
                 : {cells:entCells(d.k,cl.r,cl.c,!!G.orient[d.own]).filter(p=>inBoard(p.r,p.c)),
                    ok:false, r:cl.r, c:cl.c, merge:null, hr:cl.r, hc:cl.c};
