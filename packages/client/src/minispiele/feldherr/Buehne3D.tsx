@@ -153,19 +153,44 @@ function spriteStoff(farbe: string, deckkraft: number): THREE.SpriteMaterial {
 
 /** Schadenszahlen und Meldungen als Leinwand-Texturen, je Text geteilt. */
 const textLager = new Map<string, THREE.Texture>();
-function textTextur(text: string, farbe: string): THREE.Texture {
-  const key = text + '/' + farbe;
+function textTextur(text: string, farbe: string, tafel = false): THREE.Texture {
+  const key = text + '/' + farbe + (tafel ? '/tafel' : '');
   let t = textLager.get(key);
   if (!t) {
     const leinwand = document.createElement('canvas');
-    leinwand.width = 256; leinwand.height = 96;
+    // Breite Tafeln fuer Hinweisschilder, quadratisch fuer kurze Zahlen.
+    leinwand.width = tafel ? 1024 : 256;
+    leinwand.height = tafel ? 200 : 96;
     const z = leinwand.getContext('2d')!;
-    z.font = '800 56px system-ui, sans-serif';
+    const mitteX = leinwand.width / 2, mitteY = leinwand.height / 2;
+    if (tafel) {
+      // Wie das 2D-Schild: dunkle Platte mit farbigem Rand, damit der Text
+      // ueber jedem Untergrund lesbar bleibt. Die Schrift schrumpft nur,
+      // wenn eine lange Ansage sonst aus der Tafel liefe — die Sprites
+      // haben alle dieselbe Groesse, damit die Schrift gleich gross wirkt.
+      let grad = 72;
+      z.font = '800 ' + grad + 'px system-ui, sans-serif';
+      const platz = leinwand.width - 90;
+      if (z.measureText(text).width > platz) {
+        grad = Math.max(26, Math.floor((grad * platz) / z.measureText(text).width));
+        z.font = '800 ' + grad + 'px system-ui, sans-serif';
+      }
+      const breite = Math.min(leinwand.width - 12, z.measureText(text).width + 56);
+      z.fillStyle = 'rgba(7,12,17,.9)';
+      z.beginPath();
+      const x0 = mitteX - breite / 2, y0 = 26, h = leinwand.height - 52;
+      if (z.roundRect) z.roundRect(x0, y0, breite, h, 26); else z.rect(x0, y0, breite, h);
+      z.fill();
+      z.strokeStyle = farbe; z.globalAlpha = 0.7; z.lineWidth = 5; z.stroke();
+      z.globalAlpha = 1;
+    } else {
+      z.font = '800 56px system-ui, sans-serif';
+      z.lineWidth = 8; z.strokeStyle = 'rgba(6,10,14,.85)';
+    }
     z.textAlign = 'center'; z.textBaseline = 'middle';
-    z.lineWidth = 8; z.strokeStyle = 'rgba(6,10,14,.85)';
-    z.strokeText(text, 128, 48);
+    if (!tafel) z.strokeText(text, mitteX, mitteY);
     z.fillStyle = farbe;
-    z.fillText(text, 128, 48);
+    z.fillText(text, mitteX, mitteY);
     t = new THREE.CanvasTexture(leinwand);
     textLager.set(key, t);
   }
@@ -434,6 +459,10 @@ function Szene({
   const effekte = useRef(new THREE.Group());
   const marken = useRef(new THREE.Group());
   const markenVorrat = useRef<THREE.Mesh[]>([]);
+  const schilder = useRef(new THREE.Group());
+  const schilderVorrat = useRef<{ sprite: THREE.Sprite; text: string }[]>([]);
+  const geister = useRef(new THREE.Group());
+  const geisterLager = useRef(new Map<string, { obj: THREE.Object3D; stoff: THREE.MeshLambertMaterial }>());
   const imBild = useRef(new Map<number, {
     obj: THREE.Group; art: string; lvl: number;
     ueber: ObjektOverlays; bx: number; bz: number;
@@ -740,6 +769,78 @@ function Szene({
       markenVorrat.current[i].visible = false;
     }
 
+    // Bauvorschau: ein durchscheinendes Modell dessen, was gerade gezogen
+    // wird, auf dem Zielfeld. Grün heisst setzbar und bezahlbar, Rot heisst
+    // hier nicht — dieselbe Aussage wie die Farbe der Bodenmarke darunter.
+    const vorschau = blick.bauVorschau ? blick.bauVorschau() : [];
+    geister.current.visible = vorschau.length > 0;
+    for (const kind of geister.current.children) kind.visible = false;
+    for (const v of vorschau) {
+      let r0 = Infinity, c0 = Infinity, r1 = -Infinity, c1 = -Infinity;
+      for (const p of v.cells) {
+        r0 = Math.min(r0, p.r); c0 = Math.min(c0, p.c);
+        r1 = Math.max(r1, p.r); c1 = Math.max(c1, p.c);
+      }
+      const bw = c1 - c0 + 1, bh = r1 - r0 + 1;
+      const schluessel = v.art + '|' + v.own + '|' + v.stufe + '|' + bw + 'x' + bh;
+      let geist = geisterLager.current.get(schluessel);
+      if (!geist) {
+        const obj = baueObjekt(v.art, v.own, v.stufe, ritter);
+        // EIN durchscheinender Stoff über alle Teile: Das liest sich als
+        // Vorschau und nicht als fertiges Bauwerk. Eigener Stoff je Geist —
+        // die geteilten Materialien der echten Objekte bleiben unberührt.
+        const stoff2 = new THREE.MeshLambertMaterial({
+          transparent: true, opacity: 0.55, depthWrite: false,
+        });
+        obj.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (m.isMesh) m.material = stoff2;
+        });
+        if (v.art === 'werk') obj.scale.set(bw * 0.9, 1, bh * 0.9);
+        geist = { obj, stoff: stoff2 };
+        geisterLager.current.set(schluessel, geist);
+        geister.current.add(obj);
+      }
+      geist.obj.visible = true;
+      geist.stoff.color.set(v.ok ? '#8ef0b8' : '#ff6a52');
+      geist.obj.position.set(xVon(c0, bw), 0.01, zVon(r0, bh));
+    }
+
+    // Hinweisschilder (Reichweitengewinn, Erdwärme, Walddeckung, Preis) —
+    // welche Ansage auf welchem Feld steht, entscheidet der Kern.
+    const schilderListe = blick.schilder ? blick.schilder() : [];
+    for (let i = 0; i < schilderListe.length; i++) {
+      let eintrag = schilderVorrat.current[i];
+      if (!eintrag) {
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+        eintrag = { sprite, text: '' };
+        schilderVorrat.current[i] = eintrag;
+        schilder.current.add(sprite);
+      }
+      const s = schilderListe[i];
+      const sp = eintrag.sprite;
+      sp.visible = true;
+      const schluessel = s.tx + '/' + s.col;
+      if (schluessel !== eintrag.text) {
+        eintrag.text = schluessel;
+        sp.material.map = textTextur(s.tx, s.col, true);
+        sp.material.needsUpdate = true;
+      }
+      // Alle Schilder gleich gross — die Tafel in der Textur passt sich dem
+      // Text an, der freie Rand ist durchsichtig. Nur so wirkt die Schrift
+      // ueberall gleich gross.
+      sp.scale.set(3.9, 3.9 * (200 / 1024), 1);
+      // Aus der Vogelperspektive traegt Hoehe kaum: Was 2D nach OBEN
+      // staffelt, rueckt hier zum Betrachter. Derselbe Abstand haelt die
+      // Schilder auseinander (Stufe unter Reichweitengewinn) und laesst die
+      // Bauvorschau darunter frei.
+      sp.position.set(s.c + 0.5, s.h * 0.5 + 0.4,
+        (spiegel ? zeilen - 1 - s.r : s.r) + 0.5 + s.h * 0.55);
+    }
+    for (let i = schilderListe.length; i < schilderVorrat.current.length; i++) {
+      schilderVorrat.current[i].sprite.visible = false;
+    }
+
     // Kampf-Effekte aus G.fx spiegeln (Schadenszahlen, Ringe, Explosionen,
     // Leichen) — die Lebenszeit t treibt der Kern, hier wird nur gestellt.
     const fxLebend = new Set<object>();
@@ -796,7 +897,9 @@ function Szene({
         <primitive object={gelaende.current} />
         <primitive object={marken.current} />
         <primitive object={objekte.current} />
+        <primitive object={geister.current} />
         <primitive object={effekte.current} />
+        <primitive object={schilder.current} />
         {/* Zielfeld-Marker unter dem Zeiger */}
         <mesh ref={marker} visible={false} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.94, 0.94]} />

@@ -134,6 +134,18 @@ export interface FeldherrLeseblick {
   }[];
   /** Stellungen der Gruppe (n von max) oder null bei Bauten. */
   stellungsStand(e: FeldherrObjekt): { n: number; max: number; gruppe: string } | null;
+  /**
+   * Hinweisschilder des Augenblicks (Reichweitengewinn, Erdwaerme,
+   * Walddeckung, Preis, Sprengradius). `h` ist die Hoehe in Zellhoehen.
+   */
+  schilder(): {
+    tx: string; r: number; c: number; col: string; h: number; own: number;
+  }[];
+  /** Was gerade gezogen wird und wohin es faellt (Bauvorschau). */
+  bauVorschau(): {
+    art: string; own: number; ok: boolean; merge: boolean; stufe: number;
+    cells: { r: number; c: number }[];
+  }[];
   /** Taktzeiten des Muenzwurfs, damit 3D dieselbe Uhr benutzt wie coinTick. */
   readonly muenze: { flug: number; land: number; liegt: number; zeigen: number };
   /** Eigener Sitz, oder null wenn das Brett beiden gehoert (zu zweit am Geraet). */

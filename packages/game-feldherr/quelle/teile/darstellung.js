@@ -1480,7 +1480,6 @@ function peekAnzeige(e){                          // Reichweite bzw. Sprengradiu
         const col = man===1 ? '#ff4a3a' : man===2 ? '#ff9a4a' : '#ffd06a';
         tileMark(r,c,col, (man===1?0.28:man===2?0.18:0.10)*puls, man===1);
       }
-    schild('Sprengradius', midX(e.c), midY(e.r), TH*2.2, '#ff8a6e', e.owner);
     return;
   }
   const rng = canAtt(e) ? rngOf(e) : 0;
@@ -1492,7 +1491,78 @@ function peekAnzeige(e){                          // Reichweite bzw. Sprengradiu
   }
   for(const o of attackTargets(e))                // was gerade in Reichweite ist
     for(const q of o.cells) tileMark(q.r,q.c,'#ff6a52', 0.24*puls, true);
-  schild('Reichweite '+rng, midX(e.c), midY(e.r), TH*2.2, '#bfe6ff', e.owner);
+}
+
+/* Die Hinweisschilder als LISTE — was auf einem Feld angesagt wird
+ * (Reichweitengewinn, Erdwärme, Walddeckung, Preis, Sprengradius), ist eine
+ * Regelfrage und keine Zeichenfrage. Beide Ansichten lesen dieselbe Liste:
+ * drawHinweise unten und die 3D-Bühne über lesen().schilder. `h` ist die
+ * Höhe in Zellhöhen, damit 3D denselben Abstand halten kann. */
+function schildListe(){
+  const liste = [];
+  const schildD = (tx, r, c, col, h, own) => liste.push({tx, r, c, col, h, own});
+  if(peek && peek.t>=0.2){
+    const e = peek.ent;
+    if(DEFS[e.type].laufzeit && !e.berg && !e.tot){
+      schildD('Sprengradius', e.r, e.c, '#ff8a6e', 2.2, e.owner);
+    } else if(canAtt(e) && rngOf(e)){
+      schildD('Reichweite '+rngOf(e), e.r, e.c, '#bfe6ff', 2.2, e.owner);
+    }
+  }
+  if(phase==='place'){                             // Hinweis auf die Erdwärme
+    const who = drankommt();
+    for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+      if(freeCell(r,c) && envAt(r,c)!=='vulkan' && nebenVulkan(r,c)){
+        schildD('+1 Ressource: Erdwärme', r, c, '#ffbe5e', 2.0, who);
+        return liste;
+      }
+    return liste;
+  }
+  const belegt = {};                               // je Spieler nur ein Schild
+  for(const d of drags.values()){
+    if(!d.prev) continue;
+    const {hr,hc} = d.prev;
+    if(d.prev.merge){
+      const ziel = d.prev.merge;
+      // Mauern zählen Karten, nicht die Verbundstufe (siehe mauerNetz).
+      const nl = d.k==='mauer' ? mauerGewicht(ziel)+1 : ziel.lvl+1;
+      schildD('Stufe '+Math.min(maxLvlOf(d.k), nl)+' · '+costOf(d.k, nl), hr, hc, '#ffd977', 2.85, d.own);
+      if(d.k==='bogen' || d.k==='kanone'){         // Reichweitengewinn benennen
+        const probe = {type:d.k, owner:d.own, lvl:Math.min(maxLvlOf(d.k), nl),
+                       r:hr, c:hc, cells:[{r:hr,c:hc}], berg:ziel.berg, turm:ziel.turm};
+        const altR = rngOf(ziel), neuR = rngOf(probe);
+        if(neuR!==altR) schildD('Reichweite '+altR+' → '+neuR, hr, hc, '#8ef0b8', 3.55, d.own);
+      }
+    } else {
+      const bonus = d.prev.ok ? bonusInfo(d.k, hr, hc) : null;
+      const preis = d.prev.sp ? preisFuer(d.k, d.prev.sp) : costOf(d.k,1);
+      schildD(bonus ? bonus+'  ·  '+preis : DEFS[d.k].nm+' · '+preis, hr, hc,
+              bonus ? '#5fe0a8' : (d.prev.ok ? sh(COL.p[d.own],1.1) : '#ff6a52'), 2.15, d.own);
+    }
+    belegt[d.own]={r:hr, c:hc};
+  }
+  // Hinweis auf die Bonuszone — auch während des Ziehens sichtbar
+  for(const own of [0,1]){
+    const a=G.armed[own];
+    if(!a) continue;
+    let tx=null, zr=null, zc=null;
+    if(a==='bogen' || a==='kanone'){
+      for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+        if(envAt(r,c)==='gebirge' && !entAt(r,c)){ tx='+1 Reichweite, +1 Schaden'; zr=r; zc=c; }
+    }
+    if(!tx && a==='werk'){
+      const r0 = own===0 ? MID-PANIK : MID;
+      tx='+1 Ressource pro Sekunde'; zr=r0+0.5; zc=(COLS-1)/2;
+    }
+    if(!tx && DEFS[a].unit){
+      for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+        if(envAt(r,c)==='wald' && !entAt(r,c)){ tx='+50 % Leben, +25 % Schaden'; zr=r; zc=c; }
+    }
+    const finger = belegt[own];                 // nicht zweimal dasselbe Feld beschriften
+    if(tx && !(finger && Math.round(finger.r)===Math.round(zr) && Math.round(finger.c)===Math.round(zc)))
+      schildD(tx, zr, zc, '#5fe0a8', 2.0, own);
+  }
+  return liste;
 }
 function knallVorschau(d){                        // wen risse dieses Werk mit?
   const felsig = d.prev.cells.some(q=>envAt(q.r,q.c)==='gebirge');
@@ -1595,63 +1665,20 @@ function drawHinweise(){
     if(e.halt || e.turm) stellungsSchild(e,p);
   }
   if(peek && peek.t>=0.2) peekAnzeige(peek.ent);
-  if(phase==='place'){                            // Hinweis auf die Erdwärme
-    const who = drankommt();
-    for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-      if(freeCell(r,c) && envAt(r,c)!=='vulkan' && nebenVulkan(r,c)){
-        schild('+1 Ressource: Erdwärme', midX(c), midY(r), TH*2.0, '#ffbe5e', who);
-        return;
+  if(phase!=='place'){
+    drawSperrBalken();                            // Restzeit der Trümmer obenauf
+    for(const d of drags.values()){
+      if(!d.prev) continue;
+      if(d.k==='kanone' && d.prev.ok) kanonenZiel(d);
+      if(d.k==='werk' && d.prev.ok) knallVorschau(d);
+      if(d.prev.merge){
+        markAufwertung(d.prev.merge);
+        pfeilHoch(midX(d.prev.hc), midY(d.prev.hr), TH*2.05);
       }
+    }
   }
-  drawSperrBalken();                              // Restzeit der Trümmer obenauf
-  const belegt = {};                               // je Spieler nur ein Schild
-  for(const d of drags.values()){
-    if(!d.prev) continue;
-    const {hr,hc} = d.prev;
-    const px = midX(hc), py = midY(hr);
-    if(d.k==='kanone' && d.prev.ok) kanonenZiel(d);
-    if(d.k==='werk' && d.prev.ok) knallVorschau(d);
-    if(d.prev.merge){
-      const ziel = d.prev.merge, nl = ziel.lvl+1;
-      markAufwertung(ziel);
-      pfeilHoch(px, py, TH*2.05);
-      schild('Stufe '+nl+' · '+costOf(d.k, nl), px, py, TH*2.85, '#ffd977', d.own);
-      if(d.k==='bogen' || d.k==='kanone'){                       // Reichweitengewinn benennen
-        const probe = {type:d.k, owner:d.own, lvl:Math.min(maxLvlOf(d.k), nl),
-                       r:hr, c:hc, cells:[{r:hr,c:hc}], berg:ziel.berg, turm:ziel.turm};
-        const altR = rngOf(ziel), neuR = rngOf(probe);
-        if(neuR!==altR)
-          schild('Reichweite '+altR+' → '+neuR, px, py, TH*3.55, '#8ef0b8', d.own);
-      }
-    } else {
-      const bonus = d.prev.ok ? bonusInfo(d.k, hr, hc) : null;
-      const preis = d.prev.sp ? preisFuer(d.k, d.prev.sp) : costOf(d.k,1);
-      schild(bonus ? bonus+'  ·  '+preis : DEFS[d.k].nm+' · '+preis, px, py, TH*2.15,
-             bonus ? '#5fe0a8' : (d.prev.ok ? sh(COL.p[d.own],1.1) : '#ff6a52'), d.own);
-    }
-    belegt[d.own]={r:hr, c:hc};
-  }
-  // Hinweis auf die Bonuszone — auch während des Ziehens sichtbar
-  for(const own of [0,1]){
-    const a=G.armed[own];
-    if(!a) continue;
-    let tx=null, zr=null, zc=null;
-    if(a==='bogen' || a==='kanone'){
-      for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-        if(envAt(r,c)==='gebirge' && !entAt(r,c)){ tx='+1 Reichweite, +1 Schaden'; zr=r; zc=c; }
-    }
-    if(!tx && a==='werk'){
-      const r0 = own===0 ? MID-PANIK : MID;
-      tx='+1 Ressource pro Sekunde'; zr=r0+0.5; zc=(COLS-1)/2;
-    }
-    if(!tx && DEFS[a].unit){
-      for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-        if(envAt(r,c)==='wald' && !entAt(r,c)){ tx='+50 % Leben, +25 % Schaden'; zr=r; zc=c; }
-    }
-    const finger = belegt[own];                 // nicht zweimal dasselbe Feld beschriften
-    if(tx && !(finger && Math.round(finger.r)===Math.round(zr) && Math.round(finger.c)===Math.round(zc)))
-      schild(tx, midX(zc), midY(zr), TH*2.0, '#5fe0a8', own);
-  }
+  for(const s of schildListe())
+    schild(s.tx, midX(s.c), midY(s.r), TH*s.h, s.col, s.own);
 }
 
 /* ---------- Effekte ---------- */

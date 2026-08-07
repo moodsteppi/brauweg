@@ -406,6 +406,28 @@
       /* Bodenmarkierungen als Liste — welche Felder hervorgehoben gehoeren,
        * ist eine Regelfrage. 2D und 3D lesen dieselbe Quelle (markenListe). */
       feldMarken: markenListe,
+      /* Hinweisschilder (Reichweitengewinn, Erdwaerme, Walddeckung, Preis,
+       * Sprengradius) — dieselbe Liste zeichnet der 2D-Renderer. */
+      schilder: schildListe,
+      /* Bauvorschau: was gerade gezogen wird und wohin es faellt. Daraus
+       * stellt die 3D-Buehne ein durchscheinendes Modell aufs Zielfeld.
+       * `ok` heisst: Platz frei UND bezahlbar. */
+      bauVorschau: () => {
+        const liste = [];
+        for (const d of drags.values()) {
+          if (!d.prev || !d.prev.cells || !d.prev.cells.length) continue;
+          liste.push({
+            art: d.k,
+            own: d.own,
+            ok: !!d.prev.ok,
+            merge: !!d.prev.merge,
+            stufe: d.prev.merge ? Math.min(maxLvlOf(d.k), (d.k === 'mauer'
+                     ? mauerGewicht(d.prev.merge) + 1 : d.prev.merge.lvl + 1)) : 1,
+            cells: d.prev.cells.map((p) => ({ r: p.r, c: p.c })),
+          });
+        }
+        return liste;
+      },
       /* Taktzeiten des Muenzwurfs (Flug, Aufschlag, Anzeige) — damit die
        * 3D-Buehne dieselbe Uhr benutzt wie coinTick und nicht daneben laeuft. */
       muenze: MUENZE,

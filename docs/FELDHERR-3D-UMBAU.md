@@ -199,6 +199,27 @@ aktualisiert sich im 120-ms-Takt, nicht je Bild. Der Kopf/Zahl-Dialog des
 Kerns (`ovCoin`, z-index 100) liegt weiterhin über der Bühne (z-index 10)
 und bleibt bedienbar — geprüft mit `elementFromPoint`.
 
+**Bauvorschau und Hinweisschilder (7. August 2026):**
+
+* **Bauvorschau:** `lesen().bauVorschau()` meldet, was gerade gezogen wird
+  und wohin es fällt; die Bühne stellt ein durchscheinendes Modell aufs
+  Zielfeld — grün heißt setzbar und bezahlbar, rot heißt hier nicht.
+  Jeder Geist bekommt EINEN eigenen durchscheinenden Stoff über alle
+  Teile; die geteilten Materialien der echten Objekte bleiben unberührt.
+  Geister werden je Bauart/Stufe/Grundfläche zwischengelagert.
+* **Hinweisschilder:** `drawHinweise` ist wie `drawMarks` zerlegt —
+  `schildListe()` liefert die Ansagen als Daten (Reichweitengewinn
+  „Reichweite 3 → 4", Erdwärme, Walddeckung, Felsbonus, Preis,
+  Sprengradius), gezeichnet wird daraus in 2D **und** 3D
+  (`lesen().schilder`). Die Höhe kommt als Vielfaches der Zellhöhe, damit
+  beide Ansichten dieselbe Staffelung halten.
+* Zwei Eigenheiten der Vogelperspektive, die den Feinschliff bestimmt
+  haben: Höhe trägt kaum, also rückt 3D die Schilder **zum Betrachter**
+  statt nach oben (Abstand `h * 0,55` — dieselbe Staffelung wie in 2D).
+  Und alle Schild-Sprites haben **dieselbe Größe**; die Tafel passt sich
+  im Bild dem Text an, die Schrift schrumpft nur bei sehr langen Ansagen.
+  Größe nach Textlänge zu skalieren ließ kurze Schilder winzig wirken.
+
 **Offen in Stufe 2:** Marsch-Interpolation über `restAnteil` und `e.mt`
 statt Nachzieh-Glättung, Kanonenkugel-Flugbahn (der `ball`-Effekt trägt
 2D-Pixelkoordinaten — braucht Brettkoordinaten im fx-Eintrag),
