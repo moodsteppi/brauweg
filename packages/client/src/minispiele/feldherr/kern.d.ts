@@ -76,6 +76,13 @@ export interface FeldherrObjekt {
   readonly halt?: boolean;
   readonly turm?: boolean;
   readonly berg?: boolean;
+  /** Marsch- und Schlagtakt-Zaehler; mit marschDauer wird daraus der Ring. */
+  readonly mtimer?: number;
+  readonly timer?: number;
+  /** Schlag-Animation: 1 beim Treffer, klingt ab; adx/ady ist die Richtung. */
+  readonly atk?: number;
+  readonly adx?: number;
+  readonly ady?: number;
   readonly [weitere: string]: unknown;
 }
 
@@ -107,6 +114,12 @@ export interface FeldherrLeseblick {
   readonly spiegel: boolean;
   readonly takt: number;
   readonly restAnteil: number;
+  /** Hoechstleben samt aller Boni (Fels, Hausausbau) — Formel bleibt im Kern. */
+  maxLeben(e: FeldherrObjekt): number;
+  /** Marschtakt in Sekunden; mit e.mtimer ergibt das den Bereitschaftsring. */
+  marschDauer(e: FeldherrObjekt): number;
+  /** Kann sich bewegen (Einheit, nicht im Turm). */
+  beweglich(e: FeldherrObjekt): boolean;
 }
 
 export interface FeldherrSitzung {

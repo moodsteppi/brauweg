@@ -4339,6 +4339,12 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
       spiegel: SPIEGEL,
       takt: taktZaehler,
       restAnteil: Math.max(0, Math.min(1, restMs / TAKT_MS)),
+      /* Abgeleitete Werte fuer Lebensbalken und Bereitschaftsring — die
+       * Formeln (Fels, Hausausbau, Stufen) bleiben im Kern, der Renderer
+       * rechnet nichts nach. */
+      maxLeben: maxHp,
+      marschDauer: mcdOf,
+      beweglich: canMove,
     }),
     /**
      * Zeiger-Abbildung der 3D-Ansicht setzen (oder mit null loesen): Sie

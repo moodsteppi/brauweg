@@ -82,6 +82,154 @@ function kloetzchen(
   return mesh;
 }
 
+/* ---------- Overlays: Lebensbalken, Bereitschaftsring, Kampf-Effekte ------
+ * Die Werte kommen ausschliesslich aus dem Lesefenster (hp, mtimer, atk,
+ * G.fx) — hier wird nur dargestellt, nie gerechnet. */
+
+/** Ungefaehre Kopfhoehe je Objektart, dort schwebt der Lebensbalken. */
+const HOEHE: Record<string, number> = {
+  haus: 1.2, mauer: 0.95, werk: 0.8, kanone: 0.9,
+  schwert: 0.75, bogen: 0.75, ritter: 1.05,
+};
+
+/** Bereitschaftsring in 25 Fuellstufen — Geometrien werden geteilt. */
+const RING_STUFEN = 24;
+const ringGeos: THREE.RingGeometry[] = [];
+for (let i = 0; i <= RING_STUFEN; i++) {
+  ringGeos.push(new THREE.RingGeometry(0.34, 0.42, 24, 1, Math.PI / 2, Math.max(0.001, (i / RING_STUFEN) * Math.PI * 2)));
+}
+
+const spriteLager = new Map<string, THREE.SpriteMaterial>();
+function spriteStoff(farbe: string, deckkraft: number): THREE.SpriteMaterial {
+  const key = farbe + '/' + deckkraft;
+  let m = spriteLager.get(key);
+  if (!m) {
+    m = new THREE.SpriteMaterial({ color: farbe, opacity: deckkraft, transparent: true, depthTest: false });
+    spriteLager.set(key, m);
+  }
+  return m;
+}
+
+/** Schadenszahlen und Meldungen als Leinwand-Texturen, je Text geteilt. */
+const textLager = new Map<string, THREE.Texture>();
+function textTextur(text: string, farbe: string): THREE.Texture {
+  const key = text + '/' + farbe;
+  let t = textLager.get(key);
+  if (!t) {
+    const leinwand = document.createElement('canvas');
+    leinwand.width = 256; leinwand.height = 96;
+    const z = leinwand.getContext('2d')!;
+    z.font = '800 56px system-ui, sans-serif';
+    z.textAlign = 'center'; z.textBaseline = 'middle';
+    z.lineWidth = 8; z.strokeStyle = 'rgba(6,10,14,.85)';
+    z.strokeText(text, 128, 48);
+    z.fillStyle = farbe;
+    z.fillText(text, 128, 48);
+    t = new THREE.CanvasTexture(leinwand);
+    textLager.set(key, t);
+  }
+  return t;
+}
+
+interface ObjektOverlays {
+  balkenBg: THREE.Sprite;
+  balkenFill: THREE.Sprite;
+  ring: THREE.Mesh | null;
+  ringStufe: number;
+}
+function baueOverlays(gruppe: THREE.Group, art: string, laeuft: boolean): ObjektOverlays {
+  const hoehe = (HOEHE[art] ?? 0.9) + 0.3;
+  const balkenBg = new THREE.Sprite(spriteStoff('#0a1116', 0.75));
+  balkenBg.scale.set(0.76, 0.1, 1);
+  balkenBg.position.y = hoehe;
+  balkenBg.visible = false;
+  const balkenFill = new THREE.Sprite(spriteStoff('#7fd8a0', 0.95));
+  balkenFill.center.set(0, 0.5);            // links verankert, Breite = Lebensanteil
+  balkenFill.scale.set(0.72, 0.07, 1);
+  balkenFill.position.set(-0.36, hoehe, 0);
+  balkenFill.visible = false;
+  gruppe.add(balkenBg, balkenFill);
+  let ring: THREE.Mesh | null = null;
+  if (laeuft) {
+    ring = new THREE.Mesh(ringGeos[0], new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.025;
+    gruppe.add(ring);
+  }
+  return { balkenBg, balkenFill, ring, ringStufe: -1 };
+}
+
+/* Kampf-Effekte aus G.fx: Der Kern treibt die Lebenszeit t in animate()
+ * (negativ = Verzoegerung, das Bild wartet). Hier wird je Eintrag EIN
+ * Objekt gebaut und je Bild nachgefuehrt; verschwindet der Eintrag aus
+ * G.fx, verschwindet das Objekt. Materialien sind je Effekt eigene
+ * (Deckkraft je Instanz) und werden beim Entsorgen freigegeben. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function baueFx(f: any): THREE.Object3D | null {
+  if (f.k === 'txt') {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: textTextur(String(f.tx), String(f.col || '#ffffff')),
+      transparent: true, depthTest: false,
+    }));
+    sp.scale.set(1.5, 0.56, 1);
+    return sp;
+  }
+  if (f.k === 'ring') {
+    const m = new THREE.Mesh(
+      new THREE.RingGeometry(0.82, 1, 28),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(String(f.col || '#ffffff')),
+        transparent: true, side: THREE.DoubleSide, depthWrite: false }),
+    );
+    m.rotation.x = -Math.PI / 2;
+    return m;
+  }
+  if (f.k === 'boom') {
+    const m = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 24),
+      new THREE.MeshBasicMaterial({ color: '#ffb43c', transparent: true, depthWrite: false }),
+    );
+    m.rotation.x = -Math.PI / 2;
+    return m;
+  }
+  if (f.k === 'corpse') {
+    return new THREE.Mesh(GEO.kasten, new THREE.MeshLambertMaterial({ color: '#2e2a26', transparent: true }));
+  }
+  return null;
+}
+function stelleFx(f: any, o: THREE.Object3D, spiegel: boolean, zeilen: number): void {
+  const t = Number(f.t) || 0;
+  if (t < 0) { o.visible = false; return; }
+  o.visible = true;
+  const zr = spiegel ? zeilen - 1 - Number(f.r) : Number(f.r);
+  const x = Number(f.c) + 0.5, z = zr + 0.5;
+  if (f.k === 'txt') {
+    o.position.set(x, 0.8 + Math.min(t, 1.2) * 0.7, z);
+    (o as THREE.Sprite).material.opacity = Math.max(0, 1 - t * 0.85);
+  } else if (f.k === 'ring') {
+    const s = 0.25 + Math.min(t / 0.7, 1) * 0.75;
+    o.position.set(x, 0.03, z);
+    o.scale.set(s, s, s);
+    ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.85 * (1 - t / 0.7));
+  } else if (f.k === 'boom') {
+    const s = (Number(f.s) || 1) * (0.3 + Math.min(t / 0.5, 1) * 0.9);
+    o.position.set(x, 0.04, z);
+    o.scale.set(s, s, s);
+    ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.9 * (1 - t / 0.5));
+  } else if (f.k === 'corpse') {
+    const dur = Number(f.dur) || 0.55;
+    const a = Math.max(0, 1 - t / dur);
+    const w = Number(f.w) || 1, h = Number(f.h) || 1;
+    const zm = spiegel ? zeilen - (Number(f.r) + h / 2) : Number(f.r) + h / 2;
+    o.position.set(Number(f.c) + w / 2, 0.12 * a + 0.005, zm);
+    o.scale.set(w * 0.7 * (0.6 + 0.4 * a), 0.24 * a + 0.01, h * 0.7 * (0.6 + 0.4 * a));
+    ((o as THREE.Mesh).material as THREE.MeshLambertMaterial).opacity = a;
+  }
+}
+function entsorgeFx(o: THREE.Object3D): void {
+  ((o as THREE.Mesh).material as THREE.Material | undefined)?.dispose?.();
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 /** Platzhalter je Objektart; der Ritter bekommt das GLB, sobald es da ist. */
 function baueObjekt(art: string, owner: number, lvl: number, ritter: THREE.Group | null): THREE.Object3D {
   const gruppe = new THREE.Group();
@@ -190,7 +338,12 @@ function Szene({
 }): React.JSX.Element {
   const objekte = useRef(new THREE.Group());
   const gelaende = useRef(new THREE.Group());
-  const imBild = useRef(new Map<number, { obj: THREE.Object3D; art: string; lvl: number }>());
+  const effekte = useRef(new THREE.Group());
+  const imBild = useRef(new Map<number, {
+    obj: THREE.Group; art: string; lvl: number;
+    ueber: ObjektOverlays; bx: number; bz: number;
+  }>());
+  const fxBild = useRef(new Map<object, THREE.Object3D>());
   const gelaendeQuelle = useRef<unknown>(null);
 
   /**
@@ -296,28 +449,98 @@ function Szene({
         eintrag = undefined;
       }
       if (!eintrag) {
-        const obj = baueObjekt(e.type, e.owner, e.lvl, ritter);
-        eintrag = { obj, art: e.type, lvl: e.lvl };
+        const obj = baueObjekt(e.type, e.owner, e.lvl, ritter) as THREE.Group;
+        const zielX = xVon(e.c, e.w ?? 1);
+        const zielZ = zVon(e.r, e.h ?? 1);
+        eintrag = {
+          obj, art: e.type, lvl: e.lvl,
+          ueber: baueOverlays(obj, e.type, blick.beweglich(e)),
+          bx: zielX, bz: zielZ,
+        };
         imBild.current.set(e.id, eintrag);
         objekte.current.add(obj);
         // Werke sind 1 x 2: Grundflaeche an die echten Masse anpassen.
         if (e.type === 'werk') obj.scale.set((e.w ?? 1) * 0.9, 1, (e.h ?? 1) * 0.9);
-        obj.position.set(xVon(e.c, e.w ?? 1), 0, zVon(e.r, e.h ?? 1));
+        obj.position.set(zielX, 0, zielZ);
         // Truppen blicken zur gegnerischen Haelfte.
         const vor = e.owner === 0 ? 1 : -1;
         obj.rotation.y = (spiegel ? -vor : vor) > 0 ? Math.PI : 0;
       }
       // Weiches Nachziehen: Die Simulation springt feldweise; das Bild
       // gleitet hinterher. Reine Optik, der Zustand bleibt unberuehrt.
-      const zielX = xVon(e.c, e.w ?? 1);
-      const zielZ = zVon(e.r, e.h ?? 1);
-      eintrag.obj.position.x += (zielX - eintrag.obj.position.x) * 0.25;
-      eintrag.obj.position.z += (zielZ - eintrag.obj.position.z) * 0.25;
+      eintrag.bx += (xVon(e.c, e.w ?? 1) - eintrag.bx) * 0.25;
+      eintrag.bz += (zVon(e.r, e.h ?? 1) - eintrag.bz) * 0.25;
+      // Kampfanimation wie in 2D: Der Schlag ist ein Ausfallschritt in
+      // Angriffsrichtung (e.atk klingt im Kern ab); die Kanone federt
+      // stattdessen leicht zurueck.
+      let ox = 0, oz = 0;
+      const atk = e.atk ?? 0;
+      if (atk > 0 && ((e.adx ?? 0) !== 0 || (e.ady ?? 0) !== 0)) {
+        const dxA = e.adx ?? 0;
+        const dzA = (spiegel ? -1 : 1) * (e.ady ?? 0);
+        const len = Math.hypot(dxA, dzA) || 1;
+        const schub = e.type === 'kanone' ? -0.1 : 0.22;
+        ox = (dxA / len) * schub * atk;
+        oz = (dzA / len) * schub * atk;
+      }
+      eintrag.obj.position.set(eintrag.bx + ox, 0, eintrag.bz + oz);
+
+      // Lebensbalken: nur sichtbar, wenn etwas fehlt; Farbe nach Restanteil.
+      const max = blick.maxLeben(e) || 1;
+      const anteil = Math.max(0, Math.min(1, e.hp / max));
+      const zeigen = anteil < 0.999;
+      eintrag.ueber.balkenBg.visible = zeigen;
+      eintrag.ueber.balkenFill.visible = zeigen;
+      if (zeigen) {
+        eintrag.ueber.balkenFill.scale.x = Math.max(0.02, 0.72 * anteil);
+        eintrag.ueber.balkenFill.material =
+          spriteStoff(anteil > 0.55 ? '#7fd8a0' : anteil > 0.28 ? '#f6ca58' : '#ff6f62', 0.95);
+      }
+      // Bereitschaftsring: fuellt sich bis zum naechsten Zug; Halt = voll
+      // und orange (die Truppe steht bewusst).
+      const ring = eintrag.ueber.ring;
+      if (ring) {
+        const dauer = blick.marschDauer(e) || 1;
+        const prog = e.halt ? 1 : Math.max(0, Math.min(1, (e.mtimer ?? 0) / dauer));
+        const stufe = Math.round(prog * RING_STUFEN);
+        if (stufe !== eintrag.ueber.ringStufe) {
+          eintrag.ueber.ringStufe = stufe;
+          ring.geometry = ringGeos[stufe];
+        }
+        ring.visible = stufe > 0;
+        (ring.material as THREE.MeshBasicMaterial).color.set(
+          e.halt ? '#ffa06e' : FARBE.spieler[e.owner] ?? '#ffffff');
+      }
     }
     for (const [id, eintrag] of imBild.current) {
       if (!gesehen.has(id)) {
         objekte.current.remove(eintrag.obj);
         imBild.current.delete(id);
+      }
+    }
+
+    // Kampf-Effekte aus G.fx spiegeln (Schadenszahlen, Ringe, Explosionen,
+    // Leichen) — die Lebenszeit t treibt der Kern, hier wird nur gestellt.
+    const fxLebend = new Set<object>();
+    for (const f of G.fx as readonly object[]) {
+      const art = (f as { k?: string }).k;
+      if (art !== 'txt' && art !== 'ring' && art !== 'boom' && art !== 'corpse') continue;
+      fxLebend.add(f);
+      let o = fxBild.current.get(f);
+      if (!o) {
+        const neu = baueFx(f);
+        if (!neu) continue;
+        o = neu;
+        effekte.current.add(o);
+        fxBild.current.set(f, o);
+      }
+      stelleFx(f, o, spiegel, zeilen);
+    }
+    for (const [f, o] of fxBild.current) {
+      if (!fxLebend.has(f)) {
+        effekte.current.remove(o);
+        entsorgeFx(o);
+        fxBild.current.delete(f);
       }
     }
   });
@@ -351,6 +574,7 @@ function Szene({
         </mesh>
         <primitive object={gelaende.current} />
         <primitive object={objekte.current} />
+        <primitive object={effekte.current} />
         {/* Zielfeld-Marker unter dem Zeiger */}
         <mesh ref={marker} visible={false} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.94, 0.94]} />

@@ -133,12 +133,20 @@ Befehle. Ein Ziel-Marker leuchtet unterm Zeiger. Nachgewiesen im Client:
 Klick in die Canvas-Mitte setzt das Haus in exakt die errechnete Zelle
 (Reihe 6, Spalte 4), Karten-Drags landen auf dem markierten Feld.
 
+**Overlays und Kampf in 3D (7. August 2026):** Lebensbalken (Billboard,
+Farbe nach Restanteil, nur bei Schaden sichtbar; Mauerverbund zeigt auf
+allen Stücken den Pool), Bereitschaftsring unter Truppen (Füllbogen aus
+`mtimer/marschDauer`, Halt = voller oranger Ring), Ausfallschritt beim
+Schlag aus `e.atk`/`adx`/`ady` (Kanone federt zurück) und die Spiegelung
+der `G.fx`-Effekte: Schadenszahlen als Leinwand-Sprites, Ringe,
+Explosionen, Leichen-Ausblenden. Das Lesefenster reicht dafür
+`maxLeben`/`marschDauer`/`beweglich` durch — die Formeln bleiben im Kern.
+
 **Offen in Stufe 2:** Marsch-Interpolation über `restAnteil` und `e.mt`
-statt Nachzieh-Glättung, HP-Anzeige, Effekte (Treffer, Ringe, Münzflug)
-über die Wirkungs-Haken auch in 3D, Bau-Vorschau in 3D färben (heute nur
-neutraler Marker; ob ein Feld bezahlbar/bebaubar ist, zeigt erst die
-Karte im HUD), `bogen-turm`/Mörser-Details, Sitz-0-Spiegelung im Netz
-gegenprüfen.
+statt Nachzieh-Glättung, Kanonenkugel-Flugbahn (der `ball`-Effekt trägt
+2D-Pixelkoordinaten — braucht Brettkoordinaten im fx-Eintrag), Münzflug
+in 3D, Bau-Vorschau in 3D färben (heute nur neutraler Marker),
+`bogen-turm`/Mörser-Details, Sitz-0-Spiegelung im Netz gegenprüfen.
 
 ### Stufe 3 — Ausmustern
 
