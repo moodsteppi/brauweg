@@ -134,6 +134,20 @@ export interface FeldherrLeseblick {
   }[];
   /** Stellungen der Gruppe (n von max) oder null bei Bauten. */
   stellungsStand(e: FeldherrObjekt): { n: number; max: number; gruppe: string } | null;
+  /** Taktzeiten des Muenzwurfs, damit 3D dieselbe Uhr benutzt wie coinTick. */
+  readonly muenze: { flug: number; land: number; liegt: number; zeigen: number };
+  /** Eigener Sitz, oder null wenn das Brett beiden gehoert (zu zweit am Geraet). */
+  readonly eigenerSitz: number | null;
+}
+
+/** Zustand des Muenzwurfs; null, sobald er entschieden ist. */
+export interface FeldherrMuenze {
+  readonly stufe: 'wahl' | 'flug' | 'zeigen';
+  readonly waehler: number;
+  readonly wahl: 'kopf' | 'zahl' | null;
+  readonly ergebnis: 'kopf' | 'zahl' | null;
+  readonly sieger: number | null;
+  readonly t: number;
 }
 
 export interface FeldherrSitzung {

@@ -187,10 +187,22 @@ Explosionen, Leichen-Ausblenden. Das Lesefenster reicht dafür
   **„n/max"** (dieselbe Zahl wie das Stellungsschild in 2D, über
   `lesen().stellungsStand`).
 
+**Münzwurf in 3D (7. August 2026):** Eine Münze aus drei Materialien
+(Rand, Kopf oben, Zahl unten) fliegt über der Brettmitte — die Uhr ist
+`coin.t` aus dem Kern, nicht die Bildzeit, damit sie genau beim
+Aufschlag von `coinTick` liegt und genau die Seite zeigt, die der Kern
+gewürfelt hat (gerade Zahl halber Drehungen, dann `endLage`). Dazu ein
+**Anzeigefenster** in der Bühne: wer wählt, „Die Münze fliegt …", und am
+Ende Ergebnis samt „Du setzt zuerst" / „Der Gegner setzt zuerst" — zu
+zweit am Gerät stattdessen „Spieler 1/2" (`lesen().eigenerSitz`). Es
+aktualisiert sich im 120-ms-Takt, nicht je Bild. Der Kopf/Zahl-Dialog des
+Kerns (`ovCoin`, z-index 100) liegt weiterhin über der Bühne (z-index 10)
+und bleibt bedienbar — geprüft mit `elementFromPoint`.
+
 **Offen in Stufe 2:** Marsch-Interpolation über `restAnteil` und `e.mt`
 statt Nachzieh-Glättung, Kanonenkugel-Flugbahn (der `ball`-Effekt trägt
-2D-Pixelkoordinaten — braucht Brettkoordinaten im fx-Eintrag), Münzflug
-in 3D, Bau-Vorschau in 3D färben (heute nur neutraler Marker),
+2D-Pixelkoordinaten — braucht Brettkoordinaten im fx-Eintrag),
+Bau-Vorschau in 3D färben (heute nur neutraler Marker),
 `bogen-turm`/Mörser-Details, Sitz-0-Spiegelung im Netz gegenprüfen.
 
 ### Stufe 3 — Ausmustern

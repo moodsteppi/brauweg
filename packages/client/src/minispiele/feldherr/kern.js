@@ -4390,6 +4390,13 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
       /* Bodenmarkierungen als Liste — welche Felder hervorgehoben gehoeren,
        * ist eine Regelfrage. 2D und 3D lesen dieselbe Quelle (markenListe). */
       feldMarken: markenListe,
+      /* Taktzeiten des Muenzwurfs (Flug, Aufschlag, Anzeige) — damit die
+       * 3D-Buehne dieselbe Uhr benutzt wie coinTick und nicht daneben laeuft. */
+      muenze: MUENZE,
+      /* Eigener Sitz, soweit es einen gibt: im Netz der zugewiesene, gegen
+       * die KI der menschliche. Zu zweit am Geraet gehoert das Brett beiden —
+       * dann null, und die Anzeige spricht von Spieler 1 und 2 statt von "du". */
+      eigenerSitz: NETZ ? MEIN_SITZ : (AI ? 1 - AI.owner : null),
       /* Stellungen der Gruppe, zu der dieses Objekt gehoert: n von max.
        * Truppen ohne Gruppe (Bauten) liefern null. */
       stellungsStand: (e) => {

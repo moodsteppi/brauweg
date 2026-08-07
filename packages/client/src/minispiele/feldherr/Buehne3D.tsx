@@ -115,6 +115,22 @@ const GEO_SCHLAG = ringSatz(0.4, 0.46);
 const GEO_HALT = new THREE.RingGeometry(0.24, 0.44, 32);
 /** Bodenmarke: ein Feld gross, wird je Marke skaliert. */
 const GEO_MARKE = new THREE.PlaneGeometry(1, 1);
+
+/**
+ * Muenze des Rundenanfangs. Die Scheibe liegt flach (Zylinderachse ist Y),
+ * beim Wurf dreht sie um X. Drei Materialien: Rand, Kopfseite (oben),
+ * Zahlseite (unten) — so ist im Bild ablesbar, was gefallen ist.
+ */
+const GEO_MUENZE = new THREE.CylinderGeometry(0.42, 0.42, 0.08, 22);
+const STOFF_MUENZE = [
+  new THREE.MeshLambertMaterial({ color: '#c98f2e' }),   // Rand
+  new THREE.MeshLambertMaterial({ color: '#ffe08a' }),   // Kopf
+  new THREE.MeshLambertMaterial({ color: '#8c6a34' }),   // Zahl
+];
+/** Halbe Drehungen im Flug — gerade Zahl, damit die Muenze flach landet. */
+const MUENZ_DREHUNGEN = 6;
+/** Scheitelhoehe des Wurfs in Feldern. */
+const MUENZ_HOEHE = 3.4;
 /** Farben aus dem 2D-Renderer, damit beide Ansichten dasselbe erzaehlen. */
 const RING_FARBE = {
   marsch: '#cfe9fa', marschVoll: '#f0faff',
@@ -435,6 +451,7 @@ function Szene({
    */
   const { camera, gl } = useThree();
   const ziel = useRef<{ x: number; z: number; zeit: number } | null>(null);
+  const muenze = useRef<THREE.Mesh>(null);
   const uebersetzer = useRef<((x: number, y: number) => { r: number; c: number } | null) | null>(null);
   const stabil = useRef((x: number, y: number) => uebersetzer.current?.(x, y) ?? null);
   const angemeldet = useRef<FeldherrSitzung | null>(null);
@@ -658,6 +675,42 @@ function Szene({
       }
     }
 
+    // Muenzwurf: Die Uhr ist coin.t aus dem Kern, nicht die Bildzeit — so
+    // liegt die Muenze genau dann, wenn coinTick den Aufschlag meldet, und
+    // zeigt genau die Seite, die der Kern gewuerfelt hat.
+    const mz = muenze.current;
+    if (mz) {
+      const coin = (G as { coin?: { stufe: string; t: number; ergebnis: string | null } | null }).coin;
+      const mitte = { x: Math.floor(SPALTEN / 2) + 0.5, r: Math.floor(ZEILEN / 2) };
+      const mz_z = (spiegel ? zeilen - 1 - mitte.r : mitte.r) + 0.5;
+      if (!coin || coin.stufe === 'wahl') {
+        mz.visible = false;
+      } else {
+        mz.visible = true;
+        const takte = blick.muenze;
+        // Zahl liegt oben, wenn die Zahlseite (Materialindex 2, Unterseite)
+        // nach oben zeigt — also eine halbe Drehung mehr.
+        const endLage = coin.ergebnis === 'zahl' ? Math.PI : 0;
+        if (coin.stufe === 'flug') {
+          const k = Math.min(1, coin.t / takte.land);
+          // Wurfparabel: steigt, faellt, liegt beim Aufschlag genau auf 0.
+          const hoehe = MUENZ_HOEHE * Math.sin(Math.PI * k) * (1 - k * 0.15);
+          mz.position.set(mitte.x, 0.05 + hoehe, mz_z);
+          mz.rotation.x = k * MUENZ_DREHUNGEN * Math.PI + endLage;
+          // Nach dem Aufschlag noch ein kurzes Auftrudeln, dann Ruhe.
+          if (coin.t > takte.land) {
+            const nach = Math.min(1, (coin.t - takte.land) / 0.35);
+            mz.rotation.x = endLage;
+            mz.position.y = 0.05 + 0.18 * Math.sin(Math.PI * nach) * (1 - nach);
+          }
+        } else {
+          // Anzeige: Die Muenze liegt und wird leicht angehoben gezeigt.
+          mz.position.set(mitte.x, 0.06, mz_z);
+          mz.rotation.x = endLage;
+        }
+      }
+    }
+
     // Bodenmarken: welche Felder hervorgehoben gehoeren, entscheidet der
     // Kern (feldMarken) — dieselbe Liste zeichnet der 2D-Renderer. Die
     // Meshes liegen in einem Vorrat und werden wiederverwendet; die Liste
@@ -749,6 +802,8 @@ function Szene({
           <planeGeometry args={[0.94, 0.94]} />
           <meshBasicMaterial color="#dff2ff" transparent opacity={0.38} />
         </mesh>
+        {/* Muenze des Rundenanfangs */}
+        <mesh ref={muenze} visible={false} geometry={GEO_MUENZE} material={STOFF_MUENZE} />
       </group>
       <AnstossNachAufbau />
     </>
@@ -766,6 +821,45 @@ export function Buehne3D({
 }): React.JSX.Element | null {
   const [rechteck, setRechteck] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [ritter, setRitter] = useState<THREE.Group | null>(null);
+  /**
+   * Anzeigefenster zum Muenzwurf. In 3D deckt die Buehne das Spielfeld ab,
+   * also auch die Muenz-Meldung des 2D-Renderers — hier steht sie als
+   * eigenes Fenster. Bewusst NICHT je Bild aktualisiert: Ein Takt von
+   * 120 ms genuegt fuer Text und haelt den Szenenbaum ruhig.
+   */
+  const [muenzText, setMuenzText] = useState<{ titel: string; zeile: string } | null>(null);
+  useEffect(() => {
+    const namen = (sitz: number | null, eigen: number | null, duWort: string, erWort: string) => {
+      if (sitz === null) return '';
+      if (eigen === null) return 'Spieler ' + (sitz + 1);
+      return sitz === eigen ? duWort : erWort;
+    };
+    const takt = window.setInterval(() => {
+      const blick = sitzungRef.current?.lesen?.();
+      const coin = blick?.zustand?.coin as
+        | { stufe: string; waehler: number; ergebnis: string | null; sieger: number | null }
+        | null
+        | undefined;
+      if (!coin) { setMuenzText((alt) => (alt ? null : alt)); return; }
+      const eigen = blick?.eigenerSitz ?? null;
+      let neu: { titel: string; zeile: string };
+      if (coin.stufe === 'wahl') {
+        const wer = namen(coin.waehler, eigen, 'Du wählst', 'Der Gegner wählt');
+        neu = { titel: 'Münzwurf', zeile: eigen === null ? wer + ' wählt' : wer };
+      } else if (coin.stufe === 'flug') {
+        neu = { titel: 'Münzwurf', zeile: 'Die Münze fliegt …' };
+      } else {
+        const wer = namen(coin.sieger, eigen, 'Du setzt zuerst', 'Der Gegner setzt zuerst');
+        neu = {
+          titel: coin.ergebnis === 'zahl' ? 'Zahl' : 'Kopf',
+          zeile: eigen === null ? wer + ' setzt zuerst' : wer,
+        };
+      }
+      setMuenzText((alt) =>
+        alt && alt.titel === neu.titel && alt.zeile === neu.zeile ? alt : neu);
+    }, 120);
+    return () => window.clearInterval(takt);
+  }, [sitzungRef]);
 
   useEffect(() => {
     const stage = document.getElementById('stage');
@@ -839,6 +933,32 @@ export function Buehne3D({
       >
         <Szene sitzungRef={sitzungRef} ritter={ritter} />
       </Canvas>
+      {muenzText && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '8%',
+            transform: 'translateX(-50%)',
+            zIndex: 20,
+            pointerEvents: 'none',
+            padding: '10px 18px',
+            borderRadius: 12,
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            background: 'rgba(12,20,26,.92)',
+            boxShadow: '0 0 0 1px #2a3b46, 0 10px 24px -12px #000',
+            color: '#dfd6c2',
+          }}
+        >
+          <div style={{ font: '900 22px/1.1 system-ui', letterSpacing: '-.02em', color: '#ffd977' }}>
+            {muenzText.titel}
+          </div>
+          <div style={{ font: '600 12px/1.4 system-ui', color: '#93a7b3', marginTop: 2 }}>
+            {muenzText.zeile}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
