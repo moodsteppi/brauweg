@@ -21,6 +21,23 @@ Kartenleisten und Overlays sind DOM.
 
 2. AUFBAU DER DATEI
 --------------------------------------------------------------------------------
+DIESE DATEI WIRD GEBAUT — von Hand ändern lohnt nicht, der nächste Bau
+überschreibt sie. Seit Stufe 1 des 3D-Strukturumbaus (docs/FELDHERR-3D-UMBAU.md)
+liegt die Quelle in packages/game-feldherr/quelle/teile/ und wird von
+`node packages/game-feldherr/werkzeug/bauen.mjs` zusammengesetzt, genau in
+dieser Reihenfolge:
+
+  kopf.html          dieser Dokumentationskopf samt <head>
+  stil.css           der <style>-Block
+  huelle.html        der <body> bis zum Skript
+  simulation.js      Teil 1 — Regeln und Zustand, DOM-frei (Wächter im Bauer)
+  darstellung.js     Teile 2–4 — Projektion, Gelände, Figuren, Bildaufbau
+  ki.js              Teil 6 — die KI, ebenfalls DOM-frei
+  oberflaeche.js     Teil 5 — Bedienleisten, Eingabe, Menü, Bildschleife
+
+Derselbe Bau erzeugt auch den Client-Kern (kern.js) mit der Gleichschritt-
+Anbindung aus teile/anbindung-kopf.js und teile/anbindung-fuss.js.
+
 Die Reihenfolge ist bewusst so gewählt, dass später stehende Blöcke auf früher
 definierte Dinge zugreifen. Funktionsdeklarationen werden gehoistet, Konstanten
 mit const/let nicht — beim Verschieben von Code ist das die häufigste

@@ -210,8 +210,10 @@ Steht. Vier Dinge halten beide Geräte zusammen:
 4. **Prüfsumme** über Ressourcen und alle Objekte, die mit der Ergebnismeldung
    geht. Weichen beide ab, ist die Partie strittig und niemand gewinnt.
 
-Der Kern wird dafür **maschinell erzeugt**
-(`packages/game-feldherr/werkzeug/kern-erzeugen.mjs`). Zwei getrennt gepflegte
+Der Kern wird dafür **maschinell erzeugt** — seit Stufe 1 des 3D-Umbaus aus
+den Modulen unter `packages/game-feldherr/quelle/teile/` durch
+`packages/game-feldherr/werkzeug/bauen.mjs` (der alte Aufruf
+`kern-erzeugen.mjs` leitet dorthin weiter). Zwei getrennt gepflegte
 Fassungen liefen unweigerlich auseinander, und zwar unbemerkt.
 
 ### Was noch offen ist

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="de">
+<!--
+FELDHERR — Feld-Vorschau für den Geometrie-Entscheid vor Stufe 2
+(docs/FELDHERR-3D-UMBAU.md).
+
+Zweck: Spalten × Zeilen eingeben und SEHEN, wie rechteckig die Felder werden.
+Gezeichnet wird mit der ECHTEN Einpassung und Projektion des Spiels
+(resize() und P() aus quelle/teile/darstellung.js) — nur die Konstante 0,62
+(Zellverhältnis TH/TW) ist hier ein Regler, denn genau sie entscheidet über
+die Zellform: Die Einpassung hält das Verhältnis fest, X×Y ändern nur die
+Größe der Zellen, nicht ihre Form. Läuft per Doppelklick, keine
+Abhängigkeiten, ändert nichts am Spiel.
+-->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Feldherr — Feld-Vorschau</title>
+<style>
+:root{ --nacht:#070c11; --sand:#dfd6c2; --tinte:#8397a4; --p1:#e8433c; --p2:#3d86ff; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#05080b;color:var(--sand);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{display:flex;flex-direction:column;height:100%}
+#leiste{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:14px;align-items:center;
+  padding:10px 12px;background:#0e161c;box-shadow:0 1px 0 #1e2c36}
+#leiste label{font:600 11px/1 system-ui;color:var(--tinte);display:flex;align-items:center;gap:6px}
+#leiste input[type=number]{width:56px;padding:5px 6px;border:0;border-radius:6px;
+  background:#16222a;color:var(--sand);font:700 13px/1 ui-monospace,Menlo,monospace;
+  box-shadow:0 0 0 1px #2a3b46}
+#leiste input[type=range]{width:140px;accent-color:var(--p1)}
+#leiste button{padding:6px 10px;border:0;border-radius:7px;color:var(--sand);
+  font:700 11px/1 system-ui;background:#16222a;box-shadow:0 0 0 1px #2a3b46;cursor:pointer}
+#leiste button.on{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1))}
+#werte{font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--tinte);margin-left:auto;text-align:right}
+#werte b{color:var(--sand)}
+#buehne{flex:1 1 auto;position:relative;min-height:0;display:flex;
+  align-items:center;justify-content:center}
+#rahmen{position:relative}
+canvas{display:block;background:#05080b}
+#rahmen.handy canvas{box-shadow:0 0 0 6px #1a262e,0 0 0 7px #2c3d48;border-radius:14px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="leiste">
+    <label>Spalten (X) <input id="inC" type="number" min="3" max="20" value="6"></label>
+    <label>Zeilen (Y) <input id="inR" type="number" min="6" max="30" value="12"></label>
+    <label>Zellverhältnis <input id="inV" type="range" min="0.40" max="1.00" step="0.01" value="0.62">
+      <span id="vAnzeige">0,62</span></label>
+    <span>
+      <button data-p="5,10">Klein 5×10</button>
+      <button data-p="6,12" class="on">Mittel 6×12</button>
+      <button data-p="7,14">Groß 7×14</button>
+    </span>
+    <span>
+      <button data-b="handy" class="on">Handy hoch</button>
+      <button data-b="voll">Fenster füllen</button>
+    </span>
+    <div id="werte"></div>
+  </div>
+  <div id="buehne"><div id="rahmen" class="handy"><canvas id="cv"></canvas></div></div>
+</div>
+<script>
+"use strict";
+/* Konstanten und Einpassung wie im Spiel (teile/darstellung.js). Das
+ * Verhältnis 0,62 ist dort fest in resize() verdrahtet — hier ist es der
+ * Regler VER, damit der Entscheid fallen kann, BEVOR jemand das Spiel
+ * anfasst. */
+const KPX = 0.0030, KPY = 0.0005, KLIFT = 0.88, HS = 0.76;
+let COLS = 6, ROWS = 12, VER = 0.62;
+let TW = 40, TH = 26, OX = 0, OY = 0, CX = 0, CY = 0, W = 0, H = 0, DPR = 1;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const rahmen = document.getElementById('rahmen');
+
+function P(x, y, h){
+  const z = h * HS;
+  return [CX + (x - CX) * (1 + z * KPX), CY + (y - CY) * (1 + z * KPY) - z * KLIFT];
+}
+const gx = c => OX + c * TW, gy = r => OY + r * TH;
+
+function poly(pts, fill, stroke, lw){
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+}
+const sh = (col, k) => 'rgb(' + col.map(v => Math.min(255, v * k) | 0).join(',') + ')';
+
+/* Quader mit dem Lichtmodell des Spiels — als Stellvertreter für ein
+ * 3D-Modell auf einem Feld: So sieht man, wie ein gedrehter Körper auf der
+ * gewählten Zellform sitzt. */
+const F = { top: 1, n: 0.50, s: 0.84, w: 1.10, e: 0.60 };
+function box(x, y, w, d, h0, h1, col){
+  const b = [[x,y],[x+w,y],[x+w,y+d],[x,y+d]].map(p => P(p[0], p[1], h0));
+  const t = [[x,y],[x+w,y],[x+w,y+d],[x,y+d]].map(p => P(p[0], p[1], h1));
+  poly([b[0], b[1], t[1], t[0]], sh(col, F.n));
+  poly([b[1], b[2], t[2], t[1]], sh(col, F.e));
+  poly([b[3], b[0], t[0], t[3]], sh(col, F.w));
+  poly([b[2], b[3], t[3], t[2]], sh(col, F.s));
+  poly(t, sh(col, F.top), sh(col, 0.42), 1);
+}
+
+function einpassen(){
+  const st = rahmen.classList.contains('handy')
+    ? { width: 390, height: Math.min(700, document.getElementById('buehne').clientHeight - 24) }
+    : { width: document.getElementById('buehne').clientWidth,
+        height: document.getElementById('buehne').clientHeight };
+  W = Math.max(120, st.width); H = Math.max(120, st.height);
+  DPR = Math.min(2.5, window.devicePixelRatio || 1);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  /* Einpassung wortgleich zu resize() — nur 0,62 ist durch VER ersetzt. */
+  const pad = 12;
+  TW = Math.min((W - pad*2) / COLS, (H - pad*2) / (ROWS * VER));
+  TH = TW * VER;
+  OX = (W - TW*COLS) / 2; OY = (H - TH*ROWS) / 2 + TH*0.55;
+  CX = OX + TW*COLS/2; CY = OY + TH*ROWS/2;
+}
+
+function zeichnen(){
+  einpassen();
+  ctx.clearRect(0, 0, W, H);
+  const MID = ROWS / 2;
+
+  /* Erdsockel unter der Platte, wie bakeStatic() ihn baut. */
+  box(gx(0)-2, gy(0)-2, TW*COLS+4, TH*ROWS+4, -TH*0.9, 0, [58,44,32]);
+
+  /* Grasnarbe im Schachbrett der beiden Grüntöne des Spiels. */
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    ctx.fillStyle = sh((r + c) % 2 ? [62,92,68] : [58,87,64], 1);
+    ctx.fillRect(gx(c), gy(r), TW + 0.6, TH + 0.6);
+    ctx.strokeStyle = 'rgba(10,18,14,.25)'; ctx.lineWidth = 1;
+    ctx.strokeRect(gx(c) + .5, gy(r) + .5, TW, TH);
+  }
+
+  /* Mittellinie — die Grenze der Hälften. */
+  ctx.strokeStyle = 'rgba(223,214,194,.5)'; ctx.lineWidth = 2;
+  ctx.setLineDash([TW*0.18, TW*0.12]);
+  ctx.beginPath(); ctx.moveTo(gx(0), gy(MID)); ctx.lineTo(gx(COLS), gy(MID)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* Zwei Musterklötze in Feldgröße (Höhe ≈ Haus): einer je Hälfte, dazu ein
+   * um 90° „gedrehter" 1×2-Klotz — dafür braucht es die rechteckigeren
+   * Felder überhaupt. */
+  const h = TH * 1.35;
+  box(gx(1) + TW*0.12, gy(Math.floor(MID/2)) + TH*0.12, TW*0.76, TH*0.76, 0, h, [232,58,48]);
+  box(gx(COLS-2) + TW*0.12, gy(ROWS - Math.floor(MID/2) - 1) + TH*0.12, TW*0.76, TH*0.76, 0, h, [42,120,255]);
+  const wr = Math.floor(MID) + 1, wc = Math.floor(COLS/2) - 1;
+  box(gx(wc) + TW*0.10, gy(wr) + TH*0.10, TW*1.80, TH*0.80, 0, h*0.7, [112,82,52]);
+
+  /* Kennzahlen. */
+  const seite = (TH / TW);
+  document.getElementById('werte').innerHTML =
+    'Zelle <b>' + TW.toFixed(1) + ' × ' + TH.toFixed(1) + ' px</b> · Verhältnis <b>' +
+    seite.toFixed(2).replace('.', ',') + '</b> (heute im Spiel: 0,62)<br>Brett <b>' +
+    (TW*COLS).toFixed(0) + ' × ' + (TH*ROWS).toFixed(0) + ' px</b> auf Bühne ' +
+    W.toFixed(0) + ' × ' + H.toFixed(0);
+}
+
+function lesen(){
+  COLS = Math.max(3, Math.min(20, +document.getElementById('inC').value || 6));
+  ROWS = Math.max(6, Math.min(30, +document.getElementById('inR').value || 12));
+  /* MID = ROWS/2 — eine ungerade Zeilenzahl hätte keine Mitte; der Wert wird
+   * still auf gerade abgerundet, wie es das Spiel voraussetzt. */
+  if (ROWS % 2) { ROWS -= 1; document.getElementById('inR').value = ROWS; }
+  VER = +document.getElementById('inV').value;
+  document.getElementById('vAnzeige').textContent = VER.toFixed(2).replace('.', ',');
+  zeichnen();
+}
+
+for (const id of ['inC', 'inR', 'inV']) document.getElementById(id).addEventListener('input', lesen);
+for (const b of document.querySelectorAll('[data-p]')) b.onclick = () => {
+  for (const x of document.querySelectorAll('[data-p]')) x.classList.remove('on');
+  b.classList.add('on');
+  const [c, r] = b.dataset.p.split(',');
+  document.getElementById('inC').value = c; document.getElementById('inR').value = r;
+  lesen();
+};
+for (const b of document.querySelectorAll('[data-b]')) b.onclick = () => {
+  for (const x of document.querySelectorAll('[data-b]')) x.classList.remove('on');
+  b.classList.add('on');
+  rahmen.classList.toggle('handy', b.dataset.b === 'handy');
+  lesen();
+};
+window.addEventListener('resize', zeichnen);
+lesen();
+</script>
+</body>
+</html>

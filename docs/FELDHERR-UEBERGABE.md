@@ -67,24 +67,33 @@ die KI lebt im Spielkern auf den Geräten.
 
 ### `packages/client/src/minispiele/feldherr/kern.js` — der Spielkern
 
-**Maschinell erzeugt**, nicht von Hand ändern:
+**Maschinell erzeugt**, nicht von Hand ändern. Seit Stufe 1 des 3D-Umbaus
+(7. August 2026) ist die Erzeugungsrichtung umgedreht — EIN Bau erzeugt aus
+den Modulen unter `packages/game-feldherr/quelle/teile/` sowohl den Kern als
+auch die Standalone-Datei:
 
 ```bash
-node packages/game-feldherr/werkzeug/kern-erzeugen.mjs
+node packages/game-feldherr/werkzeug/bauen.mjs
 ```
 
-Zwei getrennt gepflegte Fassungen liefen unweigerlich auseinander. Das Werkzeug
-bricht ab, wenn es seine Ankerstellen in der Quelle nicht findet, statt
-stillschweigend Halbes zu liefern.
+(Der alte Aufruf `kern-erzeugen.mjs` leitet dorthin weiter.) Zwei getrennt
+gepflegte Fassungen liefen unweigerlich auseinander. Das Werkzeug bricht ab,
+wenn es seine Ankerstellen in den Teilen nicht findet, statt stillschweigend
+Halbes zu liefern — und es erzwingt mit Wächtern, dass `simulation.js` und
+`ki.js` DOM-, Uhr- und `Math.random`-frei bleiben.
 
-Die Quelle liegt jetzt **im Repo**: `packages/game-feldherr/quelle/feldherr.html`
-(läuft weiterhin per Doppelklick — der Duo-Münzwurf hing übrigens auch dort,
-coinTick lief nur mit KI). Sie lag zuvor nur einem Übergabezettel bei; eine
-Quelle, die nirgends eingecheckt ist, kann niemand neu erzeugen. Sie trägt
-ihre eigene Dokumentation im Kopf — Aufbau, Zustand, Zeichenschichten, die
-Regeln beim Ändern, darunter zwei neue: `zufall()` nur für Spielrelevantes,
-`deko()` für alles Sichtbare; und jede Spielerhandlung läuft durch eine
-Befehlsfunktion, nie direkt in den Zustand.
+Die Quelle liegt **im Repo**: die Module unter
+`packages/game-feldherr/quelle/teile/` (Schnitt entlang der dokumentierten
+Teile; die Wiederzusammensetzung wurde beim Umbau byte-identisch gegen den
+alten Stand bewiesen, die Gleichlauf-Probe lieferte dieselben
+Grenzprüfsummen). `quelle/feldherr.html` ist seither ein **gebautes**
+Artefakt, läuft aber weiterhin per Doppelklick (der Duo-Münzwurf hing
+übrigens auch dort, coinTick lief nur mit KI). Der Dokumentationskopf —
+Aufbau, Zustand, Zeichenschichten, die Regeln beim Ändern — lebt in
+`teile/kopf.html` und steht wie immer am Anfang der gebauten Datei; darunter
+die zwei wichtigsten Regeln: `zufall()` nur für Spielrelevantes, `deko()` für
+alles Sichtbare; und jede Spielerhandlung läuft durch eine Befehlsfunktion,
+nie direkt in den Zustand.
 
 ### Der Gleichschritt
 

@@ -46,7 +46,35 @@ liefern wie vorher — dann ist die Simulation bitgleich geblieben. Das ist der
 Beweis, den ein Rewrite nie hat. Zusätzlich einmal im Browser gegenspielen
 (zwei Ursprünge: localhost und app.localhost, siehe FELDHERR-UEBERGABE).
 
+**Stand 7. August 2026: umgesetzt.** Die Quelle liegt in
+`packages/game-feldherr/quelle/teile/` — `simulation.js` (Teil 1, DOM-frei),
+`darstellung.js` (Teile 2–4), `ki.js` (Teil 6, DOM-frei), `oberflaeche.js`
+(Teil 5) plus `kopf.html`, `stil.css`, `huelle.html` und die Gleichschritt-
+Anbindung `anbindung-kopf.js`/`anbindung-fuss.js` (vorher als Text im
+Erzeuger versteckt). `werkzeug/bauen.mjs` baut daraus beide Artefakte;
+`kern-erzeugen.mjs` leitet nur noch weiter. Beweis geführt: Die
+Wiederzusammensetzung der Teile war byte-identisch zum alten Stand, die
+Gleichlauf-Probe lieferte dieselben Grenzprüfsummen (59 Proben, u. a.
+2280→x01aye), 13 Modultests grün. Wächter im Bauer erzwingen dauerhaft:
+`simulation.js`/`ki.js` ohne DOM, Uhr und `Math.random` (zwei wörtlich
+erlaubte Ausnahmen: Startsaat, `deko`), `simulation.js` lauffähig im nackten
+Sandkasten, genau zwei `loop`-Anstöße, beide in der Oberfläche.
+
+**Offener Feinschnitt:** Die Befehlsfunktionen (`playCard`, `setzeHaus`,
+`haltBefehl`, `abrissBefehl`, `drehBefehl`, `coinWahl`) liegen noch in
+`oberflaeche.js`, weil sie HUD-Aufrufe mischen. Ihr Umzug in die Simulation
+(Zustandsänderung dort, HUD-Abgleich draußen) ist der nächste Schritt — der
+ändert Bytes, also gilt dann: Modultests und Gleichlauf-Probe statt
+Byte-Vergleich.
+
 ### Stufe 2 — 3D-Renderer daneben, nicht darüber
+
+**Torwächter davor: der Geometrie-Entscheid.** Feldmaße (Spalten × Zeilen je
+Feldgröße) und das Zellverhältnis (heute fest `TH = 0,62·TW` in `resize()`)
+müssen festliegen, BEVOR das erste Modell eingebaut wird — Kamera, Maßstäbe
+und Klickflächen bauen darauf. `werkzeug/feld-vorschau.html` (Doppelklick)
+zeigt ein X-mal-Y-Brett mit der echten Projektion und verstellbarem
+Zellverhältnis.
 
 Three/R3F liest je Bild den Simulationszustand und **interpoliert zwischen
 den Takten**: Die Simulation bleibt bei 20 Takten je Sekunde, das Bild läuft
@@ -91,7 +119,13 @@ Erst wenn 3D vollständig ist: alten Renderer entfernen, Effekte nativ in 3D.
 ## Erster Befehl für die neue Sitzung
 
 > Lies diese Datei, `docs/FELDHERR-UEBERGABE.md` und den Kopf von
-> `packages/game-feldherr/quelle/feldherr.html`. Setze Stufe 1 um: Simulation
-> als eigenes Modul ohne DOM, Standalone-Datei wird daraus gebaut,
-> `gleichlauf-probe.mjs` liefert vor und nach dem Umbau dieselben
-> Prüfsummen. Erst danach Stufe 2 beginnen.
+> `packages/game-feldherr/quelle/teile/kopf.html`. Stufe 1 ist umgesetzt
+> (Stand oben). Als Nächstes, in dieser Reihenfolge:
+>
+> 1. **Feinschnitt:** Befehlsfunktionen aus `oberflaeche.js` nach
+>    `simulation.js` ziehen (Zustandsänderung hinein, HUD-Abgleich bleibt
+>    draußen). Abnahme über `gleichlauf-probe.mjs` und die Modultests —
+>    nicht über Byte-Vergleich, der Schritt ändert Bytes.
+> 2. **Geometrie-Entscheid abwarten:** Der Auftraggeber legt Feldmaße und
+>    Zellverhältnis mit `werkzeug/feld-vorschau.html` fest. Erst mit dieser
+>    Entscheidung Stufe 2 (3D-Renderer daneben) beginnen.

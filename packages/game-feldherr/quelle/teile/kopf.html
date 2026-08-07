@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="de">
+<!--
+================================================================================
+FELDHERR — Entwicklerdokumentation
+================================================================================
+
+1. WAS DAS IST
+--------------------------------------------------------------------------------
+Ein Echtzeit-Taktikduell für zwei Spieler auf einem geteilten Brett, entweder
+gegen eine KI oder zu zweit am selben Gerät (Hot Seat). Vollständig in dieser
+einen HTML-Datei: Markup, CSS und JavaScript. Keine Abhängigkeiten, kein Build,
+kein Server, kein Netzwerkzugriff, kein Speicher (weder localStorage noch
+Cookies). Doppelklick auf die Datei genügt; zum Ausliefern reicht statisches
+Hosting (Datei ablegen, fertig).
+
+Zielplattform ist in erster Linie ein Telefon im Hochformat. Alles wird auf ein
+einzelnes Canvas gezeichnet, das sich an die Fenstergröße anpasst; nur Menüs,
+Kartenleisten und Overlays sind DOM.
+
+
+2. AUFBAU DER DATEI
+--------------------------------------------------------------------------------
+DIESE DATEI WIRD GEBAUT — von Hand ändern lohnt nicht, der nächste Bau
+überschreibt sie. Seit Stufe 1 des 3D-Strukturumbaus (docs/FELDHERR-3D-UMBAU.md)
+liegt die Quelle in packages/game-feldherr/quelle/teile/ und wird von
+`node packages/game-feldherr/werkzeug/bauen.mjs` zusammengesetzt, genau in
+dieser Reihenfolge:
+
+  kopf.html          dieser Dokumentationskopf samt <head>
+  stil.css           der <style>-Block
+  huelle.html        der <body> bis zum Skript
+  simulation.js      Teil 1 — Regeln und Zustand, DOM-frei (Wächter im Bauer)
+  darstellung.js     Teile 2–4 — Projektion, Gelände, Figuren, Bildaufbau
+  ki.js              Teil 6 — die KI, ebenfalls DOM-frei
+  oberflaeche.js     Teil 5 — Bedienleisten, Eingabe, Menü, Bildschleife
+
+Derselbe Bau erzeugt auch den Client-Kern (kern.js) mit der Gleichschritt-
+Anbindung aus teile/anbindung-kopf.js und teile/anbindung-fuss.js.
+
+Die Reihenfolge ist bewusst so gewählt, dass später stehende Blöcke auf früher
+definierte Dinge zugreifen. Funktionsdeklarationen werden gehoistet, Konstanten
+mit const/let nicht — beim Verschieben von Code ist das die häufigste
+Fehlerquelle.
+
+  a) <style>            Gestaltung von HUD, Karten, Overlays, Menü
+  b) <body>             Bühne (#stage mit #cv), Kartenleisten, alle Overlays
+  c) Skriptblock, in dieser Reihenfolge:
+
+     REGELN UND ZUSTAND
+       DEFS                Stammdaten aller Karten (Preis, Leben, Schaden,
+                           Takte, Reichweite, Kontingente, Stufenwerte)
+       statsOf/maxHp/…     abgeleitete Werte je Stufe und Gelände
+       newState            der komplette Spielzustand G
+       generateTerrain     Geländewurf, spiegelgleich fair für beide Seiten
+       Zugriff             cell/envAt/entAt/walkable/freeCell/sideOf …
+       Aktionen            addEnt/removeEnt/kill/trefferAuf/doAttack/doMove
+       fuseWerke           Werke verschmelzen bei Berührung
+       Marschbefehl        Sichtfeld, Zielwahl, Selbstlauf der Truppen
+       update(dt)          ein Rechenschritt der Partie
+
+     DARSTELLUNG
+       Projektion P()      Grid nach Bildschirm, mit Höhe
+       Farben, Geometrie   box/frus/poly/ell, Schattierung
+       Partikel, Effekte
+       Geländezeichner     Wasser, Gebirge, Wald, Vulkan
+       Figuren, Bauten     drawTroop/drawHaus/drawMauer/drawWerk/drawKanone …
+       Markierungen        Bodenmarkierungen beim Setzen
+       Vordergrund         drawHinweise: alles, was nichts verdecken darf
+       render()            Bildaufbau
+       animate(dt)         alles rein Optische (Takte, Partikel, Schwenks)
+
+     KI
+       AILVL, TAKTIK       Stufen und Spielweisen
+       aiGefahr            Lagebild: wo schlägt sofort Schaden ein
+       aiPlaceHouse        Aufstellung des Haupthauses
+       aiSpot/aiPlay       Bauplatzsuche
+       aiBuy               Einkauf mit Sparziel
+       aiUeberdenken       Taktikwechsel im Spiel
+       aiTick(dt)          Takt der KI
+
+     OBERFLÄCHE
+       buildHUD/syncHUD    Kartenleisten aufbauen und aktualisieren
+       Eingabe             Zeigerereignisse auf Karten und Brett
+       Ablauf              Menü, Münzwurf, Aufstellung, Pause, Ende
+       loop()              requestAnimationFrame-Schleife
+
+
+3. ZUSTAND
+--------------------------------------------------------------------------------
+Alles Veränderliche steckt in der globalen Variablen G (siehe newState):
+
+  grid[r][c]   {env, ent} — Rückverweis auf Gelände und Objekt des Feldes
+  envs[]       Geländeblöcke {type, cells[], r0, c0, w, h, tick, chance}
+  ents[]       alle Objekte (Truppen und Bauten)
+  fx[]         kurzlebige Effekte (Text, Ringe, Geschosse, Leichen …)
+  res[2]       Ressourcen je Spieler, gedeckelt durch capOf(spieler)
+  placed[2]    Haupthaus gesetzt?
+  erst         wer nach dem Münzwurf zuerst setzt
+  coin         Zustand des Münzwurfs oder null
+  used[2]      verbrauchte Karten je Typ (Kontingente)
+  hb[2]        Ausbaustufe des Haupthauses (1 bis 3)
+  sperren[]    Trümmerfelder {r, c, t, max, art}
+  armed/orient/raze/sel   Bedienzustand je Spieler
+
+Ein Objekt (Entity) sieht so aus:
+
+  {id, type, owner, r, c, w, h, cells[], lvl, hp,
+   timer, mtimer,          Schlag- und Zugtakt
+   spawn, flash, nudge,    rein optisch
+   leben, tot,             Werk: Restlaufzeit und Erschöpfung
+   halt, turm, berg,       Stellung, Schützenturm, auf dem Fels
+   aim, aimZiel,           Rohrschwenk der Geschütze
+   rects}                  vorberechnete Teilflächen mehrteiliger Werke
+
+cells ist die Wahrheit über die Belegung; r/c/w/h sind nur die umschließende
+Box für Sortierung und Zeichnung. Mehrteilige Werke können L-förmig sein,
+deshalb niemals von w*h auf die Felder schließen.
+
+phase (global, nicht in G): 'menu' → 'coin' → 'place' → 'war' → 'over'.
+
+
+4. SPIELSCHLEIFE
+--------------------------------------------------------------------------------
+loop() ruft je Bild:
+
+  update(dt)   Regeln: Ressourcen, Laufzeiten, Kämpfe, Bewegung, Sieg.
+               Läuft nur in phase 'war' und pausiert mit dem Spiel.
+  coinTick(dt) Münzwurf, in phase 'coin' — für ALLE Modi. Er hing einmal an
+               aiTick, und ohne KI blieb die Münze für immer in der Luft.
+  aiTick(dt)   KI, gedrosselt über AI.iv (Denkintervall je Stufe)
+  animate(dt)  Optik: Takte, Partikel, Rohrschwenk, laufende Neubewertung
+               der Bauvorschau
+  render()     Bildaufbau
+
+dt ist auf 0,05 s gedeckelt, damit ein Tabwechsel keine Sprünge erzeugt.
+
+
+5. KOORDINATEN UND PROJEKTION
+--------------------------------------------------------------------------------
+Das Brett ist COLS × ROWS Felder groß; MID trennt die Hälften (Reihen unter MID
+gehören Spieler 1). Die Feldgröße stellt setzeFeld('klein'|'mittel'|'gross')
+ein — COLS/ROWS/MID sind deshalb let, nicht const.
+
+Bildschirmkoordinaten liefert P(x, y, h): x/y sind Pixel in der Brettebene
+(gx/gy/midX/midY rechnen von Feldindizes dorthin), h ist die Höhe über dem
+Boden. Die Kamera klappt leicht auf und hebt Höhen an; die Konstanten dafür
+sind KPX, KPY, KLIFT und HS.
+
+PBASE ist ein globaler Sockel, der P() zusätzlich anhebt. Er wird für
+Stellungen auf dem Fels gesetzt und MUSS unmittelbar danach wieder auf 0
+zurückgesetzt werden, sonst schwebt der Rest des Bildes.
+
+SPIEGEL (Netzspiel, Sitz 0) stellt das Brett kopfüber dar: P() spiegelt die
+Brettebene vertikal, bevor die Kamera rechnet. Wer zeichnet, merkt davon
+nichts — solange jede Zeichnung ihre Punkte in Ebenenkoordinaten rechnet und
+durch P() projiziert. Rohe Bildschirmkoordinaten (ohne P) spiegelt niemand.
+Mitgespiegelt werden die Malersortierung in render(), die Flächenfolge in
+facet() und die Zeigereingabe in cellFromClient(); die Kartenleisten tauscht
+die CSS-Klasse .gespiegelt am #app.
+
+
+6. ZEICHENSCHICHTEN
+--------------------------------------------------------------------------------
+  1) Gebackener Boden      bakeStatic() zeichnet Rasen, Wasserbecken, Kanten
+                           und Geländeschatten einmal in ein Offscreen-Canvas.
+                           Nach jeder Änderung von Brett oder Gelände (resize,
+                           Ausbruch, Rundenstart) neu backen.
+  2) Bodenmarkierungen     Bauvorschau, Bonuszonen, Sperrflächen
+  3) Schatten              gesammelt und zusammen gezeichnet
+  4) Objekte               nach y sortiert (Maleralgorithmus). Stellungen auf
+                           dem Fels bekommen den Sortierwert ihres Felsens plus
+                           Epsilon, damit sie davor liegen.
+  5) Effekte               Partikel, Schadenszahlen, Explosionen
+  6) Vordergrund           drawHinweise(): Lebensbalken, Stufenmarken,
+                           Stellungsschilder, Laufzeitbalken, Sperrzeiten,
+                           Bauvorschau-Schilder, Reichweiten, Zielanzeige.
+                           Alles hier ist absichtlich unverdeckbar.
+
+
+7. REGELN, DIE MAN BEIM ÄNDERN KENNEN MUSS
+--------------------------------------------------------------------------------
+  · Kontingente zählen verbrauchte Karten, nicht stehende Bauten. G.used wächst
+    in playCard über verbrauche() und sinkt nie. restOf/atLimit lesen daraus.
+  · Werke belegen 1×2 Felder, wachsen aber durch Verschmelzen (fuseWerke) und
+    können danach L-förmig sein. rects merkt sich die ursprünglichen Hälften
+    für die Darstellung.
+  · Jeder Treffer auf ein Werk kostet eine Sekunde Laufzeit. Das passiert
+    zentral in trefferAuf(); wer Schaden an anderer Stelle zufügt, muss diese
+    Funktion benutzen, sonst fehlen Walddeckung, Stellungsbonus und
+    Laufzeitverlust.
+  · kill() löst Nebenwirkungen aus: Kesselexplosion des Werks, Trümmersperre
+    auf dem Fels, Siegprüfung, Zählung der KI-Verluste.
+  · Truppen sehen nur zwei Felder weit (SICHT). Die Wegsuche ist bewusst
+    kurzsichtig; globale Wegekarten (pathMap) nutzt nur die KI zur Bewertung.
+  · Aufwerten per Karte geht ausschließlich auf der eigenen Hälfte. Das
+    Verschmelzen zweier gleicher Truppen im Feld ist davon unberührt.
+  · Höchstens drei Stellungen je Gruppe (Schützen, Kämpfer); Schützentürme
+    zählen mit. Siehe stellungen() und STELLUNGEN.
+  · Zwei Zufallsquellen: zufall() (Saatkorn, spielrelevant) und deko()
+    (ungeseedet, nur Optik). Der Zeichenpfad darf NIE aus zufall() ziehen —
+    gezeichnet wird je Bild, und im Netzspiel liefe der Gleichschritt allein
+    durchs Zuschauen auseinander. Partikel (burst) sind immer Deko.
+  · Spielerhandlungen laufen durch die Befehlsfunktionen (setzeHaus,
+    haltBefehl, abrissBefehl, drehBefehl, playCard, coinWahl), nie direkt aus
+    einem Handler in den Zustand. Die Netzanbindung lenkt genau diese
+    Funktionen um; jede prüft ihre Voraussetzungen selbst, weil zwischen
+    Eingabe und Ausführung im Netz sechs Takte liegen. Ob ein Sitz an diesem
+    Gerät überhaupt bedient werden darf, entscheidet darfBedienen(own).
+  · Kein Browserspeicher. Artefakte laufen in Umgebungen, in denen
+    localStorage nicht verfügbar ist.
+
+
+8. KI
+--------------------------------------------------------------------------------
+Drei Stufen (AILVL) steuern Denkintervall, Kaufqualität, Platzierungsgüte,
+Verschwendung und Mauerneigung. Darüber liegen vier Taktiken (TAKTIK):
+
+  aufbau     Wirtschaft hinten, ruhiges Vorrücken
+  sturm      Werke vorn, mehr Truppen, weniger Belagerung
+  stellung   Mauern und Geschütze, defensiv
+  gambit     Haupthaus an den Vulkan für die Erdwärme, alles auf Tempo
+
+Die Taktik wird nach dem Geländewurf gewählt (waehleTaktik) und alle sechs
+Sekunden überdacht (aiUeberdenken): Wer zweimal ein Werk in der vorderen Zone
+verliert, baut künftig hinten; Bedrängnis führt zu 'stellung', Übermacht zu
+'sturm'; beim Gambit wird umgeschwenkt, sobald der Vulkan gefährlich wird.
+
+aiSpot bewertet jedes zulässige Feld mit einem Punktwert. Wichtigster Zusatz
+ist aiGefahr(): Felder, auf denen eine frische Einheit den ersten Treffer nicht
+überlebt, werden stark abgewertet. Wer neue Bauwerke oder Karten ergänzt,
+sollte dort eine passende Bewertung einhängen.
+
+aiBuy legt zuerst ein Bauvorhaben fest und spart darauf, statt jede freie
+Ressource sofort in Truppen zu stecken. Ohne dieses Sparen kauft die KI
+ausschließlich billige Einheiten.
+
+
+9. ERWEITERN
+--------------------------------------------------------------------------------
+Neue Karte:
+  1. Eintrag in DEFS (Preis, Werte je Stufe, Kontingent, Sonderflags)
+  2. CARD_ORDER ergänzen (Reihenfolge in der Leiste)
+  3. Symbol in cardSVG hinterlegen
+  4. Zeichenfunktion schreiben und in drawEnt einhängen
+  5. Bewertung in aiSpot ergänzen, damit die KI sie sinnvoll setzt
+  6. Werteseite und Tutorialtexte nachziehen
+
+Neues Gelände:
+  1. Typ in generateTerrain würfeln (Chance und Höchstzahl)
+  2. Zeichner ergänzen; statischer Anteil gehört nach bakeStatic
+  3. walkable/blocksSight prüfen
+  4. Auswirkungen in rngOf/dmgOf/maxHp/trefferAuf ergänzen
+  5. Bonusanzeige in bonusInfo und den Markierungen ergänzen
+
+
+10. TESTEN
+--------------------------------------------------------------------------------
+Die Datei läuft ohne Browser: Der Skriptblock lässt sich herausschneiden und in
+Node auswerten, wenn document/window/canvas nachgebildet werden. Damit wurden
+Regeln, Bedienung, Balance und Rendern geprüft (unter anderem tausende
+Geländewürfe auf Fairness, mehrere tausend Bilder auf einem echten Canvas ohne
+Ausnahme, vollständige Menü- und Bediendurchläufe sowie Bot-gegen-Bot-Serien).
+
+Zwei Fallstricke haben sich dabei als teuer erwiesen und sollten in jeder
+Prüfung mitlaufen:
+  · Nach größeren Umbauten prüfen, ob jede aufgerufene Kernfunktion noch
+    existiert. Ein verlorener Block fällt sonst erst im Spiel auf.
+  · Nach jeder Änderung an Zeichenreihenfolge oder Sockelhöhen ein Bild
+    rendern und ansehen.
+
+
+11. AUSLIEFERN
+--------------------------------------------------------------------------------
+Es genügt, diese Datei auf einen beliebigen statischen Webserver zu legen
+(oder in ein Git-Repository zu übernehmen und von dort zu veröffentlichen).
+Zu beachten:
+  · Als index.html ablegen, wenn sie unter der Wurzel erreichbar sein soll.
+  · Mit UTF-8 ausliefern; die Datei enthält deutsche Umlaute.
+  · Caching kurz halten oder den Dateinamen versionieren, sonst sehen
+    zurückkehrende Spieler alte Stände.
+  · Kein HTTPS-Zwang, keine Serverlogik, keine Datenbank; es werden keinerlei
+    Daten erhoben oder gespeichert.
+================================================================================
+-->
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>FELDHERR — Taktikduell</title>
