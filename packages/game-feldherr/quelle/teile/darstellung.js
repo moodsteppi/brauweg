@@ -2033,6 +2033,15 @@ function animate(dt){
   }
   for(const f of G.fx){
     const was=f.t; f.t+=dt;
+    /* Leuchtspur des Pfeils: ein Funke an jeder 0,06-s-Schwelle statt je
+     * Bild — so ist die Spur bei jeder Bildrate gleich dicht (örtlich 60
+     * Bilder, im Netz 20 Takte je Sekunde). Reine Deko: burst zieht aus
+     * deko(), nie aus dem Saatkorn. */
+    if(f.k==='arrow' && f.t<f.dur && Math.floor(f.t/0.06)>Math.floor(was/0.06)){
+      const kf = Math.min(1, f.t/f.dur);
+      burst(f.ax+(f.bx-f.ax)*kf, f.ay+(f.by-f.ay)*kf,
+            TH*0.62+Math.sin(kf*Math.PI)*TH*0.55, 1, 'spark', '#ffe8c0', 0.55);
+    }
     if(f.k==='arrow' && was<f.dur && f.t>=f.dur)
       burst(f.bx,f.by,TH*0.55,9,'spark','#ffe8c0');
     if(f.k==='ball' && was<f.dur && f.t>=f.dur){

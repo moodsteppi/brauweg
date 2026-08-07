@@ -117,6 +117,26 @@ const GEO_HALT = new THREE.RingGeometry(0.24, 0.44, 32);
 const GEO_MARKE = new THREE.PlaneGeometry(1, 1);
 
 /**
+ * Pfeil des Schuetzen: Schaft und Spitze zeigen entlang +Z, damit ein
+ * lookAt() auf den naechsten Bahnpunkt ihn richtig ausrichtet.
+ */
+const GEO_SCHAFT = new THREE.CylinderGeometry(0.022, 0.022, 0.44, 6);
+const GEO_SPITZE = new THREE.ConeGeometry(0.05, 0.13, 6);
+const STOFF_SCHAFT = new THREE.MeshLambertMaterial({ color: '#c9a878' });
+const STOFF_SPITZE = new THREE.MeshBasicMaterial({ color: '#f0f8ff' });
+function bauePfeil(): THREE.Group {
+  const g = new THREE.Group();
+  const schaft = new THREE.Mesh(GEO_SCHAFT, STOFF_SCHAFT);
+  schaft.rotation.x = Math.PI / 2;          // Zylinderachse Y -> Z
+  g.add(schaft);
+  const spitze = new THREE.Mesh(GEO_SPITZE, STOFF_SPITZE);
+  spitze.rotation.x = Math.PI / 2;
+  spitze.position.z = 0.27;
+  g.add(spitze);
+  return g;
+}
+
+/**
  * Partikel. Zwei Schwaerme, weil sie verschieden verblassen muessen:
  *
  *  hell  — Funken, Staub, Glut und Rauch: additiv gemischt. Verblassen
@@ -274,12 +294,12 @@ function baueOverlays(
   /* Treffer-Aufleuchten: eine additive Kugel, die bei e.flash kurz
    * aufglimmt. Bewusst ein eigenes Objekt — die Materialien der Figuren
    * sind geteilt, ein Umfaerben traefe alle Objekte derselben Art. */
-  const blitz = new THREE.Mesh(GEO.kugel, new THREE.MeshBasicMaterial({
+  const blitz = new THREE.Mesh(GEO_BLITZ, new THREE.MeshBasicMaterial({
     color: '#ffd7b4', transparent: true, opacity: 0, depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
   }));
-  blitz.scale.setScalar(1.1);
-  blitz.position.y = (HOEHE[art] ?? 0.9) * 0.5;
+  blitz.rotation.x = -Math.PI / 2;
+  blitz.position.y = 0.05;
   blitz.visible = false;
   gruppe.add(blitz);
   /* Laufzeitbalken des Werks: Wie lange laeuft es noch (2D: drawLaufzeit). */
@@ -385,6 +405,15 @@ function entsorgeFx(o: THREE.Object3D): void {
 
 /** Stufenmarken: eine gedrehte Raute je Stufe über dem Objekt (2D: drawPips). */
 const GEO_PIP = new THREE.OctahedronGeometry(0.07);
+
+/**
+ * Treffer-Aufleuchten: eine FLACHE Scheibe knapp ueber dem Boden.
+ * Zuerst war es eine Kugel — die sah aus der Vogelperspektive aus wie eine
+ * Kuppel ueber der Figur und war viel zu massiv. In 2D ist der Treffer ein
+ * weicher heller Schein rund um das Objekt; eine liegende Scheibe trifft
+ * das aus dieser Kameralage am besten.
+ */
+const GEO_BLITZ = new THREE.CircleGeometry(0.42, 20);
 
 /** Platzhalter je Objektart; der Ritter bekommt das GLB, sobald es da ist. */
 function baueObjekt(
@@ -557,6 +586,8 @@ function Szene({
   const truemmerVorrat = useRef<{ kachel: THREE.Mesh; balken: THREE.Sprite }[]>([]);
   const kugeln = useRef(new THREE.Group());
   const kugelVorrat = useRef<THREE.Mesh[]>([]);
+  const pfeilFlug = useRef<THREE.Group[]>([]);
+  const hilfsZiel = useRef(new THREE.Vector3());
   const hellRef = useRef<THREE.InstancedMesh>(null);
   const dunkelRef = useRef<THREE.InstancedMesh>(null);
   const hilfsMatrix = useRef(new THREE.Matrix4());
@@ -797,10 +828,16 @@ function Szene({
         }
       }
 
-      /* Treffer-Aufleuchten (2D: der helle Schein ueber Getroffenem). */
+      /* Treffer-Aufleuchten (2D: der helle Schein ueber Getroffenem).
+       * Dezent halten: kurz, flach und halbdurchsichtig — es soll den
+       * Treffer melden, nicht die Figur verdecken. */
       const flash = Math.max(0, (e.flash as number | undefined) ?? 0);
-      eintrag.ueber.blitz.visible = flash > 0.01;
-      (eintrag.ueber.blitz.material as THREE.MeshBasicMaterial).opacity = Math.min(0.55, flash * 0.8);
+      const blitzMesh = eintrag.ueber.blitz;
+      blitzMesh.visible = flash > 0.02;
+      (blitzMesh.material as THREE.MeshBasicMaterial).opacity = Math.min(0.34, flash * 0.5);
+      // Der Schein weitet sich beim Abklingen leicht — wie eine Druckwelle.
+      const weite = 0.75 + 0.35 * (1 - Math.min(1, flash));
+      blitzMesh.scale.set(weite, weite, 1);
 
       /* Laufzeitbalken: Wie lange arbeitet das Werk noch, bevor es auf
        * Sparflamme faellt (2D: drawLaufzeit). */
@@ -956,39 +993,68 @@ function Szene({
       truemmerVorrat.current[i].balken.visible = false;
     }
 
-    /* Kanonenkugel: Der ball-Effekt traegt Bildschirmkoordinaten des
-     * 2D-Renderers (ax/ay nach bx/by). Ueber dasselbe Raster wie die
-     * Partikel wird daraus eine Flugbahn mit Wurfbogen. */
-    let kugelZahl = 0;
+    /* Geschosse: Kanonenkugel und Pfeil. Beide Eintraege tragen
+     * Bildschirmkoordinaten des 2D-Renderers (ax/ay nach bx/by) und werden
+     * ueber dasselbe Raster wie die Partikel zurueckgerechnet. Die
+     * Bogenhoehen sind dieselben wie in drawFx, damit beide Ansichten
+     * denselben Wurf zeigen. Die Leuchtspur des Pfeils kommt aus dem Kern
+     * (Funken an festen Zeitschwellen) und laeuft ueber den Partikelpfad. */
+    let kugelZahl = 0, flugPfeile = 0;
     if (blick.raster) {
       const ra = blick.raster();
       if (ra.tw > 0 && ra.th > 0) {
-        for (const f of G.fx as readonly Record<string, number | string>[]) {
-          if (f.k !== 'ball') continue;
-          const t = Number(f.t) || 0;
-          const dur = Number(f.dur) || 0.42;
-          if (t < 0) continue;
-          const k = Math.max(0, Math.min(1, t / dur));
-          let kugel = kugelVorrat.current[kugelZahl];
-          if (!kugel) {
-            kugel = new THREE.Mesh(GEO.kugel, new THREE.MeshBasicMaterial({ color: '#ffe0b0' }));
-            kugel.scale.setScalar(0.2);
-            kugelVorrat.current[kugelZahl] = kugel;
-            kugeln.current.add(kugel);
-          }
+        const bahn = (f: Record<string, number | string>, k: number, hoch: number, basis: number) => {
           const sp0 = (Number(f.ax) - ra.ox) / ra.tw, ze0 = (Number(f.ay) - ra.oy) / ra.th;
           const sp1 = (Number(f.bx) - ra.ox) / ra.tw, ze1 = (Number(f.by) - ra.oy) / ra.th;
-          const sp = sp0 + (sp1 - sp0) * k;
           const ze = ze0 + (ze1 - ze0) * k;
-          kugel.visible = true;
-          kugel.position.set(sp, 0.35 + 1.5 * Math.sin(Math.PI * k),
-            spiegel ? zeilen - ze : ze);
-          kugelZahl += 1;
+          return new THREE.Vector3(
+            sp0 + (sp1 - sp0) * k,
+            basis + hoch * Math.sin(Math.PI * Math.max(0, Math.min(1, k))),
+            spiegel ? zeilen - ze : ze,
+          );
+        };
+        for (const f of G.fx as readonly Record<string, number | string>[]) {
+          const t = Number(f.t) || 0;
+          if (t < 0) continue;
+          if (f.k === 'ball') {
+            const k = Math.max(0, Math.min(1, t / (Number(f.dur) || 0.42)));
+            let kugel = kugelVorrat.current[kugelZahl];
+            if (!kugel) {
+              kugel = new THREE.Mesh(GEO.kugel, new THREE.MeshBasicMaterial({ color: '#ffe0b0' }));
+              kugel.scale.setScalar(0.2);
+              kugelVorrat.current[kugelZahl] = kugel;
+              kugeln.current.add(kugel);
+            }
+            kugel.visible = true;
+            kugel.position.copy(bahn(f, k, 1.5, 0.7));
+            kugelZahl += 1;
+          } else if (f.k === 'arrow') {
+            const k = Math.max(0, Math.min(1, t / (Number(f.dur) || 0.24)));
+            let pfeil = pfeilFlug.current[flugPfeile];
+            if (!pfeil) {
+              pfeil = bauePfeil();
+              pfeilFlug.current[flugPfeile] = pfeil;
+              kugeln.current.add(pfeil);
+            }
+            pfeil.visible = true;
+            pfeil.position.copy(bahn(f, k, 0.55, 0.62));
+            /* Ausrichtung aus der Bahn selbst: ein Stueck weiter vorn
+             * anpeilen. So neigt sich der Pfeil beim Steigen und Fallen
+             * mit, statt starr waagerecht zu fliegen. */
+            hilfsZiel.current.copy(bahn(f, Math.min(1, k + 0.06), 0.55, 0.62));
+            if (hilfsZiel.current.distanceToSquared(pfeil.position) > 1e-6) {
+              pfeil.lookAt(hilfsZiel.current);
+            }
+            flugPfeile += 1;
+          }
         }
       }
     }
     for (let i = kugelZahl; i < kugelVorrat.current.length; i++) {
       kugelVorrat.current[i].visible = false;
+    }
+    for (let i = flugPfeile; i < pfeilFlug.current.length; i++) {
+      pfeilFlug.current[i].visible = false;
     }
 
     // Bodenmarken: welche Felder hervorgehoben gehoeren, entscheidet der

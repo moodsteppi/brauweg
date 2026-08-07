@@ -327,17 +327,33 @@ function nebenHaus(own, r, c){
   if(!h) return false;
   return Math.abs(h.r-r)<=1 && Math.abs(h.c-c)<=1 && !(h.r===r && h.c===c);
 }
+/* Ausbaustufe des Haupthauses aus seiner Nachbarschaft.
+ *
+ * Zwei Wege führen zur vollen Stufe 3 (Entscheid vom 7. August 2026):
+ * ein einzelner Stützpunkt auf Stufe 3 (Werk oder Mauer) — oder ZWEI
+ * Stützpunkte auf Stufe 2, etwa eine Mauer und ein Schützenturm. Vorher
+ * gab es nur den ersten Weg, und breit gebaute Stellungen brachten dem
+ * Haus nichts.
+ *
+ * Gezählt werden OBJEKTE, nicht Felder: Ein Werk belegt 1×2 und kann mit
+ * beiden Feldern am Haus liegen — ohne die Kennungsprüfung zählte es
+ * doppelt und höbe das Haus im Alleingang auf Stufe 3.
+ */
 function hausStufe(own){
   const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
   if(!h) return 1;
-  let st = 1;
+  let st = 1, stuetzen = 0;
+  const gezaehlt = new Set();
   for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
     if(!dr && !dc) continue;
     const o = entAt(h.r+dr, h.c+dc);
-    if(!o || o.owner!==own) continue;
-    if(stuetzpunkt(o)) st = Math.max(st, 2);
+    if(!o || o.owner!==own || gezaehlt.has(o.id)) continue;
+    gezaehlt.add(o.id);
+    if(stuetzpunkt(o)) stuetzen += 1;
     if((o.type==='werk' || o.type==='mauer') && o.lvl>=3) st = 3;   // volle Stufe hebt ganz hoch
   }
+  if(stuetzen >= 2) st = 3;
+  else if(stuetzen >= 1) st = Math.max(st, 2);
   return st;
 }
 const hausSt = own => (G.hb && G.hb[own]) || 1;
