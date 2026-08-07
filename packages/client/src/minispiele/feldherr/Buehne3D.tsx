@@ -164,15 +164,11 @@ function baueGelaende(art: string): THREE.Object3D {
 }
 
 /**
- * Kameraeinstellung, live verstellbar ueber das Debug-Feld (siehe unten).
- * Neigung ist die Abweichung von der Senkrechten in Grad: 0 heisst exakt
- * von oben, der Entscheid des Auftraggebers liegt bei etwa 5-10.
+ * Kamera: fast senkrechte Vogelperspektive. Neigung ist die Abweichung von
+ * der Senkrechten in Grad — am 7. August 2026 vom Auftraggeber am lebenden
+ * Spiel entschieden (Debug-Regler, inzwischen ausgebaut): 10 Grad, Abstand 17.
  */
-interface KameraEinstellung {
-  neigung: number;
-  abstand: number;
-}
-const KAMERA_START: KameraEinstellung = { neigung: 8, abstand: 13 };
+const KAMERA = { neigung: 10, abstand: 17 };
 
 /** Einmal nach dem Aufbau die Leinwand anstossen. */
 function AnstossNachAufbau(): null {
@@ -188,11 +184,9 @@ function AnstossNachAufbau(): null {
 function Szene({
   sitzungRef,
   ritter,
-  kamera,
 }: {
   sitzungRef: React.RefObject<FeldherrSitzung | null>;
   ritter: THREE.Group | null;
-  kamera: React.RefObject<KameraEinstellung>;
 }): React.JSX.Element {
   const objekte = useRef(new THREE.Group());
   const gelaende = useRef(new THREE.Group());
@@ -200,10 +194,11 @@ function Szene({
   const gelaendeQuelle = useRef<unknown>(null);
 
   useFrame((drei) => {
-    // Kamera je Bild aus der Debug-Einstellung: fast senkrecht ueber der
-    // Arena, die Neigung kippt sie zur eigenen Seite (unten) hin auf.
-    const n = (kamera.current.neigung * Math.PI) / 180;
-    const d = kamera.current.abstand;
+    // Fast senkrecht ueber der Arena; die Neigung kippt die Kamera zur
+    // eigenen Seite (unten) hin auf. Je Bild gesetzt, damit ein kuenftiger
+    // Kameraschwenk (Muenzflug, Sieg) hier einen einzigen Ansatzpunkt hat.
+    const n = (KAMERA.neigung * Math.PI) / 180;
+    const d = KAMERA.abstand;
     drei.camera.position.set(SPALTEN / 2, d * Math.cos(n), ZEILEN / 2 + d * Math.sin(n));
     drei.camera.lookAt(SPALTEN / 2, 0, ZEILEN / 2);
 
@@ -310,17 +305,6 @@ export function Buehne3D({
 }): React.JSX.Element | null {
   const [rechteck, setRechteck] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [ritter, setRitter] = useState<THREE.Group | null>(null);
-  /**
-   * Kamera-Debug: Die Regler schreiben in den Ref (die Szene liest ihn je
-   * Bild), der State dient nur der Anzeige. So ruettelt kein Reglerzug am
-   * Szenenbaum. Das Feld fliegt raus, sobald der Winkel entschieden ist.
-   */
-  const kameraRef = useRef<KameraEinstellung>({ ...KAMERA_START });
-  const [kameraAnzeige, setKameraAnzeige] = useState<KameraEinstellung>({ ...KAMERA_START });
-  const stelleKamera = (aenderung: Partial<KameraEinstellung>) => {
-    kameraRef.current = { ...kameraRef.current, ...aenderung };
-    setKameraAnzeige(kameraRef.current);
-  };
 
   useEffect(() => {
     const stage = document.getElementById('stage');
@@ -375,53 +359,10 @@ export function Buehne3D({
           die Sichtpruefungen der Umbau-Sitzungen lesen das Bild headless aus. */}
       <Canvas
         gl={{ preserveDrawingBuffer: true }}
-        camera={{ position: [SPALTEN / 2, KAMERA_START.abstand, ZEILEN / 2 + 2], fov: 42 }}
+        camera={{ position: [SPALTEN / 2, KAMERA.abstand, ZEILEN / 2 + 2], fov: 42 }}
       >
-        <Szene sitzungRef={sitzungRef} ritter={ritter} kamera={kameraRef} />
+        <Szene sitzungRef={sitzungRef} ritter={ritter} />
       </Canvas>
-      {/* Kamera-Debug — bedienbar trotz durchlaessiger Buehne. */}
-      <div
-        style={{
-          position: 'absolute',
-          right: 10,
-          top: 10,
-          zIndex: 20,
-          pointerEvents: 'auto',
-          padding: '10px 12px',
-          borderRadius: 10,
-          background: 'rgba(12,20,26,.92)',
-          boxShadow: '0 0 0 1px #2a3b46',
-          color: '#dfd6c2',
-          font: '600 11px/1.6 system-ui',
-          width: 190,
-        }}
-      >
-        <div style={{ letterSpacing: '.12em', color: '#8397a4', marginBottom: 4 }}>KAMERA-DEBUG</div>
-        <label style={{ display: 'block' }}>
-          Neigung: {kameraAnzeige.neigung}°
-          <input
-            type="range"
-            min={0}
-            max={45}
-            step={1}
-            value={kameraAnzeige.neigung}
-            onChange={(e) => stelleKamera({ neigung: +e.target.value })}
-            style={{ width: '100%', accentColor: '#e8433c' }}
-          />
-        </label>
-        <label style={{ display: 'block' }}>
-          Abstand: {kameraAnzeige.abstand}
-          <input
-            type="range"
-            min={7}
-            max={22}
-            step={0.5}
-            value={kameraAnzeige.abstand}
-            onChange={(e) => stelleKamera({ abstand: +e.target.value })}
-            style={{ width: '100%', accentColor: '#e8433c' }}
-          />
-        </label>
-      </div>
     </div>
   );
 }
