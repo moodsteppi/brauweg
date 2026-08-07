@@ -4236,5 +4236,21 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     },
     takt: () => taktZaehler,
     pruefsumme,
+    /**
+     * Lesefenster fuer den 3D-Renderer (Stufe 2, docs/FELDHERR-3D-UMBAU.md):
+     * Er liest je Bild den Simulationszustand und interpoliert zwischen den
+     * Takten — die Simulation bleibt bei ihren festen Schritten, nur das
+     * Bild laeuft weicher. NUR LESEN: Wer ueber dieses Fenster schreibt,
+     * faehrt am Gleichschritt vorbei, und die Partie wird strittig.
+     * `restAnteil` ist der Anteil des schon verstrichenen naechsten Takts
+     * (0..1) — der Interpolationsfaktor zwischen zwei Simulationsstaenden.
+     */
+    lesen: () => ({
+      zustand: G,
+      phase,
+      spiegel: SPIEGEL,
+      takt: taktZaehler,
+      restAnteil: Math.max(0, Math.min(1, restMs / TAKT_MS)),
+    }),
   };
 }
