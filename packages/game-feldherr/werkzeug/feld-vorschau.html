@@ -44,14 +44,14 @@ canvas{display:block;background:#05080b}
 <body>
 <div id="app">
   <div id="leiste">
-    <label>Spalten (X) <input id="inC" type="number" min="3" max="20" value="6"></label>
+    <label>Spalten (X) <input id="inC" type="number" min="3" max="20" value="8"></label>
     <label>Zeilen (Y) <input id="inR" type="number" min="6" max="30" value="12"></label>
-    <label>Zellverhältnis <input id="inV" type="range" min="0.40" max="1.00" step="0.01" value="0.62">
-      <span id="vAnzeige">0,62</span></label>
+    <label>Zellverhältnis <input id="inV" type="range" min="0.40" max="1.00" step="0.01" value="1.00">
+      <span id="vAnzeige">1,00</span></label>
     <span>
-      <button data-p="5,10">Klein 5×10</button>
-      <button data-p="6,12" class="on">Mittel 6×12</button>
-      <button data-p="7,14">Groß 7×14</button>
+      <button data-p="8,12" class="on">Standard 8×12</button>
+      <button data-p="6,12">Alt: Mittel 6×12</button>
+      <button data-p="7,14">Alt: Groß 7×14</button>
     </span>
     <span>
       <button data-b="handy" class="on">Handy hoch</button>
@@ -68,7 +68,7 @@ canvas{display:block;background:#05080b}
  * Regler VER, damit der Entscheid fallen kann, BEVOR jemand das Spiel
  * anfasst. */
 const KPX = 0.0030, KPY = 0.0005, KLIFT = 0.88, HS = 0.76;
-let COLS = 6, ROWS = 12, VER = 0.62;
+let COLS = 8, ROWS = 12, VER = 1.00;
 let TW = 40, TH = 26, OX = 0, OY = 0, CX = 0, CY = 0, W = 0, H = 0, DPR = 1;
 
 const cv = document.getElementById('cv');
@@ -157,7 +157,7 @@ function zeichnen(){
   const seite = (TH / TW);
   document.getElementById('werte').innerHTML =
     'Zelle <b>' + TW.toFixed(1) + ' × ' + TH.toFixed(1) + ' px</b> · Verhältnis <b>' +
-    seite.toFixed(2).replace('.', ',') + '</b> (heute im Spiel: 0,62)<br>Brett <b>' +
+    seite.toFixed(2).replace('.', ',') + '</b> (heute im Spiel: 1,00)<br>Brett <b>' +
     (TW*COLS).toFixed(0) + ' × ' + (TH*ROWS).toFixed(0) + ' px</b> auf Bühne ' +
     W.toFixed(0) + ' × ' + H.toFixed(0);
 }

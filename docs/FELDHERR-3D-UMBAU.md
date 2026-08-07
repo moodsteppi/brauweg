@@ -69,12 +69,16 @@ Byte-Vergleich.
 
 ### Stufe 2 — 3D-Renderer daneben, nicht darüber
 
-**Torwächter davor: der Geometrie-Entscheid.** Feldmaße (Spalten × Zeilen je
-Feldgröße) und das Zellverhältnis (heute fest `TH = 0,62·TW` in `resize()`)
-müssen festliegen, BEVOR das erste Modell eingebaut wird — Kamera, Maßstäbe
-und Klickflächen bauen darauf. `werkzeug/feld-vorschau.html` (Doppelklick)
-zeigt ein X-mal-Y-Brett mit der echten Projektion und verstellbarem
-Zellverhältnis.
+**Torwächter davor: der Geometrie-Entscheid — GEFALLEN am 7. August 2026**
+(vom Auftraggeber mit `werkzeug/feld-vorschau.html` am Handy festgelegt):
+**8 × 12 Felder, Zellverhältnis 1,00 (quadratisch), nur noch diese eine
+Feldgröße.** Umgesetzt in `simulation.js` (setzeFeld fest), `resize()`
+(ZELL = 1,00) und den Menüs (Auswahl entfernt; Standalone wie Client). Die
+alten Schlüssel klein/mittel/gross bleiben im Tisch-Schema gültig und
+bedeuten alle dasselbe Brett — alte Snapshots laden weiter. Ebenfalls
+entschieden: Im Netz sieht jeder die ganze Karte und nur die EIGENE
+Kartenleiste; die Gegnerleiste ist ausgeblendet (anbindung-fuss.js), das
+Duo am geteilten Gerät behält beide.
 
 Three/R3F liest je Bild den Simulationszustand und **interpoliert zwischen
 den Takten**: Die Simulation bleibt bei 20 Takten je Sekunde, das Bild läuft

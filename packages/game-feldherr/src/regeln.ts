@@ -14,7 +14,15 @@
  * sofort sichtbar, sondern erst daran, dass beide einen anderen Sieger sehen.
  */
 
-/** Feldgroessen des Spiels. Mehr Regeloptionen hat Feldherr bewusst nicht. */
+/**
+ * Feldgroessen des Spiels. Mehr Regeloptionen hat Feldherr bewusst nicht.
+ *
+ * Seit dem Geometrie-Entscheid vom 7. August 2026 gibt es nur noch EIN
+ * Brett (8 x 12); der Kern bildet alle drei Schluessel darauf ab. Die Liste
+ * bleibt, weil bestehende Tisch-Optionen und Partiestaende sie tragen —
+ * das Schema zu verengen wuerde alte Snapshots ungueltig machen, ohne etwas
+ * zu gewinnen.
+ */
 export const FELDGROESSEN = ['klein', 'mittel', 'gross'] as const;
 export type Feldgroesse = (typeof FELDGROESSEN)[number];
 

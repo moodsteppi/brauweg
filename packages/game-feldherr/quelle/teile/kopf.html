@@ -139,8 +139,11 @@ dt ist auf 0,05 s gedeckelt, damit ein Tabwechsel keine Sprünge erzeugt.
 5. KOORDINATEN UND PROJEKTION
 --------------------------------------------------------------------------------
 Das Brett ist COLS × ROWS Felder groß; MID trennt die Hälften (Reihen unter MID
-gehören Spieler 1). Die Feldgröße stellt setzeFeld('klein'|'mittel'|'gross')
-ein — COLS/ROWS/MID sind deshalb let, nicht const.
+gehören Spieler 1). Seit dem Geometrie-Entscheid vom 7. August 2026 ist das
+Brett fest 8 × 12 mit quadratischen Zellen (ZELL = 1,00 in resize()); eine
+Feldgrößen-Auswahl gibt es nicht mehr. setzeFeld() setzt COLS/ROWS/MID und
+nimmt alte Schlüssel ('klein'/'mittel'/'gross') weiter entgegen, weil sie in
+Tisch-Optionen und alten Partieständen stehen — sie bedeuten dasselbe Brett.
 
 Bildschirmkoordinaten liefert P(x, y, h): x/y sind Pixel in der Brettebene
 (gx/gy/midX/midY rechnen von Feldindizes dorthin), h ist die Höhe über dem

@@ -1,9 +1,9 @@
 /**
  * Feldherr — Spielkern des Clients.
  *
- * MASCHINELL ERZEUGT aus packages/game-feldherr/quelle/feldherr.html durch
- * packages/game-feldherr/werkzeug/kern-erzeugen.mjs.
- * Nicht von Hand aendern — die Quelle anpassen und neu erzeugen.
+ * MASCHINELL ERZEUGT aus den Modulen unter packages/game-feldherr/quelle/
+ * teile/ durch packages/game-feldherr/werkzeug/bauen.mjs.
+ * Nicht von Hand aendern — die Teile anpassen und neu bauen.
  *
  * Der Kern zeichnet auf eine Leinwand und findet seine Teile ueber
  * getElementById. Er kennt kein React und soll es nicht kennen: Er muss auf

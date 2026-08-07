@@ -79,7 +79,13 @@ export function FeldherrTisch({
 }): React.JSX.Element {
   const [modus, setModus] = useState<Modus | null>(null);
   const [stufe, setStufe] = useState<Stufe>('normal');
-  const [feld, setFeld] = useState<Feld>('mittel');
+  /**
+   * Geometrie-Entscheid vom 7. August 2026: EIN festes Brett (8 × 12), keine
+   * Auswahl mehr. Der Schluessel bleibt, weil das Tisch-Schema und alte
+   * Partiestaende ihn tragen — der Kern bildet alle Werte auf dasselbe
+   * Brett ab.
+   */
+  const feld: Feld = 'mittel';
 
   /** Offene Netz-Tische; null heisst noch nie geladen. */
   const [tische, setTische] = useState<TableRow[] | null>(null);
@@ -467,14 +473,6 @@ export function FeldherrTisch({
             <option value="schwer">Schwer</option>
           </select>
         </label>
-        <label className="feldherr-zeile">
-          <span>Feldgröße</span>
-          <select value={feld} onChange={(e) => setFeld(e.target.value as Feld)}>
-            <option value="klein">Klein</option>
-            <option value="mittel">Mittel</option>
-            <option value="gross">Groß</option>
-          </select>
-        </label>
       </section>
 
       <button className="btn pri" onClick={() => setModus('ki')}>
@@ -487,7 +485,7 @@ export function FeldherrTisch({
       <section className="feldherr-online">
         <h2>Online spielen</h2>
         <button className="btn" onClick={() => void erstelleTisch()}>
-          Tisch erstellen ({feld})
+          Tisch erstellen
         </button>
         {fehler && <p className="hub-text feldherr-fehler">{fehler}</p>}
         {tische !== null && tische.length === 0 && (

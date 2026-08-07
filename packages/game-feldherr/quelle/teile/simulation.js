@@ -45,16 +45,15 @@ function mische(liste){
   return liste;
 }
 
-let COLS = 6, ROWS = 12, MID = 6;        // obere Hälfte Spieler 1, untere Spieler 2
-const FELDER = {
-  klein:  {nm:'Klein',  c:5, r:10},
-  mittel: {nm:'Mittel', c:6, r:12},
-  gross:  {nm:'Groß',   c:7, r:14}
-};
+let COLS = 8, ROWS = 12, MID = 6;        // obere Hälfte Spieler 1, untere Spieler 2
+/* Geometrie-Entscheid vom 7. August 2026 (docs/FELDHERR-3D-UMBAU.md): EIN
+ * festes Brett für alle Partien, 8 × 12. Die alten Schlüssel klein/mittel/
+ * gross leben in Tisch-Optionen und alten Partieständen weiter — setzeFeld
+ * nimmt sie deshalb weiter an, sie bedeuten aber alle dasselbe Brett. */
+const FELD = {c:8, r:12};
 const grosseKarte = () => ROWS >= 14;
-function setzeFeld(k){
-  const f = FELDER[k] || FELDER.mittel;
-  COLS = f.c; ROWS = f.r; MID = f.r/2;
+function setzeFeld(){
+  COLS = FELD.c; ROWS = FELD.r; MID = FELD.r/2;
 }
 const MAXLVL = 4, MOVE_T = 0.34;
 

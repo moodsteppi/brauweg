@@ -514,13 +514,6 @@ if(segBox) for(const b of Array.from(segBox.children)){
 const segCoin = document.getElementById('segCoin');
 if(segCoin) for(const b of Array.from(segCoin.children))
   b.onclick = ()=> coinWahl(b.dataset.w);
-const segFeld = document.getElementById('segFeld');
-if(segFeld) for(const b of Array.from(segFeld.children)){
-  b.onclick = ()=>{
-    for(const x of Array.from(segFeld.children)) x.classList.remove('on');
-    b.classList.add('on'); feldKey = b.dataset.f;
-  };
-}
 on('bAI',      ()=> launch(true));
 on('bDuo',     ()=> launch(false));
 on('bTut',     ()=>{ ovMenu.hidden=true; showTut('menu'); });

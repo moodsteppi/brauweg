@@ -227,8 +227,12 @@ function resize(){
   bg.width = cv.width; bg.height = cv.height;
   bgx.setTransform(DPR,0,0,DPR,0,0);
   const pad = 12;
-  TW = Math.min((W-pad*2)/COLS, (H-pad*2)/(ROWS*0.62));
-  TH = TW*0.62;
+  /* Zellverhältnis 1,00 — Geometrie-Entscheid vom 7. August 2026:
+   * quadratische Felder für leichteres Klicken und drehbare 3D-Modelle
+   * (vorher 0,62; mit werkzeug/feld-vorschau.html entschieden). */
+  const ZELL = 1.00;
+  TW = Math.min((W-pad*2)/COLS, (H-pad*2)/(ROWS*ZELL));
+  TH = TW*ZELL;
   OX = (W - TW*COLS)/2; OY = (H - TH*ROWS)/2 + TH*0.55;
   CX = OX + TW*COLS/2; CY = OY + TH*ROWS/2;
   bakeStatic();

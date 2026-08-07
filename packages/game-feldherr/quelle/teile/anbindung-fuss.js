@@ -104,6 +104,17 @@
     }
 
     /**
+     * Im Netz sieht jeder nur die eigene Kartenleiste; die des Gegners ist
+     * ausgeblendet und das Brett bekommt ihre Höhe (Entscheid vom 7. August
+     * 2026). buildHUD fuellt nur das Innere der Leisten neu — display am
+     * Container ueberlebt den Rundenstart. display statt hidden, weil
+     * Autorenregeln des Spielstils das UA-Stylesheet fuer [hidden] schlagen
+     * koennen (gleiche Falle wie beim "Neue Runde"-Knopf).
+     */
+    const gegnerLeiste = document.getElementById('hud' + (1 - MEIN_SITZ));
+    if (gegnerLeiste) gegnerLeiste.style.display = 'none';
+
+    /**
      * Pause gibt es im Netz nicht: update() stuende still, waehrend der Takt
      * weiterlaeuft, und das Geraet ueberspraenge Rechenschritte, die die
      * Gegenseite ausfuehrt. Das Menue oeffnet nur noch das Overlay.

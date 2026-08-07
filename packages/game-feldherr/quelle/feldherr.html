@@ -139,8 +139,11 @@ dt ist auf 0,05 s gedeckelt, damit ein Tabwechsel keine Sprünge erzeugt.
 5. KOORDINATEN UND PROJEKTION
 --------------------------------------------------------------------------------
 Das Brett ist COLS × ROWS Felder groß; MID trennt die Hälften (Reihen unter MID
-gehören Spieler 1). Die Feldgröße stellt setzeFeld('klein'|'mittel'|'gross')
-ein — COLS/ROWS/MID sind deshalb let, nicht const.
+gehören Spieler 1). Seit dem Geometrie-Entscheid vom 7. August 2026 ist das
+Brett fest 8 × 12 mit quadratischen Zellen (ZELL = 1,00 in resize()); eine
+Feldgrößen-Auswahl gibt es nicht mehr. setzeFeld() setzt COLS/ROWS/MID und
+nimmt alte Schlüssel ('klein'/'mittel'/'gross') weiter entgegen, weil sie in
+Tisch-Optionen und alten Partieständen stehen — sie bedeuten dasselbe Brett.
 
 Bildschirmkoordinaten liefert P(x, y, h): x/y sind Pixel in der Brettebene
 (gx/gy/midX/midY rechnen von Feldindizes dorthin), h ist die Höhe über dem
@@ -450,12 +453,6 @@ table.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}
     <div class="eyebrow">Taktikduell · ein Gerät · zwei Feldherren</div>
     <h1>FELD<em>HERR</em></h1>
     <div class="sub">Ein Brett, mittig geteilt. Echtzeit. Wer das gegnerische Haupthaus einreißt, gewinnt. Auf den Karten steht der Zug- und der Schlagtakt.</div>
-    <div class="seglbl">Feldgröße</div>
-    <div class="seg" id="segFeld">
-      <button data-f="klein">Klein</button>
-      <button data-f="mittel" class="on">Mittel</button>
-      <button data-f="gross">Groß</button>
-    </div>
     <div class="seglbl">Stärke der KI</div>
     <div class="seg" id="segLvl">
       <button data-l="leicht">Leicht</button>
@@ -541,7 +538,7 @@ table.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}
 
     <h2>Stellungen</h2>
     <p class="tx">Ein kurzes Antippen hält eine Truppe an: Sie marschiert nicht mehr, verteidigt ihre Umgebung und nimmt <b>12,5 % weniger Schaden</b>. Von Schützen und von Kämpfern dürfen jeweils höchstens <b>drei</b> gleichzeitig stehen; Schützentürme zählen bei den Schützen mit. Das Schild an der Figur zeigt den Stand der ganzen Gruppe.</p>
-    <p class="tx"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt. <b>Große Karte:</b> rund 40 % mehr Gelände und +1 Reichweite für alle Fernkämpfer und Geschütze.</p>
+    <p class="tx"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt.</p>
     <button class="btn" id="bTabClose">Zurück</button>
   </div>
 </div>
@@ -613,16 +610,15 @@ function mische(liste){
   return liste;
 }
 
-let COLS = 6, ROWS = 12, MID = 6;        // obere Hälfte Spieler 1, untere Spieler 2
-const FELDER = {
-  klein:  {nm:'Klein',  c:5, r:10},
-  mittel: {nm:'Mittel', c:6, r:12},
-  gross:  {nm:'Groß',   c:7, r:14}
-};
+let COLS = 8, ROWS = 12, MID = 6;        // obere Hälfte Spieler 1, untere Spieler 2
+/* Geometrie-Entscheid vom 7. August 2026 (docs/FELDHERR-3D-UMBAU.md): EIN
+ * festes Brett für alle Partien, 8 × 12. Die alten Schlüssel klein/mittel/
+ * gross leben in Tisch-Optionen und alten Partieständen weiter — setzeFeld
+ * nimmt sie deshalb weiter an, sie bedeuten aber alle dasselbe Brett. */
+const FELD = {c:8, r:12};
 const grosseKarte = () => ROWS >= 14;
-function setzeFeld(k){
-  const f = FELDER[k] || FELDER.mittel;
-  COLS = f.c; ROWS = f.r; MID = f.r/2;
+function setzeFeld(){
+  COLS = FELD.c; ROWS = FELD.r; MID = FELD.r/2;
 }
 const MAXLVL = 4, MOVE_T = 0.34;
 
@@ -1640,8 +1636,12 @@ function resize(){
   bg.width = cv.width; bg.height = cv.height;
   bgx.setTransform(DPR,0,0,DPR,0,0);
   const pad = 12;
-  TW = Math.min((W-pad*2)/COLS, (H-pad*2)/(ROWS*0.62));
-  TH = TW*0.62;
+  /* Zellverhältnis 1,00 — Geometrie-Entscheid vom 7. August 2026:
+   * quadratische Felder für leichteres Klicken und drehbare 3D-Modelle
+   * (vorher 0,62; mit werkzeug/feld-vorschau.html entschieden). */
+  const ZELL = 1.00;
+  TW = Math.min((W-pad*2)/COLS, (H-pad*2)/(ROWS*ZELL));
+  TH = TW*ZELL;
   OX = (W - TW*COLS)/2; OY = (H - TH*ROWS)/2 + TH*0.55;
   CX = OX + TW*COLS/2; CY = OY + TH*ROWS/2;
   bakeStatic();
@@ -4182,13 +4182,6 @@ if(segBox) for(const b of Array.from(segBox.children)){
 const segCoin = document.getElementById('segCoin');
 if(segCoin) for(const b of Array.from(segCoin.children))
   b.onclick = ()=> coinWahl(b.dataset.w);
-const segFeld = document.getElementById('segFeld');
-if(segFeld) for(const b of Array.from(segFeld.children)){
-  b.onclick = ()=>{
-    for(const x of Array.from(segFeld.children)) x.classList.remove('on');
-    b.classList.add('on'); feldKey = b.dataset.f;
-  };
-}
 on('bAI',      ()=> launch(true));
 on('bDuo',     ()=> launch(false));
 on('bTut',     ()=>{ ovMenu.hidden=true; showTut('menu'); });
