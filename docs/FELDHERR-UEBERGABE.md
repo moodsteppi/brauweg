@@ -259,6 +259,17 @@ nachgewiesen (zwei Partien, zwei Browser, ein Tisch):
 * **Nach Umbauten prüfen, ob jede aufgerufene Kernfunktion noch existiert.**
   Bei der Arbeit an der Spieldatei sind zweimal ganze Funktionsblöcke
   verlorengegangen und erst im Spiel aufgefallen.
+* **Der Absender war vor seinem eigenen schwebenden Zug nicht geschützt.**
+  Der Schwebe-Deckel von Ursache 6 hielt nur die GEGENSEITE vor dem
+  Zugtakt fest; der Absender selbst durfte bis T+2 rechnen und lief bei
+  einem Server-Echo über ~500 ms in den Notnagel — Handy gegen Desktop
+  wurde am 7. August genau so strittig, und jede headless Probe blieb
+  grün, weil sie keine Echo-Verspätung kennt. Seitdem: Absender-Deckel
+  (höchstens bis T−1), der Notnagel meldet sofort `aufStrittig`
+  (`zugVersatz`), und der Tisch heilt Gleichlauf-Verlust per Neustart aus
+  Saatkorn + Server-Zugliste, statt die Partie gleich strittig zu werten
+  (erst die dritte Heilung binnen zwei Minuten gilt). Details:
+  `docs/FELDHERR-BUG-STRITTIG.md`, Abschnitt *Lösung*.
 
 ---
 

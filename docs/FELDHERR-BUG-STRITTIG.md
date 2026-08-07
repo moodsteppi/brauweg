@@ -1,6 +1,8 @@
 # Übergabe: Netzpartien werden wieder strittig
 
-Stand: 7. August 2026, abends. **Offener Fehler, reproduzierbar im Spiel.**
+Stand: 7. August 2026, spät. **Ursache gefunden und behoben, dazu
+Selbstheilung eingebaut — siehe „Lösung" direkt hierunter.** Der Rest des
+Dokuments bleibt als Protokoll der Suche stehen.
 
 Der Auftraggeber hat am 7. August auf Produktion eine Netzpartie gespielt
 (zwei Geräte, Sitz 2 auf dem Handy) und bekam mitten im Spiel das Banner
@@ -10,9 +12,73 @@ Niemand gewinnt."* — die beiden Geräte haben also an derselben
 
 Das ist derselbe Fehlerklasse wie im August zuvor (siehe
 `docs/FELDHERR-UEBERGABE.md`, Abschnitt *Fallstricke*), aber die dort
-gefundenen sechs Ursachen sind alle behoben. Es ist eine **neue** Ursache,
-und sie liegt mit hoher Wahrscheinlichkeit in den Änderungen vom
-7. August.
+gefundenen sechs Ursachen sind alle behoben.
+
+---
+
+## Lösung (7. August 2026, spät)
+
+**Die Regeln vom 7. August sind unschuldig.** Die Zugliste der
+Gleichlauf-Probe wurde wie unten in Abschnitt 4 gefordert erweitert
+(Mauern nebeneinander UND gestapelt, Aufwertung mit Stufenwechsel am
+Haupthaus rauf und runter, Abriss mitten aus der Gruppe, Halt-Befehle,
+Front-Werk, Kanone, Gefechte) — live gegen Replay gegen beide Sitze bleibt
+über 110 Grenzproben **GLEICH**. `mauerNetz`, `hausStufe`, `playCard`,
+`razeEnt` und `trefferAuf` rechnen deterministisch; auch der Zeichen- und
+Bedienpfad zieht nirgends `zufall()` (geprüft per Volltextsuche und
+Code-Durchsicht von `animate`, `render`, `berechnePrev`, HAKEN).
+
+**Die eigentliche Lücke steckte im Gleichschritt-Protokoll — der Absender
+war vor seinem EIGENEN schwebenden Zug nicht geschützt.** Der Fix vom
+6. August (schwebende Züge) deckelt nur den GEMELDETEN Stand, damit die
+Gegenseite vor dem Zugtakt wartet. Die Rechnung für den Absender selbst:
+Zug geplant bei T = Takt + VORLAUF + MELDE_PUFFER (= +10); die Gegenseite
+wartet bei T−4, meldet aber weiter — also durfte der Absender bis
+(T−4) + VORLAUF + MELDE_PUFFER − 1 − POLSTER = **T+2** rechnen. Kam das
+Server-Echo des eigenen Zuges später zurück als die ~500 ms, die der
+Absender bis T braucht (Funkloch am Handy, langsamer Datenbank-Schreiber),
+führte der Notnagel den Zug verschoben aus, während die Gegenseite ihn
+pünktlich bei T rechnete: stille Divergenz, Banner an der nächsten
+40er-Grenze, Warnung nur in der am Handy unsichtbaren Konsole. Das passt
+Punkt für Punkt zum Vorfall (Handy, mitten im Spiel, direkt nach einem
+Legen) — und erklärt, warum jede headless Probe grün blieb: sie kennt
+keine Echo-Verspätung.
+
+Drei Änderungen:
+
+1. **Absender-Deckel** (`anbindung-fuss.js`, Schleife): Solange ein eigener
+   Zug schwebt, rechnet auch der Absender höchstens bis T−1
+   (`wissen = min(wissen, schwebend[0].takt − 1 + POLSTER)`). Normal kehrt
+   das Echo in 100–300 ms zurück und der Deckel greift nie; bei einer
+   Störung stottert die Partie, statt auseinanderzulaufen.
+2. **Notnagel meldet sofort** (`zugAnnehmen`): Ein Zug, der erst nach
+   seinem Takt eintrifft, wird nicht mehr still verschoben ausgeführt —
+   der Kern hält an und ruft `aufStrittig` mit `grund: 'zugVersatz'`
+   (Probenabweichung: `grund: 'probe'`).
+3. **Selbstheilung statt Strittig** (`FeldherrTisch.tsx`): Bei
+   Gleichlauf-Verlust startet der Tisch den Kern neu und spielt Saatkorn
+   plus Server-Zugliste nach — die Zugliste ist die gemeinsame Wahrheit,
+   das Replay ist der kanonische Lauf, beide Geräte finden wieder
+   zusammen („Gleichlauf wird wiederhergestellt …"). Erst die dritte
+   Heilung binnen zwei Minuten gilt als echt strittig (dann rechnen die
+   Geräte wirklich verschieden) und meldet wie bisher das Ergebnis.
+   Nebenbei gestopft: Beim Neustart mitten in der Partie bekommt der
+   frische Kern die schon verwahrten Züge jetzt SOFORT — der
+   zahlgebundene Effekt lief nur, wenn sich die Zugzahl änderte.
+
+Nachgewiesen headless (Szenario „letzter Zug kommt 20 Takte zu spät"):
+`aufStrittig(zugVersatz)` feuert im Ankunftstakt, und ein frischer
+Replay-Lauf trifft alle kanonischen Grenzsummen. Erweiterte Probe, volle
+Suite (265 Tests) und Client-Build grün. **Noch offen: eine echte
+Zwei-Geräte-Partie auf staging/prod als Gegenprobe.**
+
+Restrisiko, bewusst hingenommen: Braucht ein Echo länger als der
+Schwebe-Verfall (4 s), hebt sich der Deckel und ein danach doch noch
+eintreffendes Echo läuft wieder in den Notnagel — das fängt jetzt die
+Selbstheilung. Die Versatz-Suche der Probe ist parametrisiert
+(`VERSATZ_GRENZE`/`VERSATZ_SUMME` aus einer echten Meldung eintragen);
+ohne beobachtete Summe bleibt sie aus, weil sie sonst Scheintreffer
+listet.
 
 ---
 

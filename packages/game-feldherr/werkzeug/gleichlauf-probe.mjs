@@ -116,13 +116,47 @@ const { starteFeldherr } = await import(kernUrl.href);
 const SAAT = 133933090; // das Saatkorn der Partie, die im Browser strittig wurde
 const TAKT_MS = 50;
 
-/** Die Zugliste der strittigen Partie, wie sie der Server verwahrt hat. */
+/**
+ * Die Zugliste der strittigen Partie, wie sie der Server verwahrt hat —
+ * ERWEITERT um Kartenzuege (Uebergabe FELDHERR-BUG-STRITTIG, Abschnitt 4):
+ * Die alte Liste (Muenze + zwei Haeuser) fuehrte playCard, mauerNetz,
+ * hausStufe-Wechsel, razeEnt und haltBefehl NIE aus — genau dort liegen die
+ * Aenderungen vom 7. August. Jetzt deckt sie ab: Mauern nebeneinander UND
+ * gestapelt (Verbund-Stufen 1→2→3, Stuetzpunkt am Haupthaus rauf und wieder
+ * runter), einen Abriss mitten aus der Gruppe, Halt-Befehle (Stellung),
+ * ein Werk an der Front (Kesselexplosion neben Mauern und Truppen), eine
+ * Kanone (Belagerung gegen Mauern) und marschierende Truppen beider Seiten.
+ * Takte und Felder sind gegen das Gelaende der Saat geprueft (Brett-Dump);
+ * jeder Zug ist beim Eintreffen bezahlbar und der Platz frei.
+ */
 const ZUEGE = [
   { sitz: 0, zug: { takt: 801, art: 'muenze', wahl: 'kopf' } },
   { sitz: 0, zug: { takt: 1526, art: 'haus', r: 3, c: 4 } },
   { sitz: 1, zug: { takt: 2252, art: 'haus', r: 8, c: 3 } },
+  { sitz: 0, zug: { takt: 2410, art: 'karte', karte: 'mauer', r: 4, c: 4 } },
+  { sitz: 1, zug: { takt: 2415, art: 'karte', karte: 'mauer', r: 7, c: 3 } },
+  { sitz: 0, zug: { takt: 2565, art: 'karte', karte: 'mauer', r: 4, c: 5 } },
+  { sitz: 1, zug: { takt: 2570, art: 'karte', karte: 'mauer', r: 7, c: 2 } },
+  // Stapel auf (4,4): Gewicht 2, Gruppe damit Stufe 3 — Haupthaus-Stuetzpunkt.
+  { sitz: 0, zug: { takt: 2715, art: 'karte', karte: 'mauer', r: 4, c: 4 } },
+  { sitz: 1, zug: { takt: 2718, art: 'karte', karte: 'schwert', r: 6, c: 4 } },
+  { sitz: 1, zug: { takt: 2738, art: 'halt', r: 6, c: 4 } },
+  { sitz: 0, zug: { takt: 2835, art: 'karte', karte: 'bogen', r: 2, c: 5 } },
+  { sitz: 0, zug: { takt: 2855, art: 'halt', r: 2, c: 5 } },
+  // Werk an der Front (Panikzone): faellt im Gefecht und sprengt den Kessel
+  // neben Mauern, Truppen und dem eigenen Haus.
+  { sitz: 1, zug: { takt: 2905, art: 'karte', karte: 'werk', r: 6, c: 5 } },
+  { sitz: 0, zug: { takt: 2960, art: 'karte', karte: 'werk', r: 1, c: 4 } },
+  { sitz: 1, zug: { takt: 3060, art: 'karte', karte: 'bogen', r: 10, c: 4 } },
+  // Abriss mitten aus der Dreiergruppe: der Rest stuft sich neu ein, das
+  // Haupthaus faellt von Stufe 3 zurueck auf 2.
+  { sitz: 0, zug: { takt: 3105, art: 'abriss', r: 4, c: 5 } },
+  { sitz: 0, zug: { takt: 3210, art: 'karte', karte: 'schwert', r: 5, c: 3 } },
+  { sitz: 1, zug: { takt: 3260, art: 'karte', karte: 'kanone', r: 8, c: 5 } },
+  { sitz: 0, zug: { takt: 3360, art: 'karte', karte: 'schwert', r: 5, c: 2 } },
+  { sitz: 1, zug: { takt: 3460, art: 'karte', karte: 'schwert', r: 6, c: 3 } },
 ];
-const ZIEL_TAKT = 2400;
+const ZIEL_TAKT = 4400;
 
 /**
  * Faehrt eine Sitzung bis zielTakt und sammelt die Pruefsummen aller
@@ -241,22 +275,34 @@ vergleiche('live sitz0', live, 'replay sitz0', replay);
 vergleiche('replay sitz0', replay, 'replay sitz1', replaySitz1);
 
 for (const [grenze, summe] of live) {
-  if (grenze >= 2200 && grenze <= 2360) console.log(`  Referenz Grenze ${grenze}: ${summe}`);
+  if ((grenze >= 2200 && grenze <= 2360) || grenze >= ZIEL_TAKT - 200) {
+    console.log(`  Referenz Grenze ${grenze}: ${summe}`);
+  }
 }
 
 /**
- * Versatz-Suche: Die strittige Browser-Sitzung meldete an Grenze 2280 die
- * Summe x01aye statt der Referenz. Wurde dort der letzte Zug einige Takte
- * verschoben ausgefuehrt (Notnagel), muss sich die Summe mit dem passenden
- * Versatz reproduzieren lassen.
+ * Versatz-Suche: Meldet eine strittige Browser-Sitzung an einer Grenze eine
+ * fremde Summe, traegt man sie hier samt Grenze ein (aus der Server-Zugliste
+ * bzw. den meldungen). Wurde der letzte Zug einige Takte verschoben
+ * ausgefuehrt (Notnagel), reproduziert der passende Versatz die Summe —
+ * dann war es ein Protokollproblem, kein Regelfehler. Ohne beobachtete
+ * Summe bleibt die Suche aus: Gegen eine Grenze VOR dem letzten Zug liefe
+ * jeder Versatz auf die Referenzsumme und meldete lauter Scheintreffer.
+ * (Der historische Fall: Grenze 2280, Summe x01aye — mit der alten
+ * Drei-Zuege-Liste.)
  */
-for (let versatz = -8; versatz <= 12; versatz += 1) {
-  if (versatz === 0) continue;
-  const verschoben = ZUEGE.map((z, i) =>
-    i === ZUEGE.length - 1 ? { ...z, zug: { ...z.zug, takt: z.zug.takt + versatz } } : z,
-  );
-  const lauf = fahre(`versatz ${versatz}`, 0, (takt) => (takt === 0 ? verschoben : []));
-  const summe = lauf.get(2280);
-  if (summe === 'x01aye') console.log(`  TREFFER: Versatz ${versatz} ergibt an 2280 genau x01aye`);
+const VERSATZ_GRENZE = 0;
+const VERSATZ_SUMME = '';
+if (VERSATZ_SUMME) {
+  for (let versatz = -8; versatz <= 12; versatz += 1) {
+    if (versatz === 0) continue;
+    const verschoben = ZUEGE.map((z, i) =>
+      i === ZUEGE.length - 1 ? { ...z, zug: { ...z.zug, takt: z.zug.takt + versatz } } : z,
+    );
+    const lauf = fahre(`versatz ${versatz}`, 0, (takt) => (takt === 0 ? verschoben : []));
+    if (lauf.get(VERSATZ_GRENZE) === VERSATZ_SUMME) {
+      console.log(`  TREFFER: Versatz ${versatz} ergibt an ${VERSATZ_GRENZE} genau ${VERSATZ_SUMME}`);
+    }
+  }
 }
 process.exit(fehler ? 1 : 0);

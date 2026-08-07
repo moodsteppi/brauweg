@@ -206,11 +206,13 @@ export declare function starteFeldherr(optionen: {
   saat?: number;
   aufEnde?: (ausgang: FeldherrAusgang) => void;
   /**
-   * Die Zustandsproben beider Geraete weichen an derselben Taktgrenze ab:
-   * Die Laeufe sind auseinander, der Kern hat angehalten. Der Bildschirm
-   * meldet die Partie als strittig.
+   * Der Gleichlauf ist verloren, der Kern hat angehalten. `grund` sagt wie:
+   * `probe` — die Zustandsproben beider Geraete weichen an derselben
+   * Taktgrenze ab; `zugVersatz` — ein Zug traf erst ein, als sein Takt schon
+   * gerechnet war. Der Bildschirm heilt das per Neustart aus Saatkorn und
+   * Server-Zugliste; erst wiederholte Verluste gelten als strittig.
    */
-  aufStrittig?: (probe: { takt: number; pruef: string }) => void;
+  aufStrittig?: (probe: { takt: number; pruef: string; grund: 'probe' | 'zugVersatz' }) => void;
   /** Fehlt sie, laeuft die Partie oertlich mit der Bildzeit. */
   netz?: FeldherrNetz | null;
   /** Eigener Sitz im Netzspiel; Zuschauer melden mit -1 nichts. */

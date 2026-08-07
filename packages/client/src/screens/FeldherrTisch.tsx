@@ -106,6 +106,20 @@ export function FeldherrTisch({
    * Gegner", waehrend sein Kern laengst angehalten hat.
    */
   const [strittigLokal, setStrittigLokal] = useState(false);
+  /**
+   * Selbstheilung bei Gleichlauf-Verlust: Die Server-Zugliste ist die
+   * gemeinsame Wahrheit — ein Kern, der von ihr abgekommen ist (Zug traf
+   * nach seinem Takt ein, Zustandsprobe weicht ab), wird neu gestartet und
+   * spielt Saatkorn plus Zugliste nach, wie beim Wiedereinstieg. Beide
+   * Geraete landen damit wieder auf demselben Stand, statt die Partie
+   * sofort fuer strittig zu erklaeren. `kernLauf` stoesst den Neustart an;
+   * `heilungen` bremst die Schleife: Wer sich binnen zwei Minuten dreimal
+   * heilen muesste, rechnet wirklich anders (Engine-Fehler) — dann gilt die
+   * Partie wie bisher als strittig.
+   */
+  const [kernLauf, setKernLauf] = useState(0);
+  const [heilt, setHeilt] = useState(false);
+  const heilungen = useRef<number[]>([]);
 
   const buehne = useRef<HTMLDivElement | null>(null);
   const sitzungRef = useRef<ReturnType<typeof starteFeldherr> | null>(null);
@@ -228,7 +242,6 @@ export function FeldherrTisch({
       verlassen: () => onBackRef.current(),
     };
 
-    gereicht.current = 0;
     const sitzung = starteFeldherr({
       modus: 'netz',
       feld: netzFeld ?? 'mittel',
@@ -249,28 +262,57 @@ export function FeldherrTisch({
           pruef: a.pruef,
         }),
       /**
-       * Die Laeufe sind nachweislich auseinander. Beide Geraete melden
-       * ihre eigene Summe; die Meldungen widersprechen sich, und das Modul
-       * wertet die Partie als strittig — niemand gewinnt.
+       * Der Gleichlauf ist verloren (Zustandsprobe weicht ab oder ein Zug
+       * traf nach seinem Takt ein). Erste Wahl ist die Selbstheilung: neu
+       * starten und die Server-Zugliste nachspielen — das Replay ist der
+       * kanonische Lauf, beide Geraete finden wieder zusammen. Erst wer
+       * sich wiederholt heilen muesste (die Geraete rechnen wirklich
+       * verschieden), meldet die Partie wie bisher als strittig.
        */
       aufStrittig: (probe) => {
-        setStrittigLokal(true);
-        sendRef.current({
-          art: 'ergebnis',
-          sieger: -1,
-          takt: probe.takt,
-          pruef: probe.pruef,
-        });
+        const jetzt = Date.now();
+        heilungen.current = heilungen.current.filter((t) => jetzt - t < 120_000);
+        if (heilungen.current.length >= 2) {
+          setStrittigLokal(true);
+          sendRef.current({
+            art: 'ergebnis',
+            sieger: -1,
+            takt: probe.takt,
+            pruef: probe.pruef,
+          });
+          return;
+        }
+        heilungen.current.push(jetzt);
+        console.warn(
+          'feldherr: Gleichlauf verloren (' + probe.grund + ' bei Takt ' + probe.takt +
+            ') — Neustart aus der Server-Zugliste.',
+        );
+        setHeilt(true);
+        setKernLauf((n) => n + 1);
       },
     });
     setStrittigLokal(false);
     sitzungRef.current = sitzung;
+    /**
+     * Die schon verwahrten Zuege gehoeren SOFORT in den frischen Kern. Beim
+     * ersten Start ist die Liste leer und der Sicht-Rueckruf uebernimmt —
+     * aber bei einem Neustart mitten in der Partie (Selbstheilung, kurz
+     * gefallene Verbindung) aendert sich die Zugzahl nicht unbedingt: Der
+     * zahlgebundene Effekt unten liefe nie, und der Kern rechnete ohne die
+     * Zuege los, bis der naechste Serverfunk kaeme — die naechste Divergenz.
+     */
+    gereicht.current = 0;
+    const bisher = tisch.view?.view?.zuege ?? [];
+    for (const z of bisher) sitzung.zugAnnehmen(z, z.sitz);
+    gereicht.current = bisher.length;
+    const heilTimer = window.setTimeout(() => setHeilt(false), 5000);
     return () => {
+      window.clearTimeout(heilTimer);
       sitzung.beenden();
       sitzungRef.current = null;
       wurzel.innerHTML = '';
     };
-  }, [tableId, netzSaat, netzFeld, meinSitz]);
+  }, [tableId, netzSaat, netzFeld, meinSitz, kernLauf]);
 
   /**
    * Zuege vom Server in den Kern reichen.
@@ -427,7 +469,12 @@ export function FeldherrTisch({
         </button>
         <div ref={buehne} />
         {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
-        {stockt && !fremdesEnde && !strittigLokal && (
+        {heilt && !fremdesEnde && !strittigLokal && (
+          <div className="feldherr-hinweis">
+            Gleichlauf wird wiederhergestellt … die Partie spult kurz vor.
+          </div>
+        )}
+        {stockt && !heilt && !fremdesEnde && !strittigLokal && (
           <div className="feldherr-hinweis">
             Warte auf den Gegner … die Partie rechnet erst weiter, wenn sich
             sein Gerät wieder meldet.

@@ -170,7 +170,7 @@
     if (eigene === undefined || fremde === undefined || eigene === fremde) return;
     strittigGemeldet = true;
     laeuft = false;
-    if (aufStrittig) aufStrittig({ takt: grenze, pruef: eigene });
+    if (aufStrittig) aufStrittig({ takt: grenze, pruef: eigene, grund: 'probe' });
   }
 
   const alterSchluss = showWin;
@@ -264,6 +264,24 @@
     // Rhythmus des Netzes — als Eingabe-Lag gefuehlt, obwohl es die
     // Simulation war, die klemmte.
     const POLSTER = 3;
+    /**
+     * Der Absender wartet vor dem EIGENEN schwebenden Zug — die Luecke, die
+     * Partien am 7. August 2026 strittig machte: Der Puls-Deckel oben
+     * schuetzt nur die GEGENSEITE (sie wartet bei T-4 exakt vor dem Zug),
+     * aber deren weiterlaufende Meldungen liessen den Absender selbst bis
+     * T+2 rechnen. Kam das Server-Echo des eigenen Zuges spaeter als die
+     * ~500 ms zurueck, die der Absender bis T braucht (Funkloch, langsamer
+     * Datenbank-Schreiber), fuehrte er ihn verschoben aus, waehrend die
+     * Gegenseite ihn puenktlich bei T rechnete — stille Divergenz, Partie
+     * strittig, und die Notnagel-Warnung stand nur in der am Handy
+     * unsichtbaren Konsole. Deckel: hoechstens bis T-1 rechnen (die
+     * Schleife laeuft bis wissen-POLSTER, daher T-1+POLSTER). Normal kehrt
+     * das Echo in 100-300 ms zurueck und der Deckel greift nie; bei einer
+     * Stoerung stottert die Partie, statt auseinanderzulaufen.
+     */
+    if (schwebend.length) {
+      wissen = Math.min(wissen, schwebend[0].takt - 1 + POLSTER);
+    }
     while (schritte < 10 && taktZaehler < wissen - POLSTER && laeuft) {
       if (taktZaehler < ziel) {
         // Rueckstand: aufholen, ohne die Uhr zu fragen.
@@ -360,8 +378,22 @@
       if (takt !== zug.takt) {
         console.warn(
           'feldherr: Zug fuer Takt ' + zug.takt + ' kam erst bei ' + taktZaehler +
-            ' an — verschoben ausgefuehrt, die Laeufe gehen auseinander.',
+            ' an — die Laeufe gehen auseinander.',
         );
+        /**
+         * Frueher wurde der Zug verschoben ausgefuehrt und die Divergenz
+         * blieb still, bis die Zustandsprobe sie bis zu zwei Sekunden
+         * spaeter fand. Jetzt gilt der Gleichlauf sofort als verloren:
+         * Der Tisch drueberliegend heilt das per Neustart aus Saatkorn und
+         * Server-Zugliste — das Replay fuehrt diesen Zug an seinem echten
+         * Takt aus und landet wieder auf dem Stand der Gegenseite.
+         */
+        if (!strittigGemeldet) {
+          strittigGemeldet = true;
+          laeuft = false;
+          if (aufStrittig) aufStrittig({ takt: taktZaehler, pruef: pruefsumme(), grund: 'zugVersatz' });
+        }
+        return;
       }
       if (!geplant.has(takt)) geplant.set(takt, []);
       geplant.get(takt).push({ zug, sitz: wer });
