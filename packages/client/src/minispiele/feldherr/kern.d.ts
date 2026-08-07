@@ -11,6 +11,21 @@
 export declare const STIL: string;
 export declare const HUELLE: string;
 
+/**
+ * Ein spielbarer Charakter — Anzeigedaten fuer die Auswahl. Die WERTE
+ * seiner Karten stehen im Kern (CHARAKTERE in
+ * packages/game-feldherr/quelle/teile/simulation.js).
+ */
+export interface FeldherrCharakter {
+  readonly id: string;
+  readonly nm: string;
+  readonly kurz: string;
+  readonly karten: readonly string[];
+  readonly eigenheiten: readonly string[];
+}
+
+export declare const CHARAKTERE: readonly FeldherrCharakter[];
+
 export interface FeldherrAusgang {
   readonly sieger: number | null;
   /** Nur gegen die KI belegt, sonst null. */
@@ -217,4 +232,10 @@ export declare function starteFeldherr(optionen: {
   netz?: FeldherrNetz | null;
   /** Eigener Sitz im Netzspiel; Zuschauer melden mit -1 nichts. */
   sitz?: number;
+  /**
+   * Gewaehlter Charakter (Kennung aus CHARAKTERE). Er bestimmt Kartenhand
+   * und Kartenwerte. Im Netzspiel muss er auf beiden Geraeten gleich
+   * sein — sonst rechnen sie verschieden und die Partie wird strittig.
+   */
+  charakter?: string;
 }): FeldherrSitzung;

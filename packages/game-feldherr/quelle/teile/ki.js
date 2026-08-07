@@ -51,6 +51,11 @@ function aiGefahr(r, c, own){
   }
   return d;
 }
+/* Preis einer Karte, die es in dieser Hand vielleicht gar nicht gibt:
+ * Charaktere bringen eigene Karten mit (CHARAKTERE in simulation.js), und
+ * die KI fragt unten nach Ritter, Bogen und Schwert. Fehlt eine Karte,
+ * ist sie unbezahlbar — statt an DEFS.ritter.cost zu zerbrechen. */
+const aiPreis = k => (DEFS[k] ? DEFS[k].cost : Infinity);
 const aiMine = () => G.ents.filter(e=>e.owner===AI.owner);
 const aiFoes = () => G.ents.filter(e=>e.owner!==AI.owner);
 const aiHaus = () => G.ents.find(e=>e.type==='haus' && e.owner===AI.owner);
@@ -188,8 +193,8 @@ function aiBuy(){
 
   // 1 — Notwehr geht vor allem anderen
   if(nearHome>0 && myTroops.length <= nearHome){
-    if(res>=DEFS.ritter.cost && zufall()<0.5) return aiPlay('ritter','home');
-    if(res>=DEFS.schwert.cost) return aiPlay('schwert','home');
+    if(res>=aiPreis('ritter') && zufall()<0.5) return aiPlay('ritter','home');
+    if(res>=aiPreis('schwert')) return aiPlay('schwert','home');
   }
 
   // 2 — Bauvorhaben bestimmen, für das gespart wird
@@ -223,9 +228,9 @@ function aiBuy(){
   if(plan && res<plan.preis && myTroops.length >= (notlage?3:1)) return false;
   if(myTroops.length < AI.wantTroops + tk().truppen + (notlage?2:0)){
     const wants=[];
-    if(res>=DEFS.ritter.cost) wants.push('ritter');
-    if(res>=DEFS.bogen.cost) wants.push('bogen', foeWalls?'bogen':'schwert');
-    if(res>=DEFS.schwert.cost) wants.push('schwert','schwert');
+    if(res>=aiPreis('ritter')) wants.push('ritter');
+    if(res>=aiPreis('bogen')) wants.push('bogen', foeWalls?'bogen':'schwert');
+    if(res>=aiPreis('schwert')) wants.push('schwert','schwert');
     if(wants.length) return aiPlay(wants[Math.floor(zufall()*wants.length)],
                                    invasion?'home':'front');
   }

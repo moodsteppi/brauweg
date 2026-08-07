@@ -17,6 +17,33 @@ export const STIL = "\n:root{\n  --nacht:#070c11; --linie:#1e2c36; --sand:#dfd6c
 export const HUELLE = "\n<div id=\"app\">\n  <div class=\"hud top p1\" id=\"hud0\"></div>\n  <div id=\"stage\"><canvas id=\"cv\"></canvas><div id=\"uhr\" hidden>0:00</div><button id=\"menuBtn\">≡</button></div>\n  <div class=\"hud bot p2\" id=\"hud1\"></div>\n</div>\n<div id=\"ghost\"><div class=\"gg\">—</div></div>\n\n<div class=\"ov\" id=\"ovMenu\">\n  <div class=\"sheet\" style=\"position:relative\">\n    <button class=\"hilfe\" id=\"bTut\" title=\"Regeln\">?</button>\n    <div class=\"eyebrow\">Taktikduell · ein Gerät · zwei Feldherren</div>\n    <h1>FELD<em>HERR</em></h1>\n    <div class=\"sub\">Ein Brett, mittig geteilt. Echtzeit. Wer das gegnerische Haupthaus einreißt, gewinnt. Auf den Karten steht der Zug- und der Schlagtakt.</div>\n    <div class=\"seglbl\">Stärke der KI</div>\n    <div class=\"seg\" id=\"segLvl\">\n      <button data-l=\"leicht\">Leicht</button>\n      <button data-l=\"normal\" class=\"on\">Normal</button>\n      <button data-l=\"schwer\">Schwer</button>\n    </div>\n    <button class=\"btn pri\" id=\"bAI\">Gegen die KI spielen</button>\n    <button class=\"btn\" id=\"bDuo\">Zu zweit an einem Gerät</button>\n    <button class=\"btn gho\" id=\"bTab\">Einheitenwerte</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovCoin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Münzwurf</div>\n    <h2 id=\"coinWer\">Du wählst</h2>\n    <div class=\"sub\">Wer richtig tippt, setzt sein Haupthaus zuerst.</div>\n    <div class=\"seg\" id=\"segCoin\">\n      <button data-w=\"kopf\">Kopf</button>\n      <button data-w=\"zahl\">Zahl</button>\n    </div>\n  </div>\n</div>\n<div class=\"ov\" id=\"ovTut\" hidden>\n  <div class=\"sheet\">\n    <div class=\"pips\" id=\"pips\"></div>\n    <div id=\"tutBody\"></div>\n    <button class=\"btn pri\" id=\"bNext\">Weiter</button>\n    <button class=\"btn gho\" id=\"bSkip\">Überspringen</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovTab\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Werte</div><h2>Truppen</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>HP</th><th>DMG</th><th>Zug</th><th>Schlag</th><th>Reichw.</th></tr></thead>\n    <tbody>\n      <tr><td>Schwert</td><td>8</td><td>7</td><td>4</td><td>3,0 s</td><td>8 s</td><td>1</td></tr>\n      <tr><td>Bogen</td><td>12</td><td>5</td><td>3</td><td>4,2 s</td><td>7 s</td><td>3</td></tr>\n      <tr><td>Ritter</td><td>30</td><td>26</td><td>4</td><td>5,6 s</td><td>17 s</td><td>1</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Geschlagen wird auch über Eck, gezogen nur waagerecht und senkrecht. Bogenschützen brauchen freie Sicht, treffen aber über eine Mauer <b>direkt vor sich</b> hinweg — und ab Stufe 2 ein Feld weiter. Gegen <b>Mauern</b> richten ihre Pfeile nur <b>halben Schaden</b> an, im Turm ebenso.</p>\n    <div class=\"eyebrow\">Je Ausbaustufe</div>\n    <table class=\"bal\"><tbody>\n      <tr><td>Schwert</td><td>HP +6</td><td>DMG +2</td><td>Schlag −2 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td>Bogen</td><td>HP +2</td><td>DMG +5</td><td>Schlag −1,5 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td></td><td colspan=\"4\">ab Stufe 2 zusätzlich +1 Reichweite</td></tr>\n      <tr><td>Ritter</td><td>HP +10</td><td>DMG +4</td><td>Schlag −3,8 s</td><td>Zug −0,7 s</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Truppen steigen bis Stufe 4 (Kupfer, Silber, Gold, Diamant), indem zwei gleiche derselben Stufe aufeinandertreffen; eine frische Karte auf eine Stufe-1-Truppe wirkt genauso. Wer aufsteigt, schlägt sofort einmal zu.</p>\n\n    <h2>Bauten</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>Karten</th><th>Stufe 1 / 2 / 3</th></tr></thead>\n    <tbody>\n      <tr><td>Mauer</td><td>15 / 15 / 25</td><td>3</td><td>50 / 85 / 160 HP</td></tr>\n      <tr><td>Werk 1×2</td><td>25 je Karte</td><td>4</td><td>15 / 23 / 34 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+1 / +2 / +5 Res je s</td></tr>\n      <tr><td></td><td></td><td></td><td>15 / 20 / 25 s Laufzeit</td></tr>\n      <tr><td>Kanone</td><td>35 je Karte</td><td>2</td><td>25 HP · 10 / 8 DMG</td></tr>\n      <tr><td></td><td></td><td></td><td>Reichweite 4 / 7 · 8 s</td></tr>\n      <tr><td>Haupthaus</td><td>—</td><td>1</td><td>36 / 43 / 54 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+2 / +3 / +4 Res je s</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Kartenkontingent:</b> Werk 4, Mauer 3, Kanone 2 — einmal gesetzt zählt eine Karte für immer, auch wenn das Bauwerk fällt oder du es abreißt (20 % Rückerstattung). Die Zahl in der Kartenecke zeigt den Rest.</p>\n    <p class=\"tx\"><b>Mauer:</b> Mauern werden durch <b>Verbinden</b> stärker. Jede Mauer wiegt so viel, wie Karten in ihr stecken; die Stufe ist das <b>Gewicht der ganzen verbundenen Gruppe</b>: allein Stufe 1, <b>zwei verbunden</b> Stufe 2, <b>drei verbunden</b> Stufe 3. Drei Karten auf dasselbe Feld gestapelt ergeben ebenfalls Stufe 3. Das Leben der Stufe gehört der Gruppe und wird <b>nach Gewicht verteilt</b> — eine Stufe-2-Mauer neben einer frischen Mauer ergibt Stufe 3 mit 107 und 53 HP (2/3 zu 1/3). Jedes Stück fällt einzeln; die übrigen stufen sich danach neu ein.</p>\n    <p class=\"tx\"><b>Werk:</b> belegt 1×2 Felder, Drehung über den Knopf in der Leiste. Eine zweite Karte hebt es auf Stufe 2; liegen zwei Stufe-2-Werke aneinander, verschmelzen sie zu Stufe 3 und bleiben dabei stehen, wo sie sind. Jeder Treffer kostet <b>1 s Laufzeit</b>. Nach Ablauf läuft es auf Sparflamme weiter (+1 / +2 / +2). Fällt es im Kampf, wird alles auf den <b>vier angrenzenden Feldern zerstört</b>, über Eck und zwei Felder weiter 55 %, drei Felder 25 %.</p>\n    <p class=\"tx\"><b>Kanone:</b> unbeweglich, doppelter Schaden an Bauwerken. Stufe 1 zielt erst auf Kanonen, dann Werke; eine Mauer in der Bahn fängt den Schuss ab. Stufe 2 ist ein <b>Mörser</b>: weiter, Steilfeuer über alles hinweg, ein Viertel weniger Schaden, Ziele zuerst Werke, dann Kanonen, dann Haupthaus — dazu 30 % Splitterschaden an Bauten direkt über, unter und neben dem Einschlag.</p>\n    <p class=\"tx\"><b>Haupthaus:</b> Ein eigener <b>Stützpunkt</b> auf Stufe 2 in einem der acht Nachbarfelder hebt es auf Stufe 2 (+20 % HP, +1 Res, Vorrat 50 → 60); Stützpunkte sind Mauer, Werk, Kanone und der Schützenturm. Stufe 3 (+50 % HP, +2 Res) gibt es auf zwei Wegen: ein <b>Werk oder eine Mauer auf Stufe 3</b> daneben — oder <b>zwei Stützpunkte auf Stufe 2</b>, etwa Mauer und Schützenturm. Fallen die Stützpunkte, verschwindet der Ausbau.</p>\n\n    <p class=\"tx\"><b>Rundenbeginn:</b> Eine Münze entscheidet die Reihenfolge. Ein Spieler ruft Kopf oder Zahl, der andere bekommt die zweite Seite; wer richtig liegt, setzt sein Haupthaus zuerst.</p>\n    <h2>Gelände</h2>\n    <table class=\"bal\"><tbody>\n      <tr><td>See</td><td>unpassierbar</td></tr>\n      <tr><td>Gebirge</td><td>unpassierbar, sichtdicht</td></tr>\n      <tr><td>Wald</td><td>Truppen +50 % HP, +25 % DMG</td></tr>\n      <tr><td></td><td>Fernkämpfer −1 Reichweite</td></tr>\n      <tr><td></td><td>Kanone −25 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Haupthaus −20 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Bogen wird Turm: −1/3 erlittener Schaden</td></tr>\n      <tr><td>Vulkan</td><td>Ausbruch: Krater und Rand zerstört</td></tr>\n      <tr><td></td><td>zwei Felder weiter −30 % HP</td></tr>\n      <tr><td></td><td>2,5 % je 10 s, ab 2 min +5 Punkte</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Schützentürme</b> entstehen an zwei Orten. <b>Auf dem Fels</b> (Unterbau <b>+5</b>) sieht der Schütze weiter: +1 Reichweite, +1 Schaden. <b>Im Wald</b> (Gerüst <b>+4</b>) steht er in Deckung: <b>−1/3 erlittener Schaden</b>, dazu die Waldwerte (+50 % Leben, +25 % Schaden), aber −1 Reichweite. Beides gilt auch beim Ausbau. Ein Turm bewegt sich nie wieder, bleibt bei Stufe 2 und zählt zu den drei Schützen-Stellungen.</p>\n    <p class=\"tx\"><b>Auf dem Fels</b> dürfen außerdem Kanone und Werk bauen; der Unterbau kostet jedes Mal <b>+5</b>. Die Kanone bekommt dort +1 Reichweite und +1 Schaden. Ein <b>Werk im Fels</b> muss mit beiden Feldern darauf stehen: −1 Ressource, +50 % HP, kein Kessel, höchstens Stufe 2. Fällt eine Fels-Stellung, blockiert 15 s lang ein brennendes Wrack das Feld.</p>\n    <p class=\"tx\"><b>Erdwärme:</b> Haupthaus oder Werk direkt am Vulkan geben dauerhaft +1 Ressource, ein Werk auf Stufe 3 sogar +2. <b>Panik-Faktor:</b> ein Werk in den beiden vordersten Reihen deiner Hälfte gibt +1.</p>\n\n    <h2>Stellungen</h2>\n    <p class=\"tx\">Ein kurzes Antippen hält eine Truppe an: Sie marschiert nicht mehr, verteidigt ihre Umgebung und nimmt <b>12,5 % weniger Schaden</b>. Von Schützen und von Kämpfern dürfen jeweils höchstens <b>drei</b> gleichzeitig stehen; Schützentürme zählen bei den Schützen mit. Das Schild an der Figur zeigt den Stand der ganzen Gruppe.</p>\n    <p class=\"tx\"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt.</p>\n    <button class=\"btn\" id=\"bTabClose\">Zurück</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovPause\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Pause</div><h2>Partie angehalten</h2>\n    <button class=\"btn pri\" id=\"bResume\">Weiterspielen</button>\n    <button class=\"btn\" id=\"bNeustart\" style=\"display:none\">Neu starten</button>\n    <button class=\"btn\" id=\"bTut2\">Regeln ansehen</button>\n    <button class=\"btn gho\" id=\"bQuit\">Partie beenden</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovWin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Entscheidung</div>\n    <div class=\"win\" id=\"winTx\">—</div>\n    <div class=\"sub\" id=\"winSub\">—</div>\n    <button class=\"btn pri\" id=\"bAgain\">Neue Runde</button>\n    <button class=\"btn gho\" id=\"bMenu2\">Hauptmenü</button>\n  </div>\n</div>\n\n";
 
 /**
+ * Die spielbaren Charaktere fuer die Auswahl im Bildschirm.
+ *
+ * Absichtlich reine Anzeigedaten: Die WERTE der Karten stehen im Kern
+ * (CHARAKTERE in quelle/teile/simulation.js) und nirgends sonst — hier
+ * liegt nur, was der Bildschirm zeigen muss, damit er den Kern nicht
+ * starten muss, um eine Liste zu haben. Die Kennungen muessen zu denen
+ * im Kern passen; eine unbekannte Kennung faellt dort auf den ersten
+ * Charakter zurueck.
+ */
+export const CHARAKTERE = [
+  {
+    id: 'engineer',
+    nm: 'Engineer',
+    kurz: 'Baumeister. Seine Werkstatt im Fels mauert von allein, sein Ritter rennt Bauten ein.',
+    karten: ['Schwert', 'Bogen', 'Mauer', 'Werkstatt', 'Ritter', 'Kanone'],
+    /** Was diesen Charakter von der Grundhand unterscheidet — fuer die Auswahl. */
+    eigenheiten: [
+      'Werkstatt auf Fels setzt alle 30 s eine Mauer (ab Stufe 2 alle 25 s)',
+      'Bogen: eine Reichweite weniger, dafür zäher',
+      'Ritter: billiger und zäher, schwächerer Schlag, doppelter Schaden an Bauten',
+      'Kanone kostet 50',
+      'Schützentürme: einer je Stufe des Haupthauses',
+    ],
+  },
+];
+
+/**
  * Startet eine Partie in der bereits eingehaengten Huelle.
  *
  * Oertlich (`netz` fehlt) rechnet der Kern wie bisher mit der Bildzeit.
@@ -32,6 +59,17 @@ export function starteFeldherr(optionen = {}) {
     aufStrittig,
     netz = null,
     sitz = 1,
+    /**
+     * Gewaehlter Charakter — er bestimmt die Kartenhand und ihre Werte.
+     *
+     * Im Netzspiel MUSS er auf beiden Geraeten gleich sein, sonst rechnen
+     * sie mit verschiedenen Werten und die Partie wird strittig. Solange
+     * es nur einen Charakter gibt, ist das von selbst erfuellt; sobald es
+     * mehrere sind, muss die Wahl wie das Saatkorn ueber den Tisch
+     * kommen (je Sitz, in den Regeln der Partie) — nicht aus der
+     * oertlichen Auswahl des Geraets.
+     */
+    charakter = 'engineer',
   } = optionen;
 
   let laeuft = true;
@@ -194,7 +232,12 @@ function setzeFeld(){
 }
 const MAXLVL = 4, MOVE_T = 0.34;
 
-const DEFS = {
+/* ---------- Kartenkatalog ----------
+ * Die Grundwerte ALLER Karten, die es im Spiel gibt. Welche davon eine
+ * Partie benutzt und mit welchen Werten, entscheidet der gewählte
+ * Charakter (siehe CHARAKTERE weiter unten) — das Haupthaus ist immer
+ * dabei, es steht in keinem Kartenkontingent. */
+const GRUNDKARTEN = {
   schwert:  {nm:'Schwert', cost:8, unit:true, hp:7,  dmg:4, cd:8,  mcd:3.0, rng:1,
              up:{cd:-2, mcd:-0.4, hp:6, dmg:2}},
   mauer:    {nm:'Mauer',   cost:15, blocks:true, cardLimit:3,
@@ -212,10 +255,73 @@ const DEFS = {
              lvls:[{hp:25,dmg:10,cd:8},{hp:25,dmg:8,cd:8, rng:7, arc:true, splash:0.3}]},
   haus:     {nm:'Haupthaus', cost:0, limit:1, lvls:[{hp:36,income:2}]}
 };
-const CARD_ORDER = ['schwert','bogen','mauer','werk','ritter','kanone'];
+const GRUNDPREISE = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
+
+/* ---------- Charaktere ----------
+ * Jeder Charakter bringt seine EIGENE Kartenhand mit: welche Karten er
+ * hat, wie sie heißen und mit welchen Werten sie spielen. `werte` und
+ * `preise` überschreiben dabei nur einzelne Felder des Katalogs — so
+ * steht jede Abweichung schwarz auf weiß an einer Stelle, statt sich im
+ * Katalog zu verstecken.
+ *
+ * Der ENGINEER (erster Charakter, 7. August 2026) spielt die bisherigen
+ * sechs Karten mit den Anpassungen des Auftraggebers:
+ *
+ *   Schwert     unverändert — das Arbeitspferd bleibt, wie es war.
+ *   Bogen       eine Reichweite weniger, dafür zäher (5 → 7 Leben):
+ *               der Engineer schießt kürzer und hält länger.
+ *   Werkstatt   heißt jetzt so und ist mehr als Wirtschaft: auf Fels
+ *               gebaut mauert sie von allein (mauerbau, siehe update).
+ *   Ritter      billiger (30 → 20) und zäher (26 → 32), dafür schwächer
+ *               im Schlag (4 → 3) — und er reißt Bauten ein
+ *               (bauSchaden ×2). Aus dem teuren Panzer wird der
+ *               Rammbock des Baumeisters.
+ *   Kanone      teurer (35 → 50): Belagerung ist jetzt die Entscheidung
+ *               einer ganzen Bauphase, nicht ein Nebenbei-Kauf.
+ */
+const CHARAKTERE = {
+  engineer: {
+    nm: 'Engineer',
+    karten: ['schwert','bogen','mauer','werk','ritter','kanone'],
+    werte: {
+      bogen:  {rng:2, hp:7},
+      werk:   {nm:'Werkstatt',
+               /* Sekunden je Mauer, nach Stufe. Nur auf Fels (siehe
+                * werkstattMauer): Der Steinbruch liefert das Material. */
+               mauerbau:[30, 25, 25]},
+      ritter: {cost:20, hp:32, dmg:3, bauSchaden:2},
+      kanone: {cost:50}
+    },
+    preise: {kanone:[50,50]}
+  }
+};
+const CHARAKTER_STANDARD = 'engineer';
+let CHARAKTER = CHARAKTER_STANDARD;
+let DEFS = {};
+let CARD_ORDER = [];
+let UPCOST = {};
+/**
+ * Kartenhand des Charakters aufbauen. Läuft EINMAL vor dem Rundenstart —
+ * danach steht sie fest. Im Netzspiel müssen beide Geräte denselben
+ * Charakter setzen, sonst rechnen sie mit verschiedenen Werten und die
+ * Partie wird strittig (die Anbindung setzt ihn deshalb aus derselben
+ * Quelle wie das Saatkorn).
+ */
+function setzeCharakter(id){
+  const c = CHARAKTERE[id] || CHARAKTERE[CHARAKTER_STANDARD];
+  CHARAKTER = CHARAKTERE[id] ? id : CHARAKTER_STANDARD;
+  CARD_ORDER = c.karten.slice();
+  DEFS = {};
+  for(const k of CARD_ORDER.concat(['haus'])){
+    DEFS[k] = Object.assign({}, GRUNDKARTEN[k], (c.werte && c.werte[k]) || {});
+  }
+  UPCOST = {};
+  for(const k in GRUNDPREISE) if(DEFS[k]) UPCOST[k] = GRUNDPREISE[k].slice();
+  if(c.preise) for(const k in c.preise) if(DEFS[k]) UPCOST[k] = c.preise[k].slice();
+}
+setzeCharakter(CHARAKTER_STANDARD);
 const RES_CAP = 50;                       // mehr als 50 Ressourcen lassen sich nicht horten
 const REFUND  = 0.2;                      // Abriss bringt ein Fünftel zurück
-const UPCOST  = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
 function costOf(type, toLvl){             // was die Karte an dieser Stelle kostet
   const u = UPCOST[type];
   return (u && toLvl>1) ? u[Math.min(toLvl,u.length)-1] : DEFS[type].cost;
@@ -230,7 +336,11 @@ function investOf(e){                     // was insgesamt hineingeflossen ist
   let sum=0; for(let l=1;l<=stufen;l++) sum += costOf(e.type,l);
   return sum;
 }
-const refundOf = e => Math.floor(investOf(e)*REFUND);
+/* Was die Werkstatt selbst mauert, war nie bezahlt — dafür gibt es beim
+ * Abriss auch nichts zurück. Ohne diese Ausnahme wäre eine Werkstatt auf
+ * Fels eine Geldquelle: alle 30 Sekunden eine Mauer, abreißen, Fünftel
+ * kassieren. */
+const refundOf = e => e.frei ? 0 : Math.floor(investOf(e)*REFUND);
 const countOf = (own,type) => G.ents.filter(e=>e.owner===own && e.type===type).length;
 function restOf(own,type){                       // verbrauchte Karten kommen nicht zurück
   const lim = DEFS[type].cardLimit;
@@ -246,6 +356,16 @@ const STELLUNGEN = 3;                                  // je Gruppe höchstens d
 const gruppeVon = e => e.type==='bogen' ? 'schuetze' : (DEFS[e.type].unit ? 'kaempfer' : null);
 const stellungen = (own, gruppe) => G.ents.filter(e =>
       e.owner===own && gruppeVon(e)===gruppe && (e.halt || e.turm)).length;
+/* Schützentürme hängen am Ausbau des Haupthauses (Entscheid vom
+ * 7. August 2026): Stufe 1 trägt einen Turm, Stufe 2 zwei, ab Stufe 3
+ * drei. Wer Türme will, muss zuerst sein Haus ausbauen — vorher stand
+ * die Grenze fest bei drei und war schon in der ersten Minute erreichbar.
+ * Gezählt werden nur ECHTE Türme (Fels und Wald), nicht angehaltene
+ * Truppen; fürs Anhalten gilt weiterhin STELLUNGEN je Gruppe. */
+const TUERME_JE_HAUS = [1, 2, 3, 3];                   // Hausstufe 1 … 4
+const tuermeErlaubt = own =>
+      TUERME_JE_HAUS[Math.min(hausSt(own), TUERME_JE_HAUS.length) - 1];
+const tuerme = own => G.ents.filter(e => e.owner===own && e.turm).length;
 function rngOf(e){
   let r = statsOf(e.type,e.lvl).rng;
   if(e.type==='bogen' && e.lvl>=2) r += 1;             // geübte Schützen spannen weiter
@@ -454,6 +574,11 @@ function dmgOf(e, target){
   if(e.berg) d += 1;                                   // von oben trifft es härter
   if(DEFS[e.type].unit && envAt(e.r,e.c)==='wald') d = Math.round(d*1.25);
   if(target && DEFS[e.type].siege && !DEFS[target.type].unit) d *= DEFS[e.type].siege;
+  // Rammbock: manche Truppen (Engineer-Ritter) reißen Bauten ein, statt
+  // sie zu bekratzen. Getrennt von `siege`, damit Kanone und Ritter sich
+  // nicht dieselbe Zahl teilen müssen.
+  if(target && DEFS[e.type].bauSchaden && !DEFS[target.type].unit)
+    d = Math.round(d * DEFS[e.type].bauSchaden);
   if(target && e.type==='bogen' && target.type==='mauer')
     d = Math.max(1, Math.round(d*0.5));                // Pfeile richten an Stein wenig aus
   return d;
@@ -462,9 +587,9 @@ function stuetzpunkt(o){                               // taugt als Stützpunkt 
   if(!o || o.lvl<2) return false;
   return o.type==='kanone' || o.type==='mauer' || o.type==='werk' || (o.type==='bogen' && o.turm);
 }
-const HAUS_HP  = [1, 1.2, 1.5];                        // Stufe 1 / 2 / 3
-const HAUS_EXTRA = [0, 1, 2];
-const HAUS_CAP = [0, 10, 10];
+const HAUS_HP  = [1, 1.2, 1.5, 1.9];                   // Stufe 1 / 2 / 3 / 4
+const HAUS_EXTRA = [0, 1, 2, 3];
+const HAUS_CAP = [0, 10, 10, 20];
 function nebenHaus(own, r, c){
   const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
   if(!h) return false;
@@ -472,11 +597,16 @@ function nebenHaus(own, r, c){
 }
 /* Ausbaustufe des Haupthauses aus seiner Nachbarschaft.
  *
- * Zwei Wege führen zur vollen Stufe 3 (Entscheid vom 7. August 2026):
+ * Zwei Wege führen zur Stufe 3 (Entscheid vom 7. August 2026):
  * ein einzelner Stützpunkt auf Stufe 3 (Werk oder Mauer) — oder ZWEI
  * Stützpunkte auf Stufe 2, etwa eine Mauer und ein Schützenturm. Vorher
  * gab es nur den ersten Weg, und breit gebaute Stellungen brachten dem
  * Haus nichts.
+ *
+ * Stufe 4 ist die Krönung (Entscheid vom 7. August 2026): Sie verlangt
+ * BEIDES am Haus — eine Mauer auf Stufe 3 UND eine Werkstatt auf
+ * Stufe 3. Das ist der teuerste Ausbau des Spiels und die einzige Stelle,
+ * an der Wirtschaft und Befestigung zusammen zählen.
  *
  * Gezählt werden OBJEKTE, nicht Felder: Ein Werk belegt 1×2 und kann mit
  * beiden Feldern am Haus liegen — ohne die Kennungsprüfung zählte es
@@ -485,7 +615,7 @@ function nebenHaus(own, r, c){
 function hausStufe(own){
   const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
   if(!h) return 1;
-  let st = 1, stuetzen = 0;
+  let st = 1, stuetzen = 0, mauerVoll = false, werkVoll = false;
   const gezaehlt = new Set();
   for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
     if(!dr && !dc) continue;
@@ -494,9 +624,12 @@ function hausStufe(own){
     gezaehlt.add(o.id);
     if(stuetzpunkt(o)) stuetzen += 1;
     if((o.type==='werk' || o.type==='mauer') && o.lvl>=3) st = 3;   // volle Stufe hebt ganz hoch
+    if(o.type==='mauer' && o.lvl>=3) mauerVoll = true;
+    if(o.type==='werk'  && o.lvl>=3) werkVoll  = true;
   }
   if(stuetzen >= 2) st = 3;
   else if(stuetzen >= 1) st = Math.max(st, 2);
+  if(mauerVoll && werkVoll) st = 4;
   return st;
 }
 const hausSt = own => (G.hb && G.hb[own]) || 1;
@@ -661,6 +794,55 @@ function fuseWerke(still){
         }
       if(!fusion) break;
     }
+  }
+}
+
+/* ---------- Werkstatt im Fels: sie mauert selbst ----------
+ * Regel des Auftraggebers (7. August 2026, Engineer): Eine Werkstatt auf
+ * Stein hat den Steinbruch gleich vor der Tür und setzt alle 30 Sekunden
+ * eine Mauer daneben; ab Stufe 2 alle 25 (DEFS.werk.mauerbau).
+ *
+ * Die Mauer ist GESCHENKT: Sie kostet nichts, verbraucht keine Karte aus
+ * dem Kontingent — und bringt beim Abriss nichts zurück (e.frei, siehe
+ * refundOf), sonst wäre die Werkstatt eine Geldquelle. Im Verbund zählt
+ * sie wie jede andere Mauer mit (mauerNetz).
+ *
+ * Zustandspfad, also streng deterministisch: kein zufall(), keine
+ * Bildzeit. Das Zielfeld ist das erste freie in fester Reihenfolge
+ * (Felder der Werkstatt, dann DIRS) — beide Geräte wählen dasselbe.
+ * Findet sich keines, sammelt die Werkstatt weiter an und mauert, sobald
+ * wieder Platz ist.
+ */
+function mauerwerkTakt(w, dt){
+  const bau = DEFS[w.type] && DEFS[w.type].mauerbau;
+  // Bewusst OHNE w.tot: Die Laufzeit ist die Wirtschaftsuhr (der Ertrag
+  // fällt auf Sparflamme), das Mauern ist Handwerk und läuft weiter,
+  // solange die Werkstatt steht. Andernfalls wäre die Fähigkeit tot —
+  // eine Werkstatt ist nach 15 s erschöpft, die erste Mauer käme erst
+  // nach 30.
+  if(!bau || !w.berg) return;
+  if(!DEFS.mauer) return;                              // Charakter ohne Mauer: nichts zu bauen
+  const dauer = bau[Math.min(w.lvl, bau.length)-1];
+  w.mauerT = (w.mauerT||0) + dt;
+  if(w.mauerT < dauer) return;
+  w.mauerT -= dauer;
+  werkstattMauer(w);
+}
+function werkstattMauer(w){
+  for(const p of w.cells) for(const [dr,dc] of DIRS){
+    const r=p.r+dr, c=p.c+dc;
+    if(!inBoard(r,c) || sideOf(r)!==w.owner) continue;  // nur auf der eigenen Hälfte
+    if(!freeCell(r,c)) continue;                       // Wasser, Fels, Belegtes: nein
+    if(envAt(r,c)==='vulkan') continue;                // auf glühenden Fels baut niemand
+    if(G.sperren.some(z=>z.r===r && z.c===c)) continue; // Trümmerfeld blockiert
+    const neu = addEnt('mauer', w.owner, r, c, 1);
+    neu.karten = 1;
+    neu.frei = true;                                   // nie bezahlt, kein Abrissgeld
+    mauerNetz(w.owner);
+    fxRing(r, c, HAKEN.spielerFarbe(w.owner));
+    HAKEN.bauStaub([{r, c}]);
+    HAKEN.syncHUD();
+    return;
   }
 }
 
@@ -918,6 +1100,7 @@ function update(dt){
         }
       }
     }
+    mauerwerkTakt(e, dt);                             // Werkstatt im Fels mauert selbst
   }
   for(const own of [0,1]){                             // Ausbaustufe des Haupthauses prüfen
     const st = hausStufe(own);
@@ -1097,9 +1280,10 @@ function placeSpot(own,k,r,c){
     return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
   }
   if(atLimit(own,k)) return null;                    // Neubau nur bis zur Grenze
-  // Türme zählen als Stellung — im Fels wie im Wald.
+  // Türme (Fels wie Wald) hängen am Ausbau des Haupthauses: Stufe 1 trägt
+  // einen, Stufe 2 zwei, ab Stufe 3 drei.
   if(k==='bogen' && (envAt(r,c)==='gebirge' || envAt(r,c)==='wald') &&
-     stellungen(own,'schuetze') >= STELLUNGEN) return null;   // zu viele Stellungen
+     tuerme(own) >= tuermeErlaubt(own)) return null;          // zu viele Türme
   if(sizeOf(k)===1) return fitsAt(own,k,r,c,false);
   const v = !!G.orient[own];                         // gedreht wird nur über den Knopf
   return fitsAt(own,k,r,c,v) ||
@@ -3404,6 +3588,11 @@ function aiGefahr(r, c, own){
   }
   return d;
 }
+/* Preis einer Karte, die es in dieser Hand vielleicht gar nicht gibt:
+ * Charaktere bringen eigene Karten mit (CHARAKTERE in simulation.js), und
+ * die KI fragt unten nach Ritter, Bogen und Schwert. Fehlt eine Karte,
+ * ist sie unbezahlbar — statt an DEFS.ritter.cost zu zerbrechen. */
+const aiPreis = k => (DEFS[k] ? DEFS[k].cost : Infinity);
 const aiMine = () => G.ents.filter(e=>e.owner===AI.owner);
 const aiFoes = () => G.ents.filter(e=>e.owner!==AI.owner);
 const aiHaus = () => G.ents.find(e=>e.type==='haus' && e.owner===AI.owner);
@@ -3541,8 +3730,8 @@ function aiBuy(){
 
   // 1 — Notwehr geht vor allem anderen
   if(nearHome>0 && myTroops.length <= nearHome){
-    if(res>=DEFS.ritter.cost && zufall()<0.5) return aiPlay('ritter','home');
-    if(res>=DEFS.schwert.cost) return aiPlay('schwert','home');
+    if(res>=aiPreis('ritter') && zufall()<0.5) return aiPlay('ritter','home');
+    if(res>=aiPreis('schwert')) return aiPlay('schwert','home');
   }
 
   // 2 — Bauvorhaben bestimmen, für das gespart wird
@@ -3576,9 +3765,9 @@ function aiBuy(){
   if(plan && res<plan.preis && myTroops.length >= (notlage?3:1)) return false;
   if(myTroops.length < AI.wantTroops + tk().truppen + (notlage?2:0)){
     const wants=[];
-    if(res>=DEFS.ritter.cost) wants.push('ritter');
-    if(res>=DEFS.bogen.cost) wants.push('bogen', foeWalls?'bogen':'schwert');
-    if(res>=DEFS.schwert.cost) wants.push('schwert','schwert');
+    if(res>=aiPreis('ritter')) wants.push('ritter');
+    if(res>=aiPreis('bogen')) wants.push('bogen', foeWalls?'bogen':'schwert');
+    if(res>=aiPreis('schwert')) wants.push('schwert','schwert');
     if(wants.length) return aiPlay(wants[Math.floor(zufall()*wants.length)],
                                    invasion?'home':'front');
   }
@@ -4110,6 +4299,9 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
   // ---- Anbindung ----------------------------------------------------------
 
   if (typeof korn === 'number') saat(korn);
+  // Vor allem anderen: Die Kartenhand steht, bevor die Runde startet —
+  // buildHUD und jede Regelpruefung lesen DEFS und CARD_ORDER.
+  setzeCharakter(charakter);
   feldKey = feld;
   aiLevel = stufe;
   ovMenu.hidden = true;                 // der Bildschirm hat schon gefragt

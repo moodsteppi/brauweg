@@ -57,7 +57,12 @@ function setzeFeld(){
 }
 const MAXLVL = 4, MOVE_T = 0.34;
 
-const DEFS = {
+/* ---------- Kartenkatalog ----------
+ * Die Grundwerte ALLER Karten, die es im Spiel gibt. Welche davon eine
+ * Partie benutzt und mit welchen Werten, entscheidet der gewählte
+ * Charakter (siehe CHARAKTERE weiter unten) — das Haupthaus ist immer
+ * dabei, es steht in keinem Kartenkontingent. */
+const GRUNDKARTEN = {
   schwert:  {nm:'Schwert', cost:8, unit:true, hp:7,  dmg:4, cd:8,  mcd:3.0, rng:1,
              up:{cd:-2, mcd:-0.4, hp:6, dmg:2}},
   mauer:    {nm:'Mauer',   cost:15, blocks:true, cardLimit:3,
@@ -75,10 +80,73 @@ const DEFS = {
              lvls:[{hp:25,dmg:10,cd:8},{hp:25,dmg:8,cd:8, rng:7, arc:true, splash:0.3}]},
   haus:     {nm:'Haupthaus', cost:0, limit:1, lvls:[{hp:36,income:2}]}
 };
-const CARD_ORDER = ['schwert','bogen','mauer','werk','ritter','kanone'];
+const GRUNDPREISE = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
+
+/* ---------- Charaktere ----------
+ * Jeder Charakter bringt seine EIGENE Kartenhand mit: welche Karten er
+ * hat, wie sie heißen und mit welchen Werten sie spielen. `werte` und
+ * `preise` überschreiben dabei nur einzelne Felder des Katalogs — so
+ * steht jede Abweichung schwarz auf weiß an einer Stelle, statt sich im
+ * Katalog zu verstecken.
+ *
+ * Der ENGINEER (erster Charakter, 7. August 2026) spielt die bisherigen
+ * sechs Karten mit den Anpassungen des Auftraggebers:
+ *
+ *   Schwert     unverändert — das Arbeitspferd bleibt, wie es war.
+ *   Bogen       eine Reichweite weniger, dafür zäher (5 → 7 Leben):
+ *               der Engineer schießt kürzer und hält länger.
+ *   Werkstatt   heißt jetzt so und ist mehr als Wirtschaft: auf Fels
+ *               gebaut mauert sie von allein (mauerbau, siehe update).
+ *   Ritter      billiger (30 → 20) und zäher (26 → 32), dafür schwächer
+ *               im Schlag (4 → 3) — und er reißt Bauten ein
+ *               (bauSchaden ×2). Aus dem teuren Panzer wird der
+ *               Rammbock des Baumeisters.
+ *   Kanone      teurer (35 → 50): Belagerung ist jetzt die Entscheidung
+ *               einer ganzen Bauphase, nicht ein Nebenbei-Kauf.
+ */
+const CHARAKTERE = {
+  engineer: {
+    nm: 'Engineer',
+    karten: ['schwert','bogen','mauer','werk','ritter','kanone'],
+    werte: {
+      bogen:  {rng:2, hp:7},
+      werk:   {nm:'Werkstatt',
+               /* Sekunden je Mauer, nach Stufe. Nur auf Fels (siehe
+                * werkstattMauer): Der Steinbruch liefert das Material. */
+               mauerbau:[30, 25, 25]},
+      ritter: {cost:20, hp:32, dmg:3, bauSchaden:2},
+      kanone: {cost:50}
+    },
+    preise: {kanone:[50,50]}
+  }
+};
+const CHARAKTER_STANDARD = 'engineer';
+let CHARAKTER = CHARAKTER_STANDARD;
+let DEFS = {};
+let CARD_ORDER = [];
+let UPCOST = {};
+/**
+ * Kartenhand des Charakters aufbauen. Läuft EINMAL vor dem Rundenstart —
+ * danach steht sie fest. Im Netzspiel müssen beide Geräte denselben
+ * Charakter setzen, sonst rechnen sie mit verschiedenen Werten und die
+ * Partie wird strittig (die Anbindung setzt ihn deshalb aus derselben
+ * Quelle wie das Saatkorn).
+ */
+function setzeCharakter(id){
+  const c = CHARAKTERE[id] || CHARAKTERE[CHARAKTER_STANDARD];
+  CHARAKTER = CHARAKTERE[id] ? id : CHARAKTER_STANDARD;
+  CARD_ORDER = c.karten.slice();
+  DEFS = {};
+  for(const k of CARD_ORDER.concat(['haus'])){
+    DEFS[k] = Object.assign({}, GRUNDKARTEN[k], (c.werte && c.werte[k]) || {});
+  }
+  UPCOST = {};
+  for(const k in GRUNDPREISE) if(DEFS[k]) UPCOST[k] = GRUNDPREISE[k].slice();
+  if(c.preise) for(const k in c.preise) if(DEFS[k]) UPCOST[k] = c.preise[k].slice();
+}
+setzeCharakter(CHARAKTER_STANDARD);
 const RES_CAP = 50;                       // mehr als 50 Ressourcen lassen sich nicht horten
 const REFUND  = 0.2;                      // Abriss bringt ein Fünftel zurück
-const UPCOST  = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
 function costOf(type, toLvl){             // was die Karte an dieser Stelle kostet
   const u = UPCOST[type];
   return (u && toLvl>1) ? u[Math.min(toLvl,u.length)-1] : DEFS[type].cost;
@@ -93,7 +161,11 @@ function investOf(e){                     // was insgesamt hineingeflossen ist
   let sum=0; for(let l=1;l<=stufen;l++) sum += costOf(e.type,l);
   return sum;
 }
-const refundOf = e => Math.floor(investOf(e)*REFUND);
+/* Was die Werkstatt selbst mauert, war nie bezahlt — dafür gibt es beim
+ * Abriss auch nichts zurück. Ohne diese Ausnahme wäre eine Werkstatt auf
+ * Fels eine Geldquelle: alle 30 Sekunden eine Mauer, abreißen, Fünftel
+ * kassieren. */
+const refundOf = e => e.frei ? 0 : Math.floor(investOf(e)*REFUND);
 const countOf = (own,type) => G.ents.filter(e=>e.owner===own && e.type===type).length;
 function restOf(own,type){                       // verbrauchte Karten kommen nicht zurück
   const lim = DEFS[type].cardLimit;
@@ -109,6 +181,16 @@ const STELLUNGEN = 3;                                  // je Gruppe höchstens d
 const gruppeVon = e => e.type==='bogen' ? 'schuetze' : (DEFS[e.type].unit ? 'kaempfer' : null);
 const stellungen = (own, gruppe) => G.ents.filter(e =>
       e.owner===own && gruppeVon(e)===gruppe && (e.halt || e.turm)).length;
+/* Schützentürme hängen am Ausbau des Haupthauses (Entscheid vom
+ * 7. August 2026): Stufe 1 trägt einen Turm, Stufe 2 zwei, ab Stufe 3
+ * drei. Wer Türme will, muss zuerst sein Haus ausbauen — vorher stand
+ * die Grenze fest bei drei und war schon in der ersten Minute erreichbar.
+ * Gezählt werden nur ECHTE Türme (Fels und Wald), nicht angehaltene
+ * Truppen; fürs Anhalten gilt weiterhin STELLUNGEN je Gruppe. */
+const TUERME_JE_HAUS = [1, 2, 3, 3];                   // Hausstufe 1 … 4
+const tuermeErlaubt = own =>
+      TUERME_JE_HAUS[Math.min(hausSt(own), TUERME_JE_HAUS.length) - 1];
+const tuerme = own => G.ents.filter(e => e.owner===own && e.turm).length;
 function rngOf(e){
   let r = statsOf(e.type,e.lvl).rng;
   if(e.type==='bogen' && e.lvl>=2) r += 1;             // geübte Schützen spannen weiter
@@ -317,6 +399,11 @@ function dmgOf(e, target){
   if(e.berg) d += 1;                                   // von oben trifft es härter
   if(DEFS[e.type].unit && envAt(e.r,e.c)==='wald') d = Math.round(d*1.25);
   if(target && DEFS[e.type].siege && !DEFS[target.type].unit) d *= DEFS[e.type].siege;
+  // Rammbock: manche Truppen (Engineer-Ritter) reißen Bauten ein, statt
+  // sie zu bekratzen. Getrennt von `siege`, damit Kanone und Ritter sich
+  // nicht dieselbe Zahl teilen müssen.
+  if(target && DEFS[e.type].bauSchaden && !DEFS[target.type].unit)
+    d = Math.round(d * DEFS[e.type].bauSchaden);
   if(target && e.type==='bogen' && target.type==='mauer')
     d = Math.max(1, Math.round(d*0.5));                // Pfeile richten an Stein wenig aus
   return d;
@@ -325,9 +412,9 @@ function stuetzpunkt(o){                               // taugt als Stützpunkt 
   if(!o || o.lvl<2) return false;
   return o.type==='kanone' || o.type==='mauer' || o.type==='werk' || (o.type==='bogen' && o.turm);
 }
-const HAUS_HP  = [1, 1.2, 1.5];                        // Stufe 1 / 2 / 3
-const HAUS_EXTRA = [0, 1, 2];
-const HAUS_CAP = [0, 10, 10];
+const HAUS_HP  = [1, 1.2, 1.5, 1.9];                   // Stufe 1 / 2 / 3 / 4
+const HAUS_EXTRA = [0, 1, 2, 3];
+const HAUS_CAP = [0, 10, 10, 20];
 function nebenHaus(own, r, c){
   const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
   if(!h) return false;
@@ -335,11 +422,16 @@ function nebenHaus(own, r, c){
 }
 /* Ausbaustufe des Haupthauses aus seiner Nachbarschaft.
  *
- * Zwei Wege führen zur vollen Stufe 3 (Entscheid vom 7. August 2026):
+ * Zwei Wege führen zur Stufe 3 (Entscheid vom 7. August 2026):
  * ein einzelner Stützpunkt auf Stufe 3 (Werk oder Mauer) — oder ZWEI
  * Stützpunkte auf Stufe 2, etwa eine Mauer und ein Schützenturm. Vorher
  * gab es nur den ersten Weg, und breit gebaute Stellungen brachten dem
  * Haus nichts.
+ *
+ * Stufe 4 ist die Krönung (Entscheid vom 7. August 2026): Sie verlangt
+ * BEIDES am Haus — eine Mauer auf Stufe 3 UND eine Werkstatt auf
+ * Stufe 3. Das ist der teuerste Ausbau des Spiels und die einzige Stelle,
+ * an der Wirtschaft und Befestigung zusammen zählen.
  *
  * Gezählt werden OBJEKTE, nicht Felder: Ein Werk belegt 1×2 und kann mit
  * beiden Feldern am Haus liegen — ohne die Kennungsprüfung zählte es
@@ -348,7 +440,7 @@ function nebenHaus(own, r, c){
 function hausStufe(own){
   const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
   if(!h) return 1;
-  let st = 1, stuetzen = 0;
+  let st = 1, stuetzen = 0, mauerVoll = false, werkVoll = false;
   const gezaehlt = new Set();
   for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
     if(!dr && !dc) continue;
@@ -357,9 +449,12 @@ function hausStufe(own){
     gezaehlt.add(o.id);
     if(stuetzpunkt(o)) stuetzen += 1;
     if((o.type==='werk' || o.type==='mauer') && o.lvl>=3) st = 3;   // volle Stufe hebt ganz hoch
+    if(o.type==='mauer' && o.lvl>=3) mauerVoll = true;
+    if(o.type==='werk'  && o.lvl>=3) werkVoll  = true;
   }
   if(stuetzen >= 2) st = 3;
   else if(stuetzen >= 1) st = Math.max(st, 2);
+  if(mauerVoll && werkVoll) st = 4;
   return st;
 }
 const hausSt = own => (G.hb && G.hb[own]) || 1;
@@ -524,6 +619,55 @@ function fuseWerke(still){
         }
       if(!fusion) break;
     }
+  }
+}
+
+/* ---------- Werkstatt im Fels: sie mauert selbst ----------
+ * Regel des Auftraggebers (7. August 2026, Engineer): Eine Werkstatt auf
+ * Stein hat den Steinbruch gleich vor der Tür und setzt alle 30 Sekunden
+ * eine Mauer daneben; ab Stufe 2 alle 25 (DEFS.werk.mauerbau).
+ *
+ * Die Mauer ist GESCHENKT: Sie kostet nichts, verbraucht keine Karte aus
+ * dem Kontingent — und bringt beim Abriss nichts zurück (e.frei, siehe
+ * refundOf), sonst wäre die Werkstatt eine Geldquelle. Im Verbund zählt
+ * sie wie jede andere Mauer mit (mauerNetz).
+ *
+ * Zustandspfad, also streng deterministisch: kein zufall(), keine
+ * Bildzeit. Das Zielfeld ist das erste freie in fester Reihenfolge
+ * (Felder der Werkstatt, dann DIRS) — beide Geräte wählen dasselbe.
+ * Findet sich keines, sammelt die Werkstatt weiter an und mauert, sobald
+ * wieder Platz ist.
+ */
+function mauerwerkTakt(w, dt){
+  const bau = DEFS[w.type] && DEFS[w.type].mauerbau;
+  // Bewusst OHNE w.tot: Die Laufzeit ist die Wirtschaftsuhr (der Ertrag
+  // fällt auf Sparflamme), das Mauern ist Handwerk und läuft weiter,
+  // solange die Werkstatt steht. Andernfalls wäre die Fähigkeit tot —
+  // eine Werkstatt ist nach 15 s erschöpft, die erste Mauer käme erst
+  // nach 30.
+  if(!bau || !w.berg) return;
+  if(!DEFS.mauer) return;                              // Charakter ohne Mauer: nichts zu bauen
+  const dauer = bau[Math.min(w.lvl, bau.length)-1];
+  w.mauerT = (w.mauerT||0) + dt;
+  if(w.mauerT < dauer) return;
+  w.mauerT -= dauer;
+  werkstattMauer(w);
+}
+function werkstattMauer(w){
+  for(const p of w.cells) for(const [dr,dc] of DIRS){
+    const r=p.r+dr, c=p.c+dc;
+    if(!inBoard(r,c) || sideOf(r)!==w.owner) continue;  // nur auf der eigenen Hälfte
+    if(!freeCell(r,c)) continue;                       // Wasser, Fels, Belegtes: nein
+    if(envAt(r,c)==='vulkan') continue;                // auf glühenden Fels baut niemand
+    if(G.sperren.some(z=>z.r===r && z.c===c)) continue; // Trümmerfeld blockiert
+    const neu = addEnt('mauer', w.owner, r, c, 1);
+    neu.karten = 1;
+    neu.frei = true;                                   // nie bezahlt, kein Abrissgeld
+    mauerNetz(w.owner);
+    fxRing(r, c, HAKEN.spielerFarbe(w.owner));
+    HAKEN.bauStaub([{r, c}]);
+    HAKEN.syncHUD();
+    return;
   }
 }
 
@@ -781,6 +925,7 @@ function update(dt){
         }
       }
     }
+    mauerwerkTakt(e, dt);                             // Werkstatt im Fels mauert selbst
   }
   for(const own of [0,1]){                             // Ausbaustufe des Haupthauses prüfen
     const st = hausStufe(own);
@@ -960,9 +1105,10 @@ function placeSpot(own,k,r,c){
     return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
   }
   if(atLimit(own,k)) return null;                    // Neubau nur bis zur Grenze
-  // Türme zählen als Stellung — im Fels wie im Wald.
+  // Türme (Fels wie Wald) hängen am Ausbau des Haupthauses: Stufe 1 trägt
+  // einen, Stufe 2 zwei, ab Stufe 3 drei.
   if(k==='bogen' && (envAt(r,c)==='gebirge' || envAt(r,c)==='wald') &&
-     stellungen(own,'schuetze') >= STELLUNGEN) return null;   // zu viele Stellungen
+     tuerme(own) >= tuermeErlaubt(own)) return null;          // zu viele Türme
   if(sizeOf(k)===1) return fitsAt(own,k,r,c,false);
   const v = !!G.orient[own];                         // gedreht wird nur über den Knopf
   return fitsAt(own,k,r,c,v) ||

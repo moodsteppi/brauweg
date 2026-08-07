@@ -17,6 +17,33 @@ export const STIL = "<<STIL>>";
 export const HUELLE = "<<HUELLE>>";
 
 /**
+ * Die spielbaren Charaktere fuer die Auswahl im Bildschirm.
+ *
+ * Absichtlich reine Anzeigedaten: Die WERTE der Karten stehen im Kern
+ * (CHARAKTERE in quelle/teile/simulation.js) und nirgends sonst — hier
+ * liegt nur, was der Bildschirm zeigen muss, damit er den Kern nicht
+ * starten muss, um eine Liste zu haben. Die Kennungen muessen zu denen
+ * im Kern passen; eine unbekannte Kennung faellt dort auf den ersten
+ * Charakter zurueck.
+ */
+export const CHARAKTERE = [
+  {
+    id: 'engineer',
+    nm: 'Engineer',
+    kurz: 'Baumeister. Seine Werkstatt im Fels mauert von allein, sein Ritter rennt Bauten ein.',
+    karten: ['Schwert', 'Bogen', 'Mauer', 'Werkstatt', 'Ritter', 'Kanone'],
+    /** Was diesen Charakter von der Grundhand unterscheidet — fuer die Auswahl. */
+    eigenheiten: [
+      'Werkstatt auf Fels setzt alle 30 s eine Mauer (ab Stufe 2 alle 25 s)',
+      'Bogen: eine Reichweite weniger, dafür zäher',
+      'Ritter: billiger und zäher, schwächerer Schlag, doppelter Schaden an Bauten',
+      'Kanone kostet 50',
+      'Schützentürme: einer je Stufe des Haupthauses',
+    ],
+  },
+];
+
+/**
  * Startet eine Partie in der bereits eingehaengten Huelle.
  *
  * Oertlich (`netz` fehlt) rechnet der Kern wie bisher mit der Bildzeit.
@@ -32,6 +59,17 @@ export function starteFeldherr(optionen = {}) {
     aufStrittig,
     netz = null,
     sitz = 1,
+    /**
+     * Gewaehlter Charakter — er bestimmt die Kartenhand und ihre Werte.
+     *
+     * Im Netzspiel MUSS er auf beiden Geraeten gleich sein, sonst rechnen
+     * sie mit verschiedenen Werten und die Partie wird strittig. Solange
+     * es nur einen Charakter gibt, ist das von selbst erfuellt; sobald es
+     * mehrere sind, muss die Wahl wie das Saatkorn ueber den Tisch
+     * kommen (je Sitz, in den Regeln der Partie) — nicht aus der
+     * oertlichen Auswahl des Geraets.
+     */
+    charakter = 'engineer',
   } = optionen;
 
   let laeuft = true;

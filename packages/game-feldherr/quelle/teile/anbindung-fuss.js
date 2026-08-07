@@ -3,6 +3,9 @@
   // ---- Anbindung ----------------------------------------------------------
 
   if (typeof korn === 'number') saat(korn);
+  // Vor allem anderen: Die Kartenhand steht, bevor die Runde startet —
+  // buildHUD und jede Regelpruefung lesen DEFS und CARD_ORDER.
+  setzeCharakter(charakter);
   feldKey = feld;
   aiLevel = stufe;
   ovMenu.hidden = true;                 // der Bildschirm hat schon gefragt

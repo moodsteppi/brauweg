@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type TableRow } from '../api';
 import { Buehne3D } from '../minispiele/feldherr/Buehne3D';
 import {
+  CHARAKTERE,
   HUELLE,
   STIL,
   type FeldherrNetz,
@@ -69,7 +70,26 @@ const SCREEN_STIL = `
 .feldherr-online{margin-top:18px}
 .feldherr-online h2{margin:0 0 8px}
 .feldherr-fehler{color:#ff8b80}
+.feldherr-helden{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px}
+.feldherr-held{display:block;width:100%;text-align:left;padding:12px 14px;border:0;
+  border-radius:12px;color:#dfd6c2;background:rgba(16,25,32,.85);
+  box-shadow:0 0 0 1px #26363f;font:inherit;cursor:pointer}
+.feldherr-held.an{box-shadow:0 0 0 2px #f4655c;background:rgba(40,26,26,.9)}
+.feldherr-held[disabled]{opacity:.45;cursor:default}
+.feldherr-held .nm{font:800 15px/1.2 system-ui;margin-bottom:3px}
+.feldherr-held .kurz{font:500 12px/1.45 system-ui;opacity:.85}
+.feldherr-held ul{margin:7px 0 0;padding-left:16px;font:500 11px/1.5 system-ui;opacity:.78}
+.feldherr-held .bald{font:700 11px/1 system-ui;letter-spacing:.06em;opacity:.7}
 `;
+
+/**
+ * Der Charakter bestimmt die Kartenhand. Er steht bewusst NICHT im
+ * Tisch-Schema: Solange es einen einzigen gibt, rechnen beide Geraete
+ * ohnehin gleich. Sobald der zweite kommt, muss die Wahl je Sitz ueber
+ * den Server laufen (wie das Saatkorn) — sonst spielt jedes Geraet mit
+ * anderen Kartenwerten und die Partie wird strittig.
+ */
+const HELD_STANDARD = CHARAKTERE[0]?.id ?? 'engineer';
 
 export function FeldherrTisch({
   onBack,
@@ -93,6 +113,8 @@ export function FeldherrTisch({
   const feld: Feld = 'mittel';
   /** 3D-Vorschau (Stufe 2): Ansicht ueber dem 2D-Brett, Bedienung bleibt 2D. */
   const [dreiD, setDreiD] = useState(false);
+  /** Gewaehlter Charakter — seine Kartenhand spielt die Partie. */
+  const [held, setHeld] = useState(HELD_STANDARD);
 
   /** Offene Netz-Tische; null heisst noch nie geladen. */
   const [tische, setTische] = useState<TableRow[] | null>(null);
@@ -201,6 +223,7 @@ export function FeldherrTisch({
       modus,
       stufe,
       feld,
+      charakter: held,
       saat: (Date.now() ^ 0x9e3779b9) >>> 0,
       /**
        * Oertliche Partien melden nichts: Gegen die KI und zu zweit an einem
@@ -214,7 +237,7 @@ export function FeldherrTisch({
       sitzungRef.current = null;
       wurzel.innerHTML = '';
     };
-  }, [tableId, modus, stufe, feld]);
+  }, [tableId, modus, stufe, feld, held]);
 
   /**
    * Netzpartie. Startet, sobald die erste Sicht da ist — sie bringt das
@@ -252,6 +275,14 @@ export function FeldherrTisch({
        */
       saat: netzSaat,
       sitz: meinSitz ?? -1,
+      /**
+       * Im Netz zaehlt NICHT die oertliche Auswahl: Beide Geraete muessen
+       * dieselbe Kartenhand rechnen. Solange es genau einen Charakter
+       * gibt, ist der Standard genau das; kommt ein zweiter dazu, gehoert
+       * die Wahl je Sitz in die Partie-Regeln (wie das Saatkorn), sonst
+       * laufen die Geraete auseinander.
+       */
+      charakter: HELD_STANDARD,
       netz,
       /** Jedes Geraet meldet seinen Ausgang getrennt, samt Pruefsumme. */
       aufEnde: (a) =>
@@ -531,6 +562,33 @@ export function FeldherrTisch({
         Zwei Feldherren, ein Brett, eine Mittellinie. Wer das gegnerische
         Haupthaus einreißt, gewinnt.
       </p>
+
+      <h2>Wen spielst du?</h2>
+      <div className="feldherr-helden">
+        {CHARAKTERE.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={'feldherr-held' + (held === c.id ? ' an' : '')}
+            aria-pressed={held === c.id}
+            onClick={() => setHeld(c.id)}
+          >
+            <div className="nm">{c.nm}</div>
+            <div className="kurz">{c.kurz}</div>
+            <div className="kurz">{c.karten.join(' · ')}</div>
+            <ul>
+              {c.eigenheiten.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          </button>
+        ))}
+        {/* Platzhalter, damit die Auswahl zeigt, dass hier noch mehr kommt. */}
+        <button type="button" className="feldherr-held" disabled>
+          <div className="nm">Nächster Charakter</div>
+          <div className="bald">BALD</div>
+        </button>
+      </div>
 
       <section className="feldherr-wahl">
         <label className="feldherr-zeile">
