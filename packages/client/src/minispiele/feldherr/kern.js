@@ -3632,7 +3632,18 @@ HAKEN.muenzeRauch = (r, c) => {
                               TH*0.55, 1, 'smoke', '#d8b978');
 };
 
+/* Die 3D-Ansicht des Clients liefert ihre eigene Zeiger-Abbildung
+ * (Strahl auf die Brettebene): Solange sie gesetzt ist, gilt SIE — die
+ * perspektivischen Zellpositionen decken sich nicht mit dem flachen
+ * 2D-Raster, und ohne die Umrechnung landete jeder Zug im falschen Feld.
+ * Die Abbildung liefert fertige Brettkoordinaten (Spiegelung inklusive)
+ * oder null. Gesetzt wird sie ueber die Anbindung (zeigerAbbildung). */
+let zeigerZuZelle = null;
 function cellFromClient(clientX,clientY){
+  if(zeigerZuZelle){
+    const z = zeigerZuZelle(clientX, clientY);
+    return (z && inBoard(z.r, z.c)) ? {r:z.r, c:z.c} : null;
+  }
   const b=cv.getBoundingClientRect();
   const c=Math.floor((clientX-b.left-OX)/TW);
   let r=Math.floor((clientY-b.top-OY)/TH);
@@ -4329,5 +4340,15 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
       takt: taktZaehler,
       restAnteil: Math.max(0, Math.min(1, restMs / TAKT_MS)),
     }),
+    /**
+     * Zeiger-Abbildung der 3D-Ansicht setzen (oder mit null loesen): Sie
+     * uebersetzt Bildschirmkoordinaten per Strahl auf die Brettebene in
+     * Brettzellen. Solange sie gesetzt ist, laeuft JEDE Zeigereingabe der
+     * Spieldatei darueber — die Befehle selbst bleiben unveraendert, es
+     * aendert sich nur, welche Zelle unter dem Finger liegt.
+     */
+    zeigerAbbildung(fn) {
+      zeigerZuZelle = fn;
+    },
   };
 }

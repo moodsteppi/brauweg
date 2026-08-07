@@ -123,10 +123,22 @@ aber 3,7 MB statt ≤ 200 kB (Textur), 4 724 Dreiecke, keine Clips
 Nacharbeit nach `docs/ASSETS-FELDHERR-3D.md`, erst dann einchecken
 (Regel 4: einmal in der Historie, immer in der Historie).
 
-**Offen in Stufe 2:** Kamera-Feinschliff (Hochformat zuerst),
-Marsch-Interpolation über `restAnteil` und `e.mt` statt Nachzieh-Glättung,
-HP-Anzeige, Effekte (Treffer, Ringe, Münzflug) über die Wirkungs-Haken auch
-in 3D, `bogen-turm`/Mörser-Details, Sitz-0-Spiegelung im Netz gegenprüfen.
+**Ebenfalls umgesetzt (7. August 2026):** Kamera fest auf Neigung 10°,
+Abstand 17 (Entscheid am lebenden Spiel per Debug-Regler). **3D ist
+spielbar:** Die Buehne registriert am Kern eine Zeiger-Abbildung
+(`sitzung.zeigerAbbildung`, Strahl auf die Brettebene) — `cellFromClient`
+nutzt sie, solange sie gesetzt ist, die gesamte Eingabelogik (Karten-Drag,
+Haus, Halt, Abriss) bleibt unangetastet und läuft im Netz weiter durch die
+Befehle. Ein Ziel-Marker leuchtet unterm Zeiger. Nachgewiesen im Client:
+Klick in die Canvas-Mitte setzt das Haus in exakt die errechnete Zelle
+(Reihe 6, Spalte 4), Karten-Drags landen auf dem markierten Feld.
+
+**Offen in Stufe 2:** Marsch-Interpolation über `restAnteil` und `e.mt`
+statt Nachzieh-Glättung, HP-Anzeige, Effekte (Treffer, Ringe, Münzflug)
+über die Wirkungs-Haken auch in 3D, Bau-Vorschau in 3D färben (heute nur
+neutraler Marker; ob ein Feld bezahlbar/bebaubar ist, zeigt erst die
+Karte im HUD), `bogen-turm`/Mörser-Details, Sitz-0-Spiegelung im Netz
+gegenprüfen.
 
 ### Stufe 3 — Ausmustern
 

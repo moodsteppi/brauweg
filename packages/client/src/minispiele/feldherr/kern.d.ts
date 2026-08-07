@@ -119,6 +119,12 @@ export interface FeldherrSitzung {
   takt(): number;
   pruefsumme(): string;
   lesen(): FeldherrLeseblick;
+  /**
+   * Zeiger-Abbildung der 3D-Ansicht: uebersetzt Bildschirmkoordinaten in
+   * Brettzellen (Spiegelung inklusive) oder liefert null neben dem Brett.
+   * Mit null wird wieder die 2D-Abbildung des Kerns benutzt.
+   */
+  zeigerAbbildung(fn: ((clientX: number, clientY: number) => { r: number; c: number } | null) | null): void;
 }
 
 export declare function starteFeldherr(optionen: {

@@ -396,5 +396,15 @@
       takt: taktZaehler,
       restAnteil: Math.max(0, Math.min(1, restMs / TAKT_MS)),
     }),
+    /**
+     * Zeiger-Abbildung der 3D-Ansicht setzen (oder mit null loesen): Sie
+     * uebersetzt Bildschirmkoordinaten per Strahl auf die Brettebene in
+     * Brettzellen. Solange sie gesetzt ist, laeuft JEDE Zeigereingabe der
+     * Spieldatei darueber — die Befehle selbst bleiben unveraendert, es
+     * aendert sich nur, welche Zelle unter dem Finger liegt.
+     */
+    zeigerAbbildung(fn) {
+      zeigerZuZelle = fn;
+    },
   };
 }

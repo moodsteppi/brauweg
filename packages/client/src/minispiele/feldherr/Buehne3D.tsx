@@ -22,7 +22,7 @@
  *    teilt Geometrie und Material, genau das wollen wir.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
@@ -193,7 +193,70 @@ function Szene({
   const imBild = useRef(new Map<number, { obj: THREE.Object3D; art: string; lvl: number }>());
   const gelaendeQuelle = useRef<unknown>(null);
 
+  /**
+   * Spielbarkeit in 3D: Die Eingabe laeuft weiter durch den 2D-Pfad des
+   * Kerns (die Buehne laesst Zeiger durch), aber die Zellabbildung kommt
+   * von HIER — ein Strahl durch die Kamera auf die Brettebene. Ohne diese
+   * Umrechnung traefe jeder Zug die Zelle des flachen 2D-Rasters, nicht
+   * die, auf die der Finger in der Perspektive zeigt. Der Uebersetzer
+   * merkt sich die letzte Zielzelle fuer den Marker im Bild.
+   */
+  const { camera, gl } = useThree();
+  const ziel = useRef<{ x: number; z: number; zeit: number } | null>(null);
+  const uebersetzer = useRef<((x: number, y: number) => { r: number; c: number } | null) | null>(null);
+  const stabil = useRef((x: number, y: number) => uebersetzer.current?.(x, y) ?? null);
+  const angemeldet = useRef<FeldherrSitzung | null>(null);
+  const marker = useRef<THREE.Mesh>(null);
+
+  useEffect(() => {
+    const strahl = new THREE.Raycaster();
+    const ebene = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const punkt = new THREE.Vector3();
+    uebersetzer.current = (clientX, clientY) => {
+      const r = gl.domElement.getBoundingClientRect();
+      if (!r.width || !r.height) return null;
+      strahl.setFromCamera(
+        new THREE.Vector2(
+          ((clientX - r.left) / r.width) * 2 - 1,
+          -(((clientY - r.top) / r.height) * 2 - 1),
+        ),
+        camera,
+      );
+      if (!strahl.ray.intersectPlane(ebene, punkt)) return null;
+      const spalte = Math.floor(punkt.x);
+      const zeileWelt = Math.floor(punkt.z);
+      if (spalte < 0 || spalte >= SPALTEN || zeileWelt < 0 || zeileWelt >= ZEILEN) return null;
+      ziel.current = { x: spalte, z: zeileWelt, zeit: performance.now() };
+      // Die Szene zeichnet fuer Sitz 0 gespiegelt — die Brettzeile ist die
+      // Umkehrung derselben Abbildung, die zVon beim Zeichnen benutzt.
+      const spiegel = !!sitzungRef.current?.lesen?.().spiegel;
+      return { r: spiegel ? ZEILEN - 1 - zeileWelt : zeileWelt, c: spalte };
+    };
+    return () => {
+      uebersetzer.current = null;
+      angemeldet.current?.zeigerAbbildung?.(null);
+      angemeldet.current = null;
+    };
+  }, [camera, gl, sitzungRef]);
+
   useFrame((drei) => {
+    // Uebersetzer an der aktuellen Sitzung anmelden (sie kann wechseln,
+    // z. B. beim Neustart); beim Ausschalten der 3D-Ansicht meldet der
+    // Effekt oben ihn wieder ab, und der Kern faellt auf 2D zurueck.
+    if (sitzungRef.current !== angemeldet.current) {
+      angemeldet.current?.zeigerAbbildung?.(null);
+      angemeldet.current = sitzungRef.current;
+      angemeldet.current?.zeigerAbbildung?.(stabil.current);
+    }
+    // Ziel-Marker: solange der Zeiger frisch ueber einer Zelle stand,
+    // leuchtet sie — beim Kartenziehen sieht man so das Zielfeld.
+    if (marker.current) {
+      const z = ziel.current;
+      const frisch = z && performance.now() - z.zeit < 350;
+      marker.current.visible = !!frisch;
+      if (frisch && z) marker.current.position.set(z.x + 0.5, 0.02, z.z + 0.5);
+    }
+
     // Fast senkrecht ueber der Arena; die Neigung kippt die Kamera zur
     // eigenen Seite (unten) hin auf. Je Bild gesetzt, damit ein kuenftiger
     // Kameraschwenk (Muenzflug, Sieg) hier einen einzigen Ansatzpunkt hat.
@@ -288,6 +351,11 @@ function Szene({
         </mesh>
         <primitive object={gelaende.current} />
         <primitive object={objekte.current} />
+        {/* Zielfeld-Marker unter dem Zeiger */}
+        <mesh ref={marker} visible={false} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.94, 0.94]} />
+          <meshBasicMaterial color="#dff2ff" transparent opacity={0.38} />
+        </mesh>
       </group>
       <AnstossNachAufbau />
     </>
