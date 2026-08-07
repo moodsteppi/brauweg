@@ -3146,6 +3146,7 @@ function bonusInfo(k, r, c){                       // ausgeschriebener Bonus fü
   if(e==='gebirge' && k==='kanone') return '+1 Reichweite, +1 Schaden';
   if(e==='wald'){
     if(k==='kanone') return '−25 % erlittener Schaden';
+    if(k==='haus')   return '−20 % erlittener Schaden';   // Deckung fürs Haupthaus
     if(k==='bogen')  return '+50 % Leben, +25 % Schaden, −1 Reichweite';
     if(DEFS[k].unit) return '+50 % Leben, +25 % Schaden';
   }
@@ -3204,13 +3205,21 @@ function schildListe(){
       schildD('Reichweite '+rngOf(e), e.r, e.c, '#bfe6ff', 2.2, e.owner);
     }
   }
-  if(phase==='place'){                             // Hinweis auf die Erdwärme
+  if(phase==='place'){
+    // Was das Gelände dem Haupthaus bringt: Erdwärme am Kraterrand und
+    // Deckung im Wald. Je Art ein Schild auf dem ersten passenden Feld.
     const who = drankommt();
-    for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++)
-      if(freeCell(r,c) && envAt(r,c)!=='vulkan' && nebenVulkan(r,c)){
-        schildD('+1 Ressource: Erdwärme', r, c, '#ffbe5e', 2.0, who);
-        return liste;
+    let warm = false, wald = false;
+    for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++){
+      if(!freeCell(r,c) || envAt(r,c)==='vulkan') continue;
+      if(!warm && nebenVulkan(r,c)){
+        warm = true; schildD('+1 Ressource: Erdwärme', r, c, '#ffbe5e', 2.0, who);
       }
+      if(!wald && envAt(r,c)==='wald'){
+        wald = true; schildD(bonusInfo('haus', r, c), r, c, '#5fe0a8', 2.0, who);
+      }
+      if(warm && wald) return liste;
+    }
     return liste;
   }
   const belegt = {};                               // je Spieler nur ein Schild
@@ -3229,10 +3238,17 @@ function schildListe(){
         if(neuR!==altR) schildD('Reichweite '+altR+' → '+neuR, hr, hc, '#8ef0b8', 3.55, d.own);
       }
     } else {
-      const bonus = d.prev.ok ? bonusInfo(d.k, hr, hc) : null;
+      /* Was dieses Gelände dieser Karte bringt — auch dann, wenn hier
+       * (noch) nicht gebaut werden kann: Wer sich den Bogen gerade nicht
+       * leisten kann, soll trotzdem sehen, was der Wald ihm gäbe. Nur die
+       * eigene Hälfte wird ausgewertet, weil die Auskunft Nachbarschaft und
+       * Panikzone aus der Sicht des Besitzers liest. */
+      const bonus = sideOf(hr)===d.own ? bonusInfo(d.k, hr, hc) : null;
       const preis = d.prev.sp ? preisFuer(d.k, d.prev.sp) : costOf(d.k,1);
+      // Die Farbe sagt weiterhin, ob es geht: Rot heißt hier nicht, auch
+      // wenn der Bonus danebensteht.
       schildD(bonus ? bonus+'  ·  '+preis : DEFS[d.k].nm+' · '+preis, hr, hc,
-              bonus ? '#5fe0a8' : (d.prev.ok ? sh(COL.p[d.own],1.1) : '#ff6a52'), 2.15, d.own);
+              !d.prev.ok ? '#ff6a52' : bonus ? '#5fe0a8' : sh(COL.p[d.own],1.1), 2.15, d.own);
     }
     belegt[d.own]={r:hr, c:hc};
   }

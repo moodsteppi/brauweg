@@ -10,7 +10,8 @@ Gleichlauf-Probe, Modultests und Browser-Nachweis.
 | Anforderung | Stand |
 |---|---|
 | Mauern werden durch Verbinden stärker; Leben der Stufe wird auf die Stücke verteilt | **Umgesetzt 7.8. (Modell am 7.8. nachgeschärft).** Gewicht = Karten im Stück, Stufe = Gruppengewicht (1 allein, 2 verbunden, 3 verbunden; 3 Karten gestapelt ebenso 3). Stufen-HP 50/85/160 gehört der Gruppe und wird nach Gewicht verteilt — Stufe-2-Mauer + frische Mauer = Stufe 3 mit 107/53. Jedes Stück fällt einzeln, danach stuft die Gruppe neu ein; Erstattung zählt bezahlte Karten |
-| Haupthaus im Wald −20 % erlittener Schaden, mit Anzeige | **Umgesetzt 7.8.** (trefferAuf). Anzeige: Einheitenwerte-Tafel; Marker am Brett folgt mit den 3D-Modellen |
+| Haupthaus im Wald −20 % erlittener Schaden, mit Anzeige | **Umgesetzt 7.8., Anzeige komplett.** Regel in `trefferAuf`; Einheitenwerte-Tafel; in der Aufstellung steht der Hinweis „−20 % erlittener Schaden" auf einem Waldfeld der eigenen Hälfte (neben dem Erdwärme-Hinweis) |
+| Geländeeffekt der gezogenen Karte auf dem Zielfeld anzeigen | **Umgesetzt 7.8.** `bonusInfo` je Kartenart × Gelände, angezeigt auch dann, wenn (noch) nicht gebaut werden kann — die Farbe sagt weiter, ob es geht (rot = hier nicht). Gilt in 2D und 3D über dieselbe `schildListe` |
 | Angehaltene Einheit bleibt nach Aufwertung angehalten | **Umgesetzt 7.8.** (playCard übernimmt das halt-Flag wie turm) |
 | Neustartknopf im Menü (gegen KI) | **Umgesetzt 7.8.** Im Pausenmenü, nur gegen die KI sichtbar |
 | Feldgröße fest, Felder rechteckiger (Klick + drehbare 3D-Modelle) | **Umgesetzt 7.8.**: 8 × 12, Zellverhältnis 1,00, keine Auswahl mehr |
