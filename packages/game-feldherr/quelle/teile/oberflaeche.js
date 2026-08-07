@@ -315,6 +315,12 @@ function startRound(vsAI, level){
   if(AI) AI.taktik = waehleTaktik();               // erst jetzt steht das Gelände
   coinStart(); paused=false;
   ovMenu.hidden=ovTut.hidden=ovTab.hidden=ovPause.hidden=ovWin.hidden=true;
+  /* Neustart im Pausenmenü gibt es nur gegen die KI (Entscheid vom
+   * 7. August 2026): Im Duo säße ein zweiter Mensch am Brett, im Netz ein
+   * Gegner — dort startet niemand einseitig neu. display statt hidden,
+   * weil .btn{display:block} das UA-Stylesheet für [hidden] schlägt. */
+  const nb = document.getElementById('bNeustart');
+  if(nb) nb.style.display = vsAI ? '' : 'none';
   buildHUD(); bindHUD(); resize(); syncHUD();
 }
 function showWin(){
@@ -396,6 +402,7 @@ on('menuBtn',  ()=>{
   paused=true; ovPause.hidden=false;
 });
 on('bResume',  ()=>{ paused=false; ovPause.hidden=true; });
+on('bNeustart',()=>{ ovPause.hidden=true; startRound(true); });
 on('bTut2',    ()=>{ ovPause.hidden=true; showTut('pause'); });
 on('bQuit',    ()=>{
   paused=false; phase='menu'; G=null; AI=null; PT.length=0;

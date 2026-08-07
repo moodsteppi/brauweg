@@ -61,7 +61,9 @@ const DEFS = {
   schwert:  {nm:'Schwert', cost:8, unit:true, hp:7,  dmg:4, cd:8,  mcd:3.0, rng:1,
              up:{cd:-2, mcd:-0.4, hp:6, dmg:2}},
   mauer:    {nm:'Mauer',   cost:15, blocks:true, cardLimit:3,
-             lvls:[{hp:50},{hp:85},{hp:130}]},
+             /* Stufe 3 = 3,2 × Stufe 1 (Entscheid vom 7. August 2026) —
+              * derselbe Wert speist Stapel UND Mauerverbund. */
+             lvls:[{hp:50},{hp:85},{hp:160}]},
   bogen:    {nm:'Bogen',   cost:12, unit:true, hp:5,  dmg:3, cd:7, mcd:4.2, rng:3, ueberMauer:true,
              up:{cd:-1.5, mcd:-0.4, hp:2, dmg:5}},
   werk:     {nm:'Werk',    cost:25, size:2, cardLimit:4, fuseAt:2, laufzeit:15, knall:10,
@@ -578,6 +580,17 @@ function doAttack(e, target){
   if(target.hp<=0) kill(target, kan?0.44 : rng>1?0.22 : 0.06);
 }
 function kill(t, delay){
+  if(t.verbund){
+    // Der Pool ist EIN Leben: Fällt ein Stück des Mauerverbunds, fallen
+    // alle. Die Kennung wird vor der Kaskade gelöscht, sonst liefe sie im
+    // Kreis.
+    const kennung = t.verbund;
+    t.verbund = null;
+    for(const m of G.ents.filter(e => e.verbund === kennung)){
+      m.verbund = null;
+      kill(m, delay);
+    }
+  }
   if(AI && t.owner===AI.owner && t.type==='werk' &&
      t.cells.some(p=>inPanik(t.owner,p.r))) AI.verlusteVorn++;   // Lehrgeld an der Front
   if(t.berg && (t.turm || t.type==='kanone'))
@@ -591,8 +604,18 @@ function kill(t, delay){
 }
 function trefferAuf(o, d, delay){                      // ein Schlag, mit allen Nebenwirkungen
   if(o.type==='kanone' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.75));
+  // Deckung fürs Haupthaus im Wald (Entscheid vom 7. August 2026): −20 %
+  // erlittener Schaden — der Wald ist Verteidigung, nicht nur Kulisse.
+  if(o.type==='haus' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.80));
   if(o.halt || o.turm) d = Math.max(1, Math.round(d*0.875));   // wer steht, steht fester
-  o.hp -= d;
+  if(o.verbund){
+    // Verbundene Mauern teilen EINEN Lebenspool: Jedes Stück zeigt den
+    // Poolstand, ein Treffer irgendwo senkt ihn überall.
+    const pool = o.hp - d;
+    for(const m of G.ents) if(m.verbund===o.verbund) m.hp = pool;
+  } else {
+    o.hp -= d;
+  }
   if(DEFS[o.type].laufzeit && o.leben>0){              // jeder Treffer kostet das Werk eine Sekunde
     o.leben = Math.max(0, o.leben-1);
     G.fx.push({k:'zeit', r:o.r, c:o.c, t:-(delay||0)});
@@ -632,13 +655,25 @@ function werkKnall(w){                                 // Kesselexplosion beim E
   shake(14, 0.5);
 }
 function razeEnt(e){
+  if(e.verbund){
+    // Abriss bricht den Mauerverbund: Die übrigen Stücke fallen auf
+    // Stufe 1 zurück und behalten ihren Anteil am Pool (gedeckelt aufs
+    // Stufe-1-Maximum). Das abgerissene Stück zählt für die Erstattung
+    // als Stufe 1 — bezahlt wurde je Stück nur eine Karte, und ein
+    // Verbund darf keine Geldquelle sein.
+    const kennung = e.verbund;
+    const anteil = Math.max(1, Math.min(statsOf('mauer',1).hp, Math.round(e.hp / 3)));
+    for(const m of G.ents) if(m.verbund === kennung){
+      m.verbund = null; m.lvl = 1; m.hp = anteil;
+    }
+  }
   const back = refundOf(e);
   G.res[e.owner] = Math.min(capOf(e.owner), G.res[e.owner] + back);
   fxText(e.r, e.c, '+'+back, '#9be8c0', 0);
   fxRing(e.r, e.c, '#9be8c0');
   for(const p of e.cells) burst(midX(p.c), midY(p.r), TH*0.3, 10, 'dust', '#8a7a68');
   removeEnt(e);
-  syncHUD();
+  HAKEN.syncHUD();
 }
 function fxText(r,c,tx,col,delay){ G.fx.push({k:'txt', r, c, tx, col, t:-(delay||0)}); }
 function fxRing(r,c,col){ G.fx.push({k:'ring', r, c, col, t:0}); }
@@ -936,6 +971,10 @@ function playCard(own,k,r,c){
     removeEnt(o);
     const nu=addEnt(k,own,rr,cc,nl,vert,alt);  // bleibt genau dort stehen, wo es stand
     if(o.turm) nu.turm = true;                 // der Turm bleibt ein Turm
+    /* Wer stand, steht auch aufgewertet (Entscheid vom 7. August 2026):
+     * Vorher verlor der Neubau das halt-Flag, und die Truppe marschierte
+     * nach dem Aufwerten ungewollt los. */
+    if(o.halt) nu.halt = true;
     if(canAtt(nu)) nu.timer = cdOf(nu);        // aufgewertet heißt sofort schlagbereit
     if(DEFS[k].fuseAt) fuseWerke(true);        // eine anschließende Verschmelzung bleibt stumm
     const jetzt = entAt(rr,cc);                // nur eine Meldung: die erreichte Stufe
@@ -946,8 +985,39 @@ function playCard(own,k,r,c){
     HAKEN.bauStaub(sp.cells);
     fxRing(sp.r0,sp.c0, HAKEN.spielerFarbe(own));
     if(DEFS[k].fuseAt) fuseWerke();
+    if(k==='mauer') mauerVerbund(own);
   }
   G.armed[own]=null; HAKEN.syncHUD();
+}
+
+/* Drei verbundene Mauerstücke verschmelzen zu Stufe 3 mit EINEM Lebenspool
+ * (Entscheid vom 7. August 2026): 3,2-mal so stark wie Stufe 1, und der
+ * Stand liegt auf allen drei Objekten zugleich — ein Treffer irgendwo senkt
+ * ihn überall, fällt der Pool, fallen alle drei (siehe trefferAuf und kill).
+ * Mit dem Kartenkontingent von 3 sind höchstens drei Stücke möglich; wer
+ * stattdessen alle Karten auf ein Feld stapelt, erreicht Stufe 3 auf dem
+ * alten Weg, mit demselben Lebenswert (DEFS.mauer.lvls). */
+function mauerVerbund(own){
+  const stuecke = G.ents.filter(e => e.owner===own && e.type==='mauer' && !e.verbund && e.lvl===1);
+  if(stuecke.length !== 3) return;
+  // Zusammenhang über orthogonale Nachbarschaft, ab dem ersten Stück gesucht
+  const offen = [stuecke[0]], gesehen = new Set([stuecke[0].id]);
+  while(offen.length){
+    const m = offen.pop();
+    for(const n of stuecke){
+      if(gesehen.has(n.id)) continue;
+      if(Math.abs(n.r-m.r) + Math.abs(n.c-m.c) === 1){ gesehen.add(n.id); offen.push(n); }
+    }
+  }
+  if(gesehen.size !== 3) return;
+  const kennung = G.nextId++;
+  const pool = statsOf('mauer', 3).hp;
+  for(const m of stuecke){
+    m.verbund = kennung; m.lvl = 3; m.hp = pool;
+    fxRing(m.r, m.c, '#ffd977');
+  }
+  fxText(stuecke[0].r, stuecke[0].c, 'STUFE 3', '#ffd977', 0);
+  HAKEN.stufenFunken(stuecke[0].r, stuecke[0].c);
 }
 
 function drehBefehl(own){ G.orient[own] = !G.orient[own]; HAKEN.syncHUD(); }
