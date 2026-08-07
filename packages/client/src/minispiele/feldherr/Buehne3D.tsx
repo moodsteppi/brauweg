@@ -1169,12 +1169,15 @@ function Szene({
       // Text an, der freie Rand ist durchsichtig. Nur so wirkt die Schrift
       // ueberall gleich gross.
       sp.scale.set(3.9, 3.9 * (200 / 1024), 1);
-      // Aus der Vogelperspektive traegt Hoehe kaum: Was 2D nach OBEN
-      // staffelt, rueckt hier zum Betrachter. Derselbe Abstand haelt die
-      // Schilder auseinander (Stufe unter Reichweitengewinn) und laesst die
-      // Bauvorschau darunter frei.
+      /* Aus der Vogelperspektive traegt Hoehe kaum, also wird die
+       * Staffelung in die Tiefe verlegt — und zwar VOM Betrachter WEG
+       * (-z), damit das Schild ueber dem Feld steht. Der Finger kommt beim
+       * Ziehen von unten ins Bild; ein Schild unterhalb des Feldes laege
+       * genau unter der Hand und waere nie zu lesen. Das entspricht auch
+       * 2D, wo schild() nach oben versetzt. Der Abstand haelt zugleich
+       * mehrere Schilder auseinander (Stufe unter Reichweitengewinn). */
       sp.position.set(s.c + 0.5, s.h * 0.5 + 0.4,
-        (spiegel ? zeilen - 1 - s.r : s.r) + 0.5 + s.h * 0.55);
+        (spiegel ? zeilen - 1 - s.r : s.r) + 0.5 - s.h * 0.55);
 
       /* Randschutz: Ein Schild am Brettrand liefe sonst aus dem Bild — in
        * 2D faengt schild() das mit einer Klemme in Bildschirmkoordinaten
