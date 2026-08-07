@@ -105,11 +105,19 @@ for (const [name, quelle] of [['simulation.js', simulation], ['ki.js', ki]]) {
 // spaeteren kommen (im Sandkasten gibt es keine spaeteren Teile).
 // ---------------------------------------------------------------------------
 {
+  // Seit dem Feinschnitt gehoeren auch die Befehlsfunktionen und die
+  // Bauregeln in die Simulation — wandert eine zurueck in die Oberflaeche,
+  // faellt sie hier aus dem Sandkasten und der Bau bricht.
+  const funktionen = ['saat', 'zufall', 'mische', 'newState', 'update',
+    'placeSpot', 'preisFuer', 'playCard', 'setzeHaus', 'haltBefehl',
+    'abrissBefehl', 'drehBefehl', 'coinAuslosen', 'coinWahl', 'coinTick'];
   const befund = runInNewContext(
-    simulation + '\n;[typeof saat, typeof zufall, typeof mische, typeof newState, typeof update].join(",");',
+    simulation + '\n;[' + funktionen.map((f) => 'typeof ' + f).join(', ') +
+      ', typeof HAKEN].join(",");',
     {},
   );
-  if (befund !== 'function,function,function,function,function') {
+  const soll = funktionen.map(() => 'function').join(',') + ',object';
+  if (befund !== soll) {
     throw new Error('simulation.js unvollstaendig im Sandkasten: ' + befund);
   }
 }

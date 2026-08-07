@@ -60,12 +60,22 @@ Gleichlauf-Probe lieferte dieselben Grenzprüfsummen (59 Proben, u. a.
 erlaubte Ausnahmen: Startsaat, `deko`), `simulation.js` lauffähig im nackten
 Sandkasten, genau zwei `loop`-Anstöße, beide in der Oberfläche.
 
-**Offener Feinschnitt:** Die Befehlsfunktionen (`playCard`, `setzeHaus`,
-`haltBefehl`, `abrissBefehl`, `drehBefehl`, `coinWahl`) liegen noch in
-`oberflaeche.js`, weil sie HUD-Aufrufe mischen. Ihr Umzug in die Simulation
-(Zustandsänderung dort, HUD-Abgleich draußen) ist der nächste Schritt — der
-ändert Bytes, also gilt dann: Modultests und Gleichlauf-Probe statt
-Byte-Vergleich.
+**Feinschnitt — erledigt am 7. August 2026:** Die Befehlsfunktionen
+(`playCard`, `setzeHaus`, `haltBefehl`, `abrissBefehl`, `drehBefehl`,
+`coinAuslosen`/`coinWahl`/`coinTick`) und die Bauregeln (`placeSpot`,
+`preisFuer`, `fitsAt`) liegen jetzt in `simulation.js`. Sichtbare Wirkungen
+melden sie über die **Wirkungs-Haken** (`HAKEN`, No-Op-Standards; die
+Oberfläche hängt Partikel/HUD/Overlay ein) — genau dort kann sich später
+auch der 3D-Renderer einhängen. Der Sandkasten-Wächter in `bauen.mjs`
+erzwingt seither, dass die Befehle in der Simulation bleiben. Dabei
+bereinigt: Die Münzrauch-Deko zog `zufall()` statt `deko()` — synchron,
+aber gegen die Regel, und jede headless gerechnete Partie hätte einen
+anderen Zufallsstrom gehabt als der Browser.
+
+**Noch offen aus derselben Familie:** Der Vulkanausbruch am Ende von
+`simulation.js` ruft weiterhin direkt `burst`/`shake`/`bakeStatic` und zieht
+seine Rauchpositionen aus `zufall()`. Gleicher Umbau wie bei der Münze
+(Haken + `deko()`), eigene Abnahme über die Gleichlauf-Probe.
 
 ### Stufe 2 — 3D-Renderer daneben, nicht darüber
 
@@ -123,13 +133,12 @@ Erst wenn 3D vollständig ist: alten Renderer entfernen, Effekte nativ in 3D.
 ## Erster Befehl für die neue Sitzung
 
 > Lies diese Datei, `docs/FELDHERR-UEBERGABE.md` und den Kopf von
-> `packages/game-feldherr/quelle/teile/kopf.html`. Stufe 1 ist umgesetzt
-> (Stand oben). Als Nächstes, in dieser Reihenfolge:
->
-> 1. **Feinschnitt:** Befehlsfunktionen aus `oberflaeche.js` nach
->    `simulation.js` ziehen (Zustandsänderung hinein, HUD-Abgleich bleibt
->    draußen). Abnahme über `gleichlauf-probe.mjs` und die Modultests —
->    nicht über Byte-Vergleich, der Schritt ändert Bytes.
-> 2. **Geometrie-Entscheid abwarten:** Der Auftraggeber legt Feldmaße und
->    Zellverhältnis mit `werkzeug/feld-vorschau.html` fest. Erst mit dieser
->    Entscheidung Stufe 2 (3D-Renderer daneben) beginnen.
+> `packages/game-feldherr/quelle/teile/kopf.html`. Stufe 1 samt Feinschnitt
+> ist umgesetzt, der Geometrie-Entscheid ist gefallen (8 × 12, Verhältnis
+> 1,00 — Stand oben). Es folgt **Stufe 2**: Three/R3F-Renderer NEBEN den
+> 2D-Canvas stellen (Vorbild `packages/client/src/screens/Runner.tsx`,
+> Lehren in CLAUDE.md beachten), Simulationszustand je Bild lesen und
+> zwischen den Takten interpolieren. Das Ritter-GLB liegt beim
+> Auftraggeber; weitere Modelle nach Regel 5 bestellen, nicht beschreiben.
+> Kleiner Restposten davor oder parallel: den Vulkanausbruch auf
+> Wirkungs-Haken und `deko()` umstellen (siehe oben).

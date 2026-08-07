@@ -979,6 +979,189 @@ function erupt(o){
   bakeStatic();
 }
 
+
+/* ---------- Wirkungs-Haken ----------
+ * Die Befehlsfunktionen unten melden sichtbare Wirkungen (Partikel, Farben,
+ * HUD-Abgleich, Münz-Overlay) über diese Haken nach draußen. Die Oberfläche
+ * hängt die echten Implementierungen ein (siehe oberflaeche.js); headless
+ * bleiben es Leerläufe, und die Simulation läuft ohne DOM, Canvas und HUD.
+ * Die Haken werden im Taktpfad auf BEIDEN Geräten aufgerufen — eine
+ * Implementierung darf deshalb NIE den Zustand ändern und NIE zufall()
+ * ziehen, sonst laufen die Geräte auseinander. */
+const HAKEN = {
+  syncHUD: () => {},
+  spielerFarbe: () => '#fff',
+  stufenFunken: () => {},
+  bauStaub: () => {},
+  hausStaub: () => {},
+  coinZu: () => {},
+  muenzeAufschlag: () => {},
+  muenzeRauch: () => {},
+};
+
+/* ---------- Bauregeln ---------- */
+const turmPlatz = (k,r,c)=> (k==='bogen'||k==='kanone'||k==='werk') && envAt(r,c)==='gebirge';
+const BERGBAU = 5;                                    // Aufschlag für den Unterbau
+function preisFuer(k, sp){
+  let p = sp.merge ? costOf(k, sp.merge.lvl+1) : costOf(k,1);
+  const aufFels = sp.merge ? !!sp.merge.berg
+                           : sp.cells.some(q=>envAt(q.r,q.c)==='gebirge');
+  if(aufFels) p += BERGBAU;                        // der Unterbau kostet jedes Mal
+  return p;
+}
+function fitsAt(own,k,r0,c0,vert){
+  const cells=entCells(k,r0,c0,vert);
+  if(k==='werk'){                                    // im Fels nur ganz, im Wald gar nicht
+    const auf = cells.filter(p=>inBoard(p.r,p.c) && envAt(p.r,p.c)==='gebirge').length;
+    if(auf>0 && auf<cells.length) return null;
+    if(cells.some(p=>inBoard(p.r,p.c) && envAt(p.r,p.c)==='wald')) return null;
+  }
+  for(const p of cells){
+    if(!inBoard(p.r,p.c) || sideOf(p.r)!==own) return null;
+    if(entAt(p.r,p.c)) return null;
+    if(!walkable(p.r,p.c) && !turmPlatz(k,p.r,p.c)) return null;
+    if(G.sperren.some(z=>z.r===p.r && z.c===p.c)) return null;   // Trümmer blockieren
+    if(envAt(p.r,p.c)==='vulkan' && !DEFS[k].unit) return null;
+  }
+  return {cells, r0, c0, vert, merge:null};
+}
+function placeSpot(own,k,r,c){
+  if(!inBoard(r,c)) return null;
+  const occ=entAt(r,c);
+  if(occ){
+    const grenze = DEFS[k].fuseAt || maxLvlOf(k);   // per Karte nur bis dorthin
+    const ok = occ.owner===own && occ.type===k &&
+               occ.cells.every(q=>sideOf(q.r)===own) &&    // vorgerückte Truppen nicht mehr erreichbar
+               (DEFS[k].unit ? occ.lvl===1 : occ.lvl < grenze) &&
+               !atLimit(own,k);
+    return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
+  }
+  if(atLimit(own,k)) return null;                    // Neubau nur bis zur Grenze
+  if(k==='bogen' && envAt(r,c)==='gebirge' &&
+     stellungen(own,'schuetze') >= STELLUNGEN) return null;   // zu viele Stellungen
+  if(sizeOf(k)===1) return fitsAt(own,k,r,c,false);
+  const v = !!G.orient[own];                         // gedreht wird nur über den Knopf
+  return fitsAt(own,k,r,c,v) ||
+         (v ? fitsAt(own,k,r-1,c,v) : fitsAt(own,k,r,c-1,v));
+}
+const canPlaceCard = (own,k,r,c)=> !!placeSpot(own,k,r,c);
+function affordable(own,k,r,c){                       // Platz frei UND bezahlbar
+  const sp=placeSpot(own,k,r,c);
+  if(!sp) return false;
+  return G.res[own] >= preisFuer(k,sp);
+}
+
+/* ---------- Befehle ----------
+ * Jede Spielerhandlung läuft durch genau eine dieser Funktionen, nie direkt
+ * aus dem Handler in den Zustand. Der Grund ist das Netzspiel: Die Anbindung
+ * (teile/anbindung-fuss.js, gebaut von werkzeug/bauen.mjs) lenkt sie um und
+ * meldet den Befehl als Zug für einen künftigen Takt, statt ihn auszuführen.
+ * Zwischen Eingabe und Ausführung liegen dann einige Takte — was beim
+ * Antippen noch galt, kann vorbei sein. Deshalb prüft jede Funktion ihre
+ * Voraussetzungen SELBST und verpufft still, wenn sie nicht mehr gelten:
+ * auf beiden Geräten gleich. */
+
+function playCard(own,k,r,c){
+  const sp = placeSpot(own,k,r,c);
+  if(!sp) return;
+  const preis = preisFuer(k,sp);
+  if(G.res[own]<preis) return;
+  G.res[own]-=preis;
+  verbrauche(own,k);                           // die Karte ist damit endgültig aufgebraucht
+  if(sp.merge){
+    const o=sp.merge, vert=o.h>o.w, rr=o.r, cc=o.c, nl=o.lvl+1, alt=o.cells;
+    removeEnt(o);
+    const nu=addEnt(k,own,rr,cc,nl,vert,alt);  // bleibt genau dort stehen, wo es stand
+    if(o.turm) nu.turm = true;                 // der Turm bleibt ein Turm
+    if(canAtt(nu)) nu.timer = cdOf(nu);        // aufgewertet heißt sofort schlagbereit
+    if(DEFS[k].fuseAt) fuseWerke(true);        // eine anschließende Verschmelzung bleibt stumm
+    const jetzt = entAt(rr,cc);                // nur eine Meldung: die erreichte Stufe
+    fxText(rr,cc,'STUFE '+(jetzt?jetzt.lvl:nl),'#ffd977',0); fxRing(rr,cc,'#ffd977');
+    HAKEN.stufenFunken(rr,cc);
+  } else {
+    addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
+    HAKEN.bauStaub(sp.cells);
+    fxRing(sp.r0,sp.c0, HAKEN.spielerFarbe(own));
+    if(DEFS[k].fuseAt) fuseWerke();
+  }
+  G.armed[own]=null; HAKEN.syncHUD();
+}
+
+function drehBefehl(own){ G.orient[own] = !G.orient[own]; HAKEN.syncHUD(); }
+
+function setzeHaus(own,r,c){
+  if(phase!=='place' || G.placed[own] || drankommt()!==own) return;
+  if(sideOf(r)!==own || !freeCell(r,c) || envAt(r,c)==='vulkan') return;
+  addEnt('haus',own,r,c);
+  fxRing(r,c, HAKEN.spielerFarbe(own));
+  HAKEN.hausStaub(r,c);
+  G.placed[own]=true;
+  if(G.placed[0]&&G.placed[1]) phase='war';
+  HAKEN.syncHUD();
+}
+
+function abrissBefehl(own,r,c){
+  const t=entAt(r,c);
+  if(t && t.owner===own && t.type!=='haus') razeEnt(t);
+}
+
+function haltBefehl(own,r,c){
+  const e=entAt(r,c);
+  if(!e || e.owner!==own || !canMove(e)) return;
+  const g = gruppeVon(e);
+  if(!e.halt && stellungen(own,g) >= STELLUNGEN){
+    e.nudge = 1; fxText(e.r,e.c,'3 / 3','#ffa06e',0);   // Stellungen ausgeschöpft
+  } else {
+    e.halt = !e.halt; e.nudge = 0.8;
+    fxRing(e.r, e.c, e.halt ? '#ffa06e' : '#8ef0b8');
+  }
+}
+
+/* ---------- Münzwurf ---------- */
+const drankommt = () => G.placed[G.erst] ? 1-G.erst : G.erst;
+const MUENZE = {flug:2.15, land:1.42, liegt:0.5, zeigen:1.0};
+function coinAuslosen(){
+  G.coin = {stufe:'wahl', waehler: zufall()<0.5 ? 0 : 1,
+            wahl:null, ergebnis:null, sieger:null, t:0};
+}
+function coinWahl(w){
+  const co=G.coin;
+  if(!co || co.stufe!=='wahl') return;
+  co.wahl = w;
+  co.ergebnis = zufall()<0.5 ? 'kopf' : 'zahl';
+  co.sieger = (co.wahl===co.ergebnis) ? co.waehler : 1-co.waehler;
+  co.stufe = 'flug'; co.t = 0;
+  HAKEN.coinZu();
+}
+function coinTick(dt){
+  const co=G.coin;
+  if(!co) return;
+  co.t += dt;
+  if(co.stufe==='wahl'){
+    if(AI && co.waehler===AI.owner && co.t>0.9) coinWahl(zufall()<0.5?'kopf':'zahl');
+    return;
+  }
+  if(co.stufe==='flug'){
+    const r=Math.floor(ROWS/2), c=Math.floor(COLS/2);
+    if(co.t >= MUENZE.land && !co.gelandet){          // Aufschlag: Staub
+      co.gelandet = true;
+      HAKEN.muenzeAufschlag(r,c);
+    }
+    if(co.t >= MUENZE.land + MUENZE.liegt && !co.rauch){   // erst danach löst sie sich auf
+      co.rauch = true;
+      HAKEN.muenzeRauch(r,c);
+      fxRing(r, c, '#ffd977');
+    }
+    if(co.t >= MUENZE.flug){ co.stufe='zeigen'; co.t=0; }
+    return;
+  }
+  if(co.stufe==='zeigen' && co.t >= MUENZE.zeigen){
+    G.erst = co.sieger;
+    G.coin = null;
+    phase = 'place';
+    HAKEN.syncHUD();
+  }
+}
 /* ============================================================
    Teil 2: Renderer — Projektion, Licht, Material
    ============================================================ */
@@ -3351,82 +3534,34 @@ function syncHUD(){
 }
 
 /* ---------- Eingabe ---------- */
-const turmPlatz = (k,r,c)=> (k==='bogen'||k==='kanone'||k==='werk') && envAt(r,c)==='gebirge';
-const BERGBAU = 5;                                    // Aufschlag für den Unterbau
-function preisFuer(k, sp){
-  let p = sp.merge ? costOf(k, sp.merge.lvl+1) : costOf(k,1);
-  const aufFels = sp.merge ? !!sp.merge.berg
-                           : sp.cells.some(q=>envAt(q.r,q.c)==='gebirge');
-  if(aufFels) p += BERGBAU;                        // der Unterbau kostet jedes Mal
-  return p;
-}
-function fitsAt(own,k,r0,c0,vert){
-  const cells=entCells(k,r0,c0,vert);
-  if(k==='werk'){                                    // im Fels nur ganz, im Wald gar nicht
-    const auf = cells.filter(p=>inBoard(p.r,p.c) && envAt(p.r,p.c)==='gebirge').length;
-    if(auf>0 && auf<cells.length) return null;
-    if(cells.some(p=>inBoard(p.r,p.c) && envAt(p.r,p.c)==='wald')) return null;
-  }
-  for(const p of cells){
-    if(!inBoard(p.r,p.c) || sideOf(p.r)!==own) return null;
-    if(entAt(p.r,p.c)) return null;
-    if(!walkable(p.r,p.c) && !turmPlatz(k,p.r,p.c)) return null;
-    if(G.sperren.some(z=>z.r===p.r && z.c===p.c)) return null;   // Trümmer blockieren
-    if(envAt(p.r,p.c)==='vulkan' && !DEFS[k].unit) return null;
-  }
-  return {cells, r0, c0, vert, merge:null};
-}
-function placeSpot(own,k,r,c){
-  if(!inBoard(r,c)) return null;
-  const occ=entAt(r,c);
-  if(occ){
-    const grenze = DEFS[k].fuseAt || maxLvlOf(k);   // per Karte nur bis dorthin
-    const ok = occ.owner===own && occ.type===k &&
-               occ.cells.every(q=>sideOf(q.r)===own) &&    // vorgerückte Truppen nicht mehr erreichbar
-               (DEFS[k].unit ? occ.lvl===1 : occ.lvl < grenze) &&
-               !atLimit(own,k);
-    return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
-  }
-  if(atLimit(own,k)) return null;                    // Neubau nur bis zur Grenze
-  if(k==='bogen' && envAt(r,c)==='gebirge' &&
-     stellungen(own,'schuetze') >= STELLUNGEN) return null;   // zu viele Stellungen
-  if(sizeOf(k)===1) return fitsAt(own,k,r,c,false);
-  const v = !!G.orient[own];                         // gedreht wird nur über den Knopf
-  return fitsAt(own,k,r,c,v) ||
-         (v ? fitsAt(own,k,r-1,c,v) : fitsAt(own,k,r,c-1,v));
-}
-const canPlaceCard = (own,k,r,c)=> !!placeSpot(own,k,r,c);
-function affordable(own,k,r,c){                       // Platz frei UND bezahlbar
-  const sp=placeSpot(own,k,r,c);
-  if(!sp) return false;
-  return G.res[own] >= preisFuer(k,sp);
-}
+/* Die Befehlsfunktionen und die Bauregeln (placeSpot, preisFuer, …) leben
+ * seit dem Feinschnitt in simulation.js. Sichtbare Wirkungen melden sie
+ * über die Wirkungs-Haken — hier hängt sich die Darstellung ein. Headless
+ * bleiben die Haken Leerläufe, und die Simulation kennt weiterhin weder
+ * Pixel noch HUD. Die Haken laufen im Taktpfad auf BEIDEN Geräten und
+ * dürfen deshalb den Zustand nie anfassen und keinen Spielzufall ziehen. */
+HAKEN.syncHUD = () => syncHUD();
+HAKEN.spielerFarbe = own => sh(COL.p[own], 1);
+HAKEN.stufenFunken = (r, c) => burst(midX(c), midY(r), TH*0.6, 22, 'spark', '#ffe6a0');
+HAKEN.bauStaub = cells => {
+  for(const p of cells) burst(midX(p.c), midY(p.r), TH*0.05, 8, 'dust', '#8a7a68');
+};
+HAKEN.hausStaub = (r, c) => burst(midX(c), midY(r), TH*0.05, 16, 'dust', '#8a7a68');
+HAKEN.coinZu = () => coinAus();
+HAKEN.muenzeAufschlag = (r, c) => {
+  burst(midX(c), midY(r), TH*0.1, 14, 'dust', '#8a7a68');
+  shake(6, 0.25);
+};
+HAKEN.muenzeRauch = (r, c) => {
+  burst(midX(c), midY(r), TH*0.3, 26, 'ember', '#ffd977');
+  /* deko(), nicht zufall(): Die Rauchpositionen sind reine Optik. Vor dem
+   * Feinschnitt zogen sie aus dem Saatkorn — synchron, aber gegen die Regel
+   * »zufall() nur für Spielrelevantes«, und jede headless gerechnete Partie
+   * hätte einen anderen Zufallsstrom gehabt als der Browser. */
+  for(let i=0;i<12;i++) burst(midX(c)+(deko()-.5)*TW, midY(r)+(deko()-.5)*TH,
+                              TH*0.55, 1, 'smoke', '#d8b978');
+};
 
-function playCard(own,k,r,c){
-  const sp = placeSpot(own,k,r,c);
-  if(!sp) return;
-  const preis = preisFuer(k,sp);
-  if(G.res[own]<preis) return;
-  G.res[own]-=preis;
-  verbrauche(own,k);                           // die Karte ist damit endgültig aufgebraucht
-  if(sp.merge){
-    const o=sp.merge, vert=o.h>o.w, rr=o.r, cc=o.c, nl=o.lvl+1, alt=o.cells;
-    removeEnt(o);
-    const nu=addEnt(k,own,rr,cc,nl,vert,alt);  // bleibt genau dort stehen, wo es stand
-    if(o.turm) nu.turm = true;                 // der Turm bleibt ein Turm
-    if(canAtt(nu)) nu.timer = cdOf(nu);        // aufgewertet heißt sofort schlagbereit
-    if(DEFS[k].fuseAt) fuseWerke(true);        // eine anschließende Verschmelzung bleibt stumm
-    const jetzt = entAt(rr,cc);                // nur eine Meldung: die erreichte Stufe
-    fxText(rr,cc,'STUFE '+(jetzt?jetzt.lvl:nl),'#ffd977',0); fxRing(rr,cc,'#ffd977');
-    burst(midX(cc),midY(rr),TH*0.6,22,'spark','#ffe6a0');
-  } else {
-    addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
-    for(const p of sp.cells) burst(midX(p.c),midY(p.r),TH*0.05,8,'dust','#8a7a68');
-    fxRing(sp.r0,sp.c0, sh(COL.p[own],1));
-    if(DEFS[k].fuseAt) fuseWerke();
-  }
-  G.armed[own]=null; syncHUD();
-}
 function cellFromClient(clientX,clientY){
   const b=cv.getBoundingClientRect();
   const c=Math.floor((clientX-b.left-OX)/TW);
@@ -3444,50 +3579,11 @@ function berechnePrev(d, r, c){                    // Zustand des Zielfelds, jed
   const cells = entCells(d.k, r, c, !!G.orient[d.own]).filter(p=>inBoard(p.r,p.c));
   return cells.length ? {cells, ok:false, r, c, merge:null, sp:null, hr:r, hc:c} : null;
 }
-/* ---------- Befehle ----------
- * Jede Spielerhandlung läuft durch genau eine dieser Funktionen, nie direkt
- * aus dem Handler in den Zustand. Der Grund ist das Netzspiel: Die Anbindung
- * (kern-erzeugen.mjs) lenkt sie um und meldet den Befehl als Zug für einen
- * künftigen Takt, statt ihn auszuführen. Zwischen Eingabe und Ausführung
- * liegen dann sechs Takte — was beim Antippen noch galt, kann vorbei sein.
- * Deshalb prüft jede Funktion ihre Voraussetzungen SELBST und verpufft
- * still, wenn sie nicht mehr gelten: auf beiden Geräten gleich. */
-
 /* Wer darf an DIESEM Gerät für einen Sitz handeln? Örtlich alle außer der
  * KI. Im Netzspiel ersetzt die Anbindung das durch »nur der eigene Sitz« —
  * ohne diese Sperre ließe sich hier die Karte des Gegners ziehen, das andere
  * Gerät erführe nie davon, und beide rechneten verschiedene Partien. */
 let darfBedienen = (own) => !(AI && own===AI.owner);
-
-function drehBefehl(own){ G.orient[own] = !G.orient[own]; syncHUD(); }
-
-function setzeHaus(own,r,c){
-  if(phase!=='place' || G.placed[own] || drankommt()!==own) return;
-  if(sideOf(r)!==own || !freeCell(r,c) || envAt(r,c)==='vulkan') return;
-  addEnt('haus',own,r,c);
-  fxRing(r,c, sh(COL.p[own],1));
-  burst(midX(c),midY(r),TH*0.05,16,'dust','#8a7a68');
-  G.placed[own]=true;
-  if(G.placed[0]&&G.placed[1]) phase='war';
-  syncHUD();
-}
-
-function abrissBefehl(own,r,c){
-  const t=entAt(r,c);
-  if(t && t.owner===own && t.type!=='haus') razeEnt(t);
-}
-
-function haltBefehl(own,r,c){
-  const e=entAt(r,c);
-  if(!e || e.owner!==own || !canMove(e)) return;
-  const g = gruppeVon(e);
-  if(!e.halt && stellungen(own,g) >= STELLUNGEN){
-    e.nudge = 1; fxText(e.r,e.c,'3 / 3','#ffa06e',0);   // Stellungen ausgeschöpft
-  } else {
-    e.halt = !e.halt; e.nudge = 0.8;
-    fxRing(e.r, e.c, e.halt ? '#ffa06e' : '#8ef0b8');
-  }
-}
 
 const drags = new Map();
 let peek = null;                                   // gedrückt gehaltenes Objekt
@@ -3612,11 +3708,8 @@ const ovMenu=document.getElementById('ovMenu'), ovTut=document.getElementById('o
       ovWin=document.getElementById('ovWin');
 
 let aiLevel='normal', feldKey='mittel', lastVsAI=true, tutSeen=false;
-const drankommt = () => G.placed[G.erst] ? 1-G.erst : G.erst;
-const MUENZE = {flug:2.15, land:1.42, liegt:0.5, zeigen:1.0};
 function coinStart(){
-  G.coin = {stufe:'wahl', waehler: zufall()<0.5 ? 0 : 1,
-            wahl:null, ergebnis:null, sieger:null, t:0};
+  coinAuslosen();
   const el=document.getElementById('ovCoin');
   // Nur wer den Wähler an diesem Gerät bedient, sieht die Wahl. Im Netzspiel
   // heißt das: genau ein Gerät — auf dem anderen wählt der Gegner.
@@ -3626,48 +3719,6 @@ function coinStart(){
     const wer=document.getElementById('coinWer');
     if(wer) wer.textContent = !AI ? 'Spieler '+(G.coin.waehler+1)+' wählt'
                                   : (mensch ? 'Du wählst' : 'Die KI wählt');
-  }
-}
-function coinWahl(w){
-  const co=G.coin;
-  if(!co || co.stufe!=='wahl') return;
-  co.wahl = w;
-  co.ergebnis = zufall()<0.5 ? 'kopf' : 'zahl';
-  co.sieger = (co.wahl===co.ergebnis) ? co.waehler : 1-co.waehler;
-  co.stufe = 'flug'; co.t = 0;
-  const el=document.getElementById('ovCoin');
-  if(el) el.hidden = true;
-}
-function coinTick(dt){
-  const co=G.coin;
-  if(!co) return;
-  co.t += dt;
-  if(co.stufe==='wahl'){
-    if(AI && co.waehler===AI.owner && co.t>0.9) coinWahl(zufall()<0.5?'kopf':'zahl');
-    return;
-  }
-  if(co.stufe==='flug'){
-    const r=Math.floor(ROWS/2), c=Math.floor(COLS/2);
-    if(co.t >= MUENZE.land && !co.gelandet){          // Aufschlag: Staub
-      co.gelandet = true;
-      burst(midX(c), midY(r), TH*0.1, 14, 'dust', '#8a7a68');
-      shake(6, 0.25);
-    }
-    if(co.t >= MUENZE.land + MUENZE.liegt && !co.rauch){   // erst danach löst sie sich auf
-      co.rauch = true;
-      burst(midX(c), midY(r), TH*0.3, 26, 'ember', '#ffd977');
-      for(let i=0;i<12;i++) burst(midX(c)+(zufall()-.5)*TW, midY(r)+(zufall()-.5)*TH,
-                                  TH*0.55, 1, 'smoke', '#d8b978');
-      fxRing(r, c, '#ffd977');
-    }
-    if(co.t >= MUENZE.flug){ co.stufe='zeigen'; co.t=0; }
-    return;
-  }
-  if(co.stufe==='zeigen' && co.t >= MUENZE.zeigen){
-    G.erst = co.sieger;
-    G.coin = null;
-    phase = 'place';
-    syncHUD();
   }
 }
 
