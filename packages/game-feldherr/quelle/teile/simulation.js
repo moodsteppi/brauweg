@@ -276,6 +276,12 @@ function addEnt(type, owner, r, c, lvl=1, vert, feste){
              leben: statsOf(type,lvl).laufzeit || 0, tot:false,
              aim: (owner===0 ? Math.PI/2 : -Math.PI/2), aimZiel:null};
   if(envAt(r,c)==='wald' && DEFS[type].unit) e.hp = Math.round(s.hp*1.5);
+  /* Schützenturm im Wald (Entscheid vom 7. August 2026): Der Bogen baut
+   * sich auch in den Baumwipfeln eine Stellung — anders als auf dem Fels
+   * ohne Rundumsicht (der Wald kostet weiter eine Reichweite), dafür mit
+   * Deckung: ein Drittel weniger erlittener Schaden, siehe trefferAuf.
+   * Kein `berg`: Nur die Felsstellung hinterlässt ein brennendes Wrack. */
+  if(envAt(r,c)==='wald' && type==='bogen') e.turm = true;
   if(cells.some(p=>envAt(p.r,p.c)==='gebirge')){
     e.berg = true;                                     // Stellung im oder auf dem Fels
     if(type==='bogen') e.turm = true;                  // der Schütze bekommt einen Turm
@@ -618,6 +624,11 @@ function kill(t, delay){
 }
 function trefferAuf(o, d, delay){                      // ein Schlag, mit allen Nebenwirkungen
   if(o.type==='kanone' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.75));
+  // Schützenturm im Wald: ein Drittel weniger. Bewusst d*2/3 statt einer
+  // Kommazahl — Multiplikation und Division sind bitgenau festgelegt,
+  // und der Wert fließt in den Spielzustand.
+  if(o.type==='bogen' && o.turm && envAt(o.r,o.c)==='wald')
+    d = Math.max(1, Math.round(d*2/3));
   // Deckung fürs Haupthaus im Wald (Entscheid vom 7. August 2026): −20 %
   // erlittener Schaden — der Wald ist Verteidigung, nicht nur Kulisse.
   if(o.type==='haus' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.80));
@@ -896,6 +907,7 @@ const HAKEN = {
 /* ---------- Bauregeln ---------- */
 const turmPlatz = (k,r,c)=> (k==='bogen'||k==='kanone'||k==='werk') && envAt(r,c)==='gebirge';
 const BERGBAU = 5;                                    // Aufschlag für den Unterbau
+const WALDTURM = 4;                                   // Gerüst in den Baumwipfeln
 function preisFuer(k, sp){
   // Bei Mauern richtet sich der Preis der nächsten Karte nach dem Gewicht
   // (bezahlte Karten), nicht nach der Stufe aus dem Verbund.
@@ -906,6 +918,12 @@ function preisFuer(k, sp){
   const aufFels = sp.merge ? !!sp.merge.berg
                            : sp.cells.some(q=>envAt(q.r,q.c)==='gebirge');
   if(aufFels) p += BERGBAU;                        // der Unterbau kostet jedes Mal
+  // Schützenturm im Wald: das Gerüst kostet ebenfalls jedes Mal, aber
+  // weniger als der Unterbau im Fels.
+  const imWald = k==='bogen' && !aufFels &&
+    (sp.merge ? envAt(sp.merge.r, sp.merge.c)==='wald'
+              : sp.cells.some(q=>envAt(q.r,q.c)==='wald'));
+  if(imWald) p += WALDTURM;
   return p;
 }
 function fitsAt(own,k,r0,c0,vert){
@@ -942,7 +960,8 @@ function placeSpot(own,k,r,c){
     return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
   }
   if(atLimit(own,k)) return null;                    // Neubau nur bis zur Grenze
-  if(k==='bogen' && envAt(r,c)==='gebirge' &&
+  // Türme zählen als Stellung — im Fels wie im Wald.
+  if(k==='bogen' && (envAt(r,c)==='gebirge' || envAt(r,c)==='wald') &&
      stellungen(own,'schuetze') >= STELLUNGEN) return null;   // zu viele Stellungen
   if(sizeOf(k)===1) return fitsAt(own,k,r,c,false);
   const v = !!G.orient[own];                         // gedreht wird nur über den Knopf

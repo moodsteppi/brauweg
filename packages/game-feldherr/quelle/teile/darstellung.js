@@ -1469,7 +1469,7 @@ function bonusInfo(k, r, c){                       // ausgeschriebener Bonus fü
   if(e==='wald'){
     if(k==='kanone') return '−25 % erlittener Schaden';
     if(k==='haus')   return '−20 % erlittener Schaden';   // Deckung fürs Haupthaus
-    if(k==='bogen')  return '+50 % Leben, +25 % Schaden, −1 Reichweite';
+    if(k==='bogen')  return 'Turm: +50 % Leben, +25 % Schaden, −1/3 erlittener Schaden, −1 Reichweite';
     if(DEFS[k].unit) return '+50 % Leben, +25 % Schaden';
   }
   if(k==='werk' && e==='gebirge') return '−1 Ressource, +50 % Leben, kein Kessel · max. Stufe 2';

@@ -113,7 +113,15 @@ Deterministisch, aber sie ändert `hp`. Falls `envAt` je nach Gerät etwas
 anderes liefert (z. B. nach einem Vulkanausbruch, der `o.type` auf
 `krater` setzt), schlägt das sofort durch.
 
-### d) `playCard` — `halt` überlebt die Aufwertung
+### d) Schützenturm im Wald (7.8., NACH dem beobachteten Fehler gebaut)
+
+`addEnt` setzt `e.turm` jetzt auch im Wald, `trefferAuf` zieht dort ein
+Drittel ab, `preisFuer` schlägt +4 auf. Alles deterministisch, aber es
+schreibt `hp` und ändert die Beweglichkeit — beim Eingrenzen mit
+berücksichtigen. Diese Änderung kann den **beobachteten** Fehler nicht
+verursacht haben (sie kam später), wohl aber die Suche verkomplizieren.
+
+### e) `playCard` — `halt` überlebt die Aufwertung
 
 `if(o.halt) nu.halt = true;` — `halt` steht **nicht** in der Prüfsumme,
 wirkt aber über `trefferAuf` (`o.halt` → −12,5 % Schaden) auf `hp`. Eine
