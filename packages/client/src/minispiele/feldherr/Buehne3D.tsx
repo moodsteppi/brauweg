@@ -21,7 +21,7 @@
  *  - Kein clone() je Instanz auf Materialien oder Texturen — Object3D.clone()
  *    teilt Geometrie und Material, genau das wollen wir.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -536,6 +536,239 @@ function baueGelaende(art: string, bw = 1, bh = 1): THREE.Object3D {
   return gruppe;
 }
 
+/* ---------- Boden und Gras ----------
+ * Sichtentscheid vom 7. August 2026: Das Hell-Dunkel-Schachbrett bleibt,
+ * aber der Boden wird Rasen — eine gebackene Bodentextur plus EIN
+ * Instanzen-Feld aus kurzen 3D-Halmen.
+ *
+ *  - Textur: je Farbton DREI prozedurale Kachelvarianten (Fleckung,
+ *    Sprenkel, Grasstriche), je Feld eine davon in zufaelliger
+ *    Vierteldrehung gestempelt — kein Feld gleicht dem Nachbarn, und die
+ *    achtundvierzig halbtransparenten Schachbrett-Kacheln von vorher
+ *    schrumpfen auf EINEN Zeichenaufruf.
+ *  - Halme: EIN InstancedMesh (drei Dreiecke je Halm), Hoehe, Drehung,
+ *    Neigung und Farbe je Halm gestreut, der Farbton haengt am
+ *    Schachbrettfeld darunter. Kein Gras auf See, Fels, Vulkan, Krater.
+ *  - Wind im Vertex-Shader NACH der Instanzmatrix, damit alle Halme in
+ *    derselben Weltrichtung schwingen; die Normale zeigt nach oben, damit
+ *    jeder Halm im Licht liegt wie der Rasen selbst (stehende Flaechen
+ *    wuerden je nach Drehung fleckig dunkel).
+ *
+ * Alles hier ist Deko: eigener Wuerfel mit festem Korn (stabil je
+ * Sitzung), NIE der Spielzufall des Kerns.
+ */
+/* Die beiden Rasentoene des Schachbretts: dieselbe Farbwelt wie der
+ * 2D-Kern, aber staerker gespreizt — unter der Fleckung der Textur war
+ * der alte Abstand (gras zu grasAlt) kaum noch zu sehen. */
+const GRAS_HELL = '#456549';
+const GRAS_DUNKEL = '#37523d';
+/** Ohne Rasen bleiben Felder, auf denen kein Boden zu sehen waere. */
+const OHNE_GRAS = new Set(['see', 'gebirge', 'vulkan', 'krater']);
+const KACHEL_PX = 96;
+const HALME_JE_FELD = 150;
+
+/** Deko-Wuerfel, gleicher Aufbau wie zufall() im Kern, aber eigener Stand. */
+function wuerfel(saat: number): () => number {
+  let z = saat >>> 0;
+  return () => {
+    z = (z + 0x6d2b79f5) >>> 0;
+    let t = z;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Eine Kachelvariante: Grundton mit Fleckung, Sprenkeln und Grasstrichen. */
+function malKachel(farbe: string, wurf: () => number): HTMLCanvasElement {
+  const kachel = document.createElement('canvas');
+  kachel.width = kachel.height = KACHEL_PX;
+  const ctx = kachel.getContext('2d')!;
+  ctx.fillStyle = farbe;
+  ctx.fillRect(0, 0, KACHEL_PX, KACHEL_PX);
+  const grund = new THREE.Color(farbe);
+  const ton = new THREE.Color();
+  /** Randfarbe eines Verlaufs: DERSELBE Ton mit Deckkraft null — wer gegen
+   *  rgba(0,0,0,0) verlaufen laesst, mischt auf dem Weg dorthin Schwarz
+   *  hinein, und aus hellen Flecken werden dunkle Ringe. */
+  const durchsichtig = () => {
+    const r = Math.round(ton.r * 255), g = Math.round(ton.g * 255), b = Math.round(ton.b * 255);
+    return 'rgba(' + r + ',' + g + ',' + b + ',0)';
+  };
+  // Weiche Flecken: hellere und dunklere Stellen desselben Tons.
+  for (let i = 0; i < 6; i += 1) {
+    ton.copy(grund).offsetHSL((wurf() - 0.5) * 0.02, (wurf() - 0.5) * 0.08, (wurf() - 0.5) * 0.05);
+    const x = wurf() * KACHEL_PX, y = wurf() * KACHEL_PX, r = 9 + wurf() * 18;
+    const verlauf = ctx.createRadialGradient(x, y, 0, x, y, r);
+    verlauf.addColorStop(0, '#' + ton.getHexString());
+    verlauf.addColorStop(1, durchsichtig());
+    ctx.globalAlpha = 0.32;
+    ctx.fillStyle = verlauf;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // Sprenkel: feine Punkte, wie einzelne Halmspitzen von oben.
+  for (let i = 0; i < 110; i += 1) {
+    ton.copy(grund).offsetHSL((wurf() - 0.5) * 0.03, (wurf() - 0.5) * 0.1, (wurf() - 0.35) * 0.1);
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#' + ton.getHexString();
+    ctx.fillRect(wurf() * KACHEL_PX, wurf() * KACHEL_PX, 1 + wurf() * 1.6, 1 + wurf() * 1.6);
+  }
+  // Grasstriche: kurze, leicht gebogene Striche in Wuchsrichtung.
+  for (let i = 0; i < 26; i += 1) {
+    ton.copy(grund).offsetHSL((wurf() - 0.5) * 0.02, 0.04, 0.03 + wurf() * 0.05);
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = '#' + ton.getHexString();
+    ctx.lineWidth = 1;
+    const x = wurf() * KACHEL_PX, y = wurf() * KACHEL_PX;
+    const neig = (wurf() - 0.5) * 4, lang = 4 + wurf() * 5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + neig, y - lang * 0.6, x + neig * 1.6, y - lang);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  return kachel;
+}
+
+/** Das ganze Brett als eine Textur: Schachbrett aus gestempelten Varianten. */
+function baueBodenTextur(): THREE.CanvasTexture {
+  const wurf = wuerfel(20260807);
+  const varianten = [GRAS_DUNKEL, GRAS_HELL].map(
+    (farbe) => [0, 1, 2].map(() => malKachel(farbe, wurf)),
+  );
+  const brett = document.createElement('canvas');
+  brett.width = SPALTEN * KACHEL_PX;
+  brett.height = ZEILEN * KACHEL_PX;
+  const ctx = brett.getContext('2d')!;
+  for (let r = 0; r < ZEILEN; r += 1) {
+    for (let c = 0; c < SPALTEN; c += 1) {
+      const schar = varianten[(r + c) % 2];       // Paritaet wie das alte Schachbrett
+      const bild = schar[Math.floor(wurf() * 3)];
+      ctx.save();
+      ctx.translate(c * KACHEL_PX + KACHEL_PX / 2, r * KACHEL_PX + KACHEL_PX / 2);
+      ctx.rotate(Math.floor(wurf() * 4) * (Math.PI / 2));
+      ctx.drawImage(bild, -KACHEL_PX / 2, -KACHEL_PX / 2);
+      ctx.restore();
+    }
+  }
+  const textur = new THREE.CanvasTexture(brett);
+  textur.colorSpace = THREE.SRGBColorSpace;
+  textur.anisotropy = 4;
+  return textur;
+}
+
+/** Ein Halm: zwei Stufen plus Spitze, drei Dreiecke, Fusspunkt im Ursprung.
+ *  Die Vertexfarbe dunkelt die Wurzel ab und waermt die Spitze auf; sie
+ *  multipliziert sich mit der Instanzfarbe des Feldes. */
+const GEO_HALM = (() => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+    -0.016, 0, 0, 0.016, 0, 0,
+    -0.011, 0.55, 0.02, 0.011, 0.55, 0.02,
+    0, 1, 0.05,
+  ]), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array([
+    0.55, 0.62, 0.55, 0.55, 0.62, 0.55,
+    0.92, 0.96, 0.9, 0.92, 0.96, 0.9,
+    1.26, 1.22, 1.08,
+  ]), 3));
+  const normalen = new Float32Array(15);
+  for (let i = 1; i < 15; i += 3) normalen[i] = 1;
+  g.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
+  g.setIndex([0, 2, 1, 1, 2, 3, 2, 4, 3]);
+  return g;
+})();
+
+/** Weltzeit fuer den Wind — ein Uniform fuer alle Halme, je Bild gestellt. */
+const GRAS_ZEIT = { value: 0 };
+const STOFF_GRAS = (() => {
+  const stoff = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  stoff.onBeforeCompile = (shader) => {
+    shader.uniforms.uZeit = GRAS_ZEIT;
+    shader.vertexShader = 'uniform float uZeit;\n' + shader.vertexShader
+      // Jeder Halm liegt im Licht wie der Boden: Normale fest nach oben.
+      .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);')
+      // Wind NACH der Instanzmatrix (Weltrichtung), Staerke waechst zum
+      // Wipfel (biege = y ist am Fuss 0, an der Spitze 1) und mit der
+      // Halmhoehe aus der Instanzmatrix.
+      .replace('#include <project_vertex>', THREE.ShaderChunk.project_vertex.replace(
+        'mvPosition = modelViewMatrix * mvPosition;',
+        [
+          '#ifdef USE_INSTANCING',
+          'float biege = position.y * position.y;',
+          'float hoehe = length(vec3(instanceMatrix[1]));',
+          'float wind = sin(uZeit * 1.6 + mvPosition.x * 1.4 + mvPosition.z * 0.9) * 0.7',
+          '           + sin(uZeit * 2.9 + mvPosition.x * 2.3 + mvPosition.z * 1.6) * 0.3;',
+          'mvPosition.x += wind * biege * hoehe * 0.22;',
+          'mvPosition.z += sin(uZeit * 1.2 + mvPosition.x * 1.1 + mvPosition.z * 1.3) * biege * hoehe * 0.1;',
+          '#endif',
+          'mvPosition = modelViewMatrix * mvPosition;',
+        ].join('\n'),
+      ));
+  };
+  return stoff;
+})();
+
+/** Saet das Brett voll: ein InstancedMesh, gebaut je Partie (mit dem
+ *  Gelaende), denn erst das Gelaende sagt, wo kein Gras waechst. */
+function baueGras(
+  envs: readonly { type: string; cells: readonly { r: number; c: number }[] }[],
+  zeilen: number,
+  spalten: number,
+  spiegel: boolean,
+): THREE.InstancedMesh {
+  const gesperrt = new Set<string>();
+  for (const env of envs) {
+    if (!OHNE_GRAS.has(env.type)) continue;
+    for (const p of env.cells) gesperrt.add(p.r + '.' + p.c);
+  }
+  const felder: { x: number; z: number; hell: boolean }[] = [];
+  for (let r = 0; r < zeilen; r += 1) {
+    for (let c = 0; c < spalten; c += 1) {
+      if (gesperrt.has(r + '.' + c)) continue;
+      const zr = spiegel ? zeilen - 1 - r : r;
+      felder.push({ x: c, z: zr, hell: (zr + c) % 2 === 1 });
+    }
+  }
+  const halme = new THREE.InstancedMesh(GEO_HALM, STOFF_GRAS, felder.length * HALME_JE_FELD);
+  const wurf = wuerfel(20260811);
+  const lage = new THREE.Matrix4();
+  const ort = new THREE.Vector3();
+  const dreh = new THREE.Quaternion();
+  const kippung = new THREE.Euler();
+  const mass = new THREE.Vector3();
+  const farbe = new THREE.Color();
+  const hell = new THREE.Color(GRAS_HELL);
+  const dunkel = new THREE.Color(GRAS_DUNKEL);
+  let i = 0;
+  for (const feld of felder) {
+    // Jedes Feld bekommt zusaetzlich zur Halm-Streuung einen Hauch
+    // eigener Helligkeit — Nachbarn derselben Schachbrettfarbe
+    // unterscheiden sich dadurch auch im Gras, nicht nur in der Textur.
+    const feldTon = (wurf() - 0.5) * 0.045;
+    for (let k = 0; k < HALME_JE_FELD; k += 1) {
+      ort.set(feld.x + 0.04 + wurf() * 0.92, 0, feld.z + 0.04 + wurf() * 0.92);
+      kippung.set((wurf() - 0.5) * 0.3, wurf() * Math.PI * 2, (wurf() - 0.5) * 0.3);
+      dreh.setFromEuler(kippung);
+      mass.set(0.75 + wurf() * 0.5, 0.07 + wurf() * 0.08, 0.75 + wurf() * 0.5);
+      lage.compose(ort, dreh, mass);
+      halme.setMatrixAt(i, lage);
+      farbe.copy(feld.hell ? hell : dunkel)
+        .offsetHSL((wurf() - 0.5) * 0.03, (wurf() - 0.5) * 0.1, feldTon + (wurf() - 0.5) * 0.05);
+      halme.setColorAt(i, farbe);
+      i += 1;
+    }
+  }
+  halme.count = i;
+  halme.receiveShadow = true;
+  // Ein Brett voller Halme ist immer im Bild; die Huellkugel je Bild zu
+  // pruefen kostet mehr, als sie spart.
+  halme.frustumCulled = false;
+  halme.instanceMatrix.needsUpdate = true;
+  if (halme.instanceColor) halme.instanceColor.needsUpdate = true;
+  return halme;
+}
+
 /**
  * Kamera: fast senkrechte Vogelperspektive. Neigung ist die Abweichung von
  * der Senkrechten in Grad — am 7. August 2026 vom Auftraggeber am lebenden
@@ -572,6 +805,10 @@ function Szene({
 }): React.JSX.Element {
   const objekte = useRef(new THREE.Group());
   const gelaende = useRef(new THREE.Group());
+  const gras = useRef(new THREE.Group());
+  /** Bodentextur einmal je Buehne backen; beim Abbau freigeben. */
+  const bodenTextur = useMemo(() => baueBodenTextur(), []);
+  useEffect(() => () => bodenTextur.dispose(), [bodenTextur]);
   const effekte = useRef(new THREE.Group());
   const marken = useRef(new THREE.Group());
   const markenVorrat = useRef<THREE.Mesh[]>([]);
@@ -651,6 +888,8 @@ function Szene({
   }, [camera, gl, sitzungRef]);
 
   useFrame((drei) => {
+    // Windzeit fuer die Halme — Bildzeit, reine Deko.
+    GRAS_ZEIT.value = drei.clock.elapsedTime;
     // Uebersetzer an der aktuellen Sitzung anmelden (sie kann wechseln,
     // z. B. beim Neustart); beim Ausschalten der 3D-Ansicht meldet der
     // Effekt oben ihn wieder ab, und der Kern faellt auf 2D zurueck.
@@ -715,6 +954,12 @@ function Szene({
     const gelaendeStempel = G.envs.map((e) => e.type).join('|') + '#' + G.envs.length;
     if (gelaendeQuelle.current !== gelaendeStempel) {
       gelaendeQuelle.current = gelaendeStempel;
+      // Das Gras haengt am Gelaende (See, Fels und Vulkan bleiben kahl)
+      // und wird mit ihm neu gesaet. Die Halm-Puffer des alten Feldes
+      // muessen dabei von der Grafikkarte, Geometrie und Stoff sind geteilt.
+      for (const alt of gras.current.children) (alt as THREE.InstancedMesh).dispose();
+      gras.current.clear();
+      gras.current.add(baueGras(G.envs, zeilen, G.grid[0].length, spiegel));
       gelaende.current.clear();
       for (const env of G.envs) {
         if (BLOCKWEISE.has(env.type)) {
@@ -1337,27 +1582,18 @@ function Szene({
           <meshLambertMaterial color={FARBE.erde} />
         </mesh>
         {/**
-         * Der Rasen ist EIN Feld, das die Schatten aufnimmt; die Kacheln
-         * darueber sind nur noch Farbe. Ein Schattenempfaenger statt
-         * sechsundneunzig spart Rechenzeit und vermeidet Nahtartefakte an
-         * den Kachelraendern.
+         * Der Rasen ist EIN Feld, das die Schatten aufnimmt. Das
+         * Schachbrett steckt seit dem Rasen-Umbau in der gebackenen
+         * Bodentextur (drei Varianten je Farbton, je Feld gedreht
+         * gestempelt) — ein Zeichenaufruf statt neunundvierzig, und
+         * weiterhin keine Nahtartefakte an den Kachelraendern. Die kurzen
+         * 3D-Halme darueber liefert das Instanzen-Feld in `gras`.
          */}
         <mesh position={[SPALTEN / 2, 0.0005, ZEILEN / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[SPALTEN, ZEILEN]} />
-          <meshLambertMaterial color={FARBE.grasAlt} />
+          <meshLambertMaterial map={bodenTextur} />
         </mesh>
-        {/* Felder als Schachbrett der beiden Grasfarben */}
-        {Array.from({ length: ZEILEN * SPALTEN }, (_, i) => {
-          const r = Math.floor(i / SPALTEN);
-          const c = i % SPALTEN;
-          if ((r + c) % 2 === 0) return null;      // nur jede zweite Kachel faerbt
-          return (
-            <mesh key={i} position={[c + 0.5, 0.0015, r + 0.5]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[1, 1]} />
-              <meshBasicMaterial color={FARBE.gras} transparent opacity={0.5} />
-            </mesh>
-          );
-        })}
+        <primitive object={gras.current} />
         {/* Mittellinie */}
         <mesh position={[SPALTEN / 2, 0.01, ZEILEN / 2]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[SPALTEN, 0.06]} />
