@@ -1,5 +1,9 @@
 # Feldherr — Übergabe
 
+> **Offener Fehler (7. August 2026): Netzpartien werden wieder strittig.**
+> Eigene Übergabe dazu: [`FELDHERR-BUG-STRITTIG.md`](FELDHERR-BUG-STRITTIG.md).
+
+
 Stand: 5. August 2026, abends. Das Netzspiel **ist gelaufen**: zwei Browser,
 ein Tisch, zwei vollständige Partien, Abrechnung geprüft. Der Zweig ist in
 `staging` gemergt.
