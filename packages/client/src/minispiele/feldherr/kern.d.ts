@@ -148,6 +148,16 @@ export interface FeldherrLeseblick {
     art: string; own: number; ok: boolean; merge: boolean; stufe: number;
     cells: { r: number; c: number }[];
   }[];
+  /**
+   * Partikel (Rauch, Funken, Staub, Splitter, Glut) in BILDSCHIRM-
+   * koordinaten des 2D-Renderers; mit `raster()` in Brettmasse umrechnen.
+   */
+  readonly partikel: readonly {
+    x: number; y: number; z: number; r: number;
+    kind: string; life: number; max: number; rot: number;
+  }[];
+  /** Raster des 2D-Renderers: Ursprung und Zellmasse in Bildschirmpixeln. */
+  raster(): { ox: number; oy: number; tw: number; th: number };
   /** Taktzeiten des Muenzwurfs, damit 3D dieselbe Uhr benutzt wie coinTick. */
   readonly muenze: { flug: number; land: number; liegt: number; zeigen: number };
   /** Eigener Sitz, oder null wenn das Brett beiden gehoert (zu zweit am Geraet). */

@@ -1420,7 +1420,11 @@ function markenListe(){
         else mark(r,c,'#bfe6ff',.10,false);                   // reicht schon jetzt
       }
     }
-    for(const p of d.prev.cells) mark(p.r,p.c,col,.34,true);
+    /* Das Aufwertungsziel glüht golden statt in Spielerfarbe — dasselbe
+     * Signal wie markAufwertung, aber als Bodenmarke, damit es auch die
+     * 3D-Bühne bekommt. */
+    const zielFarbe = (d.prev.merge && d.prev.ok) ? '#ffd977' : col;
+    for(const p of d.prev.cells) mark(p.r,p.c,zielFarbe,.34,true);
   }
   return liste;
 }

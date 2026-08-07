@@ -238,13 +238,26 @@ und bleibt bedienbar — geprüft mit `elementFromPoint`.
 Stand 7. August 2026, aus einem Durchgang durch `darstellung.js`. Die
 Reihenfolge ist ein Vorschlag: erst was man im Spiel vermisst, dann Kür.
 
+**Erledigt am 7. August 2026**
+
+* **Partikel** (`burst`/`drawPT`): Rauch, Funken, Staub, Splitter, Glut
+  laufen in 3D. Zwei `InstancedMesh`-Schwärme, je ein Zeichenaufruf:
+  *hell* additiv gemischt (Verblassen = Farbe gegen Schwarz ziehen, weil
+  eine InstancedMesh keine Deckkraft je Teilchen kennt) und *dunkel*
+  normal gemischt für Gesteinssplitter, die additiv unsichtbar wären.
+  `PT` trägt Bildschirmkoordinaten; `lesen().raster()` liefert Ursprung
+  und Zellmaß des 2D-Renderers, damit 3D zurückrechnen kann. Wichtig:
+  Die Physik (`updatePT`) läuft in `animate()`, also im **Rechenpfad** —
+  die Teilchen fliegen auch, wenn der 2D-Renderer gar nicht zeichnet.
+* **Aufwertungsziel:** Die Bodenmarke des Ziels glüht **golden** statt in
+  Spielerfarbe (dieselbe Aussage wie `markAufwertung`), und darüber
+  schwebt ein wippender grüner Pfeil (`pfeilHoch`).
+
 **Spürbar im Spiel**
 
-1. **Partikel** (`burst`/`drawPT`): Rauch, Funken, Staub, Splitter, Glut.
-   Der ganze Wirkungspfad existiert im Kern (die Wirkungs-Haken liefern
-   die Anlässe bereits), in 3D fehlt die Darstellung komplett.
-2. **Kanonenkugel** (`ball`-Effekt): Der Eintrag trägt 2D-Pixel­koordinaten
-   (`ax/ay/bx/by`) — für 3D müssen Brettkoordinaten mit hinein.
+1. **Kanonenkugel** (`ball`-Effekt): Der Eintrag trägt 2D-Pixel­koordinaten
+   (`ax/ay/bx/by`) — für 3D müssen Brettkoordinaten mit hinein. (Der
+   `raster()`-Weg der Partikel wäre auch hier gangbar.)
 3. **Marschbewegung** (`e.mt`, `MOVE_T`): 2D interpoliert zwischen Feldern
    mit Beschleunigung; 3D zieht nur weich nach.
 4. **Aufleuchten bei Treffern** (`e.flash`) und **Wackeln** (`e.nudge`) —

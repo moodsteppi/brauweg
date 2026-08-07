@@ -2681,7 +2681,11 @@ function markenListe(){
         else mark(r,c,'#bfe6ff',.10,false);                   // reicht schon jetzt
       }
     }
-    for(const p of d.prev.cells) mark(p.r,p.c,col,.34,true);
+    /* Das Aufwertungsziel glüht golden statt in Spielerfarbe — dasselbe
+     * Signal wie markAufwertung, aber als Bodenmarke, damit es auch die
+     * 3D-Bühne bekommt. */
+    const zielFarbe = (d.prev.merge && d.prev.ok) ? '#ffd977' : col;
+    for(const p of d.prev.cells) mark(p.r,p.c,zielFarbe,.34,true);
   }
   return liste;
 }
@@ -4487,6 +4491,16 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
         }
         return liste;
       },
+      /* Partikel (Rauch, Funken, Staub, Splitter, Glut). Sie leben in PT,
+       * nicht in G — reine Deko, nie Spielzufall. Ihre Physik treibt
+       * updatePT() aus animate(), also im RECHENpfad: Die 3D-Buehne
+       * bekommt sie auch dann, wenn der 2D-Renderer gar nicht zeichnet. */
+      partikel: PT,
+      /* Das Raster des 2D-Renderers. Partikel tragen Bildschirmkoordinaten
+       * (burst wird mit midX/midY gerufen); damit rechnet die 3D-Buehne
+       * sie in Brettkoordinaten zurueck. Wird je Bild frisch gelesen, weil
+       * resize() die Werte aendert. */
+      raster: () => ({ ox: OX, oy: OY, tw: TW, th: TH }),
       /* Taktzeiten des Muenzwurfs (Flug, Aufschlag, Anzeige) — damit die
        * 3D-Buehne dieselbe Uhr benutzt wie coinTick und nicht daneben laeuft. */
       muenze: MUENZE,

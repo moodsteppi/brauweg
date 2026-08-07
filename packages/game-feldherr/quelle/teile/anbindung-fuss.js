@@ -428,6 +428,16 @@
         }
         return liste;
       },
+      /* Partikel (Rauch, Funken, Staub, Splitter, Glut). Sie leben in PT,
+       * nicht in G — reine Deko, nie Spielzufall. Ihre Physik treibt
+       * updatePT() aus animate(), also im RECHENpfad: Die 3D-Buehne
+       * bekommt sie auch dann, wenn der 2D-Renderer gar nicht zeichnet. */
+      partikel: PT,
+      /* Das Raster des 2D-Renderers. Partikel tragen Bildschirmkoordinaten
+       * (burst wird mit midX/midY gerufen); damit rechnet die 3D-Buehne
+       * sie in Brettkoordinaten zurueck. Wird je Bild frisch gelesen, weil
+       * resize() die Werte aendert. */
+      raster: () => ({ ox: OX, oy: OY, tw: TW, th: TH }),
       /* Taktzeiten des Muenzwurfs (Flug, Aufschlag, Anzeige) — damit die
        * 3D-Buehne dieselbe Uhr benutzt wie coinTick und nicht daneben laeuft. */
       muenze: MUENZE,

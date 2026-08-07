@@ -117,6 +117,29 @@ const GEO_HALT = new THREE.RingGeometry(0.24, 0.44, 32);
 const GEO_MARKE = new THREE.PlaneGeometry(1, 1);
 
 /**
+ * Partikel. Zwei Schwaerme, weil sie verschieden verblassen muessen:
+ *
+ *  hell  — Funken, Staub, Glut und Rauch: additiv gemischt. Verblassen
+ *          heisst hier, die Farbe gegen Schwarz zu ziehen; additiv ist
+ *          Schwarz unsichtbar. So kommt man ohne Deckkraft je Teilchen aus,
+ *          die eine InstancedMesh nicht hergibt.
+ *  dunkel— Gesteinssplitter: normal gemischt, sonst waeren dunkle Truemmer
+ *          additiv gar nicht zu sehen. Sie verblassen ueber die Groesse.
+ *
+ * Ein Zeichenaufruf je Schwarm statt Hunderter Einzelobjekte.
+ */
+const PARTIKEL_MAX = 340;
+const GEO_PARTIKEL = new THREE.SphereGeometry(0.5, 6, 4);
+/** Farben aus drawPT, damit beide Ansichten dieselbe Glut zeigen. */
+const PT_FARBE: Record<string, [number, number, number]> = {
+  smoke: [152 / 255, 148 / 255, 143 / 255],
+  rock: [58 / 255, 48 / 255, 42 / 255],
+  emberJung: [1, 220 / 255, 140 / 255],
+  emberAlt: [1, 120 / 255, 40 / 255],
+  funke: [1, 236 / 255, 190 / 255],
+};
+
+/**
  * Muenze des Rundenanfangs. Die Scheibe liegt flach (Zylinderachse ist Y),
  * beim Wurf dreht sie um X. Drei Materialien: Rand, Kopfseite (oben),
  * Zahlseite (unten) — so ist im Bild ablesbar, was gefallen ist.
@@ -471,6 +494,12 @@ function Szene({
   const hilfsPunkt = useRef(new THREE.Vector3());
   const geister = useRef(new THREE.Group());
   const geisterLager = useRef(new Map<string, { obj: THREE.Object3D; stoff: THREE.MeshLambertMaterial }>());
+  const pfeile = useRef(new THREE.Group());
+  const pfeilVorrat = useRef<THREE.Mesh[]>([]);
+  const hellRef = useRef<THREE.InstancedMesh>(null);
+  const dunkelRef = useRef<THREE.InstancedMesh>(null);
+  const hilfsMatrix = useRef(new THREE.Matrix4());
+  const hilfsFarbe = useRef(new THREE.Color());
   const imBild = useRef(new Map<number, {
     obj: THREE.Group; art: string; lvl: number;
     ueber: ObjektOverlays; bx: number; bz: number;
@@ -814,6 +843,90 @@ function Szene({
       geist.obj.position.set(xVon(c0, bw), 0.01, zVon(r0, bh));
     }
 
+    // Aufwertungspfeil: Fällt die Karte auf ein Objekt, das dadurch
+    // aufsteigt, schwebt ein grüner Pfeil darüber (2D: pfeilHoch). Das
+    // goldene Glühen darunter liefert bereits die Bodenmarke.
+    let pfeilZahl = 0;
+    for (const v of vorschau) {
+      if (!v.merge || !v.ok) continue;
+      let r0 = Infinity, c0 = Infinity, r1 = -Infinity, c1 = -Infinity;
+      for (const p of v.cells) {
+        r0 = Math.min(r0, p.r); c0 = Math.min(c0, p.c);
+        r1 = Math.max(r1, p.r); c1 = Math.max(c1, p.c);
+      }
+      const bw = c1 - c0 + 1, bh = r1 - r0 + 1;
+      let pfeil = pfeilVorrat.current[pfeilZahl];
+      if (!pfeil) {
+        pfeil = new THREE.Mesh(GEO.kegel, new THREE.MeshBasicMaterial({ color: '#5fe0a8' }));
+        pfeil.rotation.x = Math.PI;             // Spitze nach unten
+        pfeilVorrat.current[pfeilZahl] = pfeil;
+        pfeile.current.add(pfeil);
+      }
+      pfeil.visible = true;
+      pfeil.scale.set(0.42, 0.5, 0.42);
+      pfeil.position.set(
+        xVon(c0, bw),
+        1.5 + 0.12 * Math.sin(drei.clock.elapsedTime * 5),   // sanftes Wippen
+        zVon(r0, bh),
+      );
+      pfeilZahl += 1;
+    }
+    for (let i = pfeilZahl; i < pfeilVorrat.current.length; i++) {
+      pfeilVorrat.current[i].visible = false;
+    }
+
+    // Partikel: Rauch, Funken, Staub, Splitter, Glut. Positionen kommen in
+    // Bildschirmkoordinaten des 2D-Renderers und werden über sein Raster
+    // in Brettmasse zurückgerechnet.
+    const hell = hellRef.current, dunkel = dunkelRef.current;
+    if (hell && dunkel && blick.partikel && blick.raster) {
+      const ra = blick.raster();
+      let nh = 0, nd = 0;
+      if (ra.tw > 0 && ra.th > 0) {
+        for (const p of blick.partikel) {
+          const k = Math.max(0, Math.min(1, p.life / p.max));
+          const a = 1 - k * k;                    // wie drawPT
+          const spalte = (p.x - ra.ox) / ra.tw;
+          const zeileWelt = (p.y - ra.oy) / ra.th;
+          const z = spiegel ? zeilen - zeileWelt : zeileWelt;
+          const hoehe = p.z / ra.th;
+          const gross = p.r / ra.tw;
+          if (p.kind === 'rock') {
+            if (nd >= PARTIKEL_MAX) continue;
+            // Splitter verblassen über die Größe — additiv wären sie unsichtbar.
+            const s = gross * 2 * a;
+            hilfsMatrix.current.makeScale(s, s, s);
+            hilfsMatrix.current.setPosition(spalte, hoehe + s / 2, z);
+            dunkel.setMatrixAt(nd, hilfsMatrix.current);
+            const f = PT_FARBE.rock;
+            dunkel.setColorAt(nd, hilfsFarbe.current.setRGB(f[0], f[1], f[2]));
+            nd += 1;
+          } else {
+            if (nh >= PARTIKEL_MAX) continue;
+            let f: [number, number, number];
+            let staerke = a;
+            if (p.kind === 'smoke') { f = PT_FARBE.smoke; staerke = a * 0.35; }
+            else if (p.kind === 'ember') f = k < 0.5 ? PT_FARBE.emberJung : PT_FARBE.emberAlt;
+            else f = PT_FARBE.funke;
+            const schrumpf = p.kind === 'smoke' ? 1 : p.kind === 'ember' ? 1 - k * 0.4 : 1 - k * 0.5;
+            const s = gross * 2 * schrumpf;
+            hilfsMatrix.current.makeScale(s, s, s);
+            hilfsMatrix.current.setPosition(spalte, hoehe + s / 2, z);
+            hell.setMatrixAt(nh, hilfsMatrix.current);
+            hell.setColorAt(nh, hilfsFarbe.current.setRGB(
+              f[0] * staerke, f[1] * staerke, f[2] * staerke));
+            nh += 1;
+          }
+        }
+      }
+      hell.count = nh;
+      dunkel.count = nd;
+      hell.instanceMatrix.needsUpdate = true;
+      dunkel.instanceMatrix.needsUpdate = true;
+      if (hell.instanceColor) hell.instanceColor.needsUpdate = true;
+      if (dunkel.instanceColor) dunkel.instanceColor.needsUpdate = true;
+    }
+
     // Hinweisschilder (Reichweitengewinn, Erdwärme, Walddeckung, Preis) —
     // welche Ansage auf welchem Feld steht, entscheidet der Kern.
     const schilderListe = blick.schilder ? blick.schilder() : [];
@@ -933,7 +1046,26 @@ function Szene({
         <primitive object={marken.current} />
         <primitive object={objekte.current} />
         <primitive object={geister.current} />
+        <primitive object={pfeile.current} />
         <primitive object={effekte.current} />
+        {/* Partikel: zwei Schwaerme, je ein Zeichenaufruf. count wird je
+            Bild gesetzt; frisch angelegt zeigen sie nichts. */}
+        <instancedMesh
+          ref={hellRef}
+          args={[GEO_PARTIKEL, undefined, PARTIKEL_MAX]}
+          count={0}
+          frustumCulled={false}
+        >
+          <meshBasicMaterial blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        </instancedMesh>
+        <instancedMesh
+          ref={dunkelRef}
+          args={[GEO_PARTIKEL, undefined, PARTIKEL_MAX]}
+          count={0}
+          frustumCulled={false}
+        >
+          <meshLambertMaterial />
+        </instancedMesh>
         <primitive object={schilder.current} />
         {/* Zielfeld-Marker unter dem Zeiger */}
         <mesh ref={marker} visible={false} rotation={[-Math.PI / 2, 0, 0]}>
