@@ -62,6 +62,53 @@ export interface FeldherrNetz {
   verlassen?(): void;
 }
 
+/** Ein Spielobjekt im Zustand — nur die Felder, die die Darstellung braucht. */
+export interface FeldherrObjekt {
+  readonly id: number;
+  readonly type: string;
+  readonly owner: number;
+  readonly r: number;
+  readonly c: number;
+  readonly w?: number;
+  readonly h?: number;
+  readonly lvl: number;
+  readonly hp: number;
+  readonly halt?: boolean;
+  readonly turm?: boolean;
+  readonly berg?: boolean;
+  readonly [weitere: string]: unknown;
+}
+
+/** Ein Gelaendeblock im Zustand. */
+export interface FeldherrGelaende {
+  readonly type: string;
+  readonly r0: number;
+  readonly c0: number;
+  readonly w: number;
+  readonly h: number;
+  readonly cells: readonly { readonly r: number; readonly c: number }[];
+  readonly [weitere: string]: unknown;
+}
+
+/**
+ * Lesefenster fuer den 3D-Renderer (Stufe 2): Zustand, Phase, Spiegelung,
+ * Takt und der Interpolationsanteil zwischen zwei Takten. NUR LESEN — wer
+ * hierueber schreibt, faehrt am Gleichschritt vorbei.
+ */
+export interface FeldherrLeseblick {
+  readonly zustand: {
+    readonly grid: readonly unknown[][];
+    readonly ents: readonly FeldherrObjekt[];
+    readonly envs: readonly FeldherrGelaende[];
+    readonly res: readonly number[];
+    readonly [weitere: string]: unknown;
+  } | null;
+  readonly phase: string;
+  readonly spiegel: boolean;
+  readonly takt: number;
+  readonly restAnteil: number;
+}
+
 export interface FeldherrSitzung {
   /** Haelt die Bildschleife an. Ohne diesen Aufruf laeuft sie weiter. */
   beenden(): void;
@@ -71,6 +118,7 @@ export interface FeldherrSitzung {
   pulsAnnehmen(sitz: number, daten: FeldherrPuls): void;
   takt(): number;
   pruefsumme(): string;
+  lesen(): FeldherrLeseblick;
 }
 
 export declare function starteFeldherr(optionen: {

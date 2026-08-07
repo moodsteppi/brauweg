@@ -105,6 +105,29 @@ das ist der ganze Trick hinter „echtzeitfähig".
   Zeichenliste kann (Truppen, Bauten, Gelände, Effekte, Vorschau,
   Markierungen, Spiegelung für Sitz 0).
 
+**Stand 7. August 2026: Gerüst umgesetzt und im Client verifiziert.**
+`packages/client/src/minispiele/feldherr/Buehne3D.tsx` liest je Bild
+`sitzung.lesen()` und stellt Brett, Gelände, Bauten und Truppen dar —
+Platzhalterkörper, nur der Ritter kommt als GLB. Umschalter „3D“ im
+Feldherr-Bildschirm (beide Modi); die Ansicht liegt über dem `#stage` des
+Kerns, lässt Zeiger durch (`pointer-events: none`) — bedient wird weiter
+der 2D-Pfad samt HUD und Bau-Vorschau. Geprüft per KI-Partie im Client:
+Gelände je Partie neu gebaut, Objekte folgen der Simulation, Ritter-GLB
+gerendert samt Spielerring.
+
+**Ritter-GLB (Lieferung vom 7. August, liegt lokal unter
+`packages/client/public/3d/feldherr/ritter.glb`, bewusst NICHT
+eingecheckt):** Pivot und Maßstab stimmen (Bodenmitte, ~1 Einheit hoch),
+aber 3,7 MB statt ≤ 200 kB (Textur), 4 724 Dreiecke, keine Clips
+`stehen`/`gehen`/`schlagen`, keine Materialien `spieler`/`stufe` —
+Nacharbeit nach `docs/ASSETS-FELDHERR-3D.md`, erst dann einchecken
+(Regel 4: einmal in der Historie, immer in der Historie).
+
+**Offen in Stufe 2:** Kamera-Feinschliff (Hochformat zuerst),
+Marsch-Interpolation über `restAnteil` und `e.mt` statt Nachzieh-Glättung,
+HP-Anzeige, Effekte (Treffer, Ringe, Münzflug) über die Wirkungs-Haken auch
+in 3D, `bogen-turm`/Mörser-Details, Sitz-0-Spiegelung im Netz gegenprüfen.
+
 ### Stufe 3 — Ausmustern
 
 Erst wenn 3D vollständig ist: alten Renderer entfernen, Effekte nativ in 3D.

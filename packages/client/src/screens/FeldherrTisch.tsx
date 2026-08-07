@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import { Buehne3D } from '../minispiele/feldherr/Buehne3D';
 import {
   HUELLE,
   STIL,
@@ -55,6 +56,10 @@ const SCREEN_STIL = `
 .feldherr-zurueck{position:fixed;left:10px;top:10px;z-index:60;padding:8px 14px;border:0;
   border-radius:9px;color:#dfd6c2;background:rgba(16,25,32,.85);
   box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui}
+.feldherr-dreid{position:fixed;left:10px;top:50px;z-index:60;padding:8px 14px;border:0;
+  border-radius:9px;color:#dfd6c2;background:rgba(16,25,32,.85);
+  box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui}
+.feldherr-dreid.an{color:#fff;background:linear-gradient(180deg,#f4655c,#e8433c)}
 .feldherr-hinweis{position:fixed;left:50%;bottom:16%;transform:translateX(-50%);z-index:60;
   max-width:min(420px,90vw);padding:12px 16px;border-radius:12px;text-align:center;
   color:#dfd6c2;background:rgba(12,20,26,.92);box-shadow:0 0 0 1px #2a3b46;
@@ -86,6 +91,8 @@ export function FeldherrTisch({
    * Brett ab.
    */
   const feld: Feld = 'mittel';
+  /** 3D-Vorschau (Stufe 2): Ansicht ueber dem 2D-Brett, Bedienung bleibt 2D. */
+  const [dreiD, setDreiD] = useState(false);
 
   /** Offene Netz-Tische; null heisst noch nie geladen. */
   const [tische, setTische] = useState<TableRow[] | null>(null);
@@ -412,7 +419,14 @@ export function FeldherrTisch({
         <button className="feldherr-zurueck" onClick={onBack}>
           ‹ Zurück
         </button>
+        <button
+          className={'feldherr-dreid' + (dreiD ? ' an' : '')}
+          onClick={() => setDreiD((v) => !v)}
+        >
+          {dreiD ? '2D' : '3D'}
+        </button>
         <div ref={buehne} />
+        {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
         {stockt && !fremdesEnde && !strittigLokal && (
           <div className="feldherr-hinweis">
             Warte auf den Gegner … die Partie rechnet erst weiter, wenn sich
@@ -445,7 +459,14 @@ export function FeldherrTisch({
         <button className="feldherr-zurueck" onClick={() => setModus(null)}>
           ‹ Zurück
         </button>
+        <button
+          className={'feldherr-dreid' + (dreiD ? ' an' : '')}
+          onClick={() => setDreiD((v) => !v)}
+        >
+          {dreiD ? '2D' : '3D'}
+        </button>
         <div ref={buehne} />
+        {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
       </main>
     );
   }
