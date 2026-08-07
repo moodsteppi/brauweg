@@ -14,7 +14,7 @@
 
 export const STIL = "\n:root{\n  --nacht:#070c11; --linie:#1e2c36; --sand:#dfd6c2; --tinte:#8397a4;\n  --p1:#e8433c; --p2:#3d86ff; --ring:#dff2ff;\n}\n*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}\nhtml,body{height:100%;overflow:hidden;background:#05080b;\n  font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;color:var(--sand);\n  touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}\n#app{position:fixed;inset:0;display:flex;flex-direction:column}\n\n.hud{flex:0 0 auto;position:relative;z-index:5;\n  background:linear-gradient(180deg,#0e161c 0%,#0a1116 100%);\n  box-shadow:0 0 0 1px #1a262e, 0 8px 26px -14px #000 inset}\n.hud.top{background:linear-gradient(0deg,#0e161c 0%,#0a1116 100%)}\n.hud::after{content:\"\";position:absolute;left:0;right:0;height:1px;\n  background:linear-gradient(90deg,transparent,#2c3d48 20%,#2c3d48 80%,transparent)}\n.hud.bot::after{top:0}.hud.top::after{bottom:0}\n/* Netzspiel, Sitz 0: Brett gespiegelt (siehe SPIEGEL bei der Projektion) —\n   dann wandert auch die eigene Leiste nach unten. Die Klasse setzt die\n   Netzanbindung; örtlich kommt sie nie vor. */\n#app.gespiegelt .hud.top{order:3}\n#app.gespiegelt #stage{order:2}\n#app.gespiegelt .hud.bot{order:1}\n#app.gespiegelt .hud.top::after{bottom:auto;top:0}\n#app.gespiegelt .hud.bot::after{top:auto;bottom:0}\n.inner{padding:7px 9px 8px}\n.hud.top .inner{transform:rotate(180deg)}\n.bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}\n.tag{font:700 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;\n  padding:4px 7px;border-radius:3px;color:#080c10}\n.p1 .tag{background:linear-gradient(180deg,#ff6f62,var(--p1));color:#fff}\n.p2 .tag{background:linear-gradient(180deg,#71a8ff,var(--p2));color:#fff}\n.res{font:700 16px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em;\n  text-shadow:0 0 14px currentColor}\n.res .cap{font-size:10px;opacity:.5}\n.res.full{animation:pulse 1.1s ease-in-out infinite}\n@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}\n.p1 .res{color:#ff9c92}.p2 .res{color:#a8caff}\n.rate{font:600 9px/1 ui-monospace,Menlo,monospace;color:var(--tinte);letter-spacing:.06em}\n.dreh{margin-left:auto;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.dreh svg{display:block;opacity:.8;transition:transform .16s ease}\n.dreh.hoch svg{transform:rotate(90deg)}\n.dreh.an{background:linear-gradient(180deg,#7fd8b4,#3aa87e);box-shadow:0 0 14px -4px #3aa87e}\n.dreh.an svg{opacity:1}\n.raze{margin-left:6px;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.raze svg{display:block;opacity:.75}\n.raze.on{background:linear-gradient(180deg,#ff7a5e,#e8433c);box-shadow:0 0 16px -4px #e8433c}\n.raze.on svg{opacity:1}\n.raze.on svg path{fill:#fff}\n.hint{margin-left:6px;font:500 9px/1.3 system-ui;color:#93a7b3;text-align:right;max-width:38%}\n.cards{display:flex;gap:4px}\n.card{flex:1 1 0;min-width:0;position:relative;overflow:hidden;padding:5px 2px 6px;\n  border-radius:8px;text-align:center;\n  background:linear-gradient(180deg,#1b2831 0%,#131d24 100%);\n  box-shadow:0 0 0 1px #26363f, 0 1px 0 #2f4250 inset, 0 6px 12px -8px #000;\n  transition:transform .1s ease,box-shadow .14s,opacity .14s}\n.card .cost{font:800 11.5px/1 ui-monospace,Menlo,monospace;padding-right:14px;padding-left:14px}\n.p1 .card .cost{color:#ff8b80}.p2 .card .cost{color:#8fbaff}\n.card svg{display:block;margin:3px auto 2px;opacity:.92}\n.card .nm{font:700 8px/1 system-ui;letter-spacing:.04em;text-transform:uppercase;color:#d5e4ee}\n.card .st{font:500 6.8px/1.4 ui-monospace,Menlo,monospace;color:#7b8e9a;margin-top:2px;white-space:nowrap}\n.card .fill{position:absolute;left:0;bottom:0;height:2px;width:0%;transition:width .18s linear;opacity:.75}\n.card .lim{position:absolute;top:0;right:0;min-width:17px;height:15px;padding:0 3px;\n  display:grid;place-items:center;box-sizing:border-box;\n  font:800 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;\n  color:#e2eef6;background:#22333d;border-radius:0 8px 0 7px;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.07)}\n.card .lim.voll{color:#fff;background:#b8332c;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.14)}\n.p1 .card .fill{background:var(--p1)}.p2 .card .fill{background:var(--p2)}\n.card.off{opacity:.36}\n.card.drag{opacity:.35;transform:scale(.94)}\n.card.leer{opacity:.9;background:linear-gradient(180deg,#2a1418,#1d0e11);\n  box-shadow:0 0 0 1px #6d2a2f, 0 1px 0 #4a1e22 inset}\n.card.leer .nm,.card.leer .st{color:#a9737a}\n.card.leer .cost{color:#ff7a72}\n.card.leer .lim{color:#fff;background:#8e2c2c}\n.card.leer::after{content:\"\";position:absolute;left:-12%;top:50%;width:124%;height:2px;\n  background:#e8433c;transform:rotate(-24deg);box-shadow:0 0 8px #e8433c}\n.card.leer svg{opacity:.4}\n.card.rdy{box-shadow:0 0 0 1px #3d5464, 0 1px 0 #3b5265 inset, 0 6px 14px -8px #000}\n.card.arm{transform:translateY(-4px)}\n.p1 .card.arm{box-shadow:0 0 0 1.5px var(--p1),0 0 20px -4px var(--p1),0 1px 0 #4a3a1e inset}\n.p2 .card.arm{box-shadow:0 0 0 1.5px var(--p2),0 0 20px -4px var(--p2),0 1px 0 #3a2a4e inset}\n\n#stage{flex:1 1 auto;position:relative;min-height:0}\ncanvas{position:absolute;inset:0;width:100%;height:100%;display:block}\n\n#ghost{position:fixed;pointer-events:none;z-index:60;transform:translate(-50%,-50%);display:none}\n#ghost .gg{padding:7px 11px;border-radius:9px;font:700 10px/1 system-ui;letter-spacing:.08em;\n  text-transform:uppercase;background:rgba(20,32,40,.92);color:#e6f0f6;\n  box-shadow:0 0 0 1px #3f5665,0 10px 20px -8px #000}\n\n#uhr{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:19;\n  padding:3px 10px;border-radius:8px;pointer-events:none;\n  font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;\n  color:#cfe0ea;background:rgba(12,20,26,.72);box-shadow:0 0 0 1px #24343d}\n#uhr[hidden]{display:none}\n#menuBtn{position:absolute;right:3px;top:2px;z-index:20;opacity:.86;\n  width:28px;height:28px;border-radius:9px;color:#96aab7;font:700 13px/1 system-ui;\n  background:rgba(16,25,32,.8);border:0;box-shadow:0 0 0 1px #26363f;display:grid;place-items:center}\n\n.ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;\n  padding:22px;background:radial-gradient(120% 80% at 50% 0%,rgba(20,34,44,.92),rgba(4,7,10,.96));\n  backdrop-filter:blur(4px)}\n.ov[hidden]{display:none}\n.sheet{width:min(430px,100%);max-height:100%;overflow:auto;padding:22px 19px;border-radius:16px;\n  background:linear-gradient(180deg,#111c23,#0b1318);\n  box-shadow:0 0 0 1px #22323c,0 30px 60px -30px #000, 0 1px 0 #2b3d49 inset}\n.eyebrow{font:700 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.34em;color:#7b8e9a;text-transform:uppercase}\nh1{font:900 34px/.92 system-ui;letter-spacing:-.035em;margin:10px 0 4px}\nh1 em{font-style:normal;background:linear-gradient(180deg,#ff8b80,var(--p1));\n  -webkit-background-clip:text;background-clip:text;color:transparent}\nh2{font:800 18px/1.15 system-ui;letter-spacing:-.015em;margin-bottom:9px}\n.sub{font:500 12px/1.55 system-ui;color:#93a7b3;margin-bottom:18px}\np.tx{font:400 13px/1.6 system-ui;color:#c8d7e0;margin-bottom:9px}\np.tx b{color:#eae2d0;font-weight:650}\nul.tx{margin:0 0 10px 16px;font:400 12.5px/1.6 system-ui;color:#c8d7e0}\nul.tx li{margin-bottom:5px}\n.btn{display:block;width:100%;padding:13px;border-radius:10px;border:0;margin-top:9px;\n  font:700 13px/1 system-ui;letter-spacing:.03em;color:var(--sand);\n  background:linear-gradient(180deg,#1c2932,#141f26);box-shadow:0 0 0 1px #2a3b46,0 1px 0 #324754 inset}\n.btn.pri{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 24px -8px var(--p1)}\n.btn.gho{background:none;box-shadow:none;color:#7b8e9a}\n.hilfe{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;\n  font:800 17px/1 system-ui;color:#9fb3c0;background:#16222a;box-shadow:0 0 0 1px #2a3b46;\n  display:grid;place-items:center;z-index:2}\n.hilfe:active{background:#1e2d38}\n.seglbl{font:600 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.26em;color:#7b8e9a;\n  text-transform:uppercase;margin-bottom:6px}\n.seg{display:flex;gap:6px;margin-bottom:12px}\n.seg button{flex:1;padding:10px 0;border:0;border-radius:9px;color:#7b8e9a;\n  font:700 11px/1 system-ui;letter-spacing:.05em;background:#141f26;box-shadow:0 0 0 1px #24343d}\n.seg button.on{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}\n.hud.top .inner.ai{transform:none;padding-bottom:7px}\n.inner.ai .bar{margin-bottom:0}\n.pips{display:flex;gap:5px;margin-bottom:15px}\n.pip{width:24px;height:3px;border-radius:2px;background:#22323c}\n.pip.on{background:var(--p1)}\n.win{font:900 28px/1.05 system-ui;letter-spacing:-.03em;margin-bottom:7px}\ntable.bal{width:100%;border-collapse:collapse;font:500 11px/1.45 ui-monospace,Menlo,monospace;margin-bottom:12px}\ntable.bal th{text-align:left;color:#7b8e9a;font-weight:700;padding:4px;border-bottom:1px solid #22323c}\ntable.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}\n";
 
-export const HUELLE = "\n<div id=\"app\">\n  <div class=\"hud top p1\" id=\"hud0\"></div>\n  <div id=\"stage\"><canvas id=\"cv\"></canvas><div id=\"uhr\" hidden>0:00</div><button id=\"menuBtn\">≡</button></div>\n  <div class=\"hud bot p2\" id=\"hud1\"></div>\n</div>\n<div id=\"ghost\"><div class=\"gg\">—</div></div>\n\n<div class=\"ov\" id=\"ovMenu\">\n  <div class=\"sheet\" style=\"position:relative\">\n    <button class=\"hilfe\" id=\"bTut\" title=\"Regeln\">?</button>\n    <div class=\"eyebrow\">Taktikduell · ein Gerät · zwei Feldherren</div>\n    <h1>FELD<em>HERR</em></h1>\n    <div class=\"sub\">Ein Brett, mittig geteilt. Echtzeit. Wer das gegnerische Haupthaus einreißt, gewinnt. Auf den Karten steht der Zug- und der Schlagtakt.</div>\n    <div class=\"seglbl\">Stärke der KI</div>\n    <div class=\"seg\" id=\"segLvl\">\n      <button data-l=\"leicht\">Leicht</button>\n      <button data-l=\"normal\" class=\"on\">Normal</button>\n      <button data-l=\"schwer\">Schwer</button>\n    </div>\n    <button class=\"btn pri\" id=\"bAI\">Gegen die KI spielen</button>\n    <button class=\"btn\" id=\"bDuo\">Zu zweit an einem Gerät</button>\n    <button class=\"btn gho\" id=\"bTab\">Einheitenwerte</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovCoin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Münzwurf</div>\n    <h2 id=\"coinWer\">Du wählst</h2>\n    <div class=\"sub\">Wer richtig tippt, setzt sein Haupthaus zuerst.</div>\n    <div class=\"seg\" id=\"segCoin\">\n      <button data-w=\"kopf\">Kopf</button>\n      <button data-w=\"zahl\">Zahl</button>\n    </div>\n  </div>\n</div>\n<div class=\"ov\" id=\"ovTut\" hidden>\n  <div class=\"sheet\">\n    <div class=\"pips\" id=\"pips\"></div>\n    <div id=\"tutBody\"></div>\n    <button class=\"btn pri\" id=\"bNext\">Weiter</button>\n    <button class=\"btn gho\" id=\"bSkip\">Überspringen</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovTab\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Werte</div><h2>Truppen</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>HP</th><th>DMG</th><th>Zug</th><th>Schlag</th><th>Reichw.</th></tr></thead>\n    <tbody>\n      <tr><td>Schwert</td><td>8</td><td>7</td><td>4</td><td>3,0 s</td><td>8 s</td><td>1</td></tr>\n      <tr><td>Bogen</td><td>12</td><td>5</td><td>3</td><td>4,2 s</td><td>7 s</td><td>3</td></tr>\n      <tr><td>Ritter</td><td>30</td><td>26</td><td>4</td><td>5,6 s</td><td>17 s</td><td>1</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Geschlagen wird auch über Eck, gezogen nur waagerecht und senkrecht. Bogenschützen brauchen freie Sicht, treffen aber über eine Mauer <b>direkt vor sich</b> hinweg — und ab Stufe 2 ein Feld weiter. Gegen <b>Mauern</b> richten ihre Pfeile nur <b>halben Schaden</b> an, im Turm ebenso.</p>\n    <div class=\"eyebrow\">Je Ausbaustufe</div>\n    <table class=\"bal\"><tbody>\n      <tr><td>Schwert</td><td>HP +6</td><td>DMG +2</td><td>Schlag −2 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td>Bogen</td><td>HP +2</td><td>DMG +5</td><td>Schlag −1,5 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td></td><td colspan=\"4\">ab Stufe 2 zusätzlich +1 Reichweite</td></tr>\n      <tr><td>Ritter</td><td>HP +10</td><td>DMG +4</td><td>Schlag −3,8 s</td><td>Zug −0,7 s</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Truppen steigen bis Stufe 4 (Kupfer, Silber, Gold, Diamant), indem zwei gleiche derselben Stufe aufeinandertreffen; eine frische Karte auf eine Stufe-1-Truppe wirkt genauso. Wer aufsteigt, schlägt sofort einmal zu.</p>\n\n    <h2>Bauten</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>Karten</th><th>Stufe 1 / 2 / 3</th></tr></thead>\n    <tbody>\n      <tr><td>Mauer</td><td>15 / 15 / 25</td><td>3</td><td>50 / 85 / 160 HP</td></tr>\n      <tr><td>Werk 1×2</td><td>25 je Karte</td><td>4</td><td>15 / 23 / 34 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+1 / +2 / +5 Res je s</td></tr>\n      <tr><td></td><td></td><td></td><td>15 / 20 / 25 s Laufzeit</td></tr>\n      <tr><td>Kanone</td><td>35 je Karte</td><td>2</td><td>25 HP · 10 / 8 DMG</td></tr>\n      <tr><td></td><td></td><td></td><td>Reichweite 4 / 7 · 8 s</td></tr>\n      <tr><td>Haupthaus</td><td>—</td><td>1</td><td>36 / 43 / 54 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+2 / +3 / +4 Res je s</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Kartenkontingent:</b> Werk 4, Mauer 3, Kanone 2 — einmal gesetzt zählt eine Karte für immer, auch wenn das Bauwerk fällt oder du es abreißt (20 % Rückerstattung). Die Zahl in der Kartenecke zeigt den Rest.</p>\n    <p class=\"tx\"><b>Mauer:</b> Drei <b>verbundene</b> Mauerstücke verschmelzen zu Stufe 3 mit <b>einem gemeinsamen Lebenspool</b> — jedes Stück zeigt den Poolstand, ein Treffer irgendwo senkt ihn überall, und fällt der Pool, fallen alle drei. Alle Karten auf ein Feld gestapelt erreichen Stufe 3 genauso. Abriss eines Stücks bricht den Verbund; der Rest fällt auf Stufe 1 zurück.</p>\n    <p class=\"tx\"><b>Werk:</b> belegt 1×2 Felder, Drehung über den Knopf in der Leiste. Eine zweite Karte hebt es auf Stufe 2; liegen zwei Stufe-2-Werke aneinander, verschmelzen sie zu Stufe 3 und bleiben dabei stehen, wo sie sind. Jeder Treffer kostet <b>1 s Laufzeit</b>. Nach Ablauf läuft es auf Sparflamme weiter (+1 / +2 / +2). Fällt es im Kampf, wird alles auf den <b>vier angrenzenden Feldern zerstört</b>, über Eck und zwei Felder weiter 55 %, drei Felder 25 %.</p>\n    <p class=\"tx\"><b>Kanone:</b> unbeweglich, doppelter Schaden an Bauwerken. Stufe 1 zielt erst auf Kanonen, dann Werke; eine Mauer in der Bahn fängt den Schuss ab. Stufe 2 ist ein <b>Mörser</b>: weiter, Steilfeuer über alles hinweg, ein Viertel weniger Schaden, Ziele zuerst Werke, dann Kanonen, dann Haupthaus — dazu 30 % Splitterschaden an Bauten direkt über, unter und neben dem Einschlag.</p>\n    <p class=\"tx\"><b>Haupthaus:</b> Ein eigenes Gebäude auf Stufe 2 in einem der acht Nachbarfelder hebt es auf Stufe 2 (+20 % HP, +1 Res, Vorrat 50 → 60). Ein <b>Werk oder eine Mauer auf Stufe 3</b> daneben bringt Stufe 3 (+50 % HP, +2 Res). Fällt der Stützpunkt, verschwindet der Ausbau.</p>\n\n    <p class=\"tx\"><b>Rundenbeginn:</b> Eine Münze entscheidet die Reihenfolge. Ein Spieler ruft Kopf oder Zahl, der andere bekommt die zweite Seite; wer richtig liegt, setzt sein Haupthaus zuerst.</p>\n    <h2>Gelände</h2>\n    <table class=\"bal\"><tbody>\n      <tr><td>See</td><td>unpassierbar</td></tr>\n      <tr><td>Gebirge</td><td>unpassierbar, sichtdicht</td></tr>\n      <tr><td>Wald</td><td>Truppen +50 % HP, +25 % DMG</td></tr>\n      <tr><td></td><td>Fernkämpfer −1 Reichweite</td></tr>\n      <tr><td></td><td>Kanone −25 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Haupthaus −20 % erlittener Schaden</td></tr>\n      <tr><td>Vulkan</td><td>Ausbruch: Krater und Rand zerstört</td></tr>\n      <tr><td></td><td>zwei Felder weiter −30 % HP</td></tr>\n      <tr><td></td><td>2,5 % je 10 s, ab 2 min +5 Punkte</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Auf dem Fels</b> dürfen Bogenschütze, Kanone und Werk bauen; der Unterbau kostet jedes Mal <b>+5</b>, auch beim Ausbau. Schütze und Kanone bekommen +1 Reichweite und +1 Schaden; der Schütze erhält einen Turm, bewegt sich nie wieder und bleibt bei Stufe 2. Ein <b>Werk im Fels</b> muss mit beiden Feldern darauf stehen: −1 Ressource, +50 % HP, kein Kessel, höchstens Stufe 2. Fällt eine Fels-Stellung, blockiert 15 s lang ein brennendes Wrack das Feld.</p>\n    <p class=\"tx\"><b>Erdwärme:</b> Haupthaus oder Werk direkt am Vulkan geben dauerhaft +1 Ressource, ein Werk auf Stufe 3 sogar +2. <b>Panik-Faktor:</b> ein Werk in den beiden vordersten Reihen deiner Hälfte gibt +1.</p>\n\n    <h2>Stellungen</h2>\n    <p class=\"tx\">Ein kurzes Antippen hält eine Truppe an: Sie marschiert nicht mehr, verteidigt ihre Umgebung und nimmt <b>12,5 % weniger Schaden</b>. Von Schützen und von Kämpfern dürfen jeweils höchstens <b>drei</b> gleichzeitig stehen; Schützentürme zählen bei den Schützen mit. Das Schild an der Figur zeigt den Stand der ganzen Gruppe.</p>\n    <p class=\"tx\"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt.</p>\n    <button class=\"btn\" id=\"bTabClose\">Zurück</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovPause\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Pause</div><h2>Partie angehalten</h2>\n    <button class=\"btn pri\" id=\"bResume\">Weiterspielen</button>\n    <button class=\"btn\" id=\"bNeustart\" style=\"display:none\">Neu starten</button>\n    <button class=\"btn\" id=\"bTut2\">Regeln ansehen</button>\n    <button class=\"btn gho\" id=\"bQuit\">Partie beenden</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovWin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Entscheidung</div>\n    <div class=\"win\" id=\"winTx\">—</div>\n    <div class=\"sub\" id=\"winSub\">—</div>\n    <button class=\"btn pri\" id=\"bAgain\">Neue Runde</button>\n    <button class=\"btn gho\" id=\"bMenu2\">Hauptmenü</button>\n  </div>\n</div>\n\n";
+export const HUELLE = "\n<div id=\"app\">\n  <div class=\"hud top p1\" id=\"hud0\"></div>\n  <div id=\"stage\"><canvas id=\"cv\"></canvas><div id=\"uhr\" hidden>0:00</div><button id=\"menuBtn\">≡</button></div>\n  <div class=\"hud bot p2\" id=\"hud1\"></div>\n</div>\n<div id=\"ghost\"><div class=\"gg\">—</div></div>\n\n<div class=\"ov\" id=\"ovMenu\">\n  <div class=\"sheet\" style=\"position:relative\">\n    <button class=\"hilfe\" id=\"bTut\" title=\"Regeln\">?</button>\n    <div class=\"eyebrow\">Taktikduell · ein Gerät · zwei Feldherren</div>\n    <h1>FELD<em>HERR</em></h1>\n    <div class=\"sub\">Ein Brett, mittig geteilt. Echtzeit. Wer das gegnerische Haupthaus einreißt, gewinnt. Auf den Karten steht der Zug- und der Schlagtakt.</div>\n    <div class=\"seglbl\">Stärke der KI</div>\n    <div class=\"seg\" id=\"segLvl\">\n      <button data-l=\"leicht\">Leicht</button>\n      <button data-l=\"normal\" class=\"on\">Normal</button>\n      <button data-l=\"schwer\">Schwer</button>\n    </div>\n    <button class=\"btn pri\" id=\"bAI\">Gegen die KI spielen</button>\n    <button class=\"btn\" id=\"bDuo\">Zu zweit an einem Gerät</button>\n    <button class=\"btn gho\" id=\"bTab\">Einheitenwerte</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovCoin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Münzwurf</div>\n    <h2 id=\"coinWer\">Du wählst</h2>\n    <div class=\"sub\">Wer richtig tippt, setzt sein Haupthaus zuerst.</div>\n    <div class=\"seg\" id=\"segCoin\">\n      <button data-w=\"kopf\">Kopf</button>\n      <button data-w=\"zahl\">Zahl</button>\n    </div>\n  </div>\n</div>\n<div class=\"ov\" id=\"ovTut\" hidden>\n  <div class=\"sheet\">\n    <div class=\"pips\" id=\"pips\"></div>\n    <div id=\"tutBody\"></div>\n    <button class=\"btn pri\" id=\"bNext\">Weiter</button>\n    <button class=\"btn gho\" id=\"bSkip\">Überspringen</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovTab\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Werte</div><h2>Truppen</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>HP</th><th>DMG</th><th>Zug</th><th>Schlag</th><th>Reichw.</th></tr></thead>\n    <tbody>\n      <tr><td>Schwert</td><td>8</td><td>7</td><td>4</td><td>3,0 s</td><td>8 s</td><td>1</td></tr>\n      <tr><td>Bogen</td><td>12</td><td>5</td><td>3</td><td>4,2 s</td><td>7 s</td><td>3</td></tr>\n      <tr><td>Ritter</td><td>30</td><td>26</td><td>4</td><td>5,6 s</td><td>17 s</td><td>1</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Geschlagen wird auch über Eck, gezogen nur waagerecht und senkrecht. Bogenschützen brauchen freie Sicht, treffen aber über eine Mauer <b>direkt vor sich</b> hinweg — und ab Stufe 2 ein Feld weiter. Gegen <b>Mauern</b> richten ihre Pfeile nur <b>halben Schaden</b> an, im Turm ebenso.</p>\n    <div class=\"eyebrow\">Je Ausbaustufe</div>\n    <table class=\"bal\"><tbody>\n      <tr><td>Schwert</td><td>HP +6</td><td>DMG +2</td><td>Schlag −2 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td>Bogen</td><td>HP +2</td><td>DMG +5</td><td>Schlag −1,5 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td></td><td colspan=\"4\">ab Stufe 2 zusätzlich +1 Reichweite</td></tr>\n      <tr><td>Ritter</td><td>HP +10</td><td>DMG +4</td><td>Schlag −3,8 s</td><td>Zug −0,7 s</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Truppen steigen bis Stufe 4 (Kupfer, Silber, Gold, Diamant), indem zwei gleiche derselben Stufe aufeinandertreffen; eine frische Karte auf eine Stufe-1-Truppe wirkt genauso. Wer aufsteigt, schlägt sofort einmal zu.</p>\n\n    <h2>Bauten</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>Karten</th><th>Stufe 1 / 2 / 3</th></tr></thead>\n    <tbody>\n      <tr><td>Mauer</td><td>15 / 15 / 25</td><td>3</td><td>50 / 85 / 160 HP</td></tr>\n      <tr><td>Werk 1×2</td><td>25 je Karte</td><td>4</td><td>15 / 23 / 34 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+1 / +2 / +5 Res je s</td></tr>\n      <tr><td></td><td></td><td></td><td>15 / 20 / 25 s Laufzeit</td></tr>\n      <tr><td>Kanone</td><td>35 je Karte</td><td>2</td><td>25 HP · 10 / 8 DMG</td></tr>\n      <tr><td></td><td></td><td></td><td>Reichweite 4 / 7 · 8 s</td></tr>\n      <tr><td>Haupthaus</td><td>—</td><td>1</td><td>36 / 43 / 54 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+2 / +3 / +4 Res je s</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Kartenkontingent:</b> Werk 4, Mauer 3, Kanone 2 — einmal gesetzt zählt eine Karte für immer, auch wenn das Bauwerk fällt oder du es abreißt (20 % Rückerstattung). Die Zahl in der Kartenecke zeigt den Rest.</p>\n    <p class=\"tx\"><b>Mauer:</b> Mauern werden durch <b>Verbinden</b> stärker. Jede Mauer wiegt so viel, wie Karten in ihr stecken; die Stufe ist das <b>Gewicht der ganzen verbundenen Gruppe</b>: allein Stufe 1, <b>zwei verbunden</b> Stufe 2, <b>drei verbunden</b> Stufe 3. Drei Karten auf dasselbe Feld gestapelt ergeben ebenfalls Stufe 3. Das Leben der Stufe gehört der Gruppe und wird <b>nach Gewicht verteilt</b> — eine Stufe-2-Mauer neben einer frischen Mauer ergibt Stufe 3 mit 107 und 53 HP (2/3 zu 1/3). Jedes Stück fällt einzeln; die übrigen stufen sich danach neu ein.</p>\n    <p class=\"tx\"><b>Werk:</b> belegt 1×2 Felder, Drehung über den Knopf in der Leiste. Eine zweite Karte hebt es auf Stufe 2; liegen zwei Stufe-2-Werke aneinander, verschmelzen sie zu Stufe 3 und bleiben dabei stehen, wo sie sind. Jeder Treffer kostet <b>1 s Laufzeit</b>. Nach Ablauf läuft es auf Sparflamme weiter (+1 / +2 / +2). Fällt es im Kampf, wird alles auf den <b>vier angrenzenden Feldern zerstört</b>, über Eck und zwei Felder weiter 55 %, drei Felder 25 %.</p>\n    <p class=\"tx\"><b>Kanone:</b> unbeweglich, doppelter Schaden an Bauwerken. Stufe 1 zielt erst auf Kanonen, dann Werke; eine Mauer in der Bahn fängt den Schuss ab. Stufe 2 ist ein <b>Mörser</b>: weiter, Steilfeuer über alles hinweg, ein Viertel weniger Schaden, Ziele zuerst Werke, dann Kanonen, dann Haupthaus — dazu 30 % Splitterschaden an Bauten direkt über, unter und neben dem Einschlag.</p>\n    <p class=\"tx\"><b>Haupthaus:</b> Ein eigenes Gebäude auf Stufe 2 in einem der acht Nachbarfelder hebt es auf Stufe 2 (+20 % HP, +1 Res, Vorrat 50 → 60). Ein <b>Werk oder eine Mauer auf Stufe 3</b> daneben bringt Stufe 3 (+50 % HP, +2 Res). Fällt der Stützpunkt, verschwindet der Ausbau.</p>\n\n    <p class=\"tx\"><b>Rundenbeginn:</b> Eine Münze entscheidet die Reihenfolge. Ein Spieler ruft Kopf oder Zahl, der andere bekommt die zweite Seite; wer richtig liegt, setzt sein Haupthaus zuerst.</p>\n    <h2>Gelände</h2>\n    <table class=\"bal\"><tbody>\n      <tr><td>See</td><td>unpassierbar</td></tr>\n      <tr><td>Gebirge</td><td>unpassierbar, sichtdicht</td></tr>\n      <tr><td>Wald</td><td>Truppen +50 % HP, +25 % DMG</td></tr>\n      <tr><td></td><td>Fernkämpfer −1 Reichweite</td></tr>\n      <tr><td></td><td>Kanone −25 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Haupthaus −20 % erlittener Schaden</td></tr>\n      <tr><td>Vulkan</td><td>Ausbruch: Krater und Rand zerstört</td></tr>\n      <tr><td></td><td>zwei Felder weiter −30 % HP</td></tr>\n      <tr><td></td><td>2,5 % je 10 s, ab 2 min +5 Punkte</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Auf dem Fels</b> dürfen Bogenschütze, Kanone und Werk bauen; der Unterbau kostet jedes Mal <b>+5</b>, auch beim Ausbau. Schütze und Kanone bekommen +1 Reichweite und +1 Schaden; der Schütze erhält einen Turm, bewegt sich nie wieder und bleibt bei Stufe 2. Ein <b>Werk im Fels</b> muss mit beiden Feldern darauf stehen: −1 Ressource, +50 % HP, kein Kessel, höchstens Stufe 2. Fällt eine Fels-Stellung, blockiert 15 s lang ein brennendes Wrack das Feld.</p>\n    <p class=\"tx\"><b>Erdwärme:</b> Haupthaus oder Werk direkt am Vulkan geben dauerhaft +1 Ressource, ein Werk auf Stufe 3 sogar +2. <b>Panik-Faktor:</b> ein Werk in den beiden vordersten Reihen deiner Hälfte gibt +1.</p>\n\n    <h2>Stellungen</h2>\n    <p class=\"tx\">Ein kurzes Antippen hält eine Truppe an: Sie marschiert nicht mehr, verteidigt ihre Umgebung und nimmt <b>12,5 % weniger Schaden</b>. Von Schützen und von Kämpfern dürfen jeweils höchstens <b>drei</b> gleichzeitig stehen; Schützentürme zählen bei den Schützen mit. Das Schild an der Figur zeigt den Stand der ganzen Gruppe.</p>\n    <p class=\"tx\"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt.</p>\n    <button class=\"btn\" id=\"bTabClose\">Zurück</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovPause\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Pause</div><h2>Partie angehalten</h2>\n    <button class=\"btn pri\" id=\"bResume\">Weiterspielen</button>\n    <button class=\"btn\" id=\"bNeustart\" style=\"display:none\">Neu starten</button>\n    <button class=\"btn\" id=\"bTut2\">Regeln ansehen</button>\n    <button class=\"btn gho\" id=\"bQuit\">Partie beenden</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovWin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Entscheidung</div>\n    <div class=\"win\" id=\"winTx\">—</div>\n    <div class=\"sub\" id=\"winSub\">—</div>\n    <button class=\"btn pri\" id=\"bAgain\">Neue Runde</button>\n    <button class=\"btn gho\" id=\"bMenu2\">Hauptmenü</button>\n  </div>\n</div>\n\n";
 
 /**
  * Startet eine Partie in der bereits eingehaengten Huelle.
@@ -224,7 +224,10 @@ function investOf(e){                     // was insgesamt hineingeflossen ist
   // Bit-Schub statt Math.pow: pow ist zwischen Engines nicht bitgenau
   // festgelegt, und der Preis fließt in den Spielzustand.
   if(DEFS[e.type].unit) return DEFS[e.type].cost * (1 << (e.lvl-1));
-  let sum=0; for(let l=1;l<=e.lvl;l++) sum += costOf(e.type,l);
+  // Bei Mauern zählt, was WIRKLICH bezahlt wurde (Karten), nicht die Stufe
+  // aus dem Verbund — sonst wäre das Anbauen und Abreißen eine Geldquelle.
+  const stufen = e.type==='mauer' ? mauerGewicht(e) : e.lvl;
+  let sum=0; for(let l=1;l<=stufen;l++) sum += costOf(e.type,l);
   return sum;
 }
 const refundOf = e => Math.floor(investOf(e)*REFUND);
@@ -432,6 +435,9 @@ function entCells(type, r, c, vert){
   return cells;
 }
 function maxHp(e){
+  // Mauern tragen ihren Anteil am Gruppenleben selbst (siehe mauerNetz);
+  // die Stufenwerte gelten dort für die ganze Gruppe, nicht je Stück.
+  if(e.type==='mauer' && e.hpMax) return e.hpMax;
   let b = statsOf(e.type,e.lvl).hp;
   if(e.type==='werk' && e.berg) b = Math.round(b*1.5);   // in den Fels gebaut
   if(e.type==='haus') b = Math.round(b * HAUS_HP[hausSt(e.owner)-1]);
@@ -717,17 +723,6 @@ function doAttack(e, target){
   if(target.hp<=0) kill(target, kan?0.44 : rng>1?0.22 : 0.06);
 }
 function kill(t, delay){
-  if(t.verbund){
-    // Der Pool ist EIN Leben: Fällt ein Stück des Mauerverbunds, fallen
-    // alle. Die Kennung wird vor der Kaskade gelöscht, sonst liefe sie im
-    // Kreis.
-    const kennung = t.verbund;
-    t.verbund = null;
-    for(const m of G.ents.filter(e => e.verbund === kennung)){
-      m.verbund = null;
-      kill(m, delay);
-    }
-  }
   if(AI && t.owner===AI.owner && t.type==='werk' &&
      t.cells.some(p=>inPanik(t.owner,p.r))) AI.verlusteVorn++;   // Lehrgeld an der Front
   if(t.berg && (t.turm || t.type==='kanone'))
@@ -738,6 +733,9 @@ function kill(t, delay){
   G.fx.push({k:'corpse', type:t.type, owner:t.owner, lvl:t.lvl, r:t.r, c:t.c,
              w:t.w, h:t.h, t:-(delay||0), dur:0.55, big:t.type==='haus'});
   removeEnt(t);
+  // Eine gefallene Mauer reißt eine Lücke: Der Rest der Gruppe stuft sich
+  // neu ein — aus dreien werden zwei, aus zweien eine.
+  if(t.type==='mauer') mauerNetz(t.owner);
 }
 function trefferAuf(o, d, delay){                      // ein Schlag, mit allen Nebenwirkungen
   if(o.type==='kanone' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.75));
@@ -745,14 +743,7 @@ function trefferAuf(o, d, delay){                      // ein Schlag, mit allen 
   // erlittener Schaden — der Wald ist Verteidigung, nicht nur Kulisse.
   if(o.type==='haus' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.80));
   if(o.halt || o.turm) d = Math.max(1, Math.round(d*0.875));   // wer steht, steht fester
-  if(o.verbund){
-    // Verbundene Mauern teilen EINEN Lebenspool: Jedes Stück zeigt den
-    // Poolstand, ein Treffer irgendwo senkt ihn überall.
-    const pool = o.hp - d;
-    for(const m of G.ents) if(m.verbund===o.verbund) m.hp = pool;
-  } else {
-    o.hp -= d;
-  }
+  o.hp -= d;
   if(DEFS[o.type].laufzeit && o.leben>0){              // jeder Treffer kostet das Werk eine Sekunde
     o.leben = Math.max(0, o.leben-1);
     G.fx.push({k:'zeit', r:o.r, c:o.c, t:-(delay||0)});
@@ -792,24 +783,13 @@ function werkKnall(w){                                 // Kesselexplosion beim E
   shake(14, 0.5);
 }
 function razeEnt(e){
-  if(e.verbund){
-    // Abriss bricht den Mauerverbund: Die übrigen Stücke fallen auf
-    // Stufe 1 zurück und behalten ihren Anteil am Pool (gedeckelt aufs
-    // Stufe-1-Maximum). Das abgerissene Stück zählt für die Erstattung
-    // als Stufe 1 — bezahlt wurde je Stück nur eine Karte, und ein
-    // Verbund darf keine Geldquelle sein.
-    const kennung = e.verbund;
-    const anteil = Math.max(1, Math.min(statsOf('mauer',1).hp, Math.round(e.hp / 3)));
-    for(const m of G.ents) if(m.verbund === kennung){
-      m.verbund = null; m.lvl = 1; m.hp = anteil;
-    }
-  }
   const back = refundOf(e);
   G.res[e.owner] = Math.min(capOf(e.owner), G.res[e.owner] + back);
   fxText(e.r, e.c, '+'+back, '#9be8c0', 0);
   fxRing(e.r, e.c, '#9be8c0');
   for(const p of e.cells) burst(midX(p.c), midY(p.r), TH*0.3, 10, 'dust', '#8a7a68');
   removeEnt(e);
+  if(e.type==='mauer') mauerNetz(e.owner);       // Lücke: der Rest stuft neu ein
   HAKEN.syncHUD();
 }
 function fxText(r,c,tx,col,delay){ G.fx.push({k:'txt', r, c, tx, col, t:-(delay||0)}); }
@@ -1038,7 +1018,12 @@ const HAKEN = {
 const turmPlatz = (k,r,c)=> (k==='bogen'||k==='kanone'||k==='werk') && envAt(r,c)==='gebirge';
 const BERGBAU = 5;                                    // Aufschlag für den Unterbau
 function preisFuer(k, sp){
-  let p = sp.merge ? costOf(k, sp.merge.lvl+1) : costOf(k,1);
+  // Bei Mauern richtet sich der Preis der nächsten Karte nach dem Gewicht
+  // (bezahlte Karten), nicht nach der Stufe aus dem Verbund.
+  const naechste = sp.merge
+    ? (k==='mauer' ? mauerGewicht(sp.merge)+1 : sp.merge.lvl+1)
+    : 1;
+  let p = costOf(k, naechste);
   const aufFels = sp.merge ? !!sp.merge.berg
                            : sp.cells.some(q=>envAt(q.r,q.c)==='gebirge');
   if(aufFels) p += BERGBAU;                        // der Unterbau kostet jedes Mal
@@ -1065,9 +1050,15 @@ function placeSpot(own,k,r,c){
   const occ=entAt(r,c);
   if(occ){
     const grenze = DEFS[k].fuseAt || maxLvlOf(k);   // per Karte nur bis dorthin
+    // Mauern: gestapelt wird nach GEWICHT (bezahlte Karten). Eine Mauer,
+    // die schon durch den Verbund auf Stufe 3 steht, nimmt weiter Karten —
+    // sie erhöht damit ihren Anteil am Gruppenleben.
+    const stapelbar = k==='mauer' ? mauerGewicht(occ) < maxLvlOf('mauer')
+                    : DEFS[k].unit ? occ.lvl===1
+                    : occ.lvl < grenze;
     const ok = occ.owner===own && occ.type===k &&
                occ.cells.every(q=>sideOf(q.r)===own) &&    // vorgerückte Truppen nicht mehr erreichbar
-               (DEFS[k].unit ? occ.lvl===1 : occ.lvl < grenze) &&
+               stapelbar &&
                !atLimit(own,k);
     return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
   }
@@ -1103,7 +1094,12 @@ function playCard(own,k,r,c){
   if(G.res[own]<preis) return;
   G.res[own]-=preis;
   verbrauche(own,k);                           // die Karte ist damit endgültig aufgebraucht
-  if(sp.merge){
+  if(sp.merge && k==='mauer'){
+    // Stapeln erhöht das GEWICHT, nicht die Stufe: Die Stufe rechnet
+    // mauerNetz aus der ganzen Gruppe (und meldet den Aufstieg selbst).
+    sp.merge.karten = mauerGewicht(sp.merge) + 1;
+    mauerNetz(own);
+  } else if(sp.merge){
     const o=sp.merge, vert=o.h>o.w, rr=o.r, cc=o.c, nl=o.lvl+1, alt=o.cells;
     removeEnt(o);
     const nu=addEnt(k,own,rr,cc,nl,vert,alt);  // bleibt genau dort stehen, wo es stand
@@ -1118,43 +1114,74 @@ function playCard(own,k,r,c){
     fxText(rr,cc,'STUFE '+(jetzt?jetzt.lvl:nl),'#ffd977',0); fxRing(rr,cc,'#ffd977');
     HAKEN.stufenFunken(rr,cc);
   } else {
-    addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
+    const neu = addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
     HAKEN.bauStaub(sp.cells);
     fxRing(sp.r0,sp.c0, HAKEN.spielerFarbe(own));
     if(DEFS[k].fuseAt) fuseWerke();
-    if(k==='mauer') mauerVerbund(own);
+    // Eine frische Mauer wiegt eine Karte; die Gruppe stuft danach neu ein.
+    if(k==='mauer'){ neu.karten = 1; mauerNetz(own); }
   }
   G.armed[own]=null; HAKEN.syncHUD();
 }
 
-/* Drei verbundene Mauerstücke verschmelzen zu Stufe 3 mit EINEM Lebenspool
- * (Entscheid vom 7. August 2026): 3,2-mal so stark wie Stufe 1, und der
- * Stand liegt auf allen drei Objekten zugleich — ein Treffer irgendwo senkt
- * ihn überall, fällt der Pool, fallen alle drei (siehe trefferAuf und kill).
- * Mit dem Kartenkontingent von 3 sind höchstens drei Stücke möglich; wer
- * stattdessen alle Karten auf ein Feld stapelt, erreicht Stufe 3 auf dem
- * alten Weg, mit demselben Lebenswert (DEFS.mauer.lvls). */
-function mauerVerbund(own){
-  const stuecke = G.ents.filter(e => e.owner===own && e.type==='mauer' && !e.verbund && e.lvl===1);
-  if(stuecke.length !== 3) return;
-  // Zusammenhang über orthogonale Nachbarschaft, ab dem ersten Stück gesucht
-  const offen = [stuecke[0]], gesehen = new Set([stuecke[0].id]);
-  while(offen.length){
-    const m = offen.pop();
-    for(const n of stuecke){
-      if(gesehen.has(n.id)) continue;
-      if(Math.abs(n.r-m.r) + Math.abs(n.c-m.c) === 1){ gesehen.add(n.id); offen.push(n); }
+/* ---------- Mauern: Verbund statt Einzelstück ----------
+ * Regel des Auftraggebers (7. August 2026):
+ *
+ *   Jede Mauer trägt ein GEWICHT — die Zahl der in sie gesteckten Karten
+ *   (Stapeln auf demselben Feld erhöht es). Die STUFE einer Mauer ist die
+ *   Summe der Gewichte ihrer zusammenhängenden Gruppe, gedeckelt bei 3:
+ *
+ *     allein                    → Stufe 1
+ *     zwei verbunden            → Stufe 2
+ *     drei verbunden            → Stufe 3
+ *     drei Karten auf ein Feld  → Stufe 3 (derselbe Weg wie bisher)
+ *
+ *   Das LEBEN der Stufe (DEFS.mauer.lvls) gehört der ganzen Gruppe und wird
+ *   nach Gewicht auf ihre Stücke VERTEILT. Eine Stufe-2-Mauer (zwei Karten)
+ *   neben einer frischen Mauer ergibt Stufe 3, verteilt 2/3 zu 1/3.
+ *
+ * Jedes Stück trägt seinen Anteil selbst: Es fällt einzeln, und die
+ * verbleibenden Stücke stufen sich danach neu ein (kill ruft mauerNetz).
+ * Beim Umgruppieren bleibt der Schadensanteil erhalten — wer halb kaputt
+ * war, ist auch nach dem Anbau halb kaputt.
+ */
+const mauerGewicht = e => e.karten || 1;
+
+function mauerNetz(own){
+  const mauern = G.ents.filter(e => e.owner===own && e.type==='mauer');
+  const gesehen = new Set();
+  for(const start of mauern){
+    if(gesehen.has(start.id)) continue;
+    // Zusammenhangskomponente über orthogonale Nachbarschaft sammeln
+    const gruppe = [], offen = [start];
+    gesehen.add(start.id);
+    while(offen.length){
+      const m = offen.pop();
+      gruppe.push(m);
+      for(const n of mauern){
+        if(gesehen.has(n.id)) continue;
+        if(Math.abs(n.r-m.r) + Math.abs(n.c-m.c) === 1){ gesehen.add(n.id); offen.push(n); }
+      }
+    }
+    const gewicht = gruppe.reduce((s,m)=>s+mauerGewicht(m), 0);
+    const stufe = Math.max(1, Math.min(maxLvlOf('mauer'), gewicht));
+    const gesamt = statsOf('mauer', stufe).hp;
+    for(const m of gruppe){
+      // Anteil am Gesamtleben nach Gewicht; der Schadensstand bleibt.
+      const altMax = m.hpMax || statsOf('mauer', m.lvl).hp;
+      const quote = altMax > 0 ? Math.max(0, Math.min(1, m.hp / altMax)) : 1;
+      const neuMax = Math.max(1, Math.round(gesamt * mauerGewicht(m) / gewicht));
+      const alteStufe = m.lvl;
+      m.lvl = stufe;
+      m.hpMax = neuMax;
+      m.hp = Math.max(1, Math.round(neuMax * quote));
+      if(stufe > alteStufe){                       // Aufstieg wird gemeldet
+        fxText(m.r, m.c, 'STUFE '+stufe, '#ffd977', 0);
+        fxRing(m.r, m.c, '#ffd977');
+        HAKEN.stufenFunken(m.r, m.c);
+      }
     }
   }
-  if(gesehen.size !== 3) return;
-  const kennung = G.nextId++;
-  const pool = statsOf('mauer', 3).hp;
-  for(const m of stuecke){
-    m.verbund = kennung; m.lvl = 3; m.hp = pool;
-    fxRing(m.r, m.c, '#ffd977');
-  }
-  fxText(stuecke[0].r, stuecke[0].c, 'STUFE 3', '#ffd977', 0);
-  HAKEN.stufenFunken(stuecke[0].r, stuecke[0].c);
 }
 
 function drehBefehl(own){ G.orient[own] = !G.orient[own]; HAKEN.syncHUD(); }

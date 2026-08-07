@@ -87,7 +87,10 @@ function investOf(e){                     // was insgesamt hineingeflossen ist
   // Bit-Schub statt Math.pow: pow ist zwischen Engines nicht bitgenau
   // festgelegt, und der Preis fließt in den Spielzustand.
   if(DEFS[e.type].unit) return DEFS[e.type].cost * (1 << (e.lvl-1));
-  let sum=0; for(let l=1;l<=e.lvl;l++) sum += costOf(e.type,l);
+  // Bei Mauern zählt, was WIRKLICH bezahlt wurde (Karten), nicht die Stufe
+  // aus dem Verbund — sonst wäre das Anbauen und Abreißen eine Geldquelle.
+  const stufen = e.type==='mauer' ? mauerGewicht(e) : e.lvl;
+  let sum=0; for(let l=1;l<=stufen;l++) sum += costOf(e.type,l);
   return sum;
 }
 const refundOf = e => Math.floor(investOf(e)*REFUND);
@@ -295,6 +298,9 @@ function entCells(type, r, c, vert){
   return cells;
 }
 function maxHp(e){
+  // Mauern tragen ihren Anteil am Gruppenleben selbst (siehe mauerNetz);
+  // die Stufenwerte gelten dort für die ganze Gruppe, nicht je Stück.
+  if(e.type==='mauer' && e.hpMax) return e.hpMax;
   let b = statsOf(e.type,e.lvl).hp;
   if(e.type==='werk' && e.berg) b = Math.round(b*1.5);   // in den Fels gebaut
   if(e.type==='haus') b = Math.round(b * HAUS_HP[hausSt(e.owner)-1]);
@@ -580,17 +586,6 @@ function doAttack(e, target){
   if(target.hp<=0) kill(target, kan?0.44 : rng>1?0.22 : 0.06);
 }
 function kill(t, delay){
-  if(t.verbund){
-    // Der Pool ist EIN Leben: Fällt ein Stück des Mauerverbunds, fallen
-    // alle. Die Kennung wird vor der Kaskade gelöscht, sonst liefe sie im
-    // Kreis.
-    const kennung = t.verbund;
-    t.verbund = null;
-    for(const m of G.ents.filter(e => e.verbund === kennung)){
-      m.verbund = null;
-      kill(m, delay);
-    }
-  }
   if(AI && t.owner===AI.owner && t.type==='werk' &&
      t.cells.some(p=>inPanik(t.owner,p.r))) AI.verlusteVorn++;   // Lehrgeld an der Front
   if(t.berg && (t.turm || t.type==='kanone'))
@@ -601,6 +596,9 @@ function kill(t, delay){
   G.fx.push({k:'corpse', type:t.type, owner:t.owner, lvl:t.lvl, r:t.r, c:t.c,
              w:t.w, h:t.h, t:-(delay||0), dur:0.55, big:t.type==='haus'});
   removeEnt(t);
+  // Eine gefallene Mauer reißt eine Lücke: Der Rest der Gruppe stuft sich
+  // neu ein — aus dreien werden zwei, aus zweien eine.
+  if(t.type==='mauer') mauerNetz(t.owner);
 }
 function trefferAuf(o, d, delay){                      // ein Schlag, mit allen Nebenwirkungen
   if(o.type==='kanone' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.75));
@@ -608,14 +606,7 @@ function trefferAuf(o, d, delay){                      // ein Schlag, mit allen 
   // erlittener Schaden — der Wald ist Verteidigung, nicht nur Kulisse.
   if(o.type==='haus' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.80));
   if(o.halt || o.turm) d = Math.max(1, Math.round(d*0.875));   // wer steht, steht fester
-  if(o.verbund){
-    // Verbundene Mauern teilen EINEN Lebenspool: Jedes Stück zeigt den
-    // Poolstand, ein Treffer irgendwo senkt ihn überall.
-    const pool = o.hp - d;
-    for(const m of G.ents) if(m.verbund===o.verbund) m.hp = pool;
-  } else {
-    o.hp -= d;
-  }
+  o.hp -= d;
   if(DEFS[o.type].laufzeit && o.leben>0){              // jeder Treffer kostet das Werk eine Sekunde
     o.leben = Math.max(0, o.leben-1);
     G.fx.push({k:'zeit', r:o.r, c:o.c, t:-(delay||0)});
@@ -655,24 +646,13 @@ function werkKnall(w){                                 // Kesselexplosion beim E
   shake(14, 0.5);
 }
 function razeEnt(e){
-  if(e.verbund){
-    // Abriss bricht den Mauerverbund: Die übrigen Stücke fallen auf
-    // Stufe 1 zurück und behalten ihren Anteil am Pool (gedeckelt aufs
-    // Stufe-1-Maximum). Das abgerissene Stück zählt für die Erstattung
-    // als Stufe 1 — bezahlt wurde je Stück nur eine Karte, und ein
-    // Verbund darf keine Geldquelle sein.
-    const kennung = e.verbund;
-    const anteil = Math.max(1, Math.min(statsOf('mauer',1).hp, Math.round(e.hp / 3)));
-    for(const m of G.ents) if(m.verbund === kennung){
-      m.verbund = null; m.lvl = 1; m.hp = anteil;
-    }
-  }
   const back = refundOf(e);
   G.res[e.owner] = Math.min(capOf(e.owner), G.res[e.owner] + back);
   fxText(e.r, e.c, '+'+back, '#9be8c0', 0);
   fxRing(e.r, e.c, '#9be8c0');
   for(const p of e.cells) burst(midX(p.c), midY(p.r), TH*0.3, 10, 'dust', '#8a7a68');
   removeEnt(e);
+  if(e.type==='mauer') mauerNetz(e.owner);       // Lücke: der Rest stuft neu ein
   HAKEN.syncHUD();
 }
 function fxText(r,c,tx,col,delay){ G.fx.push({k:'txt', r, c, tx, col, t:-(delay||0)}); }
@@ -901,7 +881,12 @@ const HAKEN = {
 const turmPlatz = (k,r,c)=> (k==='bogen'||k==='kanone'||k==='werk') && envAt(r,c)==='gebirge';
 const BERGBAU = 5;                                    // Aufschlag für den Unterbau
 function preisFuer(k, sp){
-  let p = sp.merge ? costOf(k, sp.merge.lvl+1) : costOf(k,1);
+  // Bei Mauern richtet sich der Preis der nächsten Karte nach dem Gewicht
+  // (bezahlte Karten), nicht nach der Stufe aus dem Verbund.
+  const naechste = sp.merge
+    ? (k==='mauer' ? mauerGewicht(sp.merge)+1 : sp.merge.lvl+1)
+    : 1;
+  let p = costOf(k, naechste);
   const aufFels = sp.merge ? !!sp.merge.berg
                            : sp.cells.some(q=>envAt(q.r,q.c)==='gebirge');
   if(aufFels) p += BERGBAU;                        // der Unterbau kostet jedes Mal
@@ -928,9 +913,15 @@ function placeSpot(own,k,r,c){
   const occ=entAt(r,c);
   if(occ){
     const grenze = DEFS[k].fuseAt || maxLvlOf(k);   // per Karte nur bis dorthin
+    // Mauern: gestapelt wird nach GEWICHT (bezahlte Karten). Eine Mauer,
+    // die schon durch den Verbund auf Stufe 3 steht, nimmt weiter Karten —
+    // sie erhöht damit ihren Anteil am Gruppenleben.
+    const stapelbar = k==='mauer' ? mauerGewicht(occ) < maxLvlOf('mauer')
+                    : DEFS[k].unit ? occ.lvl===1
+                    : occ.lvl < grenze;
     const ok = occ.owner===own && occ.type===k &&
                occ.cells.every(q=>sideOf(q.r)===own) &&    // vorgerückte Truppen nicht mehr erreichbar
-               (DEFS[k].unit ? occ.lvl===1 : occ.lvl < grenze) &&
+               stapelbar &&
                !atLimit(own,k);
     return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
   }
@@ -966,7 +957,12 @@ function playCard(own,k,r,c){
   if(G.res[own]<preis) return;
   G.res[own]-=preis;
   verbrauche(own,k);                           // die Karte ist damit endgültig aufgebraucht
-  if(sp.merge){
+  if(sp.merge && k==='mauer'){
+    // Stapeln erhöht das GEWICHT, nicht die Stufe: Die Stufe rechnet
+    // mauerNetz aus der ganzen Gruppe (und meldet den Aufstieg selbst).
+    sp.merge.karten = mauerGewicht(sp.merge) + 1;
+    mauerNetz(own);
+  } else if(sp.merge){
     const o=sp.merge, vert=o.h>o.w, rr=o.r, cc=o.c, nl=o.lvl+1, alt=o.cells;
     removeEnt(o);
     const nu=addEnt(k,own,rr,cc,nl,vert,alt);  // bleibt genau dort stehen, wo es stand
@@ -981,43 +977,74 @@ function playCard(own,k,r,c){
     fxText(rr,cc,'STUFE '+(jetzt?jetzt.lvl:nl),'#ffd977',0); fxRing(rr,cc,'#ffd977');
     HAKEN.stufenFunken(rr,cc);
   } else {
-    addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
+    const neu = addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
     HAKEN.bauStaub(sp.cells);
     fxRing(sp.r0,sp.c0, HAKEN.spielerFarbe(own));
     if(DEFS[k].fuseAt) fuseWerke();
-    if(k==='mauer') mauerVerbund(own);
+    // Eine frische Mauer wiegt eine Karte; die Gruppe stuft danach neu ein.
+    if(k==='mauer'){ neu.karten = 1; mauerNetz(own); }
   }
   G.armed[own]=null; HAKEN.syncHUD();
 }
 
-/* Drei verbundene Mauerstücke verschmelzen zu Stufe 3 mit EINEM Lebenspool
- * (Entscheid vom 7. August 2026): 3,2-mal so stark wie Stufe 1, und der
- * Stand liegt auf allen drei Objekten zugleich — ein Treffer irgendwo senkt
- * ihn überall, fällt der Pool, fallen alle drei (siehe trefferAuf und kill).
- * Mit dem Kartenkontingent von 3 sind höchstens drei Stücke möglich; wer
- * stattdessen alle Karten auf ein Feld stapelt, erreicht Stufe 3 auf dem
- * alten Weg, mit demselben Lebenswert (DEFS.mauer.lvls). */
-function mauerVerbund(own){
-  const stuecke = G.ents.filter(e => e.owner===own && e.type==='mauer' && !e.verbund && e.lvl===1);
-  if(stuecke.length !== 3) return;
-  // Zusammenhang über orthogonale Nachbarschaft, ab dem ersten Stück gesucht
-  const offen = [stuecke[0]], gesehen = new Set([stuecke[0].id]);
-  while(offen.length){
-    const m = offen.pop();
-    for(const n of stuecke){
-      if(gesehen.has(n.id)) continue;
-      if(Math.abs(n.r-m.r) + Math.abs(n.c-m.c) === 1){ gesehen.add(n.id); offen.push(n); }
+/* ---------- Mauern: Verbund statt Einzelstück ----------
+ * Regel des Auftraggebers (7. August 2026):
+ *
+ *   Jede Mauer trägt ein GEWICHT — die Zahl der in sie gesteckten Karten
+ *   (Stapeln auf demselben Feld erhöht es). Die STUFE einer Mauer ist die
+ *   Summe der Gewichte ihrer zusammenhängenden Gruppe, gedeckelt bei 3:
+ *
+ *     allein                    → Stufe 1
+ *     zwei verbunden            → Stufe 2
+ *     drei verbunden            → Stufe 3
+ *     drei Karten auf ein Feld  → Stufe 3 (derselbe Weg wie bisher)
+ *
+ *   Das LEBEN der Stufe (DEFS.mauer.lvls) gehört der ganzen Gruppe und wird
+ *   nach Gewicht auf ihre Stücke VERTEILT. Eine Stufe-2-Mauer (zwei Karten)
+ *   neben einer frischen Mauer ergibt Stufe 3, verteilt 2/3 zu 1/3.
+ *
+ * Jedes Stück trägt seinen Anteil selbst: Es fällt einzeln, und die
+ * verbleibenden Stücke stufen sich danach neu ein (kill ruft mauerNetz).
+ * Beim Umgruppieren bleibt der Schadensanteil erhalten — wer halb kaputt
+ * war, ist auch nach dem Anbau halb kaputt.
+ */
+const mauerGewicht = e => e.karten || 1;
+
+function mauerNetz(own){
+  const mauern = G.ents.filter(e => e.owner===own && e.type==='mauer');
+  const gesehen = new Set();
+  for(const start of mauern){
+    if(gesehen.has(start.id)) continue;
+    // Zusammenhangskomponente über orthogonale Nachbarschaft sammeln
+    const gruppe = [], offen = [start];
+    gesehen.add(start.id);
+    while(offen.length){
+      const m = offen.pop();
+      gruppe.push(m);
+      for(const n of mauern){
+        if(gesehen.has(n.id)) continue;
+        if(Math.abs(n.r-m.r) + Math.abs(n.c-m.c) === 1){ gesehen.add(n.id); offen.push(n); }
+      }
+    }
+    const gewicht = gruppe.reduce((s,m)=>s+mauerGewicht(m), 0);
+    const stufe = Math.max(1, Math.min(maxLvlOf('mauer'), gewicht));
+    const gesamt = statsOf('mauer', stufe).hp;
+    for(const m of gruppe){
+      // Anteil am Gesamtleben nach Gewicht; der Schadensstand bleibt.
+      const altMax = m.hpMax || statsOf('mauer', m.lvl).hp;
+      const quote = altMax > 0 ? Math.max(0, Math.min(1, m.hp / altMax)) : 1;
+      const neuMax = Math.max(1, Math.round(gesamt * mauerGewicht(m) / gewicht));
+      const alteStufe = m.lvl;
+      m.lvl = stufe;
+      m.hpMax = neuMax;
+      m.hp = Math.max(1, Math.round(neuMax * quote));
+      if(stufe > alteStufe){                       // Aufstieg wird gemeldet
+        fxText(m.r, m.c, 'STUFE '+stufe, '#ffd977', 0);
+        fxRing(m.r, m.c, '#ffd977');
+        HAKEN.stufenFunken(m.r, m.c);
+      }
     }
   }
-  if(gesehen.size !== 3) return;
-  const kennung = G.nextId++;
-  const pool = statsOf('mauer', 3).hp;
-  for(const m of stuecke){
-    m.verbund = kennung; m.lvl = 3; m.hp = pool;
-    fxRing(m.r, m.c, '#ffd977');
-  }
-  fxText(stuecke[0].r, stuecke[0].c, 'STUFE 3', '#ffd977', 0);
-  HAKEN.stufenFunken(stuecke[0].r, stuecke[0].c);
 }
 
 function drehBefehl(own){ G.orient[own] = !G.orient[own]; HAKEN.syncHUD(); }
