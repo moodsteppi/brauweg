@@ -403,6 +403,15 @@
       beweglich: canMove,
       schlagDauer: cdOf,
       kannSchlagen: canAtt,
+      /* Laufzeit des Werks in Sekunden (0 bei allem anderen) — mit e.leben
+       * ergibt das den Laufzeitbalken. */
+      laufzeitVon: (e) => statsOf(e.type, e.lvl).laufzeit || 0,
+      /* Dauer eines Schrittes: Damit interpoliert die 3D-Buehne den Marsch
+       * zwischen zwei Feldern genauso wie entXY in 2D. */
+      marschZeit: MOVE_T,
+      /* Erschuetterung (Einschlaege, Explosionen). Staerke in Pixeln des
+       * 2D-Renderers, Rest in Sekunden. */
+      erschuetterung: () => ({ staerke: shakeA, rest: shakeT }),
       /* Bodenmarkierungen als Liste — welche Felder hervorgehoben gehoeren,
        * ist eine Regelfrage. 2D und 3D lesen dieselbe Quelle (markenListe). */
       feldMarken: markenListe,

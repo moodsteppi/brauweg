@@ -124,6 +124,12 @@ export interface FeldherrLeseblick {
   schlagDauer(e: FeldherrObjekt): number;
   /** Kann zuschlagen (Einheit oder Geschuetz). */
   kannSchlagen(e: FeldherrObjekt): boolean;
+  /** Laufzeit des Werks in Sekunden; 0 bei allem anderen. */
+  laufzeitVon(e: FeldherrObjekt): number;
+  /** Dauer eines Marschschrittes in Sekunden (fuer die Interpolation). */
+  readonly marschZeit: number;
+  /** Erschuetterung: Staerke in 2D-Pixeln, Rest in Sekunden. */
+  erschuetterung(): { staerke: number; rest: number };
   /**
    * Bodenmarkierungen des Augenblicks (Bauplaetze, Panikzone, Erdwaerme,
    * Reichweite, Abriss, Aufstellung). Dieselbe Liste zeichnet der

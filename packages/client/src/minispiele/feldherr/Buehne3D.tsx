@@ -237,6 +237,11 @@ interface ObjektOverlays {
   /** Schwebende Stellungszahl "n/max" — nur bei stehenden Truppen. */
   stand: THREE.Sprite | null;
   standText: string;
+  /** Kurzes Aufglimmen bei Treffern. */
+  blitz: THREE.Mesh;
+  /** Laufzeitbalken des Werks (Hintergrund und Fuellung). */
+  laufBg: THREE.Sprite;
+  laufFill: THREE.Sprite;
 }
 function baueOverlays(
   gruppe: THREE.Group,
@@ -266,6 +271,28 @@ function baueOverlays(
     gruppe.add(m);
     return m;
   };
+  /* Treffer-Aufleuchten: eine additive Kugel, die bei e.flash kurz
+   * aufglimmt. Bewusst ein eigenes Objekt — die Materialien der Figuren
+   * sind geteilt, ein Umfaerben traefe alle Objekte derselben Art. */
+  const blitz = new THREE.Mesh(GEO.kugel, new THREE.MeshBasicMaterial({
+    color: '#ffd7b4', transparent: true, opacity: 0, depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  }));
+  blitz.scale.setScalar(1.1);
+  blitz.position.y = (HOEHE[art] ?? 0.9) * 0.5;
+  blitz.visible = false;
+  gruppe.add(blitz);
+  /* Laufzeitbalken des Werks: Wie lange laeuft es noch (2D: drawLaufzeit). */
+  const laufBg = new THREE.Sprite(spriteStoff('#0a1116', 0.8));
+  laufBg.scale.set(0.8, 0.11, 1);
+  laufBg.position.y = hoehe + 0.16;
+  laufBg.visible = false;
+  const laufFill = new THREE.Sprite(spriteStoff('#ffa64a', 0.95));
+  laufFill.center.set(0, 0.5);
+  laufFill.scale.set(0.76, 0.08, 1);
+  laufFill.position.set(-0.38, hoehe + 0.16, 0);
+  laufFill.visible = false;
+  gruppe.add(laufBg, laufFill);
   let stand: THREE.Sprite | null = null;
   if (mitStand) {
     stand = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
@@ -281,6 +308,7 @@ function baueOverlays(
     schlag: schlaegt ? ring(GEO_SCHLAG, RING_FARBE.schlag, 0.028) : null,
     schlagStufe: -1,
     stand, standText: '',
+    blitz, laufBg, laufFill,
   };
 }
 
@@ -355,9 +383,22 @@ function entsorgeFx(o: THREE.Object3D): void {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+/** Stufenmarken: eine gedrehte Raute je Stufe über dem Objekt (2D: drawPips). */
+const GEO_PIP = new THREE.OctahedronGeometry(0.07);
+
 /** Platzhalter je Objektart; der Ritter bekommt das GLB, sobald es da ist. */
-function baueObjekt(art: string, owner: number, lvl: number, ritter: THREE.Group | null): THREE.Object3D {
+function baueObjekt(
+  art: string, owner: number, lvl: number, ritter: THREE.Group | null, turm = false,
+): THREE.Object3D {
   const gruppe = new THREE.Group();
+  if (turm) {
+    // Schützenturm auf dem Fels: Die Figur steht erhöht (2D: drawTurm).
+    const sockel = kloetzchen(FARBE.stein, 0.66, 0.42, 0.66);
+    gruppe.add(sockel);
+    const zinne = kloetzchen(FARBE.stein, 0.74, 0.08, 0.74);
+    zinne.position.y = 0.42;
+    gruppe.add(zinne);
+  }
   const spieler = FARBE.spieler[owner] ?? '#ffffff';
   const metall = FARBE.stufe[Math.max(0, Math.min(3, lvl - 1))];
   if (art === 'haus') {
@@ -375,11 +416,17 @@ function baueObjekt(art: string, owner: number, lvl: number, ritter: THREE.Group
     gruppe.add(kamin);
   } else if (art === 'kanone') {
     gruppe.add(kloetzchen(FARBE.stein, 0.6, 0.26, 0.6));
+    // Das Rohr sitzt auf einem drehbaren Traeger: e.aim schwenkt ihn, ohne
+    // dass die Neigung (Moerser gegen Kanone) verlorengeht.
+    const traeger = new THREE.Group();
+    traeger.name = 'rohr';
+    traeger.position.y = 0.26;
     const rohr = kloetzchen('#bac6d0', 0.16, 0.62, 0.16, GEO.walze);
-    rohr.position.y = 0.26;
+    rohr.position.y = 0;
     // Stufe 2 ist der Moerser: steiler, kuerzer.
     rohr.rotation.x = lvl >= 2 ? -0.5 : -1.2;
-    gruppe.add(rohr);
+    traeger.add(rohr);
+    gruppe.add(traeger);
   } else if (art === 'ritter' && ritter) {
     // clone() teilt Geometrie, Material und Textur — nichts wird dupliziert.
     const figur = ritter.clone();
@@ -400,6 +447,16 @@ function baueObjekt(art: string, owner: number, lvl: number, ritter: THREE.Group
       bogen.position.set(0.18, 0.3, 0);
       gruppe.add(bogen);
     }
+  }
+  // Ein Turm hebt alles, was darauf steht.
+  if (turm) for (const kind of gruppe.children.slice(2)) kind.position.y += 0.5;
+  // Stufenmarken: je Stufe über der ersten eine Raute im Stufenmetall.
+  const marken = Math.max(0, Math.min(3, lvl - 1));
+  for (let i = 0; i < marken; i++) {
+    const pip = new THREE.Mesh(GEO_PIP, stoff(FARBE.stufe[Math.min(3, lvl - 1)]));
+    pip.position.set((i - (marken - 1) / 2) * 0.19,
+      (HOEHE[art] ?? 0.9) + (turm ? 0.5 : 0) + 0.16, 0);
+    gruppe.add(pip);
   }
   return gruppe;
 }
@@ -496,13 +553,21 @@ function Szene({
   const geisterLager = useRef(new Map<string, { obj: THREE.Object3D; stoff: THREE.MeshLambertMaterial }>());
   const pfeile = useRef(new THREE.Group());
   const pfeilVorrat = useRef<THREE.Mesh[]>([]);
+  const truemmer = useRef(new THREE.Group());
+  const truemmerVorrat = useRef<{ kachel: THREE.Mesh; balken: THREE.Sprite }[]>([]);
+  const kugeln = useRef(new THREE.Group());
+  const kugelVorrat = useRef<THREE.Mesh[]>([]);
   const hellRef = useRef<THREE.InstancedMesh>(null);
   const dunkelRef = useRef<THREE.InstancedMesh>(null);
   const hilfsMatrix = useRef(new THREE.Matrix4());
   const hilfsFarbe = useRef(new THREE.Color());
   const imBild = useRef(new Map<number, {
-    obj: THREE.Group; art: string; lvl: number;
-    ueber: ObjektOverlays; bx: number; bz: number;
+    obj: THREE.Group; art: string; lvl: number; turm: boolean;
+    /** Grundskalierung (Werke sind 1 x 2) — die Setz-Animation multipliziert sie. */
+    basis: THREE.Vector3;
+    /** Drehbarer Rohrtraeger der Geschuetze, sonst null. */
+    rohr: THREE.Object3D | null;
+    ueber: ObjektOverlays;
   }>());
   const fxBild = useRef(new Map<object, THREE.Object3D>());
   const gelaendeQuelle = useRef<unknown>(null);
@@ -572,6 +637,10 @@ function Szene({
       if (frisch && z) marker.current.position.set(z.x + 0.5, 0.02, z.z + 0.5);
     }
 
+    // Zustand einmal je Bild lesen — auch die Kamera braucht ihn schon
+    // (Erschuetterung), deshalb steht die Lesung vor allem anderen.
+    const sicht: FeldherrLeseblick | undefined = sitzungRef.current?.lesen?.();
+
     // Fast senkrecht ueber der Arena; die Neigung kippt die Kamera zur
     // eigenen Seite (unten) hin auf. Je Bild gesetzt, damit ein kuenftiger
     // Kameraschwenk (Muenzflug, Sieg) hier einen einzigen Ansatzpunkt hat.
@@ -584,10 +653,24 @@ function Szene({
     const fuerTiefe = (ZEILEN / 2 + KAMERA_RAND) / halbFov;
     const fuerBreite = (SPALTEN / 2 + KAMERA_RAND) / (halbFov * seite);
     const d = Math.max(KAMERA.abstand, fuerTiefe, fuerBreite);
-    drei.camera.position.set(SPALTEN / 2, d * Math.cos(n), ZEILEN / 2 + d * Math.sin(n));
-    drei.camera.lookAt(SPALTEN / 2, 0, ZEILEN / 2);
+    /* Erschuetterung bei Einschlaegen und Explosionen (2D: shake). Die
+     * Staerke kommt in Pixeln des 2D-Renderers; ueber die Zellbreite wird
+     * daraus ein Mass in Feldern. Reine Optik — deko(), nie Spielzufall. */
+    let bebenX = 0, bebenZ = 0;
+    const beben = sicht?.erschuetterung ? sicht.erschuetterung() : null;
+    if (beben && beben.rest > 0 && beben.staerke > 0 && sicht?.raster) {
+      const ra = sicht.raster();
+      if (ra.tw > 0) {
+        const stark = (beben.staerke / ra.tw) * Math.min(1, beben.rest * 3);
+        bebenX = (Math.random() - 0.5) * stark;
+        bebenZ = (Math.random() - 0.5) * stark;
+      }
+    }
+    drei.camera.position.set(
+      SPALTEN / 2 + bebenX, d * Math.cos(n), ZEILEN / 2 + d * Math.sin(n) + bebenZ);
+    drei.camera.lookAt(SPALTEN / 2 + bebenX, 0, ZEILEN / 2 + bebenZ);
 
-    const blick: FeldherrLeseblick | undefined = sitzungRef.current?.lesen?.();
+    const blick = sicht;
     const G = blick?.zustand;
     if (!blick || !G) return;
     const spiegel = blick.spiegel;
@@ -614,11 +697,14 @@ function Szene({
           const bw = c1 - c0 + 1, bh = r1 - r0 + 1;
           const stueck = baueGelaende(env.type, bw, bh);
           stueck.position.set(xVon(c0, bw), 0, zVon(r0, bh));
+          // Seen liegen flach im Boden und werfen keinen Schatten.
+          if (env.type !== 'see') stueck.traverse((o) => { o.castShadow = true; });
           gelaende.current.add(stueck);
         } else {
           for (const zelle of env.cells) {
             const stueck = baueGelaende(env.type);
             stueck.position.set(xVon(zelle.c, 1), 0, zVon(zelle.r, 1));
+            stueck.traverse((o) => { o.castShadow = true; });
             gelaende.current.add(stueck);
           }
         }
@@ -630,33 +716,48 @@ function Szene({
     for (const e of G.ents) {
       gesehen.add(e.id);
       let eintrag = imBild.current.get(e.id);
-      if (eintrag && (eintrag.art !== e.type || eintrag.lvl !== e.lvl)) {
+      if (eintrag && (eintrag.art !== e.type || eintrag.lvl !== e.lvl
+                      || eintrag.turm !== !!e.turm)) {
         objekte.current.remove(eintrag.obj);
         eintrag = undefined;
       }
       if (!eintrag) {
-        const obj = baueObjekt(e.type, e.owner, e.lvl, ritter) as THREE.Group;
-        const zielX = xVon(e.c, e.w ?? 1);
-        const zielZ = zVon(e.r, e.h ?? 1);
+        const obj = baueObjekt(e.type, e.owner, e.lvl, ritter, !!e.turm) as THREE.Group;
+        // Werke sind 1 x 2: Grundflaeche an die echten Masse anpassen.
+        const basis = new THREE.Vector3(1, 1, 1);
+        if (e.type === 'werk') basis.set((e.w ?? 1) * 0.9, 1, (e.h ?? 1) * 0.9);
         eintrag = {
-          obj, art: e.type, lvl: e.lvl,
+          obj, art: e.type, lvl: e.lvl, turm: !!e.turm, basis,
+          rohr: obj.getObjectByName('rohr') ?? null,
           ueber: baueOverlays(obj, e.type, blick.beweglich(e), blick.kannSchlagen(e),
             !!blick.stellungsStand(e)),
-          bx: zielX, bz: zielZ,
         };
         imBild.current.set(e.id, eintrag);
         objekte.current.add(obj);
-        // Werke sind 1 x 2: Grundflaeche an die echten Masse anpassen.
-        if (e.type === 'werk') obj.scale.set((e.w ?? 1) * 0.9, 1, (e.h ?? 1) * 0.9);
-        obj.position.set(zielX, 0, zielZ);
+        obj.scale.copy(basis);
+        obj.position.set(xVon(e.c, e.w ?? 1), 0, zVon(e.r, e.h ?? 1));
         // Truppen blicken zur gegnerischen Haelfte.
         const vor = e.owner === 0 ? 1 : -1;
         obj.rotation.y = (spiegel ? -vor : vor) > 0 ? Math.PI : 0;
+        for (const kind of obj.children) kind.castShadow = true;
       }
-      // Weiches Nachziehen: Die Simulation springt feldweise; das Bild
-      // gleitet hinterher. Reine Optik, der Zustand bleibt unberuehrt.
-      eintrag.bx += (xVon(e.c, e.w ?? 1) - eintrag.bx) * 0.25;
-      eintrag.bz += (zVon(e.r, e.h ?? 1) - eintrag.bz) * 0.25;
+
+      /* Marsch wie in 2D (entXY): Solange ein Schritt laeuft, gleitet die
+       * Figur mit weicher Beschleunigung vom Ausgangs- aufs Zielfeld. Der
+       * Kern fuehrt dafuer mt (Restzeit des Schrittes) sowie fr/fc (woher)
+       * — vorher zog die Buehne nur grob nach und lief dem Zustand
+       * hinterher. */
+      let zeile = e.r, spalte = e.c;
+      const mt = e.mt as number | undefined;
+      const fr = e.fr as number | undefined;
+      const fc = e.fc as number | undefined;
+      if (blick.beweglich(e) && mt !== undefined && fr !== undefined && fc !== undefined
+          && mt < blick.marschZeit) {
+        const k = Math.max(0, Math.min(1, mt / blick.marschZeit));
+        const ke = k < 0.5 ? 2 * k * k : 1 - ((-2 * k + 2) ** 2) / 2;
+        zeile = fr + (e.r - fr) * ke;
+        spalte = fc + (e.c - fc) * ke;
+      }
       // Kampfanimation wie in 2D: Der Schlag ist ein Ausfallschritt in
       // Angriffsrichtung (e.atk klingt im Kern ab); die Kanone federt
       // stattdessen leicht zurueck.
@@ -670,7 +771,50 @@ function Szene({
         ox = (dxA / len) * schub * atk;
         oz = (dzA / len) * schub * atk;
       }
-      eintrag.obj.position.set(eintrag.bx + ox, 0, eintrag.bz + oz);
+      // Wackeln bei abgewiesener Handlung (z. B. Stellungen ausgeschoepft).
+      const nudge = (e.nudge as number | undefined) ?? 0;
+      eintrag.obj.position.set(
+        xVon(spalte, e.w ?? 1) + ox,
+        nudge > 0 ? 0.10 * Math.sin(nudge * Math.PI) : 0,
+        zVon(zeile, e.h ?? 1) + oz,
+      );
+
+      /* Setz-Animation: frisch Gebautes ploppt auf (2D: spawnScale). */
+      const spawn = (e.spawn as number | undefined) ?? 1;
+      const wuchs = spawn >= 1 ? 1
+        : 1.08 * Math.sin(spawn * Math.PI * 0.5) + 0.06 * Math.sin(spawn * Math.PI * 1.5) * (1 - spawn);
+      eintrag.obj.scale.set(
+        eintrag.basis.x * wuchs, eintrag.basis.y * wuchs, eintrag.basis.z * wuchs);
+
+      /* Rohrschwenk: e.aim ist ein Winkel in der Brettebene
+       * (atan2(Zeile, Spalte)); im Spiegel dreht die Zeilenrichtung um. */
+      if (eintrag.rohr) {
+        const aim = e.aim as number | undefined;
+        if (aim !== undefined) {
+          const dx = Math.cos(aim);
+          const dz = (spiegel ? -1 : 1) * Math.sin(aim);
+          eintrag.rohr.rotation.y = Math.atan2(dx, dz);
+        }
+      }
+
+      /* Treffer-Aufleuchten (2D: der helle Schein ueber Getroffenem). */
+      const flash = Math.max(0, (e.flash as number | undefined) ?? 0);
+      eintrag.ueber.blitz.visible = flash > 0.01;
+      (eintrag.ueber.blitz.material as THREE.MeshBasicMaterial).opacity = Math.min(0.55, flash * 0.8);
+
+      /* Laufzeitbalken: Wie lange arbeitet das Werk noch, bevor es auf
+       * Sparflamme faellt (2D: drawLaufzeit). */
+      const laufMax = blick.laufzeitVon(e);
+      const laufRest = (e.leben as number | undefined) ?? 0;
+      const zeigtLauf = laufMax > 0;
+      eintrag.ueber.laufBg.visible = zeigtLauf;
+      eintrag.ueber.laufFill.visible = zeigtLauf && laufRest > 0;
+      if (zeigtLauf) {
+        const anteilL = Math.max(0, Math.min(1, laufRest / laufMax));
+        eintrag.ueber.laufFill.scale.x = Math.max(0.01, 0.76 * anteilL);
+        eintrag.ueber.laufFill.material =
+          spriteStoff(anteilL > 0.35 ? '#ffa64a' : '#ff6f52', 0.95);
+      }
 
       // Lebensbalken: nur sichtbar, wenn etwas fehlt; Farbe nach Restanteil.
       const max = blick.maxLeben(e) || 1;
@@ -775,6 +919,76 @@ function Szene({
           mz.rotation.x = endLage;
         }
       }
+    }
+
+    /* Truemmerfelder: Wo etwas Brennendes liegt, ist das Feld gesperrt —
+     * rote Kachel plus Restzeitbalken (2D: drawSperren, drawSperrBalken).
+     * In 3D waren die Felder bisher unsichtbar blockiert. */
+    const sperren = (G.sperren ?? []) as readonly { r: number; c: number; t: number; max: number }[];
+    for (let i = 0; i < sperren.length; i++) {
+      let eintrag = truemmerVorrat.current[i];
+      if (!eintrag) {
+        const kachel = new THREE.Mesh(GEO_MARKE, new THREE.MeshBasicMaterial({
+          color: '#ff6a52', transparent: true, opacity: 0.3, depthWrite: false,
+          side: THREE.DoubleSide,
+        }));
+        kachel.rotation.x = -Math.PI / 2;
+        kachel.position.y = 0.014;
+        kachel.scale.setScalar(0.9);
+        const balken = new THREE.Sprite(spriteStoff('#ff6a52', 0.9));
+        balken.center.set(0, 0.5);
+        balken.scale.set(0.6, 0.08, 1);
+        eintrag = { kachel, balken };
+        truemmerVorrat.current[i] = eintrag;
+        truemmer.current.add(kachel, balken);
+      }
+      const z = sperren[i];
+      const zr = spiegel ? zeilen - 1 - z.r : z.r;
+      eintrag.kachel.visible = true;
+      eintrag.kachel.position.set(z.c + 0.5, 0.014, zr + 0.5);
+      eintrag.balken.visible = true;
+      const rest = Math.max(0, Math.min(1, z.max > 0 ? z.t / z.max : 0));
+      eintrag.balken.scale.x = Math.max(0.01, 0.6 * rest);
+      eintrag.balken.position.set(z.c + 0.5 - 0.3, 0.5, zr + 0.5);
+    }
+    for (let i = sperren.length; i < truemmerVorrat.current.length; i++) {
+      truemmerVorrat.current[i].kachel.visible = false;
+      truemmerVorrat.current[i].balken.visible = false;
+    }
+
+    /* Kanonenkugel: Der ball-Effekt traegt Bildschirmkoordinaten des
+     * 2D-Renderers (ax/ay nach bx/by). Ueber dasselbe Raster wie die
+     * Partikel wird daraus eine Flugbahn mit Wurfbogen. */
+    let kugelZahl = 0;
+    if (blick.raster) {
+      const ra = blick.raster();
+      if (ra.tw > 0 && ra.th > 0) {
+        for (const f of G.fx as readonly Record<string, number | string>[]) {
+          if (f.k !== 'ball') continue;
+          const t = Number(f.t) || 0;
+          const dur = Number(f.dur) || 0.42;
+          if (t < 0) continue;
+          const k = Math.max(0, Math.min(1, t / dur));
+          let kugel = kugelVorrat.current[kugelZahl];
+          if (!kugel) {
+            kugel = new THREE.Mesh(GEO.kugel, new THREE.MeshBasicMaterial({ color: '#ffe0b0' }));
+            kugel.scale.setScalar(0.2);
+            kugelVorrat.current[kugelZahl] = kugel;
+            kugeln.current.add(kugel);
+          }
+          const sp0 = (Number(f.ax) - ra.ox) / ra.tw, ze0 = (Number(f.ay) - ra.oy) / ra.th;
+          const sp1 = (Number(f.bx) - ra.ox) / ra.tw, ze1 = (Number(f.by) - ra.oy) / ra.th;
+          const sp = sp0 + (sp1 - sp0) * k;
+          const ze = ze0 + (ze1 - ze0) * k;
+          kugel.visible = true;
+          kugel.position.set(sp, 0.35 + 1.5 * Math.sin(Math.PI * k),
+            spiegel ? zeilen - ze : ze);
+          kugelZahl += 1;
+        }
+      }
+    }
+    for (let i = kugelZahl; i < kugelVorrat.current.length; i++) {
+      kugelVorrat.current[i].visible = false;
     }
 
     // Bodenmarken: welche Felder hervorgehoben gehoeren, entscheidet der
@@ -1017,23 +1231,61 @@ function Szene({
 
   return (
     <>
-      <ambientLight intensity={0.85} />
-      {/* Sonne links oben, wie das Lichtmodell des 2D-Renderers. */}
-      <directionalLight position={[-4, 9, 2]} intensity={1.4} />
+      {/**
+       * Licht in drei Schichten, wie es das 2D-Bild nachahmt:
+       *
+       *  - Himmelslicht faellt von oben und faerbt Schattenseiten kuehl
+       *    ein, statt sie schwarz absaufen zu lassen. Es ersetzt einen
+       *    Teil des flachen Umgebungslichts.
+       *  - Die Sonne steht links oben (wie F.n/F.w im 2D-Lichtmodell) und
+       *    ist die EINZIGE Quelle, die Schatten wirft — mehrere
+       *    Schattenwerfer kosten je einen Durchgang und bringen bei dieser
+       *    Draufsicht kaum etwas.
+       *  - Ein schwaches Gegenlicht von rechts unten setzt Kanten ab,
+       *    damit Figuren sich vom Boden loesen.
+       */}
+      <hemisphereLight args={['#9fc8e8', '#2a3a2c', 0.75]} />
+      <ambientLight intensity={0.28} />
+      <directionalLight
+        position={[-7, 13, -3]}
+        intensity={1.35}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-bias={-0.0012}
+        shadow-camera-near={1}
+        shadow-camera-far={40}
+        shadow-camera-left={-9}
+        shadow-camera-right={9}
+        shadow-camera-top={12}
+        shadow-camera-bottom={-12}
+      />
+      <directionalLight position={[6, 5, 9]} intensity={0.35} color="#cfe3ff" />
       <group>
         {/* Erdsockel und Brettplatte */}
-        <mesh position={[SPALTEN / 2, -0.25, ZEILEN / 2]}>
+        <mesh position={[SPALTEN / 2, -0.25, ZEILEN / 2]} receiveShadow>
           <boxGeometry args={[SPALTEN + 0.3, 0.5, ZEILEN + 0.3]} />
           <meshLambertMaterial color={FARBE.erde} />
+        </mesh>
+        {/**
+         * Der Rasen ist EIN Feld, das die Schatten aufnimmt; die Kacheln
+         * darueber sind nur noch Farbe. Ein Schattenempfaenger statt
+         * sechsundneunzig spart Rechenzeit und vermeidet Nahtartefakte an
+         * den Kachelraendern.
+         */}
+        <mesh position={[SPALTEN / 2, 0.0005, ZEILEN / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <planeGeometry args={[SPALTEN, ZEILEN]} />
+          <meshLambertMaterial color={FARBE.grasAlt} />
         </mesh>
         {/* Felder als Schachbrett der beiden Grasfarben */}
         {Array.from({ length: ZEILEN * SPALTEN }, (_, i) => {
           const r = Math.floor(i / SPALTEN);
           const c = i % SPALTEN;
+          if ((r + c) % 2 === 0) return null;      // nur jede zweite Kachel faerbt
           return (
-            <mesh key={i} position={[c + 0.5, 0.001, r + 0.5]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.98, 0.98]} />
-              <meshLambertMaterial color={(r + c) % 2 ? FARBE.gras : FARBE.grasAlt} />
+            <mesh key={i} position={[c + 0.5, 0.0015, r + 0.5]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[1, 1]} />
+              <meshBasicMaterial color={FARBE.gras} transparent opacity={0.5} />
             </mesh>
           );
         })}
@@ -1044,9 +1296,11 @@ function Szene({
         </mesh>
         <primitive object={gelaende.current} />
         <primitive object={marken.current} />
+        <primitive object={truemmer.current} />
         <primitive object={objekte.current} />
         <primitive object={geister.current} />
         <primitive object={pfeile.current} />
+        <primitive object={kugeln.current} />
         <primitive object={effekte.current} />
         {/* Partikel: zwei Schwaerme, je ein Zeichenaufruf. count wird je
             Bild gesetzt; frisch angelegt zeigen sie nichts. */}
@@ -1195,6 +1449,7 @@ export function Buehne3D({
        */}
       <Canvas
         style={{ pointerEvents: 'none' }}
+        shadows="soft"
         gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [SPALTEN / 2, KAMERA.abstand, ZEILEN / 2 + 2], fov: 42 }}
         onCreated={({ gl: renderer }) => {

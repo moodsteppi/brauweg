@@ -253,46 +253,45 @@ Reihenfolge ist ein Vorschlag: erst was man im Spiel vermisst, dann Kür.
   Spielerfarbe (dieselbe Aussage wie `markAufwertung`), und darüber
   schwebt ein wippender grüner Pfeil (`pfeilHoch`).
 
-**Spürbar im Spiel**
+**Zweite Runde, ebenfalls am 7. August 2026 erledigt**
 
-1. **Kanonenkugel** (`ball`-Effekt): Der Eintrag trägt 2D-Pixel­koordinaten
-   (`ax/ay/bx/by`) — für 3D müssen Brettkoordinaten mit hinein. (Der
-   `raster()`-Weg der Partikel wäre auch hier gangbar.)
-3. **Marschbewegung** (`e.mt`, `MOVE_T`): 2D interpoliert zwischen Feldern
-   mit Beschleunigung; 3D zieht nur weich nach.
-4. **Aufleuchten bei Treffern** (`e.flash`) und **Wackeln** (`e.nudge`) —
-   die Rückmeldung, dass etwas eingeschlagen ist.
-5. **Bildschirmwackeln** (`shake`) bei Einschlägen und Explosionen.
-6. **Trümmerfelder** (`drawSperren`, `drawSperrBalken`): rote Kachel plus
-   Restzeitbalken, dazu das **Wrack** (`drawWrack`) auf gefallenen
-   Fels-Stellungen. In 3D sind die Felder unsichtbar blockiert.
-7. **Laufzeitbalken des Werks** (`drawLaufzeit`) — wann geht ihm die Puste
-   aus.
-8. **Stufenmarken** (`drawPips`) — Kupfer/Silber/Gold/Diamant über der
-   Figur. In 3D färbt bisher nur der Kopf.
+* **Marschbewegung** aus `e.mt`/`e.fr`/`e.fc` mit derselben weichen
+  Beschleunigung wie `entXY` — vorher zog die Bühne nur grob nach.
+* **Setz-Animation** (`spawnScale`), **Aufleuchten bei Treffern**
+  (`e.flash`) und **Wackeln** (`e.nudge`). Das Aufleuchten ist ein
+  eigenes additives Objekt: Die Materialien der Figuren sind geteilt, ein
+  Umfärben träfe alle Objekte derselben Art.
+* **Rohrschwenk**: `e.aim` ist ein Winkel in der Brettebene
+  (`atan2(Zeile, Spalte)`); das Rohr sitzt auf einem drehbaren Träger,
+  damit die Neigung (Mörser gegen Kanone) erhalten bleibt.
+* **Schützenturm** (Platzhalter-Sockel), **Stufenmarken** als Rauten im
+  Stufenmetall, **Laufzeitbalken** des Werks.
+* **Trümmerfelder** aus `G.sperren` als rote Kachel mit Restzeitbalken.
+* **Kanonenkugel**: Der `ball`-Effekt trägt Bildschirmkoordinaten — über
+  `raster()` umgerechnet, mit Wurfbogen.
+* **Erschütterung**: `lesen().erschuetterung()` reicht `shake` durch, die
+  Kamera bebt gedämpft mit und beruhigt sich über die Restzeit.
+* **Licht und Schatten**: Himmelslicht hellt Schattenseiten kühl auf statt
+  sie absaufen zu lassen; die Sonne links oben ist die **einzige**
+  Schattenquelle (jede weitere kostet einen eigenen Durchgang und bringt
+  bei dieser Draufsicht kaum etwas); ein schwaches Gegenlicht setzt Kanten
+  ab. Der Rasen ist **ein** Schattenempfänger statt 96 Kacheln — das spart
+  Rechenzeit und vermeidet Nähte an den Kachelrändern; die Farbkacheln
+  liegen als halbdurchsichtige Ebene darüber.
 
-**Beim Ziehen und Zielen**
+**Was aus 2D noch fehlt**
 
-9. **Kanonenziel** (`kanonenZiel`): wen träfe das Geschütz von diesem Feld.
-10. **Kesselvorschau** (`knallVorschau`): wen risse dieses Werk mit.
-11. **Aufwertungsziel** (`markAufwertung`, `pfeilHoch`): goldenes Glühen
-    und Pfeil über dem Objekt, auf das die Karte fiele.
-
-**Feinheiten**
-
-12. **Setz-Animation** (`spawnScale`) — das Aufploppen beim Bauen.
-13. **Rohrschwenk** (`e.aim`, `aimZiel`) — Kanonen zielen sichtbar.
-14. **Schützenturm** (`drawTurm`) auf dem Fels.
-15. **Großer Bretthinweis** (`drawPlaceHint`, „Setze dein Haupthaus").
-16. **Geländemodelle** statt Platzhalter — bestellt in
-    `docs/ASSETS-FELDHERR-3D.md` (Bäume, Fels, Vulkan, abgerundete Seen).
-
-**Noch nicht gegengeprüft**
-
-17. **Sitz-0-Spiegelung im Netz** mit zwei echten Geräten.
-
-**Offen in Stufe 2 (Rest):** Bau-Vorschau in 3D nach Bezahlbarkeit
-abstufen (heute grün/rot), `bogen-turm`/Mörser-Details.
+1. **Kanonenziel** (`kanonenZiel`) und **Kesselvorschau**
+   (`knallVorschau`) beim Ziehen — beide müssten wie `markenListe` erst zu
+   Daten werden.
+2. **Großer Bretthinweis** (`drawPlaceHint`, „Setze dein Haupthaus").
+3. **Wrack** (`drawWrack`): Das Feld ist als Trümmer markiert, hat aber
+   kein eigenes Bild.
+4. **Geländemodelle** statt Platzhalter — bestellt in
+   `docs/ASSETS-FELDHERR-3D.md` (Bäume, Fels, Vulkan, abgerundete Seen).
+5. **Sitz-0-Spiegelung im Netz** mit zwei echten Geräten gegenprüfen.
+6. Bau-Vorschau nach Bezahlbarkeit abstufen (heute nur grün/rot),
+   `bogen-turm`/Mörser-Details.
 
 ### Stufe 3 — Ausmustern
 
