@@ -153,6 +153,12 @@ function spriteStoff(farbe: string, deckkraft: number): THREE.SpriteMaterial {
 
 /** Schadenszahlen und Meldungen als Leinwand-Texturen, je Text geteilt. */
 const textLager = new Map<string, THREE.Texture>();
+/**
+ * Anteil der Tafel an der Texturbreite. Der freie Rand einer Textur ist
+ * durchsichtig; ohne dieses Mass hielte der Randschutz unten die leeren
+ * Ecken fuer Schild und schoebe die Tafeln viel zu weit nach innen.
+ */
+const tafelAnteil = new Map<string, number>();
 function textTextur(text: string, farbe: string, tafel = false): THREE.Texture {
   const key = text + '/' + farbe + (tafel ? '/tafel' : '');
   let t = textLager.get(key);
@@ -176,6 +182,7 @@ function textTextur(text: string, farbe: string, tafel = false): THREE.Texture {
         z.font = '800 ' + grad + 'px system-ui, sans-serif';
       }
       const breite = Math.min(leinwand.width - 12, z.measureText(text).width + 56);
+      tafelAnteil.set(key, breite / leinwand.width);
       z.fillStyle = 'rgba(7,12,17,.9)';
       z.beginPath();
       const x0 = mitteX - breite / 2, y0 = 26, h = leinwand.height - 52;
@@ -460,7 +467,8 @@ function Szene({
   const marken = useRef(new THREE.Group());
   const markenVorrat = useRef<THREE.Mesh[]>([]);
   const schilder = useRef(new THREE.Group());
-  const schilderVorrat = useRef<{ sprite: THREE.Sprite; text: string }[]>([]);
+  const schilderVorrat = useRef<{ sprite: THREE.Sprite; text: string; anteil: number }[]>([]);
+  const hilfsPunkt = useRef(new THREE.Vector3());
   const geister = useRef(new THREE.Group());
   const geisterLager = useRef(new Map<string, { obj: THREE.Object3D; stoff: THREE.MeshLambertMaterial }>());
   const imBild = useRef(new Map<number, {
@@ -813,7 +821,7 @@ function Szene({
       let eintrag = schilderVorrat.current[i];
       if (!eintrag) {
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
-        eintrag = { sprite, text: '' };
+        eintrag = { sprite, text: '', anteil: 1 };
         schilderVorrat.current[i] = eintrag;
         schilder.current.add(sprite);
       }
@@ -825,6 +833,7 @@ function Szene({
         eintrag.text = schluessel;
         sp.material.map = textTextur(s.tx, s.col, true);
         sp.material.needsUpdate = true;
+        eintrag.anteil = tafelAnteil.get(schluessel + '/tafel') ?? 1;
       }
       // Alle Schilder gleich gross — die Tafel in der Textur passt sich dem
       // Text an, der freie Rand ist durchsichtig. Nur so wirkt die Schrift
@@ -836,6 +845,29 @@ function Szene({
       // Bauvorschau darunter frei.
       sp.position.set(s.c + 0.5, s.h * 0.5 + 0.4,
         (spiegel ? zeilen - 1 - s.r : s.r) + 0.5 + s.h * 0.55);
+
+      /* Randschutz: Ein Schild am Brettrand liefe sonst aus dem Bild — in
+       * 2D faengt schild() das mit einer Klemme in Bildschirmkoordinaten
+       * ab, hier ist das Aequivalent der Weg ueber die Bildebene: Punkt
+       * projizieren, in den sichtbaren Bereich klemmen, zurueckrechnen.
+       * Gerechnet wird mit der ECHTEN Tafelbreite (anteil), nicht mit der
+       * Sprite-Breite — der Rest der Textur ist durchsichtig. */
+      const kam2 = drei.camera as THREE.PerspectiveCamera;
+      const abstand = kam2.position.distanceTo(sp.position);
+      const sichtHoehe = 2 * abstand * Math.tan((kam2.fov * Math.PI) / 360);
+      const sichtBreite = sichtHoehe * kam2.aspect;
+      // Halbe Ausdehnung in Bildkoordinaten (NDC spannt 2 ueber das Bild),
+      // plus etwas Luft — ohne sie klebt das Schild sichtbar am Rand,
+      // auch wenn es rechnerisch gerade noch hineinpasst.
+      const LUFT = 0.04;
+      const randX = (sp.scale.x * eintrag.anteil) / sichtBreite + LUFT;
+      const randY = sp.scale.y / sichtHoehe + LUFT;
+      const p = hilfsPunkt.current.copy(sp.position).project(kam2);
+      // Passt das Schild ueberhaupt ins Bild? Sonst in die Mitte ruecken.
+      p.x = randX < 0.98 ? Math.max(-1 + randX, Math.min(1 - randX, p.x)) : 0;
+      p.y = randY < 0.98 ? Math.max(-1 + randY, Math.min(1 - randY, p.y)) : 0;
+      p.unproject(kam2);
+      sp.position.copy(p);
     }
     for (let i = schilderListe.length; i < schilderVorrat.current.length; i++) {
       schilderVorrat.current[i].sprite.visible = false;

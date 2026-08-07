@@ -219,6 +219,17 @@ und bleibt bedienbar — geprüft mit `elementFromPoint`.
   Und alle Schild-Sprites haben **dieselbe Größe**; die Tafel passt sich
   im Bild dem Text an, die Schrift schrumpft nur bei sehr langen Ansagen.
   Größe nach Textlänge zu skalieren ließ kurze Schilder winzig wirken.
+* **Randschutz:** Ein Schild am Brettrand liefe aus dem Bild. In 2D klemmt
+  `schild()` in Bildschirmkoordinaten; in 3D ist das Gegenstück der Weg
+  über die Bildebene — Punkt projizieren, in den sichtbaren Bereich
+  klemmen, zurückrechnen. Gerechnet wird mit der **echten Tafelbreite**
+  (`tafelAnteil`), nicht mit der Sprite-Breite: Der Rest der Textur ist
+  durchsichtig und würde das Schild sonst viel zu weit nach innen schieben.
+* **Overlays nur für Sitze dieses Geräts** (`darfBedienen`): Während der
+  Gegner oder die KI aufstellt, bleibt das eigene Brett ruhig — fremde
+  Bauhilfen sind weder nützlich noch verständlich. Gilt für Marken UND
+  Schilder, in 2D wie in 3D. Zu zweit an einem Gerät gehören beide Sitze
+  hierher, dort ändert sich nichts.
 
 **Offen in Stufe 2:** Marsch-Interpolation über `restAnteil` und `e.mt`
 statt Nachzieh-Glättung, Kanonenkugel-Flugbahn (der `ball`-Effekt trägt

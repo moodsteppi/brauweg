@@ -1354,6 +1354,11 @@ function markenListe(){
   const mark = (r,c,col,a,ecken)=>{ liste.push({r, c, col, a, ecken:!!ecken}); };
   if(phase==='place'){
     const who = drankommt();
+    // Nur für Sitze, die an DIESEM Gerät bedient werden: Während der Gegner
+    // (oder die KI) sein Haupthaus setzt, bleibt das eigene Brett ruhig —
+    // fremde Bauhilfen sind weder nützlich noch verständlich. Zu zweit an
+    // einem Gerät gehören beide Sitze hierher, dort ändert sich nichts.
+    if(!darfBedienen(who)) return liste;
     const col = sh(COL.p[who],1);
     for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++){
       if(!freeCell(r,c) || envAt(r,c)==='vulkan') continue;
@@ -1363,6 +1368,7 @@ function markenListe(){
     return liste;
   }
   for(const own of [0,1]){
+    if(!darfBedienen(own)) continue;                   // fremde Bauhilfen bleiben aus
     if(G.raze[own]){                                   // Abriss: eigene Objekte anbieten
       for(const e of G.ents){
         if(e.owner!==own || e.type==='haus') continue;
@@ -1512,8 +1518,10 @@ function schildListe(){
   }
   if(phase==='place'){
     // Was das Gelände dem Haupthaus bringt: Erdwärme am Kraterrand und
-    // Deckung im Wald. Je Art ein Schild auf dem ersten passenden Feld.
+    // Deckung im Wald. Je Art ein Schild auf dem ersten passenden Feld —
+    // und nur, solange ein Sitz dieses Geräts am Zug ist (siehe markenListe).
     const who = drankommt();
+    if(!darfBedienen(who)) return liste;
     let warm = false, wald = false;
     for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++){
       if(!freeCell(r,c) || envAt(r,c)==='vulkan') continue;
@@ -1559,6 +1567,7 @@ function schildListe(){
   }
   // Hinweis auf die Bonuszone — auch während des Ziehens sichtbar
   for(const own of [0,1]){
+    if(!darfBedienen(own)) continue;              // nicht für fremde Sitze
     const a=G.armed[own];
     if(!a) continue;
     let tx=null, zr=null, zc=null;
