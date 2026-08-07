@@ -557,14 +557,18 @@ function baueGelaende(art: string, bw = 1, bh = 1): THREE.Object3D {
  * Alles hier ist Deko: eigener Wuerfel mit festem Korn (stabil je
  * Sitzung), NIE der Spielzufall des Kerns.
  */
-/* Die beiden Rasentoene des Schachbretts: dieselbe Farbwelt wie der
- * 2D-Kern, aber staerker gespreizt — unter der Fleckung der Textur war
- * der alte Abstand (gras zu grasAlt) kaum noch zu sehen. */
-const GRAS_HELL = '#456549';
-const GRAS_DUNKEL = '#37523d';
+/* Die beiden Rasentoene des Schachbretts. Sichtentscheid vom 7. August
+ * 2026 nach Referenzbild des Auftraggebers (Sechseck-Rasen im Stil von
+ * Clash Royale, hier rechteckig): frisches, helles Gelbgruen statt des
+ * dunklen Waldgruens der 2D-Farbwelt — feines, gleichmaessiges Korn,
+ * weiche dunkle Naehte, leichte Helligkeitsstreuung je Feld. */
+const GRAS_HELL = '#a4c250';
+const GRAS_DUNKEL = '#8dab3f';
+/** Ton der weichen Naehte zwischen den Feldern. */
+const GRAS_NAHT = '#4a5c22';
 /** Ohne Rasen bleiben Felder, auf denen kein Boden zu sehen waere. */
 const OHNE_GRAS = new Set(['see', 'gebirge', 'vulkan', 'krater']);
-const KACHEL_PX = 96;
+const KACHEL_PX = 128;
 const HALME_JE_FELD = 150;
 
 /** Deko-Wuerfel, gleicher Aufbau wie zufall() im Kern, aber eigener Stand. */
@@ -579,58 +583,46 @@ function wuerfel(saat: number): () => number {
   };
 }
 
-/** Eine Kachelvariante: Grundton mit Fleckung, Sprenkeln und Grasstrichen. */
+/** Eine Kachelvariante: Grundton mit feinem, gleichmaessigem Korn.
+ *  Keine Flecken, keine Striche — die Referenz lebt von dichtem
+ *  Pixelrauschen, das aus der Naehe wie Rasen flirrt und aus der
+ *  Spielhoehe zu einer ruhigen, sauberen Flaeche verschwimmt. */
 function malKachel(farbe: string, wurf: () => number): HTMLCanvasElement {
   const kachel = document.createElement('canvas');
   kachel.width = kachel.height = KACHEL_PX;
   const ctx = kachel.getContext('2d')!;
-  ctx.fillStyle = farbe;
-  ctx.fillRect(0, 0, KACHEL_PX, KACHEL_PX);
-  const grund = new THREE.Color(farbe);
-  const ton = new THREE.Color();
-  /** Randfarbe eines Verlaufs: DERSELBE Ton mit Deckkraft null — wer gegen
-   *  rgba(0,0,0,0) verlaufen laesst, mischt auf dem Weg dorthin Schwarz
-   *  hinein, und aus hellen Flecken werden dunkle Ringe. */
-  const durchsichtig = () => {
-    const r = Math.round(ton.r * 255), g = Math.round(ton.g * 255), b = Math.round(ton.b * 255);
-    return 'rgba(' + r + ',' + g + ',' + b + ',0)';
-  };
-  // Weiche Flecken: hellere und dunklere Stellen desselben Tons.
-  for (let i = 0; i < 6; i += 1) {
-    ton.copy(grund).offsetHSL((wurf() - 0.5) * 0.02, (wurf() - 0.5) * 0.08, (wurf() - 0.5) * 0.05);
-    const x = wurf() * KACHEL_PX, y = wurf() * KACHEL_PX, r = 9 + wurf() * 18;
-    const verlauf = ctx.createRadialGradient(x, y, 0, x, y, r);
-    verlauf.addColorStop(0, '#' + ton.getHexString());
-    verlauf.addColorStop(1, durchsichtig());
-    ctx.globalAlpha = 0.32;
-    ctx.fillStyle = verlauf;
-    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  const br = parseInt(farbe.slice(1, 3), 16);
+  const bg = parseInt(farbe.slice(3, 5), 16);
+  const bb = parseInt(farbe.slice(5, 7), 16);
+  const bild = ctx.createImageData(KACHEL_PX, KACHEL_PX);
+  const d = bild.data;
+  for (let i = 0; i < KACHEL_PX * KACHEL_PX; i += 1) {
+    // Feines Korn: EIN Helligkeitsfaktor je Pixel plus winziges
+    // Kanalrauschen — der gemeinsame Faktor haelt den Farbton, das
+    // Kanalrauschen nimmt der Flaeche die Sterilitaet.
+    const f = 1 + (wurf() - 0.5) * 0.11;
+    const e = (wurf() - 0.5) * 7;
+    d[i * 4] = Math.max(0, Math.min(255, br * f + e));
+    d[i * 4 + 1] = Math.max(0, Math.min(255, bg * f + (wurf() - 0.5) * 5));
+    d[i * 4 + 2] = Math.max(0, Math.min(255, bb * f + e));
+    d[i * 4 + 3] = 255;
   }
-  // Sprenkel: feine Punkte, wie einzelne Halmspitzen von oben.
-  for (let i = 0; i < 110; i += 1) {
-    ton.copy(grund).offsetHSL((wurf() - 0.5) * 0.03, (wurf() - 0.5) * 0.1, (wurf() - 0.35) * 0.1);
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = '#' + ton.getHexString();
-    ctx.fillRect(wurf() * KACHEL_PX, wurf() * KACHEL_PX, 1 + wurf() * 1.6, 1 + wurf() * 1.6);
-  }
-  // Grasstriche: kurze, leicht gebogene Striche in Wuchsrichtung.
-  for (let i = 0; i < 26; i += 1) {
-    ton.copy(grund).offsetHSL((wurf() - 0.5) * 0.02, 0.04, 0.03 + wurf() * 0.05);
-    ctx.globalAlpha = 0.3;
-    ctx.strokeStyle = '#' + ton.getHexString();
-    ctx.lineWidth = 1;
-    const x = wurf() * KACHEL_PX, y = wurf() * KACHEL_PX;
-    const neig = (wurf() - 0.5) * 4, lang = 4 + wurf() * 5;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.quadraticCurveTo(x + neig, y - lang * 0.6, x + neig * 1.6, y - lang);
-    ctx.stroke();
+  ctx.putImageData(bild, 0, 0);
+  // Groeberes, sparsames Korn (2 px), kaum sichtbar — bricht die Monotonie.
+  for (let i = 0; i < 260; i += 1) {
+    ctx.globalAlpha = 0.05 + wurf() * 0.05;
+    ctx.fillStyle = wurf() < 0.5 ? '#000' : '#fff';
+    ctx.fillRect(Math.floor(wurf() * KACHEL_PX), Math.floor(wurf() * KACHEL_PX), 2, 2);
   }
   ctx.globalAlpha = 1;
   return kachel;
 }
 
-/** Das ganze Brett als eine Textur: Schachbrett aus gestempelten Varianten. */
+/** Das ganze Brett als eine Textur: Schachbrett aus gestempelten
+ *  Varianten. Jedes Feld bekommt zusaetzlich einen eigenen Hauch
+ *  Farbton (mal gelblicher, mal gruener) und Helligkeit — in der
+ *  Referenz gleicht keine Kachel exakt der Nachbarin. Zum Schluss
+ *  weiche dunkle Naehte auf den Feldgrenzen. */
 function baueBodenTextur(): THREE.CanvasTexture {
   const wurf = wuerfel(20260807);
   const varianten = [GRAS_DUNKEL, GRAS_HELL].map(
@@ -649,8 +641,40 @@ function baueBodenTextur(): THREE.CanvasTexture {
       ctx.rotate(Math.floor(wurf() * 4) * (Math.PI / 2));
       ctx.drawImage(bild, -KACHEL_PX / 2, -KACHEL_PX / 2);
       ctx.restore();
+      // Farbton-Streuung je Feld: ein duenner Schleier um den Grundton
+      // (#a4c250 liegt bei ~76 Grad) — verschiebt die Kachel ein Stueck
+      // Richtung Gelb oder Gruen, ohne das Korn zuzudecken.
+      const tonH = 76 + (wurf() - 0.5) * 18;
+      ctx.fillStyle = 'hsla(' + tonH + ', 62%, 52%, ' + (0.05 + wurf() * 0.09).toFixed(3) + ')';
+      ctx.fillRect(c * KACHEL_PX, r * KACHEL_PX, KACHEL_PX, KACHEL_PX);
+      // Dazu ein Hauch eigener Helligkeit.
+      ctx.fillStyle = wurf() < 0.5 ? '#000' : '#fff';
+      ctx.globalAlpha = 0.035 * wurf();
+      ctx.fillRect(c * KACHEL_PX, r * KACHEL_PX, KACHEL_PX, KACHEL_PX);
+      ctx.globalAlpha = 1;
     }
   }
+  // Weiche dunkle Naehte: eine breite, blasse und eine schmale,
+  // kraeftigere Linie je Grenze — wirkt wie ein sanfter Schatten
+  // zwischen den Rasenstuecken, nicht wie ein gezeichnetes Gitter.
+  ctx.strokeStyle = GRAS_NAHT;
+  for (const [breite, alpha] of [[4, 0.10], [1.6, 0.14]] as const) {
+    ctx.lineWidth = breite;
+    ctx.globalAlpha = alpha;
+    for (let r = 0; r <= ZEILEN; r += 1) {
+      ctx.beginPath();
+      ctx.moveTo(0, r * KACHEL_PX);
+      ctx.lineTo(SPALTEN * KACHEL_PX, r * KACHEL_PX);
+      ctx.stroke();
+    }
+    for (let c = 0; c <= SPALTEN; c += 1) {
+      ctx.beginPath();
+      ctx.moveTo(c * KACHEL_PX, 0);
+      ctx.lineTo(c * KACHEL_PX, ZEILEN * KACHEL_PX);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
   const textur = new THREE.CanvasTexture(brett);
   textur.colorSpace = THREE.SRGBColorSpace;
   textur.anisotropy = 4;
@@ -743,9 +767,11 @@ function baueGras(
   let i = 0;
   for (const feld of felder) {
     // Jedes Feld bekommt zusaetzlich zur Halm-Streuung einen Hauch
-    // eigener Helligkeit — Nachbarn derselben Schachbrettfarbe
-    // unterscheiden sich dadurch auch im Gras, nicht nur in der Textur.
+    // eigener Helligkeit UND eigenen Farbtons (mal gelblicher, mal
+    // gruener, wie die Bodentextur) — Nachbarn derselben
+    // Schachbrettfarbe unterscheiden sich dadurch auch im Gras.
     const feldTon = (wurf() - 0.5) * 0.045;
+    const feldTonH = (wurf() - 0.5) * 0.03;
     for (let k = 0; k < HALME_JE_FELD; k += 1) {
       ort.set(feld.x + 0.04 + wurf() * 0.92, 0, feld.z + 0.04 + wurf() * 0.92);
       kippung.set((wurf() - 0.5) * 0.3, wurf() * Math.PI * 2, (wurf() - 0.5) * 0.3);
@@ -754,7 +780,7 @@ function baueGras(
       lage.compose(ort, dreh, mass);
       halme.setMatrixAt(i, lage);
       farbe.copy(feld.hell ? hell : dunkel)
-        .offsetHSL((wurf() - 0.5) * 0.03, (wurf() - 0.5) * 0.1, feldTon + (wurf() - 0.5) * 0.05);
+        .offsetHSL(feldTonH + (wurf() - 0.5) * 0.02, (wurf() - 0.5) * 0.1, feldTon + (wurf() - 0.5) * 0.05);
       halme.setColorAt(i, farbe);
       i += 1;
     }
