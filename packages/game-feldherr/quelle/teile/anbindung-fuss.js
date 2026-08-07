@@ -401,6 +401,8 @@
       maxLeben: maxHp,
       marschDauer: mcdOf,
       beweglich: canMove,
+      schlagDauer: cdOf,
+      kannSchlagen: canAtt,
     }),
     /**
      * Zeiger-Abbildung der 3D-Ansicht setzen (oder mit null loesen): Sie

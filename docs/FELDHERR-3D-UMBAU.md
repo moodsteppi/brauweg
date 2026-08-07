@@ -133,10 +133,33 @@ Befehle. Ein Ziel-Marker leuchtet unterm Zeiger. Nachgewiesen im Client:
 Klick in die Canvas-Mitte setzt das Haus in exakt die errechnete Zelle
 (Reihe 6, Spalte 4), Karten-Drags landen auf dem markierten Feld.
 
+**Zwei Fallen, die 3D unspielbar machten (7. August 2026, behoben):**
+
+1. **R3F setzt auf seinem Container `pointer-events: auto`** und überstimmt
+   damit das `none` der äußeren Hülle. Die 3D-Leinwand schluckte jeden Tipp
+   aufs Brett: Das Haupthaus ließ sich nicht setzen, Halt und Abriss blieben
+   tot. Karten-Drags liefen weiter — deren Horcher hängen am `window`, nicht
+   am Canvas; genau deshalb sah es nach einem Teilausfall aus. Fix:
+   `pointerEvents: 'none'` am `<Canvas>` UND in `onCreated` auf
+   `gl.domElement`. Diese Ansicht braucht keine eigenen Zeigerereignisse —
+   sie rechnet die Zelle aus dem Strahl und bedient den 2D-Pfad darunter.
+   **Prüfregel:** Eingabe niemals mit `dispatchEvent` direkt auf `#cv`
+   testen — das umgeht die Trefferprüfung. Immer erst
+   `document.elementFromPoint()` fragen und auf DAS Element tippen.
+2. **Die Brennweite gilt für die Höhe, nicht für die Breite.** Auf einem
+   hochkanten Handy (375 × 656) zeigte Abstand 17 nur 7,5 Felder Breite —
+   das Brett ist 8 breit, links und rechts fehlte je eine halbe Spalte. Der
+   gewählte Abstand ist jetzt eine Untergrenze; die Kamera fährt so weit
+   zurück, wie das Format verlangt (`KAMERA_RAND`).
+
 **Overlays und Kampf in 3D (7. August 2026):** Lebensbalken (Billboard,
 Farbe nach Restanteil, nur bei Schaden sichtbar; Mauerverbund zeigt auf
-allen Stücken den Pool), Bereitschaftsring unter Truppen (Füllbogen aus
-`mtimer/marschDauer`, Halt = voller oranger Ring), Ausfallschritt beim
+allen Stücken den Pool), **beide Aktionsringe wie in 2D** (`drawRing`):
+innen der Marschring aus `mtimer/marschDauer` in Hellblau (Halt = voller
+oranger Ring), außen der Schlagring aus `timer/schlagDauer` in Bernstein,
+beide pulsen bei voller Bereitschaft. Anfangs gab es nur den Marschring in
+Spielerfarbe — der wurde als Schlagring gelesen, und die Marschanzeige
+fehlte gefühlt ganz. Dazu Ausfallschritt beim
 Schlag aus `e.atk`/`adx`/`ady` (Kanone federt zurück) und die Spiegelung
 der `G.fx`-Effekte: Schadenszahlen als Leinwand-Sprites, Ringe,
 Explosionen, Leichen-Ausblenden. Das Lesefenster reicht dafür

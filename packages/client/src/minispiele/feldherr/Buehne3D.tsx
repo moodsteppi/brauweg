@@ -92,12 +92,29 @@ const HOEHE: Record<string, number> = {
   schwert: 0.75, bogen: 0.75, ritter: 1.05,
 };
 
-/** Bereitschaftsring in 25 Fuellstufen — Geometrien werden geteilt. */
+/**
+ * Aktionsringe wie in 2D (drawRing): INNEN der Marschring (mtimer), AUSSEN
+ * der Schlagring (timer). Beide fuellen sich als Bogen und sind je Stufe
+ * eine geteilte Geometrie — je Bild neu zu bauen kostete Speicher ohne Not.
+ * Gezeichnet wird ab 12 Uhr im Uhrzeigersinn; die Ebene liegt flach, daher
+ * dreht die Startphase auf -PI/2 minus dem Bogen.
+ */
 const RING_STUFEN = 24;
-const ringGeos: THREE.RingGeometry[] = [];
-for (let i = 0; i <= RING_STUFEN; i++) {
-  ringGeos.push(new THREE.RingGeometry(0.34, 0.42, 24, 1, Math.PI / 2, Math.max(0.001, (i / RING_STUFEN) * Math.PI * 2)));
+function ringSatz(innen: number, aussen: number): THREE.RingGeometry[] {
+  const satz: THREE.RingGeometry[] = [];
+  for (let i = 0; i <= RING_STUFEN; i++) {
+    const bogen = Math.max(0.001, (i / RING_STUFEN) * Math.PI * 2);
+    satz.push(new THREE.RingGeometry(innen, aussen, 28, 1, Math.PI / 2 - bogen, bogen));
+  }
+  return satz;
 }
+const GEO_MARSCH = ringSatz(0.3, 0.37);
+const GEO_SCHLAG = ringSatz(0.4, 0.46);
+/** Farben aus dem 2D-Renderer, damit beide Ansichten dasselbe erzaehlen. */
+const RING_FARBE = {
+  marsch: '#cfe9fa', marschVoll: '#f0faff', halt: '#ff966e',
+  schlag: '#f0bc68', schlagVoll: '#ffce78',
+};
 
 const spriteLager = new Map<string, THREE.SpriteMaterial>();
 function spriteStoff(farbe: string, deckkraft: number): THREE.SpriteMaterial {
@@ -134,10 +151,17 @@ function textTextur(text: string, farbe: string): THREE.Texture {
 interface ObjektOverlays {
   balkenBg: THREE.Sprite;
   balkenFill: THREE.Sprite;
-  ring: THREE.Mesh | null;
-  ringStufe: number;
+  marsch: THREE.Mesh | null;
+  marschStufe: number;
+  schlag: THREE.Mesh | null;
+  schlagStufe: number;
 }
-function baueOverlays(gruppe: THREE.Group, art: string, laeuft: boolean): ObjektOverlays {
+function baueOverlays(
+  gruppe: THREE.Group,
+  art: string,
+  laeuft: boolean,
+  schlaegt: boolean,
+): ObjektOverlays {
   const hoehe = (HOEHE[art] ?? 0.9) + 0.3;
   const balkenBg = new THREE.Sprite(spriteStoff('#0a1116', 0.75));
   balkenBg.scale.set(0.76, 0.1, 1);
@@ -149,14 +173,23 @@ function baueOverlays(gruppe: THREE.Group, art: string, laeuft: boolean): Objekt
   balkenFill.position.set(-0.36, hoehe, 0);
   balkenFill.visible = false;
   gruppe.add(balkenBg, balkenFill);
-  let ring: THREE.Mesh | null = null;
-  if (laeuft) {
-    ring = new THREE.Mesh(ringGeos[0], new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.025;
-    gruppe.add(ring);
-  }
-  return { balkenBg, balkenFill, ring, ringStufe: -1 };
+  const ring = (satz: THREE.RingGeometry[], farbe: string, hoch: number) => {
+    const m = new THREE.Mesh(satz[0], new THREE.MeshBasicMaterial({
+      color: farbe, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false,
+    }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.y = hoch;
+    m.visible = false;
+    gruppe.add(m);
+    return m;
+  };
+  return {
+    balkenBg, balkenFill,
+    marsch: laeuft ? ring(GEO_MARSCH, RING_FARBE.marsch, 0.03) : null,
+    marschStufe: -1,
+    schlag: schlaegt ? ring(GEO_SCHLAG, RING_FARBE.schlag, 0.028) : null,
+    schlagStufe: -1,
+  };
 }
 
 /* Kampf-Effekte aus G.fx: Der Kern treibt die Lebenszeit t in animate()
@@ -315,8 +348,17 @@ function baueGelaende(art: string): THREE.Object3D {
  * Kamera: fast senkrechte Vogelperspektive. Neigung ist die Abweichung von
  * der Senkrechten in Grad — am 7. August 2026 vom Auftraggeber am lebenden
  * Spiel entschieden (Debug-Regler, inzwischen ausgebaut): 10 Grad, Abstand 17.
+ *
+ * `abstand` ist der gewuenschte Bildausschnitt, aber eine UNTERGRENZE: Auf
+ * einem hochkanten Handy ist das Blickfeld waagerecht viel enger als
+ * senkrecht (die Brennweite gilt fuer die Hoehe). Bei 375 x 656 waeren mit
+ * Abstand 17 nur 7,5 Felder Breite sichtbar — das Brett ist 8 breit, links
+ * und rechts fehlte je eine halbe Spalte. Deshalb faehrt die Kamera so weit
+ * zurueck, wie das Format es verlangt.
  */
-const KAMERA = { neigung: 10, abstand: 17 };
+const KAMERA = { neigung: 10, abstand: 17, fov: 42 };
+/** Rand in Feldern, der rundum frei bleiben soll. */
+const KAMERA_RAND = 0.6;
 
 /** Einmal nach dem Aufbau die Leinwand anstossen. */
 function AnstossNachAufbau(): null {
@@ -414,7 +456,14 @@ function Szene({
     // eigenen Seite (unten) hin auf. Je Bild gesetzt, damit ein kuenftiger
     // Kameraschwenk (Muenzflug, Sieg) hier einen einzigen Ansatzpunkt hat.
     const n = (KAMERA.neigung * Math.PI) / 180;
-    const d = KAMERA.abstand;
+    const kam = drei.camera as THREE.PerspectiveCamera;
+    const halbFov = Math.tan(((kam.fov || KAMERA.fov) * Math.PI) / 360);
+    const seite = kam.aspect || 1;
+    // So weit zurueck, dass Brett plus Rand in BEIDE Richtungen passt —
+    // der Wunschabstand bleibt die Untergrenze fuer breite Bildschirme.
+    const fuerTiefe = (ZEILEN / 2 + KAMERA_RAND) / halbFov;
+    const fuerBreite = (SPALTEN / 2 + KAMERA_RAND) / (halbFov * seite);
+    const d = Math.max(KAMERA.abstand, fuerTiefe, fuerBreite);
     drei.camera.position.set(SPALTEN / 2, d * Math.cos(n), ZEILEN / 2 + d * Math.sin(n));
     drei.camera.lookAt(SPALTEN / 2, 0, ZEILEN / 2);
 
@@ -454,7 +503,7 @@ function Szene({
         const zielZ = zVon(e.r, e.h ?? 1);
         eintrag = {
           obj, art: e.type, lvl: e.lvl,
-          ueber: baueOverlays(obj, e.type, blick.beweglich(e)),
+          ueber: baueOverlays(obj, e.type, blick.beweglich(e), blick.kannSchlagen(e)),
           bx: zielX, bz: zielZ,
         };
         imBild.current.set(e.id, eintrag);
@@ -496,20 +545,35 @@ function Szene({
         eintrag.ueber.balkenFill.material =
           spriteStoff(anteil > 0.55 ? '#7fd8a0' : anteil > 0.28 ? '#f6ca58' : '#ff6f62', 0.95);
       }
-      // Bereitschaftsring: fuellt sich bis zum naechsten Zug; Halt = voll
-      // und orange (die Truppe steht bewusst).
-      const ring = eintrag.ueber.ring;
-      if (ring) {
-        const dauer = blick.marschDauer(e) || 1;
-        const prog = e.halt ? 1 : Math.max(0, Math.min(1, (e.mtimer ?? 0) / dauer));
+      // Aktionsringe wie in 2D: innen Marsch, aussen Schlag. Der Puls beim
+      // vollen Ring ist reine Optik und zieht keinen Spielzufall.
+      const puls = 0.6 + 0.35 * Math.sin(drei.clock.elapsedTime * 4);
+      const marsch = eintrag.ueber.marsch;
+      if (marsch) {
+        const prog = e.halt ? 1 : Math.max(0, Math.min(1, (e.mtimer ?? 0) / (blick.marschDauer(e) || 1)));
         const stufe = Math.round(prog * RING_STUFEN);
-        if (stufe !== eintrag.ueber.ringStufe) {
-          eintrag.ueber.ringStufe = stufe;
-          ring.geometry = ringGeos[stufe];
+        if (stufe !== eintrag.ueber.marschStufe) {
+          eintrag.ueber.marschStufe = stufe;
+          marsch.geometry = GEO_MARSCH[stufe];
         }
-        ring.visible = stufe > 0;
-        (ring.material as THREE.MeshBasicMaterial).color.set(
-          e.halt ? '#ffa06e' : FARBE.spieler[e.owner] ?? '#ffffff');
+        marsch.visible = stufe > 0;
+        const stoff2 = marsch.material as THREE.MeshBasicMaterial;
+        // Haltebefehl: voller Ring, stumpfes Orange — die Truppe steht bewusst.
+        stoff2.color.set(e.halt ? RING_FARBE.halt : prog >= 1 ? RING_FARBE.marschVoll : RING_FARBE.marsch);
+        stoff2.opacity = e.halt ? 0.7 : prog >= 1 ? 0.55 + 0.3 * puls : 0.85;
+      }
+      const schlag = eintrag.ueber.schlag;
+      if (schlag) {
+        const prog = Math.max(0, Math.min(1, (e.timer ?? 0) / (blick.schlagDauer(e) || 1)));
+        const stufe = Math.round(prog * RING_STUFEN);
+        if (stufe !== eintrag.ueber.schlagStufe) {
+          eintrag.ueber.schlagStufe = stufe;
+          schlag.geometry = GEO_SCHLAG[stufe];
+        }
+        schlag.visible = stufe > 0;
+        const stoff2 = schlag.material as THREE.MeshBasicMaterial;
+        stoff2.color.set(prog >= 1 ? RING_FARBE.schlagVoll : RING_FARBE.schlag);
+        stoff2.opacity = prog >= 1 ? 0.5 + 0.35 * puls : 0.66;
       }
     }
     for (const [id, eintrag] of imBild.current) {
@@ -649,9 +713,24 @@ export function Buehne3D({
     >
       {/* preserveDrawingBuffer: macht toDataURL()-Bildproben moeglich —
           die Sichtpruefungen der Umbau-Sitzungen lesen das Bild headless aus. */}
+      {/**
+       * pointerEvents MUSS hier und auf der Leinwand selbst stehen:
+       * React-Three-Fiber setzt auf seinem Container `pointer-events: auto`
+       * und ueberstimmt damit das `none` der aeusseren Huelle. Dadurch
+       * schluckte die 3D-Leinwand jeden Tipp aufs Brett — das Haupthaus
+       * liess sich in 3D nicht setzen, Halt und Abriss blieben tot
+       * (Karten-Drags liefen weiter, weil deren Horcher am window haengen).
+       * Diese Ansicht braucht keine eigenen Zeigerereignisse: Sie rechnet
+       * die Zelle selbst aus dem Strahl (zeigerAbbildung), und bedient wird
+       * der 2D-Pfad darunter.
+       */}
       <Canvas
+        style={{ pointerEvents: 'none' }}
         gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [SPALTEN / 2, KAMERA.abstand, ZEILEN / 2 + 2], fov: 42 }}
+        onCreated={({ gl: renderer }) => {
+          renderer.domElement.style.pointerEvents = 'none';
+        }}
       >
         <Szene sitzungRef={sitzungRef} ritter={ritter} />
       </Canvas>

@@ -120,6 +120,10 @@ export interface FeldherrLeseblick {
   marschDauer(e: FeldherrObjekt): number;
   /** Kann sich bewegen (Einheit, nicht im Turm). */
   beweglich(e: FeldherrObjekt): boolean;
+  /** Schlagtakt in Sekunden; mit e.timer ergibt das den Schlagring. */
+  schlagDauer(e: FeldherrObjekt): number;
+  /** Kann zuschlagen (Einheit oder Geschuetz). */
+  kannSchlagen(e: FeldherrObjekt): boolean;
 }
 
 export interface FeldherrSitzung {
