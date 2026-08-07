@@ -140,6 +140,8 @@ export interface FeldherrLeseblick {
    */
   schilder(): {
     tx: string; r: number; c: number; col: string; h: number; own: number;
+    /** Sichtbarkeit 0..1 — Zonenschilder blenden mit der Naehe des Fingers ein. */
+    a: number;
   }[];
   /** Was gerade gezogen wird und wohin es faellt (Bauvorschau). */
   bauVorschau(): {

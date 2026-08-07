@@ -231,11 +231,55 @@ und bleibt bedienbar — geprüft mit `elementFromPoint`.
   Schilder, in 2D wie in 3D. Zu zweit an einem Gerät gehören beide Sitze
   hierher, dort ändert sich nichts.
 
-**Offen in Stufe 2:** Marsch-Interpolation über `restAnteil` und `e.mt`
-statt Nachzieh-Glättung, Kanonenkugel-Flugbahn (der `ball`-Effekt trägt
-2D-Pixelkoordinaten — braucht Brettkoordinaten im fx-Eintrag),
-Bau-Vorschau in 3D färben (heute nur neutraler Marker),
-`bogen-turm`/Mörser-Details, Sitz-0-Spiegelung im Netz gegenprüfen.
+---
+
+## Was aus 2D noch nach 3D fehlt
+
+Stand 7. August 2026, aus einem Durchgang durch `darstellung.js`. Die
+Reihenfolge ist ein Vorschlag: erst was man im Spiel vermisst, dann Kür.
+
+**Spürbar im Spiel**
+
+1. **Partikel** (`burst`/`drawPT`): Rauch, Funken, Staub, Splitter, Glut.
+   Der ganze Wirkungspfad existiert im Kern (die Wirkungs-Haken liefern
+   die Anlässe bereits), in 3D fehlt die Darstellung komplett.
+2. **Kanonenkugel** (`ball`-Effekt): Der Eintrag trägt 2D-Pixel­koordinaten
+   (`ax/ay/bx/by`) — für 3D müssen Brettkoordinaten mit hinein.
+3. **Marschbewegung** (`e.mt`, `MOVE_T`): 2D interpoliert zwischen Feldern
+   mit Beschleunigung; 3D zieht nur weich nach.
+4. **Aufleuchten bei Treffern** (`e.flash`) und **Wackeln** (`e.nudge`) —
+   die Rückmeldung, dass etwas eingeschlagen ist.
+5. **Bildschirmwackeln** (`shake`) bei Einschlägen und Explosionen.
+6. **Trümmerfelder** (`drawSperren`, `drawSperrBalken`): rote Kachel plus
+   Restzeitbalken, dazu das **Wrack** (`drawWrack`) auf gefallenen
+   Fels-Stellungen. In 3D sind die Felder unsichtbar blockiert.
+7. **Laufzeitbalken des Werks** (`drawLaufzeit`) — wann geht ihm die Puste
+   aus.
+8. **Stufenmarken** (`drawPips`) — Kupfer/Silber/Gold/Diamant über der
+   Figur. In 3D färbt bisher nur der Kopf.
+
+**Beim Ziehen und Zielen**
+
+9. **Kanonenziel** (`kanonenZiel`): wen träfe das Geschütz von diesem Feld.
+10. **Kesselvorschau** (`knallVorschau`): wen risse dieses Werk mit.
+11. **Aufwertungsziel** (`markAufwertung`, `pfeilHoch`): goldenes Glühen
+    und Pfeil über dem Objekt, auf das die Karte fiele.
+
+**Feinheiten**
+
+12. **Setz-Animation** (`spawnScale`) — das Aufploppen beim Bauen.
+13. **Rohrschwenk** (`e.aim`, `aimZiel`) — Kanonen zielen sichtbar.
+14. **Schützenturm** (`drawTurm`) auf dem Fels.
+15. **Großer Bretthinweis** (`drawPlaceHint`, „Setze dein Haupthaus").
+16. **Geländemodelle** statt Platzhalter — bestellt in
+    `docs/ASSETS-FELDHERR-3D.md` (Bäume, Fels, Vulkan, abgerundete Seen).
+
+**Noch nicht gegengeprüft**
+
+17. **Sitz-0-Spiegelung im Netz** mit zwei echten Geräten.
+
+**Offen in Stufe 2 (Rest):** Bau-Vorschau in 3D nach Bezahlbarkeit
+abstufen (heute grün/rot), `bogen-turm`/Mörser-Details.
 
 ### Stufe 3 — Ausmustern
 

@@ -827,7 +827,10 @@ function Szene({
       }
       const s = schilderListe[i];
       const sp = eintrag.sprite;
-      sp.visible = true;
+      // Zonenschilder blenden mit der Nähe des Fingers ein (a aus dem Kern).
+      const sicht = s.a === undefined ? 1 : s.a;
+      sp.visible = sicht > 0.01;
+      sp.material.opacity = sicht;
       const schluessel = s.tx + '/' + s.col;
       if (schluessel !== eintrag.text) {
         eintrag.text = schluessel;
