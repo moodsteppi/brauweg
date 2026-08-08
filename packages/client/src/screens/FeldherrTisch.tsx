@@ -62,6 +62,23 @@ const NETZ_STIL = '\n.hud.top .inner{transform:none}\n';
  * (dessen Farben und Overlays) nirgends auftauchen.
  */
 const SCREEN_STIL = `
+/*
+ * Die Einstiegsseite rollt.
+ *
+ * Der Kernstil setzt html,body auf overflow:hidden und touch-action:none.
+ * Fuer das Spielbrett ist das richtig - es braucht eine feste Buehne und
+ * wertet jede Wischgeste selbst aus. Auf der Einstiegsseite schnitt es
+ * aber alles ab, was nicht auf einen Bildschirm passt: Heldenwahl,
+ * Kartenhand und Tischliste zusammen sind laenger als ein Handy hoch ist.
+ *
+ * Sie bekommt deshalb einen eigenen Rollbereich. touch-action:pan-y gibt
+ * die senkrechte Wischgeste wieder frei, die body pauschal gesperrt hatte -
+ * ohne das liesse sich am Handy zwar mit der Maus rollen, aber nicht mit
+ * dem Finger.
+ */
+main.hub{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
+  padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 .feldherr-zurueck{position:fixed;left:10px;top:10px;z-index:60;padding:8px 14px;border:0;
   border-radius:9px;color:#dfd6c2;background:rgba(16,25,32,.85);
   box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui}
