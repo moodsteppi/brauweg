@@ -206,7 +206,18 @@ function bindHUD(){
       const el=ev.target.closest('.card'); if(!el) return;
       if(phase!=='war' || paused || !darfBedienen(own)) return;
       const k=el.dataset.k;
-      if(restOf(own,k)===0) return;                       // aufgebrauchte Karte lässt sich nicht ziehen
+      if(restOf(own,k)===0 && !gratisRest(own,k)) return;  // aufgebrauchte Karte lässt sich nicht ziehen
+      /* Dieselbe Karte noch einmal antippen legt sie zurück (Entscheid vom
+       * 7. August 2026): Vorher blieb eine einmal gewählte Karte gewählt,
+       * bis man eine andere nahm oder aufs Brett tippte — wer es sich
+       * anders überlegte, musste zwangsläufig irgendwo hinbauen. Der
+       * Abbruch geschieht schon beim Drücken, und der Zug wird gar nicht
+       * erst begonnen. */
+      if(G.armed[own]===k){
+        G.armed[own]=null; G.sel[own]=null; syncHUD();
+        ev.preventDefault();
+        return;
+      }
       drags.set(ev.pointerId,{own, k, el, moved:false, prev:null, x:ev.clientX, y:ev.clientY});
       el.classList.add('drag');
       G.armed[own]=k; G.sel[own]=null; syncHUD();

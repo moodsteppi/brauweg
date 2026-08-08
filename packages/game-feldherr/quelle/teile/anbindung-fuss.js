@@ -493,7 +493,9 @@
        * Truppen ohne Gruppe (Bauten) liefern null. */
       stellungsStand: (e) => {
         const gruppe = gruppeVon(e);
-        return gruppe ? { n: stellungen(e.owner, gruppe), max: STELLUNGEN, gruppe } : null;
+        return gruppe
+          ? { n: stellungen(e.owner, gruppe), max: stellungsGrenze(e.owner, gruppe), gruppe }
+          : null;
       },
     }),
     /**

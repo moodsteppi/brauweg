@@ -30,7 +30,14 @@ import { useTable } from '../useTable';
  * ergaenzt, baut sie am Gleichschritt vorbei.
  */
 
-type Modus = 'ki' | 'zuZweit';
+/**
+ * Oertlich gibt es nur noch die Partie gegen die KI (Entscheid vom
+ * 7. August 2026). Das geteilte Geraet ist raus: Es war der einzige
+ * Modus, in dem zwei Menschen dieselbe Kartenleiste bedienten, und mit
+ * den Charakteren je Spieler ergibt er keinen Sinn mehr. Der Kern kennt
+ * `zuZweit` weiter — er ist die eigenstaendige Spieldatei mit.
+ */
+type Modus = 'ki';
 type Stufe = 'leicht' | 'normal' | 'schwer';
 type Feld = 'klein' | 'mittel' | 'gross';
 
@@ -789,9 +796,6 @@ export function FeldherrTisch({
 
       <button className="btn pri" onClick={() => setModus('ki')}>
         Gegen die KI
-      </button>
-      <button className="btn" onClick={() => setModus('zuZweit')}>
-        Zu zweit an einem Gerät
       </button>
 
       <section className="feldherr-online">

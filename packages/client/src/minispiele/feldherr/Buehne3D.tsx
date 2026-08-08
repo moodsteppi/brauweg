@@ -22,6 +22,7 @@
  *    teilt Geometrie und Material, genau das wollen wir.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -418,6 +419,8 @@ const GEO_BLITZ = new THREE.CircleGeometry(0.42, 20);
 /** Platzhalter je Objektart; der Ritter bekommt das GLB, sobald es da ist. */
 function baueObjekt(
   art: string, owner: number, lvl: number, ritter: THREE.Group | null, turm = false,
+  /** Felder eines mehrfeldrigen Baus, relativ zu seiner Mitte (nur Werk). */
+  zellen?: { dx: number; dz: number }[],
 ): THREE.Object3D {
   const gruppe = new THREE.Group();
   if (turm) {
@@ -439,9 +442,24 @@ function baueObjekt(
     // Stufenbild wie in der Anforderungsliste: erst Holzpfaehle, dann Stein.
     gruppe.add(kloetzchen(lvl >= 2 ? FARBE.stein : FARBE.holz, 0.86, 0.3 + 0.18 * lvl, 0.86));
   } else if (art === 'werk') {
-    gruppe.add(kloetzchen('#8c3a34', 1, 0.42, 1)); // Grundflaeche setzt der Abgleich (w/h)
+    /**
+     * Die Halle entsteht Feld fuer Feld aus `zellen` — den ECHTEN Feldern
+     * des Werks, relativ zu seiner Mitte. Vorher stand hier ein einziger
+     * Kasten, den der Abgleich auf die umschliessende Box (w x h) zog:
+     * Ein verschmolzenes Werk auf Stufe 3 ist aber oft eine L-Form, und
+     * die Box daurm ueberdeckte drei Felder, die gar nicht ihm gehoerten
+     * — im Bild ein riesiges Viereck statt der gewachsenen Halle.
+     */
+    const felder = zellen && zellen.length ? zellen : [{ dx: 0, dz: 0 }];
+    for (const f of felder) {
+      const teil = kloetzchen('#8c3a34', 0.94, 0.42, 0.94);
+      teil.position.set(f.dx, 0, f.dz);
+      gruppe.add(teil);
+    }
+    // Der Kamin steht auf dem ERSTEN Feld, nicht in der Mitte der Box —
+    // sonst schwebt er bei einer L-Form ueber dem Loch.
     const kamin = kloetzchen(FARBE.stein, 0.14, 0.5, 0.14);
-    kamin.position.set(0.28, 0.42, 0.22);
+    kamin.position.set(felder[0].dx + 0.28, 0.42, felder[0].dz + 0.22);
     gruppe.add(kamin);
   } else if (art === 'kanone') {
     gruppe.add(kloetzchen(FARBE.stein, 0.6, 0.26, 0.6));
@@ -857,7 +875,9 @@ function Szene({
   const hilfsFarbe = useRef(new THREE.Color());
   const imBild = useRef(new Map<number, {
     obj: THREE.Group; art: string; lvl: number; turm: boolean;
-    /** Grundskalierung (Werke sind 1 x 2) — die Setz-Animation multipliziert sie. */
+    /** Zahl der belegten Felder — aendert sie sich, wechselt die Form. */
+    felder: number;
+    /** Grundskalierung — die Setz-Animation multipliziert sie. */
     basis: THREE.Vector3;
     /** Drehbarer Rohrtraeger der Geschuetze, sonst null. */
     rohr: THREE.Object3D | null;
@@ -1018,18 +1038,30 @@ function Szene({
     for (const e of G.ents) {
       gesehen.add(e.id);
       let eintrag = imBild.current.get(e.id);
+      /* Die Zellzahl gehoert zum Bauplan: Ein Werk waechst durchs
+       * Verschmelzen und wechselt dabei die FORM (aus zwei Riegeln wird
+       * ein L). Ohne diesen Vergleich behielte es die alte Huelle. */
+      const felderJetzt = e.cells ? e.cells.length : 1;
       if (eintrag && (eintrag.art !== e.type || eintrag.lvl !== e.lvl
-                      || eintrag.turm !== !!e.turm)) {
+                      || eintrag.turm !== !!e.turm || eintrag.felder !== felderJetzt)) {
         objekte.current.remove(eintrag.obj);
         eintrag = undefined;
       }
       if (!eintrag) {
-        const obj = baueObjekt(e.type, e.owner, e.lvl, ritter, !!e.turm) as THREE.Group;
-        // Werke sind 1 x 2: Grundflaeche an die echten Masse anpassen.
+        /* Mehrfeldrige Bauten (Werk) entstehen aus ihren ECHTEN Feldern,
+         * nicht aus der umschliessenden Box: Die Mitte des Objekts liegt
+         * bei xVon/zVon der Box, die Felder daneben. */
+        const mx = xVon(e.c, e.w ?? 1);
+        const mz = zVon(e.r, e.h ?? 1);
+        const zellen = (e.cells ?? []).map((p) => ({
+          dx: xVon(p.c, 1) - mx,
+          dz: zVon(p.r, 1) - mz,
+        }));
+        const obj = baueObjekt(e.type, e.owner, e.lvl, ritter, !!e.turm, zellen) as THREE.Group;
+        // Die Form steckt jetzt in den Feldern selbst — nicht mehr strecken.
         const basis = new THREE.Vector3(1, 1, 1);
-        if (e.type === 'werk') basis.set((e.w ?? 1) * 0.9, 1, (e.h ?? 1) * 0.9);
         eintrag = {
-          obj, art: e.type, lvl: e.lvl, turm: !!e.turm, basis,
+          obj, art: e.type, lvl: e.lvl, turm: !!e.turm, felder: felderJetzt, basis,
           rohr: obj.getObjectByName('rohr') ?? null,
           ueber: baueOverlays(obj, e.type, blick.beweglich(e), blick.kannSchlagen(e),
             !!blick.stellungsStand(e)),
@@ -1674,7 +1706,6 @@ export function Buehne3D({
 }: {
   sitzungRef: React.RefObject<FeldherrSitzung | null>;
 }): React.JSX.Element | null {
-  const [rechteck, setRechteck] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [ritter, setRitter] = useState<THREE.Group | null>(null);
   /**
    * Anzeigefenster zum Muenzwurf. In 3D deckt die Buehne das Spielfeld ab,
@@ -1716,20 +1747,33 @@ export function Buehne3D({
     return () => window.clearInterval(takt);
   }, [sitzungRef]);
 
+  /**
+   * Die Buehne haengt IN #stage, nicht darueber.
+   *
+   * Vorher lag sie als Geschwister mit `position:fixed; z-index:10` ueber
+   * dem ganzen Spiel — und verdeckte damit Uhr und Menueknopf, obwohl
+   * die mit z-index 19 und 20 eigentlich hoeher stehen: `#app` ist
+   * selbst `position:fixed` und oeffnet damit einen eigenen
+   * Stapelkontext, in dem die beiden gefangen sind. Kein z-index der
+   * Welt haette sie darueber gehoben.
+   *
+   * Als Kind von #stage sortiert sie sich dort ein, wo sie hingehoert:
+   * ueber die 2D-Leinwand (ohne z-index) und unter Uhr und Menue. Die
+   * Groesse kommt von `inset:0`, ein Messen entfaellt.
+   */
+  const [huelle, setHuelle] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     const stage = document.getElementById('stage');
     if (!stage) return;
-    const messen = () => {
-      const b = stage.getBoundingClientRect();
-      setRechteck({ left: b.left, top: b.top, width: b.width, height: b.height });
-    };
-    messen();
-    const beobachter = new ResizeObserver(messen);
-    beobachter.observe(stage);
-    window.addEventListener('resize', messen);
+    const kasten = document.createElement('div');
+    kasten.dataset.feldherr = 'buehne3d';
+    kasten.style.cssText =
+      'position:absolute;inset:0;z-index:9;pointer-events:none;background:#05080b';
+    stage.appendChild(kasten);
+    setHuelle(kasten);
     return () => {
-      beobachter.disconnect();
-      window.removeEventListener('resize', messen);
+      kasten.remove();
+      setHuelle(null);
     };
   }, []);
 
@@ -1751,20 +1795,9 @@ export function Buehne3D({
     };
   }, []);
 
-  if (!rechteck || rechteck.width < 40) return null;
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: rechteck.left,
-        top: rechteck.top,
-        width: rechteck.width,
-        height: rechteck.height,
-        zIndex: 10,
-        pointerEvents: 'none',
-        background: '#05080b',
-      }}
-    >
+  if (!huelle) return null;
+  return createPortal(
+    <>
       {/* preserveDrawingBuffer: macht toDataURL()-Bildproben moeglich —
           die Sichtpruefungen der Umbau-Sitzungen lesen das Bild headless aus. */}
       {/**
@@ -1815,6 +1848,7 @@ export function Buehne3D({
           </div>
         </div>
       )}
-    </div>
+    </>,
+    huelle,
   );
 }

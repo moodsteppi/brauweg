@@ -119,6 +119,13 @@ export interface FeldherrObjekt {
   readonly c: number;
   readonly w?: number;
   readonly h?: number;
+  /**
+   * Die ECHTEN Felder des Objekts. Bei mehrfeldrigen Bauten ist das nicht
+   * dasselbe wie w x h: Ein verschmolzenes Werk kann eine L-Form haben,
+   * und die umschliessende Box deckt dann Felder ab, die ihm nicht
+   * gehoeren. Wer die Grundflaeche zeichnet, nimmt diese Liste.
+   */
+  readonly cells?: readonly { readonly r: number; readonly c: number }[];
   readonly lvl: number;
   readonly hp: number;
   readonly halt?: boolean;

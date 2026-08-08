@@ -123,16 +123,23 @@ const STELLUNGEN = 3;                                  // je Gruppe höchstens d
 const gruppeVon = e => e.type==='bogen' ? 'schuetze' : (DEFS[e.type].unit ? 'kaempfer' : null);
 const stellungen = (own, gruppe) => G.ents.filter(e =>
       e.owner===own && gruppeVon(e)===gruppe && (e.halt || e.turm)).length;
-/* Schützentürme hängen am Ausbau des Haupthauses (Entscheid vom
- * 7. August 2026): Stufe 1 trägt einen Turm, Stufe 2 zwei, ab Stufe 3
- * drei. Wer Türme will, muss zuerst sein Haus ausbauen — vorher stand
- * die Grenze fest bei drei und war schon in der ersten Minute erreichbar.
- * Gezählt werden nur ECHTE Türme (Fels und Wald), nicht angehaltene
- * Truppen; fürs Anhalten gilt weiterhin STELLUNGEN je Gruppe. */
-const TUERME_JE_HAUS = [1, 2, 3, 3];                   // Hausstufe 1 … 4
-const tuermeErlaubt = own =>
-      TUERME_JE_HAUS[Math.min(hausSt(own), TUERME_JE_HAUS.length) - 1];
-const tuerme = own => G.ents.filter(e => e.owner===own && e.turm).length;
+/* Schützenstellungen hängen am Ausbau des Haupthauses (Entscheid vom
+ * 7. August 2026): Stufe 1 trägt eine, Stufe 2 zwei, Stufe 3 drei,
+ * Stufe 4 vier. Wer Stellungen will, muss zuerst sein Haus ausbauen —
+ * vorher stand die Grenze fest bei drei und war schon in der ersten
+ * Minute erreichbar.
+ *
+ * EINE Grenze für beides: Türme (Fels und Wald) und angehaltene
+ * Bogenschützen zählen zusammen. Beide sind dasselbe — ein Schütze, der
+ * stehenbleibt und schießt —, und zwei getrennte Grenzen ließen sich
+ * schlicht addieren. Für die Kämpfer (Schwert, Ritter) bleibt es bei
+ * STELLUNGEN.
+ */
+const STELLUNGEN_JE_HAUS = [1, 2, 3, 4];               // Hausstufe 1 … 4
+const stellungsGrenze = (own, gruppe) =>
+      gruppe==='schuetze'
+        ? STELLUNGEN_JE_HAUS[Math.min(hausSt(own), STELLUNGEN_JE_HAUS.length) - 1]
+        : STELLUNGEN;
 function rngOf(e){
   let r = statsOf(e.type,e.lvl).rng;
   if(e.type==='bogen' && e.lvl>=2) r += 1;             // geübte Schützen spannen weiter
@@ -434,7 +441,13 @@ function moveTargets(e){
     if(!inBoard(r,c) || !walkable(r,c)) continue;
     const o = entAt(r,c);
     if(!o) out.push({r,c,merge:false});
-    else if(o.owner===e.owner && o.type===e.type && o.lvl===e.lvl && e.lvl<MAXLVL && DEFS[e.type].unit)
+    // Türme wachsen NICHT durchs Zusammenlaufen (Entscheid vom 7. August
+    // 2026): Ein Turm wird ausgebaut, indem man die Karte noch einmal
+    // darauf legt — sonst schob sich ein vorbeiziehender Schütze
+    // ungefragt in die Stellung, und der Turm stieg auf, ohne dass
+    // jemand es wollte.
+    else if(o.owner===e.owner && o.type===e.type && o.lvl===e.lvl && e.lvl<MAXLVL
+            && DEFS[e.type].unit && !o.turm)
       out.push({r,c,merge:true});
   }
   return out;
@@ -1034,10 +1047,10 @@ function placeSpot(own,k,r,c){
     return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
   }
   if(atLimit(own,k)) return null;                    // Neubau nur bis zur Grenze
-  // Türme (Fels wie Wald) hängen am Ausbau des Haupthauses: Stufe 1 trägt
-  // einen, Stufe 2 zwei, ab Stufe 3 drei.
+  // Türme (Fels wie Wald) zählen zu den Schützenstellungen, und deren
+  // Zahl hängt am Ausbau des Haupthauses.
   if(k==='bogen' && (envAt(r,c)==='gebirge' || envAt(r,c)==='wald') &&
-     tuerme(own) >= tuermeErlaubt(own)) return null;          // zu viele Türme
+     stellungen(own,'schuetze') >= stellungsGrenze(own,'schuetze')) return null;
   if(sizeOf(k)===1) return fitsAt(own,k,r,c,false);
   const v = !!G.orient[own];                         // gedreht wird nur über den Knopf
   return fitsAt(own,k,r,c,v) ||
@@ -1185,8 +1198,9 @@ function haltBefehl(own,r,c){
   const e=entAt(r,c);
   if(!e || e.owner!==own || !canMove(e)) return;
   const g = gruppeVon(e);
-  if(!e.halt && stellungen(own,g) >= STELLUNGEN){
-    e.nudge = 1; fxText(e.r,e.c,'3 / 3','#ffa06e',0);   // Stellungen ausgeschöpft
+  const grenze = stellungsGrenze(own,g);
+  if(!e.halt && stellungen(own,g) >= grenze){
+    e.nudge = 1; fxText(e.r,e.c,grenze+' / '+grenze,'#ffa06e',0);   // ausgeschöpft
   } else {
     e.halt = !e.halt; e.nudge = 0.8;
     fxRing(e.r, e.c, e.halt ? '#ffa06e' : '#8ef0b8');

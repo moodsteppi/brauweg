@@ -1184,7 +1184,7 @@ function stellungsSchild(e, p){
   ctx.font='800 '+Math.max(7,Math.round(TW*0.115))+'px ui-monospace,Menlo,monospace';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle= schuetze ? '#0d3b2c' : '#6a2210';
-  ctx.fillText(n+'/'+STELLUNGEN, q[0], q[1]+h*0.05);
+  ctx.fillText(n+'/'+stellungsGrenze(e.owner, g), q[0], q[1]+h*0.05);
 }
 
 /* ---------- Stufenmarken ---------- */
