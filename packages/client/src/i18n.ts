@@ -28,6 +28,8 @@ const de: Record<string, string> = {
   'game.werwolf': 'Werwolf',
   // "Cabo" ist eine Marke (AMIGO). Cambio ist der markenfreie Name derselben
   // Spielfamilie - dieselbe Logik wie bei Zauberer/Wizard.
+  // "Cabo" ist eine eingetragene Marke (AMIGO). Cambio ist der markenfreie
+  // Name derselben Spielfamilie - dieselbe Logik wie bei Zauberer/Wizard.
   'game.cambio': 'Cambio',
   // "Phase 10" ist eine Marke (Mattel/Fundex). Stufenrommé beschreibt
   // dieselbe Spielfamilie ohne den Produktnamen.
@@ -302,12 +304,28 @@ const de: Record<string, string> = {
   'regel.noTrump': 'Trumpffrei',
   'regel.jesterPicksTrump': 'Narr: Geber wählt',
 
+  // Hausregeln von Cambio.
+  'regel.peekOwn': '7/8: Eigene ansehen',
+  'regel.peekOther': '9/10: Fremde ansehen',
+  'regel.blindSwap': 'Bube: Blind tauschen',
+  'regel.lookAndSwap': 'Dame: Ansehen und tauschen',
+  'regel.redKingZero': 'Roter König zählt null',
+  'regel.peekTwoAtStart': 'Zwei Karten zu Beginn ansehen',
+  'regel.callerMustBeStrictlyLower': 'Gleichstand lässt den Ruf misslingen',
+  'regel.failPenalty': 'Strafpunkte bei misslungenem Ruf',
+
   // Meldungen des Zauberer-Regelsatzes.
   'ruleset.noTrumpVsJesterPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
   'ruleset.noTrumpVsDealerPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
   'ruleset.hiddenBidsVsBidSum': 'Verdeckt angesagt gibt es keinen letzten Ansager.',
   'ruleset.roundsOutOfRange': 'So viele Runden gibt das Blatt nicht her.',
   'ruleset.tableSizeUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
+
+  // Meldungen des Cambio-Regelsatzes.
+  'ruleset.noActionCards': 'Ohne Aktionskarten bleibt wenig zu entscheiden.',
+  'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
+  'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
+  'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
 };
 
 /**

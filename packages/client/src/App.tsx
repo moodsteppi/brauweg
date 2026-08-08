@@ -10,6 +10,7 @@ import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
+import { CambioTable } from './screens/CambioTable';
 import { WizardTable } from './screens/WizardTable';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
@@ -135,7 +136,11 @@ export function App(): React.JSX.Element {
      * gemeinsamen Bausteine liegen in `src/tisch/` — verzweigt wird genau
      * hier, an einer einzigen Stelle.
      */
-    const Spieltisch = screen.gameId === 'wizard' ? WizardTable : Table;
+    const TISCHE: Record<string, typeof Table> = {
+      wizard: WizardTable as unknown as typeof Table,
+      cambio: CambioTable as unknown as typeof Table,
+    };
+    const Spieltisch = TISCHE[screen.gameId] ?? Table;
     return (
       <Spieltisch
         tableId={screen.tableId}

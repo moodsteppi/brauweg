@@ -52,6 +52,15 @@ const BILDER: Record<string, string> = {
   dealerPicksBlind: '🎲',
   noTrump: '🚱',
   jesterPicksTrump: '🤡',
+
+  // Cambio
+  peekOwn: '👁️',
+  peekOther: '🔍',
+  blindSwap: '🔀',
+  lookAndSwap: '👑',
+  redKingZero: '♥️',
+  peekTwoAtStart: '🫣',
+  callerMustBeStrictlyLower: '📉',
 };
 
 export function regelBild(key: string): string {
