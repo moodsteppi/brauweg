@@ -9817,3 +9817,307 @@ main.auth > .muted {
   flex: 0 0 auto;
   font-weight: 800;
 }
+
+/* =========================================================================
+   Cambio.
+
+   Kein Stichtisch: Jeder hat vier verdeckte Plaetze vor sich, in der Mitte
+   liegen zwei Stapel. Die eigenen Plaetze stehen unten gross, die der
+   Mitspieler klein an ihren Sitzen — dieselbe Anordnung wie an den anderen
+   Tischen, damit man sich nicht neu zurechtfinden muss.
+   ========================================================================= */
+
+.cambio-felt {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* --- Stapel in der Mitte ------------------------------------------------ */
+
+.cambio-mitte {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+}
+.cambio-stapel {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: none;
+  width: calc(var(--hw) * 1.15);
+  border-radius: 0.4rem;
+}
+.cambio-stapel .card,
+.cambio-stapel .card-img {
+  width: 100%;
+  height: auto;
+}
+/* Ziehbar hebt sich ab; gesperrt bleibt sichtbar, aber ruhig. */
+.cambio-stapel--verdeckt:not(:disabled) {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(255, 196, 90, 0.75), 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+.cambio-stapel--verdeckt:disabled {
+  filter: brightness(0.75) saturate(0.7);
+}
+.cambio-stapel--verdeckt:not(:disabled):active {
+  transform: translateY(2px);
+}
+.cambio-stapel-zahl {
+  position: absolute;
+  right: -0.4rem;
+  bottom: -0.4rem;
+  min-width: 1.3rem;
+  padding: 0 0.25rem;
+  border-radius: 0.7rem;
+  background: rgba(20, 11, 4, 0.88);
+  color: #ffe08a;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4rem;
+  text-align: center;
+}
+
+/*
+ * Die gezogene Karte.
+ *
+ * Sie liegt bewusst gross und allein ueber den Stapeln: In diesem Moment ist
+ * sie die einzige Entscheidung, und sie gehoert niemandem sonst.
+ */
+.cambio-gezogen {
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  z-index: 6;
+}
+.cambio-gezogen .card,
+.cambio-gezogen .card-img {
+  width: calc(var(--hw) * 1.5);
+  height: auto;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+.cambio-gezogen-hinweis {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffe08a;
+  text-shadow: 0 1px 0 rgba(40, 20, 4, 0.9);
+}
+
+/* --- Der Ruf ------------------------------------------------------------ */
+
+/*
+ * Nach dem Ruf zaehlt jeder Zug doppelt, und genau das muss man sehen — sonst
+ * spielt man weiter, als waere noch Zeit.
+ */
+.cambio-ruf {
+  position: absolute;
+  left: 50%;
+  bottom: 0.6rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.6rem;
+  background: rgba(200, 57, 43, 0.92);
+  color: #fff;
+  text-align: center;
+  line-height: 1.2;
+}
+.cambio-ruf strong {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cambio-ruf span {
+  font-size: 0.72rem;
+}
+
+/* --- Die vier Plaetze --------------------------------------------------- */
+
+.cambio-plaetze {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+}
+.cambio-plaetze--fremd {
+  gap: 0.12rem;
+}
+.cambio-platz {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 0.35rem;
+  background: none;
+  width: calc(var(--hw) * 1.05);
+}
+.cambio-plaetze--fremd .cambio-platz {
+  width: calc(var(--hw) * 0.6);
+}
+.cambio-platz .card,
+.cambio-platz .card-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/*
+ * Bekannte eigene Karten stehen etwas hoeher: Das ist die eine Auskunft, die
+ * das Spiel ausmacht — was weiss ich, was weiss ich nicht.
+ */
+.cambio-platz.is-bekannt {
+  transform: translateY(-4px);
+}
+.cambio-platz.is-waehlbar {
+  cursor: pointer;
+  border-color: #ffc45a;
+  box-shadow: 0 0 10px rgba(255, 196, 90, 0.55);
+}
+.cambio-platz:disabled {
+  cursor: default;
+}
+
+/* Beim Blindtausch bereits als erste Karte angetippt. */
+.cambio-platz.is-gewaehlt {
+  border-color: #7de0a4;
+  box-shadow: 0 0 12px rgba(125, 224, 164, 0.7);
+  transform: translateY(-8px);
+}
+
+/* --- Eigener Sitz ------------------------------------------------------- */
+
+.cambio-eigene {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0 0.2rem;
+}
+.cambio-eigene-kopf {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cambio-eigene-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.cambio-eigene-text strong {
+  font-size: 0.9rem;
+}
+.cambio-eigene-text .muted {
+  font-size: 0.72rem;
+}
+
+/* --- Schaltflaechen des Zuges ------------------------------------------- */
+
+.cambio-aktionen {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem 0.5rem;
+  min-height: 2.4rem;
+}
+.cambio-knopf {
+  padding: 0.45rem 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0.6rem;
+  background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
+  color: #10321f;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cambio-knopf:active {
+  transform: translateY(2px);
+}
+/* Der Ruf beendet die Runde — er sieht anders aus als ein normaler Zug. */
+.cambio-knopf.is-ruf {
+  background: linear-gradient(180deg, #ff9a7a 0%, #c8392b 100%);
+  color: #fff;
+}
+.cambio-hinweis {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.82);
+  text-align: center;
+}
+
+/* --- Abrechnung nach der Runde ------------------------------------------ */
+
+.cambio-blatt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 82vh;
+  overflow-y: auto;
+}
+.cambio-blatt h2,
+.cambio-blatt h3 {
+  margin: 0;
+}
+.cambio-ruf-gut {
+  margin: 0;
+  color: #7de0a4;
+}
+.cambio-ruf-schlecht {
+  margin: 0;
+  color: #ff9c90;
+}
+.cambio-abrechnung,
+.cambio-tafel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cambio-abrechnung li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 0.5rem;
+  background: rgba(20, 11, 4, 0.55);
+}
+.cambio-abrechnung-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cambio-abrechnung-karten {
+  display: flex;
+  gap: 0.1rem;
+}
+.cambio-abrechnung-karten .card,
+.cambio-abrechnung-karten .card-img {
+  width: 1.5rem;
+  height: 2.18rem;
+}
+.cambio-abrechnung-punkte {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cambio-tafel li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.15rem 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
