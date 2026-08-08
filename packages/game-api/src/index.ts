@@ -41,7 +41,23 @@ export type GameId =
   | 'maumau'
   | 'schwimmen'
   | 'backgammon'
-  | 'bauernskat';
+  | 'bauernskat'
+  | 'werwolf'
+  | 'drecksau'
+  /**
+   * Cabo/Cambio: Ablegespiel mit vier verdeckten Karten, Werte minimieren.
+   * "Cabo" ist ein eingetragenes Markenzeichen (AMIGO) - dieselbe Lage wie bei
+   * Wizard. Cambio ist der traditionelle, markenfreie Name der Spielfamilie
+   * (auch Golf/Kambio genannt), genau wie Mau-Mau der markenfreie Name fuer
+   * UNO ist.
+   */
+  | 'cambio'
+  /**
+   * "Phase 10" ist ein eingetragenes Markenzeichen (Mattel/Fundex). Stufenrommé
+   * beschreibt dieselbe Spielfamilie (Contract Rummy mit festen Kombinationen
+   * je Runde) ohne den Produktnamen zu verwenden.
+   */
+  | 'phase10';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby

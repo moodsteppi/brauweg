@@ -153,6 +153,10 @@ const gameIdSchema = z.enum([
   'schwimmen',
   'backgammon',
   'bauernskat',
+  'werwolf',
+  'cambio',
+  'phase10',
+  'drecksau',
 ]);
 
 const registerSchema = z.object({

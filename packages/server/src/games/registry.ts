@@ -44,6 +44,13 @@ const PREVIEW: readonly GameMeta[] = (
     ['schwimmen', [2, 3, 4, 5, 6, 7, 8]],
     ['backgammon', [2]],
     ['bauernskat', [2]],
+    // Party-Runde mit Rollen und Nachtphase. Braucht freien Text zwischen
+    // Sitzen (Diskussion, Abstimmung) - das ist ein Moderationsfall
+    // (Plan M8) und deshalb erst nach der Beta spielbar, nicht nur Vorschau.
+    ['werwolf', [5, 6, 7, 8, 9, 10]],
+    ['cambio', [2, 3, 4, 5, 6]],
+    ['phase10', [2, 3, 4, 5, 6]],
+    ['drecksau', [2, 3, 4, 5, 6]],
   ] as const
 ).map(([id, seatCounts]) => ({
   id: id as GameId,

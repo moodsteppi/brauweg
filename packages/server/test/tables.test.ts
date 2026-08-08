@@ -40,7 +40,19 @@ test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind drei', () => {
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),
-    ['backgammon', 'bauernskat', 'maumau', 'romme', 'schafkopf', 'schwimmen', 'skat'],
+    [
+      'backgammon',
+      'bauernskat',
+      'cambio',
+      'drecksau',
+      'maumau',
+      'phase10',
+      'romme',
+      'schafkopf',
+      'schwimmen',
+      'skat',
+      'werwolf',
+    ],
   );
   assert.equal(registry.get('skat'), undefined, 'Vorschau-Spiele haben kein Modul');
 });

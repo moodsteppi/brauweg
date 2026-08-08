@@ -25,6 +25,14 @@ const de: Record<string, string> = {
   'game.backgammon': 'Backgammon',
   // "Bauernskat" heisst auch Raeuberskat: Skat zu zweit, ohne Reizen.
   'game.bauernskat': 'Bauernskat',
+  'game.werwolf': 'Werwolf',
+  // "Cabo" ist eine Marke (AMIGO). Cambio ist der markenfreie Name derselben
+  // Spielfamilie - dieselbe Logik wie bei Zauberer/Wizard.
+  'game.cambio': 'Cambio',
+  // "Phase 10" ist eine Marke (Mattel/Fundex). Stufenrommé beschreibt
+  // dieselbe Spielfamilie ohne den Produktnamen.
+  'game.phase10': 'Stufenrommé',
+  'game.drecksau': 'Drecksau',
   // Mehrkampf ueber mehrere Spiele. Kein Spielmodul, sondern ein Modus -
   // deshalb steht er nicht in der Registrierung.
   'modus.mehrkampf': 'Brauweg-Bock',
