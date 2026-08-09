@@ -300,13 +300,35 @@
       }
       if (phase === 'coin') coinTick(TAKT_MS / 1000);
       update(TAKT_MS / 1000);
-      animate(TAKT_MS / 1000);
       if (taktZaehler % PROBE_TAKTE === 0) {
         proben.set(taktZaehler, pruefsumme());
         proben.delete(taktZaehler - PROBE_TAKTE * 12);
         pruefeProbe(taktZaehler);
       }
     }
+    /**
+     * Die Anzeige laeuft in Bildzeit, nicht in Takten.
+     *
+     * Die Simulation MUSS in festen 50-ms-Schritten rechnen — daran haengt
+     * der Gleichschritt. animate() hat damit nichts zu tun: Es bewegt nur
+     * Sichtbares (Schrittweg mt, Ausfallschritt atk, Rohrschwenk aim,
+     * Aufblitzen, Teilchen, fx-Uhren). Der Kern SCHREIBT diese Werte, liest
+     * sie aber nie zurueck, und die Zufallszahlen dafuer kommen aus deko(),
+     * nie aus dem Saatkorn — die beiden Geraete duerfen sie also
+     * unterschiedlich oft rechnen.
+     *
+     * Vorher lief animate() im Takt mit: 20-mal je Sekunde, waehrend
+     * gezeichnet 60-mal wurde. Jede Bewegung stand also dreimal still und
+     * sprang dann — oertlich (dort laeuft animate je Bild) sah dasselbe
+     * Spiel fluessig aus, im Netz ruckelte es. Genau das war zu sehen.
+     *
+     * Beim AUFHOLEN (mehrere Takte in einem Bild, etwa nach einer
+     * Selbstheilung) bekommt die Anzeige die Simulationszeit statt der
+     * Bildzeit: Sonst blieben die Effekte des Replays liegen und spielten
+     * sich danach alle auf einmal ab.
+     */
+    const bildSek = Math.min(0.05, dt / 1000);
+    animate(schritte > 1 ? schritte * (TAKT_MS / 1000) : bildSek);
     if (vorschau.length) vorschau = vorschau.filter((v) => v.takt > taktZaehler);
     if (!document.hidden) {
       render();
