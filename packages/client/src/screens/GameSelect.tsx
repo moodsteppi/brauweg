@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { Ladekreis } from '../Ladekreis';
+import { CardFront } from '../CardFace';
 
 import {
   ApiError,
@@ -1745,6 +1746,7 @@ function Spielen({
   const [games, setGames] = useState<GameSummary[]>([]);
   const [voted, setVoted] = useState<Set<string>>(new Set());
   const [wahlOffen, setWahlOffen] = useState(false);
+  const [anleitungOffen, setAnleitungOffen] = useState(false);
 
   useEffect(() => {
     void api.games().then(setGames);
@@ -1819,21 +1821,19 @@ function Spielen({
           </button>
         </aside>
 
-        {/* Einstieg fuer Neue, wie im Entwurf unten rechts. Die Anleitung
-            selbst gibt es noch nicht — der Platz dafuer steht schon, und beim
-            Antippen sagt sie das auch. Spielneutral: mit zwei Spielen waere
-            ein fester Spielname hier falsch. */}
+        {/* Einstieg fuer Neue, unten rechts. Oeffnet die Anleitung: was Brauweg
+            ist und woran man die Spiele erkennt. Spielneutral — mit mehreren
+            Spielen waere ein fester Spielname hier falsch. */}
         <button
           type="button"
           className="hub-neuhier"
-          onClick={() => onBald('Die Anleitung')}
+          onClick={() => setAnleitungOffen(true)}
         >
           <span className="hub-neuhier-text">
             <strong>Neu hier?</strong>
             <span>So funktioniert Brauweg</span>
           </span>
           <img src="/hub/pinguin/pinguin-basis.webp" alt="" draggable={false} />
-          <span className="front-bald-tag">Bald</span>
         </button>
       </div>
 
@@ -1875,6 +1875,155 @@ function Spielen({
           onClose={() => setWahlOffen(false)}
         />
       )}
+
+      {anleitungOffen && (
+        <Anleitung
+          games={games}
+          onSpielauswahl={() => {
+            setAnleitungOffen(false);
+            setWahlOffen(true);
+          }}
+          onClose={() => setAnleitungOffen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Anleitung fuer Neue — hinter dem "Neu hier?"-Knopf.
+ *
+ * Zwei Teile: erst was Brauweg ueberhaupt ist (viele Spiele, Trophaeen, eigenes
+ * Aussehen, Truhen), dann je spielbarem Spiel eine Beispielhand aus ECHTEN
+ * Karten. Die Hand ist der Kern: Anfaenger sehen, was sie halten, und wer die
+ * Spiele kennt, erkennt am Blatt sofort, welches es ist — auch ohne den Namen.
+ *
+ * Die Karten sind echt gerendert (kein gemaltes Beispielbild): So stimmt die
+ * Hand mit dem Tisch ueberein, und es haengt nichts an einer Lieferung. Das
+ * grosse Held-Bild und die drei Symbole kommen aus der Bestellung
+ * (docs/ASSETS-ANLEITUNG.md); bis dahin stehen vorhandene Icons und ein
+ * gemalter Verlauf als Platzhalter — nie ein <img> auf eine fehlende Datei.
+ */
+const ERKENNUNG: Record<string, { blatt: string; wieViele: string; text: string }> = {
+  doppelkopf: {
+    blatt: 'eiche',
+    wieViele: '3 bis 5 Spieler, meist zu viert',
+    text: 'Neun bis Ass, jede Karte doppelt. Die zwei Kreuz-Damen sind das stärkste Paar. Wer sie hält, spielt verdeckt zusammen. Punkte bringen Ass und Zehn.',
+  },
+  wizard: {
+    blatt: 'zauberwald',
+    wieViele: '3 bis 6 Spieler',
+    text: 'Vor jeder Runde sagst du an, wie viele Stiche du machst. Genau treffen zählt. Ein Zauberer sticht alles, ein Narr verliert jeden Stich.',
+  },
+};
+
+function Anleitung({
+  games,
+  onSpielauswahl,
+  onClose,
+}: {
+  games: GameSummary[];
+  onSpielauswahl: () => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const spielbar = games.filter((g) => g.availability === 'playable');
+  const bald = games.filter((g) => g.availability === 'preview');
+
+  return (
+    <div className="anleitung" onClick={onClose} role="presentation">
+      <div
+        className="anleitung-blatt"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="So funktioniert Brauweg"
+      >
+        <header className="anleitung-kopf">
+          <h2>Willkommen bei Brauweg</h2>
+          <button className="spielwahl-zu" onClick={onClose} aria-label="Schließen">
+            ×
+          </button>
+        </header>
+
+        {/* Held-Bild. Platzhalter ist der Logo-Verlauf; die Bestellung liefert
+            /hub/anleitung-held.webp, das dann als <img> hier steht. */}
+        <div className="anleitung-held" aria-hidden="true">
+          <img className="anleitung-held-logo" src="/hub/logo.png" alt="" draggable={false} />
+        </div>
+
+        <p className="anleitung-lauf">
+          Brauweg ist eine Stube voller Kartenspiele. Du spielst, sammelst Trophäen und richtest
+          dir deinen Tisch ein, allein gegen Bots oder mit anderen.
+        </p>
+
+        {/* Die drei Versprechen. Symbole sind vorhandene Icons als Platzhalter;
+            die Bestellung ersetzt sie durch gemalte anleitung-*.webp. */}
+        <div className="anleitung-punkte">
+          <div className="anleitung-punkt">
+            <img src="/hub/pokal.png" alt="" draggable={false} />
+            <strong>Trophäen sammeln</strong>
+            <span className="muted">
+              Jede Partie bringt Trophäen. Sie tragen dich den Pfad hinauf, von der Heimat bis zum
+              Sternenhafen.
+            </span>
+          </div>
+          <div className="anleitung-punkt">
+            <img src="/hub/tab-blatt.webp" alt="" draggable={false} />
+            <strong>Aussehen ändern</strong>
+            <span className="muted">
+              Kartenblatt, Rückseite, Tischszene und deinen Pinguin stellst du frei ein. Jeder am
+              Tisch sieht sein eigenes.
+            </span>
+          </div>
+          <div className="anleitung-punkt">
+            <img src="/hub/truhe.png" alt="" draggable={false} />
+            <strong>Truhen erspielen</strong>
+            <span className="muted">
+              Beim Spielen füllst du Truhen und Aufgaben. Daraus gibt es Münzen, mit denen du neue
+              Designs freischaltest.
+            </span>
+          </div>
+        </div>
+
+        <h3 className="anleitung-abschnitt">Woran du die Spiele erkennst</h3>
+        <p className="muted anleitung-abschnitt-hint">
+          So sieht ein Blatt aus. Wer ein Spiel kennt, erkennt es hier sofort an den Karten, auch
+          ohne den Namen.
+        </p>
+
+        {spielbar.map((spiel) => {
+          const info = ERKENNUNG[spiel.id];
+          const deck = deckById(info?.blatt);
+          const hand = handFuer(spiel.id);
+          return (
+            <section className="anleitung-spiel" key={spiel.id}>
+              <div className="anleitung-spiel-kopf">
+                <strong>{t(spiel.nameKey)}</strong>
+                <span className="muted">{info?.wieViele ?? spiel.seatCounts.join(', ') + ' Spieler'}</span>
+              </div>
+              {/* Die Beispielhand aus echten Karten des passenden Blatts. */}
+              <div className="anleitung-hand">
+                {hand.map((card) => (
+                  <span className="pc pc--hand anleitung-karte" key={card.id}>
+                    <CardFront card={card} deck={deck} />
+                  </span>
+                ))}
+              </div>
+              {info && <p className="anleitung-spiel-text">{info.text}</p>}
+            </section>
+          );
+        })}
+
+        {bald.length > 0 && (
+          <p className="muted anleitung-bald">
+            In Arbeit: {bald.map((g) => t(g.nameKey)).join(', ')}. In der Spielauswahl kannst du
+            dafür abstimmen, was als Nächstes kommt.
+          </p>
+        )}
+
+        <button className="primary anleitung-los" onClick={onSpielauswahl}>
+          Los geht’s
+        </button>
+      </div>
     </div>
   );
 }
