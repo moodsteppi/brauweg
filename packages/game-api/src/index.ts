@@ -209,12 +209,7 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
 
   // -- Sichtbarkeit ---------------------------------------------------------
 
-  /**
-   * `seit` ist die Marke, die der Empfaenger schon hat (siehe `viewCursor`).
-   * Module ohne anwachsende Sicht ignorieren sie und liefern immer alles —
-   * das ist der Normalfall und die Voreinstellung.
-   */
-  viewFor(party: TParty, seat: number, seit?: number): TView;
+  viewFor(party: TParty, seat: number): TView;
 
   /**
    * Neutrale Sicht fuer Zuschauer, OHNE jede Hand.
@@ -223,29 +218,7 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * ein Zuschauer mit Handeinsicht ein perfekter Komplize. Er muesste einem
    * Spieler nur mitteilen, wer die zweite Kreuz-Dame haelt.
    */
-  spectatorView(party: TParty, seit?: number): TView;
-
-  /**
-   * Laenge des anwachsenden Teils der Sicht.
-   *
-   * Die Sicht eines Kartenspiels ist so gross wie das Blatt und bleibt es.
-   * Bei Feldherr ist sie die Zugliste der ganzen Partie: Sie waechst mit
-   * jedem Zug, und wer sie bei jedem Rundruf vollstaendig verschickt, sendet
-   * ueber eine Partie hinweg das Quadrat davon (gemessen: 800 Zuege = 40 MB
-   * ueber die Leitung statt 0,1 MB). Am Handy heisst das, dass die
-   * Simulation gegen Ende der Partie bei jedem Zug ins Stocken geraet,
-   * waehrend JSON.parse ein halbes Hundert Kilobyte zerlegt.
-   *
-   * Ein Modul, das diese Methode anbietet, verspricht: Der Teil ist
-   * append-only, und `viewFor(..., seit)` liefert alles ab `seit`. Die
-   * Plattform merkt sich je Verbindung, wie weit sie beliefert ist, und
-   * schickt beim Rundruf nur noch den Zuwachs. Beim `join` — also auch nach
-   * jedem Wiederverbinden — geht immer die volle Sicht raus, damit ein
-   * Empfaenger nie auf einem Loch sitzen bleibt.
-   *
-   * Fehlt die Methode, bleibt alles wie bisher: `seit` ist immer 0.
-   */
-  viewCursor?(party: TParty): number;
+  spectatorView(party: TParty): TView;
 
   // -- Bot ------------------------------------------------------------------
 

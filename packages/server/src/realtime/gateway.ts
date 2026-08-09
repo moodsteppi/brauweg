@@ -42,17 +42,6 @@ interface Connection {
   letzterEmote: number;
   /** Wann diese Verbindung zuletzt einen Takt-Herzschlag abgesetzt hat. */
   letzterTakt: number;
-  /**
-   * Wie weit diese Verbindung mit dem anwachsenden Teil der Sicht beliefert
-   * ist (GameModule.viewCursor). Nur Feldherr hat so einen Teil; bei allen
-   * anderen bleibt der Wert 0 und aendert nichts.
-   *
-   * Steht auf null, solange nichts gesendet wurde — dann geht die volle
-   * Sicht raus. Auf null zurueckgesetzt wird er bei jedem Tischwechsel:
-   * Die Marke gehoert zu EINER Partie, und ein alter Stand an einem neuen
-   * Tisch waere genau das Loch, das die Marke verhindern soll.
-   */
-  sichtStand: number | null;
 }
 
 /** Hoechstens so viele offene Verbindungen je Konto. */
@@ -212,8 +201,8 @@ export class Gateway {
         protokollToken(request.headers['sec-websocket-protocol']);
       this.accept(socket, token);
     });
-    this.runtime.onUpdate((tableId, nurSicht) => {
-      void this.broadcast(tableId, nurSicht);
+    this.runtime.onUpdate((tableId) => {
+      void this.broadcast(tableId);
     });
   }
 
@@ -288,7 +277,6 @@ export class Gateway {
         imFenster: 0,
         letzterEmote: 0,
         letzterTakt: 0,
-        sichtStand: null,
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -300,16 +288,9 @@ export class Gateway {
 
   private drop(connection: Connection): void {
     if (connection.tableId) {
-      const tableId = connection.tableId;
-      const room = this.byTable.get(tableId);
-      room?.delete(connection);
-      if (room && room.size === 0) {
-        this.byTable.delete(tableId);
-        this.tischDaten.delete(tableId);
-        this.zuletztGesendet.delete(tableId);
-      }
+      this.byTable.get(connection.tableId)?.delete(connection);
       // Verbindungsverlust pausiert nichts, der Zugtimer laeuft weiter.
-      this.runtime.setPresence(tableId, connection.accountId, false);
+      this.runtime.setPresence(connection.tableId, connection.accountId, false);
     }
     this.connections.delete(connection);
   }
@@ -446,14 +427,6 @@ export class Gateway {
     // wartet, ist kein Fehler: Der Beitretende gehoert dazu und muss
     // mitbekommen, wenn sich die Plaetze fuellen.
     connection.tableId = message.tableId;
-    /**
-     * Jedes `join` ist ein Abgleich — auch das nach einem Wiederverbinden
-     * oder nach der Rueckkehr in den Tab. Die Marke faellt deshalb hier auf
-     * null, und die volle Sicht geht raus. Genau das macht den Ausschnitt
-     * im Rundruf ungefaehrlich: Wer etwas verpasst haben koennte, hat
-     * vorher ein `join` geschickt.
-     */
-    connection.sichtStand = null;
     let room = this.byTable.get(message.tableId);
     if (!room) {
       room = new Set();
@@ -464,10 +437,6 @@ export class Gateway {
     this.runtime.setPresence(message.tableId, connection.accountId, true);
     // Nur wer selbst sitzt, darf einen Tisch anlaufen lassen.
     if (sitzt) await this.ensureStarted(message.tableId);
-    // Wer gerade beitritt, hat womoeglich selbst einen Platz besetzt (der
-    // Beitritt laeuft ueber HTTP) — der zwischengespeicherte Stand kennt ihn
-    // dann noch nicht.
-    this.tischDaten.delete(message.tableId);
     await this.sendState(message.tableId, [connection]);
   }
 
@@ -492,19 +461,9 @@ export class Gateway {
 
   private leave(connection: Connection): void {
     if (!connection.tableId) return;
-    const tableId = connection.tableId;
-    const room = this.byTable.get(tableId);
-    room?.delete(connection);
-    // Mit dem letzten Zuhoerer verschwindet auch, was fuer ihn aufgehoben
-    // wurde. Sonst haelt jeder je besuchte Tisch fuer immer eine Zeile.
-    if (room && room.size === 0) {
-      this.byTable.delete(tableId);
-      this.tischDaten.delete(tableId);
-      this.zuletztGesendet.delete(tableId);
-    }
-    this.runtime.setPresence(tableId, connection.accountId, false);
+    this.byTable.get(connection.tableId)?.delete(connection);
+    this.runtime.setPresence(connection.tableId, connection.accountId, false);
     connection.tableId = null;
-    connection.sichtStand = null;
   }
 
   /**
@@ -612,52 +571,24 @@ export class Gateway {
     await this.broadcast(tableId);
   }
 
-  private async broadcast(tableId: string, nurSicht = false): Promise<void> {
+  private async broadcast(tableId: string): Promise<void> {
     const room = this.byTable.get(tableId);
-    if (!room || room.size === 0) {
-      this.tischDaten.delete(tableId);
-      this.zuletztGesendet.delete(tableId);
-      return;
-    }
-    if (!nurSicht) {
-      // Alles ausser einer reinen Spielstands-Aenderung kann Tisch und Sitze
-      // beruehrt haben: Der zwischengespeicherte Stand ist damit hinfaellig.
-      this.tischDaten.delete(tableId);
-      // Ein Beitritt ueber HTTP kann den Tisch vollgemacht haben.
-      await this.ensureStarted(tableId);
-    }
-    await this.sendState(tableId, [...room], { nurSicht, anRaum: true });
+    if (!room || room.size === 0) return;
+    // Ein Beitritt ueber HTTP kann den Tisch vollgemacht haben.
+    await this.ensureStarted(tableId);
+    await this.sendState(tableId, [...room]);
   }
 
-  /**
-   * Tischzeile, Sitze und Anzeigenamen — die drei Abfragen, die jeder
-   * Rundruf brauchte.
-   *
-   * Sie aendern sich nur, wenn jemand kommt, geht, zum Bot wird oder die
-   * Partie beginnt bzw. endet — nie durch einen Spielzug. Bei einem
-   * Kartenspiel faellt das nicht auf; Feldherr ruft mehrmals je Sekunde
-   * ueber Minuten hinweg, und drei Datenbankfragen je Zug landen als
-   * Wartezeit zwischen Tipp und sichtbarem Zug. Jeder Anlass, der nicht
-   * "nur die Sicht" ist, wirft den Eintrag weg (siehe broadcast).
-   */
-  private readonly tischDaten = new Map<string, TischDaten>();
-  /**
-   * Zuletzt an den Raum geschickte Tisch- und Partienachricht, als Text.
-   * Waehrend einer Partie sind beide von Zug zu Zug meist Wort fuer Wort
-   * dieselben — sie erneut zu schicken kostet Bytes auf der Leitung und
-   * beim Empfaenger ein Neuzeichnen fuer nichts.
-   */
-  private readonly zuletztGesendet = new Map<string, { tisch: string; partie: string }>();
-
-  private async ladeTischDaten(tableId: string): Promise<TischDaten | null> {
-    const zwischen = this.tischDaten.get(tableId);
-    if (zwischen) return zwischen;
-
+  /** Jede Verbindung bekommt ihre eigene, gefilterte Sicht. */
+  private async sendState(
+    tableId: string,
+    targets: readonly Connection[],
+  ): Promise<void> {
     const [table] = await this.db
       .select()
       .from(s.gameTable)
       .where(eq(s.gameTable.id, tableId));
-    if (!table) return null;
+    if (!table) return;
 
     const seatRows = await this.db
       .select({
@@ -667,6 +598,8 @@ export class Gateway {
       })
       .from(s.tableSeat)
       .where(eq(s.tableSeat.tableId, tableId));
+
+    const party = this.runtime.get(tableId);
 
     const accountIds = seatRows.map((row) => row.accountId).filter(Boolean) as string[];
     const names =
@@ -683,50 +616,21 @@ export class Gateway {
     const nameOf = new Map(names.map((row) => [row.id, row.displayName]));
     const avatarOf = new Map(names.map((row) => [row.id, row.hasAvatar]));
 
-    const daten: TischDaten = {
-      table,
-      seatRows: seatRows.slice().sort((a, b) => a.seatIndex - b.seatIndex),
-      nameOf,
-      avatarOf,
-    };
-    this.tischDaten.set(tableId, daten);
-    return daten;
-  }
-
-  /** Jede Verbindung bekommt ihre eigene, gefilterte Sicht. */
-  private async sendState(
-    tableId: string,
-    targets: readonly Connection[],
-    /**
-     * `anRaum` heisst: Dieser Versand geht an ALLE am Tisch. Nur dann darf
-     * er festhalten, was zuletzt geschickt wurde — die Antwort auf ein
-     * einzelnes `join` sagt nichts darueber aus, was die anderen kennen,
-     * und duerfte ihnen sonst eine Nachricht wegkuerzen, die sie nie
-     * bekommen haben.
-     */
-    { nurSicht, anRaum }: { nurSicht: boolean; anRaum: boolean } = {
-      nurSicht: false,
-      anRaum: false,
-    },
-  ): Promise<void> {
-    const daten = await this.ladeTischDaten(tableId);
-    if (!daten) return;
-    const { table, seatRows, nameOf, avatarOf } = daten;
-
-    const party = this.runtime.get(tableId);
-
-    const seats = seatRows.map((row) => ({
-      seat: row.seatIndex,
-      displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
-      accountId: row.accountId,
-      isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
-      // Nur eine kurze URL ueber die Leitung; die Bytes holt der Browser
-      // einmal und behaelt sie im Cache.
-      avatarUrl:
-        row.accountId && avatarOf.get(row.accountId)
-          ? `/api/avatars/${row.accountId}`
-          : null,
-    }));
+    const seats = seatRows
+      .slice()
+      .sort((a, b) => a.seatIndex - b.seatIndex)
+      .map((row) => ({
+        seat: row.seatIndex,
+        displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
+        accountId: row.accountId,
+        isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+        // Nur eine kurze URL ueber die Leitung; die Bytes holt der Browser
+        // einmal und behaelt sie im Cache.
+        avatarUrl:
+          row.accountId && avatarOf.get(row.accountId)
+            ? `/api/avatars/${row.accountId}`
+            : null,
+      }));
 
     // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da
     // ist und wie viele noch fehlen.
@@ -742,28 +646,10 @@ export class Gateway {
       visibility: table.visibility,
       paused: table.pausedAt !== null || (party?.paused ?? false),
     };
-
-    /**
-     * Beim Rundruf nach einem Zug wird nur geschickt, was sich auch geaendert
-     * hat.
-     *
-     * Wortgleiche Nachrichten kosten nicht nur Bytes: Der Client setzt
-     * daraufhin seinen Zustand neu und zeichnet den Tisch mit. Waehrend einer
-     * Feldherr-Partie sind Tisch- und Partienachricht von Zug zu Zug fast
-     * immer identisch — nur ihre Sicht unterscheidet sich. Wer neu dazukommt,
-     * bekommt beide trotzdem: Dieser Weg gilt allein fuer den Rundruf an den
-     * ganzen Raum (`nurSicht`), nie fuer die Antwort auf ein `join`.
-     */
-    const alt = this.zuletztGesendet.get(tableId);
-    const tischText = JSON.stringify(tableMessage);
-    const tischGleich = nurSicht && alt?.tisch === tischText;
-    if (!tischGleich) for (const connection of targets) send(connection.socket, tableMessage);
+    for (const connection of targets) send(connection.socket, tableMessage);
 
     // Laeuft noch keine Partie, ist der Wartebereich alles, was es zu sagen gibt.
-    if (!party) {
-      if (anRaum) this.zuletztGesendet.set(tableId, { tisch: tischText, partie: '' });
-      return;
-    }
+    if (!party) return;
 
     const partyMessage: ServerMessage = {
       v: ENVELOPE_VERSION,
@@ -774,21 +660,9 @@ export class Gateway {
       seats,
       trophies: party.awards,
     };
-    const partieText = JSON.stringify(partyMessage);
-    const partieGleich = nurSicht && alt?.partie === partieText;
-    if (anRaum) this.zuletztGesendet.set(tableId, { tisch: tischText, partie: partieText });
 
-    /**
-     * Stand des anwachsenden Sichtteils VOR dem Versand einlesen: Jede
-     * Verbindung bekommt alles ab ihrer eigenen Marke und traegt danach den
-     * neuen Stand ein. Bei allen Spielen ausser Feldherr ist er 0, `seit`
-     * bleibt 0, und es aendert sich nichts.
-     */
-    const stand = this.runtime.viewCursor(party);
     for (const connection of targets) {
-      const seit = connection.sichtStand ?? 0;
-      const state = this.runtime.viewFor(party, connection.accountId, seit);
-      connection.sichtStand = stand;
+      const state = this.runtime.viewFor(party, connection.accountId);
       send(connection.socket, {
         v: ENVELOPE_VERSION,
         game: party.gameId,
@@ -797,21 +671,9 @@ export class Gateway {
         ruleSetVersion: table.ruleSetVersion,
         ...state,
       });
-      if (!partieGleich) send(connection.socket, partyMessage);
+      send(connection.socket, partyMessage);
     }
   }
-}
-
-/** Was ein Rundruf ueber Tisch und Sitze wissen muss. Siehe `tischDaten`. */
-interface TischDaten {
-  readonly table: typeof s.gameTable.$inferSelect;
-  readonly seatRows: readonly {
-    seatIndex: number;
-    isBot: boolean;
-    accountId: string | null;
-  }[];
-  readonly nameOf: ReadonlyMap<string, string>;
-  readonly avatarOf: ReadonlyMap<string, boolean>;
 }
 
 function send(socket: WebSocket, message: ServerMessage): void {
