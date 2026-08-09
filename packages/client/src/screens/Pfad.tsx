@@ -258,8 +258,12 @@ function Stapel({
               hüpfte das Bild in dem Moment, in dem `three` fertig geladen
               ist. Die Zahl passt zur Bühne in `styles.css`. */}
           <Suspense fallback={<Pinguin getragen={getragen} groesse={10} />}>
+            {/* Dasselbe `getragen` wie der gemalte Rückfall darüber. Vorher
+                stand hier fest `muetze={false}`, und die Figur zeigte nie,
+                was man angezogen hatte — auf dem Bildschirm, der öfter zu
+                sehen ist als jeder andere. */}
             <Avatar3D
-              muetze={false}
+              getragen={getragen}
               bemalung={bemalung ?? LEERE_BEMALUNG}
               drehbar={false}
               lebendig

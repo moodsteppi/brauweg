@@ -1,20 +1,28 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
+import { FeldherrTisch } from './screens/FeldherrTisch';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
+import { CambioTable } from './screens/CambioTable';
 import { WizardTable } from './screens/WizardTable';
+
+const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
 
 type Screen =
   | { name: 'games' }
+  /** Minispiel: laeuft im Browser, kein Tisch, kein Spielmodul. */
+  | { name: 'feldherr' }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
+  /** Solo-Endless-Runner aus der Spielauswahl. */
+  | { name: 'prosubway' }
   /**
    * `vorher` merkt sich den Absprungpunkt: Wer vom Spieltisch aus ein Profil
    * oeffnet, muss an den Tisch zurueck - nicht auf die Startseite. Die
@@ -77,6 +85,50 @@ export function App(): React.JSX.Element {
     return <Profile accountId={screen.accountId} onBack={() => setScreen(screen.vorher)} />;
   }
 
+  if (screen.name === 'prosubway') {
+    return (
+      <Suspense
+        fallback={
+          <main className="app-laden">
+            <Ladekreis bild="/hub/lade-pinguin.webp" text="Pro-Subway…" />
+          </main>
+        }
+      >
+        <Runner
+          hubMode
+          onBack={() => {
+            setScreen({ name: 'games' });
+            void reload();
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  /**
+   * Feldherr laeuft nicht am Kartentisch.
+   *
+   * Es ist ein Echtzeitspiel: Der Kern zeichnet selbst, und die Partie
+   * rechnen beide Geraete im Gleichschritt. Ein Kartentisch mit Blatt,
+   * Stichanzeige und Zugtimer waere hier nur im Weg.
+   */
+  if (screen.name === 'table' && screen.gameId === 'feldherr') {
+    return (
+      <FeldherrTisch
+        tableId={screen.tableId}
+        onBack={() => setScreen({ name: 'lobby', gameId: screen.gameId })}
+      />
+    );
+  }
+  if (screen.name === 'lobby' && screen.gameId === 'feldherr') {
+    return (
+      <FeldherrTisch
+        onBack={() => setScreen({ name: 'games' })}
+        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+      />
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -84,7 +136,11 @@ export function App(): React.JSX.Element {
      * gemeinsamen Bausteine liegen in `src/tisch/` — verzweigt wird genau
      * hier, an einer einzigen Stelle.
      */
-    const Spieltisch = screen.gameId === 'wizard' ? WizardTable : Table;
+    const TISCHE: Record<string, typeof Table> = {
+      wizard: WizardTable as unknown as typeof Table,
+      cambio: CambioTable as unknown as typeof Table,
+    };
+    const Spieltisch = TISCHE[screen.gameId] ?? Table;
     return (
       <Spieltisch
         tableId={screen.tableId}
@@ -107,6 +163,15 @@ export function App(): React.JSX.Element {
     );
   }
 
+  if (screen.name === 'feldherr') {
+    return (
+      <FeldherrTisch
+        onBack={() => setScreen({ name: 'games' })}
+        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+      />
+    );
+  }
+
   if (screen.name === 'lobby') {
     return (
       <Lobby
@@ -123,7 +188,14 @@ export function App(): React.JSX.Element {
   return (
     <GameSelect
       me={me}
-      onPick={(gameId) => setScreen({ name: 'lobby', gameId })}
+      // Feldherr hat keine Kartenlobby: Tisch erstellen und beitreten
+      // erledigt der eigene Bildschirm, fest mit zwei Sitzen und einer Runde.
+      onPick={(gameId) =>
+        setScreen(gameId === 'feldherr' ? { name: 'feldherr' } : { name: 'lobby', gameId })
+      }
+      onSolo={(modusId) => {
+        if (modusId === 'prosubway') setScreen({ name: 'prosubway' });
+      }}
       onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
       onShowProfile={zeigeProfil}
       // Erst umschalten, dann speichern: Das Blatt wechselt ohne Wartezeit,

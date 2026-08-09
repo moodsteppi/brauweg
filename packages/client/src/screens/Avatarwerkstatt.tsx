@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
-import { api } from '../api';
+import { api, type Getragen } from '../api';
 import { spiele } from '../klang';
 import {
   BREITEN,
@@ -30,16 +30,23 @@ const Avatar3D = lazy(() => import('../Avatar3D'));
 
 export function Avatarwerkstatt({
   bemalung: gespeichert,
+  getragen = {},
   onClose,
   onGespeichert,
 }: {
   /** Was am Konto steht. `null` heißt: nie bemalt. */
   bemalung?: Bemalung | null;
+  /**
+   * Was angezogen ist. Voreinstellung leer, damit die Entwicklerstrecke
+   * `?dev=werkstatt` ohne Anmeldung weiter aufgeht.
+   */
+  getragen?: Getragen;
   onClose: () => void;
   /** Nach dem Speichern, damit das Profil die neue Figur zeigt. */
   onGespeichert?: (bemalung: Bemalung) => void;
 }): React.JSX.Element {
-  const [muetze, setMuetze] = useState(false);
+  /** Zubehör anzeigen. An, weil die Figur so aussieht wie überall sonst. */
+  const [zubehoer, setZubehoer] = useState(true);
   const [bemalung, setBemalung] = useState<Bemalung>(gespeichert ?? LEERE_BEMALUNG);
   const [malen, setMalen] = useState(false);
   const [farbe, setFarbe] = useState(FARBEN[0].wert);
@@ -125,7 +132,7 @@ export function Avatarwerkstatt({
           >
             {vermessen && (
               <Avatar3D
-                muetze={muetze}
+                getragen={zubehoer ? getragen : {}}
                 bemalung={bemalung}
                 malen={malen}
                 farbe={farbe}
@@ -252,26 +259,37 @@ export function Avatarwerkstatt({
           </div>
         )}
 
+        {/*
+          Zubehör aus- und wieder anblenden.
+
+          Vorher war das ein Mützenschalter, der bei „Ohne" anfing — und weil
+          die Figur im Spiel ohnehin nie etwas trug, war er der einzige Ort,
+          an dem man die Mütze überhaupt zu sehen bekam. Jetzt trägt die Figur
+          überall, was angezogen ist, und dieser Schalter tut das, wofür man
+          ihn hier wirklich braucht: Er nimmt das Zubehör kurz weg, damit man
+          den Kopf bemalen kann. Angezogen bleibt es trotzdem — hier wird
+          nichts ausgezogen, nur nicht angezeigt.
+        */}
         <div className="werkstatt-wahl werkstatt-muetze">
           <button
-            className={`hub-knopf hub-knopf--a werkstatt-knopf${!muetze ? ' is-gewaehlt' : ''}`}
-            aria-pressed={!muetze}
+            className={`hub-knopf hub-knopf--a werkstatt-knopf${zubehoer ? ' is-gewaehlt' : ''}`}
+            aria-pressed={zubehoer}
+            onClick={() => {
+              spiele('schalter');
+              setZubehoer(true);
+            }}
+          >
+            Mit Zubehör
+          </button>
+          <button
+            className={`hub-knopf hub-knopf--a werkstatt-knopf${!zubehoer ? ' is-gewaehlt' : ''}`}
+            aria-pressed={!zubehoer}
             onClick={() => {
               spiele('tipp');
-              setMuetze(false);
+              setZubehoer(false);
             }}
           >
             Ohne
-          </button>
-          <button
-            className={`hub-knopf hub-knopf--a werkstatt-knopf${muetze ? ' is-gewaehlt' : ''}`}
-            aria-pressed={muetze}
-            onClick={() => {
-              spiele('schalter');
-              setMuetze(true);
-            }}
-          >
-            Mit Mütze
           </button>
         </div>
 

@@ -29,18 +29,29 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind zwei', () => {
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind vier', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
 
   assert.deepEqual(
     playable.map((meta) => meta.id),
-    ['doppelkopf', 'wizard'],
+    ['doppelkopf', 'wizard', 'cambio', 'feldherr'],
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),
-    ['backgammon', 'bauernskat', 'maumau', 'romme', 'schafkopf', 'schwimmen', 'skat'],
+    [
+      'backgammon',
+      'bauernskat',
+      'drecksau',
+      'maumau',
+      'phase10',
+      'romme',
+      'schafkopf',
+      'schwimmen',
+      'skat',
+      'werwolf',
+    ],
   );
   assert.equal(registry.get('skat'), undefined, 'Vorschau-Spiele haben kein Modul');
 });

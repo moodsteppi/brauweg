@@ -36,6 +36,7 @@ import {
   type PartyMessage,
   type ServerMessage,
   type TableMessage,
+  type TaktMessage,
   type ViewMessage,
   moduleVersionFor,
 } from './protocol';
@@ -63,6 +64,12 @@ export interface TableConnection<V = GameView> {
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
+  /**
+   * Takt-Herzschlag eines Echtzeitspiels absetzen. Ohne Warteschlange: Ein
+   * Puls, der erst nach dem Wiederverbinden ankaeme, beschriebe einen Stand,
+   * den es nicht mehr gibt — der naechste ist ohnehin in 200 ms da.
+   */
+  sendTakt(daten: { takt: number; grenzTakt: number; pruef: string }): void;
   /** Von Hand neu verbinden und die volle Sicht neu anfordern. */
   reconnect(): void;
 }
@@ -77,6 +84,22 @@ const RESYNC_THROTTLE_MS = 800;
 export function useTable<V = GameView>(
   tableId: string | null,
   gameId = 'doppelkopf',
+  /**
+   * Eingehende Takt-Herzschlaege. Als Rueckruf statt als State: Sie kommen
+   * fuenfmal je Sekunde, und ein setState je Puls zeichnete den ganzen
+   * Bildschirm fuenfmal je Sekunde neu — fuer eine Nachricht, die nur der
+   * Spielkern braucht.
+   */
+  beiTakt?: (nachricht: TaktMessage) => void,
+  /**
+   * Jede frische Sicht, SOFORT beim Eintreffen — vor React. Der Weg ueber
+   * setState und Effekt kann sich um hunderte Millisekunden verspaeten,
+   * besonders im verdeckten Tab. Fuer Kartenspiele ist das egal; im
+   * Gleichschritt rechnet der Spielkern derweil ueber den Takt des
+   * eintreffenden Zuges hinweg, fuehrt ihn verschoben aus, und die Partie
+   * laeuft still auseinander. Genau so ist ein Haus-Zug zerbrochen.
+   */
+  beiSicht?: (nachricht: ViewMessage<V>) => void,
 ): TableConnection<V> {
   const [view, setView] = useState<ViewMessage<V> | null>(null);
   const [party, setParty] = useState<PartyMessage | null>(null);
@@ -114,6 +137,17 @@ export function useTable<V = GameView>(
   const [emotes, setEmotes] = useState<Record<number, string>>({});
   /** Wann zuletzt selbst gerufen wurde — die Bremse vor dem Absenden. */
   const letzterEmote = useRef(0);
+
+  /**
+   * Der Rueckruf haengt an einer Referenz, nicht am Socket-Aufbau: onmessage
+   * entsteht einmal je Verbindung, der Aufrufer gibt aber bei jedem
+   * Neuzeichnen eine frische Funktion herein. Ohne die Referenz riefe der
+   * Socket fuer immer die allererste.
+   */
+  const beiTaktRef = useRef(beiTakt);
+  beiTaktRef.current = beiTakt;
+  const beiSichtRef = useRef(beiSicht);
+  beiSichtRef.current = beiSicht;
 
   const zeigeEmote = useCallback((seat: number, emote: string): void => {
     // Der Klang haengt an dieser einen Stelle und nicht an den Tischen: Beide
@@ -234,10 +268,15 @@ export function useTable<V = GameView>(
         zeigeEmote(message.seat, message.emote);
         return;
       }
+      if (message.type === 'takt') {
+        beiTaktRef.current?.(message);
+        return;
+      }
       // Veraltete Nachricht: Der Server war beim Senden schon weiter.
       if (message.revision < revisionRef.current) return;
       revisionRef.current = message.revision;
       setError(null);
+      beiSichtRef.current?.(message);
       setView(message);
     };
 
@@ -424,6 +463,25 @@ export function useTable<V = GameView>(
     [tableId, gameId],
   );
 
+  const sendTakt = useCallback(
+    (daten: { takt: number; grenzTakt: number; pruef: string }) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({
+          v: ENVELOPE_VERSION,
+          game: gameId,
+          type: 'takt',
+          tableId,
+          takt: daten.takt,
+          grenzTakt: daten.grenzTakt,
+          pruef: daten.pruef,
+        }),
+      );
+    },
+    [tableId, gameId],
+  );
+
   const command = useCallback(
     (type: 'addBot' | 'removeBot', seat: number) => {
       const socket = socketRef.current;
@@ -448,6 +506,7 @@ export function useTable<V = GameView>(
     sendEmote,
     addBot,
     removeBot,
+    sendTakt,
     reconnect,
   };
 }

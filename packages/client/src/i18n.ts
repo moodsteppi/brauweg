@@ -13,6 +13,10 @@ const de: Record<string, string> = {
   // Produktname nicht - deshalb der deutsche Name. Die interne Kennung bleibt
   // `wizard`, sie steht in Datenbankzeilen und Nachrichten.
   'game.wizard': 'Zauberer',
+  // Feldherr ist kein Kartenspiel, sondern ein Echtzeitduell zu zweit. Es
+  // laeuft ueber dieselbe Modulschnittstelle, hat aber weder Runden noch
+  // Zugfolge — siehe docs/FELDHERR-PLAN.md.
+  'game.feldherr': 'Feldherr',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -21,9 +25,21 @@ const de: Record<string, string> = {
   'game.backgammon': 'Backgammon',
   // "Bauernskat" heisst auch Raeuberskat: Skat zu zweit, ohne Reizen.
   'game.bauernskat': 'Bauernskat',
+  'game.werwolf': 'Werwolf',
+  // "Cabo" ist eine Marke (AMIGO). Cambio ist der markenfreie Name derselben
+  // Spielfamilie - dieselbe Logik wie bei Zauberer/Wizard.
+  // "Cabo" ist eine eingetragene Marke (AMIGO). Cambio ist der markenfreie
+  // Name derselben Spielfamilie - dieselbe Logik wie bei Zauberer/Wizard.
+  'game.cambio': 'Cambio',
+  // "Phase 10" ist eine Marke (Mattel/Fundex). Stufenrommé beschreibt
+  // dieselbe Spielfamilie ohne den Produktnamen.
+  'game.phase10': 'Stufenrommé',
+  'game.drecksau': 'Drecksau',
   // Mehrkampf ueber mehrere Spiele. Kein Spielmodul, sondern ein Modus -
   // deshalb steht er nicht in der Registrierung.
   'modus.mehrkampf': 'Brauweg-Bock',
+  'modus.prosubway': 'Pro-Subway',
+  'modus.prosubway.hint': 'Alleine · Münzen fürs Hub',
 
   'error.unauthorized': 'Bitte melde dich an.',
   'error.credentialsInvalid': 'E-Mail oder Passwort stimmt nicht.',
@@ -177,6 +193,10 @@ const de: Record<string, string> = {
   'quest.zauberer-am-tag.hint': 'Eine Zauberer-Partie zu Ende spielen.',
   'quest.karten-legen': 'Leg 60 Karten',
   'quest.karten-legen.hint': 'Gezählt werden Karten aus abgerechneten Runden.',
+  'quest.pro-subway-laufen': 'Lauf eine Runde Pro-Subway',
+  'quest.pro-subway-laufen.hint': 'Spielauswahl → Alleine. Wie weit, ist egal.',
+  'quest.pro-subway-muenzen': 'Sammle 15 Münzen im Lauf',
+  'quest.pro-subway-muenzen.hint': 'Über alle Läufe des Tages zusammen.',
 
   // --- Shop ---------------------------------------------------------------
   'shop.muenzen-klein': 'Handvoll Münzen',
@@ -284,12 +304,28 @@ const de: Record<string, string> = {
   'regel.noTrump': 'Trumpffrei',
   'regel.jesterPicksTrump': 'Narr: Geber wählt',
 
+  // Hausregeln von Cambio.
+  'regel.peekOwn': '7/8: Eigene ansehen',
+  'regel.peekOther': '9/10: Fremde ansehen',
+  'regel.blindSwap': 'Bube: Blind tauschen',
+  'regel.lookAndSwap': 'Dame: Ansehen und tauschen',
+  'regel.redKingZero': 'Roter König zählt null',
+  'regel.peekTwoAtStart': 'Zwei Karten zu Beginn ansehen',
+  'regel.callerMustBeStrictlyLower': 'Gleichstand lässt den Ruf misslingen',
+  'regel.failPenalty': 'Strafpunkte bei misslungenem Ruf',
+
   // Meldungen des Zauberer-Regelsatzes.
   'ruleset.noTrumpVsJesterPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
   'ruleset.noTrumpVsDealerPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
   'ruleset.hiddenBidsVsBidSum': 'Verdeckt angesagt gibt es keinen letzten Ansager.',
   'ruleset.roundsOutOfRange': 'So viele Runden gibt das Blatt nicht her.',
   'ruleset.tableSizeUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
+
+  // Meldungen des Cambio-Regelsatzes.
+  'ruleset.noActionCards': 'Ohne Aktionskarten bleibt wenig zu entscheiden.',
+  'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
+  'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
+  'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
 };
 
 /**

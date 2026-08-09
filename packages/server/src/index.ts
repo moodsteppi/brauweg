@@ -109,7 +109,14 @@ async function main(): Promise<void> {
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
   new Gateway(app.server, db, runtime, {
-    allowedOrigins: [config.publicUrl, APP_ORIGIN],
+    /**
+     * In der Entwicklung keine Herkunftspruefung (leer = aus, wie in den
+     * Tests): Zum Testen des Netzspiels sitzen zwei Konten im selben Browser,
+     * getrennt ueber zwei Urspruenge (localhost und app.localhost) — mit
+     * fester Liste kaeme der zweite nie an den Tisch.
+     */
+    allowedOrigins:
+      config.env === 'development' ? [] : [config.publicUrl, APP_ORIGIN],
   });
 
   // Tische ohne Aktivitaet verfallen nach 24 Stunden.

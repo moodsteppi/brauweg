@@ -722,6 +722,116 @@ Bis die neuen Bilder da sind, leihen sich die drei Profilkacheln vorhandene
 Symbole. Das sieht ungenau aus, aber nicht kaputt — ein `<img>` auf eine
 Datei, die es nicht gibt, wäre ein weißer Kasten.
 
+## Am 5. August, spät: der Stilbruch unten und die grüne Insel
+
+Eine Gestaltungsdurchsicht von außen hat vier Dinge benannt. Drei waren echt,
+eines war keins.
+
+**Die Tab-Leiste war die letzte blaue Fläche im Hub.** Darüber gemalte Szenen,
+Holztafeln, Messingnieten — darunter eine flache, knallblaue Leiste mit
+blauem Leuchten am offenen Reiter. Jetzt ist sie ein Holzbrett: dunkle Fuge
+zur Szene, Lichtkante, warmes Holz, und „Spielen" trägt dieselbe Goldplatte
+wie jeder Hauptknopf. Die Fuge ist der Punkt — ohne sie stießen Bild und
+Leiste ohne Übergang aneinander, und genau das las sich wie zwei
+zusammengesteckte Bauteile.
+
+**„Konto löschen" und die Rechtstexte erbten `var(--muted)`** — ein kühles
+Blaugrau aus der flachen Grundgestaltung, gelesen auf dunkelbraunem Holz.
+Rechnerisch bestand es knapp, in der Hand war es ein grauer Fleck, der
+aussah, als wäre er ausgegraut. Jetzt warmes Rot mit dunklem Saum. Es bleibt
+Text und wird kein Knopf: Löschen ist unumkehrbar und soll sich nicht
+anfühlen wie „Abmelden" eine Zeile darüber.
+
+**„Partien und Siege zählen alles"** sagt so niemand und ließ offen, was
+alles. Jetzt: „Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege
+werden überall gezählt, auch gegen Bots." An beiden Stellen wortgleich.
+
+**„Mood-Admin" ist kein Tippfehler.** Es ist der Anzeigename des Kontos, mit
+dem geprüft wird — `me.displayName` im Tafelkopf. Da steht bei jedem sein
+eigener Name.
+
+### Die Spielauswahl sieht jetzt aus wie der Themen-Tab
+
+Zwei Bildschirme stellten dieselbe Frage („welches Spiel?") und beantworteten
+sie verschieden: Der Themen-Tab mit gemalten Bannern auf Holztafeln in einer
+Szene, die Spielauswahl unter „Spielen" mit gezeichneten SVG-Stillleben auf
+lila Verlauf und einer grünen Pille.
+
+Jetzt teilen sie sich die Bausteine — `HubSzene`, `Tafel`, `.hub-themenspiel`
+— und über `spielBanner()` in `hub.tsx` **dieselbe Bildzuordnung**. Wer ein
+neues Banner einträgt, trägt es einmal ein. Die 190 Zeilen SVG (`SpielBild`)
+sind gelöscht; die drei Abschnitte sind jetzt drei Tafeln (Jetzt spielbar,
+Kommt bald, Modus) statt einer Rolle mit Zwischenüberschrift.
+
+### Der grüne Hauptknopf ist Gold — und die Platten waren unterschiedlich breit
+
+`.hub-knopf--a-gold` hieß Gold und war gemalt grün. Der Knopf davor, vor den
+gemalten Bildern, war ein Goldverlauf mit dunkler Schrift — die Absicht stand
+also im Klassennamen, nur das Bild kam grün.
+
+`menue-knopf-gold.webp` ist die grüne Platte mit vergoldetem Feld:
+`~/bildwerkzeug/vergolden.mjs` dreht **nur** den Farbton dessen, was wirklich
+grün ist (70°–190°), das Messing bleibt unangetastet. Eine Drehung über das
+ganze Bild hätte den Rahmen rosa gemacht. Die Schrift wandert mit: Auf hellem
+Gold ist Creme nicht lesbar, dunkelbraun mit Lichtsaum liest sich wie
+graviert.
+
+**Dabei ist der eigentliche Fehler aufgefallen** — gemessen am Alphakanal auf
+der Mittelzeile, alle drei Dateien 512 × 160:
+
+| Datei | Motiv liegt bei x | belegt |
+|---|---|---|
+| Holz | 21 … 490 | 92 % |
+| Rot | 59 … 451 | 77 % |
+| Grün/Gold | 93 … 417 | **63 %** |
+
+Alle drei werden mit demselben Randmaß geschnitten, also fiel die Luft in die
+gestreckte Mitte: Der Hauptknopf sah schmaler aus als seine Nachbarn, obwohl
+alle `width: 100 %` haben, und „Spielen" stand über die Platte hinaus.
+Behoben durch Beschneiden der Goldplatte auf 325 × 160 plus eigenes Randmaß.
+Das ist ein Notnagel — die Bestellung für richtig gemalte, gleich aufgebaute
+Platten steht in `docs/ASSETS-KNOEPFE.md`.
+
+**Geprüft** ohne Anmeldung über ein Prüfblatt unter `public/`, das die echte
+`styles.css` lädt und die Markup-Bausteine von Hand setzt (danach gelöscht).
+Am laufenden Client gesehen: Tab-Leiste, Konto-Tafel mit allen drei
+Knopffarben, Spielauswahl mit beiden Bannern und beiden Bald-Zuständen.
+
+> **Offen und bewusst nicht angefasst:** Die „Bald"-Marke ist lila. Laut
+> `DESIGN.md` heißt Lila „kommt bald", das ist eine Festlegung und kein
+> Versehen — auf dem Holz sticht sie trotzdem heraus. Wenn sie weg soll,
+> braucht es erst eine neue Festlegung in `DESIGN.md`.
+
+## Am 5. August, nachts: Pro-Subway-Generalpass
+
+Der Endlos-Lauf (Cursors Rohbau) hat den großen Logik- und Feel-Pass
+bekommen — Einzelheiten und offene Reste stehen in **docs/PRO-SUBWAY.md,
+Abschnitt 1b**. Kurzfassung: Hitboxen je Prop mit Drahtgitter-Debug
+(`?dev=runner&hitbox=1`), faire Muster über eine wandernde freie Spur,
+Meter aus aufintegriertem Tempo, Punkte = Meter + 10·Münzen offen
+vorgerechnet, Geräterekord, Pause (auch automatisch bei verstecktem Tab),
+Anlauf statt Geisterlobby, Treffer-/Münz-/Rekord-Feedback, Menüs als
+Holztafeln, **GLBs 62 → 5,9 MB**.
+
+**Nachschlag derselben Nacht:** Biome-Zonen alle 220 m (Pfad-Reihe, Himmel
+gleitet), drei Kräfte (Magnet/Schild/Doppel) als Fund auf der freien Spur,
+Tagesliste (`runner_best`, Migration 0017, `POST /api/runner/lauf` +
+`GET /api/runner/rangliste`), zwei neue Tagesaufgaben (Messarten
+`runnerLaeufe`/`runnerMuenzen`), Steuerung: Wisch beim Ziehen +
+170-ms-Spurkurve. Sechs neue Servertests (jetzt 265).
+
+Zwei Fallen für später:
+
+- **Lerp-Faktoren immer mit gekapptem `delta`.** Nach einem Tab-Wechsel ist
+  `delta` sekundengroß, `8 × delta` liegt über 1, und `MathUtils.lerp`
+  schießt dann über das Ziel hinaus statt zu dämpfen — die Kamera flog ins
+  Nichts. Gilt für jede `useFrame`-Glättung, nicht nur die Kamera.
+- **Der eingebettete Prüf-Browser versteckt die Seite zwischen den
+  Werkzeugaufrufen** („Browser pane is currently hidden"): rAF steht, Läufe
+  kriechen, Screenshots zeigen alte Bilder. Spielgefühl und Tod/Pause-Blätter
+  lassen sich dort nicht ehrlich prüfen — nur am echten Gerät. Genau diese
+  Drosselung hat aber den Lerp-Fehler sichtbar gemacht.
+
 ## Am 4. August später fertig geworden (zweite Sitzung)
 
 Alles auf `staging`, Stand `66b6d25`. Migrationen **0013** (Clanchat und

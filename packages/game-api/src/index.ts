@@ -29,13 +29,35 @@
 export type GameId =
   | 'doppelkopf'
   | 'wizard'
+  /**
+   * Feldherr ist kein Kartenspiel, sondern ein Echtzeitduell. Es erfuellt
+   * dieselbe Schnittstelle, nutzt aber weder Zugfolge noch Runden: siehe
+   * docs/FELDHERR-PLAN.md.
+   */
+  | 'feldherr'
   | 'skat'
   | 'schafkopf'
   | 'romme'
   | 'maumau'
   | 'schwimmen'
   | 'backgammon'
-  | 'bauernskat';
+  | 'bauernskat'
+  | 'werwolf'
+  | 'drecksau'
+  /**
+   * Cabo/Cambio: Ablegespiel mit vier verdeckten Karten, Werte minimieren.
+   * "Cabo" ist ein eingetragenes Markenzeichen (AMIGO) - dieselbe Lage wie bei
+   * Wizard. Cambio ist der traditionelle, markenfreie Name der Spielfamilie
+   * (auch Golf/Kambio genannt), genau wie Mau-Mau der markenfreie Name fuer
+   * UNO ist.
+   */
+  | 'cambio'
+  /**
+   * "Phase 10" ist ein eingetragenes Markenzeichen (Mattel/Fundex). Stufenrommé
+   * beschreibt dieselbe Spielfamilie (Contract Rummy mit festen Kombinationen
+   * je Runde) ohne den Produktnamen zu verwenden.
+   */
+  | 'phase10';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby
@@ -57,6 +79,13 @@ export interface GameMeta {
   rotationSize(seats: number): number;
   /** Empfohlene Rundenzahlen zur Auswahl in der Lobby. */
   suggestedRounds(seats: number): readonly number[];
+  /**
+   * xpBasis zaehlt gelegte Karten — nur dann speist sie die Kartenaufgaben
+   * des Tages. Fehlt das Feld, gilt ja (alle Kartenspiele). Feldherr setzt
+   * nein: Seine xpBasis ist die Partiedauer, und die als "gelegte Karten"
+   * zu zaehlen hiesse, die Kartenaufgabe mit jedem Gefecht zu fuellen.
+   */
+  readonly xpBasisZaehltKarten?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +209,12 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
 
   // -- Sichtbarkeit ---------------------------------------------------------
 
-  viewFor(party: TParty, seat: number): TView;
+  /**
+   * `seit` ist die Marke, die der Empfaenger schon hat (siehe `viewCursor`).
+   * Module ohne anwachsende Sicht ignorieren sie und liefern immer alles —
+   * das ist der Normalfall und die Voreinstellung.
+   */
+  viewFor(party: TParty, seat: number, seit?: number): TView;
 
   /**
    * Neutrale Sicht fuer Zuschauer, OHNE jede Hand.
@@ -189,7 +223,29 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * ein Zuschauer mit Handeinsicht ein perfekter Komplize. Er muesste einem
    * Spieler nur mitteilen, wer die zweite Kreuz-Dame haelt.
    */
-  spectatorView(party: TParty): TView;
+  spectatorView(party: TParty, seit?: number): TView;
+
+  /**
+   * Laenge des anwachsenden Teils der Sicht.
+   *
+   * Die Sicht eines Kartenspiels ist so gross wie das Blatt und bleibt es.
+   * Bei Feldherr ist sie die Zugliste der ganzen Partie: Sie waechst mit
+   * jedem Zug, und wer sie bei jedem Rundruf vollstaendig verschickt, sendet
+   * ueber eine Partie hinweg das Quadrat davon (gemessen: 800 Zuege = 40 MB
+   * ueber die Leitung statt 0,1 MB). Am Handy heisst das, dass die
+   * Simulation gegen Ende der Partie bei jedem Zug ins Stocken geraet,
+   * waehrend JSON.parse ein halbes Hundert Kilobyte zerlegt.
+   *
+   * Ein Modul, das diese Methode anbietet, verspricht: Der Teil ist
+   * append-only, und `viewFor(..., seit)` liefert alles ab `seit`. Die
+   * Plattform merkt sich je Verbindung, wie weit sie beliefert ist, und
+   * schickt beim Rundruf nur noch den Zuwachs. Beim `join` — also auch nach
+   * jedem Wiederverbinden — geht immer die volle Sicht raus, damit ein
+   * Empfaenger nie auf einem Loch sitzen bleibt.
+   *
+   * Fehlt die Methode, bleibt alles wie bisher: `seit` ist immer 0.
+   */
+  viewCursor?(party: TParty): number;
 
   // -- Bot ------------------------------------------------------------------
 

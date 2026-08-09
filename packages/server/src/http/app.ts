@@ -48,6 +48,7 @@ import { GEBURTSTAGS_OUTFIT, SLOTS, istSlot, schenken } from '../kosmetik.js';
 import { anziehen, getragenVon, kaufen, paketKaufen, shopFuer } from '../shop.js';
 import { offeneTruhen, truheKaufen, truheOeffnen, truhenFuer } from '../truhen.js';
 import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
+import { runnerCashout, runnerLauf, runnerRangliste, runnerTagesstand } from '../runner.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import { isPlayable, registry, requireModule } from '../games/registry.js';
 import {
@@ -144,6 +145,7 @@ export interface AppDeps {
 const gameIdSchema = z.enum([
   'doppelkopf',
   'wizard',
+  'feldherr',
   'skat',
   'schafkopf',
   'romme',
@@ -151,6 +153,10 @@ const gameIdSchema = z.enum([
   'schwimmen',
   'backgammon',
   'bauernskat',
+  'werwolf',
+  'cambio',
+  'phase10',
+  'drecksau',
 ]);
 
 const registerSchema = z.object({
@@ -623,6 +629,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   });
 
+
   app.post('/api/me/birthday-reward', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const [account] = await deps.db
@@ -716,6 +723,54 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       return reply.send(await aufgabeAbholen(deps.db, accountId, questId));
     },
   );
+
+  // -------------------------------------------------------------------------
+  // Pro-Subway (Solo-Runner)
+  // -------------------------------------------------------------------------
+
+  /** Wie viele Hub-Muenzen heute noch aus dem Runner kommen koennen. */
+  app.get('/api/runner/today', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await runnerTagesstand(deps.db, accountId));
+  });
+
+  /**
+   * Lauf beendet: eingesammelte Runner-Muenzen in Hub-Muenzen umwandeln.
+   * Kappen: pro Lauf und pro Kalendertag (siehe runner.ts).
+   */
+  app.post('/api/runner/cashout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z
+      .object({
+        coins: z.number().int().min(0).max(500),
+      })
+      .parse(request.body);
+    return reply.send(await runnerCashout(deps.db, accountId, body.coins));
+  });
+
+  /**
+   * Lauf beendet — der eine Aufruf am Lebensende des Laufs: Muenzen (mit
+   * Kappen), Tagesaufgaben, Tagesbestwert und Platz in der Tagesliste.
+   * Ersetzt /cashout im Client; der alte Weg bleibt fuer Clients, die den
+   * Deploy noch nicht geladen haben.
+   */
+  app.post('/api/runner/lauf', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z
+      .object({
+        muenzen: z.number().int().min(0).max(500),
+        punkte: z.number().int().min(0).max(100_000),
+        meter: z.number().int().min(0).max(100_000),
+      })
+      .parse(request.body);
+    return reply.send(await runnerLauf(deps.db, accountId, body));
+  });
+
+  /** Die heutige Tagesliste: beste zehn plus eigener Platz. */
+  app.get('/api/runner/rangliste', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await runnerRangliste(deps.db, accountId));
+  });
 
   // -------------------------------------------------------------------------
   // Shop und Kleiderschrank

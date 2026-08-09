@@ -40,7 +40,12 @@ export type Messung =
   | { readonly art: 'partien' }
   | { readonly art: 'siege' }
   | { readonly art: 'partienImSpiel'; readonly gameId: GameId }
-  | { readonly art: 'karten' };
+  | { readonly art: 'karten' }
+  // Pro-Subway. Eigene Arten statt eines Pseudo-Spiels: Der Runner hat keine
+  // Partien, keine Plaetze und keine Karten — ihn durch `Ereignis` zu
+  // schleusen hiesse, Felder zu erfinden, die es nicht gibt.
+  | { readonly art: 'runnerLaeufe' }
+  | { readonly art: 'runnerMuenzen' };
 
 export interface Aufgabe {
   readonly id: string;
@@ -55,8 +60,8 @@ export interface Aufgabe {
  * Der Satz.
  *
  * Die Betraege liegen absichtlich ueber der Tagestruhe: Eine Partie spielen
- * soll mehr bringen als eine Truhe antippen. Zusammen sind an einem Tag 50
- * Muenzen zu holen — der guenstigste Hut kostet 100, ein legendaeres Stueck
+ * soll mehr bringen als eine Truhe antippen. Zusammen sind an einem Tag 65
+ * Muenzen zu holen (50 aus den Kartenspielen, 15 aus dem Runner) — der guenstigste Hut kostet 100, ein legendaeres Stueck
  * ist mit Muenzen nicht zu haben. Ausbalanciert ist daran nichts; die Zahlen
  * stehen hier, damit die Oekonomie laeuft und sich messen laesst.
  */
@@ -109,6 +114,25 @@ export const AUFGABEN: readonly Aufgabe[] = [
     messung: { art: 'karten' },
     belohnung: { waehrung: 'coins', betrag: 10 },
   },
+  // Pro-Subway. Die Betraege sind bewusst klein: Der Runner zahlt schon
+  // direkt (bis 40 Muenzen am Tag), die Aufgaben sollen hinfuehren, nicht
+  // doppelt entlohnen.
+  {
+    id: 'pro-subway-laufen',
+    nameKey: 'quest.pro-subway-laufen',
+    hinweisKey: 'quest.pro-subway-laufen.hint',
+    ziel: 1,
+    messung: { art: 'runnerLaeufe' },
+    belohnung: { waehrung: 'coins', betrag: 5 },
+  },
+  {
+    id: 'pro-subway-muenzen',
+    nameKey: 'quest.pro-subway-muenzen',
+    hinweisKey: 'quest.pro-subway-muenzen.hint',
+    ziel: 15,
+    messung: { art: 'runnerMuenzen' },
+    belohnung: { waehrung: 'coins', betrag: 10 },
+  },
 ];
 
 const NACH_ID = new Map(AUFGABEN.map((aufgabe) => [aufgabe.id, aufgabe]));
@@ -147,6 +171,11 @@ export function zuwachs(aufgabe: Aufgabe, ereignis: Ereignis): number {
       return ereignis.gameId === aufgabe.messung.gameId ? 1 : 0;
     case 'karten':
       return Math.max(0, Math.floor(ereignis.karten));
+    case 'runnerLaeufe':
+    case 'runnerMuenzen':
+      // Runner-Aufgaben ruecken nur ueber fortschreibeRunner() vor — eine
+      // Kartenpartie zaehlt hier nichts.
+      return 0;
   }
 }
 
@@ -177,6 +206,44 @@ export async function fortschreiben(
       .insert(s.questProgress)
       .values({
         accountId: ereignis.accountId,
+        questId: aufgabe.id,
+        day: tag,
+        progress: Math.min(plus, aufgabe.ziel),
+      })
+      .onConflictDoUpdate({
+        target: [s.questProgress.accountId, s.questProgress.questId, s.questProgress.day],
+        set: {
+          progress: sql`least(${s.questProgress.progress} + ${plus}, ${aufgabe.ziel})`,
+        },
+      });
+  }
+}
+
+/**
+ * Schreibt einen beendeten Pro-Subway-Lauf fort.
+ *
+ * Getrennt von `fortschreiben`, weil das Ereignis eine andere Gestalt hat:
+ * kein Spiel, kein Platz, keine Karten — nur "gelaufen" und die Muenzzahl.
+ * Derselbe Deckel, dasselbe Upsert; nur der Zuwachs kommt aus dem Lauf.
+ */
+export async function fortschreibeRunner(
+  db: Db,
+  accountId: string,
+  muenzen: number,
+  now = new Date(),
+): Promise<void> {
+  const tag = heute(now);
+
+  for (const aufgabe of AUFGABEN) {
+    let plus = 0;
+    if (aufgabe.messung.art === 'runnerLaeufe') plus = 1;
+    if (aufgabe.messung.art === 'runnerMuenzen') plus = Math.max(0, Math.floor(muenzen));
+    if (plus <= 0) continue;
+
+    await db
+      .insert(s.questProgress)
+      .values({
+        accountId,
         questId: aufgabe.id,
         day: tag,
         progress: Math.min(plus, aufgabe.ziel),

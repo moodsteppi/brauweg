@@ -1,0 +1,153 @@
+:root{
+  --nacht:#070c11; --linie:#1e2c36; --sand:#dfd6c2; --tinte:#8397a4;
+  --p1:#e8433c; --p2:#3d86ff; --ring:#dff2ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#05080b;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--sand);
+  touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+
+.hud{flex:0 0 auto;position:relative;z-index:5;
+  background:linear-gradient(180deg,#0e161c 0%,#0a1116 100%);
+  box-shadow:0 0 0 1px #1a262e, 0 8px 26px -14px #000 inset}
+.hud.top{background:linear-gradient(0deg,#0e161c 0%,#0a1116 100%)}
+.hud::after{content:"";position:absolute;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,#2c3d48 20%,#2c3d48 80%,transparent)}
+.hud.bot::after{top:0}.hud.top::after{bottom:0}
+/* Netzspiel, Sitz 0: Brett gespiegelt (siehe SPIEGEL bei der Projektion) —
+   dann wandert auch die eigene Leiste nach unten. Die Klasse setzt die
+   Netzanbindung; örtlich kommt sie nie vor. */
+#app.gespiegelt .hud.top{order:3}
+#app.gespiegelt #stage{order:2}
+#app.gespiegelt .hud.bot{order:1}
+#app.gespiegelt .hud.top::after{bottom:auto;top:0}
+#app.gespiegelt .hud.bot::after{top:auto;bottom:0}
+.inner{padding:7px 9px 8px}
+.hud.top .inner{transform:rotate(180deg)}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.tag{font:700 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;
+  padding:4px 7px;border-radius:3px;color:#080c10}
+.p1 .tag{background:linear-gradient(180deg,#ff6f62,var(--p1));color:#fff}
+.p2 .tag{background:linear-gradient(180deg,#71a8ff,var(--p2));color:#fff}
+.res{font:700 16px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em;
+  text-shadow:0 0 14px currentColor}
+.res .cap{font-size:10px;opacity:.5}
+.res.full{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.p1 .res{color:#ff9c92}.p2 .res{color:#a8caff}
+.rate{font:600 9px/1 ui-monospace,Menlo,monospace;color:var(--tinte);letter-spacing:.06em}
+.dreh{margin-left:auto;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;
+  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}
+.dreh svg{display:block;opacity:.8;transition:transform .16s ease}
+.dreh.hoch svg{transform:rotate(90deg)}
+.dreh.an{background:linear-gradient(180deg,#7fd8b4,#3aa87e);box-shadow:0 0 14px -4px #3aa87e}
+.dreh.an svg{opacity:1}
+.raze{margin-left:6px;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;
+  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}
+.raze svg{display:block;opacity:.75}
+.raze.on{background:linear-gradient(180deg,#ff7a5e,#e8433c);box-shadow:0 0 16px -4px #e8433c}
+.raze.on svg{opacity:1}
+.raze.on svg path{fill:#fff}
+.hint{margin-left:6px;font:500 9px/1.3 system-ui;color:#93a7b3;text-align:right;max-width:38%}
+.cards{display:flex;gap:4px}
+.card{flex:1 1 0;min-width:0;position:relative;overflow:hidden;padding:5px 2px 6px;
+  border-radius:8px;text-align:center;
+  background:linear-gradient(180deg,#1b2831 0%,#131d24 100%);
+  box-shadow:0 0 0 1px #26363f, 0 1px 0 #2f4250 inset, 0 6px 12px -8px #000;
+  transition:transform .1s ease,box-shadow .14s,opacity .14s}
+.card .cost{font:800 11.5px/1 ui-monospace,Menlo,monospace;padding-right:14px;padding-left:14px}
+.p1 .card .cost{color:#ff8b80}.p2 .card .cost{color:#8fbaff}
+.card svg{display:block;margin:3px auto 2px;opacity:.92}
+.card .nm{font:700 8px/1 system-ui;letter-spacing:.04em;text-transform:uppercase;color:#d5e4ee}
+.card .st{font:500 6.8px/1.4 ui-monospace,Menlo,monospace;color:#7b8e9a;margin-top:2px;white-space:nowrap}
+.card .fill{position:absolute;left:0;bottom:0;height:2px;width:0%;transition:width .18s linear;opacity:.75}
+.card .lim{position:absolute;top:0;right:0;min-width:17px;height:15px;padding:0 3px;
+  display:grid;place-items:center;box-sizing:border-box;
+  font:800 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;
+  color:#e2eef6;background:#22333d;border-radius:0 8px 0 7px;
+  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.07)}
+.card .lim.voll{color:#fff;background:#b8332c;
+  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.14)}
+.p1 .card .fill{background:var(--p1)}.p2 .card .fill{background:var(--p2)}
+.card.off{opacity:.36}
+.card.drag{opacity:.35;transform:scale(.94)}
+.card.leer{opacity:.9;background:linear-gradient(180deg,#2a1418,#1d0e11);
+  box-shadow:0 0 0 1px #6d2a2f, 0 1px 0 #4a1e22 inset}
+.card.leer .nm,.card.leer .st{color:#a9737a}
+.card.leer .cost{color:#ff7a72}
+.card.leer .lim{color:#fff;background:#8e2c2c}
+.card.leer::after{content:"";position:absolute;left:-12%;top:50%;width:124%;height:2px;
+  background:#e8433c;transform:rotate(-24deg);box-shadow:0 0 8px #e8433c}
+.card.leer svg{opacity:.4}
+/* Geschenkte Karte auf der Hand (Werkstatt im Fels): gruener Rand und
+   gruene Zahl — sie kostet nichts und geht nicht ans Kontingent. Der
+   Zaehler zeigt "Rest+Geschenk", etwa 1+2. */
+.card.gratis{background:linear-gradient(180deg,#14261d,#0e1a15);
+  box-shadow:0 0 0 1px #2f7a55, 0 1px 0 #24503a inset}
+.card.gratis .cost{color:#9be8c0}
+.card .lim.extra{color:#0d1f16;background:#7fe0aa;
+  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.2)}
+.card.rdy{box-shadow:0 0 0 1px #3d5464, 0 1px 0 #3b5265 inset, 0 6px 14px -8px #000}
+.card.arm{transform:translateY(-4px)}
+.p1 .card.arm{box-shadow:0 0 0 1.5px var(--p1),0 0 20px -4px var(--p1),0 1px 0 #4a3a1e inset}
+.p2 .card.arm{box-shadow:0 0 0 1.5px var(--p2),0 0 20px -4px var(--p2),0 1px 0 #3a2a4e inset}
+
+#stage{flex:1 1 auto;position:relative;min-height:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+#ghost{position:fixed;pointer-events:none;z-index:60;transform:translate(-50%,-50%);display:none}
+#ghost .gg{padding:7px 11px;border-radius:9px;font:700 10px/1 system-ui;letter-spacing:.08em;
+  text-transform:uppercase;background:rgba(20,32,40,.92);color:#e6f0f6;
+  box-shadow:0 0 0 1px #3f5665,0 10px 20px -8px #000}
+
+#uhr{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:19;
+  padding:3px 10px;border-radius:8px;pointer-events:none;
+  font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
+  color:#cfe0ea;background:rgba(12,20,26,.72);box-shadow:0 0 0 1px #24343d}
+#uhr[hidden]{display:none}
+#menuBtn{position:absolute;right:3px;top:2px;z-index:20;opacity:.86;
+  width:28px;height:28px;border-radius:9px;color:#96aab7;font:700 13px/1 system-ui;
+  background:rgba(16,25,32,.8);border:0;box-shadow:0 0 0 1px #26363f;display:grid;place-items:center}
+
+.ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  padding:22px;background:radial-gradient(120% 80% at 50% 0%,rgba(20,34,44,.92),rgba(4,7,10,.96));
+  backdrop-filter:blur(4px)}
+.ov[hidden]{display:none}
+.sheet{width:min(430px,100%);max-height:100%;overflow:auto;padding:22px 19px;border-radius:16px;
+  background:linear-gradient(180deg,#111c23,#0b1318);
+  box-shadow:0 0 0 1px #22323c,0 30px 60px -30px #000, 0 1px 0 #2b3d49 inset}
+.eyebrow{font:700 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.34em;color:#7b8e9a;text-transform:uppercase}
+h1{font:900 34px/.92 system-ui;letter-spacing:-.035em;margin:10px 0 4px}
+h1 em{font-style:normal;background:linear-gradient(180deg,#ff8b80,var(--p1));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font:800 18px/1.15 system-ui;letter-spacing:-.015em;margin-bottom:9px}
+.sub{font:500 12px/1.55 system-ui;color:#93a7b3;margin-bottom:18px}
+p.tx{font:400 13px/1.6 system-ui;color:#c8d7e0;margin-bottom:9px}
+p.tx b{color:#eae2d0;font-weight:650}
+ul.tx{margin:0 0 10px 16px;font:400 12.5px/1.6 system-ui;color:#c8d7e0}
+ul.tx li{margin-bottom:5px}
+.btn{display:block;width:100%;padding:13px;border-radius:10px;border:0;margin-top:9px;
+  font:700 13px/1 system-ui;letter-spacing:.03em;color:var(--sand);
+  background:linear-gradient(180deg,#1c2932,#141f26);box-shadow:0 0 0 1px #2a3b46,0 1px 0 #324754 inset}
+.btn.pri{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 24px -8px var(--p1)}
+.btn.gho{background:none;box-shadow:none;color:#7b8e9a}
+.hilfe{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;
+  font:800 17px/1 system-ui;color:#9fb3c0;background:#16222a;box-shadow:0 0 0 1px #2a3b46;
+  display:grid;place-items:center;z-index:2}
+.hilfe:active{background:#1e2d38}
+.seglbl{font:600 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.26em;color:#7b8e9a;
+  text-transform:uppercase;margin-bottom:6px}
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{flex:1;padding:10px 0;border:0;border-radius:9px;color:#7b8e9a;
+  font:700 11px/1 system-ui;letter-spacing:.05em;background:#141f26;box-shadow:0 0 0 1px #24343d}
+.seg button.on{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}
+.hud.top .inner.ai{transform:none;padding-bottom:7px}
+.inner.ai .bar{margin-bottom:0}
+.pips{display:flex;gap:5px;margin-bottom:15px}
+.pip{width:24px;height:3px;border-radius:2px;background:#22323c}
+.pip.on{background:var(--p1)}
+.win{font:900 28px/1.05 system-ui;letter-spacing:-.03em;margin-bottom:7px}
+table.bal{width:100%;border-collapse:collapse;font:500 11px/1.45 ui-monospace,Menlo,monospace;margin-bottom:12px}
+table.bal th{text-align:left;color:#7b8e9a;font-weight:700;padding:4px;border-bottom:1px solid #22323c}
+table.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}

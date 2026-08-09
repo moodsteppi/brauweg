@@ -203,6 +203,75 @@ export interface WizardGameView extends BaseGameView {
   history: WizardRoundSummary[];
 }
 
+// ---------------------------------------------------------------------------
+// Cambio
+// ---------------------------------------------------------------------------
+
+/**
+ * Ein Platz in einer Hand, so wie ihn dieser Betrachter sieht.
+ *
+ * `card: null` heißt verdeckt — für ihn. Der Client blendet nichts selbst
+ * aus: Was hier steht, hat der Server bereits gefiltert.
+ */
+export interface CambioSlot {
+  index: number;
+  card: Card | null;
+}
+
+/** Ein Platz als Ziel einer Aktion. */
+export interface CambioTarget {
+  seat: number;
+  index: number;
+}
+
+export interface CambioRoundView {
+  seat: number | null;
+  /** 'turn' | 'decide' | 'action' | 'finished' */
+  phase: string;
+  seats: number[];
+  dealer: number;
+  /** Der Regelsatz — der Tisch zeigt an, welche Aktionskarten gelten. */
+  rs: Record<string, unknown>;
+  /** Alle Hände, je Karte nur sichtbar, wenn dieser Sitz sie kennt. */
+  hands: Record<number, CambioSlot[]>;
+  stockCount: number;
+  topDiscard: Card;
+  /** Gezogene Karte — nur für den, der sie gerade hält. */
+  drawn: Card | null;
+  /** 'peekOwn' | 'peekOther' | 'blindSwap' | 'lookAndSwap' */
+  pendingAction: string | null;
+  /** Bei der Dame: der bereits angesehene Platz. */
+  lookedAt: CambioTarget | null;
+  turn: number;
+  isMyTurn: boolean;
+  legal: Action[];
+  caller: number | null;
+  afterCall: number[];
+  result: {
+    raw: Record<number, number>;
+    scores: Record<number, number>;
+    caller: number | null;
+    callSucceeded: boolean | null;
+    hands: Record<number, Card[]>;
+  } | null;
+}
+
+/** Eine abgerechnete Runde, wie sie in der Punktetafel steht. */
+export interface CambioRoundSummary {
+  roundIndex: number;
+  dealer: number;
+  caller: number | null;
+  callSucceeded: boolean | null;
+  raw: Record<number, number>;
+  scores: Record<number, number>;
+  totals: Record<number, number>;
+}
+
+export interface CambioGameView extends BaseGameView {
+  round: CambioRoundView | null;
+  history: CambioRoundSummary[];
+}
+
 export interface Action {
   type: string;
   seat: number;
@@ -286,9 +355,29 @@ export interface EmoteMessage {
   emote: string;
 }
 
+/**
+ * Takt-Herzschlag eines Echtzeitspiels (Feldherr), weitergereicht wie ein
+ * Zuruf: keine Revision, kein Zustand. Wer einen verpasst, bekommt in 200 ms
+ * den naechsten.
+ */
+export interface TaktMessage {
+  v: number;
+  game: string;
+  type: 'takt';
+  tableId: string;
+  /** Sitz des Absenders, vom Server gestempelt. */
+  seat: number;
+  /** Takt, bis zu dem das andere Geraet gerechnet hat. */
+  takt: number;
+  /** 40er-Taktgrenze, zu der die Pruefsumme gehoert. */
+  grenzTakt: number;
+  pruef: string;
+}
+
 export type ServerMessage<V = GameView> =
   | ViewMessage<V>
   | PartyMessage
   | TableMessage
   | EmoteMessage
+  | TaktMessage
   | ErrorMessage;

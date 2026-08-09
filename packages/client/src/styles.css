@@ -1246,7 +1246,17 @@ td {
 }
 
 /* =========================================================================
-   Spielauswahl — Vollbild mit einem Bild je Spiel
+   Spielauswahl — derselbe Bau wie der Themen-Tab.
+
+   Vorher: lila Verlauf, gezeichnete SVG-Stillleben, gruene Spielen-Pille.
+   Der Themen-Tab beantwortet dieselbe Frage ("welches Spiel?") mit gemalten
+   Bannern auf einer Holztafel in einer Szene — zwei Antworten, zwei
+   Gestaltungen, und dazwischen ein Tab-Wechsel.
+
+   Jetzt teilen sich beide die Bausteine: `.hub-tafel`, `.hub-themenwahl`,
+   `.hub-themenspiel`. Hier stehen nur noch die drei Dinge, die die
+   Spielauswahl eigen hat: Sie ist ein Vollbild ueber dem Hub, sie traegt ihre
+   Szene selbst, und sie hat den Spielen-Knopf.
    ========================================================================= */
 
 .spielwahl {
@@ -1257,22 +1267,46 @@ td {
   z-index: 130;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, rgba(16, 10, 40, 0.98), rgba(22, 18, 54, 0.98));
+  /* Derselbe Ton wie .hub-tab-szene: Er traegt die eine Sekunde, bis das
+     Szenenbild da ist, und er faerbt die Raender, falls es nicht passt. */
+  background: #3a2a18;
   padding-top: env(safe-area-inset-top);
   animation: doko-rise 0.2s ease;
+  overflow: hidden;
 }
 
+/* Als Bild und nicht als CSS-Hintergrund — wie in `HubSzene`: `object-fit`
+   fuellt jedes Seitenverhaeltnis, ohne die Szene zu stauchen. */
+.spielwahl-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Kopf und Rolle liegen ueber dem Bild. Ohne `position` waeren sie darunter
+   und die Szene deckte den ganzen Bildschirm ab. */
 .spielwahl-kopf {
+  position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.8rem 1rem 0.4rem;
+  padding: 0.7rem 0.8rem 0.35rem;
 }
 
 .spielwahl-kopf h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  color: #ffe08a;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.65);
 }
 
 .spielwahl-zu {
@@ -1283,50 +1317,29 @@ td {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
+  background: rgba(10, 16, 22, 0.6);
+  border: 1px solid rgba(255, 220, 120, 0.35);
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text);
+  color: #ffe9bd;
 }
 
 .spielwahl-rolle {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.3rem 0.8rem calc(1rem + env(safe-area-inset-bottom));
+  gap: 0.8rem;
+  padding: 0.2rem 0.55rem calc(1rem + env(safe-area-inset-bottom));
 }
 
-.spielwahl-karte {
-  position: relative;
-  border-radius: 0.9rem;
-  overflow: hidden;
-  border: 2px solid rgba(166, 120, 242, 0.55);
-  background: #241a55;
-  padding: 0;
-  text-align: left;
-  flex: 0 0 auto;
-}
-
-.spielwahl-karte.is-offen {
-  border-color: var(--gold);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-}
-
-.spielwahl-karte svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.spielwahl-karte.is-zu svg {
-  filter: saturate(0.55) brightness(0.75);
-}
-
+/* Die Bildflaeche eines Bald-Spiels ist der Knopf. Kein eigenes Aussehen -
+   das Banner darunter ist das Aussehen. */
 .spielwahl-flaeche {
   display: block;
   width: 100%;
@@ -1334,55 +1347,60 @@ td {
   border: none;
   background: none;
   text-align: left;
+  cursor: pointer;
 }
 
-.spielwahl-titel {
-  position: absolute;
-  left: 0.75rem;
-  bottom: 0.55rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  align-items: flex-start;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  pointer-events: none;
-}
+/*
+  Der Spielen-Knopf: dieselbe Goldplatte wie der Hauptknopf im Menue.
 
-.spielwahl-titel strong {
-  font-size: 1.05rem;
-  line-height: 1.15;
-}
-
-.spielwahl-titel span {
-  font-size: 0.72rem;
-  opacity: 0.9;
-}
-
+  Er war gruen — als Einziges auf einem Bildschirm aus Holz und Messing, und
+  ausgerechnet an der Stelle, auf die man tippt. Jetzt ist es dasselbe Bild
+  wie ueberall sonst, wo es weitergeht, nur kleiner. `pointer-events: none`
+  bleibt: Der Knopf ist Beschriftung, gedrueckt wird die ganze Karte — sonst
+  gaebe es einen toten Rand um ihn herum.
+*/
 .spielwahl-spielen {
   position: absolute;
-  right: 0.6rem;
-  bottom: 0.55rem;
-  font-size: 0.85rem;
+  right: 0.5rem;
+  bottom: 0.45rem;
+  z-index: 2;
+  font-size: 0.82rem;
   font-weight: 800;
-  padding: 0.4rem 1rem;
-  border-radius: 0.6rem;
-  background: linear-gradient(180deg, #62b96b, #337a42);
-  color: #f2fff0;
-  box-shadow: 0 3px 0 #1d4f28;
+  padding: 0 0.5rem;
+  border: 9px solid transparent;
+  /* Randmass 30 wie beim Hauptknopf — das Goldbild ist auf die Platte
+     beschnitten und schmaler als Holz und Rot (siehe dort). */
+  border-image: url(/hub/menue-knopf-gold.webp) 30 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
   pointer-events: none;
 }
 
+/* Abstimmen ist eine Nebenhandlung und bekommt deshalb Holz, nicht Gold. */
 .spielwahl-stimme {
   position: absolute;
-  right: 0.6rem;
-  bottom: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.32rem 0.7rem;
-  border-radius: 0.55rem;
-  background: rgba(255, 255, 255, 0.14);
-  border: none;
-  color: #e8e2f8;
+  right: 0.5rem;
+  bottom: 0.45rem;
+  z-index: 2;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0 0.4rem;
+  border: 8px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #f4e9d4;
+  cursor: pointer;
+}
+.spielwahl-stimme:active {
+  border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
+  transform: translateY(1px);
+}
+.spielwahl-stimme:disabled {
+  filter: saturate(0.5) brightness(0.75);
+  cursor: default;
 }
 
 /* Ladezustand */
@@ -2651,13 +2669,41 @@ td {
   color: var(--gold);
   border-color: rgba(226, 182, 79, 0.55);
 }
+/*
+  Die Tab-Leiste: Holz und Messing statt Flachblau.
+
+  Sie war die letzte blaue Flaeche im Hub. Darueber liegen gemalte Szenen,
+  Holztafeln mit Messingnieten und geschnitzte Knoepfe — und darunter eine
+  flache, knallblaue Leiste. Zwei Gestaltungen auf einem Bildschirm lesen
+  sich wie zwei Programme, und die Naht lag ausgerechnet an der Stelle, an
+  der das Auge ohnehin haengenbleibt: der Kante zwischen Bild und Leiste.
+
+  Aufgebaut wie eine Holzleiste unter dem Bild und nicht wie eine Flaeche
+  mit einer Linie obendrauf — deshalb vier Schichten im `box-shadow` statt
+  eines `border-top`:
+
+    innen oben  Lichtkante — die Oberkante des Bretts faengt Licht
+    innen weich warmer Schein, damit das Holz nicht wie Pappe wirkt
+    aussen hart die Fuge zur Szene: erst Schatten, dann Brett
+    aussen weich das Brett wirft Schatten auf die Szene darueber
+
+  Ohne die harte Fuge stossen Bild und Leiste ohne Uebergang aneinander, und
+  genau das sah aus, als waeren zwei Bauteile zusammengesteckt.
+*/
 .front--hub .front-tabs {
-  background: linear-gradient(180deg, #1e4f8c 0%, #163a68 100%);
-  border-top: 2px solid rgba(255, 210, 90, 0.5);
-  box-shadow: 0 -8px 24px rgba(10, 30, 70, 0.35);
+  background: linear-gradient(180deg, #6b431f 0%, #4a2c12 45%, #2c1a0a 100%);
+  border-top: none;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 214, 138, 0.5),
+    inset 0 7px 10px rgba(255, 196, 104, 0.1),
+    0 -2px 0 rgba(24, 14, 5, 0.95),
+    0 -10px 22px rgba(12, 6, 2, 0.45);
 }
+/* Warmes Elfenbein statt kuehlem Blaugrau: Auf Holz sieht ein blaustichiges
+   Grau schmutzig aus, nicht ruhig. */
 .front--hub .front-tab {
-  color: rgba(230, 242, 255, 0.78);
+  color: rgba(255, 236, 198, 0.74);
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.8);
 }
 .front--hub .front-tab {
   padding: 0.35rem 0.15rem 0.28rem;
@@ -2674,15 +2720,25 @@ td {
   width: 1.85rem;
   height: 1.85rem;
 }
+/* Der offene Tab ist ein eingelassenes Feld im Brett: heller als das Holz,
+   mit Messingfassung. */
 .front--hub .front-tab.is-active {
-  color: #fff;
-  background: linear-gradient(180deg, rgba(78, 184, 255, 0.45) 0%, rgba(42, 127, 212, 0.55) 100%);
-  box-shadow: inset 0 0 0 2px rgba(255, 224, 138, 0.85);
+  color: #fff3d4;
+  background: linear-gradient(180deg, rgba(176, 116, 46, 0.9) 0%, rgba(116, 71, 25, 0.92) 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 214, 138, 0.85);
   border-radius: 0.75rem;
 }
+/*
+  "Spielen" ist der Weg zum Spiel und darf der einzige goldene Punkt der
+  Leiste sein — dieselbe Platte wie der Hauptknopf, damit "hier geht es
+  weiter" ueberall gleich aussieht. Auf hellem Gold muss die Schrift dunkel
+  werden, sonst verschwindet sie.
+*/
 .front--hub .front-tab--spielen.is-active {
-  background: linear-gradient(180deg, #4eb8ff 0%, #2a7fd4 100%);
-  box-shadow: inset 0 0 0 2px #ffe08a, 0 0 16px rgba(80, 200, 255, 0.45);
+  background: linear-gradient(180deg, #f2c85f 0%, #b8801f 100%);
+  color: #38220a;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.55);
+  box-shadow: inset 0 0 0 2px #ffeab4, 0 0 16px rgba(255, 190, 80, 0.4);
 }
 
 /* Breiter Browser: die Handyflaeche hebt sich vom Grund ab. */
@@ -3878,15 +3934,6 @@ td {
 .hub-side-btn:active {
   transform: translateY(2px);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
-}
-.hub-side-btn--lila {
-  background: linear-gradient(180deg, #c49aff 0%, #7a48d4 100%);
-}
-.hub-side-btn--blau {
-  background: linear-gradient(180deg, #7ec8ff 0%, #2f7fd4 100%);
-}
-.hub-side-btn--grau {
-  background: linear-gradient(180deg, #9aa8b8 0%, #5a6674 100%);
 }
 .hub-truhe {
   position: relative;
@@ -5215,11 +5262,42 @@ main.auth > .muted {
   box-shadow: none;
   color: #f4e9d4;
 }
+/*
+  Der Hauptknopf heisst `--gold` und war gemalt gruen.
+
+  Das war der letzte Fremdkoerper im Hub: Holz, Messing und Gold ueberall,
+  und mittendrin eine gruene Tafel. Der Knopf davor (vor den gemalten
+  Bildern) war ein Goldverlauf mit dunkler Schrift — die Absicht stand also
+  im Klassennamen, nur das Bild kam gruen.
+
+  `menue-knopf-gold.webp` ist dasselbe Bild mit vergoldetem Feld: Nur was im
+  Gruenen lag, wurde umgefaerbt, der Messingrahmen und die Eckbeschlaege
+  blieben unangetastet (`~/bildwerkzeug/vergolden.mjs`). Das ist ein
+  Zwischenstand; die Bestellung fuer eine richtig gemalte Fassung steht in
+  docs/ASSETS-SPIELAUSWAHL.md.
+
+  Die Schrift muss dabei mitwandern: Auf hellem Gold ist Creme nicht mehr
+  lesbar. Dunkelbraun mit hellem Lichtsaum liest sich wie graviert.
+*/
 .hub-knopf--a-gold,
 .hub-knopf--gold {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
-  color: #eafaf0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
+  /*
+    Eigenes Randmass, weil das Bild schmaler ist als die anderen.
+
+    Gemessen: Die gemalte Platte lag im gruenen Bild nur zwischen x=93 und
+    x=417 von 512 — der Rest war Luft. Beim Holzknopf sind es 21..490. Mit
+    demselben Randmass von 40 fiel der ganze Freiraum in die gestreckte
+    Mitte, und die Platte deckte nur noch zwei Drittel des Knopfes ab: Die
+    Schrift stand rechts und links darueber hinaus.
+
+    Das Bild ist jetzt auf die Platte beschnitten (325x160). Beschneiden
+    aendert nur die Luft, nicht den Rahmen — der bleibt rund 30 px dick, und
+    genau das steht hier.
+  */
+  border-image-slice: 30 fill;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
 }
 .hub-knopf--a-raus,
 .hub-knopf--raus {
@@ -5389,9 +5467,10 @@ main.auth > .muted {
   cursor: pointer;
 }
 .auth button.primary {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
-  color: #eafaf0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
+  border-image-slice: 30 fill;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
 }
 .auth button:active {
   transform: translateY(1px) scale(0.985);
@@ -5684,7 +5763,10 @@ main.auth > .muted {
   border-radius: 0.7rem;
   overflow: hidden;
   border: 2px solid rgba(255, 220, 120, 0.3);
-  background: #0c2046;
+  /* Warmes Holzbraun statt Marineblau: Man sieht es nur, solange das Banner
+     laedt — aber genau dann blitzte auf einem Holzbildschirm ein blauer
+     Kasten auf. */
+  background: #2a1a0c;
   color: var(--text);
   font: inherit;
   text-align: left;
@@ -5747,20 +5829,15 @@ main.auth > .muted {
   cursor: pointer;
 }
 
-/* Abschnitt "Modus" in der Spielauswahl. */
-.spielwahl-abschnitt {
-  margin: 1.2rem 0 0.1rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 233, 189, 0.7);
-}
+/* Erklaerung unter dem Mehrkampf-Banner. Die Ueberschrift dazu ist jetzt der
+   Tafelkopf ("Modus") — die eigene Zwischenzeile ist damit weggefallen. */
 .spielwahl-modus-text {
-  margin: 0;
-  padding: 0.5rem 0.7rem 0.7rem;
-  font-size: 0.82rem;
+  margin: 0.15rem 0 0;
+  padding: 0 0.15rem;
+  font-size: 0.8rem;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 240, 210, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 /* Nicht moegliche Vorbehalte: sichtbar, aber erkennbar tot, mit Grund. */
@@ -8394,9 +8471,10 @@ main.auth > .muted {
   cursor: pointer;
 }
 .profil-kachel.is-gold {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
-  color: #eafaf0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
+  border-image-slice: 30 fill;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
 }
 .profil-kachel img {
   width: 1.6rem;
@@ -8440,6 +8518,38 @@ main.auth > .muted {
 .profil-konto .hub-konto-loeschen {
   align-self: center;
   margin-top: 0.1rem;
+}
+
+/*
+  Lesbarkeit von "Konto loeschen" und den Rechtstexten auf dem Holz.
+
+  Beide erbten `var(--muted)` — ein kuehles Blaugrau (#8fa3ad). Das stammt
+  aus der flachen dunklen Grundgestaltung, in der es richtig ist, und stand
+  hier auf dunkelbraunem Holz: rechnerisch gerade noch im Rahmen, in der
+  Hand aber ein grauer Fleck auf braunem Grund, der so aussieht, als waere
+  er ausgegraut und gar nicht antippbar.
+
+  Es bleibt bewusst Text und wird kein Knopf. Der Grund steht weiter oben:
+  Loeschen ist unumkehrbar und soll sich nicht anfuehlen wie "Abmelden" eine
+  Zeile darueber. Gefixt wird der Kontrast, nicht das Gewicht — warmes Rot
+  statt kaltem Grau, dazu ein dunkler Saum, weil das Holz nicht ueberall
+  gleich hell ist.
+*/
+.hub-tab-inhalt .hub-konto-loeschen {
+  color: #f0a08f;
+  text-shadow: 0 1px 2px rgba(20, 8, 2, 0.85);
+}
+.hub-tab-inhalt .hub-konto-loeschen:hover,
+.hub-tab-inhalt .hub-konto-loeschen:active {
+  color: #ff8f7a;
+}
+.hub-tab-inhalt .rechtliches,
+.hub-tab-inhalt .rechtliches a {
+  color: rgba(255, 232, 196, 0.82);
+  text-shadow: 0 1px 2px rgba(20, 8, 2, 0.8);
+}
+.hub-tab-inhalt .rechtliches a:hover {
+  color: #ffe9bd;
 }
 
 /* —— 3D-Avatar-Ausrichter (/?dev=avatar) —— */
@@ -8636,12 +8746,12 @@ main.auth > .muted {
   border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
   transform: translateY(1px);
 }
-/* Gruen und Rot behalten beim Druecken ihre Farbe - ein gruener Knopf, der
+/* Gold und Rot behalten beim Druecken ihre Farbe - ein goldener Knopf, der
    beim Antippen braun wird, sieht nach Fehler aus. */
 .hub-knopf--a-gold:active,
 .hub-knopf--gold:active,
 .profil-kachel.is-gold:active {
-  border-image-source: url(/hub/menue-knopf-gruen.webp);
+  border-image-source: url(/hub/menue-knopf-gold.webp);
   filter: brightness(0.88);
 }
 .hub-knopf--a-raus:active,
@@ -9290,4 +9400,883 @@ main.auth > .muted {
 .anleitung-los {
   width: 100%;
   margin-top: 0.4rem;
+}
+
+/* =========================================================================
+   Pro-Subway — der Endlos-Lauf.
+
+   Die Menüs sind Holztafeln aus dem Hub-Baukasten (`.hub-tafel`,
+   `.hub-knopf`); hier steht nur, was der Lauf eigen hat: die Anzeige oben,
+   der Schleier unter den Tafeln und die Rückmeldungen (Blitz, +1, Rekord).
+   Vorher war das ein grauer Systemkasten mit blauen Knöpfen — das einzige
+   Stück der Anwendung, das nicht aus dem Haus kam.
+   ========================================================================= */
+.runner {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #87b8d8;
+  color: #f4e9d4;
+  touch-action: none;
+  user-select: none;
+}
+.runner canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Anzeige oben: Messingkapseln wie im Hub-Kopfband. */
+.runner-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: calc(0.6rem + env(safe-area-inset-top)) 0.7rem 0;
+}
+.runner-kapsel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 4px 9px;
+  border-image: url(/hub/waehrung-kapsel-grund.webp) 14 45 fill / 1 / 0 stretch;
+  padding: 0.14rem 0.3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+  color: #ffe08a;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.8);
+}
+.runner-kapsel img {
+  width: 1.05rem;
+  height: 1.05rem;
+  object-fit: contain;
+}
+/* Das "+1" steigt aus der Münzkapsel auf. Der key-Wechsel im Markup startet
+   die Animation bei jeder Münze neu. */
+.runner-plus {
+  position: absolute;
+  right: -0.2rem;
+  top: -0.4rem;
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #ffe9a0;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.9);
+  animation: runner-plus-flug 0.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes runner-plus-flug {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-1.1rem);
+  }
+}
+.runner-pause {
+  margin-left: auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 0;
+  background: url(/hub/side-btn-grund.webp) center / 100% 100% no-repeat;
+  color: #ffe9bd;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: -0.08em;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  cursor: pointer;
+}
+.runner-pause:active {
+  transform: translateY(1px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) brightness(0.9);
+}
+
+/* Der Schleier unter jeder Tafel: dunkelt die Szene, hält den Blick vorn. */
+.runner-schleier {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(12, 7, 2, 0.55);
+}
+.runner-tafel {
+  width: min(100%, 21rem);
+}
+.runner-tafel-inhalt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.runner-text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #ffeccb;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.7);
+}
+.runner-text--klein {
+  font-size: 0.76rem;
+  color: rgba(255, 232, 196, 0.85);
+}
+.runner-knopf {
+  width: 100%;
+  font-size: 0.95rem;
+  padding: 0.3rem 0.5rem;
+}
+
+/* Steuerungszeile im Startblatt: Tasten als kleine Holzplaettchen. */
+.runner-steuerung {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  color: #ffeccb;
+}
+.runner-steuerung span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.runner-steuerung kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.2rem;
+  border-radius: 0.3rem;
+  background: rgba(30, 18, 8, 0.85);
+  border: 1px solid rgba(255, 214, 138, 0.5);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  font: inherit;
+  font-size: 0.72rem;
+  color: #ffe08a;
+}
+
+/* Endstand: die offene Rechnung — Strecke, Muenzen, Summe. */
+.runner-endstand {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.runner-endstand > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  color: #ffeccb;
+}
+.runner-endstand dt {
+  font-weight: 600;
+}
+.runner-endstand dd {
+  margin: 0;
+  font-weight: 800;
+}
+.runner-endstand-summe {
+  margin-top: 0.15rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 214, 138, 0.4);
+  font-size: 1rem !important;
+  color: #ffe08a !important;
+}
+
+/* "Neuer Rekord!" — einmal gross pulsieren, dann stehen. */
+.runner-rekord {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #ffe08a;
+  text-shadow: 0 1px 0 rgba(20, 10, 2, 0.8), 0 0 14px rgba(255, 190, 80, 0.45);
+  animation: runner-rekord-puls 0.7s ease-out;
+}
+@keyframes runner-rekord-puls {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Der rote Blitz beim Aufprall — kurz, dann weg. Kein Dauerrot: Das
+   Endblatt soll lesbar sein, nicht dramatisch. */
+.runner-blitz {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(200, 40, 20, 0) 40%, rgba(200, 40, 20, 0.55) 100%);
+  animation: runner-blitz-ab 0.55s ease-out forwards;
+}
+@keyframes runner-blitz-ab {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+  Der Countdown vor dem Lauf.
+
+  Gross, mittig, mit Goldrand — dieselbe Sprache wie die Tafeln, nur ohne
+  Tafel drumherum: Ein Kasten wuerde die Strecke verdecken, die man gerade
+  studieren soll.
+
+  Jede Zahl faehrt aus der Tiefe heran, wird kurz gross und verblasst.
+  `will-change` bleibt weg: Vier Zahlen sind kein Fall fuer eine eigene
+  Ebene, und auf schwachen Geraeten kostet sie mehr als sie bringt.
+*/
+.runner-countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.runner-countdown span {
+  font-size: clamp(4rem, 22vw, 9rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: #ffe08a;
+  text-shadow:
+    0 3px 0 rgba(20, 10, 2, 0.9),
+    0 0 30px rgba(255, 190, 80, 0.55),
+    0 10px 40px rgba(0, 0, 0, 0.6);
+  animation: runner-zahl 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* Das LOS bleibt stehen statt zu schrumpfen — es ist kein Zwischenschritt,
+   sondern der Startschuss. */
+.runner-countdown span.ist-los {
+  color: #ffffff;
+  text-shadow:
+    0 3px 0 rgba(20, 10, 2, 0.9),
+    0 0 46px rgba(255, 214, 138, 0.9),
+    0 10px 40px rgba(0, 0, 0, 0.6);
+  animation: runner-los 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes runner-zahl {
+  0% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+@keyframes runner-los {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-6deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.25) rotate(2deg);
+  }
+  55% {
+    transform: scale(1.05) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .runner-countdown span,
+  .runner-countdown span.ist-los {
+    animation: none;
+  }
+}
+
+.runner-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.runner-banner span {
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffe08a;
+  text-shadow: 0 2px 0 rgba(20, 10, 2, 0.85), 0 6px 18px rgba(0, 0, 0, 0.5);
+  animation: runner-banner-pop 0.45s ease-out;
+}
+@keyframes runner-banner-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+/* =========================================================================
+   Der grosse Spielen-Knopf im Hub — gemalte Platte statt CSS-Gruen.
+
+   Er stand als knallgruener Verlauf mit weissem 2-px-Rand ueber der gemalten
+   Weltkarte und war damit das letzte Bauteil im alten Flach-Stil. Weiss
+   umrandetes Gruen auf Lava sieht aus wie eine Schaltflaeche, die jemand
+   darauf geklebt hat.
+
+   Er bekommt dieselbe Goldplatte wie jeder Hauptknopf: "hier geht es weiter"
+   sieht ueberall gleich aus. Der zweite Knopf daneben ("Spielauswahl", wenn
+   ein Tisch laeuft) bekommt Holz — er ist die Nebenhandlung, "Weiterspielen"
+   ist die Hauptsache.
+
+   Steht am Dateiende, damit es die flachen Flaechen weiter oben ueberschreibt
+   — dieselbe Anordnung wie bei den Menueblaettern und Tafeln.
+   ========================================================================= */
+
+.front--hub .front-play {
+  padding: 0.22rem 0.5rem;
+  border: 14px solid transparent;
+  /* Randmass 30 statt 40: Das Goldbild ist auf die Platte beschnitten und
+     schmaler als Holz und Rot — siehe docs/ASSETS-KNOEPFE.md. */
+  border-image: url(/hub/menue-knopf-gold.webp) 30 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  color: #3a2408;
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.6);
+}
+/*
+  Alle drei Schattenregeln zurueckgenommen — die Basis, der Stapel unten und
+  der klebende Knopf setzten je einen gruenen Sockelschatten (#245442,
+  #1f6b40). Der Sockel steckt jetzt im Bild; ein zweiter darunter waere ein
+  gruener Streifen unter einer Goldplatte.
+*/
+.front--hub .front-play,
+.front--hub .front-play-stack .front-play,
+.front--hub .front-play.is-schwebend {
+  box-shadow: none;
+}
+.front--hub .front-play:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+.front--hub .front-play:active {
+  transform: translateY(1px);
+  box-shadow: none;
+  filter: brightness(0.88);
+}
+
+/* Der Knopf daneben, wenn ein Tisch laeuft: Holz. Er war blau. */
+.front--hub .front-play-neben {
+  padding: 0.18rem 0.5rem;
+  border: 12px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #f4e9d4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.front--hub .front-play-neben:active {
+  border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* =========================================================================
+   Seitenknoepfe und Waehrungskapseln — gemaltes Holz statt Verlaeufen.
+
+   Die drei Knoepfe links standen als Lila-, Cyan- und Grauverlauf mit weissem
+   Rand auf dem Vulkan; die Staende oben als dunkelblaue Pillen. Beides ist die
+   Formsprache eines anderen Spiels. Die Karte erzaehlt Abenteuer am Vulkan,
+   die Knoepfe erzaehlten Systemeinstellungen.
+
+   Ab hier tragen sie dieselben gemalten Gruende wie Tafeln und Knoepfe.
+   ========================================================================= */
+
+/*
+  Der Seitenknopf ist quadratisch, das Bild auch (256x256) — deshalb reicht
+  ein Hintergrundbild auf 100 % / 100 % und es braucht kein `border-image`:
+  Ohne Formaenderung gibt es nichts zu strecken, und die Messingbeschlaege in
+  den Ecken bleiben rund.
+
+  Der weisse Rand faellt weg. Er war da, um den Knopf vom bunten Grund
+  abzuheben; das macht jetzt der gemalte Rahmen. Ein Schlagschatten bleibt,
+  aber als `drop-shadow` und nicht als `box-shadow` — das Bild hat
+  durchsichtige Ecken, und ein Kastenschatten zeichnete brav das Quadrat
+  darum nach.
+*/
+.hub-side-btn {
+  border: none;
+  border-radius: 0;
+  background: url(/hub/side-btn-grund.webp) center / 100% 100% no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45));
+}
+/* Etwas kleiner als vorher: Der gemalte Rahmen braucht Platz, sonst sitzt das
+   Symbol auf den Messingbeschlaegen. */
+.hub-side-btn img {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+.hub-side-btn:active {
+  transform: translateY(2px);
+  box-shadow: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) brightness(0.9);
+}
+
+/*
+  Die Waehrungskapsel streckt sich nur in die Breite — dafuer ist
+  `border-image` gebaut: Die Messingkappen links und rechts bleiben, das Holz
+  dazwischen wird gezogen.
+
+  Die Randmasse sind gemessen, nicht geraten. Im Bild (512x128) reichen die
+  Kappen bis x = 45, der Rahmen oben und unten ist rund 14 px dick. Die
+  Kapsel im Hub ist rund 26 px hoch, die Kappe darf also gut 9 px breit sein —
+  daher `border-width: 4px 9px` bei `border-image-slice: 14 45`.
+
+  Waagerecht und senkrecht verschieden, weil die Kapsel es auch ist: Ein
+  gleichmaessiges Randmass haette entweder die Kappen zu Stummeln gequetscht
+  oder die duenne Oberkante zum Balken aufgeblasen.
+*/
+.front--hub .front-waehrung {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 4px 9px;
+  border-image: url(/hub/waehrung-kapsel-grund.webp) 14 45 fill / 1 / 0 stretch;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #ffeccb;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.8);
+}
+/* Die Zahl behaelt ihre Bedeutungsfarbe, nur waermer: Gold fuer Pokale und
+   Muenzen, Blaugruen fuer Edelsteine (Lila heisst laut DESIGN.md "bald"). */
+.front--hub .front-waehrung--cups,
+.front--hub .front-waehrung--muenzen {
+  color: #ffe08a;
+}
+.front--hub .front-waehrung--edelsteine {
+  color: #9ef0ff;
+}
+
+/*
+  Das Band ueber der Karte — die letzte blaue Flaeche im Hub.
+
+  Die Kapseln waren warm, das Brett darunter war Himmelblau: Es sah aus, als
+  laegen Holzschilder auf einer Systemleiste. Der Grund ist alt und war einmal
+  richtig — der Hub hatte einen knalligen Himmel, bevor gemalte Szenen die
+  Flaeche fuellten. Sichtbar ist davon heute nur noch dieser Streifen samt dem
+  Stueck unter der Notch.
+
+  Aufgebaut wie die Tab-Leiste, nur gespiegelt: Lichtkante oben, Fuge nach
+  unten zur Szene. Oben und unten dasselbe Holz — dazwischen die Welt.
+*/
+.front--hub {
+  background: linear-gradient(180deg, #6b431f 0%, #4a2c12 40%, #2c1a0a 100%);
+}
+.front--hub .front-top {
+  background: linear-gradient(180deg, #6b431f 0%, #4a2c12 60%, #33200d 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 214, 138, 0.4),
+    0 2px 0 rgba(24, 14, 5, 0.95),
+    0 8px 18px rgba(12, 6, 2, 0.4);
+}
+
+/* Kraft-Chips im Runner-HUD: klein, neben den Kapseln, verschwinden mit
+   dem Ablauf. Dieselbe Messingkapsel, nur enger. */
+.runner-chip {
+  display: inline-flex;
+  align-items: center;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 3px 7px;
+  border-image: url(/hub/waehrung-kapsel-grund.webp) 14 45 fill / 1 / 0 stretch;
+  padding: 0.06rem 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffd6a0;
+  text-shadow: 0 1px 2px rgba(20, 10, 2, 0.8);
+}
+.runner-chip--schild {
+  color: #a8d0ff;
+}
+
+/* Die Tagesliste: Zeilen wie in der Hub-Rangliste, eigene Zeile in Gold. */
+.runner-rang {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.runner-rang li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+  color: #ffeccb;
+}
+.runner-rang li.is-du {
+  color: #ffe08a;
+  font-weight: 800;
+}
+.runner-rang-nr {
+  flex: 0 0 1.3rem;
+  text-align: right;
+  font-weight: 800;
+  color: rgba(255, 232, 196, 0.7);
+}
+.runner-rang li.is-du .runner-rang-nr {
+  color: #ffe08a;
+}
+.runner-rang-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.runner-rang-punkte {
+  flex: 0 0 auto;
+  font-weight: 800;
+}
+
+/* =========================================================================
+   Cambio.
+
+   Kein Stichtisch: Jeder hat vier verdeckte Plaetze vor sich, in der Mitte
+   liegen zwei Stapel. Die eigenen Plaetze stehen unten gross, die der
+   Mitspieler klein an ihren Sitzen — dieselbe Anordnung wie an den anderen
+   Tischen, damit man sich nicht neu zurechtfinden muss.
+   ========================================================================= */
+
+.cambio-felt {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* --- Stapel in der Mitte ------------------------------------------------ */
+
+.cambio-mitte {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+}
+.cambio-stapel {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: none;
+  width: calc(var(--hw) * 1.15);
+  border-radius: 0.4rem;
+}
+.cambio-stapel .card,
+.cambio-stapel .card-img {
+  width: 100%;
+  height: auto;
+}
+/* Ziehbar hebt sich ab; gesperrt bleibt sichtbar, aber ruhig. */
+.cambio-stapel--verdeckt:not(:disabled) {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(255, 196, 90, 0.75), 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+.cambio-stapel--verdeckt:disabled {
+  filter: brightness(0.75) saturate(0.7);
+}
+.cambio-stapel--verdeckt:not(:disabled):active {
+  transform: translateY(2px);
+}
+.cambio-stapel-zahl {
+  position: absolute;
+  right: -0.4rem;
+  bottom: -0.4rem;
+  min-width: 1.3rem;
+  padding: 0 0.25rem;
+  border-radius: 0.7rem;
+  background: rgba(20, 11, 4, 0.88);
+  color: #ffe08a;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4rem;
+  text-align: center;
+}
+
+/*
+ * Die gezogene Karte.
+ *
+ * Sie liegt bewusst gross und allein ueber den Stapeln: In diesem Moment ist
+ * sie die einzige Entscheidung, und sie gehoert niemandem sonst.
+ */
+.cambio-gezogen {
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  z-index: 6;
+}
+.cambio-gezogen .card,
+.cambio-gezogen .card-img {
+  width: calc(var(--hw) * 1.5);
+  height: auto;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+.cambio-gezogen-hinweis {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffe08a;
+  text-shadow: 0 1px 0 rgba(40, 20, 4, 0.9);
+}
+
+/* --- Der Ruf ------------------------------------------------------------ */
+
+/*
+ * Nach dem Ruf zaehlt jeder Zug doppelt, und genau das muss man sehen — sonst
+ * spielt man weiter, als waere noch Zeit.
+ */
+.cambio-ruf {
+  position: absolute;
+  left: 50%;
+  bottom: 0.6rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.6rem;
+  background: rgba(200, 57, 43, 0.92);
+  color: #fff;
+  text-align: center;
+  line-height: 1.2;
+}
+.cambio-ruf strong {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cambio-ruf span {
+  font-size: 0.72rem;
+}
+
+/* --- Die vier Plaetze --------------------------------------------------- */
+
+.cambio-plaetze {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+}
+.cambio-plaetze--fremd {
+  gap: 0.12rem;
+}
+.cambio-platz {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 0.35rem;
+  background: none;
+  width: calc(var(--hw) * 1.05);
+}
+.cambio-plaetze--fremd .cambio-platz {
+  width: calc(var(--hw) * 0.6);
+}
+.cambio-platz .card,
+.cambio-platz .card-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/*
+ * Bekannte eigene Karten stehen etwas hoeher: Das ist die eine Auskunft, die
+ * das Spiel ausmacht — was weiss ich, was weiss ich nicht.
+ */
+.cambio-platz.is-bekannt {
+  transform: translateY(-4px);
+}
+.cambio-platz.is-waehlbar {
+  cursor: pointer;
+  border-color: #ffc45a;
+  box-shadow: 0 0 10px rgba(255, 196, 90, 0.55);
+}
+.cambio-platz:disabled {
+  cursor: default;
+}
+
+/* Beim Blindtausch bereits als erste Karte angetippt. */
+.cambio-platz.is-gewaehlt {
+  border-color: #7de0a4;
+  box-shadow: 0 0 12px rgba(125, 224, 164, 0.7);
+  transform: translateY(-8px);
+}
+
+/* --- Eigener Sitz ------------------------------------------------------- */
+
+.cambio-eigene {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0 0.2rem;
+}
+.cambio-eigene-kopf {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cambio-eigene-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.cambio-eigene-text strong {
+  font-size: 0.9rem;
+}
+.cambio-eigene-text .muted {
+  font-size: 0.72rem;
+}
+
+/* --- Schaltflaechen des Zuges ------------------------------------------- */
+
+.cambio-aktionen {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem 0.5rem;
+  min-height: 2.4rem;
+}
+.cambio-knopf {
+  padding: 0.45rem 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0.6rem;
+  background: linear-gradient(180deg, #6ee09a 0%, #2f9c5e 100%);
+  color: #10321f;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cambio-knopf:active {
+  transform: translateY(2px);
+}
+/* Der Ruf beendet die Runde — er sieht anders aus als ein normaler Zug. */
+.cambio-knopf.is-ruf {
+  background: linear-gradient(180deg, #ff9a7a 0%, #c8392b 100%);
+  color: #fff;
+}
+.cambio-hinweis {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.82);
+  text-align: center;
+}
+
+/* --- Abrechnung nach der Runde ------------------------------------------ */
+
+.cambio-blatt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 82vh;
+  overflow-y: auto;
+}
+.cambio-blatt h2,
+.cambio-blatt h3 {
+  margin: 0;
+}
+.cambio-ruf-gut {
+  margin: 0;
+  color: #7de0a4;
+}
+.cambio-ruf-schlecht {
+  margin: 0;
+  color: #ff9c90;
+}
+.cambio-abrechnung,
+.cambio-tafel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cambio-abrechnung li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 0.5rem;
+  background: rgba(20, 11, 4, 0.55);
+}
+.cambio-abrechnung-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cambio-abrechnung-karten {
+  display: flex;
+  gap: 0.1rem;
+}
+.cambio-abrechnung-karten .card,
+.cambio-abrechnung-karten .card-img {
+  width: 1.5rem;
+  height: 2.18rem;
+}
+.cambio-abrechnung-punkte {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cambio-tafel li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.15rem 0.45rem;
+  font-variant-numeric: tabular-nums;
 }

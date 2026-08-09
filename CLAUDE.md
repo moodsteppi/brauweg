@@ -30,7 +30,12 @@ Anweisungen für längst vorhandene Spalten — die Snapshots unter
 `packages/server/drizzle/meta/` sind veraltet (nur `0001`, `0002`, `0006`).
 Selbst schreiben, Eintrag in `_journal.json` selbst ergänzen, und **vorher
 prüfen, welche Nummer auf `origin/staging` schon vergeben ist.** Zwei
-Sitzungen haben schon dieselbe `0012` benutzt.
+Sitzungen haben schon dieselbe `0012` benutzt. **Mehrere Befehle in einer
+Datei brauchen zwischen sich die Drizzle-Trennzeile (Pfeil-Kommentar, siehe
+`0016`).** Der PGlite-Prüfstand nimmt je Abschnitt nur einen Befehl; der
+Server-Migrator ist nachsichtiger — `0016` lief deshalb im Deploy durch,
+während 215 Tests rot waren. Und den Trenner nie im Kommentar zitieren:
+gesplittet wird auf die wörtliche Zeichenkette, auch mitten im Kommentar.
 
 **4. Bilder: Original ins Archiv, WebP ins Repo.** Originale liegen im
 Repository [`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art),
@@ -56,6 +61,21 @@ Originalauflösung unter `public/`.
 
 **6. Fragen vorab bündeln, dann bis fertig durchbauen.** Nicht mittendrin
 nachfragen.
+
+**7. Vor jedem Commit `git diff --cached --stat` lesen — die Zahl, nicht die
+Liste.** Am 5. August hat ein Commit 932 Dateien mitgelöscht (halber Server,
+Migrationen, Doku) und ging so auf `staging`. Aufgefallen ist es erst danach:
+**Build und alle 541 Tests liefen grün durch**, weil sie von der Platte lesen
+und nicht aus dem Index. Auslöser war ein `git add` auf einen ignorierten Pfad
+(`packages/client/art/`); danach stand fast alles als gelöscht im Index. Und
+weil hier mehrere Sitzungen im **selben Arbeitsbaum** arbeiten, kann der Index
+sich zwischen zwei Befehlen ändern — Index aufbauen und committen deshalb in
+**einem** Aufruf, mit einer Plausibilitätsschwelle davor:
+
+```bash
+git diff --cached --stat | tail -1        # "N files changed" gegen die Erwartung
+git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
+```
 
 ---
 
@@ -131,3 +151,21 @@ Wirtschaftsmodell.
 - **Kein `<img>` auf eine Datei, die es noch nicht gibt.** Lieber ein Zeichen
   oder gar nichts: Ein weißer Kasten sieht nach Fehler aus, ein Notenzeichen
   nach Absicht. Beim Clan-Krieg ging das einmal fast so live.
+- **Kachelbare Texturen vor dem Einbau auf Nähte messen.** Kantenabstand
+  gegen Innenvarianz; über Faktor 3 sieht man die Linie, über 8 ist sie ein
+  Balken. Von zwölf gelieferten Runner-Kacheln hatten drei echte Nähte
+  (Schneefeld: Faktor 25). Heilen mit `~/bildwerkzeug/naht-heilen.mjs`.
+- **In `<Canvas>` nichts laden, was anhalten kann, ohne es zu prüfen.**
+  `useTexture` löste im Runner nie auf, obwohl alle Dateien mit 200 kamen —
+  die äußere Suspense hängte die ganze Leinwand ab, Dauerladetext. Für
+  Kulisse (Böden, Hintergründe) lieber `TextureLoader` in einem Effekt: Es
+  gibt nichts anzuhalten, und bis das Bild da ist, steht eine Farbfläche.
+  Und **niemals `clone()` je Instanz** — zwölf zusätzliche 1024er-Texturen
+  kosteten den WebGL-Kontext ("Context Lost").
+- **Bei `border-image` zählt nicht das Bild, sondern wo das Motiv darin
+  liegt.** Die drei Knopfplatten sind alle 512 × 160, das Motiv belegt aber
+  92 % (Holz), 77 % (Rot) und 63 % (Gold) der Breite. Mit demselben Randmaß
+  fällt die Luft in die gestreckte Mitte: Der Knopf sieht schmaler aus als
+  seine Nachbarn, obwohl alle `width: 100%` haben, und die Schrift steht über
+  die Platte hinaus. Gemessen wird der Alphakanal auf der Mittelzeile, nicht
+  die Dateigröße. Bestellung und Sollmaße: `docs/ASSETS-KNOEPFE.md`.

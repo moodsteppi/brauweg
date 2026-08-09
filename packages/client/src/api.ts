@@ -553,6 +553,49 @@ export const api = {
   claimQuest: (questId: string) =>
     post<{ betrag: number; waehrung: Waehrung; stand: number }>(`/quests/${questId}/claim`),
 
+  // --- Pro-Subway -----------------------------------------------------------
+
+  /** Tagesstand: wie viele Hub-Münzen heute noch aus dem Runner kommen. */
+  runnerToday: () =>
+    request<{ verdient: number; restHeute: number; limitTag: number }>('/runner/today'),
+  /**
+   * Lauf beendet: Runner-Münzen (Anzahl Pickups) in Hub-Münzen umwandeln.
+   * Server kappt pro Lauf und pro Tag.
+   */
+  runnerCashout: (coins: number) =>
+    post<{
+      gutgeschrieben: number;
+      stand: number;
+      restHeute: number;
+      limitTag: number;
+    }>('/runner/cashout', { coins }),
+  /**
+   * Lauf beendet — der eine Aufruf am Lebensende des Laufs: Münzen (mit
+   * Kappen), Tagesaufgaben, Tagesbestwert und Platz in der Tagesliste.
+   */
+  runnerLauf: (lauf: { muenzen: number; punkte: number; meter: number }) =>
+    post<{
+      gutgeschrieben: number;
+      stand: number;
+      restHeute: number;
+      limitTag: number;
+      rangHeute: number;
+    }>('/runner/lauf', lauf),
+  /** Die heutige Tagesliste: beste zehn plus eigener Platz. */
+  runnerRangliste: () =>
+    request<{
+      eintraege: {
+        rang: number;
+        displayName: string;
+        punkte: number;
+        meter: number;
+        muenzen: number;
+        du: boolean;
+      }[];
+      rang: number;
+      punkte: number;
+    }>('/runner/rangliste'),
+
   // --- Shop und Kleiderschrank ---------------------------------------------
 
   shop: () => request<Shop>('/shop'),
@@ -579,6 +622,11 @@ export const api = {
     patch<{ ok: true; avatar: Getragen }>('/me/avatar', { slot, itemId }),
 
   /** Geburtstags-Pinguin einsammeln (nur am Geburtstag). */
+  /**
+   * Feldherr meldet seinen Ausgang. Der Server deckelt je Tag; was
+   * zurueckkommt, ist das tatsaechlich Gebuchte, nicht das Erhoffte.
+   */
+
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */
   deleteMe: async (password: string) => {

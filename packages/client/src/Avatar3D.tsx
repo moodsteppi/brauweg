@@ -3,6 +3,7 @@ import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { ContactShadows, OrbitControls, useGLTF } from '@react-three/drei';
 import { CanvasTexture, Group, Mesh, MeshStandardMaterial, SRGBColorSpace, type Texture } from 'three';
 
+import type { Getragen } from './api';
 import { MAX_PUNKTE_JE_STRICH, zeichne, type Bemalung, type Strich } from './bemalung';
 
 /**
@@ -22,29 +23,64 @@ import { MAX_PUNKTE_JE_STRICH, zeichne, type Bemalung, type Strich } from './bem
  */
 
 const PINGUIN = '/3d/penguin_base.glb';
-const MUETZE = '/3d/beanie.glb';
 
 /** Kantenlänge der Malfläche. 1024 reicht: Die Figur ist nie größer als ein Handy. */
 const LEINWAND = 1024;
 
 /**
- * Wo die Mütze sitzt.
+ * Welches angezogene Stück welches Modell hat — und wo es sitzt.
  *
- * Von Hand im Ausrichter eingestellt (`/?dev=avatar`) — **nicht** der
- * rechnerische Kopfansatz aus `avatar_normalize.json`. Der liegt bei
- * y = 0,988, also gut 25 Zentimeter höher, und lässt die Mütze schweben.
+ * **Hier lag der Fehler.** Vorher hatte die Figur einen Schalter `muetze:
+ * boolean`, und beide Ansichten im Spiel gaben ihm fest `false` mit. Die
+ * Mütze war damit nur in der Werkstatt zu sehen, und auch dort nur, weil man
+ * sie dort von Hand einschaltete: Wer sie im Kleiderschrank anzog, sah sie an
+ * der 3D-Figur nirgends. Die Figur wusste gar nicht, was man trägt.
+ *
+ * Jetzt bekommt sie dasselbe `getragen` wie der gemalte Pinguin und sucht
+ * sich hier heraus, wofür sie ein Modell hat. Ein Stück ohne Eintrag
+ * erscheint nicht — sichtbar wäre nur, was auch wirklich gemodellt ist.
+ *
+ * **Zurzeit steht hier genau ein Eintrag.** Modelliert ist die Wollmütze; die
+ * übrigen fünf Hüte, die Brillen, Oberteile, Schuhe, Handstücke und Auren
+ * gibt es nur gemalt. Die Bestellung dafür steht in
+ * `docs/ASSETS-3D-ZUBEHOER.md`. Kommt ein Modell, ist es eine Zeile hier und
+ * sonst nichts.
+ *
+ * Die Sitzwerte sind von Hand im Ausrichter eingestellt (`/?dev=avatar`) —
+ * **nicht** der rechnerische Kopfansatz aus `avatar_normalize.json`. Der
+ * liegt bei y = 0,988, also gut 25 Zentimeter höher, und lässt die Mütze
+ * schweben.
  */
-const MUETZE_SITZ = {
-  position: [-0.007, 0.736, 0.013] as [number, number, number],
-  rotation: [0, 0, 0] as [number, number, number],
-  scale: 1.09,
+interface Sitz {
+  readonly datei: string;
+  readonly position: [number, number, number];
+  readonly rotation: [number, number, number];
+  readonly scale: number;
+}
+
+const MODELLE: Readonly<Record<string, Sitz>> = {
+  'hut-wollmuetze': {
+    datei: '/3d/beanie.glb',
+    position: [-0.007, 0.736, 0.013],
+    rotation: [0, 0, 0],
+    scale: 1.09,
+  },
 };
 
+/** Die Kennungen, für die es ein Modell gibt — in fester Reihenfolge. */
+const MODELLIERT = Object.keys(MODELLE);
+
 useGLTF.preload(PINGUIN);
-useGLTF.preload(MUETZE);
+for (const kennung of MODELLIERT) useGLTF.preload(MODELLE[kennung].datei);
 
 export interface Avatar3DProps {
-  muetze: boolean;
+  /**
+   * Was die Figur trägt — dieselben Kennungen wie beim gemalten Pinguin.
+   *
+   * Bewusst der ganze Satz und kein einzelner Schalter: Sobald ein zweites
+   * Stück ein Modell bekommt, ist hier nichts zu ändern.
+   */
+  getragen: Getragen;
   bemalung: Bemalung;
   /** Malmodus: Wischen malt, statt zu drehen. */
   malen?: boolean;
@@ -69,7 +105,7 @@ export interface Avatar3DProps {
 }
 
 export default function Avatar3D({
-  muetze,
+  getragen,
   bemalung,
   malen = false,
   farbe = '#e8433a',
@@ -87,13 +123,38 @@ export default function Avatar3D({
    * wenn beide Modelle da sind — damit ist schon das erste Bild vollständig.
    */
   const pinguin = useGLTF(PINGUIN);
-  const hut = useGLTF(MUETZE);
+  /**
+   * Alle Zubehörmodelle werden geladen, nicht nur die getragenen.
+   *
+   * `useGLTF` ist ein Hook: Er muss bei jedem Durchlauf gleich oft und in
+   * derselben Reihenfolge aufgerufen werden. Nur das gerade Getragene zu laden
+   * hieße, die Zahl der Hooks vom Zustand abhängig zu machen — und beim
+   * Wechseln der Mütze stürzt React ab. Die Modelle sind klein und liegen
+   * ohnehin schon im Zwischenspeicher (`preload` oben).
+   */
+  const zubehoer = useGLTF(MODELLIERT.map((k) => MODELLE[k].datei));
 
   // `clone(true)` statt der Szene selbst: `useGLTF` hält sie zwischengespeichert
   // und gibt jedem Aufrufer dasselbe Objekt. Wer es direkt einhängt, klaut es
   // dem nächsten — und dann ist der Pinguin beim zweiten Öffnen weg.
   const pinguinSzene = useMemo(() => pinguin.scene.clone(true), [pinguin.scene]);
-  const hutSzene = useMemo(() => hut.scene.clone(true), [hut.scene]);
+  const zubehoerSzenen = useMemo(
+    () => zubehoer.map((g) => g.scene.clone(true)),
+    [zubehoer],
+  );
+
+  /**
+   * Was davon gerade zu sehen ist.
+   *
+   * Aus `getragen` werden die Werte genommen und gegen die Modelltabelle
+   * geprüft — nicht die Plätze. So ist es gleich, auf welchem Platz ein Stück
+   * sitzt: Bekommt die Brille ein Modell, greift derselbe Weg.
+   */
+  const sichtbar = useMemo(() => {
+    const angezogen = new Set(Object.values(getragen).filter(Boolean));
+    return MODELLIERT.map((kennung, i) => ({ kennung, i }))
+      .filter(({ kennung }) => angezogen.has(kennung));
+  }, [getragen]);
 
   /**
    * Die Malfläche und ihre Textur.
@@ -257,15 +318,19 @@ export default function Avatar3D({
         onPointerLeave={beenden}
       >
         <primitive object={pinguinSzene} />
-        {muetze && (
-          <group
-            position={MUETZE_SITZ.position}
-            rotation={MUETZE_SITZ.rotation}
-            scale={[MUETZE_SITZ.scale, MUETZE_SITZ.scale, MUETZE_SITZ.scale]}
-          >
-            <primitive object={hutSzene} />
-          </group>
-        )}
+        {sichtbar.map(({ kennung, i }) => {
+          const sitz = MODELLE[kennung];
+          return (
+            <group
+              key={kennung}
+              position={sitz.position}
+              rotation={sitz.rotation}
+              scale={[sitz.scale, sitz.scale, sitz.scale]}
+            >
+              <primitive object={zubehoerSzenen[i]} />
+            </group>
+          );
+        })}
       </group>
       </Wippe>
 

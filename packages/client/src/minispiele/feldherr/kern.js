@@ -1,0 +1,5021 @@
+"use strict";
+/* ============================================================
+   FELDHERR — Teil 0: Karten und Charaktere
+   ============================================================
+
+   Reine Daten und reine Rechnung, kein Zustand: Was eine Karte kostet,
+   was sie aushält, was sie anrichtet — und was sie mit dem Gelände und
+   den anderen Karten treibt.
+
+   Dieser Teil steht als EINZIGER vor der Spielfunktion, im Modulrahmen.
+   Der Grund ist die Auswahl im Bildschirm: Sie zeigt die Werteseite
+   jeder Karte, bevor überhaupt eine Partie läuft, und darf sie deshalb
+   nicht aus einem laufenden Kern abgreifen. Stünden die Zahlen zweimal
+   im Haus — einmal hier, einmal in der Anzeige —, liefen sie mit dem
+   ersten Balance-Schritt auseinander, und die Werteseite löge.
+
+   Regel beim Ändern: Hier gibt es keinen Zufall, keine Uhr, kein DOM.
+   Die Werte fließen in den Spielzustand; jede Rechnung muss auf beiden
+   Geräten Zeichen für Zeichen dasselbe ergeben (nur Grundrechenarten
+   und sqrt sind dafür bitgenau festgelegt).
+*/
+
+/* ---------- Kartenkatalog ----------
+ * Die Grundwerte ALLER Karten, die es im Spiel gibt. Welche davon eine
+ * Partie benutzt und mit welchen Werten, entscheidet der gewählte
+ * Charakter (CHARAKTERE weiter unten) — das Haupthaus ist immer dabei,
+ * es steht in keinem Kartenkontingent. */
+const GRUNDKARTEN = {
+  schwert:  {nm:'Schwert', cost:8, unit:true, hp:7,  dmg:4, cd:8,  mcd:3.0, rng:1,
+             up:{cd:-2, mcd:-0.4, hp:6, dmg:2}},
+  mauer:    {nm:'Mauer',   cost:15, blocks:true, cardLimit:3,
+             /* Stufe 3 = 3,2 × Stufe 1 (Entscheid vom 7. August 2026) —
+              * derselbe Wert speist Stapel UND Mauerverbund. */
+             lvls:[{hp:50},{hp:85},{hp:160}]},
+  bogen:    {nm:'Bogen',   cost:12, unit:true, hp:5,  dmg:3, cd:7, mcd:4.2, rng:3, ueberMauer:true,
+             up:{cd:-1.5, mcd:-0.4, hp:2, dmg:5}},
+  werk:     {nm:'Werk',    cost:25, size:2, cardLimit:4, fuseAt:2, laufzeit:15, knall:10,
+             lvls:[{hp:15,income:1,laufzeit:15},{hp:23,income:2,laufzeit:20},
+                   {hp:34,income:5,laufzeit:25}]},
+  ritter:   {nm:'Ritter',  cost:30, unit:true, hp:26, dmg:4, cd:17, mcd:5.6, rng:1,
+             up:{cd:-3.8, mcd:-0.7, hp:10, dmg:4}},
+  kanone:   {nm:'Kanone',  cost:35, att:true, rng:4, siege:2, cardLimit:2,
+             lvls:[{hp:25,dmg:10,cd:8},{hp:25,dmg:8,cd:8, rng:7, arc:true, splash:0.3}]},
+  haus:     {nm:'Haupthaus', cost:0, limit:1, lvls:[{hp:36,income:2}]}
+};
+const GRUNDPREISE = {mauer:[15,15,25], werk:[25,25,40], kanone:[35,35]};
+
+/* ---------- Werteseite: was auf der Karte steht ----------
+ * Ein Satz, der die Karte erklärt, und die Wechselwirkungen, die man
+ * sonst erst im Spiel entdeckt. Die ZAHLEN stehen hier bewusst nicht —
+ * die rechnet kartenBlatt() aus den Werten oben, damit ein
+ * Balance-Schritt nicht zwei Stellen braucht. Hier steht nur, was Zahlen
+ * nicht sagen können. */
+const KARTENTEXT = {
+  schwert: {
+    satz: 'Billig, schnell, in Masse gefährlich — das Arbeitspferd jedes Angriffs.',
+    wirkt: [
+      'Zwei gleiche Schwerter derselben Stufe legen sich beim Treffen von allein zusammen',
+      'Im Wald: mehr Leben und härterer Schlag, dafür kürzere Sicht',
+      'Kurzes Antippen hält die Truppe an: sie verteidigt und steckt weniger ein'
+    ]
+  },
+  bogen: {
+    satz: 'Trifft aus der Distanz und über eine Mauer direkt vor ihm hinweg.',
+    wirkt: [
+      'Gegen Mauerwerk fast wirkungslos — Pfeile richten an Stein halben Schaden an',
+      'Ab Stufe 2 spannt er eine Reichweite weiter',
+      'Auf Fels oder im Wald wird er zum Turm: unbeweglich, erhöhte Sicht, weniger Schaden',
+      'Türme sind knapp: einer je Ausbaustufe des Haupthauses'
+    ]
+  },
+  mauer: {
+    satz: 'Versperrt den Weg. Truppen gehen drumherum, wenn sie eine Lücke sehen.',
+    wirkt: [
+      'Verbundene Mauern teilen sich eine Stufe: zwei ergeben Stufe 2, drei Stufe 3',
+      'Das Leben der Stufe gehört der GRUPPE und verteilt sich nach eingesetzten Karten',
+      'Fällt ein Stück, stuft sich der Rest neu ein',
+      'Eine Mauer auf Stufe 2 am Haupthaus ist ein Stützpunkt und hebt es'
+    ]
+  },
+  werk: {
+    satz: 'Wirtschaft auf Zeit: volle Kraft nur für seine Laufzeit, danach Sparflamme.',
+    wirkt: [
+      'Zwei Werke auf Stufe 2 nebeneinander verschmelzen zu einem größeren',
+      'In den vordersten zwei Reihen bringt es mehr — ist dort aber schwer zu halten',
+      'Am Kraterrand zapft es Erdwärme an: zusätzlicher Ertrag',
+      'Fällt es im Kampf, explodiert der Kessel und reißt die Nachbarschaft mit',
+      'In den Fels gebaut: voller Panzer, aber der Fels frisst einen Ertrag',
+      'Jeder Treffer kostet es eine Sekunde Laufzeit'
+    ]
+  },
+  ritter: {
+    satz: 'Schwer gepanzert, langsam im Schlag. Er hält aus, was andere umwirft.',
+    wirkt: [
+      'Zwei Ritter derselben Stufe legen sich beim Treffen zusammen',
+      'Im Wald: mehr Leben und härterer Schlag',
+      'Kurzes Antippen hält ihn an: er verteidigt und steckt weniger ein'
+    ]
+  },
+  kanone: {
+    satz: 'Belagerung. Trifft weit und richtet an Bauwerken doppelten Schaden an.',
+    wirkt: [
+      'Ausgebaut wird sie zum Mörser: Steilfeuer über Mauern hinweg, dazu Splitter',
+      'Eine feindliche Mauer auf der Flugbahn fängt den Schuss ab',
+      'Ein Gebirge dazwischen schluckt ihn ganz',
+      'Im Wald steckt sie weniger ein, auf Fels sieht und trifft sie weiter',
+      'Sie marschiert nicht — wo sie steht, steht sie'
+    ]
+  },
+  haus: {
+    satz: 'Deine Lebensader. Fällt es, ist die Partie vorbei.',
+    wirkt: [
+      'Ausgebaute Nachbarn heben es: ein Stützpunkt auf Stufe 3, oder zwei auf Stufe 2',
+      'Stufe 4 verlangt beides am Haus: eine Mauer auf Stufe 3 UND eine Werkstatt auf Stufe 3',
+      'Jede Stufe bringt mehr Leben, mehr Ertrag, ein größeres Lager — und einen Turm mehr',
+      'Im Wald steht es geschützt: ein Fünftel weniger Schaden'
+    ]
+  }
+};
+
+/* ---------- Charaktere ----------
+ * Jeder Charakter bringt seine EIGENE Kartenhand mit: welche Karten er
+ * hat, wie sie heißen und mit welchen Werten sie spielen. `werte` und
+ * `preise` überschreiben dabei nur einzelne Felder des Katalogs — so
+ * steht jede Abweichung schwarz auf weiß an einer Stelle, statt sich im
+ * Katalog zu verstecken. `texte` ergänzt die Werteseite um das, was nur
+ * für diesen Charakter gilt.
+ */
+const HELDEN = {
+  engineer: {
+    nm: 'Engineer',
+    kurz: 'Baumeister. Seine Werkstatt im Fels mauert von allein, sein Ritter rennt Bauten ein.',
+    karten: ['schwert','bogen','mauer','werk','ritter','kanone'],
+    werte: {
+      bogen:  {rng:2, hp:7},
+      werk:   {nm:'Werkstatt',
+               /* Sekunden je Mauer, nach Stufe. Nur auf Fels (siehe
+                * werkstattMauer): Der Steinbruch liefert das Material. */
+               mauerbau:[30, 25, 25]},
+      ritter: {cost:20, hp:32, dmg:3, bauSchaden:2},
+      kanone: {cost:50}
+    },
+    preise: {kanone:[50,50]},
+    texte: {
+      bogen:  {satz:'Kürzere Sicht als anderswo, dafür hält er mehr aus.'},
+      werk:   {satz:'Wirtschaft auf Zeit — und im Fels eine Mauerfabrik.',
+               wirkt:['Auf Fels legt sie dir alle 30 Sekunden eine Mauer auf die Hand (ab Stufe 2 alle 25)',
+                      'Diese Mauer ist geschenkt: kostet nichts, zählt nicht gegen dein Kartenlimit',
+                      'Wohin sie kommt, entscheidest du — und beim Abriss gibt es nichts zurück',
+                      'Das Mauern läuft weiter, auch wenn die Laufzeit erschöpft ist']},
+      ritter: {satz:'Der Rammbock des Baumeisters: billig, zäh, und er reißt Bauten ein.',
+               wirkt:['Doppelter Schaden an allem, was gebaut ist']}
+    }
+  }
+};
+
+/* ---------- Rechnung ----------
+ * Reine Funktionen über einer Kartendefinition. Der Kern rechnet damit
+ * (statsOf), die Werteseite ebenfalls — dieselbe Formel, eine Quelle. */
+
+/** Kartenhand eines Charakters: Definitionen, Reihenfolge, Ausbaupreise. */
+function handVon(id){
+  const c = HELDEN[id] || HELDEN.engineer;
+  const reihe = c.karten.slice();
+  const defs = {};
+  for(const k of reihe.concat(['haus'])){
+    defs[k] = Object.assign({}, GRUNDKARTEN[k], (c.werte && c.werte[k]) || {});
+  }
+  const preise = {};
+  for(const k in GRUNDPREISE) if(defs[k]) preise[k] = GRUNDPREISE[k].slice();
+  if(c.preise) for(const k in c.preise) if(defs[k]) preise[k] = c.preise[k].slice();
+  return {charakter: c, reihe, defs, preise};
+}
+
+/** Werte einer Karte auf einer Stufe. Formel des Spiels, an einer Stelle. */
+function werteVon(d, lvl){
+  if(!d) return {hp:0, dmg:0, cd:0, mcd:0, rng:0, income:0};
+  if(d.unit){
+    const n = lvl-1;
+    return {hp:d.hp + d.up.hp*n, dmg:d.dmg + d.up.dmg*n,
+            cd:Math.max(2, +(d.cd + d.up.cd*n).toFixed(1)),
+            mcd:Math.max(1.2, +(d.mcd + d.up.mcd*n).toFixed(2)),
+            rng:d.rng, income:0};
+  }
+  const L = d.lvls[Math.min(lvl, d.lvls.length)-1];
+  return {hp:L.hp, dmg:L.dmg||0, cd:L.cd||0, mcd:0, rng:L.rng||d.rng||0,
+          income:L.income||0, arc:!!L.arc, splash:L.splash||0,
+          laufzeit:L.laufzeit||d.laufzeit||0};
+}
+/** Höchste Stufe einer Karte. */
+function stufenVon(d){ return d.unit ? 4 : d.lvls.length; }
+/** Was die Karte auf dem Weg zu dieser Stufe kostet. */
+function preisVon(preise, k, d, toLvl){
+  const u = preise[k];
+  return (u && toLvl>1) ? u[Math.min(toLvl,u.length)-1] : d.cost;
+}
+
+/**
+ * Werteseite einer Karte: alles, was die Anzeige braucht — Name, Rolle,
+ * Zahlen je Stufe, Wechselwirkungen. Kein DOM, keine Formatierung: WAS
+ * dasteht, entscheidet hier; WIE es aussieht, der Bildschirm.
+ */
+function kartenBlatt(charakterId, k){
+  const hand = handVon(charakterId);
+  const d = hand.defs[k];
+  if(!d) return null;
+  const grund = KARTENTEXT[k] || {};
+  const eigen = (hand.charakter.texte && hand.charakter.texte[k]) || {};
+  const stufen = [];
+  for(let l=1; l<=stufenVon(d); l++){
+    const w = werteVon(d, l);
+    stufen.push({
+      stufe: l,
+      /* Truppen kauft man nur auf Stufe 1 — höher kommen sie allein
+       * durchs Verschmelzen zweier Gleicher. Ein Preis stünde da nur
+       * herum und wäre gelogen. */
+      preis: (d.unit && l > 1) ? null : preisVon(hand.preise, k, d, l),
+      hp: w.hp,
+      dmg: w.dmg || 0,
+      rng: w.rng || 0,
+      schlag: w.cd || 0,
+      marsch: w.mcd || 0,
+      ertrag: w.income || 0,
+      laufzeit: w.laufzeit || 0,
+      steilfeuer: !!w.arc,
+      splitter: w.splash || 0
+    });
+  }
+  return {
+    id: k,
+    nm: d.nm,
+    art: d.unit ? 'Truppe' : d.att ? 'Geschütz' : d.blocks ? 'Sperre' : 'Bau',
+    satz: eigen.satz || grund.satz || '',
+    /* Wechselwirkungen: die des Charakters zuerst, dann die allgemeinen. */
+    wirkt: (eigen.wirkt || []).concat(grund.wirkt || []),
+    feld: d.size === 2 ? '1 × 2 Felder' : '1 Feld',
+    kartenGrenze: d.cardLimit || null,
+    beweglich: !!d.unit,
+    stufen
+  };
+}
+
+/** Alles, was die Auswahl über einen Charakter zeigen muss. */
+function charakterBlatt(id){
+  const hand = handVon(id);
+  return {
+    id: HELDEN[id] ? id : 'engineer',
+    nm: hand.charakter.nm,
+    kurz: hand.charakter.kurz,
+    karten: hand.reihe.map((k) => kartenBlatt(id, k))
+  };
+}
+/**
+ * Feldherr — Spielkern des Clients.
+ *
+ * MASCHINELL ERZEUGT aus den Modulen unter packages/game-feldherr/quelle/
+ * teile/ durch packages/game-feldherr/werkzeug/bauen.mjs.
+ * Nicht von Hand aendern — die Teile anpassen und neu bauen.
+ *
+ * Der Kern zeichnet auf eine Leinwand und findet seine Teile ueber
+ * getElementById. Er kennt kein React und soll es nicht kennen: Er muss auf
+ * beiden Geraeten Zeichen fuer Zeichen gleich rechnen. Sein Spielzufall kommt
+ * ausschliesslich aus saat(); alles Sichtbare ohne Spielwirkung zieht aus
+ * deko().
+ */
+
+export const STIL = "\n:root{\n  --nacht:#070c11; --linie:#1e2c36; --sand:#dfd6c2; --tinte:#8397a4;\n  --p1:#e8433c; --p2:#3d86ff; --ring:#dff2ff;\n}\n*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}\nhtml,body{height:100%;overflow:hidden;background:#05080b;\n  font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;color:var(--sand);\n  touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}\n#app{position:fixed;inset:0;display:flex;flex-direction:column}\n\n.hud{flex:0 0 auto;position:relative;z-index:5;\n  background:linear-gradient(180deg,#0e161c 0%,#0a1116 100%);\n  box-shadow:0 0 0 1px #1a262e, 0 8px 26px -14px #000 inset}\n.hud.top{background:linear-gradient(0deg,#0e161c 0%,#0a1116 100%)}\n.hud::after{content:\"\";position:absolute;left:0;right:0;height:1px;\n  background:linear-gradient(90deg,transparent,#2c3d48 20%,#2c3d48 80%,transparent)}\n.hud.bot::after{top:0}.hud.top::after{bottom:0}\n/* Netzspiel, Sitz 0: Brett gespiegelt (siehe SPIEGEL bei der Projektion) —\n   dann wandert auch die eigene Leiste nach unten. Die Klasse setzt die\n   Netzanbindung; örtlich kommt sie nie vor. */\n#app.gespiegelt .hud.top{order:3}\n#app.gespiegelt #stage{order:2}\n#app.gespiegelt .hud.bot{order:1}\n#app.gespiegelt .hud.top::after{bottom:auto;top:0}\n#app.gespiegelt .hud.bot::after{top:auto;bottom:0}\n.inner{padding:7px 9px 8px}\n.hud.top .inner{transform:rotate(180deg)}\n.bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}\n.tag{font:700 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;\n  padding:4px 7px;border-radius:3px;color:#080c10}\n.p1 .tag{background:linear-gradient(180deg,#ff6f62,var(--p1));color:#fff}\n.p2 .tag{background:linear-gradient(180deg,#71a8ff,var(--p2));color:#fff}\n.res{font:700 16px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em;\n  text-shadow:0 0 14px currentColor}\n.res .cap{font-size:10px;opacity:.5}\n.res.full{animation:pulse 1.1s ease-in-out infinite}\n@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}\n.p1 .res{color:#ff9c92}.p2 .res{color:#a8caff}\n.rate{font:600 9px/1 ui-monospace,Menlo,monospace;color:var(--tinte);letter-spacing:.06em}\n.dreh{margin-left:auto;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.dreh svg{display:block;opacity:.8;transition:transform .16s ease}\n.dreh.hoch svg{transform:rotate(90deg)}\n.dreh.an{background:linear-gradient(180deg,#7fd8b4,#3aa87e);box-shadow:0 0 14px -4px #3aa87e}\n.dreh.an svg{opacity:1}\n.raze{margin-left:6px;width:28px;height:26px;border:0;border-radius:7px;flex:0 0 auto;\n  background:#16222a;box-shadow:0 0 0 1px #2a3b46;display:grid;place-items:center;padding:0}\n.raze svg{display:block;opacity:.75}\n.raze.on{background:linear-gradient(180deg,#ff7a5e,#e8433c);box-shadow:0 0 16px -4px #e8433c}\n.raze.on svg{opacity:1}\n.raze.on svg path{fill:#fff}\n.hint{margin-left:6px;font:500 9px/1.3 system-ui;color:#93a7b3;text-align:right;max-width:38%}\n.cards{display:flex;gap:4px}\n.card{flex:1 1 0;min-width:0;position:relative;overflow:hidden;padding:5px 2px 6px;\n  border-radius:8px;text-align:center;\n  background:linear-gradient(180deg,#1b2831 0%,#131d24 100%);\n  box-shadow:0 0 0 1px #26363f, 0 1px 0 #2f4250 inset, 0 6px 12px -8px #000;\n  transition:transform .1s ease,box-shadow .14s,opacity .14s}\n.card .cost{font:800 11.5px/1 ui-monospace,Menlo,monospace;padding-right:14px;padding-left:14px}\n.p1 .card .cost{color:#ff8b80}.p2 .card .cost{color:#8fbaff}\n.card svg{display:block;margin:3px auto 2px;opacity:.92}\n.card .nm{font:700 8px/1 system-ui;letter-spacing:.04em;text-transform:uppercase;color:#d5e4ee}\n.card .st{font:500 6.8px/1.4 ui-monospace,Menlo,monospace;color:#7b8e9a;margin-top:2px;white-space:nowrap}\n.card .fill{position:absolute;left:0;bottom:0;height:2px;width:0%;transition:width .18s linear;opacity:.75}\n.card .lim{position:absolute;top:0;right:0;min-width:17px;height:15px;padding:0 3px;\n  display:grid;place-items:center;box-sizing:border-box;\n  font:800 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;\n  color:#e2eef6;background:#22333d;border-radius:0 8px 0 7px;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.07)}\n.card .lim.voll{color:#fff;background:#b8332c;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.14)}\n.p1 .card .fill{background:var(--p1)}.p2 .card .fill{background:var(--p2)}\n.card.off{opacity:.36}\n.card.drag{opacity:.35;transform:scale(.94)}\n.card.leer{opacity:.9;background:linear-gradient(180deg,#2a1418,#1d0e11);\n  box-shadow:0 0 0 1px #6d2a2f, 0 1px 0 #4a1e22 inset}\n.card.leer .nm,.card.leer .st{color:#a9737a}\n.card.leer .cost{color:#ff7a72}\n.card.leer .lim{color:#fff;background:#8e2c2c}\n.card.leer::after{content:\"\";position:absolute;left:-12%;top:50%;width:124%;height:2px;\n  background:#e8433c;transform:rotate(-24deg);box-shadow:0 0 8px #e8433c}\n.card.leer svg{opacity:.4}\n/* Geschenkte Karte auf der Hand (Werkstatt im Fels): gruener Rand und\n   gruene Zahl — sie kostet nichts und geht nicht ans Kontingent. Der\n   Zaehler zeigt \"Rest+Geschenk\", etwa 1+2. */\n.card.gratis{background:linear-gradient(180deg,#14261d,#0e1a15);\n  box-shadow:0 0 0 1px #2f7a55, 0 1px 0 #24503a inset}\n.card.gratis .cost{color:#9be8c0}\n.card .lim.extra{color:#0d1f16;background:#7fe0aa;\n  box-shadow:-1px 1px 0 rgba(6,11,15,.55), inset 0 0 0 1px rgba(255,255,255,.2)}\n.card.rdy{box-shadow:0 0 0 1px #3d5464, 0 1px 0 #3b5265 inset, 0 6px 14px -8px #000}\n.card.arm{transform:translateY(-4px)}\n.p1 .card.arm{box-shadow:0 0 0 1.5px var(--p1),0 0 20px -4px var(--p1),0 1px 0 #4a3a1e inset}\n.p2 .card.arm{box-shadow:0 0 0 1.5px var(--p2),0 0 20px -4px var(--p2),0 1px 0 #3a2a4e inset}\n\n#stage{flex:1 1 auto;position:relative;min-height:0}\ncanvas{position:absolute;inset:0;width:100%;height:100%;display:block}\n\n#ghost{position:fixed;pointer-events:none;z-index:60;transform:translate(-50%,-50%);display:none}\n#ghost .gg{padding:7px 11px;border-radius:9px;font:700 10px/1 system-ui;letter-spacing:.08em;\n  text-transform:uppercase;background:rgba(20,32,40,.92);color:#e6f0f6;\n  box-shadow:0 0 0 1px #3f5665,0 10px 20px -8px #000}\n\n#uhr{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:19;\n  padding:3px 10px;border-radius:8px;pointer-events:none;\n  font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;\n  color:#cfe0ea;background:rgba(12,20,26,.72);box-shadow:0 0 0 1px #24343d}\n#uhr[hidden]{display:none}\n#menuBtn{position:absolute;right:3px;top:2px;z-index:20;opacity:.86;\n  width:28px;height:28px;border-radius:9px;color:#96aab7;font:700 13px/1 system-ui;\n  background:rgba(16,25,32,.8);border:0;box-shadow:0 0 0 1px #26363f;display:grid;place-items:center}\n\n.ov{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;\n  padding:22px;background:radial-gradient(120% 80% at 50% 0%,rgba(20,34,44,.92),rgba(4,7,10,.96));\n  backdrop-filter:blur(4px)}\n.ov[hidden]{display:none}\n.sheet{width:min(430px,100%);max-height:100%;overflow:auto;padding:22px 19px;border-radius:16px;\n  background:linear-gradient(180deg,#111c23,#0b1318);\n  box-shadow:0 0 0 1px #22323c,0 30px 60px -30px #000, 0 1px 0 #2b3d49 inset}\n.eyebrow{font:700 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.34em;color:#7b8e9a;text-transform:uppercase}\nh1{font:900 34px/.92 system-ui;letter-spacing:-.035em;margin:10px 0 4px}\nh1 em{font-style:normal;background:linear-gradient(180deg,#ff8b80,var(--p1));\n  -webkit-background-clip:text;background-clip:text;color:transparent}\nh2{font:800 18px/1.15 system-ui;letter-spacing:-.015em;margin-bottom:9px}\n.sub{font:500 12px/1.55 system-ui;color:#93a7b3;margin-bottom:18px}\np.tx{font:400 13px/1.6 system-ui;color:#c8d7e0;margin-bottom:9px}\np.tx b{color:#eae2d0;font-weight:650}\nul.tx{margin:0 0 10px 16px;font:400 12.5px/1.6 system-ui;color:#c8d7e0}\nul.tx li{margin-bottom:5px}\n.btn{display:block;width:100%;padding:13px;border-radius:10px;border:0;margin-top:9px;\n  font:700 13px/1 system-ui;letter-spacing:.03em;color:var(--sand);\n  background:linear-gradient(180deg,#1c2932,#141f26);box-shadow:0 0 0 1px #2a3b46,0 1px 0 #324754 inset}\n.btn.pri{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 24px -8px var(--p1)}\n.btn.gho{background:none;box-shadow:none;color:#7b8e9a}\n.hilfe{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:0;\n  font:800 17px/1 system-ui;color:#9fb3c0;background:#16222a;box-shadow:0 0 0 1px #2a3b46;\n  display:grid;place-items:center;z-index:2}\n.hilfe:active{background:#1e2d38}\n.seglbl{font:600 8.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.26em;color:#7b8e9a;\n  text-transform:uppercase;margin-bottom:6px}\n.seg{display:flex;gap:6px;margin-bottom:12px}\n.seg button{flex:1;padding:10px 0;border:0;border-radius:9px;color:#7b8e9a;\n  font:700 11px/1 system-ui;letter-spacing:.05em;background:#141f26;box-shadow:0 0 0 1px #24343d}\n.seg button.on{color:#fff;background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}\n.hud.top .inner.ai{transform:none;padding-bottom:7px}\n.inner.ai .bar{margin-bottom:0}\n.pips{display:flex;gap:5px;margin-bottom:15px}\n.pip{width:24px;height:3px;border-radius:2px;background:#22323c}\n.pip.on{background:var(--p1)}\n.win{font:900 28px/1.05 system-ui;letter-spacing:-.03em;margin-bottom:7px}\ntable.bal{width:100%;border-collapse:collapse;font:500 11px/1.45 ui-monospace,Menlo,monospace;margin-bottom:12px}\ntable.bal th{text-align:left;color:#7b8e9a;font-weight:700;padding:4px;border-bottom:1px solid #22323c}\ntable.bal td{padding:4px;color:#c8d7e0;border-bottom:1px solid #141f26}\n";
+
+export const HUELLE = "\n<div id=\"app\">\n  <div class=\"hud top p1\" id=\"hud0\"></div>\n  <div id=\"stage\"><canvas id=\"cv\"></canvas><div id=\"uhr\" hidden>0:00</div><button id=\"menuBtn\">≡</button></div>\n  <div class=\"hud bot p2\" id=\"hud1\"></div>\n</div>\n<div id=\"ghost\"><div class=\"gg\">—</div></div>\n\n<div class=\"ov\" id=\"ovMenu\">\n  <div class=\"sheet\" style=\"position:relative\">\n    <button class=\"hilfe\" id=\"bTut\" title=\"Regeln\">?</button>\n    <div class=\"eyebrow\">Taktikduell · ein Gerät · zwei Feldherren</div>\n    <h1>FELD<em>HERR</em></h1>\n    <div class=\"sub\">Ein Brett, mittig geteilt. Echtzeit. Wer das gegnerische Haupthaus einreißt, gewinnt. Auf den Karten steht der Zug- und der Schlagtakt.</div>\n    <div class=\"seglbl\">Stärke der KI</div>\n    <div class=\"seg\" id=\"segLvl\">\n      <button data-l=\"leicht\">Leicht</button>\n      <button data-l=\"normal\" class=\"on\">Normal</button>\n      <button data-l=\"schwer\">Schwer</button>\n    </div>\n    <button class=\"btn pri\" id=\"bAI\">Gegen die KI spielen</button>\n    <button class=\"btn\" id=\"bDuo\">Zu zweit an einem Gerät</button>\n    <button class=\"btn gho\" id=\"bTab\">Einheitenwerte</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovCoin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Münzwurf</div>\n    <h2 id=\"coinWer\">Du wählst</h2>\n    <div class=\"sub\">Wer richtig tippt, setzt sein Haupthaus zuerst.</div>\n    <div class=\"seg\" id=\"segCoin\">\n      <button data-w=\"kopf\">Kopf</button>\n      <button data-w=\"zahl\">Zahl</button>\n    </div>\n  </div>\n</div>\n<div class=\"ov\" id=\"ovTut\" hidden>\n  <div class=\"sheet\">\n    <div class=\"pips\" id=\"pips\"></div>\n    <div id=\"tutBody\"></div>\n    <button class=\"btn pri\" id=\"bNext\">Weiter</button>\n    <button class=\"btn gho\" id=\"bSkip\">Überspringen</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovTab\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Werte</div><h2>Truppen</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>HP</th><th>DMG</th><th>Zug</th><th>Schlag</th><th>Reichw.</th></tr></thead>\n    <tbody>\n      <tr><td>Schwert</td><td>8</td><td>7</td><td>4</td><td>3,0 s</td><td>8 s</td><td>1</td></tr>\n      <tr><td>Bogen</td><td>12</td><td>5</td><td>3</td><td>4,2 s</td><td>7 s</td><td>3</td></tr>\n      <tr><td>Ritter</td><td>30</td><td>26</td><td>4</td><td>5,6 s</td><td>17 s</td><td>1</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Geschlagen wird auch über Eck, gezogen nur waagerecht und senkrecht. Bogenschützen brauchen freie Sicht, treffen aber über eine Mauer <b>direkt vor sich</b> hinweg — und ab Stufe 2 ein Feld weiter. Gegen <b>Mauern</b> richten ihre Pfeile nur <b>halben Schaden</b> an, im Turm ebenso.</p>\n    <div class=\"eyebrow\">Je Ausbaustufe</div>\n    <table class=\"bal\"><tbody>\n      <tr><td>Schwert</td><td>HP +6</td><td>DMG +2</td><td>Schlag −2 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td>Bogen</td><td>HP +2</td><td>DMG +5</td><td>Schlag −1,5 s</td><td>Zug −0,4 s</td></tr>\n      <tr><td></td><td colspan=\"4\">ab Stufe 2 zusätzlich +1 Reichweite</td></tr>\n      <tr><td>Ritter</td><td>HP +10</td><td>DMG +4</td><td>Schlag −3,8 s</td><td>Zug −0,7 s</td></tr>\n    </tbody></table>\n    <p class=\"tx\">Truppen steigen bis Stufe 4 (Kupfer, Silber, Gold, Diamant), indem zwei gleiche derselben Stufe aufeinandertreffen; eine frische Karte auf eine Stufe-1-Truppe wirkt genauso. Wer aufsteigt, schlägt sofort einmal zu.</p>\n\n    <h2>Bauten</h2>\n    <table class=\"bal\"><thead><tr><th></th><th>Preis</th><th>Karten</th><th>Stufe 1 / 2 / 3</th></tr></thead>\n    <tbody>\n      <tr><td>Mauer</td><td>15 / 15 / 25</td><td>3</td><td>50 / 85 / 160 HP</td></tr>\n      <tr><td>Werk 1×2</td><td>25 je Karte</td><td>4</td><td>15 / 23 / 34 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+1 / +2 / +5 Res je s</td></tr>\n      <tr><td></td><td></td><td></td><td>15 / 20 / 25 s Laufzeit</td></tr>\n      <tr><td>Kanone</td><td>35 je Karte</td><td>2</td><td>25 HP · 10 / 8 DMG</td></tr>\n      <tr><td></td><td></td><td></td><td>Reichweite 4 / 7 · 8 s</td></tr>\n      <tr><td>Haupthaus</td><td>—</td><td>1</td><td>36 / 43 / 54 HP</td></tr>\n      <tr><td></td><td></td><td></td><td>+2 / +3 / +4 Res je s</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Kartenkontingent:</b> Werk 4, Mauer 3, Kanone 2 — einmal gesetzt zählt eine Karte für immer, auch wenn das Bauwerk fällt oder du es abreißt (20 % Rückerstattung). Die Zahl in der Kartenecke zeigt den Rest.</p>\n    <p class=\"tx\"><b>Mauer:</b> Mauern werden durch <b>Verbinden</b> stärker. Jede Mauer wiegt so viel, wie Karten in ihr stecken; die Stufe ist das <b>Gewicht der ganzen verbundenen Gruppe</b>: allein Stufe 1, <b>zwei verbunden</b> Stufe 2, <b>drei verbunden</b> Stufe 3. Drei Karten auf dasselbe Feld gestapelt ergeben ebenfalls Stufe 3. Das Leben der Stufe gehört der Gruppe und wird <b>nach Gewicht verteilt</b> — eine Stufe-2-Mauer neben einer frischen Mauer ergibt Stufe 3 mit 107 und 53 HP (2/3 zu 1/3). Jedes Stück fällt einzeln; die übrigen stufen sich danach neu ein.</p>\n    <p class=\"tx\"><b>Werk:</b> belegt 1×2 Felder, Drehung über den Knopf in der Leiste. Eine zweite Karte hebt es auf Stufe 2; liegen zwei Stufe-2-Werke aneinander, verschmelzen sie zu Stufe 3 und bleiben dabei stehen, wo sie sind. Jeder Treffer kostet <b>1 s Laufzeit</b>. Nach Ablauf läuft es auf Sparflamme weiter (+1 / +2 / +2). Fällt es im Kampf, wird alles auf den <b>vier angrenzenden Feldern zerstört</b>, über Eck und zwei Felder weiter 55 %, drei Felder 25 %.</p>\n    <p class=\"tx\"><b>Kanone:</b> unbeweglich, doppelter Schaden an Bauwerken. Stufe 1 zielt erst auf Kanonen, dann Werke; eine Mauer in der Bahn fängt den Schuss ab. Stufe 2 ist ein <b>Mörser</b>: weiter, Steilfeuer über alles hinweg, ein Viertel weniger Schaden, Ziele zuerst Werke, dann Kanonen, dann Haupthaus — dazu 30 % Splitterschaden an Bauten direkt über, unter und neben dem Einschlag.</p>\n    <p class=\"tx\"><b>Haupthaus:</b> Ein eigener <b>Stützpunkt</b> auf Stufe 2 in einem der acht Nachbarfelder hebt es auf Stufe 2 (+20 % HP, +1 Res, Vorrat 50 → 60); Stützpunkte sind Mauer, Werk, Kanone und der Schützenturm. Stufe 3 (+50 % HP, +2 Res) gibt es auf zwei Wegen: ein <b>Werk oder eine Mauer auf Stufe 3</b> daneben — oder <b>zwei Stützpunkte auf Stufe 2</b>, etwa Mauer und Schützenturm. Fallen die Stützpunkte, verschwindet der Ausbau.</p>\n\n    <p class=\"tx\"><b>Rundenbeginn:</b> Eine Münze entscheidet die Reihenfolge. Ein Spieler ruft Kopf oder Zahl, der andere bekommt die zweite Seite; wer richtig liegt, setzt sein Haupthaus zuerst.</p>\n    <h2>Gelände</h2>\n    <table class=\"bal\"><tbody>\n      <tr><td>See</td><td>unpassierbar</td></tr>\n      <tr><td>Gebirge</td><td>unpassierbar, sichtdicht</td></tr>\n      <tr><td>Wald</td><td>Truppen +50 % HP, +25 % DMG</td></tr>\n      <tr><td></td><td>Fernkämpfer −1 Reichweite</td></tr>\n      <tr><td></td><td>Kanone −25 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Haupthaus −20 % erlittener Schaden</td></tr>\n      <tr><td></td><td>Bogen wird Turm: −1/3 erlittener Schaden</td></tr>\n      <tr><td>Vulkan</td><td>Ausbruch: Krater und Rand zerstört</td></tr>\n      <tr><td></td><td>zwei Felder weiter −30 % HP</td></tr>\n      <tr><td></td><td>2,5 % je 10 s, ab 2 min +5 Punkte</td></tr>\n    </tbody></table>\n    <p class=\"tx\"><b>Schützentürme</b> entstehen an zwei Orten. <b>Auf dem Fels</b> (Unterbau <b>+5</b>) sieht der Schütze weiter: +1 Reichweite, +1 Schaden. <b>Im Wald</b> (Gerüst <b>+4</b>) steht er in Deckung: <b>−1/3 erlittener Schaden</b>, dazu die Waldwerte (+50 % Leben, +25 % Schaden), aber −1 Reichweite. Beides gilt auch beim Ausbau. Ein Turm bewegt sich nie wieder, bleibt bei Stufe 2 und zählt zu den drei Schützen-Stellungen.</p>\n    <p class=\"tx\"><b>Auf dem Fels</b> dürfen außerdem Kanone und Werk bauen; der Unterbau kostet jedes Mal <b>+5</b>. Die Kanone bekommt dort +1 Reichweite und +1 Schaden. Ein <b>Werk im Fels</b> muss mit beiden Feldern darauf stehen: −1 Ressource, +50 % HP, kein Kessel, höchstens Stufe 2. Fällt eine Fels-Stellung, blockiert 15 s lang ein brennendes Wrack das Feld.</p>\n    <p class=\"tx\"><b>Erdwärme:</b> Haupthaus oder Werk direkt am Vulkan geben dauerhaft +1 Ressource, ein Werk auf Stufe 3 sogar +2. <b>Panik-Faktor:</b> ein Werk in den beiden vordersten Reihen deiner Hälfte gibt +1.</p>\n\n    <h2>Stellungen</h2>\n    <p class=\"tx\">Ein kurzes Antippen hält eine Truppe an: Sie marschiert nicht mehr, verteidigt ihre Umgebung und nimmt <b>12,5 % weniger Schaden</b>. Von Schützen und von Kämpfern dürfen jeweils höchstens <b>drei</b> gleichzeitig stehen; Schützentürme zählen bei den Schützen mit. Das Schild an der Figur zeigt den Stand der ganzen Gruppe.</p>\n    <p class=\"tx\"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt.</p>\n    <button class=\"btn\" id=\"bTabClose\">Zurück</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovPause\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Pause</div><h2>Partie angehalten</h2>\n    <button class=\"btn pri\" id=\"bResume\">Weiterspielen</button>\n    <button class=\"btn\" id=\"bNeustart\" style=\"display:none\">Neu starten</button>\n    <button class=\"btn\" id=\"bTut2\">Regeln ansehen</button>\n    <button class=\"btn gho\" id=\"bQuit\">Partie beenden</button>\n  </div>\n</div>\n\n<div class=\"ov\" id=\"ovWin\" hidden>\n  <div class=\"sheet\">\n    <div class=\"eyebrow\">Entscheidung</div>\n    <div class=\"win\" id=\"winTx\">—</div>\n    <div class=\"sub\" id=\"winSub\">—</div>\n    <button class=\"btn pri\" id=\"bAgain\">Neue Runde</button>\n    <button class=\"btn gho\" id=\"bMenu2\">Hauptmenü</button>\n  </div>\n</div>\n\n";
+
+/**
+ * Die spielbaren Charaktere samt Werteseite jeder Karte.
+ *
+ * Die Daten kommen aus teile/karten.js — DERSELBEN Quelle, aus der der
+ * Spielkern seine Werte zieht. Deshalb steht dieser Teil als einziger vor
+ * der Spielfunktion: Die Auswahl zeigt die Werteseite, bevor eine Partie
+ * laeuft, und muesste die Zahlen sonst ein zweites Mal pflegen — beim
+ * ersten Balance-Schritt loege die Anzeige.
+ */
+export const CHARAKTERE = Object.keys(HELDEN).map(charakterBlatt);
+
+/** Werteseite einer einzelnen Karte (fuer das Halten auf einer Karte). */
+export function kartenSeite(charakterId, karte) {
+  return kartenBlatt(charakterId, karte);
+}
+
+/**
+ * Startet eine Partie in der bereits eingehaengten Huelle.
+ *
+ * Oertlich (`netz` fehlt) rechnet der Kern wie bisher mit der Bildzeit.
+ * Im Netzspiel uebernimmt der Gleichschritt: feste Takte, Befehle als Zuege.
+ */
+export function starteFeldherr(optionen = {}) {
+  const {
+    modus = 'ki',
+    stufe = 'normal',
+    feld = 'mittel',
+    saat: korn,
+    aufEnde,
+    aufStrittig,
+    netz = null,
+    sitz = 1,
+    /**
+     * Gewaehlter Charakter — er bestimmt die Kartenhand und ihre Werte.
+     *
+     * Im Netzspiel MUSS er auf beiden Geraeten gleich sein, sonst rechnen
+     * sie mit verschiedenen Werten und die Partie wird strittig. Solange
+     * es nur einen Charakter gibt, ist das von selbst erfuellt; sobald es
+     * mehrere sind, muss die Wahl wie das Saatkorn ueber den Tisch
+     * kommen (je Sitz, in den Regeln der Partie) — nicht aus der
+     * oertlichen Auswahl des Geraets.
+     */
+    charakter = 'engineer',
+  } = optionen;
+
+  let laeuft = true;
+  const NETZ = netz;
+  const MEIN_SITZ = sitz;
+
+  /** Warteschlange: Takt -> Zuege, die in diesem Takt auszufuehren sind. */
+  const geplant = new Map();
+  let taktZaehler = 0;
+  let restMs = 0;
+  /** Muessen mit TAKT_MS und VORLAUF_TAKTE aus @brauweg/game-feldherr uebereinstimmen. */
+  const TAKT_MS = 50;
+  const VORLAUF = 6;
+  /**
+   * Sicherheitsabstand beim Einplanen eigener Zuege, zusaetzlich zum Vorlauf.
+   *
+   * Der gemeldete Gegnerstand hinkt dem echten um bis zu einen Pulsabstand
+   * plus Leitungszeit hinterher. Wer nur den Vorlauf draufschlaegt, plant
+   * seinen Zug damit gelegentlich fuer einen Takt, den die Gegenseite beim
+   * Eintreffen schon gerechnet hat — deren Notnagel verschiebt ihn dann
+   * still, und die Partie laeuft unbemerkt auseinander, bis die
+   * Zustandsprobe sie fuer strittig erklaert. Genau so ist ein Haus-Zug
+   * nach einem Tabwechsel zerbrochen.
+   *
+   * Die Sicherheit haengt an zwei Zusagen, beide vom ABSENDER und damit
+   * unabhaengig von der Leitungszeit: Geplant wird bei mindestens
+   * Stand+VORLAUF+PUFFER, und solange ein eigener Zug schwebt, meldet der
+   * Herzschlag hoechstens den Stand seiner Planung (siehe melden). Die
+   * Gegenseite (Grenze: gemeldeter Stand+VORLAUF+PUFFER-1) wartet dadurch
+   * exakt VOR jedem schwebenden Zug. Vier Takte Puffer bedeuten eine halbe
+   * Sekunde Reaktionszeit aufs eigene Legen.
+   */
+  const MELDE_PUFFER = 4;
+  /** Herzschlag-Abstand nach Wanduhr. Deutlich unter VORLAUF * TAKT_MS, sonst
+   *  stockt die Gegenseite zwischen zwei Pulsen. 100 ms statt 200: Je
+   *  frischer der gemeldete Stand, desto enger folgt die Gegenseite — und
+   *  desto kuerzer darf der Meldepuffer sein. Das Gateway nimmt die Pulse
+   *  dafuer aus seinem Nachrichtenfenster aus. */
+  const PULS_MS = 100;
+  /** Abstand der Zustandsproben in Takten. */
+  const PROBE_TAKTE = 40;
+
+  /**
+   * Letzter gemeldeter Takt je Gegensitz. Daraus entsteht die Wissensgrenze:
+   * Die Gegenseite plant Zuege fruehestens fuer ihren Takt plus Vorlauf ein —
+   * bis dorthin (ausschliesslich) ist die eigene Rechnung sicher.
+   */
+  const gegnerStand = { 0: 0, 1: 0 };
+  /** Eigene Pruefsummen an den 40er-Grenzen, fuer den Abgleich. */
+  const proben = new Map();
+  /** Gemeldete Summen der Gegenseite, bis die eigene Grenze erreicht ist. */
+  const fremdeProben = new Map();
+  let strittigGemeldet = false;
+
+  /**
+   * Takt fuer den naechsten eigenen Zug. Streng aufsteigend, denn der Server
+   * lehnt zwei Zuege desselben Sitzes im selben Takt ab; und nie hinter dem
+   * Gegnerstand, sonst laege der Zug beim Aufholen in dessen Vergangenheit.
+   */
+  let letzterMeldeTakt = 0;
+  function planTakt() {
+    let basis = taktZaehler;
+    for (const s of [0, 1]) if (s !== MEIN_SITZ) basis = Math.max(basis, gegnerStand[s]);
+    const t = Math.max(basis + VORLAUF + MELDE_PUFFER, letzterMeldeTakt + 1);
+    letzterMeldeTakt = t;
+    return t;
+  }
+
+  /**
+   * Eigene Zuege schweben, bis der Server sie zurueckgespielt hat. Solange
+   * einer schwebt, meldet der Herzschlag hoechstens den Stand seiner
+   * Planung. Ohne den Deckel ueberholt der Puls den Zug im Server — der
+   * Zug wartet dort auf die Datenbank, der Puls nicht —, die Gegenseite
+   * laeuft ueber den Zugtakt hinaus, und der Zug kommt zu spaet an: genau
+   * der Notnagel-Fall, der Partien strittig machte. Mit dem Deckel wartet
+   * die Gegenseite exakt VOR dem schwebenden Zug, bis die Sicht ihn
+   * bringt; da jede Leitung ihre Reihenfolge wahrt, kommt kein spaeter
+   * gemeldeter Stand vor dem Zug an.
+   *
+   * Der Verfall deckt den Fall, dass der Server einen Zug ablehnt: Ein
+   * Geisterzug froere den gemeldeten Stand sonst fuer immer ein.
+   */
+  const schwebend = [];
+  const SCHWEBE_VERFALL_MS = 4000;
+  /**
+   * Sofortige Lege-Vorschau: Zwischen Fingertipp und Ausfuehrung liegt eine
+   * halbe Sekunde Gleichschritt — ohne sichtbare Reaktion fuehlt sich das
+   * wie Eingabe-Lag an, obwohl alles planmaessig laeuft. Der pulsierende
+   * Rahmen auf dem Zielfeld erscheint im selben Bild wie der Tipp und
+   * verschwindet, sobald der Takt den Zug ausfuehrt. Reine Zeichnung,
+   * beruehrt den Zustand nicht.
+   */
+  let vorschau = [];
+  function melden(zug) {
+    const takt = planTakt();
+    schwebend.push({ takt, seit: performance.now() });
+    if (zug.r !== undefined && zug.c !== undefined) {
+      vorschau.push({ takt, r: zug.r, c: zug.c });
+    }
+    NETZ.melde({ ...zug, takt });
+  }
+
+
+"use strict";
+/* ============================================================
+   FELDHERR — standalone, keine externen Abhängigkeiten
+   Teil 1: Regeln und Zustand
+   ============================================================ */
+
+/* ---------- Zufall aus einem Saatkorn ----------------------------------------
+ * Alles Spielrelevante zieht aus dieser Quelle, nie aus zufall(). Nur so
+ * rechnen zwei Geräte dieselbe Partie aus, wenn sie denselben Anfangswert
+ * bekommen — die Voraussetzung für ein Netzspiel ohne ständige Zustandsfunkerei.
+ * mulberry32: klein, schnell, gleichverteilt genug für ein Brettspiel.
+ */
+let ZSTAND = 1;
+function saat(wert){ ZSTAND = (wert>>>0) || 1; }
+function zufall(){
+  ZSTAND = (ZSTAND + 0x6D2B79F5) >>> 0;
+  let t = ZSTAND;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+saat((Date.now() ^ 0x9E3779B9) >>> 0);
+
+/* Zufall fürs Auge: Rauch, Funken, Bildschirmwackeln. Absichtlich NICHT aus
+ * dem Saatkorn: Gezeichnet wird je Bild, und zwei Geräte haben nie dieselbe
+ * Bildfolge. Zöge die Deko aus zufall(), verschöbe jedes gezeichnete Bild den
+ * Spielzufall — und zwei Geräte rechneten allein durchs Zuschauen verschiedene
+ * Partien. Regel beim Ändern: zufall() nur für Dinge, die den Spielverlauf
+ * betreffen (Gelände, KI, Münze, Trefferstreuung); deko() für alles Sichtbare
+ * ohne Spielwirkung (Partikel, Wackeln, Flackern). */
+const deko = Math.random;
+
+/* Eine Liste mit dem Spielzufall mischen — NIEMALS über
+ * sort(()=>zufall()-0.5): Wie oft sort() seinen Vergleicher ruft, entscheidet
+ * die Browser-Engine, und Safari sortiert anders als Chrome. Jeder Aufruf
+ * zieht aus dem Saatkorn — iPhone gegen Desktop verbrauchte darum
+ * verschieden viel Zufall, die Läufe trennten sich mit dem ersten Gefecht,
+ * und die Partie wurde strittig. Fisher-Yates zieht exakt (n-1)-mal, auf
+ * jeder Engine gleich. */
+function mische(liste){
+  for(let i=liste.length-1;i>0;i--){
+    const j=Math.floor(zufall()*(i+1));
+    const t=liste[i]; liste[i]=liste[j]; liste[j]=t;
+  }
+  return liste;
+}
+
+let COLS = 8, ROWS = 12, MID = 6;        // obere Hälfte Spieler 1, untere Spieler 2
+/* Geometrie-Entscheid vom 7. August 2026 (docs/FELDHERR-3D-UMBAU.md): EIN
+ * festes Brett für alle Partien, 8 × 12. Die alten Schlüssel klein/mittel/
+ * gross leben in Tisch-Optionen und alten Partieständen weiter — setzeFeld
+ * nimmt sie deshalb weiter an, sie bedeuten aber alle dasselbe Brett. */
+const FELD = {c:8, r:12};
+const grosseKarte = () => ROWS >= 14;
+function setzeFeld(){
+  COLS = FELD.c; ROWS = FELD.r; MID = FELD.r/2;
+}
+const MAXLVL = 4, MOVE_T = 0.34;
+
+/* ---------- Kartenhand des Charakters ----------
+ * Katalog, Charaktere und die Werte-Rechnung stehen in teile/karten.js —
+ * im Modulrahmen, damit die Auswahl im Bildschirm dieselben Zahlen liest,
+ * ohne eine Partie zu starten. Hier steht nur, was daraus fuer DIESE
+ * Partie gilt.
+ */
+let CHARAKTER = 'engineer';
+let DEFS = {};
+let CARD_ORDER = [];
+let UPCOST = {};
+/**
+ * Kartenhand des Charakters aufbauen. Läuft EINMAL vor dem Rundenstart —
+ * danach steht sie fest. Im Netzspiel müssen beide Geräte denselben
+ * Charakter setzen, sonst rechnen sie mit verschiedenen Werten und die
+ * Partie wird strittig (die Anbindung setzt ihn deshalb aus derselben
+ * Quelle wie das Saatkorn).
+ */
+function setzeCharakter(id){
+  const hand = handVon(id);
+  CHARAKTER = hand.charakter === HELDEN[id] ? id : 'engineer';
+  CARD_ORDER = hand.reihe;
+  DEFS = hand.defs;
+  UPCOST = hand.preise;
+}
+setzeCharakter(CHARAKTER);
+const RES_CAP = 50;                       // mehr als 50 Ressourcen lassen sich nicht horten
+const REFUND  = 0.2;                      // Abriss bringt ein Fünftel zurück
+function costOf(type, toLvl){             // was die Karte an dieser Stelle kostet
+  const u = UPCOST[type];
+  return (u && toLvl>1) ? u[Math.min(toLvl,u.length)-1] : DEFS[type].cost;
+}
+function investOf(e){                     // was insgesamt hineingeflossen ist
+  // Bit-Schub statt Math.pow: pow ist zwischen Engines nicht bitgenau
+  // festgelegt, und der Preis fließt in den Spielzustand.
+  if(DEFS[e.type].unit) return DEFS[e.type].cost * (1 << (e.lvl-1));
+  // Bei Mauern zählt, was WIRKLICH bezahlt wurde (Karten), nicht die Stufe
+  // aus dem Verbund — sonst wäre das Anbauen und Abreißen eine Geldquelle.
+  const stufen = e.type==='mauer' ? mauerGewicht(e) : e.lvl;
+  let sum=0; for(let l=1;l<=stufen;l++) sum += costOf(e.type,l);
+  return sum;
+}
+/* Was die Werkstatt selbst mauert, war nie bezahlt — dafür gibt es beim
+ * Abriss auch nichts zurück. Ohne diese Ausnahme wäre eine Werkstatt auf
+ * Fels eine Geldquelle: alle 30 Sekunden eine Mauer, abreißen, Fünftel
+ * kassieren. */
+const refundOf = e => e.frei ? 0 : Math.floor(investOf(e)*REFUND);
+const countOf = (own,type) => G.ents.filter(e=>e.owner===own && e.type===type).length;
+function restOf(own,type){                       // verbrauchte Karten kommen nicht zurück
+  const lim = DEFS[type].cardLimit;
+  if(!lim) return null;
+  return Math.max(0, lim - (G.used[own][type]||0));
+}
+/* Geschenkte Karten liegen NEBEN dem Kontingent: Wer eine auf der Hand
+ * hat, darf legen, auch wenn seine drei Mauern längst verbaut sind. */
+function atLimit(own,type){
+  if(gratisRest(own,type) > 0) return false;
+  const r=restOf(own,type); return r!==null && r<=0;
+}
+function verbrauche(own,type){
+  if(DEFS[type].cardLimit) G.used[own][type] = (G.used[own][type]||0) + 1;
+}
+const canMove = e => !!DEFS[e.type].unit && !e.turm;   // im Turm wird nicht marschiert
+const STELLUNGEN = 3;                                  // je Gruppe höchstens drei Stellungen
+const gruppeVon = e => e.type==='bogen' ? 'schuetze' : (DEFS[e.type].unit ? 'kaempfer' : null);
+const stellungen = (own, gruppe) => G.ents.filter(e =>
+      e.owner===own && gruppeVon(e)===gruppe && (e.halt || e.turm)).length;
+/* Schützenstellungen hängen am Ausbau des Haupthauses (Entscheid vom
+ * 7. August 2026): Stufe 1 trägt eine, Stufe 2 zwei, Stufe 3 drei,
+ * Stufe 4 vier. Wer Stellungen will, muss zuerst sein Haus ausbauen —
+ * vorher stand die Grenze fest bei drei und war schon in der ersten
+ * Minute erreichbar.
+ *
+ * EINE Grenze für beides: Türme (Fels und Wald) und angehaltene
+ * Bogenschützen zählen zusammen. Beide sind dasselbe — ein Schütze, der
+ * stehenbleibt und schießt —, und zwei getrennte Grenzen ließen sich
+ * schlicht addieren. Für die Kämpfer (Schwert, Ritter) bleibt es bei
+ * STELLUNGEN.
+ */
+const STELLUNGEN_JE_HAUS = [1, 2, 3, 4];               // Hausstufe 1 … 4
+const stellungsGrenze = (own, gruppe) =>
+      gruppe==='schuetze'
+        ? STELLUNGEN_JE_HAUS[Math.min(hausSt(own), STELLUNGEN_JE_HAUS.length) - 1]
+        : STELLUNGEN;
+function rngOf(e){
+  let r = statsOf(e.type,e.lvl).rng;
+  if(e.type==='bogen' && e.lvl>=2) r += 1;             // geübte Schützen spannen weiter
+  if(r > 1 && grosseKarte()) r += 1;                   // weites Feld, weite Schüsse
+  if(e.berg) r += 1;                                   // erhöhter Stand sieht weiter
+  if(r > 1 && envAt(e.r,e.c)==='wald') r -= 1;         // im Dickicht fehlt die Sicht
+  return Math.max(1, r);
+}
+const canAtt  = e => !!(DEFS[e.type].unit || DEFS[e.type].att);
+
+/* Die Formel steht in teile/karten.js (werteVon) — dieselbe, aus der die
+ * Werteseite der Auswahl ihre Zahlen zieht. Zwei Formeln wären zwei
+ * Wahrheiten, und die Anzeige löge beim ersten Balance-Schritt. */
+const statsOf = (type, lvl) => werteVon(DEFS[type], lvl);
+const sizeOf   = type => DEFS[type].size || 1;
+const maxLvlOf = type => DEFS[type].unit ? MAXLVL : DEFS[type].lvls.length;
+
+let G = null;
+let phase = 'menu';           // menu | place | war | over
+let paused = false;
+
+function newState(){
+  return {
+    grid: Array.from({length:ROWS},()=>Array.from({length:COLS},()=>({env:null,ent:null}))),
+    envs: [], ents: [], fx: [],
+    res: [0,0], placed:[false,false], erst:0, coin:null, t:0, nextId:1,
+    sel: [null,null], armed:[null,null], orient:[false,false], raze:[false,false],
+    hb:[1,1], sperren:[],
+    /* Geschenkte Karten auf der Hand (Werkstatt im Fels): je Spieler und
+     * Kartenart ein Vorrat. Sie kosten nichts und zaehlen nicht gegen das
+     * Kartenlimit. */
+    gratis: [{},{}],
+    used: [{},{}], winner:null
+  };
+}
+
+/* ---------- Geländewurf: gleiche Art und Anzahl je Seite, andere Lage ---------- */
+const rnd = n => Math.floor(zufall()*n);
+
+function rollPlan(){
+  let plan = [];
+  for(let pass=0; pass<3 && plan.length===0; pass++){   // ein völlig kahles Brett neu würfeln
+    plan = [];
+    let dichte = (COLS*MID)/36;                   // größere Bretter tragen mehr Gelände
+    if(grosseKarte()) dichte *= 1.30;
+    const roll = (type,p0,max)=>{
+      const p = grosseKarte() ? Math.min(0.95, p0*1.10) : p0;
+      let n=0;
+      if(zufall()<p){ n=1;
+        for(let k=2;k<=max;k++) if(zufall()<p*0.60*dichte) n=k; else break;
+      }
+      for(let i=0;i<n;i++) plan.push(type);
+    };
+    roll('see',0.55,3); roll('gebirge',0.72,3); roll('wald',0.85,3); roll('vulkan',0.35,1);
+  }
+  return plan;
+}
+function shapeOf(type){
+  if(type==='gebirge') return zufall()<0.5 ? [1,2] : [2,1];
+  if(type==='vulkan')  return [2,2];
+  return [1,1];
+}
+function placeSide(plan, side){
+  const r0 = side===0 ? 0 : MID, r1 = side===0 ? MID-1 : ROWS-1;
+  const used = new Set(), out = [];
+  for(const type of plan){
+    let ok=false;
+    for(let tries=0; tries<160 && !ok; tries++){
+      const [w,h] = shapeOf(type);
+      const c = rnd(COLS-w+1), r = r0 + rnd((r1-r0+1)-h+1);
+      const cells=[]; let free=true;
+      for(let dr=0;dr<h;dr++) for(let dc=0;dc<w;dc++){
+        const k=(r+dr)+'.'+(c+dc);
+        if(used.has(k)) free=false; else cells.push({r:r+dr,c:c+dc});
+      }
+      if(!free) continue;
+      cells.forEach(p=>used.add(p.r+'.'+p.c));
+      out.push({type, cells, r0:r, c0:c, w, h, side, seed:zufall()*1000});
+      ok=true;
+    }
+    if(!ok) return null;
+  }
+  if(used.size > Math.round(COLS*MID*0.45)) return null;
+  return out;
+}
+function mirrorClash(A,B){
+  const key = o => o.type+'|'+o.cells.map(p=>p.r+'.'+p.c).sort().join(',');
+  const mir  = new Set(A.map(o => o.type+'|'+o.cells.map(p=>(ROWS-1-p.r)+'.'+p.c).sort().join(',')));
+  const mir2 = new Set(A.map(o => o.type+'|'+o.cells.map(p=>(ROWS-1-p.r)+'.'+(COLS-1-p.c)).sort().join(',')));
+  return B.some(o => mir.has(key(o)) || mir2.has(key(o)));
+}
+function connectivityOK(objs){
+  const solid = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  for(const o of objs) if(o.type==='see'||o.type==='gebirge')
+    o.cells.forEach(p=>solid[p.r][p.c]=true);
+  let start=null, free=0;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(!solid[r][c]){ free++; if(!start) start={r,c}; }
+  if(!start) return false;
+  const seen = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  const st=[start]; seen[start.r][start.c]=true; let n=1;
+  while(st.length){
+    const p=st.pop();
+    for(const [dr,dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const r=p.r+dr, c=p.c+dc;
+      if(r<0||c<0||r>=ROWS||c>=COLS||solid[r][c]||seen[r][c]) continue;
+      seen[r][c]=true; n++; st.push({r,c});
+    }
+  }
+  if(n!==free) return false;                       // kein Feld darf eingeschlossen sein
+  for(const side of [0,1]){
+    let o=0;
+    for(let r=side?MID:0; r<(side?ROWS:MID); r++) for(let c=0;c<COLS;c++) if(!solid[r][c]) o++;
+    if(o < Math.round(COLS*MID*0.64)) return false;
+  }
+  return true;
+}
+function generateTerrain(){
+  for(let att=0; att<600; att++){
+    const plan = rollPlan();
+    const A = placeSide(plan,0); if(!A) continue;
+    const B = placeSide(plan,1); if(!B) continue;
+    if(mirrorClash(A,B)) continue;
+    const all = A.concat(B);
+    if(!connectivityOK(all)) continue;
+    return all;
+  }
+  return [];
+}
+
+/* ---------- Zugriff ---------- */
+const inBoard = (r,c)=> r>=0&&c>=0&&r<ROWS&&c<COLS;
+const sideOf  = r => r<MID ? 0 : 1;
+const cell    = (r,c)=> G.grid[r][c];
+function envAt(r,c){ const e=cell(r,c).env; return e?e.type:null; }
+function walkable(r,c){ const t=envAt(r,c); return t!=='see' && t!=='gebirge'; }
+function freeCell(r,c){ return walkable(r,c) && !cell(r,c).ent; }
+function blocksSight(r,c){
+  const t=envAt(r,c); if(t==='gebirge') return true;
+  const e=cell(r,c).ent; return !!(e && e.type==='mauer');
+}
+function entAt(r,c){ return inBoard(r,c) ? cell(r,c).ent : null; }
+
+function addEnt(type, owner, r, c, lvl=1, vert, feste){
+  const s = statsOf(type,lvl), n = sizeOf(type);
+  let cells, w, h;
+  if(feste && feste.length){
+    cells = feste.map(p=>({r:p.r,c:p.c}));
+    const rs=cells.map(p=>p.r), cs=cells.map(p=>p.c);
+    r=Math.min(...rs); c=Math.min(...cs);
+    w=Math.max(...cs)-c+1; h=Math.max(...rs)-r+1;
+  } else {
+    w = n===1 ? 1 : (vert?1:2); h = n===1 ? 1 : (vert?2:1);
+    cells=[];
+    for(let dr=0;dr<h;dr++) for(let dc=0;dc<w;dc++) cells.push({r:r+dr, c:c+dc});
+  }
+  const e = {id:G.nextId++, type, owner, r, c, w, h, cells, lvl, hp:s.hp,
+             timer:0, mtimer:0, idle:0, flash:0, nudge:0, spawn:0, mt:9, fr:r, fc:c,
+             atk:0, adx:0, ady:0, ph:zufall()*6.283, born:G.t,
+             leben: statsOf(type,lvl).laufzeit || 0, tot:false,
+             aim: (owner===0 ? Math.PI/2 : -Math.PI/2), aimZiel:null};
+  if(envAt(r,c)==='wald' && DEFS[type].unit) e.hp = Math.round(s.hp*1.5);
+  /* Schützenturm im Wald (Entscheid vom 7. August 2026): Der Bogen baut
+   * sich auch in den Baumwipfeln eine Stellung — anders als auf dem Fels
+   * ohne Rundumsicht (der Wald kostet weiter eine Reichweite), dafür mit
+   * Deckung: ein Drittel weniger erlittener Schaden, siehe trefferAuf.
+   * Kein `berg`: Nur die Felsstellung hinterlässt ein brennendes Wrack. */
+  if(envAt(r,c)==='wald' && type==='bogen') e.turm = true;
+  if(cells.some(p=>envAt(p.r,p.c)==='gebirge')){
+    e.berg = true;                                     // Stellung im oder auf dem Fels
+    if(type==='bogen') e.turm = true;                  // der Schütze bekommt einen Turm
+    if(type==='werk') e.hp = maxHp(e);                 // Felswerk startet mit vollem Panzer
+  }
+  e.cells = cells = cells.filter(p=>inBoard(p.r,p.c));   // nie über den Brettrand hinaus
+  if(!cells.length) return e;
+  G.ents.push(e);
+  for(const p of cells) cell(p.r,p.c).ent = e;
+  return e;
+}
+function removeEnt(e){
+  for(const p of e.cells) if(cell(p.r,p.c).ent===e) cell(p.r,p.c).ent=null;
+  const i=G.ents.indexOf(e); if(i>=0) G.ents.splice(i,1);
+}
+function entCells(type, r, c, vert){
+  const n=sizeOf(type), w=n===1?1:(vert?1:2), h=n===1?1:(vert?2:1);
+  const cells=[];
+  for(let dr=0;dr<h;dr++) for(let dc=0;dc<w;dc++) cells.push({r:r+dr, c:c+dc});
+  return cells;
+}
+function maxHp(e){
+  // Mauern tragen ihren Anteil am Gruppenleben selbst (siehe mauerNetz);
+  // die Stufenwerte gelten dort für die ganze Gruppe, nicht je Stück.
+  if(e.type==='mauer' && e.hpMax) return e.hpMax;
+  let b = statsOf(e.type,e.lvl).hp;
+  if(e.type==='werk' && e.berg) b = Math.round(b*1.5);   // in den Fels gebaut
+  if(e.type==='haus') b = Math.round(b * HAUS_HP[hausSt(e.owner)-1]);
+  return (DEFS[e.type].unit && envAt(e.r,e.c)==='wald') ? Math.round(b*1.5) : b;
+}
+function dmgOf(e, target){
+  let d = statsOf(e.type,e.lvl).dmg;
+  if(e.berg) d += 1;                                   // von oben trifft es härter
+  if(DEFS[e.type].unit && envAt(e.r,e.c)==='wald') d = Math.round(d*1.25);
+  if(target && DEFS[e.type].siege && !DEFS[target.type].unit) d *= DEFS[e.type].siege;
+  // Rammbock: manche Truppen (Engineer-Ritter) reißen Bauten ein, statt
+  // sie zu bekratzen. Getrennt von `siege`, damit Kanone und Ritter sich
+  // nicht dieselbe Zahl teilen müssen.
+  if(target && DEFS[e.type].bauSchaden && !DEFS[target.type].unit)
+    d = Math.round(d * DEFS[e.type].bauSchaden);
+  if(target && e.type==='bogen' && target.type==='mauer')
+    d = Math.max(1, Math.round(d*0.5));                // Pfeile richten an Stein wenig aus
+  return d;
+}
+function stuetzpunkt(o){                               // taugt als Stützpunkt am Haupthaus
+  if(!o || o.lvl<2) return false;
+  return o.type==='kanone' || o.type==='mauer' || o.type==='werk' || (o.type==='bogen' && o.turm);
+}
+const HAUS_HP  = [1, 1.2, 1.5, 1.9];                   // Stufe 1 / 2 / 3 / 4
+const HAUS_EXTRA = [0, 1, 2, 3];
+const HAUS_CAP = [0, 10, 10, 20];
+function nebenHaus(own, r, c){
+  const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
+  if(!h) return false;
+  return Math.abs(h.r-r)<=1 && Math.abs(h.c-c)<=1 && !(h.r===r && h.c===c);
+}
+/* Ausbaustufe des Haupthauses aus seiner Nachbarschaft.
+ *
+ * Zwei Wege führen zur Stufe 3 (Entscheid vom 7. August 2026):
+ * ein einzelner Stützpunkt auf Stufe 3 (Werk oder Mauer) — oder ZWEI
+ * Stützpunkte auf Stufe 2, etwa eine Mauer und ein Schützenturm. Vorher
+ * gab es nur den ersten Weg, und breit gebaute Stellungen brachten dem
+ * Haus nichts.
+ *
+ * Stufe 4 ist die Krönung (Entscheid vom 7. August 2026): Sie verlangt
+ * BEIDES am Haus — eine Mauer auf Stufe 3 UND eine Werkstatt auf
+ * Stufe 3. Das ist der teuerste Ausbau des Spiels und die einzige Stelle,
+ * an der Wirtschaft und Befestigung zusammen zählen.
+ *
+ * Gezählt werden OBJEKTE, nicht Felder: Ein Werk belegt 1×2 und kann mit
+ * beiden Feldern am Haus liegen — ohne die Kennungsprüfung zählte es
+ * doppelt und höbe das Haus im Alleingang auf Stufe 3.
+ */
+function hausStufe(own){
+  const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
+  if(!h) return 1;
+  let st = 1, stuetzen = 0, mauerVoll = false, werkVoll = false;
+  const gezaehlt = new Set();
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+    if(!dr && !dc) continue;
+    const o = entAt(h.r+dr, h.c+dc);
+    if(!o || o.owner!==own || gezaehlt.has(o.id)) continue;
+    gezaehlt.add(o.id);
+    if(stuetzpunkt(o)) stuetzen += 1;
+    if((o.type==='werk' || o.type==='mauer') && o.lvl>=3) st = 3;   // volle Stufe hebt ganz hoch
+    if(o.type==='mauer' && o.lvl>=3) mauerVoll = true;
+    if(o.type==='werk'  && o.lvl>=3) werkVoll  = true;
+  }
+  if(stuetzen >= 2) st = 3;
+  else if(stuetzen >= 1) st = Math.max(st, 2);
+  if(mauerVoll && werkVoll) st = 4;
+  return st;
+}
+const hausSt = own => (G.hb && G.hb[own]) || 1;
+const capOf = own => RES_CAP + HAUS_CAP[hausSt(own)-1];
+const PANIK = 2;                                       // die zwei vordersten Reihen je Seite
+function inPanik(owner, r){
+  return owner===0 ? r>=MID-PANIK && r<MID : r>=MID && r<MID+PANIK;
+}
+const panikBonus = e => (e.type==='werk' && e.cells.some(p=>inPanik(e.owner,p.r))) ? 1 : 0;
+function nebenVulkan(r,c){                             // grenzt das Feld an glühenden Fels?
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+    if(!dr && !dc) continue;
+    const rr=r+dr, cc=c+dc;
+    if(inBoard(rr,cc) && envAt(rr,cc)==='vulkan') return true;
+  }
+  return false;
+}
+function vulkanBonus(e){                               // Erdwärme zapft man am Kraterrand an
+  if(e.type!=='haus' && e.type!=='werk') return 0;
+  if(!e.cells.some(p=>nebenVulkan(p.r,p.c))) return 0;
+  return (e.type==='werk' && e.lvl>=3) ? 2 : 1;
+}
+function incomeOf(e){
+  let voll = statsOf(e.type,e.lvl).income || 0;
+  if(e.type==='werk' && e.berg) voll = Math.max(0, voll-1);   // der Fels frisst Ertrag
+  if(e.type==='haus') voll += HAUS_EXTRA[hausSt(e.owner)-1];   // ausgebautes Haupthaus
+  if(!voll) return 0;
+  const REST = [1,2,2];                                // erschöpft: Stufe 1/2/3
+  const b = e.tot ? (e.type==='werk' ? REST[Math.min(e.lvl,3)-1] : 0) : voll;
+  return b ? b + panikBonus(e) + vulkanBonus(e) : 0;
+}
+function cdOf(e){ return statsOf(e.type,e.lvl).cd; }
+function mcdOf(e){ return statsOf(e.type,e.lvl).mcd; }
+function ready(e){ return canMove(e) && e.mtimer >= mcdOf(e); }          // Zug bereit
+function attReady(e){ return canAtt(e) && e.timer >= cdOf(e); }          // Schlag bereit
+
+function moveTargets(e){
+  const out=[];
+  for(const [dr,dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const r=e.r+dr, c=e.c+dc;
+    if(!inBoard(r,c) || !walkable(r,c)) continue;
+    const o = entAt(r,c);
+    if(!o) out.push({r,c,merge:false});
+    // Türme wachsen NICHT durchs Zusammenlaufen (Entscheid vom 7. August
+    // 2026): Ein Turm wird ausgebaut, indem man die Karte noch einmal
+    // darauf legt — sonst schob sich ein vorbeiziehender Schütze
+    // ungefragt in die Stellung, und der Turm stieg auf, ohne dass
+    // jemand es wollte.
+    else if(o.owner===e.owner && o.type===e.type && o.lvl===e.lvl && e.lvl<MAXLVL
+            && DEFS[e.type].unit && !o.turm)
+      out.push({r,c,merge:true});
+  }
+  return out;
+}
+function losClear(r0,c0,r1,c1){
+  const steps = Math.max(Math.abs(r1-r0), Math.abs(c1-c0));
+  if(steps<=1) return true;
+  for(let i=1;i<steps;i++){
+    const t=i/steps, rr=r0+(r1-r0)*t, cc=c0+(c1-c0)*t;
+    const rs=new Set([Math.floor(rr+1e-6), Math.ceil(rr-1e-6)]);
+    const cs=new Set([Math.floor(cc+1e-6), Math.ceil(cc-1e-6)]);
+    let allBlocked=true;
+    for(const a of rs) for(const b of cs)
+      if(!inBoard(a,b) || !blocksSight(a,b)) allBlocked=false;
+    if(allBlocked) return false;
+  }
+  return true;
+}
+function nearestPair(e,o){                       // dichtestes Zellenpaar zweier Objekte
+  let best=null, bd=99;
+  for(const p of e.cells) for(const q of o.cells){
+    const d=Math.max(Math.abs(p.r-q.r), Math.abs(p.c-q.c));
+    if(d<bd){ bd=d; best={from:p, to:q, d}; }
+  }
+  return best;
+}
+function lineBlock(r0,c0,r1,c1,owner){        // erstes Hindernis auf der Flugbahn
+  const steps=Math.max(Math.abs(r1-r0),Math.abs(c1-c0));
+  for(let i=1;i<steps;i++){
+    const t=i/steps;
+    const r=Math.round(r0+(r1-r0)*t), c=Math.round(c0+(c1-c0)*t);
+    if(!inBoard(r,c)) continue;
+    if(envAt(r,c)==='gebirge') return {kind:'berg'};
+    const o=entAt(r,c);
+    if(o && o.type==='mauer' && o.owner!==owner) return {kind:'mauer', ent:o};
+  }
+  return null;
+}
+function ueberMauerFrei(e, from, to){          // direkt vor der Mauer: das Feld dahinter geht
+  const dr=to.r-from.r, dc=to.c-from.c;
+  if(Math.max(Math.abs(dr),Math.abs(dc))!==2) return false;
+  if(Math.abs(dr)===2 && Math.abs(dc)===1) return false;   // schräge Bahnen bleiben verstellt
+  if(Math.abs(dc)===2 && Math.abs(dr)===1) return false;
+  const mr=from.r+Math.sign(dr), mc=from.c+Math.sign(dc);
+  if(!inBoard(mr,mc) || envAt(mr,mc)==='gebirge') return false;
+  const o=entAt(mr,mc);
+  return !!(o && o.type==='mauer');
+}
+function attackTargets(e){
+  if(!canAtt(e)) return [];
+  const rng = rngOf(e), st = statsOf(e.type,e.lvl), siege = !!DEFS[e.type].siege;
+  const out=[], seen=new Set();
+  for(const o of G.ents){
+    if(o.owner===e.owner || o===e) continue;
+    const np = nearestPair(e,o);
+    if(!np || np.d>rng || np.d===0) continue;
+    if(siege){
+      if(st.arc){ out.push(o); continue; }             // Steilfeuer nimmt keine Rücksicht
+      const b = lineBlock(np.from.r,np.from.c,np.to.r,np.to.c,e.owner);
+      if(b && b.kind==='berg') continue;              // der Berg schluckt den Schuss
+      const echt = b ? b.ent : o;                     // eine Mauer fängt ihn ab
+      if(!seen.has(echt.id)){ seen.add(echt.id); out.push(echt); }
+      continue;
+    }
+    if(e.turm){ out.push(o); continue; }               // vom Turm aus ist die Sicht frei
+    if(!losClear(np.from.r,np.from.c,np.to.r,np.to.c) &&
+       !(DEFS[e.type].ueberMauer && ueberMauerFrei(e,np.from,np.to))) continue;
+    out.push(o);
+  }
+  return out;
+}
+function pickTarget(list, e){
+  const dmgTo = o => dmgOf(e,o);
+  const siege = !!DEFS[e.type].siege;
+  const score = o => {
+    const lethal = o.hp <= dmgTo(o);
+    if(siege){
+      const arc = statsOf(e.type,e.lvl).arc;
+      const rank = arc                                   // Mörser: erst Werke, dann Kanonen, dann Haus
+        ? (o.type==='werk' ? 0 : o.type==='kanone' ? 1 : o.type==='haus' ? 2 : DEFS[o.type].unit ? 4 : 3)
+        : (o.type==='kanone' ? 0 : o.type==='werk' ? 1 : o.type==='haus' ? 2 : DEFS[o.type].unit ? 4 : 3);
+      return rank*100 + (lethal?0:40) + o.hp/1000;
+    }
+    const rank = o.type==='haus' ? 1 : DEFS[o.type].unit ? 0 : 2;
+    return (lethal ? 0 : 100) + rank*10 + o.hp/1000;
+  };
+  return list.slice().sort((a,b)=>score(a)-score(b))[0];
+}
+
+/* ---------- Werke wachsen durch Berührung ---------- */
+function beruehrt(a,b){
+  for(const p of a.cells) for(const q of b.cells)
+    if(Math.abs(p.r-q.r)+Math.abs(p.c-q.c)===1) return true;
+  return false;
+}
+function fuseWerke(still){
+  for(const own of [0,1]){
+    for(let runde=0; runde<4; runde++){
+      const ws = G.ents.filter(e=>e.owner===own && e.type==='werk' &&
+                                  e.lvl===DEFS.werk.fuseAt && !e.berg);  // Felswerke wachsen nicht weiter
+      let fusion=false;
+      for(let i=0;i<ws.length && !fusion;i++)
+        for(let j=i+1;j<ws.length && !fusion;j++){
+          const a=ws[i], b=ws[j];
+          if(a.lvl!==b.lvl || !beruehrt(a,b)) continue;
+          const cells=a.cells.concat(b.cells), lvl=a.lvl+1;
+          const teile=(a.rects||rechtecke(a.cells)).concat(b.rects||rechtecke(b.cells));
+          removeEnt(a); removeEnt(b);
+          const nu=addEnt('werk', own, 0, 0, lvl, false, cells);
+          nu.rects = teile;                       // beide Hälften bleiben sichtbar bestehen
+          nu.spawn=0.35; nu.flash=.5;
+          if(!still) fxText(nu.r, nu.c, 'STUFE '+lvl, '#ffd977', 0);
+          for(const p of cells){
+            fxRing(p.r,p.c,'#ffd977');
+            burst(midX(p.c), midY(p.r), TH*0.5, 10, 'spark', '#ffe6a0');
+          }
+          fusion=true;
+        }
+      if(!fusion) break;
+    }
+  }
+}
+
+/* ---------- Werkstatt im Fels: sie liefert Mauern ----------
+ * Regel des Auftraggebers (7. August 2026, Engineer): Eine Werkstatt auf
+ * Stein hat den Steinbruch gleich vor der Tür und legt alle 30 Sekunden
+ * eine Mauer auf die HAND; ab Stufe 2 alle 25 (DEFS.werk.mauerbau).
+ *
+ * Auf die Hand, nicht aufs Brett: Wo die Mauer hingehört, weiß der
+ * Spieler besser als jede Regel — eine selbstgesetzte Mauer stünde
+ * zwangsläufig neben der Werkstatt, also weit hinten, wo sie niemanden
+ * aufhält.
+ *
+ * Die Karte ist GESCHENKT: Sie kostet nichts, zählt nicht gegen das
+ * Kartenlimit — und bringt beim Abriss nichts zurück (e.frei, siehe
+ * refundOf), sonst wäre die Werkstatt eine Geldquelle.
+ *
+ * Zustandspfad, also streng deterministisch: kein zufall(), keine
+ * Bildzeit. Der Vorrat sammelt sich an, wenn gerade nicht gelegt wird.
+ */
+function mauerwerkTakt(w, dt){
+  const bau = DEFS[w.type] && DEFS[w.type].mauerbau;
+  // Bewusst OHNE w.tot: Die Laufzeit ist die Wirtschaftsuhr (der Ertrag
+  // fällt auf Sparflamme), das Mauern ist Handwerk und läuft weiter,
+  // solange die Werkstatt steht. Andernfalls wäre die Fähigkeit tot —
+  // eine Werkstatt ist nach 15 s erschöpft, die erste Mauer käme erst
+  // nach 30.
+  if(!bau || !w.berg) return;
+  if(!DEFS.mauer) return;                              // Charakter ohne Mauer: nichts zu liefern
+  const dauer = bau[Math.min(w.lvl, bau.length)-1];
+  w.mauerT = (w.mauerT||0) + dt;
+  if(w.mauerT < dauer) return;
+  w.mauerT -= dauer;
+  schenkeKarte(w.owner, 'mauer');
+  fxText(w.r, w.c, '+1 MAUER', '#9be8c0', 0);
+  fxRing(w.r, w.c, '#9be8c0');
+  HAKEN.syncHUD();
+}
+/* Geschenkte Karten auf der Hand: Vorrat je Spieler und Kartenart. Sie
+ * kosten nichts und gehen nicht ans Kontingent — beides prüft playCard. */
+function schenkeKarte(own, k){
+  G.gratis[own][k] = (G.gratis[own][k]||0) + 1;
+}
+const gratisRest = (own, k) => (G.gratis && G.gratis[own] && G.gratis[own][k]) || 0;
+
+/* ---------- Wegekarte: Entfernung zu einem Ziel, eigene Truppen sind durchlässig ---------- */
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+function pathMap(goalCells, owner){
+  const d = Array.from({length:ROWS},()=>Array(COLS).fill(-1));
+  const q = [];
+  for(const p of goalCells) if(inBoard(p.r,p.c)){ d[p.r][p.c]=0; q.push(p); }
+  for(let i=0;i<q.length;i++){
+    const p=q[i];
+    for(const [dr,dc] of DIRS){
+      const r=p.r+dr, c=p.c+dc;
+      if(!inBoard(r,c) || d[r][c]>=0 || !walkable(r,c)) continue;
+      const o = entAt(r,c);
+      if(o && !(o.owner===owner && DEFS[o.type].unit)) continue;   // Bauten und Feinde sperren
+      d[r][c] = d[p.r][p.c]+1; q.push({r,c});
+    }
+  }
+  return d;
+}
+
+/* ---------- Aktionen ---------- */
+function doMove(e, t){
+  const target = entAt(t.r,t.c);
+  if(t.merge && target){
+    removeEnt(target); removeEnt(e);
+    const nu = addEnt(e.type, e.owner, t.r, t.c, e.lvl+1);
+    nu.timer = cdOf(nu);                       // frisch aufgewertet: ein Schlag sitzt sofort
+    nu.mtimer = 0; nu.flash = .5; nu.spawn = 0;
+    fxText(t.r,t.c,'STUFE '+nu.lvl,'#ffd977',0);
+    fxRing(t.r,t.c,'#ffd977');
+    burst(midX(t.c), midY(t.r), TH*0.6, 26, 'spark', '#ffe6a0');
+    return;
+  }
+  cell(e.r,e.c).ent = null;
+  const wasForest = envAt(e.r,e.c)==='wald';
+  e.fr=e.r; e.fc=e.c; e.mt=0;
+  e.r=t.r; e.c=t.c; e.cells=[{r:t.r,c:t.c}]; cell(e.r,e.c).ent=e;
+  const nowForest = envAt(e.r,e.c)==='wald';
+  if(!wasForest && nowForest) e.hp += maxHp(e) - statsOf(e.type,e.lvl).hp;
+  if(wasForest && !nowForest) e.hp = Math.min(e.hp, statsOf(e.type,e.lvl).hp);
+  e.mtimer = 0; e.idle = 0;
+}
+function doAttack(e, target){
+  const d = dmgOf(e,target), rng = rngOf(e);
+  const kan = !!DEFS[e.type].siege;
+  const np = nearestPair(e,target) || {to:{r:target.r,c:target.c}};
+  e.timer = 0; e.mtimer = 0; e.idle = 0; e.atk = 1;
+  e.adx = np.to.c-e.c; e.ady = np.to.r-e.r;
+  const echt = trefferAuf(target, d, kan?0.40 : rng>1?0.20 : 0.10);
+  const tx = entMidX(target), ty = entMidY(target);
+  if(kan){
+    G.fx.push({k:'ball', ax:entMidX(e), ay:entMidY(e), bx:tx, by:ty, t:0, dur:0.42});
+    fxText(np.to.r, np.to.c, '-'+echt, '#ffd2c6', 0.40);
+    target.flash = -0.40;
+    burst(entMidX(e), entMidY(e), TH*0.55, 14, 'spark', '#ffe0b0');
+    burst(entMidX(e), entMidY(e), TH*0.6, 5, 'smoke', '#8a847e', 0.5);
+    shake(5, 0.18);
+  } else if(rng>1){
+    G.fx.push({k:'arrow', ax:entMidX(e), ay:entMidY(e), bx:tx, by:ty, t:0, dur:0.24});
+    fxText(np.to.r, np.to.c, '-'+echt, '#ffd2c6', 0.20);
+    target.flash = -0.20;                       // Trefferblitz erst beim Einschlag
+  } else {
+    fxText(np.to.r, np.to.c, '-'+echt, '#ffd2c6', 0.10);
+    target.flash = 0.32;
+    burst(tx, ty, TH*0.55, 12, 'spark', '#ffd9a8');
+  }
+  const sp = statsOf(e.type,e.lvl).splash;
+  if(sp){                                              // Splitter treffen die Nachbarbauten
+    const anteil = Math.max(1, Math.round(d*sp));
+    for(const [dr,dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const r=np.to.r+dr, c=np.to.c+dc;
+      if(!inBoard(r,c)) continue;
+      const o=entAt(r,c);
+      if(!o || o===target || DEFS[o.type].unit) continue;
+      const t2 = trefferAuf(o, anteil, 0.46); o.flash=-0.40;
+      fxText(o.r,o.c,'-'+t2,'#ffd2c6',0.46);
+      if(o.hp<=0) kill(o,0.5);
+    }
+  }
+  if(target.hp<=0) kill(target, kan?0.44 : rng>1?0.22 : 0.06);
+}
+function kill(t, delay){
+  if(AI && t.owner===AI.owner && t.type==='werk' &&
+     t.cells.some(p=>inPanik(t.owner,p.r))) AI.verlusteVorn++;   // Lehrgeld an der Front
+  if(t.berg && (t.turm || t.type==='kanone'))
+    for(const p of t.cells)
+      G.sperren.push({r:p.r, c:p.c, t:15, max:15, art:t.turm?'turm':'kanone', owner:t.owner});
+  if(DEFS[t.type].knall && !t.tot && !t.berg) werkKnall(t);   // ausgebrannt oder im Fels: kein Kessel
+  if(t.type==='haus'){ G.winner = 1-t.owner; phase='over'; setTimeout(showWin, 1400); }
+  G.fx.push({k:'corpse', type:t.type, owner:t.owner, lvl:t.lvl, r:t.r, c:t.c,
+             w:t.w, h:t.h, t:-(delay||0), dur:0.55, big:t.type==='haus'});
+  removeEnt(t);
+  // Eine gefallene Mauer reißt eine Lücke: Der Rest der Gruppe stuft sich
+  // neu ein — aus dreien werden zwei, aus zweien eine.
+  if(t.type==='mauer') mauerNetz(t.owner);
+}
+function trefferAuf(o, d, delay){                      // ein Schlag, mit allen Nebenwirkungen
+  if(o.type==='kanone' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.75));
+  // Schützenturm im Wald: ein Drittel weniger. Bewusst d*2/3 statt einer
+  // Kommazahl — Multiplikation und Division sind bitgenau festgelegt,
+  // und der Wert fließt in den Spielzustand.
+  if(o.type==='bogen' && o.turm && envAt(o.r,o.c)==='wald')
+    d = Math.max(1, Math.round(d*2/3));
+  // Deckung fürs Haupthaus im Wald (Entscheid vom 7. August 2026): −20 %
+  // erlittener Schaden — der Wald ist Verteidigung, nicht nur Kulisse.
+  if(o.type==='haus' && envAt(o.r,o.c)==='wald') d = Math.max(1, Math.round(d*0.80));
+  if(o.halt || o.turm) d = Math.max(1, Math.round(d*0.875));   // wer steht, steht fester
+  o.hp -= d;
+  if(DEFS[o.type].laufzeit && o.leben>0){              // jeder Treffer kostet das Werk eine Sekunde
+    o.leben = Math.max(0, o.leben-1);
+    G.fx.push({k:'zeit', r:o.r, c:o.c, t:-(delay||0)});
+    if(o.leben<=0){ o.tot=true; }
+  }
+  return d;
+}
+const KNALL_ANTEIL = [0, 1, 0.55, 0.25];               // nach Manhattan-Abstand
+function knallAnteil(man){ return KNALL_ANTEIL[man] || 0; }
+function werkKnall(w){                                 // Kesselexplosion beim Einsturz
+  const naeh = new Map();                              // Objekt -> kleinster Abstand
+  for(const p of w.cells){
+    for(let dr=-3;dr<=3;dr++) for(let dc=-3;dc<=3;dc++){
+      const man = Math.abs(dr)+Math.abs(dc);
+      if(!man || man>3) continue;
+      const r=p.r+dr, c=p.c+dc;
+      if(!inBoard(r,c)) continue;
+      const o=entAt(r,c);
+      if(!o || o===w) continue;
+      const alt = naeh.get(o);
+      if(alt===undefined || man<alt) naeh.set(o, man);
+    }
+    fxBoom(p.r,p.c,1.35);
+    burst(midX(p.c), midY(p.r), TH*0.45, 30, 'ember', '#ffb43c');
+    burst(midX(p.c), midY(p.r), TH*0.40, 14, 'rock', '#4a4038');
+    burst(midX(p.c), midY(p.r), TH*0.50, 5, 'smoke', '#8a847e', 0.9);
+  }
+  for(const [o, man] of naeh){
+    const anteil = knallAnteil(man);
+    if(!anteil) continue;
+    const schaden = Math.max(1, Math.round(maxHp(o)*anteil));
+    const t4 = trefferAuf(o, schaden, 0.12);
+    o.flash = .4;
+    fxText(o.r, o.c, man===1 ? 'ZERSTÖRT' : '-'+t4, man===1 ? '#ff8a6e' : '#ffc46a', 0.12);
+    if(o.hp<=0) kill(o, 0.16);
+  }
+  shake(14, 0.5);
+}
+function razeEnt(e){
+  const back = refundOf(e);
+  G.res[e.owner] = Math.min(capOf(e.owner), G.res[e.owner] + back);
+  fxText(e.r, e.c, '+'+back, '#9be8c0', 0);
+  fxRing(e.r, e.c, '#9be8c0');
+  for(const p of e.cells) burst(midX(p.c), midY(p.r), TH*0.3, 10, 'dust', '#8a7a68');
+  removeEnt(e);
+  if(e.type==='mauer') mauerNetz(e.owner);       // Lücke: der Rest stuft neu ein
+  HAKEN.syncHUD();
+}
+function fxText(r,c,tx,col,delay){ G.fx.push({k:'txt', r, c, tx, col, t:-(delay||0)}); }
+function fxRing(r,c,col){ G.fx.push({k:'ring', r, c, col, t:0}); }
+function fxBoom(r,c,s){ G.fx.push({k:'boom', r, c, s, t:0}); }
+
+/* ---------- Marschbefehl: jede Truppe sieht zwei Felder weit ---------- */
+const SICHT = 2;
+const luft = (r,c,o)=>{                       // Luftlinie zum nächsten Zielfeld
+  let m=99;
+  for(const q of o.cells) m=Math.min(m, Math.max(Math.abs(q.r-r), Math.abs(q.c-c)));
+  return m;
+};
+function sichtfeld(e){                        // begehbare Felder im Umkreis von zwei Feldern
+  const dist={}, first={};
+  const key=(r,c)=>r+'.'+c;
+  const q=[{r:e.r,c:e.c}];
+  dist[key(e.r,e.c)]=0; first[key(e.r,e.c)]=null;
+  for(let i=0;i<q.length;i++){
+    const p=q[i], dk=key(p.r,p.c);
+    for(const [dr,dc] of DIRS){
+      const r=p.r+dr, c=p.c+dc, k=key(r,c);
+      if(!inBoard(r,c) || dist[k]!==undefined) continue;
+      if(Math.abs(r-e.r)>SICHT || Math.abs(c-e.c)>SICHT) continue;
+      if(!walkable(r,c) || entAt(r,c)) continue;
+      dist[k]=dist[dk]+1;
+      first[k]=first[dk] || {r,c};
+      q.push({r,c});
+    }
+  }
+  return {dist, first};
+}
+function zielListe(e){
+  const foes = G.ents.filter(o=>o.owner!==e.owner);
+  if(!foes.length) return [];
+  const haus = foes.find(o=>o.type==='haus');
+  const ziele = [];
+  if(haus) ziele.push(haus);
+  let nah=null, nd=1e9;
+  for(const o of foes){
+    if(o===haus || o.type==='mauer') continue;          // Mauern sind Hindernis, kein Ziel
+    const d=luft(e.r,e.c,o); if(d<nd){ nd=d; nah=o; }
+  }
+  if(nah) ziele.push(nah);
+  if(!ziele.length){                                    // nur noch Mauern übrig
+    for(const o of foes){ const d=luft(e.r,e.c,o); if(d<nd){ nd=d; nah=o; } }
+    if(nah) ziele.push(nah);
+  }
+  return ziele;
+}
+function autoStep(e){
+  const opts = moveTargets(e);
+  if(!opts.length) return null;
+  const ziele = zielListe(e);
+  const merge = opts.find(t=>t.merge);
+  if(merge && e.lvl<MAXLVL){
+    if(!ziele.length) return merge;
+    const zz=ziele[0];
+    if(luft(merge.r,merge.c,zz) <= luft(e.r,e.c,zz)) return merge;
+  }
+  if(!ziele.length) return null;
+  const {dist, first} = sichtfeld(e);
+  const fwd = e.owner===0 ? 1 : -1;
+  for(const ziel of ziele){
+    const hier = luft(e.r,e.c,ziel);
+    let best=null, bs=1e9;
+    for(const k in dist){
+      if(!first[k]) continue;
+      const [r,c]=k.split('.').map(Number);
+      let sc = luft(r,c,ziel)*10 + dist[k];
+      if((first[k].r-e.r)===fwd) sc -= 1;               // bei Gleichstand geradeaus
+      if(envAt(r,c)==='wald') sc -= 1;
+      if(sc<bs){ bs=sc; best=first[k]; }
+    }
+    if(best && bs < hier*10) return best;               // nur ziehen, wenn es näher bringt
+  }
+  return null;
+}
+
+/* ---------- Schleife ---------- */
+let hudAcc = 0;
+function update(dt){
+  if(phase!=='war' || paused) return;
+  G.t += dt;
+  for(const e of G.ents){
+    if(e.leben>0){
+      e.leben -= dt;
+      if(e.leben<=0){ e.leben=0; e.tot=true; fxText(e.r,e.c,'ERSCHÖPFT','#ff9a5e',0); }
+    }
+    const inc = incomeOf(e);
+    if(inc){
+      G.res[e.owner] += inc*dt;
+      if(e.type==='werk'){                            // jede fertige Ressource kurz zeigen
+        e.acc = (e.acc||0) + inc*dt;
+        while(e.acc >= 1){
+          e.acc -= 1;
+          const z = e.cells[Math.floor(zufall()*e.cells.length)];
+          G.fx.push({k:'plus', r:z.r, c:z.c, t:0, dx:(zufall()-0.5)*0.5});
+        }
+      }
+    }
+    mauerwerkTakt(e, dt);                             // Werkstatt im Fels mauert selbst
+  }
+  for(const own of [0,1]){                             // Ausbaustufe des Haupthauses prüfen
+    const st = hausStufe(own);
+    if(st !== (G.hb[own]||1)){
+      const h = G.ents.find(e=>e.type==='haus' && e.owner===own);
+      const alt = G.hb[own]||1;
+      G.hb[own] = st;
+      if(h){
+        const basis = statsOf('haus',1).hp;
+        const diff = Math.round(basis*HAUS_HP[st-1]) - Math.round(basis*HAUS_HP[alt-1]);
+        if(diff>0){
+          h.hp += diff;
+          fxText(h.r,h.c,'+'+diff+' LEBEN','#ffd977',0.5);
+          fxText(h.r,h.c,'STUFE '+st,'#ffd977',0);
+          fxRing(h.r,h.c,'#ffd977');
+        } else h.hp = Math.min(h.hp, maxHp(h));
+      }
+    }
+  }
+  for(let i=0;i<2;i++) G.res[i] = Math.min(G.res[i], capOf(i));
+  for(let i=G.sperren.length-1;i>=0;i--){               // Trümmerfelder freiräumen
+    G.sperren[i].t -= dt;
+    if(G.sperren[i].t<=0) G.sperren.splice(i,1);
+  }
+
+  for(const e of G.ents)
+    if(canMove(e) && e.mtimer < mcdOf(e)) e.mtimer = Math.min(mcdOf(e), e.mtimer+dt);
+  const order = G.ents.filter(canAtt);
+  for(const e of order) if(e.timer < cdOf(e)) e.timer = Math.min(cdOf(e), e.timer+dt);
+  mische(order);                          // keine Seite schlägt systematisch zuerst
+  for(const e of order){
+    if(!G.ents.includes(e) || !attReady(e)) continue;
+    const tg = attackTargets(e);
+    if(DEFS[e.type].siege){
+      if(tg.length){
+        const z = pickTarget(tg,e), np = nearestPair(e,z);
+        if(np) e.aimZiel = Math.atan2(np.to.r-e.r, np.to.c-e.c);
+      } else e.aimZiel = null;
+    }
+    if(!tg.length) continue;
+    if(canMove(e) && tg.every(o=>o.type==='mauer') && autoStep(e)) continue;  // lieber vorbeigehen
+    doAttack(e, pickTarget(tg, e));                 // Ziele sucht sich jede Figur selbst
+  }
+  fuseWerke();
+  const marschierer = G.ents.filter(e=>canMove(e) && ready(e));
+  if(marschierer.length){
+    mische(marschierer);
+    for(const e of marschierer){
+      if(!G.ents.includes(e) || !ready(e)) continue;
+      if(e.halt) continue;                                        // angehalten: nur noch verteidigen
+      if(attackTargets(e).some(o=>o.type!=='mauer')) continue;   // im Gefecht wird gekämpft
+      const t = autoStep(e);
+      if(t) doMove(e,t);
+    }
+  }
+
+  for(const o of G.envs){
+    if(o.type!=='vulkan') continue;
+    o.tick = (o.tick||0) + dt;
+    o.chance = 0.025 + Math.max(0, Math.floor((G.t-120)/10))*0.05;
+    if(o.tick >= 10){ o.tick -= 10; if(zufall() < Math.min(1,o.chance)) erupt(o); }
+  }
+  hudAcc += dt;
+  if(hudAcc > 0.12){ hudAcc = 0; syncHUD(); }
+}
+
+function erupt(o){
+  const naeh = new Map();                            // Objekt -> kleinster Ringabstand
+  for(const p of o.cells){
+    for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++){
+      const r=p.r+dr, c=p.c+dc;
+      if(!inBoard(r,c)) continue;
+      const e = entAt(r,c);
+      if(!e) continue;
+      const kern = o.cells.some(q=>q.r===r && q.c===c);
+      const ring = kern ? 0 : Math.max(Math.abs(dr), Math.abs(dc));
+      const alt = naeh.get(e);
+      if(alt===undefined || ring<alt) naeh.set(e, ring);
+    }
+  }
+  for(const [e, ring] of naeh){
+    if(ring<=1){                                     // Krater und Kraterrand werden leergefegt
+      trefferAuf(e, maxHp(e)+999, 0.1);
+      e.flash=.4; fxText(e.r, e.c, 'ZERSTÖRT', '#ff8a6e', 0.1);
+      kill(e, 0.12);
+    } else {
+      const d = Math.max(1, Math.round(maxHp(e)*0.3));
+      const t3 = trefferAuf(e, d, 0.1);
+      e.flash=.4; fxText(e.r, e.c, '-'+t3, '#ffc46a', 0.1);
+      if(e.hp<=0) kill(e, 0.12);
+    }
+  }
+  o.cells.forEach(p=>fxBoom(p.r,p.c,1.3));
+  const cx = OX + (o.c0+o.w/2)*TW, cy = OY + (o.r0+o.h/2)*TH;
+  burst(cx, cy, TH*0.5, 70, 'ember', '#ffb43c');
+  burst(cx, cy, TH*0.5, 26, 'rock', '#5a4a40');
+  for(let i=0;i<22;i++) burst(cx+(zufall()-.5)*TW, cy+(zufall()-.5)*TH, TH*0.8, 1, 'smoke', '#6b6560');
+  shake(16, 0.7);
+  o.type = 'krater';
+  o.cells.forEach(p=>{ cell(p.r,p.c).env = o; });
+  bakeStatic();
+}
+
+
+/* ---------- Wirkungs-Haken ----------
+ * Die Befehlsfunktionen unten melden sichtbare Wirkungen (Partikel, Farben,
+ * HUD-Abgleich, Münz-Overlay) über diese Haken nach draußen. Die Oberfläche
+ * hängt die echten Implementierungen ein (siehe oberflaeche.js); headless
+ * bleiben es Leerläufe, und die Simulation läuft ohne DOM, Canvas und HUD.
+ * Die Haken werden im Taktpfad auf BEIDEN Geräten aufgerufen — eine
+ * Implementierung darf deshalb NIE den Zustand ändern und NIE zufall()
+ * ziehen, sonst laufen die Geräte auseinander. */
+const HAKEN = {
+  syncHUD: () => {},
+  spielerFarbe: () => '#fff',
+  stufenFunken: () => {},
+  bauStaub: () => {},
+  hausStaub: () => {},
+  coinZu: () => {},
+  muenzeAufschlag: () => {},
+  muenzeRauch: () => {},
+};
+
+/* ---------- Bauregeln ---------- */
+const turmPlatz = (k,r,c)=> (k==='bogen'||k==='kanone'||k==='werk') && envAt(r,c)==='gebirge';
+const BERGBAU = 5;                                    // Aufschlag für den Unterbau
+const WALDTURM = 4;                                   // Gerüst in den Baumwipfeln
+function preisFuer(k, sp){
+  // Bei Mauern richtet sich der Preis der nächsten Karte nach dem Gewicht
+  // (bezahlte Karten), nicht nach der Stufe aus dem Verbund.
+  const naechste = sp.merge
+    ? (k==='mauer' ? mauerGewicht(sp.merge)+1 : sp.merge.lvl+1)
+    : 1;
+  let p = costOf(k, naechste);
+  const aufFels = sp.merge ? !!sp.merge.berg
+                           : sp.cells.some(q=>envAt(q.r,q.c)==='gebirge');
+  if(aufFels) p += BERGBAU;                        // der Unterbau kostet jedes Mal
+  // Schützenturm im Wald: das Gerüst kostet ebenfalls jedes Mal, aber
+  // weniger als der Unterbau im Fels.
+  const imWald = k==='bogen' && !aufFels &&
+    (sp.merge ? envAt(sp.merge.r, sp.merge.c)==='wald'
+              : sp.cells.some(q=>envAt(q.r,q.c)==='wald'));
+  if(imWald) p += WALDTURM;
+  return p;
+}
+function fitsAt(own,k,r0,c0,vert){
+  const cells=entCells(k,r0,c0,vert);
+  if(k==='werk'){                                    // im Fels nur ganz, im Wald gar nicht
+    const auf = cells.filter(p=>inBoard(p.r,p.c) && envAt(p.r,p.c)==='gebirge').length;
+    if(auf>0 && auf<cells.length) return null;
+    if(cells.some(p=>inBoard(p.r,p.c) && envAt(p.r,p.c)==='wald')) return null;
+  }
+  for(const p of cells){
+    if(!inBoard(p.r,p.c) || sideOf(p.r)!==own) return null;
+    if(entAt(p.r,p.c)) return null;
+    if(!walkable(p.r,p.c) && !turmPlatz(k,p.r,p.c)) return null;
+    if(G.sperren.some(z=>z.r===p.r && z.c===p.c)) return null;   // Trümmer blockieren
+    if(envAt(p.r,p.c)==='vulkan' && !DEFS[k].unit) return null;
+  }
+  return {cells, r0, c0, vert, merge:null};
+}
+function placeSpot(own,k,r,c){
+  if(!inBoard(r,c)) return null;
+  const occ=entAt(r,c);
+  if(occ){
+    const grenze = DEFS[k].fuseAt || maxLvlOf(k);   // per Karte nur bis dorthin
+    // Mauern: gestapelt wird nach GEWICHT (bezahlte Karten). Eine Mauer,
+    // die schon durch den Verbund auf Stufe 3 steht, nimmt weiter Karten —
+    // sie erhöht damit ihren Anteil am Gruppenleben.
+    const stapelbar = k==='mauer' ? mauerGewicht(occ) < maxLvlOf('mauer')
+                    : DEFS[k].unit ? occ.lvl===1
+                    : occ.lvl < grenze;
+    const ok = occ.owner===own && occ.type===k &&
+               occ.cells.every(q=>sideOf(q.r)===own) &&    // vorgerückte Truppen nicht mehr erreichbar
+               stapelbar &&
+               !atLimit(own,k);
+    return ok ? {cells:occ.cells, r0:occ.r, c0:occ.c, vert:occ.h>occ.w, merge:occ} : null;
+  }
+  if(atLimit(own,k)) return null;                    // Neubau nur bis zur Grenze
+  // Türme (Fels wie Wald) zählen zu den Schützenstellungen, und deren
+  // Zahl hängt am Ausbau des Haupthauses.
+  if(k==='bogen' && (envAt(r,c)==='gebirge' || envAt(r,c)==='wald') &&
+     stellungen(own,'schuetze') >= stellungsGrenze(own,'schuetze')) return null;
+  if(sizeOf(k)===1) return fitsAt(own,k,r,c,false);
+  const v = !!G.orient[own];                         // gedreht wird nur über den Knopf
+  return fitsAt(own,k,r,c,v) ||
+         (v ? fitsAt(own,k,r-1,c,v) : fitsAt(own,k,r,c-1,v));
+}
+const canPlaceCard = (own,k,r,c)=> !!placeSpot(own,k,r,c);
+function affordable(own,k,r,c){                       // Platz frei UND bezahlbar
+  const sp=placeSpot(own,k,r,c);
+  if(!sp) return false;
+  return G.res[own] >= preisFuer(k,sp);
+}
+
+/* ---------- Befehle ----------
+ * Jede Spielerhandlung läuft durch genau eine dieser Funktionen, nie direkt
+ * aus dem Handler in den Zustand. Der Grund ist das Netzspiel: Die Anbindung
+ * (teile/anbindung-fuss.js, gebaut von werkzeug/bauen.mjs) lenkt sie um und
+ * meldet den Befehl als Zug für einen künftigen Takt, statt ihn auszuführen.
+ * Zwischen Eingabe und Ausführung liegen dann einige Takte — was beim
+ * Antippen noch galt, kann vorbei sein. Deshalb prüft jede Funktion ihre
+ * Voraussetzungen SELBST und verpufft still, wenn sie nicht mehr gelten:
+ * auf beiden Geräten gleich. */
+
+function playCard(own,k,r,c){
+  const sp = placeSpot(own,k,r,c);
+  if(!sp) return;
+  /* Geschenkte Karte auf der Hand (Werkstatt im Fels): Sie gilt nur für
+   * einen NEUBAU — aufwerten und stapeln bleibt Sache der Ressourcen,
+   * sonst verschöbe man den Vorrat still in eine Stufe-3-Mauer. */
+  const geschenkt = !sp.merge && gratisRest(own,k) > 0;
+  const preis = geschenkt ? 0 : preisFuer(k,sp);
+  if(G.res[own]<preis) return;
+  G.res[own]-=preis;
+  if(geschenkt) G.gratis[own][k] -= 1;         // eine Karte weniger auf der Hand
+  else verbrauche(own,k);                      // die Karte ist damit endgültig aufgebraucht
+  if(sp.merge && k==='mauer'){
+    // Stapeln erhöht das GEWICHT, nicht die Stufe: Die Stufe rechnet
+    // mauerNetz aus der ganzen Gruppe (und meldet den Aufstieg selbst).
+    sp.merge.karten = mauerGewicht(sp.merge) + 1;
+    mauerNetz(own);
+  } else if(sp.merge){
+    const o=sp.merge, vert=o.h>o.w, rr=o.r, cc=o.c, nl=o.lvl+1, alt=o.cells;
+    removeEnt(o);
+    const nu=addEnt(k,own,rr,cc,nl,vert,alt);  // bleibt genau dort stehen, wo es stand
+    if(o.turm) nu.turm = true;                 // der Turm bleibt ein Turm
+    /* Wer stand, steht auch aufgewertet (Entscheid vom 7. August 2026):
+     * Vorher verlor der Neubau das halt-Flag, und die Truppe marschierte
+     * nach dem Aufwerten ungewollt los. */
+    if(o.halt) nu.halt = true;
+    if(canAtt(nu)) nu.timer = cdOf(nu);        // aufgewertet heißt sofort schlagbereit
+    if(DEFS[k].fuseAt) fuseWerke(true);        // eine anschließende Verschmelzung bleibt stumm
+    const jetzt = entAt(rr,cc);                // nur eine Meldung: die erreichte Stufe
+    fxText(rr,cc,'STUFE '+(jetzt?jetzt.lvl:nl),'#ffd977',0); fxRing(rr,cc,'#ffd977');
+    HAKEN.stufenFunken(rr,cc);
+  } else {
+    const neu = addEnt(k,own,sp.r0,sp.c0,1,sp.vert);
+    if(geschenkt) neu.frei = true;              // nie bezahlt, kein Abrissgeld
+    HAKEN.bauStaub(sp.cells);
+    fxRing(sp.r0,sp.c0, HAKEN.spielerFarbe(own));
+    if(DEFS[k].fuseAt) fuseWerke();
+    // Eine frische Mauer wiegt eine Karte; die Gruppe stuft danach neu ein.
+    if(k==='mauer'){ neu.karten = 1; mauerNetz(own); }
+  }
+  G.armed[own]=null; HAKEN.syncHUD();
+}
+
+/* ---------- Mauern: Verbund statt Einzelstück ----------
+ * Regel des Auftraggebers (7. August 2026):
+ *
+ *   Jede Mauer trägt ein GEWICHT — die Zahl der in sie gesteckten Karten
+ *   (Stapeln auf demselben Feld erhöht es). Die STUFE einer Mauer ist die
+ *   Summe der Gewichte ihrer zusammenhängenden Gruppe, gedeckelt bei 3:
+ *
+ *     allein                    → Stufe 1
+ *     zwei verbunden            → Stufe 2
+ *     drei verbunden            → Stufe 3
+ *     drei Karten auf ein Feld  → Stufe 3 (derselbe Weg wie bisher)
+ *
+ *   Das LEBEN der Stufe (DEFS.mauer.lvls) gehört der ganzen Gruppe und wird
+ *   nach Gewicht auf ihre Stücke VERTEILT. Eine Stufe-2-Mauer (zwei Karten)
+ *   neben einer frischen Mauer ergibt Stufe 3, verteilt 2/3 zu 1/3.
+ *
+ * Jedes Stück trägt seinen Anteil selbst: Es fällt einzeln, und die
+ * verbleibenden Stücke stufen sich danach neu ein (kill ruft mauerNetz).
+ * Beim Umgruppieren bleibt der Schadensanteil erhalten — wer halb kaputt
+ * war, ist auch nach dem Anbau halb kaputt.
+ */
+const mauerGewicht = e => e.karten || 1;
+
+function mauerNetz(own){
+  const mauern = G.ents.filter(e => e.owner===own && e.type==='mauer');
+  const gesehen = new Set();
+  for(const start of mauern){
+    if(gesehen.has(start.id)) continue;
+    // Zusammenhangskomponente über orthogonale Nachbarschaft sammeln
+    const gruppe = [], offen = [start];
+    gesehen.add(start.id);
+    while(offen.length){
+      const m = offen.pop();
+      gruppe.push(m);
+      for(const n of mauern){
+        if(gesehen.has(n.id)) continue;
+        if(Math.abs(n.r-m.r) + Math.abs(n.c-m.c) === 1){ gesehen.add(n.id); offen.push(n); }
+      }
+    }
+    const gewicht = gruppe.reduce((s,m)=>s+mauerGewicht(m), 0);
+    const stufe = Math.max(1, Math.min(maxLvlOf('mauer'), gewicht));
+    const gesamt = statsOf('mauer', stufe).hp;
+    for(const m of gruppe){
+      // Anteil am Gesamtleben nach Gewicht; der Schadensstand bleibt.
+      const altMax = m.hpMax || statsOf('mauer', m.lvl).hp;
+      const quote = altMax > 0 ? Math.max(0, Math.min(1, m.hp / altMax)) : 1;
+      const neuMax = Math.max(1, Math.round(gesamt * mauerGewicht(m) / gewicht));
+      const alteStufe = m.lvl;
+      m.lvl = stufe;
+      m.hpMax = neuMax;
+      m.hp = Math.max(1, Math.round(neuMax * quote));
+      if(stufe > alteStufe){                       // Aufstieg wird gemeldet
+        fxText(m.r, m.c, 'STUFE '+stufe, '#ffd977', 0);
+        fxRing(m.r, m.c, '#ffd977');
+        HAKEN.stufenFunken(m.r, m.c);
+      }
+    }
+  }
+}
+
+function drehBefehl(own){ G.orient[own] = !G.orient[own]; HAKEN.syncHUD(); }
+
+function setzeHaus(own,r,c){
+  if(phase!=='place' || G.placed[own] || drankommt()!==own) return;
+  if(sideOf(r)!==own || !freeCell(r,c) || envAt(r,c)==='vulkan') return;
+  addEnt('haus',own,r,c);
+  fxRing(r,c, HAKEN.spielerFarbe(own));
+  HAKEN.hausStaub(r,c);
+  G.placed[own]=true;
+  if(G.placed[0]&&G.placed[1]) phase='war';
+  HAKEN.syncHUD();
+}
+
+function abrissBefehl(own,r,c){
+  const t=entAt(r,c);
+  if(t && t.owner===own && t.type!=='haus') razeEnt(t);
+}
+
+function haltBefehl(own,r,c){
+  const e=entAt(r,c);
+  if(!e || e.owner!==own || !canMove(e)) return;
+  const g = gruppeVon(e);
+  const grenze = stellungsGrenze(own,g);
+  if(!e.halt && stellungen(own,g) >= grenze){
+    e.nudge = 1; fxText(e.r,e.c,grenze+' / '+grenze,'#ffa06e',0);   // ausgeschöpft
+  } else {
+    e.halt = !e.halt; e.nudge = 0.8;
+    fxRing(e.r, e.c, e.halt ? '#ffa06e' : '#8ef0b8');
+  }
+}
+
+/* ---------- Münzwurf ---------- */
+const drankommt = () => G.placed[G.erst] ? 1-G.erst : G.erst;
+const MUENZE = {flug:2.15, land:1.42, liegt:0.5, zeigen:1.0};
+function coinAuslosen(){
+  G.coin = {stufe:'wahl', waehler: zufall()<0.5 ? 0 : 1,
+            wahl:null, ergebnis:null, sieger:null, t:0};
+}
+function coinWahl(w){
+  const co=G.coin;
+  if(!co || co.stufe!=='wahl') return;
+  co.wahl = w;
+  co.ergebnis = zufall()<0.5 ? 'kopf' : 'zahl';
+  co.sieger = (co.wahl===co.ergebnis) ? co.waehler : 1-co.waehler;
+  co.stufe = 'flug'; co.t = 0;
+  HAKEN.coinZu();
+}
+function coinTick(dt){
+  const co=G.coin;
+  if(!co) return;
+  co.t += dt;
+  if(co.stufe==='wahl'){
+    if(AI && co.waehler===AI.owner && co.t>0.9) coinWahl(zufall()<0.5?'kopf':'zahl');
+    return;
+  }
+  if(co.stufe==='flug'){
+    const r=Math.floor(ROWS/2), c=Math.floor(COLS/2);
+    if(co.t >= MUENZE.land && !co.gelandet){          // Aufschlag: Staub
+      co.gelandet = true;
+      HAKEN.muenzeAufschlag(r,c);
+    }
+    if(co.t >= MUENZE.land + MUENZE.liegt && !co.rauch){   // erst danach löst sie sich auf
+      co.rauch = true;
+      HAKEN.muenzeRauch(r,c);
+      fxRing(r, c, '#ffd977');
+    }
+    if(co.t >= MUENZE.flug){ co.stufe='zeigen'; co.t=0; }
+    return;
+  }
+  if(co.stufe==='zeigen' && co.t >= MUENZE.zeigen){
+    G.erst = co.sieger;
+    G.coin = null;
+    phase = 'place';
+    HAKEN.syncHUD();
+  }
+}
+/* ============================================================
+   Teil 2: Renderer — Projektion, Licht, Material
+   ============================================================ */
+const cv = document.getElementById('cv');
+let ctx = cv.getContext('2d');
+let TW=40, TH=26, OX=0, OY=0, CX=0, CY=0, W=0, H=0, DPR=1;
+const KPX = 0.0030, KPY = 0.0005, KLIFT = 0.88;   // feste Kamera: seitliches Aufklappen, klarer Höhenlift
+const HS = 0.76;                                  // Höhenmaßstab aller Aufbauten
+const SHX = 0.46, SHY = 0.28;                     // Schattenwurf pro Höheneinheit
+
+let PBASE = 0;                                    // Sockelhöhe für Stellungen auf dem Fels
+
+/* Netzspiel, Sitz 0: Das Brett steht kopf, damit jeder die eigene Hälfte
+ * unten hat. Gespiegelt wird die BRETTEBENE genau hier in der Projektion —
+ * einmal für alles Gezeichnete: Höhen heben weiter nach oben, Schrift bleibt
+ * lesbar, und Richtungen (Kanonenrohre, Ausfallschritte) stimmen von selbst,
+ * weil jede Zeichnung ihre Punkte in Ebenenkoordinaten rechnet und erst dann
+ * projiziert. Wer eine Bildschirmdrehung versucht, dreht den Höhenlift mit,
+ * und die Gebäude hängen nach unten. Die Netzanbindung setzt das Flag vor
+ * dem Rundenstart; örtlich bleibt es aus. Drei Stellen müssen mitspiegeln:
+ * die Malersortierung in render(), die Flächenfolge in facet() und die
+ * Zeigereingabe in cellFromClient(). */
+let SPIEGEL = false;
+
+function P(x,y,h){
+  if(SPIEGEL) y = 2*OY + ROWS*TH - y;
+  const z = (h+PBASE)*HS;
+  return [CX + (x-CX)*(1+z*KPX), CY + (y-CY)*(1+z*KPY) - z*KLIFT];
+}
+const gx = c => OX + c*TW, gy = r => OY + r*TH;
+const midX = c => OX + (c+0.5)*TW, midY = r => OY + (r+0.5)*TH;
+const entMidX = e => OX + (e.c + (e.w||1)/2)*TW;     // Mittelpunkt auch bei 1×2-Bauten
+const entMidY = e => OY + (e.r + (e.h||1)/2)*TH;
+
+/* ---------- Farben ---------- */
+const F = {top:1, n:0.50, s:0.84, w:1.10, e:0.60};   // Flächenhelligkeit, Sonne links oben
+function sh(col,k,a){
+  const r=Math.min(255,col[0]*k)|0, g=Math.min(255,col[1]*k)|0, b=Math.min(255,col[2]*k)|0;
+  return a===undefined ? 'rgb('+r+','+g+','+b+')' : 'rgba('+r+','+g+','+b+','+a+')';
+}
+const mix = (a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+
+const COL = {
+  gras:[62,92,68], grasAlt:[58,87,64], erde:[58,44,32], erdeDark:[36,27,20],
+  fels:[112,120,130], felsSchnee:[228,238,244],
+  stamm:[74,54,36], laub:[47,106,70], laubHell:[86,156,104],
+  wasser:[26,64,88], wasserFlach:[52,124,152], schaum:[190,226,238],
+  lava:[255,120,32], lavaHell:[255,214,110], basalt:[46,38,34],
+  stein:[142,136,124], steinDark:[74,70,64],
+  metall:[186,198,208], holz:[112,82,52], haut:[212,166,130],
+  p:[[232,58,48],[42,120,255]],                       // knallrot / knallblau
+  pD:[[138,26,22],[18,62,158]], pL:[[255,158,138],[152,200,255]],
+  matt:[118,130,140],                                 // Ruhefarbe nicht ziehbereiter Figuren
+  stufe:[[198,118,62],[210,218,228],[246,202,88],[168,236,255]]   // Kupfer, Silber, Gold, Diamant
+};
+const metallOf = lvl => COL.stufe[Math.max(1,Math.min(4,lvl))-1];
+let PC = COL.p;
+
+/* ---------- Geometrie ---------- */
+function poly(pts, fill, stroke, lw){
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();
+  if(fill){ ctx.fillStyle=fill; ctx.fill(); }
+  if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=lw||1; ctx.stroke(); }
+}
+function ell(p,rx,ry,fill,stroke,lw){
+  ctx.beginPath(); ctx.ellipse(p[0],p[1],Math.max(.1,rx),Math.max(.1,ry),0,0,6.2832);
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke();}
+}
+/* Quader mit Lichtmodell */
+function box(x,y,w,d,h0,h1,col,edge){
+  const b=[[x,y],[x+w,y],[x+w,y+d],[x,y+d]].map(p=>P(p[0],p[1],h0));
+  const t=[[x,y],[x+w,y],[x+w,y+d],[x,y+d]].map(p=>P(p[0],p[1],h1));
+  poly([b[0],b[1],t[1],t[0]], sh(col,F.n));
+  poly([b[1],b[2],t[2],t[1]], sh(col,F.e));
+  poly([b[3],b[0],t[0],t[3]], sh(col,F.w));
+  poly([b[2],b[3],t[3],t[2]], sh(col,F.s));
+  const g=ctx.createLinearGradient(t[0][0],t[0][1],t[2][0],t[2][1]);
+  g.addColorStop(0, sh(col,F.top*1.06)); g.addColorStop(1, sh(col,F.top*0.88));
+  poly(t, g, edge?sh(col,0.42):null, 1);
+  return t;
+}
+/* Kegelstumpf — runde Körper, Bäume, Figuren */
+function frus(cx,cy,hb,ht,rb,rt,col,kl,kr){
+  const pb=P(cx,cy,hb), pt=P(cx,cy,ht);
+  const rby=rb*0.5, rty=rt*0.5;
+  ctx.beginPath();
+  ctx.moveTo(pb[0]+rb, pb[1]);
+  ctx.ellipse(pb[0],pb[1],rb,rby,0,0,Math.PI);
+  ctx.lineTo(pt[0]-rt, pt[1]);
+  ctx.ellipse(pt[0],pt[1],rt,rty,0,Math.PI,Math.PI*2);
+  ctx.closePath();
+  const g=ctx.createLinearGradient(pb[0]-rb,0,pb[0]+rb,0);
+  g.addColorStop(0, sh(col,kl===undefined?1.12:kl));
+  g.addColorStop(0.55, sh(col,0.92));
+  g.addColorStop(1, sh(col,kr===undefined?0.56:kr));
+  ctx.fillStyle=g; ctx.fill();
+  return pt;
+}
+function cap(cx,cy,h,r,col){                       // Kuppel oben drauf
+  const p=P(cx,cy,h);
+  const g=ctx.createRadialGradient(p[0]-r*0.35,p[1]-r*0.4,r*0.1,p[0],p[1],r*1.15);
+  g.addColorStop(0, sh(col,1.24)); g.addColorStop(1, sh(col,0.7));
+  ell(p,r,r*0.62,g); return p;
+}
+/* Facettierter Körper — Fels, Vulkankegel */
+function facet(cx,cy,h0,h1,rb,rt,offx,offy,col,N,seedv,jag){
+  let s2=seedv; const rr=()=>{ s2=(s2*9301+49297)%233280; return s2/233280; };
+  const bp=[], tp=[], rads=[];
+  for(let i=0;i<N;i++) rads.push(1-jag*0.5+rr()*jag);
+  for(let i=0;i<N;i++){
+    const a=i/N*6.2832 - 0.4, k=rads[i];
+    bp.push([cx+Math.cos(a)*rb*k, cy+Math.sin(a)*rb*k*0.62]);
+    tp.push([cx+offx+Math.cos(a)*rt*k, cy+offy+Math.sin(a)*rt*k*0.62]);
+  }
+  const faces=[];
+  for(let i=0;i<N;i++){
+    const j=(i+1)%N;
+    const mx=(bp[i][0]+bp[j][0])/2-cx, my=(bp[i][1]+bp[j][1])/2-cy;
+    const len=Math.hypot(mx,my)||1;
+    const dot=(mx/len)*(-0.62)+(my/len)*(-0.78);
+    // Im Spiegel liegt "hinten" auf der anderen Seite — sonst übermalen die
+    // Rückflächen des Felsens die vorderen.
+    faces.push({i,j,k:0.52+0.62*Math.max(0,dot+0.35), depth:SPIEGEL ? -my : my});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces){
+    poly([P(bp[f.i][0],bp[f.i][1],h0), P(bp[f.j][0],bp[f.j][1],h0),
+          P(tp[f.j][0],tp[f.j][1],h1), P(tp[f.i][0],tp[f.i][1],h1)], sh(col,f.k));
+  }
+  return tp.map(q=>P(q[0],q[1],h1));
+}
+
+/* Schlagschatten */
+const SHADOWS=[];
+function shBox(x,y,w,d,h){ SHADOWS.push({t:0,x,y,w,d,h}); }
+function shEll(cx,cy,r,h){ SHADOWS.push({t:1,cx,cy,r,h}); }
+function flushShadows(){
+  ctx.save(); ctx.globalCompositeOperation='multiply';
+  for(const s of SHADOWS){
+    const dx=SHX*s.h*HS, dy=SHY*s.h*HS;
+    if(s.t===0){
+      const p=[[s.x,s.y],[s.x+s.w,s.y],[s.x+s.w+dx,s.y+dy],[s.x+s.w+dx,s.y+s.d+dy],
+               [s.x+dx,s.y+s.d+dy],[s.x,s.y+s.d]].map(q=>P(q[0],q[1],0));
+      poly(p,'rgba(16,24,20,0.24)');
+    } else {
+      ell(P(s.cx+dx*0.6, s.cy+dy*0.6, 0), s.r*1.05, s.r*0.55, 'rgba(16,24,20,0.22)');
+    }
+  }
+  ctx.restore(); SHADOWS.length=0;
+}
+
+/* ---------- Erschütterung ---------- */
+let shakeA=0, shakeT=0;
+function shake(a,t){ shakeA=Math.max(shakeA,a); shakeT=Math.max(shakeT,t); }
+
+/* ---------- Partikel ---------- */
+const PT=[];
+/* Nur Deko-Zufall hier: burst wird auch aus dem Zeichenpfad gerufen, und die
+ * Teilchen leben in PT, nicht in G — sie dürfen den Spielzufall nie anfassen. */
+function burst(x,y,z,n,kind,col,sc){
+  sc = sc||1;
+  for(let i=0;i<n;i++){
+    const a=deko()*6.283, sp=(0.4+deko())*TW;
+    let p={x,y,z:z*(0.4+deko()*0.8),kind,col,
+      vx:Math.cos(a)*sp*(kind==='smoke'?0.12:0.55),
+      vy:Math.sin(a)*sp*(kind==='smoke'?0.08:0.34),
+      vz:(kind==='smoke'? 12+deko()*16 : 26+deko()*70),
+      g:kind==='smoke'?-2:150, life:0,
+      max:kind==='smoke'?1.4+deko()*0.9 : kind==='rock'?0.9 : 0.35+deko()*0.45,
+      r:(kind==='smoke'?0.10:kind==='rock'?0.045:0.032)*TW*(0.6+deko()*0.9)*sc, sc:sc,
+      rot:deko()*6.28, vr:(deko()-.5)*8};
+    if(PT.length>320) PT.shift();
+    PT.push(p);
+  }
+}
+function updatePT(dt){
+  for(let i=PT.length-1;i>=0;i--){
+    const p=PT[i]; p.life+=dt;
+    if(p.life>p.max){ PT.splice(i,1); continue; }
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; p.vz-=p.g*dt; p.rot+=p.vr*dt;
+    if(p.z<0){ p.z=0; p.vz*=-0.35; p.vx*=0.6; p.vy*=0.6; }
+    if(p.kind==='smoke'){ p.r+=dt*TW*0.085*p.sc; p.vx*=0.97; p.vy*=0.97; }
+  }
+}
+function drawPT(){
+  for(const p of PT){
+    const k=p.life/p.max, a=1-k*k;
+    const q=P(p.x,p.y,p.z);
+    if(p.kind==='smoke'){
+      ell(q,p.r,p.r*0.8,'rgba(152,148,143,'+(a*0.20).toFixed(3)+')');
+    } else if(p.kind==='rock'){
+      ctx.save(); ctx.translate(q[0],q[1]); ctx.rotate(p.rot);
+      ctx.fillStyle='rgba(58,48,42,'+a.toFixed(2)+')';
+      ctx.fillRect(-p.r,-p.r*0.7,p.r*2,p.r*1.4); ctx.restore();
+    } else if(p.kind==='ember'){
+      const c=k<0.5?'255,220,140':'255,120,40';
+      ell(q,p.r*(1-k*0.4),p.r*(1-k*0.4),'rgba('+c+','+a.toFixed(2)+')');
+    } else {
+      ell(q,p.r*(1-k*0.5),p.r*(1-k*0.5),'rgba(255,236,190,'+a.toFixed(2)+')');
+    }
+  }
+}
+
+/* ============================================================
+   Statischer Untergrund — einmal gebacken, dann nur noch kopiert
+   ============================================================ */
+const bg = document.createElement('canvas');
+let bgx = bg.getContext('2d');
+let seed=1;
+const sr = ()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+
+function resize(){
+  // Nach dem Ende einer eingebetteten Sitzung kann ein schon gestellter
+  // Timer (orientationchange wartet 220 ms) noch hierher feuern — dann gibt
+  // es die Bühne nicht mehr, und der Griff ins Leere stünde als Fehlerbox
+  // über dem Hub.
+  const buehnenrest = document.getElementById('stage');
+  if(!buehnenrest) return;
+  const st = buehnenrest.getBoundingClientRect();
+  W = Math.max(120, st.width); H = Math.max(120, st.height);
+  DPR = Math.min(2.5, window.devicePixelRatio||1);
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  bg.width = cv.width; bg.height = cv.height;
+  bgx.setTransform(DPR,0,0,DPR,0,0);
+  const pad = 12;
+  /* Zellverhältnis 1,00 — Geometrie-Entscheid vom 7. August 2026:
+   * quadratische Felder für leichteres Klicken und drehbare 3D-Modelle
+   * (vorher 0,62; mit werkzeug/feld-vorschau.html entschieden). */
+  const ZELL = 1.00;
+  TW = Math.min((W-pad*2)/COLS, (H-pad*2)/(ROWS*ZELL));
+  TH = TW*ZELL;
+  OX = (W - TW*COLS)/2; OY = (H - TH*ROWS)/2 + TH*0.55;
+  CX = OX + TW*COLS/2; CY = OY + TH*ROWS/2;
+  bakeStatic();
+}
+/* Fenster-Horcher laufen über diese Hilfe, damit eine eingebettete Sitzung
+ * sie beim Beenden wieder abhängen kann. Ohne das feuerte nach dem Verlassen
+ * des Tisches ein resize auf eine Bühne, die es nicht mehr gibt — die
+ * Fehlerbox stand dann mitten im Hub. Standalone ändert sich nichts: Dort
+ * lebt die Seite genau so lange wie ihre Horcher. */
+const fensterHorcher = [];
+function horchen(art, fn){
+  window.addEventListener(art, fn);
+  fensterHorcher.push([art, fn]);
+}
+function horcherAbhaengen(){
+  for(const [art, fn] of fensterHorcher) window.removeEventListener(art, fn);
+  fensterHorcher.length = 0;
+}
+
+horchen('resize', resize);
+
+function bakeStatic(){
+  const real = ctx; ctx = bgx;
+  seed = 20260804;
+  ctx.clearRect(0,0,W,H);
+  // Tisch
+  let g = ctx.createRadialGradient(CX,CY*0.7,TW*2,CX,CY,Math.max(W,H));
+  g.addColorStop(0,'#101a22'); g.addColorStop(1,'#05080b');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<220;i++){
+    const x=sr()*W, y=sr()*H, r=sr()*1.6+0.3;
+    ctx.fillStyle='rgba(140,170,190,'+(sr()*0.035).toFixed(3)+')';
+    ctx.beginPath(); ctx.arc(x,y,r,0,6.28); ctx.fill();
+  }
+  if(!G){ ctx = real; return; }
+
+  // Schatten der Brettplatte auf den Tisch
+  const dx=SHX*TH*0.9, dy=SHY*TH*0.9;
+  poly([[gx(0),gy(0)],[gx(COLS)+dx,gy(0)+dy],[gx(COLS)+dx,gy(ROWS)+dy],[gx(0),gy(ROWS)]]
+       .map(p=>P(p[0],p[1],0)), 'rgba(0,0,0,.5)');
+  // Erdsockel
+  box(gx(0)-2, gy(0)-2, TW*COLS+4, TH*ROWS+4, -TH*0.9, 0, COL.erde);
+  poly([[gx(0)-2,gy(0)-2],[gx(COLS)+2,gy(0)-2],[gx(COLS)+2,gy(ROWS)+2],[gx(0)-2,gy(ROWS)+2]]
+       .map(p=>P(p[0],p[1],0)), sh(COL.erdeDark,1));
+
+  // Grasnarbe
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const x=gx(c), y=gy(r), t=envAt(r,c);
+    if(t==='see' || t==='krater') continue;
+    const warm = sideOf(r)===0 ? 0.055 : 0;
+    const cool = sideOf(r)===1 ? 0.055 : 0;
+    let base = mix(mix((r+c)%2?COL.gras:COL.grasAlt, COL.p[0], warm*0.35), COL.p[1], cool*0.30);
+
+    const gg = ctx.createLinearGradient(x,y,x+TW,y+TH);
+    gg.addColorStop(0, sh(base,1.06)); gg.addColorStop(1, sh(base,0.9));
+    ctx.fillStyle=gg; ctx.fillRect(x,y,TW+0.6,TH+0.6);
+    // Grasrauschen
+    const n = 26;
+    for(let i=0;i<n;i++){
+      const px=x+sr()*TW, py=y+sr()*TH, s=sr();
+      ctx.fillStyle = s>0.62 ? sh(base,1.22,0.5) : sh(base,0.74,0.45);
+      ctx.beginPath(); ctx.ellipse(px,py,TW*0.035*(0.5+s),TH*0.022*(0.5+s),sr()*3,0,6.28); ctx.fill();
+    }
+    ctx.strokeStyle='rgba(10,18,14,.10)'; ctx.lineWidth=1;
+    ctx.strokeRect(x+.5,y+.5,TW,TH);
+  }
+
+  // Seebecken
+  for(const o of G.envs){
+    if(o.type!=='see') continue;
+    const x=gx(o.c0), y=gy(o.r0), w=TW*o.w, d=TH*o.h, DP=-TH*0.20;
+    // Uferstreifen
+    const gr=ctx.createLinearGradient(x,y,x,y+d);
+    gr.addColorStop(0, sh([84,74,54],1)); gr.addColorStop(1, sh([96,86,64],1));
+    ctx.fillStyle=gr; ctx.fillRect(x,y,w,d);
+    box(x+TW*0.06,y+TH*0.06,w-TW*0.12,d-TH*0.12,DP,0,[46,40,32]);
+    const p=[[x+TW*0.06,y+TH*0.06],[x+w-TW*0.06,y+TH*0.06],
+             [x+w-TW*0.06,y+d-TH*0.06],[x+TW*0.06,y+d-TH*0.06]].map(q=>P(q[0],q[1],DP));
+    const gg=ctx.createLinearGradient(p[0][0],p[0][1],p[2][0],p[2][1]);
+    gg.addColorStop(0, sh(COL.wasser,0.85)); gg.addColorStop(1, sh(COL.wasserFlach,0.95));
+    poly(p, gg);
+    ctx.globalAlpha=.5; poly(p,null,sh(COL.schaum,1),Math.max(1.5,TW*0.035)); ctx.globalAlpha=1;
+    o.wpts = p;
+  }
+
+  // Krater: Aschering, Senke, Restglut
+  for(const o of G.envs){
+    if(o.type!=='krater') continue;
+    const x=gx(o.c0), y=gy(o.r0), w=TW*o.w, d=TH*o.h, DP=-TH*0.26;
+    const ga=ctx.createRadialGradient(x+w/2,y+d/2,w*0.1,x+w/2,y+d/2,w*0.62);
+    ga.addColorStop(0,sh([72,58,48],1)); ga.addColorStop(0.7,sh([58,48,40],1));
+    ga.addColorStop(1,sh([46,52,42],1));
+    ctx.fillStyle=ga; ctx.fillRect(x,y,w,d);
+    for(let i=0;i<40;i++){
+      const px=x+sr()*w, py=y+sr()*d, s2=sr();
+      ctx.fillStyle = s2>0.6?'rgba(120,104,92,.5)':'rgba(30,24,20,.5)';
+      ctx.beginPath(); ctx.ellipse(px,py,TW*0.04*(0.4+s2),TH*0.03*(0.4+s2),sr()*3,0,6.28); ctx.fill();
+    }
+    box(x+w*0.16,y+d*0.16,w*0.68,d*0.68,DP,0,[52,40,34]);
+    const p=[[x+w*0.16,y+d*0.16],[x+w*0.84,y+d*0.16],[x+w*0.84,y+d*0.84],[x+w*0.16,y+d*0.84]]
+            .map(q=>P(q[0],q[1],DP));
+    const gk=ctx.createRadialGradient((p[0][0]+p[2][0])/2,(p[0][1]+p[2][1])/2,1,
+                                      (p[0][0]+p[2][0])/2,(p[0][1]+p[2][1])/2,w*0.4);
+    gk.addColorStop(0,'rgb(74,44,30)'); gk.addColorStop(1,'rgb(34,26,22)');
+    poly(p,gk);
+    for(let i=0;i<7;i++){
+      const px=x+w*(0.24+sr()*0.52), py=y+d*(0.24+sr()*0.52);
+      const q=P(px,py,DP);
+      ctx.fillStyle='rgba(255,120,40,'+(0.10+sr()*0.22).toFixed(3)+')';
+      ctx.beginPath(); ctx.ellipse(q[0],q[1],TW*0.055,TH*0.04,sr()*3,0,6.28); ctx.fill();
+    }
+  }
+
+  // Grenzlinie
+  const y0=gy(MID), a=P(gx(0),y0,0), b=P(gx(COLS),y0,0);
+  ctx.save();
+  const lg=ctx.createLinearGradient(a[0],a[1],b[0],b[1]);
+  lg.addColorStop(0,'rgba(220,235,245,0)'); lg.addColorStop(.5,'rgba(220,235,245,.5)');
+  lg.addColorStop(1,'rgba(220,235,245,0)');
+  ctx.setLineDash([TW*0.16,TW*0.12]); ctx.lineWidth=1.6; ctx.strokeStyle=lg;
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+  ctx.restore();
+  // Grenzpfosten
+  for(let c=0;c<=COLS;c+=2){
+    const px=gx(c)+(c===COLS?-TW*0.06:TW*0.06);
+    box(px-TW*0.028, y0-TH*0.03, TW*0.056, TH*0.06, 0, TH*0.30, COL.holz);
+  }
+  // Vignette
+  const vg=ctx.createRadialGradient(CX,CY,Math.min(W,H)*0.30,CX,CY,Math.max(W,H)*0.78);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.55)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  ctx = real;
+}
+
+/* ============================================================
+   Teil 3: Gelände, Figuren, Bauten
+   ============================================================ */
+const now = ()=>performance.now()/1000;
+
+/* ---------- Wasser (über dem gebackenen Becken) ---------- */
+function drawWater(o){
+  if(!o.wpts) return;
+  const p=o.wpts, t=now();
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(p[0][0],p[0][1]);
+  for(let i=1;i<4;i++) ctx.lineTo(p[i][0],p[i][1]);
+  ctx.closePath(); ctx.clip();
+  const x0=p[0][0], x1=p[1][0], yTop=p[0][1], yBot=p[3][1], hh=yBot-yTop;
+  for(let i=0;i<3;i++){
+    const yy = yTop + hh*(0.26+i*0.25) + Math.sin(t*1.1+i*2+o.seed)*hh*0.05;
+    ctx.strokeStyle='rgba(180,228,245,'+(0.14+0.09*Math.sin(t*2+i)).toFixed(3)+')';
+    ctx.lineWidth=Math.max(1,hh*0.055);
+    ctx.beginPath();
+    for(let k=0;k<=10;k++){
+      const px=x0+(x1-x0)*k/10, py=yy+Math.sin(t*1.7+k*0.8+i*1.3)*hh*0.035;
+      k?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.stroke();
+  }
+  const gl=ctx.createLinearGradient(x0,yTop,x0+(x1-x0)*0.75,yBot);
+  gl.addColorStop(0,'rgba(210,240,255,'+(0.12+0.05*Math.sin(t*0.8)).toFixed(3)+')');
+  gl.addColorStop(1,'rgba(210,240,255,0)');
+  ctx.fillStyle=gl; ctx.fillRect(x0,yTop,x1-x0,hh);
+  ctx.restore();
+}
+
+/* ---------- Gebirge ---------- */
+function drawBerg(o){
+  const x=gx(o.c0), y=gy(o.r0), w=TW*o.w, d=TH*o.h;
+  let s=o.seed; const rr=()=>{ s=(s*9301+49297)%233280; return s/233280; };
+  const n = o.w*o.h + 1;
+  const laengs = o.w >= o.h;                    // liegt der Fels quer oder hochkant?
+  const peaks=[];
+  for(let i=0;i<n;i++){
+    const f=(i+0.5)/n;
+    peaks.push({
+      px: x + (laengs ? w*(0.24+0.52*f) : w*0.50) + (rr()-0.5)*w*(laengs?0.12:0.26),
+      py: y + (laengs ? d*(0.36+rr()*0.30) : d*(0.18+0.64*f) + (rr()-0.5)*d*0.05),
+      pw: Math.min(w, d) * (0.46+rr()*0.14),
+      ph: TH*(0.68+rr()*0.46)
+    });
+  }
+  peaks.sort((a,b)=>a.py-b.py);
+  for(const p of peaks){                       // Geröll zuerst, damit nichts auf den Gipfeln landet
+    for(let i=0;i<3;i++){
+      const a=rr()*6.28, rad=p.pw*(0.55+rr()*0.22);
+      const q=P(p.px+Math.cos(a)*rad, p.py+Math.sin(a)*rad*0.6, 0);
+      ell(q, p.pw*0.10, p.pw*0.06, sh(COL.fels,0.62));
+    }
+  }
+  for(const p of peaks){
+    const top = facet(p.px,p.py,0,p.ph,p.pw*0.60,p.pw*0.34,
+                      (rr()-0.5)*p.pw*0.10,(rr()-0.5)*p.pw*0.06, COL.fels,7,p.px*17+p.py,0.34);
+    // Gipfelfläche
+    const c0=top.reduce((a,q)=>[a[0]+q[0]/top.length,a[1]+q[1]/top.length],[0,0]);
+    const gt=ctx.createLinearGradient(c0[0]-p.pw*0.4,c0[1]-p.pw*0.3,c0[0]+p.pw*0.4,c0[1]+p.pw*0.3);
+    gt.addColorStop(0,sh(COL.fels,1.30)); gt.addColorStop(1,sh(COL.fels,1.02));
+    poly(top, gt);
+    if(p.ph > TH*0.92){                       // nur hohe Gipfel tragen Schnee
+      const cap2 = top.map(q=>[c0[0]+(q[0]-c0[0])*0.62-p.pw*0.05, c0[1]+(q[1]-c0[1])*0.62-p.pw*0.04]);
+      const gs=ctx.createLinearGradient(c0[0]-p.pw*0.3,c0[1]-p.pw*0.2,c0[0]+p.pw*0.3,c0[1]+p.pw*0.2);
+      gs.addColorStop(0,sh(COL.felsSchnee,1)); gs.addColorStop(1,sh(COL.felsSchnee,0.82));
+      poly(cap2, gs);
+    }
+  }
+}
+
+/* ---------- Wald: hintere und vordere Baumgruppe ---------- */
+function baumSet(o){
+  let s=o.seed; const rr=()=>{ s=(s*9301+49297)%233280; return s/233280; };
+  const arr=[];
+  for(let i=0;i<5;i++){
+    arr.push({fx:0.16+rr()*0.68, fy:0.14+rr()*0.74, sc:0.78+rr()*0.5, ph:rr()*6.28});
+  }
+  return arr;
+}
+function drawBaum(o, front){
+  if(!o.trees) o.trees = baumSet(o);
+  const x=gx(o.c0), y=gy(o.r0), t=now();
+  for(const b of o.trees){
+    if((b.fy>0.52) !== front) continue;
+    const px=x+TW*b.fx, py=y+TH*b.fy, sc=b.sc;
+    const sway=Math.sin(t*1.1+b.ph)*TW*0.012*sc;
+    frus(px,py,0,TH*0.30*sc,TW*0.035*sc,TW*0.022*sc,COL.stamm,1.15,0.5);
+    for(let k=0;k<3;k++){
+      const hb=TH*(0.22+k*0.17)*sc, r=TW*(0.150-k*0.037)*sc;
+      const cxp=px+sway*(k+1)*0.5;
+      const c1=P(cxp,py,hb), c2=P(cxp+sway,py,hb+TH*0.30*sc);
+      ctx.beginPath();
+      ctx.moveTo(c2[0],c2[1]);
+      ctx.lineTo(c1[0]-r,c1[1]+r*0.22);
+      ctx.quadraticCurveTo(c1[0],c1[1]+r*0.5,c1[0]+r,c1[1]+r*0.22);
+      ctx.closePath();
+      const g=ctx.createLinearGradient(c1[0]-r,0,c1[0]+r,0);
+      g.addColorStop(0,sh(COL.laubHell,1)); g.addColorStop(0.5,sh(COL.laub,1));
+      g.addColorStop(1,sh(COL.laub,0.6));
+      ctx.fillStyle=g; ctx.fill();
+    }
+  }
+}
+
+/* ---------- Vulkan ---------- */
+function drawVulkan(o){
+  const x=gx(o.c0), y=gy(o.r0), w=TW*o.w, d=TH*o.h, t=now();
+  const cx=x+w/2, cy=y+d/2, heat=Math.min(1,(o.chance||0.05)*2.6);
+  const pulse=0.55+0.45*Math.sin(t*3.1);
+  const rim = facet(cx,cy,0,TH*0.80,w*0.38,w*0.21,0,0,COL.basalt,9,o.seed,0.18);
+  // Kraterrand
+  poly(rim, sh(COL.basalt,1.15));
+  const rc=P(cx,cy,TH*0.80);
+  const lava=mix(COL.lava,COL.lavaHell,0.12+0.38*pulse*heat);
+  ell(rc, w*0.165, w*0.082, sh([18,13,11],1));
+  ell(rc, w*0.125, w*0.060, sh(lava,0.70+0.45*pulse));
+  ell([rc[0],rc[1]-w*0.008], w*0.062, w*0.028, sh(COL.lavaHell,1));
+  const g=ctx.createRadialGradient(rc[0],rc[1],1,rc[0],rc[1],w*(0.40+0.14*pulse));
+  g.addColorStop(0,'rgba(255,190,90,'+(0.36+0.34*pulse*heat).toFixed(2)+')');
+  g.addColorStop(1,'rgba(255,110,30,0)');
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  ctx.fillStyle=g; ctx.beginPath();
+  ctx.ellipse(rc[0],rc[1],w*(0.52+0.16*pulse),w*0.30,0,0,6.28); ctx.fill();
+  ctx.restore();
+  // Lavaadern über die Flanke
+  for(let i=0;i<5;i++){
+    const a=i*1.256+o.seed*0.01;
+    const p1=P(cx+Math.cos(a)*w*0.14, cy+Math.sin(a)*d*0.09, TH*0.70);
+    const p2=P(cx+Math.cos(a)*w*0.38, cy+Math.sin(a)*d*0.26, 0);
+    ctx.strokeStyle='rgba(255,'+((110+90*pulse)|0)+',40,'+(0.26+0.34*heat).toFixed(2)+')';
+    ctx.lineWidth=Math.max(1,TW*0.024);
+    ctx.beginPath(); ctx.moveTo(p1[0],p1[1]);
+    ctx.quadraticCurveTo((p1[0]+p2[0])/2+TW*0.05,(p1[1]+p2[1])/2,p2[0],p2[1]); ctx.stroke();
+  }
+  if(phase==='war' && !paused){
+    if(deko()<0.12+heat*0.35) burst(cx,cy,TH*0.95,1,'ember','#ffb43c');
+    if(deko()<0.05) burst(cx,cy,TH*0.9,1,'smoke','#8a847e',0.8);
+  }
+  if(phase==='war'){
+    const pc=P(cx,cy,TH*1.58);
+    ctx.font='800 '+Math.max(8,Math.round(TW*0.19))+'px ui-monospace,Menlo,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(10,14,18,.62)';
+    ctx.fillRect(pc[0]-TW*0.21,pc[1]-TH*0.14,TW*0.42,TH*0.28);
+    ctx.fillStyle=heat>0.5?'#ffb04a':'rgba(255,200,130,.92)';
+    const ch = Math.min(1, o.chance||0.025);
+    ctx.fillText((ch<0.1 ? (ch*100).toFixed(1) : Math.round(ch*100))+'%', pc[0], pc[1]+1);
+  }
+}
+
+/* ============================================================
+   Figuren
+   ============================================================ */
+function troopMetrics(type){
+  if(type==='ritter') return {h:0.94, r:0.172, head:0.078};
+  if(type==='bogen')  return {h:0.66, r:0.110, head:0.062};
+  return {h:0.73, r:0.126, head:0.066};
+}
+function zunftzeichen(type, p, r){
+  ctx.save();
+  ctx.translate(p[0], p[1]+r*0.10);
+  ctx.scale(1, 0.80);
+  ctx.strokeStyle='rgba(12,18,24,.62)';
+  ctx.fillStyle='rgba(12,18,24,.62)';
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  const lw=Math.max(1.4, r*0.19);
+  ctx.lineWidth=lw;
+  if(type==='schwert'){
+    ctx.beginPath(); ctx.moveTo(0,-r*0.78); ctx.lineTo(0,r*0.62); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r*0.46,r*0.10); ctx.lineTo(r*0.46,r*0.10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r*0.20,r*0.62); ctx.lineTo(r*0.20,r*0.62); ctx.stroke();
+  } else if(type==='bogen'){
+    ctx.beginPath(); ctx.arc(-r*0.16, 0, r*0.70, -1.15, 1.15); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-r*0.16+Math.cos(-1.15)*r*0.70, Math.sin(-1.15)*r*0.70);
+    ctx.lineTo(-r*0.16+Math.cos(1.15)*r*0.70, Math.sin(1.15)*r*0.70);
+    ctx.lineWidth=lw*0.6; ctx.stroke();
+    ctx.lineWidth=lw;
+    ctx.beginPath(); ctx.moveTo(-r*0.30,0); ctx.lineTo(r*0.72,0); ctx.stroke();
+  } else {                                     // Helm als Umriss mit Visierschlitz
+    ctx.beginPath();
+    ctx.moveTo(-r*0.62, r*0.30);
+    ctx.quadraticCurveTo(-r*0.62,-r*0.74, 0,-r*0.74);
+    ctx.quadraticCurveTo(r*0.62,-r*0.74, r*0.62, r*0.30);
+    ctx.quadraticCurveTo(0, r*0.68, -r*0.62, r*0.30);
+    ctx.closePath();
+    ctx.lineWidth=lw*0.92; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-r*0.40, r*0.02); ctx.lineTo(r*0.40, r*0.02);
+    ctx.stroke();
+  }
+  ctx.lineCap='butt'; ctx.lineJoin='miter';
+  ctx.restore();
+}
+function drawTroop(type, owner, lvl, x, y, o){
+  o = o||{};
+  const m = troopMetrics(type);
+  const MET = metallOf(lvl);                       // Kupfer, Silber, Gold, Diamant
+  const armor = mix(COL.p[owner], MET, (lvl-1)*0.10);
+  const dark  = mix(COL.pD[owner], MET, (lvl-1)*0.08);
+  const light = COL.pL[owner];
+  const t = now(), ph = o.ph||0;
+  const rdy = o.rdy===undefined ? true : o.rdy;
+  const sat = rdy ? 1 : 0.14 + 0.26*(o.prog||0);        // matt, solange kein Zug möglich
+  const breathe = Math.sin(t*1.8+ph)*TH*0.012;
+  const walk = o.walk||0;                                   // 0..1 während des Zuges
+  const bob = walk ? Math.abs(Math.sin(walk*Math.PI*2))*TH*0.10 : 0;
+  const legSw = walk ? Math.sin(walk*Math.PI*4)*TW*0.055 : 0;
+  const HH = TH*m.h, RR = TW*m.r;
+  const base = (o.alpha!==undefined) ? o.alpha : 1;
+
+  ctx.save();
+  if(o.tilt){
+    const p=P(x,y,0); ctx.translate(p[0],p[1]); ctx.rotate(o.tilt); ctx.translate(-p[0],-p[1]);
+  }
+  ctx.globalAlpha = base;
+  const hurt = o.hurt||0;
+  const armorS = mix(COL.matt, armor, sat), darkS = mix(mix(COL.matt,[40,48,54],0.4), dark, sat);
+  const A = hurt>0 ? mix(armorS,[255,255,255],Math.min(0.72,hurt*1.9)) : armorS;
+  const D = hurt>0 ? mix(darkS,[255,255,255],Math.min(0.65,hurt*1.7)) : darkS;
+  {                                                      // Standscheibe: immer Teamfarbe
+    const gp=P(x,y+TH*0.05,(o.base||0));
+    const sk = o.base ? 0.76 : 1;                        // auf der Plattform ist weniger Platz
+    ell(gp, TW*0.265*sk, TH*0.232*sk, sh(COL.pD[owner],1.15,0.88));
+    ell(gp, TW*0.205*sk, TH*0.180*sk, sh(armor,1,0.92));
+    zunftzeichen(type, gp, TW*0.175*sk);                 // Schwert, Bogen oder Helm
+    if(rdy){
+      const gl=0.16+0.09*Math.sin(t*3+ph);
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const g=ctx.createRadialGradient(gp[0],gp[1],1,gp[0],gp[1],TW*0.38);
+      g.addColorStop(0, sh(COL.pL[owner],1,gl));
+      g.addColorStop(1, sh(COL.pL[owner],1,0));
+      ctx.fillStyle=g; ctx.beginPath();
+      ctx.ellipse(gp[0],gp[1],TW*0.38,TH*0.32,0,0,6.2832); ctx.fill();
+      ctx.restore();
+    }
+  }
+  const lift = bob + breathe + (o.base||0);
+
+  // Beine
+  frus(x-RR*0.42+legSw, y, lift*0.2, HH*0.34+lift, RR*0.30, RR*0.24, D, 1.1, 0.55);
+  frus(x+RR*0.42-legSw, y, lift*0.2, HH*0.34+lift, RR*0.30, RR*0.24, D, 1.1, 0.55);
+  // Rumpf
+  frus(x, y, HH*0.28+lift, HH*0.74+lift, RR*(type==='ritter'?1.02:0.86), RR*0.66, A, 1.16, 0.5);
+  // Gürtel
+  const belt=P(x,y,HH*0.46+lift);
+  ell(belt,RR*0.86,RR*0.34,sh(D,0.85,0.9));
+  // Schultern
+  if(type==='ritter'){
+    frus(x-RR*0.86,y,HH*0.60+lift,HH*0.80+lift,RR*0.42,RR*0.34,A,1.2,0.5);
+    frus(x+RR*0.86,y,HH*0.60+lift,HH*0.80+lift,RR*0.42,RR*0.34,A,1.2,0.5);
+  }
+  // Kopf
+  const hR=TW*m.head;
+  frus(x,y,HH*0.74+lift,HH*0.80+lift,RR*0.30,RR*0.26,COL.haut,1.1,0.6);
+  cap(x,y,HH*0.86+lift,hR,COL.haut);
+  // Helm / Kapuze
+  if(type==='bogen'){
+    const hp=P(x,y,HH*0.90+lift);
+    ctx.beginPath();
+    ctx.moveTo(hp[0]-hR*1.15,hp[1]+hR*0.5);
+    ctx.quadraticCurveTo(hp[0],hp[1]-hR*1.7,hp[0]+hR*1.15,hp[1]+hR*0.5);
+    ctx.quadraticCurveTo(hp[0],hp[1]+hR*0.95,hp[0]-hR*1.15,hp[1]+hR*0.5);
+    ctx.closePath();
+    const gg=ctx.createLinearGradient(hp[0]-hR,0,hp[0]+hR,0);
+    gg.addColorStop(0,sh(A,1.2)); gg.addColorStop(1,sh(A,0.62));
+    ctx.fillStyle=gg; ctx.fill();
+  } else {
+    const hp=P(x,y,HH*0.90+lift);
+    ctx.beginPath(); ctx.ellipse(hp[0],hp[1]+hR*0.12,hR*1.12,hR*0.92,0,Math.PI,0);
+    const gg=ctx.createLinearGradient(hp[0]-hR,0,hp[0]+hR,0);
+    gg.addColorStop(0,sh(MET,1.12)); gg.addColorStop(1,sh(MET,0.52));
+    ctx.fillStyle=gg; ctx.fill();
+    if(type==='ritter'){                                  // geschlossener Helm mit Visier
+      ctx.beginPath();
+      ctx.ellipse(hp[0],hp[1]+hR*0.44,hR*1.02,hR*0.62,0,0,Math.PI);
+      ctx.fillStyle=sh(MET,0.78); ctx.fill();
+      ctx.fillStyle='rgba(16,22,28,.85)';
+      ctx.fillRect(hp[0]-hR*0.72, hp[1]+hR*0.22, hR*1.44, hR*0.20);
+      ctx.fillStyle=sh(MET,1.24);
+      ctx.fillRect(hp[0]-hR*0.10, hp[1]-hR*0.30, hR*0.20, hR*0.95);
+    }
+    const cr=P(x,y,HH*1.0+lift);                         // Helmkamm
+    ctx.fillStyle=sh(light,1);
+    ctx.beginPath(); ctx.ellipse(cr[0],cr[1],hR*0.24,hR*0.5,0,0,6.28); ctx.fill();
+  }
+  // Waffen
+  if(type==='schwert'){
+    const g1=P(x+RR*1.0,y,HH*0.52+lift), g2=P(x+RR*1.12,y,HH*1.30+lift);
+    ctx.strokeStyle=sh(COL.holz,0.9); ctx.lineWidth=Math.max(1.4,RR*0.20); ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(g1[0],g1[1]); ctx.lineTo(g1[0]+(g2[0]-g1[0])*0.22,g1[1]+(g2[1]-g1[1])*0.22); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(g1[0]+(g2[0]-g1[0])*0.22,g1[1]+(g2[1]-g1[1])*0.22);
+    ctx.lineTo(g2[0],g2[1]);
+    ctx.strokeStyle=sh(MET,1.06); ctx.lineWidth=Math.max(1.6,RR*0.26); ctx.stroke();
+    const gp=P(x+RR*1.02,y,HH*0.66+lift);                // Parierstange
+    ctx.strokeStyle=sh(MET,0.72); ctx.lineWidth=Math.max(1.2,RR*0.16);
+    ctx.beginPath(); ctx.moveTo(gp[0]-RR*0.30,gp[1]); ctx.lineTo(gp[0]+RR*0.30,gp[1]); ctx.stroke();
+    ctx.lineCap='butt';
+    const sp=P(x-RR*1.05,y,HH*0.55+lift);                // Schild
+    const sg=ctx.createLinearGradient(sp[0]-RR*0.6,0,sp[0]+RR*0.6,0);
+    sg.addColorStop(0,sh(A,1.25)); sg.addColorStop(1,sh(D,0.9));
+    ell(sp,RR*0.52,RR*0.72,sg,sh(MET,0.85,0.95),1.4);
+    ell(sp,RR*0.16,RR*0.22,sh(MET,1.15));
+  } else if(type==='bogen'){
+    const bp=P(x-RR*1.15,y,HH*0.72+lift);
+    ctx.strokeStyle=sh(COL.holz,1.1); ctx.lineWidth=Math.max(1.5,RR*0.20);
+    ctx.beginPath(); ctx.ellipse(bp[0],bp[1],RR*0.86,RR*1.35,0.25,-1.25,1.25); ctx.stroke();
+    ctx.strokeStyle=sh(MET,1.2,0.7); ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.moveTo(bp[0]+Math.cos(-1.25)*RR*0.86*0.98, bp[1]+Math.sin(-1.25)*RR*1.35);
+    ctx.lineTo(bp[0]+Math.cos(1.25)*RR*0.86*0.98, bp[1]+Math.sin(1.25)*RR*1.35);
+    ctx.stroke();
+    const qv=P(x+RR*0.9,y,HH*0.62+lift);                  // Köcher
+    ctx.save(); ctx.translate(qv[0],qv[1]); ctx.rotate(0.42);
+    ctx.fillStyle=sh(COL.holz,0.8); ctx.fillRect(-RR*0.22,-RR*0.55,RR*0.44,RR*1.1);
+    ctx.fillStyle=sh(MET,1.0);
+    ctx.fillRect(-RR*0.16,-RR*0.85,RR*0.10,RR*0.4);
+    ctx.fillRect(RR*0.02,-RR*0.9,RR*0.10,RR*0.42);
+    ctx.restore();
+  } else {                                              // Ritter: Langschwert und Wappenschild
+    const g1=P(x+RR*1.02,y,HH*0.50+lift), g2=P(x+RR*1.16,y,HH*1.42+lift);
+    ctx.lineCap='round';
+    ctx.strokeStyle=sh(COL.holz,0.9); ctx.lineWidth=Math.max(1.8,RR*0.22);
+    ctx.beginPath(); ctx.moveTo(g1[0],g1[1]);
+    ctx.lineTo(g1[0]+(g2[0]-g1[0])*0.20, g1[1]+(g2[1]-g1[1])*0.20); ctx.stroke();
+    ctx.strokeStyle=sh(MET,1.12); ctx.lineWidth=Math.max(2.4,RR*0.30);
+    ctx.beginPath();
+    ctx.moveTo(g1[0]+(g2[0]-g1[0])*0.20, g1[1]+(g2[1]-g1[1])*0.20);
+    ctx.lineTo(g2[0],g2[1]); ctx.stroke();
+    ctx.lineCap='butt';
+    const gp=P(x+RR*1.06,y,HH*0.70+lift);
+    ctx.strokeStyle=sh(MET,0.72); ctx.lineWidth=Math.max(1.4,RR*0.18);
+    ctx.beginPath(); ctx.moveTo(gp[0]-RR*0.42,gp[1]); ctx.lineTo(gp[0]+RR*0.42,gp[1]); ctx.stroke();
+    const sp=P(x-RR*1.06,y,HH*0.56+lift);
+    ctx.beginPath();
+    ctx.moveTo(sp[0]-RR*0.62, sp[1]-RR*0.78);
+    ctx.lineTo(sp[0]+RR*0.62, sp[1]-RR*0.78);
+    ctx.lineTo(sp[0]+RR*0.62, sp[1]+RR*0.30);
+    ctx.quadraticCurveTo(sp[0], sp[1]+RR*1.15, sp[0]-RR*0.62, sp[1]+RR*0.30);
+    ctx.closePath();
+    const sg=ctx.createLinearGradient(sp[0]-RR*0.6,0,sp[0]+RR*0.6,0);
+    sg.addColorStop(0,sh(A,1.28)); sg.addColorStop(1,sh(D,0.88));
+    ctx.fillStyle=sg; ctx.fill();
+    ctx.strokeStyle=sh(MET,0.95,0.95); ctx.lineWidth=1.6; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(sp[0], sp[1]-RR*0.70); ctx.lineTo(sp[0], sp[1]+RR*0.70);
+    ctx.moveTo(sp[0]-RR*0.50, sp[1]-RR*0.20); ctx.lineTo(sp[0]+RR*0.50, sp[1]-RR*0.20);
+    ctx.strokeStyle=sh(MET,1.18,0.8); ctx.lineWidth=Math.max(1.2,RR*0.13); ctx.stroke();
+  }
+  if(lvl>=4 && rdy){                               // Diamant funkelt
+    for(let i=0;i<3;i++){
+      const ph2=t*2.2+i*2.1+ (o.ph||0);
+      const fa=0.35+0.65*Math.abs(Math.sin(ph2));
+      const q=P(x+Math.cos(i*2.1+t*0.6)*RR*0.9, y, HH*(0.55+0.3*i)+lift);
+      ell(q, RR*0.10*fa, RR*0.10*fa, 'rgba(226,250,255,'+(0.75*fa).toFixed(2)+')');
+    }
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
+/* ---------- Bauten ---------- */
+function drawHaus(e,x,y,s){
+  const col=COL.p[e.owner], dk=COL.pD[e.owner], t=now();
+  const stufe = hausSt(e.owner), stark = stufe>1;
+  const H0=TH*0.72*s;
+  box(x-TW*0.29,y-TH*0.26,TW*0.58,TH*0.52,0,TH*0.14*s,COL.stein,true);      // Sockel
+  box(x-TW*0.255,y-TH*0.225,TW*0.51,TH*0.45,TH*0.14*s,H0,[196,178,146],true); // Mauerwerk
+  // Fachwerk
+  ctx.strokeStyle=sh(COL.stamm,0.9,0.85); ctx.lineWidth=Math.max(1,TW*0.02);
+  for(const fx of [-0.19,0,0.19]){
+    const a=P(x+TW*fx,y+TH*0.225,TH*0.14*s), b=P(x+TW*fx,y+TH*0.225,H0);
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+  }
+  // Fenster
+  for(const fx of [-0.10,0.10]){
+    const p=P(x+TW*fx,y+TH*0.225,H0*0.60);
+    const gl=0.6+0.4*Math.sin(t*1.4+fx*9+e.ph);
+    ctx.fillStyle='rgba(255,206,120,'+(0.55+0.35*gl).toFixed(2)+')';
+    ctx.fillRect(p[0]-TW*0.038,p[1]-TH*0.09,TW*0.076,TH*0.14);
+  }
+  // Dach
+  const ridge=P(x,y,H0+TH*0.42*s);
+  const e1=P(x-TW*0.33,y-TH*0.29,H0), e2=P(x+TW*0.33,y-TH*0.29,H0);
+  const e3=P(x+TW*0.33,y+TH*0.29,H0), e4=P(x-TW*0.33,y+TH*0.29,H0);
+  poly([e1,e2,ridge], sh(col,0.72));
+  poly([e2,e3,ridge], sh(col,0.60));
+  poly([e4,e1,ridge], sh(col,1.12));
+  poly([e3,e4,ridge], sh(col,0.94));
+  ctx.strokeStyle= stark ? 'rgba(255,214,120,.95)' : sh(dk,0.8,0.8);
+  ctx.lineWidth= stark ? 2.2 : 1;
+  ctx.beginPath(); ctx.moveTo(e4[0],e4[1]); ctx.lineTo(ridge[0],ridge[1]); ctx.lineTo(e2[0],e2[1]); ctx.stroke();
+  if(stark){                                          // vergoldete Traufe als Zeichen des Ausbaus
+    ctx.strokeStyle= stufe>2 ? 'rgba(255,236,180,.95)' : 'rgba(255,214,120,.85)';
+    ctx.lineWidth= stufe>2 ? 3 : 2;
+    ctx.beginPath();
+    ctx.moveTo(e1[0],e1[1]); ctx.lineTo(e2[0],e2[1]);
+    ctx.lineTo(e3[0],e3[1]); ctx.lineTo(e4[0],e4[1]); ctx.closePath(); ctx.stroke();
+    const kr=P(x,y,H0+TH*0.42*s);
+    ctx.fillStyle='#ffd977';
+    ctx.beginPath(); ctx.arc(kr[0],kr[1]-TH*0.06,TW*(stufe>2?0.06:0.045),0,6.2832); ctx.fill();
+    if(stufe>2){                                      // Zinnenkranz auf der dritten Stufe
+      for(let i=0;i<4;i++){
+        const w2=i*1.5708+0.785;
+        const q=P(x+Math.cos(w2)*TW*0.24, y+Math.sin(w2)*TH*0.22, H0+TH*0.10*s);
+        ctx.fillStyle='#ffd977';
+        ctx.beginPath(); ctx.arc(q[0],q[1],TW*0.028,0,6.2832); ctx.fill();
+      }
+    }
+  }
+  // Fahne
+  const fb=P(x+TW*0.02,y,H0+TH*0.42*s), ft=P(x+TW*0.02,y,H0+TH*0.80*s);
+  ctx.strokeStyle=sh(COL.stamm,1); ctx.lineWidth=Math.max(1,TW*0.018);
+  ctx.beginPath(); ctx.moveTo(fb[0],fb[1]); ctx.lineTo(ft[0],ft[1]); ctx.stroke();
+  const wv=Math.sin(t*3+e.ph)*TW*0.03;
+  ctx.beginPath();
+  ctx.moveTo(ft[0],ft[1]);
+  ctx.quadraticCurveTo(ft[0]+TW*0.10,ft[1]+TH*0.025+wv,ft[0]+TW*0.19,ft[1]+TH*0.015);
+  ctx.lineTo(ft[0]+TW*0.175,ft[1]+TH*0.14);
+  ctx.quadraticCurveTo(ft[0]+TW*0.09,ft[1]+TH*0.14+wv,ft[0],ft[1]+TH*0.13);
+  ctx.closePath(); ctx.fillStyle=sh(col,1.05); ctx.fill();
+  if(deko()<0.05 && !paused) burst(x-TW*0.16,y-TH*0.10,TH*1.05,1,'smoke','#8a847e',0.42);
+}
+function mauerAnschluss(e, dr, dc){                // wo hat die Mauer Halt?
+  const r=e.r+dr, c=e.c+dc;
+  if(!inBoard(r,c)) return true;                  // der Brettrand hält auch
+  const t=envAt(r,c);
+  if(t==='gebirge' || t==='see') return true;
+  const o=entAt(r,c);
+  return !!(o && o.type==='mauer' && o.owner===e.owner);
+}
+function drawMauer(e,x,y,s){
+  const lv=e.lvl||1;
+  const H0=TH*(0.60+0.12*(lv-1))*s;
+  const stein = lv>2 ? mix(COL.stein,[176,182,196],0.35) : COL.stein;
+  const bw=TW*0.19, bd=TH*0.19;                   // halbe Mauerdicke
+  let N=mauerAnschluss(e,-1,0), S=mauerAnschluss(e,1,0),
+      W=mauerAnschluss(e,0,-1), O=mauerAnschluss(e,0,1);
+  const halt = {N, S, W, O};                      // echter Halt, vor dem Durchziehen
+  if(!N && !S && !W && !O){ W=O=true; }           // frei stehend: quer zum Feld
+  else if(W && !O && !N && !S) O=true;            // ein Ende hält, das andere zieht durch
+  else if(O && !W && !N && !S) W=true;
+  else if(N && !S && !W && !O) S=true;
+  else if(S && !N && !W && !O) N=true;
+
+  const zinnen=[];
+  if(W || O){                                     // waagerechtes Stück
+    const x0 = W ? x-TW*0.5 : x-bw, x1 = O ? x+TW*0.5 : x+bw;
+    box(x0, y-bd, x1-x0, bd*2, 0, H0, stein, true);
+    const n=Math.max(2, Math.round((x1-x0)/(TW*0.30)));
+    for(let i=0;i<n;i++) zinnen.push([x0+(x1-x0)*(i+0.5)/n - TW*0.10, y-bd, TW*0.20, bd*2]);
+  }
+  if(N || S){                                     // senkrechtes Stück
+    const y0 = N ? y-TH*0.5 : y-bd, y1 = S ? y+TH*0.5 : y+bd;
+    box(x-bw, y0, bw*2, y1-y0, 0, H0, stein, true);
+    const n=Math.max(2, Math.round((y1-y0)/(TH*0.30)));
+    for(let i=0;i<n;i++) zinnen.push([x-bw, y0+(y1-y0)*(i+0.5)/n - TH*0.10, bw*2, TH*0.20]);
+  }
+  if((W||O) && (N||S)){                           // Knick: ein kräftiger Eckturm
+    box(x-bw*1.30, y-bd*1.30, bw*2.6, bd*2.6, 0, H0+TH*0.16*s, stein, true);
+    box(x-bw*1.05, y-bd*1.05, bw*2.1, bd*2.1, H0+TH*0.16*s, H0+TH*0.40*s, stein, true);
+  }
+  // Wo die Mauer an Fels, Wasser oder den Rand stößt, sitzt ein Widerlager
+  const widerlager=[];
+  if(halt.W && !entAt(e.r, e.c-1)) widerlager.push([x-TW*0.45, y]);
+  if(halt.O && !entAt(e.r, e.c+1)) widerlager.push([x+TW*0.45, y]);
+  if(halt.N && !entAt(e.r-1, e.c)) widerlager.push([x, y-TH*0.45]);
+  if(halt.S && !entAt(e.r+1, e.c)) widerlager.push([x, y+TH*0.45]);
+  for(const [ax,ay] of widerlager)                // dort stemmt sich die Mauer gegen den Fels
+    box(ax-bw*1.20, ay-bd*1.20, bw*2.4, bd*2.4, 0, H0+TH*0.12*s, stein, true);
+
+  for(const [zx,zy,zw,zd] of zinnen)
+    box(zx, zy, zw, zd, H0, H0+TH*0.19*s, stein, true);
+
+  if(lv>1){                                       // Eisenbänder als Verstärkung
+    for(let i=0;i<lv-1;i++){
+      const hh=H0*(0.34+i*0.30);
+      if(W||O){
+        const x0 = W ? x-TW*0.5 : x-bw, x1 = O ? x+TW*0.5 : x+bw;
+        const p1=P(x0,y+bd,hh), p2=P(x1,y+bd,hh);
+        ctx.strokeStyle=sh(COL.metall,0.75,0.85); ctx.lineWidth=Math.max(1.5,TH*0.05);
+        ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.stroke();
+      }
+      if(N||S){
+        const y0 = N ? y-TH*0.5 : y-bd, y1 = S ? y+TH*0.5 : y+bd;
+        const p1=P(x+bw,y0,hh), p2=P(x+bw,y1,hh);
+        ctx.strokeStyle=sh(COL.metall,0.75,0.85); ctx.lineWidth=Math.max(1.5,TH*0.05);
+        ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.stroke();
+      }
+    }
+  }
+}
+function rechtecke(cells){                  // Zellmenge in möglichst große Rechtecke zerlegen
+  const set=new Set(cells.map(p=>p.r+','+p.c)), out=[];
+  const rs=cells.map(p=>p.r), cs=cells.map(p=>p.c);
+  const r0=Math.min(...rs), r1=Math.max(...rs), c0=Math.min(...cs), c1=Math.max(...cs);
+  for(let r=r0;r<=r1;r++) for(let c=c0;c<=c1;c++){
+    if(!set.has(r+','+c)) continue;
+    let w=0; while(set.has(r+','+(c+w))) w++;
+    let h=1;
+    for(;;){
+      let voll=true;
+      for(let k=0;k<w;k++) if(!set.has((r+h)+','+(c+k))) { voll=false; break; }
+      if(!voll) break;
+      h++;
+    }
+    for(let dr=0;dr<h;dr++) for(let dc=0;dc<w;dc++) set.delete((r+dr)+','+(c+dc));
+    out.push({r,c,w,h});
+  }
+  return out;
+}
+function drawWerk(e,x,y,s){
+  const tot = !!e.tot;
+  const col = tot ? mix(COL.p[e.owner], COL.matt, 0.72) : COL.p[e.owner];
+  const t=now(), lv=e.lvl||1;
+  if(!e.rects) e.rects = rechtecke(e.cells);
+  const H0=TH*(0.66+0.13*(lv-1))*s;
+  const wand = tot ? [78,84,92] : [96,106,118];
+  const dach = mix(wand,col,0.62);
+  const teile=[...e.rects].sort((a,b)=> (a.r+a.h) - (b.r+b.h));
+  for(const R of teile){
+    const x0=gx(R.c)+TW*0.10, y0=gy(R.r)+TH*0.10;
+    const w=TW*R.w-TW*0.20, d=TH*R.h-TH*0.20;
+    const cx=x0+w/2, cy=y0+d/2;
+    // Baukörper über die ganze Teilfläche
+    box(x0, y0, w, d, 0, H0, wand, true);
+    // Satteldach entlang der längeren Seite
+    const laengs = R.w >= R.h;
+    const rw = laengs ? w*0.5 : 0, rd = laengs ? 0 : d*0.5;
+    const first1=P(cx-rw*0.86, cy-rd*0.86, H0+TH*0.34*s);
+    const first2=P(cx+rw*0.86, cy+rd*0.86, H0+TH*0.34*s);
+    const e1=P(x0-TW*0.02, y0-TH*0.02, H0), e2=P(x0+w+TW*0.02, y0-TH*0.02, H0);
+    const e3=P(x0+w+TW*0.02, y0+d+TH*0.02, H0), e4=P(x0-TW*0.02, y0+d+TH*0.02, H0);
+    if(laengs){
+      poly([e1,e2,first2,first1], sh(dach,0.74));
+      poly([e4,e3,first2,first1], sh(dach,1.06));
+      poly([e1,e4,first1], sh(dach,1.16));
+      poly([e2,e3,first2], sh(dach,0.60));
+    } else {
+      poly([e1,e4,first1,first2], sh(dach,1.12));
+      poly([e2,e3,first2,first1], sh(dach,0.62));
+      poly([e1,e2,first2], sh(dach,0.76));
+      poly([e4,e3,first1], sh(dach,1.0));
+    }
+    ctx.strokeStyle=sh(dach,0.5,0.8); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(first1[0],first1[1]); ctx.lineTo(first2[0],first2[1]); ctx.stroke();
+    // Fensterband
+    for(let i=0;i<(laengs?R.w:R.h);i++){
+      const n2 = (laengs?R.w:R.h);
+      const fx = laengs ? x0 + w*(0.25+0.5*(n2>1?i/(n2-1):0.5)) : cx;
+      const fy = laengs ? y0+d : y0 + d*(0.25+0.5*(n2>1?i/(n2-1):0.5));
+      const fp = P(laengs?fx:x0+w, fy, H0*0.55);
+      const gl = tot ? 0.10 : 0.55+0.35*Math.sin(t*1.6+i*1.4+e.ph);
+      ctx.fillStyle='rgba(255,214,140,'+gl.toFixed(2)+')';
+      ctx.fillRect(fp[0]-TW*0.028, fp[1]-TH*0.05, TW*0.056, TH*0.09);
+    }
+    R._cx=cx; R._cy=cy; R._x0=x0; R._y0=y0; R._w=w; R._d=d;
+  }
+  // Schornsteine, einer je Stufe
+  for(let i=0;i<lv;i++){
+    const R=teile[i%teile.length];
+    const sx=R._x0+R._w*(0.24+0.5*((i%2)?1:0)), sy=R._y0+R._d*0.22;
+    box(sx-TW*0.06, sy-TH*0.06, TW*0.12, TH*0.12, H0+TH*0.10*s, H0+TH*0.58*s, [80,70,62], true);
+    if(!tot && deko()<0.2 && !paused) burst(sx, sy, H0+TH*0.6, 1, 'smoke', '#8a847e', 0.5);
+  }
+  // Sägeblatt vorn
+  const F=teile[teile.length-1];
+  const wv=P(F._x0+F._w*0.22, F._y0+F._d+TH*0.02, H0*0.42);
+  ctx.save(); ctx.translate(wv[0],wv[1]); ctx.rotate(tot ? 0.4 : t*(1.2+0.6*lv));
+  ctx.strokeStyle=sh(COL.metall,1); ctx.lineWidth=Math.max(1,TW*0.022);
+  for(let i=0;i<6;i++){
+    const a2=i*1.047;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a2)*TW*0.03,Math.sin(a2)*TW*0.03*0.6);
+    ctx.lineTo(Math.cos(a2)*TW*0.10,Math.sin(a2)*TW*0.10*0.6); ctx.stroke();
+  }
+  ctx.restore();
+  ell(wv, TW*0.032, TW*0.024, sh(COL.metall,0.7));
+  // Ertragslampen
+  for(let i=0;i<lv;i++){
+    const R=teile[i%teile.length];
+    const lp=P(R._x0+R._w*(0.75-0.2*i), R._y0+R._d+TH*0.01, H0*0.7);
+    const pulse = tot ? 0.05 : 0.5+0.5*Math.sin(t*2.4+e.ph+i*1.1);
+    const lc = lv>2 ? [255,214,120] : col;
+    ell(lp,TW*0.032,TW*0.026,sh(lc,1.15,0.55+0.45*pulse));
+    ell(lp,TW*0.075,TW*0.055,sh(lc,1.15,0.13*pulse));
+  }
+}
+
+/* ---------- Schützenturm auf dem Fels ---------- */
+const sockelOf = e => e.turm ? TH*1.06 : (e.berg ? TH*0.78 : 0);
+function drawTurm(x, y, hoehe, owner, fuss){
+  const holz=[112,82,52], dunkel=[74,54,36];
+  const f = fuss || 0;                            // die Pfosten stehen auf dem Stein
+  for(const [ox,oy] of [[-0.16,-0.13],[0.16,-0.13],[-0.16,0.13],[0.16,0.13]]){
+    const px=x+TW*ox, py=y+TH*oy;
+    frus(px,py, f, hoehe, TW*0.032, TW*0.026, dunkel, 1.1, 0.5);
+  }
+  // Plattform — schmal genug, dass der Fels ringsum sichtbar bleibt
+  box(x-TW*0.24, y-TH*0.20, TW*0.48, TH*0.40, hoehe, hoehe+TH*0.08, holz, true);
+  // Brüstung ringsum
+  const bh=hoehe+TH*0.08;
+  box(x-TW*0.24, y+TH*0.14, TW*0.48, TH*0.06, bh, bh+TH*0.17, holz, true);
+  box(x-TW*0.24, y-TH*0.20, TW*0.07, TH*0.34, bh, bh+TH*0.17, holz, true);
+  box(x+TW*0.17, y-TH*0.20, TW*0.07, TH*0.34, bh, bh+TH*0.17, holz, true);
+  // Wimpel in Teamfarbe
+  const f0=P(x+TW*0.19,y-TH*0.17,bh), f1=P(x+TW*0.19,y-TH*0.17,bh+TH*0.46);
+  ctx.strokeStyle=sh(dunkel,1.2); ctx.lineWidth=Math.max(1,TW*0.016);
+  ctx.beginPath(); ctx.moveTo(f0[0],f0[1]); ctx.lineTo(f1[0],f1[1]); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(f1[0],f1[1]);
+  ctx.lineTo(f1[0]+TW*0.15, f1[1]+TH*0.06);
+  ctx.lineTo(f1[0], f1[1]+TH*0.13);
+  ctx.closePath(); ctx.fillStyle=sh(COL.p[owner],1.05); ctx.fill();
+}
+
+/* ---------- Ausgebranntes Wrack auf gesperrtem Fels ---------- */
+function drawWrack(z){
+  const x=midX(z.c), y=midY(z.r), t=now();
+  const kohle=[34,30,30], asche=[58,52,50];
+  if(z.art==='turm'){
+    for(const [ox,oy] of [[-0.18,-0.14],[0.18,-0.14],[-0.18,0.14],[0.18,0.14]]){
+      const h = 0.30 + 0.28*((ox+oy)>0?1:0.4);
+      frus(x+TW*ox, y+TH*oy, 0, TH*h, TW*0.032, TW*0.024, kohle, 1.0, 0.45);
+    }
+    box(x-TW*0.24, y-TH*0.20, TW*0.42, TH*0.34, TH*0.30, TH*0.36, asche, true);
+    const p1=P(x-TW*0.02,y+TH*0.10,TH*0.36), p2=P(x+TW*0.26,y-TH*0.16,TH*0.10);
+    ctx.strokeStyle=sh(kohle,1.2); ctx.lineWidth=Math.max(2,TW*0.05);
+    ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.stroke();
+  } else {
+    box(x-TW*0.26, y-TH*0.20, TW*0.52, TH*0.40, 0, TH*0.12, kohle, true);
+    const a=P(x-TW*0.18,y+TH*0.04,TH*0.14), b=P(x+TW*0.24,y-TH*0.10,TH*0.30);
+    ctx.lineCap='round';
+    ctx.strokeStyle=sh(kohle,1.3); ctx.lineWidth=Math.max(3,TW*0.13);
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    ctx.lineCap='butt';
+    for(const sx of [-1,1]){
+      const wp=P(x+sx*TW*0.20, y+TH*0.16, TH*0.06);
+      ell(wp, TW*0.075, TW*0.065, sh(kohle,1.1), sh(asche,1,0.7), 1);
+    }
+  }
+  // Glut und Rauch
+  const gl=0.4+0.6*Math.abs(Math.sin(t*3+z.c));
+  const gp=P(x,y,TH*0.16);
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(gp[0],gp[1],1,gp[0],gp[1],TW*0.30);
+  g.addColorStop(0,'rgba(255,150,50,'+(0.35*gl).toFixed(2)+')');
+  g.addColorStop(1,'rgba(255,80,20,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(gp[0],gp[1],TW*0.30,TH*0.26,0,0,6.28); ctx.fill();
+  ctx.restore();
+  if(!paused && deko()<0.25) burst(x,y,TH*0.35,1,'smoke','#6f6a66',0.55);
+  if(!paused && deko()<0.18) burst(x,y,TH*0.30,1,'ember','#ff9a3c');
+}
+
+/* ---------- Kanone ---------- */
+function drawKanone(e,x,y,s){
+  const col=COL.p[e.owner], t=now(), lv=e.lvl||1, gr=1+0.11*(lv-1);
+  const rec = e.atk>0 ? Math.sin(e.atk*Math.PI)*TW*0.10 : 0;     // Rückstoß
+  // Plattform
+  box(x-TW*0.32,y-TH*0.26,TW*0.64,TH*0.52,0,TH*0.14*s,COL.holz,true);
+  // Räder
+  for(const sx of [-1,1]){
+    const wp=P(x+sx*TW*0.24, y+TH*0.16, TH*0.20*s);
+    ell(wp,TW*0.115,TW*0.105,sh(COL.stamm,0.85),sh(COL.metall,0.7,0.8),1.4);
+    ell(wp,TW*0.035,TW*0.032,sh(COL.metall,0.9));
+    for(let i=0;i<4;i++){
+      const a=i*0.785+t*0.0;
+      ctx.strokeStyle=sh(COL.stamm,1.3,0.8); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(wp[0]-Math.cos(a)*TW*0.10, wp[1]-Math.sin(a)*TW*0.09);
+      ctx.lineTo(wp[0]+Math.cos(a)*TW*0.10, wp[1]+Math.sin(a)*TW*0.09); ctx.stroke();
+    }
+  }
+  // Lafette in Teamfarbe, leicht in Zielrichtung versetzt
+  frus(x+ (e.aim===undefined?0:Math.cos(e.aim))*TW*0.02,
+       y+ (e.aim===undefined?0:Math.sin(e.aim))*TH*0.02,
+       TH*0.14*s, TH*0.40*s, TW*0.17, TW*0.13, col, 1.2, 0.55);
+  // Rohr: flach auf Stufe 1, steiler Mörser auf Stufe 2 — beide folgen dem Ziel
+  const aim = (e.aim===undefined) ? (e.owner===0 ? Math.PI/2 : -Math.PI/2) : e.aim;
+  const ax = Math.cos(aim), ay = Math.sin(aim);
+  const moerser = lv>1;
+  let p0,p1;
+  if(moerser){
+    const bx=x+ax*TW*0.03, by=y+ay*TH*0.02;
+    p0=P(bx, by, TH*0.40*s - rec*0.4);
+    p1=P(bx+ax*TW*0.11, by+ay*TH*0.07, TH*1.02*s - rec*0.8);
+    ctx.lineCap='round';
+    ctx.strokeStyle=sh([58,62,70],0.75); ctx.lineWidth=Math.max(4,TW*0.24);
+    ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]); ctx.stroke();
+    ctx.strokeStyle=sh([176,134,70],1.05); ctx.lineWidth=Math.max(3,TW*0.175);
+    ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]); ctx.stroke();
+    ctx.lineCap='butt';
+    ell(p1, TW*0.10, TW*0.078, sh([22,22,26],1));
+    ell(p1, TW*0.072, TW*0.056, sh([196,150,80],0.9));
+    // Bronzeringe
+    for(const f of [0.35,0.65]){
+      const q=P(x+ax*TW*(0.03+0.11*f), y+ay*TH*(0.02+0.07*f), TH*(0.40+0.62*f)*s);
+      ell(q, TW*0.108, TW*0.05, sh([214,166,88],1));
+    }
+  } else {
+    const bx0=x-ax*TW*0.10-rec*ax*0.5, by0=y-ay*TH*0.06+rec*ay*0.25;
+    const bx1=x+ax*TW*0.30-rec*ax, by1=y+ay*TH*0.20-rec*ay*0.6;
+    p0=P(bx0,by0,TH*0.44*s); p1=P(bx1,by1,TH*0.60*s);
+    ctx.lineCap='round';
+    ctx.strokeStyle=sh([70,74,82],0.7); ctx.lineWidth=Math.max(3,TW*0.145*gr);
+    ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]); ctx.stroke();
+    ctx.strokeStyle=sh([132,140,150],1.05); ctx.lineWidth=Math.max(2,TW*0.10*gr);
+    ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]); ctx.stroke();
+    ctx.lineCap='butt';
+    ell(p1,TW*0.055*gr,TW*0.05*gr,sh([26,26,30],1));
+    ell(P(bx0,by0,TH*0.44*s),TW*0.075,TW*0.068,sh([150,158,168],1));
+  }
+  // Mündungsglut kurz nach dem Schuss
+  if(e.atk>0.55 && p1){
+    const k=(e.atk-0.55)/0.45;
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const g=ctx.createRadialGradient(p1[0],p1[1],1,p1[0],p1[1],TW*0.30*k);
+    g.addColorStop(0,'rgba(255,240,200,'+(0.9*k).toFixed(2)+')');
+    g.addColorStop(1,'rgba(255,140,40,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(p1[0],p1[1],TW*0.30*k,TW*0.26*k,0,0,6.28); ctx.fill();
+    ctx.restore();
+  }
+  // Kugelstapel
+  for(let i=0;i<3;i++){
+    const q=P(x-TW*0.26+i*TW*0.055, y+TH*0.30, TH*0.16*s+ (i===2?TW*0.04:0));
+    ell(q,TW*0.042,TW*0.038,sh([44,46,52],1.1));
+  }
+}
+
+/* ============================================================
+   Teil 4: Einheiten-Rendering, Effekte, Bildaufbau
+   ============================================================ */
+function entXY(e){
+  let r=e.r, c=e.c, walk=0;
+  if(canMove(e) && e.mt < MOVE_T){
+    const k=e.mt/MOVE_T, ke = k<0.5 ? 2*k*k : 1-Math.pow(-2*k+2,2)/2;
+    r = e.fr + (e.r-e.fr)*ke; c = e.fc + (e.c-e.fc)*ke; walk = k;
+  }
+  let x = OX + (c + (e.w||1)/2)*TW, y = OY + (r + (e.h||1)/2)*TH;
+  if(e.atk>0){
+    const s=Math.sin((1-e.atk)*Math.PI);
+    x += e.adx*TW*0.22*s; y += e.ady*TH*0.22*s;
+  }
+  return {x,y,walk};
+}
+function spawnScale(e){
+  if(e.spawn>=1) return 1;
+  const k=e.spawn;
+  return 1.08*Math.sin(k*Math.PI*0.5) + 0.06*Math.sin(k*Math.PI*1.5)*(1-k);
+}
+function drawEnt(e,p){
+  const s = spawnScale(e), hurt = Math.max(0,e.flash);
+  if(e.spawn<1 && e.spawn>=0){
+    ctx.save(); ctx.globalAlpha=Math.min(1,e.spawn*2);
+  }
+  if(DEFS[e.type].unit){
+    const base = sockelOf(e);
+    if(e.turm) drawTurm(p.x, p.y, base, e.owner, TH*0.38);
+    drawRing(e,p,base);                                  // Leiste liegt unter der Figur
+    drawTroop(e.type, e.owner, e.lvl, p.x, p.y,
+      {walk:p.walk, ph:e.ph, hurt, rdy:ready(e), base,
+       prog: canMove(e) ? Math.min(1,e.mtimer/mcdOf(e)) : 1,
+       alpha:e.spawn<1?Math.min(1,e.spawn*2):1});
+    drawRing(e,p,base,true);                             // verdeckter Bogen scheint durch
+  } else if(e.type==='haus') drawHaus(e,p.x,p.y,s);
+  else if(e.type==='mauer') drawMauer(e,p.x,p.y,s);
+  else if(e.type==='kanone'){
+    const base = sockelOf(e);
+    if(e.berg) drawTurm(p.x, p.y, base, e.owner, TH*0.34);
+    drawRing(e,p,base);
+    PBASE = base; drawKanone(e,p.x,p.y,s); PBASE = 0;
+    drawRing(e,p,base,true);
+  }
+  else drawWerk(e,p.x,p.y,s);
+  if(!DEFS[e.type].unit && hurt>0){
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=Math.min(.5,hurt*1.4);
+    const q=P(p.x,p.y,TH*0.4);
+    const g=ctx.createRadialGradient(q[0],q[1],1,q[0],q[1],TW*0.6);
+    g.addColorStop(0,'rgba(255,220,190,.9)'); g.addColorStop(1,'rgba(255,120,80,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(q[0],q[1],TW*0.6,TH*0.6,0,0,6.28); ctx.fill();
+    ctx.restore();
+  }
+  if(e.spawn<1 && e.spawn>=0) ctx.restore();
+}
+
+/* ---------- Stellungsschild mit Zähler ---------- */
+function stellungsSchild(e, p){
+  const g = gruppeVon(e);
+  if(!g) return;
+  const n = stellungen(e.owner, g);
+  const schuetze = g==='schuetze';
+  const q=P(p.x, p.y, TH*(e.type==='ritter'?1.60:1.40) + sockelOf(e));
+  const w=TW*0.125, h=TW*0.135;
+  ctx.beginPath();
+  if(schuetze){                                  // Schützen: Rundschild
+    ctx.moveTo(q[0]-w, q[1]-h*0.55);
+    ctx.quadraticCurveTo(q[0], q[1]-h*1.15, q[0]+w, q[1]-h*0.55);
+    ctx.lineTo(q[0]+w, q[1]+h*0.15);
+    ctx.quadraticCurveTo(q[0], q[1]+h*1.25, q[0]-w, q[1]+h*0.15);
+  } else {                                       // Kämpfer: Wappenschild
+    ctx.moveTo(q[0]-w, q[1]-h*0.85);
+    ctx.lineTo(q[0]+w, q[1]-h*0.85);
+    ctx.lineTo(q[0]+w, q[1]+h*0.25);
+    ctx.quadraticCurveTo(q[0], q[1]+h*1.35, q[0]-w, q[1]+h*0.25);
+  }
+  ctx.closePath();
+  const gs=ctx.createLinearGradient(q[0]-w,0,q[0]+w,0);
+  if(schuetze){ gs.addColorStop(0,'#dff5ec'); gs.addColorStop(1,'#7fd8b4'); }
+  else        { gs.addColorStop(0,'#fff0e2'); gs.addColorStop(1,'#ffb98d'); }
+  ctx.fillStyle=gs; ctx.fill();
+  ctx.strokeStyle= schuetze ? 'rgba(12,50,38,.85)' : 'rgba(60,26,14,.85)';
+  ctx.lineWidth=1.6; ctx.stroke();
+  ctx.font='800 '+Math.max(7,Math.round(TW*0.115))+'px ui-monospace,Menlo,monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle= schuetze ? '#0d3b2c' : '#6a2210';
+  ctx.fillText(n+'/'+stellungsGrenze(e.owner, g), q[0], q[1]+h*0.05);
+}
+
+/* ---------- Stufenmarken ---------- */
+function drawPips(e,p){
+  const n=e.lvl-1;
+  const h = sockelOf(e) + (e.type==='haus' ? TH*1.14 : DEFS[e.type].unit
+        ? TH*(e.type==='ritter'?1.26:1.06) : e.type==='mauer' ? TH*1.16 : TH*1.06);
+  const w = TW*0.195;
+  for(let i=0;i<n;i++){
+    const q=P(p.x - (n-1)*w*0.5 + i*w, p.y, h);
+    ctx.save(); ctx.translate(q[0],q[1]); ctx.rotate(Math.PI/4);
+    const s2=TW*0.078;
+    ctx.fillStyle=sh(metallOf(e.lvl),1.05); ctx.fillRect(-s2/2,-s2/2,s2,s2);
+    ctx.strokeStyle='rgba(20,26,32,.55)'; ctx.lineWidth=1; ctx.strokeRect(-s2/2,-s2/2,s2,s2);
+    ctx.restore();
+  }
+}
+
+/* ---------- Aktionsring ---------- */
+function drawRing(e,p,base,schleier){
+  const sk2 = base ? 0.78 : 1;
+  const q=P(p.x, p.y+TH*0.04, base||0), rx=TW*0.31*sk2, ry=TH*0.27*sk2, t=now();
+  ctx.save();
+  if(schleier){                                    // nur der von der Figur verdeckte Teil
+    ctx.beginPath();
+    ctx.rect(q[0]-rx*2, q[1]-ry*2.2, rx*4, ry*2.2);
+    ctx.clip();
+    ctx.globalAlpha = 0.30;
+  }
+  ctx.translate(q[0],q[1]); ctx.scale(1, ry/rx);
+  // äußerer Ring: Schlagbereitschaft
+  if(canAtt(e)){
+    const ap=Math.min(1,e.timer/cdOf(e)), R=rx*1.24;
+    ctx.beginPath(); ctx.arc(0,0,R,0,6.2832);
+    ctx.strokeStyle='rgba(240,190,120,.10)'; ctx.lineWidth=1.6; ctx.stroke();
+    if(ap>0.004){
+      ctx.beginPath(); ctx.arc(0,0,R,-Math.PI/2,-Math.PI/2+6.2832*ap);
+      if(ap>=1){
+        const g2=0.45+0.35*Math.sin(t*3.2);
+        ctx.strokeStyle='rgba(255,206,120,'+g2.toFixed(2)+')'; ctx.lineWidth=2.6;
+      } else { ctx.strokeStyle='rgba(240,188,104,.66)'; ctx.lineWidth=2.1; }
+      ctx.stroke();
+    }
+  }
+  if(!canMove(e)){ ctx.restore(); return; }
+  ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832);
+  ctx.strokeStyle='rgba(200,226,240,.13)'; ctx.lineWidth=2.6; ctx.stroke();
+  if(e.halt){                                   // Haltebefehl: Ring bleibt stumpf
+    ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832);
+    ctx.strokeStyle='rgba(255,150,110,.55)'; ctx.lineWidth=3; ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  const prog=Math.min(1,e.mtimer/mcdOf(e));
+  if(e.nudge>0){
+    ctx.beginPath(); ctx.arc(0,0,rx*(1+0.10*(1-e.nudge)),0,6.2832);
+    ctx.strokeStyle='rgba(255,255,255,'+(e.nudge*0.6).toFixed(2)+')'; ctx.lineWidth=4; ctx.stroke();
+  }
+  if(prog>0.004){
+    const a0=-Math.PI/2, a1=a0+6.2832*prog;
+    if(prog>=1){
+      const gl=0.35+0.3*Math.sin(t*4);
+      ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832);
+      ctx.strokeStyle='rgba(226,244,255,'+(gl*0.26).toFixed(2)+')'; ctx.lineWidth=6; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832);
+      ctx.strokeStyle='rgba(240,250,255,.78)'; ctx.lineWidth=2.4; ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(0,0,rx,a0,a1);
+      ctx.strokeStyle='rgba(214,238,252,.26)'; ctx.lineWidth=5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,0,rx,a0,a1);
+      ctx.strokeStyle='#cfe9fa'; ctx.lineWidth=2.8; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,0,rx,a1-0.05,a1);
+      ctx.strokeStyle='#ffffff'; ctx.lineWidth=3.4; ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function drawLaufzeit(e,p){                       // orangener Balken über dem Werk
+  const max = statsOf(e.type,e.lvl).laufzeit;
+  if(!max) return;
+  const q = P(p.x, p.y, TH*1.55);
+  const w = TW*0.62, h = Math.max(3.4, TH*0.10);
+  const f = Math.max(0, Math.min(1, e.leben/max));
+  ctx.fillStyle='rgba(6,11,15,.8)';
+  ctx.fillRect(q[0]-w/2-1.2, q[1]-h/2-1.2, w+2.4, h+2.4);
+  if(f>0){
+    const g=ctx.createLinearGradient(q[0]-w/2,0,q[0]+w/2,0);
+    g.addColorStop(0,'#ffb154'); g.addColorStop(1,'#ff7a2f');
+    ctx.fillStyle=g; ctx.fillRect(q[0]-w/2, q[1]-h/2, w*f, h);
+  } else {
+    ctx.font='700 '+Math.max(7,Math.round(TW*0.13))+'px ui-monospace,Menlo,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(255,150,100,.85)';
+    ctx.fillText('ERSCHÖPFT', q[0], q[1]+1);
+  }
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1;
+  ctx.strokeRect(q[0]-w/2-1.2, q[1]-h/2-1.2, w+2.4, h+2.4);
+}
+function drawHp(e,p){
+  const m=maxHp(e);
+  if(e.hp>=m && e.type!=='haus') return;
+  const top = sockelOf(e) + (e.type==='haus' ? TH*1.28 : DEFS[e.type].unit
+        ? TH*(e.type==='ritter'?1.42:1.18) : e.type==='kanone' ? TH*1.10 : TH*1.20);
+  const q=P(p.x,p.y,top), w=TW*0.50, h=Math.max(3.2,TH*0.085);
+  const f=Math.max(0,Math.min(1,e.hp/m));
+  ctx.fillStyle='rgba(6,11,15,.8)';
+  ctx.fillRect(q[0]-w/2-1.2, q[1]-h/2-1.2, w+2.4, h+2.4);
+  const g=ctx.createLinearGradient(q[0]-w/2,0,q[0]+w/2,0);
+  const c1 = f>0.5?[95,224,168] : f>0.25?[255,207,90] : [255,106,82];
+  g.addColorStop(0, sh(c1,1.15)); g.addColorStop(1, sh(c1,0.8));
+  ctx.fillStyle=g; ctx.fillRect(q[0]-w/2, q[1]-h/2, w*f, h);
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1;
+  ctx.strokeRect(q[0]-w/2-1.2, q[1]-h/2-1.2, w+2.4, h+2.4);
+}
+
+/* ---------- Markierungen ---------- */
+function tileMark(r,c,col,alpha,corner){
+  const x=gx(c), y=gy(r), i=TW*0.06, t=now();
+  const pl=[[x+i,y+i],[x+TW-i,y+i],[x+TW-i,y+TH-i],[x+i,y+TH-i]].map(q=>P(q[0],q[1],0));
+  const pulse=0.75+0.25*Math.sin(t*3.4);
+  ctx.globalAlpha=alpha*pulse; poly(pl,col); ctx.globalAlpha=1;
+  ctx.strokeStyle=col; ctx.lineWidth=1.6; ctx.globalAlpha=0.55*pulse;
+  poly(pl,null,col,1.4); ctx.globalAlpha=1;
+  if(corner){
+    const L=TW*0.16;
+    ctx.strokeStyle=col; ctx.lineWidth=2.2; ctx.globalAlpha=0.95*pulse;
+    const cs=[[0,1,1,0,1],[1,-1,1,0,1],[2,-1,-1,0,-1],[3,1,-1,0,-1]];
+    for(const [idx,sx,sy] of cs){
+      const p=pl[idx];
+      ctx.beginPath();
+      ctx.moveTo(p[0]+sx*L,p[1]); ctx.lineTo(p[0],p[1]); ctx.lineTo(p[0],p[1]+sy*L*0.7);
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+}
+function drawSperren(){                            // rote Kachel unter allem
+  const t=now();
+  for(const z of G.sperren){
+    const x=gx(z.c), y=gy(z.r), i=TW*0.05;
+    const pl=[[x+i,y+i],[x+TW-i,y+i],[x+TW-i,y+TH-i],[x+i,y+TH-i]].map(q=>P(q[0],q[1],0));
+    ctx.globalAlpha=0.26+0.10*Math.sin(t*4); poly(pl,'#ff5a4a'); ctx.globalAlpha=1;
+    ctx.globalAlpha=0.75; poly(pl,null,'#ff5a4a',2); ctx.globalAlpha=1;
+  }
+}
+function drawSperrBalken(){                        // Restzeit über dem Trümmerhaufen
+  for(const z of G.sperren){
+    const q=P(midX(z.c), midY(z.r), TH*0.95);
+    const w=TW*0.56, h=Math.max(3.2,TH*0.10), f=Math.max(0,z.t/z.max);
+    ctx.fillStyle='rgba(6,11,15,.85)';
+    ctx.fillRect(q[0]-w/2-1.2, q[1]-h/2-1.2, w+2.4, h+2.4);
+    ctx.fillStyle='#ff6a52';
+    ctx.fillRect(q[0]-w/2, q[1]-h/2, w*f, h);
+    ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1;
+    ctx.strokeRect(q[0]-w/2-1.2, q[1]-h/2-1.2, w+2.4, h+2.4);
+  }
+}
+/* Die Bodenmarkierungen als LISTE — welche Felder gerade hervorgehoben
+ * gehören, ist eine Regelfrage (Bauplätze, Panikzone, Erdwärme, Reichweite)
+ * und keine Zeichenfrage. Beide Ansichten lesen dieselbe Liste: der
+ * 2D-Renderer unten in drawMarks, die 3D-Bühne über das Lesefenster
+ * (sitzung.lesen().feldMarken). Ohne diese Trennung müsste die 3D-Bühne die
+ * Regeln nachbauen — der sichere Weg, dass beide Ansichten verschiedene
+ * Felder anbieten. */
+function markenListe(){
+  const liste = [];
+  const mark = (r,c,col,a,ecken)=>{ liste.push({r, c, col, a, ecken:!!ecken}); };
+  if(phase==='place'){
+    const who = drankommt();
+    // Nur für Sitze, die an DIESEM Gerät bedient werden: Während der Gegner
+    // (oder die KI) sein Haupthaus setzt, bleibt das eigene Brett ruhig —
+    // fremde Bauhilfen sind weder nützlich noch verständlich. Zu zweit an
+    // einem Gerät gehören beide Sitze hierher, dort ändert sich nichts.
+    if(!darfBedienen(who)) return liste;
+    const col = sh(COL.p[who],1);
+    for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++){
+      if(!freeCell(r,c) || envAt(r,c)==='vulkan') continue;
+      mark(r,c,col,.12,false);
+      if(nebenVulkan(r,c)) mark(r,c,'#ffbe5e',.30,true);   // Erdwärme am Kraterrand
+    }
+    return liste;
+  }
+  // Gedrückthalten auf einer Figur zeigt ihre Reichweite — auch beim
+  // Gegner, denn das ist die eigene Handlung und blanke Aufklärung.
+  if(peek && peek.t>=0.2 && peek.ent && G.ents.includes(peek.ent)) peekMarken(peek.ent, mark);
+  for(const own of [0,1]){
+    if(!darfBedienen(own)) continue;                   // fremde Bauhilfen bleiben aus
+    if(G.raze[own]){                                   // Abriss: eigene Objekte anbieten
+      for(const e of G.ents){
+        if(e.owner!==own || e.type==='haus') continue;
+        for(const p of e.cells) mark(p.r,p.c,'#ff8a5e',.22,true);
+      }
+      continue;
+    }
+    const a = G.armed[own];
+    if(a){
+      const col=sh(COL.p[own],1);
+      for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+        if(placeSpot(own,a,r,c)) mark(r,c,col,.14,false);
+      if(a==='werk'){                              // Panikzone hervorheben
+        const r0 = own===0 ? MID-PANIK : MID, r1 = own===0 ? MID-1 : MID+PANIK-1;
+        for(let r=r0;r<=r1;r++) for(let c=0;c<COLS;c++) mark(r,c,'#5fe0a8',.24,true);
+        for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+          if(nebenVulkan(r,c) && !entAt(r,c) && walkable(r,c)) mark(r,c,'#ffbe5e',.30,true);
+      }
+      if(DEFS[a].unit)                             // Wald deckt jede Truppe
+        for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+          if(envAt(r,c)==='wald' && !entAt(r,c)) mark(r,c,'#5fe0a8',.26,true);
+      if(a==='kanone')                             // Wald deckt die Kanone
+        for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+          if(envAt(r,c)==='wald' && !entAt(r,c)) mark(r,c,'#5fe0a8',.26,true);
+      if(a==='bogen' || a==='kanone')              // Felsen als Stellung zeigen
+        for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+          if(envAt(r,c)==='gebirge' && !entAt(r,c)) mark(r,c,'#7fe8c0',.34,true);
+    }
+  }
+  for(const d of drags.values()){
+    if(!d.prev) continue;
+    const col = d.prev.ok ? sh(COL.p[d.own],1) : '#ff6a52';
+    // Reichweite, die von diesem Feld aus entstünde — Zugewinn eigens gefärbt
+    if(d.prev.ok && (d.k==='bogen' || d.k==='kanone')){
+      const hr=d.prev.hr, hc=d.prev.hc, ziel=d.prev.merge;
+      const lvl = ziel ? Math.min(maxLvlOf(d.k), ziel.lvl+1) : 1;
+      const probe = {type:d.k, owner:d.own, lvl, r:hr, c:hc, cells:[{r:hr,c:hc}],
+                     berg: envAt(hr,hc)==='gebirge', turm: d.k==='bogen' && envAt(hr,hc)==='gebirge'};
+      const neuR = rngOf(probe);
+      const altR = ziel ? rngOf(ziel) : 0;
+      for(let r=hr-neuR; r<=hr+neuR; r++) for(let c=hc-neuR; c<=hc+neuR; c++){
+        if(!inBoard(r,c) || (r===hr && c===hc)) continue;
+        const dist = Math.max(Math.abs(r-hr), Math.abs(c-hc));
+        if(dist>neuR) continue;
+        if(dist>altR) mark(r,c,'#8ef0b8',.17, dist===neuR);   // kommt neu hinzu
+        else mark(r,c,'#bfe6ff',.10,false);                   // reicht schon jetzt
+      }
+    }
+    /* Das Aufwertungsziel glüht golden statt in Spielerfarbe — dasselbe
+     * Signal wie markAufwertung, aber als Bodenmarke, damit es auch die
+     * 3D-Bühne bekommt. */
+    const zielFarbe = (d.prev.merge && d.prev.ok) ? '#ffd977' : col;
+    for(const p of d.prev.cells) mark(p.r,p.c,zielFarbe,.34,true);
+  }
+  return liste;
+}
+function drawMarks(){
+  drawSperren();
+  for(const m of markenListe()) tileMark(m.r, m.c, m.col, m.a, m.ecken);
+}
+
+/* ---------- Vordergrund: alles, was der Finger nicht verdecken darf ---------- */
+
+/* Sitzt dieser Spieler an diesem Gerät gegenüber, also mit Texten über Kopf?
+ * Zu zweit an einem Gerät ja (Spieler 1 schaut von oben), gegen die KI nein.
+ * Die Netzanbindung schaltet es ganz ab: Dort hat jeder sein eigenes Gerät,
+ * und ein kopfstehender Hinweis wäre nur ein Rätsel. */
+let ueberKopf = (own) => own===0 && !AI;
+
+function schild(tx, px, py, hoehe, col, own, alpha){
+  const a = alpha===undefined ? 1 : alpha;
+  if(a<=0) return null;
+  const p=P(px,py,hoehe);
+  p[1] = Math.max(16, Math.min(H-16, p[1]));       // bleibt immer im Bild
+  p[0] = Math.max(52, Math.min(W-52, p[0]));
+  ctx.save(); ctx.translate(p[0],p[1]);
+  ctx.globalAlpha = a;                             // weiches Ein- und Ausblenden
+  if(ueberKopf(own)) ctx.rotate(Math.PI);
+  ctx.font='800 '+Math.max(8,Math.round(TW*0.155))+'px ui-monospace,Menlo,monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const w=ctx.measureText(tx).width+16;
+  ctx.fillStyle='rgba(7,12,17,.88)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(-w/2,-10,w,20,6); else ctx.rect(-w/2,-10,w,20);
+  ctx.fill();
+  ctx.strokeStyle=col; ctx.globalAlpha=.65*a; ctx.lineWidth=1.2; ctx.stroke();
+  ctx.globalAlpha=a;
+  ctx.fillStyle=col; ctx.fillText(tx,0,1);
+  ctx.restore();
+  return p;
+}
+function bonusInfo(k, r, c){                       // ausgeschriebener Bonus für ein Feld
+  const e = envAt(r,c);
+  if(e==='gebirge' && k==='kanone') return '+1 Reichweite, +1 Schaden';
+  if(e==='wald'){
+    if(k==='kanone') return '−25 % erlittener Schaden';
+    if(k==='haus')   return '−20 % erlittener Schaden';   // Deckung fürs Haupthaus
+    if(k==='bogen')  return 'Turm: +50 % Leben, +25 % Schaden, −1/3 erlittener Schaden, −1 Reichweite';
+    if(DEFS[k].unit) return '+50 % Leben, +25 % Schaden';
+  }
+  if(k==='werk' && e==='gebirge') return '−1 Ressource, +50 % Leben, kein Kessel · max. Stufe 2';
+  if(k==='bogen' && e==='gebirge') return '+1 Reichweite, +1 Schaden · max. Stufe 2';
+  if(k==='werk' && nebenVulkan(r,c))
+    return inPanik(sideOf(r), r) ? '+2 Ressourcen: Erdwärme und Panik' : '+1 Ressource: Erdwärme';
+  if(k==='werk' && inPanik(sideOf(r), r)) return '+1 Ressource pro Sekunde';
+  if(nebenHaus(sideOf(r), r, c) &&
+     (k==='mauer' || k==='kanone' || (k==='bogen' && e==='gebirge')))
+    return k==='mauer' || k==='werk'
+      ? 'Stützpunkt: Haupthaus ab Stufe 2 stärker, ab Stufe 3 voll ausgebaut'
+      : 'Stützpunkt ab Stufe 2: Haupthaus +20 % Leben, +1 Ressource, +10 Vorrat';
+  return null;
+}
+/* Reichweite bzw. Sprengradius beim Gedrückthalten — als Marken in die
+ * Liste, damit BEIDE Ansichten sie zeigen. Vorher zeichnete das direkt auf
+ * die 2D-Leinwand und fehlte in 3D vollständig. */
+function peekMarken(e, mark){
+  if(DEFS[e.type].laufzeit && !e.berg && !e.tot){ // Werk: der eigene Sprengradius
+    const gesehen=new Set(e.cells.map(q=>q.r+','+q.c));
+    for(const p of e.cells)
+      for(let dr=-3;dr<=3;dr++) for(let dc=-3;dc<=3;dc++){
+        const man=Math.abs(dr)+Math.abs(dc);
+        if(!man || man>3) continue;
+        const r=p.r+dr, c=p.c+dc, key=r+','+c;
+        if(!inBoard(r,c) || gesehen.has(key)) continue;
+        gesehen.add(key);
+        const col = man===1 ? '#ff4a3a' : man===2 ? '#ff9a4a' : '#ffd06a';
+        mark(r,c,col, man===1?0.28:man===2?0.18:0.10, man===1);
+      }
+    return;
+  }
+  const rng = canAtt(e) ? rngOf(e) : 0;
+  if(!rng) return;
+  for(let dr=-rng; dr<=rng; dr++) for(let dc=-rng; dc<=rng; dc++){
+    const r=e.r+dr, c=e.c+dc;
+    if(!inBoard(r,c) || (!dr && !dc)) continue;
+    mark(r,c,'#bfe6ff', 0.13, false);
+  }
+  for(const o of attackTargets(e))                // was gerade in Reichweite ist
+    for(const q of o.cells) mark(q.r,q.c,'#ff6a52', 0.24, true);
+}
+
+/* Die Hinweisschilder als LISTE — was auf einem Feld angesagt wird
+ * (Reichweitengewinn, Erdwärme, Walddeckung, Preis, Sprengradius), ist eine
+ * Regelfrage und keine Zeichenfrage. Beide Ansichten lesen dieselbe Liste:
+ * drawHinweise unten und die 3D-Bühne über lesen().schilder. `h` ist die
+ * Höhe in Zellhöhen, damit 3D denselben Abstand halten kann. */
+/* Ein Zonenschild („dort drüben gäbe es Deckung") gehört nicht dauerhaft
+ * aufs Brett: Es soll auftauchen, wenn der Finger mit der Karte in die Nähe
+ * des Feldes kommt, und auf dem Weg dorthin weich einblenden. Zwischen den
+ * beiden Grenzen ist es halbdurchsichtig. */
+const NAH_VOLL = 1.4, NAH_AUS = 3.4;
+function naehe(dist){
+  if(dist <= NAH_VOLL) return 1;
+  if(dist >= NAH_AUS) return 0;
+  return (NAH_AUS - dist) / (NAH_AUS - NAH_VOLL);
+}
+function schildListe(){
+  const liste = [];
+  const schildD = (tx, r, c, col, h, own, a) =>
+    liste.push({tx, r, c, col, h, own, a: a===undefined ? 1 : a});
+  if(peek && peek.t>=0.2){
+    const e = peek.ent;
+    if(DEFS[e.type].laufzeit && !e.berg && !e.tot){
+      schildD('Sprengradius', e.r, e.c, '#ff8a6e', 2.2, e.owner);
+    } else if(canAtt(e) && rngOf(e)){
+      schildD('Reichweite '+rngOf(e), e.r, e.c, '#bfe6ff', 2.2, e.owner);
+    }
+  }
+  if(phase==='place'){
+    // Was das Gelände dem Haupthaus bringt: Erdwärme am Kraterrand und
+    // Deckung im Wald. Je Art ein Schild auf dem ersten passenden Feld —
+    // und nur, solange ein Sitz dieses Geräts am Zug ist (siehe markenListe).
+    const who = drankommt();
+    if(!darfBedienen(who)) return liste;
+    let warm = false, wald = false;
+    for(let r=who?MID:0; r<(who?ROWS:MID); r++) for(let c=0;c<COLS;c++){
+      if(!freeCell(r,c) || envAt(r,c)==='vulkan') continue;
+      if(!warm && nebenVulkan(r,c)){
+        warm = true; schildD('+1 Ressource: Erdwärme', r, c, '#ffbe5e', 2.0, who);
+      }
+      if(!wald && envAt(r,c)==='wald'){
+        wald = true; schildD(bonusInfo('haus', r, c), r, c, '#5fe0a8', 2.0, who);
+      }
+      if(warm && wald) return liste;
+    }
+    return liste;
+  }
+  const belegt = {};                               // je Spieler nur ein Schild
+  for(const d of drags.values()){
+    if(!d.prev) continue;
+    const {hr,hc} = d.prev;
+    if(d.prev.merge){
+      const ziel = d.prev.merge;
+      // Mauern zählen Karten, nicht die Verbundstufe (siehe mauerNetz).
+      const nl = d.k==='mauer' ? mauerGewicht(ziel)+1 : ziel.lvl+1;
+      schildD('Stufe '+Math.min(maxLvlOf(d.k), nl)+' · '+costOf(d.k, nl), hr, hc, '#ffd977', 2.85, d.own);
+      if(d.k==='bogen' || d.k==='kanone'){         // Reichweitengewinn benennen
+        const probe = {type:d.k, owner:d.own, lvl:Math.min(maxLvlOf(d.k), nl),
+                       r:hr, c:hc, cells:[{r:hr,c:hc}], berg:ziel.berg, turm:ziel.turm};
+        const altR = rngOf(ziel), neuR = rngOf(probe);
+        if(neuR!==altR) schildD('Reichweite '+altR+' → '+neuR, hr, hc, '#8ef0b8', 3.55, d.own);
+      }
+    } else {
+      /* Was dieses Gelände dieser Karte bringt — auch dann, wenn hier
+       * (noch) nicht gebaut werden kann: Wer sich den Bogen gerade nicht
+       * leisten kann, soll trotzdem sehen, was der Wald ihm gäbe. Nur die
+       * eigene Hälfte wird ausgewertet, weil die Auskunft Nachbarschaft und
+       * Panikzone aus der Sicht des Besitzers liest. */
+      const bonus = sideOf(hr)===d.own ? bonusInfo(d.k, hr, hc) : null;
+      const preis = d.prev.sp ? preisFuer(d.k, d.prev.sp) : costOf(d.k,1);
+      // Die Farbe sagt weiterhin, ob es geht: Rot heißt hier nicht, auch
+      // wenn der Bonus danebensteht.
+      schildD(bonus ? bonus+'  ·  '+preis : DEFS[d.k].nm+' · '+preis, hr, hc,
+              !d.prev.ok ? '#ff6a52' : bonus ? '#5fe0a8' : sh(COL.p[d.own],1.1), 2.15, d.own);
+    }
+    belegt[d.own]={r:hr, c:hc};
+  }
+  // Hinweis auf die Bonuszone — auch während des Ziehens sichtbar
+  for(const own of [0,1]){
+    if(!darfBedienen(own)) continue;              // nicht für fremde Sitze
+    const a=G.armed[own];
+    if(!a) continue;
+    let tx=null, zr=null, zc=null;
+    if(a==='bogen' || a==='kanone'){
+      for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+        if(envAt(r,c)==='gebirge' && !entAt(r,c)){ tx='+1 Reichweite, +1 Schaden'; zr=r; zc=c; }
+    }
+    if(!tx && a==='werk'){
+      const r0 = own===0 ? MID-PANIK : MID;
+      tx='+1 Ressource pro Sekunde'; zr=r0+0.5; zc=(COLS-1)/2;
+    }
+    if(!tx && DEFS[a].unit){
+      for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+        if(envAt(r,c)==='wald' && !entAt(r,c)){ tx='+50 % Leben, +25 % Schaden'; zr=r; zc=c; }
+    }
+    /* Nur mit Finger am Brett, nur in der Nähe des Feldes — und nie
+     * zweimal dasselbe Feld beschriften (dort steht schon das Zugschild). */
+    const finger = belegt[own];
+    if(!tx || !finger) continue;
+    if(Math.round(finger.r)===Math.round(zr) && Math.round(finger.c)===Math.round(zc)) continue;
+    const sicht = naehe(Math.max(Math.abs(finger.r-zr), Math.abs(finger.c-zc)));
+    if(sicht>0) schildD(tx, zr, zc, '#5fe0a8', 2.0, own, sicht);
+  }
+  return liste;
+}
+function knallVorschau(d){                        // wen risse dieses Werk mit?
+  const felsig = d.prev.cells.some(q=>envAt(q.r,q.c)==='gebirge');
+  if(felsig) return;                              // ein Felswerk explodiert nicht
+  const t=now(), puls=0.6+0.4*Math.sin(t*4);
+  const gesehen=new Set(d.prev.cells.map(q=>q.r+','+q.c));
+  for(const p of d.prev.cells){
+    for(let dr=-3;dr<=3;dr++) for(let dc=-3;dc<=3;dc++){
+      const man=Math.abs(dr)+Math.abs(dc);
+      if(!man || man>3) continue;
+      const r=p.r+dr, c=p.c+dc, key=r+','+c;
+      if(!inBoard(r,c) || gesehen.has(key)) continue;
+      gesehen.add(key);
+      const anteil = knallAnteil(man);
+      if(!anteil) continue;
+      const col = man===1 ? '#ff4a3a' : man===2 ? '#ff9a4a' : '#ffd06a';
+      const x=gx(c), y=gy(r), i=TW*0.10;
+      const pl=[[x+i,y+i],[x+TW-i,y+i],[x+TW-i,y+TH-i],[x+i,y+TH-i]].map(q=>P(q[0],q[1],0));
+      ctx.globalAlpha=(man===1?0.30:man===2?0.20:0.12)*puls; poly(pl,col); ctx.globalAlpha=1;
+      ctx.globalAlpha=(man===1?0.85:0.45)*puls;
+      poly(pl,null,col, man===1?2.2:1.4); ctx.globalAlpha=1;
+      if(man===1){
+        const q=P(midX(c), midY(r), TH*0.55);
+        ctx.font='800 '+Math.max(7,Math.round(TW*0.13))+'px ui-monospace,Menlo,monospace';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.lineWidth=3; ctx.lineJoin='round'; ctx.strokeStyle='rgba(20,6,4,.85)';
+        ctx.strokeText('100 %', q[0], q[1]); 
+        ctx.fillStyle='#ffd9d2'; ctx.fillText('100 %', q[0], q[1]);
+      }
+    }
+  }
+}
+function kanonenZiel(d){                          // wen träfe die Kanone von hier aus?
+  const {hr,hc} = d.prev;
+  const lvl = d.prev.merge ? Math.min(maxLvlOf('kanone'), d.prev.merge.lvl+1) : 1;
+  const probe = {id:-1, type:'kanone', owner:d.own, lvl, r:hr, c:hc,
+                 cells:[{r:hr,c:hc}], berg: envAt(hr,hc)==='gebirge'};
+  const tg = attackTargets(probe);
+  if(!tg.length) return;
+  const ziel = pickTarget(tg, probe);
+  if(!ziel) return;
+  const np = nearestPair(probe, ziel) || {to:{r:ziel.r,c:ziel.c}};
+  const a = P(midX(hc), midY(hr), TH*0.55);
+  const b = P(midX(np.to.c), midY(np.to.r), TH*0.35);
+  const t = now(), puls = 0.6+0.4*Math.sin(t*5);
+  ctx.save();
+  ctx.setLineDash([TW*0.10, TW*0.07]);
+  ctx.lineDashOffset = -t*TW*0.5;
+  ctx.strokeStyle='rgba(255,90,74,'+(0.55+0.35*puls).toFixed(2)+')';
+  ctx.lineWidth=Math.max(1.6,TW*0.035);
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+  ctx.restore();
+  const zc = P(midX(np.to.c), midY(np.to.r), 0);
+  ctx.strokeStyle='rgba(255,90,74,'+(0.6+0.4*puls).toFixed(2)+')';
+  ctx.lineWidth=Math.max(2,TW*0.04);
+  ctx.beginPath(); ctx.ellipse(zc[0],zc[1],TW*0.34,TH*0.30,0,0,6.2832); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(zc[0],zc[1],TW*0.20*puls,TH*0.18*puls,0,0,6.2832); ctx.stroke();
+  const kr=TW*0.42;
+  for(const w2 of [0, Math.PI/2, Math.PI, -Math.PI/2]){
+    ctx.beginPath();
+    ctx.moveTo(zc[0]+Math.cos(w2)*kr*0.72, zc[1]+Math.sin(w2)*kr*0.62);
+    ctx.lineTo(zc[0]+Math.cos(w2)*kr, zc[1]+Math.sin(w2)*kr*0.86);
+    ctx.stroke();
+  }
+}
+function markAufwertung(o){                        // goldenes Glühen um das Ziel
+  const t=now(), puls=0.55+0.45*Math.sin(t*5);
+  for(const p of o.cells){
+    const x=gx(p.c), y=gy(p.r), i=TW*0.04;
+    const pl=[[x+i,y+i],[x+TW-i,y+i],[x+TW-i,y+TH-i],[x+i,y+TH-i]].map(q=>P(q[0],q[1],0));
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.globalAlpha=0.26*puls; poly(pl,'#ffd977'); ctx.restore();
+    ctx.strokeStyle='#ffd977'; ctx.lineWidth=2.6; ctx.globalAlpha=0.5+0.5*puls;
+    poly(pl,null,'#ffd977',2.6); ctx.globalAlpha=1;
+  }
+}
+function pfeilHoch(px, py, hoehe){                 // grüner Pfeil, hoch über dem Feld
+  const t=now();
+  const sp=P(px,py,hoehe + TH*0.10*Math.sin(t*5)), br=TW*0.15;
+  sp[1] = Math.max(30, sp[1]);
+  ctx.fillStyle='#5fe0a8';
+  ctx.beginPath();
+  ctx.moveTo(sp[0], sp[1]-br*1.25);
+  ctx.lineTo(sp[0]+br, sp[1]+br*0.28);
+  ctx.lineTo(sp[0]+br*0.45, sp[1]+br*0.28);
+  ctx.lineTo(sp[0]+br*0.45, sp[1]+br*1.25);
+  ctx.lineTo(sp[0]-br*0.45, sp[1]+br*1.25);
+  ctx.lineTo(sp[0]-br*0.45, sp[1]+br*0.28);
+  ctx.lineTo(sp[0]-br, sp[1]+br*0.28);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(10,30,22,.55)'; ctx.lineWidth=1.2; ctx.stroke();
+}
+function drawHinweise(){
+  const liste = G.ents.slice().sort((a,b)=> a.r-b.r);
+  for(const e of liste){                          // Statusanzeigen immer obenauf
+    const p = entXY(e);
+    if(statsOf(e.type,e.lvl).laufzeit) drawLaufzeit(e, p);
+    if(e.lvl>1) drawPips(e,p);
+    drawHp(e,p);
+    if(e.halt || e.turm) stellungsSchild(e,p);
+  }
+  if(phase!=='place'){
+    drawSperrBalken();                            // Restzeit der Trümmer obenauf
+    for(const d of drags.values()){
+      if(!d.prev) continue;
+      if(d.k==='kanone' && d.prev.ok) kanonenZiel(d);
+      if(d.k==='werk' && d.prev.ok) knallVorschau(d);
+      if(d.prev.merge){
+        markAufwertung(d.prev.merge);
+        pfeilHoch(midX(d.prev.hc), midY(d.prev.hr), TH*2.05);
+      }
+    }
+  }
+  for(const s of schildListe())
+    schild(s.tx, midX(s.c), midY(s.r), TH*s.h, s.col, s.own, s.a);
+}
+
+/* ---------- Effekte ---------- */
+function drawCorpse(f){
+  const k=Math.min(1,f.t/f.dur);
+  const x=OX+(f.c+(f.w||1)/2)*TW, y=OY+(f.r+(f.h||1)/2)*TH;
+  if(f.big || !DEFS[f.type].unit){
+    const q=P(x,y,TH*0.2);
+    ctx.globalAlpha=1-k;
+    ell(q,TW*0.34*(f.w||1)*(1+k*0.3),TH*0.28*(f.h||1)*(1+k*0.3),sh([70,62,54],1));
+    ctx.globalAlpha=1;
+    if(f.t<0.05){
+      burst(x,y,TH*0.4,f.big?46:18,'rock','#4a4038');
+      burst(x,y,TH*0.4,f.big?30:10,'smoke','#6b6560');
+      if(f.big) shake(14,0.6);
+    }
+  } else {
+    drawTroop(f.type,f.owner,f.lvl,x,y,{alpha:1-k, tilt:k*1.15, hurt:0.5*(1-k), rdy:false, prog:0});
+    if(f.t<0.05) burst(x,y,TH*0.3,10,'dust','#8a7a68');
+  }
+}
+function drawFx(){
+  for(const f of G.fx){
+    if(f.t<0) continue;
+    if(f.k==='zeit'){
+      const k=f.t/0.8;
+      const p=P(midX(f.c), midY(f.r), TH*(1.5 + k*1.0));
+      ctx.globalAlpha=Math.max(0,1-k*k);
+      ctx.font='800 '+Math.round(TW*0.24)+'px ui-monospace,Menlo,monospace';
+      ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+      ctx.lineWidth=Math.max(2,TW*0.045); ctx.lineJoin='round';
+      ctx.strokeStyle='rgba(18,10,6,.9)'; ctx.strokeText('-1s',p[0],p[1]);
+      ctx.fillStyle='#ffab5e'; ctx.fillText('-1s',p[0],p[1]);
+      ctx.globalAlpha=1;
+    } else if(f.k==='plus'){
+      const k=f.t/0.75;
+      const p=P(midX(f.c)+ (f.dx||0)*TW, midY(f.r), TH*(0.9 + k*0.9));
+      ctx.globalAlpha=Math.max(0,1-k*k);
+      ctx.font='800 '+Math.round(TW*0.24)+'px ui-monospace,Menlo,monospace';
+      ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+      ctx.lineWidth=Math.max(2,TW*0.045); ctx.lineJoin='round';
+      ctx.strokeStyle='rgba(6,14,10,.9)'; ctx.strokeText('+1',p[0],p[1]);
+      ctx.fillStyle='#8ef0b8'; ctx.fillText('+1',p[0],p[1]);
+      ctx.globalAlpha=1;
+    } else if(f.k==='txt'){
+      const p=P(midX(f.c), midY(f.r), TH*1.5 + f.t*TH*1.1);
+      const a=Math.max(0,1-(f.t/1.1)*(f.t/1.1));
+      ctx.globalAlpha=a;
+      ctx.font='800 '+Math.round(TW*0.32)+'px ui-monospace,Menlo,monospace';
+      ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+      ctx.lineWidth=Math.max(2,TW*0.05); ctx.lineJoin='round';
+      ctx.strokeStyle='rgba(6,10,14,.92)'; ctx.strokeText(f.tx,p[0],p[1]);
+      ctx.fillStyle=f.col; ctx.fillText(f.tx, p[0], p[1]);
+      ctx.globalAlpha=1;
+    } else if(f.k==='arrow'){
+      const k=Math.min(1,f.t/f.dur);
+      const x=f.ax+(f.bx-f.ax)*k, y=f.ay+(f.by-f.ay)*k;
+      const z=TH*0.62+Math.sin(k*Math.PI)*TH*0.55;
+      const p=P(x,y,z);
+      const k2=Math.max(0,k-0.09);
+      const p2=P(f.ax+(f.bx-f.ax)*k2, f.ay+(f.by-f.ay)*k2, TH*0.62+Math.sin(k2*Math.PI)*TH*0.55);
+      ctx.strokeStyle='rgba(240,248,255,.9)'; ctx.lineWidth=Math.max(1.4,TW*0.028); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(p2[0],p2[1]); ctx.lineTo(p[0],p[1]); ctx.stroke();
+      ctx.strokeStyle='rgba(160,205,235,.35)'; ctx.lineWidth=Math.max(1,TW*0.014);
+      ctx.beginPath(); ctx.moveTo(p2[0],p2[1]); ctx.lineTo(p[0],p[1]); ctx.stroke();
+      ctx.lineCap='butt';
+    } else if(f.k==='ball'){
+      const k=Math.min(1,f.t/f.dur);
+      const x=f.ax+(f.bx-f.ax)*k, y=f.ay+(f.by-f.ay)*k;
+      const z=TH*0.70+Math.sin(k*Math.PI)*TH*1.5;
+      const p=P(x,y,z);
+      ell(P(x,y,0), TW*0.07*(1-k*0.3), TH*0.05*(1-k*0.3), 'rgba(10,16,20,.22)');
+      ell(p, TW*0.078, TW*0.072, sh([40,42,48],1.1));
+      ell([p[0]-TW*0.024,p[1]-TW*0.024], TW*0.028, TW*0.025, 'rgba(226,236,246,.55)');
+      if(deko()<0.28) burst(x,y,z,1,'smoke','#8a847e',0.3);
+    } else if(f.k==='ring'){
+      const k=f.t/0.5, p=P(midX(f.c),midY(f.r),TH*0.3);
+      if(k<1){
+        ctx.globalAlpha=(1-k)*0.8;
+        ell(p,TW*(0.2+k*0.6),TH*(0.16+k*0.5),null,f.col,3);
+        ctx.globalAlpha=1;
+      }
+    } else if(f.k==='boom'){
+      const k=f.t/0.9, p=P(midX(f.c), midY(f.r), TH*0.35);
+      const rad=TW*(0.2+k*1.05)*f.s;
+      ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=Math.max(0,1-k*1.1);
+      const g=ctx.createRadialGradient(p[0],p[1],1,p[0],p[1],rad);
+      g.addColorStop(0,'rgba(255,244,214,.95)');
+      g.addColorStop(0.35,'rgba(255,168,60,.7)');
+      g.addColorStop(1,'rgba(255,70,10,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(p[0],p[1],rad,rad*0.72,0,0,6.28); ctx.fill();
+      ctx.restore();
+      if(k<0.6){
+        ctx.globalAlpha=(1-k/0.6)*0.7;
+        ell(P(midX(f.c),midY(f.r),0), TW*(0.3+k*1.6), TH*(0.24+k*1.3), null,'rgba(255,200,130,.9)',2.4);
+        ctx.globalAlpha=1;
+      }
+    }
+  }
+}
+
+/* ---------- Schatten sammeln ---------- */
+function collectShadows(){
+  for(const o of G.envs){
+    const x=gx(o.c0), y=gy(o.r0), w=TW*o.w, d=TH*o.h;
+    if(o.type==='gebirge') shBox(x+w*0.14,y+d*0.16,w*0.72,d*0.66,TH*1.35);
+    else if(o.type==='vulkan') shBox(x+w*0.16,y+d*0.18,w*0.68,d*0.62,TH*0.5);
+    else if(o.type==='wald' && o.trees)
+      for(const b of o.trees) shEll(x+TW*b.fx, y+TH*b.fy, TW*0.10*b.sc, TH*0.55*b.sc);
+  }
+  for(const e of G.ents){
+    const p=entXY(e), s=spawnScale(e);
+    if(DEFS[e.type].unit) shEll(p.x,p.y, TW*(e.type==='ritter'?0.19:0.15), TH*0.55);
+    else if(e.type==='haus') shBox(p.x-TW*0.34,p.y-TH*0.30,TW*0.68,TH*0.60,TH*1.1*s);
+    else if(e.type==='mauer') shBox(p.x-TW*0.46,p.y-TH*0.20,TW*0.92,TH*0.40,TH*0.8*s);
+    else if(e.type==='kanone')
+      shBox(p.x-TW*0.32,p.y-TH*0.26,TW*0.64,TH*0.52,sockelOf(e)+TH*0.55*s);
+    else for(const q of e.cells)
+      shBox(midX(q.c)-TW*0.36, midY(q.r)-TH*0.36, TW*0.72, TH*0.72, TH*0.72*s);
+  }
+}
+
+/* ---------- Bildaufbau ---------- */
+function render(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,W,H);
+  if(!G){ ctx.drawImage(bg,0,0,W,H); return; }
+  if(shakeT>0){
+    const a=shakeA*Math.min(1,shakeT*2.2);
+    ctx.translate((deko()-.5)*a,(deko()-.5)*a);
+  }
+  ctx.drawImage(bg,0,0,W,H);
+  for(const o of G.envs) if(o.type==='see') drawWater(o);
+  drawMarks();
+  collectShadows(); flushShadows();
+
+  const items=[];
+  for(const o of G.envs){
+    if(o.type==='gebirge') items.push({y:gy(o.r0+o.h)-TH*0.1, f:()=>drawBerg(o)});
+    else if(o.type==='vulkan') items.push({y:gy(o.r0)+TH*0.04, f:()=>drawVulkan(o)});
+    else if(o.type==='wald'){
+      items.push({y:gy(o.r0)+TH*0.20, f:()=>drawBaum(o,false)});
+      items.push({y:gy(o.r0)+TH*0.96, f:()=>drawBaum(o,true)});
+    }
+  }
+  for(const e of G.ents){
+    const p=entXY(e);
+    const hint = e.cells.reduce((m,q)=>Math.max(m,q.r), e.r);
+    let key = midY(hint);
+    if(e.berg){                                   // Stellungen gehören vor ihren Felsen
+      const env = cell(e.r,e.c).env;
+      if(env) key = gy(Math.max(...env.cells.map(q=>q.r))+1) + 0.5;
+    }
+    items.push({y: key, f:()=>drawEnt(e,p)});
+  }
+  for(const f of G.fx) if(f.k==='corpse' && f.t>=0) items.push({y:midY(f.r)+0.1, f:()=>drawCorpse(f)});
+  for(const z of G.sperren) if(z.art){                 // ausgebrannte Stellung
+    const env = cell(z.r,z.c).env;
+    const key = env ? gy(Math.max(...env.cells.map(q=>q.r))+1)+0.5 : midY(z.r);
+    items.push({y:key, f:()=>drawWrack(z)});
+  }
+  // Gespiegelt kehrt sich die Tiefe um: Was in der Ebene weiter unten liegt,
+  // steht auf dem Bild dann weiter OBEN — der Maler malt es zuerst.
+  items.sort((a,b)=>SPIEGEL ? b.y-a.y : a.y-b.y);
+  for(const it of items) it.f();
+
+  drawFx();
+  drawPT();
+  drawHinweise();
+  if(phase==='place') drawPlaceHint();
+  if(phase==='coin') drawCoin();
+}
+function drawCoin(){
+  const co=G.coin;
+  if(!co) return;
+  const r=Math.floor(ROWS/2), c=Math.floor(COLS/2);
+  const x=midX(c), y=midY(r), R=Math.max(16, TW*0.38);
+  let hoehe=0, a=0, sichtbar=true, liegt=false, verblassen=1;
+  if(co.stufe==='wahl'){
+    hoehe = TH*0.9 + Math.sin(now()*2)*TH*0.10;
+    a = now()*1.2;
+  } else if(co.stufe==='flug'){
+    const k = Math.min(1, co.t/MUENZE.land);
+    hoehe = TH*(0.9 + 9.5*k*(1-k)*1.5);                  // Wurfparabel
+    const dreh = 16*Math.PI + (co.ergebnis==='kopf' ? 0 : Math.PI);
+    a = dreh*(1-Math.pow(1-k,1.7));
+    if(co.t > MUENZE.land){                              // liegt und zeigt das Ergebnis
+      hoehe = TH*0.07;
+      liegt = true;
+      const nach = co.t - MUENZE.land - MUENZE.liegt;
+      if(nach > 0) verblassen = Math.max(0, 1 - nach/0.18);
+      if(verblassen <= 0) sichtbar = false;
+    }
+  } else { sichtbar = false; }
+
+  if(sichtbar){
+    ctx.save();
+    ctx.globalAlpha = verblassen;
+    const p=P(x, y, hoehe);
+    const co2 = Math.cos(a), vorder = co2 >= 0;
+    const ry = liegt ? R*0.60 : Math.max(1.5, R*0.34 + R*0.62*Math.abs(co2));
+    const sp=P(x, y, 0);                                  // Schatten am Boden
+    ctx.fillStyle='rgba(0,0,0,.22)';
+    ctx.beginPath();
+    ctx.ellipse(sp[0]+SHX*hoehe*0.5, sp[1]+SHY*hoehe*0.5, R*0.7, R*0.24, 0, 0, 6.2832);
+    ctx.fill();
+    const g=ctx.createLinearGradient(p[0]-R,p[1]-ry,p[0]+R,p[1]+ry);
+    g.addColorStop(0,'#ffe9a8'); g.addColorStop(0.45,'#f2c455'); g.addColorStop(1,'#b8862c');
+    ctx.beginPath(); ctx.ellipse(p[0],p[1],R,ry,0,0,6.2832);
+    ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='rgba(90,60,14,.75)'; ctx.lineWidth=Math.max(1.2,R*0.09); ctx.stroke();
+    if(ry > R*0.42){                                      // Prägung nur, wenn die Fläche zu sehen ist
+      ctx.save();
+      ctx.translate(p[0],p[1]); ctx.scale(1, ry/R);
+      ctx.strokeStyle='rgba(96,64,16,.85)'; ctx.lineWidth=Math.max(1.4,R*0.11);
+      ctx.lineCap='round'; ctx.lineJoin='round';
+      if(vorder){                                         // Kopf: Krone
+        ctx.beginPath();
+        ctx.moveTo(-R*0.42, R*0.22); ctx.lineTo(-R*0.32,-R*0.28);
+        ctx.lineTo(-R*0.05, R*0.02); ctx.lineTo(R*0.20,-R*0.32);
+        ctx.lineTo(R*0.42, R*0.22); ctx.closePath(); ctx.stroke();
+      } else {                                            // Zahl: Schwerterkreuz
+        ctx.beginPath();
+        ctx.moveTo(-R*0.36,-R*0.36); ctx.lineTo(R*0.36, R*0.36);
+        ctx.moveTo(R*0.36,-R*0.36); ctx.lineTo(-R*0.36, R*0.36);
+        ctx.stroke();
+      }
+      ctx.lineCap='butt'; ctx.restore();
+    }
+    if(liegt){                                           // kurzer Glanz auf der Prägeseite
+      const gl=ctx.createLinearGradient(p[0]-R,p[1]-ry,p[0]+R*0.3,p[1]+ry);
+      gl.addColorStop(0,'rgba(255,255,255,.34)');
+      gl.addColorStop(0.5,'rgba(255,255,255,0)');
+      ctx.beginPath(); ctx.ellipse(p[0],p[1],R*0.94,ry*0.94,0,0,6.2832);
+      ctx.fillStyle=gl; ctx.fill();
+    }
+    ctx.restore();
+  }
+  // Beschriftung
+  let tx=null;
+  if(co.stufe==='wahl') tx = (!AI ? 'Spieler '+(co.waehler+1) : (co.waehler===AI.owner?'Die KI':'Du')) + ' wählt …';
+  else if(co.stufe==='flug' && co.t>MUENZE.land) tx = co.ergebnis==='kopf' ? 'KOPF' : 'ZAHL';
+  else if(co.stufe==='zeigen')
+    tx = (co.ergebnis==='kopf'?'KOPF':'ZAHL') + ' — ' + (!AI ? 'Spieler '+(co.sieger+1)
+         : (co.sieger===AI.owner?'die KI':'du')) + ' beginnt';
+  if(tx) schild(tx, x, y, TH*3.2, '#ffd977', 1);
+}
+function drawPlaceHint(){
+  const who = drankommt();
+  const kiDran = AI && who===AI.owner;
+  const y = who===0 ? gy(MID) - TH*0.62 : gy(MID) + TH*0.62;
+  ctx.save(); ctx.translate(CX, y);
+  if(ueberKopf(who)) ctx.rotate(Math.PI);
+  const tx = kiDran ? 'DIE KI SUCHT IHREN PLATZ'
+           : AI ? 'DEIN HAUPTHAUS SETZEN'
+           : 'SPIELER '+(who+1)+' — HAUPTHAUS SETZEN';
+  ctx.font='800 '+Math.max(9,Math.round(TW*0.19))+'px ui-monospace,Menlo,monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const w=ctx.measureText(tx).width+18;
+  ctx.fillStyle='rgba(7,12,17,.86)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(-w/2,-11,w,22,6); else ctx.rect(-w/2,-11,w,22);
+  ctx.fill();
+  ctx.strokeStyle=sh(COL.p[who],1,.45); ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle=sh(COL.p[who],1.1); ctx.fillText(tx,0,1);
+  ctx.restore();
+}
+
+/* ---------- Animationstakt ---------- */
+function animate(dt){
+  if(shakeT>0){ shakeT-=dt; if(shakeT<=0) shakeA=0; }
+  updatePT(dt);
+  if(!G) return;
+  for(const d of drags.values())                  // Zielfeld laufend neu bewerten
+    if(d.prev) d.prev = berechnePrev(d, d.prev.hr, d.prev.hc) || d.prev;
+  if(peek){
+    peek.t += dt;
+    if(!G.ents.includes(peek.ent)) peek = null;
+  }
+  for(const e of G.ents){
+    if(e.mt<MOVE_T){
+      const before=e.mt; e.mt+=dt;
+      if(before<MOVE_T*0.5 && e.mt>=MOVE_T*0.5){
+        const p=entXY(e); burst(p.x,p.y,TH*0.06,3,'dust','#8a7a68');
+      }
+    }
+    if(e.atk>0) e.atk=Math.max(0,e.atk-dt*(DEFS[e.type].siege?2.0:3.2));
+    if(DEFS[e.type].siege){                        // Rohr schwenkt weich zum Ziel
+      const ruhe = e.owner===0 ? Math.PI/2 : -Math.PI/2;
+      const soll = (e.aimZiel===undefined || e.aimZiel===null) ? ruhe : e.aimZiel;
+      let d2 = soll - e.aim;
+      while(d2>Math.PI) d2-=6.2832;
+      while(d2<-Math.PI) d2+=6.2832;
+      e.aim += d2*Math.min(1, dt*3.2);
+    }
+    if(e.nudge>0) e.nudge-=dt*1.8;
+    if(e.spawn<1) e.spawn=Math.min(1,e.spawn+dt*2.4);
+    if(e.flash<0){ e.flash+=dt; if(e.flash>=0) e.flash=0.32; }
+    else if(e.flash>0) e.flash-=dt;
+  }
+  for(const f of G.fx){
+    const was=f.t; f.t+=dt;
+    /* Leuchtspur des Pfeils: ein Funke an jeder 0,06-s-Schwelle statt je
+     * Bild — so ist die Spur bei jeder Bildrate gleich dicht (örtlich 60
+     * Bilder, im Netz 20 Takte je Sekunde). Reine Deko: burst zieht aus
+     * deko(), nie aus dem Saatkorn. */
+    if(f.k==='arrow' && f.t<f.dur && Math.floor(f.t/0.06)>Math.floor(was/0.06)){
+      const kf = Math.min(1, f.t/f.dur);
+      burst(f.ax+(f.bx-f.ax)*kf, f.ay+(f.by-f.ay)*kf,
+            TH*0.62+Math.sin(kf*Math.PI)*TH*0.55, 1, 'spark', '#ffe8c0', 0.55);
+    }
+    if(f.k==='arrow' && was<f.dur && f.t>=f.dur)
+      burst(f.bx,f.by,TH*0.55,9,'spark','#ffe8c0');
+    if(f.k==='ball' && was<f.dur && f.t>=f.dur){
+      burst(f.bx,f.by,TH*0.35,22,'spark','#ffdca8');
+      burst(f.bx,f.by,TH*0.30,10,'rock','#4a4038');
+      burst(f.bx,f.by,TH*0.40,4,'smoke','#8a847e',0.7);
+      shake(7,0.22);
+    }
+  }
+  G.fx = G.fx.filter(f => f.t < (f.k==='txt'?1.1 : f.k==='plus'?0.75 : f.k==='zeit'?0.8 : f.k==='boom'?.95
+                             : f.k==='corpse'?f.dur : f.k==='ring'?.5 : (f.dur||0.3)+0.02));
+}
+
+/* ============================================================
+   Teil 6: Die KI — spielt Spieler 1, wenn der Modus aktiv ist
+   ============================================================ */
+const AILVL = {
+  leicht: {nm:'Leicht', iv:3.6, maxKanone:0, wantTroops:2, upgrade:false, defend:false,
+           waste:0.58, buys:1, aim:0,   wall:0, kanoneAb:999},  // baut keine Wirtschaft aus
+  normal: {nm:'Normal', iv:1.5, maxKanone:1, wantTroops:4, upgrade:true,  defend:true,
+           waste:0.12, buys:2, aim:0.6, wall:1, kanoneAb:75},
+  schwer: {nm:'Schwer', iv:0.6, maxKanone:2, wantTroops:6, upgrade:true,  defend:true,
+           waste:0,    buys:3, aim:1,   wall:2, kanoneAb:55}    // plant Wirtschaft und Belagerung
+};
+let AI = null;
+
+const TAKTIK = {
+  aufbau:   {nm:'Aufbau',        vorn:0.0, truppen:0,  kanone:1.0, mauer:1.0, wagemut:0.2},
+  sturm:    {nm:'Sturmangriff',  vorn:1.0, truppen:2,  kanone:0.5, mauer:0.4, wagemut:0.8},
+  stellung: {nm:'Verschanzt',    vorn:0.0, truppen:0,  kanone:1.3, mauer:1.6, wagemut:0.1},
+  gambit:   {nm:'Vulkan-Gambit', vorn:1.0, truppen:3,  kanone:0.4, mauer:0.3, wagemut:1.0}
+};
+const tk = () => TAKTIK[AI.taktik] || TAKTIK.aufbau;
+
+function vulkanPlatz(own){                             // gibt es hier überhaupt einen Krater?
+  if(!G || !G.grid) return false;
+  for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++)
+    if(freeCell(r,c) && envAt(r,c)!=='vulkan' && nebenVulkan(r,c)) return true;
+  return false;
+}
+function waehleTaktik(){
+  const own=AI.owner;
+  if(AI.key==='leicht') return 'aufbau';
+  const w=zufall();
+  if(AI.key==='schwer'){
+    if(vulkanPlatz(own) && w<0.28) return 'gambit';
+    return w<0.40 ? 'aufbau' : w<0.82 ? 'sturm' : 'stellung';
+  }
+  return w<0.45 ? 'aufbau' : w<0.85 ? 'sturm' : 'stellung';
+}
+function startAI(level){
+  AI = Object.assign({owner:0, key:level, think:0, status:'stellt auf',
+                      taktik:'aufbau', verlusteVorn:0, wechsel:0, prueft:0}, AILVL[level]);
+}
+
+/* ---------- Lagebild: wo schlägt sofort etwas ein? ---------- */
+function aiGefahr(r, c, own){
+  let d = 0;
+  for(const o of G.ents){
+    if(o.owner===own || !canAtt(o)) continue;
+    let nah = 99;
+    for(const q of o.cells) nah = Math.min(nah, Math.max(Math.abs(q.r-r), Math.abs(q.c-c)));
+    if(nah <= rngOf(o)) d += dmgOf(o);
+  }
+  return d;
+}
+/* Preis einer Karte, die es in dieser Hand vielleicht gar nicht gibt:
+ * Charaktere bringen eigene Karten mit (CHARAKTERE in simulation.js), und
+ * die KI fragt unten nach Ritter, Bogen und Schwert. Fehlt eine Karte,
+ * ist sie unbezahlbar — statt an DEFS.ritter.cost zu zerbrechen. */
+const aiPreis = k => (DEFS[k] ? DEFS[k].cost : Infinity);
+const aiMine = () => G.ents.filter(e=>e.owner===AI.owner);
+const aiFoes = () => G.ents.filter(e=>e.owner!==AI.owner);
+const aiHaus = () => G.ents.find(e=>e.type==='haus' && e.owner===AI.owner);
+const foeHaus = () => G.ents.find(e=>e.type==='haus' && e.owner!==AI.owner);
+const entDist = (a,b)=>{
+  let m=99;
+  for(const p of a.cells) for(const q of b.cells)
+    m=Math.min(m, Math.max(Math.abs(p.r-q.r), Math.abs(p.c-q.c)));
+  return m;
+};
+
+/* ---------- Aufstellung ---------- */
+function aiPlaceHouse(){
+  const own=AI.owner;
+  let best=null, bs=-1e9;
+  for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++){
+    if(!freeCell(r,c) || envAt(r,c)==='vulkan') continue;
+    const back = own===0 ? r : (ROWS-1-r);           // 0 = hinterste eigene Reihe
+    let sc = -back*3.4;
+    for(const [dr,dc] of DIRS){
+      const rr=r+dr, cc=c+dc;
+      if(!inBoard(rr,cc)) sc += 2.4;                 // Brettkante deckt
+      else if(!walkable(rr,cc)) sc += 3.4;           // See und Gebirge decken besser
+    }
+    if(AI.taktik==='gambit'){                        // Erdwärme mitnehmen, koste es was es wolle
+      if(nebenVulkan(r,c)) sc += 16;
+    } else {
+      for(const o of G.envs) if(o.type==='vulkan')
+        for(const p of o.cells)
+          if(Math.abs(p.r-r)<=1 && Math.abs(p.c-c)<=1) sc -= 9;
+    }
+    const fh0 = foeHaus();                             // Antwort auf die gegnerische Wahl
+    if(fh0){
+      const seit = Math.abs(c - fh0.c);
+      sc += (tk().vorn>0.5 ? -seit*2.4 : seit*2.0);
+    }
+    sc += zufall()*2;
+    if(sc>bs){ bs=sc; best={r,c}; }
+  }
+  if(!best) return;
+  addEnt('haus', own, best.r, best.c);
+  fxRing(best.r,best.c, sh(COL.p[own],1));
+  burst(midX(best.c), midY(best.r), TH*0.05, 16, 'dust', '#8a7a68');
+  G.placed[own]=true;
+  if(G.placed[0]&&G.placed[1]) phase='war';
+  syncHUD();
+}
+
+/* ---------- Bauplatz suchen ---------- */
+function aiSpot(k, mode){
+  const own=AI.owner, haus=aiHaus(), fh=foeHaus();
+  // Wegekarten: wie weit ist ein Feld vom feindlichen bzw. vom eigenen Haus entfernt
+  const zuFeind = (AI.aim && fh) ? pathMap(fh.cells, own) : null;
+  const zuMir   = (AI.aim && haus) ? pathMap(haus.cells, 1-own) : null;
+  let best=null, bs=-1e9;
+  for(let r=own?MID:0; r<(own?ROWS:MID); r++) for(let c=0;c<COLS;c++){
+    const sp = placeSpot(own,k,r,c);
+    if(!sp || sp.merge) continue;
+    const front = own===0 ? r : (ROWS-1-r);
+    let sc;
+    if(mode==='front'){
+      sc = front*3;
+      if(zuFeind){                                   // kurzer Anmarsch, keine Sackgasse
+        const d = zuFeind[r][c];
+        sc += (d>=0 ? (26-d)*1.6 : -24) * AI.aim;
+      }
+    }
+    else if(mode==='riegel'){                        // Mauer auf die Anmarschroute des Gegners
+      sc = zuMir && zuMir[r][c]>=0 ? (26-zuMir[r][c])*2.2 : -50;
+      if(haus && Math.abs(r-haus.r)+Math.abs(c-haus.c)>4) sc -= 25;
+    }
+    else if(mode==='werk'){                          // an bestehende Werke andocken
+      sc = -front*2;
+      let bonus=-6;
+      for(const o of G.ents){
+        if(o.owner!==own || o.type!=='werk') continue;
+        for(const q of o.cells)
+          if(Math.abs(q.r-r)+Math.abs(q.c-c)===1)
+            bonus=Math.max(bonus, o.lvl===2 ? 18 : o.lvl===1 ? 4 : -12);
+      }
+      sc += bonus;
+    }
+    else if(mode==='back') sc = -front*3;
+    else {
+      sc = haus ? -(Math.abs(r-haus.r)+Math.abs(c-haus.c))*2.5 : 0;
+      if(zuMir && zuMir[r][c]>=0) sc += (26-zuMir[r][c])*0.8*AI.aim;
+    }
+    if(envAt(r,c)==='wald' && DEFS[k].unit) sc += 4;      // Deckung mitnehmen
+    if((k==='bogen'||k==='kanone') && envAt(r,c)==='gebirge') sc += 16*(0.4+AI.aim);
+    if(k==='kanone' && envAt(r,c)==='wald') sc += 7*(0.4+AI.aim);      // Deckung für die Kanone
+    if(k==='werk' && inPanik(own,r)){                                 // Panikbonus nur, wenn gewagt
+      const mut = tk().vorn * (1 - Math.min(1, AI.verlusteVorn*0.5));
+      sc += mut>0.05 ? 15*mut : -7;                                    // sonst lieber hinten bleiben
+    }
+    if(k==='werk' && envAt(r,c)!=='gebirge' &&
+       sp.cells.some(q=>nebenHaus(own,q.r,q.c))) sc -= 60;              // nicht neben das eigene Haus
+    if(k==='werk' && G.t<90 && AI.aim>0.5 &&
+       sp.cells.some(q=>nebenVulkan(q.r,q.c))) sc += 8;                 // früh lohnt die Erdwärme
+    if(envAt(r,c)==='vulkan') sc -= 8;
+    if(DEFS[k].unit){                                                  // nicht ins Feuer stellen
+      const g = aiGefahr(r,c,own);
+      if(g>0){
+        const hp = statsOf(k,1).hp * (envAt(r,c)==='wald' ? 1.5 : 1);
+        sc -= (g >= hp ? 32 : 7) * (0.35 + AI.aim);
+      }
+    } else if(k!=='mauer'){
+      const g = aiGefahr(r,c,own);
+      if(g>0) sc -= 9 * (0.35 + AI.aim);
+    }
+    sc += zufall()*1.6;
+    if(sc>bs){ bs=sc; best=sp; }
+  }
+  return best;
+}
+function aiPlay(k, mode){
+  const sp = aiSpot(k, mode);
+  if(!sp) return false;
+  playCard(AI.owner, k, sp.cells[0].r, sp.cells[0].c);
+  return true;
+}
+
+/* ---------- Einkauf: erst planen, dann sparen, dann setzen ---------- */
+function aiBuy(){
+  const own=AI.owner, res=G.res[own];
+  const mine=aiMine(), foes=aiFoes();
+  const myTroops=mine.filter(canMove), foeTroops=foes.filter(canMove);
+  const haus=aiHaus();
+  const werke=mine.filter(e=>e.type==='werk');
+  const kanonen=mine.filter(e=>e.type==='kanone');
+  const mauern=mine.filter(e=>e.type==='mauer');
+  const nearHome = haus ? foeTroops.filter(o=>entDist(o,haus)<=3).length : 0;
+  const invasion = foeTroops.filter(o=>sideOf(o.r)===own).length;
+  const foeWalls = foes.filter(o=>o.type==='mauer').length;
+  const werkRest = restOf(own,'werk'), kanRest = restOf(own,'kanone');
+
+  // 1 — Notwehr geht vor allem anderen
+  if(nearHome>0 && myTroops.length <= nearHome){
+    if(res>=aiPreis('ritter') && zufall()<0.5) return aiPlay('ritter','home');
+    if(res>=aiPreis('schwert')) return aiPlay('schwert','home');
+  }
+
+  // 2 — Bauvorhaben bestimmen, für das gespart wird
+  let plan = null;
+  if(invasion<2){
+    const rohbau = werke.find(e=>e.lvl===1 && (e.tot || true));   // erschöpfte zuerst
+    const müde = werke.find(e=>e.tot && e.lvl===1);
+    const zweite = werke.length===1 && werke[0].lvl===2;
+    if(werkRest>0 && werke.length===0 && G.t<240)
+      plan={k:'werk', mode:'werk', preis:costOf('werk',1)};                 // Wirtschaft zuerst
+    else if(AI.upgrade && werkRest>0 && (müde||rohbau))
+      plan={k:'werk', up:(müde||rohbau), preis:costOf('werk',2)};                   // und gleich auf Stufe 2
+    else if(kanRest>0 && kanonen.length<AI.maxKanone && G.t > AI.kanoneAb*tk().kanone)
+      plan={k:'kanone', mode:'front', preis:costOf('kanone',1)};            // dann Belagerungsgerät
+    else if(AI.upgrade && werkRest>1 && zweite && G.t<260)
+      plan={k:'werk', mode:'werk', preis:costOf('werk',1)};                 // später auf Stufe 3
+    else if(AI.upgrade && kanRest>0 && G.t>110){
+      const roh=kanonen.find(o=>o.lvl<maxLvlOf('kanone'));   // sonst spart sie auf Unmögliches
+      if(roh) plan={k:'kanone', up:roh, preis:costOf('kanone',roh.lvl+1)};
+    }
+  }
+
+  // 3 — Vorhaben ausführen, sobald es bezahlbar ist
+  if(plan && res>=plan.preis){
+    if(plan.up){ playCard(own, plan.k, plan.up.cells[0].r, plan.up.cells[0].c); return true; }
+    if(aiPlay(plan.k, plan.mode)) return true;
+  }
+
+  // 4 — Truppen: bei Ruhe wird für den Bau gespart, bei Gefahr sofort ausgehoben
+  const notlage = invasion>0 || nearHome>0;
+  if(plan && res<plan.preis && myTroops.length >= (notlage?3:1)) return false;
+  if(myTroops.length < AI.wantTroops + tk().truppen + (notlage?2:0)){
+    const wants=[];
+    if(res>=aiPreis('ritter')) wants.push('ritter');
+    if(res>=aiPreis('bogen')) wants.push('bogen', foeWalls?'bogen':'schwert');
+    if(res>=aiPreis('schwert')) wants.push('schwert','schwert');
+    if(wants.length) return aiPlay(wants[Math.floor(zufall()*wants.length)],
+                                   invasion?'home':'front');
+  }
+
+  // 5 — Riegel auf die Anmarschroute
+  if(AI.wall && mauern.length<AI.wall && res>=costOf('mauer',1)+14 && G.t>30 &&
+     zufall() < 0.5*tk().mauer)
+    return aiPlay('mauer','riegel');
+  if(nearHome>0 && mauern.length<3 && res>=costOf('mauer',1)+16 && zufall()<0.5)
+    return aiPlay('mauer','home');
+  return false;
+}
+
+/* ---------- Statuszeile ---------- */
+/* ---------- Statuszeile nennt Taktik und Lage ---------- */
+function aiStatus(){
+  const mine=aiMine(), foes=aiFoes();
+  const haus=aiHaus();
+  const troops=mine.filter(canMove).length;
+  let lage;
+  if(haus && foes.filter(canMove).some(o=>entDist(o,haus)<=3)) lage='verteidigt das Haus';
+  else if(mine.some(e=>canMove(e) && sideOf(e.r)!==AI.owner)) lage='greift an';
+  else if(troops===0) lage='sammelt Ressourcen';
+  else lage='rückt vor · ' + troops + ' Truppen';
+  return tk().nm + ' · ' + lage;
+}
+
+/* ---------- Lagebeurteilung: die Taktik darf sich ändern ---------- */
+function aiUeberdenken(){
+  const own=AI.owner, mine=aiMine(), foes=aiFoes(), haus=aiHaus();
+  const meine=mine.filter(canMove).length, seine=foes.filter(canMove).length;
+  const bedraengt = haus && foes.filter(canMove).some(o=>entDist(o,haus)<=3);
+  const alt = AI.taktik;
+
+  if(AI.taktik==='gambit'){                            // der Berg tickt: rechtzeitig umschwenken
+    const v = G.envs.find(o=>o.type==='vulkan');
+    if(!v || (v.chance||0) > 0.22) AI.taktik = 'sturm';
+  }
+  if(AI.verlusteVorn >= 2 && tk().vorn > 0.5)          // vorn gebaut, vorn verloren
+    AI.taktik = bedraengt ? 'stellung' : 'aufbau';
+  if(bedraengt && AI.taktik !== 'stellung' && AI.key!=='leicht' && seine > meine)
+    AI.taktik = 'stellung';
+  else if(!bedraengt && meine >= seine + 3 && AI.key!=='leicht' && G.t > 45)
+    AI.taktik = 'sturm';                               // Übermacht ausnutzen
+  if(alt !== AI.taktik){
+    AI.wechsel = G.t;
+    const h = aiHaus();
+    if(h) fxText(h.r, h.c, tk().nm.toUpperCase(), '#ffd977', 0);
+  }
+}
+
+/* ---------- Takt ---------- */
+function aiTick(dt){
+  if(!AI || paused) return;
+  // Die Münze tickt in loop() für alle Modi — auch zu zweit gibt es eine.
+  // Hier tickte sie früher mit, und ohne KI blieb sie für immer in der Luft.
+  if(phase==='coin') return;
+  if(phase==='place'){
+    if(!G.placed[AI.owner] && drankommt()===AI.owner){
+      AI.think += dt;
+      if(AI.think > 0.8){ AI.think=0; aiPlaceHouse(); }
+    }
+    return;
+  }
+  if(phase!=='war') return;
+  AI.think += dt;
+  if(AI.think < AI.iv) return;
+  AI.think = 0;
+  AI.prueft += AI.iv;
+  if(AI.prueft > 6){ AI.prueft = 0; aiUeberdenken(); }   // Lage neu bewerten
+  let guard=0;
+  while(aiBuy() && ++guard<AI.buys){}           // Einkaufstempo je nach Stufe
+  AI.status = aiStatus();
+}
+
+/* ============================================================
+   Teil 5: Bedienleisten, Eingabe, Menü
+   ============================================================ */
+const ICONS = {
+  schwert:'<path d="M12.6 2.2l3.2 3.2-7.1 7.1 1.4 1.4-1.9 1.9-1.4-1.4-2.1 2.1-1.4-1.4 2.1-2.1-1.4-1.4 1.9-1.9 1.4 1.4z" fill="#dbe8f1"/><path d="M4.6 17.4l2 2-1.6 1.6-2-2z" fill="#9db0bc"/>',
+  mauer:'<rect x="2" y="5" width="4" height="3" fill="#c3cfd8"/><rect x="8" y="5" width="4" height="3" fill="#c3cfd8"/><rect x="14" y="5" width="4" height="3" fill="#c3cfd8"/><rect x="2" y="9" width="16" height="4" fill="#aab8c2"/><rect x="2" y="14" width="16" height="4" fill="#93a3ae"/>',
+  werk:'<path d="M2 20v-8l5 2.5V12l5 2.5V12l5 2.5V20z" fill="#c3cfd8"/><rect x="16" y="3" width="3" height="9" fill="#93a3ae"/><rect x="3" y="6" width="7" height="2" rx="1" fill="#7e8f9c"/>',
+  kanone:'<circle cx="7" cy="17" r="3.4" fill="#93a3ae"/><rect x="3" y="12" width="9" height="4" rx="1.4" fill="#c3cfd8"/><rect x="9" y="6.4" width="12" height="4.2" rx="2.1" transform="rotate(-24 9 6.4)" fill="#dbe8f1"/>',
+  bogen:'<path d="M16 3a12 12 0 010 18" fill="none" stroke="#dbe8f1" stroke-width="2.1" stroke-linecap="round"/><path d="M16 3L4.5 12 16 21" fill="none" stroke="#8fa3b0" stroke-width="1.1"/><path d="M4 12h11" stroke="#dbe8f1" stroke-width="1.6"/>',
+  ritter:'<circle cx="10" cy="5" r="3.1" fill="#dbe8f1"/><path d="M5.5 9.5h9v6l-2.6 6h-1.2l-.7-5-.7 5H8.1L5.5 15.5z" fill="#c3cfd8"/><rect x="16" y="4" width="2.4" height="13" rx="1.2" fill="#93a3ae"/>'
+};
+function cardHTML(k){
+  const d=DEFS[k], s=statsOf(k,1);
+  const lim = (d.limit||d.blockLimit) ? '<div class="lim"></div>' : '';
+  const line = d.unit ? s.hp+' HP · '+s.dmg+' DMG<br>'+s.mcd+'s / '+s.cd+'s'
+             : k==='mauer'  ? s.hp+' HP<br>blockiert'
+             : k==='kanone' ? s.hp+' HP · '+s.dmg+' DMG<br>RW '+DEFS.kanone.rng+' · ×2 Bau'
+             : s.hp+' HP · 1×2<br>+1 Res/s';
+  return '<div class="card off" data-k="'+k+'">'+lim+'<div class="cost">'+d.cost+'</div>'+
+    '<svg width="20" height="20" viewBox="0 0 24 24">'+ICONS[k]+'</svg>'+
+    '<div class="nm">'+d.nm+'</div><div class="st">'+line+'</div><div class="fill"></div></div>';
+}
+function buildHUD(){
+  for(const own of [0,1]){
+    if(AI && AI.owner===own){
+      document.getElementById('hud'+own).innerHTML =
+        '<div class="inner ai"><div class="bar">'+
+        '<span class="tag">KI · '+AI.nm.toUpperCase()+'</span>'+
+        '<span class="res" id="res'+own+'">0</span>'+
+        '<span class="rate" id="rate'+own+'">+0/s</span>'+
+        '<span class="hint" id="hint'+own+'"></span></div></div>';
+      continue;
+    }
+    document.getElementById('hud'+own).innerHTML =
+      '<div class="inner"><div class="bar">'+
+      '<span class="tag">'+(AI?'DU':'SPIELER '+(own+1))+'</span>'+
+      '<span class="res" id="res'+own+'">0</span>'+
+      '<span class="rate" id="rate'+own+'">+0/s</span>'+
+      '<button class="dreh" id="dreh'+own+'" title="Bauwerk drehen">'+
+        '<svg width="15" height="15" viewBox="0 0 24 24">'+
+        '<rect x="3" y="9" width="13" height="6" rx="1.5" fill="#cfe0ea"/>'+
+        '<path fill="#cfe0ea" d="M18.6 5.2a7 7 0 011.9 4.3h-2a5 5 0 00-1.3-2.9zM20.5 14.5a7 7 0 01-1.9 4.3l-1.4-1.4a5 5 0 001.3-2.9z"/>'+
+        '</svg></button>'+
+      '<button class="raze" id="raze'+own+'" title="Abreißen">'+
+        '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#cfe0ea" d="M9 3h6l1 2h4v2H4V5h4l1-2zm-3 6h12l-1 12H7L6 9zm3 2v8h2v-8H9zm4 0v8h2v-8h-2z"/></svg>'+
+      '</button>'+
+      '<span class="hint" id="hint'+own+'"></span></div>'+
+      '<div class="cards" id="cards'+own+'">'+CARD_ORDER.map(cardHTML).join('')+'</div></div>';
+  }
+}
+const uhrEl = document.getElementById('uhr');
+function syncHUD(){
+  if(!G) return;
+  if(uhrEl){
+    const zeigen = phase==='war' || phase==='over';
+    uhrEl.hidden = !zeigen;
+    if(zeigen) uhrEl.textContent =
+      Math.floor(G.t/60)+':'+String(Math.floor(G.t%60)).padStart(2,'0');
+  }
+  for(const own of [0,1]){
+    const r=Math.floor(G.res[own]);
+    const rEl=document.getElementById('res'+own);
+    const cap = capOf(own);
+    rEl.innerHTML = r+'<span class="cap">/'+cap+'</span>';
+    rEl.classList.toggle('full', r>=cap);
+    let inc=0; for(const e of G.ents) if(e.owner===own) inc+=incomeOf(e);
+    document.getElementById('rate'+own).textContent = '+'+inc+'/s';
+    const h=document.getElementById('hint'+own);
+    const box=document.getElementById('cards'+own);
+    if(!box){                                   // KI-Leiste: nur Anzeige
+      h.textContent = phase==='place' ? (G.placed[own]?'bereit':'stellt auf')
+                    : phase==='war' ? (AI.status||'') : '';
+      continue;
+    }
+    const rz=document.getElementById('raze'+own);
+    if(rz) rz.classList.toggle('on', !!G.raze[own]);
+    const dr=document.getElementById('dreh'+own);
+    if(dr){
+      dr.classList.toggle('hoch', !!G.orient[own]);
+      dr.classList.toggle('an', G.armed[own]==='werk');
+    }
+    for(const el of box.children){
+      const k=el.dataset.k;
+      const rest = restOf(own,k);
+      // Geschenkte Karten (Werkstatt im Fels) liegen NEBEN dem Kontingent:
+      // Wer eine hat, kann legen, auch wenn seine drei Mauern verbaut sind
+      // — und sie kostet nichts.
+      const gratis = gratisRest(own,k);
+      const voll = rest!==null && rest<=0 && !gratis;
+      // ist die Grenze erreicht, taugt die Karte nur noch zum Aufwerten
+      const grenze = DEFS[k].fuseAt || maxLvlOf(k);
+      const ausbau = (rest===0 && !gratis) ? null : G.ents.find(e=>e.owner===own && e.type===k &&
+                     (DEFS[k].unit ? e.lvl===1 : e.lvl<grenze));
+      const cost = gratis ? 0 : (voll && ausbau) ? costOf(k, ausbau.lvl+1) : costOf(k,1);
+      const usable = phase==='war' && r>=cost && (!voll || !!ausbau);
+      el.querySelector('.cost').textContent = cost;
+      el.classList.toggle('off', !usable);
+      el.classList.toggle('rdy', usable);
+      el.classList.toggle('leer', rest===0 && !gratis);
+      el.classList.toggle('gratis', gratis>0);
+      el.classList.toggle('arm', G.armed[own]===k);
+      el.querySelector('.fill').style.width = cost ? Math.min(100, r/cost*100)+'%' : '100%';
+      const le=el.querySelector('.lim');
+      if(le){
+        // Vorrat sichtbar: "2" ist das Kontingent, "+1" die geschenkte Karte.
+        le.textContent = gratis ? rest+'+'+gratis : rest;
+        le.classList.toggle('voll', !!voll);
+        le.classList.toggle('extra', gratis>0);
+      }
+    }
+    if(phase==='place') h.textContent = G.placed[own] ? 'Bereit' :
+        (own===0 || G.placed[0]) ? 'Setze dein Haupthaus' : 'Gleich bist du dran…';
+    else if(G.raze[own]) h.textContent = 'Eigenes Feld antippen — '+Math.round(REFUND*100)+' % zurück';
+    else if(G.armed[own]) h.textContent = sizeOf(G.armed[own])>1
+        ? 'Aufs Feld ziehen · Knopf dreht' : 'Auf ein Feld deiner Hälfte ziehen';
+    else h.textContent = '';
+  }
+}
+
+/* ---------- Eingabe ---------- */
+/* Die Befehlsfunktionen und die Bauregeln (placeSpot, preisFuer, …) leben
+ * seit dem Feinschnitt in simulation.js. Sichtbare Wirkungen melden sie
+ * über die Wirkungs-Haken — hier hängt sich die Darstellung ein. Headless
+ * bleiben die Haken Leerläufe, und die Simulation kennt weiterhin weder
+ * Pixel noch HUD. Die Haken laufen im Taktpfad auf BEIDEN Geräten und
+ * dürfen deshalb den Zustand nie anfassen und keinen Spielzufall ziehen. */
+HAKEN.syncHUD = () => syncHUD();
+HAKEN.spielerFarbe = own => sh(COL.p[own], 1);
+HAKEN.stufenFunken = (r, c) => burst(midX(c), midY(r), TH*0.6, 22, 'spark', '#ffe6a0');
+HAKEN.bauStaub = cells => {
+  for(const p of cells) burst(midX(p.c), midY(p.r), TH*0.05, 8, 'dust', '#8a7a68');
+};
+HAKEN.hausStaub = (r, c) => burst(midX(c), midY(r), TH*0.05, 16, 'dust', '#8a7a68');
+HAKEN.coinZu = () => coinAus();
+HAKEN.muenzeAufschlag = (r, c) => {
+  burst(midX(c), midY(r), TH*0.1, 14, 'dust', '#8a7a68');
+  shake(6, 0.25);
+};
+HAKEN.muenzeRauch = (r, c) => {
+  burst(midX(c), midY(r), TH*0.3, 26, 'ember', '#ffd977');
+  /* deko(), nicht zufall(): Die Rauchpositionen sind reine Optik. Vor dem
+   * Feinschnitt zogen sie aus dem Saatkorn — synchron, aber gegen die Regel
+   * »zufall() nur für Spielrelevantes«, und jede headless gerechnete Partie
+   * hätte einen anderen Zufallsstrom gehabt als der Browser. */
+  for(let i=0;i<12;i++) burst(midX(c)+(deko()-.5)*TW, midY(r)+(deko()-.5)*TH,
+                              TH*0.55, 1, 'smoke', '#d8b978');
+};
+
+/* Die 3D-Ansicht des Clients liefert ihre eigene Zeiger-Abbildung
+ * (Strahl auf die Brettebene): Solange sie gesetzt ist, gilt SIE — die
+ * perspektivischen Zellpositionen decken sich nicht mit dem flachen
+ * 2D-Raster, und ohne die Umrechnung landete jeder Zug im falschen Feld.
+ * Die Abbildung liefert fertige Brettkoordinaten (Spiegelung inklusive)
+ * oder null. Gesetzt wird sie ueber die Anbindung (zeigerAbbildung). */
+let zeigerZuZelle = null;
+function cellFromClient(clientX,clientY){
+  if(zeigerZuZelle){
+    const z = zeigerZuZelle(clientX, clientY);
+    return (z && inBoard(z.r, z.c)) ? {r:z.r, c:z.c} : null;
+  }
+  const b=cv.getBoundingClientRect();
+  const c=Math.floor((clientX-b.left-OX)/TW);
+  let r=Math.floor((clientY-b.top-OY)/TH);
+  if(SPIEGEL) r = ROWS-1-r;              // die Leinwand zeigt das Brett kopfüber
+  return inBoard(r,c) ? {r,c} : null;
+}
+
+/* Was das Legen HIER kostet — dieselbe Regel wie in playCard: eine
+ * geschenkte Karte (Werkstatt im Fels) gilt nur fuer den Neubau. */
+function legePreis(own, k, sp){
+  return (!sp.merge && gratisRest(own,k) > 0) ? 0 : preisFuer(k, sp);
+}
+function berechnePrev(d, r, c){                    // Zustand des Zielfelds, jederzeit neu bewertet
+  const sp = placeSpot(d.own, d.k, r, c);
+  if(sp){
+    const bezahlbar = G.res[d.own] >= legePreis(d.own, d.k, sp);
+    return {cells:sp.cells, ok:!!bezahlbar, r:sp.r0, c:sp.c0, merge:sp.merge, sp, hr:r, hc:c};
+  }
+  const cells = entCells(d.k, r, c, !!G.orient[d.own]).filter(p=>inBoard(p.r,p.c));
+  return cells.length ? {cells, ok:false, r, c, merge:null, sp:null, hr:r, hc:c} : null;
+}
+/* Wer darf an DIESEM Gerät für einen Sitz handeln? Örtlich alle außer der
+ * KI. Im Netzspiel ersetzt die Anbindung das durch »nur der eigene Sitz« —
+ * ohne diese Sperre ließe sich hier die Karte des Gegners ziehen, das andere
+ * Gerät erführe nie davon, und beide rechneten verschiedene Partien. */
+let darfBedienen = (own) => !(AI && own===AI.owner);
+
+const drags = new Map();
+let peek = null;                                   // gedrückt gehaltenes Objekt
+const ghost = document.getElementById('ghost');
+function bindHUD(){
+  for(const own of [0,1]){
+    const dr=document.getElementById('dreh'+own);
+    if(dr) dr.onclick = ()=>{ if(!darfBedienen(own)) return; drehBefehl(own); };
+    const rz=document.getElementById('raze'+own);
+    if(rz) rz.onclick = ()=>{
+      if(phase!=='war' || !darfBedienen(own)) return;
+      // Der Abrissmodus ist reine Eingabe-Vorwahl und bleibt örtlich; erst
+      // der Abriss selbst ist ein Befehl und geht im Netzspiel als Zug.
+      G.raze[own] = !G.raze[own];
+      G.armed[own] = null; syncHUD();
+    };
+    const box=document.getElementById('cards'+own);
+    if(!box) continue;
+    box.addEventListener('pointerdown', ev=>{
+      const el=ev.target.closest('.card'); if(!el) return;
+      if(phase!=='war' || paused || !darfBedienen(own)) return;
+      const k=el.dataset.k;
+      if(restOf(own,k)===0 && !gratisRest(own,k)) return;  // aufgebrauchte Karte lässt sich nicht ziehen
+      /* Dieselbe Karte noch einmal antippen legt sie zurück (Entscheid vom
+       * 7. August 2026): Vorher blieb eine einmal gewählte Karte gewählt,
+       * bis man eine andere nahm oder aufs Brett tippte — wer es sich
+       * anders überlegte, musste zwangsläufig irgendwo hinbauen. Der
+       * Abbruch geschieht schon beim Drücken, und der Zug wird gar nicht
+       * erst begonnen. */
+      if(G.armed[own]===k){
+        G.armed[own]=null; G.sel[own]=null; syncHUD();
+        ev.preventDefault();
+        return;
+      }
+      drags.set(ev.pointerId,{own, k, el, moved:false, prev:null, x:ev.clientX, y:ev.clientY});
+      el.classList.add('drag');
+      G.armed[own]=k; G.sel[own]=null; syncHUD();
+      ev.preventDefault();
+    });
+  }
+}
+horchen('pointermove', ev=>{
+  const d=drags.get(ev.pointerId); if(!d) return;
+  if(Math.abs(ev.clientX-d.x)>4 || Math.abs(ev.clientY-d.y)>4) d.moved=true;
+  if(!d.moved) return;
+  ghost.style.display='block';
+  ghost.style.left=ev.clientX+'px'; ghost.style.top=(ev.clientY-36)+'px';
+  const cl=cellFromClient(ev.clientX,ev.clientY);
+  let lbl=DEFS[d.k].nm+' · '+costOf(d.k,1);
+  if(cl){
+    const sp0=placeSpot(d.own,d.k,cl.r,cl.c);
+    if(sp0) lbl = (sp0.merge ? 'Stufe '+(sp0.merge.lvl+1) : DEFS[d.k].nm)+' · '+legePreis(d.own,d.k,sp0);
+  }
+  ghost.firstElementChild.textContent=lbl;
+  if(cl){
+    const sp=placeSpot(d.own,d.k,cl.r,cl.c);
+    const bezahlbar = sp && G.res[d.own] >= legePreis(d.own, d.k, sp);
+    d.prev = sp ? {cells:sp.cells, ok:!!bezahlbar, r:sp.r0, c:sp.c0, merge:sp.merge, sp, hr:cl.r, hc:cl.c}
+                : {cells:entCells(d.k,cl.r,cl.c,!!G.orient[d.own]).filter(p=>inBoard(p.r,p.c)),
+                   ok:false, r:cl.r, c:cl.c, merge:null, hr:cl.r, hc:cl.c};
+    if(!d.prev.cells.length) d.prev=null;
+  } else d.prev=null;
+});
+horchen('pointerup', ev=>{
+  if(peek && peek.id===ev.pointerId){
+    const e = peek.ent, kurz = peek.t < 0.2;
+    peek = null;
+    if(kurz && e && G.ents.includes(e) && canMove(e) && darfBedienen(e.owner)){
+      haltBefehl(e.owner, e.r, e.c);
+      syncHUD();
+    }
+    return;
+  }
+  const d=drags.get(ev.pointerId); if(!d) return;
+  drags.delete(ev.pointerId);
+  if(d.el) d.el.classList.remove('drag');
+  if(!drags.size) ghost.style.display='none';
+  if(d.moved){
+    if(d.prev && d.prev.ok) playCard(d.own,d.k,d.prev.cells[0].r,d.prev.cells[0].c);
+    G.armed[d.own]=null;                            // zurückgezogen heißt abgebrochen
+  }
+  // kurzes Antippen lässt die Karte gewählt: dann genügt ein Tippen aufs Feld
+  syncHUD();
+});
+horchen('pointercancel', ev=>{
+  if(peek && peek.id===ev.pointerId) peek=null;
+  const d=drags.get(ev.pointerId);
+  if(d){ if(d.el) d.el.classList.remove('drag'); G.armed[d.own]=null; }
+  drags.delete(ev.pointerId);
+  if(!drags.size) ghost.style.display='none';
+  syncHUD();
+});
+
+cv.addEventListener('pointerdown', ev=>{
+  if(paused) return;
+  const cl=cellFromClient(ev.clientX,ev.clientY); if(!cl) return;
+  const {r,c}=cl;
+  if(phase==='place'){
+    const own=drankommt();
+    if(!darfBedienen(own)) return;   // die KI stellt selbst auf; im Netz nur der eigene Sitz
+    setzeHaus(own,r,c);
+    return;
+  }
+  if(phase!=='war') return;
+  for(const own of [0,1]){
+    const k=G.armed[own];
+    if(k && !G.raze[own]){                            // gewählte Karte: erst beim Loslassen setzen
+      const d0 = {own, k, el:null, moved:true, vomBrett:true, x:ev.clientX, y:ev.clientY, prev:null};
+      d0.prev = berechnePrev(d0, r, c);
+      drags.set(ev.pointerId, d0);
+      return;
+    }
+  }
+  for(const own of [0,1]){
+    if(G.raze[own]){                                  // Abrissmodus
+      const t=entAt(r,c);
+      if(t && t.owner===own && t.type!=='haus'){ abrissBefehl(own,r,c); G.raze[own]=false; syncHUD(); return; }
+      G.raze[own]=false; syncHUD(); return;
+    }
+  }
+  const e=entAt(r,c);                                 // gedrückt halten zeigt die Reichweite
+  if(e){ peek = {id:ev.pointerId, ent:e, t:0}; return; }
+  syncHUD();
+});
+
+/* ---------- Ablauf ---------- */
+function on(id, fn){                       // fehlt ein Knopf, stirbt nicht die ganze Oberfläche
+  const el=document.getElementById(id);
+  if(el) el.onclick=fn; else console.warn('Bedienelement fehlt:', id);
+}
+const ovMenu=document.getElementById('ovMenu'), ovTut=document.getElementById('ovTut'),
+      ovTab=document.getElementById('ovTab'), ovPause=document.getElementById('ovPause'),
+      ovWin=document.getElementById('ovWin');
+
+let aiLevel='normal', feldKey='mittel', lastVsAI=true, tutSeen=false;
+function coinStart(){
+  coinAuslosen();
+  const el=document.getElementById('ovCoin');
+  // Nur wer den Wähler an diesem Gerät bedient, sieht die Wahl. Im Netzspiel
+  // heißt das: genau ein Gerät — auf dem anderen wählt der Gegner.
+  const mensch = darfBedienen(G.coin.waehler);
+  if(el){
+    el.hidden = !mensch;
+    const wer=document.getElementById('coinWer');
+    if(wer) wer.textContent = !AI ? 'Spieler '+(G.coin.waehler+1)+' wählt'
+                                  : (mensch ? 'Du wählst' : 'Die KI wählt');
+  }
+}
+
+function startRound(vsAI, level){
+  AI = null;
+  coinAus();
+  if(vsAI) startAI(level||aiLevel);
+  lastVsAI = !!vsAI;
+  setzeFeld(feldKey);
+  G=newState();
+  G.erst = 0;
+  const envs=generateTerrain();
+  G.envs=envs;
+  for(const o of envs){ o.tick=0; o.chance=0.05; o.cells.forEach(p=>{ G.grid[p.r][p.c].env=o; }); }
+  PT.length=0;
+  phase='coin';
+  if(AI) AI.taktik = waehleTaktik();               // erst jetzt steht das Gelände
+  coinStart(); paused=false;
+  ovMenu.hidden=ovTut.hidden=ovTab.hidden=ovPause.hidden=ovWin.hidden=true;
+  /* Neustart im Pausenmenü gibt es nur gegen die KI (Entscheid vom
+   * 7. August 2026): Im Duo säße ein zweiter Mensch am Brett, im Netz ein
+   * Gegner — dort startet niemand einseitig neu. display statt hidden,
+   * weil .btn{display:block} das UA-Stylesheet für [hidden] schlägt. */
+  const nb = document.getElementById('bNeustart');
+  if(nb) nb.style.display = vsAI ? '' : 'none';
+  buildHUD(); bindHUD(); resize(); syncHUD();
+}
+function showWin(){
+  if(!G) return;
+  const w=G.winner, zeit=Math.floor(G.t/60)+':'+String(Math.floor(G.t%60)).padStart(2,'0');
+  const tx=document.getElementById('winTx');
+  if(AI){
+    const gewonnen = w!==AI.owner;
+    tx.textContent = gewonnen ? 'Du gewinnst' : 'Die KI gewinnt';
+    tx.style.color = gewonnen ? 'var(--p2)' : 'var(--p1)';
+    document.getElementById('winSub').textContent = (gewonnen
+      ? 'Das Haupthaus der KI ('+AI.nm+') ist gefallen. '
+      : 'Dein Haupthaus ist gefallen — die KI spielte auf '+AI.nm+'. ')+'Spielzeit '+zeit+'.';
+  } else {
+    tx.textContent='Spieler '+(w+1)+' gewinnt';
+    tx.style.color = w===0?'var(--p1)':'var(--p2)';
+    document.getElementById('winSub').textContent =
+      'Das Haupthaus von Spieler '+(2-w)+' ist gefallen. Spielzeit '+zeit+'.';
+  }
+  ovWin.hidden=false;
+}
+
+const TUT = [
+  {h:'Worum es geht', p:'Zwei Feldherren, ein Brett, eine Mittellinie. Jeder setzt sein <b>Haupthaus</b> auf die eigene Hälfte, dann läuft alles in Echtzeit weiter. Wer das gegnerische Haupthaus einreißt, gewinnt.',
+   l:['Ein <b>Münzwurf</b> entscheidet, wer sein Haupthaus zuerst setzt — wer zuletzt setzt, sieht die Wahl des Gegners und kann darauf antworten','Dein Haupthaus wirft die Ressourcen ab, aus denen alles bezahlt wird','Karten ziehst du aus der Leiste auf ein Feld deiner Hälfte — gesetzt wird beim Loslassen','Gebaut wird nur hinten, gekämpft wird überall','Truppen marschieren und schlagen von allein; du entscheidest, <b>was</b> du wo hinstellst','Alle genauen Werte stehen im Menü unter „Einheitenwerte“']},
+
+  {h:'Das Gelände', p:'Jede Partie würfelt Geländeblöcke aus — beide Seiten bekommen dieselbe Art und Anzahl, nur an anderen Stellen. Das Gelände ist kein Beiwerk, sondern deine halbe Verteidigung.',
+   l:['<b>See</b> — unpassierbar. Ein natürlicher Wall, hinter dem dein Haupthaus sicherer steht','<b>Gebirge</b> — unpassierbar und sichtdicht. Bogenschützen und Kanonen dürfen als einzige darauf bauen und stehen dort erhöht','<b>Wald</b> — Deckung. Truppen darin sind zäher und schlagen härter, sehen dafür kürzer; Kanonen stecken dort mehr ein','<b>Vulkan</b> — begehbar, aber tickend. Wer daran baut, bekommt Erdwärme dazu; beim Ausbruch ist alles im Umkreis verloren']},
+
+  {h:'Deine Bauten', p:'Bauten stehen fest und verbrauchen ein festes Kartenkontingent. Was gesetzt ist, bleibt gezählt — auch wenn es zerstört wird.',
+   l:['<b>Haupthaus</b> — deine Lebensader. Steht ein ausgebautes Gebäude daneben, wächst es mit und wirft mehr ab; eine voll ausgebaute Mauer oder ein volles Werk heben es ganz hoch','<b>Werk</b> — Wirtschaft auf Zeit. Es läuft nur eine begrenzte Weile auf voller Kraft, fällt danach auf Sparflamme und explodiert, wenn es im Kampf fällt. Weit vorn bringt es mehr, ist aber schwer zu halten','<b>Mauer</b> — versperrt den Weg. Truppen gehen drumherum, wenn sie eine Lücke sehen, und schlagen sonst hindurch. Sie richtet sich selbst so aus, dass sie zwischen Fels, Wasser und Nachbarmauern eine geschlossene Sperre bildet','<b>Kanone</b> — Belagerung. Trifft weit, richtet an Bauwerken doppelten Schaden an und wird ausgebaut zum Mörser, der über Mauern hinweg schießt']},
+
+  {h:'Deine Truppen', p:'Truppen suchen sich ihren Weg und ihre Ziele selbst. Sie halten auf das gegnerische Haupthaus zu und schlagen sich durch, was ihnen im Weg steht.',
+   l:['<b>Schwertkämpfer</b> — billig und in Masse gefährlich. Das Arbeitspferd deiner Angriffe','<b>Bogenschütze</b> — trifft aus der Distanz und über eine Mauer direkt vor ihm hinweg, ab der zweiten Stufe noch weiter; dafür ist er zerbrechlich und gegen Mauerwerk fast wirkungslos','<b>Ritter</b> — schwer gepanzert, langsam im Schlag. Er hält aus, was andere umwirft','Jede Truppe sieht nur zwei Felder weit — hinter der nächsten Ecke plant sie nicht']},
+
+  {h:'Stellung und Ausbau', p:'Die zweite Hälfte des Spiels liegt im Ausbau: aus zwei gleichen Truppen wird eine stärkere, aus zwei Werken ein größeres, aus einer Kanone ein Mörser.',
+   l:['Gleiche Truppen derselben Stufe legen sich beim Aufeinandertreffen von allein zusammen','Bauten wertest du auf, indem du dieselbe Karte noch einmal darauf ziehst','Wer aufsteigt, darf sofort einmal zuschlagen — und die Rüstung wechselt von Kupfer über Silber und Gold zu Diamant','Ein kurzes Antippen <b>hält eine Truppe an</b>: sie bleibt stehen, verteidigt ihre Umgebung und steckt weniger ein. Nur wenige können das gleichzeitig','Halte den Finger auf einer Figur, um ihre Reichweite zu sehen — bei einem Werk den Sprengradius']}
+];
+let tutI=0, tutBack='menu';
+function showTut(from){ tutBack=from; tutI=0; renderTut(); ovTut.hidden=false; }
+function renderTut(){
+  const t=TUT[tutI];
+  document.getElementById('pips').innerHTML =
+    TUT.map((_,i)=>'<div class="pip '+(i<=tutI?'on':'')+'"></div>').join('');
+  document.getElementById('tutBody').innerHTML =
+    '<div class="eyebrow">Regel '+(tutI+1)+' von '+TUT.length+'</div><h2>'+t.h+'</h2>'+
+    '<p class="tx">'+t.p+'</p><ul class="tx">'+t.l.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+  document.getElementById('bNext').textContent = tutI===TUT.length-1 ? 'Fertig' : 'Weiter';
+}
+function coinAus(){ const el=document.getElementById('ovCoin'); if(el) el.hidden=true; }
+function closeTut(){
+  ovTut.hidden=true;
+  if(tutBack==='menu') ovMenu.hidden=false;
+  else if(tutBack==='pause') ovPause.hidden=false;
+}
+let pendingAI=true;
+function launch(vsAI){ ovMenu.hidden=true; startRound(vsAI); }
+const segBox = document.getElementById('segLvl');
+if(segBox) for(const b of Array.from(segBox.children)){
+  b.onclick = ()=>{
+    for(const x of Array.from(segBox.children)) x.classList.remove('on');
+    b.classList.add('on'); aiLevel = b.dataset.l;
+  };
+}
+const segCoin = document.getElementById('segCoin');
+if(segCoin) for(const b of Array.from(segCoin.children))
+  b.onclick = ()=> coinWahl(b.dataset.w);
+on('bAI',      ()=> launch(true));
+on('bDuo',     ()=> launch(false));
+on('bTut',     ()=>{ ovMenu.hidden=true; showTut('menu'); });
+on('bTab',     ()=>{ ovMenu.hidden=true; ovTab.hidden=false; });
+on('bTabClose',()=>{ ovTab.hidden=true; ovMenu.hidden=false; });
+on('bNext',    ()=>{
+  if(tutI<TUT.length-1){ tutI++; renderTut(); } else { ovTut.hidden=true; closeTut(); }
+});
+on('bSkip',    ()=>{ ovTut.hidden=true; closeTut(); });
+on('menuBtn',  ()=>{
+  if(phase==='menu'||phase==='over') return;
+  paused=true; ovPause.hidden=false;
+});
+on('bResume',  ()=>{ paused=false; ovPause.hidden=true; });
+on('bNeustart',()=>{ ovPause.hidden=true; startRound(true); });
+on('bTut2',    ()=>{ ovPause.hidden=true; showTut('pause'); });
+on('bQuit',    ()=>{
+  paused=false; phase='menu'; G=null; AI=null; PT.length=0;
+  ovPause.hidden=true; ovMenu.hidden=false; bakeStatic();
+});
+on('bAgain',   ()=> startRound(lastVsAI));
+on('bMenu2',   ()=>{
+  phase='menu'; G=null; AI=null; PT.length=0; ovWin.hidden=true; ovMenu.hidden=false; bakeStatic();
+});
+
+/* ---------- Start ---------- */
+horchen('error', ev=>{
+  let box=document.getElementById('errbox');
+  if(!box){
+    box=document.createElement('div'); box.id='errbox';
+    box.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:999;padding:10px 12px;'+
+      'border-radius:10px;background:#3a1418;color:#ffd9d2;font:600 11px/1.4 ui-monospace,Menlo,monospace;'+
+      'box-shadow:0 0 0 1px #7a2b31';
+    document.body.appendChild(box);
+  }
+  box.textContent = 'Fehler: '+(ev.message||'unbekannt')+(ev.lineno?(' (Zeile '+ev.lineno+')'):'');
+});
+buildHUD(); bindHUD(); resize();
+let last=performance.now();
+function loop(t){
+  const dt=Math.min(0.05,(t-last)/1000); last=t;
+  update(dt);
+  if(G && !paused && phase==='coin') coinTick(dt);   // Münzflug auch ohne KI
+  if(G) aiTick(dt);
+  if(!paused) animate(dt);
+  render();
+  
+}
+
+horchen('orientationchange', ()=>setTimeout(resize,220));
+
+
+  // ---- Anbindung ----------------------------------------------------------
+
+  if (typeof korn === 'number') saat(korn);
+  // Vor allem anderen: Die Kartenhand steht, bevor die Runde startet —
+  // buildHUD und jede Regelpruefung lesen DEFS und CARD_ORDER.
+  setzeCharakter(charakter);
+  feldKey = feld;
+  aiLevel = stufe;
+  ovMenu.hidden = true;                 // der Bildschirm hat schon gefragt
+
+  /**
+   * Im Netzspiel wird nicht ausgefuehrt, sondern gemeldet — auch beim
+   * Absender. Nur wenn beide Geraete denselben Befehl im selben Takt
+   * ausfuehren, bleiben die Laeufe gleich. Die *Sofort-Fassungen fuehren aus;
+   * sie gehoeren fuehreAus und niemandem sonst.
+   */
+  const legeSofort = playCard;
+  playCard = function (own, k, r, c) {
+    if (NETZ && own === MEIN_SITZ) {
+      melden({ art: 'karte', karte: k, r, c });
+      return;
+    }
+    legeSofort(own, k, r, c);
+  };
+
+  const hausSofort = setzeHaus;
+  setzeHaus = function (own, r, c) {
+    if (NETZ && own === MEIN_SITZ) {
+      melden({ art: 'haus', r, c });
+      return;
+    }
+    hausSofort(own, r, c);
+  };
+
+  const haltSofort = haltBefehl;
+  haltBefehl = function (own, r, c) {
+    if (NETZ && own === MEIN_SITZ) {
+      melden({ art: 'halt', r, c });
+      return;
+    }
+    haltSofort(own, r, c);
+  };
+
+  const abrissSofort = abrissBefehl;
+  abrissBefehl = function (own, r, c) {
+    if (NETZ && own === MEIN_SITZ) {
+      melden({ art: 'abriss', r, c });
+      return;
+    }
+    abrissSofort(own, r, c);
+  };
+
+  const drehSofort = drehBefehl;
+  drehBefehl = function (own) {
+    if (NETZ && own === MEIN_SITZ) {
+      melden({ art: 'drehen' });
+      return;
+    }
+    drehSofort(own);
+  };
+
+  /**
+   * Muenzwurf: Die Wahl verbraucht Spielzufall (Ergebniswurf) und MUSS deshalb
+   * auf beiden Geraeten im selben Takt fallen. Das Overlay schliesst sofort —
+   * die Wahl gilt, sobald der Takt sie erreicht.
+   */
+  const wahlSofort = coinWahl;
+  coinWahl = function (w) {
+    if (NETZ && G && G.coin && G.coin.stufe === 'wahl' && G.coin.waehler === MEIN_SITZ) {
+      melden({ art: 'muenze', wahl: w });
+      coinAus();
+      return;
+    }
+    wahlSofort(w);
+  };
+
+  function fuehreAus(zug, wer) {
+    if (zug.art === 'karte') legeSofort(wer, zug.karte, zug.r, zug.c);
+    else if (zug.art === 'haus') hausSofort(wer, zug.r, zug.c);
+    else if (zug.art === 'halt') haltSofort(wer, zug.r, zug.c);
+    else if (zug.art === 'abriss') abrissSofort(wer, zug.r, zug.c);
+    else if (zug.art === 'drehen') { drehSofort(wer); }
+    else if (zug.art === 'muenze') wahlSofort(zug.wahl);
+  }
+
+  if (NETZ) {
+    /**
+     * Im Netz darf nur der eigene Sitz bedient werden. Ohne diese Sperre
+     * liesse sich die Karte des Gegners ziehen — oertlich ausgefuehrt, dem
+     * anderen Geraet nie gemeldet, und beide rechneten verschiedene Partien.
+     */
+    darfBedienen = (own) => own === MEIN_SITZ;
+    /** Niemand sitzt gegenueber — kopfstehende Hinweise gibt es nur am geteilten Geraet. */
+    ueberKopf = () => false;
+
+    /**
+     * Sitz 0 bekommt das Brett gespiegelt: Jeder verteidigt unten. Muss vor
+     * startRound stehen, denn resize und bakeStatic backen die Buehne mit
+     * der Spiegelung; die Klasse tauscht zusaetzlich die Kartenleisten.
+     */
+    if (MEIN_SITZ === 0) {
+      SPIEGEL = true;
+      const app = document.getElementById('app');
+      if (app) app.classList.add('gespiegelt');
+    }
+
+    /**
+     * Im Netz sieht jeder nur die eigene Kartenleiste; die des Gegners ist
+     * ausgeblendet und das Brett bekommt ihre Höhe (Entscheid vom 7. August
+     * 2026). buildHUD fuellt nur das Innere der Leisten neu — display am
+     * Container ueberlebt den Rundenstart. display statt hidden, weil
+     * Autorenregeln des Spielstils das UA-Stylesheet fuer [hidden] schlagen
+     * koennen (gleiche Falle wie beim "Neue Runde"-Knopf).
+     */
+    const gegnerLeiste = document.getElementById('hud' + (1 - MEIN_SITZ));
+    if (gegnerLeiste) gegnerLeiste.style.display = 'none';
+
+    /**
+     * Pause gibt es im Netz nicht: update() stuende still, waehrend der Takt
+     * weiterlaeuft, und das Geraet ueberspraenge Rechenschritte, die die
+     * Gegenseite ausfuehrt. Das Menue oeffnet nur noch das Overlay.
+     */
+    on('menuBtn', () => { if (phase !== 'menu' && phase !== 'over') ovPause.hidden = false; });
+    on('bResume', () => { ovPause.hidden = true; });
+    on('bQuit', () => { ovPause.hidden = true; if (NETZ.aufgabe) NETZ.aufgabe(); });
+    /**
+     * Der Tisch ist nach der Partie zu — eine neue Runde gibt es hier nicht.
+     * display statt hidden: Die Regel .btn{display:block} des Spielstils
+     * schlaegt das UA-Stylesheet fuer [hidden], der Knopf bliebe sichtbar.
+     */
+    const nochmal = document.getElementById('bAgain');
+    if (nochmal) nochmal.style.display = 'none';
+    on('bMenu2', () => { if (NETZ.verlassen) NETZ.verlassen(); });
+  }
+
+  startRound(modus === 'ki');
+
+  /**
+   * Zustandsprobe.
+   *
+   * Absichtlich grob und billig: Ressourcen, Objektzahl und die Kernwerte
+   * jedes Objekts. Feiner waere teurer, ohne mehr zu finden — was
+   * auseinanderlaeuft, laeuft in diesen Zahlen auseinander.
+   */
+  function pruefsumme() {
+    if (!G) return '0';
+    let h = 2166136261;
+    const misch = (s) => {
+      for (let i = 0; i < s.length; i += 1) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+    };
+    misch(Math.round(G.res[0]) + ':' + Math.round(G.res[1]) + ':' + G.ents.length);
+    for (const e of G.ents) {
+      misch(e.type + e.owner + e.r + ',' + e.c + ':' + e.lvl + ':' + Math.round(e.hp));
+    }
+    return (h >>> 0).toString(36);
+  }
+
+  /**
+   * Probenvergleich an einer 40er-Grenze. Beide Seiten melden ihre Summe mit
+   * dem Herzschlag; stimmen sie an derselben Grenze nicht ueberein, sind die
+   * Laeufe auseinander. Dann ist jede weitere Minute gespielte Luege —
+   * die Partie endet sofort als strittig, auf beiden Geraeten.
+   */
+  function pruefeProbe(grenze) {
+    if (strittigGemeldet) return;
+    const eigene = proben.get(grenze);
+    const fremde = fremdeProben.get(grenze);
+    if (eigene === undefined || fremde === undefined || eigene === fremde) return;
+    strittigGemeldet = true;
+    laeuft = false;
+    if (aufStrittig) aufStrittig({ takt: grenze, pruef: eigene, grund: 'probe' });
+  }
+
+  const alterSchluss = showWin;
+  showWin = function () {
+    alterSchluss();
+    if (aufEnde) {
+      aufEnde({
+        sieger: G && G.winner,
+        gewonnen: modus === 'ki' ? G && G.winner === 1 : null,
+        gegenKI: modus === 'ki',
+        stufe: modus === 'ki' ? stufe : null,
+        dauer: G ? G.t : 0,
+        feld,
+        takt: taktZaehler,
+        pruef: pruefsumme(),
+      });
+    }
+  };
+
+  proben.set(0, pruefsumme());
+
+  /**
+   * Bildschleife.
+   *
+   * Oertlich wie gehabt. Im Netzspiel wird die verstrichene Zeit in feste
+   * Takte zerlegt, gerechnet aber hoechstens bis zur Wissensgrenze: dem
+   * letzten gemeldeten Takt der Gegenseite plus Vorlauf. Ein Rueckstand
+   * (Neuladen, Tab im Hintergrund) wird ohne Uhr aufgeholt, bis zu zehn
+   * Takte je Bild — die Uhr kaeme nie hinterher, denn ihr Guthaben ist auf
+   * zwei Takte gedeckelt, damit ein Aussetzer die Partie nicht beschleunigt.
+   */
+  let letzte = 0;
+  let letzterPuls = 0;
+  /**
+   * Nie mehr als eine Bildanforderung offen halten: Im verdeckten Tab feuert
+   * requestAnimationFrame nicht, sammelt Anforderungen aber — beim
+   * Sichtbarwerden kaeme sonst eine ganze Salve auf einmal.
+   */
+  let bildOffen = false;
+  const naechstesBild = () => {
+    if (bildOffen) return;
+    bildOffen = true;
+    requestAnimationFrame((t) => {
+      bildOffen = false;
+      schleife(t);
+    });
+  };
+  const schleife = (t) => {
+    if (!laeuft) return;
+    if (!NETZ) { loop(t); naechstesBild(); return; }
+
+    const dt = letzte ? Math.min(500, t - letzte) : 0;
+    letzte = t;
+    restMs = Math.min(restMs + dt, TAKT_MS * 2);
+
+    // Herzschlag nach Wanduhr, nicht nach Takt: Auch ein Geraet, das an der
+    // Wissensgrenze wartet, muss sich melden — sonst warten am Ende beide.
+    if (t - letzterPuls >= PULS_MS) {
+      letzterPuls = t;
+      // Vom Server abgelehnte Zuege kommen nie zurueck — nach dem Verfall
+      // geben sie den Stand wieder frei, statt ihn fuer immer einzufrieren.
+      while (schwebend.length && t - schwebend[0].seit > SCHWEBE_VERFALL_MS) {
+        schwebend.shift();
+      }
+      let stand = taktZaehler;
+      if (schwebend.length) {
+        stand = Math.max(0, Math.min(stand, schwebend[0].takt - VORLAUF - MELDE_PUFFER));
+      }
+      let grenze = Math.floor(taktZaehler / PROBE_TAKTE) * PROBE_TAKTE;
+      while (grenze > 0 && !proben.has(grenze)) grenze -= PROBE_TAKTE;
+      NETZ.puls({ takt: stand, grenzTakt: grenze, pruef: proben.get(grenze) ?? '0' });
+    }
+
+    // Die Grenze nutzt Vorlauf UND Meldepuffer: Die Gegenseite plant ihre
+    // Zuege bei mindestens Stand+VORLAUF+MELDE_PUFFER, und der Puls-Deckel
+    // oben garantiert, dass kein gemeldeter Stand einen noch schwebenden
+    // Zug ueberholt. Eine engere Grenze verschenkte vier Takte und liess
+    // die Simulation im Netz spuerbar stottern.
+    let wissen = Infinity;
+    let ziel = Infinity;
+    for (const s of [0, 1]) {
+      if (s === MEIN_SITZ) continue;
+      wissen = Math.min(wissen, gegnerStand[s] + VORLAUF + MELDE_PUFFER - 1);
+      ziel = Math.min(ziel, gegnerStand[s]);
+    }
+
+    let schritte = 0;
+    // Drei Takte Vorrat hinter der Wissensgrenze: Kommt ein Puls einen
+    // Wimpernschlag zu spaet (Funkjitter), zehrt die Schleife vom Polster,
+    // statt sichtbar stehenzubleiben. Ohne Polster stotterte die Partie im
+    // Rhythmus des Netzes — als Eingabe-Lag gefuehlt, obwohl es die
+    // Simulation war, die klemmte.
+    const POLSTER = 3;
+    /**
+     * Der Absender wartet vor dem EIGENEN schwebenden Zug — die Luecke, die
+     * Partien am 7. August 2026 strittig machte: Der Puls-Deckel oben
+     * schuetzt nur die GEGENSEITE (sie wartet bei T-4 exakt vor dem Zug),
+     * aber deren weiterlaufende Meldungen liessen den Absender selbst bis
+     * T+2 rechnen. Kam das Server-Echo des eigenen Zuges spaeter als die
+     * ~500 ms zurueck, die der Absender bis T braucht (Funkloch, langsamer
+     * Datenbank-Schreiber), fuehrte er ihn verschoben aus, waehrend die
+     * Gegenseite ihn puenktlich bei T rechnete — stille Divergenz, Partie
+     * strittig, und die Notnagel-Warnung stand nur in der am Handy
+     * unsichtbaren Konsole. Deckel: hoechstens bis T-1 rechnen (die
+     * Schleife laeuft bis wissen-POLSTER, daher T-1+POLSTER). Normal kehrt
+     * das Echo in 100-300 ms zurueck und der Deckel greift nie; bei einer
+     * Stoerung stottert die Partie, statt auseinanderzulaufen.
+     */
+    if (schwebend.length) {
+      wissen = Math.min(wissen, schwebend[0].takt - 1 + POLSTER);
+    }
+    while (schritte < 10 && taktZaehler < wissen - POLSTER && laeuft) {
+      if (taktZaehler < ziel) {
+        // Rueckstand: aufholen, ohne die Uhr zu fragen.
+      } else if (restMs >= TAKT_MS) {
+        restMs -= TAKT_MS;
+      } else break;
+      taktZaehler += 1;
+      schritte += 1;
+      const faellig = geplant.get(taktZaehler);
+      if (faellig) {
+        for (const { zug, sitz: wer } of faellig) fuehreAus(zug, wer);
+        geplant.delete(taktZaehler);
+      }
+      if (phase === 'coin') coinTick(TAKT_MS / 1000);
+      update(TAKT_MS / 1000);
+      animate(TAKT_MS / 1000);
+      if (taktZaehler % PROBE_TAKTE === 0) {
+        proben.set(taktZaehler, pruefsumme());
+        proben.delete(taktZaehler - PROBE_TAKTE * 12);
+        pruefeProbe(taktZaehler);
+      }
+    }
+    if (vorschau.length) vorschau = vorschau.filter((v) => v.takt > taktZaehler);
+    if (!document.hidden) {
+      render();
+      for (const v of vorschau) tileMark(v.r, v.c, sh(COL.p[MEIN_SITZ], 1), 0.3, true);
+    }
+    naechstesBild();
+  };
+  naechstesBild();
+
+  /**
+   * Antrieb fuer den verdeckten Tab.
+   *
+   * Dort feuert requestAnimationFrame gar nicht und setInterval nur einmal
+   * je Sekunde — der Kern staende still, wuerde nicht mehr pulsen, und die
+   * Partie froere auf BEIDEN Geraeten ein. Am Handy passiert genau das bei
+   * jedem kurzen Blick woandershin. Timer in einem Web Worker drosselt der
+   * Browser nicht; seine Nachrichten treiben die Schleife weiter, solange
+   * der Tab verdeckt ist. Gezeichnet wird dabei nichts.
+   */
+  let werker = null;
+  if (NETZ && typeof Worker !== 'undefined' && typeof Blob !== 'undefined') {
+    try {
+      const quelle = new Blob(['setInterval(() => postMessage(0), ' + TAKT_MS + ');'], {
+        type: 'text/javascript',
+      });
+      werker = new Worker(URL.createObjectURL(quelle));
+      werker.onmessage = () => {
+        if (laeuft && document.hidden) schleife(performance.now());
+      };
+    } catch {
+      werker = null;   // strenge CSP: dann friert der verdeckte Tab wie zuvor
+    }
+  }
+
+  return {
+    beenden() {
+      laeuft = false;
+      paused = true;
+      if (werker) werker.terminate();
+      // Die Fenster-Horcher der Spieldatei muessen mit der Sitzung sterben:
+      // Ein zurueckgebliebenes resize griff nach dem Verlassen auf die
+      // abgeraeumte Buehne, und die Fehlerbox der Spieldatei stand im Hub.
+      horcherAbhaengen();
+      const box = document.getElementById('errbox');
+      if (box) box.remove();
+    },
+    /** Ein Zug vom Server — eigener wie fremder. */
+    zugAnnehmen(zug, wer) {
+      // Der eigene Zug ist zurueck: Er schwebt nicht mehr, der Herzschlag
+      // darf wieder den vollen Stand melden.
+      if (wer === MEIN_SITZ) {
+        const i = schwebend.findIndex((s) => s.takt === zug.takt);
+        if (i >= 0) schwebend.splice(i, 1);
+      }
+      // Aus einem fremden Zug wird BEWUSST kein Gegnerstand abgeleitet.
+      // Geplant wird er bei max(eigener Takt, Gegnerstand) plus Vorlauf —
+      // zug.takt minus Vorlauf ist also KEINE Untergrenze der Gegnerposition,
+      // sondern oft eine Ueberschaetzung. Die hat auf Produktion einen
+      // Teufelskreis gedreht: Beide Geraete "holten" auf den jeweils
+      // ueberschaetzten Stand des anderen auf, die Partie rannte der
+      // Echtzeit davon (Ressourcen schneller als die angezeigte Rate), der
+      // Dauersprint mit zehn Takten je Bild ruckelte, und am Ende kamen
+      // Zuege zu spaet an und die Partie wurde strittig. Den Gegnerstand
+      // kennen allein die Herzschlaege — die melden den echten Taktzaehler.
+      //
+      // Notnagel: Ein Zug fuer einen schon gerechneten Takt duerfte dank
+      // Wissensgrenze und Meldepuffer nie eintreffen. Faellt er doch, wird er
+      // verspaetet ausgefuehrt und die Zustandsprobe deckt die Abweichung in
+      // Sekunden auf — aber laut, nicht still: Die Warnung nennt die Ursache,
+      // die im Strittig-Banner sonst unsichtbar bliebe.
+      const takt = Math.max(zug.takt, taktZaehler + 1);
+      if (takt !== zug.takt) {
+        console.warn(
+          'feldherr: Zug fuer Takt ' + zug.takt + ' kam erst bei ' + taktZaehler +
+            ' an — die Laeufe gehen auseinander.',
+        );
+        /**
+         * Frueher wurde der Zug verschoben ausgefuehrt und die Divergenz
+         * blieb still, bis die Zustandsprobe sie bis zu zwei Sekunden
+         * spaeter fand. Jetzt gilt der Gleichlauf sofort als verloren:
+         * Der Tisch drueberliegend heilt das per Neustart aus Saatkorn und
+         * Server-Zugliste — das Replay fuehrt diesen Zug an seinem echten
+         * Takt aus und landet wieder auf dem Stand der Gegenseite.
+         */
+        if (!strittigGemeldet) {
+          strittigGemeldet = true;
+          laeuft = false;
+          if (aufStrittig) aufStrittig({ takt: taktZaehler, pruef: pruefsumme(), grund: 'zugVersatz' });
+        }
+        return;
+      }
+      if (!geplant.has(takt)) geplant.set(takt, []);
+      geplant.get(takt).push({ zug, sitz: wer });
+    },
+    /** Herzschlag der Gegenseite: Takt und juengste Zustandsprobe. */
+    pulsAnnehmen(wer, daten) {
+      if (wer === MEIN_SITZ || (wer !== 0 && wer !== 1)) return;
+      gegnerStand[wer] = Math.max(gegnerStand[wer], daten.takt);
+      // Auch die Probe an Grenze 0 vergleichen: Sie entsteht direkt nach dem
+      // Rundenstart und entlarvt ein falsches Saatkorn schon nach 200 ms
+      // statt erst am Ende der Partie.
+      if (daten.pruef) {
+        fremdeProben.set(daten.grenzTakt, daten.pruef);
+        pruefeProbe(daten.grenzTakt);
+      }
+    },
+    takt: () => taktZaehler,
+    pruefsumme,
+    /**
+     * Lesefenster fuer den 3D-Renderer (Stufe 2, docs/FELDHERR-3D-UMBAU.md):
+     * Er liest je Bild den Simulationszustand und interpoliert zwischen den
+     * Takten — die Simulation bleibt bei ihren festen Schritten, nur das
+     * Bild laeuft weicher. NUR LESEN: Wer ueber dieses Fenster schreibt,
+     * faehrt am Gleichschritt vorbei, und die Partie wird strittig.
+     * `restAnteil` ist der Anteil des schon verstrichenen naechsten Takts
+     * (0..1) — der Interpolationsfaktor zwischen zwei Simulationsstaenden.
+     */
+    lesen: () => ({
+      zustand: G,
+      phase,
+      spiegel: SPIEGEL,
+      takt: taktZaehler,
+      restAnteil: Math.max(0, Math.min(1, restMs / TAKT_MS)),
+      /* Abgeleitete Werte fuer Lebensbalken und Bereitschaftsring — die
+       * Formeln (Fels, Hausausbau, Stufen) bleiben im Kern, der Renderer
+       * rechnet nichts nach. */
+      maxLeben: maxHp,
+      marschDauer: mcdOf,
+      beweglich: canMove,
+      schlagDauer: cdOf,
+      kannSchlagen: canAtt,
+      /* Laufzeit des Werks in Sekunden (0 bei allem anderen) — mit e.leben
+       * ergibt das den Laufzeitbalken. */
+      laufzeitVon: (e) => statsOf(e.type, e.lvl).laufzeit || 0,
+      /* Dauer eines Schrittes: Damit interpoliert die 3D-Buehne den Marsch
+       * zwischen zwei Feldern genauso wie entXY in 2D. */
+      marschZeit: MOVE_T,
+      /* Erschuetterung (Einschlaege, Explosionen). Staerke in Pixeln des
+       * 2D-Renderers, Rest in Sekunden. */
+      erschuetterung: () => ({ staerke: shakeA, rest: shakeT }),
+      /* Bodenmarkierungen als Liste — welche Felder hervorgehoben gehoeren,
+       * ist eine Regelfrage. 2D und 3D lesen dieselbe Quelle (markenListe). */
+      feldMarken: markenListe,
+      /* Hinweisschilder (Reichweitengewinn, Erdwaerme, Walddeckung, Preis,
+       * Sprengradius) — dieselbe Liste zeichnet der 2D-Renderer. */
+      schilder: schildListe,
+      /* Bauvorschau: was gerade gezogen wird und wohin es faellt. Daraus
+       * stellt die 3D-Buehne ein durchscheinendes Modell aufs Zielfeld.
+       * `ok` heisst: Platz frei UND bezahlbar. */
+      bauVorschau: () => {
+        const liste = [];
+        for (const d of drags.values()) {
+          if (!d.prev || !d.prev.cells || !d.prev.cells.length) continue;
+          liste.push({
+            art: d.k,
+            own: d.own,
+            ok: !!d.prev.ok,
+            merge: !!d.prev.merge,
+            stufe: d.prev.merge ? Math.min(maxLvlOf(d.k), (d.k === 'mauer'
+                     ? mauerGewicht(d.prev.merge) + 1 : d.prev.merge.lvl + 1)) : 1,
+            cells: d.prev.cells.map((p) => ({ r: p.r, c: p.c })),
+          });
+        }
+        return liste;
+      },
+      /* Partikel (Rauch, Funken, Staub, Splitter, Glut). Sie leben in PT,
+       * nicht in G — reine Deko, nie Spielzufall. Ihre Physik treibt
+       * updatePT() aus animate(), also im RECHENpfad: Die 3D-Buehne
+       * bekommt sie auch dann, wenn der 2D-Renderer gar nicht zeichnet. */
+      partikel: PT,
+      /* Das Raster des 2D-Renderers. Partikel tragen Bildschirmkoordinaten
+       * (burst wird mit midX/midY gerufen); damit rechnet die 3D-Buehne
+       * sie in Brettkoordinaten zurueck. Wird je Bild frisch gelesen, weil
+       * resize() die Werte aendert. */
+      raster: () => ({ ox: OX, oy: OY, tw: TW, th: TH }),
+      /* Taktzeiten des Muenzwurfs (Flug, Aufschlag, Anzeige) — damit die
+       * 3D-Buehne dieselbe Uhr benutzt wie coinTick und nicht daneben laeuft. */
+      muenze: MUENZE,
+      /* Eigener Sitz, soweit es einen gibt: im Netz der zugewiesene, gegen
+       * die KI der menschliche. Zu zweit am Geraet gehoert das Brett beiden —
+       * dann null, und die Anzeige spricht von Spieler 1 und 2 statt von "du". */
+      eigenerSitz: NETZ ? MEIN_SITZ : (AI ? 1 - AI.owner : null),
+      /* Stellungen der Gruppe, zu der dieses Objekt gehoert: n von max.
+       * Truppen ohne Gruppe (Bauten) liefern null. */
+      stellungsStand: (e) => {
+        const gruppe = gruppeVon(e);
+        return gruppe
+          ? { n: stellungen(e.owner, gruppe), max: stellungsGrenze(e.owner, gruppe), gruppe }
+          : null;
+      },
+    }),
+    /**
+     * Zeiger-Abbildung der 3D-Ansicht setzen (oder mit null loesen): Sie
+     * uebersetzt Bildschirmkoordinaten per Strahl auf die Brettebene in
+     * Brettzellen. Solange sie gesetzt ist, laeuft JEDE Zeigereingabe der
+     * Spieldatei darueber — die Befehle selbst bleiben unveraendert, es
+     * aendert sich nur, welche Zelle unter dem Finger liegt.
+     */
+    zeigerAbbildung(fn) {
+      zeigerZuZelle = fn;
+    },
+  };
+}

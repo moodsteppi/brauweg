@@ -17,13 +17,17 @@ import type {
   GameMeta,
   GameRegistry,
 } from '@brauweg/game-api';
+import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { feldherr } from '@brauweg/game-feldherr';
 import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
 
 const MODULES: readonly AnyGameModule[] = [
   doppelkopf as unknown as AnyGameModule,
   wizard as unknown as AnyGameModule,
+  cambio as unknown as AnyGameModule,
+  feldherr as unknown as AnyGameModule,
 ];
 
 /**
@@ -42,6 +46,12 @@ const PREVIEW: readonly GameMeta[] = (
     ['schwimmen', [2, 3, 4, 5, 6, 7, 8]],
     ['backgammon', [2]],
     ['bauernskat', [2]],
+    // Party-Runde mit Rollen und Nachtphase. Braucht freien Text zwischen
+    // Sitzen (Diskussion, Abstimmung) - das ist ein Moderationsfall
+    // (Plan M8) und deshalb erst nach der Beta spielbar, nicht nur Vorschau.
+    ['werwolf', [5, 6, 7, 8, 9, 10]],
+    ['phase10', [2, 3, 4, 5, 6]],
+    ['drecksau', [2, 3, 4, 5, 6]],
   ] as const
 ).map(([id, seatCounts]) => ({
   id: id as GameId,

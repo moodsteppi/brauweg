@@ -59,6 +59,7 @@ import {
   StatKachel,
   StatSpiel,
   Tafel,
+  spielBanner,
 } from '../hub';
 import { Pinguin } from '../pinguin';
 import { Clan } from './Clan';
@@ -108,6 +109,7 @@ const zeigeKaufbares = !inApp;
 export function GameSelect({
   me,
   onPick,
+  onSolo,
   onResume,
   onThemeChange,
   onAvatarChange,
@@ -117,6 +119,8 @@ export function GameSelect({
 }: {
   me: Me;
   onPick: (gameId: string) => void;
+  /** Solo-Minispiele aus der Spielauswahl (z. B. Pro-Subway). */
+  onSolo: (modusId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
   onThemeChange: (
     gameId: string,
@@ -308,6 +312,7 @@ export function GameSelect({
             bemalung={me.figur ?? null}
             activeTable={me.activeTable}
             onPick={onPick}
+            onSolo={onSolo}
             onResume={onResume}
             onBald={setBald}
             onRangliste={() => setRanglisteOffen(true)}
@@ -398,7 +403,10 @@ export function GameSelect({
             </span>
           )}
           <span className="front-waehrung front-waehrung--cups">
-            <img className="front-waehrung-icon" src="/hub/pokal.png" alt="" />
+            {/* `pokal-zeile` statt `pokal.png`: derselbe Pokal, aber fuer
+                Zeilenhoehe gemalt — der alte war ein Bild fuer grosse Flaechen
+                und wurde in der Kopfleiste matschig. */}
+            <img className="front-waehrung-icon" src="/hub/pokal-zeile.webp" alt="" />
             {kompakteZahl(trophies)}
           </span>
           {/*
@@ -528,6 +536,7 @@ export function GameSelect({
       {werkstattOffen && (
         <Avatarwerkstatt
           bemalung={me.figur ?? null}
+          getragen={me.avatar}
           onClose={() => setWerkstattOffen(false)}
           // Neu laden, damit die Figur im Profil sofort so aussieht wie
           // gerade gespeichert.
@@ -701,8 +710,10 @@ function ProfilTab({
       <Tafel titel="Deine Figur" zusatz={me.figur?.design === 'bemalt' ? 'Selbst angemalt' : 'Antippen zum Bearbeiten'}>
         <button className="hub-figur-buehne" onClick={onWerkstatt} title="Figur bearbeiten">
           <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
+            {/* `me.avatar` ist genau das, was der Kleiderschrank anzieht —
+                dieselbe Quelle wie beim gemalten Rückfall darüber. */}
             <Avatar3D
-              muetze={false}
+              getragen={me.avatar}
               bemalung={me.figur ?? LEERE_BEMALUNG}
               drehbar={false}
             />
@@ -801,8 +812,14 @@ function ProfilTab({
           ))
         )}
 
+        {/* „zählen alles" war eine Verkürzung, die niemand so sagt — und sie
+            liess offen, was denn alles. Gemeint ist der Gegensatz zur Zeile
+            davor: Trophäen sind an Tische ohne Bots gebunden, die Zählung von
+            Partien und Siegen ist es nicht. Wortgleich mit dem fremden Profil
+            (`Profile.tsx`) — dieselbe Regel, dieselbe Erklärung. */}
         <p className="hub-statistik-hinweis">
-          Trophäen nur an Tischen ohne Bots. Partien und Siege zählen alles.
+          Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege werden
+          überall gezählt, auch gegen Bots.
         </p>
       </Tafel>
 
@@ -1723,6 +1740,7 @@ function Spielen({
   bemalung,
   activeTable,
   onPick,
+  onSolo,
   onResume,
   onBald,
   onRangliste,
@@ -1737,6 +1755,7 @@ function Spielen({
   /** Wie viel bereitliegt (Truhen plus fertige Aufgaben). 0 = kein Punkt. */
   bereit: number;
   onPick: (gameId: string) => void;
+  onSolo: (modusId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
   onBald: (name: string) => void;
   onRangliste: () => void;
@@ -1776,27 +1795,27 @@ function Spielen({
         <aside className="hub-seite hub-seite--links">
           <button
             type="button"
-            className="hub-side-btn hub-side-btn--lila"
+            className="hub-side-btn"
             aria-label="Spielauswahl"
             onClick={() => setWahlOffen(true)}
           >
-            <img src="/hub/tab-spielen.webp" alt="" draggable={false} />
+            <img src="/hub/side-icon-spielwahl.webp" alt="" draggable={false} />
           </button>
           <button
             type="button"
-            className="hub-side-btn hub-side-btn--blau"
+            className="hub-side-btn"
             aria-label="Rangliste"
             onClick={onRangliste}
           >
-            <img src="/hub/pokal.png" alt="" draggable={false} />
+            <img src="/hub/side-icon-rangliste.webp" alt="" draggable={false} />
           </button>
           <button
             type="button"
-            className="hub-side-btn hub-side-btn--grau"
+            className="hub-side-btn"
             aria-label="Bald"
             onClick={() => onBald('Mehr Features')}
           >
-            <img src="/hub/krone.png" alt="" draggable={false} />
+            <img src="/hub/side-icon-bald.webp" alt="" draggable={false} />
           </button>
         </aside>
 
@@ -1870,6 +1889,10 @@ function Spielen({
           onPick={(gameId) => {
             setWahlOffen(false);
             onPick(gameId);
+          }}
+          onSolo={(modusId) => {
+            setWahlOffen(false);
+            onSolo(modusId);
           }}
           onBald={onBald}
           onClose={() => setWahlOffen(false)}
@@ -1951,7 +1974,7 @@ function Anleitung({
         </div>
 
         <p className="anleitung-lauf">
-          Brauweg ist eine Stube voller Kartenspiele. Du spielst, sammelst Trophäen und richtest
+          Brauweg ist eine Stube voller Spiele. Du spielst, sammelst Trophäen und richtest
           dir deinen Tisch ein, allein gegen Bots oder mit anderen.
         </p>
 
@@ -1990,28 +2013,36 @@ function Anleitung({
           ohne den Namen.
         </p>
 
-        {spielbar.map((spiel) => {
-          const info = ERKENNUNG[spiel.id];
-          const deck = deckById(info?.blatt);
-          const hand = handFuer(spiel.id);
-          return (
-            <section className="anleitung-spiel" key={spiel.id}>
-              <div className="anleitung-spiel-kopf">
-                <strong>{t(spiel.nameKey)}</strong>
-                <span className="muted">{info?.wieViele ?? spiel.seatCounts.join(', ') + ' Spieler'}</span>
-              </div>
-              {/* Die Beispielhand aus echten Karten des passenden Blatts. */}
-              <div className="anleitung-hand">
-                {hand.map((card) => (
-                  <span className="pc pc--hand anleitung-karte" key={card.id}>
-                    <CardFront card={card} deck={deck} />
-                  </span>
-                ))}
-              </div>
-              {info && <p className="anleitung-spiel-text">{info.text}</p>}
-            </section>
-          );
-        })}
+        {/* Nur Spiele mit echter Beispielhand. Ein Eintrag in ERKENNUNG ist
+            die Bedingung: So bekommt ein neues Kartenspiel hier eine Hand,
+            sobald jemand seine Karten und einen Satz dazuschreibt. Spiele ohne
+            Blatt (z. B. Feldherr, ein Echtzeit-Duell) haben keine Hand und
+            gehoeren nicht in einen Abschnitt ueber Karten - eine erfundene
+            Fallback-Hand waere schlicht falsch. */}
+        {spielbar
+          .filter((spiel) => ERKENNUNG[spiel.id])
+          .map((spiel) => {
+            const info = ERKENNUNG[spiel.id]!;
+            const deck = deckById(info.blatt);
+            const hand = handFuer(spiel.id);
+            return (
+              <section className="anleitung-spiel" key={spiel.id}>
+                <div className="anleitung-spiel-kopf">
+                  <strong>{t(spiel.nameKey)}</strong>
+                  <span className="muted">{info.wieViele}</span>
+                </div>
+                {/* Die Beispielhand aus echten Karten des passenden Blatts. */}
+                <div className="anleitung-hand">
+                  {hand.map((card) => (
+                    <span className="pc pc--hand anleitung-karte" key={card.id}>
+                      <CardFront card={card} deck={deck} />
+                    </span>
+                  ))}
+                </div>
+                <p className="anleitung-spiel-text">{info.text}</p>
+              </section>
+            );
+          })}
 
         {bald.length > 0 && (
           <p className="muted anleitung-bald">
@@ -2160,17 +2191,28 @@ function RanglisteBlatt({
 }
 
 /**
- * Spielauswahl im Vollbild: ein Bild je Spiel.
+ * Spielauswahl im Vollbild: ein gemaltes Banner je Spiel.
  *
- * Doppelkopf ist offen und fuehrt ins Tisch-Menue; die anderen tragen die
- * Bald-Marke, lassen sich anstimmen, und ein Tipp aufs Bild oeffnet das
- * "Kommt bald"-Blatt. Die Bilder sind gemalte SVGs - nichts laedt nach.
+ * Doppelkopf und Zauberer sind offen und fuehren ins Tisch-Menue; die anderen
+ * tragen die Bald-Marke, lassen sich anstimmen, und ein Tipp aufs Bild oeffnet
+ * das "Kommt bald"-Blatt.
+ *
+ * **Sie sieht aus wie der Themen-Tab, und das ist der Punkt.** Vorher war sie
+ * der einzige Bildschirm im Haus mit lila Flaeche und gezeichneten
+ * SVG-Stillleben — daneben der Themen-Tab, der dieselbe Frage stellt
+ * ("welches Spiel?") und sie mit gemalten Bannern auf einer Holztafel in
+ * einer Szene stellt. Zwei Antworten auf dieselbe Frage, zwei Gestaltungen.
+ *
+ * Deshalb sind es hier dieselben Bausteine und nicht nachgebaute: `HubSzene`,
+ * `Tafel`, `.hub-themenspiel` und `spielBanner()`. Wer den Themen-Tab
+ * umgestaltet, gestaltet diesen Bildschirm mit — genau das soll so sein.
  */
 function Spielwahl({
   games,
   voted,
   onVote,
   onPick,
+  onSolo,
   onBald,
   onClose,
 }: {
@@ -2178,6 +2220,7 @@ function Spielwahl({
   voted: Set<string>;
   onVote: (gameId: string) => void;
   onPick: (gameId: string) => void;
+  onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -2186,45 +2229,92 @@ function Spielwahl({
 
   return (
     <div className="spielwahl">
+      {/* Die gemalte Szene wie in jedem Hub-Tab. Sie liegt als Bild und nicht
+          als CSS-Hintergrund darin, damit `object-fit: cover` sie auf jedem
+          Seitenverhaeltnis fuellt statt sie zu stauchen — dieselbe Bauart wie
+          `HubSzene`. */}
+      <img className="spielwahl-bg" src="/hub/bg-blatt.webp" alt="" draggable={false} />
+
       <header className="spielwahl-kopf">
         <h2>Spielauswahl</h2>
         <button className="spielwahl-zu" onClick={onClose} aria-label="Schließen">
           ×
         </button>
       </header>
+
       <div className="spielwahl-rolle">
-        {playable.map((game) => (
-          <button
-            key={game.id}
-            className="spielwahl-karte is-offen"
-            onClick={() => onPick(game.id)}
-          >
-            <SpielBild id={game.id} />
-            <span className="spielwahl-titel">
-              <strong>{t(game.nameKey)}</strong>
-              <span>{game.seatCounts.join(', ')} Spieler</span>
-            </span>
-            <span className="spielwahl-spielen">Spielen</span>
-          </button>
-        ))}
-        {preview.map((game) => (
-          <div key={game.id} className="spielwahl-karte is-zu">
-            <button className="spielwahl-flaeche" onClick={() => onBald(t(game.nameKey))}>
-              <SpielBild id={game.id} />
-              <span className="spielwahl-titel">
-                <strong>{t(game.nameKey)}</strong>
-                <span className="front-bald-tag">Bald</span>
-              </span>
-            </button>
+        <Tafel titel="Alleine" zusatz="Minispiel">
+          <div className="hub-themenwahl">
             <button
-              className="spielwahl-stimme"
-              disabled={voted.has(game.id)}
-              onClick={() => onVote(game.id)}
+              type="button"
+              className="hub-themenspiel"
+              onClick={() => onSolo('prosubway')}
             >
-              {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
+              <span className="hub-themenspiel-bild" aria-hidden="true">
+                <img src={spielBanner('prosubway')} alt="" draggable={false} />
+              </span>
+              <span className="hub-themenspiel-text">
+                <strong>{t('modus.prosubway')}</strong>
+                <span className="muted">{t('modus.prosubway.hint')}</span>
+              </span>
+              <span className="spielwahl-spielen">Spielen</span>
             </button>
           </div>
-        ))}
+        </Tafel>
+
+        <Tafel titel="Jetzt spielbar" zusatz={`${playable.length} von ${games.length}`}>
+          <div className="hub-themenwahl">
+            {playable.map((game) => (
+              <button
+                key={game.id}
+                className="hub-themenspiel"
+                onClick={() => onPick(game.id)}
+              >
+                <span className="hub-themenspiel-bild" aria-hidden="true">
+                  <img src={spielBanner(game.id)} alt="" draggable={false} />
+                </span>
+                <span className="hub-themenspiel-text">
+                  <strong>{t(game.nameKey)}</strong>
+                  {/* Nur der Untertitel weiss mehr als der Server: Feldherr
+                      ist das einzige Echtzeitspiel, und das gehoert aufs
+                      Banner. */}
+                  <span className="muted">
+                    {game.seatCounts.join(', ')} Spieler
+                    {game.id === 'feldherr' ? ' · Echtzeit' : ''}
+                  </span>
+                </span>
+                <span className="spielwahl-spielen">Spielen</span>
+              </button>
+            ))}
+          </div>
+        </Tafel>
+
+        {preview.length > 0 && (
+          <Tafel titel="Kommt bald" zusatz="Stimm ab, was zuerst kommt">
+            <div className="hub-themenwahl">
+              {preview.map((game) => (
+                <div key={game.id} className="hub-themenspiel is-bald">
+                  <button className="spielwahl-flaeche" onClick={() => onBald(t(game.nameKey))}>
+                    <span className="hub-themenspiel-bild" aria-hidden="true">
+                      <img src={spielBanner(game.id)} alt="" draggable={false} />
+                    </span>
+                    <span className="hub-themenspiel-text">
+                      <strong>{t(game.nameKey)}</strong>
+                    </span>
+                  </button>
+                  <span className="front-bald-tag">Bald</span>
+                  <button
+                    className="spielwahl-stimme"
+                    disabled={voted.has(game.id)}
+                    onClick={() => onVote(game.id)}
+                  >
+                    {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Tafel>
+        )}
 
         {/*
           Der Mehrkampf steht unter den Spielen, weil er keines ist: Eine
@@ -2236,225 +2326,35 @@ function Spielwahl({
 
           Deshalb steht er auch nicht in der Spielregistrierung des Servers
           und bekommt keine Abstimmung: Er konkurriert nicht mit den
-          Spielen, er benutzt sie.
+          Spielen, er benutzt sie. Eine eigene Tafel sagt das, ohne dass es
+          jemand lesen muss.
         */}
-        <h3 className="spielwahl-abschnitt">Modus</h3>
-        <div className="spielwahl-karte is-zu">
-          <button
-            className="spielwahl-flaeche"
-            onClick={() => onBald(`${t('modus.mehrkampf')} — der Mehrkampf über mehrere Spiele`)}
-          >
-            <SpielBild id="mehrkampf" />
-            <span className="spielwahl-titel">
-              <strong>{t('modus.mehrkampf')}</strong>
+        <Tafel titel="Modus" zusatz="Über mehrere Spiele">
+          <div className="hub-themenwahl">
+            <div className="hub-themenspiel is-bald">
+              <button
+                className="spielwahl-flaeche"
+                onClick={() =>
+                  onBald(`${t('modus.mehrkampf')} — der Mehrkampf über mehrere Spiele`)
+                }
+              >
+                <span className="hub-themenspiel-bild" aria-hidden="true">
+                  <img src={spielBanner('mehrkampf')} alt="" draggable={false} />
+                </span>
+                <span className="hub-themenspiel-text">
+                  <strong>{t('modus.mehrkampf')}</strong>
+                </span>
+              </button>
               <span className="front-bald-tag">Bald</span>
-            </span>
-          </button>
-          <p className="spielwahl-modus-text">
-            Eine Partie aus Runden verschiedener Spiele. Gewertet wird, wer über alles am besten
-            durchkommt — nicht, wer die meisten Punkte macht.
-          </p>
-        </div>
+            </div>
+            <p className="spielwahl-modus-text">
+              Eine Partie aus Runden verschiedener Spiele. Gewertet wird, wer über alles am besten
+              durchkommt — nicht, wer die meisten Punkte macht.
+            </p>
+          </div>
+        </Tafel>
       </div>
     </div>
-  );
-}
-
-/**
- * Gemalte Bilder der Spiele: je ein kleines Stillleben mit den Karten, an
- * denen man das Spiel erkennt. Ein unbekanntes Spiel bekommt Ruecken -
- * sichtbar generisch statt unsichtbar kaputt.
- */
-function SpielBild({ id }: { id: string }): React.JSX.Element {
-  const karte = (
-    x: number,
-    rot: number,
-    text: string,
-    rotFarbe: boolean,
-    breit = 30,
-  ): React.JSX.Element => (
-    <g key={`${x}-${text}`} transform={`translate(${x},14) rotate(${rot})`}>
-      <rect width={breit} height={breit * 1.45} rx="3" fill="#fff" />
-      <text x="5" y="15" fontSize="11" fill={rotFarbe ? '#c22b1e' : '#17181d'} fontWeight="800">
-        {text}
-      </text>
-    </g>
-  );
-
-  if (id === 'doppelkopf') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#1c5138" />
-        <ellipse cx="160" cy="92" rx="190" ry="48" fill="#237a4d" />
-        {karte(112, -14, '♣D', false)}
-        {karte(142, -5, '♠D', false)}
-        {karte(172, 5, '♥10', true)}
-        {karte(202, 14, '♦A', true)}
-      </svg>
-    );
-  }
-  if (id === 'skat') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#1d3a52" />
-        {karte(104, -8, '♠B', false)}
-        {karte(134, 0, '♥B', true)}
-        {karte(164, 8, '♣B', false)}
-        <g transform="translate(216,22) rotate(4)">
-          <rect width="26" height="37" rx="3" fill="#4a6a8a" />
-          <rect x="3" y="3" width="20" height="31" rx="2" fill="#3a5570" />
-        </g>
-        <g transform="translate(240,24) rotate(11)">
-          <rect width="26" height="37" rx="3" fill="#4a6a8a" />
-          <rect x="3" y="3" width="20" height="31" rx="2" fill="#3a5570" />
-        </g>
-      </svg>
-    );
-  }
-  if (id === 'schafkopf') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#3a5f8a" />
-        <g fill="#fff" opacity="0.2">
-          <path d="M0 0 L28 40 L0 80 Z" />
-          <path d="M56 0 L28 40 L56 80 L84 40 Z" />
-          <path d="M112 0 L84 40 L112 80 Z" />
-        </g>
-        {karte(150, -6, '♥O', true)}
-        {karte(182, 7, '♠O', false)}
-      </svg>
-    );
-  }
-  if (id === 'romme') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#5a3a78" />
-        {karte(104, -6, '♦3', true, 28)}
-        {karte(134, 0, '♦4', true, 28)}
-        {karte(164, 0, '♦5', true, 28)}
-        <g transform="translate(196,16) rotate(7)">
-          <rect width="28" height="40" rx="3" fill="#ffe9a8" />
-          <text x="7" y="27" fontSize="16">🃏</text>
-        </g>
-      </svg>
-    );
-  }
-  if (id === 'maumau') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#8a3a4a" />
-        {karte(116, -9, '♣7', false)}
-        {karte(150, 3, '♥7', true)}
-        <text x="204" y="48" fontSize="19" fontWeight="900" fill="#ffd76e" transform="rotate(6 204 48)">
-          Mau!
-        </text>
-      </svg>
-    );
-  }
-  if (id === 'wizard') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#2e2258" />
-        {/* Nachthimmel: der Zauberer ist das Spiel mit den Sternen drauf. */}
-        <g fill="#ffe08a" opacity="0.5">
-          <circle cx="34" cy="20" r="2" />
-          <circle cx="72" cy="46" r="1.6" />
-          <circle cx="20" cy="58" r="1.4" />
-          <circle cx="292" cy="24" r="1.8" />
-        </g>
-        {karte(108, -12, '♠13', false, 28)}
-        {karte(140, -2, '♥7', true, 28)}
-        {/* Zauberer und Narr: die beiden Karten, an denen man das Spiel
-            erkennt. Der Zauberer sticht alles, der Narr verliert alles. */}
-        <g transform="translate(174,12) rotate(6)">
-          <rect width="30" height="43" rx="3" fill="#fdf3d8" />
-          <text x="8" y="27" fontSize="17" fontWeight="900" fill="#5b3fa8">
-            Z
-          </text>
-        </g>
-        <g transform="translate(208,18) rotate(14)">
-          <rect width="30" height="43" rx="3" fill="#fdf3d8" />
-          <text x="8" y="27" fontSize="17" fontWeight="900" fill="#c2564c">
-            N
-          </text>
-        </g>
-      </svg>
-    );
-  }
-  if (id === 'mehrkampf') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#3b2a63" />
-        {/* Aus drei Spielen eins: Karte, Wuerfel, Stein. */}
-        {karte(106, -10, '♦A', true, 26)}
-        <g transform="translate(146,22) rotate(6)">
-          <rect width="34" height="34" rx="6" fill="#f4ead8" />
-          <circle cx="11" cy="11" r="3.2" fill="#2a1c12" />
-          <circle cx="23" cy="23" r="3.2" fill="#2a1c12" />
-          <circle cx="17" cy="17" r="3.2" fill="#2a1c12" />
-        </g>
-        <circle cx="204" cy="40" r="14" fill="#e8cba0" stroke="#a8734a" strokeWidth="3" />
-        <text x="228" y="47" fontSize="17" fontWeight="900" fill="#ffd76e">
-          ⇄
-        </text>
-      </svg>
-    );
-  }
-  if (id === 'schwimmen') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#1d5c78" />
-        {/* Drei Karten und die 31 - mehr ist das Spiel nicht. */}
-        {karte(108, -8, '♥A', true, 28)}
-        {karte(138, 0, '♥10', true, 28)}
-        {karte(168, 8, '♥B', true, 28)}
-        <text x="206" y="50" fontSize="22" fontWeight="900" fill="#ffe08a" transform="rotate(5 206 50)">
-          31
-        </text>
-      </svg>
-    );
-  }
-  if (id === 'backgammon') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#6b4326" />
-        {/* Zacken und zwei Steine - das Brett erkennt man an der Form. */}
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <polygon
-            key={i}
-            points={`${110 + i * 20},8 ${120 + i * 20},52 ${130 + i * 20},8`}
-            fill={i % 2 === 0 ? '#e8cba0' : '#a8734a'}
-          />
-        ))}
-        <circle cx="120" cy="62" r="9" fill="#f4ead8" />
-        <circle cx="212" cy="20" r="9" fill="#2a1c12" />
-      </svg>
-    );
-  }
-  if (id === 'bauernskat') {
-    return (
-      <svg viewBox="0 0 320 80" aria-hidden="true">
-        <rect width="320" height="80" fill="#2f5b46" />
-        {karte(120, -7, '♣B', false)}
-        {karte(158, 7, '♠B', false)}
-        <text x="206" y="48" fontSize="17" fontWeight="900" fill="#ffd76e" transform="rotate(5 206 48)">
-          zu zweit
-        </text>
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 320 80" aria-hidden="true">
-      <rect width="320" height="80" fill="#33266b" />
-      <g transform="translate(132,16) rotate(-6)">
-        <rect width="28" height="40" rx="3" fill="#4a55a8" />
-        <rect x="3" y="3" width="22" height="34" rx="2" fill="#3a4488" />
-      </g>
-      <g transform="translate(162,16) rotate(6)">
-        <rect width="28" height="40" rx="3" fill="#4a55a8" />
-        <rect x="3" y="3" width="22" height="34" rx="2" fill="#3a4488" />
-      </g>
-    </svg>
   );
 }
 
@@ -2687,20 +2587,11 @@ function ThemenTab({
                     className={`hub-themenspiel${bald ? ' is-bald' : ''}`}
                     onClick={() => setGewaehlt(spiel.id)}
                   >
-                    {/*
-                      Das gemalte Stillleben des Spiels als Banner. Es ist ein
-                      SVG und laedt nichts nach — die Bestellung fuer gemalte
-                      Banner steht in docs/ASSETS-SPIELWAHL.md. Erst wenn die
-                      Datei wirklich liegt, wird hier ein <img> daraus; ein
-                      <img> auf eine noch fehlende Datei waere ein weisser
-                      Kasten (CLAUDE.md).
-                    */}
+                    {/* Dasselbe Banner wie in der Spielauswahl unter
+                        „Spielen" — die Zuordnung steht in `spielBanner()`,
+                        damit beide Bildschirme nicht auseinanderlaufen. */}
                     <span className="hub-themenspiel-bild" aria-hidden="true">
-                      <img
-                        src={`/hub/spielwahl-${spiel.id === 'doppelkopf' || spiel.id === 'wizard' ? spiel.id : 'bald'}.webp`}
-                        alt=""
-                        draggable={false}
-                      />
+                      <img src={spielBanner(spiel.id)} alt="" draggable={false} />
                     </span>
                     {/* Name und was eingestellt ist, auf einem Verlauf unten -
                         sonst muesste man jedes Spiel oeffnen, um seine Wahl zu

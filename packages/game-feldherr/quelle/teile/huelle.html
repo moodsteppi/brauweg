@@ -1,0 +1,127 @@
+<div id="app">
+  <div class="hud top p1" id="hud0"></div>
+  <div id="stage"><canvas id="cv"></canvas><div id="uhr" hidden>0:00</div><button id="menuBtn">≡</button></div>
+  <div class="hud bot p2" id="hud1"></div>
+</div>
+<div id="ghost"><div class="gg">—</div></div>
+
+<div class="ov" id="ovMenu">
+  <div class="sheet" style="position:relative">
+    <button class="hilfe" id="bTut" title="Regeln">?</button>
+    <div class="eyebrow">Taktikduell · ein Gerät · zwei Feldherren</div>
+    <h1>FELD<em>HERR</em></h1>
+    <div class="sub">Ein Brett, mittig geteilt. Echtzeit. Wer das gegnerische Haupthaus einreißt, gewinnt. Auf den Karten steht der Zug- und der Schlagtakt.</div>
+    <div class="seglbl">Stärke der KI</div>
+    <div class="seg" id="segLvl">
+      <button data-l="leicht">Leicht</button>
+      <button data-l="normal" class="on">Normal</button>
+      <button data-l="schwer">Schwer</button>
+    </div>
+    <button class="btn pri" id="bAI">Gegen die KI spielen</button>
+    <button class="btn" id="bDuo">Zu zweit an einem Gerät</button>
+    <button class="btn gho" id="bTab">Einheitenwerte</button>
+  </div>
+</div>
+
+<div class="ov" id="ovCoin" hidden>
+  <div class="sheet">
+    <div class="eyebrow">Münzwurf</div>
+    <h2 id="coinWer">Du wählst</h2>
+    <div class="sub">Wer richtig tippt, setzt sein Haupthaus zuerst.</div>
+    <div class="seg" id="segCoin">
+      <button data-w="kopf">Kopf</button>
+      <button data-w="zahl">Zahl</button>
+    </div>
+  </div>
+</div>
+<div class="ov" id="ovTut" hidden>
+  <div class="sheet">
+    <div class="pips" id="pips"></div>
+    <div id="tutBody"></div>
+    <button class="btn pri" id="bNext">Weiter</button>
+    <button class="btn gho" id="bSkip">Überspringen</button>
+  </div>
+</div>
+
+<div class="ov" id="ovTab" hidden>
+  <div class="sheet">
+    <div class="eyebrow">Werte</div><h2>Truppen</h2>
+    <table class="bal"><thead><tr><th></th><th>Preis</th><th>HP</th><th>DMG</th><th>Zug</th><th>Schlag</th><th>Reichw.</th></tr></thead>
+    <tbody>
+      <tr><td>Schwert</td><td>8</td><td>7</td><td>4</td><td>3,0 s</td><td>8 s</td><td>1</td></tr>
+      <tr><td>Bogen</td><td>12</td><td>5</td><td>3</td><td>4,2 s</td><td>7 s</td><td>3</td></tr>
+      <tr><td>Ritter</td><td>30</td><td>26</td><td>4</td><td>5,6 s</td><td>17 s</td><td>1</td></tr>
+    </tbody></table>
+    <p class="tx">Geschlagen wird auch über Eck, gezogen nur waagerecht und senkrecht. Bogenschützen brauchen freie Sicht, treffen aber über eine Mauer <b>direkt vor sich</b> hinweg — und ab Stufe 2 ein Feld weiter. Gegen <b>Mauern</b> richten ihre Pfeile nur <b>halben Schaden</b> an, im Turm ebenso.</p>
+    <div class="eyebrow">Je Ausbaustufe</div>
+    <table class="bal"><tbody>
+      <tr><td>Schwert</td><td>HP +6</td><td>DMG +2</td><td>Schlag −2 s</td><td>Zug −0,4 s</td></tr>
+      <tr><td>Bogen</td><td>HP +2</td><td>DMG +5</td><td>Schlag −1,5 s</td><td>Zug −0,4 s</td></tr>
+      <tr><td></td><td colspan="4">ab Stufe 2 zusätzlich +1 Reichweite</td></tr>
+      <tr><td>Ritter</td><td>HP +10</td><td>DMG +4</td><td>Schlag −3,8 s</td><td>Zug −0,7 s</td></tr>
+    </tbody></table>
+    <p class="tx">Truppen steigen bis Stufe 4 (Kupfer, Silber, Gold, Diamant), indem zwei gleiche derselben Stufe aufeinandertreffen; eine frische Karte auf eine Stufe-1-Truppe wirkt genauso. Wer aufsteigt, schlägt sofort einmal zu.</p>
+
+    <h2>Bauten</h2>
+    <table class="bal"><thead><tr><th></th><th>Preis</th><th>Karten</th><th>Stufe 1 / 2 / 3</th></tr></thead>
+    <tbody>
+      <tr><td>Mauer</td><td>15 / 15 / 25</td><td>3</td><td>50 / 85 / 160 HP</td></tr>
+      <tr><td>Werk 1×2</td><td>25 je Karte</td><td>4</td><td>15 / 23 / 34 HP</td></tr>
+      <tr><td></td><td></td><td></td><td>+1 / +2 / +5 Res je s</td></tr>
+      <tr><td></td><td></td><td></td><td>15 / 20 / 25 s Laufzeit</td></tr>
+      <tr><td>Kanone</td><td>35 je Karte</td><td>2</td><td>25 HP · 10 / 8 DMG</td></tr>
+      <tr><td></td><td></td><td></td><td>Reichweite 4 / 7 · 8 s</td></tr>
+      <tr><td>Haupthaus</td><td>—</td><td>1</td><td>36 / 43 / 54 HP</td></tr>
+      <tr><td></td><td></td><td></td><td>+2 / +3 / +4 Res je s</td></tr>
+    </tbody></table>
+    <p class="tx"><b>Kartenkontingent:</b> Werk 4, Mauer 3, Kanone 2 — einmal gesetzt zählt eine Karte für immer, auch wenn das Bauwerk fällt oder du es abreißt (20 % Rückerstattung). Die Zahl in der Kartenecke zeigt den Rest.</p>
+    <p class="tx"><b>Mauer:</b> Mauern werden durch <b>Verbinden</b> stärker. Jede Mauer wiegt so viel, wie Karten in ihr stecken; die Stufe ist das <b>Gewicht der ganzen verbundenen Gruppe</b>: allein Stufe 1, <b>zwei verbunden</b> Stufe 2, <b>drei verbunden</b> Stufe 3. Drei Karten auf dasselbe Feld gestapelt ergeben ebenfalls Stufe 3. Das Leben der Stufe gehört der Gruppe und wird <b>nach Gewicht verteilt</b> — eine Stufe-2-Mauer neben einer frischen Mauer ergibt Stufe 3 mit 107 und 53 HP (2/3 zu 1/3). Jedes Stück fällt einzeln; die übrigen stufen sich danach neu ein.</p>
+    <p class="tx"><b>Werk:</b> belegt 1×2 Felder, Drehung über den Knopf in der Leiste. Eine zweite Karte hebt es auf Stufe 2; liegen zwei Stufe-2-Werke aneinander, verschmelzen sie zu Stufe 3 und bleiben dabei stehen, wo sie sind. Jeder Treffer kostet <b>1 s Laufzeit</b>. Nach Ablauf läuft es auf Sparflamme weiter (+1 / +2 / +2). Fällt es im Kampf, wird alles auf den <b>vier angrenzenden Feldern zerstört</b>, über Eck und zwei Felder weiter 55 %, drei Felder 25 %.</p>
+    <p class="tx"><b>Kanone:</b> unbeweglich, doppelter Schaden an Bauwerken. Stufe 1 zielt erst auf Kanonen, dann Werke; eine Mauer in der Bahn fängt den Schuss ab. Stufe 2 ist ein <b>Mörser</b>: weiter, Steilfeuer über alles hinweg, ein Viertel weniger Schaden, Ziele zuerst Werke, dann Kanonen, dann Haupthaus — dazu 30 % Splitterschaden an Bauten direkt über, unter und neben dem Einschlag.</p>
+    <p class="tx"><b>Haupthaus:</b> Ein eigener <b>Stützpunkt</b> auf Stufe 2 in einem der acht Nachbarfelder hebt es auf Stufe 2 (+20 % HP, +1 Res, Vorrat 50 → 60); Stützpunkte sind Mauer, Werk, Kanone und der Schützenturm. Stufe 3 (+50 % HP, +2 Res) gibt es auf zwei Wegen: ein <b>Werk oder eine Mauer auf Stufe 3</b> daneben — oder <b>zwei Stützpunkte auf Stufe 2</b>, etwa Mauer und Schützenturm. Fallen die Stützpunkte, verschwindet der Ausbau.</p>
+
+    <p class="tx"><b>Rundenbeginn:</b> Eine Münze entscheidet die Reihenfolge. Ein Spieler ruft Kopf oder Zahl, der andere bekommt die zweite Seite; wer richtig liegt, setzt sein Haupthaus zuerst.</p>
+    <h2>Gelände</h2>
+    <table class="bal"><tbody>
+      <tr><td>See</td><td>unpassierbar</td></tr>
+      <tr><td>Gebirge</td><td>unpassierbar, sichtdicht</td></tr>
+      <tr><td>Wald</td><td>Truppen +50 % HP, +25 % DMG</td></tr>
+      <tr><td></td><td>Fernkämpfer −1 Reichweite</td></tr>
+      <tr><td></td><td>Kanone −25 % erlittener Schaden</td></tr>
+      <tr><td></td><td>Haupthaus −20 % erlittener Schaden</td></tr>
+      <tr><td></td><td>Bogen wird Turm: −1/3 erlittener Schaden</td></tr>
+      <tr><td>Vulkan</td><td>Ausbruch: Krater und Rand zerstört</td></tr>
+      <tr><td></td><td>zwei Felder weiter −30 % HP</td></tr>
+      <tr><td></td><td>2,5 % je 10 s, ab 2 min +5 Punkte</td></tr>
+    </tbody></table>
+    <p class="tx"><b>Schützentürme</b> entstehen an zwei Orten. <b>Auf dem Fels</b> (Unterbau <b>+5</b>) sieht der Schütze weiter: +1 Reichweite, +1 Schaden. <b>Im Wald</b> (Gerüst <b>+4</b>) steht er in Deckung: <b>−1/3 erlittener Schaden</b>, dazu die Waldwerte (+50 % Leben, +25 % Schaden), aber −1 Reichweite. Beides gilt auch beim Ausbau. Ein Turm bewegt sich nie wieder, bleibt bei Stufe 2 und zählt zu den drei Schützen-Stellungen.</p>
+    <p class="tx"><b>Auf dem Fels</b> dürfen außerdem Kanone und Werk bauen; der Unterbau kostet jedes Mal <b>+5</b>. Die Kanone bekommt dort +1 Reichweite und +1 Schaden. Ein <b>Werk im Fels</b> muss mit beiden Feldern darauf stehen: −1 Ressource, +50 % HP, kein Kessel, höchstens Stufe 2. Fällt eine Fels-Stellung, blockiert 15 s lang ein brennendes Wrack das Feld.</p>
+    <p class="tx"><b>Erdwärme:</b> Haupthaus oder Werk direkt am Vulkan geben dauerhaft +1 Ressource, ein Werk auf Stufe 3 sogar +2. <b>Panik-Faktor:</b> ein Werk in den beiden vordersten Reihen deiner Hälfte gibt +1.</p>
+
+    <h2>Stellungen</h2>
+    <p class="tx">Ein kurzes Antippen hält eine Truppe an: Sie marschiert nicht mehr, verteidigt ihre Umgebung und nimmt <b>12,5 % weniger Schaden</b>. Von Schützen und von Kämpfern dürfen jeweils höchstens <b>drei</b> gleichzeitig stehen; Schützentürme zählen bei den Schützen mit. Das Schild an der Figur zeigt den Stand der ganzen Gruppe.</p>
+    <p class="tx"><b>Vorrat:</b> höchstens 50 Ressourcen (60 mit ausgebautem Haupthaus) — alles darüber verfällt.</p>
+    <button class="btn" id="bTabClose">Zurück</button>
+  </div>
+</div>
+
+<div class="ov" id="ovPause" hidden>
+  <div class="sheet">
+    <div class="eyebrow">Pause</div><h2>Partie angehalten</h2>
+    <button class="btn pri" id="bResume">Weiterspielen</button>
+    <button class="btn" id="bNeustart" style="display:none">Neu starten</button>
+    <button class="btn" id="bTut2">Regeln ansehen</button>
+    <button class="btn gho" id="bQuit">Partie beenden</button>
+  </div>
+</div>
+
+<div class="ov" id="ovWin" hidden>
+  <div class="sheet">
+    <div class="eyebrow">Entscheidung</div>
+    <div class="win" id="winTx">—</div>
+    <div class="sub" id="winSub">—</div>
+    <button class="btn pri" id="bAgain">Neue Runde</button>
+    <button class="btn gho" id="bMenu2">Hauptmenü</button>
+  </div>
+</div>
+
