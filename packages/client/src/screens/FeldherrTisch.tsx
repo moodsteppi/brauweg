@@ -62,6 +62,14 @@ const NETZ_STIL = '\n.hud.top .inner{transform:none}\n';
  * (dessen Farben und Overlays) nirgends auftauchen.
  */
 const SCREEN_STIL = `
+:root{
+  /* Die eingebauten CSS-Kurven sind zu weich; diese hier haben den Zug,
+   * der eine Bewegung absichtlich wirken laesst. */
+  --fh-aus:cubic-bezier(.23,1,.32,1);
+  --fh-flaeche:linear-gradient(180deg,#111c23,#0b1318);
+  --fh-kante:0 0 0 1px #22323c,0 1px 0 #2b3d49 inset;
+}
+
 /*
  * Die Einstiegsseite rollt.
  *
@@ -74,54 +82,157 @@ const SCREEN_STIL = `
  * Sie bekommt deshalb einen eigenen Rollbereich. touch-action:pan-y gibt
  * die senkrechte Wischgeste wieder frei, die body pauschal gesperrt hatte -
  * ohne das liesse sich am Handy zwar mit der Maus rollen, aber nicht mit
- * dem Finger.
+ * dem Finger. ACHTUNG: Jedes Kind, das touch-action wieder auf none setzt,
+ * reisst darueber ein totes Loch in die Wischgeste - siehe .feldherr-karte.
  */
 main.hub{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
-  padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  padding:calc(14px + env(safe-area-inset-top)) 14px calc(78px + env(safe-area-inset-bottom));
+  background:radial-gradient(120% 52% at 50% 0%,rgba(24,41,53,.92),rgba(5,8,11,0) 72%),#05080b;
+  background-attachment:fixed}
+/* Der Fuss laeuft ins Dunkle aus: Es ist auf einen Blick zu sehen, dass
+ * die Seite unten weitergeht. Der Verlauf haengt am Bildschirm, nicht am
+ * Inhalt, und die Fusspolsterung oben haelt jede Schaltflaeche aus ihm heraus. */
+main.hub::after{content:"";position:fixed;left:0;right:0;bottom:0;height:76px;z-index:1;
+  pointer-events:none;background:linear-gradient(180deg,rgba(5,8,11,0),rgba(5,8,11,.94))}
+/* Am Schreibtisch soll die Seite nicht ueber den ganzen Bildschirm laufen.
+ * Die Spalte wird hier begrenzt und nicht ueber die Polsterung von main.hub:
+ * Prozentwerte in der Polsterung eines festen Kastens rechnen gegen den
+ * Bildschirm, nicht gegen den Kasten selbst - das ging um Hunderte Pixel
+ * daneben. Das Kartenblatt ist ausgenommen, es deckt absichtlich alles. */
+main.hub > :not(.feldherr-blatt){max-width:520px;margin-inline:auto}
+
+/* Kopf: Zurueck-Knopf und Titel in einer Zeile - das spart auf kleinen
+ * Bildschirmen eine ganze Zeile Hoehe. */
+main.hub .hub-kopf{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+main.hub .hub-kopf h1{flex:1 1 auto;min-width:0;margin:0;
+  font:900 clamp(23px,7.6vw,31px)/1 system-ui;letter-spacing:-.035em}
+main.hub .hub-kopf .eyebrow{margin-bottom:5px}
+/* Der Zurueck-Knopf des Hubs ist blau-gold; hier steht er auf der
+ * Nachtfarbe des Spiels und bekommt deshalb dessen Kleid. */
+main.hub .hub-zurueck{flex:0 0 auto;padding:9px 13px;border:0;border-radius:10px;
+  color:#9fb3c0;background:rgba(16,25,32,.85);box-shadow:0 0 0 1px #26363f;
+  font:700 12px/1 system-ui;letter-spacing:.02em;cursor:pointer;
+  transition:transform 160ms var(--fh-aus),color 160ms ease}
+main.hub .hub-zurueck:active{transform:scale(.96);box-shadow:0 0 0 1px #26363f}
+/* auto seitlich, sonst schlaegt diese Regel die Spaltenbegrenzung oben
+ * (gleiche Gewichtung, spaeter im Blatt) und der Satz rutscht nach links. */
+main.hub .hub-text{font:400 13px/1.6 system-ui;color:#c8d7e0;margin:0 auto 16px}
+
+/* Tafeln - dieselbe Flaeche wie die Bildschirme im Spiel (.sheet), damit
+ * Einstieg und Partie wie ein Stueck wirken. */
+.fh-tafel{position:relative;border-radius:16px;padding:14px;margin:0 0 12px;
+  background:var(--fh-flaeche);box-shadow:var(--fh-kante),0 18px 34px -26px #000;
+  opacity:1;transform:none;
+  transition:opacity 300ms var(--fh-aus) var(--fh-verzug,0ms),
+             transform 300ms var(--fh-aus) var(--fh-verzug,0ms)}
+.fh-tafel:nth-of-type(2){--fh-verzug:60ms}
+.fh-tafel:nth-of-type(3){--fh-verzug:120ms}
+@starting-style{.fh-tafel{opacity:0;transform:translateY(10px)}}
+/* Die Tafel, auf die es ankommt, traegt den Glutstrich des Spiels. */
+.fh-tafel.betont::before{content:"";position:absolute;left:16px;right:16px;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--p1) 25%,var(--p1) 75%,transparent);opacity:.75}
+.fh-tafel .btn:first-of-type{margin-top:0}
+.fh-marke{font:700 8.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.32em;
+  color:#7b8e9a;text-transform:uppercase;margin:0 0 11px}
+
+/* Offene Tische. Der Beitritt ist die lauteste Sache der Seite - er war
+ * vorher ein Geisterknopf ganz unten. */
+.fh-tisch{display:flex;align-items:center;gap:10px;width:100%;padding:10px 10px 10px 13px;
+  margin:0 0 8px;border:0;border-radius:12px;color:var(--sand);text-align:left;font:inherit;
+  cursor:pointer;background:linear-gradient(180deg,#1c2932,#141f26);
+  box-shadow:0 0 0 1px #2a3b46,0 1px 0 #324754 inset;
+  opacity:1;transform:none;
+  transition:transform 160ms var(--fh-aus),opacity 200ms var(--fh-aus)}
+@starting-style{.fh-tisch{opacity:0;transform:translateY(6px)}}
+.fh-tisch:active{transform:scale(.985)}
+.fh-tisch .wer{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;font:700 14px/1.2 system-ui}
+.fh-tisch .platz{flex:0 0 auto;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.06em;color:#93a7b3}
+.fh-tisch .bei{flex:0 0 auto;padding:8px 11px;border-radius:9px;color:#fff;
+  font:800 10.5px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;
+  background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}
+.fh-leer{margin:0 0 10px;font:500 12px/1.5 system-ui;color:#7b8e9a}
+.feldherr-fehler{margin:0 0 10px;font:600 12px/1.5 system-ui;color:#ff8b80}
+
+/* Staerke der KI: drei Knoepfe statt einer Auswahlliste. Am Handy ist der
+ * Unterschied gross - kein Systemblatt, ein Tipp statt drei. */
+.fh-seg{display:flex;gap:6px}
+.fh-seg button{flex:1;padding:11px 0;border:0;border-radius:10px;color:#7b8e9a;
+  font:700 11px/1 system-ui;letter-spacing:.05em;background:#141f26;
+  box-shadow:0 0 0 1px #24343d;cursor:pointer;
+  transition:transform 160ms var(--fh-aus),color 160ms ease}
+.fh-seg button[aria-pressed=true]{color:#fff;
+  background:linear-gradient(180deg,#f4655c,var(--p1));box-shadow:0 0 18px -8px var(--p1)}
+.fh-seg button:active{transform:scale(.97)}
+
 .feldherr-zurueck{position:fixed;left:10px;top:10px;z-index:60;padding:8px 14px;border:0;
   border-radius:9px;color:#dfd6c2;background:rgba(16,25,32,.85);
-  box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui}
+  box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui;
+  transition:transform 160ms var(--fh-aus)}
 .feldherr-dreid{position:fixed;left:10px;top:50px;z-index:60;padding:8px 14px;border:0;
   border-radius:9px;color:#dfd6c2;background:rgba(16,25,32,.85);
-  box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui}
+  box-shadow:0 0 0 1px #26363f;font:700 12px/1 system-ui;
+  transition:transform 160ms var(--fh-aus)}
 .feldherr-dreid.an{color:#fff;background:linear-gradient(180deg,#f4655c,#e8433c)}
+.feldherr-zurueck:active,.feldherr-dreid:active{transform:scale(.96)}
 .feldherr-hinweis{position:fixed;left:50%;bottom:16%;transform:translateX(-50%);z-index:60;
   max-width:min(420px,90vw);padding:12px 16px;border-radius:12px;text-align:center;
   color:#dfd6c2;background:rgba(12,20,26,.92);box-shadow:0 0 0 1px #2a3b46;
   font:600 13px/1.5 system-ui}
 .feldherr-ende{z-index:120;bottom:auto;top:50%;transform:translate(-50%,-50%)}
 .feldherr-ende .btn{margin-top:12px}
-.feldherr-online{margin-top:18px}
-.feldherr-online h2{margin:0 0 8px}
-.feldherr-fehler{color:#ff8b80}
-.feldherr-helden{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px}
+.feldherr-zeile{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 12px;margin:0 0 8px;border-radius:11px;background:rgba(16,25,32,.7);
+  box-shadow:0 0 0 1px #22323c;font:700 13px/1.2 system-ui;color:var(--sand)}
+.feldherr-zeile span:last-child{font-weight:500;color:#93a7b3}
+.feldherr-helden{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}
 .feldherr-held{display:block;width:100%;text-align:left;padding:12px 14px;border:0;
   border-radius:12px;color:#dfd6c2;background:rgba(16,25,32,.85);
-  box-shadow:0 0 0 1px #26363f;font:inherit;cursor:pointer}
-.feldherr-held.an{box-shadow:0 0 0 2px #f4655c;background:rgba(40,26,26,.9)}
+  box-shadow:0 0 0 1px #26363f;font:inherit;cursor:pointer;
+  transition:transform 160ms var(--fh-aus),box-shadow 200ms ease}
+.feldherr-held.an{box-shadow:0 0 0 1.5px #f4655c,0 0 22px -12px var(--p1);
+  background:rgba(40,26,26,.9)}
+.feldherr-held:active{transform:scale(.985)}
 .feldherr-held[disabled]{opacity:.45;cursor:default}
+.feldherr-held[disabled]:active{transform:none}
 .feldherr-held .nm{font:800 15px/1.2 system-ui;margin-bottom:3px}
 .feldherr-held .kurz{font:500 12px/1.45 system-ui;opacity:.85}
 .feldherr-held .bald{font:700 11px/1 system-ui;letter-spacing:.06em;opacity:.7}
 /* Kartenhand des gewaehlten Charakters */
 .feldherr-hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
-  gap:8px;margin:2px 0 6px}
+  gap:8px;margin:0 0 8px}
+/*
+ * touch-action:pan-y statt none: Das Gitter belegt das halbe Handy. Mit
+ * none verschluckte jede Wischgeste, die auf einer Karte beginnt, das
+ * Rollen der Seite - der Weg zur Tischliste war genau dort blockiert, wo
+ * der Daumen von selbst hinfaellt. Senkrecht rollen bleibt frei, waagerecht
+ * bleibt gesperrt, damit das lange Druecken nicht verrutscht.
+ */
 .feldherr-karte{position:relative;padding:9px 8px 8px;border:0;border-radius:11px;
   color:#dfd6c2;background:rgba(16,25,32,.85);box-shadow:0 0 0 1px #26363f;
-  font:inherit;text-align:left;cursor:pointer;touch-action:none;
-  -webkit-user-select:none;user-select:none}
-.feldherr-karte:active{background:rgba(30,44,54,.95)}
+  font:inherit;text-align:left;cursor:pointer;touch-action:pan-y;
+  -webkit-user-select:none;user-select:none;
+  transition:transform 160ms var(--fh-aus)}
+.feldherr-karte:active{transform:scale(.97);background:rgba(30,44,54,.95)}
 .feldherr-karte .kn{font:800 12px/1.2 system-ui}
 .feldherr-karte .kp{position:absolute;top:7px;right:8px;font:800 12px/1 system-ui;color:#ffd977}
 .feldherr-karte .kw{margin-top:4px;font:600 10px/1.35 system-ui;opacity:.72}
-.feldherr-handhinweis{font:500 11px/1.4 system-ui;opacity:.6;margin:0 0 14px}
+.feldherr-handhinweis{font:500 11px/1.4 system-ui;opacity:.6;margin:0}
 /* Werteseite einer Karte */
 .feldherr-blatt{position:fixed;inset:0;z-index:200;display:flex;align-items:center;
-  justify-content:center;padding:16px;background:rgba(6,10,14,.72)}
+  justify-content:center;padding:16px;background:rgba(6,10,14,.72);
+  opacity:1;transition:opacity 180ms var(--fh-aus)}
+@starting-style{.feldherr-blatt{opacity:0}}
+/* Ein Blatt mitten im Bild gehoert nicht an einen Ausloeser gebunden -
+ * es waechst aus der Mitte, anders als ein Menue an seiner Schaltflaeche. */
 .feldherr-blatt-inner{width:min(430px,100%);max-height:82vh;overflow:auto;
   padding:18px;border-radius:16px;color:#dfd6c2;background:#101922;
-  box-shadow:0 0 0 1px #2a3b46,0 18px 50px rgba(0,0,0,.5)}
+  box-shadow:0 0 0 1px #2a3b46,0 18px 50px rgba(0,0,0,.5);
+  opacity:1;transform:none;
+  transition:opacity 200ms var(--fh-aus),transform 200ms var(--fh-aus)}
+@starting-style{.feldherr-blatt-inner{opacity:0;transform:scale(.96) translateY(8px)}}
 .feldherr-blatt h3{margin:0;font:800 19px/1.2 system-ui}
 .feldherr-blatt .art{font:700 11px/1 system-ui;letter-spacing:.06em;opacity:.6;
   margin:5px 0 9px;text-transform:uppercase}
@@ -134,6 +245,26 @@ main.hub{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;
 .feldherr-blatt h4{margin:14px 0 5px;font:800 12px/1 system-ui;opacity:.75}
 .feldherr-blatt ul{margin:0;padding-left:16px;font:500 12px/1.55 system-ui}
 .feldherr-blatt .fuss{margin-top:12px;font:500 11px/1.4 system-ui;opacity:.6}
+.btn{transition:transform 160ms var(--fh-aus)}
+.btn:active{transform:scale(.98)}
+
+/* Der Zeigefinger darf ruehren, der Finger nicht: Auf Beruehrbildschirmen
+ * loest ein Tipp sonst den Ueberfahren-Zustand aus und laesst ihn stehen. */
+@media (hover:hover) and (pointer:fine){
+  .fh-tisch:hover,.feldherr-held:hover:not([disabled]),.feldherr-karte:hover{
+    box-shadow:0 0 0 1px #3a5060,0 1px 0 #324754 inset}
+  main.hub .hub-zurueck:hover{color:#dfd6c2}
+}
+
+/* Weniger Bewegung heisst weniger, nicht nichts: Ein- und Ausblenden hilft
+ * beim Verstehen und bleibt, jede Verschiebung faellt weg. */
+@media (prefers-reduced-motion:reduce){
+  .fh-tafel,.fh-tisch,.feldherr-blatt-inner{transform:none!important;
+    transition-property:opacity;transition-duration:150ms}
+  .fh-tafel:active,.fh-tisch:active,.feldherr-held:active,.feldherr-karte:active,
+  .btn:active,.fh-seg button:active,main.hub .hub-zurueck:active,
+  .feldherr-zurueck:active,.feldherr-dreid:active{transform:none}
+}
 `;
 
 /**
@@ -669,14 +800,18 @@ export function FeldherrTisch({
             >
               ‹ Zurück
             </button>
-            <h1>Feldherr — Tisch</h1>
+            <div>
+              <div className="eyebrow">Feldherr</div>
+              <h1>Tisch</h1>
+            </div>
           </header>
           <p className="hub-text">
             {tisch.error
               ? 'Der Tisch ist nicht erreichbar.'
               : 'Warte auf den zweiten Feldherrn…'}
           </p>
-          <section className="feldherr-wahl">
+          <section className="fh-tafel betont">
+            <div className="fh-marke">Sitze</div>
             {sitze.map((platz) => (
               <div key={platz.seat} className="feldherr-zeile">
                 <span>Sitz {platz.seat + 1}</span>
@@ -750,13 +885,20 @@ export function FeldherrTisch({
     );
   }
 
+  const offene = tische ?? [];
+
   return (
     <main className="hub">
       <header className="hub-kopf">
         <button className="hub-zurueck" onClick={onBack}>
           ‹ Zurück
         </button>
-        <h1>Feldherr</h1>
+        <div>
+          <div className="eyebrow">Echtzeit · 2 Spieler</div>
+          <h1>
+            Feld<em>herr</em>
+          </h1>
+        </div>
       </header>
 
       <p className="hub-text">
@@ -764,76 +906,109 @@ export function FeldherrTisch({
         Haupthaus einreißt, gewinnt.
       </p>
 
-      <h2>Wen spielst du?</h2>
-      <div className="feldherr-helden">
-        {CHARAKTERE.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className={'feldherr-held' + (held === c.id ? ' an' : '')}
-            aria-pressed={held === c.id}
-            onClick={() => setHeld(c.id)}
-          >
-            <div className="nm">{c.nm}</div>
-            <div className="kurz">{c.kurz}</div>
-          </button>
-        ))}
-        {/* Platzhalter, damit die Auswahl zeigt, dass hier noch mehr kommt. */}
-        <button type="button" className="feldherr-held" disabled>
-          <div className="nm">Nächster Charakter</div>
-          <div className="bald">BALD</div>
-        </button>
-      </div>
-
-      {/* Die Kartenhand des gewaehlten Charakters. Halten oeffnet die Werte. */}
-      {gewaehlt && (
-        <>
-          <div className="feldherr-hand">
-            {gewaehlt.karten.map((k) => (
-              <Handkarte key={k.id} karte={k} onOeffnen={() => setBlatt(k)} />
-            ))}
-          </div>
-          <p className="feldherr-handhinweis">
-            Karte gedrückt halten für alle Werte und das Zusammenspiel.
-          </p>
-        </>
-      )}
-      {blatt && <Kartenblatt karte={blatt} onClose={() => setBlatt(null)} />}
-
-      <section className="feldherr-wahl">
-        <label className="feldherr-zeile">
-          <span>Stärke der KI</span>
-          <select value={stufe} onChange={(e) => setStufe(e.target.value as Stufe)}>
-            <option value="leicht">Leicht</option>
-            <option value="normal">Normal</option>
-            <option value="schwer">Schwer</option>
-          </select>
-        </label>
-      </section>
-
-      <button className="btn pri" onClick={() => setModus('ki')}>
-        Gegen die KI
-      </button>
-
-      <section className="feldherr-online">
-        <h2>Online spielen</h2>
-        <button className="btn" onClick={() => void erstelleTisch()}>
-          Tisch erstellen
-        </button>
-        {fehler && <p className="hub-text feldherr-fehler">{fehler}</p>}
-        {tische !== null && tische.length === 0 && (
-          <p className="hub-text">Gerade wartet niemand — erstell einen Tisch.</p>
-        )}
-        {(tische ?? []).map((zeile) => (
+      {/*
+       * Online steht oben.
+       *
+       * Es ist der Modus, um den es geht, und der einzige, in dem jemand
+       * anderes wartet — wer beitreten will, soll nicht erst an Heldenwahl
+       * und Kartenhand vorbeirollen. Die Reihenfolge dahinter erzaehlt den
+       * Rest: erst waehlen, mit wem man spielt, dann gegen die KI ueben.
+       */}
+      <section className="fh-tafel betont">
+        <div className="fh-marke">Online spielen</div>
+        {offene.map((zeile) => (
           <button
             key={zeile.id}
-            className="btn gho"
+            type="button"
+            className="fh-tisch"
             onClick={() => void tretebei(zeile.id)}
           >
-            Beitreten: {zeile.host ?? 'Unbekannt'} ({zeile.occupied}/{zeile.seats})
+            <span className="wer">{zeile.host ?? 'Unbekannt'}</span>
+            <span className="platz">
+              {zeile.occupied}/{zeile.seats}
+            </span>
+            <span className="bei">Beitreten</span>
           </button>
         ))}
+        {tische === null && <p className="fh-leer">Tische werden gesucht …</p>}
+        {tische !== null && offene.length === 0 && (
+          <p className="fh-leer">Gerade wartet niemand — erstell den ersten Tisch.</p>
+        )}
+        {fehler && <p className="feldherr-fehler">{fehler}</p>}
+        <button
+          /* Solange niemand wartet, ist Erstellen der einzige Weg ins
+           * Netzspiel — dann traegt es die Hauptfarbe. Steht ein Tisch
+           * offen, gehoert sie dem Beitreten. */
+          className={'btn' + (offene.length === 0 ? ' pri' : '')}
+          onClick={() => void erstelleTisch()}
+        >
+          Tisch erstellen
+        </button>
       </section>
+
+      <section className="fh-tafel">
+        <div className="fh-marke">Wen spielst du?</div>
+        <div className="feldherr-helden">
+          {CHARAKTERE.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={'feldherr-held' + (held === c.id ? ' an' : '')}
+              aria-pressed={held === c.id}
+              onClick={() => setHeld(c.id)}
+            >
+              <div className="nm">{c.nm}</div>
+              <div className="kurz">{c.kurz}</div>
+            </button>
+          ))}
+          {/* Platzhalter, damit die Auswahl zeigt, dass hier noch mehr kommt. */}
+          <button type="button" className="feldherr-held" disabled>
+            <div className="nm">Nächster Charakter</div>
+            <div className="bald">BALD</div>
+          </button>
+        </div>
+
+        {/* Die Kartenhand des gewaehlten Charakters. Halten oeffnet die Werte. */}
+        {gewaehlt && (
+          <>
+            <div className="feldherr-hand">
+              {gewaehlt.karten.map((k) => (
+                <Handkarte key={k.id} karte={k} onOeffnen={() => setBlatt(k)} />
+              ))}
+            </div>
+            <p className="feldherr-handhinweis">
+              Karte gedrückt halten für alle Werte und das Zusammenspiel.
+            </p>
+          </>
+        )}
+      </section>
+
+      <section className="fh-tafel">
+        <div className="fh-marke">Gegen die KI</div>
+        <div className="fh-seg">
+          {(
+            [
+              ['leicht', 'Leicht'],
+              ['normal', 'Normal'],
+              ['schwer', 'Schwer'],
+            ] as [Stufe, string][]
+          ).map(([wert, text]) => (
+            <button
+              key={wert}
+              type="button"
+              aria-pressed={stufe === wert}
+              onClick={() => setStufe(wert)}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+        <button className="btn pri" onClick={() => setModus('ki')}>
+          Übungspartie starten
+        </button>
+      </section>
+
+      {blatt && <Kartenblatt karte={blatt} onClose={() => setBlatt(null)} />}
     </main>
   );
 }
