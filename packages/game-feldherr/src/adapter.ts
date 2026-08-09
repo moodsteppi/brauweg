@@ -48,8 +48,15 @@ const SNAPSHOT_VERSION = 1;
 export interface FeldherrView {
   readonly saat: number;
   readonly regeln: FeldherrRegeln;
-  /** Alle Zuege beider Sitze, aeltester zuerst. Nichts ist verdeckt. */
+  /**
+   * Zuege beider Sitze, aeltester zuerst. Nichts ist verdeckt — aber nicht
+   * unbedingt alle: `abIndex` sagt, an welcher Stelle der Partie dieser
+   * Ausschnitt beginnt. Beim `join` ist er 0 und die Liste vollstaendig;
+   * beim Rundruf nach einem Zug enthaelt sie nur den Zuwachs.
+   */
   readonly zuege: FeldherrPartie['zuege'];
+  /** Stelle in der Gesamtliste, an der `zuege` beginnt. */
+  readonly abIndex: number;
   readonly meldungen: Readonly<Record<number, Meldung>>;
   readonly ausgang: FeldherrPartie['ausgang'];
   readonly taktMs: number;
@@ -91,7 +98,15 @@ export const feldherr: GameModule<
   FeldherrRegeln
 > = {
   meta,
-  protocolVersion: 1,
+  /**
+   * 2 seit dem 9. August 2026: Die Sicht traegt die Zugliste nur noch als
+   * Ausschnitt ab `abIndex`. Ein Client der Version 1 liest `zuege` als die
+   * ganze Liste — bekaeme er einen Ausschnitt, rechnete er ab dem ersten
+   * Zug etwas voellig anderes. Der Server schickt ihm deshalb weiter die
+   * volle Sicht (siehe `zuwachsFaehig` im Gateway); die Version sagt ihm
+   * nur, wer den Ausschnitt vertraegt.
+   */
+  protocolVersion: 2,
 
   defaultConfig: () => STANDARD_REGELN,
 
@@ -147,17 +162,35 @@ export const feldherr: GameModule<
    * Eine Sicht je Sitz gibt es trotzdem, damit die Plattform nichts
    * Besonderes tun muss.
    */
-  viewFor: (partie): FeldherrView => ({
-    saat: partie.saat,
-    regeln: partie.regeln,
-    zuege: partie.zuege,
-    meldungen: partie.meldungen,
-    ausgang: partie.ausgang,
-    taktMs: TAKT_MS,
-    vorlauf: VORLAUF_TAKTE,
-  }),
+  viewFor: (partie, _sitz, seit = 0): FeldherrView => {
+    /**
+     * Die Zugliste ist das Gedaechtnis der Partie und waechst bis zum Ende.
+     * Sie bei jedem Rundruf ganz zu verschicken kostet ueber eine Partie
+     * hinweg das Quadrat: gemessen 40 MB an beide Geraete statt 0,1 MB, und
+     * jedes einzelne dieser Pakete muss das Handy mitten in der laufenden
+     * Simulation zerlegen. Deshalb der Ausschnitt ab `seit`.
+     *
+     * `abIndex` faengt den einzigen Fall ab, in dem das gefaehrlich waere:
+     * Fehlt dem Empfaenger ein Stueck, sieht er es an der Luecke und holt
+     * sich die volle Sicht, statt still mit einem Loch weiterzurechnen.
+     */
+    const ab = Math.max(0, Math.min(seit, partie.zuege.length));
+    return {
+      saat: partie.saat,
+      regeln: partie.regeln,
+      zuege: ab === 0 ? partie.zuege : partie.zuege.slice(ab),
+      abIndex: ab,
+      meldungen: partie.meldungen,
+      ausgang: partie.ausgang,
+      taktMs: TAKT_MS,
+      vorlauf: VORLAUF_TAKTE,
+    };
+  },
 
-  spectatorView: (partie): FeldherrView => feldherr.viewFor(partie, 0),
+  spectatorView: (partie, seit = 0): FeldherrView => feldherr.viewFor(partie, 0, seit),
+
+  /** Die Zugliste ist append-only — ihre Laenge ist die Marke. */
+  viewCursor: (partie): number => partie.zuege.length,
 
   /**
    * Ein Bot gibt auf.

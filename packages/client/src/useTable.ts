@@ -272,11 +272,23 @@ export function useTable<V = GameView>(
         beiTaktRef.current?.(message);
         return;
       }
+      /**
+       * Der Zug-Rueckruf bekommt JEDE Sicht, auch eine veraltete.
+       *
+       * Fuer den angezeigten Zustand ist eine ueberholte Nachricht wertlos —
+       * die wird unten weiter verworfen. Fuer eine anwachsende Zugliste ist
+       * sie es nicht: Bei Feldherr traegt jede Sicht nur den Zuwachs, und
+       * was hier verworfen wird, kommt nie wieder (der Server haelt sich
+       * fuer beliefert). Ein fehlender Zug ist genau der Fehler, der zwei
+       * Geraete still auseinanderlaufen laesst. Doppelt schadet dagegen
+       * nichts: Der Empfaenger haengt anhand von `abIndex` nur an, was er
+       * noch nicht hat.
+       */
+      beiSichtRef.current?.(message);
       // Veraltete Nachricht: Der Server war beim Senden schon weiter.
       if (message.revision < revisionRef.current) return;
       revisionRef.current = message.revision;
       setError(null);
-      beiSichtRef.current?.(message);
       setView(message);
     };
 

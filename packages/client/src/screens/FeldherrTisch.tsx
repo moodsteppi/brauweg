@@ -45,7 +45,14 @@ type Feld = 'klein' | 'mittel' | 'gross';
 interface FeldherrSicht {
   saat: number;
   regeln: { feld: Feld };
+  /**
+   * Ausschnitt der Zugliste, nicht zwingend die ganze — `abIndex` sagt, wo
+   * er anfaengt. Beim `join` (und damit nach jedem Wiederverbinden) ist er
+   * 0 und die Liste vollstaendig; nach einem Zug enthaelt sie nur den
+   * Zuwachs. Der Grund steht in `viewCursor` in packages/game-api.
+   */
   zuege: (FeldherrZug & { sitz: number })[];
+  abIndex?: number;
   ausgang: { sieger: number | null; strittig: boolean; aufgegeben: boolean } | null;
 }
 
@@ -492,6 +499,22 @@ export function FeldherrTisch({
   }, []);
 
   /**
+   * Die ganze Zugliste der Partie, hier zusammengetragen.
+   *
+   * Frueher stand sie in jeder Sicht vom Server. Das war bequem und teuer:
+   * Sie waechst bis zum Partieende, und wer sie bei jedem Zug vollstaendig
+   * verschickt, sendet ueber eine Partie hinweg das Quadrat davon — 800
+   * Zuege sind 40 MB an beide Geraete statt 0,1 MB. Am Handy hiess das,
+   * dass gegen Ende jeder Zug die Simulation anhielt, waehrend JSON.parse
+   * ein halbes Hundert Kilobyte zerlegte. Genau das war das Ruckeln, das
+   * mit der Partiedauer schlimmer wurde.
+   *
+   * Jetzt kommt nur noch der Zuwachs, und die vollstaendige Liste liegt
+   * hier: Der Selbstheilungs-Neustart spielt sie nach, und sie ist die
+   * Quelle fuer alles, was frueher `sicht.zuege` las.
+   */
+  const alleZuege = useRef<(FeldherrZug & { sitz: number })[]>([]);
+  /**
    * Zuege gehen wie die Herzschlaege am React-State vorbei direkt in den
    * Kern — SOFORT beim Eintreffen der Sicht. Der Weg ueber setState und
    * Effekt verspaetet sich sonst um hunderte Millisekunden (besonders im
@@ -501,18 +524,86 @@ export function FeldherrTisch({
    * Nachzuegler-Faenger; `gereicht` haelt beide Wege doppelfrei.
    */
   const gereicht = useRef(0);
-  const beiSicht = useCallback((m: ViewMessage<FeldherrSicht>) => {
-    const sitzung = sitzungRef.current;
-    const zuege = m.view?.zuege;
-    if (!sitzung || !zuege) return;
-    for (let i = gereicht.current; i < zuege.length; i += 1) {
-      sitzung.zugAnnehmen(zuege[i], zuege[i].sitz);
+  /**
+   * Neu verbinden, ohne dass die Rueckrufe unten den Tisch schon kennen —
+   * `useTable` wird erst darunter aufgerufen.
+   */
+  const neuVerbindenRef = useRef<() => void>(() => {});
+
+  /**
+   * Eine Sicht verarbeiten: Zugliste nachfuehren, Neues in den Kern reichen.
+   *
+   * `abIndex === 0` heisst: Der Server hat die GANZE Liste geschickt (jede
+   * Antwort auf ein `join`, also auch jeder Abgleich). Dann wird die eigene
+   * Liste ERSETZT, nicht ergaenzt. Das ist der Unterschied zwischen einem
+   * Abgleich und einem Anhaengen — und der Grund, warum die Selbstheilung
+   * wieder funktioniert: Sie startet den Kern aus der Serverliste neu, also
+   * aus der gemeinsamen Wahrheit, und nicht aus dem, was dieses Geraet
+   * selbst zusammengetragen hat. Aus der eigenen Sammlung zu heilen heisst,
+   * einen moeglichen Fehler noch einmal abzuspielen.
+   */
+  const nimmZuege = useCallback((sicht: FeldherrSicht | null | undefined) => {
+    const zuege = sicht?.zuege;
+    if (!zuege) return;
+    const ab = sicht.abIndex ?? 0;
+    let liste = alleZuege.current;
+
+    if (ab === 0) {
+      /**
+       * Volle Sicht: Der Server ist die Wahrheit. Kuerzer als das, was
+       * dieses Geraet dem Kern schon gereicht hat, darf sie nie sein — der
+       * Server schreibt seinen Schnappschuss vor jedem Rundruf. Faellt es
+       * doch so aus, ist der Kern auf einem Stand, den es beim Server nicht
+       * gibt; dann hilft nur ein Neustart aus der Serverliste.
+       */
+      if (zuege.length < gereicht.current) {
+        console.warn(
+          'feldherr: Serverliste ist kuerzer als der eigene Stand (' +
+            zuege.length + ' statt ' + gereicht.current + ') — Kern wird neu gestartet.',
+        );
+        alleZuege.current = zuege.slice();
+        /* Der Neustart-Effekt setzt `gereicht` zurueck und reicht die
+         * Serverliste von vorn ein; von Hand nachzuhelfen liesse Zuege
+         * doppelt ausfuehren. */
+        setKernLauf((n) => n + 1);
+        return;
+      }
+      liste = zuege.slice();
+      alleZuege.current = liste;
+    } else if (ab > liste.length) {
+      /**
+       * Luecke: Der Ausschnitt beginnt hinter dem, was hier liegt — eine
+       * Nachricht ist verlorengegangen. NICHT raten: Ein Loch in der
+       * Zugliste laesst die Geraete still auseinanderlaufen, und genau das
+       * macht die Partie strittig. Stattdessen die volle Sicht anfordern.
+       */
+      console.warn(
+        'feldherr: Zugliste hat ein Loch (Sicht beginnt bei ' + ab + ', vorhanden ' +
+          liste.length + ') — volle Sicht wird neu angefordert.',
+      );
+      neuVerbindenRef.current();
+      return;
+    } else {
+      /* Der Ausschnitt ueberlappt; nur der Rest dahinter ist neu. */
+      for (let i = liste.length - ab; i < zuege.length; i += 1) liste.push(zuege[i]);
     }
-    gereicht.current = zuege.length;
+
+    const sitzung = sitzungRef.current;
+    if (!sitzung) return;
+    for (let i = gereicht.current; i < liste.length; i += 1) {
+      sitzung.zugAnnehmen(liste[i], liste[i].sitz);
+    }
+    gereicht.current = liste.length;
   }, []);
+
+  const beiSicht = useCallback(
+    (m: ViewMessage<FeldherrSicht>) => nimmZuege(m.view),
+    [nimmZuege],
+  );
 
   /** Nur im Netzspiel verbunden; oertlich bleibt der Tisch still. */
   const tisch = useTable<FeldherrSicht>(tableId, 'feldherr', beiTakt, beiSicht);
+  neuVerbindenRef.current = tisch.reconnect;
   const sicht = tableId ? (tisch.view?.view ?? null) : null;
   /** Zuschauer bekommen keinen Sitz; sie sehen zu und melden nichts. */
   const meinSitz = tisch.view?.seat ?? null;
@@ -570,6 +661,20 @@ export function FeldherrTisch({
       wurzel.innerHTML = '';
     };
   }, [tableId, modus, stufe, feld, held]);
+
+  /**
+   * Die Zugliste beim Tischwechsel leeren.
+   *
+   * Sie gehoert zu EINER Partie. Bliebe sie stehen, faende der Kern des
+   * naechsten Tisches eine gefuellte Liste vor und spielte fremde Zuege
+   * nach. Der Effekt steht mit Absicht VOR der Netzpartie: Effekte laufen
+   * in der Reihenfolge, in der sie stehen, und der Kern muss auf eine
+   * leere Liste treffen.
+   */
+  useEffect(() => {
+    alleZuege.current = [];
+    gereicht.current = 0;
+  }, [tableId]);
 
   /**
    * Netzpartie. Startet, sobald die erste Sicht da ist — sie bringt das
@@ -651,6 +756,18 @@ export function FeldherrTisch({
             ') — Neustart aus der Server-Zugliste.',
         );
         setHeilt(true);
+        /**
+         * Erst die Serverliste frisch holen, dann neu starten.
+         *
+         * Der Abgleich beantwortet der Server mit der VOLLEN Sicht; die
+         * ersetzt hier die eigene Liste (siehe nimmZuege). Ohne diesen
+         * Schritt heilte sich das Geraet aus seiner eigenen Sammlung —
+         * also womoeglich aus genau dem Fehler, der die Heilung ausgeloest
+         * hat. Der Neustart darunter laeuft trotzdem sofort: Kommt die
+         * volle Sicht kurz danach, faengt der Nachzuegler-Faenger den
+         * Rest ab, und ein Replay ist ohnehin schneller als die Echtzeit.
+         */
+        neuVerbindenRef.current();
         setKernLauf((n) => n + 1);
       },
     });
@@ -665,7 +782,7 @@ export function FeldherrTisch({
      * Zuege los, bis der naechste Serverfunk kaeme — die naechste Divergenz.
      */
     gereicht.current = 0;
-    const bisher = tisch.view?.view?.zuege ?? [];
+    const bisher = alleZuege.current;
     for (const z of bisher) sitzung.zugAnnehmen(z, z.sitz);
     gereicht.current = bisher.length;
     const heilTimer = window.setTimeout(() => setHeilt(false), 5000);
@@ -678,25 +795,22 @@ export function FeldherrTisch({
   }, [tableId, netzSaat, netzFeld, meinSitz, kernLauf]);
 
   /**
-   * Zuege vom Server in den Kern reichen.
+   * Nachzuegler-Faenger.
    *
-   * Der Effekt haengt an der ZAHL der Zuege, nicht an der Liste: Ein Effekt
-   * mit dem Sichten-Objekt in der Abhaengigkeitsliste laeuft bei jedem
-   * Serverfunk neu — genau der Fehler, der am Kartentisch schon einmal den
-   * Rundenabschluss verschluckt hat. Beim Wiederverbinden kommt die volle
-   * Liste erneut; `gereicht` sorgt dafuer, dass nichts doppelt ausgefuehrt
-   * wird.
+   * `beiSicht` reicht Zuege sofort weiter, aber nur wenn der Kern schon
+   * steht. Traf eine Sicht davor ein (oder wurde der Kern gerade fuer die
+   * Selbstheilung neu gebaut), liegen die Zuege in `alleZuege` und muessen
+   * hier nachkommen. `gereicht` haelt beide Wege doppelfrei.
    */
   useEffect(() => {
     const sitzung = sitzungRef.current;
-    const zuege = sicht?.zuege;
-    if (!sitzung || !zuege) return;
-    for (let i = gereicht.current; i < zuege.length; i += 1) {
-      const z = zuege[i];
-      sitzung.zugAnnehmen(z, z.sitz);
+    const liste = alleZuege.current;
+    if (!sitzung || gereicht.current >= liste.length) return;
+    for (let i = gereicht.current; i < liste.length; i += 1) {
+      sitzung.zugAnnehmen(liste[i], liste[i].sitz);
     }
-    gereicht.current = zuege.length;
-  }, [sicht?.zuege?.length]);
+    gereicht.current = liste.length;
+  }, [sicht]);
 
   /**
    * Serverseitiges Partie-Ende (Aufgabe, Verlassen, strittige Meldungen):
