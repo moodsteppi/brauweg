@@ -19,10 +19,19 @@ export const ENVELOPE_VERSION = 1;
  */
 export const DOPPELKOPF_MODULE_VERSION = 1;
 export const WIZARD_MODULE_VERSION = 1;
+/**
+ * 2 seit dem 9. August 2026: Dieser Client versteht die Zugliste als
+ * Ausschnitt ab `abIndex`. Wer die 1 meldet, bekommt vom Server weiter die
+ * ganze Liste. Das ist der Grund, warum ein Geraet, das ueber einen Deploy
+ * hinweg offen bleibt, nicht auseinanderlaeuft — der Server richtet sich
+ * nach dem, was der Client gemeldet hat, nicht nach dem, was er selbst kann.
+ */
+export const FELDHERR_MODULE_VERSION = 2;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
+  feldherr: FELDHERR_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */
