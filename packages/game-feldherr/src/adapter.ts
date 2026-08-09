@@ -48,15 +48,8 @@ const SNAPSHOT_VERSION = 1;
 export interface FeldherrView {
   readonly saat: number;
   readonly regeln: FeldherrRegeln;
-  /**
-   * Zuege beider Sitze, aeltester zuerst. Nichts ist verdeckt — aber nicht
-   * unbedingt alle: `abIndex` sagt, an welcher Stelle der Partie dieser
-   * Ausschnitt beginnt. Beim `join` ist er 0 und die Liste vollstaendig;
-   * beim Rundruf nach einem Zug enthaelt sie nur den Zuwachs.
-   */
+  /** Alle Zuege beider Sitze, aeltester zuerst. Nichts ist verdeckt. */
   readonly zuege: FeldherrPartie['zuege'];
-  /** Stelle in der Gesamtliste, an der `zuege` beginnt. */
-  readonly abIndex: number;
   readonly meldungen: Readonly<Record<number, Meldung>>;
   readonly ausgang: FeldherrPartie['ausgang'];
   readonly taktMs: number;
@@ -154,35 +147,17 @@ export const feldherr: GameModule<
    * Eine Sicht je Sitz gibt es trotzdem, damit die Plattform nichts
    * Besonderes tun muss.
    */
-  viewFor: (partie, _sitz, seit = 0): FeldherrView => {
-    /**
-     * Die Zugliste ist das Gedaechtnis der Partie und waechst bis zum Ende.
-     * Sie bei jedem Rundruf ganz zu verschicken kostet ueber eine Partie
-     * hinweg das Quadrat: gemessen 40 MB an beide Geraete statt 0,1 MB, und
-     * jedes einzelne dieser Pakete muss das Handy mitten in der laufenden
-     * Simulation zerlegen. Deshalb der Ausschnitt ab `seit`.
-     *
-     * `abIndex` faengt den einzigen Fall ab, in dem das gefaehrlich waere:
-     * Fehlt dem Empfaenger ein Stueck, sieht er es an der Luecke und holt
-     * sich die volle Sicht, statt still mit einem Loch weiterzurechnen.
-     */
-    const ab = Math.max(0, Math.min(seit, partie.zuege.length));
-    return {
-      saat: partie.saat,
-      regeln: partie.regeln,
-      zuege: ab === 0 ? partie.zuege : partie.zuege.slice(ab),
-      abIndex: ab,
-      meldungen: partie.meldungen,
-      ausgang: partie.ausgang,
-      taktMs: TAKT_MS,
-      vorlauf: VORLAUF_TAKTE,
-    };
-  },
+  viewFor: (partie): FeldherrView => ({
+    saat: partie.saat,
+    regeln: partie.regeln,
+    zuege: partie.zuege,
+    meldungen: partie.meldungen,
+    ausgang: partie.ausgang,
+    taktMs: TAKT_MS,
+    vorlauf: VORLAUF_TAKTE,
+  }),
 
-  spectatorView: (partie, seit = 0): FeldherrView => feldherr.viewFor(partie, 0, seit),
-
-  /** Die Zugliste ist append-only — ihre Laenge ist die Marke. */
-  viewCursor: (partie): number => partie.zuege.length,
+  spectatorView: (partie): FeldherrView => feldherr.viewFor(partie, 0),
 
   /**
    * Ein Bot gibt auf.
