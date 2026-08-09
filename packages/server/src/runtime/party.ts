@@ -102,7 +102,17 @@ export interface LiveParty {
   awards: readonly { seat: number; delta: number; reason: string }[];
 }
 
-export type RuntimeListener = (tableId: string) => void;
+/**
+ * `nurSicht` heisst: Es hat sich nichts an Tisch und Sitzen geaendert,
+ * sondern nur am Spielstand. Der Rundruf darf sich dann die Abfragen nach
+ * Tischzeile, Sitzen und Anzeigenamen sparen.
+ *
+ * Fuer ein Kartenspiel ist das Feinschliff — dort faellt eine Aktion je
+ * Sekunden an. Feldherr rundruft mehrmals je Sekunde ueber Minuten hinweg,
+ * und drei Datenbankfragen je Zug legen sich als Wartezeit direkt auf die
+ * Zeit zwischen Tipp und sichtbarem Zug.
+ */
+export type RuntimeListener = (tableId: string, nurSicht: boolean) => void;
 
 const DEFAULTS = {
   turnTimeoutMs: 60_000,
@@ -134,8 +144,8 @@ export class PartyRuntime {
     return () => this.listeners.delete(listener);
   }
 
-  private emit(tableId: string): void {
-    for (const listener of this.listeners) listener(tableId);
+  private emit(tableId: string, nurSicht = false): void {
+    for (const listener of this.listeners) listener(tableId, nurSicht);
   }
 
   get(tableId: string): LiveParty | undefined {
@@ -397,12 +407,18 @@ export class PartyRuntime {
    * ohne jede Hand — die Trennung ist nicht verhandelbar: Bei verdeckter
    * Partnerschaft waere ein Zuschauer mit Handeinsicht ein perfekter Komplize.
    */
-  viewFor(party: LiveParty, accountId: string | null) {
+  /**
+   * `seit` ist die Marke, die der Empfaenger schon hat (siehe
+   * GameModule.viewCursor). Nur Module mit anwachsender Sicht — heute
+   * Feldherr mit seiner Zugliste — werten sie aus; alle anderen bekommen
+   * unveraendert ihre volle Sicht.
+   */
+  viewFor(party: LiveParty, accountId: string | null, seit = 0) {
     const seat = accountId === null ? null : this.seatOf(party, accountId);
     const view =
       seat === null
-        ? party.module.spectatorView(party.state)
-        : party.module.viewFor(party.state, seat);
+        ? party.module.spectatorView(party.state, seit)
+        : party.module.viewFor(party.state, seat, seit);
 
     return {
       seat,
@@ -419,6 +435,14 @@ export class PartyRuntime {
 
   standings(party: LiveParty): PartyStanding[] {
     return party.module.standings(party.state);
+  }
+
+  /**
+   * Stand des anwachsenden Sichtteils. 0 bei jedem Modul, das keinen hat —
+   * dann bleibt `seit` fuer immer 0 und die Sicht geht vollstaendig raus.
+   */
+  viewCursor(party: LiveParty): number {
+    return party.module.viewCursor?.(party.state) ?? 0;
   }
 
   // -------------------------------------------------------------------------
@@ -478,7 +502,13 @@ export class PartyRuntime {
     }
 
     this.schedule(party);
-    this.emit(party.tableId);
+    /**
+     * Nur die Sicht: Eine Aktion, die die Partie NICHT beendet, ruehrt
+     * weder an Tischzeile noch an Sitzbelegung — die beiden Zweige, die das
+     * koennten, sind oben schon abgebogen. Der Rundruf darf sich seine
+     * Abfragen also sparen.
+     */
+    this.emit(party.tableId, true);
   }
 
   // -------------------------------------------------------------------------
