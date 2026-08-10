@@ -59,10 +59,17 @@ const MAX_EREIGNISSE = 4000;
 /** Beim Ueberlauf in einem Rutsch wegwerfen; Stueck fuer Stueck waere teuer. */
 const UEBERLAUF_BLOCK = 500;
 /**
- * Rumpfgrenze einer Sendung. Der Server nimmt 128 kB (BODY_LIMIT in
- * app.ts); hier bleibt Luft fuer Kopf und Kodierung.
+ * Rumpfgrenze einer Sendung.
+ *
+ * Nicht der Server ist hier die enge Stelle (BODY_LIMIT sind 128 kB),
+ * sondern der Browser: `sendBeacon` und `fetch` mit `keepalive` sind auf
+ * **64 kB** gedeckelt, und ueber der Grenze schlagen sie fehl. Genau die
+ * Sendungen, auf die es ankommt, gehen so raus — die Strittig-Meldung und
+ * der Abschied, wenn der Spieler den Tab schliesst. Eine grosszuegigere
+ * Grenze haette also ausgerechnet den Bericht gekostet, wegen dem das
+ * Ganze gebaut ist.
  */
-const MAX_RUMPF = 80 * 1024;
+const MAX_RUMPF = 56 * 1024;
 /** Nicht oefter als alle drei Sekunden senden — ausser beim Abschied. */
 const SENDE_PAUSE_MS = 3000;
 

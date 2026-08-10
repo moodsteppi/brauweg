@@ -212,6 +212,12 @@ Laufzeit, wie viele Zeichen stimmen.
   zerschnitte den Mitschnitt genau an der interessantesten Stelle.
 * **Beide Geräte müssen die Fassung mit Aufzeichnung haben.** Sonst gibt es
   nur einen Sitz, und der Vergleich — das eigentliche Werkzeug — entfällt.
+* **64 kB je Sendung, nicht mehr.** `sendBeacon` und `fetch` mit
+  `keepalive` sind dort gedeckelt — und genau darüber gehen die Sendungen
+  raus, auf die es ankommt (Strittig-Meldung, Abschied beim Schließen des
+  Tabs). Die Grenze im Ringpuffer steht deshalb bei 56 kB, mit Luft für
+  Kopf und Kodierung; darüber fallen die *ältesten* Einträge der Portion
+  weg, und `ab` weist die Lücke aus.
 * **`MIGRATE_ON_BOOT`** muss am Dienst stehen, sonst legt der Deploy die
   Tabelle nicht an und jede Aufnahme läuft ins Leere. (Die Migrationen 0016
   und 0017 sind so durchgelaufen; die Variable ist gesetzt.)
