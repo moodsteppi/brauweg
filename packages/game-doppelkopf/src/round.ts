@@ -62,6 +62,20 @@ export interface VorbehaltEntry {
 }
 
 /**
+ * Wie ein Vorbehalt fremden Sitzen WAEHREND der Abfrage gezeigt wird: Ob
+ * jemand "gesund" ist oder einen Vorbehalt hat, hoert man am Tisch sofort —
+ * WELCHEN aber nicht. `'verdeckt'` steht fuer "hat einen Vorbehalt, Art noch
+ * geheim". Erst wenn alle erklaert haben, wird die Art offengelegt. Ohne das
+ * verriete ein frueh angesagtes Solo/Hochzeit einem noch unentschlossenen
+ * Solisten, wer was auf der Hand hat.
+ */
+export interface SichtbarerVorbehalt {
+  readonly seat: number;
+  readonly kind: VorbehaltKind | 'verdeckt' | null;
+  readonly solo?: SoloKind;
+}
+
+/**
  * Wer was angesagt hat, in der Reihenfolge der Ansagen.
  *
  * Die Announcements-Struktur haelt nur fest, OB Re und Kontra gefallen
@@ -953,7 +967,7 @@ export interface PlayerView {
    * Listen kann die Oberflaeche eine Ansage niemandem zuordnen: Die
    * Announcements-Struktur haelt nur fest, OB Re gefallen ist.
    */
-  readonly vorbehalte: readonly VorbehaltEntry[];
+  readonly vorbehalte: readonly SichtbarerVorbehalt[];
   readonly ansagen: readonly AnsageEntry[];
   /** Eigene Partei. Bei ungeklaerter Hochzeit null. */
   readonly myParty: Party | null;
@@ -1121,16 +1135,29 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     gameType: state.gameType,
     order: state.order,
     announcements: state.announcements,
-    vorbehalte: state.vorbehalte,
+    // Waehrend der Vorbehaltsabfrage bleibt die ART fremder Vorbehalte
+    // verdeckt und die Schweine ungenannt: Wer ein Solo erwaegt, soll nicht
+    // sehen, wer Hochzeit/Armut/Solo hat oder die Karo-Asse haelt. Der eigene
+    // Sitz sieht seine eigene Wahl. Sobald alle erklaert haben (Phase nicht
+    // mehr 'vorbehalt'), liegt alles offen wie zuvor.
+    vorbehalte:
+      state.phase === 'vorbehalt'
+        ? state.vorbehalte.map((v) =>
+            v.seat === seat || v.kind === null
+              ? v
+              : { seat: v.seat, kind: 'verdeckt' as const },
+          )
+        : state.vorbehalte,
     ansagen: state.ansagen,
     myParty,
     knownParties,
     standings,
     trickCounts,
     pendingPflichtansage: state.pendingPflichtansage,
-    schweineSeats: state.rs.pflichtansageSchweine
-      ? state.seats.filter((s) => state.schweinchen[s])
-      : [],
+    schweineSeats:
+      state.rs.pflichtansageSchweine && state.phase !== 'vorbehalt'
+        ? state.seats.filter((s) => state.schweinchen[s])
+        : [],
     result: state.result,
     isMyTurn,
     allowedVorbehalte:

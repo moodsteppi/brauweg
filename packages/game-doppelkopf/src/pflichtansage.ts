@@ -98,16 +98,27 @@ export function checkPflichtansage(
 /**
  * Fristen fuer Ansagen und Absagen.
  *
- * Re/Kontra bis unmittelbar vor der zweiten eigenen Karte, danach je Stufe
- * eine Karte spaeter.
+ * Re/Kontra darf fallen, bis die zweite eigene Karte gelegt ist — am
+ * Vierertisch also bis zur achten Karte insgesamt (Ende des zweiten Stichs).
+ * Danach je Absage-Stufe eine eigene Karte spaeter; die Leiter rueckt als
+ * Ganzes einen Stich mit.
  */
 export function announcementDeadline(level: 0 | 1 | 2 | 3 | 4): number {
-  return level + 2; // 0 -> vor eigener Karte 2, 1 -> 3, ... 4 -> 6
+  return level + 2; // Re/Kontra -> 2 eigene Karten, keine 90 -> 3, ... schwarz -> 6
 }
 
+/**
+ * Zulaessig, solange der Ansager WENIGER eigene Karten gelegt hat als die
+ * Frist erlaubt. Fuer Re/Kontra (Stufe 0) heisst das `ownCardsPlayed < 2`:
+ * vor der eigenen Karte 1 und vor der eigenen Karte 2, danach nicht mehr.
+ *
+ * Frueher stand hier ein zusaetzliches `- 1`, das die Frist um eine eigene
+ * Karte verkuerzte: Re/Kontra ging dann nur bis zur vierten Tischkarte (erster
+ * Stich). Das war zu knapp — jetzt reicht es bis zur achten.
+ */
 export function mayAnnounce(
   level: 0 | 1 | 2 | 3 | 4,
   ownCardsPlayed: number,
 ): boolean {
-  return ownCardsPlayed < announcementDeadline(level) - 1;
+  return ownCardsPlayed < announcementDeadline(level);
 }

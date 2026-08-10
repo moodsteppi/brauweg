@@ -300,8 +300,12 @@ export function scoreRound(input: RoundInput): RoundResult {
    * auch wenn die Ansage zu leise war. Deshalb dreht ihr Vorzeichen mit dem
    * Sieg um, statt einfach mitzuwandern.
    */
+  // Feigling getrennt fuer Normal und Solo: im Normalspiel greift `feigling`,
+  // im Solo `feiglingSolo`. So laesst sich das Drehen fuers Solo einschalten,
+  // ohne es am Normaltisch zu haben — oder umgekehrt.
+  const feiglingAktiv = isSolo ? rs.feiglingSolo : rs.feigling;
   const feigling =
-    rs.feigling && angesagteStufe(ann, winner) < feiglingVerlangt(loserPoints);
+    feiglingAktiv && angesagteStufe(ann, winner) < feiglingVerlangt(loserPoints);
   const nimmt: Party = feigling ? (winner === 're' ? 'kontra' : 're') : winner;
 
   value += feigling ? -specialsNet : specialsNet;

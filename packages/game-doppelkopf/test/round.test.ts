@@ -13,6 +13,7 @@ import {
   createRound,
   currentActor,
   viewFor,
+  vorbehaltTurn,
 } from '../src/round.js';
 import type { AbsageLevel } from '../src/scoring.js';
 
@@ -498,4 +499,42 @@ test('eine gespielte Kreuz-Dame deckt die Partei dauerhaft auf', () => {
     state = apply(state, { type: 'playCard', seat, cardId: view.legal[0].id });
     assert.ok(merke(), 'die Kreuz-Dame wurde spaeter wieder vergessen');
   }
+});
+
+test('Sicht: fremde Vorbehalts-Art und Schweine bleiben bis zum Ende der Gesund-Runde verdeckt', () => {
+  // Der Reihe nach sagt einer ein Solo an, waehrend die anderen noch nicht
+  // erklaert haben. Ein Mitspieler, der selbst noch ein Solo erwaegt, darf
+  // daran nicht ablesen, wer was hat - erst wenn alle durch sind.
+  const rs = makeRuleSet({ pflichtansageSchweine: true });
+  let state = createRound(rs, SEATS, 0, 42);
+  assert.equal(state.phase, 'vorbehalt');
+
+  const erster = vorbehaltTurn(state)!;
+  const sichtErster = viewFor(state, erster);
+  assert.ok(sichtErster.allowedVorbehalte.includes('solo'), 'Aufbau: Solo muss ansagbar sein');
+  const solo = sichtErster.soloOptions[0]!;
+  state = apply(state, { type: 'vorbehalt', seat: erster, kind: 'solo', solo });
+
+  // Die Abfrage laeuft noch: der Ansager sieht sein Solo, ein anderer nur,
+  // DASS ein Vorbehalt da ist ('verdeckt'), nicht welcher. Und die Schweine
+  // nennt die Sicht noch niemandem.
+  assert.equal(state.phase, 'vorbehalt');
+  const anderer = SEATS.find((s) => s !== erster)!;
+  const fremd = viewFor(state, anderer).vorbehalte.find((v) => v.seat === erster);
+  assert.equal(fremd?.kind, 'verdeckt', 'die Art bleibt fremden Sitzen verborgen');
+  const eigen = viewFor(state, erster).vorbehalte.find((v) => v.seat === erster);
+  assert.equal(eigen?.kind, 'solo', 'der Ansager sieht seine eigene Wahl');
+  assert.deepEqual(viewFor(state, anderer).schweineSeats, [], 'Schweine erst nach der Runde');
+
+  // Die restlichen Sitze sagen gesund - danach ist die Abfrage vorbei.
+  while (state.phase === 'vorbehalt') {
+    const dran = vorbehaltTurn(state)!;
+    state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
+  }
+
+  // Jetzt liegt die Art offen: aus dem Solo ist ein Solo geworden, und ein
+  // Mitspieler sieht das auch.
+  assert.notEqual(state.phase, 'vorbehalt');
+  const offen = viewFor(state, anderer).vorbehalte.find((v) => v.seat === erster);
+  assert.equal(offen?.kind, 'solo', 'nach der Gesund-Runde ist die Art offen');
 });

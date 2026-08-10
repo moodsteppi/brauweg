@@ -58,7 +58,7 @@ export function validateRuleSet(rs: RuleSet): ValidationIssue[] {
       'Die moralische Schwelle muss unter der Pflichtschwelle liegen.',
     );
   }
-  if (rs.feigling && !rs.announcements) {
+  if ((rs.feigling || rs.feiglingSolo) && !rs.announcements) {
     err('FEIGLING_NEEDS_ANNOUNCEMENTS', 'Feigling setzt aktivierte Ansagen voraus.');
   }
 

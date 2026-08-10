@@ -79,8 +79,15 @@ export interface RuleSet {
    *
    * Sinn der Regel: Sie bestraft das Sitzenlassen einer sicheren Hand. Ohne sie
    * ist Schweigen bei guten Karten die risikoloseste Wahl.
+   *
+   * `feigling` gilt NUR im Normalspiel. Fuers Solo gibt es den eigenen Schalter
+   * `feiglingSolo` — dort will man das Drehen oft anders (oder gar nicht)
+   * haben als am gewoehnlichen Tisch, weil ein Solist allein gegen drei
+   * ohnehin hoch ansagen muss.
    */
   feigling: boolean;
+  /** Feigling, aber nur in Solo-Spielen. Getrennt schaltbar von `feigling`. */
+  feiglingSolo: boolean;
 
   // --- Zaehlhilfe ---
   /**
@@ -169,6 +176,7 @@ export const DEFAULT_RULESET: RuleSet = {
   announcements: true,
   absagen: true,
   feigling: false,
+  feiglingSolo: false,
 
   countPoints: false,
 

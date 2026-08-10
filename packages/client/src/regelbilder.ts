@@ -37,6 +37,8 @@ const BILDER: Record<string, string> = {
   pflichtansageSchweine: '🐷',
   /* Der Feigling ist der, der sich nicht traut — nicht der, der verliert. */
   feigling: '🙈',
+  /* Derselbe Hasenfuß, nur fürs Solo — anderes Äffchen zum Unterscheiden. */
+  feiglingSolo: '🙊',
   bock: '🐐',
   pflichtsolo: '☝️',
   countPoints: '🔢',

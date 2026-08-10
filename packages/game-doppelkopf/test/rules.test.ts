@@ -344,13 +344,16 @@ test('Pflichtansage: bei 29 Augen nur moralischer Hinweis', () => {
   assert.equal(r.canDecline, true);
 });
 
-test('Ansagefristen: Re bis vor der zweiten Karte, Absagen je eine spaeter', () => {
-  assert.equal(mayAnnounce(0, 0), true);
-  assert.equal(mayAnnounce(0, 1), false); // zweite Karte liegt bereits
-  assert.equal(mayAnnounce(1, 1), true); // keine 90 noch moeglich
-  assert.equal(mayAnnounce(1, 2), false);
-  assert.equal(mayAnnounce(4, 4), true); // schwarz
-  assert.equal(mayAnnounce(4, 5), false);
+test('Ansagefristen: Re bis zur zweiten eigenen Karte (8. Tischkarte), Absagen je eine spaeter', () => {
+  // Re/Kontra bleibt erlaubt, solange die eigene Karte 2 noch aussteht — am
+  // Vierertisch also bis zur achten gelegten Karte. Erst danach ist Schluss.
+  assert.equal(mayAnnounce(0, 0), true); // vor der ersten eigenen Karte
+  assert.equal(mayAnnounce(0, 1), true); // eine eigene Karte gelegt, noch offen
+  assert.equal(mayAnnounce(0, 2), false); // zweite eigene Karte liegt: zu spaet
+  assert.equal(mayAnnounce(1, 2), true); // keine 90 eine Karte spaeter
+  assert.equal(mayAnnounce(1, 3), false);
+  assert.equal(mayAnnounce(4, 5), true); // schwarz ganz am Ende der Leiter
+  assert.equal(mayAnnounce(4, 6), false);
 });
 
 // --- Punkteschema: multiplikative Ansagen ---
@@ -491,6 +494,64 @@ test('Feigling: ausgeschaltet dreht nichts', () => {
   const aus = feiglingRunde(knappUeberNull(), { re: true }, { feigling: false });
   assert.equal(aus.feigling, false);
   assert.equal(aus.winner, 're');
+});
+
+// Feigling ist getrennt schaltbar: `feigling` gilt nur im Normalspiel,
+// `feiglingSolo` nur im Solo. Ein Solist, der zu leise ansagt, dreht also nur
+// mit dem eigenen Schalter — und der Normalspiel-Feigling fasst ein Solo nicht
+// mehr an.
+function feiglingSoloRunde(
+  tricks: TrickRecord[],
+  ann: Partial<typeof NO_ANNOUNCEMENTS>,
+  patch = {},
+) {
+  const rs = makeRuleSet({
+    feigling: false,
+    feiglingSolo: true,
+    spDoppelkopf: false,
+    spFuchsGefangen: false,
+    spKarlchen: false,
+    ...patch,
+  });
+  return scoreRound({
+    rs,
+    gameType: { kind: 'solo', solo: 'suitC' },
+    order: buildOrder({ kind: 'solo', solo: 'suitC' }, rs),
+    reSeats: [0],
+    tricks,
+    announcements: { ...NO_ANNOUNCEMENTS, ...ann },
+    multiplier: 1,
+  });
+}
+
+test('Feigling/Solo: feiglingSolo dreht im Solo, feigling allein nicht', () => {
+  // Solist gewinnt hoch, sagt aber nur Re — mit feiglingSolo dreht der Sieg.
+  const mit = feiglingSoloRunde(knappUeberNull(), { re: true });
+  assert.equal(mit.isSolo, true);
+  assert.equal(mit.feigling, true, 'der Solo-Schalter dreht');
+
+  // Nur der Normalspiel-Feigling an, feiglingSolo aus: im Solo passiert nichts.
+  const nurNormal = feiglingSoloRunde(
+    knappUeberNull(),
+    { re: true },
+    { feigling: true, feiglingSolo: false },
+  );
+  assert.equal(nurNormal.isSolo, true);
+  assert.equal(nurNormal.feigling, false, 'der Normalspiel-Feigling fasst das Solo nicht an');
+});
+
+test('Feigling: der Normalspiel-Schalter dreht das Normalspiel weiter, aber nicht das Solo', () => {
+  // Gleiche zu leise Ansage, einmal normal (dreht) und einmal solo (dreht nicht),
+  // jeweils nur mit feigling (Normal) an.
+  const normal = feiglingRunde(knappUeberNull(), { re: true }, { feiglingSolo: false });
+  assert.equal(normal.feigling, true);
+
+  const solo = feiglingSoloRunde(
+    knappUeberNull(),
+    { re: true },
+    { feigling: true, feiglingSolo: false },
+  );
+  assert.equal(solo.feigling, false);
 });
 
 test('Feigling: die Nullsumme der Sitzpunkte bleibt erhalten', () => {
