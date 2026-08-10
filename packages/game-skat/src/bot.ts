@@ -142,6 +142,15 @@ export function botAction(view: PlayerView): PartyAction | null {
       return view.reiz.wert <= grenze ? { type: 'reizWeiter' } : { type: 'reizWeg' };
     }
 
+    case 'schieben': {
+      // Schieberamsch: aufnehmen und die zwei augenreichsten Karten
+      // weiterschieben. Blind schieben verdoppelt den Ramsch — das ist eine
+      // Wette, die der Bot nicht eingeht.
+      if (!view.schiebenAufgenommen) return { type: 'schiebenNehmen' };
+      const weg = [...view.hand].sort((a, b) => augen(b) - augen(a)).slice(0, 2);
+      return { type: 'schieben', cards: weg.map((c) => c.id) };
+    }
+
     case 'skat':
       // Immer aufnehmen: mehr Information, und der Bot sagt ohnehin kein
       // Handspiel an (das waere eine Einschaetzung, die er sich nicht zutraut).
@@ -164,11 +173,19 @@ export function botAction(view: PlayerView): PartyAction | null {
     }
 
     case 'ansage':
-      return { type: 'ansage', spiel: besteFarbe(view.hand) };
+      // Farbspiel, nie Grand oder Saechsische Spitze — beide verlangen eine
+      // Einschaetzung, die der Bot nicht sicher treffen kann. Patrouillen sagt
+      // er dagegen an: Was er hat, zeigt er, und beide Buben einer Couleur
+      // sprechen ohnehin fuer ein tragfaehiges Blatt.
+      return {
+        type: 'ansage',
+        spiel: besteFarbe(view.hand),
+        patrouillen: view.meinePatrouillen,
+      };
 
     case 'stich':
-      // Kontra/Re sagt der Bot nie: das verdoppelt den Einsatz und ist eine
-      // Einschaetzung, die er nicht treffen kann.
+      // Kontra, Re und Hirsch sagt der Bot nie: jede Stufe verdoppelt den
+      // Einsatz und ist eine Einschaetzung, die er nicht treffen kann.
       return { type: 'karte', cardId: chooseCard(view).id };
 
     default:

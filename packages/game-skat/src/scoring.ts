@@ -10,10 +10,11 @@
  * Null ist gewonnen, wenn der Alleinspieler keinen Stich macht; fester Wert.
  *
  * Ramsch (alle passen): Wer die meisten Augen sammelt, verliert sie als
- * Minuspunkte; ein Durchmarsch (alle Stiche) gewinnt stattdessen.
+ * Minuspunkte; ein Durchmarsch (alle Stiche) gewinnt stattdessen. Jungfrauen
+ * (ein Sitz ohne einen einzigen Stich) und blind geschobene Runden im
+ * Schieberamsch verdoppeln diesen Betrag.
  *
- * Bewusst schlank gehalten, aber regelrichtig fuer den Normalfall: Jungfrau im
- * Ramsch und die feineren Turnierboni (Seeger-Fabian) sind nicht abgebildet —
+ * Die feineren Turnierboni (Seeger-Fabian) sind bewusst nicht abgebildet —
  * sie aendern die Rangfolge einer Partie praktisch nie und stehen als offener
  * Punkt.
  */
@@ -37,6 +38,10 @@ export interface DealErgebnis {
   readonly punkte: Readonly<Record<number, number>>;
   /** Ramsch: Sitz mit Durchmarsch, sonst null. */
   readonly durchmarsch: number | null;
+  /** Ramsch: Sitze ohne einen einzigen Stich (nur wenn die Regel an ist). */
+  readonly jungfrauen: readonly number[];
+  /** Angesagte Patrouillen, die in den Spielwert eingingen. */
+  readonly patrouillen: number;
 }
 
 export interface AbrechnungEingabe {
@@ -49,6 +54,17 @@ export interface AbrechnungEingabe {
   readonly schwarzAngesagt: boolean;
   readonly kontra: boolean;
   readonly re: boolean;
+  readonly hirsch: boolean;
+  /** Angesagte Patrouillen (0-2): je eine Spielstufe. */
+  readonly patrouillen: number;
+  /** Tischvariante „Nur Buben sind Spitze". */
+  readonly nurBubenSpitzen: boolean;
+  /** Tischvariante „Hand wird nicht bestraft": verlorene Hand zaehlt einfach. */
+  readonly handNichtBestraft: boolean;
+  /** Tischvariante Jungfrauen im Ramsch. */
+  readonly jungfrauenAn: boolean;
+  /** Verdopplungen aus blind geschobenen Runden im Schieberamsch. */
+  readonly ramschFaktor: number;
   /** Alle drei Sitze. */
   readonly seats: readonly number[];
   /** Von jedem Sitz gewonnene Karten aus den Stichen. */
@@ -63,8 +79,9 @@ export interface AbrechnungEingabe {
   readonly deck: readonly Card[];
 }
 
-const kontraFaktor = (e: { kontra: boolean; re: boolean }): number =>
-  e.re ? 4 : e.kontra ? 2 : 1;
+/** Die Kette Kontra ×2, Re ×4, Hirsch ×8. Jede Stufe setzt die vorige voraus. */
+const kontraFaktor = (e: { kontra: boolean; re: boolean; hirsch: boolean }): number =>
+  e.hirsch ? 8 : e.re ? 4 : e.kontra ? 2 : 1;
 
 /** Kleinstes Vielfache des Grundwerts, das den Reizwert erreicht. */
 function ueberreizVerlust(grund: number, reizWert: number): number {
@@ -95,7 +112,7 @@ export function abrechnen(e: AbrechnungEingabe): DealErgebnis {
     const k = kontraFaktor(e);
     const ueberreizt = wert < e.reizWert;
     const wirklichGewonnen = gewonnen && !ueberreizt;
-    punkte[declarer] = (wirklichGewonnen ? wert : -2 * wert) * k;
+    punkte[declarer] = (wirklichGewonnen ? wert : -verlustFaktor(e) * wert) * k;
     return {
       gameType: e.gameType,
       declarer,
@@ -108,6 +125,8 @@ export function abrechnen(e: AbrechnungEingabe): DealErgebnis {
       declarerAugen,
       punkte,
       durchmarsch: null,
+      jungfrauen: [],
+      patrouillen: 0,
     };
   }
 
@@ -118,7 +137,7 @@ export function abrechnen(e: AbrechnungEingabe): DealErgebnis {
   const schneider = verliererAugen <= 30;
   const schwarz = verliererStiche === 0;
 
-  const spitzenN = spitzen(e.matadorKarten, e.gameType, e.deck);
+  const spitzenN = spitzen(e.matadorKarten, e.gameType, e.deck, e.nurBubenSpitzen);
   const spielwert = farbGrandWert(e.gameType, {
     spitzenN,
     hand: e.hand,
@@ -127,6 +146,7 @@ export function abrechnen(e: AbrechnungEingabe): DealErgebnis {
     schwarz,
     schwarzAngesagt: e.schwarzAngesagt,
     ouvert: e.ouvert,
+    patrouillen: e.patrouillen,
   });
 
   // Ansagen muessen erfuellt sein, sonst ist das Spiel verloren.
@@ -141,7 +161,7 @@ export function abrechnen(e: AbrechnungEingabe): DealErgebnis {
 
   const k = kontraFaktor(e);
   const verlustBasis = ueberreizt ? Math.max(spielwert, ueberreizVerlust(grund, e.reizWert)) : spielwert;
-  punkte[declarer] = (gewonnen ? spielwert : -2 * verlustBasis) * k;
+  punkte[declarer] = (gewonnen ? spielwert : -verlustFaktor(e) * verlustBasis) * k;
 
   return {
     gameType: e.gameType,
@@ -155,10 +175,30 @@ export function abrechnen(e: AbrechnungEingabe): DealErgebnis {
     declarerAugen,
     punkte,
     durchmarsch: null,
+    jungfrauen: [],
+    patrouillen: e.patrouillen,
   };
 }
 
-/** Ramsch: der Augenreichste zahlt; ein Durchmarsch dreht das um. */
+/**
+ * Womit ein verlorenes Spiel zu Buche schlaegt: sonst doppelt, im Handspiel
+ * einfach, wenn der Tisch „Hand wird nicht bestraft" spielt. Wer ohne Skat
+ * antritt, geht das groessere Risiko und soll dafuer nicht auch noch doppelt
+ * zahlen.
+ */
+function verlustFaktor(e: { hand: boolean; handNichtBestraft: boolean }): number {
+  return e.hand && e.handNichtBestraft ? 1 : 2;
+}
+
+/**
+ * Ramsch: der Augenreichste zahlt; ein Durchmarsch dreht das um.
+ *
+ * Verdoppelt wird zweimal: einmal je blind geschobener Runde im
+ * Schieberamsch (`ramschFaktor`), einmal je Jungfrau — einem Sitz, der keinen
+ * einzigen Stich gemacht hat. Der Durchmarsch bleibt davon unberuehrt: Wer
+ * alle zehn Stiche holt, gewinnt die vollen 120, und die anderen beiden waeren
+ * sonst gleich zwei Jungfrauen, was den Gewinn ins Absurde triebe.
+ */
 function ramsch(e: AbrechnungEingabe): DealErgebnis {
   const punkte: Record<number, number> = Object.fromEntries(e.seats.map((s) => [s, 0]));
   const augen: Record<number, number> = Object.fromEntries(
@@ -170,18 +210,24 @@ function ramsch(e: AbrechnungEingabe): DealErgebnis {
   // gewonnenen Karten, deshalb hier nichts weiter zu tun.
   const durch = e.seats.find((s) => e.stiche[s] === 10) ?? null;
   if (durch !== null) {
-    punkte[durch] = 120; // Durchmarsch: alle Stiche
-    return baseRamsch(e, punkte, durch);
+    punkte[durch] = 120 * e.ramschFaktor; // Durchmarsch: alle Stiche
+    return baseRamsch(e, punkte, durch, []);
   }
+
   const maxAugen = Math.max(...e.seats.map((s) => augen[s]!));
-  for (const s of e.seats) if (augen[s] === maxAugen) punkte[s] = -maxAugen;
-  return baseRamsch(e, punkte, null);
+  const jungfrauen = e.jungfrauenAn
+    ? e.seats.filter((s) => e.stiche[s] === 0 && augen[s] !== maxAugen)
+    : [];
+  const faktor = e.ramschFaktor * 2 ** jungfrauen.length;
+  for (const s of e.seats) if (augen[s] === maxAugen) punkte[s] = -maxAugen * faktor;
+  return baseRamsch(e, punkte, null, jungfrauen);
 }
 
 function baseRamsch(
   e: AbrechnungEingabe,
   punkte: Record<number, number>,
   durchmarsch: number | null,
+  jungfrauen: readonly number[],
 ): DealErgebnis {
   return {
     gameType: e.gameType,
@@ -195,5 +241,7 @@ function baseRamsch(
     declarerAugen: 0,
     punkte,
     durchmarsch,
+    jungfrauen,
+    patrouillen: 0,
   };
 }

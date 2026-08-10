@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react';
 
 import { cardImage, deckBack, type Deck } from './decks';
-import { cardLabel, cardName, isRed, rankLabel, suitSymbol } from './i18n';
+import { cardName, isRed, rankLabel, suitSymbol } from './i18n';
 import type { Card } from './protocol';
 
 export function CardFront({
@@ -46,9 +46,84 @@ export function CardFront({
       </>
     );
   }
+  return <TextKarte card={card} />;
+}
+
+/**
+ * Die gezeichnete Karte des Textblatts.
+ *
+ * Frueher stand hier eine Zeile Text in fester Schriftgroesse. Die war am
+ * Rechner in Ordnung und im Hochformat unlesbar: Die Karte ist dort keine
+ * 50 Pixel breit, die Schrift blieb aber bei 1,15rem stehen und lief entweder
+ * ueber den Rand oder verschwand im Zusammenschieben der Hand.
+ *
+ * Jetzt ist es ein SVG mit fester `viewBox`. Damit skaliert alles exakt mit
+ * der Kartengroesse mit — vom Kartenruecken-kleinen Stich bis zur
+ * herangezoomten Handkarte — und die Schriftgroesse muss nirgends je
+ * Tischplatz gerechnet werden.
+ *
+ * Der Index sitzt oben LINKS und nicht mittig: In der Hand liegen die Karten
+ * uebereinander, sichtbar ist nur ein schmaler Streifen am linken Rand. Wert
+ * und Farbe muessen in diesem Streifen stehen, sonst sieht man von acht der
+ * zehn Karten nichts als Weiss. Das grosse Zeichen in der Mitte ist fuer die
+ * Karten, die frei liegen: Stich, letzter Stich, Ouvert.
+ */
+function TextKarte({ card }: { card: { suit: string; rank: string } }): React.JSX.Element {
+  // Zauberer und Narr haben weder Farbe noch Wert — sie sind, was sie sind.
+  // Ihr Buchstabe steht deshalb allein und gross in der Mitte.
+  if (card.suit === 'Z' || card.suit === 'N') {
+    const z = card.suit === 'Z';
+    return (
+      <span className={`pc-text pc-text--sonder pc-text--${z ? 'z' : 'n'}`} aria-label={cardName(card)}>
+        <svg viewBox="0 0 100 145" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <g className="pc-text-tinte">
+            <text x="50" y="88" textAnchor="middle" fontSize="62" fontWeight="800">
+              {z ? 'Z' : 'N'}
+            </text>
+            {z && (
+              <text x="50" y="122" textAnchor="middle" fontSize="26">
+                ★
+              </text>
+            )}
+          </g>
+        </svg>
+      </span>
+    );
+  }
+
+  const rot = isRed(card);
+  const zeichen = suitSymbol(card.suit);
+  const wert = rankLabel(card.rank);
+  // Die viewBox folgt --pc-ratio (1.452): 100 breit, 145 hoch.
   return (
-    <span className={`pc-text${isRed(card) ? ' pc-red' : ''}`} aria-label={cardName(card)}>
-      {cardLabel(card)}
+    <span className={`pc-text${rot ? ' pc-red' : ''}`} aria-label={cardName(card)}>
+      <svg viewBox="0 0 100 145" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <g className="pc-text-tinte">
+          {/* Index oben links: Wert ueber Farbzeichen, beides im sichtbaren
+              Streifen. Die Zehn ist zweistellig und braucht eine kleinere
+              Schrift — sonst schneidet der Kartenrand ihre Eins ab, und aus
+              der Zehn wird eine Null. */}
+          <text
+            x="15"
+            y="34"
+            textAnchor="middle"
+            fontSize={wert.length > 1 ? 24 : 30}
+            fontWeight="800"
+          >
+            {wert}
+          </text>
+          <text x="15" y="60" textAnchor="middle" fontSize="24">
+            {zeichen}
+          </text>
+          {/* Grosses Zeichen fuer frei liegende Karten — unten rechts, weit
+              genug nach aussen, dass es NICHT in den sichtbaren Streifen der
+              Nachbarkarte ragt. Sonst steht unter jedem Index noch ein halbes
+              fremdes Zeichen, und die Reihe wird unruhiger als vorher. */}
+          <text x="74" y="114" textAnchor="middle" fontSize="40" opacity="0.85">
+            {zeichen}
+          </text>
+        </g>
+      </svg>
     </span>
   );
 }

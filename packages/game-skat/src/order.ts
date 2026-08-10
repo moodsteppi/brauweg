@@ -9,6 +9,11 @@
  *    > 9 > 8 > 7.
  *  - **Grand** (`grand`) und **Ramsch** (`ramsch`): Nur die vier Buben sind
  *    Trumpf, sonst nichts. Ramsch spielt sich wie Grand.
+ *  - **Saechsische Spitze** (`saechsisch`): wie Grand nur mit Buben als
+ *    Trumpf, aber die ganze Ordnung steht auf dem Kopf. Der Karo-Bube ist der
+ *    hoechste Trumpf und der Kreuz-Bube der niedrigste; unter den Farbkarten
+ *    ist die Sieben die staerkste und das Ass die schwaechste
+ *    (7 > 8 > 9 > 10 > D > K > A). Eine schaltbare Tischvariante.
  *  - **Null** (`null`): Kein Trumpf. Die Buben sind gewoehnliche Karten ihrer
  *    Farbe, und die Reihenfolge ist A > K > D > B > 10 > 9 > 8 > 7 — die Zehn
  *    steht also NICHT mehr oben. Das ist die eigene Falle des Nullspiels.
@@ -19,19 +24,15 @@ import { type Card, type Suit, SUITS, isJack } from './cards.js';
 export type GameType =
   | { readonly kind: 'suit'; readonly trump: Suit }
   | { readonly kind: 'grand' }
+  | { readonly kind: 'saechsisch' }
   | { readonly kind: 'null' }
   | { readonly kind: 'ramsch' };
-
-/** In Grand und Ramsch ist Trumpf allein Bubensache. */
-function onlyJacksAreTrump(gt: GameType): boolean {
-  return gt.kind === 'grand' || gt.kind === 'ramsch';
-}
 
 export function isTrump(card: Card, gt: GameType): boolean {
   if (gt.kind === 'null') return false;
   if (isJack(card)) return true;
   if (gt.kind === 'suit') return card.suit === gt.trump;
-  return false; // grand/ramsch: nur Buben
+  return false; // grand/saechsisch/ramsch: nur Buben
 }
 
 /**
@@ -57,20 +58,35 @@ const NULL_RANG: Record<string, number> = {
   '8': 1,
   '7': 0,
 };
+// Saechsische Spitze: die Farbreihe steht auf dem Kopf — die Sieben schlaegt
+// alles, das Ass verliert gegen alles. Die Augen bleiben davon unberuehrt: Ein
+// Ass ist weiterhin elf Augen wert, es sticht nur nichts mehr.
+const SAECHS_RANG: Record<string, number> = { '7': 6, '8': 5, '9': 4, T: 3, Q: 2, K: 1, A: 0 };
+
+/** Rangtafel der Farbkarten fuer diese Spielart. */
+function farbRang(gt: GameType): Record<string, number> {
+  if (gt.kind === 'null') return NULL_RANG;
+  if (gt.kind === 'saechsisch') return SAECHS_RANG;
+  return FARB_RANG;
+}
 
 /**
  * Trumpfstaerke. Buben liegen ueber allen Trumpffarbkarten; unter den Buben
- * gewinnt Kreuz. Nur fuer Truempfe aufrufen (sonst -1).
+ * gewinnt Kreuz — in der Saechsischen Spitze dagegen Karo, weil dort die
+ * ganze Ordnung gedreht ist. Nur fuer Truempfe aufrufen (sonst -1).
  */
 function trumpStrength(card: Card, gt: GameType): number {
   if (!isTrump(card, gt)) return -1;
-  if (isJack(card)) return 100 - SUITS.indexOf(card.suit); // C=100 … D=97
-  return 50 + (FARB_RANG[card.rank] ?? 0); // Trumpffarbkarte, stets unter den Buben
+  if (isJack(card)) {
+    const i = SUITS.indexOf(card.suit); // C=0 … D=3
+    return gt.kind === 'saechsisch' ? 97 + i : 100 - i;
+  }
+  return 50 + (farbRang(gt)[card.rank] ?? 0); // Trumpffarbkarte, stets unter den Buben
 }
 
 /** Rang einer Fehlfarbkarte innerhalb ihrer Farbe. */
 function suitStrength(card: Card, gt: GameType): number {
-  return (gt.kind === 'null' ? NULL_RANG : FARB_RANG)[card.rank] ?? 0;
+  return farbRang(gt)[card.rank] ?? 0;
 }
 
 /**

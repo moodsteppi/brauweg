@@ -295,9 +295,17 @@ const de: Record<string, string> = {
   'regel.training': 'Training',
   'regel.scharf': 'Scharfer Doppelkopf',
 
-  // Tischregeln von Skat.
+  // Tischregeln von Skat. `training` und `bock` teilt es sich mit dem
+  // Doppelkopf — die Schlüssel stehen weiter oben und gelten für beide.
+  'regel.nurBubenSpitzen': 'Nur Buben sind Spitze',
+  'regel.patrouillen': 'Patrouillen',
+  'regel.saechsischeSpitze': 'Sächsische Spitze',
+  'regel.handNichtBestraft': 'Hand wird nicht bestraft',
   'regel.ramsch': 'Ramsch, wenn alle passen',
+  'regel.schieberamsch': 'Schieberamsch',
+  'regel.jungfrauen': 'Jungfrauen',
   'regel.kontraRe': 'Kontra und Re',
+  'regel.hirsch': 'Hirsch',
 
   // Hausregeln des Zauberers.
   'regel.lastSpecialWins': 'Der letzte sticht',

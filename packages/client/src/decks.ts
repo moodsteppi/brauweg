@@ -65,14 +65,14 @@ export interface Deck {
 
 export const DECKS: readonly Deck[] = [
   { id: 'text', nameKey: 'deck.text', hintKey: 'deck.text.hint' },
-  // Die beiden Minimal-Blaetter haben nur Neun bis Ass - ein Doppelkopfblatt.
+  // Die beiden Minimal-Blaetter haben nur Neun bis Ass.
   {
     id: 'minimal2',
     nameKey: 'deck.minimal2',
     hintKey: 'deck.minimal2.hint',
     dir: 'minimal2',
     ext: 'svg',
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'minimal4',
@@ -80,7 +80,7 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.minimal4.hint',
     dir: 'minimal4',
     ext: 'svg',
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'klassisch',
@@ -88,8 +88,8 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.klassisch.hint',
     dir: 'klassisch',
     ext: 'png',
-    // Kein Zauberblatt: keine Karte fuer Eins bis Acht, kein Zauberer, kein Narr.
-    games: ['doppelkopf'],
+    // Kein Zauberblatt: kein Zauberer, kein Narr.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'eiche',
@@ -97,8 +97,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.eiche.hint',
     dir: 'eiche',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'winterhof',
@@ -106,8 +107,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.winterhof.hint',
     dir: 'winterhof',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'sommerwiese',
@@ -115,8 +117,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.sommerwiese.hint',
     dir: 'sommerwiese',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'nachthimmel',
@@ -124,8 +127,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.nachthimmel.hint',
     dir: 'nachthimmel',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'rubin',
@@ -133,8 +137,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.rubin.hint',
     dir: 'rubin',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'smaragd',
@@ -142,8 +147,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.smaragd.hint',
     dir: 'smaragd',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'kupferstich',
@@ -151,8 +157,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.kupferstich.hint',
     dir: 'kupferstich',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'koeniglich',
@@ -160,8 +167,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.koeniglich.hint',
     dir: 'koeniglich',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'schiefer',
@@ -169,8 +177,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.schiefer.hint',
     dir: 'schiefer',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'pinguin',
@@ -178,8 +187,9 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.pinguin.hint',
     dir: 'pinguin',
     ext: 'webp',
-    // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    // Neun bis Ass. Beim Skat fallen Sieben und Acht auf die Textkarte
+    // zurueck, solange die Flaechen fehlen — siehe DECK_LUECKE.
+    games: ['doppelkopf', 'skat'],
   },
   {
     id: 'zauberwald',
@@ -193,6 +203,25 @@ export const DECKS: readonly Deck[] = [
 ];
 
 export const DEFAULT_DECK: DeckId = 'text';
+
+/**
+ * Bekannte Luecke: Die Bildblaetter reichen von Neun bis Ass (Doppelkopf-
+ * Bereich). Skat braucht auch Sieben und Acht. Solange die Flaechen fehlen,
+ * faellt genau diese Karte auf die Textdarstellung zurueck (`CardFront`
+ * fängt den Ladefehler ab) — ein gemischtes Blatt statt eines kaputten Bildes.
+ *
+ * Steht hier als Konstante und nicht nur als Kommentar, damit die Blattwahl
+ * den Hinweis anzeigen kann, statt dass jemand den Wechsel für einen Fehler
+ * hält. Weg darf sie, sobald eine Bestellung die 7/8-Flächen nachliefert.
+ */
+export const DECK_LUECKE: Record<string, readonly string[]> = {
+  skat: ['7', '8'],
+};
+
+/** Fehlen diesem Blatt in diesem Spiel Karten? Nur für den Hinweistext. */
+export function deckLuecke(deck: Deck, gameId: string): readonly string[] {
+  return deck.dir ? (DECK_LUECKE[gameId] ?? []) : [];
+}
 
 export function deckById(id: string | null | undefined): Deck {
   return DECKS.find((deck) => deck.id === id) ?? DECKS[0]!;

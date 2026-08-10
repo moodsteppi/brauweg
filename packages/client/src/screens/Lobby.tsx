@@ -40,6 +40,27 @@ function gemerkteEinstellungen(gameId: string): Gemerkt | null {
     return null;
   }
 }
+/**
+ * Der Satz unter dem Erstellen-Knopf.
+ *
+ * Er stand einmal fest verdrahtet da und erzählte auch am Skattisch vom
+ * „Bot als Vierter" — ein Satz aus dem Doppelkopf. Skat IST ein Dreierspiel;
+ * dort ist der Dreiertisch der Normalfall und kein Behelf. Deshalb hängt der
+ * Text jetzt am Spiel und nicht allein an der Platzzahl.
+ */
+function fussnote(gameId: string, seats: number, visibility: 'public' | 'club_only'): string {
+  if (visibility === 'club_only') {
+    return 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.';
+  }
+  if (gameId === 'skat') {
+    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots — dann zählt der Tisch nicht für die Rangliste.';
+  }
+  if (seats === 3) {
+    return 'Am Dreiertisch spielt immer ein Bot als Vierter mit. Der Tisch zählt trotzdem für die Rangliste.';
+  }
+  return 'Freie Plätze füllst du am Tisch mit Bots. Dann zählt der Tisch nicht für die Rangliste.';
+}
+
 export function Lobby({
   gameId,
   onEnter,
@@ -281,13 +302,7 @@ export function Lobby({
             <button className="lobby-erstellen" onClick={() => void create()}>
               Tisch erstellen
             </button>
-            <p className="muted lobby-fussnote">
-              {visibility === 'club_only'
-                ? 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.'
-                : seats === 3
-                  ? 'Am Dreiertisch spielt immer ein Bot als Vierter mit. Der Tisch zählt trotzdem für die Rangliste.'
-                  : 'Freie Plätze füllst du am Tisch mit Bots. Dann zählt der Tisch nicht für die Rangliste.'}
-            </p>
+            <p className="muted lobby-fussnote">{fussnote(gameId, seats, visibility)}</p>
           </section>
         </div>
 

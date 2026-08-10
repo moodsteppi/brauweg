@@ -44,6 +44,19 @@ const BILDER: Record<string, string> = {
   // Skat: Ramsch (alle passen, der Augenreichste zahlt) und Kontra/Re.
   ramsch: '🗑️',
   kontraRe: '✖️',
+  /* Nur die Buben zählen — deshalb das Kartenzeichen, nicht ein Rechenzeichen. */
+  nurBubenSpitzen: '🃏',
+  /* Zwei Buben derselben Couleur ziehen gemeinsam los. */
+  patrouillen: '👮',
+  /* Die Ordnung steht auf dem Kopf. */
+  saechsischeSpitze: '🔄',
+  /* Hand spielen ohne Nachschlag. */
+  handNichtBestraft: '🤝',
+  /* Der Skat wandert einmal um den Tisch. */
+  schieberamsch: '↪️',
+  jungfrauen: '👰',
+  /* Die dritte Stufe der Kette nach Kontra und Re. */
+  hirsch: '🦌',
   countPoints: '🔢',
   training: '🎓',
   scharf: '🌶️',
