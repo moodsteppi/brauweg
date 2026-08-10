@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameDesk — Game Design Board</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/modules.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header id="topbar">
+    <div class="tb-group tb-brand">
+      <span class="brand-mark">◈</span>
+      <span class="brand-name">GameDesk</span>
+      <input id="board-name" class="board-name" value="Unbenanntes Board" spellcheck="false" title="Board-Name">
+    </div>
+
+    <div class="tb-group">
+      <button class="tb-btn" data-act="undo" title="Rückgängig (Strg+Z)">↺</button>
+      <button class="tb-btn" data-act="redo" title="Wiederherstellen (Strg+Umschalt+Z)">↻</button>
+    </div>
+
+    <div class="tb-group">
+      <button class="tb-btn" data-act="zoom-out" title="Herauszoomen (Strg+-)">−</button>
+      <button class="tb-btn tb-btn--wide" data-act="zoom-reset" id="zoom-label" title="Zoom zurücksetzen (Strg+0)">100&nbsp;%</button>
+      <button class="tb-btn" data-act="zoom-in" title="Hineinzoomen (Strg++)">+</button>
+      <button class="tb-btn" data-act="zoom-fit" title="Alles einpassen (Strg+1)">⤢</button>
+    </div>
+
+    <div class="tb-group">
+      <button class="tb-btn tb-toggle is-on" data-act="toggle-grid" title="Raster anzeigen">▦</button>
+      <button class="tb-btn tb-toggle is-on" data-act="toggle-snap" title="Einrasten / Führungslinien">⊹</button>
+      <button class="tb-btn tb-toggle is-on" data-act="toggle-minimap" title="Übersichtskarte">◱</button>
+    </div>
+
+    <div class="tb-group">
+      <button class="tb-btn tb-btn--label" data-act="layout" title="Höhen an den Text anpassen, Überlappungen auflösen, Rahmen nachziehen">⤡&nbsp; Anordnen</button>
+    </div>
+
+    <div class="tb-spacer"></div>
+
+    <div class="tb-group">
+      <button class="tb-btn tb-btn--label" data-act="zurueck" id="btn-zurueck" title="Zurück zur Tafel, aus der du hergekommen bist" hidden>←&nbsp; Zurück</button>
+      <button class="tb-btn tb-btn--label" data-act="library" title="Projekte im Bibliotheksordner (Strg+P)">🗀&nbsp; Projekte</button>
+      <button class="tb-btn tb-btn--label" data-act="new">Neu</button>
+      <button class="tb-btn tb-btn--label" data-act="import">Öffnen…</button>
+      <button class="tb-btn tb-btn--label tb-btn--primary" data-act="export" id="btn-save">Speichern</button>
+    </div>
+
+    <div class="tb-group">
+      <button class="tb-btn" data-act="settings" title="Einstellungen">⚙</button>
+      <button class="tb-btn" data-act="toggle-theme" title="Hell / Dunkel">◐</button>
+      <button class="tb-btn" data-act="help" title="Tastenkürzel (?)">?</button>
+    </div>
+  </header>
+
+  <aside id="palette">
+    <div class="pal-title">Module</div>
+    <div id="pal-list" class="pal-list"></div>
+    <div class="pal-hint">
+      Klicken oder auf&nbsp;das Board ziehen
+    </div>
+  </aside>
+
+  <main id="board" tabindex="0">
+    <div id="world">
+      <svg id="conn-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="win-layer"></div>
+      <!-- Rahmenüberschriften: über den Kacheln, damit sie auf Distanz lesbar bleiben -->
+      <div id="frame-layer"></div>
+      <svg id="guide-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="label-layer"></div>
+    <div id="marquee"></div>
+    <div id="board-empty" class="board-empty">
+      <div class="be-title">Leeres Board</div>
+      <div class="be-sub">Modul links wählen &nbsp;·&nbsp; Rechtsklick für Menü &nbsp;·&nbsp; Ziehen zum Bewegen &nbsp;·&nbsp; Mausrad zum Zoomen</div>
+    </div>
+  </main>
+
+  <aside id="inspector">
+    <div id="insp-body"></div>
+  </aside>
+
+  <div id="minimap"><canvas id="minimap-canvas"></canvas></div>
+  <div id="toasts"></div>
+  <div id="ctxmenu" class="ctxmenu" hidden></div>
+  <div id="modal-root"></div>
+</div>
+
+<script src="js/core/util.js"></script>
+<script src="js/core/registry.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/core/board.js"></script>
+<script src="js/core/windows.js"></script>
+<script src="js/core/connections.js"></script>
+<script src="js/core/minimap.js"></script>
+<script src="js/core/geom3d.js"></script>
+<script src="js/core/gl3d.js"></script>
+<script src="js/core/models.js"></script>
+<script src="js/core/library.js"></script>
+<script src="js/core/layout.js"></script>
+<script src="js/core/ui.js"></script>
+<script src="js/modules/frame.js"></script>
+<script src="js/modules/wireframe.js"></script>
+<script src="js/modules/notes.js"></script>
+<script src="js/modules/code.js"></script>
+<script src="js/modules/media.js"></script>
+<script src="js/modules/model3d.js"></script>
+<script src="js/modules/modelview.js"></script>
+<script src="js/modules/sandbox.js"></script>
+<script src="js/modules/project.js"></script>
+<script src="js/core/app.js"></script>
+</body>
+</html>

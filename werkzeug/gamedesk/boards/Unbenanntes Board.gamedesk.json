@@ -1,0 +1,817 @@
+{
+ "format": "gamedesk-board",
+ "version": 1,
+ "name": "Unbenanntes Board",
+ "view": {
+  "x": -2133.0232755753477,
+  "y": -288.9470594027641,
+  "scale": 0.17811455336732931
+ },
+ "grid": {
+  "size": 20,
+  "show": true,
+  "snap": true
+ },
+ "windows": [
+  {
+   "id": "win_msnngf5o_g5",
+   "type": "frame",
+   "title": "Map & Umwelt Design",
+   "x": 1094,
+   "y": -1540,
+   "w": 1766,
+   "h": 3400,
+   "z": 28,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "tint": "#b78cf7",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnh5pz_g6",
+   "type": "frame",
+   "title": "Charaktere Fähigkeiten und Karten",
+   "x": 3320,
+   "y": -1540,
+   "w": 17180,
+   "h": 3460,
+   "z": 106,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "tint": "#4fd1c5",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnni0ra_g7",
+   "type": "frame",
+   "title": "Ziel des Spieles",
+   "x": -1640,
+   "y": -900,
+   "w": 1000,
+   "h": 740,
+   "z": 87,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "tint": "#b78cf7",
+    "strength": 0,
+    "dashed": false,
+    "note": "",
+    "bereich": "gamedesign"
+   }
+  },
+  {
+   "id": "win_msnniuw7_g8",
+   "type": "frame",
+   "title": "Visual Design Game",
+   "x": 2300,
+   "y": 2240,
+   "w": 1600,
+   "h": 1120,
+   "z": 63,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "tint": "#6ea8fe",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnkeh6_gc",
+   "type": "frame",
+   "title": "Menüstruktur & Design",
+   "x": -460,
+   "y": 2320,
+   "w": 1854,
+   "h": 1360,
+   "z": 19,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "tint": "#57c98a",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnn69y_gd",
+   "type": "frame",
+   "title": "Technische Umsetzung",
+   "x": -460,
+   "y": 5320,
+   "w": 6164,
+   "h": 1660,
+   "z": 26,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnpllj_gk",
+   "type": "frame",
+   "title": "Umweltblöcke",
+   "x": 1140,
+   "y": -267,
+   "w": 1660,
+   "h": 2067,
+   "z": 44,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnq0qs_gl",
+   "type": "model3d",
+   "title": "3D-Modell",
+   "x": 1197,
+   "y": 740,
+   "w": 394,
+   "h": 324,
+   "z": 59,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "nodes": [],
+    "env": {
+     "background": "#12151c",
+     "ambient": 0.34,
+     "ambientColor": "#8fa4c4",
+     "sunPos": [
+      4.4,
+      8,
+      3.2
+     ],
+     "sunDir": [
+      -0.45479402682709774,
+      -0.8268982305947231,
+      -0.33075929223788925
+     ],
+     "sunColor": "#ffffff",
+     "sunIntensity": 1.05,
+     "shadows": true,
+     "shadowStrength": 0.78,
+     "floor": true,
+     "floorY": -1.001,
+     "floorColor": "#1a1e27",
+     "gridColor": "#39435a",
+     "gridSize": 1
+    },
+    "camera": {
+     "yaw": 0.7,
+     "pitch": 0.5,
+     "dist": 7,
+     "target": [
+      -8.393143720837848,
+      -2.192555107639698,
+      8.921227228689105
+     ]
+    },
+    "snap": {
+     "on": true,
+     "step": 0.25,
+     "rot": 15,
+     "scale": 0.1
+    },
+    "modelId": null,
+    "mode": "move"
+   }
+  },
+  {
+   "id": "win_msnnqetj_gn",
+   "type": "notes",
+   "title": "Notiz",
+   "x": 1197,
+   "y": 1400,
+   "w": 394,
+   "h": 300,
+   "z": 58,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "html": "<p><br></p>",
+    "fontSize": 14
+   }
+  },
+  {
+   "id": "win_msnnqv3e_gq",
+   "type": "modelview",
+   "title": "3D-Ansicht",
+   "x": 1197,
+   "y": 1080,
+   "w": 394,
+   "h": 300,
+   "z": 57,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "modelId": null,
+    "spin": true,
+    "speed": 0.28,
+    "yaw": 0.7,
+    "pitch": 0.35,
+    "zoom": 1,
+    "background": null,
+    "floor": true,
+    "quality": "normal"
+   }
+  },
+  {
+   "id": "win_msnnrx4h_gs",
+   "type": "frame",
+   "title": "Generierung",
+   "x": 1197,
+   "y": -111,
+   "w": 1543,
+   "h": 691,
+   "z": 48,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnsh20_gt",
+   "type": "notes",
+   "title": "Notiz",
+   "x": 1260,
+   "y": -20,
+   "w": 380,
+   "h": 300,
+   "z": 49,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "html": "<p><br></p>",
+    "fontSize": 14
+   }
+  },
+  {
+   "id": "win_msnnsn5d_gu",
+   "type": "media",
+   "title": "Medien",
+   "x": 1694,
+   "y": -28,
+   "w": 420,
+   "h": 320,
+   "z": 50,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "items": [],
+    "index": 0,
+    "fit": "contain",
+    "bg": "#0b0d12",
+    "loop": true,
+    "muted": true,
+    "autoplay": false,
+    "controls": true,
+    "volume": 1
+   }
+  },
+  {
+   "id": "win_msnnsy1s_gw",
+   "type": "frame",
+   "title": "Bereich",
+   "x": 1140,
+   "y": -1440,
+   "w": 1660,
+   "h": 640,
+   "z": 52,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnntgrl_gx",
+   "type": "frame",
+   "title": "Arten von Umweltlöcken + Beschreibung",
+   "x": 1197,
+   "y": 620,
+   "w": 1543,
+   "h": 1140,
+   "z": 56,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnudvc_gy",
+   "type": "media",
+   "title": "Medien",
+   "x": 2650,
+   "y": 2700,
+   "w": 420,
+   "h": 320,
+   "z": 64,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "items": [],
+    "index": 0,
+    "fit": "contain",
+    "bg": "#0b0d12",
+    "loop": true,
+    "muted": true,
+    "autoplay": false,
+    "controls": true,
+    "volume": 1
+   }
+  },
+  {
+   "id": "win_msnnujwz_h0",
+   "type": "notes",
+   "title": "Notiz",
+   "x": 2410,
+   "y": 2345,
+   "w": 380,
+   "h": 300,
+   "z": 65,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "html": "<p>In den oberen Bereichen werden die 3D Modelle aufgezeigt, hier sollen sie im Kontext dargestellt werden (Beispielhaft wie das in Game aussehen würde als Render)</p>",
+    "fontSize": 14
+   }
+  },
+  {
+   "id": "win_msnnvacx_h1",
+   "type": "frame",
+   "title": "Industrialist",
+   "x": 3360,
+   "y": -1387,
+   "w": 3700,
+   "h": 1860,
+   "z": 107,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnvidc_h2",
+   "type": "notes",
+   "title": "Core Mechanics",
+   "x": 3390,
+   "y": -1287,
+   "w": 1650,
+   "h": 300,
+   "z": 112,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "html": "<p>Cannon</p><p>Werk</p>",
+    "fontSize": 14
+   }
+  },
+  {
+   "id": "win_msnnvtkj_h3",
+   "type": "model3d",
+   "title": "3D-Modell",
+   "x": 3390,
+   "y": -207,
+   "w": 360,
+   "h": 300,
+   "z": 109,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "nodes": [],
+    "env": {
+     "background": "#12151c",
+     "ambient": 0.34,
+     "ambientColor": "#8fa4c4",
+     "sunPos": [
+      4.4,
+      8,
+      3.2
+     ],
+     "sunDir": [
+      -0.45479402682709774,
+      -0.8268982305947231,
+      -0.33075929223788925
+     ],
+     "sunColor": "#ffffff",
+     "sunIntensity": 1.05,
+     "shadows": true,
+     "shadowStrength": 0.78,
+     "floor": true,
+     "floorY": -1.001,
+     "floorColor": "#1a1e27",
+     "gridColor": "#39435a",
+     "gridSize": 1
+    },
+    "camera": {
+     "yaw": 0.7,
+     "pitch": 0.5,
+     "dist": 9.446887987731548,
+     "target": [
+      -10.796401396510124,
+      18.810900355723152,
+      -4.056638111796373
+     ]
+    },
+    "snap": {
+     "on": true,
+     "step": 0.25,
+     "rot": 15,
+     "scale": 0.1
+    },
+    "modelId": null,
+    "mode": "move"
+   }
+  },
+  {
+   "id": "win_msnnw7mz_h5",
+   "type": "notes",
+   "title": "Notiz",
+   "x": 3380,
+   "y": 133,
+   "w": 380,
+   "h": 300,
+   "z": 113,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "html": "<p><br></p>",
+    "fontSize": 14
+   }
+  },
+  {
+   "id": "win_msnnwoz9_h6",
+   "type": "model3d",
+   "title": "3D-Modell",
+   "x": 3390,
+   "y": -502,
+   "w": 403,
+   "h": 255,
+   "z": 110,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "nodes": [],
+    "env": {
+     "background": "#12151c",
+     "ambient": 0.34,
+     "ambientColor": "#8fa4c4",
+     "sunPos": [
+      4.4,
+      8,
+      3.2
+     ],
+     "sunDir": [
+      -0.45479402682709774,
+      -0.8268982305947231,
+      -0.33075929223788925
+     ],
+     "sunColor": "#ffffff",
+     "sunIntensity": 1.05,
+     "shadows": true,
+     "shadowStrength": 0.78,
+     "floor": true,
+     "floorY": -1.001,
+     "floorColor": "#1a1e27",
+     "gridColor": "#39435a",
+     "gridSize": 1
+    },
+    "camera": {
+     "yaw": 0.7,
+     "pitch": 0.5,
+     "dist": 7,
+     "target": [
+      -9.738904752643554,
+      14.23557808683709,
+      -1.6793478218707953
+     ]
+    },
+    "snap": {
+     "on": true,
+     "step": 0.25,
+     "rot": 15,
+     "scale": 0.1
+    },
+    "modelId": null,
+    "mode": "move"
+   }
+  },
+  {
+   "id": "win_msnnwu29_h7",
+   "type": "frame",
+   "title": "Schwertkämpfer",
+   "x": 3380,
+   "y": -594,
+   "w": 460,
+   "h": 1027,
+   "z": 108,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnx2m5_h8",
+   "type": "frame",
+   "title": "Alle anderen Karten",
+   "x": 3875,
+   "y": -587,
+   "w": 2365,
+   "h": 980,
+   "z": 111,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msnnz5fn_ha",
+   "type": "frame",
+   "title": "Visual Inspiration and Vision Board",
+   "x": -4360,
+   "y": 93,
+   "w": 3000,
+   "h": 2067,
+   "z": 88,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msno12ob_hb",
+   "type": "frame",
+   "title": "Funcional Deep Dive Card Mechanics",
+   "x": 13180,
+   "y": 3360,
+   "w": 4273,
+   "h": 2578,
+   "z": 97,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.1,
+    "dashed": false,
+    "note": ""
+   }
+  },
+  {
+   "id": "win_msno1hjq_hc",
+   "type": "notes",
+   "title": "Notiz",
+   "x": 13465,
+   "y": 3557,
+   "w": 380,
+   "h": 300,
+   "z": 98,
+   "accent": null,
+   "collapsed": false,
+   "state": {
+    "html": "<p>Tiefere Genauere Beschreibung der einzelnen Karten und Karteninterkationen</p>",
+    "fontSize": 14
+   }
+  }
+ ],
+ "connections": [
+  {
+   "id": "con_msnnk66s_gb",
+   "from": {
+    "win": "win_msnngf5o_g5",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnniuw7_g8",
+    "side": "t",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnnnrhj_ge",
+   "from": {
+    "win": "win_msnnkeh6_gc",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnnn69y_gd",
+    "side": "t",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnnntce_gf",
+   "from": {
+    "win": "win_msnniuw7_g8",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnnn69y_gd",
+    "side": "auto",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnno97w_gh",
+   "from": {
+    "win": "win_msnnh5pz_g6",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnnn69y_gd",
+    "side": "t",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnnoddk_gi",
+   "from": {
+    "win": "win_msnngf5o_g5",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnnn69y_gd",
+    "side": "t",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnnor17_gj",
+   "from": {
+    "win": "win_msnnh5pz_g6",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnniuw7_g8",
+    "side": "t",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnnw3qb_h4",
+   "from": {
+    "win": "win_msnnvacx_h1",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnnh5pz_g6",
+    "side": "auto",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnny571_h9",
+   "from": {
+    "win": "win_msnnw7mz_h5",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msnnqetj_gn",
+    "side": "auto",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_msno27lk_hd",
+   "from": {
+    "win": "win_msnnh5pz_g6",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msno12ob_hb",
+    "side": "auto",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  }
+ ],
+ "models": [],
+ "nextZ": 113
+}

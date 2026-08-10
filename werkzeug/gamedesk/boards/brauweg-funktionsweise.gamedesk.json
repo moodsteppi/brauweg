@@ -1,0 +1,2677 @@
+{
+ "format": "gamedesk-board",
+ "version": 1,
+ "name": "Brauweg — Funktionsweise",
+ "view": {
+  "x": 173.24,
+  "y": 438.04,
+  "scale": 0.08
+ },
+ "grid": {
+  "size": 20,
+  "show": true,
+  "snap": true
+ },
+ "windows": [
+  {
+   "id": "win_bw_13",
+   "type": "frame",
+   "title": "Ablauf einer Aktion",
+   "x": -1604,
+   "y": 1327,
+   "w": 3308,
+   "h": 407,
+   "z": 92,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "tint": "#9aa4b6",
+    "strength": 0.075,
+    "dashed": false,
+    "note": "Vom Antippen bis zum neuen Bild — der Weg, den jede Regel nimmt",
+    "bereich": "mechanik"
+   }
+  },
+  {
+   "id": "win_bw_v",
+   "type": "frame",
+   "title": "Betrieb & Auslieferung",
+   "x": 1516,
+   "y": 362,
+   "w": 1058,
+   "h": 856,
+   "z": 100,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "tint": "#e8b45c",
+    "strength": 0.075,
+    "dashed": false,
+    "note": "www.brauweg-spielen.de · Railway",
+    "bereich": "betrieb"
+   }
+  },
+  {
+   "id": "win_bw_r",
+   "type": "frame",
+   "title": "Daten",
+   "x": 96,
+   "y": 533,
+   "w": 1008,
+   "h": 748,
+   "z": 104,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "tint": "#4fd1c5",
+    "strength": 0.075,
+    "dashed": false,
+    "note": "PostgreSQL · Drizzle · pglite für lokal",
+    "bereich": "daten"
+   }
+  },
+  {
+   "id": "win_bw_n",
+   "type": "frame",
+   "title": "Grundsätze",
+   "x": -1604,
+   "y": 485,
+   "w": 1018,
+   "h": 698,
+   "z": 108,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "tint": "#ef6b6b",
+    "strength": 0.075,
+    "dashed": false,
+    "note": "Was die Trennung trägt",
+    "bereich": "gamedesign"
+   }
+  },
+  {
+   "id": "win_bw_j",
+   "type": "frame",
+   "title": "Spielmodule",
+   "x": 1516,
+   "y": -1072,
+   "w": 1482,
+   "h": 1290,
+   "z": 112,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "tint": "#b78cf7",
+    "strength": 0.075,
+    "dashed": false,
+    "note": "Reine Logik · kein Netz, keine Uhr, kein Zufall außer dem Seed",
+    "bereich": "game"
+   }
+  },
+  {
+   "id": "win_bw_d",
+   "type": "frame",
+   "title": "Server",
+   "x": 96,
+   "y": -1072,
+   "w": 1008,
+   "h": 1461,
+   "z": 119,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "tint": "#6ea8fe",
+    "strength": 0.075,
+    "dashed": false,
+    "note": "Ein Dienst · packages/server",
+    "bereich": "technik"
+   }
+  },
+  {
+   "id": "win_bw_6",
+   "type": "frame",
+   "title": "Nutzer & Client",
+   "x": -1604,
+   "y": -1072,
+   "w": 1288,
+   "h": 1413,
+   "z": 126,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "tint": "#57c98a",
+    "strength": 0.075,
+    "dashed": false,
+    "note": "React-PWA · packages/client",
+    "bereich": "technik"
+   }
+  },
+  {
+   "id": "win_bw_1",
+   "type": "notes",
+   "title": "Client — React-PWA",
+   "x": -1560,
+   "y": -914,
+   "w": 430,
+   "h": 372,
+   "z": 132,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h2>packages/client</h2>\n<p>React + Vite, als PWA gebaut. <b>Ein</b> Bündel für Web und iOS-App.</p>\n<h3>Bildschirme</h3>\n<ul><li>Lobby, Spielauswahl, Tisch</li>\n<li>WizardTable, FeldherrTisch</li>\n<li>Profil, Verein, Aufgaben, Shop, Runner</li></ul>\n<p><b>Der Client bildet keine Regel nach.</b> Schaltflächen entstehen aus\n<code>legalActions</code>, die Kartenreihenfolge kommt als <code>order</code>\nvom Server.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_2",
+   "type": "code",
+   "title": "useTable.ts — die Leitung hält sich selbst am Leben",
+   "x": -1560,
+   "y": -506,
+   "w": 430,
+   "h": 421,
+   "z": 128,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "path": "packages/client/src/useTable.ts",
+    "code": "/**\n * Verbindung zum Tisch.\n *\n * Der Client haelt keinen eigenen Verlauf: Beim Verbinden\n * schickt der Server die vollstaendige Sicht. Nachrichten\n * mit kleinerer Revisionsnummer sind ueberholt und werden\n * verworfen.\n *\n *   1. Bricht die Leitung ab, verbindet der Client von\n *      selbst neu - mit wachsender Wartezeit.\n *   2. Kommt der Tab zurueck, wird sofort abgeglichen.\n *   3. reconnect() macht dasselbe auf Knopfdruck.\n */\nconst MAX_BACKOFF_MS   = 15_000;\nconst RESYNC_WATCHDOG_MS = 3_000;\nconst RESYNC_THROTTLE_MS =   800;",
+    "firstLine": 1,
+    "size": 11,
+    "wrap": false,
+    "marks": [
+     15,
+     16,
+     17
+    ],
+    "caption": "Handybrowser kappen die WebSocket, sobald der Tab in den Hintergrund geht."
+   }
+  },
+  {
+   "id": "win_bw_3",
+   "type": "notes",
+   "title": "Kartenblätter",
+   "x": -1560,
+   "y": -85,
+   "w": 430,
+   "h": 382,
+   "z": 129,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h3>Vier Blätter, Wahl am Konto</h3>\n<ul><li><code>text</code> — Zeichen (♣D), lädt nichts nach</li>\n<li><code>minimal2</code> / <code>minimal4</code> — flache Bildkarten</li>\n<li><code>klassisch</code> — gezeichnet</li></ul>\n<p><b>Der Server kennt nur die Kennungen.</b> Wie ein Blatt aussieht, weiß\nallein der Client. Ein neues Blatt = ein Bildordner + je ein Listeneintrag.</p>\n<p>Der ausgeschriebene Kartenname steht im <code>alt</code>-Text — Vorlese­gerät\nund fehlendes Bild ergeben dieselbe Ausgabe wie das Textblatt.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_4",
+   "type": "wireframe",
+   "title": "Tisch — Bildschirmskizze",
+   "x": -1060,
+   "y": -914,
+   "w": 700,
+   "h": 500,
+   "z": 130,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "canvas": {
+     "w": 900,
+     "h": 600,
+     "bg": "#f6f7f9"
+    },
+    "shapes": [
+     {
+      "id": "sh_msni2feu_be",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 900,
+      "h": 64,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#e2e6ee",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Brauweg  ·  Tisch „Feierabend\"  ·  Runde 3/8",
+      "pad": 20,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 650,
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msni2feu_bh",
+      "type": "rect",
+      "x": 760,
+      "y": 16,
+      "w": 120,
+      "h": 32,
+      "rot": 0,
+      "fill": "#eef1f7",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#d2d8e2",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Verlassen",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 12,
+       "color": "#5a6479"
+      }
+     },
+     {
+      "id": "sh_msni2feu_bk",
+      "type": "ellipse",
+      "x": 250,
+      "y": 120,
+      "w": 400,
+      "h": 300,
+      "rot": 0,
+      "fill": "#2f6b46",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msni2feu_bn",
+      "type": "rect",
+      "x": 380,
+      "y": 84,
+      "w": 140,
+      "h": 46,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#d2d8e2",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 10,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": true,
+       "x": 0,
+       "y": 3,
+       "blur": 10,
+       "color": "#0f172a26"
+      },
+      "text": "Nils",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 13,
+       "weight": 600
+      }
+     },
+     {
+      "id": "sh_msni2feu_bq",
+      "type": "rect",
+      "x": 660,
+      "y": 240,
+      "w": 140,
+      "h": 46,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#d2d8e2",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 10,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": true,
+       "x": 0,
+       "y": 3,
+       "blur": 10,
+       "color": "#0f172a26"
+      },
+      "text": "Bot 2",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 13,
+       "weight": 600
+      }
+     },
+     {
+      "id": "sh_msni2feu_bt",
+      "type": "rect",
+      "x": 380,
+      "y": 430,
+      "w": 140,
+      "h": 46,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#d2d8e2",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 10,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": true,
+       "x": 0,
+       "y": 3,
+       "blur": 10,
+       "color": "#0f172a26"
+      },
+      "text": "Anni",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 13,
+       "weight": 600
+      }
+     },
+     {
+      "id": "sh_msni2feu_bw",
+      "type": "rect",
+      "x": 100,
+      "y": 240,
+      "w": 140,
+      "h": 46,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#d2d8e2",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 10,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": true,
+       "x": 0,
+       "y": 3,
+       "blur": 10,
+       "color": "#0f172a26"
+      },
+      "text": "Bot 4",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 13,
+       "weight": 600
+      }
+     },
+     {
+      "id": "sh_msni2feu_bz",
+      "type": "rect",
+      "x": 360,
+      "y": 230,
+      "w": 56,
+      "h": 80,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♣D",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 16,
+       "weight": 700,
+       "color": "#1b2029"
+      }
+     },
+     {
+      "id": "sh_msni2feu_c2",
+      "type": "rect",
+      "x": 426,
+      "y": 230,
+      "w": 56,
+      "h": 80,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♥10",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 16,
+       "weight": 700,
+       "color": "#1b2029"
+      }
+     },
+     {
+      "id": "sh_msni2feu_c5",
+      "type": "rect",
+      "x": 492,
+      "y": 230,
+      "w": 56,
+      "h": 80,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♠A",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 16,
+       "weight": 700,
+       "color": "#1b2029"
+      }
+     },
+     {
+      "id": "sh_msni2feu_c8",
+      "type": "text",
+      "x": 250,
+      "y": 434,
+      "w": 400,
+      "h": 22,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Nils spielt aus  ·  noch 0:23",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 12,
+       "color": "#5a6479"
+      }
+     },
+     {
+      "id": "sh_msni2feu_cb",
+      "type": "rect",
+      "x": 120,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♣9",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_ce",
+      "type": "rect",
+      "x": 198,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♣K",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_ch",
+      "type": "rect",
+      "x": 276,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♠9",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_ck",
+      "type": "rect",
+      "x": 354,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♠D",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_cn",
+      "type": "rect",
+      "x": 432,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♥A",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_cq",
+      "type": "rect",
+      "x": 510,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♥9",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_ct",
+      "type": "rect",
+      "x": 588,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♦B",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_cw",
+      "type": "rect",
+      "x": 666,
+      "y": 480,
+      "w": 68,
+      "h": 96,
+      "rot": 0,
+      "fill": "#ffffff",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#b9c2d0",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 7,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "♦A",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msni2feu_cz",
+      "type": "rect",
+      "x": 20,
+      "y": 500,
+      "w": 84,
+      "h": 40,
+      "rot": 0,
+      "fill": "#2f6fe4",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 9,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Re",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "weight": 650,
+       "color": "#ffffff"
+      }
+     },
+     {
+      "id": "sh_msni2feu_d2",
+      "type": "rect",
+      "x": 796,
+      "y": 500,
+      "w": 84,
+      "h": 40,
+      "rot": 0,
+      "fill": "#eef1f7",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#d2d8e2",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 9,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Kontra",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 13,
+       "color": "#8a93a5"
+      }
+     },
+     {
+      "id": "sh_msni2feu_d5",
+      "type": "text",
+      "x": 20,
+      "y": 548,
+      "w": 300,
+      "h": 20,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Schaltflächen kommen aus legalActions",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 11,
+       "color": "#8a93a5",
+       "align": "left"
+      }
+     }
+    ],
+    "guides": {
+     "v": [],
+     "h": []
+    },
+    "grid": {
+     "size": 10,
+     "show": false,
+     "snap": true
+    }
+   }
+  },
+  {
+   "id": "win_bw_5",
+   "type": "sandbox",
+   "title": "Sichtbarkeit ausprobieren",
+   "x": -1060,
+   "y": -374,
+   "w": 700,
+   "h": 460,
+   "z": 131,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<div id=\"a\"></div><div id=\"b\"></div>",
+    "css": "body{margin:0;font:12px/1.5 system-ui;background:#12151c;color:#e6eaf2;padding:10px}\nh4{margin:0 0 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9aa4b6}\npre{margin:0 0 12px;padding:8px;border-radius:6px;background:#1b1f28;overflow:auto}\n.w{color:#e8b45c}",
+    "js": "",
+    "tab": "js",
+    "autorun": true,
+    "split": 0.46,
+    "showConsole": true
+   }
+  },
+  {
+   "id": "win_bw_7",
+   "type": "notes",
+   "title": "HTTP-API",
+   "x": 140,
+   "y": -914,
+   "w": 440,
+   "h": 370,
+   "z": 120,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h2>packages/server · http/app.ts</h2>\n<p>Fastify, rund 60 Endpunkte. Sitzung als Cookie, in der iOS-App als\n<code>Authorization</code>-Kopf.</p>\n<ul>\n<li><code>/api/auth/*</code> — Registrierung, Bestätigung, Anmeldung</li>\n<li><code>/api/me</code>, <code>/api/players</code>, <code>/api/friends</code></li>\n<li><code>/api/games</code>, <code>/api/rulesets</code>, <code>/api/tables</code></li>\n<li><code>/api/clubs/*</code> — Vereine, Chat, Clan-Krieg</li>\n<li><code>/api/shop</code>, <code>/api/chests</code>, <code>/api/quests</code>, <code>/api/runner/*</code></li>\n<li><code>/api/rankings</code>, <code>/api/health</code></li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_8",
+   "type": "notes",
+   "title": "WebSocket-Gateway",
+   "x": 620,
+   "y": -914,
+   "w": 440,
+   "h": 395,
+   "z": 121,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h2>realtime/gateway.ts</h2>\n<p>Eine Verbindung je Gerät, Sitzungstoken aus Cookie oder Unterprotokoll\n<code>brauweg-token</code>.</p>\n<ul>\n<li><code>join</code> — prüft Modulversion, schickt die volle Sicht</li>\n<li><code>action</code> — reicht an die Laufzeit weiter</li>\n<li><code>leave</code>, <code>addBot</code> / <code>removeBot</code></li>\n<li><code>emote</code> — feste Liste, nie Freitext</li>\n<li><code>takt</code> — Herzschlag für Feldherr, <b>keine</b> Aktion:\nkein Partiestand, kein Snapshot, kein Rundruf</li>\n</ul>\n<p>Nach jeder Änderung: <code>broadcast</code> → je Sitz eine eigene Sicht.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_9",
+   "type": "code",
+   "title": "protocol.ts — jeder Umschlag trägt Spiel und Version",
+   "x": 140,
+   "y": -512,
+   "w": 440,
+   "h": 421,
+   "z": 122,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "path": "packages/server/src/realtime/protocol.ts",
+    "code": "/** Version des Rahmenprotokolls. */\nexport const ENVELOPE_VERSION = 1;\n/** Wie viele Versionen zurueck ein Modul bedient wird. */\nexport const SUPPORTED_MODULE_VERSIONS = 2;\n\nexport type ClientMessage =\n  | { v: number; game: GameId; type: 'join';\n      tableId: string; moduleVersion: number }\n  | { v: number; game: GameId; type: 'action';\n      tableId: string; action: unknown }\n  | { v: number; game: GameId; type: 'leave'; tableId: string }\n  | { v: number; game: GameId; type: 'emote';\n      tableId: string; emote: string }\n  | { v: number; game: GameId; type: 'takt';\n      tableId: string; takt: number;\n      grenzTakt: number; pruef: string };",
+    "firstLine": 1,
+    "size": 11,
+    "wrap": false,
+    "marks": [
+     2,
+     4
+    ],
+    "caption": "Nur additive Änderungen. Die Mindestversion wird beim Beitritt erzwungen, nie mitten in der Partie."
+   }
+  },
+  {
+   "id": "win_bw_a",
+   "type": "code",
+   "title": "registry.ts — die einzige Stelle, die ein Spiel kennt",
+   "x": 620,
+   "y": -487,
+   "w": 440,
+   "h": 421,
+   "z": 123,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "path": "packages/server/src/games/registry.ts",
+    "code": "/**\n * DIESE DATEI IST DIE EINZIGE STELLE IM SERVER,\n * DIE EIN KONKRETES SPIEL KENNT.\n *\n * Alles andere - Lobby, Tische, WebSocket, Ranglisten -\n * arbeitet ausschliesslich gegen GameModule.\n */\nconst MODULES: readonly AnyGameModule[] = [\n  doppelkopf as unknown as AnyGameModule,\n  wizard     as unknown as AnyGameModule,\n  feldherr   as unknown as AnyGameModule,\n];\n\n/** Spiele ohne Modul: sichtbar, nicht startbar, abstimmbar. */\nconst PREVIEW = ['skat','schafkopf','romme','maumau',\n                 'schwimmen','backgammon','bauernskat'];",
+    "firstLine": 1,
+    "size": 11,
+    "wrap": false,
+    "marks": [
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    "caption": "Ein neues Spiel = eine Zeile in MODULES. Kein weiterer Eingriff in Server oder Client."
+   }
+  },
+  {
+   "id": "win_bw_b",
+   "type": "notes",
+   "title": "Laufzeit — laufende Partien",
+   "x": 140,
+   "y": -91,
+   "w": 440,
+   "h": 408,
+   "z": 124,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h2>runtime/party.ts</h2>\n<p>Die Partie liegt <b>maßgeblich im Arbeitsspeicher</b>; nach <b>jeder</b>\nAktion geht ein Schnappschuss in die Datenbank. Railway startet Container\njederzeit neu — ohne das wäre jeder Tisch weg.</p>\n<ul>\n<li><code>start</code> / <code>resume</code> — Partie anlegen oder aus dem\nSchnappschuss holen</li>\n<li><code>act</code> — <code>module.act()</code>, Snapshot, Rundruf</li>\n<li><code>schedule</code> — Zugtimer; läuft er ab, zieht der Bot</li>\n<li><code>scheduleInterlude</code> — Schaupause: das Modul nennt nur die\nDauer, die Zeit misst die Plattform</li>\n<li><code>markLeft</code> — Aussteiger, die Partie läuft mit Bot weiter</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_c",
+   "type": "notes",
+   "title": "Wirtschaft, Fortschritt, Sozial",
+   "x": 620,
+   "y": -66,
+   "w": 440,
+   "h": 411,
+   "z": 125,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h3>Plattform, nicht Spiel</h3>\n<ul>\n<li><b>Trophäen</b> — Module liefern nur Platzierungen, die Wertung rechnet\ndie Plattform. Deshalb trägt eine Rangliste über alle Spiele.</li>\n<li><b>Münzen und Edelsteine</b> — Edelsteine kaufen alles, Münzen nicht\nalles. Der Umtausch ist <b>einseitig</b>; eine Gegenrichtung machte jede\nTruhe zur Geldquelle.</li>\n<li><b>Preise stehen im Katalog</b> (<code>kosmetik.ts</code>,\n<code>tischware.ts</code>), nie in der Datenbank — eine neue Warenart ist\neine Datei, keine Migration.</li>\n<li>Truhen, Aufgaben, Stufen, Runner, Vereine samt Krieg und Chat.</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_e",
+   "type": "code",
+   "title": "GameModule — die ganze Schnittstelle",
+   "x": 1560,
+   "y": -914,
+   "w": 520,
+   "h": 751,
+   "z": 113,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "path": "packages/game-api/src/index.ts",
+    "code": "/**\n * Server, Lobby und Client kennen NUR diese Schnittstelle.\n * Sie wissen nicht, dass es Doppelkopf gibt.\n */\nexport interface GameModule<TParty, TAction, TView, TConfig> {\n  readonly meta: GameMeta;\n  readonly protocolVersion: number;\n\n  // Regelsatz\n  defaultConfig(): TConfig;\n  validateConfig(config: unknown, seats: number,\n                 rounds: number): ConfigProblem[];\n\n  // Ablauf\n  createParty(options: CreatePartyOptions<TConfig>): TParty;\n  act(party: TParty, seat: number, action: TAction): TParty;\n  currentActor(party: TParty): number | null;\n  legalActions(party: TParty, seat: number): TAction[];\n  isFinished(party: TParty): boolean;\n  interludeMs?(party: TParty): number | null;\n  advanceInterlude?(party: TParty): TParty;\n  standings(party: TParty): PartyStanding[];\n  markLeft(party: TParty, seat: number): TParty;\n\n  // Sichtbarkeit\n  viewFor(party: TParty, seat: number): TView;\n  spectatorView(party: TParty): TView;\n\n  // Bot - bekommt NUR die gefilterte Sicht\n  botAction(view: TView): TAction;\n\n  // Persistenz\n  serialize(party: TParty): unknown;\n  deserialize(raw: unknown): TParty;\n  completedSegments?(party: TParty): readonly unknown[];\n  xpBasis?(party: TParty): Readonly<Record<number, number>>;\n}",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     26,
+     27,
+     30
+    ],
+    "caption": "viewFor und spectatorView sind die einzigen Wege nach draußen — der Bot sieht dasselbe wie ein Mensch."
+   }
+  },
+  {
+   "id": "win_bw_f",
+   "type": "notes",
+   "title": "Doppelkopf",
+   "x": 2130,
+   "y": -914,
+   "w": 400,
+   "h": 323,
+   "z": 114,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h3>packages/game-doppelkopf</h3>\n<p>Die größte Engine im Haus: <code>round.ts</code> allein 43 kB.</p>\n<ul><li><code>ruleset.ts</code>, <code>validator.ts</code> — Regelsatz</li>\n<li><code>deal.ts</code>, <code>order.ts</code>, <code>trick.ts</code></li>\n<li>Vorbehalte, Hochzeit, Armut, Pflichtsolo, Schmeiß, Bock</li>\n<li><code>scoring.ts</code>, <code>trophies.ts</code>, <code>bot.ts</code></li></ul>\n<p>3 bis 5 Sitze · 128 Tests</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_g",
+   "type": "notes",
+   "title": "Zauberer",
+   "x": 2130,
+   "y": -584,
+   "w": 400,
+   "h": 265,
+   "z": 115,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h3>packages/game-wizard</h3>\n<p>Stichansage-Spiel. Die xp-Basis ist hier die Summe der Rundennummern,\nbeim Doppelkopf Blattgröße mal Runden — <b>nur das Modul weiß das.</b></p>\n<p>117 Tests</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_h",
+   "type": "notes",
+   "title": "Feldherr — Echtzeit im Gleichschritt",
+   "x": 2130,
+   "y": -291,
+   "w": 400,
+   "h": 396,
+   "z": 116,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h3>packages/game-feldherr</h3>\n<p>Kein Kartenspiel, aber dieselbe Schnittstelle — <b>ohne</b> Zugfolge und\nRunden. Beide Geräte rechnen gleichzeitig aus demselben Saatkorn und\nderselben Aktionsliste weiter.</p>\n<p>Über die Leitung gehen <b>nur Handlungen, nie Zustände</b>: eine Partie\nkommt mit einigen Dutzend Aktionen aus statt mit zwanzig Zuständen je\nSekunde.</p>\n<p>Der Kern zieht seinen Zufall ausschließlich aus <code>saat()</code>\n(mulberry32). Wer daran etwas ändert, bricht jedes Netzspiel — sichtbar\nerst daran, dass beide einen anderen Sieger sehen.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_i",
+   "type": "code",
+   "title": "adapter.ts — die einzige Brücke je Spiel",
+   "x": 1560,
+   "y": -163,
+   "w": 520,
+   "h": 337,
+   "z": 117,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "path": "packages/game-doppelkopf/src/adapter.ts",
+    "code": "/**\n * Diese Datei ist die EINZIGE Stelle, an der Plattform und\n * Doppelkopf-Engine einander kennen. Die Engine bleibt\n * unveraendert; sie weiss nichts von Tischen, Konten oder\n * Trophaeen.\n *\n *   1. Die Engine liefert die Sicht auf RUNDEN-Ebene. Die\n *      Plattform braucht sie samt Partiestand -> DokoView.\n *   2. Eine Zuschauersicht gibt es in der Engine nicht. Sie\n *      entsteht hier, indem Hand und alles daraus\n *      Abgeleitete weggelassen werden.\n */",
+    "firstLine": 1,
+    "size": 11,
+    "wrap": false,
+    "marks": [],
+    "caption": "Die Spiel-Engine kennt die Plattform nicht — und umgekehrt."
+   }
+  },
+  {
+   "id": "win_bw_k",
+   "type": "notes",
+   "title": "Grundsätze, die nicht aufgeweicht werden",
+   "x": -1560,
+   "y": 643,
+   "w": 460,
+   "h": 409,
+   "z": 109,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "html": "\n<ol>\n<li>Ein Spielmodul ist eine <b>reine Logikbibliothek</b> — kein Netzwerk,\nkeine Datenbank, keine Uhr, kein Zufall außer dem Seed. Gleicher Zustand\nplus gleiche Aktion ergibt immer dasselbe Ergebnis.</li>\n<li>Sichtbarkeit entsteht <b>ausschließlich in <code>viewFor</code></b>.\nDer Client bekommt nie den vollen Zustand und blendet nichts selbst aus.</li>\n<li>Trophäen sind <b>nicht</b> Teil eines Spielmoduls. Module liefern\nPlatzierungen, die Plattform rechnet die Wertung.</li>\n<li>Regelsatz und Währung bleiben getrennt.</li>\n<li>Jede WebSocket-Nachricht trägt Spielkennung und Protokollversion,\njeder Zustand eine Revisionsnummer.</li>\n<li>Der Client baut seine Schaltflächen aus <code>legalActions</code> und\n<code>viewFor</code> und bildet keine Regeln nach.</li>\n</ol>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_l",
+   "type": "notes",
+   "title": "Warum Zuschauer keine Hand sehen",
+   "x": -1050,
+   "y": 643,
+   "w": 420,
+   "h": 236,
+   "z": 110,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "html": "\n<p><code>spectatorView</code> ist bewusst von <code>viewFor</code> getrennt:</p>\n<p>Bei verdeckter Partnerschaft wäre ein Zuschauer mit Handeinsicht ein\nperfekter Komplize. Er müsste einem Spieler nur mitteilen, wer die zweite\nKreuz-Dame hält.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_m",
+   "type": "notes",
+   "title": "Warum der Bot nicht schummeln kann",
+   "x": -1050,
+   "y": 903,
+   "w": 420,
+   "h": 236,
+   "z": 111,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "html": "\n<p><code>botAction(view)</code> nimmt <b>ausschließlich die gefilterte\nSicht</b> entgegen, nie den Partiezustand.</p>\n<p>Damit ist Chancengleichheit keine Frage der Disziplin beim Programmieren,\nsondern eine Frage der Signatur.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_o",
+   "type": "notes",
+   "title": "PostgreSQL — 32 Tabellen",
+   "x": 140,
+   "y": 691,
+   "w": 440,
+   "h": 455,
+   "z": 105,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h3>db/schema.ts (Drizzle)</h3>\n<p><b>Konto:</b> account, session, auth_token, account_game_stat,\naccount_game_theme, account_cosmetic, account_avatar</p>\n<p><b>Tisch und Partie:</b> game_table, table_seat, party, party_snapshot,\nround_summary, rule_set, trophy_ledger, pairing_log</p>\n<p><b>Verein:</b> club, club_member, club_join_request, club_message,\nclub_war, club_war_score</p>\n<p><b>Fortschritt:</b> chest_claim, quest_progress, runner_day, runner_best,\nstat_counter, purchase</p>\n<p><b>Sozial:</b> friendship, block, report, game_vote, invite_code</p>\n<p>Ohne installierte Datenbank: <code>DATABASE_URL=pglite</code> startet\nPostgreSQL als WebAssembly im selben Prozess. In Produktion gesperrt.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_p",
+   "type": "notes",
+   "title": "Der Schnappschuss",
+   "x": 620,
+   "y": 717,
+   "w": 440,
+   "h": 236,
+   "z": 106,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "html": "\n<p><code>module.serialize(party)</code> nach <b>jeder</b> Aktion in\n<code>party_snapshot</code>.</p>\n<p>Dass alle Mitspieler dasselbe sehen, folgt <b>nicht</b> aus der\nSpeicherung, sondern aus dem Rundruf: eine Sicht je Sitz, jede mit\nRevisionsnummer.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_q",
+   "type": "notes",
+   "title": "Migrationen von Hand",
+   "x": 620,
+   "y": 977,
+   "w": 440,
+   "h": 260,
+   "z": 107,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "html": "\n<p><code>drizzle-kit generate</code> ist hier unbrauchbar — die Snapshots\nunter <code>drizzle/meta/</code> sind veraltet.</p>\n<p>Selbst schreiben, <code>_journal.json</code> selbst ergänzen, und\n<b>vorher prüfen, welche Nummer auf <code>origin/staging</code> schon\nvergeben ist</b>. Zwei Sitzungen hatten schon dieselbe 0012.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_s",
+   "type": "notes",
+   "title": "Ein Dienst, eine Domain",
+   "x": 1560,
+   "y": 520,
+   "w": 460,
+   "h": 350,
+   "z": 101,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "\n<p>In Produktion liefert der <b>Server den gebauten Client selbst aus</b>.\nDamit gibt es genau einen Ursprung: Das Sitzungs-Cookie gilt ohne Sonderfall\nauch für den WebSocket, es braucht kein CORS und keine zweite Domain.</p>\n<p>In der Entwicklung übernimmt Vite diese Rolle und reicht <code>/api</code>\nund <code>/ws</code> weiter.</p>\n<p>Railway: <code>npm install --include=dev &amp;&amp; npm run build</code>,\nStart <code>node packages/server/dist/src/index.js</code>, Health-Check auf\n<code>/api/health</code>.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_t",
+   "type": "notes",
+   "title": "iOS-App — die eine Ausnahme",
+   "x": 1560,
+   "y": 894,
+   "w": 460,
+   "h": 280,
+   "z": 102,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "\n<p>Eigenes Repository <code>Brauweg-spiel-ios</code>: eine Hülle um einen\n<code>WKWebView</code>, die <b>genau diesen Client</b> aus dem App-Paket\nausliefert. Keine zweite Oberfläche.</p>\n<p>Damit ist sie eine zweite Herkunft (<code>brauweg://app</code>). Cookies\ngehen dorthin nicht — sie trägt ihr Sitzungstoken selbst: per\n<code>Authorization</code>-Kopf und am WebSocket als Unterprotokoll.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_u",
+   "type": "notes",
+   "title": "Fallen, die Zeit gekostet haben",
+   "x": 2070,
+   "y": 520,
+   "w": 460,
+   "h": 559,
+   "z": 103,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "\n<ul>\n<li><b>Watch Paths müssen leer bleiben.</b> Railway setzt beim Import\n<code>/packages/server/**</code>. Damit werden Client-Änderungen still\nübersprungen und <b>nie ausgeliefert</b> — ohne Fehlermeldung.</li>\n<li><b>Build im Wurzelverzeichnis</b>, nie <code>--workspace</code>: sonst\nist die <code>.d.ts</code> von <code>game-api</code> alt und\n<code>tsc</code> meldet Felder als fehlend, die längst da sind.</li>\n<li><b>Supabase:</b> Session Pooler (5432), nicht Transaction Pooler (6543)\n— der kann keine Prepared Statements.</li>\n<li><b>Zonen-Apex:</b> ein CNAME ist dort nicht erlaubt, Strato bietet kein\nALIAS — deshalb <code>www</code> als Ziel und 301 davor.</li>\n<li><b>React-Effekte an einen Schlüssel hängen</b>, nicht an ein Objekt.\nSonst läuft der Effekt bei jedem Serverfunk neu und räumt seine Timer ab —\nso blieb der Rundenabschluss einmal unsichtbar.</li>\n<li><b>Am Tisch nichts stumm verwerfen.</b> <code>send()</code> verschluckte\nAktionen bei toter Verbindung; jetzt hält eine Warteschlange sie kurz fest.</li>\n<li><b>Vor jedem Commit <code>git diff --cached --stat</code> lesen.</b> Am\n5. August löschte ein Commit 932 Dateien mit — Build und alle 541 Tests\nliefen grün durch, weil sie von der Platte lesen, nicht aus dem Index.</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_w",
+   "type": "notes",
+   "title": "1. Karte antippen",
+   "x": -1560,
+   "y": 1485,
+   "w": 400,
+   "h": 185,
+   "z": 93,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Der Client zeigt nur, was <code>legalActions</code> hergibt. Ein Klick erzeugt keine Regel, sondern eine <b>Aktion</b>.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_bw_x",
+   "type": "notes",
+   "title": "2. action über die Leitung",
+   "x": -1090,
+   "y": 1485,
+   "w": 400,
+   "h": 185,
+   "z": 94,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p><code>{ v, game, type:\"action\", tableId, action }</code><br>Beim Beitritt wurde die Modulversion geprüft; jetzt nicht mehr.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_bw_y",
+   "type": "notes",
+   "title": "3. Gateway prüft",
+   "x": -620,
+   "y": 1485,
+   "w": 400,
+   "h": 185,
+   "z": 95,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Sitzung → Konto, Konto → Sitz. Kein Sitz, keine Aktion. Weiter an die Laufzeit.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_bw_z",
+   "type": "notes",
+   "title": "4. module.act(...)",
+   "x": -150,
+   "y": 1485,
+   "w": 400,
+   "h": 205,
+   "z": 96,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Die <b>einzige</b> Stelle, die Zustand ändert. Sie prüft die Regel erneut, auch wenn der Client schon geprüft hat, und wirft bei Verstoß.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_bw_10",
+   "type": "notes",
+   "title": "5. Schnappschuss",
+   "x": 320,
+   "y": 1485,
+   "w": 400,
+   "h": 185,
+   "z": 97,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p><code>serialize()</code> → <code>party_snapshot</code>. Danach überlebt der Tisch einen Neustart des Containers.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_bw_11",
+   "type": "notes",
+   "title": "6. viewFor je Sitz",
+   "x": 790,
+   "y": 1485,
+   "w": 400,
+   "h": 205,
+   "z": 98,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Ein Rundruf, aber <b>vier verschiedene Nachrichten</b>: jeder bekommt nur seine Sicht, dazu <code>legalActions</code> und eine neue Revision.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_bw_12",
+   "type": "notes",
+   "title": "7. Client zeichnet neu",
+   "x": 1260,
+   "y": 1485,
+   "w": 400,
+   "h": 185,
+   "z": 99,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Kleinere Revision als die zuletzt gesehene? Verworfen. Ist ein Bot am Zug, läuft derselbe Weg vom Zugtimer aus.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_bw_14",
+   "type": "notes",
+   "title": "Brauweg",
+   "x": -1560,
+   "y": -1420,
+   "w": 900,
+   "h": 288,
+   "z": 49,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h1>Brauweg — Funktionsweise</h1>\n<p><b>Kartenspiel-Plattform mit frei konfigurierbaren Regelsätzen.</b> Mehrere\nklassische Spiele unter einem Dach, eigene Rangliste je Spiel plus\nspielübergreifende Gesamtwertung.</p>\n<p>Das Produktversprechen ist nicht „viele Spiele\", sondern <i>„spiel nach\neuren Regeln, über alle Spiele hinweg gewertet\"</i>. Der ganze Aufbau folgt\ndaraus: Server und Client kennen kein einzelnes Kartenspiel.</p>\n<p style=\"color:#8a93a5;font-size:.9em\">Stand: Doppelkopf, Zauberer und\nFeldherr spielbar · sieben weitere als Vorschau zur Abstimmung ·\n504 Tests · live auf www.brauweg-spielen.de</p>",
+    "fontSize": 14
+   }
+  },
+  {
+   "id": "win_msni83pd_2j",
+   "type": "project",
+   "title": "Feldherr — Funktionsweise",
+   "x": 2554,
+   "y": -291,
+   "w": 400,
+   "h": 340,
+   "z": 118,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "datei": "feldherr-funktionsweise.gamedesk.json",
+    "name": "Feldherr — Funktionsweise",
+    "fenster": 73,
+    "pfeile": 34,
+    "modelle": 8,
+    "module": {
+     "frame": 9,
+     "wireframe": 3,
+     "notes": 35,
+     "code": 6,
+     "media": 12,
+     "modelview": 8
+    },
+    "boxen": [
+     {
+      "x": -1664,
+      "y": 532,
+      "w": 708,
+      "h": 727,
+      "t": "frame"
+     },
+     {
+      "x": -944,
+      "y": 164,
+      "w": 2308,
+      "h": 1000,
+      "t": "frame"
+     },
+     {
+      "x": 856,
+      "y": -968,
+      "w": 508,
+      "h": 1160,
+      "t": "frame"
+     },
+     {
+      "x": 256,
+      "y": -968,
+      "w": 548,
+      "h": 1513,
+      "t": "frame"
+     },
+     {
+      "x": -364,
+      "y": -968,
+      "w": 508,
+      "h": 1681,
+      "t": "frame"
+     },
+     {
+      "x": -1664,
+      "y": -968,
+      "w": 1208,
+      "h": 1782,
+      "t": "frame"
+     },
+     {
+      "x": -1664,
+      "y": 2572,
+      "w": 2778,
+      "h": 2190,
+      "t": "frame"
+     },
+     {
+      "x": -1664,
+      "y": 1752,
+      "w": 2228,
+      "h": 732,
+      "t": "frame"
+     },
+     {
+      "x": -1664,
+      "y": 3492,
+      "w": 2378,
+      "h": 1629,
+      "t": "frame"
+     },
+     {
+      "x": -1620,
+      "y": -900,
+      "w": 620,
+      "h": 470,
+      "t": "wireframe"
+     },
+     {
+      "x": -1620,
+      "y": -380,
+      "w": 620,
+      "h": 480,
+      "t": "wireframe"
+     },
+     {
+      "x": -900,
+      "y": -900,
+      "w": 400,
+      "h": 236,
+      "t": "notes"
+     },
+     {
+      "x": -900,
+      "y": -640,
+      "w": 400,
+      "h": 257,
+      "t": "notes"
+     },
+     {
+      "x": -900,
+      "y": -359,
+      "w": 400,
+      "h": 237,
+      "t": "notes"
+     },
+     {
+      "x": -900,
+      "y": -98,
+      "w": 400,
+      "h": 306,
+      "t": "notes"
+     },
+     {
+      "x": -900,
+      "y": 232,
+      "w": 400,
+      "h": 237,
+      "t": "notes"
+     },
+     {
+      "x": -900,
+      "y": 493,
+      "w": 400,
+      "h": 277,
+      "t": "notes"
+     },
+     {
+      "x": -320,
+      "y": -900,
+      "w": 420,
+      "h": 334,
+      "t": "notes"
+     },
+     {
+      "x": -320,
+      "y": -560,
+      "w": 420,
+      "h": 347,
+      "t": "notes"
+     },
+     {
+      "x": -320,
+      "y": -189,
+      "w": 420,
+      "h": 451,
+      "t": "code"
+     },
+     {
+      "x": -320,
+      "y": 286,
+      "w": 420,
+      "h": 383,
+      "t": "code"
+     },
+     {
+      "x": 300,
+      "y": -900,
+      "w": 460,
+      "h": 213,
+      "t": "code"
+     },
+     {
+      "x": 300,
+      "y": -560,
+      "w": 460,
+      "h": 366,
+      "t": "code"
+     },
+     {
+      "x": 300,
+      "y": -120,
+      "w": 460,
+      "h": 256,
+      "t": "notes"
+     },
+     {
+      "x": 300,
+      "y": 140,
+      "w": 460,
+      "h": 361,
+      "t": "notes"
+     },
+     {
+      "x": 900,
+      "y": -900,
+      "w": 420,
+      "h": 269,
+      "t": "notes"
+     },
+     {
+      "x": 900,
+      "y": -600,
+      "w": 420,
+      "h": 363,
+      "t": "code"
+     },
+     {
+      "x": 900,
+      "y": -160,
+      "w": 420,
+      "h": 308,
+      "t": "notes"
+     },
+     {
+      "x": 900,
+      "y": 240,
+      "w": 420,
+      "h": 315,
+      "t": "code"
+     },
+     {
+      "x": 300,
+      "y": 600,
+      "w": 460,
+      "h": 259,
+      "t": "notes"
+     },
+     {
+      "x": -900,
+      "y": 794,
+      "w": 400,
+      "h": 326,
+      "t": "notes"
+     },
+     {
+      "x": -1620,
+      "y": 600,
+      "w": 620,
+      "h": 262,
+      "t": "notes"
+     },
+     {
+      "x": -1620,
+      "y": 940,
+      "w": 620,
+      "h": 275,
+      "t": "notes"
+     },
+     {
+      "x": -1620,
+      "y": -1320,
+      "w": 900,
+      "h": 322,
+      "t": "notes"
+     },
+     {
+      "x": -1620,
+      "y": 1820,
+      "w": 400,
+      "h": 620,
+      "t": "media"
+     },
+     {
+      "x": -1190,
+      "y": 1820,
+      "w": 400,
+      "h": 620,
+      "t": "media"
+     },
+     {
+      "x": -760,
+      "y": 1820,
+      "w": 400,
+      "h": 620,
+      "t": "media"
+     },
+     {
+      "x": -330,
+      "y": 1820,
+      "w": 400,
+      "h": 620,
+      "t": "media"
+     },
+     {
+      "x": 100,
+      "y": 1820,
+      "w": 420,
+      "h": 337,
+      "t": "notes"
+     },
+     {
+      "x": -1620,
+      "y": 2640,
+      "w": 310,
+      "h": 300,
+      "t": "media"
+     },
+     {
+      "x": -1620,
+      "y": 2960,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": -1620,
+      "y": 3280,
+      "w": 310,
+      "h": 290,
+      "t": "notes"
+     },
+     {
+      "x": -1280,
+      "y": 2640,
+      "w": 310,
+      "h": 300,
+      "t": "media"
+     },
+     {
+      "x": -1280,
+      "y": 2960,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": -1280,
+      "y": 3280,
+      "w": 310,
+      "h": 271,
+      "t": "notes"
+     },
+     {
+      "x": -940,
+      "y": 2640,
+      "w": 310,
+      "h": 300,
+      "t": "media"
+     },
+     {
+      "x": -940,
+      "y": 2960,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": -940,
+      "y": 3280,
+      "w": 310,
+      "h": 309,
+      "t": "notes"
+     },
+     {
+      "x": -600,
+      "y": 2640,
+      "w": 310,
+      "h": 300,
+      "t": "media"
+     },
+     {
+      "x": -600,
+      "y": 2960,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": -600,
+      "y": 3280,
+      "w": 310,
+      "h": 271,
+      "t": "notes"
+     },
+     {
+      "x": -260,
+      "y": 2640,
+      "w": 310,
+      "h": 300,
+      "t": "media"
+     },
+     {
+      "x": -260,
+      "y": 2960,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": -260,
+      "y": 3280,
+      "w": 310,
+      "h": 271,
+      "t": "notes"
+     },
+     {
+      "x": 80,
+      "y": 2640,
+      "w": 310,
+      "h": 300,
+      "t": "media"
+     },
+     {
+      "x": 80,
+      "y": 2960,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": 80,
+      "y": 3280,
+      "w": 310,
+      "h": 290,
+      "t": "notes"
+     },
+     {
+      "x": 420,
+      "y": 2640,
+      "w": 310,
+      "h": 300,
+      "t": "media"
+     },
+     {
+      "x": 420,
+      "y": 2960,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": 420,
+      "y": 3280,
+      "w": 310,
+      "h": 271,
+      "t": "notes"
+     },
+     {
+      "x": 760,
+      "y": 3031,
+      "w": 310,
+      "h": 300,
+      "t": "modelview"
+     },
+     {
+      "x": 760,
+      "y": 3355,
+      "w": 310,
+      "h": 290,
+      "t": "notes"
+     },
+     {
+      "x": 760,
+      "y": 2640,
+      "w": 310,
+      "h": 367,
+      "t": "notes"
+     },
+     {
+      "x": -1620,
+      "y": 3594,
+      "w": 640,
+      "h": 700,
+      "t": "wireframe"
+     },
+     {
+      "x": -940,
+      "y": 3613,
+      "w": 380,
+      "h": 349,
+      "t": "notes"
+     },
+     {
+      "x": -940,
+      "y": 4742,
+      "w": 380,
+      "h": 335,
+      "t": "notes"
+     },
+     {
+      "x": -530,
+      "y": 3560,
+      "w": 380,
+      "h": 347,
+      "t": "notes"
+     },
+     {
+      "x": -530,
+      "y": 3920,
+      "w": 380,
+      "h": 334,
+      "t": "notes"
+     },
+     {
+      "x": -120,
+      "y": 3594,
+      "w": 380,
+      "h": 335,
+      "t": "notes"
+     },
+     {
+      "x": -120,
+      "y": 3953,
+      "w": 380,
+      "h": 347,
+      "t": "notes"
+     },
+     {
+      "x": 290,
+      "y": 3594,
+      "w": 380,
+      "h": 396,
+      "t": "notes"
+     },
+     {
+      "x": 290,
+      "y": 4014,
+      "w": 380,
+      "h": 302,
+      "t": "notes"
+     },
+     {
+      "x": -1620,
+      "y": 4318,
+      "w": 1100,
+      "h": 400,
+      "t": "media"
+     }
+    ],
+    "geaendert": 1786382583927.42,
+    "groesse": 400906,
+    "geholt": 1786382849723
+   }
+  }
+ ],
+ "connections": [
+  {
+   "id": "con_bw_15",
+   "from": {
+    "win": "win_bw_1",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_7",
+    "side": "l",
+    "shape": null
+   },
+   "label": "REST: Konto, Lobby, Tische",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_16",
+   "from": {
+    "win": "win_bw_2",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_8",
+    "side": "l",
+    "shape": null
+   },
+   "label": "WebSocket  /ws",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#57c98a",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_17",
+   "from": {
+    "win": "win_bw_8",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_2",
+    "side": "b",
+    "shape": null
+   },
+   "label": "view · table · party  (mit Revision)",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#57c98a",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_18",
+   "from": {
+    "win": "win_bw_8",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_b",
+    "side": "r",
+    "shape": null
+   },
+   "label": "join / action / leave",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_19",
+   "from": {
+    "win": "win_bw_9",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_8",
+    "side": "l",
+    "shape": null
+   },
+   "label": "Umschlag",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1a",
+   "from": {
+    "win": "win_bw_b",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_e",
+    "side": "l",
+    "shape": null
+   },
+   "label": "act · viewFor · legalActions · standings",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#b78cf7",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1b",
+   "from": {
+    "win": "win_bw_a",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_e",
+    "side": "l",
+    "shape": null
+   },
+   "label": "verdrahtet die Module",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#b78cf7",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1c",
+   "from": {
+    "win": "win_bw_f",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_e",
+    "side": "r",
+    "shape": null
+   },
+   "label": "erfüllt",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1d",
+   "from": {
+    "win": "win_bw_g",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_e",
+    "side": "r",
+    "shape": null
+   },
+   "label": "erfüllt",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1e",
+   "from": {
+    "win": "win_bw_h",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_e",
+    "side": "r",
+    "shape": null
+   },
+   "label": "erfüllt",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1f",
+   "from": {
+    "win": "win_bw_i",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_f",
+    "side": "b",
+    "shape": null
+   },
+   "label": "Engine ⇄ Plattform",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1g",
+   "from": {
+    "win": "win_bw_b",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_p",
+    "side": "t",
+    "shape": null
+   },
+   "label": "Snapshot nach jeder Aktion",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1h",
+   "from": {
+    "win": "win_bw_7",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_o",
+    "side": "t",
+    "shape": null
+   },
+   "label": "Drizzle",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1i",
+   "from": {
+    "win": "win_bw_c",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_o",
+    "side": "r",
+    "shape": null
+   },
+   "label": "Trophäen, Münzen, Truhen",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1j",
+   "from": {
+    "win": "win_bw_q",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_o",
+    "side": "r",
+    "shape": null
+   },
+   "label": "von Hand",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1k",
+   "from": {
+    "win": "win_bw_s",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_7",
+    "side": "b",
+    "shape": null
+   },
+   "label": "liefert den gebauten Client mit aus",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1l",
+   "from": {
+    "win": "win_bw_t",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_1",
+    "side": "b",
+    "shape": null
+   },
+   "label": "WKWebView — derselbe Client",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1m",
+   "from": {
+    "win": "win_bw_k",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_e",
+    "side": "b",
+    "shape": null
+   },
+   "label": "gilt für jedes Modul",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1n",
+   "from": {
+    "win": "win_bw_m",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_e",
+    "side": "b",
+    "shape": null
+   },
+   "label": "botAction(view)",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "solid",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1o",
+   "from": {
+    "win": "win_bw_5",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_l",
+    "side": "l",
+    "shape": null
+   },
+   "label": "Grundsatz 2 zum Anfassen",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1p",
+   "from": {
+    "win": "win_bw_4",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_1",
+    "side": "r",
+    "shape": null
+   },
+   "label": "gebaut aus legalActions",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1q",
+   "from": {
+    "win": "win_bw_3",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_1",
+    "side": "b",
+    "shape": null
+   },
+   "label": "decks.ts",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1r",
+   "from": {
+    "win": "win_bw_w",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_x",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1s",
+   "from": {
+    "win": "win_bw_x",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_y",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1t",
+   "from": {
+    "win": "win_bw_y",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_z",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1u",
+   "from": {
+    "win": "win_bw_z",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_10",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1v",
+   "from": {
+    "win": "win_bw_10",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_11",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1w",
+   "from": {
+    "win": "win_bw_11",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_12",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_1x",
+   "from": {
+    "win": "win_bw_12",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_bw_w",
+    "side": "b",
+    "shape": null
+   },
+   "label": "nächster Zug",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_msnia2k9_dv",
+   "from": {
+    "win": "win_bw_h",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_msni83pd_2j",
+    "side": "l",
+    "shape": null
+   },
+   "label": "eigene Tafel",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "bezier",
+   "heads": "end"
+  }
+ ],
+ "models": [],
+ "nextZ": 132
+}
