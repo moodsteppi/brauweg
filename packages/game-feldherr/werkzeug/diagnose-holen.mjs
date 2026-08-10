@@ -256,6 +256,44 @@ function berichtFuerTisch(tisch, sitze) {
   // --- Der Befund ---
   zeilen.push('### Befund');
   zeilen.push('');
+
+  /**
+   * Zuerst das Ergebnis, dann die Ursachensuche.
+   *
+   * Ein Gleichlaufverlust ist NICHT dasselbe wie eine strittige Partie: Die
+   * Selbstheilung faengt die meisten ab, und am Ende melden beide Geraete
+   * dieselbe Pruefsumme. Beim ersten Einsatz stand hier nur "strittig
+   * gemeldet", und das hat zweimal in die Irre gefuehrt.
+   */
+  const meldungen = nummern.map((n) => {
+    const liste = nur(sitze.get(n).ereignisse, 'meldeErgebnis');
+    return liste.length > 0 ? liste[liste.length - 1] : null;
+  });
+  const verluste = nummern.map((n) => nur(sitze.get(n).ereignisse, 'gleichlauf-verloren').length);
+  if (meldungen.every((m) => m !== null)) {
+    const einig =
+      meldungen.every((m) => m.pruef === meldungen[0].pruef) &&
+      meldungen.every((m) => m.sieger === meldungen[0].sieger);
+    zeilen.push(
+      einig
+        ? `- **Die Partie ging EINIG aus** (Sieger ${meldungen[0].sieger}, Pruefsumme ` +
+            `\`${meldungen[0].pruef}\` auf beiden Geraeten). Sie war nicht strittig.`
+        : `- **Die Partie war STRITTIG.** ` +
+            nummern
+              .map((n, i) => `Sitz ${n}: Sieger ${meldungen[i].sieger}, \`${meldungen[i].pruef}\` bei Takt ${meldungen[i].takt}`)
+              .join(' — '),
+    );
+  } else if (meldungen.some((m) => m !== null)) {
+    zeilen.push('- Nur ein Geraet hat ein Ergebnis gemeldet — die Partie wurde abgebrochen.');
+  }
+  if (verluste.some((v) => v > 0)) {
+    zeilen.push(
+      `- Gleichlaufverluste: ` +
+        nummern.map((n, i) => `Sitz ${n}: ${verluste[i]}`).join(', ') +
+        '. Jeder davon hat einen Neustart aus der Server-Zugliste ausgeloest.',
+    );
+  }
+  zeilen.push('');
   if (nummern.length < 2) {
     zeilen.push(
       '> Nur EIN Sitz hat gemeldet. Ein Vergleich ist damit nicht moeglich — ' +
@@ -296,7 +334,9 @@ function berichtFuerTisch(tisch, sitze) {
           `zwischen Takt ${ab.letzteGleich ?? 0} und ${ab.grenze} — bei 50 ms je Takt ` +
           `sind das ${zeit(((ab.grenze - (ab.letzteGleich ?? 0)) * 50))} Spielzeit.`,
       );
-    } else if (zug.i === null && saatA === saatB) {
+    } else if (zug.i === null && saatA === saatB && !meldungen.every((m) => m !== null)) {
+      /* Nur solange der Ausgang unbekannt ist. Steht er oben schon, waere
+       * dieser Satz Widerspruch statt Hinweis. */
       zeilen.push(
         '- Keine ungleiche Pruefsumme und keine Zugabweichung gefunden. Wenn die ' +
           'Partie trotzdem strittig wurde, standen die Geraete verschieden WEIT ' +
@@ -373,14 +413,17 @@ async function main() {
     kopf,
   );
   const tische = uebersicht.tische.filter(
-    (t) => (!TISCH || t.tableId === TISCH) && (!NUR_STRITTIG || t.strittig),
+    (t) => (!TISCH || t.tableId === TISCH) && (!NUR_STRITTIG || t.gleichlaufVerlust),
   );
   console.log(`${tische.length} Tisch(e) mit Mitschnitt in den letzten ${STUNDEN} Stunden.`);
   for (const t of tische) {
     console.log(
       `  ${t.tableId ?? '(ohne)'}  ${t.zeilen} Zeilen, ${t.sitze} Sitz(e), ` +
         `${new Date(t.von).toISOString()} bis ${new Date(t.bis).toISOString()}` +
-        (t.strittig ? '  [strittig gemeldet]' : ''),
+        /* "Gleichlaufverlust" heisst NICHT "strittig": Die Selbstheilung
+         * faengt die meisten ab, und beide Geraete melden am Ende dieselbe
+         * Pruefsumme. Wie es ausging, steht im Bericht. */
+        (t.gleichlaufVerlust ? '  [Gleichlaufverlust gemeldet]' : ''),
     );
   }
 

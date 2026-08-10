@@ -109,6 +109,13 @@ export function useTable<V = GameView>(
    * laeuft still auseinander. Genau so ist ein Haus-Zug zerbrochen.
    */
   beiSicht?: (nachricht: ViewMessage<V>) => void,
+  /**
+   * Der Server hat eine Aktion abgewiesen. Fuer Kartenspiele genuegt der
+   * Fehlertext; im Gleichschritt nicht: Dort haengt der abgewiesene Zug
+   * weiter in der Schwebe und deckelt den gemeldeten Stand, bis er
+   * verfaellt. Der Tisch muss es also erfahren, nicht nur der Spieler.
+   */
+  beiAbweisung?: (code: string) => void,
 ): TableConnection<V> {
   const [view, setView] = useState<ViewMessage<V> | null>(null);
   const [party, setParty] = useState<PartyMessage | null>(null);
@@ -157,6 +164,8 @@ export function useTable<V = GameView>(
   beiTaktRef.current = beiTakt;
   const beiSichtRef = useRef(beiSicht);
   beiSichtRef.current = beiSicht;
+  const beiAbweisungRef = useRef(beiAbweisung);
+  beiAbweisungRef.current = beiAbweisung;
 
   const zeigeEmote = useCallback((seat: number, emote: string): void => {
     // Der Klang haengt an dieser einen Stelle und nicht an den Tischen: Beide
@@ -276,6 +285,7 @@ export function useTable<V = GameView>(
         // nicht, und ein abgelehnter Zug ist genau das Loch, an dem die
         // Laeufe auseinandergehen.
         notiere('ws-abgelehnt', { code: message.messageKey });
+        beiAbweisungRef.current?.(message.messageKey);
         setError(message.messageKey);
         return;
       }

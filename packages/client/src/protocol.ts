@@ -381,6 +381,13 @@ export interface TaktMessage {
   /** 40er-Taktgrenze, zu der die Pruefsumme gehoert. */
   grenzTakt: number;
   pruef: string;
+  /**
+   * Wie viele Zuege der Absender aus der Serverliste schon hat. Damit weiss
+   * die Gegenseite, ob IHR letzter Zug drueben angekommen ist — der
+   * Gleichschritt haengt daran. Fehlt das Feld, spricht ein aelterer
+   * Client; dann gilt die alte Regel.
+   */
+  zuege?: number;
 }
 
 export type ServerMessage<V = GameView> =

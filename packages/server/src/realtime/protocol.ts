@@ -90,6 +90,12 @@ export type ClientMessage =
       readonly grenzTakt: number;
       /** Zustandsprobe an dieser Grenze, fuer den Abgleich beider Laeufe. */
       readonly pruef: string;
+      /**
+       * Quittung: so viele Zuege hat dieses Geraet aus der Serverliste. Der
+       * Server reicht sie unveraendert weiter; die Gegenseite loest daran
+       * ihren Melde-Deckel. Optional, weil aeltere Clients sie nicht senden.
+       */
+      readonly zuege?: number;
     };
 
 // ---------------------------------------------------------------------------
@@ -204,6 +210,18 @@ export interface TaktMessage {
   readonly takt: number;
   readonly grenzTakt: number;
   readonly pruef: string;
+  /**
+   * Zahl der Zuege, die der Absender aus der Serverliste schon erhalten hat.
+   *
+   * Sie beantwortet der Gegenseite die einzige Frage, auf die es ankommt:
+   * Ist MEIN letzter Zug bei dir angekommen? Der Absender darf seinen
+   * Melde-Deckel erst danach loesen — sein eigenes Server-Echo sagt darueber
+   * nichts (Befund vom 10.8.2026, docs/FELDHERR-DIAGNOSE.md).
+   *
+   * Optional: Aeltere Clients senden das Feld nicht. Wer es nie sieht,
+   * faellt auf die alte Regel zurueck, statt fuer immer zu deckeln.
+   */
+  readonly zuege?: number;
 }
 
 export type ServerMessage =

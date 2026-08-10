@@ -396,6 +396,39 @@ export function starteFeldherr(optionen = {}) {
   const schwebend = [];
   const SCHWEBE_VERFALL_MS = 4000;
   /**
+   * Zuege, die dieses Geraet aus der Serverliste bekommen hat, und der
+   * zuletzt gemeldete Stand der Gegenseite.
+   *
+   * Das eigene Server-Echo beendet die Schwebe NICHT mehr — es sagt nur,
+   * dass der SERVER den Zug hat. Am 10. August 2026 stand das im Mitschnitt
+   * einer echten Partie: Der Desktop bekam sein Echo 400 ms vor dem iPhone,
+   * loeste seinen Deckel, meldete den vollen Stand, und das iPhone rechnete
+   * ueber den Takt des Zuges hinaus, den es noch gar nicht hatte —
+   * zugVersatz. Zwischen Schreibtisch und Schreibtisch faellt das nie auf,
+   * weil beide Wege gleich schnell sind.
+   *
+   * Der Zaehler ist die Antwort: Die Zugliste ist eine Reihenfolge, die
+   * beide Geraete teilen. Meldet die Gegenseite, sie habe N Zuege, dann hat
+   * sie jeden Zug bis N — auch meinen. Erst dann faellt der Deckel.
+   */
+  let empfangen = 0;
+  let gegnerZuege = 0;
+  /**
+   * Hat die Gegenseite einen Herzschlag OHNE Zugzaehler geschickt?
+   *
+   * Dann spricht ein aelterer Kern, und der Deckel faellt wie frueher schon
+   * beim eigenen Echo — die Lehre vom 9. August: Eine Formatergaenzung
+   * braucht Abwaertskompatibilitaet, nicht nur eine Versionsnummer.
+   *
+   * Die Frage steht bewusst SO herum. Andersherum ("hat sie je quittiert?")
+   * war sie am Partieanfang immer mit nein zu beantworten — da hat noch
+   * niemand gepulst —, und genau dort faellt der erste Zug: Der Deckel ging
+   * sofort wieder auf, und die Probe in werkzeug/deckel-probe.mjs zeigte den
+   * Fehler unveraendert. Wer nichts weiss, deckelt; das kostet
+   * schlimmstenfalls einen Puls Wartezeit.
+   */
+  let gegnerOhneQuittung = false;
+  /**
    * Sofortige Lege-Vorschau: Zwischen Fingertipp und Ausfuehrung liegt eine
    * halbe Sekunde Gleichschritt — ohne sichtbare Reaktion fuehlt sich das
    * wie Eingabe-Lag an, obwohl alles planmaessig laeuft. Der pulsierende
@@ -406,7 +439,10 @@ export function starteFeldherr(optionen = {}) {
   let vorschau = [];
   function melden(zug) {
     const takt = planTakt();
-    schwebend.push({ takt, seit: performance.now() });
+    /* `bestaetigt` ist die Zugzahl, ab der die Gegenseite diesen Zug haben
+     * MUSS. Sie steht erst fest, wenn er als Echo zurueckkommt — vorher
+     * weiss niemand, an welcher Stelle der Liste er landet. */
+    schwebend.push({ takt, seit: performance.now(), bestaetigt: null });
     if (zug.r !== undefined && zug.c !== undefined) {
       vorschau.push({ takt, r: zug.r, c: zug.c });
     }
@@ -4736,6 +4772,43 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
    */
   let letztesWissen = 0;
   let letztesZiel = 0;
+
+  /**
+   * Raeumt erledigte Schwebe-Eintraege weg. Ein Eintrag ist erledigt, wenn
+   * die GEGENSEITE den Zug hat — nicht schon, wenn der Server ihn hat.
+   *
+   * Drei Faelle, und jeder hat einen Grund:
+   *
+   *   1. Kein Echo vom Server: Der Zug ist unterwegs oder wurde abgelehnt.
+   *      Nur der Verfall raeumt ihn weg, sonst froere ein abgelehnter Zug
+   *      den gemeldeten Stand fuer immer ein.
+   *   2. Echo da, Gegenseite zaehlt mit: Sie hat den Zug, sobald ihr
+   *      Zugzaehler die Stelle erreicht, an der er in der Liste steht.
+   *   3. Echo da, die Gegenseite hat aber schon einmal OHNE Zugzaehler
+   *      gepulst (aelterer Client): Rueckfall auf die alte Regel — Echo
+   *      genuegt. Sonst wartete dieses Geraet auf eine Meldung, die nie
+   *      kommt, und die Partie stuende still.
+   *
+   * Die Liste ist nach Takt aufsteigend, und `bestaetigt` waechst mit ihr —
+   * deshalb genuegt es, vorne abzuraeumen.
+   */
+  function schwebeAufraeumen(t) {
+    while (schwebend.length) {
+      const s = schwebend[0];
+      if (s.bestaetigt === null) {
+        if (t - s.seit > SCHWEBE_VERFALL_MS) {
+          schwebend.shift();
+          continue;
+        }
+        break;
+      }
+      if (gegnerOhneQuittung || gegnerZuege >= s.bestaetigt) {
+        schwebend.shift();
+        continue;
+      }
+      break;
+    }
+  }
   /**
    * Nie mehr als eine Bildanforderung offen halten: Im verdeckten Tab feuert
    * requestAnimationFrame nicht, sammelt Anforderungen aber — beim
@@ -4758,22 +4831,30 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     letzte = t;
     restMs = Math.min(restMs + dt, TAKT_MS * 2);
 
+    /* Vor allem anderen: Was ist erledigt? Beide Deckel unten lesen
+     * schwebend[0], und zwischen zwei Pulsen liegen 100 ms — die duerfen
+     * sie nicht auf einem veralteten Eintrag stehen. */
+    schwebeAufraeumen(t);
+
     // Herzschlag nach Wanduhr, nicht nach Takt: Auch ein Geraet, das an der
     // Wissensgrenze wartet, muss sich melden — sonst warten am Ende beide.
     if (t - letzterPuls >= PULS_MS) {
       letzterPuls = t;
-      // Vom Server abgelehnte Zuege kommen nie zurueck — nach dem Verfall
-      // geben sie den Stand wieder frei, statt ihn fuer immer einzufrieren.
-      while (schwebend.length && t - schwebend[0].seit > SCHWEBE_VERFALL_MS) {
-        schwebend.shift();
-      }
       let stand = taktZaehler;
       if (schwebend.length) {
         stand = Math.max(0, Math.min(stand, schwebend[0].takt - VORLAUF - MELDE_PUFFER));
       }
       let grenze = Math.floor(taktZaehler / PROBE_TAKTE) * PROBE_TAKTE;
       while (grenze > 0 && !proben.has(grenze)) grenze -= PROBE_TAKTE;
-      NETZ.puls({ takt: stand, grenzTakt: grenze, pruef: proben.get(grenze) ?? '0' });
+      /* `zuege` ist die Quittung fuer die Gegenseite: So viele Zuege habe
+       * ich aus der Liste. Daran erkennt sie, dass ihr Zug hier angekommen
+       * ist — und erst dann loest sie ihren Deckel. */
+      NETZ.puls({
+        takt: stand,
+        grenzTakt: grenze,
+        pruef: proben.get(grenze) ?? '0',
+        zuege: empfangen,
+      });
     }
 
     // Die Grenze nutzt Vorlauf UND Meldepuffer: Die Gegenseite plant ihre
@@ -4903,8 +4984,13 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
         antrieb = 'keiner';
       };
       werker.onmessage = () => {
+        /* Nur wenn der Worker wirklich antreibt. Vorher stand die Marke
+         * hier oben und wurde alle 50 ms auf 'worker' gesetzt, auch im
+         * sichtbaren Tab — als Beleg fuer einen eingefrorenen Tab war sie
+         * damit wertlos. */
+        if (!laeuft || !document.hidden) return;
         antrieb = 'worker';
-        if (laeuft && document.hidden) schleife(performance.now());
+        schleife(performance.now());
       };
     } catch {
       werker = null;   // strenge CSP: dann friert der verdeckte Tab wie zuvor
@@ -4925,11 +5011,17 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     },
     /** Ein Zug vom Server — eigener wie fremder. */
     zugAnnehmen(zug, wer) {
-      // Der eigene Zug ist zurueck: Er schwebt nicht mehr, der Herzschlag
-      // darf wieder den vollen Stand melden.
+      empfangen += 1;
+      /**
+       * Der eigene Zug ist vom Server zurueck. Er schwebt trotzdem WEITER —
+       * das Echo beweist nur, dass der Server ihn hat, nicht die
+       * Gegenseite. Festgehalten wird die Stelle in der Liste: Sobald die
+       * Gegenseite meldet, so viele Zuege zu haben, hat sie auch diesen.
+       * Dann erst faellt der Deckel (siehe `offeneSchwebe`).
+       */
       if (wer === MEIN_SITZ) {
-        const i = schwebend.findIndex((s) => s.takt === zug.takt);
-        if (i >= 0) schwebend.splice(i, 1);
+        const eintrag = schwebend.find((s) => s.takt === zug.takt);
+        if (eintrag) eintrag.bestaetigt = empfangen;
       }
       // Aus einem fremden Zug wird BEWUSST kein Gegnerstand abgeleitet.
       // Geplant wird er bei max(eigener Takt, Gegnerstand) plus Vorlauf —
@@ -4989,6 +5081,21 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     pulsAnnehmen(wer, daten) {
       if (wer === MEIN_SITZ || (wer !== 0 && wer !== 1)) return;
       gegnerStand[wer] = Math.max(gegnerStand[wer], daten.takt);
+      /**
+       * Die Quittung der Gegenseite. Nur nach oben: Pulse koennen sich
+       * ueberholen, und ein aelterer duerfte einen schon geloesten Deckel
+       * nicht wieder zuziehen.
+       *
+       * `gegnerZaehlt` merkt sich, dass drueben ueberhaupt gezaehlt wird.
+       * Bleibt es falsch, spricht ein aelterer Client, und der Deckel faellt
+       * wie frueher schon beim eigenen Echo — lieber die alte Schwaeche als
+       * eine Partie, die stillsteht.
+       */
+      if (typeof daten.zuege === 'number') {
+        if (daten.zuege > gegnerZuege) gegnerZuege = daten.zuege;
+      } else {
+        gegnerOhneQuittung = true;
+      }
       // Auch die Probe an Grenze 0 vergleichen: Sie entsteht direkt nach dem
       // Rundenstart und entlarvt ein falsches Saatkorn schon nach 200 ms
       // statt erst am Ende der Partie.
@@ -4999,6 +5106,30 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     },
     takt: () => taktZaehler,
     pruefsumme,
+    /**
+     * Der Server hat eine Aktion abgewiesen (etwa `partyNotRunning`, waehrend
+     * er neu anlaeuft). Der Zug kommt dann nie zurueck.
+     *
+     * Ohne diesen Weg blieb er vier Sekunden in der Schwebe, deckelte den
+     * gemeldeten Stand und liess die Gegenseite warten — fuer einen Zug, den
+     * es nicht mehr gibt. Am 10.8.2026 im Mitschnitt gesehen: zwei
+     * Kartenlegungen waehrend eines Neustarts, beide still verloren.
+     *
+     * Weggeraeumt wird NUR, was noch kein Echo hat. Ein bestaetigter Zug ist
+     * in der Serverliste; seinen Deckel hier zu loesen, hiesse der
+     * Gegenseite zu erlauben, ueber ihn hinwegzurechnen.
+     */
+    zugVerworfen() {
+      let weg = 0;
+      for (let i = schwebend.length - 1; i >= 0; i -= 1) {
+        if (schwebend[i].bestaetigt === null) {
+          schwebend.splice(i, 1);
+          weg += 1;
+        }
+      }
+      vorschau = [];
+      return weg;
+    },
     /**
      * Lesefenster fuer die Aufzeichnung (docs/FELDHERR-DIAGNOSE.md).
      *
@@ -5020,6 +5151,13 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
       /* Nur die Takte: Ein schwebender Zug ist so lange die Bremse des
        * eigenen Geraets, wie er nicht zurueckkommt. */
       schwebend: schwebend.map((s) => s.takt),
+      /* Fuer den Mitschnitt: Wie viele Zuege hier angekommen sind, was die
+       * Gegenseite quittiert hat, und ob sie ueberhaupt quittiert. Ohne
+       * diese drei Zahlen ist ein haengender Deckel nicht von einer
+       * stillen Leitung zu unterscheiden. */
+      empfangen,
+      gegnerZuege,
+      gegnerZaehlt: !gegnerOhneQuittung,
       letzterMeldeTakt,
       strittigGemeldet,
       laeuft,
