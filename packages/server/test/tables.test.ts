@@ -202,26 +202,31 @@ test('Beitritt belegt den naechsten freien Platz, ein voller Tisch weist ab', as
   const bert = await createVerifiedAccount(c, 'Bert');
   const cara = await createVerifiedAccount(c, 'Cara');
 
+  // Vierertisch: Den Dreiertisch gibt es beim Doppelkopf nicht mehr (er war
+  // ohnehin vier mit Dauerbot). Vier Plaetze fuellen, der fuenfte wird
+  // abgewiesen.
   const table = await createTable(c.db, {
     accountId: anna.accountId,
     gameId: 'doppelkopf',
     config: CONFIG,
-    seats: 3,
+    seats: 4,
     rounds: 4,
   });
 
   await joinTable(c.db, table.id, bert.accountId);
   await joinTable(c.db, table.id, cara.accountId);
+  const dora = await createVerifiedAccount(c, 'Dora');
+  await joinTable(c.db, table.id, dora.accountId);
 
   const { seats } = await tableWithSeats(c.db, table.id);
   assert.deepEqual(
     seats.map((seat) => seat.accountId),
-    [anna.accountId, bert.accountId, cara.accountId],
+    [anna.accountId, bert.accountId, cara.accountId, dora.accountId],
   );
 
-  const dora = await createVerifiedAccount(c, 'Dora');
+  const eva = await createVerifiedAccount(c, 'Eva');
   await assert.rejects(
-    () => joinTable(c.db, table.id, dora.accountId),
+    () => joinTable(c.db, table.id, eva.accountId),
     (err: AppError) => err.code === 'tableFull',
   );
 });

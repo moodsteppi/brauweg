@@ -88,7 +88,11 @@ const meta: GameMeta = {
   id: 'doppelkopf',
   nameKey: 'game.doppelkopf',
   availability: 'playable',
-  seatCounts: [3, 4, 5],
+  // Kein Dreiertisch mehr zur Auswahl: Er war ohnehin vier mit Dauerbot, und
+  // genau das verwirrte. Wer zu dritt spielen will, macht einen Vierertisch
+  // auf und laesst den freien Platz mit einem Bot fuellen. Die Engine kann 3
+  // weiterhin (validator, Tests) - es steht nur nicht mehr in der Lobby.
+  seatCounts: [4, 5],
   rotationSize(seats) {
     // 3er-Tisch hat einen Dauerbot, die Rotation umfasst trotzdem 4 Geber.
     return rotationSize(seats as 3 | 4 | 5);
