@@ -17,6 +17,28 @@ Minuten live.
 `tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
 decken beides ab.
 
+> **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
+> Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder
+> Hand, Drücken, Ansage (Farbe, Grand, Null, Ouvert, Hand, Schneider/Schwarz),
+> Kontra/Re, Abrechnung mit Spitzen und Überreizt. **Ramsch und Bock sind
+> schaltbare Tischregeln** und stehen im datengetriebenen Regel-Editor. Neues
+> Paket `@brauweg/game-skat` (21 eigene Tests, grün), eigener `SkatTable` im
+> Client, ein Sitz mehr in der Registrierung (`MODULES`). Vor `main` gehört
+> das eine Runde Probespielen — die Bot-Reizlogik ist bewusst zurückhaltend
+> und noch nicht am echten Tisch erprobt.
+>
+> **Bekannte Lücke (Grafik):** Die meisten Kartenblätter reichen nur von Neun
+> bis Ass (Doppelkopf-Bereich); Skat braucht auch **Sieben und Acht**. Nur
+> `zauberwald` hat sie. Fehlt die Datei, fällt die Karte auf die
+> Textdarstellung zurück (`CardFront`, `onError`) statt ein kaputtes Bild zu
+> zeigen; die Skat-Voreinstellung ist ohnehin das Textblatt. Wer Skat mit
+> einem Bildblatt spielt, sieht Neun bis Ass gemalt und Sieben/Acht als
+> Textkachel gemischt. Sauber wird es erst mit einer Bestellung der fehlenden
+> 7/8-Flächen je Bildblatt (`docs/ASSETS-*.md`).
+
+Doppelkopf hat außerdem seit dem 10. August **keinen Dreiertisch mehr in der
+Lobby** (er war ohnehin vier mit Dauerbot); die Engine kann drei weiterhin.
+
 **Vorsicht beim ersten Bauen in einem frischen Arbeitsbaum:** `npm run build`
 im Wurzelverzeichnis, nicht `--workspace @brauweg/server`. Die `.d.ts` von
 `@brauweg/game-api` ist sonst der alte Stand, und `tsc` meldet Felder als
