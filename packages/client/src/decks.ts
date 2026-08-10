@@ -46,6 +46,14 @@ export interface Deck {
    */
   readonly games?: readonly string[];
   /**
+   * Raenge, die dieses Blatt NICHT als Bild mitbringt. Skat braucht Sieben und
+   * Acht, die meisten Blaetter reichen aber nur von Neun bis Ass. Solche Karten
+   * fallen auf die Textdarstellung zurueck (siehe CardFront), statt ein kaputtes
+   * Bild zu zeigen. Rein informativ fuer die Blattwahl; das Rendern regelt der
+   * onError-Rueckfall.
+   */
+  readonly fehlendeRaenge?: readonly string[];
+  /**
    * Die App zeichnet die Ecken-Anzeige (Wert + Farbe) selbst als Chip, statt
    * sie im Bild zu erwarten. Fuer das Zauberwald-Blatt: dort liegt ein flaches
    * weisses Kaestchen im Bild, das der Chip verdeckt; auf spaeteren
@@ -72,7 +80,7 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.minimal2.hint',
     dir: 'minimal2',
     ext: 'svg',
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'minimal4',
@@ -80,7 +88,7 @@ export const DECKS: readonly Deck[] = [
     hintKey: 'deck.minimal4.hint',
     dir: 'minimal4',
     ext: 'svg',
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'klassisch',
@@ -89,7 +97,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'klassisch',
     ext: 'png',
     // Kein Zauberblatt: keine Karte fuer Eins bis Acht, kein Zauberer, kein Narr.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'eiche',
@@ -98,7 +106,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'eiche',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'winterhof',
@@ -107,7 +115,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'winterhof',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'sommerwiese',
@@ -116,7 +124,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'sommerwiese',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'nachthimmel',
@@ -125,7 +133,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'nachthimmel',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'rubin',
@@ -134,7 +142,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'rubin',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'smaragd',
@@ -143,7 +151,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'smaragd',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'kupferstich',
@@ -152,7 +160,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'kupferstich',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'koeniglich',
@@ -161,7 +169,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'koeniglich',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'schiefer',
@@ -170,7 +178,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'schiefer',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'pinguin',
@@ -179,7 +187,7 @@ export const DECKS: readonly Deck[] = [
     dir: 'pinguin',
     ext: 'webp',
     // Doppelkopfblatt: Neun bis Ass, keine Karte fuer Zwei bis Acht.
-    games: ['doppelkopf'],
+    games: ['doppelkopf', 'skat'], fehlendeRaenge: ['7', '8'],
   },
   {
     id: 'zauberwald',

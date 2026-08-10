@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { CardFront } from '../CardFace';
@@ -10,7 +10,9 @@ import type { Card, SkatGameView, SkatRoundView } from '../protocol';
 import {
   Avatar,
   HandCard,
+  LetzterStich,
   PartyEnd,
+  RegelBlatt,
   Ruecken,
   StichStapel,
   TurnClock,
@@ -82,6 +84,8 @@ export function SkatTable({
   const [gedrueckt, setGedrueckt] = useState<number[]>([]);
   /** Abrechnung von Hand geschlossen. Die Pause selbst steuert der Server. */
   const [abrechnungWeg, setAbrechnungWeg] = useState(false);
+  const [zeigeRegeln, setZeigeRegeln] = useState(false);
+  const [zeigeLetzten, setZeigeLetzten] = useState(false);
 
   const round: SkatRoundView | null = view?.view.round ?? null;
 
@@ -91,6 +95,31 @@ export function SkatTable({
   useEffect(() => {
     if (round?.phase !== 'vorbei') setAbrechnungWeg(false);
   }, [round?.phase]);
+
+  /*
+   * Der volle Stich muss kurz liegen bleiben, bevor er verschwindet — sonst
+   * sieht man die entscheidende dritte Karte nie: Der Server rechnet den Stich
+   * in derselben Aktion ab, in der die dritte Karte faellt, und schickt `trick`
+   * schon leer mit gefuelltem `lastTrick`. Genau wie am Doppelkopftisch wird
+   * der letzte Stich deshalb hier noch anderthalb Sekunden weitergezeigt.
+   * `seenKey` verhindert das Aufblitzen beim Beitritt mitten in einer Gabe.
+   */
+  const lastTrick = view?.view.round?.lastTrick ?? null;
+  const lastKey = lastTrick ? lastTrick.played.map((p) => p.card.id).join('.') : null;
+  const [frozenKey, setFrozenKey] = useState<string | null>(null);
+  const seenKey = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (seenKey.current === undefined) {
+      seenKey.current = lastKey;
+      return;
+    }
+    if (lastKey && lastKey !== seenKey.current) {
+      seenKey.current = lastKey;
+      setFrozenKey(lastKey);
+      const handle = setTimeout(() => setFrozenKey((k) => (k === lastKey ? null : k)), 1500);
+      return () => clearTimeout(handle);
+    }
+  }, [lastKey]);
 
   const nameOf = (seat: number): string =>
     table?.seats.find((s) => s.seat === seat)?.displayName ?? `Bot ${seat + 1}`;
@@ -151,6 +180,11 @@ export function SkatTable({
   const kann = (typ: string): boolean => round.aktionen.includes(typ);
   const zeigeAbrechnung = round.phase === 'vorbei' && !!round.result && !abrechnungWeg;
 
+  // Frisch abgeraeumter Stich: die drei Karten bleiben kurz liegen (siehe oben).
+  const frozenActive = frozenKey !== null && frozenKey === lastKey && round.trick.length === 0;
+  const trickAnzeige = frozenActive && lastTrick ? lastTrick.played : round.trick;
+  const trickGewinner = frozenActive && lastTrick ? lastTrick.winner : null;
+
   const toggleDruecken = (id: number): void =>
     setGedrueckt((alt) =>
       alt.includes(id) ? alt.filter((x) => x !== id) : alt.length < 2 ? [...alt, id] : alt,
@@ -173,7 +207,23 @@ export function SkatTable({
           </strong>
           <span className="muted">{phasenText(round, meinSitz)}</span>
         </div>
-        <span className="doko-icon is-leer" aria-hidden="true" />
+        <div className="doko-top-right">
+          <button
+            className="doko-icon"
+            onClick={() => setZeigeLetzten(true)}
+            disabled={!lastTrick}
+            aria-label="Letzter Stich"
+          >
+            ↩
+          </button>
+          <button
+            className="doko-icon"
+            onClick={() => setZeigeRegeln(true)}
+            aria-label="Tischregeln ansehen"
+          >
+            §
+          </button>
+        </div>
       </header>
 
       <div className="doko-felt seats-3">
@@ -218,19 +268,18 @@ export function SkatTable({
         </div>
 
         <div className="doko-trick">
-          {round.trick.map((played) => (
+          {trickAnzeige.map((played) => (
             <div
               key={played.card.id}
-              className={`doko-trick-card at-${slotFor(played.seat, meinSitz, 3)}`}
+              className={`doko-trick-card at-${slotFor(played.seat, meinSitz, 3)}${
+                trickGewinner === played.seat ? ' is-winner' : ''
+              }`}
             >
               <div className="pc pc--trick">
                 <CardFront card={played.card} deck={deck} />
               </div>
             </div>
           ))}
-          {round.trick.length === 0 && round.lastTrick && round.phase === 'stich' && (
-            <p className="doko-last">Letzter Stich an {nameOf(round.lastTrick.winner)}</p>
-          )}
         </div>
       </div>
 
@@ -331,6 +380,18 @@ export function SkatTable({
             send({ type: 'weiter' });
             setAbrechnungWeg(true);
           }}
+        />
+      )}
+
+      {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
+
+      {zeigeLetzten && lastTrick && (
+        <LetzterStich
+          played={lastTrick.played}
+          winnerSeat={lastTrick.winner}
+          nameOf={nameOf}
+          deck={deck}
+          onClose={() => setZeigeLetzten(false)}
         />
       )}
     </div>
