@@ -1548,7 +1548,7 @@ function VorbehaltDialog({
           <p className="muted vb-pflichtsolo">
             Pflichtsolo offen:{' '}
             {offen.map((s) => (s === eigenerSitz ? 'du' : nameOf(s))).join(', ')}
-            {ichOffen ? ' — dich kann es noch treffen.' : ''}
+            {ichOffen ? '. Dich kann es noch treffen.' : ''}
           </p>
         )}
 

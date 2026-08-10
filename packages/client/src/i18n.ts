@@ -96,7 +96,7 @@ const de: Record<string, string> = {
   'error.clubRequired': 'Für einen Clantisch brauchst du einen Clan.',
   'error.notClubMember': 'Diesen Tisch sehen nur Clanmitglieder.',
   'error.pauseClubOnly': 'Pausieren geht nur an Clantischen.',
-  'error.partyPaused': 'Der Tisch ist pausiert — erst fortsetzen.',
+  'error.partyPaused': 'Der Tisch ist pausiert. Erst fortsetzen.',
   'error.clubUnknown': 'Diesen Clan gibt es nicht.',
 
   // Waehrungen, Truhen, Aufgaben, Shop. Die Meldungen sagen, was zu tun ist —
@@ -111,7 +111,7 @@ const de: Record<string, string> = {
   'error.questNotDone': 'Diese Aufgabe ist noch nicht fertig.',
   'error.questAlreadyClaimed': 'Die Belohnung hast du schon geholt.',
   'error.itemUnknown': 'Dieses Stück gibt es nicht.',
-  'error.itemNotForSale': 'Das gibt es nicht zu kaufen — nur zu bekommen.',
+  'error.itemNotForSale': 'Das gibt es nicht zu kaufen, nur zu bekommen.',
   'error.itemAlreadyOwned': 'Das hast du schon.',
   'error.itemNotOwned': 'Das gehört dir noch nicht.',
   'error.itemWrongSlot': 'Das gehört an eine andere Stelle.',

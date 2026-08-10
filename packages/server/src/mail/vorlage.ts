@@ -83,6 +83,6 @@ ${absaetze}
 Falls der Knopf nicht geht:<br>${sicher(v.knopfLink)}</p></td></tr>
 
 </table>
-<p style="margin:14px 0 0;font-size:12px;color:#7b8b95;font-family:Arial,sans-serif">Brauweg — spielt nach euren Regeln.</p>
+<p style="margin:14px 0 0;font-size:12px;color:#7b8b95;font-family:Arial,sans-serif">Brauweg. Spielt nach euren Regeln.</p>
 </td></tr></table></body></html>`;
 }

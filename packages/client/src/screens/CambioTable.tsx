@@ -674,7 +674,7 @@ function BlindtauschLeiste({
     <>
       <span className="cambio-hinweis">
         {erster
-          ? 'Erste Karte gewählt — jetzt die zweite antippen'
+          ? 'Erste Karte gewählt, jetzt die zweite antippen'
           : 'Zwei Karten antippen, die getauscht werden sollen'}
       </span>
       {erster && (
@@ -708,7 +708,7 @@ function Rundenblatt({
         <h2>Aufgedeckt</h2>
         {r.caller !== null && (
           <p className={r.callSucceeded ? 'cambio-ruf-gut' : 'cambio-ruf-schlecht'}>
-            {nameOf(r.caller)} rief Cambio —{' '}
+            {nameOf(r.caller)} rief Cambio:{' '}
             {r.callSucceeded ? 'und lag vorn: null Punkte.' : 'daneben, plus Strafpunkte.'}
           </p>
         )}
@@ -747,7 +747,7 @@ function Rundenblatt({
               </li>
             ))}
         </ol>
-        <p className="muted">Wenig ist gut — es gewinnt, wer am Ende am wenigsten hat.</p>
+        <p className="muted">Wenig ist gut. Es gewinnt, wer am Ende am wenigsten hat.</p>
 
         <button className="primary" onClick={onClose}>
           Weiter

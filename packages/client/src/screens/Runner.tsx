@@ -2728,7 +2728,7 @@ export function Runner({
             <div className="hub-tafel-inhalt runner-tafel-inhalt">
               {rangliste === null && <p className="runner-text">Wird geladen…</p>}
               {rangliste !== null && rangliste.eintraege.length === 0 && (
-                <p className="runner-text">Heute ist noch niemand gelaufen — sei du es.</p>
+                <p className="runner-text">Heute ist noch niemand gelaufen. Sei du es.</p>
               )}
               {rangliste !== null && rangliste.eintraege.length > 0 && (
                 <ol className="runner-rang">
@@ -2771,7 +2771,7 @@ export function Runner({
             <div className="hub-tafel-inhalt runner-tafel-inhalt">
               <p className="runner-text">
                 {hubMode
-                  ? 'Renn, so weit du kommst — gesammelte Münzen landen in deinem Hub-Konto.'
+                  ? 'Renn, so weit du kommst. Gesammelte Münzen landen in deinem Hub-Konto.'
                   : 'Renn, so weit du kommst. Hindernisse: drüber, drunter oder daneben.'}
               </p>
               {hubMode && restHeute !== null && (
@@ -2893,7 +2893,7 @@ export function Runner({
                       : hubMuenzen > 0
                         ? `+${hubMuenzen} Münzen im Hub-Konto`
                         : restHeute === 0
-                          ? 'Tageslimit erreicht — morgen wieder'
+                          ? 'Tageslimit erreicht, morgen wieder'
                           : 'Keine Hub-Münzen diesmal'}
                 </p>
               )}

@@ -624,7 +624,7 @@ export function WizardTable({
       {view.seat !== null && runde?.blind && (
         <div className="doko-hand wiz-blind">
           <BlindKarte deck={deck} action={blindLegen} onPlay={send} />
-          <p className="muted">Deine Karte kennst du nicht — die der anderen schon.</p>
+          <p className="muted">Deine Karte kennst du nicht, die der anderen schon.</p>
         </div>
       )}
 
@@ -1018,7 +1018,7 @@ function Gebotsblatt({
               ? `${handSize} ${handSize === 1 ? 'Stich' : 'Stiche'} sind zu vergeben. Du sagst zuerst an.`
               : `Bisher angesagt: ${bisher
                   .map(([seat, bid]) => `${nameOf(Number(seat))} ${bid}`)
-                  .join(' · ')}${bidTotal !== null ? ` — Summe ${bidTotal} von ${handSize}` : ''}`}
+                  .join(' · ')}${bidTotal !== null ? `, Summe ${bidTotal} von ${handSize}` : ''}`}
         </p>
 
         <div className="wiz-gebote">
@@ -1076,7 +1076,7 @@ function Trumpfwahl({
     <div className="doko-sheet doko-sheet--mitte">
       <div className="doko-sheet-card wiz-knapp">
         <h2>Du bestimmst den Trumpf</h2>
-        <p className="muted">Aufgedeckt wurde ein Zauberer — du wählst die Farbe.</p>
+        <p className="muted">Aufgedeckt wurde ein Zauberer, du wählst die Farbe.</p>
         <div className="wiz-farben">
           {actions.map((action) => {
             const suit = String(action.suit);

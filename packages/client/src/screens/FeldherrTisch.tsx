@@ -885,7 +885,7 @@ export function FeldherrTisch({
       await api.joinTable(id);
       onEnter?.(id);
     } catch {
-      setFehler('Beitritt fehlgeschlagen — vielleicht ist der Tisch schon voll.');
+      setFehler('Beitritt fehlgeschlagen, vielleicht ist der Tisch schon voll.');
     }
   };
 
@@ -929,7 +929,7 @@ export function FeldherrTisch({
             {sitze.map((platz) => (
               <div key={platz.seat} className="feldherr-zeile">
                 <span>Sitz {platz.seat + 1}</span>
-                <span>{platz.displayName ?? '— frei —'}</span>
+                <span>{platz.displayName ?? 'frei'}</span>
               </div>
             ))}
           </section>
@@ -966,7 +966,7 @@ export function FeldherrTisch({
             {strittigLokal || (ausgang && (ausgang.strittig || ausgang.sieger === null))
               ? 'Die Partie ist strittig: Die Geräte haben verschiedene Stände gemeldet. Niemand gewinnt.'
               : ausgang && ausgang.sieger === meinSitz
-                ? 'Dein Gegner hat aufgegeben — du gewinnst.'
+                ? 'Dein Gegner hat aufgegeben. Du gewinnst.'
                 : 'Die Partie ist beendet.'}
             <button className="btn pri" onClick={onBack}>
               Zurück zur Auswahl
@@ -1046,7 +1046,7 @@ export function FeldherrTisch({
         ))}
         {tische === null && <p className="fh-leer">Tische werden gesucht …</p>}
         {tische !== null && offene.length === 0 && (
-          <p className="fh-leer">Gerade wartet niemand — erstell den ersten Tisch.</p>
+          <p className="fh-leer">Gerade wartet niemand. Erstell den ersten Tisch.</p>
         )}
         {fehler && <p className="feldherr-fehler">{fehler}</p>}
         <button

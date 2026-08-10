@@ -272,7 +272,7 @@ function Spielregel(): React.JSX.Element {
           <strong>Platz 1</strong> bringt 3 Punkte, <strong>Platz 2</strong> einen.
         </li>
         <li>
-          Je Mitglied zählen <strong>höchstens 10 Partien</strong> — ein Vielspieler
+          Je Mitglied zählen <strong>höchstens 10 Partien</strong>. Ein Vielspieler
           entscheidet den Krieg nicht allein.
         </li>
         <li>
@@ -295,7 +295,7 @@ function LetzterKrieg({ krieg }: { krieg: WarView }): React.JSX.Element {
     <section className={`clan-krieg-letzter is-${krieg.ergebnis ?? 'unentschieden'}`}>
       <h3>Letzter Krieg</h3>
       <p>
-        <strong>{wort}</strong> gegen {krieg.gegner?.name ?? 'einen Clan'} —{' '}
+        <strong>{wort}</strong> gegen {krieg.gegner?.name ?? 'einen Clan'}:{' '}
         {krieg.wir.score} zu {krieg.gegner?.score ?? 0}.
       </p>
     </section>

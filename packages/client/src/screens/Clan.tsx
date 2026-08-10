@@ -238,11 +238,11 @@ function fehlertext(e: unknown): string {
     case 'notClubAdmin':
       return 'Das darf nur der Admin.';
     case 'lastAdmin':
-      return 'Das ist der letzte Admin — der Clan braucht mindestens einen.';
+      return 'Das ist der letzte Admin. Der Clan braucht mindestens einen.';
     case 'cannotChangeOwnRole':
       return 'Die eigene Rolle kann man nicht ändern. Lass es einen anderen Admin tun.';
     case 'cannotKickSelf':
-      return 'Dich selbst wirfst du nicht raus — dafür gibt es „Clan verlassen“.';
+      return 'Dich selbst wirfst du nicht raus. Dafür gibt es „Clan verlassen“.';
     default:
       return 'Hat nicht geklappt. Versuch es nochmal.';
   }
@@ -491,7 +491,7 @@ function MitgliedBlatt({
             }}
           >
             {r.wort}
-            {r.hinweis && <span className="muted"> — {r.hinweis}</span>}
+            {r.hinweis && <span className="muted"> · {r.hinweis}</span>}
           </button>
         ))}
 

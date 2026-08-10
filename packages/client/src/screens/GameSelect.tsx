@@ -398,7 +398,7 @@ export function GameSelect({
               Auf staging hing es dauerhaft im Bild und stand beim Prüfen der
               Optik im Weg. Wer dort ist, weiß es an der Adresse. */}
           {me.stage === 'production' && me.entitlements.staff && (
-            <span className="front-stufe" title="Testkonto — hier wird nichts gewertet">
+            <span className="front-stufe" title="Testkonto, hier wird nichts gewertet">
               Test
             </span>
           )}
@@ -1863,7 +1863,7 @@ function Spielen({
             onClick={() => onResume(activeTable.gameId, activeTable.tableId)}
           >
             {activeTable.paused
-              ? 'Weiterspielen — pausiert'
+              ? 'Weiterspielen · pausiert'
               : activeTable.status === 'waiting'
                 ? 'Zurück zum Tisch'
                 : 'Weiterspielen'}
@@ -2335,7 +2335,7 @@ function Spielwahl({
               <button
                 className="spielwahl-flaeche"
                 onClick={() =>
-                  onBald(`${t('modus.mehrkampf')} — der Mehrkampf über mehrere Spiele`)
+                  onBald(`${t('modus.mehrkampf')}: der Mehrkampf über mehrere Spiele`)
                 }
               >
                 <span className="hub-themenspiel-bild" aria-hidden="true">

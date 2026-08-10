@@ -285,8 +285,8 @@ export function Lobby({
               {visibility === 'club_only'
                 ? 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.'
                 : seats === 3
-                  ? 'Am Dreiertisch spielt immer ein Bot als Vierter mit — der Tisch zählt trotzdem für die Rangliste.'
-                  : 'Freie Plätze füllst du am Tisch mit Bots — dann zählt der Tisch nicht für die Rangliste.'}
+                  ? 'Am Dreiertisch spielt immer ein Bot als Vierter mit. Der Tisch zählt trotzdem für die Rangliste.'
+                  : 'Freie Plätze füllst du am Tisch mit Bots. Dann zählt der Tisch nicht für die Rangliste.'}
             </p>
           </section>
         </div>

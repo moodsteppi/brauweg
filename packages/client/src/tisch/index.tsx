@@ -364,7 +364,7 @@ export function RegelBlatt({
           <>
             <p className="muted">
               {an === 0
-                ? 'Keine Sonderregeln — es gilt das Grundspiel.'
+                ? 'Keine Sonderregeln. Es gilt das Grundspiel.'
                 : `${an} von ${gesamt} Regeln an.`}
             </p>
             <div className="regeln">
@@ -626,7 +626,7 @@ export function PartyEnd({
         </ol>
         <p className="muted doko-fineprint">
           {gewertet
-            ? 'Trophäen sind gutgeschrieben — dein Stand steht im Profil.'
+            ? 'Trophäen sind gutgeschrieben. Dein Stand steht im Profil.'
             : 'Keine Trophäen: An Tischen mit Bots wird nicht gewertet.'}
         </p>
         <button className="primary" onClick={onLeave}>
