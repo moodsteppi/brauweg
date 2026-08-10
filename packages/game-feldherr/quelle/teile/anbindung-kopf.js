@@ -144,6 +144,39 @@ export function starteFeldherr(optionen = {}) {
   const schwebend = [];
   const SCHWEBE_VERFALL_MS = 4000;
   /**
+   * Zuege, die dieses Geraet aus der Serverliste bekommen hat, und der
+   * zuletzt gemeldete Stand der Gegenseite.
+   *
+   * Das eigene Server-Echo beendet die Schwebe NICHT mehr — es sagt nur,
+   * dass der SERVER den Zug hat. Am 10. August 2026 stand das im Mitschnitt
+   * einer echten Partie: Der Desktop bekam sein Echo 400 ms vor dem iPhone,
+   * loeste seinen Deckel, meldete den vollen Stand, und das iPhone rechnete
+   * ueber den Takt des Zuges hinaus, den es noch gar nicht hatte —
+   * zugVersatz. Zwischen Schreibtisch und Schreibtisch faellt das nie auf,
+   * weil beide Wege gleich schnell sind.
+   *
+   * Der Zaehler ist die Antwort: Die Zugliste ist eine Reihenfolge, die
+   * beide Geraete teilen. Meldet die Gegenseite, sie habe N Zuege, dann hat
+   * sie jeden Zug bis N — auch meinen. Erst dann faellt der Deckel.
+   */
+  let empfangen = 0;
+  let gegnerZuege = 0;
+  /**
+   * Hat die Gegenseite einen Herzschlag OHNE Zugzaehler geschickt?
+   *
+   * Dann spricht ein aelterer Kern, und der Deckel faellt wie frueher schon
+   * beim eigenen Echo — die Lehre vom 9. August: Eine Formatergaenzung
+   * braucht Abwaertskompatibilitaet, nicht nur eine Versionsnummer.
+   *
+   * Die Frage steht bewusst SO herum. Andersherum ("hat sie je quittiert?")
+   * war sie am Partieanfang immer mit nein zu beantworten — da hat noch
+   * niemand gepulst —, und genau dort faellt der erste Zug: Der Deckel ging
+   * sofort wieder auf, und die Probe in werkzeug/deckel-probe.mjs zeigte den
+   * Fehler unveraendert. Wer nichts weiss, deckelt; das kostet
+   * schlimmstenfalls einen Puls Wartezeit.
+   */
+  let gegnerOhneQuittung = false;
+  /**
    * Sofortige Lege-Vorschau: Zwischen Fingertipp und Ausfuehrung liegt eine
    * halbe Sekunde Gleichschritt — ohne sichtbare Reaktion fuehlt sich das
    * wie Eingabe-Lag an, obwohl alles planmaessig laeuft. Der pulsierende
@@ -154,7 +187,10 @@ export function starteFeldherr(optionen = {}) {
   let vorschau = [];
   function melden(zug) {
     const takt = planTakt();
-    schwebend.push({ takt, seit: performance.now() });
+    /* `bestaetigt` ist die Zugzahl, ab der die Gegenseite diesen Zug haben
+     * MUSS. Sie steht erst fest, wenn er als Echo zurueckkommt — vorher
+     * weiss niemand, an welcher Stelle der Liste er landet. */
+    schwebend.push({ takt, seit: performance.now(), bestaetigt: null });
     if (zug.r !== undefined && zug.c !== undefined) {
       vorschau.push({ takt, r: zug.r, c: zug.c });
     }

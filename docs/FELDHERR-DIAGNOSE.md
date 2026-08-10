@@ -54,11 +54,59 @@ Tab meldet der Mitschnitt jetzt `antrieb: "worker"` und der Takt läuft
 (vorher `antrieb: "keiner"`, Takt 0, kein einziger Puls).
 
 **Ob damit alles erklärt ist, ist offen.** Das Einfrieren allein macht eine
-Partie nicht strittig — die Gegenseite wartet dann sichtbar. Gefährlich wird
-die Rückkehr: Ein eigener schwebender Zug verfällt nach 4 s, der Pulsdeckel
-fällt weg, der gemeldete Stand springt über einen Zug hinweg, den der Server
-danach ausliefert — `zugVersatz`. Deshalb bleibt die Aufzeichnung an; erst
-die nächsten echten Partien sagen, ob noch etwas anderes darunterliegt.
+Partie nicht strittig — die Gegenseite wartet dann sichtbar. Deshalb bleibt
+die Aufzeichnung an; und die nächsten zwei echten Partien haben prompt mehr
+gezeigt.
+
+---
+
+## Zweiter Fund: der Herzschlag überholt den Zug
+
+Zwei live gespielte Partien, 10. August 2026 abends, iPhone gegen Desktop.
+Beide gingen **einig** aus — die Selbstheilung hat gehalten. Der Mitschnitt
+zeigt trotzdem den Riss, Millisekunde für Millisekunde:
+
+```
+133,7 s  Desktop meldet Zug für Takt 2673        (eigener Takt ~2663)
+134,1 s  Desktop bekommt sein eigenes Echo       → schwebend leer, Deckel fällt
+134,4 s  Desktop pulst Takt 2677 ungedeckelt     → iPhone darf bis 2682 rechnen
+134,5 s  iPhone bekommt den Zug für 2673 — bei Takt 2679
+         zugVersatz, Kern hält an, Selbstheilung
+```
+
+Zwei Ursachen, beide behoben:
+
+**a) Der Server serialisierte die Nachrichten eines Clients nicht.** Im
+Gateway stand `void this.handle(connection, text)`. Der `takt`-Zweig ist
+synchron und geht sofort raus, der `action`-Zweig wartet auf die Datenbank —
+ein Herzschlag, der **nach** einem Zug abgeschickt wurde, kam beim Gegner
+**vor** ihm an. Jetzt hängt jede Verbindung an einer Kette
+(`Connection.kette`), und die Reihenfolge des Absenders bleibt erhalten.
+Probe: `test/feldherr-reihenfolge.test.ts`.
+
+**b) Der Melde-Deckel wurde vom falschen Ereignis gelöst.** Der Absender hörte
+auf zu deckeln, sobald **sein eigenes** Echo zurück war. Das sagt nichts
+darüber, ob der *Gegner* den Zug hat — und mit Handy gegen Desktop liegen da
+400 ms. Jetzt trägt jeder Herzschlag die eigene **Zugzahl** (`zuege`), und der
+Deckel fällt erst, wenn die Gegenseite so viele Züge quittiert, dass der
+eigene darin enthalten sein muss. Die Zugliste ist eine gemeinsame
+Reihenfolge; mehr braucht es nicht.
+
+Probe: `node packages/game-feldherr/werkzeug/deckel-probe.mjs` — sie stellt
+die langsame Funkstrecke nach und läuft **zweimal**: mit Quittung (heutiger
+Kern, muss durchlaufen) und ohne (älterer Kern, **muss** den Versatz
+auslösen). Der zweite Lauf ist der wichtige — eine Probe, die den Fehler
+nicht mehr fangen kann, beweist nichts. Genau daran ist die erste Fassung des
+Fixes aufgeflogen: Der Rückfall auf die alte Regel griff, solange die
+Gegenseite *noch nie* quittiert hatte — was am Partieanfang immer zutrifft,
+und dort fällt der erste Zug.
+
+**Und ein dritter Fund nebenbei:** Während eines Server-Neustarts (unser
+eigener Deploy, mitten in der Partie) wies der Server zwei Kartenlegungen mit
+`partyNotRunning` ab. Der Client warf sie weg — die Warteschlange greift nur
+bei *geschlossener* Leitung —, und der Spieler sah nichts. Jetzt erfährt es
+der Kern (`zugVerworfen()` räumt die unbestätigten Züge weg, statt den
+gemeldeten Stand vier Sekunden lang zu deckeln) und der Spieler auch.
 
 ---
 
@@ -127,7 +175,7 @@ Die Datei entsteht auf dem Entwicklungsrechner, wenn das Werkzeug sie holt.
 | Art | Wann | Inhalt |
 |---|---|---|
 | `start` | Kernstart, auch jede Selbstheilung | Laufnummer |
-| `spur` | jede Sekunde | Takt, Gegnerstand, Wissensgrenze, Ziel, schwebende Züge, Rest-ms, Phase |
+| `spur` | jede Sekunde | Takt, Gegnerstand, Wissensgrenze, Ziel, schwebende Züge, Rest-ms, Phase, Antrieb (`bild`/`worker`/`keiner`) |
 | `probe` | je 40er-Taktgrenze | eigene **und** fremde Prüfsumme, Ungleich-Marke |
 | `melde` | eigener Befehl raus | geplanter Takt, Art, Feld |
 | `zug` | Zug vom Server rein | Stelle in der Liste, Sitz, Takt, Art, Feld, eigener Stand |
@@ -163,6 +211,13 @@ folgen kann:
 4. **Erste ungleiche Prüfsumme.** Mit der letzten gemeinsamen Grenze
    daneben: Dazwischen liegt der Fehler, und bei 50 ms je Takt sagt der
    Abstand, wie viel Spielzeit man absuchen muss.
+Davor steht immer das **Ergebnis**: Haben beide Geräte dieselbe Prüfsumme
+gemeldet? Nur dann ist die Frage „warum war sie strittig" überhaupt die
+richtige. Ein *Gleichlaufverlust* ist etwas anderes als eine *strittige
+Partie* — die Selbstheilung fängt die meisten ab, und die Übersicht sagt
+deshalb `gleichlaufVerlust`, nicht `strittig`. Beim ersten Einsatz hat genau
+diese Verwechslung zweimal falschen Alarm geschlagen.
+
 5. **Löcher.** Zwei Sorten, und sie bedeuten Verschiedenes:
    * *Loch im Mitschnitt* — eine Sendung ging verloren.
    * *Spur setzt aus* — der Browser hat den Tab eingefroren. Ohne diese

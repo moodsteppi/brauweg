@@ -64,6 +64,16 @@ interface Connection {
    * Programm im Speicher.
    */
   moduleVersion: number;
+  /**
+   * Warteschlange dieser Verbindung: Nachrichten werden der Reihe nach
+   * abgearbeitet, nicht nebeneinander.
+   *
+   * Ohne sie ueberholt ein synchron weitergereichter Herzschlag den Zug
+   * desselben Absenders, der noch auf die Datenbank wartet — und die
+   * Gegenseite bekommt die Erlaubnis, ueber den Takt dieses Zuges hinaus zu
+   * rechnen. Siehe die Kette in `accept`.
+   */
+  kette: Promise<void>;
 }
 
 /** Hoechstens so viele offene Verbindungen je Konto. */
@@ -124,6 +134,15 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     grenzTakt: z.number().int().min(0).max(10_000_000),
     // Pruefsumme ist eine Basis-36-Zahl; 16 Zeichen sind mehr als genug.
     pruef: z.string().max(16),
+    /**
+     * Wie viele Zuege der Absender aus der Serverliste schon bekommen hat.
+     *
+     * Damit weiss die Gegenseite, ob IHR letzter Zug drueben angekommen ist —
+     * die Frage, an der der Gleichschritt haengt (siehe `bestaetigt` im Kern).
+     * Optional, weil aeltere Clients das Feld nicht senden; dann faellt der
+     * Empfaenger auf die alte Regel zurueck.
+     */
+    zuege: z.number().int().min(0).max(10_000_000).optional(),
   }),
 ]);
 
@@ -259,7 +278,29 @@ export class Gateway {
         queued.push(text);
         return;
       }
-      void this.handle(connection, text);
+      /**
+       * Der Reihe nach, je Verbindung.
+       *
+       * Vorher stand hier ein blosses `void this.handle(...)`, und damit
+       * liefen die Nachrichten EINES Clients nebeneinander. Das ist bei
+       * Kartenspielen folgenlos und bei Feldherr der Fehler: Der
+       * `takt`-Zweig ist synchron und geht sofort raus, der `action`-Zweig
+       * wartet auf die Datenbank. Ein Herzschlag, der NACH einem Zug
+       * abgeschickt wurde, kam beim Gegner damit VOR ihm an — der Gegner
+       * bekam die Erlaubnis, ueber den Takt des Zuges hinaus zu rechnen,
+       * und der Zug traf danach in seiner Vergangenheit ein. Am 10.8.2026
+       * im Mitschnitt einer echten Partie nachgewiesen (400 ms Fenster,
+       * docs/FELDHERR-DIAGNOSE.md).
+       *
+       * Die Kette kostet nichts, was nicht ohnehin zu bezahlen waere:
+       * Pulse, die hinter einem langsamen Zug warten, beschreiben einen
+       * Stand, den die Gegenseite ohne den Zug gar nicht rechnen darf.
+       */
+      connection.kette = connection.kette
+        .then(() => this.handle(connection as Connection, text))
+        .catch(() => {
+          /* handle() faengt selbst; hier nur die Kette am Leben halten. */
+        });
     });
 
     socket.on('close', () => {
@@ -302,6 +343,7 @@ export class Gateway {
         sichtStand: null,
         /* Bis zum `join` gilt die vorsichtigste Annahme: alles vollstaendig. */
         moduleVersion: 1,
+        kette: Promise.resolve(),
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -605,6 +647,9 @@ export class Gateway {
       takt: message.takt,
       grenzTakt: message.grenzTakt,
       pruef: message.pruef,
+      /* Unveraendert durchreichen. Fehlt es (aelterer Client), fehlt es auch
+       * drueben — und der Empfaenger nimmt die alte Regel. */
+      ...(message.zuege === undefined ? {} : { zuege: message.zuege }),
     };
     for (const ziel of this.byTable.get(message.tableId) ?? []) {
       // Der Absender kennt seinen eigenen Takt — zurueckspiegeln waere Laerm.
