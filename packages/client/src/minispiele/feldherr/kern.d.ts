@@ -88,6 +88,12 @@ export interface FeldherrPuls {
   /** 40er-Taktgrenze, zu der die Pruefsumme gehoert. */
   readonly grenzTakt: number;
   readonly pruef: string;
+  /**
+   * Quittung: so viele Zuege hat der Absender aus der Serverliste. Erst
+   * wenn sie den eigenen Zug einschliesst, loest die Gegenseite ihren
+   * Melde-Deckel. Fehlt sie, spricht ein aelterer Client.
+   */
+  readonly zuege?: number;
 }
 
 /**
@@ -252,8 +258,17 @@ export interface FeldherrNetzstand {
   /** Stand, auf den aufgeholt wird (gemeldeter Takt der Gegenseite). */
   readonly ziel: number | null;
   readonly gegnerStand: number;
-  /** Takte eigener Zuege, die noch nicht vom Server zurueckkamen. */
+  /**
+   * Takte eigener Zuege, die noch in der Schwebe sind — also noch nicht
+   * nachweislich bei der Gegenseite angekommen.
+   */
   readonly schwebend: readonly number[];
+  /** Zuege, die dieses Geraet aus der Serverliste bekommen hat. */
+  readonly empfangen: number;
+  /** Zugzahl, die die Gegenseite zuletzt quittiert hat. */
+  readonly gegnerZuege: number;
+  /** Quittiert die Gegenseite ueberhaupt? Sonst gilt die alte Regel. */
+  readonly gegnerZaehlt: boolean;
   readonly letzterMeldeTakt: number;
   readonly strittigGemeldet: boolean;
   readonly laeuft: boolean;
@@ -284,6 +299,12 @@ export interface FeldherrSitzung {
    * Spielinhalte — siehe docs/FELDHERR-DIAGNOSE.md.
    */
   netzStand(): FeldherrNetzstand;
+  /**
+   * Der Server hat eine Aktion abgewiesen: Die noch unbestaetigten eigenen
+   * Zuege sind verloren und geben den gemeldeten Stand wieder frei. Gibt
+   * zurueck, wie viele es waren.
+   */
+  zugVerworfen(): number;
   /**
    * Zeiger-Abbildung der 3D-Ansicht: uebersetzt Bildschirmkoordinaten in
    * Brettzellen (Spiegelung inklusive) oder liefert null neben dem Brett.

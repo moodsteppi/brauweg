@@ -177,7 +177,7 @@ test('Der Schluessel im Kopf ersetzt das Konto, ein falscher nicht', async (t) =
   assert.equal(falsch.statusCode, 401);
 });
 
-test('Die Uebersicht nennt Tisch, Sitze und ob Streit gemeldet wurde', async (t) => {
+test('Die Uebersicht nennt Tisch, Sitze und ob der Gleichlauf verloren ging', async (t) => {
   const { ctx, app, token, tisch } = await aufbau(t);
   await app.inject({
     method: 'POST',
@@ -206,7 +206,44 @@ test('Die Uebersicht nennt Tisch, Sitze und ob Streit gemeldet wurde', async (t)
   assert.equal(eintrag.tableId, tisch.id);
   assert.equal(eintrag.zeilen, 2);
   assert.equal(eintrag.sitze, 2);
-  assert.equal(eintrag.strittig, true);
+  /**
+   * Die Marke sagt "hier ging der Gleichlauf verloren", NICHT "die Partie
+   * war strittig". Zuerst zaehlte sie auch den Anlass 'ausgang' mit — den
+   * meldet jedes Partieende, und damit stand die Marke ueberall. Beim
+   * ersten Einsatz hat sie so zweimal falschen Alarm geschlagen.
+   */
+  assert.equal(eintrag.gleichlaufVerlust, true);
+
+  const ohne = await app.inject({
+    method: 'POST',
+    url: '/api/diagnose/feldherr',
+    cookies: { [SESSION_COOKIE]: token },
+    payload: portion(tisch.id, {
+      grund: 'ausgang',
+      kopf: { spiel: 'feldherr', tisch: tisch.id, sitz: 0 },
+    }),
+  });
+  assert.equal(ohne.statusCode, 200);
+});
+
+test('Ein blosses Partieende ist kein Gleichlaufverlust', async (t) => {
+  const { ctx, app, token, tisch } = await aufbau(t);
+  for (const grund of ['takt', 'ende', 'ausgang', 'abschied']) {
+    await app.inject({
+      method: 'POST',
+      url: '/api/diagnose/feldherr',
+      cookies: { [SESSION_COOKIE]: token },
+      payload: portion(tisch.id, { grund }),
+    });
+  }
+  await ctx.db.update(schema.account).set({ isStaff: true });
+
+  const antwort = await app.inject({
+    method: 'GET',
+    url: '/api/diagnose/feldherr/tische',
+    cookies: { [SESSION_COOKIE]: token },
+  });
+  assert.equal(antwort.json().tische[0].gleichlaufVerlust, false);
 });
 
 test('Ein unbekannter Tisch kostet keinen Fehler, nur die Zuordnung', async (t) => {

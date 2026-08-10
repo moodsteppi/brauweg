@@ -176,6 +176,18 @@ export class TestClient {
     return this.seen.filter((m) => m.type === type) as Extract<ServerMessage, { type: T }>[];
   }
 
+  /**
+   * Alle Nachrichten in der REIHENFOLGE des Eintreffens.
+   *
+   * Bei Kartenspielen belanglos, bei Feldherr der Kern der Sache: Ein
+   * Herzschlag, der den Zug desselben Absenders ueberholt, gibt der
+   * Gegenseite die Erlaubnis, ueber den Takt dieses Zuges hinauszurechnen.
+   * Ohne die Reihenfolge laesst sich das nicht pruefen.
+   */
+  get verlauf(): readonly ServerMessage[] {
+    return this.seen;
+  }
+
   /** Wartet, bis die Bedingung erfuellt ist, oder scheitert nach timeoutMs. */
   async waitFor(
     predicate: () => unknown,

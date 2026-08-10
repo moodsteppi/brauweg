@@ -143,8 +143,17 @@ export interface Uebersicht {
   readonly sitze: number;
   readonly von: Date;
   readonly bis: Date;
-  /** Wurde fuer diesen Tisch ein Gleichlaufverlust gemeldet? */
-  readonly strittig: boolean;
+  /**
+   * Wurde an diesem Tisch ein Gleichlaufverlust gemeldet?
+   *
+   * NICHT dasselbe wie "die Partie war strittig" — genau das stand hier
+   * zuerst, und es hat beim ersten Einsatz zweimal falschen Alarm
+   * geschlagen: Beide Partien hatten einen Verlust, beide wurden von der
+   * Selbstheilung aufgefangen, beide endeten mit derselben Pruefsumme. Ob
+   * eine Partie wirklich strittig ausging, steht im Ausgang und damit im
+   * Rumpf, nicht in dieser Uebersicht.
+   */
+  readonly gleichlaufVerlust: boolean;
 }
 
 /**
@@ -162,7 +171,9 @@ export async function uebersicht(db: Db, seit: Date, grenze = 100): Promise<Uebe
       sitze: sql<number>`count(distinct ${s.feldherrDiagnose.seat})::int`,
       von: sql<Date>`min(${s.feldherrDiagnose.createdAt})`,
       bis: sql<Date>`max(${s.feldherrDiagnose.createdAt})`,
-      strittig: sql<boolean>`bool_or(${s.feldherrDiagnose.grund} in ('strittig','ausgang'))`,
+      /* Nur der Anlass 'strittig' — 'ausgang' meldet JEDES Partieende und
+       * machte die Marke damit wertlos. */
+      gleichlaufVerlust: sql<boolean>`bool_or(${s.feldherrDiagnose.grund} = 'strittig')`,
     })
     .from(s.feldherrDiagnose)
     .where(gt(s.feldherrDiagnose.createdAt, seit))
@@ -176,7 +187,7 @@ export async function uebersicht(db: Db, seit: Date, grenze = 100): Promise<Uebe
     sitze: z.sitze,
     von: new Date(z.von),
     bis: new Date(z.bis),
-    strittig: z.strittig === true,
+    gleichlaufVerlust: z.gleichlaufVerlust === true,
   }));
 }
 

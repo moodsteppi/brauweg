@@ -495,6 +495,12 @@ export function FeldherrTisch({
   const [kernLauf, setKernLauf] = useState(0);
   const [heilt, setHeilt] = useState(false);
   const heilungen = useRef<number[]>([]);
+  /**
+   * Ein Zug, den der Server abgewiesen hat — kurz sichtbar. Er ist wirklich
+   * weg; ihn erneut zu senden waere schlimmer, denn er traegt seinen alten
+   * Takt und kaeme beim Gegner in dessen Vergangenheit an.
+   */
+  const [verworfen, setVerworfen] = useState<string | null>(null);
 
   const buehne = useRef<HTMLDivElement | null>(null);
   const sitzungRef = useRef<ReturnType<typeof starteFeldherr> | null>(null);
@@ -663,8 +669,24 @@ export function FeldherrTisch({
     [nimmZuege],
   );
 
+  /**
+   * Ein abgewiesener Zug.
+   *
+   * Am haeufigsten `partyNotRunning`, waehrend der Server neu anlaeuft — am
+   * 10.8.2026 im Mitschnitt: zwei Kartenlegungen mitten in der Partie
+   * abgewiesen, beide still verloren, der Spieler sah nichts. Der Kern muss
+   * es erfahren (sonst deckelt der Zug vier Sekunden lang den gemeldeten
+   * Stand), und der Spieler auch — er hat gerade eine Karte ausgegeben, die
+   * nie gelegt wurde.
+   */
+  const beiAbweisung = useCallback((code: string) => {
+    const weg = sitzungRef.current?.zugVerworfen?.() ?? 0;
+    notiere('zug-verworfen', { code, weg });
+    if (weg > 0) setVerworfen(code);
+  }, []);
+
   /** Nur im Netzspiel verbunden; oertlich bleibt der Tisch still. */
-  const tisch = useTable<FeldherrSicht>(tableId, 'feldherr', beiTakt, beiSicht);
+  const tisch = useTable<FeldherrSicht>(tableId, 'feldherr', beiTakt, beiSicht, beiAbweisung);
   neuVerbindenRef.current = tisch.reconnect;
   const sicht = tableId ? (tisch.view?.view ?? null) : null;
   /** Zuschauer bekommen keinen Sitz; sie sehen zu und melden nichts. */
@@ -917,6 +939,13 @@ export function FeldherrTisch({
     gereicht.current = liste.length;
   }, [sicht]);
 
+  /** Der Hinweis auf den verworfenen Zug verschwindet von selbst. */
+  useEffect(() => {
+    if (verworfen === null) return;
+    const uhr = window.setTimeout(() => setVerworfen(null), 4000);
+    return () => window.clearTimeout(uhr);
+  }, [verworfen]);
+
   /**
    * Die Spur: einmal je Sekunde der Stand des Gleichschritts, dazu jede
    * neue Pruefsumme. Alle 20 Sekunden geht das Gesammelte an den Server.
@@ -1147,12 +1176,18 @@ export function FeldherrTisch({
         </button>
         <div ref={buehne} />
         {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
-        {heilt && !fremdesEnde && !strittigLokal && (
+        {verworfen && !fremdesEnde && !strittigLokal && (
+          <div className="feldherr-hinweis">
+            Der Zug kam nicht durch — der Tisch war gerade nicht bereit. Leg
+            noch einmal.
+          </div>
+        )}
+        {heilt && !verworfen && !fremdesEnde && !strittigLokal && (
           <div className="feldherr-hinweis">
             Gleichlauf wird wiederhergestellt … die Partie spult kurz vor.
           </div>
         )}
-        {stockt && !heilt && !fremdesEnde && !strittigLokal && (
+        {stockt && !heilt && !verworfen && !fremdesEnde && !strittigLokal && (
           <div className="feldherr-hinweis">
             Warte auf den Gegner … die Partie rechnet erst weiter, wenn sich
             sein Gerät wieder meldet.
