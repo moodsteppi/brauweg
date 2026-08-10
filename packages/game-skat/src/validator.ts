@@ -21,6 +21,8 @@ export function validateRuleSet(rs: RuleSet): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const err = (code: string, message: string) =>
     issues.push({ severity: 'error', code, message });
+  const warn = (code: string, message: string) =>
+    issues.push({ severity: 'warning', code, message });
 
   if (rs.tableSize !== 3) {
     err('TABLE_SIZE', 'Skat wird zu dritt gespielt.');
@@ -33,6 +35,22 @@ export function validateRuleSet(rs: RuleSet): ValidationIssue[] {
   // Kontra-Spiel. Ohne Kontra kann sie also nie greifen.
   if (rs.bock && !rs.kontraRe) {
     err('BOCK_NEEDS_KONTRA', 'Bockrunden setzen erlaubtes Kontra/Re voraus.');
+  }
+  // Hirsch ist die dritte Stufe derselben Kette. Ohne Kontra/Re kaeme sie nie.
+  if (rs.hirsch && !rs.kontraRe) {
+    err('HIRSCH_NEEDS_KONTRA', 'Hirsch setzt erlaubtes Kontra/Re voraus.');
+  }
+  // Schieberamsch und Jungfrauen sind Ramsch-Varianten. Wird eingepasst statt
+  // geramscht, gaebe es sie nie zu sehen.
+  if (rs.schieberamsch && !rs.ramsch) {
+    err('SCHIEBERAMSCH_NEEDS_RAMSCH', 'Schieberamsch setzt Ramsch voraus.');
+  }
+  if (rs.jungfrauen && !rs.ramsch) {
+    err('JUNGFRAUEN_NEEDS_RAMSCH', 'Jungfrauen setzen Ramsch voraus.');
+  }
+
+  if (rs.training) {
+    warn('TRAINING', 'Trainingstisch: keine Ranglistenwertung.');
   }
 
   return issues;

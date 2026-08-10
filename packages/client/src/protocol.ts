@@ -298,11 +298,25 @@ export interface SkatResult {
   declarerAugen: number;
   punkte: Record<number, number>;
   durchmarsch: number | null;
+  /** Ramsch: Sitze ohne einen einzigen Stich. */
+  jungfrauen: number[];
+  /** Angesagte Patrouillen, die in den Spielwert eingingen. */
+  patrouillen: number;
+}
+
+/** Eine Zeile des Reizrechners. Alles darin hat der Server gerechnet. */
+export interface SkatReizZeile {
+  /** 'C' | 'S' | 'H' | 'D' | 'grand' | 'saechsisch' | 'null' */
+  spiel: string;
+  grundwert: number;
+  spitzen: number;
+  mit: boolean;
+  maxWert: number;
 }
 
 export interface SkatRoundView {
   seat: number;
-  /** 'reizen' | 'skat' | 'druecken' | 'ansage' | 'stich' | 'vorbei' */
+  /** 'reizen' | 'schieben' | 'skat' | 'druecken' | 'ansage' | 'stich' | 'vorbei' */
   phase: string;
   dealer: number;
   hand: Card[];
@@ -314,7 +328,16 @@ export interface SkatRoundView {
   gameType: { kind: string; trump?: string } | null;
   /** Trumpfkarten als `Farbe+Wert`, absteigend. Der Client rechnet nichts aus. */
   trumpfKeys: string[];
-  reiz: { wert: number; gebot: number | null; amZug: number | null; rolle: string | null };
+  reiz: {
+    wert: number;
+    gebot: number | null;
+    amZug: number | null;
+    rolle: string | null;
+    /** Werte, die jetzt gesagt werden dürfen — die Leiter des Rechners. */
+    stufen: number[];
+  };
+  /** Was die eigene Hand je Spielart hergibt. Nur während des Reizens gefüllt. */
+  reizHilfe: SkatReizZeile[];
   declarer: number | null;
   reizWert: number;
   handSpiel: boolean;
@@ -323,6 +346,15 @@ export interface SkatRoundView {
   schwarzAngesagt: boolean;
   kontra: boolean;
   re: boolean;
+  hirsch: boolean;
+  /** Angesagte Patrouillen des Alleinspielers ('schwarz' | 'rot'). */
+  patrouillen: string[];
+  /** Patrouillen, die man selbst gerade ansagen könnte (nur in der Ansage). */
+  meinePatrouillen: string[];
+  /** Schieberamsch: wer schiebt, ob er aufnahm, wie oft schon verdoppelt wurde. */
+  schiebenSitz: number | null;
+  schiebenAufgenommen: boolean;
+  ramschFaktor: number;
   trickCounts: Record<number, number>;
   augen: Record<number, number>;
   /** Offene Hand des Alleinspielers bei Ouvert, sonst null. */
@@ -331,6 +363,9 @@ export interface SkatRoundView {
   isMyTurn: boolean;
   neuGeben: boolean;
   ramschAn: boolean;
+  /** Tischvarianten, aus denen der Client seine Ansage-Kacheln baut. */
+  saechsischAn: boolean;
+  patrouillenAn: boolean;
   /** Nicht-Karten-Aktionen dieses Sitzes als Typen ('reizWeiter', 'kontra', …). */
   aktionen: string[];
 }

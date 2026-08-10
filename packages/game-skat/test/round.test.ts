@@ -126,3 +126,32 @@ test('Alle passen bei Ramsch=aus: neu geben', () => {
   assert.equal(s.neuGeben, true);
   assert.equal(s.result, null);
 });
+
+test('Null endet sofort, sobald der Alleinspieler einen Stich macht', () => {
+  const rs = makeRuleSet();
+  // Mehrere Gaben durchspielen (stur die erste zulaessige Karte): Sobald der
+  // Alleinspieler im Null einen Stich nimmt, muss die Gabe vorbei sein, ohne
+  // dass alle zehn Stiche gespielt werden.
+  let sahFruehesEnde = false;
+  for (const seed of ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10']) {
+    let s = reizenZuVorhand(createRound(rs, 0, seed));
+    const declarer = s.declarer!;
+    s = apply(s, declarer, { type: 'handSpielen' });
+    s = apply(s, declarer, { type: 'ansage', spiel: 'null' });
+    s = stecheDurch(s);
+    assert.equal(s.phase, 'vorbei');
+    const declStiche = s.tricks.filter((t) => t.winner === declarer).length;
+    // Hoechstens ein Stich fuer den Alleinspieler: beim ersten ist Schluss.
+    assert.ok(declStiche <= 1, `Null: Alleinspieler nahm ${declStiche} Stiche`);
+    if (declStiche === 1) {
+      sahFruehesEnde = true;
+      assert.equal(s.tricks[s.tricks.length - 1]!.winner, declarer, 'letzter Stich ging an ihn');
+      assert.equal(s.result!.gewonnen, false, 'ein Stich heisst Null verloren');
+      assert.ok(s.tricks.length <= 10);
+    } else {
+      assert.equal(s.tricks.length, 10, 'ohne eigenen Stich wird ausgespielt');
+      assert.equal(s.result!.gewonnen, true, 'kein Stich heisst Null gewonnen');
+    }
+  }
+  assert.ok(sahFruehesEnde, 'im Testfeld sollte mindestens ein Null frueh enden');
+});

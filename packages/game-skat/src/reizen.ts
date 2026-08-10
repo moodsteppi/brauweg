@@ -12,7 +12,7 @@
  * „weg" (passen).
  */
 
-import { naechsterReiz } from './spielwert.js';
+import { naechsterReiz, reizLeiter } from './spielwert.js';
 
 export interface ReizenState {
   readonly vorhand: number;
@@ -27,9 +27,16 @@ export interface ReizenState {
   readonly amZug: 'sager' | 'hoerer';
   /** Nach 'fertig': Alleinspieler oder null (alle haben gepasst). */
   readonly gewinner: number | null;
+  /**
+   * Spielt der Tisch die Saechsische Spitze? Die Leiter kennt dann auch die
+   * Vielfachen von 20. Der Schalter steht im Reizzustand und nicht als
+   * Parameter an jeder Funktion, weil sonst eine einzige vergessene
+   * Durchreichung eine ganze Partie mit falschen Geboten laufen liesse.
+   */
+  readonly saechsisch: boolean;
 }
 
-export function startReizen(dealer: number): ReizenState {
+export function startReizen(dealer: number, saechsisch = false): ReizenState {
   const vorhand = (dealer + 1) % 3;
   const mittelhand = (dealer + 2) % 3;
   const hinterhand = dealer;
@@ -43,6 +50,7 @@ export function startReizen(dealer: number): ReizenState {
     hoerer: vorhand,
     amZug: 'sager',
     gewinner: null,
+    saechsisch,
   };
 }
 
@@ -62,18 +70,43 @@ export function reizSicht(s: ReizenState): {
   wert: number;
   gebot: number | null;
   rolle: 'sager' | 'hoerer' | 'vh' | null;
+  /** Werte, die der Sager jetzt sagen darf (aufsteigend). Fuer den Rechner. */
+  stufen: number[];
 } {
-  if (s.phase === 'fertig') return { wert: s.wert, gebot: null, rolle: null };
-  if (s.phase === 'vh') return { wert: 18, gebot: 18, rolle: 'vh' };
-  return { wert: s.wert, gebot: naechsterReiz(s.wert), rolle: s.amZug };
+  if (s.phase === 'fertig') return { wert: s.wert, gebot: null, rolle: null, stufen: [] };
+  if (s.phase === 'vh') return { wert: 18, gebot: 18, rolle: 'vh', stufen: [18] };
+  return {
+    wert: s.wert,
+    gebot: naechsterReiz(s.wert, s.saechsisch),
+    rolle: s.amZug,
+    // Der Hoerer haelt nur den Stand; springen darf allein der Sager.
+    stufen: s.amZug === 'sager' ? moeglicheGebote(s) : [s.wert],
+  };
+}
+
+/**
+ * Alle Werte, die der Sager jetzt rufen darf. Skat erlaubt das Ueberspringen
+ * von Stufen — man sagt gleich 36, statt sich 18, 20, 22, 23, 24 hochzuzaehlen.
+ * Nach oben begrenzt, damit die Liste im Client eine Liste bleibt: Ueber 264
+ * hinaus reizt an einem echten Tisch niemand.
+ */
+export function moeglicheGebote(s: ReizenState): number[] {
+  return reizLeiter(s.saechsisch).filter((w) => w > s.wert && w <= 264);
 }
 
 function fertig(s: ReizenState, gewinner: number | null, wert: number): ReizenState {
   return { ...s, phase: 'fertig', gewinner, wert };
 }
 
-/** „Weiter": Sager geht eine Stufe hoch, Hoerer haelt, Vorhand nimmt an. */
-export function applyReizWeiter(s: ReizenState): ReizenState {
+/**
+ * „Weiter": Sager geht hoch, Hoerer haelt, Vorhand nimmt an.
+ *
+ * `wert` ist der Zielwert des Sagers. Fehlt er, geht es eine Stufe hoch (der
+ * Knopf „18 sagen"); steht er, wird gesprungen — er muss dann aber ein
+ * echter Leiterwert ueber dem Stand sein, sonst entstuende ein Gebot, das
+ * kein Spiel je einloesen kann.
+ */
+export function applyReizWeiter(s: ReizenState, wert?: number): ReizenState {
   if (s.phase === 'vh') {
     // Beide anderen haben gepasst, ohne dass gereizt wurde: Vorhand spielt zu 18.
     return fertig({ ...s }, s.vorhand, 18);
@@ -81,11 +114,20 @@ export function applyReizWeiter(s: ReizenState): ReizenState {
   if (s.phase === 'fertig') throw new Error('Reizen ist vorbei');
 
   if (s.amZug === 'sager') {
-    const gebot = naechsterReiz(s.wert);
+    const gebot = wert ?? naechsterReiz(s.wert, s.saechsisch);
     if (gebot === null) throw new Error('Kein hoeheres Gebot moeglich');
+    if (wert !== undefined && !moeglicheGebote(s).includes(wert)) {
+      throw new Error(`${wert} ist kein gueltiges Gebot ueber ${s.wert}`);
+    }
     return { ...s, wert: gebot, amZug: 'hoerer' };
   }
-  // Hoerer haelt den aktuellen Wert: der Sager ist wieder dran.
+  // Hoerer haelt den aktuellen Wert: der Sager ist wieder dran. Ein Zielwert
+  // ergibt hier keinen Sinn — wer hoert, sagt keine Zahl. Stillschweigend zu
+  // ignorieren waere schlimmer als abzulehnen: Der Client saehe eine Zahl
+  // abgeschickt und eine andere gelten.
+  if (wert !== undefined && wert !== s.wert) {
+    throw new Error('Wer haelt, sagt keinen eigenen Wert');
+  }
   return { ...s, amZug: 'sager' };
 }
 

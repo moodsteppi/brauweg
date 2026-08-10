@@ -627,16 +627,20 @@ td {
   fill: #6b4a9e;
 }
 .pc-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Die gezeichnete Karte des Textblatts.
+   Ein SVG mit fester viewBox statt einer Textzeile: Es skaliert exakt mit der
+   Kartengroesse mit. Eine feste Schriftgroesse war im Hochformat unlesbar —
+   die Karte ist dort keine 50 Pixel breit. */
 .pc-text {
+  display: block;
   width: 100%;
   height: 100%;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 1.15rem;
-  color: #10171b;
 }
-.pc-text.pc-red { color: #b3231b; }
+.pc-text svg { display: block; width: 100%; height: 100%; }
+.pc-text-tinte { fill: #10171b; }
+.pc-text.pc-red .pc-text-tinte { fill: #b3231b; }
+.pc-text--z .pc-text-tinte { fill: #a8791d; }
+.pc-text--n .pc-text-tinte { fill: #5f3f96; }
 .pc-back {
   display: block;
   width: 100%;
@@ -10350,6 +10354,71 @@ main.auth > .muted {
 .skat-hinweis {
   font-size: 0.78rem;
   opacity: 0.8;
+}
+
+/*
+ * Der Reizrechner.
+ *
+ * Er liegt an derselben Stelle wie die Reizknoepfe und ersetzt sie, solange er
+ * offen ist — nicht darueber, sondern an ihrer Statt. Ein Blatt, das sich vor
+ * die Hand legt, verdeckt genau die Karten, nach denen man gerade rechnet.
+ */
+.skat-reiz {
+  flex: 0 0 auto;
+}
+.skat-reizblatt {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem 0.6rem;
+}
+.skat-reiztabelle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+.skat-reizzeile {
+  display: grid;
+  grid-template-columns: 5.2rem 1fr auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.16rem 0.4rem;
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 0.82rem;
+}
+.skat-reizart {
+  font-weight: 700;
+}
+.skat-reizleiter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+  max-height: 8.5rem;
+  overflow-y: auto;
+}
+.skat-reizwert {
+  min-width: 2.9rem;
+  padding: 0.36rem 0.4rem;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+/* Gruen umrandet ist, was die eigene Hand ohne Zusatzansage noch traegt. Die
+   Grenze ist die eigentliche Auskunft des Rechners — darueber spielt man auf
+   Hand, Schneider oder Schwarz, oder man ueberreizt sich. */
+.skat-reizwert.is-tragbar {
+  border-color: #2f9c5e;
+  background: rgba(47, 156, 94, 0.18);
+}
+.skat-reizwert:active {
+  transform: translateY(2px);
 }
 
 .skat-ansage {

@@ -13,28 +13,50 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 146 Doppelkopf-Tests, 117 Zauberer-Tests, **259 Servertests**,
-`tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
-decken beides ab.
+**Prüfstand:** 149 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
+43 Skat-Tests, 15 Feldherr-Tests, **275 Servertests**, `tsc --noEmit` sauber.
+`npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder
 > Hand, Drücken, Ansage (Farbe, Grand, Null, Ouvert, Hand, Schneider/Schwarz),
-> Kontra/Re, Abrechnung mit Spitzen und Überreizt. **Ramsch und Bock sind
-> schaltbare Tischregeln** und stehen im datengetriebenen Regel-Editor. Neues
-> Paket `@brauweg/game-skat` (21 eigene Tests, grün), eigener `SkatTable` im
+> Kontra/Re, Abrechnung mit Spitzen und Überreizt. Neues Paket
+> `@brauweg/game-skat` (**43 eigene Tests**, grün), eigener `SkatTable` im
 > Client, ein Sitz mehr in der Registrierung (`MODULES`). Vor `main` gehört
 > das eine Runde Probespielen — die Bot-Reizlogik ist bewusst zurückhaltend
 > und noch nicht am echten Tisch erprobt.
 >
-> **Bekannte Lücke (Grafik):** Die meisten Kartenblätter reichen nur von Neun
-> bis Ass (Doppelkopf-Bereich); Skat braucht auch **Sieben und Acht**. Nur
-> `zauberwald` hat sie. Fehlt die Datei, fällt die Karte auf die
-> Textdarstellung zurück (`CardFront`, `onError`) statt ein kaputtes Bild zu
-> zeigen; die Skat-Voreinstellung ist ohnehin das Textblatt. Wer Skat mit
-> einem Bildblatt spielt, sieht Neun bis Ass gemalt und Sieben/Acht als
-> Textkachel gemischt. Sauber wird es erst mit einer Bestellung der fehlenden
-> 7/8-Flächen je Bildblatt (`docs/ASSETS-*.md`).
+> **Elf schaltbare Tischvarianten** stehen im datengetriebenen Regel-Editor:
+> Nur Buben sind Spitze, Patrouillen (beide Buben einer Couleur, je eine
+> Spielstufe), Sächsische Spitze (eigene Spielart: wie Grand, aber die ganze
+> Ordnung gedreht — Karo-Bube oben, Sieben schlägt Ass, Grundwert 20), Hand
+> wird nicht bestraft, Kontra/Re, Hirsch (dritte Stufe der Kette, ×8), Ramsch,
+> Schieberamsch, Jungfrauen, Bockrunde, Training.
+>
+> **Reizrechner:** Der Server liefert in `viewFor` je Spielart Grundwert,
+> Spitzen (mit/ohne) und den höchsten ohne Zusatzansage tragbaren Wert
+> (`reizHilfe`) sowie die Leiter der jetzt erlaubten Gebote (`reiz.stufen`).
+> Der Client malt daraus nur Zeilen und Knöpfe — er rechnet nichts nach, sonst
+> stünde die Reizleiter an zwei Stellen. `reizWeiter` nimmt einen Zielwert und
+> erlaubt damit das Überspringen von Stufen, wie am echten Tisch.
+>
+> **Bekannte Lücke (Grafik):** Die Bildblätter reichen nur von Neun bis Ass
+> (Doppelkopf-Bereich); Skat braucht auch **Sieben und Acht**. Sie sind seit
+> dem 10. August trotzdem **für Skat freigegeben** (`decks.ts`), weil das
+> Textblatt im Hochformat die schlechtere Wahl war: Fehlt die Datei, fällt
+> genau diese Karte auf die Textdarstellung zurück (`CardFront`, `onError`)
+> statt ein kaputtes Bild zu zeigen. Wer Skat mit einem Bildblatt spielt,
+> sieht Neun bis Ass gemalt und Sieben/Acht als Textkachel gemischt. Sauber
+> wird es erst mit einer Bestellung der fehlenden 7/8-Flächen je Bildblatt
+> (`docs/ASSETS-*.md`); die Lücke steht als `DECK_LUECKE` in `decks.ts`.
+>
+> **Die Textkarte ist jetzt ein SVG mit fester viewBox** statt einer Zeile in
+> fester Schriftgröße. Der alte Stand war am Rechner in Ordnung und im
+> Hochformat unlesbar — die Karte ist dort keine 50 Pixel breit, die Schrift
+> blieb aber bei 1,15 rem und wurde vom Kartenrand abgeschnitten. Der Index
+> sitzt oben links, weil in der Hand nur ein schmaler Streifen sichtbar ist;
+> das große Farbzeichen steht weit genug rechts, dass es nicht in den Streifen
+> der Nachbarkarte ragt. Gilt für alle Spiele, nicht nur für Skat.
 
 Doppelkopf hat außerdem seit dem 10. August **keinen Dreiertisch mehr in der
 Lobby** (er war ohnehin vier mit Dauerbot); die Engine kann drei weiterhin.

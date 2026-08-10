@@ -235,6 +235,40 @@ export interface FeldherrMuenze {
   readonly t: number;
 }
 
+/**
+ * Stand des Gleichschritts, wie ihn die Aufzeichnung mitschreibt.
+ *
+ * Jede Zahl beantwortet eine Frage, die im Nachhinein sonst offen bleibt:
+ * `wissen` sagt, bis wohin dieses Geraet ueberhaupt rechnen durfte,
+ * `schwebend` welche eigenen Zuege noch beim Server hingen, und `proben`
+ * traegt je Taktgrenze beide Pruefsummen — die erste Grenze, an der sie
+ * auseinandergehen, ist der Tatort.
+ */
+export interface FeldherrNetzstand {
+  readonly takt: number;
+  readonly restMs: number;
+  /** Wissensgrenze des letzten Bildes; null, solange noch keine steht. */
+  readonly wissen: number | null;
+  /** Stand, auf den aufgeholt wird (gemeldeter Takt der Gegenseite). */
+  readonly ziel: number | null;
+  readonly gegnerStand: number;
+  /** Takte eigener Zuege, die noch nicht vom Server zurueckkamen. */
+  readonly schwebend: readonly number[];
+  readonly letzterMeldeTakt: number;
+  readonly strittigGemeldet: boolean;
+  readonly laeuft: boolean;
+  readonly phase: string;
+  /**
+   * Woran die Schleife haengt: 'bild' (requestAnimationFrame), 'worker'
+   * (verdeckter Tab) oder 'keiner'. 'keiner' bei verdecktem Tab heisst:
+   * Dieses Geraet rechnet gerade ueberhaupt nicht.
+   */
+  readonly antrieb: 'bild' | 'worker' | 'keiner';
+  readonly verdeckt: boolean;
+  /** Je Taktgrenze: [Grenze, eigene Summe, Summe der Gegenseite oder null]. */
+  readonly proben: readonly [number, string, string | null][];
+}
+
 export interface FeldherrSitzung {
   /** Haelt die Bildschleife an. Ohne diesen Aufruf laeuft sie weiter. */
   beenden(): void;
@@ -245,6 +279,11 @@ export interface FeldherrSitzung {
   takt(): number;
   pruefsumme(): string;
   lesen(): FeldherrLeseblick;
+  /**
+   * Zahlen des Gleichschritts fuer die Aufzeichnung. NUR LESEN, keine
+   * Spielinhalte — siehe docs/FELDHERR-DIAGNOSE.md.
+   */
+  netzStand(): FeldherrNetzstand;
   /**
    * Zeiger-Abbildung der 3D-Ansicht: uebersetzt Bildschirmkoordinaten in
    * Brettzellen (Spiegelung inklusive) oder liefert null neben dem Brett.
@@ -267,7 +306,20 @@ export declare function starteFeldherr(optionen: {
    * gerechnet war. Der Bildschirm heilt das per Neustart aus Saatkorn und
    * Server-Zugliste; erst wiederholte Verluste gelten als strittig.
    */
-  aufStrittig?: (probe: { takt: number; pruef: string; grund: 'probe' | 'zugVersatz' }) => void;
+  aufStrittig?: (probe: {
+    takt: number;
+    pruef: string;
+    grund: 'probe' | 'zugVersatz';
+    /** Nur bei `probe`: die abweichende Summe der Gegenseite. */
+    fremd?: string;
+    /** Eigener Taktzaehler im Augenblick des Verlusts. */
+    stand?: number;
+    /** Nur bei `zugVersatz`: der Zug, der zu spaet kam. */
+    zug?: { art: string; takt: number; sitz: number; r?: number; c?: number };
+    /** Nur bei `zugVersatz`: Wissensgrenze und gemeldeter Gegnerstand. */
+    wissen?: number | null;
+    gegnerStand?: number;
+  }) => void;
   /** Fehlt sie, laeuft die Partie oertlich mit der Bildzeit. */
   netz?: FeldherrNetz | null;
   /** Eigener Sitz im Netzspiel; Zuschauer melden mit -1 nichts. */

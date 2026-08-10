@@ -3,8 +3,10 @@
  *
  * Phasen: reizen → skat (aufnehmen oder Hand) → druecken → ansage → stich →
  * vorbei. Passen alle, wird je nach Tischregel Ramsch gespielt oder neu
- * gegeben. Der Automat ist die einzige Stelle, die Zustand aendert; er prueft
- * jede Aktion (Bedienpflicht, Reizfolge, Ansageregeln).
+ * gegeben; spielt der Tisch Schieberamsch, schiebt sich der Skat vorher in der
+ * Phase „schieben" einmal um den Tisch. Der Automat ist die einzige Stelle,
+ * die Zustand aendert; er prueft jede Aktion (Bedienpflicht, Reizfolge,
+ * Ansageregeln).
  */
 
 import { type Card, sumAugen } from './cards.js';
@@ -20,11 +22,25 @@ import {
 } from './reizen.js';
 import { type RuleSet } from './ruleset.js';
 import { type AbrechnungEingabe, type DealErgebnis, abrechnen } from './scoring.js';
+import {
+  type Patrouille,
+  grundwert,
+  patrouillenDerHand,
+  spitzen,
+  trumpfLeiter,
+} from './spielwert.js';
 
-export type Phase = 'reizen' | 'skat' | 'druecken' | 'ansage' | 'stich' | 'vorbei';
+export type Phase =
+  | 'reizen'
+  | 'schieben'
+  | 'skat'
+  | 'druecken'
+  | 'ansage'
+  | 'stich'
+  | 'vorbei';
 
-/** Was der Alleinspieler ansagt: eine Farbe, Grand oder Null. */
-export type AnsageSpiel = 'C' | 'S' | 'H' | 'D' | 'grand' | 'null';
+/** Was der Alleinspieler ansagt: eine Farbe, Grand, Saechsische Spitze oder Null. */
+export type AnsageSpiel = 'C' | 'S' | 'H' | 'D' | 'grand' | 'saechsisch' | 'null';
 
 export interface PlayedCard {
   readonly seat: number;
@@ -56,6 +72,14 @@ export interface RoundState {
   readonly gedrueckt: readonly Card[];
   readonly kontra: boolean;
   readonly re: boolean;
+  readonly hirsch: boolean;
+  /** Angesagte Patrouillen des Alleinspielers. */
+  readonly patrouillen: readonly Patrouille[];
+  /** Schieberamsch: wer gerade schiebt, und ob er den Skat schon aufnahm. */
+  readonly schiebenSitz: number | null;
+  readonly schiebenAufgenommen: boolean;
+  /** Verdopplungen aus blind geschobenen Runden. */
+  readonly ramschFaktor: number;
   readonly vorhand: number;
   readonly turn: number;
   readonly trick: readonly PlayedCard[];
@@ -67,7 +91,8 @@ export interface RoundState {
 }
 
 export type RoundAction =
-  | { readonly type: 'reizWeiter' }
+  /** `wert` springt auf ein hoeheres Gebot; ohne ihn geht es eine Stufe hoch. */
+  | { readonly type: 'reizWeiter'; readonly wert?: number }
   | { readonly type: 'reizWeg' }
   | { readonly type: 'skatNehmen' }
   | { readonly type: 'handSpielen' }
@@ -78,9 +103,15 @@ export type RoundAction =
       readonly ouvert?: boolean;
       readonly schneider?: boolean;
       readonly schwarz?: boolean;
+      readonly patrouillen?: readonly Patrouille[];
     }
   | { readonly type: 'kontra' }
   | { readonly type: 're' }
+  | { readonly type: 'hirsch' }
+  /** Schieberamsch: Skat aufnehmen, blind weiterschieben, zwei weiterschieben. */
+  | { readonly type: 'schiebenNehmen' }
+  | { readonly type: 'schiebenBlind' }
+  | { readonly type: 'schieben'; readonly cards: readonly number[] }
   | { readonly type: 'karte'; readonly cardId: number };
 
 export class RuleViolation extends Error {}
@@ -90,6 +121,7 @@ function fail(msg: string): never {
 
 function spielZuGameType(spiel: AnsageSpiel): GameType {
   if (spiel === 'grand') return { kind: 'grand' };
+  if (spiel === 'saechsisch') return { kind: 'saechsisch' };
   if (spiel === 'null') return { kind: 'null' };
   return { kind: 'suit', trump: spiel };
 }
@@ -112,7 +144,7 @@ export function createRound(rs: RuleSet, dealer: number, seed: number | string):
     hands,
     skat: g.skat,
     phase: 'reizen',
-    reizen: startReizen(dealer),
+    reizen: startReizen(dealer, rs.saechsischeSpitze),
     declarer: null,
     reizWert: 0,
     gameType: null,
@@ -124,6 +156,11 @@ export function createRound(rs: RuleSet, dealer: number, seed: number | string):
     gedrueckt: [],
     kontra: false,
     re: false,
+    hirsch: false,
+    patrouillen: [],
+    schiebenSitz: null,
+    schiebenAufgenommen: false,
+    ramschFaktor: 1,
     vorhand: (dealer + 1) % 3,
     turn: (dealer + 1) % 3,
     trick: [],
@@ -138,6 +175,8 @@ export function currentActor(s: RoundState): number | null {
   switch (s.phase) {
     case 'reizen':
       return reizAmZug(s.reizen);
+    case 'schieben':
+      return s.schiebenSitz;
     case 'skat':
     case 'druecken':
     case 'ansage':
@@ -152,8 +191,14 @@ export function currentActor(s: RoundState): number | null {
 export function apply(s: RoundState, seat: number, a: RoundAction): RoundState {
   switch (a.type) {
     case 'reizWeiter':
+      return applyReiz(s, seat, 'reizWeiter', a.wert);
     case 'reizWeg':
-      return applyReiz(s, seat, a.type);
+      return applyReiz(s, seat, 'reizWeg');
+    case 'schiebenNehmen':
+    case 'schiebenBlind':
+      return applySchiebenWahl(s, seat, a.type);
+    case 'schieben':
+      return applySchieben(s, seat, a.cards);
     case 'skatNehmen':
     case 'handSpielen':
       return applySkatWahl(s, seat, a.type);
@@ -165,6 +210,8 @@ export function apply(s: RoundState, seat: number, a: RoundAction): RoundState {
       return applyKontra(s, seat);
     case 're':
       return applyRe(s, seat);
+    case 'hirsch':
+      return applyHirsch(s, seat);
     case 'karte':
       return applyKarte(s, seat, a.cardId);
     default:
@@ -172,10 +219,22 @@ export function apply(s: RoundState, seat: number, a: RoundAction): RoundState {
   }
 }
 
-function applyReiz(s: RoundState, seat: number, art: 'reizWeiter' | 'reizWeg'): RoundState {
+function applyReiz(
+  s: RoundState,
+  seat: number,
+  art: 'reizWeiter' | 'reizWeg',
+  wert?: number,
+): RoundState {
   if (s.phase !== 'reizen') fail('Es wird gerade nicht gereizt');
   if (reizAmZug(s.reizen) !== seat) fail('Dieser Sitz ist beim Reizen nicht am Zug');
-  const reizen = art === 'reizWeiter' ? applyReizWeiter(s.reizen) : applyReizWeg(s.reizen);
+  let reizen: ReizenState;
+  try {
+    reizen = art === 'reizWeiter' ? applyReizWeiter(s.reizen, wert) : applyReizWeg(s.reizen);
+  } catch (e) {
+    // Ein Sprung auf einen Wert, den die Leiter nicht kennt, ist ein
+    // Regelverstoss und kein Absturz — der Client bekommt eine Meldung.
+    fail(e instanceof Error ? e.message : 'Ungueltiges Gebot');
+  }
   if (reizen.phase !== 'fertig') return { ...s, reizen };
 
   // Reizen vorbei: Alleinspieler oder alle gepasst.
@@ -186,14 +245,76 @@ function applyReiz(s: RoundState, seat: number, art: 'reizWeiter' | 'reizWeg'): 
   return { ...s, reizen, declarer: reizen.gewinner, reizWert: reizen.wert, phase: 'skat' };
 }
 
+/**
+ * Alle haben gepasst. Beim Schieberamsch wandert der Skat erst einmal um den
+ * Tisch, sonst geht es sofort in den Stich. Die Spielart steht in beiden
+ * Faellen schon fest — die Hand muss auch beim Schieben in Ramsch-Ordnung
+ * sortiert angezeigt werden.
+ */
 function startRamsch(s: RoundState): RoundState {
-  return {
-    ...s,
-    phase: 'stich',
-    gameType: { kind: 'ramsch' },
-    declarer: null,
-    turn: s.vorhand,
-  };
+  const basis: RoundState = { ...s, gameType: { kind: 'ramsch' }, declarer: null };
+  if (s.rs.schieberamsch) {
+    return { ...basis, phase: 'schieben', schiebenSitz: s.vorhand, schiebenAufgenommen: false };
+  }
+  return { ...basis, phase: 'stich', turn: s.vorhand };
+}
+
+/** Aufnehmen oder blind weiterschieben. Blind verdoppelt den Ramsch. */
+function applySchiebenWahl(
+  s: RoundState,
+  seat: number,
+  art: 'schiebenNehmen' | 'schiebenBlind',
+): RoundState {
+  if (s.phase !== 'schieben') fail('Es wird gerade nicht geschoben');
+  if (s.schiebenSitz !== seat) fail('Dieser Sitz ist beim Schieben nicht am Zug');
+  if (art === 'schiebenNehmen') {
+    if (s.schiebenAufgenommen) fail('Der Skat ist schon aufgenommen');
+    return {
+      ...s,
+      hands: { ...s.hands, [seat]: [...s.hands[seat]!, ...s.skat] },
+      schiebenAufgenommen: true,
+    };
+  }
+  if (s.schiebenAufgenommen) fail('Blind schieben geht nur, ohne den Skat gesehen zu haben');
+  return naechsterSchieber({ ...s, ramschFaktor: s.ramschFaktor * 2 }, seat);
+}
+
+/** Zwei Karten weiterschieben — nur, wer den Skat aufnahm. */
+function applySchieben(s: RoundState, seat: number, cards: readonly number[]): RoundState {
+  if (s.phase !== 'schieben') fail('Es wird gerade nicht geschoben');
+  if (s.schiebenSitz !== seat) fail('Dieser Sitz ist beim Schieben nicht am Zug');
+  if (!s.schiebenAufgenommen) fail('Erst den Skat aufnehmen, dann schieben');
+  if (cards.length !== 2 || cards[0] === cards[1]) fail('Genau zwei verschiedene Karten schieben');
+  const hand = s.hands[seat]!;
+  const weg = cards.map((id) => hand.find((c) => c.id === id));
+  if (weg.some((c) => !c)) fail('Geschobene Karte ist nicht auf der Hand');
+  return naechsterSchieber(
+    {
+      ...s,
+      hands: { ...s.hands, [seat]: hand.filter((c) => !cards.includes(c.id)) },
+      skat: weg as Card[],
+    },
+    seat,
+  );
+}
+
+/**
+ * Weiter an den naechsten Sitz — oder in den Stich, wenn der Skat einmal
+ * herum ist. Nach der Runde liegt er wieder auf dem Tisch und faellt am Ende
+ * dem Sitz zu, der den letzten Stich nimmt.
+ */
+function naechsterSchieber(s: RoundState, seat: number): RoundState {
+  const naechster = (seat + 1) % 3;
+  if (naechster === s.vorhand) {
+    return {
+      ...s,
+      phase: 'stich',
+      schiebenSitz: null,
+      schiebenAufgenommen: false,
+      turn: s.vorhand,
+    };
+  }
+  return { ...s, schiebenSitz: naechster, schiebenAufgenommen: false };
 }
 
 function applySkatWahl(s: RoundState, seat: number, art: 'skatNehmen' | 'handSpielen'): RoundState {
@@ -229,6 +350,9 @@ function applyAnsage(
 ): RoundState {
   if (s.phase !== 'ansage') fail('Es wird gerade nichts angesagt');
   if (seat !== s.declarer) fail('Nur der Alleinspieler sagt an');
+  if (a.spiel === 'saechsisch' && !s.rs.saechsischeSpitze) {
+    fail('Die Saechsische Spitze ist an diesem Tisch aus');
+  }
   const gt = spielZuGameType(a.spiel);
   const ouvert = !!a.ouvert;
   let schneider = !!a.schneider;
@@ -251,18 +375,38 @@ function applyAnsage(
     if (schwarz) schneider = true;
   }
 
+  // Patrouillen: Angesagt werden darf nur, was wirklich auf der Hand liegt —
+  // geprueft an den Karten, mit denen gespielt wird (nach dem Druecken). Beim
+  // Null gibt es keine Spielstufen, also auch keine Patrouille.
+  let patrouillen: Patrouille[] = [];
+  if (a.patrouillen && a.patrouillen.length > 0) {
+    if (!s.rs.patrouillen) fail('Patrouillen sind an diesem Tisch aus');
+    if (gt.kind === 'null') fail('Im Nullspiel gibt es keine Patrouillen');
+    const echte = patrouillenDerHand(s.hands[seat]!);
+    for (const p of a.patrouillen) {
+      if (!echte.includes(p)) fail(`Die ${p === 'rot' ? 'rote' : 'schwarze'} Patrouille fehlt`);
+    }
+    patrouillen = [...new Set(a.patrouillen)];
+  }
+
   return {
     ...s,
     gameType: gt,
     ouvert,
     schneiderAngesagt: schneider,
     schwarzAngesagt: schwarz,
+    patrouillen,
     phase: 'stich',
     turn: s.vorhand,
   };
 }
 
-/** Kontra darf ein Gegner sagen, solange keine Karte liegt. */
+/**
+ * Kontra, Re und Hirsch gehen beim Skat nur, solange keine Karte liegt — anders
+ * als beim Doppelkopf mit seinem Kartenfenster. Wer die erste Karte gespielt
+ * hat, hat sich entschieden. (Frueher hier einmal auf ein Sechs-Karten-Fenster
+ * ausgeweitet; das ist Doppelkopf-Brauch und beim Skat falsch.)
+ */
 function applyKontra(s: RoundState, seat: number): RoundState {
   if (!s.rs.kontraRe) fail('Kontra ist an diesem Tisch aus');
   if (s.phase !== 'stich' || s.gameType?.kind === 'ramsch') fail('Kontra geht jetzt nicht');
@@ -279,6 +423,16 @@ function applyRe(s: RoundState, seat: number): RoundState {
   if (seat !== s.declarer) fail('Nur der Alleinspieler sagt Re');
   if (!s.kontra || s.re) fail('Re setzt ein offenes Kontra voraus');
   return { ...s, re: true };
+}
+
+/** Hirsch ist die dritte Stufe: die Gegenpartei legt auf ein Re noch einmal nach. */
+function applyHirsch(s: RoundState, seat: number): RoundState {
+  if (!s.rs.hirsch) fail('Hirsch ist an diesem Tisch aus');
+  if (s.phase !== 'stich') fail('Hirsch geht jetzt nicht');
+  if (s.tricks.length > 0 || s.trick.length > 0) fail('Hirsch nur vor der ersten Karte');
+  if (seat === s.declarer) fail('Nur die Gegenpartei sagt Hirsch');
+  if (!s.re || s.hirsch) fail('Hirsch setzt ein offenes Re voraus');
+  return { ...s, hirsch: true };
 }
 
 function applyKarte(s: RoundState, seat: number, cardId: number): RoundState {
@@ -308,6 +462,13 @@ function applyKarte(s: RoundState, seat: number, cardId: number): RoundState {
   };
   const tricks = [...s.tricks, record];
   const rest = { ...s, hands, trick: [], tricks, gewonnen, turn: gewinner };
+
+  // Null endet sofort, sobald der Alleinspieler einen Stich macht: Damit ist es
+  // verloren, und weiterspielen kann daran nichts mehr aendern. Man muss die
+  // Gabe also nicht zu Ende spielen.
+  if (gt.kind === 'null' && gewinner === s.declarer) {
+    return abrechnenUndBeenden(rest, gewinner);
+  }
 
   if (tricks.length < 10) return rest;
 
@@ -344,6 +505,12 @@ function abrechnenUndBeenden(s: RoundState, letzterStichGewinner: number): Round
     schwarzAngesagt: s.schwarzAngesagt,
     kontra: s.kontra,
     re: s.re,
+    hirsch: s.hirsch,
+    patrouillen: s.patrouillen.length,
+    nurBubenSpitzen: s.rs.nurBubenSpitzen,
+    handNichtBestraft: s.rs.handNichtBestraft,
+    jungfrauenAn: s.rs.jungfrauen,
+    ramschFaktor: s.ramschFaktor,
     seats: s.seats,
     gewonneneKarten: gewonnen,
     stiche,
@@ -367,6 +534,15 @@ export function legalActions(s: RoundState, seat: number): RoundAction[] {
         out.push({ type: 'reizWeiter' }, { type: 'reizWeg' });
       }
       break;
+    case 'schieben':
+      if (s.schiebenSitz === seat) {
+        if (s.schiebenAufgenommen) {
+          // Die zwei Karten waehlt der Client; hier keine fertige Aktion.
+        } else {
+          out.push({ type: 'schiebenNehmen' }, { type: 'schiebenBlind' });
+        }
+      }
+      break;
     case 'skat':
       if (seat === s.declarer) out.push({ type: 'skatNehmen' }, { type: 'handSpielen' });
       break;
@@ -377,9 +553,10 @@ export function legalActions(s: RoundState, seat: number): RoundAction[] {
       // Die Ansage baut der Client aus Farbe/Grand/Null plus Zusatzflaggen.
       break;
     case 'stich': {
-      if (s.gameType?.kind !== 'ramsch' && (s.tricks.length === 0 && s.trick.length === 0)) {
+      if (s.gameType?.kind !== 'ramsch' && s.tricks.length === 0 && s.trick.length === 0) {
         if (s.rs.kontraRe && seat !== s.declarer && !s.kontra) out.push({ type: 'kontra' });
         if (s.rs.kontraRe && seat === s.declarer && s.kontra && !s.re) out.push({ type: 're' });
+        if (s.rs.hirsch && seat !== s.declarer && s.re && !s.hirsch) out.push({ type: 'hirsch' });
       }
       if (s.turn === seat) {
         for (const c of legalCards(s.hands[seat]!, s.trick.map((p) => p.card), s.gameType!)) {
@@ -398,6 +575,29 @@ export function legalActions(s: RoundState, seat: number): RoundAction[] {
 // Sicht
 // ---------------------------------------------------------------------------
 
+/**
+ * Eine Zeile des Reizrechners: Was dieses Blatt in dieser Spielart hergibt.
+ *
+ * Der Client rechnet nichts davon selbst — er malt Zeilen. „Mit dreien" und
+ * der daraus folgende hoechste vertretbare Reizwert sind Regelwissen und
+ * gehoeren deshalb in die Engine, genau wie `legalActions`.
+ */
+export interface ReizZeile {
+  /** Ansagekennung: 'C'|'S'|'H'|'D'|'grand'|'saechsisch'|'null'. */
+  readonly spiel: AnsageSpiel;
+  readonly grundwert: number;
+  /** Anzahl der Spitzen (mit oder ohne). Bei Null immer 0. */
+  readonly spitzen: number;
+  /** true = „mit", false = „ohne". Bei Null bedeutungslos. */
+  readonly mit: boolean;
+  /**
+   * Hoechster Wert, den dieses Blatt in dieser Spielart ohne Zusatzansagen
+   * traegt: Grundwert × (Spitzen + 1). Wer darueber reizt, spielt auf
+   * Schneider, Schwarz oder Hand — oder ueberreizt sich.
+   */
+  readonly maxWert: number;
+}
+
 export interface PlayerView {
   readonly seat: number;
   readonly phase: Phase;
@@ -415,7 +615,11 @@ export interface PlayerView {
     readonly gebot: number | null;
     readonly amZug: number | null;
     readonly rolle: 'sager' | 'hoerer' | 'vh' | null;
+    /** Werte, die jetzt gesagt werden duerfen — die Leiter des Rechners. */
+    readonly stufen: readonly number[];
   };
+  /** Der Reizrechner: was die eigene Hand je Spielart hergibt. */
+  readonly reizHilfe: readonly ReizZeile[];
   readonly declarer: number | null;
   readonly reizWert: number;
   readonly handSpiel: boolean;
@@ -424,6 +628,18 @@ export interface PlayerView {
   readonly schwarzAngesagt: boolean;
   readonly kontra: boolean;
   readonly re: boolean;
+  readonly hirsch: boolean;
+  /** Angesagte Patrouillen des Alleinspielers (fuer alle sichtbar). */
+  readonly patrouillen: readonly Patrouille[];
+  /**
+   * Patrouillen, die dieser Sitz gerade ansagen koennte. Nur in der Ansage
+   * gefuellt und nur fuer den Alleinspieler — sonst waere es ein Kartenblick.
+   */
+  readonly meinePatrouillen: readonly Patrouille[];
+  /** Schieberamsch: wer schiebt, hat er schon aufgenommen, wie oft verdoppelt. */
+  readonly schiebenSitz: number | null;
+  readonly schiebenAufgenommen: boolean;
+  readonly ramschFaktor: number;
   readonly trickCounts: Readonly<Record<number, number>>;
   readonly augen: Readonly<Record<number, number>>;
   /** Offene Hand des Alleinspielers bei Ouvert (für alle sichtbar). */
@@ -433,6 +649,9 @@ export interface PlayerView {
   readonly neuGeben: boolean;
   /** Spielt der Tisch Ramsch, wenn alle passen? (Sonst wird neu gegeben.) */
   readonly ramschAn: boolean;
+  /** Tischvarianten, aus denen der Client seine Ansage-Kacheln baut. */
+  readonly saechsischAn: boolean;
+  readonly patrouillenAn: boolean;
   /**
    * Nicht-Karten-Aktionen, die dieser Sitz gerade ausfuehren darf, als Typen
    * (z.B. 'reizWeiter', 'skatNehmen', 'kontra'). Der Client baut daraus seine
@@ -462,6 +681,7 @@ export function viewFor(s: RoundState, seat: number): PlayerView {
     phase: s.phase,
     dealer: s.dealer,
     hand: gt ? sortHand([...s.hands[seat]!], gt) : sortHand([...s.hands[seat]!], { kind: 'grand' }),
+    reizHilfe: s.phase === 'reizen' ? reizHilfeFuer(s, seat) : [],
     legal:
       s.phase === 'stich' && s.turn === seat
         ? legalCards(s.hands[seat]!, s.trick.map((p) => p.card), gt!)
@@ -472,7 +692,13 @@ export function viewFor(s: RoundState, seat: number): PlayerView {
     turn: currentActor(s),
     gameType: gt,
     trumpfKeys: gt && gt.kind !== 'null' ? trumpKeys(gt, s.deck) : gt ? nullOrder(s.deck) : [],
-    reiz: { wert: rs.wert, gebot: rs.gebot, amZug: reizAmZug(s.reizen), rolle: rs.rolle },
+    reiz: {
+      wert: rs.wert,
+      gebot: rs.gebot,
+      amZug: reizAmZug(s.reizen),
+      rolle: rs.rolle,
+      stufen: rs.stufen,
+    },
     declarer: s.declarer,
     reizWert: s.reizWert,
     handSpiel: s.handSpiel,
@@ -481,6 +707,15 @@ export function viewFor(s: RoundState, seat: number): PlayerView {
     schwarzAngesagt: s.schwarzAngesagt,
     kontra: s.kontra,
     re: s.re,
+    hirsch: s.hirsch,
+    patrouillen: s.patrouillen,
+    meinePatrouillen:
+      s.phase === 'ansage' && seat === s.declarer && s.rs.patrouillen
+        ? patrouillenDerHand(s.hands[seat]!)
+        : [],
+    schiebenSitz: s.schiebenSitz,
+    schiebenAufgenommen: s.schiebenAufgenommen,
+    ramschFaktor: s.ramschFaktor,
     trickCounts,
     augen,
     ouvertHand: seat === s.declarer ? null : zeigeOuvert,
@@ -488,10 +723,56 @@ export function viewFor(s: RoundState, seat: number): PlayerView {
     isMyTurn: currentActor(s) === seat,
     neuGeben: s.neuGeben,
     ramschAn: s.rs.ramsch,
+    saechsischAn: s.rs.saechsischeSpitze,
+    patrouillenAn: s.rs.patrouillen,
     aktionen: legalActions(s, seat)
       .filter((a) => a.type !== 'karte')
       .map((a) => a.type),
   };
+}
+
+/**
+ * Der Reizrechner fuer eine Hand.
+ *
+ * Gerechnet wird ohne den Skat — beim Reizen kennt ihn niemand. Das ist die
+ * vorsichtige Schaetzung, die auch ein Mensch am Tisch anstellt: Was traegt
+ * das Blatt, wenn nichts dazukommt? Der Skat kann den Wert nur heben (mehr
+ * Spitzen) oder eine „ohne"-Serie brechen — beides ueberrascht dann nach oben
+ * bzw. ist der bekannte Reizfehler, den es zu vermeiden gilt.
+ */
+function reizHilfeFuer(s: RoundState, seat: number): ReizZeile[] {
+  const hand = s.hands[seat]!;
+  const arten: AnsageSpiel[] = ['D', 'H', 'S', 'C', 'grand'];
+  if (s.rs.saechsischeSpitze) arten.push('saechsisch');
+
+  const zeilen: ReizZeile[] = arten.map((spiel) => {
+    const gt = spielZuGameType(spiel);
+    const n = spitzen(hand, gt, s.deck, s.rs.nurBubenSpitzen);
+    const grund = grundwert(gt);
+    // „Mit" heisst: der oberste Trumpf der Leiter liegt auf der Hand. Fuer die
+    // Saechsische Spitze ist das der Karo-Bube, sonst der Kreuz-Bube.
+    const mit = obersterTrumpfAufDerHand(hand, gt, s.deck);
+    return { spiel, grundwert: grund, spitzen: n, mit, maxWert: grund * (n + 1) };
+  });
+
+  // Null steht ohne Spitzen da: ein fester Wert, den man kennen muss.
+  zeilen.push({
+    spiel: 'null',
+    grundwert: 0,
+    spitzen: 0,
+    mit: false,
+    maxWert: 23,
+  });
+  return zeilen;
+}
+
+function obersterTrumpfAufDerHand(
+  hand: readonly Card[],
+  gt: GameType,
+  deck: readonly Card[],
+): boolean {
+  const oben = trumpfLeiter(gt, deck)[0];
+  return !!oben && hand.some((c) => c.id === oben.id);
 }
 
 // Null hat keinen Trumpf; fuer die Sortierung reicht eine leere Trumpfliste.
