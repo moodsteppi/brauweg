@@ -32,8 +32,9 @@
  * geht es durch keine der beiden.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 
 // ---------------------------------------------------------------------------
@@ -52,7 +53,24 @@ const STUNDEN = Number(opt('stunden', 48));
 const TISCH = opt('tisch', null);
 const ORDNER = resolve(process.cwd(), String(opt('ordner', 'diagnose')));
 const NUR_STRITTIG = args.has('nur-strittig');
-const SCHLUESSEL = opt('schluessel', process.env.DIAGNOSE_SCHLUESSEL ?? null);
+/**
+ * Diagnoseschluessel, in dieser Reihenfolge: Schalter, Umgebung, Datei
+ * `.env.diagnose` im Wurzelverzeichnis des Repos.
+ *
+ * Die Datei ist der gedachte Weg. Ein Schluessel auf der Kommandozeile steht
+ * in der Prozessliste und in der Historie; in der Umgebung vergisst man ihn.
+ * `.env*` ist ohnehin schon aus Git ausgeschlossen.
+ */
+function schluesselAusDatei() {
+  const wurzel = resolve(fileURLToPath(new URL('../../../', import.meta.url)));
+  const pfad = resolve(wurzel, '.env.diagnose');
+  if (!existsSync(pfad)) return null;
+  const treffer = /^\s*DIAGNOSE_SCHLUESSEL\s*=\s*(.+?)\s*$/m.exec(readFileSync(pfad, 'utf8'));
+  return treffer ? treffer[1].replace(/^["']|["']$/g, '') : null;
+}
+
+const SCHLUESSEL =
+  opt('schluessel', process.env.DIAGNOSE_SCHLUESSEL ?? null) ?? schluesselAusDatei();
 const EMAIL = opt('email', process.env.BRAUWEG_EMAIL ?? null);
 const PASSWORT = opt('passwort', process.env.BRAUWEG_PASSWORT ?? null);
 

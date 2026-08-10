@@ -184,10 +184,21 @@ Aufnehmen darf jeder Angemeldete — es ist die Messung des eigenen Geräts.
   keinen Endpunkt, über den man es sich selbst geben könnte. Steht die
   eigene Adresse noch nicht drin, gehört sie an den Dienst — sie wirkt beim
   nächsten Start.
-* **`DIAGNOSE_SCHLUESSEL`.** Für den Fall, dass auf einer Ausgabe kein
-  Testkonto eingerichtet ist. Mindestens 20 Zeichen, sonst gilt er als
+* **`DIAGNOSE_SCHLUESSEL`.** Für den Fall, dass kein Testkonto zur Hand ist —
+  und der Weg, auf dem ein Agent die Mitschnitte holen kann, ohne dass ihm
+  jemand ein Kontopasswort gibt. Mindestens 20 Zeichen, sonst gilt er als
   nicht gesetzt: Ein kurzer Schlüssel sieht nach Schutz aus und ist in
   Minuten durchprobiert. Ohne die Variable ist dieser Weg zu.
+
+  Er erlaubt **nur Lesen der Mitschnitte** — kein Anmelden, kein Spielen,
+  keine Konten, nichts Schreibendes. Widerrufen heißt: Variable am Dienst
+  löschen oder ändern.
+
+  Das Werkzeug sucht ihn in dieser Reihenfolge: `--schluessel=…`, Umgebung,
+  Datei **`.env.diagnose`** im Wurzelverzeichnis (`DIAGNOSE_SCHLUESSEL=…`,
+  eine Zeile). Die Datei ist der gedachte Weg — `.env*` steht in
+  `.gitignore`, und auf der Kommandozeile stünde der Schlüssel in der
+  Prozessliste und in der Historie.
 
 Verglichen wird zeitgleich (`timingSafeEqual`). Ein `===` verrät über die
 Laufzeit, wie viele Zeichen stimmen.
