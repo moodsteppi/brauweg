@@ -4682,7 +4682,19 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     if (eigene === undefined || fremde === undefined || eigene === fremde) return;
     strittigGemeldet = true;
     laeuft = false;
-    if (aufStrittig) aufStrittig({ takt: grenze, pruef: eigene, grund: 'probe' });
+    // `fremd` und `stand` gehen an die Aufzeichnung: Ohne die Summe der
+    // Gegenseite und den Takt, an dem der eigene Lauf stand, ist im Nachhinein
+    // nicht zu unterscheiden, ob die Geraete verschieden RECHNEN oder nur
+    // verschieden WEIT sind.
+    if (aufStrittig) {
+      aufStrittig({
+        takt: grenze,
+        pruef: eigene,
+        fremd: fremde,
+        stand: taktZaehler,
+        grund: 'probe',
+      });
+    }
   }
 
   const alterSchluss = showWin;
@@ -4716,6 +4728,14 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
    */
   let letzte = 0;
   let letzterPuls = 0;
+  /**
+   * Wissensgrenze und Zielstand des letzten Bildes — nur fuer die
+   * Aufzeichnung (netzStand). Sie stehen hier und nicht in der Schleife,
+   * weil ein Diagnosewerkzeug sonst genau die Zahl nicht sehen kann, die
+   * erklaert, WARUM ein Geraet stehenblieb oder vorlief.
+   */
+  let letztesWissen = 0;
+  let letztesZiel = 0;
   /**
    * Nie mehr als eine Bildanforderung offen halten: Im verdeckten Tab feuert
    * requestAnimationFrame nicht, sammelt Anforderungen aber — beim
@@ -4794,6 +4814,9 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     if (schwebend.length) {
       wissen = Math.min(wissen, schwebend[0].takt - 1 + POLSTER);
     }
+    letztesWissen = wissen;
+    letztesZiel = ziel;
+    if (!document.hidden) antrieb = 'bild';
     while (schritte < 10 && taktZaehler < wissen - POLSTER && laeuft) {
       if (taktZaehler < ziel) {
         // Rueckstand: aufholen, ohne die Uhr zu fragen.
@@ -4858,13 +4881,29 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
    * der Tab verdeckt ist. Gezeichnet wird dabei nichts.
    */
   let werker = null;
+  /**
+   * Woran der Kern haengt: 'bild' (requestAnimationFrame), 'worker' oder
+   * 'keiner'. Steht hier 'keiner', friert der verdeckte Tab vollstaendig
+   * ein — und das steht dann auch im Mitschnitt (netzStand), statt dass
+   * man es aus einer Luecke in der Spur erraten muss.
+   *
+   * Der Fall ist NICHT theoretisch: Ein per Inhaltsrichtlinie verbotener
+   * Worker wirft NICHT beim Erzeugen. `new Worker` liefert ein Objekt
+   * zurueck, das nie eine Nachricht schickt; der Fehler kommt asynchron
+   * ueber onerror. Der Versuch unten faengt deshalb beides ab.
+   */
+  let antrieb = 'keiner';
   if (NETZ && typeof Worker !== 'undefined' && typeof Blob !== 'undefined') {
     try {
       const quelle = new Blob(['setInterval(() => postMessage(0), ' + TAKT_MS + ');'], {
         type: 'text/javascript',
       });
       werker = new Worker(URL.createObjectURL(quelle));
+      werker.onerror = () => {
+        antrieb = 'keiner';
+      };
       werker.onmessage = () => {
+        antrieb = 'worker';
         if (laeuft && document.hidden) schleife(performance.now());
       };
     } catch {
@@ -4925,7 +4964,21 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
         if (!strittigGemeldet) {
           strittigGemeldet = true;
           laeuft = false;
-          if (aufStrittig) aufStrittig({ takt: taktZaehler, pruef: pruefsumme(), grund: 'zugVersatz' });
+          if (aufStrittig) {
+            aufStrittig({
+              takt: taktZaehler,
+              pruef: pruefsumme(),
+              grund: 'zugVersatz',
+              stand: taktZaehler,
+              // Welcher Zug zu spaet kam, von wem, und wie weit die
+              // Wissensgrenze stand: Ohne diese vier Zahlen ist im Nachhinein
+              // nicht zu sehen, ob der Absender zu frueh geplant oder die
+              // Leitung zu lange gebraucht hat.
+              zug: { art: zug.art, takt: zug.takt, sitz: wer, r: zug.r, c: zug.c },
+              wissen: letztesWissen,
+              gegnerStand: gegnerStand[1 - MEIN_SITZ],
+            });
+          }
         }
         return;
       }
@@ -4946,6 +4999,39 @@ horchen('orientationchange', ()=>setTimeout(resize,220));
     },
     takt: () => taktZaehler,
     pruefsumme,
+    /**
+     * Lesefenster fuer die Aufzeichnung (docs/FELDHERR-DIAGNOSE.md).
+     *
+     * NUR LESEN, und ausschliesslich Zahlen des Gleichschritts — keine
+     * Spielinhalte. Ohne dieses Fenster steht im Fehlerbericht nur "strittig":
+     * Die Frage, ob ein Geraet vorlief, an der Wissensgrenze klemmte oder
+     * einen eigenen Zug ewig schweben liess, beantworten genau diese Werte,
+     * und sie sind sonst im Funktionsscope des Kerns eingeschlossen.
+     *
+     * `proben` traegt je Taktgrenze die eigene Summe und die der Gegenseite —
+     * die erste Grenze, an der sie sich unterscheiden, ist der Tatort.
+     */
+    netzStand: () => ({
+      takt: taktZaehler,
+      restMs: Math.round(restMs),
+      wissen: letztesWissen === Infinity ? null : letztesWissen,
+      ziel: letztesZiel === Infinity ? null : letztesZiel,
+      gegnerStand: gegnerStand[1 - MEIN_SITZ],
+      /* Nur die Takte: Ein schwebender Zug ist so lange die Bremse des
+       * eigenen Geraets, wie er nicht zurueckkommt. */
+      schwebend: schwebend.map((s) => s.takt),
+      letzterMeldeTakt,
+      strittigGemeldet,
+      laeuft,
+      phase,
+      /* 'bild', 'worker' oder 'keiner' — siehe oben. 'keiner' im verdeckten
+       * Tab heisst: Dieses Geraet rechnet gerade ueberhaupt nicht. */
+      antrieb,
+      verdeckt: document.hidden,
+      proben: [...proben.keys()]
+        .sort((a, b) => a - b)
+        .map((g) => [g, proben.get(g), fremdeProben.get(g) ?? null]),
+    }),
     /**
      * Lesefenster fuer den 3D-Renderer (Stufe 2, docs/FELDHERR-3D-UMBAU.md):
      * Er liest je Bild den Simulationszustand und interpoliert zwischen den

@@ -6,6 +6,8 @@
  * unaufgefordert an alle muss.
  */
 
+import { timingSafeEqual } from 'node:crypto';
+
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
@@ -94,6 +96,7 @@ import {
   warState,
 } from '../clubs/war.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
+import { lies, nimmAuf, uebersicht } from '../diagnose.js';
 import {
   activeTableFor,
   createTable,
@@ -140,6 +143,14 @@ export interface AppDeps {
    * Rechte haengen am Konto, nicht an der Umgebung.
    */
   readonly stage?: 'production' | 'staging' | 'development';
+  /**
+   * Schluessel fuer den Abruf der Feldherr-Mitschnitte, aus
+   * `DIAGNOSE_SCHLUESSEL`. Fehlt er, geht der Abruf ausschliesslich ueber
+   * ein angemeldetes Testkonto — was der uebliche Weg ist. Der Schluessel
+   * ist fuer den Fall gedacht, dass auf einer Ausgabe kein Testkonto
+   * eingerichtet ist und man trotzdem an die Daten muss.
+   */
+  readonly diagnoseSchluessel?: string | null;
 }
 
 const gameIdSchema = z.enum([
@@ -168,6 +179,27 @@ const registerSchema = z.object({
   inviteCode: z.string().min(1),
   /** Kalendertag YYYY-MM-DD — Mindestalter prueft der Auth-Service. */
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+/**
+ * Portion eines Feldherr-Mitschnitts.
+ *
+ * Bewusst duenn: Geprueft wird nur, was der Server selbst braucht (Tisch,
+ * Sitz, Anlass, Startindex). Der ganze Rumpf wird unveraendert abgelegt —
+ * ein Schema ueber den Inhalt hiesse, dass jeder neue Verdacht erst eine
+ * Migration braucht, waehrend der Fehler weiter unbeobachtet auftritt. Die
+ * Groesse begrenzt BODY_LIMIT, die Haeufigkeit die Ratengrenze.
+ */
+const diagnoseSchema = z.object({
+  grund: z.string().min(1).max(40),
+  /** Index des ersten mitgeschickten Ereignisses; Luecken werden so sichtbar. */
+  ab: z.number().int().min(0).max(50_000_000).optional(),
+  kopf: z.object({
+    tisch: z.string().max(64).optional(),
+    /** -1 ist der Zuschauer; er zeichnet mit, sitzt aber nicht. */
+    sitz: z.number().int().min(-1).max(7),
+  }),
+  ereignisse: z.array(z.unknown()).max(4000).optional(),
 });
 
 const createTableSchema = z.object({
@@ -259,7 +291,42 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          */
         imgSrc: ["'self'", 'data:', 'blob:'],
         fontSrc: ["'self'"],
-        connectSrc: ["'self'", 'ws:', 'wss:'],
+        /**
+         * `blob:` gehoert dazu, und der Fehler war teuer.
+         *
+         * Der GLTF-Lader von three packt die Texturen aus dem GLB aus und
+         * HOLT sie ueber eine `blob:`-Adresse — das ist ein `connect`, kein
+         * `img`. Ohne diesen Eintrag blieb der Ritter in der 3D-Ansicht
+         * ohne Textur, mit "Refused to connect" in der Konsole. Auf dem
+         * Entwicklungsserver faellt das nie auf: Dort liefert Vite aus, und
+         * Vite setzt gar keine Inhaltsrichtlinie.
+         */
+        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:'],
+        /**
+         * DER Fehler, der Feldherr auf Produktion strittig gemacht hat —
+         * und der in keiner Testfassung auftrat.
+         *
+         * Der Spielkern haelt den verdeckten Tab mit einem Web Worker am
+         * Leben (`anbindung-fuss.js`): Dort feuert requestAnimationFrame
+         * nicht, und ohne Antrieb steht der Kern still, pulst nicht mehr,
+         * und die Partie friert auf BEIDEN Geraeten ein. Am Handy passiert
+         * das bei jedem kurzen Blick woandershin.
+         *
+         * Der Worker entsteht aus einem Blob. Ohne `worker-src` faellt der
+         * Browser auf `script-src` zurueck, und dort steht nur `'self'` —
+         * der Worker wurde also auf JEDER Ausgabe blockiert, die den Client
+         * ueber diesen Server ausliefert (Produktion und Staging), aber auf
+         * KEINER Entwicklungsfassung, weil Vite keine Richtlinie setzt.
+         * Genau das erklaert "in den Testversionen passiert es nie".
+         *
+         * Und es faellt nicht als Ausnahme auf: Ein verbotener Worker wirft
+         * beim Erzeugen NICHT. `new Worker` liefert ein Objekt zurueck, das
+         * schweigt; der Versuch/Fange-Zweig im Kern lief also nie.
+         *
+         * `blob:` heisst hier ausschliesslich "von dieser Seite selbst
+         * erzeugt" — es oeffnet keine fremde Herkunft.
+         */
+        workerSrc: ["'self'", 'blob:'],
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
@@ -373,6 +440,41 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const session = await sessionFromToken(deps.db, sessionToken(request));
     if (!session) throw unauthorized();
     return session.accountId;
+  };
+
+  /**
+   * Zugang zu den Mitschnitten (docs/FELDHERR-DIAGNOSE.md).
+   *
+   * Zwei Wege, und beide mit Absicht:
+   *
+   *   - **Angemeldetes Testkonto.** Der uebliche Weg. Das Merkmal kommt
+   *     ausschliesslich aus `STAFF_EMAILS` beim Serverstart (siehe
+   *     staff.ts) — es gibt keinen Endpunkt, ueber den man es sich selbst
+   *     geben koennte.
+   *   - **Schluessel im Kopf.** Fuer den Fall, dass auf einer Ausgabe kein
+   *     Testkonto eingerichtet ist. Er kommt aus der Umgebung; ohne
+   *     `DIAGNOSE_SCHLUESSEL` ist dieser Weg zu.
+   *
+   * Verglichen wird zeitgleich. Ein gewoehnliches `===` verraet ueber die
+   * Laufzeit, wie viele Zeichen stimmen — bei einem Geheimnis, das im Kopf
+   * jeder Anfrage steht, ist das kein theoretischer Einwand.
+   */
+  const requireAufsicht = async (request: FastifyRequest): Promise<void> => {
+    const roh = request.headers['x-diagnose-schluessel'];
+    const gereicht = Array.isArray(roh) ? roh[0] : roh;
+    const erwartet = deps.diagnoseSchluessel;
+    if (erwartet && gereicht) {
+      const a = Buffer.from(gereicht);
+      const b = Buffer.from(erwartet);
+      if (a.length === b.length && timingSafeEqual(a, b)) return;
+    }
+
+    const accountId = await requireAccount(request);
+    const [konto] = await deps.db
+      .select({ isStaff: s.account.isStaff })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!konto?.isStaff) throw forbidden('nurAufsicht');
   };
 
   app.setErrorHandler((error, request, reply) => {
@@ -1547,6 +1649,96 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .parse(request.query);
     return reply.send(await overallRanking(deps.db, query.limit, query.offset));
   });
+
+  // -------------------------------------------------------------------------
+  // Diagnose (Feldherr)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Aufnehmen darf jeder Angemeldete: Es ist die Messung des eigenen
+   * Geraets an der eigenen Partie. Lesen darf nur die Aufsicht — die
+   * Sammlung ueber alle Partien ist etwas anderes als der eigene
+   * Mitschnitt. Der ganze Zweck steht in docs/FELDHERR-DIAGNOSE.md.
+   */
+  app.post(
+    '/api/diagnose/feldherr',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const body = diagnoseSchema.parse(request.body);
+
+      /**
+       * Der Tisch wird nachgesehen, nicht geglaubt: Ein unbekanntes
+       * Saatkorn im Feld `tisch` liefe sonst in einen Fremdschluessel-
+       * Fehler und damit in einen 500er — fuer eine Meldung, die im
+       * Zweifel trotzdem wertvoll ist. Ohne Tisch wird sie eben ohne
+       * Zuordnung abgelegt.
+       */
+      let tableId: string | null = null;
+      if (body.kopf.tisch) {
+        const [zeile] = await deps.db
+          .select({ id: s.gameTable.id })
+          .from(s.gameTable)
+          .where(eq(s.gameTable.id, body.kopf.tisch));
+        tableId = zeile?.id ?? null;
+      }
+
+      const gespeichert = await nimmAuf(deps.db, {
+        accountId,
+        tableId,
+        seat: body.kopf.sitz,
+        grund: body.grund,
+        abIndex: body.ab ?? 0,
+        rumpf: request.body,
+      });
+
+      /**
+       * Auch eine verworfene Meldung ist ein `ok`. Ein Geraet, das ein
+       * Nein bekaeme, faenge an zu wiederholen — und belastete genau die
+       * Leitung, auf der die Partie laeuft, die wir gerade untersuchen.
+       */
+      return reply.send({ ok: true, gespeichert });
+    },
+  );
+
+  app.get(
+    '/api/diagnose/feldherr',
+    { config: { rateLimit: LIMIT_ALLGEMEIN } },
+    async (request, reply) => {
+      await requireAufsicht(request);
+      const query = z
+        .object({
+          seit: z.string().optional(),
+          tisch: z.string().uuid().optional(),
+          grenze: z.coerce.number().int().min(1).max(5000).optional(),
+        })
+        .parse(request.query);
+
+      const seit = query.seit ? new Date(query.seit) : undefined;
+      if (seit && Number.isNaN(seit.getTime())) throw badRequest('invalidInput');
+
+      const zeilen = await lies(deps.db, {
+        seit,
+        tableId: query.tisch,
+        grenze: query.grenze ?? 2000,
+      });
+      return reply.send({ zeilen, grenze: query.grenze ?? 2000 });
+    },
+  );
+
+  /** Welche Partien ueberhaupt Mitschnitte haben — der Einstieg in die Suche. */
+  app.get(
+    '/api/diagnose/feldherr/tische',
+    { config: { rateLimit: LIMIT_ALLGEMEIN } },
+    async (request, reply) => {
+      await requireAufsicht(request);
+      const query = z
+        .object({ stunden: z.coerce.number().int().min(1).max(24 * 30).optional() })
+        .parse(request.query);
+      const seit = new Date(Date.now() - (query.stunden ?? 48) * 3600_000);
+      return reply.send({ seit, tische: await uebersicht(deps.db, seit) });
+    },
+  );
 
   app.get('/api/health', async (_request, reply) => reply.send({ ok: true }));
 

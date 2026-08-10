@@ -28,6 +28,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { wsProtokolle, wsUrl } from './laufzeit';
+/**
+ * Die Verbindung schreibt mit, solange eine Partie aufgezeichnet wird
+ * (heute nur Feldherr, siehe aufzeichnung.ts). Ohne laufende Aufzeichnung
+ * kostet jeder dieser Aufrufe einen Vergleich — deshalb stehen sie hier
+ * und nicht in einem Spielbildschirm: Wann die Leitung fiel, wann neu
+ * verbunden wurde und wie lange die Pause war, weiss nur diese Datei, und
+ * genau das ist bei einer strittigen Partie die erste Frage.
+ */
+import { notiere } from './aufzeichnung';
 import { EMOTE_DAUER_MS, EMOTE_PAUSE_MS } from './emotes';
 import { spiele } from './klang';
 import {
@@ -234,6 +243,7 @@ export function useTable<V = GameView>(
 
     socket.onopen = () => {
       if (genRef.current !== gen) return;
+      notiere('ws-offen', { versuche: attemptRef.current, gen });
       attemptRef.current = 0;
       setStatus('open');
       socket.send(joinPayload());
@@ -242,6 +252,15 @@ export function useTable<V = GameView>(
       // das ist sichtbar, ein stilles Verschlucken war es nicht.
       const jetzt = Date.now();
       const offen = outboxRef.current.filter((e) => e.bis > jetzt);
+      // Ein nachgereichter Zug traegt seinen ALTEN Takt — er kann beim
+      // Gegner also zu spaet ankommen. Und ein verfallener ist schlicht
+      // weg. Beides muss im Mitschnitt stehen.
+      if (outboxRef.current.length > 0) {
+        notiere('ws-nachgereicht', {
+          n: offen.length,
+          verfallen: outboxRef.current.length - offen.length,
+        });
+      }
       outboxRef.current = [];
       for (const eintrag of offen) socket.send(eintrag.payload);
     };
@@ -252,6 +271,11 @@ export function useTable<V = GameView>(
       clearWatchdog();
       const message = JSON.parse(event.data as string) as ServerMessage<V>;
       if (message.type === 'error') {
+        // Die Fehlerschluessel des Servers sind die einzigen Fehlercodes, die
+        // eine abgelehnte Aktion hinterlaesst — auf dem Geraet sieht man sie
+        // nicht, und ein abgelehnter Zug ist genau das Loch, an dem die
+        // Laeufe auseinandergehen.
+        notiere('ws-abgelehnt', { code: message.messageKey });
         setError(message.messageKey);
         return;
       }
@@ -306,6 +330,7 @@ export function useTable<V = GameView>(
       const delay =
         Math.min(MAX_BACKOFF_MS, 500 * 2 ** attemptRef.current) +
         Math.floor(Math.random() * 400);
+      notiere('ws-zu', { versuch: attemptRef.current, wartet: delay });
       attemptRef.current += 1;
       retryTimer.current = setTimeout(() => {
         if (genRef.current === gen) connect();
@@ -339,9 +364,11 @@ export function useTable<V = GameView>(
         connect();
         return;
       }
+      notiere('abgleich', { offen: true });
       clearWatchdog();
       watchdogTimer.current = setTimeout(() => {
         // Kein Lebenszeichen auf den Abgleich: Leitung tot, frisch aufbauen.
+        notiere('wachhund');
         attemptRef.current = 0;
         connect();
       }, RESYNC_WATCHDOG_MS);
@@ -439,6 +466,7 @@ export function useTable<V = GameView>(
       // kurz aufgehoben und nach dem Wiederverbinden nachgereicht. Genau so
       // verschwand die Armut-Abgabe: Handy kurz weg, Funk tot, Tipp ins
       // Leere - und niemand hat etwas gemerkt.
+      notiere('ws-verwahrt', { grund: socket ? socket.readyState : 'kein-socket' });
       outboxRef.current.push({ payload, bis: Date.now() + 6000 });
       resync();
     },

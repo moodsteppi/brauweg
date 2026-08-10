@@ -4,6 +4,23 @@ Stand: 7. August 2026, spät. **Ursache gefunden und behoben, dazu
 Selbstheilung eingebaut — siehe „Lösung" direkt hierunter.** Der Rest des
 Dokuments bleibt als Protokoll der Suche stehen.
 
+**Nachtrag 10. August 2026.** Es kommt weiter vor — und ausschließlich auf
+dem Produktivsystem. Statt weiterer Vermutungen gibt es jetzt einen
+Mitschnitt echter Partien: **`docs/FELDHERR-DIAGNOSE.md`**. Beide Geräte
+schreiben Takt, Wissensgrenze, schwebende Züge, beide Prüfsummen, jeden
+Verbindungsabbruch und jeden Fehlercode mit;
+`node packages/game-feldherr/werkzeug/diagnose-holen.mjs` meldet sich am
+Produktivsystem an, holt das ab und nennt die erste Stelle, an der die
+beiden Läufe auseinandergingen.
+
+**Und der erste Probelauf hat sofort etwas gefunden:** Die Inhaltsrichtlinie
+des Servers verbot den Web Worker, mit dem der Kern den verdeckten Tab am
+Leben hält (`worker-src` fehlte, der Browser fiel auf `script-src 'self'`
+zurück). Auf jeder ausgelieferten Ausgabe war der verdeckte Tab damit
+komplett eingefroren — kein Takt, kein Puls —, auf keiner
+Entwicklungsfassung, weil Vite keine Richtlinie setzt. Behoben; Einzelheiten
+in `docs/FELDHERR-DIAGNOSE.md`, Abschnitt *Erster Fund*.
+
 Der Auftraggeber hat am 7. August auf Produktion eine Netzpartie gespielt
 (zwei Geräte, Sitz 2 auf dem Handy) und bekam mitten im Spiel das Banner
 *„Die Partie ist strittig: Die Geräte haben verschiedene Stände gemeldet.

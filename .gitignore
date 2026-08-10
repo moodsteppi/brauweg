@@ -22,6 +22,14 @@ coverage/
 # Arbeitsordner der Bildaufbereitung — nichts davon gehoert ins Repository.
 tmp-*/
 
+# Geholte Feldherr-Mitschnitte (docs/FELDHERR-DIAGNOSE.md).
+#
+# Sie entstehen auf dem Entwicklungsrechner, wenn diagnose-holen.mjs sie vom
+# Produktivsystem holt, und beschreiben echte Partien echter Spieler samt
+# ihrer Geraete. Das gehoert in kein Repository — gebraucht wird es fuer die
+# Dauer einer Fehlersuche.
+/diagnose/
+
 # Bildquellen in voller Aufloesung liegen im Archivrepo moodsteppi/brauweg-art.
 #
 # Sie sind zusammen ueber 800 MB und wurden hier bei jedem Deploy mitgeladen,
