@@ -53,6 +53,17 @@ interface Connection {
    * Tisch waere genau das Loch, das die Marke verhindern soll.
    */
   sichtStand: number | null;
+  /**
+   * Protokollversion, die diese Verbindung beim `join` gemeldet hat.
+   *
+   * Sie entscheidet, ob die Sicht als Ausschnitt rausgehen darf. Ein Client
+   * mit aelterer Version liest die Zugliste als vollstaendig — bekaeme er
+   * einen Ausschnitt, rechnete er ab dem ersten Zug eine andere Partie.
+   * Genau das passiert bei jedem Deploy: Der Server startet neu, alle
+   * offenen Geraete verbinden sich neu, und die haben noch das alte
+   * Programm im Speicher.
+   */
+  moduleVersion: number;
 }
 
 /** Hoechstens so viele offene Verbindungen je Konto. */
@@ -289,6 +300,8 @@ export class Gateway {
         letzterEmote: 0,
         letzterTakt: 0,
         sichtStand: null,
+        /* Bis zum `join` gilt die vorsichtigste Annahme: alles vollstaendig. */
+        moduleVersion: 1,
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -454,6 +467,8 @@ export class Gateway {
      * vorher ein `join` geschickt.
      */
     connection.sichtStand = null;
+    /* Was dieser Client versteht, sagt er hier — und nur hier. */
+    connection.moduleVersion = message.moduleVersion;
     let room = this.byTable.get(message.tableId);
     if (!room) {
       room = new Set();
@@ -785,8 +800,17 @@ export class Gateway {
      * bleibt 0, und es aendert sich nichts.
      */
     const stand = this.runtime.viewCursor(party);
+    /**
+     * Den Ausschnitt bekommt nur, wer die aktuelle Protokollversion des
+     * Moduls gemeldet hat. Alle anderen — insbesondere jedes Geraet, das
+     * einen Deploy im Speicher ueberlebt hat — bekommen weiter die volle
+     * Sicht. Lieber ein paar Kilobyte zu viel an ein altes Programm als ein
+     * Ausschnitt, den es als ganze Liste liest.
+     */
+    const aktuelleVersion = requireModule(party.gameId).protocolVersion;
     for (const connection of targets) {
-      const seit = connection.sichtStand ?? 0;
+      const zuwachsFaehig = connection.moduleVersion >= aktuelleVersion;
+      const seit = zuwachsFaehig ? (connection.sichtStand ?? 0) : 0;
       const state = this.runtime.viewFor(party, connection.accountId, seit);
       connection.sichtStand = stand;
       send(connection.socket, {

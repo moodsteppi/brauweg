@@ -98,7 +98,15 @@ export const feldherr: GameModule<
   FeldherrRegeln
 > = {
   meta,
-  protocolVersion: 1,
+  /**
+   * 2 seit dem 9. August 2026: Die Sicht traegt die Zugliste nur noch als
+   * Ausschnitt ab `abIndex`. Ein Client der Version 1 liest `zuege` als die
+   * ganze Liste — bekaeme er einen Ausschnitt, rechnete er ab dem ersten
+   * Zug etwas voellig anderes. Der Server schickt ihm deshalb weiter die
+   * volle Sicht (siehe `zuwachsFaehig` im Gateway); die Version sagt ihm
+   * nur, wer den Ausschnitt vertraegt.
+   */
+  protocolVersion: 2,
 
   defaultConfig: () => STANDARD_REGELN,
 

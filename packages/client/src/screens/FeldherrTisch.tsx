@@ -530,33 +530,63 @@ export function FeldherrTisch({
    */
   const neuVerbindenRef = useRef<() => void>(() => {});
 
-  /** Zuwachs anhaengen und alles Neue in den Kern reichen. */
+  /**
+   * Eine Sicht verarbeiten: Zugliste nachfuehren, Neues in den Kern reichen.
+   *
+   * `abIndex === 0` heisst: Der Server hat die GANZE Liste geschickt (jede
+   * Antwort auf ein `join`, also auch jeder Abgleich). Dann wird die eigene
+   * Liste ERSETZT, nicht ergaenzt. Das ist der Unterschied zwischen einem
+   * Abgleich und einem Anhaengen — und der Grund, warum die Selbstheilung
+   * wieder funktioniert: Sie startet den Kern aus der Serverliste neu, also
+   * aus der gemeinsamen Wahrheit, und nicht aus dem, was dieses Geraet
+   * selbst zusammengetragen hat. Aus der eigenen Sammlung zu heilen heisst,
+   * einen moeglichen Fehler noch einmal abzuspielen.
+   */
   const nimmZuege = useCallback((sicht: FeldherrSicht | null | undefined) => {
     const zuege = sicht?.zuege;
     if (!zuege) return;
-    const liste = alleZuege.current;
     const ab = sicht.abIndex ?? 0;
-    /**
-     * Eine Luecke darf es nicht geben — der Rundruf setzt bei genau dem
-     * Stand an, den der Server zuletzt an DIESE Verbindung geschickt hat.
-     * Wenn doch (verlorene Nachricht, Reihenfolge durcheinander), wird
-     * NICHT geraten: Ein Loch in der Zugliste laesst die Geraete still
-     * auseinanderlaufen, und das ist der Fehler, der diese Partie
-     * strittig macht. Stattdessen die volle Sicht neu anfordern.
-     */
-    if (ab > liste.length) {
+    let liste = alleZuege.current;
+
+    if (ab === 0) {
+      /**
+       * Volle Sicht: Der Server ist die Wahrheit. Kuerzer als das, was
+       * dieses Geraet dem Kern schon gereicht hat, darf sie nie sein — der
+       * Server schreibt seinen Schnappschuss vor jedem Rundruf. Faellt es
+       * doch so aus, ist der Kern auf einem Stand, den es beim Server nicht
+       * gibt; dann hilft nur ein Neustart aus der Serverliste.
+       */
+      if (zuege.length < gereicht.current) {
+        console.warn(
+          'feldherr: Serverliste ist kuerzer als der eigene Stand (' +
+            zuege.length + ' statt ' + gereicht.current + ') — Kern wird neu gestartet.',
+        );
+        alleZuege.current = zuege.slice();
+        /* Der Neustart-Effekt setzt `gereicht` zurueck und reicht die
+         * Serverliste von vorn ein; von Hand nachzuhelfen liesse Zuege
+         * doppelt ausfuehren. */
+        setKernLauf((n) => n + 1);
+        return;
+      }
+      liste = zuege.slice();
+      alleZuege.current = liste;
+    } else if (ab > liste.length) {
+      /**
+       * Luecke: Der Ausschnitt beginnt hinter dem, was hier liegt — eine
+       * Nachricht ist verlorengegangen. NICHT raten: Ein Loch in der
+       * Zugliste laesst die Geraete still auseinanderlaufen, und genau das
+       * macht die Partie strittig. Stattdessen die volle Sicht anfordern.
+       */
       console.warn(
         'feldherr: Zugliste hat ein Loch (Sicht beginnt bei ' + ab + ', vorhanden ' +
           liste.length + ') — volle Sicht wird neu angefordert.',
       );
       neuVerbindenRef.current();
       return;
+    } else {
+      /* Der Ausschnitt ueberlappt; nur der Rest dahinter ist neu. */
+      for (let i = liste.length - ab; i < zuege.length; i += 1) liste.push(zuege[i]);
     }
-    /* ab <= liste.length: Der Ausschnitt ueberlappt, nur der Rest ist neu.
-     * Bei der vollen Sicht (ab = 0) ist das genau der Zuwachs seit dem
-     * letzten Mal — doppelt eingereichte Zuege gaebe es sonst nach jedem
-     * Wiederverbinden. */
-    for (let i = liste.length - ab; i < zuege.length; i += 1) liste.push(zuege[i]);
 
     const sitzung = sitzungRef.current;
     if (!sitzung) return;
@@ -726,6 +756,18 @@ export function FeldherrTisch({
             ') — Neustart aus der Server-Zugliste.',
         );
         setHeilt(true);
+        /**
+         * Erst die Serverliste frisch holen, dann neu starten.
+         *
+         * Der Abgleich beantwortet der Server mit der VOLLEN Sicht; die
+         * ersetzt hier die eigene Liste (siehe nimmZuege). Ohne diesen
+         * Schritt heilte sich das Geraet aus seiner eigenen Sammlung —
+         * also womoeglich aus genau dem Fehler, der die Heilung ausgeloest
+         * hat. Der Neustart darunter laeuft trotzdem sofort: Kommt die
+         * volle Sicht kurz danach, faengt der Nachzuegler-Faenger den
+         * Rest ab, und ein Replay ist ohnehin schneller als die Echtzeit.
+         */
+        neuVerbindenRef.current();
         setKernLauf((n) => n + 1);
       },
     });

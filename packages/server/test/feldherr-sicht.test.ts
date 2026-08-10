@@ -68,8 +68,8 @@ test('der Rundruf nach einem Zug traegt nur den Zuwachs', async (t) => {
   const b = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Bert');
   a.passive = true;
   b.passive = true;
-  a.join(table.id, 1, 'feldherr');
-  b.join(table.id, 1, 'feldherr');
+  a.join(table.id, 2, 'feldherr');
+  b.join(table.id, 2, 'feldherr');
   await a.waitFor(() => a.lastView !== null, 'Partiebeginn bei Anna', 30_000);
   await b.waitFor(() => b.lastView !== null, 'Partiebeginn bei Bert', 30_000);
 
@@ -129,8 +129,8 @@ test('ein zweites join liefert die ganze Liste zurueck', async (t) => {
   const b = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Bert');
   a.passive = true;
   b.passive = true;
-  a.join(table.id, 1, 'feldherr');
-  b.join(table.id, 1, 'feldherr');
+  a.join(table.id, 2, 'feldherr');
+  b.join(table.id, 2, 'feldherr');
   await a.waitFor(() => a.lastView !== null, 'Partiebeginn', 30_000);
   await b.waitFor(() => b.lastView !== null, 'Partiebeginn', 30_000);
 
@@ -146,7 +146,7 @@ test('ein zweites join liefert die ganze Liste zurueck', async (t) => {
    * still auseinander.
    */
   const vorher = a.messages('view').length;
-  a.join(table.id, 1, 'feldherr');
+  a.join(table.id, 2, 'feldherr');
   await a.waitFor(() => a.messages('view').length > vorher, 'Antwort auf den Abgleich');
 
   const abgleich = sichten(a).at(-1)!;
@@ -161,6 +161,67 @@ test('ein zweites join liefert die ganze Liste zurueck', async (t) => {
   b.close();
 });
 
+/**
+ * Der Fehler, der am 9. August 2026 auf Produktion ging.
+ *
+ * Beim Deploy startet der Server neu, also verbinden sich ALLE offenen
+ * Geraete neu — mit dem Programm, das sie im Speicher haben. Das ist das
+ * alte. Bekommt so ein Geraet den Ausschnitt, liest es ihn als vollstaendige
+ * Zugliste und rechnet ab dem ersten Zug eine andere Partie: Die Partie wird
+ * sofort strittig, und es sieht so aus, als liesse sich nicht einmal das
+ * erste Haus setzen. Deshalb richtet sich der Server nach dem, was der
+ * Client beim `join` gemeldet hat.
+ */
+test('ein Client mit altem Protokollstand bekommt weiter die ganze Zugliste', async (t) => {
+  const h = await startHarness();
+  t.after(() => h.close());
+
+  const { anna, bert, table } = await feldherrTisch(h);
+  const alt = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'alt');
+  const neu = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'neu');
+  alt.passive = true;
+  neu.passive = true;
+  // Genau der Unterschied: derselbe Tisch, zwei Protokollstaende.
+  alt.join(table.id, 1, 'feldherr');
+  neu.join(table.id, 2, 'feldherr');
+  await alt.waitFor(() => alt.lastView !== null, 'Partiebeginn alt', 30_000);
+  await neu.waitFor(() => neu.lastView !== null, 'Partiebeginn neu', 30_000);
+
+  const takte: number[] = [];
+  for (let i = 0; i < 6; i += 1) {
+    const takt = 20 + i * 10;
+    takte.push(takt);
+    zug(i % 2 === 0 ? alt : neu, table.id, takt);
+    await alt.waitFor(
+      () => (sichten(alt).at(-1)?.zuege.length ?? 0) === i + 1,
+      `alter Client sieht Zug ${i + 1}`,
+      10_000,
+    );
+  }
+  assert.deepEqual(alt.errors, []);
+
+  // Der alte Client bekommt jede Sicht vollstaendig — er wuerde sie sonst
+  // falsch lesen, und niemand koennte ihm das ansehen.
+  for (const s of sichten(alt)) {
+    assert.equal(s.abIndex, 0, 'fuer den alten Client faengt die Liste immer bei null an');
+  }
+  assert.deepEqual(
+    sichten(alt).at(-1)!.zuege.map((z) => z.takt),
+    takte,
+    'und sie ist wirklich vollstaendig',
+  );
+
+  // Der neue Client bekommt weiterhin Ausschnitte — sonst waere die
+  // Ersparnis wieder weg.
+  assert.ok(
+    sichten(neu).slice(1).some((s) => s.abIndex > 0),
+    'der neue Client bekommt Ausschnitte',
+  );
+
+  alt.close();
+  neu.close();
+});
+
 test('wortgleiche Tisch- und Partienachrichten gehen nicht noch einmal raus', async (t) => {
   const h = await startHarness();
   t.after(() => h.close());
@@ -170,8 +231,8 @@ test('wortgleiche Tisch- und Partienachrichten gehen nicht noch einmal raus', as
   const b = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Bert');
   a.passive = true;
   b.passive = true;
-  a.join(table.id, 1, 'feldherr');
-  b.join(table.id, 1, 'feldherr');
+  a.join(table.id, 2, 'feldherr');
+  b.join(table.id, 2, 'feldherr');
   await a.waitFor(() => a.lastView !== null, 'Partiebeginn', 30_000);
   await b.waitFor(() => b.lastView !== null, 'Partiebeginn', 30_000);
 
