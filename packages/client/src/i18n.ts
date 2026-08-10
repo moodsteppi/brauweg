@@ -285,7 +285,6 @@ const de: Record<string, string> = {
   'regel.absagen': 'Absagen',
   'regel.pflichtansage': 'Pflichtansage',
   'regel.pflichtansageFolge': 'Pflichtansage: Folgeansage',
-  'regel.pflichtansageHochzeit': 'Pflichtansage: Hochzeit',
   'regel.pflichtansageArmut': 'Pflichtansage: Armut',
   'regel.pflichtansageSchweine': 'Pflichtansage: Schweine',
   'regel.feigling': 'Feigling im Normalspiel',

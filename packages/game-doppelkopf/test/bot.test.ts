@@ -71,7 +71,6 @@ test('Bot: 1000 Partien laufen ohne Regelverstoss durch', () => {
       pflichtsolo: rng() < 0.7,
       pflichtansage,
       pflichtansageFolge: pflichtansage && rng() < 0.5,
-      pflichtansageHochzeit: pflichtansage && rng() < 0.5,
       pflichtansageArmut: pflichtansage && rng() < 0.5,
       pflichtansageSchweine: pflichtansage && schweinchen && rng() < 0.5,
       feigling: rng() < 0.4,

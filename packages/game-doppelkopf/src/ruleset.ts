@@ -116,11 +116,12 @@ export interface RuleSet {
    * als naechste offene Stufe der Partei, nicht als feste Zahl.
    *
    * Sie haengen am TATSAECHLICH GESPIELTEN Spieltyp, nicht an der Ansage: Sagt
-   * einer Hochzeit und einer Armut an, wird Armut gespielt (Armut sticht
-   * Hochzeit), und der Hochzeit-Ansager bekommt nichts. Beide Regeln duerfen
-   * deshalb gleichzeitig an sein.
+   * jemand Armut an und es kommt eine Armut zustande, greift der Ausloeser.
+   *
+   * (Einen Hochzeit-Ausloeser gab es hier einmal, er ist bewusst entfernt: Eine
+   * Hochzeit wird als Normalspiel zu Ende gespielt, eine eigene Pflichtansage
+   * dafuer ergibt keinen Sinn.)
    */
-  pflichtansageHochzeit: boolean;
   pflichtansageArmut: boolean;
   /** Verpflichtet ist, wer die Schweine haelt — nicht, wer sie spielt. */
   pflichtansageSchweine: boolean;
@@ -184,7 +185,6 @@ export const DEFAULT_RULESET: RuleSet = {
   pflichtansageThreshold: 30,
   pflichtansageMoralThreshold: 29,
   pflichtansageFolge: false,
-  pflichtansageHochzeit: false,
   pflichtansageArmut: false,
   pflichtansageSchweine: false,
 

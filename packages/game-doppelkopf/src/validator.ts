@@ -71,12 +71,6 @@ export function validateRuleSet(rs: RuleSet): ValidationIssue[] {
   if (rs.pflichtansageFolge && !rs.pflichtansage) {
     err('PFLICHT_FOLGE_NEEDS_PFLICHT', 'Die Folgeansage setzt die Pflichtansage voraus.');
   }
-  if (rs.pflichtansageHochzeit && !rs.pflichtansage) {
-    err('PFLICHT_HOCHZEIT_NEEDS_PFLICHT', 'Der Hochzeit-Ausloeser setzt die Pflichtansage voraus.');
-  }
-  if (rs.pflichtansageHochzeit && !rs.hochzeit) {
-    err('PFLICHT_HOCHZEIT_NEEDS_HOCHZEIT', 'Der Hochzeit-Ausloeser setzt erlaubte Hochzeiten voraus.');
-  }
   if (rs.pflichtansageArmut && !rs.pflichtansage) {
     err('PFLICHT_ARMUT_NEEDS_PFLICHT', 'Der Armut-Ausloeser setzt die Pflichtansage voraus.');
   }
