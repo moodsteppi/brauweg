@@ -41,6 +41,9 @@ const BILDER: Record<string, string> = {
   feiglingSolo: '🙊',
   bock: '🐐',
   pflichtsolo: '☝️',
+  // Skat: Ramsch (alle passen, der Augenreichste zahlt) und Kontra/Re.
+  ramsch: '🗑️',
+  kontraRe: '✖️',
   countPoints: '🔢',
   training: '🎓',
   scharf: '🌶️',

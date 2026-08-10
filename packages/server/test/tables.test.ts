@@ -29,14 +29,14 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind vier', () => {
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind fuenf', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
 
   assert.deepEqual(
     playable.map((meta) => meta.id),
-    ['doppelkopf', 'wizard', 'cambio', 'feldherr'],
+    ['doppelkopf', 'wizard', 'cambio', 'feldherr', 'skat'],
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),
@@ -49,11 +49,11 @@ test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind vier', () => {
       'romme',
       'schafkopf',
       'schwimmen',
-      'skat',
       'werwolf',
     ],
   );
-  assert.equal(registry.get('skat'), undefined, 'Vorschau-Spiele haben kein Modul');
+  assert.ok(registry.get('skat'), 'Skat ist jetzt ein spielbares Modul');
+  assert.equal(registry.get('schafkopf'), undefined, 'Vorschau-Spiele haben kein Modul');
 });
 
 test('die Rundenzahl muss zur Geberrotation des Moduls passen', async (t) => {

@@ -20,6 +20,7 @@ import type {
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { feldherr } from '@brauweg/game-feldherr';
+import { skat } from '@brauweg/game-skat';
 import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
 
@@ -28,6 +29,7 @@ const MODULES: readonly AnyGameModule[] = [
   wizard as unknown as AnyGameModule,
   cambio as unknown as AnyGameModule,
   feldherr as unknown as AnyGameModule,
+  skat as unknown as AnyGameModule,
 ];
 
 /**
@@ -38,7 +40,6 @@ const MODULES: readonly AnyGameModule[] = [
  */
 const PREVIEW: readonly GameMeta[] = (
   [
-    ['skat', [3, 4]],
     ['schafkopf', [4]],
     ['romme', [2, 3, 4, 5, 6]],
     ['maumau', [2, 3, 4, 5]],

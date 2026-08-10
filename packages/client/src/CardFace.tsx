@@ -11,6 +11,8 @@
  * oder ein gezeichnetes Muster, wo es keins gibt (Textblatt).
  */
 
+import { useEffect, useState } from 'react';
+
 import { cardImage, deckBack, type Deck } from './decks';
 import { cardLabel, cardName, isRed, rankLabel, suitSymbol } from './i18n';
 import type { Card } from './protocol';
@@ -23,10 +25,23 @@ export function CardFront({
   deck: Deck;
 }): React.JSX.Element {
   const src = cardImage(deck, card);
-  if (src) {
+  // Nicht jedes Blatt bringt jede Karte mit: Die meisten Blaetter reichen nur
+  // von Neun bis Ass (Doppelkopf), Skat braucht aber auch Sieben und Acht.
+  // Fehlt die Datei, faellt die Karte auf die Textdarstellung zurueck, statt
+  // ein kaputtes Bild zu zeigen (ein weisser Kasten sieht nach Fehler aus).
+  const [fehler, setFehler] = useState(false);
+  useEffect(() => setFehler(false), [src]);
+
+  if (src && !fehler) {
     return (
       <>
-        <img className="pc-img" src={src} alt={cardName(card)} draggable={false} />
+        <img
+          className="pc-img"
+          src={src}
+          alt={cardName(card)}
+          draggable={false}
+          onError={() => setFehler(true)}
+        />
         {deck.eigeneEcke && <EckenChip card={card} />}
       </>
     );

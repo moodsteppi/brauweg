@@ -10280,3 +10280,146 @@ main.auth > .muted {
   padding: 0.15rem 0.45rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* --------------------------------------------------------------------------
+   Skat
+   Der Tisch teilt sich die Grundbausteine (doko-*) mit den anderen Spielen;
+   hier steht nur, was Skat eigen ist: die Reiz-/Skat-/Ansage-Knopfleiste,
+   die Spielinfo-Plakette und das Abrechnungsblatt.
+   -------------------------------------------------------------------------- */
+.skat-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  text-align: center;
+}
+.skat-info strong {
+  font-size: 1.05rem;
+}
+.skat-kontra {
+  margin-top: 0.15rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(180deg, #ff9a7a 0%, #c8392b 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.72rem;
+}
+.doko-bock {
+  color: var(--accent, #f0b429);
+  font-weight: 800;
+}
+.skat-ouvert {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding: 0.2rem 0.6rem;
+}
+.skat-ouvert .pc--mini {
+  width: 1.4rem;
+  height: 2rem;
+  display: inline-block;
+}
+
+.skat-aktionen {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem 0.6rem;
+  min-height: 2.4rem;
+}
+.skat-knopf {
+  padding: 0.45rem 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.skat-knopf:active {
+  transform: translateY(2px);
+}
+.skat-hinweis {
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.skat-ansage {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem 0.6rem;
+}
+.skat-ansage-arten {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.skat-art {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.7rem;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.skat-art.is-gewaehlt {
+  border-color: var(--accent, #f0b429);
+  background: rgba(240, 180, 41, 0.22);
+}
+.skat-art-zeichen {
+  font-size: 1.1rem;
+}
+.skat-ansage-zusatz {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+}
+.skat-ansage-zusatz label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.skat-blatt .skat-gut {
+  color: #2f9c5e;
+  font-weight: 700;
+}
+.skat-blatt .skat-schlecht {
+  color: #c8392b;
+  font-weight: 700;
+}
+.skat-abrechnung,
+.skat-tafel {
+  list-style: none;
+  margin: 0.3rem 0;
+  padding: 0;
+}
+.skat-abrechnung li,
+.skat-tafel li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.15rem 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+.skat-abrechnung .skat-minus {
+  color: #c8392b;
+  font-weight: 800;
+}

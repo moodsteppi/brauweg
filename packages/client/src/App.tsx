@@ -11,6 +11,7 @@ import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
 import { CambioTable } from './screens/CambioTable';
+import { SkatTable } from './screens/SkatTable';
 import { WizardTable } from './screens/WizardTable';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
@@ -139,6 +140,7 @@ export function App(): React.JSX.Element {
     const TISCHE: Record<string, typeof Table> = {
       wizard: WizardTable as unknown as typeof Table,
       cambio: CambioTable as unknown as typeof Table,
+      skat: SkatTable as unknown as typeof Table,
     };
     const Spieltisch = TISCHE[screen.gameId] ?? Table;
     return (

@@ -281,6 +281,66 @@ export interface CambioGameView extends BaseGameView {
   history: CambioRoundSummary[];
 }
 
+// ---------------------------------------------------------------------------
+// Skat
+// ---------------------------------------------------------------------------
+
+/** Abrechnung einer Skat-Gabe (kommt aus der Engine, wird nur gezeigt). */
+export interface SkatResult {
+  gameType: { kind: string; trump?: string };
+  declarer: number | null;
+  reizWert: number;
+  spielwert: number;
+  gewonnen: boolean;
+  ueberreizt: boolean;
+  schneider: boolean;
+  schwarz: boolean;
+  declarerAugen: number;
+  punkte: Record<number, number>;
+  durchmarsch: number | null;
+}
+
+export interface SkatRoundView {
+  seat: number;
+  /** 'reizen' | 'skat' | 'druecken' | 'ansage' | 'stich' | 'vorbei' */
+  phase: string;
+  dealer: number;
+  hand: Card[];
+  legal: Card[];
+  handCounts: Record<number, number>;
+  trick: PlayedCard[];
+  lastTrick: { winner: number; played: PlayedCard[] } | null;
+  turn: number | null;
+  gameType: { kind: string; trump?: string } | null;
+  /** Trumpfkarten als `Farbe+Wert`, absteigend. Der Client rechnet nichts aus. */
+  trumpfKeys: string[];
+  reiz: { wert: number; gebot: number | null; amZug: number | null; rolle: string | null };
+  declarer: number | null;
+  reizWert: number;
+  handSpiel: boolean;
+  ouvert: boolean;
+  schneiderAngesagt: boolean;
+  schwarzAngesagt: boolean;
+  kontra: boolean;
+  re: boolean;
+  trickCounts: Record<number, number>;
+  augen: Record<number, number>;
+  /** Offene Hand des Alleinspielers bei Ouvert, sonst null. */
+  ouvertHand: Card[] | null;
+  result: SkatResult | null;
+  isMyTurn: boolean;
+  neuGeben: boolean;
+  ramschAn: boolean;
+  /** Nicht-Karten-Aktionen dieses Sitzes als Typen ('reizWeiter', 'kontra', …). */
+  aktionen: string[];
+}
+
+export interface SkatGameView extends BaseGameView {
+  round: SkatRoundView | null;
+  /** Bock-Faktor der laufenden Gabe. */
+  bock: number;
+}
+
 export interface Action {
   type: string;
   seat: number;

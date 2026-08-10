@@ -295,6 +295,10 @@ const de: Record<string, string> = {
   'regel.training': 'Training',
   'regel.scharf': 'Scharfer Doppelkopf',
 
+  // Tischregeln von Skat.
+  'regel.ramsch': 'Ramsch, wenn alle passen',
+  'regel.kontraRe': 'Kontra und Re',
+
   // Hausregeln des Zauberers.
   'regel.lastSpecialWins': 'Der letzte sticht',
   'regel.bidSumForbidden': 'Es darf nicht aufgehen',
@@ -327,6 +331,14 @@ const de: Record<string, string> = {
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
+
+  // Meldungen des Skat-Regelsatzes.
+  'ruleset.TABLE_SIZE': 'Skat wird zu dritt gespielt.',
+  'ruleset.ROUNDS_MULTIPLE': 'Die Rundenzahl muss eine volle Geberrunde ergeben.',
+  'ruleset.BOCK_NEEDS_KONTRA': 'Bockrunden brauchen erlaubtes Kontra und Re.',
+  'ruleset.notAnObject': 'Der Regelsatz fehlt oder ist beschädigt.',
+  'ruleset.fieldMissing': 'Dem Regelsatz fehlt ein Feld.',
+  'ruleset.fieldWrongType': 'Ein Feld des Regelsatzes hat den falschen Typ.',
 };
 
 /**
