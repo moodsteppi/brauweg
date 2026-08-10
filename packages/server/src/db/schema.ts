@@ -978,6 +978,57 @@ export const purchase = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Diagnose
+// ---------------------------------------------------------------------------
+
+/**
+ * Mitschnitt einer Feldherr-Netzpartie (docs/FELDHERR-DIAGNOSE.md).
+ *
+ * Feldherr wird auf dem Produktivsystem strittig und in keiner Testfassung.
+ * Ein Fehler, der nur auf fremden Geraeten, fremden Browsern und echten
+ * Funkstrecken auftritt, laesst sich nicht nachstellen — er muss
+ * aufgezeichnet werden, waehrend er passiert. Jede Zeile ist eine Portion
+ * Mitschnitt EINES Geraets; die Auswertung stellt aus den Portionen beider
+ * Sitze den Vergleich her, und genau der zeigt, wo die Laeufe auseinander
+ * gingen.
+ *
+ * `rumpf` ist bewusst `jsonb` und ungeprueft: Was drinsteht, entscheidet
+ * der Client, und ein Schema hier wuerde bei jedem neuen Verdacht eine
+ * Migration verlangen — waehrend der Fehler weiter unbeobachtet auftritt.
+ *
+ * Die Zeilen verfallen (siehe `aufraeumen` in src/diagnose.ts). Ein
+ * Mitschnitt ist ein Werkzeug, kein Bestand: Was aelter als zwei Wochen
+ * ist, gehoert nicht mehr in die Datenbank eines Spiels.
+ */
+export const feldherrDiagnose = pgTable(
+  'feldherr_diagnose',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /**
+     * Wer gemeldet hat. `set null` und nicht `cascade`: Loescht jemand sein
+     * Konto, bleibt der Mitschnitt als anonyme Messung brauchbar — er
+     * beschreibt eine Partie, keinen Menschen.
+     */
+    accountId: uuid().references(() => account.id, { onDelete: 'set null' }),
+    /** Tisch der Partie — der Schluessel, unter dem beide Sitze zusammenfinden. */
+    tableId: uuid().references(() => gameTable.id, { onDelete: 'cascade' }),
+    seat: integer().notNull(),
+    /** Warum gesendet wurde: takt, strittig, ende, ausgang, tab, abschied. */
+    grund: text().notNull(),
+    /** Index des ersten Ereignisses dieser Portion — Luecken werden sichtbar. */
+    abIndex: integer().notNull().default(0),
+    rumpf: jsonb().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    /** Die Auswertung liest immer "ein Tisch, in Reihenfolge". */
+    index('feldherr_diagnose_tisch_idx').on(t.tableId, t.createdAt),
+    /** Und der Abruf ohne Tisch liest "alles seit gestern". */
+    index('feldherr_diagnose_zeit_idx').on(t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Abgeleitete Typen
 // ---------------------------------------------------------------------------
 

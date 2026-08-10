@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import {
+  beendeAufzeichnung,
+  notiere,
+  notiereFehler,
+  sendeAufzeichnung,
+  starteAufzeichnung,
+} from '../aufzeichnung';
 import { Buehne3D } from '../minispiele/feldherr/Buehne3D';
 import {
   CHARAKTERE,
@@ -11,7 +18,7 @@ import {
   type FeldherrZug,
   starteFeldherr,
 } from '../minispiele/feldherr/kern.js';
-import type { TaktMessage, ViewMessage } from '../protocol';
+import { moduleVersionFor, type TaktMessage, type ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
 
 /**
@@ -53,6 +60,13 @@ interface FeldherrSicht {
    */
   zuege: (FeldherrZug & { sitz: number })[];
   abIndex?: number;
+  /**
+   * Die Ergebnismeldung je Sitz. Der Bildschirm rechnet nicht damit — sie
+   * steht hier fuer die Aufzeichnung: Weichen Sieger oder Pruefsumme der
+   * beiden Geraete ab, gilt die Partie als strittig, und dann ist genau
+   * dieses Paar der Beweis, WIE weit sie auseinanderlagen.
+   */
+  meldungen?: Record<number, { sieger: number; takt: number; pruef: string }>;
   ausgang: { sieger: number | null; strittig: boolean; aufgegeben: boolean } | null;
 }
 
@@ -531,6 +545,27 @@ export function FeldherrTisch({
   const neuVerbindenRef = useRef<() => void>(() => {});
 
   /**
+   * Der Gleichschritt-Stand des Augenblicks fuer die Aufzeichnung.
+   *
+   * Er haengt an jeder Sendung, nicht nur an einzelnen Ereignissen: Wer im
+   * Nachhinein liest, dass die Partie strittig wurde, braucht als Erstes
+   * die Antwort darauf, WO die beiden Geraete standen — Takt,
+   * Wissensgrenze, schwebende Zuege, Pruefsummen.
+   */
+  const standJetzt = useCallback((): Record<string, unknown> | undefined => {
+    const sitzung = sitzungRef.current;
+    if (!sitzung?.netzStand) return undefined;
+    try {
+      return { ...sitzung.netzStand(), zuege: alleZuege.current.length };
+    } catch {
+      /* Der Mitschnitt darf nie der Grund sein, warum etwas nicht laeuft. */
+      return undefined;
+    }
+  }, []);
+  /** Schon festgehaltene Pruefsummen je Taktgrenze — gegen Doppeleintraege. */
+  const notierteProben = useRef(new Map<number, string>());
+
+  /**
    * Eine Sicht verarbeiten: Zugliste nachfuehren, Neues in den Kern reichen.
    *
    * `abIndex === 0` heisst: Der Server hat die GANZE Liste geschickt (jede
@@ -557,6 +592,11 @@ export function FeldherrTisch({
        * gibt; dann hilft nur ein Neustart aus der Serverliste.
        */
       if (zuege.length < gereicht.current) {
+        notiereFehler(
+          'liste-kuerzer',
+          'Serverliste kuerzer als der eigene Stand',
+          { server: zuege.length, eigen: gereicht.current },
+        );
         console.warn(
           'feldherr: Serverliste ist kuerzer als der eigene Stand (' +
             zuege.length + ' statt ' + gereicht.current + ') — Kern wird neu gestartet.',
@@ -577,6 +617,10 @@ export function FeldherrTisch({
        * Zugliste laesst die Geraete still auseinanderlaufen, und genau das
        * macht die Partie strittig. Stattdessen die volle Sicht anfordern.
        */
+      notiereFehler('zugliste-loch', 'Sicht beginnt hinter dem eigenen Stand', {
+        ab,
+        vorhanden: liste.length,
+      });
       console.warn(
         'feldherr: Zugliste hat ein Loch (Sicht beginnt bei ' + ab + ', vorhanden ' +
           liste.length + ') — volle Sicht wird neu angefordert.',
@@ -591,7 +635,25 @@ export function FeldherrTisch({
     const sitzung = sitzungRef.current;
     if (!sitzung) return;
     for (let i = gereicht.current; i < liste.length; i += 1) {
-      sitzung.zugAnnehmen(liste[i], liste[i].sitz);
+      const z = liste[i];
+      /**
+       * Jeder Zug, so wie ihn DIESES Geraet bekommt: Stelle in der Liste,
+       * Sitz, geplanter Takt und der Takt, bei dem der Kern gerade steht.
+       * Aus zwei Mitschnitten wird daraus die eine Frage beantwortbar, um
+       * die sich alles dreht — sahen beide Geraete dieselben Zuege in
+       * derselben Reihenfolge, und wie viel Luft war bis zu ihrem Takt?
+       */
+      notiere('zug', {
+        i,
+        sitz: z.sitz,
+        zt: z.takt,
+        zart: z.art,
+        r: z.r,
+        c: z.c,
+        k: z.karte,
+        stand: sitzung.takt(),
+      });
+      sitzung.zugAnnehmen(z, z.sitz);
     }
     gereicht.current = liste.length;
   }, []);
@@ -695,10 +757,36 @@ export function FeldherrTisch({
     const wurzel = buehne.current;
     wurzel.innerHTML = HUELLE;
 
+    /**
+     * Ab hier wird mitgeschrieben (docs/FELDHERR-DIAGNOSE.md). Der Aufruf
+     * steht VOR dem Kernstart: Was beim Start schiefgeht — falsches
+     * Saatkorn, fehlender Sitz — gehoert zum Wertvollsten im Mitschnitt.
+     * Ein zweiter Aufruf mit demselben Tisch (Selbstheilung) fuehrt die
+     * Aufzeichnung fort und zaehlt nur den Lauf hoch.
+     */
+    starteAufzeichnung({
+      spiel: 'feldherr',
+      tisch: tableId,
+      sitz: meinSitz ?? -1,
+      saat: netzSaat,
+      feld: netzFeld ?? 'mittel',
+      held: HELD_STANDARD,
+      protokoll: moduleVersionFor('feldherr'),
+    });
+
     const netz: FeldherrNetz = {
-      melde: (zug) => sendRef.current({ art: 'zug', zug }),
+      melde: (zug) => {
+        /* Der eigene Zug beim ABSENDEN — die Gegenprobe zum 'zug'-Eintrag,
+         * der ihn nach dem Server-Echo festhaelt. Die Zeit dazwischen ist
+         * die Umlaufzeit, und sie ist der Kern des Strittig-Problems. */
+        notiere('melde', { zt: zug.takt, zart: zug.art, r: zug.r, c: zug.c, k: zug.karte });
+        sendRef.current({ art: 'zug', zug });
+      },
       puls: (daten) => sendTaktRef.current(daten),
-      aufgabe: () => sendRef.current({ art: 'aufgabe' }),
+      aufgabe: () => {
+        notiere('aufgabe');
+        sendRef.current({ art: 'aufgabe' });
+      },
       verlassen: () => onBackRef.current(),
     };
 
@@ -722,13 +810,19 @@ export function FeldherrTisch({
       charakter: HELD_STANDARD,
       netz,
       /** Jedes Geraet meldet seinen Ausgang getrennt, samt Pruefsumme. */
-      aufEnde: (a) =>
+      aufEnde: (a) => {
+        /* Der gemeldete Ausgang IST das Urteil: Weichen Sieger oder
+         * Pruefsumme der beiden Geraete ab, gilt die Partie als strittig.
+         * Beide Meldungen gehoeren deshalb in den Mitschnitt. */
+        notiere('meldeErgebnis', { sieger: a.sieger, takt: a.takt, pruef: a.pruef });
+        void sendeAufzeichnung('ende', standJetzt(), true);
         sendRef.current({
           art: 'ergebnis',
           sieger: a.sieger ?? 0,
           takt: a.takt,
           pruef: a.pruef,
-        }),
+        });
+      },
       /**
        * Der Gleichlauf ist verloren (Zustandsprobe weicht ab oder ein Zug
        * traf nach seinem Takt ein). Erste Wahl ist die Selbstheilung: neu
@@ -740,6 +834,17 @@ export function FeldherrTisch({
       aufStrittig: (probe) => {
         const jetzt = Date.now();
         heilungen.current = heilungen.current.filter((t) => jetzt - t < 120_000);
+        /**
+         * Der wichtigste Eintrag des ganzen Mitschnitts, und er geht SOFORT
+         * raus: Danach kann der Spieler den Tab schliessen, und ein Bericht,
+         * der erst beim naechsten Takt gesendet wuerde, waere verloren.
+         */
+        notiere('gleichlauf-verloren', {
+          ...probe,
+          heilungen: heilungen.current.length,
+          zuege: alleZuege.current.length,
+        });
+        void sendeAufzeichnung('strittig', standJetzt(), true);
         if (heilungen.current.length >= 2) {
           setStrittigLokal(true);
           sendRef.current({
@@ -813,6 +918,81 @@ export function FeldherrTisch({
   }, [sicht]);
 
   /**
+   * Die Spur: einmal je Sekunde der Stand des Gleichschritts, dazu jede
+   * neue Pruefsumme. Alle 20 Sekunden geht das Gesammelte an den Server.
+   *
+   * Warum eine Probe je Sekunde und nicht nur beim Fehler: Die Ursache
+   * liegt IMMER vor der Wirkung. Wenn ein Geraet zehn Sekunden lang an der
+   * Wissensgrenze klebte oder mit zehn Takten je Bild sprintete, steht das
+   * hier — und eine LUECKE in der Spur ist selbst ein Befund: Dann hat der
+   * Browser den Tab eingefroren.
+   *
+   * Der Effekt haengt nur am Tisch, nicht am Kernlauf: Eine Selbstheilung
+   * tauscht den Kern aus, die Aufzeichnung laeuft weiter.
+   */
+  useEffect(() => {
+    if (!tableId) return;
+    notierteProben.current = new Map();
+    const spur = window.setInterval(() => {
+      const sitzung = sitzungRef.current;
+      if (!sitzung?.netzStand) return;
+      try {
+        const n = sitzung.netzStand();
+        notiere('spur', {
+          k: n.takt,
+          g: n.gegnerStand,
+          w: n.wissen,
+          z: n.ziel,
+          sch: n.schwebend.length,
+          rest: n.restMs,
+          ph: n.phase,
+          /* Woran der Kern haengt. 'keiner' bei verdecktem Tab heisst: Das
+           * Geraet rechnet gerade gar nicht — genau der Zustand, in dem die
+           * Partie auseinanderlaeuft. */
+          an: n.antrieb,
+          ...(n.verdeckt ? { verdeckt: true } : {}),
+          ...(n.laeuft ? {} : { steht: true }),
+        });
+        /* Jede Taktgrenze genau einmal, und erst, wenn beide Summen da
+         * sind, gilt sie als vollstaendig. Die erste Grenze, an der sie
+         * auseinandergehen, ist der Tatort. */
+        for (const [grenze, eigen, fremd] of n.proben) {
+          const marke = eigen + '/' + (fremd ?? '?');
+          if (notierteProben.current.get(grenze) === marke) continue;
+          notierteProben.current.set(grenze, marke);
+          notiere('probe', {
+            g: grenze,
+            eigen,
+            fremd,
+            ...(fremd && fremd !== eigen ? { ungleich: true } : {}),
+          });
+        }
+        if (notierteProben.current.size > 400) notierteProben.current = new Map();
+      } catch {
+        /* siehe standJetzt */
+      }
+    }, 1000);
+    const abgabe = window.setInterval(() => {
+      void sendeAufzeichnung('takt', standJetzt());
+    }, 20_000);
+    return () => {
+      window.clearInterval(spur);
+      window.clearInterval(abgabe);
+    };
+  }, [tableId, standJetzt]);
+
+  /**
+   * Der Mitschnitt endet mit dem Tisch, nicht mit dem Kern: Eine
+   * Selbstheilung startet den Kern neu, die Partie laeuft aber weiter, und
+   * ein an den Kernlauf gehaengtes Ende zerschnitte die Aufzeichnung genau
+   * an der interessantesten Stelle.
+   */
+  useEffect(() => {
+    if (!tableId) return;
+    return () => beendeAufzeichnung('verlassen');
+  }, [tableId]);
+
+  /**
    * Serverseitiges Partie-Ende (Aufgabe, Verlassen, strittige Meldungen):
    * Der Kern erfaehrt davon nichts von selbst — sein eigenes Endbild kennt
    * nur das gefallene Haupthaus. Hier wird er angehalten; das Banner unten
@@ -821,7 +1001,16 @@ export function FeldherrTisch({
   const fremdesEnde =
     ausgang !== null && (ausgang.aufgegeben || ausgang.strittig || ausgang.sieger === null);
   useEffect(() => {
-    if (fremdesEnde) sitzungRef.current?.beenden();
+    if (!fremdesEnde) return;
+    /* Das Urteil des Servers, samt beider Meldungen: Erst hier steht fest,
+     * OB die Partie strittig ausgeht — das eigene Geraet kann laengst
+     * geheilt sein und trotzdem verlieren, weil die Gegenseite abwich. */
+    notiere('ausgang', { ...ausgang, meldungen: sicht?.meldungen ?? null });
+    void sendeAufzeichnung('ausgang', standJetzt(), true);
+    sitzungRef.current?.beenden();
+    // Der Ausgang ist ein einmaliges Ereignis; `ausgang` und `sicht` wandern
+    // bei jedem Serverfunk, duerfen den Effekt aber nicht erneut ausloesen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fremdesEnde]);
 
   /**
@@ -832,11 +1021,19 @@ export function FeldherrTisch({
   useEffect(() => {
     if (!tableId) return;
     let letzter = -1;
+    let stockteZuletzt = false;
     const wachhund = window.setInterval(() => {
       const sitzung = sitzungRef.current;
       if (!sitzung) return;
       const t = sitzung.takt();
-      setStockt(t > 0 && t === letzter);
+      const steht = t > 0 && t === letzter;
+      /* Nur der Wechsel, nicht der Zustand: Ein stehender Takt ueber eine
+       * Minute waere sonst vierzig gleiche Zeilen im Mitschnitt. */
+      if (steht !== stockteZuletzt) {
+        stockteZuletzt = steht;
+        notiere('stockt', { steht, takt: t });
+      }
+      setStockt(steht);
       letzter = t;
     }, 1500);
     return () => window.clearInterval(wachhund);

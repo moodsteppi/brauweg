@@ -18,6 +18,7 @@ import { APP_ORIGIN, buildApp } from './http/app.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
 import { applyStaffEmails } from './staff.js';
+import { aufraeumen } from './diagnose.js';
 import { expireStaleTables } from './tables/service.js';
 
 const HOUR = 3600_000;
@@ -102,6 +103,7 @@ async function main(): Promise<void> {
     cookieSecure: config.cookieSecure,
     sessionTtlDays: config.sessionTtlDays,
     stage: config.stage,
+    diagnoseSchluessel: config.diagnoseSchluessel,
     // In der Entwicklung liefert Vite den Client aus, dann gibt es hier nichts
     // auszuliefern und der Server bleibt reine API.
     clientDir: existsSync(CLIENT_DIR) ? CLIENT_DIR : undefined,
@@ -119,9 +121,13 @@ async function main(): Promise<void> {
       config.env === 'development' ? [] : [config.publicUrl, APP_ORIGIN],
   });
 
-  // Tische ohne Aktivitaet verfallen nach 24 Stunden.
+  // Tische ohne Aktivitaet verfallen nach 24 Stunden; Feldherr-Mitschnitte
+  // nach zwei Wochen (docs/FELDHERR-DIAGNOSE.md). Beides im selben Takt: Es
+  // ist dieselbe Art Aufraeumen, und ein zweiter Timer waere nur ein
+  // zweiter Ort, an dem man ihn vergessen kann.
   const sweeper = setInterval(() => {
     void expireStaleTables(db).catch((err) => app.log.error(err));
+    void aufraeumen(db).catch((err) => app.log.error(err));
   }, HOUR);
 
   const stop = async (): Promise<void> => {

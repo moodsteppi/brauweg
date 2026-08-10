@@ -31,6 +31,14 @@ export interface Config {
    * Beim Start abgeglichen; wer heruntergenommen wird, verliert das Merkmal.
    */
   readonly staffEmails: readonly string[];
+  /**
+   * Schluessel fuer den Abruf der Feldherr-Mitschnitte
+   * (docs/FELDHERR-DIAGNOSE.md). Ohne ihn geht der Abruf nur ueber ein
+   * angemeldetes Testkonto — der uebliche Weg. Er ist der Ausweg fuer eine
+   * Ausgabe ohne Testkonto und bewusst NICHT vorbelegt: Ein
+   * Standardschluessel waere schlimmer als gar keiner.
+   */
+  readonly diagnoseSchluessel: string | null;
 }
 
 function required(name: string, fallbackInDev?: string): string {
@@ -65,5 +73,11 @@ export function loadConfig(): Config {
     resendApiKey: process.env.RESEND_API_KEY ?? null,
     mailFrom: process.env.MAIL_FROM ?? 'Brauweg <noreply@brauweg-spielen.de>',
     staffEmails: parseStaffEmails(process.env.STAFF_EMAILS),
+    // Ein zu kurzer Schluessel ist schlimmer als keiner: Er sieht nach
+    // Schutz aus und ist in Minuten durchprobiert. Dann lieber zu.
+    diagnoseSchluessel:
+      (process.env.DIAGNOSE_SCHLUESSEL ?? '').length >= 20
+        ? (process.env.DIAGNOSE_SCHLUESSEL as string)
+        : null,
   };
 }
