@@ -15,7 +15,9 @@
  *
  * Anmeldung, in dieser Reihenfolge:
  *   1. --schluessel=… oder DIAGNOSE_SCHLUESSEL (Kopfzeile, ohne Konto)
- *   2. --email=… --passwort=… oder BRAUWEG_EMAIL / BRAUWEG_PASSWORT
+ *   2. --email=… (oder BRAUWEG_EMAIL); das Passwort fragt es selbst ab, mit
+ *      verdeckter Eingabe. Nur wer es ausdruecklich als BRAUWEG_PASSWORT
+ *      oder --passwort=… mitgibt, umgeht die Abfrage.
  * Das Konto muss ein Testkonto sein (STAFF_EMAILS am Dienst).
  *
  * Weitere Schalter:
@@ -25,12 +27,14 @@
  *   --ordner=diagnose   wohin die Dateien gehen
  *   --nur-strittig      nur Tische mit gemeldetem Gleichlaufverlust
  *
- * ACHTUNG Zugangsdaten: Sie stehen sonst in der Prozessliste und in der
- * Historie der Kommandozeile. Besser ueber die Umgebung setzen.
+ * ACHTUNG Zugangsdaten: Ein Passwort auf der Kommandozeile steht in der
+ * Prozessliste und in der Historie der Sitzung. Deshalb die Abfrage — dort
+ * geht es durch keine der beiden.
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { createInterface } from 'node:readline';
 
 // ---------------------------------------------------------------------------
 // Schalter
@@ -57,6 +61,40 @@ const PASSWORT = opt('passwort', process.env.BRAUWEG_PASSWORT ?? null);
 // ---------------------------------------------------------------------------
 
 /**
+ * Passwort verdeckt abfragen.
+ *
+ * Weder in die Prozessliste noch in die Historie der Sitzung — und schon gar
+ * nicht in ein Protokoll. Die Zeichen werden dabei gar nicht ausgegeben:
+ * Sternchen verraten die Laenge, und das ist die einzige Angabe, die ein
+ * Blick ueber die Schulter sonst mitnimmt.
+ *
+ * Ohne Terminal (Skript, Dienst) wird nicht gefragt, sondern klar
+ * abgebrochen — eine Abfrage ins Leere haengt sonst ewig.
+ */
+function fragePasswort(text) {
+  if (!process.stdin.isTTY) {
+    throw new Error(
+      'Kein Terminal fuer die Passwortabfrage. Setze BRAUWEG_PASSWORT in der ' +
+        'Umgebung oder nimm --schluessel=… .',
+    );
+  }
+  return new Promise((fertig) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    process.stdout.write(text);
+    let verdeckt = true;
+    rl._writeToOutput = (s) => {
+      if (!verdeckt) rl.output.write(s);
+    };
+    rl.question('', (wert) => {
+      verdeckt = false;
+      rl.close();
+      process.stdout.write('\n');
+      fertig(wert);
+    });
+  });
+}
+
+/**
  * Kopfzeilen fuer alle Abrufe.
  *
  * Das Sitzungs-Cookie kommt aus `set-cookie` der Anmeldung. Node schickt
@@ -67,16 +105,17 @@ async function anmelden() {
   if (SCHLUESSEL) {
     return { 'x-diagnose-schluessel': SCHLUESSEL };
   }
-  if (!EMAIL || !PASSWORT) {
+  if (!EMAIL) {
     throw new Error(
       'Kein Zugang. Entweder --schluessel=… (bzw. DIAGNOSE_SCHLUESSEL) oder ' +
-        '--email=… --passwort=… (bzw. BRAUWEG_EMAIL / BRAUWEG_PASSWORT).',
+        '--email=… (bzw. BRAUWEG_EMAIL) — nach dem Passwort wird dann gefragt.',
     );
   }
+  const passwort = PASSWORT ?? (await fragePasswort(`Passwort fuer ${EMAIL}: `));
   const antwort = await fetch(ZIEL + '/api/auth/login', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: EMAIL, password: PASSWORT }),
+    body: JSON.stringify({ email: EMAIL, password: passwort }),
   });
   if (!antwort.ok) {
     const text = await antwort.text().catch(() => '');

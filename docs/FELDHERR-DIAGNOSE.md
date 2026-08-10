@@ -65,10 +65,13 @@ die nächsten echten Partien sagen, ob noch etwas anderes darunterliegt.
 ## In drei Zeilen benutzen
 
 ```bash
-export BRAUWEG_EMAIL=…            # Testkonto (STAFF_EMAILS am Dienst)
-export BRAUWEG_PASSWORT=…
-node packages/game-feldherr/werkzeug/diagnose-holen.mjs --stunden=24 --nur-strittig
+node packages/game-feldherr/werkzeug/diagnose-holen.mjs --email=DEINE@ADRESSE --stunden=24
 ```
+
+Nach dem Passwort fragt es selbst, mit verdeckter Eingabe — auf der
+Kommandozeile stünde es in der Prozessliste und in der Historie der Sitzung.
+Wer es doch dort haben will, setzt `BRAUWEG_PASSWORT`. Das Konto muss ein
+Testkonto sein (`STAFF_EMAILS` am Dienst).
 
 Es entstehen zwei Dateien unter `diagnose/`:
 
