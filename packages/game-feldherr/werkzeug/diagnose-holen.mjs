@@ -327,7 +327,22 @@ function berichtFuerTisch(tisch, sitze) {
     return liste.length > 0 ? liste[liste.length - 1] : null;
   });
   const verluste = nummern.map((n) => nur(sitze.get(n).ereignisse, 'gleichlauf-verloren').length);
-  if (meldungen.every((m) => m !== null)) {
+  if (nummern.length < 2) {
+    /**
+     * Mit einem Sitz gibt es kein Urteil ueber die Partie.
+     *
+     * Genau das stand hier trotzdem: "ging EINIG aus, auf beiden Geraeten" —
+     * direkt neben dem Hinweis, dass nur ein Sitz gemeldet hat. Eine
+     * Auswertung, die sich selbst widerspricht, ist schlimmer als keine.
+     */
+    if (meldungen[0]) {
+      zeilen.push(
+        `- Dieses Geraet meldete Sieger ${meldungen[0].sieger} mit Pruefsumme ` +
+          `\`${meldungen[0].pruef}\` bei Takt ${meldungen[0].takt}. Was die Gegenseite ` +
+          'gemeldet hat, steht hier nicht — sie hat nichts aufgezeichnet.',
+      );
+    }
+  } else if (meldungen.every((m) => m !== null)) {
     const einig =
       meldungen.every((m) => m.pruef === meldungen[0].pruef) &&
       meldungen.every((m) => m.sieger === meldungen[0].sieger);
