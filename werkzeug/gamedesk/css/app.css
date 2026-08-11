@@ -1,0 +1,1380 @@
+/* ==========================================================================
+   GameDesk — Shell, Board, Fenster, Verbindungen
+   ========================================================================== */
+
+:root {
+  --bg:            #14161c;
+  --bg-board:      #0f1116;
+  --grid:          rgba(255,255,255,.055);
+  --grid-strong:   rgba(255,255,255,.10);
+  --panel:         #1b1f28;
+  --panel-2:       #222833;
+  --panel-3:       #2b323f;
+  --line:          #333c4b;
+  --line-soft:     #29303c;
+  --text:          #e6eaf2;
+  --text-dim:      #9aa4b6;
+  --text-faint:    #6b7488;
+  --accent:        #6ea8fe;
+  --accent-2:      #4d8ef7;
+  --accent-soft:   rgba(110,168,254,.16);
+  --danger:        #ef6b6b;
+  --ok:            #57c98a;
+  --warn:          #e8b45c;
+  --shadow-1:      0 1px 2px rgba(0,0,0,.4);
+  --shadow-2:      0 8px 24px rgba(0,0,0,.45);
+  --shadow-3:      0 18px 48px rgba(0,0,0,.55);
+  --radius:        10px;
+  --radius-s:      7px;
+  --bar-h:         46px;
+  --pal-w:         172px;
+  --insp-w:        286px;
+
+  /* --------------------------------------------------------------- Abstände
+     Eine Leiter, keine Einzelfälle. Jeder Wert im Blatt kommt von hier —
+     wer eine Zahl direkt hinschreibt, hat sich nicht entschieden.
+     Schritt 4 (14px) ist der MINDESTABSTAND jeder Schrift zu jeder Kante,
+     an der sie steht. Darunter geht nur Beschriftung IN einem Knopf. */
+  --luft-1:        4px;
+  --luft-2:        8px;
+  --luft-3:        11px;
+  --luft-4:        14px;      /* Mindestabstand für Schrift */
+  --luft-5:        20px;
+  --luft-6:        28px;
+  --schrift-luft:  var(--luft-4);
+  /* Messchrome und Chips können 14 nicht einhalten — ein Lineal ist 18 px
+     breit. Für sie gilt der enge Mindestabstand, für Lesetext nie. */
+  --schrift-luft-eng: 6px;
+
+  /* ------------------------------------------------------- Kopf des Rahmens
+     Ein Rahmen trägt Titelleiste, Wasserzeichen und Untertitel. So hoch ist
+     dieses Band — js/core/layout.js liest genau diese Werte und hält den
+     Inhalt darunter. Wer die Schriftgrößen unten ändert, ändert sie hier mit;
+     frame.js misst zusätzlich nach und meldet die echte Höhe. */
+  --fr-bar:        34px;      /* Titelleiste, s. .gd-win__bar */
+  --fr-mark-top:   12px;
+  --fr-mark-size:  28px;
+  --fr-note-size:  12.5px;
+  --fr-kopf:       84px;      /* Band ohne Untertitel */
+  --fr-kopf-note:  116px;     /* Band mit Untertitel */
+
+  /* ----------------------------------------------------------------- Bewegung
+     Eine Kurve fürs ganze Haus. Die eingebauten CSS-Kurven sind zu weich;
+     alles, was auf eine Eingabe antwortet, läuft ease-out und unter 300 ms. */
+  --aus:           cubic-bezier(.23, 1, .32, 1);
+  --aus-weich:     cubic-bezier(.32, .72, 0, 1);
+  --zeit-druck:    120ms;
+  --zeit-klein:    160ms;
+  --zeit-gross:    220ms;
+  --font: "Inter", -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-titel: "Space Grotesk", "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+
+html[data-theme="light"] {
+  --bg:            #eef0f4;
+  --bg-board:      #f6f7f9;
+  --grid:          rgba(0,0,0,.06);
+  --grid-strong:   rgba(0,0,0,.11);
+  --panel:         #ffffff;
+  --panel-2:       #f2f4f8;
+  --panel-3:       #e5e9f0;
+  --line:          #d2d8e2;
+  --line-soft:     #e2e6ee;
+  --text:          #1b2029;
+  --text-dim:      #5a6479;
+  --text-faint:    #8a93a5;
+  --accent:        #2f6fe4;
+  --accent-2:      #2360d6;
+  --accent-soft:   rgba(47,111,228,.13);
+  --shadow-1:      0 1px 2px rgba(20,30,50,.10);
+  --shadow-2:      0 8px 24px rgba(20,30,50,.13);
+  --shadow-3:      0 18px 48px rgba(20,30,50,.20);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 13px;
+  font-feature-settings: "cv05" 1, "ss03" 1, "tnum" 0;   /* Inter: offenes ä/ö/ü, geschwungenes ß */
+  color: var(--text);
+  background: var(--bg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, .brand-name, .board-name, .gd-win__title, .fr-mark, .modal h2,
+.lib-zeile__name, .be-title, .pj-name {
+  font-family: var(--font-titel);
+  letter-spacing: -.012em;
+}
+
+/* Laufweite gehört zur Größe, nicht zur Schriftart: Große Schrift steht von
+   allein zu weit auseinander und wird enger gestellt, kleine Schrift braucht
+   Luft zwischen den Buchstaben. Ein fester Wert für alles ist irgendwo falsch.
+   Der Zeilenabstand läuft gegenläufig — eng bei großer, weit bei kleiner
+   Schrift. */
+h1, .fr-mark, .be-title { letter-spacing: -.022em; line-height: 1.12; }
+h2, .modal h2          { letter-spacing: -.018em; line-height: 1.2; }
+h3                     { letter-spacing: -.012em; line-height: 1.3; }
+.gd-win__title, .lib-zeile__name, .pj-name { line-height: 1.35; }
+.md-time, .wf-rl, .md-counter, .conn-label { letter-spacing: .006em; }
+
+/* Die kleine Überschrift über einem Abschnitt — überall dieselbe, egal ob sie
+   über der Palette, im Inspector, im Kontextmenü oder im Dialog steht */
+.pal-title, .insp-title, .ctx-head, .modal h3 {
+  font-family: var(--font-titel);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Zahlen, die untereinander stehen, müssen auch untereinander stehen —
+   die Grundeinstellung des Fließtextes (tnum 0) taugt dafür nicht.
+   Was ohnehin in der Monospace steht, braucht die Regel nicht. */
+.fld[type="number"], .insp-row input[type="number"], .lib-zeile__datum, .pj-zahl strong {
+  font-variant-numeric: tabular-nums;
+}
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Messfläche des Layouts: außerhalb des Boards, damit der Zoom nicht
+   hineinrechnet, und ohne Höhenbegrenzung, damit scrollHeight etwas taugt */
+.gd-messung {
+  position: absolute; left: -30000px; top: 0;
+  height: auto; max-height: none; min-height: 0;
+  overflow: visible; visibility: hidden; pointer-events: none;
+  contain: none;
+}
+
+/* ---------------------------------------------------------------- Layout */
+
+#app {
+  display: grid;
+  grid-template-columns: var(--pal-w) 1fr var(--insp-w);
+  grid-template-rows: var(--bar-h) 1fr;
+  grid-template-areas: "top top top" "pal board insp";
+  height: 100vh;
+  width: 100vw;
+}
+#topbar    { grid-area: top; }
+#palette   { grid-area: pal; }
+#board     { grid-area: board; }
+#inspector { grid-area: insp; }
+
+@media (max-width: 1280px) {
+  :root { --pal-w: 148px; --insp-w: 248px; }
+  .pal-item__desc { display: none; }
+}
+@media (max-width: 1020px) {
+  :root { --pal-w: 52px; --insp-w: 214px; }
+  .pal-item__label, .pal-item__desc, .pal-title, .pal-hint { display: none; }
+  .pal-item { justify-content: center; padding: 9px 0; }
+  #minimap { display: none; }
+}
+
+/* ---------------------------------------------------------------- Topbar */
+
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  z-index: 40;
+}
+.tb-group { display: flex; align-items: center; gap: 3px; }
+.tb-spacer { flex: 1; }
+.tb-brand { gap: 8px; padding-right: 6px; }
+.brand-mark { color: var(--accent); font-size: 17px; line-height: 1; }
+.brand-name { font-weight: 650; letter-spacing: .3px; }
+.board-name {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  padding: 4px 7px;
+  width: 190px;
+  color: var(--text-dim);
+  font-weight: 500;          /* leichtester Schnitt, den Space Grotesk mitbringt */
+}
+.board-name:hover  { border-color: var(--line); }
+.board-name:focus  { border-color: var(--accent); color: var(--text); outline: none; background: var(--panel-2); }
+
+.tb-btn {
+  min-width: 30px; height: 30px;
+  padding: 0 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: background var(--zeit-druck) ease,
+              color var(--zeit-druck) ease,
+              border-color var(--zeit-druck) ease,
+              transform var(--zeit-druck) var(--aus);
+}
+.tb-btn:active { transform: scale(.96); }
+.tb-btn--label { font-size: 12.5px; padding: 0 11px; }
+.tb-btn--wide { min-width: 58px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.tb-btn--primary { background: var(--accent-2); color: #fff; }
+.tb-btn--primary:hover { background: var(--accent); color: #fff; }
+.tb-btn[disabled] { opacity: .35; pointer-events: none; }
+.tb-toggle.is-on { color: var(--accent); background: var(--accent-soft); }
+
+/* --------------------------------------------------------------- Palette */
+
+#palette {
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+}
+.pal-title, .insp-title {
+  padding: 12px 12px 7px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+.pal-list { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+.pal-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-s);
+  background: var(--panel-2);
+  cursor: grab;
+  text-align: left;
+  user-select: none;
+}
+.pal-item:hover { border-color: var(--accent); background: var(--accent-soft); }
+.pal-item:active { cursor: grabbing; }
+.pal-item__icon { font-size: 15px; width: 20px; text-align: center; color: var(--accent); }
+.pal-item__label { font-weight: 550; }
+.pal-item__desc { display: block; font-size: 10.5px; color: var(--text-faint); font-weight: 400; margin-top: 1px; }
+.pal-hint {
+  margin-top: auto; padding: 12px;
+  font-size: 10.5px; color: var(--text-faint);
+  border-top: 1px solid var(--line-soft);
+  line-height: 1.5;
+}
+
+/* ----------------------------------------------------------------- Board */
+
+#board {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-board);
+  cursor: default;
+  outline: none;
+  contain: strict;
+}
+#board.show-grid {
+  background-image:
+    linear-gradient(to right,  var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px),
+    linear-gradient(to right,  var(--grid-strong) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-strong) 1px, transparent 1px);
+}
+#board.is-panning { cursor: grabbing; }
+#board.is-space   { cursor: grab; }
+#board.is-linking { cursor: crosshair; }
+
+#world {
+  position: absolute;
+  left: 0; top: 0;
+  width: 0; height: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+#conn-layer, #guide-layer {
+  position: absolute;
+  left: -50000px; top: -50000px;
+  width: 100000px; height: 100000px;
+  overflow: visible;
+  pointer-events: none;
+}
+/* Pfeile liegen ÜBER den Fenstern (die stehen bei 100000+). Sie sollen die
+   Verbindung zeigen, nicht hinter dem Inhalt verschwinden; getroffen wird
+   trotzdem nur der Strich selbst, alles andere ist durchlässig. */
+#conn-layer { z-index: 2500000; }
+#guide-layer { z-index: 3000000; }
+#win-layer { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 2; }
+/*
+ * Rahmenüberschriften liegen ÜBER den Kacheln.
+ *
+ * Ein Rahmen selbst gehört ins untere Stapelband — er darf seinen Inhalt nie
+ * verdecken. Seine Überschrift muss aber genau das dürfen: Weit
+ * herausgezoomt ist sie das Einzige, woran man erkennt, wo man ist. Sie lebt
+ * deshalb in einer eigenen Ebene, die windows.js an der Fenstergeometrie
+ * führt. Durchlässig bis auf die Überschrift selbst.
+ */
+#frame-layer { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 2400000; pointer-events: none; }
+/*
+ * Eckgriffe liegen über den Überschriften, aber unter den Pfeilen.
+ *
+ * Sie sind das, woran eine Kachel auf Distanz noch anfassbar ist — deshalb
+ * dürfen sie den Rahmeninhalt überdecken. Unter den Pfeilen, weil ein Pfeil
+ * seinen Weg zeigen muss und der Griff nur ein Bedienteil ist.
+ */
+#pad-layer { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 2450000; pointer-events: none; }
+
+#label-layer {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 12;
+  overflow: hidden;
+}
+#marquee {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  pointer-events: none;
+  z-index: 14;
+  display: none;
+}
+.board-empty {
+  position: absolute; left: 50%; top: 45%;
+  transform: translate(-50%,-50%);
+  text-align: center;
+  pointer-events: none;
+  color: var(--text-faint);
+  z-index: 5;
+}
+.board-empty.is-hidden { display: none; }
+.be-title { font-size: 19px; font-weight: 650; color: var(--text-dim); margin-bottom: 6px; }
+.be-sub { font-size: 12px; }
+
+/* ---------------------------------------------------------------- Fenster */
+
+.gd-win {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+  overflow: visible;
+  --win-accent: var(--accent);
+}
+.gd-win.is-selected { border-color: var(--win-accent); box-shadow: var(--shadow-3), 0 0 0 1px var(--win-accent); }
+.gd-win.is-dragging { opacity: .93; }
+.gd-win.is-collapsed .gd-win__body { display: none; }
+.gd-win.is-collapsed { height: auto !important; min-height: 0; }
+
+.gd-win__bar {
+  display: flex; align-items: center; gap: 7px;
+  height: 32px;
+  padding: 0 6px 0 9px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: var(--radius) var(--radius) 0 0;
+  cursor: grab;
+  user-select: none;
+  flex: 0 0 auto;
+}
+.gd-win.is-collapsed .gd-win__bar { border-bottom: none; border-radius: var(--radius); }
+.gd-win__bar:active { cursor: grabbing; }
+.gd-win__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--win-accent); flex: 0 0 auto; }
+.gd-win__icon { color: var(--win-accent); font-size: 13px; }
+.gd-win__title {
+  font-weight: 600; font-size: 12.5px;
+  flex: 1 1 auto;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 3px 4px; border-radius: 4px;
+  cursor: text;
+}
+.gd-win__title:focus { outline: none; background: var(--panel-3); box-shadow: 0 0 0 1px var(--accent); }
+.gd-win__tools { display: flex; gap: 2px; flex: 0 0 auto; }
+.gd-win__btn {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 5px;
+  color: var(--text-faint); cursor: pointer; font-size: 12px; line-height: 1;
+}
+.gd-win__btn:hover { background: var(--panel-3); color: var(--text); }
+.gd-win__btn--close:hover { background: var(--danger); color: #fff; }
+
+.gd-win__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--panel);
+}
+
+/* --------------------------------------------------------- Resize-Griffe
+ *
+ * Die Griffe liegen im Weltraum und schrumpfen mit dem Zoom — bei 25 %
+ * blieben von 8 Pixeln zwei übrig, und Größe ändern wurde zum Zielschießen.
+ * windows.js rechnet deshalb je Kachel ein --griff aus, das auf dem
+ * BILDSCHIRM konstant bleibt (gedeckelt, damit der Griff nie einen großen
+ * Teil einer kleinen Kachel frisst). Die Zahlen hier sind nur Rückfall für
+ * den Fall, dass noch nichts gesetzt wurde.
+ */
+/* --griff kommt aus windows.js und ist das Bildschirmmaß. --griff-fass ist
+   das, was der Zeiger wirklich trifft: Kommt er in die Nähe, wächst das
+   Feld ihm ein Stück entgegen (is-randnah). Ein Ziel, das größer wird,
+   während man darauf zugeht, trifft sich messbar leichter — und weil es
+   nur an EINER Kachel wächst und nur im Nahbereich, frisst es niemandem
+   den Klick auf seinen Inhalt weg. */
+.gd-win {
+  --griff: 8px;
+  --griff-zu: 1;
+  --griff-fass: calc(var(--griff) * var(--griff-zu));
+  --eck: calc(var(--griff-fass) * 1.5);
+}
+.gd-win.is-randnah, .gd-win.is-groesse { --griff-zu: 1.45; }
+.gd-win__handle { position: absolute; z-index: 5; }
+.gd-win__handle[data-dir="n"]  { left: var(--griff-fass); right: var(--griff-fass); top: calc(var(--griff-fass) / -2); height: var(--griff-fass); cursor: ns-resize; }
+.gd-win__handle[data-dir="s"]  { left: var(--griff-fass); right: var(--griff-fass); bottom: calc(var(--griff-fass) / -2); height: var(--griff-fass); cursor: ns-resize; }
+.gd-win__handle[data-dir="w"]  { top: var(--griff-fass); bottom: var(--griff-fass); left: calc(var(--griff-fass) / -2); width: var(--griff-fass); cursor: ew-resize; }
+.gd-win__handle[data-dir="e"]  { top: var(--griff-fass); bottom: var(--griff-fass); right: calc(var(--griff-fass) / -2); width: var(--griff-fass); cursor: ew-resize; }
+.gd-win__handle[data-dir="nw"] { left: calc(var(--griff-fass) * -.625); top: calc(var(--griff-fass) * -.625); width: var(--eck); height: var(--eck); cursor: nwse-resize; }
+.gd-win__handle[data-dir="ne"] { right: calc(var(--griff-fass) * -.625); top: calc(var(--griff-fass) * -.625); width: var(--eck); height: var(--eck); cursor: nesw-resize; }
+.gd-win__handle[data-dir="sw"] { left: calc(var(--griff-fass) * -.625); bottom: calc(var(--griff-fass) * -.625); width: var(--eck); height: var(--eck); cursor: nesw-resize; }
+.gd-win__handle[data-dir="se"] { right: calc(var(--griff-fass) * -.625); bottom: calc(var(--griff-fass) * -.625); width: var(--eck); height: var(--eck); cursor: nwse-resize; }
+.gd-win.is-collapsed .gd-win__handle[data-dir*="s"] { display: none; }
+
+/* ------------------------------------------- Ränder zum Größerziehen ---
+ *
+ * Die Griffe waren unsichtbar: Man musste wissen, dass da etwas ist, und
+ * eine 11 Pixel schmale Kante blind treffen. Jetzt meldet sich der Rand
+ * selbst — windows.js setzt `is-randnah` auf die Kachel, deren Kante dem
+ * Zeiger am nächsten ist (immer nur eine, sonst flimmert bei kleinem
+ * Maßstab das halbe Brett), und die Kanten werden weiß und dicker. Wer
+ * dann einen Griff überfährt, bekommt ihn ganz.
+ *
+ * Die Dicke hängt an --griff und damit am Zoom: Der Rand bleibt auf dem
+ * BILDSCHIRM gleich stark, egal wie weit man draußen ist.
+ */
+.gd-win { --rand-dick: calc(var(--griff) * .18); }
+.gd-win.is-randnah { --rand-dick: calc(var(--griff) * .40); }
+.gd-win.is-randnah .gd-win__handle:hover,
+.gd-win.is-groesse .gd-win__handle { --rand-dick: calc(var(--griff) * .64); }
+
+.gd-win__handle::before {
+  content: '';
+  position: absolute;
+  background: #fff;
+  /* Ein weißer Strich auf einer hellen Bildkachel wäre nicht da. Der
+     dünne dunkle Saum kostet nichts und trägt ihn über jeden Untergrund. */
+  box-shadow: 0 0 0 max(.5px, calc(var(--rand-dick) * .16)) rgba(0,0,0,.5);
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity var(--zeit-klein) ease,
+              width var(--zeit-klein) var(--aus),
+              height var(--zeit-klein) var(--aus);
+}
+/* Im hellen Blatt liegt der Rand auf weißem Papier — dort ist Weiß keine
+   Farbe, sondern Abwesenheit. Gemeint ist „der stärkste Kontrast". */
+html[data-theme="light"] .gd-win__handle::before {
+  background: var(--text);
+  box-shadow: 0 0 0 max(.5px, calc(var(--rand-dick) * .16)) rgba(255,255,255,.6);
+}
+.gd-win__handle[data-dir="n"]::before, .gd-win__handle[data-dir="s"]::before {
+  left: 0; right: 0; top: 50%;
+  height: var(--rand-dick);
+  transform: translateY(-50%);
+}
+.gd-win__handle[data-dir="w"]::before, .gd-win__handle[data-dir="e"]::before {
+  top: 0; bottom: 0; left: 50%;
+  width: var(--rand-dick);
+  transform: translateX(-50%);
+}
+/* Die Ecken sitzen auf dem Kachelpunkt selbst, nicht in der Mitte ihres
+   Trefferfelds — das liegt um 0,625·Griff nach außen versetzt. */
+.gd-win__handle[data-dir="nw"]::before, .gd-win__handle[data-dir="ne"]::before,
+.gd-win__handle[data-dir="sw"]::before, .gd-win__handle[data-dir="se"]::before {
+  width: calc(var(--rand-dick) * 2.3); height: calc(var(--rand-dick) * 2.3);
+}
+.gd-win__handle[data-dir="nw"]::before { left: calc(var(--griff-fass) * .625); top: calc(var(--griff-fass) * .625); transform: translate(-50%,-50%); }
+.gd-win__handle[data-dir="ne"]::before { right: calc(var(--griff-fass) * .625); top: calc(var(--griff-fass) * .625); transform: translate(50%,-50%); }
+.gd-win__handle[data-dir="sw"]::before { left: calc(var(--griff-fass) * .625); bottom: calc(var(--griff-fass) * .625); transform: translate(-50%,50%); }
+.gd-win__handle[data-dir="se"]::before { right: calc(var(--griff-fass) * .625); bottom: calc(var(--griff-fass) * .625); transform: translate(50%,50%); }
+
+.gd-win.is-randnah .gd-win__handle::before { opacity: .52; }
+.gd-win.is-randnah .gd-win__handle:hover::before { opacity: 1; }
+/* Während gezogen wird, bleibt der ganze Rand hell — der Zeiger läuft
+   dabei über die Kante hinaus und verlöre sonst mitten im Ziehen sein
+   :hover. */
+.gd-win.is-groesse .gd-win__handle::before { opacity: .9; }
+
+/* --------------------------------------------------- Verbindungs-Ports
+ *
+ * Der Knopf sagt, was er tut: ein Kreis mit einem Plus darin — „hier
+ * beginnt eine Verbindung". Das Plus sind zwei Balken aus Pseudoelementen
+ * (keine Schrift: die säße je nach Zeichensatz anders und wäre bei 9 px
+ * unscharf). Ziehen zieht den Pfeil auf, ein einzelner Klick schaltet in
+ * den Klickmodus — s. connections.js.
+ *
+ * --port kommt wie --griff aus windows.js und hält den Knopf auf dem
+ * Bildschirm gleich groß.
+ */
+.gd-win { --port: 15px; }
+.gd-port {
+  position: absolute;
+  width: var(--port); height: var(--port);
+  margin: calc(var(--port) / -2) 0 0 calc(var(--port) / -2);
+  border-radius: 50%;
+  background: var(--panel);
+  border: max(1.5px, calc(var(--port) * .12)) solid var(--win-accent);
+  box-shadow: 0 0 0 calc(var(--port) * .18) var(--panel);
+  opacity: 0;
+  transform: scale(.72);
+  transform-origin: center;
+  transition: opacity var(--zeit-klein) ease,
+              transform var(--zeit-klein) var(--aus),
+              background-color var(--zeit-druck) ease;
+  cursor: crosshair;
+  z-index: 6;
+}
+/* Das Plus. Zwei Balken, deren LÄNGE die Antwort auf das Überfahren trägt:
+   Der Knopf dreht sich zwar auch eine Vierteldrehung, aber ein Plus sieht
+   um 90° gedreht genauso aus wie vorher — die Drehung ist nur während der
+   Bewegung zu sehen, im Ruhezustand wäre sie unsichtbar. Die wachsenden
+   Balken sind der Teil, den man auch im Standbild erkennt. */
+.gd-port::before, .gd-port::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  background: var(--win-accent);
+  border-radius: 1px;
+  transition: background-color var(--zeit-druck) ease,
+              width var(--zeit-klein) var(--aus),
+              height var(--zeit-klein) var(--aus);
+}
+.gd-port::before {
+  width: calc(var(--port) * .46); height: max(1.5px, calc(var(--port) * .13));
+  transform: translate(-50%,-50%);
+}
+.gd-port::after {
+  width: max(1.5px, calc(var(--port) * .13)); height: calc(var(--port) * .46);
+  transform: translate(-50%,-50%);
+}
+/* Auftritt: erst wenn die Kachel gemeint ist, und versetzt statt alle auf
+   einmal — vier gleichzeitig aufpoppende Punkte lesen sich als Blinken. */
+.gd-win:hover .gd-port, .gd-win.is-selected .gd-port, #board.is-linking .gd-port {
+  opacity: 1;
+  transform: scale(1);
+}
+.gd-win:hover .gd-port[data-side="t"], .gd-win.is-selected .gd-port[data-side="t"] { transition-delay: 0ms; }
+.gd-win:hover .gd-port[data-side="r"], .gd-win.is-selected .gd-port[data-side="r"] { transition-delay: 35ms; }
+.gd-win:hover .gd-port[data-side="b"], .gd-win.is-selected .gd-port[data-side="b"] { transition-delay: 70ms; }
+.gd-win:hover .gd-port[data-side="l"], .gd-win.is-selected .gd-port[data-side="l"] { transition-delay: 105ms; }
+.gd-port[data-side="t"] { left: 50%;  top: 0; }
+.gd-port[data-side="b"] { left: 50%;  top: 100%; }
+.gd-port[data-side="l"] { left: 0;    top: 50%; }
+.gd-port[data-side="r"] { left: 100%; top: 50%; }
+.gd-win.is-collapsed .gd-port[data-side="b"] { top: 100%; }
+.gd-win.is-drop-target { box-shadow: 0 0 0 2px var(--ok), var(--shadow-3); }
+
+/* ------------------------------------------------------------- Eckgriff
+ *
+ * Das Problem: Herausgezoomt ist die Titelleiste einer Kachel zwei Pixel
+ * hoch. Anfassen wird zum Zielen, und ein Rahmen, der zwanzig Kacheln
+ * mitnimmt, lässt sich praktisch nicht mehr verschieben.
+ *
+ * Die Antwort ist ein Viertelkreis in der oberen rechten Ecke, dessen
+ * Mittelpunkt genau auf der Ecke sitzt. Er behält seine Bildschirmgröße,
+ * erscheint erst beim Herauszoomen und liegt sonst fast durchsichtig da:
+ * sichtbar genug, dass man weiß, dass er da ist, leise genug, dass man
+ * durch ihn hindurchsieht. Kommt die Maus in die Nähe, tritt er hervor.
+ *
+ * Die Form entsteht aus einem Quadrat mit voll gerundeter unterer linker
+ * Ecke: der Mittelpunkt dieser Rundung liegt dann auf der oberen rechten
+ * Ecke des Quadrats — genau da, wo die Kachelecke ist.
+ */
+/* Ruhewerte je Thema.
+   „Fast durchsichtig" ist keine Zahl, sondern ein Verhältnis: 13 % einer
+   hellen Fläche auf fast schwarzem Grund sind gut zu ahnen — dieselben
+   13 % auf weißem Grund sind nichts. Im hellen Thema steht der Griff
+   deshalb kräftiger und satter, damit er DENSELBEN Eindruck macht. */
+.gd-pad { --pad-ruhe: .13; --pad-satt: 55%; --pad-blass: 22%; }
+html[data-theme="light"] .gd-pad { --pad-ruhe: .34; --pad-satt: 88%; --pad-blass: 46%; }
+
+.gd-pad {
+  position: absolute;
+  border-bottom-left-radius: 100%;
+  background: linear-gradient(225deg,
+    color-mix(in srgb, var(--pad-ton, var(--accent)) var(--pad-satt), var(--panel)),
+    color-mix(in srgb, var(--pad-ton, var(--accent)) var(--pad-blass), var(--panel)));
+  border: var(--pad-linie, 1px) solid color-mix(in srgb, var(--pad-ton, var(--accent)) 70%, transparent);
+  border-top: none; border-right: none;
+  opacity: 0;
+  transform: scale(.86);
+  transform-origin: 100% 0;
+  pointer-events: none;
+  /* transition statt keyframes: Wer beim Zoomen über die Schwelle wippt,
+     bekommt kein neu startendes Aufblitzen, sondern eine Bewegung, die von
+     ihrem aktuellen Wert aus umkehrt. */
+  transition: opacity var(--zeit-klein) ease,
+              transform var(--zeit-gross) var(--aus);
+}
+.gd-pad.is-da { opacity: var(--pad-ruhe); transform: scale(1); pointer-events: auto; cursor: grab; }
+/* Während ein Pfeil aufgezogen wird, ist jede Kachel ein mögliches Ziel —
+   der Eckgriff darf ihr dann nicht vor der Nase liegen. */
+#board.is-linking .gd-pad { pointer-events: none; opacity: .08; }
+.gd-pad.is-nah { opacity: .96; }
+.gd-pad.is-fest { opacity: 1; cursor: grabbing; }
+.gd-pad.is-da:active { transform: scale(.975); }
+
+/* Das Zeichen sitzt auf der Winkelhalbierenden, ungefähr auf halbem Weg
+   zwischen Ecke und Bogen — dort ist im Viertelkreis am meisten Platz. */
+.gd-pad__zeichen {
+  position: absolute;
+  right: 24%; top: 24%;
+  transform: translate(50%,-50%);
+  font-size: var(--pad-schrift, 15px);
+  line-height: 1;
+  color: var(--text);
+  pointer-events: none;
+  user-select: none;
+  transition: transform var(--zeit-klein) var(--aus);
+}
+.gd-pad.is-nah .gd-pad__zeichen { transform: translate(50%,-50%) scale(1.08); }
+
+/* Der Eckgriff verschiebt nur. Größe ändern saß hier als zweiter kleiner
+   Knopf auf dem Bogen und blockierte sich mit dem Verschieben gegenseitig —
+   das liegt jetzt an den Rändern, s. „Ränder zum Größerziehen". */
+/* Ein Finger hat keine „Nähe" — auf Touch ist der Griff immer da. */
+@media (hover: none) {
+  .gd-pad.is-da { opacity: .55; }
+}
+
+
+/* ----------------------------------------------------------- Verbindungen */
+
+.conn-hit { stroke: transparent; fill: none; pointer-events: stroke; cursor: pointer; }
+/* Ecken bleiben Ecken: kein Verschleifen an den rechten Winkeln. */
+.conn-path { fill: none; pointer-events: none; stroke-linecap: butt; stroke-linejoin: miter; }
+.conn-dot { pointer-events: none; }
+/* Der Weg, der beim Aufziehen am Zeiger hängt — noch kein Pfeil, deshalb
+   gestrichelt und in der Systemfarbe statt in der des künftigen Pfeils. */
+.conn-path--vorschau { stroke: var(--accent); }
+.conn.is-selected .conn-path { filter: drop-shadow(0 0 4px var(--accent)); }
+/* Anfassbar heißt sichtbar: Wer über einen Pfeil fährt, sieht ihn aufleuchten,
+   bevor er klickt. Nur ein Filter — Geometrie bleibt unangetastet. */
+.conn-path { transition: filter var(--zeit-druck) ease; }
+.conn:hover .conn-path { filter: drop-shadow(0 0 5px currentColor) brightness(1.15); }
+.conn:hover .conn-hit { cursor: pointer; }
+
+/* Der Anschlusspunkt pocht, solange ein Pfeil aufgezogen wird — er ist das
+   Ziel, das gesucht wird. */
+#board.is-linking .gd-port { animation: port-puls 1.4s ease-in-out infinite; }
+@keyframes port-puls {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-soft); }
+  50%      { box-shadow: 0 0 0 6px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #board.is-linking .gd-port { animation: none; }
+}
+#conn-layer .conn { pointer-events: none; }
+#conn-layer .conn > .conn-hit { pointer-events: stroke; }
+
+/*
+ * Solange ein Pfeil aufgezogen wird, ist ALLES über den Kacheln durchlässig.
+ *
+ * Die Zielerkennung fragt `elementFromPoint`. Über den Kacheln liegen aber
+ * mehrere Ebenen, die Treffer annehmen: die Trefferlinie jedes bestehenden
+ * Pfeils (#conn-layer, z 2 500 000), seine Beschriftung, die Wickel eines
+ * Bündels, die Überschrift eines Rahmens. Zog man einen neuen Pfeil über
+ * einen alten hinweg, meldete `elementFromPoint` dessen Trefferlinie —
+ * `.closest('.gd-win')` war null, das Ziel wurde nicht erkannt, und beim
+ * Loslassen entstand einfach nichts. Auf einer Tafel mit dreißig Pfeilen
+ * traf das ständig zu und sah aus wie ein Aussetzer der Maus.
+ *
+ * Nichts davon ist während des Aufziehens ein sinnvolles Ziel — also
+ * schaltet der Modus sie alle ab.
+ */
+#board.is-linking #conn-layer .conn > .conn-hit,
+#board.is-linking .conn-label,
+#board.is-linking .bnd-griff,
+#board.is-linking .bnd-chip,
+#board.is-linking #frame-layer > *,
+#board.is-linking .fr-kopf > * {
+  pointer-events: none;
+}
+
+.conn-label {
+  position: absolute;
+  transform: translate(-50%,-50%);
+  padding: var(--luft-1) var(--luft-2);
+  border-radius: 5px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  white-space: pre;
+  pointer-events: auto;
+  cursor: text;
+  user-select: none;
+  box-shadow: var(--shadow-1);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conn-label.is-empty { opacity: .45; font-style: italic; }
+.conn-label.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.conn-label:focus { outline: none; border-color: var(--accent); user-select: text; overflow: visible; }
+
+/* -------------------------------------------------------- Führungslinien */
+
+.snap-guide { stroke: #ff4fa3; stroke-dasharray: 4 4; }
+
+/* ------------------------------------------------------------- Inspector */
+
+#inspector {
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 30;
+}
+#insp-body { padding-bottom: 40px; }
+.insp-sec { border-bottom: 1px solid var(--line-soft); padding: 4px 0 12px; }
+.insp-row {
+  display: grid; grid-template-columns: 82px 1fr;
+  gap: 8px; align-items: center;
+  padding: 3px 12px;
+}
+.insp-row > label { color: var(--text-dim); font-size: 11.5px; }
+.insp-row--full { grid-template-columns: 1fr; }
+.insp-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.insp-grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.insp-grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+.insp-empty { padding: 28px 16px; color: var(--text-faint); text-align: center; line-height: 1.6; }
+.insp-note { padding: 2px var(--luft-3) var(--luft-2); color: var(--text-faint); font-size: 10.5px; line-height: 1.5; }
+
+/* Liste der Adern eines Bündels */
+.insp-liste { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--luft-3) var(--luft-2); }
+.insp-liste__zeile {
+  display: flex; align-items: center; gap: var(--luft-2);
+  padding: var(--luft-1) var(--luft-2);
+  border-radius: var(--radius-s);
+  transition: background-color var(--zeit-druck) ease;
+}
+.insp-liste__zeile:hover { background: var(--panel-2); }
+.insp-liste__punkt { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.insp-liste__text {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 11.5px; color: var(--text-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.fld, .insp-row select, .insp-row input[type="text"], .insp-row input[type="number"] {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 7px;
+  color: var(--text);
+}
+.fld:focus { outline: none; border-color: var(--accent); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+input[type="color"] {
+  width: 100%; height: 26px; padding: 1px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 6px; cursor: pointer;
+}
+input[type="checkbox"] { accent-color: var(--accent); }
+
+.btn {
+  padding: 6px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+}
+.btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+.btn.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.btn--danger:hover { border-color: var(--danger); background: rgba(239,107,107,.15); color: var(--danger); }
+.btn--sm { padding: 4px 7px; font-size: 11.5px; }
+
+.swatches { display: grid; grid-template-columns: repeat(8,1fr); gap: 4px; padding: 2px 12px; }
+.swatch { width: 100%; aspect-ratio: 1; border-radius: 5px; border: 1px solid rgba(128,128,128,.35); cursor: pointer; }
+.swatch { transition: transform var(--zeit-druck) var(--aus); }
+.swatch:active { transform: scale(.92); }
+.swatch.is-on { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ------------------------------------------------------------- Minimap */
+
+#minimap {
+  position: absolute;
+  right: calc(var(--insp-w) + 12px);
+  bottom: 12px;
+  width: 190px; height: 128px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-2);
+  z-index: 25;
+  overflow: hidden;
+  cursor: pointer;
+}
+#minimap.is-hidden { display: none; }
+#minimap-canvas { width: 100%; height: 100%; display: block; }
+
+/* -------------------------------------------------------------- Kontextmenü */
+
+.ctxmenu {
+  position: fixed;
+  min-width: 190px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-3);
+  padding: 5px;
+  z-index: 200;
+}
+.ctx-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 6px 9px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+}
+.ctx-item:hover { background: var(--accent-soft); color: var(--accent); }
+.ctx-item.is-danger:hover { background: rgba(239,107,107,.16); color: var(--danger); }
+.ctx-key { color: var(--text-faint); font-size: 11px; }
+.ctx-sep { height: 1px; background: var(--line-soft); margin: 4px 2px; }
+.ctx-head { padding: 6px 9px 4px; }
+
+/* ------------------------------------------------------------------ Toasts */
+
+#toasts {
+  position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 7px; align-items: center;
+  z-index: 300; pointer-events: none;
+}
+.toast {
+  background: var(--panel); border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 7px; padding: 8px 14px;
+  box-shadow: var(--shadow-2);
+  animation: toast-in var(--zeit-gross) var(--aus);
+}
+.toast--err { border-left-color: var(--danger); }
+.toast--ok  { border-left-color: var(--ok); }
+/* Nichts erscheint aus dem Nichts: die Meldung kommt aus der Richtung, in
+   die sie beim Verschwinden auch wieder geht, und schon fast in ihrer Größe. */
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+/* ------------------------------------------------------------------- Modal */
+
+.modal-back {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 400;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-3);
+  max-width: 720px; max-height: 82vh;
+  overflow: auto;
+  padding: 20px 22px;
+}
+.modal h2 { margin: 0 0 14px; font-size: 16px; }
+.modal h3 { margin: 20px 0 8px; }
+.kbd-list { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: baseline; }
+kbd {
+  font-family: var(--mono); font-size: 11px;
+  background: var(--panel-3); border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px; padding: 1px 5px; white-space: nowrap;
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+
+/* --------------------------------------------------- Projekt-Bibliothek */
+
+.lib { width: min(780px, 86vw); }
+.lib-kopf { margin-bottom: 12px; }
+.lib-pfad {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.lib-pfad__icon { color: var(--accent); }
+.lib-pfad__text {
+  flex: 1 1 auto; min-width: 0;
+  font: 11.5px var(--mono); color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left;
+}
+.lib-liste { max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.lib-zeile {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: var(--panel-2);
+  cursor: default;
+}
+.lib-zeile:hover { border-color: var(--accent); }
+.lib-zeile.is-on { border-color: var(--ok); background: rgba(87,201,138,.09); }
+.lib-zeile__haupt { flex: 1 1 auto; min-width: 0; }
+.lib-zeile__name { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-zeile__meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-zeile__module { font-size: 10.5px; color: var(--accent); margin-top: 2px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-zeile__datum {
+  flex: 0 0 auto; text-align: right;
+  font-size: 10.5px; color: var(--text-faint);
+  white-space: pre-line; line-height: 1.45;
+}
+.lib-zeile__tools { flex: 0 0 auto; display: flex; gap: 4px; }
+.lib-leer { padding: 26px 14px; text-align: center; color: var(--text-faint); line-height: 1.6; }
+.lib-leer p { margin: 0 0 12px; }
+.lib-laedt { padding: 22px; text-align: center; color: var(--text-faint); }
+.set-hinweis { color: var(--text-dim); line-height: 1.6; margin: 0 0 10px; }
+
+/* Befund der Anordnungsprüfung (GD.layout.pruefe) */
+.set-befund {
+  padding: 8px 11px; margin-bottom: 8px;
+  border-radius: 7px; border: 1px solid var(--line-soft);
+  background: var(--panel-2); color: var(--text-dim);
+}
+.set-befund.is-ok { color: var(--ok); border-color: rgba(87,201,138,.4); }
+.set-befund.is-warn { color: var(--warn); border-color: rgba(232,180,92,.4); }
+.set-punkt {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 4px 6px 11px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--text-dim); line-height: 1.5;
+}
+.set-punkt__regel {
+  flex: 0 0 auto;
+  font: 10.5px/1 var(--mono); letter-spacing: .02em;
+  padding: 3px 5px; border-radius: 4px;
+  background: var(--panel-3); color: var(--text-faint);
+}
+.set-punkt__text { flex: 1 1 auto; min-width: 0; }
+.set-punkt.is-warn .set-punkt__regel { background: var(--accent-soft); color: var(--accent); }
+.tb-btn--linked::after {
+  content: '';
+  width: 5px; height: 5px; margin-left: 6px;
+  border-radius: 50%; background: #9ff0c0;
+}
+
+/* --------------------------------------------------------------- Scrollbars */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--panel-3); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--line); background-clip: content-box; }
+
+/* ==========================================================================
+   Bewegung und Druck — eine Stelle für alles, was auf eine Eingabe antwortet
+   ========================================================================== */
+
+/*
+ * Ein Knopf muss sich gedrückt anfühlen. Die Rückmeldung kommt beim
+ * Herunterdrücken, nicht beim Loslassen, und sie ist klein: 0,96–0,97.
+ * Nur transform und opacity — beides läuft am Layout vorbei.
+ */
+.btn, .pal-item, .ctx-item, .md-play, .md-mini, .md-nav, .nt-btn, .wf-tool,
+.cd-btn, .m3-btn, .m3-item__btn, .m3-model__btn, .sb-btn, .mv-spin,
+.gd-win__btn, .md-thumb, .lib-zeile {
+  transition: transform var(--zeit-druck) var(--aus),
+              background-color var(--zeit-druck) ease,
+              border-color var(--zeit-druck) ease,
+              color var(--zeit-druck) ease;
+}
+.btn:active, .pal-item:active, .ctx-item:active, .md-play:active, .md-mini:active,
+.md-nav:active, .nt-btn:active, .wf-tool:active, .cd-btn:active, .m3-btn:active,
+.m3-item__btn:active, .m3-model__btn:active, .sb-btn:active, .mv-spin:active,
+.gd-win__btn:active, .md-thumb:active, .lib-zeile:active {
+  transform: scale(.97);
+}
+
+/*
+ * Vergrößern beim Überfahren nur mit einer echten Maus. Ein Finger löst
+ * :hover beim Tippen mit aus — die Fläche zuckt dann unter dem Finger.
+ */
+@media (hover: hover) and (pointer: fine) {
+  /* Der Verbindungsknopf wächst, füllt sich mit seiner Farbe und dreht das
+     Plus eine Vierteldrehung — drei Zeichen für dieselbe Aussage, damit man
+     auch bei 60 % Zoom sieht, dass man ihn getroffen hat. */
+  .gd-win .gd-port:hover {
+    transform: scale(1.42) rotate(90deg);
+    background: var(--win-accent);
+    transition-delay: 0ms;
+  }
+  .gd-win .gd-port:hover::before, .gd-win .gd-port:hover::after { background: var(--panel); }
+  .gd-win .gd-port:hover::before { width: calc(var(--port) * .62); }
+  .gd-win .gd-port:hover::after  { height: calc(var(--port) * .62); }
+  .gd-win .gd-port:active { transform: scale(1.18) rotate(90deg); }
+  .nt-color:hover { transform: scale(1.12); }
+  .swatch:hover { transform: scale(1.1); }
+}
+
+/*
+ * Weniger Bewegung heißt nicht keine Rückmeldung: Farbe und Deckkraft
+ * bleiben, nur das Verschieben und Wachsen fällt weg.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--zeit-druck) !important;
+  }
+  .btn:active, .pal-item:active, .ctx-item:active, .md-play:active, .md-mini:active,
+  .md-nav:active, .nt-btn:active, .wf-tool:active, .cd-btn:active, .m3-btn:active,
+  .m3-item__btn:active, .m3-model__btn:active, .sb-btn:active, .mv-spin:active,
+  .gd-win__btn:active, .md-thumb:active, .lib-zeile:active { transform: none; }
+  .gd-win .gd-port:hover, .nt-color:hover, .swatch:hover { transform: scale(1); }
+  .gd-win .gd-port { transition-delay: 0ms !important; }
+  /* Beide Zustände nennen: `.gd-pad.is-da` ist spezifischer als `.gd-pad`
+     und hätte die Regel sonst gleich wieder überschrieben. */
+  .gd-pad, .gd-pad.is-da, .gd-pad.is-da:active { transform: none; }
+  .gd-pad.is-nah .gd-pad__zeichen { transform: translate(50%,-50%); }
+  #toasts .toast { animation: none; }
+}
+
+/* ==========================================================================
+   Bündel — mehrere Pfeile auf einem Weg
+   ========================================================================== */
+
+/*
+ * Ein Strang liest sich wie ein Kabelbaum: die Adern nebeneinander, quer
+ * darüber in Abständen ein Wickel. Zugezogen rücken die Adern zusammen und
+ * der Mantel wird kräftig — aus fünf Pfeilen wird eine Leitung.
+ */
+.bnd { pointer-events: none; }
+.bnd-mantel {
+  fill: none;
+  transition: opacity var(--zeit-gross) var(--aus);
+}
+.bnd-wickel {
+  fill: none;
+  opacity: .78;
+  transition: opacity var(--zeit-druck) ease;
+}
+.bnd-griff {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.bnd.is-hover .bnd-wickel,
+.bnd.is-selected .bnd-wickel { opacity: 1; }
+.bnd.is-selected .bnd-mantel { filter: drop-shadow(0 0 6px var(--accent)); }
+
+/* Eine Ader im Strang tritt hervor, wenn man den Strang anfasst */
+.conn.is-hervor .conn-path { filter: drop-shadow(0 0 3px currentColor); }
+.conn.is-bundled .conn-path { transition: none; }
+
+/* Die Sprechblase am Strang: Zahl, Name, Auf/Zu — und der Griff zum Ziehen */
+.bnd-chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: var(--luft-2);
+  padding: var(--luft-1) var(--luft-2) var(--luft-1) var(--luft-1);
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--bnd-farbe, var(--line));
+  box-shadow: var(--shadow-1);
+  color: var(--text);
+  font-size: 11.5px; line-height: 1.3;
+  white-space: nowrap;
+  cursor: grab;
+  user-select: none;
+  transition: transform var(--zeit-klein) var(--aus),
+              box-shadow var(--zeit-klein) ease,
+              opacity var(--zeit-klein) ease;
+}
+.bnd-chip:active { cursor: grabbing; transform: translate(-50%, -50%) scale(.97); }
+.bnd-chip.is-hover { box-shadow: var(--shadow-2); }
+.bnd-chip.is-selected { box-shadow: 0 0 0 1px var(--bnd-farbe, var(--accent)), var(--shadow-2); }
+.bnd-chip__pfeil {
+  width: 16px; height: 16px; flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--bnd-farbe, var(--accent));
+  position: relative;
+  transition: transform var(--zeit-gross) var(--aus);
+}
+/* Der Winkel zeigt, was ein Doppelklick tut: zu = aufziehen, auf = zuziehen */
+.bnd-chip__pfeil::after {
+  content: '';
+  position: absolute; left: 5px; top: 5px;
+  width: 5px; height: 5px;
+  border-right: 1.6px solid #0e131b;
+  border-bottom: 1.6px solid #0e131b;
+  transform: rotate(-45deg);
+  transition: transform var(--zeit-gross) var(--aus);
+}
+.bnd-chip.is-zu .bnd-chip__pfeil::after { transform: rotate(45deg); }
+.bnd-chip__name { font-weight: 600; }
+.bnd-chip__zahl {
+  min-width: 17px; padding: 0 var(--luft-1);
+  border-radius: 999px;
+  background: var(--panel-3); color: var(--text-dim);
+  font-size: 10.5px; font-variant-numeric: tabular-nums; text-align: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bnd-chip:hover { transform: translate(-50%, -50%) scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bnd-chip:hover, .bnd-chip:active { transform: translate(-50%, -50%); }
+}
+
+/* ====================================================== Änderungssicht ===
+ *
+ * Alles, was seit dem letzten Commit anders ist, bekommt einen roten Kasten
+ * mit beschriftetem Reiter — Klasse und Titel, wie bei einer Objekterkennung.
+ * Die Kästen liegen in #diff-layer und wandern mit Zoom und Verschieben mit;
+ * die Reiter hängen in #label-layer und behalten ihre Pixelgröße, damit sie
+ * auch weit herausgezoomt lesbar bleiben.
+ */
+
+#diff-layer {
+  position: absolute;
+  left: -50000px; top: -50000px;
+  width: 100000px; height: 100000px;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2600000;              /* über den Pfeilen (2 500 000) */
+}
+.diff-box { fill: none; }
+.diff-box.is-weg { fill: rgba(255,45,85,.10); }
+.diff-marke { fill: rgba(255,77,109,.18); }
+
+/* Der Reiter am Kasten. Sitzt mit der Unterkante auf der Kastenoberkante —
+   deshalb translateY(-100%) und nicht etwa ein Abstand in Weltpixeln, der
+   beim Zoomen mitwüchse. */
+.diff-reiter {
+  position: absolute;
+  transform: translateY(-100%);
+  display: flex; align-items: center; gap: var(--luft-1);
+  max-width: 320px;
+  padding: 2px var(--schrift-luft-eng);
+  border-radius: 4px 4px 4px 0;
+  background: var(--diff-farbe, #ff3b30);
+  color: #fff;
+  font-size: 11px; line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--zeit-druck) var(--aus), filter var(--zeit-druck) ease;
+}
+.diff-reiter b { font-weight: 700; letter-spacing: .01em; }
+.diff-reiter span {
+  overflow: hidden; text-overflow: ellipsis;
+  max-width: 210px;
+  opacity: .88;
+}
+.diff-reiter i {
+  font-style: normal;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.25);
+  font-size: 10px;
+}
+.diff-reiter:active { transform: translateY(-100%) scale(.97); }
+
+/* In der Änderungssicht tritt alles Unveränderte zurück — das Auge soll die
+   roten Kästen zuerst finden und nicht erst suchen. */
+#board.is-diffsicht .gd-win { opacity: .62; transition: opacity var(--zeit-gross) var(--aus); }
+/* Rahmenüberschriften hängen in einer eigenen Ebene und würden sonst als
+   Einzige in voller Stärke stehenbleiben. */
+#board.is-diffsicht #frame-layer { opacity: .62; }
+#board.is-diffsicht .gd-win.is-geaendert { opacity: 1; }
+#board.is-diffsicht .gd-win.is-geaendert > .gd-win__bar {
+  background: color-mix(in srgb, var(--diff-farbe, #ff3b30) 22%, var(--panel-2));
+}
+#board.is-diffsicht .gd-win.is-geaendert > .gd-win__bar .gd-win__dot { background: var(--diff-farbe, #ff3b30); }
+
+@media (hover: hover) and (pointer: fine) {
+  .diff-reiter:hover { filter: brightness(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #board.is-diffsicht .gd-win { transition: none; }
+  .diff-reiter:active { transform: translateY(-100%); }
+}
+
+/* Zähler an der Werkzeugleiste */
+.tb-zahl {
+  margin-left: 6px;
+  min-width: 18px; padding: 0 5px;
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(255,59,48,.18);
+  color: #ff6a5a;
+  font-size: 10.5px; font-variant-numeric: tabular-nums; text-align: center;
+}
+.tb-toggle.has-offen { color: #ff6a5a; }
+.tb-toggle.has-offen.is-on { color: #fff; background: rgba(255,59,48,.26); }
+
+/* ------------------------------------------------------ Änderungsfenster */
+
+.aend-kopf { margin-bottom: var(--luft-3); }
+.aend-satz {
+  padding: var(--luft-2) var(--luft-3);
+  border: 1px solid rgba(255,59,48,.35);
+  border-radius: var(--radius-s);
+  background: rgba(255,59,48,.08);
+  color: var(--text);
+  line-height: 1.5;
+}
+.aend-satz.is-ruhig { border-color: var(--line-soft); background: var(--panel-2); color: var(--text-dim); }
+.aend-chips { display: flex; flex-wrap: wrap; gap: var(--luft-1); margin-top: var(--luft-2); }
+.aend-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 1px var(--schrift-luft-eng);
+  border-radius: 4px;
+  background: var(--diff-farbe, #ff3b30);
+  color: #fff;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.aend-chip span {
+  padding: 0 4px; border-radius: 999px;
+  background: rgba(0,0,0,.25);
+  font-variant-numeric: tabular-nums;
+}
+.aend-basis {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--luft-2);
+  margin-top: var(--luft-2);
+  color: var(--text-faint); font-size: 11px;
+}
+
+.aend-liste { max-height: 34vh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.aend-zeile {
+  display: flex; align-items: flex-start; gap: var(--luft-2);
+  padding: var(--luft-2) var(--luft-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-s);
+  background: var(--panel-2);
+}
+.aend-zeile.is-weg { opacity: .75; }
+.aend-zeile__haupt { flex: 1 1 auto; min-width: 0; }
+.aend-zeile__name { display: flex; align-items: baseline; gap: var(--luft-2); font-weight: 600; }
+.aend-zeile__name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aend-zeile__name em { font-style: normal; font-weight: 400; font-size: 10.5px; color: var(--text-faint); flex: 0 0 auto; }
+.aend-zeile__text { margin-top: 2px; font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+
+.aend-form { border-top: 1px solid var(--line-soft); padding-top: var(--luft-2); }
+.aend-text { width: 100%; resize: vertical; font-family: inherit; padding: 6px 8px; line-height: 1.5; }
+.aend-schreib { width: 100%; }
+
+.aend-verlauf { max-height: 30vh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.aend-commit {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-s);
+  background: var(--panel-2);
+  padding: var(--luft-2) var(--luft-3);
+}
+.aend-commit.is-basis { border-color: rgba(255,59,48,.45); }
+.aend-commit__kopf { display: flex; align-items: center; gap: var(--luft-2); }
+.aend-commit__wer {
+  flex: 0 0 auto;
+  padding: 1px 7px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; letter-spacing: .02em;
+}
+.aend-commit__wer--mensch { background: var(--accent-soft); color: var(--accent); }
+.aend-commit__wer--ki     { background: rgba(232,180,92,.18); color: var(--warn); }
+.aend-commit__titel { font-weight: 600; }
+.aend-commit__meta { font-size: 10.5px; color: var(--text-faint); margin-top: 1px; }
+.aend-commit__basis { font-size: 10.5px; color: #ff6a5a; }
+.aend-commit__inhalt { margin-top: var(--luft-2); border-top: 1px solid var(--line-soft); padding-top: var(--luft-2); }
+.aend-commit__text { margin: 0 0 var(--luft-2); color: var(--text-dim); line-height: 1.6; white-space: pre-wrap; }
+.aend-commit__punkt {
+  display: flex; align-items: baseline; gap: var(--luft-2);
+  padding: 2px 0;
+  font-size: 11px; color: var(--text-dim);
+}
+.aend-commit__punkt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ============================================================ Springen zu …
+   Ein Feld über dem Brett, mit dem sich jede Kachel wiederfinden lässt
+   (Strg+F, s. js/core/suche.js). Es liegt über ALLEM — auch über den
+   Pfeilen (2 500 000) und den Rahmenüberschriften (2 400 000) —, sitzt aber
+   oben und schmal, damit unter ihm sichtbar bleibt, wohin die Kamera fährt.
+   Genau das ist der Sinn: Man sieht schon beim Durchgehen das Ziel. */
+.suche {
+  position: fixed;
+  top: calc(var(--bar-h) + var(--luft-5));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3000000;
+  width: min(620px, calc(100vw - var(--luft-6) * 2));
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+  animation: suche-auf var(--zeit-klein) var(--aus);
+}
+@keyframes suche-auf {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) { .suche { animation: none; } }
+
+.suche__kopf {
+  display: flex; align-items: center; gap: var(--luft-2);
+  padding: var(--luft-1) var(--schrift-luft);
+  border-bottom: 1px solid var(--line-soft);
+}
+.suche__feld {
+  flex: 1; min-width: 0;
+  background: none; border: none; outline: none;
+  padding: var(--luft-3) 0;
+  font-size: 15px; color: var(--text);
+}
+.suche__feld::placeholder { color: var(--text-faint); }
+.suche__zahl {
+  flex: 0 0 auto;
+  font-size: 11px; color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.suche__liste { max-height: min(46vh, 420px); overflow-y: auto; }
+.suche__leer {
+  padding: var(--luft-3) var(--schrift-luft);
+  color: var(--text-faint); font-size: 12px;
+}
+
+.suche__zeile {
+  display: flex; align-items: center; gap: var(--luft-3);
+  padding: var(--luft-2) var(--schrift-luft);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+}
+.suche__zeile.is-an {
+  background: var(--accent-soft);
+  border-left-color: var(--ton, var(--accent));
+}
+@media (hover: hover) { .suche__zeile:hover { background: var(--panel-2); } }
+
+.suche__icon {
+  flex: 0 0 auto; width: 20px; text-align: center;
+  font-size: 14px; color: var(--ton, var(--text-dim));
+}
+.suche__haupt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.suche__titel {
+  font-size: 13px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.suche__stelle {
+  font-size: 11px; color: var(--text-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.suche__art {
+  flex: 0 0 auto;
+  font-size: 10.5px; color: var(--text-faint);
+  padding: 1px var(--schrift-luft-eng);
+  border: 1px solid var(--line-soft); border-radius: 999px;
+}

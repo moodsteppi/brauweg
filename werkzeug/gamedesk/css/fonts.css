@@ -1,0 +1,38 @@
+/* ==========================================================================
+   GameDesk — Schriften, lokal eingebunden
+   --------------------------------------------------------------------------
+   Drei Familien, alle unter der SIL Open Font License 1.1, als woff2 im
+   Ordner fonts/. Bewusst lokal und nicht von einem fremden Server: GameDesk
+   soll ohne Netz und auch über file:// gleich aussehen.
+
+     Inter          Oberfläche und Fließtext — auf kleine Größen gezeichnet
+     Space Grotesk  Überschriften, Marke, Rahmentitel — etwas Charakter
+     JetBrains Mono Quelltext, Pfade, Zahlenkolonnen — echte Nullen mit Strich
+
+   Nur die latin-Untermenge (enthält ä ö ü ß). Zusammen rund 370 kB.
+   ========================================================================== */
+
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400;
+  font-display: swap; src: url('../fonts/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500;
+  font-display: swap; src: url('../fonts/inter-500.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600;
+  font-display: swap; src: url('../fonts/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700;
+  font-display: swap; src: url('../fonts/inter-700.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 800;
+  font-display: swap; src: url('../fonts/inter-800.woff2') format('woff2'); }
+
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 500;
+  font-display: swap; src: url('../fonts/grotesk-500.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 600;
+  font-display: swap; src: url('../fonts/grotesk-600.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700;
+  font-display: swap; src: url('../fonts/grotesk-700.woff2') format('woff2'); }
+
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400;
+  font-display: swap; src: url('../fonts/jetbrains-400.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500;
+  font-display: swap; src: url('../fonts/jetbrains-500.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700;
+  font-display: swap; src: url('../fonts/jetbrains-700.woff2') format('woff2'); }

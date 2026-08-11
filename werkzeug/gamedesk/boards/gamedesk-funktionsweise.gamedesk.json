@@ -1,0 +1,5794 @@
+{
+ "format": "gamedesk-board",
+ "version": 1,
+ "name": "GameDesk — Funktionsweise",
+ "view": {
+  "x": -2,
+  "y": -2,
+  "scale": 0.3
+ },
+ "grid": {
+  "size": 20,
+  "show": true,
+  "snap": true
+ },
+ "windows": [
+  {
+   "id": "win_gd_2k",
+   "type": "frame",
+   "title": "Weiterentwicklung",
+   "x": 156,
+   "y": 10123,
+   "w": 1972,
+   "h": 3481,
+   "z": 10,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.06,
+    "dashed": false,
+    "note": "Ideensammlung und der Weg von hier zu einem Worker",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "sonstiges"
+   }
+  },
+  {
+   "id": "win_gd_2j",
+   "type": "frame",
+   "title": "Ideen — hier sammeln",
+   "x": 200,
+   "y": 12218,
+   "w": 1368,
+   "h": 1342,
+   "z": 30,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "tint": "#94a3b8",
+    "strength": 0.11,
+    "dashed": true,
+    "note": "eine Notiz je Idee · Reihenfolge auf der Tafel = Reihenfolge im Prompt",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "sonstiges"
+   }
+  },
+  {
+   "id": "win_gd_2i",
+   "type": "frame",
+   "title": "Ablauf einer Änderung",
+   "x": 1684,
+   "y": 8176,
+   "w": 5088,
+   "h": 427,
+   "z": 9,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "tint": "#4fd1c5",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "Vom Tastenanschlag bis in die Datei — und wieder zurück",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "mechanik"
+   }
+  },
+  {
+   "id": "win_gd_2h",
+   "type": "frame",
+   "title": "Regeln & Gestaltung",
+   "x": 200,
+   "y": 8176,
+   "w": 1008,
+   "h": 1800,
+   "z": 8,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "tint": "#b78cf7",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "Was das Bild ruhig hält",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "gamedesign"
+   }
+  },
+  {
+   "id": "win_gd_2g",
+   "type": "frame",
+   "title": "Bibliothek & Server",
+   "x": 3328,
+   "y": 6118,
+   "w": 1088,
+   "h": 1674,
+   "z": 7,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "tint": "#ef6b6b",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "Ein Ordner auf der Platte · 127.0.0.1 · Brücke nach Broweg",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "betrieb"
+   }
+  },
+  {
+   "id": "win_gd_2f",
+   "type": "frame",
+   "title": "Änderungsverfolgung & Medienlager",
+   "x": 1764,
+   "y": 6118,
+   "w": 1088,
+   "h": 1477,
+   "z": 11,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "tint": "#e8b45c",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "Was sich geändert hat — und wo die Bytes liegen",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "daten"
+   }
+  },
+  {
+   "id": "win_gd_2e",
+   "type": "frame",
+   "title": "Daten & Format",
+   "x": 200,
+   "y": 6118,
+   "w": 1088,
+   "h": 1855,
+   "z": 6,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "tint": "#e8b45c",
+    "strength": 0.07,
+    "dashed": false,
+    "note": ".gamedesk.json · localStorage · Historie",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "daten"
+   }
+  },
+  {
+   "id": "win_gd_2d",
+   "type": "frame",
+   "title": "3D-Maschine",
+   "x": 2284,
+   "y": 3310,
+   "w": 1088,
+   "h": 1231,
+   "z": 5,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "tint": "#4fd1c5",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "Kein three.js — rund 1 490 Zeilen WebGL2 und Geometrie",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "mechanik"
+   }
+  },
+  {
+   "id": "win_gd_2c",
+   "type": "frame",
+   "title": "Module",
+   "x": 200,
+   "y": 3310,
+   "w": 1608,
+   "h": 2707,
+   "z": 4,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "tint": "#57c98a",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "Der Inhalt eines Fensters · zehn Stück in js/modules/",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "game"
+   }
+  },
+  {
+   "id": "win_gd_2b",
+   "type": "frame",
+   "title": "Kern",
+   "x": 2624,
+   "y": 824,
+   "w": 3408,
+   "h": 2225,
+   "z": 3,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "tint": "#8fa4c4",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "17 Kerndateien, eine Ladekette, ein Namensraum GD — hier elf davon",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "technik"
+   }
+  },
+  {
+   "id": "win_gd_2a",
+   "type": "frame",
+   "title": "Seiten & Oberfläche",
+   "x": 200,
+   "y": 824,
+   "w": 1948,
+   "h": 2337,
+   "z": 2,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "tint": "#6ea8fe",
+    "strength": 0.07,
+    "dashed": false,
+    "note": "index.html · eine Seite, sechs Flächen, vier Dialoge",
+    "kopfX": 0,
+    "kopfY": 0,
+    "bereich": "menues"
+   }
+  },
+  {
+   "id": "win_gd_1",
+   "type": "code",
+   "title": "index.html — das ganze Gerüst",
+   "x": 244,
+   "y": 982,
+   "w": 560,
+   "h": 702,
+   "z": 100,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "path": "gamedesk/index.html",
+    "code": "<body>\n <div id=\"app\">\n   <header id=\"topbar\"> Marke · ↺ ↻ · Zoom · ▦ ⊹ ◱ · ⤡ Anordnen ·\n                        ⬚ Aenderungssicht + Aenderungen ·\n                        ← Zurueck · Projekte · Neu · Oeffnen · Speichern ·\n                        ⚙ ◐ ? </header>\n   <aside  id=\"palette\">  Modulliste (aus GD.modules.list())  </aside>\n\n   <main id=\"board\" tabindex=\"0\">\n     <div id=\"world\">                     <!-- traegt Zoom + Versatz -->\n       <svg id=\"conn-layer\">              <!-- Pfeile, ueber den Fenstern -->\n       <div id=\"win-layer\">               <!-- Fenster, zwei Baender -->\n       <div id=\"frame-layer\">             <!-- Rahmenkoepfe -->\n       <svg id=\"diff-layer\">              <!-- Aenderungssicht, rote Kaesten -->\n       <svg id=\"guide-layer\">             <!-- rosa Hilfslinien -->\n     </div>\n     <div id=\"label-layer\"></div>         <!-- Pfeil- und Diff-Beschriftung -->\n     <div id=\"marquee\"></div>             <!-- Auswahlrechteck -->\n     <div id=\"board-empty\"></div>\n   </main>\n\n   <aside id=\"inspector\"><div id=\"insp-body\"></div></aside>\n\n   <div id=\"minimap\">…</div>  <div id=\"toasts\"></div>\n   <div id=\"ctxmenu\"></div>   <div id=\"modal-root\"></div>\n </div>\n\n <script src=\"js/core/util.js\"></script>       <!-- 1  Fundament -->\n …                                              <!-- 17 Kerndateien -->\n <script src=\"js/modules/frame.js\"></script>    <!-- 10 Module -->\n …\n <script src=\"js/modules/worker.js\"></script>\n <script src=\"js/core/app.js\"></script>         <!-- zuletzt: Start -->\n</body>",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     1,
+     2
+    ],
+    "caption": "Klassische <script>-Tags ohne Import — nur so lässt sich index.html auch per Doppelklick über file:// öffnen. Die Reihenfolge IST die Abhängigkeitskette."
+   }
+  },
+  {
+   "id": "win_gd_2",
+   "type": "notes",
+   "title": "Werkzeugleiste — #topbar",
+   "x": 244,
+   "y": 1719,
+   "w": 440,
+   "h": 506,
+   "z": 101,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>Sieben Gruppen, links nach rechts</h3>\n<ul>\n<li><b>Marke + Boardname</b> — das Eingabefeld schreibt <code>doc.name</code></li>\n<li><b>↺ ↻</b> — Rückgängig / Wiederherstellen</li>\n<li><b>− 100 % + ⤢</b> — Zoom, Zurücksetzen, alles einpassen</li>\n<li><b>▦ ⊹ ◱</b> — Raster, Einrasten, Übersichtskarte</li>\n<li><b>⤡ Anordnen</b> — setzt die fünf Regeln durch (<code>GD.layout.aufraeumen</code>)</li>\n<li><b>⬚ + Änderungen</b> <span style=\"color:#e8b45c\">(neu)</span> — die Änderungssicht\n(<code>Strg+Umschalt+D</code>) rahmt alles rot ein, was seit dem letzten Commit anders\nist; die Zahl am Knopf zählt die offenen Änderungen</li>\n<li><b>← Zurück · 🗀 Projekte · Neu · Öffnen… · Speichern</b> — der Zurück-Knopf steht nur\nda, wenn man über eine Projekt-Kachel hergekommen ist; der Speichern-Knopf trägt einen\ngrünen Punkt, sobald das Board mit einer Datei verknüpft ist</li>\n<li><b>⚙ ◐ ?</b> — Einstellungen, Hell/Dunkel, Hilfe</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_3",
+   "type": "notes",
+   "title": "Palette — #palette",
+   "x": 244,
+   "y": 2249,
+   "w": 440,
+   "h": 277,
+   "z": 102,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Die Liste baut sich aus <code>GD.modules.list()</code>: Symbol, Bezeichnung, Kurztext.\nEin <b>Klick</b> legt das Modul in die Mitte der Sicht, <b>Ziehen</b> auf das Board legt es\ndorthin, wo man loslässt.</p>\n<p>Ein neues Modul erscheint hier von allein — es gibt keine zweite Liste, die man\nnachpflegen müsste. Zuletzt kam so <b>⚗ Worker</b> dazu.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_4",
+   "type": "notes",
+   "title": "Board — #board / #world",
+   "x": 844,
+   "y": 1552,
+   "w": 440,
+   "h": 453,
+   "z": 103,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>Fünf Ebenen in einer Welt</h3>\n<p><code>#world</code> trägt <b>eine</b> Transformation (Versatz + Maßstab). Alles darin\nrechnet in Weltkoordinaten, nichts rechnet den Zoom selbst nach.</p>\n<ul>\n<li><code>#conn-layer</code> — die Pfeile, z-index 2 500 000: sie liegen <b>über</b> den\nFenstern</li>\n<li><code>#win-layer</code> — die Fenster, in zwei Stapelbändern (Rahmen unten)</li>\n<li><code>#frame-layer</code> — die Rahmenüberschriften, z-index 2 400 000</li>\n<li><code>#diff-layer</code> — die roten Kästen der Änderungssicht</li>\n<li><code>#guide-layer</code> — die rosa Hilfslinien beim Einrasten</li>\n</ul>\n<p><code>#label-layer</code> und <code>#marquee</code> liegen <b>außerhalb</b> von\n<code>#world</code>: Pfeilbeschriftungen und die Reiter der Änderungssicht behalten ihre\nPixelgröße, das Auswahlrechteck seine Strichstärke.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_5",
+   "type": "notes",
+   "title": "Inspector — #inspector",
+   "x": 844,
+   "y": 2010,
+   "w": 440,
+   "h": 506,
+   "z": 104,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>Fünf Gesichter, je nach Auswahl</h3>\n<ul>\n<li><b>nichts gewählt</b> — Board: Name, Raster, Zoom, Zahlen zum Bestand</li>\n<li><b>ein Fenster</b> — Titel, Position, Größe, Farbe, Einklappen, Löschen; darunter\nhängt <code>inst.inspector(host)</code>, der Teil des Moduls</li>\n<li><b>mehrere Fenster</b> — Ausrichten, Verteilen, gemeinsame Farbe</li>\n<li><b>ein Pfeil</b> — Beschriftung und Schriftgröße, Farbe, Stärke, Linienstil,\nVerlauf, Pfeilspitzen, Ankerpunkte, Bündelzugehörigkeit</li>\n<li><b>ein Bündel</b> — Name, Farbe, Dicke, Aderabstand, Stranglänge, Adern lösen</li>\n</ul>\n<p>Die Bausteine der Felder stehen als <code>GD.ui.fields</code> bereit\n(<code>title · row · full · grid · sel · chk · range · num · text · btn · note</code>) —\nein Modul baut seinen Inspector aus denselben Teilen wie der Kern.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_6",
+   "type": "notes",
+   "title": "Übersichtskarte · Meldungen · Kontextmenü",
+   "x": 1664,
+   "y": 982,
+   "w": 440,
+   "h": 515,
+   "z": 105,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>#minimap</h3>\n<p>Zeichnet alle Fenster als Rechtecke in der Farbe ihres Moduls, Rahmen blass darunter,\ndazu der Ausschnitt der Sicht. Klicken springt dorthin.</p>\n<h3>#toasts</h3>\n<p><code>GD.ui.toast(text, kind)</code> — <code>ok</code>, <code>err</code> oder neutral.\nAlles, was schiefgehen kann, meldet sich hier statt in der Konsole.</p>\n<h3>#ctxmenu</h3>\n<p>Drei Fassungen: auf einem <b>Pfeil</b> (beschriften, Richtung umkehren, löschen), auf\neinem <b>Fenster</b> (duplizieren, ein-/ausklappen, nach vorn/hinten, einpassen, löschen)\nund auf <b>leerer Fläche</b> (jedes Modul einfügen, alles auswählen, einpassen, 100 %).</p>\n<h3>#modal-root</h3>\n<p>Trägt die vier Dialoge. <code>GD.ui.modal(node, opts)</code> und\n<code>GD.ui.confirm(titel, text, okLabel)</code>.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_7",
+   "type": "notes",
+   "title": "Dialog „Projekte\" — Strg+P",
+   "x": 1664,
+   "y": 1502,
+   "w": 440,
+   "h": 308,
+   "z": 106,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Die Tafeln im Bibliotheksordner mit Namen, Datum, Umfang und Modul-Aufteilung.</p>\n<ul>\n<li>öffnen · umbenennen · kopieren · löschen</li>\n<li>neues Projekt anlegen</li>\n<li>„aktuelles Board hier ablegen\"</li>\n</ul>\n<p>Ein geöffnetes Projekt bleibt mit seiner Datei <b>verknüpft</b> — der Speichern-Knopf\nschreibt danach direkt dorthin.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_8",
+   "type": "notes",
+   "title": "Dialog „Änderungen\" — Strg+Umschalt+A",
+   "x": 1664,
+   "y": 1834,
+   "w": 440,
+   "h": 372,
+   "z": 107,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Was seit dem letzten Commit offen ist, als Liste einzelner Befunde: Klasse\n(neu · entfernt · Inhalt · Titel · Größe · verschoben · Darstellung), betroffene Kachel,\nje ein <b>„zeigen\"</b>-Knopf.</p>\n<ul>\n<li>Schalter <b>Änderungssicht an/aus</b></li>\n<li><b>Stand festschreiben</b> — Titel, Text und <i>wer</i> (Mensch oder KI)</li>\n<li>darunter der Commit-Verlauf; jeder Commit zeigt seine Änderungsliste und lässt sich\nlöschen</li>\n</ul>\n<p>Aus einem Skript heraus geht dasselbe über\n<code>GD.aenderungen.festschreiben({ titel, wer: 'ki' })</code>, außerhalb des Browsers\nüber <code>tools/festschreiben.mjs</code>.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_9",
+   "type": "notes",
+   "title": "Dialog „Einstellungen\" — ⚙",
+   "x": 1664,
+   "y": 2230,
+   "w": 440,
+   "h": 534,
+   "z": 108,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>Projektordner</h3>\n<p>Zugriff über <b>GameDesk-Server</b> (Pfad frei eintippen, wird in\n<code>tools/bibliothek.json</code> gemerkt) oder <b>Ordnerdialog des Browsers</b>.\nDazu: welche Datei mit diesem Board verknüpft ist, Verknüpfung lösen und\n<b>„Automatisch in die Datei\"</b> (Vorgabe: aus).</p>\n<h3>Darstellung</h3>\n<p>Hell/Dunkel, Übersichtskarte, Raster anzeigen, Einrasten, Rastermaß.</p>\n<h3>Anordnung</h3>\n<p>Der Prüfbericht aus <code>GD.layout.pruefe()</code>: was die fünf Regeln gerade\nbemängeln, je mit einem <b>„zeigen\"</b>-Knopf, der zur Stelle springt, plus\n„Jetzt anordnen\" und „Erneut prüfen\".</p>\n<h3>Speicher</h3>\n<p>Wie viel dieses Board im Browser-Speicher belegt, Anzahl Module und Fenster,\n„Als Datei exportieren\".</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_a",
+   "type": "notes",
+   "title": "Dialog „Hilfe\" — ?",
+   "x": 1664,
+   "y": 2788,
+   "w": 440,
+   "h": 329,
+   "z": 109,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Fünf Blöcke Tastenkürzel: <b>Board</b>, <b>Fenster</b>, <b>Pfeile</b>,\n<b>3D-Modell</b>, <b>Allgemein</b>.</p>\n<p>Die Tastenbindung selbst sitzt in <code>ui.js</code> und fragt <b>zuerst das aktive\nModul</b>: liefert <code>inst.onKey(ev)</code> ein <code>true</code>, ist die Taste\nverbraucht. So darf das Wireframe <code>R</code> für „Rechteck\" belegen, ohne dem Board\netwas wegzunehmen.</p>\n<p>Getippt wird nie in die Kürzel hinein — <code>U.isTyping()</code> hält jede Eingabe\nin Feldern und <code>contenteditable</code> heraus.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_b",
+   "type": "wireframe",
+   "title": "Bildschirmaufteilung",
+   "x": 844,
+   "y": 982,
+   "w": 780,
+   "h": 540,
+   "z": 110,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "canvas": {
+     "w": 1280,
+     "h": 800,
+     "bg": "#0f1218"
+    },
+    "shapes": [
+     {
+      "id": "sh_msntiaqg_g1",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "rot": 0,
+      "fill": "#0f1218",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msntiaqg_g4",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 46,
+      "rot": 0,
+      "fill": "#171b23",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#252a35",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "◈  GameDesk  ｜  ↺ ↻   − 100 % + ⤢   ▦ ⊹ ◱   ⤡ Anordnen   ⬚ Änderungen ③",
+      "pad": 16,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 12,
+       "color": "#c9d3e4",
+       "align": "left",
+       "weight": 600
+      }
+     },
+     {
+      "id": "sh_msntiaqg_g7",
+      "type": "text",
+      "x": 720,
+      "y": 12,
+      "w": 544,
+      "h": 22,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "🗀 Projekte    Neu    Öffnen…    ▮ Speichern      ⚙  ◐  ?",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 12,
+       "color": "#9aa4b6",
+       "align": "right"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_ga",
+      "type": "rect",
+      "x": 0,
+      "y": 46,
+      "w": 104,
+      "h": 754,
+      "rot": 0,
+      "fill": "#141821",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#252a35",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gd",
+      "type": "text",
+      "x": 0,
+      "y": 60,
+      "w": 104,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "MODULE",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#6d778b",
+       "align": "center"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gg",
+      "type": "rect",
+      "x": 10,
+      "y": 84,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "▢ Rahmen",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gj",
+      "type": "rect",
+      "x": 10,
+      "y": 124,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "▧ Wireframe",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gm",
+      "type": "rect",
+      "x": 10,
+      "y": 164,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "≡ Notiz",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gp",
+      "type": "rect",
+      "x": 10,
+      "y": 204,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "⌗ Quelltext",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gs",
+      "type": "rect",
+      "x": 10,
+      "y": 244,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "▣ Medien",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gv",
+      "type": "rect",
+      "x": 10,
+      "y": 284,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "⬢ 3D-Modell",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_gy",
+      "type": "rect",
+      "x": 10,
+      "y": 324,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "◈ 3D-Ansicht",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqg_h1",
+      "type": "rect",
+      "x": 10,
+      "y": 364,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "‹› Sandbox",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_h4",
+      "type": "rect",
+      "x": 10,
+      "y": 404,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "🗂 Projekt",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_h7",
+      "type": "rect",
+      "x": 10,
+      "y": 444,
+      "w": 84,
+      "h": 32,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "⚗ Worker",
+      "pad": 7,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#c9d3e4",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_ha",
+      "type": "rect",
+      "x": 104,
+      "y": 46,
+      "w": 940,
+      "h": 754,
+      "rot": 0,
+      "fill": "#0f1218",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hd",
+      "type": "rect",
+      "x": 150,
+      "y": 120,
+      "w": 470,
+      "h": 330,
+      "rot": 0,
+      "fill": "#1a2436",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#3d6ea8",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "dashed",
+      "radius": 10,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hg",
+      "type": "text",
+      "x": 168,
+      "y": 136,
+      "w": 300,
+      "h": 26,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Bereich  ·  Menüs",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 15,
+       "weight": 700,
+       "color": "#6ea8fe",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hj",
+      "type": "text",
+      "x": 168,
+      "y": 162,
+      "w": 300,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Untertitel des Rahmens",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#7a8499",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hm",
+      "type": "rect",
+      "x": 176,
+      "y": 240,
+      "w": 200,
+      "h": 180,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#57c98a",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "≡  Notiz",
+      "pad": 10,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 11,
+       "color": "#c9d3e4",
+       "align": "left",
+       "valign": "top"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hp",
+      "type": "rect",
+      "x": 396,
+      "y": 240,
+      "w": 200,
+      "h": 180,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#8fa4c4",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "⌗  Quelltext",
+      "pad": 10,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 11,
+       "color": "#c9d3e4",
+       "align": "left",
+       "valign": "top"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hs",
+      "type": "rect",
+      "x": 790,
+      "y": 240,
+      "w": 200,
+      "h": 180,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#4fd1c5",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "⬢  3D-Modell",
+      "pad": 10,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 11,
+       "color": "#c9d3e4",
+       "align": "left",
+       "valign": "top"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hv",
+      "type": "line",
+      "x": 596,
+      "y": 330,
+      "w": 194,
+      "h": 0,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#6ea8fe",
+      "strokeW": 2,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msntiaqh_hy",
+      "type": "rect",
+      "x": 646,
+      "y": 312,
+      "w": 96,
+      "h": 22,
+      "rot": 0,
+      "fill": "#171b23",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2f3a4d",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 5,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "liefert Netz",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#9aa4b6"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_i1",
+      "type": "rect",
+      "x": 168,
+      "y": 232,
+      "w": 216,
+      "h": 196,
+      "rot": 0,
+      "fill": "#00000000",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#ff3b30",
+      "strokeW": 2,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msntiaqh_i4",
+      "type": "rect",
+      "x": 168,
+      "y": 210,
+      "w": 84,
+      "h": 20,
+      "rot": 0,
+      "fill": "#ff3b30",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 4,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Inhalt",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#ffffff",
+       "weight": 700
+      }
+     },
+     {
+      "id": "sh_msntiaqh_i7",
+      "type": "rect",
+      "x": 884,
+      "y": 660,
+      "w": 144,
+      "h": 100,
+      "rot": 0,
+      "fill": "#141821",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 8,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "◱",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 18,
+       "color": "#3f4a5e"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_ia",
+      "type": "rect",
+      "x": 1044,
+      "y": 46,
+      "w": 236,
+      "h": 754,
+      "rot": 0,
+      "fill": "#141821",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#252a35",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 14,
+       "family": "ui",
+       "weight": 500,
+       "italic": false,
+       "underline": false,
+       "color": "#1b2029",
+       "align": "center",
+       "valign": "middle",
+       "lh": 1.35
+      }
+     },
+     {
+      "id": "sh_msntiaqh_id",
+      "type": "text",
+      "x": 1060,
+      "y": 66,
+      "w": 204,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "FENSTER",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#6d778b",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_ig",
+      "type": "rect",
+      "x": 1060,
+      "y": 90,
+      "w": 204,
+      "h": 28,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Titel",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#9aa4b6",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_ij",
+      "type": "rect",
+      "x": 1060,
+      "y": 128,
+      "w": 204,
+      "h": 28,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "X / Y",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#9aa4b6",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_im",
+      "type": "rect",
+      "x": 1060,
+      "y": 166,
+      "w": 204,
+      "h": 28,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Breite / Höhe",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#9aa4b6",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_ip",
+      "type": "rect",
+      "x": 1060,
+      "y": 204,
+      "w": 204,
+      "h": 28,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Farbe",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#9aa4b6",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_is",
+      "type": "rect",
+      "x": 1060,
+      "y": 242,
+      "w": 204,
+      "h": 28,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Einklappen",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#9aa4b6",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_iv",
+      "type": "text",
+      "x": 1060,
+      "y": 296,
+      "w": 204,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "NOTIZ",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9,
+       "color": "#6d778b",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_iy",
+      "type": "rect",
+      "x": 1060,
+      "y": 320,
+      "w": 204,
+      "h": 28,
+      "rot": 0,
+      "fill": "#1b2029",
+      "fillOn": true,
+      "grad": null,
+      "stroke": "#2a3140",
+      "strokeW": 1,
+      "strokeOn": true,
+      "dash": "solid",
+      "radius": 6,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "Grundgröße   13 px",
+      "pad": 8,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 9.5,
+       "color": "#9aa4b6",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_j1",
+      "type": "text",
+      "x": 120,
+      "y": 58,
+      "w": 240,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "↑ #topbar",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 10,
+       "color": "#e8b45c",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_j4",
+      "type": "text",
+      "x": 150,
+      "y": 470,
+      "w": 300,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "#diff-layer  ·  rot = seit dem letzten Commit",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 10,
+       "color": "#e8b45c",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_j7",
+      "type": "text",
+      "x": 150,
+      "y": 492,
+      "w": 300,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "#win-layer  ·  zwei Stapelbänder",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 10,
+       "color": "#e8b45c",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_ja",
+      "type": "text",
+      "x": 660,
+      "y": 288,
+      "w": 220,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "#conn-layer  liegt darüber",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 10,
+       "color": "#e8b45c",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_jd",
+      "type": "text",
+      "x": 884,
+      "y": 640,
+      "w": 144,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "#minimap",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 10,
+       "color": "#e8b45c",
+       "align": "left"
+      }
+     },
+     {
+      "id": "sh_msntiaqh_jg",
+      "type": "text",
+      "x": 1060,
+      "y": 776,
+      "w": 204,
+      "h": 16,
+      "rot": 0,
+      "fill": "#e9edf5",
+      "fillOn": false,
+      "grad": null,
+      "stroke": "#94a3b8",
+      "strokeW": 1,
+      "strokeOn": false,
+      "dash": "solid",
+      "radius": 0,
+      "opacity": 1,
+      "blur": 0,
+      "shadow": {
+       "on": false,
+       "x": 0,
+       "y": 4,
+       "blur": 12,
+       "color": "#0f172a40"
+      },
+      "text": "#inspector",
+      "pad": 0,
+      "src": null,
+      "locked": false,
+      "font": {
+       "size": 10,
+       "color": "#e8b45c",
+       "align": "left"
+      }
+     }
+    ],
+    "guides": {
+     "v": [],
+     "h": []
+    },
+    "grid": {
+     "size": 10,
+     "show": false,
+     "snap": true
+    }
+   }
+  },
+  {
+   "id": "win_gd_c",
+   "type": "notes",
+   "title": "util.js — das Fundament",
+   "x": 2668,
+   "y": 982,
+   "w": 440,
+   "h": 521,
+   "z": 111,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/util.js · 304 Zeilen · <code>GD.util</code></h3>\n<p>Hat <b>keine</b> Abhängigkeit und legt den Namensraum <code>window.GD</code> an.</p>\n<ul>\n<li><code>el()</code> / <code>svg()</code> — DOM und SVG bauen, mit\n<code>class · text · html · style · dataset · on*</code></li>\n<li><code>drag(ev, {onMove, onEnd, cursor})</code> — <b>jede</b> Zieherei im Haus.\nLauscht auf <code>window</code> mit <code>capture</code>, deshalb funktioniert Ziehen\nauch über fremde Elemente hinweg</li>\n<li><code>debounce(fn, ms)</code> mit <code>.cancel()</code> und <code>.flush()</code>,\n<code>raf(fn)</code>, <code>nextFrame(fn)</code> — <b>letzteres fällt im versteckten Tab\nauf einen Timer zurück</b>, weil <code>requestAnimationFrame</code> dort nicht feuert</li>\n<li><code>emitter()</code> — die Ereignisbusse von store, board, library, models,\naenderungen</li>\n<li><code>download · pickFile · readAsDataURL · readAsText</code></li>\n<li><code>wrapText · measureText · rotate · boundsOf · shade · withAlpha · clamp · uid · clone</code></li>\n<li><code>isTyping()</code> — hält die Tastenkürzel aus Eingabefeldern heraus</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_d",
+   "type": "notes",
+   "title": "registry.js — die Modul-Registry",
+   "x": 2668,
+   "y": 1516,
+   "w": 440,
+   "h": 400,
+   "z": 112,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/registry.js · 83 Zeilen · <code>GD.modules</code></h3>\n<ul>\n<li><code>register(def)</code> — <code>id · label · icon · description · accent ·\ndefaultSize · defaultTitle · create(ctx)</code></li>\n<li><code>get(id)</code> · <code>list()</code> — die Palette liest hier</li>\n<li><code>fallback(id)</code> — <b>der wichtigste Teil</b>: Ein Board mit einem noch\nnicht geladenen Modultyp verliert nichts. Das Fenster zeigt einen Platzhalter und gibt\nseinen Zustand unverändert wieder heraus</li>\n</ul>\n<p>Ein neues Modul = eine Datei in <code>js/modules/</code> + ein\n<code>&lt;script&gt;</code>-Tag. Kein Eintrag in einer Liste, keine Registrierung\nanderswo — so ist zuletzt <code>worker.js</code> dazugekommen.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_e",
+   "type": "notes",
+   "title": "store.js — Dokument, Historie, Persistenz",
+   "x": 2668,
+   "y": 1940,
+   "w": 440,
+   "h": 557,
+   "z": 113,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/store.js · 328 Zeilen · <code>GD.store</code></h3>\n<ul>\n<li><code>doc</code> — das ganze Board: <code>name · view · grid · windows ·\nconnections · bundles · models · aenderungen · nextZ</code></li>\n<li><code>serialize()</code> — sammelt zuerst über <code>GD.windows.syncStates()</code>\nalle Modulzustände ein und gibt dann einen Klon</li>\n<li><code>commit(label)</code> — Schnappschuss in die Rückgängig-Historie (höchstens 60);\nidentische Zustände werden nicht doppelt abgelegt. <b>Nicht zu verwechseln</b> mit einem\nCommit der Änderungsverfolgung</li>\n<li><code>touch()</code> — Änderung <b>ohne</b> Historieneintrag (Kameraposition)</li>\n<li><code>undo() / redo()</code> → Ereignis <code>doc:restored</code></li>\n<li><code>save()</code> — 600 ms entprellt nach <code>localStorage</code>;\nMedien liegen dabei nur als <code>depot:</code>-Verweis darin</li>\n<li><code>load(raw)</code> → <code>normalize()</code> → Ereignis <code>doc:replaced</code></li>\n<li>beim Schreiben in eine Datei bläst <code>GD.depot.aufblasen()</code> die Verweise\nwieder zu <code>data:</code>-URLs auf — die <code>.json</code> bleibt in sich\ngeschlossen</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_f",
+   "type": "notes",
+   "title": "board.js — die Kamera",
+   "x": 3628,
+   "y": 982,
+   "w": 440,
+   "h": 520,
+   "z": 114,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/board.js · 260 Zeilen · <code>GD.board</code></h3>\n<p><code>#world</code> trägt <b>eine</b> Transformation; alles andere rechnet in\nWeltkoordinaten.</p>\n<ul>\n<li><code>setView(x, y, scale)</code> — <b>drei Zahlen, kein Objekt.</b> Ein Objekt macht\n<code>view.x</code> still zu <code>NaN</code> und wird so mitgespeichert</li>\n<li><code>panBy · zoomAt(clientX, clientY, faktor) · zoomBy · resetZoom · zoomToFit(rect)\n· centerOn</code></li>\n<li><code>screenToWorld · worldToScreen · viewCenter · viewRect · contentBounds</code></li>\n<li><code>scale()</code> — der Maßstab, an dem sich Rahmenköpfe, Pfeilbeschriftungen,\nDiff-Reiter und die 3D-Auflösung ausrichten</li>\n<li><code>apply()</code> ist <code>raf</code>-gedrosselt und meldet <code>view</code></li>\n</ul>\n<p>Ziehen auf leerer Fläche, mittlere Taste und <code>Leertaste</code> verschieben;\nMausrad zoomt <b>an der Mausposition</b>, nicht in der Mitte.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_g",
+   "type": "notes",
+   "title": "windows.js — die Fenster",
+   "x": 3628,
+   "y": 1526,
+   "w": 440,
+   "h": 610,
+   "z": 115,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/windows.js · 708 Zeilen · <code>GD.windows</code></h3>\n<ul>\n<li><code>add(type, x, y, opts)</code> · <code>remove · duplicate · removeSelected</code></li>\n<li><code>mount(data)</code> — holt die Moduldefinition, baut <code>ctx</code>, ruft\n<code>create(ctx)</code> und hängt die Instanz ein</li>\n<li><code>setGeometry(id, patch) · setTitle · setAccent · setCollapsed ·\nbringToFront · sendToBack</code></li>\n<li><code>select(ids, additive) · selectAll · selection · activeInstance</code></li>\n<li><code>syncStates()</code> — <code>inst.getState()</code> zurück in\n<code>doc.windows[].state</code></li>\n<li><code>reconcile()</code> — nach Rückgängig: bestehende Instanzen behalten und mit\n<code>setState()</code> füttern, statt alles neu zu bauen</li>\n</ul>\n<p><b>Falle:</b> <code>reconcile()</code> hängt einen <b>frischen</b> Datensatz in\n<code>rec.data</code>. Closures aus <code>mount()</code> dürfen <code>data</code> nicht\neinfangen — sie müssen über <code>rec.data</code> gehen.</p>\n<p>Beim Verschieben rasten Kanten und Mittelachsen an anderen Fenstern ein (rosa\nHilfslinien), <code>Alt</code> schaltet das kurz aus. Ein <b>Klick</b> auf den Titel\nbenennt um, Ziehen an derselben Stelle verschiebt — entschieden wird beim Loslassen.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_h",
+   "type": "notes",
+   "title": "connections.js — Pfeile und Bündel",
+   "x": 3628,
+   "y": 2160,
+   "w": 440,
+   "h": 535,
+   "z": 116,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/connections.js · 892 Zeilen · <code>GD.connections</code></h3>\n<ul>\n<li><code>add(fromWin, fromSide, toWin, toSide, fromShape, toShape)</code> —\ndie beiden <code>shape</code>-Felder hängen ein Ende an eine <b>einzelne\nWireframe-Form</b> statt an das Fenster</li>\n<li><code>update(id, patch) · remove · removeForWindow · select · editLabel</code></li>\n<li><code>addBundle(ids, name) · updateBundle · toggleBundle · removeBundle ·\nmitglieder(id)</code></li>\n<li><code>redraw()</code> (gedrosselt) und <code>redrawNow()</code></li>\n</ul>\n<p><b>Pfeile laufen im rechten Winkel:</b> senkrecht aus der Kante, höchstens zweimal\nabgebogen, senkrecht in die Gegenkante. Der Weg entsteht im Weltraum, die\n<b>Beschriftung im Bildschirmraum</b> — sie behält ihre Pixelgröße.</p>\n<p>Steht <code>t</code> auf <code>null</code>, sucht sich die Beschriftung selbst das\nlängste gerade Stück, das <b>neben</b> den Kacheln liegt. Eine Zahl ist eine von Hand\ngesetzte Stelle und bleibt. Unter etwa 30 % Zoom blenden alle Beschriftungen aus.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_i",
+   "type": "notes",
+   "title": "minimap.js — die Übersichtskarte",
+   "x": 3628,
+   "y": 2719,
+   "w": 440,
+   "h": 286,
+   "z": 117,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/minimap.js · 101 Zeilen · <code>GD.minimap</code></h3>\n<p>Ein Canvas: alle Fenster als Rechtecke in der Farbe ihres Moduls, Rahmen blass\ndarunter, dazu der Ausschnitt der aktuellen Sicht. Klicken springt dorthin.</p>\n<p>Dieselbe Idee steckt in der Vorschau der <b>Projekt-Kachel</b> — nur zeichnet die\neine <i>fremde</i> Tafel.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_j",
+   "type": "notes",
+   "title": "library.js — der Projektordner",
+   "x": 4588,
+   "y": 982,
+   "w": 440,
+   "h": 383,
+   "z": 118,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/library.js · 439 Zeilen · <code>GD.library</code></h3>\n<p>Bildet einen Ordner auf der Platte als Projektliste ab. Zwei Wege, je nachdem wie\nGameDesk läuft — Einzelheiten im Bereich <b>Bibliothek &amp; Server</b>.</p>\n<ul>\n<li><code>init() · status() · setModus('server' | 'ordner')</code></li>\n<li><code>liste(neu) · lesen · schreiben · loeschen · umbenennen</code></li>\n<li><code>oeffnen · sichern · neu · dateiName(name, vorlage)</code></li>\n<li><code>hinein(datei) · zurueck() · verlauf()</code> — der Weg durch ineinander­\nliegende Projekte</li>\n<li><code>link() · verknuepfen() · entkoppeln()</code></li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_k",
+   "type": "notes",
+   "title": "layout.js — das automatische Layout",
+   "x": 4588,
+   "y": 1389,
+   "w": 440,
+   "h": 539,
+   "z": 119,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/layout.js · 608 Zeilen · <code>GD.layout</code></h3>\n<p>Setzt die fünf Regeln durch — siehe Bereich <b>Regeln &amp; Gestaltung</b>.</p>\n<ul>\n<li><code>textHoehe(html, breite, size)</code> — <b>gemessen</b> an einem versteckten\nKnoten außerhalb des Boards; dort greift die Zoom-Transformation nicht, der\n<code>scrollHeight</code> ist also eine echte Pixelzahl</li>\n<li><code>passeHoehenAn(ids) · entwirre(ids) · rahmenNachziehen(gemerkt) ·\nrahmenAnpassen(id) · kopfFreiRaeumen() · bloeckeFliessen()</code></li>\n<li><code>aufraeumen(ids)</code> — alles in der richtigen Folge, <b>ein</b>\nHistorieneintrag</li>\n<li><code>pruefe()</code> — der Bericht für den Einstellungsdialog</li>\n<li><code>BEREICHE · bereichVon · merkeBereich · bereich(id, titel, kacheln) ·\nkopfVon(rahmenId)</code></li>\n</ul>\n<p><b>Die Reihenfolge ist alles:</b> Höhen → Köpfe freiräumen → entwirren → Rahmen\nnachziehen. Das Freiräumen erzeugt absichtlich Überlappungen, die das Entwirren danach\nauflöst.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_l",
+   "type": "notes",
+   "title": "ui.js — Oberfläche und Bedienung",
+   "x": 5548,
+   "y": 982,
+   "w": 440,
+   "h": 431,
+   "z": 120,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/ui.js · 1 477 Zeilen · <code>GD.ui</code></h3>\n<p>Die größte Kerndatei, weil hier alles zusammenläuft, was man anfassen kann.</p>\n<ul>\n<li><b>Palette</b> aus <code>GD.modules.list()</code>, klick- und ziehbar</li>\n<li><b>Werkzeugleiste</b> mit <code>runAction(name)</code></li>\n<li><b>Inspector</b> in fünf Fassungen + <code>GD.ui.fields</code> als Baukasten</li>\n<li><b>Kontextmenü</b> in drei Fassungen</li>\n<li><b>Tastenkürzel</b> — fragt zuerst <code>inst.onKey(ev)</code></li>\n<li><b>Dialoge</b>: Projekte, Änderungen, Einstellungen, Hilfe; dazu <code>toast ·\nmodal · confirm</code></li>\n<li><code>updateSaveButton() · updateBackButton()</code> und die Zahl am\nÄnderungen-Knopf</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_m",
+   "type": "notes",
+   "title": "app.js — der Start",
+   "x": 5548,
+   "y": 1437,
+   "w": 440,
+   "h": 566,
+   "z": 121,
+   "accent": "#8fa4c4",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/app.js · 273 Zeilen · <code>GD.app</code></h3>\n<ol>\n<li><code>store.init()</code> — Einstellungen und letztes Board aus\n<code>localStorage</code></li>\n<li><code>depot.init()</code> — die Medien-Datenbank öffnen</li>\n<li><code>board.init() · windows.init() · connections.init() · minimap.init() ·\naenderungen.init() · ui.init()</code></li>\n<li><code>library.init()</code> — prüft Server und Ordnerdialog, stellt den Modus ein</li>\n<li>war nichts gespeichert: <code>seedStarterBoard()</code></li>\n</ol>\n<ul>\n<li><code>undo() / redo()</code> → <code>windows.reconcile()</code> +\n<code>connections.redraw()</code></li>\n<li><code>saveBoard() · importBoard() · toggleTheme()</code></li>\n<li><b>Dateien ablegen</b>: eine <code>.json</code> auf das Board gezogen wird geladen,\nBilder/Video/Ton werden zu Medien-Kacheln</li>\n<li><b>Einfügen</b> (<code>Strg+V</code>): Bild aus der Zwischenablage → Medien-Kachel</li>\n<li><code>autoInDatei()</code> — schreibt, wenn eingeschaltet, wenige Sekunden nach\njeder Änderung auch in die Projektdatei</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_n",
+   "type": "code",
+   "title": "Der ganze Modulvertrag",
+   "x": 244,
+   "y": 3468,
+   "w": 560,
+   "h": 686,
+   "z": 122,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "path": "js/core/registry.js",
+    "code": "GD.modules.register({\n  id: 'timeline',\n  label: 'Zeitstrahl',\n  icon: '⏱',\n  description: 'Ablauf einer Mission',   // Kurztext in der Palette\n  accent: '#57c98a',                     // Fensterfarbe\n  defaultSize: { w: 500, h: 260 },\n\n  create(ctx) {\n    const state = Object.assign({ items: [] }, ctx.state || {});\n    const el = GD.util.el('div', { class: 'tl-root' });\n\n    return {\n      el,                                // Pflicht\n      getState: () => state,             // wird gespeichert und exportiert\n      setState: (s) => { },              // nach Rueckgaengig / Laden\n      onResize: (w, h) => { },           // optional\n      onZoom:   (scale) => { },          // optional\n      onSelect: (an) => { },             // optional\n      onTitle:  (text) => { },           // optional\n      onKey:    (ev) => false,           // true = Taste verbraucht\n      headerTools: () => [],             // Knoepfe in der Titelleiste\n      inspector: (host) => { },          // Felder im rechten Bereich\n      inhaltsHoehe: (breite) => 0,       // fuer GD.layout, Regel 1\n      overlayEl: () => null,             // Ebene ueber den Kacheln (Rahmen)\n      dragCompanions: () => [],          // zieht mit (Rahmen)\n      destroy: () => { }\n    };\n  }\n});\n\n/* ctx: id · state · win.get/setTitle/setSize/select ·\n        changed() · commit(label) · refreshInspector() · toast(text, kind) */",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     15,
+     16,
+     17,
+     26
+    ],
+    "caption": "Das Fenster drumherum — Verschieben, Größe, Pfeile, Auswahl, Speichern, Historie — kommt automatisch. Nur die Rückgabewerte el und getState sind Pflicht."
+   }
+  },
+  {
+   "id": "win_gd_o",
+   "type": "notes",
+   "title": "Rahmen — Bereiche gruppieren",
+   "x": 244,
+   "y": 4189,
+   "w": 440,
+   "h": 555,
+   "z": 123,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>frame.js · 236 Zeilen · <code>▢</code> · 680 × 440</h3>\n<p>Getönte Fläche hinter den Fenstern, mit Titel und Untertitel. <b>Fängt keine\nMausklicks</b> — über seiner Fläche bleibt das Board verschieb- und aufziehbar.</p>\n<ul>\n<li><code>dragCompanions()</code> = alles, was <b>vollständig</b> in ihm liegt; das\nwandert beim Verschieben mit. <b>Über dieselbe Auskunft liest der Worker-Connector die\nIdeen aus dem Rahmen</b></li>\n<li><code>overlayEl()</code> — die Überschrift hängt in <code>#frame-layer</code>,\n<b>über</b> den Kacheln, damit sie auf Distanz lesbar bleibt</li>\n<li><code>kopfHoehe()</code> — misst Titelleiste + Wasserzeichen + Untertitel und\nmeldet das Kopfband an <code>GD.layout</code></li>\n<li>Inspector: Bereich aus der Taxonomie, Farbe, Deckkraft, gestrichelt, Untertitel,\n„Inhalt auswählen\", „Um den Inhalt legen\"</li>\n</ul>\n<p>Die Überschrift wächst gegen den Zoom (Ziel ~20 px, höchstens 14×) — über\n<code>transform: scale</code>, <b>nie</b> über die Schriftgröße: sonst rechnet das\nLayout neu und <code>kopfHoehe()</code> misst mitten in die Animation.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_p",
+   "type": "notes",
+   "title": "Notiz — Text im Notizstil",
+   "x": 244,
+   "y": 4768,
+   "w": 440,
+   "h": 424,
+   "z": 124,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>notes.js · 249 Zeilen · <code>≡</code> · 380 × 300</h3>\n<p>Ein <code>contenteditable</code> mit eigener Leiste: H1–H3, Fließtext, Zitat, Code,\nAufzählung, nummerierte Liste, <b>Aufgabenliste zum Abhaken</b>, fett/kursiv/\nunterstrichen/durchgestrichen, Textfarbe, Markierung, Ausrichtung, Links.</p>\n<ul>\n<li>Grundschriftgröße pro Fenster (10–32 px), Export als Textdatei</li>\n<li><code>inhaltsHoehe(breite)</code> = Leiste + <code>GD.layout.textHoehe(...)</code></li>\n<li>Beim Einfügen wird <b>nur Text</b> übernommen — fremdes HTML sprengte sonst das\nLayout</li>\n</ul>\n<p>Das ist das Modul, aus dem diese Tafel zum größten Teil besteht — und das Modul, aus\ndem der Worker-Connector seine Ideen liest.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_q",
+   "type": "notes",
+   "title": "Wireframe — Seiten skizzieren",
+   "x": 844,
+   "y": 3468,
+   "w": 440,
+   "h": 670,
+   "z": 125,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>wireframe.js · 1 394 Zeilen · <code>▧</code> · 760 × 520</h3>\n<p>Das größte Modul. Werkzeuge: Auswahl (<code>V</code>), Rechteck (<code>R</code>),\nEllipse (<code>O</code>), Linie (<code>L</code>), Text (<code>T</code>),\nBild (<code>I</code>).</p>\n<ul>\n<li><b>Form</b> — Eckenradius, Füllung als Farbe oder 2-Stopp-Verlauf mit Winkel,\nKontur mit Stärke und Strichart</li>\n<li><b>Effekte</b> — Deckkraft, Schlagschatten, Weichzeichner</li>\n<li><b>Text in Objekten</b> — Doppelklick; Größe, Familie, Stärke, Ausrichtung\nwaagerecht und senkrecht, Zeilenhöhe, Innenabstand, Umbruch, „Höhe an Text anpassen\"</li>\n<li><b>Führungslinien</b> aus den Linealen; Einrasten an Führungslinien,\nArtboard-Kanten und -Mitte, Kanten und Mitten anderer Objekte, Raster</li>\n<li><b>Bausteine</b> — Button, Eingabefeld, Karte, Kopfzeile, Listenzeile,\nBildplatzhalter, Überschrift, Textblock</li>\n<li>Ausrichten/Verteilen, Ebenen (<code>[</code>/<code>]</code>), Sperren, Drehen\n(<code>Umschalt</code> rastet auf 15°)</li>\n<li><b>Export</b> als SVG und PNG @2×</li>\n</ul>\n<p>Formate: A4 quer, Desktop 1280, Full HD, Tablet, Handy, Quadrat, frei.</p>\n<p>Einzigartig: An einer <b>einzelnen Form</b> darf ein Pfeil hängen\n(<code>connection.from.shape</code>). Er wandert mit, wenn sie verschoben, skaliert oder\ngedreht wird, und fällt sauber auf den Fensterrand zurück, wenn sie verschwindet.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_r",
+   "type": "notes",
+   "title": "Quelltext — Ausschnitt mit Herkunft",
+   "x": 844,
+   "y": 4162,
+   "w": 440,
+   "h": 378,
+   "z": 126,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>code.js · 173 Zeilen · <code>⌗</code> · 520 × 300</h3>\n<p>Zum <b>Dokumentieren</b>, nicht zum Ausführen — dafür gibt es die Sandbox.</p>\n<ul>\n<li>Dateipfad, Zeilennummern ab einer wählbaren Startzeile, hervorgehobene Zeilen\n(<code>marks</code>), Bildunterschrift</li>\n<li>leichte Einfärbung für Kommentare, Zeichenketten, Schlüsselwörter, Zahlen</li>\n<li>Knöpfe zum Kopieren von Code und Pfad, Stift zum Bearbeiten</li>\n<li><code>inhaltsHoehe(breite)</code> — deshalb misst „Anordnen\" auch Quelltext richtig</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_s",
+   "type": "notes",
+   "title": "Bild / Video / Ton — Referenzen",
+   "x": 844,
+   "y": 4564,
+   "w": 440,
+   "h": 549,
+   "z": 127,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>media.js · 535 Zeilen · <code>▣</code> · 420 × 320</h3>\n<p>Dateien hineinziehen, einfügen (<code>Strg+V</code>) oder aus einer Adresse laden.\nMehrere Medien pro Fenster mit Vorschaustreifen und Bildunterschrift.</p>\n<ul>\n<li><b>Bild</b> — einpassen / füllend / verzerrt / Original, Hintergrundfarbe</li>\n<li><b>Video</b> — Bedienelemente, Schleife, stumm, Autostart, Lautstärke</li>\n<li><b>Ton</b> (mp3, wav, ogg, m4a, flac) — die <b>Wellenform ist der Inhalt</b> der\nKachel. 220 Stützstellen, einmal je Datei aus dem dekodierten Ton gerechnet und im\nArbeitsspeicher gehalten, <b>nicht</b> im Board. Klicken springt an die Stelle;\n<code>Leertaste</code> startet und stoppt. Geht es nicht, sagt die Kachel das hin\n(„Wellenform nicht lesbar\") statt eine leere Linie zu zeigen</li>\n</ul>\n<p>Die Bytes selbst liegen seit dem Medienlager <b>nicht mehr im Dokument</b>, sondern\nin einer eigenen IndexedDB; im Board steht nur <code>depot:&lt;sha256&gt;</code>.\nBeim Schreiben in eine Datei werden sie wieder eingebettet.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_t",
+   "type": "notes",
+   "title": "3D-Modell — bauen und beleuchten",
+   "x": 1324,
+   "y": 3468,
+   "w": 440,
+   "h": 507,
+   "z": 128,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>model3d.js · 1 011 Zeilen · <code>⬢</code> · 760 × 520</h3>\n<p>Grundkörper: Würfel, Quader, Ebene, Dreieck, Pyramide, Zylinder, Kegel, Kugel, Torus.\nJe Form Position, Drehung, <b>Größe pro Achse</b> und Formparameter.</p>\n<ul>\n<li><b>Kanten rund</b> — echte Verrundung in der Geometrie, kein Shading-Trick</li>\n<li><b>Material</b> — Farbe, Rauheit, Metallisch, Deckkraft, Leuchten</li>\n<li><b>Sonne</b> als anfassbares Objekt: der Stern im Bild lässt sich ziehen, sie läuft\nauf einer Kugelbahn um den Nullpunkt. Im Inspector zusätzlich als\nRichtung / Höhe / Abstand in Grad</li>\n<li><b>Texturen</b> — Bild oder eingebautes Muster, Projektion als <b>Netz-UV</b>,\n<b>Box (dreiachsig)</b> oder <b>Ebene von oben</b>. Box hält die Kachel quadratisch, egal\nwie die Form gestreckt wird</li>\n<li><code>G</code>/<code>R</code>/<code>S</code>, Achssperren über\n<code>Strg</code>/<code>Alt</code>, <code>Umschalt</code> schaltet Einrasten aus</li>\n<li><b>„Als Modell speichern\"</b> legt die Szene in <code>GD.models</code> ab</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_u",
+   "type": "notes",
+   "title": "3D-Ansicht — Modell als Kachel",
+   "x": 1324,
+   "y": 3998,
+   "w": 440,
+   "h": 307,
+   "z": 129,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>modelview.js · 290 Zeilen · <code>◈</code> · 340 × 280</h3>\n<p>Zeigt ein gespeichertes Modell. Ziehen dreht, Mausrad ändert den Abstand, ein\nSchalter oben rechts startet eine langsame Kamerafahrt (Tempo einstellbar).\nDoppelklick öffnet das Modell zum Bearbeiten.</p>\n<p>Die Auflösung folgt dem Board-Zoom und ist gedeckelt — für viele Kacheln reicht\n„normal\".</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_v",
+   "type": "notes",
+   "title": "Code-Sandbox — Features vorführen",
+   "x": 1324,
+   "y": 4329,
+   "w": 440,
+   "h": 450,
+   "z": 130,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>sandbox.js · 428 Zeilen · <code>‹›</code> · 620 × 400</h3>\n<p>HTML-, CSS- und JS-Tab, Vorschau daneben (Trennlinie verschiebbar), Konsole darunter.\n<code>Strg+Enter</code> oder „Ausführen\", optional Neustart beim Tippen.</p>\n<ul>\n<li>läuft in einem <code>sandbox=\"allow-scripts\"</code>-iframe <b>ohne Zugriff auf das\nBoard</b></li>\n<li><code>console.log/warn/error</code>, Laufzeitfehler und abgelehnte Promises werden\nin die Konsole gespiegelt</li>\n<li>Vorlagen: Minimal, Canvas-Animation, UI-Interaktion, „3D-Modell verwenden\"</li>\n<li>Export als eigenständige <code>.html</code></li>\n</ul>\n<p>Im Sandbox-Code steht <code>GameDesk</code> bereit — der einzige Weg von innen nach\naußen, und er führt nur zu den 3D-Modellen.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_w",
+   "type": "notes",
+   "title": "Projekt — eine andere Tafel als Kachel",
+   "x": 1324,
+   "y": 4803,
+   "w": 440,
+   "h": 461,
+   "z": 131,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>project.js · 248 Zeilen · <code>🗂</code> · 360 × 300</h3>\n<p>Zeigt, <b>dass</b> es ein zweites Projekt gibt, ohne dessen Innenleben auszubreiten:\nName, Dateiname, Anzahl Fenster/Pfeile/Modelle, Modul-Aufteilung, Änderungsdatum und\neine kleine Vorschau, die die Fenster der anderen Tafel als Rechtecke zeichnet.</p>\n<ul>\n<li>Datei im Inspector aus dem Bibliotheksordner wählen, „Auffrischen\" liest neu ein</li>\n<li><b>Alles Angezeigte liegt im Zustand der Kachel</b> — damit steht auch ohne\nOrdnerzugriff etwas da (über <code>file://</code> oder wenn die Tafel weitergegeben wurde)</li>\n<li>„Öffnen\" geht hinein (<code>GD.library.hinein</code>), „← Zurück\" wieder heraus;\ndas geht mehrere Ebenen tief</li>\n<li>Vor jedem Wechsel wird die aktuelle Tafel in ihre eigene Datei geschrieben</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_x",
+   "type": "notes",
+   "title": "Worker — Gegenstelle zum Broweg",
+   "x": 1324,
+   "y": 5288,
+   "w": 440,
+   "h": 685,
+   "z": 132,
+   "accent": "#57c98a",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>worker.js · 472 Zeilen · <code>⚗</code> · 400 × 380</h3>\n<p>Der <b>bro-server</b> aus dem Broweg-Projekt verteilt Aufgaben an Worker-PCs: Jeder\nWorker hängt per WebSocket am Gateway, meldet Herzschläge und nimmt Aufträge entgegen;\nErgebnis, Verbrauch und Commit-Hash laufen zurück.</p>\n<p>Diese Kachel ist die Gegenstelle auf der Tafel:</p>\n<ul>\n<li>wer <b>online</b> ist (online · arbeitet · Kontingent aufgebraucht · offline), mit\nFähigkeiten, erledigten Aufgaben, Token-Verbrauch und letztem Herzschlag</li>\n<li>die letzten <b>Aufgaben</b> (wartet · zugeteilt · läuft · fertig · gescheitert ·\nabgebrochen) mit Worker, Repo und Commit-Hash</li>\n<li><b>„Aufgabe geben…\"</b> — Titel, Auftrag (geht als Prompt an Claude auf dem\nWorker-PC) und freiwillig ein Repo; der Server sucht einen freien Worker, sonst wartet\ndie Aufgabe in der Queue</li>\n<li>Anmelden/Abmelden, neuen Worker anlegen — <b>der Klartext-Token kommt genau\neinmal</b> zurück, danach kennt der Server nur seinen Hash</li>\n<li>Abfragetakt in Sekunden; <code>0</code> schaltet das Nachladen ab, im unsichtbaren\nTab wird ohnehin nicht gefragt</li>\n</ul>\n<p>Der Zustand hält <code>letzte</code> — das zuletzt Gesehene. Ohne Server\n(<code>file://</code>) bleibt die Kachel bei diesem Stand stehen, statt leer zu sein.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_y",
+   "type": "notes",
+   "title": "geom3d.js — die Grundkörper",
+   "x": 2328,
+   "y": 3468,
+   "w": 440,
+   "h": 418,
+   "z": 133,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/geom3d.js · 347 Zeilen · <code>GD.geom3d</code></h3>\n<p><b>Verrundung entsteht in der Geometrie</b>, nicht im Shader: Ein geschlossener\nQuerschnitt (Kreis oder verrundetes n-Eck) wird entlang eines Profils (verrundetes\nRechteck bzw. Dreieck) rotiert. Beim Quader laufen so alle zwölf Kanten und acht Ecken\nrund, beim Kegel zusätzlich die Spitze.</p>\n<ul>\n<li><code>KINDS</code> — die neun Formen mit ihren Parametern</li>\n<li><code>key(kind, params)</code> · <code>get(kind, params)</code> —\n<b>Netze werden geteilt</b>: hundert gleiche Würfel belegen ein Netz und einen\nGPU-Puffer. Der Zwischenspeicher hält 160 Einträge</li>\n<li><code>stats()</code> — Netze und Dreiecke; ein Grundkörper hat typisch 300–1 300</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_z",
+   "type": "notes",
+   "title": "gl3d.js — der Renderer",
+   "x": 2328,
+   "y": 3910,
+   "w": 440,
+   "h": 472,
+   "z": 134,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/gl3d.js · 803 Zeilen · <code>GD.gl3d</code> · <code>GD.m4</code></h3>\n<p>Kein three.js, keine Abhängigkeit — rund 800 Zeilen WebGL2.</p>\n<ul>\n<li><b>Ein einziger GL-Kontext</b> für das ganze Board. Jede Kachel lässt in einen\nversteckten Puffer zeichnen und kopiert das Bild per <code>drawImage</code> in ihr\neigenes 2D-Canvas. Browser erlauben nur rund 16 Kontexte — so sind beliebig viele\n3D-Fenster möglich</li>\n<li>Schattenkarte, Strahlentreffer (<code>ray</code>) fürs Anfassen von Objekten</li>\n<li><code>M4</code> — <code>perspective · ortho · lookAt · compose · invert ·\nnormalMatrix</code></li>\n<li><code>orbitPos(cam) · addAnimator(fn) · stats()</code></li>\n</ul>\n<p><b>Gezeichnet wird nur bei Bedarf:</b> Kacheln außerhalb des Sichtfelds pausieren\n(<code>IntersectionObserver</code>), im Hintergrundtab läuft keine Animation, die\nKamerafahrt begnügt sich mit 30 Bildern/s, und die Auflösung folgt dem Board-Zoom.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_10",
+   "type": "notes",
+   "title": "models.js — die Modell-Bibliothek",
+   "x": 2808,
+   "y": 3468,
+   "w": 440,
+   "h": 515,
+   "z": 135,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/models.js · 336 Zeilen · <code>GD.models</code></h3>\n<p>Die gespeicherten Szenen liegen in <code>doc.models</code> — sie gehören zur Tafel,\nnicht zu einem Fenster.</p>\n<ul>\n<li><code>all · get · byName · save · remove · rename · usage(id)</code></li>\n<li><code>flatten(scene)</code> — löst <code>ref</code>-Knoten auf: Ein Modell darf ein\nanderes als <b>eine Form</b> enthalten. Der Verweis lässt sich als Ganzes bewegen,\ndrehen und skalieren; Änderungen am Original wirken überall</li>\n<li><code>bake(scene)</code> — alle Formen zu <b>einem</b> Netz, in Modellkoordinaten,\nmit <code>groups</code> je Form und den Lichtern</li>\n<li><code>bounds · normScene · normNode · defaultScene · defaultEnv</code></li>\n<li><code>applySunPos(env)</code> — die Sonne scheint immer zum Nullpunkt, ihre\nPosition legt also die Einstrahlung fest</li>\n<li><code>describe()</code> — kompakte Liste für die Sandbox</li>\n</ul>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_11",
+   "type": "code",
+   "title": "GameDesk — die Brücke in die Sandbox",
+   "x": 2808,
+   "y": 4007,
+   "w": 520,
+   "h": 490,
+   "z": 136,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "path": "js/modules/sandbox.js",
+    "code": "/* Im Sandbox-Code steht GameDesk bereit. Es ist der EINZIGE Weg\n   von innen nach aussen - und er fuehrt nur zu den 3D-Modellen. */\n\nGameDesk.models                  // [{ id, name, updated, shapes, lights }]\nGameDesk.getModel('Turm')        // Formen, Transformationen, Material\nawait GameDesk.geometry('Turm')  // fertig gebackenes Netz:\n\n{\n  id, name,\n  position: Float32Array,   // x,y,z je Ecke\n  normal:   Float32Array,\n  uv:       Float32Array,\n  index:    Uint32Array,    // Dreiecke\n  groups:   [{ start, count, name, shape, color,\n               opacity, emissive, emissiveStrength }],\n  lights:   [{ pos, color, intensity, range }],\n  vertices, triangles\n}\n\n// Texturbilder werden aus Groessengruenden NICHT uebergeben -\n// nur material.hasTexture.",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     1,
+     2
+    ],
+    "caption": "Die Vorlage „3D-Modell verwenden\" zeichnet damit ein rotierendes Modell auf ein 2D-Canvas — ohne WebGL, ohne Zugriff auf das Board."
+   }
+  },
+  {
+   "id": "win_gd_12",
+   "type": "code",
+   "title": "Das Dokument — .gamedesk.json",
+   "x": 244,
+   "y": 6276,
+   "w": 520,
+   "h": 474,
+   "z": 137,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "path": "js/core/store.js",
+    "code": "{\n  \"format\":  \"gamedesk-board\",   // Pflicht - sonst wird nichts geladen\n  \"version\": 1,\n  \"name\":    \"GameDesk — Funktionsweise\",\n\n  \"view\": { \"x\": 0, \"y\": 0, \"scale\": 0.34 },   // Kamera\n  \"grid\": { \"size\": 20, \"show\": true, \"snap\": true },\n\n  \"windows\":     [ … ],   // die Kacheln UND die Rahmen\n  \"connections\": [ … ],   // die Pfeile\n  \"bundles\":     [ … ],   // gemeinsame Strecken mehrerer Pfeile\n  \"models\":      [ … ],   // 3D-Szenen der ganzen Tafel\n\n  \"aenderungen\": {        // Aenderungsverfolgung\n    \"basis\":   { id, zeit, titel, wer, abzug },   // letzter Commit\n    \"commits\": [ … ]                              // aeltere, je mit Liste\n  },\n\n  \"nextZ\": 1              // laufende Nummer fuer bringToFront\n}",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     2,
+     15
+    ],
+    "caption": "Ein Rahmen ist kein Sonderfall, sondern ein Fenster vom Typ frame. Deshalb kann an ihm auch ein Pfeil hängen — genau so hängt der Worker-Connector am Ideen-Rahmen."
+   }
+  },
+  {
+   "id": "win_gd_13",
+   "type": "code",
+   "title": "Ein Fenster",
+   "x": 244,
+   "y": 6784,
+   "w": 520,
+   "h": 360,
+   "z": 138,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "path": "js/core/store.js",
+    "code": "{\n  \"id\":    \"win_gd_1\",\n  \"type\":  \"notes\",        // Modul-id; unbekannt -> Platzhalter, Zustand bleibt\n  \"title\": \"Werkzeugleiste\",\n  \"x\": -1560, \"y\": -960, \"w\": 440, \"h\": 330,\n  \"z\": 112,                // zwei Baender: frame 0+z, alles andere 100000+z\n  \"accent\": \"#6ea8fe\",\n  \"collapsed\": false,\n  \"state\": { … }           // gehoert dem Modul, der Kern liest es nie\n}\n\n/* normalize() erzwingt beim Laden: w >= 140, h >= 80, Zahlen sind\n   Zahlen, ids sind eindeutig. Ein doppeltes id bekommt ein neues. */",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     7
+    ],
+    "caption": "z darf beim Nach-hinten-Legen bis 0 fallen — deshalb steht nirgends w.z || 1: das machte aus einer 0 eine 1 und risse die Ordnung ein."
+   }
+  },
+  {
+   "id": "win_gd_14",
+   "type": "code",
+   "title": "Ein Pfeil und ein Bündel",
+   "x": 244,
+   "y": 7177,
+   "w": 520,
+   "h": 507,
+   "z": 139,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "path": "js/core/store.js",
+    "code": "// Verbindung\n{\n  \"id\": \"con_gd_7\",\n  \"from\": { \"win\": \"win_a\", \"side\": \"r\", \"shape\": null },\n  \"to\":   { \"win\": \"win_b\", \"side\": \"l\", \"shape\": \"sh_12\" },\n  \"label\": \"liefert Netz\",\n  \"labelSize\": 12,          // feste Pixelgroesse, zoomt nicht mit\n  \"t\": null,                // null = steht frei, Zahl = von Hand gesetzt\n  \"color\": \"#6ea8fe\", \"width\": 2,\n  \"dash\":  \"solid\",         // solid | dashed | dotted\n  \"curve\": \"ortho\",         // ortho | straight | bezier\n  \"heads\": \"end\",           // none | end | both\n  \"bundle\": null\n}\n\n// Buendel - reine Wegfuehrung, es traegt keine Enden\n{\n  \"id\": \"bnd_1\", \"name\": \"Aktionen\", \"collapsed\": true,\n  \"color\": \"#8fa4c4\", \"width\": 2.5,\n  \"spreizung\": 11,          // Abstand der Adern im Kanal\n  \"laenge\": 260,            // Laenge des gemeinsamen Stuecks\n  \"mitte\": { \"x\": 0, \"y\": 0 }   // null = selbst gewaehlt\n}",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     5,
+     8
+    ],
+    "caption": "shape hängt ein Ende an eine einzelne Wireframe-Form statt an das ganze Fenster."
+   }
+  },
+  {
+   "id": "win_gd_15",
+   "type": "notes",
+   "title": "Vier Speicherorte",
+   "x": 804,
+   "y": 6276,
+   "w": 440,
+   "h": 581,
+   "z": 140,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>1 · Browser-Speicher <span style=\"color:#8a93a5\">(immer)</span></h3>\n<p><code>localStorage['gamedesk.doc.v1']</code> — jede Änderung landet 600 ms später hier.\nDaneben <code>gamedesk.prefs.v1</code> für Thema, Übersichtskarte, Bibliotheksmodus,\nVerknüpfung und „Automatisch in die Datei\".</p>\n<h3>2 · Das Medienlager <span style=\"color:#8a93a5\">(IndexedDB)</span></h3>\n<p><code>gamedesk-medien</code> — die Bytes von Bildern, Ton und Video. Im Dokument steht\nnur <code>depot:&lt;sha256&gt;</code>.</p>\n<h3>3 · Die Projektdatei <span style=\"color:#8a93a5\">(auf Knopfdruck)</span></h3>\n<p><code>Strg+S</code> schreibt in die <b>verknüpfte</b> Datei; ist keine verknüpft, legt\nes sie im Bibliotheksordner an; gibt es keinen, lädt es eine <code>.gamedesk.json</code>\nherunter. Die Medien werden dabei wieder eingebettet.</p>\n<h3>4 · Die Rückgängig-Historie <span style=\"color:#8a93a5\">(Arbeitsspeicher)</span></h3>\n<p>Bis zu 60 Schnappschüsse als Zeichenketten. Sie überlebt kein Neuladen — das ist\nAbsicht: Rückgängig gehört zur Sitzung. Was die Tafel <i>dauerhaft</i> über ihre\nGeschichte weiß, steht in <code>doc.aenderungen</code>.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_16",
+   "type": "notes",
+   "title": "changed() oder commit()?",
+   "x": 804,
+   "y": 6881,
+   "w": 440,
+   "h": 552,
+   "z": 141,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Zwei Wege, und die Wahl ist keine Geschmacksfrage:</p>\n<ul>\n<li><code>ctx.changed()</code> — <b>„es hat sich etwas geändert\"</b>. Löst das\nAutospeichern aus, <b>kein</b> Historieneintrag. Das Richtige beim Tippen, beim Ziehen\neines Reglers, bei jedem Zwischenschritt.</li>\n<li><code>ctx.commit('Notiz bearbeitet')</code> — <b>„das war eine Handlung\"</b>. Ein\nSchnappschuss in die Rückgängig-Historie, <code>Strg+Z</code> springt genau hierher\nzurück. Das Richtige beim Loslassen, beim Schließen eines Dialogs, nach einer\nabgeschlossenen Eingabe.</li>\n</ul>\n<p>Die Notiz macht beides: <code>changed()</code> nach 250 ms,\n<code>commit()</code> erst nach 1 400 ms Ruhe. So entsteht pro Absatz ein\nRückgängig-Schritt, nicht pro Buchstabe.</p>\n<p><code>GD.store.touch()</code> ist der dritte Weg: speichern <b>ohne</b> Historie —\nfür die Kameraposition. Sonst wäre der Rückgängig-Stapel voll mit Scrollen.</p>\n<p><b>Ein Vierter, ganz anderer:</b> <code>GD.aenderungen.festschreiben()</code> schreibt\neinen Stand fest. Das ist kein Rückgängig-Schritt, sondern ein Merkzeichen in der\nGeschichte der Tafel.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_17",
+   "type": "notes",
+   "title": "normalize() — fremde Daten hereinlassen",
+   "x": 804,
+   "y": 7457,
+   "w": 440,
+   "h": 472,
+   "z": 142,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Jedes Dokument von außen geht durch <code>normalize(raw)</code>. Es gibt\n<code>null</code> zurück, wenn etwas grundsätzlich nicht stimmt, und repariert sonst\nstill:</p>\n<ul>\n<li>falsches <code>format</code> oder fehlendes <code>windows</code> → <code>null</code></li>\n<li>doppelte oder fehlende <code>id</code> → neue über <code>U.uid()</code></li>\n<li>Zahlen, die keine sind → Vorgabe; <code>scale</code> auf 0,05–6 begrenzt</li>\n<li>Pfeile auf nicht vorhandene Fenster → <b>weg</b> (sonst zeigt ein Pfeil ins Leere)</li>\n<li>Bündelzugehörigkeit auf ein unbekanntes Bündel → <code>null</code></li>\n<li><code>aenderungen.basis</code> ohne <code>abzug</code> → <code>null</code></li>\n<li><code>state</code> bleibt <b>unangetastet</b> — der Kern weiß nicht, was drinsteht,\nund darf es deshalb auch nicht anfassen</li>\n</ul>\n<p><code>nextZ</code> wird auf das Maximum aller vorhandenen <code>z</code> gezogen —\nsonst läge das nächste nach vorn geholte Fenster hinter den alten.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_18",
+   "type": "notes",
+   "title": "vergleich.js — der Abzug",
+   "x": 1808,
+   "y": 6276,
+   "w": 440,
+   "h": 537,
+   "z": 143,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/vergleich.js · 320 Zeilen · <code>GD.vergleich</code></h3>\n<p>Rein rechnend, <b>ohne einen einzigen Zugriff auf <code>window</code> oder\n<code>document</code></b> — und deshalb in beiden Welten lauffähig: als klassisches\n<code>&lt;script&gt;</code> im Browser und als <code>require()</code> in Node.</p>\n<ul>\n<li><code>abzug(doc)</code> — ein schlanker Fingerabdruck: je Fenster nur Lage, Größe,\nTitel und eine <b>Prüfsumme des Inhalts</b>, rund 90 Byte pro Kachel. Eine zweite Kopie\ndes ganzen Dokuments wären bei den großen Tafeln mehrere MB</li>\n<li><code>punkte(alt, neu)</code> — was sich geändert hat, als Liste einzelner Befunde\nmit Klasse und Kasten</li>\n</ul>\n<p><b>Absichtlich nicht verfolgt:</b> <code>view</code> (die Kamera ist keine Änderung an\nder Tafel), <code>z</code> (jeder Klick hebt ein Fenster nach vorn — nur Rauschen) und\ndie Anzeigeschalter <code>grid.show/snap</code>.</p>\n<p>Sieben Klassen mit Rang, alle im roten Feld, unterschieden über den Ton:\n<b>Neu · Entfernt · Inhalt · Titel · Größe · Verschoben · Darstellung</b>. Ein Kasten\nträgt genau eine — wie bei einer Objekterkennung.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_19",
+   "type": "notes",
+   "title": "aenderungen.js — Verlauf und Sicht",
+   "x": 2368,
+   "y": 6276,
+   "w": 440,
+   "h": 623,
+   "z": 144,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/aenderungen.js · 288 Zeilen · <code>GD.aenderungen</code></h3>\n<p>Die Tafel führt einen eigenen, kleinen Verlauf <b>neben</b> der Rückgängig-Historie:</p>\n<ul>\n<li><b>Commit</b> — ein festgeschriebener Stand: der Abzug, wer ihn geschrieben hat\n(<code>mensch</code> oder <code>ki</code>), Titel, Text und die Liste der Änderungen, die\nzu ihm geführt haben</li>\n<li><b>Basis</b> — der Abzug des <i>jüngsten</i> Commits. Alles danach ist „offen\"</li>\n</ul>\n<p><b>Warum nicht jeder Commit mit vollem Abzug?</b> Ein Abzug wiegt bei den großen\nTafeln rund 12 KB; vierzig davon lägen dauerhaft in jeder <code>.gamedesk.json</code>.\nVollständig gehalten wird nur die Basis, ältere Commits behalten ihre fertige\nÄnderungsliste. Das beantwortet „was ist seither passiert\" und „was steckte in Commit X\"\n— nur nicht „zeig mir alles seit vorletzter Woche\".</p>\n<p><b>Die Änderungssicht</b> (⬚ in der Leiste, <code>Strg+Umschalt+D</code>) legt über\njede geänderte Kachel einen roten Kasten mit beschriftetem Reiter. Die Kästen liegen in\n<code>#diff-layer</code> und wandern mit Zoom und Verschieben mit; die Reiter hängen in\n<code>#label-layer</code> und behalten ihre Pixelgröße.</p>\n<p>Höchstens 60 Commits, höchstens 300 mitgeschriebene Befunde je Commit.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1a",
+   "type": "notes",
+   "title": "depot.js — das Medienlager",
+   "x": 2368,
+   "y": 6902,
+   "w": 440,
+   "h": 649,
+   "z": 145,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>js/core/depot.js · 372 Zeilen · <code>GD.depot</code></h3>\n<p><b>Das Problem:</b> Bilder, Ton und Video sind Bytes, keine Zeichen. Sie standen als\n<code>data:</code>-URL mitten im Dokument — und landeten damit bei jedem Autospeichern im\n<code>localStorage</code>, der pro Herkunft rund <b>5 MB</b> fasst. Ein einziges Foto\nsprengte ihn, und danach ließ sich <i>gar nichts</i> mehr sichern. Schlimmer noch: Der\nVerlaufsstapel hält bis zu 60 Abzüge als Text — mit eingebetteten Medien schnell\nGigabyte.</p>\n<p><b>Die Lösung:</b> Die Bytes liegen in einer eigenen IndexedDB. Im Dokument steht nur\nnoch <code>depot:&lt;id&gt;</code> — und die <b>id ist der Inhalt selbst</b> (SHA-256).\nDasselbe Bild zweimal eingefügt belegt darum nur einmal Platz.</p>\n<p>Drei Übersetzungen halten das zusammen:</p>\n<ul>\n<li><code>aufloesen(v)</code> — <code>depot:</code> → <code>blob:</code>-URL (zum Anzeigen)</li>\n<li><code>einlesen(doc)</code> — <code>data:</code> → <code>depot:</code> (beim Öffnen\nfremder Tafeln)</li>\n<li><code>aufblasen(doc)</code> — <code>depot:</code> → <code>data:</code> (beim\nSchreiben in die Datei)</li>\n</ul>\n<p>Die Dateien auf der Platte bleiben dadurch <b>in sich geschlossen</b>: Eine\n<code>.gamedesk.json</code> trägt ihre Medien mit sich, man kann sie verschicken. Nur der\nBrowser-Zwischenstand ist schlank. Kurze <code>data:</code>-URLs unter 4 kB bleiben, wo\nsie sind.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1b",
+   "type": "code",
+   "title": "festschreiben.mjs — Commit ohne Browser",
+   "x": 1808,
+   "y": 6837,
+   "w": 520,
+   "h": 458,
+   "z": 146,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "path": "gamedesk/tools/festschreiben.mjs",
+    "code": "/**\n * Einen Stand festschreiben - ohne Browser.\n *\n * Tafeln wachsen auch ausserhalb von GameDesk: Ein Umbauskript in\n * boards/ legt Kacheln um, benennt Abschnitte um, zieht Rahmen nach.\n * Damit die Aenderungssicht danach nicht die GANZE Tafel rot\n * einrahmt, gehoert zu so einem Lauf ein Commit.\n *\n *   node tools/festschreiben.mjs <datei.gamedesk.json>\n *        --titel \"Abschnitte umgebaut\"\n *        [--text \"…\"] [--wer ki|mensch] [--zeigen]\n *\n *   --zeigen   nur auflisten, was offen ist; nichts schreiben\n *\n * Gerechnet wird mit DEMSELBEN Kern wie im Browser\n * (js/core/vergleich.js) - ein zweiter Abgleich, der auseinanderliefe,\n * waere schlimmer als keiner.\n */\nconst V = require(join(HEIM, 'js', 'core', 'vergleich.js'));",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     16,
+     17,
+     18,
+     20
+    ],
+    "caption": "Deshalb der Doppelkopf in vergleich.js: dieselbe Datei ist module.exports in Node und GD.vergleich im Browser."
+   }
+  },
+  {
+   "id": "win_gd_1c",
+   "type": "notes",
+   "title": "Zwei Wege zum Ordner",
+   "x": 3372,
+   "y": 6276,
+   "w": 440,
+   "h": 481,
+   "z": 147,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>server — <code>tools/serve.mjs</code></h3>\n<p>Start über <code>GameDesk starten.bat</code>. Der Pfad wird <b>frei eingetippt</b>, in\n<code>tools/bibliothek.json</code> gemerkt und gilt beim nächsten Start wieder — ohne\nNachfrage.</p>\n<h3>ordner — File System Access API</h3>\n<p>Chrome oder Edge über http/https. Ein echter Ordnerdialog, der Ordner darf überall\nliegen. Der Griff wird in <b>IndexedDB</b> gemerkt; nach einem Neustart des Browsers\nfragt Chrome einmal nach der Erlaubnis — eine Sicherheitsvorgabe, kein Fehler.</p>\n<h3>keiner — <code>file://</code></h3>\n<p>Beim Doppelklick auf <code>index.html</code> steht keiner von beiden zur Verfügung.\nDann bleibt der Weg über „Öffnen…\" und „Speichern\" als Datei — und die Tafel\nfunktioniert trotzdem vollständig. Nur die Worker-Kachel bleibt bei dem stehen, was sie\nzuletzt gesehen hat.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1d",
+   "type": "code",
+   "title": "Die Endpunkte der Bibliothek",
+   "x": 3852,
+   "y": 6276,
+   "w": 520,
+   "h": 360,
+   "z": 148,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "path": "gamedesk/tools/serve.mjs",
+    "code": "GET    /api/bibliothek          -> { ordner, existiert, schreibbar }\nPOST   /api/bibliothek          <- { ordner, anlegen }   Ordner festlegen\nGET    /api/bibliothek/liste    -> { …, projekte: [ … ] }\nGET    /api/bibliothek/datei?name=…\nPUT    /api/bibliothek/datei?name=…   <- die ganze .json\nDELETE /api/bibliothek/datei?name=…\n\n/* Ein Projekt in der Liste:\n   { datei, name, groesse, geaendert, fenster, pfeile, modelle, module } */\n\n// Auch unter einem Unterpfad erreichbar (/gamedesk/api/…), damit\n// GameDesk und andere Seiten aus derselben Herkunft laufen koennen.\nconst treffer = /(\\/api\\/.*)$/.exec(url.pathname);",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     12
+    ],
+    "caption": "Der Server lauscht nur auf 127.0.0.1. Er sucht bis zu zwei Ebenen tief und nimmt nur Dateien, in denen format: \"gamedesk-board\" steht."
+   }
+  },
+  {
+   "id": "win_gd_1e",
+   "type": "code",
+   "title": "sicherePfad() — kein Ausbruch aus dem Ordner",
+   "x": 3852,
+   "y": 6669,
+   "w": 520,
+   "h": 328,
+   "z": 149,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "path": "gamedesk/tools/serve.mjs",
+    "code": "/** Nur Namen innerhalb des Bibliotheksordners, keine Ausbrueche. */\nfunction sicherePfad(name) {\n  if (typeof name !== 'string' || !name) return null;\n  if (!/\\.json$/i.test(name)) return null;\n  if (/[:*?\"<>|]/.test(name)) return null;      // keine Laufwerke, keine Wildcards\n  const rein = normalize(name).replace(/^([/\\\\])+/, '');\n  if (rein.split(/[/\\\\]/).includes('..')) return null;\n  const voll = resolve(join(ordner, rein));\n  if (voll !== ordner && !voll.startsWith(ordner + sep)) return null;\n  return voll;\n}",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     8,
+     9
+    ],
+    "caption": "Der Ordner wird einmal gesetzt; jeder weitere Aufruf nennt nur noch einen Namen darin. Geprüft mit ../../x.json, ..\\..\\x.json und C:\\Windows\\x.json."
+   }
+  },
+  {
+   "id": "win_gd_1f",
+   "type": "code",
+   "title": "Die Brücke nach Broweg",
+   "x": 3852,
+   "y": 7029,
+   "w": 520,
+   "h": 604,
+   "z": 150,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "path": "gamedesk/tools/serve.mjs",
+    "code": "/*\n * Die Worker-Kachel spricht mit dem bro-server (Worker-Modul:\n * /workers, /tasks). Direkt aus der Seite heraus ginge das nicht -\n * der bro-server schickt keine CORS-Koepfe und haengt seine Sitzung\n * an ein Cookie, das ein fremder Ursprung nicht mitschicken darf.\n * Also laeuft alles ueber diesen Server: gleiche Herkunft, kein CORS,\n * und das Sitzungs-Cookie liegt hier statt im Browser.\n *\n * Das Cookie bleibt ABSICHTLICH nur im Arbeitsspeicher. Auf die\n * Platte geht nur die Adresse (tools/broweg.json) - nie E-Mail, nie\n * Passwort, nie das Cookie.\n *\n * Weitergereicht werden ausschliesslich die Pfade in ERLAUBT.\n * Die Bruecke ist kein offener Weiterleiter.\n */\nconst ERLAUBT = [\n  /^\\/health$/,\n  /^\\/auth\\/session$/,\n  /^\\/workers$/,          /^\\/workers\\/[\\w-]+$/,\n  /^\\/tasks$/,            /^\\/tasks\\/[\\w-]+$/,\n  /^\\/tasks\\/[\\w-]+\\/(followup|feedback)$/\n];\n\nGET  /api/broweg            -> { basis, angemeldet, benutzer }\nPOST /api/broweg            <- { basis }\nPOST /api/broweg/anmelden   <- { email, passwort }\nPOST /api/broweg/abmelden\n*/  /api/broweg/ruf?pfad=…  -> weitergereicht, wenn ERLAUBT",
+    "firstLine": 1,
+    "size": 10.5,
+    "wrap": false,
+    "marks": [
+     10,
+     11,
+     13,
+     14
+    ],
+    "caption": "Nach einem Neustart des Servers muss man sich neu anmelden — das ist der Preis dafür, dass kein Zugangsdatum die Platte berührt."
+   }
+  },
+  {
+   "id": "win_gd_1g",
+   "type": "notes",
+   "title": "Die Reise durch die Projekte",
+   "x": 3372,
+   "y": 7329,
+   "w": 440,
+   "h": 419,
+   "z": 151,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Eine Projekt-Kachel führt in eine andere Tafel <b>hinein</b>; „← Zurück\" bringt einen\nwieder heraus. Das geht mehrere Ebenen tief — <code>GD.library.verlauf()</code> ist der\nStapel.</p>\n<ul>\n<li><code>hinein(datei)</code> — sichert <b>zuerst</b> die aktuelle Tafel in ihre eigene\nDatei, legt sie auf den Stapel, lädt die neue, passt den Zoom ein</li>\n<li><code>zurueck()</code> — dasselbe rückwärts</li>\n</ul>\n<p><b>Warum das Sichern davor sein muss:</b> Sonst stünde beim Zurückkommen der Stand von\nzuletzt gespeichert da — die Arbeit von eben wäre still weg.</p>\n<p>In <code>brauweg-funktionsweise.gamedesk.json</code> sitzt so eine Kachel im Bereich\n<i>Spielmodule</i> und führt nach Feldherr.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1h",
+   "type": "notes",
+   "title": "tools/serve.mjs — drei Aufgaben",
+   "x": 3372,
+   "y": 6772,
+   "w": 440,
+   "h": 537,
+   "z": 152,
+   "accent": "#ef6b6b",
+   "collapsed": false,
+   "state": {
+    "html": "<h3>1 · Ausliefern</h3>\n<p>Ein Dateiserver ohne jedes Paket — Node bringt alles mit.\n<code>node tools/serve.mjs [port] [wurzel]</code>.</p>\n<p><b>Wichtig ist <code>Cache-Control: no-store</code>.</b> Ohne diesen Kopf liefert der\nBrowser nach einer Änderung weiter die alte <code>.js</code> aus dem Speicher — und man\nsucht den Fehler im Quelltext statt im Cache. (Ein Aufruf mit anderem Abfrageteil,\n<code>?frisch=2</code>, hilft ebenfalls.)</p>\n<h3>2 · Die Bibliothek</h3>\n<p>Ein Ordner auf der Platte als Projektliste, gemerkt in\n<code>tools/bibliothek.json</code>. Vorgabe ist <code>gamedesk/boards</code>.</p>\n<p>Ein zweiter Pfad als Argument legt statt GameDesk einen beliebigen Ordner offen —\npraktisch, um fremde Seiten daneben zu betrachten.</p>\n<h3>3 · Die Brücke nach Broweg <span style=\"color:#e8b45c\">(neu)</span></h3>\n<p><code>/api/broweg/*</code> — der Weg der Worker-Kachel zum bro-server. Adresse in\n<code>tools/broweg.json</code>, Sitzung nur im Arbeitsspeicher.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1i",
+   "type": "notes",
+   "title": "Die fünf Anordnungsregeln",
+   "x": 244,
+   "y": 8334,
+   "w": 440,
+   "h": 521,
+   "z": 153,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Der Knopf <b>„⤡ Anordnen\"</b> setzt sie durch. Sind Fenster ausgewählt, gilt er nur\nfür diese, sonst für das ganze Board.</p>\n<ol>\n<li><b>Text vollständig sichtbar.</b> Die Höhe wird <b>gemessen</b>, nicht geschätzt:\nder Inhalt wird versteckt außerhalb des Boards gerendert, sein\n<code>scrollHeight</code> ist die Antwort.</li>\n<li><b>Keine Überlappungen.</b> Kollidierende Kacheln weichen <b>nur nach unten</b> aus —\nso bleibt die Leserichtung, und das Verfahren endet garantiert. Rahmen zählen nicht mit.</li>\n<li><b>Rahmen sitzen am Inhalt.</b> 44 px Luft ringsum, oben zusätzlich das Kopfband.</li>\n<li><b>Bereiche benannt.</b> Jeder Rahmen gehört zu einem Bereich aus der Taxonomie.</li>\n<li><b>Überschriften frei.</b> Im Kopfband eines Rahmens liegt nichts. Was hineinragt,\nwandert nach unten — als <b>Gruppe</b>, nicht Kachel für Kachel.</li>\n</ol>\n<p>Der Bericht steht unter <b>⚙ Einstellungen → Anordnung</b>, mit einem „zeigen\"-Knopf\nje Befund.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1j",
+   "type": "notes",
+   "title": "Die Bereichs-Taxonomie",
+   "x": 244,
+   "y": 8879,
+   "w": 440,
+   "h": 604,
+   "z": 154,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Zehn Bereiche, je mit Farbe und Ordnungszahl. Die Zahl bestimmt, in welcher Folge\n<code>GD.layout.bereich()</code> neue Bereiche untereinanderlegt.</p>\n<ul>\n<li><span style=\"color:#b78cf7\">■</span> Gamedesign · 10</li>\n<li><span style=\"color:#6ea8fe\">■</span> Menüs · 20</li>\n<li><span style=\"color:#57c98a\">■</span> Game · 30</li>\n<li><span style=\"color:#f78ca0\">■</span> Charaktere · 40</li>\n<li><span style=\"color:#4fd1c5\">■</span> Mechanik · 50</li>\n<li><span style=\"color:#8fa4c4\">■</span> Technik · 60</li>\n<li><span style=\"color:#e8b45c\">■</span> Daten · 70</li>\n<li><span style=\"color:#ef6b6b\">■</span> Betrieb · 80</li>\n<li><span style=\"color:#e0a0c8\">■</span> Medien · 90</li>\n<li><span style=\"color:#94a3b8\">■</span> Sonstiges · 100</li>\n</ul>\n<p>Erweitern über <code>GD.layout.merkeBereich({ id, label, tint, ordnung })</code>.\nGewählt wird der Bereich im Inspector eines Rahmens.</p>\n<p><b>Zwei Regeln halten das lesbar:</b> Verschachtelte Rahmen sind <b>immer</b> neutral\n(<code>#94a3b8</code>) und erben den Bereich ihrer Fläche — und ein Rahmen ohne\nUntertitel bekommt ein flacheres Kopfband als einer mit.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1k",
+   "type": "notes",
+   "title": "Zwei Stapelbänder",
+   "x": 244,
+   "y": 9507,
+   "w": 440,
+   "h": 425,
+   "z": 155,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Die Fenster liegen in zwei getrennten Bändern:</p>\n<ul>\n<li><b>Rahmen</b> — <code>0 + z</code></li>\n<li><b>alles andere</b> — <code>100 000 + z</code></li>\n</ul>\n<p>Damit kann ein Rahmen seinen Inhalt <b>nie</b> verdecken, egal wie oft man ihn nach\nvorn holt. <code>bringToFront</code> und <code>sendToBack</code> nehmen den Rahmeninhalt\nmit.</p>\n<p><b>Ein Pfeil darf verdecken.</b> <code>#conn-layer</code> liegt bei z-index\n2 500 000 — über den Fenstern: Er soll die Verbindung zeigen, nicht dahinter\nverschwinden. Getroffen wird trotzdem nur der Strich selbst.</p>\n<p>Die Rahmenüberschriften liegen dazwischen, bei 2 400 000 — sie müssen die Kacheln\nüberlagern dürfen, sonst sind sie auf Distanz weg.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1l",
+   "type": "notes",
+   "title": "Schrift — drei Familien, vier Regeln",
+   "x": 724,
+   "y": 8334,
+   "w": 440,
+   "h": 567,
+   "z": 156,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Alle drei liegen lokal in <code>fonts/</code> unter der SIL Open Font License, nur die\nlatin-Untermenge, zusammen rund 370 kB — kein fremder Server, damit GameDesk ohne Netz\nund über <code>file://</code> gleich aussieht.</p>\n<ul>\n<li><b>Inter</b> — Oberfläche und Fließtext</li>\n<li><b>Space Grotesk</b> — Überschriften, Marke, Fenster- und Rahmentitel</li>\n<li><b>JetBrains Mono</b> — Quelltext, Pfade, Dateinamen</li>\n</ul>\n<ol>\n<li>Jede Abschnitts-Überschrift wird gleich gesetzt: 10,5 px, Versalien, gesperrt.</li>\n<li>Zahlen, die untereinanderstehen, bekommen <b>Tabellenziffern</b>; im Fließtext\nbleiben sie proportional.</li>\n<li><b>Die Laufweite gehört zur Größe, nicht zur Schriftart.</b> Große Schrift wird enger\ngestellt (−0,022 em), kleine Zahlenschrift bekommt Luft (+0,006 em). Der Zeilenabstand\nläuft gegenläufig.</li>\n<li><b>Jede Schrift hält Mindestabstand</b> — 14 px (<code>--schrift-luft</code>). Nur\nLineale und Chips dürfen auf 6 px (<code>--schrift-luft-eng</code>); Lesetext nie.</li>\n</ol>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1m",
+   "type": "notes",
+   "title": "Abstände und Bewegung",
+   "x": 724,
+   "y": 8925,
+   "w": 440,
+   "h": 493,
+   "z": 157,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Alle Abstände kommen aus einer Leiter in <code>:root</code> —\n<code>--luft-1</code> (4 px) bis <code>--luft-6</code> (28 px). <i>Wer eine Zahl direkt\nins Blatt schreibt, hat sich nicht entschieden.</i></p>\n<p>Bewegung läuft über drei Zeiten und <b>eine</b> Kurve:</p>\n<ul>\n<li><code>--zeit-druck</code> 120 ms — Knopfdruck, Hover-Farbe</li>\n<li><code>--zeit-klein</code> 160 ms — kleine Einblendungen</li>\n<li><code>--zeit-gross</code> 220 ms — Meldungen, Überlagerungen</li>\n<li><code>--aus</code> <code>cubic-bezier(.23,1,.32,1)</code></li>\n</ul>\n<p>Drei Grundsätze: Rückmeldung kommt <b>beim Herunterdrücken</b>\n(<code>:active { scale(.97) }</code>), nicht beim Loslassen. Bewegt wird nur\n<code>transform</code> und <code>opacity</code> — beides läuft am Layout vorbei. Und\nVergrößern beim Überfahren steht hinter\n<code>@media (hover: hover) and (pointer: fine)</code>, sonst zuckt die Fläche unter dem\nFinger. <code>prefers-reduced-motion</code> nimmt alle Wege heraus und lässt Farbe und\nDeckkraft stehen.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1n",
+   "type": "notes",
+   "title": "Verdrahtete Spalten brauchen eine Gasse",
+   "x": 724,
+   "y": 9442,
+   "w": 440,
+   "h": 445,
+   "z": 158,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "<p><b>Die Pfeilbeschriftung behält ihre Pixelgröße</b> — beim Herauszoomen wird sie\nnicht kleiner, der Abstand zwischen den Pfeilen aber schon. Deshalb blenden alle\nBeschriftungen unter etwa 30 % Zoom aus; sonst läge alles übereinander.</p>\n<p>Von allein stellt sich eine Beschriftung auf das längste gerade Stück, das\n<b>neben</b> den Kacheln verläuft und breit genug für sie ist. Findet sie keins, sitzt\nsie auf der Nachbarkachel.</p>\n<blockquote>Zwischen zwei Spalten, zwischen denen Pfeile laufen, gehören rund\n<b>460 Welteinheiten</b> Platz. Das reicht für eine Zeile bei 32 % Zoom. Kacheln direkt\nnebeneinander bekommen ihre Beschriftung nie unter.</blockquote>\n<p>Diese Tafel hält <b>520</b> — ein bisschen mehr, weil einige Beschriftungen lang\nsind.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1o",
+   "type": "notes",
+   "title": "1. Tippen im Modul",
+   "x": 1728,
+   "y": 8334,
+   "w": 380,
+   "h": 185,
+   "z": 159,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Die Notiz hört auf <code>input</code>. Sie schreibt <b>nicht</b> sofort in den Zustand — erst 250 ms nach dem letzten Anschlag.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1p",
+   "type": "notes",
+   "title": "2. ctx.changed()",
+   "x": 2498,
+   "y": 8334,
+   "w": 380,
+   "h": 205,
+   "z": 160,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Das Fenster meldet dem Kern: „hier hat sich etwas geändert\". <b>Kein</b> Historieneintrag — sonst stünde jeder Buchstabe im Rückgängig-Stapel.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1q",
+   "type": "notes",
+   "title": "3. store.save()",
+   "x": 3268,
+   "y": 8334,
+   "w": 380,
+   "h": 225,
+   "z": 161,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>600 ms entprellt. <code>serialize()</code> holt über <code>windows.syncStates()</code> jeden Modulzustand ab und schreibt das Ganze nach <code>localStorage</code> — Medien nur als <code>depot:</code>-Verweis.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1r",
+   "type": "notes",
+   "title": "4. ctx.commit(label)",
+   "x": 4038,
+   "y": 8334,
+   "w": 380,
+   "h": 205,
+   "z": 162,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Nach 1 400 ms Ruhe: ein Schnappschuss in die Rückgängig-Historie, höchstens 60. Identische Zustände werden nicht doppelt abgelegt.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1s",
+   "type": "notes",
+   "title": "5. Strg+Z",
+   "x": 4808,
+   "y": 8334,
+   "w": 380,
+   "h": 205,
+   "z": 163,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p><code>store.undo()</code> setzt <code>doc</code> zurück und meldet <code>doc:restored</code>. <code>windows.reconcile()</code> behält bestehende Instanzen und füttert sie mit <code>setState()</code> — kein Neuaufbau.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1t",
+   "type": "notes",
+   "title": "6. Strg+S",
+   "x": 5578,
+   "y": 8334,
+   "w": 380,
+   "h": 225,
+   "z": 164,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p><code>library.sichern()</code> → <code>depot.aufblasen()</code> → <code>PUT api/bibliothek/datei</code>. Ist „Automatisch in die Datei\" an, passiert das ohnehin wenige Sekunden nach jeder Änderung.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1u",
+   "type": "notes",
+   "title": "7. Festschreiben",
+   "x": 6348,
+   "y": 8334,
+   "w": 380,
+   "h": 225,
+   "z": 165,
+   "accent": "#9aa4b6",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Wenn ein Arbeitsschritt fertig ist: <code>GD.aenderungen.festschreiben({ titel, wer })</code>. Danach ist die Änderungssicht wieder leer — und die nächste Runde beginnt bei einer sauberen Basis.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1v",
+   "type": "worker",
+   "title": "Worker (Broweg)",
+   "x": 244,
+   "y": 10281,
+   "w": 420,
+   "h": 400,
+   "z": 166,
+   "accent": "#4fd1c5",
+   "collapsed": false,
+   "state": {
+    "takt": 0,
+    "zeigeAufgaben": true,
+    "maxAufgaben": 6,
+    "letzte": null
+   }
+  },
+  {
+   "id": "win_gd_1w",
+   "type": "notes",
+   "title": "✉ Anforderung: Ideen → Auftrag",
+   "x": 784,
+   "y": 10281,
+   "w": 560,
+   "h": 1025,
+   "z": 167,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<h2>Nachricht an die Sitzung, die am Worker arbeitet</h2>\n<p>Die Worker-Kachel steht und kann Aufträge geben. Was fehlt, ist der <b>Weg von diesem\nRahmen dorthin</b>: Heute muss man den Auftrag von Hand abtippen, obwohl die Ideen\nnebenan schon geschrieben stehen.</p>\n<h3>Gewünscht: „Rahmen als Auftrag\"</h3>\n<p>Ein Knopf — in <code>headerTools()</code> der Worker-Kachel oder im Inspector —, der\naus einem <b>gewählten Rahmen</b> einen strukturierten Prompt baut und damit den\nvorhandenen Dialog <code>aufgabeGeben()</code> <b>vorbefüllt</b> öffnet. Nicht absenden:\nvorbefüllen. Der Mensch drückt „Absenden\".</p>\n<h3>Die sechs Schritte</h3>\n<ol>\n<li><b>Rahmen wählen</b> — im Inspector eine Liste aller Fenster mit\n<code>type === 'frame'</code>; die Wahl liegt als <code>state.rahmenId</code>.</li>\n<li><b>Zustände einsammeln</b> — <b>zuerst</b> <code>GD.windows.syncStates()</code>,\nsonst steht im Dokument noch der Stand von vor dem letzten Tastenanschlag.</li>\n<li><b>Ideen lesen</b> —\n<code>GD.windows.get(rahmenId).inst.dragCompanions()</code> liefert die Ids aller\nKacheln, die <b>vollständig</b> im Rahmen liegen (dieselbe Prüfung, die auch das\nMitziehen benutzt). Danach über <code>GD.store.getWindow(id)</code> an\n<code>title</code> und <code>state.html</code>.</li>\n<li><b>Sortieren</b> — nach <code>y</code>, bei gleicher Höhe nach <code>x</code>.\n<b>Die Anordnung auf der Tafel <i>ist</i> die Reihenfolge.</b></li>\n<li><b>Prompt bauen</b> — Kopf (Tafelname, Rahmentitel, Untertitel, Datum, Anzahl),\nKontext, die Ideen als nummerierte Abschnitte, zum Schluss der Auftrag. Aufzählungen\nbleiben Aufzählungen; abgehakte Aufgaben (<code>li[data-done=\"1\"]</code>) werden als\n<i>erledigt</i> gekennzeichnet. Der Text muss <b>ohne</b> diese Tafel verständlich sein.\nDer Prototyp nebenan macht genau das — er lässt sich fast unverändert übernehmen.</li>\n<li><b>Zeigen und geben</b> — <code>aufgabeGeben()</code> öffnen mit\n<code>title</code> = Rahmentitel und <code>prompt</code> = gebautem Text, beides noch\nänderbar. Kam eine Aufgabe zurück, gehört ihr Ergebnis wieder auf die Tafel: eine neue\nNotiz im selben Rahmen oder eine Statuszeile in der Kachel.</li>\n</ol>\n<h3>Zwei Fallen, die hier schon jemanden erwischt haben</h3>\n<ul>\n<li>Closures aus <code>create()</code> dürfen den Datensatz <b>nicht einfangen</b> —\n<code>windows.reconcile()</code> hängt nach Rückgängig einen frischen in\n<code>rec.data</code>. Immer über <code>ctx.win.get()</code> gehen.</li>\n<li>Ein Rahmen, dessen Kacheln beim Anordnen aus dem Kasten gerutscht sind, gibt über\n<code>dragCompanions()</code> weniger zurück, als man erwartet. Vor dem Sammeln lohnt\n<code>GD.layout.rahmenAnpassen(rahmenId)</code>.</li>\n</ul>\n<p style=\"color:#8a93a5\">Der Pfeil von diesem Rahmen zur Kachel liegt schon; er heißt\n„Notizen → strukturierter Prompt\". Wenn der Knopf da ist, ist auf dieser Tafel nichts\nweiter zu tun.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_gd_1x",
+   "type": "sandbox",
+   "title": "Prompt-Bauer — lauffähiger Prototyp",
+   "x": 1464,
+   "y": 10281,
+   "w": 620,
+   "h": 460,
+   "z": 168,
+   "accent": "#e8b45c",
+   "collapsed": false,
+   "state": {
+    "html": "<pre id=\"out\"></pre>",
+    "css": "body{margin:0;font:11.5px/1.5 ui-monospace,Consolas,monospace;background:#12151c;color:#e6eaf2;padding:10px}\npre{margin:0;white-space:pre-wrap}",
+    "js": "",
+    "tab": "js",
+    "autorun": false,
+    "split": 0.42,
+    "showConsole": false
+   }
+  },
+  {
+   "id": "win_gd_1y",
+   "type": "notes",
+   "title": "Rahmen als Auftrag geben",
+   "x": 244,
+   "y": 12376,
+   "w": 400,
+   "h": 277,
+   "z": 169,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p><b>Die Idee, aus der dieser Rahmen entstanden ist.</b></p>\n<p>Ein Knopf an der Worker-Kachel, der die Notizen aus einem gewählten Rahmen zu einem\nstrukturierten Prompt zusammenfasst und den Dialog „Aufgabe geben\" damit vorbefüllt.</p>\n<p>Einzelheiten in der Anforderung darüber, Prototyp daneben.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_1z",
+   "type": "notes",
+   "title": "Suche über alle Kacheln",
+   "x": 244,
+   "y": 12677,
+   "w": 400,
+   "h": 285,
+   "z": 170,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<h3><code>Strg+F</code></h3>\n<p>Volltext über Fenstertitel, Notizen und Quelltext.</p>\n<ul><li>Trefferliste rechts, Enter springt weiter</li>\n<li>Treffer in der Übersichtskarte markieren</li>\n<li>bei großen Tafeln (109 Fenster) die häufigste Handbewegung</li></ul>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_20",
+   "type": "notes",
+   "title": "Tafel als Bild ausgeben",
+   "x": 244,
+   "y": 12986,
+   "w": 400,
+   "h": 255,
+   "z": 171,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>PNG und SVG des ganzen Boards oder einer Auswahl.</p>\n<ul><li>das Wireframe-Modul kann das für sein Artboard bereits</li>\n<li>für das ganze Board fehlt es — bisher hilft nur ein Bildschirmfoto</li>\n<li>nützlich für Handzettel und für Fragen an eine KI</li></ul>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_21",
+   "type": "notes",
+   "title": "Kachel-Vorlagen",
+   "x": 244,
+   "y": 13265,
+   "w": 400,
+   "h": 251,
+   "z": 172,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Eine fertige Kachel als <b>Vorlage</b> ablegen und aus der Palette wieder einsetzen —\nmit Inhalt, Farbe und Größe.</p>\n<p>Die Muster wiederholen sich ohnehin: „Baustein\" (2D-Bild, 3D-Modell, Werte),\n„Ablaufschritt\", „Datei mit Kurzbeschreibung\".</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_22",
+   "type": "notes",
+   "title": "Modul „Tabelle\"",
+   "x": 684,
+   "y": 12376,
+   "w": 400,
+   "h": 235,
+   "z": 173,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Werte in Zeilen und Spalten — Schaden, Reichweite, Kosten.</p>\n<ul><li>heute steht das als Aufzählung in einer Notiz</li>\n<li>Sortieren, einfache Summen</li>\n<li>Export als CSV</li></ul>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_23",
+   "type": "notes",
+   "title": "Modul „Zeitstrahl\"",
+   "x": 684,
+   "y": 12620,
+   "w": 400,
+   "h": 211,
+   "z": 174,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Ablauf einer Mission, Kampagnenstruktur, Meilensteine.</p>\n<p>Steht seit jeher als Beispiel im Modulvertrag — gebaut ist es nie worden.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_24",
+   "type": "notes",
+   "title": "Dieselbe Notiz auf zwei Tafeln",
+   "x": 684,
+   "y": 12855,
+   "w": 400,
+   "h": 231,
+   "z": 175,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Eine Kachel als <b>Verweis</b> auf eine Kachel in einer anderen Tafel, so wie ein\n3D-Modell schon in mehreren Fenstern stecken darf.</p>\n<p>Heute wird kopiert — und läuft danach auseinander.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_25",
+   "type": "notes",
+   "title": "Zwei Tafeln vergleichen",
+   "x": 684,
+   "y": 13110,
+   "w": 400,
+   "h": 251,
+   "z": 176,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p><code>GD.vergleich.punkte(alt, neu)</code> kann bereits zwei Abzüge gegeneinander\nrechnen. Bisher nur für <i>dieselbe</i> Tafel zu zwei Zeitpunkten.</p>\n<p>Denkbar: zwei Dateien aus dem Projektordner wählen und die Unterschiede in derselben\nroten Sicht zeigen.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_26",
+   "type": "notes",
+   "title": "Ohne Maus von Kachel zu Kachel",
+   "x": 1124,
+   "y": 12376,
+   "w": 400,
+   "h": 231,
+   "z": 177,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Tab/Pfeile springen zur nächsten Kachel in Blickrichtung, Enter geht hinein,\nEscape wieder heraus.</p>\n<p>Verschieben mit Pfeiltasten gibt es schon — das Auswählen fehlt.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_27",
+   "type": "notes",
+   "title": "Pfeile automatisch entzerren",
+   "x": 1124,
+   "y": 12631,
+   "w": 400,
+   "h": 251,
+   "z": 178,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Regel 2 löst Überlappungen von <b>Kacheln</b> auf. Pfeile, die übereinanderliegen\noder eine Kachel kreuzen, bleiben, wie sie sind.</p>\n<p>Denkbar: eine sechste Regel, die Ankerseiten neu wählt und Beschriftungen freistellt.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_28",
+   "type": "notes",
+   "title": "Zwei Fenster auf derselben Datei",
+   "x": 1124,
+   "y": 12906,
+   "w": 400,
+   "h": 317,
+   "z": 179,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p>Zwei Browserfenster auf dieselbe <code>.gamedesk.json</code> — das zweite bemerkt\ndie Änderung nicht und überschreibt sie beim Speichern.</p>\n<p>Kleinste Lösung: Der Server meldet die Änderungszeit, und „Speichern\" fragt nach,\nwenn die Datei jünger ist als der eigene Stand.</p>\n<p><span style=\"color:#e8b45c\">Dringlich geworden</span>, seit mehrere KI-Sitzungen\ngleichzeitig an derselben Tafel arbeiten.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_29",
+   "type": "notes",
+   "title": "Neue Idee hier",
+   "x": 1124,
+   "y": 13247,
+   "w": 400,
+   "h": 205,
+   "z": 180,
+   "accent": "#94a3b8",
+   "collapsed": false,
+   "state": {
+    "html": "<p style=\"color:#8a93a5\">Doppelklick auf die leere Fläche im Rahmen legt eine neue Notiz\nan. Der <b>Titel</b> wird zur Überschrift des Abschnitts im Prompt — also einen wählen,\nder für sich steht.</p>",
+    "fontSize": 12.5
+   }
+  },
+  {
+   "id": "win_gd_2l",
+   "type": "notes",
+   "title": "GameDesk",
+   "x": 200,
+   "y": 200,
+   "w": 900,
+   "h": 427,
+   "z": 192,
+   "accent": "#6ea8fe",
+   "collapsed": false,
+   "state": {
+    "html": "<h1>GameDesk — Funktionsweise</h1>\n<p><b>Ein Board zum Entwerfen von Spielen.</b> Eine unendliche Fläche, auf der modulare\nFenster liegen, die mit beschrifteten Pfeilen verbunden werden.</p>\n<p>Läuft komplett lokal im Browser — <b>kein Build, keine Abhängigkeit, kein Netz</b>.\nRund 13 000 Zeilen JavaScript in 27 klassischen <code>&lt;script&gt;</code>-Dateien\n(17 im Kern, 10 Module), dazu 1 830 Zeilen Blatt, 130 Zeilen <code>index.html</code> und\nzwei Werkzeuge in Node, die ohne ein einziges Paket auskommen.</p>\n<p>Diese Tafel bildet GameDesk mit seinen eigenen Mitteln ab: die <b>Seiten</b> der\nOberfläche, die <b>Ladekette des Kerns</b>, die zehn <b>Module</b>, die\n<b>3D-Maschine</b>, das <b>Dateiformat</b>, die <b>Änderungsverfolgung</b> samt\nMedienlager, den <b>Projektordner</b> mit Server und Broweg-Brücke und die <b>Regeln</b>,\ndie das Bild ruhig halten. Ganz unten sammelt ein Rahmen die\n<b>Weiterentwicklungsideen</b>; ein Pfeil führt von dort zur Worker-Kachel.</p>\n<p style=\"color:#8a93a5;font-size:.9em\">Stand des Quelltextes: 11.08.2026, 00:32 Uhr ·\n10 Module · 17 Kerndateien · 10 Bereiche in der Taxonomie · 5 Anordnungsregeln ·\n2 Stapelbänder · 7 Änderungsklassen</p>",
+    "fontSize": 14
+   }
+  }
+ ],
+ "connections": [
+  {
+   "id": "con_gd_2m",
+   "from": {
+    "win": "win_gd_c",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_e",
+    "side": "l",
+    "shape": null
+   },
+   "label": "uid · clone · debounce · emitter",
+   "labelSize": 11,
+   "t": null,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2n",
+   "from": {
+    "win": "win_gd_c",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_d",
+    "side": "t",
+    "shape": null
+   },
+   "label": "el() · svg()",
+   "labelSize": 11,
+   "t": null,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2o",
+   "from": {
+    "win": "win_gd_e",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_f",
+    "side": "l",
+    "shape": null
+   },
+   "label": "doc.view",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2p",
+   "from": {
+    "win": "win_gd_e",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_g",
+    "side": "l",
+    "shape": null
+   },
+   "label": "doc.windows",
+   "labelSize": 12,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2q",
+   "from": {
+    "win": "win_gd_e",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_h",
+    "side": "l",
+    "shape": null
+   },
+   "label": "doc.connections · doc.bundles",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2r",
+   "from": {
+    "win": "win_gd_d",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_g",
+    "side": "l",
+    "shape": null
+   },
+   "label": "modules.get(type).create(ctx)",
+   "labelSize": 12,
+   "t": null,
+   "color": "#57c98a",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2s",
+   "from": {
+    "win": "win_gd_f",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_g",
+    "side": "t",
+    "shape": null
+   },
+   "label": "onZoom(scale)",
+   "labelSize": 11,
+   "t": null,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2t",
+   "from": {
+    "win": "win_gd_g",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_h",
+    "side": "t",
+    "shape": null
+   },
+   "label": "Geometrie der Enden",
+   "labelSize": 11,
+   "t": null,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2u",
+   "from": {
+    "win": "win_gd_g",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_i",
+    "side": "t",
+    "shape": null
+   },
+   "label": "zeichnet doc.windows",
+   "labelSize": 11,
+   "t": null,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2v",
+   "from": {
+    "win": "win_gd_g",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_k",
+    "side": "l",
+    "shape": null
+   },
+   "label": "setGeometry() · inst.inhaltsHoehe()",
+   "labelSize": 12,
+   "t": null,
+   "color": "#b78cf7",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2w",
+   "from": {
+    "win": "win_gd_e",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_j",
+    "side": "l",
+    "shape": null
+   },
+   "label": "serialize() beim Sichern",
+   "labelSize": 11,
+   "t": null,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2x",
+   "from": {
+    "win": "win_gd_k",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_l",
+    "side": "l",
+    "shape": null
+   },
+   "label": "pruefe() → Einstellungen",
+   "labelSize": 11,
+   "t": null,
+   "color": "#b78cf7",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2y",
+   "from": {
+    "win": "win_gd_j",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_l",
+    "side": "l",
+    "shape": null
+   },
+   "label": "Dialog „Projekte\"",
+   "labelSize": 11,
+   "t": null,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_2z",
+   "from": {
+    "win": "win_gd_l",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_m",
+    "side": "t",
+    "shape": null
+   },
+   "label": "runAction() · Tasten",
+   "labelSize": 11,
+   "t": null,
+   "color": "#8fa4c4",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_30",
+   "from": {
+    "win": "win_gd_m",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_e",
+    "side": "b",
+    "shape": null
+   },
+   "label": "undo · redo · Datei-Drop · Startboard",
+   "labelSize": 11,
+   "t": null,
+   "color": "#9aa4b6",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_31",
+   "from": {
+    "win": "win_gd_1",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_2b",
+    "side": "l",
+    "shape": null
+   },
+   "label": "lädt in dieser Folge",
+   "labelSize": 12,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_32",
+   "from": {
+    "win": "win_gd_l",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_2a",
+    "side": "r",
+    "shape": null
+   },
+   "label": "baut Palette, Leiste, Inspector, Dialoge",
+   "labelSize": 11,
+   "t": null,
+   "color": "#6ea8fe",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_33",
+   "from": {
+    "win": "win_gd_d",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_n",
+    "side": "t",
+    "shape": null
+   },
+   "label": "GD.modules.register()",
+   "labelSize": 12,
+   "t": null,
+   "color": "#57c98a",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_34",
+   "from": {
+    "win": "win_gd_g",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_n",
+    "side": "t",
+    "shape": null
+   },
+   "label": "mount(): ctx · getState · setState",
+   "labelSize": 11,
+   "t": null,
+   "color": "#57c98a",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_35",
+   "from": {
+    "win": "win_gd_e",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_2e",
+    "side": "t",
+    "shape": null
+   },
+   "label": "doc · Historie · localStorage",
+   "labelSize": 12,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_36",
+   "from": {
+    "win": "win_gd_h",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_14",
+    "side": "t",
+    "shape": null
+   },
+   "label": "connections + bundles",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_37",
+   "from": {
+    "win": "win_gd_k",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_2h",
+    "side": "t",
+    "shape": null
+   },
+   "label": "setzt die fünf Regeln durch",
+   "labelSize": 12,
+   "t": null,
+   "color": "#b78cf7",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_38",
+   "from": {
+    "win": "win_gd_j",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_2g",
+    "side": "t",
+    "shape": null
+   },
+   "label": "liste · lesen · schreiben · hinein",
+   "labelSize": 12,
+   "t": null,
+   "color": "#ef6b6b",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_39",
+   "from": {
+    "win": "win_gd_2g",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_j",
+    "side": "b",
+    "shape": null
+   },
+   "label": "api/bibliothek/*",
+   "labelSize": 11,
+   "t": null,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3a",
+   "from": {
+    "win": "win_gd_t",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_2d",
+    "side": "l",
+    "shape": null
+   },
+   "label": "geom3d · gl3d · models",
+   "labelSize": 12,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3b",
+   "from": {
+    "win": "win_gd_u",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_10",
+    "side": "l",
+    "shape": null
+   },
+   "label": "zeigt ein gespeichertes Modell",
+   "labelSize": 11,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3c",
+   "from": {
+    "win": "win_gd_v",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_11",
+    "side": "l",
+    "shape": null
+   },
+   "label": "GameDesk.geometry()",
+   "labelSize": 11,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3d",
+   "from": {
+    "win": "win_gd_y",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_z",
+    "side": "t",
+    "shape": null
+   },
+   "label": "geteilte Netze",
+   "labelSize": 11,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3e",
+   "from": {
+    "win": "win_gd_10",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_y",
+    "side": "r",
+    "shape": null
+   },
+   "label": "bake() über geom3d.get()",
+   "labelSize": 11,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3f",
+   "from": {
+    "win": "win_gd_w",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_2g",
+    "side": "t",
+    "shape": null
+   },
+   "label": "liest fremde Tafeln",
+   "labelSize": 11,
+   "t": null,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3g",
+   "from": {
+    "win": "win_gd_x",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1f",
+    "side": "t",
+    "shape": null
+   },
+   "label": "api/broweg/ruf",
+   "labelSize": 12,
+   "t": null,
+   "color": "#ef6b6b",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3h",
+   "from": {
+    "win": "win_gd_s",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1a",
+    "side": "t",
+    "shape": null
+   },
+   "label": "depot:<sha256> statt data:",
+   "labelSize": 12,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3i",
+   "from": {
+    "win": "win_gd_o",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1i",
+    "side": "t",
+    "shape": null
+   },
+   "label": "kopfHoehe() meldet das Kopfband",
+   "labelSize": 11,
+   "t": null,
+   "color": "#b78cf7",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3j",
+   "from": {
+    "win": "win_gd_p",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1n",
+    "side": "t",
+    "shape": null
+   },
+   "label": "inhaltsHoehe() — Regel 1",
+   "labelSize": 11,
+   "t": null,
+   "color": "#b78cf7",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3k",
+   "from": {
+    "win": "win_gd_e",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_19",
+    "side": "t",
+    "shape": null
+   },
+   "label": "doc.aenderungen",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3l",
+   "from": {
+    "win": "win_gd_19",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_18",
+    "side": "r",
+    "shape": null
+   },
+   "label": "abzug() · punkte()",
+   "labelSize": 12,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3m",
+   "from": {
+    "win": "win_gd_1b",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_18",
+    "side": "b",
+    "shape": null
+   },
+   "label": "derselbe Kern in Node",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3n",
+   "from": {
+    "win": "win_gd_1a",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_e",
+    "side": "b",
+    "shape": null
+   },
+   "label": "aufblasen() beim Schreiben",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3o",
+   "from": {
+    "win": "win_gd_1o",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1p",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3p",
+   "from": {
+    "win": "win_gd_1p",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1q",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3q",
+   "from": {
+    "win": "win_gd_1q",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1r",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3r",
+   "from": {
+    "win": "win_gd_1r",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1s",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3s",
+   "from": {
+    "win": "win_gd_1s",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1t",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3t",
+   "from": {
+    "win": "win_gd_1t",
+    "side": "r",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1u",
+    "side": "l",
+    "shape": null
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3u",
+   "from": {
+    "win": "win_gd_1u",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1o",
+    "side": "b",
+    "shape": null
+   },
+   "label": "nächste Runde",
+   "labelSize": 11,
+   "t": null,
+   "color": "#4fd1c5",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3v",
+   "from": {
+    "win": "win_gd_16",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1r",
+    "side": "t",
+    "shape": null
+   },
+   "label": "changed() oder commit()?",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3w",
+   "from": {
+    "win": "win_gd_19",
+    "side": "b",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1u",
+    "side": "t",
+    "shape": null
+   },
+   "label": "festschreiben({ titel, wer })",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3x",
+   "from": {
+    "win": "win_gd_2j",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1v",
+    "side": "b",
+    "shape": null
+   },
+   "label": "Notizen → strukturierter Prompt",
+   "labelSize": 14,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 3,
+   "dash": "solid",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3y",
+   "from": {
+    "win": "win_gd_1w",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1v",
+    "side": "r",
+    "shape": null
+   },
+   "label": "was noch zu bauen ist",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_3z",
+   "from": {
+    "win": "win_gd_1x",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_1v",
+    "side": "r",
+    "shape": null
+   },
+   "label": "so sieht der Prompt aus",
+   "labelSize": 11,
+   "t": null,
+   "color": "#e8b45c",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_40",
+   "from": {
+    "win": "win_gd_1v",
+    "side": "t",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_x",
+    "side": "b",
+    "shape": null
+   },
+   "label": "dieselbe Kachel, dort beschrieben",
+   "labelSize": 11,
+   "t": null,
+   "color": "#57c98a",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  },
+  {
+   "id": "con_gd_41",
+   "from": {
+    "win": "win_gd_2j",
+    "side": "l",
+    "shape": null
+   },
+   "to": {
+    "win": "win_gd_o",
+    "side": "b",
+    "shape": null
+   },
+   "label": "dragCompanions() liefert die Ideen",
+   "labelSize": 11,
+   "t": null,
+   "color": "#57c98a",
+   "width": 2,
+   "dash": "dotted",
+   "curve": "ortho",
+   "heads": "end",
+   "bundle": null
+  }
+ ],
+ "bundles": [],
+ "models": [],
+ "aenderungen": {
+  "basis": {
+   "id": "cmt_msntjf98_ji",
+   "zeit": 1786401852668,
+   "titel": "Tafel angelegt",
+   "wer": "ki",
+   "abzug": {
+    "v": 1,
+    "name": "GameDesk — Funktionsweise",
+    "raster": 20,
+    "fenster": {
+     "win_gd_2k": {
+      "t": "frame",
+      "ti": "Weiterentwicklung",
+      "x": 156,
+      "y": 10123,
+      "b": 1972,
+      "h": 3481,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "16sndlj",
+      "l": 151
+     },
+     "win_gd_2j": {
+      "t": "frame",
+      "ti": "Ideen — hier sammeln",
+      "x": 200,
+      "y": 12218,
+      "b": 1368,
+      "h": 1342,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "feysiu",
+      "l": 170
+     },
+     "win_gd_2i": {
+      "t": "frame",
+      "ti": "Ablauf einer Änderung",
+      "x": 1684,
+      "y": 8176,
+      "b": 5088,
+      "h": 427,
+      "e": 0,
+      "f": "#4fd1c5",
+      "z": "1jee9if",
+      "l": 155
+     },
+     "win_gd_2h": {
+      "t": "frame",
+      "ti": "Regeln & Gestaltung",
+      "x": 200,
+      "y": 8176,
+      "b": 1008,
+      "h": 1800,
+      "e": 0,
+      "f": "#b78cf7",
+      "z": "1bpbmr6",
+      "l": 125
+     },
+     "win_gd_2g": {
+      "t": "frame",
+      "ti": "Bibliothek & Server",
+      "x": 3328,
+      "y": 6118,
+      "b": 1088,
+      "h": 1674,
+      "e": 0,
+      "f": "#ef6b6b",
+      "z": "yx5bpz",
+      "l": 157
+     },
+     "win_gd_2f": {
+      "t": "frame",
+      "ti": "Änderungsverfolgung & Medienlager",
+      "x": 1764,
+      "y": 6118,
+      "b": 1088,
+      "h": 1477,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "1ltz24h",
+      "l": 144
+     },
+     "win_gd_2e": {
+      "t": "frame",
+      "ti": "Daten & Format",
+      "x": 200,
+      "y": 6118,
+      "b": 1088,
+      "h": 1855,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "3lhe7v",
+      "l": 137
+     },
+     "win_gd_2d": {
+      "t": "frame",
+      "ti": "3D-Maschine",
+      "x": 2284,
+      "y": 3310,
+      "b": 1088,
+      "h": 1231,
+      "e": 0,
+      "f": "#4fd1c5",
+      "z": "1m2fgw6",
+      "l": 154
+     },
+     "win_gd_2c": {
+      "t": "frame",
+      "ti": "Module",
+      "x": 200,
+      "y": 3310,
+      "b": 1608,
+      "h": 2707,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "131maqo",
+      "l": 149
+     },
+     "win_gd_2b": {
+      "t": "frame",
+      "ti": "Kern",
+      "x": 2624,
+      "y": 824,
+      "b": 3408,
+      "h": 2225,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "1vnu9al",
+      "l": 165
+     },
+     "win_gd_2a": {
+      "t": "frame",
+      "ti": "Seiten & Oberfläche",
+      "x": 200,
+      "y": 824,
+      "b": 1948,
+      "h": 2337,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "d3pv0u",
+      "l": 150
+     },
+     "win_gd_1": {
+      "t": "code",
+      "ti": "index.html — das ganze Gerüst",
+      "x": 244,
+      "y": 982,
+      "b": 560,
+      "h": 702,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "1n5ox3p",
+      "l": 1868
+     },
+     "win_gd_2": {
+      "t": "notes",
+      "ti": "Werkzeugleiste — #topbar",
+      "x": 244,
+      "y": 1719,
+      "b": 440,
+      "h": 506,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "1y1fm7w",
+      "l": 981
+     },
+     "win_gd_3": {
+      "t": "notes",
+      "ti": "Palette — #palette",
+      "x": 244,
+      "y": 2249,
+      "b": 440,
+      "h": 277,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "1kudh5z",
+      "l": 384
+     },
+     "win_gd_4": {
+      "t": "notes",
+      "ti": "Board — #board / #world",
+      "x": 844,
+      "y": 1552,
+      "b": 440,
+      "h": 453,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "an2ipy",
+      "l": 882
+     },
+     "win_gd_5": {
+      "t": "notes",
+      "ti": "Inspector — #inspector",
+      "x": 844,
+      "y": 2010,
+      "b": 440,
+      "h": 506,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "2078n4",
+      "l": 854
+     },
+     "win_gd_6": {
+      "t": "notes",
+      "ti": "Übersichtskarte · Meldungen · Kontextmenü",
+      "x": 1664,
+      "y": 982,
+      "b": 440,
+      "h": 515,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "1h4wuw7",
+      "l": 814
+     },
+     "win_gd_7": {
+      "t": "notes",
+      "ti": "Dialog „Projekte\" — Strg+P",
+      "x": 1664,
+      "y": 1502,
+      "b": 440,
+      "h": 308,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "sz7b66",
+      "l": 375
+     },
+     "win_gd_8": {
+      "t": "notes",
+      "ti": "Dialog „Änderungen\" — Strg+Umschalt+A",
+      "x": 1664,
+      "y": 1834,
+      "b": 440,
+      "h": 372,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "gyy6n5",
+      "l": 659
+     },
+     "win_gd_9": {
+      "t": "notes",
+      "ti": "Dialog „Einstellungen\" — ⚙",
+      "x": 1664,
+      "y": 2230,
+      "b": 440,
+      "h": 534,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "1d9bo39",
+      "l": 788
+     },
+     "win_gd_a": {
+      "t": "notes",
+      "ti": "Dialog „Hilfe\" — ?",
+      "x": 1664,
+      "y": 2788,
+      "b": 440,
+      "h": 329,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "169ee5t",
+      "l": 571
+     },
+     "win_gd_b": {
+      "t": "wireframe",
+      "ti": "Bildschirmaufteilung",
+      "x": 844,
+      "y": 982,
+      "b": 780,
+      "h": 540,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "2u1g6y",
+      "l": 17031
+     },
+     "win_gd_c": {
+      "t": "notes",
+      "ti": "util.js — das Fundament",
+      "x": 2668,
+      "y": 982,
+      "b": 440,
+      "h": 521,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "1w984kh",
+      "l": 1165
+     },
+     "win_gd_d": {
+      "t": "notes",
+      "ti": "registry.js — die Modul-Registry",
+      "x": 2668,
+      "y": 1516,
+      "b": 440,
+      "h": 400,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "puyizt",
+      "l": 758
+     },
+     "win_gd_e": {
+      "t": "notes",
+      "ti": "store.js — Dokument, Historie, Persistenz",
+      "x": 2668,
+      "y": 1940,
+      "b": 440,
+      "h": 557,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "1oj1il",
+      "l": 1194
+     },
+     "win_gd_f": {
+      "t": "notes",
+      "ti": "board.js — die Kamera",
+      "x": 3628,
+      "y": 982,
+      "b": 440,
+      "h": 520,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "wj1wdf",
+      "l": 963
+     },
+     "win_gd_g": {
+      "t": "notes",
+      "ti": "windows.js — die Fenster",
+      "x": 3628,
+      "y": 1526,
+      "b": 440,
+      "h": 610,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "1w3mpin",
+      "l": 1297
+     },
+     "win_gd_h": {
+      "t": "notes",
+      "ti": "connections.js — Pfeile und Bündel",
+      "x": 3628,
+      "y": 2160,
+      "b": 440,
+      "h": 535,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "5gc1cy",
+      "l": 1076
+     },
+     "win_gd_i": {
+      "t": "notes",
+      "ti": "minimap.js — die Übersichtskarte",
+      "x": 3628,
+      "y": 2719,
+      "b": 440,
+      "h": 286,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "1weq6av",
+      "l": 372
+     },
+     "win_gd_j": {
+      "t": "notes",
+      "ti": "library.js — der Projektordner",
+      "x": 4588,
+      "y": 982,
+      "b": 440,
+      "h": 383,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "16989xv",
+      "l": 662
+     },
+     "win_gd_k": {
+      "t": "notes",
+      "ti": "layout.js — das automatische Layout",
+      "x": 4588,
+      "y": 1389,
+      "b": 440,
+      "h": 539,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "58gg09",
+      "l": 1030
+     },
+     "win_gd_l": {
+      "t": "notes",
+      "ti": "ui.js — Oberfläche und Bedienung",
+      "x": 5548,
+      "y": 982,
+      "b": 440,
+      "h": 431,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "11gxhzf",
+      "l": 742
+     },
+     "win_gd_m": {
+      "t": "notes",
+      "ti": "app.js — der Start",
+      "x": 5548,
+      "y": 1437,
+      "b": 440,
+      "h": 566,
+      "e": 0,
+      "f": "#8fa4c4",
+      "z": "1245xmx",
+      "l": 1098
+     },
+     "win_gd_n": {
+      "t": "code",
+      "ti": "Der ganze Modulvertrag",
+      "x": 244,
+      "y": 3468,
+      "b": 560,
+      "h": 686,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "wr9mh9",
+      "l": 1687
+     },
+     "win_gd_o": {
+      "t": "notes",
+      "ti": "Rahmen — Bereiche gruppieren",
+      "x": 244,
+      "y": 4189,
+      "b": 440,
+      "h": 555,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "3fz410",
+      "l": 1127
+     },
+     "win_gd_p": {
+      "t": "notes",
+      "ti": "Notiz — Text im Notizstil",
+      "x": 244,
+      "y": 4768,
+      "b": 440,
+      "h": 424,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "1r1mrbq",
+      "l": 745
+     },
+     "win_gd_q": {
+      "t": "notes",
+      "ti": "Wireframe — Seiten skizzieren",
+      "x": 844,
+      "y": 3468,
+      "b": 440,
+      "h": 670,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "1r0xqo9",
+      "l": 1422
+     },
+     "win_gd_r": {
+      "t": "notes",
+      "ti": "Quelltext — Ausschnitt mit Herkunft",
+      "x": 844,
+      "y": 4162,
+      "b": 440,
+      "h": 378,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "v64qtu",
+      "l": 556
+     },
+     "win_gd_s": {
+      "t": "notes",
+      "ti": "Bild / Video / Ton — Referenzen",
+      "x": 844,
+      "y": 4564,
+      "b": 440,
+      "h": 549,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "1tt13do",
+      "l": 1061
+     },
+     "win_gd_t": {
+      "t": "notes",
+      "ti": "3D-Modell — bauen und beleuchten",
+      "x": 1324,
+      "y": 3468,
+      "b": 440,
+      "h": 507,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "1mx75zq",
+      "l": 1071
+     },
+     "win_gd_u": {
+      "t": "notes",
+      "ti": "3D-Ansicht — Modell als Kachel",
+      "x": 1324,
+      "y": 3998,
+      "b": 440,
+      "h": 307,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "eqbnft",
+      "l": 398
+     },
+     "win_gd_v": {
+      "t": "notes",
+      "ti": "Code-Sandbox — Features vorführen",
+      "x": 1324,
+      "y": 4329,
+      "b": 440,
+      "h": 450,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "cmintw",
+      "l": 772
+     },
+     "win_gd_w": {
+      "t": "notes",
+      "ti": "Projekt — eine andere Tafel als Kachel",
+      "x": 1324,
+      "y": 4803,
+      "b": 440,
+      "h": 461,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "kcdrm5",
+      "l": 838
+     },
+     "win_gd_x": {
+      "t": "notes",
+      "ti": "Worker — Gegenstelle zum Broweg",
+      "x": 1324,
+      "y": 5288,
+      "b": 440,
+      "h": 685,
+      "e": 0,
+      "f": "#57c98a",
+      "z": "234isx",
+      "l": 1331
+     },
+     "win_gd_y": {
+      "t": "notes",
+      "ti": "geom3d.js — die Grundkörper",
+      "x": 2328,
+      "y": 3468,
+      "b": 440,
+      "h": 418,
+      "e": 0,
+      "f": "#4fd1c5",
+      "z": "1jvhxgg",
+      "l": 770
+     },
+     "win_gd_z": {
+      "t": "notes",
+      "ti": "gl3d.js — der Renderer",
+      "x": 2328,
+      "y": 3910,
+      "b": 440,
+      "h": 472,
+      "e": 0,
+      "f": "#4fd1c5",
+      "z": "1q5fbc8",
+      "l": 977
+     },
+     "win_gd_10": {
+      "t": "notes",
+      "ti": "models.js — die Modell-Bibliothek",
+      "x": 2808,
+      "y": 3468,
+      "b": 440,
+      "h": 515,
+      "e": 0,
+      "f": "#4fd1c5",
+      "z": "ynrlvd",
+      "l": 956
+     },
+     "win_gd_11": {
+      "t": "code",
+      "ti": "GameDesk — die Brücke in die Sandbox",
+      "x": 2808,
+      "y": 4007,
+      "b": 520,
+      "h": 490,
+      "e": 0,
+      "f": "#4fd1c5",
+      "z": "11wmcm6",
+      "l": 1020
+     },
+     "win_gd_12": {
+      "t": "code",
+      "ti": "Das Dokument — .gamedesk.json",
+      "x": 244,
+      "y": 6276,
+      "b": 520,
+      "h": 474,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "pyzmib",
+      "l": 1054
+     },
+     "win_gd_13": {
+      "t": "code",
+      "ti": "Ein Fenster",
+      "x": 244,
+      "y": 6784,
+      "b": 520,
+      "h": 360,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "hx2w7i",
+      "l": 789
+     },
+     "win_gd_14": {
+      "t": "code",
+      "ti": "Ein Pfeil und ein Bündel",
+      "x": 244,
+      "y": 7177,
+      "b": 520,
+      "h": 507,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "gjsa8p",
+      "l": 1154
+     },
+     "win_gd_15": {
+      "t": "notes",
+      "ti": "Vier Speicherorte",
+      "x": 804,
+      "y": 6276,
+      "b": 440,
+      "h": 581,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "1nhrwl9",
+      "l": 1187
+     },
+     "win_gd_16": {
+      "t": "notes",
+      "ti": "changed() oder commit()?",
+      "x": 804,
+      "y": 6881,
+      "b": 440,
+      "h": 552,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "10g5ont",
+      "l": 1149
+     },
+     "win_gd_17": {
+      "t": "notes",
+      "ti": "normalize() — fremde Daten hereinlassen",
+      "x": 804,
+      "y": 7457,
+      "b": 440,
+      "h": 472,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "1mt7ejh",
+      "l": 1020
+     },
+     "win_gd_18": {
+      "t": "notes",
+      "ti": "vergleich.js — der Abzug",
+      "x": 1808,
+      "y": 6276,
+      "b": 440,
+      "h": 537,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "rivxor",
+      "l": 1167
+     },
+     "win_gd_19": {
+      "t": "notes",
+      "ti": "aenderungen.js — Verlauf und Sicht",
+      "x": 2368,
+      "y": 6276,
+      "b": 440,
+      "h": 623,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "1yclci1",
+      "l": 1306
+     },
+     "win_gd_1a": {
+      "t": "notes",
+      "ti": "depot.js — das Medienlager",
+      "x": 2368,
+      "y": 6902,
+      "b": 440,
+      "h": 649,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "1etppbw",
+      "l": 1442
+     },
+     "win_gd_1b": {
+      "t": "code",
+      "ti": "festschreiben.mjs — Commit ohne Browser",
+      "x": 1808,
+      "y": 6837,
+      "b": 520,
+      "h": 458,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "x7n88c",
+      "l": 999
+     },
+     "win_gd_1c": {
+      "t": "notes",
+      "ti": "Zwei Wege zum Ordner",
+      "x": 3372,
+      "y": 6276,
+      "b": 440,
+      "h": 481,
+      "e": 0,
+      "f": "#ef6b6b",
+      "z": "1pyw5pe",
+      "l": 887
+     },
+     "win_gd_1d": {
+      "t": "code",
+      "ti": "Die Endpunkte der Bibliothek",
+      "x": 3852,
+      "y": 6276,
+      "b": 520,
+      "h": 360,
+      "e": 0,
+      "f": "#ef6b6b",
+      "z": "1rw6czi",
+      "l": 882
+     },
+     "win_gd_1e": {
+      "t": "code",
+      "ti": "sicherePfad() — kein Ausbruch aus dem Ordner",
+      "x": 3852,
+      "y": 6669,
+      "b": 520,
+      "h": 328,
+      "e": 0,
+      "f": "#ef6b6b",
+      "z": "lji8lh",
+      "l": 800
+     },
+     "win_gd_1f": {
+      "t": "code",
+      "ti": "Die Brücke nach Broweg",
+      "x": 3852,
+      "y": 7029,
+      "b": 520,
+      "h": 604,
+      "e": 0,
+      "f": "#ef6b6b",
+      "z": "n3nmj4",
+      "l": 1408
+     },
+     "win_gd_1g": {
+      "t": "notes",
+      "ti": "Die Reise durch die Projekte",
+      "x": 3372,
+      "y": 7329,
+      "b": 440,
+      "h": 419,
+      "e": 0,
+      "f": "#ef6b6b",
+      "z": "rkwl02",
+      "l": 740
+     },
+     "win_gd_1h": {
+      "t": "notes",
+      "ti": "tools/serve.mjs — drei Aufgaben",
+      "x": 3372,
+      "y": 6772,
+      "b": 440,
+      "h": 537,
+      "e": 0,
+      "f": "#ef6b6b",
+      "z": "1u9vn8g",
+      "l": 1024
+     },
+     "win_gd_1i": {
+      "t": "notes",
+      "ti": "Die fünf Anordnungsregeln",
+      "x": 244,
+      "y": 8334,
+      "b": 440,
+      "h": 521,
+      "e": 0,
+      "f": "#b78cf7",
+      "z": "1aylw24",
+      "l": 1002
+     },
+     "win_gd_1j": {
+      "t": "notes",
+      "ti": "Die Bereichs-Taxonomie",
+      "x": 244,
+      "y": 8879,
+      "b": 440,
+      "h": 604,
+      "e": 0,
+      "f": "#b78cf7",
+      "z": "1nh13ip",
+      "l": 1192
+     },
+     "win_gd_1k": {
+      "t": "notes",
+      "ti": "Zwei Stapelbänder",
+      "x": 244,
+      "y": 9507,
+      "b": 440,
+      "h": 425,
+      "e": 0,
+      "f": "#b78cf7",
+      "z": "1gniupt",
+      "l": 747
+     },
+     "win_gd_1l": {
+      "t": "notes",
+      "ti": "Schrift — drei Familien, vier Regeln",
+      "x": 724,
+      "y": 8334,
+      "b": 440,
+      "h": 567,
+      "e": 0,
+      "f": "#b78cf7",
+      "z": "ys8mfa",
+      "l": 1059
+     },
+     "win_gd_1m": {
+      "t": "notes",
+      "ti": "Abstände und Bewegung",
+      "x": 724,
+      "y": 8925,
+      "b": 440,
+      "h": 493,
+      "e": 0,
+      "f": "#b78cf7",
+      "z": "102mzd1",
+      "l": 1058
+     },
+     "win_gd_1n": {
+      "t": "notes",
+      "ti": "Verdrahtete Spalten brauchen eine Gasse",
+      "x": 724,
+      "y": 9442,
+      "b": 440,
+      "h": 445,
+      "e": 0,
+      "f": "#b78cf7",
+      "z": "1pqvyea",
+      "l": 796
+     },
+     "win_gd_1o": {
+      "t": "notes",
+      "ti": "1. Tippen im Modul",
+      "x": 1728,
+      "y": 8334,
+      "b": 380,
+      "h": 185,
+      "e": 0,
+      "f": "#9aa4b6",
+      "z": "1s8qfec",
+      "l": 161
+     },
+     "win_gd_1p": {
+      "t": "notes",
+      "ti": "2. ctx.changed()",
+      "x": 2498,
+      "y": 8334,
+      "b": 380,
+      "h": 205,
+      "e": 0,
+      "f": "#9aa4b6",
+      "z": "1i3c9wd",
+      "l": 177
+     },
+     "win_gd_1q": {
+      "t": "notes",
+      "ti": "3. store.save()",
+      "x": 3268,
+      "y": 8334,
+      "b": 380,
+      "h": 225,
+      "e": 0,
+      "f": "#9aa4b6",
+      "z": "qsarel",
+      "l": 242
+     },
+     "win_gd_1r": {
+      "t": "notes",
+      "ti": "4. ctx.commit(label)",
+      "x": 4038,
+      "y": 8334,
+      "b": 380,
+      "h": 205,
+      "e": 0,
+      "f": "#9aa4b6",
+      "z": "1sjyfcs",
+      "l": 164
+     },
+     "win_gd_1s": {
+      "t": "notes",
+      "ti": "5. Strg+Z",
+      "x": 4808,
+      "y": 8334,
+      "b": 380,
+      "h": 205,
+      "e": 0,
+      "f": "#9aa4b6",
+      "z": "1xdb2gl",
+      "l": 250
+     },
+     "win_gd_1t": {
+      "t": "notes",
+      "ti": "6. Strg+S",
+      "x": 5578,
+      "y": 8334,
+      "b": 380,
+      "h": 225,
+      "e": 0,
+      "f": "#9aa4b6",
+      "z": "103b7fj",
+      "l": 232
+     },
+     "win_gd_1u": {
+      "t": "notes",
+      "ti": "7. Festschreiben",
+      "x": 6348,
+      "y": 8334,
+      "b": 380,
+      "h": 225,
+      "e": 0,
+      "f": "#9aa4b6",
+      "z": "4s8chc",
+      "l": 228
+     },
+     "win_gd_1v": {
+      "t": "worker",
+      "ti": "Worker (Broweg)",
+      "x": 244,
+      "y": 10281,
+      "b": 420,
+      "h": 400,
+      "e": 0,
+      "f": "#4fd1c5",
+      "z": "j7k0y2",
+      "l": 61
+     },
+     "win_gd_1w": {
+      "t": "notes",
+      "ti": "✉ Anforderung: Ideen → Auftrag",
+      "x": 784,
+      "y": 10281,
+      "b": 560,
+      "h": 1025,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "1ouzrd0",
+      "l": 2965
+     },
+     "win_gd_1x": {
+      "t": "sandbox",
+      "ti": "Prompt-Bauer — lauffähiger Prototyp",
+      "x": 1464,
+      "y": 10281,
+      "b": 620,
+      "h": 460,
+      "e": 0,
+      "f": "#e8b45c",
+      "z": "102bylk",
+      "l": 254
+     },
+     "win_gd_1y": {
+      "t": "notes",
+      "ti": "Rahmen als Auftrag geben",
+      "x": 244,
+      "y": 12376,
+      "b": 400,
+      "h": 277,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "19uoe2i",
+      "l": 334
+     },
+     "win_gd_1z": {
+      "t": "notes",
+      "ti": "Suche über alle Kacheln",
+      "x": 244,
+      "y": 12677,
+      "b": 400,
+      "h": 285,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "19hyiav",
+      "l": 295
+     },
+     "win_gd_20": {
+      "t": "notes",
+      "ti": "Tafel als Bild ausgeben",
+      "x": 244,
+      "y": 12986,
+      "b": 400,
+      "h": 255,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "wa0u10",
+      "l": 294
+     },
+     "win_gd_21": {
+      "t": "notes",
+      "ti": "Kachel-Vorlagen",
+      "x": 244,
+      "y": 13265,
+      "b": 400,
+      "h": 251,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "1ublwlx",
+      "l": 285
+     },
+     "win_gd_22": {
+      "t": "notes",
+      "ti": "Modul „Tabelle\"",
+      "x": 684,
+      "y": 12376,
+      "b": 400,
+      "h": 235,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "1k8vrql",
+      "l": 219
+     },
+     "win_gd_23": {
+      "t": "notes",
+      "ti": "Modul „Zeitstrahl\"",
+      "x": 684,
+      "y": 12620,
+      "b": 400,
+      "h": 211,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "1pkqb01",
+      "l": 170
+     },
+     "win_gd_24": {
+      "t": "notes",
+      "ti": "Dieselbe Notiz auf zwei Tafeln",
+      "x": 684,
+      "y": 12855,
+      "b": 400,
+      "h": 231,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "65id6z",
+      "l": 226
+     },
+     "win_gd_25": {
+      "t": "notes",
+      "ti": "Zwei Tafeln vergleichen",
+      "x": 684,
+      "y": 13110,
+      "b": 400,
+      "h": 251,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "lud7qo",
+      "l": 297
+     },
+     "win_gd_26": {
+      "t": "notes",
+      "ti": "Ohne Maus von Kachel zu Kachel",
+      "x": 1124,
+      "y": 12376,
+      "b": 400,
+      "h": 231,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "1p2pn1",
+      "l": 206
+     },
+     "win_gd_27": {
+      "t": "notes",
+      "ti": "Pfeile automatisch entzerren",
+      "x": 1124,
+      "y": 12631,
+      "b": 400,
+      "h": 251,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "112boqz",
+      "l": 259
+     },
+     "win_gd_28": {
+      "t": "notes",
+      "ti": "Zwei Fenster auf derselben Datei",
+      "x": 1124,
+      "y": 12906,
+      "b": 400,
+      "h": 317,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "14ndp9v",
+      "l": 446
+     },
+     "win_gd_29": {
+      "t": "notes",
+      "ti": "Neue Idee hier",
+      "x": 1124,
+      "y": 13247,
+      "b": 400,
+      "h": 205,
+      "e": 0,
+      "f": "#94a3b8",
+      "z": "1vmlilz",
+      "l": 231
+     },
+     "win_gd_2l": {
+      "t": "notes",
+      "ti": "GameDesk",
+      "x": 200,
+      "y": 200,
+      "b": 900,
+      "h": 427,
+      "e": 0,
+      "f": "#6ea8fe",
+      "z": "ouem81",
+      "l": 1234
+     }
+    },
+    "pfeile": {
+     "con_gd_2m": {
+      "v": "win_gd_c",
+      "n": "win_gd_e",
+      "l": "uid · clone · debounce · emitter",
+      "z": "xvqza1"
+     },
+     "con_gd_2n": {
+      "v": "win_gd_c",
+      "n": "win_gd_d",
+      "l": "el() · svg()",
+      "z": "1x4lkhe"
+     },
+     "con_gd_2o": {
+      "v": "win_gd_e",
+      "n": "win_gd_f",
+      "l": "doc.view",
+      "z": "1737k9i"
+     },
+     "con_gd_2p": {
+      "v": "win_gd_e",
+      "n": "win_gd_g",
+      "l": "doc.windows",
+      "z": "vnhvcl"
+     },
+     "con_gd_2q": {
+      "v": "win_gd_e",
+      "n": "win_gd_h",
+      "l": "doc.connections · doc.bundles",
+      "z": "1737k9i"
+     },
+     "con_gd_2r": {
+      "v": "win_gd_d",
+      "n": "win_gd_g",
+      "l": "modules.get(type).create(ctx)",
+      "z": "1405959"
+     },
+     "con_gd_2s": {
+      "v": "win_gd_f",
+      "n": "win_gd_g",
+      "l": "onZoom(scale)",
+      "z": "rsk54x"
+     },
+     "con_gd_2t": {
+      "v": "win_gd_g",
+      "n": "win_gd_h",
+      "l": "Geometrie der Enden",
+      "z": "rmy07l"
+     },
+     "con_gd_2u": {
+      "v": "win_gd_g",
+      "n": "win_gd_i",
+      "l": "zeichnet doc.windows",
+      "z": "1x4lkhe"
+     },
+     "con_gd_2v": {
+      "v": "win_gd_g",
+      "n": "win_gd_k",
+      "l": "setGeometry() · inst.inhaltsHoehe()",
+      "z": "bhi3yj"
+     },
+     "con_gd_2w": {
+      "v": "win_gd_e",
+      "n": "win_gd_j",
+      "l": "serialize() beim Sichern",
+      "z": "7jhakm"
+     },
+     "con_gd_2x": {
+      "v": "win_gd_k",
+      "n": "win_gd_l",
+      "l": "pruefe() → Einstellungen",
+      "z": "l5duio"
+     },
+     "con_gd_2y": {
+      "v": "win_gd_j",
+      "n": "win_gd_l",
+      "l": "Dialog „Projekte\"",
+      "z": "7jhakm"
+     },
+     "con_gd_2z": {
+      "v": "win_gd_l",
+      "n": "win_gd_m",
+      "l": "runAction() · Tasten",
+      "z": "rmy07l"
+     },
+     "con_gd_30": {
+      "v": "win_gd_m",
+      "n": "win_gd_e",
+      "l": "undo · redo · Datei-Drop · Startboard",
+      "z": "10zf91e"
+     },
+     "con_gd_31": {
+      "v": "win_gd_1",
+      "n": "win_gd_2b",
+      "l": "lädt in dieser Folge",
+      "z": "1m3bmq3"
+     },
+     "con_gd_32": {
+      "v": "win_gd_l",
+      "n": "win_gd_2a",
+      "l": "baut Palette, Leiste, Inspector, Dialoge",
+      "z": "xsglye"
+     },
+     "con_gd_33": {
+      "v": "win_gd_d",
+      "n": "win_gd_n",
+      "l": "GD.modules.register()",
+      "z": "3f0wqd"
+     },
+     "con_gd_34": {
+      "v": "win_gd_g",
+      "n": "win_gd_n",
+      "l": "mount(): ctx · getState · setState",
+      "z": "6eecae"
+     },
+     "con_gd_35": {
+      "v": "win_gd_e",
+      "n": "win_gd_2e",
+      "l": "doc · Historie · localStorage",
+      "z": "15j1xil"
+     },
+     "con_gd_36": {
+      "v": "win_gd_h",
+      "n": "win_gd_14",
+      "l": "connections + bundles",
+      "z": "1a42ht3"
+     },
+     "con_gd_37": {
+      "v": "win_gd_k",
+      "n": "win_gd_2h",
+      "l": "setzt die fünf Regeln durch",
+      "z": "dx0u1v"
+     },
+     "con_gd_38": {
+      "v": "win_gd_j",
+      "n": "win_gd_2g",
+      "l": "liste · lesen · schreiben · hinein",
+      "z": "exmc3h"
+     },
+     "con_gd_39": {
+      "v": "win_gd_2g",
+      "n": "win_gd_j",
+      "l": "api/bibliothek/*",
+      "z": "xy1zx0"
+     },
+     "con_gd_3a": {
+      "v": "win_gd_t",
+      "n": "win_gd_2d",
+      "l": "geom3d · gl3d · models",
+      "z": "jgiwz"
+     },
+     "con_gd_3b": {
+      "v": "win_gd_u",
+      "n": "win_gd_10",
+      "l": "zeigt ein gespeichertes Modell",
+      "z": "14idgh4"
+     },
+     "con_gd_3c": {
+      "v": "win_gd_v",
+      "n": "win_gd_11",
+      "l": "GameDesk.geometry()",
+      "z": "1vsu1eu"
+     },
+     "con_gd_3d": {
+      "v": "win_gd_y",
+      "n": "win_gd_z",
+      "l": "geteilte Netze",
+      "z": "51l1nk"
+     },
+     "con_gd_3e": {
+      "v": "win_gd_10",
+      "n": "win_gd_y",
+      "l": "bake() über geom3d.get()",
+      "z": "vx4nbt"
+     },
+     "con_gd_3f": {
+      "v": "win_gd_w",
+      "n": "win_gd_2g",
+      "l": "liest fremde Tafeln",
+      "z": "10mpkxa"
+     },
+     "con_gd_3g": {
+      "v": "win_gd_x",
+      "n": "win_gd_1f",
+      "l": "api/broweg/ruf",
+      "z": "exmc3h"
+     },
+     "con_gd_3h": {
+      "v": "win_gd_s",
+      "n": "win_gd_1a",
+      "l": "depot:<sha256> statt data:",
+      "z": "15j1xil"
+     },
+     "con_gd_3i": {
+      "v": "win_gd_o",
+      "n": "win_gd_1i",
+      "l": "kopfHoehe() meldet das Kopfband",
+      "z": "1zhfqh"
+     },
+     "con_gd_3j": {
+      "v": "win_gd_p",
+      "n": "win_gd_1n",
+      "l": "inhaltsHoehe() — Regel 1",
+      "z": "1zhfqh"
+     },
+     "con_gd_3k": {
+      "v": "win_gd_e",
+      "n": "win_gd_19",
+      "l": "doc.aenderungen",
+      "z": "10avtha"
+     },
+     "con_gd_3l": {
+      "v": "win_gd_19",
+      "n": "win_gd_18",
+      "l": "abzug() · punkte()",
+      "z": "178e2lp"
+     },
+     "con_gd_3m": {
+      "v": "win_gd_1b",
+      "n": "win_gd_18",
+      "l": "derselbe Kern in Node",
+      "z": "1wm68n0"
+     },
+     "con_gd_3n": {
+      "v": "win_gd_1a",
+      "n": "win_gd_e",
+      "l": "aufblasen() beim Schreiben",
+      "z": "1glxzpr"
+     },
+     "con_gd_3o": {
+      "v": "win_gd_1o",
+      "n": "win_gd_1p",
+      "l": "",
+      "z": "10cnjif"
+     },
+     "con_gd_3p": {
+      "v": "win_gd_1p",
+      "n": "win_gd_1q",
+      "l": "",
+      "z": "10cnjif"
+     },
+     "con_gd_3q": {
+      "v": "win_gd_1q",
+      "n": "win_gd_1r",
+      "l": "",
+      "z": "10cnjif"
+     },
+     "con_gd_3r": {
+      "v": "win_gd_1r",
+      "n": "win_gd_1s",
+      "l": "",
+      "z": "10cnjif"
+     },
+     "con_gd_3s": {
+      "v": "win_gd_1s",
+      "n": "win_gd_1t",
+      "l": "",
+      "z": "10cnjif"
+     },
+     "con_gd_3t": {
+      "v": "win_gd_1t",
+      "n": "win_gd_1u",
+      "l": "",
+      "z": "10cnjif"
+     },
+     "con_gd_3u": {
+      "v": "win_gd_1u",
+      "n": "win_gd_1o",
+      "l": "nächste Runde",
+      "z": "6enqlw"
+     },
+     "con_gd_3v": {
+      "v": "win_gd_16",
+      "n": "win_gd_1r",
+      "l": "changed() oder commit()?",
+      "z": "1a42ht3"
+     },
+     "con_gd_3w": {
+      "v": "win_gd_19",
+      "n": "win_gd_1u",
+      "l": "festschreiben({ titel, wer })",
+      "z": "1a42ht3"
+     },
+     "con_gd_3x": {
+      "v": "win_gd_2j",
+      "n": "win_gd_1v",
+      "l": "Notizen → strukturierter Prompt",
+      "z": "64a13v"
+     },
+     "con_gd_3y": {
+      "v": "win_gd_1w",
+      "n": "win_gd_1v",
+      "l": "was noch zu bauen ist",
+      "z": "9qbwj8"
+     },
+     "con_gd_3z": {
+      "v": "win_gd_1x",
+      "n": "win_gd_1v",
+      "l": "so sieht der Prompt aus",
+      "z": "9qbwj8"
+     },
+     "con_gd_40": {
+      "v": "win_gd_1v",
+      "n": "win_gd_x",
+      "l": "dieselbe Kachel, dort beschrieben",
+      "z": "1qb1a8n"
+     },
+     "con_gd_41": {
+      "v": "win_gd_2j",
+      "n": "win_gd_o",
+      "l": "dragCompanions() liefert die Ideen",
+      "z": "65k2kv"
+     }
+    },
+    "buendel": {},
+    "modelle": {}
+   }
+  },
+  "commits": [
+   {
+    "id": "cmt_msntjf98_ji",
+    "zeit": 1786401852668,
+    "titel": "Tafel angelegt",
+    "text": "GameDesk beschreibt sich selbst: Seiten, Kern, Module, 3D-Maschine, Daten, Änderungsverfolgung, Bibliothek, Regeln, Ablauf — plus Ideenrahmen mit Connector zur Worker-Kachel. Erzeugt von boards/_erzeuger-gamedesk.mjs, Feinlayout über GD.layout.aufraeumen().",
+    "wer": "ki",
+    "zahlen": {
+     "gesamt": 0,
+     "jeKlasse": {},
+     "fenster": 0,
+     "pfeile": 0,
+     "sonst": 0
+    },
+    "punkte": [],
+    "gekuerzt": 0
+   }
+  ]
+ },
+ "nextZ": 293
+}

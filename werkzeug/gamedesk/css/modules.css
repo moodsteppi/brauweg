@@ -1,0 +1,877 @@
+/* ==========================================================================
+   GameDesk — Modul-Styles
+   ========================================================================== */
+
+.mod-missing { padding: 16px; color: var(--text-dim); line-height: 1.6; }
+.mod-missing pre { white-space: pre-wrap; font: 11px/1.5 var(--mono); color: var(--danger); }
+
+/* ------------------------------------------------------------- Notiz --- */
+
+.nt-root { display: flex; flex-direction: column; height: 100%; }
+
+.nt-bar {
+  display: flex; align-items: center; gap: 1px;
+  flex: 0 0 auto;
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--panel-2);
+  flex-wrap: wrap;
+}
+.nt-btn {
+  min-width: 24px; height: 24px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: var(--text-dim); cursor: pointer; font-size: 12px; line-height: 1;
+}
+.nt-btn:hover { background: var(--panel-3); color: var(--text); }
+.nt-btn.is-on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.nt-select {
+  height: 24px; padding: 0 4px;
+  background: var(--panel-3); border: 1px solid var(--line); border-radius: 5px;
+  color: var(--text); font-size: 11.5px;
+}
+.nt-sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+
+.nt-pop { position: relative; }
+.nt-pop__panel {
+  display: none;
+  position: absolute; top: 100%; left: 0; z-index: 20;
+  padding: 5px; gap: 4px;
+  grid-template-columns: repeat(4, 18px);
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 7px; box-shadow: var(--shadow-2);
+}
+.nt-pop.is-open .nt-pop__panel { display: grid; }
+.nt-color { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--line); cursor: pointer; }
+.nt-color:hover { transform: scale(1.15); }
+
+.nt-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--schrift-luft) var(--schrift-luft) var(--luft-6);
+  line-height: 1.6;
+  outline: none;
+}
+.nt-editor:focus { outline: none; }
+.nt-editor h1 { font-size: 1.85em; margin: .5em 0 .35em; font-weight: 700; }
+.nt-editor h2 { font-size: 1.4em;  margin: .7em 0 .3em;  font-weight: 650; }
+.nt-editor h3 { font-size: 1.15em; margin: .7em 0 .3em;  font-weight: 650; color: var(--text-dim); }
+.nt-editor p { margin: .45em 0; }
+.nt-editor ul, .nt-editor ol { margin: .4em 0; padding-left: 1.5em; }
+.nt-editor li { margin: .18em 0; }
+.nt-editor blockquote {
+  margin: .6em 0; padding: .3em 0 .3em .9em;
+  border-left: 3px solid var(--accent); color: var(--text-dim);
+}
+.nt-editor pre {
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+  border-radius: 6px; padding: 9px 11px; overflow-x: auto;
+  font: 12px/1.5 var(--mono);
+}
+.nt-editor a { color: var(--accent); }
+.nt-editor ul.nt-todo { list-style: none; padding-left: 1.4em; }
+.nt-editor ul.nt-todo > li { position: relative; }
+.nt-editor ul.nt-todo > li::before {
+  content: '☐';
+  position: absolute; left: -1.25em; top: 0;
+  color: var(--text-faint); cursor: pointer;
+}
+.nt-editor ul.nt-todo > li[data-done="1"]::before { content: '☑'; color: var(--ok); }
+.nt-editor ul.nt-todo > li[data-done="1"] { color: var(--text-faint); text-decoration: line-through; }
+
+/* ------------------------------------------------------------ Medien --- */
+
+.md-root { display: flex; flex-direction: column; height: 100%; background: var(--panel); }
+.md-stage {
+  position: relative;
+  flex: 1 1 auto; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.md-stage.is-drop { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.md-media { width: 100%; height: 100%; display: block; }
+.md-empty {
+  display: flex; flex-direction: column; align-items: center; gap: var(--luft-3);
+  color: var(--text-faint); text-align: center; padding: var(--luft-5);
+  line-height: 1.5;
+}
+.md-empty__icon { font-size: 30px; opacity: .5; }
+.md-empty__row { display: flex; gap: 7px; }
+.md-error { position: absolute; color: var(--danger); }
+.md-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 46px;
+  background: rgba(0,0,0,.45); color: #fff;
+  border: none; border-radius: 7px; cursor: pointer; font-size: 20px; line-height: 1;
+}
+.md-nav:hover { background: rgba(0,0,0,.7); }
+.md-nav--prev { left: 7px; }
+.md-nav--next { right: 7px; }
+.md-counter {
+  position: absolute; right: var(--luft-3); bottom: var(--luft-3);
+  background: rgba(0,0,0,.55); color: #fff;
+  padding: var(--luft-1) var(--luft-2); border-radius: 5px; font-size: 11px;
+}
+.md-caption {
+  flex: 0 0 auto;
+  padding: var(--luft-3) var(--schrift-luft);
+  border-top: 1px solid var(--line-soft);
+  color: var(--text-dim); font-size: 12px;
+  outline: none; min-height: 30px;
+}
+.md-caption[data-empty="1"]::before {
+  content: 'Bildunterschrift…'; color: var(--text-faint); font-style: italic;
+}
+.md-caption:focus[data-empty="1"]::before { content: ''; }
+.md-strip {
+  flex: 0 0 auto;
+  display: flex; gap: var(--luft-2); padding: var(--luft-2);
+  overflow-x: auto;
+  border-top: 1px solid var(--line-soft);
+  background: var(--panel-2);
+}
+.md-thumb {
+  width: 46px; height: 34px; flex: 0 0 auto;
+  border-radius: 5px; border: 1px solid var(--line);
+  background-size: cover; background-position: center;
+  background-color: var(--panel-3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+}
+.md-thumb.is-on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.md-thumb__vid { font-size: 13px; }
+
+/*
+ * Tonkachel — die Wellenform ist der Inhalt, nicht eine Zeile darin.
+ *
+ * Name oben, Bedienleiste unten, dazwischen nimmt die Wellenform allen
+ * Platz. `min-height` an der Wellenform statt `justify-content:center`:
+ * Wird die Kachel klein gezogen, schrumpft die Wellenform bis zu einer
+ * Grenze und danach nichts mehr — vorher wurde sie als Erstes plattgedrückt.
+ */
+.md-audio {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  gap: var(--luft-3);
+  padding: var(--schrift-luft);
+  min-height: 0;
+}
+.md-audio__name {
+  flex: 0 0 auto;
+  font-size: 12.5px; font-weight: 600; color: var(--text);
+  line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.md-wavebox {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 44px;
+}
+.md-wave { width: 100%; height: 100%; display: block; cursor: pointer; }
+.md-wave__hinweis {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--luft-2) var(--schrift-luft);
+  font-size: 11px; line-height: 1.4; text-align: center;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.md-wave__hinweis[data-stand="geht-nicht"] { color: var(--warn); }
+.md-transport { display: flex; align-items: center; gap: var(--luft-3); flex: 0 0 auto; }
+.md-transport--knapp { gap: var(--luft-3); }
+.md-transport__luecke { flex: 1 1 auto; }
+.md-play {
+  width: 34px; height: 34px; flex: 0 0 auto;
+  border-radius: 50%; border: 1px solid var(--accent);
+  background: var(--accent-soft); color: var(--accent);
+  cursor: pointer; font-size: 12px; line-height: 1;
+}
+.md-play:hover { background: var(--accent); color: #fff; }
+.md-time { font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.md-thumb__welle { width: 40px; height: 24px; display: block; opacity: .85; }
+.md-mini {
+  width: 24px; height: 24px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--text-faint); cursor: pointer; font-size: 12px; line-height: 1;
+}
+.md-mini.is-on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.md-vol { width: 76px; accent-color: var(--accent); }
+/* Das <audio> ist nur noch der Antrieb — bedient wird über .md-transport. */
+.md-audio audio { display: none; }
+
+/* ----------------------------------------------------------- Sandbox --- */
+
+.sb-root { display: grid; grid-template-columns: 50% 6px 1fr; height: 100%; min-height: 0; }
+.sb-left, .sb-right { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.sb-divider { background: var(--line-soft); cursor: col-resize; }
+.sb-divider:hover { background: var(--accent); }
+
+.sb-tabs { display: flex; gap: 2px; padding: var(--luft-2) var(--luft-3); background: var(--panel-2); border-bottom: 1px solid var(--line-soft); }
+.sb-tab {
+  padding: 3px 10px; border-radius: 5px; border: 1px solid transparent;
+  background: transparent; color: var(--text-dim); cursor: pointer; font-size: 11.5px; font-weight: 600;
+}
+.sb-tab:hover { background: var(--panel-3); color: var(--text); }
+.sb-tab.is-on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+.sb-code {
+  flex: 1 1 auto; min-height: 0;
+  border: none; outline: none; resize: none;
+  padding: 9px 11px;
+  background: var(--bg-board); color: var(--text);
+  font: 12px/1.55 var(--mono);
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+
+.sb-bar {
+  display: flex; align-items: center; gap: var(--luft-2);
+  padding: var(--luft-3) var(--luft-3);
+  background: var(--panel-2); border-bottom: 1px solid var(--line-soft);
+}
+.sb-btn {
+  padding: 3px 9px; border-radius: 5px;
+  border: 1px solid var(--line); background: var(--panel-3);
+  color: var(--text-dim); cursor: pointer; font-size: 11.5px;
+}
+.sb-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sb-btn--run { background: var(--accent-2); border-color: var(--accent-2); color: #fff; font-weight: 600; }
+.sb-btn--run:hover { background: var(--accent); color: #fff; }
+.sb-btn--tiny { padding: 1px 6px; font-size: 10.5px; }
+.sb-check { display: inline-flex; align-items: center; gap: 4px; color: var(--text-dim); font-size: 11.5px; cursor: pointer; }
+
+.sb-frame { flex: 1 1 auto; min-height: 0; border: none; width: 100%; background: #fff; }
+.sb-console-box { flex: 0 0 34%; display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--line-soft); }
+.sb-console-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 3px 8px; background: var(--panel-2);
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-faint);
+}
+.sb-console { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 8px; font: 11.5px/1.5 var(--mono); background: var(--bg-board); }
+.sb-line { display: flex; gap: 7px; padding: 1px 0; white-space: pre-wrap; word-break: break-word; }
+.sb-line__tag { color: var(--text-faint); flex: 0 0 auto; }
+.sb-line--error { color: var(--danger); }
+.sb-line--error .sb-line__tag { color: var(--danger); }
+.sb-line--warn { color: var(--warn); }
+.sb-line--warn .sb-line__tag { color: var(--warn); }
+
+/* --------------------------------------------------------- Wireframe --- */
+
+.wf-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.wf-bar {
+  display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding: 4px 5px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.wf-tool {
+  min-width: 25px; height: 25px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: var(--text-dim); cursor: pointer; font-size: 12px; line-height: 1;
+}
+.wf-tool:hover { background: var(--panel-3); color: var(--text); }
+.wf-tool.is-on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.wf-sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+.wf-select {
+  height: 25px; padding: 0 5px; max-width: 120px;
+  background: var(--panel-3); border: 1px solid var(--line); border-radius: 5px;
+  color: var(--text); font-size: 11.5px;
+}
+
+.wf-grid {
+  position: relative;
+  flex: 1 1 auto; min-height: 0;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-rows: 18px 1fr;
+  background: var(--bg-board);
+}
+.wf-corner { background: var(--panel-2); border-right: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+.wf-ruler { background: var(--panel-2); display: block; overflow: hidden; }
+.wf-ruler--h { border-bottom: 1px solid var(--line-soft); cursor: ns-resize; }
+.wf-ruler--v { border-right: 1px solid var(--line-soft); cursor: ew-resize; }
+.wf-tick { stroke: var(--text-faint); }
+
+.wf-ruler-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.wf-rl { position: absolute; font-size: 8px; color: var(--text-faint); line-height: 1; }
+.wf-rl--h { top: var(--schrift-luft-eng); transform: translateX(2px); }
+.wf-rl--v { left: var(--schrift-luft-eng); transform: translateY(2px); }
+
+.wf-stage { position: relative; overflow: hidden; min-width: 0; min-height: 0; }
+.wf-stage.is-draw { cursor: crosshair; }
+.wf-svg { width: 100%; height: 100%; display: block; touch-action: none; }
+.wf-artboard { filter: drop-shadow(0 2px 10px rgba(0,0,0,.28)); }
+.wf-shape { cursor: default; }
+.wf-stage:not(.is-draw) .wf-shape { cursor: move; }
+
+.wf-selbox { stroke: #6ea8fe; fill: none; pointer-events: none; }
+.wf-selbox--multi { stroke-dasharray: 5 4; }
+.wf-handle { fill: #ffffff; stroke: #6ea8fe; }
+.wf-handle--rot { fill: #6ea8fe; }
+.wf-marquee { fill: rgba(110,168,254,.14); stroke: #6ea8fe; stroke-dasharray: 4 3; }
+.wf-link { fill: #6ea8fe; stroke: #ffffff; cursor: crosshair; }
+.wf-link:hover { fill: #4fd1c5; }
+.wf-shape.is-drop-shape { filter: drop-shadow(0 0 4px #57c98a) drop-shadow(0 0 2px #57c98a); }
+.wf-smartline { stroke: #ff4fa3; pointer-events: none; }
+.wf-guide { stroke: #21c7d6; pointer-events: none; }
+.wf-guide-hit { stroke: transparent; pointer-events: stroke; cursor: grab; }
+
+/* ------------------------------------------------------------ Rahmen --- */
+
+.fr-root {
+  position: relative;
+  width: 100%; height: 100%;
+  pointer-events: none;            /* über der Fläche bleibt das Board bedienbar */
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/*
+ * Der Kopf ist ein eigenes Band, kein frei schwebender Text.
+ *
+ * Vorher standen Wasserzeichen und Untertitel absolut positioniert im
+ * Rahmen, und das Layout reservierte dafür 24 Pixel — gebraucht wurden über
+ * hundert. Jede Überschrift lag unter der ersten Kachel. Jetzt steht die
+ * Höhe hier, `frame.js` misst sie nach und meldet sie an `GD.layout`, das
+ * den Inhalt genau darunter setzt.
+ */
+/*
+ * Die Überschrift sitzt in #frame-layer, nicht im Rahmen — windows.js führt
+ * sie an dessen Geometrie. Der Kasten deckt den ganzen Rahmen ab, gezeigt
+ * wird nur das Band oben; angefasst wird ausschließlich der Text selbst.
+ */
+.fr-schild {
+  position: absolute;
+  pointer-events: none;
+  overflow: visible;
+}
+.fr-schild.is-eingeklappt .fr-kopf,
+.fr-schild.is-eingeklappt .fr-glas,
+.fr-schild.is-eingeklappt .fr-modulband { display: none; }
+/*
+ * Der Kasten beginnt am oberen Fensterrand — und das ist die OBERKANTE DER
+ * TITELLEISTE, nicht die des Rahmenfelds. Stand der Kopf hier bei 0, legte
+ * sich die Überschrift über die Leiste und schnitt genau durch deren untere
+ * Linie: Bei Zoom 1 ragte sie 19 Pixel hinein, quer über den kleinen
+ * Leistentitel. Die Leiste ist eine harte Grenze, also fängt der Kopf erst
+ * darunter an. `frame.js.kopfHoehe()` meldet ohnehin `--fr-bar` + eigene
+ * Höhe an GD.layout — erst mit diesem Versatz stimmen Band und Anzeige
+ * überein.
+ */
+.fr-kopf {
+  position: absolute; left: 0; top: var(--fr-bar);
+  padding: var(--schrift-luft) var(--schrift-luft) var(--luft-4);
+  pointer-events: none;
+  user-select: none;
+  transform-origin: 0 0;
+  transition: transform var(--zeit-gross) var(--aus),
+              opacity var(--zeit-gross) ease;
+}
+.fr-kopf > * { pointer-events: auto; cursor: grab; }
+.fr-kopf:active > * { cursor: grabbing; }
+/* Hier stand `.fr-kopf.is-weg { opacity: 0 }` — schmale Rahmen nahmen ihre
+   Überschrift weg. Die Regel ist raus: Wo der Wuchs an seinen Deckel stößt,
+   behält die Schrift ihre Größe, statt zu verschwinden (s. frame.js). */
+.fr-mark {
+  font-size: var(--fr-mark-size);
+  font-weight: 750;
+  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.fr-note {
+  margin-top: var(--luft-1);
+  font-size: var(--fr-note-size);
+  line-height: 1.35;
+  color: var(--text-faint);
+  max-width: 62ch;
+}
+/* Weit herausgezoomt trägt die vergrößerte Überschrift eine eigene Platte —
+   sonst liest sie sich nicht mehr gegen die Kacheln darunter. */
+.fr-kopf.is-gross .fr-mark,
+.fr-kopf.is-gross .fr-note {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(10,13,18,.72);
+  width: fit-content;
+  max-width: 100%;
+}
+html[data-theme="light"] .fr-kopf.is-gross .fr-mark,
+html[data-theme="light"] .fr-kopf.is-gross .fr-note {
+  background: rgba(255,255,255,.82);
+}
+/* Weit draußen zählt nur der Name — der Untertitel wäre ohnehin nicht mehr
+   zu lesen und verdoppelte nur die Fläche. */
+.fr-kopf.is-gross .fr-note { display: none !important; }
+/* Der Name bricht dann statt auszulaufen: Der Deckel steht in frame.js an
+   der Rahmenbreite, hier steht nur, wie er umgeht. Zwei Zeilen sind die
+   Grenze — was in zwei Zeilen nicht steht, liest auf dieser Größe niemand. */
+.fr-kopf.is-gross .fr-mark {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+/* Der Griff wird erst sichtbar, wenn man in die Nähe kommt — er zeigt, dass
+   die Überschrift kein Bild ist, sondern etwas, das man anfassen kann. */
+.fr-griff {
+  position: absolute; left: 3px; top: calc(var(--schrift-luft) + 2px);
+  width: 10px; height: calc(var(--fr-mark-size) * .8);
+  border-radius: 3px;
+  background: repeating-linear-gradient(180deg,
+    currentColor 0 2px, transparent 2px 5px);
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity var(--zeit-klein) ease, transform var(--zeit-klein) var(--aus);
+}
+.fr-kopf:hover .fr-griff { opacity: .75; }
+.fr-kopf:active .fr-griff { opacity: 1; transform: scaleX(1.3); }
+.fr-kopf.is-verschoben .fr-griff { opacity: .45; }
+/* Der Text hebt sich beim Überfahren leicht an: Er ist anfassbar, das soll
+   man sehen, bevor man zieht. */
+.fr-mark, .fr-note { transition: transform var(--zeit-druck) var(--aus); }
+.fr-kopf:hover .fr-mark { transform: translateX(2px); }
+.gd-win[data-type="frame"] .gd-win__body { background: transparent; }
+
+/* ------------------------------------------------- Fernsicht des Rahmens ---
+ *
+ * Herausgezoomt bleibt die Überschrift auf dem Bildschirm gleich groß, der
+ * Rahmen darunter schrumpft. Ab dem Punkt, an dem die Schrift mehr Inhalt
+ * verdeckt als sie erklärt (frame.js: GLAS_AB), wechselt der Rahmen die
+ * Darstellung: Der Inhalt geht hinter Milchglas, und unten sagt ein Band,
+ * was drinsteckt. Ein- und Ausblenden hängen an einer Klasse am Schild,
+ * damit beides in einem Zug läuft.
+ */
+.fr-glas {
+  position: absolute; left: 0; right: 0; top: var(--fr-bar); bottom: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: rgba(15,17,22,.40);
+  opacity: 0;
+  /* Die Unschärfe steht in frame.js (sie muss gegen den Zoom rechnen).
+     Geblendet wird nur über die Deckkraft — Chromium mischt den unscharfen
+     Hintergrund damit ein, die Unschärfe zieht also sauber mit auf. */
+  transition: opacity var(--zeit-gross) var(--aus);
+}
+html[data-theme="light"] .fr-glas { background: rgba(246,247,249,.55); }
+.fr-schild.is-fern .fr-glas { opacity: 1; }
+/* Ein leerer Rahmen hat nichts zu verdecken — Glas wäre dort nur Schleier. */
+.fr-schild.is-leer .fr-glas { opacity: 0; }
+/* Steckt der Rahmen in einem, der schon Glas zeigt, bleibt seins weg
+   (frame.js: unterFremdemGlas). Zwei Scheiben übereinander verdoppeln
+   Trübung und Unschärfe — aus der ruhigen Fläche wird ein dunkler Fleck,
+   und ein Brett voller Abschnitte bekommt lauter solche Flecken. */
+.fr-schild.is-fremdglas .fr-glas { opacity: 0; }
+/* Auf dem Glas trägt der Name keine eigene Platte mehr: Zwei Schichten
+   übereinander sehen aus wie ein Fehler, und der Kontrast steht schon. */
+.fr-schild.is-fern .fr-kopf.is-gross .fr-mark { background: transparent; }
+
+.fr-modulband {
+  position: absolute; left: 50%; bottom: 0;
+  /* Der Ursprung unten Mitte hält das Band beim Mitwachsen an der
+     Unterkante; translateX(-50%) rechnet mit der unskalierten Breite und
+     zentriert deshalb bei jedem Maßstab richtig. */
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) scale(1);
+  display: flex; flex-wrap: wrap-reverse; justify-content: center;
+  gap: 10px;
+  padding: 0 12px 14px;
+  pointer-events: none;
+}
+/*
+ * Ein Plättchen je Modulart. Ruhezustand ist der Tropfen: rund, klein, tief
+ * unten — von dort fließt es in die Form und zeigt erst am Ende seine Daten.
+ * Zurück gehen alle zusammen (Verzögerung 0), sonst zerfasert das Ausblenden.
+ */
+.fr-chip {
+  --i: 0;
+  --ton: var(--accent);
+  flex: 0 0 auto;
+  width: 46px; height: 52px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  opacity: 0;
+  border-radius: 50%;
+  transform: translateY(16px) scale(.3);
+  transition: transform 320ms var(--aus),
+              border-radius 320ms var(--aus),
+              opacity 180ms ease;
+  transition-delay: 0ms;
+}
+.fr-schild.is-fern .fr-chip {
+  opacity: 1;
+  border-radius: 14px;
+  transform: none;
+  transition-delay: calc(var(--i) * 55ms);
+}
+.fr-chip__zahl {
+  font-size: 12px; font-weight: 700; line-height: 1;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.fr-chip__logo { font-size: 19px; line-height: 1; color: var(--ton); }
+/* Inhalt kommt zuletzt — erst steht die Form, dann steht sie für etwas. */
+.fr-chip__zahl, .fr-chip__logo {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 150ms ease, transform 150ms var(--aus);
+}
+.fr-schild.is-fern .fr-chip__zahl,
+.fr-schild.is-fern .fr-chip__logo {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--i) * 55ms + 200ms);
+}
+/* Zu flacher Rahmen für Plättchen (frame.js) oder gar nichts zu zeigen:
+   Band zurück in den Tropfen, Glas bleibt. Muss NACH den is-fern-Regeln
+   stehen — gleiche Spezifität, es entscheidet die Reihenfolge. */
+.fr-schild.is-eng .fr-chip,
+.fr-schild.is-leer .fr-chip {
+  opacity: 0;
+  border-radius: 50%;
+  transform: translateY(16px) scale(.3);
+  transition-delay: 0ms;
+}
+.fr-schild.is-eng .fr-chip__zahl, .fr-schild.is-eng .fr-chip__logo,
+.fr-schild.is-leer .fr-chip__zahl, .fr-schild.is-leer .fr-chip__logo {
+  opacity: 0; transform: translateY(4px); transition-delay: 0ms;
+}
+/* Gestaffelt einlaufen ist Zierde, nicht Aussage — wer Bewegung abbestellt
+   hat, bekommt alles auf einmal. Die Dauern deckelt app.css bereits. */
+@media (prefers-reduced-motion: reduce) {
+  .fr-schild.is-fern .fr-chip,
+  .fr-schild.is-fern .fr-chip__zahl,
+  .fr-schild.is-fern .fr-chip__logo { transition-delay: 0ms; }
+}
+
+/* ---------------------------------------------------------- Quelltext --- */
+
+.cd-root { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--bg-board); }
+.cd-head {
+  display: flex; align-items: center; gap: var(--luft-2);
+  flex: 0 0 auto;
+  padding: var(--luft-3) var(--luft-2) var(--luft-3) var(--schrift-luft);
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.cd-path {
+  font: 11px var(--mono); color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left;
+}
+.cd-btn {
+  width: 22px; height: 22px; flex: 0 0 auto;
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: var(--text-faint); cursor: pointer; font-size: 11px; line-height: 1;
+}
+.cd-btn:hover { background: var(--panel-3); color: var(--text); }
+.cd-btn.is-on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+.cd-scroll {
+  position: relative;
+  flex: 1 1 auto; min-height: 0;
+  display: flex; gap: var(--luft-3);
+  overflow: auto;
+  /* Rechts dieselbe Luft wie links: Eine Zeile, die genau passt, soll nicht
+     an der Kante kleben. Beim Rollen schiebt sie sich unter das Polster. */
+  padding: var(--luft-3) var(--schrift-luft) var(--luft-5);
+}
+.cd-gutter {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  line-height: 1.55;
+  color: var(--text-faint);
+  text-align: right;
+  user-select: none;
+  white-space: pre;
+  opacity: .55;
+}
+.cd-code {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-right: var(--schrift-luft);
+  font-family: var(--mono);
+  line-height: 1.55;
+  color: var(--text);
+  tab-size: 2;
+}
+.cd-marks { position: absolute; left: 0; right: 0; top: var(--luft-3); pointer-events: none; }
+.cd-mark { position: absolute; left: 0; right: 0; background: var(--accent-soft); border-left: 2px solid var(--accent); }
+
+.cd-c { color: #6b7f5e; font-style: italic; }
+.cd-s { color: #c9926b; }
+.cd-k { color: #7fa8e8; }
+.cd-n { color: #b58ad8; }
+html[data-theme="light"] .cd-c { color: #5c7a4a; }
+html[data-theme="light"] .cd-s { color: #a4562a; }
+html[data-theme="light"] .cd-k { color: #2f6fe4; }
+html[data-theme="light"] .cd-n { color: #7a3fb0; }
+
+.cd-editor {
+  flex: 1 1 auto; min-height: 0;
+  border: none; outline: none; resize: none;
+  padding: var(--luft-3) var(--schrift-luft);
+  background: var(--bg-board); color: var(--text);
+  font: 12px/1.55 var(--mono);
+  tab-size: 2; white-space: pre;
+}
+.cd-caption {
+  flex: 0 0 auto;
+  padding: var(--luft-2) var(--schrift-luft);
+  border-top: 1px solid var(--line-soft);
+  font-size: 11px; line-height: 1.45; color: var(--text-faint);
+  background: var(--panel-2);
+}
+
+/* --------------------------------------------------------- 3D-Modell --- */
+
+.m3-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.m3-bar {
+  display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.m3-btn {
+  min-width: 25px; height: 25px; padding: 0 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: var(--text-dim); cursor: pointer; font-size: 12px; line-height: 1;
+}
+.m3-btn:hover { background: var(--panel-3); color: var(--text); }
+.m3-btn.is-on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.m3-btn--go { background: #2f8f86; border-color: #2f8f86; color: #fff; font-weight: 600; padding: 0 10px; }
+.m3-btn--go:hover { background: #3fada2; color: #fff; }
+.m3-sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+.m3-select {
+  height: 25px; padding: 0 5px; max-width: 150px;
+  background: var(--panel-3); border: 1px solid var(--line); border-radius: 5px;
+  color: var(--text); font-size: 11.5px;
+}
+.m3-num {
+  width: 56px; height: 25px; padding: 0 5px;
+  background: var(--panel-3); border: 1px solid var(--line); border-radius: 5px;
+  color: var(--text); font-size: 11.5px;
+}
+
+.m3-stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #0d1016; }
+.m3-view { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+.m3-hint {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 4px 9px;
+  font-size: 10.5px; color: var(--text-faint);
+  background: linear-gradient(to top, rgba(0,0,0,.55), transparent);
+  pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.m3-nogl { padding: 20px; color: var(--text-dim); line-height: 1.6; }
+.m3-nogl strong { color: var(--warn); }
+
+.m3-list { padding: 0 8px 4px; display: flex; flex-direction: column; gap: 2px; max-height: 210px; overflow-y: auto; }
+.m3-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 7px; border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer; font-size: 11.5px;
+}
+.m3-item:hover { background: var(--panel-2); }
+.m3-item.is-on { background: var(--accent-soft); border-color: var(--accent); }
+.m3-item__dot { width: 9px; height: 9px; border-radius: 3px; flex: 0 0 auto; border: 1px solid rgba(128,128,128,.4); }
+.m3-item__name { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m3-item__btn {
+  width: 20px; height: 20px; flex: 0 0 auto;
+  background: transparent; border: none; border-radius: 4px;
+  color: var(--text-faint); cursor: pointer; font-size: 10px; line-height: 1;
+}
+.m3-item__btn:hover { background: var(--panel-3); color: var(--text); }
+
+.m3-texprev {
+  width: 100%; height: 74px;
+  border: 1px solid var(--line); border-radius: 7px;
+  background-size: 64px 64px; background-repeat: repeat;
+}
+
+.m3-model {
+  display: flex; align-items: center; gap: 6px;
+  margin: 2px 12px; padding: 5px 8px;
+  border: 1px solid var(--line-soft); border-radius: 7px;
+  background: var(--panel-2);
+  font-size: 11.5px;
+}
+.m3-model.is-on { border-color: var(--accent); }
+.m3-model__name { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m3-model__btns { display: flex; gap: 2px; flex: 0 0 auto; }
+.m3-model__btn {
+  width: 22px; height: 22px;
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: var(--text-faint); cursor: pointer; font-size: 11px; line-height: 1;
+}
+.m3-model__btn:hover { background: var(--panel-3); color: var(--accent); border-color: var(--line); }
+
+/* -------------------------------------------------------- 3D-Ansicht --- */
+
+.mv-root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0d1016; }
+.mv-view { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.mv-view:active { cursor: grabbing; }
+.mv-spin {
+  position: absolute; right: 7px; top: 7px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(12,15,22,.72);
+  color: var(--text-dim);
+  cursor: pointer; font-size: 12px; line-height: 1;
+  z-index: 2;
+}
+.mv-spin:hover { color: var(--text); border-color: var(--accent); }
+.mv-spin.is-on { color: #4fd1c5; border-color: #4fd1c5; }
+.mv-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
+  color: var(--text-faint); text-align: center; padding: 16px;
+}
+.mv-empty__icon { font-size: 28px; opacity: .5; }
+.mv-empty__hint { font-size: 10.5px; }
+
+.wf-textedit {
+  position: fixed;
+  z-index: 500;
+  margin: 0;
+  border: 2px solid var(--accent);
+  border-radius: 3px;
+  background: #ffffff;
+  resize: none;
+  outline: none;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0,0,0,.3);
+}
+
+/* ----------------------------------------------------------- Projekt --- */
+
+.pj-root {
+  display: flex; flex-direction: column; height: 100%; min-height: 0;
+  padding: var(--schrift-luft); gap: var(--luft-3);
+  background: var(--panel);
+}
+.pj-kopf { flex: 0 0 auto; }
+.pj-name { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+.pj-name.is-leer { color: var(--text-faint); font-weight: 500; }
+.pj-pfad {
+  font: 10.5px var(--mono); color: var(--text-faint); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.pj-buehne {
+  flex: 1 1 auto; min-height: 60px; position: relative;
+  border: 1px solid var(--line-soft); border-radius: 7px;
+  background: var(--bg-board);
+  overflow: hidden; cursor: pointer;
+}
+.pj-leinwand { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.pj-zahlen { flex: 0 0 auto; display: flex; gap: 16px; }
+.pj-zahl { display: flex; align-items: baseline; gap: 4px; }
+.pj-zahl strong { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pj-zahl span { font-size: 11px; color: var(--text-faint); }
+
+.pj-module {
+  flex: 0 0 auto; font-size: 11px; color: var(--text-dim); line-height: 1.5;
+}
+.pj-fuss { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; }
+.pj-datum { flex: 1 1 auto; min-width: 0; font-size: 10.5px; color: var(--text-faint); }
+.pj-oeffnen { flex: 0 0 auto; }
+
+/* ====================================================== Modul: Worker ===
+   Schnittstelle zum Worker-Modul im Broweg (js/modules/worker.js) */
+
+.wk-root {
+  display: flex; flex-direction: column; gap: var(--luft-2);
+  height: 100%;
+  padding: var(--luft-3);
+}
+.wk-kopf {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--luft-2);
+  padding-bottom: var(--luft-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.wk-punkt {
+  width: 9px; height: 9px; flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--wk-farbe, #6b7488);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wk-farbe, #6b7488) 22%, transparent);
+}
+.wk-adresse {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11.5px; color: var(--text-dim);
+}
+.wk-wer { flex: 0 0 auto; font-size: 10.5px; color: var(--ok); }
+.wk-wer.is-aus { color: var(--text-faint); }
+.wk-btn {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  border: 1px solid var(--line); border-radius: var(--radius-s);
+  background: var(--panel-2); color: var(--text-dim);
+  cursor: pointer; line-height: 1;
+}
+.wk-btn:hover { border-color: var(--accent); color: var(--accent); }
+.wk-btn.is-laeuft { opacity: .5; }
+
+.wk-rumpf { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.wk-meldung {
+  margin-bottom: var(--luft-2);
+  padding: var(--luft-2) var(--luft-3);
+  border-radius: var(--radius-s);
+  background: rgba(239,107,107,.12);
+  color: var(--danger);
+  font-size: 11px; line-height: 1.5;
+}
+.wk-abschnitt {
+  margin: var(--luft-3) 0 var(--luft-2);
+  color: var(--text-faint); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.wk-liste { display: flex; flex-direction: column; gap: 4px; }
+.wk-zeile {
+  display: flex; gap: var(--luft-2);
+  padding: var(--luft-2) var(--luft-3);
+  border: 1px solid var(--line-soft); border-radius: var(--radius-s);
+  background: var(--panel-2);
+}
+.wk-zeile__haupt { flex: 1 1 auto; min-width: 0; }
+.wk-zeile__name { display: flex; align-items: center; gap: var(--luft-2); font-weight: 600; }
+.wk-zeile__name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-zeile__meta {
+  margin-top: 2px;
+  font-size: 10.5px; color: var(--text-faint); line-height: 1.5;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.wk-pille {
+  flex: 0 0 auto;
+  padding: 1px 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--wk-farbe, #6b7488) 20%, transparent);
+  color: var(--wk-farbe, #6b7488);
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+.wk-leer { padding: var(--luft-5) var(--luft-3); text-align: center; color: var(--text-faint); font-size: 11px; line-height: 1.6; }
+.wk-fuss { flex: 0 0 auto; display: flex; align-items: center; gap: var(--luft-2); }
+.wk-stand { flex: 1 1 auto; font-size: 10.5px; color: var(--text-faint); }
+.wk-token {
+  display: block;
+  padding: var(--luft-3);
+  border: 1px solid var(--line); border-radius: var(--radius-s);
+  background: var(--panel-2);
+  font-family: var(--mono); font-size: 11.5px;
+  word-break: break-all; user-select: all;
+}
