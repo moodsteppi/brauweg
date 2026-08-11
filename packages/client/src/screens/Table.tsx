@@ -653,6 +653,16 @@ export function Table({
     (action) => action.type !== 'vorbehalt' && action.type !== 'weiter',
   );
 
+  // Die Armut-Entscheidung (annehmen/ablehnen) ist keine beilaeufige Knopfreihe,
+  // sondern eine echte Verpflichtung — sie bekommt ein eigenes Blatt mit
+  // Erklaerung. Die uebrigen Reihen-Aktionen (Ansagen) bleiben unten.
+  const armutAccept = rowActions.find((a) => a.type === 'armutAccept');
+  const armutDecline = rowActions.find((a) => a.type === 'armutDecline');
+  const armutEntscheidung = armutAccept && armutDecline ? { armutAccept, armutDecline } : null;
+  const knopfActions = rowActions.filter(
+    (a) => a.type !== 'armutAccept' && a.type !== 'armutDecline',
+  );
+
   const opponents = Array.from({ length: seatCount }, (_, s) => s).filter(
     (s) => view.seat === null || s !== view.seat,
   );
@@ -902,10 +912,10 @@ export function Table({
         />
       )}
 
-      {/* Ansagen und Armut-Antworten bleiben eine Knopfreihe */}
-      {rowActions.length > 0 && !round?.pendingPflichtansage && (
+      {/* Ansagen bleiben eine Knopfreihe */}
+      {knopfActions.length > 0 && !round?.pendingPflichtansage && (
         <div className="doko-actions">
-          {rowActions.map((action, index) => (
+          {knopfActions.map((action, index) => (
             <button
               key={index}
               className={`doko-action${action.type === 'announce' ? ' doko-action--call' : ''}${
@@ -919,6 +929,19 @@ export function Table({
             </button>
           ))}
         </div>
+      )}
+
+      {/* Armut-Entscheidung als eigenes Blatt mit Erklaerung. */}
+      {armutEntscheidung && !round?.pendingPflichtansage && (
+        <ArmutEntscheidung
+          ansager={
+            round?.vorbehalte?.find((v) => v.kind === 'armut')?.seat !== undefined
+              ? nameOf(round!.vorbehalte.find((v) => v.kind === 'armut')!.seat)
+              : null
+          }
+          onAnnehmen={() => send(armutEntscheidung.armutAccept)}
+          onAblehnen={() => send(armutEntscheidung.armutDecline)}
+        />
       )}
 
       {/* Vorbehaltsabfrage als Dialog mit Bestaetigung — erst nach dem Geben. */}
@@ -1640,6 +1663,47 @@ function Pflichtansage({
           <button onClick={() => onDecide(false)} disabled={!canDecline}>
             Ablehnen
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Armut-Entscheidung als eigenes Blatt.
+ *
+ * Vorher standen „Armut annehmen/ablehnen" als nackte Knopfreihe ueber der
+ * Hand — dieselbe Bauform wie eine beilaeufige Ansage, obwohl das Annehmen eine
+ * echte Verpflichtung ist (man wird Partner und uebernimmt Karten). Als Blatt
+ * mit Erklaerung ist die Tragweite klar, und kein Fehltipp entscheidet sie
+ * nebenbei. Absichtlich ohne Klick-daneben-schliesst: Es ist eine Pflichtwahl,
+ * und der Zugtimer laeuft ohnehin.
+ */
+function ArmutEntscheidung({
+  ansager,
+  onAnnehmen,
+  onAblehnen,
+}: {
+  ansager: string | null;
+  onAnnehmen: () => void;
+  onAblehnen: () => void;
+}): React.JSX.Element {
+  return (
+    <div className="doko-sheet">
+      <div className="doko-sheet-card">
+        <h2>Armut</h2>
+        <p>
+          {ansager ? `${ansager} hat Armut angesagt` : 'Ein Mitspieler hat Armut angesagt'} — er
+          hält höchstens drei Trümpfe. Nimmst du an, wirst du sein Partner: Du
+          bekommst seine Trümpfe und gibst dafür gleich viele Karten zurück, dann
+          spielt ihr zu zweit gegen die anderen beiden. Lehnst du ab, wird der
+          Nächste gefragt.
+        </p>
+        <div className="doko-sheet-row">
+          <button className="primary" onClick={onAnnehmen}>
+            Annehmen
+          </button>
+          <button onClick={onAblehnen}>Ablehnen</button>
         </div>
       </div>
     </div>

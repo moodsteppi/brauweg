@@ -38,10 +38,12 @@
  *
  * Zwei Festlegungen:
  *
- * 1. **Keine Ansagen, aber die Vorbehalte, die die Hand vorgibt.** Re und
- *    Kontra sagt er nie — das verdoppelt den Einsatz und ist eine
- *    Einschaetzung, die er nicht treffen kann. Ein Solo waehlt er ebenso
- *    wenig freiwillig; Ausnahme ist die Vorfuehrung, dort ist es Pflicht.
+ * 1. **Ansagen mit Augenmass.** Re und Kontra sagt nur der Experte, und nur
+ *    bei klar tragendem Blatt (siehe ansageReif). Ein Solo waehlt der Bot ab
+ *    Standard freiwillig, aber ebenfalls nur mit vielen und hohen Truempfen
+ *    (chooseVoluntarySolo) — sonst wird er bei aktivem Pflichtsolo jede Runde
+ *    vorgefuehrt und spielt es mit irgendeiner Hand. Der Anfaenger sagt
+ *    weder Re/Kontra noch ein Solo an.
  *
  *    Schmeissen, Armut und Hochzeit sagt er dagegen immer an, wenn er sie
  *    hat. Das ist keine Einschaetzung, sondern liest sich aus dem Blatt ab,
@@ -451,19 +453,31 @@ export function botAction(
      * immer "gesund" und spielte eine Armut wie ein normales Blatt durch —
      * fuer den Partner ein verlorener Abend.
      *
-     * Ein Solo waehlt er weiterhin nie freiwillig: Das erhoeht den Einsatz
-     * und ist eine Einschaetzung, die er nicht treffen kann.
-     *
      * Reihenfolge: Schmeissen zuerst. Eine Hand, die man wegwerfen darf,
      * spielt man nicht. Dass Schmeissen und Hochzeit zusammenfallen, geht
      * theoretisch (sieben Volle samt beider Kreuz-Damen) und ist der
-     * einzige Fall, in dem diese Reihenfolge diskutabel waere.
+     * einzige Fall, in dem diese Reihenfolge diskutabel waere. Hochzeit steht
+     * vor dem Solo: Wer beide Kreuz-Damen haelt, sucht sich lieber einen
+     * Partner, als allein gegen drei zu spielen.
      */
     for (const kind of ['schmeiss', 'armut', 'hochzeit'] as const) {
       if (view.allowedVorbehalte.includes(kind)) {
         return { type: 'vorbehalt', seat, kind };
       }
     }
+
+    /*
+     * Freiwilliges Solo, aber nur mit klar starkem Blatt (siehe
+     * chooseVoluntarySolo). Der Anfaenger bleibt aussen vor — er soll einfach
+     * spielen und wird notfalls vorgefuehrt. Sonst saesse der Bot bei aktivem
+     * Pflichtsolo jede Runde die Vorfuehrung ab und spielte sein Solo mit einer
+     * beliebigen Hand.
+     */
+    if (level !== 'anfaenger') {
+      const solo = chooseVoluntarySolo(view);
+      if (solo) return { type: 'vorbehalt', seat, kind: 'solo', solo };
+    }
+
     return { type: 'vorbehalt', seat, kind: null };
   }
 
@@ -494,6 +508,53 @@ export function botAction(
   }
 
   return null;
+}
+
+/** Trumpfmacht des Blattes unter EINER Solo-Ordnung: Zahl und Hoehe. */
+function soloBlattStaerke(view: PlayerView, order: CardOrder): { trumps: number; hoch: number } {
+  let trumps = 0;
+  let hoch = 0;
+  for (const c of view.hand) {
+    const i = order.trumps.indexOf(cardKey(c));
+    if (i >= 0) {
+      trumps++;
+      if (i < 10) hoch++;
+    }
+  }
+  return { trumps, hoch };
+}
+
+/**
+ * Freiwilliges Solo — nur mit einem klar starken Blatt.
+ *
+ * Ohne das wird der Bot bei aktivem Pflichtsolo am Ende immer vorgefuehrt und
+ * spielt sein Solo dann mit irgendeiner Hand. Hier waehlt er stattdessen die
+ * Variante, unter deren Trumpfordnung sein Blatt am staerksten ist — aber nur,
+ * wenn es viele UND hohe Truempfe traegt. Ein zu mutiger Bot verliert ein
+ * angesagtes Solo fett, deshalb ist die Schwelle bewusst hoch.
+ *
+ * Trumpflose Soli (z.B. Fleischlos) bleiben aussen vor: dort zaehlt das
+ * Gegenteil, und eine Bewertung nach Trumpfmacht waere sinnlos.
+ */
+function chooseVoluntarySolo(view: PlayerView): (typeof view.soloOptions)[number] | null {
+  if (!view.allowedVorbehalte.includes('solo')) return null;
+  // Unvollstaendige Sichten aus Tests: ohne Optionen, Vorschau oder Hand gibt
+  // es nichts zu bewerten — dann bleibt er gesund, statt zu werfen.
+  const opts = view.soloOptions ?? [];
+  const vorschau = view.soloVorschau ?? {};
+  if (opts.length === 0 || (view.hand?.length ?? 0) === 0) return null;
+  let best: { opt: (typeof view.soloOptions)[number]; trumps: number; hoch: number } | null = null;
+  for (const opt of opts) {
+    const order = vorschau[opt];
+    if (!order || order.trumps.length === 0) continue;
+    const { trumps, hoch } = soloBlattStaerke(view, order);
+    const stark = trumps >= 9 || (trumps >= 8 && hoch >= 5);
+    if (!stark) continue;
+    if (!best || hoch > best.hoch || (hoch === best.hoch && trumps > best.trumps)) {
+      best = { opt, trumps, hoch };
+    }
+  }
+  return best ? best.opt : null;
 }
 
 /** Solowahl bei Vorfuehrung: die laengste eigene Farbe, sonst das erste erlaubte. */

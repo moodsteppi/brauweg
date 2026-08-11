@@ -463,14 +463,15 @@ test('Partei: eine einzelne Kreuz-Dame verraet nichts ueber die uebrigen Sitze',
   assert.equal(chooseCard(view).id, 3, 'soll nicht schmieren');
 });
 
-test('Vorbehalt: sagt an, was die Hand vorgibt — aber nie freiwillig ein Solo', () => {
+test('Vorbehalt: sagt an, was die Hand vorgibt — Solo nur mit starkem Blatt', () => {
   const base = { seat: 1, isMyTurn: true, phase: 'vorbehalt', forcedSolo: false };
 
   const faelle: { erlaubt: string[]; erwartet: string | null }[] = [
     { erlaubt: ['solo', 'schmeiss'], erwartet: 'schmeiss' },
     { erlaubt: ['solo', 'armut'], erwartet: 'armut' },
     { erlaubt: ['solo', 'hochzeit'], erwartet: 'hochzeit' },
-    // Nur ein Solo im Angebot heisst: gesundes Blatt. Der Bot bleibt gesund.
+    // Nur ein Solo im Angebot, aber kein starkes Blatt (Sicht ohne Hand):
+    // der Bot bleibt gesund, statt blind ein Solo anzusagen.
     { erlaubt: ['solo'], erwartet: null },
     { erlaubt: [], erwartet: null },
     // Schmeissen geht vor: eine Hand, die man wegwerfen darf, spielt man nicht.
@@ -487,4 +488,25 @@ test('Vorbehalt: sagt an, was die Hand vorgibt — aber nie freiwillig ein Solo'
       `bei [${f.erlaubt.join(', ')}]`,
     );
   }
+
+  // Starkes Solo-Blatt: zehn Karten, alle in der oberen Trumpfordnung der
+  // angebotenen Variante. Jetzt sagt der Bot das Solo an — genau dafuer, dass
+  // er bei Pflichtsolo nicht jede Runde vorgefuehrt wird.
+  const trumps = ['HT', 'CQ', 'SQ', 'HQ', 'DQ', 'CJ', 'SJ', 'HJ', 'DJ', 'DA'];
+  const hand = trumps.map((k, i) => ({ id: i, suit: k[0], rank: k.slice(1) }));
+  const stark = {
+    ...base,
+    allowedVorbehalte: ['solo'],
+    soloOptions: ['suitD'],
+    soloVorschau: { suitD: { trumps } },
+    hand,
+  } as unknown as PlayerView;
+  const soloAction = botAction(stark)! as { type: string; kind: string; solo: string };
+  assert.equal(soloAction.type, 'vorbehalt');
+  assert.equal(soloAction.kind, 'solo');
+  assert.equal(soloAction.solo, 'suitD');
+
+  // Anfaenger bleibt auch mit starkem Blatt gesund — er sagt nie an.
+  const anf = botAction(stark, 'anfaenger')! as { kind: unknown };
+  assert.equal(anf.kind, null);
 });
