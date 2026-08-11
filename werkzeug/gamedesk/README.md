@@ -1,8 +1,3 @@
-> **Im Brauweg-Repo unter `werkzeug/gamedesk/`.** GameDesk ist ein
-> Entwurfswerkzeug, kein Teil der Auslieferung: Es wird nicht gebaut, nicht
-> vom Server ausgeliefert und ist über keine Adresse erreichbar. Starten
-> lokal mit `node werkzeug/gamedesk/tools/serve.mjs 5190`.
-
 # GameDesk
 
 Ein Board zum Entwerfen von Spielen: eine unendliche Fläche, auf der modulare
@@ -36,6 +31,31 @@ Dann `http://localhost:5190` öffnen. `GameDesk starten.bat` macht das in einem 
 | Rechtsklick | Kontextmenü (Modul einfügen, einpassen …) |
 | Doppelklick auf leere Fläche | Neue Notiz |
 | `Strg`+`0` / `Strg`+`1` | Zoom 100 % / alles einpassen |
+| `Strg`+`F` | Springen zu … (suchen und hinfahren, s. u.) |
+| `Strg`+`Umschalt`+`D` | Änderungssicht ein/aus |
+| `Strg`+`Umschalt`+`A` | Änderungsfenster (Liste, Zusammenfassung, Commit) |
+
+### Springen zu … — Wiederfinden statt Suchen
+
+Auf einer Tafel mit hundert Kacheln ist nicht das Anlegen die Arbeit, sondern
+das Wiederfinden. `Strg`+`F` (oder ⌕ in der Leiste) öffnet ein Feld über dem
+Brett. Gesucht wird in **Titeln, Modulnamen, Rahmenuntertiteln, Notiztexten,
+Quelltexten, Wireframe-Beschriftungen, Mediennamen und Pfeilbeschriftungen**.
+
+| Taste | Wirkung |
+|---|---|
+| tippen | Alle Wörter müssen vorkommen, aber nicht am Stück: „regel karte" findet „Kartenregeln" |
+| `Hoch` / `Runter` | Durch die Treffer blättern — **die Kamera fährt mit** |
+| `Eingabe` | Dort bleiben |
+| `Esc` | Zurück dorthin, wo man vor dem Suchen war |
+
+Der Rückweg ist der eigentliche Punkt: Wer sucht, will meist nachsehen, nicht
+umziehen. Ohne ihn traut man sich nicht, mitten in der Arbeit zu suchen.
+
+Beim Tippen wartet der Flug einen Wimpernschlag ab — sonst führe die Kamera bei
+„k", „ka", „kar" dreimal quer über die Tafel. Beim Blättern fliegt sie sofort:
+Da ist es die Absicht. Ein Treffer im Titel wiegt schwerer als einer im
+Fließtext, sonst schwemmen lange Notizen das Gesuchte weg.
 
 ### Fenster
 Verschieben an der Titelleiste, Größe an allen acht Rändern. Beim Verschieben
@@ -47,11 +67,51 @@ Doppelklick auf die freie Leiste klappt ein.
 Ein Rahmen wandert samt seiner Kacheln nach vorn bzw. nach hinten; verdecken
 kann er sie nie, er liegt in einem eigenen, tieferen Stapelband.
 
+`Strg`+`Pfeiltasten` ändert die Größe der Auswahl um einen Pixel (mit
+`Umschalt` um ein Rastermaß). Das ist der einzige Weg, der bei **jedem** Zoom
+auf den Pixel genau arbeitet — ein Griff ist herausgezoomt immer ein
+Kompromiss, eine Taste nie.
+
+### Weit herausgezoomt — Eckgriff und leuchtende Ränder
+Alles, was man mit der Maus trifft, liegt im Weltraum und schrumpft mit dem
+Zoom. Bei 20 % war die Titelleiste zwei Pixel hoch, der Randgriff anderthalb —
+Anfassen wurde zum Zielschießen, und ein Rahmen mit zwanzig Kacheln ließ sich
+praktisch nicht mehr bewegen. Drei Dinge halten dagegen:
+
+- **Griffe und Anschlussknöpfe behalten ihre Bildschirmgröße.** `windows.js`
+  rechnet je Kachel ein `--griff` und ein `--port` aus, das gegen den Zoom
+  gerechnet ist — gedeckelt an der Kachelgröße, damit eine kleine Kachel nicht
+  nur noch aus Griffen besteht.
+- **Der Eckgriff.** Unter 55 % Zoom öffnet sich oben rechts in jeder Kachel ein
+  Viertelkreis, dessen Mittelpunkt genau auf der Ecke sitzt. Er liegt fast
+  durchsichtig da und tritt hervor, sobald die Maus in seine Nähe kommt;
+  Ziehen verschiebt die Kachel — bei einem Rahmen samt Inhalt. Er verschiebt
+  **nur**: Zwei Bedienteile auf einem Viertelkreis standen sich gegenseitig im
+  Weg. Griffe kleiner Kacheln liegen über denen großer Rahmen, weil die
+  kleinen die schwerer zu treffenden sind.
+- **Leuchtende Ränder.** Kommt der Zeiger einer Kachel nahe, wird ihre Kante
+  weiß und dicker — immer nur bei **einer** Kachel, sonst flimmerte bei
+  kleinem Maßstab das halbe Brett.
+
+Eingerastet wird nur an dem, was auf dem Bildschirm steht. Vorher zählte jede
+Kachel der Tafel: Bei siebzig lag immer irgendeine Kante im Fangbereich, auch
+die einer Kachel zehn Bildschirme weiter — die Hilfslinie zeigte dann auf
+nichts. Eine einmal gefangene Kante hält außerdem 1,85-mal so weit, wie sie
+gefangen hat; ohne diese Haftung zittert eine Kachel am Rand des Fangbereichs
+zwischen eingerastet und frei.
+
 ### Pfeile
-Beim Überfahren eines Fensters erscheinen vier Anschlusspunkte. Von einem Punkt
-auf ein anderes Fenster ziehen erzeugt einen Pfeil. Doppelklick auf den Pfeil
-oder auf seine Beschriftung öffnet die Texteingabe; die Beschriftung lässt sich
-am Pfeil entlangziehen.
+Beim Überfahren eines Fensters erscheinen vier Anschlussknöpfe — ein Kreis mit
+einem Plus darin. Es gibt **zwei Wege** von dort zum Pfeil:
+
+- **Ziehen:** Knopf drücken, auf das Zielfenster ziehen, loslassen.
+- **Klicken:** Knopf antippen und loslassen — der Pfeil hängt am Zeiger, der
+  nächste Klick setzt ihn ab. `Esc` bricht ab. Für lange Wege, für Trackpads
+  und für alle, denen Ziehen über weite Strecken schwerfällt.
+
+Welcher Weg gemeint war, entscheidet sich am Ende von selbst: ohne Bewegung
+war es ein Klick. Doppelklick auf den Pfeil oder auf seine Beschriftung öffnet
+die Texteingabe; die Beschriftung lässt sich am Pfeil entlangziehen.
 
 **Pfeile laufen im rechten Winkel.** Sie verlassen ihre Kante senkrecht, biegen
 höchstens zweimal ab und treffen die Gegenkante wieder senkrecht — so ist auf
@@ -179,6 +239,78 @@ liefert die Höhe, bei der sein Inhalt vollständig steht. Ohne diese Auskunft
 schaut das Layout auf den Überlauf des mit `data-gd-scroll` ausgezeichneten
 Bereichs; damit kann es ein Fenster nur vergrößern, nicht verkleinern.
 
+## Änderungen — Commits und die Änderungssicht
+
+Neben dem Rückgängig-Stapel führt jede Tafel einen zweiten, gröberen Verlauf:
+**Commits**. Ein Commit ist ein festgeschriebener Stand. Alles, was danach
+passiert, ist *offen* — und offen heißt sichtbar.
+
+Zwei Bedienstellen, beide in der Werkzeugleiste:
+
+| | |
+|---|---|
+| **⬚** (Strg+Umschalt+D) | Änderungssicht ein/aus |
+| **Änderungen** *n* (Strg+Umschalt+A) | Das Änderungsfenster; die Zahl zählt das Offene |
+
+### Die Änderungssicht
+
+Jede geänderte Kachel bekommt einen **roten Kasten mit beschriftetem Reiter** —
+Klasse und Titel, wie bei einer Objekterkennung. Alles Unveränderte tritt
+zurück. Ein Klick auf den Reiter springt zur Kachel.
+
+Eine Kachel bekommt **höchstens einen** Kasten, auch wenn an ihr mehreres
+gleichzeitig anders ist; beschriftet wird die wichtigste Klasse, der Rest steht
+als `+n` daneben und vollständig im Änderungsfenster.
+
+| Klasse | Wofür |
+|---|---|
+| Neu | Kachel gibt es seit dem letzten Commit |
+| Entfernt | Kachel ist weg — der Kasten steht gestrichelt an ihrem alten Platz |
+| Inhalt | Der Zustand des Moduls ist ein anderer (mit Angabe, um wie viel er wuchs) |
+| Titel | Umbenannt, alt → neu |
+| Größe / Verschoben | Geometrie |
+| Darstellung | Farbe, ein-/ausgeklappt |
+| Pfeil | Pfeil oder Bündel neu, weg oder anders — Marke in der Mitte zwischen beiden Enden |
+| 3D-Modell / Tafel | Modell geändert, Tafel umbenannt, Rastermaß |
+
+Nicht verfolgt werden Kamera, Stapelhöhe (`z`) und die Anzeigeschalter des
+Rasters. Das wäre Rauschen: Jeder Klick hebt ein Fenster nach vorn.
+
+### Das Änderungsfenster
+
+Zählt auf, was offen ist, fasst es in einem Satz zusammen — und ist die
+Stelle, an der ein Commit entsteht: Titel, Beschreibung, **Urheber**
+(Mensch oder KI). Darunter steht der Commit-Verlauf; jeder Eintrag lässt sich
+aufklappen und zeigt die Liste, die zu ihm geführt hat.
+
+Aus einem Skript heraus geht dasselbe:
+
+```js
+GD.aenderungen.stand()                                  // { punkte, zahlen, satz }
+GD.aenderungen.festschreiben({ titel: '…', wer: 'ki' }) // Commit setzen
+GD.aenderungen.sichtSetzen(true)                        // Änderungssicht an
+```
+
+Und ohne Browser — für Umbauskripte in `boards/`, die eine Tafel von außen
+verändern:
+
+```
+node tools/festschreiben.mjs boards/feldherr-funktionsweise.gamedesk.json --zeigen
+node tools/festschreiben.mjs boards/… --titel "Abschnitte umgebaut" --wer ki
+```
+
+### Was in der Datei landet
+
+Gespeichert wird kein zweites Dokument, sondern ein **Abzug**: je Kachel Lage,
+Größe, Titel und eine Prüfsumme des Inhalts, rund 200 Byte — für eine Tafel mit
+40 Kacheln etwa 8 KB. Vollständig gehalten wird nur der Abzug des jüngsten
+Commits; ältere Commits behalten ihre fertige Änderungsliste. Damit lässt sich
+„was ist seither passiert" und „was steckte in Commit X" beantworten, aber
+nicht „zeig mir alles seit vorletzter Woche".
+
+Tafeln ohne diesen Block (alle bisherigen) stehen auf *noch nichts
+festgeschrieben*; bis zum ersten Commit gilt alles als unverändert.
+
 ## Projekte — der Bibliotheksordner
 
 GameDesk kann einen Ordner auf der Platte als **Projektliste** führen: welche
@@ -206,8 +338,10 @@ Ordners. Pfade mit `..`, Laufwerksbuchstaben oder Wildcards werden abgewiesen �
 geprüft mit `../../x.json`, `..\..\x.json` und `C:\Windows\x.json`.
 
 ### Speichern
-Das Board wird laufend im Browser gespeichert (`localStorage`). **„Speichern"
-(`Strg`+`S`)** schreibt in die verknüpfte Projektdatei; ist keine verknüpft,
+Das Board wird laufend im Browser gespeichert (`localStorage`). Der fasst pro
+Herkunft rund **5 MB** — Bilder, Ton und Video liegen deshalb nicht im Board,
+sondern im Medienlager (siehe unten). **„Speichern" (`Strg`+`S`)** schreibt in
+die verknüpfte Projektdatei; ist keine verknüpft,
 legt es sie im Bibliotheksordner an; gibt es keinen, lädt es eine
 `.gamedesk.json` herunter. „Öffnen" (`Strg`+`O`) lädt eine Datei von außen; eine
 `.json` lässt sich auch einfach auf das Board ziehen.
@@ -392,9 +526,10 @@ Mehrere Medien pro Fenster mit Vorschaustreifen und Bildunterschrift.
   Leisten übereinander haben die Wellenform plattgedrückt. „Volle Leiste"
   ergänzt Schleife und Lautstärke, ohne sie bleiben Knopf und Zeit.
 
-Medien werden als Data-URL im Board gespeichert — dadurch bleibt eine
-exportierte `.json` vollständig, große Dateien blähen sie aber auf (Grenze 24 MB
-pro Datei).
+Die Bytes einer Datei liegen im **Medienlager** (`js/core/depot.js`), nicht im
+Board: Dort steht nur `depot:<Kennung>`. Beim Speichern in eine Datei werden sie
+wieder ausgeschrieben, eine exportierte `.json` bleibt also vollständig. Grenze
+64 MB pro Datei.
 
 ### Projekt — eine andere Tafel als Kachel
 
@@ -455,6 +590,44 @@ einem Netz zusammengefasst, in Modellkoordinaten:
 Die Vorlage „3D-Modell verwenden" zeichnet damit ein rotierendes Modell auf ein
 2D-Canvas. Texturbilder werden aus Größengründen nicht mit übergeben (nur
 `material.hasTexture`).
+
+### Worker — Schnittstelle zum Worker-Modul im Broweg
+
+Der bro-server aus dem Broweg-Projekt verteilt Aufgaben an **Worker-PCs**: Jeder
+Worker hängt per WebSocket am Gateway (`/worker`), meldet Herzschläge und nimmt
+Aufträge entgegen; Ergebnis, Verbrauch und Commit-Hash laufen zurück
+(`bro-server/src/lib/worker-gateway.ts`).
+
+Die Kachel ist die Gegenstelle auf der Tafel. Sie zeigt je Worker Zustand
+(online · arbeitet · offline · Kontingent aufgebraucht), Fähigkeiten, erledigte
+Aufgaben, verbrauchte Token und den letzten Herzschlag — darunter die letzten
+Aufgaben mit Status, Repo und Commit. Über den Inspector lässt sich ein Worker
+anlegen (der Klartext-Token erscheint **genau einmal**) oder widerrufen, und
+„Aufgabe geben…" legt eine Aufgabe an, die der Server sofort einem freien
+Worker zuteilt.
+
+Der Weg dorthin läuft über den GameDesk-Server, nicht direkt:
+
+```
+Kachel ──► GameDesk-Server ──► bro-server
+        api/broweg/ruf      /workers, /tasks
+```
+
+Direkt ginge es nicht — der bro-server schickt keine CORS-Köpfe und hängt seine
+Sitzung an ein Cookie, das ein fremder Ursprung nicht mitschicken darf. Über die
+Brücke ist alles dieselbe Herkunft. Dabei gilt:
+
+* Das **Sitzungs-Cookie bleibt im Arbeitsspeicher** des GameDesk-Servers. Nach
+  einem Neustart meldet man sich neu an. Auf die Platte geht nur die Adresse
+  des Servers (`tools/broweg.json`) — nie E-Mail, nie Passwort, nie das Cookie.
+* Weitergereicht werden **ausschließlich** `/health`, `/auth/session`,
+  `/workers*` und `/tasks*` (Liste `ERLAUBT` in `tools/serve.mjs`). Die Brücke
+  ist kein offener Weiterleiter.
+* Über `file://` gibt es keinen Server und damit keine Brücke — die Kachel zeigt
+  dann, was sie zuletzt gesehen hat.
+
+Adresse des bro-servers und Anmeldung stehen im Inspector; der Abfragetakt
+(Vorgabe 15 s, 0 schaltet ab) ebenso. Im unsichtbaren Tab wird nicht gefragt.
 
 ## Schrift
 
@@ -554,6 +727,7 @@ css/modules.css      Styles der Module
 js/core/util.js      DOM-/SVG-Helfer, Drag, Textumbruch, Dateien
 js/core/registry.js  Modul-Registry
 js/core/store.js     Dokument, Historie, localStorage, Import/Export
+js/core/depot.js     Medienlager: Bytes in IndexedDB, im Board nur ein Verweis
 js/core/board.js     Kamera: Verschieben, Zoomen, Raster
 js/core/windows.js   Fenster: Erzeugen, Bewegen, Einrasten, Auswahl
 js/core/connections.js  Pfeile im Weltraum, Beschriftungen im Bildschirmraum
@@ -564,19 +738,98 @@ js/core/models.js    Modell-Bibliothek, Auflösen von Verweisen, Backen
 js/core/library.js   Projektordner: auflisten, öffnen, sichern, umbenennen
 js/core/layout.js    Automatisches Layout: Höhen messen, entwirren, Rahmen,
                      Bereichs-Taxonomie, Prüfbericht
+js/core/vergleich.js Abzug einer Tafel + Vergleich zweier Stände (auch in Node)
+js/core/aenderungen.js  Commits, offene Änderungen, Änderungssicht auf dem Brett
+js/core/suche.js     „Springen zu …" — Volltext über die Tafel, Kamera fährt mit
 js/core/ui.js        Palette, Werkzeugleiste, Inspector, Kontextmenü, Tasten,
                      Dialoge „Projekte" und „Einstellungen"
 js/core/app.js       Start, Undo/Redo, Datei-Drop, Startboard
+js/core/schnittstelle.js  GD.hilfe / GD.zustand / GD.pruefe — der Einstieg
+                     für Konsole, Skripte und Automaten
 js/modules/*.js      Rahmen, Wireframe, Notiz, Quelltext, Medien,
-                     3D-Modell, 3D-Ansicht, Sandbox, Projekt
+                     3D-Modell, 3D-Ansicht, Sandbox, Projekt, Worker
 fonts/*.woff2        Inter, Space Grotesk, JetBrains Mono (OFL, latin, ~370 kB)
-tools/serve.mjs      Dateiserver (ohne Cache) + Projektordner-API
+tools/serve.mjs      Dateiserver (ohne Cache) + Projektordner-API + Broweg-Brücke
+tools/festschreiben.mjs  Commit ohne Browser (für Umbauskripte)
 tools/bibliothek.json  gemerkter Projektordner (legt der Server selbst an)
+tools/broweg.json    Adresse des bro-servers (legt der Server selbst an)
 boards/*.json        Vorgabe-Projektordner mit fertigen Tafeln
 ```
 
 Alles sind klassische `<script>`-Dateien ohne Module-Import, damit `index.html`
 auch direkt per Doppelklick (`file://`) funktioniert.
+
+### Warum es flüssig läuft — vier Regeln, die man leicht bricht
+
+Eine große Tafel lief einmal mit acht Bildern in der Sekunde. Nicht, weil zu
+viel gezeichnet wurde, sondern weil an vier Stellen **Messen und Schreiben
+verschränkt** waren. Der Browser rechnet das Layout neu, sobald jemand nach
+etwas fragt, das davon abhängt — und wer zwischen zwei Schreibvorgängen fragt,
+löst diese Rechnung jedes Mal neu aus. Auf der Feldherr-Tafel kostet ein
+solcher Lauf **4,3 ms**; ein Bild hat 16.
+
+Wer hier Hand anlegt, sollte die vier Regeln kennen:
+
+1. **Nie `getComputedStyle` in einer Schleife.** Werte aus `:root` holt man
+   über `U.blatt(name, vorgabe)` / `U.blattText(...)` — die merken sich das
+   Ergebnis und werfen es beim Themenwechsel weg. `frame.js` las fünfmal je
+   Rahmen direkt aus dem Blatt; das allein waren 110–145 ms je Zoomschritt.
+2. **Nie `getBoundingClientRect` auf dem Brett.** Dafür gibt es
+   `GD.board.rect()`; ein `ResizeObserver` hält den Wert frisch.
+   `screenToWorld()` und alles darüber laufen darüber.
+3. **Erst rechnen, dann schreiben.** `connections.render()` berechnet ALLE
+   Wege, bevor der erste Pfad ins DOM geht — weil ein Pfeil, der an einer
+   Wireframe-Form hängt, deren Lage messen lässt (`getScreenCTM`).
+   Beschriftungen laufen aus demselben Grund in drei Durchgängen: beschriften,
+   alle Breiten messen, alle Lagen setzen.
+4. **Knoten stehen lassen, nur Geändertes schreiben.** Pfeile, Bündelstränge
+   und Fenstergeometrie werden abgeglichen, nicht neu gebaut. `setzeAttr()`
+   in `connections.js` und die `merk`-Objekte in `windows.js` sorgen dafür,
+   dass ein unveränderter Wert gar nicht erst ins Blatt geht.
+
+Dazu zwei billige Unterscheidungen, die viel sparen: **Schwenken ist nicht
+Zoomen.** Beim Schwenken ändert sich an Pfaden, Griffen und Rahmenüberschriften
+nichts — sie liegen im Weltraum und werden von der Board-Transformation
+mitgeschoben. `connections.js` und `windows.js` prüfen deshalb den Maßstab und
+führen beim reinen Schwenken nur die Bildschirm-Ebene nach (Beschriftungen,
+Sprechblasen). Und: **`GD.store.getWindow()` geht über ein Verzeichnis**, nicht
+über `Array.find` — der Griff sitzt in den heißesten Schleifen.
+
+Gemessen auf den mitgelieferten Tafeln (Feldherr: 117 Kacheln, 40 Pfeile,
+3 Bündel):
+
+| | vorher | nachher |
+|---|---|---|
+| Pfeilebene zeichnen (93 Kacheln / 52 Pfeile) | 120 ms | 0,5 ms |
+| Zoomschritt | 138 ms | 0,5 ms |
+| Schwenkbild | 120 ms | ≈ 0 ms |
+| Pfeilebene zeichnen (Feldherr, mit Bündeln) | — | 2,7 ms |
+
+### Bedienung aus der Konsole — für Skripte und Automaten
+
+Menschen bedienen GameDesk mit der Maus. Umbauskripte und Sitzungen mit einem
+Sprachmodell bedienen es über die Konsole. Drei Aufrufe sind der Einstieg —
+sie behaupten nichts, sondern antworten über den **echten** Stand:
+
+| Aufruf | Antwort |
+|---|---|
+| `GD.hilfe()` | Was es gibt, in Kurzform ins Protokoll |
+| `GD.hilfe('notes')` | Größe, Farbe und die **Form von `state`** dieses Moduls |
+| `GD.zustand()` | Kompakter Abzug: Ansicht, Zahlen je Modultyp, Inhaltsrechteck |
+| `GD.zustand({kacheln:true, pfeile:true})` | zusätzlich jede Kachel und jeder Pfeil |
+| `GD.pruefe()` | Layoutregeln **plus** NaN-Geometrie, Pfeile ins Leere, doppelte Kennungen |
+
+`GD.hilfe('notes')` liest die `state`-Form von einer echten Kachel dieses Typs
+ab; liegt keine auf der Tafel, legt es kurz eine an und nimmt sie samt Verlauf
+wieder zurück. Eine abgeschriebene Liste wäre beim ersten Umbau veraltet.
+
+**Falsche Zahlen brechen jetzt ab, statt still zu wirken.** Der häufigste
+Fehlgriff war `GD.board.setView({x, y, scale})` statt dreier Zahlen: Daraus
+wurde `view.x = NaN`, die Ansicht war fort, und der NaN landete beim nächsten
+Autospeichern in der Datei — der Fehler tauchte Stunden später an ganz anderer
+Stelle auf. `setView` nimmt die Objektform inzwischen an und weist alles andere
+mit einer Meldung zurück; `windows.setGeometry` und `windows.add` prüfen ihre
+Zahlen ebenso.
 
 ### Wie 3D hier funktioniert
 

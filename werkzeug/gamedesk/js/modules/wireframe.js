@@ -302,7 +302,7 @@
             g.setAttribute('clip-path', 'url(#' + cid + ')');
           }
           g.appendChild(U.svg('image', {
-            href: s.src || '', x: s.x, y: s.y, width: Math.max(0, s.w), height: Math.max(0, s.h),
+            href: GD.depot.aufloesen(s.src) || '', x: s.x, y: s.y, width: Math.max(0, s.w), height: Math.max(0, s.h),
             preserveAspectRatio: s.fit === 'cover' ? 'xMidYMid slice' : s.fit === 'fill' ? 'none' : 'xMidYMid meet'
           }));
           if (s.strokeOn) {
@@ -587,7 +587,10 @@
         if (!files.length) return;
         const f = files[0];
         if (f.size > 16 * 1024 * 1024) { ctx.toast('Bild ist zu groß (max. 16 MB)', 'err'); return; }
-        const src = await U.readAsDataURL(f);
+        /* Ins Depot, nicht ins Dokument: sonst hängt das ganze Bild als
+           data:-URL in jedem Verlaufsabzug (js/core/depot.js). */
+        const src = await GD.depot.ausDatei(f);
+        const adr = await GD.depot.aufloesenAsync(src);
         const img = new Image();
         img.onload = () => {
           const maxW = state.canvas.w * 0.5;
@@ -603,7 +606,7 @@
           render(); refresh(); commit('Bild eingefügt');
         };
         img.onerror = () => ctx.toast('Bild konnte nicht gelesen werden', 'err');
-        img.src = src;
+        img.src = adr;
       }
 
       /* ------------------------------------------------------ Verschieben */
@@ -984,7 +987,32 @@
 
       /* ---------------------------------------------------------- Export */
 
-      function exportSvg() {
+      /**
+       * Bilder für den Export ausschreiben.
+       *
+       * Auf dem Board zeigen sie auf eine blob:-Adresse aus dem Depot. Die
+       * gilt nur in dieser Sitzung — in einer SVG-Datei wäre sie morgen tot,
+       * und im PNG-Umweg (SVG als data:-URL in ein <img>) lädt der Browser
+       * sie gar nicht erst.
+       */
+      async function bilderAusschreiben(clone) {
+        const karte = new Map();
+        for (const s of state.shapes) {
+          if (s.type !== 'image' || !s.src) continue;
+          const adr = GD.depot.aufloesen(s.src);
+          if (!adr || adr.startsWith('data:') || karte.has(adr)) continue;
+          const d = await GD.depot.alsDataURL(s.src);
+          if (d) karte.set(adr, d);
+        }
+        if (!karte.size) return;
+        for (const el of clone.querySelectorAll('image')) {
+          const h = el.getAttribute('href') || el.getAttribute('xlink:href');
+          const d = h && karte.get(h);
+          if (d) el.setAttribute('href', d);
+        }
+      }
+
+      function exportKopie() {
         const clone = svg.cloneNode(true);
         for (const cls of ['.wf-overlay', '.wf-smart', '.wf-guides']) {
           const n = clone.querySelector(cls);
@@ -993,19 +1021,19 @@
         clone.setAttribute('xmlns', U.SVG_NS);
         clone.setAttribute('width', state.canvas.w);
         clone.setAttribute('height', state.canvas.h);
+        return clone;
+      }
+
+      async function exportSvg() {
+        const clone = exportKopie();
+        await bilderAusschreiben(clone);
         const text = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
         U.download((ctx.win.get().title || 'wireframe') + '.svg', text, 'image/svg+xml');
       }
 
-      function exportPng(factor) {
-        const clone = svg.cloneNode(true);
-        for (const cls of ['.wf-overlay', '.wf-smart', '.wf-guides']) {
-          const n = clone.querySelector(cls);
-          if (n) n.remove();
-        }
-        clone.setAttribute('xmlns', U.SVG_NS);
-        clone.setAttribute('width', state.canvas.w);
-        clone.setAttribute('height', state.canvas.h);
+      async function exportPng(factor) {
+        const clone = exportKopie();
+        await bilderAusschreiben(clone);
         const svgText = new XMLSerializer().serializeToString(clone);
         const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
         const img = new Image();
@@ -1032,6 +1060,9 @@
       function refresh() { ctx.refreshInspector(); }
 
       const rerender = U.raf(() => { render(); });
+      /* Bilder liegen im Depot; trifft ein Blob ein, muss das href neu
+         gesetzt werden — vorher stand dort ein leerer Verweis. */
+      const offBereit = GD.depot.events.on('bereit', rerender);
       const nudgeCommit = U.debounce(() => commit('Objekt verschoben'), 400);
       const ro = new ResizeObserver(rerender);
       ro.observe(stage);
@@ -1077,7 +1108,7 @@
           const art = { rect: 'Rechteck', ellipse: 'Ellipse', line: 'Linie', text: 'Text', image: 'Bild' }[s.type] || 'Form';
           return s.text ? art + ' „' + s.text.split('\n')[0].slice(0, 22) + '"' : art;
         },
-        destroy() { ro.disconnect(); if (editing) editing.done(false); },
+        destroy() { ro.disconnect(); offBereit(); if (editing) editing.done(false); },
 
         headerTools() {
           const b = U.el('button', { class: 'gd-win__btn', title: 'Als SVG exportieren', text: '⤓' });
@@ -1267,7 +1298,7 @@
           host.appendChild(ifull(ibtn('Bild ersetzen…', async () => {
             const files = await U.pickFile('image/*');
             if (!files.length) return;
-            const src = await U.readAsDataURL(files[0]);
+            const src = await GD.depot.ausDatei(files[0]);
             for (const o of list) if (o.type === 'image') o.src = src;
             render(); commit('Bild ersetzt');
           })));

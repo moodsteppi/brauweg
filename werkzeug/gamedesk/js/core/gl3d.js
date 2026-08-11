@@ -399,7 +399,12 @@ void main(){ fragColor = u_color; }`;
     }
   }
 
-  function getTexture(src) {
+  /* Texturen liegen im Depot (js/core/depot.js); im Modell steht nur
+     `depot:<id>`. Ist der Blob noch nicht da, bleibt das Material diesen
+     Durchgang unbetextet — 'bereit' unten stößt das Neuzeichnen an. */
+  function getTexture(quelle) {
+    if (!quelle) return null;
+    const src = GD.depot ? GD.depot.aufloesen(quelle) : quelle;
     if (!src) return null;
     let t = texCache.get(src);
     if (t) return t;
@@ -788,6 +793,10 @@ void main(){ fragColor = u_color; }`;
       return { textures: texCache.size, contextOk: ready, animators: animators.size };
     }
   };
+
+  if (GD.depot && GD.depot.events) {
+    GD.depot.events.on('bereit', () => gl3d.events.emit('texture', null));
+  }
 
   GD.gl3d = gl3d;
   GD.m4 = M4;

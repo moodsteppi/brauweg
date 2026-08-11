@@ -26,7 +26,23 @@
   const labelEls = new Map();
   const pathEls = new Map();
   const chipEls = new Map();
+  const chipPunkte = new Map();    // Bündel-Id -> Weltpunkt der Sprechblase
   const anim = new Map();          // Bündel-Id -> laufendes Auf-/Zuklappen
+
+  /* --------------------------------------------------- Was schon dasteht
+   *
+   * Je Pfeil merkt sich `adern` seine Knoten im DOM und die zuletzt
+   * geschriebenen Werte. Vorher wurde die ganze Ebene bei JEDEM Bild
+   * abgerissen und neu gebaut — mit Markern, Zuhörern und allem. Auf einer
+   * Tafel mit 52 Pfeilen kostete ein Neubau 120 ms; da er an jedem Schwenk,
+   * jedem Zoomschritt und jedem Zug hängt, lief das Brett mit acht Bildern
+   * in der Sekunde. Jetzt bleiben die Knoten stehen, und geschrieben wird
+   * nur, was sich wirklich geändert hat.
+   */
+  const adern = new Map();         // conn.id -> { g, hit, path, dot, letzt, weltPunkt }
+  const strangEls = new Map();     // Bündel-Id -> { g, mantel, paare }
+  const markerEls = new Map();     // Farbe|Seite -> <marker> in <defs>
+  let letzterMassstab = null;      // um reines Schwenken zu erkennen
 
   const connections = {
     events: U.emitter(),
@@ -36,7 +52,14 @@
       labelLayer = document.getElementById('label-layer');
       defs = U.svg('defs');
       layer.appendChild(defs);
-      GD.board.events.on('view', connections.redraw);
+      /* Beim reinen SCHWENKEN ändert sich an den Pfeilen nichts: Sie liegen
+         im Weltraum und werden vom Board mitgeschoben. Nur Beschriftungen
+         und Sprechblasen hängen im Bildschirmraum. Dafür die ganze Ebene neu
+         zu bauen, war der teuerste Handgriff auf jeder größeren Tafel. */
+      GD.board.events.on('view', (v) => {
+        if (letzterMassstab !== null && v.scale === letzterMassstab) schirmNachfuehren();
+        else connections.redraw();
+      });
       GD.board.events.on('background:click', () => {
         connections.select(null);
         if (selBundle) { selBundle = null; applySelectionClasses(); connections.events.emit('bundle', null); }
@@ -196,94 +219,164 @@
     if (!layer) return;
     const doc = GD.store.doc;
     const scale = GD.board.scale();
+    letzterMassstab = scale;
 
-    // Alles außer <defs> neu aufbauen (überschaubare Anzahl Verbindungen)
-    while (layer.childNodes.length > 1) layer.removeChild(layer.lastChild);
-    while (defs.firstChild) defs.removeChild(defs.firstChild);
-    pathEls.clear();
-
-    const seenLabels = new Set();
     const seenChips = new Set();
+    const seenAdern = new Set();
 
-    /* Erst die Bündel: Sie legen den Weg ihrer Mitglieder fest, einzeln
-       geroutet wird nur, was in keinem Bündel liegt. */
+    /* ============ ERST RECHNEN ============================================
+     *
+     * Kein Schreibzugriff in diesem Abschnitt. Der Grund steht in einer
+     * einzigen Zeile in wireframe.js: Hängt ein Pfeil an einer Form, fragt
+     * `endpointRect()` das Modul nach deren Lage, und das MISST sie
+     * (getScreenCTM). Eine Messung nach einem Schreibvorgang zwingt den
+     * Browser, das Layout der ganzen Seite neu zu rechnen — auf der
+     * Feldherr-Tafel 4,3 ms für einen einzigen Griff. Vermischt kostete das
+     * Zeichnen dadurch 8 ms; getrennt bleibt einer dieser Läufe übrig, und
+     * der fällt beim ersten Messen ohnehin an.
+     */
     const wege = new Map();          // conn.id -> geo
+    const straenge = [];
     for (const b of (doc.bundles || [])) {
       const mit = mitgliederVon(b.id);
       if (!mit.length) continue;
       const strang = buendelWege(b, mit);
       if (!strang) continue;
       for (const [id, geo] of strang.wege) wege.set(id, geo);
-      zeichneStrang(b, strang, mit, scale);
-      chip(b, strang, mit);
-      seenChips.add(b.id);
+      straenge.push({ b: b, strang: strang, mit: mit });
     }
 
+    const gerechnet = [];
     for (const c of doc.connections) {
       const geo = wege.get(c.id) || (() => {
         const a = endpointRect(c.from), b = endpointRect(c.to);
         return a && b ? routeGeometry(a, b, c) : null;
       })();
       if (!geo) continue;
-
-      const g = U.svg('g', {
-        class: 'conn' + (c.id === selectedId ? ' is-selected' : '') + (c.bundle ? ' is-bundled' : ''),
-        dataset: { id: c.id, bundle: c.bundle || '' }
-      });
-      g.setAttribute('data-id', c.id);
-      if (c.bundle) g.setAttribute('data-bundle', c.bundle);
-
-      const strokeW = Math.max(c.width, 1.1 / scale);
-      const dash = dashArray(c.dash, strokeW);
-
-      const markerEnd = c.heads === 'end' || c.heads === 'both' ? makeMarker(c, 'end') : null;
-      const markerStart = c.heads === 'start' || c.heads === 'both' ? makeMarker(c, 'start') : null;
-
-      const hit = U.svg('path', { class: 'conn-hit', d: geo.d, 'stroke-width': Math.max(14 / scale, strokeW * 3) });
-      const path = U.svg('path', {
-        class: 'conn-path', d: geo.d,
-        stroke: c.color, 'stroke-width': strokeW,
-        'stroke-dasharray': dash || null,
-        'marker-end': markerEnd ? 'url(#' + markerEnd + ')' : null,
-        'marker-start': markerStart ? 'url(#' + markerStart + ')' : null
-      });
-
-      g.append(hit, path);
-
-      /* Hängt der Pfeil an einem einzelnen Element — einem Knopf im
-         Wireframe —, bekommt sein Anfang einen Punkt. Ohne ihn ist bei
-         mehreren Pfeilen aus derselben Kante nicht zu sehen, welcher zu
-         welchem Knopf gehört. */
-      if (c.from.shape) {
-        g.appendChild(U.svg('circle', {
-          class: 'conn-dot', cx: geo.start.x + OFF, cy: geo.start.y + OFF,
-          r: Math.max(strokeW * 1.9, 3 / scale), fill: c.color
-        }));
-      }
-
-      layer.appendChild(g);
-      pathEls.set(c.id, path);
-
-      hit.addEventListener('pointerdown', (ev) => {
-        if (ev.button !== 0) return;
-        ev.stopPropagation();
-        connections.select(c.id);
-      });
-      hit.addEventListener('dblclick', (ev) => { ev.stopPropagation(); startLabelEdit(c.id); });
-      hit.addEventListener('pointerenter', () => { hoverId = c.id; applySelectionClasses(); });
-      hit.addEventListener('pointerleave', () => { if (hoverId === c.id) { hoverId = null; applySelectionClasses(); } });
-
-      updateLabel(c, path, geo);
-      seenLabels.add(c.id);
+      gerechnet.push({ c: c, geo: geo });
     }
 
-    for (const [id, el] of Array.from(labelEls)) {
-      if (!seenLabels.has(id)) { el.remove(); labelEls.delete(id); }
+    /* ============ DANN SCHREIBEN ========================================= */
+    for (const s of straenge) {
+      zeichneStrang(s.b, s.strang, s.mit, scale);
+      chip(s.b, s.strang, s.mit);
+      seenChips.add(s.b.id);
+    }
+
+    const beschriften = [];
+    const reihe = [];
+    for (const e of gerechnet) {
+      const rec = aderFuer(e.c);
+      seenAdern.add(e.c.id);
+      reihe.push(e.c.id);
+      aderSetzen(rec, e.c, e.geo, scale);
+      beschriften.push({ c: e.c, rec: rec, geo: e.geo });
+    }
+
+    /* Weggefallene Pfeile wegräumen */
+    for (const [id, rec] of Array.from(adern)) {
+      if (seenAdern.has(id)) continue;
+      rec.g.remove();
+      adern.delete(id);
+      pathEls.delete(id);
+      const el = labelEls.get(id);
+      if (el) { el.remove(); labelEls.delete(id); }
     }
     for (const [id, el] of Array.from(chipEls)) {
-      if (!seenChips.has(id)) { el.remove(); chipEls.delete(id); }
+      if (!seenChips.has(id)) { el.remove(); chipEls.delete(id); chipPunkte.delete(id); }
     }
+    for (const [id, s] of Array.from(strangEls)) {
+      if (!seenChips.has(id)) { s.g.remove(); strangEls.delete(id); }
+    }
+
+    /* Reihenfolge im DOM = Reihenfolge im Dokument. Nur nötig, wenn Pfeile
+       dazugekommen, verschwunden oder umsortiert sind — sonst stehen sie
+       schon richtig, und ein appendChild je Pfeil wäre reine Arbeit. */
+    if (reihe.length !== ordnung.length || reihe.some((id, i) => ordnung[i] !== id)) {
+      for (const id of reihe) layer.appendChild(adern.get(id).g);
+      ordnung = reihe;
+    }
+
+    beschriftungen(beschriften, scale);
     applySelectionClasses();
+  }
+
+  let ordnung = [];
+
+  /* ---------------------------------------------------------- Eine Ader */
+
+  /** Knoten eines Pfeils holen oder einmalig anlegen (samt Zuhörern) */
+  function aderFuer(c) {
+    let rec = adern.get(c.id);
+    if (rec) return rec;
+
+    const g = U.svg('g', { class: 'conn' });
+    g.setAttribute('data-id', c.id);
+    const hit = U.svg('path', { class: 'conn-hit' });
+    const path = U.svg('path', { class: 'conn-path' });
+    g.append(hit, path);
+    layer.appendChild(g);
+
+    /* Die Zuhörer hängen EINMAL am Knoten, nicht bei jedem Bild neu. Sie
+       greifen über c.id auf den jeweils gültigen Datensatz zu — nach
+       Rückgängig hängt im Dokument ein frischer, die Kennung bleibt. */
+    hit.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      ev.stopPropagation();
+      connections.select(c.id);
+    });
+    hit.addEventListener('dblclick', (ev) => { ev.stopPropagation(); startLabelEdit(c.id); });
+    hit.addEventListener('pointerenter', () => { hoverId = c.id; applySelectionClasses(); });
+    hit.addEventListener('pointerleave', () => { if (hoverId === c.id) { hoverId = null; applySelectionClasses(); } });
+
+    rec = { g: g, hit: hit, path: path, dot: null, letzt: {}, weltPunkt: null, breite: 0, breiteKenn: null };
+    adern.set(c.id, rec);
+    pathEls.set(c.id, path);
+    return rec;
+  }
+
+  /** Nur schreiben, was sich geändert hat — jeder Schreibzugriff kostet */
+  function setzeAttr(el, name, wert, letzt, schluessel) {
+    if (letzt[schluessel] === wert) return;
+    letzt[schluessel] = wert;
+    if (wert === null || wert === undefined) el.removeAttribute(name);
+    else el.setAttribute(name, wert);
+  }
+
+  function aderSetzen(rec, c, geo, scale) {
+    const L = rec.letzt;
+    const strokeW = Math.max(c.width, 1.1 / scale);
+    const dash = dashArray(c.dash, strokeW);
+    const markerEnd = c.heads === 'end' || c.heads === 'both' ? holeMarker(c.color, 'end') : null;
+    const markerStart = c.heads === 'start' || c.heads === 'both' ? holeMarker(c.color, 'start') : null;
+
+    const klasse = 'conn' + (c.bundle ? ' is-bundled' : '');
+    if (L.klasse !== klasse) { L.klasse = klasse; rec.g.setAttribute('class', klasse); }
+    setzeAttr(rec.g, 'data-bundle', c.bundle || null, L, 'bundle');
+
+    setzeAttr(rec.hit, 'd', geo.d, L, 'd');
+    setzeAttr(rec.hit, 'stroke-width', Math.max(14 / scale, strokeW * 3), L, 'hitW');
+
+    setzeAttr(rec.path, 'd', geo.d, L, 'd2');
+    setzeAttr(rec.path, 'stroke', c.color, L, 'farbe');
+    setzeAttr(rec.path, 'stroke-width', strokeW, L, 'w');
+    setzeAttr(rec.path, 'stroke-dasharray', dash || null, L, 'dash');
+    setzeAttr(rec.path, 'marker-end', markerEnd ? 'url(#' + markerEnd + ')' : null, L, 'mEnd');
+    setzeAttr(rec.path, 'marker-start', markerStart ? 'url(#' + markerStart + ')' : null, L, 'mStart');
+
+    /* Hängt der Pfeil an einem einzelnen Element — einem Knopf im
+       Wireframe —, bekommt sein Anfang einen Punkt. Ohne ihn ist bei
+       mehreren Pfeilen aus derselben Kante nicht zu sehen, welcher zu
+       welchem Knopf gehört. */
+    if (c.from.shape) {
+      if (!rec.dot) { rec.dot = U.svg('circle', { class: 'conn-dot' }); rec.g.appendChild(rec.dot); }
+      setzeAttr(rec.dot, 'cx', geo.start.x + OFF, L, 'cx');
+      setzeAttr(rec.dot, 'cy', geo.start.y + OFF, L, 'cy');
+      setzeAttr(rec.dot, 'r', Math.max(strokeW * 1.9, 3 / scale), L, 'r');
+      setzeAttr(rec.dot, 'fill', c.color, L, 'dotFarbe');
+    } else if (rec.dot) {
+      rec.dot.remove(); rec.dot = null; L.cx = L.cy = L.r = L.dotFarbe = undefined;
+    }
   }
 
   /* ======================================================== Bündel ===== */
@@ -387,63 +480,89 @@
     return ny < 0 ? 't' : 'b';
   }
 
-  /** Mantel und Wickel — das Sichtbare am Strang */
+  /**
+   * Mantel und Wickel — das Sichtbare am Strang.
+   *
+   * Wie bei den Adern bleiben die Knoten stehen. Drei Bündel kosteten im
+   * Neubau 7,7 ms je Bild (gemessen auf der Feldherr-Tafel): 27 Pfade und
+   * ebenso viele Zuhörer, abgerissen und wieder aufgebaut, damit sich zwei
+   * Zahlen ändern. Neu angelegt wird nur, wenn die ANZAHL der Wickel
+   * wechselt — und die hängt an der Länge des Strangs, nicht am Zoom.
+   */
   function zeichneStrang(b, st, mit, scale) {
-    const g = U.svg('g', {
-      class: 'bnd' + (b.id === selBundle ? ' is-selected' : '') + (st.auf < 0.5 ? ' is-zu' : ' is-auf'),
-      dataset: { bundle: b.id }
-    });
-    g.setAttribute('data-bundle', b.id);
+    let s = strangEls.get(b.id);
+    if (!s) {
+      const g = U.svg('g', { class: 'bnd' });
+      g.setAttribute('data-bundle', b.id);
+      const mantel = U.svg('path', { class: 'bnd-mantel', 'stroke-linecap': 'round' });
+      g.appendChild(mantel);
+      /* Gleich hinter <defs>, also ganz unten im Stapel: Der Strang gehört
+         HINTER seine Adern. Angehängt landete ein später erzeugtes Bündel
+         über den Pfeilen und legte seinen Mantel darüber. */
+      layer.insertBefore(g, defs.nextSibling);
+      s = { g: g, mantel: mantel, paare: [], letzt: {} };
+      strangEls.set(b.id, s);
+    }
+    const L = s.letzt;
 
     const halbe = st.spanne + Math.max(3, b.width * 1.3);
     const px = (v) => v / scale;                     // Bildpunkte in Weltmaß
+
+    s.g.classList.toggle('is-zu', st.auf < 0.5);
+    s.g.classList.toggle('is-auf', st.auf >= 0.5);
 
     /* Mantel: liegt HINTER den Adern und macht aus vielen Strichen eine
        Leitung. Zugeklappt ist er kräftig, offen nur noch ein Hauch. */
     const mantelBreite = st.auf < 1
       ? (halbe * 2 + Math.max(6, b.width * 2.2)) * (1 - st.auf) + halbe * 2 * st.auf
       : halbe * 2;
-    g.appendChild(U.svg('path', {
-      class: 'bnd-mantel',
-      d: 'M' + (st.A.x + OFF) + ',' + (st.A.y + OFF) + ' L' + (st.B.x + OFF) + ',' + (st.B.y + OFF),
-      stroke: b.color, 'stroke-width': Math.max(mantelBreite, px(6)),
-      'stroke-linecap': 'round',
-      opacity: 0.10 + 0.26 * (1 - st.auf)
-    }));
+    setzeAttr(s.mantel, 'd', 'M' + (st.A.x + OFF) + ',' + (st.A.y + OFF) + ' L' + (st.B.x + OFF) + ',' + (st.B.y + OFF), L, 'md');
+    setzeAttr(s.mantel, 'stroke', b.color, L, 'mfarbe');
+    setzeAttr(s.mantel, 'stroke-width', Math.max(mantelBreite, px(6)), L, 'mw');
+    setzeAttr(s.mantel, 'opacity', 0.10 + 0.26 * (1 - st.auf), L, 'mo');
 
     /* Wickel quer über den Strang. Sie sind zugleich der Griff: darauf
        tippen klappt auf und zu. */
     const laenge = Math.abs(st.B.x - st.A.x) + Math.abs(st.B.y - st.A.y);
     const anzahl = U.clamp(Math.round(laenge / 90), 2, 7);
     const dicke = Math.max(px(5), b.width * 1.6);
+
+    while (s.paare.length > anzahl) {
+      const p = s.paare.pop();
+      p.wickel.remove(); p.griff.remove();
+    }
+    while (s.paare.length < anzahl) s.paare.push(neuesWickelpaar(s, b));
+
     for (let i = 1; i <= anzahl; i++) {
+      const p = s.paare[i - 1];
       const t = i / (anzahl + 1);
       const cx = st.A.x + (st.B.x - st.A.x) * t;
       const cy = st.A.y + (st.B.y - st.A.y) * t;
       const q1 = { x: cx - st.senk.x * (halbe + px(2)), y: cy - st.senk.y * (halbe + px(2)) };
       const q2 = { x: cx + st.senk.x * (halbe + px(2)), y: cy + st.senk.y * (halbe + px(2)) };
-      g.appendChild(U.svg('path', {
-        class: 'bnd-wickel',
-        d: 'M' + (q1.x + OFF) + ',' + (q1.y + OFF) + ' L' + (q2.x + OFF) + ',' + (q2.y + OFF),
-        stroke: b.color, 'stroke-width': dicke, 'stroke-linecap': 'round'
-      }));
-      const griff = U.svg('path', {
-        class: 'bnd-griff',
-        d: 'M' + (q1.x + OFF) + ',' + (q1.y + OFF) + ' L' + (q2.x + OFF) + ',' + (q2.y + OFF),
-        'stroke-width': Math.max(dicke * 2.4, px(16))
-      });
-      griff.addEventListener('pointerdown', (ev) => {
-        if (ev.button !== 0) return;
-        ev.stopPropagation();
-        connections.selectBundle(b.id);
-      });
-      griff.addEventListener('dblclick', (ev) => { ev.stopPropagation(); connections.toggleBundle(b.id); });
-      griff.addEventListener('pointerenter', () => { hoverBundle = b.id; applySelectionClasses(); });
-      griff.addEventListener('pointerleave', () => { if (hoverBundle === b.id) { hoverBundle = null; applySelectionClasses(); } });
-      g.appendChild(griff);
+      const d = 'M' + (q1.x + OFF) + ',' + (q1.y + OFF) + ' L' + (q2.x + OFF) + ',' + (q2.y + OFF);
+      setzeAttr(p.wickel, 'd', d, p.letzt, 'd');
+      setzeAttr(p.wickel, 'stroke', b.color, p.letzt, 'farbe');
+      setzeAttr(p.wickel, 'stroke-width', dicke, p.letzt, 'w');
+      setzeAttr(p.griff, 'd', d, p.letzt, 'gd');
+      setzeAttr(p.griff, 'stroke-width', Math.max(dicke * 2.4, px(16)), p.letzt, 'gw');
     }
+  }
 
-    layer.appendChild(g);
+  /** Ein Wickel samt Griff — Zuhörer hängen einmal daran, nicht je Bild */
+  function neuesWickelpaar(s, b) {
+    const wickel = U.svg('path', { class: 'bnd-wickel', 'stroke-linecap': 'round' });
+    const griff = U.svg('path', { class: 'bnd-griff' });
+    griff.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      ev.stopPropagation();
+      connections.selectBundle(b.id);
+    });
+    griff.addEventListener('dblclick', (ev) => { ev.stopPropagation(); connections.toggleBundle(b.id); });
+    griff.addEventListener('pointerenter', () => { hoverBundle = b.id; applySelectionClasses(); });
+    griff.addEventListener('pointerleave', () => { if (hoverBundle === b.id) { hoverBundle = null; applySelectionClasses(); } });
+    s.g.append(wickel, griff);
+    return { wickel: wickel, griff: griff, letzt: {} };
   }
 
   /** Die Sprechblase am Strang: Name, Zahl, Auf-/Zuklappen, Verschieben */
@@ -471,7 +590,9 @@
     el.classList.toggle('is-zu', st.auf < 0.5);
     el.style.setProperty('--bnd-farbe', b.color);
 
-    const s = GD.board.worldToScreen(st.mitte.x, st.mitte.y - (st.waag ? st.spanne + 22 : 0));
+    const wx = st.mitte.x, wy = st.mitte.y - (st.waag ? st.spanne + 22 : 0);
+    chipPunkte.set(b.id, { x: wx, y: wy });     // fürs Nachführen beim Schwenken
+    const s = GD.board.worldToScreen(wx, wy);
     el.style.left = s.x + 'px';
     el.style.top = s.y + 'px';
 
@@ -500,15 +621,26 @@
     });
   }
 
-  function makeMarker(c, which) {
-    const id = 'ah_' + which + '_' + c.id;
+  /**
+   * Pfeilspitze — je FARBE und Richtung eine, nicht je Pfeil eine.
+   *
+   * Vorher bekam jeder Pfeil seinen eigenen Marker, und bei jedem Bild
+   * wurden alle weggeworfen und neu gebaut. Eine Spitze hängt aber nur an
+   * ihrer Farbe: Zwanzig blaue Pfeile teilen sich einen Marker, und der
+   * bleibt stehen, bis die Seite neu lädt (ein paar Dutzend leere Knoten
+   * im <defs> kosten nichts, ihr ständiger Neubau schon).
+   */
+  function holeMarker(farbe, which) {
+    const kenn = which + '_' + String(farbe).replace(/[^a-z0-9]/gi, '');
+    if (markerEls.has(kenn)) return kenn;
     const marker = U.svg('marker', {
-      id: id, viewBox: '0 0 8 8', refX: which === 'end' ? 7.2 : 0.8, refY: 4,
+      id: kenn, viewBox: '0 0 8 8', refX: which === 'end' ? 7.2 : 0.8, refY: 4,
       markerWidth: 5, markerHeight: 5, orient: which === 'end' ? 'auto' : 'auto-start-reverse',
       markerUnits: 'strokeWidth'
-    }, [U.svg('path', { d: 'M0.5,0.6 L7.5,4 L0.5,7.4 L2.1,4 Z', fill: c.color })]);
+    }, [U.svg('path', { d: 'M0.5,0.6 L7.5,4 L0.5,7.4 L2.1,4 Z', fill: farbe })]);
     defs.appendChild(marker);
-    return id;
+    markerEls.set(kenn, marker);
+    return kenn;
   }
 
   function dashArray(kind, w) {
@@ -698,7 +830,32 @@
 
   /* ------------------------------------------------------ Beschriftungen */
 
-  function updateLabel(c, pathEl, geo) {
+  /**
+   * Alle Beschriftungen in DREI Durchgängen.
+   *
+   * Die Breite einer Beschriftung lässt sich nur erfragen, indem man den
+   * Browser das Layout ausrechnen lässt (`offsetWidth`). Wer zwischen zwei
+   * Schreibvorgängen misst, löst diese Rechnung jedes Mal neu aus — bei 52
+   * Pfeilen also 52-mal je Bild. Deshalb: erst ALLES schreiben, dann ALLES
+   * messen, dann alle Lagen setzen. Gemessen wird ohnehin nur, was seinen
+   * Text oder seine Schriftgröße geändert hat.
+   */
+  function beschriftungen(liste, scale) {
+    for (const e of liste) e.el = labelKnoten(e.c);
+
+    for (const e of liste) {
+      const kenn = (e.c.label || '') + '¦' + (e.c.labelSize || 12);
+      if (e.rec.breiteKenn !== kenn) {
+        e.rec.breite = e.el.offsetWidth;
+        e.rec.breiteKenn = kenn;
+      }
+    }
+
+    for (const e of liste) labelLegen(e.c, e.rec, e.geo, e.el, scale);
+  }
+
+  /** Knoten der Beschriftung holen oder anlegen, Text und Schrift setzen */
+  function labelKnoten(c) {
     let el = labelEls.get(c.id);
     if (!el) {
       el = U.el('div', { class: 'conn-label', dataset: { id: c.id }, spellcheck: false });
@@ -713,16 +870,21 @@
       labelEls.set(c.id, el);
     }
     if (!el.isContentEditable) {
-      el.textContent = c.label || '＋';
+      const text = c.label || '＋';
+      if (el.textContent !== text) el.textContent = text;
       el.classList.toggle('is-empty', !c.label);
     }
-    el.style.fontSize = (c.labelSize || 12) + 'px';
-    el.style.borderColor = c.id === selectedId ? c.color : '';
+    const gr = (c.labelSize || 12) + 'px';
+    if (el.style.fontSize !== gr) el.style.fontSize = gr;
+    const rand = c.id === selectedId ? c.color : '';
+    if (el.style.borderColor !== rand) el.style.borderColor = rand;
+    return el;
+  }
 
+  function labelLegen(c, rec, geo, el, sc) {
     /* Weit herausgezoomt liegen die Beschriftungen sonst übereinander: Sie
        behalten ihre Pixelgröße, der Abstand zwischen den Pfeilen aber nicht.
        Ausgeblendet wird nur die Anzeige — Größe und Text bleiben unberührt. */
-    const sc = GD.board.scale();
     const fade = c.id === selectedId || c.id === hoverId
       ? 1 : U.clamp((sc - 0.16) / 0.16, 0, 1);
     el.style.opacity = fade;
@@ -736,19 +898,73 @@
     const t = c.t;
     let pt = null;
     if ((t === undefined || t === null) && geo && geo.pts) {
-      const m = langstesStueck(geo.pts, (el.offsetWidth + 10) / Math.max(sc, 0.01));
-      if (m) pt = { x: m.x + OFF, y: m.y + OFF };
+      const m = langstesStueck(geo.pts, (rec.breite + 10) / Math.max(sc, 0.01));
+      if (m) pt = { x: m.x, y: m.y };
     }
-    if (!pt) {
-      try {
-        const len = pathEl.getTotalLength();
-        pt = pathEl.getPointAtLength(len * U.clamp(t === undefined || t === null ? 0.5 : t, 0, 1));
-      } catch (e) { pt = { x: OFF, y: OFF }; }
-    }
-    const s = GD.board.worldToScreen(pt.x - OFF, pt.y - OFF);
+    if (!pt) pt = punktAuf(geo, rec, t);
+
+    rec.weltPunkt = pt;                 // fürs Nachführen beim Schwenken
+    const s = GD.board.worldToScreen(pt.x, pt.y);
     el.style.left = s.x + 'px';
     el.style.top = s.y + 'px';
   }
+
+  /**
+   * Punkt bei Anteil t auf dem Weg — selbst gerechnet.
+   *
+   * `getPointAtLength()` ist ein Lesezugriff auf das Layout und damit genauso
+   * teuer wie `offsetWidth`. Für einen Streckenzug ist die Rechnung ein
+   * Zehnzeiler; nur die geschwungene Form (bezier, ohne Punktliste) muss
+   * weiter den Browser fragen.
+   */
+  function punktAuf(geo, rec, t) {
+    const anteil = U.clamp(t === undefined || t === null ? 0.5 : t, 0, 1);
+    const pts = geo && geo.pts;
+    if (pts && pts.length > 1) {
+      let ges = 0;
+      for (let i = 0; i < pts.length - 1; i++) ges += Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+      let rest = ges * anteil;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const l = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+        if (rest <= l || i === pts.length - 2) {
+          const f = l > 0 ? U.clamp(rest / l, 0, 1) : 0;
+          return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * f, y: pts[i].y + (pts[i + 1].y - pts[i].y) * f };
+        }
+        rest -= l;
+      }
+    }
+    if (pts && pts.length === 1) return { x: pts[0].x, y: pts[0].y };
+    try {
+      const len = rec.path.getTotalLength();
+      const p = rec.path.getPointAtLength(len * anteil);
+      return { x: p.x - OFF, y: p.y - OFF };
+    } catch (e) { return { x: 0, y: 0 }; }
+  }
+
+  /**
+   * Beim reinen Schwenken: nur die Bildschirm-Ebene nachziehen.
+   *
+   * Pfade, Stränge und Wickel liegen im Weltraum — das Board schiebt sie
+   * mit seiner eigenen Transformation. Beschriftungen und Sprechblasen
+   * hängen im Bildschirmraum und brauchen zwei Zahlen. Mehr ist beim
+   * Schwenken nicht zu tun.
+   */
+  const schirmNachfuehren = U.raf(function () {
+    for (const [id, el] of labelEls) {
+      const rec = adern.get(id);
+      if (!rec || !rec.weltPunkt) continue;
+      const s = GD.board.worldToScreen(rec.weltPunkt.x, rec.weltPunkt.y);
+      el.style.left = s.x + 'px';
+      el.style.top = s.y + 'px';
+    }
+    for (const [id, el] of chipEls) {
+      const p = chipPunkte.get(id);
+      if (!p) continue;
+      const s = GD.board.worldToScreen(p.x, p.y);
+      el.style.left = s.x + 'px';
+      el.style.top = s.y + 'px';
+    }
+  });
 
   function startLabelEdit(id) {
     const c = GD.store.doc.connections.find((x) => x.id === id);
@@ -809,18 +1025,20 @@
       el.classList.toggle('is-selected', id === selectedId);
       el.style.display = (el.classList.contains('is-empty') && !active) ? 'none' : '';
     }
-    for (const g of layer.querySelectorAll('.conn')) {
-      const eigen = g.dataset.id === selectedId;
-      const imBund = g.dataset.bundle && (g.dataset.bundle === selBundle || g.dataset.bundle === hoverBundle);
-      g.classList.toggle('is-selected', eigen);
+    /* Über die gemerkten Knoten statt über querySelectorAll: Das hier läuft
+       bei jedem Überfahren eines Pfeils, und die Ebene neu zu durchsuchen
+       kostet mehr als der Klassenwechsel selbst. */
+    for (const [id, rec] of adern) {
+      const g = rec.g;
+      const bnd = g.getAttribute('data-bundle');
+      g.classList.toggle('is-selected', id === selectedId);
       /* Das ganze Bündel hebt sich mit: Wer den Strang anfasst, soll sehen,
          welche Adern darin liegen. */
-      g.classList.toggle('is-hervor', !!imBund);
+      g.classList.toggle('is-hervor', !!(bnd && (bnd === selBundle || bnd === hoverBundle)));
     }
-    for (const g of layer.querySelectorAll('.bnd')) {
-      const id = g.dataset.bundle;
-      g.classList.toggle('is-selected', id === selBundle);
-      g.classList.toggle('is-hover', id === hoverBundle);
+    for (const [id, s] of strangEls) {
+      s.g.classList.toggle('is-selected', id === selBundle);
+      s.g.classList.toggle('is-hover', id === hoverBundle);
     }
     for (const [id, el] of chipEls) {
       el.classList.toggle('is-selected', id === selBundle);
@@ -830,59 +1048,109 @@
 
   /* --------------------------------------------------- Pfeil aufziehen */
 
+  /**
+   * Einen Pfeil aufziehen — auf zwei Wegen.
+   *
+   * ZIEHEN: Knopf drücken, zum Ziel ziehen, loslassen. Schnell, aber es
+   * verlangt eine gehaltene Taste über womöglich den halben Bildschirm, und
+   * herausgezoomt liegen Start und Ziel weit auseinander.
+   *
+   * KLICKEN: Knopf antippen, loslassen, Ziel anklicken. Der Pfeil hängt
+   * dazwischen am Zeiger, Esc bricht ab. Für lange Wege, für Trackpads und
+   * für alle, denen Ziehen über weite Strecken schwerfällt. Welcher der
+   * beiden Wege gemeint war, entscheidet sich am Ende von selbst: ohne
+   * Bewegung war es ein Klick.
+   */
   connections.beginLink = function (winId, side, ev, shapeId) {
     const boardEl = GD.board.elBoard;
-    boardEl.classList.add('is-linking');
     const fromRect = endpointRect({ win: winId, side: side, shape: shapeId || null });
     if (!fromRect) return;
-    const a = anchor(fromRect, side === 'auto' ? (shapeId ? 'r' : 'r') : side);
+    boardEl.classList.add('is-linking');
+    const a = anchor(fromRect, side === 'auto' ? 'r' : side);
 
-    const temp = U.svg('path', {
-      class: 'conn-path',
-      stroke: 'var(--accent)', 'stroke-width': Math.max(2, 2 / GD.board.scale()),
-      'stroke-dasharray': (6 / GD.board.scale()) + ' ' + (5 / GD.board.scale()), fill: 'none'
-    });
+    const temp = U.svg('path', { class: 'conn-path conn-path--vorschau', fill: 'none' });
     layer.appendChild(temp);
     let dropRec = null, dropShapeEl = null;
+    let loesen = null;                 // Zuhörer des Klickmodus
+
+    /** Vorschauweg und Zielhervorhebung an die Zeigerposition führen */
+    function vorschau(clientX, clientY) {
+      const sc = GD.board.scale() || 1;
+      temp.setAttribute('stroke-width', String(Math.max(1.5, 2 / sc)));
+      temp.setAttribute('stroke-dasharray', (6 / sc) + ' ' + (5 / sc));
+
+      const p = GD.board.screenToWorld(clientX, clientY);
+      // Vorschau im selben rechten Winkel, in dem der Pfeil danach liegt
+      const s = { x: a.x + a.nx * STUMMEL, y: a.y + a.ny * STUMMEL };
+      const ecke = (a.nx !== 0) ? { x: p.x, y: s.y } : { x: s.x, y: p.y };
+      const pts = entdopple([a, s, ecke, p]);
+      temp.setAttribute('d', 'M' + pts.map((q) => (q.x + OFF) + ',' + (q.y + OFF)).join(' L'));
+
+      const under = document.elementFromPoint(clientX, clientY);
+      const winEl = under && under.closest ? under.closest('.gd-win') : null;
+      // Eine Form im eigenen Fenster ist ein gültiges Ziel, das Fenster selbst nicht
+      const shapeEl = under && under.closest ? under.closest('.wf-shape') : null;
+      const rec = winEl && (winEl.dataset.id !== winId || shapeEl) ? GD.windows.get(winEl.dataset.id) : null;
+      if (dropRec !== rec) {
+        if (dropRec) dropRec.el.classList.remove('is-drop-target');
+        dropRec = rec;
+        if (dropRec) dropRec.el.classList.add('is-drop-target');
+      }
+      if (dropShapeEl !== shapeEl) {
+        if (dropShapeEl) dropShapeEl.classList.remove('is-drop-shape');
+        dropShapeEl = shapeEl;
+        if (dropShapeEl) dropShapeEl.classList.add('is-drop-shape');
+      }
+    }
+
+    function aufraeumen() {
+      temp.remove();
+      boardEl.classList.remove('is-linking');
+      if (dropRec) dropRec.el.classList.remove('is-drop-target');
+      if (dropShapeEl) dropShapeEl.classList.remove('is-drop-shape');
+      if (loesen) { loesen(); loesen = null; }
+    }
+
+    /** Am Zeigerpunkt abschließen; true, wenn ein Pfeil entstanden ist */
+    function abschliessen(clientX, clientY) {
+      const ziel = dropRec;
+      const zielForm = dropShapeEl ? dropShapeEl.dataset.id : null;
+      const under = document.elementFromPoint(clientX, clientY);
+      const portSide = under && under.closest && under.closest('.gd-port');
+      aufraeumen();
+      if (!ziel) return false;
+      connections.add(winId, side, ziel.data.id,
+        portSide ? portSide.dataset.side : 'auto', shapeId || null, zielForm);
+      return true;
+    }
+
+    function klickModus() {
+      const ab = [];
+      loesen = () => { for (const f of ab) f(); ab.length = 0; };
+      ab.push(U.on(window, 'pointermove', (e) => vorschau(e.clientX, e.clientY), true));
+      ab.push(U.on(window, 'pointerdown', (e) => {
+        if (e.button !== 0) { aufraeumen(); return; }
+        e.preventDefault();
+        e.stopPropagation();
+        vorschau(e.clientX, e.clientY);   // auch ohne vorheriges Bewegen (Touch)
+        abschliessen(e.clientX, e.clientY);
+      }, true));
+      ab.push(U.on(window, 'keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        e.stopPropagation();
+        aufraeumen();
+      }, true));
+      // Ein Modus ohne Ausgang ist eine Falle — der Ausgang steht dabei
+      if (GD.ui) GD.ui.toast('Pfeil: Ziel anklicken · Esc bricht ab');
+    }
 
     U.drag(ev, {
       cursor: 'crosshair',
-      onMove(dx, dy, e) {
-        const p = GD.board.screenToWorld(e.clientX, e.clientY);
-        // Vorschau im selben rechten Winkel, in dem der Pfeil danach liegt
-        const s = { x: a.x + a.nx * STUMMEL, y: a.y + a.ny * STUMMEL };
-        const ecke = (a.nx !== 0) ? { x: p.x, y: s.y } : { x: s.x, y: p.y };
-        const pts = entdopple([a, s, ecke, p]);
-        temp.setAttribute('d', 'M' + pts.map((q) => (q.x + OFF) + ',' + (q.y + OFF)).join(' L'));
-
-        const under = document.elementFromPoint(e.clientX, e.clientY);
-        const winEl = under && under.closest ? under.closest('.gd-win') : null;
-        // Eine Form im eigenen Fenster ist ein gültiges Ziel, das Fenster selbst nicht
-        const shapeEl = under && under.closest ? under.closest('.wf-shape') : null;
-        const rec = winEl && (winEl.dataset.id !== winId || shapeEl) ? GD.windows.get(winEl.dataset.id) : null;
-        if (dropRec !== rec) {
-          if (dropRec) dropRec.el.classList.remove('is-drop-target');
-          dropRec = rec;
-          if (dropRec) dropRec.el.classList.add('is-drop-target');
-        }
-        if (dropShapeEl !== shapeEl) {
-          if (dropShapeEl) dropShapeEl.classList.remove('is-drop-shape');
-          dropShapeEl = shapeEl;
-          if (dropShapeEl) dropShapeEl.classList.add('is-drop-shape');
-        }
-      },
-      onEnd(e) {
-        temp.remove();
-        boardEl.classList.remove('is-linking');
-        if (dropShapeEl) dropShapeEl.classList.remove('is-drop-shape');
-        if (dropRec) {
-          dropRec.el.classList.remove('is-drop-target');
-          const under = document.elementFromPoint(e.clientX, e.clientY);
-          const portSide = under && under.closest && under.closest('.gd-port');
-          const targetShape = dropShapeEl ? dropShapeEl.dataset.id : null;
-          connections.add(winId, side, dropRec.data.id,
-            portSide ? portSide.dataset.side : 'auto', shapeId || null, targetShape);
-        }
+      onMove(dx, dy, e) { vorschau(e.clientX, e.clientY); },
+      onEnd(e, moved) {
+        if (moved) abschliessen(e.clientX, e.clientY);
+        else klickModus();
       }
     });
   };

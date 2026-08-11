@@ -38,7 +38,13 @@
     </div>
 
     <div class="tb-group">
+      <button class="tb-btn" data-act="suche" title="Springen zu … — Kachel oder Pfeil suchen und hinfahren (Strg+F)">⌕</button>
       <button class="tb-btn tb-btn--label" data-act="layout" title="Höhen an den Text anpassen, Überlappungen auflösen, Rahmen nachziehen">⤡&nbsp; Anordnen</button>
+    </div>
+
+    <div class="tb-group">
+      <button class="tb-btn tb-toggle" data-act="toggle-diff" id="btn-diff" title="Änderungssicht: alles, was seit dem letzten Commit anders ist, rot einrahmen">⬚</button>
+      <button class="tb-btn tb-btn--label" data-act="aenderungen" title="Änderungen seit dem letzten Commit (Strg+Umschalt+A)">Änderungen<span class="tb-zahl" id="aend-zahl" hidden>0</span></button>
     </div>
 
     <div class="tb-spacer"></div>
@@ -72,6 +78,11 @@
       <div id="win-layer"></div>
       <!-- Rahmenüberschriften: über den Kacheln, damit sie auf Distanz lesbar bleiben -->
       <div id="frame-layer"></div>
+      <!-- Eckgriffe: der Viertelkreis, mit dem herausgezoomte Kacheln und
+           Rahmen anfassbar bleiben (s. js/core/windows.js) -->
+      <div id="pad-layer"></div>
+      <!-- Änderungssicht: rote Kästen um alles, was seit dem letzten Commit anders ist -->
+      <svg id="diff-layer" xmlns="http://www.w3.org/2000/svg"></svg>
       <svg id="guide-layer" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <div id="label-layer"></div>
@@ -93,7 +104,9 @@
 </div>
 
 <script src="js/core/util.js"></script>
+<script src="js/core/vergleich.js"></script>
 <script src="js/core/registry.js"></script>
+<script src="js/core/depot.js"></script>
 <script src="js/core/store.js"></script>
 <script src="js/core/board.js"></script>
 <script src="js/core/windows.js"></script>
@@ -104,6 +117,8 @@
 <script src="js/core/models.js"></script>
 <script src="js/core/library.js"></script>
 <script src="js/core/layout.js"></script>
+<script src="js/core/aenderungen.js"></script>
+<script src="js/core/suche.js"></script>
 <script src="js/core/ui.js"></script>
 <script src="js/modules/frame.js"></script>
 <script src="js/modules/wireframe.js"></script>
@@ -114,6 +129,9 @@
 <script src="js/modules/modelview.js"></script>
 <script src="js/modules/sandbox.js"></script>
 <script src="js/modules/project.js"></script>
+<script src="js/modules/worker.js"></script>
 <script src="js/core/app.js"></script>
+<!-- Zuletzt: die Schnittstelle legt sich über alles Vorstehende -->
+<script src="js/core/schnittstelle.js"></script>
 </body>
 </html>

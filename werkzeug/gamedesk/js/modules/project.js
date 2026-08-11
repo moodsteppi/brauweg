@@ -132,8 +132,8 @@
 
         const boxen = state.boxen || [];
         if (!boxen.length) {
-          ctx2.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-faint').trim() || '#888';
-          ctx2.font = '11px ' + (getComputedStyle(document.body).fontFamily || 'sans-serif');
+          ctx2.fillStyle = U.blattText('--text-faint', '#888');
+          ctx2.font = '11px ' + U.blattText('--font', 'sans-serif');
           ctx2.textAlign = 'center';
           ctx2.fillText('keine Vorschau', B / 2, H / 2);
           return;

@@ -351,9 +351,21 @@
   pointer-events: none;
   overflow: visible;
 }
-.fr-schild.is-eingeklappt .fr-kopf { display: none; }
+.fr-schild.is-eingeklappt .fr-kopf,
+.fr-schild.is-eingeklappt .fr-glas,
+.fr-schild.is-eingeklappt .fr-modulband { display: none; }
+/*
+ * Der Kasten beginnt am oberen Fensterrand — und das ist die OBERKANTE DER
+ * TITELLEISTE, nicht die des Rahmenfelds. Stand der Kopf hier bei 0, legte
+ * sich die Überschrift über die Leiste und schnitt genau durch deren untere
+ * Linie: Bei Zoom 1 ragte sie 19 Pixel hinein, quer über den kleinen
+ * Leistentitel. Die Leiste ist eine harte Grenze, also fängt der Kopf erst
+ * darunter an. `frame.js.kopfHoehe()` meldet ohnehin `--fr-bar` + eigene
+ * Höhe an GD.layout — erst mit diesem Versatz stimmen Band und Anzeige
+ * überein.
+ */
 .fr-kopf {
-  position: absolute; left: 0; top: 0;
+  position: absolute; left: 0; top: var(--fr-bar);
   padding: var(--schrift-luft) var(--schrift-luft) var(--luft-4);
   pointer-events: none;
   user-select: none;
@@ -363,10 +375,9 @@
 }
 .fr-kopf > * { pointer-events: auto; cursor: grab; }
 .fr-kopf:active > * { cursor: grabbing; }
-/* Weit draußen wird aus vielen kleinen Schildern Grütze — die schmalen
-   Rahmen lassen ihre Überschrift dann weg. */
-.fr-kopf.is-weg { opacity: 0; pointer-events: none; }
-.fr-kopf.is-weg > * { pointer-events: none; }
+/* Hier stand `.fr-kopf.is-weg { opacity: 0 }` — schmale Rahmen nahmen ihre
+   Überschrift weg. Die Regel ist raus: Wo der Wuchs an seinen Deckel stößt,
+   behält die Schrift ihre Größe, statt zu verschwinden (s. frame.js). */
 .fr-mark {
   font-size: var(--fr-mark-size);
   font-weight: 750;
@@ -397,6 +408,17 @@ html[data-theme="light"] .fr-kopf.is-gross .fr-note {
 /* Weit draußen zählt nur der Name — der Untertitel wäre ohnehin nicht mehr
    zu lesen und verdoppelte nur die Fläche. */
 .fr-kopf.is-gross .fr-note { display: none !important; }
+/* Der Name bricht dann statt auszulaufen: Der Deckel steht in frame.js an
+   der Rahmenbreite, hier steht nur, wie er umgeht. Zwei Zeilen sind die
+   Grenze — was in zwei Zeilen nicht steht, liest auf dieser Größe niemand. */
+.fr-kopf.is-gross .fr-mark {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
 /* Der Griff wird erst sichtbar, wenn man in die Nähe kommt — er zeigt, dass
    die Überschrift kein Bild ist, sondern etwas, das man anfassen kann. */
 .fr-griff {
@@ -417,6 +439,119 @@ html[data-theme="light"] .fr-kopf.is-gross .fr-note {
 .fr-mark, .fr-note { transition: transform var(--zeit-druck) var(--aus); }
 .fr-kopf:hover .fr-mark { transform: translateX(2px); }
 .gd-win[data-type="frame"] .gd-win__body { background: transparent; }
+
+/* ------------------------------------------------- Fernsicht des Rahmens ---
+ *
+ * Herausgezoomt bleibt die Überschrift auf dem Bildschirm gleich groß, der
+ * Rahmen darunter schrumpft. Ab dem Punkt, an dem die Schrift mehr Inhalt
+ * verdeckt als sie erklärt (frame.js: GLAS_AB), wechselt der Rahmen die
+ * Darstellung: Der Inhalt geht hinter Milchglas, und unten sagt ein Band,
+ * was drinsteckt. Ein- und Ausblenden hängen an einer Klasse am Schild,
+ * damit beides in einem Zug läuft.
+ */
+.fr-glas {
+  position: absolute; left: 0; right: 0; top: var(--fr-bar); bottom: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: rgba(15,17,22,.40);
+  opacity: 0;
+  /* Die Unschärfe steht in frame.js (sie muss gegen den Zoom rechnen).
+     Geblendet wird nur über die Deckkraft — Chromium mischt den unscharfen
+     Hintergrund damit ein, die Unschärfe zieht also sauber mit auf. */
+  transition: opacity var(--zeit-gross) var(--aus);
+}
+html[data-theme="light"] .fr-glas { background: rgba(246,247,249,.55); }
+.fr-schild.is-fern .fr-glas { opacity: 1; }
+/* Ein leerer Rahmen hat nichts zu verdecken — Glas wäre dort nur Schleier. */
+.fr-schild.is-leer .fr-glas { opacity: 0; }
+/* Steckt der Rahmen in einem, der schon Glas zeigt, bleibt seins weg
+   (frame.js: unterFremdemGlas). Zwei Scheiben übereinander verdoppeln
+   Trübung und Unschärfe — aus der ruhigen Fläche wird ein dunkler Fleck,
+   und ein Brett voller Abschnitte bekommt lauter solche Flecken. */
+.fr-schild.is-fremdglas .fr-glas { opacity: 0; }
+/* Auf dem Glas trägt der Name keine eigene Platte mehr: Zwei Schichten
+   übereinander sehen aus wie ein Fehler, und der Kontrast steht schon. */
+.fr-schild.is-fern .fr-kopf.is-gross .fr-mark { background: transparent; }
+
+.fr-modulband {
+  position: absolute; left: 50%; bottom: 0;
+  /* Der Ursprung unten Mitte hält das Band beim Mitwachsen an der
+     Unterkante; translateX(-50%) rechnet mit der unskalierten Breite und
+     zentriert deshalb bei jedem Maßstab richtig. */
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) scale(1);
+  display: flex; flex-wrap: wrap-reverse; justify-content: center;
+  gap: 10px;
+  padding: 0 12px 14px;
+  pointer-events: none;
+}
+/*
+ * Ein Plättchen je Modulart. Ruhezustand ist der Tropfen: rund, klein, tief
+ * unten — von dort fließt es in die Form und zeigt erst am Ende seine Daten.
+ * Zurück gehen alle zusammen (Verzögerung 0), sonst zerfasert das Ausblenden.
+ */
+.fr-chip {
+  --i: 0;
+  --ton: var(--accent);
+  flex: 0 0 auto;
+  width: 46px; height: 52px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  opacity: 0;
+  border-radius: 50%;
+  transform: translateY(16px) scale(.3);
+  transition: transform 320ms var(--aus),
+              border-radius 320ms var(--aus),
+              opacity 180ms ease;
+  transition-delay: 0ms;
+}
+.fr-schild.is-fern .fr-chip {
+  opacity: 1;
+  border-radius: 14px;
+  transform: none;
+  transition-delay: calc(var(--i) * 55ms);
+}
+.fr-chip__zahl {
+  font-size: 12px; font-weight: 700; line-height: 1;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.fr-chip__logo { font-size: 19px; line-height: 1; color: var(--ton); }
+/* Inhalt kommt zuletzt — erst steht die Form, dann steht sie für etwas. */
+.fr-chip__zahl, .fr-chip__logo {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 150ms ease, transform 150ms var(--aus);
+}
+.fr-schild.is-fern .fr-chip__zahl,
+.fr-schild.is-fern .fr-chip__logo {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--i) * 55ms + 200ms);
+}
+/* Zu flacher Rahmen für Plättchen (frame.js) oder gar nichts zu zeigen:
+   Band zurück in den Tropfen, Glas bleibt. Muss NACH den is-fern-Regeln
+   stehen — gleiche Spezifität, es entscheidet die Reihenfolge. */
+.fr-schild.is-eng .fr-chip,
+.fr-schild.is-leer .fr-chip {
+  opacity: 0;
+  border-radius: 50%;
+  transform: translateY(16px) scale(.3);
+  transition-delay: 0ms;
+}
+.fr-schild.is-eng .fr-chip__zahl, .fr-schild.is-eng .fr-chip__logo,
+.fr-schild.is-leer .fr-chip__zahl, .fr-schild.is-leer .fr-chip__logo {
+  opacity: 0; transform: translateY(4px); transition-delay: 0ms;
+}
+/* Gestaffelt einlaufen ist Zierde, nicht Aussage — wer Bewegung abbestellt
+   hat, bekommt alles auf einmal. Die Dauern deckelt app.css bereits. */
+@media (prefers-reduced-motion: reduce) {
+  .fr-schild.is-fern .fr-chip,
+  .fr-schild.is-fern .fr-chip__zahl,
+  .fr-schild.is-fern .fr-chip__logo { transition-delay: 0ms; }
+}
 
 /* ---------------------------------------------------------- Quelltext --- */
 
@@ -655,3 +790,88 @@ html[data-theme="light"] .cd-n { color: #7a3fb0; }
 .pj-fuss { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; }
 .pj-datum { flex: 1 1 auto; min-width: 0; font-size: 10.5px; color: var(--text-faint); }
 .pj-oeffnen { flex: 0 0 auto; }
+
+/* ====================================================== Modul: Worker ===
+   Schnittstelle zum Worker-Modul im Broweg (js/modules/worker.js) */
+
+.wk-root {
+  display: flex; flex-direction: column; gap: var(--luft-2);
+  height: 100%;
+  padding: var(--luft-3);
+}
+.wk-kopf {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--luft-2);
+  padding-bottom: var(--luft-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.wk-punkt {
+  width: 9px; height: 9px; flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--wk-farbe, #6b7488);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wk-farbe, #6b7488) 22%, transparent);
+}
+.wk-adresse {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11.5px; color: var(--text-dim);
+}
+.wk-wer { flex: 0 0 auto; font-size: 10.5px; color: var(--ok); }
+.wk-wer.is-aus { color: var(--text-faint); }
+.wk-btn {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  border: 1px solid var(--line); border-radius: var(--radius-s);
+  background: var(--panel-2); color: var(--text-dim);
+  cursor: pointer; line-height: 1;
+}
+.wk-btn:hover { border-color: var(--accent); color: var(--accent); }
+.wk-btn.is-laeuft { opacity: .5; }
+
+.wk-rumpf { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.wk-meldung {
+  margin-bottom: var(--luft-2);
+  padding: var(--luft-2) var(--luft-3);
+  border-radius: var(--radius-s);
+  background: rgba(239,107,107,.12);
+  color: var(--danger);
+  font-size: 11px; line-height: 1.5;
+}
+.wk-abschnitt {
+  margin: var(--luft-3) 0 var(--luft-2);
+  color: var(--text-faint); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.wk-liste { display: flex; flex-direction: column; gap: 4px; }
+.wk-zeile {
+  display: flex; gap: var(--luft-2);
+  padding: var(--luft-2) var(--luft-3);
+  border: 1px solid var(--line-soft); border-radius: var(--radius-s);
+  background: var(--panel-2);
+}
+.wk-zeile__haupt { flex: 1 1 auto; min-width: 0; }
+.wk-zeile__name { display: flex; align-items: center; gap: var(--luft-2); font-weight: 600; }
+.wk-zeile__name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-zeile__meta {
+  margin-top: 2px;
+  font-size: 10.5px; color: var(--text-faint); line-height: 1.5;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.wk-pille {
+  flex: 0 0 auto;
+  padding: 1px 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--wk-farbe, #6b7488) 20%, transparent);
+  color: var(--wk-farbe, #6b7488);
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+.wk-leer { padding: var(--luft-5) var(--luft-3); text-align: center; color: var(--text-faint); font-size: 11px; line-height: 1.6; }
+.wk-fuss { flex: 0 0 auto; display: flex; align-items: center; gap: var(--luft-2); }
+.wk-stand { flex: 1 1 auto; font-size: 10.5px; color: var(--text-faint); }
+.wk-token {
+  display: block;
+  padding: var(--luft-3);
+  border: 1px solid var(--line); border-radius: var(--radius-s);
+  background: var(--panel-2);
+  font-family: var(--mono); font-size: 11.5px;
+  word-break: break-all; user-select: all;
+}

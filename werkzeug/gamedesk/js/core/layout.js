@@ -46,9 +46,7 @@
   }
 
   function kopfVorgabe(mitNote) {
-    const css = getComputedStyle(document.documentElement);
-    const v = parseFloat(css.getPropertyValue(mitNote ? '--fr-kopf-note' : '--fr-kopf'));
-    return Number.isFinite(v) && v > 0 ? Math.ceil(v) : (mitNote ? 112 : 92);
+    return Math.ceil(U.blatt(mitNote ? '--fr-kopf-note' : '--fr-kopf', mitNote ? 112 : 92));
   }
 
   /**

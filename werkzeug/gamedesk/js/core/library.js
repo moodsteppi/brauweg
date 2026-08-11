@@ -269,18 +269,24 @@
       return laufendeListe;
     },
 
+    /* Gelesen wird eine in sich geschlossene Datei: Medien stehen darin als
+       data:-URL. Sie wandern gleich beim Lesen ins Depot, damit sie nicht in
+       den Browser-Speicher gelangen (js/core/depot.js). */
     async lesen(datei) {
-      if (modus === 'server') return await serverFrage('api/bibliothek/datei?name=' + encodeURIComponent(datei));
-      if (modus === 'ordner' && griff) {
+      let doc;
+      if (modus === 'server') doc = await serverFrage('api/bibliothek/datei?name=' + encodeURIComponent(datei));
+      else if (modus === 'ordner' && griff) {
         const z = await ordnerZiel(datei, false);
         const f = await (await z.dir.getFileHandle(z.name)).getFile();
-        return JSON.parse(await f.text());
-      }
-      throw new Error('Keine Bibliothek eingerichtet.');
+        doc = JSON.parse(await f.text());
+      } else throw new Error('Keine Bibliothek eingerichtet.');
+      if (GD.depot) { await GD.depot.einlesen(doc); await GD.depot.vorladen(doc); }
+      return doc;
     },
 
     async schreiben(datei, doc) {
-      const text = JSON.stringify(doc, null, 1);
+      const voll = GD.depot ? await GD.depot.aufblasen(doc) : doc;
+      const text = JSON.stringify(voll, null, 1);
       if (modus === 'server') {
         await serverFrage('api/bibliothek/datei?name=' + encodeURIComponent(datei), {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text

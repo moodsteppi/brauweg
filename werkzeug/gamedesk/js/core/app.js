@@ -5,15 +5,21 @@
   const U = GD.util;
 
   const app = {
-    init() {
+    async init() {
       const had = GD.store.init();
 
       applyTheme(GD.store.prefs.theme);
+
+      /* Medienlager vor dem ersten Fensterbau: Es holt Medien aus älteren
+         Tafeln aus dem Dokument heraus und legt die blob:-Adressen bereit,
+         damit Bilder gleich stehen statt kurz zu blinken. */
+      const gewandert = await GD.depot.init(GD.store.doc);
 
       GD.board.init();
       GD.windows.init();
       GD.connections.init();
       GD.minimap.init();
+      GD.aenderungen.init();
       GD.ui.init();
 
       GD.board.elBoard.classList.toggle('show-grid', GD.store.doc.grid.show !== false);
@@ -38,8 +44,16 @@
       GD.windows.rebuild();
       GD.connections.redraw();
 
+      /* Sind Medien ins Depot gewandert, ist der bisherige Verlauf schwer und
+         der Browser-Speicher voll — beides einmal geradeziehen. */
+      if (gewandert) { GD.store.neueBasis(); GD.store.saveNow(); }
+
       if (!had && !GD.store.doc.windows.length) seedStarterBoard();
       if (GD.store.doc.windows.length) GD.board.zoomToFit();
+
+      // Die Änderungssicht überlebt einen Neustart — wer sie anhat, arbeitet
+      // gerade an einem Stand und will nach dem Neuladen nicht neu einschalten.
+      if (GD.store.prefs.diffsicht === true) GD.aenderungen.sichtSetzen(true);
 
       /* Projekt-Bibliothek: Ordner auf der Platte, aus dem geöffnet und in
          den gespeichert wird. Schlägt die Einrichtung fehl, bleibt alles
@@ -109,7 +123,7 @@
           GD.ui.toast('Bibliothek nicht beschreibbar (' + err.message + ') — lege stattdessen eine Datei ab.', 'err');
         }
       }
-      GD.store.exportFile();
+      await GD.store.exportFile();
       GD.ui.toast('Board als Datei gespeichert', 'ok');
     },
 
@@ -119,7 +133,7 @@
       try {
         const text = await U.readAsText(files[0]);
         GD.library.entkoppeln();          // eine hochgeladene Datei ist keine Bibliotheksdatei
-        GD.store.load(JSON.parse(text));
+        GD.store.load(await eingelesen(JSON.parse(text)));
         GD.board.zoomToFit();
         GD.ui.toast('Board geladen: ' + GD.store.doc.name, 'ok');
       } catch (err) {
@@ -177,7 +191,7 @@
 
       for (const f of files) {
         if (/\.json$/i.test(f.name)) {
-          try { GD.store.load(JSON.parse(await U.readAsText(f))); GD.board.zoomToFit(); GD.ui.toast('Board geladen', 'ok'); }
+          try { GD.store.load(await eingelesen(JSON.parse(await U.readAsText(f)))); GD.board.zoomToFit(); GD.ui.toast('Board geladen', 'ok'); }
           catch (e) { GD.ui.toast('Keine gültige Board-Datei', 'err'); }
           return;
         }
@@ -203,12 +217,18 @@
     });
   }
 
+  /** Eine hereingereichte Tafel: eingebettete Medien zuerst ins Depot. */
+  async function eingelesen(doc) {
+    if (GD.depot) { await GD.depot.einlesen(doc); await GD.depot.vorladen(doc); }
+    return doc;
+  }
+
   async function addMediaWindow(file, x, y) {
-    if (file.size > 24 * 1024 * 1024) {
-      GD.ui.toast('Datei ist ' + U.fmtBytes(file.size) + ' groß — das sprengt den Browser-Speicher.', 'err');
+    if (file.size > GD.depot.MAX_BYTES) {
+      GD.ui.toast('Datei ist ' + U.fmtBytes(file.size) + ' groß — mehr als ' + U.fmtBytes(GD.depot.MAX_BYTES) + ' nimmt GameDesk nicht auf.', 'err');
       return;
     }
-    const src = await U.readAsDataURL(file);
+    const src = await GD.depot.ausDatei(file);
     const kind = /^video\//.test(file.type) ? 'video' : /^audio\//.test(file.type) ? 'audio' : 'image';
     GD.windows.add('media', x, y, {
       title: file.name,

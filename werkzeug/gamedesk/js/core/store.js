@@ -9,6 +9,8 @@
   const LS_DOC = 'gamedesk.doc.v1';
   const LS_PREFS = 'gamedesk.prefs.v1';
   const HISTORY_MAX = 60;
+  const HISTORY_MIN = 12;                    // so viele Schritte bleiben immer
+  const VERLAUF_BUDGET = 24 * 1024 * 1024;   // Zeichen, s. kuerzeVerlauf()
 
   function emptyDoc() {
     return {
@@ -21,6 +23,9 @@
       connections: [],
       bundles: [],
       models: [],
+      /* Änderungsverfolgung: Abzug des letzten Commits + Commit-Verlauf.
+         Aufbau und Beweggründe in js/core/aenderungen.js. */
+      aenderungen: { basis: null, commits: [] },
       nextZ: 1
     };
   }
@@ -71,7 +76,30 @@
 
     /* ------------------------------------------- Zugriff / Manipulation */
 
-    getWindow(id) { return store.doc.windows.find((w) => w.id === id) || null; },
+    /**
+     * Fenster nach Kennung — über ein Verzeichnis, nicht über die Liste.
+     *
+     * Der Griff sitzt in den heißesten Schleifen des Programms: Jeder Pfeil
+     * fragt bei jedem Neuzeichnen zweimal nach seinen Enden, die
+     * Übersichtskarte ebenso. Auf einer Tafel mit 117 Kacheln und 40 Pfeilen
+     * sind das rund zehntausend Vergleiche je Bild, nur um Kennungen zu
+     * suchen, die sich nicht bewegt haben.
+     *
+     * Das Verzeichnis gilt, solange dieselbe Liste in derselben Länge
+     * vorliegt — Anlegen und Löschen ändern beides, ein Dokumentwechsel
+     * tauscht die Liste aus. Geht ein Griff trotzdem daneben, wird einmal
+     * frisch aufgebaut; falsch antworten kann er dadurch nicht.
+     */
+    getWindow(id) {
+      const liste = store.doc.windows;
+      if (verzeichnis.liste !== liste || verzeichnis.laenge !== liste.length) baueVerzeichnis(liste);
+      const w = verzeichnis.map.get(id);
+      if (w) return w;
+      // Nachzügler: gleiche Länge, aber getauschter Inhalt
+      const gesucht = liste.find((x) => x.id === id) || null;
+      if (gesucht) baueVerzeichnis(liste);
+      return gesucht;
+    },
     getConnection(id) { return store.doc.connections.find((c) => c.id === id) || null; },
 
     bumpZ(win) {
@@ -82,24 +110,34 @@
 
     /** Modulzustände einsammeln und Klon des Dokuments zurückgeben */
     serialize() {
+      return JSON.parse(store.text());
+    },
+
+    /**
+     * Dasselbe, aber gleich als Text.
+     *
+     * Verlauf und Autospeichern brauchen beide eine ZEICHENKETTE. Über
+     * serialize() lief das bisher als stringify → parse → stringify: Das
+     * Dokument wurde dreimal durch die Wandlung geschickt, um am Ende genau
+     * das zu bekommen, was schon nach dem ersten Schritt dastand. Auf einer
+     * Tafel mit 500 KB ist das kein Rundungsfehler.
+     */
+    text() {
       if (GD.windows && GD.windows.syncStates) GD.windows.syncStates();
-      return U.clone(store.doc);
+      return JSON.stringify(store.doc);
     },
 
     /* -------------------------------------------------------- Historie */
 
     /** Zustand nach einer abgeschlossenen Änderung sichern */
     commit(label) {
-      const snap = JSON.stringify(store.serialize());
+      const snap = store.text();
       if (history.stack[history.index] === snap) { store.save(); return; }
       history.stack.length = history.index + 1;
       history.stack.push(snap);
       history.labels.length = history.index + 1;
       history.labels.push(label || '');
-      if (history.stack.length > HISTORY_MAX) {
-        history.stack.shift();
-        history.labels.shift();
-      }
+      kuerzeVerlauf();
       history.index = history.stack.length - 1;
       events.emit('history', historyInfo());
       store.save();
@@ -125,6 +163,10 @@
     canUndo() { return history.index > 0; },
     canRedo() { return history.index < history.stack.length - 1; },
 
+    /** Verlauf auf den jetzigen Stand zurücksetzen (nach der Medienwanderung:
+        der erste Abzug trüge sonst weiter die eingebetteten Bytes). */
+    neueBasis() { resetHistory(); },
+
     /* ------------------------------------------------------ Persistenz */
 
     save: U.debounce(function () { writeLocal(); }, 600),
@@ -134,8 +176,18 @@
       try { localStorage.setItem(LS_PREFS, JSON.stringify(store.prefs)); } catch (e) { /* egal */ }
     },
 
-    exportFile() {
+    /**
+     * Für Datei und Bibliothek: dasselbe Dokument, aber mit ausgeschriebenen
+     * Medien. Auf der Platte soll eine Tafel in sich geschlossen sein — man
+     * verschickt sie, öffnet sie anderswo, und die Bilder sind dabei.
+     */
+    async serializeVoll() {
       const doc = store.serialize();
+      return GD.depot ? await GD.depot.aufblasen(doc) : doc;
+    },
+
+    async exportFile() {
+      const doc = await store.serializeVoll();
       const name = (doc.name || 'board').replace(/[^\w\-. äöüÄÖÜß]/g, '_').trim() || 'board';
       U.download(name + '.gamedesk.json', JSON.stringify(doc, null, 2), 'application/json');
     }
@@ -143,7 +195,38 @@
 
   /* --------------------------------------------------------- intern */
 
+  /* Kennung -> Fenster, s. store.getWindow */
+  const verzeichnis = { liste: null, laenge: -1, map: new Map() };
+
+  function baueVerzeichnis(liste) {
+    verzeichnis.map.clear();
+    for (const w of liste) verzeichnis.map.set(w.id, w);
+    verzeichnis.liste = liste;
+    verzeichnis.laenge = liste.length;
+  }
+
   const history = { stack: [], labels: [], index: -1 };
+
+  /**
+   * Verlauf kürzen — nach Anzahl UND nach Umfang.
+   *
+   * Sechzig Abzüge klingen harmlos, solange eine Tafel ein paar Kilobyte
+   * groß ist. Die Feldherr-Tafel wiegt 545 KB; sechzig Abzüge davon sind
+   * dreißig Megabyte Zeichenketten, die nur darauf warten, dass jemand
+   * einmal Rückgängig drückt. Deshalb greift zusätzlich ein Budget: Wird es
+   * überschritten, fallen die ÄLTESTEN Schritte weg — die jüngsten sind die,
+   * die man zurücknehmen will.
+   */
+  function kuerzeVerlauf() {
+    while (history.stack.length > HISTORY_MAX) { history.stack.shift(); history.labels.shift(); }
+    let umfang = 0;
+    for (const s of history.stack) umfang += s.length;
+    while (history.stack.length > HISTORY_MIN && umfang > VERLAUF_BUDGET) {
+      umfang -= history.stack[0].length;
+      history.stack.shift();
+      history.labels.shift();
+    }
+  }
 
   function resetHistory() {
     history.stack = [JSON.stringify(store.doc)];
@@ -164,13 +247,21 @@
     store.save();
   }
 
+  /*
+   * Autospeichern geht in den localStorage, und der fasst pro Herkunft rund
+   * 5 MB. Medien liegen deshalb im Depot und stehen hier nur als kurzer
+   * Verweis (js/core/depot.js). Läuft er trotzdem über, sagt die Meldung, wie
+   * groß die Tafel geworden ist — „Speicher voll" allein hilft niemandem.
+   */
   function writeLocal() {
+    let text = '';
     try {
-      localStorage.setItem(LS_DOC, JSON.stringify(store.serialize()));
+      text = store.text();
+      localStorage.setItem(LS_DOC, text);
       events.emit('saved', Date.now());
     } catch (err) {
-      events.emit('save:failed', err);
-      console.warn('[GD] Autospeichern fehlgeschlagen:', err);
+      events.emit('save:failed', { fehler: err, bytes: text.length });
+      console.warn('[GD] Autospeichern fehlgeschlagen (' + text.length + ' Zeichen):', err);
     }
   }
 
@@ -243,6 +334,33 @@
           ? { x: num(b.mitte.x, 0), y: num(b.mitte.y, 0) } : null
       }));
     const bIds = new Set(doc.bundles.map((b) => b.id));
+
+    /* Änderungsverfolgung. Sie gehört zur Tafel, nicht zur Sitzung: Wer eine
+       .gamedesk.json weitergibt, gibt den Commit-Verlauf mit. Fremde Dateien
+       ohne Block bekommen einen leeren — dann steht die Tafel auf „noch nichts
+       festgeschrieben", und alles gilt als unverändert. */
+    const spur = raw.aenderungen && typeof raw.aenderungen === 'object' ? raw.aenderungen : {};
+    doc.aenderungen = {
+      basis: (spur.basis && spur.basis.abzug && typeof spur.basis.abzug === 'object') ? {
+        id: String(spur.basis.id || U.uid('cmt')),
+        zeit: num(spur.basis.zeit, Date.now()),
+        titel: typeof spur.basis.titel === 'string' ? spur.basis.titel : '',
+        wer: spur.basis.wer === 'ki' ? 'ki' : 'mensch',
+        abzug: spur.basis.abzug
+      } : null,
+      commits: (Array.isArray(spur.commits) ? spur.commits : [])
+        .filter((c) => c && typeof c === 'object')
+        .map((c) => ({
+          id: typeof c.id === 'string' ? c.id : U.uid('cmt'),
+          zeit: num(c.zeit, 0),
+          titel: typeof c.titel === 'string' ? c.titel : '',
+          text: typeof c.text === 'string' ? c.text : '',
+          wer: c.wer === 'ki' ? 'ki' : 'mensch',
+          zahlen: c.zahlen && typeof c.zahlen === 'object' ? c.zahlen : { gesamt: 0, jeKlasse: {} },
+          punkte: Array.isArray(c.punkte) ? c.punkte : [],
+          gekuerzt: num(c.gekuerzt, 0)
+        }))
+    };
 
     const ids = new Set(doc.windows.map((w) => w.id));
     doc.connections = (Array.isArray(raw.connections) ? raw.connections : [])

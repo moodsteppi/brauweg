@@ -1,12 +1,8 @@
 /* Erzeugt die GameDesk-Tafel „Brauweg — Funktionsweise". */
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 
-/* Pfad aus dem eigenen Ort ableiten — das Skript läuft in jedem Checkout. */
-const HIER = dirname(fileURLToPath(import.meta.url));
-
-const OUT = join(HIER, 'brauweg-funktionsweise.gamedesk.json');
+const OUT = 'C:/Users/freyd/Desktop/SPIDERVISION/gamedesk/boards/brauweg-funktionsweise.gamedesk.json';
 
 let n = 0;
 const uid = (p) => p + '_bw_' + (++n).toString(36);

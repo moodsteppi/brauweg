@@ -3,9 +3,9 @@
  "version": 1,
  "name": "Feldherr",
  "view": {
-  "x": 786,
-  "y": 197,
-  "scale": 0.28
+  "x": 2107.5182005359425,
+  "y": -2642.4814964290317,
+  "scale": 0.6539803696619519
  },
  "grid": {
   "size": 20,
@@ -735,7 +735,7 @@
    "y": 4398,
    "w": 440,
    "h": 830,
-   "z": 10,
+   "z": 95,
    "accent": "#6ea8fe",
    "collapsed": false,
    "state": {
@@ -1238,7 +1238,7 @@
        "blur": 12,
        "color": "#0f172a40"
       },
-      "text": "Engineer\nBaumeister. Werkstatt\nim Fels, Ritter als\nRammbock.",
+      "text": "Engineer\n",
       "pad": 10,
       "src": null,
       "locked": false,
@@ -1248,7 +1248,7 @@
        "color": "#dfe9f2",
        "family": "ui",
        "align": "center",
-       "valign": "top",
+       "valign": "middle",
        "lh": 1.3
       }
      },
@@ -6941,7 +6941,7 @@
     "modelId": "mdl_msnfp5s3_5t",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.352559999996424,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -7018,7 +7018,7 @@
     "modelId": "mdl_msnfp5s3_62",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.36675,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -7095,7 +7095,7 @@
     "modelId": "mdl_msnfp5s3_6a",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.367709999996424,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -7172,7 +7172,7 @@
     "modelId": "mdl_msnfp5s3_6i",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.367739999994636,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -7249,7 +7249,7 @@
     "modelId": "mdl_msnfp5s3_70",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.3677399999946365,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -7326,7 +7326,7 @@
     "modelId": "mdl_msnfp5s3_7a",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.3677700000017887,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -7403,7 +7403,7 @@
     "modelId": "mdl_msnfp5s3_7m",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.3677400000035767,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -7442,7 +7442,7 @@
     "modelId": "mdl_msnfp5s3_6q",
     "spin": true,
     "speed": 0.3,
-    "yaw": 0.8200000000000001,
+    "yaw": 1.3498299999982117,
     "pitch": 0.35,
     "zoom": 1,
     "background": null,
@@ -12081,7 +12081,7 @@
     "modelId": "mdl_ub15",
     "spin": true,
     "speed": 0.24,
-    "yaw": 0.72,
+    "yaw": 1.20614399999857,
     "pitch": 0.46,
     "zoom": 1,
     "background": null,
@@ -12104,7 +12104,7 @@
     "modelId": "mdl_ub16",
     "spin": true,
     "speed": 0.24,
-    "yaw": 0.72,
+    "yaw": 1.2060960000085832,
     "pitch": 0.46,
     "zoom": 1,
     "background": null,
@@ -12127,7 +12127,7 @@
     "modelId": "mdl_ub17",
     "spin": true,
     "speed": 0.24,
-    "yaw": 0.72,
+    "yaw": 1.2060960000014307,
     "pitch": 0.46,
     "zoom": 1,
     "background": null,
@@ -12150,7 +12150,7 @@
     "modelId": "mdl_ub18",
     "spin": true,
     "speed": 0.24,
-    "yaw": 0.72,
+    "yaw": 1.2060720000028609,
     "pitch": 0.46,
     "zoom": 1,
     "background": null,
@@ -19030,5 +19030,9 @@
    }
   }
  ],
- "nextZ": 94
+ "aenderungen": {
+  "basis": null,
+  "commits": []
+ },
+ "nextZ": 95
 }

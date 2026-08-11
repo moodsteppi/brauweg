@@ -12,13 +12,9 @@
  * angefangen hat.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 
-/* Pfad aus dem eigenen Ort ableiten — das Skript läuft in jedem Checkout. */
-const HIER = dirname(fileURLToPath(import.meta.url));
-
-const OUT = join(HIER, 'feldherr-funktionsweise.gamedesk.json');
+const OUT = 'C:/Users/freyd/Desktop/SPIDERVISION/gamedesk/boards/feldherr-funktionsweise.gamedesk.json';
 
 let n = 0;
 const uid = (p) => p + '_fh_' + (++n).toString(36);

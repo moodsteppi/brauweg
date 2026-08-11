@@ -3,8 +3,17 @@
   'use strict';
   const GD = window.GD;
   const U = GD.util;
-  const MAX_BYTES = 24 * 1024 * 1024;
+  const MAX_BYTES = GD.depot.MAX_BYTES;
   const peakCache = new Map();          // nur im Arbeitsspeicher, nicht im Board
+
+  /*
+   * Die Bytes einer Datei liegen nicht im Board, sondern im Depot
+   * (js/core/depot.js); `it.src` ist dann nur `depot:<id>`. Zum Anzeigen
+   * braucht es die laufende blob:-Adresse — fremde Adressen (http, kurze
+   * data:) reicht `aufloesen` unverändert durch. Kommt null zurück, wird der
+   * Blob gerade aus der Datenbank geholt; das Ereignis 'bereit' meldet sich.
+   */
+  function quelle(it) { return it ? GD.depot.aufloesen(it.src) : null; }
 
   /* Platzhalter-Wellenform, solange die echte gelesen wird. Ruhig und
      symmetrisch — sie soll die Form des Bauteils zeigen, nicht Daten
@@ -48,6 +57,14 @@
       const root = U.el('div', { class: 'md-root' }, [stage, caption, strip]);
       let activeMedia = null;
       let welleNeu = null;        // Neuzeichner der gerade sichtbaren Wellenform
+      let wartet = false;         // Bühne zeigt den Platzhalter, das Depot lädt noch
+
+      /* Kommt ein Blob aus der Datenbank an, steht das Bild sofort da. Nur
+         neu bauen, wenn die Bühne wirklich wartet — sonst risse jedes
+         eintreffende Vorschaubild die laufende Wiedergabe ab. */
+      const offBereit = GD.depot.events.on('bereit', () => {
+        if (wartet) render(); else renderStrip();
+      });
 
       caption.addEventListener('keydown', (ev) => {
         ev.stopPropagation();
@@ -75,11 +92,15 @@
         if (!usable.length) { ctx.toast('Nur Bilder, Videos oder Audio', 'err'); return; }
         for (const f of usable) {
           if (f.size > MAX_BYTES) {
-            ctx.toast(f.name + ' ist ' + U.fmtBytes(f.size) + ' groß — bitte kleiner als 24 MB.', 'err');
+            ctx.toast(f.name + ' ist ' + U.fmtBytes(f.size) + ' groß — bitte kleiner als ' + U.fmtBytes(MAX_BYTES) + '.', 'err');
             continue;
           }
-          const src = await U.readAsDataURL(f);
-          state.items.push({ id: U.uid('m'), kind: kindOf(f.type, f.name), src: src, name: f.name, caption: '' });
+          try {
+            const src = await GD.depot.ausDatei(f);
+            state.items.push({ id: U.uid('m'), kind: kindOf(f.type, f.name), src: src, name: f.name, caption: '' });
+          } catch (e) {
+            ctx.toast(f.name + ' ließ sich nicht ablegen: ' + (e.message || e), 'err');
+          }
         }
         state.index = state.items.length - 1;
         render();
@@ -112,6 +133,7 @@
         if (activeMedia && activeMedia.pause) { try { activeMedia.pause(); } catch (e) { /* egal */ } }
         activeMedia = null;
         welleNeu = null;
+        wartet = false;
         stage.innerHTML = '';
         stage.style.background = state.bg;
         const it = current();
@@ -131,10 +153,25 @@
           return;
         }
 
-        if (it.kind === 'audio') stage.appendChild(audioPlayer(it));
+        /* Noch im Depot unterwegs: Platzhalter statt eines kaputten Bildes.
+           'bereit' zeichnet gleich neu. */
+        const adr = quelle(it);
+        if (adr === null) {
+          wartet = true;
+          stage.appendChild(U.el('div', { class: 'md-empty' }, [
+            U.el('div', { class: 'md-empty__icon', text: '▣' }),
+            U.el('div', { text: 'Medium wird geladen …' })
+          ]));
+          caption.textContent = it.caption || '';
+          caption.dataset.empty = it.caption ? '0' : '1';
+          renderStrip();
+          return;
+        }
+
+        if (it.kind === 'audio') stage.appendChild(audioPlayer(it, adr));
         else if (it.kind === 'video') {
           const v = U.el('video', {
-            src: it.src, class: 'md-media',
+            src: adr, class: 'md-media',
             controls: state.controls, loop: state.loop, muted: state.muted, autoplay: state.autoplay,
             playsInline: true
           });
@@ -143,7 +180,7 @@
           activeMedia = v;
           stage.appendChild(v);
         } else {
-          const img = U.el('img', { src: it.src, class: 'md-media', alt: it.name || '' });
+          const img = U.el('img', { src: adr, class: 'md-media', alt: it.name || '' });
           img.style.objectFit = state.fit;
           img.addEventListener('error', () => stage.appendChild(U.el('div', { class: 'md-error', text: 'Bild konnte nicht geladen werden' })));
           stage.appendChild(img);
@@ -165,8 +202,8 @@
 
       /* --------------------------------------------------- Tonwiedergabe */
 
-      function audioPlayer(it) {
-        const audio = U.el('audio', { src: it.src, loop: state.loop, autoplay: state.autoplay, preload: 'metadata' });
+      function audioPlayer(it, adr) {
+        const audio = U.el('audio', { src: adr, loop: state.loop, autoplay: state.autoplay, preload: 'metadata' });
         audio.volume = state.volume;
         activeMedia = audio;
 
@@ -255,9 +292,9 @@
           if (wave.width !== w || wave.height !== h) { wave.width = w; wave.height = h; }
           const g = wave.getContext('2d');
           g.clearRect(0, 0, w, h);
-          const css = getComputedStyle(document.documentElement);
-          const dim = css.getPropertyValue('--text-faint').trim() || '#777';
-          const acc = css.getPropertyValue('--accent').trim() || '#6ea8fe';
+          // gemerkt statt gemessen — das hier läuft je Bild, solange Ton läuft
+          const dim = U.blattText('--text-faint', '#777');
+          const acc = U.blattText('--accent', '#6ea8fe');
           const prog = audio.duration ? audio.currentTime / audio.duration : 0;
 
           /* Balken statt Linie, auch ohne Daten: Die Kachel zeigt sofort, dass
@@ -312,12 +349,11 @@
         try {
           const AC = window.AudioContext || window.webkitAudioContext;
           if (!AC) return null;
-          // Alles, was sich überhaupt einfügen lässt (MAX_BYTES), muss auch
-          // lesbar sein — als Data-URL ist es rund ein Drittel länger.
-          if (it.src.length > MAX_BYTES * 1.5) return null;
-          const res = await fetch(it.src);
-          if (!res.ok) return null;
-          const buf = await res.arrayBuffer();
+          // Die Bytes kommen aus dem Depot; bei einer fremden Adresse holt
+          // GD.depot.blob sie über das Netz (und liefert null ohne CORS).
+          const blob = await GD.depot.blob(it.src);
+          if (!blob) return null;
+          const buf = await blob.arrayBuffer();
           const actx = new AC();
           let decoded;
           try { decoded = await actx.decodeAudioData(buf); } finally { actx.close(); }
@@ -356,7 +392,10 @@
           const t = U.el('button', { class: 'md-thumb' + (i === state.index ? ' is-on' : ''), title: it.name || '' });
           if (it.kind === 'video') t.appendChild(U.el('span', { class: 'md-thumb__vid', text: '▶' }));
           else if (it.kind === 'audio') t.appendChild(miniWelle(it));
-          else t.style.backgroundImage = 'url(' + JSON.stringify(it.src).slice(1, -1) + ')';
+          else {
+            const a = quelle(it);
+            if (a) t.style.backgroundImage = 'url(' + JSON.stringify(a).slice(1, -1) + ')';
+          }
           t.addEventListener('click', () => { state.index = i; render(); ctx.changed(); });
           strip.appendChild(t);
         });
@@ -379,7 +418,7 @@
         const w = Math.round(40 * dpr), h = Math.round(24 * dpr);
         c.width = w; c.height = h;
         const g = c.getContext('2d');
-        g.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#9aa4b6';
+        g.fillStyle = U.blattText('--text-dim', '#9aa4b6');
         const n = 20, schritt = Math.floor(p.length / n) || 1;
         for (let i = 0; i < n; i++) {
           let m = 0;
@@ -420,7 +459,10 @@
           render();
         },
 
-        destroy() { if (activeMedia && activeMedia.pause) { try { activeMedia.pause(); } catch (e) { /* egal */ } } },
+        destroy() {
+          offBereit();
+          if (activeMedia && activeMedia.pause) { try { activeMedia.pause(); } catch (e) { /* egal */ } }
+        },
 
         /* Nur neu ZEICHNEN, nicht neu bauen: Ein Neuaufbau der Bühne setzte
            die laufende Wiedergabe zurück. Die Wellenform hängt an der
@@ -479,7 +521,11 @@
           }
 
           if (it) {
-            host.appendChild(F.note(it.name + ' · ' + (it.src.startsWith('data:') ? U.fmtBytes(Math.round(it.src.length * 0.75)) : 'extern')));
+            const info = GD.depot.info(it.src);
+            const groesse = info ? U.fmtBytes(info.groesse)
+              : it.src.startsWith('data:') ? U.fmtBytes(Math.round(it.src.length * 0.75))
+                : 'extern';
+            host.appendChild(F.note(it.name + ' · ' + groesse));
             host.appendChild(F.full(F.btn('Aktuelles Medium entfernen', removeCurrent, 'btn--danger')));
           }
         }

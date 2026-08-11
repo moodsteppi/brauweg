@@ -79,6 +79,38 @@
 
     clone(obj) { return obj === undefined ? obj : JSON.parse(JSON.stringify(obj)); },
 
+    /**
+     * Werte aus dem Stilblatt (:root) — einmal lesen, dann gemerkt.
+     *
+     * `getComputedStyle()` ist ein LESEZUGRIFF auf das Layout: Steht davor
+     * irgendwo ein Schreibzugriff, rechnet der Browser erst alles nach, bevor
+     * er antwortet. Genau das war der teuerste Griff im ganzen Programm.
+     * Beim Zoomen schreibt windows.js je Kachel neue Griffgrößen und ruft
+     * dazwischen `onZoom()` jedes Rahmens auf — und der las fünfmal aus
+     * :root. Aus zwölf Rahmen wurden so sechzig erzwungene Layoutläufe über
+     * die ganze Tafel. Gemessen auf einer Tafel mit 93 Kacheln: 110-145 ms
+     * FÜR EIN EINZIGES BILD, also sieben Bilder in der Sekunde.
+     *
+     * Die Werte in :root ändern sich nur beim Themenwechsel. Der Beobachter
+     * unten wirft den Speicher dann weg; sonst wird nie wieder gelesen.
+     */
+    blatt(name, fallback) {
+      const v = parseFloat(util.blattText(name, ''));
+      return Number.isFinite(v) && v > 0 ? v : fallback;
+    },
+
+    /** Wie blatt(), aber als Text — für Farben */
+    blattText(name, fallback) {
+      if (name in blattWerte) return blattWerte[name] || fallback;
+      if (!blattStil) blattStil = getComputedStyle(document.documentElement);
+      const v = blattStil.getPropertyValue(name).trim();
+      blattWerte[name] = v;
+      return v || fallback;
+    },
+
+    /** Gemerkte Blattwerte wegwerfen (Themenwechsel, Schriftnachladung) */
+    blattFrisch() { blattWerte = Object.create(null); blattStil = null; },
+
     /** Text/Blob als Datei herunterladen */
     download(filename, data, mime) {
       const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'application/json' });
@@ -298,6 +330,20 @@
   function measureCtx() {
     if (!_mctx) _mctx = document.createElement('canvas').getContext('2d');
     return _mctx;
+  }
+
+  /* Gemerkte Werte aus :root (s. util.blatt). Der Beobachter hängt am
+     Themenwechsel — GD.app schreibt dafür data-theme an <html>. Die
+     Schriften kommen später nach; ein einmaliges Wegwerfen danach schadet
+     nichts und fängt Maße ab, die vor dem Nachladen gemessen wurden. */
+  let blattWerte = Object.create(null);
+  let blattStil = null;
+
+  new MutationObserver(() => util.blattFrisch())
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => util.blattFrisch()).catch(() => {});
   }
 
   GD.util = util;

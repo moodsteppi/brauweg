@@ -48,10 +48,12 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
 
-      const css = getComputedStyle(document.documentElement);
-      const cLine = css.getPropertyValue('--line').trim() || '#333';
-      const cAccent = css.getPropertyValue('--accent').trim() || '#6ea8fe';
-      const cDim = css.getPropertyValue('--text-faint').trim() || '#777';
+      /* Gemerkte Blattwerte: Die Karte zeichnet bei jedem Schwenk neu, und
+         ein getComputedStyle() zwischen den Kachelschreibvorgängen kostet
+         einen vollen Layoutlauf (s. util.blatt). */
+      const cLine = U.blattText('--line', '#333');
+      const cAccent = U.blattText('--accent', '#6ea8fe');
+      const cDim = U.blattText('--text-faint', '#777');
 
       const wins = GD.store.doc.windows;
       const view = GD.board.viewRect();

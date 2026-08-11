@@ -22,15 +22,25 @@
       GD.connections.events.on('bundle', renderInspector);
       GD.windows.events.on('changed', updateEmptyHint);
       GD.store.events.on('history', updateHistoryButtons);
-      GD.store.events.on('save:failed', () => {
-        ui.toast('Autospeichern fehlgeschlagen (Speicher voll?). Bitte über „Speichern" sichern.', 'err');
+      /* Nur einmal melden, nicht bei jedem Tastendruck erneut: Ist der
+         Browser-Speicher voll, bleibt er es, bis die Tafel kleiner wird. */
+      let vollGemeldet = false;
+      GD.store.events.on('save:failed', (info) => {
+        if (vollGemeldet) return;
+        vollGemeldet = true;
+        const gross = info && info.bytes ? ' — die Tafel ist ' + U.fmtBytes(info.bytes) + ' groß, der Browser-Speicher fasst rund 5 MB' : '';
+        ui.toast('Autospeichern fehlgeschlagen' + gross + '. Über „Speichern" landet sie trotzdem vollständig auf der Platte.', 'err');
       });
+      GD.store.events.on('saved', () => { vollGemeldet = false; });
       GD.board.events.on('view', updateZoomLabel);
+      GD.aenderungen.events.on('stand', updateAenderungen);
+      GD.aenderungen.events.on('sicht', updateAenderungen);
 
       renderInspector();
       updateEmptyHint();
       updateZoomLabel();
       updateHistoryButtons(GD.store);
+      updateAenderungen();
     },
 
     /* ---------------------------------------------------------- Meldungen */
@@ -305,6 +315,20 @@
         renderInspector();
         break;
       }
+      case 'toggle-diff': {
+        const on = GD.aenderungen.sichtUmschalten();
+        GD.store.prefs.diffsicht = on;
+        GD.store.savePrefs();
+        const z = GD.aenderungen.stand().zahlen.gesamt;
+        ui.toast(on
+          ? (GD.aenderungen.hatBasis()
+            ? 'Änderungssicht an — ' + z + (z === 1 ? ' Änderung' : ' Änderungen') + ' seit dem letzten Commit'
+            : 'Änderungssicht an — diese Tafel hat noch keinen Commit')
+          : 'Änderungssicht aus');
+        break;
+      }
+      case 'suche': GD.suche.oeffnen(); break;
+      case 'aenderungen': showAenderungen(); break;
       case 'toggle-theme': GD.app.toggleTheme(); break;
       case 'new': GD.app.newBoard(); break;
       case 'import': GD.app.importBoard(); break;
@@ -335,6 +359,21 @@
   function updateEmptyHint() {
     const el = document.getElementById('board-empty');
     if (el) el.classList.toggle('is-hidden', GD.store.doc.windows.length > 0);
+  }
+
+  /** Zähler an der Werkzeugleiste und Zustand des Sicht-Schalters */
+  function updateAenderungen() {
+    const zahl = document.getElementById('aend-zahl');
+    const knopf = document.getElementById('btn-diff');
+    const stand = GD.aenderungen.stand();
+    if (zahl) {
+      zahl.textContent = String(stand.zahlen.gesamt);
+      zahl.hidden = !stand.zahlen.gesamt;
+    }
+    if (knopf) {
+      knopf.classList.toggle('is-on', GD.aenderungen.sicht());
+      knopf.classList.toggle('has-offen', stand.zahlen.gesamt > 0);
+    }
   }
 
   /* ---------------------------------------------------------- Inspector */
@@ -718,7 +757,7 @@
     inspHost.appendChild(section([
       U.el('div', { class: 'insp-title', text: 'Datei' }),
       U.el('div', { class: 'insp-grid2', style: { padding: '0 12px' } }, [
-        mkBtn('Speichern', () => { GD.store.exportFile(); ui.toast('Board gespeichert', 'ok'); }),
+        mkBtn('Speichern', async () => { await GD.store.exportFile(); ui.toast('Board gespeichert', 'ok'); }),
         mkBtn('Öffnen…', () => GD.app.importBoard()),
         mkBtn('Neues Board', () => GD.app.newBoard()),
         mkBtn('Tastenkürzel', () => showHelp())
@@ -785,6 +824,7 @@
         items.push({ label: def.label, icon: def.icon, run: () => GD.windows.add(def.id, p.x, p.y) });
       }
       items.push('-',
+        { label: 'Springen zu …', icon: '⌕', key: 'Strg+F', run: () => GD.suche.oeffnen() },
         { label: 'Alles auswählen', icon: '▣', key: 'Strg+A', run: () => GD.windows.selectAll() },
         { label: 'Alles einpassen', icon: '⤢', key: 'Strg+1', run: () => GD.board.zoomToFit() },
         { label: 'Zoom 100 %', icon: '◎', key: 'Strg+0', run: () => GD.board.resetZoom() });
@@ -807,6 +847,9 @@
 
       if (ctrl && (k === 'z' || k === 'Z')) { ev.preventDefault(); ev.shiftKey ? GD.app.redo() : GD.app.undo(); return; }
       if (ctrl && (k === 'y' || k === 'Y')) { ev.preventDefault(); GD.app.redo(); return; }
+      // vor Strg+A und Strg+D prüfen — die fragen nicht nach der Umschalttaste
+      if (ctrl && ev.shiftKey && (k === 'a' || k === 'A')) { ev.preventDefault(); showAenderungen(); return; }
+      if (ctrl && ev.shiftKey && (k === 'd' || k === 'D')) { ev.preventDefault(); runAction('toggle-diff'); return; }
       if (ctrl && (k === 'd' || k === 'D')) {
         ev.preventDefault();
         const ids = GD.windows.selectionIds();
@@ -814,6 +857,10 @@
         return;
       }
       if (ctrl && (k === 'a' || k === 'A')) { ev.preventDefault(); GD.windows.selectAll(); return; }
+      /* Strg+F nimmt dem Browser seine eigene Suche weg — und das ist auch
+         gemeint: Dessen Suche findet nur, was gerade gezeichnet ist, also
+         das, was ohnehin vor einem liegt. */
+      if (ctrl && (k === 'f' || k === 'F')) { ev.preventDefault(); GD.suche.oeffnen(); return; }
       if (ctrl && (k === 's' || k === 'S')) { ev.preventDefault(); GD.app.saveBoard(); return; }
       if (ctrl && (k === 'o' || k === 'O')) { ev.preventDefault(); GD.app.importBoard(); return; }
       if (ctrl && (k === 'p' || k === 'P')) { ev.preventDefault(); showLibrary(); return; }
@@ -829,20 +876,29 @@
       if (k === 'Escape') { GD.windows.select([]); GD.connections.select(null); hideMenu(); return; }
       if (k === '?' || (k === '/' && ev.shiftKey)) { ev.preventDefault(); showHelp(); return; }
 
-      // Pfeiltasten verschieben die Auswahl
+      /* Pfeiltasten verschieben die Auswahl, mit Strg ändern sie die Größe.
+         Das ist nicht nur bequem: Es ist der einzige Weg, der bei JEDEM
+         Zoom auf den Pixel genau arbeitet. Ein Griff ist herausgezoomt
+         immer ein Kompromiss — eine Taste nie. */
       if (k.startsWith('Arrow') && GD.windows.selectionIds().length) {
         ev.preventDefault();
         const step = ev.shiftKey ? GD.store.doc.grid.size : 1;
         const dx = k === 'ArrowLeft' ? -step : k === 'ArrowRight' ? step : 0;
         const dy = k === 'ArrowUp' ? -step : k === 'ArrowDown' ? step : 0;
-        for (const d of GD.windows.selection()) GD.windows.setGeometry(d.id, { x: d.x + dx, y: d.y + dy });
+        if (ctrl) {
+          for (const d of GD.windows.selection()) GD.windows.setGeometry(d.id, { w: d.w + dx, h: d.h + dy });
+          commitGroesse();
+        } else {
+          for (const d of GD.windows.selection()) GD.windows.setGeometry(d.id, { x: d.x + dx, y: d.y + dy });
+          commitNudge();
+        }
         GD.connections.redraw();
-        commitNudge();
       }
     });
   }
 
   const commitNudge = U.debounce(() => GD.store.commit('Verschoben'), 450);
+  const commitGroesse = U.debounce(() => GD.store.commit('Größe geändert'), 450);
 
   /* --------------------------------------------------- Projekt-Bibliothek */
 
@@ -857,7 +913,7 @@
   };
 
   function modulKuerzel(module) {
-    const namen = { frame: 'Rahmen', wireframe: 'Wireframe', notes: 'Notiz', code: 'Quelltext', media: 'Medien', model3d: '3D', modelview: '3D-Ansicht', sandbox: 'Sandbox', project: 'Projekt' };
+    const namen = { frame: 'Rahmen', wireframe: 'Wireframe', notes: 'Notiz', code: 'Quelltext', media: 'Medien', model3d: '3D', modelview: '3D-Ansicht', sandbox: 'Sandbox', project: 'Projekt', worker: 'Worker' };
     return Object.keys(module || {})
       .sort((a, b) => module[b] - module[a])
       .map((k) => (namen[k] || k) + ' ' + module[k])
@@ -994,6 +1050,211 @@
     );
 
     zeichne(true);
+  }
+
+  /* -------------------------------------------------------- Änderungen
+   *
+   * Das Änderungsfenster ist die Gegenstelle zur Änderungssicht auf dem
+   * Brett: Es zählt auf, was seit dem letzten Commit anders ist, fasst es in
+   * einem Satz zusammen und ist die einzige Stelle, an der ein neuer Commit
+   * entsteht — von Hand oder mit „KI" als Urheber, wenn ein Skript die Arbeit
+   * gemacht hat und der Mensch sie nur festhält.
+   */
+
+  const WER = { mensch: 'Mensch', ki: 'KI' };
+  const ZIEL = { fenster: 'Kachel', pfeil: 'Pfeil', buendel: 'Bündel', modell: '3D-Modell', tafel: 'Tafel' };
+
+  function klasseChip(art, zahl) {
+    const k = GD.vergleich.KLASSEN[art];
+    if (!k) return null;
+    const el = U.el('span', { class: 'aend-chip' }, [
+      U.el('b', { text: k.label }),
+      zahl === undefined ? null : U.el('span', { text: String(zahl) })
+    ]);
+    el.style.setProperty('--diff-farbe', k.farbe);
+    return el;
+  }
+
+  function showAenderungen() {
+    const F = ui.fields;
+    const body = U.el('div', { class: 'lib aend' });
+    const kopf = U.el('div', { class: 'aend-kopf' });
+    const liste = U.el('div', { class: 'aend-liste' });
+    const formular = U.el('div', { class: 'aend-form' });
+    const verlauf = U.el('div', { class: 'aend-verlauf' });
+
+    body.append(
+      U.el('h2', { text: 'Änderungen' }), kopf, liste,
+      U.el('h3', { text: 'Stand festschreiben' }), formular,
+      U.el('h3', { text: 'Commit-Verlauf' }), verlauf);
+
+    const m = ui.modal(body);
+
+    /* Mitlaufen, solange das Fenster offen ist. Geschlossen wird es über den
+       Knopf, über Esc und über den Hintergrund — nur der Knopf käme hier
+       vorbei. Deshalb hängt der Ausstieg am Zuhörer selbst: Ist der Kasten
+       nicht mehr im Dokument, meldet er sich ab.
+       Und: NICHT neu rechnen. Der Stand kommt mit der Meldung; wer hier
+       rechnen ließe, stieße dieselbe Meldung wieder an. */
+    const ab = GD.aenderungen.events.on('stand', (s) => {
+      if (!document.contains(m.box)) { ab(); abSicht(); return; }
+      zeichne(s);
+    });
+    const abSicht = GD.aenderungen.events.on('sicht', () => {
+      if (!document.contains(m.box)) { ab(); abSicht(); return; }
+      zeichne();
+    });
+    const schliessen = m.close;
+    m.close = () => { ab(); abSicht(); schliessen(); };
+
+    /* Entwurf des Commits — bleibt beim Neuzeichnen erhalten */
+    const entwurf = { titel: '', text: '', wer: 'mensch' };
+
+    function zeichneKopf(stand) {
+      kopf.innerHTML = '';
+      const b = GD.aenderungen.basis();
+      kopf.appendChild(U.el('div', {
+        class: 'aend-satz' + (stand.zahlen.gesamt ? '' : ' is-ruhig'),
+        text: b ? stand.satz : 'Diese Tafel hat noch keinen Commit — bis zum ersten gilt alles als unverändert.'
+      }));
+
+      const chips = U.el('div', { class: 'aend-chips' });
+      for (const art of Object.keys(stand.zahlen.jeKlasse)) {
+        chips.appendChild(klasseChip(art, stand.zahlen.jeKlasse[art]));
+      }
+      if (chips.children.length) kopf.appendChild(chips);
+
+      kopf.appendChild(U.el('div', { class: 'aend-basis' }, [
+        U.el('span', {
+          text: b
+            ? 'Letzter Commit: „' + b.titel + '" · ' + fmtDatum(b.zeit) + ' · ' + (WER[b.wer] || b.wer)
+            : 'Noch nichts festgeschrieben'
+        }),
+        mkBtn(GD.aenderungen.sicht() ? 'Änderungssicht aus' : 'Änderungssicht an', () => {
+          const on = GD.aenderungen.sichtUmschalten();
+          GD.store.prefs.diffsicht = on;
+          GD.store.savePrefs();
+        }, 'btn--sm')
+      ]));
+    }
+
+    function zeichneListe(stand) {
+      liste.innerHTML = '';
+      if (!stand.punkte.length) {
+        liste.appendChild(U.el('div', { class: 'lib-leer' }, [
+          U.el('p', { text: GD.aenderungen.hatBasis()
+            ? 'Nichts offen — der Stand auf dem Brett ist der des letzten Commits.'
+            : 'Sobald ein Ausgangsstand festgeschrieben ist, steht hier jede Abweichung davon.' })
+        ]));
+        return;
+      }
+      for (const p of stand.punkte) {
+        const def = p.ziel === 'fenster' ? (GD.modules.get(p.typ) || GD.modules.fallback(p.typ)) : null;
+        const zeile = U.el('div', { class: 'aend-zeile' + (p.fehlt ? ' is-weg' : '') }, [
+          klasseChip(p.art),
+          U.el('div', { class: 'aend-zeile__haupt' }, [
+            U.el('div', { class: 'aend-zeile__name' }, [
+              U.el('span', { text: p.titel }),
+              U.el('em', { text: def ? def.label : (ZIEL[p.ziel] || p.ziel) })
+            ]),
+            U.el('div', { class: 'aend-zeile__text', text: p.text })
+          ]),
+          (p.ziel === 'fenster' || p.ziel === 'pfeil')
+            ? mkBtn('zeigen', () => { GD.aenderungen.zeige(p); }, 'btn--sm')
+            : null
+        ]);
+        liste.appendChild(zeile);
+      }
+    }
+
+    function zeichneFormular(stand) {
+      formular.innerHTML = '';
+      const erster = !GD.aenderungen.hatBasis();
+      const nichts = !erster && !stand.zahlen.gesamt;
+
+      const titel = U.el('input', { type: 'text', class: 'fld', value: entwurf.titel, placeholder: erster ? 'Ausgangsstand' : 'Was wurde gemacht?' });
+      titel.addEventListener('input', () => { entwurf.titel = titel.value; });
+      titel.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') schreibe(); });
+
+      const text = U.el('textarea', { class: 'fld aend-text', rows: 3, value: entwurf.text, placeholder: 'Beschreibung (freiwillig)' });
+      text.addEventListener('input', () => { entwurf.text = text.value; });
+      text.addEventListener('keydown', (ev) => ev.stopPropagation());
+
+      const wer = F.sel(entwurf.wer, [['mensch', 'Mensch — ich selbst'], ['ki', 'KI — von einem Agenten gemacht']], (v) => { entwurf.wer = v; });
+
+      const knopf = mkBtn(erster ? 'Ausgangsstand festschreiben' : 'Festschreiben', () => schreibe());
+      knopf.classList.add('aend-schreib');
+      if (nichts) knopf.disabled = true;
+
+      formular.append(
+        F.row('Titel', titel),
+        F.row('Beschreibung', text),
+        F.row('Urheber', wer),
+        F.full(knopf),
+        F.note(erster
+          ? 'Der erste Commit hält den heutigen Stand fest. Ab da zeigt die Änderungssicht jede Abweichung davon.'
+          : 'Der Commit merkt sich den Abzug der Tafel und die obige Liste. Aus einem Skript heraus geht dasselbe über GD.aenderungen.festschreiben({ titel, wer: "ki" }).'));
+
+      function schreibe() {
+        const erg = GD.aenderungen.festschreiben({ titel: entwurf.titel, text: entwurf.text, wer: entwurf.wer });
+        if (!erg.ok) { ui.toast(erg.grund, 'err'); return; }
+        entwurf.titel = ''; entwurf.text = '';
+        ui.toast('Festgeschrieben: ' + erg.commit.titel, 'ok');
+        zeichne();
+      }
+    }
+
+    function zeichneVerlauf() {
+      verlauf.innerHTML = '';
+      const commits = GD.aenderungen.commits();
+      const basis = GD.aenderungen.basis();
+      if (!commits.length) {
+        verlauf.appendChild(U.el('div', { class: 'lib-leer' }, [U.el('p', { text: 'Noch kein Commit.' })]));
+        return;
+      }
+      for (const c of commits) {
+        const aktuell = basis && basis.id === c.id;
+        const zeile = U.el('div', { class: 'aend-commit' + (aktuell ? ' is-basis' : '') });
+        const kopfZeile = U.el('div', { class: 'aend-commit__kopf' }, [
+          U.el('span', { class: 'aend-commit__wer aend-commit__wer--' + c.wer, text: WER[c.wer] || c.wer }),
+          U.el('div', {}, [
+            U.el('div', { class: 'aend-commit__titel', text: c.titel || '(ohne Titel)' }),
+            U.el('div', { class: 'aend-commit__meta', text: fmtDatum(c.zeit) + '  ·  ' + (c.zahlen.gesamt || 0) + ' Änderungen' + (c.gekuerzt ? ' (' + c.gekuerzt + " nicht mitgeschrieben)" : '') })
+          ]),
+          U.el('span', { style: { flex: '1' } }),
+          (c.punkte || []).length ? mkBtn('▾', () => {
+            inhalt.hidden = !inhalt.hidden;
+          }, 'btn--sm') : null,
+          aktuell ? U.el('span', { class: 'aend-commit__basis', text: 'Basis' })
+            : mkBtn('Löschen', async () => {
+              const ok = await ui.confirm('Commit löschen?', '„' + c.titel + '" verschwindet aus dem Verlauf. Die Basis für den Vergleich bleibt, wo sie ist.', 'Löschen');
+              if (!ok) return;
+              if (GD.aenderungen.commitLoeschen(c.id)) { zeichne(); ui.toast('Commit gelöscht', 'ok'); }
+            }, 'btn--sm btn--danger')
+        ]);
+        const inhalt = U.el('div', { class: 'aend-commit__inhalt', hidden: true });
+        if (c.text) inhalt.appendChild(U.el('p', { class: 'aend-commit__text', text: c.text }));
+        for (const p of c.punkte || []) {
+          inhalt.appendChild(U.el('div', { class: 'aend-commit__punkt' }, [
+            klasseChip(p.art),
+            U.el('span', { text: p.titel + ' — ' + p.text })
+          ]));
+        }
+        zeile.append(kopfZeile, inhalt);
+        verlauf.appendChild(zeile);
+      }
+    }
+
+    function zeichne(vorhanden) {
+      const stand = vorhanden || GD.aenderungen.stand(true);
+      zeichneKopf(stand);
+      zeichneListe(stand);
+      zeichneFormular(stand);
+      zeichneVerlauf();
+    }
+
+    body.appendChild(U.el('div', { class: 'modal-actions' }, [mkBtn('Schließen', () => m.close())]));
+    zeichne();
   }
 
   /* ----------------------------------------------------- Einstellungen */
@@ -1133,7 +1394,7 @@
     try { belegt = (localStorage.getItem('gamedesk.doc.v1') || '').length; } catch (e) { /* egal */ }
     body.appendChild(F.note('Browser-Speicher dieses Boards: ' + U.fmtBytes(belegt) +
       ' · Module: ' + GD.modules.list().length + ' · Fenster: ' + GD.store.doc.windows.length));
-    body.appendChild(F.full(F.btn('Als Datei exportieren', () => { GD.store.exportFile(); ui.toast('Datei abgelegt', 'ok'); })));
+    body.appendChild(F.full(F.btn('Als Datei exportieren', async () => { await GD.store.exportFile(); ui.toast('Datei abgelegt', 'ok'); })));
 
     body.appendChild(U.el('div', { class: 'modal-actions' }, [mkBtn('Schließen', () => m.close())]));
 
@@ -1166,6 +1427,7 @@
 
   ui.showLibrary = showLibrary;
   ui.showSettings = showSettings;
+  ui.showAenderungen = showAenderungen;
   ui.updateSaveButton = updateSaveButton;
   ui.updateBackButton = updateBackButton;
 
@@ -1184,20 +1446,36 @@
         kb('Strg + 0 / 1', 'Zoom 100 % / alles einpassen'),
         kb('Rechtsklick', 'Kontextmenü')
       )),
+      U.el('h3', { text: 'Springen zu …' }),
+      U.el('div', { class: 'kbd-list' }, [].concat(
+        kb('Strg + F', 'Kachel oder Pfeil suchen — in Titeln, Notizen, Quelltexten, Beschriftungen'),
+        kb('Hoch / Runter', 'Durch die Treffer blättern; die Kamera fährt mit'),
+        kb('Eingabe', 'Dort bleiben'),
+        kb('Esc', 'Zurück dorthin, wo man vor dem Suchen war')
+      )),
       U.el('h3', { text: 'Fenster' }),
       U.el('div', { class: 'kbd-list' }, [].concat(
         kb('Ziehen an der Leiste', 'Verschieben (rastet an Kanten und Mitten ein)'),
         kb('Alt halten', 'Einrasten vorübergehend aus'),
-        kb('Ränder ziehen', 'Größe ändern'),
+        kb('Ränder ziehen', 'Größe ändern — die Kante leuchtet auf, wenn die Maus nah ist'),
         kb('Klick auf den Titel', 'Umbenennen (Ziehen verschiebt weiter)'),
         kb('Doppelklick Leiste', 'Ein-/Ausklappen'),
         kb('Strg + D', 'Duplizieren'),
         kb('Entf', 'Löschen'),
-        kb('Pfeiltasten', 'Verschieben (Umschalt = Rastermaß)')
+        kb('Pfeiltasten', 'Verschieben (Umschalt = Rastermaß)'),
+        kb('Strg + Pfeiltasten', 'Größe ändern — auf den Pixel, bei jedem Zoom')
+      )),
+      U.el('h3', { text: 'Weit herausgezoomt' }),
+      U.el('div', { class: 'kbd-list' }, [].concat(
+        kb('Viertelkreis oben rechts', 'Erscheint unter 55 % Zoom: Ziehen verschiebt die Kachel samt Inhalt'),
+        kb('Maus in seine Nähe', 'Der Griff tritt aus der Durchsichtigkeit hervor'),
+        kb('Maus an einen Rand', 'Die nächste Kante leuchtet auf — dort ändert man die Größe'),
+        kb('Griffe und Knöpfe', 'Behalten ihre Bildschirmgröße; sie schrumpfen nicht mit')
       )),
       U.el('h3', { text: 'Pfeile' }),
       U.el('div', { class: 'kbd-list' }, [].concat(
-        kb('Punkt am Rand ziehen', 'Pfeil zu einem anderen Fenster ziehen'),
+        kb('⊕ am Rand ziehen', 'Pfeil zu einem anderen Fenster ziehen'),
+        kb('⊕ nur anklicken', 'Pfeil hängt am Zeiger — dann das Ziel anklicken (Esc bricht ab)'),
         kb('Doppelklick auf Pfeil', 'Beschriften'),
         kb('Beschriftung ziehen', 'Position am Pfeil verschieben'),
         kb('Inspector', 'Farbe, Stärke, Stil, Schriftgröße, Ankerpunkte')
@@ -1214,6 +1492,13 @@
         kb('Umschalt', 'Einrasten aus (Abstand im Inspector einstellbar)'),
         kb('G / R / S', 'Bewegen / Drehen / Skalieren'),
         kb('F', 'Alles einpassen')
+      )),
+      U.el('h3', { text: 'Änderungen' }),
+      U.el('div', { class: 'kbd-list' }, [].concat(
+        kb('Strg + Umschalt + A', 'Änderungsfenster: Liste, Zusammenfassung, Commit'),
+        kb('Strg + Umschalt + D', 'Änderungssicht ein/aus (roter Kasten je Änderung)'),
+        kb('⬚ in der Leiste', 'Derselbe Schalter; die Zahl daneben zählt das Offene'),
+        kb('Klick auf einen Reiter', 'Zur geänderten Kachel springen')
       )),
       U.el('h3', { text: 'Allgemein' }),
       U.el('div', { class: 'kbd-list' }, [].concat(

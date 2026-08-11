@@ -815,7 +815,7 @@
 
         host.appendChild(F.title('Textur'));
         if (m.texture) {
-          const url = JSON.stringify(m.texture).slice(1, -1);
+          const url = JSON.stringify(GD.depot.aufloesen(m.texture) || '').slice(1, -1);
           const tile = m.texMode === 'uv'
             ? Math.max(8, 64 / Math.max(0.2, m.uvScale[0]))
             : Math.max(8, 46 / Math.max(0.05, m.texSize));
@@ -862,7 +862,7 @@
               const files = await U.pickFile('image/*');
               if (!files.length) return;
               if (files[0].size > 8 * 1024 * 1024) { ctx.toast('Textur größer als 8 MB', 'err'); return; }
-              m.texture = await U.readAsDataURL(files[0]);
+              m.texture = await GD.depot.ausDatei(files[0]);
               invalidate(); commitEdit(); ctx.refreshInspector();
             }),
             F.btn('Entfernen', () => { m.texture = null; invalidate(); commitEdit(); ctx.refreshInspector(); }, 'btn--danger')
@@ -872,7 +872,7 @@
             const files = await U.pickFile('image/*');
             if (!files.length) return;
             if (files[0].size > 8 * 1024 * 1024) { ctx.toast('Textur größer als 8 MB', 'err'); return; }
-            m.texture = await U.readAsDataURL(files[0]);
+            m.texture = await GD.depot.ausDatei(files[0]);
             invalidate(); commitEdit(); ctx.refreshInspector();
           })));
           host.appendChild(F.full(F.grid(3, PATTERNS.map((p) =>

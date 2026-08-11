@@ -15,13 +15,8 @@
  * Die Feinhöhen setzt danach GD.layout im Browser.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 
-/* Pfad aus dem eigenen Ort ableiten — das Skript läuft in jedem Checkout. */
-const HIER = dirname(fileURLToPath(import.meta.url));
-
-const DATEI = join(HIER, 'feldherr-funktionsweise.gamedesk.json');
+const DATEI = 'C:/Users/freyd/Desktop/SPIDERVISION/gamedesk/boards/feldherr-funktionsweise.gamedesk.json';
 const doc = JSON.parse(readFileSync(DATEI, 'utf8'));
 
 let n = 0;
