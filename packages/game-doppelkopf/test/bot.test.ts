@@ -153,6 +153,7 @@ test('Genie: 500 Partien laufen ohne Regelverstoss durch', () => {
       pflichtsolo: rng() < 0.7,
       pflichtansage,
       pflichtansageSchweine: pflichtansage && schweinchen && rng() < 0.5,
+      pflichtansageImSolo: pflichtansage && rng() < 0.5,
       announcements: true,
       absagen: true,
       hochzeit: true,

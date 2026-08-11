@@ -450,6 +450,8 @@ function resolveVorbehaltPhase(state: RoundState): RoundState {
  */
 function mitRundenbeginnPflichten(state: RoundState): RoundState {
   if (!state.rs.pflichtansage) return state;
+  // Im Solo nur, wenn ausdruecklich erlaubt (auch die Schweine-Pflicht).
+  if (state.gameType.kind === 'solo' && !state.rs.pflichtansageImSolo) return state;
 
   let next = state;
   if (state.rs.pflichtansageSchweine) {
@@ -756,6 +758,9 @@ function maybeCheckPflichtansage(
   hochzeitJetztGeklaert: boolean,
 ): RoundState {
   if (!state.rs.pflichtansage) return state;
+  // Im Solo greift die Pflichtansage nur, wenn ausdruecklich erlaubt — sonst
+  // trifft die erzwungene Ansage (und die Folgekette) den Alleinspieler zu hart.
+  if (state.gameType.kind === 'solo' && !state.rs.pflichtansageImSolo) return state;
 
   /*
    * Bezugsstich ist der erste Stich — bei einer Hochzeit dagegen der
@@ -814,6 +819,9 @@ function partyOf(state: RoundState, seat: number): Party {
  */
 function pflichtansageDroht(state: RoundState): boolean {
   if (!state.rs.pflichtansage) return false;
+  // Im Solo ohne ausdrueckliche Erlaubnis feuert keine Pflicht — dann darf der
+  // Bot ohne Eskalationsgefahr ansagen.
+  if (state.gameType.kind === 'solo' && !state.rs.pflichtansageImSolo) return false;
   // Etwas steht schon an bzw. liegt in der Warteschlange (Rundenbeginn-Pflichten).
   if (state.pendingPflichtansage !== null) return true;
   if (state.pflichtansageWarteschlange.length > 0) return true;

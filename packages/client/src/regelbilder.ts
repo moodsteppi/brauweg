@@ -34,6 +34,8 @@ const BILDER: Record<string, string> = {
   pflichtansageFolge: '⛓️',
   pflichtansageArmut: '💸',
   pflichtansageSchweine: '🐷',
+  /* Auch im Solo: der Alleinspieler mit erhobener Hand. */
+  pflichtansageImSolo: '🙋',
   /* Der Feigling ist der, der sich nicht traut — nicht der, der verliert. */
   feigling: '🙈',
   /* Derselbe Hasenfuß, nur fürs Solo — anderes Äffchen zum Unterscheiden. */

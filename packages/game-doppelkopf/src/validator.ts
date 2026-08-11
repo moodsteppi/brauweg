@@ -83,6 +83,9 @@ export function validateRuleSet(rs: RuleSet): ValidationIssue[] {
   if (rs.pflichtansageSchweine && !rs.schweinchen) {
     err('PFLICHT_SCHWEINE_NEEDS_SCHWEINCHEN', 'Der Schweine-Ausloeser setzt aktivierte Schweinchen voraus.');
   }
+  if (rs.pflichtansageImSolo && !rs.pflichtansage) {
+    err('PFLICHT_SOLO_NEEDS_PFLICHT', 'Pflichtansage im Solo setzt die Pflichtansage voraus.');
+  }
 
   // --- Solo und Pflichtsolo ---
   if (rs.pflichtsolo && rs.solos.length === 0) {

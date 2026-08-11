@@ -287,6 +287,7 @@ const de: Record<string, string> = {
   'regel.pflichtansageFolge': 'Pflichtansage: Folgeansage',
   'regel.pflichtansageArmut': 'Pflichtansage: Armut',
   'regel.pflichtansageSchweine': 'Pflichtansage: Schweine',
+  'regel.pflichtansageImSolo': 'Pflichtansage: auch im Solo',
   'regel.feigling': 'Feigling im Normalspiel',
   'regel.feiglingSolo': 'Feigling im Solo',
   'regel.bock': 'Bockrunden',

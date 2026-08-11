@@ -125,6 +125,15 @@ export interface RuleSet {
   pflichtansageArmut: boolean;
   /** Verpflichtet ist, wer die Schweine haelt — nicht, wer sie spielt. */
   pflichtansageSchweine: boolean;
+  /**
+   * Gilt die Pflichtansage auch im Solo? Vorgabe: nein.
+   *
+   * Im Solo spielt einer allein gegen drei; eine erzwungene Ansage (erst recht
+   * die Folgekette) trifft ihn besonders hart und faellt oft mit der Vorfuehrung
+   * zusammen. Deshalb greift die Pflichtansage im Solo nur, wenn das hier
+   * ausdruecklich angeschaltet ist — fuer Bezugs- UND Folgestich.
+   */
+  pflichtansageImSolo: boolean;
 
   // --- Bockrunden ---
   bock: boolean;
@@ -187,6 +196,7 @@ export const DEFAULT_RULESET: RuleSet = {
   pflichtansageFolge: false,
   pflichtansageArmut: false,
   pflichtansageSchweine: false,
+  pflichtansageImSolo: false,
 
   bock: false,
   bockTriggers: ['zeroResult', 'reAndKontra'],
