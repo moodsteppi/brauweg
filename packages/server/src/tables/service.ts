@@ -44,6 +44,11 @@ export interface CreateTableInput {
    * Rangliste.
    */
   readonly fillWithBots?: boolean;
+  /**
+   * Spielstaerke der Bots dieses Tisches. Wandert in die Tischfilter, wird beim
+   * Partiestart uebernommen. Fehlt sie, gilt die Vorgabe (`tableBotLevel`).
+   */
+  readonly botLevel?: BotLevel;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +175,14 @@ export async function createTable(db: Db, input: CreateTableInput) {
       clubId,
       seats: input.seats,
       maxRounds: input.rounds,
-      filters: { fillWithBots: input.fillWithBots === true },
+      // Nur gültige Stufen in die Filter — tableBotLevel fällt sonst ohnehin auf
+      // die Vorgabe zurück, aber ein sauberer Filter erspart Rätselraten.
+      filters: {
+        fillWithBots: input.fillWithBots === true,
+        botLevel: BOT_LEVELS.includes(input.botLevel as BotLevel)
+          ? input.botLevel
+          : DEFAULT_BOT_LEVEL,
+      },
     })
     .returning();
 

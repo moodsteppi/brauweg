@@ -566,6 +566,22 @@ export function Wartebereich({
           </button>
         </div>
       </header>
+
+      {/* Bot-Stärke ganz oben, damit sie sichtbar ist, bevor man Bots setzt.
+          Nur beim Doppelkopf: nur dort spielen die Stufen wirklich
+          unterschiedlich, die übrigen Module ignorieren die Einstellung. */}
+      {table.game === 'doppelkopf' && (
+        <button
+          type="button"
+          className="doko-botstufe-knopf"
+          onClick={() => setStufenOffen(true)}
+        >
+          <span className="muted">Bot-Stärke</span>
+          <strong>{STUFEN_NAME[table.botLevel] ?? 'Standard'}</strong>
+          <span className="doko-botstufe-pfeil" aria-hidden="true">›</span>
+        </button>
+      )}
+
       <div className="doko-wait">
         {table.seats.map((seat) => (
           <div
@@ -626,21 +642,6 @@ export function Wartebereich({
         Teile die Adresse dieser Seite, dann können andere direkt beitreten — oder
         fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.
       </p>
-
-      {/* Bot-Stärke nur beim Doppelkopf: nur dort spielen die Stufen wirklich
-          unterschiedlich. Die übrigen Module ignorieren die Einstellung, ein
-          Wähler dort wäre ein Versprechen ohne Wirkung. */}
-      {table.game === 'doppelkopf' && (
-        <button
-          type="button"
-          className="doko-botstufe-knopf"
-          onClick={() => setStufenOffen(true)}
-        >
-          <span className="muted">Bot-Stärke</span>
-          <strong>{STUFEN_NAME[table.botLevel] ?? 'Standard'}</strong>
-          <span className="doko-botstufe-pfeil" aria-hidden="true">›</span>
-        </button>
-      )}
 
       {error && <p className="doko-error">{t(error)}</p>}
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}

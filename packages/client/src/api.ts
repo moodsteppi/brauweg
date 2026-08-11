@@ -11,6 +11,7 @@
  */
 
 import type { Bemalung } from './bemalung';
+import type { BotLevel } from './protocol';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 
 export class ApiError extends Error {
@@ -653,6 +654,7 @@ export const api = {
     visibility?: 'public' | 'on_request' | 'club_only';
     clubId?: string;
     fillWithBots?: boolean;
+    botLevel?: BotLevel;
   }) => post<{ id: string }>('/tables', body),
   joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type GameDefaults, type TableRow } from '../api';
 import { t } from '../i18n';
+import type { BotLevel } from '../protocol';
 import { regelBild } from '../regelbilder';
 
 /**
@@ -20,7 +21,18 @@ interface Gemerkt {
   rounds?: number;
   config?: Record<string, unknown>;
   visibility?: 'public' | 'club_only';
+  botLevel?: BotLevel;
 }
+
+/**
+ * Die drei Bot-Spielstärken mit einem Satz, was sie ausmacht. Nur beim
+ * Doppelkopf angeboten — nur dort wertet das Modul die Stufe aus.
+ */
+const BOT_STUFEN: readonly { id: BotLevel; name: string; hinweis: string }[] = [
+  { id: 'anfaenger', name: 'Anfänger', hinweis: 'Legt einfach die billigste Karte. Zum Reinkommen.' },
+  { id: 'standard', name: 'Standard', hinweis: 'Solider Vereinsspieler: hält Trümpfe, schmiert dem Partner.' },
+  { id: 'experte', name: 'Experte', hinweis: 'Zieht Trümpfe und sagt Re/Kontra an, wenn das Blatt es trägt.' },
+];
 
 /**
  * Der Zaehler am Schluessel verwirft alte Staende.
@@ -75,6 +87,7 @@ export function Lobby({
   const [seats, setSeats] = useState(4);
   const [rounds, setRounds] = useState(8);
   const [visibility, setVisibility] = useState<'public' | 'club_only'>('public');
+  const [botLevel, setBotLevel] = useState<BotLevel>('standard');
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
@@ -132,6 +145,13 @@ export function Lobby({
       if (merken?.visibility === 'club_only' || merken?.visibility === 'public') {
         setVisibility(merken.visibility);
       }
+      if (
+        merken?.botLevel === 'anfaenger' ||
+        merken?.botLevel === 'standard' ||
+        merken?.botLevel === 'experte'
+      ) {
+        setBotLevel(merken.botLevel);
+      }
     });
     const handle = setInterval(refresh, 4000);
     return () => clearInterval(handle);
@@ -155,13 +175,16 @@ export function Lobby({
         seats,
         rounds,
         visibility,
+        // Bot-Stärke gilt für alle Bots des Tisches; nur Doppelkopf wertet sie
+        // aus, für andere Spiele schadet das Mitschicken nicht.
+        botLevel,
       });
       // Erst nach dem Erfolg merken: Ein abgelehnter Regelsatz soll nicht
       // beim naechsten Besuch wieder vorgelegt werden.
       try {
         localStorage.setItem(
           merkKey(gameId),
-          JSON.stringify({ seats, rounds, config, visibility }),
+          JSON.stringify({ seats, rounds, config, visibility, botLevel }),
         );
       } catch {
         // Voller oder gesperrter Speicher ist kein Grund, den Tisch zu verweigern.
@@ -290,6 +313,30 @@ export function Lobby({
                 Nur Clan
               </button>
             </div>
+
+            {/* Bot-Stärke nur beim Doppelkopf: nur dort spielen die Stufen
+                wirklich unterschiedlich. Gehört hierher, wo der Tisch gebaut
+                wird — wie Runden und „Für wen", einmal gewählt und fest. */}
+            {gameId === 'doppelkopf' && (
+              <>
+                <h2 className="lobby-tafel-titel">Bot-Stärke</h2>
+                <div className="lobby-chips">
+                  {BOT_STUFEN.map((stufe) => (
+                    <button
+                      key={stufe.id}
+                      className={`lobby-chip${botLevel === stufe.id ? ' is-an' : ''}`}
+                      aria-pressed={botLevel === stufe.id}
+                      onClick={() => setBotLevel(stufe.id)}
+                    >
+                      {stufe.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="muted lobby-botstufe-hinweis">
+                  {BOT_STUFEN.find((s) => s.id === botLevel)?.hinweis}
+                </p>
+              </>
+            )}
 
             <h2 className="lobby-tafel-titel">Regeln</h2>
             {/* Eine Zeile statt eines aufgeklappten Formulars: Der Stand ist
