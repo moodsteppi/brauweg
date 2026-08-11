@@ -423,11 +423,6 @@ const STUFEN_NAME: Record<BotLevel, string> = {
  */
 const STUFEN: readonly { id: BotLevel; name: string; text: string }[] = [
   {
-    id: 'anfaenger',
-    name: 'Anfänger',
-    text: 'Legt einfach die billigste Karte. Zum Reinkommen — verschenkt Augen und spart keine Trümpfe.',
-  },
-  {
     id: 'standard',
     name: 'Standard',
     text: 'Solider Vereinsspieler: spielt Ässe früh, hält Trümpfe, schmiert dem Partner. Sagt nichts an.',

@@ -28,11 +28,13 @@ interface Gemerkt {
  * Die drei Bot-Spielstärken mit einem Satz, was sie ausmacht. Nur beim
  * Doppelkopf angeboten — nur dort wertet das Modul die Stufe aus.
  */
-const BOT_STUFEN: readonly { id: BotLevel; name: string; hinweis: string }[] = [
-  { id: 'anfaenger', name: 'Anfänger', hinweis: 'Legt einfach die billigste Karte. Zum Reinkommen.' },
-  { id: 'standard', name: 'Standard', hinweis: 'Solider Vereinsspieler: hält Trümpfe, schmiert dem Partner.' },
-  { id: 'experte', name: 'Experte', hinweis: 'Zieht Trümpfe und sagt Re/Kontra an, wenn das Blatt es trägt.' },
-  { id: 'genie', name: 'Genie', hinweis: 'Zählt Karten und spielt auf sicheren Gewinn. Richtig stark.' },
+// Anfänger ist bewusst nicht wählbar: zu schwach für einen ernsten Tisch. Die
+// Stufe bleibt im Modul erhalten, wird hier aber nicht angeboten — so bleiben
+// es drei Chips in einer Reihe.
+const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
+  { id: 'standard', name: 'Standard' },
+  { id: 'experte', name: 'Experte' },
+  { id: 'genie', name: 'Genie' },
 ];
 
 /**
@@ -147,9 +149,9 @@ export function Lobby({
         setVisibility(merken.visibility);
       }
       if (
-        merken?.botLevel === 'anfaenger' ||
         merken?.botLevel === 'standard' ||
-        merken?.botLevel === 'experte'
+        merken?.botLevel === 'experte' ||
+        merken?.botLevel === 'genie'
       ) {
         setBotLevel(merken.botLevel);
       }
@@ -333,9 +335,6 @@ export function Lobby({
                     </button>
                   ))}
                 </div>
-                <p className="muted lobby-botstufe-hinweis">
-                  {BOT_STUFEN.find((s) => s.id === botLevel)?.hinweis}
-                </p>
               </>
             )}
 
