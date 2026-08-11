@@ -965,6 +965,13 @@ export interface PlayerView {
   readonly currentTrick: readonly PlayedCard[];
   /** Der letzte abgeschlossene Stich ist immer einsehbar. */
   readonly lastTrick: TrickRecord | null;
+  /**
+   * Alle abgeschlossenen Stiche der Runde — oeffentliche Information: jede
+   * Karte lag beim Legen offen. Der Client zeigt nur den letzten; der
+   * kartenzaehlende Genie-Bot braucht die ganze Reihe, um zu wissen, was noch
+   * im Spiel ist. Kein Geheimnis wird preisgegeben, nur Gedaechtnis erlaubt.
+   */
+  readonly alleStiche: readonly TrickRecord[];
   readonly turn: number;
   readonly gameType: GameType;
   readonly order: CardOrder;
@@ -1174,6 +1181,7 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     ),
     currentTrick: state.currentTrick,
     lastTrick: state.tricks[state.tricks.length - 1] ?? null,
+    alleStiche: state.tricks,
     turn: state.turn,
     gameType: state.gameType,
     order: state.order,

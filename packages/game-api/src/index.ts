@@ -29,12 +29,14 @@
 /**
  * Spielstaerke eines Bots — eine Tischeinstellung, kein Spielzustand.
  *
- * Drei Stufen, damit ein aufgefuellter Tisch weder langweilig (zu schwach)
- * noch aussichtslos (zu stark) ist. Nicht jedes Spiel muss alle Stufen
- * unterscheiden; ein Modul, das nur eine Strategie kennt, spielt sie fuer
- * jede Stufe. Bisher wertet nur Doppelkopf die Stufe aus.
+ * Vier Stufen, damit ein aufgefuellter Tisch weder langweilig (zu schwach)
+ * noch aussichtslos (zu stark) ist. `genie` zaehlt Karten und spielt auf
+ * groesste Siegwahrscheinlichkeit — die uebrigen kommen ohne Gedaechtnis aus.
+ * Nicht jedes Spiel muss alle Stufen unterscheiden; ein Modul, das nur eine
+ * Strategie kennt, spielt sie fuer jede Stufe. Bisher wertet nur Doppelkopf
+ * die Stufe aus.
  */
-export type BotLevel = 'anfaenger' | 'standard' | 'experte';
+export type BotLevel = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
 /** Vorgabe, wenn ein Tisch keine Stufe gesetzt hat. */
 export const DEFAULT_BOT_LEVEL: BotLevel = 'standard';

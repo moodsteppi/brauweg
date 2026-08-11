@@ -415,7 +415,7 @@ export interface SeatInfo {
 }
 
 /** Spielstärke der Bots eines Tisches. Spiegelbild von game-api BotLevel. */
-export type BotLevel = 'anfaenger' | 'standard' | 'experte';
+export type BotLevel = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
 export interface TableMessage {
   v: number;

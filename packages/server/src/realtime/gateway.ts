@@ -129,7 +129,7 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     game: z.string().max(40).optional(),
     type: z.literal('setBotLevel'),
     tableId: z.string().uuid(),
-    level: z.enum(['anfaenger', 'standard', 'experte']),
+    level: z.enum(['anfaenger', 'standard', 'experte', 'genie']),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),

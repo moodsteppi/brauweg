@@ -477,7 +477,7 @@ export async function setSeatBot(
 }
 
 /** Gültige Bot-Stufen — Wache gegen Fremdwerte aus der Leitung. */
-const BOT_LEVELS: readonly BotLevel[] = ['anfaenger', 'standard', 'experte'];
+const BOT_LEVELS: readonly BotLevel[] = ['anfaenger', 'standard', 'experte', 'genie'];
 
 /**
  * Bot-Stufe eines Tisches aus seinen Filtern lesen.

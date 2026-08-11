@@ -211,7 +211,7 @@ const createTableSchema = z.object({
   visibility: z.enum(['public', 'on_request', 'club_only']).optional(),
   clubId: z.string().uuid().optional(),
   fillWithBots: z.boolean().optional(),
-  botLevel: z.enum(['anfaenger', 'standard', 'experte']).optional(),
+  botLevel: z.enum(['anfaenger', 'standard', 'experte', 'genie']).optional(),
 });
 
 /**

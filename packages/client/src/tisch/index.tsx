@@ -413,6 +413,7 @@ const STUFEN_NAME: Record<BotLevel, string> = {
   anfaenger: 'Anfänger',
   standard: 'Standard',
   experte: 'Experte',
+  genie: 'Genie',
 };
 
 /**
@@ -435,6 +436,11 @@ const STUFEN: readonly { id: BotLevel; name: string; text: string }[] = [
     id: 'experte',
     name: 'Experte',
     text: 'Zieht bei starkem Blatt die Trümpfe und sagt Re oder Kontra an, wenn die Hand es trägt.',
+  },
+  {
+    id: 'genie',
+    name: 'Genie',
+    text: 'Zählt mit, was schon gespielt wurde, und wählt die Karte mit dem sichersten Gewinn. Richtig stark.',
   },
 ];
 

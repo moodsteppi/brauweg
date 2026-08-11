@@ -32,6 +32,7 @@ const BOT_STUFEN: readonly { id: BotLevel; name: string; hinweis: string }[] = [
   { id: 'anfaenger', name: 'Anfänger', hinweis: 'Legt einfach die billigste Karte. Zum Reinkommen.' },
   { id: 'standard', name: 'Standard', hinweis: 'Solider Vereinsspieler: hält Trümpfe, schmiert dem Partner.' },
   { id: 'experte', name: 'Experte', hinweis: 'Zieht Trümpfe und sagt Re/Kontra an, wenn das Blatt es trägt.' },
+  { id: 'genie', name: 'Genie', hinweis: 'Zählt Karten und spielt auf sicheren Gewinn. Richtig stark.' },
 ];
 
 /**

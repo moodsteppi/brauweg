@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import type { BotLevel } from '@brauweg/game-api';
+
 import { cardValue, sumValues } from '../src/cards.js';
 import { makeRuleSet } from '../src/ruleset.js';
 import { makeRng } from '../src/deal.js';
@@ -24,8 +26,8 @@ import {
 
 const FOUR = [0, 1, 2, 3];
 
-/** Spielt eine ganze Partie ausschliesslich mit Bots. */
-function botParty(party: PartyState): PartyState {
+/** Spielt eine ganze Partie ausschliesslich mit Bots einer Stufe. */
+function botParty(party: PartyState, level?: BotLevel): PartyState {
   let guard = 0;
   while (!party.finished && guard++ < 500) {
     party = startRound(party);
@@ -34,7 +36,7 @@ function botParty(party: PartyState): PartyState {
     while (party.current && steps++ < 500) {
       const seat = currentActor(party.current);
       if (seat === null) break;
-      const action = botAction(viewFor(party.current, seat));
+      const action = botAction(viewFor(party.current, seat), level);
       assert.notEqual(
         action,
         null,
@@ -135,6 +137,44 @@ test('Bot: 1000 Partien laufen ohne Regelverstoss durch', () => {
   }
 
   assert.ok(soloParties > 500, 'Zu wenige Partien mit Pflichtsolo getestet');
+});
+
+test('Genie: 500 Partien laufen ohne Regelverstoss durch', () => {
+  // Der Genie zaehlt Karten, sagt Re/Kontra und Soli an und liest die
+  // Stichhistorie — deutlich mehr bewegliche Teile als bei den anderen Stufen.
+  // act() validiert jeden Zug, ein illegaler Zug bricht den Lauf hier ab.
+  const rng = makeRng(24680);
+  for (let i = 0; i < 500; i++) {
+    const pflichtansage = rng() < 0.5;
+    const schweinchen = rng() < 0.5;
+    const rs = makeRuleSet({
+      deck: rng() < 0.5 ? 'with9' : 'without9',
+      rounds: 4,
+      pflichtsolo: rng() < 0.7,
+      pflichtansage,
+      pflichtansageSchweine: pflichtansage && schweinchen && rng() < 0.5,
+      announcements: true,
+      absagen: true,
+      hochzeit: true,
+      armut: true,
+      schweinchen,
+      superSchweine: rng() < 0.3,
+      secondDulleBeatsFirst: rng() < 0.5,
+      defusedDullen: rng() < 0.3,
+    });
+
+    const party = botParty(createParty(rs, FOUR, 50000 + i), 'genie');
+
+    assert.equal(party.finished, true, `Genie-Partie ${i} nicht beendet`);
+    assert.equal(Object.values(party.scores).reduce((a, b) => a + b, 0), 0);
+    for (const summary of party.history) {
+      assert.equal(
+        summary.result.rePoints + summary.result.kontraPoints,
+        240,
+        `Genie-Partie ${i}, Runde ${summary.roundIndex}: Augensumme falsch`,
+      );
+    }
+  }
 });
 
 test('Bot nimmt eine Armut nie an', () => {

@@ -306,6 +306,167 @@ function plainLowest(cards: readonly Card[]): Card {
   })[0];
 }
 
+// ---------------------------------------------------------------------------
+// Genie: kartenzaehlend
+//
+// Der Genie ist der einzige Bot mit Gedaechtnis: Er liest die vollstaendige
+// (oeffentliche) Stichhistorie und weiss dadurch, welche Karten noch im Spiel
+// sind. Statt der Faustregel „sicher genug" rechnet er die Wahrheit aus — eine
+// Karte haelt den Stich, wenn nachweislich keine hoehere mehr offen ist bzw.
+// keiner der Nachfolgenden stechen kann. Damit cashst er sichere Sieger,
+// verschenkt keine Augen und schmiert nur auf garantiert gehaltene Stiche.
+// ---------------------------------------------------------------------------
+
+/** Alle Karten, die ich sehen kann: eigene Hand plus alles bereits Gelegte. */
+function gesehen(view: PlayerView): Map<string, number> {
+  const m = new Map<string, number>();
+  const add = (c: Card): void => {
+    const k = cardKey(c);
+    m.set(k, (m.get(k) ?? 0) + 1);
+  };
+  for (const c of view.hand) add(c);
+  for (const t of view.alleStiche ?? []) for (const p of t.played) add(p.card);
+  for (const p of view.currentTrick) add(p.card);
+  return m;
+}
+
+/** Wie oft eine Kartensorte noch ungesehen im Spiel ist (jede gibt es doppelt). */
+function offen(g: Map<string, number>, key: string): number {
+  return Math.max(0, 2 - (g.get(key) ?? 0));
+}
+
+/** Ungesehene Truempfe, die diese Trumpfkarte schlagen. */
+function offeneHoehereTruempfe(view: PlayerView, card: Card, g: Map<string, number>): number {
+  const i = view.order.trumps.indexOf(cardKey(card));
+  if (i < 0) return 0;
+  let n = 0;
+  for (let j = 0; j < i; j++) n += offen(g, view.order.trumps[j]!);
+  // „Zweite Dulle sticht erste": die andere Herz-Zehn schlaegt meine trotz
+  // gleichen Rangs.
+  if (view.secondDulleBeatsFirst && cardKey(card) === 'HT') n += offen(g, 'HT');
+  return n;
+}
+
+/** Ungesehene hoehere Karten DERSELBEN Fehlfarbe. */
+function offeneHoehereFehl(view: PlayerView, card: Card, g: Map<string, number>): number {
+  const reihe = view.order.fehl[card.suit] ?? [];
+  const idx = reihe.indexOf(cardKey(card));
+  if (idx < 0) return 0;
+  let n = 0;
+  for (let j = 0; j < idx; j++) n += offen(g, reihe[j]!);
+  return n;
+}
+
+/** Ungesehene Truempfe insgesamt. */
+function offeneTruempfeGesamt(view: PlayerView, g: Map<string, number>): number {
+  let n = 0;
+  for (const k of view.order.trumps) n += offen(g, k);
+  return n;
+}
+
+/** Sitze, die in diesem Stich NACH mir legen. */
+function spaetereSeats(view: PlayerView): number[] {
+  const gespielt = new Set(view.currentTrick.map((p) => p.seat));
+  const alle = view.handCounts ? Object.keys(view.handCounts).map(Number) : [];
+  return alle.filter((s) => s !== view.seat && !gespielt.has(s));
+}
+
+/** Wer ist in welcher Bedienfarbe blank — abgelesen aus den bisherigen Stichen. */
+function blankFarben(view: PlayerView): Map<number, Set<string>> {
+  const m = new Map<number, Set<string>>();
+  for (const t of view.alleStiche ?? []) {
+    if (t.played.length === 0) continue;
+    const lead = servingSuit(t.played[0].card, view.order);
+    for (const p of t.played) {
+      if (servingSuit(p.card, view.order) !== lead) {
+        if (!m.has(p.seat)) m.set(p.seat, new Set());
+        m.get(p.seat)!.add(lead);
+      }
+    }
+  }
+  return m;
+}
+
+/**
+ * Haelt diese Karte den Stich bis zum Schluss? Gezaehlt, nicht geraten.
+ *
+ * - Letzter im Stich: es kommt niemand mehr, also immer.
+ * - Trumpf: nur, wenn kein ungesehener hoeherer Trumpf mehr im Spiel ist.
+ * - Fehl: die hoechste offene ihrer Farbe UND kein Nachfolger kann stechen
+ *   (keiner ist in der Farbe blank, oder es liegt ohnehin kein Trumpf mehr).
+ */
+function haeltGarantiert(view: PlayerView, card: Card, g: Map<string, number>): boolean {
+  if (nachMir(view) === 0) return true;
+  if (istTrumpf(card, view.order)) return offeneHoehereTruempfe(view, card, g) === 0;
+  if (offeneHoehereFehl(view, card, g) > 0) return false;
+  const lead = servingSuit(card, view.order);
+  const blank = blankFarben(view);
+  const kannGestochen = spaetereSeats(view).some((s) => blank.get(s)?.has(lead));
+  if (!kannGestochen) return true;
+  return offeneTruempfeGesamt(view, g) === 0;
+}
+
+/** Knappste ausreichende Karte: schwaechster Sieger, bei Gleichstand billiger. */
+function knappste(cards: readonly Card[], view: PlayerView): Card {
+  const lead = servingSuit(view.currentTrick[0]!.card, view.order);
+  return [...cards].sort((a, b) => {
+    const s = strength(a, view.order, lead) - strength(b, view.order, lead);
+    return s !== 0 ? s : cardValue(a) - cardValue(b);
+  })[0]!;
+}
+
+/**
+ * Genie-Ausspiel: die wertvollste Karte cashen, die garantiert den Stich holt.
+ * Gibt es keine, das bewaehrte Vereinsspieler-Ausspiel (Truempfe ziehen bei
+ * Staerke, sonst Fehl-Ass bzw. kurze Farbe).
+ */
+function chooseLeadGenie(view: PlayerView): Card {
+  const g = gesehen(view);
+  const sicher = view.legal.filter((c) => haeltGarantiert(view, c, g));
+  if (sicher.length > 0) return highestByValue(sicher);
+  return chooseLead(view, 'experte');
+}
+
+/**
+ * Genie-Kartenwahl im laufenden Stich. Nutzt die gezaehlte Wahrheit:
+ * garantierte Sieger werden gecasht, Partnerstiche nur bei sicherem Halt
+ * geschmiert, ohne sicheren Gewinn wird nichts Teures verschenkt.
+ */
+function chooseCardGenie(view: PlayerView): Card {
+  const legal = view.legal;
+  if (view.currentTrick.length === 0) return chooseLeadGenie(view);
+
+  const g = gesehen(view);
+  const lead = servingSuit(view.currentTrick[0].card, view.order);
+  const best = aktuellerGewinner(view)!;
+  const bekannt = parteien(view);
+  const partnerLeads =
+    bekannt[best.seat] !== undefined &&
+    view.myParty !== null &&
+    bekannt[best.seat] === view.myParty &&
+    best.seat !== view.seat;
+
+  if (partnerLeads) {
+    if (!haeltGarantiert(view, best.card, g)) return abwurfGegner(view, legal);
+    const nichtUeber = legal.filter((c) => !wuerdeGewinnen(view, c));
+    return highestByValue(nichtUeber.length > 0 ? nichtUeber : legal);
+  }
+
+  const winning = legal.filter((c) => wuerdeGewinnen(view, c));
+  if (winning.length === 0) return abwurfGegner(view, legal);
+
+  // Garantierte Sieger zuerst: der knappste, der den Stich sicher holt.
+  const garant = winning.filter((c) => haeltGarantiert(view, c, g));
+  if (garant.length > 0) return knappste(garant, view);
+
+  // Kein sicherer Sieg: nur einen fetten Stich riskiert der Genie noch, sonst
+  // laesst er ziehen und wirft billig ab.
+  if (nachMir(view) === 0) return knappste(winning, view);
+  if (augenImStich(view) >= 15) return knappste(winning, view);
+  const verzicht = legal.filter((c) => !winning.includes(c));
+  return abwurfGegner(view, verzicht.length > 0 ? verzicht : legal);
+}
+
 export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL): Card {
   const legal = view.legal;
   if (legal.length === 0) throw new Error('Keine legale Karte verfuegbar');
@@ -314,6 +475,9 @@ export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL
   // Anfaenger: immer die billigste erlaubte Karte, ohne Ruecksicht auf
   // Position, Partner oder Trumpfvorrat. Absichtlich schwach (siehe Kopf).
   if (level === 'anfaenger') return plainLowest(legal);
+
+  // Genie: kartenzaehlend, spielt auf sicheren Gewinn (siehe oben).
+  if (level === 'genie') return chooseCardGenie(view);
 
   const best = aktuellerGewinner(view);
   if (!best) return chooseLead(view, level);
@@ -501,7 +665,11 @@ export function botAction(
     // nicht selbst nach. Nur Stufe 0; die Absagenkette bleibt ihm verschlossen.
     // Die Ansage verbraucht den Zug nicht: Beim naechsten Botzug faellt 0 aus
     // announceOptions (schon gesagt), und er legt die Karte.
-    if (level === 'experte' && view.announceOptions.includes(0) && ansageReif(view)) {
+    if (
+      (level === 'experte' || level === 'genie') &&
+      view.announceOptions.includes(0) &&
+      ansageReif(view)
+    ) {
       return { type: 'announce', seat, level: 0 };
     }
     return { type: 'playCard', seat, cardId: chooseCard(view, level).id };
