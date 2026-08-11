@@ -23,6 +23,23 @@
  */
 
 // ---------------------------------------------------------------------------
+// Bot-Spielstaerke
+// ---------------------------------------------------------------------------
+
+/**
+ * Spielstaerke eines Bots — eine Tischeinstellung, kein Spielzustand.
+ *
+ * Drei Stufen, damit ein aufgefuellter Tisch weder langweilig (zu schwach)
+ * noch aussichtslos (zu stark) ist. Nicht jedes Spiel muss alle Stufen
+ * unterscheiden; ein Modul, das nur eine Strategie kennt, spielt sie fuer
+ * jede Stufe. Bisher wertet nur Doppelkopf die Stufe aus.
+ */
+export type BotLevel = 'anfaenger' | 'standard' | 'experte';
+
+/** Vorgabe, wenn ein Tisch keine Stufe gesetzt hat. */
+export const DEFAULT_BOT_LEVEL: BotLevel = 'standard';
+
+// ---------------------------------------------------------------------------
 // Spielkennung und Beschreibung
 // ---------------------------------------------------------------------------
 
@@ -252,8 +269,13 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
   /**
    * Nimmt ausschliesslich die gefilterte Sicht entgegen, nie den Partiezustand.
    * So kann der Bot bauartbedingt nicht schummeln.
+   *
+   * `level` ist die gewuenschte Spielstaerke (eine Einstellung des Tisches,
+   * kein Spielzustand). Ein Modul, dem die Stufe egal ist, ignoriert den
+   * Parameter einfach — deshalb ist er optional und die bisherigen Module
+   * bleiben unveraendert gueltig.
    */
-  botAction(view: TView): TAction;
+  botAction(view: TView, level?: BotLevel): TAction;
 
   // -- Persistenz -----------------------------------------------------------
 

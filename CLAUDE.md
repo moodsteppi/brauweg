@@ -15,10 +15,13 @@ bereit)**.
 
 ## Die sechs Regeln, an denen man sonst scheitert
 
-**1. Gegen `staging` arbeiten, nie gegen `main`.** `main` löst den Deploy in
-die Produktion aus; was dorthin geht, entscheidet Nils. Vor jedem Push
-`git pull --no-rebase origin staging` — an diesem Repo arbeiten mehrere
-Sitzungen gleichzeitig, auch Cursor. Merges sind der Normalfall, kein Fehler.
+**1. Standardmäßig gegen `staging` arbeiten.** `main` löst den Deploy in die
+Produktion aus. Ein Push nach `main` braucht keine bestimmte Person: Wer dich
+in der Sitzung anweist, gibt ihn frei — frag vorher einmal kurz zur Sicherheit
+nach (ein Prod-Deploy ist schwer rückholbar, siehe Regel 7), aber warte auf
+niemand anderen. Vor jedem Push `git pull --no-rebase origin staging` — an
+diesem Repo arbeiten mehrere Sitzungen gleichzeitig, auch Cursor. Merges sind
+der Normalfall, kein Fehler.
 
 **2. Alles auf Deutsch.** Bezeichner, Kommentare, Commit-Nachrichten,
 Oberflächentexte. Kommentare erklären das **Warum**, nicht das Was — und

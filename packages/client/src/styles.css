@@ -1509,6 +1509,44 @@ td {
 .doko-wait-seat.is-empty { color: var(--muted); font-weight: 400; font-style: italic; opacity: 0.7; }
 .doko-wait-hint { text-align: center; max-width: 24rem; margin: 0 auto; }
 
+/* ---- Bot-Stärke: Knopf im Wartebereich + Zwischenschirm ---- */
+.doko-botstufe-knopf {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  text-align: left;
+}
+.doko-botstufe-knopf strong { font-weight: 700; }
+/* Der Wert wandert nach rechts, der Pfeil an den Rand — wie eine Listenzeile. */
+.doko-botstufe-knopf strong { margin-left: auto; }
+.doko-botstufe-pfeil { color: var(--muted); font-size: 1.2rem; line-height: 1; }
+
+.doko-botstufe-hint { margin: 0 0 0.4rem; }
+.doko-botstufe-wahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  margin-top: 0.5rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.05);
+  /* Rand transparent, damit die aktive Stufe ihn ohne Sprung fuellen kann. */
+  border: 2px solid transparent;
+  color: inherit;
+  text-align: left;
+}
+.doko-botstufe-wahl strong { font-weight: 700; }
+.doko-botstufe-wahl span { font-size: 0.85rem; line-height: 1.3; }
+.doko-botstufe-wahl.is-aktiv { border-color: var(--gold, #d8b45a); }
+
 /* ---- Profilbild im Avatar ---- */
 .doko-avatar-img {
   width: 100%;

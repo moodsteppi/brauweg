@@ -57,7 +57,7 @@ export function CambioTable({
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot } =
+  const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot, setBotLevel } =
     useTable<CambioGameView>(tableId, 'cambio');
 
   /** Welche Zurufe mir gehoeren — dieselbe Frage wie an den anderen Tischen. */
@@ -137,6 +137,7 @@ export function CambioTable({
         spielerName={spielerName}
         addBot={addBot}
         removeBot={removeBot}
+        setBotLevel={setBotLevel}
         onLeave={onLeave}
       />
     );

@@ -80,7 +80,7 @@ export function SkatTable({
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot } =
+  const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot, setBotLevel } =
     useTable<SkatGameView>(tableId, 'skat');
 
   const [meineEmotes, setMeineEmotes] = useState<Set<string>>(new Set());
@@ -213,6 +213,7 @@ export function SkatTable({
         spielerName={spielerName}
         addBot={addBot}
         removeBot={removeBot}
+        setBotLevel={setBotLevel}
         onLeave={onLeave}
       />
     );

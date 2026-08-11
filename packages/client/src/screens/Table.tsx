@@ -104,6 +104,7 @@ export function Table({
     sendEmote,
     addBot,
     removeBot,
+    setBotLevel,
     reconnect,
   } = useTable(tableId);
 
@@ -572,6 +573,7 @@ export function Table({
           spielerName={spielerName}
           addBot={addBot}
           removeBot={removeBot}
+          setBotLevel={setBotLevel}
           onLeave={onLeave}
         />
       </>

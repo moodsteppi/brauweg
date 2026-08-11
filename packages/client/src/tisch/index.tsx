@@ -23,7 +23,14 @@ import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
 import type { Deck } from '../decks';
 import { t } from '../i18n';
-import type { BaseGameView, Card, PartyMessage, TableMessage, ViewMessage } from '../protocol';
+import type {
+  BaseGameView,
+  BotLevel,
+  Card,
+  PartyMessage,
+  TableMessage,
+  ViewMessage,
+} from '../protocol';
 import { regelBild } from '../regelbilder';
 import { useCountdown } from '../useTable';
 
@@ -401,6 +408,75 @@ export function RegelBlatt({
   );
 }
 
+/** Kurzname je Bot-Stufe, fuer den Knopf im Wartebereich. */
+const STUFEN_NAME: Record<BotLevel, string> = {
+  anfaenger: 'Anfänger',
+  standard: 'Standard',
+  experte: 'Experte',
+};
+
+/**
+ * Die drei Bot-Stufen mit je einem Satz, was sie ausmacht. Der Text steht hier
+ * und nicht im Bot: Der Spieler waehlt nach dieser Beschreibung, der Bot spielt
+ * danach — beide muessen zusammenpassen, aber nur einer davon ist Text.
+ */
+const STUFEN: readonly { id: BotLevel; name: string; text: string }[] = [
+  {
+    id: 'anfaenger',
+    name: 'Anfänger',
+    text: 'Legt einfach die billigste Karte. Zum Reinkommen — verschenkt Augen und spart keine Trümpfe.',
+  },
+  {
+    id: 'standard',
+    name: 'Standard',
+    text: 'Solider Vereinsspieler: spielt Ässe früh, hält Trümpfe, schmiert dem Partner. Sagt nichts an.',
+  },
+  {
+    id: 'experte',
+    name: 'Experte',
+    text: 'Zieht bei starkem Blatt die Trümpfe und sagt Re oder Kontra an, wenn die Hand es trägt.',
+  },
+];
+
+/**
+ * Zwischenschirm zur Wahl der Bot-Spielstärke — nach der doko-sheet-Vorlage
+ * wie Einstellungen und Regelblatt. Eine Stufe gilt für alle Bots des Tisches.
+ */
+function BotStufenBlatt({
+  aktuell,
+  onWahl,
+  onClose,
+}: {
+  aktuell: BotLevel;
+  onWahl: (level: BotLevel) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <div className="doko-sheet" onClick={onClose}>
+      <div
+        className="doko-sheet-card doko-botstufe"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2>Bot-Stärke</h2>
+        <p className="muted doko-botstufe-hint">
+          Gilt für alle Bots an diesem Tisch.
+        </p>
+        {STUFEN.map((stufe) => (
+          <button
+            key={stufe.id}
+            type="button"
+            className={`doko-botstufe-wahl${stufe.id === aktuell ? ' is-aktiv' : ''}`}
+            onClick={() => onWahl(stufe.id)}
+          >
+            <strong>{stufe.name}</strong>
+            <span className="muted">{stufe.text}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Wartebereich vor dem Start.
  *
@@ -416,6 +492,7 @@ export function Wartebereich({
   spielerName,
   addBot,
   removeBot,
+  setBotLevel,
   onLeave,
 }: {
   tableId: string;
@@ -424,6 +501,7 @@ export function Wartebereich({
   spielerName: (text: string, accountId: string | null | undefined) => React.JSX.Element;
   addBot: (seat: number) => void;
   removeBot: (seat: number) => void;
+  setBotLevel: (level: BotLevel) => void;
   onLeave: () => void;
 }): React.JSX.Element {
   /**
@@ -433,6 +511,10 @@ export function Wartebereich({
    */
   const [botBusy, setBotBusy] = useState<Record<number, 'add' | 'remove'>>({});
   const [zeigeRegeln, setZeigeRegeln] = useState(false);
+  // Bot-Stufe waehlt man auf einem eigenen Zwischenschirm (doko-sheet), nicht
+  // inline: Drei Stufen mit je einem Satz Erklaerung passen nicht neben die
+  // Sitzreihe, ohne den Wartebereich zu ueberladen.
+  const [stufenOffen, setStufenOffen] = useState(false);
 
   useEffect(() => {
     setBotBusy((prev) => {
@@ -544,8 +626,34 @@ export function Wartebereich({
         Teile die Adresse dieser Seite, dann können andere direkt beitreten — oder
         fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.
       </p>
+
+      {/* Bot-Stärke nur beim Doppelkopf: nur dort spielen die Stufen wirklich
+          unterschiedlich. Die übrigen Module ignorieren die Einstellung, ein
+          Wähler dort wäre ein Versprechen ohne Wirkung. */}
+      {table.game === 'doppelkopf' && (
+        <button
+          type="button"
+          className="doko-botstufe-knopf"
+          onClick={() => setStufenOffen(true)}
+        >
+          <span className="muted">Bot-Stärke</span>
+          <strong>{STUFEN_NAME[table.botLevel] ?? 'Standard'}</strong>
+          <span className="doko-botstufe-pfeil" aria-hidden="true">›</span>
+        </button>
+      )}
+
       {error && <p className="doko-error">{t(error)}</p>}
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
+      {stufenOffen && (
+        <BotStufenBlatt
+          aktuell={table.botLevel}
+          onWahl={(level) => {
+            setBotLevel(level);
+            setStufenOffen(false);
+          }}
+          onClose={() => setStufenOffen(false)}
+        />
+      )}
     </div>
   );
 }

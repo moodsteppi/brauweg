@@ -61,6 +61,40 @@ Minuten live.
 Doppelkopf hat außerdem seit dem 10. August **keinen Dreiertisch mehr in der
 Lobby** (er war ohnehin vier mit Dauerbot); die Engine kann drei weiterhin.
 
+## Am 11. August: Bot-Spielstärken (Doppelkopf)
+
+**Der Bot hat drei Stufen: Anfänger, Standard, Experte** — eine
+Tischeinstellung, gewählt auf einem eigenen Zwischenschirm (`doko-sheet`) im
+Wartebereich, und **nur beim Doppelkopf sichtbar**. Anlass war, dass der eine
+bisherige Bot für eine ganze Runde zu schwach war.
+
+- **Anfänger** legt immer die billigste erlaubte Karte — verschenkt Augen,
+  spart keine Trümpfe. Absichtlich schwach.
+- **Standard** ist der bisherige Vereinsspieler (unverändert): Ässe früh,
+  Trümpfe halten, dem Partner schmieren, knapp stechen.
+- **Experte** zieht bei klarer Trumpfmacht die Trümpfe (führt einen hohen
+  Trumpf an statt ein Ass zu cashen) und **sagt Re/Kontra an, wenn das Blatt
+  es trägt** — nur die Ansage selbst, nie die Absagenkette (keine 90/60/…).
+
+**Wie die Stufe fließt:** `filters.botLevel` am Tisch (jsonb, **keine
+Migration**) → beim Partiestart in `LiveParty.botLevel` übernommen → `playBot`
+reicht sie an `module.botAction(view, level)`. Die `botAction`-Signatur im
+`game-api` hat dafür einen **optionalen** zweiten Parameter bekommen; die
+übrigen Module ignorieren ihn. Gesetzt wird über die neue WS-Nachricht
+`setBotLevel` (nur wer am Tisch sitzt, nur solange gewartet wird). Die
+Ansage-Legalität rechnet der Server: neues `announceOptions` in der
+`PlayerView`, damit der Experte-Bot keine Regel nachbaut und mit einer
+illegalen Ansage den Tisch wirft.
+
+> **Offen für den Live-Deploy — Trophäen in Bot-Runden raus.** Aktuell zählt
+> ein aufgefüllter Tisch weiter für die Rangliste (`countsForRanking` schließt
+> nur *Training* aus, Bots nicht mehr — siehe Kommentar dort). Gewünscht:
+> Runden mit Bots geben keine Trophäen. Beim Testen egal, **vor dem echten
+> Live-Deploy** aber erledigen. Noch nicht umgesetzt.
+
+**Prüfstand danach:** 149 Doppelkopf, 286 Server, 117 Zauberer, 82 Cambio,
+44 Skat, 15 Feldherr — alle grün, `npm run build` sauber.
+
 **Vorsicht beim ersten Bauen in einem frischen Arbeitsbaum:** `npm run build`
 im Wurzelverzeichnis, nicht `--workspace @brauweg/server`. Die `.d.ts` von
 `@brauweg/game-api` ist sonst der alte Stand, und `tsc` meldet Felder als
@@ -70,7 +104,9 @@ fehlend, die im Quelltext längst stehen (`xpBasis`, `interludeMs`).
 den Edelstein-Umbau. Auf `staging` und noch **nicht in der Produktion**
 liegen: Währungen, Truhen, Tagesaufgaben, der **gemalte** anziehbare Pinguin,
 Clanchat, Clankrieg, Zurufe am Tisch, der erweiterte Shop und der Edelstein
-als universelle Währung. Ob und wann das nach `main` geht, entscheidet Nils.
+als universelle Währung. Ob und wann das nach `main` geht, entscheidet, wer in
+der Sitzung anweist — es braucht keine bestimmte Person (siehe `CLAUDE.md`,
+Regel 1).
 
 **Die Historie ist am 4. August umgeschrieben worden** (`git filter-repo`),
 um die Bildoriginale aus der Vergangenheit zu entfernen: 977 MB → 143 MB, ein
@@ -138,8 +174,9 @@ zum Projekt; eine Kopie liegt im Archivrepo.
 
 **Gearbeitet wird gegen `staging`, nicht gegen `main`** (seit 4. August
 2026): Zweig von `origin/staging`, Änderung, Zweig pushen, nach `staging`
-mergen, `staging` pushen. **`main` wird aus der Sitzung heraus nicht mehr
-angefasst** — was von `staging` nach `main` geht, entscheidet Jan.
+mergen, `staging` pushen. **Ein Push nach `main` braucht keine bestimmte
+Person mehr** — wer in der Sitzung anweist, gibt ihn frei (kurze
+Sicherheitsrückfrage, da schwer rückholbar; siehe `CLAUDE.md`, Regel 1).
 
 Der Grund: `main` löst den Deploy aus. Bis dahin lag jede Änderung nach
 zwei Minuten auf dem Produktivsystem, auch die, die man erst noch ansehen

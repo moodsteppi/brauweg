@@ -15,7 +15,7 @@
 
 import { randomBytes, randomInt } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
-import type { AnyGameModule, GameId, PartyStanding } from '@brauweg/game-api';
+import type { AnyGameModule, BotLevel, GameId, PartyStanding } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
@@ -26,6 +26,7 @@ import {
   isReadyToStart,
   pauseTable,
   resumeTable,
+  tableBotLevel,
   tableWithSeats,
   touch,
 } from '../tables/service.js';
@@ -70,6 +71,13 @@ export interface LiveParty {
   readonly gameId: GameId;
   readonly module: AnyGameModule;
   readonly seats: readonly Seat[];
+  /**
+   * Spielstaerke der Bots dieses Tisches. Beim Start aus den Tischfiltern
+   * uebernommen und danach fest — die Stufe aendert sich nicht mitten in der
+   * Partie. Nur Doppelkopf wertet sie derzeit aus; die uebrigen Module
+   * ignorieren den Parameter.
+   */
+  readonly botLevel: BotLevel;
   /** Sichtbarkeit des Tisches — Clantische werden nicht nach Offline-Zeit aufgeloest. */
   readonly visibility: s.TableVisibility;
   state: unknown;
@@ -266,6 +274,7 @@ export class PartyRuntime {
         accountId: seat.accountId,
         permanentBot: !seat.accountId,
       })),
+      botLevel: tableBotLevel(table.filters),
       visibility: table.visibility,
       state,
       revision: 0,
@@ -337,6 +346,7 @@ export class PartyRuntime {
         accountId: seat.accountId,
         permanentBot: seat.isBot,
       })),
+      botLevel: tableBotLevel(table.filters),
       visibility: table.visibility,
       state,
       revision: snapshot.revision,
@@ -615,7 +625,10 @@ export class PartyRuntime {
     try {
       // Der Bot bekommt ausschliesslich die gefilterte Sicht und kann deshalb
       // bauartbedingt nicht schummeln.
-      const action = party.module.botAction(party.module.viewFor(party.state, seat));
+      const action = party.module.botAction(
+        party.module.viewFor(party.state, seat),
+        party.botLevel,
+      );
       party.state = party.module.act(party.state, seat, action);
       await this.afterAction(party);
     } catch (err) {

@@ -22,6 +22,20 @@
  * Stichen lag. Die Spielersicht zeigt nur den laufenden und den letzten
  * Stich — genau so viel, wie am echten Tisch auch nachzusehen ist.
  *
+ * **Drei Spielstaerken** (`BotLevel`, eine Tischeinstellung):
+ *
+ * - **Anfaenger** legt immer die billigste erlaubte Karte. Kein Schmieren,
+ *   kein Aufheben von Assen, kein Trumpf sparen — die typischen
+ *   Anfaengerfehler bleiben absichtlich drin, damit ein aufgefuellter Tisch
+ *   nicht zu leicht wird. Sinnlos ist keiner seiner Zuege; die billigste
+ *   Karte ist am echten Anfaengertisch der Normalfall.
+ * - **Standard** ist der oben beschriebene Vereinsspieler.
+ * - **Experte** spielt wie Standard, zieht aber bei klarer Trumpfmacht die
+ *   Truempfe (fuehrt einen hohen Trumpf an statt ein Ass zu cashen) und
+ *   **sagt Re/Kontra an, wenn das Blatt es traegt** — nur die Ansage selbst,
+ *   nie die Absagenkette (keine 90/60/…): Eine Absage ist eine Prognose ueber
+ *   den Spielverlauf, die auch ein Heuristik-Bot nicht seriös treffen kann.
+ *
  * Zwei Festlegungen:
  *
  * 1. **Keine Ansagen, aber die Vorbehalte, die die Hand vorgibt.** Re und
@@ -41,6 +55,8 @@
  *    unschlagbarer Mitspieler und ein Einfallstor, sobald jemand die
  *    Bot-Logik in den Client verlagert.
  */
+
+import { type BotLevel, DEFAULT_BOT_LEVEL } from '@brauweg/game-api';
 
 import { type Card, cardKey, cardValue } from './cards.js';
 import { type CardOrder, servingSuit, strength } from './order.js';
@@ -192,9 +208,28 @@ function lowestByValue(cards: readonly Card[], view: PlayerView): Card {
  *    Wird die Farbe leer, kann er spaeter stechen.
  * 3. Nur wer ausschliesslich Trumpf hat, spielt Trumpf an.
  */
-function chooseLead(view: PlayerView): Card {
+function chooseLead(view: PlayerView, level: BotLevel): Card {
   const legal = view.legal;
   const fehl = legal.filter((c) => !istTrumpf(c, view.order));
+
+  /*
+   * Experte mit klarer Trumpfmacht zieht Truempfe: fuehrt seinen hoechsten
+   * sicheren Trumpf an, statt ein Fehl-Ass zu cashen. So verlieren die Gegner
+   * ihre Truempfe, bevor sie damit Augen stechen — der Vorteil eines starken
+   * Blattes wird eingeloest, statt ihn liegen zu lassen. Nur bei echter Staerke
+   * (sechs Truempfe oder beide Kreuz-Damen), sonst entbloesst es die eigene Hand.
+   */
+  if (level === 'experte') {
+    const trumpf = legal.filter((c) => istTrumpf(c, view.order));
+    const kreuzDamen = view.hand.filter((c) => c.suit === 'C' && c.rank === 'Q').length;
+    if (trumpf.length >= 6 || kreuzDamen === 2) {
+      const sicher = trumpf
+        .filter((c) => sicherGenug(c, view.order))
+        .sort((a, b) => schlagenNoch(a, view.order) - schlagenNoch(b, view.order));
+      if (sicher.length > 0) return sicher[0];
+    }
+  }
+
   if (fehl.length === 0) return lowestByValue(legal, view);
 
   const laenge = (suit: string): number =>
@@ -228,13 +263,25 @@ function highestByValue(cards: readonly Card[]): Card {
  * im Solo oder nach geklaerter Hochzeit. Im verdeckten Normalspiel schmiert
  * der Bot nicht, weil er es nicht wissen kann.
  */
-export function chooseCard(view: PlayerView): Card {
+/** Reine Wertsortierung, ohne Trumpf zu schonen — die Anfaengerwahl. */
+function plainLowest(cards: readonly Card[]): Card {
+  return [...cards].sort((a, b) => {
+    const v = cardValue(a) - cardValue(b);
+    return v !== 0 ? v : a.id - b.id;
+  })[0];
+}
+
+export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL): Card {
   const legal = view.legal;
   if (legal.length === 0) throw new Error('Keine legale Karte verfuegbar');
   if (legal.length === 1) return legal[0];
 
+  // Anfaenger: immer die billigste erlaubte Karte, ohne Ruecksicht auf
+  // Position, Partner oder Trumpfvorrat. Absichtlich schwach (siehe Kopf).
+  if (level === 'anfaenger') return plainLowest(legal);
+
   const best = currentBest(view);
-  if (!best) return chooseLead(view);
+  if (!best) return chooseLead(view, level);
 
   const lead = servingSuit(view.currentTrick[0].card, view.order);
   const bekannt = parteien(view);
@@ -304,7 +351,37 @@ export function chooseCard(view: PlayerView): Card {
  *
  * Gibt null zurueck, wenn der Bot gerade nicht am Zug ist.
  */
-export function botAction(view: PlayerView): PartyAction | null {
+/**
+ * Traegt das Blatt eine Re-/Kontra-Ansage? Grob nach Trumpfmacht gewichtet:
+ * die Kreuz-Damen zaehlen am meisten, dann die uebrigen Damen und Buben, die
+ * hohen Karo-Truempfe und die Aesse. Bewusst zurueckhaltend — eine Ansage
+ * verdoppelt den Einsatz, ein zu mutiger Bot verschenkt Partien.
+ */
+function handStrength(view: PlayerView): number {
+  let score = 0;
+  for (const c of view.hand) {
+    if (c.suit === 'C' && c.rank === 'Q') score += 3;
+    else if (c.rank === 'Q') score += 2;
+    else if (c.rank === 'J') score += 1;
+    else if (istTrumpf(c, view.order) && sicherGenug(c, view.order)) score += 1;
+    else if (c.rank === 'A') score += 0.5;
+  }
+  return score;
+}
+
+/**
+ * Kontra verlangt etwas mehr als Re: Der Partner ist unbekannt, seine Staerke
+ * laesst sich nicht einrechnen, also darf nur das eigene Blatt allein tragen.
+ */
+function ansageReif(view: PlayerView): boolean {
+  const schwelle = view.myParty === 're' ? 8 : 9;
+  return handStrength(view) >= schwelle;
+}
+
+export function botAction(
+  view: PlayerView,
+  level: BotLevel = DEFAULT_BOT_LEVEL,
+): PartyAction | null {
   const seat = view.seat;
 
   // Rundenpause: Ein Bot gruebelt nicht ueber der Abrechnung, er tippt
@@ -367,7 +444,15 @@ export function botAction(view: PlayerView): PartyAction | null {
   }
 
   if (view.phase === 'playing') {
-    return { type: 'playCard', seat, cardId: chooseCard(view).id };
+    // Experte sagt Re/Kontra an, wenn das Blatt es traegt. `announceOptions`
+    // traegt die Legalitaet (Ansagefrist, schon gesagt) — der Bot rechnet sie
+    // nicht selbst nach. Nur Stufe 0; die Absagenkette bleibt ihm verschlossen.
+    // Die Ansage verbraucht den Zug nicht: Beim naechsten Botzug faellt 0 aus
+    // announceOptions (schon gesagt), und er legt die Karte.
+    if (level === 'experte' && view.announceOptions.includes(0) && ansageReif(view)) {
+      return { type: 'announce', seat, level: 0 };
+    }
+    return { type: 'playCard', seat, cardId: chooseCard(view, level).id };
   }
 
   return null;

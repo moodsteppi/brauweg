@@ -18,7 +18,7 @@
  *      veraltete Nachrichten.
  */
 
-import type { GameId } from '@brauweg/game-api';
+import type { BotLevel, GameId } from '@brauweg/game-api';
 
 /** Version des Rahmenprotokolls, unabhaengig von der eines Spielmoduls. */
 export const ENVELOPE_VERSION = 1;
@@ -70,6 +70,14 @@ export type ClientMessage =
       readonly type: 'addBot' | 'removeBot';
       readonly tableId: string;
       readonly seat: number;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /** Spielstaerke der Bots dieses Tisches setzen (gilt fuer alle Bots). */
+      readonly type: 'setBotLevel';
+      readonly tableId: string;
+      readonly level: BotLevel;
     }
   | {
       readonly v: number;
@@ -156,6 +164,12 @@ export interface TableMessage {
   readonly visibility: 'public' | 'on_request' | 'club_only';
   /** Vereinstisch bewusst angehalten — Zugtimer und Verfall stehen still. */
   readonly paused: boolean;
+  /**
+   * Eingestellte Bot-Spielstaerke des Tisches. Der Client zeigt sie im
+   * Wartebereich und laesst sie dort aendern (derzeit nur beim Doppelkopf
+   * ausgewertet).
+   */
+  readonly botLevel: BotLevel;
 }
 
 export interface PartyMessage {

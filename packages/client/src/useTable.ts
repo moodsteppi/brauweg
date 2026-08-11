@@ -41,6 +41,7 @@ import { EMOTE_DAUER_MS, EMOTE_PAUSE_MS } from './emotes';
 import { spiele } from './klang';
 import {
   ENVELOPE_VERSION,
+  type BotLevel,
   type GameView,
   type PartyMessage,
   type ServerMessage,
@@ -73,6 +74,8 @@ export interface TableConnection<V = GameView> {
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
+  /** Spielstärke der Bots dieses Tisches setzen (gilt für alle Bots). */
+  setBotLevel(level: BotLevel): void;
   /**
    * Takt-Herzschlag eines Echtzeitspiels absetzen. Ohne Warteschlange: Ein
    * Puls, der erst nach dem Wiederverbinden ankaeme, beschriebe einen Stand,
@@ -544,6 +547,17 @@ export function useTable<V = GameView>(
   const addBot = useCallback((seat: number) => command('addBot', seat), [command]);
   const removeBot = useCallback((seat: number) => command('removeBot', seat), [command]);
 
+  const setBotLevel = useCallback(
+    (level: BotLevel) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'setBotLevel', tableId, level }),
+      );
+    },
+    [tableId, gameId],
+  );
+
   return {
     view,
     party,
@@ -556,6 +570,7 @@ export function useTable<V = GameView>(
     sendEmote,
     addBot,
     removeBot,
+    setBotLevel,
     sendTakt,
     reconnect,
   };

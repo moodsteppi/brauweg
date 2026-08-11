@@ -367,13 +367,13 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
     return wrap(party, round, true);
   },
 
-  botAction(view) {
+  botAction(view, level) {
     if (!view.round) throw new Error('Keine laufende Runde');
     // Der Bot der Engine arbeitet ausschliesslich auf PlayerView und kann
     // deshalb bauartbedingt nicht schummeln. Die Zuschauersicht waere fuer ihn
     // unbrauchbar, also wird sie hier ausgeschlossen.
     if (view.spectator) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
-    const action = engineBotAction(view.round);
+    const action = engineBotAction(view.round, level);
     if (!action) throw new Error('Bot fand keine gueltige Aktion');
     return action;
   },

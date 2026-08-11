@@ -1023,6 +1023,17 @@ export interface PlayerView {
    * nicht in der Runde; sichtbar war sie bisher nirgends.
    */
   readonly pflichtsoloOffen: readonly number[];
+  /**
+   * Gerade legale Ansagestufen der eigenen Partei (Re/Kontra = 0, danach die
+   * Absagenkette). Leer, wenn Ansagen aus sind, die Frist abgelaufen ist oder
+   * die Partei die Stufe schon gesagt hat.
+   *
+   * Wie `allowedVorbehalte`: Die Legalitaet rechnet der Server in `viewFor`,
+   * nicht der Client oder der Bot — beide bilden keine Regel nach (DESIGN.md,
+   * Grundsatz 6). Ein Experte-Bot ohne diese Angabe muesste die Ansagefrist
+   * selbst nachbauen und wuerfe bei einem Fehler den ganzen Tisch.
+   */
+  readonly announceOptions: readonly AbsageLevel[];
   /** Eigene Rolle im Armut-Ablauf und was gerade von mir erwartet wird. */
   readonly armut: {
     readonly role: 'poor' | 'candidate' | 'partner' | null;
@@ -1096,6 +1107,22 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
   const actor = currentActor(state);
   const isMyTurn = actor === seat;
 
+  // Legale Ansagen der eigenen Partei — dieselbe Frist wie in legalActions des
+  // Adapters (mayAnnounce bemisst sie an den eigenen gespielten Karten, nicht
+  // am Zugrecht). Hier gerechnet, damit der Bot sie nur ablesen muss.
+  const announceOptions: AbsageLevel[] = [];
+  if (state.phase === 'playing' && myParty && state.rs.announcements) {
+    const own = state.cardsPlayed[seat] ?? 0;
+    const made = myParty === 're' ? state.announcements.re : state.announcements.kontra;
+    const absage =
+      myParty === 're' ? state.announcements.reAbsage : state.announcements.kontraAbsage;
+    if (!made && mayAnnounce(0, own)) announceOptions.push(0);
+    const next = (absage + 1) as AbsageLevel;
+    if (made && state.rs.absagen && next <= 4 && mayAnnounce(next, own)) {
+      announceOptions.push(next);
+    }
+  }
+
   const a = state.armut;
   let role: 'poor' | 'candidate' | 'partner' | null = null;
   let awaiting: 'decide' | 'handover' | 'return' | null = null;
@@ -1168,6 +1195,7 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     pflichtsoloOffen: state.rs.pflichtsolo
       ? state.seats.filter((s) => !state.soloPlayed.includes(s))
       : [],
+    announceOptions,
     armut: { role, awaiting, handoverSize },
   };
 }

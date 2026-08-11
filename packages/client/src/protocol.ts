@@ -414,6 +414,9 @@ export interface SeatInfo {
   avatarUrl: string | null;
 }
 
+/** Spielstärke der Bots eines Tisches. Spiegelbild von game-api BotLevel. */
+export type BotLevel = 'anfaenger' | 'standard' | 'experte';
+
 export interface TableMessage {
   v: number;
   game: string;
@@ -426,6 +429,8 @@ export interface TableMessage {
   visibility: 'public' | 'on_request' | 'club_only';
   /** Clantisch bewusst angehalten. */
   paused: boolean;
+  /** Eingestellte Bot-Spielstärke (derzeit nur beim Doppelkopf ausgewertet). */
+  botLevel: BotLevel;
 }
 
 export interface PartyMessage {

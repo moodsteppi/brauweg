@@ -12,12 +12,20 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { Server } from 'node:http';
 import { z } from 'zod';
 
+import type { BotLevel } from '@brauweg/game-api';
+
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { AppError, forbidden } from '../errors.js';
 import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
-import { isReadyToStart, setSeatBot, tableWithSeats } from '../tables/service.js';
+import {
+  isReadyToStart,
+  setSeatBot,
+  setTableBotLevel,
+  tableBotLevel,
+  tableWithSeats,
+} from '../tables/service.js';
 import { requireModule } from '../games/registry.js';
 import { requireClubMember } from '../clubs/service.js';
 import {
@@ -115,6 +123,13 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.enum(['addBot', 'removeBot']),
     tableId: z.string().uuid(),
     seat: z.number().int().min(0).max(7),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('setBotLevel'),
+    tableId: z.string().uuid(),
+    level: z.enum(['anfaenger', 'standard', 'experte']),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -440,6 +455,9 @@ export class Gateway {
         case 'removeBot':
           await this.setBot(connection, message.tableId, message.seat, false);
           break;
+        case 'setBotLevel':
+          await this.setBotLevel(connection, message.tableId, message.level);
+          break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
       }
@@ -672,6 +690,19 @@ export class Gateway {
     await this.broadcast(tableId);
   }
 
+  /**
+   * Bot-Spielstaerke des Tisches setzen. Gilt fuer alle Bots des Tisches; der
+   * anschliessende Rundruf traegt die neue Stufe an alle im Wartebereich.
+   */
+  private async setBotLevel(
+    connection: Connection,
+    tableId: string,
+    level: BotLevel,
+  ): Promise<void> {
+    await setTableBotLevel(this.db, tableId, level, connection.accountId);
+    await this.broadcast(tableId);
+  }
+
   private async broadcast(tableId: string, nurSicht = false): Promise<void> {
     const room = this.byTable.get(tableId);
     if (!room || room.size === 0) {
@@ -801,6 +832,7 @@ export class Gateway {
       rounds: table.maxRounds,
       visibility: table.visibility,
       paused: table.pausedAt !== null || (party?.paused ?? false),
+      botLevel: tableBotLevel(table.filters),
     };
 
     /**

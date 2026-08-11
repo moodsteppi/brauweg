@@ -8,7 +8,7 @@
  */
 
 import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
-import type { GameId } from '@brauweg/game-api';
+import { type BotLevel, DEFAULT_BOT_LEVEL, type GameId } from '@brauweg/game-api';
 
 import { requireClubMember } from '../clubs/service.js';
 import type { Db } from '../db/types.js';
@@ -461,6 +461,46 @@ export async function setSeatBot(
     .update(s.tableSeat)
     .set({ isBot: wantBot })
     .where(and(eq(s.tableSeat.tableId, tableId), eq(s.tableSeat.seatIndex, seatIndex)));
+  await touch(db, tableId);
+}
+
+/** Gültige Bot-Stufen — Wache gegen Fremdwerte aus der Leitung. */
+const BOT_LEVELS: readonly BotLevel[] = ['anfaenger', 'standard', 'experte'];
+
+/**
+ * Bot-Stufe eines Tisches aus seinen Filtern lesen.
+ *
+ * Die Stufe liegt bewusst im `filters`-jsonb und nicht in einer eigenen Spalte:
+ * Sie ist eine Tischeinstellung wie `fillWithBots`, keine feste Verdrahtung im
+ * Server — so kostet sie keine Migration. Fehlt sie (alte Tische), gilt die
+ * Vorgabe.
+ */
+export function tableBotLevel(filters: unknown): BotLevel {
+  const lvl = (filters as { botLevel?: unknown } | null)?.botLevel;
+  return BOT_LEVELS.includes(lvl as BotLevel) ? (lvl as BotLevel) : DEFAULT_BOT_LEVEL;
+}
+
+/**
+ * Setzt die Bot-Stufe des Tisches. Wie beim Bot-Setzen: nur wer selbst am
+ * Tisch sitzt, darf sie aendern, und nur solange noch keine Partie laeuft — die
+ * Stufe wird beim Start in die Partie uebernommen und aendert sich danach nicht
+ * mehr mitten im Spiel.
+ */
+export async function setTableBotLevel(
+  db: Db,
+  tableId: string,
+  level: BotLevel,
+  byAccountId: string,
+): Promise<void> {
+  if (!BOT_LEVELS.includes(level)) throw badRequest('botLevelUnknown');
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+
+  // Filter zusammenfuehren, nicht ersetzen: `fillWithBots` und alles andere
+  // bleiben stehen.
+  const filters = { ...(table.filters as Record<string, unknown> | null), botLevel: level };
+  await db.update(s.gameTable).set({ filters }).where(eq(s.gameTable.id, tableId));
   await touch(db, tableId);
 }
 

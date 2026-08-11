@@ -70,7 +70,7 @@ export function WizardTable({
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
-  const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot } =
+  const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot, setBotLevel } =
     useTable<WizardGameView>(tableId, 'wizard');
 
   /** Welche Zurufe mir gehoeren — dieselbe Frage wie am Doppelkopftisch. */
@@ -333,6 +333,7 @@ export function WizardTable({
         spielerName={spielerName}
         addBot={addBot}
         removeBot={removeBot}
+        setBotLevel={setBotLevel}
         onLeave={onLeave}
       />
     );
