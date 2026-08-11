@@ -60,6 +60,7 @@ import { type BotLevel, DEFAULT_BOT_LEVEL } from '@brauweg/game-api';
 
 import { type Card, cardKey, cardValue } from './cards.js';
 import { type CardOrder, servingSuit, strength } from './order.js';
+import { resolveTrick } from './trick.js';
 import type { PlayerView, RoundAction } from './round.js';
 import type { PartyAction } from './party.js';
 import type { Party } from './scoring.js';
@@ -144,18 +145,50 @@ function augenImStich(view: PlayerView): number {
   return view.currentTrick.reduce((s, p) => s + cardValue(p.card), 0);
 }
 
-/** Bewertet, wie stark eine Karte im aktuellen Stich waere. */
-function currentBest(
-  view: PlayerView,
-): { strength: number; seat: number; card: Card } | null {
+/**
+ * Wer haelt den Stich gerade — nach der ECHTEN Engine-Auswertung.
+ *
+ * Frueher rechnete der Bot den Gewinner selbst aus reinem Rang (`strength`).
+ * Das ist falsch, sobald die Reihenfolge mitentscheidet: Bei aktiver Regel
+ * „zweite Dulle sticht erste" schlaegt die zweite Herz-Zehn die erste, obwohl
+ * beide denselben Rang haben. `resolveTrick` ist dieselbe Funktion, die auch
+ * die Runde benutzt — so bewertet der Bot exakt so, wie tatsaechlich gestochen
+ * wird (Schweine inbegriffen, weil sie in `order` stecken).
+ */
+function aktuellerGewinner(view: PlayerView): { seat: number; card: Card } | null {
   if (view.currentTrick.length === 0) return null;
-  const lead = servingSuit(view.currentTrick[0].card, view.order);
-  let best = { strength: -Infinity, seat: -1, card: view.currentTrick[0].card };
-  for (const p of view.currentTrick) {
-    const s = strength(p.card, view.order, lead);
-    if (s > best.strength) best = { strength: s, seat: p.seat, card: p.card };
-  }
-  return best;
+  const res = resolveTrick([...view.currentTrick], view.order, {
+    secondDulleBeatsFirst: view.secondDulleBeatsFirst,
+  });
+  const gewinn = view.currentTrick[res.winningIndex]!;
+  return { seat: gewinn.seat, card: gewinn.card };
+}
+
+/** Wuerde diese Karte den Stich gewinnen, wenn ich sie jetzt lege? */
+function wuerdeGewinnen(view: PlayerView, card: Card): boolean {
+  const res = resolveTrick([...view.currentTrick, { card, seat: view.seat }], view.order, {
+    secondDulleBeatsFirst: view.secondDulleBeatsFirst,
+  });
+  return res.winnerSeat === view.seat;
+}
+
+/**
+ * Abwurf, wenn der Stich an den Gegner geht: so wenig Augen wie moeglich
+ * hergeben, ohne dabei einen hohen Trumpf zu verschenken.
+ *
+ * Die alte `lowestByValue` warf Fehl VOR Trumpf ab — und schob damit eine
+ * Fehl-Zehn (zehn Augen!) oder gar den Fuchs dem Gegner zu, statt einer
+ * wertlosen Karo-Neun. Hier zaehlt zuerst der Augenwert: die billigste Karte
+ * geht weg, bei Gleichstand der am leichtesten zu stechende (schwaechste)
+ * Trumpf — so bleibt das teure Blatt beisammen und der Gegner bekommt nichts
+ * geschenkt.
+ */
+function abwurfGegner(view: PlayerView, cards: readonly Card[]): Card {
+  return [...cards].sort((a, b) => {
+    const v = cardValue(a) - cardValue(b);
+    if (v !== 0) return v;
+    return schlagenNoch(b, view.order) - schlagenNoch(a, view.order);
+  })[0]!;
 }
 
 /**
@@ -280,7 +313,7 @@ export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL
   // Position, Partner oder Trumpfvorrat. Absichtlich schwach (siehe Kopf).
   if (level === 'anfaenger') return plainLowest(legal);
 
-  const best = currentBest(view);
+  const best = aktuellerGewinner(view);
   if (!best) return chooseLead(view, level);
 
   const lead = servingSuit(view.currentTrick[0].card, view.order);
@@ -293,17 +326,21 @@ export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL
     best.seat !== view.seat;
 
   /*
-   * Der Partner haelt den Stich: Augen drauflegen — aber nur, wenn er ihn
-   * voraussichtlich behaelt. Unter eine Karo-Neun des Partners schmiert
-   * niemand seine Zehn, wenn noch zwei Gegner kommen.
+   * Der Partner haelt den Stich: Augen drauflegen — aber nur mit einer Karte,
+   * die ihn NICHT selbst uebersticht. Frueher nahm der Bot schlicht die
+   * wertvollste Karte; die Dulle ist zehn Augen wert UND der hoechste Trumpf,
+   * also stach der „Schmier" den eigenen Partner. Geschmiert wird nur, wenn er
+   * den Stich voraussichtlich behaelt; sonst nichts Teures hergeben.
    */
   if (partnerLeads) {
     const sicher = nachMir(view) === 0 || haeltSicher(best.card, view.order, lead);
-    return sicher ? highestByValue(legal) : lowestByValue(legal, view);
+    if (!sicher) return abwurfGegner(view, legal);
+    const nichtUeber = legal.filter((c) => !wuerdeGewinnen(view, c));
+    return highestByValue(nichtUeber.length > 0 ? nichtUeber : legal);
   }
 
-  const winning = legal.filter((c) => strength(c, view.order, lead) > best.strength);
-  if (winning.length === 0) return lowestByValue(legal, view);
+  const winning = legal.filter((c) => wuerdeGewinnen(view, c));
+  if (winning.length === 0) return abwurfGegner(view, legal);
 
   const knapp = [...winning].sort((a, b) => {
     const s = strength(a, view.order, lead) - strength(b, view.order, lead);
@@ -334,9 +371,10 @@ export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL
     .sort((a, b) => cardValue(a) - cardValue(b))[0];
   if (sicher && augenImStich(view) + cardValue(sicher) >= 20) return sicher;
 
-  // Sonst ziehen lassen und billig abwerfen.
+  // Sonst ziehen lassen und so billig wie moeglich abwerfen — der Stich geht
+  // an den Gegner, also keine Augen und keinen hohen Trumpf hergeben.
   const verzicht = legal.filter((c) => !winning.includes(c));
-  if (verzicht.length > 0) return lowestByValue(verzicht, view);
+  if (verzicht.length > 0) return abwurfGegner(view, verzicht);
 
   /*
    * Es geht nicht anders: Alles, was er legen darf, gewinnt den Stich.

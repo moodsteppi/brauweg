@@ -1034,6 +1034,13 @@ export interface PlayerView {
    * selbst nachbauen und wuerfe bei einem Fehler den ganzen Tisch.
    */
   readonly announceOptions: readonly AbsageLevel[];
+  /**
+   * Ob die Hausregel „zweite Dulle sticht erste" aktiv ist. Der Bot braucht
+   * das, um eine gelegte Dulle nicht faelschlich fuer unschlagbar zu halten und
+   * um eine gegnerische Dulle mit der eigenen zweiten stechen zu koennen — die
+   * Stichauswertung haengt sonst von der Reihenfolge ab, nicht nur vom Rang.
+   */
+  readonly secondDulleBeatsFirst: boolean;
   /** Eigene Rolle im Armut-Ablauf und was gerade von mir erwartet wird. */
   readonly armut: {
     readonly role: 'poor' | 'candidate' | 'partner' | null;
@@ -1196,6 +1203,7 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
       ? state.seats.filter((s) => !state.soloPlayed.includes(s))
       : [],
     announceOptions,
+    secondDulleBeatsFirst: state.rs.secondDulleBeatsFirst,
     armut: { role, awaiting, handoverSize },
   };
 }
