@@ -413,11 +413,20 @@ function resolveVorbehaltPhase(state: RoundState): RoundState {
 
     case 'hochzeit': {
       const gameType: GameType = { kind: 'hochzeit' };
+      // Schweinchen wirken auf die ganze Runde, nicht nur bei der Braut. Den
+      // TATSAECHLICHEN Halter suchen (wie in startNormalGame) — sonst bleibt
+      // das Karo-Ass eines Nicht-Braut-Halters ein niedriger Trumpf, obwohl
+      // „Schweine" angezeigt wird: die Faeuste stechen dann nicht, die Anzeige
+      // verspricht eine Wirkung, die es nicht gibt. Die Hochzeit nutzt die
+      // normale Trumpfordnung, deshalb ist state.schweinchen (bei Rundenbeginn
+      // im Normalspiel erkannt) hier gueltig.
+      const holder = state.seats.find((s) => state.schweinchen[s]);
+      const ctx = holder !== undefined ? schweinCtx(state, holder, gameType) : {};
       return mitRundenbeginnPflichten({
         ...state,
         phase: 'playing',
         gameType,
-        order: buildOrder(gameType, state.rs, schweinCtx(state, winner.seat, gameType)),
+        order: buildOrder(gameType, state.rs, ctx),
         reSeats: [winner.seat],
         hochzeitBride: winner.seat,
         hochzeitResolved: false,

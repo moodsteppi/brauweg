@@ -368,6 +368,50 @@ test('Pflichtansage: ohne den Ausloeser bleibt der Halter geheim', () => {
   }
 });
 
+/**
+ * Sucht einen Seed mit Hochzeit, bei der ein ANDERER Sitz als die Braut die
+ * Schweine haelt, und bringt die Runde in die Spielphase.
+ */
+function hochzeitMitFremdenSchweinen() {
+  const rs = makeRuleSet({
+    schweinchen: true,
+    hochzeit: true,
+    armut: false,
+    pflichtsolo: false,
+    pflichtansage: false,
+    pflichtansageSchweine: false,
+  });
+  for (let seed = 0; seed < 30000; seed++) {
+    let state = createRound(rs, SEATS, 0, seed);
+    const halter = SEATS.find((s) => state.schweinchen[s]);
+    if (halter === undefined) continue;
+    let braut = -1;
+    while (state.phase === 'vorbehalt') {
+      const seat = currentActor(state) as number;
+      if (viewFor(state, seat).allowedVorbehalte.includes('hochzeit')) {
+        braut = seat;
+        state = apply(state, { type: 'vorbehalt', seat, kind: 'hochzeit' });
+      } else {
+        state = apply(state, { type: 'vorbehalt', seat, kind: null });
+      }
+    }
+    if (state.phase === 'playing' && state.gameType.kind === 'hochzeit' && braut !== halter) {
+      return { state, halter, braut };
+    }
+  }
+  throw new Error('Kein Seed mit Hochzeit + fremden Schweinen gefunden');
+}
+
+test('Schweine wirken auch in der Hochzeit, wenn nicht die Braut sie haelt', () => {
+  const { state, halter, braut } = hochzeitMitFremdenSchweinen();
+  assert.notEqual(halter, braut, 'Der Halter darf nicht die Braut sein');
+  // Das Karo-Ass des Halters steht als Schwein ganz oben — ueber der Dulle.
+  // Vorher baute die Hochzeit die Ordnung nur mit dem Schwein-Kontext der
+  // Braut, ein fremder Halter bekam seine Faeuste nicht erhoeht.
+  assert.equal(state.order.trumps[0], 'DA', 'Karo-Ass (Schwein) muss oben stehen');
+  assert.equal(state.order.trumps[1], 'HT', 'darunter die Dulle');
+});
+
 test('Pflichtansage: die Schweine-Pflicht sagt Re oder Kontra an', () => {
   let state = rundeMitSchweinen();
   const halter = state.pendingPflichtansage!.seat;
