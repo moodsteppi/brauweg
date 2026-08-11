@@ -424,7 +424,23 @@ function chooseLeadGenie(view: PlayerView): Card {
   const g = gesehen(view);
   const sicher = view.legal.filter((c) => haeltGarantiert(view, c, g));
   if (sicher.length > 0) return highestByValue(sicher);
-  return chooseLead(view, 'experte');
+
+  // Kein garantierter Sieger. Bei Trumpfmacht wird gezogen — aber kein teurer
+  // Trumpf (Dulle/Fuchs) ins offene Messer: Steht die zweite Dulle noch aus,
+  // ueberstchit sie meine, und zehn Augen wandern zum Gegner. Also mit dem
+  // staerksten UNBEDENKLICHEN Trumpf ziehen (billig genug, oder nachweislich
+  // nicht mehr schlagbar).
+  const trumpf = view.legal.filter((c) => istTrumpf(c, view.order));
+  if (trumpf.length >= 5) {
+    const unbedenklich = trumpf.filter(
+      (c) => cardValue(c) < 10 || offeneHoehereTruempfe(view, c, g) === 0,
+    );
+    const zug = unbedenklich.length > 0 ? unbedenklich : trumpf;
+    return [...zug].sort(
+      (a, b) => schlagenNoch(a, view.order) - schlagenNoch(b, view.order),
+    )[0]!;
+  }
+  return chooseLead(view, 'standard');
 }
 
 /**
@@ -667,6 +683,11 @@ export function botAction(
     // announceOptions (schon gesagt), und er legt die Karte.
     if (
       (level === 'experte' || level === 'genie') &&
+      // Nicht ansagen, solange eine Pflichtansage die Ansage hochheben koennte:
+      // Die Pflicht erzwingt Re/Kontra ohnehin, und eine freiwillige davor macht
+      // aus dem erzwungenen Re ein Keine 90. Bleibt aber der erste Stich unter
+      // der Schwelle, ist die Gefahr vorbei und er darf im zweiten noch ansagen.
+      !view.pflichtansageDroht &&
       view.announceOptions.includes(0) &&
       ansageReif(view)
     ) {
@@ -716,7 +737,10 @@ function chooseVoluntarySolo(view: PlayerView): (typeof view.soloOptions)[number
     const order = vorschau[opt];
     if (!order || order.trumps.length === 0) continue;
     const { trumps, hoch } = soloBlattStaerke(view, order);
-    const stark = trumps >= 9 || (trumps >= 8 && hoch >= 5);
+    // Bewusst hohe Schwelle: Ein freiwilliges Solo lohnt nur mit einem Blatt,
+    // das allein gegen drei traegt. Zu locker, und der Tisch spielt gefuehlt
+    // jede Runde ein Solo.
+    const stark = trumps >= 10 || (trumps >= 9 && hoch >= 5);
     if (!stark) continue;
     if (!best || hoch > best.hoch || (hoch === best.hoch && trumps > best.trumps)) {
       best = { opt, trumps, hoch };

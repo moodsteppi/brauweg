@@ -807,6 +807,36 @@ function partyOf(state: RoundState, seat: number): Party {
   return state.reSeats.includes(seat) ? 're' : 'kontra';
 }
 
+/**
+ * Kann noch eine Pflichtansage erzwungen werden, die eine freiwillige Ansage
+ * hochhoebe? Spiegelt die Trigger-Bedingungen aus der Stichauswertung, damit der
+ * Bot nicht selbst Regellogik nachbaut.
+ */
+function pflichtansageDroht(state: RoundState): boolean {
+  if (!state.rs.pflichtansage) return false;
+  // Etwas steht schon an bzw. liegt in der Warteschlange (Rundenbeginn-Pflichten).
+  if (state.pendingPflichtansage !== null) return true;
+  if (state.pflichtansageWarteschlange.length > 0) return true;
+  // Bezugsstich noch offen: Der erste Stich (bzw. bei Hochzeit der
+  // Klaerungsstich) kann noch fett werden.
+  if (state.gameType.kind === 'hochzeit') {
+    if (!state.hochzeitResolved) return true;
+  } else if (state.tricks.length < 1) {
+    return true;
+  }
+  // Folgestich noch offen: nur wenn im Bezugsstich wirklich angesagt wurde
+  // (Kette) und der Stich danach noch nicht durch ist.
+  if (
+    state.rs.pflichtansageFolge &&
+    state.pflichtansageKette &&
+    state.pflichtansageRefTrick !== null &&
+    state.tricks.length <= state.pflichtansageRefTrick
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function applyAnnounce(
   state: RoundState,
   a: Extract<RoundAction, { type: 'announce' }>,
@@ -1057,6 +1087,17 @@ export interface PlayerView {
    * Stichauswertung haengt sonst von der Reihenfolge ab, nicht nur vom Rang.
    */
   readonly secondDulleBeatsFirst: boolean;
+  /**
+   * Kann JETZT noch eine Pflichtansage erzwungen werden, die eine freiwillige
+   * Re/Kontra-Ansage um eine Stufe hochhebt (aus Re wird Keine 90)?
+   *
+   * Der Bot sagt freiwillig erst an, wenn das false ist: solange der
+   * Bezugsstich noch laufen kann (er koennte fett werden) oder ein Folgestich
+   * droht, wartet er; bleibt der erste Stich unter der Schwelle, ist die Gefahr
+   * vorbei und er darf im zweiten Stich noch ansagen. Der Server rechnet das,
+   * nicht der Bot — die Pflichtansage-Kette ist Regellogik.
+   */
+  readonly pflichtansageDroht: boolean;
   /** Eigene Rolle im Armut-Ablauf und was gerade von mir erwartet wird. */
   readonly armut: {
     readonly role: 'poor' | 'candidate' | 'partner' | null;
@@ -1221,6 +1262,7 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
       : [],
     announceOptions,
     secondDulleBeatsFirst: state.rs.secondDulleBeatsFirst,
+    pflichtansageDroht: pflichtansageDroht(state),
     armut: { role, awaiting, handoverSize },
   };
 }
