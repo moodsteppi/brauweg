@@ -2388,7 +2388,19 @@ function Freunde({
   const anzahl = lists ? lists.friends.length : 0;
 
   return (
-    <Tafel titel="Freunde" zusatz={lists ? `${anzahl}` : '…'} weit>
+    /*
+      Kein `weit`.
+
+      `weit` heisst "fuell den Rest der Hoehe und roll innen" und stimmt nur,
+      solange die Tafel den Bildschirm allein hat — so stand sie frueher im
+      eigenen Freunde-Tab. Im Profil ist sie eine von sechs Tafeln in einer
+      Spalte, die selbst schon rollt: Dort bedeutet `flex: 1 1 auto` mit
+      `min-height: 0` das Gegenteil, naemlich "darfst auf null schrumpfen".
+      Genau das tat sie — 36 px hoch, gerade die beiden Rahmenhaelften, Liste
+      und Suchfeld unsichtbar, und weil der Tafelrahmen ueberstehen darf
+      (`overflow: visible`), schob sich die Konto-Tafel sichtbar darueber.
+    */
+    <Tafel titel="Freunde" zusatz={lists ? `${anzahl}` : '…'}>
       {/* Anfragen zuoberst: sie verlangen eine Antwort. */}
       {lists?.incoming.map((player) => (
         <div className="hub-freund is-anfrage" key={player.id}>

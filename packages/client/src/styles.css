@@ -2276,14 +2276,20 @@ td {
   line-height: 1.1;
 }
 
-/* Statistik: Hinweis zu den zwei Zahlenwelten. */
+/*
+  Statistik: Hinweis zu den zwei Zahlenwelten.
+
+  Kein eigener Kasten. Ein Hinweis IN einer Tafel bekommt in diesem Haus
+  keinen zweiten Rahmen — der Shop macht es seit jeher so (`.shop-hinweis`),
+  und im Profil sass stattdessen ein flacher Kasten mit runden Ecken mitten
+  im gemalten Holz. Zwei Bauformen fuer dieselbe Art Satz, und die juengere
+  sah aus wie aus einer anderen App.
+*/
 .hub-statistik-hinweis {
-  margin: 0.4rem 0 0;
-  padding: 0.35rem 0.4rem;
-  border-radius: 0.45rem;
-  background: rgba(12, 8, 3, 0.35);
-  font-size: 0.62rem;
-  line-height: 1.3;
+  margin: 0.55rem 0 0;
+  padding: 0.3rem 0.15rem 0.05rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
   color: rgba(255, 240, 210, 0.8);
 }
 
@@ -3288,10 +3294,22 @@ td {
   text-transform: uppercase;
   color: rgba(255, 240, 210, 0.92);
 }
+/*
+  Abstand zwischen den vier Zahlkacheln — und zum Pokalfeld darueber wie zu
+  den Spielzeilen darunter.
+
+  0,4 rem stammen aus der Zeit der flachen Kacheln mit 1 px Rand. Jede Kachel
+  traegt heute einen gemalten Rahmen von 13 px; bei so wenig Luft stossen zwei
+  davon zusammen und ergeben einen breiten Streifen, der zu keiner der beiden
+  Kacheln mehr gehoert. Dasselbe galt nach oben und unten, wo gar kein Abstand
+  stand: Pokalfeld, Raster und Spielzeilen wurden zu einem einzigen Stapel
+  Bretter mit Naehten darin.
+*/
 .hub-stat-raster {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
+  gap: 0.55rem;
+  margin: 0.55rem 0;
 }
 .hub-stat-kachel {
   display: flex;
@@ -3367,14 +3385,14 @@ td {
   height: 0.9rem;
   object-fit: contain;
 }
-.hub-stat-leer {
-  margin: 0.15rem 0;
-  text-align: center;
+/* Je Spiel eine gemalte Zeile — zwischen zwei Zeilen gehoert Luft, sonst
+   verschmelzen die Rahmen zum Lattenzaun (siehe `.hub-stat-raster`). */
+.hub-stat-spiel + .hub-stat-spiel {
+  margin-top: 0.4rem;
 }
-.front-profil--a .hub-statistik-hinweis {
-  background: rgba(12, 32, 70, 0.45);
-  border: 1px solid rgba(255, 220, 120, 0.28);
-  color: rgba(230, 242, 255, 0.88);
+.hub-stat-leer {
+  margin: 0.55rem 0;
+  text-align: center;
 }
 .hub-knopfreihe--a {
   margin-top: 0.1rem;
@@ -5359,14 +5377,35 @@ main.auth > .muted {
   filter: saturate(0.5) brightness(0.75);
 }
 
-/* Eingabefelder: die eingelassene Rille. */
+/* Eingabefelder: die eingelassene Rille. Die Spielersuche im Profil stand
+   hier nicht mit drin und blieb als einziges Feld ein flacher Kasten mit
+   runden Ecken — direkt neben der gemalten Clan-Suche, die dasselbe tut. */
 .clan-feld input,
+.hub-suche input,
 .hub-loeschen input {
   background: none;
   border: 12px solid transparent;
   border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
   border-radius: 0;
   padding: 0.15rem 0.2rem;
+}
+
+/* Der Knopf neben der Spielersuche. Er wird hier mitgemalt und nicht ueber
+   `.hub-mini` allgemein: derselbe Chip sitzt auch im Clan und im
+   Kleiderschrank, und dort ist er kein Nachbar einer gemalten Rille. Neben
+   einer aber sieht ein flacher Kasten aus wie ein vergessenes Feld.
+   `.hub-suche` gibt es nur einmal — in der Freundes-Tafel im Profil. */
+.hub-suche .hub-mini {
+  background: none;
+  border: 10px solid transparent;
+  border-image: url(/hub/menue-knopf-holz.webp) 40 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.1rem 0.35rem;
+  color: #fff7e2;
+}
+.hub-suche .hub-mini:active {
+  border-image-source: url(/hub/menue-knopf-holz-gedrueckt.webp);
+  transform: translateY(1px);
 }
 
 /* Der Umschalter mit zwei Seiten. */
@@ -8752,11 +8791,20 @@ main.auth > .muted {
   margin: 0 0 0.3rem;
 }
 
-/* Der Erfahrungsbalken: eingelassene Rinne, darin warmes Gold. Die Fuellung
-   wird von links beschnitten, deshalb darf sie keinen Verlauf in die Breite
-   haben - sonst sieht ein halb voller Balken kaputt aus. */
+/*
+  Der Erfahrungsbalken: eingelassene Rinne, darin warmes Gold. Die Fuellung
+  wird von links beschnitten, deshalb darf sie keinen Verlauf in die Breite
+  haben - sonst sieht ein halb voller Balken kaputt aus.
+
+  Die Hoehe muss die Rinne TRAGEN, nicht nur so hoch sein wie sie.
+  0,85 rem sind 13,6 px; die gemalte Rinne bringt 7 px Rand oben und unten
+  mit, und bei `box-sizing: border-box` blieb damit exakt 0 px Innenraum. Der
+  Balken war also nie leer, sondern hoehenlos: Die goldene Fuellung wurde
+  gemessen 0 px hoch, bei jedem Stand, auch bei 90 %. Sichtbar waren nur die
+  zwei Raender der Rinne, die wie ein doppelter Strich aussahen.
+*/
 .stufe-balken {
-  height: 0.85rem;
+  height: 1.5rem;
   border-radius: 0;
   background: none;
   border: 7px solid transparent;
@@ -8764,11 +8812,38 @@ main.auth > .muted {
   overflow: hidden;
   padding: 0;
 }
+/*
+  Eine Kachel ueber die ganze Breite statt gekachelter Wiederholung.
+
+  Das Bild ist 512 x 64 und hat an beiden Enden eine halbdurchsichtige
+  Randspalte. Bei `repeat-x` stossen zwei davon aufeinander und ergeben alle
+  paar Zentimeter einen dunklen Strich - der Balken sah aus wie in Stuecke
+  zerlegt. `100vw` ist breiter als die Rinne je werden kann, also faellt keine
+  zweite Kachel an; die Fuellung wird weiterhin allein ueber die Breite des
+  Elements beschnitten, und quer durchs Bild laeuft ohnehin kein Verlauf.
+*/
 .stufe-balken > span {
   border-radius: 0;
-  background: url(/hub/menue-balken-fuellung.webp) left center / auto 100% repeat-x;
+  background: url(/hub/menue-balken-fuellung.webp) left center / 100vw 100% no-repeat;
   /* Bei 0 % bleibt sonst ein Pixel Gold stehen und sieht aus wie ein Fehler. */
   min-width: 0;
+}
+
+/*
+  Der Stufenblock im Profil: eingelassenes Holzfeld statt flachem Kasten.
+
+  Er war der letzte Abschnitt im Profil-Tab, der noch aus runden Ecken und
+  einem duennen Strich bestand - und er steht als Erstes auf dem Bildschirm,
+  direkt ueber dem Messingschild. Nur im Profil: In der Stufenleiter steht
+  derselbe Block auf einem Blatt, nicht auf gemaltem Holz.
+*/
+.front-profil--a .stufe-block {
+  background: none;
+  border: 14px solid transparent;
+  border-image: url(/hub/menue-feld.webp) 32 fill / 1 / 0 stretch;
+  border-radius: 0;
+  padding: 0.15rem 0.25rem;
+  margin: 0;
 }
 
 /* Das Namensschild: Messing auf Holz, vier Schrauben. Die linken 140 px im
