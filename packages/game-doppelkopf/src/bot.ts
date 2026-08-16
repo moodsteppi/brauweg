@@ -142,6 +142,20 @@ function nachMir(view: PlayerView): number {
   return Math.max(0, sitzzahl(view) - 1 - view.currentTrick.length);
 }
 
+/**
+ * Steht dieser Sitz allein gegen den Rest?
+ *
+ * Beim Solo ist der Solist die ganze Re-Partei. Fuer ihn aendert sich das
+ * Vorzeichen jeder Abwaegung: Es gibt keinen Partner, der einen Stich noch
+ * abraeumen oder ihm Augen schmieren koennte. Was er ziehen laesst, ist weg.
+ */
+function spieltAllein(view: PlayerView): boolean {
+  // Fragezeichen wie in parteien(): Der Bot laeuft im Server, und eine
+  // unvollstaendige Sicht darf hier keinen Wurf ausloesen — der Tisch bliebe
+  // sonst stehen.
+  return view.gameType?.kind === 'solo' && view.myParty === 're';
+}
+
 /** Augen, die schon im Stich liegen. */
 function augenImStich(view: PlayerView): number {
   return view.currentTrick.reduce((s, p) => s + cardValue(p.card), 0);
@@ -416,6 +430,26 @@ function knappste(cards: readonly Card[], view: PlayerView): Card {
 }
 
 /**
+ * Schmieren, wenn der Partner den Stich haelt.
+ *
+ * Der Normalfall ist die wertvollste Karte, die ihn nicht selbst uebersticht.
+ * Der Sonderfall stand vier Runden lang am Tisch: Fuehrt der Partner mit einem
+ * NIEDRIGEN Trumpf an - der Karo-Koenig ist der zweitschwaechste ueberhaupt -
+ * und muss man Trumpf bedienen, dann schlaegt JEDE erlaubte Karte ihn.
+ * `nichtUeber` ist dann leer, und die alte Rueckfallzeile nahm die wertvollste
+ * Karte des Blattes: die Kreuz-Dame, obwohl ein Bube denselben Stich holt.
+ *
+ * Ueberstochen wird der Partner in dem Fall ohnehin, der Stich bleibt also in
+ * der Partei. Es geht nur noch darum, moeglichst wenig dafuer auszugeben —
+ * also die knappste Karte, nicht die teuerste.
+ */
+function schmieren(view: PlayerView, legal: readonly Card[]): Card {
+  const nichtUeber = legal.filter((c) => !wuerdeGewinnen(view, c));
+  if (nichtUeber.length > 0) return highestByValue(nichtUeber);
+  return knappste(legal, view);
+}
+
+/**
  * Genie-Ausspiel: die wertvollste Karte cashen, die garantiert den Stich holt.
  * Gibt es keine, das bewaehrte Vereinsspieler-Ausspiel (Truempfe ziehen bei
  * Staerke, sonst Fehl-Ass bzw. kurze Farbe).
@@ -464,8 +498,7 @@ function chooseCardGenie(view: PlayerView): Card {
 
   if (partnerLeads) {
     if (!haeltGarantiert(view, best.card, g)) return abwurfGegner(view, legal);
-    const nichtUeber = legal.filter((c) => !wuerdeGewinnen(view, c));
-    return highestByValue(nichtUeber.length > 0 ? nichtUeber : legal);
+    return schmieren(view, legal);
   }
 
   const winning = legal.filter((c) => wuerdeGewinnen(view, c));
@@ -477,8 +510,16 @@ function chooseCardGenie(view: PlayerView): Card {
 
   // Kein sicherer Sieg: nur einen fetten Stich riskiert der Genie noch, sonst
   // laesst er ziehen und wirft billig ab.
+  //
+  // „Ziehen lassen" setzt aber einen Partner voraus, der den Stich noch holen
+  // koennte. Wer ein Solo spielt, hat keinen: Jeder Stich, den er vorbeilaesst,
+  // ist gezaehlte Beute der Gegenpartei — und er braucht 121 von 240 allein.
+  // Genau das war am Tisch zu sehen: Im Herz-Solo lagen dreizehn Augen im
+  // Stich, die Grenze stand bei fuenfzehn, und der Solist legte den zweiten
+  // Karo-Buben auf den ersten — eine Karte, die gleichauf liegt und deshalb
+  // nicht einmal gewinnen KANN.
   if (nachMir(view) === 0) return knappste(winning, view);
-  if (augenImStich(view) >= 15) return knappste(winning, view);
+  if (augenImStich(view) >= (spieltAllein(view) ? 10 : 15)) return knappste(winning, view);
   const verzicht = legal.filter((c) => !winning.includes(c));
   return abwurfGegner(view, verzicht.length > 0 ? verzicht : legal);
 }
@@ -517,8 +558,7 @@ export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL
   if (partnerLeads) {
     const sicher = nachMir(view) === 0 || haeltSicher(best.card, view.order, lead);
     if (!sicher) return abwurfGegner(view, legal);
-    const nichtUeber = legal.filter((c) => !wuerdeGewinnen(view, c));
-    return highestByValue(nichtUeber.length > 0 ? nichtUeber : legal);
+    return schmieren(view, legal);
   }
 
   const winning = legal.filter((c) => wuerdeGewinnen(view, c));
@@ -547,11 +587,14 @@ export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL
   if (!teuer || sicherGenug(knapp, view.order)) return knapp;
 
   // Ein fetter Stich ist es wert, mit einer sicheren Karte geholt zu werden.
-  // Fuer vier Augen dagegen gibt niemand eine Dulle her.
+  // Fuer vier Augen dagegen gibt niemand eine Dulle her. Der Solist greift
+  // frueher zu: Er hat keinen Partner, der den Stich sonst noch holt (siehe
+  // spieltAllein).
   const sicher = winning
     .filter((c) => sicherGenug(c, view.order))
     .sort((a, b) => cardValue(a) - cardValue(b))[0];
-  if (sicher && augenImStich(view) + cardValue(sicher) >= 20) return sicher;
+  const lohnt = spieltAllein(view) ? 15 : 20;
+  if (sicher && augenImStich(view) + cardValue(sicher) >= lohnt) return sicher;
 
   // Sonst ziehen lassen und so billig wie moeglich abwerfen — der Stich geht
   // an den Gegner, also keine Augen und keinen hohen Trumpf hergeben.

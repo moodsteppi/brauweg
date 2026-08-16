@@ -6530,12 +6530,6 @@ main.auth > .muted {
   50% { opacity: 0.3; }
 }
 
-/* Das Aktualisieren-Icon dreht sich, solange nachverbunden wird. */
-.doko-icon.is-syncing {
-  animation: doko-spin 1s linear infinite;
-  color: var(--gold);
-}
-
 /* Zwei Knoepfe nebeneinander im Ladebildschirm. */
 .doko-loading-actions {
   display: flex;
@@ -6545,8 +6539,7 @@ main.auth > .muted {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .doko-conn-dot,
-  .doko-icon.is-syncing {
+  .doko-conn-dot {
     animation: none;
   }
 }

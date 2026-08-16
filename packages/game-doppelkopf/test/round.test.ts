@@ -582,3 +582,127 @@ test('Sicht: fremde Vorbehalts-Art und Schweine bleiben bis zum Ende der Gesund-
   const offen = viewFor(state, anderer).vorbehalte.find((v) => v.seat === erster);
   assert.equal(offen?.kind, 'solo', 'nach der Gesund-Runde ist die Art offen');
 });
+
+// --- Schweine haengen an der tatsaechlich gespielten Spielart ---
+
+/**
+ * Sucht einen Seed, bei dem ein Sitz beide Karo-Asse haelt. Beim Geben steht
+ * die Spielart noch nicht fest, die Schweine werden dort gegen das Normalspiel
+ * erkannt - genau das ist der Ausgangspunkt der beiden Tests darunter.
+ */
+function seedMitSchweinen(rs: ReturnType<typeof makeRuleSet>): {
+  seed: number;
+  halter: number;
+} {
+  for (let seed = 0; seed < 400; seed++) {
+    const state = createRound(rs, SEATS, 0, seed);
+    const halter = SEATS.find((s) => state.schweinchen[s]);
+    if (halter !== undefined) return { seed, halter };
+  }
+  throw new Error('Kein Seed mit Schweinchen gefunden');
+}
+
+test('Schweine verschwinden im Pik-Solo: dort ist Karo kein Trumpf', () => {
+  // Am Tisch stand „🐷 Schweine" an einem Sitz, waehrend ein Pik-Solo lief.
+  // Die Erkennung beim Geben prueft gegen das Normalspiel; wird daraus ein
+  // Solo in einer anderen Farbe, sind die beiden Karo-Asse gewoehnliche
+  // Fehlkarten - anzuzeigen gibt es dann nichts.
+  const rs = makeRuleSet({ schweinchen: true, pflichtansageSchweine: true });
+  const { seed, halter } = seedMitSchweinen(rs);
+
+  let state = createRound(rs, SEATS, 0, seed);
+  const solist = vorbehaltTurn(state)!;
+  state = apply(state, { type: 'vorbehalt', seat: solist, kind: 'solo', solo: 'suitS' });
+  while (state.phase === 'vorbehalt') {
+    const dran = vorbehaltTurn(state)!;
+    state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
+  }
+
+  assert.equal(state.gameType.kind, 'solo');
+  assert.equal(state.schweinchen[halter], false, 'kein Schwein ohne Karo-Trumpf');
+  assert.deepEqual(viewFor(state, halter).schweineSeats, [], 'und nichts anzuzeigen');
+  assert.equal(
+    state.pendingPflichtansage?.reason,
+    undefined,
+    'auch keine Schweine-Pflicht im Pik-Solo',
+  );
+});
+
+test('Schweine bleiben im Karo-Solo - und stechen dort auch beim Gegner', () => {
+  // Die Gegenprobe: Karo ist Trumpf, also gelten die Faeuste. Sie gelten auch
+  // dann, wenn nicht der Solist sie haelt - sonst verspricht die Anzeige eine
+  // Wirkung, die die Kartenordnung nicht hat.
+  const rs = makeRuleSet({ schweinchen: true, solos: ['suitD'] });
+  const { seed, halter } = seedMitSchweinen(rs);
+
+  let state = createRound(rs, SEATS, 0, seed);
+  // Bewusst ein anderer Sitz als der Halter, wo es geht.
+  const solist = vorbehaltTurn(state)!;
+  state = apply(state, { type: 'vorbehalt', seat: solist, kind: 'solo', solo: 'suitD' });
+  while (state.phase === 'vorbehalt') {
+    const dran = vorbehaltTurn(state)!;
+    state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
+  }
+
+  assert.equal(state.schweinchen[halter], true, 'Karo ist Trumpf, die Faeuste gelten');
+  assert.equal(state.order.trumps[0], 'DA', 'und stehen ganz oben in der Ordnung');
+});
+
+test('Armut: nach dem Tausch gelten die Schweine dessen, der sie dann haelt', () => {
+  // Die Armut war die einzige Spielart, in der die Schweine zwar angezeigt
+  // wurden, aber nie in die Kartenordnung kamen. Und der Tausch verschiebt sie:
+  // Wer vor der Abgabe beide Asse hielt, kann sie danach los sein.
+  const rs = makeRuleSet({ schweinchen: true, armut: true });
+  let gefunden = false;
+
+  for (let seed = 0; seed < 20000 && !gefunden; seed++) {
+    let state = createRound(rs, SEATS, 0, seed);
+    const armer = SEATS.find((s) => allowedVorbehalte(state, s).includes('armut'));
+    if (armer === undefined) continue;
+    // Ohne Schweine im Blatt prueft der Test nichts - der Seed muss beides
+    // treffen: eine ansagbare Armut UND beide Karo-Asse auf einer Hand.
+    if (!SEATS.some((s) => state.schweinchen[s])) continue;
+
+    // Alle erklaeren der Reihe nach; nur der Arme sagt Armut an.
+    while (state.phase === 'vorbehalt') {
+      const dran = vorbehaltTurn(state)!;
+      state = apply(state, {
+        type: 'vorbehalt',
+        seat: dran,
+        kind: dran === armer ? 'armut' : null,
+      });
+    }
+    if (state.phase !== 'armutExchange') continue;
+
+    state = apply(state, { type: 'armutAccept', seat: currentActor(state)! });
+    const poor = state.hands[armer];
+    const trumps = poor.filter((c) => isTrump(c, state.order));
+    const abgabe = trumps.length > 0 ? trumps : poor.slice(0, 3);
+    state = apply(state, {
+      type: 'armutHandover',
+      seat: armer,
+      cards: abgabe.map((c) => c.id),
+    });
+    const partner = state.armut!.partnerSeat!;
+    state = apply(state, {
+      type: 'armutReturn',
+      seat: partner,
+      cards: state.hands[partner].slice(0, abgabe.length).map((c) => c.id),
+    });
+
+    // Kern der Sache: Anzeige und Kartenordnung sagen dasselbe.
+    const halter = SEATS.find((s) => state.schweinchen[s]);
+    for (const s of SEATS) {
+      const asse = state.hands[s].filter((c) => c.suit === 'D' && c.rank === 'A').length;
+      assert.equal(state.schweinchen[s], asse === 2, `Sitz ${s}: Anzeige passt zur Hand`);
+    }
+    assert.equal(
+      state.order.trumps[0] === 'DA',
+      halter !== undefined,
+      'Faeuste stehen genau dann oben, wenn sie jemand haelt',
+    );
+    gefunden = true;
+  }
+
+  assert.ok(gefunden, 'Kein Seed mit durchgespielter Armut gefunden');
+});

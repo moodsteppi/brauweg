@@ -551,3 +551,98 @@ test('Vorbehalt: sagt an, was die Hand vorgibt — Solo nur mit starkem Blatt', 
   const anf = botAction(stark, 'anfaenger')! as { kind: unknown };
   assert.equal(anf.kind, null);
 });
+
+// --- Zwei Fehler, die am Tisch aufgefallen sind ---
+
+test('Schmieren: muss der Partner ueberstochen werden, dann knapp statt teuer', () => {
+  // Der Partner haelt den Stich sicher (Karo-Dame), der Bot hat aber nur noch
+  // Karten, die DARUEBER liegen — er kann gar nicht schmieren, ohne den
+  // eigenen Partner zu ueberholen. Der Stich bleibt so oder so in der Partei;
+  // es geht nur darum, moeglichst wenig dafuer auszugeben. Frueher griff hier
+  // die Regel „wertvollste Karte" weiter und warf die Dulle (zehn Augen,
+  // hoechster Trumpf) auf einen Stich, den die Herz-Dame genauso holt.
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  const view = {
+    seat: 2,
+    gameType: { kind: 'normal' },
+    order,
+    myParty: 're',
+    // Der Partner ist bekannt: er hat schon eine Kreuz-Dame gelegt.
+    knownParties: { 1: 're' },
+    handCounts: VOLLE_HAENDE,
+    currentTrick: [{ card: mk('DQ', 1), seat: 1 }],
+    legal: [mk('HT', 2), mk('CQ', 3), mk('HQ', 4)],
+    hand: [mk('HT', 2), mk('CQ', 3), mk('HQ', 4)],
+    alleStiche: [],
+    secondDulleBeatsFirst: false,
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 4, 'die Herz-Dame reicht, die Dulle bleibt liegen');
+  assert.equal(chooseCard(view, 'genie').id, 4, 'der Genie genauso');
+});
+
+test('Schmieren bleibt Schmieren, solange eine Karte den Partner nicht ueberholt', () => {
+  // Gegenprobe zum Test darueber: Sobald es eine Karte gibt, die UNTER dem
+  // Partner bleibt, wird wieder die wertvollste davon geschmiert. Sonst haette
+  // die Korrektur das Schmieren ganz abgeschafft.
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  const view = {
+    seat: 2,
+    gameType: { kind: 'normal' },
+    order,
+    myParty: 're',
+    knownParties: { 1: 're' },
+    handCounts: VOLLE_HAENDE,
+    // Der Partner haelt mit der Kreuz-Dame — die ueberholt hier niemand.
+    currentTrick: [{ card: mk('CQ', 1), seat: 1 }],
+    legal: [mk('DA', 2), mk('D9', 3), mk('DJ', 4)],
+    hand: [mk('DA', 2), mk('D9', 3), mk('DJ', 4)],
+    secondDulleBeatsFirst: false,
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 2, 'elf Augen auf den sicheren Partnerstich');
+});
+
+test('Solo: der Solist laesst keinen dicken Stich vorbei, es holt ihn niemand fuer ihn', () => {
+  // Der Fall aus dem Herz-Solo: Ein Gegner haelt den Stich mit dem Karo-Buben,
+  // dreizehn Augen liegen drin. Der Genie liess ziehen, weil seine Grenze bei
+  // fuenfzehn Augen stand — eine Grenze, die einen Partner voraussetzt. Der
+  // Solist hat keinen: Was er vorbeilaesst, zaehlt gegen ihn.
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'solo', solo: 'suitH' }, rs);
+
+  const view = {
+    seat: 2,
+    gameType: { kind: 'solo', solo: 'suitH' },
+    order,
+    myParty: 're',
+    knownParties: { 0: 'kontra', 1: 'kontra', 3: 'kontra' },
+    handCounts: { 0: 8, 1: 8, 2: 8, 3: 8 },
+    // Ass-Karo (Fehl, elf Augen) angespielt, ein Gegner sticht mit Karo-Bube.
+    currentTrick: [
+      { card: mk('DA', 1), seat: 0 },
+      { card: mk('DJ', 2), seat: 1 },
+    ],
+    legal: [mk('DQ', 3), mk('DJ', 4), mk('H9', 5)],
+    hand: [mk('DQ', 3), mk('DJ', 4), mk('H9', 5)],
+    alleStiche: [],
+    secondDulleBeatsFirst: false,
+  } as unknown as PlayerView;
+
+  // Die Karo-Dame schlaegt den Buben; der zweite Karo-Bube liegt gleichauf und
+  // kann den Stich gar nicht gewinnen.
+  assert.equal(chooseCard(view, 'genie').id, 3, 'Genie sticht mit der Karo-Dame');
+
+  // Dieselbe Lage im Normalspiel bleibt beim vorsichtigen Verhalten: dort
+  // koennte der Partner den Stich noch holen.
+  const normal = {
+    ...view,
+    gameType: { kind: 'normal' },
+    knownParties: {},
+  } as unknown as PlayerView;
+  assert.notEqual(chooseCard(normal, 'genie').id, 3, 'im Normalspiel bleibt er vorsichtig');
+});

@@ -386,12 +386,9 @@ function resolveVorbehaltPhase(state: RoundState): RoundState {
     case 'solo': {
       const entry = state.vorbehalte.find((v) => v.seat === winner.seat)!;
       const gameType: GameType = { kind: 'solo', solo: entry.solo! };
-      const order = buildOrder(gameType, state.rs, schweinCtx(state, winner.seat, gameType));
       return mitRundenbeginnPflichten({
-        ...state,
+        ...mitSchweinen(state, gameType),
         phase: 'playing',
-        gameType,
-        order,
         reSeats: [winner.seat],
         turn: soloLead(state, winner.seat),
       });
@@ -412,21 +409,14 @@ function resolveVorbehaltPhase(state: RoundState): RoundState {
       };
 
     case 'hochzeit': {
-      const gameType: GameType = { kind: 'hochzeit' };
-      // Schweinchen wirken auf die ganze Runde, nicht nur bei der Braut. Den
-      // TATSAECHLICHEN Halter suchen (wie in startNormalGame) — sonst bleibt
-      // das Karo-Ass eines Nicht-Braut-Halters ein niedriger Trumpf, obwohl
-      // „Schweine" angezeigt wird: die Faeuste stechen dann nicht, die Anzeige
-      // verspricht eine Wirkung, die es nicht gibt. Die Hochzeit nutzt die
-      // normale Trumpfordnung, deshalb ist state.schweinchen (bei Rundenbeginn
-      // im Normalspiel erkannt) hier gueltig.
-      const holder = state.seats.find((s) => state.schweinchen[s]);
-      const ctx = holder !== undefined ? schweinCtx(state, holder, gameType) : {};
+      // Schweinchen wirken auf die ganze Runde, nicht nur bei der Braut — den
+      // TATSAECHLICHEN Halter sucht mitSchweinen. Sonst bleibt das Karo-Ass
+      // eines Nicht-Braut-Halters ein niedriger Trumpf, obwohl „Schweine"
+      // angezeigt wird: die Faeuste stechen dann nicht, die Anzeige verspricht
+      // eine Wirkung, die es nicht gibt.
       return mitRundenbeginnPflichten({
-        ...state,
+        ...mitSchweinen(state, { kind: 'hochzeit' }),
         phase: 'playing',
-        gameType,
-        order: buildOrder(gameType, state.rs, ctx),
         reSeats: [winner.seat],
         hochzeitBride: winner.seat,
         hochzeitResolved: false,
@@ -503,6 +493,59 @@ function schweinCtx(state: RoundState, seat: number, gameType: GameType) {
 }
 
 /**
+ * Schweine neu bestimmen, sobald die Spielart feststeht — und die Kartenordnung
+ * gleich mit.
+ *
+ * Beim Geben ist noch offen, was gespielt wird; `createRound` prueft deshalb
+ * gegen das Normalspiel. Das ist als Vorgriff richtig und als Endstand falsch:
+ * In einem Pik-Solo ist Karo kein Trumpf, die beiden Karo-Asse sind dort
+ * gewoehnliche Fehlkarten. Wer den Stand vom Geben stehen laesst, zeigt am Sitz
+ * „Schweine" an und legt eine Pflichtansage auf, obwohl es nichts zu stechen
+ * gibt. Genau das war am Tisch zu sehen.
+ *
+ * Zwei Dinge muessen deshalb hier zusammen passieren, sonst versprechen sie
+ * einander etwas Falsches:
+ *
+ * - **Der Halter wird ueber ALLE Haende gesucht**, nicht nur beim Solisten oder
+ *   der Braut. Schweine wirken auf die ganze Runde; wer nur eine Hand prueft,
+ *   zeigt die Faeuste an, ohne dass sie stechen (so beim Solo und bei der
+ *   Armut).
+ * - **Die Haende koennen sich noch geaendert haben.** Die Armut schiebt Karten
+ *   herueber; die Asse liegen danach womoeglich woanders. Deshalb nimmt die
+ *   Funktion die Haende als Parameter und nicht blind `state.hands`.
+ */
+function mitSchweinen(
+  state: RoundState,
+  gameType: GameType,
+  hands: Readonly<Record<number, readonly Card[]>> = state.hands,
+): RoundState {
+  const schweinchen: Record<number, boolean> = {};
+  for (const seat of state.seats) {
+    schweinchen[seat] = detectSchweinchen(hands[seat], state.rs, gameType).schweinchen;
+  }
+
+  const holder = state.seats.find((s) => schweinchen[s]);
+  const ctx =
+    holder === undefined
+      ? {}
+      : (() => {
+          const status = detectSchweinchen(hands[holder], state.rs, gameType);
+          return {
+            schweinchenActive: status.schweinchen,
+            superSchweinActive: status.superschwein,
+          };
+        })();
+
+  return {
+    ...state,
+    hands,
+    gameType,
+    schweinchen,
+    order: buildOrder(gameType, state.rs, ctx),
+  };
+}
+
+/**
  * Wer spielt bei einem Solo aus?
  *
  * Das ERSTE Solo eines Spielers ist sein Pflichtsolo und hat immer Aufspiel.
@@ -525,17 +568,11 @@ function startNormalGame(state: RoundState): RoundState {
   const stille = reSeats.length === 1;
 
   // Schweinchen des Spielers, der sie haelt, wirken auf die ganze Runde.
-  const holder = state.seats.find((s) => state.schweinchen[s]);
-  const ctx = holder !== undefined
-    ? schweinCtx(state, holder, state.gameType)
-    : {};
-
   return mitRundenbeginnPflichten({
-    ...state,
+    ...mitSchweinen(state, state.gameType),
     phase: 'playing',
     reSeats,
     stilleHochzeit: stille,
-    order: buildOrder(state.gameType, state.rs, ctx),
     turn: state.vorhand,
   });
 }
@@ -653,10 +690,13 @@ function applyArmutReturn(
     [armut.seat]: [...state.hands[armut.seat], ...back],
   };
 
+  // Erst hier stehen die Haende endgueltig: Der Tausch kann beide Karo-Asse
+  // zum Annehmer schieben oder auseinanderreissen. Vorher war die Armut die
+  // einzige Spielart, in der die Schweine zwar angezeigt wurden, aber nie in
+  // die Kartenordnung kamen — die Faeuste stachen also nicht.
   return mitRundenbeginnPflichten({
-    ...state,
+    ...mitSchweinen(state, state.gameType, hands),
     phase: 'playing',
-    hands,
     reSeats: [armut.seat, armut.partnerSeat],
     turn: state.vorhand,
     armut: {

@@ -747,15 +747,11 @@ export function Table({
           </strong>
           <span className="muted">{gameLine}</span>
         </div>
+        {/* Kein Aktualisieren-Knopf mehr: Reisst die Verbindung, blendet
+            ConnectionBanner von selbst ein UND bietet dort „Neu verbinden" an.
+            Der Knopf in der Kopfzeile war die zweite Tuer zur selben Funktion
+            und stand die uebrige Zeit nur im Weg. */}
         <div className="doko-top-right">
-          <button
-            className={`doko-icon${status !== 'open' ? ' is-syncing' : ''}`}
-            onClick={reconnect}
-            aria-label="Neu verbinden / aktualisieren"
-            title="Neu verbinden"
-          >
-            ⟳
-          </button>
           {view.view.nextMultiplier > 1 && (
             <span className="doko-badge doko-badge--bock">Bock ×{view.view.nextMultiplier}</span>
           )}
