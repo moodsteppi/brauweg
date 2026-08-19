@@ -637,12 +637,100 @@ test('Solo: der Solist laesst keinen dicken Stich vorbei, es holt ihn niemand fu
   // kann den Stich gar nicht gewinnen.
   assert.equal(chooseCard(view, 'genie').id, 3, 'Genie sticht mit der Karo-Dame');
 
-  // Dieselbe Lage im Normalspiel bleibt beim vorsichtigen Verhalten: dort
-  // koennte der Partner den Stich noch holen.
-  const normal = {
+  // Gegenprobe: Ist Karo schon einmal gelaufen, darf er wieder vorsichtig
+  // sein — die Fetten sind dann meist durch, und hinter ihm sticht leicht
+  // jemand drueber. Im Normalspiel, wo der Partner den Stich noch holen kann.
+  const gelaufen = {
     ...view,
     gameType: { kind: 'normal' },
     knownParties: {},
+    alleStiche: [
+      {
+        played: [
+          { card: mk('DK', 90), seat: 0 },
+          { card: mk('D9', 91), seat: 1 },
+          { card: mk('DA', 92), seat: 2 },
+          { card: mk('D9', 93), seat: 3 },
+        ],
+        winnerSeat: 2,
+      },
+    ],
   } as unknown as PlayerView;
-  assert.notEqual(chooseCard(normal, 'genie').id, 3, 'im Normalspiel bleibt er vorsichtig');
+  assert.notEqual(
+    chooseCard(gelaufen, 'genie').id,
+    3,
+    'in der zweiten Runde der Farbe bleibt er vorsichtig',
+  );
+});
+
+test('Fehl laeuft zum ersten Mal: der Bot sticht, statt Augen nachzuwerfen', () => {
+  // Der Fall aus der Hochzeit, Runde 4: Herz-Koenig angespielt, ein Gegner
+  // legt das Herz-Ass drauf, der Bot ist blank in Herz. Er hatte den Fuchs
+  // (elf Augen) und das Kreuz-Ass (auch elf). Weil ihm der Fuchs zum Stechen
+  // zu teuer war, warf er das Kreuz-Ass ab — elf Augen sicher an den Gegner,
+  // um elf Augen vielleicht zu retten. Und der Fuchs wird spaeter doch
+  // gefangen.
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  const view = {
+    seat: 2,
+    gameType: { kind: 'hochzeit' },
+    order,
+    // Ungeklaerte Hochzeit: Der Bot kennt seine Partei noch gar nicht.
+    myParty: null,
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    currentTrick: [
+      { card: mk('HK', 1), seat: 0 },
+      { card: mk('HA', 2), seat: 1 },
+    ],
+    legal: [mk('DA', 3), mk('CA', 4), mk('SK', 5)],
+    hand: [mk('DA', 3), mk('CA', 4), mk('SK', 5)],
+    alleStiche: [],
+    secondDulleBeatsFirst: false,
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 3, 'mit dem Fuchs stechen statt das Ass abwerfen');
+  assert.equal(chooseCard(view, 'genie').id, 3, 'der Genie genauso');
+});
+
+test('Abwerfen bleibt richtig, wenn es wirklich billiger ist', () => {
+  // Gegenprobe: Dieselbe Lage, aber der Bot hat eine wertlose Karte uebrig
+  // UND die Farbe ist schon gelaufen. Dann wirft er sie ab und behaelt den
+  // Fuchs — die Vorsicht von vorher gilt weiter, sie hat nur eine
+  // Gegenrechnung bekommen.
+  const rs = makeRuleSet();
+  const order = buildOrder({ kind: 'normal' }, rs);
+
+  const view = {
+    seat: 2,
+    gameType: { kind: 'normal' },
+    order,
+    myParty: 'kontra',
+    knownParties: {},
+    handCounts: VOLLE_HAENDE,
+    currentTrick: [
+      { card: mk('HK', 1), seat: 0 },
+      { card: mk('HA', 2), seat: 1 },
+    ],
+    legal: [mk('DA', 3), mk('S9', 4), mk('SK', 5)],
+    hand: [mk('DA', 3), mk('S9', 4), mk('SK', 5)],
+    // Herz lief schon einmal — angespielt mit der Neun, nicht mit der Dulle:
+    // die ist Trumpf und zaehlt als Trumpfanspiel, nicht als Herz.
+    alleStiche: [
+      {
+        played: [
+          { card: mk('H9', 80), seat: 0 },
+          { card: mk('HA', 81), seat: 1 },
+          { card: mk('HK', 82), seat: 2 },
+          { card: mk('H9', 83), seat: 3 },
+        ],
+        winnerSeat: 1,
+      },
+    ],
+    secondDulleBeatsFirst: false,
+  } as unknown as PlayerView;
+
+  assert.equal(chooseCard(view).id, 4, 'die Pik-Neun kostet nichts, der Fuchs bleibt');
 });

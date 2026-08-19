@@ -230,16 +230,29 @@ test('Erkennung: Superschwein braucht beide Paare auf derselben Hand', () => {
   });
 });
 
-test('Erkennung: Schweinchen greifen nicht, wenn Karo kein Trumpf ist', () => {
+test('Erkennung: Schweinchen gibt es nur im Normalspiel, in keinem Solo', () => {
   const rs = makeRuleSet({ schweinchen: true, superSchweine: true });
   const hand = [c('DA'), c('DA'), c('D9'), c('D9')];
+
+  assert.deepEqual(detectSchweinchen(hand, rs, { kind: 'normal' }), {
+    schweinchen: true,
+    superschwein: true,
+  });
+  // Hochzeit und Armut spielen die normale Trumpfordnung, also gelten sie mit.
+  assert.deepEqual(detectSchweinchen(hand, rs, { kind: 'hochzeit' }), {
+    schweinchen: true,
+    superschwein: true,
+  });
+
   assert.deepEqual(detectSchweinchen(hand, rs, { kind: 'solo', solo: 'suitH' }), {
     schweinchen: false,
     superschwein: false,
   });
+  // Auch im Karo-Solo nicht, obwohl dort Karo Trumpf ist: Die Spielart hat
+  // sich einer ausgesucht, die Faeuste kommen aus dem Geben.
   assert.deepEqual(detectSchweinchen(hand, rs, { kind: 'solo', solo: 'suitD' }), {
-    schweinchen: true,
-    superschwein: true,
+    schweinchen: false,
+    superschwein: false,
   });
 });
 

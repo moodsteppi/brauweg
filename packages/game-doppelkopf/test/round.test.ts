@@ -628,15 +628,14 @@ test('Schweine verschwinden im Pik-Solo: dort ist Karo kein Trumpf', () => {
   );
 });
 
-test('Schweine bleiben im Karo-Solo - und stechen dort auch beim Gegner', () => {
-  // Die Gegenprobe: Karo ist Trumpf, also gelten die Faeuste. Sie gelten auch
-  // dann, wenn nicht der Solist sie haelt - sonst verspricht die Anzeige eine
-  // Wirkung, die die Kartenordnung nicht hat.
+test('Auch im Karo-Solo gibt es keine Schweine', () => {
+  // Der naheliegende Einwand waere: Im Karo-Solo IST Karo doch Trumpf. Am
+  // Tisch stand deshalb „Schweine" an einem Sitz, und das Karo-Ass stach die
+  // Kreuz-Dame. Gewollt ist das nicht: Die Faeuste gehoeren ins Normalspiel.
   const rs = makeRuleSet({ schweinchen: true, solos: ['suitD'] });
   const { seed, halter } = seedMitSchweinen(rs);
 
   let state = createRound(rs, SEATS, 0, seed);
-  // Bewusst ein anderer Sitz als der Halter, wo es geht.
   const solist = vorbehaltTurn(state)!;
   state = apply(state, { type: 'vorbehalt', seat: solist, kind: 'solo', solo: 'suitD' });
   while (state.phase === 'vorbehalt') {
@@ -644,8 +643,9 @@ test('Schweine bleiben im Karo-Solo - und stechen dort auch beim Gegner', () => 
     state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
   }
 
-  assert.equal(state.schweinchen[halter], true, 'Karo ist Trumpf, die Faeuste gelten');
-  assert.equal(state.order.trumps[0], 'DA', 'und stehen ganz oben in der Ordnung');
+  assert.equal(state.schweinchen[halter], false, 'im Solo keine Faeuste');
+  assert.deepEqual(viewFor(state, halter).schweineSeats, [], 'und nichts anzuzeigen');
+  assert.notEqual(state.order.trumps[0], 'DA', 'das Karo-Ass bleibt ein normaler Trumpf');
 });
 
 test('Armut: nach dem Tausch gelten die Schweine dessen, der sie dann haelt', () => {

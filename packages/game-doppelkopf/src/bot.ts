@@ -17,12 +17,20 @@
  *   ein Ass, das man liegen laesst, wird spaeter gestochen.
  * - Er wirft Fehlkarten ab und haelt seine Truempfe.
  * - Er schmiert, wenn erkennbar der Partner den Stich haelt.
+ * - Laeuft eine Fehlfarbe zum ersten Mal und er kann nicht bedienen, sticht
+ *   er, statt Augen nachzuwerfen.
  *
- * Was er nicht kann und nicht koennen soll: sich merken, was in frueheren
- * Stichen lag. Die Spielersicht zeigt nur den laufenden und den letzten
- * Stich — genau so viel, wie am echten Tisch auch nachzusehen ist.
+ * Was er nicht kann und nicht koennen soll: sich merken, WELCHE KARTEN in
+ * frueheren Stichen lagen. Das wertet allein der Genie aus.
  *
- * **Drei Spielstaerken** (`BotLevel`, eine Tischeinstellung):
+ * Seit dem 19. August liest er allerdings die ANSPIELFARBEN der bisherigen
+ * Stiche (`farbeSchonAngespielt`). Das ist kein Kartengedaechtnis: Ob Herz
+ * schon einmal lief, bekommt am echten Tisch jeder ohne Muehe mit, waehrend
+ * das Zaehlen einzelner Karten Arbeit ist. Und ohne diese eine Auskunft laesst
+ * sich „beim ersten Anspiel einer Farbe wird gestochen" nicht formulieren.
+ *
+ * **Vier Spielstaerken** (`BotLevel`, eine Tischeinstellung; Anfaenger wird in
+ * der Oberflaeche nicht mehr angeboten, die Stufe bleibt aber im Modul):
  *
  * - **Anfaenger** legt immer die billigste erlaubte Karte. Kein Schmieren,
  *   kein Aufheben von Assen, kein Trumpf sparen — die typischen
@@ -35,6 +43,7 @@
  *   **sagt Re/Kontra an, wenn das Blatt es traegt** — nur die Ansage selbst,
  *   nie die Absagenkette (keine 90/60/…): Eine Absage ist eine Prognose ueber
  *   den Spielverlauf, die auch ein Heuristik-Bot nicht seriös treffen kann.
+ * - **Genie** zaehlt zusaetzlich die Karten mit (siehe weiter unten).
  *
  * Zwei Festlegungen:
  *
@@ -60,7 +69,7 @@
 
 import { type BotLevel, DEFAULT_BOT_LEVEL } from '@brauweg/game-api';
 
-import { type Card, cardKey, cardValue } from './cards.js';
+import { type Card, type Suit, cardKey, cardValue } from './cards.js';
 import { type CardOrder, servingSuit, strength } from './order.js';
 import { resolveTrick } from './trick.js';
 import type { PlayerView, RoundAction } from './round.js';
@@ -430,6 +439,70 @@ function knappste(cards: readonly Card[], view: PlayerView): Card {
 }
 
 /**
+ * Wurde diese Fehlfarbe schon einmal angespielt?
+ *
+ * Beim ERSTEN Anspiel einer Farbe liegen die dicken Karten noch drin: Wer sie
+ * anspielt, hat in aller Regel Ass oder Zehn dabei, und wer nicht bedienen
+ * kann, wirft Augen nach. Ist die Farbe dagegen schon einmal gelaufen, sind
+ * die Fetten meist weg und die Mitspieler womoeglich blank — dann sticht
+ * hinter einem leicht jemand drueber.
+ *
+ * Gelesen wird nur die Anspielfarbe der bisherigen Stiche, nicht ihr Inhalt.
+ * Das ist das, was am Tisch jeder ohne Muehe mitbekommt, und kein
+ * Kartengedaechtnis: Welche Karten in frueheren Stichen lagen, wertet
+ * weiterhin nur der Genie aus.
+ */
+function farbeSchonAngespielt(view: PlayerView, lead: Suit | 'T'): boolean {
+  return (view.alleStiche ?? []).some(
+    (t) => t.played.length > 0 && servingSuit(t.played[0]!.card, view.order) === lead,
+  );
+}
+
+/**
+ * Ziehen lassen — oder eben doch stechen?
+ *
+ * Der Bot war hier zu vorsichtig, und zwar auf eine Art, die am Tisch weh tut.
+ * Die Regel darueber sagt: Teure Karten nur einsetzen, wenn sie den Stich auch
+ * halten. Richtig gedacht, nur fehlte die Gegenrechnung — was das Abwerfen
+ * kostet. Am 19. August stand er mit Fuchs und Kreuz-Ass da, weigerte sich, mit
+ * dem Fuchs (elf Augen) zu stechen, und warf das Kreuz-Ass ab. Elf Augen sicher
+ * an den Gegner, um elf Augen vielleicht zu retten — und der Fuchs wird spaeter
+ * doch gefangen.
+ *
+ * Zwei Gruende, jetzt doch zu stechen:
+ *
+ * 1. **Der Abwurf ist nicht billiger als der Stich.** Was weggeworfen wird,
+ *    ist sicher verloren; was gestochen wird, nur vielleicht.
+ * 2. **Die Farbe laeuft zum ersten Mal.** Dann liegen die Fetten noch drin und
+ *    hinter einem wirft ebenfalls jemand Augen nach (siehe
+ *    farbeSchonAngespielt).
+ */
+function abwurfOderStich(
+  view: PlayerView,
+  legal: readonly Card[],
+  winning: readonly Card[],
+  knapp: Card,
+): Card {
+  const verzicht = legal.filter((c) => !winning.includes(c));
+  if (verzicht.length === 0) {
+    /*
+     * Es geht nicht anders: Alles, was er legen darf, gewinnt den Stich.
+     * Dann nicht die knappste Karte, sondern die billigste — eine Kreuz-Dame
+     * haelt den Stich, ein Karo-Ass fuettert nur den, der drueberkommt.
+     */
+    return [...winning].sort((a, b) => cardValue(a) - cardValue(b))[0]!;
+  }
+
+  const abwurf = abwurfGegner(view, verzicht);
+  if (cardValue(abwurf) >= cardValue(knapp)) return knapp;
+
+  const lead = servingSuit(view.currentTrick[0]!.card, view.order);
+  if (lead !== 'T' && !farbeSchonAngespielt(view, lead)) return knapp;
+
+  return abwurf;
+}
+
+/**
  * Schmieren, wenn der Partner den Stich haelt.
  *
  * Der Normalfall ist die wertvollste Karte, die ihn nicht selbst uebersticht.
@@ -520,8 +593,7 @@ function chooseCardGenie(view: PlayerView): Card {
   // nicht einmal gewinnen KANN.
   if (nachMir(view) === 0) return knappste(winning, view);
   if (augenImStich(view) >= (spieltAllein(view) ? 10 : 15)) return knappste(winning, view);
-  const verzicht = legal.filter((c) => !winning.includes(c));
-  return abwurfGegner(view, verzicht.length > 0 ? verzicht : legal);
+  return abwurfOderStich(view, legal, winning, knappste(winning, view));
 }
 
 export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL): Card {
@@ -596,17 +668,9 @@ export function chooseCard(view: PlayerView, level: BotLevel = DEFAULT_BOT_LEVEL
   const lohnt = spieltAllein(view) ? 15 : 20;
   if (sicher && augenImStich(view) + cardValue(sicher) >= lohnt) return sicher;
 
-  // Sonst ziehen lassen und so billig wie moeglich abwerfen — der Stich geht
-  // an den Gegner, also keine Augen und keinen hohen Trumpf hergeben.
-  const verzicht = legal.filter((c) => !winning.includes(c));
-  if (verzicht.length > 0) return abwurfGegner(view, verzicht);
-
-  /*
-   * Es geht nicht anders: Alles, was er legen darf, gewinnt den Stich.
-   * Dann nicht die knappste Karte, sondern die billigste — eine Kreuz-Dame
-   * haelt den Stich, ein Karo-Ass fuettert nur den, der drueberkommt.
-   */
-  return [...winning].sort((a, b) => cardValue(a) - cardValue(b))[0];
+  // Sonst ziehen lassen und billig abwerfen — aber nur, wenn das ueberhaupt
+  // billiger ist als zu stechen (siehe abwurfOderStich).
+  return abwurfOderStich(view, legal, winning, knapp);
 }
 
 /**

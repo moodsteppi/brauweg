@@ -45,16 +45,20 @@ export interface SchweinchenStatus {
  *
  * Beides gilt AUTOMATISCH, ohne Ansage, und ist ab Rundenbeginn fuer alle
  * sichtbar. Superschwein setzt voraus, dass derselbe Spieler beide Paare haelt.
- * Beides greift nur, wenn Karo Trumpf ist.
+ *
+ * **Nur im Normalspiel** — Hochzeit und Armut zaehlen dazu, sie benutzen
+ * dieselbe Trumpfordnung. Im Solo nicht, auch nicht im Karo-Solo: Dort ist
+ * Karo zwar Trumpf, aber die Spielart hat sich einer ausgesucht, und die
+ * Faeuste sind eine Zugabe aus dem Geben. (Am 19. August stand deshalb
+ * „Schweine" in einem Karo-Solo am Sitz — gemeint war immer nur das
+ * Normalspiel.)
  */
 export function detectSchweinchen(
   hand: readonly Card[],
   rs: RuleSet,
   gameType: GameType,
 ): SchweinchenStatus {
-  const karoIsTrump =
-    gameType.kind !== 'solo' || gameType.solo === 'suitD';
-  if (!karoIsTrump || !rs.schweinchen) {
+  if (gameType.kind === 'solo' || !rs.schweinchen) {
     return { schweinchen: false, superschwein: false };
   }
 
