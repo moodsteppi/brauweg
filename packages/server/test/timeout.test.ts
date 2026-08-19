@@ -1,9 +1,18 @@
 /**
  * Zugzeit, Bot-Uebernahme und Verlassen.
  *
- * Die Zugzeit betraegt im Betrieb 60 Sekunden und wird serverseitig gemessen.
- * Hier steht sie auf wenigen Millisekunden, damit dieselbe Logik in
- * vertretbarer Zeit durchlaeuft.
+ * Die Zugzeit betraegt im Betrieb 60 Sekunden und wird serverseitig gemessen,
+ * die Abwesenheitsgrenze 5 Minuten. Hier stehen beide auf wenigen
+ * Millisekunden, damit dieselbe Logik in vertretbarer Zeit durchlaeuft.
+ *
+ * Die Regel dahinter, festgelegt am 19. August 2026:
+ *
+ * - **Tisch mit Botsitz:** wird nie aufgeloest. Verschwindet jemand,
+ *   uebernimmt ein Bot und die Partie laeuft zu Ende — ein Bot mehr ist dort
+ *   der Normalfall.
+ * - **Reiner Vierertisch:** ein Bot uebernimmt auch, aber wer laenger als
+ *   `absenceMs` weg bleibt, gilt als ausgestiegen. Aufgeloest wird dann erst
+ *   an der Rundengrenze, nie mitten in der Runde.
  */
 
 import { test } from 'node:test';
@@ -15,7 +24,7 @@ import { startHarness, tableWithFourHumans, tableWithTwoHumans } from './harness
 import { TestClient } from './client.js';
 
 test('ein einzelner Timeout loest den Tisch nicht auf, der Bot springt ein', async (t) => {
-  const h = await startHarness({ turnTimeoutMs: 40, timeoutsUntilLeave: 3 });
+  const h = await startHarness({ turnTimeoutMs: 40, absenceMs: 60_000 });
   t.after(() => h.close());
 
   const { anna, bert, table } = await tableWithTwoHumans(h);
@@ -49,8 +58,12 @@ test('ein einzelner Timeout loest den Tisch nicht auf, der Bot springt ein', asy
   b.close();
 });
 
-test('drei aufeinanderfolgende Timeouts gelten als Verlassen', async (t) => {
-  const h = await startHarness({ turnTimeoutMs: 30, timeoutsUntilLeave: 3 });
+test('Am aufgefuellten Tisch wird niemand rausgeworfen — der Bot spielt zu Ende', async (t) => {
+  // Frueher galten drei verpasste Zuege als Verlassen und der Tisch loeste
+  // sich auf. An einem Tisch, an dem ohnehin zwei Bots sitzen, ist das kein
+  // Gewinn fuer irgendwen: Der dritte Bot faellt niemandem auf, ein
+  // abgebrochener Tisch schon.
+  const h = await startHarness({ turnTimeoutMs: 20, absenceMs: 30 });
   t.after(() => h.close());
 
   const { anna, bert, table } = await tableWithTwoHumans(h);
@@ -62,23 +75,26 @@ test('drei aufeinanderfolgende Timeouts gelten als Verlassen', async (t) => {
   a.join(table.id);
   b.join(table.id);
 
-  await a.waitFor(
-    () => (a.lastView?.leftSeats.length ?? 0) > 0 || a.lastView?.finished === true,
-    'Wertung als Verlassen',
-    30_000,
-  );
+  // Beide sitzen die ganze Partie aus. Die Bots spielen sie regulaer zu Ende.
+  await a.waitFor(() => a.lastView?.finished === true, 'Partie laeuft durch', 60_000);
 
-  const party = h.runtime.get(table.id);
-  assert.ok(party, 'die Partie liegt noch fuer das Partie-Ende bereit');
-  assert.ok(party.leftSeats.size > 0, 'mindestens ein Sitz gilt als ausgestiegen');
+  const party = h.runtime.get(table.id)!;
+  assert.equal(party.endAfterRound, false, 'ein Bottisch wird nicht aufgeloest');
+
+  // Alle vier Runden sind gespielt, nicht mittendrin abgerechnet.
+  const runden = await h.ctx.db
+    .select()
+    .from(schema.roundSummary)
+    .where(eq(schema.roundSummary.partyId, party.partyId));
+  assert.equal(runden.length, 4, 'die Partie ist ueber die volle Distanz gegangen');
 
   a.close();
   b.close();
 });
 
-test('ein Zug beendet die Bot-Uebernahme und setzt den Zaehler zurueck', async (t) => {
+test('ein Zug beendet die Bot-Uebernahme und setzt die Abwesenheit zurueck', async (t) => {
   // Grosszuegige Zugzeit, damit der zurueckkehrende Client sie sicher trifft.
-  const h = await startHarness({ turnTimeoutMs: 400, timeoutsUntilLeave: 3 });
+  const h = await startHarness({ turnTimeoutMs: 400, absenceMs: 60_000 });
   t.after(() => h.close());
 
   const { anna, bert, table } = await tableWithTwoHumans(h);
@@ -98,15 +114,18 @@ test('ein Zug beendet die Bot-Uebernahme und setzt den Zaehler zurueck', async (
     30_000,
   );
 
+  const party = h.runtime.get(table.id);
+  assert.equal(party?.absentSince.has(0), false, 'die Abwesenheitsuhr steht wieder');
+
   a.close();
   b.close();
 });
 
 test('Verlassen kostet zehn Trophaeen und wird als Letzter gewertet', async (t) => {
-  const h = await startHarness({ turnTimeoutMs: 25, timeoutsUntilLeave: 3, graceRounds: 0 });
+  const h = await startHarness({ turnTimeoutMs: 25, absenceMs: 20 });
   t.after(() => h.close());
 
-  // Vier Menschen: Nur ein Tisch ohne Bots zaehlt fuer die Rangliste.
+  // Vier Menschen: Nur ein Tisch ohne Bots loest sich ueberhaupt auf.
   const { accounts, table } = await tableWithFourHumans(h);
 
   const clients: TestClient[] = [];
@@ -134,6 +153,16 @@ test('Verlassen kostet zehn Trophaeen und wird als Letzter gewertet', async (t) 
     'die regulaere Wertung wird zusaetzlich gebucht',
   );
 
+  // Der Kern des Fehlers vom 19. August: Abgerechnet wird an der
+  // Rundengrenze. Eine angefangene Runde darf nicht verfallen — es muss
+  // mindestens eine vollstaendige Runde in den Buechern stehen.
+  const party = h.runtime.get(table.id)!;
+  const runden = await h.ctx.db
+    .select()
+    .from(schema.roundSummary)
+    .where(eq(schema.roundSummary.partyId, party.partyId));
+  assert.ok(runden.length > 0, 'die laufende Runde wurde zu Ende gespielt');
+
   for (const client of clients) client.close();
 });
 
@@ -156,8 +185,9 @@ test('Kontoloeschung waehrend laufender Partie gilt als Verlassen', async (t) =>
   const party = h.runtime.get(table.id);
   assert.ok(party!.leftSeats.has(0));
   assert.ok(party!.botControlled.has(0), 'der Bot uebernimmt den Sitz');
+  // Der Account ist weg, aber der Tisch hat Botsitze: Er laeuft weiter.
+  assert.equal(party!.endAfterRound, false, 'ein Bottisch wird nicht aufgeloest');
 
   a.close();
   b.close();
 });
-

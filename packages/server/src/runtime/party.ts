@@ -45,12 +45,14 @@ export interface RuntimeOptions {
   readonly turnTimeoutMs?: number;
   /** Kurze Pause vor Botzuegen, damit der Tisch nicht ruckartig durchlaeuft. */
   readonly botDelayMs?: number;
-  /** Drei aufeinanderfolgende Timeouts gelten als Verlassen. */
-  readonly timeoutsUntilLeave?: number;
-  /** Eine Karenzrunde nach dem Verlassen, dann Auflösung. */
-  readonly graceRounds?: number;
-  /** Sind alle Sitze offline, wird nach dieser Zeit mit Wertung aufgeloest. */
-  readonly allOfflineMs?: number;
+  /**
+   * Ab wann ein Sitz als verlassen gilt: so lange weg, ohne wiederzukommen.
+   *
+   * Gemessen an der Uhr und nicht in verpassten Zuegen. Ein Sitz kommt je
+   * Stich einmal dran; drei verpasste Zuege sind je nach Spielart eine Minute
+   * oder zehn. Gemeint war immer die Zeit.
+   */
+  readonly absenceMs?: number;
   /**
    * Wie lange eine beendete Partie im Speicher bleibt, damit Partie-Ende und
    * Revanche noch darauf zugreifen koennen.
@@ -85,10 +87,23 @@ export interface LiveParty {
   /** Sitze, fuer die gerade ein Bot uebernimmt. Fuer alle sichtbar. */
   readonly botControlled: Set<number>;
   readonly leftSeats: Set<number>;
-  readonly consecutiveTimeouts: Map<number, number>;
+  /**
+   * Seit wann ein Sitz weg ist, als Zeitstempel. Gesetzt beim ersten
+   * verpassten Zug ODER beim Verlust der Verbindung, geloescht, sobald der
+   * Spieler handelt oder wieder da ist.
+   */
+  readonly absentSince: Map<number, number>;
   readonly online: Set<number>;
   segmentsWritten: number;
-  graceRoundsLeft: number | null;
+  /**
+   * Diese Partie endet, sobald die laufende Runde durch ist.
+   *
+   * Nur ein reiner Vierertisch kommt hierher: Sitzt ohnehin ein Bot mit, wird
+   * gar nicht aufgeloest. Und aufgeloest wird nie mitten in der Runde — die
+   * spielen Bots zu Ende, abgerechnet wird eine ganze Runde. Genau das ging
+   * am 19. August schief: ein Kreuz-Solo brach mit fuenf Karten auf der Hand ab.
+   */
+  endAfterRound: boolean;
   turnDeadline: number | null;
   /**
    * Ende der laufenden Schaupause (interludeMs des Moduls), z.B. der
@@ -127,11 +142,22 @@ const DEFAULTS = {
   // 0,8 s zwischen den Botzuegen: schnell genug, dass der Tisch fliesst,
   // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt.
   botDelayMs: 800,
-  timeoutsUntilLeave: 3,
-  graceRounds: 1,
-  allOfflineMs: 5 * 60_000,
+  absenceMs: 5 * 60_000,
   finishedRetentionMs: 10 * 60_000,
 };
+
+/**
+ * Sitzt an diesem Tisch ohnehin ein Bot?
+ *
+ * Danach richtet sich, was bei einem verschwundenen Spieler passiert. An
+ * einem aufgefuellten Tisch ist ein Bot mehr kein Bruch, sondern der
+ * Normalfall — dort uebernimmt er den Platz und die Partie laeuft zu Ende.
+ * Nur ein reiner Vierertisch loest sich auf, denn dort ersetzt der Bot einen
+ * Mitspieler, mit dem die anderen drei verabredet waren.
+ */
+function hatBotSitze(party: LiveParty): boolean {
+  return party.seats.some((seat) => seat.permanentBot);
+}
 
 export class PartyRuntime {
   private readonly live = new Map<string, LiveParty>();
@@ -280,10 +306,10 @@ export class PartyRuntime {
       revision: 0,
       botControlled: new Set(emptySeats),
       leftSeats: new Set(),
-      consecutiveTimeouts: new Map(),
+      absentSince: new Map(),
       online: new Set(),
       segmentsWritten: 0,
-      graceRoundsLeft: null,
+      endAfterRound: false,
       turnDeadline: null,
       interludeDeadline: null,
       timer: null,
@@ -354,10 +380,10 @@ export class PartyRuntime {
         seats.filter((seat) => seat.isBot).map((seat) => seat.seatIndex),
       ),
       leftSeats: new Set(),
-      consecutiveTimeouts: new Map(),
+      absentSince: new Map(),
       online: new Set(),
       segmentsWritten: (module.completedSegments?.(state) ?? []).length,
-      graceRoundsLeft: null,
+      endAfterRound: false,
       turnDeadline: null,
       interludeDeadline: null,
       timer: null,
@@ -477,7 +503,9 @@ export class PartyRuntime {
     }
 
     const next = party.module.act(party.state, seat, action);
-    party.consecutiveTimeouts.set(seat, 0);
+    // Wer selbst handelt, ist zurueck: Die Abwesenheitsuhr faengt beim
+    // naechsten Mal wieder bei null an und nicht dort, wo sie stehen blieb.
+    party.absentSince.delete(seat);
 
     // Eine Aktion ohne Wirkung - etwa ein doppeltes oder knapp zu spaetes
     // "Weiter" - wird nicht verbucht: kein Snapshot, kein Rundruf. Sonst
@@ -490,7 +518,7 @@ export class PartyRuntime {
   }
 
   private async afterAction(party: LiveParty): Promise<void> {
-    await this.persist(party);
+    const rundeVorbei = await this.persist(party);
     await touch(this.db, party.tableId);
 
     if (party.module.isFinished(party.state)) {
@@ -498,17 +526,12 @@ export class PartyRuntime {
       return;
     }
 
-    // Karenzrunde abgelaufen. Wer zurueckgekommen ist, hat selbst gehandelt und
-    // damit die Bot-Uebernahme beendet; dann laeuft der Tisch weiter. Sitzt
-    // dort weiterhin ein Bot, wird mit Wertung aufgeloest.
-    if (party.graceRoundsLeft !== null && party.graceRoundsLeft <= 0) {
-      const stillAbsent = [...party.leftSeats].some((seat) =>
-        party.botControlled.has(seat),
-      );
-      if (stillAbsent) {
-        await this.finish(party);
-        return;
-      }
+    // Ein reiner Vierertisch hat jemanden endgueltig verloren. Aufgeloest wird
+    // trotzdem erst an der Rundengrenze: Wer mitten im Solo abbricht, nimmt
+    // den anderen drei eine Runde weg, die sie schon halb gespielt haben.
+    if (party.endAfterRound && rundeVorbei) {
+      await this.finish(party);
+      return;
     }
 
     this.schedule(party);
@@ -643,18 +666,20 @@ export class PartyRuntime {
   /**
    * Zugzeit abgelaufen: Der Bot spielt, der Spieler BLEIBT am Tisch. Ein
    * einzelner Timeout durch Funkloch oder Tuerklingel darf keinen Tisch
-   * aufloesen. Erst drei aufeinanderfolgende gelten als Verlassen.
+   * aufloesen — und die Uebernahme gilt fuer genau diesen Zug, beim naechsten
+   * laeuft wieder die volle Zugzeit fuer den Menschen.
+   *
+   * Verlassen ist etwas anderes als ein verpasster Zug: Dafuer muss jemand
+   * `absenceMs` am Stueck weg gewesen sein.
    */
   private async onTimeout(party: LiveParty, seat: number): Promise<void> {
     if (party.finished || !this.live.has(party.tableId)) return;
 
-    const count = (party.consecutiveTimeouts.get(seat) ?? 0) + 1;
-    party.consecutiveTimeouts.set(seat, count);
+    if (!party.absentSince.has(seat)) party.absentSince.set(seat, Date.now());
     party.botControlled.add(seat);
 
-    if (count >= this.opts.timeoutsUntilLeave && !party.leftSeats.has(seat)) {
-      this.markLeft(party, seat);
-    }
+    const wegSeit = party.absentSince.get(seat)!;
+    if (Date.now() - wegSeit >= this.opts.absenceMs) this.markLeft(party, seat);
 
     await this.playBot(party, seat);
   }
@@ -662,16 +687,18 @@ export class PartyRuntime {
   /**
    * Ein Sitz gilt als ausgestiegen.
    *
-   * Die laufende Runde wird mit Bot zu Ende gespielt, danach laeuft eine
-   * Karenzrunde fuer die Rueckkehr, dann wird aufgeloest. Die Punkte gehen an
-   * den Account, nie an den Bot.
+   * Der Bot uebernimmt den Platz dauerhaft. Ob die Partie deshalb endet,
+   * haengt am Tisch und nicht am Sitz: Sitzt ohnehin ein Bot mit, laeuft sie
+   * zu Ende (siehe hatBotSitze) — nur ein reiner Vierertisch loest sich auf,
+   * und auch der erst an der naechsten Rundengrenze. Die Punkte gehen an den
+   * Account, nie an den Bot.
    */
   markLeft(party: LiveParty, seat: number): void {
     if (party.leftSeats.has(seat)) return;
     party.leftSeats.add(seat);
     party.botControlled.add(seat);
     party.state = party.module.markLeft(party.state, seat);
-    party.graceRoundsLeft = this.opts.graceRounds;
+    if (!hatBotSitze(party)) party.endAfterRound = true;
     this.emit(party.tableId);
   }
 
@@ -694,6 +721,11 @@ export class PartyRuntime {
    *
    * Ausnahme Clantische: Die laufen ueber Wochen und werden nicht nach
    * fuenf Minuten Offline aufgeloest — dort gilt Pause oder die 24h-Schonung.
+   *
+   * Und Ausnahme aufgefuellter Tisch: Sind alle Menschen weg, spielen die Bots
+   * die Partie einfach zu Ende, statt sie mitten in der Runde abzurechnen. Nur
+   * ein reiner Vierertisch hat niemanden, der uebernehmen koennte, ohne dass es
+   * ein anderes Spiel wird.
    */
   setPresence(tableId: string, accountId: string, online: boolean): void {
     const party = this.live.get(tableId);
@@ -703,6 +735,8 @@ export class PartyRuntime {
 
     if (online) {
       party.online.add(seat);
+      // Zurueck am Tisch: Die Abwesenheitsuhr dieses Sitzes ist gestoppt.
+      party.absentSince.delete(seat);
       if (party.offlineTimer) {
         clearTimeout(party.offlineTimer);
         party.offlineTimer = null;
@@ -711,7 +745,13 @@ export class PartyRuntime {
     }
 
     party.online.delete(seat);
+    // Die Uhr laeuft ab dem Verbindungsverlust, nicht erst ab dem naechsten
+    // eigenen Zug: Wer den Bildschirm sperrt, waehrend zwei andere dran sind,
+    // ist genauso weg — nur faellt es erst spaeter auf.
+    if (!party.absentSince.has(seat)) party.absentSince.set(seat, Date.now());
+
     if (party.paused || party.visibility === 'club_only') return;
+    if (hatBotSitze(party)) return;
 
     const humansOnline = party.seats.some(
       (seat_) => seat_.accountId && party.online.has(seat_.index),
@@ -719,7 +759,7 @@ export class PartyRuntime {
     if (!humansOnline && !party.offlineTimer && !party.finished) {
       party.offlineTimer = setTimeout(() => {
         void this.finish(party);
-      }, this.opts.allOfflineMs);
+      }, this.opts.absenceMs);
     }
   }
 
@@ -727,7 +767,11 @@ export class PartyRuntime {
   // Persistenz
   // -------------------------------------------------------------------------
 
-  private async persist(party: LiveParty): Promise<void> {
+  /**
+   * Gibt zurueck, ob mit dieser Aktion eine Runde fertig geworden ist — daran
+   * haengt die Auflösung eines Vierertischs (siehe afterAction).
+   */
+  private async persist(party: LiveParty): Promise<boolean> {
     party.revision += 1;
     const state = party.module.serialize(party.state) as object;
 
@@ -742,22 +786,18 @@ export class PartyRuntime {
     // Abgeschlossene Abschnitte anhaengen. Der Inhalt ist fuer den Server
     // opak; gezaehlt wird nur, wie viele schon abgelegt sind.
     const segments = party.module.completedSegments?.(party.state) ?? [];
-    if (segments.length > party.segmentsWritten) {
-      const fresh = segments.slice(party.segmentsWritten);
-      await this.db.insert(s.roundSummary).values(
-        fresh.map((summary, offset) => ({
-          partyId: party.partyId,
-          roundIndex: party.segmentsWritten + offset,
-          summary: summary as object,
-        })),
-      );
-      party.segmentsWritten = segments.length;
+    if (segments.length <= party.segmentsWritten) return false;
 
-      // Karenzrunde: Nach dem Verlassen laeuft noch eine Runde, dann Schluss.
-      if (party.graceRoundsLeft !== null) {
-        party.graceRoundsLeft -= 1;
-      }
-    }
+    const fresh = segments.slice(party.segmentsWritten);
+    await this.db.insert(s.roundSummary).values(
+      fresh.map((summary, offset) => ({
+        partyId: party.partyId,
+        roundIndex: party.segmentsWritten + offset,
+        summary: summary as object,
+      })),
+    );
+    party.segmentsWritten = segments.length;
+    return true;
   }
 
   // -------------------------------------------------------------------------
