@@ -71,7 +71,7 @@ Minuten live.
 > geleert. Die Reaktion geht deshalb nur an Verbindungen ab Modulversion 2.
 >
 > Reibungsstellen beim Bauen — auch eigene Fehler — stehen gesammelt in
-> `docs/MEMEMORY-TICKETS.md` (20 Einträge und eine Gesamteinschätzung).
+> `docs/MEMEMORY-TICKETS.md` (22 Einträge und eine Gesamteinschätzung).
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

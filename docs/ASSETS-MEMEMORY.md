@@ -13,15 +13,16 @@ Vorlage, falls jemand Motive nachliefert.
 
 | Was | Ordner | Anzahl | Maß | Format | Gewicht |
 | --- | --- | --- | --- | --- | --- |
-| Motive | `public/mememory/motive/` | 44 | 256 × 256 | WebP q78 | 3,6–17,8 kB · **374 kB gesamt** |
+| Motive | `public/mememory/motive/` | 43 | 256 × 256 | WebP q78 | 2,3–15,7 kB · **320 kB gesamt** |
 | Tischdecken | `public/mememory/` | 3 | 640 × 936 | WebP q70 | je ~19 kB · **57 kB gesamt** |
 | Banner Spielauswahl | `public/hub/spielwahl-mememory.webp` | 1 | 1200 × 300 | WebP q80 | 30 kB |
 
-**Vier der 44 Motive gehen auf Vorlagen des Nutzers zurück** (verzerrtes
-Schrei-Gesicht, Strichzeichnung mit Spritz, Katzenfilter, Dinosaurier hinter
-Hund). Sie sind **nachgezogen, nicht kopiert**: Die Vorlagen sind fremde
-Aufnahmen, der Katalog besteht aus eigenen Bildern. Neun weitere Vorlagen
-hatte der Katalog schon in eigener Fassung.
+**Seit dem 23. August sind 13 der 43 Motive nicht mehr selbst erzeugt.**
+Der Nutzer hat seine dreizehn Vorlagen ausdrücklich im Deck haben wollen;
+sie ersetzen jeweils meine KI-Fassung desselben Motivs. Nebeneinander ging
+es nicht — mein Apfel mit Augen und der echte Apfel mit Augen sind auf
+80 px nicht auseinanderzuhalten (Abnahmekriterium 4). **Was daran offen
+ist, steht unten unter „Herkunft“.**
 
 Originale (PNG, 1024 × 1024 bzw. 832 × 1216) liegen unter
 `packages/client/art/mememory/` und sind über `.gitignore` aus dem Repo
@@ -43,7 +44,7 @@ zu den fünf Spalten, die das Brett bis zum 22. August hatte.
 Vom quadratischen Motiv fällt dadurch kaum noch etwas weg. Die Karte schneidet
 mit `object-fit: cover` nach, das Motiv muss also die Mitte tragen.
 
-**Ein Match lädt 12 Motive**, nicht 44: rund **102 kB**. Zusammen mit einer
+**Ein Match lädt 12 Motive**, nicht 43: rund **89 kB**. Zusammen mit einer
 Tischdecke ist das Spiel damit unter 125 kB spielbereit — trotz größerer
 Bilder weniger als vorher. Das ist die Zahl,
 an der die Forderung „keine langen Ladephasen" hängt.
@@ -63,7 +64,7 @@ ist zum guten Teil verdeckt. Mehr Auflösung landet unter den Karten.
    geprüft. Einer der drei Fehler aus CLAUDE.md Regel 5.
 3. **Heller, ruhiger Hintergrund.** Dunkle Motive verschwinden auf der dunklen
    Tischdecke.
-4. **Unverwechselbar gegen die anderen 43.** Zwei ähnliche Motive machen das
+4. **Unverwechselbar gegen die anderen 42.** Zwei ähnliche Motive machen das
    Spiel nicht schwerer, sondern unfair — man kann ein Paar dann nicht mehr
    sicher wiedererkennen. Lama und Alpaka sind der engste Fall im Katalog und
    wurden bewusst behalten (weiß mit Mähne gegen braun und zottelig).
@@ -114,11 +115,54 @@ feinem Diagonalmuster, einem Ring und dem Monogramm „M" (`.mm-rueck` in
 
 ---
 
-## 7 — Nachliefern
+## 7 — Herkunft: was bei den 13 Vorlagen offen ist
+
+Die dreizehn Motive `apfel`, `kartoffel`, `greis`, `heulemoji`, `denkemoji`,
+`hamster`, `waschbaer`, `schere`, `strichtier`, `zerrgesicht`, `spritzglas`,
+`katzenfilter` und `dinohund` sind **fremde Bilder aus dem Netz**, vom Nutzer
+mitgeschickt. Die Originale liegen unter
+`packages/client/art/mememory/vorlagen/` (aus dem Sitzungsprotokoll geholt,
+weil Anhänge sonst nirgends auf der Platte landen).
+
+Der Rest des Katalogs — 30 Motive — ist weiterhin selbst erzeugt.
+
+**Das ist eine bewusste Entscheidung des Nutzers, keine Empfehlung.** Diese
+Punkte gehören dazu und sind mit dem Einbau nicht erledigt:
+
+1. **Urheberrecht.** Mindestens `dinohund` ist ein Filmstandbild
+   (Spinosaurus aus *Jurassic Park III*). Bei den übrigen ist die Quelle
+   unbekannt. Für eine öffentliche Produktion ist „im Netz gefunden“ keine
+   Rechtsgrundlage.
+2. **Recht am eigenen Bild.** `greis`, `zerrgesicht` und `katzenfilter`
+   zeigen **erkennbare Personen**. In Deutschland braucht die Verbreitung
+   eines Personenbildnisses grundsätzlich die Einwilligung der abgebildeten
+   Person (§ 22 KUG). Das ist der Punkt mit dem größten Gewicht, unabhängig
+   vom Urheberrecht am Foto.
+3. **Eine Attribution wurde entfernt.** `zerrgesicht` trug rechts unten die
+   Handles `@max_jaou` / `@czroc`. Der Zuschnitt schneidet sie weg — nach der
+   Hausregel „kein eingebrannter Text“, aber die Wirkung ist, dass der
+   einzige Hinweis auf die Quelle jetzt fehlt. Er steht deshalb hier.
+4. **`docs/KLANG.md` führt für jeden Ton Herkunft und Lizenz.** Für Bilder
+   gibt es diese Spalte nicht. Diese dreizehn wären die ersten Einträge.
+
+**Wer das aufräumen will**, hat zwei Wege: die KI-Fassungen zurückholen (die
+Erzeugerskripte und Prompts liegen im Sitzungs-Scratchpad, die Motive lassen
+sich jederzeit neu ziehen) oder für die Vorlagen Rechte klären. Der Katalog
+ist so gebaut, dass beides eine Datei je Motiv ist.
+
+---
+
+## 8 — Nachliefern
 
 Die Prompts stehen in den Erzeugerskripten (Sitzungs-Scratchpad,
 `mememory_motive.py` / `mememory_nachzug.py` / `mememory_kulisse.py`), die
-Wandlung in `mememory_ausliefern.py`. Wer ein Motiv ersetzt, muss **beides**
+Wandlung in `mememory_ausliefern.py`. Vorlagen des Nutzers werden über
+`vorlagen_einbauen.py` eingebaut — dort stehen auch die Zuschnitte als Zahlen
+und die Regel, Transparenz gegen die **Kartenfarbe** zusammenzulegen und nicht
+gegen Schwarz (`.convert("RGB")` nimmt sonst Schwarz, und ein freigestelltes
+Emoji wird zum schwarzen Kasten).
+
+Wer ein Motiv ersetzt, muss **beides**
 tun: die Datei unter `public/mememory/motive/<kennung>.webp` austauschen **und**
 die Kennung in `packages/game-mememory/src/motive.ts` stehen lassen bzw.
 mitändern. Der Katalog ist der Vertrag zwischen Modul und Client — eine Kennung

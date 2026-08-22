@@ -687,6 +687,74 @@ darstellt, könnte `javascript_tool` bei einem `requestAnimationFrame` im
 ausgeführten Code früh warnen, statt dreißig Sekunden zu warten und dann
 „möglicherweise hängend" zu melden.
 
+---
+
+## T-21 — Angehängte Bilder sind für den Agenten nicht erreichbar
+
+**Schwere:** bremsend · **Art:** Werkzeug · **Stand:** umgangen
+
+**Beobachtung.** Der Nutzer hatte im ersten Auftrag dreizehn Bilder
+angehängt. Ich kann sie **sehen**, aber es gibt kein Werkzeug, sie auf die
+Platte zu schreiben. Genau das brauchte ich aber, um sie ins Spiel
+einzubauen.
+
+Deshalb hatte ich sie in der ersten Runde **nachgezeichnet statt benutzt** —
+und dabei nicht gesagt, dass das eine Notlösung war. Der Nutzer musste erst
+nachfassen („füge meine Bilder vom Anfang noch mit ein"), damit die Lücke
+sichtbar wurde. Das ist der eigentliche Fehler an dieser Stelle: nicht die
+fehlende Fähigkeit, sondern dass ich sie nicht benannt habe.
+
+**Wo sie nicht liegen.** `~/.claude/uploads/` hat Ordner je Sitzung, aber
+keinen für diese. In `Downloads` und `Pictures` war nichts Passendes.
+
+**Notbehelf.** Die Anhänge stehen als base64 im Sitzungsprotokoll
+`~/.claude/projects/<projekt>/<sitzung>.jsonl`. Ein kurzes Skript liest die
+erste Nutzernachricht mit Bildblöcken und schreibt sie der Reihe nach
+heraus — dreizehn Dateien, verlustfrei, in der Reihenfolge des Absendens.
+
+**Nebenbefund, eigener Fehler.** Mein Einbauskript legte die alte Fassung als
+`ki-fassung-<name>.png` beiseite und überschrieb diese Sicherung bei jedem
+Lauf. Beim zweiten Lauf lag unter dem Zielnamen schon die Vorlage — die
+Sicherung enthielt danach die Vorlage statt der KI-Fassung. **Eine Sicherung,
+die sich selbst überschreibt, sichert genau einen Lauf.** Kein Verlust hier
+(die Originale liegen unter `vorlagen/`, die KI-Fassungen waren nie
+ausgeliefert), aber die Regel gilt allgemein: erst prüfen, ob die Sicherung
+schon existiert.
+
+**Vorschlag ans System.** Ein Werkzeug, das einen Anhang der laufenden
+Unterhaltung in eine Datei schreibt, wäre eine Zeile Aufwand und erspart
+diesen Umweg — und vor allem die stille Ersatzhandlung, die daraus entsteht,
+wenn ein Agent die Fähigkeit nicht hat und es nicht sagt.
+
+---
+
+## T-22 — Fremde Bilder in der Produktion, und im Repo fehlt die Spalte dafür
+
+**Schwere:** stolpert · **Art:** Architektur/Dokumentation · **Stand:** offen
+
+**Beobachtung.** Mit den dreizehn Vorlagen liegen jetzt fremde Bilder aus dem
+Netz in einer öffentlichen Produktion: mindestens ein Filmstandbild, drei
+Aufnahmen erkennbarer Personen, und bei einem hat mein Zuschnitt die Handles
+des Urhebers entfernt (nach der Hausregel „kein eingebrannter Text" — die
+Wirkung ist trotzdem, dass die einzige Quellenangabe weg ist).
+
+**Was daran systematisch ist.** `docs/KLANG.md` führt für **jeden** Ton
+Herkunft und Lizenz; das Projekt nimmt das Thema also ernst. Für **Bilder**
+gibt es diese Spalte nicht — `docs/ASSETS-*.md` beschreibt Maße und
+Abnahmekriterien, aber nirgends steht, woher ein Bild kommt und unter welcher
+Lizenz. Solange alle Bilder bestellt oder selbst erzeugt waren, ist das nicht
+aufgefallen. Beim ersten fremden Bild fällt es sofort auf.
+
+**Stand.** Der Nutzer hat den Einbau ausdrücklich verlangt, ich habe die
+Punkte benannt und eingebaut. Aufgeräumt ist nichts: Kapitel 7 in
+`docs/ASSETS-MEMEMORY.md` hält fest, was offen ist, und nennt beide Wege
+zurück (KI-Fassungen neu ziehen oder Rechte klären).
+
+**Vorschlag ans System.** Eine Herkunftsspalte für Bilder, so wie es sie für
+Klänge gibt — eine Zeile je Datei mit Quelle und Lizenz. Am besten als
+Pflichtfeld in `docs/ASSETS-*.md`, damit die Frage beim nächsten Mal vor dem
+Einbau gestellt wird und nicht danach.
+
 # Gesamteinschätzung
 
 Ohne Beschönigung, aber auch ohne die Übertreibung, die eine reine

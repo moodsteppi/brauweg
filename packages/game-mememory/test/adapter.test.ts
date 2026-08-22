@@ -146,7 +146,7 @@ test('validateConfig winkt keinen Unsinn durch', () => {
   assert.deepEqual(mememory.validateConfig(DEFAULT_REGELN, 2, 1), []);
   assert.ok(mememory.validateConfig(DEFAULT_REGELN, 3, 1).length > 0);
   assert.ok(mememory.validateConfig({}, 2, 1).length > 0);
-  // 10x10 = 50 Paare, der Katalog hat 44.
+  // 10x10 = 50 Paare, der Katalog hat 43.
   assert.ok(
     mememory.validateConfig({ spalten: 10, zeilen: 10, merkzeitMs: 1100 }, 2, 1).length > 0,
   );

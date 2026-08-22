@@ -64,6 +64,9 @@ tatsaechlich laeuft.
 10. Hintergrund: KI-Bild, Holztisch + Tischdecke in weiß/blau/rot.
 11. Eigenes Design für die **Kartenrückseite**.
 12. **Mehr Motive erzeugen als ein Match braucht** (Durchwechseln).
+    *(43 Motive für 12 Paare. Seit 23.8. sind 13 davon die Originalbilder
+    des Nutzers statt meiner KI-Fassungen — Herkunft und was daran offen
+    ist: `docs/ASSETS-MEMEMORY.md`, Kapitel 7.)*
 13. Flüssig: Animation örtlich, an den Server geht nur die Wahl; verkleinerte
     Bilder vorladen; **keine langen Ladephasen**.
 14. Klang-Demo: Meme-Töne beim Umdrehen, Jubel beim Punkt/Sieg. Geringste
