@@ -10821,12 +10821,12 @@ main.auth > .muted {
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
-  background: linear-gradient(180deg, rgba(8, 4, 2, 0.72), rgba(8, 4, 2, 0));
+  background: linear-gradient(180deg, rgba(8, 4, 2, 0.55), rgba(8, 4, 2, 0));
 }
 .mm-leiste.oben { padding-top: calc(env(safe-area-inset-top) + 8px); }
 .mm-leiste.unten {
   padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
-  background: linear-gradient(0deg, rgba(8, 4, 2, 0.72), rgba(8, 4, 2, 0));
+  background: linear-gradient(0deg, rgba(8, 4, 2, 0.55), rgba(8, 4, 2, 0));
 }
 
 .mm-raus {
@@ -10872,6 +10872,14 @@ main.auth > .muted {
 .mm-leiste[data-farbe='rot'] .mm-stand,
 .mm-ende-stand b[data-farbe='rot'] { color: #ff8a80; }
 
+/*
+ * Die Polsterung ist Anzeige, nicht Zierde.
+ *
+ * Vierzig Karten fuellen ein Handy fast vollstaendig aus. Mit 8 px Rand blieb
+ * von der Tischdecke ein Faden uebrig, und damit war der Farbwechsel beim
+ * Zugwechsel praktisch unsichtbar. Rand und Fugen sind deshalb absichtlich
+ * grosszuegig: Sie sind die Flaeche, auf der die Teamfarbe zu sehen ist.
+ */
 .mm-mitte {
   position: relative;
   z-index: 1;
@@ -10879,7 +10887,7 @@ main.auth > .muted {
   min-height: 0;
   display: flex;
   justify-content: center;
-  padding: 2px 8px 6px;
+  padding: 6px 16px 10px;
 }
 
 /*
@@ -10894,7 +10902,7 @@ main.auth > .muted {
   display: grid;
   grid-template-columns: repeat(var(--mm-spalten, 5), 1fr);
   grid-template-rows: repeat(var(--mm-zeilen, 8), 1fr);
-  gap: clamp(3px, 1.2vw, 8px);
+  gap: clamp(5px, 2vw, 11px);
   width: 100%;
   height: 100%;
   max-width: min(100%, 520px);
@@ -10937,12 +10945,21 @@ main.auth > .muted {
  * und ein Ring mit Monogramm. Alles aus CSS — eine Bilddatei dafür wäre 40 mal
  * dasselbe Byte auf dem Schirm und eine Ladephase mehr.
  */
+/*
+ * Warmes Dunkelbraun mit Gold, NICHT das naheliegende Pflaumenblau.
+ *
+ * Der erste Entwurf war indigo — und stand damit auf der blauen Tischdecke
+ * fast unsichtbar: Vierzig Karten und der Grund dahinter wurden eine einzige
+ * blaue Flaeche, und die Tischdecke konnte nicht mehr anzeigen, wer dran ist.
+ * Die Rueckseite muss gegen BEIDE Teamfarben stehen; ein warmer, fast
+ * schwarzer Ton tut das und passt ausserdem zum Holztisch.
+ */
 .mm-rueck {
   display: grid;
   place-items: center;
   background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 5px, rgba(255, 255, 255, 0) 5px 10px),
-    radial-gradient(130% 100% at 50% 0%, #46316f 0%, #241748 55%, #150c2e 100%);
+    repeating-linear-gradient(45deg, rgba(255, 214, 140, 0.07) 0 5px, rgba(255, 255, 255, 0) 5px 10px),
+    radial-gradient(130% 100% at 50% 0%, #3c332a 0%, #221c15 55%, #12100c 100%);
   box-shadow:
     inset 0 0 0 1px rgba(255, 214, 140, 0.4),
     inset 0 0 0 3px rgba(18, 10, 34, 0.9),

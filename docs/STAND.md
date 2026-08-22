@@ -14,8 +14,46 @@ Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
 **Prüfstand:** 149 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-43 Skat-Tests, 15 Feldherr-Tests, **275 Servertests**, `tsc --noEmit` sauber.
+43 Skat-Tests, 15 Feldherr-Tests, 31 Mememory-Tests, **287 Servertests**,
+`tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
+
+> **Mememory ist neu auf `staging` (22. August 2026), noch nicht in der
+> Produktion.** Memory-Duell zu zweit: 5×8 Karten, zwanzig von vierzig
+> KI-erzeugten Meme-Motiven je Partie, Online-Match-Suche über die
+> gewöhnliche Tischliste, eigener Bildschirm statt Kartentisch (wie
+> Feldherr). Neues Paket `@brauweg/game-mememory` (**31 eigene Tests**),
+> `Mememory.tsx` im Client, ein Eintrag mehr in `MODULES`. Bauplan,
+> Architekturentscheidungen und Bildbestellung: `docs/MEMEMORY-PLAN.md`
+> und `docs/ASSETS-MEMEMORY.md`.
+>
+> **Drei Dinge daran sind für andere Spiele interessant:**
+>
+> 1. **Die Schaupause macht das Zurückdrehen.** Zwei ungleiche Karten
+>    bleiben liegen und drehen dann zurück — das ist eine Uhr, und ein
+>    Spielmodul ist uhrlos. Gelöst über `interludeMs`/`advanceInterlude`:
+>    Das Modul nennt die Dauer, die Plattform misst sie. Ein eigener Timer
+>    im Modul überlebte keinen Serverneustart.
+> 2. **Neu: `GET /api/games/:gameId/aktiv`.** Zählt besetzte Plätze an
+>    wartenden **und** laufenden Tischen. `listTables` filtert auf
+>    `status='waiting'` — wer spielt, ist darin unsichtbar, und eine
+>    Anzeige „N aktive Spieler", die beim Spielstart auf null fällt, ist
+>    schlechter als gar keine. Die Zeile kennt kein einzelnes Spiel.
+> 3. **Eine neue Spielkennung muss an vier Stellen stehen**, nicht an der
+>    einen, die CLAUDE.md nennt: `GameId`-Union (game-api), `MODULES`
+>    (registry.ts), **`gameIdSchema` in `http/app.ts`** und die feste Liste
+>    im Registry-Test. Fehlt die dritte, übersetzt alles grün und jeder
+>    Aufruf endet im Zod-Fehler.
+>
+> Geprüft wurde mit zwei angemeldeten Sitzungen auf zwei Ursprüngen
+> (`localhost:3000` und `127.0.0.1:3000` haben getrennte Cookie-Töpfe) —
+> eine Partie über volle zwanzig Paare bis zum Abschlussblatt.
+> **Nicht geprüft: das Aussehen.** Im Sitzungsbrowser lässt sich kein
+> Bildschirmfoto machen; belegt sind Aufbau, Maße, Farben und Verhalten,
+> nicht der Auftritt. Vor `main` gehört das einmal an ein echtes Handy.
+>
+> Reibungsstellen beim Bauen — auch eigene Fehler — stehen gesammelt in
+> `docs/MEMEMORY-TICKETS.md`.
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

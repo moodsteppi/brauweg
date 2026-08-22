@@ -20,13 +20,21 @@ hinein, auf die ein KI-System beim Bauen in diesem Repo stößt.
 | 3 | Server: GameId, Registry, zod-Enum, i18n, Aktiv-Zaehler | **fertig** |
 | 4 | Client: Bildschirm, Menue, Match-Suche, Brett | **fertig** |
 | 5 | Klang (Web Audio, opt-in) | **fertig** |
-| 6 | Oertlicher Zwei-Geraete-Test | laeuft |
+| 6 | Oertlicher Zwei-Geraete-Test | **fertig** |
 | 7 | Commit + Push auf `staging` | offen |
 
-Letzte Sitzungsnotiz: Zwei Browser-Sitzungen auf zwei Urspruengen
-(`localhost:3000` und `127.0.0.1:3000`, getrennte Cookie-Toepfe) spielen
-gegeneinander. Gefunden und behoben: die globale `main`-Regel schrumpfte das
-Brett (T-05) und die vorweggenommene Kartendrehung blieb haengen (T-08).
+Letzte Sitzungsnotiz (22.08.2026): Eine volle Partie ueber zwanzig Paare bis
+zum Abschlussblatt gespielt — zwei angemeldete Sitzungen auf zwei Urspruengen
+(`localhost:3000` und `127.0.0.1:3000` haben getrennte Cookie-Toepfe).
+Endstand 4:16, alle vierzig Karten vergeben, Tischdecke am Ende neutral.
+Gefunden und behoben: die globale `main`-Regel schrumpfte das Brett (T-05),
+die vorweggenommene Kartendrehung blieb haengen (T-08), und der Aktiv-Zaehler
+stand im Wartebereich still.
+
+**Nicht geprueft: das Aussehen.** Im Sitzungsbrowser laesst sich kein
+Bildschirmfoto machen (T-09). Belegt sind Aufbau, Masse, Farben und
+Verhalten — nicht der Auftritt und nicht, dass die Umdreh-Bewegung
+tatsaechlich laeuft.
 
 ---
 

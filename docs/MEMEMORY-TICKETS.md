@@ -378,3 +378,178 @@ Prüfung wertlos.
 nicht in jede Sitzung neu. Oder die Ursache abstellen: Das Rauschen entsteht
 durch eine npm-Version, die `peer`-Marken anders schreibt als die, mit der die
 Datei zuletzt erzeugt wurde.
+
+---
+
+## T-12 — Ein Spiel für zwei ist mit einem Browserprofil nicht zu testen
+
+**Schwere:** bremsend · **Art:** Werkzeug · **Stand:** umgangen
+
+**Beobachtung.** Mememory braucht zwei angemeldete Konten, die gleichzeitig
+spielen. Der Browser der Sitzung hat aber **ein** Profil: Zwei Tabs teilen
+sich den Cookie-Topf, also auch das Konto. Ein zweiter Spieler ist damit
+zunächst nicht herstellbar.
+
+**Notbehelf 1 — zwei Ursprünge.** Cookies gehören zum Host, nicht zum Port.
+Der Server liefert den gebauten Client selbst aus, also sind
+`http://localhost:3000` und `http://127.0.0.1:3000` **zwei getrennte
+Sitzungen auf demselben Server**. Damit lässt sich Anna in dem einen Tab und
+Bert in dem anderen anmelden. (Anmelden selbst geht am schnellsten per
+`fetch('/api/auth/login')` aus der Seite heraus — das setzt das Cookie für
+genau diesen Ursprung.)
+
+**Notbehelf 2 — der zweite Spieler als Node-Client.** Es bleibt ein zweites
+Problem: Nur **ein** Tab ist im Vordergrund, der andere wird gedrosselt
+(`setInterval` auf eine Sekunde). Eine Partie über zwanzig Paare dauert so
+eine halbe Stunde. Die Gegenseite läuft deshalb als kleiner Node-Client über
+denselben WebSocket (`ws` liegt in den `node_modules` des Servers). Damit
+läuft der echte Bildschirm im Tab und der Gegner in Echtzeit.
+
+**Nebenbefund, der die Architektur bestätigt.** Der Node-Client bekommt
+ausschließlich die normale Sicht — und spielt trotzdem stark, weil er sich
+selbst merkt, was er gesehen hat. Genau deshalb muss das Modul **keine**
+Merkliste mitschicken (siehe `sicht.ts`): Wer sich erinnern will, kann es,
+und wer schummeln will, gewinnt dadurch nichts, was ein aufmerksamer Mensch
+nicht auch hätte.
+
+**Vorschlag ans System.** Ein zweites Browserprofil (oder ein Inkognito-Tab)
+wäre die naheliegende Lösung. Solange es das nicht gibt, gehört der
+Zwei-Ursprung-Kniff in die Projektdoku — er ist bei Feldherr schon einmal
+neu erfunden worden und stand nirgends.
+
+---
+
+## T-13 — Zeitmessungen im Sitzungsbrowser sind nicht belastbar
+
+**Schwere:** stolpert · **Art:** Werkzeug · **Stand:** offen
+
+**Beobachtung.** Ich wollte prüfen, ob zwei ungleiche Karten wirklich
+1100 ms liegen bleiben. Der Versuch: Karte klicken, 700 ms warten, Zustand
+lesen — und der Zustand war schon weiter, obwohl die Pause noch hätte laufen
+müssen. `document.hidden` meldete dabei `false`.
+
+Zusammen mit T-09 (keine Bildkomposition) heißt das: Der Tab ist in einem
+Zwischenzustand, in dem `setTimeout` anders läuft als in einem sichtbaren
+Fenster, sich aber als sichtbar meldet. Zeitabhängige Prüfungen sind hier
+**nicht** verlässlich.
+
+**Folge für diesen Bericht.** Ich habe alle Zeitaussagen aus der Prüfung
+herausgenommen und stattdessen Zustandsübergänge geprüft (liegt die Karte
+offen? wechselt das Zugrecht? sind beide Plätze vergeben?). Dass die
+Merkzeit **1100 ms** beträgt, ist durch einen Test des Moduls belegt, nicht
+durch eine Messung im Browser.
+
+**Vorschlag ans System.** Entweder `document.visibilityState` ehrlich auf
+`hidden` setzen, wenn der Bereich nicht angezeigt wird — dann weiß der Code,
+woran er ist —, oder in der Werkzeugbeschreibung sagen, dass Zeitverhalten im
+nicht angezeigten Bereich nicht dem eines sichtbaren Fensters entspricht.
+
+---
+
+---
+
+## T-14 — Zahlen finden keine Farbfehler: der Nachbau als Ersatz fürs Bildschirmfoto
+
+**Schwere:** bremsend · **Art:** Werkzeug · **Stand:** umgangen — und es hat sich gelohnt
+
+**Beobachtung.** T-09 hält fest, dass im Sitzungsbrowser kein Bildschirmfoto
+möglich ist. Ich hatte das mit gemessenen Kastenmaßen aufgefangen und alles
+für richtig befunden: Leisten sitzen, Gitter füllt, Karten quadratisch genug,
+Farben laut `getComputedStyle` korrekt gesetzt.
+
+Zur Abnahme habe ich das Brett dann in Python **nachgemalt** — mit denselben
+gemessenen Maßen und denselben Bilddateien. Das Bild zeigte sofort zwei
+Fehler, die keine einzige Zahl verraten hatte:
+
+1. **Die Kartenrückseite war fast so blau wie die blaue Tischdecke.** Ich
+   hatte sie pflaumenblau/indigo gebaut, weil das für sich hübsch aussieht.
+   Auf der blauen Decke verschmolzen vierzig Karten und der Grund zu einer
+   Fläche — und damit war die Tischdecke als Anzeige, wer am Zug ist, tot.
+   Genau die Funktion, die der Auftrag ausdrücklich verlangt.
+2. **Von der Tischdecke war fast nichts zu sehen.** Vierzig Karten mit 8 px
+   Rand und 5 px Fuge füllen ein Handy praktisch vollständig; die Farbe blieb
+   ein Faden. Rand und Fuge sind jetzt größer — sie sind die Fläche, auf der
+   die Teamfarbe überhaupt erscheinen kann.
+
+**Was daran allgemein ist.** Beide Fehler sind *Beziehungen zwischen zwei
+richtigen Werten*: Die Rückseite war richtig, die Tischdecke war richtig, der
+Kontrast zwischen beiden war es nicht. Eine Prüfung, die Elemente einzeln
+misst, kann so etwas nicht finden. Ein KI-Agent ohne Bild ist an dieser Stelle
+also nicht „etwas eingeschränkt", sondern für eine ganze Fehlerklasse blind.
+
+**Notbehelf, und seine Grenze.** Der Nachbau
+(`mememory_nachbau.py` im Sitzungs-Scratchpad, Bilder unter
+`packages/client/art/mememory/nachbau-*.jpg`) ist kein Bildschirmfoto: Er
+zeigt Anordnung, Größen, Bilder und Farbflächen, aber weder die echten
+Verläufe und Schatten noch die Umdreh-Bewegung. Für Kontrast- und
+Dichtefragen reicht er; für „sieht das gut aus" nicht.
+
+**Vorschlag ans System.** Ein Bildschirmfoto des nicht angezeigten Bereichs
+wäre die eine Verbesserung mit dem größten Hebel in dieser ganzen Liste.
+Solange es sie nicht gibt: Ein Nachbau kostet zwanzig Minuten und findet
+Fehler, die sonst erst der Nutzer sieht — das gehört in die Arbeitsweise, wenn
+etwas Sichtbares gebaut wird.
+
+# Gesamteinschätzung
+
+Ohne Beschönigung, aber auch ohne die Übertreibung, die eine reine
+Problemliste erzeugt: **Dieses System ist für KI-gestützte Entwicklung gut
+geeignet.** Ein vollständiges Mehrspieler-Spiel — Regelmodul, Server-
+Anbindung, Oberfläche, vierzig erzeugte Bilder, Klang, Tests, Dokumentation —
+ist in einer Sitzung ohne menschlichen Eingriff entstanden. Kein einziges
+Ticket war *blockierend*.
+
+## Was das möglich gemacht hat
+
+1. **Die Modulschnittstelle trägt.** `GameModule` hat für jede Frage, die
+   ein Memory stellt, schon eine Antwort gehabt: verdeckte Information über
+   `viewFor`, das Zurückdrehen über die Schaupause, Aussteiger über
+   `markLeft`, Wiederanlauf über `serialize`. Ich musste an keiner Stelle
+   gegen die Schnittstelle arbeiten — das ist bei einem Spiel, das kein
+   Kartenspiel ist, bemerkenswert.
+2. **Die Kommentare erklären das Warum.** Regel 2 aus CLAUDE.md ist keine
+   Stilvorgabe, sie ist der Grund, warum eine fremde Sitzung hier schnell
+   arbeiten kann. „Nicht in die Warteschlange: Ein Zuruf, der nach dem
+   Wiederverbinden nachkäme, gehörte zu einem Moment, den es nicht mehr
+   gibt" — solche Sätze ersparen jedes Mal eine halbe Stunde.
+3. **Die Fehlerlisten sind echt.** `docs/STAND.md` und CLAUDE.md nennen
+   Fehler, die tatsächlich passiert sind, mit Datum. Drei davon hätte ich
+   ohne diese Warnungen wiederholt (Bildgrößen, `<img>` auf fehlende Datei,
+   `git add` auf ignorierte Pfade).
+4. **`game_id` ist `text` und kein Enum.** Eine einzige Entscheidung, und
+   ein neues Spiel braucht keine Migration. Das ist der Unterschied zwischen
+   „eine Sitzung" und „eine Sitzung plus Rücksprache".
+
+## Wo es hakt, in der Reihenfolge, in der es weh tut
+
+1. **Prüfen ohne Augen** (T-09, T-13, T-14). Die größte Lücke, und die
+   teuerste: Zwei Gestaltungsfehler — eine Rückseite, die auf der blauen
+   Tischdecke verschwand, und eine Tischdecke, die hinter vierzig Karten
+   praktisch unsichtbar war — sind durch **keine** Messung aufgefallen.
+   Beide sind Beziehungen zwischen zwei für sich richtigen Werten. Gefunden
+   hat sie erst ein Nachbau des Bretts in Python. Ein Agent ohne Bild ist
+   hier nicht eingeschränkt, sondern für eine ganze Fehlerklasse blind.
+2. **Dokumentation, die einen anderen Rechner beschreibt** (T-01, T-04). Die
+   verbindlich vorgeschriebenen Werkzeuge gibt es hier nicht. Das kostet
+   nicht nur Zeit, es untergräbt die Verbindlichkeit: Wer eine Regel nicht
+   befolgen *kann*, fängt an, Regeln zu bewerten.
+3. **Versteckte Kopplungen** (T-05, T-06). Eine globale CSS-Regel und eine
+   zweite, handgepflegte Liste von Spielkennungen. Beide brechen leise: Der
+   Übersetzer schweigt, die Tests bleiben grün, der Fehler zeigt sich erst
+   beim Benutzen.
+4. **Werkzeugketten mit Escape-Schichten** (T-03). Der einzige Punkt, an dem
+   ich eine Datei tatsächlich beschädigt habe.
+
+## Was ich als Nächstes verbessern würde
+
+In dieser Reihenfolge, nach Nutzen je Aufwand:
+
+- `gameIdSchema` aus der `GameId`-Union ableiten (eine Zeile, entfernt eine
+  ganze Fehlerklasse).
+- Ein plattformunabhängiges Bildwerkzeug ins Repo, und CLAUDE.md Regel 4
+  darauf umschreiben.
+- Den Pull an den Anfang der Sitzung ziehen (ein Satz).
+- Die globale `main`-Regel auf eine Klasse umhängen.
+
+Alles vier sind kleine Eingriffe. Der große — ein Weg, das Ergebnis zu
+**sehen** — ist keiner, den dieses Repo lösen kann.
