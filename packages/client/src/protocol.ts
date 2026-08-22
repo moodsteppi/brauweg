@@ -28,10 +28,20 @@ export const WIZARD_MODULE_VERSION = 1;
  */
 export const FELDHERR_MODULE_VERSION = 2;
 
+/**
+ * 2 seit dem 22. August 2026: Dieser Client versteht Reaktionen (Emojis, die
+ * ueber den Tisch fliegen). Der Server schickt sie NUR an Verbindungen, die
+ * mindestens die 2 gemeldet haben — eine unbekannte Nachricht landet sonst im
+ * Sicht-Zweig und leert das Brett. Ein Geraet, das ueber den Deploy hinweg
+ * offen bleibt, meldet die 1 und spielt einfach ohne Reaktionen weiter.
+ */
+export const MEMEMORY_MODULE_VERSION = 2;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
   feldherr: FELDHERR_MODULE_VERSION,
+  mememory: MEMEMORY_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */
@@ -490,10 +500,27 @@ export interface TaktMessage {
   zuege?: number;
 }
 
+/**
+ * Eine Reaktion vom Tisch: ein Emoji, das der Gegner abgeschickt hat.
+ *
+ * Traegt nur die Nummer im Zeichenvorrat, nicht das Zeichen selbst — der
+ * Server kennt den Vorrat nicht und soll ihn nicht kennen. Wie ein Zuruf
+ * ohne Revision: ein Moment, kein Zustand.
+ */
+export interface ReaktionMessage {
+  v: number;
+  game: string;
+  type: 'reaktion';
+  tableId: string;
+  seat: number;
+  zeichen: number;
+}
+
 export type ServerMessage<V = GameView> =
   | ViewMessage<V>
   | PartyMessage
   | TableMessage
   | EmoteMessage
   | TaktMessage
+  | ReaktionMessage
   | ErrorMessage;

@@ -20,13 +20,23 @@ export interface MememoryRegeln {
 }
 
 /**
- * 5 x 8 = 40 Karten, 20 Paare. Vorgabe des Auftrags und zugleich das, was auf
- * ein Handy passt: fuenf Spalten ergeben bei 390 px Breite rund 75 px je
- * Karte, und das ist quadratisch — deshalb sind auch die Motive quadratisch.
+ * 4 x 6 = 24 Karten, 12 Paare.
+ *
+ * Vorher waren es 5 x 8. Der Nutzer wollte die Bilder groesser haben und
+ * schlug vor, zwei ZEILEN zu streichen — das haette das Gegenteil bewirkt:
+ * Die Kartenbreite haengt allein an der SPALTENZAHL (fuenf Spalten auf einem
+ * 375 px breiten Handy sind 63 px je Karte, egal wie viele Zeilen darunter
+ * stehen). Weniger Zeilen haetten die Karten nur hoeher gemacht, und weil
+ * quadratische Motive auf eine hohe Karte beschnitten werden, waere vom Bild
+ * SEITLICH mehr weggefallen.
+ *
+ * Eine Spalte weniger bringt dagegen sofort 27 % mehr Kartenbreite (63 -> 80
+ * px), und mit vier Spalten auf sechs Zeilen ist die Zelle fast quadratisch —
+ * also wird vom quadratischen Motiv auch kaum noch etwas abgeschnitten.
  */
 export const DEFAULT_REGELN: MememoryRegeln = {
-  spalten: 5,
-  zeilen: 8,
+  spalten: 4,
+  zeilen: 6,
   merkzeitMs: 1100,
 };
 

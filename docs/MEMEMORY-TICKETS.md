@@ -490,6 +490,143 @@ Solange es sie nicht gibt: Ein Nachbau kostet zwanzig Minuten und findet
 Fehler, die sonst erst der Nutzer sieht — das gehört in die Arbeitsweise, wenn
 etwas Sichtbares gebaut wird.
 
+---
+
+## T-15 — Die frisch umgedrehte Karte war blass, und mein Blatt hatte keine Regel dafür
+
+**Schwere:** bremsend · **Art:** eigener Fehler / Umgebung · **Stand:** gelöst
+
+**Beobachtung.** Der Nutzer meldete am Gerät: Wer selbst eine Karte umdreht,
+sieht das Bild halbdurchsichtig. In meinem Blatt steht dafür keine einzige
+Zeile — kein `opacity`, kein `filter`.
+
+**Ursache.** Die Karte ist ein `<button>`, und ich hatte sie
+`disabled={!meinZug || aufgedeckt}` gesetzt. Genau im Moment des Umdrehens
+wird sie also deaktiviert — sie ist ja nicht mehr anklickbar. Deaktivierte
+Knöpfe zeichnet WebKit nach eigener Vorgabe blasser; die Regel steht im
+Browser, nicht im Projekt, und taucht deshalb in keiner Suche über das Repo
+auf.
+
+**Ehrliche Einschränkung.** Nachstellen konnte ich es nicht (T-09: kein
+Bildschirmfoto). Belegt ist: Mein Blatt setzt keine Durchsichtigkeit, und die
+Karte bekommt in genau diesem Moment `disabled`. Das ist eine sehr gute
+Erklärung, aber sie bleibt eine Erklärung.
+
+**Lösung.** `disabled` ganz raus. Ob ein Tipp zählt, entscheidet ohnehin die
+Behandlungsfunktion; für die Vorlesehilfe bleibt `aria-disabled`. Und weil
+der Nutzer die Blässe für **fertige Paare** ausdrücklich haben wollte, steht
+sie jetzt dort — als eigene Regel auf dem Bild, sichtbar im Blatt.
+
+**Allgemein.** `disabled` ist kein Gestaltungsmerkmal, sondern ein
+Verhaltensmerkmal mit Aussehen im Gepäck. Wer ein eigenes Aussehen baut und
+`disabled` benutzt, erbt Vorgaben, die er nie geschrieben hat.
+
+---
+
+## T-16 — Eine Animation, die vor ihren Daten losläuft, zeigt die Lücke
+
+**Schwere:** bremsend · **Art:** eigener Fehler · **Stand:** gelöst
+
+**Beobachtung.** Zweite Meldung des Nutzers: Während des Umdrehens ist
+manchmal kurz nichts zu sehen, dann erscheint das Bild.
+
+**Ursache — und sie war eingebaut, nicht zufällig.** Die Karte dreht auf den
+Tipp hin sofort, damit die Bewegung nicht auf die Funkstrecke wartet (T-08).
+Welches Motiv darunter liegt, weiß der Client aber erst mit der
+Serverantwort — verdeckt heißt verdeckt, das ist der Kern des Spiels. Die
+Drehung lief also über die 90 Grad hinaus, an denen die Vorderseite sichtbar
+wird, während die Vorderseite noch leer war. Dazu kommt, dass ein geladenes
+Bild nicht dasselbe ist wie ein **entpacktes**: Selbst ein vorgeladenes Motiv
+erscheint erst einen Bildlauf später.
+
+**Lösung, zweiteilig.**
+
+1. **Zwei Stufen statt einer.** Angetippt dreht die Karte auf 82 Grad und
+   hält dort — sichtbar ist weiter die Rückseite, schräg gestellt, was sich
+   als „dreht gerade" liest. Die zweite Hälfte läuft erst, wenn das Motiv da
+   und zeigbar ist. 82 und nicht 90: Bei 90 Grad steht die Karte auf der
+   Kante und ist unsichtbar — das sähe aus, als wäre sie verschwunden.
+2. **`decode()` statt `onload`.** Erst danach gilt ein Motiv als zeigbar.
+   Ein Fehlschlag zählt ausdrücklich auch als fertig, sonst bliebe eine Karte
+   mit fehlender Datei für immer halb gedreht stehen.
+
+**Allgemein.** Eine vorweggenommene Animation darf nur so weit laufen, wie
+sie ohne die Daten ehrlich bleibt. Der Punkt, an dem sie warten muss, ist
+genau der, an dem sie anfängt, etwas zu behaupten.
+
+---
+
+## T-17 — „Zwei Zeilen weniger" hätte die Bilder kleiner gemacht
+
+**Schwere:** stolpert · **Art:** Design · **Stand:** gelöst
+
+**Beobachtung.** Der Wunsch war: oberste und unterste Zeile streichen, damit
+die Bilder größer werden. Das hätte das Gegenteil bewirkt.
+
+Bei einem Gitter, das die Breite füllt, hängt die Kartenbreite **allein an
+der Spaltenzahl**: Fünf Spalten sind auf einem 375 px breiten Handy 63 px je
+Karte, egal ob acht Zeilen darunter stehen oder sechs. Weniger Zeilen machen
+die Karten nur **höher** — und weil die Motive quadratisch sind und mit
+`object-fit: cover` gefüllt werden, wäre vom Bild dann seitlich *mehr*
+abgeschnitten worden. Aus 5×8 mit 63×81 px wäre 5×6 mit 63×110 px geworden:
+dieselbe Breite, ein Drittel weniger vom Motiv zu sehen.
+
+**Lösung.** Eine Spalte weniger statt zwei Zeilen: **4×6 = 24 Karten**.
+Das bringt sofort 27 % mehr Kartenbreite (63 → 80 px), und weil das Brett
+jetzt ein Seitenverhältnis aus Spalten und Zeilen trägt, sind die Zellen
+fast quadratisch — vom quadratischen Motiv fällt kaum noch etwas weg.
+
+**Warum das hier steht.** Nicht als Widerspruch: Das Ziel („die Bilder
+sollen besser zu erkennen sein") war richtig und ist erreicht. Der Weg dahin
+war eine Geometriefrage, die man am Gerät nicht sieht — man sieht nur, dass
+zu viele Karten da sind. Ein Agent, der so einen Wunsch wörtlich ausführt,
+liefert das Gegenteil des Gewünschten und kann dabei auf jede Rückfrage
+verzichten. **Wörtlich richtig ist nicht dasselbe wie richtig.**
+
+---
+
+## T-18 — Für schnelle Reaktionen gab es keinen Kanal, und der neue hat eine Falle
+
+**Schwere:** bremsend · **Art:** Architektur · **Stand:** gelöst
+
+**Beobachtung.** Der Auftrag: ein Knopf, der ein Emoji über den Tisch fliegen
+lässt, bis zu viermal je Sekunde. Die Plattform hat dafür Zurufe (`emote`) —
+die passen aber an drei Stellen nicht:
+
+1. **Takt.** `EMOTE_PAUSE_MS` steht auf **2000**. Das ist eine Größenordnung
+   neben den geforderten 250 ms, und die Zahl ist eine gemeinsame Konstante
+   aller Spiele — hochsetzen hieße, sie überall hochzusetzen.
+2. **Besitz.** Jeder Zuruf wird gegen `besitztEmote` geprüft, also gegen eine
+   Datenbankabfrage. Viermal je Sekunde je Spieler ist das nicht vertretbar.
+3. **Fester Katalog.** Zurufe sind zehn Kennungen mit gemalten Bildern für
+   alle Spiele. Fünf Mememory-Emojis dort einzutragen wäre eine
+   spielspezifische Ausnahme in einer bewusst gemeinsamen Liste.
+
+**Lösung.** Ein eigener Nachrichtentyp `reaktion` im Gateway, nach dem
+Vorbild des Takt-Herzschlags: nicht gespeichert, in keiner Sicht, Sitz vom
+Server gestempelt, eigene Bremse (250 ms). Er trägt **nur eine Nummer** aus
+dem Zeichenvorrat des Clients — der Server erfährt nie, welches Emoji das
+ist. Aus einer Zahl lässt sich niemand beleidigen; das ist derselbe Grund,
+aus dem es Zurufe gibt und keinen Tischchat, nur ohne Katalogpflege.
+
+**Die Falle, und sie ist die eigentliche Lehre.** Ein neuer
+Server→Client-Nachrichtentyp ist **nicht** rückwärtskompatibel, obwohl er
+neu ist. `useTable` prüft die bekannten Typen der Reihe nach und behandelt
+alles Übrige als **Sicht** — ein älterer Client hätte die Reaktion als
+Spielstand übernommen und das Brett geleert. Und ältere Clients gibt es
+zuverlässig: Beim Deploy startet der Server neu, alle offenen Geräte
+verbinden mit dem alten Bündel im Speicher wieder.
+
+Deshalb geht die Reaktion nur an Verbindungen, die mindestens Modulversion 2
+gemeldet haben. Dieselbe Lehre wie beim Feldherr-Sichtumbau am 9. August, nur
+diesmal vorher bedacht statt hinterher repariert.
+
+**Vorschlag ans System.** `useTable` sollte unbekannte Nachrichtentypen
+**verwerfen** statt sie in den Sicht-Zweig fallen zu lassen. Eine Zeile
+(`if (message.type !== 'view') return;` vor der Sichtbehandlung) macht jeden
+künftigen neuen Typ von sich aus harmlos — und erspart der nächsten Sitzung
+diese Überlegung ganz.
+
 # Gesamteinschätzung
 
 Ohne Beschönigung, aber auch ohne die Übertreibung, die eine reine

@@ -42,14 +42,14 @@ function fehlgriff(partie: MememoryPartie): [number, number] {
   throw new Error('kein Fehlgriff moeglich');
 }
 
-test('das Brett hat 40 Plaetze und jedes Motiv genau zweimal', () => {
+test('das Brett hat 24 Plaetze und jedes Motiv genau zweimal', () => {
   const partie = brett();
-  assert.equal(partie.feld.length, 40);
-  assert.equal(partie.motive.length, 20);
+  assert.equal(partie.feld.length, 24);
+  assert.equal(partie.motive.length, 12);
 
   const zaehler = new Map<number, number>();
   for (const nummer of partie.feld) zaehler.set(nummer, (zaehler.get(nummer) ?? 0) + 1);
-  assert.equal(zaehler.size, 20);
+  assert.equal(zaehler.size, 12);
   for (const [nummer, anzahl] of zaehler) {
     assert.equal(anzahl, 2, `Motiv ${nummer} liegt ${anzahl}-mal`);
   }
@@ -68,12 +68,12 @@ test('dieselbe Saat ergibt dasselbe Brett, eine andere ein anderes', () => {
 });
 
 test('zwei Partien ziehen unterschiedliche Motive - der Katalog wird durchgewechselt', () => {
-  // Nicht zwingend verschieden, aber bei 40 aus 20 extrem unwahrscheinlich
+  // Nicht zwingend verschieden, aber bei 12 aus 44 extrem unwahrscheinlich
   // gleich. Der Test schuetzt davor, dass die Auswahl versehentlich fest wird.
   const a = new Set(brett('1111').motive);
   const b = new Set(brett('2222').motive);
   const gleich = [...a].filter((m) => b.has(m)).length;
-  assert.ok(gleich < 20, `beide Partien zogen dieselben Motive (${gleich})`);
+  assert.ok(gleich < 12, `beide Partien zogen dieselben Motive (${gleich})`);
 });
 
 test('ein Treffer gibt einen Punkt, faerbt beide Plaetze und behaelt das Zugrecht', () => {
@@ -161,10 +161,10 @@ test('ein bereits gewonnener Platz ist tabu', () => {
 
 test('ein leeres Brett beendet die Partie und kuert den Sieger', () => {
   let partie = brett();
-  // Alle zwanzig Paare hintereinander vom selben Sitz: Nach einem Treffer
+  // Alle zwoelf Paare hintereinander vom selben Sitz: Nach einem Treffer
   // bleibt das Zugrecht, also kommt der Gegner nie dran.
   const genommen: number[] = [];
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 12; i++) {
     const [a, b] = paarSuchen(partie, genommen);
     genommen.push(a, b);
     partie = fuehreAus(partie, partie.dran, { typ: 'aufdecken', platz: a });
@@ -175,7 +175,7 @@ test('ein leeres Brett beendet die Partie und kuert den Sieger', () => {
   assert.equal(amZug(partie), null);
   const gewinner = sieger(partie);
   assert.notEqual(gewinner, null);
-  assert.equal(partie.punkte[gewinner as number], 20);
+  assert.equal(partie.punkte[gewinner as number], 12);
 
   const rang = platzierungen(partie);
   assert.equal(rang[0]?.place, 1);
@@ -184,7 +184,7 @@ test('ein leeres Brett beendet die Partie und kuert den Sieger', () => {
 
 test('Gleichstand ergibt zweimal Platz 1', () => {
   let partie = brett();
-  partie = { ...partie, punkte: { 0: 10, 1: 10 }, fertig: true };
+  partie = { ...partie, punkte: { 0: 6, 1: 6 }, fertig: true };
   const rang = platzierungen(partie);
   assert.equal(rang[0]?.place, 1);
   assert.equal(rang[1]?.place, 1);

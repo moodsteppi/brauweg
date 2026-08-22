@@ -10886,8 +10886,15 @@ main.auth > .muted {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 6px 16px 10px;
+  /*
+   * Das Brett faengt bewusst nicht direkt unter der Leiste an und hoert
+   * bewusst nicht direkt ueber ihr auf. Der Rand ist die Flaeche, auf der die
+   * Tischdecke ihre Farbe zeigt — und darunter ist Platz fuer den
+   * Reaktionsknopf.
+   */
+  padding: 10px 16px 6px;
 }
 
 /*
@@ -10900,12 +10907,25 @@ main.auth > .muted {
  */
 .mm-brett {
   display: grid;
-  grid-template-columns: repeat(var(--mm-spalten, 5), 1fr);
-  grid-template-rows: repeat(var(--mm-zeilen, 8), 1fr);
-  gap: clamp(5px, 2vw, 11px);
+  grid-template-columns: repeat(var(--mm-spalten, 4), 1fr);
+  grid-template-rows: repeat(var(--mm-zeilen, 6), 1fr);
+  gap: clamp(6px, 2.2vw, 13px);
   width: 100%;
-  height: 100%;
-  max-width: min(100%, 520px);
+  height: auto;
+  /*
+   * Das Seitenverhaeltnis des BRETTS folgt Spalten und Zeilen. Damit werden
+   * die Zellen von selbst fast quadratisch — und weil die Motive quadratisch
+   * sind, wird kaum noch etwas abgeschnitten.
+   *
+   * Vorher stand hier `height: 100%`: Das streckte die Karten ueber die volle
+   * Hoehe, bei sechs Zeilen also auf rund 110 x 80 px, und `object-fit:
+   * cover` schnitt dem Bild seitlich ein Drittel weg. Genau das Gegenteil von
+   * "besser zu erkennen".
+   */
+  aspect-ratio: var(--mm-spalten, 4) / var(--mm-zeilen, 6);
+  max-width: min(100%, 460px);
+  max-height: 100%;
+  margin: auto;
 }
 
 .mm-karte {
@@ -10917,9 +10937,17 @@ main.auth > .muted {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-/* Eine schon offene Karte ist nicht "ausgegraut", sie ist nur fertig. */
-.mm-karte:disabled { cursor: default; }
-.mm-karte:not(:disabled):active .mm-innen { transform: scale(0.95); }
+/*
+ * Nicht anklickbar heisst NICHT blass.
+ *
+ * Vorher trug eine solche Karte das `disabled`-Merkmal — und Safari zeichnet
+ * einen deaktivierten Knopf halbdurchsichtig. Damit sah ausgerechnet die
+ * Karte, die man gerade selbst umgedreht hatte, verwaschen aus: Sie ist in
+ * diesem Moment nicht mehr anklickbar. Jetzt entscheidet allein `tippe`, ob
+ * ein Tipp zaehlt, und die Blaesse bleibt den fertigen Paaren vorbehalten.
+ */
+.mm-karte[aria-disabled='true'] { cursor: default; }
+.mm-karte:not([aria-disabled='true']):active .mm-innen { transform: scale(0.95); }
 
 .mm-innen {
   position: absolute;
@@ -10929,6 +10957,21 @@ main.auth > .muted {
 }
 .mm-karte[data-offen] .mm-innen,
 .mm-karte[data-offen]:active .mm-innen { transform: rotateY(180deg); }
+/*
+ * Zwischenstellung: angetippt, aber das Bild ist noch nicht da.
+ *
+ * Der eigene Tipp dreht sofort, das Motiv kommt aber erst mit der
+ * Serverantwort — und muss danach noch entpackt werden. Wer bis 180 Grad
+ * durchdrehte, sah dazwischen eine leere weisse Karte aufblitzen. Also haelt
+ * die Karte bei 82 Grad an: Sichtbar ist weiterhin die Rueckseite, schraeg
+ * gestellt, und das liest sich als "dreht gerade". Die zweite Haelfte laeuft,
+ * sobald `data-offen` dazukommt.
+ *
+ * 82 und nicht 90 Grad: Bei 90 stuende die Karte genau auf der Kante und
+ * waere unsichtbar — es saehe aus, als waere sie verschwunden.
+ */
+.mm-karte[data-halb] .mm-innen,
+.mm-karte[data-halb]:active .mm-innen { transform: rotateY(82deg); }
 
 .mm-rueck,
 .mm-vorn {
@@ -11002,6 +11045,82 @@ main.auth > .muted {
 .mm-karte[data-besitz='rot'] .mm-vorn {
   box-shadow: inset 0 0 0 3px #ea4b40, 0 0 14px -3px #ea4b40;
 }
+/*
+ * Erst das fertige Paar wird blass — und nur das Bild, nicht der farbige
+ * Rand. So bleibt auf einen Blick klar, was noch im Spiel ist und was
+ * abgehakt: Ein aufgedecktes Paar ist erledigt, eine gerade umgedrehte Karte
+ * ist die Frage, um die es geht.
+ */
+.mm-karte[data-besitz] .mm-vorn img { opacity: 0.6; }
+
+/* --- Reaktionen ---------------------------------------------------------- */
+
+.mm-reaktionsleiste {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  padding: 2px 0 6px;
+}
+
+.mm-reaktion {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  font-size: 27px;
+  line-height: 1;
+  cursor: pointer;
+  background: rgba(18, 12, 6, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 140, 0.4), 0 6px 16px -8px #000;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  -webkit-tap-highlight-color: transparent;
+  /* Kein CSS-Uebergang: Der Druck wird per animate() gespielt, damit er auch
+     beim vierten Tipp je Sekunde noch von vorn beginnt. */
+}
+
+/*
+ * Die Flugbahn der Emojis liegt ueber allem ausser dem Abschlussblatt und
+ * faengt keine Tipps ab — man soll waehrend der Reaktion weiterspielen.
+ */
+.mm-flug {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mm-flieger {
+  position: absolute;
+  left: 50%;
+  font-size: 34px;
+  line-height: 1;
+  will-change: transform, opacity;
+}
+/* Eigene Reaktion: steigt vom Knopf auf und verklingt. */
+.mm-flieger[data-richtung='hoch'] {
+  bottom: calc(env(safe-area-inset-bottom) + 92px);
+  animation: mm-flug-hoch 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+/* Fremde Reaktion: faellt von oben herein und wird dabei groesser — sie kommt
+   auf einen zu. */
+.mm-flieger[data-richtung='runter'] {
+  top: calc(env(safe-area-inset-top) + 52px);
+  animation: mm-flug-runter 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+@keyframes mm-flug-hoch {
+  0% { transform: translate(calc(-50% + var(--mm-ab, 0px)), 0) scale(0.55); opacity: 0; }
+  14% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--mm-ab, 0px)), -210px) scale(1.05); opacity: 0; }
+}
+@keyframes mm-flug-runter {
+  0% { transform: translate(calc(-50% + var(--mm-ab, 0px)), 0) scale(0.65); opacity: 0; }
+  14% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--mm-ab, 0px)), 190px) scale(1.75); opacity: 0; }
+}
 
 .mm-funk {
   position: absolute;
@@ -11062,4 +11181,6 @@ main.auth > .muted {
   .mm-suchen,
   .mm-zurueck { transition-duration: 1ms; }
   .mm-punkte-lauf span { animation: none; opacity: 0.7; }
+  /* Die Reaktion bleibt sichtbar, sie zieht nur nicht mehr durchs Bild. */
+  .mm-flieger { animation-duration: 900ms; }
 }

@@ -32,12 +32,22 @@ import {
   ENVELOPE_VERSION,
   type ClientMessage,
   type EmoteMessage,
+  type ReaktionMessage,
   type ServerMessage,
   type TaktMessage,
   errorMessage,
   moduleVersionAccepted,
 } from './protocol.js';
 import { EMOTE_PAUSE_MS, besitztEmote, istEmote } from '../emotes.js';
+
+/**
+ * Ab welcher gemeldeten Modulversion ein Client Reaktionen vertraegt.
+ *
+ * Wer weniger meldet, bekommt sie nicht — siehe die Begruendung in
+ * `reaktion()`. Die Zahl gehoert zum Spiel, das den Kanal benutzt
+ * (Mememory, protocolVersion 2), gilt aber fuer jedes weitere gleich.
+ */
+const REAKTION_AB_MODULVERSION = 2;
 
 interface Connection {
   readonly socket: WebSocket;
@@ -50,6 +60,8 @@ interface Connection {
   letzterEmote: number;
   /** Wann diese Verbindung zuletzt einen Takt-Herzschlag abgesetzt hat. */
   letzterTakt: number;
+  /** Wann diese Verbindung zuletzt eine Reaktion abgesetzt hat. */
+  letzteReaktion: number;
   /**
    * Wie weit diese Verbindung mit dem anwachsenden Teil der Sicht beliefert
    * ist (GameModule.viewCursor). Nur Feldherr hat so einen Teil; bei allen
@@ -139,6 +151,19 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     // Die Laenge deckelt hier nur grob; welche Kennungen es gibt, entscheidet
     // istEmote — eine erfundene faellt still durch.
     emote: z.string().min(1).max(40),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('reaktion'),
+    tableId: z.string().uuid(),
+    /*
+     * Platz im Zeichenvorrat des Clients, keine Zeichenkette. Der Server
+     * weiss nicht, welches Emoji das ist, und soll es nicht wissen: Eine
+     * Zahl kann kein Schimpfwort sein. Die Obergrenze ist grosszuegig, damit
+     * ein spaeterer, groesserer Vorrat keine Serveraenderung braucht.
+     */
+    zeichen: z.number().int().min(0).max(63),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -354,6 +379,7 @@ export class Gateway {
         fensterStart: Date.now(),
         imFenster: 0,
         letzterEmote: 0,
+        letzteReaktion: 0,
         letzterTakt: 0,
         sichtStand: null,
         /* Bis zum `join` gilt die vorsichtigste Annahme: alles vollstaendig. */
@@ -448,6 +474,9 @@ export class Gateway {
           break;
         case 'takt':
           this.takt(connection, message);
+          break;
+        case 'reaktion':
+          this.reaktion(connection, message);
           break;
         case 'addBot':
           await this.setBot(connection, message.tableId, message.seat, true);
@@ -672,6 +701,74 @@ export class Gateway {
     for (const ziel of this.byTable.get(message.tableId) ?? []) {
       // Der Absender kennt seinen eigenen Takt — zurueckspiegeln waere Laerm.
       if (ziel !== connection) send(ziel.socket, nachricht);
+    }
+  }
+
+  /**
+   * Reaktion: ein Emoji ueber den Tisch, weitergereicht wie ein Herzschlag.
+   *
+   * Bewusst NICHT ueber den Zuruf-Weg gebaut, obwohl es aehnlich aussieht.
+   * Drei Unterschiede, jeder davon ein eigener Grund:
+   *
+   *   1. **Takt.** Ein Zuruf darf alle zwei Sekunden kommen (EMOTE_PAUSE_MS),
+   *      eine Reaktion viermal je Sekunde. Sie ist ein Zwischenruf, kein
+   *      Statement.
+   *   2. **Kein Besitz.** Zurufe muessen gekauft sein. Reaktionen gehoeren
+   *      zum Spiel und kosten nichts — eine Abfrage in der Datenbank je Tipp
+   *      waere bei diesem Takt ohnehin nicht vertretbar.
+   *   3. **Nur eine Zahl.** Der Server kennt den Zeichenvorrat nicht. Damit
+   *      gibt es hier nichts zu pruefen ausser dem Zahlenbereich, und nichts,
+   *      was sich als Freitext missbrauchen liesse.
+   *
+   * Was nicht durchgeht, endet still — wie beim Herzschlag. Eine
+   * Fehlermeldung waere genau die Aufmerksamkeit, auf die es ein
+   * Dauerklicker abgesehen hat.
+   */
+  private reaktion(
+    connection: Connection,
+    message: Extract<ClientMessage, { type: 'reaktion' }>,
+  ): void {
+    if (connection.tableId !== message.tableId) return;
+
+    // Viermal je Sekunde. Die Bremse steht hier UND im Client: Was ohnehin
+    // verworfen wuerde, muss die Leitung nicht belasten — aber der Client
+    // ist nicht die Stelle, an der eine Grenze durchgesetzt wird.
+    const jetzt = Date.now();
+    if (jetzt - connection.letzteReaktion < 250) return;
+
+    const party = this.runtime.get(message.tableId);
+    if (!party) return;
+    // Zuschauer reagieren nicht. Am echten Tisch ruft mit, wer mitspielt.
+    const seat = this.runtime.seatOf(party, connection.accountId);
+    if (seat === null) return;
+
+    connection.letzteReaktion = jetzt;
+
+    const nachricht: ReaktionMessage = {
+      v: ENVELOPE_VERSION,
+      game: party.gameId,
+      type: 'reaktion',
+      tableId: message.tableId,
+      seat,
+      zeichen: message.zeichen,
+    };
+    for (const ziel of this.byTable.get(message.tableId) ?? []) {
+      /*
+       * Nur an Clients, die den Nachrichtentyp kennen.
+       *
+       * Ein aelterer Client faellt bei einer unbekannten Nachricht in seinen
+       * Sicht-Zweig und setzt sie als Sicht — das Brett waere danach leer.
+       * Die gemeldete Modulversion ist die einzige verlaessliche Auskunft
+       * darueber, was drueben laeuft; nach einem Deploy verbinden alte
+       * Geraete mit dem alten Buendel im Speicher neu. Dieselbe Lehre wie
+       * bei der Feldherr-Sicht am 9. August.
+       *
+       * Der Absender bekommt nichts zurueck: Er hat sein eigenes Emoji schon
+       * fliegen sehen, bevor die Nachricht draussen war.
+       */
+      if (ziel === connection) continue;
+      if (ziel.moduleVersion < REAKTION_AB_MODULVERSION) continue;
+      send(ziel.socket, nachricht);
     }
   }
 

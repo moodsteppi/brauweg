@@ -104,6 +104,19 @@ export type ClientMessage =
        * ihren Melde-Deckel. Optional, weil aeltere Clients sie nicht senden.
        */
       readonly zuege?: number;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /**
+       * Reaktion: ein Emoji ueber den Tisch. Wie der Takt bewusst KEINE
+       * Aktion — kein Partiestand, kein Schnappschuss, kein Sicht-Rundruf.
+       * Sie traegt nur eine Nummer aus dem Zeichenvorrat des Clients; welches
+       * Zeichen das ist, erfaehrt der Server nie und braucht es nicht.
+       */
+      readonly type: 'reaktion';
+      readonly tableId: string;
+      readonly zeichen: number;
     };
 
 // ---------------------------------------------------------------------------
@@ -214,6 +227,29 @@ export interface EmoteMessage {
  * Weitergereichter Takt-Herzschlag. Wie der Zuruf ohne Revision: Er ist ein
  * Moment, kein Zustand. Wer ihn verpasst, bekommt in 200 ms den naechsten.
  */
+/**
+ * Eine Reaktion: ein Emoji, das ueber den Tisch fliegt.
+ *
+ * Genau wie ein Zuruf ein Moment und kein Zustand — nicht gespeichert, in
+ * keiner Sicht, ueberlebt kein Neuladen. Der Unterschied zum Zuruf ist die
+ * Frequenz: Ein Zuruf darf alle zwei Sekunden kommen, eine Reaktion viermal
+ * je Sekunde. Deshalb traegt sie auch keinen Text und keine Kennung, sondern
+ * nur eine **Nummer** aus einem festen Vorrat, den der Client kennt. Der
+ * Server prueft die Zahl und stempelt den Sitz; was fuer ein Zeichen das ist,
+ * erfaehrt er nie. Aus einer Zahl laesst sich niemand beleidigen — derselbe
+ * Grund, aus dem es Zurufe gibt und keinen Tischchat.
+ */
+export interface ReaktionMessage {
+  readonly v: number;
+  readonly game: GameId;
+  readonly type: 'reaktion';
+  readonly tableId: string;
+  /** Sitz des Absenders — vom Server gestempelt, nie vom Client behauptet. */
+  readonly seat: number;
+  /** Platz im Vorrat des Clients. */
+  readonly zeichen: number;
+}
+
 export interface TaktMessage {
   readonly v: number;
   readonly game: GameId;
@@ -244,6 +280,7 @@ export type ServerMessage =
   | TableMessage
   | EmoteMessage
   | TaktMessage
+  | ReaktionMessage
   | ErrorMessage;
 
 export function errorMessage(code: string, messageKey?: string): ErrorMessage {

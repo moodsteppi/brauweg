@@ -40,7 +40,10 @@ tatsaechlich laeuft.
 
 ## Anforderungen (unverhandelbar, vom Nutzer)
 
-1. Gitter **5×8 = 40 Karten**, jedes Bild genau **zweimal**.
+1. Gitter **4×6 = 24 Karten**, jedes Bild genau **zweimal**.
+   *(Bis zum 22.8. 5×8. Geändert auf Wunsch des Nutzers: Die Bilder sollen
+   besser zu erkennen sein. Warum dafür eine SPALTE weichen musste und
+   nicht zwei Zeilen, steht in `docs/MEMEMORY-TICKETS.md`, T-17.)*
 2. Zwei gleiche Bilder nacheinander → bleiben offen, **ein Punkt**, Spieler
    ist **weiter dran**.
 3. Aufgedeckte Karten tragen die **Randfarbe des Besitzers** (Blau/Rot).
@@ -66,6 +69,10 @@ tatsaechlich laeuft.
 14. Klang-Demo: Meme-Töne beim Umdrehen, Jubel beim Punkt/Sieg. Geringste
     Priorität.
 15. Zurück-Knopf auch im laufenden Spiel.
+16. **Nur fertige Paare sind blass**, eine gerade umgedrehte Karte nicht.
+17. **Reaktionsknopf** unten: Tipp → zufälliges Emoji fliegt vom Knopf nach
+    oben, der Knopf pulst kurz; beim Gegner fällt es von oben herein und
+    wird dabei größer. Höchstens viermal je Sekunde.
 
 ---
 

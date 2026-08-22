@@ -18,11 +18,11 @@ Minuten live.
 `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
-> **Mememory ist neu auf `staging` (22. August 2026), noch nicht in der
-> Produktion.** Memory-Duell zu zweit: 5×8 Karten, zwanzig von vierzig
-> KI-erzeugten Meme-Motiven je Partie, Online-Match-Suche über die
-> gewöhnliche Tischliste, eigener Bildschirm statt Kartentisch (wie
-> Feldherr). Neues Paket `@brauweg/game-mememory` (**31 eigene Tests**),
+> **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
+> 4×6 Karten, zwölf von vierundvierzig KI-erzeugten Meme-Motiven je Partie,
+> Online-Match-Suche über die gewöhnliche Tischliste, eigener Bildschirm
+> statt Kartentisch (wie Feldherr). Neues Paket `@brauweg/game-mememory`
+> (**31 eigene Tests**),
 > `Mememory.tsx` im Client, ein Eintrag mehr in `MODULES`. Bauplan,
 > Architekturentscheidungen und Bildbestellung: `docs/MEMEMORY-PLAN.md`
 > und `docs/ASSETS-MEMEMORY.md`.
@@ -52,8 +52,26 @@ Minuten live.
 > Bildschirmfoto machen; belegt sind Aufbau, Maße, Farben und Verhalten,
 > nicht der Auftritt. Vor `main` gehört das einmal an ein echtes Handy.
 >
+> **Nachbesserung am selben Tag (Rückmeldung vom Gerät):** Das Brett ging
+> von 5×8 auf 4×6 — die Kartenbreite hängt allein an der Spaltenzahl, zwei
+> Zeilen weniger hätten die Bilder nur höher und seitlich stärker
+> beschnitten gemacht (T-17). Dazu: Nur fertige Paare sind blass, eine
+> gerade umgedrehte Karte nicht mehr (das kam vom `disabled`-Merkmal am
+> Knopf, T-15), und die Karte dreht in zwei Stufen, damit während der
+> Bewegung nie eine leere Fläche zu sehen ist (T-16).
+>
+> **Vierter Punkt für die Plattform: der Nachrichtentyp `reaktion`.**
+> Ein Emoji, das über den Tisch fliegt — wie ein Zuruf ein Moment und kein
+> Zustand, aber viermal je Sekunde statt alle zwei Sekunden, ohne
+> Besitzprüfung und ohne Katalog: Über die Leitung geht nur eine **Nummer**
+> aus dem Zeichenvorrat des Clients. Der Server erfährt nie, welches Emoji
+> das ist — aus einer Zahl lässt sich niemand beleidigen.
+> **Achtung bei jedem weiteren neuen Nachrichtentyp:** `useTable` behandelt
+> alles Unbekannte als Sicht, ein älterer Client hätte davon das Brett
+> geleert. Die Reaktion geht deshalb nur an Verbindungen ab Modulversion 2.
+>
 > Reibungsstellen beim Bauen — auch eigene Fehler — stehen gesammelt in
-> `docs/MEMEMORY-TICKETS.md`.
+> `docs/MEMEMORY-TICKETS.md` (18 Einträge und eine Gesamteinschätzung).
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

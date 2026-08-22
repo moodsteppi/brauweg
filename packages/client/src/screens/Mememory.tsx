@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
 import { spieleKlang, setzeTon, tonAn } from '../minispiele/mememory/klaenge';
+import type { ReaktionMessage } from '../protocol';
 import { useTable } from '../useTable';
 
 /**
@@ -10,8 +11,8 @@ import { useTable } from '../useTable';
  * Ein Bildschirm mit zwei Gesichtern, wie beim Feldherr: ohne Tisch das
  * Hauptmenue mit der Match-Suche, mit Tisch das Brett. Der Tisch wird HIER
  * gehalten und nicht ueber App.tsx geroutet — die Match-Suche muss den Tisch
- * unter Umstaenden wechseln (siehe `wechsleZuKleinerem`), und ein Wechsel ueber
- * zwei Bildschirmzustaende hinweg waere ein Flackern.
+ * unter Umstaenden wechseln (siehe die Wettrennen-Regel unten), und ein
+ * Wechsel ueber zwei Bildschirmzustaende hinweg waere ein Flackern.
  *
  * Arbeitsteilung mit dem Spielmodul: Der Bildschirm bildet KEINE Regel nach.
  * Er schickt genau das, was der Spieler antippt, und zeichnet, was in der
@@ -45,6 +46,33 @@ interface MememorySicht {
 const NAME_SCHLUESSEL = 'mememory.name';
 const NAME_MAX = 16;
 
+/**
+ * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
+ *
+ * Muss zu DEFAULT_REGELN in packages/game-mememory/src/regeln.ts passen —
+ * dort steht auch, warum es vier Spalten sind und nicht fuenf. Bewusst
+ * ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll nicht
+ * auf eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht.
+ */
+const REGELSATZ = { spalten: 4, zeilen: 6, merkzeitMs: 1100 };
+
+/**
+ * Zeichenvorrat der Reaktionen.
+ *
+ * Die REIHENFOLGE ist Protokoll: Ueber die Leitung geht nur die Nummer, nicht
+ * das Zeichen (der Server soll gar nicht wissen, was da fliegt — aus einer
+ * Zahl laesst sich niemand beleidigen). Wer hier etwas einfuegt, verschiebt
+ * die Bedeutung aller folgenden Nummern und muss die Modulversion hochsetzen.
+ * Anhaengen ist gefahrlos.
+ */
+const REAKTIONEN = ['😂', '😮', '😎', '😭', '🔥'] as const;
+
+/** Viermal je Sekunde, so wie es der Server auch deckelt. */
+const REAKTION_PAUSE_MS = 250;
+
+/** So viele Emojis duerfen hoechstens gleichzeitig fliegen. */
+const FLIEGER_MAX = 12;
+
 /** Bildpfad eines Motivs. Eine Stelle, damit Katalog und Ordner nie auseinanderlaufen. */
 function motivBild(kennung: string): string {
   return `/mememory/motive/${kennung}.webp`;
@@ -67,6 +95,14 @@ function gelesenerName(): string {
   } catch {
     return '';
   }
+}
+
+interface Flieger {
+  readonly id: number;
+  readonly zeichen: number;
+  readonly richtung: 'hoch' | 'runter';
+  /** Seitlicher Versatz, damit zwei schnelle Reaktionen nicht uebereinander liegen. */
+  readonly ab: number;
 }
 
 export function Mememory({
@@ -100,7 +136,49 @@ export function Mememory({
    */
   const [getippt, setGetippt] = useState<{ platz: number; revision: number } | null>(null);
 
-  const tisch = useTable<MememorySicht>(tischId, 'mememory');
+  /**
+   * Motive, deren Bild fertig geladen UND entpackt ist.
+   *
+   * Der Grund ist die Umdreh-Bewegung: Wer eine Karte antippt, sieht die
+   * Rueckseite wegdrehen — und dahinter lag bis eben eine weisse Flaeche,
+   * weil das Bild erst mit der Serverantwort kommt und danach noch entpackt
+   * werden muss. Die Karte dreht deshalb in zwei Stufen (siehe `data-halb`).
+   */
+  const [bereiteBilder, setBereiteBilder] = useState<ReadonlySet<string>>(new Set());
+
+  /** Emojis, die gerade ueber den Tisch fliegen. */
+  const [flieger, setFlieger] = useState<readonly Flieger[]>([]);
+  const fliegerNr = useRef(0);
+  const letzteReaktion = useRef(0);
+  const [zuletztGesendet, setZuletztGesendet] = useState(0);
+  const knopfRef = useRef<HTMLButtonElement | null>(null);
+
+  const zeigeFlieger = useCallback((zeichen: number, richtung: 'hoch' | 'runter'): void => {
+    const id = (fliegerNr.current += 1);
+    const ab = Math.round((Math.random() - 0.5) * 90);
+    // Der Deckel ist kein Schoenheitsfehler: Ohne ihn haelt ein Dauerklicker
+    // beliebig viele Knoten am Leben, und der Bildschirm ruckelt.
+    setFlieger((alt) => [...alt, { id, zeichen, richtung, ab }].slice(-FLIEGER_MAX));
+    window.setTimeout(() => setFlieger((alt) => alt.filter((f) => f.id !== id)), 1400);
+  }, []);
+
+  /**
+   * Eine Reaktion der Gegenseite. Der Server spiegelt dem Absender nichts
+   * zurueck — was hier ankommt, ist immer fremd und faellt deshalb von oben.
+   */
+  const beiReaktion = useCallback(
+    (nachricht: ReaktionMessage): void => zeigeFlieger(nachricht.zeichen, 'runter'),
+    [zeigeFlieger],
+  );
+
+  const tisch = useTable<MememorySicht>(
+    tischId,
+    'mememory',
+    undefined,
+    undefined,
+    undefined,
+    beiReaktion,
+  );
   const sicht = tisch.view?.view ?? null;
   const eigenerSitz = tisch.view?.seat ?? 0;
   const gegnerSitz = eigenerSitz === 0 ? 1 : 0;
@@ -163,7 +241,7 @@ export function Mememory({
       }
       const { id } = await api.createTable({
         gameId: 'mememory',
-        config: { spalten: 5, zeilen: 8, merkzeitMs: 1100 },
+        config: REGELSATZ,
         seats: 2,
         rounds: 1,
       });
@@ -244,19 +322,36 @@ export function Mememory({
   }, [sicht !== null, tischId, name]);
 
   /**
-   * Bilder vorladen, sobald die Motivliste da ist.
+   * Bilder vorladen UND entpacken, sobald die Motivliste da ist.
    *
-   * Der Auftrag verlangt ausdruecklich, dass es keine Ladephasen gibt. Ein
-   * Motiv, das erst beim Umdrehen geladen wird, zeigt fuer einen Wimpernschlag
-   * eine leere Karte — und das ist genau der Moment, in dem man hinsieht.
+   * `decode()` statt `onload` ist hier der Unterschied, auf den es ankommt:
+   * Ein geladenes, aber noch nicht entpacktes Bild erscheint erst einen
+   * Bildlauf spaeter — und genau dieser eine Bildlauf ist das Aufblitzen der
+   * leeren Karte mitten in der Drehung.
+   *
+   * Ein Fehlschlag zaehlt ausdruecklich auch als "fertig". Sonst bliebe eine
+   * Karte, deren Datei fehlt, fuer immer halb gedreht stehen — ein fehlendes
+   * Bild darf das Spiel nicht anhalten.
    */
   useEffect(() => {
     if (!sicht) return;
+    let lebt = true;
     for (const kennung of sicht.motive) {
       const bild = new Image();
-      bild.decoding = 'async';
+      const fertig = (): void => {
+        if (!lebt) return;
+        setBereiteBilder((alt) => (alt.has(kennung) ? alt : new Set(alt).add(kennung)));
+      };
       bild.src = motivBild(kennung);
+      if (typeof bild.decode === 'function') void bild.decode().then(fertig, fertig);
+      else {
+        bild.onload = fertig;
+        bild.onerror = fertig;
+      }
     }
+    return () => {
+      lebt = false;
+    };
   }, [sicht?.motive.join(',')]);
 
   /** Klangausloeser. Verglichen wird gegen den vorigen Stand, nicht gegen die Zeit. */
@@ -444,6 +539,37 @@ export function Mememory({
     tisch.send({ typ: 'aufdecken', platz });
   };
 
+  const reagiere = (): void => {
+    const jetzt = Date.now();
+    // Die Bremse steht auch hier, nicht nur im Server: Was ohnehin verworfen
+    // wuerde, muss die Leitung gar nicht erst belasten.
+    if (jetzt - letzteReaktion.current < REAKTION_PAUSE_MS) return;
+    letzteReaktion.current = jetzt;
+
+    const zeichen = Math.floor(Math.random() * REAKTIONEN.length);
+    setZuletztGesendet(zeichen);
+    zeigeFlieger(zeichen, 'hoch');
+    tisch.sendeReaktion(zeichen);
+
+    /*
+     * Der Knopfdruck wird ueber die Web-Animations-Schnittstelle gespielt und
+     * nicht ueber CSS: Eine CSS-Animation startet nur dann neu, wenn sich der
+     * Animationsname aendert oder das Element neu entsteht — beim vierten
+     * Tipp je Sekunde also gar nicht. `animate()` beginnt jedes Mal von vorn.
+     */
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      knopfRef.current?.animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(.86)', offset: 0.35 },
+          { transform: 'scale(1.06)', offset: 0.7 },
+          { transform: 'scale(1)' },
+        ],
+        { duration: 280, easing: 'cubic-bezier(.2,.8,.25,1)' },
+      );
+    }
+  };
+
   const namenVon = (sitz: number): string =>
     sicht.namen[sitz] ||
     tisch.table?.seats.find((platz) => platz.seat === sitz)?.displayName ||
@@ -479,17 +605,29 @@ export function Mememory({
         >
           {sicht.feld.map((kennung, platz) => {
             const besitzer = sicht.besitzer[platz];
-            const aufgedeckt = kennung !== null || offenLokal.includes(platz);
+            /** Die Karte SOLL gedreht sein — ob sie es ganz kann, steht darunter. */
+            const gewuenscht = kennung !== null || offenLokal.includes(platz);
+            /** Ganz drehen darf sie erst, wenn das Bild auch zeigbar ist. */
+            const zeigbar = kennung !== null && bereiteBilder.has(kennung);
             return (
               <button
                 key={platz}
                 type="button"
                 className="mm-karte"
-                data-offen={aufgedeckt || undefined}
+                data-offen={zeigbar || undefined}
+                data-halb={(gewuenscht && !zeigbar) || undefined}
                 data-besitz={besitzer === null ? undefined : farbeVon(besitzer)}
-                disabled={!meinZug || aufgedeckt}
+                /*
+                 * KEIN `disabled`.
+                 *
+                 * Ein deaktivierter Knopf wird von Safari halbdurchsichtig
+                 * gezeichnet — und damit sah jede gerade umgedrehte Karte
+                 * blass aus, weil sie in dem Moment nicht mehr anklickbar
+                 * ist. Ob ein Tipp zaehlt, entscheidet ohnehin `tippe`.
+                 */
+                aria-disabled={!meinZug || gewuenscht || undefined}
                 onClick={() => tippe(platz)}
-                aria-label={aufgedeckt ? `Karte ${platz + 1}, aufgedeckt` : `Karte ${platz + 1}`}
+                aria-label={gewuenscht ? `Karte ${platz + 1}, aufgedeckt` : `Karte ${platz + 1}`}
               >
                 <span className="mm-innen">
                   <span className="mm-rueck" />
@@ -505,11 +643,39 @@ export function Mememory({
         </div>
       </div>
 
+      {/* Reaktionen: ein Tipp, ein Emoji, kein Menue. Absichtlich zufaellig —
+          wer erst auswaehlen muesste, waere mitten in der Partie zu lange
+          beschaeftigt. Der Knopf zeigt, was zuletzt rausging. */}
+      <div className="mm-reaktionsleiste">
+        <button
+          ref={knopfRef}
+          className="mm-reaktion"
+          type="button"
+          onClick={reagiere}
+          aria-label="Reaktion senden"
+        >
+          <span aria-hidden="true">{REAKTIONEN[zuletztGesendet] ?? REAKTIONEN[0]}</span>
+        </button>
+      </div>
+
       <footer className="mm-leiste unten" data-farbe={farbeVon(eigenerSitz)}>
         <span className="mm-name">{namenVon(eigenerSitz)}</span>
         <span className="mm-zug">{meinZug ? 'Du bist dran' : ''}</span>
         <span className="mm-stand">{sicht.punkte[eigenerSitz] ?? 0}</span>
       </footer>
+
+      <div className="mm-flug" aria-hidden="true">
+        {flieger.map((f) => (
+          <span
+            key={f.id}
+            className="mm-flieger"
+            data-richtung={f.richtung}
+            style={{ '--mm-ab': `${f.ab}px` } as React.CSSProperties}
+          >
+            {REAKTIONEN[f.zeichen] ?? REAKTIONEN[0]}
+          </span>
+        ))}
+      </div>
 
       {tisch.status !== 'open' && <div className="mm-funk">Verbindung…</div>}
 
@@ -537,6 +703,7 @@ export function Mememory({
                 vorigePause.current = null;
                 nameGesendet.current = null;
                 setGetippt(null);
+                setFlieger([]);
                 setTischId(null);
                 setEigenerTisch(null);
                 setSucht(false);

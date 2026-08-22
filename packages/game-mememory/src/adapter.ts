@@ -74,7 +74,14 @@ export const mememory: GameModule<
   MememoryRegeln
 > = {
   meta,
-  protocolVersion: 1,
+  /**
+   * 2 seit dem 22. August 2026: Der Client kennt den Reaktionskanal
+   * (Emojis ueber den Tisch). Der Gateway schickt Reaktionen nur an
+   * Verbindungen, die mindestens diese Version gemeldet haben — eine
+   * unbekannte Nachricht landete bei einem aelteren Client im Sicht-Zweig
+   * und leerte das Brett.
+   */
+  protocolVersion: 2,
 
   defaultConfig: () => DEFAULT_REGELN,
 

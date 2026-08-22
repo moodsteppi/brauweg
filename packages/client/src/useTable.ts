@@ -46,6 +46,7 @@ import {
   type PartyMessage,
   type ServerMessage,
   type TableMessage,
+  type ReaktionMessage,
   type TaktMessage,
   type ViewMessage,
   moduleVersionFor,
@@ -82,6 +83,14 @@ export interface TableConnection<V = GameView> {
    * den es nicht mehr gibt — der naechste ist ohnehin in 200 ms da.
    */
   sendTakt(daten: { takt: number; grenzTakt: number; pruef: string }): void;
+  /**
+   * Eine Reaktion absetzen (Nummer im Zeichenvorrat des Spiels).
+   *
+   * Wie der Zuruf ohne Warteschlange: Ein Emoji, das nach dem
+   * Wiederverbinden nachkaeme, gehoerte zu einem Moment, den es nicht mehr
+   * gibt.
+   */
+  sendeReaktion(zeichen: number): void;
   /** Von Hand neu verbinden und die volle Sicht neu anfordern. */
   reconnect(): void;
 }
@@ -119,6 +128,12 @@ export function useTable<V = GameView>(
    * verfaellt. Der Tisch muss es also erfahren, nicht nur der Spieler.
    */
   beiAbweisung?: (code: string) => void,
+  /**
+   * Eine Reaktion der Gegenseite. Als Rueckruf und nicht als State: Sie kommt
+   * bis zu viermal je Sekunde, und ein setState je Emoji zeichnete den ganzen
+   * Bildschirm neu — fuer etwas, das nur eine Animation auszuloesen hat.
+   */
+  beiReaktion?: (nachricht: ReaktionMessage) => void,
 ): TableConnection<V> {
   const [view, setView] = useState<ViewMessage<V> | null>(null);
   const [party, setParty] = useState<PartyMessage | null>(null);
@@ -169,6 +184,8 @@ export function useTable<V = GameView>(
   beiSichtRef.current = beiSicht;
   const beiAbweisungRef = useRef(beiAbweisung);
   beiAbweisungRef.current = beiAbweisung;
+  const beiReaktionRef = useRef(beiReaktion);
+  beiReaktionRef.current = beiReaktion;
 
   const zeigeEmote = useCallback((seat: number, emote: string): void => {
     // Der Klang haengt an dieser einen Stelle und nicht an den Tischen: Beide
@@ -307,6 +324,10 @@ export function useTable<V = GameView>(
       }
       if (message.type === 'takt') {
         beiTaktRef.current?.(message);
+        return;
+      }
+      if (message.type === 'reaktion') {
+        beiReaktionRef.current?.(message);
         return;
       }
       /**
@@ -535,6 +556,17 @@ export function useTable<V = GameView>(
     [tableId, gameId],
   );
 
+  const sendeReaktion = useCallback(
+    (zeichen: number) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'reaktion', tableId, zeichen }),
+      );
+    },
+    [tableId, gameId],
+  );
+
   const command = useCallback(
     (type: 'addBot' | 'removeBot', seat: number) => {
       const socket = socketRef.current;
@@ -572,6 +604,7 @@ export function useTable<V = GameView>(
     removeBot,
     setBotLevel,
     sendTakt,
+    sendeReaktion,
     reconnect,
   };
 }

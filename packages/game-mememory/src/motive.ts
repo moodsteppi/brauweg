@@ -7,9 +7,9 @@
  * mit umbenennen — sonst steht auf der Karte ein weisser Kasten, und das ist
  * laut docs/STAND.md genau der Fehler, der schon zweimal live ging.
  *
- * Der Katalog ist ABSICHTLICH groesser als ein Spiel braucht: 40 Motive, ein
- * Brett fasst 20 Paare. Jede Partie zieht also eine andere Auswahl, und zwei
- * Partien hintereinander sehen nicht gleich aus.
+ * Der Katalog ist ABSICHTLICH viel groesser als ein Spiel braucht: 44 Motive,
+ * ein Brett fasst 12 Paare. Jede Partie zieht also eine andere Auswahl, und
+ * zwei Partien hintereinander sehen kaum gleich aus.
  *
  * Reihenfolge egal — gezogen wird gemischt, angezeigt wird sortiert.
  */
@@ -54,4 +54,13 @@ export const MOTIVE: readonly string[] = [
   'alpaka',
   'hundbrille',
   'krabbe',
+  /*
+   * Nach den Vorlagen, die der Nutzer mitgeschickt hat. Neun seiner dreizehn
+   * Bilder hatte der Katalog schon in eigener Fassung; diese vier fehlten.
+   * Nachgezogen, nicht kopiert — die Vorlagen sind fremde Aufnahmen.
+   */
+  'zerrgesicht',
+  'spritzglas',
+  'katzenfilter',
+  'dinohund',
 ];

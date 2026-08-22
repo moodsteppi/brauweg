@@ -44,14 +44,14 @@ test('das Modul meldet sich als spielbar, nur zu zweit', () => {
 test('die Sicht verraet KEIN verdecktes Motiv', () => {
   const p = partie();
   const sicht = mememory.viewFor(p, 0);
-  assert.equal(sicht.feld.length, 40);
+  assert.equal(sicht.feld.length, 24);
   assert.ok(
     sicht.feld.every((eintrag) => eintrag === null),
     'am Anfang liegt alles verdeckt',
   );
   // Die Motivliste geht mit - sie ist die Grundlage des Vorladens und
   // sortiert, verraet also nichts ueber die Lage.
-  assert.equal(sicht.motive.length, 20);
+  assert.equal(sicht.motive.length, 12);
   assert.deepEqual([...sicht.motive], [...sicht.motive].sort());
   // Und nirgends steckt die interne Feldbelegung mit drin.
   const roh = JSON.stringify(sicht);
@@ -112,7 +112,7 @@ test('ein Treffer bleibt in der Sicht sichtbar und traegt seinen Besitzer', () =
 test('legalActions liefert genau die verdeckten Plaetze des Spielers am Zug', () => {
   const p = partie();
   const wer = p.dran;
-  assert.equal(mememory.legalActions(p, wer).length, 40);
+  assert.equal(mememory.legalActions(p, wer).length, 24);
   assert.equal(mememory.legalActions(p, wer === 0 ? 1 : 0).length, 0);
 });
 
@@ -146,7 +146,7 @@ test('validateConfig winkt keinen Unsinn durch', () => {
   assert.deepEqual(mememory.validateConfig(DEFAULT_REGELN, 2, 1), []);
   assert.ok(mememory.validateConfig(DEFAULT_REGELN, 3, 1).length > 0);
   assert.ok(mememory.validateConfig({}, 2, 1).length > 0);
-  // 10x10 = 50 Paare, der Katalog hat 40.
+  // 10x10 = 50 Paare, der Katalog hat 44.
   assert.ok(
     mememory.validateConfig({ spalten: 10, zeilen: 10, merkzeitMs: 1100 }, 2, 1).length > 0,
   );
