@@ -29,14 +29,14 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind fuenf', () => {
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind sechs', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
 
   assert.deepEqual(
     playable.map((meta) => meta.id),
-    ['doppelkopf', 'wizard', 'cambio', 'feldherr', 'skat'],
+    ['doppelkopf', 'wizard', 'cambio', 'feldherr', 'skat', 'mememory'],
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),
@@ -501,4 +501,59 @@ test('die Tischregeln sind nachlesbar und auf die Erstellversion festgeschrieben
   const gelesen = await tableRules(c.db, table.id);
   assert.equal(gelesen.schweinchen, true);
   assert.equal(gelesen.armut, CONFIG.armut);
+});
+
+test('der Aktiv-Zaehler sieht auch laufende Partien - die Tischliste tut das nicht', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+  const bert = await createVerifiedAccount(c, 'Bert');
+
+  const wartend = await createTable(c.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  const laufend = await createTable(c.db, {
+    accountId: bert.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 8,
+  });
+  await c.db
+    .update(schema.gameTable)
+    .set({ status: 'running' })
+    .where(eq(schema.gameTable.id, laufend.id));
+
+  const app = await buildApp({
+    db: c.db,
+    runtime: new PartyRuntime(c.db),
+    auth: c.auth,
+    cookieSecure: false,
+    sessionTtlDays: 30,
+  });
+  t.after(() => app.close());
+
+  const zaehler = await app.inject({ method: 'GET', url: '/api/games/doppelkopf/aktiv' });
+  assert.equal(zaehler.statusCode, 200);
+  // Beide zaehlen: einer wartet, einer spielt. Genau das ist der Grund fuer
+  // diese Zeile - `listTables` zeigt nur den wartenden.
+  assert.equal(zaehler.json().aktiv, 2);
+  assert.equal(
+    (await listTables(c.db, { gameId: 'doppelkopf' })).length,
+    1,
+    'die Tischliste kennt nur den wartenden Tisch',
+  );
+
+  // Ein anderes Spiel darf nicht mitgezaehlt werden.
+  const anderes = await app.inject({ method: 'GET', url: '/api/games/mememory/aktiv' });
+  assert.equal(anderes.json().aktiv, 0);
+
+  // Verlaesst Anna ihren Tisch, faellt der Zaehler auf den Spielenden zurueck.
+  await leaveLobby(c.db, wartend.id, anna.accountId);
+  const danach = await app.inject({ method: 'GET', url: '/api/games/doppelkopf/aktiv' });
+  assert.equal(danach.json().aktiv, 1);
 });

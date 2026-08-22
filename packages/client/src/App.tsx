@@ -8,6 +8,7 @@ import { Auth } from './screens/Auth';
 import { FeldherrTisch } from './screens/FeldherrTisch';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
+import { Mememory } from './screens/Mememory';
 import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
 import { CambioTable } from './screens/CambioTable';
@@ -20,6 +21,13 @@ type Screen =
   | { name: 'games' }
   /** Minispiel: laeuft im Browser, kein Tisch, kein Spielmodul. */
   | { name: 'feldherr' }
+  /**
+   * Mememory bringt sein eigenes Hauptmenue mit und haelt den Tisch selbst.
+   * `tisch` ist nur der Einstieg aus dem "Weiterspielen" des Hubs — den
+   * Wechsel waehrend der Match-Suche macht der Bildschirm intern, weil ein
+   * Umweg ueber diesen Zustand jedes Mal die Verbindung neu aufbaute.
+   */
+  | { name: 'mememory'; tisch?: string | null }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
   /** Solo-Endless-Runner aus der Spielauswahl. */
@@ -130,6 +138,38 @@ export function App(): React.JSX.Element {
     );
   }
 
+  /**
+   * Mememory laeuft ebenfalls nicht am Kartentisch: Es bringt sein eigenes
+   * Hauptmenue samt Match-Suche mit und haelt den Tisch selbst. Deshalb
+   * fuehren alle drei Wege — Spielauswahl, Lobby, Weiterspielen — auf
+   * denselben Bildschirm.
+   */
+  if (screen.name === 'mememory') {
+    return (
+      <Mememory
+        startTisch={screen.tisch ?? null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+  if (
+    (screen.name === 'table' || screen.name === 'lobby') &&
+    screen.gameId === 'mememory'
+  ) {
+    return (
+      <Mememory
+        startTisch={screen.name === 'table' ? screen.tableId : null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -190,11 +230,14 @@ export function App(): React.JSX.Element {
   return (
     <GameSelect
       me={me}
-      // Feldherr hat keine Kartenlobby: Tisch erstellen und beitreten
-      // erledigt der eigene Bildschirm, fest mit zwei Sitzen und einer Runde.
-      onPick={(gameId) =>
-        setScreen(gameId === 'feldherr' ? { name: 'feldherr' } : { name: 'lobby', gameId })
-      }
+      // Feldherr und Mememory haben keine Kartenlobby: Tisch erstellen und
+      // beitreten erledigt der jeweils eigene Bildschirm, fest mit zwei
+      // Sitzen und einer Runde.
+      onPick={(gameId) => {
+        if (gameId === 'feldherr') return setScreen({ name: 'feldherr' });
+        if (gameId === 'mememory') return setScreen({ name: 'mememory' });
+        return setScreen({ name: 'lobby', gameId });
+      }}
       onSolo={(modusId) => {
         if (modusId === 'prosubway') setScreen({ name: 'prosubway' });
       }}

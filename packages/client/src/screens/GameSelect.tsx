@@ -2275,12 +2275,13 @@ function Spielwahl({
                 </span>
                 <span className="hub-themenspiel-text">
                   <strong>{t(game.nameKey)}</strong>
-                  {/* Nur der Untertitel weiss mehr als der Server: Feldherr
-                      ist das einzige Echtzeitspiel, und das gehoert aufs
-                      Banner. */}
+                  {/* Nur der Untertitel weiss mehr als der Server: Welche
+                      Spiele keine Kartenspiele sind, steht in keiner
+                      Modulbeschreibung, gehoert aber aufs Banner. */}
                   <span className="muted">
                     {game.seatCounts.join(', ')} Spieler
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
+                    {game.id === 'mememory' ? ' · Meme-Memory' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

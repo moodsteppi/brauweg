@@ -17,6 +17,10 @@ const de: Record<string, string> = {
   // laeuft ueber dieselbe Modulschnittstelle, hat aber weder Runden noch
   // Zugfolge — siehe docs/FELDHERR-PLAN.md.
   'game.feldherr': 'Feldherr',
+  // Memory-Duell mit Meme-Bildern. Der Name ist ein Kofferwort aus Meme und
+  // Memory und bleibt deshalb auch im Deutschen stehen — "Meme-Memory" waere
+  // die Erklaerung, nicht der Name.
+  'game.mememory': 'Mememory',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',

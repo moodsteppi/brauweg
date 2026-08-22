@@ -10598,3 +10598,451 @@ main.auth > .muted {
   color: #c8392b;
   font-weight: 800;
 }
+
+/* ===========================================================================
+   Mememory — Memory-Duell mit Meme-Bildern
+   ---------------------------------------------------------------------------
+   Zwei Flächen: das Hauptmenü (.mm-menue) und das Brett (.mm-buehne). Beide
+   sind `position:fixed`, weil das Spiel den ganzen Bildschirm einnimmt und
+   nichts rollen soll — vierzig Karten müssen ohne Wischen erreichbar sein.
+
+   Die Apple-Notch: Jede Schaltfläche am oberen Rand rechnet mit
+   `env(safe-area-inset-top)`. Ohne das liegt der Zurück-Knopf auf iPhones
+   unter der Statusleiste und ist nicht zu treffen.
+   =========================================================================== */
+
+/* --- Hauptmenü ----------------------------------------------------------- */
+
+.mm-menue {
+  position: fixed;
+  inset: 0;
+  /* styles.css setzt weiter oben `main { max-width: 60rem; padding: 1rem }`.
+     Beides gilt auch fuer einen Vollbild-Bildschirm: Die Polsterung schiebt
+     den Inhalt um 16 px ein, und die Hoechstbreite kappt die feste Flaeche auf
+     einem breiten Schirm bei 960 px. Deshalb hier ausdruecklich zuruecknehmen. */
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #f3ecff;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(96, 58, 160, 0.55), rgba(10, 6, 20, 0) 70%),
+    radial-gradient(90% 50% at 50% 100%, rgba(200, 60, 70, 0.28), rgba(10, 6, 20, 0) 70%),
+    #0b0716;
+}
+
+/* Nicht ganz oben in der Ecke: Dort sitzt auf dem iPhone die Notch. */
+.mm-zurueck {
+  position: fixed;
+  left: 14px;
+  top: calc(env(safe-area-inset-top) + 16px);
+  z-index: 3;
+  padding: 10px 15px;
+  border: 0;
+  border-radius: 12px;
+  color: #d9cdf2;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.mm-zurueck:active { transform: scale(0.96); }
+
+.mm-menue-mitte {
+  width: min(92vw, 420px);
+  text-align: center;
+}
+
+.mm-titel {
+  margin: 0 0 6px;
+  font: 900 clamp(36px, 12vw, 56px)/1 system-ui;
+  letter-spacing: -0.045em;
+  background: linear-gradient(180deg, #fff4cf, #e0a83c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mm-untertitel {
+  margin: 0 0 22px;
+  font: 500 13px/1.5 system-ui;
+  color: #a595c4;
+}
+
+/*
+ * Schriftgröße 16px ist Pflicht, keine Geschmacksfrage: Safari auf dem iPhone
+ * zoomt beim Antippen jedes Eingabefelds unter 16px in die Seite hinein — und
+ * kommt nicht von selbst wieder heraus.
+ */
+.mm-namensfeld {
+  width: 100%;
+  padding: 15px 16px;
+  border: 0;
+  border-radius: 15px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  font: 600 16px/1 system-ui;
+  text-align: center;
+  outline: none;
+  transition: box-shadow 200ms ease;
+}
+.mm-namensfeld::placeholder { color: #7d6f9c; }
+.mm-namensfeld:focus { box-shadow: inset 0 0 0 2px rgba(224, 168, 60, 0.65); }
+
+.mm-suchen {
+  width: 100%;
+  margin-top: 14px;
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 18px;
+  color: #1a0e05;
+  background: linear-gradient(180deg, #ffd873, #e0a83c);
+  box-shadow: 0 12px 26px -14px rgba(224, 168, 60, 0.9);
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms ease;
+}
+.mm-suchen em { font: 800 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0.7; }
+.mm-suchen:active { transform: scale(0.985); }
+.mm-suchen:disabled { filter: saturate(0.4) brightness(0.8); cursor: default; }
+
+.mm-zweitknopf {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px;
+  border: 0;
+  border-radius: 14px;
+  color: #b9a9d8;
+  background: rgba(255, 255, 255, 0.06);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+}
+
+.mm-fehler {
+  margin: 14px 0 0;
+  font: 600 12px/1.5 system-ui;
+  color: #ff9b90;
+}
+
+/* Der Lautsprecher: durchgestrichen heißt aus, und aus ist die Vorgabe. */
+.mm-ton {
+  position: fixed;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  z-index: 3;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #cbbde8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), color 160ms ease;
+}
+.mm-ton svg { width: 24px; height: 24px; }
+.mm-ton[aria-pressed='true'] { color: #ffd873; }
+.mm-ton:active { transform: scale(0.94); }
+
+/* Drei Punkte, die der Reihe nach aufleuchten — ein Wartezeichen ohne Bild. */
+.mm-punkte-lauf {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  margin: 8px 0 20px;
+}
+.mm-punkte-lauf span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e0a83c;
+  animation: mm-huepf 1.1s infinite ease-in-out;
+}
+.mm-punkte-lauf span:nth-child(2) { animation-delay: 0.16s; }
+.mm-punkte-lauf span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes mm-huepf {
+  0%, 70%, 100% { opacity: 0.25; transform: translateY(0); }
+  35% { opacity: 1; transform: translateY(-5px); }
+}
+
+/* --- Brett --------------------------------------------------------------- */
+
+.mm-buehne {
+  position: fixed;
+  inset: 0;
+  /* Siehe .mm-menue: die allgemeine `main`-Regel muss hier weg, sonst liegt
+     das Brett 16 px vom Rand und ist auf dem Handy zwei Kartenbreiten kleiner. */
+  padding: 0;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #fff;
+  background: #150d06;
+  /* Doppeltipp-Zoom aus: Wer zwei Karten schnell hintereinander antippt,
+     hat sonst plötzlich einen vergrößerten Ausschnitt vor sich. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/*
+ * Drei Tischdecken übereinander, nur eine sichtbar.
+ *
+ * Der Zugwechsel wird damit eine Überblendung. Ein einzelnes Bild mit
+ * CSS-Filter einzufärben ginge nicht: Der Holztisch am Rand würde mitgefärbt.
+ */
+.mm-grund { position: absolute; inset: 0; z-index: 0; }
+.mm-grund img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 520ms ease;
+}
+.mm-grund img[data-an='true'] { opacity: 1; }
+
+.mm-leiste {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, rgba(8, 4, 2, 0.72), rgba(8, 4, 2, 0));
+}
+.mm-leiste.oben { padding-top: calc(env(safe-area-inset-top) + 8px); }
+.mm-leiste.unten {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+  background: linear-gradient(0deg, rgba(8, 4, 2, 0.72), rgba(8, 4, 2, 0));
+}
+
+.mm-raus {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  color: #f0e4d2;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+}
+
+.mm-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 15px/1.2 system-ui;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.mm-zug {
+  flex: 0 0 auto;
+  font: 700 11px/1 system-ui;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.mm-stand {
+  flex: 0 0 auto;
+  min-width: 40px;
+  text-align: right;
+  font: 900 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* Die Teamfarben. Genau zwei, und sie hängen am Sitz — nie daran, wer zusieht. */
+.mm-leiste[data-farbe='blau'] .mm-stand,
+.mm-ende-stand b[data-farbe='blau'] { color: #7fb3ff; }
+.mm-leiste[data-farbe='rot'] .mm-stand,
+.mm-ende-stand b[data-farbe='rot'] { color: #ff8a80; }
+
+.mm-mitte {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  padding: 2px 8px 6px;
+}
+
+/*
+ * Das Gitter füllt die Fläche zwischen den beiden Leisten vollständig aus.
+ *
+ * Die Kartenform ergibt sich dabei aus der Fläche und ist auf einem Handy von
+ * selbst fast quadratisch (5 Spalten auf 8 Zeilen). Ein festes Seitenverhältnis
+ * am Gitter wäre gefährlich: Auf einem kurzen Bildschirm liefen die unteren
+ * Karten aus dem Bild, und gerollt wird hier nicht.
+ */
+.mm-brett {
+  display: grid;
+  grid-template-columns: repeat(var(--mm-spalten, 5), 1fr);
+  grid-template-rows: repeat(var(--mm-zeilen, 8), 1fr);
+  gap: clamp(3px, 1.2vw, 8px);
+  width: 100%;
+  height: 100%;
+  max-width: min(100%, 520px);
+}
+
+.mm-karte {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 620px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Eine schon offene Karte ist nicht "ausgegraut", sie ist nur fertig. */
+.mm-karte:disabled { cursor: default; }
+.mm-karte:not(:disabled):active .mm-innen { transform: scale(0.95); }
+
+.mm-innen {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 420ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+.mm-karte[data-offen] .mm-innen,
+.mm-karte[data-offen]:active .mm-innen { transform: rotateY(180deg); }
+
+.mm-rueck,
+.mm-vorn {
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  overflow: hidden;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/*
+ * Rückseite: dunkles Pflaumenblau, ein Goldrahmen, ein feines Diagonalmuster
+ * und ein Ring mit Monogramm. Alles aus CSS — eine Bilddatei dafür wäre 40 mal
+ * dasselbe Byte auf dem Schirm und eine Ladephase mehr.
+ */
+.mm-rueck {
+  display: grid;
+  place-items: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 5px, rgba(255, 255, 255, 0) 5px 10px),
+    radial-gradient(130% 100% at 50% 0%, #46316f 0%, #241748 55%, #150c2e 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 214, 140, 0.4),
+    inset 0 0 0 3px rgba(18, 10, 34, 0.9),
+    inset 0 0 0 4px rgba(255, 214, 140, 0.2),
+    0 3px 9px rgba(0, 0, 0, 0.45);
+}
+.mm-rueck::before {
+  content: '';
+  width: 56%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 214, 140, 0.45);
+}
+.mm-rueck::after {
+  content: 'M';
+  position: absolute;
+  font: 900 clamp(12px, 3.6vw, 22px)/1 Georgia, 'Times New Roman', serif;
+  background: linear-gradient(180deg, #ffe9b0, #c9922f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mm-vorn {
+  transform: rotateY(180deg);
+  background: #fbf7ef;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9), 0 3px 9px rgba(0, 0, 0, 0.45);
+}
+.mm-vorn img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Gewonnene Paare tragen die Farbe dessen, der sie geholt hat. */
+.mm-karte[data-besitz='blau'] .mm-vorn {
+  box-shadow: inset 0 0 0 3px #3f82ff, 0 0 14px -3px #3f82ff;
+}
+.mm-karte[data-besitz='rot'] .mm-vorn {
+  box-shadow: inset 0 0 0 3px #ea4b40, 0 0 14px -3px #ea4b40;
+}
+
+.mm-funk {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 62px);
+  z-index: 4;
+  transform: translateX(-50%);
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  font: 700 11px/1 system-ui;
+  letter-spacing: 0.06em;
+}
+
+/* --- Abschluss ----------------------------------------------------------- */
+
+.mm-ende {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 4, 16, 0.74);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.mm-ende-blatt {
+  width: min(88vw, 380px);
+  padding: 26px 22px;
+  border-radius: 22px;
+  text-align: center;
+  background: linear-gradient(180deg, #271a45, #150d2c);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 30px 60px -30px #000;
+}
+.mm-ende-blatt h2 {
+  margin: 0 0 4px;
+  font: 900 30px/1.1 system-ui;
+  letter-spacing: -0.03em;
+}
+.mm-ende-stand {
+  margin: 0 0 20px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  font: 900 40px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.mm-ende-stand span { font-size: 24px; opacity: 0.4; }
+
+/*
+ * Wer Bewegung abbestellt hat, bekommt keine. Das Umdrehen bleibt sichtbar —
+ * es ist die Information selbst, nicht Zierde —, aber ohne Weg dorthin.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .mm-innen,
+  .mm-grund img,
+  .mm-suchen,
+  .mm-zurueck { transition-duration: 1ms; }
+  .mm-punkte-lauf span { animation: none; opacity: 0.7; }
+}

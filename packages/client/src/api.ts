@@ -644,6 +644,12 @@ export const api = {
   games: () => request<GameSummary[]>('/games'),
   vote: (gameId: string) => post<{ ok: true }>(`/games/${gameId}/vote`),
   defaults: (gameId: string) => request<GameDefaults>(`/games/${gameId}/defaults`),
+  /**
+   * Wie viele Menschen gerade in diesem einen Spiel stecken — suchend ODER
+   * spielend. Die Tischliste kann das nicht beantworten: Sie zeigt nur Tische
+   * im Zustand `waiting`.
+   */
+  aktiveSpieler: (gameId: string) => request<{ aktiv: number }>(`/games/${gameId}/aktiv`),
 
   tables: (gameId: string) => request<TableRow[]>(`/tables?game=${gameId}`),
   createTable: (body: {

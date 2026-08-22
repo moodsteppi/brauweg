@@ -17,6 +17,7 @@
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",
     "@brauweg/game-feldherr": "*",
+    "@brauweg/game-mememory": "*",
     "@brauweg/game-skat": "*",
     "@brauweg/game-wizard": "*",
     "@fastify/cookie": "^11.1.2",

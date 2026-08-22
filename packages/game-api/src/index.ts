@@ -54,6 +54,13 @@ export type GameId =
    * docs/FELDHERR-PLAN.md.
    */
   | 'feldherr'
+  /**
+   * Mememory ist wie Feldherr kein Kartenspiel: ein Memory-Duell zu zweit auf
+   * einem 5x8-Brett aus Meme-Bildern. Zugbasiert bleibt es trotzdem, es nutzt
+   * also die Schnittstelle vollstaendig — anders als Feldherr sogar die
+   * Schaupause (das Zurueckdrehen zweier ungleicher Karten).
+   */
+  | 'mememory'
   | 'skat'
   | 'schafkopf'
   | 'romme'

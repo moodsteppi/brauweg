@@ -157,6 +157,7 @@ const gameIdSchema = z.enum([
   'doppelkopf',
   'wizard',
   'feldherr',
+  'mememory',
   'skat',
   'schafkopf',
   'romme',
@@ -1280,6 +1281,33 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }
     await deps.db.insert(s.gameVote).values({ accountId, gameId }).onConflictDoNothing();
     return reply.send({ ok: true });
+  });
+
+  /**
+   * Wie viele Menschen gerade in EINEM Spiel stecken - suchend oder spielend.
+   *
+   * Warum eine eigene Zeile und nicht die Tischliste: `/tables` zeigt
+   * ausschliesslich Tische im Zustand `waiting`. Wer gerade eine Partie
+   * spielt, ist darin unsichtbar, und eine Anzeige "3 aktive Spieler", die
+   * beim Spielstart auf 1 faellt, ist schlechter als gar keine.
+   *
+   * Bewusst spielunabhaengig: Die Zeile kennt kein einzelnes Spiel, sie
+   * zaehlt besetzte Plaetze. Botsitze zaehlen nicht mit (accountId ist null).
+   */
+  app.get('/api/games/:gameId/aktiv', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    const [zeile] = await deps.db
+      .select({ anzahl: sql<number>`count(distinct ${s.tableSeat.accountId})::int` })
+      .from(s.tableSeat)
+      .innerJoin(s.gameTable, eq(s.tableSeat.tableId, s.gameTable.id))
+      .where(
+        and(
+          eq(s.gameTable.gameId, gameId),
+          sql`${s.gameTable.status} in ('waiting','running')`,
+          sql`${s.tableSeat.accountId} is not null`,
+        ),
+      );
+    return reply.send({ aktiv: zeile?.anzahl ?? 0 });
   });
 
   /** Vorbelegung fuer den Regelsatz-Editor. Der Inhalt kommt aus dem Modul. */
