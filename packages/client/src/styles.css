@@ -10926,7 +10926,18 @@ main.auth > .muted {
   max-width: min(100%, 460px);
   max-height: 100%;
   margin: auto;
+  transition: opacity 260ms ease;
 }
+
+/*
+ * Der Gegner ist am Zug: Das Brett liegt blasser da.
+ *
+ * Die Deckkraft haengt am ganzen Brett und nicht an den einzelnen Karten —
+ * eine Ebene statt vierundzwanzig. Wichtig fuer die Drehung: Der
+ * 3D-Zusammenhang steckt eine Ebene tiefer (.mm-innen), er wird davon nicht
+ * flachgelegt.
+ */
+.mm-brett[data-warten] { opacity: 0.62; }
 
 .mm-karte {
   position: relative;
@@ -11066,12 +11077,19 @@ main.auth > .muted {
 .mm-reaktion {
   width: 54px;
   height: 54px;
-  display: grid;
-  place-items: center;
+  /*
+   * `padding: 0` ist hier keine Kosmetik: Ein <button> bringt eine eigene
+   * Polsterung des Browsers mit (Chrome 1px/6px), und die verschiebt den
+   * Inhalt gegen die runde Flaeche. Zentriert wird ausserdem NICHT vom Knopf
+   * selbst, sondern von dem Kasten darin — ein Knopf legt seinen Inhalt in
+   * einen anonymen Kasten, und wie der sich zu `place-items` verhaelt, ist
+   * zwischen den Browsern nicht dasselbe.
+   */
+  padding: 0;
+  display: block;
+  overflow: hidden;
   border: 0;
   border-radius: 50%;
-  font-size: 27px;
-  line-height: 1;
   cursor: pointer;
   background: rgba(18, 12, 6, 0.55);
   box-shadow: inset 0 0 0 1px rgba(255, 214, 140, 0.4), 0 6px 16px -8px #000;
@@ -11080,6 +11098,24 @@ main.auth > .muted {
   -webkit-tap-highlight-color: transparent;
   /* Kein CSS-Uebergang: Der Druck wird per animate() gespielt, damit er auch
      beim vierten Tipp je Sekunde noch von vorn beginnt. */
+}
+
+/*
+ * Das Zeichen fuellt den Knopf und wird darin zentriert.
+ *
+ * Flex zentriert den Kasten der Zeile, und mit `line-height: 1` ist dieser
+ * Kasten genau so hoch, wie das Zeichen gross ist. Sich stattdessen auf die
+ * Grundlinie zu verlassen geht bei Emojis schief: Sie sitzen in ihrer Zeile
+ * nicht dort, wo ein Buchstabe sitzt.
+ */
+.mm-reaktion-zeichen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  line-height: 1;
 }
 
 /*
@@ -11183,4 +11219,5 @@ main.auth > .muted {
   .mm-punkte-lauf span { animation: none; opacity: 0.7; }
   /* Die Reaktion bleibt sichtbar, sie zieht nur nicht mehr durchs Bild. */
   .mm-flieger { animation-duration: 900ms; }
+  .mm-brett { transition-duration: 1ms; }
 }

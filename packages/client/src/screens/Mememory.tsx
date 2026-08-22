@@ -150,7 +150,14 @@ export function Mememory({
   const [flieger, setFlieger] = useState<readonly Flieger[]>([]);
   const fliegerNr = useRef(0);
   const letzteReaktion = useRef(0);
-  const [zuletztGesendet, setZuletztGesendet] = useState(0);
+  /**
+   * Das Zeichen, das der Knopf gerade anbietet.
+   *
+   * Es wandert von selbst weiter (siehe unten). Gesendet wird GENAU dieses —
+   * der erste Anlauf wuerfelte beim Tippen, und dann stand auf dem Knopf
+   * etwas anderes, als beim Gegner ankam.
+   */
+  const [angeboten, setAngeboten] = useState(0);
   const knopfRef = useRef<HTMLButtonElement | null>(null);
 
   const zeigeFlieger = useCallback((zeichen: number, richtung: 'hoch' | 'runter'): void => {
@@ -382,6 +389,26 @@ export function Mememory({
     }
   }, [sicht, eigenerSitz]);
 
+  /**
+   * Das Angebot wandert im Zweisekundentakt weiter.
+   *
+   * Damit ist der Knopf ein kleines Spiel im Spiel: Wer ein bestimmtes Zeichen
+   * schicken will, muss den Moment abpassen. Der Reihe nach und nicht
+   * gewuerfelt — nur so laesst sich abwarten, dass das gewuenschte Zeichen
+   * gleich kommt.
+   *
+   * Laeuft nur am Brett: Im Menue gibt es keinen Knopf, und ein Takt, der
+   * dort weiterliefe, zeichnete den Bildschirm alle zwei Sekunden umsonst neu.
+   */
+  useEffect(() => {
+    if (!sicht) return;
+    const takt = window.setInterval(
+      () => setAngeboten((n) => (n + 1) % REAKTIONEN.length),
+      2000,
+    );
+    return () => window.clearInterval(takt);
+  }, [sicht !== null]);
+
   /** Die Vorwegnahme faellt mit der naechsten Sicht — bestaetigt oder nicht. */
   const revision = tisch.view?.revision ?? -1;
   useEffect(() => {
@@ -530,6 +557,17 @@ export function Mememory({
       ? sicht.offen
       : [...sicht.offen, getippt.platz];
   const deckeFarbe = sicht.fertig ? 'weiss' : farbeVon(sicht.dran);
+  /**
+   * Der Gegner ist am Zug — dann liegt das ganze Brett blasser da.
+   *
+   * Das war vorher ein Zufall: Solange man nicht dran war, trugen ALLE Karten
+   * das `disabled`-Merkmal, und WebKit zeichnet deaktivierte Knoepfe blasser.
+   * Der Nebeneffekt (auch die gerade selbst umgedrehte Karte war blass) ist
+   * weg, die Anzeige bleibt — jetzt als eigene Regel, die auch sagt, was sie
+   * meint. Massgeblich ist `dran`, nicht `meinZug`: Waehrend der eigenen
+   * Schaupause ist man nicht am Zug, aber eben auch nicht am Warten.
+   */
+  const wartend = !sicht.fertig && sicht.dran !== eigenerSitz;
 
   const tippe = (platz: number): void => {
     if (!meinZug || offenLokal.length >= 2) return;
@@ -546,8 +584,9 @@ export function Mememory({
     if (jetzt - letzteReaktion.current < REAKTION_PAUSE_MS) return;
     letzteReaktion.current = jetzt;
 
-    const zeichen = Math.floor(Math.random() * REAKTIONEN.length);
-    setZuletztGesendet(zeichen);
+    // Genau das, was auf dem Knopf steht. Beide Seiten schlagen dieselbe
+    // Nummer im selben Vorrat nach, also fliegt drueben dasselbe Zeichen.
+    const zeichen = angeboten;
     zeigeFlieger(zeichen, 'hoch');
     tisch.sendeReaktion(zeichen);
 
@@ -596,6 +635,7 @@ export function Mememory({
       <div className="mm-mitte">
         <div
           className="mm-brett"
+          data-warten={wartend || undefined}
           style={
             {
               '--mm-spalten': sicht.spalten,
@@ -643,18 +683,28 @@ export function Mememory({
         </div>
       </div>
 
-      {/* Reaktionen: ein Tipp, ein Emoji, kein Menue. Absichtlich zufaellig —
-          wer erst auswaehlen muesste, waere mitten in der Partie zu lange
-          beschaeftigt. Der Knopf zeigt, was zuletzt rausging. */}
+      {/* Reaktionen: ein Tipp, ein Emoji, kein Menue. Der Knopf bietet alle
+          zwei Sekunden ein anderes Zeichen an — wer ein bestimmtes schicken
+          will, passt den Moment ab. Eine Auswahlliste waere mitten in der
+          Partie zu lange Beschaeftigung, ein fester Zufall waere Willkuer. */}
       <div className="mm-reaktionsleiste">
         <button
           ref={knopfRef}
           className="mm-reaktion"
           type="button"
           onClick={reagiere}
-          aria-label="Reaktion senden"
+          aria-label={`Reaktion ${REAKTIONEN[angeboten] ?? ''} senden`}
         >
-          <span aria-hidden="true">{REAKTIONEN[zuletztGesendet] ?? REAKTIONEN[0]}</span>
+          {/*
+           * Das Zeichen sitzt in einem eigenen Kasten, der den Knopf ganz
+           * ausfuellt, und wird DARIN zentriert — nicht vom Knopf selbst.
+           * Ein <button> bringt eine eigene Polsterung mit und legt seinen
+           * Inhalt in einen anonymen Kasten; beides zusammen hat das Emoji
+           * sichtbar aus der Mitte geschoben.
+           */}
+          <span className="mm-reaktion-zeichen" aria-hidden="true">
+            {REAKTIONEN[angeboten] ?? REAKTIONEN[0]}
+          </span>
         </button>
       </div>
 

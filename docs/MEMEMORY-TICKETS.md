@@ -627,6 +627,66 @@ diesmal vorher bedacht statt hinterher repariert.
 künftigen neuen Typ von sich aus harmlos — und erspart der nächsten Sitzung
 diese Überlegung ganz.
 
+---
+
+## T-19 — Der Knopf zeigte etwas anderes, als er verschickte
+
+**Schwere:** stolpert · **Art:** eigener Fehler · **Stand:** gelöst
+
+**Beobachtung.** Der Reaktionsknopf trug ein Emoji, beim Gegner kam ein
+anderes an. Kein Übertragungsfehler: Ich hatte beim Tippen **gewürfelt**
+(`Math.random()`), und der Knopf zeigte davon unabhängig das zuletzt
+gesendete Zeichen. Über die Leitung ging also die richtige Nummer — nur war
+sie nie die, die der Spieler gesehen hatte.
+
+**Warum es entstand.** Der Auftrag lautete „such vier, fünf zufällige Emojis
+aus". Ich habe „zufällig" auf den **Zeitpunkt des Tippens** gelegt statt auf
+die Zusammenstellung des Vorrats. Beides ist eine mögliche Lesart; nur ergibt
+die eine eine Oberfläche, die lügt.
+
+**Lösung — und sie ist besser als das Original.** Der Knopf **bietet** ein
+Zeichen an und wechselt es alle zwei Sekunden der Reihe nach. Gesendet wird
+genau das angebotene. Damit ist der Knopf ein kleines Spiel im Spiel: Wer ein
+bestimmtes Zeichen schicken will, passt den Moment ab. Der Reihe nach und
+nicht gewürfelt — nur so lässt sich abwarten, dass das gewünschte gleich
+kommt.
+
+**Allgemein.** Wenn eine Oberfläche etwas anzeigt und eine Aktion etwas
+auslöst, müssen beide dieselbe Quelle haben. Zwei getrennte Zufälle, die
+zufällig meist ähnlich aussehen, fallen erst am Gerät auf — und dort sieht es
+nach einem Netzwerkfehler aus, nicht nach einer Zeile Code.
+
+---
+
+## T-20 — Zweimal in dieselbe Falle: `requestAnimationFrame` im nicht angezeigten Bereich
+
+**Schwere:** stolpert · **Art:** eigener Fehler / Werkzeug · **Stand:** gelöst
+
+**Beobachtung.** Beim Nachmessen der neuen Blässe wollte ich einen Bildlauf
+abwarten (`await new Promise(r => requestAnimationFrame(r))`). Der Aufruf lief
+in den 30-Sekunden-Zeitüberlauf und meldete den Browser-Bereich als
+möglicherweise hängend.
+
+**Ursache.** Genau das, was in T-09 schon steht: Der Bereich stellt nichts
+dar, also treibt er keine Bilder — und `requestAnimationFrame` feuert nie.
+Ein `.catch()` hilft nicht, weil das Versprechen nicht scheitert, sondern
+schlicht nie eingelöst wird.
+
+**Warum es trotzdem passiert ist.** Ich hatte T-09 selbst geschrieben. Beim
+Messen einer *anderen* Sache greift man dann zum gewohnten Werkzeug, ohne die
+eigene Notiz noch einmal zu lesen. Das ist keine Entschuldigung, sondern der
+eigentliche Befund: **Eine Notiz schützt nur, wenn sie am Werkzeug hängt,
+nicht im Dokument.**
+
+**Lösung.** Ohne Bildlauf messen: Merkmal setzen,
+`document.getAnimations().forEach(a => a.finish())`, dann `getComputedStyle`
+lesen. Das treibt jeden Übergang ans Ziel und braucht kein einziges Bild.
+
+**Vorschlag ans System.** Wenn der Browser-Bereich weiß, dass er nichts
+darstellt, könnte `javascript_tool` bei einem `requestAnimationFrame` im
+ausgeführten Code früh warnen, statt dreißig Sekunden zu warten und dann
+„möglicherweise hängend" zu melden.
+
 # Gesamteinschätzung
 
 Ohne Beschönigung, aber auch ohne die Übertreibung, die eine reine
