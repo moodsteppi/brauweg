@@ -21,7 +21,7 @@ hinein, auf die ein KI-System beim Bauen in diesem Repo stößt.
 | 4 | Client: Bildschirm, Menue, Match-Suche, Brett | **fertig** |
 | 5 | Klang (Web Audio, opt-in) | **fertig** |
 | 6 | Oertlicher Zwei-Geraete-Test | **fertig** |
-| 7 | Commit + Push auf `staging` | offen |
+| 7 | Commit + Push auf `staging` | **fertig** (a7951d6, 39e007f) |
 
 Letzte Sitzungsnotiz (22.08.2026): Eine volle Partie ueber zwanzig Paare bis
 zum Abschlussblatt gespielt — zwei angemeldete Sitzungen auf zwei Urspruengen
