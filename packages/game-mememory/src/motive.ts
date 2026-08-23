@@ -7,7 +7,7 @@
  * mit umbenennen — sonst steht auf der Karte ein weisser Kasten, und das ist
  * laut docs/STAND.md genau der Fehler, der schon zweimal live ging.
  *
- * Der Katalog ist ABSICHTLICH viel groesser als ein Spiel braucht: 43 Motive,
+ * Der Katalog ist ABSICHTLICH viel groesser als ein Spiel braucht: 88 Motive,
  * ein Brett fasst 12 Paare. Jede Partie zieht also eine andere Auswahl, und
  * zwei Partien hintereinander sehen kaum gleich aus.
  *
@@ -71,4 +71,56 @@ export const MOTIVE: readonly string[] = [
   'spritzglas',
   'katzenfilter',
   'dinohund',
+  /*
+   * 23. August: 35 frei lizenzierte Motive aus Wikimedia Commons und
+   * zehn selbst erzeugte. Zu JEDER Commons-Datei steht die Lizenz in
+   * docs/ASSETS-MEMEMORY.md -- das ist die Herkunftsspalte, die dem
+   * Repo bisher fehlte (T-22). CC-BY und CC-BY-SA verlangen eine
+   * Namensnennung; sie steht dort und darf nicht verlorengehen.
+   */
+  'quokka',
+  'shiba',
+  'igel',
+  'chamaeleon',
+  'krake',
+  'roterpanda',
+  'schmetterling',
+  'tukan',
+  'qualle',
+  'schildkroete',
+  'fledermaus',
+  'fuchs',
+  'koala',
+  'kaenguru',
+  'walross',
+  'kamel',
+  'avocado',
+  'melone',
+  'burger',
+  'erdmaennchen',
+  'giraffe',
+  'panda',
+  'papageitaucher',
+  'pelikan',
+  'seepferdchen',
+  'seestern',
+  'gottesanbeterin',
+  'libelle',
+  'kaktusbluete',
+  'sonnenblume',
+  'fliegenpilz',
+  'donut',
+  'taco',
+  'lolli',
+  'gluehbirne',
+  'backenhoernchen',
+  'entemesser',
+  'skatekatze',
+  'traurighamster',
+  'brotmuskel',
+  'froschbrille',
+  'nudelkatze',
+  'augenkaktus',
+  'tanzhuhn',
+  'brilleschnecke',
 ];

@@ -13,7 +13,7 @@ Vorlage, falls jemand Motive nachliefert.
 
 | Was | Ordner | Anzahl | Maß | Format | Gewicht |
 | --- | --- | --- | --- | --- | --- |
-| Motive | `public/mememory/motive/` | 43 | 256 × 256 | WebP q78 | 2,3–15,7 kB · **320 kB gesamt** |
+| Motive | `public/mememory/motive/` | 88 | 256 × 256 | WebP q78 | 2,3–17,9 kB · **804 kB gesamt** |
 | Tischdecken | `public/mememory/` | 3 | 640 × 936 | WebP q70 | je ~19 kB · **57 kB gesamt** |
 | Banner Spielauswahl | `public/hub/spielwahl-mememory.webp` | 1 | 1200 × 300 | WebP q80 | 30 kB |
 
@@ -44,7 +44,7 @@ zu den fünf Spalten, die das Brett bis zum 22. August hatte.
 Vom quadratischen Motiv fällt dadurch kaum noch etwas weg. Die Karte schneidet
 mit `object-fit: cover` nach, das Motiv muss also die Mitte tragen.
 
-**Ein Match lädt 12 Motive**, nicht 43: rund **89 kB**. Zusammen mit einer
+**Ein Match lädt 12 Motive**, nicht 88: rund **110 kB**. Zusammen mit einer
 Tischdecke ist das Spiel damit unter 125 kB spielbereit — trotz größerer
 Bilder weniger als vorher. Das ist die Zahl,
 an der die Forderung „keine langen Ladephasen" hängt.
@@ -64,7 +64,7 @@ ist zum guten Teil verdeckt. Mehr Auflösung landet unter den Karten.
    geprüft. Einer der drei Fehler aus CLAUDE.md Regel 5.
 3. **Heller, ruhiger Hintergrund.** Dunkle Motive verschwinden auf der dunklen
    Tischdecke.
-4. **Unverwechselbar gegen die anderen 42.** Zwei ähnliche Motive machen das
+4. **Unverwechselbar gegen die anderen 87.** Zwei ähnliche Motive machen das
    Spiel nicht schwerer, sondern unfair — man kann ein Paar dann nicht mehr
    sicher wiedererkennen. Lama und Alpaka sind der engste Fall im Katalog und
    wurden bewusst behalten (weiß mit Mähne gegen braun und zottelig).
@@ -115,40 +115,90 @@ feinem Diagonalmuster, einem Ring und dem Monogramm „M" (`.mm-rueck` in
 
 ---
 
-## 7 — Herkunft: was bei den 13 Vorlagen offen ist
+## 7 — Herkunft
 
-Die dreizehn Motive `apfel`, `kartoffel`, `greis`, `heulemoji`, `denkemoji`,
-`hamster`, `waschbaer`, `schere`, `strichtier`, `zerrgesicht`, `spritzglas`,
-`katzenfilter` und `dinohund` sind **fremde Bilder aus dem Netz**, vom Nutzer
-mitgeschickt. Die Originale liegen unter
-`packages/client/art/mememory/vorlagen/` (aus dem Sitzungsprotokoll geholt,
-weil Anhänge sonst nirgends auf der Platte landen).
+Der Katalog hat **88 Motive** aus drei Quellen. Die Spalte gab es im Repo
+bisher nicht (`docs/KLANG.md` fuehrt sie fuer Toene, fuer Bilder fehlte sie —
+`docs/MEMEMORY-TICKETS.md`, T-22). Hier ist sie.
 
-Der Rest des Katalogs — 30 Motive — ist weiterhin selbst erzeugt.
+| Quelle | Anzahl | Lizenzlage |
+| --- | --- | --- |
+| Selbst erzeugt (lokale SDXL) | 40 | unbedenklich |
+| Wikimedia Commons | 35 | **frei lizenziert, Namensnennung siehe Tabelle** |
+| Vorlagen des Nutzers | 13 | **ungeklaert — siehe 7.1** |
 
-**Das ist eine bewusste Entscheidung des Nutzers, keine Empfehlung.** Diese
-Punkte gehören dazu und sind mit dem Einbau nicht erledigt:
+### 7.1 — Die 13 Vorlagen des Nutzers: ungeklaert
+
+`apfel`, `kartoffel`, `greis`, `heulemoji`, `denkemoji`, `hamster`,
+`waschbaer`, `schere`, `strichtier`, `zerrgesicht`, `spritzglas`,
+`katzenfilter`, `dinohund` sind fremde Bilder aus dem Netz, vom Nutzer
+mitgeschickt und auf seine ausdrueckliche Anweisung eingebaut. Offen bleibt:
 
 1. **Urheberrecht.** Mindestens `dinohund` ist ein Filmstandbild
-   (Spinosaurus aus *Jurassic Park III*). Bei den übrigen ist die Quelle
-   unbekannt. Für eine öffentliche Produktion ist „im Netz gefunden“ keine
-   Rechtsgrundlage.
+   (Spinosaurus aus *Jurassic Park III*). Bei den uebrigen ist die Quelle
+   unbekannt.
 2. **Recht am eigenen Bild.** `greis`, `zerrgesicht` und `katzenfilter`
-   zeigen **erkennbare Personen**. In Deutschland braucht die Verbreitung
-   eines Personenbildnisses grundsätzlich die Einwilligung der abgebildeten
-   Person (§ 22 KUG). Das ist der Punkt mit dem größten Gewicht, unabhängig
-   vom Urheberrecht am Foto.
-3. **Eine Attribution wurde entfernt.** `zerrgesicht` trug rechts unten die
-   Handles `@max_jaou` / `@czroc`. Der Zuschnitt schneidet sie weg — nach der
-   Hausregel „kein eingebrannter Text“, aber die Wirkung ist, dass der
-   einzige Hinweis auf die Quelle jetzt fehlt. Er steht deshalb hier.
-4. **`docs/KLANG.md` führt für jeden Ton Herkunft und Lizenz.** Für Bilder
-   gibt es diese Spalte nicht. Diese dreizehn wären die ersten Einträge.
+   zeigen **erkennbare Personen** (§ 22 KUG verlangt fuer die Verbreitung
+   grundsaetzlich deren Einwilligung). Der gewichtigste Punkt.
+3. **Eine Attribution wurde entfernt.** `zerrgesicht` trug die Handles
+   `@max_jaou` / `@czroc`; der Zuschnitt schneidet sie weg.
 
-**Wer das aufräumen will**, hat zwei Wege: die KI-Fassungen zurückholen (die
-Erzeugerskripte und Prompts liegen im Sitzungs-Scratchpad, die Motive lassen
-sich jederzeit neu ziehen) oder für die Vorlagen Rechte klären. Der Katalog
-ist so gebaut, dass beides eine Datei je Motiv ist.
+Originale unter `packages/client/art/mememory/vorlagen/`.
+
+### 7.2 — Die 35 aus Wikimedia Commons: frei, aber mit Pflicht
+
+Geholt ueber die Commons-API, gefiltert auf **CC0, Public Domain, CC BY und
+CC BY-SA**. Alles andere wurde verworfen — der Filter steht im Skript
+`commons_holen.py`, nicht im Kopf.
+
+**CC BY und CC BY-SA verlangen eine Namensnennung.** Diese Tabelle IST die
+Namensnennung. Wer ein Motiv entfernt, streicht die Zeile; wer eines
+hinzufuegt, ergaenzt sie. Sie darf nicht verlorengehen.
+
+| Kennung | Datei auf Commons | Lizenz | Urheber |
+| --- | --- | --- | --- |
+| `avocado` | [Persea americana fruit 2.JPG](https://commons.wikimedia.org/wiki/File:Persea_americana_fruit_2.JPG) | CC BY-SA 3.0 | B.navez |
+| `burger` | [NCI Visuals Food Hamburger.jpg](https://commons.wikimedia.org/wiki/File:NCI_Visuals_Food_Hamburger.jpg) | Public domain | Len Rizzi (photographer) |
+| `chamaeleon` | [Panther chameleon (Furcifer pardalis) male Nosy Be.jpg](https://commons.wikimedia.org/wiki/File:Panther_chameleon_(Furcifer_pardalis)_male_Nosy_Be.jpg) | CC BY-SA 4.0 | Charles J. Sharp |
+| `donut` | [Golden Donut Sugar Coated Doughnut (15533318029).jpg](https://commons.wikimedia.org/wiki/File:Golden_Donut_Sugar_Coated_Doughnut_(15533318029).jpg) | CC BY-SA 2.0 | Willis Lam |
+| `erdmaennchen` | [Standing meerkat looking behind.jpg](https://commons.wikimedia.org/wiki/File:Standing_meerkat_looking_behind.jpg) | CC BY-SA 4.0 | Basile Morin |
+| `fledermaus` | [Unidentified newborn bat.jpg](https://commons.wikimedia.org/wiki/File:Unidentified_newborn_bat.jpg) | CC BY-SA 4.0 | Anton |
+| `fliegenpilz` | [Fly Agaric mushroom 3.jpg](https://commons.wikimedia.org/wiki/File:Fly_Agaric_mushroom_3.jpg) | CC BY 2.5 | Tony Wills |
+| `fuchs` | [Alaska Red Fox (Vulpes vulpes).jpg](https://commons.wikimedia.org/wiki/File:Alaska_Red_Fox_(Vulpes_vulpes).jpg) | CC BY-SA 2.0 | Gregory "Slobirdr" Smith |
+| `giraffe` | [Giraffe head close up.jpg](https://commons.wikimedia.org/wiki/File:Giraffe_head_close_up.jpg) | Public domain | Stansell Kenneth, U.S. Fish and Wildlife Service |
+| `gluehbirne` | [Gluehlampe 01 KMJ.jpg](https://commons.wikimedia.org/wiki/File:Gluehlampe_01_KMJ.jpg) | CC BY-SA 3.0 | KMJ |
+| `gottesanbeterin` | [Praying mantis india.jpg](https://commons.wikimedia.org/wiki/File:Praying_mantis_india.jpg) | CC BY-SA 2.0 | Shiva shankar |
+| `igel` | [Erinaceus roumanicus 2020 G2.jpg](https://commons.wikimedia.org/wiki/File:Erinaceus_roumanicus_2020_G2.jpg) | Public domain | George Chernilevsky |
+| `kaenguru` | [Forester kangaroo (Macropus giganteus tasmaniensis) juvenile hopping Esk Valley.jpg](https://commons.wikimedia.org/wiki/File:Forester_kangaroo_(Macropus_giganteus_tasmaniensis)_juvenile_hopping_Esk_Valley.jpg) | CC BY-SA 4.0 | Charles J. Sharp |
+| `kaktusbluete` | [Echinopsis unidentified.jpg](https://commons.wikimedia.org/wiki/File:Echinopsis_unidentified.jpg) | CC BY-SA 3.0 | Tomas Castelazo |
+| `kamel` | [07. Camel Profile, near Silverton, NSW, 07.07.2007.jpg](https://commons.wikimedia.org/wiki/File:07._Camel_Profile,_near_Silverton,_NSW,_07.07.2007.jpg) | CC BY-SA 3.0 | Jjron |
+| `koala` | [Australia Cairns Koala.jpg](https://commons.wikimedia.org/wiki/File:Australia_Cairns_Koala.jpg) | CC BY-SA 1.0 | Guillaume Blanchard at French Wikipedia |
+| `krake` | [Octopus vulgaris Merculiano.jpg](https://commons.wikimedia.org/wiki/File:Octopus_vulgaris_Merculiano.jpg) | Public domain | Comingio Merculiano (1845-1915) in Jatta Giuseppe (1860-1903) |
+| `libelle` | [Dragonfly macro.jpg](https://commons.wikimedia.org/wiki/File:Dragonfly_macro.jpg) | CC BY-SA 3.0 | Daniel Schwen |
+| `lolli` | [Lollipop in the package.jpg](https://commons.wikimedia.org/wiki/File:Lollipop_in_the_package.jpg) | CC BY-SA 2.5 | - |
+| `melone` | [Taiwan 2009 Tainan City Organic Farm Watermelon FRD 7962.jpg](https://commons.wikimedia.org/wiki/File:Taiwan_2009_Tainan_City_Organic_Farm_Watermelon_FRD_7962.jpg) | CC BY-SA 3.0 | Fred Hsu (Wikipedia:User:Fred Hsu on en.wikipedia) |
+| `panda` | [Panda eating Bamboo leaves.jpg](https://commons.wikimedia.org/wiki/File:Panda_eating_Bamboo_leaves.jpg) | CC BY 4.0 | MspreilsCN |
+| `papageitaucher` | [Puffin Latrabjarg Iceland.jpg](https://commons.wikimedia.org/wiki/File:Puffin_Latrabjarg_Iceland.jpg) | CC BY 3.0 | Boaworm |
+| `pelikan` | [ComputerHotline - Pelecanus crispus (by) (1).jpg](https://commons.wikimedia.org/wiki/File:ComputerHotline_-_Pelecanus_crispus_(by)_(1).jpg) | CC BY 2.0 | Thomas Bresson |
+| `qualle` | [Moon jellyfish at Gota Sagher.JPG](https://commons.wikimedia.org/wiki/File:Moon_jellyfish_at_Gota_Sagher.JPG) | CC BY-SA 3.0 | Alexander Vasenin |
+| `quokka` | [Quokka (Setonix brachyurus) (27725086285).jpg](https://commons.wikimedia.org/wiki/File:Quokka_(Setonix_brachyurus)_(27725086285).jpg) | CC BY 2.0 | patrickkavanagh |
+| `roterpanda` | [Red Panda.JPG](https://commons.wikimedia.org/wiki/File:Red_Panda.JPG) | CC BY-SA 3.0 | User Bernard Landgraf on de.wikipedia.org |
+| `schildkroete` | [Green sea turtle (Chelonia mydas) Moorea.jpg](https://commons.wikimedia.org/wiki/File:Green_sea_turtle_(Chelonia_mydas)_Moorea.jpg) | CC BY-SA 4.0 | Charles J. Sharp |
+| `schmetterling` | [Peacock butterfly (Aglais io) 2.jpg](https://commons.wikimedia.org/wiki/File:Peacock_butterfly_(Aglais_io)_2.jpg) | CC BY-SA 3.0 | Charles J. Sharp |
+| `seepferdchen` | [Seahorse Skeleton Macro 8.JPG](https://commons.wikimedia.org/wiki/File:Seahorse_Skeleton_Macro_8.JPG) | CC BY-SA 3.0 | “Jon Zander (Digon3)" |
+| `seestern` | [Asterias rubens.jpg](https://commons.wikimedia.org/wiki/File:Asterias_rubens.jpg) | CC BY-SA 4.0 | Hans Hillewaert |
+| `shiba` | [Shiba inu taiki.jpg](https://commons.wikimedia.org/wiki/File:Shiba_inu_taiki.jpg) | Public domain | Roberto Vasarri |
+| `sonnenblume` | [Single Sunflower 1.JPG](https://commons.wikimedia.org/wiki/File:Single_Sunflower_1.JPG) | CC BY-SA 3.0 | Sivaraj |
+| `taco` | [001 Tacos de carnitas, carne asada y al pastor.jpg](https://commons.wikimedia.org/wiki/File:001_Tacos_de_carnitas,_carne_asada_y_al_pastor.jpg) | CC BY-SA 2.0 | Larry Miller |
+| `tukan` | [006 Toco toucan in Encontro das Águas State Park Photo by Giles Laurent.jpg](https://commons.wikimedia.org/wiki/File:006_Toco_toucan_in_Encontro_das_%C3%81guas_State_Park_Photo_by_Giles_Laurent.jpg) | CC BY-SA 4.0 | Giles Laurent |
+| `walross` | [Pacific Walrus - Bull (8247646168).jpg](https://commons.wikimedia.org/wiki/File:Pacific_Walrus_-_Bull_(8247646168).jpg) | Public domain | Joel Garlich-Miller, U.S. Fish and Wildlife Service |
+
+### 7.3 — Was noch fehlt
+
+Die Namensnennung steht bisher nur hier, nicht **im Spiel**. Fuer CC BY ist
+das grenzwertig: Ueblich ist ein Hinweis dort, wo das Werk erscheint —
+`CREDITS.md` oder eine Zeile im Mememory-Menue waeren der saubere Ort. Nicht
+gebaut, weil die Zeit dafuer nicht reichte.
 
 ---
 

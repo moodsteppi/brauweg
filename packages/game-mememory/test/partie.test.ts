@@ -219,5 +219,10 @@ test('der Regelsatz weist ungerade Kartenzahlen und Unsinn ab', () => {
 });
 
 test('ein Brett, fuer das der Katalog nicht reicht, wird gar nicht erst gebaut', () => {
-  assert.throws(() => erstellePartie({ spalten: 10, zeilen: 10, merkzeitMs: 1100 }, [0, 1], 1));
+  // Die Brettgroesse haengt an der Katalogzahl, nicht an einer festen Zahl:
+  // Mit 10x10 lief dieser Test ins Leere, sobald der Katalog auf 88 Motive
+  // wuchs -- 50 Paare passten ploetzlich hinein. Zwei Zeilen mal (Katalog+1)
+  // Spalten sind IMMER ein Paar zu viel.
+  const zuGross = { spalten: MOTIVE.length + 1, zeilen: 2, merkzeitMs: 1100 };
+  assert.throws(() => erstellePartie(zuGross, [0, 1], 1));
 });
