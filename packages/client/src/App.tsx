@@ -5,6 +5,7 @@ import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
+import { EasyPoker } from './screens/EasyPoker';
 import { FeldherrTisch } from './screens/FeldherrTisch';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
@@ -28,6 +29,11 @@ type Screen =
    * Umweg ueber diesen Zustand jedes Mal die Verbindung neu aufbaute.
    */
   | { name: 'mememory'; tisch?: string | null }
+  /**
+   * Easy Poker bringt wie Mememory sein eigenes Hauptmenue mit: Sofort
+   * gegen den Computer oder Match-Suche, beides ohne Kartenlobby.
+   */
+  | { name: 'easypoker'; tisch?: string | null }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
   /** Solo-Endless-Runner aus der Spielauswahl. */
@@ -170,6 +176,37 @@ export function App(): React.JSX.Element {
     );
   }
 
+  /**
+   * Easy Poker laeuft ebenfalls nicht am Kartentisch: Vier Schaltflaechen,
+   * zwei Sitze, ein eigener Filz. Alle drei Wege — Spielauswahl, Lobby,
+   * Weiterspielen — fuehren auf denselben Bildschirm.
+   */
+  if (screen.name === 'easypoker') {
+    return (
+      <EasyPoker
+        startTisch={screen.tisch ?? null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+  if (
+    (screen.name === 'table' || screen.name === 'lobby') &&
+    screen.gameId === 'easypoker'
+  ) {
+    return (
+      <EasyPoker
+        startTisch={screen.name === 'table' ? screen.tableId : null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -236,6 +273,7 @@ export function App(): React.JSX.Element {
       onPick={(gameId) => {
         if (gameId === 'feldherr') return setScreen({ name: 'feldherr' });
         if (gameId === 'mememory') return setScreen({ name: 'mememory' });
+        if (gameId === 'easypoker') return setScreen({ name: 'easypoker' });
         return setScreen({ name: 'lobby', gameId });
       }}
       onSolo={(modusId) => {

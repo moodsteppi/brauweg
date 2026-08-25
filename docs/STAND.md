@@ -13,9 +13,10 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand:** 149 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-43 Skat-Tests, 15 Feldherr-Tests, 31 Mememory-Tests, **287 Servertests**,
-`tsc --noEmit` sauber.
+**Prüfstand (gezählt am 25. August 2026, nicht aus der Erinnerung):**
+161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
+15 Feldherr-Tests, 31 Mememory-Tests, 54 Easy-Poker-Tests, **287 Servertests**
+— zusammen 791, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
@@ -72,6 +73,63 @@ Minuten live.
 >
 > Reibungsstellen beim Bauen — auch eigene Fehler — stehen gesammelt in
 > `docs/MEMEMORY-TICKETS.md` (22 Einträge und eine Gesamteinschätzung).
+
+> **Easy Poker ist neu auf `staging` (25. August 2026), noch nicht in der
+> Produktion.** Texas Hold'em Kopf an Kopf, für ein Hochkant-Handy entworfen:
+> zwei Handkarten, fünf Gemeinschaftskarten, vier Setzrunden — und genau
+> **vier Schaltflächen** (Fold · Check · Call · Bet). Neues Paket
+> `@brauweg/game-easypoker` (**54 eigene Tests**), `EasyPoker.tsx` im Client,
+> ein Eintrag mehr in `MODULES`. Bildbestellung: `docs/ASSETS-EASYPOKER.md`
+> (genau ein Bild, alles andere ist gezeichnet).
+>
+> **Der Einstieg hat zwei Knöpfe, nicht einen.** „Sofort spielen" macht einen
+> Tisch mit `fillWithBots` auf und ist nach zwei Sekunden im Spiel; „Online-Match
+> suchen" geht den Mememory-Weg über die gewöhnliche Tischliste. Der Bot-Tisch
+> wird mit `visibility: 'on_request'` angelegt — ein öffentlicher stünde in der
+> Lobbyliste, und wer nach einem Menschen sucht, landete mitten in einer
+> Botpartie.
+>
+> **Vier Dinge daran sind für andere Spiele interessant:**
+>
+> 1. **Der Betrag steht IN der erlaubten Aktion.** `legalActions` liefert
+>    `{typ:'mitgehen', betrag:12}` und `{typ:'setzen', betrag:30}` — der
+>    Bildschirm schreibt die Zahl auf den Knopf, ohne zu rechnen, und der
+>    Server prüft sie beim Ausführen gegen seine eigene Rechnung. Damit kommt
+>    ein Setzspiel ohne Schieberegler und ohne Regelwissen im Client aus.
+> 2. **Die Schaupause macht das Zeigen** (`interludeMs`/`advanceInterlude`,
+>    wie bei Mememory): 1,6 s nach einer Aufgabe, 3,4 s nach einem Zeigen,
+>    danach wird von selbst neu gegeben.
+> 3. **Der Zufall JE HAND, nicht je Partie.** Die Handnummer steht dabei
+>    **vorne** in der Hexkette: `worte()` liest nur die ersten 32 Hexzeichen,
+>    eine hinten angehängte Nummer fiele bei einer langen Basis lautlos heraus
+>    — und dann bekäme jede Hand dieselben Karten.
+> 4. **Die Jetons sind Partiepunkte, keine Währung.** `docs/SPIELE-IDEEN.md`
+>    führt Poker unter „Vorsicht geboten", und der Grund steht in `game-api`,
+>    Grundsatz 4: Regelwerk und Währung bleiben getrennt. Es gibt deshalb
+>    keinen Kauf, keinen Umtausch und keine Verbindung zu Münzen oder
+>    Edelsteinen — und die Bildbestellung verbietet ausdrücklich Geld- und
+>    Spielbank-Motive.
+>
+> **Zwei Fallen, die beim Prüfen aufgeflogen sind:**
+>
+> - **`main { padding: 1rem }` trifft auch diesen Vollbild-Bildschirm.**
+>   Gemessen lag der Tisch 16 px vom Rand und war 358 statt 390 px breit. Das
+>   Hauptmenü sah richtig aus, weil es eine eigene Polsterung setzt — der
+>   Tisch nicht. Dieselbe Falle wie bei Mememory, und sie kommt wieder.
+> - **Eine Zahl, die per `requestAnimationFrame` läuft, friert im verdeckten
+>   Tab ein.** Topf und Jetonstand klebten über vier Hände hinweg auf ihrem
+>   ersten Wert. Der Lauf ist jetzt Zierde mit Sicherheitsnetz: keine
+>   Bewegung, wenn `document.visibilityState !== 'visible'`, und eine Uhr, die
+>   nach der Laufzeit in jedem Fall auf den Zielwert setzt.
+>
+> **Geprüft** mit dem gebauten Client auf PGlite, Port 3000, in fünf Formaten
+> (360 × 640 · 360 × 800 · 375 × 812 · 390 × 844 · 412 × 915): nichts rollt,
+> nichts wird abgeschnitten, die Aktionsleiste bleibt überall im Bild. Dazu
+> ganze Partien gegen den Bot — die Summe beider Jetonstände plus Topf blieb
+> in jeder Stichprobe genau 400. **Nicht geprüft: das Aussehen.** Im
+> Sitzungsbrowser lässt sich kein Bildschirmfoto machen; belegt sind Aufbau,
+> Maße, Farben, Kontraste und Verhalten, nicht der Auftritt. Vor `main`
+> gehört das einmal an ein echtes Handy.
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

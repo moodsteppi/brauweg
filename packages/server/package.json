@@ -16,6 +16,7 @@
     "@brauweg/game-api": "*",
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",
+    "@brauweg/game-easypoker": "*",
     "@brauweg/game-feldherr": "*",
     "@brauweg/game-mememory": "*",
     "@brauweg/game-skat": "*",

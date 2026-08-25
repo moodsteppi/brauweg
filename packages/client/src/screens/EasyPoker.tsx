@@ -1,0 +1,1155 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { api, type TableRow } from '../api';
+import { cardName, isRed, rankLabel, suitSymbol } from '../i18n';
+import { useTable } from '../useTable';
+
+/**
+ * Easy Poker — Texas Hold'em zu zweit, Hochkant-Handy.
+ *
+ * Ein Bildschirm mit zwei Gesichtern, wie bei Feldherr und Mememory: ohne
+ * Tisch das Hauptmenue, mit Tisch der Filz. Der Tisch wird HIER gehalten und
+ * nicht ueber App.tsx geroutet — die Match-Suche muss den Tisch unter
+ * Umstaenden wechseln (Wettrennen-Regel weiter unten), und ein Wechsel ueber
+ * zwei Bildschirmzustaende hinweg waere ein Flackern.
+ *
+ * Arbeitsteilung mit dem Spielmodul: Dieser Bildschirm bildet KEINE Pokerregel
+ * nach (DESIGN-DOKO). Die vier Schaltflaechen entstehen aus `legalActions`,
+ * und was ein Mitgehen oder Erhoehen kostet, steht als Betrag in der erlaubten
+ * Aktion — gerechnet hat das der Server. Der Bildschirm weiss deshalb nicht
+ * einmal, was ein grosser Blind ist; er zeigt Zahlen an, die er bekommt.
+ *
+ * Der ganze Aufbau ist fuer eine Hand im Hochformat entworfen: Kopfzeile,
+ * Gegner, Tisch, eigene Karten, Aktionsleiste — von oben nach unten in der
+ * Reihenfolge, in der man sie braucht, und das Wichtigste unten am Daumen.
+ */
+
+// ---------------------------------------------------------------------------
+// Was vom Server kommt (siehe packages/game-easypoker/src/sicht.ts)
+// ---------------------------------------------------------------------------
+
+interface Karte {
+  farbe: string;
+  wert: string;
+  id: number;
+}
+
+interface Bewertung {
+  kategorie: number;
+  werte: number[];
+  karten: Karte[];
+}
+
+type Aktionsart = 'passen' | 'schieben' | 'mitgehen' | 'setzen';
+
+interface LetzteAktion {
+  sitz: number;
+  art: Aktionsart;
+  betrag: number | null;
+}
+
+interface HandErgebnis {
+  gewinner: number[];
+  durchAufgabe: boolean;
+  topf: number;
+  gezeigt: Record<number, Karte[]>;
+  bewertung: Record<number, Bewertung>;
+  gewinn: Record<number, number>;
+}
+
+interface EasyPokerSicht {
+  handNr: number;
+  handMax: number;
+  strasse: 'preflop' | 'flop' | 'turn' | 'river';
+  brett: Karte[];
+  meineKarten: Karte[];
+  gegnerKarten: Karte[] | null;
+  gegnerVerdeckt: number;
+  meineStaerke: Bewertung | null;
+  jetons: Record<number, number>;
+  einsatz: Record<number, number>;
+  topf: number;
+  geber: number;
+  dran: number | null;
+  zuZahlen: number;
+  setzKosten: number | null;
+  letzteAktion: LetzteAktion | null;
+  ergebnis: HandErgebnis | null;
+  pauseMs: number | null;
+  kleinerBlind: number;
+  grosserBlind: number;
+  startJetons: number;
+  namen: Record<number, string>;
+  fertig: boolean;
+  sieger: number | null;
+  leftSeats: number[];
+  zuschauer: boolean;
+}
+
+type Aktion =
+  | { typ: 'passen' }
+  | { typ: 'schieben' }
+  | { typ: 'mitgehen'; betrag: number }
+  | { typ: 'setzen'; betrag: number }
+  | { typ: 'name'; name: string };
+
+// ---------------------------------------------------------------------------
+// Feste Werte
+// ---------------------------------------------------------------------------
+
+const NAME_SCHLUESSEL = 'easypoker.name';
+const NAME_MAX = 16;
+
+/**
+ * Regelsatz, mit dem ein Tisch aufgemacht wird.
+ *
+ * Muss zu DEFAULT_REGELN in packages/game-easypoker/src/regeln.ts passen.
+ * Bewusst ausgeschrieben statt ueber `api.defaults()` geholt: Der Einstieg
+ * soll nicht auf eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht.
+ */
+const REGELSATZ = { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 };
+
+/**
+ * Zwoelf Haende sind am Handy rund fuenf Minuten — und eine gerade Zahl, weil
+ * der Knopf jede Hand wandert und die Plattform deshalb ein Vielfaches der
+ * Geberrotation verlangt.
+ */
+const HAENDE = 12;
+
+/**
+ * Die Namen der Kartenkombinationen.
+ *
+ * Die ZAHLEN sind Protokoll und stehen als `KATEGORIE` in
+ * packages/game-easypoker/src/karten.ts. Wer sie dort verschiebt, muss sie
+ * hier mitverschieben — deshalb steht die Herkunft in dieser Zeile und nicht
+ * nur im Modul.
+ */
+const KOMBINATION: Record<number, string> = {
+  1: 'Höchste Karte',
+  2: 'Ein Paar',
+  3: 'Zwei Paare',
+  4: 'Drilling',
+  5: 'Straße',
+  6: 'Flush',
+  7: 'Full House',
+  8: 'Vierling',
+  9: 'Straight Flush',
+};
+
+/** Deutsche Beschriftung der Züge — für die Sprechblase des Gegners. */
+const AKTIONSWORT: Record<Aktionsart, string> = {
+  passen: 'Fold',
+  schieben: 'Check',
+  mitgehen: 'Call',
+  setzen: 'Bet',
+};
+
+const STRASSENWORT: Record<EasyPokerSicht['strasse'], string> = {
+  preflop: 'Vor dem Flop',
+  flop: 'Flop',
+  turn: 'Turn',
+  river: 'River',
+};
+
+function wenigerBewegung(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+function gelesenerName(): string {
+  try {
+    return window.localStorage.getItem(NAME_SCHLUESSEL) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Karten
+// ---------------------------------------------------------------------------
+
+/**
+ * Eine Spielkarte, gezeichnet und nicht geladen (DESIGN.md: "Alles gemalt,
+ * nichts geladen").
+ *
+ * Als SVG mit fester `viewBox`, damit alles exakt mit der Kartengroesse
+ * mitskaliert — von der 44 px breiten Brettkarte bis zur 100 px breiten
+ * Handkarte muss keine Schriftgroesse je Platz gerechnet werden. Dasselbe
+ * Verhaeltnis wie am Doppelkopftisch (`--pc-ratio` 1.452), damit Karten
+ * ueberall in Brauweg gleich proportioniert sind.
+ *
+ * Wert und Farbe stehen oben links UND gross in der Mitte: Oben links liest
+ * man sie im Fächer, in der Mitte auf einen Blick. Mehr Zeichen braucht die
+ * Karte nicht — der Auftrag sagt ausdruecklich "sehr simpel".
+ */
+function Spielkarte({
+  karte,
+  hervor,
+  gehoben,
+  verzoegerung,
+  onClick,
+}: {
+  karte: Karte;
+  /** Teil der gewerteten Kombination — bekommt den goldenen Rand. */
+  hervor?: boolean;
+  gehoben?: boolean;
+  verzoegerung?: number;
+  onClick?: () => void;
+}): React.JSX.Element {
+  /*
+   * Das Spielmodul nennt die Felder deutsch (`farbe`/`wert`), die
+   * Kartenhelfer der Plattform erwarten die Namen des Kartenprotokolls
+   * (`suit`/`rank`). Umbenannt wird an dieser einen Stelle — so bleiben
+   * Farbzeichen, Wertkuerzel und Vorlese-Name im ganzen Produkt dieselben,
+   * ohne dass das Modul die englische Schreibweise uebernehmen muss.
+   */
+  const alsBlatt = { suit: karte.farbe, rank: karte.wert };
+  const rot = isRed(alsBlatt);
+  const zeichen = suitSymbol(karte.farbe);
+  const wert = rankLabel(karte.wert);
+  const Element = onClick ? 'button' : 'span';
+
+  return (
+    <Element
+      className={`poker-karte${rot ? ' is-rot' : ''}`}
+      data-hervor={hervor || undefined}
+      data-gehoben={gehoben || undefined}
+      style={verzoegerung ? ({ '--poker-ab': `${verzoegerung}ms` } as React.CSSProperties) : undefined}
+      onClick={onClick}
+      {...(onClick ? { type: 'button' as const } : {})}
+      aria-label={cardName(alsBlatt)}
+    >
+      <svg viewBox="0 0 100 145" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <rect className="poker-karte-grund" x="1.5" y="1.5" width="97" height="142" rx="11" />
+        {/* Die Zehn ist zweistellig und braucht eine kleinere Schrift, sonst
+            schneidet der Kartenrand ihre Eins ab — aus der Zehn wuerde eine
+            Null. Dieselbe Falle wie in CardFace.tsx. */}
+        <text
+          className="poker-tinte"
+          x="13"
+          y="36"
+          fontSize={wert.length > 1 ? 26 : 32}
+          fontWeight="800"
+        >
+          {wert}
+        </text>
+        <text className="poker-tinte" x="13" y="60" fontSize="23">
+          {zeichen}
+        </text>
+        <text className="poker-tinte" x="58" y="112" fontSize="60" textAnchor="middle">
+          {zeichen}
+        </text>
+      </svg>
+    </Element>
+  );
+}
+
+/** Die Rueckseite: fremde Handkarten. Dieselbe Groesse, dieselbe Form. */
+function Kartenruecken({ verzoegerung }: { verzoegerung?: number }): React.JSX.Element {
+  return (
+    <span
+      className="poker-karte is-ruecken"
+      style={verzoegerung ? ({ '--poker-ab': `${verzoegerung}ms` } as React.CSSProperties) : undefined}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 100 145" preserveAspectRatio="xMidYMid meet">
+        <rect className="poker-ruecken-grund" x="1.5" y="1.5" width="97" height="142" rx="11" />
+        <rect className="poker-ruecken-rand" x="9" y="9" width="82" height="127" rx="7" />
+        <path className="poker-ruecken-raute" d="M50 42 L72 72 L50 102 L28 72 Z" />
+        <path className="poker-ruecken-raute is-innen" d="M50 57 L62 72 L50 87 L38 72 Z" />
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * Ein leerer Brettplatz.
+ *
+ * Er steht schon da, bevor die Karte kommt. Ohne ihn springt das ganze
+ * Layout, sobald der Flop faellt — und auf einem kurzen Bildschirm ist ein
+ * Sprung von drei Kartenbreiten der Unterschied zwischen "passt" und
+ * "abgeschnitten".
+ */
+function LeererPlatz(): React.JSX.Element {
+  return (
+    <span className="poker-karte is-leer" aria-hidden="true">
+      <svg viewBox="0 0 100 145" preserveAspectRatio="xMidYMid meet">
+        <rect x="2" y="2" width="96" height="141" rx="11" />
+      </svg>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Zahlen, die sich bewegen
+// ---------------------------------------------------------------------------
+
+/**
+ * Eine Zahl, die zu ihrem neuen Wert laeuft, statt zu springen.
+ *
+ * Der Jetonstand ist die einzige Zahl auf dem Bildschirm, an der man den
+ * Ausgang einer Hand abliest. Ein Sprung von 196 auf 172 ist eine Information,
+ * die man verpassen kann; ein Lauf ueber eine halbe Sekunde nicht.
+ *
+ * Unter "weniger Bewegung" faellt der Lauf ersatzlos weg (DESIGN.md, keine
+ * Ausnahme).
+ */
+function useLaufendeZahl(ziel: number): number {
+  const [wert, setWert] = useState(ziel);
+  const stand = useRef(ziel);
+
+  useEffect(() => {
+    const start = stand.current;
+    if (start === ziel) return;
+
+    /*
+     * Kein Lauf, wo kein Bildtakt kommt.
+     *
+     * Ein verdeckter Tab bekommt keine `requestAnimationFrame` — und ein
+     * Handybrowser drosselt sie, sobald man kurz woanders hinsieht. Die Zahl
+     * ist aber keine Zierde, sondern die einzige Stelle, an der man den
+     * Ausgang einer Hand abliest. Sie muss also auch dann stimmen, wenn nie
+     * ein Bild gezeichnet wird.
+     */
+    if (wenigerBewegung() || document.visibilityState !== 'visible') {
+      stand.current = ziel;
+      setWert(ziel);
+      return;
+    }
+
+    let laeuft = true;
+    const beginn = performance.now();
+    const dauer = 520;
+    const schritt = (jetzt: number): void => {
+      if (!laeuft) return;
+      const anteil = Math.min(1, (jetzt - beginn) / dauer);
+      // Weich auslaufen: schnell los, sanft ankommen.
+      const weich = 1 - Math.pow(1 - anteil, 3);
+      const aktuell = Math.round(start + (ziel - start) * weich);
+      stand.current = aktuell;
+      setWert(aktuell);
+      if (anteil < 1) window.requestAnimationFrame(schritt);
+    };
+    window.requestAnimationFrame(schritt);
+
+    /*
+     * Sicherheitsnetz. Wird der Tab genau zwischen Effektstart und erstem Bild
+     * verdeckt, laeuft `schritt` nie an, und die Zahl bliebe auf einem alten
+     * Stand stehen — beim Prüfen im verdeckten Fenster ist genau das passiert:
+     * Topf und Jetons klebten über vier Hände hinweg auf ihrem ersten Wert.
+     * Eine Uhr wird zwar auch gedrosselt, aber sie kommt.
+     */
+    const netz = window.setTimeout(() => {
+      if (!laeuft) return;
+      stand.current = ziel;
+      setWert(ziel);
+    }, dauer + 140);
+
+    return () => {
+      laeuft = false;
+      window.clearTimeout(netz);
+      // Der naechste Lauf beginnt beim Ziel und nicht mittendrin, sonst
+      // laufen zwei schnelle Aenderungen gegeneinander.
+      stand.current = ziel;
+    };
+  }, [ziel]);
+
+  return wert;
+}
+
+function Jetonzahl({ wert }: { wert: number }): React.JSX.Element {
+  return <span className="poker-jetons">{useLaufendeZahl(wert)}</span>;
+}
+
+// ---------------------------------------------------------------------------
+// Der Bildschirm
+// ---------------------------------------------------------------------------
+
+export function EasyPoker({
+  startTisch,
+  onBack,
+}: {
+  /** Tisch aus dem "Weiterspielen" des Hubs. Sonst faengt alles im Menue an. */
+  startTisch?: string | null;
+  onBack: () => void;
+}): React.JSX.Element {
+  const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
+  /** Tisch, den ich selbst aufgemacht habe — nur dann wird gewechselt. */
+  const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
+  const [sucht, setSucht] = useState(false);
+  const [aktiv, setAktiv] = useState<number | null>(null);
+  const [name, setName] = useState(gelesenerName);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [regelnOffen, setRegelnOffen] = useState(false);
+  /** Angetippte eigene Karte — sie hebt sich an, damit man sie besser sieht. */
+  const [gehobeneKarte, setGehobeneKarte] = useState<number | null>(null);
+  /**
+   * Revision, bei der ich zuletzt eine Aktion abgeschickt habe.
+   *
+   * Solange keine neuere Sicht da ist, sind die Knoepfe gesperrt — sonst
+   * provoziert ein stummer Knopf das Doppeltippen (DESIGN-DOKO,
+   * "Rueckmeldung"). An die Revision gehaengt und nicht an den Inhalt: Treffen
+   * zwei Sichten im selben Takt ein, fasst React sie zusammen, und eine
+   * Zwischenstufe wird nie gerendert.
+   */
+  const [gesendetBei, setGesendetBei] = useState<number | null>(null);
+
+  const tisch = useTable<EasyPokerSicht>(tischId, 'easypoker');
+  const sicht = tisch.view?.view ?? null;
+  const eigenerSitz = tisch.view?.seat ?? 0;
+  const gegnerSitz = eigenerSitz === 0 ? 1 : 0;
+  const revision = tisch.view?.revision ?? -1;
+
+  useEffect(() => {
+    if (gesendetBei !== null && revision !== gesendetBei) setGesendetBei(null);
+  }, [revision, gesendetBei]);
+
+  // -------------------------------------------------------------------------
+  // Aktive Spieler
+  // -------------------------------------------------------------------------
+
+  // Auch im Wartebereich weiterzaehlen: Dort steht die Zahl noch einmal, und
+  // eine eingefrorene Null waehrend der Suche sieht aus, als suchte man allein.
+  useEffect(() => {
+    if (sicht) return;
+    let lebt = true;
+    const hole = (): void => {
+      void api
+        .aktiveSpieler('easypoker')
+        .then((antwort) => {
+          if (lebt) setAktiv(antwort.aktiv);
+        })
+        .catch(() => {
+          /* Die Zahl ist Beiwerk. Ein Fehlversuch darf das Menue nicht stoeren. */
+        });
+    };
+    hole();
+    const takt = window.setInterval(hole, 5000);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, [sicht !== null]);
+
+  // -------------------------------------------------------------------------
+  // Einstieg
+  // -------------------------------------------------------------------------
+
+  /**
+   * Sofort spielen: eigener Tisch, freier Platz mit einem Bot besetzt.
+   *
+   * `visibility: 'on_request'` ist hier kein Detail. Ein oeffentlicher Tisch
+   * stuende in der Lobbyliste, und wer gerade nach einem Menschen sucht,
+   * landete mitten in einer laufenden Botpartie.
+   */
+  const sofortSpielen = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setSucht(true);
+    try {
+      const { id } = await api.createTable({
+        gameId: 'easypoker',
+        config: REGELSATZ,
+        seats: 2,
+        rounds: HAENDE,
+        visibility: 'on_request',
+        fillWithBots: true,
+      });
+      setEigenerTisch(null);
+      setTischId(id);
+    } catch {
+      setSucht(false);
+      setFehler('Der Tisch liess sich nicht aufmachen. Noch einmal versuchen?');
+    }
+  }, []);
+
+  /**
+   * Einen Gegner finden: an einem offenen Tisch Platz nehmen, sonst selbst
+   * einen aufmachen.
+   *
+   * Die Plattform hat keine Warteschlange; gesucht wird deshalb ueber die
+   * gewoehnliche Tischliste. Das reicht, weil `joinTable` serverseitig
+   * absichert, dass zwei gleichzeitige Beitritte nicht denselben Platz
+   * bekommen — der Verlierer des Rennens bekommt einen Fehler und sucht weiter.
+   */
+  const suche = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setSucht(true);
+    try {
+      const zeilen = await api.tables('easypoker');
+      const offen = zeilen
+        .filter((zeile) => zeile.occupied < zeile.seats)
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const ziel = offen[0];
+      if (ziel) {
+        await api.joinTable(ziel.id);
+        setEigenerTisch(null);
+        setTischId(ziel.id);
+        return;
+      }
+      const { id } = await api.createTable({
+        gameId: 'easypoker',
+        config: REGELSATZ,
+        seats: 2,
+        rounds: HAENDE,
+      });
+      setEigenerTisch(id);
+      setTischId(id);
+    } catch {
+      setSucht(false);
+      setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+    }
+  }, []);
+
+  /**
+   * Das Wettrennen aufloesen.
+   *
+   * Tippen zwei Leute gleichzeitig auf "Suchen", sieht keiner den Tisch des
+   * anderen und beide machen einen auf. Wechselten danach BEIDE zum jeweils
+   * anderen, taeten sie das fuer immer. Deshalb bewegt sich nur einer: der mit
+   * der groesseren Tischkennung. Die Kennungen sind auf beiden Geraeten
+   * dieselben, also braucht die Regel keine Absprache.
+   */
+  const wechseltGerade = useRef(false);
+  useEffect(() => {
+    if (!tischId || !eigenerTisch || tischId !== eigenerTisch) return;
+    if (tisch.table && tisch.table.status !== 'waiting') return;
+    let lebt = true;
+    const pruefe = (): void => {
+      void api
+        .tables('easypoker')
+        .then(async (zeilen: TableRow[]) => {
+          if (!lebt || wechseltGerade.current) return;
+          const kleiner = zeilen
+            .filter((z) => z.occupied < z.seats && z.id < tischId)
+            .sort((a, b) => a.id.localeCompare(b.id))[0];
+          if (!kleiner) return;
+          wechseltGerade.current = true;
+          try {
+            // Kein leaveTable davor: joinTable raeumt serverseitig alle
+            // anderen Warteplaetze desselben Kontos ab.
+            await api.joinTable(kleiner.id);
+            if (!lebt) return;
+            setEigenerTisch(null);
+            setTischId(kleiner.id);
+          } catch {
+            /* Der Tisch war schneller voll. Beim naechsten Takt weiter. */
+          } finally {
+            wechseltGerade.current = false;
+          }
+        })
+        .catch(() => {});
+    };
+    const takt = window.setInterval(pruefe, 2500);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, [tischId, eigenerTisch, tisch.table?.status]);
+
+  const brichAb = useCallback((): void => {
+    const id = tischId;
+    setSucht(false);
+    setTischId(null);
+    setEigenerTisch(null);
+    if (id) void api.leaveTable(id).catch(() => {});
+  }, [tischId]);
+
+  const nochEineRunde = useCallback((): void => {
+    setGesendetBei(null);
+    setGehobeneKarte(null);
+    setTischId(null);
+    setEigenerTisch(null);
+    setSucht(false);
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Name
+  // -------------------------------------------------------------------------
+
+  /** Den eigenen Namen einmal an die Partie reichen, sobald sie steht. */
+  const nameGesendet = useRef<string | null>(null);
+  useEffect(() => {
+    if (!sicht || !tischId) return;
+    const gewuenscht = name.trim();
+    if (!gewuenscht || nameGesendet.current === `${tischId}:${gewuenscht}`) return;
+    nameGesendet.current = `${tischId}:${gewuenscht}`;
+    tisch.send({ typ: 'name', name: gewuenscht } satisfies Aktion);
+  }, [sicht !== null, tischId, name]);
+
+  const merkeName = (roh: string): void => {
+    const gekuerzt = [...roh].slice(0, NAME_MAX).join('');
+    setName(gekuerzt);
+    try {
+      window.localStorage.setItem(NAME_SCHLUESSEL, gekuerzt);
+    } catch {
+      /* Privater Modus: der Name gilt dann nur fuer diese Sitzung. */
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Der Gewinn einer Hand, kurz eingeblendet
+  // -------------------------------------------------------------------------
+
+  const [flug, setFlug] = useState<{ id: number; betrag: number } | null>(null);
+  const flugNr = useRef(0);
+  const letztesErgebnis = useRef<string | null>(null);
+  useEffect(() => {
+    const marke = sicht?.ergebnis ? `${sicht.handNr}` : null;
+    if (marke === null || marke === letztesErgebnis.current) {
+      if (marke === null) letztesErgebnis.current = null;
+      return;
+    }
+    letztesErgebnis.current = marke;
+    const betrag = sicht?.ergebnis?.gewinn[eigenerSitz] ?? 0;
+    const id = (flugNr.current += 1);
+    setFlug({ id, betrag });
+    const uhr = window.setTimeout(() => {
+      setFlug((alt) => (alt && alt.id === id ? null : alt));
+    }, 1900);
+    return () => window.clearTimeout(uhr);
+  }, [sicht?.ergebnis, sicht?.handNr, eigenerSitz]);
+
+  const regelKnopf = (
+    <button
+      className="poker-rund"
+      type="button"
+      onClick={() => setRegelnOffen(true)}
+      aria-label="Regeln nachlesen"
+    >
+      ?
+    </button>
+  );
+
+  // -------------------------------------------------------------------------
+  // Hauptmenue
+  // -------------------------------------------------------------------------
+
+  if (!tischId) {
+    return (
+      <main className="poker-menue">
+        {/* Der Zurueck-Knopf sitzt bewusst nicht ganz oben: Auf iPhones mit
+            Notch liegt die obere Ecke unter der Statusleiste. */}
+        <button className="poker-zurueck" type="button" onClick={onBack}>
+          ← Zurück
+        </button>
+
+        <div className="poker-menue-mitte">
+          <h1 className="poker-titel">
+            Easy <span>Poker</span>
+          </h1>
+          <p className="poker-untertitel">Zwei Karten, ein Gegner, vier Knöpfe.</p>
+
+          <input
+            className="poker-namensfeld"
+            type="text"
+            inputMode="text"
+            enterKeyHint="done"
+            maxLength={NAME_MAX}
+            placeholder="Name…"
+            value={name}
+            onChange={(e) => merkeName(e.target.value)}
+          />
+
+          <button
+            className="poker-hauptknopf"
+            type="button"
+            onClick={() => void sofortSpielen()}
+            disabled={sucht}
+          >
+            <span>Sofort spielen</span>
+            <em>gegen den Computer</em>
+          </button>
+
+          <button
+            className="poker-zweitknopf"
+            type="button"
+            onClick={() => void suche()}
+            disabled={sucht}
+          >
+            <span>Online-Match suchen</span>
+            {/* Die Zahl steht daneben und nicht im Satz: Sie aendert sich alle
+                fuenf Sekunden, und ein springendes Wort mitten im Text liest
+                sich wie ein Fehler. */}
+            <em>({aktiv ?? '…'})</em>
+          </button>
+
+          <button className="poker-textknopf" type="button" onClick={() => setRegelnOffen(true)}>
+            Wie geht das?
+          </button>
+
+          {fehler && <p className="poker-fehler">{fehler}</p>}
+        </div>
+
+        {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Wartebereich
+  // -------------------------------------------------------------------------
+
+  if (!sicht) {
+    const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
+    return (
+      <main className="poker-menue">
+        <button className="poker-zurueck" type="button" onClick={brichAb}>
+          ← Abbrechen
+        </button>
+        <div className="poker-menue-mitte">
+          <h1 className="poker-titel">
+            Am <span>Tisch</span>
+          </h1>
+          <p className="poker-untertitel">
+            {tisch.status === 'open'
+              ? `${besetzt} von 2 Plätzen besetzt`
+              : 'Verbindung wird aufgebaut…'}
+          </p>
+          <div className="poker-punkte-lauf" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p className="poker-untertitel">{aktiv ?? '…'} Spieler gerade in Easy Poker</p>
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Tisch
+  // -------------------------------------------------------------------------
+
+  const meinZug = sicht.dran === eigenerSitz && !sicht.fertig;
+  const wartet = gesendetBei !== null;
+  /*
+   * Die erlaubten Zuege kommen aus der Nachrichtenhuelle und sind dort
+   * bewusst untypisiert (jedes Spiel hat andere). Der Umweg ueber `unknown`
+   * ist deshalb kein Trick, sondern die Stelle, an der aus einer
+   * Plattformnachricht eine Poker-Aktion wird.
+   */
+  const erlaubt = (tisch.view?.legalActions ?? []) as unknown as Aktion[];
+  const findeZug = (typ: Aktion['typ']): Aktion | undefined =>
+    erlaubt.find((zug) => zug.typ === typ);
+
+  const schicke = (zug: Aktion | undefined): void => {
+    if (!zug || !meinZug || wartet) return;
+    setGesendetBei(revision);
+    tisch.send(zug);
+  };
+
+  const namenVon = (sitz: number): string =>
+    sicht.namen[sitz] ||
+    tisch.table?.seats.find((platz) => platz.seat === sitz)?.displayName ||
+    (sitz === eigenerSitz ? 'Du' : 'Gegner');
+
+  const istBot = tisch.table?.seats.find((platz) => platz.seat === gegnerSitz)?.isBot ?? false;
+
+  /** Karten, die zur gewerteten Kombination gehoeren — sie bekommen Gold. */
+  const hervorgehoben = new Set<number>(
+    (sicht.ergebnis && !sicht.ergebnis.durchAufgabe
+      ? (sicht.ergebnis.gewinner.flatMap(
+          (sitz) => sicht.ergebnis?.bewertung[sitz]?.karten ?? [],
+        ) as Karte[])
+      : []
+    ).map((karte) => karte.id),
+  );
+
+  const gegnerKarten = sicht.gegnerKarten;
+  const ergebnis = sicht.ergebnis;
+
+  return (
+    <main className="poker-buehne" data-dran={meinZug ? 'ich' : 'gegner'}>
+      {/* Der Filz ist gemalt und nicht geladen: zwei weiche Lichtkegel auf
+          dunklem Gruen, dazu die Holzkante am Rand. Ein Bild waere hier
+          hundert Kilobyte fuer eine Flaeche, die niemand ansieht. */}
+      <div className="poker-filz" aria-hidden="true" />
+
+      <header className="poker-kopf">
+        <button
+          className="poker-rund"
+          type="button"
+          onClick={onBack}
+          aria-label="Spiel verlassen"
+        >
+          ←
+        </button>
+        <div className="poker-marke">
+          <strong>
+            Easy <span>Poker</span>
+          </strong>
+          <em>
+            Hand {sicht.handNr}/{sicht.handMax} · {STRASSENWORT[sicht.strasse]}
+          </em>
+        </div>
+        <div className="poker-kopfstand" aria-label="Dein Punktestand">
+          <span className="poker-jeton-zeichen" aria-hidden="true" />
+          <Jetonzahl wert={sicht.jetons[eigenerSitz] ?? 0} />
+        </div>
+        {regelKnopf}
+      </header>
+
+      {/*
+       * Alles zwischen Kopfzeile und Aktionsleiste liegt auf EINER
+       * Tischplatte: der Gegner an der oberen Kante, das Brett in der
+       * Mitte, die eigene Hand an der unteren. Vorher standen die drei
+       * Abschnitte lose auf dem Grund, und auf einem hohen Bildschirm
+       * blieben zweihundertsechzig Pixel Fläche uebrig, die nach nichts
+       * aussahen. Derselbe Aufbau wie am Doppelkopftisch: dunkle Stube
+       * oben und unten, Filz dazwischen.
+       */}
+      <div className="poker-tischflaeche">
+      {/* --- Gegner ------------------------------------------------------- */}
+      <section className="poker-sitz is-gegner" data-aktiv={sicht.dran === gegnerSitz || undefined}>
+        <div className="poker-sitz-karten">
+          {gegnerKarten
+            ? gegnerKarten.map((karte) => (
+                <Spielkarte key={karte.id} karte={karte} hervor={hervorgehoben.has(karte.id)} />
+              ))
+            : Array.from({ length: sicht.gegnerVerdeckt }, (_, i) => (
+                <Kartenruecken key={`${sicht.handNr}-${i}`} verzoegerung={i * 90} />
+              ))}
+        </div>
+        <div className="poker-sitz-text">
+          <span className="poker-sitz-name">
+            {namenVon(gegnerSitz)}
+            {istBot && <em> · Computer</em>}
+            {sicht.geber === gegnerSitz && <b className="poker-knopfmarke">Geber</b>}
+          </span>
+          <span className="poker-sitz-stand">
+            <span className="poker-jeton-zeichen" aria-hidden="true" />
+            <Jetonzahl wert={sicht.jetons[gegnerSitz] ?? 0} />
+          </span>
+        </div>
+        <Einsatzmarke betrag={sicht.einsatz[gegnerSitz] ?? 0} />
+        {sicht.letzteAktion?.sitz === gegnerSitz && (
+          <span className="poker-sprechblase" key={`${sicht.handNr}-${sicht.strasse}-${revision}`}>
+            {AKTIONSWORT[sicht.letzteAktion.art]}
+            {sicht.letzteAktion.betrag ? ` ${sicht.letzteAktion.betrag}` : ''}
+          </span>
+        )}
+      </section>
+
+      {/* --- Tischmitte --------------------------------------------------- */}
+      <section className="poker-mitte">
+        <div className="poker-topf" data-leer={sicht.topf === 0 || undefined}>
+          <span>Topf</span>
+          <b>
+            <Jetonzahl wert={sicht.topf} />
+          </b>
+        </div>
+
+        <div className="poker-brett">
+          {Array.from({ length: 5 }, (_, platz) => {
+            const karte = sicht.brett[platz];
+            if (!karte) return <LeererPlatz key={`leer-${platz}`} />;
+            return (
+              <Spielkarte
+                key={karte.id}
+                karte={karte}
+                hervor={hervorgehoben.has(karte.id)}
+                verzoegerung={platz < 3 ? platz * 110 : 0}
+              />
+            );
+          })}
+        </div>
+
+        {ergebnis ? (
+          <Ergebnisband
+            ergebnis={ergebnis}
+            eigenerSitz={eigenerSitz}
+            fertig={sicht.fertig}
+          />
+        ) : (
+          /*
+             Zwei Zeilen, weil es zwei Fragen sind: "Was habe ich?" und "Wer
+             ist dran?". Der erste Anlauf zeigte nur eine — sobald der Flop
+             lag, verdraengte die Handstaerke den Zughinweis, und wer nicht
+             auf die Knopfleiste sah, wusste nicht mehr, ob er wartet.
+          */
+          <p className="poker-hinweis">
+            {sicht.meineStaerke && (
+              <b>{KOMBINATION[sicht.meineStaerke.kategorie] ?? ''}</b>
+            )}
+            <span>{meinZug ? 'Du bist dran' : 'Der Gegner überlegt…'}</span>
+          </p>
+        )}
+      </section>
+
+      {/* --- Eigener Sitz -------------------------------------------------- */}
+      <section className="poker-sitz is-ich" data-aktiv={meinZug || undefined}>
+        <Einsatzmarke betrag={sicht.einsatz[eigenerSitz] ?? 0} />
+        <div className="poker-sitz-text">
+          <span className="poker-sitz-name">
+            {namenVon(eigenerSitz)}
+            {sicht.geber === eigenerSitz && <b className="poker-knopfmarke">Geber</b>}
+          </span>
+        </div>
+        <div className="poker-hand">
+          {sicht.meineKarten.map((karte, i) => (
+            <Spielkarte
+              key={`${sicht.handNr}-${i}`}
+              karte={karte}
+              hervor={hervorgehoben.has(karte.id)}
+              gehoben={gehobeneKarte === karte.id}
+              verzoegerung={i * 110}
+              onClick={() => setGehobeneKarte((alt) => (alt === karte.id ? null : karte.id))}
+            />
+          ))}
+        </div>
+        {flug && (
+          <span className="poker-flug" key={flug.id} data-plus={flug.betrag >= 0 || undefined}>
+            {flug.betrag >= 0 ? '+' : '−'}
+            {Math.abs(flug.betrag)}
+          </span>
+        )}
+      </section>
+      </div>
+
+      {/* --- Aktionen ------------------------------------------------------ */}
+      <footer className="poker-aktionen" data-an={meinZug && !wartet ? 'true' : undefined}>
+        <Aktionsknopf
+          art="fold"
+          wort="Fold"
+          zug={findeZug('passen')}
+          gesperrt={!meinZug || wartet}
+          onClick={schicke}
+        />
+        <Aktionsknopf
+          art="check"
+          wort="Check"
+          zug={findeZug('schieben')}
+          gesperrt={!meinZug || wartet}
+          onClick={schicke}
+        />
+        <Aktionsknopf
+          art="call"
+          wort="Call"
+          zug={findeZug('mitgehen')}
+          gesperrt={!meinZug || wartet}
+          onClick={schicke}
+        />
+        <Aktionsknopf
+          art="bet"
+          wort="Bet"
+          zug={findeZug('setzen')}
+          gesperrt={!meinZug || wartet}
+          onClick={schicke}
+        />
+      </footer>
+
+      {tisch.error && <div className="poker-fehlerpille">{tisch.error}</div>}
+      {tisch.status !== 'open' && <div className="poker-funk">Verbindung…</div>}
+
+      {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
+
+      {sicht.fertig && (
+        <div className="poker-ende">
+          <div className="poker-ende-blatt">
+            <h2>
+              {sicht.sieger === null
+                ? 'Unentschieden'
+                : sicht.sieger === eigenerSitz
+                  ? 'Gewonnen!'
+                  : 'Verloren'}
+            </h2>
+            <p className="poker-ende-stand">
+              <b data-mein="true">{sicht.jetons[eigenerSitz] ?? 0}</b>
+              <span>:</span>
+              <b>{sicht.jetons[gegnerSitz] ?? 0}</b>
+            </p>
+            <p className="poker-ende-text">
+              {sicht.handNr} von {sicht.handMax} Händen gespielt · Start waren{' '}
+              {sicht.startJetons} Jetons
+            </p>
+            <button className="poker-hauptknopf" type="button" onClick={nochEineRunde}>
+              <span>Noch eine Runde</span>
+            </button>
+            <button className="poker-textknopf" type="button" onClick={onBack}>
+              Zurück zur Spielauswahl
+            </button>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bausteine
+// ---------------------------------------------------------------------------
+
+/** Der Einsatz eines Sitzes in dieser Strasse, als Jetonmarke am Tischrand. */
+function Einsatzmarke({ betrag }: { betrag: number }): React.JSX.Element | null {
+  if (betrag <= 0) return null;
+  return (
+    <span className="poker-einsatz">
+      <span className="poker-jeton-zeichen" aria-hidden="true" />
+      {betrag}
+    </span>
+  );
+}
+
+/**
+ * Eine der vier Schaltflaechen.
+ *
+ * Sie steht IMMER da, auch wenn sie gerade nicht geht — das ist der ganze
+ * Sinn einer festen Vierer-Leiste: Der Daumen lernt eine Stelle, nicht eine
+ * wechselnde Reihenfolge. Was moeglich ist, leuchtet; der Rest liegt blass
+ * daneben.
+ *
+ * Der Betrag kommt aus der erlaubten Aktion und wird hier nur angezeigt. Der
+ * Bildschirm rechnet ihn nicht aus — er weiss nicht einmal, wie.
+ */
+function Aktionsknopf({
+  art,
+  wort,
+  zug,
+  gesperrt,
+  onClick,
+}: {
+  art: 'fold' | 'check' | 'call' | 'bet';
+  wort: string;
+  zug: Aktion | undefined;
+  gesperrt: boolean;
+  onClick: (zug: Aktion | undefined) => void;
+}): React.JSX.Element {
+  const moeglich = zug !== undefined && !gesperrt;
+  const betrag = zug && 'betrag' in zug ? zug.betrag : null;
+  return (
+    <button
+      className="poker-aktion"
+      data-art={art}
+      data-moeglich={moeglich || undefined}
+      type="button"
+      /*
+       * KEIN `disabled`.
+       *
+       * Safari zeichnet deaktivierte Knoepfe von sich aus blasser, und dann
+       * haengt das Aussehen der Leiste am Browser statt am Blatt — dieselbe
+       * Falle wie bei den Mememory-Karten. Ob ein Tipp zaehlt, entscheidet
+       * `onClick`.
+       */
+      aria-disabled={!moeglich || undefined}
+      onClick={() => moeglich && onClick(zug)}
+    >
+      <span className="poker-aktion-wort">{wort}</span>
+      <span className="poker-aktion-zahl">{betrag !== null ? betrag : ''}</span>
+    </button>
+  );
+}
+
+/** Der Ausgang einer Hand, waehrend die Karten noch liegen. */
+function Ergebnisband({
+  ergebnis,
+  eigenerSitz,
+  fertig,
+}: {
+  ergebnis: HandErgebnis;
+  eigenerSitz: number;
+  fertig: boolean;
+}): React.JSX.Element {
+  const gewonnen = ergebnis.gewinner.includes(eigenerSitz);
+  const geteilt = ergebnis.gewinner.length > 1;
+  const kombination = ergebnis.bewertung[eigenerSitz]?.kategorie;
+
+  return (
+    <p
+      className="poker-band"
+      data-ton={geteilt ? 'geteilt' : gewonnen ? 'gut' : 'schlecht'}
+      // Ein neuer Schluessel je Hand laesst die Einblendung neu laufen.
+      key={`${ergebnis.topf}-${ergebnis.gewinner.join('-')}-${fertig}`}
+    >
+      <b>
+        {geteilt
+          ? 'Geteilter Topf'
+          : gewonnen
+            ? `+${ergebnis.topf} gewonnen`
+            : 'Hand verloren'}
+      </b>
+      <span>
+        {ergebnis.durchAufgabe
+          ? gewonnen
+            ? 'Der Gegner hat gefoldet.'
+            : 'Du hast gefoldet.'
+          : kombination
+            ? `Du hattest ${KOMBINATION[kombination] ?? ''}.`
+            : ''}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * Das Regelblatt.
+ *
+ * Alles, was eine Erklaerung braucht, kommt als Blatt von unten und nicht als
+ * Text auf dem Tisch (DESIGN-DOKO: "Der Tisch ist heilig"). Tipp auf den
+ * Hintergrund schliesst.
+ */
+function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
+  return (
+    <div className="poker-blatt" onClick={onClose} role="presentation">
+      <div className="poker-blatt-karte" onClick={(e) => e.stopPropagation()} role="presentation">
+        <h2>So geht Easy Poker</h2>
+
+        <h3>Ziel</h3>
+        <p>
+          Du und dein Gegner bekommen je zwei verdeckte Karten. In der Mitte
+          liegen nach und nach fünf offene Karten. Wer aus seinen zwei und den
+          fünf offenen die besten <b>fünf</b> Karten bildet, gewinnt den Topf.
+        </p>
+
+        <h3>Die vier Knöpfe</h3>
+        <ul className="poker-blatt-liste">
+          <li>
+            <b>Fold</b> — aussteigen. Du verlierst, was du schon gesetzt hast,
+            mehr nicht.
+          </li>
+          <li>
+            <b>Check</b> — weiter, ohne zu setzen. Geht nur, wenn nichts offen
+            steht.
+          </li>
+          <li>
+            <b>Call</b> — den Einsatz des Gegners bezahlen. Die Zahl auf dem
+            Knopf ist der Preis.
+          </li>
+          <li>
+            <b>Bet</b> — setzen oder erhöhen. Auch hier steht der Betrag auf
+            dem Knopf.
+          </li>
+        </ul>
+
+        <h3>Der Ablauf</h3>
+        <p>
+          Vor dem Flop · Flop (drei Karten) · Turn (eine) · River (eine). Vor
+          jeder neuen Karte wird gesetzt. Danach wird gezeigt.
+        </p>
+
+        <h3>Was schlägt was</h3>
+        <ol className="poker-blatt-rang">
+          <li>Straight Flush — fünf in Reihe, alle gleiche Farbe</li>
+          <li>Vierling — vier gleiche Werte</li>
+          <li>Full House — Drilling und Paar</li>
+          <li>Flush — fünf gleiche Farbe</li>
+          <li>Straße — fünf in Reihe</li>
+          <li>Drilling — drei gleiche Werte</li>
+          <li>Zwei Paare</li>
+          <li>Ein Paar</li>
+          <li>Höchste Karte</li>
+        </ol>
+
+        <p className="poker-blatt-fuss">
+          Die Jetons gehören zur Partie und sonst nirgendwohin: Sie lassen sich
+          nicht kaufen und nicht in Münzen oder Edelsteine tauschen.
+        </p>
+
+        <button className="poker-hauptknopf" type="button" onClick={onClose}>
+          <span>Verstanden</span>
+        </button>
+      </div>
+    </div>
+  );
+}

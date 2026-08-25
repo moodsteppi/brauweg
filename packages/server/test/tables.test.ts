@@ -36,7 +36,7 @@ test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind sechs', () => {
 
   assert.deepEqual(
     playable.map((meta) => meta.id),
-    ['doppelkopf', 'wizard', 'cambio', 'feldherr', 'skat', 'mememory'],
+    ['doppelkopf', 'wizard', 'cambio', 'feldherr', 'skat', 'mememory', 'easypoker'],
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),

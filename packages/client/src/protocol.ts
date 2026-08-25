@@ -37,11 +37,15 @@ export const FELDHERR_MODULE_VERSION = 2;
  */
 export const MEMEMORY_MODULE_VERSION = 2;
 
+/** Easy Poker, erste Fassung. */
+export const EASYPOKER_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
   feldherr: FELDHERR_MODULE_VERSION,
   mememory: MEMEMORY_MODULE_VERSION,
+  easypoker: EASYPOKER_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

@@ -2282,6 +2282,7 @@ function Spielwahl({
                     {game.seatCounts.join(', ')} Spieler
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
+                    {game.id === 'easypoker' ? ' · Poker zu zweit' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>
