@@ -727,7 +727,12 @@ export function botAction(
     };
   }
 
-  if (!view.isMyTurn) return null;
+  // Die Vorbehaltsabfrage laeuft gleichzeitig: Niemand ist dabei „am Zug",
+  // der Bot gibt seine Antwort trotzdem, sobald er gefragt ist. Diese Zeile
+  // muss deshalb VOR der isMyTurn-Sperre stehen.
+  if (view.phase === 'vorbehalt' && !view.vorbehaltOffen) return null;
+
+  if (!view.isMyTurn && view.phase !== 'vorbehalt') return null;
 
   if (view.phase === 'vorbehalt') {
     if (view.forcedSolo) {

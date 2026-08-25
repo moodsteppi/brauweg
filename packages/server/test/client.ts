@@ -41,6 +41,7 @@ export class TestClient {
   passive = false;
   private actedAt = -1;
   /** Rundenpause, fuer die schon "Weiter" gesendet wurde (roundIndex). */
+  private vorbehaltFuer: number | null = null;
   private weiterFuer = -1;
 
   private constructor(
@@ -99,6 +100,27 @@ export class TestClient {
       if (this.weiterFuer === pause) return;
       this.weiterFuer = pause;
       this.send(weiter);
+      return;
+    }
+
+    // Vorbehaltsabfrage: Sie laeuft beim Doppelkopf GLEICHZEITIG, also ist
+    // dabei niemand am Zug und die Sperre unten griffe fuer immer. Der Automat
+    // meldet sich gesund, sobald er gefragt ist - wie das "Weiter" oben haengt
+    // das nicht am Zugrecht.
+    const gesund = view.legalActions.find(
+      (candidate) =>
+        (candidate as { type: string; kind?: unknown }).type === 'vorbehalt' &&
+        (candidate as { kind?: unknown }).kind === null,
+    );
+    if (gesund) {
+      // Wie beim "Weiter": hoechstens EINMAL je Runde. Zwischen dem Senden und
+      // der naechsten Sicht koennen Sichten eintreffen, die noch vor der
+      // eigenen Aktion gerechnet wurden - dort steht die Abfrage noch offen,
+      // und ein zweites Mal antworten weist der Server zu Recht ab.
+      const runde = (view.view as { roundIndex?: number }).roundIndex ?? 0;
+      if (this.vorbehaltFuer === runde) return;
+      this.vorbehaltFuer = runde;
+      this.send(gesund);
       return;
     }
 

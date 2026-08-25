@@ -71,7 +71,7 @@ export interface VorbehaltEntry {
  */
 export interface SichtbarerVorbehalt {
   readonly seat: number;
-  readonly kind: VorbehaltKind | 'verdeckt' | null;
+  readonly kind: VorbehaltKind | 'verdeckt' | 'geheim' | null;
   readonly solo?: SoloKind;
 }
 
@@ -320,24 +320,65 @@ export function apply(state: RoundState, action: RoundAction): RoundState {
   }
 }
 
-/** Sitz, der als Naechstes eine Vorbehaltsantwort geben muss. */
+/**
+ * Sitz, der als Einziger eine Vorbehaltsantwort geben muss.
+ *
+ * Nur noch bei der Vorfuehrung: Dort steht die Spielart schon fest, der
+ * Vorgefuehrte MUSS ein Solo ansagen, und allen anderen bietet
+ * allowedVorbehalte nichts an. Sie trotzdem zu fragen waere eine Frage ohne
+ * Antwortmoeglichkeit.
+ *
+ * Im Normalfall gibt es keinen einzelnen Sitz mehr, der dran waere: Alle
+ * erklaeren gleichzeitig, siehe `vorbehaltOffen`.
+ */
 export function vorbehaltTurn(state: RoundState): number | null {
   if (state.phase !== 'vorbehalt') return null;
+  if (state.forcedSoloSeat === null) return null;
   const asked = new Set(state.vorbehalte.map((v) => v.seat));
+  return asked.has(state.forcedSoloSeat) ? null : state.forcedSoloSeat;
+}
 
-  // Wird vorgefuehrt, steht die Spielart bereits fest: Der Vorgefuehrte MUSS
-  // ein Solo ansagen, und allen anderen bietet allowedVorbehalte nichts an -
-  // kein Solo, kein Schmeissen, keine Armut, keine Hochzeit. Sie trotzdem der
-  // Reihe nach zu fragen ist eine Frage ohne Antwortmoeglichkeit: Sie koennten
-  // nur passen, und das aendert nichts. Also wird nur der Vorgefuehrte gefragt.
+/**
+ * Sitze, die ihre Vorbehaltsantwort noch schulden — in Vorhand-Reihenfolge.
+ *
+ * Die Abfrage laeuft gleichzeitig statt reihum. Reihum hiess: drei Spieler
+ * sehen zu, wie einer nachdenkt, und das viermal hintereinander. Am echten
+ * Tisch redet man auch nicht vier Runden lang nacheinander.
+ *
+ * Die REIHENFOLGE bleibt trotzdem wichtig und geht nicht verloren: Welcher
+ * Vorbehalt gewinnt, entscheidet `resolveVorbehalte` an Gewicht und
+ * Vorhand-Naehe, nicht daran, wer zuerst getippt hat.
+ */
+export function vorbehaltOffen(state: RoundState): number[] {
+  if (state.phase !== 'vorbehalt') return [];
+  const asked = new Set(state.vorbehalte.map((v) => v.seat));
   if (state.forcedSoloSeat !== null) {
-    return asked.has(state.forcedSoloSeat) ? null : state.forcedSoloSeat;
+    return asked.has(state.forcedSoloSeat) ? [] : [state.forcedSoloSeat];
   }
+  return seatOrderFrom(state.seats, state.vorhand).filter((seat) => !asked.has(seat));
+}
 
-  for (const seat of seatOrderFrom(state.seats, state.vorhand)) {
-    if (!asked.has(seat)) return seat;
-  }
-  return null;
+/**
+ * Fuellt alle offenen Antworten mit „gesund" und loest die Phase auf.
+ *
+ * Das ist der Ablauf der Frist: Wer in der Zeit nichts gesagt hat, ist gesund.
+ * Die Plattform misst die Zeit, die Engine bleibt uhrlos.
+ */
+export function vorbehalteAblaufen(state: RoundState): RoundState {
+  if (state.phase !== 'vorbehalt') return state;
+  const offen = vorbehaltOffen(state);
+  if (offen.length === 0) return state;
+
+  // Der Vorgefuehrte kann nicht „gesund" werden — sein Solo ist Pflicht. Fuer
+  // ihn waehlt die Engine nichts aus; dort bleibt es beim normalen Zugtimer
+  // samt Bot-Uebernahme.
+  if (state.forcedSoloSeat !== null) return state;
+
+  const vorbehalte = [
+    ...state.vorbehalte,
+    ...offen.map((seat) => ({ seat, kind: null })),
+  ];
+  return resolveVorbehaltPhase({ ...state, vorbehalte });
 }
 
 function applyVorbehalt(
@@ -345,7 +386,11 @@ function applyVorbehalt(
   a: Extract<RoundAction, { type: 'vorbehalt' }>,
 ): RoundState {
   if (state.phase !== 'vorbehalt') fail('Keine Vorbehaltsabfrage aktiv');
-  if (vorbehaltTurn(state) !== a.seat) fail('Sitz ist nicht an der Reihe');
+  // Gleichzeitige Abfrage: Es zaehlt nicht, wer dran ist, sondern ob dieser
+  // Sitz seine Antwort noch schuldet. Ein zweites Mal antworten geht nicht —
+  // sonst koennte man seine Erklaerung zuruecknehmen, nachdem man an den
+  // Zurufen der anderen gehoert hat, wie sie stehen.
+  if (!vorbehaltOffen(state).includes(a.seat)) fail('Sitz ist nicht an der Reihe');
 
   if (state.forcedSoloSeat === a.seat && a.kind !== 'solo') {
     fail('Vorgefuehrter Spieler muss ein Solo ansagen');
@@ -363,7 +408,7 @@ function applyVorbehalt(
   const vorbehalte = [...state.vorbehalte, { seat: a.seat, kind: a.kind, solo: a.solo }];
   const next = { ...state, vorbehalte };
 
-  return vorbehaltTurn(next) === null ? resolveVorbehaltPhase(next) : next;
+  return vorbehaltOffen(next).length === 0 ? resolveVorbehaltPhase(next) : next;
 }
 
 function resolveVorbehaltPhase(state: RoundState): RoundState {
@@ -1088,6 +1133,8 @@ export interface PlayerView {
 
   /** Ist dieser Sitz gerade dran? */
   readonly isMyTurn: boolean;
+  /** Dieser Sitz schuldet seine Vorbehaltsantwort noch (gleichzeitige Abfrage). */
+  readonly vorbehaltOffen: boolean;
   /** Eigene zulaessige Vorbehalte, leer ausserhalb der Abfrage. */
   readonly allowedVorbehalte: readonly VorbehaltKind[];
   /** Wird dieser Sitz vorgefuehrt und muss ein Solo ansagen? */
@@ -1218,6 +1265,9 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
 
   const actor = currentActor(state);
   const isMyTurn = actor === seat;
+  // Waehrend der gleichzeitigen Vorbehaltsabfrage ist niemand „am Zug"; wer
+  // seine Antwort noch schuldet, darf trotzdem erklaeren.
+  const darfErklaeren = vorbehaltOffen(state).includes(seat);
 
   // Legale Ansagen der eigenen Partei — dieselbe Frist wie in legalActions des
   // Adapters (mayAnnounce bemisst sie an den eigenen gespielten Karten, nicht
@@ -1275,17 +1325,17 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     gameType: state.gameType,
     order: state.order,
     announcements: state.announcements,
-    // Waehrend der Vorbehaltsabfrage bleibt die ART fremder Vorbehalte
-    // verdeckt und die Schweine ungenannt: Wer ein Solo erwaegt, soll nicht
-    // sehen, wer Hochzeit/Armut/Solo hat oder die Karo-Asse haelt. Der eigene
-    // Sitz sieht seine eigene Wahl. Sobald alle erklaert haben (Phase nicht
-    // mehr 'vorbehalt'), liegt alles offen wie zuvor.
+    // Waehrend der Vorbehaltsabfrage bleibt jede fremde Antwort verdeckt und
+    // die Schweine ungenannt: Wer ein Solo erwaegt, soll nicht sehen, wer
+    // Hochzeit/Armut/Solo hat oder die Karo-Asse haelt. Seit alle
+    // GLEICHZEITIG erklaeren, gilt das auch fuer „gesund": Wer sich Zeit
+    // laesst, saehe sonst erst die Antworten der anderen und entschiede
+    // danach. Sichtbar bleibt nur, DASS jemand geantwortet hat. Sobald alle
+    // erklaert haben (Phase nicht mehr 'vorbehalt'), liegt alles offen.
     vorbehalte:
       state.phase === 'vorbehalt'
         ? state.vorbehalte.map((v) =>
-            v.seat === seat || v.kind === null
-              ? v
-              : { seat: v.seat, kind: 'verdeckt' as const },
+            v.seat === seat ? v : { seat: v.seat, kind: 'geheim' as const },
           )
         : state.vorbehalte,
     ansagen: state.ansagen,
@@ -1301,10 +1351,11 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
     result: state.result,
     isMyTurn,
     allowedVorbehalte:
-      state.phase === 'vorbehalt' && isMyTurn ? allowedVorbehalte(state, seat) : [],
+      state.phase === 'vorbehalt' && darfErklaeren ? allowedVorbehalte(state, seat) : [],
     forcedSolo: state.forcedSoloSeat === seat,
     soloOptions: state.rs.solos,
-    soloVorschau: soloVorschauFuer(state, seat, isMyTurn),
+    soloVorschau: soloVorschauFuer(state, seat, darfErklaeren),
+    vorbehaltOffen: darfErklaeren,
     pflichtsoloOffen: state.rs.pflichtsolo
       ? state.seats.filter((s) => !state.soloPlayed.includes(s))
       : [],

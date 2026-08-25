@@ -562,11 +562,76 @@ vorzustellen ist die eigentliche Hürde.
 **Die Ordnung kommt vom Server** (`soloVorschau` in der Sicht, je wählbarem Solo
 eine `CardOrder`), nicht aus dem Client. Ein Client, der Solo-Trumpfordnungen
 selbst nachbaut, wäre die zweite Wahrheit — Grundsatz 6. Gerechnet wird sie nur in
-der Vorbehaltsabfrage und nur für den Sitz, der dran ist.
+der Vorbehaltsabfrage und nur für Sitze, die ihre Antwort noch schulden.
 
 Dazu `pflichtsoloOffen`: welche Sitze ihr Pflichtsolo noch offen haben. Stand
 bisher nirgends, obwohl es mitentscheidet, ob man freiwillig ein Solo wählt oder
 auf die Vorführung wartet.
+
+### Die Vorbehaltsabfrage läuft gleichzeitig (25. August 2026)
+
+Bisher wurde reihum gefragt: „Bist du gesund?" — vier Mal hintereinander, und
+drei Spieler sahen jeweils zu. Jetzt erklären **alle gleichzeitig**, mit einer
+gemeinsamen Frist von **30 Sekunden**; wer bis dahin nichts sagt, gilt als
+gesund.
+
+**Die Gewichtung ändert sich dadurch nicht.** Welcher Vorbehalt gewinnt,
+entscheidet weiterhin `resolveVorbehalte` an Gewicht und Vorhand-Nähe — nicht
+daran, wer zuerst getippt hat. Die Reihenfolge steckt in der Auflösung, nicht
+im Ablauf der Frage.
+
+**Getragen wird die Frist von der Schaupause der Plattform**, nicht von einer
+neuen Mechanik: `interludeMs` liefert die 30 Sekunden, `advanceInterlude` füllt
+die offenen Antworten mit „gesund" und löst auf. Dort steht schon alles, was es
+dafür braucht — eine Frist ab Phasenbeginn, Bots, die ihre Antwort selbst
+geben, und ein Weiterlaufen von selbst. Das Modul bleibt uhrlos.
+
+Neu in der Engine: `vorbehaltOffen(state)` (wer schuldet noch) und
+`vorbehalteAblaufen(state)` (Frist abgelaufen). `vorbehaltTurn` gibt es
+weiterhin, aber **nur noch für die Vorführung** — dort ist genau ein Sitz am
+Zug, sein Solo ist Pflicht, und es gilt der normale Zugtimer samt
+Bot-Übernahme. Eine Frist mit „dann eben gesund" gäbe es dort nicht.
+
+**Fremde Antworten bleiben bis zum Ende der Abfrage verdeckt**, und zwar auch
+das „gesund". Vorher war nur die *Art* eines Vorbehalts verborgen; das reichte,
+solange reihum gefragt wurde. Gleichzeitig gefragt hätte sonst, wer sich Zeit
+lässt, erst die Antworten der anderen gesehen und sich danach entschieden. In
+der Sicht steht deshalb bei fremden Sitzen `'geheim'` — sichtbar bleibt nur,
+DASS jemand geantwortet hat. Mit dem Ende der Phase liegt alles offen, und der
+Client lässt dann erst die Zurufe aufblitzen.
+
+Zweimal antworten weist die Engine ab: Sonst könnte man seine Erklärung
+zurücknehmen, nachdem man an den Zurufen der anderen gehört hat, wie sie
+stehen.
+
+**Neu am Protokoll:** `interludeDeadline` in der Sichtnachricht. Der Zugtimer
+`turnDeadline` gilt einem Sitz, die Schaupause allen — ohne sichtbaren Zähler
+wüsste niemand, dass eine Uhr läuft, und das Blatt verschwände plötzlich.
+
+**Neu am Prüfstand:** `interludeMaxMs` in den Laufzeitoptionen deckelt jede
+Schaupause. Ohne die Grenze säße jeder Test, der auf die Zeit NACH einer Pause
+zielt, je Runde 30 Sekunden ab. Die Harness setzt 250 ms — **nicht kürzer**:
+Darunter lief die Frist ab, während die Antwort eines Testclients noch
+unterwegs war, und der Test scheiterte an einem `actionRejected`, das mit der
+geprüften Sache nichts zu tun hatte. Nur unter Last, also flatterig.
+
+### Armut-Blatt: durchscheinend und über der Hand
+
+Ob man eine Armut annimmt, entscheidet sich an den eigenen Karten. Das Blatt
+saß aber wie jedes andere `doko-sheet` am unteren Rand — genau auf der Hand —
+und verdunkelte den Tisch dazu. `.doko-sheet--armut` lässt den Hintergrund
+frei, setzt das Blatt oberhalb der Handreihe ab (dieselbe Rechnung wie bei
+`.doko-error`) und macht es durchscheinend. `pointer-events` liegen nur auf dem
+Blatt selbst, nicht auf der ganzen Fläche — sonst hinge eine unsichtbare Sperre
+über dem Bildschirm.
+
+### Aufspiel wandert nicht mehr
+
+Das Abzeichen hing an `view.currentActor` und sprang deshalb während der
+Vorbehaltsabfrage reihum mit der Frage „bist du gesund?" von Sitz zu Sitz,
+obwohl Aufspiel damit nichts zu tun hat. Jetzt steht es fest bei der Vorhand
+und nur bis zum Ende der Abfrage; sobald gespielt wird, sieht man am laufenden
+Stich ohnehin, wer angespielt hat.
 
 ### Trophäen: die Untergrenze bei 0 ist gewollt
 

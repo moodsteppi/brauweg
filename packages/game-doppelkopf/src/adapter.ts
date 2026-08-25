@@ -40,6 +40,8 @@ import {
   createParty as engineCreateParty,
   botAction as engineBotAction,
   currentActor as roundCurrentActor,
+  vorbehaltOffen,
+  vorbehalteAblaufen,
   finishParty,
   markLeft as engineMarkLeft,
   pauseSeats,
@@ -171,6 +173,19 @@ function wrap(party: PartyState, round: PlayerView | null, spectator: boolean): 
 // Modul
 // ---------------------------------------------------------------------------
 
+/**
+ * Laeuft gerade die gleichzeitige Vorbehaltsabfrage und schuldet noch jemand
+ * eine Antwort? Bei der Vorfuehrung nicht: Dort ist genau ein Sitz am Zug,
+ * sein Solo ist Pflicht, und dafuer gilt der normale Zugtimer samt
+ * Bot-Uebernahme — eine Frist mit „dann eben gesund" gaebe es dort nicht.
+ */
+function offeneVorbehalte(party: PartyState): boolean {
+  const st = party.current;
+  if (!st || st.phase !== 'vorbehalt') return false;
+  if (st.forcedSoloSeat !== null) return false;
+  return vorbehaltOffen(st).length > 0;
+}
+
 export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> = {
   meta,
   protocolVersion: 1,
@@ -279,9 +294,9 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
       }
     }
 
-    if (!v.isMyTurn) return actions;
-
-    if (v.phase === 'vorbehalt') {
+    // Die Vorbehaltsabfrage laeuft gleichzeitig und haengt deshalb NICHT am
+    // Zugrecht: Jeder, der seine Antwort noch schuldet, darf sie geben.
+    if (v.phase === 'vorbehalt' && v.vorbehaltOffen) {
       for (const kind of v.allowedVorbehalte) {
         if (kind === 'solo') {
           for (const solo of v.soloOptions) {
@@ -296,7 +311,11 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
       if (!v.forcedSolo) {
         actions.push({ type: 'vorbehalt', seat, kind: null });
       }
+      // Solange die Abfrage laeuft, ist sie die einzige Aktion dieses Sitzes.
+      return actions;
     }
+
+    if (!v.isMyTurn) return actions;
 
     if (v.armut.awaiting === 'decide') {
       actions.push({ type: 'armutAccept', seat });
@@ -334,9 +353,20 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
    * und Zwischenstand, kurz genug, dass der Tisch nie an einem AFK-Spieler
    * haengt. Wer frueher weiterspielen will, tippt "Weiter".
    */
-  interludeMs: (party) => (inRundenpause(party) ? 15_000 : null),
+  interludeMs: (party) => {
+    if (inRundenpause(party)) return 15_000;
+    // Gleichzeitige Vorbehaltsabfrage: Alle erklaeren zusammen, und nach
+    // Ablauf der Frist gilt „gesund". Die Frist laeuft ueber die Schaupause
+    // der Plattform, weil dort schon alles steht, was es dafuer braucht:
+    // eine Frist ab Phasenbeginn, Bots die ihre Antwort selbst geben, und ein
+    // Weiterlaufen von selbst. Das Modul bleibt uhrlos.
+    return offeneVorbehalte(party) ? 30_000 : null;
+  },
 
   advanceInterlude(party) {
+    if (offeneVorbehalte(party)) {
+      return { ...party, current: vorbehalteAblaufen(party.current!) };
+    }
     if (!inRundenpause(party)) return party;
     const next = endeRundenpause(party);
     return next.finished ? next : startRound(next);

@@ -136,6 +136,12 @@ export interface ViewMessage {
   readonly currentActor: number | null;
   /** Zeitpunkt in Millisekunden seit Epoche, null wenn kein Timer laeuft. */
   readonly turnDeadline: number | null;
+  /**
+   * Frist einer laufenden Schaupause, oder null. Getrennt vom Zugtimer, weil
+   * sie fuer ALLE gilt und nicht fuer einen Sitz: die Rundenabrechnung, und
+   * beim Doppelkopf die gleichzeitige Vorbehaltsabfrage.
+   */
+  readonly interludeDeadline: number | null;
   readonly botSeats: readonly number[];
   readonly leftSeats: readonly number[];
   readonly finished: boolean;

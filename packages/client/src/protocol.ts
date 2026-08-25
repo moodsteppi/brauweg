@@ -99,6 +99,10 @@ export interface RoundView {
    * Wer was gesagt hat. Beides öffentlich und am Tisch zu hören — die
    * `announcements` oben halten nur fest, OB Re gefallen ist, nicht von wem.
    * `vorbehalte` führt auch das „gesund" mit `kind: null`.
+   *
+   * Solange die Abfrage läuft, steht bei fremden Sitzen `'geheim'`: Alle
+   * erklären gleichzeitig, also sieht man nur, DASS jemand geantwortet hat.
+   * Mit dem Ende der Phase liegt alles offen.
    */
   vorbehalte: { seat: number; kind: string | null; solo?: string }[];
   ansagen: { seat: number; level: number }[];
@@ -145,6 +149,8 @@ export interface RoundView {
   pflichtsoloOffen?: number[];
   result: RoundResult | null;
   isMyTurn: boolean;
+  /** Dieser Sitz schuldet seine Vorbehaltsantwort noch (gleichzeitige Abfrage). */
+  vorbehaltOffen?: boolean;
   armut: { role: string | null; awaiting: string | null; handoverSize: number };
 }
 
@@ -408,6 +414,8 @@ export interface ViewMessage<V = GameView> {
   legalActions: Action[];
   currentActor: number | null;
   turnDeadline: number | null;
+  /** Frist einer Schaupause (Abrechnung, gleichzeitige Vorbehaltsabfrage). */
+  interludeDeadline: number | null;
   botSeats: number[];
   leftSeats: number[];
   finished: boolean;

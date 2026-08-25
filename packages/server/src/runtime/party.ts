@@ -46,6 +46,13 @@ export interface RuntimeOptions {
   /** Kurze Pause vor Botzuegen, damit der Tisch nicht ruckartig durchlaeuft. */
   readonly botDelayMs?: number;
   /**
+   * Obergrenze fuer jede Schaupause des Moduls. Die Dauer nennt das Modul
+   * (uhrlos), gemessen wird sie hier — also gehoert auch die Grenze hierher.
+   * Ohne sie muesste ein Test, der auf die Zeit NACH einer Pause zielt, die
+   * volle Pause absitzen: eine Vorbehaltsfrist dauert 30 Sekunden.
+   */
+  readonly interludeMaxMs?: number;
+  /**
    * Ab wann ein Sitz als verlassen gilt: so lange weg, ohne wiederzukommen.
    *
    * Gemessen an der Uhr und nicht in verpassten Zuegen. Ein Sitz kommt je
@@ -142,6 +149,7 @@ const DEFAULTS = {
   // 0,8 s zwischen den Botzuegen: schnell genug, dass der Tisch fliesst,
   // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt.
   botDelayMs: 800,
+  interludeMaxMs: Number.POSITIVE_INFINITY,
   absenceMs: 5 * 60_000,
   finishedRetentionMs: 10 * 60_000,
 };
@@ -463,6 +471,7 @@ export class PartyRuntime {
       legalActions: seat === null ? [] : party.module.legalActions(party.state, seat),
       currentActor: party.module.currentActor(party.state),
       turnDeadline: party.turnDeadline,
+      interludeDeadline: party.interludeDeadline,
       botSeats: [...party.botControlled],
       leftSeats: [...party.leftSeats],
       finished: party.finished,
@@ -602,7 +611,7 @@ export class PartyRuntime {
       return;
     }
     if (party.interludeDeadline === null) {
-      party.interludeDeadline = Date.now() + ms;
+      party.interludeDeadline = Date.now() + Math.min(ms, this.opts.interludeMaxMs);
     }
 
     // Auch in der Pause koennen Sitze eine Aktion offen haben (etwa das

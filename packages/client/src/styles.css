@@ -825,6 +825,54 @@ td {
   z-index: 300;
   padding: 1rem;
 }
+/*
+ * Armut-Entscheidung: durchscheinend und ueber der Hand, nicht davor.
+ *
+ * Ob man eine Armut annimmt, entscheidet sich an den eigenen Karten. Das
+ * Blatt sass aber am unteren Rand — genau auf der Hand — und verdunkelte den
+ * Tisch dazu. Jetzt bleibt der Hintergrund frei, das Blatt sitzt oberhalb der
+ * Handreihe, und die Karten scheinen durch.
+ *
+ * Der Abstand nach unten rechnet sich aus der Kartenhoehe (--hw x --pc-ratio)
+ * plus der eigenen Zeile darueber. Dieselbe Rechnung steht bei `.doko-error`;
+ * beide muessen ueber derselben Hand stehenbleiben.
+ */
+.doko-sheet--armut {
+  background: none;
+  align-items: flex-end;
+  padding-bottom: calc(var(--hw) * var(--pc-ratio) + 4.6rem);
+  /* Keine unsichtbare Sperre ueber dem ganzen Bildschirm: Nur das Blatt
+     selbst faengt Tipper ab, alles andere bleibt bedienbar. */
+  pointer-events: none;
+}
+.doko-sheet--armut .doko-sheet-card {
+  pointer-events: auto;
+  max-width: 26rem;
+  opacity: 0.88;
+  /* Das Blatt muss zwischen Kopfzeile und Hand passen. `85dvh` wie sonst
+     waere hier zu hoch: Zusammen mit dem Abstand nach unten schoebe es sich
+     oben aus dem Bild, und der obere Teil des Textes waere nicht erreichbar. */
+  max-height: calc(100dvh - var(--hw) * var(--pc-ratio) - 9rem);
+  /* Der Rahmen kommt als border-image aus dem Menueblatt und traegt seine
+     eigene Flaeche. Durchscheinen laesst ihn nur die Deckkraft des ganzen
+     Blattes, nicht eine Hintergrundfarbe. */
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+.doko-sheet--armut .doko-sheet-card p {
+  font-size: 0.84rem;
+}
+
+/* Hinweis und Zaehler der gleichzeitigen Vorbehaltsabfrage. */
+.doko-vb-hinweis {
+  font-size: 0.8rem;
+  margin: 0 0 0.6rem;
+}
+.doko-vb-frist {
+  float: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
 /* Vorbehalt u. a.: Karte mittig im Bildschirm, nicht am unteren Rand. */
 .doko-sheet--mitte {
   align-items: center;

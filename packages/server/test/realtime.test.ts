@@ -168,7 +168,11 @@ test('ohne gueltige Sitzung kommt keine Verbindung zustande', async (t) => {
 });
 
 test('eine regelwidrige Aktion wird abgewiesen, ohne den Tisch zu beschaedigen', async (t) => {
-  const h = await startHarness();
+  // Lange Schaupause: Der Test prueft, dass die Revision UNVERAENDERT bleibt.
+  // Mit der kurzen Testfrist liefe waehrenddessen die Vorbehaltsabfrage ab,
+  // der Tisch ginge von selbst weiter, und die Revision stiege — ohne dass
+  // die abgewiesene Aktion damit etwas zu tun haette.
+  const h = await startHarness({ interludeMaxMs: 60_000 });
   t.after(() => h.close());
 
   const { anna, table } = await tableWithTwoHumans(h);

@@ -34,6 +34,15 @@ export async function startHarness(
   const runtime = new PartyRuntime(ctx.db, {
     botDelayMs: 0,
     turnTimeoutMs: 60_000,
+    // Schaupausen im Test kurz halten: Die Vorbehaltsfrist dauert echte
+    // 30 Sekunden, und jeder Test, der auf die Zeit DANACH zielt, saesse sie
+    // sonst je Runde ab.
+    //
+    // Nicht kuerzer als 250 ms: Darunter lief die Frist ab, WAEHREND die
+    // Antwort eines Testclients noch unterwegs war — der Server wies sie dann
+    // zu Recht ab, und der Test scheiterte an einem 'actionRejected', das mit
+    // der geprueften Sache nichts zu tun hatte. Nur unter Last, also flatterig.
+    interludeMaxMs: 250,
     ...options,
   });
 
