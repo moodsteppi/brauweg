@@ -117,6 +117,8 @@ export type ClientMessage =
       readonly type: 'reaktion';
       readonly tableId: string;
       readonly zeichen: number;
+      /** Statt des Emojis ein gesammeltes Motiv. Siehe ReaktionMessage. */
+      readonly motiv?: string;
     };
 
 // ---------------------------------------------------------------------------
@@ -248,6 +250,15 @@ export interface ReaktionMessage {
   readonly seat: number;
   /** Platz im Vorrat des Clients. */
   readonly zeichen: number;
+  /**
+   * Statt eines Emojis ein gesammeltes Motiv (Mememory, seit dem 26. August).
+   *
+   * Die einzige Zeichenkette, die bei einer Reaktion fliegt — und trotzdem
+   * kein Freitext: Geprueft wird die Form, und das Bild dahinter liefert der
+   * Server nur aus, wenn es freigegeben ist. Ein wartender oder erfundener
+   * Vorschlag erreicht die Gegenseite gar nicht als Bild.
+   */
+  readonly motiv?: string;
 }
 
 export interface TaktMessage {

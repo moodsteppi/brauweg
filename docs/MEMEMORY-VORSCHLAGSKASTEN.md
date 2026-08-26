@@ -86,6 +86,62 @@ es anzeigen.
 
 ---
 
+## Sammlung und Emote-Gurt
+
+**Wer ein Motiv in einer Partie aufdeckt, hat es gesammelt.** Im Menü sitzt
+neben dem Briefkasten ein zweiter Knopf (drei gestapelte Karten): Dort steht,
+was zusammengekommen ist, und dort wählt man **bis zu drei** aus. Die
+ersetzen am Tisch den Emoji-Knopf — statt eines wandernden Zeichens stehen
+drei Memes bereit, und ein Tipp wirft eines über den Tisch.
+
+Gesammelt wird alles, was auf dem Brett auftaucht: die 88 Grundmotive
+genauso wie die hochgeladenen.
+
+**Gemeldet wird vom Client, und das ist Absicht.** Wer eine Karte aufdeckt,
+weiß es dort; der Server müsste sonst in den Spielzustand sehen, und das ist
+die Grenze, die diese Plattform nicht überschreitet. Der Preis ist bekannt:
+Mit der Entwicklerkonsole lässt sich eine Sammlung zusammenlügen. Sie ist
+Schmuck — kein Preis, kein Handel, kein Vorteil im Spiel —, und wer sich
+selbst Bilder in eine Liste schreibt, betrügt niemanden außer sich. Gemeldet
+wird gebündelt mit 1,2 s Verzögerung; sonst fiele bei jedem Tipp eine
+Anfrage an.
+
+**Der Gurt wird serverseitig geprüft:** Hineinwählen lässt sich nur, was auch
+gesammelt ist. Das ist die eine Stelle, an der die Sammlung wirklich etwas
+bedeutet. Gespeichert wird beim Tippen auf „Auswahl merken", nicht bei jedem
+Antippen — Auswählen ist ein Suchvorgang, und ein Dutzend Anfragen für eine
+Entscheidung sieht man auf einer Mobilfunkleitung.
+
+Beim Setzen wird **erst geräumt, dann gesetzt**. Sonst stolpert die zweite
+Zuweisung über den eindeutigen Teilindex, sobald zwei Motive die Plätze
+tauschen — ein Test sichert genau diesen Fall.
+
+### Ein Meme als Reaktion
+
+Der Reaktionskanal trug bisher nur eine **Zahl** (Platz im Zeichenvorrat des
+Clients), und der Kommentar dazu lautete: „Aus einer Zahl lässt sich niemand
+beleidigen." Für ein Meme braucht es eine Zeichenkette — das Feld `motiv`.
+Der Grundsatz hält trotzdem:
+
+- Geprüft wird die **Form** (`^[a-z0-9][a-z0-9-]{0,39}$`); Freitext kommt gar
+  nicht erst durch das Gateway.
+- Das Bild dahinter liefert der Server **nur aus, wenn es freigegeben ist**
+  (`bildVon` filtert auf `frei`). Ein wartender oder erfundener Vorschlag
+  erreicht die Gegenseite also nicht als Bild, sondern gar nicht.
+- Keine Datenbankabfrage je Tipp: Bei vier Reaktionen je Sekunde wäre das
+  nicht vertretbar, und die Auslieferung prüft ohnehin.
+
+**Modulversion 3.** Ein Client der Version 2 kennt die Nachricht, nicht aber
+das Feld — er zeigte das Emoji Nummer 0 und damit etwas anderes, als
+geschickt wurde. Der Gateway lässt Motive deshalb erst ab 3 durch; Emojis
+gehen weiterhin auch an 2. Dieselbe Lehre wie am 22. August, als Reaktionen
+neu waren.
+
+**Ist der Gurt leer, bleibt der Emoji-Knopf.** Ein frisches Konto hat noch
+nichts gesammelt; lieber der alte Knopf als gar keine Reaktion.
+
+---
+
 ## Der Stapel
 
 Wer in der Galerie steht, hat selten genau ein Meme dabei. Die Auswahl ist
@@ -201,7 +257,10 @@ erste Karte zeichnen kann.
 | Bildpfad | `packages/client/src/minispiele/mememory/bildpfad.ts` |
 | Feld im Regelsatz | `packages/game-mememory/src/regeln.ts` (`zusatz`) |
 | Namensblitz | `packages/client/src/screens/Mememory.tsx` (`namensblitz`), `.mm-namensblitz` in styles.css |
-| Tests | `packages/server/test/memes.test.ts` (19), `packages/game-mememory/test/zusatz.test.ts` (8) |
+| Sammlung (Server) | `packages/server/src/sammlung.ts`, Migration `0020_mememory_sammlung.sql` |
+| Sammlung (Client) | `packages/client/src/minispiele/mememory/Sammlung.tsx` |
+| Motiv als Reaktion | `packages/server/src/realtime/gateway.ts` (`MOTIV_AB_MODULVERSION`) |
+| Tests | `packages/server/test/memes.test.ts` (19), `sammlung.test.ts` (8), `reaktion-motiv.test.ts` (3), `packages/game-mememory/test/zusatz.test.ts` (8) |
 
 ### Endpunkte
 
@@ -209,6 +268,9 @@ erste Karte zeichnen kann.
 | --- | --- | --- |
 | GET | `/api/mememory/motive` | alle (nur Kennungen) |
 | GET | `/api/mememory/eigene` | angemeldet (eigener Stand: `offen`, `frei`) |
+| POST | `/api/mememory/sammlung` | angemeldet (aufgedeckte Motive melden) |
+| GET | `/api/mememory/sammlung` | angemeldet (eigene Sammlung samt Gurt) |
+| PUT | `/api/mememory/sammlung/gurt` | angemeldet (bis zu drei wählen) |
 | GET | `/api/mememory/motive/:kennung` | alle (nur freigegebene) |
 | POST | `/api/mememory/vorschlaege` | angemeldet (`direkt` wirkt nur bei der Aufsicht) |
 | GET | `/api/mememory/vorschlaege` | Aufsicht |

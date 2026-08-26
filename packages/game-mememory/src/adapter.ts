@@ -80,8 +80,14 @@ export const mememory: GameModule<
    * Verbindungen, die mindestens diese Version gemeldet haben — eine
    * unbekannte Nachricht landete bei einem aelteren Client im Sicht-Zweig
    * und leerte das Brett.
+   *
+   * 3 seit dem 26. August 2026: Als Reaktion kann ein gesammeltes MOTIV
+   * fliegen (Feld `motiv`). Version 2 kennt die Nachricht, nicht aber das
+   * Feld — sie zeigte das Emoji Nummer 0 und damit etwas anderes, als der
+   * Absender geschickt hat. Der Gateway laesst Motive deshalb erst ab 3
+   * durch; Emojis gehen weiterhin auch an 2.
    */
-  protocolVersion: 2,
+  protocolVersion: 3,
 
   defaultConfig: () => DEFAULT_REGELN,
 

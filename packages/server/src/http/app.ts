@@ -97,6 +97,7 @@ import {
 } from '../clubs/war.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
 import { lies, nimmAuf, uebersicht } from '../diagnose.js';
+import { GURT_MAX, MELDUNG_MAX, merkeGesehen, sammlungVon, setzeGurt } from '../sammlung.js';
 import { istEchtesBild } from '../bilder.js';
 import {
   BILD_MAX_ZEICHEN,
@@ -1961,6 +1962,50 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       return reply.send({ ok: true });
     },
   );
+
+  // -------------------------------------------------------------------------
+  // Mememory: Sammlung und Emote-Gurt
+  // -------------------------------------------------------------------------
+
+  /**
+   * Aufgedeckte Motive gutschreiben.
+   *
+   * Gemeldet wird vom Client — er weiss, was aufgedeckt wurde; der Server
+   * muesste dafuer in den Spielzustand sehen, und das ist die Grenze, die
+   * diese Plattform nicht ueberschreitet. Der Preis steht in sammlung.ts:
+   * Die Sammlung ist Schmuck, kein Preis, und wer sich selbst Bilder in eine
+   * Liste schreibt, betruegt niemanden ausser sich.
+   */
+  app.post('/api/mememory/sammlung', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z
+      .object({ kennungen: z.array(z.string().max(40)).max(MELDUNG_MAX) })
+      .parse(request.body);
+    return reply.send(await merkeGesehen(deps.db, accountId, body.kennungen));
+  });
+
+  /** Die eigene Sammlung samt Gurt. */
+  app.get('/api/mememory/sammlung', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const gesammelt = await sammlungVon(deps.db, accountId);
+    return reply.send({
+      gesammelt,
+      gurt: gesammelt.filter((z) => z.platz !== null).sort((a, b) => a.platz! - b.platz!).map((z) => z.kennung),
+      hoechstens: GURT_MAX,
+    });
+  });
+
+  /**
+   * Den Gurt neu belegen. Die Liste ist die ganze Wahrheit: Was nicht
+   * darinsteht, verliert seinen Platz.
+   */
+  app.put('/api/mememory/sammlung/gurt', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z
+      .object({ kennungen: z.array(z.string().max(40)).max(GURT_MAX) })
+      .parse(request.body);
+    return reply.send({ gurt: await setzeGurt(deps.db, accountId, body.kennungen) });
+  });
 
   app.get('/api/health', async (_request, reply) => reply.send({ ok: true }));
 

@@ -796,6 +796,30 @@ export const api = {
   mememoryAendern: (kennung: string, aenderung: { titel?: string | null; bild?: string }) =>
     patch<{ ok: true }>(`/mememory/motive/${kennung}`, aenderung),
 
+  // --- Mememory: Sammlung und Emote-Gurt ------------------------------------
+
+  /**
+   * Aufgedeckte Motive gutschreiben. Zurueck kommt, wie viele wirklich neu
+   * waren — nur dafuer lohnt sich eine Anzeige.
+   */
+  mememoryGesehen: (kennungen: string[]) =>
+    post<{ neu: number; gesamt: number }>('/mememory/sammlung', { kennungen }),
+
+  /** Die eigene Sammlung samt Gurt (die drei fuer den Tisch). */
+  mememorySammlung: () =>
+    request<{
+      gesammelt: { kennung: string; platz: number | null }[];
+      gurt: string[];
+      hoechstens: number;
+    }>('/mememory/sammlung'),
+
+  /** Den Gurt neu belegen. Die Liste ist die ganze Wahrheit. */
+  mememoryGurt: (kennungen: string[]) =>
+    request<{ gurt: string[] }>('/mememory/sammlung/gurt', {
+      method: 'PUT',
+      body: JSON.stringify({ kennungen }),
+    }),
+
   /** Ablehnen und Herausnehmen sind derselbe Handgriff: die Zeile geht weg. */
   mememoryLoeschen: (kennung: string) =>
     request<{ ok: true }>(`/mememory/motive/${kennung}`, { method: 'DELETE' }),

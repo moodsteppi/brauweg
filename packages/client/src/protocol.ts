@@ -35,7 +35,7 @@ export const FELDHERR_MODULE_VERSION = 2;
  * Sicht-Zweig und leert das Brett. Ein Geraet, das ueber den Deploy hinweg
  * offen bleibt, meldet die 1 und spielt einfach ohne Reaktionen weiter.
  */
-export const MEMEMORY_MODULE_VERSION = 2;
+export const MEMEMORY_MODULE_VERSION = 3;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
@@ -514,6 +514,8 @@ export interface ReaktionMessage {
   tableId: string;
   seat: number;
   zeichen: number;
+  /** Statt des Emojis ein gesammeltes Motiv (Mememory). */
+  motiv?: string;
 }
 
 export type ServerMessage<V = GameView> =

@@ -90,7 +90,8 @@ export interface TableConnection<V = GameView> {
    * Wiederverbinden nachkaeme, gehoerte zu einem Moment, den es nicht mehr
    * gibt.
    */
-  sendeReaktion(zeichen: number): void;
+  /** Emoji-Nummer, oder ein gesammeltes Motiv statt des Emojis. */
+  sendeReaktion(zeichen: number, motiv?: string): void;
   /** Von Hand neu verbinden und die volle Sicht neu anfordern. */
   reconnect(): void;
 }
@@ -557,11 +558,20 @@ export function useTable<V = GameView>(
   );
 
   const sendeReaktion = useCallback(
-    (zeichen: number) => {
+    (zeichen: number, motiv?: string) => {
       const socket = socketRef.current;
       if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
       socket.send(
-        JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'reaktion', tableId, zeichen }),
+        JSON.stringify({
+          v: ENVELOPE_VERSION,
+          game: gameId,
+          type: 'reaktion',
+          tableId,
+          zeichen,
+          // Nur mitschicken, wenn es eines gibt: Ein leeres Feld liefe in die
+          // Formpruefung des Servers und die ganze Reaktion faellt still weg.
+          ...(motiv ? { motiv } : {}),
+        }),
       );
     },
     [tableId, gameId],
