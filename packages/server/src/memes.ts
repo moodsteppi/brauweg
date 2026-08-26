@@ -169,10 +169,17 @@ export async function anzahlOffen(db: Db): Promise<number> {
 /**
  * Ein Bild einreichen.
  *
- * `direkt` ist der Weg der Aufsicht: Was sie selbst hochlaedt, ist sofort im
- * Spiel. Sie muesste sich sonst ihre eigenen Bilder freigeben, und jeder
- * Handgriff, der immer gleich ausgeht, wird irgendwem laestig genug, um ihn
- * zu ueberspringen.
+ * Zwei getrennte Fragen, und sie waren einmal verwechselt:
+ *
+ *   - **`direkt`** entscheidet ueber den ZUSTAND: Was die Aufsicht selbst
+ *     hochlaedt, ist sofort im Spiel. Sie muesste sich sonst ihre eigenen
+ *     Bilder freigeben, und jeder Handgriff, der immer gleich ausgeht, wird
+ *     irgendwem laestig genug, um ihn zu ueberspringen.
+ *   - **`istStaff`** entscheidet ueber die GRENZE. Sie haengt am Konto, nicht
+ *     am Knopf. Vorher hing sie an `direkt` — und weil die Auskunft
+ *     `/api/mememory/eigene` schon immer nach dem Konto ging, sagte sie
+ *     "unbegrenzt", waehrend eine Einreichung ohne `direkt` am Riegel
+ *     scheiterte. Zwei Wahrheiten ueber dieselbe Frage.
  */
 export async function einreichen(
   db: Db,
@@ -181,6 +188,7 @@ export async function einreichen(
     bild: string;
     titel?: string | null;
     direkt: boolean;
+    istStaff: boolean;
   },
 ): Promise<{ kennung: string; status: 'vorschlag' | 'frei'; frei: number | null }> {
   const bild = eingabe.bild;
@@ -191,7 +199,7 @@ export async function einreichen(
   if (!BILD_DATA_URL.test(bild) || !istEchtesBild(bild)) throw badRequest('bildUngueltig');
 
   let offenNachher: number | null = null;
-  if (!eingabe.direkt) {
+  if (!eingabe.istStaff) {
     const offen = await offeneVon(db, eingabe.accountId);
     if (offen >= OFFEN_MAX) throw conflict('zuVieleVorschlaege');
     offenNachher = offen + 1;
@@ -207,6 +215,8 @@ export async function einreichen(
     titel: titel.length > 0 ? titel : null,
     status,
     eingereichtVon: eingabe.accountId,
+    // Wer direkt aufnimmt, hat damit auch geprueft — er hat das Bild ja
+    // gerade angesehen.
     geprueftVon: eingabe.direkt ? eingabe.accountId : null,
     geprueftAm: eingabe.direkt ? new Date() : null,
   });

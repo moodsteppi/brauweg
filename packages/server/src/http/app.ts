@@ -1853,6 +1853,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       bild: body.bild,
       titel: body.titel ?? null,
       direkt: Boolean(body.direkt) && Boolean(konto?.isStaff),
+      // Die Grenze haengt am Konto, nicht am Knopf — sonst widerspraeche sie
+      // der Auskunft aus /api/mememory/eigene, die es schon immer so haelt.
+      istStaff: Boolean(konto?.isStaff),
     });
     return reply.send(ergebnis);
   });

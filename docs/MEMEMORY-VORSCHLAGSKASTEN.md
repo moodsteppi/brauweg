@@ -37,7 +37,17 @@ selbst. Oben steht „Bild 2 von 5" samt Perlenreihe, unten stehen
 verwerfen". Am Ende steht eine Bilanz: wie viele eingereicht, wie viele
 übersprungen, wie viele nicht lesbar waren.
 
-Vier Dinge daran sind wichtiger, als sie aussehen:
+Zwischen zwei Bildern steht eine **Wartefläche** in der Größe des Rahmens
+(„Nächstes Bild wird geöffnet…"). Sie ist kein Schmuck: Solange entpackt wird
+— auf einem Telefon bis zu anderthalb Sekunden bei einem 12-MP-Foto — darf es
+keinen Rahmen geben. Sonst stünde dort ein Bild, dessen Speicher schon
+freigegeben ist, und der erste Wisch darauf würde zeichnen wollen.
+`drawImage` wirft auf ein geschlossenes `ImageBitmap`, und aus einem Effekt
+heraus nimmt dieser Wurf den ganzen Bildschirm mit. Vor dem Stapel konnte das
+nicht passieren: Da standen `close()` und `setBild(null)` immer in derselben
+Runde, ohne `await` dazwischen.
+
+Fünf Dinge daran sind wichtiger, als sie aussehen:
 
 1. **Nur das aktuelle Bild ist entpackt.** In der Schlange liegen
    `File`-Verweise, kein Bildspeicher. Zehn Handyfotos gleichzeitig als
@@ -56,6 +66,14 @@ Vier Dinge daran sind wichtiger, als sie aussehen:
 4. **Höchstens 20 Bilder je Durchgang.** Nicht gegen Missbrauch — dagegen
    steht der Riegel im Server —, sondern gegen das Versehen: In der
    iOS-Galerie ist „alle auswählen" ein Griff.
+5. **Jeder Durchgang hat eine Laufnummer** (`laufNr`). Wer abbricht, neu
+   auswählt oder den Kasten schließt, erhöht sie — und ein noch laufendes
+   Entpacken legt sein Ergebnis danach nicht mehr ab, sondern gibt es frei.
+   Ohne diese Kennung kam ein gerade verworfener Stapel eine Sekunde später
+   von selbst zurück. Der Riegel gegen den Doppeltipp steht daneben in einem
+   Ref und nicht im Zustand: Zwei Tipper in derselben Ereignisrunde sehen
+   beide noch den alten Zustand, und der zweite zählte sonst in der Bilanz
+   mit, ohne etwas zu tun.
 
 Hochgeladen wird weiterhin **eines nach dem anderen** (ein POST je Bild). Ein
 Sammel-Endpunkt hätte die Rumpfgrenze von 128 kB gesprengt und im Fehlerfall
@@ -123,7 +141,7 @@ erste Karte zeichnen kann.
 | Oberfläche | `packages/client/src/minispiele/mememory/Vorschlagskasten.tsx` |
 | Bildpfad | `packages/client/src/minispiele/mememory/bildpfad.ts` |
 | Feld im Regelsatz | `packages/game-mememory/src/regeln.ts` (`zusatz`) |
-| Tests | `packages/server/test/memes.test.ts` (15), `packages/game-mememory/test/zusatz.test.ts` (8) |
+| Tests | `packages/server/test/memes.test.ts` (16), `packages/game-mememory/test/zusatz.test.ts` (8) |
 
 ### Endpunkte
 
@@ -146,7 +164,10 @@ erste Karte zeichnen kann.
   Riegel im Server steht für den Fall, dass jemand den Browser umgeht.
 - **Fünf offene Vorschläge** je Konto (`OFFEN_MAX`). Ohne diese Zahl schüttet
   ein Einzelner den Kasten in einer Minute zu — beim Stapel-Upload erst recht.
-  Die Aufsicht ist davon ausgenommen: Was sie hochlädt, wartet nirgends.
+  **Die Grenze hängt am Konto (`istStaff`), nicht am Knopf (`direkt`).** Sonst
+  widerspräche sie der Auskunft aus `/api/mememory/eigene`, die schon immer
+  nach dem Konto geht: Ein Testkonto, das ohne `direkt` einreicht, bekäme ein
+  Nein, obwohl ihm dieselbe Anwendung „unbegrenzt" gemeldet hat.
 - **20 Bilder je Stapel** im Client (`STAPEL_MAX`).
 - **Der Typ in der data-URL wird nicht geglaubt.** Geprüft werden die ersten
   Bytes (`istEchtesBild`): Wer HTML als `image/png` hinterlegt, bekäme es sonst

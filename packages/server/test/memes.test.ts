@@ -325,6 +325,28 @@ test('Fuer die Aufsicht gibt es keine Grenze', async (t) => {
   assert.equal(katalog.json().hochgeladen.length, 10);
 });
 
+test('Die Fuenfergrenze haengt am Konto, nicht am Knopf', async (t) => {
+  const { ctx, app, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+
+  // Die Aufsicht reicht OHNE `direkt` ein — das Bild wartet dann wie jedes
+  // andere. Die Grenze darf trotzdem nicht greifen, sonst widerspricht der
+  // Riegel der Auskunft aus /api/mememory/eigene, die nach dem Konto geht.
+  for (let i = 0; i < 7; i++) {
+    const antwort = await einreichen(app, bertToken, { bild: PNG });
+    assert.equal(antwort.statusCode, 200, `Bild ${i + 1} abgelehnt`);
+    assert.equal(antwort.json().status, 'vorschlag');
+    assert.equal(antwort.json().frei, null);
+  }
+
+  const eigene = await app.inject({
+    method: 'GET',
+    url: '/api/mememory/eigene',
+    cookies: { [SESSION_COOKIE]: bertToken },
+  });
+  assert.equal(eigene.json().frei, null);
+});
+
 test('Die Grenze meldet sich beim sechsten Bild, nicht spaeter', async (t) => {
   const { app, annaToken } = await aufbau(t);
   // Der Stapel im Client haelt bei `frei: 0` von selbst an. Dieser Test

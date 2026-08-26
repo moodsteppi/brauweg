@@ -10996,6 +10996,21 @@ main.auth > .muted {
   background: #ffd873;
 }
 
+/* Die Wartefläche zwischen zwei Bildern des Stapels. Sie hat genau die
+   Maße des Zuschneide-Rahmens: Ohne das springt der ganze Kasten bei jedem
+   Bild einmal zusammen und wieder auf. */
+.mm-kasten-warten {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #a595c4;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  font: 600 13px/1 system-ui;
+}
+
 .mm-kasten-knoepfe { display: flex; gap: 8px; margin-top: 10px; }
 .mm-kasten-knoepfe button {
   flex: 1;

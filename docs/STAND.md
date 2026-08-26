@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 26. August 2026, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 39 Mememory-Tests, 54 Easy-Poker-Tests, **302 Servertests**
-— zusammen 814, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 39 Mememory-Tests, 54 Easy-Poker-Tests, **303 Servertests**
+— zusammen 815, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
