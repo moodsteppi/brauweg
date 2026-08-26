@@ -45,8 +45,6 @@ interface MememorySicht {
   zuschauer: boolean;
 }
 
-const NAME_SCHLUESSEL = 'mememory.name';
-const NAME_MAX = 16;
 
 /**
  * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
@@ -86,14 +84,6 @@ function farbeVon(sitz: number): 'blau' | 'rot' {
   return sitz === 0 ? 'blau' : 'rot';
 }
 
-function gelesenerName(): string {
-  try {
-    return window.localStorage.getItem(NAME_SCHLUESSEL) ?? '';
-  } catch {
-    return '';
-  }
-}
-
 interface Flieger {
   readonly id: number;
   readonly zeichen: number;
@@ -122,7 +112,6 @@ export function Mememory({
   const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
   const [sucht, setSucht] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
-  const [name, setName] = useState(gelesenerName);
   const [ton, setTonZustand] = useState(tonAn);
   const [fehler, setFehler] = useState<string | null>(null);
   /** Der Vorschlagskasten liegt ueber dem Menue, sobald er offen ist. */
@@ -398,18 +387,8 @@ export function Mememory({
   }, [tischId]);
 
   // -------------------------------------------------------------------------
-  // Name, Vorladen, Klang
+  // Vorladen, Klang
   // -------------------------------------------------------------------------
-
-  /** Den eigenen Namen einmal an die Partie reichen, sobald sie steht. */
-  const nameGesendet = useRef<string | null>(null);
-  useEffect(() => {
-    if (!sicht || !tischId) return;
-    const gewuenscht = name.trim();
-    if (!gewuenscht || nameGesendet.current === `${tischId}:${gewuenscht}`) return;
-    nameGesendet.current = `${tischId}:${gewuenscht}`;
-    tisch.send({ typ: 'name', name: gewuenscht });
-  }, [sicht !== null, tischId, name]);
 
   /**
    * Bilder vorladen UND entpacken, sobald die Motivliste da ist.
@@ -534,16 +513,6 @@ export function Mememory({
     if (neu) spieleKlang('dreh');
   };
 
-  const merkeName = (roh: string): void => {
-    const gekuerzt = [...roh].slice(0, NAME_MAX).join('');
-    setName(gekuerzt);
-    try {
-      window.localStorage.setItem(NAME_SCHLUESSEL, gekuerzt);
-    } catch {
-      /* Privater Modus: der Name gilt dann nur fuer diese Sitzung. */
-    }
-  };
-
   const tonKnopf = (
     <button
       className="mm-ton"
@@ -625,17 +594,6 @@ export function Mememory({
         <div className="mm-menue-mitte">
           <h1 className="mm-titel">Mememory</h1>
           <p className="mm-untertitel">Zwei Bilder, ein Paar, zwei Spieler.</p>
-
-          <input
-            className="mm-namensfeld"
-            type="text"
-            inputMode="text"
-            enterKeyHint="done"
-            maxLength={NAME_MAX}
-            placeholder="Name…"
-            value={name}
-            onChange={(e) => merkeName(e.target.value)}
-          />
 
           <button className="mm-suchen" type="button" onClick={() => void suche()} disabled={sucht}>
             <span>Online Match suchen…</span>
@@ -749,8 +707,16 @@ export function Mememory({
     }
   };
 
+  /**
+   * Am Tisch steht der Name des KONTOS, nicht ein selbstgewaehlter.
+   *
+   * Bis zum 26. August gab es im Menue ein Feld dafuer, und die Sicht traegt
+   * mit `namen` weiterhin die Moeglichkeit — das Spielmodul kann es, es
+   * benutzt hier nur niemand mehr. Ein zweiter Name je Spiel war eine
+   * Einladung, sich am selben Abend unter drei Namen zu zeigen; die
+   * Plattform hat ohnehin einen, und der steht auch auf jeder Rangliste.
+   */
   const namenVon = (sitz: number): string =>
-    sicht.namen[sitz] ||
     tisch.table?.seats.find((platz) => platz.seat === sitz)?.displayName ||
     (sitz === eigenerSitz ? 'Du' : 'Gegner');
 
@@ -906,7 +872,6 @@ export function Mememory({
                 siegGespielt.current = false;
                 vorigeOffen.current = [];
                 vorigePause.current = null;
-                nameGesendet.current = null;
                 setGetippt(null);
                 setFlieger([]);
                 setTischId(null);
