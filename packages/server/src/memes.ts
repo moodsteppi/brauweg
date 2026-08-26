@@ -139,6 +139,24 @@ export async function offeneVorschlaege(db: Db): Promise<VorschlagZeile[]> {
   }));
 }
 
+/**
+ * Wie viele offene Vorschlaege ein Konto gerade hat.
+ *
+ * Seit dem Stapel-Upload (mehrere Bilder in einem Durchgang) braucht das der
+ * Client VOR dem Zuschneiden: Wer acht Bilder waehlt, aber nur noch drei
+ * einreichen darf, soll das erfahren, bevor er fuenf davon umsonst
+ * zurechtrueckt.
+ */
+export async function offeneVon(db: Db, accountId: string): Promise<number> {
+  const [zeile] = await db
+    .select({ anzahl: sql<number>`count(*)::int` })
+    .from(s.mememoryMotiv)
+    .where(
+      and(eq(s.mememoryMotiv.status, 'vorschlag'), eq(s.mememoryMotiv.eingereichtVon, accountId)),
+    );
+  return zeile?.anzahl ?? 0;
+}
+
 /** Wie viele offene Vorschlaege gerade warten. Fuer die Zahl am Briefkasten. */
 export async function anzahlOffen(db: Db): Promise<number> {
   const [zeile] = await db
@@ -164,7 +182,7 @@ export async function einreichen(
     titel?: string | null;
     direkt: boolean;
   },
-): Promise<{ kennung: string; status: 'vorschlag' | 'frei' }> {
+): Promise<{ kennung: string; status: 'vorschlag' | 'frei'; frei: number | null }> {
   const bild = eingabe.bild;
   if (bild.length > BILD_MAX_ZEICHEN) throw badRequest('bildZuGross');
   // Der Kopf einer data-URL ist nur eine Behauptung. Ohne Blick auf die
@@ -172,17 +190,11 @@ export async function einreichen(
   // unserer eigenen Herkunft ausliefern - der kurze Weg zu XSS.
   if (!BILD_DATA_URL.test(bild) || !istEchtesBild(bild)) throw badRequest('bildUngueltig');
 
+  let offenNachher: number | null = null;
   if (!eingabe.direkt) {
-    const [zeile] = await db
-      .select({ anzahl: sql<number>`count(*)::int` })
-      .from(s.mememoryMotiv)
-      .where(
-        and(
-          eq(s.mememoryMotiv.status, 'vorschlag'),
-          eq(s.mememoryMotiv.eingereichtVon, eingabe.accountId),
-        ),
-      );
-    if ((zeile?.anzahl ?? 0) >= OFFEN_MAX) throw conflict('zuVieleVorschlaege');
+    const offen = await offeneVon(db, eingabe.accountId);
+    if (offen >= OFFEN_MAX) throw conflict('zuVieleVorschlaege');
+    offenNachher = offen + 1;
   }
 
   const kennung = neueKennung();
@@ -199,7 +211,10 @@ export async function einreichen(
     geprueftAm: eingabe.direkt ? new Date() : null,
   });
 
-  return { kennung, status };
+  // `frei` ist der Rest, den dieses Konto noch einreichen darf. null heisst
+  // unbegrenzt (Aufsicht) — der Client haelt den Stapel danach an, statt in
+  // einen Fehler zu laufen, den der Spieler nicht kommen sieht.
+  return { kennung, status, frei: offenNachher === null ? null : OFFEN_MAX - offenNachher };
 }
 
 /** Einen Vorschlag freigeben. Ab dann kann ihn jede neue Partie ziehen. */

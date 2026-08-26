@@ -10969,6 +10969,33 @@ main.auth > .muted {
 }
 .mm-kasten-titel::placeholder { color: #7d6f9c; }
 
+/* Wo im Stapel man gerade ist. Zahl UND Perlen: Die Zahl sagt es genau, die
+   Perlen zeigen ohne Lesen, wie viel noch kommt. */
+.mm-kasten-fortschritt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+.mm-kasten-fortschritt strong { font: 800 12px/1 system-ui; color: #ffd873; }
+.mm-kasten-perlen { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+.mm-kasten-perlen i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+.mm-kasten-perlen i.ist-durch { background: #7fd493; }
+/* Die laufende Perle ist größer, nicht nur anders gefärbt — auf einem
+   Telefonschirm sind 7 px Farbunterschied bei Sonne nicht zu sehen. */
+.mm-kasten-perlen i.ist-dran {
+  width: 9px;
+  height: 9px;
+  margin: -1px 0;
+  background: #ffd873;
+}
+
 .mm-kasten-knoepfe { display: flex; gap: 8px; margin-top: 10px; }
 .mm-kasten-knoepfe button {
   flex: 1;
@@ -10981,6 +11008,21 @@ main.auth > .muted {
 .mm-kasten-weg { color: #b9a9d8; background: rgba(255, 255, 255, 0.07); }
 .mm-kasten-los { color: #1a0e05; background: linear-gradient(180deg, #ffd873, #e0a83c); }
 .mm-kasten-knoepfe button:disabled { filter: saturate(0.4) brightness(0.8); cursor: default; }
+
+/* Der Ausweg aus einem versehentlich zu großen Stapel. Bewusst unscheinbar:
+   Er steht neben zwei Knöpfen, die man wirklich drücken will. */
+.mm-kasten-abbruch {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  border: 0;
+  border-radius: 11px;
+  color: #8a7cab;
+  background: none;
+  font: 600 11px/1 system-ui;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 .mm-kasten-zeile {
   display: flex;

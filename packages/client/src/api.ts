@@ -749,15 +749,23 @@ export const api = {
   mememoryMotive: () => request<{ hochgeladen: string[] }>('/mememory/motive'),
 
   /**
+   * Was das eigene Konto noch einreichen darf. `frei: null` heisst
+   * unbegrenzt (Aufsicht). Der Stapel-Upload fragt das, bevor er
+   * zuschneiden laesst.
+   */
+  mememoryEigene: () =>
+    request<{ offen: number; frei: number | null; hoechstens: number }>('/mememory/eigene'),
+
+  /**
    * Ein Bild einreichen. `direkt` wirkt nur bei der Aufsicht (der Server
-   * prueft das nach) und stellt es sofort ins Spiel.
+   * prueft das nach) und stellt es sofort ins Spiel. `frei` ist der Rest,
+   * den das Konto danach noch einreichen darf.
    */
   mememoryEinreichen: (bild: string, titel: string | null, direkt = false) =>
-    post<{ kennung: string; status: 'vorschlag' | 'frei' }>('/mememory/vorschlaege', {
-      bild,
-      titel,
-      direkt,
-    }),
+    post<{ kennung: string; status: 'vorschlag' | 'frei'; frei: number | null }>(
+      '/mememory/vorschlaege',
+      { bild, titel, direkt },
+    ),
 
   /** Was im Kasten liegt, plus der freigegebene Bestand. Nur Aufsicht. */
   mememoryVorschlaege: () =>

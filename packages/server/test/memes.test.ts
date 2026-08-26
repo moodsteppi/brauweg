@@ -268,6 +268,77 @@ function eqAccount(accountId: string) {
 }
 
 /**
+ * Der Stapel: mehrere Bilder in einem Durchgang.
+ *
+ * Hochgeladen wird weiterhin eines nach dem anderen — der Stapel ist eine
+ * Sache der Oberflaeche. Was der Server dafuer beisteuert, ist die Auskunft,
+ * wie viele Vorschlaege das Konto noch offen haben darf. Ohne sie merkt ein
+ * Spieler beim vierten von acht Bildern, dass er zu spaet zugeschnitten hat.
+ */
+test('Das Konto erfaehrt, wie viele Bilder es noch einreichen darf', async (t) => {
+  const { app, annaToken } = await aufbau(t);
+
+  const ohneAnmeldung = await app.inject({ method: 'GET', url: '/api/mememory/eigene' });
+  assert.equal(ohneAnmeldung.statusCode, 401);
+
+  const leer = await app.inject({
+    method: 'GET',
+    url: '/api/mememory/eigene',
+    cookies: { [SESSION_COOKIE]: annaToken },
+  });
+  assert.deepEqual(leer.json(), { offen: 0, frei: 5, hoechstens: 5 });
+
+  // Nach zwei Einreichungen zaehlt beides mit — und die Antwort auf das
+  // Einreichen selbst sagt dasselbe, damit der Stapel nicht nach jedem Bild
+  // nachfragen muss.
+  assert.equal((await einreichen(app, annaToken, { bild: PNG })).json().frei, 4);
+  assert.equal((await einreichen(app, annaToken, { bild: PNG })).json().frei, 3);
+
+  const danach = await app.inject({
+    method: 'GET',
+    url: '/api/mememory/eigene',
+    cookies: { [SESSION_COOKIE]: annaToken },
+  });
+  assert.deepEqual(danach.json(), { offen: 2, frei: 3, hoechstens: 5 });
+});
+
+test('Fuer die Aufsicht gibt es keine Grenze', async (t) => {
+  const { ctx, app, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+
+  const eigene = await app.inject({
+    method: 'GET',
+    url: '/api/mememory/eigene',
+    cookies: { [SESSION_COOKIE]: bertToken },
+  });
+  assert.equal(eigene.json().frei, null);
+
+  // Zehn Stueck am Stueck, alle sofort im Spiel: Genau das ist der Stapel
+  // der Aufsicht, und die Fuenfergrenze darf ihm nicht dazwischenkommen.
+  for (let i = 0; i < 10; i++) {
+    const antwort = await einreichen(app, bertToken, { bild: PNG, direkt: true });
+    assert.equal(antwort.statusCode, 200);
+    assert.equal(antwort.json().status, 'frei');
+    assert.equal(antwort.json().frei, null);
+  }
+  const katalog = await app.inject({ method: 'GET', url: '/api/mememory/motive' });
+  assert.equal(katalog.json().hochgeladen.length, 10);
+});
+
+test('Die Grenze meldet sich beim sechsten Bild, nicht spaeter', async (t) => {
+  const { app, annaToken } = await aufbau(t);
+  // Der Stapel im Client haelt bei `frei: 0` von selbst an. Dieser Test
+  // sichert die Zahl, auf die er sich verlaesst: Nach fuenf Bildern steht
+  // dort 0, und das sechste wird abgewiesen.
+  let frei: number | null = null;
+  for (let i = 0; i < 5; i++) {
+    frei = (await einreichen(app, annaToken, { bild: PNG })).json().frei;
+  }
+  assert.equal(frei, 0);
+  assert.equal((await einreichen(app, annaToken, { bild: PNG })).statusCode, 409);
+});
+
+/**
  * Der Weg vom Kasten auf den Tisch.
  *
  * Der Client haengt die freigegebenen Kennungen als `zusatz` an die

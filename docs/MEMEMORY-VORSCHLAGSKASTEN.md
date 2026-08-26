@@ -12,7 +12,7 @@ dem Handy findet.
 
 | Wer | Weg | Ergebnis |
 | --- | --- | --- |
-| Jeder angemeldete Spieler | Briefkasten im Mememory-Menü → Bild wählen → selbst zuschneiden → **Einreichen** | Das Bild wartet auf Freigabe |
+| Jeder angemeldete Spieler | Briefkasten im Mememory-Menü → **mehrere** Bilder wählen → eines nach dem anderen zuschneiden → **Einreichen** | Die Bilder warten auf Freigabe |
 | Aufsicht (Testkonto) | derselbe Knopf, Blatt **Hochladen** | Sofort im Spiel |
 | Aufsicht | Blatt **Kasten** | Wartendes ✓ freigeben oder ✕ ablehnen (= löschen) |
 | Aufsicht | Blatt **Bestand** | Ein freigegebenes Bild wieder herausnehmen |
@@ -24,6 +24,42 @@ Aufsicht die Zahl der wartenden Vorschläge.
 Railway-Variablen `STAFF_EMAILS` stehen. Sie wird beim Serverstart
 angewandt (`staff.ts`) — es gibt bewusst keinen Endpunkt, über den sich
 jemand das Merkmal selbst geben könnte.
+
+---
+
+## Der Stapel
+
+Wer in der Galerie steht, hat selten genau ein Meme dabei. Die Auswahl ist
+deshalb eine **Warteschlange**: zuschneiden, einreichen, das nächste kommt von
+selbst. Oben steht „Bild 2 von 5" samt Perlenreihe, unten stehen
+*Überspringen* und *Einreichen*; beim letzten Bild heißt der linke Knopf
+*Verwerfen*. Darunter liegt für den Notfall „Dieses und die N übrigen
+verwerfen". Am Ende steht eine Bilanz: wie viele eingereicht, wie viele
+übersprungen, wie viele nicht lesbar waren.
+
+Vier Dinge daran sind wichtiger, als sie aussehen:
+
+1. **Nur das aktuelle Bild ist entpackt.** In der Schlange liegen
+   `File`-Verweise, kein Bildspeicher. Zehn Handyfotos gleichzeitig als
+   `ImageBitmap` wären dreistellige Megabyte — auf dem Telefon wirft der
+   Browser dafür den Tab weg.
+2. **Ein unlesbares Bild hält den Stapel nicht an.** Es wird gezählt und
+   überholt. Sonst reißt eine einzige HEIC-Datei aus der iOS-Galerie neun
+   brauchbare Memes mit sich.
+3. **Die Grenze wird vor dem Zuschneiden geprüft, nicht danach.** Ein Spieler
+   darf fünf Vorschläge offen haben. Wer acht Bilder wählt und beim vierten
+   ein Nein bekommt, hat drei umsonst zurechtgerückt — deshalb sagt
+   `GET /api/mememory/eigene` vorher, wie viele noch gehen, und die Auswahl
+   wird auf diese Zahl gekürzt (mit Hinweis). Jede Antwort auf ein
+   Einreichen führt den Rest mit (`frei`), damit der Stapel nicht nach jedem
+   Bild nachfragen muss.
+4. **Höchstens 20 Bilder je Durchgang.** Nicht gegen Missbrauch — dagegen
+   steht der Riegel im Server —, sondern gegen das Versehen: In der
+   iOS-Galerie ist „alle auswählen" ein Griff.
+
+Hochgeladen wird weiterhin **eines nach dem anderen** (ein POST je Bild). Ein
+Sammel-Endpunkt hätte die Rumpfgrenze von 128 kB gesprengt und im Fehlerfall
+die Frage aufgeworfen, was von einem halb angenommenen Stapel gilt.
 
 ---
 
@@ -87,13 +123,14 @@ erste Karte zeichnen kann.
 | Oberfläche | `packages/client/src/minispiele/mememory/Vorschlagskasten.tsx` |
 | Bildpfad | `packages/client/src/minispiele/mememory/bildpfad.ts` |
 | Feld im Regelsatz | `packages/game-mememory/src/regeln.ts` (`zusatz`) |
-| Tests | `packages/server/test/memes.test.ts` (12), `packages/game-mememory/test/zusatz.test.ts` (8) |
+| Tests | `packages/server/test/memes.test.ts` (15), `packages/game-mememory/test/zusatz.test.ts` (8) |
 
 ### Endpunkte
 
 | Methode | Pfad | Wer |
 | --- | --- | --- |
 | GET | `/api/mememory/motive` | alle (nur Kennungen) |
+| GET | `/api/mememory/eigene` | angemeldet (eigener Stand: `offen`, `frei`) |
 | GET | `/api/mememory/motive/:kennung` | alle (nur freigegebene) |
 | POST | `/api/mememory/vorschlaege` | angemeldet (`direkt` wirkt nur bei der Aufsicht) |
 | GET | `/api/mememory/vorschlaege` | Aufsicht |
@@ -107,8 +144,10 @@ erste Karte zeichnen kann.
 
 - **60 000 Zeichen** je Bild (~45 kB). Der Client verkleinert auf 320 px, der
   Riegel im Server steht für den Fall, dass jemand den Browser umgeht.
-- **Fünf offene Vorschläge** je Konto. Ohne diese Zahl schüttet ein Einzelner
-  den Kasten in einer Minute zu.
+- **Fünf offene Vorschläge** je Konto (`OFFEN_MAX`). Ohne diese Zahl schüttet
+  ein Einzelner den Kasten in einer Minute zu — beim Stapel-Upload erst recht.
+  Die Aufsicht ist davon ausgenommen: Was sie hochlädt, wartet nirgends.
+- **20 Bilder je Stapel** im Client (`STAPEL_MAX`).
 - **Der Typ in der data-URL wird nicht geglaubt.** Geprüft werden die ersten
   Bytes (`istEchtesBild`): Wer HTML als `image/png` hinterlegt, bekäme es sonst
   unter unserer eigenen Herkunft ausgeliefert — der kurze Weg zu XSS.
