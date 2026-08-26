@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import { motivBildPfad } from '../minispiele/mememory/bildpfad';
 import { spieleKlang, setzeTon, tonAn } from '../minispiele/mememory/klaenge';
+import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
 import { useTable } from '../useTable';
 
@@ -73,11 +75,6 @@ const REAKTION_PAUSE_MS = 250;
 /** So viele Emojis duerfen hoechstens gleichzeitig fliegen. */
 const FLIEGER_MAX = 12;
 
-/** Bildpfad eines Motivs. Eine Stelle, damit Katalog und Ordner nie auseinanderlaufen. */
-function motivBild(kennung: string): string {
-  return `/mememory/motive/${kennung}.webp`;
-}
-
 /**
  * Teamfarbe haengt am SITZ, nicht daran, wer man selbst ist.
  *
@@ -107,10 +104,17 @@ interface Flieger {
 
 export function Mememory({
   startTisch,
+  istAufsicht = false,
   onBack,
 }: {
   /** Tisch aus dem "Weiterspielen" des Hubs. Sonst faengt alles im Menue an. */
   startTisch?: string | null;
+  /**
+   * Testkonto: darf im Vorschlagskasten freigeben, ablehnen und direkt
+   * aufnehmen. Kommt fertig aus App.tsx — der Client rechnet nichts aus
+   * Rechten aus, und der Server prueft es ohnehin ein zweites Mal.
+   */
+  istAufsicht?: boolean;
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
@@ -121,6 +125,10 @@ export function Mememory({
   const [name, setName] = useState(gelesenerName);
   const [ton, setTonZustand] = useState(tonAn);
   const [fehler, setFehler] = useState<string | null>(null);
+  /** Der Vorschlagskasten liegt ueber dem Menue, sobald er offen ist. */
+  const [kastenOffen, setKastenOffen] = useState(false);
+  /** Wie viele Vorschlaege warten. Nur die Aufsicht bekommt die Zahl. */
+  const [warten, setWarten] = useState(0);
   /**
    * Platz, den ich gerade angetippt habe — dreht sofort, ohne auf den Server
    * zu warten.
@@ -218,6 +226,30 @@ export function Mememory({
     };
   }, [sicht !== null]);
 
+  /**
+   * Die Zahl am Briefkasten: wie viele Vorschlaege warten.
+   *
+   * Nur fuer die Aufsicht und nur im Menue — und bewusst OHNE Takt. Ein
+   * Vorschlagskasten ist nichts, was im Sekundentakt neu gezaehlt werden
+   * muesste; einmal beim Aufschlagen des Menues und nach jedem Schliessen
+   * des Kastens reicht.
+   */
+  useEffect(() => {
+    if (!istAufsicht || tischId || kastenOffen) return;
+    let lebt = true;
+    void api
+      .mememoryOffen()
+      .then((antwort) => {
+        if (lebt) setWarten(antwort.offen);
+      })
+      .catch(() => {
+        /* Kein Recht, kein Netz: Dann steht am Knopf eben keine Zahl. */
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [istAufsicht, tischId, kastenOffen]);
+
   // -------------------------------------------------------------------------
   // Match-Suche
   // -------------------------------------------------------------------------
@@ -246,9 +278,21 @@ export function Mememory({
         setTischId(ziel.id);
         return;
       }
+      /**
+       * Die hochgeladenen Motive kommen als `zusatz` mit an den Tisch.
+       *
+       * Erst hier und nicht beim Aufbau des Bildschirms: Wer beitritt,
+       * braucht sie nicht — der Topf steht am Tisch, den der andere
+       * aufgemacht hat. Und faellt der Abruf aus, spielt der Tisch eben mit
+       * den 88 Grundmotiven; ein Fehlschlag darf keine Partie verhindern.
+       */
+      const zusatz = await api
+        .mememoryMotive()
+        .then((antwort) => antwort.hochgeladen)
+        .catch(() => []);
       const { id } = await api.createTable({
         gameId: 'mememory',
-        config: REGELSATZ,
+        config: zusatz.length > 0 ? { ...REGELSATZ, zusatz } : REGELSATZ,
         seats: 2,
         rounds: 1,
       });
@@ -349,7 +393,7 @@ export function Mememory({
         if (!lebt) return;
         setBereiteBilder((alt) => (alt.has(kennung) ? alt : new Set(alt).add(kennung)));
       };
-      bild.src = motivBild(kennung);
+      bild.src = motivBildPfad(kennung);
       if (typeof bild.decode === 'function') void bild.decode().then(fertig, fertig);
       else {
         bild.onload = fertig;
@@ -477,6 +521,34 @@ export function Mememory({
     </button>
   );
 
+  /**
+   * Der Briefkasten. Er sitzt unten LINKS, gegenueber dem Lautsprecher:
+   * Beides sind Nebensachen, und die Mitte gehoert der Match-Suche.
+   */
+  const kastenKnopf = (
+    <button
+      className="mm-kasten-knopf"
+      type="button"
+      onClick={() => setKastenOffen(true)}
+      aria-label="Vorschlagskasten öffnen"
+      title="Meme vorschlagen"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {/* Briefkasten: Kasten, Klappe, Fahne. Ein Bild waere eine Datei mehr
+            fuer ein Zeichen, das in drei Strichen erzaehlt ist. */}
+        <path
+          d="M4 10a4 4 0 0 1 8 0v8H5a1 1 0 0 1-1-1v-7z"
+          fill="currentColor"
+          opacity="0.9"
+        />
+        <path d="M12 18V10a4 4 0 0 1 8 0v7a1 1 0 0 1-1 1h-7z" fill="currentColor" />
+        <path d="M6.5 10h3" stroke="#0b0716" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M17 6V3.5h2.6" stroke="#ff9b90" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+      </svg>
+      {warten > 0 && <em>{warten}</em>}
+    </button>
+  );
+
   if (!tischId) {
     return (
       <main className="mm-menue">
@@ -513,6 +585,10 @@ export function Mememory({
         </div>
 
         {tonKnopf}
+        {kastenKnopf}
+        {kastenOffen && (
+          <Vorschlagskasten istAufsicht={istAufsicht} onFertig={() => setKastenOffen(false)} />
+        )}
       </main>
     );
   }
@@ -674,7 +750,7 @@ export function Mememory({
                   <span className="mm-vorn">
                     {/* Kein <img> auf eine Datei, die es noch nicht gibt: Bis
                         die Sicht die Kennung liefert, bleibt die Flaeche leer. */}
-                    {kennung && <img src={motivBild(kennung)} alt="" draggable={false} />}
+                    {kennung && <img src={motivBildPfad(kennung)} alt="" draggable={false} />}
                   </span>
                 </span>
               </button>

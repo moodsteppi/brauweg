@@ -154,6 +154,7 @@ export function App(): React.JSX.Element {
     return (
       <Mememory
         startTisch={screen.tisch ?? null}
+        istAufsicht={me.entitlements.staff}
         onBack={() => {
           setScreen({ name: 'games' });
           void reload();
@@ -168,6 +169,7 @@ export function App(): React.JSX.Element {
     return (
       <Mememory
         startTisch={screen.name === 'table' ? screen.tableId : null}
+        istAufsicht={me.entitlements.staff}
         onBack={() => {
           setScreen({ name: 'games' });
           void reload();

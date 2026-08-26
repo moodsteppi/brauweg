@@ -13,10 +13,10 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 25. August 2026, nicht aus der Erinnerung):**
+**Prüfstand (gezählt am 26. August 2026, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 31 Mememory-Tests, 54 Easy-Poker-Tests, **287 Servertests**
-— zusammen 791, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 39 Mememory-Tests, 54 Easy-Poker-Tests, **299 Servertests**
+— zusammen 811, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
@@ -73,6 +73,38 @@ Minuten live.
 >
 > Reibungsstellen beim Bauen — auch eigene Fehler — stehen gesammelt in
 > `docs/MEMEMORY-TICKETS.md` (22 Einträge und eine Gesamteinschätzung).
+
+> **Der Vorschlagskasten ist neu (26. August 2026).** Ein neues Meme ist
+> seitdem kein Commit mehr: Briefkasten im Mememory-Menü, Bild aus der
+> Galerie, im Browser selbst zuschneiden, einreichen. Die Aufsicht
+> (Testkonto) lädt über denselben Knopf direkt ins Spiel, gibt Wartendes
+> frei oder lehnt es ab und kann ein freigegebenes Bild wieder herausnehmen
+> — alles vom Handy, alles ohne Deploy. Ganzer Bauplan, Endpunkte und
+> Grenzen: **`docs/MEMEMORY-VORSCHLAGSKASTEN.md`**.
+>
+> **Drei Dinge daran sind für andere Spiele interessant:**
+>
+> 1. **Hochgeladene Bilder gehören in die Datenbank, nicht auf die Platte.**
+>    Railway baut bei jedem Deploy ein frisches Abbild; alles, was der
+>    laufende Dienst schreibt, ist danach weg. Gespeichert wird als
+>    data-URL in einer Textspalte wie `account.avatar`, ausgeliefert als
+>    Bytes. Die Bytesprüfung dafür steht jetzt geteilt in
+>    `packages/server/src/bilder.ts` — eine kopierte Sicherheitsprüfung
+>    wird irgendwann nur an einer Stelle nachgezogen.
+> 2. **Inhalt kommt über die Tisch-`config` ins Modul.** Der Client hängt
+>    die freigegebenen Kennungen als `zusatz` an; das Modul bleibt rein und
+>    weiß nicht, dass es hochgeladene Bilder gibt. Weil die Liste im Tisch
+>    steht, ändert eine Freigabe keine laufende Partie mehr. **Ergänzend
+>    und nicht ersetzend**, weil der Client die Grundkennungen gar nicht
+>    kennt — sonst bräuchte er eine zweite Abschrift von `MOTIVE`.
+> 3. **Ein Vorsatz in der Kennung spart einen Abruf.** Was mit `hoch-`
+>    beginnt, kommt aus der Datenbank, alles andere aus `public/`. Ohne ihn
+>    müsste der Bildschirm erst einen Katalog laden, bevor er die erste
+>    Karte zeichnen kann.
+>
+> **In der Produktion muss dafür die eigene Adresse in der Railway-Variablen
+> `STAFF_EMAILS` stehen** — sie wird beim Serverstart angewandt, und es gibt
+> bewusst keinen Endpunkt, über den man sich das Merkmal selbst gibt.
 
 > **Easy Poker ist neu auf `staging` (25. August 2026), noch nicht in der
 > Produktion.** Texas Hold'em Kopf an Kopf, für ein Hochkant-Handy entworfen:

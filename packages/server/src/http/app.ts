@@ -97,6 +97,19 @@ import {
 } from '../clubs/war.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
 import { lies, nimmAuf, uebersicht } from '../diagnose.js';
+import { istEchtesBild } from '../bilder.js';
+import {
+  BILD_MAX_ZEICHEN,
+  TITEL_MAX,
+  anzahlOffen,
+  bildVon,
+  einreichen,
+  freieKennungen,
+  freieMotive,
+  freigeben,
+  loeschen,
+  offeneVorschlaege,
+} from '../memes.js';
 import {
   activeTableFor,
   createTable,
@@ -235,33 +248,12 @@ const LIMIT_AUTH = { max: 30, timeWindow: '15 minutes' };
 const LIMIT_SCHREIBEN = { max: 60, timeWindow: '1 minute' };
 const LIMIT_ALLGEMEIN = { max: 300, timeWindow: '1 minute' };
 
-/** Rumpfgrenze: Der groesste erlaubte Rumpf ist das Profilbild (~60 kB). */
-const BODY_LIMIT = 128 * 1024;
-
 /**
- * Prueft die ersten Bytes einer Bild-data-URL.
- *
- * Der angegebene Typ sagt nichts: Wer HTML als `image/png` hinterlegt,
- * bekaeme es unter unserer eigenen Herkunft ausgeliefert. Also wird
- * nachgesehen, ob wirklich PNG, JPEG oder WebP dahintersteht.
+ * Rumpfgrenze: Der groesste erlaubte Rumpf ist ein Bild (~60 kB) — das
+ * Profilbild oder ein eingereichtes Mememory-Motiv. Beide werden im Browser
+ * verkleinert; die Grenze hier ist der Riegel, falls das umgangen wird.
  */
-function istEchtesBild(dataUrl: string): boolean {
-  const komma = dataUrl.indexOf(',');
-  if (komma < 0) return false;
-  let kopf: Buffer;
-  try {
-    kopf = Buffer.from(dataUrl.slice(komma + 1, komma + 41), 'base64');
-  } catch {
-    return false;
-  }
-  if (kopf.length < 12) return false;
-  const png = kopf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-  const jpeg = kopf[0] === 0xff && kopf[1] === 0xd8 && kopf[2] === 0xff;
-  const webp =
-    kopf.subarray(0, 4).toString('ascii') === 'RIFF' &&
-    kopf.subarray(8, 12).toString('ascii') === 'WEBP';
-  return png || jpeg || webp;
-}
+const BODY_LIMIT = 128 * 1024;
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
@@ -1767,6 +1759,126 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .parse(request.query);
       const seit = new Date(Date.now() - (query.stunden ?? 48) * 3600_000);
       return reply.send({ seit, tische: await uebersicht(deps.db, seit) });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Mememory: Vorschlagskasten und Motivkatalog
+  // -------------------------------------------------------------------------
+
+  /**
+   * Die freigegebenen HOCHGELADENEN Motive — nicht der ganze Katalog.
+   *
+   * Die 88 Grundmotive stehen im Spielmodul und liegen unter public/; der
+   * Server kennt sie nicht und soll sie nicht kennen. Der Client haengt
+   * diese Liste beim Tischaufmachen als `zusatz` an die `config`, und das
+   * Modul legt sie zu seinem eigenen Katalog.
+   *
+   * Angemeldet sein muss dafuer niemand: Es sind Kennungen, keine Daten,
+   * und die Bilder dahinter liegen ohnehin offen.
+   */
+  app.get('/api/mememory/motive', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (_request, reply) => {
+    return reply.send({ hochgeladen: await freieKennungen(deps.db) });
+  });
+
+  /**
+   * Bild eines freigegebenen Motivs.
+   *
+   * Oeffentlich, weil es auf der Karte des Gegenuebers landet. Kurz
+   * zwischengespeichert wie das Profilbild — ein Brett zeigt dasselbe Motiv
+   * zweimal, und beide Karten sollen nicht zweimal laden.
+   */
+  app.get('/api/mememory/motive/:kennung', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const { kennung } = z
+      .object({ kennung: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/) })
+      .parse(request.params);
+    const { typ, bytes } = await bildVon(deps.db, kennung);
+    return reply
+      .header('content-type', typ)
+      .header('cache-control', 'public, max-age=300')
+      .send(bytes);
+  });
+
+  /**
+   * Ein Bild einreichen.
+   *
+   * Jeder Angemeldete darf das — der Vorschlagskasten ist ausdruecklich
+   * offen, sonst haette er keinen Zweck. Ins Spiel kommt es erst durch die
+   * Aufsicht. Wer selbst Aufsicht ist, kann mit `direkt` daran vorbei;
+   * fuer alle anderen ist das Feld wirkungslos statt ein Fehler, damit ein
+   * mitgeschickter Wert nicht die Einreichung verliert.
+   */
+  app.post('/api/mememory/vorschlaege', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z
+      .object({
+        bild: z.string().max(BILD_MAX_ZEICHEN),
+        titel: z.string().max(TITEL_MAX).nullable().optional(),
+        direkt: z.boolean().optional(),
+      })
+      .parse(request.body);
+
+    const [konto] = await deps.db
+      .select({ isStaff: s.account.isStaff })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+
+    const ergebnis = await einreichen(deps.db, {
+      accountId,
+      bild: body.bild,
+      titel: body.titel ?? null,
+      direkt: Boolean(body.direkt) && Boolean(konto?.isStaff),
+    });
+    return reply.send(ergebnis);
+  });
+
+  /**
+   * Was im Kasten liegt. Nur die Aufsicht — ein wartendes Bild hat noch
+   * niemand angesehen, und genau deshalb wartet es.
+   */
+  app.get('/api/mememory/vorschlaege', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    await requireAufsicht(request);
+    return reply.send({
+      vorschlaege: await offeneVorschlaege(deps.db),
+      freigegeben: await freieMotive(deps.db),
+    });
+  });
+
+  /**
+   * Wie viele Vorschlaege warten. Die Zahl am Briefkasten, sonst nichts —
+   * deshalb ohne Bilder und ohne Namen, aber mit derselben Sperre: Wer
+   * nicht Aufsicht ist, hat auch an der Zahl nichts verloren.
+   */
+  app.get('/api/mememory/vorschlaege/anzahl', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    await requireAufsicht(request);
+    return reply.send({ offen: await anzahlOffen(deps.db) });
+  });
+
+  app.post(
+    '/api/mememory/vorschlaege/:kennung/freigeben',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      await requireAufsicht(request);
+      const accountId = await requireAccount(request);
+      const { kennung } = z.object({ kennung: z.string().max(40) }).parse(request.params);
+      await freigeben(deps.db, kennung, accountId);
+      return reply.send({ ok: true });
+    },
+  );
+
+  /**
+   * Ablehnen und Herausnehmen sind derselbe Handgriff: Die Zeile geht weg.
+   * Ein abgelehntes Bild aufzubewahren waere ein Bilderfriedhof aus genau
+   * dem Material, das man nicht aufbewahren will.
+   */
+  app.delete(
+    '/api/mememory/motive/:kennung',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      await requireAufsicht(request);
+      const { kennung } = z.object({ kennung: z.string().max(40) }).parse(request.params);
+      await loeschen(deps.db, kennung);
+      return reply.send({ ok: true });
     },
   );
 

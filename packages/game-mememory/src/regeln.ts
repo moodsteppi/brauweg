@@ -3,9 +3,16 @@
  *
  * Bewusst winzig. Ein Memory hat drei Stellschrauben, und zwei davon sind die
  * Brettgroesse. Was NICHT hierher gehoert: Einsatz, Topf, Preise (game-api,
- * Grundsatz 4) — und auch keine Bildauswahl. Welche Motive gezogen werden,
- * entscheidet der Seed, nicht der Tisch; sonst koennte ein Gastgeber sich das
- * Brett bauen, das er schon kennt.
+ * Grundsatz 4).
+ *
+ * Bis zum 26. August stand hier auch: keine Bildauswahl, denn sonst koenne
+ * ein Gastgeber sich das Brett bauen, das er schon kennt. Der Grund gilt
+ * weiter — fuer die LAGE. Sie kommt nach wie vor allein aus dem Seed, und
+ * `zusatz` sagt nichts darueber. Zu wissen, WELCHE Motive auf dem Brett
+ * liegen koennten, hilft in einem Memory niemandem: Gesucht werden Paare,
+ * und beide Spieler sehen dieselben Bilder. Was `zusatz` dagegen moeglich
+ * macht, geht ohne das Feld gar nicht — hochgeladene Motive, die es beim
+ * Bauen des Moduls noch nicht gab.
  */
 
 export interface MememoryRegeln {
@@ -17,7 +24,50 @@ export interface MememoryRegeln {
    * dreht — und die Plattform misst sie, nicht das Modul (siehe interludeMs).
    */
   readonly merkzeitMs: number;
+  /**
+   * Motive, die es beim Bauen des Moduls noch nicht gab: hochgeladene, von
+   * der Aufsicht freigegebene Bilder. Sie kommen ZUM festen Katalog dazu,
+   * sie ersetzen ihn nicht — deshalb `zusatz` und nicht `katalog`.
+   *
+   * Der Unterschied ist kein Geschmack, sondern eine Grenze: Der Client
+   * kennt keine Spielregeln (packages/client/package.json) und damit auch
+   * die 88 Grundkennungen nicht. Muesste er den vollstaendigen Topf
+   * schicken, braeuchte er eine zweite Abschrift von MOTIVE — und zwei
+   * Abschriften laufen auseinander. So schickt er nur, was er ohnehin vom
+   * Server bekommen hat, und das Modul legt es zu dem, was es selbst weiss.
+   *
+   * Fehlt das Feld, ist alles wie vorher. Jeder Tisch, den nicht der
+   * Mememory-Bildschirm aufmacht (Schnellspiel, Bot, Test) und jeder Tisch
+   * von vor dem 26. August spielt mit dem festen Katalog.
+   *
+   * Die Liste steht in der `config` und damit im Tisch: Eine laufende Partie
+   * aendert sich nicht mehr, wenn nebenbei ein Bild freigegeben oder
+   * herausgenommen wird.
+   *
+   * **Hier haengen spaeter die Packs.** Ein eigener Pack ist eine andere
+   * Liste an genau dieser Stelle. Soll er den Grundkatalog dann ersetzen
+   * statt ergaenzen, kommt ein Feld daneben (`nurZusatz`) — eine Zeile in
+   * `erstellePartie`, kein Umbau an Sicht, Snapshot oder Bot.
+   */
+  readonly zusatz?: readonly string[];
 }
+
+/**
+ * Form einer Motivkennung. Muss zu KENNUNG_MUSTER im Server passen.
+ *
+ * Geprueft wird die FORM, nicht die Existenz: Ob es zu `hoch-a1b2c3d4e5` ein
+ * Bild gibt, weiss nur die Datenbank, und ein Spielmodul fragt keine
+ * Datenbank. Ein erfundener Eintrag kostet den Tisch, der ihn schickt, eine
+ * leere Karte — mehr nicht, denn die Bilder sind fuer beide Seiten dieselben.
+ */
+const KENNUNG = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+/**
+ * Obergrenze fuer die Zusatzliste. 2000 Kennungen sind rund 26 kB in der
+ * `config` — genug fuer jede absehbare Sammlung und klein genug, dass
+ * niemand ueber diesen Weg die Tischtabelle vollschreibt.
+ */
+const ZUSATZ_MAX = 2000;
 
 /**
  * 4 x 6 = 24 Karten, 12 Paare.
@@ -98,6 +148,20 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   }
   if (merkzeitMs < 300 || merkzeitMs > 5000) {
     probleme.push({ path: 'merkzeitMs', messageKey: 'ruleset.merkzeitAusserhalb', severity: 'error' });
+  }
+
+  // Die Zusatzliste wird auf FORM geprueft, nicht auf Groesse: Sie ergaenzt
+  // den festen Katalog, kann also nie zu klein sein. Zu wenig Motive fuer das
+  // Brett faengt weiterhin validateConfig im Adapter ab.
+  const zusatz = gegeben['zusatz'];
+  if (zusatz !== undefined && zusatz !== null) {
+    const kaputt =
+      !Array.isArray(zusatz) ||
+      zusatz.length > ZUSATZ_MAX ||
+      zusatz.some((k) => typeof k !== 'string' || !KENNUNG.test(k));
+    if (kaputt) {
+      probleme.push({ path: 'zusatz', messageKey: 'ruleset.zusatzUngueltig', severity: 'error' });
+    }
   }
 
   return probleme;

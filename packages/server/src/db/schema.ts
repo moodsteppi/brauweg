@@ -1028,6 +1028,59 @@ export const feldherrDiagnose = pgTable(
   ],
 );
 
+/**
+ * Mememory: hochgeladene Motive und der Vorschlagskasten.
+ *
+ * Grundsatz 2 oben ("alles Spielabhaengige liegt in jsonb") gilt fuer den
+ * SPIELZUSTAND — der Server darf nicht wissen, wie eine Partie aussieht.
+ * Bilder sind kein Spielzustand, sondern Inhalt, und Inhalt braucht eine
+ * Zeile, die man ansehen, freigeben und wieder loeschen kann. Dieselbe
+ * Ueberlegung wie bei `feldherr_diagnose`: spielnah, aber kein Regelwissen.
+ *
+ * Warum Datenbank und nicht Datei unter public/: Railway baut bei jedem
+ * Deploy ein frisches Abbild, und alles, was der laufende Dienst auf die
+ * Platte schreibt, ist danach weg.
+ */
+export const mememoryMotiv = pgTable(
+  'mememory_motiv',
+  {
+    /**
+     * Die Kennung ist der Schluessel und zugleich der Vertrag zum Spielmodul
+     * (siehe packages/game-mememory/src/motive.ts). Sie traegt den Vorsatz
+     * `hoch-`, und daran allein erkennt der Client, ob er das Bild aus
+     * `public/` oder ueber diesen Endpunkt holt — ohne einen zweiten Abruf.
+     */
+    kennung: text().primaryKey(),
+    /** data-URL, im Browser auf ein Quadrat verkleinert. Wie account.avatar. */
+    bild: text().notNull(),
+    /** Freier Titel des Einreichenden. Nur Anzeige, nie Teil des Spiels. */
+    titel: text(),
+    /**
+     * 'vorschlag' oder 'frei'. Abgelehnt heisst geloescht: Ein dritter
+     * Zustand waere ein Bilderfriedhof, und ausgerechnet die Bilder, die
+     * jemand abgelehnt hat, will man nicht aufheben.
+     */
+    status: text().notNull().default('vorschlag'),
+    /**
+     * Vorbereitung fuer eigene Packs. NULL ist der Grundtopf, den alle
+     * sehen. Bekommt ein Motiv spaeter eine Pack-Kennung, filtert der
+     * Katalogabruf danach — Tabelle, Endpunkte und Spielmodul bleiben, wie
+     * sie sind.
+     */
+    pack: text(),
+    /** `set null`: Loescht jemand sein Konto, bleibt sein Meme im Spiel. */
+    eingereichtVon: uuid().references(() => account.id, { onDelete: 'set null' }),
+    geprueftVon: uuid().references(() => account.id, { onDelete: 'set null' }),
+    geprueftAm: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    /** Beide Listen fragen nach dem Zustand: der Katalog nach 'frei', der
+        Vorschlagskasten nach 'vorschlag'. */
+    index('mememory_motiv_status_idx').on(t.status),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Abgeleitete Typen
 // ---------------------------------------------------------------------------
