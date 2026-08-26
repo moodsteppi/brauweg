@@ -92,8 +92,10 @@ export const mememory: GameModule<
     const regeln = config as MememoryRegeln;
     // Der Katalog ist die harte Grenze: Ein Brett, fuer das es nicht genug
     // Motive gibt, liesse sich nur mit doppelten Paaren fuellen — und dann
-    // gaebe es vier gleiche Karten statt zwei.
-    if ((regeln.spalten * regeln.zeilen) / 2 > MOTIVE.length) {
+    // gaebe es vier gleiche Karten statt zwei. Zusatzmotive des Tisches
+    // zaehlen mit; auf ihre Form hat pruefeRegeln schon gesehen.
+    const topfGroesse = new Set([...MOTIVE, ...(regeln.zusatz ?? [])]).size;
+    if ((regeln.spalten * regeln.zeilen) / 2 > topfGroesse) {
       probleme.push({
         path: 'spalten',
         messageKey: 'ruleset.zuWenigMotive',

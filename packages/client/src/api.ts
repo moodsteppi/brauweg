@@ -736,6 +736,53 @@ export const api = {
   deleteClubMessage: (clubId: string, messageId: string) =>
     request<{ ok: true }>(`/clubs/${clubId}/messages/${messageId}`, { method: 'DELETE' }),
 
+  // --- Mememory: Vorschlagskasten -------------------------------------------
+
+  /**
+   * Die freigegebenen hochgeladenen Motive.
+   *
+   * NUR die hochgeladenen — die 88 Grundmotive kennt der Client nicht als
+   * Liste, sondern nur als Dateien unter public/. Deshalb wandert diese
+   * Liste als `zusatz` in die Tisch-config, und das Spielmodul legt sie zu
+   * seinem eigenen Katalog.
+   */
+  mememoryMotive: () => request<{ hochgeladen: string[] }>('/mememory/motive'),
+
+  /**
+   * Ein Bild einreichen. `direkt` wirkt nur bei der Aufsicht (der Server
+   * prueft das nach) und stellt es sofort ins Spiel.
+   */
+  mememoryEinreichen: (bild: string, titel: string | null, direkt = false) =>
+    post<{ kennung: string; status: 'vorschlag' | 'frei' }>('/mememory/vorschlaege', {
+      bild,
+      titel,
+      direkt,
+    }),
+
+  /** Was im Kasten liegt, plus der freigegebene Bestand. Nur Aufsicht. */
+  mememoryVorschlaege: () =>
+    request<{
+      vorschlaege: {
+        kennung: string;
+        titel: string | null;
+        pack: string | null;
+        bild: string;
+        einreicher: string | null;
+        eingereichtAm: string;
+      }[];
+      freigegeben: { kennung: string; titel: string | null; pack: string | null }[];
+    }>('/mememory/vorschlaege'),
+
+  /** Nur die Zahl fuer den Punkt am Briefkasten. Nur Aufsicht. */
+  mememoryOffen: () => request<{ offen: number }>('/mememory/vorschlaege/anzahl'),
+
+  mememoryFreigeben: (kennung: string) =>
+    post<{ ok: true }>(`/mememory/vorschlaege/${kennung}/freigeben`),
+
+  /** Ablehnen und Herausnehmen sind derselbe Handgriff: die Zeile geht weg. */
+  mememoryLoeschen: (kennung: string) =>
+    request<{ ok: true }>(`/mememory/motive/${kennung}`, { method: 'DELETE' }),
+
   /** Clankrieg: Stand, Gegnersuche, Herausforderung. */
   clubWar: (clubId: string) => request<WarState>(`/clubs/${clubId}/war`),
   searchWar: (clubId: string) =>

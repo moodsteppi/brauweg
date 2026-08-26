@@ -169,14 +169,18 @@ export function erstellePartie(
 ): MememoryPartie {
   const plaetze = regeln.spalten * regeln.zeilen;
   const paare = plaetze / 2;
-  if (paare > MOTIVE.length) {
-    throw new Error(`Brett braucht ${paare} Motive, der Katalog hat ${MOTIVE.length}`);
+  // Fester Katalog plus die Zusatzmotive des Tisches. Doppelte Kennungen
+  // fliegen raus — zweimal dasselbe Motiv waeren zwei Paare, die sich nicht
+  // unterscheiden lassen, und das Brett liesse sich nicht raeumen.
+  const topf = [...new Set([...MOTIVE, ...(regeln.zusatz ?? [])])];
+  if (paare > topf.length) {
+    throw new Error(`Brett braucht ${paare} Motive, der Katalog hat ${topf.length}`);
   }
 
   const zufall = baueZufall(saat);
   // Erst ziehen, dann sortieren: Die Sicht schickt die Liste an beide Geraete,
   // und die Reihenfolge darf nichts ueber die Lage auf dem Brett verraten.
-  const gezogen = mische([...MOTIVE], zufall).slice(0, paare).sort();
+  const gezogen = mische(topf, zufall).slice(0, paare).sort();
 
   const paarliste: number[] = [];
   for (let i = 0; i < paare; i++) paarliste.push(i, i);
