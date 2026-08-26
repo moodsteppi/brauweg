@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 26. August 2026, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 39 Mememory-Tests, 54 Easy-Poker-Tests, **306 Servertests**
-— zusammen 818, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 39 Mememory-Tests, 54 Easy-Poker-Tests, **317 Servertests**
+— zusammen 829, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
@@ -127,6 +127,24 @@ Minuten live.
 > beiden laufen im Compositor; alles andere ruckelt auf dem Telefon, gerade
 > während gleichzeitig Karten drehen. Die Kurve steht gemessen in
 > `docs/MEMEMORY-VORSCHLAGSKASTEN.md`.
+>
+> **Sammlung und Emote-Gurt (27. August 2026).** Wer ein Motiv in einer
+> Partie aufdeckt, hat es gesammelt; im Menü wählt man aus der Sammlung bis
+> zu **drei** aus, und die ersetzen am Tisch den Emoji-Knopf. Zwei Dinge
+> daran sind für die Plattform interessant: **Der Reaktionskanal trägt jetzt
+> auch eine Zeichenkette** (`motiv`) statt nur einer Zahl — der Grundsatz
+> „aus einer Zahl lässt sich niemand beleidigen" hält trotzdem, weil nur die
+> FORM durchkommt und das Bild dahinter ohnehin nur ausgeliefert wird, wenn
+> es freigegeben ist. Und **Modulversion 3**: Ein Client der Version 2 kennt
+> die Nachricht, nicht aber das Feld, und zeigte sonst das Emoji Nummer 0 —
+> der Gateway lässt Motive deshalb erst ab 3 durch. Dazu Migration
+> `0020_mememory_sammlung` (Sammlung je Konto, Teilindex für die drei
+> Gurtplätze).
+>
+> **Gemeldet wird vom Client**, weil nur er weiß, was aufgedeckt wurde; der
+> Server müsste dafür in den Spielzustand sehen. Die Sammlung ist deshalb
+> bewusst Schmuck ohne Preis oder Vorteil — wer sich Bilder in eine Liste
+> lügt, betrügt niemanden außer sich.
 
 > **Easy Poker ist neu auf `staging` (25. August 2026), noch nicht in der
 > Produktion.** Texas Hold'em Kopf an Kopf, für ein Hochkant-Handy entworfen:

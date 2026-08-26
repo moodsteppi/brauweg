@@ -49,6 +49,16 @@ import { EMOTE_PAUSE_MS, besitztEmote, istEmote } from '../emotes.js';
  */
 const REAKTION_AB_MODULVERSION = 2;
 
+/**
+ * Ab welcher Version ein Client ein MOTIV als Reaktion versteht.
+ *
+ * Seit dem 26. August kann statt eines Emojis ein gesammeltes Meme fliegen.
+ * Ein Client der Version 2 kennt die Nachricht, nicht aber das Feld `motiv`
+ * — er zeigte das Emoji Nummer 0 und damit etwas anderes, als der Absender
+ * geschickt hat. Lieber nichts als das Falsche.
+ */
+const MOTIV_AB_MODULVERSION = 3;
+
 interface Connection {
   readonly socket: WebSocket;
   readonly accountId: string;
@@ -164,6 +174,16 @@ const clientMessageSchema = z.discriminatedUnion('type', [
      * ein spaeterer, groesserer Vorrat keine Serveraenderung braucht.
      */
     zeichen: z.number().int().min(0).max(63),
+    /*
+     * Statt eines Emojis kann ein gesammeltes Motiv fliegen. Das ist die
+     * einzige Stelle, an der bei einer Reaktion eine Zeichenkette ueber die
+     * Leitung geht — und sie ist trotzdem kein Freitext: Geprueft wird die
+     * Form, und das Bild dahinter liefert der Server nur aus, wenn es
+     * freigegeben ist (siehe memes.ts, `bildVon` filtert auf 'frei'). Ein
+     * wartender oder erfundener Vorschlag erreicht die Gegenseite also nicht
+     * als Bild, sondern gar nicht.
+     */
+    motiv: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/).optional(),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -751,6 +771,7 @@ export class Gateway {
       tableId: message.tableId,
       seat,
       zeichen: message.zeichen,
+      ...(message.motiv ? { motiv: message.motiv } : {}),
     };
     for (const ziel of this.byTable.get(message.tableId) ?? []) {
       /*
@@ -768,6 +789,9 @@ export class Gateway {
        */
       if (ziel === connection) continue;
       if (ziel.moduleVersion < REAKTION_AB_MODULVERSION) continue;
+      // Ein Motiv braucht einen Client, der das Feld kennt. Sonst zeigte er
+      // das Emoji Nummer 0 — etwas anderes, als geschickt wurde.
+      if (message.motiv && ziel.moduleVersion < MOTIV_AB_MODULVERSION) continue;
       send(ziel.socket, nachricht);
     }
   }

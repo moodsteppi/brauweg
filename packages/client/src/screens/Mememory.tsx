@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type TableRow } from '../api';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
 import { spieleKlang, setzeTon, tonAn } from '../minispiele/mememory/klaenge';
+import { Sammlung } from '../minispiele/mememory/Sammlung';
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
 import { useTable } from '../useTable';
@@ -87,6 +88,8 @@ function farbeVon(sitz: number): 'blau' | 'rot' {
 interface Flieger {
   readonly id: number;
   readonly zeichen: number;
+  /** Gesammeltes Motiv statt des Emojis. Siehe den Gurt weiter unten. */
+  readonly motiv?: string;
   readonly richtung: 'hoch' | 'runter';
   /** Seitlicher Versatz, damit zwei schnelle Reaktionen nicht uebereinander liegen. */
   readonly ab: number;
@@ -136,6 +139,24 @@ export function Mememory({
   const [namensblitz, setNamensblitz] = useState<{ nr: number; name: string } | null>(null);
   const blitzNr = useRef(0);
   /**
+   * Die bis zu drei gewaehlten Motive. Sind welche da, ersetzen sie den
+   * Emoji-Knopf am Tisch — so hat der Nutzer es sich gewuenscht. Ist der Gurt
+   * leer (frisches Konto, nichts gewaehlt), bleibt es beim Emoji: lieber der
+   * alte Knopf als gar keine Reaktion.
+   */
+  const [gurt, setGurt] = useState<string[]>([]);
+  /** Der Sammlungs-Kasten liegt ueber dem Menue, sobald er offen ist. */
+  const [sammlungOffen, setSammlungOffen] = useState(false);
+  /**
+   * Was diese Partie schon gemeldet hat.
+   *
+   * Aufgedeckte Motive gehen gebuendelt an den Server, nicht Karte fuer
+   * Karte: Auf einem Brett faellt sonst bei jedem Tipp eine Anfrage an, und
+   * gemeldet werden muss ohnehin nur, was noch nie gemeldet wurde.
+   */
+  const gemeldet = useRef(new Set<string>());
+  const meldeUhr = useRef<number | null>(null);
+  /**
    * Platz, den ich gerade angetippt habe — dreht sofort, ohne auf den Server
    * zu warten.
    *
@@ -174,21 +195,25 @@ export function Mememory({
   const [angeboten, setAngeboten] = useState(0);
   const knopfRef = useRef<HTMLButtonElement | null>(null);
 
-  const zeigeFlieger = useCallback((zeichen: number, richtung: 'hoch' | 'runter'): void => {
-    const id = (fliegerNr.current += 1);
-    const ab = Math.round((Math.random() - 0.5) * 90);
-    // Der Deckel ist kein Schoenheitsfehler: Ohne ihn haelt ein Dauerklicker
-    // beliebig viele Knoten am Leben, und der Bildschirm ruckelt.
-    setFlieger((alt) => [...alt, { id, zeichen, richtung, ab }].slice(-FLIEGER_MAX));
-    window.setTimeout(() => setFlieger((alt) => alt.filter((f) => f.id !== id)), 1400);
-  }, []);
+  const zeigeFlieger = useCallback(
+    (zeichen: number, richtung: 'hoch' | 'runter', motiv?: string): void => {
+      const id = (fliegerNr.current += 1);
+      const ab = Math.round((Math.random() - 0.5) * 90);
+      // Der Deckel ist kein Schoenheitsfehler: Ohne ihn haelt ein Dauerklicker
+      // beliebig viele Knoten am Leben, und der Bildschirm ruckelt.
+      setFlieger((alt) => [...alt, { id, zeichen, motiv, richtung, ab }].slice(-FLIEGER_MAX));
+      window.setTimeout(() => setFlieger((alt) => alt.filter((f) => f.id !== id)), 1400);
+    },
+    [],
+  );
 
   /**
    * Eine Reaktion der Gegenseite. Der Server spiegelt dem Absender nichts
    * zurueck — was hier ankommt, ist immer fremd und faellt deshalb von oben.
    */
   const beiReaktion = useCallback(
-    (nachricht: ReaktionMessage): void => zeigeFlieger(nachricht.zeichen, 'runter'),
+    (nachricht: ReaktionMessage): void =>
+      zeigeFlieger(nachricht.zeichen, 'runter', nachricht.motiv),
     [zeigeFlieger],
   );
 
@@ -253,6 +278,25 @@ export function Mememory({
       lebt = false;
     };
   }, []);
+
+  /**
+   * Der eigene Gurt. Beim Aufschlagen und nach jedem Schliessen der Sammlung.
+   */
+  useEffect(() => {
+    if (sammlungOffen) return;
+    let lebt = true;
+    void api
+      .mememorySammlung()
+      .then((antwort) => {
+        if (lebt) setGurt(antwort.gurt);
+      })
+      .catch(() => {
+        /* Ohne Gurt bleibt der Emoji-Knopf. */
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [sammlungOffen]);
 
   /**
    * Die Zahl am Briefkasten: wie viele Vorschlaege warten.
@@ -463,6 +507,43 @@ export function Mememory({
   }, [sicht, eigenerSitz, motivNamen]);
 
   /**
+   * Aufgedeckte Motive in die Sammlung melden.
+   *
+   * Der Client meldet, weil nur er weiss, was aufgedeckt wurde — der Server
+   * muesste dafuer in den Spielzustand sehen, und das ist die Grenze, die
+   * diese Plattform nicht ueberschreitet. Gebuendelt und mit kurzer
+   * Verzoegerung: Auf einem Brett faellt sonst bei jedem Tipp eine Anfrage
+   * an. Was einmal gemeldet ist, wird in dieser Sitzung nicht noch einmal
+   * geschickt.
+   */
+  useEffect(() => {
+    if (!sicht) return;
+    const neue = sicht.feld.filter(
+      (kennung): kennung is string => !!kennung && !gemeldet.current.has(kennung),
+    );
+    if (neue.length === 0) return;
+    for (const kennung of neue) gemeldet.current.add(kennung);
+
+    if (meldeUhr.current !== null) window.clearTimeout(meldeUhr.current);
+    const stapel = [...gemeldet.current];
+    meldeUhr.current = window.setTimeout(() => {
+      meldeUhr.current = null;
+      void api.mememoryGesehen(stapel).catch(() => {
+        // Eine verlorene Meldung kostet ein Bild in der Sammlung, nicht die
+        // Partie. Der naechste Treffer meldet ohnehin wieder alles mit.
+      });
+    }, 1200);
+  }, [sicht]);
+
+  /** Beim Verlassen: eine angefangene Meldung nicht verschlucken. */
+  useEffect(
+    () => () => {
+      if (meldeUhr.current !== null) window.clearTimeout(meldeUhr.current);
+    },
+    [],
+  );
+
+  /**
    * Der Namensblitz raeumt sich selbst weg.
    *
    * Etwas laenger als die Animation (1500 ms), damit sie sicher zu Ende
@@ -582,6 +663,28 @@ export function Mememory({
     </button>
   );
 
+  /**
+   * Die Sammlung. Sie sitzt neben dem Briefkasten unten links — beides sind
+   * Nebensachen des Menues, und die Mitte gehoert der Match-Suche.
+   */
+  const sammlungsKnopf = (
+    <button
+      className="mm-sammlung-knopf"
+      type="button"
+      onClick={() => setSammlungOffen(true)}
+      aria-label="Sammlung öffnen"
+      title="Gesammelte Memes"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {/* Drei gestapelte Karten — dasselbe Bild wie im Kopf: eine Sammlung. */}
+        <rect x="3" y="7" width="11" height="14" rx="2" fill="currentColor" opacity="0.45" />
+        <rect x="6.5" y="5" width="11" height="14" rx="2" fill="currentColor" opacity="0.7" />
+        <rect x="10" y="3" width="11" height="14" rx="2" fill="currentColor" />
+      </svg>
+      {gurt.length > 0 && <em>{gurt.length}</em>}
+    </button>
+  );
+
   if (!tischId) {
     return (
       <main className="mm-menue">
@@ -608,8 +711,12 @@ export function Mememory({
 
         {tonKnopf}
         {kastenKnopf}
+        {sammlungsKnopf}
         {kastenOffen && (
           <Vorschlagskasten istAufsicht={istAufsicht} onFertig={() => setKastenOffen(false)} />
+        )}
+        {sammlungOffen && (
+          <Sammlung namen={motivNamen} onFertig={() => setSammlungOffen(false)} />
         )}
       </main>
     );
@@ -673,6 +780,15 @@ export function Mememory({
     setGetippt({ platz, revision });
     spieleKlang('dreh');
     tisch.send({ typ: 'aufdecken', platz });
+  };
+
+  /** Ein gewaehltes Motiv ueber den Tisch schicken. */
+  const wirfMotiv = (kennung: string): void => {
+    const jetzt = Date.now();
+    if (jetzt - letzteReaktion.current < REAKTION_PAUSE_MS) return;
+    letzteReaktion.current = jetzt;
+    zeigeFlieger(0, 'hoch', kennung);
+    tisch.sendeReaktion(0, kennung);
   };
 
   const reagiere = (): void => {
@@ -808,6 +924,27 @@ export function Mememory({
           zwei Sekunden ein anderes Zeichen an — wer ein bestimmtes schicken
           will, passt den Moment ab. Eine Auswahlliste waere mitten in der
           Partie zu lange Beschaeftigung, ein fester Zufall waere Willkuer. */}
+      {/*
+        * Die Leiste zeigt den GURT, wenn einer belegt ist — bis zu drei
+        * gesammelte Memes, jedes ein eigener Knopf. Ist er leer (frisches
+        * Konto, noch nichts gewaehlt), bleibt es beim wandernden Emoji:
+        * lieber der alte Knopf als gar keine Reaktion.
+        */}
+      {gurt.length > 0 ? (
+        <div className="mm-reaktionsleiste" data-gurt="">
+          {gurt.map((kennung) => (
+            <button
+              key={kennung}
+              className="mm-reaktion mm-reaktion-motiv"
+              type="button"
+              onClick={() => wirfMotiv(kennung)}
+              aria-label={`${motivNamen[kennung] ?? 'Meme'} werfen`}
+            >
+              <img src={motivBildPfad(kennung)} alt="" draggable={false} />
+            </button>
+          ))}
+        </div>
+      ) : (
       <div className="mm-reaktionsleiste">
         <button
           ref={knopfRef}
@@ -828,6 +965,7 @@ export function Mememory({
           </span>
         </button>
       </div>
+      )}
 
       <footer className="mm-leiste unten" data-farbe={farbeVon(eigenerSitz)}>
         <span className="mm-name">{namenVon(eigenerSitz)}</span>
@@ -841,9 +979,14 @@ export function Mememory({
             key={f.id}
             className="mm-flieger"
             data-richtung={f.richtung}
+            data-motiv={f.motiv ? '' : undefined}
             style={{ '--mm-ab': `${f.ab}px` } as React.CSSProperties}
           >
-            {REAKTIONEN[f.zeichen] ?? REAKTIONEN[0]}
+            {f.motiv ? (
+              <img src={motivBildPfad(f.motiv)} alt="" draggable={false} />
+            ) : (
+              (REAKTIONEN[f.zeichen] ?? REAKTIONEN[0])
+            )}
           </span>
         ))}
       </div>

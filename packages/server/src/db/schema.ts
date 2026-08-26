@@ -31,6 +31,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -1078,6 +1079,39 @@ export const mememoryMotiv = pgTable(
     /** Beide Listen fragen nach dem Zustand: der Katalog nach 'frei', der
         Vorschlagskasten nach 'vorschlag'. */
     index('mememory_motiv_status_idx').on(t.status),
+  ],
+);
+
+/**
+ * Mememory: die Sammlung eines Kontos und sein Emote-Gurt.
+ *
+ * Wer ein Motiv im Spiel einmal aufgedeckt hat, hat es gesammelt. Aus der
+ * Sammlung waehlt man bis zu drei, die im Spiel als Reaktion fliegen.
+ *
+ * KEIN Fremdschluessel auf `mememory_motiv`: Die 88 Grundmotive stehen dort
+ * nicht, sie liegen als Dateien im Client. Ein Fremdschluessel schloesse
+ * also die Haelfte der sammelbaren Bilder aus. Geprueft wird die FORM der
+ * Kennung — ein erfundener Eintrag kostet den, der ihn schickt, ein leeres
+ * Feld in der eigenen Sammlung und sonst nichts.
+ */
+export const mememorySammlung = pgTable(
+  'mememory_sammlung',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    kennung: text().notNull(),
+    /** 1, 2 oder 3 — der Gurt. NULL heisst: gesammelt, aber nicht dabei. */
+    platz: smallint(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.kennung] }),
+    /** Ein Konto vergibt denselben Platz nicht zweimal. Teilindex, damit die
+        vielen NULL-Zeilen (nicht im Gurt) sich nicht gegenseitig sperren. */
+    uniqueIndex('mememory_sammlung_platz_key')
+      .on(t.accountId, t.platz)
+      .where(sql`${t.platz} is not null`),
   ],
 );
 
