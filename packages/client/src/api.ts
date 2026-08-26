@@ -746,7 +746,8 @@ export const api = {
    * Liste als `zusatz` in die Tisch-config, und das Spielmodul legt sie zu
    * seinem eigenen Katalog.
    */
-  mememoryMotive: () => request<{ hochgeladen: string[] }>('/mememory/motive'),
+  mememoryMotive: () =>
+    request<{ hochgeladen: string[]; namen: Record<string, string> }>('/mememory/motive'),
 
   /**
    * Was das eigene Konto noch einreichen darf. `frei: null` heisst
@@ -786,6 +787,14 @@ export const api = {
 
   mememoryFreigeben: (kennung: string) =>
     post<{ ok: true }>(`/mememory/vorschlaege/${kennung}/freigeben`),
+
+  /**
+   * Ein freigegebenes Motiv nachtraeglich aendern — Name, Zuschnitt oder
+   * beides. Die Kennung bleibt, damit laufende Tische keine leere Karte
+   * bekommen. Nur Aufsicht.
+   */
+  mememoryAendern: (kennung: string, aenderung: { titel?: string | null; bild?: string }) =>
+    patch<{ ok: true }>(`/mememory/motive/${kennung}`, aenderung),
 
   /** Ablehnen und Herausnehmen sind derselbe Handgriff: die Zeile geht weg. */
   mememoryLoeschen: (kennung: string) =>

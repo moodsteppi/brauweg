@@ -11074,7 +11074,7 @@ main.auth > .muted {
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 8px;
 }
-.mm-kasten-kachel { position: relative; }
+.mm-kasten-kachel { position: relative; padding-top: 5px; }
 .mm-kasten-kachel img {
   width: 100%;
   aspect-ratio: 1;
@@ -11082,18 +11082,39 @@ main.auth > .muted {
   object-fit: cover;
   background: #0b0716;
 }
+/* Der Name unter der Kachel. Einzeilig abgeschnitten statt umgebrochen:
+   Sonst sind in einem Raster aus zwölf Kacheln alle unterschiedlich hoch. */
+.mm-kasten-kachel-name {
+  display: block;
+  margin-top: 3px;
+  color: #a595c4;
+  font: 600 10px/1.3 system-ui;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .mm-kasten-kachel button {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: 0;
   width: 22px;
   height: 22px;
   border: 0;
   border-radius: 50%;
-  color: #2b0d0d;
-  background: #ff9b90;
   font: 800 11px/1 system-ui;
   cursor: pointer;
+}
+/* Bearbeiten links, Herausnehmen rechts — die zerstörerische Taste sitzt
+   nicht dort, wo der Daumen beim Blättern ohnehin liegt. */
+.mm-kasten-stift {
+  left: -5px;
+  color: #1a0e05;
+  background: #ffd873;
+}
+.mm-kasten-raus {
+  right: -5px;
+  color: #2b0d0d;
+  background: #ff9b90;
 }
 
 .mm-kasten-gut {
@@ -11106,6 +11127,90 @@ main.auth > .muted {
   padding: 0 14px 14px;
   font: 600 12px/1.5 system-ui;
   color: #ff9b90;
+}
+
+/* --- Der Name des gefundenen Paares -------------------------------------
+   Wer ein Paar findet, sieht kurz groß, wie das Motiv heißt. Nur
+   hochgeladene Memes haben einen Namen; bei den 88 Grundmotiven bleibt es
+   still (siehe motivNamen in Mememory.tsx).
+
+   Animiert wird ausschließlich mit `transform` und `opacity`. Das ist keine
+   Stilfrage: Nur diese beiden Eigenschaften laufen im Compositor, also ohne
+   Neuberechnung des Layouts — alles andere (font-size, top, width) ruckelt
+   auf einem Telefon sichtbar, gerade während das Brett gleichzeitig Karten
+   dreht. */
+
+.mm-namensblitz {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  /* Die Schaupause dauert nur 650 ms — in der Zeit darf man weiter auf
+     Karten zielen. Die Schicht nimmt deshalb keine Tipper an. */
+  pointer-events: none;
+}
+
+.mm-namensblitz span {
+  max-width: 86vw;
+  padding: 0 12px;
+  color: #fff;
+  font: 900 clamp(28px, 9vw, 58px)/1.05 system-ui;
+  letter-spacing: -0.03em;
+  text-align: center;
+  overflow-wrap: anywhere;
+  /* Drei Lagen: harter Rand gegen jedes Motiv darunter, weicher Schlagschatten
+     für Tiefe, goldener Hauch für die Zugehörigkeit zum Spiel. */
+  text-shadow:
+    0 2px 0 rgba(10, 6, 20, 0.9),
+    0 8px 24px rgba(0, 0, 0, 0.75),
+    0 0 34px rgba(255, 216, 115, 0.45);
+  will-change: transform, opacity;
+  animation: mm-name-auf 1500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/*
+ * Klein → groß mit einem kurzen Überschwingen, kurz stehen, dann größer
+ * werdend verblassen. Das Überschwingen (1.14 → 0.98 → 1) ist der ganze
+ * Unterschied zwischen „eingeblendet" und „gelandet".
+ */
+@keyframes mm-name-auf {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(10px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.14) translateY(0);
+  }
+  28% {
+    transform: scale(0.98);
+  }
+  38% {
+    transform: scale(1.03);
+  }
+  48% {
+    transform: scale(1);
+  }
+  76% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+/* Wer Bewegung abbestellt hat, bekommt denselben Inhalt ohne Sprung. */
+@media (prefers-reduced-motion: reduce) {
+  .mm-namensblitz span {
+    animation: mm-name-ruhig 1500ms ease both;
+  }
+  @keyframes mm-name-ruhig {
+    0%, 100% { opacity: 0; }
+    12%, 76% { opacity: 1; }
+  }
 }
 
 /* Drei Punkte, die der Reihe nach aufleuchten — ein Wartezeichen ohne Bild. */

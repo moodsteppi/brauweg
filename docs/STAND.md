@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 26. August 2026, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 39 Mememory-Tests, 54 Easy-Poker-Tests, **303 Servertests**
-— zusammen 815, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 39 Mememory-Tests, 54 Easy-Poker-Tests, **306 Servertests**
+— zusammen 818, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
@@ -116,6 +116,17 @@ Minuten live.
 > Mengengrenze vor der Arbeit prüfen, nicht danach** — dafür gibt es
 > `GET /api/mememory/eigene`, und jede Einreichung führt den Rest (`frei`)
 > gleich mit zurück.
+>
+> **Und am selben Tag noch: Bearbeiten und der Namensblitz.** Im Bestand
+> ändert ✎ Name und Zuschnitt eines schon freigegebenen Motivs — **unter
+> derselben Kennung**, damit ein Tisch, der es in seiner `config` stehen hat,
+> keine leere Karte bekommt. Der Preis dafür ist der Zwischenspeicher der
+> Browser, und den löst die Auslieferung mit **ETag** statt fünf Minuten
+> Frist. Wird ein Paar gefunden, blitzt sein Name groß über dem Brett auf.
+> **Animiert wird ausschließlich mit `transform` und `opacity`** — nur diese
+> beiden laufen im Compositor; alles andere ruckelt auf dem Telefon, gerade
+> während gleichzeitig Karten drehen. Die Kurve steht gemessen in
+> `docs/MEMEMORY-VORSCHLAGSKASTEN.md`.
 
 > **Easy Poker ist neu auf `staging` (25. August 2026), noch nicht in der
 > Produktion.** Texas Hold'em Kopf an Kopf, für ein Hochkant-Handy entworfen:
