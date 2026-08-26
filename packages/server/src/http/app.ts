@@ -100,6 +100,7 @@ import { lies, nimmAuf, uebersicht } from '../diagnose.js';
 import { istEchtesBild } from '../bilder.js';
 import {
   BILD_MAX_ZEICHEN,
+  OFFEN_MAX,
   TITEL_MAX,
   anzahlOffen,
   bildVon,
@@ -108,6 +109,7 @@ import {
   freieMotive,
   freigeben,
   loeschen,
+  offeneVon,
   offeneVorschlaege,
 } from '../memes.js';
 import {
@@ -1799,6 +1801,29 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   /**
+   * Was das eigene Konto noch darf.
+   *
+   * Gebraucht wird das fuer den Stapel: Wer acht Bilder aus der Galerie
+   * waehlt, aber nur noch drei einreichen darf, soll das VOR dem
+   * Zuschneiden erfahren. Ohne diese Auskunft merkt er es am vierten Bild —
+   * nachdem er es zurechtgerueckt hat.
+   *
+   * `frei: null` heisst unbegrenzt und gilt fuer die Aufsicht: Was sie
+   * hochlaedt, ist sofort im Spiel und wartet nirgends.
+   */
+  app.get('/api/mememory/eigene', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const [konto] = await deps.db
+      .select({ isStaff: s.account.isStaff })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (konto?.isStaff) return reply.send({ offen: 0, frei: null, hoechstens: OFFEN_MAX });
+
+    const offen = await offeneVon(deps.db, accountId);
+    return reply.send({ offen, frei: Math.max(0, OFFEN_MAX - offen), hoechstens: OFFEN_MAX });
+  });
+
+  /**
    * Ein Bild einreichen.
    *
    * Jeder Angemeldete darf das — der Vorschlagskasten ist ausdruecklich
@@ -1827,6 +1852,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       bild: body.bild,
       titel: body.titel ?? null,
       direkt: Boolean(body.direkt) && Boolean(konto?.isStaff),
+      // Die Grenze haengt am Konto, nicht am Knopf — sonst widerspraeche sie
+      // der Auskunft aus /api/mememory/eigene, die es schon immer so haelt.
+      istStaff: Boolean(konto?.isStaff),
     });
     return reply.send(ergebnis);
   });

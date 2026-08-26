@@ -23,6 +23,19 @@
  * 4-MB-Foto ueber die Leitung: Was den Server erreicht, ist ein Quadrat von
  * 320 px.
  *
+ * **Mehrere Bilder auf einmal, eines nach dem anderen zugeschnitten.** Wer
+ * in der Galerie steht, hat selten genau ein Meme dabei. Die Auswahl wird
+ * deshalb zur Warteschlange: zuschneiden, einreichen, das naechste kommt von
+ * selbst. Zwei Dinge sind daran wichtiger, als sie aussehen —
+ *
+ *   - **Nur das aktuelle Bild ist entpackt.** In der Schlange liegen
+ *     `File`-Verweise, kein Bildspeicher. Zehn Handyfotos gleichzeitig als
+ *     ImageBitmap waeren dreistellige Megabyte, und auf dem Telefon wirft
+ *     der Browser dafuer den Tab weg.
+ *   - **Ein unlesbares Bild haelt den Stapel nicht an.** Es wird gezaehlt und
+ *     uebersprungen. Sonst reisst eine einzige HEIC-Datei aus der Galerie
+ *     neun brauchbare Memes mit sich.
+ *
  * **Vorschau und Ergebnis sind dieselbe Funktion.** `malen()` zeichnet in die
  * Vorschau-Leinwand und in die Ausgabe-Leinwand; nur die Seitenlaenge ist
  * anders, alle Masse sind Bruchteile davon. Eine zweite Rechenstrecke fuer
@@ -47,6 +60,16 @@ const TITEL_MAX = 40;
 
 /** Wie weit sich hineinzoomen laesst. 1 heisst: das ganze Bild ist zu sehen. */
 const ZOOM_MAX = 4;
+
+/**
+ * Wie viele Bilder ein Stapel hoechstens fasst.
+ *
+ * Nicht gegen Missbrauch — dagegen steht der Riegel im Server —, sondern
+ * gegen das Versehen: In der iOS-Galerie ist "alle auswaehlen" ein Griff,
+ * und 400 Urlaubsfotos in einer Warteschlange sind keine Absicht, sondern
+ * ein Ausrutscher. Was darueber hinausgeht, wird abgeschnitten und gesagt.
+ */
+const STAPEL_MAX = 20;
 
 interface Versatz {
   readonly x: number;
@@ -206,6 +229,18 @@ export function Vorschlagskasten({
 }): React.JSX.Element {
   const [blatt, setBlatt] = useState<Blatt>('einreichen');
   const [bild, setBild] = useState<ImageBitmap | null>(null);
+  /**
+   * Die noch nicht bearbeiteten Bilder — als Dateien, nicht als Bildspeicher.
+   * Das aktuelle steckt NICHT mehr darin, sonst zaehlt es doppelt.
+   */
+  const [schlange, setSchlange] = useState<File[]>([]);
+  /** Wie viele Bilder dieser Durchgang hatte. 0 heisst: gerade keiner. */
+  const [gesamt, setGesamt] = useState(0);
+  /**
+   * Wie viele Vorschlaege das Konto noch offen haben darf. null = unbegrenzt
+   * (Aufsicht), undefined = noch nicht gefragt.
+   */
+  const [frei, setFrei] = useState<number | null | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const [versatz, setVersatz] = useState<Versatz>({ x: 0, y: 0 });
   const [grund, setGrund] = useState('#ffffff');
@@ -213,12 +248,85 @@ export function Vorschlagskasten({
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
+  /** Sachhinweis zum Stapel (abgeschnitten, gedeckelt) — kein Fehler. */
+  const [stapelhinweis, setStapelhinweis] = useState<string | null>(null);
+  /**
+   * Zwischen zwei Bildern wird entpackt, und das dauert auf einem Telefon bis
+   * zu anderthalb Sekunden. Solange steht hier true — und in dieser Zeit gibt
+   * es KEINEN Rahmen, sondern eine Wartefläche. Der Grund steht bei `weiter`.
+   */
+  const [laedtNaechstes, setLaedtNaechstes] = useState(false);
 
   const [vorschlaege, setVorschlaege] = useState<Vorschlag[]>([]);
   const [bestand, setBestand] = useState<Bestandsmotiv[]>([]);
   const [laedt, setLaedt] = useState(false);
 
-  const leinwand = useRef<HTMLCanvasElement | null>(null);
+  /**
+   * Die Bilanz des laufenden Durchgangs.
+   *
+   * In einem Ref und nicht im Zustand: Sie wird mitten in einer
+   * Ereigniskette hochgezaehlt (einreichen -> naechstes Bild laden), und ein
+   * Zustand waere dort noch der alte. Angezeigt wird sie erst am Ende, dann
+   * einmal als `meldung`.
+   */
+  const bilanz = useRef({ eingereicht: 0, uebersprungen: 0, unlesbar: 0 });
+
+  /**
+   * Kennung des laufenden Durchgangs.
+   *
+   * Zwischen "naechstes Bild holen" und "naechstes Bild da" liegt ein
+   * `await`. Wer in dieser Zeit abbricht, eine neue Auswahl trifft oder den
+   * Kasten schliesst, erhoeht die Zahl — und der alte Lauf legt sein
+   * Ergebnis danach nicht mehr ab, sondern gibt es frei. Ohne diese Kennung
+   * kam ein gerade verworfener Stapel eine Sekunde spaeter zurueck.
+   */
+  const laufNr = useRef(0);
+
+  /**
+   * Laeuft gerade eine Entpackung?
+   *
+   * Bewusst ein Ref und nicht `laedtNaechstes`: Zwei Tipper in DERSELBEN
+   * Ereignisrunde sehen beide noch den Zustand von vorher, und der zweite
+   * kaeme durch jede Wache, die auf gerendertem Zustand steht. Er
+   * uebersprang dann zwar kein zweites Bild (dafuer sorgt die Laufnummer),
+   * zaehlte aber eines mit — und am Ende stand in der Bilanz eine Zahl, die
+   * nicht stimmte.
+   */
+  const laeuft = useRef(false);
+
+  /**
+   * Das aktuelle Bild auch als Ref — nur fuer das Aufraeumen beim Schliessen.
+   * Ein Effekt mit `bild` in der Abhaengigkeitsliste wuerde bei JEDEM Wechsel
+   * aufraeumen und damit das gerade gezeigte Bild schliessen.
+   */
+  const bildRef = useRef<ImageBitmap | null>(null);
+  useEffect(() => {
+    bildRef.current = bild;
+  }, [bild]);
+
+  useEffect(
+    () => () => {
+      // Kasten zu: laufende Entpackung entwerten und den Bildspeicher
+      // freigeben, statt auf die Speicherbereinigung zu warten. Auf einem
+      // Telefon sind das schnell zweistellige Megabyte.
+      laufNr.current += 1;
+      laeuft.current = false;
+      bildRef.current?.close?.();
+    },
+    [],
+  );
+
+  /**
+   * Die Vorschau-Leinwand steht im ZUSTAND, nicht in einem Ref.
+   *
+   * Der Grund ist der Reiterwechsel: Geht die Aufsicht mitten im Stapel auf
+   * "Kasten" und zurueck auf "Hochladen", baut React die Leinwand neu. Ein
+   * Ref aendert dabei nichts, woran ein Effekt haengen koennte — der
+   * Zeichen-Effekt liefe also nicht, und der Rahmen bliebe leer, bis der
+   * Nutzer ihn anfasst und damit `versatz` aendert. Als Zustand ist das
+   * frische Element selbst die Abhaengigkeit.
+   */
+  const [leinwand, setLeinwand] = useState<HTMLCanvasElement | null>(null);
   /** Aktive Finger. Zwei davon heissen: zoomen statt schieben. */
   const zeiger = useRef(new Map<number, { x: number; y: number }>());
   const letzterAbstand = useRef<number | null>(null);
@@ -255,15 +363,14 @@ export function Vorschlagskasten({
   // --- Vorschau ------------------------------------------------------------
 
   useEffect(() => {
-    const flaeche = leinwand.current;
-    if (!flaeche || !bild) return;
-    const ctx = flaeche.getContext('2d');
+    if (!leinwand || !bild) return;
+    const ctx = leinwand.getContext('2d');
     if (!ctx) return;
     // Die Leinwand ist doppelt so gross wie ihre Anzeige. Auf einem
     // Telefonschirm ist eine 1:1-Leinwand sichtbar weich, und ein weiches
     // Vorschaubild laesst einen genauer zuschneiden, als noetig waere.
-    malen(ctx, flaeche.width, bild, zoom, versatz, grund);
-  }, [bild, zoom, versatz, grund]);
+    malen(ctx, leinwand.width, bild, zoom, versatz, grund);
+  }, [leinwand, bild, zoom, versatz, grund]);
 
   // --- Listen der Aufsicht -------------------------------------------------
 
@@ -285,27 +392,217 @@ export function Vorschlagskasten({
     if (blatt === 'kasten' || blatt === 'bestand') void listenHolen();
   }, [blatt, listenHolen]);
 
-  // --- Bild waehlen --------------------------------------------------------
+  // --- Wie viel das Konto noch darf ---------------------------------------
 
-  const waehlen = async (datei: File | undefined): Promise<void> => {
-    if (!datei) return;
+  /**
+   * Vor dem ersten Zuschneiden fragen, nicht danach.
+   *
+   * Die Grenze von fuenf offenen Vorschlaegen faellt erst beim Stapel
+   * wirklich auf: Wer acht Bilder waehlt und beim vierten ein Nein bekommt,
+   * hat drei davon umsonst zurechtgerueckt.
+   */
+  useEffect(() => {
+    if (blatt !== 'einreichen') return;
+    let lebt = true;
+    void api
+      .mememoryEigene()
+      .then((antwort) => {
+        if (lebt) setFrei(antwort.frei);
+      })
+      .catch(() => {
+        // Kein Netz, keine Auskunft: Dann laeuft der Stapel wie frueher in
+        // den Serverfehler. Das ist schlechter, aber nicht kaputt.
+        if (lebt) setFrei(null);
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [blatt]);
+
+  // --- Bilder waehlen und abarbeiten --------------------------------------
+
+  /** Ein entpacktes Bild in den Rahmen legen und die Ansicht zuruecksetzen. */
+  const zeige = useCallback((neu: ImageBitmap): void => {
+    zoomRef.current = 1;
+    versatzRef.current = { x: 0, y: 0 };
+    setBild(neu);
+    setGrund(randfarbe(neu));
+    setZoom(1);
+    setVersatz({ x: 0, y: 0 });
+    setTitel('');
+  }, []);
+
+  /** Was am Ende eines Durchgangs dasteht. null heisst: nichts zu melden. */
+  const schlussmeldung = useCallback((): string | null => {
+    const { eingereicht, uebersprungen, unlesbar } = bilanz.current;
+    if (eingereicht === 0 && unlesbar === 0) return null;
+    const teile: string[] = [];
+    if (eingereicht === 1) {
+      teile.push(
+        istAufsicht
+          ? 'Aufgenommen. Ab der nächsten Partie kann es auf dem Brett liegen.'
+          : 'Danke! Dein Meme liegt jetzt im Kasten und wartet auf Freigabe.',
+      );
+    } else if (eingereicht > 1) {
+      teile.push(
+        istAufsicht
+          ? `${eingereicht} Bilder aufgenommen. Ab der nächsten Partie können sie auf dem Brett liegen.`
+          : `Danke! ${eingereicht} Memes liegen jetzt im Kasten und warten auf Freigabe.`,
+      );
+    }
+    if (unlesbar > 0) {
+      teile.push(
+        unlesbar === 1
+          ? 'Eine Datei ließ sich nicht öffnen und wurde übergangen.'
+          : `${unlesbar} Dateien ließen sich nicht öffnen und wurden übergangen.`,
+      );
+    }
+    if (uebersprungen > 0) {
+      teile.push(uebersprungen === 1 ? 'Eines hast du übersprungen.' : `${uebersprungen} hast du übersprungen.`);
+    }
+    return teile.join(' ');
+  }, [istAufsicht]);
+
+  /**
+   * Das naechste lesbare Bild aus der Schlange holen.
+   *
+   * Der Rest wird ausdruecklich uebergeben und nicht aus dem Zustand gelesen:
+   * Diese Funktion laeuft direkt nach dem Einreichen, und dort steht im
+   * Zustand noch die Schlange von vorher.
+   *
+   * Unlesbares wird gezaehlt und ueberholt, statt den Stapel anzuhalten —
+   * eine einzelne Datei, die der Browser nicht entpacken kann (HEIC aus der
+   * iOS-Galerie ist der Regelfall), darf neun brauchbare nicht mitreissen.
+   */
+  const weiter = useCallback(
+    async (rest: readonly File[]): Promise<void> => {
+      const meins = (laufNr.current += 1);
+      laeuft.current = true;
+
+      /**
+       * ZUERST das alte Bild aus dem Zustand nehmen, dann entpacken.
+       *
+       * Der Aufrufer hat es bereits geschlossen, und ein geschlossenes
+       * ImageBitmap im Zustand ist eine Falle: Der Rahmen bliebe waehrend des
+       * Entpackens sichtbar UND bedienbar — auf einem Telefon bis zu
+       * anderthalb Sekunden bei einem 12-Megapixel-Foto. Der erste Wisch in
+       * dieser Zeit liefe in `malen()`, und `drawImage` auf ein
+       * geschlossenes Bitmap wirft. Aus einem Effekt heraus nimmt dieser Wurf
+       * den ganzen Bildschirm mit.
+       *
+       * Vor dem Stapel konnte das nicht passieren: Da standen `close()` und
+       * `setBild(null)` immer in derselben Runde, ohne `await` dazwischen.
+       */
+      setBild(null);
+      setLaedtNaechstes(true);
+
+      let uebrig = [...rest];
+      while (uebrig.length > 0) {
+        const naechste = uebrig[0]!;
+        uebrig = uebrig.slice(1);
+        try {
+          // `from-image` ist die Vorgabe der Norm, steht hier aber
+          // ausdruecklich: Ein Handyfoto traegt seine Drehung als
+          // EXIF-Merkmal, und ohne diese Auswertung liegt jedes Hochformat
+          // quer im Rahmen.
+          const neu = await createImageBitmap(naechste, { imageOrientation: 'from-image' });
+          if (laufNr.current !== meins) {
+            // Inzwischen abgebrochen. Das frisch Entpackte gleich wieder
+            // freigeben, statt den verworfenen Stapel zurueckzuholen.
+            neu.close?.();
+            return;
+          }
+          laeuft.current = false;
+          setSchlange(uebrig);
+          zeige(neu);
+          setLaedtNaechstes(false);
+          return;
+        } catch {
+          if (laufNr.current !== meins) return;
+          bilanz.current.unlesbar += 1;
+        }
+      }
+      if (laufNr.current !== meins) return;
+      // Nichts mehr da: Durchgang zu Ende.
+      laeuft.current = false;
+      setSchlange([]);
+      setGesamt(0);
+      setLaedtNaechstes(false);
+      setMeldung(schlussmeldung());
+    },
+    [schlussmeldung, zeige],
+  );
+
+  const waehlen = async (liste: FileList | null): Promise<void> => {
+    const gewaehlt = [...(liste ?? [])];
+    if (gewaehlt.length === 0) return;
     setFehler(null);
     setMeldung(null);
-    try {
-      // `from-image` ist die Vorgabe der Norm, steht hier aber ausdruecklich:
-      // Ein Handyfoto traegt seine Drehung als EXIF-Merkmal, und ohne diese
-      // Auswertung liegt jedes Hochformat quer im Rahmen.
-      const neu = await createImageBitmap(datei, { imageOrientation: 'from-image' });
-      bild?.close?.();
-      zoomRef.current = 1;
-      versatzRef.current = { x: 0, y: 0 };
-      setBild(neu);
-      setGrund(randfarbe(neu));
-      setZoom(1);
-      setVersatz({ x: 0, y: 0 });
-    } catch {
-      setFehler('Dieses Bild ließ sich nicht öffnen.');
+    setStapelhinweis(null);
+    bilanz.current = { eingereicht: 0, uebersprungen: 0, unlesbar: 0 };
+
+    // Zwei Deckel: STAPEL_MAX gegen das Versehen in der Galerie, `frei` gegen
+    // die Grenze im Server. Der kleinere gewinnt.
+    let platz = typeof frei === 'number' ? Math.min(STAPEL_MAX, frei) : STAPEL_MAX;
+    if (platz <= 0) {
+      // Die Zahl stammt vom Oeffnen des Kastens und kann alt sein —
+      // inzwischen kann die Aufsicht etwas freigegeben haben. Bevor der
+      // Client von sich aus ablehnt, fragt er nach. Ein Client, der aus
+      // eigener Rechnung ein Nein sagt, das der Server gar nicht mehr
+      // sagen wuerde, ist die aergerlichste Sorte Fehler.
+      const jetzt = await api.mememoryEigene().catch(() => null);
+      if (jetzt && (jetzt.frei === null || jetzt.frei > 0)) {
+        setFrei(jetzt.frei);
+        platz = jetzt.frei === null ? STAPEL_MAX : Math.min(STAPEL_MAX, jetzt.frei);
+      } else {
+        setFehler('Es warten schon fünf Bilder von dir. Warte, bis sie geprüft sind.');
+        return;
+      }
     }
+    const genommen = gewaehlt.slice(0, platz);
+    if (genommen.length < gewaehlt.length) {
+      setStapelhinweis(
+        typeof frei === 'number' && frei <= STAPEL_MAX
+          ? `Von ${gewaehlt.length} Bildern nimmst du ${genommen.length}: mehr Vorschläge darfst du gerade nicht offen haben.`
+          : `Von ${gewaehlt.length} Bildern nimmst du die ersten ${genommen.length}.`,
+      );
+    }
+
+    bild?.close?.();
+    setGesamt(genommen.length);
+    await weiter(genommen);
+  };
+
+  /**
+   * Das aktuelle Bild verwerfen und weitermachen.
+   *
+   * Der Riegel ist noetig, obwohl der Knopf waehrend des Entpackens gar nicht
+   * dasteht: Zwei schnelle Tipper koennen beide durch sein, bevor React neu
+   * gezeichnet hat — und dann zaehlte die Bilanz zwei, es wuerde aber nur
+   * eines uebersprungen.
+   */
+  const ueberspringen = (): void => {
+    if (!bild || laeuft.current) return;
+    bilanz.current.uebersprungen += 1;
+    bild.close?.();
+    void weiter(schlange);
+  };
+
+  /** Den ganzen Rest verwerfen. */
+  const stapelWeg = (): void => {
+    // Erhoeht die Laufnummer und entwertet damit eine gerade laufende
+    // Entpackung. Ohne das kam der verworfene Stapel zurueck, sobald das
+    // naechste Bild fertig war.
+    laufNr.current += 1;
+    laeuft.current = false;
+    bild?.close?.();
+    bilanz.current.uebersprungen += (bild ? 1 : 0) + schlange.length;
+    setSchlange([]);
+    setBild(null);
+    setGesamt(0);
+    setLaedtNaechstes(false);
+    setStapelhinweis(null);
+    setMeldung(schlussmeldung());
   };
 
   // --- Schieben und Zoomen -------------------------------------------------
@@ -366,7 +663,7 @@ export function Vorschlagskasten({
   // --- Einreichen ----------------------------------------------------------
 
   const einreichen = async (direkt: boolean): Promise<void> => {
-    if (!bild) return;
+    if (!bild || laeuft.current || busy) return;
     setBusy(true);
     setFehler(null);
     setMeldung(null);
@@ -377,23 +674,38 @@ export function Vorschlagskasten({
         return;
       }
       const antwort = await api.mememoryEinreichen(dataUrl, titel.trim() || null, direkt);
+      bilanz.current.eingereicht += 1;
+      setFrei(antwort.frei);
       bild.close?.();
-      setBild(null);
-      setTitel('');
-      setMeldung(
-        antwort.status === 'frei'
-          ? 'Aufgenommen. Ab der nächsten Partie kann es auf dem Brett liegen.'
-          : 'Danke! Dein Meme liegt jetzt im Kasten und wartet auf Freigabe.',
-      );
       if (istAufsicht) void listenHolen();
+      // Das naechste Bild kommt von selbst — das ist der ganze Sinn des
+      // Stapels. Die Meldung steht erst am Ende, sonst blitzt sie zwischen
+      // zwei Bildern kurz auf und liest sich niemand.
+      await weiter(schlange);
     } catch (e) {
       const code = (e as { code?: string }).code;
+      if (code === 'zuVieleVorschlaege') {
+        // Der Riegel des Servers hat zugeschlagen — dann hat auch der Rest
+        // des Stapels keine Aussicht mehr. Ihn stumm weiterlaufen zu lassen
+        // hiesse, denselben Fehler noch fuenfmal zu zeigen.
+        const uebrig = schlange.length + 1;
+        bild.close?.();
+        setSchlange([]);
+        setBild(null);
+        setGesamt(0);
+        setFrei(0);
+        setFehler(
+          uebrig > 1
+            ? `Es warten schon fünf Bilder von dir. Die restlichen ${uebrig} sind nicht eingereicht — warte, bis die anderen geprüft sind.`
+            : 'Es warten schon fünf Bilder von dir. Warte, bis sie geprüft sind.',
+        );
+        setMeldung(schlussmeldung());
+        return;
+      }
       setFehler(
-        code === 'zuVieleVorschlaege'
-          ? 'Es warten schon fünf Bilder von dir. Warte, bis sie geprüft sind.'
-          : code === 'bildUngueltig' || code === 'bildZuGross'
-            ? 'Dieses Bild hat der Server nicht angenommen.'
-            : 'Das Einreichen ist fehlgeschlagen.',
+        code === 'bildUngueltig' || code === 'bildZuGross'
+          ? 'Dieses Bild hat der Server nicht angenommen.'
+          : 'Das Einreichen ist fehlgeschlagen.',
       );
     } finally {
       setBusy(false);
@@ -453,31 +765,27 @@ export function Vorschlagskasten({
 
         {blatt === 'einreichen' && (
           <div className="mm-kasten-inhalt">
-            {!bild ? (
+            {bild ? (
               <>
-                <p className="mm-kasten-hinweis">
-                  {istAufsicht
-                    ? 'Bild aussuchen, Ausschnitt wählen, aufnehmen. Es ist sofort im Spiel.'
-                    : 'Such dir ein Meme aus deiner Galerie aus. Du schneidest es selbst zurecht — was auf dem Brett landet, entscheidet die Aufsicht.'}
-                </p>
-                <label className="mm-kasten-waehlen">
-                  <span>Bild auswählen</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => void waehlen(e.target.files?.[0])}
-                  />
-                </label>
-              </>
-            ) : (
-              <>
+                {gesamt > 1 && (
+                  <div className="mm-kasten-fortschritt" role="status">
+                    <strong>
+                      Bild {gesamt - schlange.length} von {gesamt}
+                    </strong>
+                    <span className="mm-kasten-perlen" aria-hidden="true">
+                      {Array.from({ length: gesamt }, (_, i) => (
+                        <i key={i} className={i < gesamt - schlange.length - 1 ? 'ist-durch' : i === gesamt - schlange.length - 1 ? 'ist-dran' : ''} />
+                      ))}
+                    </span>
+                  </div>
+                )}
                 <p className="mm-kasten-hinweis">
                   Schieben zum Verrücken, zwei Finger oder der Regler zum Zoomen. Was im Rahmen
                   steht, kommt auf die Karte.
                 </p>
+                {stapelhinweis && <p className="mm-kasten-hinweis">{stapelhinweis}</p>}
                 <canvas
-                  ref={leinwand}
+                  ref={setLeinwand}
                   className="mm-kasten-rahmen"
                   width={AUSGABE_PX * 2}
                   height={AUSGABE_PX * 2}
@@ -506,16 +814,17 @@ export function Vorschlagskasten({
                   onChange={(e) => setTitel(e.target.value)}
                 />
                 <div className="mm-kasten-knoepfe">
+                  {/* Derselbe Platz, zwei Bedeutungen: Steht noch etwas in der
+                      Schlange, geht es weiter; ist dies das letzte Bild,
+                      endet der Durchgang. Ein dritter Knopf daneben waere auf
+                      einem Telefon eine Reihe zu viel. */}
                   <button
                     type="button"
                     className="mm-kasten-weg"
-                    onClick={() => {
-                      bild.close?.();
-                      setBild(null);
-                    }}
+                    onClick={ueberspringen}
                     disabled={busy}
                   >
-                    Anderes Bild
+                    {schlange.length > 0 ? 'Überspringen' : 'Verwerfen'}
                   </button>
                   <button
                     type="button"
@@ -526,6 +835,52 @@ export function Vorschlagskasten({
                     {istAufsicht ? 'Aufnehmen' : 'Einreichen'}
                   </button>
                 </div>
+                {schlange.length > 0 && (
+                  <button
+                    type="button"
+                    className="mm-kasten-abbruch"
+                    onClick={stapelWeg}
+                    disabled={busy}
+                  >
+                    Dieses und die {schlange.length} übrigen verwerfen
+                  </button>
+                )}
+              </>
+            ) : laedtNaechstes ? (
+              /* Zwischen zwei Bildern. Die Flaeche behaelt die Groesse des
+                 Rahmens, damit der Kasten nicht bei jedem Bild springt. */
+              <div className="mm-kasten-warten" role="status">
+                Nächstes Bild wird geöffnet…
+              </div>
+            ) : (
+              <>
+                <p className="mm-kasten-hinweis">
+                  {istAufsicht
+                    ? 'Bilder aussuchen — auch mehrere auf einmal. Du schneidest sie nacheinander zu, jedes ist sofort im Spiel.'
+                    : 'Such dir Memes aus deiner Galerie aus, gern mehrere auf einmal. Du schneidest sie nacheinander selbst zurecht — was auf dem Brett landet, entscheidet die Aufsicht.'}
+                </p>
+                {typeof frei === 'number' && (
+                  <p className="mm-kasten-hinweis">
+                    {frei > 0
+                      ? `Du kannst gerade noch ${frei === 1 ? 'ein Bild' : `${frei} Bilder`} einreichen.`
+                      : 'Es warten schon fünf Bilder von dir. Sobald eines geprüft ist, geht wieder etwas.'}
+                  </p>
+                )}
+                <label className="mm-kasten-waehlen">
+                  <span>{istAufsicht ? 'Bilder auswählen' : 'Memes auswählen'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      void waehlen(e.target.files);
+                      // Zuruecksetzen, sonst loest dieselbe Auswahl beim
+                      // zweiten Mal kein `change` aus und der Knopf wirkt tot.
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
               </>
             )}
             {meldung && <p className="mm-kasten-gut">{meldung}</p>}

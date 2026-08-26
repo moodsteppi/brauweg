@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 26. August 2026 auf diesem Zweig, nicht aus der
 Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-44 Skat-Tests, 15 Feldherr-Tests, 39 Mememory-Tests, **299 Servertests**
-— zusammen 755, alle grün. `tsc --noEmit` sauber.
+44 Skat-Tests, 15 Feldherr-Tests, 39 Mememory-Tests, **303 Servertests**
+— zusammen 759, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
@@ -105,6 +105,17 @@ Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
 > **In der Produktion muss dafür die eigene Adresse in der Railway-Variablen
 > `STAFF_EMAILS` stehen** — sie wird beim Serverstart angewandt, und es gibt
 > bewusst keinen Endpunkt, über den man sich das Merkmal selbst gibt.
+>
+> **Nachgelegt am selben Tag: der Stapel.** Man wählt jetzt mehrere Bilder auf
+> einmal und schneidet sie nacheinander zu („Bild 2 von 5", Überspringen,
+> Bilanz am Ende). Drei Lehren daraus, die für jede weitere Massenauswahl
+> gelten: **nur das aktuelle Bild entpackt halten** (zehn Handyfotos als
+> `ImageBitmap` sind dreistellige Megabyte, und das Telefon wirft dafür den
+> Tab weg); **eine unlesbare Datei überholen statt anhalten** (eine HEIC aus
+> der iOS-Galerie darf neun brauchbare Memes nicht mitreißen); und **eine
+> Mengengrenze vor der Arbeit prüfen, nicht danach** — dafür gibt es
+> `GET /api/mememory/eigene`, und jede Einreichung führt den Rest (`frei`)
+> gleich mit zurück.
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder
