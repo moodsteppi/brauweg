@@ -361,6 +361,124 @@ test('Die Grenze meldet sich beim sechsten Bild, nicht spaeter', async (t) => {
 });
 
 /**
+ * Nachtraeglich aendern: Name und Zuschnitt.
+ *
+ * Der Knackpunkt ist die Kennung. Sie bleibt, damit ein Tisch, der das Motiv
+ * schon in seiner `config` stehen hat, keine leere Karte bekommt — und genau
+ * deshalb muss die Auslieferung dem Browser sagen, dass sich unter derselben
+ * Adresse etwas geaendert hat.
+ */
+test('Die Aufsicht aendert Name und Bild, die Kennung bleibt', async (t) => {
+  const { ctx, app, annaToken, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+
+  const kennung = (await einreichen(app, bertToken, { bild: PNG, titel: 'Alt', direkt: true }))
+    .json().kennung;
+
+  const vorher = await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}` });
+  assert.equal(vorher.statusCode, 200);
+  const markeVorher = vorher.headers.etag;
+  assert.ok(markeVorher, 'ohne ETag merkt kein Browser die Aenderung');
+
+  // Ein anderes echtes Bild: 1x1 JPEG statt PNG.
+  const JPEG =
+    'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsL' +
+    'DBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAAB' +
+    'AAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==';
+
+  const geaendert = await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { titel: 'Neu', bild: JPEG },
+  });
+  assert.equal(geaendert.statusCode, 200);
+
+  const nachher = await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}` });
+  assert.equal(nachher.statusCode, 200);
+  assert.equal(nachher.headers['content-type'], 'image/jpeg', 'das Bild wurde nicht ersetzt');
+  assert.notEqual(nachher.headers.etag, markeVorher, 'die Marke haette sich aendern muessen');
+
+  // Der Name steht jetzt oeffentlich im Katalog — das Brett blendet ihn ein.
+  const katalog = await app.inject({ method: 'GET', url: '/api/mememory/motive' });
+  assert.deepEqual(katalog.json().hochgeladen, [kennung]);
+  assert.equal(katalog.json().namen[kennung], 'Neu');
+
+  // Und unveraendert antwortet der Server mit 304 statt mit dem Bild.
+  const nochmal = await app.inject({
+    method: 'GET',
+    url: `/api/mememory/motive/${kennung}`,
+    headers: { 'if-none-match': String(nachher.headers.etag) },
+  });
+  assert.equal(nochmal.statusCode, 304);
+  assert.equal(nochmal.rawPayload.length, 0);
+
+  // Ein Spieler darf das nicht.
+  const verboten = await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: annaToken },
+    payload: { titel: 'Fremd' },
+  });
+  assert.equal(verboten.statusCode, 403);
+});
+
+test('Nur der Name aendern laesst das Bild in Ruhe', async (t) => {
+  const { ctx, app, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+  const kennung = (await einreichen(app, bertToken, { bild: PNG, titel: 'Eins', direkt: true }))
+    .json().kennung;
+
+  const geaendert = await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { titel: 'Zwei' },
+  });
+  assert.equal(geaendert.statusCode, 200);
+
+  const bild = await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}` });
+  assert.equal(bild.headers['content-type'], 'image/png');
+  const katalog = await app.inject({ method: 'GET', url: '/api/mememory/motive' });
+  assert.equal(katalog.json().namen[kennung], 'Zwei');
+});
+
+test('Ein leerer Name nimmt den Namen weg, kaputte Bilder kommen nicht durch', async (t) => {
+  const { ctx, app, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+  const kennung = (await einreichen(app, bertToken, { bild: PNG, titel: 'Weg damit', direkt: true }))
+    .json().kennung;
+
+  await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { titel: '   ' },
+  });
+  const katalog = await app.inject({ method: 'GET', url: '/api/mememory/motive' });
+  assert.equal(katalog.json().namen[kennung], undefined, 'ein leerer Name gehoert nicht in die Liste');
+
+  // Dieselbe Bytespruefung wie beim Hochladen — HTML in einer PNG-Huelle.
+  const getarnt = await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { bild: GETARNT },
+  });
+  assert.equal(getarnt.statusCode, 400);
+  assert.equal(getarnt.json().code, 'bildUngueltig');
+
+  // Und eine Aenderung ohne Inhalt ist ein Fehler, kein stiller Erfolg.
+  const leer = await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: {},
+  });
+  assert.equal(leer.statusCode, 400);
+});
+
+/**
  * Der Weg vom Kasten auf den Tisch.
  *
  * Der Client haengt die freigegebenen Kennungen als `zusatz` an die

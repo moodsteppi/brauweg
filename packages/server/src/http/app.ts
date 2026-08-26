@@ -102,11 +102,13 @@ import {
   BILD_MAX_ZEICHEN,
   OFFEN_MAX,
   TITEL_MAX,
+  aendern,
   anzahlOffen,
   bildVon,
   einreichen,
   freieKennungen,
   freieMotive,
+  freieNamen,
   freigeben,
   loeschen,
   offeneVon,
@@ -1779,7 +1781,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * und die Bilder dahinter liegen ohnehin offen.
    */
   app.get('/api/mememory/motive', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (_request, reply) => {
-    return reply.send({ hochgeladen: await freieKennungen(deps.db) });
+    // `namen` kommt mit, weil das Brett den Namen eines gefundenen Paares
+    // einblendet. Nur die hochgeladenen haben einen — die 88 Grundmotive
+    // heissen nirgends anders als in ihrer Kennung.
+    return reply.send({
+      hochgeladen: await freieKennungen(deps.db),
+      namen: await freieNamen(deps.db),
+    });
   });
 
   /**
@@ -1793,10 +1801,28 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { kennung } = z
       .object({ kennung: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/) })
       .parse(request.params);
-    const { typ, bytes } = await bildVon(deps.db, kennung);
+    const { typ, bytes, marke } = await bildVon(deps.db, kennung);
+
+    /**
+     * Kurze Frist plus ETag statt langer Frist.
+     *
+     * Seit die Aufsicht ein Motiv nachtraeglich neu zuschneiden kann, bleibt
+     * die Kennung gleich, waehrend sich das Bild aendert. Mit den frueheren
+     * fuenf Minuten sah man die Korrektur bis zu fuenf Minuten lang nicht.
+     * Jetzt fragt der Browser nach einer halben Minute kurz nach und bekommt
+     * meist ein 304 ohne Rumpf — billiger als das Bild und immer aktuell.
+     */
+    if (request.headers['if-none-match'] === marke) {
+      return reply
+        .header('etag', marke)
+        .header('cache-control', 'public, max-age=30, must-revalidate')
+        .status(304)
+        .send();
+    }
     return reply
       .header('content-type', typ)
-      .header('cache-control', 'public, max-age=300')
+      .header('etag', marke)
+      .header('cache-control', 'public, max-age=30, must-revalidate')
       .send(bytes);
   });
 
@@ -1889,6 +1915,33 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const accountId = await requireAccount(request);
       const { kennung } = z.object({ kennung: z.string().max(40) }).parse(request.params);
       await freigeben(deps.db, kennung, accountId);
+      return reply.send({ ok: true });
+    },
+  );
+
+  /**
+   * Ein Motiv nachtraeglich aendern: Name, Zuschnitt oder beides.
+   *
+   * Nur die Aufsicht, und bewusst unter derselben Kennung — sonst zeigte
+   * jeder Tisch, der das Motiv schon in seiner `config` stehen hat,
+   * anschliessend eine leere Karte.
+   */
+  app.patch(
+    '/api/mememory/motive/:kennung',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      await requireAufsicht(request);
+      const accountId = await requireAccount(request);
+      const { kennung } = z.object({ kennung: z.string().max(40) }).parse(request.params);
+      const body = z
+        .object({
+          titel: z.string().max(TITEL_MAX).nullable().optional(),
+          bild: z.string().max(BILD_MAX_ZEICHEN).optional(),
+        })
+        .parse(request.body);
+      if (body.titel === undefined && body.bild === undefined) throw badRequest('invalidInput');
+
+      await aendern(deps.db, kennung, body, accountId);
       return reply.send({ ok: true });
     },
   );

@@ -241,6 +241,17 @@ export function Vorschlagskasten({
    * (Aufsicht), undefined = noch nicht gefragt.
    */
   const [frei, setFrei] = useState<number | null | undefined>(undefined);
+  /**
+   * Welches Motiv gerade nachtraeglich bearbeitet wird, sonst null.
+   *
+   * Der Zuschneider ist derselbe wie beim Hochladen — nur der Weg hinein und
+   * der Knopf am Ende sind andere. Ein zweiter Zuschneider waere eine zweite
+   * Rechenstrecke fuer denselben Ausschnitt, und genau davor warnt der
+   * Kopfkommentar oben.
+   */
+  const [bearbeitet, setBearbeitet] = useState<{ kennung: string; titel: string } | null>(null);
+  /** Hochgezaehlt bei jeder Aenderung — haengt an den Bildadressen im Bestand. */
+  const [stand, setStand] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [versatz, setVersatz] = useState<Versatz>({ x: 0, y: 0 });
   const [grund, setGrund] = useState('#ffffff');
@@ -712,6 +723,74 @@ export function Vorschlagskasten({
     }
   };
 
+  /**
+   * Ein freigegebenes Motiv zum Bearbeiten in den Zuschneider holen.
+   *
+   * Das Bild kommt vom Server zurueck, nicht aus einem Zwischenspeicher der
+   * Anzeige: Was hier bearbeitet wird, muss der Stand sein, den auch das
+   * Spiel ausliefert. `frisch` haengt eine Zahl an die Adresse, damit ein
+   * Browser den eigenen Zwischenspeicher nicht bevorzugt.
+   */
+  const bearbeiten = async (eintrag: Bestandsmotiv): Promise<void> => {
+    setBusy(true);
+    setFehler(null);
+    setMeldung(null);
+    try {
+      const antwort = await fetch(`${motivBildPfad(eintrag.kennung)}?frisch=${stand}`);
+      if (!antwort.ok) throw new Error('nicht ladbar');
+      const neu = await createImageBitmap(await antwort.blob(), {
+        imageOrientation: 'from-image',
+      });
+      bild?.close?.();
+      setBearbeitet({ kennung: eintrag.kennung, titel: eintrag.titel ?? '' });
+      zeige(neu);
+      setTitel(eintrag.titel ?? '');
+    } catch {
+      setFehler('Das Bild ließ sich nicht zum Bearbeiten öffnen.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Bearbeiten abbrechen — nichts geht an den Server. */
+  const bearbeitenWeg = (): void => {
+    bild?.close?.();
+    setBild(null);
+    setBearbeitet(null);
+    setTitel('');
+  };
+
+  /** Namen und Zuschnitt eines Motivs ersetzen. Die Kennung bleibt. */
+  const speichern = async (): Promise<void> => {
+    if (!bild || !bearbeitet || busy) return;
+    setBusy(true);
+    setFehler(null);
+    try {
+      const dataUrl = alsDataUrl(bild, zoom, versatz, grund);
+      if (dataUrl.length > MAX_ZEICHEN) {
+        setFehler('Das Bild ist zu groß. Etwas näher heranzoomen hilft.');
+        return;
+      }
+      await api.mememoryAendern(bearbeitet.kennung, {
+        titel: titel.trim() || null,
+        bild: dataUrl,
+      });
+      bild.close?.();
+      setBild(null);
+      setBearbeitet(null);
+      setTitel('');
+      // Die Kennung bleibt gleich — ohne neue Zahl in der Adresse zeigte die
+      // Kachel daneben noch den alten Zuschnitt.
+      setStand((z) => z + 1);
+      setMeldung('Geändert. Neue Partien zeigen den neuen Zuschnitt.');
+      await listenHolen();
+    } catch {
+      setFehler('Das Ändern hat nicht geklappt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const entscheiden = async (kennung: string, frei: boolean): Promise<void> => {
     setBusy(true);
     setFehler(null);
@@ -748,7 +827,7 @@ export function Vorschlagskasten({
           </button>
         </div>
 
-        {blaetter.length > 1 && (
+        {blaetter.length > 1 && !bild && !laedtNaechstes && (
           <div className="mm-kasten-reiter">
             {blaetter.map((eintrag) => (
               <button
@@ -763,7 +842,14 @@ export function Vorschlagskasten({
           </div>
         )}
 
-        {blatt === 'einreichen' && (
+        {/*
+          * Der Zuschneider bekommt das ganze Blatt, egal woher er kommt:
+          * aus dem Stapel oder aus dem Bestand. Die Reiter sind dabei weg —
+          * ein Wechsel mitten im Zuschnitt wuerfe die Arbeit weg, und ein
+          * Kasten, der zwei Dinge gleichzeitig anbietet, wird auf einem
+          * Telefon zum Ratespiel.
+          */}
+        {bild || laedtNaechstes ? (
           <div className="mm-kasten-inhalt">
             {bild ? (
               <>
@@ -780,8 +866,9 @@ export function Vorschlagskasten({
                   </div>
                 )}
                 <p className="mm-kasten-hinweis">
-                  Schieben zum Verrücken, zwei Finger oder der Regler zum Zoomen. Was im Rahmen
-                  steht, kommt auf die Karte.
+                  {bearbeitet
+                    ? 'Neuer Ausschnitt, neuer Name — die Kennung bleibt, laufende Tische behalten das Motiv.'
+                    : 'Schieben zum Verrücken, zwei Finger oder der Regler zum Zoomen. Was im Rahmen steht, kommt auf die Karte.'}
                 </p>
                 {stapelhinweis && <p className="mm-kasten-hinweis">{stapelhinweis}</p>}
                 <canvas
@@ -808,34 +895,34 @@ export function Vorschlagskasten({
                 <input
                   className="mm-kasten-titel"
                   type="text"
-                  placeholder="Name (freiwillig)"
+                  placeholder={bearbeitet ? 'Name' : 'Name (freiwillig)'}
                   maxLength={TITEL_MAX}
                   value={titel}
                   onChange={(e) => setTitel(e.target.value)}
                 />
                 <div className="mm-kasten-knoepfe">
-                  {/* Derselbe Platz, zwei Bedeutungen: Steht noch etwas in der
-                      Schlange, geht es weiter; ist dies das letzte Bild,
-                      endet der Durchgang. Ein dritter Knopf daneben waere auf
-                      einem Telefon eine Reihe zu viel. */}
+                  {/* Derselbe Platz, drei Bedeutungen: beim Bearbeiten
+                      Abbrechen/Speichern, im Stapel Ueberspringen, beim
+                      letzten Bild Verwerfen. Ein weiterer Knopf daneben waere
+                      auf einem Telefon eine Reihe zu viel. */}
                   <button
                     type="button"
                     className="mm-kasten-weg"
-                    onClick={ueberspringen}
+                    onClick={bearbeitet ? bearbeitenWeg : ueberspringen}
                     disabled={busy}
                   >
-                    {schlange.length > 0 ? 'Überspringen' : 'Verwerfen'}
+                    {bearbeitet ? 'Abbrechen' : schlange.length > 0 ? 'Überspringen' : 'Verwerfen'}
                   </button>
                   <button
                     type="button"
                     className="mm-kasten-los"
-                    onClick={() => void einreichen(istAufsicht)}
+                    onClick={() => void (bearbeitet ? speichern() : einreichen(istAufsicht))}
                     disabled={busy}
                   >
-                    {istAufsicht ? 'Aufnehmen' : 'Einreichen'}
+                    {bearbeitet ? 'Speichern' : istAufsicht ? 'Aufnehmen' : 'Einreichen'}
                   </button>
                 </div>
-                {schlange.length > 0 && (
+                {!bearbeitet && schlange.length > 0 && (
                   <button
                     type="button"
                     className="mm-kasten-abbruch"
@@ -846,13 +933,19 @@ export function Vorschlagskasten({
                   </button>
                 )}
               </>
-            ) : laedtNaechstes ? (
+            ) : (
               /* Zwischen zwei Bildern. Die Flaeche behaelt die Groesse des
                  Rahmens, damit der Kasten nicht bei jedem Bild springt. */
               <div className="mm-kasten-warten" role="status">
                 Nächstes Bild wird geöffnet…
               </div>
-            ) : (
+            )}
+            {meldung && <p className="mm-kasten-gut">{meldung}</p>}
+          </div>
+        ) : (
+          <>
+            {blatt === 'einreichen' && (
+              <div className="mm-kasten-inhalt">
               <>
                 <p className="mm-kasten-hinweis">
                   {istAufsicht
@@ -882,10 +975,9 @@ export function Vorschlagskasten({
                   />
                 </label>
               </>
-            )}
             {meldung && <p className="mm-kasten-gut">{meldung}</p>}
-          </div>
-        )}
+              </div>
+            )}
 
         {blatt === 'kasten' && (
           <div className="mm-kasten-inhalt">
@@ -928,8 +1020,9 @@ export function Vorschlagskasten({
         {blatt === 'bestand' && (
           <div className="mm-kasten-inhalt">
             <p className="mm-kasten-hinweis">
-              Alles, was zusätzlich zu den 88 Grundmotiven im Spiel ist. Herausnehmen wirkt sofort
-              für neue Partien.
+              Alles, was zusätzlich zu den 88 Grundmotiven im Spiel ist. ✎ ändert Name und
+              Zuschnitt, ✕ nimmt heraus — beides wirkt sofort für neue Partien. Der Name steht
+              im Spiel groß über dem Brett, sobald jemand das Paar findet.
             </p>
             {!laedt && bestand.length === 0 && (
               <p className="mm-kasten-hinweis">Noch nichts hochgeladen.</p>
@@ -937,12 +1030,29 @@ export function Vorschlagskasten({
             <div className="mm-kasten-gitter">
               {bestand.map((eintrag) => (
                 <div className="mm-kasten-kachel" key={eintrag.kennung}>
-                  <img src={motivBildPfad(eintrag.kennung)} alt={eintrag.titel ?? eintrag.kennung} />
+                  {/* Die Zahl in der Adresse ist kein Schmuck: Beim Aendern
+                      bleibt die Kennung gleich, und ohne sie zeigte die
+                      Kachel danach noch den alten Zuschnitt. */}
+                  <img
+                    src={`${motivBildPfad(eintrag.kennung)}?v=${stand}`}
+                    alt={eintrag.titel ?? eintrag.kennung}
+                  />
+                  <span className="mm-kasten-kachel-name">{eintrag.titel ?? '—'}</span>
                   <button
                     type="button"
+                    className="mm-kasten-stift"
+                    onClick={() => void bearbeiten(eintrag)}
+                    disabled={busy}
+                    aria-label={`${eintrag.titel ?? 'Motiv'} bearbeiten`}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    className="mm-kasten-raus"
                     onClick={() => void entscheiden(eintrag.kennung, false)}
                     disabled={busy}
-                    aria-label="Herausnehmen"
+                    aria-label={`${eintrag.titel ?? 'Motiv'} herausnehmen`}
                   >
                     ✕
                   </button>
@@ -950,6 +1060,8 @@ export function Vorschlagskasten({
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
 
         {fehler && <p className="mm-kasten-fehler">{fehler}</p>}

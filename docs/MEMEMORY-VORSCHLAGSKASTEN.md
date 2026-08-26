@@ -15,7 +15,7 @@ dem Handy findet.
 | Jeder angemeldete Spieler | Briefkasten im Mememory-Menü → **mehrere** Bilder wählen → eines nach dem anderen zuschneiden → **Einreichen** | Die Bilder warten auf Freigabe |
 | Aufsicht (Testkonto) | derselbe Knopf, Blatt **Hochladen** | Sofort im Spiel |
 | Aufsicht | Blatt **Kasten** | Wartendes ✓ freigeben oder ✕ ablehnen (= löschen) |
-| Aufsicht | Blatt **Bestand** | Ein freigegebenes Bild wieder herausnehmen |
+| Aufsicht | Blatt **Bestand** | ✎ Name und Zuschnitt ändern · ✕ herausnehmen |
 
 Alles vom Telefon aus, alles ohne Deploy. Der Briefkasten trägt für die
 Aufsicht die Zahl der wartenden Vorschläge.
@@ -24,6 +24,65 @@ Aufsicht die Zahl der wartenden Vorschläge.
 Railway-Variablen `STAFF_EMAILS` stehen. Sie wird beim Serverstart
 angewandt (`staff.ts`) — es gibt bewusst keinen Endpunkt, über den sich
 jemand das Merkmal selbst geben könnte.
+
+---
+
+## Nachträglich ändern (Bestand)
+
+Jede Kachel im Bestand trägt zwei Knöpfe: **✎** öffnet denselben Zuschneider
+wie beim Hochladen, mit Bild und Namen des Motivs; **✕** nimmt es heraus.
+Bearbeiten links, Herausnehmen rechts — die zerstörerische Taste sitzt nicht
+dort, wo der Daumen beim Blättern ohnehin liegt.
+
+**Die Kennung bleibt beim Ändern.** Eine neue wäre einfacher zu bauen, träfe
+aber jeden Tisch, der das Motiv schon in seiner `config` stehen hat: Dort
+erschiene danach eine leere Karte. Der Preis dafür ist der Zwischenspeicher
+der Browser — unter derselben Adresse liegt jetzt ein anderes Bild. Deshalb
+liefert `GET /api/mememory/motive/:kennung` seit dem 26. August mit **ETag**
+und `max-age=30, must-revalidate` statt mit fünf Minuten Frist: Der Browser
+fragt kurz nach und bekommt meist ein 304 ohne Rumpf — billiger als das Bild
+und immer aktuell. Die Marke ist `"<kennung>-<geprueftAm>"`, und `geprueftAm`
+wandert bei jeder Änderung mit.
+
+Während zugeschnitten wird, sind die Reiter ausgeblendet: Ein Wechsel mitten
+im Zuschnitt würfe die Arbeit weg, und ein Kasten, der zwei Dinge gleichzeitig
+anbietet, wird auf einem Telefon zum Ratespiel.
+
+---
+
+## Der Name im Spiel
+
+Wird ein Paar gefunden, blitzt sein Name groß über dem Brett auf: fett,
+zentriert, mit dreilagigem Schatten (harter Rand gegen jedes Motiv darunter,
+weicher Schlagschatten für Tiefe, goldener Hauch für die Zugehörigkeit).
+
+Die Bewegung — gemessen, nicht geschätzt:
+
+| Zeit | Skalierung | Deckkraft |
+| --- | --- | --- |
+| 0 ms | 0,30 (klein, leicht tiefer) | 0 |
+| 150–225 ms | 1,12 → 1,14 (Überschwingen) | 1 |
+| 300–450 ms | 1,03 → 0,98 → 1,01 (einpendeln) | 1 |
+| 525–1125 ms | 1,00 (steht) | 1 |
+| 1200–1500 ms | 1,18 → 1,30 (wächst weg) | 0,4 → 0 |
+
+**Animiert werden ausschließlich `transform` und `opacity`.** Das ist keine
+Stilfrage: Nur diese beiden laufen im Compositor, also ohne Neuberechnung des
+Layouts. Alles andere (`font-size`, `top`, `width`) ruckelt auf einem Telefon
+sichtbar — gerade während das Brett gleichzeitig Karten dreht. Das
+Überschwingen (1,14 → 0,98 → 1,00) ist der Unterschied zwischen
+„eingeblendet" und „gelandet".
+
+Die Schicht liegt über dem Brett, nimmt aber keine Tipper an
+(`pointer-events: none`): Die Schaupause dauert nur 650 ms, und in der Zeit
+darf man weiter auf Karten zielen. Wer Bewegung abbestellt hat
+(`prefers-reduced-motion`), bekommt denselben Namen ohne Sprung.
+
+**Namen haben nur die hochgeladenen Motive.** Die 88 Grundmotive heißen
+nirgends anders als in ihrer Kennung, und eine aus `dj-katze` gebastelte
+Beschriftung wäre geraten, nicht benannt — dort bleibt es still. `namen`
+kommt öffentlich mit `GET /api/mememory/motive`, weil beide Seiten am Tisch
+es anzeigen.
 
 ---
 
@@ -141,7 +200,8 @@ erste Karte zeichnen kann.
 | Oberfläche | `packages/client/src/minispiele/mememory/Vorschlagskasten.tsx` |
 | Bildpfad | `packages/client/src/minispiele/mememory/bildpfad.ts` |
 | Feld im Regelsatz | `packages/game-mememory/src/regeln.ts` (`zusatz`) |
-| Tests | `packages/server/test/memes.test.ts` (16), `packages/game-mememory/test/zusatz.test.ts` (8) |
+| Namensblitz | `packages/client/src/screens/Mememory.tsx` (`namensblitz`), `.mm-namensblitz` in styles.css |
+| Tests | `packages/server/test/memes.test.ts` (19), `packages/game-mememory/test/zusatz.test.ts` (8) |
 
 ### Endpunkte
 
@@ -154,6 +214,7 @@ erste Karte zeichnen kann.
 | GET | `/api/mememory/vorschlaege` | Aufsicht |
 | GET | `/api/mememory/vorschlaege/anzahl` | Aufsicht |
 | POST | `/api/mememory/vorschlaege/:kennung/freigeben` | Aufsicht |
+| PATCH | `/api/mememory/motive/:kennung` | Aufsicht (Name und/oder Bild) |
 | DELETE | `/api/mememory/motive/:kennung` | Aufsicht |
 
 ---

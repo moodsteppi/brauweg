@@ -104,6 +104,25 @@ export async function freieKennungen(db: Db): Promise<string[]> {
   return zeilen.map((zeile) => zeile.kennung);
 }
 
+/**
+ * Namen der freigegebenen Motive, Kennung -> Titel.
+ *
+ * Oeffentlich, weil das Spiel sie beim Aufdecken eines Paares einblendet.
+ * Motive ohne Titel stehen gar nicht erst drin — der Client blendet dann
+ * nichts ein, und das ist besser als ein leeres Band ueber dem Brett.
+ */
+export async function freieNamen(db: Db): Promise<Record<string, string>> {
+  const zeilen = await db
+    .select({ kennung: s.mememoryMotiv.kennung, titel: s.mememoryMotiv.titel })
+    .from(s.mememoryMotiv)
+    .where(eq(s.mememoryMotiv.status, 'frei'));
+  const namen: Record<string, string> = {};
+  for (const zeile of zeilen) {
+    if (zeile.titel && zeile.titel.trim().length > 0) namen[zeile.kennung] = zeile.titel;
+  }
+  return namen;
+}
+
 /** Freigegebene Motive mit Titel — fuer die Katalogansicht der Aufsicht. */
 export async function freieMotive(db: Db): Promise<MotivZeile[]> {
   return db
@@ -238,6 +257,48 @@ export async function freigeben(db: Db, kennung: string, aufsichtId: string): Pr
 }
 
 /**
+ * Ein Motiv nachtraeglich aendern: Name, Bild oder beides.
+ *
+ * Der Zuschnitt laesst sich damit korrigieren, ohne die Kennung zu wechseln —
+ * und das ist die eigentliche Entscheidung hier. Eine neue Kennung waere
+ * einfacher zu bauen, wuerde aber jeden laufenden Tisch treffen, der das
+ * alte Motiv schon in seiner `config` stehen hat: Dort erschiene eine leere
+ * Karte. Der Preis dafuer ist der Zwischenspeicher der Browser, und den
+ * loest die Auslieferung mit ETag (siehe app.ts).
+ *
+ * `geprueftAm` wandert dabei mit: Die Aufsicht hat das Bild ja gerade
+ * angesehen — und der Zeitstempel ist zugleich die Marke, an der ein Browser
+ * erkennt, dass sich etwas geaendert hat.
+ */
+export async function aendern(
+  db: Db,
+  kennung: string,
+  aenderung: { titel?: string | null; bild?: string },
+  aufsichtId: string,
+): Promise<void> {
+  const satz: Record<string, unknown> = { geprueftVon: aufsichtId, geprueftAm: new Date() };
+
+  if (aenderung.bild !== undefined) {
+    if (aenderung.bild.length > BILD_MAX_ZEICHEN) throw badRequest('bildZuGross');
+    if (!BILD_DATA_URL.test(aenderung.bild) || !istEchtesBild(aenderung.bild)) {
+      throw badRequest('bildUngueltig');
+    }
+    satz.bild = aenderung.bild;
+  }
+  if (aenderung.titel !== undefined) {
+    const sauber = (aenderung.titel ?? '').trim().slice(0, TITEL_MAX);
+    satz.titel = sauber.length > 0 ? sauber : null;
+  }
+
+  const ergebnis = await db
+    .update(s.mememoryMotiv)
+    .set(satz)
+    .where(eq(s.mememoryMotiv.kennung, kennung))
+    .returning({ kennung: s.mememoryMotiv.kennung });
+  if (ergebnis.length === 0) throw notFound('motivUnbekannt');
+}
+
+/**
  * Ein Motiv entfernen — abgelehnter Vorschlag oder freigegebenes Bild.
  *
  * Laufende Partien stoert das nicht: Die gezogenen Kennungen stehen im
@@ -261,12 +322,23 @@ export async function loeschen(db: Db, kennung: string): Promise<void> {
  * Kennungen sind zufaellig, aber nicht geheim. Die Aufsicht sieht wartende
  * Bilder ueber die Liste, nicht ueber diesen Weg.
  */
-export async function bildVon(db: Db, kennung: string): Promise<{ typ: string; bytes: Buffer }> {
+export async function bildVon(
+  db: Db,
+  kennung: string,
+): Promise<{ typ: string; bytes: Buffer; marke: string }> {
   const [zeile] = await db
-    .select({ bild: s.mememoryMotiv.bild })
+    .select({
+      bild: s.mememoryMotiv.bild,
+      geprueftAm: s.mememoryMotiv.geprueftAm,
+      createdAt: s.mememoryMotiv.createdAt,
+    })
     .from(s.mememoryMotiv)
     .where(and(eq(s.mememoryMotiv.kennung, kennung), eq(s.mememoryMotiv.status, 'frei')));
   const zerlegt = zeile ? bytesAusDataUrl(zeile.bild) : null;
-  if (!zerlegt) throw notFound('motivUnbekannt');
-  return zerlegt;
+  if (!zeile || !zerlegt) throw notFound('motivUnbekannt');
+  // Die Marke aendert sich, sobald die Aufsicht das Bild anfasst. Ohne sie
+  // zeigte ein Browser nach einer Korrektur noch minutenlang den alten
+  // Zuschnitt — die Kennung bleibt ja dieselbe.
+  const stand = (zeile.geprueftAm ?? zeile.createdAt).getTime();
+  return { ...zerlegt, marke: `"${kennung}-${stand}"` };
 }

@@ -130,6 +130,23 @@ export function Mememory({
   /** Wie viele Vorschlaege warten. Nur die Aufsicht bekommt die Zahl. */
   const [warten, setWarten] = useState(0);
   /**
+   * Namen der hochgeladenen Motive, Kennung -> Name.
+   *
+   * Nur die hochgeladenen haben einen; die 88 Grundmotive heissen nirgends
+   * anders als in ihrer Kennung, und eine aus `dj-katze` gebastelte
+   * Beschriftung waere geraten, nicht benannt. Steht kein Name da, blendet
+   * das Brett auch nichts ein — besser als ein leeres Band.
+   */
+  const [motivNamen, setMotivNamen] = useState<Record<string, string>>({});
+  /**
+   * Der Name, der gerade ueber dem Brett aufblitzt. Die Nummer ist der
+   * Schluessel der Animation: Zwei Treffer hintereinander mit demselben
+   * Namen muessen sie neu starten, und dafuer muss sich der Schluessel
+   * aendern.
+   */
+  const [namensblitz, setNamensblitz] = useState<{ nr: number; name: string } | null>(null);
+  const blitzNr = useRef(0);
+  /**
    * Platz, den ich gerade angetippt habe — dreht sofort, ohne auf den Server
    * zu warten.
    *
@@ -225,6 +242,28 @@ export function Mememory({
       window.clearInterval(takt);
     };
   }, [sicht !== null]);
+
+  /**
+   * Die Namen der hochgeladenen Motive.
+   *
+   * Einmal beim Aufschlagen des Bildschirms, fuer BEIDE Seiten — nicht nur
+   * fuer den, der den Tisch aufmacht. Faellt der Abruf aus, bleibt es beim
+   * stummen Brett; ein Name ist Beiwerk und darf keine Partie aufhalten.
+   */
+  useEffect(() => {
+    let lebt = true;
+    void api
+      .mememoryMotive()
+      .then((antwort) => {
+        if (lebt) setMotivNamen(antwort.namen ?? {});
+      })
+      .catch(() => {
+        /* ohne Namen weiterspielen */
+      });
+    return () => {
+      lebt = false;
+    };
+  }, []);
 
   /**
    * Die Zahl am Briefkasten: wie viele Vorschlaege warten.
@@ -419,6 +458,17 @@ export function Mememory({
     if (sicht.pause !== vorigePause.current) {
       if (sicht.pause === 'treffer') {
         spieleKlang(sicht.dran === eigenerSitz ? 'treffer' : 'gefunden');
+        /*
+         * Der Name des gefundenen Paares blitzt auf.
+         *
+         * Die Kennung steht in der Sicht an jedem der beiden offenen
+         * Plaetze — waehrend der Schaupause sind sie aufgedeckt. Hat das
+         * Motiv keinen Namen (alle 88 Grundmotive), passiert nichts.
+         */
+        const platz = sicht.offen[0];
+        const kennung = platz === undefined ? null : sicht.feld[platz];
+        const name = kennung ? motivNamen[kennung] : undefined;
+        if (name) setNamensblitz({ nr: (blitzNr.current += 1), name });
       } else if (sicht.pause === 'daneben') {
         spieleKlang('daneben');
       }
@@ -431,7 +481,21 @@ export function Mememory({
         spieleKlang(sicht.sieger === eigenerSitz ? 'sieg' : 'niederlage');
       }
     }
-  }, [sicht, eigenerSitz]);
+  }, [sicht, eigenerSitz, motivNamen]);
+
+  /**
+   * Der Namensblitz raeumt sich selbst weg.
+   *
+   * Etwas laenger als die Animation (1500 ms), damit sie sicher zu Ende
+   * gelaufen ist, bevor der Knoten verschwindet — sonst bricht sie im
+   * letzten Bild ab. Der Schluessel ist die Nummer: Ein neuer Treffer setzt
+   * eine neue, und der alte Zeitgeber wird beim Aufraeumen abgeraeumt.
+   */
+  useEffect(() => {
+    if (!namensblitz) return;
+    const uhr = window.setTimeout(() => setNamensblitz(null), 1600);
+    return () => window.clearTimeout(uhr);
+  }, [namensblitz]);
 
   /**
    * Das Angebot wandert im Zweisekundentakt weiter.
@@ -758,6 +822,21 @@ export function Mememory({
           })}
         </div>
       </div>
+
+      {/*
+        * Der Name des gefundenen Paares.
+        *
+        * Liegt ueber dem Brett und nimmt keine Tipper an (`pointer-events`
+        * steht im Blatt auf none) — waehrend der Schaupause darf man weiter
+        * auf Karten zielen. Der Schluessel ist die Blitznummer: Ohne ihn
+        * bliebe React beim selben Knoten, und ein zweiter Treffer mit
+        * demselben Namen liefe die Animation gar nicht noch einmal.
+        */}
+      {namensblitz && (
+        <div className="mm-namensblitz" aria-hidden="true">
+          <span key={namensblitz.nr}>{namensblitz.name}</span>
+        </div>
+      )}
 
       {/* Reaktionen: ein Tipp, ein Emoji, kein Menue. Der Knopf bietet alle
           zwei Sekunden ein anderes Zeichen an — wer ein bestimmtes schicken
