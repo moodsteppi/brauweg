@@ -31,6 +31,34 @@
 /** Die vier Stufen. Der Client zeigt sie in dieser Reihenfolge. */
 export const STUFEN = ['leicht', 'mittel', 'schwer', 'experte'] as const;
 
+/**
+ * Die vier Stufen der PLATTFORM auf die vier dieses Spiels.
+ *
+ * Die Plattform kennt `anfaenger | standard | experte | genie` (game-api) und
+ * stellt sie je Tisch ein; Mememory hat eigene Namen, weil hier keine
+ * Suchtiefe steigt, sondern ein Gedaechtnis waechst. Eins zu eins in der
+ * Reihenfolge — mehr Bedeutung steckt nicht drin, und mehr braucht es auch
+ * nicht: Beide Leitern haben vier Sprossen.
+ *
+ * Gebraucht wird das beim AUFFUELLEN eines wartenden Tisches: Dort steht die
+ * `config` mit ihren `botStufen` laengst fest, die Tischeinstellung
+ * `botLevel` aber nicht.
+ */
+export function stufeAusBotLevel(level: string | undefined): MememoryStufe {
+  switch (level) {
+    case 'anfaenger':
+      return 'leicht';
+    case 'experte':
+      return 'schwer';
+    case 'genie':
+      return 'experte';
+    default:
+      // 'standard' und alles Unbekannte. Die Mitte ist der richtige Fehlwert:
+      // Wer nichts einstellt, soll weder ueberrannt noch gelangweilt werden.
+      return 'mittel';
+  }
+}
+
 export type MememoryStufe = (typeof STUFEN)[number];
 
 export interface StufenRegel {

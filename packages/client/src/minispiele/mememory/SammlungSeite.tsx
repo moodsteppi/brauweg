@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../api';
+import { Schloss } from '../../zeichen';
 import { motivBildPfad } from './bildpfad';
 
 /** Muss zu GURT_MAX in packages/server/src/sammlung.ts passen. */
@@ -53,6 +54,21 @@ export function SammlungSeite({
 }): React.JSX.Element {
   const [gesammelt, setGesammelt] = useState<ReadonlySet<string>>(new Set());
   const [gurt, setGurt] = useState<string[]>([]);
+  /**
+   * Zufallsgurt: In jeder Partie drei andere Memes aus der Sammlung.
+   *
+   * Der Schalter wirkt SOFORT (eigene Route), der Gurt darunter erst beim
+   * Merken. Beides in einem Aufruf hiesse, dass ein Umlegen des Schalters
+   * eine halbfertige Auswahl mit festschreibt.
+   */
+  const [zufall, setZufall] = useState(false);
+  /**
+   * Welches Fach der Zufall in Ruhe laesst — Stellung fuer Stellung zum Gurt.
+   *
+   * Eine eigene Liste und kein Feld an der Kennung: Gesperrt wird ein FACH.
+   * Wer das Motiv aus dem Fach nimmt, nimmt damit auch das Schloss weg.
+   */
+  const [gesperrt, setGesperrt] = useState<boolean[]>([]);
   const [laedt, setLaedt] = useState(true);
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -64,6 +80,8 @@ export function SammlungSeite({
       const antwort = await api.mememorySammlung();
       setGesammelt(new Set(antwort.gesammelt.map((zeile) => zeile.kennung)));
       setGurt(antwort.gurt);
+      setGesperrt(antwort.gesperrt ?? []);
+      setZufall(antwort.zufall === true);
     } catch {
       setFehler('Die Sammlung ließ sich nicht laden.');
     } finally {
@@ -123,17 +141,45 @@ export function SammlungSeite({
     if (!gesammelt.has(kennung)) return;
     setGemerkt(false);
     setGurt((alt) => {
-      if (alt.includes(kennung)) return alt.filter((k) => k !== kennung);
+      const drin = alt.indexOf(kennung);
+      if (drin >= 0) {
+        // Das Schloss geht mit dem Motiv aus dem Fach: Es haengt am Fach, und
+        // das ist gleich wieder leer.
+        setGesperrt((schloesser) => schloesser.filter((_, i) => i !== drin));
+        return alt.filter((k) => k !== kennung);
+      }
       if (alt.length >= GURT_MAX) return alt;
+      setGesperrt((schloesser) => [...schloesser, false]);
       return [...alt, kennung];
     });
+  };
+
+  /** Ein Fach sperren oder freigeben. Wirkt erst beim Merken. */
+  const schliesse = (fach: number): void => {
+    setGemerkt(false);
+    setGesperrt((alt) => {
+      const neu = [...alt];
+      while (neu.length < gurt.length) neu.push(false);
+      neu[fach] = !neu[fach];
+      return neu;
+    });
+  };
+
+  /**
+   * Den Schalter umlegen. Er geht sofort raus — und faellt bei einem Fehler
+   * sichtbar zurueck, statt still stehenzubleiben und beim naechsten Laden
+   * anders auszusehen.
+   */
+  const schalteZufall = (an: boolean): void => {
+    setZufall(an);
+    void api.mememoryZufall(an).catch(() => setZufall(!an));
   };
 
   const speichern = async (): Promise<void> => {
     setBusy(true);
     setFehler(null);
     try {
-      const antwort = await api.mememoryGurt(gurt);
+      const antwort = await api.mememoryGurt(gurt, gesperrt.slice(0, gurt.length));
       setGurt(antwort.gurt);
       setGemerkt(true);
       onGurt?.(antwort.gurt);
@@ -158,8 +204,14 @@ export function SammlungSeite({
       <div className="mm-gurt mm-gurt-gross" aria-label="Gewählte Memes">
         {Array.from({ length: GURT_MAX }, (_, i) => {
           const kennung = gurt[i];
+          const zu = gesperrt[i] === true;
           return (
-            <div className="mm-gurt-fach" key={i} data-belegt={kennung ? '' : undefined}>
+            <div
+              className="mm-gurt-fach"
+              key={i}
+              data-belegt={kennung ? '' : undefined}
+              data-zu={zufall && zu ? '' : undefined}
+            >
               {kennung ? (
                 <button
                   type="button"
@@ -171,15 +223,58 @@ export function SammlungSeite({
               ) : (
                 <span aria-hidden="true">{i + 1}</span>
               )}
+              {/*
+                * Das Schloss gibt es NUR im Zufallsmodus.
+                *
+                * Ohne ihn haelt der Gurt ohnehin, was drinsteht — ein
+                * Schloss daneben waere ein Knopf, der nichts tut, und der
+                * ist schlimmer als gar keiner.
+                */}
+              {zufall && kennung && (
+                <button
+                  type="button"
+                  className="mm-fach-schloss"
+                  onClick={() => schliesse(i)}
+                  aria-pressed={zu}
+                  aria-label={
+                    zu
+                      ? `${namen[kennung] ?? 'Meme'} nicht mehr festhalten`
+                      : `${namen[kennung] ?? 'Meme'} festhalten`
+                  }
+                >
+                  <Schloss zu={zu} />
+                </button>
+              )}
             </div>
           );
         })}
       </div>
 
+      {/*
+        * Der Schalter steht ZWISCHEN Gurt und Satz: Er aendert, was die drei
+        * Faecher darueber bedeuten, und geht deshalb nicht ans Seitenende.
+        */}
+      <label className="mm-schalterzeile">
+        <span>
+          <b>Jede Partie andere Memes</b>
+          <em>Drei aus deiner Sammlung, neu gezogen — außer den festgehaltenen.</em>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          className="mm-schalter"
+          checked={zufall}
+          disabled={laedt}
+          onChange={(e) => schalteZufall(e.target.checked)}
+        />
+      </label>
+
       <p className="mm-gurt-satz">
         {habe === 0
           ? 'Noch nichts gefunden. Jedes Paar, das du selbst aufdeckst, landet hier.'
-          : `Wähle bis zu ${GURT_MAX} aus — die wirfst du im Spiel über den Tisch.`}
+          : zufall
+            ? `Tippe auf ein Schloss, um ein Fach festzuhalten — die anderen werden jede Partie neu gezogen.`
+            : `Wähle bis zu ${GURT_MAX} aus — die wirfst du im Spiel über den Tisch.`}
       </p>
 
       <div className="mm-gurt-fuss">

@@ -59,12 +59,13 @@ const gurtSetzen = (
   app: Awaited<ReturnType<typeof buildApp>>,
   token: string,
   kennungen: string[],
+  gesperrt?: boolean[],
 ) =>
   app.inject({
     method: 'PUT',
     url: '/api/mememory/sammlung/gurt',
     cookies: { [SESSION_COOKIE]: token },
-    payload: { kennungen },
+    payload: { kennungen, gesperrt },
   });
 
 const lesen = (app: Awaited<ReturnType<typeof buildApp>>, token: string) =>
@@ -164,4 +165,90 @@ test('Eine leere Liste raeumt den Gurt', async (t) => {
   assert.deepEqual(geraeumt.json().gurt, []);
   // Gesammelt bleibt gesammelt — nur der Gurt ist leer.
   assert.equal((await lesen(app, token)).json().gesammelt.length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Zufallsgurt und Schloesser (27. August 2026)
+// ---------------------------------------------------------------------------
+
+const zufallSetzen = (
+  app: Awaited<ReturnType<typeof buildApp>>,
+  token: string,
+  an: boolean,
+) =>
+  app.inject({
+    method: 'PUT',
+    url: '/api/mememory/sammlung/zufall',
+    cookies: { [SESSION_COOKIE]: token },
+    payload: { an },
+  });
+
+test('Der Zufallsgurt ist aus, bis ihn jemand einschaltet', async (t) => {
+  const { app, token } = await aufbau(t);
+  assert.equal((await lesen(app, token)).json().zufall, false);
+
+  const an = await zufallSetzen(app, token, true);
+  assert.equal(an.statusCode, 200);
+  assert.equal(an.json().zufall, true);
+  assert.equal((await lesen(app, token)).json().zufall, true);
+
+  await zufallSetzen(app, token, false);
+  assert.equal((await lesen(app, token)).json().zufall, false);
+});
+
+test('Der Schalter gehoert dem Konto, nicht dem Geraet', async (t) => {
+  const { app, token, bertToken } = await aufbau(t);
+  await zufallSetzen(app, token, true);
+  assert.equal(
+    (await lesen(app, bertToken)).json().zufall,
+    false,
+    'Bert hat seinen eigenen Schalter',
+  );
+});
+
+test('Schloesser stehen Stellung fuer Stellung zum Gurt', async (t) => {
+  const { app, token } = await aufbau(t);
+  await melden(app, token, ['a', 'b', 'c']);
+
+  await gurtSetzen(app, token, ['a', 'b', 'c'], [false, true, false]);
+  const stand = (await lesen(app, token)).json();
+  assert.deepEqual(stand.gurt, ['a', 'b', 'c']);
+  assert.deepEqual(stand.gesperrt, [false, true, false], 'nur das mittlere Fach haelt');
+});
+
+test('Ein Fach, das neu belegt wird, verliert sein Schloss', async (t) => {
+  const { app, token } = await aufbau(t);
+  await melden(app, token, ['a', 'b', 'c']);
+  await gurtSetzen(app, token, ['a', 'b'], [true, true]);
+  assert.deepEqual((await lesen(app, token)).json().gesperrt, [true, true]);
+
+  // Dasselbe Fach, anderes Motiv, kein Schloss mehr mitgeschickt: Das
+  // Schloss haengt am FACH, und das wird gerade neu vergeben.
+  await gurtSetzen(app, token, ['c', 'b']);
+  const nachher = (await lesen(app, token)).json();
+  assert.deepEqual(nachher.gurt, ['c', 'b']);
+  assert.deepEqual(nachher.gesperrt, [false, false]);
+});
+
+test('Ein Client ohne Zufallsmodus setzt seinen Gurt weiterhin', async (t) => {
+  const { app, token } = await aufbau(t);
+  await melden(app, token, ['a', 'b']);
+
+  // Genau der alte Aufruf: nur `kennungen`, kein `gesperrt`. Er muss
+  // durchgehen, sonst braeche der Deploy jeden Client, der noch laeuft.
+  const alt = await app.inject({
+    method: 'PUT',
+    url: '/api/mememory/sammlung/gurt',
+    cookies: { [SESSION_COOKIE]: token },
+    payload: { kennungen: ['a', 'b'] },
+  });
+  assert.equal(alt.statusCode, 200);
+  assert.deepEqual((await lesen(app, token)).json().gesperrt, [false, false]);
+});
+
+test('Zu viele Schloesser kommen nicht durch', async (t) => {
+  const { app, token } = await aufbau(t);
+  await melden(app, token, ['a']);
+  const zuViel = await gurtSetzen(app, token, ['a'], [true, true, true, true]);
+  assert.equal(zuViel.statusCode, 400);
 });

@@ -9,7 +9,7 @@
 
 import { MOTIVE } from './motive.js';
 import type { MememoryRegeln } from './regeln.js';
-import { STUFEN_REGELN, istStufe } from './stufen.js';
+import { STUFEN_REGELN, istStufe, stufeAusBotLevel } from './stufen.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
@@ -363,6 +363,16 @@ export function erstellePartie(
   regeln: MememoryRegeln,
   sitze: readonly number[],
   saat: Saat,
+  /**
+   * Plaetze, auf denen ein Bot sitzt, und die Stufe der Tischeinstellung.
+   *
+   * Beides kommt von der Plattform (`CreatePartyOptions`) und wird nur
+   * gebraucht, wenn die `config` keine `botStufen` nennt — also beim
+   * AUFFUELLEN eines wartenden Tisches. Dort steht die config laengst fest,
+   * die Tischeinstellung aber nicht.
+   */
+  botSitze: readonly number[] = [],
+  botLevel?: string,
 ): MememoryPartie {
   const plaetze = regeln.spalten * regeln.zeilen;
   const paare = (plaetze + nachschubMenge(plaetze, sitze.length)) / 2;
@@ -373,6 +383,25 @@ export function erstellePartie(
   if (paare > topf.length) {
     throw new Error(`Brett braucht ${paare} Motive, der Katalog hat ${topf.length}`);
   }
+
+  /*
+   * Welcher Sitz spielt mit welcher Staerke?
+   *
+   * Was in der `config` steht, hat Vorrang: Das ist das KI-Match, dort hat
+   * JEDER Gegner seine eigene Stufe, und die soll eine Tischeinstellung nicht
+   * ueberschreiben. Steht dort nichts, bekommen genau die Bot-Sitze des
+   * Tisches die eingestellte Stufe.
+   *
+   * Warum nicht einfach alle Sitze eintragen: Wer hier steht, bekommt in
+   * `sichtFuer` ein Gedaechtnis mitgeschickt. Fuer einen Bot ist das noetig,
+   * fuer einen Menschen waere es ein Geschenk.
+   */
+  const ausConfig = regeln.botStufen ?? {};
+  const botStufen =
+    Object.keys(ausConfig).length > 0
+      ? ausConfig
+      : Object.fromEntries(botSitze.map((sitz) => [sitz, stufeAusBotLevel(botLevel)]));
+  const wirksam: MememoryRegeln = { ...regeln, botStufen };
 
   const zufall = baueZufall(saat);
   // Erst ziehen, dann sortieren: Die Sicht schickt die Liste an beide Geraete,
@@ -387,7 +416,7 @@ export function erstellePartie(
   const feld = alle.slice(0, plaetze);
 
   return {
-    regeln,
+    regeln: wirksam,
     motive: gezogen,
     feld,
     besitzer: Array.from({ length: plaetze }, () => null),
@@ -408,7 +437,7 @@ export function erstellePartie(
     // Jeder Bot-Sitz startet mit leerem Gedaechtnis. Sitze ohne Stufe stehen
     // gar nicht erst drin — so gibt es fuer einen Menschen nichts zu holen.
     erinnerung: Object.fromEntries(
-      Object.keys(regeln.botStufen ?? {})
+      Object.keys(botStufen)
         .map((k) => Number(k))
         .filter((s) => Number.isInteger(s))
         .map((s) => [s, [] as Erinnerung[]]),

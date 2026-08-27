@@ -101,7 +101,15 @@ import {
 } from '../clubs/war.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
 import { lies, nimmAuf, uebersicht } from '../diagnose.js';
-import { GURT_MAX, MELDUNG_MAX, merkeGesehen, sammlungVon, setzeGurt } from '../sammlung.js';
+import {
+  GURT_MAX,
+  MELDUNG_MAX,
+  merkeGesehen,
+  sammlungVon,
+  setzeGurt,
+  setzeZufall,
+  zufallVon,
+} from '../sammlung.js';
 import { istEchtesBild } from '../bilder.js';
 import {
   BILD_MAX_ZEICHEN,
@@ -2008,27 +2016,56 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send(await merkeGesehen(deps.db, accountId, body.kennungen));
   });
 
-  /** Die eigene Sammlung samt Gurt. */
+  /** Die eigene Sammlung samt Gurt, Schloessern und dem Zufallsschalter. */
   app.get('/api/mememory/sammlung', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const gesammelt = await sammlungVon(deps.db, accountId);
+    const imGurt = gesammelt
+      .filter((z) => z.platz !== null)
+      .sort((a, b) => a.platz! - b.platz!);
     return reply.send({
       gesammelt,
-      gurt: gesammelt.filter((z) => z.platz !== null).sort((a, b) => a.platz! - b.platz!).map((z) => z.kennung),
+      gurt: imGurt.map((z) => z.kennung),
+      // Stellung fuer Stellung zum Gurt: Fach 1, 2, 3. Eine eigene Liste und
+      // kein Feld an der Kennung, weil das Schloss zum FACH gehoert.
+      gesperrt: imGurt.map((z) => z.gesperrt),
+      zufall: await zufallVon(deps.db, accountId),
       hoechstens: GURT_MAX,
     });
   });
 
   /**
    * Den Gurt neu belegen. Die Liste ist die ganze Wahrheit: Was nicht
-   * darinsteht, verliert seinen Platz.
+   * darinsteht, verliert seinen Platz — und sein Schloss.
    */
   app.put('/api/mememory/sammlung/gurt', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = z
-      .object({ kennungen: z.array(z.string().max(40)).max(GURT_MAX) })
+      .object({
+        kennungen: z.array(z.string().max(40)).max(GURT_MAX),
+        // Optional: Ein Client, der den Zufallsmodus nicht kennt, schickt sie
+        // nicht mit und soll trotzdem seinen Gurt setzen koennen.
+        gesperrt: z.array(z.boolean()).max(GURT_MAX).optional(),
+      })
       .parse(request.body);
-    return reply.send({ gurt: await setzeGurt(deps.db, accountId, body.kennungen) });
+    return reply.send({
+      gurt: await setzeGurt(deps.db, accountId, body.kennungen, body.gesperrt ?? []),
+    });
+  });
+
+  /**
+   * Den Zufallsgurt ein- oder ausschalten.
+   *
+   * Eine eigene Route und kein Feld im Gurt-Aufruf: Der Schalter soll sofort
+   * wirken, der Gurt erst beim Tippen auf "Auswahl merken". Beides in einem
+   * Aufruf hiesse, dass ein Umlegen des Schalters die halbfertige Auswahl
+   * darunter mit festschreibt.
+   */
+  app.put('/api/mememory/sammlung/zufall', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z.object({ an: z.boolean() }).parse(request.body);
+    await setzeZufall(deps.db, accountId, body.an);
+    return reply.send({ zufall: body.an });
   });
 
   app.get('/api/health', async (_request, reply) => reply.send({ ok: true }));

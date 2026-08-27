@@ -212,6 +212,18 @@ export const account = pgTable(
     birthday: date(),
     /** true, sobald das Geburtstags-Pinguin-Outfit mindestens einmal geholt wurde. */
     hasBirthdayOutfit: boolean().notNull().default(false),
+    /**
+     * Mememory: Zufallsgurt an?
+     *
+     * Ist er an, bekommt der Spieler in JEDER Partie drei andere Memes aus
+     * seiner Sammlung — bis auf die Faecher, die er gesperrt hat (siehe
+     * `mememory_sammlung.gesperrt`).
+     *
+     * Am KONTO und nicht am Geraet, anders als die Lautstaerke: Er gehoert
+     * zur Sammlung, und wer seine Bilder rollen laesst, will das auf jedem
+     * Geraet.
+     */
+    mememoryZufall: boolean().notNull().default(false),
     /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
     birthdayRewardYear: integer(),
     anonymizedAt: timestamp({ withTimezone: true }),
@@ -1103,6 +1115,15 @@ export const mememorySammlung = pgTable(
     kennung: text().notNull(),
     /** 1, 2 oder 3 — der Gurt. NULL heisst: gesammelt, aber nicht dabei. */
     platz: smallint(),
+    /**
+     * Haelt dieses Fach beim Zufallsgurt fest.
+     *
+     * Nur sinnvoll zusammen mit einem `platz`: Der Gurt IST die Spalte
+     * `platz`, ein Fach ohne Motiv gibt es nicht — also auch nichts, was ein
+     * Schloss ohne Motiv festhalten koennte. Ohne Zufallsmodus steht die
+     * Spalte still; sie kostet dann ein Byte je Zeile und keinen Gedanken.
+     */
+    gesperrt: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [

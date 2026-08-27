@@ -15,6 +15,7 @@ Vorlage, falls jemand Motive nachliefert.
 | --- | --- | --- | --- | --- | --- |
 | Motive | `public/mememory/motive/` | 88 | 256 × 256 | WebP q78 | 2,3–17,9 kB · **804 kB gesamt** |
 | Tischdecken | `public/mememory/` | 5 | 640 × 936 | WebP q70 | 19–27 kB · **109 kB gesamt** |
+| Kartenrückseite (HUD-Stapel) | `public/mememory/karte-ruecken.webp` | 1 | 78 × 108 | WebP q92 | 3,4 kB · *gerechnet, siehe 6* |
 | Banner Spielauswahl | `public/hub/spielwahl-mememory.webp` | 1 | 1200 × 300 | WebP q80 | 30 kB |
 
 **Seit dem 23. August sind 13 der 43 Motive nicht mehr selbst erzeugt.**
@@ -140,9 +141,9 @@ Spielerfarben) und bleibt damit bei den 57 kB von vorher. Die Liste steht in
 
 ---
 
-## 6 — Kartenrückseite: bewusst kein Bild
+## 6 — Kartenrückseite: am Brett CSS, im HUD ein Bild
 
-Die Rückseite ist **CSS**, kein Asset: dunkles Pflaumenblau mit Goldrahmen,
+Am Brett ist die Rückseite **CSS**, kein Asset: warmes Dunkelbraun mit Goldrahmen,
 feinem Diagonalmuster, einem Ring und dem Monogramm „M" (`.mm-rueck` in
 `styles.css`). Gründe:
 
@@ -152,6 +153,28 @@ feinem Diagonalmuster, einem Ring und dem Monogramm „M" (`.mm-rueck` in
   224er WebP nicht.
 - Ein Goldrahmen mit Alphakanal ist genau der Fall, bei dem hier schon dreimal
   ein Schachbrett statt Transparenz ausgeliefert wurde.
+
+**Seit dem 27. August 2026 gibt es sie zusätzlich als Bild** —
+`public/mememory/karte-ruecken.webp`, 78 × 108, 3,4 kB. Nicht für das Brett:
+Dort bleibt es beim CSS, und alle drei Gründe oben gelten dort weiter. Das Bild
+ist für den **Kartenstapel im Ecken-HUD**, wo jeder Spieler eine Karte je Punkt
+bekommt. Warum dort umgekehrt entschieden:
+
+- Es sind bis zu **zwanzig** Karten je Spieler, also achtzig auf dem Schirm.
+  Als CSS wäre jede davon fünf gestapelte Schichten (Verlauf, Streifen, drei
+  Ringe, Kreis, Monogramm) — vierhundert Zeichenebenen in vier Ecken, die sich
+  bei jedem Punkt neu aufbauen. Als Bild ist jede eine Ebene.
+- Sie ist dort **immer 16 px breit**. Das Argument „muss auf jeder Kartengröße
+  scharf sein“ trifft die Brettkarte, nicht diese.
+- Kein Alphakanal an den Kanten: Die runden Ecken sind ins Bild gestanzt, der
+  Rest ist voll gefüllt.
+
+**Das Bild wird nicht bestellt, sondern gerechnet.** `scripts/mememory-karte-zeichnen.py`
+malt es aus denselben Zahlen, die in `styles.css` stehen — Verlauf, Streifenwinkel,
+Ringstärken, Goldtöne. Wer die Rückseite am Brett ändert, lässt das Skript
+noch einmal laufen; sonst liegen im selben Bildschirm zwei verschiedene Karten.
+Das Skript liegt unter `scripts/` und nicht unter `packages/client/art/`, weil
+dieser Ordner in `.gitignore` steht — ein Erzeuger ist Quelltext, kein Original.
 
 ---
 

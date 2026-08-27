@@ -181,6 +181,24 @@ Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
 > dem, der am Zug ist; Reaktionen starten in der Ecke ihres Absenders und
 > fliegen in die Mitte. Ganzer Bauplan: **`docs/MEMEMORY-ECKEN.md`**.
 >
+> **Noch am 27. August: Stufenregler, Kartenstapel, Zufallsgurt.** Ganzer
+> Bauplan: **`docs/MEMEMORY-HEIM.md`**, Abschnitte 9 bis 11. Zwei Dinge daran
+> gelten auch fuer andere Spiele:
+>
+> 1. **`CreatePartyOptions` traegt jetzt `botSeats` und `botLevel`** (beide
+>    optional). Der Grund: Ein Modul, dessen Bot ein GEDAECHTNIS hat, muss den
+>    Platz dafuer beim Aufbau der Partie anlegen — spaeter entsteht kein
+>    Zustand mehr. `botAction(view, level)` bekommt die Stufe erst beim Zug und
+>    damit zu spaet. Ohne diese beiden Felder waere der Staerkeregler beim
+>    Auffuellen eines wartenden Tisches ein Knopf, der sich bewegt und nichts
+>    tut — der Regelsatz steht seit dem Erstellen fest, die Tischeinstellung
+>    `botLevel` nicht.
+> 2. **Eine Spalte am Konto schlaegt eine eigene Tabelle**, wenn das, was sie
+>    beschreibt, ohnehin nur an einer bestehenden Zeile haengt. Das Schloss
+>    eines Gurtfachs sitzt in `mememory_sammlung.gesperrt` und nicht in einer
+>    Fachtabelle: Der Gurt IST die Spalte `platz`, ein Fach ohne Motiv gibt es
+>    nicht.
+>
 > **Am Abend des 27. August: Menü zum Wischen, Sammlungsseite, Kühlung.**
 > Ganzer Bauplan: **`docs/MEMEMORY-HEIM.md`**. Vier Dinge daran gelten auch
 > für andere Bildschirme:

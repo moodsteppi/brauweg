@@ -7,10 +7,11 @@ import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/e
 import { Einstellungsfenster } from '../minispiele/mememory/Einstellungsfenster';
 import { Heim } from '../minispiele/mememory/Heim';
 import { spieleKlang } from '../minispiele/mememory/klaenge';
-import { KiMatch, type Stufe } from '../minispiele/mememory/KiMatch';
+import { KiMatch } from '../minispiele/mememory/KiMatch';
 import { MehrSeite } from '../minispiele/mememory/MehrSeite';
 import { OnlineMatch, type Gegnerzahl } from '../minispiele/mememory/OnlineMatch';
 import { SammlungSeite } from '../minispiele/mememory/SammlungSeite';
+import { Stufenregler, botLevelAus, type Stufe } from '../minispiele/mememory/Stufenregler';
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
 import { PfeilLinks } from '../zeichen';
@@ -95,6 +96,9 @@ const REAKTION_PAUSE_MS = 250;
  */
 const MOTIV_PAUSE_MS = 1000;
 
+/** Muss zu GURT_MAX in packages/server/src/sammlung.ts passen. */
+const GURT_FAECHER = 3;
+
 /**
  * Der erste Teil der Mischbewegung: die Karten zur Mitte zusammenschieben.
  *
@@ -143,6 +147,14 @@ export function Mememory({
   const [fehler, setFehler] = useState<string | null>(null);
   /** Das Einstellungsfenster liegt ueber dem Menue, sobald es offen ist. */
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  /**
+   * Die Staerke, mit der ein wartender Tisch aufgefuellt wird.
+   *
+   * Sie lebt nur in diesem Bildschirm: Am Tisch steht sie in den Filtern
+   * (`setBotLevel`), und dort ist sie die Wahrheit — hier steht nur, was der
+   * Regler zeigen soll.
+   */
+  const [fuellStufe, setFuellStufe] = useState<Stufe>('mittel');
   /** Der Vorschlagskasten liegt ueber dem Menue, sobald er offen ist. */
   const [kastenOffen, setKastenOffen] = useState(false);
   /** Wie viele Vorschlaege warten. Nur die Aufsicht bekommt die Zahl. */
@@ -208,6 +220,23 @@ export function Mememory({
    * Animation.
    */
   const gesammelt = useRef(new Set<string>());
+  /**
+   * Zufallsgurt an? Und welche Faecher sind festgehalten?
+   *
+   * Beides in Refs: Gezeichnet wird davon nichts, gefragt wird es genau
+   * einmal — beim Betreten eines Tisches. Ein Zustand loeste hier nur ein
+   * Neuzeichnen des Bretts aus.
+   */
+  const zufall = useRef(false);
+  const schloesser = useRef<readonly boolean[]>([]);
+  /**
+   * Der Gurt DIESER Partie.
+   *
+   * `null` heisst: der gespeicherte Gurt gilt. Sonst steht hier die
+   * Ziehung fuer die laufende Partie — festgehaltene Faecher unveraendert,
+   * die anderen neu aus der Sammlung.
+   */
+  const [partieGurt, setPartieGurt] = useState<string[] | null>(null);
   /**
    * Motive, deren Meldung nicht durchkam. Sie reisen bei der naechsten
    * Meldung mit — eine verlorene Anfrage kostet sonst ein Bild in der
@@ -392,6 +421,8 @@ export function Mememory({
       .then((antwort) => {
         if (!lebt) return;
         setGurt(antwort.gurt);
+        zufall.current = antwort.zufall === true;
+        schloesser.current = antwort.gesperrt ?? [];
         gesammelt.current = new Set(antwort.gesammelt.map((zeile) => zeile.kennung));
       })
       .catch(() => {
@@ -400,6 +431,43 @@ export function Mememory({
     return () => {
       lebt = false;
     };
+  }, [tischId]);
+
+  /**
+   * Beim Betreten eines Tisches wird der Gurt gezogen — wenn der Zufallsgurt
+   * an ist.
+   *
+   * Festgehaltene Faecher bleiben, die uebrigen bekommen ein anderes Motiv
+   * aus der eigenen Sammlung. Gezogen wird EINMAL je Partie und nicht bei
+   * jedem Zeichnen: Sonst wechselten die Knoepfe unter dem Daumen.
+   *
+   * Das passiert rein im Client, und das ist kein Versehen: Der Gurt geht
+   * ohnehin nie an den Server: Ans Brett kommt immer nur das eine geworfene
+   * Motiv (siehe `wirfMotiv`). Es gibt also gar keine Stelle, an der ein
+   * Server etwas zu ziehen haette.
+   */
+  useEffect(() => {
+    if (!tischId) {
+      setPartieGurt(null);
+      return;
+    }
+    if (!zufall.current) return;
+    const topf = [...gesammelt.current];
+    if (topf.length === 0) return;
+    const gezogen: string[] = [];
+    for (let fach = 0; fach < GURT_FAECHER; fach += 1) {
+      const gehalten = schloesser.current[fach] === true ? gurt[fach] : undefined;
+      if (gehalten) {
+        gezogen.push(gehalten);
+        continue;
+      }
+      // Kein Motiv zweimal in denselben Gurt: Drei gleiche Knoepfe waeren
+      // keine Auswahl.
+      const frei = topf.filter((k) => !gezogen.includes(k));
+      if (frei.length === 0) break;
+      gezogen.push(frei[Math.floor(Math.random() * frei.length)] ?? '');
+    }
+    setPartieGurt(gezogen.filter(Boolean));
   }, [tischId]);
 
   /**
@@ -1121,15 +1189,39 @@ export function Mememory({
             * nimmt der Wartebereich der anderen Spiele auch.
             */}
           {freiePlaetze.length > 0 && (tisch.table?.seats.length ?? 2) > 2 && (
-            <button
-              className="mm-zweitknopf mm-fuellen"
-              type="button"
-              onClick={() => {
-                for (const platz of freiePlaetze) tisch.addBot(platz.seat);
-              }}
-            >
-              Mit Bots auffüllen ({freiePlaetze.length})
-            </button>
+            <div className="mm-fuellblock">
+              {/*
+                * Die Staerke steht ÜBER dem Knopf und nicht dahinter: Sie
+                * gilt fuer alle Bots dieses Tisches, und wer sie erst nach
+                * dem Auffuellen sieht, hat sie zu spaet gesehen.
+                *
+                * Gesetzt wird sie ueber `setBotLevel` — das ist eine
+                * TISCHeinstellung und keine Regel, sie laesst sich also
+                * aendern, solange gewartet wird. Der Regelsatz des Tisches
+                * steht dagegen seit dem Erstellen fest; ihm eine Stufe
+                * nachzureichen ginge gar nicht.
+                */}
+              <Stufenregler
+                wert={fuellStufe}
+                onWert={(stufe) => {
+                  setFuellStufe(stufe);
+                  tisch.setBotLevel(botLevelAus(stufe));
+                }}
+                beschriftung="Spielstärke der Bots"
+              />
+              <button
+                className="mm-zweitknopf mm-fuellen"
+                type="button"
+                onClick={() => {
+                  // Erst die Stufe, dann die Bots: Sie liegt danach am Tisch
+                  // und gilt fuer die Partie, die gleich startet.
+                  tisch.setBotLevel(botLevelAus(fuellStufe));
+                  for (const platz of freiePlaetze) tisch.addBot(platz.seat);
+                }}
+              >
+                Mit Bots auffüllen ({freiePlaetze.length})
+              </button>
+            </div>
           )}
         </div>
       </main>
@@ -1421,9 +1513,14 @@ export function Mememory({
         * Konto, noch nichts gewaehlt), bleibt es beim wandernden Emoji:
         * lieber der alte Knopf als gar keine Reaktion.
         */}
-      {gurt.length > 0 ? (
+      {/*
+        * Am Tisch gilt der Gurt DIESER Partie, wenn einer gezogen wurde —
+        * sonst der gespeicherte. Beides ist dieselbe Leiste; nur die Liste
+        * dahinter wechselt.
+        */}
+      {(partieGurt ?? gurt).length > 0 ? (
         <div className="mm-reaktionsleiste" data-gurt="">
-          {gurt.map((kennung) => (
+          {(partieGurt ?? gurt).map((kennung) => (
             <button
               key={kennung}
               className="mm-reaktion mm-reaktion-motiv"
