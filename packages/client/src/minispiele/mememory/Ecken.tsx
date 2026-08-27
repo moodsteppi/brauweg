@@ -87,6 +87,31 @@ export function Ecken({
           <span className="mm-puck-fach" aria-hidden="true">
             {dran === sitz && <span className="mm-puck" ref={puckRef} />}
           </span>
+          {/*
+            * Der Stapel: eine Karte je Punkt, hinter dem Namen hervor.
+            *
+            * Er steht VOR der Namenszeile im Blatt und rutscht ueber einen
+            * negativen Abstand unter sie — so schaut er hinter dem Kissen
+            * hervor, statt daneben zu stehen. In den oberen Ecken kehrt
+            * `column-reverse` die Reihenfolge um, dort liegt er entsprechend
+            * unter dem Namen.
+            *
+            * Die Karten tragen alle dieselbe Quelle: ein Bild, einmal
+            * geladen, danach aus dem Zwischenspeicher. Zwanzig davon je
+            * Spieler sind zwanzig Knoten — aber keine zwanzig Anfragen.
+            */}
+          {(punkte[sitz] ?? 0) > 0 && (
+            <span className="mm-ecke-stapel" aria-hidden="true">
+              {Array.from({ length: punkte[sitz] ?? 0 }, (_, i) => (
+                /*
+                 * Schluessel ist die Nummer der Karte. Damit bleiben die
+                 * schon liegenden Karten dieselben Knoten, und nur die neue
+                 * entsteht — nur sie spielt deshalb die kurze Bewegung.
+                 */
+                <img key={i} src="/mememory/karte-ruecken.webp" alt="" draggable={false} />
+              ))}
+            </span>
+          )}
           <span className="mm-ecke-zeile">
             <span className="mm-ecke-name">{nameVon(sitz)}</span>
             <span className="mm-ecke-trenner" aria-hidden="true">

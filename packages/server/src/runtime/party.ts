@@ -277,6 +277,16 @@ export class PartyRuntime {
       rounds: table.maxRounds,
       seed,
       seedHex,
+      /*
+       * Wer hier keinen Menschen sitzen hat, wird gleich darunter dauerhaft
+       * ein Bot. Das Modul erfaehrt es JETZT, weil ein Bot mit Gedaechtnis
+       * seinen Platz dafuer beim Aufbau braucht — spaeter entsteht kein
+       * Zustand mehr. Und die Stufe kommt aus den Tischeinstellungen, nicht
+       * aus der eingefrorenen `config`: Sie laesst sich waehrend des Wartens
+       * noch aendern, die config nicht.
+       */
+      botSeats: seats.filter((seat) => !seat.accountId).map((seat) => seat.seatIndex),
+      botLevel: tableBotLevel(table.filters),
     });
 
     const [party] = await this.db

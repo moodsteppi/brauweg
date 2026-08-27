@@ -133,11 +133,26 @@ export const mememory: GameModule<
     return probleme;
   },
 
-  createParty({ config, seats, seed, seedHex }: CreatePartyOptions<MememoryRegeln>) {
+  createParty({
+    config,
+    seats,
+    seed,
+    seedHex,
+    botSeats,
+    botLevel,
+  }: CreatePartyOptions<MememoryRegeln>) {
     const sitze = Array.from({ length: seats }, (_, i) => i);
-    // Die Hexkette, wenn es sie gibt: Ein 32-Bit-Zahlenseed liesse sich
-    // durchprobieren, und wer ihn hat, kennt jede verdeckte Karte.
-    return erstellePartie(config, sitze, seedHex ?? seed);
+    /*
+     * `botSeats` und `botLevel` reicht die Plattform durch, seit ein
+     * wartender Tisch mit Bots aufgefuellt werden kann, deren Staerke man
+     * dabei einstellt. Sie wirken nur, wenn die `config` keine `botStufen`
+     * nennt — im KI-Match hat jeder Gegner seine eigene, und die soll eine
+     * Tischeinstellung nicht ueberschreiben.
+     *
+     * Die Hexkette, wenn es sie gibt: Ein 32-Bit-Zahlenseed liesse sich
+     * durchprobieren, und wer ihn hat, kennt jede verdeckte Karte.
+     */
+    return erstellePartie(config, sitze, seedHex ?? seed, botSeats ?? [], botLevel);
   },
 
   act: (partie, sitz, aktion) => fuehreAus(partie, sitz, aktion),

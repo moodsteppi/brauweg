@@ -362,6 +362,125 @@ Briefkasten), saßen **alle drei** daneben, zwischen 4,2 % und 6,3 %.
 
 ---
 
+## 9. Spielstärke als Regler
+
+Vier Knöpfe nebeneinander brauchten eine Zeile für sich, und mit drei Gegnern
+waren das drei Zeilen. Jetzt ist es ein `<input type="range">` mit den vier
+Namen darunter — die gewählte groß und golden, die anderen klein und grau.
+Die Namen sind zugleich Knöpfe: Wer die Stufe kennt, tippt sie direkt an.
+
+Ein echter Regler und kein Nachbau: Er bringt Pfeiltasten, das Ziehverhalten
+des Geräts und die Vorlesehilfe mit. `aria-valuetext` steht ausdrücklich dabei
+— ohne ihn liest ein Vorleseprogramm „2“ vor, und die Zahl steht nirgends auf
+dem Bildschirm.
+
+`font-size` bleibt aus dem Übergang heraus: Eine Schriftgröße, die überblendet,
+rechnet in jedem Bild das Layout der ganzen Zeile neu. Der Sprung ist hier
+ohnehin richtig — der Regler rastet, also rastet auch die Beschriftung.
+
+### Der Weg der Stufe an den Bot
+
+Das ist der interessante Teil, und er war nicht offensichtlich.
+
+Der **Regelsatz** eines Tisches wird beim Erstellen festgeschrieben. Wer einen
+WARTENDEN Tisch mit Bots auffüllt, kann ihm also keine `botStufen` nachreichen.
+Die Tischeinstellung **`botLevel`** dagegen liegt in `gameTable.filters` und
+lässt sich bis zum Start ändern — sie ist der einzige Weg, an dem dort noch
+etwas ankommt.
+
+Nur: `botAction(view, level)` bekommt die Stufe erst beim ZUG, und da ist es zu
+spät. Ein Memory-Bot ist genau so stark wie sein Gedächtnis, und dessen Platz
+im Partiezustand entsteht beim **Aufbau** der Partie — danach nie wieder.
+
+Deshalb trägt `CreatePartyOptions` seit dem 27. August zwei weitere Felder:
+
+```
+botSeats?: readonly number[]   // welche Plätze ein Bot spielt
+botLevel?: BotLevel            // wie stark, laut Tischeinstellung
+```
+
+Beide optional, andere Module merken nichts davon. Der Server füllt sie beim
+Start aus den Sitzen, die keinen `accountId` haben — genau die, die eine Zeile
+weiter dauerhaft Bots werden. Mememory baut daraus seine `botStufen`, **außer**
+die `config` nennt schon welche: Im KI-Match hat jeder Gegner seine eigene
+Stufe, und eine Tischeinstellung darf sie nicht überschreiben.
+
+Die vier Stufen der Plattform gehen eins zu eins auf die vier des Spiels
+(`stufeAusBotLevel`): anfänger–leicht, standard–mittel, experte–schwer,
+genie–experte.
+
+**Warum nicht einfach alle Sitze in `botStufen` eintragen:** Wer dort steht,
+bekommt in `sichtFuer` die Liste der gesehenen Karten mitgeschickt. Für einen
+Bot ist das nötig, für einen Menschen wäre es ein Geschenk. Deshalb genau die
+Bot-Sitze und keinen mehr — geprüft in
+`packages/server/test/mememory-botstufe.test.ts` (fünf Fälle, darunter „der
+Platz des Menschen bekommt keine Stufe“).
+
+---
+
+## 10. Ein Kartenstapel je Punkt
+
+In jeder Ecke liegt jetzt hinter dem Namen ein Stapel: eine Karte je Punkt.
+Die Zahl steht weiter daneben — der Stapel ersetzt sie nicht, er macht sie
+fühlbar: Man sieht auf einen Blick, wer vorn liegt, ohne zwei Zahlen zu
+vergleichen.
+
+Jede weitere Karte zeigt 5 px von sich, gerade genug für den Goldrand. Damit
+bleibt auch der größtmögliche Stapel in der Ecke: 16 + 19 × 5 = 111 px gegen
+42 % der Brettbreite (144 px auf einem schmalen Telefon). Zwanzig Punkte sind
+das Maximum, das es überhaupt gibt (zwanzig Paare zu viert). Nachgemessen:
+neun Karten sind 62 px breit.
+
+Rechte Ecken stapeln nach links, linke nach rechts — der Stapel wächst also
+immer ins Brett hinein und nie über den Bildschirmrand.
+
+**Nur die neue Karte bewegt sich.** Eine CSS-Animation läuft, wenn ihr Knoten
+entsteht; die schon liegenden Karten behalten ihren Schlüssel und damit ihren
+Knoten. Ohne diese Eigenschaft zuckte bei jedem Punkt der ganze Stapel.
+
+Zum Bild selbst siehe `docs/ASSETS-MEMEMORY.md`, Abschnitt 6: Am Brett bleibt
+die Rückseite CSS, für den Stapel gibt es sie zusätzlich als 3,4-kB-WebP —
+gerechnet aus denselben Zahlen, mit `scripts/mememory-karte-zeichnen.py`.
+
+---
+
+## 11. Zufallsgurt und Schlösser
+
+Ein Schalter auf der Sammlungsseite: **„Jede Partie andere Memes“**. Ist er an,
+zieht jede Partie drei aus der eigenen Sammlung — außer den Fächern, die man
+festhält. Das Schloss ist offen und grau, wenn das Fach frei ist, und
+geschlossen und golden, wenn es hält; das Fach trägt dann denselben goldenen
+Rand.
+
+**Schloss und Schalter gibt es nur in diesem Modus.** Ohne Zufall hält der Gurt
+ohnehin, was drinsteht — ein Schloss daneben wäre ein Knopf, der nichts tut,
+und der ist schlimmer als gar keiner.
+
+| | wo | wann geschrieben |
+| --- | --- | --- |
+| Schalter | `account.mememory_zufall` | sofort beim Umlegen (eigene Route) |
+| Schlösser | `mememory_sammlung.gesperrt` | mit „Auswahl merken“ |
+
+Zwei getrennte Wege, und das ist Absicht: Beides in einem Aufruf hieße, dass
+ein Umlegen des Schalters die halbfertige Auswahl darunter mit festschreibt.
+
+**Das Schloss hängt am FACH, nicht am Motiv.** Wer ein Motiv aus dem Fach
+nimmt, nimmt das Schloss mit weg; wer den Gurt neu setzt, räumt alle Schlösser
+mit. Eine eigene Tabelle wäre sauberer normalisiert und hier trotzdem falsch:
+Der Gurt IST die Spalte `platz`, ein Fach ohne Motiv gibt es nicht.
+
+**Gezogen wird im Client**, einmal beim Betreten eines Tisches. Das ist kein
+Versehen: Der Gurt geht ohnehin nie an den Server — ans Brett kommt immer nur
+das eine geworfene Motiv (`wirfMotiv` → `sendeReaktion`). Es gäbe also gar
+keine Stelle, an der ein Server etwas zu ziehen hätte.
+
+Migration `0023_mememory_zufallsgurt.sql`, zwei Spalten mit Vorgabewert: Ein
+Konto von vor dem Deploy hat den Schalter aus und kein Fach gesperrt — genau
+der Zustand, den es heute hat. Der Gurt-Aufruf nimmt `gesperrt` weiterhin
+optional, damit ein noch laufender Client seinen Gurt setzen kann.
+
+---
+
 ## Dateien
 
 | Datei | Was |
@@ -371,7 +490,13 @@ Briefkasten), saßen **alle drei** daneben, zwischen 4,2 % und 6,3 %.
 | `client/src/minispiele/mememory/MehrSeite.tsx` | Baustellenhinweis, Vorschlagskasten, Freunde |
 | `client/src/minispiele/mememory/Einstellungsfenster.tsx` | Lautstärke |
 | `client/src/minispiele/mememory/Banner.tsx` | Banner der Spielauswahl, Takt und Konfetti |
-| `client/src/zeichen.tsx` | Kreuz, Pfeil, Note, Haus, Winkel |
+| `client/src/zeichen.tsx` | Kreuz, Pfeil, Note, Haus, Winkel, Schloss |
+| `client/src/minispiele/mememory/Stufenregler.tsx` | Regler samt Stufenkatalog |
+| `client/src/minispiele/mememory/Ecken.tsx` | Kartenstapel je Punkt |
+| `scripts/mememory-karte-zeichnen.py` | erzeugt `karte-ruecken.webp` |
+| `server/drizzle/0023_mememory_zufallsgurt.sql` | zwei Spalten |
+| `server/test/mememory-botstufe.test.ts` | der Weg der Stufe an den Bot |
+| `game-api/src/index.ts` | `botSeats` und `botLevel` in `CreatePartyOptions` |
 | `server/src/tables/service.ts` | `verlasseKiTisch` |
 | `server/src/runtime/party.ts` | `verwirf` |
 | `server/test/ki-tisch-verlassen.test.ts` | vier Fälle |

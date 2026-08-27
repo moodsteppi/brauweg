@@ -16,46 +16,16 @@
 import { useState } from 'react';
 
 import { Kreuz } from '../../zeichen';
-
-/** Muss zu MememoryStufe in packages/game-mememory/src/stufen.ts passen. */
-export type Stufe = 'leicht' | 'mittel' | 'schwer' | 'experte';
-
-/** So viele Bots passen an einen Tisch. Vier Sitze, einer ist der Mensch. */
-const GEGNER_MAX = 3;
-
-interface Beschreibung {
-  readonly stufe: Stufe;
-  readonly name: string;
-  readonly satz: string;
-}
+import { STUFEN, Stufenregler, type Stufe } from './Stufenregler';
 
 /**
- * Was die Stufen wirklich tun — in der Sprache des Spielers, nicht in der des
- * Codes. Wer "70 % Haltewahrscheinlichkeit" liest, weiss nicht, ob er
- * gewinnen kann.
+ * So viele Bots passen an einen Tisch. Vier Sitze, einer ist der Mensch.
+ *
+ * Die vier Stufen samt ihren Saetzen stehen im Regler (Stufenregler.tsx) —
+ * sie werden dort UND im Wartebereich gebraucht, und zwei Abschriften
+ * derselben Liste laufen auseinander.
  */
-const STUFEN: readonly Beschreibung[] = [
-  {
-    stufe: 'leicht',
-    name: 'Leicht',
-    satz: 'Merkt sich nur die letzten zwei Züge und deckt sonst blind auf.',
-  },
-  {
-    stufe: 'mittel',
-    name: 'Mittel',
-    satz: 'Merkt sich drei Züge — aber jede Karte nur mit halber Wahrscheinlichkeit.',
-  },
-  {
-    stufe: 'schwer',
-    name: 'Schwer',
-    satz: 'Vier Züge, dreht nichts unnötig zweimal um und behält manches für immer.',
-  },
-  {
-    stufe: 'experte',
-    name: 'Experte',
-    satz: 'Vergisst nichts. Was einmal offen lag, hat er.',
-  },
-];
+const GEGNER_MAX = 3;
 
 export function KiMatch({
   laeuft,
@@ -107,21 +77,12 @@ export function KiMatch({
                 </button>
               </div>
             )}
-            <div className="mm-stufenwahl">
-              {STUFEN.map((eintrag) => (
-                <button
-                  key={eintrag.stufe}
-                  type="button"
-                  className="mm-stufe"
-                  data-an={eintrag.stufe === gewaehlt ? '' : undefined}
-                  aria-pressed={eintrag.stufe === gewaehlt}
-                  onClick={() => setze(index, eintrag.stufe)}
-                  disabled={laeuft}
-                >
-                  {eintrag.name}
-                </button>
-              ))}
-            </div>
+            <Stufenregler
+              wert={gewaehlt}
+              onWert={(stufe) => setze(index, stufe)}
+              gesperrt={laeuft}
+              beschriftung={`Spielstärke von Gegner ${index + 1}`}
+            />
             <p className="mm-stufensatz">
               {STUFEN.find((eintrag) => eintrag.stufe === gewaehlt)?.satz}
             </p>

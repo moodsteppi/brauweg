@@ -170,6 +170,28 @@ export interface CreatePartyOptions<TConfig> {
    * fehlt sie (Tests), bleibt nur der reproduzierbare Zahlen-Seed.
    */
   readonly seedHex?: string;
+  /**
+   * Plaetze, die von einem Bot gespielt werden.
+   *
+   * Warum das hierher gehoert und nicht erst in `botAction`: Ein Modul, dessen
+   * Bot ein GEDAECHTNIS hat, muss den Platz dafuer beim Aufbau der Partie
+   * anlegen — spaeter gibt es keine Stelle mehr, an der Zustand entsteht.
+   * Mememory ist so eines (siehe stufen.ts). Ohne diese Liste bliebe nur, die
+   * Bot-Sitze in die `config` zu schreiben, und die steht beim Auffuellen
+   * eines wartenden Tisches laengst fest.
+   *
+   * Fehlt das Feld, sitzt kein Bot am Tisch oder das Modul braucht die
+   * Auskunft nicht — beides ist der Normalfall, deshalb optional.
+   */
+  readonly botSeats?: readonly number[];
+  /**
+   * Spielstaerke, die fuer die Bots DIESES Tisches eingestellt ist
+   * (`filters.botLevel`, aenderbar solange gewartet wird).
+   *
+   * Sie steht auch in `botAction` zur Verfuegung; hier ist sie fuer Module,
+   * die daraus schon beim Aufbau etwas ableiten muessen.
+   */
+  readonly botLevel?: BotLevel;
 }
 
 // ---------------------------------------------------------------------------

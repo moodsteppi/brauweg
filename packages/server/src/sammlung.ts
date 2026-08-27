@@ -49,6 +49,13 @@ export interface SammlungsZeile {
   readonly kennung: string;
   /** 1..3 = im Gurt, sonst null. */
   readonly platz: number | null;
+  /**
+   * Haelt dieses Fach beim Zufallsgurt fest.
+   *
+   * Ohne `platz` bedeutungslos — gesperrt wird ein FACH, und ein Fach gibt
+   * es nur, wo ein Platz vergeben ist.
+   */
+  readonly gesperrt: boolean;
 }
 
 /**
@@ -89,7 +96,11 @@ async function anzahl(db: Db, accountId: string): Promise<number> {
 /** Die ganze Sammlung, aelteste zuerst — so bleibt die Reihenfolge stabil. */
 export async function sammlungVon(db: Db, accountId: string): Promise<SammlungsZeile[]> {
   return db
-    .select({ kennung: s.mememorySammlung.kennung, platz: s.mememorySammlung.platz })
+    .select({
+      kennung: s.mememorySammlung.kennung,
+      platz: s.mememorySammlung.platz,
+      gesperrt: s.mememorySammlung.gesperrt,
+    })
     .from(s.mememorySammlung)
     .where(eq(s.mememorySammlung.accountId, accountId))
     .orderBy(asc(s.mememorySammlung.createdAt), asc(s.mememorySammlung.kennung));
@@ -120,6 +131,15 @@ export async function setzeGurt(
   db: Db,
   accountId: string,
   kennungen: readonly string[],
+  /**
+   * Welche Faecher der Zufallsgurt in Ruhe laesst — Stellung fuer Stellung
+   * zur Kennungsliste.
+   *
+   * Kuerzer oder ganz weg heisst "nicht gesperrt": Ein Client, der den
+   * Zufallsmodus gar nicht kennt, schickt sie nicht mit und soll trotzdem
+   * seinen Gurt setzen koennen.
+   */
+  gesperrt: readonly boolean[] = [],
 ): Promise<string[]> {
   const gewaehlt = [...new Set(kennungen)].filter((k) => KENNUNG_MUSTER.test(k));
   if (gewaehlt.length > GURT_MAX) throw badRequest('gurtZuVoll');
@@ -137,19 +157,44 @@ export async function setzeGurt(
     if (vorhanden.length !== gewaehlt.length) throw badRequest('nichtGesammelt');
   }
 
+  // Auch das Schloss faellt beim Raeumen: Es haengt am Fach, und das Fach
+  // wird gerade neu vergeben.
   await db
     .update(s.mememorySammlung)
-    .set({ platz: null })
+    .set({ platz: null, gesperrt: false })
     .where(and(eq(s.mememorySammlung.accountId, accountId), isNotNull(s.mememorySammlung.platz)));
 
   for (const [i, kennung] of gewaehlt.entries()) {
     await db
       .update(s.mememorySammlung)
-      .set({ platz: i + 1 })
+      .set({ platz: i + 1, gesperrt: gesperrt[i] === true })
       .where(
         and(eq(s.mememorySammlung.accountId, accountId), eq(s.mememorySammlung.kennung, kennung)),
       );
   }
 
   return [...gewaehlt];
+}
+
+/**
+ * Steht der Zufallsgurt dieses Kontos auf an?
+ *
+ * Er gehoert ans Konto und nicht ans Geraet, anders als die Lautstaerke: Er
+ * gehoert zur Sammlung, und wer seine Bilder rollen laesst, will das auf
+ * jedem Geraet.
+ */
+export async function zufallVon(db: Db, accountId: string): Promise<boolean> {
+  const [zeile] = await db
+    .select({ an: s.account.mememoryZufall })
+    .from(s.account)
+    .where(eq(s.account.id, accountId));
+  return zeile?.an ?? false;
+}
+
+/** Den Zufallsgurt ein- oder ausschalten. */
+export async function setzeZufall(db: Db, accountId: string, an: boolean): Promise<void> {
+  await db
+    .update(s.account)
+    .set({ mememoryZufall: an })
+    .where(eq(s.account.id, accountId));
 }

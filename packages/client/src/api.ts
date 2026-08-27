@@ -835,19 +835,38 @@ export const api = {
   mememoryGesehen: (kennungen: string[]) =>
     post<{ neu: number; gesamt: number }>('/mememory/sammlung', { kennungen }),
 
-  /** Die eigene Sammlung samt Gurt (die drei fuer den Tisch). */
+  /**
+   * Die eigene Sammlung samt Gurt (die drei fuer den Tisch), den Schloessern
+   * der drei Faecher und dem Zufallsschalter.
+   *
+   * `gesperrt` steht Stellung fuer Stellung zum `gurt` — eine eigene Liste
+   * und kein Feld an der Kennung, weil das Schloss zum FACH gehoert und
+   * nicht zum Motiv.
+   */
   mememorySammlung: () =>
     request<{
-      gesammelt: { kennung: string; platz: number | null }[];
+      gesammelt: { kennung: string; platz: number | null; gesperrt: boolean }[];
       gurt: string[];
+      gesperrt: boolean[];
+      zufall: boolean;
       hoechstens: number;
     }>('/mememory/sammlung'),
 
   /** Den Gurt neu belegen. Die Liste ist die ganze Wahrheit. */
-  mememoryGurt: (kennungen: string[]) =>
+  mememoryGurt: (kennungen: string[], gesperrt?: boolean[]) =>
     request<{ gurt: string[] }>('/mememory/sammlung/gurt', {
       method: 'PUT',
-      body: JSON.stringify({ kennungen }),
+      body: JSON.stringify({ kennungen, gesperrt }),
+    }),
+
+  /**
+   * Den Zufallsgurt ein- oder ausschalten. Wirkt sofort — anders als der
+   * Gurt, der erst beim Merken geschrieben wird.
+   */
+  mememoryZufall: (an: boolean) =>
+    request<{ zufall: boolean }>('/mememory/sammlung/zufall', {
+      method: 'PUT',
+      body: JSON.stringify({ an }),
     }),
 
   /** Ablehnen und Herausnehmen sind derselbe Handgriff: die Zeile geht weg. */
