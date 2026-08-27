@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 26. August 2026 auf diesem Zweig, nicht aus der
 Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-44 Skat-Tests, 15 Feldherr-Tests, 39 Mememory-Tests, **317 Servertests**
-— zusammen 773, alle grün. `tsc --noEmit` sauber.
+44 Skat-Tests, 15 Feldherr-Tests, 53 Mememory-Tests, **317 Servertests**
+— zusammen 787, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
@@ -145,6 +145,27 @@ Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
 > Server müsste dafür in den Spielzustand sehen. Die Sammlung ist deshalb
 > bewusst Schmuck ohne Preis oder Vorteil — wer sich Bilder in eine Liste
 > lügt, betrügt niemanden außer sich.
+>
+> **Und ein Gegner aus dem Rechner (27. August 2026).** Unter der Match-Suche
+> steht „Gegen die KI spielen"; der Bildschirm „KI-Match erstellen" hat vier
+> Stufen (leicht / mittel / schwer / Experte). Ganzer Bauplan:
+> **`docs/MEMEMORY-KI.md`**. Zwei Dinge daran sind für andere Spiele
+> interessant:
+>
+> 1. **Ein merkfähiger Bot braucht Zustand, keine schlauere Sicht.**
+>    `botAction` bekommt nur die gefilterte Sicht, und die trägt bewusst
+>    keine Liste gesehener Karten. Also liegt das Gedächtnis im
+>    PARTIEZUSTAND, und `viewFor` legt es genau dem Sitz bei, der in
+>    `config.botStufen` steht — ein Mensch bekommt weiterhin nichts.
+> 2. **Wer im Zustandsübergang würfelt, würfelt aus der Saat.** Die
+>    Vergessensproben laufen in `act`/`advanceInterlude` und müssen nach
+>    einem Serverneustart aus dem Snapshot dasselbe ergeben; dafür trägt der
+>    Zustand Saat und Zugnummer. Die Zugwahl des Bots darf dagegen weiter
+>    `Math.random()` benutzen — sie wandert als Aktion in die Zugliste.
+>
+> Dadurch steigt `SNAPSHOT_VERSION` auf 2. **`deserialize` nimmt die 1
+> weiterhin an** und ergänzt die neuen Felder: Sonst bräche der Deploy jede
+> laufende Partie.
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

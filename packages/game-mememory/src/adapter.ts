@@ -47,8 +47,13 @@ import { type MememorySicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
+ *
+ * 2 seit dem 27. August 2026: Der Zustand traegt Zugnummer, Saat und das
+ * Gedaechtnis der Bots. `deserialize` nimmt die 1 weiterhin an und ergaenzt
+ * die Felder — sonst braeche der Deploy jede laufende Partie, und das
+ * ausgerechnet fuer eine Funktion, die diese Partien gar nicht benutzen.
  */
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 
 type GespeichertePartie = MememoryPartie & { readonly v: number };
 
@@ -164,12 +169,28 @@ export const mememory: GameModule<
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
-    const { v: _v, ...rest } = snap;
+    const { v, ...rest } = snap;
+    if (v === 1) {
+      /**
+       * Eine Partie aus der Zeit vor den Bot-Stufen.
+       *
+       * Sie hat weder Zugnummer noch Saat noch Gedaechtnis — und braucht
+       * nichts davon: Ohne `botStufen` in der `config` merkt sich kein Sitz
+       * etwas. Die Felder werden trotzdem gesetzt, damit der Zustand ab hier
+       * vollstaendig ist und niemand auf `undefined` laeuft.
+       */
+      return {
+        ...(rest as MememoryPartie),
+        zug: 0,
+        saat: 'alt',
+        erinnerung: {},
+      };
+    }
     return rest as MememoryPartie;
   },
 };

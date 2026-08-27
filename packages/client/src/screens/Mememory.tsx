@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type TableRow } from '../api';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
 import { spieleKlang, setzeTon, tonAn } from '../minispiele/mememory/klaenge';
+import { KiMatch, type Stufe } from '../minispiele/mememory/KiMatch';
 import { Sammlung } from '../minispiele/mememory/Sammlung';
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
@@ -147,6 +148,8 @@ export function Mememory({
   const [gurt, setGurt] = useState<string[]>([]);
   /** Der Sammlungs-Kasten liegt ueber dem Menue, sobald er offen ist. */
   const [sammlungOffen, setSammlungOffen] = useState(false);
+  /** Der Bildschirm "KI-Match erstellen" liegt STATT des Menues da. */
+  const [kiOffen, setKiOffen] = useState(false);
   /**
    * Was diese Partie schon gemeldet hat.
    *
@@ -373,6 +376,49 @@ export function Mememory({
     } catch {
       setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+    }
+  }, []);
+
+  /**
+   * Einen Tisch gegen die KI aufmachen.
+   *
+   * `fillWithBots` besetzt jeden freien Platz — der Ersteller sitzt auf 0,
+   * die Bots also ab 1. Genau so wandern die Stufen in die `config`:
+   * Sitz 1 bekommt den ersten Eintrag, Sitz 2 den zweiten. Damit steht die
+   * Erweiterung auf vier Spieler schon: eine laengere Liste, sonst nichts.
+   *
+   * `on_request` und nicht oeffentlich: Ein Bot-Tisch in der Lobbyliste
+   * faenge Leute ab, die einen Menschen suchen — dieselbe Ueberlegung wie bei
+   * Easy Poker.
+   */
+  const starteKi = useCallback(async (stufen: Stufe[]): Promise<void> => {
+    setSucht(true);
+    setFehler(null);
+    try {
+      const zusatz = await api
+        .mememoryMotive()
+        .then((antwort) => antwort.hochgeladen)
+        .catch(() => []);
+      const botStufen = Object.fromEntries(stufen.map((stufe, i) => [i + 1, stufe]));
+      const { id } = await api.createTable({
+        gameId: 'mememory',
+        config: {
+          ...REGELSATZ,
+          ...(zusatz.length > 0 ? { zusatz } : {}),
+          botStufen,
+        },
+        seats: 1 + stufen.length,
+        rounds: 1,
+        visibility: 'on_request',
+        fillWithBots: true,
+      });
+      setKiOffen(false);
+      setEigenerTisch(null);
+      setTischId(id);
+    } catch {
+      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+    } finally {
+      setSucht(false);
     }
   }, []);
 
@@ -685,6 +731,20 @@ export function Mememory({
     </button>
   );
 
+  if (!tischId && kiOffen) {
+    return (
+      <KiMatch
+        laeuft={sucht}
+        fehler={fehler}
+        onStart={(stufen) => void starteKi(stufen)}
+        onBack={() => {
+          setKiOffen(false);
+          setFehler(null);
+        }}
+      />
+    );
+  }
+
   if (!tischId) {
     return (
       <main className="mm-menue">
@@ -704,6 +764,20 @@ export function Mememory({
                 aendert sich alle fuenf Sekunden, und ein springendes Wort
                 mitten im Text liest sich wie ein Fehler. */}
             <em>({aktiv ?? '…'})</em>
+          </button>
+
+          {/* Mit Abstand unter der Match-Suche: Es sind zwei verschiedene
+              Entscheidungen, und der Zwischenraum sagt das ohne Worte. */}
+          <button
+            className="mm-ki-knopf"
+            type="button"
+            onClick={() => {
+              setFehler(null);
+              setKiOffen(true);
+            }}
+            disabled={sucht}
+          >
+            <span>Gegen die KI spielen</span>
           </button>
 
           {fehler && <p className="mm-fehler">{fehler}</p>}
