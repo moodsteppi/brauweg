@@ -13,10 +13,10 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 27. August 2026, nicht aus der Erinnerung):**
+**Prüfstand (gezählt am 27. August 2026 abends, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 63 Mememory-Tests, 54 Easy-Poker-Tests, **318 Servertests**
-— zusammen 854, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 63 Mememory-Tests, 63 Easy-Poker-Tests, **328 Servertests**
+— zusammen 873, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
@@ -180,6 +180,35 @@ Minuten live.
 > deshalb auf jedem Gerät dieselbe. Ein Puck in der Spielerfarbe wandert zu
 > dem, der am Zug ist; Reaktionen starten in der Ecke ihres Absenders und
 > fliegen in die Mitte. Ganzer Bauplan: **`docs/MEMEMORY-ECKEN.md`**.
+>
+> **Am Abend des 27. August: Menü zum Wischen, Sammlungsseite, Kühlung.**
+> Ganzer Bauplan: **`docs/MEMEMORY-HEIM.md`**. Vier Dinge daran gelten auch
+> für andere Bildschirme:
+>
+> 1. **Seiten zum Wischen gehören auf eine Rollfläche mit Rastpunkten**
+>    (`scroll-snap`), nicht auf nachgebauten Fingercode — Schwung und
+>    Rückfederung kommen so vom Gerät. Die Falle ist die Startseite: Eine
+>    Rollfläche steht beim Aufbau links, und die Mitte lässt sich erst
+>    einstellen, wenn die Breite feststeht. `Heim.tsx` setzt so lange nach,
+>    bis es einmal geklappt hat.
+> 2. **Ein Schriftzeichen im Knopf lässt sich nicht zentrieren.** Der Browser
+>    zentriert nach VORSCHUBBREITE, nicht nach Tinte; was links und rechts vom
+>    Strich Luft ist, entscheidet die Schrift. Gemessen: `✕` 3,4 px nach
+>    rechts (von 34), `×` 2,2 px zu tief, `♪` 2,3 px zu tief. Symbole sind
+>    jetzt Pfade in `client/src/zeichen.tsx`. Die gelieferten BILDdateien
+>    unter `public/hub/` waren dagegen alle in Ordnung — und drei von Hand
+>    geschriebene SVG-Umrisse desselben Tages saßen alle daneben. Wer einen
+>    Umriss schreibt, misst ihn nach.
+> 3. **Eine Sperre, die man sieht, braucht die Uhr im `setTimeout`** und nicht
+>    in der Animation: Eine CSS-Animation friert im verdeckten Tab ein, ein
+>    `setTimeout` wird nur gedeckelt. Die Kreisbewegung selbst sind zwei
+>    gedrehte Halbscheiben (reines `transform`) und kein `conic-gradient` —
+>    dessen Winkel bewegt sich nur mit `@property`, und wo die fehlt, bliebe
+>    der Film für immer stehen.
+> 4. **Ein verlassener KI-Tisch wird geschlossen, ein Online-Tisch nicht.**
+>    Maßgeblich ist die BESETZUNG (genau ein Konto, sonst Bots), nicht die
+>    Sichtbarkeit. Die Partie wird weggeworfen (`verwirf`) und nicht
+>    abgerechnet — sonst wäre Aufgeben eine Abkürzung zu Trophäen.
 >
 > **Am selben Nachmittag kam das Spiel dazu: 2 bis 4 Sitze sind jetzt echt.**
 > `SEAT_COUNTS` steht auf `[2, 3, 4]`. Ganzer Bauplan:

@@ -61,7 +61,9 @@ import {
   Tafel,
   spielBanner,
 } from '../hub';
+import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
+import { Kreuz, Note } from '../zeichen';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
@@ -1547,7 +1549,7 @@ function Shop({
         zusatz="Wie sich der Tisch anhört"
         waren={ware('klang')}
         bild={() => null}
-        glyph="♪"
+        glyph="note"
         name={(w) => PAKET_NAMEN[w.wert] ?? w.wert}
         kauft={kauft}
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
@@ -1558,7 +1560,7 @@ function Shop({
         zusatz="Im Menü und am Tisch"
         waren={ware('musik')}
         bild={() => null}
-        glyph="♫"
+        glyph="noten"
         name={(w) => MUSIK_NAMEN[w.wert] ?? w.wert}
         kauft={kauft}
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
@@ -1626,7 +1628,15 @@ function WareRegal({
    * Grafik da ist.
    */
   bild: (w: RegalWare) => string | null;
-  glyph?: string;
+  /**
+   * Welches Ersatzzeichen: 'note' (Klangpaket) oder 'noten' (Musik).
+   *
+   * Bis zum 27. August standen hier die Schriftzeichen selbst. Sie sassen
+   * gemessen 2,3 px zu tief in ihrem 30 px hohen Feld — eine Schrift
+   * zentriert nach Vorschubbreite, nicht nach Tinte (siehe src/zeichen.tsx).
+   * Jetzt ist es ein Name und dahinter eine Zeichnung, die mittig sitzt.
+   */
+  glyph?: 'note' | 'noten';
   name: (w: RegalWare) => string;
   /** Kennung, die gerade gekauft wird — der Knopf sperrt sich so lange. */
   kauft: string | null;
@@ -1653,7 +1663,7 @@ function WareRegal({
               <img src={bild(w) ?? undefined} alt="" draggable={false} />
             ) : (
               <span className="shop-ware-glyph" aria-hidden="true">
-                {glyph ?? '?'}
+                {glyph === 'note' || glyph === 'noten' ? <Note doppelt={glyph === 'noten'} /> : '?'}
               </span>
             )}
             <span className="shop-ware-name">{name(w)}</span>
@@ -2015,7 +2025,7 @@ function Anleitung({
         <header className="anleitung-kopf">
           <h2>Willkommen bei Brauweg</h2>
           <button className="spielwahl-zu" onClick={onClose} aria-label="Schließen">
-            ×
+            <Kreuz />
           </button>
         </header>
 
@@ -2181,7 +2191,7 @@ function RanglisteBlatt({
         <header className="front-ranking-head">
           <strong>Rangliste · {titel}</strong>
           <button className="doko-icon" onClick={onClose} aria-label="Schließen">
-            ×
+            <Kreuz />
           </button>
         </header>
 
@@ -2290,7 +2300,7 @@ function Spielwahl({
       <header className="spielwahl-kopf">
         <h2>Spielauswahl</h2>
         <button className="spielwahl-zu" onClick={onClose} aria-label="Schließen">
-          ×
+          <Kreuz />
         </button>
       </header>
 
@@ -2323,7 +2333,15 @@ function Spielwahl({
                 onClick={() => onPick(game.id)}
               >
                 <span className="hub-themenspiel-bild" aria-hidden="true">
-                  <img src={spielBanner(game.id)} alt="" draggable={false} />
+                  {/* Mememory zeigt echte Memes aus dem Vorschlagskasten
+                      statt eines gemalten Stilllebens — was auf dem Banner
+                      haengt, liegt im Spiel auch auf den Karten. Faellt der
+                      Abruf aus, faellt es auf das gemalte Bild zurueck. */}
+                  {game.id === 'mememory' ? (
+                    <MememoryBanner />
+                  ) : (
+                    <img src={spielBanner(game.id)} alt="" draggable={false} />
+                  )}
                 </span>
                 <span className="hub-themenspiel-text">
                   <strong>{t(game.nameKey)}</strong>

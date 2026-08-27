@@ -10673,6 +10673,551 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* --- Hauptmenü ----------------------------------------------------------- */
 
+/* --- Das Mememory-Banner in der Spielauswahl ------------------------------
+   Rote Tischdecke aus dem Spiel, darauf echte Memes aus dem Vorschlagskasten.
+   Kein neues Bild: Was auf dem Banner hängt, steht erst fest, wenn jemand
+   etwas eingereicht hat — ein gemaltes Banner könnte es gar nicht zeigen.
+
+   Alle Regeln nennen ZWEI Klassen. Weiter oben steht
+   `.hub-themenspiel-bild img { width: 100%; height: auto }` für die gemalten
+   Banner, und das gilt auch für die Bilder hier drin. Mit einer Klasse
+   verlöre jede Maßangabe unten gegen diese eine Zeile. */
+
+.mm-banner {
+  position: relative;
+  display: block;
+  width: 100%;
+  /* Dasselbe Verhältnis wie die gemalten Banner (1200 × 300), damit die
+     Kacheln in der Reihe gleich hoch bleiben. */
+  aspect-ratio: 4 / 1;
+  overflow: hidden;
+  background: #7a1020;
+}
+
+.mm-banner .mm-banner-tuch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Die Decke ist hochkant (640 × 935) und wird hier quer gebraucht. Weil sie
+     ein Stoff ohne Motiv ist, fällt kein Ausschnitt auf — genau deshalb ist
+     sie brauchbar und ein gemaltes Bild nicht. */
+  object-fit: cover;
+  object-position: center 30%;
+  /*
+   * Herangezoomt, und das ist gerechnet: Auf dem Bild liegt das Tuch nur über
+   * den mittleren 70 % der Breite, links und rechts davon sind dunkle
+   * Holzbretter. `cover` allein füllt die Kachel genau bis zum Bildrand — also
+   * mit Holz an beiden Seiten. Der Faktor 1,6 zeigt nur noch die Breite von
+   * 19 % bis 81 %, und die ist ganz Stoff. Er darf mitwachsen, weil die Kachel
+   * immer 4 : 1 ist; ein anderes Seitenverhältnis würde diese Rechnung
+   * ungültig machen.
+   */
+  transform: scale(1.6);
+  /* Der Stoff misst an dieser Stelle rgb(74, 32, 34) — im Spiel ein
+     Tischtuch, in einer 98 px hohen Kachel eher braun. Ein Achtel mehr
+     Helligkeit macht daraus wieder Rot, ohne dass es leuchtet. */
+  filter: brightness(1.18) saturate(1.1);
+}
+
+/*
+ * Die Reihe sitzt im oberen Feld.
+ *
+ * Die Prozente sind gemessen und nicht geschätzt: Auf einer 391 × 98 großen
+ * Kachel beginnt die Schrift des Namens bei 39 px, und die Karten sollen ihr
+ * nicht unter den Buchstaben liegen. Mit dieser Aufteilung sind sie 47 px hoch
+ * und enden bei 56 px — die letzten Millimeter verschwinden hinter dem oberen,
+ * noch durchsichtigen Teil des Namensverlaufs. Genau so liegen auf dem gemalten
+ * Banner auch die Karten hinter der Schrift.
+ */
+.mm-banner .mm-banner-reihe {
+  position: absolute;
+  inset: 9% 5% 43%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 2.4%, 15px);
+}
+
+.mm-banner .mm-banner-karte {
+  width: auto;
+  height: 100%;
+  /* Nicht schrumpfen: Ein Flex-Element mit fester Höhe und `aspect-ratio`
+     gibt sonst bei Platzmangel die BREITE nach — aus der quadratischen Karte
+     würde ein Rechteck, und das Meme darin wäre beschnitten. */
+  flex: none;
+  /* Quadratisch wie auf dem Brett: Die hochgeladenen Bilder werden beim
+     Einreichen quadratisch zugeschnitten. */
+  aspect-ratio: 1;
+  display: block;
+  border-radius: 12%;
+  object-fit: cover;
+  /* Weißer Rand und Schatten: So liegt die Karte auf dem Tuch, statt darin zu
+     versinken. Auf rotem Filz braucht ein dunkles Meme diese Kante. */
+  background: #fff;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.92),
+    0 7px 14px -7px rgba(0, 0, 0, 0.8);
+  transform: rotate(var(--mm-dreh, 0deg)) translateY(var(--mm-hoch, 0));
+}
+
+
+/* --- Das Heim: drei Seiten auf einem Streifen -----------------------------
+   Links die Sammlung, in der Mitte das Menü, rechts "Mehr". Gewischt wird auf
+   einer echten Rollfläche mit Rastpunkten — Schwung, Randwiderstand und
+   Rückfederung kommen so vom Gerät und nicht aus nachgebautem Fingercode. */
+
+.mm-heim {
+  position: fixed;
+  inset: 0;
+  /* styles.css setzt weiter oben `main { max-width: 60rem; padding: 1rem }`.
+     Beides gilt auch für einen Vollbild-Bildschirm und muss hier ausdrücklich
+     zurückgenommen werden — sonst sitzt der Streifen auf einem breiten Schirm
+     in einer 960-px-Spalte und die Seiten sind schmaler als das Fenster. */
+  max-width: none;
+  padding: 0;
+  color: #f3ecff;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(96, 58, 160, 0.55), rgba(10, 6, 20, 0) 70%),
+    radial-gradient(90% 50% at 50% 100%, rgba(200, 60, 70, 0.28), rgba(10, 6, 20, 0) 70%),
+    #0b0716;
+}
+
+.mm-streifen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  /* Am Rand des Streifens soll NICHT die Seite darunter mitrollen — sonst
+     löst der Wisch nach rechts auf der ersten Seite die Zurück-Geste des
+     Browsers aus, und man ist aus dem Spiel heraus statt in der Sammlung. */
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.mm-streifen::-webkit-scrollbar { display: none; }
+
+.mm-blatt {
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: center;
+  /* `scroll-snap-stop: always` verhindert, dass ein kräftiger Wisch zwei
+     Seiten auf einmal nimmt: Von der Sammlung soll man im Menü landen und
+     nicht auf "Mehr". */
+  scroll-snap-stop: always;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Im Streifen ist das Menü eine SEITE und keine feste Fläche mehr: `fixed`
+   würde es aus dem Streifen heben und auf allen drei Seiten zeigen. */
+.mm-blatt .mm-menue {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  /* Der Hintergrund gehört jetzt dem Heim — sonst malen ihn drei Seiten
+     dreimal übereinander. */
+  background: none;
+}
+.mm-blatt .mm-zurueck,
+.mm-blatt .mm-zahnrad {
+  position: absolute;
+}
+
+/* Die Randlaschen sagen, dass es links und rechts weitergeht. Ein Wisch ist
+   unsichtbar; ohne sie findet die Sammlung niemand. */
+.mm-lasche {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 7px;
+  border: 0;
+  color: #b6a6d8;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  font: 700 11px/1 system-ui;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+.mm-lasche span { font-size: 15px; line-height: 1; }
+.mm-lasche:hover { color: #ffd873; background: rgba(255, 255, 255, 0.1); }
+.mm-lasche-links {
+  left: 0;
+  border-radius: 0 12px 12px 0;
+  transform: translateY(-50%);
+}
+.mm-lasche-rechts {
+  right: 0;
+  border-radius: 12px 0 0 12px;
+  transform: translateY(-50%);
+}
+/* Die Schrift steht hochkant: Quer nähme die Lasche ein Viertel der Breite des
+   Bildschirms weg, und der Knopf darunter ist wichtiger. */
+.mm-lasche b {
+  writing-mode: vertical-rl;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.mm-lasche-links b { transform: rotate(180deg); }
+
+/* Die Punkte liegen über dem Streifen und rollen nicht mit: Sie sind die
+   Karte, nicht der Inhalt. */
+.mm-punkte {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+  z-index: 4;
+  display: flex;
+  gap: 9px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(11, 7, 22, 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transform: translateX(-50%);
+}
+.mm-punkt {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.24);
+  cursor: pointer;
+  transition: background 200ms ease, transform 200ms ease;
+}
+.mm-punkt[data-an] {
+  background: #ffd873;
+  transform: scale(1.25);
+}
+
+/* --- Sammlung und "Mehr" als ganze Seiten -------------------------------- */
+
+.mm-seite {
+  width: min(100%, 720px);
+  /* Unten Luft für die Punkteleiste: Ohne sie liegt die letzte Kachelreihe
+     darunter und lässt sich nicht antippen. */
+  padding: calc(env(safe-area-inset-top) + 18px) 16px
+    calc(env(safe-area-inset-bottom) + 74px);
+  margin: 0 auto;
+}
+
+.mm-seite-kopf {
+  margin-bottom: 14px;
+  text-align: center;
+}
+.mm-seite-kopf h2 {
+  margin: 0;
+  font: 900 26px/1.1 system-ui;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #fff4cf, #e0a83c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.mm-seite-kopf p {
+  margin: 5px 0 0;
+  font: 600 12px/1.4 system-ui;
+  color: #a595c4;
+}
+
+/* Der Gurt auf der Sammlungsseite ist größer als der im alten Kasten: Hier ist
+   Platz, und die drei Fächer sind das Ergebnis der ganzen Seite. */
+.mm-gurt-gross { justify-content: center; }
+.mm-gurt-gross .mm-gurt-fach {
+  /* `flex: none` ist hier keine Zierde: `.mm-gurt-fach` traegt `flex: 1`, und
+     dessen `flex-basis: 0` sticht jede Breitenangabe. Ohne diese Zeile wurden
+     die Faecher 109 statt 84 px breit und fuellten die halbe Seite. */
+  flex: none;
+  width: 84px;
+  height: 84px;
+}
+
+.mm-gurt-satz {
+  margin: 12px 0 0;
+  text-align: center;
+  font: 500 12px/1.5 system-ui;
+  color: #a595c4;
+}
+.mm-gurt-fuss {
+  margin: 12px 0 6px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Eine Sammlung. Heute zwei (Grundstock, Vorschlagskasten), später Packs —
+   der Aufbau ist schon der für viele. */
+.mm-gruppe { margin-top: 26px; }
+.mm-gruppe h3 {
+  margin: 0 0 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font: 800 14px/1.2 system-ui;
+  color: #e6dcff;
+}
+.mm-gruppe h3 em {
+  flex: none;
+  font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: normal;
+  color: #8f7fb4;
+}
+
+/*
+ * Vier bis fünf Bilder je Reihe.
+ *
+ * Die Spanne macht das von selbst: 20vw ergibt auf einem 375-px-Telefon vier
+ * Spalten, die Obergrenze von 130 px zusammen mit der Seitenbreite von 720 px
+ * höchstens fünf. Eine feste Spaltenzahl wäre auf einem der beiden Geräte
+ * falsch.
+ */
+.mm-sammelgitter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(74px, 20vw, 130px), 1fr));
+  gap: 10px;
+}
+
+.mm-sammelkachel {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 160ms ease;
+}
+/*
+ * `contain` und nicht `cover`: Der Auftrag verlangt, dass jedes Meme GANZ zu
+ * erkennen ist. Die Grundmotive sind quadratisch und füllen die Kachel damit
+ * ohnehin; ein hochgeladenes, das es nicht ist, bekommt lieber Luft am Rand
+ * als einen Beschnitt.
+ */
+.mm-sammelkachel img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+.mm-sammelkachel:active { transform: scale(0.96); }
+.mm-sammelkachel[data-gewaehlt] {
+  box-shadow: inset 0 0 0 2px #ffd873, 0 8px 20px -12px rgba(224, 168, 60, 0.9);
+}
+
+/* Noch nicht gefunden: dunkles Feld mit Fragezeichen. Das Bild wird gar nicht
+   erst geladen — ein Filter wäre nur Zierde, die Datei käme trotzdem, und im
+   Blatt stünde die Antwort für jeden, der nachsieht. */
+.mm-sammelkachel[data-fehlt] {
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  cursor: default;
+}
+/*
+ * Das Fragezeichen der leeren Kachel.
+ *
+ * 28 % und nicht 16 %: Nachgerechnet lag der Kontrast gegen die Kachel (weiss
+ * zu 3 % auf dem dunklen Grund) bei 1,6 : 1 — das ist praktisch unsichtbar,
+ * und die leere Kachel saehe schlicht kaputt aus. Mit 28 % sind es 2,5 : 1:
+ * leise genug, dass die gefundenen Bilder die Seite tragen, und deutlich
+ * genug, dass man sieht, dass da noch etwas hingehoert.
+ */
+.mm-sammel-frage {
+  font: 800 clamp(18px, 5vw, 26px)/1 system-ui;
+  color: rgba(255, 255, 255, 0.28);
+}
+
+/* --- Die Seite "Mehr" ---------------------------------------------------- */
+
+.mm-baustelle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 16px;
+  background: rgba(224, 168, 60, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(224, 168, 60, 0.28);
+}
+.mm-baustelle-zeichen {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #ffd873;
+  background: rgba(224, 168, 60, 0.16);
+}
+.mm-baustelle-zeichen svg { width: 22px; height: 22px; display: block; }
+.mm-baustelle b {
+  display: block;
+  font: 800 14px/1.2 system-ui;
+  color: #ffd873;
+}
+.mm-baustelle p {
+  margin: 3px 0 0;
+  font: 500 12px/1.45 system-ui;
+  color: #cbbde8;
+}
+
+.mm-liste {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.mm-zeile {
+  width: 100%;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 16px;
+  color: inherit;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background 160ms ease;
+}
+.mm-zeile:active { transform: scale(0.99); }
+.mm-zeile:disabled { cursor: default; opacity: 0.5; }
+.mm-zeile-zeichen {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #cbbde8;
+  background: rgba(255, 255, 255, 0.07);
+}
+.mm-zeile-zeichen svg { width: 22px; height: 22px; display: block; }
+.mm-zeile-text { flex: 1; min-width: 0; }
+.mm-zeile-text b {
+  display: block;
+  font: 800 14px/1.2 system-ui;
+  color: #f3ecff;
+}
+.mm-zeile-text em {
+  display: block;
+  margin-top: 2px;
+  font: 500 12px/1.35 system-ui;
+  font-style: normal;
+  color: #a595c4;
+}
+.mm-zeile-punkt {
+  flex: none;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #1a0e05;
+  background: #ffd873;
+  font: 800 11px/1 system-ui;
+}
+.mm-zeile-bald {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 10px/1 system-ui;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a595c4;
+}
+.mm-zeile-pfeil {
+  flex: none;
+  font: 700 17px/1 system-ui;
+  color: #6f6091;
+}
+
+/* --- Das Zahnrad und sein Fenster ---------------------------------------- */
+
+/*
+ * Oben rechts, gegenüber dem Zurück-Knopf — und auf DESSEN Mitte ausgerichtet,
+ * nicht auf dessen Oberkante.
+ *
+ * Der Zurück-Knopf ist 33 px hoch und beginnt bei 16, seine Mitte liegt also
+ * auf 32,5. Das Zahnrad ist 42 px hoch; mit denselben 16 px oben säße seine
+ * Mitte auf 37 und es hänge sichtbar tiefer als sein Gegenüber. 11,5 px
+ * bringen beide auf eine Linie. Gemessen, nicht geschätzt.
+ */
+.mm-zahnrad {
+  position: fixed;
+  right: 14px;
+  top: calc(env(safe-area-inset-top) + 11.5px);
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #cbbde8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1), color 160ms ease;
+}
+/* `display: block` auf dem Bild: Ein Inline-SVG sitzt auf der Grundlinie und
+   hängt damit im runden Knopf um zwei, drei Pixel zu tief — genau der Fehler,
+   der in dieser App an mehreren Zeichen aufgefallen ist. */
+.mm-zahnrad svg { width: 23px; height: 23px; display: block; }
+.mm-zahnrad:hover { color: #ffd873; }
+.mm-zahnrad:active { transform: rotate(35deg); }
+
+/* Ein schmales Blatt für ein Fenster mit wenig Inhalt: Der volle Kasten wäre
+   für einen Regler eine leere Fläche. */
+.mm-blatt-schmal { max-width: 380px; }
+
+.mm-regler {
+  display: block;
+  padding: 4px 2px 2px;
+}
+.mm-regler-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mm-regler-kopf b { font: 800 14px/1.2 system-ui; color: #f3ecff; }
+.mm-regler-kopf em {
+  font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: normal;
+  color: #ffd873;
+}
+.mm-regler input[type="range"] {
+  width: 100%;
+  margin: 14px 0 0;
+  accent-color: #e0a83c;
+}
+.mm-regler-satz {
+  display: block;
+  margin-top: 12px;
+  font: 500 11px/1.5 system-ui;
+  color: #8f7fb4;
+}
+
 .mm-menue {
   position: fixed;
   inset: 0;
@@ -10940,108 +11485,11 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: #ff9b90;
 }
 
-/* Der Lautsprecher: durchgestrichen heißt aus, und aus ist die Vorgabe. */
-.mm-ton {
-  position: fixed;
-  right: 16px;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
-  z-index: 3;
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: #cbbde8;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  cursor: pointer;
-  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), color 160ms ease;
-}
-.mm-ton svg { width: 24px; height: 24px; }
-.mm-ton[aria-pressed='true'] { color: #ffd873; }
-.mm-ton:active { transform: scale(0.94); }
-
 /* --- Vorschlagskasten ----------------------------------------------------
-   Der Briefkasten sitzt unten links, gegenüber dem Lautsprecher, und der
-   Kasten selbst legt sich als eigene Fläche darüber. Kein Ausrollen im Menü:
-   .mm-menue ist `position:fixed` und rollt nicht — was hier hineinsoll, rollt
-   in seinem eigenen Blatt. */
-
-.mm-kasten-knopf {
-  position: fixed;
-  left: 16px;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
-  z-index: 3;
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: #cbbde8;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  cursor: pointer;
-  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), color 160ms ease;
-}
-.mm-kasten-knopf svg { width: 24px; height: 24px; }
-.mm-kasten-knopf:active { transform: scale(0.94); }
-
-/* Die Zahl der wartenden Vorschläge. Sie sitzt AUF dem Knopf und nicht
-   daneben: Daneben verschöbe sie den Knopf, sobald sie erscheint. */
-.mm-kasten-knopf em {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 5px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  color: #1a0e05;
-  background: #ffd873;
-  font: 800 11px/1 system-ui;
-  font-style: normal;
-}
-
-/* Die Sammlung sitzt rechts neben dem Briefkasten. Beides Nebensachen des
-   Menüs; die Mitte gehört der Match-Suche. */
-.mm-sammlung-knopf {
-  position: fixed;
-  left: 70px;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
-  z-index: 3;
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: #cbbde8;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  cursor: pointer;
-  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), color 160ms ease;
-}
-.mm-sammlung-knopf svg { width: 23px; height: 23px; }
-.mm-sammlung-knopf:active { transform: scale(0.94); }
-.mm-sammlung-knopf em {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 5px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  color: #1a0e05;
-  background: #7fd493;
-  font: 800 11px/1 system-ui;
-  font-style: normal;
-}
+   Der Kasten kommt seit dem 27. August von der Seite "Mehr" und legt sich als
+   eigene Fläche über alles. Ein Fenster und keine vierte Seite im Streifen:
+   Was mitwischt, ist kein Fenster mehr. Kein Ausrollen im Blatt darunter —
+   was hier hineinsoll, rollt in seinem eigenen. */
 
 /* --- Der Gurt: drei feste Fächer -----------------------------------------
    Fest und nicht mitwachsend, damit die Leiste beim Aus- und Abwählen nicht
@@ -11077,30 +11525,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   height: 100%;
   border-radius: 12px;
   object-fit: cover;
-}
-
-/* Eine Kachel der Sammlung. Gewählte tragen denselben goldenen Rand wie das
-   Gurtfach — dieselbe Bedeutung, dieselbe Farbe. */
-.mm-sammelkachel .mm-sammel-knopf {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  cursor: pointer;
-}
-.mm-sammelkachel img {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 10px;
-  object-fit: cover;
-  background: #0b0716;
-  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.mm-sammelkachel[data-gewaehlt] img {
-  box-shadow: 0 0 0 2px #ffd873;
-  transform: scale(0.94);
 }
 
 /* Der Fuß bleibt stehen, während das Raster darüber rollt: Die Auswahl wird
@@ -11999,6 +12423,7 @@ span.hub-angebot-art.poker-jeton-stapel {
 .mm-reaktionsleiste[data-gurt] { gap: 12px; }
 
 .mm-reaktion {
+  position: relative;
   width: 54px;
   height: 54px;
   /*
@@ -12050,6 +12475,89 @@ span.hub-angebot-art.poker-jeton-stapel {
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+/*
+ * Die Sperre nach einem geworfenen Meme: ein Film, den eine Uhr abraeumt.
+ *
+ * Die Dauer steht hier UND als MOTIV_PAUSE_MS in Mememory.tsx. Wer die eine
+ * aendert, muss die andere ansehen: Laeuft das Rad zu kurz, sagt es "wirf
+ * wieder", waehrend die Bremse noch greift — und der zweite Tipp verpufft.
+ *
+ * Der Aufbau sind zwei Halbscheiben und kein Kegelverlauf. Ein
+ * `conic-gradient` als Maske liesse sich nur ueber eine mit `@property`
+ * angemeldete Winkelvariable bewegen; wo die fehlt, bliebe der Film ganz
+ * stehen und die Kachel saehe fuer immer gesperrt aus. Gedrehte Halbscheiben
+ * sind reines `transform` und laufen ueberall — und auf dem Compositor.
+ */
+.mm-kuehler {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* Rund, weil der Knopf rund ist: Dieser Rand macht aus den beiden
+     Rechtecken darin ueberhaupt erst Tortenstuecke. */
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/*
+ * Eine Haelfte ist ein Fenster ueber der halben Kachel. Der Film darin dreht
+ * sich um die MITTE der Kachel und wandert dabei aus dem Fenster; weil das
+ * Fenster abschneidet, laeuft seine Kante als Zeiger ueber das Bild.
+ *
+ * Dass der Film ein Rechteck ist und keine Halbscheibe, geht auf: Seine
+ * aeussere Kante liegt genau auf dem Kreis (halbe Kachelbreite vom
+ * Mittelpunkt), er deckt den Halbkreis also gerade eben ab — was darueber
+ * hinaussteht, schneidet .mm-kuehler weg.
+ */
+.mm-kuehler-halb {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+}
+.mm-kuehler-halb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Hellgrau und durchscheinend: Das Meme muss darunter erkennbar bleiben.
+     Der Film sagt "noch nicht", er nimmt das Bild nicht weg. */
+  background: rgba(226, 231, 238, 0.55);
+}
+
+/* Erst raeumt sich die rechte Haelfte (12 bis 6 Uhr), dann die linke. */
+.mm-kuehler-rechts { left: 50%; }
+.mm-kuehler-rechts::before {
+  transform-origin: left center;
+  animation: mm-kuehl-rechts 1s linear forwards;
+}
+.mm-kuehler-links { left: 0; }
+.mm-kuehler-links::before {
+  transform-origin: right center;
+  animation: mm-kuehl-links 1s linear forwards;
+}
+
+@keyframes mm-kuehl-rechts {
+  from { transform: rotate(0deg); }
+  50%, to { transform: rotate(180deg); }
+}
+@keyframes mm-kuehl-links {
+  from, 50% { transform: rotate(0deg); }
+  to { transform: rotate(180deg); }
+}
+
+/* Ohne Bewegung bleibt der Film ganz stehen und blendet sich aus. Die
+   Auskunft "jetzt wieder" muss auch hier ankommen — sie darf nur nicht
+   kreisen. */
+@media (prefers-reduced-motion: reduce) {
+  .mm-kuehler-halb::before { animation: none; }
+  .mm-kuehler { animation: mm-kuehl-blende 1s linear forwards; }
+}
+@keyframes mm-kuehl-blende {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 /*
@@ -13568,3 +14076,43 @@ span.hub-angebot-art.poker-jeton-stapel {
     transition: none;
   }
 }
+
+/* --- Zeichen als Symbol ---------------------------------------------------
+   Siehe src/zeichen.tsx: Ein Kreuz als SCHRIFTZEICHEN wird nach seiner
+   Vorschubbreite zentriert und nicht nach seiner Tinte — gemessen saß das ✕
+   im Schließknopf 3,4 px zu weit rechts, das × in der Spielauswahl 2,2 px zu
+   tief. Ein Pfad in einer viewBox sitzt dort, wo er hingeschrieben wird.
+
+   Die Größe kommt in `em` und richtet sich damit nach der Schrift des
+   Knopfes: So bleibt jeder Knopf so groß wie vorher, ohne dass an zehn
+   Stellen eine Pixelzahl steht.
+
+   `display: block` ist keine Kosmetik: Ein Inline-SVG sitzt auf der
+   Grundlinie und hängt dadurch im runden Knopf ein paar Pixel zu tief. */
+.zeichen {
+  display: block;
+  width: 1.15em;
+  height: 1.15em;
+}
+
+/* Knöpfe, die jetzt ein Bild statt eines Zeichens tragen, müssen es auch
+   zentrieren. Ein <button> legt seinen Inhalt sonst in einen anonymen Kasten,
+   und dessen Ausrichtung ist zwischen den Browsern nicht dieselbe. */
+.mm-kasten-zu,
+.mm-gegner-weg,
+.mm-raus,
+.mm-kasten-zeile-knoepfe button,
+.mm-kasten-kachel button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+/* Der Löschknopf im Clanchat steht MITTEN in einer Textzeile — `grid`
+   nähme ihn aus dem Fluss und schöbe die Uhrzeit in die nächste Zeile.
+   `inline-grid` zentriert und bleibt in der Zeile. */
+.clan-chat-weg {
+  display: inline-grid;
+  place-items: center;
+  vertical-align: middle;
+}
+

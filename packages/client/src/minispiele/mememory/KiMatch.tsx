@@ -15,6 +15,8 @@
 
 import { useState } from 'react';
 
+import { Kreuz } from '../../zeichen';
+
 /** Muss zu MememoryStufe in packages/game-mememory/src/stufen.ts passen. */
 export type Stufe = 'leicht' | 'mittel' | 'schwer' | 'experte';
 
@@ -101,7 +103,7 @@ export function KiMatch({
                   disabled={laeuft}
                   aria-label={`Gegner ${index + 1} entfernen`}
                 >
-                  ✕
+                  <Kreuz />
                 </button>
               </div>
             )}

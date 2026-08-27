@@ -4,12 +4,16 @@ import { api, type TableRow } from '../api';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
 import { Ecken } from '../minispiele/mememory/Ecken';
 import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/eckenplan';
-import { spieleKlang, setzeTon, tonAn } from '../minispiele/mememory/klaenge';
+import { Einstellungsfenster } from '../minispiele/mememory/Einstellungsfenster';
+import { Heim } from '../minispiele/mememory/Heim';
+import { spieleKlang } from '../minispiele/mememory/klaenge';
 import { KiMatch, type Stufe } from '../minispiele/mememory/KiMatch';
+import { MehrSeite } from '../minispiele/mememory/MehrSeite';
 import { OnlineMatch, type Gegnerzahl } from '../minispiele/mememory/OnlineMatch';
-import { Sammlung } from '../minispiele/mememory/Sammlung';
+import { SammlungSeite } from '../minispiele/mememory/SammlungSeite';
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
+import { PfeilLinks } from '../zeichen';
 import { useTable } from '../useTable';
 
 /**
@@ -136,8 +140,9 @@ export function Mememory({
   const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
   const [sucht, setSucht] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
-  const [ton, setTonZustand] = useState(tonAn);
   const [fehler, setFehler] = useState<string | null>(null);
+  /** Das Einstellungsfenster liegt ueber dem Menue, sobald es offen ist. */
+  const [einstellungenOffen, setEinstellungenOffen] = useState(false);
   /** Der Vorschlagskasten liegt ueber dem Menue, sobald er offen ist. */
   const [kastenOffen, setKastenOffen] = useState(false);
   /** Wie viele Vorschlaege warten. Nur die Aufsicht bekommt die Zahl. */
@@ -151,6 +156,20 @@ export function Mememory({
    * das Brett auch nichts ein — besser als ein leeres Band.
    */
   const [motivNamen, setMotivNamen] = useState<Record<string, string>>({});
+  /**
+   * Der ganze Motivtopf, wie ihn der Server kennt: fester Katalog plus
+   * freigegebene Einsendungen.
+   *
+   * Er wird nur von der Sammlungsseite gebraucht — sie zeigt auch, was noch
+   * FEHLT, und dafuer reicht die eigene Sammlung nicht aus. Der Client
+   * fuehrt den Katalog ausdruecklich NICHT selbst (er kennt keine
+   * Spielregeln, siehe game-mememory/src/regeln.ts); er bekommt ihn vom
+   * Server durchgereicht.
+   */
+  const [katalog, setKatalog] = useState<{ grund: string[]; hochgeladen: string[] }>({
+    grund: [],
+    hochgeladen: [],
+  });
   /**
    * Was gerade ueber dem Brett aufblitzt: der Name des Paares, der Hinweis
    * auf die Sammlung, oder beides. Die Nummer ist der Schluessel der
@@ -173,8 +192,6 @@ export function Mememory({
    * alte Knopf als gar keine Reaktion.
    */
   const [gurt, setGurt] = useState<string[]>([]);
-  /** Der Sammlungs-Kasten liegt ueber dem Menue, sobald er offen ist. */
-  const [sammlungOffen, setSammlungOffen] = useState(false);
   /** Der Bildschirm "KI-Match erstellen" liegt STATT des Menues da. */
   const [kiOffen, setKiOffen] = useState(false);
   /** Der Bildschirm "Online-Match" (gegen wie viele?) liegt STATT des Menues da. */
@@ -236,6 +253,15 @@ export function Mememory({
    */
   const [angeboten, setAngeboten] = useState(0);
   const letzteMotivReaktion = useRef(0);
+  /**
+   * Laeuft die Sperre nach einem geworfenen Meme gerade?
+   *
+   * Ein Merker neben `letzteMotivReaktion` und keine Ableitung daraus: Die
+   * Ref sagt der Bremse, ob ein Wurf durchgeht, aber sie loest kein Zeichnen
+   * aus. Ohne den Zustand haette die Kachel keinen Anlass, den Film wieder
+   * abzunehmen.
+   */
+  const [kuehlt, setKuehlt] = useState(false);
   const knopfRef = useRef<HTMLButtonElement | null>(null);
   /**
    * Ecke eines Sitzes — als Ref, weil die Antwort erst feststeht, wenn der
@@ -336,7 +362,9 @@ export function Mememory({
     void api
       .mememoryMotive()
       .then((antwort) => {
-        if (lebt) setMotivNamen(antwort.namen ?? {});
+        if (!lebt) return;
+        setMotivNamen(antwort.namen ?? {});
+        setKatalog({ grund: antwort.grund ?? [], hochgeladen: antwort.hochgeladen ?? [] });
       })
       .catch(() => {
         /* ohne Namen weiterspielen */
@@ -347,8 +375,9 @@ export function Mememory({
   }, []);
 
   /**
-   * Der eigene Gurt UND die eigene Sammlung. Beim Aufschlagen und nach jedem
-   * Schliessen der Sammlung.
+   * Der eigene Gurt UND die eigene Sammlung. Beim Aufschlagen und immer
+   * dann, wenn man vom Tisch ins Menue zurueckkommt — dort ist die Sammlung
+   * gewachsen, und dort steht auch der Gurt zur Wahl.
    *
    * Die Sammlung landet in einem Ref und nicht im Zustand: Sie wird nicht
    * gezeichnet, sondern nur gefragt ("kenne ich das schon?"), und ein
@@ -356,7 +385,7 @@ export function Mememory({
    * ueberfluessiges Neuzeichnen des Bretts aus.
    */
   useEffect(() => {
-    if (sammlungOffen) return;
+    if (tischId) return;
     let lebt = true;
     void api
       .mememorySammlung()
@@ -371,7 +400,7 @@ export function Mememory({
     return () => {
       lebt = false;
     };
-  }, [sammlungOffen]);
+  }, [tischId]);
 
   /**
    * Die Zahl am Briefkasten: wie viele Vorschlaege warten.
@@ -561,6 +590,26 @@ export function Mememory({
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
+  /**
+   * Zurueck zur Spielauswahl — und dem Server sagen, dass man weg ist.
+   *
+   * Der Client entscheidet dabei NICHT, ob der Tisch geschlossen wird; das
+   * tut der Server (verlasseKiTisch in tables/service.ts). Er schliesst einen
+   * laufenden Tisch nur, wenn danach ausser Bots niemand mehr sitzt — bei
+   * einem Online-Match antwortet er mit einem Konflikt, und der ist hier
+   * genau richtig: Die Partie laeuft weiter, ein Bot uebernimmt, und wer
+   * wiederkommt, findet seinen Platz.
+   *
+   * Deshalb steht hier auch kein `await`: Zurueck geht es sofort. Eine
+   * abgebrochene Anfrage kostet hoechstens einen Tisch, den die
+   * Verfallslogik spaeter ohnehin einsammelt.
+   */
+  const verlasseUndZurueck = useCallback((): void => {
+    const id = tischId;
+    if (id) void api.leaveTable(id).catch(() => {});
+    onBack();
+  }, [tischId, onBack]);
+
   // -------------------------------------------------------------------------
   // Vorladen, Klang
   // -------------------------------------------------------------------------
@@ -699,6 +748,21 @@ export function Mememory({
     const uhr = window.setTimeout(() => setNamensblitz(null), 1600);
     return () => window.clearTimeout(uhr);
   }, [namensblitz]);
+
+  /**
+   * Die Sperre nimmt sich nach einer Sekunde selbst zurueck.
+   *
+   * Die Uhr steht hier und nicht in der Bewegung: Eine CSS-Animation friert
+   * in einem verdeckten Tab ein (siehe Mischbewegung weiter unten), ein
+   * `setTimeout` wird dort zwar auf eine Sekunde gedeckelt, kommt aber. Wer
+   * das Handy waehrend der Sperre sperrt, findet die Kacheln danach also
+   * frei — und nicht unter einem Film, der nie verschwindet.
+   */
+  useEffect(() => {
+    if (!kuehlt) return;
+    const uhr = window.setTimeout(() => setKuehlt(false), MOTIV_PAUSE_MS);
+    return () => window.clearTimeout(uhr);
+  }, [kuehlt]);
 
   /**
    * Das Angebot wandert im Zweisekundentakt weiter.
@@ -844,101 +908,52 @@ export function Mememory({
   // Hauptmenue
   // -------------------------------------------------------------------------
 
-  const schalteTon = (): void => {
-    const neu = !ton;
-    setTonZustand(neu);
-    setzeTon(neu);
-    if (neu) spieleKlang('dreh');
-  };
-
-  const tonKnopf = (
-    <button
-      className="mm-ton"
-      type="button"
-      aria-pressed={ton}
-      aria-label={ton ? 'Ton ausschalten' : 'Ton einschalten'}
-      onClick={schalteTon}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
-        {ton ? (
-          <>
-            <path
-              d="M16.5 8.5a5 5 0 0 1 0 7"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-            <path
-              d="M19 6a8.5 8.5 0 0 1 0 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </>
-        ) : (
-          // Der rote Balken ist der ganze Unterschied: durchgestrichen = aus.
-          <path
-            d="M3 3 L21 21"
-            fill="none"
-            stroke="#ff4d4d"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-          />
-        )}
-      </svg>
-    </button>
-  );
-
   /**
-   * Der Briefkasten. Er sitzt unten LINKS, gegenueber dem Lautsprecher:
-   * Beides sind Nebensachen, und die Mitte gehoert der Match-Suche.
+   * Das Zahnrad, oben rechts.
+   *
+   * Es hat den Lautsprecher unten rechts abgeloest. Ein Schalter am Rand
+   * traegt genau eine Einstellung; sobald die zweite kommt, braucht es
+   * ohnehin eine Stelle, an der man nachsieht — und die soll schon da sein,
+   * bevor man sie sucht.
    */
-  const kastenKnopf = (
+  const einstellungsKnopf = (
     <button
-      className="mm-kasten-knopf"
+      className="mm-zahnrad"
       type="button"
-      onClick={() => setKastenOffen(true)}
-      aria-label="Vorschlagskasten öffnen"
-      title="Meme vorschlagen"
+      onClick={() => setEinstellungenOffen(true)}
+      aria-label="Einstellungen öffnen"
+      title="Einstellungen"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        {/* Briefkasten: Kasten, Klappe, Fahne. Ein Bild waere eine Datei mehr
-            fuer ein Zeichen, das in drei Strichen erzaehlt ist. */}
-        <path
-          d="M4 10a4 4 0 0 1 8 0v8H5a1 1 0 0 1-1-1v-7z"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <path d="M12 18V10a4 4 0 0 1 8 0v7a1 1 0 0 1-1 1h-7z" fill="currentColor" />
-        <path d="M6.5 10h3" stroke="#0b0716" strokeWidth="1.6" strokeLinecap="round" />
-        <path d="M17 6V3.5h2.6" stroke="#ff9b90" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+        {/*
+          * Ein Zahnrad aus vier durchgehenden Balken und einem Ring.
+          *
+          * Nicht aus einem von Hand geschriebenen Umriss: Der erste Anlauf war
+          * einer, und er sass gemessene 6,3 % zu hoch. Vier Rechtecke, jedes
+          * um (12,12) gedreht, koennen dagegen gar nicht schief liegen — die
+          * Mitte steht in jeder Zeile.
+          *
+          * Acht Zaehne aus vier Balken: Jeder Balken geht durch, seine beiden
+          * Enden sind zwei gegenueberliegende Zaehne.
+          */}
+        <g fill="currentColor">
+          {[0, 45, 90, 135].map((winkel) => (
+            <rect
+              key={winkel}
+              x="10.6"
+              y="2.2"
+              width="2.8"
+              height="19.6"
+              rx="1.2"
+              transform={`rotate(${winkel} 12 12)`}
+            />
+          ))}
+        </g>
+        {/* Der Kranz. Als Ring aus Strichstaerke und nicht als zwei Kreise —
+            das Loch in der Mitte muss durchsichtig bleiben, denn dahinter
+            liegt der Knopf und nicht eine bekannte Farbe. */}
+        <circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" strokeWidth="3.4" />
       </svg>
-      {warten > 0 && <em>{warten}</em>}
-    </button>
-  );
-
-  /**
-   * Die Sammlung. Sie sitzt neben dem Briefkasten unten links — beides sind
-   * Nebensachen des Menues, und die Mitte gehoert der Match-Suche.
-   */
-  const sammlungsKnopf = (
-    <button
-      className="mm-sammlung-knopf"
-      type="button"
-      onClick={() => setSammlungOffen(true)}
-      aria-label="Sammlung öffnen"
-      title="Gesammelte Memes"
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        {/* Drei gestapelte Karten — dasselbe Bild wie im Kopf: eine Sammlung. */}
-        <rect x="3" y="7" width="11" height="14" rx="2" fill="currentColor" opacity="0.45" />
-        <rect x="6.5" y="5" width="11" height="14" rx="2" fill="currentColor" opacity="0.7" />
-        <rect x="10" y="3" width="11" height="14" rx="2" fill="currentColor" />
-      </svg>
-      {gurt.length > 0 && <em>{gurt.length}</em>}
     </button>
   );
 
@@ -972,62 +987,91 @@ export function Mememory({
 
   if (!tischId) {
     return (
-      <main className="mm-menue">
-        {/* Der Zurueck-Knopf sitzt bewusst nicht ganz oben: Auf iPhones mit
-            Notch liegt die obere Ecke unter der Statusleiste. */}
-        <button className="mm-zurueck" type="button" onClick={onBack}>
-          ← Zurück
-        </button>
+      <>
+        {/*
+          * Drei Seiten nebeneinander statt Knoepfen am Rand.
+          *
+          * Der Briefkasten und die Sammlung sassen bis zum 27. August als
+          * kleine runde Knoepfe unten links und oeffneten je ein Blatt ueber
+          * dem Menue. Beides ist jetzt eine ganze Seite: Die Sammlung
+          * braucht die Flaeche (ueber hundert Bilder wollen einzeln
+          * erkennbar sein), und "Mehr" ist der Platz, an dem Freunde und
+          * alles Weitere dazukommen, ohne dass der Rand voller Knoepfe wird.
+          */}
+        <Heim
+          sammlung={
+            <SammlungSeite
+              grund={katalog.grund}
+              hochgeladen={katalog.hochgeladen}
+              namen={motivNamen}
+              onGurt={setGurt}
+            />
+          }
+          mehr={<MehrSeite wartende={warten} onKasten={() => setKastenOffen(true)} />}
+          menue={
+            <div className="mm-menue">
+              {/* Der Zurueck-Knopf sitzt bewusst nicht ganz oben: Auf iPhones
+                  mit Notch liegt die obere Ecke unter der Statusleiste. */}
+              <button className="mm-zurueck" type="button" onClick={onBack}>
+                ← Zurück
+              </button>
+              {einstellungsKnopf}
 
-        <div className="mm-menue-mitte">
-          <h1 className="mm-titel">Mememory</h1>
-          <p className="mm-untertitel">Zwei Bilder, ein Paar, zwei Spieler.</p>
+              <div className="mm-menue-mitte">
+                <h1 className="mm-titel">Mememory</h1>
+                <p className="mm-untertitel">Zwei Bilder, ein Paar, zwei bis vier Spieler.</p>
 
-          {/* Der Knopf sucht nicht mehr selbst: Erst wird gewaehlt, gegen wie
-              viele man spielen will — jede Zahl ist ein eigener Topf. */}
-          <button
-            className="mm-suchen"
-            type="button"
-            onClick={() => {
-              setFehler(null);
-              setOnlineOffen(true);
-            }}
-            disabled={sucht}
-          >
-            <span>Online Match suchen…</span>
-            {/* Die Zahl steht in Klammern daneben und nicht im Satz: Sie
-                aendert sich alle fuenf Sekunden, und ein springendes Wort
-                mitten im Text liest sich wie ein Fehler. */}
-            <em>({aktiv ?? '…'})</em>
-          </button>
+                {/* Der Knopf sucht nicht mehr selbst: Erst wird gewaehlt,
+                    gegen wie viele man spielen will — jede Zahl ist ein
+                    eigener Topf. */}
+                <button
+                  className="mm-suchen"
+                  type="button"
+                  onClick={() => {
+                    setFehler(null);
+                    setOnlineOffen(true);
+                  }}
+                  disabled={sucht}
+                >
+                  <span>Online Match suchen…</span>
+                  {/* Die Zahl steht in Klammern daneben und nicht im Satz:
+                      Sie aendert sich alle fuenf Sekunden, und ein
+                      springendes Wort mitten im Text liest sich wie ein
+                      Fehler. */}
+                  <em>({aktiv ?? '…'})</em>
+                </button>
 
-          {/* Mit Abstand unter der Match-Suche: Es sind zwei verschiedene
-              Entscheidungen, und der Zwischenraum sagt das ohne Worte. */}
-          <button
-            className="mm-ki-knopf"
-            type="button"
-            onClick={() => {
-              setFehler(null);
-              setKiOffen(true);
-            }}
-            disabled={sucht}
-          >
-            <span>Gegen die KI spielen</span>
-          </button>
+                {/* Mit Abstand unter der Match-Suche: Es sind zwei
+                    verschiedene Entscheidungen, und der Zwischenraum sagt das
+                    ohne Worte. */}
+                <button
+                  className="mm-ki-knopf"
+                  type="button"
+                  onClick={() => {
+                    setFehler(null);
+                    setKiOffen(true);
+                  }}
+                  disabled={sucht}
+                >
+                  <span>Gegen die KI spielen</span>
+                </button>
 
-          {fehler && <p className="mm-fehler">{fehler}</p>}
-        </div>
+                {fehler && <p className="mm-fehler">{fehler}</p>}
+              </div>
+            </div>
+          }
+        />
 
-        {tonKnopf}
-        {kastenKnopf}
-        {sammlungsKnopf}
+        {/* Die beiden Fenster liegen ueber ALLEN Seiten und nicht in einer
+            davon: Ein Blatt, das mit dem Streifen mitwischt, waere kein
+            Fenster mehr. */}
         {kastenOffen && (
           <Vorschlagskasten istAufsicht={istAufsicht} onFertig={() => setKastenOffen(false)} />
         )}
-        {sammlungOffen && (
-          <Sammlung namen={motivNamen} onFertig={() => setSammlungOffen(false)} />
+        {einstellungenOffen && (
+          <Einstellungsfenster onFertig={() => setEinstellungenOffen(false)} />
         )}
-      </main>
+      </>
     );
   }
 
@@ -1086,7 +1130,6 @@ export function Mememory({
             </button>
           )}
         </div>
-        {tonKnopf}
       </main>
     );
   }
@@ -1171,6 +1214,7 @@ export function Mememory({
     const jetzt = Date.now();
     if (jetzt - letzteMotivReaktion.current < MOTIV_PAUSE_MS) return;
     letzteMotivReaktion.current = jetzt;
+    setKuehlt(true);
     zeigeFlieger(0, eigeneEcke, kennung);
     tisch.sendeReaktion(0, kennung);
   };
@@ -1241,8 +1285,13 @@ export function Mememory({
         ))}
       </div>
 
-      <button className="mm-raus" type="button" onClick={onBack} aria-label="Spiel verlassen">
-        ←
+      <button
+        className="mm-raus"
+        type="button"
+        onClick={verlasseUndZurueck}
+        aria-label="Spiel verlassen"
+      >
+        <PfeilLinks />
       </button>
 
       {/*
@@ -1379,8 +1428,37 @@ export function Mememory({
               type="button"
               onClick={() => wirfMotiv(kennung)}
               aria-label={`${motivNamen[kennung] ?? 'Meme'} werfen`}
+              /*
+               * Angezeigt, aber nicht gesperrt: `disabled` naehme dem Knopf
+               * den Tastaturfokus mitten im Tippen, und der Browser haette
+               * ihn danach an keiner sinnvollen Stelle wieder abgelegt. Die
+               * Bremse sitzt ohnehin in `wirfMotiv`.
+               */
+              aria-disabled={kuehlt || undefined}
             >
               <img src={motivBildPfad(kennung)} alt="" draggable={false} />
+              {/*
+               * Der graue Film der Sperre.
+               *
+               * Er entsteht erst beim Wurf und verschwindet mit ihr — und
+               * genau darum laeuft die Uhr als CSS-Animation: Sie beginnt
+               * von selbst von vorn, weil der Knoten neu ist. (Ein
+               * wiederholter Start waere das Problem, aber ein zweiter Wurf
+               * kommt waehrend der Sperre gar nicht durch.)
+               *
+               * Zwei Haelften und kein Kegelverlauf: Ein `conic-gradient`
+               * als Maske liesse sich nur ueber eine mit `@property`
+               * angemeldete Winkelvariable bewegen, und die faellt bei
+               * aelteren Geraeten auf den Startwert zurueck — dort bliebe
+               * der Film dann ganz stehen. Zwei gedrehte Halbscheiben sind
+               * reines `transform` und laufen ueberall.
+               */}
+              {kuehlt && (
+                <span className="mm-kuehler" aria-hidden="true">
+                  <i className="mm-kuehler-halb mm-kuehler-rechts" />
+                  <i className="mm-kuehler-halb mm-kuehler-links" />
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1475,7 +1553,7 @@ export function Mememory({
             >
               <span>Noch eine Runde</span>
             </button>
-            <button className="mm-zweitknopf" type="button" onClick={onBack}>
+            <button className="mm-zweitknopf" type="button" onClick={verlasseUndZurueck}>
               Zurück zur Spielauswahl
             </button>
           </div>

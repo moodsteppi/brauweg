@@ -92,12 +92,23 @@ export function EdelsteinIcon({ className }: { className?: string }): React.JSX.
       viewBox="0 0 32 32"
       aria-hidden="true"
     >
-      <path d="M9 6 L23 6 L29 14 L16 29 L3 14 Z" fill="#5ec8d8" />
-      <path d="M9 6 L16 14 L3 14 Z" fill="#8fe4ee" />
-      <path d="M23 6 L29 14 L16 14 Z" fill="#3da8bc" />
-      <path d="M3 14 L16 14 L16 29 Z" fill="#49b4c8" />
-      <path d="M16 14 L29 14 L16 29 Z" fill="#2e93a8" />
-      <path d="M9 6 L23 6 L16 14 Z" fill="#c8f2f8" />
+      {/*
+        * Die Zahlen sind um 1,5 nach oben gerueckt (Kopf 6 -> 4,5, Spitze
+        * 29 -> 27,5).
+        *
+        * Vorher lag die Zeichnung von y 6 bis y 29 in einer Box von 0 bis 32:
+        * Ihre Mitte sass bei 17,5 statt bei 16, also 4,7 % zu tief. Daneben
+        * steht die Muenze als Bilddatei, und die ist mittig — der Edelstein
+        * hing dadurch sichtbar tiefer als sein Nachbar. Gemessen mit
+        * `getBBox()` gegen die viewBox; waagerecht stimmte es schon (3 bis 29,
+        * Mitte 16).
+        */}
+      <path d="M9 4.5 L23 4.5 L29 12.5 L16 27.5 L3 12.5 Z" fill="#5ec8d8" />
+      <path d="M9 4.5 L16 12.5 L3 12.5 Z" fill="#8fe4ee" />
+      <path d="M23 4.5 L29 12.5 L16 12.5 Z" fill="#3da8bc" />
+      <path d="M3 12.5 L16 12.5 L16 27.5 Z" fill="#49b4c8" />
+      <path d="M16 12.5 L29 12.5 L16 27.5 Z" fill="#2e93a8" />
+      <path d="M9 4.5 L23 4.5 L16 12.5 Z" fill="#c8f2f8" />
     </svg>
   );
 }

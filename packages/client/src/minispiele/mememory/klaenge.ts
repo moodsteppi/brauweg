@@ -23,6 +23,22 @@ let kontext: AudioContext | null = null;
 let summe: GainNode | null = null;
 
 const SCHLUESSEL = 'mememory.ton';
+/**
+ * Der Regler, seit dem 27. August. Er steht neben dem alten Schalter und
+ * nicht an seiner Stelle: Wer den Ton frueher eingeschaltet hat, soll ihn
+ * nach dem Deploy noch anhaben, und ein neuer Schluessel waere fuer den
+ * genauso still wie fuer alle anderen.
+ */
+const SCHLUESSEL_STAERKE = 'mememory.lautstaerke';
+
+/**
+ * Voll aufgedreht sind diese Toene am Handy unangenehm laut — deshalb liegt
+ * schon die Obergrenze des Reglers hier und nicht bei 1.
+ */
+const OBERGRENZE = 0.28;
+
+/** Vorgabe des Reglers, sobald jemand den Ton ueberhaupt einschaltet. */
+const VORGABE_STAERKE = 70;
 
 /** Der Ton ist opt-in — Vorgabe aus, so steht es im Auftrag. */
 export function tonAn(): boolean {
@@ -42,6 +58,48 @@ export function setzeTon(an: boolean): void {
   if (an) starte();
 }
 
+/** Reglerstand 0..100. Ohne Eintrag die Vorgabe. */
+export function lautstaerke(): number {
+  try {
+    const roh = Number(window.localStorage.getItem(SCHLUESSEL_STAERKE));
+    if (!Number.isFinite(roh)) return VORGABE_STAERKE;
+    return Math.min(100, Math.max(0, Math.round(roh)));
+  } catch {
+    return VORGABE_STAERKE;
+  }
+}
+
+/**
+ * Den Regler setzen — und ihn dabei zum Schalter machen.
+ *
+ * Null heisst aus, alles darueber an. Zwei getrennte Bedienelemente fuer
+ * dieselbe Frage ("hoere ich etwas?") waeren eine Falle: Ein Regler auf
+ * siebzig, aus dem nichts kommt, weil daneben noch ein Schalter steht, sieht
+ * nach kaputt aus.
+ *
+ * Und der Zug am Regler IST die Nutzergeste, die der AudioContext braucht
+ * (siehe `starte`) — deshalb wird er hier gleich mit gestartet.
+ */
+export function setzeLautstaerke(wert: number): void {
+  const stand = Math.min(100, Math.max(0, Math.round(wert)));
+  try {
+    window.localStorage.setItem(SCHLUESSEL_STAERKE, String(stand));
+  } catch {
+    /* Privater Modus: dann gilt der Regler nur fuer diese Sitzung. */
+  }
+  setzeTon(stand > 0);
+  // Ein laufender Kontext soll die neue Zahl sofort tragen, nicht erst beim
+  // naechsten Aufbau — sonst zieht man den Regler und hoert die alte Stufe.
+  if (summe) summe.gain.value = verstaerkung(stand);
+}
+
+/**
+ * Reglerstand auf Verstaerkung. Quadratisch, nicht linear — dieselbe
+ * Ueberlegung wie in klang.ts: Das Ohr hoert ungefaehr logarithmisch, ein
+ * linearer Regler taete auf der unteren Haelfte des Weges fast nichts.
+ */
+const verstaerkung = (stand: number): number => (stand / 100) ** 2 * OBERGRENZE;
+
 /**
  * Der AudioContext entsteht erst beim Einschalten.
  *
@@ -60,8 +118,7 @@ function starte(): void {
   if (!Konstruktor) return;
   kontext = new Konstruktor();
   summe = kontext.createGain();
-  // Kopfhoerer am Handy: Voll aufgedreht ist das hier unangenehm laut.
-  summe.gain.value = 0.28;
+  summe.gain.value = verstaerkung(lautstaerke());
   summe.connect(kontext.destination);
 }
 
