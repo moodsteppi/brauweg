@@ -215,13 +215,19 @@ Minuten live.
 > statt vier: Emojis bleiben bei vier, ein Bild quer über das Brett bekommt
 > einen eigenen Deckel (Client und Gateway).
 
-> **Easy Poker ist neu auf `staging` (25. August 2026), noch nicht in der
-> Produktion.** Texas Hold'em Kopf an Kopf, für ein Hochkant-Handy entworfen:
-> zwei Handkarten, fünf Gemeinschaftskarten, vier Setzrunden — und genau
-> **vier Schaltflächen** (Fold · Check · Call · Bet). Neues Paket
-> `@brauweg/game-easypoker` (**54 eigene Tests**), `EasyPoker.tsx` im Client,
-> ein Eintrag mehr in `MODULES`. Bildbestellung: `docs/ASSETS-EASYPOKER.md`
-> (genau ein Bild, alles andere ist gezeichnet).
+> **Poker ist neu auf `staging` (25. August 2026), noch nicht in der
+> Produktion.** Texas Hold'em zu zweit bis sechst, für ein Hochkant-Handy
+> entworfen: zwei Handkarten, fünf Gemeinschaftskarten, vier Setzrunden —
+> und genau **vier Schaltflächen** (Fold · Check · Call · Bet). Anzeigename
+> „Poker“ (interne Kennung bleibt `easypoker`). Neues Paket
+> `@brauweg/game-easypoker`, `EasyPoker.tsx` im Client, ein Eintrag mehr in
+> `MODULES`. Spielauswahl-Banner liegt unter `hub/spielwahl-easypoker.webp`.
+>
+> **Online ist 6-max.** „Online-Tisch suchen" setzt sich an einen wartenden
+> Tisch oder macht einen mit sechs Plätzen auf; wer nicht warten will, füllt
+> die freien Sitze mit Computern. „Sofort spielen" nimmt 2–6 Plätze gegen
+> Bots. Die Engine kennt Nebentoepfe: Wer all-in weniger setzen kann als die
+> anderen, spielt nur um den Topf bis zu seinem Beitrag.
 >
 > **Der Einstieg hat zwei Knöpfe, nicht einen.** „Sofort spielen" macht einen
 > Tisch mit `fillWithBots` auf und ist nach zwei Sekunden im Spiel; „Online-Match
@@ -271,6 +277,13 @@ Minuten live.
 > Sitzungsbrowser lässt sich kein Bildschirmfoto machen; belegt sind Aufbau,
 > Maße, Farben, Kontraste und Verhalten, nicht der Auftritt. Vor `main`
 > gehört das einmal an ein echtes Handy.
+>
+> **BroJetons (27. August 2026).** Poker hat eine eigene Chip-Währung:
+> `account.bro_jetons`, Startstapel 1000, im Shop gegen Münzen (40/100/280
+> für 500/1.500/5.000). Zurück in Münzen gehen sie nicht. Wer den Tisch
+> aufmacht, stellt Mindest-Einsatz und Blinds. Die Plattform zieht den
+> Buy-in beim Partiestart ein und zahlt den Reststapel am Ende aus
+> (`chip_lock`); das Spielmodul sieht weiter nur Zahlen (`chipStackField`).
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

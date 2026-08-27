@@ -39,6 +39,7 @@ import {
 import { xpFuerPartie } from '../level.js';
 import { recordPartyResult } from '../clubs/war.js';
 import { fortschreiben } from '../quests.js';
+import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -250,6 +251,15 @@ export class PartyRuntime {
         and(eq(s.ruleSet.id, table.ruleSetId), eq(s.ruleSet.version, table.ruleSetVersion)),
       );
     if (!rs) throw notFound('ruleSetUnknown');
+
+    const chipFeld = module.meta.chipStackField;
+    if (chipFeld) {
+      const buyIn = einsatzVon(rs.config, chipFeld);
+      const menschen = seats
+        .filter((seat): seat is typeof seat & { accountId: string } => !!seat.accountId)
+        .map((seat) => ({ accountId: seat.accountId, seat: seat.seatIndex }));
+      await zieheEinsatz(this.db, tableId, menschen, buyIn);
+    }
 
     // Der Seed bestimmt jedes Geben. Er wird gespeichert, damit die Partie aus
     // Seed und Aktionsfolge exakt nachvollziehbar bleibt.
@@ -824,6 +834,15 @@ export class PartyRuntime {
 
     const standings = party.module.standings(party.state);
     await this.persist(party);
+
+    if (party.module.meta.chipStackField) {
+      const rest: Record<string, number> = {};
+      for (const standing of standings) {
+        const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
+        if (accountId) rest[accountId] = standing.points;
+      }
+      await zahleAus(this.db, party.tableId, rest);
+    }
 
     await this.db
       .update(s.party)

@@ -107,6 +107,11 @@ export interface Me {
    * Geschenk, nie aus Truhen: sonst waere jede Truhe eine Geldquelle.
    */
   gems: number;
+  /**
+   * BroJetons — Pokerchips. Gekauft gegen Münzen, eingesetzt am Tisch.
+   * Zurück in Münzen gehen sie nicht.
+   */
+  broJetons: number;
   /** Was der Pinguin gerade traegt, je Platz. */
   avatar: Getragen;
   /**
@@ -175,6 +180,7 @@ export interface RankingEntry {
 // ---------------------------------------------------------------------------
 
 export type Waehrung = 'coins' | 'gems';
+export type Guthaben = Waehrung | 'broJetons';
 
 export type Grad = 'holz' | 'bronze' | 'silber' | 'gold' | 'diamant';
 
@@ -248,11 +254,13 @@ export interface RegalStueck {
 export interface Paket {
   id: string;
   nameKey: string;
-  gibt: { waehrung: Waehrung; betrag: number } | null;
+  gibt: { waehrung: Guthaben; betrag: number } | null;
   /** Anzeigepreis in ganzen Cent, oder null: kostet kein Geld. */
   cents: number | null;
   /** Preis in Edelsteinen, oder null: dafür nicht zu haben. */
   gems: number | null;
+  /** Preis in Münzen, oder null — so kosten die BroJeton-Pakete. */
+  coins: number | null;
   /** Aufschlag gegenüber dem kleinsten Paket, in Prozent. */
   bonus: number | null;
   /** Läuft der Kauf wirklich, oder ist es ein Schaufenster? */
@@ -292,6 +300,7 @@ export interface Shop {
   paesse: Paket[];
   muenzpakete: Paket[];
   edelsteinpakete: Paket[];
+  jetonpakete: Paket[];
   tischware: RegalWare[];
   truhen: Kauftruhe[];
   /** Münzen je Edelstein. Kommt vom Server, damit niemand falsch rechnet. */
@@ -303,8 +312,8 @@ export interface Shop {
 export interface Paketkauf {
   paketId: string;
   bezahlt: number;
-  gibt: { waehrung: Waehrung; betrag: number };
-  stand: { coins: number; gems: number };
+  gibt: { waehrung: Guthaben; betrag: number };
+  stand: { coins: number; gems: number; broJetons: number };
 }
 
 /** Was in einer gekauften Truhe war. */
@@ -314,7 +323,7 @@ export interface Kauffund {
   grad: Grad;
   coins: number;
   bezahlt: number;
-  stand: { coins: number; gems: number };
+  stand: { coins: number; gems: number; broJetons: number };
 }
 
 export interface TableRow {
@@ -328,6 +337,8 @@ export interface TableRow {
   host: string | null;
   /** Wie viele Sonderregeln an sind. 0 heißt Grundspiel. */
   ruleCount: number;
+  /** Buy-in und Blinds, oder null wenn der Tisch keine Chips kennt. */
+  stakes: { startJetons: number; kleinerBlind: number; grosserBlind: number } | null;
 }
 
 export interface GameDefaults {

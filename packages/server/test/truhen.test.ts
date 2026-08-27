@@ -255,7 +255,7 @@ test('Ohne Edelsteine keine Truhe — und kein Wurf', async () => {
       (err: unknown) => err instanceof AppError && err.code === 'gemsInsufficient',
     );
 
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 24 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 24, broJetons: 1000 });
     const zeilen = await ctx.db
       .select({ chestId: schema.chestClaim.chestId })
       .from(schema.chestClaim)
@@ -327,7 +327,7 @@ test('Eine erfundene Kauftruhe gibt es nicht', async () => {
         `${id} haette abgelehnt werden muessen`,
       );
     }
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 10_000 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 10_000, broJetons: 1000 });
   } finally {
     await ctx.close();
   }

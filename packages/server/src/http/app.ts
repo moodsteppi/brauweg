@@ -595,6 +595,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         displayName: s.account.displayName,
         coins: s.account.coins,
         gems: s.account.gems,
+        broJetons: s.account.broJetons,
         xp: s.account.xp,
         premiumUntil: s.account.premiumUntil,
         isStaff: s.account.isStaff,
@@ -673,6 +674,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       ...rest,
       coins: stand.coins,
       gems: stand.gems,
+      broJetons: stand.broJetons,
       avatar: getragen,
       /**
        * Die Bemalung der 3D-Figur, schon geprueft. `null` heisst: nie bemalt,

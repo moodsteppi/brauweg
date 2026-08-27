@@ -148,6 +148,13 @@
       "when": 1787010000000,
       "tag": "0020_mememory_sammlung",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787100000000,
+      "tag": "0021_bro_jetons",
+      "breakpoints": true
     }
   ]
 }

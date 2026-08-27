@@ -21,7 +21,7 @@ const de: Record<string, string> = {
   // Memory und bleibt deshalb auch im Deutschen stehen — "Meme-Memory" waere
   // die Erklaerung, nicht der Name.
   'game.mememory': 'Mememory',
-  'game.easypoker': 'Easy Poker',
+  'game.easypoker': 'Poker',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -108,6 +108,7 @@ const de: Record<string, string> = {
   // "Konflikt" hilft niemandem weiter.
   'error.coinsInsufficient': 'Dafür fehlen dir Münzen.',
   'error.gemsInsufficient': 'Dafür fehlen dir Edelsteine.',
+  'error.broJetonsInsufficient': 'Dafür fehlen dir BroJetons.',
   'error.chestUnknown': 'Diese Truhe gibt es nicht.',
   'error.chestAlreadyOpened': 'Diese Truhe hast du schon geöffnet.',
   'error.chestLocked': 'Diese Truhe braucht eine höhere Stufe.',
@@ -126,9 +127,11 @@ const de: Record<string, string> = {
   // --- Waehrungen ---------------------------------------------------------
   'waehrung.coins': 'Münzen',
   'waehrung.gems': 'Edelsteine',
+  'waehrung.broJetons': 'BroJetons',
   // Einzahl fuer Saetze wie "kostet 1 Münze".
   'waehrung.coins.eins': 'Münze',
   'waehrung.gems.eins': 'Edelstein',
+  'waehrung.broJetons.eins': 'BroJeton',
 
   // --- Truhen -------------------------------------------------------------
   'truhe.holz': 'Holztruhe',
@@ -207,6 +210,9 @@ const de: Record<string, string> = {
   'shop.muenzen-klein': 'Handvoll Münzen',
   'shop.muenzen-mittel': 'Beutel Münzen',
   'shop.muenzen-gross': 'Kiste Münzen',
+  'shop.brojetons-klein': 'Beutel BroJetons',
+  'shop.brojetons-mittel': 'Sack BroJetons',
+  'shop.brojetons-gross': 'Kiste BroJetons',
   'shop.edelsteine-klein': 'Handvoll Edelsteine',
   'shop.edelsteine-mittel': 'Beutel Edelsteine',
   'shop.edelsteine-gross': 'Kiste Edelsteine',

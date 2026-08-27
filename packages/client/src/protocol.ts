@@ -42,8 +42,13 @@ export const FELDHERR_MODULE_VERSION = 2;
  */
 export const MEMEMORY_MODULE_VERSION = 4;
 
-/** Easy Poker, erste Fassung. */
-export const EASYPOKER_MODULE_VERSION = 1;
+/**
+ * 2 seit dem 27. August 2026: Sicht und Zustand kennen bis zu sechs Sitze
+ * (fremde Karten je Sitz, imSpiel, Nebentoepfe). Wer die 1 meldet, darf noch
+ * beitreten — die neuen Felder sind zusaetzlich, `gegnerKarten` bleibt fuer
+ * den Zweier-Bildschirm stehen.
+ */
+export const EASYPOKER_MODULE_VERSION = 2;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,

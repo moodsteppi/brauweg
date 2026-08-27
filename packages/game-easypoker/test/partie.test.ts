@@ -10,6 +10,7 @@ import {
   erstellePartie,
   fuehreAus,
   gegnerVon,
+  linksVon,
   markiereVerlassen,
   pauseDauerMs,
   platzierungen,
@@ -35,6 +36,10 @@ function jetonSumme(partie: EasyPokerPartie): number {
   );
 }
 
+function startSumme(partie: EasyPokerPartie): number {
+  return DEFAULT_REGELN.startJetons * sitzeVon(partie).length;
+}
+
 function zugMitTyp(
   partie: EasyPokerPartie,
   sitz: number,
@@ -55,7 +60,7 @@ function spieleDurch(
 ): EasyPokerPartie {
   let partie = start;
   for (let i = 0; i < maxSchritte && !partie.fertig; i++) {
-    assert.equal(jetonSumme(partie), DEFAULT_REGELN.startJetons * 2, 'Jetons sind verschwunden');
+    assert.equal(jetonSumme(partie), startSumme(partie), 'Jetons sind verschwunden');
     const sitz = amZug(partie);
     if (sitz === null) {
       assert.notEqual(pauseDauerMs(partie), null, 'niemand am Zug und keine Pause');
@@ -389,4 +394,120 @@ test('der Regelsatz weist Unsinn ab', () => {
   assert.ok(pruefeRegeln({ startJetons: 20, kleinerBlind: 2, grosserBlind: 4 }).length > 0);
   assert.ok(pruefeRegeln({ startJetons: 200, kleinerBlind: 2 }).length > 0);
   assert.ok(pruefeRegeln({ startJetons: 200, kleinerBlind: 2, grosserBlind: '4' }).length > 0);
+});
+
+// ---------------------------------------------------------------------------
+// Mehrere Sitze
+// ---------------------------------------------------------------------------
+
+test('zu dritt zahlt links vom Knopf den kleinen Blind, nicht der Knopf', () => {
+  const partie = erstellePartie(DEFAULT_REGELN, [0, 1, 2], 7, 6);
+  const knopf = partie.geber;
+  const klein = linksVon(knopf, sitzeVon(partie));
+  const gross = linksVon(klein, sitzeVon(partie));
+  assert.equal(partie.kleinerSitz, klein);
+  assert.equal(partie.grosserSitz, gross);
+  assert.equal(partie.einsatz[klein], DEFAULT_REGELN.kleinerBlind);
+  assert.equal(partie.einsatz[gross], DEFAULT_REGELN.grosserBlind);
+  assert.equal(partie.einsatz[knopf], 0);
+  assert.equal(amZug(partie), linksVon(gross, sitzeVon(partie)));
+  assert.equal(jetonSumme(partie), startSumme(partie));
+});
+
+test('ein Passen zu dritt beendet die Hand nicht', () => {
+  const partie = erstellePartie(DEFAULT_REGELN, [0, 1, 2], 11, 6);
+  const sitz = amZug(partie)!;
+  const nachher = fuehreAus(partie, sitz, { typ: 'passen' });
+  assert.equal(nachher.ergebnis, null);
+  assert.equal(nachher.imSpiel.length, 2);
+  assert.ok(!nachher.imSpiel.includes(sitz));
+  assert.notEqual(amZug(nachher), null);
+  assert.equal(jetonSumme(nachher), startSumme(nachher));
+});
+
+test('der letzte, der nicht passt, gewinnt ohne Karten zu zeigen', () => {
+  let partie = erstellePartie(DEFAULT_REGELN, [0, 1, 2], 13, 6);
+  partie = fuehreAus(partie, amZug(partie)!, { typ: 'passen' });
+  const zweiter = amZug(partie)!;
+  partie = fuehreAus(partie, zweiter, { typ: 'passen' });
+  assert.ok(partie.ergebnis);
+  assert.equal(partie.ergebnis!.durchAufgabe, true);
+  assert.equal(partie.ergebnis!.gewinner.length, 1);
+  assert.deepEqual(partie.ergebnis!.gezeigt, {});
+  assert.equal(jetonSumme(partie), startSumme(partie));
+});
+
+test('ein kurzer Stapel begrenzt den Hauptopf, der Rest bleibt Nebentopf', () => {
+  const start = erstellePartie(DEFAULT_REGELN, [0, 1, 2], 17, 4);
+  const kurzSitz = 2;
+  const kurz: typeof start = {
+    ...start,
+    jetons: {
+      ...start.jetons,
+      [kurzSitz]: Math.max(0, 24 - (start.einsatz[kurzSitz] ?? 0)),
+    },
+  };
+
+  let partie = kurz;
+  for (let i = 0; i < 80 && partie.ergebnis === null; i++) {
+    const sitz = amZug(partie);
+    if (sitz === null) break;
+    partie = fuehreAus(partie, sitz, letzter(erlaubteZuege(partie, sitz)));
+  }
+
+  assert.ok(partie.ergebnis, 'die Hand muss zu Ende sein');
+  assert.equal(jetonSumme(partie), startSumme(start) - DEFAULT_REGELN.startJetons + 24);
+  const gewinnKurz = partie.ergebnis!.gewinn[kurzSitz] ?? 0;
+  assert.ok(
+    gewinnKurz <= 24 * 2,
+    `der kurze Stapel kann hoechstens 48 gewinnen, war ${gewinnKurz}`,
+  );
+});
+
+test('wer pleite ist, bekommt die naechste Hand nicht — die anderen spielen weiter', () => {
+  const start = erstellePartie(DEFAULT_REGELN, [0, 1, 2], 19, 12);
+  const leer: typeof start = {
+    ...start,
+    jetons: { ...start.jetons, 2: 0 },
+    einsatz: { ...start.einsatz, 2: 0 },
+    imSpiel: start.imSpiel.filter((s) => s !== 2),
+  };
+  const nachPause = beendePause({
+    ...leer,
+    ergebnis: {
+      gewinner: [0],
+      durchAufgabe: true,
+      topf: 0,
+      gezeigt: {},
+      bewertung: {},
+      gewinn: { 0: 0, 1: 0, 2: 0 },
+    },
+  });
+  assert.equal(nachPause.fertig, false);
+  assert.equal((nachPause.hand[2] ?? []).length, 0);
+  assert.ok(!nachPause.imSpiel.includes(2));
+  assert.equal(nachPause.imSpiel.length, 2);
+});
+
+test('sechs Sitze bekommen je zwei Karten, Jetons bleiben zusammen', () => {
+  const partie = erstellePartie(DEFAULT_REGELN, [0, 1, 2, 3, 4, 5], 23, 12);
+  for (const sitz of sitzeVon(partie)) {
+    assert.equal(partie.hand[sitz]?.length, 2, `Sitz ${sitz} ohne Karten`);
+  }
+  assert.equal(partie.reststapel.length, 40);
+  assert.equal(partie.imSpiel.length, 6);
+  assert.equal(jetonSumme(partie), DEFAULT_REGELN.startJetons * 6);
+});
+
+test('viele Sechser-Partien laufen fehlerfrei durch und verlieren keine Jetons', () => {
+  for (let saat = 0; saat < 20; saat++) {
+    const zufaellig = (zuege: EasyPokerAktion[]): EasyPokerAktion =>
+      zuege[(saat * 7 + zuege.length) % zuege.length]!;
+    const partie = spieleDurch(
+      erstellePartie(DEFAULT_REGELN, [0, 1, 2, 3, 4, 5], saat, 12),
+      zufaellig,
+      8000,
+    );
+    assert.equal(jetonSumme(partie), DEFAULT_REGELN.startJetons * 6, `Seed ${saat}`);
+  }
 });

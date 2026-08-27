@@ -62,12 +62,10 @@ export type GameId =
    */
   | 'mememory'
   /**
-   * Easy Poker: Texas Hold'em Kopf an Kopf, auf vier Schaltflaechen
-   * eingedampft. Ein gewoehnliches Kartenspiel an der Schnittstelle — mit
-   * einer Besonderheit, die zum Grundsatz 4 gehoert: Seine Jetons sind
-   * Partiepunkte und keine Waehrung. Sie lassen sich nicht kaufen und nicht
-   * in Muenzen oder Edelsteine tauschen; genau das trennt ein Kartenspiel
-   * von einer Gluecksspiel-Nachbildung (siehe docs/SPIELE-IDEEN.md).
+   * Poker: Texas Hold'em zu zweit bis sechst, auf vier Schaltflaechen
+   * eingedampft. Die Zahlen im Regelsatz (Startstapel, Blinds) sind
+   * Partiechips — welche Waehrung das auf der Plattform ist, weiss das
+   * Modul nicht (Grundsatz 4). Die Plattform mappt sie auf BroJetons.
    */
   | 'easypoker'
   | 'skat'
@@ -121,6 +119,16 @@ export interface GameMeta {
    * zu zaehlen hiesse, die Kartenaufgabe mit jedem Gefecht zu fuellen.
    */
   readonly xpBasisZaehltKarten?: boolean;
+  /**
+   * Name des Regelsatz-Felds, das den Chip-Stapel je Sitz angibt.
+   *
+   * Fehlt es, kennt die Partie keine Plattform-Chips. Ist es gesetzt, zieht
+   * die Plattform diesen Betrag in BroJetons ein, sobald die Partie startet,
+   * und zahlt den Reststapel am Ende zurueck. Das Modul rechnet weiter nur
+   * mit Zahlen — welche Waehrung das ist, weiss allein die Plattform
+   * (Grundsatz 4: der Regelsatz enthaelt keinen Geldbeutel).
+   */
+  readonly chipStackField?: string;
 }
 
 // ---------------------------------------------------------------------------
