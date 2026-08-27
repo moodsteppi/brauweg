@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 27. August 2026 abends, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 63 Mememory-Tests, 63 Easy-Poker-Tests, **335 Servertests**
-— zusammen 880, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 63 Mememory-Tests, 65 Easy-Poker-Tests, **335 Servertests**
+— zusammen 882, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
