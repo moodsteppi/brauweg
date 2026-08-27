@@ -19,6 +19,19 @@ Minuten live.
 — zusammen 899, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
+> **Eine Einzelübernahme nach `main` muss den Zeitstempel ihrer Migration
+> anfassen.** Der Drizzle-Migrator vergleicht ausschließlich Zeitstempel
+> (`pg-core/dialect.js`: `Number(lastDbMigration.created_at) <
+> migration.folderMillis`), nicht Hashes: Er wendet alles an, was NEUER ist
+> als der jüngste Eintrag in der Datenbank. Wer eine Migration mit hoher
+> Nummer vorzieht, macht damit alle übersprungenen Nummern für immer
+> unerreichbar — der Deploy sieht grün aus, die Spalten fehlen. Am
+> 27. August ging `0023_mememory_zufallsgurt` deshalb mit `when`
+> 1787050000000 nach `main` (statt 1787300000000), also VOR
+> `0021_bro_jetons` und `0022_google_login`, die dort noch fehlen. Beim
+> großen Merge holt `main` den staging-Wert nach und die Migration läuft
+> einmal erneut — sie ist `IF NOT EXISTS` und damit wiederholbar.
+
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
 > wird abgewiesen, ohne den Tisch zu beschaedigen" fällt unter der Last des
 > vollen Laufs gelegentlich um (erwartet 2, bekommt 3). Allein laufen die
