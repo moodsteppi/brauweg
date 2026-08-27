@@ -263,6 +263,11 @@ export interface ReaktionMessage {
    * kein Freitext: Geprueft wird die Form, und das Bild dahinter liefert der
    * Server nur aus, wenn es freigegeben ist. Ein wartender oder erfundener
    * Vorschlag erreicht die Gegenseite gar nicht als Bild.
+   *
+   * **Eigener Takt.** Eine Reaktion mit Motiv darf einmal je Sekunde kommen,
+   * eine ohne viermal (gateway.ts). Ein Bild quer ueber das Brett ist etwas
+   * anderes als ein Zeichen am Rand — und der Gegner will sich in derselben
+   * Zeit Karten merken.
    */
   readonly motiv?: string;
 }

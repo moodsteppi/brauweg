@@ -11368,6 +11368,26 @@ main.auth > .muted {
   }
 }
 
+/*
+ * „Gesammelt" — der Hinweis unter dem Namen, wenn ein selbst geholtes Paar
+ * neu in die Sammlung wandert.
+ *
+ * Er hängt IM selben Knoten wie der Name und läuft deshalb in derselben
+ * Animation mit. Zwei Einblendungen übereinander wären zwei Dinge, die um
+ * denselben Blick streiten — und die Schaupause dauert 650 ms.
+ *
+ * Deutlich kleiner und in Gold: Er ist die Fußnote, nicht die Nachricht.
+ */
+.mm-blitz-neu {
+  display: block;
+  margin-top: 8px;
+  color: #ffd873;
+  font: 800 clamp(12px, 3.4vw, 17px)/1.2 system-ui;
+  font-style: normal;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 /* Drei Punkte, die der Reihe nach aufleuchten — ein Wartezeichen ohne Bild. */
 .mm-punkte-lauf {
   display: flex;
@@ -11394,9 +11414,16 @@ main.auth > .muted {
 .mm-buehne {
   position: fixed;
   inset: 0;
-  /* Siehe .mm-menue: die allgemeine `main`-Regel muss hier weg, sonst liegt
-     das Brett 16 px vom Rand und ist auf dem Handy zwei Kartenbreiten kleiner. */
-  padding: 0;
+  /*
+   * Siehe .mm-menue: die allgemeine `main`-Regel muss hier weg, sonst liegt
+   * das Brett 16 px vom Rand und ist auf dem Handy zwei Kartenbreiten kleiner.
+   *
+   * Oben und unten bleibt seit dem 27. August ein Streifen frei. Er ist die
+   * Fläche der vier Ecken: Sie liegen absolut, nehmen also keinen Platz im
+   * Fluss ein — ohne diesen Rand liefe das Brett unter die Namen. Unten ist
+   * er breiter, weil dort außerdem die Reaktionsleiste steht.
+   */
+  padding: calc(env(safe-area-inset-top) + 50px) 0 calc(env(safe-area-inset-bottom) + 56px);
   max-width: none;
   display: flex;
   flex-direction: column;
@@ -11428,25 +11455,14 @@ main.auth > .muted {
 }
 .mm-grund img[data-an='true'] { opacity: 1; }
 
-.mm-leiste {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  background: linear-gradient(180deg, rgba(8, 4, 2, 0.55), rgba(8, 4, 2, 0));
-}
-.mm-leiste.oben { padding-top: calc(env(safe-area-inset-top) + 8px); }
-.mm-leiste.unten {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
-  background: linear-gradient(0deg, rgba(8, 4, 2, 0.55), rgba(8, 4, 2, 0));
-}
-
 .mm-raus {
-  flex: 0 0 auto;
+  position: absolute;
+  z-index: 4;
+  left: 12px;
+  top: calc(env(safe-area-inset-top) + 9px);
   width: 34px;
   height: 34px;
+  padding: 0;
   border: 0;
   border-radius: 10px;
   color: #f0e4d2;
@@ -11456,35 +11472,127 @@ main.auth > .muted {
   cursor: pointer;
 }
 
-.mm-name {
-  flex: 1 1 auto;
+/* --- Die vier Ecken -------------------------------------------------------
+   Bis zum 27. August lagen Name und Punktzahl in zwei Leisten quer über dem
+   Brett. Die konnten genau zwei Spieler; vier hätten sich dort gegenseitig
+   aus dem Bild geschoben.
+
+   Jeder sieht sich selbst UNTEN LINKS, der nächste Sitz sitzt gegenüber
+   (oben rechts) — zu zweit ist das die Diagonale und damit der größte
+   Abstand, den ein Handy hergibt. Erst der dritte füllt oben links, der
+   vierte unten rechts (siehe ecken.ts).
+
+   Die Ecken liegen absolut und nehmen deshalb keinen Platz im Fluss; den
+   Streifen für sie hält .mm-buehne über ihre Polsterung frei. */
+
+.mm-ecke {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 42%;
+  /* Sie liegen über dem Brett und dürfen keinen Tipp abfangen: Unter der
+     unteren Ecke liegt die letzte Kartenreihe. */
+  pointer-events: none;
+}
+.mm-ecke[data-ecke='ul'],
+.mm-ecke[data-ecke='ol'] {
+  left: 12px;
+  align-items: flex-start;
+}
+.mm-ecke[data-ecke='ur'],
+.mm-ecke[data-ecke='or'] {
+  right: 12px;
+  align-items: flex-end;
+}
+.mm-ecke[data-ecke='ul'],
+.mm-ecke[data-ecke='ur'] { bottom: calc(env(safe-area-inset-bottom) + 8px); }
+/*
+ * Obere Ecken: Der Puck liegt UNTER dem Namen, nicht darüber — sonst stieße
+ * er an die Statusleiste des Telefons. Dieselbe Reihenfolge im Text, nur
+ * andersherum gestapelt.
+ */
+.mm-ecke[data-ecke='ol'],
+.mm-ecke[data-ecke='or'] {
+  top: calc(env(safe-area-inset-top) + 9px);
+  flex-direction: column-reverse;
+}
+/* Oben links teilt sich die Ecke mit dem Zurück-Knopf und rückt an ihm vorbei. */
+.mm-ecke[data-ecke='ol'] { left: 58px; }
+
+.mm-ecke-zeile {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px;
+  border-radius: 999px;
+  /* Ein Kissen unter der Zeile. Ohne läge sie mal auf der Decke, mal auf
+     einer hellen Karte — und wäre dort nicht mehr zu lesen. */
+  background: rgba(8, 4, 2, 0.46);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.mm-ecke-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 800 15px/1.2 system-ui;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font: 800 14px/1.2 system-ui;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
 }
-.mm-zug {
+.mm-ecke-trenner {
   flex: 0 0 auto;
-  font: 700 11px/1 system-ui;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.75;
+  color: rgba(255, 255, 255, 0.42);
+  font: 800 14px/1 system-ui;
 }
-.mm-stand {
+.mm-ecke-stand {
   flex: 0 0 auto;
-  min-width: 40px;
-  text-align: right;
-  font: 900 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 900 19px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
-/* Die Teamfarben. Genau zwei, und sie hängen am Sitz — nie daran, wer zusieht. */
-.mm-leiste[data-farbe='blau'] .mm-stand,
+/*
+ * Die Spielerfarben. Vier, und sie hängen am SITZ — nie daran, wer zusieht.
+ * Sitz 0 ist blau, Sitz 1 rot, Sitz 2 gelb, Sitz 3 grün, auf jedem Gerät.
+ * Mattere Töne: Sie stehen auf einer dunklen Decke und färben sie außerdem.
+ */
+.mm-ecke[data-farbe='blau'] .mm-ecke-stand,
 .mm-ende-stand b[data-farbe='blau'] { color: #7fb3ff; }
-.mm-leiste[data-farbe='rot'] .mm-stand,
+.mm-ecke[data-farbe='rot'] .mm-ecke-stand,
 .mm-ende-stand b[data-farbe='rot'] { color: #ff8a80; }
+.mm-ecke[data-farbe='gelb'] .mm-ecke-stand,
+.mm-ende-stand b[data-farbe='gelb'] { color: #e8c96a; }
+.mm-ecke[data-farbe='gruen'] .mm-ecke-stand,
+.mm-ende-stand b[data-farbe='gruen'] { color: #86c48f; }
+
+/*
+ * Der Puck: Er steht bei dem, der am Zug ist, und wandert beim Zugwechsel
+ * hinüber (die Strecke spielt Ecken.tsx, weil nur dort beide Orte bekannt
+ * sind). Sein Fach behält die Höhe auch leer — sonst rutschte der Name bei
+ * jedem Zugwechsel um zehn Pixel.
+ */
+.mm-puck-fach {
+  height: 14px;
+  display: flex;
+  align-items: center;
+}
+.mm-puck {
+  width: 30px;
+  height: 13px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--mm-puck-hell) 0%, var(--mm-puck-dunkel) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 3px 9px -2px rgba(0, 0, 0, 0.85);
+}
+.mm-ecke[data-farbe='blau'] { --mm-puck-hell: #9ec6ff; --mm-puck-dunkel: #3f6dae; }
+.mm-ecke[data-farbe='rot'] { --mm-puck-hell: #ffa79e; --mm-puck-dunkel: #b04a41; }
+.mm-ecke[data-farbe='gelb'] { --mm-puck-hell: #f3dc93; --mm-puck-dunkel: #a8862c; }
+.mm-ecke[data-farbe='gruen'] { --mm-puck-hell: #a6d9ad; --mm-puck-dunkel: #4c8a58; }
 
 /*
  * Die Polsterung ist Anzeige, nicht Zierde.
@@ -11670,6 +11778,14 @@ main.auth > .muted {
 .mm-karte[data-besitz='rot'] .mm-vorn {
   box-shadow: inset 0 0 0 3px #ea4b40, 0 0 14px -3px #ea4b40;
 }
+/* Kräftiger als die Ecken-Töne: Hier ist der Rand nur drei Pixel breit und
+   liegt auf einer hellen Karte, nicht auf der dunklen Decke. */
+.mm-karte[data-besitz='gelb'] .mm-vorn {
+  box-shadow: inset 0 0 0 3px #d8a828, 0 0 14px -3px #d8a828;
+}
+.mm-karte[data-besitz='gruen'] .mm-vorn {
+  box-shadow: inset 0 0 0 3px #3f9b55, 0 0 14px -3px #3f9b55;
+}
 /*
  * Erst das fertige Paar wird blass — und nur das Bild, nicht der farbige
  * Rand. So bleibt auf einen Blick klar, was noch im Spiel ist und was
@@ -11756,16 +11872,45 @@ main.auth > .muted {
   overflow: hidden;
   pointer-events: none;
 }
+/*
+ * Ein Flug ist ZWEI Knoten, und das ist der Kern der Sache.
+ *
+ * Außen ein Kasten über die ganze Bühne — er trägt die Bewegung. Seine
+ * Prozentangaben rechnen gegen sich selbst, also gegen die Bühne: „Von der
+ * Ecke in die Mitte" ist damit auf jedem Gerät derselbe Bruchteil, ohne dass
+ * irgendwo eine Strecke in Pixeln ausgerechnet und bei jeder Drehung des
+ * Telefons neu gemessen werden müsste.
+ *
+ * Der Drehpunkt liegt in der ECKE und nicht in der Mitte des Kastens. Sonst
+ * zöge das Kleinerwerden am Anfang das Zeichen aus der Ecke heraus — es
+ * startete sichtbar neben dem, der es geworfen hat.
+ *
+ * Innen sitzt das Zeichen an genau dieser Ecke und bewegt sich selbst nie.
+ */
 .mm-flieger {
   position: absolute;
-  left: 50%;
+  inset: 0;
+  transform-origin: var(--mm-ox) var(--mm-oy);
+  animation: mm-flug 1.35s cubic-bezier(0.22, 0.7, 0.3, 1) forwards;
+}
+.mm-flieger[data-ecke='ul'] { --mm-ox: 13%; --mm-oy: 87%; --mm-zx: 37%; --mm-zy: -37%; }
+.mm-flieger[data-ecke='ur'] { --mm-ox: 87%; --mm-oy: 87%; --mm-zx: -37%; --mm-zy: -37%; }
+.mm-flieger[data-ecke='ol'] { --mm-ox: 13%; --mm-oy: 11%; --mm-zx: 37%; --mm-zy: 39%; }
+.mm-flieger[data-ecke='or'] { --mm-ox: 87%; --mm-oy: 11%; --mm-zx: -37%; --mm-zy: 39%; }
+
+.mm-flieger-koerper {
+  position: absolute;
+  left: var(--mm-ox);
+  top: var(--mm-oy);
+  /* Der seitliche Versatz verhindert, dass zwei Reaktionen desselben
+     Augenblicks genau übereinander liegen. */
+  transform: translate(calc(-50% + var(--mm-ab, 0px)), -50%);
   font-size: 34px;
   line-height: 1;
-  will-change: transform, opacity;
 }
 /* Ein fliegendes Meme ist ein Bild, kein Zeichen: Es braucht eine Größe, und
    der Schatten hebt es von jedem Untergrund ab, über den es fliegt. */
-.mm-flieger[data-motiv] img {
+.mm-flieger-koerper[data-motiv] img {
   width: 92px;
   height: 92px;
   display: block;
@@ -11773,26 +11918,16 @@ main.auth > .muted {
   object-fit: cover;
   box-shadow: 0 10px 26px -8px rgba(0, 0, 0, 0.75);
 }
-/* Eigene Reaktion: steigt vom Knopf auf und verklingt. */
-.mm-flieger[data-richtung='hoch'] {
-  bottom: calc(env(safe-area-inset-bottom) + 92px);
-  animation: mm-flug-hoch 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
-}
-/* Fremde Reaktion: faellt von oben herein und wird dabei groesser — sie kommt
-   auf einen zu. */
-.mm-flieger[data-richtung='runter'] {
-  top: calc(env(safe-area-inset-top) + 52px);
-  animation: mm-flug-runter 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
-}
-@keyframes mm-flug-hoch {
-  0% { transform: translate(calc(-50% + var(--mm-ab, 0px)), 0) scale(0.55); opacity: 0; }
-  14% { opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--mm-ab, 0px)), -210px) scale(1.05); opacity: 0; }
-}
-@keyframes mm-flug-runter {
-  0% { transform: translate(calc(-50% + var(--mm-ab, 0px)), 0) scale(0.65); opacity: 0; }
-  14% { opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--mm-ab, 0px)), 190px) scale(1.75); opacity: 0; }
+
+/*
+ * Klein aus der Ecke, groß in der Mitte, dort kurz stehen und verpuffen.
+ * Bei 66 % ist es angekommen — der Rest ist das Verklingen, nicht der Weg.
+ */
+@keyframes mm-flug {
+  0% { transform: translate(0, 0) scale(0.45); opacity: 0; }
+  12% { opacity: 1; }
+  66% { transform: translate(var(--mm-zx), var(--mm-zy)) scale(1); opacity: 1; }
+  100% { transform: translate(var(--mm-zx), var(--mm-zy)) scale(1.2); opacity: 0; }
 }
 
 .mm-funk {
