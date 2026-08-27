@@ -30,6 +30,25 @@ test('der Regelsatz wird gegen Spielerzahl und Unsinn geprueft', () => {
 });
 
 /**
+ * Ist der Botzug erlaubt? Setzen zaehlt, wenn der Betrag in der Spanne des
+ * angebotenen Zugs liegt — seit dem Regler ist jeder Betrag darin gueltig,
+ * nicht nur der Vorschlag.
+ */
+function zugErlaubt(erlaubt: readonly unknown[], zug: unknown): boolean {
+  const z = zug as { typ: string; betrag?: number };
+  return erlaubt.some((eintrag) => {
+    const e = eintrag as { typ: string; betrag?: number; min?: number; max?: number };
+    if (e.typ !== z.typ) return false;
+    if (e.typ === 'setzen') {
+      const min = e.min ?? e.betrag ?? 0;
+      const max = e.max ?? e.betrag ?? 0;
+      return typeof z.betrag === 'number' && z.betrag >= min && z.betrag <= max;
+    }
+    return JSON.stringify(e) === JSON.stringify(z);
+  });
+}
+
+/**
  * Der Kern des Ganzen: Die Sicht darf die Karten des Gegners nicht enthalten
  * — auch nicht versteckt in einem Feld, das der Client "eigentlich nicht
  * anzeigt". Geprueft wird deshalb der ganze serialisierte Text.
@@ -94,7 +113,7 @@ test('zwei Bots spielen hundert Partien zu Ende, jeder Zug erlaubt', () => {
       const erlaubt = easypoker.legalActions(partie, sitz);
       const zug = easypoker.botAction(easypoker.viewFor(partie, sitz), 'standard');
       assert.ok(
-        erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(zug)),
+        zugErlaubt(erlaubt, zug),
         `Seed ${seed}: Botzug ${JSON.stringify(zug)} steht nicht in ${JSON.stringify(erlaubt)}`,
       );
       partie = easypoker.act(partie, sitz, zug);
@@ -125,7 +144,7 @@ test('sechs Bots spielen Partien zu Ende, jeder Zug erlaubt, Jetons bleiben', ()
       const erlaubt = easypoker.legalActions(partie, sitz);
       const zug = easypoker.botAction(easypoker.viewFor(partie, sitz), 'standard');
       assert.ok(
-        erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(zug)),
+        zugErlaubt(erlaubt, zug),
         `Seed ${seed}: Botzug ${JSON.stringify(zug)} steht nicht in ${JSON.stringify(erlaubt)}`,
       );
       partie = easypoker.act(partie, sitz, zug);

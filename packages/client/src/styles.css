@@ -13523,6 +13523,100 @@ span.hub-angebot-art.poker-jeton-stapel {
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* --- Das Setzblatt: Betrag fuer Bet waehlen ------------------------------- */
+
+.poker-blatt-karte.is-setzen { text-align: center; }
+
+.poker-setzen-betrag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 14px;
+  font-size: 26px;
+}
+.poker-setzen-betrag b {
+  font: 900 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+
+/*
+ * Der Regler. `appearance: none` auf Bahn und Griff, sonst malt jeder
+ * Browser seine eigene Form und der Griff ist am Handy zu klein zum Treffen.
+ * Der Griff ist der gemalte Jeton — man schiebt buchstaeblich einen Chip.
+ */
+.poker-regler {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  touch-action: pan-x;
+}
+.poker-regler::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0c1712 0%, #1d2c25 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.poker-regler::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 34px;
+  height: 34px;
+  margin-top: -12px;
+  border: 0;
+  border-radius: 50%;
+  background: url(/poker/jeton.webp) center / contain no-repeat;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
+  cursor: grab;
+}
+.poker-regler::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0c1712 0%, #1d2c25 100%);
+}
+.poker-regler::-moz-range-thumb {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: url(/poker/jeton.webp) center / contain no-repeat;
+}
+
+.poker-regler-enden {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 2px 12px;
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #9fbcae;
+}
+
+.poker-schnellwahl {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.poker-schnellknopf {
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: #dfe9e2;
+  font: 800 12px/1 system-ui;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.poker-schnellknopf[data-an] {
+  background: rgba(226, 182, 79, 0.18);
+  box-shadow: inset 0 0 0 1.5px rgba(226, 182, 79, 0.6);
+  color: var(--gold);
+}
+
 .poker-blatt-karte h2 { margin: 0 0 14px; font: 900 21px/1.2 system-ui; }
 .poker-blatt-karte h3 {
   margin: 16px 0 6px;
