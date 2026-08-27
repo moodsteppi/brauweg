@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 
 import { DEFAULT_REGELN } from '../src/regeln.js';
 import { erstellePartie, fuehreAus } from '../src/partie.js';
-import { sichtFuer } from '../src/sicht.js';
+import { sichtFuer, zuschauerSicht } from '../src/sicht.js';
 import { stufeAusBotLevel } from '../src/stufen.js';
 
 const SITZE = [0, 1, 2];
@@ -76,6 +76,32 @@ test('ein Mensch bekommt kein Gedaechtnis in seine Sicht', () => {
   assert.equal(sichtFuer(partie, 0).erinnerung, undefined, 'Sitz 0 ist der Mensch');
   assert.ok(sichtFuer(partie, 1).erinnerung, 'Sitz 1 ist ein Bot und merkt sich etwas');
   assert.equal(sichtFuer(partie, 1).stufe, 'experte');
+});
+
+/**
+ * Die Stufen stehen in JEDER Sicht — anders als das Gedaechtnis.
+ *
+ * Der Bildschirm schreibt sie an die Ecke ("KI - Schwer"), und das muss ein
+ * Neuladen ueberstehen: Der Client, der den Tisch aufgemacht hat, hat sie
+ * danach nicht mehr. Ein Geheimnis ist keines dabei — eingestellt hat sie,
+ * wer den Tisch aufgemacht hat.
+ */
+test('die Stufen aller Bots stehen in jeder Sicht', () => {
+  const regeln = { ...DEFAULT_REGELN, botStufen: { 1: 'leicht', 2: 'experte' } as const };
+  const partie = erstellePartie(regeln, SITZE, 'saat-6', [1, 2], 'anfaenger');
+
+  assert.deepEqual(sichtFuer(partie, 0).stufen, { 1: 'leicht', 2: 'experte' });
+  assert.deepEqual(sichtFuer(partie, 1).stufen, { 1: 'leicht', 2: 'experte' });
+  assert.deepEqual(zuschauerSicht(partie).stufen, { 1: 'leicht', 2: 'experte' });
+});
+
+test('ohne Bots traegt die Sicht gar kein Stufenfeld', () => {
+  const partie = erstellePartie(DEFAULT_REGELN, SITZE, 'saat-7');
+
+  // Nicht `{}`: `erstellePartie` legt `botStufen` auch ohne Bots an, und ein
+  // leeres Verzeichnis in jeder Sicht waere ein Feld, das nie etwas bedeutet.
+  assert.equal(sichtFuer(partie, 0).stufen, undefined);
+  assert.equal(zuschauerSicht(partie).stufen, undefined);
 });
 
 test('dieselbe Saat und dieselben Bot-Sitze ergeben dieselbe Partie', () => {

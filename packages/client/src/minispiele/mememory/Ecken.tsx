@@ -10,6 +10,13 @@
  * Die Farbe traegt die Zahl und nicht den Namen — ein Name in Farbe waere auf
  * der dunklen Decke schlechter zu lesen, und die Zahl ist ohnehin das, was
  * man im Spiel sucht.
+ *
+ * **Die Punktzahl steht immer innen.** In den linken Ecken hinter dem Namen,
+ * in den rechten davor — das macht `row-reverse` im Blatt, die Reihenfolge im
+ * Text bleibt dieselbe. Der Grund ist der Blick: Waehrend einer Partie sucht
+ * man den Stand, und alle vier Staende an der Bildmitte zu haben ist ein
+ * kurzer Weg. Aussen an den Bildschirmraendern waeren es vier weit
+ * auseinanderliegende Punkte.
  */
 
 import { useLayoutEffect, useRef } from 'react';
@@ -21,6 +28,7 @@ export function Ecken({
   eigenerSitz,
   punkte,
   nameVon,
+  stufeVon,
   dran,
 }: {
   /** Die Sitze des Tisches, aufsteigend. */
@@ -29,6 +37,15 @@ export function Ecken({
   eigenerSitz: number;
   punkte: Readonly<Record<number, number>>;
   nameVon: (sitz: number) => string;
+  /**
+   * Die Spielstaerke eines Bots, fertig zum Anzeigen — oder null fuer einen
+   * Menschen.
+   *
+   * Sie steht NEBEN dem Namen und nicht darin: Am Namen haengt das
+   * Abschneiden bei zu wenig Platz (`text-overflow`), und ein abgeschnittenes
+   * „KI · Schw…" waere schlechter als gar keine Stufe.
+   */
+  stufeVon?: (sitz: number) => string | null;
   /** Wer am Zug ist, oder null waehrend einer Schaupause bzw. am Ende. */
   dran: number | null;
 }): React.JSX.Element {
@@ -114,6 +131,14 @@ export function Ecken({
           )}
           <span className="mm-ecke-zeile">
             <span className="mm-ecke-name">{nameVon(sitz)}</span>
+            {/*
+              * Die Stufe steht nur da, wo ein Bot sitzt. An einem Menschen
+              * gaebe es nichts anzuzeigen, und ein leeres Schildchen waere
+              * eine Zeile, die bei zwei Sitzen verschieden hoch ist.
+              */}
+            {stufeVon?.(sitz) && (
+              <span className="mm-ecke-stufe">{stufeVon(sitz)}</span>
+            )}
             <span className="mm-ecke-trenner" aria-hidden="true">
               ·
             </span>

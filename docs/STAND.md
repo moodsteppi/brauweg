@@ -13,10 +13,10 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 27. August 2026 abends, nicht aus der Erinnerung):**
+**Prüfstand (gezählt am 28. August 2026, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 69 Mememory-Tests, 65 Easy-Poker-Tests, **346 Servertests**
-— zusammen 899, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, **349 Servertests**
+— zusammen 904, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Eine Einzelübernahme nach `main` muss den Zeitstempel ihrer Migration

@@ -55,6 +55,18 @@ export const STUFEN: readonly Beschreibung[] = [
 ];
 
 /**
+ * Der Anzeigename einer Stufe, oder null fuer alles Unbekannte.
+ *
+ * Gebraucht am Brett: Neben dem Namen eines Bots steht seine Staerke, und die
+ * kommt als Kennung aus der Sicht des Moduls. Die Namen stehen hier, weil hier
+ * auch die Saetze stehen — zwei Listen mit denselben vier Woertern liefen
+ * auseinander.
+ */
+export function stufenName(stufe: string | undefined): string | null {
+  return STUFEN.find((eintrag) => eintrag.stufe === stufe)?.name ?? null;
+}
+
+/**
  * Die Mememory-Stufe auf die der Plattform.
  *
  * Die Plattform kennt vier eigene Namen (`BotLevel` in game-api) und speichert

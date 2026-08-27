@@ -128,7 +128,10 @@ import {
   loeschen,
   offeneVon,
   offeneVorschlaege,
+  toneKennungen,
+  tonVon,
 } from '../memes.js';
+import { TON_MAX_ZEICHEN } from '../toene.js';
 import {
   activeTableFor,
   createTable,
@@ -1878,10 +1881,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // eine zweite Abschrift im Client waere die Abschrift, die auslaeuft.
     // Der Server darf das Modul kennen — er tut es ohnehin ueber die
     // Modulliste.
+    // `toene` seit dem 28. August: Welche Motive einen Ton haben, muss der
+    // Client VOR dem ersten Wurf wissen. Sonst fragte er fuer jedes fliegende
+    // Meme erst an und bekaeme bei 88 stummen Grundmotiven fast immer eine
+    // Absage — ein Abruf je Wurf, nur um nichts abzuspielen.
     return reply.send({
       grund: MOTIVE,
       hochgeladen: await freieKennungen(deps.db),
       namen: await freieNamen(deps.db),
+      toene: await toneKennungen(deps.db),
     });
   });
 
@@ -1920,6 +1928,41 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .header('cache-control', 'public, max-age=30, must-revalidate')
       .send(bytes);
   });
+
+  /**
+   * Der Ton eines freigegebenen Motivs.
+   *
+   * Eigener Endpunkt und nicht im Bild mit drin: Ein Ton ist ein zweites
+   * Stueck Inhalt mit eigenem Typ, und die allermeisten Motive haben keinen.
+   * Wer keinen hat, bekommt hier eine klare Absage statt eines leeren
+   * Rumpfes — der Client merkt sich das und fragt nicht wieder.
+   *
+   * Dieselbe kurze Frist mit ETag wie beim Bild: Die Marke haengt an
+   * `geprueftAm` und wechselt, sobald die Aufsicht den Ton austauscht.
+   */
+  app.get(
+    '/api/mememory/motive/:kennung/ton',
+    { config: { rateLimit: LIMIT_ALLGEMEIN } },
+    async (request, reply) => {
+      const { kennung } = z
+        .object({ kennung: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/) })
+        .parse(request.params);
+      const { typ, bytes, marke } = await tonVon(deps.db, kennung);
+
+      if (request.headers['if-none-match'] === marke) {
+        return reply
+          .header('etag', marke)
+          .header('cache-control', 'public, max-age=30, must-revalidate')
+          .status(304)
+          .send();
+      }
+      return reply
+        .header('content-type', typ)
+        .header('etag', marke)
+        .header('cache-control', 'public, max-age=30, must-revalidate')
+        .send(bytes);
+    },
+  );
 
   /**
    * Was das eigene Konto noch darf.
@@ -2032,9 +2075,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .object({
           titel: z.string().max(TITEL_MAX).nullable().optional(),
           bild: z.string().max(BILD_MAX_ZEICHEN).optional(),
+          /**
+           * Der Ton. `null` nimmt ihn weg — deshalb `nullable` und nicht nur
+           * `optional`: Das eine heisst "nicht angefasst", das andere
+           * "geloescht", und beides muss sich unterscheiden lassen.
+           */
+          ton: z.string().max(TON_MAX_ZEICHEN).nullable().optional(),
         })
         .parse(request.body);
-      if (body.titel === undefined && body.bild === undefined) throw badRequest('invalidInput');
+      if (body.titel === undefined && body.bild === undefined && body.ton === undefined) {
+        throw badRequest('invalidInput');
+      }
 
       await aendern(deps.db, kennung, body, accountId);
       return reply.send({ ok: true });

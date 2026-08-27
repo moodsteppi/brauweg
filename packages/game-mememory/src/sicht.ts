@@ -57,6 +57,18 @@ export interface MememorySicht {
   /** true = neutrale Zuschauersicht. */
   readonly zuschauer: boolean;
   /**
+   * Wer von einem Bot gespielt wird und wie stark: Sitz -> Stufe. Fehlt,
+   * wenn kein Bot am Tisch sitzt.
+   *
+   * Anders als `stufe` weiter unten steht das in JEDER Sicht — auch in der
+   * eines Menschen und in der eines Zuschauers. Ein Leck ist das nicht: Die
+   * Stufen hat eingestellt, wer den Tisch aufgemacht hat, und ueber die Lage
+   * der Karten sagen sie nichts. Der Bildschirm schreibt sie an die Ecke des
+   * Gegners ("KI - Schwer"), und dafuer muessen sie ein Neuladen ueberstehen:
+   * Aus dem Gedaechtnis des Clients waeren sie danach weg.
+   */
+  readonly stufen?: Readonly<Record<number, MememoryStufe>>;
+  /**
    * Spielstaerke dieses Sitzes — steht NUR in der Sicht eines Bot-Sitzes.
    *
    * `botAction` bekommt nichts als die Sicht, und die Stufe der Plattform
@@ -104,6 +116,12 @@ function grundsicht(partie: MememoryPartie, zuschauer: boolean): MememorySicht {
     sieger: sieger(partie),
     leftSeats: partie.leftSeats,
     zuschauer,
+    // Auf Vorhandensein zu pruefen reicht nicht: `erstellePartie` legt das
+    // Feld auch ohne Bots an, dann als leeres Verzeichnis. Ein `stufen: {}`
+    // in jeder Sicht waere ein Feld, das nie etwas bedeutet.
+    ...(Object.keys(partie.regeln.botStufen ?? {}).length > 0
+      ? { stufen: partie.regeln.botStufen }
+      : {}),
   };
 }
 

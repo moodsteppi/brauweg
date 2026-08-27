@@ -25,12 +25,13 @@
 
 import { randomBytes } from 'node:crypto';
 
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { BILD_DATA_URL, bytesAusDataUrl, istEchtesBild } from './bilder.js';
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
 import { badRequest, conflict, notFound } from './errors.js';
+import { TON_MAX_ZEICHEN, istEchterTon, tonBytes } from './toene.js';
 
 /**
  * Vorsatz jeder hochgeladenen Kennung.
@@ -75,6 +76,25 @@ export interface MotivZeile {
   readonly kennung: string;
   readonly titel: string | null;
   readonly pack: string | null;
+}
+
+/**
+ * Eine Zeile des Bestands — dasselbe plus die Frage nach dem Ton.
+ *
+ * Getrennt von `MotivZeile`, weil ein WARTENDER Vorschlag keinen Ton haben
+ * kann: Toene setzt allein die Aufsicht, und zwar im Bestand. Ein Feld, das
+ * an einer Stelle immer falsch waere, gehoert dort nicht hin.
+ */
+export interface BestandsZeile extends MotivZeile {
+  /**
+   * Haengt an diesem Motiv ein Ton?
+   *
+   * Nur das JA oder NEIN, nicht der Ton selbst: Der Bestand zeigt ein Dutzend
+   * Kacheln auf einmal, und ein Dutzend Toene in einer Liste waeren ein
+   * halbes Megabyte fuer eine Auskunft, die in ein Bit passt. Wer ihn hoeren
+   * will, holt ihn ueber seinen eigenen Endpunkt.
+   */
+  readonly hatTon: boolean;
 }
 
 export interface VorschlagZeile extends MotivZeile {
@@ -124,16 +144,36 @@ export async function freieNamen(db: Db): Promise<Record<string, string>> {
 }
 
 /** Freigegebene Motive mit Titel — fuer die Katalogansicht der Aufsicht. */
-export async function freieMotive(db: Db): Promise<MotivZeile[]> {
-  return db
+export async function freieMotive(db: Db): Promise<BestandsZeile[]> {
+  const zeilen = await db
     .select({
       kennung: s.mememoryMotiv.kennung,
       titel: s.mememoryMotiv.titel,
       pack: s.mememoryMotiv.pack,
+      // Nur die Frage, ob etwas drinsteht — der Ton selbst bleibt in der
+      // Datenbank, bis ihn jemand hoeren will.
+      hatTon: sql<boolean>`${s.mememoryMotiv.ton} is not null`,
     })
     .from(s.mememoryMotiv)
     .where(eq(s.mememoryMotiv.status, 'frei'))
     .orderBy(desc(s.mememoryMotiv.createdAt));
+  return zeilen.map((zeile) => ({ ...zeile, hatTon: zeile.hatTon === true }));
+}
+
+/**
+ * Kennungen aller freigegebenen Motive MIT Ton.
+ *
+ * Der Client bekommt sie beim Aufschlagen zusammen mit der Motivliste. Ohne
+ * sie muesste er fuer jedes fliegende Meme erst einen Ton anfragen und die
+ * Absage abwarten — bei 88 stummen Grundmotiven waere das fast immer
+ * umsonst.
+ */
+export async function toneKennungen(db: Db): Promise<string[]> {
+  const zeilen = await db
+    .select({ kennung: s.mememoryMotiv.kennung })
+    .from(s.mememoryMotiv)
+    .where(and(eq(s.mememoryMotiv.status, 'frei'), isNotNull(s.mememoryMotiv.ton)));
+  return zeilen.map((zeile) => zeile.kennung);
 }
 
 /** Offene Vorschlaege, neueste zuerst. Nur fuer die Aufsicht. */
@@ -273,7 +313,7 @@ export async function freigeben(db: Db, kennung: string, aufsichtId: string): Pr
 export async function aendern(
   db: Db,
   kennung: string,
-  aenderung: { titel?: string | null; bild?: string },
+  aenderung: { titel?: string | null; bild?: string; ton?: string | null },
   aufsichtId: string,
 ): Promise<void> {
   const satz: Record<string, unknown> = { geprueftVon: aufsichtId, geprueftAm: new Date() };
@@ -289,6 +329,22 @@ export async function aendern(
     const sauber = (aenderung.titel ?? '').trim().slice(0, TITEL_MAX);
     satz.titel = sauber.length > 0 ? sauber : null;
   }
+  /*
+   * Der Ton. `null` nimmt ihn weg — und das ist der Grund, warum hier auf
+   * `undefined` und nicht auf Wahrheit geprueft wird: "kein Feld
+   * mitgeschickt" und "ausdruecklich geloescht" sind zwei verschiedene
+   * Anweisungen, und mit einem `if (aenderung.ton)` waeren sie dieselbe.
+   */
+  if (aenderung.ton !== undefined) {
+    if (aenderung.ton === null) satz.ton = null;
+    else {
+      if (aenderung.ton.length > TON_MAX_ZEICHEN) throw badRequest('tonZuGross');
+      // Prueft Form, Magiebytes UND Dauer in einem: Geschnitten wird im
+      // Browser, und ein Browser laesst sich umgehen.
+      if (!istEchterTon(aenderung.ton)) throw badRequest('tonUngueltig');
+      satz.ton = aenderung.ton;
+    }
+  }
 
   const ergebnis = await db
     .update(s.mememoryMotiv)
@@ -296,6 +352,35 @@ export async function aendern(
     .where(eq(s.mememoryMotiv.kennung, kennung))
     .returning({ kennung: s.mememoryMotiv.kennung });
   if (ergebnis.length === 0) throw notFound('motivUnbekannt');
+}
+
+/**
+ * Ton eines freigegebenen Motivs als Bytes.
+ *
+ * Wie beim Bild nur 'frei', und mit derselben Marke: Sie haengt an
+ * `geprueftAm`, und das wandert bei jeder Aenderung mit — ein Browser, der
+ * den alten Ton im Zwischenspeicher hat, bekommt ihn damit von selbst neu.
+ *
+ * `notFound` auch bei einem stummen Motiv: Es gibt dort nichts abzuspielen,
+ * und eine leere Antwort mit 200 waere fuer den Client schwerer zu deuten als
+ * ein klares Nein.
+ */
+export async function tonVon(
+  db: Db,
+  kennung: string,
+): Promise<{ typ: string; bytes: Buffer; marke: string }> {
+  const [zeile] = await db
+    .select({
+      ton: s.mememoryMotiv.ton,
+      geprueftAm: s.mememoryMotiv.geprueftAm,
+      createdAt: s.mememoryMotiv.createdAt,
+    })
+    .from(s.mememoryMotiv)
+    .where(and(eq(s.mememoryMotiv.kennung, kennung), eq(s.mememoryMotiv.status, 'frei')));
+  const zerlegt = zeile?.ton ? tonBytes(zeile.ton) : null;
+  if (!zeile || !zerlegt) throw notFound('tonUnbekannt');
+  const stand = (zeile.geprueftAm ?? zeile.createdAt).getTime();
+  return { ...zerlegt, marke: `"${kennung}-ton-${stand}"` };
 }
 
 /**

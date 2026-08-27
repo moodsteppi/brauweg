@@ -1114,6 +1114,15 @@ export const mememoryMotiv = pgTable(
     kennung: text().primaryKey(),
     /** data-URL, im Browser auf ein Quadrat verkleinert. Wie account.avatar. */
     bild: text().notNull(),
+    /**
+     * Der Ton zum Meme als data-URL (`audio/wav`), oder NULL fuer stumm.
+     *
+     * Hoechstens acht Zehntelsekunden — geschnitten wird im Browser, geprueft
+     * in memes.ts. Er haengt an derselben Zeile wie das Bild und nicht an
+     * einer eigenen Tabelle: Wer ein Motiv herausnimmt, soll nicht einen Ton
+     * zuruecklassen, zu dem es kein Bild mehr gibt.
+     */
+    ton: text(),
     /** Freier Titel des Einreichenden. Nur Anzeige, nie Teil des Spiels. */
     titel: text(),
     /**

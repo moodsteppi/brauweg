@@ -12217,6 +12217,15 @@ span.hub-angebot-art.poker-jeton-stapel {
 /* Oben links teilt sich die Ecke mit dem Zurück-Knopf und rückt an ihm vorbei. */
 .mm-ecke[data-ecke='ol'] { left: 58px; }
 
+/*
+ * Die Punktzahl steht immer INNEN, also zur Bildmitte hin.
+ *
+ * Links Name-Stufe-Punkt-Zahl, rechts andersherum. Gedreht wird das Blatt
+ * (`row-reverse`), nicht der Text — im Blatt bleibt die Reihenfolge
+ * dieselbe, und damit auch das, was ein Vorleseprogramm sagt. Der Grund ist
+ * der Blick: Wer waehrend der Partie den Stand sucht, findet vier Zahlen
+ * dicht beieinander statt vier an den Aussenraendern.
+ */
 .mm-ecke-zeile {
   display: flex;
   align-items: baseline;
@@ -12230,6 +12239,10 @@ span.hub-angebot-art.poker-jeton-stapel {
   -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
 }
+.mm-ecke[data-ecke='or'] .mm-ecke-zeile,
+.mm-ecke[data-ecke='ur'] .mm-ecke-zeile {
+  flex-direction: row-reverse;
+}
 .mm-ecke-name {
   min-width: 0;
   overflow: hidden;
@@ -12238,6 +12251,24 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: #fff;
   font: 800 14px/1.2 system-ui;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+}
+/*
+ * Die Spielstaerke des Bots, als kleines Schildchen neben dem Namen.
+ *
+ * Klein und grau: Sie beantwortet eine Frage, die man einmal je Partie hat
+ * („gegen wen spiele ich hier?"), und darf dem Stand nicht die Aufmerksamkeit
+ * nehmen. `flex: none`, damit sie beim engen Platz nicht der Name ist, der
+ * gequetscht wird — der hat sein eigenes Abschneiden.
+ */
+.mm-ecke-stufe {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.13);
+  font: 800 10px/1.5 system-ui;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 .mm-ecke-trenner {
   flex: 0 0 auto;
@@ -14574,6 +14605,16 @@ span.hub-angebot-art.poker-jeton-stapel {
 .mm-schalter-name {
   flex: 1;
   min-width: 0;
+  /*
+   * `margin: 0` ist hier die ganze Zentrierung.
+   *
+   * Weit oben steht `label { margin-bottom: 0.75rem }` fuer die Formulare der
+   * Plattform. Ein Flex-Kasten mittet den MARGIN-Kasten seiner Kinder, nicht
+   * den Text: Mit zwoelf Pixeln Luft unter der Schrift stand das Wort
+   * gemessene sechs Pixel zu hoch — und legte nebenbei die Zeilenhoehe auf
+   * 28 px fest, obwohl der hoechste Teil (der Schalter) nur 27 misst.
+   */
+  margin: 0;
   font: 800 13px/1.25 system-ui;
   color: #f3ecff;
   cursor: pointer;
@@ -14687,6 +14728,15 @@ span.hub-angebot-art.poker-jeton-stapel {
  */
 .mm-gurt-fach .mm-fach-schloss {
   position: absolute;
+  /*
+   * Ueber der goldenen Linie, die das Meme umrandet.
+   *
+   * Die Linie ist ein `::after` und damit das LETZTE Kind des Fachs — ohne
+   * eine Nummer hier laege sie vor dem Schloss und schnitte ihm die Ecke ab.
+   * Sie faengt keinen Tipp ab (`pointer-events: none`), es ging also nur ums
+   * Bild; aber genau daran erkennt man den Knopf.
+   */
+  z-index: 2;
   top: -6px;
   right: -6px;
   width: 26px;
@@ -14744,6 +14794,139 @@ span.hub-angebot-art.poker-jeton-stapel {
   box-shadow:
     inset 0 0 0 3px #ffd873,
     0 0 14px -4px rgba(255, 216, 115, 0.9);
+}
+
+/* --- Der Bestand: dieselbe Aufmachung wie die Sammlungsseite -------------
+ *
+ * Kachel, Raster und Ueberschrift kommen von dort (`mm-sammelgitter`,
+ * `mm-sammelkachel`, `mm-gruppe`) und stehen deshalb hier nicht noch einmal.
+ * Was hier steht, ist allein der Unterschied: Diese Kachel ist kein Knopf,
+ * sondern traegt drei — die Aufsicht verwaltet, sie waehlt nicht aus.
+ */
+.mm-bestandskachel {
+  cursor: default;
+  /* Die Ecken der drei Knoepfe ragen absichtlich hinaus, wie das Schloss am
+     Gurtfach. `overflow: hidden` von der Sammelkachel schnitte sie ab. */
+  overflow: visible;
+}
+/* Das Bild bekommt die Rundung zurueck, die es ohne `overflow: hidden`
+   verliert. */
+.mm-bestandskachel img { border-radius: 14px; }
+
+/* Der Name liegt IM Bild, nicht darunter: Sonst waeren die Kacheln eines
+   Rasters je nach Namenslaenge verschieden hoch. Ein Verlauf darunter, damit
+   er auf jedem Meme lesbar bleibt. */
+.mm-bestand-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 6px 5px;
+  border-radius: 0 0 14px 14px;
+  background: linear-gradient(180deg, transparent, rgba(6, 3, 14, 0.86));
+  color: #efe6ff;
+  font: 700 10px/1.3 system-ui;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.mm-bestand-knopf {
+  position: absolute;
+  /* Ueber Bild und Namensband. Beide sind Geschwister ohne eigene Nummer,
+     also entschiede sonst die Reihenfolge im Blatt — und der Name steht
+     dort spaeter als die Knoepfe. */
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  font: 800 12px/1 system-ui;
+  cursor: pointer;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.8);
+}
+.mm-bestand-knopf .zeichen { width: 13px; height: 13px; }
+.mm-bestand-knopf:active { transform: scale(0.92); }
+/* Bearbeiten links oben, Herausnehmen rechts oben — die zerstoererische Taste
+   sitzt nicht dort, wo der Daumen beim Blaettern ohnehin liegt. */
+.mm-bestand-stift {
+  top: -6px;
+  left: -6px;
+  color: #1a0e05;
+  background: #ffd873;
+}
+.mm-bestand-raus {
+  top: -6px;
+  right: -6px;
+  color: #2b0d0d;
+  background: #ff9b90;
+}
+/* Die Note sagt „hier haengt ein Ton" und spielt ihn auf einen Tipp. Unten
+   links, also weit weg von den beiden anderen. */
+.mm-bestand-ton {
+  bottom: -6px;
+  left: -6px;
+  color: #05221a;
+  background: #7fd4c0;
+}
+
+/* --- Der Ton im Bearbeiten ----------------------------------------------- */
+
+.mm-tonzeile {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+.mm-tonzeile-kopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f3ecff;
+  font: 800 13px/1.2 system-ui;
+}
+.mm-tonzeile-kopf .zeichen { width: 17px; height: 17px; flex: none; }
+/* Der Stand rechts daneben, klein und grau: „vorhanden", „neu gewaehlt",
+   „wird entfernt". Er beantwortet die einzige Frage, die man hier hat. */
+.mm-tonzeile-kopf em {
+  margin-left: auto;
+  font: 600 11px/1.2 system-ui;
+  font-style: normal;
+  color: #a595c4;
+}
+.mm-tonzeile-knoepfe {
+  margin-top: 9px;
+  display: flex;
+  gap: 7px;
+}
+.mm-tonzeile-knoepfe button,
+.mm-tonzeile-waehlen {
+  flex: 1;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 11px;
+  color: #1a0e05;
+  background: linear-gradient(180deg, #ffd873, #e0a83c);
+  font: 700 12px/1 system-ui;
+  text-align: center;
+  cursor: pointer;
+}
+/* Das Entfernen ist die einzige Taste hier, die etwas wegnimmt — und sieht
+   deshalb auch so aus. */
+.mm-tonzeile-weg {
+  color: #2b0d0d !important;
+  background: #ff9b90 !important;
+}
+.mm-tonzeile-satz {
+  margin: 9px 0 0;
+  font: 500 11px/1.5 system-ui;
+  color: #a595c4;
 }
 
 @media (prefers-reduced-motion: reduce) {

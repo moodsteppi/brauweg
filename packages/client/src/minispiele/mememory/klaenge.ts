@@ -17,7 +17,17 @@
  *
  * Der Ton ist damit bewusst ein Cartoon-Ton und kein Originalzitat. Wer
  * spaeter echte Schnipsel einbaut, ersetzt genau diese Datei.
+ *
+ * **Die Meme-Toene sind die Ausnahme, und sie widersprechen dem nicht.**
+ * Seit dem 28. August haengt an jedem hochgeladenen Motiv ein Schnipsel von
+ * hoechstens acht Zehntelsekunden. Er kommt nicht aus dem Repository, sondern
+ * aus der Datenbank — hochgeladen von der Aufsicht, wie das Bild daneben.
+ * `docs/KLANG.md` fuehrt Herkunft und Lizenz fuer die Toene DER PLATTFORM;
+ * ein Meme-Ton ist Inhalt, kein Bestandteil der Anwendung, und steht dort
+ * genauso wenig wie das Bild, zu dem er gehoert.
  */
+
+import { motivTonPfad } from './bildpfad';
 
 let kontext: AudioContext | null = null;
 let summe: GainNode | null = null;
@@ -242,3 +252,132 @@ export function spieleKlang(welcher: Klang): void {
       break;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Meme-Toene
+// ---------------------------------------------------------------------------
+
+/**
+ * Entpackte Meme-Toene, Kennung -> Puffer. `null` heisst: nachgesehen, es gibt
+ * keinen.
+ *
+ * Der Merker fuer „gibt es nicht" ist so wichtig wie der Puffer selbst: Ohne
+ * ihn fragte jeder Wurf desselben stummen Motivs wieder an.
+ */
+const memeToene = new Map<string, AudioBuffer | null>();
+/** Was gerade unterwegs ist — damit dasselbe Motiv nicht doppelt geholt wird. */
+const unterwegs = new Set<string>();
+
+/**
+ * Die Toene einer Partie im Voraus holen.
+ *
+ * **Vorladen und nicht beim Wurf holen.** Ein Flug dauert 1450 ms; ein Ton,
+ * der erst danach ankommt, kommt zum falschen Bild. Der Aufrufer schickt nur
+ * die Kennungen, von denen der Server gesagt hat, dass sie einen Ton haben
+ * (`toene` in /api/mememory/motive) — sonst waeren es zwei Dutzend Abrufe je
+ * Partie, von denen fast alle mit „nicht gefunden" enden.
+ *
+ * Bei ausgeschaltetem Ton passiert gar nichts: kein Kontext, kein Abruf, kein
+ * Byte. Wer nichts hoeren will, soll auch nichts laden.
+ */
+export async function ladeMemeToene(kennungen: readonly string[]): Promise<void> {
+  const b = bereit();
+  if (!b) return;
+  await Promise.all(
+    kennungen.map(async (kennung) => {
+      if (memeToene.has(kennung) || unterwegs.has(kennung)) return;
+      const pfad = motivTonPfad(kennung);
+      if (!pfad) return;
+      unterwegs.add(kennung);
+      try {
+        const antwort = await fetch(pfad);
+        if (!antwort.ok) {
+          // Auch das Nein wird gemerkt. Ein Motiv ohne Ton bleibt eines.
+          memeToene.set(kennung, null);
+          return;
+        }
+        // Ueber den Kontext entpacken und nicht ueber ein <audio>-Element:
+        // Die Inhaltsrichtlinie der Produktion erlaubt `media-src` nur von
+        // der eigenen Herkunft, und ein Puffer laesst sich ausserdem durch
+        // denselben Regler schicken wie alle anderen Toene.
+        memeToene.set(kennung, await b.ctx.decodeAudioData(await antwort.arrayBuffer()));
+      } catch {
+        memeToene.set(kennung, null);
+      } finally {
+        unterwegs.delete(kennung);
+      }
+    }),
+  );
+}
+
+/**
+ * Den Ton eines Memes spielen — falls es einen gibt und er schon da ist.
+ *
+ * Bewusst ohne Nachladen: Diese Funktion laeuft in dem Moment, in dem das Bild
+ * losfliegt. Was jetzt nicht da ist, kommt zu spaet; dann bleibt es eben
+ * stumm, und beim naechsten Wurf ist der Ton geladen.
+ *
+ * Etwas lauter als die synthetischen Toene (Faktor 1,6): Die sind auf einen
+ * Cartoon-Pieps hin gebaut, ein Meme-Schnipsel ist eine Aufnahme mit ganz
+ * anderem Pegel und ginge daneben unter.
+ */
+export function spieleMemeTon(kennung: string): void {
+  const b = bereit();
+  if (!b) return;
+  const puffer = memeToene.get(kennung);
+  if (!puffer) return;
+  const quelle = b.ctx.createBufferSource();
+  quelle.buffer = puffer;
+  const g = b.ctx.createGain();
+  g.gain.value = 1.6;
+  quelle.connect(g);
+  g.connect(b.aus);
+  quelle.start();
+}
+
+/**
+ * Einen Ton zur Probe spielen, ohne Ruecksicht auf den Schalter.
+ *
+ * Fuer den Bestandseditor: Dort ist das Abspielen ein ausdruecklicher
+ * Handgriff der Aufsicht. Ein Knopf, der wegen eines Schalters an ganz
+ * anderer Stelle stumm bleibt, sieht kaputt aus — und der Tipp darauf IST die
+ * Nutzergeste, die der Kontext braucht.
+ *
+ * Deshalb hier ein eigener Weg mit fester Lautstaerke, direkt an den Ausgang:
+ * Der Regler des Spiels gehoert dem Spiel.
+ */
+export async function spieleTonProbe(dataUrl: string): Promise<void> {
+  // Von Hand entpackt und nicht ueber `fetch('data:...')`: Die
+  // Inhaltsrichtlinie der Produktion laesst als `connect-src` nur die eigene
+  // Herkunft zu, und ein `data:` gehoert nicht dazu. Auf dem
+  // Entwicklungsserver faellt das nicht auf — Vite setzt gar keine Richtlinie.
+  const komma = dataUrl.indexOf(',');
+  if (komma < 0) return;
+  const roh = atob(dataUrl.slice(komma + 1));
+  const bytes = new Uint8Array(roh.length);
+  for (let i = 0; i < roh.length; i += 1) bytes[i] = roh.charCodeAt(i);
+  await probe(bytes.buffer);
+}
+
+/** Dasselbe fuer einen Ton, der beim Server liegt. */
+export async function spieleTonProbeVon(pfad: string): Promise<void> {
+  const antwort = await fetch(pfad);
+  if (!antwort.ok) return;
+  await probe(await antwort.arrayBuffer());
+}
+
+/** Der gemeinsame Teil der beiden Proben. */
+async function probe(bytes: ArrayBuffer): Promise<void> {
+  if (!kontext) starte();
+  if (!kontext) return;
+  if (kontext.state === 'suspended') await kontext.resume();
+  const puffer = await kontext.decodeAudioData(bytes);
+  const quelle = kontext.createBufferSource();
+  quelle.buffer = puffer;
+  const g = kontext.createGain();
+  g.gain.value = 0.9;
+  quelle.connect(g);
+  g.connect(kontext.destination);
+  quelle.start();
+}
+

@@ -81,6 +81,57 @@ ausgerechnet für eine Funktion, die diese Partien gar nicht benutzen.
 
 ---
 
+## Die KI wirft Memes (seit dem 28. August)
+
+Jeder Bot bekommt **drei Memes und drei Anlässe**:
+
+| Anlass | wann |
+| --- | --- |
+| `gut` | ein Paar geht an ihn — und am Ende, wenn er gewonnen hat |
+| `schlecht` | die Partie ist zu Ende und ein anderer hat gewonnen |
+| `spam` | zwischendurch, solange **andere** am Zug sind |
+
+Der Zwischenruf wird gewürfelt und läuft nicht im Takt: alle 3,5 Sekunden mit
+35 % Wahrscheinlichkeit, also im Schnitt einer je zehn Sekunden. Ein Meme alle
+zehn Sekunden auf die Sekunde genau wäre eine Uhr, kein Gegenüber. Gemessen an
+einem Tisch mit drei Bots: vier Würfe in 24 Sekunden, während der Mensch noch
+überlegte.
+
+Am Ende werfen alle Bots gestaffelt (260 ms, dann je 380 ms mehr). Ohne die
+Staffelung starteten bei drei Gegnern drei Bilder im selben Bild — das sähe
+nach einem Fehler aus und nicht nach drei Meinungen.
+
+### Warum das rein im Client passiert
+
+Eine Reaktion ist **kein Zustand** (siehe `gateway.ts`): nicht gespeichert, in
+keiner Sicht, überlebt kein Neuladen. Ein Bot könnte sie also gar nicht
+schicken — er hat keine Verbindung. Und er braucht auch keine: An einem
+KI-Tisch sitzt genau ein Mensch (`visibility: 'on_request'`, `fillWithBots`),
+es gibt also niemanden, dem etwas entginge.
+
+Das Spielmodul bleibt dabei unberührt. Es weiß nichts von Memes, und ein
+Zwischenruf ist keine Regel — dieselbe Grenze wie überall: Was keine Regel ist,
+gehört nicht ins Modul.
+
+### Woher die drei Bilder kommen
+
+Aus `sicht.motive` — den Motiven dieser Partie. Das ist der einzige Topf, den
+beide Seiten kennen und der garantiert Bilder enthält, die auch schon geladen
+sind (der Bildschirm lädt sie ohnehin vor). Eine eigene Sammlung hat ein Bot
+nicht: Sammeln setzt ein Konto voraus.
+
+Gezogen wird **einmal je Tisch und für alle Bots gemeinsam aus einem Topf**.
+Zöge jeder für sich, sähe man denselben Frosch von zwei Ecken kommen — und
+genau die Verwechslung soll ein eigener Gurt je Gegner verhindern. Bei zwölf
+Motiven auf dem Brett und drei Gegnern reicht der Topf für neun verschiedene
+Bilder; geht er doch aus, wird er neu gefüllt, statt einen Anlass leer zu
+lassen.
+
+Hat ein Motiv einen **Ton** (`docs/MEMEMORY-HEIM.md`, Abschnitt 12), spielt er
+mit — für den Wurf der KI gilt derselbe Weg wie für den eigenen.
+
+---
+
 ## Was wo steht
 
 | Teil | Datei |
@@ -91,7 +142,9 @@ ausgerechnet für eine Funktion, die diese Partien gar nicht benutzen.
 | Zugwahl | `packages/game-mememory/src/bot.ts` |
 | Stufe je Sitz | `packages/game-mememory/src/regeln.ts` (`botStufen`) |
 | Bildschirm | `packages/client/src/minispiele/mememory/KiMatch.tsx` |
-| Tests | `packages/game-mememory/test/stufen.test.ts` (14) |
+| Stufe an der Ecke | `packages/client/src/minispiele/mememory/Ecken.tsx`, `docs/MEMEMORY-ECKEN.md` |
+| Memes der KI | `packages/client/src/screens/Mememory.tsx` (`ziehGurte`, `wirfBotMeme`) |
+| Tests | `packages/game-mememory/test/stufen.test.ts` (14), `botsitze.test.ts` (7) |
 
 Der Tisch entsteht mit `fillWithBots: true` und `visibility: 'on_request'` —
 ein Bot-Tisch in der Lobbyliste finge Leute ab, die einen Menschen suchen.

@@ -469,7 +469,15 @@ Partie drei aus der eigenen Sammlung — außer den Fächern, die man festhält.
 Das Schloss ist offen und grau, wenn das Fach frei ist, und geschlossen und
 golden, wenn es hält; das Fach trägt dann denselben goldenen Rand.
 
-Die Zeile ist von links nach rechts **Würfel, Name, Schalter**. Der Würfel ist
+Die Zeile ist von links nach rechts **Würfel, Name, Schalter**, und der Name
+steht **senkrecht mittig** darin. Dass er das nicht tat, war kein Zufall,
+sondern eine Erbschaft: Weit oben in `styles.css` steht `label { margin-bottom:
+0.75rem }` für die Formulare der Plattform. Ein Flexkasten mittet den
+MARGIN-Kasten seiner Kinder, nicht die Schrift — mit zwölf Pixeln Luft unter
+dem Wort stand es gemessene **sechs Pixel zu hoch** und legte nebenbei die
+Zeilenhöhe auf 28 px fest, obwohl der höchste Teil (der Schalter) 27 misst. Ein
+`margin: 0` an `.mm-schalter-name` ist die ganze Behebung; nachgemessen liegt
+die Abweichung jetzt bei 0,0 px. Der Würfel ist
 das einzige Zeichen in `zeichen.tsx` mit festen Farben statt `currentColor`:
 mattes Cremeweiß mit schwarzen Augen. Ein einfarbiger Umriss sähe aus wie ein
 leeres Kästchen. Gezeigt wird die **Fünf**, weil sie punktsymmetrisch ist und
@@ -510,6 +518,15 @@ Rand damit zu: sichtbar war er nur auf einem leeren Fach, also genau dort, wo
 er nichts bedeutet. Jetzt trägt ihn `.mm-gurt-fach::after`, das letzte Kind.
 Belegt sind es 2 px, festgehalten 3 px plus ein Schein nach außen.
 
+**Und genau deshalb braucht das Schloss eine Nummer.** Ein `::after` ist das
+letzte Kind — es liegt damit auch über dem Schloss, das in derselben Ecke
+sitzt, und schnitt ihm den Rand an. Zu tippen war es weiter (die Ebene trägt
+`pointer-events: none`), aber ein angeschnittener Knopf sieht nicht nach Knopf
+aus. `.mm-fach-schloss` trägt deshalb `z-index: 2`. Nachgewiesen ohne
+Bildschirmfoto: Gibt man der Randebene versuchsweise `pointer-events: auto`,
+liefert `elementFromPoint` auf der Schlossmitte mit der Nummer den Knopf, ohne
+sie das Fach darunter.
+
 **Das Schloss hängt am FACH, nicht am Motiv.** Wer ein Motiv aus dem Fach
 nimmt, nimmt das Schloss mit weg; wer den Gurt neu setzt, räumt alle Schlösser
 mit. Eine eigene Tabelle wäre sauberer normalisiert und hier trotzdem falsch:
@@ -527,6 +544,65 @@ optional, damit ein noch laufender Client seinen Gurt setzen kann.
 
 ---
 
+## 12. Meme-Töne
+
+Seit dem **28. August 2026** hängt an jedem hochgeladenen Motiv ein Ton von
+höchstens **0,8 Sekunden**. Er spielt in dem Moment, in dem das Meme über den
+Tisch fliegt — beim eigenen Wurf, beim Wurf der Gegenseite und beim Zwischenruf
+der KI.
+
+**Warum gerade dort und nirgends sonst.** Ein Ton beim Aufdecken eines Paares
+wäre zwölfmal je Partie, und der Gegner will sich in derselben Zeit Karten
+merken. Der Wurf dagegen ist ohnehin schon eine Unterbrechung, gedeckelt auf
+eines je Sekunde: Ton und Bild sind dieselbe Geste.
+
+### Der Weg einer Tondatei
+
+| Schritt | Wo | Was |
+| --- | --- | --- |
+| Auswählen | Bestandseditor | beliebige Datei, die der Browser abspielen kann |
+| Schneiden | `tonschnitt.ts` | 0,8 s, Mono, 22050 Hz, 16 Bit → WAV als data-URL |
+| Prüfen | `server/src/toene.ts` | Form, Magiebytes, Dauer aus dem WAV-Kopf |
+| Ablegen | `mememory_motiv.ton` | dieselbe Zeile wie das Bild |
+| Ausliefern | `/api/mememory/motive/:kennung/ton` | mit ETag, wie das Bild |
+| Spielen | `klaenge.ts` | über denselben Regler wie alle anderen Töne |
+
+**Geschnitten wird im Browser, wie beim Bild** — und aus demselben Grund: Eine
+MP3-Datei vom Telefon wiegt Megabyte, und davon soll nicht einmal eine Sekunde
+übrig bleiben. Gemessen: 3 s Stereo mit 44100 Hz gehen als **47 122 Zeichen**
+hinaus, der Server legt 35 324 Bytes ab. Das ist die Rechnung 0,8 · 22050 · 2
+plus 44 Bytes Kopf, auf das Byte genau.
+
+**Nur WAV wird angenommen.** Nicht aus Bequemlichkeit: Bei WAV steht die Länge
+im Kopf, ein MP3 müsste der Server erst dekodieren, um sie zu kennen. Und die
+Länge ist der Punkt — die **Dateigröße** ist es ausdrücklich nicht. Zwei
+Sekunden mit 8000 Hz sind 43 000 Zeichen und damit weit unter dem Deckel; wer
+nur die Größe prüfte, ließe sie durch. Ein Test hält genau diesen Fall fest.
+
+**Vorgeladen, nicht beim Wurf geholt.** Ein Flug dauert 1450 ms; ein Ton, der
+danach ankommt, gehört zu einem Bild, das nicht mehr da ist. Geladen wird beim
+Betreten des Tisches, und zwar nur das, was auf dem Brett liegt oder im eigenen
+Gurt steckt — **und davon nur, was laut Server überhaupt einen Ton hat**
+(`toene` in `/api/mememory/motive`). Ohne diese Liste wären es zwei Dutzend
+Abrufe je Partie, von denen fast alle mit „nicht gefunden" enden. Gemessen an
+einem Tisch mit zwei Gurtmemes, von denen eines einen Ton hat: **genau ein
+Abruf**.
+
+**Bei ausgeschaltetem Ton passiert gar nichts** — kein Kontext, kein Abruf,
+kein Byte. Nachgemessen: Schalter aus, `ladeMemeToene` aufgerufen, null
+Anfragen.
+
+Die 88 Grundmotive können keinen Ton haben. Sie liegen als Dateien im Client
+und stehen in keiner Tabelle; `motivTonPfad()` gibt für sie `null` zurück und
+erspart den Abruf, der sicher scheitern würde.
+
+**`null` und „kein Feld" sind zwei verschiedene Anweisungen.** Beim Ändern
+heißt ein fehlendes `ton` „nicht angefasst" und `ton: null` „weg damit". Wer
+das verwechselt, löscht bei jedem Umbenennen den Ton — ein Test hält auch das
+fest.
+
+---
+
 ## Dateien
 
 | Datei | Was |
@@ -538,6 +614,9 @@ optional, damit ein noch laufender Client seinen Gurt setzen kann.
 | `client/src/minispiele/mememory/Banner.tsx` | Banner der Spielauswahl, Takt und Konfetti |
 | `client/src/zeichen.tsx` | Kreuz, Pfeil, Note, Haus, Winkel, Schloss, Würfel |
 | `client/src/minispiele/mememory/Stufenregler.tsx` | Regler samt Stufenkatalog |
+| `client/src/minispiele/mememory/tonschnitt.ts` | Tondatei auf 0,8 s Mono-WAV schneiden |
+| `client/src/minispiele/mememory/klaenge.ts` | Töne des Spiels, Vorladen und Spielen der Meme-Töne |
+| `server/src/toene.ts` | Form, Magiebytes und Dauer eines hochgeladenen Tons |
 | `client/src/minispiele/mememory/Ecken.tsx` | Kartenstapel je Punkt |
 | `scripts/mememory-karte-zeichnen.py` | erzeugt `karte-ruecken.webp` |
 | `server/drizzle/0023_mememory_zufallsgurt.sql` | zwei Spalten |

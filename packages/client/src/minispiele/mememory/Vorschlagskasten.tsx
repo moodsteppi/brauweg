@@ -46,8 +46,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../../api';
-import { Kreuz } from '../../zeichen';
-import { motivBildPfad } from './bildpfad';
+import { Kreuz, Note } from '../../zeichen';
+import { motivBildPfad, motivTonPfad } from './bildpfad';
+import { spieleTonProbe, spieleTonProbeVon } from './klaenge';
+import { TON_SEKUNDEN, tonSchnipsel } from './tonschnitt';
 
 /** Kantenlaenge des gespeicherten Bildes. Die Grundmotive haben 224 px; hier
     sind es mehr, weil auf einem Meme oft Text steht. */
@@ -58,6 +60,9 @@ const MAX_ZEICHEN = 60_000;
 
 /** Muss zu TITEL_MAX im Server passen. */
 const TITEL_MAX = 40;
+
+/** Muss zu TON_MAX_ZEICHEN in packages/server/src/toene.ts passen. */
+const TON_MAX_ZEICHEN = 64_000;
 
 /** Wie weit sich hineinzoomen laesst. 1 heisst: das ganze Bild ist zu sehen. */
 const ZOOM_MAX = 4;
@@ -90,7 +95,21 @@ interface Vorschlag {
 interface Bestandsmotiv {
   kennung: string;
   titel: string | null;
+  /** Haengt ein Ton daran? Nur das Ja oder Nein — der Ton kommt einzeln. */
+  hatTon: boolean;
 }
+
+/**
+ * Was mit dem Ton eines Motivs im Bearbeiten gerade passiert.
+ *
+ * Drei Zustaende und nicht zwei: „unveraendert" und „geloescht" muessen sich
+ * unterscheiden lassen, sonst nimmt jedes Umbenennen den Ton mit weg (der
+ * Server liest `undefined` als „nicht angefasst" und `null` als „weg").
+ */
+type Tonlage =
+  | { art: 'unveraendert'; hatTon: boolean }
+  | { art: 'neu'; daten: string }
+  | { art: 'weg' };
 
 // ---------------------------------------------------------------------------
 // Zeichnen
@@ -251,6 +270,17 @@ export function Vorschlagskasten({
    * Kopfkommentar oben.
    */
   const [bearbeitet, setBearbeitet] = useState<{ kennung: string; titel: string } | null>(null);
+  /**
+   * Der Ton des gerade bearbeiteten Motivs.
+   *
+   * Er wird NICHT mit ins Bearbeiten geladen: Zum Abspielen reicht die
+   * Adresse beim Server, und ein Ton, den man nur anhoeren will, muss nicht
+   * durch den Browserspeicher. Erst wer einen neuen waehlt, hat Daten hier
+   * stehen.
+   */
+  const [tonlage, setTonlage] = useState<Tonlage>({ art: 'unveraendert', hatTon: false });
+  /** Laeuft gerade das Zuschneiden einer Tondatei? Es dauert kurz. */
+  const [tonLaedt, setTonLaedt] = useState(false);
   /** Hochgezaehlt bei jeder Aenderung — haengt an den Bildadressen im Bestand. */
   const [stand, setStand] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -746,6 +776,7 @@ export function Vorschlagskasten({
       setBearbeitet({ kennung: eintrag.kennung, titel: eintrag.titel ?? '' });
       zeige(neu);
       setTitel(eintrag.titel ?? '');
+      setTonlage({ art: 'unveraendert', hatTon: eintrag.hatTon });
     } catch {
       setFehler('Das Bild ließ sich nicht zum Bearbeiten öffnen.');
     } finally {
@@ -759,6 +790,50 @@ export function Vorschlagskasten({
     setBild(null);
     setBearbeitet(null);
     setTitel('');
+    setTonlage({ art: 'unveraendert', hatTon: false });
+  };
+
+  /**
+   * Eine Tondatei annehmen: entpacken, auf 0,8 s schneiden, als WAV merken.
+   *
+   * Geschnitten wird im BROWSER, wie beim Bild — und aus demselben Grund: Eine
+   * MP3-Datei vom Telefon wiegt Megabyte, und davon soll nicht einmal eine
+   * Sekunde uebrig bleiben. Was den Server erreicht, sind rund 47 kB (siehe
+   * tonschnitt.ts).
+   */
+  const tonWaehlen = async (datei: File | null | undefined): Promise<void> => {
+    if (!datei) return;
+    setTonLaedt(true);
+    setFehler(null);
+    try {
+      const daten = await tonSchnipsel(datei);
+      if (daten.length > TON_MAX_ZEICHEN) {
+        // Kann bei 0,8 s Mono eigentlich nicht passieren; steht hier, damit
+        // ein spaeter geaenderter Schnitt nicht am Server scheitert, ohne dass
+        // jemand sagt, warum.
+        setFehler('Der Ton ist zu groß geworden.');
+        return;
+      }
+      setTonlage({ art: 'neu', daten });
+      // Sofort vorspielen: Was von einem Meme-Ton uebrig bleibt, entscheidet
+      // sich in den ersten acht Zehnteln — das will man hoeren, bevor man
+      // speichert, und nicht erst mitten in einer Partie.
+      await spieleTonProbe(daten);
+    } catch {
+      setFehler('Diese Tondatei ließ sich nicht öffnen.');
+    } finally {
+      setTonLaedt(false);
+    }
+  };
+
+  /** Den Ton anhoeren — den neu gewaehlten oder den, der beim Server liegt. */
+  const tonProbe = (): void => {
+    if (tonlage.art === 'neu') {
+      void spieleTonProbe(tonlage.daten).catch(() => setFehler('Der Ton ließ sich nicht abspielen.'));
+      return;
+    }
+    const pfad = bearbeitet ? motivTonPfad(bearbeitet.kennung) : null;
+    if (pfad) void spieleTonProbeVon(pfad).catch(() => setFehler('Der Ton ließ sich nicht abspielen.'));
   };
 
   /** Namen und Zuschnitt eines Motivs ersetzen. Die Kennung bleibt. */
@@ -775,11 +850,20 @@ export function Vorschlagskasten({
       await api.mememoryAendern(bearbeitet.kennung, {
         titel: titel.trim() || null,
         bild: dataUrl,
+        // Nur mitschicken, wenn wirklich etwas am Ton passiert ist: Ein
+        // `undefined` laesst ihn stehen, ein `null` nimmt ihn weg. Wer nur
+        // umbenennt, soll seinen Ton behalten.
+        ...(tonlage.art === 'neu'
+          ? { ton: tonlage.daten }
+          : tonlage.art === 'weg'
+            ? { ton: null }
+            : {}),
       });
       bild.close?.();
       setBild(null);
       setBearbeitet(null);
       setTitel('');
+      setTonlage({ art: 'unveraendert', hatTon: false });
       // Die Kennung bleibt gleich — ohne neue Zahl in der Adresse zeigte die
       // Kachel daneben noch den alten Zuschnitt.
       setStand((z) => z + 1);
@@ -901,6 +985,76 @@ export function Vorschlagskasten({
                   value={titel}
                   onChange={(e) => setTitel(e.target.value)}
                 />
+                {/*
+                  * Der Ton — nur beim Bearbeiten eines Motivs, das schon im
+                  * Spiel ist.
+                  *
+                  * Beim EINREICHEN steht er bewusst nicht da: Ein wartender
+                  * Vorschlag ist ein Bild, ueber das die Aufsicht noch
+                  * entscheidet, und ein Ton daran waere ein zweites Stueck
+                  * Inhalt, das dieselbe Pruefung braeuchte. Wer aufnimmt,
+                  * haengt ihn danach an.
+                  */}
+                {bearbeitet && (
+                  <div className="mm-tonzeile">
+                    <span className="mm-tonzeile-kopf">
+                      <Note />
+                      <b>Ton</b>
+                      <em>
+                        {tonLaedt
+                          ? 'wird geschnitten…'
+                          : tonlage.art === 'neu'
+                            ? 'neu gewählt'
+                            : tonlage.art === 'weg'
+                              ? 'wird entfernt'
+                              : tonlage.hatTon
+                                ? 'vorhanden'
+                                : 'keiner'}
+                      </em>
+                    </span>
+                    <div className="mm-tonzeile-knoepfe">
+                      {/*
+                        * Anhören gibt es nur, wenn es etwas zu hören gibt.
+                        * Ein Knopf, der nichts tut, ist schlimmer als keiner.
+                        */}
+                      {(tonlage.art === 'neu' ||
+                        (tonlage.art === 'unveraendert' && tonlage.hatTon)) && (
+                        <button type="button" onClick={tonProbe} disabled={busy}>
+                          Anhören
+                        </button>
+                      )}
+                      <label className="mm-tonzeile-waehlen">
+                        <span>{tonlage.art === 'neu' ? 'Andere Datei' : 'Datei wählen'}</span>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          hidden
+                          onChange={(e) => {
+                            void tonWaehlen(e.target.files?.[0]);
+                            // Zuruecksetzen, sonst loest dieselbe Datei beim
+                            // zweiten Mal kein `change` aus.
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                      {(tonlage.art === 'neu' ||
+                        (tonlage.art === 'unveraendert' && tonlage.hatTon)) && (
+                        <button
+                          type="button"
+                          className="mm-tonzeile-weg"
+                          onClick={() => setTonlage({ art: 'weg' })}
+                          disabled={busy}
+                        >
+                          Entfernen
+                        </button>
+                      )}
+                    </div>
+                    <p className="mm-tonzeile-satz">
+                      Höchstens {String(TON_SEKUNDEN).replace('.', ',')} Sekunden — was länger ist,
+                      wird abgeschnitten. Er spielt, sobald jemand dieses Meme über den Tisch wirft.
+                    </p>
+                  </div>
+                )}
                 <div className="mm-kasten-knoepfe">
                   {/* Derselbe Platz, drei Bedeutungen: beim Bearbeiten
                       Abbrechen/Speichern, im Stapel Ueberspringen, beim
@@ -1018,48 +1172,89 @@ export function Vorschlagskasten({
           </div>
         )}
 
+        {/*
+          * Der Bestand traegt seit dem 28. August die Aufmachung der
+          * Sammlungsseite: dieselbe Ueberschrift mit Zahl daneben, dasselbe
+          * Raster (`mm-sammelgitter`), dieselben Kacheln.
+          *
+          * Das ist keine Kosmetik, sondern dieselbe Sache zweimal: Hier wie
+          * dort steht ein Raster aus Memes, und wer beides am selben Abend
+          * benutzt, soll nicht zweimal lernen, wie ein Meme aussieht. Die
+          * Aufsicht bekommt darueber hinaus drei Knoepfe je Kachel — der
+          * Unterschied zwischen Ansehen und Verwalten.
+          */}
         {blatt === 'bestand' && (
           <div className="mm-kasten-inhalt">
             <p className="mm-kasten-hinweis">
-              Alles, was zusätzlich zu den 88 Grundmotiven im Spiel ist. ✎ ändert Name und
-              Zuschnitt, ✕ nimmt heraus — beides wirkt sofort für neue Partien. Der Name steht
-              im Spiel groß über dem Brett, sobald jemand das Paar findet.
+              Alles, was zusätzlich zu den 88 Grundmotiven im Spiel ist. ✎ ändert Name,
+              Zuschnitt und Ton, ✕ nimmt heraus — beides wirkt sofort für neue Partien. Der
+              Name steht im Spiel groß über dem Brett, sobald jemand das Paar findet.
             </p>
             {!laedt && bestand.length === 0 && (
               <p className="mm-kasten-hinweis">Noch nichts hochgeladen.</p>
             )}
-            <div className="mm-kasten-gitter">
-              {bestand.map((eintrag) => (
-                <div className="mm-kasten-kachel" key={eintrag.kennung}>
-                  {/* Die Zahl in der Adresse ist kein Schmuck: Beim Aendern
-                      bleibt die Kennung gleich, und ohne sie zeigte die
-                      Kachel danach noch den alten Zuschnitt. */}
-                  <img
-                    src={`${motivBildPfad(eintrag.kennung)}?v=${stand}`}
-                    alt={eintrag.titel ?? eintrag.kennung}
-                  />
-                  <span className="mm-kasten-kachel-name">{eintrag.titel ?? '—'}</span>
-                  <button
-                    type="button"
-                    className="mm-kasten-stift"
-                    onClick={() => void bearbeiten(eintrag)}
-                    disabled={busy}
-                    aria-label={`${eintrag.titel ?? 'Motiv'} bearbeiten`}
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    className="mm-kasten-raus"
-                    onClick={() => void entscheiden(eintrag.kennung, false)}
-                    disabled={busy}
-                    aria-label={`${eintrag.titel ?? 'Motiv'} herausnehmen`}
-                  >
-                    <Kreuz />
-                  </button>
+            {bestand.length > 0 && (
+              <section className="mm-gruppe">
+                <h3>
+                  Im Spiel
+                  <em>
+                    {bestand.filter((eintrag) => eintrag.hatTon).length}/{bestand.length} mit Ton
+                  </em>
+                </h3>
+                <div className="mm-sammelgitter">
+                  {bestand.map((eintrag) => (
+                    <div className="mm-sammelkachel mm-bestandskachel" key={eintrag.kennung}>
+                      {/* Die Zahl in der Adresse ist kein Schmuck: Beim Aendern
+                          bleibt die Kennung gleich, und ohne sie zeigte die
+                          Kachel danach noch den alten Zuschnitt. */}
+                      <img
+                        src={`${motivBildPfad(eintrag.kennung)}?v=${stand}`}
+                        alt={eintrag.titel ?? eintrag.kennung}
+                      />
+                      <span className="mm-bestand-name">{eintrag.titel ?? '—'}</span>
+                      <button
+                        type="button"
+                        className="mm-bestand-knopf mm-bestand-stift"
+                        onClick={() => void bearbeiten(eintrag)}
+                        disabled={busy}
+                        aria-label={`${eintrag.titel ?? 'Motiv'} bearbeiten`}
+                      >
+                        ✎
+                      </button>
+                      {/*
+                        * Die Note ist Anzeige UND Knopf: Sie sagt, dass hier
+                        * ein Ton haengt, und spielt ihn auf einen Tipp. Ein
+                        * stummes Motiv bekommt sie gar nicht erst — ein
+                        * blasses Zeichen, das nichts tut, waere eine Frage
+                        * ohne Antwort.
+                        */}
+                      {eintrag.hatTon && (
+                        <button
+                          type="button"
+                          className="mm-bestand-knopf mm-bestand-ton"
+                          onClick={() => {
+                            const pfad = motivTonPfad(eintrag.kennung);
+                            if (pfad) void spieleTonProbeVon(pfad).catch(() => undefined);
+                          }}
+                          aria-label={`Ton von ${eintrag.titel ?? 'Motiv'} anhören`}
+                        >
+                          <Note />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="mm-bestand-knopf mm-bestand-raus"
+                        onClick={() => void entscheiden(eintrag.kennung, false)}
+                        disabled={busy}
+                        aria-label={`${eintrag.titel ?? 'Motiv'} herausnehmen`}
+                      >
+                        <Kreuz />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </section>
+            )}
           </div>
         )}
           </>
