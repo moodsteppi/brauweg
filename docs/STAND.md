@@ -15,9 +15,21 @@ Minuten live.
 
 **Prüfstand (gezählt am 27. August 2026 auf diesem Zweig, nicht aus der
 Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-44 Skat-Tests, 15 Feldherr-Tests, 63 Mememory-Tests, **318 Servertests**
-— zusammen 798, alle grün. `tsc --noEmit` sauber.
+44 Skat-Tests, 15 Feldherr-Tests, 69 Mememory-Tests, **334 Servertests**
+— zusammen 820, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
+
+> **Die Migration `0023_mememory_zufallsgurt` trägt auf `main` einen
+> anderen Zeitstempel als auf `staging`** (1787050000000 statt
+> 1787300000000), und das ist Absicht. Der Drizzle-Migrator vergleicht
+> ausschließlich Zeitstempel (`pg-core/dialect.js`: `created_at <
+> folderMillis`), nicht Hashes. Stünde hier der Wert von `staging`, wäre er
+> nach diesem Deploy der höchste in der Produktionsdatenbank — und
+> `0021_bro_jetons` (1787100000000) sowie `0022_google_login`
+> (1787200000000) würden später **still übersprungen**. Der Deploy sähe grün
+> aus, die Spalten fehlten. Beim großen Merge kommt der staging-Wert nach,
+> und die Migration läuft einmal erneut — sie ist `IF NOT EXISTS` und damit
+> wiederholbar.
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
 > wird abgewiesen, ohne den Tisch zu beschaedigen" fällt unter der Last des
