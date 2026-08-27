@@ -20,17 +20,28 @@ Knöpfe bleiben.
 Jetzt liegt das Menü auf einem **Streifen aus drei Seiten**:
 
 ```
-   ‹ Sammlung          M E M E M O R Y          Mehr ›
-   (wischen nach       Online-Match · KI        (Vorschlagskasten,
-    rechts)            Zahnrad oben rechts       Freunde, …)
+     Sammlung            M E M E M O R Y            Mehr
+   (wischen nach        Online-Match · KI        (Vorschlagskasten,
+    rechts)             Zahnrad oben rechts        Freunde, …)
+
+                     ‹      ⌂      ›          <- die Leiste unten
 ```
 
 Gewischt wird mit dem Finger nach rechts, um die Sammlung zu holen — dieselbe
 Richtung wie überall sonst am Telefon: Der Finger zieht den Inhalt mit, und
-was links liegt, kommt dabei ins Bild. Wer das nicht weiß, findet es
-trotzdem: An beiden Rändern der Menüseite steht eine schmale Lasche
-(`‹ Sammlung`, `Mehr ›`), und die tut beim Tippen dasselbe wie der Wisch.
-Unten zeigen drei Punkte, wo man ist; sie sind zugleich Knöpfe.
+was links liegt, kommt dabei ins Bild.
+
+Wer das nicht weiß, findet es über die **Leiste unten**. Sie trägt drei
+Zeichen: außen zwei Winkel (`‹` und `›`, dort geht es weiter), in der Mitte ein
+Haus (dort ist das Hauptmenü). Gelb ist die Seite, auf der man steht, die
+anderen beiden sind grau. Jedes Zeichen ist ein Knopf und führt auf seine
+Seite. Die Fläche eines Knopfes ist 44 × 40 px — die Untergrenze, die Apple und
+Google für einen Daumen nennen; vorher waren es 8-px-Punkte, die man nur
+zufällig traf.
+
+An den Rändern der Menüseite standen kurzzeitig zwei Laschen (`‹ Sammlung`,
+`Mehr ›`). Sie sind wieder heraus: Zwei Hinweise auf dieselbe Sache sind einer
+zu viel, und die Laschen lagen über dem Brett statt daneben.
 
 **Gebaut als Rollfläche mit Rastpunkten** (`scroll-snap-type: x mandatory`)
 und ausdrücklich **nicht** mit eigener Fingerrechnung. Schwung, Widerstand am
@@ -99,9 +110,20 @@ Eine abgeschaltete Zeile und keine fehlende: Ein Platz, den man sieht, sagt
 „kommt noch". Eine Zeile, die später auftaucht, sagt niemandem etwas.
 
 Das **Zahnrad** sitzt oben rechts auf der Menüseite, gegenüber dem
-Zurück-Knopf. Dahinter liegt heute die Lautstärke. Der Lautsprecher unten
-rechts ist damit weg: Ein Schalter am Rand trägt genau eine Einstellung;
-sobald die zweite kommt, braucht es ohnehin eine Stelle, an der man nachsieht.
+Zurück-Knopf. Dahinter liegt heute die Lautstärke — ein Regler, sonst nichts.
+
+Es ist aus acht Zähnen am Rand und einem Kranz gebaut, mit einem **Loch in
+der Mitte**, so wie ein Zahnrad eines hat. Zwei Anläufe davor: ein von Hand
+geschriebener Umriss (saß 6,3 % zu hoch) und vier durchgehende Balken (lagen
+mittig, füllten aber die Mitte aus). Jetzt ist jeder Zahn dasselbe Rechteck,
+nur um (12, 12) gedreht — damit kann die Zeichnung gar nicht schief liegen —,
+und der Kranz ist ein Ring aus Strichstärke: Das Loch bleibt durchsichtig,
+denn dahinter liegt der Knopf und keine bekannte Farbe. Nachgemessen: Kranz
+von Radius 4,5 bis 7,7, Zähne von 5,3 bis 10,1 — innerhalb von 4,5 ist nichts.
+
+Der Lautsprecher unten rechts ist damit weg: Ein Schalter am Rand trägt genau
+eine Einstellung; sobald die zweite kommt, braucht es ohnehin eine Stelle, an
+der man nachsieht.
 
 **Kein getrennter An-Aus-Schalter.** Null ist aus. Zwei Bedienelemente für
 dieselbe Frage („höre ich etwas?") sind eine Falle: Ein Regler auf siebzig,
@@ -188,10 +210,20 @@ Bis zum 27. August lag dort ein gemaltes Stillleben: eine Pinnwand voller
 erfundener Tierkarten. Das sah nach Mememory aus, zeigte aber nichts, was es
 im Spiel wirklich gibt.
 
-Jetzt hängen dort **echte Bilder aus dem Vorschlagskasten** — dieselben, die
-im Spiel auf den Karten liegen. Nur hochgeladene, ausdrücklich keine
-Grundmotive: Die 88 aus dem Katalog sind gezeichnet und gerechnet; das Banner
-soll zeigen, was die Leute selbst eingeschickt haben.
+Jetzt hängen dort **genau die Motive, die eine Partie auf die Karten legt** —
+gezogen aus dem ganzen Topf: dem festen Katalog UND den freigegebenen
+Einsendungen. Fünf Stück, bei jedem Aufschlagen der Spielauswahl andere.
+
+Der erste Anlauf zog nur aus den Einsendungen und ging am Ziel vorbei:
+Solange kaum jemand etwas eingereicht hat, zeigte das Banner dieselben zwei
+Bilder oder fiel ganz auf das gemalte Stillleben zurück — also auf alles
+außer den Memes, um die es geht.
+
+**Zur Herkunft:** Von den 88 Grundmotiven sind laut `docs/ASSETS-MEMEMORY.md`
+40 lokal erzeugt (SDXL), 35 von Wikimedia und 13 Vorlagen des Nutzers. Auf dem
+Banner können also auch selbst erzeugte landen. Das ist bewusst so: Sie liegen
+im Spiel auf den Karten, und genau das soll das Banner zeigen. Soll es nur
+Bilder aus dem Vorschlagskasten sein, ist das eine Zeile in `Banner.tsx`.
 
 **Keine neue Datei.** Der Untergrund ist die rote Tischdecke aus dem Spiel
 (`decke-rot.webp`, 19 kB, lädt am Tisch ohnehin), die Karten sind die Motive
@@ -211,9 +243,8 @@ Zwei gerechnete Zahlen stehen im CSS und sollen dort bleiben:
   hinter dem oberen, noch durchsichtigen Teil des Namensverlaufs. Genau so
   liegen auf dem gemalten Banner auch die Karten hinter der Schrift.
 
-**Fällt der Abruf aus oder ist noch nichts eingereicht, bleibt es beim
-gemalten Banner.** Eine leere rote Fläche sieht nach Fehler aus, das
-Stillleben nach Absicht.
+**Fällt der Abruf aus, bleibt es beim gemalten Banner.** Eine leere rote
+Fläche sieht nach Fehler aus, das Stillleben nach Absicht.
 
 ---
 
@@ -239,8 +270,9 @@ und die *geschriebenen*:
 **Ein Schriftzeichen lässt sich mit CSS nicht zentrieren.** Was links und
 rechts vom Strich Luft ist, entscheidet die Schrift, und die ist auf jedem
 Gerät eine andere. Deshalb gibt es jetzt `packages/client/src/zeichen.tsx`
-mit `Kreuz`, `PfeilLinks` und `Note` — alle um (12, 12) gebaut und damit
-mittig per Konstruktion. Die Größe kommt in `em` und richtet sich nach der
+mit `Kreuz`, `PfeilLinks`, `Note`, `Haus` und `Winkel` — alle um (12, 12)
+gebaut und damit mittig per Konstruktion. Nachgemessen sitzen sie alle auf
+0,0 %. Die Größe kommt in `em` und richtet sich nach der
 Schrift des Knopfes, damit jeder Knopf so groß bleibt wie vorher.
 
 **Für neue Zeichen gilt daraus:** Ein Symbol im Knopf ist ein Pfad, kein
@@ -254,7 +286,7 @@ Briefkasten), saßen **alle drei** daneben, zwischen 4,2 % und 6,3 %.
 
 | Datei | Was |
 | --- | --- |
-| `client/src/minispiele/mememory/Heim.tsx` | Streifen aus drei Seiten, Laschen, Punkte |
+| `client/src/minispiele/mememory/Heim.tsx` | Streifen aus drei Seiten, Leiste unten |
 | `client/src/minispiele/mememory/SammlungSeite.tsx` | Gurt und Bestand nach Gruppen |
 | `client/src/minispiele/mememory/MehrSeite.tsx` | Baustellenhinweis, Vorschlagskasten, Freunde |
 | `client/src/minispiele/mememory/Einstellungsfenster.tsx` | Lautstärke |

@@ -10864,84 +10864,77 @@ span.hub-angebot-art.poker-jeton-stapel {
   position: absolute;
 }
 
-/* Die Randlaschen sagen, dass es links und rechts weitergeht. Ein Wisch ist
-   unsichtbar; ohne sie findet die Sammlung niemand. */
-.mm-lasche {
-  position: absolute;
-  top: 50%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 10px 7px;
-  border: 0;
-  color: #b6a6d8;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  font: 700 11px/1 system-ui;
-  cursor: pointer;
-  transition: color 160ms ease, background 160ms ease;
-}
-.mm-lasche span { font-size: 15px; line-height: 1; }
-.mm-lasche:hover { color: #ffd873; background: rgba(255, 255, 255, 0.1); }
-.mm-lasche-links {
-  left: 0;
-  border-radius: 0 12px 12px 0;
-  transform: translateY(-50%);
-}
-.mm-lasche-rechts {
-  right: 0;
-  border-radius: 12px 0 0 12px;
-  transform: translateY(-50%);
-}
-/* Die Schrift steht hochkant: Quer nähme die Lasche ein Viertel der Breite des
-   Bildschirms weg, und der Knopf darunter ist wichtiger. */
-.mm-lasche b {
-  writing-mode: vertical-rl;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-.mm-lasche-links b { transform: rotate(180deg); }
-
-/* Die Punkte liegen über dem Streifen und rollen nicht mit: Sie sind die
-   Karte, nicht der Inhalt. */
+/*
+ * Die Leiste liegt über dem Streifen und rollt nicht mit: Sie ist die Karte,
+ * nicht der Inhalt.
+ *
+ * Sie ist auch der einzige sichtbare Hinweis darauf, dass es links und rechts
+ * weitergeht — die Laschen an den Rändern des Menüs sind wieder heraus.
+ * Deshalb ist sie größer als eine Punktreihe und trägt Zeichen: außen zwei
+ * Winkel (dort geht es weiter), in der Mitte ein Haus (dort ist das
+ * Hauptmenü). Gelb ist die Seite, auf der man steht.
+ */
 .mm-punkte {
   position: absolute;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom) + 12px);
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
   z-index: 4;
   display: flex;
-  gap: 9px;
-  padding: 7px 11px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(11, 7, 22, 0.55);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: rgba(11, 7, 22, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   transform: translateX(-50%);
 }
+
+/* 44 px ist die Fläche, die ein Daumen sicher trifft — dieselbe Zahl, die
+   Apple und Google als Untergrenze nennen. Vorher waren es 8-px-Punkte, die
+   man nur zufällig traf. */
 .mm-punkt {
-  width: 8px;
-  height: 8px;
+  width: 44px;
+  height: 40px;
   padding: 0;
+  display: grid;
+  place-items: center;
   border: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: none;
+  /* Grau, solange man woanders steht. */
+  color: rgba(255, 255, 255, 0.34);
   cursor: pointer;
-  transition: background 200ms ease, transform 200ms ease;
+  transition: color 200ms ease, background 200ms ease;
+}
+.mm-punkt .zeichen {
+  width: 26px;
+  height: 26px;
 }
 .mm-punkt[data-an] {
-  background: #ffd873;
-  transform: scale(1.25);
+  color: #ffd873;
+  background: rgba(255, 216, 115, 0.12);
+}
+.mm-punkt:active { transform: scale(0.94); }
+
+/* Ohne Bewegung bleibt der Farbwechsel, nur ohne Überblendung: Welche Seite
+   gilt, muss auch hier zu sehen sein. */
+@media (prefers-reduced-motion: reduce) {
+  .mm-punkt { transition: none; }
+  .mm-punkt:active { transform: none; }
 }
 
 /* --- Sammlung und "Mehr" als ganze Seiten -------------------------------- */
 
 .mm-seite {
   width: min(100%, 720px);
-  /* Unten Luft für die Punkteleiste: Ohne sie liegt die letzte Kachelreihe
-     darunter und lässt sich nicht antippen. */
+  /* Unten Luft für die Leiste: Ohne sie liegt die letzte Kachelreihe darunter
+     und lässt sich nicht antippen. 86 px, weil die Leiste seit dem Umbau auf
+     Daumengröße 52 px hoch ist und 14 px über dem Rand sitzt — macht 66, plus
+     eine Reihe Luft. */
   padding: calc(env(safe-area-inset-top) + 18px) 16px
-    calc(env(safe-area-inset-bottom) + 74px);
+    calc(env(safe-area-inset-bottom) + 86px);
   margin: 0 auto;
 }
 
@@ -11245,12 +11238,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 100%;
   margin: 14px 0 0;
   accent-color: #e0a83c;
-}
-.mm-regler-satz {
-  display: block;
-  margin-top: 12px;
-  font: 500 11px/1.5 system-ui;
-  color: #8f7fb4;
 }
 
 .mm-menue {

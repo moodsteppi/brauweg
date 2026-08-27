@@ -70,9 +70,6 @@ export function Einstellungsfenster({ onFertig }: { onFertig: () => void }): Rea
               onPointerUp={() => stand > 0 && spieleKlang('dreh')}
               onKeyUp={() => stand > 0 && spieleKlang('dreh')}
             />
-            <span className="mm-regler-satz">
-              Die Töne von Mememory entstehen im Browser — sie kosten keine Ladezeit.
-            </span>
           </label>
         </div>
       </div>

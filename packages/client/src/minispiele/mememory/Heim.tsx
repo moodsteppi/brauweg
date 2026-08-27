@@ -23,6 +23,8 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { Haus, Winkel } from '../../zeichen';
+
 export type Seite = 'sammlung' | 'menue' | 'mehr';
 
 /** Die Reihenfolge auf dem Streifen — von links nach rechts. */
@@ -107,7 +109,7 @@ export function Heim({
     onSeite?.(seite);
   }, [seite, onSeite]);
 
-  /** Zu einer Seite fahren — der Weg fuer die Punkte und die Randlaschen. */
+  /** Zu einer Seite fahren — der Weg fuer die Leiste unten. */
   const geheZu = useCallback((ziel: Seite): void => {
     const streifen = streifenRef.current;
     if (!streifen) return;
@@ -123,42 +125,26 @@ export function Heim({
         <section className="mm-blatt" aria-label="Sammlung">
           {sammlung}
         </section>
-        <section className="mm-blatt" aria-label="Mememory">
-          {/*
-            * Die Randlaschen sind kein Schmuck.
-            *
-            * Ein Wisch ist unsichtbar: Wer nicht weiss, dass es links und
-            * rechts weitergeht, findet die Sammlung nie. Die beiden Laschen
-            * sagen es und tun beim Tippen dasselbe wie der Wisch — damit ist
-            * auch gleich geklaert, welche Richtung wohin fuehrt.
-            */}
-          <button
-            className="mm-lasche mm-lasche-links"
-            type="button"
-            onClick={() => geheZu('sammlung')}
-            aria-label="Zur Sammlung"
-          >
-            <span aria-hidden="true">‹</span>
-            <b>Sammlung</b>
-          </button>
-          {menue}
-          <button
-            className="mm-lasche mm-lasche-rechts"
-            type="button"
-            onClick={() => geheZu('mehr')}
-            aria-label="Zu Mehr"
-          >
-            <b>Mehr</b>
-            <span aria-hidden="true">›</span>
-          </button>
-        </section>
+        <section className="mm-blatt" aria-label="Mememory">{menue}</section>
         <section className="mm-blatt" aria-label="Mehr">
           {mehr}
         </section>
       </div>
 
-      {/* Die Punkte liegen ueber dem Streifen und rollen nicht mit: Sie sind
-          die Karte, nicht der Inhalt. */}
+      {/*
+        * Die Leiste liegt ueber dem Streifen und rollt nicht mit: Sie ist die
+        * Karte, nicht der Inhalt.
+        *
+        * Sie ist zugleich der einzige sichtbare Hinweis darauf, dass es links
+        * und rechts weitergeht — die Randlaschen am Menue sind am 27. August
+        * abends wieder herausgeflogen. Deshalb tragen die aeusseren beiden
+        * einen WINKEL und keinen Punkt: Ein Punkt sagt "hier ist noch eine
+        * Seite", ein Winkel sagt zusaetzlich, in welche Richtung. Der mittlere
+        * ist ein Haus, weil dort das Hauptmenue liegt.
+        *
+        * Angetippt fuehrt jedes Zeichen auf seine Seite. Das gelbe ist das,
+        * auf dem man steht.
+        */}
       <nav className="mm-punkte" aria-label="Seiten">
         {SEITEN.map((eine) => (
           <button
@@ -169,7 +155,9 @@ export function Heim({
             aria-current={eine === seite ? 'page' : undefined}
             aria-label={BESCHRIFTUNG[eine]}
             onClick={() => geheZu(eine)}
-          />
+          >
+            {eine === 'menue' ? <Haus /> : <Winkel nach={eine === 'sammlung' ? 'links' : 'rechts'} />}
+          </button>
         ))}
       </nav>
     </main>

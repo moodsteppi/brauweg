@@ -926,33 +926,35 @@ export function Mememory({
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
         {/*
-          * Ein Zahnrad aus vier durchgehenden Balken und einem Ring.
+          * Ein Zahnrad aus acht Zaehnen am Rand und einem Kranz — mit einem
+          * LOCH in der Mitte, so wie ein Zahnrad eins hat.
           *
-          * Nicht aus einem von Hand geschriebenen Umriss: Der erste Anlauf war
-          * einer, und er sass gemessene 6,3 % zu hoch. Vier Rechtecke, jedes
-          * um (12,12) gedreht, koennen dagegen gar nicht schief liegen — die
-          * Mitte steht in jeder Zeile.
+          * Der erste Anlauf war ein von Hand geschriebener Umriss und sass
+          * gemessene 6,3 % zu hoch. Der zweite waren vier durchgehende
+          * Balken; die lagen mittig, fuellten aber die Mitte aus. Jetzt sind
+          * es acht kurze Zaehne, die AUSSEN am Kranz sitzen: Jeder ist
+          * dasselbe Rechteck, nur um (12,12) gedreht — damit kann die
+          * Zeichnung gar nicht schief liegen, und innerhalb des Kranzes
+          * bleibt nichts stehen.
           *
-          * Acht Zaehne aus vier Balken: Jeder Balken geht durch, seine beiden
-          * Enden sind zwei gegenueberliegende Zaehne.
+          * Der Kranz ist ein Ring aus Strichstaerke und nicht zwei gefuellte
+          * Kreise: Das Loch muss durchsichtig sein, denn dahinter liegt der
+          * Knopf und keine bekannte Farbe.
           */}
         <g fill="currentColor">
-          {[0, 45, 90, 135].map((winkel) => (
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((winkel) => (
             <rect
               key={winkel}
               x="10.6"
-              y="2.2"
+              y="1.9"
               width="2.8"
-              height="19.6"
-              rx="1.2"
+              height="4.8"
+              rx="1"
               transform={`rotate(${winkel} 12 12)`}
             />
           ))}
         </g>
-        {/* Der Kranz. Als Ring aus Strichstaerke und nicht als zwei Kreise —
-            das Loch in der Mitte muss durchsichtig bleiben, denn dahinter
-            liegt der Knopf und nicht eine bekannte Farbe. */}
-        <circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" strokeWidth="3.4" />
+        <circle cx="12" cy="12" r="6.1" fill="none" stroke="currentColor" strokeWidth="3.2" />
       </svg>
     </button>
   );
