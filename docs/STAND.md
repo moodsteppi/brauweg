@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 27. August 2026 auf diesem Zweig, nicht aus der
 Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-44 Skat-Tests, 15 Feldherr-Tests, 53 Mememory-Tests, **318 Servertests**
-— zusammen 788, alle grün. `tsc --noEmit` sauber.
+44 Skat-Tests, 15 Feldherr-Tests, 63 Mememory-Tests, **318 Servertests**
+— zusammen 798, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
@@ -181,12 +181,32 @@ Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
 > dem, der am Zug ist; Reaktionen starten in der Ecke ihres Absenders und
 > fliegen in die Mitte. Ganzer Bauplan: **`docs/MEMEMORY-ECKEN.md`**.
 >
-> **Das ist Vorarbeit für 2–4 Spieler und noch kein 4-Spieler-Spiel.**
-> `SEAT_COUNTS` steht weiterhin auf `[2]`; was für die Erweiterung fehlt,
-> sind die Punkte- und Rangregeln (`gegner()` reicht heute an den einen
-> anderen Sitz weiter). Die Oberfläche ist an einem Tisch mit vier Sitzen
-> nachgemessen worden — dafür stand `SEAT_COUNTS` kurz auf `[2, 4]`, das ist
-> zurückgenommen.
+> **Am selben Nachmittag kam das Spiel dazu: 2 bis 4 Sitze sind jetzt echt.**
+> `SEAT_COUNTS` steht auf `[2, 3, 4]`. Ganzer Bauplan:
+> **`docs/MEMEMORY-MEHRSPIELER.md`**. Drei Dinge daran sind für andere
+> Spiele interessant:
+>
+> 1. **Mehr Spieler heißt nicht größeres Brett.** Vier Spalten sind auf einem
+>    Handy die Grenze, also warten die zusätzlichen Karten (acht je Spieler
+>    ab dem dritten) auf einem **Stapel** und kommen nach, sobald acht Plätze
+>    frei sind — und dabei wird das ganze Brett neu gemischt. Damit dauert
+>    eine Partie für jeden gleich lang, egal zu wie vielen.
+> 2. **Eine Bewegung, die den ganzen Zustand umbaut, braucht einen eigenen
+>    Pausenzustand.** `Pause` hat den Wert `mischen` bekommen: Die Plattform
+>    misst 2200 ms, in denen der Client die Karten zusammenschiebt und neu
+>    austeilt. Läge das Mischen in `beendePause`, spränge das Brett in einem
+>    einzigen Bild um.
+> 3. **`fill: forwards` ist eine Falle, wenn die Uhr stehenbleiben kann.**
+>    Eine Animation, die nicht zu Ende läuft (gesperrtes Telefon,
+>    Hintergrund-Tab, nicht zeichnender Sitzungsbrowser), hält die Elemente
+>    fest, wo sie aufgehört hat — und die nächste Messung liest genau diese
+>    Stelle. Wer misst, bricht vorher ab. Hat einen halben Nachmittag
+>    gekostet.
+>
+> Die Online-Suche hat dafür **getrennte Töpfe** je Gegnerzahl bekommen
+> (eins gegen eins, zwei oder drei), der KI-Bildschirm eine Zeile je Gegner
+> mit eigener Stufe, und der Wartebereich eines Drei- oder Vierertisches den
+> Knopf „Mit Bots auffüllen".
 >
 > **Gesammelt wird nur noch das SELBST geholte Paar.** Vorher zählte jede
 > umgedrehte Karte, auch die des Gegners — damit war die Sammlung nach drei

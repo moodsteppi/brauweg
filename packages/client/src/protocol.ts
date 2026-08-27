@@ -34,8 +34,13 @@ export const FELDHERR_MODULE_VERSION = 2;
  * mindestens die 2 gemeldet haben — eine unbekannte Nachricht landet sonst im
  * Sicht-Zweig und leert das Brett. Ein Geraet, das ueber den Deploy hinweg
  * offen bleibt, meldet die 1 und spielt einfach ohne Reaktionen weiter.
+ *
+ * 4 seit dem 27. August 2026: Dieser Client kennt den Nachschubstapel, den
+ * Mischzaehler und die Schaupause `mischen` — also alles, was ein Tisch zu
+ * dritt oder zu viert braucht. Ein Client der 3 kommt damit nicht
+ * durcheinander, er zeigt den Stapel nur nicht und mischt ohne Bewegung.
  */
-export const MEMEMORY_MODULE_VERSION = 3;
+export const MEMEMORY_MODULE_VERSION = 4;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,

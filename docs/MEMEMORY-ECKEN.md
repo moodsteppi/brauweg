@@ -5,9 +5,9 @@ Leiste, sondern in jeder Ecke ein Spieler. Zwei Gründe, und nur der zweite
 ist Geschmack:
 
 1. **Die Leisten konnten genau zwei Spieler.** Vier hätten sich in derselben
-   Zeile gegenseitig aus dem Bild geschoben. Das Brett soll auf 2–4 Spieler
-   wachsen (nächster Schritt, siehe `MEMEMORY-KI.md`); die Oberfläche kann es
-   ab jetzt schon.
+   Zeile gegenseitig aus dem Bild geschoben. Seit dem Nachmittag desselben
+   Tages hat ein Tisch wirklich zwei bis vier Sitze — siehe
+   `MEMEMORY-MEHRSPIELER.md`.
 2. **Zu zweit sieht es besser aus.** Die Leisten nahmen die volle Breite für
    je einen Namen und eine Zahl. Das Brett hat jetzt mehr Höhe.
 

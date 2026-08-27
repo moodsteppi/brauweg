@@ -108,16 +108,17 @@ erste Paar zufällig auf 0 und 1 legte. Seitdem steht dort `!== null`.
 
 ---
 
-## Nächster Schritt: vier Spieler
+## Bis zu drei Bots (seit dem 27. August, nachmittags)
 
-Vorbereitet, nicht gebaut. `botStufen` ist eine Abbildung **Sitz → Stufe**,
-kein einzelner Wert, und der Client führt die Auswahl schon als **Liste**
-(`gegner: Stufe[]`, heute mit genau einem Eintrag). Für drei Bots
-verschiedener Stärke braucht es später:
+Gebaut. Der KI-Bildschirm trägt eine Zeile je Gegner mit eigener Stufe, bis
+zu drei; `SEAT_COUNTS` steht auf `[2, 3, 4]`. Am Gedächtnis war dafür nichts
+zu tun — es war von Anfang an **je Sitz** geführt, und `botStufen` war immer
+eine Abbildung Sitz → Stufe und kein einzelner Wert.
 
-1. **`SEAT_COUNTS` auf `[2, 4]`** in `regeln.ts` — plus Punkte- und
-   Rangregeln für mehr als zwei (`platzierungen`, `gegner()` in `partie.ts`
-   rechnen heute mit genau zwei Sitzen).
-2. **Eine Zeile je Gegner** im KI-Bildschirm; die Liste geht ohnehin schon
-   sitzweise in die `config`.
-3. Nichts am Gedächtnis: Es ist bereits je Sitz geführt.
+**Eine Sache musste der Bot dazulernen: vergessen, wenn gemischt wird.** Zu
+dritt und zu viert kommen Karten von einem Nachschubstapel nach, und dabei
+liegt das ganze Brett neu (siehe `MEMEMORY-MEHRSPIELER.md`). Ein Gedächtnis
+mit alten Plätzen wäre danach schlimmer als gar keines: Der Bot griffe nicht
+mehr zufällig daneben, sondern **gezielt**. `mischeNeu` in `partie.ts` leert
+es deshalb für jeden Bot-Sitz — auch beim Experten, der sonst nichts
+vergisst. Ein Test sichert genau das.

@@ -115,8 +115,21 @@ export const DEFAULT_REGELN: MememoryRegeln = {
   merkzeitMs: 1100,
 };
 
-/** Nur zu zweit. Memory zu dritt braucht andere Punkte- und Rangregeln. */
-export const SEAT_COUNTS: readonly number[] = [2];
+/**
+ * Zwei bis vier.
+ *
+ * Das BRETT waechst dabei nicht — vier Spalten sind auf einem Handy die
+ * Grenze (siehe DEFAULT_REGELN), und mehr Zeilen machten die Karten flacher.
+ * Stattdessen bringt jeder Spieler ab dem dritten acht Karten mit, die auf
+ * einem Stapel warten und nachkommen, sobald Platz ist (`vorrat` in
+ * partie.ts). Eine Partie bleibt damit fuer jeden gleich lang, egal zu wie
+ * vielen gespielt wird.
+ *
+ * Zu dritt und zu viert gibt es keine eigenen Punkteregeln und braucht auch
+ * keine: Ein Paar ist ein Punkt, und `platzierungen` sortiert danach —
+ * gleiche Punkte ergeben denselben Platz.
+ */
+export const SEAT_COUNTS: readonly number[] = [2, 3, 4];
 
 /** Eine Partie ist ein Brett. Es gibt nichts zu rotieren. */
 export function rotationSize(): number {

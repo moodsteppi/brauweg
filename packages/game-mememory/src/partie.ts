@@ -121,8 +121,37 @@ function probe(saat: string, ...teile: readonly (string | number)[]): number {
 // Zustand
 // ---------------------------------------------------------------------------
 
-/** Anlass der laufenden Schaupause. */
-export type Pause = 'treffer' | 'daneben';
+/**
+ * Anlass der laufenden Schaupause.
+ *
+ * `mischen` ist seit dem 27. August dabei und die einzige, in der sich das
+ * ganze Brett aendert. Sie ist ein eigener Schritt und kein Anhaengsel des
+ * Zuges: Der Client soll die Karten sichtbar zusammenschieben, mischen und
+ * neu verteilen koennen, und dafuer braucht er einen Zustand, in dem genau
+ * das passiert. Waere das Mischen Teil von `beendePause`, spraenge das Brett
+ * in einem einzigen Bild um.
+ */
+export type Pause = 'treffer' | 'daneben' | 'mischen';
+
+/**
+ * So viele Karten bringt jeder Spieler ab dem dritten mit. Vier Paare.
+ *
+ * Das Brett waechst dabei NICHT — vier Spalten sind auf einem Handy die
+ * Grenze (siehe regeln.ts), und mehr Zeilen machten die Karten flacher. Die
+ * zusaetzlichen Karten warten deshalb auf einem Stapel und kommen nach,
+ * sobald Platz ist.
+ */
+export const NACHSCHUB_JE_SPIELER = 8;
+
+/**
+ * So viele Karten kommen auf einmal nach.
+ *
+ * Nachgelegt wird erst, wenn ein ganzer Block Platz hat, und dann wird das
+ * Brett EINMAL durchgemischt. Wuerde nach jedem geholten Paar nachgelegt,
+ * mischte es bei jedem zweiten Zug — und ein Brett, das staendig neu liegt,
+ * ist kein Memory mehr.
+ */
+export const NACHSCHUB_BLOCK = 8;
 
 /**
  * Ein Stueck Bot-Gedaechtnis: An Platz X lag Motiv Y, gesehen in Zug Z.
@@ -179,6 +208,23 @@ export interface MememoryPartie {
   readonly saat: string;
   /** Was welcher Bot-Sitz behalten hat. Sitze ohne Stufe stehen nicht drin. */
   readonly erinnerung: Readonly<Record<number, readonly Erinnerung[]>>;
+  /**
+   * Karten, die noch auf dem Stapel warten. Motivnummern, in fester
+   * Reihenfolge — genommen wird von vorn.
+   *
+   * Leer bei jeder Partie zu zweit: Dort passen alle Karten aufs Brett.
+   */
+  readonly vorrat: readonly number[];
+  /**
+   * Wie oft schon gemischt wurde. Zwei Aufgaben in einer Zahl:
+   *
+   *   - Sie ist der Wuerfelbeutel jeder Mischung. Denselben Generator aus
+   *     derselben Saat neu zu bauen ergaebe jedes Mal dieselbe Lage.
+   *   - Der Client erkennt an ihr, dass gemischt wurde, und spielt die
+   *     Bewegung — auch dann, wenn er die Schaupause verpasst hat, weil er
+   *     gerade neu verbunden hat.
+   */
+  readonly mischung: number;
 }
 
 export type MememoryAktion =
@@ -301,13 +347,25 @@ function altere(partie: MememoryPartie, zugJetzt: number): MememoryPartie['erinn
 // Aufbau
 // ---------------------------------------------------------------------------
 
+/**
+ * Wie viele Karten ausser den Brettplaetzen noch mitspielen.
+ *
+ * Null zu zweit. Ab dem dritten Spieler acht je Kopf — aber nur, wenn auf
+ * dem Brett ueberhaupt ein ganzer Block frei werden kann. Auf einem winzigen
+ * Brett kaeme der Nachschub sonst nie, und die Partie waere nie zu Ende.
+ */
+export function nachschubMenge(plaetze: number, spieler: number): number {
+  if (plaetze < 2 * NACHSCHUB_BLOCK) return 0;
+  return NACHSCHUB_JE_SPIELER * Math.max(0, spieler - 2);
+}
+
 export function erstellePartie(
   regeln: MememoryRegeln,
   sitze: readonly number[],
   saat: Saat,
 ): MememoryPartie {
   const plaetze = regeln.spalten * regeln.zeilen;
-  const paare = plaetze / 2;
+  const paare = (plaetze + nachschubMenge(plaetze, sitze.length)) / 2;
   // Fester Katalog plus die Zusatzmotive des Tisches. Doppelte Kennungen
   // fliegen raus — zweimal dasselbe Motiv waeren zwei Paare, die sich nicht
   // unterscheiden lassen, und das Brett liesse sich nicht raeumen.
@@ -323,7 +381,10 @@ export function erstellePartie(
 
   const paarliste: number[] = [];
   for (let i = 0; i < paare; i++) paarliste.push(i, i);
-  const feld = mische(paarliste, zufall);
+  // Erst alles mischen, dann teilen: Was auf dem Stapel landet, ist damit
+  // genauso zufaellig wie das, was zuerst liegt.
+  const alle = mische(paarliste, zufall);
+  const feld = alle.slice(0, plaetze);
 
   return {
     regeln,
@@ -342,6 +403,8 @@ export function erstellePartie(
     fertig: false,
     zug: 0,
     saat: String(saat),
+    vorrat: alle.slice(plaetze),
+    mischung: 0,
     // Jeder Bot-Sitz startet mit leerem Gedaechtnis. Sitze ohne Stufe stehen
     // gar nicht erst drin — so gibt es fuer einen Menschen nichts zu holen.
     erinnerung: Object.fromEntries(
@@ -437,33 +500,104 @@ export function fuehreAus(
 export function pauseDauerMs(partie: MememoryPartie): number | null {
   if (partie.pause === 'treffer') return 650;
   if (partie.pause === 'daneben') return partie.regeln.merkzeitMs;
+  // Zusammenschieben, mischen, austeilen — die Bewegung braucht ihre Zeit,
+  // und waehrend sie laeuft, darf niemand tippen. Der Client rechnet mit
+  // derselben Zahl (MISCH_DAUER_MS in Mememory.tsx).
+  if (partie.pause === 'mischen') return 2200;
   return null;
 }
 
 /** Ende der Schaupause: Karten wegraeumen bzw. zurueckdrehen, dann weiter. */
 export function beendePause(partie: MememoryPartie): MememoryPartie {
   if (partie.pause === null) return partie;
-  const fertig = partie.besitzer.every((wer) => wer !== null);
+  // Die Mischpause ist der Mischvorgang selbst — sie beendet keinen Zug.
+  if (partie.pause === 'mischen') return mischeNeu(partie);
+
   // Hier — und nur hier — ist ein Zug wirklich vorbei: Zwei Karten lagen
   // offen, sie sind gewertet, die naechsten zwei kommen. Die
   // Gedaechtnisfenster der Bots rechnen mit dieser Zahl.
   const zug = partie.zug + 1;
-  return {
+  const weiter: MememoryPartie = {
     ...partie,
     offen: [],
     // Ein Treffer behaelt das Zugrecht, ein Fehlgriff gibt es ab.
-    dran: partie.pause === 'treffer' ? partie.dran : gegner(partie, partie.dran),
+    dran: partie.pause === 'treffer' ? partie.dran : naechsterSitz(partie, partie.dran),
     pause: null,
-    fertig,
     zug,
     erinnerung: altere(partie, zug),
   };
+
+  // Ist ein ganzer Block frei geworden, wird nachgelegt — aber erst im
+  // naechsten Schritt. Dazwischen liegt die Mischpause, damit der Client die
+  // Bewegung zeigen kann.
+  if (nachschubFaellig(weiter)) return { ...weiter, pause: 'mischen' };
+
+  return { ...weiter, fertig: istFertig(weiter) };
 }
 
-function gegner(partie: MememoryPartie, sitz: number): number {
+/** Die Partie ist zu Ende, wenn das Brett leer ist UND kein Stapel mehr wartet. */
+function istFertig(partie: MememoryPartie): boolean {
+  return partie.vorrat.length === 0 && partie.besitzer.every((wer) => wer !== null);
+}
+
+/** Genug Platz fuer einen ganzen Block Nachschub? */
+function nachschubFaellig(partie: MememoryPartie): boolean {
+  if (partie.vorrat.length === 0) return false;
+  const frei = partie.besitzer.filter((wer) => wer !== null).length;
+  return frei >= Math.min(NACHSCHUB_BLOCK, partie.vorrat.length);
+}
+
+/**
+ * Nachlegen und das ganze Brett neu mischen.
+ *
+ * Die geholten Paare gehen vom Brett — sie sind gewertet, ihre Punkte stehen
+ * laengst in `punkte`. Ihre Plaetze nehmen die Karten vom Stapel ein, und
+ * dann liegt ALLES neu: Wer sich gemerkt hat, wo etwas lag, faengt von vorn
+ * an. Genau darum geht es, sonst waere der Nachschub bloss Auffuellen.
+ *
+ * **Die Rechnung geht immer auf.** Genommen werden hoechstens so viele
+ * Karten, wie Plaetze frei sind; und frei werden sie in Zweierschritten, bei
+ * jeder Schaupause geprueft — der Block ist also genau erreicht und nie
+ * ueberschritten. Das Brett bleibt damit voll.
+ */
+function mischeNeu(partie: MememoryPartie): MememoryPartie {
+  const behalten = partie.feld.filter((_, platz) => partie.besitzer[platz] === null);
+  const frei = partie.feld.length - behalten.length;
+  const nachschub = partie.vorrat.slice(0, frei);
+  const mischung = partie.mischung + 1;
+  const zufall = baueZufall(`${partie.saat}|misch|${mischung}`);
+  const feld = mische([...behalten, ...nachschub], zufall);
+
+  return {
+    ...partie,
+    feld,
+    besitzer: feld.map(() => null),
+    offen: [],
+    vorrat: partie.vorrat.slice(nachschub.length),
+    mischung,
+    pause: null,
+    // Nach dem Mischen liegt nichts mehr dort, wo es lag. Ein Gedaechtnis zu
+    // behalten waere schlimmer als es zu leeren: Der Bot griffe gezielt
+    // daneben, statt nur zufaellig.
+    erinnerung: Object.fromEntries(
+      Object.keys(partie.erinnerung).map((sitz) => [Number(sitz), [] as Erinnerung[]]),
+    ),
+    fertig: false,
+  };
+}
+
+/**
+ * Wer als naechstes dran ist: der naechsthoehere Sitz, danach wieder von vorn.
+ *
+ * Bis zum 27. August hiess das "der andere" und suchte den ersten Sitz, der
+ * nicht man selbst ist. Zu zweit ist das dasselbe; zu dritt bekaeme Sitz 2
+ * nie einen Zug.
+ */
+function naechsterSitz(partie: MememoryPartie, sitz: number): number {
   const sitze = Object.keys(partie.punkte).map(Number).sort((x, y) => x - y);
-  const anderer = sitze.find((s) => s !== sitz);
-  return anderer ?? sitz;
+  if (sitze.length === 0) return sitz;
+  const platz = sitze.indexOf(sitz);
+  return sitze[(platz + 1) % sitze.length] ?? sitz;
 }
 
 export function markiereVerlassen(partie: MememoryPartie, sitz: number): MememoryPartie {

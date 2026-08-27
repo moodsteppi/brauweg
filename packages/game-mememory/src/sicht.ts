@@ -37,6 +37,20 @@ export interface MememorySicht {
   readonly pause: Pause | null;
   /** Damit der Client die Rueckdreh-Animation gleich lang laufen laesst. */
   readonly merkzeitMs: number;
+  /**
+   * Wie viele Karten noch auf dem Stapel warten.
+   *
+   * Nur die ZAHL, nicht die Karten: Welche Motive dort liegen, steht ohnehin
+   * schon in `motive` (das ist der Topf der ganzen Partie), aber in welcher
+   * Reihenfolge sie kommen, geht niemanden etwas an — sonst wuesste man nach
+   * dem Mischen, welche vier Paare neu dabei sind.
+   */
+  readonly vorrat: number;
+  /**
+   * Wie oft schon gemischt wurde. Der Client erkennt daran, dass das Brett
+   * neu liegt, und spielt die Bewegung — auch nach einem Neuverbinden.
+   */
+  readonly mischung: number;
   readonly fertig: boolean;
   readonly sieger: number | null;
   readonly leftSeats: readonly number[];
@@ -84,6 +98,8 @@ function grundsicht(partie: MememoryPartie, zuschauer: boolean): MememorySicht {
     dran: partie.dran,
     pause: partie.pause,
     merkzeitMs: partie.regeln.merkzeitMs,
+    vorrat: partie.vorrat.length,
+    mischung: partie.mischung,
     fertig: partie.fertig,
     sieger: sieger(partie),
     leftSeats: partie.leftSeats,
