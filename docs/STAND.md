@@ -13,11 +13,16 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 26. August 2026 auf diesem Zweig, nicht aus der
+**Prüfstand (gezählt am 27. August 2026 auf diesem Zweig, nicht aus der
 Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-44 Skat-Tests, 15 Feldherr-Tests, 53 Mememory-Tests, **317 Servertests**
-— zusammen 787, alle grün. `tsc --noEmit` sauber.
+44 Skat-Tests, 15 Feldherr-Tests, 53 Mememory-Tests, **318 Servertests**
+— zusammen 788, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
+
+> **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
+> wird abgewiesen, ohne den Tisch zu beschaedigen" fällt unter der Last des
+> vollen Laufs gelegentlich um (erwartet 2, bekommt 3). Allein laufen die
+> elf Tests der Datei durch. Er ist älter als die Arbeiten vom 26./27. August.
 
 > **Mememory ist am 22. August 2026 live gegangen.** Memory-Duell zu zweit:
 > 4×6 Karten, zwölf von vierundvierzig KI-erzeugten Meme-Motiven je Partie,
@@ -166,6 +171,29 @@ Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
 > Dadurch steigt `SNAPSHOT_VERSION` auf 2. **`deserialize` nimmt die 1
 > weiterhin an** und ergänzt die neuen Felder: Sonst bräche der Deploy jede
 > laufende Partie.
+>
+> **Vier Ecken statt zweier Leisten (27. August 2026).** Am Brett steht jetzt
+> in jeder Ecke ein Spieler — Name in Weiß, Punktzahl in seiner Farbe,
+> dazwischen ein Halbhochpunkt. **Jeder sieht sich selbst unten links**, der
+> nächste Sitz gegenüber oben rechts, der dritte oben links, der vierte unten
+> rechts. Die Farbe hängt am SITZ (0 blau, 1 rot, 2 gelb, 3 grün) und ist
+> deshalb auf jedem Gerät dieselbe. Ein Puck in der Spielerfarbe wandert zu
+> dem, der am Zug ist; Reaktionen starten in der Ecke ihres Absenders und
+> fliegen in die Mitte. Ganzer Bauplan: **`docs/MEMEMORY-ECKEN.md`**.
+>
+> **Das ist Vorarbeit für 2–4 Spieler und noch kein 4-Spieler-Spiel.**
+> `SEAT_COUNTS` steht weiterhin auf `[2]`; was für die Erweiterung fehlt,
+> sind die Punkte- und Rangregeln (`gegner()` reicht heute an den einen
+> anderen Sitz weiter). Die Oberfläche ist an einem Tisch mit vier Sitzen
+> nachgemessen worden — dafür stand `SEAT_COUNTS` kurz auf `[2, 4]`, das ist
+> zurückgenommen.
+>
+> **Gesammelt wird nur noch das SELBST geholte Paar.** Vorher zählte jede
+> umgedrehte Karte, auch die des Gegners — damit war die Sammlung nach drei
+> Partien voll und bedeutete nichts. Jetzt kostet ein Bild einen Punkt, und
+> im Spiel blitzt „Gesammelt" unter dem Namen auf. **Ein Meme je Sekunde**
+> statt vier: Emojis bleiben bei vier, ein Bild quer über das Brett bekommt
+> einen eigenen Deckel (Client und Gateway).
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

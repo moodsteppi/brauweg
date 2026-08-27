@@ -88,23 +88,48 @@ es anzeigen.
 
 ## Sammlung und Emote-Gurt
 
-**Wer ein Motiv in einer Partie aufdeckt, hat es gesammelt.** Im Menü sitzt
+**Wer ein Paar SELBST aufdeckt, hat das Motiv gesammelt.** Im Menü sitzt
 neben dem Briefkasten ein zweiter Knopf (drei gestapelte Karten): Dort steht,
 was zusammengekommen ist, und dort wählt man **bis zu drei** aus. Die
 ersetzen am Tisch den Emoji-Knopf — statt eines wandernden Zeichens stehen
 drei Memes bereit, und ein Tipp wirft eines über den Tisch.
 
-Gesammelt wird alles, was auf dem Brett auftaucht: die 88 Grundmotive
-genauso wie die hochgeladenen.
+Gesammelt wird alles, was so zusammenkommt: die 88 Grundmotive genauso wie
+die hochgeladenen.
+
+### Ein Bild kostet einen Punkt
+
+Bis zum 27. August zählte **jede umgedrehte Karte** — auch die einzelne, auch
+die des Gegners. Damit war die Sammlung nach drei Partien voll und bedeutete
+nichts mehr. Jetzt zählt nur, wofür es auch einen Punkt gab: beide Hälften
+eines Paares, in einem Zug, von einem selbst.
+
+Entschieden wird das am Feld `besitzer` des offenen Platzes und nicht an
+`dran`. Während der Schaupause ist beides dasselbe — aber `besitzer` sagt es
+über den Platz und hält auch dann noch, wenn das Zugrecht einmal anders
+weitergereicht wird.
+
+**Im Spiel sichtbar.** Fällt ein Motiv neu in die Sammlung, blitzt unter dem
+Namen des Paares in Gold **„Gesammelt"** auf — im selben Knoten und in
+derselben Animation wie der Name. Zwei Einblendungen übereinander wären zwei
+Dinge, die um denselben Blick streiten, und die Schaupause dauert 650 ms.
+Hat das Motiv keinen Namen (alle 88 Grundmotive), blitzt nur der Hinweis auf.
+
+Ob es neu ist, entscheidet der Client aus der Sammlung, die er beim
+Aufschlagen des Bildschirms geladen hat — **nicht** aus der Serverantwort.
+Die käme 200–400 ms später und damit zu spät für dieselbe Animation.
 
 **Gemeldet wird vom Client, und das ist Absicht.** Wer eine Karte aufdeckt,
 weiß es dort; der Server müsste sonst in den Spielzustand sehen, und das ist
 die Grenze, die diese Plattform nicht überschreitet. Der Preis ist bekannt:
 Mit der Entwicklerkonsole lässt sich eine Sammlung zusammenlügen. Sie ist
 Schmuck — kein Preis, kein Handel, kein Vorteil im Spiel —, und wer sich
-selbst Bilder in eine Liste schreibt, betrügt niemanden außer sich. Gemeldet
-wird gebündelt mit 1,2 s Verzögerung; sonst fiele bei jedem Tipp eine
-Anfrage an.
+selbst Bilder in eine Liste schreibt, betrügt niemanden außer sich.
+
+Gemeldet wird **einzeln und sofort**: ein Aufruf je geholtem Paar, höchstens
+zwölf in einer Partie. Der alte Bund mit 1,2 s Verzögerung war nötig, solange
+jede umgedrehte Karte eine Meldung auslöste. Was nicht durchkommt, reist bei
+der nächsten Meldung mit.
 
 **Der Gurt wird serverseitig geprüft:** Hineinwählen lässt sich nur, was auch
 gesammelt ist. Das ist die eine Stelle, an der die Sammlung wirklich etwas
@@ -130,6 +155,10 @@ Der Grundsatz hält trotzdem:
   erreicht die Gegenseite also nicht als Bild, sondern gar nicht.
 - Keine Datenbankabfrage je Tipp: Bei vier Reaktionen je Sekunde wäre das
   nicht vertretbar, und die Auslieferung prüft ohnehin.
+
+**Seit dem 27. August höchstens eines je Sekunde** — Emojis weiterhin vier.
+Wohin es fliegt und warum es einen eigenen Deckel hat, steht in
+`MEMEMORY-ECKEN.md`.
 
 **Modulversion 3.** Ein Client der Version 2 kennt die Nachricht, nicht aber
 das Feld — er zeigte das Emoji Nummer 0 und damit etwas anderes, als
@@ -259,8 +288,9 @@ erste Karte zeichnen kann.
 | Namensblitz | `packages/client/src/screens/Mememory.tsx` (`namensblitz`), `.mm-namensblitz` in styles.css |
 | Sammlung (Server) | `packages/server/src/sammlung.ts`, Migration `0020_mememory_sammlung.sql` |
 | Sammlung (Client) | `packages/client/src/minispiele/mememory/Sammlung.tsx` |
-| Motiv als Reaktion | `packages/server/src/realtime/gateway.ts` (`MOTIV_AB_MODULVERSION`) |
-| Tests | `packages/server/test/memes.test.ts` (19), `sammlung.test.ts` (8), `reaktion-motiv.test.ts` (3), `packages/game-mememory/test/zusatz.test.ts` (8) |
+| Motiv als Reaktion | `packages/server/src/realtime/gateway.ts` (`MOTIV_AB_MODULVERSION`, `letztesMotiv`) |
+| Ecken, Farben, Puck | `docs/MEMEMORY-ECKEN.md` |
+| Tests | `packages/server/test/memes.test.ts` (19), `sammlung.test.ts` (8), `reaktion-motiv.test.ts` (4), `packages/game-mememory/test/zusatz.test.ts` (8) |
 
 ### Endpunkte
 

@@ -12,6 +12,9 @@
  *      anderes, als geschickt wurde. Emojis muss er weiterhin bekommen.
  *   3. **Der Absender bekommt nichts zurueck.** Er hat sein Meme schon
  *      fliegen sehen, bevor die Nachricht draussen war.
+ *   4. **Hoechstens eines je Sekunde** (seit dem 27. August). Ein Emoji darf
+ *      viermal je Sekunde kommen; ein Bild quer ueber das Brett ist etwas
+ *      anderes, und der Gegner will sich in derselben Zeit Karten merken.
  */
 
 import { test } from 'node:test';
@@ -144,6 +147,61 @@ test('Eine erfundene Motivform faellt still durch', async (t) => {
   });
   await new Promise((r) => setTimeout(r, 400));
   assert.deepEqual(b.messages('reaktion'), [], 'Freitext darf den Tisch nicht erreichen');
+
+  await a.close();
+  await b.close();
+});
+
+test('Ein Motiv je Sekunde — Emojis bleiben davon unberuehrt', async (t) => {
+  const h = await startHarness();
+  t.after(() => h.close());
+  const { anna, bert, table } = await tischZuZweit(h);
+
+  const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  const b = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Bert');
+  a.passive = true;
+  b.passive = true;
+  a.join(table.id, 3, 'mememory');
+  await a.waitFor(() => a.lastView !== null, 'erste Sicht fuer Anna');
+  b.join(table.id, 3, 'mememory');
+  await b.waitFor(() => b.lastView !== null, 'erste Sicht fuer Bert');
+
+  const wirf = (motiv?: string, zeichen = 0): void =>
+    a.raw({
+      v: ENVELOPE_VERSION,
+      game: 'mememory',
+      type: 'reaktion',
+      tableId: table.id,
+      zeichen,
+      ...(motiv ? { motiv } : {}),
+    });
+  const warte = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+  // Die Zeitpunkte sind der Kern des Tests und keine Willkuer:
+  //   0 ms   erstes Motiv - geht durch
+  //   400 ms zweites Motiv - waere am Emoji-Deckel (250 ms) VORBEI und faellt
+  //          trotzdem, also am Motiv-Deckel. Genau das soll bewiesen werden.
+  //   700 ms Emoji - beweist, dass die Motivbremse Emojis nicht mitbremst
+  //   1100 ms drittes Motiv - die Sekunde ist um, es geht wieder
+  wirf('erstes-motiv');
+  await warte(400);
+  wirf('zweites-motiv');
+  await warte(300);
+  wirf(undefined, 3);
+  await warte(400);
+  wirf('drittes-motiv');
+
+  await b.waitFor(() => b.messages('reaktion').length >= 3, 'drei Reaktionen bei Bert');
+  // Noch einen Moment warten: Waere das zweite Motiv doch durchgekommen, soll
+  // es hier auftauchen und den Test rot machen.
+  await warte(300);
+
+  const angekommen = b.messages('reaktion');
+  assert.deepEqual(
+    angekommen.map((n) => n.motiv ?? `emoji ${n.zeichen}`),
+    ['erstes-motiv', 'emoji 3', 'drittes-motiv'],
+    'das zweite Motiv kam zu frueh und darf nicht dabei sein',
+  );
 
   await a.close();
   await b.close();

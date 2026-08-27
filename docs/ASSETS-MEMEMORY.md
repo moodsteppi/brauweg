@@ -14,7 +14,7 @@ Vorlage, falls jemand Motive nachliefert.
 | Was | Ordner | Anzahl | Maß | Format | Gewicht |
 | --- | --- | --- | --- | --- | --- |
 | Motive | `public/mememory/motive/` | 88 | 256 × 256 | WebP q78 | 2,3–17,9 kB · **804 kB gesamt** |
-| Tischdecken | `public/mememory/` | 3 | 640 × 936 | WebP q70 | je ~19 kB · **57 kB gesamt** |
+| Tischdecken | `public/mememory/` | 5 | 640 × 936 | WebP q70 | 19–27 kB · **109 kB gesamt** |
 | Banner Spielauswahl | `public/hub/spielwahl-mememory.webp` | 1 | 1200 × 300 | WebP q80 | 30 kB |
 
 **Seit dem 23. August sind 13 der 43 Motive nicht mehr selbst erzeugt.**
@@ -47,7 +47,10 @@ mit `object-fit: cover` nach, das Motiv muss also die Mitte tragen.
 **Ein Match lädt 12 Motive**, nicht 88: rund **110 kB**. Zusammen mit einer
 Tischdecke ist das Spiel damit unter 125 kB spielbereit — trotz größerer
 Bilder weniger als vorher. Das ist die Zahl,
-an der die Forderung „keine langen Ladephasen" hängt.
+an der die Forderung „keine langen Ladephasen" hängt. **Seit dem 27. August
+gibt es fünf Decken statt drei** (weiß plus vier Spielerfarben); ein Tisch
+hängt aber nur die ins Blatt, deren Farbe an ihm sitzt — zu zweit sind das
+weiterhin drei.
 
 **640 × 936 für die Tischdecke.** Sie liegt hinter vierundzwanzig Karten und
 ist zum guten Teil verdeckt. Mehr Auflösung landet unter den Karten.
@@ -78,18 +81,55 @@ ist zum guten Teil verdeckt. Mehr Auflösung landet unter den Karten.
 
 ## 4 — Abnahmekriterien für die Tischdecke
 
-1. **Die drei Farben müssen deckungsgleich sein.** Sie werden beim Zugwechsel
-   ineinander geblendet; ein anderer Faltenwurf wäre ein Bildsprung.
-   **Deshalb sind es keine drei Aufnahmen:** Aus einem geänderten Farbwort
-   macht SDXL auch bei gleichem Startwert ein anderes Bild (geprüft — die
-   weiße Decke hing diagonal, die blaue lag mittig). Geliefert wurde die
-   **blaue** Aufnahme; Rot und Weiß entstehen daraus durch Farbdrehung, und
-   zwar nur auf dem Stoff. Der Holztisch am Rand bleibt Holz.
+1. **Die Spielerfarben müssen deckungsgleich sein.** Sie werden beim
+   Zugwechsel ineinander geblendet; ein anderer Faltenwurf wäre ein
+   Bildsprung. **Deshalb ist es EINE Aufnahme:** Aus einem geänderten
+   Farbwort macht SDXL auch bei gleichem Startwert ein anderes Bild (geprüft
+   — die weiße Decke hing diagonal, die blaue lag mittig). Geliefert wurde
+   die **blaue** Aufnahme; Rot, Gelb und Grün entstehen daraus durch
+   Farbdrehung, und zwar nur auf dem Stoff. Der Holztisch am Rand bleibt Holz.
+
+   **Weiß ist die Ausnahme und war es von Anfang an.** Nachgemessen am
+   27. August: Die Helligkeitsverläufe von Blau und Rot decken sich zu 0,83,
+   die von Blau und Weiß nur zu 0,39 — die weiße Decke ist eine eigene
+   Aufnahme mit anderem Faltenwurf. Sie liegt nur am Partieende, wenn
+   niemand mehr am Zug ist; dort blendet nichts mehr über. Für die vier
+   Spielerfarben gilt die Regel weiterhin ohne Ausnahme.
 2. **Die Maske trennt Stoff von Holz.** Stoff ist bläulich und farbig
    (Farbton 0,50–0,78, Sättigung > 0,15), Holz ist orange. Die Maske wird
    weich gezeichnet, sonst zieht der Farbwechsel einen harten Saum. Gemessen:
-   47,8 % der Fläche sind Stoff — das passt zum Bild.
+   47,5 % der Fläche sind Stoff — das passt zum Bild.
 3. **Die Mitte bleibt ruhig.** Dort liegen die Karten.
+4. **Matte Töne, keine Signalfarben.** Ein reines Gelb neben einem reinen
+   Grün wäre hinter 24 Karten Lärm — und die Kartenrückseite ist selbst
+   dunkelbraun mit Gold. Gelb muss dabei heller ausfallen als die anderen,
+   sonst wird daraus Braun.
+
+### Das Rezept
+
+Es steht als `decke-faerben.py` neben den Originalen (also außerhalb des
+Repos, `packages/client/art/` ist ignoriert). Was es tut, in Zahlen:
+Zielfarbton setzen, die Abweichung jedes Pixels davon zur Hälfte behalten
+(sonst ist die Decke eine Fläche statt eines Stoffs), Sättigung und
+Helligkeit mit einem Faktor nachziehen, weiche Maske darüber.
+
+| Farbe | Farbton | × Sättigung | × Helligkeit | Datei |
+| --- | --- | --- | --- | --- |
+| Blau | *Vorlage* (0,627) | — | — | 19 kB |
+| Rot | 0,960 | 1,19 | 1,17 | 20 kB *(Bestand, nicht neu erzeugt)* |
+| Gelb | 0,115 | 1,05 | 1,15 | 27 kB |
+| Grün | 0,300 | 0,68 | 0,98 | 24 kB |
+
+**Rot wird vom Skript nur nachgebaut, nicht ausgeliefert.** Die rote Decke
+liegt seit dem 23. August im Bündel; sie noch einmal zu erzeugen hieße, das
+Aussehen eines fertigen Spiels nebenbei zu ändern. Sie steht im Skript als
+Prüfung: Trifft das Rezept die vorhandene rote Decke, trifft es Gelb und
+Grün auch.
+
+**Geladen wird nur, was der Tisch braucht.** Fünf Decken sind 109 kB; ein
+Tisch zu zweit hängt aber nur drei davon ins Blatt (weiß plus die zwei
+Spielerfarben) und bleibt damit bei den 57 kB von vorher. Die Liste steht in
+`Mememory.tsx` als `decken`.
 
 ## 5 — Was NICHT ins Bild gehört
 

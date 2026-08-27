@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
+import { Ecken } from '../minispiele/mememory/Ecken';
+import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/eckenplan';
 import { spieleKlang, setzeTon, tonAn } from '../minispiele/mememory/klaenge';
 import { KiMatch, type Stufe } from '../minispiele/mememory/KiMatch';
 import { Sammlung } from '../minispiele/mememory/Sammlung';
@@ -72,26 +74,28 @@ const REAKTIONEN = ['😂', '😮', '😎', '😭', '🔥'] as const;
 /** Viermal je Sekunde, so wie es der Server auch deckelt. */
 const REAKTION_PAUSE_MS = 250;
 
+/**
+ * Ein Meme je Sekunde und Spieler.
+ *
+ * Deutlich strenger als beim Emoji, und das hat einen Grund: Ein Emoji ist
+ * ein Zeichen von 34 px, ein Meme ist ein Bild von 92 px, das quer ueber das
+ * Brett fliegt. Viermal je Sekunde waeren vier davon gleichzeitig in der
+ * Luft — waehrend der Gegner sich Karten merken will. Der Server deckelt
+ * dasselbe noch einmal; hier steht es, damit die Leitung gar nicht erst
+ * belastet wird.
+ */
+const MOTIV_PAUSE_MS = 1000;
+
 /** So viele Emojis duerfen hoechstens gleichzeitig fliegen. */
 const FLIEGER_MAX = 12;
-
-/**
- * Teamfarbe haengt am SITZ, nicht daran, wer man selbst ist.
- *
- * Sonst saehe jeder sich blau und den Gegner rot — und ein Screenshot des
- * einen widerspraeche dem des anderen. Sitz 0 ist blau, Sitz 1 ist rot, auf
- * beiden Geraeten.
- */
-function farbeVon(sitz: number): 'blau' | 'rot' {
-  return sitz === 0 ? 'blau' : 'rot';
-}
 
 interface Flieger {
   readonly id: number;
   readonly zeichen: number;
   /** Gesammeltes Motiv statt des Emojis. Siehe den Gurt weiter unten. */
   readonly motiv?: string;
-  readonly richtung: 'hoch' | 'runter';
+  /** Ecke des Absenders — dort startet der Flug, das Ziel ist die Mitte. */
+  readonly ecke: Ecke;
   /** Seitlicher Versatz, damit zwei schnelle Reaktionen nicht uebereinander liegen. */
   readonly ab: number;
 }
@@ -132,12 +136,19 @@ export function Mememory({
    */
   const [motivNamen, setMotivNamen] = useState<Record<string, string>>({});
   /**
-   * Der Name, der gerade ueber dem Brett aufblitzt. Die Nummer ist der
-   * Schluessel der Animation: Zwei Treffer hintereinander mit demselben
-   * Namen muessen sie neu starten, und dafuer muss sich der Schluessel
-   * aendern.
+   * Was gerade ueber dem Brett aufblitzt: der Name des Paares, der Hinweis
+   * auf die Sammlung, oder beides. Die Nummer ist der Schluessel der
+   * Animation — zwei Treffer hintereinander mit demselben Namen muessen sie
+   * neu starten, und dafuer muss sich der Schluessel aendern.
+   *
+   * `name` kann fehlen: Die 88 Grundmotive heissen nirgends. Dann blitzt
+   * nur der Sammlungshinweis auf, und der steht ohne Namen genauso richtig.
    */
-  const [namensblitz, setNamensblitz] = useState<{ nr: number; name: string } | null>(null);
+  const [namensblitz, setNamensblitz] = useState<{
+    nr: number;
+    name?: string;
+    neu?: boolean;
+  } | null>(null);
   const blitzNr = useRef(0);
   /**
    * Die bis zu drei gewaehlten Motive. Sind welche da, ersetzen sie den
@@ -151,14 +162,22 @@ export function Mememory({
   /** Der Bildschirm "KI-Match erstellen" liegt STATT des Menues da. */
   const [kiOffen, setKiOffen] = useState(false);
   /**
-   * Was diese Partie schon gemeldet hat.
+   * Die eigene Sammlung, wie sie beim Aufschlagen des Bildschirms stand.
    *
-   * Aufgedeckte Motive gehen gebuendelt an den Server, nicht Karte fuer
-   * Karte: Auf einem Brett faellt sonst bei jedem Tipp eine Anfrage an, und
-   * gemeldet werden muss ohnehin nur, was noch nie gemeldet wurde.
+   * Sie steht hier, damit "das ist neu" SOFORT feststeht und nicht erst,
+   * wenn der Server geantwortet hat: Der Hinweis blitzt zusammen mit dem
+   * Namen auf, und der blitzt in dem Moment, in dem das Paar liegt. Eine
+   * Antwort, die 300 ms spaeter kommt, waere zu spaet fuer dieselbe
+   * Animation.
    */
-  const gemeldet = useRef(new Set<string>());
-  const meldeUhr = useRef<number | null>(null);
+  const gesammelt = useRef(new Set<string>());
+  /**
+   * Motive, deren Meldung nicht durchkam. Sie reisen bei der naechsten
+   * Meldung mit — eine verlorene Anfrage kostet sonst ein Bild in der
+   * Sammlung, und der naechste Treffer meldet seit dem 27. August nicht
+   * mehr alles noch einmal mit.
+   */
+  const nachtrag = useRef<string[]>([]);
   /**
    * Platz, den ich gerade angetippt habe — dreht sofort, ohne auf den Server
    * zu warten.
@@ -196,27 +215,42 @@ export function Mememory({
    * etwas anderes, als beim Gegner ankam.
    */
   const [angeboten, setAngeboten] = useState(0);
+  const letzteMotivReaktion = useRef(0);
   const knopfRef = useRef<HTMLButtonElement | null>(null);
+  /**
+   * Ecke eines Sitzes — als Ref, weil die Antwort erst feststeht, wenn der
+   * Tisch da ist, und `beiReaktion` VOR dem Tisch gebaut werden muss (es
+   * geht als Rueckruf in `useTable` hinein). Gesetzt wird beim Zeichnen,
+   * gelesen beim Eintreffen einer Reaktion.
+   */
+  const eckeRef = useRef<(sitz: number) => Ecke>(() => 'or');
 
   const zeigeFlieger = useCallback(
-    (zeichen: number, richtung: 'hoch' | 'runter', motiv?: string): void => {
+    (zeichen: number, ecke: Ecke, motiv?: string): void => {
       const id = (fliegerNr.current += 1);
-      const ab = Math.round((Math.random() - 0.5) * 90);
+      // Weniger Streuung als frueher: Die Fluege laufen jetzt alle auf die
+      // Mitte zu, und dort wuerde ein grosser Versatz sie am Ziel vorbeiziehen.
+      const ab = Math.round((Math.random() - 0.5) * 52);
       // Der Deckel ist kein Schoenheitsfehler: Ohne ihn haelt ein Dauerklicker
       // beliebig viele Knoten am Leben, und der Bildschirm ruckelt.
-      setFlieger((alt) => [...alt, { id, zeichen, motiv, richtung, ab }].slice(-FLIEGER_MAX));
-      window.setTimeout(() => setFlieger((alt) => alt.filter((f) => f.id !== id)), 1400);
+      setFlieger((alt) => [...alt, { id, zeichen, motiv, ecke, ab }].slice(-FLIEGER_MAX));
+      window.setTimeout(() => setFlieger((alt) => alt.filter((f) => f.id !== id)), 1450);
     },
     [],
   );
 
   /**
-   * Eine Reaktion der Gegenseite. Der Server spiegelt dem Absender nichts
-   * zurueck — was hier ankommt, ist immer fremd und faellt deshalb von oben.
+   * Eine Reaktion der Gegenseite.
+   *
+   * Sie startet in der Ecke DESSEN, DER SIE GESCHICKT HAT, und fliegt in die
+   * Mitte. Der Sitz steht in der Nachricht und wird vom Server gestempelt —
+   * behauptet wird er nie vom Client. Bis zum 27. August fiel jede fremde
+   * Reaktion einfach von oben herein; das ging, solange es genau einen
+   * Gegner gab, und sagt bei dreien nichts mehr darueber, wer da ruft.
    */
   const beiReaktion = useCallback(
     (nachricht: ReaktionMessage): void =>
-      zeigeFlieger(nachricht.zeichen, 'runter', nachricht.motiv),
+      zeigeFlieger(nachricht.zeichen, eckeRef.current(nachricht.seat), nachricht.motiv),
     [zeigeFlieger],
   );
 
@@ -229,8 +263,18 @@ export function Mememory({
     beiReaktion,
   );
   const sicht = tisch.view?.view ?? null;
-  const eigenerSitz = tisch.view?.seat ?? 0;
-  const gegnerSitz = eigenerSitz === 0 ? 1 : 0;
+  /**
+   * Der eigene Sitz — als Zuschauer bewusst -1 und nicht 0.
+   *
+   * Ein Zuschauer sitzt nirgends. Mit 0 saehe er sich selbst als Sitz 0
+   * unten links, wuerde dessen Paare in die eigene Sammlung buchen und
+   * bekaeme "Du bist dran" angezeigt.
+   */
+  const eigenerSitz = sicht?.zuschauer ? -1 : (tisch.view?.seat ?? 0);
+  /** Die Sitze dieses Tisches, aufsteigend. Grundlage der Ecken. */
+  const sitze = sicht ? sitzeAus(sicht.punkte) : [];
+  // Beim Zeichnen gesetzt, beim Eintreffen einer fremden Reaktion gelesen.
+  eckeRef.current = (sitz: number): Ecke => eckeVon(sitz, eigenerSitz, sitze);
 
   // -------------------------------------------------------------------------
   // Aktive Spieler
@@ -283,7 +327,13 @@ export function Mememory({
   }, []);
 
   /**
-   * Der eigene Gurt. Beim Aufschlagen und nach jedem Schliessen der Sammlung.
+   * Der eigene Gurt UND die eigene Sammlung. Beim Aufschlagen und nach jedem
+   * Schliessen der Sammlung.
+   *
+   * Die Sammlung landet in einem Ref und nicht im Zustand: Sie wird nicht
+   * gezeichnet, sondern nur gefragt ("kenne ich das schon?"), und ein
+   * Zustand mit zweitausend Eintraegen loeste bei jeder Antwort ein
+   * ueberfluessiges Neuzeichnen des Bretts aus.
    */
   useEffect(() => {
     if (sammlungOffen) return;
@@ -291,7 +341,9 @@ export function Mememory({
     void api
       .mememorySammlung()
       .then((antwort) => {
-        if (lebt) setGurt(antwort.gurt);
+        if (!lebt) return;
+        setGurt(antwort.gurt);
+        gesammelt.current = new Set(antwort.gesammelt.map((zeile) => zeile.kennung));
       })
       .catch(() => {
         /* Ohne Gurt bleibt der Emoji-Knopf. */
@@ -513,6 +565,25 @@ export function Mememory({
     };
   }, [sicht?.motive.join(',')]);
 
+  /**
+   * Ein Motiv in die Sammlung melden.
+   *
+   * Einzeln und sofort, seit dem 27. August: Gemeldet wird nur noch das
+   * selbst geholte Paar, und davon gibt es je Partie hoechstens zwoelf. Der
+   * alte Bund mit Verzoegerung war noetig, solange JEDE umgedrehte Karte
+   * eine Meldung ausloeste.
+   *
+   * Was nicht durchkommt, reist beim naechsten Mal mit. Der Deckel von 40
+   * ist der des Servers (MELDUNG_MAX).
+   */
+  const melde = useCallback((kennung: string): void => {
+    const stapel = [...new Set([kennung, ...nachtrag.current])].slice(-40);
+    nachtrag.current = [];
+    void api.mememoryGesehen(stapel).catch(() => {
+      nachtrag.current = [...new Set([...stapel, ...nachtrag.current])].slice(-40);
+    });
+  }, []);
+
   /** Klangausloeser. Verglichen wird gegen den vorigen Stand, nicht gegen die Zeit. */
   const vorigeOffen = useRef<number[]>([]);
   const vorigePause = useRef<MememorySicht['pause']>(null);
@@ -526,18 +597,44 @@ export function Mememory({
 
     if (sicht.pause !== vorigePause.current) {
       if (sicht.pause === 'treffer') {
-        spieleKlang(sicht.dran === eigenerSitz ? 'treffer' : 'gefunden');
         /*
-         * Der Name des gefundenen Paares blitzt auf.
+         * Der Name des gefundenen Paares blitzt auf, und wenn es das eigene
+         * war, wandert das Motiv in die Sammlung.
          *
          * Die Kennung steht in der Sicht an jedem der beiden offenen
-         * Plaetze — waehrend der Schaupause sind sie aufgedeckt. Hat das
-         * Motiv keinen Namen (alle 88 Grundmotive), passiert nichts.
+         * Plaetze — waehrend der Schaupause sind sie aufgedeckt. Wem das
+         * Paar gehoert, steht in `besitzer` und nicht in `dran`: Das ist
+         * dasselbe, solange die Schaupause laeuft, aber `besitzer` sagt es
+         * ueber den Platz und haelt auch dann noch, wenn irgendwann einmal
+         * jemand anderes den Zug bekommt.
          */
         const platz = sicht.offen[0];
         const kennung = platz === undefined ? null : sicht.feld[platz];
+        const wer = platz === undefined ? null : sicht.besitzer[platz];
+        const meins = wer !== null && wer === eigenerSitz;
+        spieleKlang(meins ? 'treffer' : 'gefunden');
+
+        /*
+         * Gesammelt wird NUR das selbst geholte Paar.
+         *
+         * Bis zum 27. August zaehlte jede umgedrehte Karte — auch die
+         * einzelne, auch die des Gegners. Damit war die Sammlung nach drei
+         * Partien voll und bedeutete nichts mehr. Jetzt kostet ein Bild
+         * einen Punkt.
+         */
+        let frisch = false;
+        if (meins && kennung && !gesammelt.current.has(kennung)) {
+          gesammelt.current.add(kennung);
+          frisch = true;
+          melde(kennung);
+        }
+
+        // Ohne Namen und ohne Sammlungshinweis blitzt gar nichts auf — ein
+        // leeres Band ueber dem Brett waere schlechter als nichts.
         const name = kennung ? motivNamen[kennung] : undefined;
-        if (name) setNamensblitz({ nr: (blitzNr.current += 1), name });
+        if (name || frisch) {
+          setNamensblitz({ nr: (blitzNr.current += 1), name, neu: frisch });
+        }
       } else if (sicht.pause === 'daneben') {
         spieleKlang('daneben');
       }
@@ -550,44 +647,7 @@ export function Mememory({
         spieleKlang(sicht.sieger === eigenerSitz ? 'sieg' : 'niederlage');
       }
     }
-  }, [sicht, eigenerSitz, motivNamen]);
-
-  /**
-   * Aufgedeckte Motive in die Sammlung melden.
-   *
-   * Der Client meldet, weil nur er weiss, was aufgedeckt wurde — der Server
-   * muesste dafuer in den Spielzustand sehen, und das ist die Grenze, die
-   * diese Plattform nicht ueberschreitet. Gebuendelt und mit kurzer
-   * Verzoegerung: Auf einem Brett faellt sonst bei jedem Tipp eine Anfrage
-   * an. Was einmal gemeldet ist, wird in dieser Sitzung nicht noch einmal
-   * geschickt.
-   */
-  useEffect(() => {
-    if (!sicht) return;
-    const neue = sicht.feld.filter(
-      (kennung): kennung is string => !!kennung && !gemeldet.current.has(kennung),
-    );
-    if (neue.length === 0) return;
-    for (const kennung of neue) gemeldet.current.add(kennung);
-
-    if (meldeUhr.current !== null) window.clearTimeout(meldeUhr.current);
-    const stapel = [...gemeldet.current];
-    meldeUhr.current = window.setTimeout(() => {
-      meldeUhr.current = null;
-      void api.mememoryGesehen(stapel).catch(() => {
-        // Eine verlorene Meldung kostet ein Bild in der Sammlung, nicht die
-        // Partie. Der naechste Treffer meldet ohnehin wieder alles mit.
-      });
-    }, 1200);
-  }, [sicht]);
-
-  /** Beim Verlassen: eine angefangene Meldung nicht verschlucken. */
-  useEffect(
-    () => () => {
-      if (meldeUhr.current !== null) window.clearTimeout(meldeUhr.current);
-    },
-    [],
-  );
+  }, [sicht, eigenerSitz, motivNamen, melde]);
 
   /**
    * Der Namensblitz raeumt sich selbst weg.
@@ -810,8 +870,11 @@ export function Mememory({
         <div className="mm-menue-mitte">
           <h1 className="mm-titel">Suche läuft</h1>
           <p className="mm-untertitel">
+            {/* Die Platzzahl kommt vom Tisch und steht nicht als 2 im Text:
+                Sobald es Tische zu dritt und zu viert gibt, stimmt eine
+                festgeschriebene Zwei nur noch manchmal. */}
             {tisch.status === 'open'
-              ? `${besetzt} von 2 Plätzen besetzt`
+              ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
               : 'Verbindung wird aufgebaut…'}
           </p>
           <div className="mm-punkte-lauf" aria-hidden="true">
@@ -837,6 +900,16 @@ export function Mememory({
       : [...sicht.offen, getippt.platz];
   const deckeFarbe = sicht.fertig ? 'weiss' : farbeVon(sicht.dran);
   /**
+   * Nur die Decken, die dieser Tisch brauchen kann.
+   *
+   * Es gibt fuenf Dateien (weiss und vier Spielerfarben), aber ein Tisch zu
+   * zweit sieht nie mehr als drei davon. Alle fuenf ins Blatt zu haengen
+   * kostete den Spieler 50 kB Ladezeit fuer Bilder, die nie zu sehen sind —
+   * und die Ladezeit ist bei diesem Spiel die Zahl, an der alles haengt
+   * (docs/ASSETS-MEMEMORY.md).
+   */
+  const decken = [...new Set(['weiss', ...sitze.map(farbeVon)])];
+  /**
    * Der Gegner ist am Zug — dann liegt das ganze Brett blasser da.
    *
    * Das war vorher ein Zufall: Solange man nicht dran war, trugen ALLE Karten
@@ -856,12 +929,24 @@ export function Mememory({
     tisch.send({ typ: 'aufdecken', platz });
   };
 
-  /** Ein gewaehltes Motiv ueber den Tisch schicken. */
+  /** Die eigene Ecke — von dort starten die eigenen Reaktionen. */
+  const eigeneEcke = eckeVon(eigenerSitz, eigenerSitz, sitze);
+
+  /** Die Sitze fuer den Abschlussstand: der eigene zuerst, dann der Reihe nach. */
+  const ich = sitze.indexOf(eigenerSitz);
+  const standReihe = ich < 0 ? sitze : [...sitze.slice(ich), ...sitze.slice(0, ich)];
+
+  /**
+   * Ein gewaehltes Motiv ueber den Tisch schicken.
+   *
+   * Eines je Sekunde, nicht viermal wie beim Emoji: Ein Meme ist ein Bild
+   * quer ueber das Brett, kein Zeichen am Rand. Der Server deckelt dasselbe.
+   */
   const wirfMotiv = (kennung: string): void => {
     const jetzt = Date.now();
-    if (jetzt - letzteReaktion.current < REAKTION_PAUSE_MS) return;
-    letzteReaktion.current = jetzt;
-    zeigeFlieger(0, 'hoch', kennung);
+    if (jetzt - letzteMotivReaktion.current < MOTIV_PAUSE_MS) return;
+    letzteMotivReaktion.current = jetzt;
+    zeigeFlieger(0, eigeneEcke, kennung);
     tisch.sendeReaktion(0, kennung);
   };
 
@@ -875,7 +960,7 @@ export function Mememory({
     // Genau das, was auf dem Knopf steht. Beide Seiten schlagen dieselbe
     // Nummer im selben Vorrat nach, also fliegt drueben dasselbe Zeichen.
     const zeichen = angeboten;
-    zeigeFlieger(zeichen, 'hoch');
+    zeigeFlieger(zeichen, eigeneEcke);
     tisch.sendeReaktion(zeichen);
 
     /*
@@ -906,27 +991,53 @@ export function Mememory({
    * Einladung, sich am selben Abend unter drei Namen zu zeigen; die
    * Plattform hat ohnehin einen, und der steht auch auf jeder Rangliste.
    */
-  const namenVon = (sitz: number): string =>
-    tisch.table?.seats.find((platz) => platz.seat === sitz)?.displayName ||
-    (sitz === eigenerSitz ? 'Du' : 'Gegner');
+  const namenVon = (sitz: number): string => {
+    const platz = tisch.table?.seats.find((eintrag) => eintrag.seat === sitz);
+    if (platz?.displayName) return platz.displayName;
+    // Ein Bot hat keinen Anzeigenamen. "Sitz 2" waere richtig und nichtssagend
+    // — an der Ecke soll stehen, gegen WEN man spielt.
+    if (platz?.isBot) return 'KI';
+    return sitz === eigenerSitz ? 'Du' : `Sitz ${sitz + 1}`;
+  };
 
   return (
     <main className="mm-buehne" data-dran={deckeFarbe}>
-      {/* Drei Bilder uebereinander statt eines eingefaerbten: Der Farbwechsel
-          beim Zugwechsel wird so eine Ueberblendung und kein Bildsprung. */}
+      {/* Mehrere Bilder uebereinander statt eines eingefaerbten: Der
+          Farbwechsel beim Zugwechsel wird so eine Ueberblendung und kein
+          Bildsprung. */}
       <div className="mm-grund" aria-hidden="true">
-        <img src="/mememory/decke-weiss.webp" alt="" data-an={deckeFarbe === 'weiss'} />
-        <img src="/mememory/decke-blau.webp" alt="" data-an={deckeFarbe === 'blau'} />
-        <img src="/mememory/decke-rot.webp" alt="" data-an={deckeFarbe === 'rot'} />
+        {decken.map((farbe) => (
+          <img
+            key={farbe}
+            src={`/mememory/decke-${farbe}.webp`}
+            alt=""
+            data-an={deckeFarbe === farbe}
+          />
+        ))}
       </div>
 
-      <header className="mm-leiste oben" data-farbe={farbeVon(gegnerSitz)}>
-        <button className="mm-raus" type="button" onClick={onBack} aria-label="Spiel verlassen">
-          ←
-        </button>
-        <span className="mm-name">{namenVon(gegnerSitz)}</span>
-        <span className="mm-stand">{sicht.punkte[gegnerSitz] ?? 0}</span>
-      </header>
+      <button className="mm-raus" type="button" onClick={onBack} aria-label="Spiel verlassen">
+        ←
+      </button>
+
+      {/*
+        * Vier Ecken statt zweier Leisten.
+        *
+        * Jeder sieht sich selbst unten links, der Gegner sitzt gegenueber.
+        * Der Puck steht bei dem, der am Zug ist.
+        *
+        * Massgeblich ist `dran` und NICHT `amZug`: Waehrend der Schaupause
+        * ist streng genommen niemand am Zug, aber der Puck verschwaende dann
+        * nach jedem zweiten Aufdecker fuer eine Sekunde und kaeme wieder —
+        * ein Blinken, kein Wandern. Die Tischdecke haelt es genauso.
+        */}
+      <Ecken
+        sitze={sitze}
+        eigenerSitz={eigenerSitz}
+        punkte={sicht.punkte}
+        nameVon={namenVon}
+        dran={sicht.fertig ? null : sicht.dran}
+      />
 
       <div className="mm-mitte">
         <div
@@ -990,7 +1101,14 @@ export function Mememory({
         */}
       {namensblitz && (
         <div className="mm-namensblitz" aria-hidden="true">
-          <span key={namensblitz.nr}>{namensblitz.name}</span>
+          <span key={namensblitz.nr}>
+            {namensblitz.name}
+            {/* Der Sammlungshinweis haengt UNTER dem Namen und laeuft in
+                derselben Animation mit — zwei getrennte Einblendungen
+                uebereinander waeren zwei Dinge, die um denselben Blick
+                streiten. */}
+            {namensblitz.neu && <em className="mm-blitz-neu">Gesammelt</em>}
+          </span>
         </div>
       )}
 
@@ -1041,26 +1159,32 @@ export function Mememory({
       </div>
       )}
 
-      <footer className="mm-leiste unten" data-farbe={farbeVon(eigenerSitz)}>
-        <span className="mm-name">{namenVon(eigenerSitz)}</span>
-        <span className="mm-zug">{meinZug ? 'Du bist dran' : ''}</span>
-        <span className="mm-stand">{sicht.punkte[eigenerSitz] ?? 0}</span>
-      </footer>
-
+      {/*
+        * Jeder Flug ist ZWEI Knoten, und das ist kein Versehen.
+        *
+        * Aussen ein Kasten ueber die ganze Buehne, innen das Zeichen an der
+        * Ecke des Absenders. Bewegt wird der aeussere: Seine
+        * Prozentangaben rechnen gegen die Buehne, ein Weg von "Ecke zur
+        * Mitte" ist damit derselbe Bruchteil auf jedem Geraet. Der innere
+        * traegt nur die Lage. Ohne diese Teilung muesste die Strecke in
+        * Pixeln ausgerechnet und bei jeder Drehung des Handys neu gemessen
+        * werden.
+        */}
       <div className="mm-flug" aria-hidden="true">
         {flieger.map((f) => (
           <span
             key={f.id}
             className="mm-flieger"
-            data-richtung={f.richtung}
-            data-motiv={f.motiv ? '' : undefined}
+            data-ecke={f.ecke}
             style={{ '--mm-ab': `${f.ab}px` } as React.CSSProperties}
           >
-            {f.motiv ? (
-              <img src={motivBildPfad(f.motiv)} alt="" draggable={false} />
-            ) : (
-              (REAKTIONEN[f.zeichen] ?? REAKTIONEN[0])
-            )}
+            <span className="mm-flieger-koerper" data-motiv={f.motiv ? '' : undefined}>
+              {f.motiv ? (
+                <img src={motivBildPfad(f.motiv)} alt="" draggable={false} />
+              ) : (
+                (REAKTIONEN[f.zeichen] ?? REAKTIONEN[0])
+              )}
+            </span>
           </span>
         ))}
       </div>
@@ -1077,10 +1201,16 @@ export function Mememory({
                   ? 'Gewonnen!'
                   : 'Verloren'}
             </h2>
+            {/* Der eigene Stand zuerst, dann die anderen in Sitzreihenfolge —
+                dieselbe Drehung wie bei den Ecken. "7 : 5" liest sich
+                anders als "5 : 7", und gemeint ist immer das eigene zuerst. */}
             <p className="mm-ende-stand">
-              <b data-farbe={farbeVon(eigenerSitz)}>{sicht.punkte[eigenerSitz] ?? 0}</b>
-              <span>:</span>
-              <b data-farbe={farbeVon(gegnerSitz)}>{sicht.punkte[gegnerSitz] ?? 0}</b>
+              {standReihe.map((sitz, i) => (
+                <Fragment key={sitz}>
+                  {i > 0 && <span>:</span>}
+                  <b data-farbe={farbeVon(sitz)}>{sicht.punkte[sitz] ?? 0}</b>
+                </Fragment>
+              ))}
             </p>
             <button
               className="mm-suchen"

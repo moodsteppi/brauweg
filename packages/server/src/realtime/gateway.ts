@@ -73,6 +73,15 @@ interface Connection {
   /** Wann diese Verbindung zuletzt eine Reaktion abgesetzt hat. */
   letzteReaktion: number;
   /**
+   * Wann diese Verbindung zuletzt eine Reaktion MIT MOTIV abgesetzt hat.
+   *
+   * Ein eigener Deckel neben `letzteReaktion`, weil ein Bild etwas anderes
+   * ist als ein Zeichen: Das Emoji sitzt am Rand, das Motiv fliegt quer
+   * ueber das Brett — und der Gegner will sich in derselben Zeit Karten
+   * merken. Eines je Sekunde statt vier.
+   */
+  letztesMotiv: number;
+  /**
    * Wie weit diese Verbindung mit dem anwachsenden Teil der Sicht beliefert
    * ist (GameModule.viewCursor). Nur Feldherr hat so einen Teil; bei allen
    * anderen bleibt der Wert 0 und aendert nichts.
@@ -400,6 +409,7 @@ export class Gateway {
         imFenster: 0,
         letzterEmote: 0,
         letzteReaktion: 0,
+        letztesMotiv: 0,
         letzterTakt: 0,
         sichtStand: null,
         /* Bis zum `join` gilt die vorsichtigste Annahme: alles vollstaendig. */
@@ -732,7 +742,8 @@ export class Gateway {
    *
    *   1. **Takt.** Ein Zuruf darf alle zwei Sekunden kommen (EMOTE_PAUSE_MS),
    *      eine Reaktion viermal je Sekunde. Sie ist ein Zwischenruf, kein
-   *      Statement.
+   *      Statement. Traegt sie ein MOTIV, gilt seit dem 27. August eine
+   *      Sekunde: Ein Bild quer ueber das Brett ist kein Zwischenruf mehr.
    *   2. **Kein Besitz.** Zurufe muessen gekauft sein. Reaktionen gehoeren
    *      zum Spiel und kosten nichts — eine Abfrage in der Datenbank je Tipp
    *      waere bei diesem Takt ohnehin nicht vertretbar.
@@ -755,6 +766,11 @@ export class Gateway {
     // ist nicht die Stelle, an der eine Grenze durchgesetzt wird.
     const jetzt = Date.now();
     if (jetzt - connection.letzteReaktion < 250) return;
+    // Ein Motiv je Sekunde. Ein Bild quer ueber das Brett ist etwas anderes
+    // als ein Zeichen am Rand — und wer sich Karten merken will, braucht die
+    // Sekunde. Gedeckelt wird je Verbindung, wie schon beim Zuruf und beim
+    // Takt: Der Sitz haengt an der Partie, die Bremse an der Leitung.
+    if (message.motiv && jetzt - connection.letztesMotiv < 1000) return;
 
     const party = this.runtime.get(message.tableId);
     if (!party) return;
@@ -763,6 +779,7 @@ export class Gateway {
     if (seat === null) return;
 
     connection.letzteReaktion = jetzt;
+    if (message.motiv) connection.letztesMotiv = jetzt;
 
     const nachricht: ReaktionMessage = {
       v: ENVELOPE_VERSION,
