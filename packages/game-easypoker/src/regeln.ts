@@ -1,17 +1,14 @@
 /**
- * Regelsatz von Easy Poker.
+ * Regelsatz von Poker.
  *
  * Bewusst klein: Startstapel und die beiden Blinds, mehr nicht. Was hier
- * ausdruecklich NICHT hineingehoert, ist alles, was mit dem Geldbeutel der
- * Plattform zu tun hat — Einsatz, Topf, Preise bleiben draussen (game-api,
- * Grundsatz 4).
+ * ausdruecklich NICHT hineingehoert, ist der Geldbeutel der Plattform —
+ * BroJetons, Shop, Auszahlung bleiben draussen (game-api, Grundsatz 4).
  *
- * Die Jetons dieses Spiels sind Punkte einer Partie, keine Waehrung: Sie
- * entstehen beim Geben, verschwinden am Ende und lassen sich weder kaufen
- * noch in Muenzen oder Edelsteine umtauschen. Genau darauf beruht die
- * Einordnung in `docs/SPIELE-IDEEN.md` ("Regelwerk und Waehrung bleiben
- * getrennt") — wer daran ruettelt, macht aus einem Kartenspiel ein
- * Gluecksspiel.
+ * `startJetons` ist eine Zahl. Dass die Plattform sie als BroJetons fuehrt,
+ * weiss dieses Paket nicht und darf es nicht wissen: Sonst waere das
+ * Regelwerk an eine Waehrung gebunden, und das zweite Spiel mit Chips
+ * muesste denselben Beutel nachbauen.
  */
 
 export interface EasyPokerRegeln {

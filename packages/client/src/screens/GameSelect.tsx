@@ -1035,6 +1035,8 @@ function PaketKachel({
       {paket.gibt ? (
         paket.gibt.waehrung === 'coins' ? (
           <img className="hub-angebot-art" src="/hub/muenze.png" alt="" draggable={false} />
+        ) : paket.gibt.waehrung === 'broJetons' ? (
+          <span className="hub-angebot-art poker-jeton-zeichen" aria-hidden="true" />
         ) : (
           <EdelsteinIcon className="hub-angebot-art shop-paket-stein" />
         )
@@ -1068,6 +1070,14 @@ function PaketKachel({
  */
 function preisSchild(paket: Paket): React.JSX.Element | string {
   if (paket.cents !== null) return euro(paket.cents);
+  if (paket.coins !== null) {
+    return (
+      <>
+        {paket.coins}
+        <img className="shop-preis-muenze" src="/hub/muenze.png" alt="" />
+      </>
+    );
+  }
   if (paket.gems === null) return '—';
   return (
     <>
@@ -1147,6 +1157,7 @@ function KaufFrage({
       : frage.art === 'ware'
         ? frage.ware.preis.gems
         : (frage.paket.gems ?? 0);
+  const muenzen = frage.art === 'paket' ? frage.paket.coins : null;
 
   return (
     <div className="doko-sheet" onClick={onAbbrechen} role="presentation">
@@ -1220,7 +1231,15 @@ function KaufFrage({
         ) : (
           <>
             <p className="ks-kauf-preis">
-              {gems} {gems === 1 ? t('waehrung.gems.eins') : t('waehrung.gems')}
+              {muenzen !== null ? (
+                <>
+                  {muenzen} {muenzen === 1 ? t('waehrung.coins.eins') : t('waehrung.coins')}
+                </>
+              ) : (
+                <>
+                  {gems} {gems === 1 ? t('waehrung.gems.eins') : t('waehrung.gems')}
+                </>
+              )}
             </p>
             <div className="hub-knopfreihe hub-knopfreihe--a">
               <button type="button" className="hub-knopf hub-knopf--a" onClick={onAbbrechen}>
@@ -1412,6 +1431,24 @@ function Shop({
         <p className="shop-hinweis muted">
           Münzen gibt es auch fürs Spielen: aus der Tagestruhe, den Stufentruhen und den
           Tagesaufgaben. Gekaufte sind derselbe Stand, nur früher da.
+        </p>
+      </Tafel>
+
+      <Tafel titel="BroJetons" zusatz="Für Poker">
+        <div className="hub-reihe hub-reihe--drei">
+          {(shop?.jetonpakete ?? []).map((paket) => (
+            <PaketKachel
+              key={paket.id}
+              paket={paket}
+              laeuft={laeuft}
+              onBald={onBald}
+              onKaufen={(p) => setFrage({ art: 'paket', paket: p })}
+            />
+          ))}
+        </div>
+        <p className="shop-hinweis muted">
+          BroJetons setzt du am Pokertisch. Zurück in Münzen oder Edelsteine gehen sie nicht —
+          wer gewinnt, hat mehr Chips für die nächste Runde.
         </p>
       </Tafel>
 

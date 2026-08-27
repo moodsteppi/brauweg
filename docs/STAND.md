@@ -257,6 +257,13 @@ Minuten live.
 > Sitzungsbrowser lässt sich kein Bildschirmfoto machen; belegt sind Aufbau,
 > Maße, Farben, Kontraste und Verhalten, nicht der Auftritt. Vor `main`
 > gehört das einmal an ein echtes Handy.
+>
+> **BroJetons (27. August 2026).** Poker hat eine eigene Chip-Währung:
+> `account.bro_jetons`, Startstapel 1000, im Shop gegen Münzen (40/100/280
+> für 500/1.500/5.000). Zurück in Münzen gehen sie nicht. Wer den Tisch
+> aufmacht, stellt Mindest-Einsatz und Blinds. Die Plattform zieht den
+> Buy-in beim Partiestart ein und zahlt den Reststapel am Ende aus
+> (`chip_lock`); das Spielmodul sieht weiter nur Zahlen (`chipStackField`).
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder

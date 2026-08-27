@@ -18,6 +18,7 @@ test('die Beschreibung passt zur Plattform', () => {
   assert.equal(easypoker.meta.rotationSize(2), 2);
   assert.equal(easypoker.meta.rotationSize(6), 6);
   assert.equal(easypoker.meta.xpBasisZaehltKarten, false);
+  assert.equal(easypoker.meta.chipStackField, 'startJetons');
 });
 
 test('der Regelsatz wird gegen Spielerzahl und Unsinn geprueft', () => {

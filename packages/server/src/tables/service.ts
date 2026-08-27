@@ -15,6 +15,7 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { RuleSetInvalidError, badRequest, conflict, forbidden, notFound } from '../errors.js';
 import { requireModule } from '../games/registry.js';
+import { einsatzVon, stakesVon, verlangen } from '../brojetons.js';
 
 /**
  * Oeffentliche und private Tische muessen in einer Sitzung durchlaufen, daher
@@ -161,6 +162,11 @@ export async function createTable(db: Db, input: CreateTableInput) {
     clubId,
   });
 
+  const chipFeld = module.meta.chipStackField;
+  if (chipFeld) {
+    await verlangen(db, input.accountId, einsatzVon(input.config, chipFeld));
+  }
+
   // Erst nach allen Pruefungen (auch der des Regelsatzes in saveRuleSet):
   // Ein abgelehnter Tisch soll den alten nicht kosten.
   await leaveOtherWaitingTables(db, input.accountId);
@@ -277,6 +283,7 @@ export async function listTables(db: Db, filter: LobbyFilter) {
     .from(s.ruleSet)
     .where(inArray(s.ruleSet.id, tables.map((t) => t.ruleSetId)));
   const regelZahl = new Map<string, number>();
+  const stakesZahl = new Map<string, ReturnType<typeof stakesVon>>();
   for (const rs of regelSaetze) {
     const config = rs.config as Record<string, unknown>;
     let anders = 0;
@@ -284,7 +291,9 @@ export async function listTables(db: Db, filter: LobbyFilter) {
       if (typeof wert !== 'boolean') continue;
       if (config[schluessel] !== wert) anders += 1;
     }
-    regelZahl.set(`${rs.id}:${rs.version}`, anders);
+    const key = `${rs.id}:${rs.version}`;
+    regelZahl.set(key, anders);
+    stakesZahl.set(key, stakesVon(rs.config));
   }
 
   return tables.map((table) => {
@@ -298,6 +307,8 @@ export async function listTables(db: Db, filter: LobbyFilter) {
       host: gastgeber ? (namen.get(gastgeber) ?? null) : null,
       /** Anzahl aktiver Sonderregeln. 0 heisst Grundspiel. */
       ruleCount: regelZahl.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? 0,
+      /** Buy-in und Blinds, oder null wenn der Tisch keine Chips kennt. */
+      stakes: stakesZahl.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? null,
     };
   });
 }
@@ -351,6 +362,15 @@ export async function joinTable(db: Db, tableId: string, accountId: string) {
   if (table.visibility === 'club_only') {
     if (!table.clubId) throw forbidden('notClubMember');
     await requireClubMember(db, table.clubId, accountId);
+  }
+
+  const chipFeld = requireModule(table.gameId).meta.chipStackField;
+  if (chipFeld) {
+    const [rs] = await db
+      .select({ config: s.ruleSet.config })
+      .from(s.ruleSet)
+      .where(and(eq(s.ruleSet.id, table.ruleSetId), eq(s.ruleSet.version, table.ruleSetVersion)));
+    if (rs) await verlangen(db, accountId, einsatzVon(rs.config, chipFeld));
   }
 
   // Niemand wartet an zwei Tischen gleichzeitig.

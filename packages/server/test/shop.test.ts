@@ -22,6 +22,7 @@ import {
 } from '../src/kosmetik.js';
 import {
   EDELSTEINPAKETE,
+  JETONPAKETE,
   MUENZPAKETE,
   PAESSE,
   anziehen,
@@ -394,6 +395,7 @@ test('Der Shop zeigt jeden Platz als Regal, mit Besitzstand', async () => {
 
     assert.ok(shop.muenzpakete.length >= 3);
     assert.ok(shop.edelsteinpakete.length >= 3);
+    assert.ok(shop.jetonpakete.length >= 3);
     assert.ok(shop.paesse.length >= 2);
     assert.ok(shop.truhen.length >= 3);
     assert.equal(shop.kurs, MUENZEN_JE_EDELSTEIN, 'der Kurs muss mitgehen');
@@ -469,8 +471,8 @@ test('Ein Muenzpaket kostet Edelsteine und bringt Muenzen', async () => {
     const kauf = await paketKaufen(ctx.db, accountId, 'muenzen-mittel');
     assert.equal(kauf.bezahlt, 100);
     assert.deepEqual(kauf.gibt, { waehrung: 'coins', betrag: 1_500 });
-    assert.deepEqual(kauf.stand, { coins: 1_500, gems: 20 });
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 1_500, gems: 20 });
+    assert.deepEqual(kauf.stand, { coins: 1_500, gems: 20, broJetons: 1000 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 1_500, gems: 20, broJetons: 1000 });
   } finally {
     await ctx.close();
   }
@@ -486,7 +488,7 @@ test('Ohne Edelsteine kein Paket — und keine halben Muenzen', async () => {
       (err: unknown) => err instanceof AppError && err.code === 'gemsInsufficient',
     );
 
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 34 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 34, broJetons: 1000 });
   } finally {
     await ctx.close();
   }
@@ -517,7 +519,31 @@ test('Was nicht gegen Edelsteine zu haben ist, laesst sich nicht so kaufen', asy
       (err: unknown) => err instanceof AppError && err.code === 'packUnknown',
     );
 
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 10_000 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 10_000, broJetons: 1000 });
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('BroJetons kauft man gegen Muenzen, nicht gegen Edelsteine', async () => {
+  const { ctx, accountId } = await konto();
+  try {
+    await gutschreiben(ctx.db, accountId, 'coins', 100);
+    const kauf = await paketKaufen(ctx.db, accountId, 'brojetons-klein');
+    assert.equal(kauf.bezahlt, 40);
+    assert.deepEqual(kauf.gibt, { waehrung: 'broJetons', betrag: 500 });
+    assert.deepEqual(await standVon(ctx.db, accountId), {
+      coins: 60,
+      gems: 0,
+      broJetons: 1500,
+    });
+
+    for (const paket of JETONPAKETE) {
+      assert.ok(paket.coins !== null && paket.coins > 0, `${paket.id}: kostet Muenzen`);
+      assert.equal(paket.gems, null);
+      assert.equal(paket.cents, null);
+      assert.equal(paket.gibt?.waehrung, 'broJetons');
+    }
   } finally {
     await ctx.close();
   }

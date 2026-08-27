@@ -7322,6 +7322,19 @@ main.auth > .muted {
   flex: 0 0 auto;
 }
 
+.shop-preis-muenze {
+  width: 0.72rem;
+  height: 0.72rem;
+  flex: 0 0 auto;
+}
+
+span.hub-angebot-art.poker-jeton-zeichen {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: block;
+  margin: 0.15rem auto 0;
+}
+
 /*
  * Die Truhenkachel im Regal.
  *
@@ -12202,6 +12215,71 @@ main.auth > .muted {
   margin: 0 0 8px;
   font: 600 12px/1.3 system-ui;
   color: #9fbcae;
+}
+
+.poker-guthaben {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(226, 182, 79, 0.35);
+  font: 800 16px/1 system-ui;
+  color: #ffe8a8;
+}
+.poker-guthaben .poker-jeton-zeichen {
+  width: 1.05em;
+  height: 1.05em;
+}
+.poker-guthaben em {
+  font: 600 12px/1 system-ui;
+  color: #cfe3d8;
+  font-style: normal;
+}
+
+.poker-einsatz {
+  margin: 4px 0 14px;
+}
+.poker-einsatz-zeile {
+  margin: 8px 0 10px;
+  font: 700 13px/1.3 system-ui;
+  color: #e2b64f;
+}
+
+.poker-lobby {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.poker-lobby-zeile {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  color: #eef4f0;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 800 15px/1.2 system-ui;
+  cursor: pointer;
+  text-align: left;
+}
+.poker-lobby-zeile em {
+  font: 600 12px/1.3 system-ui;
+  color: #9fbcae;
+  font-style: normal;
+}
+.poker-lobby-zeile:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .poker-warte-sitze {

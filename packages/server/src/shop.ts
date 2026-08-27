@@ -63,7 +63,9 @@ import { KAUFTRUHEN, type Kauftruhe } from './truhen.js';
 import {
   abbuchen,
   edelsteineZuMuenzen,
+  muenzenZuBroJetons,
   MUENZEN_JE_EDELSTEIN,
+  type Guthaben,
   type Stand,
   type Waehrung,
 } from './waehrung.js';
@@ -77,7 +79,7 @@ export interface Paket {
   readonly id: string;
   readonly nameKey: string;
   /** Was drin ist. Null bei Paessen, die kein Guthaben geben. */
-  readonly gibt: { readonly waehrung: Waehrung; readonly betrag: number } | null;
+  readonly gibt: { readonly waehrung: Guthaben; readonly betrag: number } | null;
   /**
    * Anzeigepreis in ganzen Cent, oder null.
    *
@@ -89,6 +91,8 @@ export interface Paket {
   readonly cents: number | null;
   /** Preis in Edelsteinen, oder null, wenn es dafuer nicht zu haben ist. */
   readonly gems: number | null;
+  /** Preis in Muenzen, oder null — so kosten die BroJeton-Pakete. */
+  readonly coins: number | null;
   /** Prozent Aufschlag gegenueber dem kleinsten Paket — der "Spartipp". */
   readonly bonus: number | null;
   /**
@@ -112,9 +116,9 @@ export interface Paket {
  * Paket eine Muenzquelle macht, gegen die sich Spielen nicht mehr lohnt.
  */
 export const MUENZPAKETE: readonly Paket[] = [
-  { id: 'muenzen-klein', nameKey: 'shop.muenzen-klein', gibt: { waehrung: 'coins', betrag: 500 }, cents: null, gems: 35, bonus: null, kaufbar: true },
-  { id: 'muenzen-mittel', nameKey: 'shop.muenzen-mittel', gibt: { waehrung: 'coins', betrag: 1_500 }, cents: null, gems: 100, bonus: 5, kaufbar: true },
-  { id: 'muenzen-gross', nameKey: 'shop.muenzen-gross', gibt: { waehrung: 'coins', betrag: 4_000 }, cents: null, gems: 250, bonus: 12, kaufbar: true },
+  { id: 'muenzen-klein', nameKey: 'shop.muenzen-klein', gibt: { waehrung: 'coins', betrag: 500 }, cents: null, gems: 35, coins: null, bonus: null, kaufbar: true },
+  { id: 'muenzen-mittel', nameKey: 'shop.muenzen-mittel', gibt: { waehrung: 'coins', betrag: 1_500 }, cents: null, gems: 100, coins: null, bonus: 5, kaufbar: true },
+  { id: 'muenzen-gross', nameKey: 'shop.muenzen-gross', gibt: { waehrung: 'coins', betrag: 4_000 }, cents: null, gems: 250, coins: null, bonus: 12, kaufbar: true },
 ];
 
 /**
@@ -125,9 +129,9 @@ export const MUENZPAKETE: readonly Paket[] = [
  * Bezahlweg.
  */
 export const EDELSTEINPAKETE: readonly Paket[] = [
-  { id: 'edelsteine-klein', nameKey: 'shop.edelsteine-klein', gibt: { waehrung: 'gems', betrag: 50 }, cents: 299, gems: null, bonus: null, kaufbar: false },
-  { id: 'edelsteine-mittel', nameKey: 'shop.edelsteine-mittel', gibt: { waehrung: 'gems', betrag: 150 }, cents: 799, gems: null, bonus: 12, kaufbar: false },
-  { id: 'edelsteine-gross', nameKey: 'shop.edelsteine-gross', gibt: { waehrung: 'gems', betrag: 400 }, cents: 1_899, gems: null, bonus: 26, kaufbar: false },
+  { id: 'edelsteine-klein', nameKey: 'shop.edelsteine-klein', gibt: { waehrung: 'gems', betrag: 50 }, cents: 299, gems: null, coins: null, bonus: null, kaufbar: false },
+  { id: 'edelsteine-mittel', nameKey: 'shop.edelsteine-mittel', gibt: { waehrung: 'gems', betrag: 150 }, cents: 799, gems: null, coins: null, bonus: 12, kaufbar: false },
+  { id: 'edelsteine-gross', nameKey: 'shop.edelsteine-gross', gibt: { waehrung: 'gems', betrag: 400 }, cents: 1_899, gems: null, coins: null, bonus: 26, kaufbar: false },
 ];
 
 /**
@@ -145,13 +149,26 @@ export const EDELSTEINPAKETE: readonly Paket[] = [
  * so wenig wie an allem Preislichen hier.
  */
 export const PAESSE: readonly Paket[] = [
-  { id: 'vip-pass', nameKey: 'shop.vip-pass', gibt: null, cents: 499, gems: null, bonus: null, kaufbar: false },
-  { id: 'season-pass', nameKey: 'shop.season-pass', gibt: null, cents: null, gems: 150, bonus: null, kaufbar: false },
+  { id: 'vip-pass', nameKey: 'shop.vip-pass', gibt: null, cents: 499, gems: null, coins: null, bonus: null, kaufbar: false },
+  { id: 'season-pass', nameKey: 'shop.season-pass', gibt: null, cents: null, gems: 150, coins: null, bonus: null, kaufbar: false },
+];
+
+/**
+ * BroJetons — **gegen Muenzen**.
+ *
+ * Einseitiger Umtausch, bewusst ohne Rueckweg: Wer am Tisch gewinnt, hat mehr
+ * Chips fuer Poker, nicht mehr Huete. Die Staffelung ist dieselbe Idee wie
+ * bei den Muenzpaketen — das grosse Paket gibt mehr BroJetons je Muenze.
+ */
+export const JETONPAKETE: readonly Paket[] = [
+  { id: 'brojetons-klein', nameKey: 'shop.brojetons-klein', gibt: { waehrung: 'broJetons', betrag: 500 }, cents: null, gems: null, coins: 40, bonus: null, kaufbar: true },
+  { id: 'brojetons-mittel', nameKey: 'shop.brojetons-mittel', gibt: { waehrung: 'broJetons', betrag: 1_500 }, cents: null, gems: null, coins: 100, bonus: 20, kaufbar: true },
+  { id: 'brojetons-gross', nameKey: 'shop.brojetons-gross', gibt: { waehrung: 'broJetons', betrag: 5_000 }, cents: null, gems: null, coins: 280, bonus: 43, kaufbar: true },
 ];
 
 /** Alle Pakete an einer Stelle, damit `paketKaufen` eine Kennung findet. */
 const PAKET_NACH_ID = new Map(
-  [...MUENZPAKETE, ...EDELSTEINPAKETE, ...PAESSE].map((paket) => [paket.id, paket]),
+  [...MUENZPAKETE, ...EDELSTEINPAKETE, ...PAESSE, ...JETONPAKETE].map((paket) => [paket.id, paket]),
 );
 
 // ---------------------------------------------------------------------------
@@ -187,6 +204,7 @@ export interface ShopAnsicht {
   readonly paesse: readonly Paket[];
   readonly muenzpakete: readonly Paket[];
   readonly edelsteinpakete: readonly Paket[];
+  readonly jetonpakete: readonly Paket[];
   /** Szenerien, Rueckseiten, Zurufe und Wappen, inklusive der kostenlosen. */
   readonly tischware: readonly RegalWare[];
   /** Truhen, die Edelsteine kosten. Spanne inklusive — sie steht dran. */
@@ -218,6 +236,7 @@ export async function shopFuer(db: Db, accountId: string): Promise<ShopAnsicht> 
     paesse: PAESSE,
     muenzpakete: MUENZPAKETE,
     edelsteinpakete: EDELSTEINPAKETE,
+    jetonpakete: JETONPAKETE,
     /**
      * Ware fuer den Tisch. Kostenlose Stuecke bleiben in der Liste, damit die
      * Auswahl im Client vollstaendig ist — sie tragen Preis 0 und gelten als
@@ -323,11 +342,11 @@ export async function kaufen(
 
 export interface Paketkauf {
   readonly paketId: string;
-  /** Was es gekostet hat, in Edelsteinen. */
+  /** Was es gekostet hat — Edelsteine oder Muenzen, je nach Paket. */
   readonly bezahlt: number;
   /** Was es gebracht hat. */
-  readonly gibt: { readonly waehrung: Waehrung; readonly betrag: number };
-  /** Beide Staende danach — es haben sich beide geaendert. */
+  readonly gibt: { readonly waehrung: Guthaben; readonly betrag: number };
+  /** Die Guthaben danach. */
   readonly stand: Stand;
 }
 
@@ -353,13 +372,17 @@ export async function paketKaufen(
 ): Promise<Paketkauf> {
   const paket = PAKET_NACH_ID.get(paketId);
   if (!paket) throw notFound('packUnknown');
-  if (!paket.kaufbar || paket.gems === null) throw forbidden('packNotForSale');
-  if (paket.gibt === null || paket.gibt.waehrung !== 'coins') {
-    throw forbidden('packNotForSale');
-  }
+  if (!paket.kaufbar || paket.gibt === null) throw forbidden('packNotForSale');
 
-  const stand = await edelsteineZuMuenzen(db, accountId, paket.gems, paket.gibt.betrag);
-  return { paketId: paket.id, bezahlt: paket.gems, gibt: paket.gibt, stand };
+  if (paket.gems !== null && paket.gibt.waehrung === 'coins') {
+    const stand = await edelsteineZuMuenzen(db, accountId, paket.gems, paket.gibt.betrag);
+    return { paketId: paket.id, bezahlt: paket.gems, gibt: paket.gibt, stand };
+  }
+  if (paket.coins !== null && paket.gibt.waehrung === 'broJetons') {
+    const stand = await muenzenZuBroJetons(db, accountId, paket.coins, paket.gibt.betrag);
+    return { paketId: paket.id, bezahlt: paket.coins, gibt: paket.gibt, stand };
+  }
+  throw forbidden('packNotForSale');
 }
 
 /** Wie oben, aber fuer Szenerien, Rueckseiten, Zurufe und Wappen. */

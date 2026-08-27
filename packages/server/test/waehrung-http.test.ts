@@ -208,6 +208,7 @@ test('Der Shop liefert Regale, Pakete und den Besitzstand', async () => {
     assert.equal(shop.regale.length, SLOTS.length);
     assert.ok(shop.muenzpakete.length >= 3);
     assert.ok(shop.edelsteinpakete.length >= 3);
+    assert.ok(shop.jetonpakete.length >= 3);
     assert.ok(shop.paesse.length >= 2);
 
     // Es gibt bewusst keinen Weg, ein Geldpaket zu kaufen.

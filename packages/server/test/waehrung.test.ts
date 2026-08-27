@@ -38,7 +38,7 @@ async function konto(): Promise<{ ctx: TestContext; accountId: string }> {
 test('Ein neues Konto hat null Muenzen und null Edelsteine', async () => {
   const { ctx, accountId } = await konto();
   try {
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 0 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 0, gems: 0, broJetons: 1000 });
   } finally {
     await ctx.close();
   }
@@ -49,14 +49,14 @@ test('Gutschreiben und Abbuchen fuehren beide Waehrungen getrennt', async () => 
   try {
     await gutschreiben(ctx.db, accountId, 'coins', 100);
     await gutschreiben(ctx.db, accountId, 'gems', 7);
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 100, gems: 7 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 100, gems: 7, broJetons: 1000 });
 
     await abbuchen(ctx.db, accountId, 'coins', 40);
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 60, gems: 7 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 60, gems: 7, broJetons: 1000 });
 
     // Muenzen abbuchen darf Edelsteine nie beruehren - es gibt keinen Kurs.
     await abbuchen(ctx.db, accountId, 'gems', 7);
-    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 60, gems: 0 });
+    assert.deepEqual(await standVon(ctx.db, accountId), { coins: 60, gems: 0, broJetons: 1000 });
   } finally {
     await ctx.close();
   }
@@ -144,6 +144,7 @@ test('Ein Testkonto zahlt nicht und sein Stand schrumpft nicht', async () => {
     assert.deepEqual(await standVon(ctx.db, accountId), {
       coins: STAFF_STAND,
       gems: STAFF_STAND,
+      broJetons: STAFF_STAND,
     });
 
     // Abbuchen meldet Erfolg, aber die Spalte bleibt bei null: Der Stand soll
@@ -166,11 +167,28 @@ test('Ein Testkonto zahlt nicht und sein Stand schrumpft nicht', async () => {
 
 test('sichtbarerStand rechnet ohne zweite Abfrage dasselbe', () => {
   assert.deepEqual(
-    sichtbarerStand({ coins: 12, gems: 3, premiumUntil: null, isStaff: false }),
-    { coins: 12, gems: 3 },
+    sichtbarerStand({ coins: 12, gems: 3, broJetons: 9, premiumUntil: null, isStaff: false }),
+    { coins: 12, gems: 3, broJetons: 9 },
   );
   assert.deepEqual(
-    sichtbarerStand({ coins: 12, gems: 3, premiumUntil: null, isStaff: true }),
-    { coins: STAFF_STAND, gems: STAFF_STAND },
+    sichtbarerStand({ coins: 12, gems: 3, broJetons: 9, premiumUntil: null, isStaff: true }),
+    { coins: STAFF_STAND, gems: STAFF_STAND, broJetons: STAFF_STAND },
   );
+});
+
+test('BroJetons sind ein eigenes Guthaben und haben einen eigenen Fehlerschluessel', async () => {
+  const { ctx, accountId } = await konto();
+  try {
+    assert.equal((await standVon(ctx.db, accountId)).broJetons, 1000);
+    await abbuchen(ctx.db, accountId, 'broJetons', 200);
+    assert.equal((await standVon(ctx.db, accountId)).broJetons, 800);
+    await assert.rejects(
+      () => abbuchen(ctx.db, accountId, 'broJetons', 801),
+      (err: unknown) =>
+        err instanceof AppError && err.code === 'broJetonsInsufficient' && err.status === 409,
+    );
+    assert.equal((await standVon(ctx.db, accountId)).coins, 0);
+  } finally {
+    await ctx.close();
+  }
 });

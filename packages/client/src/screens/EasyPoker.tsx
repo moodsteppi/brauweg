@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { api, type TableRow } from '../api';
+import { api, ApiError, type TableRow } from '../api';
 import { cardName, isRed, rankLabel, suitSymbol } from '../i18n';
 import { useTable } from '../useTable';
 
@@ -109,14 +109,49 @@ const NAME_MAX = 16;
 /** Online immer 6-max: wer dazukommt, setzt sich dazu, der Rest kann mit Bots aufgefuellt werden. */
 const ONLINE_SITZE = 6;
 
+type PokerRegeln = { startJetons: number; kleinerBlind: number; grosserBlind: number };
+
 /**
- * Regelsatz, mit dem ein Tisch aufgemacht wird.
- *
- * Muss zu DEFAULT_REGELN in packages/game-easypoker/src/regeln.ts passen.
- * Bewusst ausgeschrieben statt ueber `api.defaults()` geholt: Der Einstieg
- * soll nicht auf eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht.
+ * Drei fertige Einsaetze. Der Host kann sie uebernehmen oder die Zahlen
+ * darunter selbst drehen — Buy-in und Blinds gehoeren an den Tisch, nicht
+ * fest ins Spiel.
  */
-const REGELSATZ = { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 };
+const EINSATZ_VORGABEN: readonly { name: string; regelsatz: PokerRegeln }[] = [
+  { name: 'Locker', regelsatz: { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 } },
+  { name: 'Abend', regelsatz: { startJetons: 500, kleinerBlind: 5, grosserBlind: 10 } },
+  { name: 'Hoch', regelsatz: { startJetons: 2_000, kleinerBlind: 20, grosserBlind: 40 } },
+];
+
+const BUY_IN_STUFEN = [200, 500, 1_000, 2_000, 5_000] as const;
+const SB_STUFEN = [1, 2, 5, 10, 25, 50, 100] as const;
+
+const REGELSATZ_VORGABE = EINSATZ_VORGABEN[0]!.regelsatz;
+
+function blindsZuBuyIn(buyIn: number): Pick<PokerRegeln, 'kleinerBlind' | 'grosserBlind'> {
+  const kleinerBlind = Math.max(1, Math.round(buyIn / 100));
+  return { kleinerBlind, grosserBlind: kleinerBlind * 2 };
+}
+
+function regelsatzOk(r: PokerRegeln): boolean {
+  return r.kleinerBlind >= 1 && r.grosserBlind > r.kleinerBlind && r.startJetons >= r.grosserBlind * 10;
+}
+
+function gleicherEinsatz(zeile: TableRow, r: PokerRegeln): boolean {
+  const s = zeile.stakes;
+  return (
+    !!s &&
+    s.startJetons === r.startJetons &&
+    s.kleinerBlind === r.kleinerBlind &&
+    s.grosserBlind === r.grosserBlind
+  );
+}
+
+function pokerFehler(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.code === 'broJetonsInsufficient') {
+    return 'Dafür fehlen dir BroJetons. Im Shop gibt es welche gegen Münzen.';
+  }
+  return fallback;
+}
 
 /**
  * Rund zwoelf Haende, auf ein Vielfaches der Sitzzahl gehoben — die Plattform
@@ -399,6 +434,88 @@ function Jetonzahl({ wert }: { wert: number }): React.JSX.Element {
   return <span className="poker-jetons">{useLaufendeZahl(wert)}</span>;
 }
 
+function Einsatzwahl({
+  regelsatz,
+  onChange,
+}: {
+  regelsatz: PokerRegeln;
+  onChange: (r: PokerRegeln) => void;
+}): React.JSX.Element {
+  const vorgabe = EINSATZ_VORGABEN.find(
+    (v) =>
+      v.regelsatz.startJetons === regelsatz.startJetons &&
+      v.regelsatz.kleinerBlind === regelsatz.kleinerBlind &&
+      v.regelsatz.grosserBlind === regelsatz.grosserBlind,
+  );
+  const bbStufen = [...new Set(SB_STUFEN.map((n) => n * 2))];
+
+  return (
+    <section className="poker-einsatz">
+      <div className="poker-sitze-wahl" role="group" aria-label="Einsatzvorgabe">
+        {EINSATZ_VORGABEN.map((v) => (
+          <button
+            key={v.name}
+            className="poker-sitze-knopf"
+            type="button"
+            data-an={vorgabe?.name === v.name || undefined}
+            onClick={() => onChange(v.regelsatz)}
+          >
+            {v.name}
+          </button>
+        ))}
+      </div>
+      <p className="poker-einsatz-zeile">
+        Mindestens {regelsatz.startJetons} · Blinds {regelsatz.kleinerBlind}/
+        {regelsatz.grosserBlind}
+      </p>
+      <div className="poker-sitze-wahl" role="group" aria-label="Mindest-BroJetons">
+        {BUY_IN_STUFEN.map((zahl) => (
+          <button
+            key={zahl}
+            className="poker-sitze-knopf"
+            type="button"
+            data-an={regelsatz.startJetons === zahl || undefined}
+            onClick={() => onChange({ startJetons: zahl, ...blindsZuBuyIn(zahl) })}
+          >
+            {zahl}
+          </button>
+        ))}
+      </div>
+      <p className="poker-sitze-text">Mindest-BroJetons</p>
+      <div className="poker-sitze-wahl" role="group" aria-label="Small Blind">
+        {SB_STUFEN.map((zahl) => (
+          <button
+            key={zahl}
+            className="poker-sitze-knopf"
+            type="button"
+            data-an={regelsatz.kleinerBlind === zahl || undefined}
+            onClick={() =>
+              onChange({ ...regelsatz, kleinerBlind: zahl, grosserBlind: zahl * 2 })
+            }
+          >
+            {zahl}
+          </button>
+        ))}
+      </div>
+      <p className="poker-sitze-text">Small Blind</p>
+      <div className="poker-sitze-wahl" role="group" aria-label="Big Blind">
+        {bbStufen.map((zahl) => (
+          <button
+            key={zahl}
+            className="poker-sitze-knopf"
+            type="button"
+            data-an={regelsatz.grosserBlind === zahl || undefined}
+            onClick={() => onChange({ ...regelsatz, grosserBlind: zahl })}
+          >
+            {zahl}
+          </button>
+        ))}
+      </div>
+      <p className="poker-sitze-text">Big Blind</p>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Der Bildschirm
 // ---------------------------------------------------------------------------
@@ -420,6 +537,11 @@ export function EasyPoker({
   const [sitzeWahl, setSitzeWahl] = useState(2);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
+  const [regelsatz, setRegelsatz] = useState<PokerRegeln>(REGELSATZ_VORGABE);
+  const [broJetons, setBroJetons] = useState<number | null>(null);
+  const [lobbyOffen, setLobbyOffen] = useState(false);
+  const [tische, setTische] = useState<TableRow[] | null>(null);
+  const [tischEinsatz, setTischEinsatz] = useState<PokerRegeln | null>(null);
   /** Angetippte eigene Karte — sie hebt sich an, damit man sie besser sieht. */
   const [gehobeneKarte, setGehobeneKarte] = useState<number | null>(null);
   /**
@@ -470,6 +592,48 @@ export function EasyPoker({
     };
   }, [sicht !== null]);
 
+  useEffect(() => {
+    if (sicht) return;
+    let lebt = true;
+    void api
+      .me()
+      .then((konto) => {
+        if (lebt) setBroJetons(konto.broJetons);
+      })
+      .catch(() => {
+        /* Der Stand ist Beiwerk. Ohne ihn bleibt der Knopf, der Server prueft. */
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [sicht !== null, tischId]);
+
+  useEffect(() => {
+    if (!tischId || sicht) return;
+    let lebt = true;
+    void api
+      .tableRules(tischId)
+      .then((antwort) => {
+        const s = antwort.config;
+        if (
+          lebt &&
+          typeof s.startJetons === 'number' &&
+          typeof s.kleinerBlind === 'number' &&
+          typeof s.grosserBlind === 'number'
+        ) {
+          setTischEinsatz({
+            startJetons: s.startJetons,
+            kleinerBlind: s.kleinerBlind,
+            grosserBlind: s.grosserBlind,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      lebt = false;
+    };
+  }, [tischId, sicht !== null]);
+
   // -------------------------------------------------------------------------
   // Einstieg
   // -------------------------------------------------------------------------
@@ -487,7 +651,7 @@ export function EasyPoker({
     try {
       const { id } = await api.createTable({
         gameId: 'easypoker',
-        config: REGELSATZ,
+        config: regelsatz,
         seats: sitzeWahl,
         rounds: haendeFuer(sitzeWahl),
         visibility: 'on_request',
@@ -495,11 +659,11 @@ export function EasyPoker({
       });
       setEigenerTisch(null);
       setTischId(id);
-    } catch {
+    } catch (err) {
       setSucht(false);
-      setFehler('Der Tisch liess sich nicht aufmachen. Noch einmal versuchen?');
+      setFehler(pokerFehler(err, 'Der Tisch liess sich nicht aufmachen. Noch einmal versuchen?'));
     }
-  }, [sitzeWahl]);
+  }, [sitzeWahl, regelsatz]);
 
   /**
    * Einen Gegner finden: an einem offenen Tisch Platz nehmen, sonst selbst
@@ -516,28 +680,84 @@ export function EasyPoker({
     try {
       const zeilen = await api.tables('easypoker');
       const offen = zeilen
-        .filter((zeile) => zeile.occupied < zeile.seats)
+        .filter(
+          (zeile) =>
+            zeile.occupied < zeile.seats &&
+            gleicherEinsatz(zeile, regelsatz) &&
+            (broJetons === null || broJetons >= regelsatz.startJetons),
+        )
         .sort((a, b) => b.occupied - a.occupied || a.id.localeCompare(b.id));
       const ziel = offen[0];
       if (ziel) {
         await api.joinTable(ziel.id);
         setEigenerTisch(null);
+        setLobbyOffen(false);
         setTischId(ziel.id);
         return;
       }
       const { id } = await api.createTable({
         gameId: 'easypoker',
-        config: REGELSATZ,
+        config: regelsatz,
         seats: ONLINE_SITZE,
         rounds: haendeFuer(ONLINE_SITZE),
       });
       setEigenerTisch(id);
+      setLobbyOffen(false);
       setTischId(id);
-    } catch {
+    } catch (err) {
       setSucht(false);
-      setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+      setFehler(pokerFehler(err, 'Die Suche ist fehlgeschlagen. Noch einmal versuchen?'));
+    }
+  }, [regelsatz, broJetons]);
+
+  const oeffneLobby = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setLobbyOffen(true);
+    setTische(null);
+    try {
+      setTische(await api.tables('easypoker'));
+    } catch {
+      setFehler('Die Tischliste liess sich nicht laden.');
+      setTische([]);
     }
   }, []);
+
+  const trittBei = useCallback(
+    async (id: string): Promise<void> => {
+      setFehler(null);
+      setSucht(true);
+      try {
+        await api.joinTable(id);
+        setEigenerTisch(null);
+        setLobbyOffen(false);
+        setTischId(id);
+      } catch (err) {
+        setSucht(false);
+        setFehler(pokerFehler(err, 'Der Platz ist weg. Einen anderen Tisch versuchen?'));
+        void oeffneLobby();
+      }
+    },
+    [oeffneLobby],
+  );
+
+  const eigenenTisch = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setSucht(true);
+    try {
+      const { id } = await api.createTable({
+        gameId: 'easypoker',
+        config: regelsatz,
+        seats: ONLINE_SITZE,
+        rounds: haendeFuer(ONLINE_SITZE),
+      });
+      setEigenerTisch(id);
+      setLobbyOffen(false);
+      setTischId(id);
+    } catch (err) {
+      setSucht(false);
+      setFehler(pokerFehler(err, 'Der Tisch liess sich nicht aufmachen. Noch einmal versuchen?'));
+    }
+  }, [regelsatz]);
 
   /**
    * Das Wettrennen aufloesen.
@@ -559,7 +779,9 @@ export function EasyPoker({
         .then(async (zeilen: TableRow[]) => {
           if (!lebt || wechseltGerade.current) return;
           const kleiner = zeilen
-            .filter((z) => z.occupied < z.seats && z.id < tischId)
+            .filter(
+              (z) => z.occupied < z.seats && z.id < tischId && gleicherEinsatz(z, regelsatz),
+            )
             .sort((a, b) => a.id.localeCompare(b.id))[0];
           if (!kleiner) return;
           wechseltGerade.current = true;
@@ -583,13 +805,14 @@ export function EasyPoker({
       lebt = false;
       window.clearInterval(takt);
     };
-  }, [tischId, eigenerTisch, tisch.table?.status]);
+  }, [tischId, eigenerTisch, tisch.table?.status, regelsatz]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
     setSucht(false);
     setTischId(null);
     setEigenerTisch(null);
+    setLobbyOffen(false);
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
@@ -665,6 +888,88 @@ export function EasyPoker({
   // -------------------------------------------------------------------------
 
   if (!tischId) {
+    const reicht = broJetons === null || broJetons >= regelsatz.startJetons;
+    const startbar = reicht && regelsatzOk(regelsatz) && !sucht;
+
+    if (lobbyOffen) {
+      const liste = tische ?? [];
+      return (
+        <main className="poker-menue">
+          <button
+            className="poker-zurueck"
+            type="button"
+            onClick={() => {
+              setLobbyOffen(false);
+              setFehler(null);
+            }}
+          >
+            ← Zurück
+          </button>
+          {infoKnopf('menue')}
+          <div className="poker-menue-mitte">
+            <h1 className="poker-titel">
+              Online-<span>Tisch</span>
+            </h1>
+            <p className="poker-untertitel">
+              Einsatz {regelsatz.startJetons} · Blinds {regelsatz.kleinerBlind}/
+              {regelsatz.grosserBlind}
+            </p>
+            {tische === null ? (
+              <p className="poker-sitze-text">Tische werden geladen…</p>
+            ) : liste.length === 0 ? (
+              <p className="poker-sitze-text">Gerade kein offener Tisch.</p>
+            ) : (
+              <ul className="poker-lobby">
+                {liste.map((zeile) => {
+                  const buyIn = zeile.stakes?.startJetons ?? regelsatz.startJetons;
+                  const zuTeuer = broJetons !== null && broJetons < buyIn;
+                  return (
+                    <li key={zeile.id}>
+                      <button
+                        className="poker-lobby-zeile"
+                        type="button"
+                        disabled={sucht || zuTeuer}
+                        onClick={() => void trittBei(zeile.id)}
+                      >
+                        <strong>{zeile.host ?? 'Tisch'}</strong>
+                        <em>
+                          {zeile.occupied}/{zeile.seats}
+                          {zeile.stakes
+                            ? ` · ${zeile.stakes.startJetons} · ${zeile.stakes.kleinerBlind}/${zeile.stakes.grosserBlind}`
+                            : ''}
+                          {zuTeuer ? ' · zu hoch' : ''}
+                        </em>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <button
+              className="poker-hauptknopf"
+              type="button"
+              onClick={() => void suche()}
+              disabled={!startbar}
+            >
+              <span>Passenden Tisch suchen</span>
+              <em>gleicher Einsatz · sonst neu aufmachen</em>
+            </button>
+            <button
+              className="poker-zweitknopf"
+              type="button"
+              onClick={() => void eigenenTisch()}
+              disabled={!startbar}
+            >
+              <span>Eigenen Tisch aufmachen</span>
+              <em>6 Plätze · deine Blinds</em>
+            </button>
+            {fehler && <p className="poker-fehler">{fehler}</p>}
+          </div>
+          {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
+        </main>
+      );
+    }
+
     return (
       <main className="poker-menue">
         {/* Der Zurueck-Knopf sitzt bewusst nicht ganz oben: Auf iPhones mit
@@ -680,6 +985,12 @@ export function EasyPoker({
           </h1>
           <p className="poker-untertitel">Zwei Karten, bis zu sechs am Tisch, vier Knöpfe.</p>
 
+          <p className="poker-guthaben" aria-label={`${broJetons ?? '…'} BroJetons`}>
+            <span className="poker-jeton-zeichen" aria-hidden="true" />
+            <strong>{broJetons ?? '…'}</strong>
+            <em>BroJetons</em>
+          </p>
+
           <input
             className="poker-namensfeld"
             type="text"
@@ -690,6 +1001,8 @@ export function EasyPoker({
             value={name}
             onChange={(e) => merkeName(e.target.value)}
           />
+
+          <Einsatzwahl regelsatz={regelsatz} onChange={setRegelsatz} />
 
           <div className="poker-sitze-wahl" role="group" aria-label="Spielerzahl">
             {[2, 3, 4, 5, 6].map((zahl) => (
@@ -712,7 +1025,7 @@ export function EasyPoker({
             className="poker-hauptknopf"
             type="button"
             onClick={() => void sofortSpielen()}
-            disabled={sucht}
+            disabled={!startbar}
           >
             <span>Sofort spielen</span>
             <em>gegen den Computer · {sitzeWahl} Plätze</em>
@@ -721,16 +1034,19 @@ export function EasyPoker({
           <button
             className="poker-zweitknopf"
             type="button"
-            onClick={() => void suche()}
+            onClick={() => void oeffneLobby()}
             disabled={sucht}
           >
-            <span>Online-Tisch suchen</span>
-            {/* Die Zahl steht daneben und nicht im Satz: Sie aendert sich alle
-                fuenf Sekunden, und ein springendes Wort mitten im Text liest
-                sich wie ein Fehler. */}
+            <span>Online spielen</span>
             <em>({aktiv ?? '…'})</em>
           </button>
 
+          {!reicht && (
+            <p className="poker-fehler">
+              Für diesen Einsatz brauchst du {regelsatz.startJetons} BroJetons. Im Shop gibt es
+              welche gegen Münzen.
+            </p>
+          )}
           {fehler && <p className="poker-fehler">{fehler}</p>}
         </div>
 
@@ -762,6 +1078,9 @@ export function EasyPoker({
             {tisch.status === 'open'
               ? `${besetzt} von ${gesamt} Plätzen besetzt`
               : 'Verbindung wird aufgebaut…'}
+            {tischEinsatz
+              ? ` · ${tischEinsatz.startJetons} · ${tischEinsatz.kleinerBlind}/${tischEinsatz.grosserBlind}`
+              : ''}
           </p>
           {plaetze.length > 0 && (
             <ul className="poker-warte-sitze">
@@ -1321,8 +1640,9 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         </ol>
 
         <p className="poker-blatt-fuss">
-          Die Jetons gehören zur Partie und sonst nirgendwohin: Sie lassen sich
-          nicht kaufen und nicht in Münzen oder Edelsteine tauschen.
+          Gespielt wird mit BroJetons. Die kauft man im Shop gegen Münzen; zurück
+          in Münzen gehen sie nicht. Wer den Tisch aufmacht, stellt Mindest-Einsatz
+          und die Blinds ein.
         </p>
 
         <button className="poker-hauptknopf" type="button" onClick={onClose}>

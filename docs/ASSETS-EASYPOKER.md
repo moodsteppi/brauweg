@@ -66,8 +66,7 @@ schiefgegangen). Motiv: eine einzelne Karte mit Pik-Ass, davor zwei Jetons.
 Geld stuft Apple eine Gluecksspiel-Nachbildung anders ein, und `game-api`
 verlangt, dass Regelwerk und Währung getrennt bleiben.
 
-Easy Poker hält beides ein — die Jetons entstehen beim Geben, verschwinden am
-Ende der Partie und lassen sich weder kaufen noch in Münzen oder Edelsteine
-tauschen. **Ein Bild kann diese Trennung wieder einreißen**, wenn es Geld oder
-eine Spielbank zeigt. Deshalb steht die Verbotsliste oben nicht aus
+Die Trennung hält weiter: Das Modul kennt Zahlen, die Plattform BroJetons.
+**Ein Bild kann das wieder einreißen**, wenn es Euros, Jetons mit Beträgen
+oder eine Spielbank zeigt. Deshalb steht die Verbotsliste oben nicht aus
 Geschmacksgründen da.

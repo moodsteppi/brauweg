@@ -1,5 +1,5 @@
 /**
- * Die zwei Waehrungen.
+ * Die Guthaben der Plattform.
  *
  * DIE EINZIGE STELLE, an der ein Guthaben sich aendert. Wer irgendwo sonst
  * `update(account).set({ coins: ... })` schreibt, umgeht die Sperre gegen
@@ -12,20 +12,19 @@
  * **Edelsteine** (`gems`) entstehen nur aus Kauf oder Geschenk. Sie sind die
  * Waehrung des Ungeduldigen — und die einzige, die echtes Geld kostet.
  *
- * **Der Umtausch laeuft nur in eine Richtung: aus Edelsteinen werden Muenzen,
- * aus Muenzen nie Edelsteine.**
+ * **BroJetons** (`broJetons`) sind Pokerchips. Man kauft sie im Shop gegen
+ * Muenzen, setzt sie am Tisch ein und bekommt den Reststapel zurueck. Aus
+ * BroJetons werden bewusst nie wieder Muenzen oder Edelsteine: Sonst waere
+ * jede gewonnene Hand ein Weg in den Shop.
  *
- * Hier stand bis zum 4. August „getrennt und ohne Wechselkurs", begruendet
- * damit, dass sonst jede Truhe indirekt eine Geldquelle waere. Die Begruendung
- * gilt unveraendert weiter — sie trifft aber nur die Gegenrichtung. Solange aus
- * Muenzen keine Edelsteine werden, ist keine Truhe und keine Tagesaufgabe ein
- * Weg zu etwas, das Geld kostet; erspieltes Guthaben bleibt erspielt. Deshalb
- * gibt es hier `edelsteineZuMuenzen()` und bewusst keine zweite Funktion
- * daneben: Die Einseitigkeit ist keine Regel in einer Doku, sondern eine
- * fehlende Funktion.
+ * **Zwei einseitige Bruecken, keine Kreise.** Edelsteine werden zu Muenzen,
+ * Muenzen zu BroJetons. Es gibt weder `muenzenZuEdelsteinen()` noch
+ * `broJetonsZuMuenzen()` — die Einseitigkeit ist eine fehlende Funktion,
+ * keine Regel in einem Kommentar.
  *
- * Bewusst kein Einsatz- und Topfsystem (Plan 11): Verwettete virtuelle
- * Waehrung ist in Deutschland gluecksspielrechtlich eine Grauzone.
+ * BroJetons gegen BroJetons am Tisch ist ein geschlossener Chipkreislauf,
+ * kein Umtausch in die Shop-Waehrungen. Genau das haelt Grundsatz 4: Das
+ * Regelwerk kennt Zahlen, die Plattform den Beutel.
  */
 
 import { and, eq, sql } from 'drizzle-orm';
@@ -35,18 +34,28 @@ import * as s from './db/schema.js';
 import { badRequest, conflict, notFound } from './errors.js';
 import { entitlementsFor } from './entitlements.js';
 
+/** Waehrungen, mit denen der Shop Kosmetik verkauft — bewusst ohne BroJetons. */
 export const WAEHRUNGEN = ['coins', 'gems'] as const;
 export type Waehrung = (typeof WAEHRUNGEN)[number];
 
-/** Die Spalte zur Waehrung. Eine Stelle, damit kein Zweig sie vergisst. */
+/** Alle drei Guthaben, inklusive der Pokerchips. */
+export const GUTHABEN = ['coins', 'gems', 'broJetons'] as const;
+export type Guthaben = (typeof GUTHABEN)[number];
+
+/** Startstapel fuer neue Konten — eine kleine Runde Poker, ohne zuerst zu kaufen. */
+export const START_BRO_JETONS = 1000;
+
+/** Die Spalte zum Guthaben. Eine Stelle, damit kein Zweig sie vergisst. */
 const SPALTE = {
   coins: s.account.coins,
   gems: s.account.gems,
+  broJetons: s.account.broJetons,
 } as const;
 
 export interface Stand {
   readonly coins: number;
   readonly gems: number;
+  readonly broJetons: number;
 }
 
 /**
@@ -70,6 +79,7 @@ export async function standVon(db: Db, accountId: string): Promise<Stand> {
     .select({
       coins: s.account.coins,
       gems: s.account.gems,
+      broJetons: s.account.broJetons,
       premiumUntil: s.account.premiumUntil,
       isStaff: s.account.isStaff,
     })
@@ -84,14 +94,15 @@ export async function standVon(db: Db, accountId: string): Promise<Stand> {
 export function sichtbarerStand(row: {
   coins: number;
   gems: number;
+  broJetons: number;
   premiumUntil: Date | string | null;
   isStaff: boolean;
 }): Stand {
   const rechte = entitlementsFor(row);
   if (rechte.unlimitedCoins) {
-    return { coins: STAFF_STAND, gems: STAFF_STAND };
+    return { coins: STAFF_STAND, gems: STAFF_STAND, broJetons: STAFF_STAND };
   }
-  return { coins: row.coins, gems: row.gems };
+  return { coins: row.coins, gems: row.gems, broJetons: row.broJetons };
 }
 
 /**
@@ -117,7 +128,7 @@ export const STAFF_STAND = 9_999_999;
 export async function gutschreiben(
   db: Db,
   accountId: string,
-  waehrung: Waehrung,
+  waehrung: Guthaben,
   betrag: number,
 ): Promise<number> {
   const wert = ganzzahlig(betrag);
@@ -135,6 +146,7 @@ export async function gutschreiben(
     .returning({
       coins: s.account.coins,
       gems: s.account.gems,
+      broJetons: s.account.broJetons,
       premiumUntil: s.account.premiumUntil,
       isStaff: s.account.isStaff,
     });
@@ -157,7 +169,7 @@ export async function gutschreiben(
 export async function abbuchen(
   db: Db,
   accountId: string,
-  waehrung: Waehrung,
+  waehrung: Guthaben,
   betrag: number,
 ): Promise<number> {
   const wert = ganzzahlig(betrag);
@@ -180,7 +192,7 @@ export async function abbuchen(
     .where(and(eq(s.account.id, accountId), sql`${spalte} >= ${wert}`))
     .returning({ stand: spalte });
 
-  if (!row) throw conflict(waehrung === 'gems' ? 'gemsInsufficient' : 'coinsInsufficient');
+  if (!row) throw conflict(fehlerschluessel(waehrung));
   return row.stand;
 }
 
@@ -254,13 +266,45 @@ export async function edelsteineZuMuenzen(
 }
 
 /**
+ * Muenzen ausgeben, BroJetons dafuer bekommen.
+ *
+ * Die zweite einseitige Bruecke, und sie fuehrt nur hierhin: Es gibt keine
+ * Funktion, die BroJetons zu Muenzen macht. Wer am Pokertisch gewinnt, hat
+ * mehr Chips fuer die naechste Runde — nicht mehr Hut oder Truhe.
+ *
+ * **Erst abbuchen, dann gutschreiben**, dieselbe Reihenfolge wie oben.
+ * Beide Betraege kommen vom Aufrufer, weil die Pakete bewusst nicht
+ * kursgenau sind: Das grosse gibt mehr BroJetons je Muenze.
+ */
+export async function muenzenZuBroJetons(
+  db: Db,
+  accountId: string,
+  muenzen: number,
+  broJetons: number,
+): Promise<Stand> {
+  const preis = ganzzahlig(muenzen);
+  const ertrag = ganzzahlig(broJetons);
+  if (preis <= 0 || ertrag <= 0) throw badRequest('invalidInput');
+
+  await abbuchen(db, accountId, 'coins', preis);
+  await gutschreiben(db, accountId, 'broJetons', ertrag);
+  return standVon(db, accountId);
+}
+
+/**
  * Feldname im Drizzle-Objekt.
  *
  * `set()` erwartet den Namen der Eigenschaft, `where()` die Spalte. Beides
  * steht hier beieinander, damit ein Umbenennen nicht die Haelfte trifft.
  */
-function feldname(waehrung: Waehrung): 'coins' | 'gems' {
+function feldname(waehrung: Guthaben): 'coins' | 'gems' | 'broJetons' {
   return waehrung;
+}
+
+function fehlerschluessel(waehrung: Guthaben): string {
+  if (waehrung === 'gems') return 'gemsInsufficient';
+  if (waehrung === 'broJetons') return 'broJetonsInsufficient';
+  return 'coinsInsufficient';
 }
 
 function ganzzahlig(betrag: number): number {

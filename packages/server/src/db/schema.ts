@@ -147,6 +147,19 @@ export const account = pgTable(
      */
     gems: integer().notNull().default(0),
     /**
+     * BroJetons — Chips fuer Poker.
+     *
+     * Eine dritte Saeule neben Muenzen und Edelsteinen, absichtlich ohne
+     * Rueckweg: BroJetons kauft man im Shop gegen Muenzen, und am Pokertisch
+     * werden sie eingesetzt. Aus BroJetons werden nie wieder Muenzen oder
+     * Edelsteine, sonst waere jede gewonnene Hand ein Weg in den Shop.
+     *
+     * Neue Konten bekommen einen Startstapel (Default 1000), damit die erste
+     * Runde nicht erst einen Kauf erzwingt. Alle Buchungen laufen ueber
+     * src/waehrung.ts, genau wie bei den beiden anderen Guthaben.
+     */
+    broJetons: integer().notNull().default(1000),
+    /**
      * Erfahrungspunkte, spieluebergreifend. Die Stufe wird daraus gerechnet
      * und nicht gespeichert (src/level.ts): Sonst gaebe es zwei Wahrheiten,
      * und eine Aenderung an der Kurve muesste jede Zeile anfassen.
@@ -836,6 +849,33 @@ export const partySnapshot = pgTable('party_snapshot', {
   state: jsonb().notNull(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Einsatz-Schloss fuer Spiele mit BroJetons (heute Poker).
+ *
+ * Beim Partiestart wird der Buy-in abgezogen und hier festgehalten. Am Ende
+ * kommt der Reststapel zurueck, und `settled_at` schliesst die Zeile — ein
+ * zweites Auszahlen trifft dann keine Zeile mehr. Der Tisch, nicht die
+ * Partie, ist der Schluessel: So bleibt die Zeile auch dann findbar, wenn
+ * der Start zwischen Abbuchung und Partie-Insert abbricht.
+ */
+export const chipLock = pgTable(
+  'chip_lock',
+  {
+    tableId: uuid()
+      .notNull()
+      .references(() => gameTable.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    seat: smallint().notNull(),
+    buyIn: integer().notNull(),
+    /** Reststapel, der zurueckging. Null, solange die Partie laeuft. */
+    returned: integer(),
+    settledAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.tableId, t.accountId] })],
+);
 
 /**
  * Speichert bewusst nur jsonb: Die Struktur einer Runde ist spielabhaengig,

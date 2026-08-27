@@ -67,6 +67,8 @@ const meta: GameMeta = {
    * Ueberlegung wie bei Feldherr und Mememory.
    */
   xpBasisZaehltKarten: false,
+  /** Plattform zieht `startJetons` als BroJetons ein — das Modul sieht nur die Zahl. */
+  chipStackField: 'startJetons',
 };
 
 export const easypoker: GameModule<
