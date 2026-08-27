@@ -710,6 +710,35 @@ export class PartyRuntime {
     if (seat !== null) this.markLeft(party, seat);
   }
 
+  /**
+   * Eine laufende Partie wegwerfen, ohne sie abzurechnen.
+   *
+   * Der Weg fuer einen Solotisch gegen die KI, den sein einziger Mensch
+   * verlaesst (siehe verlasseKiTisch in tables/service.ts). Bewusst NICHT
+   * `finish`: Dort haengen Trophaeen, Erfahrung, Aufgaben und die Statistik
+   * dran, und eine abgebrochene Partie gegen Bots soll nichts davon buchen —
+   * sonst waere Aufgeben eine Abkuerzung.
+   *
+   * Zuerst die Timer, dann die Ablage, dann die Datenbank: Solange die Partie
+   * noch in `live` steht, koennte ein Botzug sie weiterspielen und dabei auf
+   * einen Tisch schreiben, den es nicht mehr gibt.
+   */
+  async verwirf(tableId: string): Promise<void> {
+    const party = this.live.get(tableId);
+    if (!party) return;
+    if (party.timer) clearTimeout(party.timer);
+    if (party.offlineTimer) clearTimeout(party.offlineTimer);
+    party.timer = null;
+    party.offlineTimer = null;
+    party.turnDeadline = null;
+    this.live.delete(tableId);
+
+    await this.db
+      .update(s.party)
+      .set({ status: 'abandoned', endedAt: new Date() })
+      .where(eq(s.party.id, party.partyId));
+  }
+
   // -------------------------------------------------------------------------
   // Anwesenheit
   // -------------------------------------------------------------------------

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 
 import { type ChatMessage, api } from '../api';
+import { Kreuz } from '../zeichen';
 import { MAX_NACHRICHT, avatarBild } from './ClanTeile';
 
 /** Wie oft nach neuen Nachrichten gefragt wird, solange der Chat offen ist. */
@@ -220,7 +221,7 @@ function Blase({
             aria-label="Nachricht löschen"
             type="button"
           >
-            ×
+            <Kreuz />
           </button>
         )}
       </div>
