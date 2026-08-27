@@ -20,6 +20,7 @@
 
 import type { MememoryPartie, Pause } from './partie.js';
 import { sieger } from './partie.js';
+import type { MememoryStufe } from './stufen.js';
 
 export interface MememorySicht {
   readonly spalten: number;
@@ -41,6 +42,26 @@ export interface MememorySicht {
   readonly leftSeats: readonly number[];
   /** true = neutrale Zuschauersicht. */
   readonly zuschauer: boolean;
+  /**
+   * Spielstaerke dieses Sitzes — steht NUR in der Sicht eines Bot-Sitzes.
+   *
+   * `botAction` bekommt nichts als die Sicht, und die Stufe der Plattform
+   * (`botLevel`) gilt fuer den ganzen Tisch. Damit spaeter drei Bots
+   * verschiedener Staerke am selben Brett sitzen koennen, reist sie hier mit.
+   */
+  readonly stufe?: MememoryStufe;
+  /**
+   * Was dieser Bot behalten hat: Platz und Kennung, sonst nichts.
+   *
+   * **Und warum das kein Verrat ist.** Die Sicht traegt bewusst keine Liste
+   * der schon gesehenen Karten (siehe oben) — hier steht sie trotzdem, aber
+   * nur fuer Sitze, die in `regeln.botStufen` stehen. In diesem Spiel sieht
+   * ohnehin JEDER jede umgedrehte Karte; die Liste enthaelt also nichts, was
+   * nicht schon auf dem Tisch lag, und ein eigener Client koennte sie
+   * mitschreiben (steht so in docs/MEMEMORY-PLAN.md). Was sie NICHT
+   * enthaelt: verdeckte Karten. Die stehen nirgends ausser im Zustand.
+   */
+  readonly erinnerung?: readonly { readonly platz: number; readonly kennung: string }[];
 }
 
 function sichtbaresFeld(partie: MememoryPartie): readonly (string | null)[] {
@@ -79,8 +100,19 @@ function grundsicht(partie: MememoryPartie, zuschauer: boolean): MememorySicht {
  * Nachrichtenhuelle (`ViewMessage.seat`), also wird es hier nicht doppelt
  * mitgeschickt.
  */
-export function sichtFuer(partie: MememoryPartie, _sitz: number): MememorySicht {
-  return grundsicht(partie, false);
+export function sichtFuer(partie: MememoryPartie, sitz: number): MememorySicht {
+  const stufe = partie.regeln.botStufen?.[sitz];
+  if (!stufe) return grundsicht(partie, false);
+
+  // Ein Bot-Sitz bekommt zusaetzlich sein Gedaechtnis. Plaetze, die inzwischen
+  // jemandem gehoeren, fallen dabei heraus: Sie sind vom Brett, und ein Bot,
+  // der sie noch mitfuehrt, verrechnet sich beim Meiden bekannter Felder.
+  const erinnerung = (partie.erinnerung[sitz] ?? [])
+    .filter((stueck) => partie.besitzer[stueck.platz] === null)
+    .map((stueck) => ({ platz: stueck.platz, kennung: partie.motive[stueck.motiv] ?? '' }))
+    .filter((stueck) => stueck.kennung !== '');
+
+  return { ...grundsicht(partie, false), stufe, erinnerung };
 }
 
 /**

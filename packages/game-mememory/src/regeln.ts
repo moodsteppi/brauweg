@@ -15,6 +15,8 @@
  * Bauen des Moduls noch nicht gab.
  */
 
+import { type MememoryStufe, istStufe } from './stufen.js';
+
 export interface MememoryRegeln {
   readonly spalten: number;
   readonly zeilen: number;
@@ -50,6 +52,26 @@ export interface MememoryRegeln {
    * `erstellePartie`, kein Umbau an Sicht, Snapshot oder Bot.
    */
   readonly zusatz?: readonly string[];
+  /**
+   * Welcher Sitz von einem Bot welcher Staerke gespielt wird: Sitz -> Stufe.
+   *
+   * Steht ein Sitz hier, ist er ein Bot — die Plattform fuellt ihn ueber
+   * `fillWithBots`, und dieselbe Liste sagt dem Modul, WIE stark er spielen
+   * soll. Die Stufe der Plattform (`botLevel`) reicht dafuer nicht: Sie gilt
+   * fuer den ganzen Tisch, und beim naechsten Schritt — vier Spieler, drei
+   * Bots — soll jeder Gegner seine eigene haben. Deshalb je Sitz.
+   *
+   * Fehlt das Feld, ist alles wie vorher: ein Zufallsbot ohne Gedaechtnis,
+   * wie er auch einspringt, wenn ein Mensch seine Zugzeit verstreichen laesst.
+   *
+   * **Was hier steht, entscheidet auch, wer ein Gedaechtnis in seiner Sicht
+   * bekommt** (siehe sicht.ts). Das ist bewusst so und kostet nichts: In
+   * diesem Spiel sieht jeder jede umgedrehte Karte, das Gedaechtnis enthaelt
+   * also nur, was ohnehin auf dem Tisch lag. Wer sich selbst eine Stufe
+   * eintraegt, bekommt seine eigenen gesehenen Karten zurueck — und die
+   * koennte ein eigener Client ohnehin mitschreiben.
+   */
+  readonly botStufen?: Readonly<Record<number, MememoryStufe>>;
 }
 
 /**
@@ -68,6 +90,9 @@ const KENNUNG = /^[a-z0-9][a-z0-9-]{0,39}$/;
  * niemand ueber diesen Weg die Tischtabelle vollschreibt.
  */
 const ZUSATZ_MAX = 2000;
+
+/** Hoechster Sitz, den es geben kann. Heute zwei, spaeter vier. */
+const SITZ_MAX = 7;
 
 /**
  * 4 x 6 = 24 Karten, 12 Paare.
@@ -161,6 +186,20 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
       zusatz.some((k) => typeof k !== 'string' || !KENNUNG.test(k));
     if (kaputt) {
       probleme.push({ path: 'zusatz', messageKey: 'ruleset.zusatzUngueltig', severity: 'error' });
+    }
+  }
+
+  const botStufen = gegeben['botStufen'];
+  if (botStufen !== undefined && botStufen !== null) {
+    const kaputt =
+      typeof botStufen !== 'object' ||
+      Array.isArray(botStufen) ||
+      Object.entries(botStufen as Record<string, unknown>).some(([sitz, stufe]) => {
+        const nr = Number(sitz);
+        return !Number.isInteger(nr) || nr < 0 || nr > SITZ_MAX || !istStufe(stufe);
+      });
+    if (kaputt) {
+      probleme.push({ path: 'botStufen', messageKey: 'ruleset.botStufeUngueltig', severity: 'error' });
     }
   }
 

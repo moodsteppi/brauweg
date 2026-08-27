@@ -9,6 +9,7 @@
 
 import { MOTIVE } from './motive.js';
 import type { MememoryRegeln } from './regeln.js';
+import { STUFEN_REGELN, istStufe } from './stufen.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
@@ -92,12 +93,55 @@ function mische<T>(liste: T[], zufall: () => number): T[] {
   return kopie;
 }
 
+/**
+ * Eine reproduzierbare Probe aus Saat und Umstaenden.
+ *
+ * Die Gedaechtnisproben der Bots (behalte ich diese Karte? bleibt sie mir?)
+ * passieren IM Zustandsuebergang und muessen deshalb aus dem Snapshot heraus
+ * dasselbe ergeben. `Math.random()` waere hier genau der Fehler, den das
+ * Modul sonst ueberall vermeidet: Nach einem Serverneustart wuerfelte
+ * dieselbe Partie anders, und aus der Zugliste liesse sie sich nicht mehr
+ * nachrechnen.
+ *
+ * FNV-1a ueber die Umstaende, das Ergebnis als Saat fuer einen Zug aus
+ * mulberry32. Keine Kryptografie — es geht um ein Gedaechtnis, nicht um
+ * verdeckte Karten.
+ */
+function probe(saat: string, ...teile: readonly (string | number)[]): number {
+  const text = `${saat}|${teile.join('|')}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return mulberry32(h)();
+}
+
 // ---------------------------------------------------------------------------
 // Zustand
 // ---------------------------------------------------------------------------
 
 /** Anlass der laufenden Schaupause. */
 export type Pause = 'treffer' | 'daneben';
+
+/**
+ * Ein Stueck Bot-Gedaechtnis: An Platz X lag Motiv Y, gesehen in Zug Z.
+ *
+ * Gespeichert wird die MOTIVNUMMER und nicht die Kennung — der Zustand
+ * rechnet durchgaengig mit Nummern, und die Sicht uebersetzt sie erst beim
+ * Hinausgeben.
+ */
+export interface Erinnerung {
+  readonly platz: number;
+  readonly motiv: number;
+  readonly zug: number;
+  /**
+   * Hat die einmalige Halteprobe bestanden (nur "schwer") und bleibt damit
+   * bis zum Ende. Ohne diesen Merker wuerde bei jedem Zug neu gewuerfelt,
+   * und dann waere die Erinnerung eine Muenze statt eines Gedaechtnisses.
+   */
+  readonly fest?: boolean;
+}
 
 export interface MememoryPartie {
   readonly regeln: MememoryRegeln;
@@ -118,6 +162,23 @@ export interface MememoryPartie {
   readonly pause: Pause | null;
   readonly leftSeats: readonly number[];
   readonly fertig: boolean;
+  /**
+   * Fortlaufende Zugnummer. Ein Zug sind zwei Aufdecker; hochgezaehlt wird am
+   * Ende der Schaupause, also genau dann, wenn der Zug vorbei ist. Die
+   * Gedaechtnisfenster der Bots rechnen damit.
+   */
+  readonly zug: number;
+  /**
+   * Die Saat als Zeichenkette — fuer die Gedaechtnisproben.
+   *
+   * Sie steht schon im Zustand und nicht nur beim Aufbau, weil nach einem
+   * Serverneustart aus dem Snapshot weitergewuerfelt werden muss. Verdeckte
+   * Karten verraet sie nicht: Die Lage steckt in `feld`, das ohnehin im
+   * Snapshot steht, und der Snapshot verlaesst den Server nie.
+   */
+  readonly saat: string;
+  /** Was welcher Bot-Sitz behalten hat. Sitze ohne Stufe stehen nicht drin. */
+  readonly erinnerung: Readonly<Record<number, readonly Erinnerung[]>>;
 }
 
 export type MememoryAktion =
@@ -157,6 +218,84 @@ export function saeubereName(roh: string): string {
   return sichtbar.slice(0, NAME_MAX).join("").trim();
 }
 
+
+// ---------------------------------------------------------------------------
+// Bot-Gedaechtnis
+// ---------------------------------------------------------------------------
+
+/** Die Sitze, die einen Bot mit Stufe tragen. */
+function botSitze(regeln: MememoryRegeln): number[] {
+  const stufen = regeln.botStufen;
+  if (!stufen) return [];
+  return Object.keys(stufen)
+    .map((k) => Number(k))
+    .filter((sitz) => Number.isInteger(sitz) && istStufe(stufen[sitz]));
+}
+
+/**
+ * Eine gerade aufgedeckte Karte den Bots vorlegen.
+ *
+ * ALLEN Bots, nicht nur dem, der aufgedeckt hat: In diesem Spiel sieht jeder
+ * jede umgedrehte Karte. Genau deshalb ist das Gedaechtnis auch kein
+ * Geheimnis — es enthaelt nur, was ohnehin auf dem Tisch lag.
+ *
+ * Ob eine Karte haengen bleibt, entscheidet die Stufe. Bei "mittel" faellt
+ * die Muenze je Karte einzeln; er kann die eine Haelfte eines Paares behalten
+ * und die andere vergessen.
+ */
+function merke(partie: MememoryPartie, platz: number): MememoryPartie['erinnerung'] {
+  const sitze = botSitze(partie.regeln);
+  if (sitze.length === 0) return partie.erinnerung;
+
+  const motiv = partie.feld[platz];
+  if (motiv === undefined) return partie.erinnerung;
+
+  const neu: Record<number, readonly Erinnerung[]> = { ...partie.erinnerung };
+  for (const sitz of sitze) {
+    const regel = STUFEN_REGELN[partie.regeln.botStufen![sitz]!];
+    if (regel.merkt < 1 && probe(partie.saat, 'merke', sitz, partie.zug, platz) >= regel.merkt) {
+      continue;
+    }
+    // Denselben Platz nicht doppelt fuehren: Wer ihn wieder sieht, sieht ihn
+    // frisch — die Zugnummer wird also aufgefrischt.
+    const ohne = (neu[sitz] ?? []).filter((e) => e.platz !== platz);
+    neu[sitz] = [...ohne, { platz, motiv, zug: partie.zug }];
+  }
+  return neu;
+}
+
+/**
+ * Am Zugende altern lassen.
+ *
+ * Was aus dem Fenster faellt, ist bei "leicht" und "mittel" einfach weg. Bei
+ * "schwer" entscheidet EINE Probe mit 70 %, ob es dauerhaft bleibt; das
+ * Ergebnis wird als `fest` festgehalten, damit nicht in jedem Zug neu
+ * gewuerfelt wird. Ein Gedaechtnis, das jede Runde neu wuerfelt, ist keines.
+ */
+function altere(partie: MememoryPartie, zugJetzt: number): MememoryPartie['erinnerung'] {
+  const sitze = botSitze(partie.regeln);
+  if (sitze.length === 0) return partie.erinnerung;
+
+  const neu: Record<number, readonly Erinnerung[]> = { ...partie.erinnerung };
+  for (const sitz of sitze) {
+    const regel = STUFEN_REGELN[partie.regeln.botStufen![sitz]!];
+    if (regel.fenster === null) continue;
+
+    const behalten: Erinnerung[] = [];
+    for (const stueck of neu[sitz] ?? []) {
+      if (stueck.fest || zugJetzt - stueck.zug <= regel.fenster) {
+        behalten.push(stueck);
+        continue;
+      }
+      // Faellt gerade heraus: einmal wuerfeln, dann steht es fest.
+      if (regel.haelt > 0 && probe(partie.saat, 'halte', sitz, stueck.platz, stueck.zug) < regel.haelt) {
+        behalten.push({ ...stueck, fest: true });
+      }
+    }
+    neu[sitz] = behalten;
+  }
+  return neu;
+}
 
 // ---------------------------------------------------------------------------
 // Aufbau
@@ -201,6 +340,16 @@ export function erstellePartie(
     pause: null,
     leftSeats: [],
     fertig: false,
+    zug: 0,
+    saat: String(saat),
+    // Jeder Bot-Sitz startet mit leerem Gedaechtnis. Sitze ohne Stufe stehen
+    // gar nicht erst drin — so gibt es fuer einen Menschen nichts zu holen.
+    erinnerung: Object.fromEntries(
+      Object.keys(regeln.botStufen ?? {})
+        .map((k) => Number(k))
+        .filter((s) => Number.isInteger(s))
+        .map((s) => [s, [] as Erinnerung[]]),
+    ),
   };
 }
 
@@ -251,13 +400,16 @@ export function fuehreAus(
 
   const offen = [...partie.offen, aktion.platz];
   const aufgedeckt = { ...partie.aufgedeckt, [sitz]: (partie.aufgedeckt[sitz] ?? 0) + 1 };
+  // Was umgedreht wird, sehen alle — also legen es alle Bots ihrem Gedaechtnis
+  // vor. Ob es haengen bleibt, entscheidet ihre Stufe.
+  const erinnerung = merke(partie, aktion.platz);
 
-  if (offen.length < 2) return { ...partie, offen, aufgedeckt };
+  if (offen.length < 2) return { ...partie, offen, aufgedeckt, erinnerung };
 
   const [a, b] = offen as [number, number];
   const treffer = partie.feld[a] === partie.feld[b];
 
-  if (!treffer) return { ...partie, offen, aufgedeckt, pause: 'daneben' };
+  if (!treffer) return { ...partie, offen, aufgedeckt, erinnerung, pause: 'daneben' };
 
   // Treffer: Die beiden Plaetze gehoeren sofort dem Spieler. Sie bleiben damit
   // auch fuer den Gegner sichtbar — die Sicht zeigt jeden besessenen Platz.
@@ -268,6 +420,7 @@ export function fuehreAus(
     ...partie,
     offen,
     aufgedeckt,
+    erinnerung,
     besitzer,
     punkte: { ...partie.punkte, [sitz]: (partie.punkte[sitz] ?? 0) + 1 },
     pause: 'treffer',
@@ -291,6 +444,10 @@ export function pauseDauerMs(partie: MememoryPartie): number | null {
 export function beendePause(partie: MememoryPartie): MememoryPartie {
   if (partie.pause === null) return partie;
   const fertig = partie.besitzer.every((wer) => wer !== null);
+  // Hier — und nur hier — ist ein Zug wirklich vorbei: Zwei Karten lagen
+  // offen, sie sind gewertet, die naechsten zwei kommen. Die
+  // Gedaechtnisfenster der Bots rechnen mit dieser Zahl.
+  const zug = partie.zug + 1;
   return {
     ...partie,
     offen: [],
@@ -298,6 +455,8 @@ export function beendePause(partie: MememoryPartie): MememoryPartie {
     dran: partie.pause === 'treffer' ? partie.dran : gegner(partie, partie.dran),
     pause: null,
     fertig,
+    zug,
+    erinnerung: altere(partie, zug),
   };
 }
 
