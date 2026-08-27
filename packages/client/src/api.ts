@@ -752,9 +752,17 @@ export const api = {
    * dafuer den ganzen Topf.
    */
   mememoryMotive: () =>
-    request<{ grund: string[]; hochgeladen: string[]; namen: Record<string, string> }>(
-      '/mememory/motive',
-    ),
+    request<{
+      grund: string[];
+      hochgeladen: string[];
+      namen: Record<string, string>;
+      /**
+       * Welche Motive einen Ton haben. Der Client laedt nur diese vor —
+       * sonst waeren es zwei Dutzend Abrufe je Partie, von denen fast alle
+       * mit „nicht gefunden" enden.
+       */
+      toene: string[];
+    }>('/mememory/motive'),
 
   /**
    * Was das eigene Konto noch einreichen darf. `frei: null` heisst
@@ -786,7 +794,13 @@ export const api = {
         einreicher: string | null;
         eingereichtAm: string;
       }[];
-      freigegeben: { kennung: string; titel: string | null; pack: string | null }[];
+      freigegeben: {
+        kennung: string;
+        titel: string | null;
+        pack: string | null;
+        /** Haengt ein Ton daran? Nur das Ja oder Nein, nicht der Ton selbst. */
+        hatTon: boolean;
+      }[];
     }>('/mememory/vorschlaege'),
 
   /** Nur die Zahl fuer den Punkt am Briefkasten. Nur Aufsicht. */
@@ -800,8 +814,15 @@ export const api = {
    * beides. Die Kennung bleibt, damit laufende Tische keine leere Karte
    * bekommen. Nur Aufsicht.
    */
-  mememoryAendern: (kennung: string, aenderung: { titel?: string | null; bild?: string }) =>
-    patch<{ ok: true }>(`/mememory/motive/${kennung}`, aenderung),
+  mememoryAendern: (
+    kennung: string,
+    /**
+     * `ton: null` nimmt den Ton weg, ein fehlendes Feld laesst ihn stehen.
+     * Die beiden zu verwechseln hiesse, bei jedem Umbenennen den Ton zu
+     * loeschen.
+     */
+    aenderung: { titel?: string | null; bild?: string; ton?: string | null },
+  ) => patch<{ ok: true }>(`/mememory/motive/${kennung}`, aenderung),
 
   // --- Mememory: Sammlung und Emote-Gurt ------------------------------------
 

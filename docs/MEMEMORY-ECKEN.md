@@ -71,6 +71,50 @@ sitzt.
 
 ---
 
+## Die Punktzahl steht innen, die Stufe neben dem Namen
+
+Seit dem **28. August 2026** gilt in der Ecke eine Leserichtung, die von der
+Ecke abhängt:
+
+| Ecke | Reihenfolge im Bild |
+| --- | --- |
+| unten links, oben links | Name · Stufe · **Zahl** |
+| oben rechts, unten rechts | **Zahl** · Stufe · Name |
+
+Gedreht wird das **Blatt** (`flex-direction: row-reverse`), nicht der Text: Im
+Blatt bleibt die Reihenfolge dieselbe, und damit auch das, was ein
+Vorleseprogramm sagt.
+
+**Der Grund ist der Blick.** Während einer Partie sucht man den Stand, und zwar
+alle vier. Aussen an den Bildschirmrändern wären das vier weit
+auseinanderliegende Punkte; innen liegen sie dicht beieinander. Gemessen auf
+375 px Breite (Bildmitte 187,5), Abstand der Zahl zur Mitte gegen den des
+Namens:
+
+| Ecke | Name | Zahl |
+| --- | --- | --- |
+| ul | 150 px | **112 px** |
+| or | 158 px | **75 px** |
+| ol | 112 px | **21 px** |
+| ur | 158 px | **67 px** |
+
+In allen vier Ecken liegt die Zahl näher an der Mitte als der Name.
+
+**Neben dem Namen steht die Spielstärke**, aber nur, wo ein Bot sitzt: „KI ·
+Schwer". Sie ist ein kleines graues Schildchen und nicht Teil des Namens — am
+Namen hängt das Abschneiden bei zu wenig Platz (`text-overflow`), und ein
+abgeschnittenes „KI · Schw…" wäre schlechter als gar keine Stufe.
+
+**Sie kommt aus der Sicht des Moduls**, nicht aus dem Gedächtnis des Clients.
+`sichtFuer` legt jeder Sicht `stufen` bei (Sitz → Stufe), sobald `botStufen` im
+Regelsatz stehen — auch der eines Menschen und der eines Zuschauers. Ein Leck
+ist das nicht: Eingestellt hat sie, wer den Tisch aufgemacht hat, und über die
+Lage der Karten sagen sie nichts. Der Client, der den Tisch aufmacht, wüsste es
+zwar auch selbst — aber nur bis zum nächsten Neuladen, und danach stünde an der
+Ecke des Gegners nichts mehr.
+
+---
+
 ## Der Puck
 
 Ein flacher Chip in der Spielerfarbe. Er steht bei dem, der am Zug ist, und

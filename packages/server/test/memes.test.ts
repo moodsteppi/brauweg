@@ -503,6 +503,182 @@ test('Ein leerer Name nimmt den Namen weg, kaputte Bilder kommen nicht durch', a
  * Mememory laesst sich gar nicht mehr spielen. Deshalb steht dieser Test hier
  * und nicht bei den Motiven.
  */
+// ---------------------------------------------------------------------------
+// Der Ton am Meme
+// ---------------------------------------------------------------------------
+
+/**
+ * Ein echtes WAV bauen: Mono, 22050 Hz, 16 Bit — genau das Format, das der
+ * Client abliefert.
+ *
+ * Selbst gebaut und nicht eingebettet, weil die Laenge der Punkt ist: Die
+ * Pruefung im Server liest sie aus dem Kopf, und ein Test dafuer braucht
+ * beide Faelle, den kurzen und den zu langen.
+ */
+function wav(sekunden: number, rate = 22050): string {
+  const werte = Math.max(1, Math.round(sekunden * rate));
+  const b = Buffer.alloc(44 + werte * 2);
+  b.write('RIFF', 0, 'ascii');
+  b.writeUInt32LE(36 + werte * 2, 4);
+  b.write('WAVE', 8, 'ascii');
+  b.write('fmt ', 12, 'ascii');
+  b.writeUInt32LE(16, 16);
+  b.writeUInt16LE(1, 20);
+  b.writeUInt16LE(1, 22);
+  b.writeUInt32LE(rate, 24);
+  b.writeUInt32LE(rate * 2, 28);
+  b.writeUInt16LE(2, 32);
+  b.writeUInt16LE(16, 34);
+  b.write('data', 36, 'ascii');
+  b.writeUInt32LE(werte * 2, 40);
+  return `data:audio/wav;base64,${b.toString('base64')}`;
+}
+
+test('Die Aufsicht haengt einen Ton an, nimmt ihn wieder weg — und das Bild bleibt', async (t) => {
+  const { ctx, app, annaToken, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+  const kennung = (await einreichen(app, bertToken, { bild: PNG, titel: 'Mit Ton', direkt: true }))
+    .json().kennung;
+
+  // Vorher: stumm. Und das sagt der Server deutlich, statt einen leeren
+  // Rumpf zu schicken.
+  const stumm = await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}/ton` });
+  assert.equal(stumm.statusCode, 404);
+  assert.deepEqual(
+    (await app.inject({ method: 'GET', url: '/api/mememory/motive' })).json().toene,
+    [],
+    'ohne Ton steht die Kennung in keiner Tonliste',
+  );
+
+  const gesetzt = await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { ton: wav(0.8) },
+  });
+  assert.equal(gesetzt.statusCode, 200);
+
+  const geholt = await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}/ton` });
+  assert.equal(geholt.statusCode, 200);
+  assert.equal(geholt.headers['content-type'], 'audio/wav');
+  assert.ok(geholt.headers.etag, 'ohne ETag laedt jeder Wurf den Ton neu');
+
+  // Der Client erfaehrt beim Aufschlagen, WELCHE Motive einen Ton haben —
+  // sonst fragte er fuer jedes fliegende Meme umsonst an.
+  const katalog = (await app.inject({ method: 'GET', url: '/api/mememory/motive' })).json();
+  assert.deepEqual(katalog.toene, [kennung]);
+
+  // Nur umbenennen darf den Ton NICHT mitnehmen. Genau dafuer sind
+  // "kein Feld" und "null" zwei verschiedene Anweisungen.
+  await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { titel: 'Anders' },
+  });
+  assert.equal(
+    (await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}/ton` })).statusCode,
+    200,
+    'ein Umbenennen hat den Ton geloescht',
+  );
+
+  // `null` nimmt ihn weg, und das Bild bleibt stehen.
+  await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { ton: null },
+  });
+  assert.equal(
+    (await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}/ton` })).statusCode,
+    404,
+  );
+  assert.equal(
+    (await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}` })).statusCode,
+    200,
+    'das Bild darf davon nichts merken',
+  );
+
+  // Ein Spieler darf keinen Ton setzen.
+  const verboten = await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${kennung}`,
+    cookies: { [SESSION_COOKIE]: annaToken },
+    payload: { ton: wav(0.5) },
+  });
+  assert.equal(verboten.statusCode, 403);
+});
+
+test('Ein zu langer, ein getarnter und ein zu grosser Ton kommen nicht durch', async (t) => {
+  const { ctx, app, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+  const kennung = (await einreichen(app, bertToken, { bild: PNG, direkt: true })).json().kennung;
+
+  const schicke = (ton: unknown) =>
+    app.inject({
+      method: 'PATCH',
+      url: `/api/mememory/motive/${kennung}`,
+      cookies: { [SESSION_COOKIE]: bertToken },
+      payload: { ton },
+    });
+
+  /*
+   * Zu lang — und dabei klein genug, um am Zeichendeckel vorbeizukommen.
+   *
+   * Die niedrige Abtastrate ist der ganze Sinn dieses Falls: Zwei Sekunden
+   * mit 8000 Hz sind 43 000 Zeichen, also weit unter TON_MAX_ZEICHEN. Wer
+   * die Laenge allein ueber die Dateigroesse deckelte, liesse genau das
+   * durch. Der Schnitt passiert im Browser, und ein Browser laesst sich
+   * umgehen.
+   */
+  const lang = await schicke(wav(2, 8000));
+  assert.equal(lang.statusCode, 400);
+  assert.equal(lang.json().code, 'tonUngueltig');
+
+  // Kein WAV, nur die Huelle: derselbe Fall wie das getarnte HTML beim Bild.
+  const getarnt = await schicke(
+    `data:audio/wav;base64,${Buffer.from('<html><script>alert(1)</script></html>').toString('base64')}`,
+  );
+  assert.equal(getarnt.statusCode, 400);
+  assert.equal(getarnt.json().code, 'tonUngueltig');
+
+  // Und ein Rumpf ueber der Zeichengrenze faellt schon am Schema.
+  const gross = await schicke(`data:audio/wav;base64,${'A'.repeat(70_000)}`);
+  assert.equal(gross.statusCode, 400);
+
+  assert.equal(
+    (await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}/ton` })).statusCode,
+    404,
+    'nach drei Fehlversuchen haengt immer noch kein Ton daran',
+  );
+});
+
+test('Der Bestand sagt je Motiv, ob ein Ton daranhaengt', async (t) => {
+  const { ctx, app, bert, bertToken } = await aufbau(t);
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));
+  const stumm = (await einreichen(app, bertToken, { bild: PNG, titel: 'Stumm', direkt: true }))
+    .json().kennung;
+  const laut = (await einreichen(app, bertToken, { bild: PNG, titel: 'Laut', direkt: true }))
+    .json().kennung;
+  await app.inject({
+    method: 'PATCH',
+    url: `/api/mememory/motive/${laut}`,
+    cookies: { [SESSION_COOKIE]: bertToken },
+    payload: { ton: wav(0.4) },
+  });
+
+  const liste = (
+    await app.inject({
+      method: 'GET',
+      url: '/api/mememory/vorschlaege',
+      cookies: { [SESSION_COOKIE]: bertToken },
+    })
+  ).json().freigegeben as { kennung: string; hatTon: boolean }[];
+
+  assert.equal(liste.find((z) => z.kennung === laut)?.hatTon, true);
+  assert.equal(liste.find((z) => z.kennung === stumm)?.hatTon, false);
+});
+
 test('Ein Tisch nimmt die hochgeladenen Motive als zusatz an', async (t) => {
   const { ctx, app, annaToken, anna, bert, bertToken } = await aufbau(t);
   await ctx.db.update(schema.account).set({ isStaff: true }).where(eqAccount(bert.accountId));

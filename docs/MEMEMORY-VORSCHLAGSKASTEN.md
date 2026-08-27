@@ -29,10 +29,53 @@ jemand das Merkmal selbst geben könnte.
 
 ## Nachträglich ändern (Bestand)
 
-Jede Kachel im Bestand trägt zwei Knöpfe: **✎** öffnet denselben Zuschneider
-wie beim Hochladen, mit Bild und Namen des Motivs; **✕** nimmt es heraus.
+**Der Bestand sieht seit dem 28. August aus wie die Sammlungsseite.** Dieselbe
+Überschrift mit der Zahl daneben (`.mm-gruppe h3`), dasselbe Raster
+(`.mm-sammelgitter`), dieselben Kacheln (`.mm-sammelkachel`) — vier bis fünf
+Bilder je Reihe, `object-fit: contain`, damit jedes Meme ganz zu erkennen ist.
+Das ist keine Kosmetik, sondern zweimal dieselbe Sache: Hier wie dort steht ein
+Raster aus Memes, und wer beides am selben Abend benutzt, soll nicht zweimal
+lernen, wie ein Meme aussieht. Die Zahl in der Überschrift zählt nicht die
+Kacheln, sondern die **Töne**: „1/2 mit Ton".
+
+Der Unterschied zur Sammlung ist, was die Kachel kann. Dort ist sie ein Knopf,
+der auswählt; hier ist sie ein Behälter mit bis zu drei Knöpfen an den Ecken:
+
+| Knopf | Ecke | Was |
+| --- | --- | --- |
+| **✎** | oben links | Zuschneider öffnen — Bild, Name **und Ton** |
+| **✕** | oben rechts | herausnehmen |
+| **♪** | unten links | Ton anhören; steht nur da, wo einer hängt |
+
 Bearbeiten links, Herausnehmen rechts — die zerstörerische Taste sitzt nicht
-dort, wo der Daumen beim Blättern ohnehin liegt.
+dort, wo der Daumen beim Blättern ohnehin liegt. Die Note ist Anzeige und Knopf
+in einem: Sie sagt, dass hier ein Ton hängt, und spielt ihn auf einen Tipp. Ein
+stummes Motiv bekommt sie gar nicht erst — ein blasses Zeichen, das nichts tut,
+wäre eine Frage ohne Antwort.
+
+Die Kachel trägt `overflow: visible`, sonst schnitte die Rundung der
+Sammelkachel die drei Knöpfe an ihren Ecken ab; das Bild bekommt die Rundung
+einzeln zurück. Der Name liegt **im** Bild unter einem Verlauf und nicht
+darunter: Sonst wären die Kacheln eines Rasters je nach Namenslänge
+verschieden hoch.
+
+### Der Ton am Motiv
+
+Im Zuschneider steht unter dem Namensfeld eine Zeile **Ton** mit ihrem Stand
+(„keiner", „vorhanden", „neu gewählt", „wird entfernt") und bis zu drei
+Knöpfen: *Anhören*, *Datei wählen*, *Entfernen*. Gewählt werden darf jede Datei,
+die der Browser abspielen kann — geschnitten wird auf **0,8 Sekunden** Mono,
+und zwar im Browser (`tonschnitt.ts`). Eine neu gewählte Datei spielt sofort
+vor: Was von einem Meme-Ton übrig bleibt, entscheidet sich in den ersten acht
+Zehnteln, und das will man hören, bevor man speichert.
+
+**Beim Einreichen gibt es die Zeile bewusst nicht.** Ein wartender Vorschlag
+ist ein Bild, über das die Aufsicht noch entscheidet; ein Ton daran wäre ein
+zweites Stück Inhalt, das dieselbe Prüfung bräuchte. Wer aufnimmt, hängt ihn
+danach an.
+
+Alles Weitere zum Ton — Format, Grenzen, Vorladen, Messwerte — steht in
+`docs/MEMEMORY-HEIM.md`, Abschnitt 12.
 
 **Die Kennung bleibt beim Ändern.** Eine neue wäre einfacher zu bauen, träfe
 aber jeden Tisch, der das Motiv schon in seiner `config` stehen hat: Dort
@@ -286,6 +329,8 @@ erste Karte zeichnen kann.
 | Tabelle | `mememory_motiv`, Migration `0019_mememory_motive.sql` |
 | Dienst | `packages/server/src/memes.ts` |
 | Bildprüfung | `packages/server/src/bilder.ts` (geteilt mit dem Profilbild) |
+| Tonprüfung | `packages/server/src/toene.ts`, Migration `0024_mememory_ton.sql` |
+| Tonschnitt (Client) | `packages/client/src/minispiele/mememory/tonschnitt.ts` |
 | Endpunkte | `packages/server/src/http/app.ts`, Abschnitt „Mememory“ |
 | Oberfläche | `packages/client/src/minispiele/mememory/Vorschlagskasten.tsx` |
 | Bildpfad | `packages/client/src/minispiele/mememory/bildpfad.ts` |
@@ -295,7 +340,7 @@ erste Karte zeichnen kann.
 | Sammlung (Client) | `packages/client/src/minispiele/mememory/Sammlung.tsx` |
 | Motiv als Reaktion | `packages/server/src/realtime/gateway.ts` (`MOTIV_AB_MODULVERSION`, `letztesMotiv`) |
 | Ecken, Farben, Puck | `docs/MEMEMORY-ECKEN.md` |
-| Tests | `packages/server/test/memes.test.ts` (19), `sammlung.test.ts` (8), `reaktion-motiv.test.ts` (4), `packages/game-mememory/test/zusatz.test.ts` (8) |
+| Tests | `packages/server/test/memes.test.ts` (22), `sammlung.test.ts` (8), `reaktion-motiv.test.ts` (4), `packages/game-mememory/test/zusatz.test.ts` (8) |
 
 ### Endpunkte
 
@@ -307,11 +352,12 @@ erste Karte zeichnen kann.
 | GET | `/api/mememory/sammlung` | angemeldet (eigene Sammlung samt Gurt) |
 | PUT | `/api/mememory/sammlung/gurt` | angemeldet (bis zu drei wählen) |
 | GET | `/api/mememory/motive/:kennung` | alle (nur freigegebene) |
+| GET | `/api/mememory/motive/:kennung/ton` | alle (404, wenn stumm) |
 | POST | `/api/mememory/vorschlaege` | angemeldet (`direkt` wirkt nur bei der Aufsicht) |
 | GET | `/api/mememory/vorschlaege` | Aufsicht |
 | GET | `/api/mememory/vorschlaege/anzahl` | Aufsicht |
 | POST | `/api/mememory/vorschlaege/:kennung/freigeben` | Aufsicht |
-| PATCH | `/api/mememory/motive/:kennung` | Aufsicht (Name und/oder Bild) |
+| PATCH | `/api/mememory/motive/:kennung` | Aufsicht (Name, Bild und/oder Ton; `ton: null` nimmt ihn weg) |
 | DELETE | `/api/mememory/motive/:kennung` | Aufsicht |
 
 ---
@@ -327,9 +373,14 @@ erste Karte zeichnen kann.
   nach dem Konto geht: Ein Testkonto, das ohne `direkt` einreicht, bekäme ein
   Nein, obwohl ihm dieselbe Anwendung „unbegrenzt" gemeldet hat.
 - **20 Bilder je Stapel** im Client (`STAPEL_MAX`).
+- **0,8 Sekunden und 64 000 Zeichen** je Ton (`TON_MAX_SEKUNDEN` mit einem
+  Zehntel Zugabe, `TON_MAX_ZEICHEN`). Beides sind zwei verschiedene Regeln:
+  Zwei Sekunden mit 8000 Hz kämen unter dem Zeichendeckel durch, deshalb liest
+  der Server die Dauer aus dem WAV-Kopf.
 - **Der Typ in der data-URL wird nicht geglaubt.** Geprüft werden die ersten
-  Bytes (`istEchtesBild`): Wer HTML als `image/png` hinterlegt, bekäme es sonst
-  unter unserer eigenen Herkunft ausgeliefert — der kurze Weg zu XSS.
+  Bytes (`istEchtesBild`, `wavDauer`): Wer HTML als `image/png` oder
+  `audio/wav` hinterlegt, bekäme es sonst unter unserer eigenen Herkunft
+  ausgeliefert — der kurze Weg zu XSS.
 - **Abgelehnt heißt gelöscht.** Ein Zustand „abgelehnt“ wäre ein Bilderfriedhof
   aus genau dem Material, das man nicht aufbewahren will.
 

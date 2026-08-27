@@ -6,12 +6,17 @@ import { Ecken } from '../minispiele/mememory/Ecken';
 import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/eckenplan';
 import { Einstellungsfenster } from '../minispiele/mememory/Einstellungsfenster';
 import { Heim } from '../minispiele/mememory/Heim';
-import { spieleKlang } from '../minispiele/mememory/klaenge';
+import { ladeMemeToene, spieleKlang, spieleMemeTon } from '../minispiele/mememory/klaenge';
 import { KiMatch } from '../minispiele/mememory/KiMatch';
 import { MehrSeite } from '../minispiele/mememory/MehrSeite';
 import { OnlineMatch, type Gegnerzahl } from '../minispiele/mememory/OnlineMatch';
 import { SammlungSeite } from '../minispiele/mememory/SammlungSeite';
-import { Stufenregler, botLevelAus, type Stufe } from '../minispiele/mememory/Stufenregler';
+import {
+  Stufenregler,
+  botLevelAus,
+  stufenName,
+  type Stufe,
+} from '../minispiele/mememory/Stufenregler';
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
 import { PfeilLinks } from '../zeichen';
@@ -57,6 +62,15 @@ interface MememorySicht {
   sieger: number | null;
   leftSeats: number[];
   zuschauer: boolean;
+  /**
+   * Welcher Sitz von einem Bot welcher Staerke gespielt wird. Fehlt, wenn
+   * kein Bot am Tisch sitzt.
+   *
+   * Sie steht in JEDER Sicht (siehe sicht.ts im Modul) und nicht nur im
+   * Gedaechtnis dieses Bildschirms: Wer nach einem Neuladen an seinen Tisch
+   * zurueckkommt, soll an der Ecke weiterhin lesen, gegen wen er spielt.
+   */
+  stufen?: Record<number, Stufe>;
 }
 
 
@@ -112,6 +126,57 @@ const MISCH_SAMMELN_MS = 820;
 
 /** So viele Emojis duerfen hoechstens gleichzeitig fliegen. */
 const FLIEGER_MAX = 12;
+
+/**
+ * Wie oft gefragt wird, ob ein Bot dazwischenruft — und wie oft er es tut.
+ *
+ * 35 % alle dreieinhalb Sekunden sind im Schnitt ein Zwischenruf je zehn
+ * Sekunden, also etwa ein halbes Dutzend in einer Partie. Genug, dass der
+ * Gegner lebendig wirkt; wenig genug, dass niemand deswegen ein Paar
+ * vergisst. Gewuerfelt wird und kein fester Takt: Ein Meme alle zehn
+ * Sekunden auf die Sekunde genau ist eine Uhr, kein Gegenueber.
+ */
+const SPAM_TAKT_MS = 3500;
+const SPAM_CHANCE = 0.35;
+
+/**
+ * Die drei Memes eines Bots.
+ *
+ * Eins zum Jubeln, eins zum Verlieren, eins zum Dazwischenrufen. Gezogen
+ * werden sie aus den Motiven DIESER Partie (`sicht.motive`) — das ist der
+ * einzige Topf, den beide Seiten kennen und der garantiert Bilder enthaelt,
+ * die auch geladen sind. Eine eigene Sammlung hat ein Bot nicht: Sammeln
+ * setzt ein Konto voraus.
+ */
+interface BotGurt {
+  readonly gut: string;
+  readonly schlecht: string;
+  readonly spam: string;
+}
+
+/**
+ * Die Gurte ALLER Bots in einem Zug ziehen.
+ *
+ * In einem Zug und nicht je Bot einzeln, weil der Topf ein gemeinsamer ist:
+ * Zwoelf Motive liegen auf dem Brett, drei Gegner brauchen neun. Zoege jeder
+ * fuer sich, saehe man denselben Frosch von zwei Ecken kommen — und das ist
+ * genau die Verwechslung, die ein eigener Gurt je Gegner verhindern soll.
+ *
+ * Geht der Topf doch aus (kleines Brett, viele Bots), wird er neu gefuellt,
+ * statt einen Anlass leer zu lassen: Ein Bot ohne Jubel-Meme jubelte gar
+ * nicht, und das faellt mehr auf als ein doppeltes Bild.
+ */
+function ziehGurte(motive: readonly string[], sitze: readonly number[]): Record<number, BotGurt> {
+  if (motive.length === 0) return {};
+  let topf: string[] = [];
+  const nimm = (): string => {
+    if (topf.length === 0) topf = [...motive];
+    return topf.splice(Math.floor(Math.random() * topf.length), 1)[0] ?? '';
+  };
+  const gurte: Record<number, BotGurt> = {};
+  for (const sitz of sitze) gurte[sitz] = { gut: nimm(), schlecht: nimm(), spam: nimm() };
+  return gurte;
+}
 
 interface Flieger {
   readonly id: number;
@@ -230,6 +295,15 @@ export function Mememory({
   const zufall = useRef(false);
   const schloesser = useRef<readonly boolean[]>([]);
   /**
+   * Welche Motive einen Ton haben — die Auskunft des Servers.
+   *
+   * Ebenfalls eine Schachtel: Gezeichnet wird davon nichts, gefragt wird sie
+   * beim Vorladen. Sie kommt mit der Motivliste und ist meistens kurz — die
+   * 88 Grundmotive stehen nie darin, sie liegen als Dateien im Client und
+   * koennen deshalb gar keinen Ton haben.
+   */
+  const mitTon = useRef(new Set<string>());
+  /**
    * Der Gurt DIESER Partie.
    *
    * `null` heisst: der gespeicherte Gurt gilt. Sonst steht hier die
@@ -306,6 +380,11 @@ export function Mememory({
       // Weniger Streuung als frueher: Die Fluege laufen jetzt alle auf die
       // Mitte zu, und dort wuerde ein grosser Versatz sie am Ziel vorbeiziehen.
       const ab = Math.round((Math.random() - 0.5) * 52);
+      // Der Ton haengt am Motiv und wird deshalb HIER gespielt und nicht an
+      // den drei Stellen, die etwas werfen: Ein eigener Wurf, einer der
+      // Gegenseite und einer der KI kommen alle hier vorbei. Wer keinen Ton
+      // hat, bleibt stumm; nachgeladen wird nichts (siehe klaenge.ts).
+      if (motiv) spieleMemeTon(motiv);
       // Der Deckel ist kein Schoenheitsfehler: Ohne ihn haelt ein Dauerklicker
       // beliebig viele Knoten am Leben, und der Bildschirm ruckelt.
       setFlieger((alt) => [...alt, { id, zeichen, motiv, ecke, ab }].slice(-FLIEGER_MAX));
@@ -352,6 +431,110 @@ export function Mememory({
   eckeRef.current = (sitz: number): Ecke => eckeVon(sitz, eigenerSitz, sitze);
 
   // -------------------------------------------------------------------------
+  // Die KI wirft Memes
+  // -------------------------------------------------------------------------
+
+  /**
+   * Jeder Bot bekommt drei Memes und drei Anlaesse.
+   *
+   * **Das passiert rein im Client, und das ist die richtige Stelle.** Eine
+   * Reaktion ist kein Zustand (siehe gateway.ts): nicht gespeichert, in keiner
+   * Sicht, ueberlebt kein Neuladen. Ein Bot koennte sie also gar nicht
+   * schicken — er hat keine Verbindung. Und er braucht auch keine: An einem
+   * KI-Tisch sitzt genau ein Mensch (`visibility: 'on_request'`,
+   * `fillWithBots`), es gibt also niemanden, dem etwas entginge. Das
+   * Spielmodul bleibt damit unberuehrt — es weiss nichts von Memes, und ein
+   * Zwischenruf ist keine Regel.
+   *
+   * Welche drei es sind, wird je Tisch EINMAL gewuerfelt. Bei jedem Wurf neu
+   * zu ziehen hiesse, dass der Gegner kein Gesicht hat; so hat jede Partie
+   * ihren eigenen Gegner mit seinen drei Spruechen.
+   */
+  const botGurte = useRef<Record<number, BotGurt>>({});
+  const gurtTisch = useRef<string | null>(null);
+  const stufenListe = sicht?.stufen;
+
+  useEffect(() => {
+    if (!tischId || !sicht || sicht.motive.length === 0) {
+      if (!tischId) {
+        gurtTisch.current = null;
+        botGurte.current = {};
+      }
+      return;
+    }
+    if (gurtTisch.current === tischId) return;
+    gurtTisch.current = tischId;
+    botGurte.current = ziehGurte(
+      sicht.motive,
+      Object.keys(stufenListe ?? {}).map(Number),
+    );
+  }, [tischId, sicht?.motive.length, stufenListe]);
+
+  /**
+   * Ein Bot wirft eines seiner drei Memes.
+   *
+   * Ohne Gurt passiert nichts — dann sitzt an diesem Platz ein Mensch, oder
+   * die Motive der Partie waren beim Ziehen noch nicht da.
+   */
+  const wirfBotMeme = useCallback(
+    (sitz: number, anlass: keyof BotGurt): void => {
+      const kennung = botGurte.current[sitz]?.[anlass];
+      if (!kennung) return;
+      zeigeFlieger(0, eckeRef.current(sitz), kennung);
+    },
+    [zeigeFlieger],
+  );
+
+  /**
+   * Der Zwischenruf: waehrend ANDERE am Zug sind, immer mal wieder eines.
+   *
+   * Nur wer gerade nicht dran ist, ruft dazwischen — wer selbst aufdeckt, hat
+   * zu tun. Und nur, solange die Partie laeuft: Zum Schluss kommt ohnehin das
+   * Meme zum Ausgang, und zwei gleichzeitig waeren Laerm.
+   */
+  const dranJetzt = sicht?.dran ?? null;
+  const fertig = sicht?.fertig ?? false;
+  useEffect(() => {
+    if (!sicht || fertig) return;
+    const takt = window.setInterval(() => {
+      if (Math.random() > SPAM_CHANCE) return;
+      const wartende = Object.keys(botGurte.current)
+        .map(Number)
+        .filter((sitz) => sitz !== dranJetzt);
+      const wer = wartende[Math.floor(Math.random() * wartende.length)];
+      if (wer !== undefined) wirfBotMeme(wer, 'spam');
+    }, SPAM_TAKT_MS);
+    return () => window.clearInterval(takt);
+  }, [sicht !== null, fertig, dranJetzt, wirfBotMeme]);
+
+  /**
+   * Das Meme zum Ausgang: Wer gewonnen hat, jubelt; alle anderen nicht.
+   *
+   * Gestaffelt, damit bei drei Gegnern nicht drei Bilder im selben Bild
+   * losfliegen — das saehe nach einem Fehler aus und nicht nach drei
+   * Meinungen.
+   */
+  const endeGeworfen = useRef(false);
+  useEffect(() => {
+    if (!fertig) {
+      endeGeworfen.current = false;
+      return;
+    }
+    if (endeGeworfen.current) return;
+    endeGeworfen.current = true;
+    const sieger = sicht?.sieger ?? null;
+    const uhren = Object.keys(botGurte.current)
+      .map(Number)
+      .map((sitz, i) =>
+        window.setTimeout(
+          () => wirfBotMeme(sitz, sitz === sieger ? 'gut' : 'schlecht'),
+          260 + i * 380,
+        ),
+      );
+    return () => uhren.forEach((uhr) => window.clearTimeout(uhr));
+  }, [fertig, sicht?.sieger, wirfBotMeme]);
+
+  // -------------------------------------------------------------------------
   // Aktive Spieler
   // -------------------------------------------------------------------------
 
@@ -394,6 +577,10 @@ export function Mememory({
         if (!lebt) return;
         setMotivNamen(antwort.namen ?? {});
         setKatalog({ grund: antwort.grund ?? [], hochgeladen: antwort.hochgeladen ?? [] });
+        // In eine Schachtel und nicht in den Zustand: Die Liste wird nie
+        // gezeichnet, sondern nur gefragt ("hat das einen Ton?"). Ein Zustand
+        // loeste bei jeder Antwort ein Neuzeichnen des Bretts aus.
+        mitTon.current = new Set(antwort.toene ?? []);
       })
       .catch(() => {
         /* ohne Namen weiterspielen */
@@ -734,6 +921,27 @@ export function Mememory({
     });
   }, []);
 
+  /**
+   * Die Toene dieser Partie vorladen, sobald Brett und Tonliste da sind.
+   *
+   * Vorladen und nicht beim Wurf holen: Ein Flug dauert 1450 ms, ein Ton, der
+   * erst danach ankommt, gehoert zu einem Bild, das nicht mehr da ist.
+   * Geladen wird, was auf dem Brett liegt UND was im eigenen Gurt steckt —
+   * das Zweite ist nicht dasselbe: Ein gesammeltes Meme muss in dieser Partie
+   * nicht vorkommen.
+   *
+   * Bei ausgeschaltetem Ton passiert nichts (siehe `ladeMemeToene`): kein
+   * Kontext, kein Abruf, kein Byte.
+   */
+  const gurtJetzt = (partieGurt ?? gurt).join(',');
+  useEffect(() => {
+    if (!sicht) return;
+    const topf = [...new Set([...sicht.motive, ...(partieGurt ?? gurt)])].filter((kennung) =>
+      mitTon.current.has(kennung),
+    );
+    if (topf.length > 0) void ladeMemeToene(topf);
+  }, [sicht?.motive.join(','), gurtJetzt]);
+
   /** Klangausloeser. Verglichen wird gegen den vorigen Stand, nicht gegen die Zeit. */
   const vorigeOffen = useRef<number[]>([]);
   const vorigePause = useRef<MememorySicht['pause']>(null);
@@ -763,6 +971,15 @@ export function Mememory({
         const wer = platz === undefined ? null : sicht.besitzer[platz];
         const meins = wer !== null && wer === eigenerSitz;
         spieleKlang(meins ? 'treffer' : 'gefunden');
+
+        /*
+         * Geht das Paar an einen Bot, wirft er sein Jubel-Meme.
+         *
+         * Der Anlass ist der Besitzer des Platzes und nicht `dran`: Beides
+         * sagt waehrend der Schaupause dasselbe, aber der Besitzer sagt es
+         * ueber die KARTE — und die ist es, um die es geht.
+         */
+        if (wer !== null && !meins) wirfBotMeme(wer, 'gut');
 
         /*
          * Gesammelt wird NUR das selbst geholte Paar.
@@ -801,7 +1018,7 @@ export function Mememory({
         spieleKlang(sicht.sieger === eigenerSitz ? 'sieg' : 'niederlage');
       }
     }
-  }, [sicht, eigenerSitz, motivNamen, melde]);
+  }, [sicht, eigenerSitz, motivNamen, melde, wirfBotMeme]);
 
   /**
    * Der Namensblitz raeumt sich selbst weg.
@@ -1404,6 +1621,7 @@ export function Mememory({
         eigenerSitz={eigenerSitz}
         punkte={sicht.punkte}
         nameVon={namenVon}
+        stufeVon={(sitz) => stufenName(sicht.stufen?.[sitz])}
         dran={sicht.fertig ? null : sicht.dran}
       />
 
