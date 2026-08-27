@@ -494,9 +494,19 @@ export const api = {
     email: string;
     password: string;
     displayName: string;
-    inviteCode: string;
     birthday: string;
   }) => post<{ ok: true }>('/auth/register', body),
+
+  /** Ob "Mit Google anmelden" auf dieser Ausgabe eingerichtet ist. */
+  googleConfig: () => request<{ clientId: string | null }>('/auth/google/config'),
+  /** Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login. */
+  googleLogin: async (credential: string) => {
+    const antwort = await post<{ ok: true; token?: string }>('/auth/google', {
+      credential,
+    });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>

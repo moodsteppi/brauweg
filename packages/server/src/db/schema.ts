@@ -227,11 +227,19 @@ export const account = pgTable(
     hasBirthdayOutfit: boolean().notNull().default(false),
     /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
     birthdayRewardYear: integer(),
+    /**
+     * Google-Kennung (`sub` aus dem ID-Token). Stabil, waehrend die E-Mail
+     * beim selben Google-Konto wechseln kann — deshalb haengt die Verknuepfung
+     * an dieser Spalte und nicht an der Adresse. null: nie mit Google
+     * angemeldet.
+     */
+    googleSub: text(),
     anonymizedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
     uniqueIndex('account_display_name_key').on(t.displayName),
+    uniqueIndex('account_google_sub_key').on(t.googleSub),
   ],
 );
 
