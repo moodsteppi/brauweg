@@ -10775,18 +10775,59 @@ span.hub-angebot-art.poker-jeton-stapel {
   gap: clamp(4px, 2.4%, 15px);
 }
 
+/*
+ * Eine Bannerkarte ist eine echte Klappkarte.
+ *
+ * Zwei Ebenen mit getrennten Aufgaben: Die äußere trägt die Neigung im Fächer
+ * (eine Drehung in der Bildebene), die innere die Umdrehung um die Hochachse.
+ * Zusammen in einer `transform` ginge es auch, aber dann müsste die
+ * Fächerneigung bei jedem Zwischenschritt der Umdrehung mitgeschrieben
+ * werden — und die steht in einer Variablen, die je Karte anders ist.
+ */
 .mm-banner .mm-banner-karte {
+  position: relative;
   width: auto;
   height: 100%;
+  /* Quadratisch wie auf dem Brett: Die hochgeladenen Bilder werden beim
+     Einreichen quadratisch zugeschnitten. */
+  aspect-ratio: 1;
   /* Nicht schrumpfen: Ein Flex-Element mit fester Höhe und `aspect-ratio`
      gibt sonst bei Platzmangel die BREITE nach — aus der quadratischen Karte
      würde ein Rechteck, und das Meme darin wäre beschnitten. */
   flex: none;
-  /* Quadratisch wie auf dem Brett: Die hochgeladenen Bilder werden beim
-     Einreichen quadratisch zugeschnitten. */
-  aspect-ratio: 1;
-  display: block;
+  /* Ohne Perspektive ist die Umdrehung eine Stauchung und keine Drehung. 300
+     px auf eine 47 px große Karte ist flach genug, dass die Kante beim
+     Halbwinkel nicht ausbricht. */
+  perspective: 300px;
+  transform: rotate(var(--mm-dreh, 0deg)) translateY(var(--mm-hoch, 0));
+}
+
+.mm-banner .mm-banner-blatt {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+/* Die Dauer muss zu DREH_MS in Banner.tsx passen: Läuft die Uhr dort
+   schneller, wechselt das Bild, während die Vorderseite noch zu sehen ist. */
+.mm-banner .mm-banner-karte[data-zu] .mm-banner-blatt {
+  transform: rotateY(180deg);
+}
+
+.mm-banner .mm-banner-vorn,
+.mm-banner .mm-banner-rueck {
+  position: absolute;
+  inset: 0;
   border-radius: 12%;
+  overflow: hidden;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.mm-banner .mm-banner-vorn {
+  width: 100%;
+  height: 100%;
+  display: block;
   object-fit: cover;
   /* Weißer Rand und Schatten: So liegt die Karte auf dem Tuch, statt darin zu
      versinken. Auf rotem Filz braucht ein dunkles Meme diese Kante. */
@@ -10794,8 +10835,81 @@ span.hub-angebot-art.poker-jeton-stapel {
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.92),
     0 7px 14px -7px rgba(0, 0, 0, 0.8);
-  transform: rotate(var(--mm-dreh, 0deg)) translateY(var(--mm-hoch, 0));
 }
+
+/*
+ * Die Rückseite ist dieselbe wie am Brett (`.mm-rueck`) — nur runder und mit
+ * kleinerem Monogramm, weil die Karte hier 47 statt 80 px misst. Sie liegt um
+ * 180 Grad gedreht hinter der Vorderseite und kommt beim Umdrehen nach vorn.
+ */
+.mm-banner .mm-banner-rueck {
+  transform: rotateY(180deg);
+}
+/*
+ * Das Monogramm der Rueckseite, kleiner als am Brett.
+ *
+ * Eine feste Zahl und KEIN Prozentwert: Prozente rechnen bei `font-size`
+ * gegen die Schrift des Elternteils und nicht gegen die Karte — der erste
+ * Anlauf stand mit `40 %` bei gemessenen 6,4 px auf einer 55 px breiten
+ * Karte, also 12 % statt der 27 %, die das Brett hat. Die Karte selbst
+ * schwankt nur zwischen 41 px (schmales Telefon) und 56 px (breiter Schirm);
+ * 14 px sind darin durchgehend richtig.
+ */
+.mm-banner .mm-banner-rueck::after {
+  font-size: 14px;
+}
+
+/*
+ * Konfetti, wenn ein Paar liegt.
+ *
+ * Es fliegt ÜBER der Karte und fängt keine Tipps ab: Das Banner sitzt in
+ * einem Knopf, und ein Schnipsel, der den Knopf schluckt, wäre ein Spiel, das
+ * sich nicht starten lässt.
+ */
+.mm-konfetti {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.mm-konfetti i {
+  position: absolute;
+  width: 4px;
+  height: 5px;
+  margin: -2px 0 0 -2px;
+  border-radius: 1px;
+  /* Nur `transform` und `opacity`: Beides läuft auf dem Compositor, und die
+     Spielauswahl zeichnet sieben Banner gleichzeitig. */
+  animation: mm-konfetti-flug 900ms cubic-bezier(0.15, 0.7, 0.4, 1) var(--mm-kverzug, 0ms) both;
+}
+
+@keyframes mm-konfetti-flug {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0.4);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    /* Am Ende noch ein Stück weiter nach unten als der Wurf: Konfetti fällt. */
+    transform: translate(var(--mm-kx, 0), calc(var(--mm-ky, 0) + 16px))
+      rotate(var(--mm-kdreh, 180deg)) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Ohne Bewegung dreht sich nichts und fliegt nichts. Den Takt schaltet
+   Banner.tsx ohnehin ab; die Regeln hier fangen den Fall ab, dass eine
+   Umdrehung gerade läuft, wenn die Einstellung wechselt. */
+@media (prefers-reduced-motion: reduce) {
+  .mm-banner .mm-banner-blatt { transition: none; }
+  .mm-konfetti { display: none; }
+}
+
 
 
 /* --- Das Heim: drei Seiten auf einem Streifen -----------------------------
@@ -11396,10 +11510,22 @@ span.hub-angebot-art.poker-jeton-stapel {
   gap: 8px;
   margin-bottom: 12px;
 }
+/*
+ * Der Name steht MITTIG im Kasten, die Zahl der offenen Tische sitzt rechts
+ * in der Ecke.
+ *
+ * Vorher teilten sich beide die Zeile (`space-between`), und damit stand der
+ * Name links am Rand — in einer Reihe aus drei gleich breiten Kaesten sieht
+ * das aus wie eine Liste und nicht wie eine Wahl. Die Zahl kann nicht
+ * einfach mit in die Mitte: Sie aendert sich alle paar Sekunden, und ein
+ * Name, der dabei hin und her rutscht, liest sich wie ein Fehler. Also
+ * hoert sie auf, in der Zeile mitzurechnen.
+ */
 .mm-zahl {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 10px;
   padding: 14px 16px;
   border: 0;
@@ -11412,6 +11538,8 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .mm-zahl-name { font: 800 14px/1 system-ui; }
 .mm-zahl-warten {
+  position: absolute;
+  right: 16px;
   font: 700 11.5px/1 system-ui;
   letter-spacing: 0.04em;
   opacity: 0.65;

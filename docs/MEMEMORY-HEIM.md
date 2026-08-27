@@ -246,9 +246,59 @@ Zwei gerechnete Zahlen stehen im CSS und sollen dort bleiben:
 **Fällt der Abruf aus, bleibt es beim gemalten Banner.** Eine leere rote
 Fläche sieht nach Fehler aus, das Stillleben nach Absicht.
 
+### Das Banner spielt sich selbst
+
+Alle vier bis zehn Sekunden dreht sich eine Karte um, bleibt kurz verdeckt
+liegen und kommt mit einem anderen Meme zurück. **In einem von vier Fällen**
+ist das andere Meme eines, das schon auf dem Banner liegt: Dann drehen BEIDE
+zu, werden nacheinander aufgedeckt — und es gibt Konfetti. Das ist das Spiel
+in fünf Sekunden erzählt, ohne ein Wort.
+
+Die Karte ist dabei eine echte Klappkarte: zwei Seiten in einem
+`preserve-3d`-Blatt, die Rückseite ist dieselbe `.mm-rueck` wie am Brett
+(reines CSS, kein Byte Übertragung). **Getauscht wird, während die Karte
+verdeckt liegt** — die Vorderseite trägt `backface-visibility: hidden` und ist
+in dieser Zeit unsichtbar.
+
+Drei Dinge daran sind für andere Bildschirme interessant:
+
+1. **Der Takt hängt an einem SCHLÜSSEL, nicht an den Karten.** Ein Effekt mit
+   dem Kartenfeld in der Abhängigkeitsliste liefe bei jedem Tausch neu und
+   räumte dabei seine eigenen Uhren ab — der Takt bliebe nach dem ersten
+   Umdrehen stehen. Der aktuelle Stand kommt deshalb aus einem Ref.
+2. **Bei verdecktem Tab passiert nichts.** `setTimeout` wird dort auf eine
+   Sekunde gedeckelt und die CSS-Übergänge stehen still; ein Takt, der
+   trotzdem weiterliefe, arbeitete nur gegen den Akku. Nebenwirkung beim
+   Prüfen: Der Sitzungsbrowser meldet die Seite als `hidden`, dort passiert
+   also von selbst gar nichts. Zum Messen muss `document.visibilityState`
+   überschrieben werden.
+3. **Konfetti nur aus `transform` und `opacity`.** Richtung und Weite kommen
+   einmal aus dem Zufall und stehen dann in Stilvariablen; die Bewegung ist
+   eine CSS-Animation. Ein Wurf, der bei jedem Bild neu rechnet, kostet die
+   Bildrate der ganzen Spielauswahl — und die zeichnet sieben Banner.
+
+Nachgemessen über 87 Sekunden (Mutationen mit Zeitstempel, dazu eine Nummer je
+Knoten, um Neuaufbauten auszuschließen): zehn Umdrehungen, Abstände 6,2 bis
+10,7 s; je Umdrehung 730 ms zwischen Zudrehen und Tausch (Soll 720); zwei
+Paare, dabei 726 ms bis zum ersten Aufdecker, 293 ms bis zum zweiten (Soll
+280), 308 ms bis zum Konfetti (Soll 300), 902 ms bis es weg ist (Soll 900).
+Die Knotennummern blieben durchgehend dieselben — React baut nichts neu.
+
 ---
 
-## 7. Zeichen sitzen jetzt mittig
+## 7. Die Gegnerwahl steht mittig
+
+Im Bildschirm „Online-Match“ stehen die drei Namen jetzt in der Mitte ihres
+Kastens statt links am Rand. Die Zahl der offenen Tische sitzt rechts in der
+Ecke und rechnet in der Zeile nicht mehr mit (`position: absolute`).
+
+Beides zusammen wäre falsch: Die Zahl ändert sich alle paar Sekunden, und ein
+Name, der dabei hin und her rutscht, liest sich wie ein Fehler. Nachgemessen
+sitzen alle drei Namen auf 0,0 px zur Kastenmitte.
+
+---
+
+## 8. Zeichen sitzen jetzt mittig
 
 Am 27. August einmal quer durch die App gemessen: für jedes `<svg>` der Kasten
 seiner Zeichnung gegen den Kasten der Fläche, für jedes Zeichen-in-einem-Knopf
@@ -290,8 +340,8 @@ Briefkasten), saßen **alle drei** daneben, zwischen 4,2 % und 6,3 %.
 | `client/src/minispiele/mememory/SammlungSeite.tsx` | Gurt und Bestand nach Gruppen |
 | `client/src/minispiele/mememory/MehrSeite.tsx` | Baustellenhinweis, Vorschlagskasten, Freunde |
 | `client/src/minispiele/mememory/Einstellungsfenster.tsx` | Lautstärke |
-| `client/src/minispiele/mememory/Banner.tsx` | Banner der Spielauswahl |
-| `client/src/zeichen.tsx` | Kreuz, Pfeil, Note |
+| `client/src/minispiele/mememory/Banner.tsx` | Banner der Spielauswahl, Takt und Konfetti |
+| `client/src/zeichen.tsx` | Kreuz, Pfeil, Note, Haus, Winkel |
 | `server/src/tables/service.ts` | `verlasseKiTisch` |
 | `server/src/runtime/party.ts` | `verwirf` |
 | `server/test/ki-tisch-verlassen.test.ts` | vier Fälle |
