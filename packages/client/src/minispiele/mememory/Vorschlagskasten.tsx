@@ -46,6 +46,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../../api';
+import { Kreuz } from '../../zeichen';
 import { motivBildPfad } from './bildpfad';
 
 /** Kantenlaenge des gespeicherten Bildes. Die Grundmotive haben 224 px; hier
@@ -823,7 +824,7 @@ export function Vorschlagskasten({
         <div className="mm-kasten-kopf">
           <h2>Vorschlagskasten</h2>
           <button type="button" className="mm-kasten-zu" onClick={onFertig} aria-label="Schließen">
-            ✕
+            <Kreuz />
           </button>
         </div>
 
@@ -1009,7 +1010,7 @@ export function Vorschlagskasten({
                     disabled={busy}
                     aria-label="Ablehnen"
                   >
-                    ✕
+                    <Kreuz />
                   </button>
                 </div>
               </div>
@@ -1054,7 +1055,7 @@ export function Vorschlagskasten({
                     disabled={busy}
                     aria-label={`${eintrag.titel ?? 'Motiv'} herausnehmen`}
                   >
-                    ✕
+                    <Kreuz />
                   </button>
                 </div>
               ))}

@@ -764,13 +764,20 @@ export const api = {
   /**
    * Die freigegebenen hochgeladenen Motive.
    *
-   * NUR die hochgeladenen — die 88 Grundmotive kennt der Client nicht als
-   * Liste, sondern nur als Dateien unter public/. Deshalb wandert diese
-   * Liste als `zusatz` in die Tisch-config, und das Spielmodul legt sie zu
-   * seinem eigenen Katalog.
+   * `hochgeladen` sind NUR die freigegebenen Einsendungen. Genau diese
+   * Liste wandert als `zusatz` in die Tisch-config, und das Spielmodul legt
+   * sie zu seinem eigenen Katalog — sie ist der Teil, den das Modul beim
+   * Bauen noch nicht kennen konnte.
+   *
+   * `grund` ist der feste Katalog des Moduls, durchgereicht vom Server. Er
+   * gehoert NICHT in die `zusatz`-Liste (das Modul hat ihn schon) und dient
+   * allein der Sammlungsseite: Sie zeigt auch, was noch fehlt, und braucht
+   * dafuer den ganzen Topf.
    */
   mememoryMotive: () =>
-    request<{ hochgeladen: string[]; namen: Record<string, string> }>('/mememory/motive'),
+    request<{ grund: string[]; hochgeladen: string[]; namen: Record<string, string> }>(
+      '/mememory/motive',
+    ),
 
   /**
    * Was das eigene Konto noch einreichen darf. `frei: null` heisst

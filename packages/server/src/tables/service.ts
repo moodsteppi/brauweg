@@ -458,6 +458,51 @@ export async function leaveLobby(db: Db, tableId: string, accountId: string) {
   }
 }
 
+/**
+ * Ein laufender Tisch gegen die KI, verlassen von seinem einzigen Menschen.
+ *
+ * Gibt `true` zurueck, wenn der Tisch daraufhin geschlossen wurde.
+ *
+ * **Warum das eine Ausnahme braucht.** Wer eine laufende Partie gegen andere
+ * verlaesst, gibt seinen Platz an einen Bot ab und kann zurueckkommen — so
+ * ueberlebt eine Partie eine U-Bahn-Fahrt, und die Mitspieler stehen nicht
+ * vor einem leeren Stuhl. Gegen die KI gibt es niemanden, fuer den das
+ * Weiterlaufen einen Sinn haette: Der Tisch bliebe nur als "Weiterspielen"
+ * im Menue stehen und boete beim naechsten Griff genau die Partie an, die der
+ * Nutzer eben bewusst abgebrochen hat.
+ *
+ * Massgeblich ist die BESETZUNG und nicht die Sichtbarkeit: Ein Tisch, an dem
+ * genau ein Konto sitzt und sonst nur Bots, ist ein KI-Match — gleich, ueber
+ * welchen Knopf er entstanden ist. Ueber `visibility: 'on_request'` zu gehen
+ * waere schmaler und truegerisch, denn dieselbe Einstellung tragen auch
+ * Tische, zu denen jemand einen Freund einlaedt.
+ *
+ * Der Sitz bleibt besetzt. Er ist die Auskunft darueber, WER hier gespielt
+ * hat; gebraucht wird sie von der Statistik, und `activeTableFor` sieht auf
+ * den Tischstatus, nicht auf den Sitz — der geschlossene Tisch taucht also
+ * ohnehin nicht mehr als "Weiterspielen" auf.
+ */
+export async function verlasseKiTisch(
+  db: Db,
+  tableId: string,
+  accountId: string,
+): Promise<boolean> {
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'running') return false;
+
+  const menschen = seats.filter((seat) => seat.accountId !== null);
+  if (menschen.length !== 1 || menschen[0]?.accountId !== accountId) return false;
+  // Ohne einen einzigen Bot ist das kein KI-Match, sondern ein Tisch, dessen
+  // Mitspieler noch kommen sollen — den raeumt die Wartelogik.
+  if (!seats.some((seat) => seat.isBot)) return false;
+
+  await db
+    .update(s.gameTable)
+    .set({ status: 'abandoned' })
+    .where(and(eq(s.gameTable.id, tableId), eq(s.gameTable.status, 'running')));
+  return true;
+}
+
 export async function touch(db: Db, tableId: string): Promise<void> {
   await db
     .update(s.gameTable)

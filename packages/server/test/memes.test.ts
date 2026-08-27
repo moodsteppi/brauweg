@@ -19,6 +19,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
+import { MOTIVE } from '@brauweg/game-mememory';
+
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { createSession } from '../src/auth/service.js';
@@ -106,6 +108,20 @@ test('Ein eingereichtes Bild wartet: nicht im Katalog, nicht abrufbar', async (t
   // Bild trotzdem nicht sehen, solange es wartet.
   const bild = await app.inject({ method: 'GET', url: `/api/mememory/motive/${kennung}` });
   assert.equal(bild.statusCode, 404);
+});
+
+test('Der Katalog reicht auch den Grundstock durch', async (t) => {
+  const { app } = await aufbau(t);
+
+  const katalog = (await app.inject({ method: 'GET', url: '/api/mememory/motive' })).json();
+
+  // Die Sammlungsseite zeigt auch, was noch FEHLT, und braucht dafuer den
+  // ganzen Topf. Der Client fuehrt den Katalog ausdruecklich nicht selbst
+  // (er kennt keine Spielregeln, siehe game-mememory/src/regeln.ts) — also
+  // muss er hier herauskommen.
+  assert.deepEqual(katalog.grund, MOTIVE, 'der feste Katalog des Moduls, unveraendert');
+  assert.ok(katalog.grund.length > 80, 'der Grundstock ist nicht leer');
+  assert.deepEqual(katalog.hochgeladen, [], 'Einsendungen bleiben eine eigene Liste');
 });
 
 test('Getarntes HTML kommt nicht durch', async (t) => {

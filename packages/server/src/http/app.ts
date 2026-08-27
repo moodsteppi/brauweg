@@ -17,6 +17,10 @@ import fastifyStatic from '@fastify/static';
 import { and, eq, sql } from 'drizzle-orm';
 import { ZodError, z } from 'zod';
 import type { GameId } from '@brauweg/game-api';
+// Der Motivkatalog von Mememory. Der Server darf ein Spielmodul kennen — er
+// fuehrt ohnehin die Modulliste; der CLIENT darf es nicht (siehe regeln.ts),
+// und genau deshalb reicht ihm diese Route den Katalog durch.
+import { MOTIVE } from '@brauweg/game-mememory';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
@@ -127,6 +131,7 @@ import {
   saveRuleSet,
   tableRules,
   tableWithSeats,
+  verlasseKiTisch,
 } from '../tables/service.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
@@ -1702,11 +1707,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ ok: true });
   });
 
-  /** Vor dem Start straffrei. Danach greift die Verlassen-Logik am Tisch. */
+  /**
+   * Vor dem Start straffrei. Danach greift die Verlassen-Logik am Tisch.
+   *
+   * Mit einer Ausnahme: Ein laufender Tisch, an dem nur noch Bots sitzen
+   * wuerden, wird geschlossen statt weitergespielt (verlasseKiTisch). Die
+   * Partie wird dabei weggeworfen und nicht abgerechnet — Aufgeben soll keine
+   * Abkuerzung zu Trophaeen und Erfahrung sein.
+   */
   app.post('/api/tables/:tableId/leave', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
-    await leaveLobby(deps.db, tableId, accountId);
+    if (await verlasseKiTisch(deps.db, tableId, accountId)) {
+      await deps.runtime.verwirf(tableId);
+    } else {
+      await leaveLobby(deps.db, tableId, accountId);
+    }
     deps.runtime.notify(tableId);
     return reply.send({ ok: true });
   });
@@ -1847,7 +1863,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // `namen` kommt mit, weil das Brett den Namen eines gefundenen Paares
     // einblendet. Nur die hochgeladenen haben einen — die 88 Grundmotive
     // heissen nirgends anders als in ihrer Kennung.
+    //
+    // `grund` seit dem 27. August: Die Sammlungsseite zeigt auch, was noch
+    // FEHLT, und dafuer braucht sie den ganzen Topf. Der Client kennt keine
+    // Spielregeln und damit auch die 88 Kennungen nicht (siehe regeln.ts);
+    // eine zweite Abschrift im Client waere die Abschrift, die auslaeuft.
+    // Der Server darf das Modul kennen — er tut es ohnehin ueber die
+    // Modulliste.
     return reply.send({
+      grund: MOTIVE,
       hochgeladen: await freieKennungen(deps.db),
       namen: await freieNamen(deps.db),
     });
