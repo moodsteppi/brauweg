@@ -83,6 +83,16 @@ export type ClientMessage =
       readonly v: number;
       readonly game: GameId;
       /**
+       * Sofort starten: Der Tisch schrumpft auf die besetzten Plaetze
+       * (mindestens zwei) und die Partie geht los — ohne Bot-Auffuellen.
+       */
+      readonly type: 'startNow';
+      readonly tableId: string;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /**
        * Takt-Herzschlag eines Echtzeitspiels (Feldherr). Bewusst KEINE
        * Aktion: Er aendert keinen Partiestand, wird nicht gespeichert und
        * loest keinen Sicht-Rundruf aus — er wird nur an die anderen am Tisch

@@ -5543,6 +5543,14 @@ main.auth > .muted {
   border-radius: 0;
   padding: 0.4rem 0.6rem 0.7rem;
 }
+/* Der Google-Knopf: Google zeichnet ihn selbst, hier nur die Buehne. Leer
+   (keine Client-ID, Google blockiert) faellt er auf Hoehe null zusammen. */
+.auth-google {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+.auth-google:empty { margin-top: 0; }
 .auth .panel label {
   display: block;
   margin: 0.5rem 0 0;
@@ -13020,7 +13028,9 @@ span.hub-angebot-art.poker-jeton-stapel {
 .poker-sitz.is-ich .poker-einsatz { left: 14px; top: 0; }
 .poker-sitz.is-fremd .poker-einsatz {
   left: 50%;
-  bottom: -8px;
+  /* Deutlich unter den Sitz, nicht an seine Kante: Bei -8px lag die Pille
+     genau auf der Jetonzahl des Sitzes und verdeckte sie. */
+  bottom: -24px;
   transform: translateX(-50%);
 }
 
@@ -13038,7 +13048,16 @@ span.hub-angebot-art.poker-jeton-stapel {
   align-items: center;
 }
 .poker-sitz.is-fremd .poker-sitz-text { align-items: center; flex: 0 0 auto; }
-.poker-sitz.is-fremd .poker-sitz-name { font-size: 11px; max-width: 88px; }
+/* Umbrechen statt abschneiden: Mit `overflow: hidden` ragte die Geber-Marke
+   als schmaler Splitter ueber die Sitzkante hinaus — Name in die eine Zeile,
+   Marke darunter, beides mittig. */
+.poker-sitz.is-fremd .poker-sitz-name {
+  font-size: 11px;
+  max-width: 92px;
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 2px;
+}
 .poker-sitz.is-fremd .poker-sitz-stand { font-size: 12px; }
 .poker-sitz.is-fremd .poker-sprechblase {
   left: 50%;
@@ -13050,11 +13069,18 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .poker-sitz.is-fremd[data-raus],
 .poker-sitz.is-fremd[data-pleite] { opacity: 0.42; }
+/*
+ * Zwei Reihen statt eines Ovals: drei Plaetze oben, zwei darunter an den
+ * Kanten. Der erste Anlauf setzte links/rechts auf 38 % Hoehe — genau die
+ * Zeile, in der die Brettkarten liegen. Auf 375 px Breite bleiben neben fuenf
+ * Brettkarten (~244 px) keine 96 px je Seite: Die Sitze lagen AUF dem Brett.
+ * Oberhalb des Topfes ist die Flaeche dagegen frei.
+ */
 .poker-sitz[data-ort='oben'] { top: 4px; left: 50%; transform: translateX(-50%); }
-.poker-sitz[data-ort='links'] { left: 2px; top: 38%; }
-.poker-sitz[data-ort='rechts'] { right: 2px; top: 38%; }
-.poker-sitz[data-ort='oben-links'] { top: 14%; left: 6%; }
-.poker-sitz[data-ort='oben-rechts'] { top: 14%; right: 6%; }
+.poker-sitz[data-ort='links'] { left: 2px; top: 17%; }
+.poker-sitz[data-ort='rechts'] { right: 2px; top: 17%; }
+.poker-sitz[data-ort='oben-links'] { top: 4px; left: 4%; }
+.poker-sitz[data-ort='oben-rechts'] { top: 4px; right: 4%; }
 
 /* Zu zweit bleibt der eine Gegner oben groesser — sonst saehe Kopf-an-Kopf
    aus wie ein vergessener Sechser-Tisch. */
@@ -13063,6 +13089,9 @@ span.hub-angebot-art.poker-jeton-stapel {
   flex-direction: row;
   max-width: none;
   padding: 8px 14px 4px;
+  /* Der grosse Kopf-an-Kopf-Sitz ragt bei 4px in die Holzrundung — die
+     Karten standen halb auf der Kante. Platz nach unten ist reichlich da. */
+  top: 24px;
 }
 .poker-tischflaeche[data-sitze='2'] .poker-sitz[data-ort='oben'] .poker-sitz-text {
   align-items: flex-start;

@@ -216,7 +216,9 @@ function gegnerOrte(sitze: readonly number[], ich: number): { sitz: number; ort:
   }
   const layout: Record<number, GegnerOrt[]> = {
     1: ['oben'],
-    2: ['links', 'rechts'],
+    // Zu dritt beide nach oben: zwei einsame Sitze an den Seitenkanten
+    // liessen die Tischmitte oben leer aussehen.
+    2: ['oben-links', 'oben-rechts'],
     3: ['links', 'oben', 'rechts'],
     4: ['links', 'oben-links', 'oben-rechts', 'rechts'],
     5: ['links', 'oben-links', 'oben', 'oben-rechts', 'rechts'],
@@ -1162,6 +1164,8 @@ export function EasyPoker({
   if (!sicht) {
     const plaetze = tisch.table?.seats ?? [];
     const besetzt = plaetze.filter((platz) => platz.accountId).length;
+    /** Wer beim Sofortstart mitspielt: Menschen und schon gesetzte Bots. */
+    const mitspieler = plaetze.filter((platz) => platz.accountId || platz.isBot).length;
     const frei = plaetze.filter((platz) => !platz.accountId && !platz.isBot);
     const gesamt = plaetze.length || ONLINE_SITZE;
     return (
@@ -1196,6 +1200,18 @@ export function EasyPoker({
             <span />
             <span />
           </div>
+          {/* Ab zwei Menschen muss niemand auf sechs auffuellen: Der Tisch
+              schrumpft serverseitig auf die Besetzten und legt los. */}
+          {tisch.status === 'open' && frei.length > 0 && mitspieler >= 2 && (
+            <button
+              className="poker-hauptknopf"
+              type="button"
+              onClick={() => tisch.startNow()}
+            >
+              <span>Jetzt starten</span>
+              <em>zu {mitspieler} · ohne Auffüllen</em>
+            </button>
+          )}
           {tisch.status === 'open' && frei.length > 0 && (
             <button
               className="poker-zweitknopf"

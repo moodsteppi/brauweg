@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { easypoker } from '@brauweg/game-easypoker';
 
 import { AppError } from '../src/errors.js';
 import { registry } from '../src/games/registry.js';
@@ -10,10 +11,12 @@ import {
   MAX_ROUNDS,
   createTable,
   expireStaleTables,
+  isReadyToStart,
   joinTable,
   leaveLobby,
   listTables,
   saveRuleSet,
+  schrumpfeAufBesetzte,
   tableWithSeats,
 } from '../src/tables/service.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
@@ -556,4 +559,54 @@ test('der Aktiv-Zaehler sieht auch laufende Partien - die Tischliste tut das nic
   await leaveLobby(c.db, wartend.id, anna.accountId);
   const danach = await app.inject({ method: 'GET', url: '/api/games/doppelkopf/aktiv' });
   assert.equal(danach.json().aktiv, 1);
+});
+
+test('ein wartender Tisch schrumpft auf die Besetzten und ist dann startklar', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId: anna } = await createVerifiedAccount(c, 'Anna');
+  const { accountId: bert } = await createVerifiedAccount(c, 'Bert');
+
+  const table = await createTable(c.db, {
+    accountId: anna,
+    gameId: 'easypoker',
+    config: easypoker.defaultConfig(),
+    seats: 6,
+    rounds: 12,
+  });
+  await joinTable(c.db, table.id, bert);
+
+  await schrumpfeAufBesetzte(c.db, table.id, anna);
+
+  const { table: nachher, seats } = await tableWithSeats(c.db, table.id);
+  assert.equal(nachher.seats, 2);
+  assert.equal(seats.length, 2);
+  // Die Sitze ruecken lueckenlos auf 0..n-1 auf — die Module zaehlen so.
+  assert.deepEqual(seats.map((s2) => s2.seatIndex), [0, 1]);
+  assert.ok(seats.every((s2) => s2.accountId), 'kein leerer Platz bleibt uebrig');
+  assert.ok(isReadyToStart(nachher, seats), 'nach dem Schrumpfen ist der Tisch startklar');
+});
+
+test('schrumpfen verlangt zwei Mitspieler und einen eigenen Platz', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId: anna } = await createVerifiedAccount(c, 'Anna');
+  const { accountId: fremd } = await createVerifiedAccount(c, 'Fremd');
+
+  const table = await createTable(c.db, {
+    accountId: anna,
+    gameId: 'easypoker',
+    config: easypoker.defaultConfig(),
+    seats: 6,
+    rounds: 12,
+  });
+
+  await assert.rejects(
+    () => schrumpfeAufBesetzte(c.db, table.id, anna),
+    (err: AppError) => err.code === 'tableNotFull',
+  );
+  await assert.rejects(
+    () => schrumpfeAufBesetzte(c.db, table.id, fremd),
+    (err: AppError) => err.code === 'notSeated',
+  );
 });
