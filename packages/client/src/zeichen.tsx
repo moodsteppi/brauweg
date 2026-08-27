@@ -192,3 +192,49 @@ export function Schloss({ zu }: { zu: boolean }): React.JSX.Element {
     </svg>
   );
 }
+
+/**
+ * Ein Wuerfel — das Zeichen fuer „Random Memes".
+ *
+ * Traegt als einziges Zeichen hier FESTE Farben und nicht `currentColor`: Ein
+ * Wuerfel ist an seinem Cremeweiss mit den schwarzen Augen zu erkennen, und
+ * ein einfarbiger Umriss saehe aus wie ein leeres Kaestchen. Matt gehalten,
+ * kein Glanzlicht: Er steht in einer Zeile neben Text und soll sie nicht
+ * uebertoenen.
+ *
+ * Die Fuenf und keine andere Zahl: Sie ist punktsymmetrisch. Damit sitzt das
+ * Augenbild von selbst mittig im Wuerfel — bei einer Zwei oder Drei muesste
+ * man die Diagonale ausrichten, und genau daran gehen solche Zeichen schief.
+ */
+export function Wuerfel({ className }: { className?: string }): React.JSX.Element {
+  return (
+    <svg
+      className={`zeichen zeichen-wuerfel${className ? ` ${className}` : ''}`}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      {/* Der Koerper: 18 x 18 um (12,12), also mittig per Konstruktion. */}
+      <rect x="3" y="3" width="18" height="18" rx="4.6" fill="#efe4cf" />
+      {/* Eine haarfeine dunklere Kante. Ohne sie verschwimmt der helle Wuerfel
+          auf einem hellen Untergrund — und die Sammlungsseite ist dunkel,
+          aber die Zeile darunter ist es nicht ueberall. */}
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="4.6"
+        fill="none"
+        stroke="#0000001f"
+        strokeWidth="1"
+      />
+      <g fill="#221c14">
+        <circle cx="8" cy="8" r="1.85" />
+        <circle cx="16" cy="8" r="1.85" />
+        <circle cx="12" cy="12" r="1.85" />
+        <circle cx="8" cy="16" r="1.85" />
+        <circle cx="16" cy="16" r="1.85" />
+      </g>
+    </svg>
+  );
+}

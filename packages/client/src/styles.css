@@ -11029,12 +11029,6 @@ main.auth > .muted {
   font: 500 12px/1.5 system-ui;
   color: #a595c4;
 }
-.mm-gurt-fuss {
-  margin: 12px 0 6px;
-  display: flex;
-  justify-content: center;
-}
-
 /* Eine Sammlung. Heute zwei (Grundstock, Vorschlagskasten), später Packs —
    der Aufbau ist schon der für viele. */
 .mm-gruppe { margin-top: 26px; }
@@ -11574,7 +11568,8 @@ main.auth > .muted {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   font: 800 15px/1 system-ui;
 }
-.mm-gurt-fach[data-belegt] { box-shadow: inset 0 0 0 2px #ffd873; }
+/* Der goldene Rand eines belegten Fachs liegt auf einer eigenen Ebene über
+   dem Bild — siehe .mm-gurt-fach::after weiter unten. */
 .mm-gurt-fach button {
   width: 100%;
   height: 100%;
@@ -12181,6 +12176,18 @@ main.auth > .muted {
  * jedem Zugwechsel um zehn Pixel.
  */
 .mm-puck-fach {
+  position: relative;
+  /*
+   * Über allem in seiner Ecke, und der Stapel ist der Grund.
+   *
+   * In den OBEREN Ecken kehrt `column-reverse` die Reihenfolge um: Der Stapel
+   * liegt dort unter dem Namen und schiebt sich über seinen negativen Abstand
+   * 7 px in das Puckfach hinein. Weil er im Blatt später steht als der Puck,
+   * deckte er ihn zur Hälfte zu — beim Gegner also genau den Hinweis, dass er
+   * am Zug ist. Über dem BRETT liegt der Puck ohnehin: `.mm-ecke` hat z-index
+   * 3, `.mm-mitte` hat 1.
+   */
+  z-index: 2;
   height: 14px;
   display: flex;
   align-items: center;
@@ -12949,7 +12956,15 @@ main.auth > .muted {
    NUR in diesem Modus — ein Schloss ohne Zufall wäre ein Knopf, der nichts
    tut, und der ist schlimmer als gar keiner. */
 
+/*
+ * Von links nach rechts: Würfel, Name, Schalter.
+ *
+ * Kein <label> mehr um die ganze Zeile. Der Name trägt seit dem 27. August
+ * eine eigene Geste — gedrückt halten heißt „erklär mir das" —, und ein
+ * Label ringsum legte beim Loslassen zusätzlich den Schalter um.
+ */
 .mm-schalterzeile {
+  position: relative;
   margin: 16px 0 0;
   padding: 11px 14px;
   display: flex;
@@ -12958,20 +12973,72 @@ main.auth > .muted {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.06);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  cursor: pointer;
 }
-.mm-schalterzeile span { flex: 1; min-width: 0; }
-.mm-schalterzeile b {
-  display: block;
+/* Der Würfel bringt seine Farben selbst mit (siehe zeichen.tsx) und braucht
+   hier nur eine Größe. `flex: none`, sonst drückt ihn ein langer Name schmal. */
+.mm-schalterzeile .zeichen-wuerfel {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+.mm-schalter-name {
+  flex: 1;
+  min-width: 0;
   font: 800 13px/1.25 system-ui;
   color: #f3ecff;
+  cursor: pointer;
+  /* Gedrückt halten heißt hier „erklären" und nicht „markieren": Ohne diese
+     drei Zeilen legt das Telefon beim langen Druck die Lupe über den Text und
+     bietet Kopieren an — und die Erklärung läge darunter. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
-.mm-schalterzeile em {
-  display: block;
-  margin-top: 2px;
-  font: 500 11.5px/1.4 system-ui;
-  font-style: normal;
-  color: #a595c4;
+
+/*
+ * Der Erklärsatz zum langen Druck.
+ *
+ * Er sitzt ÜBER der Zeile, und der Abstand ist gemessen und nicht geraten:
+ * Der Finger liegt in der Mitte der Zeile, seine Kuppe deckt rundherum gut
+ * zwanzig Pixel ab. Mit 30 px Luft liegt die Unterkante des Satzes 49 px über
+ * dem Druckpunkt — also sicher über der Hand, die ihn gerade hält. Darunter
+ * oder daneben wäre der Satz zwar da, aber verdeckt, und genau dafür hält man
+ * ja gedrückt.
+ *
+ * `pointer-events: none`, damit er den Finger nicht abfängt, der ihn hält:
+ * Sonst käme unter ihm ein `pointerleave` an und er räumte sich selbst weg.
+ */
+.mm-schalter-hilfe {
+  position: absolute;
+  z-index: 3;
+  left: 6px;
+  right: 6px;
+  bottom: calc(100% + 30px);
+  padding: 10px 13px;
+  border-radius: 13px;
+  color: #f3ecff;
+  background: #2a1c4a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 14px 30px -12px rgba(0, 0, 0, 0.9);
+  font: 600 12px/1.45 system-ui;
+  pointer-events: none;
+  animation: mm-hilfe-auf 140ms ease-out;
+}
+/* Die Spitze zeigt auf die Zeile, aus der der Satz kommt. */
+.mm-schalter-hilfe::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  margin-left: -7px;
+  top: 100%;
+  border: 7px solid transparent;
+  border-top-color: #2a1c4a;
+  border-bottom: 0;
+}
+@keyframes mm-hilfe-auf {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
 }
 
 /*
@@ -13046,7 +13113,10 @@ main.auth > .muted {
   cursor: pointer;
   transition: color 180ms ease, background 180ms ease, transform 180ms ease;
 }
-.mm-gurt-fach .mm-fach-schloss .zeichen { width: 15px; height: 15px; }
+/* Ein Viertel größer als zuvor (15 px). Das Schloss ist der einzige Knopf am
+   Fach und steht auf einem bunten Meme — bei 15 px war seine Form dort kaum
+   von einem Fleck im Bild zu unterscheiden. */
+.mm-gurt-fach .mm-fach-schloss .zeichen { width: 18.75px; height: 18.75px; }
 .mm-gurt-fach .mm-fach-schloss:active { transform: scale(0.92); }
 .mm-gurt-fach .mm-fach-schloss[aria-pressed='true'] {
   color: #2a1a06;
@@ -13054,11 +13124,33 @@ main.auth > .muted {
   box-shadow: 0 0 10px -2px rgba(255, 216, 115, 0.8);
 }
 
-/* Ein gesperrtes Fach trägt denselben goldenen Rand wie das Schloss — dieselbe
-   Bedeutung, dieselbe Farbe. Der Rand ist kräftiger als der eines belegten
-   Fachs, damit „belegt" und „festgehalten" auseinandergehen. */
 .mm-gurt-fach { position: relative; overflow: visible; }
-.mm-gurt-fach[data-zu] {
+
+/*
+ * Die goldenen Ränder liegen auf einer EIGENEN EBENE über dem Meme.
+ *
+ * Vorher waren es `inset`-Schatten am Fach selbst — und ein Innenschatten
+ * zeichnet UNTER die Kinder seines Kastens. Das Meme füllt das Fach
+ * vollständig aus (`width`/`height: 100%`) und deckte den Rand damit zu:
+ * sichtbar war er nur auf einem LEEREN Fach, also genau dort, wo er nichts
+ * bedeutet. Ein `::after` ist das letzte Kind und liegt deshalb oben.
+ */
+.mm-gurt-fach[data-belegt]::after,
+.mm-gurt-fach[data-zu]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+}
+/* Belegt: eine schmale goldene Linie um das Bild. */
+.mm-gurt-fach[data-belegt]::after { box-shadow: inset 0 0 0 2px #ffd873; }
+/*
+ * Festgehalten: dieselbe Farbe wie das geschlossene Schloss, nur kräftiger —
+ * damit „belegt" und „festgehalten" auseinandergehen — und ein Schein nach
+ * außen, den ein Innenschatten gar nicht zeichnen könnte.
+ */
+.mm-gurt-fach[data-zu]::after {
   box-shadow:
     inset 0 0 0 3px #ffd873,
     0 0 14px -4px rgba(255, 216, 115, 0.9);
@@ -13068,5 +13160,6 @@ main.auth > .muted {
   .mm-schalter,
   .mm-schalter::after,
   .mm-fach-schloss { transition: none; }
+  .mm-schalter-hilfe { animation: none; }
 }
 
