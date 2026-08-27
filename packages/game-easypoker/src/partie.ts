@@ -150,7 +150,14 @@ export type EasyPokerAktion =
   | { readonly typ: 'passen' }
   | { readonly typ: 'schieben' }
   | { readonly typ: 'mitgehen'; readonly betrag: number }
-  | { readonly typ: 'setzen'; readonly betrag: number }
+  /**
+   * `betrag` ist der Vorschlag des Servers; `min`/`max` stecken die Spanne
+   * ab, in der der Spieler den Betrag selbst waehlen darf (Mindest-Erhoehung
+   * bis all-in). Beide stehen nur in `legalActions` — die zurueckkommende
+   * Aktion traegt allein den gewaehlten `betrag`, und der wird gegen die
+   * Spanne geprueft.
+   */
+  | { readonly typ: 'setzen'; readonly betrag: number; readonly min?: number; readonly max?: number }
   /**
    * Anzeigename fuer dieses Spiel. Kein Spielzug: steht nicht in
    * `legalActions`, aendert weder Zugrecht noch Jetons und ist deshalb auch
@@ -488,6 +495,43 @@ export function setzKosten(partie: EasyPokerPartie, sitz: number): number | null
   return kosten > fehlt ? kosten : null;
 }
 
+/**
+ * Die Spanne, in der ein Spieler den Setzbetrag selbst waehlen darf.
+ *
+ * `min` ist Mitgehen plus Mindest-Erhoehung (grosser Blind bzw. die letzte
+ * Erhoehung — die uebliche No-Limit-Regel), `max` der eigene Stapel, beides
+ * gedeckelt auf das, was die Gegner ueberhaupt noch stellen koennen (die
+ * Begruendung steht an `setzKosten`). Reicht der Stapel nicht bis zur
+ * Mindest-Erhoehung, ist all-in trotzdem erlaubt: min faellt dann auf max.
+ *
+ * null unter denselben Bedingungen, unter denen es kein `setzen` gibt.
+ */
+export function setzSpanne(
+  partie: EasyPokerPartie,
+  sitz: number,
+): { min: number; max: number } | null {
+  const eigen = partie.jetons[sitz] ?? 0;
+  if (eigen <= 0) return null;
+
+  const gegner = partie.imSpiel.filter((s) => s !== sitz);
+  if (gegner.length === 0) return null;
+
+  const bisDeckel = Math.max(
+    0,
+    ...gegner.map(
+      (g) => (partie.einsatz[g] ?? 0) + (partie.jetons[g] ?? 0) - (partie.einsatz[sitz] ?? 0),
+    ),
+  );
+
+  const fehlt = zuZahlen(partie, sitz);
+  if (bisDeckel <= fehlt) return null;
+
+  const max = Math.min(eigen, bisDeckel);
+  const mindest = fehlt + Math.max(partie.regeln.grosserBlind, partie.letzteErhoehung);
+  const min = Math.min(mindest, max);
+  return max > fehlt ? { min, max } : null;
+}
+
 export function erlaubteZuege(partie: EasyPokerPartie, sitz: number): EasyPokerAktion[] {
   if (amZug(partie) !== sitz) return [];
 
@@ -506,12 +550,28 @@ export function erlaubteZuege(partie: EasyPokerPartie, sitz: number): EasyPokerA
   }
 
   const kosten = setzKosten(partie, sitz);
-  if (kosten !== null) zuege.push({ typ: 'setzen', betrag: kosten });
+  const spanne = setzSpanne(partie, sitz);
+  if (kosten !== null && spanne !== null) {
+    zuege.push({ typ: 'setzen', betrag: kosten, min: spanne.min, max: spanne.max });
+  }
 
   return zuege;
 }
 
 function istErlaubt(partie: EasyPokerPartie, sitz: number, aktion: EasyPokerAktion): boolean {
+  // Setzen prueft gegen die Spanne, nicht gegen den einen Vorschlag: Der
+  // Spieler darf den Betrag selbst waehlen. Ganzzahlig muss er sein — ein
+  // halber Jeton existiert nicht.
+  if (aktion.typ === 'setzen') {
+    const spanne = setzSpanne(partie, sitz);
+    return (
+      amZug(partie) === sitz &&
+      spanne !== null &&
+      Number.isInteger(aktion.betrag) &&
+      aktion.betrag >= spanne.min &&
+      aktion.betrag <= spanne.max
+    );
+  }
   return erlaubteZuege(partie, sitz).some(
     (zug) =>
       zug.typ === aktion.typ &&

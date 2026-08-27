@@ -16,6 +16,7 @@ import {
   platzierungen,
   saeubereName,
   setzKosten,
+  setzSpanne,
   sieger,
   sitzeVon,
   topfGesamt,
@@ -177,6 +178,40 @@ test('ein erfundener Betrag wird abgewiesen', () => {
   const knopf = partie.geber;
   assert.throws(() => fuehreAus(partie, knopf, { typ: 'setzen', betrag: 999 }), /nicht erlaubt/);
   assert.throws(() => fuehreAus(partie, knopf, { typ: 'mitgehen', betrag: 1 }), /nicht erlaubt/);
+});
+
+test('setzen erlaubt jeden Betrag in der Spanne, nicht nur den Vorschlag', () => {
+  const partie = partieMit();
+  const knopf = partie.geber;
+  const spanne = setzSpanne(partie, knopf)!;
+  const fehlt = zuZahlen(partie, knopf);
+
+  // Untergrenze: mitgehen plus ein grosser Blind. Obergrenze: der Stapel.
+  assert.equal(spanne.min, fehlt + DEFAULT_REGELN.grosserBlind);
+  assert.equal(spanne.max, partie.jetons[knopf]);
+
+  // Ein frei gewaehlter Betrag zwischen Vorschlag und all-in geht durch.
+  const eigen = Math.min(spanne.min + 7, spanne.max);
+  const nachher = fuehreAus(partie, knopf, { typ: 'setzen', betrag: eigen });
+  assert.equal(nachher.einsatz[knopf], (partie.einsatz[knopf] ?? 0) + eigen);
+
+  // All-in geht auch.
+  fuehreAus(partie, knopf, { typ: 'setzen', betrag: spanne.max });
+
+  // Unter der Mindest-Erhoehung, ueber dem Stapel, krumm: alles abgewiesen.
+  assert.throws(() => fuehreAus(partie, knopf, { typ: 'setzen', betrag: spanne.min - 1 }), /nicht erlaubt/);
+  assert.throws(() => fuehreAus(partie, knopf, { typ: 'setzen', betrag: spanne.max + 1 }), /nicht erlaubt/);
+  assert.throws(() => fuehreAus(partie, knopf, { typ: 'setzen', betrag: spanne.min + 0.5 }), /nicht erlaubt/);
+});
+
+test('die Spanne steht mit im erlaubten Setzen-Zug', () => {
+  const partie = partieMit();
+  const knopf = partie.geber;
+  const zug = erlaubteZuege(partie, knopf).find((z) => z.typ === 'setzen')!;
+  const spanne = setzSpanne(partie, knopf)!;
+  assert.ok('min' in zug && zug.min === spanne.min);
+  assert.ok('max' in zug && zug.max === spanne.max);
+  assert.ok(zug.typ === 'setzen' && zug.betrag >= spanne.min && zug.betrag <= spanne.max);
 });
 
 test('eine Erhoehung ist mindestens einen grossen Blind gross', () => {

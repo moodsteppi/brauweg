@@ -97,7 +97,8 @@ type Aktion =
   | { typ: 'passen' }
   | { typ: 'schieben' }
   | { typ: 'mitgehen'; betrag: number }
-  | { typ: 'setzen'; betrag: number }
+  /** min/max kommen nur in `legalActions` mit — die Spanne fuer den Regler. */
+  | { typ: 'setzen'; betrag: number; min?: number; max?: number }
   | { typ: 'name'; name: string };
 
 // ---------------------------------------------------------------------------
@@ -646,6 +647,8 @@ export function EasyPoker({
   const [tischEinsatz, setTischEinsatz] = useState<PokerRegeln | null>(null);
   /** Angetippte eigene Karte — sie hebt sich an, damit man sie besser sieht. */
   const [gehobeneKarte, setGehobeneKarte] = useState<number | null>(null);
+  /** Das Setzblatt (Regler fuer den Bet-Betrag) liegt offen. */
+  const [setzenOffen, setSetzenOffen] = useState(false);
   /**
    * Revision, bei der ich zuletzt eine Aktion abgeschickt habe.
    *
@@ -666,6 +669,13 @@ export function EasyPoker({
   useEffect(() => {
     if (gesendetBei !== null && revision !== gesendetBei) setGesendetBei(null);
   }, [revision, gesendetBei]);
+
+  // Das Setzblatt schliesst, sobald der Zug nicht mehr bei mir liegt — sonst
+  // staende es nach einem Timeout-Fold offen und setzte in eine fremde Runde.
+  const binDran = sicht?.dran === (tisch.view?.seat ?? 0) && !sicht?.fertig;
+  useEffect(() => {
+    if (!binDran) setSetzenOffen(false);
+  }, [binDran]);
 
   // -------------------------------------------------------------------------
   // Aktive Spieler
@@ -1252,6 +1262,24 @@ export function EasyPoker({
     tisch.send(zug);
   };
 
+  /**
+   * Bet oeffnet das Setzblatt, wenn es eine Spanne gibt — sonst (nur ein
+   * moeglicher Betrag, etwa all-in) geht der Zug direkt raus wie bisher.
+   */
+  const setzZug = findeZug('setzen');
+  const setzSpanne =
+    setzZug && setzZug.typ === 'setzen' && setzZug.min !== undefined && setzZug.max !== undefined && setzZug.min < setzZug.max
+      ? { min: setzZug.min, max: setzZug.max, vorschlag: setzZug.betrag }
+      : null;
+  const aufBet = (zug: Aktion | undefined): void => {
+    if (!zug || !meinZug || wartet) return;
+    if (setzSpanne) {
+      setSetzenOffen(true);
+      return;
+    }
+    schicke(zug);
+  };
+
   const namenVon = (sitz: number): string =>
     sicht.namen[sitz] ||
     tisch.table?.seats.find((platz) => platz.seat === sitz)?.displayName ||
@@ -1446,11 +1474,24 @@ export function EasyPoker({
         <Aktionsknopf
           art="bet"
           wort="Bet"
-          zug={findeZug('setzen')}
+          zug={setzZug}
           gesperrt={!meinZug || wartet}
-          onClick={schicke}
+          onClick={aufBet}
         />
       </footer>
+
+      {setzenOffen && setzSpanne && (
+        <Setzblatt
+          spanne={setzSpanne}
+          topf={sicht.topf}
+          zuZahlen={sicht.zuZahlen}
+          onClose={() => setSetzenOffen(false)}
+          onSetzen={(betrag) => {
+            setSetzenOffen(false);
+            schicke({ typ: 'setzen', betrag });
+          }}
+        />
+      )}
 
       {tisch.error && <div className="poker-fehlerpille">{tisch.error}</div>}
       {tisch.status !== 'open' && <div className="poker-funk">Verbindung…</div>}
@@ -1681,6 +1722,99 @@ function Ergebnisband({
             : ''}
       </span>
     </p>
+  );
+}
+
+/**
+ * Das Setzblatt: Betrag fuer "Bet" waehlen.
+ *
+ * Ein Blatt von unten (wie das Regelblatt), kein Feld auf dem Tisch — "der
+ * Tisch ist heilig" (DESIGN-DOKO). Der Regler laeuft in Schritten des kleinen
+ * Werts der Spanne, dazu vier Schnellwahlen: Min, halber Topf, Topf, All-in.
+ * Jeder Schritt gibt einen kurzen Vibrationstick (wo das Geraet es kann) —
+ * so fuehlt sich der Regler wie ein Chip-Stapel an, nicht wie ein Formular.
+ */
+function Setzblatt({
+  spanne,
+  topf,
+  zuZahlen,
+  onClose,
+  onSetzen,
+}: {
+  spanne: { min: number; max: number; vorschlag: number };
+  topf: number;
+  zuZahlen: number;
+  onClose: () => void;
+  onSetzen: (betrag: number) => void;
+}): React.JSX.Element {
+  const [betrag, setBetrag] = useState(
+    Math.min(Math.max(spanne.vorschlag, spanne.min), spanne.max),
+  );
+
+  const klemme = (wert: number): number =>
+    Math.min(spanne.max, Math.max(spanne.min, Math.round(wert)));
+
+  const waehle = (wert: number): void => {
+    const neu = klemme(wert);
+    if (neu !== betrag && typeof navigator !== 'undefined') navigator.vibrate?.(4);
+    setBetrag(neu);
+  };
+
+  /** Schnellwahlen. "Topf" heisst: den Topf nachbauen (mitgehen + Topfgroesse). */
+  const schnell: { name: string; wert: number }[] = [
+    { name: 'Min', wert: spanne.min },
+    { name: '½ Topf', wert: zuZahlen + Math.round(topf / 2) },
+    { name: 'Topf', wert: zuZahlen + topf },
+    { name: 'All-in', wert: spanne.max },
+  ];
+
+  return (
+    <div className="poker-blatt" onClick={onClose} role="presentation">
+      <div className="poker-blatt-karte is-setzen" onClick={(e) => e.stopPropagation()} role="presentation">
+        <h2>Wie viel setzen?</h2>
+        <p className="poker-setzen-betrag" aria-live="polite">
+          <span className="poker-jeton-zeichen" aria-hidden="true" />
+          <b>{betrag}</b>
+        </p>
+        <input
+          className="poker-regler"
+          type="range"
+          min={spanne.min}
+          max={spanne.max}
+          step={1}
+          value={betrag}
+          onChange={(e) => waehle(Number(e.target.value))}
+          aria-label={`Einsatz, ${spanne.min} bis ${spanne.max}`}
+        />
+        <p className="poker-regler-enden" aria-hidden="true">
+          <span>{spanne.min}</span>
+          <span>{spanne.max}</span>
+        </p>
+        <div className="poker-schnellwahl" role="group" aria-label="Schnellwahl">
+          {schnell.map(({ name, wert }) => {
+            const ziel = klemme(wert);
+            return (
+              <button
+                key={name}
+                type="button"
+                className="poker-schnellknopf"
+                data-an={ziel === betrag || undefined}
+                onClick={() => waehle(wert)}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+        <button className="poker-hauptknopf" type="button" onClick={() => onSetzen(betrag)}>
+          <span>Bet {betrag}</span>
+          {betrag === spanne.max && <em>all-in</em>}
+        </button>
+        <button className="poker-textknopf" type="button" onClick={onClose}>
+          Abbrechen
+        </button>
+      </div>
+    </div>
   );
 }
 
