@@ -7328,11 +7328,10 @@ main.auth > .muted {
   flex: 0 0 auto;
 }
 
-span.hub-angebot-art.poker-jeton-zeichen {
-  width: 2.4rem;
-  height: 2.4rem;
-  display: block;
-  margin: 0.15rem auto 0;
+span.hub-angebot-art.poker-jeton-stapel {
+  width: 2.6rem;
+  height: 2.6rem;
+  max-width: 2.6rem;
 }
 
 /*
@@ -12158,14 +12157,28 @@ span.hub-angebot-art.poker-jeton-zeichen {
   letter-spacing: -0.045em;
   color: var(--text);
 }
-/* Zwei Töne im Namen: „Easy" hell, „Poker" in Brauweg-Gold. Ein Verlauf über
-   das ganze Wort wäre auf dunklem Grund unruhig. */
 .poker-titel span { color: var(--gold); }
 
 .poker-untertitel {
-  margin: 0 0 22px;
+  margin: 0 0 12px;
   font: 500 13px/1.5 system-ui;
   color: var(--muted);
+}
+
+/*
+ * Lobby und Wartebereich brauchen die Hoehe: Titel und Knoepfe bleiben,
+ * die Liste rollt dazwischen. Das Menue selbst bleibt eine Komposition.
+ */
+.poker-menue[data-lage='liste'] {
+  justify-content: flex-start;
+  padding-top: calc(env(safe-area-inset-top) + 64px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+}
+.poker-menue[data-lage='liste'] .poker-menue-mitte {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /*
@@ -12175,7 +12188,7 @@ span.hub-angebot-art.poker-jeton-zeichen {
  */
 .poker-namensfeld {
   width: 100%;
-  padding: 15px 16px;
+  padding: 13px 16px;
   border: 0;
   border-radius: 15px;
   color: var(--text);
@@ -12193,7 +12206,7 @@ span.hub-angebot-art.poker-jeton-zeichen {
   display: flex;
   gap: 6px;
   justify-content: center;
-  margin: 4px 0 2px;
+  margin: 10px 0 2px;
 }
 .poker-sitze-knopf {
   width: 42px;
@@ -12221,17 +12234,18 @@ span.hub-angebot-art.poker-jeton-zeichen {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 16px;
-  padding: 8px 14px;
+  margin: 0 0 10px;
+  padding: 7px 14px 7px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(226, 182, 79, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(226, 182, 79, 0.45);
   font: 800 16px/1 system-ui;
-  color: #ffe8a8;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
 }
 .poker-guthaben .poker-jeton-zeichen {
-  width: 1.05em;
-  height: 1.05em;
+  width: 1.15em;
+  height: 1.15em;
 }
 .poker-guthaben em {
   font: 600 12px/1 system-ui;
@@ -12239,47 +12253,172 @@ span.hub-angebot-art.poker-jeton-zeichen {
   font-style: normal;
 }
 
-.poker-einsatz {
-  margin: 4px 0 14px;
+/*
+ * Drei Vorgaben statt eines Formulars: Locker / Abend / Hoch. Feineinstellung
+ * liegt im Blatt darunter — sonst laeuft das Menue aus einer Viewport-Hoehe.
+ */
+.poker-einsatzwahl {
+  margin: 8px 0 6px;
 }
+.poker-vorgaben {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.poker-vorgabe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px 9px;
+  border: 0;
+  border-radius: 14px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: inherit;
+  cursor: pointer;
+}
+.poker-vorgabe strong {
+  font: 800 13px/1 system-ui;
+}
+.poker-vorgabe em {
+  font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.poker-vorgabe em span {
+  color: #9fbcae;
+  font-weight: 600;
+}
+.poker-vorgabe[aria-pressed='true'] {
+  color: #08130e;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 3px 0 #2a5f47;
+}
+.poker-vorgabe[aria-pressed='true'] em,
+.poker-vorgabe[aria-pressed='true'] em span {
+  color: #08130e;
+  opacity: 0.78;
+}
+.poker-vorgabe:active { transform: scale(0.97); }
+
 .poker-einsatz-zeile {
-  margin: 8px 0 10px;
-  font: 700 13px/1.3 system-ui;
-  color: #e2b64f;
+  margin: 8px 0 0;
+  font: 700 12px/1.3 system-ui;
+  color: var(--gold);
 }
+
+.poker-chipreihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 0 0 4px;
+}
+.poker-chip {
+  min-width: 46px;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 12px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 800 14px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.poker-chip[aria-pressed='true'] {
+  color: #08130e;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 3px 0 #2a5f47;
+}
+.poker-chip:active { transform: scale(0.97); }
 
 .poker-lobby {
   list-style: none;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   padding: 0;
   display: grid;
   gap: 8px;
   text-align: left;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .poker-lobby-zeile {
   width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 12px 14px;
-  border: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 13px;
   border-radius: 14px;
   color: #eef4f0;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  font: 800 15px/1.2 system-ui;
+  background: linear-gradient(180deg, rgba(38, 82, 52, 0.95) 0%, rgba(24, 56, 34, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 110, 0.5);
+  box-shadow: 0 3px 0 rgba(16, 10, 4, 0.8);
+  font: inherit;
   cursor: pointer;
   text-align: left;
 }
-.poker-lobby-zeile em {
-  font: 600 12px/1.3 system-ui;
+.poker-lobby-zeile:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(16, 10, 4, 0.8);
+}
+.poker-lobby-wer {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 14px/1.2 system-ui;
+}
+.poker-lobby-platz {
+  flex: 0 0 auto;
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   color: #9fbcae;
+}
+.poker-lobby-einsatz {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--gold);
+  font: 800 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.poker-lobby-einsatz .poker-jeton-zeichen {
+  width: 0.85em;
+  height: 0.85em;
+}
+.poker-lobby-einsatz em {
+  font: 600 11px/1 system-ui;
   font-style: normal;
+  color: #cfe3d8;
+}
+.poker-lobby-bei {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 9px;
+  color: #08130e;
+  font: 800 10.5px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 3px 0 #2a5f47;
 }
 .poker-lobby-zeile:disabled {
-  opacity: 0.45;
+  opacity: 0.55;
   cursor: default;
+  transform: none;
+}
+.poker-lobby-zeile:disabled .poker-lobby-bei {
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .poker-warte-sitze {
@@ -12313,7 +12452,7 @@ span.hub-angebot-art.poker-jeton-zeichen {
  */
 .poker-hauptknopf {
   width: 100%;
-  margin-top: 14px;
+  margin-top: 10px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -12366,14 +12505,17 @@ span.hub-angebot-art.poker-jeton-zeichen {
 
 .poker-textknopf {
   width: 100%;
-  margin-top: 10px;
-  padding: 11px;
+  margin-top: 2px;
+  padding: 8px;
   border: 0;
   border-radius: 12px;
   color: var(--muted);
   background: transparent;
   font: 700 13px/1 system-ui;
   cursor: pointer;
+}
+.poker-textknopf[data-an] {
+  color: var(--gold);
 }
 
 .poker-fehler {
@@ -12539,17 +12681,45 @@ span.hub-angebot-art.poker-jeton-zeichen {
 
 /*
  * Der Jeton ist gezeichnet und kein Bild: ein goldener Kreis mit heller
- * Randmarkierung. Er steht an vier Stellen in verschiedenen Größen, deshalb
- * hängt alles an `em` und nicht an Pixeln.
+ * Randmarkierung. Er steht an mehreren Stellen in verschiedenen Groessen,
+ * deshalb haengt alles an `em` und nicht an Pixeln.
  */
 .poker-jeton-zeichen {
   width: 0.78em;
   height: 0.78em;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe8a8, #d8a63c 62%, #a97d24);
-  box-shadow: inset 0 0 0 0.11em rgba(255, 255, 255, 0.55);
+  background:
+    radial-gradient(circle at 50% 50%, transparent 58%, rgba(255, 246, 208, 0.9) 59% 64%, transparent 65%),
+    radial-gradient(circle at 35% 30%, #ffe8a8, #d8a63c 62%, #a97d24);
+  box-shadow: inset 0 0 0 0.11em rgba(168, 118, 28, 0.55);
   flex: 0 0 auto;
 }
+
+/*
+ * Shop-Kachel: ein, zwei oder drei Jetons im Stapel, damit Beutel / Sack /
+ * Kiste sich wie die Muenzpakete auf einen Blick unterscheiden.
+ */
+.poker-jeton-stapel {
+  position: relative;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: block;
+  margin: 0.05rem auto 0;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.poker-jeton-stapel .poker-jeton-zeichen {
+  position: absolute;
+  left: 50%;
+  width: 1.45rem;
+  height: 1.45rem;
+  margin-left: -0.725rem;
+}
+.poker-jeton-stapel.is-1 .poker-jeton-zeichen { top: 0.55rem; }
+.poker-jeton-stapel.is-2 .poker-jeton-zeichen:nth-child(1) { top: 0.78rem; }
+.poker-jeton-stapel.is-2 .poker-jeton-zeichen:nth-child(2) { top: 0.32rem; }
+.poker-jeton-stapel.is-3 .poker-jeton-zeichen:nth-child(1) { top: 0.95rem; }
+.poker-jeton-stapel.is-3 .poker-jeton-zeichen:nth-child(2) { top: 0.52rem; }
+.poker-jeton-stapel.is-3 .poker-jeton-zeichen:nth-child(3) { top: 0.1rem; }
 
 /* --- Sitze ---------------------------------------------------------------- */
 
@@ -13147,6 +13317,8 @@ span.hub-angebot-art.poker-jeton-zeichen {
   color: var(--muted) !important;
 }
 .poker-blatt-karte .poker-hauptknopf { margin-top: 18px; }
+.poker-blatt-karte .poker-vorgaben { margin: 4px 0 8px; }
+.poker-blatt-karte .poker-chipreihe { margin: 0; }
 
 .poker-ende-blatt h2 { margin: 0 0 10px; font: 900 26px/1.1 system-ui; }
 .poker-ende-stand {

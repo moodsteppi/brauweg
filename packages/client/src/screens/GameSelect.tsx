@@ -1002,6 +1002,21 @@ function euro(cents: number): string {
 }
 
 /**
+ * BroJetons im Shop: ein gemalter Stapel statt eines Bildes, ein / zwei /
+ * drei Jetons je nach Paketgroesse — wie die Muenzgrafik daneben ein Bild ist.
+ */
+function BroJetonStapel({ betrag }: { betrag: number }): React.JSX.Element {
+  const hoehe = betrag >= 5_000 ? 3 : betrag >= 1_500 ? 2 : 1;
+  return (
+    <span className={`hub-angebot-art poker-jeton-stapel is-${hoehe}`} aria-hidden="true">
+      {Array.from({ length: hoehe }, (_, i) => (
+        <span key={i} className="poker-jeton-zeichen" />
+      ))}
+    </span>
+  );
+}
+
+/**
  * Ein Paket im Regal.
  *
  * Zwei Sorten in einer Kachel, weil sie sich nur im Preisschild und im Tipp
@@ -1036,7 +1051,7 @@ function PaketKachel({
         paket.gibt.waehrung === 'coins' ? (
           <img className="hub-angebot-art" src="/hub/muenze.png" alt="" draggable={false} />
         ) : paket.gibt.waehrung === 'broJetons' ? (
-          <span className="hub-angebot-art poker-jeton-zeichen" aria-hidden="true" />
+          <BroJetonStapel betrag={paket.gibt.betrag} />
         ) : (
           <EdelsteinIcon className="hub-angebot-art shop-paket-stein" />
         )

@@ -112,9 +112,8 @@ const ONLINE_SITZE = 6;
 type PokerRegeln = { startJetons: number; kleinerBlind: number; grosserBlind: number };
 
 /**
- * Drei fertige Einsaetze. Der Host kann sie uebernehmen oder die Zahlen
- * darunter selbst drehen — Buy-in und Blinds gehoeren an den Tisch, nicht
- * fest ins Spiel.
+ * Drei fertige Einsaetze. Feiner drehen geht im Blatt darunter — Buy-in
+ * und Blinds gehoeren an den Tisch, nicht fest ins Spiel.
  */
 const EINSATZ_VORGABEN: readonly { name: string; regelsatz: PokerRegeln }[] = [
   { name: 'Locker', regelsatz: { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 } },
@@ -144,6 +143,10 @@ function gleicherEinsatz(zeile: TableRow, r: PokerRegeln): boolean {
     s.kleinerBlind === r.kleinerBlind &&
     s.grosserBlind === r.grosserBlind
   );
+}
+
+function blindsText(r: Pick<PokerRegeln, 'kleinerBlind' | 'grosserBlind'>): string {
+  return `${r.kleinerBlind}/${r.grosserBlind}`;
 }
 
 function pokerFehler(err: unknown, fallback: string): string {
@@ -441,78 +444,174 @@ function Einsatzwahl({
   regelsatz: PokerRegeln;
   onChange: (r: PokerRegeln) => void;
 }): React.JSX.Element {
+  const [fein, setFein] = useState(false);
   const vorgabe = EINSATZ_VORGABEN.find(
     (v) =>
       v.regelsatz.startJetons === regelsatz.startJetons &&
       v.regelsatz.kleinerBlind === regelsatz.kleinerBlind &&
       v.regelsatz.grosserBlind === regelsatz.grosserBlind,
   );
-  const bbStufen = [...new Set(SB_STUFEN.map((n) => n * 2))];
 
   return (
-    <section className="poker-einsatz">
-      <div className="poker-sitze-wahl" role="group" aria-label="Einsatzvorgabe">
+    <section className="poker-einsatzwahl">
+      <div className="poker-vorgaben" role="group" aria-label="Einsatz">
         {EINSATZ_VORGABEN.map((v) => (
           <button
             key={v.name}
-            className="poker-sitze-knopf"
+            className="poker-vorgabe"
             type="button"
-            data-an={vorgabe?.name === v.name || undefined}
+            aria-pressed={vorgabe?.name === v.name}
             onClick={() => onChange(v.regelsatz)}
           >
-            {v.name}
+            <strong>{v.name}</strong>
+            <em>
+              {v.regelsatz.startJetons}
+              <span> · {blindsText(v.regelsatz)}</span>
+            </em>
           </button>
         ))}
       </div>
-      <p className="poker-einsatz-zeile">
-        Mindestens {regelsatz.startJetons} · Blinds {regelsatz.kleinerBlind}/
-        {regelsatz.grosserBlind}
-      </p>
-      <div className="poker-sitze-wahl" role="group" aria-label="Mindest-BroJetons">
-        {BUY_IN_STUFEN.map((zahl) => (
-          <button
-            key={zahl}
-            className="poker-sitze-knopf"
-            type="button"
-            data-an={regelsatz.startJetons === zahl || undefined}
-            onClick={() => onChange({ startJetons: zahl, ...blindsZuBuyIn(zahl) })}
-          >
-            {zahl}
-          </button>
-        ))}
-      </div>
-      <p className="poker-sitze-text">Mindest-BroJetons</p>
-      <div className="poker-sitze-wahl" role="group" aria-label="Small Blind">
-        {SB_STUFEN.map((zahl) => (
-          <button
-            key={zahl}
-            className="poker-sitze-knopf"
-            type="button"
-            data-an={regelsatz.kleinerBlind === zahl || undefined}
-            onClick={() =>
-              onChange({ ...regelsatz, kleinerBlind: zahl, grosserBlind: zahl * 2 })
-            }
-          >
-            {zahl}
-          </button>
-        ))}
-      </div>
-      <p className="poker-sitze-text">Small Blind</p>
-      <div className="poker-sitze-wahl" role="group" aria-label="Big Blind">
-        {bbStufen.map((zahl) => (
-          <button
-            key={zahl}
-            className="poker-sitze-knopf"
-            type="button"
-            data-an={regelsatz.grosserBlind === zahl || undefined}
-            onClick={() => onChange({ ...regelsatz, grosserBlind: zahl })}
-          >
-            {zahl}
-          </button>
-        ))}
-      </div>
-      <p className="poker-sitze-text">Big Blind</p>
+      {!vorgabe && (
+        <p className="poker-einsatz-zeile">
+          Mindest-Einsatz {regelsatz.startJetons} · Blinds {blindsText(regelsatz)}
+        </p>
+      )}
+      <button
+        className="poker-textknopf"
+        type="button"
+        data-an={!vorgabe || undefined}
+        onClick={() => setFein(true)}
+      >
+        {vorgabe ? 'Eigenen Einsatz…' : 'Eigener Einsatz'}
+      </button>
+      {fein && (
+        <Einsatzblatt
+          regelsatz={regelsatz}
+          onChange={onChange}
+          onClose={() => setFein(false)}
+        />
+      )}
     </section>
+  );
+}
+
+/**
+ * Feineinstellung als Blatt von unten — nicht als Formular auf dem Menue.
+ * Drei Vorgaben reichen zum Loslegen; Buy-in und Blinds gehoeren hinter
+ * einen Tipp (DESIGN.md: Entscheidungen kommen als Blatt).
+ */
+function Einsatzblatt({
+  regelsatz,
+  onChange,
+  onClose,
+}: {
+  regelsatz: PokerRegeln;
+  onChange: (r: PokerRegeln) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const bbStufen = [...new Set(SB_STUFEN.map((n) => n * 2))];
+  const vorgabe = EINSATZ_VORGABEN.find(
+    (v) =>
+      v.regelsatz.startJetons === regelsatz.startJetons &&
+      v.regelsatz.kleinerBlind === regelsatz.kleinerBlind &&
+      v.regelsatz.grosserBlind === regelsatz.grosserBlind,
+  );
+
+  return (
+    <div className="poker-blatt" onClick={onClose} role="presentation">
+      <div className="poker-blatt-karte" onClick={(e) => e.stopPropagation()} role="presentation">
+        <h2>Einsatz einstellen</h2>
+        <p>
+          Wer den Tisch aufmacht, setzt den Mindest-Einsatz und die Blinds.
+          Die anderen bringen denselben Stapel mit.
+        </p>
+
+        <h3>Vorgabe</h3>
+        <div className="poker-vorgaben" role="group" aria-label="Einsatzvorgabe">
+          {EINSATZ_VORGABEN.map((v) => (
+            <button
+              key={v.name}
+              className="poker-vorgabe"
+              type="button"
+              aria-pressed={vorgabe?.name === v.name}
+              onClick={() => onChange(v.regelsatz)}
+            >
+              <strong>{v.name}</strong>
+              <em>
+                {v.regelsatz.startJetons}
+                <span> · {blindsText(v.regelsatz)}</span>
+              </em>
+            </button>
+          ))}
+        </div>
+
+        <h3>Mindest-Einsatz</h3>
+        <div className="poker-chipreihe" role="group" aria-label="Mindest-Einsatz">
+          {BUY_IN_STUFEN.map((zahl) => (
+            <button
+              key={zahl}
+              className="poker-chip"
+              type="button"
+              aria-pressed={regelsatz.startJetons === zahl}
+              onClick={() => onChange({ startJetons: zahl, ...blindsZuBuyIn(zahl) })}
+            >
+              {zahl}
+            </button>
+          ))}
+        </div>
+
+        <h3>Kleiner Blind</h3>
+        <div className="poker-chipreihe" role="group" aria-label="Kleiner Blind">
+          {SB_STUFEN.map((zahl) => (
+            <button
+              key={zahl}
+              className="poker-chip"
+              type="button"
+              aria-pressed={regelsatz.kleinerBlind === zahl}
+              onClick={() =>
+                onChange({ ...regelsatz, kleinerBlind: zahl, grosserBlind: zahl * 2 })
+              }
+            >
+              {zahl}
+            </button>
+          ))}
+        </div>
+
+        <h3>Großer Blind</h3>
+        <div className="poker-chipreihe" role="group" aria-label="Großer Blind">
+          {bbStufen.map((zahl) => (
+            <button
+              key={zahl}
+              className="poker-chip"
+              type="button"
+              aria-pressed={regelsatz.grosserBlind === zahl}
+              onClick={() => onChange({ ...regelsatz, grosserBlind: zahl })}
+            >
+              {zahl}
+            </button>
+          ))}
+        </div>
+
+        {!regelsatzOk(regelsatz) && (
+          <p className="poker-fehler">
+            Der große Blind muss über dem kleinen liegen, und der Einsatz
+            mindestens das Zehnfache des großen Blinds sein.
+          </p>
+        )}
+
+        <button
+          className="poker-hauptknopf"
+          type="button"
+          onClick={onClose}
+          disabled={!regelsatzOk(regelsatz)}
+        >
+          <span>So spielen</span>
+          <em>
+            {regelsatz.startJetons} · Blinds {blindsText(regelsatz)}
+          </em>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -894,7 +993,7 @@ export function EasyPoker({
     if (lobbyOffen) {
       const liste = tische ?? [];
       return (
-        <main className="poker-menue">
+        <main className="poker-menue" data-lage="liste">
           <button
             className="poker-zurueck"
             type="button"
@@ -911,13 +1010,12 @@ export function EasyPoker({
               Online-<span>Tisch</span>
             </h1>
             <p className="poker-untertitel">
-              Einsatz {regelsatz.startJetons} · Blinds {regelsatz.kleinerBlind}/
-              {regelsatz.grosserBlind}
+              Mindest-Einsatz {regelsatz.startJetons} · Blinds {blindsText(regelsatz)}
             </p>
             {tische === null ? (
               <p className="poker-sitze-text">Tische werden geladen…</p>
             ) : liste.length === 0 ? (
-              <p className="poker-sitze-text">Gerade kein offener Tisch.</p>
+              <p className="poker-sitze-text">Gerade wartet niemand. Mach den ersten Tisch auf.</p>
             ) : (
               <ul className="poker-lobby">
                 {liste.map((zeile) => {
@@ -931,14 +1029,16 @@ export function EasyPoker({
                         disabled={sucht || zuTeuer}
                         onClick={() => void trittBei(zeile.id)}
                       >
-                        <strong>{zeile.host ?? 'Tisch'}</strong>
-                        <em>
+                        <span className="poker-lobby-wer">{zeile.host ?? 'Tisch'}</span>
+                        <span className="poker-lobby-platz">
                           {zeile.occupied}/{zeile.seats}
-                          {zeile.stakes
-                            ? ` · ${zeile.stakes.startJetons} · ${zeile.stakes.kleinerBlind}/${zeile.stakes.grosserBlind}`
-                            : ''}
-                          {zuTeuer ? ' · zu hoch' : ''}
-                        </em>
+                        </span>
+                        <span className="poker-lobby-einsatz">
+                          <span className="poker-jeton-zeichen" aria-hidden="true" />
+                          {buyIn}
+                          {zeile.stakes ? <em>{blindsText(zeile.stakes)}</em> : null}
+                        </span>
+                        <span className="poker-lobby-bei">{zuTeuer ? 'Zu hoch' : 'Beitreten'}</span>
                       </button>
                     </li>
                   );
@@ -1079,7 +1179,7 @@ export function EasyPoker({
               ? `${besetzt} von ${gesamt} Plätzen besetzt`
               : 'Verbindung wird aufgebaut…'}
             {tischEinsatz
-              ? ` · ${tischEinsatz.startJetons} · ${tischEinsatz.kleinerBlind}/${tischEinsatz.grosserBlind}`
+              ? ` · Mindest-Einsatz ${tischEinsatz.startJetons} · Blinds ${blindsText(tischEinsatz)}`
               : ''}
           </p>
           {plaetze.length > 0 && (
