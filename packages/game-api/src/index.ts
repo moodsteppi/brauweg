@@ -62,7 +62,7 @@ export type GameId =
    */
   | 'mememory'
   /**
-   * Easy Poker: Texas Hold'em Kopf an Kopf, auf vier Schaltflaechen
+   * Easy Poker: Texas Hold'em zu zweit bis sechst, auf vier Schaltflaechen
    * eingedampft. Ein gewoehnliches Kartenspiel an der Schnittstelle — mit
    * einer Besonderheit, die zum Grundsatz 4 gehoert: Seine Jetons sind
    * Partiepunkte und keine Waehrung. Sie lassen sich nicht kaufen und nicht

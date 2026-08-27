@@ -50,7 +50,7 @@ import { type EasyPokerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 
 type GespeichertePartie = EasyPokerPartie & { readonly v: number };
 
@@ -59,8 +59,8 @@ const meta: GameMeta = {
   nameKey: 'game.easypoker',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
-  rotationSize: () => rotationSize(),
-  suggestedRounds: () => suggestedRounds(),
+  rotationSize: (seats) => rotationSize(seats),
+  suggestedRounds: (seats) => suggestedRounds(seats),
   /**
    * Eine ausgeteilte Pokerhand ist keine gelegte Karte. Zaehlte sie als
    * solche, fuellte eine einzige Partie die Kartenaufgabe des Tages — dieselbe
@@ -76,7 +76,7 @@ export const easypoker: GameModule<
   EasyPokerRegeln
 > = {
   meta,
-  protocolVersion: 1,
+  protocolVersion: 2,
 
   defaultConfig: () => DEFAULT_REGELN,
 

@@ -2282,7 +2282,7 @@ function Spielwahl({
                     {game.seatCounts.join(', ')} Spieler
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
-                    {game.id === 'easypoker' ? ' · Poker zu zweit' : ''}
+                    {game.id === 'easypoker' ? ' · Texas Hold’em' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

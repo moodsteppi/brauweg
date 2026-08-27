@@ -2,8 +2,8 @@
  * Die gefilterte Sicht.
  *
  * Hier — und nur hier — entsteht die Sichtbarkeit (game-api, Grundsatz 2).
- * Beim Poker ist das die ganze Spielmechanik: Wer die beiden Karten des
- * Gegners kennt, braucht nicht mehr zu spielen. Fuer eine verdeckte Hand geht
+ * Beim Poker ist das die ganze Spielmechanik: Wer die Karten der anderen
+ * kennt, braucht nicht mehr zu spielen. Fuer eine verdeckte Hand geht
  * deshalb `null` raus und nicht etwa die Karte mit einem Merker "bitte nicht
  * anzeigen".
  *
@@ -14,7 +14,7 @@
  * Was zusaetzlich DRINSTEHT, ist die eigene Handstaerke (`meineStaerke`). Sie
  * ist eine Regel, und der Client bildet keine Regeln nach (DESIGN-DOKO) — er
  * soll aber "Zwei Paare" anzeigen koennen, ohne selbst zu werten. Sie ist je
- * Sitz gefiltert und verraet dem Gegner nichts.
+ * Sitz gefiltert und verraet den anderen nichts.
  */
 
 import type { Bewertung, Karte } from './karten.js';
@@ -25,7 +25,15 @@ import type {
   LetzteAktion,
   Strasse,
 } from './partie.js';
-import { gegnerVon, pauseDauerMs, setzKosten, sieger, sitzeVon, topfGesamt, zuZahlen } from './partie.js';
+import {
+  gegnerVon,
+  pauseDauerMs,
+  setzKosten,
+  sieger,
+  sitzeVon,
+  topfGesamt,
+  zuZahlen,
+} from './partie.js';
 
 export interface EasyPokerSicht {
   readonly handNr: number;
@@ -35,11 +43,22 @@ export interface EasyPokerSicht {
   /** Die eigene Hand. Fuer Zuschauer immer leer. */
   readonly meineKarten: readonly Karte[];
   /**
-   * Die Hand des Gegners — nur beim Zeigen. Sonst nur die ANZAHL verdeckter
-   * Karten, damit der Bildschirm zwei Rueckseiten legen kann.
+   * Die Hand des naechsten anderen Sitzes — nur beim Zeigen. Sonst nur die
+   * ANZAHL verdeckter Karten, damit ein Zweier-Bildschirm zwei Rueckseiten
+   * legen kann, ohne die neuen Felder zu kennen.
    */
   readonly gegnerKarten: readonly Karte[] | null;
   readonly gegnerVerdeckt: number;
+  /**
+   * Fremde Karten je Sitz. `null` = verdeckt, leeres Feld = nicht in der
+   * Hand (gepasst oder pleite). Eigene Karten stehen hier nicht.
+   */
+  readonly fremdeKarten: Readonly<Record<number, readonly Karte[] | null>>;
+  readonly fremdeVerdeckt: Readonly<Record<number, number>>;
+  readonly sitze: readonly number[];
+  readonly imSpiel: readonly number[];
+  readonly kleinerSitz: number;
+  readonly grosserSitz: number;
   /** Beste Fuenferkombination des eigenen Sitzes, sobald das Brett liegt. */
   readonly meineStaerke: Bewertung | null;
   readonly jetons: Readonly<Record<number, number>>;
@@ -76,10 +95,37 @@ function offengelegt(partie: EasyPokerPartie, sitz: number): readonly Karte[] | 
   return gezeigt && gezeigt.length > 0 ? gezeigt : null;
 }
 
+function fremdsicht(
+  partie: EasyPokerPartie,
+  sitz: number | null,
+): {
+  fremdeKarten: Record<number, readonly Karte[] | null>;
+  fremdeVerdeckt: Record<number, number>;
+} {
+  const fremdeKarten: Record<number, readonly Karte[] | null> = {};
+  const fremdeVerdeckt: Record<number, number> = {};
+  for (const anderer of sitzeVon(partie)) {
+    if (sitz !== null && anderer === sitz) continue;
+    const offen = offengelegt(partie, anderer);
+    if (offen) {
+      fremdeKarten[anderer] = offen;
+      fremdeVerdeckt[anderer] = 0;
+    } else if (partie.imSpiel.includes(anderer) && (partie.hand[anderer] ?? []).length > 0) {
+      fremdeKarten[anderer] = null;
+      fremdeVerdeckt[anderer] = (partie.hand[anderer] ?? []).length;
+    } else {
+      fremdeKarten[anderer] = null;
+      fremdeVerdeckt[anderer] = 0;
+    }
+  }
+  return { fremdeKarten, fremdeVerdeckt };
+}
+
 function grundsicht(partie: EasyPokerPartie, sitz: number | null): EasyPokerSicht {
   const zuschauer = sitz === null;
   const eigene = sitz === null ? [] : (partie.hand[sitz] ?? []);
   const gegner = sitz === null ? null : gegnerVon(partie, sitz);
+  const { fremdeKarten, fremdeVerdeckt } = fremdsicht(partie, sitz);
 
   /*
    * Die eigene Staerke erst ab dem Flop.
@@ -96,8 +142,14 @@ function grundsicht(partie: EasyPokerPartie, sitz: number | null): EasyPokerSich
     strasse: partie.strasse,
     brett: partie.brett,
     meineKarten: eigene,
-    gegnerKarten: gegner === null ? null : offengelegt(partie, gegner),
-    gegnerVerdeckt: gegner === null ? 0 : (partie.hand[gegner] ?? []).length,
+    gegnerKarten: gegner === null ? null : (fremdeKarten[gegner] ?? null),
+    gegnerVerdeckt: gegner === null ? 0 : (fremdeVerdeckt[gegner] ?? 0),
+    fremdeKarten,
+    fremdeVerdeckt,
+    sitze: sitzeVon(partie),
+    imSpiel: partie.imSpiel,
+    kleinerSitz: partie.kleinerSitz,
+    grosserSitz: partie.grosserSitz,
     meineStaerke,
     jetons: partie.jetons,
     einsatz: partie.einsatz,
@@ -129,13 +181,12 @@ export function sichtFuer(partie: EasyPokerPartie, sitz: number): EasyPokerSicht
  *
  * Die Trennung ist nicht verhandelbar (game-api): Ein Zuschauer mit
  * Handeinsicht waere hier der perfekte Komplize — er muesste einem Spieler
- * nur mitteilen, dass der Gegner blufft. Gezeigte Karten am Ende einer Hand
+ * nur mitteilen, dass ein anderer blufft. Gezeigte Karten am Ende einer Hand
  * darf er sehen, die stehen ohnehin auf dem Tisch.
  */
 export function zuschauerSicht(partie: EasyPokerPartie): EasyPokerSicht {
   const sicht = grundsicht(partie, null);
-  const sitze = sitzeVon(partie);
-  const gezeigt = sitze
+  const gezeigt = sitzeVon(partie)
     .map((s) => partie.ergebnis?.gezeigt[s] ?? null)
     .filter((karten): karten is readonly Karte[] => karten !== null && karten.length > 0);
   return {

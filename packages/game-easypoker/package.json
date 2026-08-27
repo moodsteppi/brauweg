@@ -2,7 +2,7 @@
   "name": "@brauweg/game-easypoker",
   "private": true,
   "version": "1.0.0",
-  "description": "Regel-Engine fuer Easy Poker - Texas Hold'em zu zweit, vereinfacht",
+  "description": "Regel-Engine fuer Easy Poker - Texas Hold'em zu zweit bis sechst, vereinfacht",
   "main": "dist/src/index.js",
   "directories": {
     "test": "test"

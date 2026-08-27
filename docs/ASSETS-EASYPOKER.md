@@ -1,18 +1,18 @@
 # Bestellung: Bilder für Easy Poker
 
-Easy Poker läuft **vollständig ohne gelieferte Grafik**. Karten, Rückseite,
+Easy Poker läuft **ohne gelieferte Tischgrafik**. Karten, Rückseite,
 Jetons, Filz und Holzkante sind gezeichnet (SVG im Bündel bzw. CSS-Verläufe) —
 so wie DESIGN.md es verlangt: „Alles gemalt, nichts geladen."
 
-Bestellt wird deshalb genau **ein** Bild, und ein zweites nur, falls das Spiel
-eine eigene Kachel im Hub bekommen soll.
+Bestellt und eingebaut ist das Spielauswahl-Banner. Eine eigene Hub-Kachel
+ist nicht nötig.
 
 ---
 
-## 1. Spielauswahl-Banner (nötig)
+## 1. Spielauswahl-Banner (eingebaut)
 
 **Datei:** `packages/client/public/hub/spielwahl-easypoker.webp`
-**Maße:** 640 × 360 px (16:9), WebP Qualität 85, **unter 60 kB**
+**Maße:** 1200 × 300 px (4:1), WebP Qualität 82, **unter 60 kB**
 **Eintrag danach:** `GEMALTE_BANNER` in `packages/client/src/hub.tsx` um
 `'easypoker'` ergänzen — ohne diesen Eintrag zeigt die Spielauswahl weiter das
 Ersatzbanner `spielwahl-bald.webp`, so wie heute bei Skat und Feldherr.
@@ -32,7 +32,7 @@ kleiner Stapel goldener Jetons. Von schräg oben, warmes Licht von links.
 | Jetons | Gold `#e2b64f`, Glanz `#ffe8a8` |
 
 **Freihalten:** Die unteren 20 % bleiben ruhig — dort liegt in der
-Spielauswahl der Textstreifen („Easy Poker · 2 Spieler · Poker zu zweit").
+Spielauswahl der Textstreifen („Easy Poker · 2, 3, 4, 5, 6 Spieler · Texas Hold’em").
 
 **Was NICHT ins Bild gehört:**
 

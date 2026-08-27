@@ -5,7 +5,7 @@ import { cardName, isRed, rankLabel, suitSymbol } from '../i18n';
 import { useTable } from '../useTable';
 
 /**
- * Easy Poker — Texas Hold'em zu zweit, Hochkant-Handy.
+ * Easy Poker — Texas Hold'em zu zweit bis sechst, Hochkant-Handy.
  *
  * Ein Bildschirm mit zwei Gesichtern, wie bei Feldherr und Mememory: ohne
  * Tisch das Hauptmenue, mit Tisch der Filz. Der Tisch wird HIER gehalten und
@@ -20,8 +20,9 @@ import { useTable } from '../useTable';
  * einmal, was ein grosser Blind ist; er zeigt Zahlen an, die er bekommt.
  *
  * Der ganze Aufbau ist fuer eine Hand im Hochformat entworfen: Kopfzeile,
- * Gegner, Tisch, eigene Karten, Aktionsleiste — von oben nach unten in der
- * Reihenfolge, in der man sie braucht, und das Wichtigste unten am Daumen.
+ * Gegner um den Filz, Brett in der Mitte, eigene Karten und Aktionsleiste
+ * unten am Daumen. Zu sechst sitzen fuenf Gegner auf dem Oval, man selbst
+ * bleibt unten — dieselbe Orientierung wie am Doppelkopftisch.
  */
 
 // ---------------------------------------------------------------------------
@@ -65,6 +66,12 @@ interface EasyPokerSicht {
   meineKarten: Karte[];
   gegnerKarten: Karte[] | null;
   gegnerVerdeckt: number;
+  fremdeKarten: Record<number, Karte[] | null>;
+  fremdeVerdeckt: Record<number, number>;
+  sitze: number[];
+  imSpiel: number[];
+  kleinerSitz: number;
+  grosserSitz: number;
   meineStaerke: Bewertung | null;
   jetons: Record<number, number>;
   einsatz: Record<number, number>;
@@ -99,6 +106,8 @@ type Aktion =
 
 const NAME_SCHLUESSEL = 'easypoker.name';
 const NAME_MAX = 16;
+/** Online immer 6-max: wer dazukommt, setzt sich dazu, der Rest kann mit Bots aufgefuellt werden. */
+const ONLINE_SITZE = 6;
 
 /**
  * Regelsatz, mit dem ein Tisch aufgemacht wird.
@@ -110,11 +119,12 @@ const NAME_MAX = 16;
 const REGELSATZ = { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 };
 
 /**
- * Zwoelf Haende sind am Handy rund fuenf Minuten — und eine gerade Zahl, weil
- * der Knopf jede Hand wandert und die Plattform deshalb ein Vielfaches der
- * Geberrotation verlangt.
+ * Rund zwoelf Haende, auf ein Vielfaches der Sitzzahl gehoben — die Plattform
+ * verlangt das, weil der Knopf jede Hand wandert.
  */
-const HAENDE = 12;
+function haendeFuer(sitze: number): number {
+  return Math.ceil(12 / sitze) * sitze;
+}
 
 /**
  * Die Namen der Kartenkombinationen.
@@ -150,6 +160,32 @@ const STRASSENWORT: Record<EasyPokerSicht['strasse'], string> = {
   turn: 'Turn',
   river: 'River',
 };
+
+type GegnerOrt = 'oben' | 'links' | 'rechts' | 'oben-links' | 'oben-rechts';
+
+/**
+ * Sitze um das Oval, immer so gedreht, dass man selbst unten sitzt.
+ *
+ * Die Reihenfolge ist linksherum vom eigenen Platz: wer am Tisch links sitzt,
+ * steht auf dem Bildschirm links. Die fuenf Orte reichen fuer sechs Sitze;
+ * weniger Gegner lassen die inneren Plaetze einfach weg.
+ */
+function gegnerOrte(sitze: readonly number[], ich: number): { sitz: number; ort: GegnerOrt }[] {
+  const stelle = sitze.indexOf(ich);
+  const andere: number[] = [];
+  for (let k = 1; k < sitze.length; k++) {
+    andere.push(sitze[(stelle + k + sitze.length) % sitze.length]!);
+  }
+  const layout: Record<number, GegnerOrt[]> = {
+    1: ['oben'],
+    2: ['links', 'rechts'],
+    3: ['links', 'oben', 'rechts'],
+    4: ['links', 'oben-links', 'oben-rechts', 'rechts'],
+    5: ['links', 'oben-links', 'oben', 'oben-rechts', 'rechts'],
+  };
+  const orte = layout[andere.length] ?? layout[5]!;
+  return andere.map((sitz, index) => ({ sitz, ort: orte[index] ?? 'oben' }));
+}
 
 function wenigerBewegung(): boolean {
   return (
@@ -381,6 +417,7 @@ export function EasyPoker({
   const [sucht, setSucht] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [name, setName] = useState(gelesenerName);
+  const [sitzeWahl, setSitzeWahl] = useState(2);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
   /** Angetippte eigene Karte — sie hebt sich an, damit man sie besser sieht. */
@@ -399,7 +436,7 @@ export function EasyPoker({
   const tisch = useTable<EasyPokerSicht>(tischId, 'easypoker');
   const sicht = tisch.view?.view ?? null;
   const eigenerSitz = tisch.view?.seat ?? 0;
-  const gegnerSitz = eigenerSitz === 0 ? 1 : 0;
+  const sitzeAmTisch = sicht?.sitze ?? tisch.table?.seats.map((platz) => platz.seat) ?? [0, 1];
   const revision = tisch.view?.revision ?? -1;
 
   useEffect(() => {
@@ -451,8 +488,8 @@ export function EasyPoker({
       const { id } = await api.createTable({
         gameId: 'easypoker',
         config: REGELSATZ,
-        seats: 2,
-        rounds: HAENDE,
+        seats: sitzeWahl,
+        rounds: haendeFuer(sitzeWahl),
         visibility: 'on_request',
         fillWithBots: true,
       });
@@ -462,7 +499,7 @@ export function EasyPoker({
       setSucht(false);
       setFehler('Der Tisch liess sich nicht aufmachen. Noch einmal versuchen?');
     }
-  }, []);
+  }, [sitzeWahl]);
 
   /**
    * Einen Gegner finden: an einem offenen Tisch Platz nehmen, sonst selbst
@@ -480,7 +517,7 @@ export function EasyPoker({
       const zeilen = await api.tables('easypoker');
       const offen = zeilen
         .filter((zeile) => zeile.occupied < zeile.seats)
-        .sort((a, b) => a.id.localeCompare(b.id));
+        .sort((a, b) => b.occupied - a.occupied || a.id.localeCompare(b.id));
       const ziel = offen[0];
       if (ziel) {
         await api.joinTable(ziel.id);
@@ -491,8 +528,8 @@ export function EasyPoker({
       const { id } = await api.createTable({
         gameId: 'easypoker',
         config: REGELSATZ,
-        seats: 2,
-        rounds: HAENDE,
+        seats: ONLINE_SITZE,
+        rounds: haendeFuer(ONLINE_SITZE),
       });
       setEigenerTisch(id);
       setTischId(id);
@@ -639,7 +676,7 @@ export function EasyPoker({
           <h1 className="poker-titel">
             Easy <span>Poker</span>
           </h1>
-          <p className="poker-untertitel">Zwei Karten, ein Gegner, vier Knöpfe.</p>
+          <p className="poker-untertitel">Zwei Karten, bis zu sechs am Tisch, vier Knöpfe.</p>
 
           <input
             className="poker-namensfeld"
@@ -652,6 +689,23 @@ export function EasyPoker({
             onChange={(e) => merkeName(e.target.value)}
           />
 
+          <div className="poker-sitze-wahl" role="group" aria-label="Spielerzahl">
+            {[2, 3, 4, 5, 6].map((zahl) => (
+              <button
+                key={zahl}
+                className="poker-sitze-knopf"
+                type="button"
+                data-an={sitzeWahl === zahl || undefined}
+                onClick={() => setSitzeWahl(zahl)}
+              >
+                {zahl}
+              </button>
+            ))}
+          </div>
+          <p className="poker-sitze-text">
+            {sitzeWahl === 2 ? 'Du gegen den Computer' : `Du und ${sitzeWahl - 1} Computer`}
+          </p>
+
           <button
             className="poker-hauptknopf"
             type="button"
@@ -659,7 +713,7 @@ export function EasyPoker({
             disabled={sucht}
           >
             <span>Sofort spielen</span>
-            <em>gegen den Computer</em>
+            <em>gegen den Computer · {sitzeWahl} Plätze</em>
           </button>
 
           <button
@@ -668,7 +722,7 @@ export function EasyPoker({
             onClick={() => void suche()}
             disabled={sucht}
           >
-            <span>Online-Match suchen</span>
+            <span>Online-Tisch suchen</span>
             {/* Die Zahl steht daneben und nicht im Satz: Sie aendert sich alle
                 fuenf Sekunden, und ein springendes Wort mitten im Text liest
                 sich wie ein Fehler. */}
@@ -692,7 +746,10 @@ export function EasyPoker({
   // -------------------------------------------------------------------------
 
   if (!sicht) {
-    const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
+    const plaetze = tisch.table?.seats ?? [];
+    const besetzt = plaetze.filter((platz) => platz.accountId).length;
+    const frei = plaetze.filter((platz) => !platz.accountId && !platz.isBot);
+    const gesamt = plaetze.length || ONLINE_SITZE;
     return (
       <main className="poker-menue">
         <button className="poker-zurueck" type="button" onClick={brichAb}>
@@ -704,14 +761,33 @@ export function EasyPoker({
           </h1>
           <p className="poker-untertitel">
             {tisch.status === 'open'
-              ? `${besetzt} von 2 Plätzen besetzt`
+              ? `${besetzt} von ${gesamt} Plätzen besetzt`
               : 'Verbindung wird aufgebaut…'}
           </p>
+          {plaetze.length > 0 && (
+            <ul className="poker-warte-sitze">
+              {plaetze.map((platz) => (
+                <li key={platz.seat} data-leer={!platz.accountId && !platz.isBot || undefined}>
+                  {platz.displayName || (platz.isBot ? 'Computer' : 'Frei')}
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="poker-punkte-lauf" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
+          {tisch.status === 'open' && frei.length > 0 && (
+            <button
+              className="poker-zweitknopf"
+              type="button"
+              onClick={() => frei.forEach((platz) => tisch.addBot(platz.seat))}
+            >
+              <span>Mit Computern auffüllen</span>
+              <em>und loslegen</em>
+            </button>
+          )}
           <p className="poker-untertitel">{aktiv ?? '…'} Spieler gerade in Easy Poker</p>
         </div>
       </main>
@@ -743,9 +819,10 @@ export function EasyPoker({
   const namenVon = (sitz: number): string =>
     sicht.namen[sitz] ||
     tisch.table?.seats.find((platz) => platz.seat === sitz)?.displayName ||
-    (sitz === eigenerSitz ? 'Du' : 'Gegner');
+    (sitz === eigenerSitz ? 'Du' : `Platz ${sitz + 1}`);
 
-  const istBot = tisch.table?.seats.find((platz) => platz.seat === gegnerSitz)?.isBot ?? false;
+  const istBotVon = (sitz: number): boolean =>
+    tisch.table?.seats.find((platz) => platz.seat === sitz)?.isBot ?? false;
 
   /** Karten, die zur gewerteten Kombination gehoeren — sie bekommen Gold. */
   const hervorgehoben = new Set<number>(
@@ -757,11 +834,17 @@ export function EasyPoker({
     ).map((karte) => karte.id),
   );
 
-  const gegnerKarten = sicht.gegnerKarten;
   const ergebnis = sicht.ergebnis;
+  const gegner = gegnerOrte(sitzeAmTisch, eigenerSitz);
+  const dranName =
+    sicht.dran === null
+      ? ''
+      : sicht.dran === eigenerSitz
+        ? 'Du bist dran'
+        : `${namenVon(sicht.dran)} überlegt…`;
 
   return (
-    <main className="poker-buehne" data-dran={meinZug ? 'ich' : 'gegner'}>
+    <main className="poker-buehne" data-dran={meinZug ? 'ich' : 'gegner'} data-sitze={sitzeAmTisch.length}>
       {/* Der Filz ist gemalt und nicht geladen: zwei weiche Lichtkegel auf
           dunklem Gruen, dazu die Holzkante am Rand. Ein Bild waere hier
           hundert Kilobyte fuer eine Flaeche, die niemand ansieht. */}
@@ -781,7 +864,7 @@ export function EasyPoker({
             Easy <span>Poker</span>
           </strong>
           <em>
-            Hand {sicht.handNr}/{sicht.handMax} · {STRASSENWORT[sicht.strasse]}
+            Hand {sicht.handNr}/{sicht.handMax} · {STRASSENWORT[sicht.strasse]} · {sitzeAmTisch.length}
           </em>
         </div>
         <div className="poker-kopfstand" aria-label="Dein Punktestand">
@@ -793,44 +876,33 @@ export function EasyPoker({
 
       {/*
        * Alles zwischen Kopfzeile und Aktionsleiste liegt auf EINER
-       * Tischplatte: der Gegner an der oberen Kante, das Brett in der
-       * Mitte, die eigene Hand an der unteren. Vorher standen die drei
-       * Abschnitte lose auf dem Grund, und auf einem hohen Bildschirm
-       * blieben zweihundertsechzig Pixel Fläche uebrig, die nach nichts
-       * aussahen. Derselbe Aufbau wie am Doppelkopftisch: dunkle Stube
-       * oben und unten, Filz dazwischen.
+       * Tischplatte: die Gegner um das Oval, das Brett in der Mitte, die
+       * eigene Hand an der unteren Kante. Derselbe Aufbau wie am
+       * Doppelkopftisch: dunkle Stube oben und unten, Filz dazwischen.
        */}
-      <div className="poker-tischflaeche">
-      {/* --- Gegner ------------------------------------------------------- */}
-      <section className="poker-sitz is-gegner" data-aktiv={sicht.dran === gegnerSitz || undefined}>
-        <div className="poker-sitz-karten">
-          {gegnerKarten
-            ? gegnerKarten.map((karte) => (
-                <Spielkarte key={karte.id} karte={karte} hervor={hervorgehoben.has(karte.id)} />
-              ))
-            : Array.from({ length: sicht.gegnerVerdeckt }, (_, i) => (
-                <Kartenruecken key={`${sicht.handNr}-${i}`} verzoegerung={i * 90} />
-              ))}
-        </div>
-        <div className="poker-sitz-text">
-          <span className="poker-sitz-name">
-            {namenVon(gegnerSitz)}
-            {istBot && <em> · Computer</em>}
-            {sicht.geber === gegnerSitz && <b className="poker-knopfmarke">Geber</b>}
-          </span>
-          <span className="poker-sitz-stand">
-            <span className="poker-jeton-zeichen" aria-hidden="true" />
-            <Jetonzahl wert={sicht.jetons[gegnerSitz] ?? 0} />
-          </span>
-        </div>
-        <Einsatzmarke betrag={sicht.einsatz[gegnerSitz] ?? 0} />
-        {sicht.letzteAktion?.sitz === gegnerSitz && (
-          <span className="poker-sprechblase" key={`${sicht.handNr}-${sicht.strasse}-${revision}`}>
-            {AKTIONSWORT[sicht.letzteAktion.art]}
-            {sicht.letzteAktion.betrag ? ` ${sicht.letzteAktion.betrag}` : ''}
-          </span>
-        )}
-      </section>
+      <div className="poker-tischflaeche" data-sitze={sitzeAmTisch.length}>
+      {gegner.map(({ sitz, ort }) => (
+        <Fremdsitz
+          key={sitz}
+          ort={ort}
+          name={namenVon(sitz)}
+          bot={istBotVon(sitz)}
+          jetons={sicht.jetons[sitz] ?? 0}
+          einsatz={sicht.einsatz[sitz] ?? 0}
+          karten={sicht.fremdeKarten[sitz] ?? null}
+          verdeckt={sicht.fremdeVerdeckt[sitz] ?? 0}
+          geber={sicht.geber === sitz}
+          klein={sicht.kleinerSitz === sitz && sitzeAmTisch.length > 2}
+          gross={sicht.grosserSitz === sitz}
+          aktiv={sicht.dran === sitz}
+          dabei={sicht.imSpiel.includes(sitz)}
+          pleite={(sicht.jetons[sitz] ?? 0) <= 0 && !sicht.imSpiel.includes(sitz)}
+          aktion={sicht.letzteAktion?.sitz === sitz ? sicht.letzteAktion : null}
+          hervorgehoben={hervorgehoben}
+          handNr={sicht.handNr}
+          revision={revision}
+        />
+      ))}
 
       {/* --- Tischmitte --------------------------------------------------- */}
       <section className="poker-mitte">
@@ -873,7 +945,7 @@ export function EasyPoker({
             {sicht.meineStaerke && (
               <b>{KOMBINATION[sicht.meineStaerke.kategorie] ?? ''}</b>
             )}
-            <span>{meinZug ? 'Du bist dran' : 'Der Gegner überlegt…'}</span>
+            <span>{meinZug ? 'Du bist dran' : dranName || 'Es wird gezeigt…'}</span>
           </p>
         )}
       </section>
@@ -885,6 +957,10 @@ export function EasyPoker({
           <span className="poker-sitz-name">
             {namenVon(eigenerSitz)}
             {sicht.geber === eigenerSitz && <b className="poker-knopfmarke">Geber</b>}
+            {sicht.kleinerSitz === eigenerSitz && sitzeAmTisch.length > 2 && (
+              <b className="poker-knopfmarke">SB</b>
+            )}
+            {sicht.grosserSitz === eigenerSitz && <b className="poker-knopfmarke">BB</b>}
           </span>
         </div>
         <div className="poker-hand">
@@ -955,11 +1031,17 @@ export function EasyPoker({
                   ? 'Gewonnen!'
                   : 'Verloren'}
             </h2>
-            <p className="poker-ende-stand">
-              <b data-mein="true">{sicht.jetons[eigenerSitz] ?? 0}</b>
-              <span>:</span>
-              <b>{sicht.jetons[gegnerSitz] ?? 0}</b>
-            </p>
+            <ol className="poker-ende-liste">
+              {sitzeAmTisch
+                .slice()
+                .sort((a, b) => (sicht.jetons[b] ?? 0) - (sicht.jetons[a] ?? 0))
+                .map((sitz) => (
+                  <li key={sitz} data-mein={sitz === eigenerSitz || undefined}>
+                    <span>{namenVon(sitz)}</span>
+                    <b>{sicht.jetons[sitz] ?? 0}</b>
+                  </li>
+                ))}
+            </ol>
             <p className="poker-ende-text">
               {sicht.handNr} von {sicht.handMax} Händen gespielt · Start waren{' '}
               {sicht.startJetons} Jetons
@@ -989,6 +1071,90 @@ function Einsatzmarke({ betrag }: { betrag: number }): React.JSX.Element | null 
       <span className="poker-jeton-zeichen" aria-hidden="true" />
       {betrag}
     </span>
+  );
+}
+
+/**
+ * Ein fremder Sitz auf dem Oval.
+ *
+ * Klein und absolut gesetzt, damit fuenf davon um die Brettkarten herum
+ * passen. Der eigene Sitz bleibt unten gross — dort liest man die Hand.
+ */
+function Fremdsitz({
+  ort,
+  name,
+  bot,
+  jetons,
+  einsatz,
+  karten,
+  verdeckt,
+  geber,
+  klein,
+  gross,
+  aktiv,
+  dabei,
+  pleite,
+  aktion,
+  hervorgehoben,
+  handNr,
+  revision,
+}: {
+  ort: GegnerOrt;
+  name: string;
+  bot: boolean;
+  jetons: number;
+  einsatz: number;
+  karten: Karte[] | null;
+  verdeckt: number;
+  geber: boolean;
+  klein: boolean;
+  gross: boolean;
+  aktiv: boolean;
+  dabei: boolean;
+  pleite: boolean;
+  aktion: LetzteAktion | null;
+  hervorgehoben: Set<number>;
+  handNr: number;
+  revision: number;
+}): React.JSX.Element {
+  return (
+    <section
+      className="poker-sitz is-fremd"
+      data-ort={ort}
+      data-aktiv={aktiv || undefined}
+      data-raus={!dabei || undefined}
+      data-pleite={pleite || undefined}
+    >
+      <div className="poker-sitz-karten">
+        {karten
+          ? karten.map((karte) => (
+              <Spielkarte key={karte.id} karte={karte} hervor={hervorgehoben.has(karte.id)} />
+            ))
+          : Array.from({ length: verdeckt }, (_, i) => (
+              <Kartenruecken key={`${handNr}-${i}`} verzoegerung={i * 70} />
+            ))}
+      </div>
+      <div className="poker-sitz-text">
+        <span className="poker-sitz-name">
+          {name}
+          {bot && <em> · CPU</em>}
+          {geber && <b className="poker-knopfmarke">G</b>}
+          {klein && <b className="poker-knopfmarke">SB</b>}
+          {gross && <b className="poker-knopfmarke">BB</b>}
+        </span>
+        <span className="poker-sitz-stand">
+          <span className="poker-jeton-zeichen" aria-hidden="true" />
+          <Jetonzahl wert={jetons} />
+        </span>
+      </div>
+      <Einsatzmarke betrag={einsatz} />
+      {aktion && (
+        <span className="poker-sprechblase" key={`${handNr}-${aktion.art}-${revision}`}>
+          {AKTIONSWORT[aktion.art]}
+          {aktion.betrag ? ` ${aktion.betrag}` : ''}
+        </span>
+      )}
+    </section>
   );
 }
 
@@ -1072,7 +1238,7 @@ function Ergebnisband({
       <span>
         {ergebnis.durchAufgabe
           ? gewonnen
-            ? 'Der Gegner hat gefoldet.'
+            ? 'Die anderen sind ausgestiegen.'
             : 'Du hast gefoldet.'
           : kombination
             ? `Du hattest ${KOMBINATION[kombination] ?? ''}.`
@@ -1097,9 +1263,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
 
         <h3>Ziel</h3>
         <p>
-          Du und dein Gegner bekommen je zwei verdeckte Karten. In der Mitte
+          Du und die anderen bekommen je zwei verdeckte Karten. In der Mitte
           liegen nach und nach fünf offene Karten. Wer aus seinen zwei und den
           fünf offenen die besten <b>fünf</b> Karten bildet, gewinnt den Topf.
+          Am Tisch sitzen zwei bis sechs.
         </p>
 
         <h3>Die vier Knöpfe</h3>
@@ -1113,7 +1280,7 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
             steht.
           </li>
           <li>
-            <b>Call</b> — den Einsatz des Gegners bezahlen. Die Zahl auf dem
+            <b>Call</b> — den offenen Einsatz bezahlen. Die Zahl auf dem
             Knopf ist der Preis.
           </li>
           <li>

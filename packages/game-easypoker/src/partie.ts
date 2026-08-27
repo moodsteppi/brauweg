@@ -1,11 +1,12 @@
 /**
  * Spielzustand und Regeln von Easy Poker.
  *
- * Texas Hold'em Kopf an Kopf, auf das Noetigste eingedampft: zwei Handkarten,
- * fuenf Gemeinschaftskarten, vier Setzrunden — und genau VIER Schaltflaechen,
- * weil eine Setzleiste mit Schieberegler auf einem Handy niemand bedient. Wie
- * viel ein Erhoehen kostet, rechnet deshalb dieses Modul aus und schickt den
- * Betrag mit der erlaubten Aktion mit (siehe `erlaubteZuege`).
+ * Texas Hold'em fuer zwei bis sechs Sitze, auf das Noetigste eingedampft:
+ * zwei Handkarten, fuenf Gemeinschaftskarten, vier Setzrunden — und genau
+ * VIER Schaltflaechen, weil eine Setzleiste mit Schieberegler auf einem Handy
+ * niemand bedient. Wie viel ein Erhoehen kostet, rechnet deshalb dieses
+ * Modul aus und schickt den Betrag mit der erlaubten Aktion mit (siehe
+ * `erlaubteZuege`).
  *
  * Reine Logik: kein Netz, keine Datenbank, keine Uhr, kein Zufall ausser dem
  * uebergebenen Seed (game-api, Grundsatz 1). Auch die Pause zwischen zwei
@@ -194,9 +195,13 @@ export interface LetzteAktion {
 
 /** Ausgang einer Hand. Liegt waehrend der Schaupause an der Partie. */
 export interface HandErgebnis {
-  /** Ein Sitz, oder beide bei geteiltem Topf. */
+  /**
+   * Sitze, die mindestens einen umkaempften Topf gewonnen haben.
+   * Bei geteiltem Topf mehrere; wer nur ungerufene Jetons zurueckbekommt,
+   * steht nicht hier.
+   */
   readonly gewinner: readonly number[];
-  /** Der Gegner hat aufgegeben — dann werden keine Karten gezeigt. */
+  /** Alle bis auf einen haben aufgegeben — dann werden keine Karten gezeigt. */
   readonly durchAufgabe: boolean;
   readonly topf: number;
   /** Handkarten, die offen gezeigt werden. Bei Aufgabe leer. */
@@ -219,8 +224,12 @@ export interface EasyPokerPartie {
   readonly handNr: number;
   /** Abgeschlossene Haende — Grundlage der Erfahrungspunkte. */
   readonly abgeschlossen: number;
-  /** Sitz mit dem Knopf. Zahlt den kleinen Blind und handelt vor dem Flop zuerst. */
+  /** Sitz mit dem Knopf. Zu dritt und mehr zahlt LINKS davon den kleinen Blind. */
   readonly geber: number;
+  /** Wer in DIESER Hand den kleinen Blind gestellt hat. */
+  readonly kleinerSitz: number;
+  /** Wer in DIESER Hand den grossen Blind gestellt hat. */
+  readonly grosserSitz: number;
   /** Jetons HINTER dem laufenden Einsatz. */
   readonly jetons: Readonly<Record<number, number>>;
   readonly hand: Readonly<Record<number, readonly Karte[]>>;
@@ -230,6 +239,11 @@ export interface EasyPokerPartie {
   readonly strasse: Strasse;
   /** Einsatz in DIESER Strasse. Am Strassenende wandert er in den Topf. */
   readonly einsatz: Readonly<Record<number, number>>;
+  /**
+   * Was jeder Sitz in DIESER Hand insgesamt in den Topf gelegt hat
+   * (abgeschlossene Strassen). Grundlage der Nebentoepfe.
+   */
+  readonly beitrag: Readonly<Record<number, number>>;
   readonly topf: number;
   readonly dran: number | null;
   /** Wer seit der letzten Erhoehung schon gehandelt hat. */
@@ -237,6 +251,8 @@ export interface EasyPokerPartie {
   /** Betrag der letzten Erhoehung — Untergrenze fuer die naechste. */
   readonly letzteErhoehung: number;
   readonly letzteAktion: LetzteAktion | null;
+  /** Sitze, die in dieser Hand noch dabei sind (nicht gepasst). */
+  readonly imSpiel: readonly number[];
   /** Waehrend der Schaupause gesetzt, sonst null. */
   readonly ergebnis: HandErgebnis | null;
   readonly namen: Readonly<Record<number, string>>;
@@ -252,12 +268,45 @@ export function sitzeVon(partie: EasyPokerPartie): number[] {
   return Object.keys(partie.jetons).map(Number).sort((a, b) => a - b);
 }
 
+/** Sitze, die noch Jetons haben — nur die bekommen die naechste Hand. */
+export function lebendeSitze(partie: EasyPokerPartie): number[] {
+  return sitzeVon(partie).filter((sitz) => (partie.jetons[sitz] ?? 0) > 0);
+}
+
+/**
+ * Der Sitz links vom angegebenen, in Sitzreihenfolge.
+ *
+ * "Links" ist die naechste hoehere Nummer, am Ende zurueck auf den ersten —
+ * dieselbe Umlaufordnung wie am echten Tisch.
+ */
+export function linksVon(sitz: number, sitze: readonly number[]): number {
+  const geordnet = [...sitze].sort((a, b) => a - b);
+  const stelle = geordnet.indexOf(sitz);
+  if (stelle < 0) return geordnet[0] ?? sitz;
+  return geordnet[(stelle + 1) % geordnet.length]!;
+}
+
+/** Sitze im Umlauf, beginnend links vom angegebenen. */
+function reihumLinksVon(sitz: number, sitze: readonly number[]): number[] {
+  const geordnet = [...sitze].sort((a, b) => a - b);
+  if (geordnet.length === 0) return [];
+  const start = linksVon(sitz, geordnet);
+  const stelle = geordnet.indexOf(start);
+  if (stelle < 0) return geordnet;
+  return [...geordnet.slice(stelle), ...geordnet.slice(0, stelle)];
+}
+
+/**
+ * Der andere Sitz. Zu dritt und mehr der naechste in der Nummerierung —
+ * bewusst kein "der Gegner", nur ein bequemer Alias fuer die alten Tests
+ * zu zweit.
+ */
 export function gegnerVon(partie: EasyPokerPartie, sitz: number): number {
   return sitzeVon(partie).find((s) => s !== sitz) ?? sitz;
 }
 
 function hoechsterEinsatz(partie: EasyPokerPartie): number {
-  return Math.max(...sitzeVon(partie).map((s) => partie.einsatz[s] ?? 0));
+  return Math.max(0, ...sitzeVon(partie).map((s) => partie.einsatz[s] ?? 0));
 }
 
 /** Der ganze Topf inklusive der laufenden Strasse — die Zahl auf dem Tisch. */
@@ -271,18 +320,38 @@ export function zuZahlen(partie: EasyPokerPartie, sitz: number): number {
   return Math.max(0, Math.min(fehlt, partie.jetons[sitz] ?? 0));
 }
 
+function leereZahl(sitze: readonly number[], wert = 0): Record<number, number> {
+  return Object.fromEntries(sitze.map((s) => [s, wert]));
+}
+
 /**
  * Kann dieser Sitz in der laufenden Strasse noch handeln?
  *
  * Drei Faelle, und der dritte ist der, an dem eine selbstgebaute Setzrunde
  * fast immer haengt: Vor dem Flop hat der grosse Blind das Recht zu erhoehen,
- * auch wenn der Gegner nur mitgegangen ist — die Einsaetze sind dann gleich,
+ * auch wenn bisher nur mitgegangen wurde — die Einsaetze sind dann gleich,
  * gehandelt hat er aber noch nicht.
  */
 function kannHandeln(partie: EasyPokerPartie, sitz: number): boolean {
+  if (!partie.imSpiel.includes(sitz)) return false;
   if ((partie.jetons[sitz] ?? 0) <= 0) return false;
   if (!partie.gehandelt.includes(sitz)) return true;
   return (partie.einsatz[sitz] ?? 0) < hoechsterEinsatz(partie);
+}
+
+function gegebeneSitze(partie: EasyPokerPartie): number[] {
+  return sitzeVon(partie).filter((sitz) => (partie.hand[sitz] ?? []).length > 0);
+}
+
+/** Kleiner Blind: zu zweit der Knopf, sonst links vom Knopf. */
+export function kleinerBlindVon(geber: number, gegeben: readonly number[]): number {
+  if (gegeben.length <= 2) return geber;
+  return linksVon(geber, gegeben);
+}
+
+/** Grosser Blind: links vom kleinen. */
+export function grosserBlindVon(geber: number, gegeben: readonly number[]): number {
+  return linksVon(kleinerBlindVon(geber, gegeben), gegeben);
 }
 
 // ---------------------------------------------------------------------------
@@ -292,27 +361,30 @@ function kannHandeln(partie: EasyPokerPartie, sitz: number): boolean {
 /**
  * Setzt eine neue Hand auf: mischen, geben, Blinds stellen.
  *
- * Die Blinds werden auf den Stapel gedeckelt. Das ist kein Randfall, sondern
- * der Normalfall am Ende einer Partie: Wer weniger Jetons hat als der grosse
- * Blind, geht mit dem Setzen des Blinds all-in — und darf trotzdem noch
- * gewinnen.
+ * Nur Sitze mit Jetons bekommen Karten. Die Blinds werden auf den Stapel
+ * gedeckelt: Wer weniger hat als der grosse Blind, geht mit dem Setzen
+ * all-in — und darf trotzdem noch gewinnen.
  */
 function gibHand(partie: EasyPokerPartie): EasyPokerPartie {
-  const sitze = sitzeVon(partie);
+  const alle = sitzeVon(partie);
+  const lebende = alle.filter((sitz) => (partie.jetons[sitz] ?? 0) > 0);
+  const geber = lebende.includes(partie.geber)
+    ? partie.geber
+    : (reihumLinksVon(partie.geber, alle).find((sitz) => lebende.includes(sitz)) ?? lebende[0] ?? 0);
+
   const zufall = handZufall(partie.saat, partie.handNr);
   const blatt = mische(erstelleBlatt(), zufall);
 
   const hand: Record<number, readonly Karte[]> = {};
+  for (const sitz of alle) hand[sitz] = [];
   let naechste = 0;
-  // Reihum geben, beginnend links vom Geber — wie am echten Tisch. Es aendert
-  // nichts an den Wahrscheinlichkeiten, aber es macht die Tests lesbar.
-  const gebeReihenfolge = [gegnerVon(partie, partie.geber), partie.geber];
-  for (const sitz of gebeReihenfolge) {
+  // Reihum geben, beginnend links vom Geber — wie am echten Tisch.
+  for (const sitz of reihumLinksVon(geber, lebende)) {
     hand[sitz] = [blatt[naechste++]!, blatt[naechste++]!];
   }
 
-  const kleinerSitz = partie.geber;
-  const grosserSitz = gegnerVon(partie, partie.geber);
+  const kleinerSitz = kleinerBlindVon(geber, lebende);
+  const grosserSitz = grosserBlindVon(geber, lebende);
   const kleinerBetrag = Math.min(partie.regeln.kleinerBlind, partie.jetons[kleinerSitz] ?? 0);
   const grosserBetrag = Math.min(partie.regeln.grosserBlind, partie.jetons[grosserSitz] ?? 0);
 
@@ -320,25 +392,29 @@ function gibHand(partie: EasyPokerPartie): EasyPokerPartie {
   jetons[kleinerSitz] = (jetons[kleinerSitz] ?? 0) - kleinerBetrag;
   jetons[grosserSitz] = (jetons[grosserSitz] ?? 0) - grosserBetrag;
 
-  const einsatz: Record<number, number> = {};
-  for (const sitz of sitze) einsatz[sitz] = 0;
+  const einsatz = leereZahl(alle);
   einsatz[kleinerSitz] = kleinerBetrag;
   einsatz[grosserSitz] = grosserBetrag;
 
   const gegeben: EasyPokerPartie = {
     ...partie,
+    geber,
+    kleinerSitz,
+    grosserSitz,
     hand,
     brett: [],
     reststapel: blatt.slice(naechste),
     strasse: 'preflop',
     jetons,
     einsatz,
+    beitrag: leereZahl(alle),
     topf: 0,
     // Blinds sind kein Handeln: Wer den grossen Blind gestellt hat, darf
     // spaeter trotzdem noch erhoehen.
     gehandelt: [],
     letzteErhoehung: partie.regeln.grosserBlind,
     letzteAktion: null,
+    imSpiel: [...lebende],
     ergebnis: null,
     dran: null,
   };
@@ -349,19 +425,18 @@ function gibHand(partie: EasyPokerPartie): EasyPokerPartie {
 /**
  * Beginn einer Setzrunde: Wer zuerst handelt, und ob ueberhaupt jemand kann.
  *
- * Vor dem Flop handelt der Knopf zuerst (er zahlt den kleinen Blind), danach
- * zuletzt. Diese Umkehr ist der ganze Positionsvorteil des Spiels und deshalb
- * die einzige Stelle, an der die Reihenfolge steht.
+ * Vor dem Flop handelt links vom grossen Blind zuerst (zu zweit also der
+ * Knopf). Danach handelt links vom Knopf zuerst. Diese Umkehr ist der
+ * Positionsvorteil des Spiels und deshalb die einzige Stelle, an der die
+ * Reihenfolge steht.
  */
 function starteStrasse(partie: EasyPokerPartie, strasse: Strasse): EasyPokerPartie {
-  const reihenfolge =
-    strasse === 'preflop'
-      ? [partie.geber, gegnerVon(partie, partie.geber)]
-      : [gegnerVon(partie, partie.geber), partie.geber];
-
   const mitStrasse: EasyPokerPartie = { ...partie, strasse };
-  const dran = reihenfolge.find((sitz) => kannHandeln(mitStrasse, sitz)) ?? null;
-  if (dran === null) return schliesseStrasse(mitStrasse);
+  const referenz = strasse === 'preflop' ? partie.grosserSitz : partie.geber;
+  const dran = reihumLinksVon(referenz, sitzeVon(mitStrasse)).find((sitz) =>
+    kannHandeln(mitStrasse, sitz),
+  );
+  if (dran === undefined) return schliesseStrasse(mitStrasse);
   return { ...mitStrasse, dran };
 }
 
@@ -380,18 +455,28 @@ export function amZug(partie: EasyPokerPartie): number | null {
  * Ein einziger Knopf, also eine einzige Groesse: der halbe Topf, mindestens
  * aber ein grosser Blind und mindestens so viel wie die letzte Erhoehung
  * (sonst waere es nach den Regeln gar keine). Nach oben deckeln zwei Dinge —
- * der eigene Stapel und das, was der Gegner ueberhaupt noch bezahlen kann.
- * Ohne den zweiten Deckel setzte man Jetons in einen Topf, den niemand mehr
- * mitgehen kann, und bekaeme sie am Strassenende wieder zurueck: eine
+ * der eigene Stapel und das, was der reichste noch aktive Gegner ueberhaupt
+ * bezahlen kann. Ohne den zweiten Deckel setzte man Jetons in einen Topf,
+ * den niemand mehr mitgehen kann, und bekaeme sie am Ende zurueck: eine
  * Erhoehung, die keine ist.
  */
 export function setzKosten(partie: EasyPokerPartie, sitz: number): number | null {
-  const gegner = gegnerVon(partie, sitz);
   const eigen = partie.jetons[sitz] ?? 0;
-  const fremd = partie.jetons[gegner] ?? 0;
-  if (eigen <= 0 || fremd <= 0) return null;
+  if (eigen <= 0) return null;
+
+  const gegner = partie.imSpiel.filter((s) => s !== sitz);
+  if (gegner.length === 0) return null;
+
+  const bisDeckel = Math.max(
+    0,
+    ...gegner.map(
+      (g) => (partie.einsatz[g] ?? 0) + (partie.jetons[g] ?? 0) - (partie.einsatz[sitz] ?? 0),
+    ),
+  );
 
   const fehlt = zuZahlen(partie, sitz);
+  if (bisDeckel <= fehlt) return null;
+
   const topfNachMitgehen = topfGesamt(partie) + fehlt;
   const erhoehung = Math.max(
     partie.regeln.grosserBlind,
@@ -399,13 +484,7 @@ export function setzKosten(partie: EasyPokerPartie, sitz: number): number | null
     Math.round(topfNachMitgehen / 2),
   );
 
-  const bisAllIn = eigen;
-  // Mehr als der Gegner insgesamt stellen kann, waere Zierde: Die Differenz
-  // kaeme am Strassenende zurueck.
-  const bisGegnerDeckel =
-    (partie.einsatz[gegner] ?? 0) + fremd - (partie.einsatz[sitz] ?? 0);
-
-  const kosten = Math.min(fehlt + erhoehung, bisAllIn, bisGegnerDeckel);
+  const kosten = Math.min(fehlt + erhoehung, eigen, bisDeckel);
   return kosten > fehlt ? kosten : null;
 }
 
@@ -457,10 +536,14 @@ export function fuehreAus(
   if (!istErlaubt(partie, sitz, aktion)) throw new Error(`Zug nicht erlaubt: ${aktion.typ}`);
 
   if (aktion.typ === 'passen') {
-    return beendeDurchAufgabe(
-      { ...partie, letzteAktion: { sitz, art: 'passen', betrag: null } },
-      sitz,
-    );
+    const imSpiel = partie.imSpiel.filter((s) => s !== sitz);
+    const weiter: EasyPokerPartie = {
+      ...partie,
+      imSpiel,
+      letzteAktion: { sitz, art: 'passen', betrag: null },
+    };
+    if (imSpiel.length <= 1) return beendeDurchAufgabe(weiter);
+    return naechsterSchritt(weiter);
   }
 
   if (aktion.typ === 'schieben') {
@@ -480,7 +563,7 @@ export function fuehreAus(
     ...partie,
     jetons: { ...partie.jetons, [sitz]: (partie.jetons[sitz] ?? 0) - betrag },
     einsatz: { ...partie.einsatz, [sitz]: neuerEinsatz },
-    // Ein Erhoehen setzt die Runde zurueck: Der Gegner muss noch einmal ran.
+    // Ein Erhoehen setzt die Runde zurueck: Jeder andere muss noch einmal ran.
     gehandelt: aktion.typ === 'setzen' ? [sitz] : [...partie.gehandelt, sitz],
     letzteErhoehung:
       aktion.typ === 'setzen' && neuerEinsatz > vorher
@@ -493,15 +576,15 @@ export function fuehreAus(
 }
 
 /**
- * Nach jedem Zug: Gegner dran, oder Strasse zu Ende.
+ * Nach jedem Zug: naechster Sitz dran, oder Strasse zu Ende.
  *
- * Kein Fall dazwischen. Wer gerade gehandelt hat, kann in derselben Strasse
- * nur dann noch einmal, wenn der Gegner erhoeht — und dann ist der Gegner
- * vorher am Zug.
+ * Die Suche laeuft linksherum und ueberspringt, wer nicht mehr handeln kann
+ * (gepasst, all-in, oder schon gehandelt bei gleichem Einsatz).
  */
 function naechsterSchritt(partie: EasyPokerPartie): EasyPokerPartie {
-  const gegner = gegnerVon(partie, partie.dran ?? 0);
-  if (kannHandeln(partie, gegner)) return { ...partie, dran: gegner };
+  const akt = partie.dran ?? 0;
+  const dran = reihumLinksVon(akt, sitzeVon(partie)).find((sitz) => kannHandeln(partie, sitz));
+  if (dran !== undefined) return { ...partie, dran };
   return schliesseStrasse(partie);
 }
 
@@ -509,48 +592,43 @@ function naechsterSchritt(partie: EasyPokerPartie): EasyPokerPartie {
  * Strassenende: Einsaetze in den Topf, dann die naechste Karte — oder das
  * Zeigen.
  *
- * Die Rueckgabe ist der einzige Nebentopf, den ein Spiel zu zweit braucht:
- * Wer mehr gesetzt hat, als der Gegner ueberhaupt stellen konnte, bekommt die
- * Differenz zurueck. Ohne sie koennte man einen Gegner mit funfzig Jetons um
- * zweihundert erleichtern.
+ * Anders als zu zweit gibt es hier KEINE Rueckgabe "des ueberzaehligen
+ * Teils" an dieser Stelle. Wer mehr gesetzt hat, als ein anderer stellen
+ * konnte, landet in einem Nebentopf, und den loest `zahleAus` am Handende.
  */
 function schliesseStrasse(partie: EasyPokerPartie): EasyPokerPartie {
-  const sitze = sitzeVon(partie);
-  const gedeckt = Math.min(...sitze.map((s) => partie.einsatz[s] ?? 0));
+  const gesammelt = sammleEinsaetze(partie);
 
-  const jetons: Record<number, number> = { ...partie.jetons };
+  const koennenNoch = gesammelt.imSpiel.filter((sitz) => (gesammelt.jetons[sitz] ?? 0) > 0);
+  const naechste = STRASSEN[STRASSEN.indexOf(gesammelt.strasse) + 1];
+
+  if (koennenNoch.length <= 1 || naechste === undefined) {
+    return zahleAus(deckeRestlichesBrettAuf(gesammelt), false);
+  }
+
+  const mitKarten = deckeAuf(gesammelt, NEUE_BRETTKARTEN[naechste]);
+  return starteStrasse(mitKarten, naechste);
+}
+
+function sammleEinsaetze(partie: EasyPokerPartie): EasyPokerPartie {
+  const sitze = sitzeVon(partie);
+  const beitrag: Record<number, number> = { ...partie.beitrag };
   let topf = partie.topf;
   for (const sitz of sitze) {
     const gesetzt = partie.einsatz[sitz] ?? 0;
-    topf += gedeckt;
-    jetons[sitz] = (jetons[sitz] ?? 0) + (gesetzt - gedeckt);
+    beitrag[sitz] = (beitrag[sitz] ?? 0) + gesetzt;
+    topf += gesetzt;
   }
-
-  const einsatz: Record<number, number> = {};
-  for (const sitz of sitze) einsatz[sitz] = 0;
-
-  const gesammelt: EasyPokerPartie = {
+  return {
     ...partie,
-    jetons,
-    einsatz,
+    beitrag,
     topf,
+    einsatz: leereZahl(sitze),
     gehandelt: [],
     letzteErhoehung: partie.regeln.grosserBlind,
     letzteAktion: null,
     dran: null,
   };
-
-  // Steht jemand all-in, ist nichts mehr zu entscheiden: Die restlichen
-  // Brettkarten fallen am Stueck, und es wird gezeigt.
-  const allIn = sitze.some((sitz) => (gesammelt.jetons[sitz] ?? 0) <= 0);
-  const naechste = STRASSEN[STRASSEN.indexOf(gesammelt.strasse) + 1];
-
-  if (allIn || naechste === undefined) {
-    return zeigeAuf(deckeRestlichesBrettAuf(gesammelt));
-  }
-
-  const mitKarten = deckeAuf(gesammelt, NEUE_BRETTKARTEN[naechste]);
-  return starteStrasse(mitKarten, naechste);
 }
 
 function deckeAuf(partie: EasyPokerPartie, anzahl: number): EasyPokerPartie {
@@ -572,121 +650,114 @@ function deckeRestlichesBrettAuf(partie: EasyPokerPartie): EasyPokerPartie {
 // ---------------------------------------------------------------------------
 
 /**
- * Der Gegner hat aufgegeben.
+ * Alle bis auf einen haben aufgegeben.
  *
  * Karten werden dabei NICHT gezeigt. Das ist keine Kosmetik: Wer sieht, mit
- * welchen Blaettern sein Gegner setzt, spielt danach ein anderes Spiel.
- *
- * Die Deckelung gilt auch hier: Wer mehr gesetzt hat, als der Gegner
- * ueberhaupt bezahlt hat, bekommt die Differenz zurueck, statt sie sich
- * selbst als Topf auszuzahlen.
+ * welchen Blaettern die anderen setzen, spielt danach ein anderes Spiel.
  */
-function beendeDurchAufgabe(partie: EasyPokerPartie, aufgeber: number): EasyPokerPartie {
-  const sieger = gegnerVon(partie, aufgeber);
-  const sitze = sitzeVon(partie);
+function beendeDurchAufgabe(partie: EasyPokerPartie): EasyPokerPartie {
+  return zahleAus(sammleEinsaetze(partie), true);
+}
 
-  const gedeckt = Math.min(...sitze.map((s) => partie.einsatz[s] ?? 0));
-  const jetons: Record<number, number> = { ...partie.jetons };
-  let topf = partie.topf;
-  for (const sitz of sitze) {
-    topf += gedeckt;
-    jetons[sitz] = (jetons[sitz] ?? 0) + ((partie.einsatz[sitz] ?? 0) - gedeckt);
+function besteSitze(
+  kandidaten: readonly number[],
+  bewertung: Readonly<Record<number, Bewertung>>,
+): number[] {
+  const erster = kandidaten[0];
+  if (erster === undefined) return [];
+  let beste: number[] = [erster];
+  for (const sitz of kandidaten.slice(1)) {
+    const vergleich = vergleicheHaende(bewertung[sitz]!, bewertung[beste[0]!]!);
+    if (vergleich > 0) beste = [sitz];
+    else if (vergleich === 0) beste.push(sitz);
   }
-
-  jetons[sieger] = (jetons[sieger] ?? 0) + topf;
-
-  /*
-   * Beide haben zum Topf gleich viel beigetragen — dafuer sorgen die
-   * Deckelungen an jedem Strassenende. Der Gewinn des Siegers ist deshalb
-   * genau die Haelfte des Topfes, und exakt das ist der Verlust des
-   * Aufgebers.
-   */
-  const anteil = topf / sitze.length;
-  const gewinn: Record<number, number> = { [sieger]: anteil, [aufgeber]: -anteil };
-
-  const einsatz: Record<number, number> = {};
-  for (const sitz of sitze) einsatz[sitz] = 0;
-
-  return {
-    ...partie,
-    jetons,
-    einsatz,
-    /*
-     * Der Topf ist AUSGEZAHLT und deshalb leer.
-     *
-     * Die Zahl steht nur noch im Ergebnis, und das ist kein Schoenheitsfehler:
-     * Stuende sie zusaetzlich hier, waeren dieselben Jetons zweimal gezaehlt —
-     * einmal im Stapel des Siegers und einmal auf dem Tisch. Die Anzeige des
-     * gewonnenen Topfes liest `ergebnis.topf`.
-     */
-    topf: 0,
-    dran: null,
-    gehandelt: [],
-    ergebnis: {
-      gewinner: [sieger],
-      durchAufgabe: true,
-      topf,
-      gezeigt: {},
-      bewertung: {},
-      gewinn,
-    },
-  };
+  return beste;
 }
 
 /**
- * Zeigen: beide Blaetter vergleichen, Topf verteilen.
+ * Toepfe bauen und auszahlen.
  *
- * Bei Gleichstand geht der ungerade Jeton an den Sitz OHNE Knopf. Irgendwohin
- * muss er, und der Knopf hat in dieser Hand schon die bessere Position gehabt.
+ * Ein Topf je Einsatzstufe: Wer all-in weniger setzen konnte als die anderen,
+ * spielt nur um den Topf bis zu seinem Beitrag mit. Der Rest ist ein
+ * Nebentopf unter denen, die weitergesetzt haben. Ungerufene Jetons — der
+ * einzige "Sieger" einer Stufe — kommen an den Sitz zurueck und zaehlen
+ * nicht als Gewinn der Hand.
+ *
+ * Ungerade Jetons in einem geteilten Topf gehen an den Sitz, der links vom
+ * Knopf als Erstes unter den Gewinnern sitzt. Zu zweit ist das der Sitz
+ * ohne Knopf — dieselbe Regel wie zuvor.
  */
-function zeigeAuf(partie: EasyPokerPartie): EasyPokerPartie {
+function zahleAus(partie: EasyPokerPartie, durchAufgabe: boolean): EasyPokerPartie {
   const sitze = sitzeVon(partie);
+  const berechtigt = partie.imSpiel;
+
   const bewertung: Record<number, Bewertung> = {};
   const gezeigt: Record<number, readonly Karte[]> = {};
-  for (const sitz of sitze) {
-    const eigene = partie.hand[sitz] ?? [];
-    bewertung[sitz] = besteHand([...eigene, ...partie.brett]);
-    gezeigt[sitz] = eigene;
+  if (!durchAufgabe) {
+    for (const sitz of berechtigt) {
+      const eigene = partie.hand[sitz] ?? [];
+      bewertung[sitz] = besteHand([...eigene, ...partie.brett]);
+      gezeigt[sitz] = eigene;
+    }
   }
 
-  const [a, b] = sitze as [number, number];
-  const vergleich = vergleicheHaende(bewertung[a]!, bewertung[b]!);
-  const gewinner = vergleich > 0 ? [a] : vergleich < 0 ? [b] : [a, b];
+  const stufen = [...new Set(sitze.map((s) => partie.beitrag[s] ?? 0).filter((v) => v > 0))].sort(
+    (a, b) => a - b,
+  );
 
   const jetons: Record<number, number> = { ...partie.jetons };
-  const gewinn: Record<number, number> = {};
-  // Der eigene Anteil am Topf ist die Haelfte: Beide haben gleich viel
-  // gestellt, sonst waere die Deckelung schon vorher aktiv geworden.
-  const eigenerAnteil = partie.topf / sitze.length;
+  const erhalten = leereZahl(sitze);
+  const gewinner: number[] = [];
 
-  if (gewinner.length === 1) {
-    const sieger = gewinner[0]!;
-    const verlierer = gegnerVon(partie, sieger);
-    jetons[sieger] = (jetons[sieger] ?? 0) + partie.topf;
-    gewinn[sieger] = partie.topf - eigenerAnteil;
-    gewinn[verlierer] = -eigenerAnteil;
-  } else {
-    const ohneKnopf = gegnerVon(partie, partie.geber);
-    const haelfte = Math.floor(partie.topf / 2);
-    const rest = partie.topf - haelfte * 2;
-    for (const sitz of sitze) {
-      const anteil = haelfte + (sitz === ohneKnopf ? rest : 0);
-      jetons[sitz] = (jetons[sitz] ?? 0) + anteil;
-      gewinn[sitz] = anteil - eigenerAnteil;
+  let vorher = 0;
+  for (const stufe of stufen) {
+    const zahler = sitze.filter((s) => (partie.beitrag[s] ?? 0) >= stufe);
+    const amount = (stufe - vorher) * zahler.length;
+    vorher = stufe;
+    const kandidaten = zahler.filter((s) => berechtigt.includes(s));
+    if (kandidaten.length === 0 || amount <= 0) continue;
+
+    const siegerSitze =
+      durchAufgabe || kandidaten.length === 1
+        ? [...kandidaten]
+        : besteSitze(kandidaten, bewertung);
+
+    if (kandidaten.length >= 2 || durchAufgabe) {
+      for (const sitz of siegerSitze) {
+        if (!gewinner.includes(sitz)) gewinner.push(sitz);
+      }
     }
+
+    const anteil = Math.floor(amount / siegerSitze.length);
+    let rest = amount - anteil * siegerSitze.length;
+    const reihenfolge = reihumLinksVon(partie.geber, sitze).filter((s) => siegerSitze.includes(s));
+    for (const sitz of reihenfolge) {
+      const extra = rest > 0 ? 1 : 0;
+      if (rest > 0) rest -= 1;
+      const teil = anteil + extra;
+      jetons[sitz] = (jetons[sitz] ?? 0) + teil;
+      erhalten[sitz] = (erhalten[sitz] ?? 0) + teil;
+    }
+  }
+
+  const gewinn = leereZahl(sitze);
+  for (const sitz of sitze) {
+    gewinn[sitz] = (erhalten[sitz] ?? 0) - (partie.beitrag[sitz] ?? 0);
   }
 
   return {
     ...partie,
     jetons,
-    // Ausgezahlt, also leer — siehe die Begruendung in beendeDurchAufgabe.
+    // Ausgezahlt, also leer — dieselben Jetons duerfen nicht noch einmal im
+    // Topf stehen, sonst zaehlte die Summe sie doppelt.
     topf: 0,
+    einsatz: leereZahl(sitze),
     dran: null,
     gehandelt: [],
     ergebnis: {
       gewinner,
-      durchAufgabe: false,
-      topf: partie.topf,
+      durchAufgabe,
+      topf: sitze.reduce((summe, s) => summe + (partie.beitrag[s] ?? 0), 0),
       gezeigt,
       bewertung,
       gewinn,
@@ -698,9 +769,9 @@ function zeigeAuf(partie: EasyPokerPartie): EasyPokerPartie {
  * Dauer der Schaupause zwischen zwei Haenden, oder null.
  *
  * Zwei Laengen, und der Unterschied ist keine Kosmetik: Bei einer Aufgabe
- * gibt es nichts zu lesen, es geht sofort weiter. Beim Zeigen liegen zwei
- * fremde Blaetter auf dem Tisch, und wer sie nicht sieht, versteht nicht,
- * warum sein Stapel kleiner geworden ist.
+ * gibt es nichts zu lesen, es geht sofort weiter. Beim Zeigen liegen fremde
+ * Blaetter auf dem Tisch, und wer sie nicht sieht, versteht nicht, warum
+ * sein Stapel kleiner geworden ist.
  */
 export function pauseDauerMs(partie: EasyPokerPartie): number | null {
   if (partie.fertig || partie.ergebnis === null) return null;
@@ -712,22 +783,30 @@ export function pauseDauerMs(partie: EasyPokerPartie): number | null {
  *
  * Der letzte Ausgang bleibt dabei stehen. Wer die entscheidende Hand verliert,
  * soll auf dem Abschlussblatt noch sehen, woran es lag.
+ *
+ * Vorbei ist die Partie, wenn weniger als zwei Sitze noch Jetons haben —
+ * nicht schon, wenn der Erste pleite ist. Sonst waere ein Sechser-Tisch nach
+ * der ersten Pleite zu Ende.
  */
 export function beendePause(partie: EasyPokerPartie): EasyPokerPartie {
   if (partie.ergebnis === null || partie.fertig) return partie;
 
   const abgeschlossen = partie.abgeschlossen + 1;
-  const pleite = sitzeVon(partie).some((sitz) => (partie.jetons[sitz] ?? 0) <= 0);
+  const nachher: EasyPokerPartie = { ...partie, abgeschlossen, ergebnis: partie.ergebnis };
+  const lebende = lebendeSitze(nachher);
 
-  if (pleite || partie.handNr >= partie.handMax) {
-    return { ...partie, abgeschlossen, fertig: true, dran: null };
+  if (lebende.length < 2 || partie.handNr >= partie.handMax) {
+    return { ...nachher, fertig: true, dran: null };
   }
 
+  const naechsterGeber =
+    reihumLinksVon(partie.geber, sitzeVon(partie)).find((sitz) => lebende.includes(sitz)) ??
+    lebende[0]!;
+
   return gibHand({
-    ...partie,
-    abgeschlossen,
+    ...nachher,
     handNr: partie.handNr + 1,
-    geber: gegnerVon(partie, partie.geber),
+    geber: naechsterGeber,
     ergebnis: null,
   });
 }
@@ -755,17 +834,21 @@ export function erstellePartie(
     handNr: 1,
     abgeschlossen: 0,
     geber,
+    kleinerSitz: geber,
+    grosserSitz: geber,
     jetons: Object.fromEntries(geordnet.map((s) => [s, regeln.startJetons])),
     hand: {},
     brett: [],
     reststapel: [],
     strasse: 'preflop',
-    einsatz: Object.fromEntries(geordnet.map((s) => [s, 0])),
+    einsatz: leereZahl(geordnet),
+    beitrag: leereZahl(geordnet),
     topf: 0,
     dran: null,
     gehandelt: [],
     letzteErhoehung: regeln.grosserBlind,
     letzteAktion: null,
+    imSpiel: [...geordnet],
     ergebnis: null,
     namen: Object.fromEntries(geordnet.map((s) => [s, ''])),
     leftSeats: [],
@@ -781,8 +864,8 @@ export function markiereVerlassen(partie: EasyPokerPartie, sitz: number): EasyPo
 }
 
 /**
- * Platzierungen. Gewertet wird der Jetonstand — mehr gibt es bei einem Duell
- * nicht zu ordnen. Gleichstand ergibt zweimal Platz eins.
+ * Platzierungen. Gewertet wird der Jetonstand. Gleichstand ergibt denselben
+ * Platz mehrfach.
  */
 export function platzierungen(
   partie: EasyPokerPartie,
@@ -806,10 +889,11 @@ export function platzierungen(
   });
 }
 
-/** Sieger der Partie, oder null bei Gleichstand bzw. laufender Partie. */
+/** Sieger der Partie, oder null bei Gleichstand auf Platz eins bzw. laufender Partie. */
 export function sieger(partie: EasyPokerPartie): number | null {
   if (!partie.fertig) return null;
   const [erster, zweiter] = platzierungen(partie);
-  if (!erster || !zweiter) return null;
+  if (!erster) return null;
+  if (!zweiter) return erster.seat;
   return erster.points === zweiter.points ? null : erster.seat;
 }

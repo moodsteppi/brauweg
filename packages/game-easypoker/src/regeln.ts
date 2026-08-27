@@ -36,31 +36,41 @@ export const DEFAULT_REGELN: EasyPokerRegeln = {
 };
 
 /**
- * Nur zu zweit.
+ * Zwei bis sechs Sitze.
  *
- * Zu dritt braeuchte es Nebentoepfe (wer all-in geht, kann nur bis zu seinem
- * Einsatz gewinnen), Position ueber mehrere Sitze und eine ganz andere
- * Bedienoberflaeche. Kopf an Kopf gibt es genau EINEN Sonderfall — der
- * kuerzere Stapel deckelt den Topf —, und den loest `partie.ts` mit einer
- * Rueckgabe an den laengeren Stapel.
+ * Sechs ist die klassische "6-max"-Tafel: Jeder bekommt noch Platz am
+ * Hochkant-Handy, und mehr waere ein Ring, den man nicht mehr lesen kann.
+ * Zu zweit bleibt Kopf-an-Kopf (der Knopf zahlt den kleinen Blind); ab
+ * drei sitzt der kleine Blind links vom Knopf, und `partie.ts` baut
+ * Nebentoepfe, sobald jemand all-in weniger setzen kann als die anderen.
  */
-export const SEAT_COUNTS: readonly number[] = [2];
+export const SEAT_COUNTS: readonly number[] = [2, 3, 4, 5, 6];
 
 /**
- * Der Geber wechselt jede Hand, also ist die Rotation zwei.
+ * Der Geber wechselt jede Hand, also ist die Rotation die Sitzzahl.
  *
- * Die Plattform verlangt daraufhin eine gerade Handzahl (siehe
- * tables/service.ts). Das ist hier keine Formalie: Wer den Knopf hat, zahlt
- * den kleinen Blind und handelt vor dem Flop zuletzt — bei ungerader Handzahl
- * haette einer der beiden diesen Vorteil oefter.
+ * Die Plattform verlangt daraufhin ein Vielfaches (siehe tables/service.ts).
+ * Das ist hier keine Formalie: Wer den Knopf hat, handelt nach dem Flop
+ * zuletzt — bei einer Handzahl, die nicht durch die Sitzzahl geht, haette
+ * einer diesen Vorteil oefter.
  */
-export function rotationSize(): number {
-  return 2;
+export function rotationSize(seats: number): number {
+  return seats;
 }
 
-/** Zwoelf Haende sind am Handy rund fuenf Minuten. */
-export function suggestedRounds(): readonly number[] {
-  return [6, 12, 20];
+/**
+ * Empfohlene Handzahlen: kurz / rund zwoelf / etwas laenger, jeweils ein
+ * Vielfaches der Sitzzahl.
+ *
+ * Zwoelf Haende sind zu zweit am Handy rund fuenf Minuten. Zu sechst dauert
+ * dieselbe Zahl laenger, bleibt aber zwei Umlaeufe des Knopfes — und das
+ * ist die Einheit, in der die Plattform rechnet.
+ */
+export function suggestedRounds(seats: number): readonly number[] {
+  const kurz = seats * 2;
+  const mittel = Math.ceil(12 / seats) * seats;
+  const lang = Math.ceil(18 / seats) * seats;
+  return [...new Set([kurz, mittel, lang])].sort((a, b) => a - b);
 }
 
 export interface RegelProblem {

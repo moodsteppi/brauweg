@@ -196,12 +196,17 @@ Minuten live.
 > einen eigenen Deckel (Client und Gateway).
 
 > **Easy Poker ist neu auf `staging` (25. August 2026), noch nicht in der
-> Produktion.** Texas Hold'em Kopf an Kopf, für ein Hochkant-Handy entworfen:
-> zwei Handkarten, fünf Gemeinschaftskarten, vier Setzrunden — und genau
-> **vier Schaltflächen** (Fold · Check · Call · Bet). Neues Paket
-> `@brauweg/game-easypoker` (**54 eigene Tests**), `EasyPoker.tsx` im Client,
-> ein Eintrag mehr in `MODULES`. Bildbestellung: `docs/ASSETS-EASYPOKER.md`
-> (genau ein Bild, alles andere ist gezeichnet).
+> Produktion.** Texas Hold'em zu zweit bis sechst, für ein Hochkant-Handy
+> entworfen: zwei Handkarten, fünf Gemeinschaftskarten, vier Setzrunden —
+> und genau **vier Schaltflächen** (Fold · Check · Call · Bet). Neues Paket
+> `@brauweg/game-easypoker`, `EasyPoker.tsx` im Client, ein Eintrag mehr in
+> `MODULES`. Spielauswahl-Banner liegt unter `hub/spielwahl-easypoker.webp`.
+>
+> **Online ist 6-max.** „Online-Tisch suchen" setzt sich an einen wartenden
+> Tisch oder macht einen mit sechs Plätzen auf; wer nicht warten will, füllt
+> die freien Sitze mit Computern. „Sofort spielen" nimmt 2–6 Plätze gegen
+> Bots. Die Engine kennt Nebentoepfe: Wer all-in weniger setzen kann als die
+> anderen, spielt nur um den Topf bis zu seinem Beitrag.
 >
 > **Der Einstieg hat zwei Knöpfe, nicht einen.** „Sofort spielen" macht einen
 > Tisch mit `fillWithBots` auf und ist nach zwei Sekunden im Spiel; „Online-Match
