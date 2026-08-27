@@ -133,9 +133,14 @@ der nächsten Meldung mit.
 
 **Der Gurt wird serverseitig geprüft:** Hineinwählen lässt sich nur, was auch
 gesammelt ist. Das ist die eine Stelle, an der die Sammlung wirklich etwas
-bedeutet. Gespeichert wird beim Tippen auf „Auswahl merken", nicht bei jedem
-Antippen — Auswählen ist ein Suchvorgang, und ein Dutzend Anfragen für eine
-Entscheidung sieht man auf einer Mobilfunkleitung.
+bedeutet. Gespeichert wird **von selbst**, aber nicht bei jedem Antippen:
+Auswählen ist ein Suchvorgang — eines rein, ansehen, wieder raus —, und ein
+Dutzend Anfragen für eine Entscheidung sieht man auf einer Mobilfunkleitung.
+Ein Zeitgeber sammelt die Tipps und schickt, wenn eine halbe Sekunde lang
+Ruhe war; beim Verlassen der Seite geht der Rest sofort raus. Bis zum
+27. August stand dafür ein Knopf „Auswahl merken" darunter — mit demselben
+Grund und einem Nachteil, den ein Zeitgeber nicht hat: Wer ihn übersah,
+verlor seine Auswahl.
 
 Beim Setzen wird **erst geräumt, dann gesetzt**. Sonst stolpert die zweite
 Zuweisung über den eindeutigen Teilindex, sobald zwei Motive die Plätze

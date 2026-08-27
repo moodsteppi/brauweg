@@ -16,20 +16,38 @@
  * Grundstock und der Vorschlagskasten. Ein Pack ist spaeter eine weitere
  * Zeile in `gruppen()`, kein Umbau: Die Seite kennt nur "Titel plus Liste".
  *
- * **Gespeichert wird erst beim Tippen auf "Auswahl merken".** Auswaehlen ist
- * ein Suchvorgang — man tippt eines an, sieht es oben, nimmt es wieder weg.
- * Eine Anfrage je Tipp waere ein Dutzend Anfragen fuer eine Entscheidung, und
- * auf einer Mobilfunkleitung sieht man das.
+ * **Gespeichert wird von selbst.** Bis zum 27. August stand darunter ein
+ * Knopf "Auswahl merken" — mit dem guten Grund, dass Auswaehlen ein
+ * Suchvorgang ist: Man tippt eines an, sieht es oben, nimmt es wieder weg,
+ * und eine Anfrage je Tipp waeren ein Dutzend Anfragen fuer eine
+ * Entscheidung. Der Grund gilt weiter, die Loesung ist eine andere geworden:
+ * Ein Zeitgeber sammelt die Tipps und schickt erst, wenn eine halbe Sekunde
+ * lang Ruhe war. Zwoelf Tipps sind damit eine Anfrage — und niemand verliert
+ * mehr seine Auswahl, weil er den Knopf uebersehen hat.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../../api';
-import { Schloss } from '../../zeichen';
+import { Schloss, Wuerfel } from '../../zeichen';
 import { motivBildPfad } from './bildpfad';
 
 /** Muss zu GURT_MAX in packages/server/src/sammlung.ts passen. */
 const GURT_MAX = 3;
+
+/**
+ * So lange Ruhe, bevor gespeichert wird.
+ *
+ * Kurz genug, dass es beim Weiterwischen schon draussen ist; lang genug, dass
+ * "eines rein, eines raus, doch wieder das erste" eine Anfrage bleibt und
+ * nicht drei.
+ */
+const RUHE_MS = 550;
+
+/** Gurt und Schloesser als eine Zeichenkette — damit ein Vergleich eine Zeile ist. */
+function schluessel(gurt: readonly string[], gesperrt: readonly boolean[]): string {
+  return gurt.map((kennung, i) => `${kennung}:${gesperrt[i] === true ? 1 : 0}`).join('|');
+}
 
 export interface Gruppe {
   readonly schluessel: string;
@@ -57,9 +75,10 @@ export function SammlungSeite({
   /**
    * Zufallsgurt: In jeder Partie drei andere Memes aus der Sammlung.
    *
-   * Der Schalter wirkt SOFORT (eigene Route), der Gurt darunter erst beim
-   * Merken. Beides in einem Aufruf hiesse, dass ein Umlegen des Schalters
-   * eine halbfertige Auswahl mit festschreibt.
+   * Der Schalter geht seinen eigenen Weg (eigene Route, sofort) — er ist eine
+   * Entscheidung und kein Suchvorgang. Ein Zeitgeber davor waere nur eine
+   * halbe Sekunde, in der der Schalter schon umgelegt aussieht und es noch
+   * nicht ist.
    */
   const [zufall, setZufall] = useState(false);
   /**
@@ -70,9 +89,24 @@ export function SammlungSeite({
    */
   const [gesperrt, setGesperrt] = useState<boolean[]>([]);
   const [laedt, setLaedt] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
-  const [gemerkt, setGemerkt] = useState(false);
+  /** Der Erklaersatz zum Schalter, solange der Finger auf dem Text liegt. */
+  const [hilfe, setHilfe] = useState(false);
+
+  /** Was zuletzt beim Server steht. `null` heisst: der naechste Lauf schickt. */
+  const gespeichert = useRef<string | null>(null);
+  /** Was noch draussen ist, falls die Seite vorher verlassen wird. */
+  const offen = useRef<{ gurt: string[]; gesperrt: boolean[] } | null>(null);
+  /**
+   * `onGurt` liegt in einer Schachtel und nicht in der Abhaengigkeitsliste.
+   *
+   * Der Aufrufer gibt es als Pfeilfunktion mit — die ist bei jedem Bild eine
+   * andere. In der Liste des Zeitgebers stuende damit bei jedem Bild ein
+   * neuer Wert, der Zeitgeber wuerde abgeraeumt und neu gestellt, und
+   * gespeichert wuerde nie.
+   */
+  const meldeGurt = useRef(onGurt);
+  meldeGurt.current = onGurt;
 
   const holen = useCallback(async (): Promise<void> => {
     setLaedt(true);
@@ -82,6 +116,9 @@ export function SammlungSeite({
       setGurt(antwort.gurt);
       setGesperrt(antwort.gesperrt ?? []);
       setZufall(antwort.zufall === true);
+      // Der Stand vom Server ist der Stand beim Server: Ohne diese Zeile
+      // schickte der Zeitgeber gleich nach dem Laden dasselbe noch einmal.
+      gespeichert.current = schluessel(antwort.gurt, antwort.gesperrt ?? []);
     } catch {
       setFehler('Die Sammlung ließ sich nicht laden.');
     } finally {
@@ -92,6 +129,54 @@ export function SammlungSeite({
   useEffect(() => {
     void holen();
   }, [holen]);
+
+  /** Einmal wirklich schicken. Stabil, damit der Zeitgeber stehen bleibt. */
+  const sende = useCallback(async (last: { gurt: string[]; gesperrt: boolean[] }) => {
+    // Vorgemerkt, bevor die Antwort da ist: Sonst schickte ein zweiter Lauf
+    // waehrend der Wartezeit denselben Stand ein zweites Mal.
+    gespeichert.current = schluessel(last.gurt, last.gesperrt);
+    try {
+      const antwort = await api.mememoryGurt(last.gurt, last.gesperrt);
+      if (offen.current === last) offen.current = null;
+      setFehler(null);
+      meldeGurt.current?.(antwort.gurt);
+    } catch {
+      // Zurueckgenommen, damit die naechste Aenderung es wieder versucht.
+      gespeichert.current = null;
+      setFehler('Das Speichern hat nicht geklappt.');
+    }
+  }, []);
+
+  /**
+   * Der Zeitgeber. Jede Aenderung raeumt ihn ab und stellt ihn neu — erst
+   * wenn eine halbe Sekunde nichts mehr passiert, geht die Auswahl raus.
+   */
+  useEffect(() => {
+    if (laedt) return;
+    const jetzt = schluessel(gurt, gesperrt);
+    if (jetzt === gespeichert.current) return;
+    // Die Schloesser werden auf die Laenge des Gurts gebracht: Der Server
+    // liest sie Fach fuer Fach, ein Ueberhang waere ein Schloss ohne Fach.
+    const last = { gurt: [...gurt], gesperrt: gurt.map((_, i) => gesperrt[i] === true) };
+    offen.current = last;
+    const uhr = window.setTimeout(() => void sende(last), RUHE_MS);
+    return () => window.clearTimeout(uhr);
+  }, [gurt, gesperrt, laedt, sende]);
+
+  /**
+   * Beim Verlassen der Seite geht der Rest sofort raus.
+   *
+   * Ohne das verloere genau der seine Auswahl, der sie zuletzt getroffen und
+   * dann weitergewischt hat — also der wahrscheinlichste Fall ueberhaupt.
+   */
+  useEffect(
+    () => () => {
+      const rest = offen.current;
+      offen.current = null;
+      if (rest) void api.mememoryGurt(rest.gurt, rest.gesperrt).catch(() => undefined);
+    },
+    [],
+  );
 
   /**
    * Die Gruppen dieser Seite.
@@ -139,7 +224,6 @@ export function SammlungSeite({
    */
   const umschalten = (kennung: string): void => {
     if (!gesammelt.has(kennung)) return;
-    setGemerkt(false);
     setGurt((alt) => {
       const drin = alt.indexOf(kennung);
       if (drin >= 0) {
@@ -154,9 +238,8 @@ export function SammlungSeite({
     });
   };
 
-  /** Ein Fach sperren oder freigeben. Wirkt erst beim Merken. */
+  /** Ein Fach sperren oder freigeben. */
   const schliesse = (fach: number): void => {
-    setGemerkt(false);
     setGesperrt((alt) => {
       const neu = [...alt];
       while (neu.length < gurt.length) neu.push(false);
@@ -175,19 +258,40 @@ export function SammlungSeite({
     void api.mememoryZufall(an).catch(() => setZufall(!an));
   };
 
-  const speichern = async (): Promise<void> => {
-    setBusy(true);
-    setFehler(null);
-    try {
-      const antwort = await api.mememoryGurt(gurt, gesperrt.slice(0, gurt.length));
-      setGurt(antwort.gurt);
-      setGemerkt(true);
-      onGurt?.(antwort.gurt);
-    } catch {
-      setFehler('Das Speichern hat nicht geklappt.');
-    } finally {
-      setBusy(false);
+  /* --- Der Erklaersatz zum Schalter --------------------------------------
+     Er kommt beim Gedrueckthalten des Namens und geht beim Loslassen. Vorher
+     stand er fest unter dem Namen: dort war er laenger als das, was er
+     erklaert, und stand auch fuer die da, die den Schalter laengst kennen. */
+  const halteUhr = useRef<number | null>(null);
+  /**
+   * Nach einem langen Druck darf der Klick den Schalter NICHT umlegen.
+   *
+   * Beim Loslassen schickt der Browser trotzdem einen Klick auf die
+   * Beschriftung, und eine Beschriftung schaltet ihr Kaestchen. Wer sich also
+   * die Erklaerung ansieht, haette damit nebenbei den Schalter umgelegt.
+   */
+  const unterdrueckt = useRef(false);
+
+  const haltAn = (): void => {
+    halteUhr.current = window.setTimeout(() => {
+      halteUhr.current = null;
+      setHilfe(true);
+    }, 400);
+  };
+  const haltAus = (): void => {
+    if (halteUhr.current !== null) {
+      window.clearTimeout(halteUhr.current);
+      halteUhr.current = null;
     }
+    if (hilfe) {
+      unterdrueckt.current = true;
+      // Nur fuer den einen Klick, der jetzt gleich kommt: Bliebe die Sperre
+      // stehen, ginge das naechste normale Antippen ins Leere.
+      window.setTimeout(() => {
+        unterdrueckt.current = false;
+      }, 350);
+    }
+    setHilfe(false);
   };
 
   return (
@@ -251,15 +355,32 @@ export function SammlungSeite({
       </div>
 
       {/*
-        * Der Schalter steht ZWISCHEN Gurt und Satz: Er aendert, was die drei
-        * Faecher darueber bedeuten, und geht deshalb nicht ans Seitenende.
+        * Der Schalter steht ZWISCHEN Gurt und Satz: Er ändert, was die drei
+        * Fächer darüber bedeuten, und geht deshalb nicht ans Seitenende.
+        *
+        * Von links nach rechts Würfel, Name, Schalter — und kein <label> mehr
+        * um die ganze Zeile: Der Name trägt jetzt eine eigene Geste (halten =
+        * erklären), und die verträgt sich nicht damit, dass ein Tipp
+        * irgendwo in der Zeile den Schalter umlegt.
         */}
-      <label className="mm-schalterzeile">
-        <span>
-          <b>Jede Partie andere Memes</b>
-          <em>Drei aus deiner Sammlung, neu gezogen — außer den festgehaltenen.</em>
-        </span>
+      <div className="mm-schalterzeile">
+        <Wuerfel />
+        <label
+          className="mm-schalter-name"
+          htmlFor="mm-zufallsgurt"
+          onPointerDown={haltAn}
+          onPointerUp={haltAus}
+          onPointerLeave={haltAus}
+          onPointerCancel={haltAus}
+          onContextMenu={(e) => e.preventDefault()}
+          onClick={(e) => {
+            if (unterdrueckt.current) e.preventDefault();
+          }}
+        >
+          Random Memes
+        </label>
         <input
+          id="mm-zufallsgurt"
           type="checkbox"
           role="switch"
           className="mm-schalter"
@@ -267,26 +388,23 @@ export function SammlungSeite({
           disabled={laedt}
           onChange={(e) => schalteZufall(e.target.checked)}
         />
-      </label>
+        {/*
+          * Die Erklärung steht ÜBER der Zeile und mit Abstand: Darunter läge
+          * sie unter dem Finger, der sie gerade aufruft.
+          */}
+        {hilfe && (
+          <span className="mm-schalter-hilfe" role="tooltip">
+            Jede Partie zieht drei andere Memes aus deiner Sammlung — festgehaltene Fächer
+            bleiben.
+          </span>
+        )}
+      </div>
 
       <p className="mm-gurt-satz">
         {habe === 0
           ? 'Noch nichts gefunden. Jedes Paar, das du selbst aufdeckst, landet hier.'
-          : zufall
-            ? `Tippe auf ein Schloss, um ein Fach festzuhalten — die anderen werden jede Partie neu gezogen.`
-            : `Wähle bis zu ${GURT_MAX} aus — die wirfst du im Spiel über den Tisch.`}
+          : `Wähle bis zu ${GURT_MAX} aus — die wirfst du im Spiel über den Tisch.`}
       </p>
-
-      <div className="mm-gurt-fuss">
-        <button
-          type="button"
-          className="mm-kasten-los"
-          onClick={() => void speichern()}
-          disabled={busy || laedt}
-        >
-          {gemerkt ? 'Gemerkt ✓' : 'Auswahl merken'}
-        </button>
-      </div>
 
       {fehler && <p className="mm-kasten-fehler">{fehler}</p>}
 

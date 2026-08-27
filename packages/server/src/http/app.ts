@@ -2119,9 +2119,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Den Zufallsgurt ein- oder ausschalten.
    *
    * Eine eigene Route und kein Feld im Gurt-Aufruf: Der Schalter soll sofort
-   * wirken, der Gurt erst beim Tippen auf "Auswahl merken". Beides in einem
-   * Aufruf hiesse, dass ein Umlegen des Schalters die halbfertige Auswahl
-   * darunter mit festschreibt.
+   * wirken, der Gurt kommt dagegen erst, wenn der Client eine halbe Sekunde
+   * lang keinen weiteren Tipp mehr gesehen hat. Beides in einem Aufruf hiesse,
+   * dass ein Umlegen des Schalters die halbfertige Auswahl darunter mit
+   * festschreibt.
    */
   app.put('/api/mememory/sammlung/zufall', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);

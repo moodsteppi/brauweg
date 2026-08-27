@@ -91,6 +91,14 @@ Entwicklerkonsole.
 weitere Zeile in `gruppen()` in `SammlungSeite.tsx`, kein Umbau: Die Seite
 kennt nur „Titel plus Liste". Eine leere Gruppe fällt heraus.
 
+**Gespeichert wird von selbst.** Kein Knopf „Auswahl merken" mehr: Ein
+Zeitgeber sammelt die Tipps und schickt 550 ms nach dem letzten. Der Grund für
+den Knopf gilt weiter — Auswählen ist ein Suchvorgang, und eine Anfrage je
+Tipp wären ein Dutzend für eine Entscheidung —, nur löst ihn der Zeitgeber
+besser: Nachgemessen wurden vier Tipps zu **einer** Anfrage. Beim Verlassen der
+Seite geht ein noch offener Stand sofort raus, sonst verlöre ihn genau der,
+der ihn zuletzt gesetzt und dann weitergewischt hat.
+
 **Der Client bekommt den Katalog vom Server.** `/api/mememory/motive` reicht
 seit dem 27. August auch `grund` durch — den festen Katalog des Spielmoduls.
 Der Client führt ihn ausdrücklich nicht selbst: Er kennt keine Spielregeln
@@ -442,15 +450,46 @@ Zum Bild selbst siehe `docs/ASSETS-MEMEMORY.md`, Abschnitt 6: Am Brett bleibt
 die Rückseite CSS, für den Stapel gibt es sie zusätzlich als 3,4-kB-WebP —
 gerechnet aus denselben Zahlen, mit `scripts/mememory-karte-zeichnen.py`.
 
+**Der Stapel hat den Puck des Gegners verdeckt.** In den OBEREN Ecken kehrt
+`column-reverse` die Reihenfolge um: Der Stapel liegt dort unter dem Namen und
+schiebt sich über seinen negativen Abstand in das Puckfach hinein (gemessen
+2,5 px von 13). Weil er im Blatt später steht als der Puck, deckte er ihn ab —
+beim Gegner also genau den Hinweis, dass er am Zug ist. `.mm-puck-fach` trägt
+deshalb `position: relative; z-index: 2`. Nachgemessen mit `elementFromPoint`
+im überlappten Streifen: mit der Zeile liegt dort `.mm-puck`, ohne sie ein
+`<img>` des Stapels. Über dem BRETT lag der Puck ohnehin — `.mm-ecke` hat
+z-index 3, `.mm-mitte` hat 1.
+
 ---
 
 ## 11. Zufallsgurt und Schlösser
 
-Ein Schalter auf der Sammlungsseite: **„Jede Partie andere Memes“**. Ist er an,
-zieht jede Partie drei aus der eigenen Sammlung — außer den Fächern, die man
-festhält. Das Schloss ist offen und grau, wenn das Fach frei ist, und
-geschlossen und golden, wenn es hält; das Fach trägt dann denselben goldenen
-Rand.
+Ein Schalter auf der Sammlungsseite: **„Random Memes"**. Ist er an, zieht jede
+Partie drei aus der eigenen Sammlung — außer den Fächern, die man festhält.
+Das Schloss ist offen und grau, wenn das Fach frei ist, und geschlossen und
+golden, wenn es hält; das Fach trägt dann denselben goldenen Rand.
+
+Die Zeile ist von links nach rechts **Würfel, Name, Schalter**. Der Würfel ist
+das einzige Zeichen in `zeichen.tsx` mit festen Farben statt `currentColor`:
+mattes Cremeweiß mit schwarzen Augen. Ein einfarbiger Umriss sähe aus wie ein
+leeres Kästchen. Gezeigt wird die **Fünf**, weil sie punktsymmetrisch ist und
+das Augenbild damit von selbst mittig sitzt.
+
+**Die Erklärung kommt auf Verlangen.** Wer den Namen gedrückt hält (400 ms),
+bekommt einen Satz darüber eingeblendet; beim Loslassen ist er wieder weg. Er
+sitzt 30 px über der Zeile — gemessen 49 px über dem Druckpunkt, also über der
+Hand, die ihn gerade hält. Als feste Zeile darunter war er länger als das, was
+er erklärt, und stand auch für die da, die den Schalter längst kennen.
+
+Zwei Fallen stecken darin, beide sind gelöst:
+
+* **Kein `<label>` um die ganze Zeile mehr.** Beim Loslassen schickt der
+  Browser einen Klick auf die Beschriftung, und eine Beschriftung schaltet ihr
+  Kästchen — wer sich die Erklärung ansah, hätte nebenbei den Schalter
+  umgelegt. Der Klick nach einem langen Druck wird deshalb einmalig
+  unterdrückt (`unterdrueckt`, 350 ms).
+* **`pointer-events: none` an der Blase.** Sonst käme unter ihr ein
+  `pointerleave` an und sie räumte sich selbst weg.
 
 **Schloss und Schalter gibt es nur in diesem Modus.** Ohne Zufall hält der Gurt
 ohnehin, was drinsteht — ein Schloss daneben wäre ein Knopf, der nichts tut,
@@ -459,10 +498,17 @@ und der ist schlimmer als gar keiner.
 | | wo | wann geschrieben |
 | --- | --- | --- |
 | Schalter | `account.mememory_zufall` | sofort beim Umlegen (eigene Route) |
-| Schlösser | `mememory_sammlung.gesperrt` | mit „Auswahl merken“ |
+| Schlösser | `mememory_sammlung.gesperrt` | mit dem Gurt, 550 ms nach dem letzten Tipp |
 
 Zwei getrennte Wege, und das ist Absicht: Beides in einem Aufruf hieße, dass
 ein Umlegen des Schalters die halbfertige Auswahl darunter mit festschreibt.
+
+**Der goldene Rand liegt auf einer eigenen Ebene.** Er war zuerst ein
+`inset`-Schatten am Fach selbst — und ein Innenschatten zeichnet UNTER die
+Kinder seines Kastens. Das Meme füllt das Fach vollständig aus und deckte den
+Rand damit zu: sichtbar war er nur auf einem leeren Fach, also genau dort, wo
+er nichts bedeutet. Jetzt trägt ihn `.mm-gurt-fach::after`, das letzte Kind.
+Belegt sind es 2 px, festgehalten 3 px plus ein Schein nach außen.
 
 **Das Schloss hängt am FACH, nicht am Motiv.** Wer ein Motiv aus dem Fach
 nimmt, nimmt das Schloss mit weg; wer den Gurt neu setzt, räumt alle Schlösser
@@ -490,7 +536,7 @@ optional, damit ein noch laufender Client seinen Gurt setzen kann.
 | `client/src/minispiele/mememory/MehrSeite.tsx` | Baustellenhinweis, Vorschlagskasten, Freunde |
 | `client/src/minispiele/mememory/Einstellungsfenster.tsx` | Lautstärke |
 | `client/src/minispiele/mememory/Banner.tsx` | Banner der Spielauswahl, Takt und Konfetti |
-| `client/src/zeichen.tsx` | Kreuz, Pfeil, Note, Haus, Winkel, Schloss |
+| `client/src/zeichen.tsx` | Kreuz, Pfeil, Note, Haus, Winkel, Schloss, Würfel |
 | `client/src/minispiele/mememory/Stufenregler.tsx` | Regler samt Stufenkatalog |
 | `client/src/minispiele/mememory/Ecken.tsx` | Kartenstapel je Punkt |
 | `scripts/mememory-karte-zeichnen.py` | erzeugt `karte-ruecken.webp` |
