@@ -32,7 +32,7 @@ kleiner Stapel goldener Jetons. Von schräg oben, warmes Licht von links.
 | Jetons | Gold `#e2b64f`, Glanz `#ffe8a8` |
 
 **Freihalten:** Die unteren 20 % bleiben ruhig — dort liegt in der
-Spielauswahl der Textstreifen („Easy Poker · 2, 3, 4, 5, 6 Spieler · Texas Hold’em").
+Spielauswahl der Textstreifen („Poker · 2, 3, 4, 5, 6 Spieler · Hold’em").
 
 **Was NICHT ins Bild gehört:**
 

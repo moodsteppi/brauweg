@@ -195,10 +195,11 @@ Minuten live.
 > statt vier: Emojis bleiben bei vier, ein Bild quer über das Brett bekommt
 > einen eigenen Deckel (Client und Gateway).
 
-> **Easy Poker ist neu auf `staging` (25. August 2026), noch nicht in der
+> **Poker ist neu auf `staging` (25. August 2026), noch nicht in der
 > Produktion.** Texas Hold'em zu zweit bis sechst, für ein Hochkant-Handy
 > entworfen: zwei Handkarten, fünf Gemeinschaftskarten, vier Setzrunden —
-> und genau **vier Schaltflächen** (Fold · Check · Call · Bet). Neues Paket
+> und genau **vier Schaltflächen** (Fold · Check · Call · Bet). Anzeigename
+> „Poker“ (interne Kennung bleibt `easypoker`). Neues Paket
 > `@brauweg/game-easypoker`, `EasyPoker.tsx` im Client, ein Eintrag mehr in
 > `MODULES`. Spielauswahl-Banner liegt unter `hub/spielwahl-easypoker.webp`.
 >

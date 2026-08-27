@@ -12085,6 +12085,55 @@ main.auth > .muted {
 }
 .poker-zurueck:active { transform: scale(0.96); }
 
+/*
+ * Info sitzt spiegelbildlich zu Zurück: oben rechts, unter der Notch.
+ * Das Wort steht dabei, nicht nur ein Fragezeichen — sonst sucht man die
+ * Regeln und findet einen runden Knopf, den niemand als Hilfe liest.
+ */
+.poker-info {
+  position: fixed;
+  right: 14px;
+  top: calc(env(safe-area-inset-top) + 16px);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 8px 8px;
+  border: 0;
+  border-radius: 12px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.poker-info b {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #1b1408;
+  font: 800 13px/1 Georgia, 'Times New Roman', serif;
+  font-style: italic;
+}
+.poker-info:active { transform: scale(0.96); }
+.poker-info.is-tisch {
+  position: static;
+  flex: 0 0 auto;
+  padding: 6px 10px 6px 6px;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  color: #eef4f0;
+}
+.poker-info.is-tisch b {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+
 .poker-menue-mitte {
   width: min(92vw, 420px);
   text-align: center;

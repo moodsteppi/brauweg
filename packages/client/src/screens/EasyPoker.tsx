@@ -648,14 +648,15 @@ export function EasyPoker({
     return () => window.clearTimeout(uhr);
   }, [sicht?.ergebnis, sicht?.handNr, eigenerSitz]);
 
-  const regelKnopf = (
+  const infoKnopf = (wo: 'menue' | 'tisch') => (
     <button
-      className="poker-rund"
+      className={wo === 'menue' ? 'poker-info' : 'poker-info is-tisch'}
       type="button"
       onClick={() => setRegelnOffen(true)}
       aria-label="Regeln nachlesen"
     >
-      ?
+      <b aria-hidden="true">i</b>
+      <span>Info</span>
     </button>
   );
 
@@ -671,10 +672,11 @@ export function EasyPoker({
         <button className="poker-zurueck" type="button" onClick={onBack}>
           ← Zurück
         </button>
+        {infoKnopf('menue')}
 
         <div className="poker-menue-mitte">
           <h1 className="poker-titel">
-            Easy <span>Poker</span>
+            <span>Poker</span>
           </h1>
           <p className="poker-untertitel">Zwei Karten, bis zu sechs am Tisch, vier Knöpfe.</p>
 
@@ -729,10 +731,6 @@ export function EasyPoker({
             <em>({aktiv ?? '…'})</em>
           </button>
 
-          <button className="poker-textknopf" type="button" onClick={() => setRegelnOffen(true)}>
-            Wie geht das?
-          </button>
-
           {fehler && <p className="poker-fehler">{fehler}</p>}
         </div>
 
@@ -755,6 +753,7 @@ export function EasyPoker({
         <button className="poker-zurueck" type="button" onClick={brichAb}>
           ← Abbrechen
         </button>
+        {infoKnopf('menue')}
         <div className="poker-menue-mitte">
           <h1 className="poker-titel">
             Am <span>Tisch</span>
@@ -788,8 +787,9 @@ export function EasyPoker({
               <em>und loslegen</em>
             </button>
           )}
-          <p className="poker-untertitel">{aktiv ?? '…'} Spieler gerade in Easy Poker</p>
+          <p className="poker-untertitel">{aktiv ?? '…'} Spieler gerade am Tisch</p>
         </div>
+        {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </main>
     );
   }
@@ -861,7 +861,7 @@ export function EasyPoker({
         </button>
         <div className="poker-marke">
           <strong>
-            Easy <span>Poker</span>
+            <span>Poker</span>
           </strong>
           <em>
             Hand {sicht.handNr}/{sicht.handMax} · {STRASSENWORT[sicht.strasse]} · {sitzeAmTisch.length}
@@ -871,7 +871,7 @@ export function EasyPoker({
           <span className="poker-jeton-zeichen" aria-hidden="true" />
           <Jetonzahl wert={sicht.jetons[eigenerSitz] ?? 0} />
         </div>
-        {regelKnopf}
+        {infoKnopf('tisch')}
       </header>
 
       {/*
@@ -1259,14 +1259,23 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
     <div className="poker-blatt" onClick={onClose} role="presentation">
       <div className="poker-blatt-karte" onClick={(e) => e.stopPropagation()} role="presentation">
-        <h2>So geht Easy Poker</h2>
+        <h2>So geht Poker</h2>
 
         <h3>Ziel</h3>
         <p>
-          Du und die anderen bekommen je zwei verdeckte Karten. In der Mitte
-          liegen nach und nach fünf offene Karten. Wer aus seinen zwei und den
-          fünf offenen die besten <b>fünf</b> Karten bildet, gewinnt den Topf.
-          Am Tisch sitzen zwei bis sechs.
+          Jeder bekommt zwei verdeckte Karten. In der Mitte liegen nach und
+          nach fünf offene Karten. Wer aus seinen zwei und den fünf offenen
+          die besten <b>fünf</b> Karten bildet, gewinnt den Topf. Am Tisch
+          sitzen zwei bis sechs.
+        </p>
+
+        <h3>Die Blinds</h3>
+        <p>
+          Vor jeder Hand zahlen zwei Sitze einen Pflicht-Einsatz: den kleinen
+          Blind (SB) und den großen Blind (BB). Zu zweit zahlt der Geber den
+          kleinen, der andere den großen. Zu dritt und mehr sitzt der kleine
+          Blind links vom Geber, der große links davon. Der Knopf wandert jede
+          Hand weiter.
         </p>
 
         <h3>Die vier Knöpfe</h3>
@@ -1292,7 +1301,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         <h3>Der Ablauf</h3>
         <p>
           Vor dem Flop · Flop (drei Karten) · Turn (eine) · River (eine). Vor
-          jeder neuen Karte wird gesetzt. Danach wird gezeigt.
+          jeder neuen Karte wird gesetzt. Wer als Letzter nicht gefoldet hat,
+          gewinnt ohne Zeigen. Sonst werden die Hände verglichen. Wer all-in
+          weniger setzen konnte als die anderen, spielt nur um den Topf bis zu
+          seinem Beitrag — der Rest ist ein Nebentopf.
         </p>
 
         <h3>Was schlägt was</h3>
