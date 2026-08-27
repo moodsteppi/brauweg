@@ -10705,6 +10705,39 @@ main.auth > .muted {
      Halbwinkel nicht ausbricht. */
   perspective: 300px;
   transform: rotate(var(--mm-dreh, 0deg)) translateY(var(--mm-hoch, 0));
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+/*
+ * Der wandernde Zeiger.
+ *
+ * Während der Wartezeit springt er über die Karten und bleibt auf der
+ * stehen, die gleich umgedreht wird. Er ist damit kein Schmuck, sondern eine
+ * Ankündigung — wer hinsieht, weiß eine Sekunde vorher, wo etwas passiert.
+ *
+ * Angehoben, größer, mit einem goldenen Schein. Ausdrücklich KEIN `filter`
+ * auf der Karte: Ein Filter macht aus ihr eine eigene Zeichenebene und legt
+ * damit das `preserve-3d` ihres Blattes flach — aus der Umdrehung würde eine
+ * Stauchung. Der Schein sitzt deshalb als Schatten auf der Vorderseite.
+ *
+ * `--mm-hoch` ist ein Prozentwert (0 in der Mitte, 3 % außen); `calc` zieht
+ * davon ab, der äußerste Flügel hebt also von 3 % auf -4 % und die mittlere
+ * Karte von 0 auf -7 %. Alle steigen um denselben Betrag.
+ */
+.mm-banner .mm-banner-karte[data-hebt] {
+  z-index: 2;
+  transform: rotate(var(--mm-dreh, 0deg)) translateY(calc(var(--mm-hoch, 0%) - 7%))
+    scale(1.09);
+}
+.mm-banner .mm-banner-karte[data-hebt] .mm-banner-vorn {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 13px -1px rgba(255, 216, 115, 0.8),
+    0 11px 18px -9px rgba(0, 0, 0, 0.85);
+}
+.mm-banner .mm-banner-vorn,
+.mm-banner .mm-banner-rueck {
+  transition: box-shadow 260ms ease;
 }
 
 .mm-banner .mm-banner-blatt {
@@ -10811,7 +10844,9 @@ main.auth > .muted {
    Banner.tsx ohnehin ab; die Regeln hier fangen den Fall ab, dass eine
    Umdrehung gerade läuft, wenn die Einstellung wechselt. */
 @media (prefers-reduced-motion: reduce) {
-  .mm-banner .mm-banner-blatt { transition: none; }
+  .mm-banner .mm-banner-blatt,
+  .mm-banner .mm-banner-karte,
+  .mm-banner .mm-banner-vorn { transition: none; }
   .mm-konfetti { display: none; }
 }
 

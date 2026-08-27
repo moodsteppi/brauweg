@@ -79,6 +79,19 @@ const KONFETTI_MS = 900;
 /** Jede vierte Drehung legt ein Paar. So steht es im Auftrag. */
 const PAAR_CHANCE = 0.25;
 
+/**
+ * Kuerzester und laengster Halt des Zeigers auf einer Karte.
+ *
+ * Er wird von Sprung zu Sprung laenger (siehe `sprungdauern`) — das liest
+ * sich wie ein Rad, das ausrollt und stehenbleibt, und macht aus dem Warten
+ * eine Ankuendigung statt eines Flackerns.
+ */
+const HALT_MIN = 360;
+const HALT_MAX = 900;
+
+/** Wie viel jeder weitere Sprung auf die Haltezeit drauflegt. */
+const HALT_ZUWACHS = 110;
+
 interface Karte {
   readonly kennung: string;
   /** Liegt gerade verdeckt. */
@@ -107,6 +120,15 @@ export function MememoryBanner(): React.JSX.Element {
    */
   const [konfetti, setKonfetti] = useState<{ platz: number; nr: number } | null>(null);
   const konfettiNr = useRef(0);
+  /**
+   * Welche Karte gerade hervorgehoben ist, oder `null`.
+   *
+   * Waehrend der Wartezeit wandert der Zeiger ueber die Karten und bleibt am
+   * Ende auf der stehen, die gleich umgedreht wird. Er ist damit kein
+   * Schmuck, sondern eine Ankuendigung: Wer hinsieht, weiss eine Sekunde
+   * vorher, wo etwas passiert.
+   */
+  const [schweber, setSchweber] = useState<number | null>(null);
 
   useEffect(() => {
     let lebt = true;
@@ -158,16 +180,86 @@ export function MememoryBanner(): React.JSX.Element {
         offen.add(loesen);
       });
 
+    /**
+     * Die Haltezeiten eines Durchlaufs, zusammen genau `gesamt`.
+     *
+     * Vorne kurz, hinten lang: Jeder Sprung bekommt HALT_ZUWACHS mehr als
+     * sein Vorgaenger, gedeckelt bei HALT_MAX. Der letzte Eintrag ist der
+     * Rest und gehoert der Zielkarte — er ist damit immer der laengste
+     * Halt, und genau das laesst die Wahl endgueltig aussehen.
+     */
+    const sprungdauern = (gesamt: number): number[] => {
+      const dauern: number[] = [];
+      let rest = gesamt;
+      let i = 0;
+      // Solange noch Platz fuer einen Sprung UND den Schlusshalt ist.
+      while (rest > HALT_MAX + HALT_MIN) {
+        const d = Math.min(HALT_MAX, HALT_MIN + i * HALT_ZUWACHS + Math.random() * 160);
+        dauern.push(d);
+        rest -= d;
+        i += 1;
+      }
+      dauern.push(rest);
+      return dauern;
+    };
+
+    /**
+     * Der Zeiger wandert ueber die Karten und bleibt auf `ziel` stehen.
+     *
+     * Er springt nie auf die Karte, auf der er schon steht — ein Sprung, den
+     * man nicht sieht, ist keiner. Und der VORLETZTE Halt meidet zusaetzlich
+     * das Ziel: Sonst waere der letzte Sprung ein Stehenbleiben, und das
+     * Landen ginge unter.
+     */
+    const wandere = async (ziel: number, anzahl: number, gesamt: number): Promise<void> => {
+      const dauern = sprungdauern(gesamt);
+      let steht = -1;
+      for (let k = 0; k < dauern.length; k += 1) {
+        const letzter = k === dauern.length - 1;
+        const vorletzter = k === dauern.length - 2;
+        let naechste = ziel;
+        if (!letzter) {
+          const auswahl = [...Array(anzahl).keys()].filter(
+            (x) => x !== steht && !(vorletzter && x === ziel),
+          );
+          naechste = auswahl[Math.floor(Math.random() * auswahl.length)] ?? ziel;
+        }
+        steht = naechste;
+        setSchweber(naechste);
+        await schlaf(dauern[k] ?? HALT_MIN);
+        if (!lebt) return;
+      }
+    };
+
     const lauf = async (): Promise<void> => {
       while (lebt) {
-        await schlaf(4000 + Math.random() * 6000);
-        if (!lebt) return;
-        // Verdeckter Tab: nichts tun, aber weiter warten.
-        if (document.visibilityState !== 'visible') continue;
+        /*
+         * Verdeckter Tab: nichts tun, aber weiter nachsehen. Der Zeiger
+         * bliebe sonst irgendwo stehen, und beim Zurueckkommen saehe man
+         * eine willkuerlich hervorgehobene Karte.
+         */
+        if (document.visibilityState !== 'visible') {
+          setSchweber(null);
+          await schlaf(2000);
+          if (!lebt) return;
+          continue;
+        }
 
         const jetzt = stand.current;
-        if (!jetzt || jetzt.length < 2) continue;
+        if (!jetzt || jetzt.length < 2) {
+          await schlaf(2000);
+          if (!lebt) return;
+          continue;
+        }
 
+        /*
+         * Entschieden wird VOR der Wartezeit.
+         *
+         * Anders ginge es nicht: Der Zeiger soll waehrend des Wartens genau
+         * auf die Karte zulaufen, die danach umgedreht wird. Waehrend der
+         * Wartezeit aendert sich am Stand nichts — es gibt nur diesen einen
+         * Takt —, die Entscheidung ist am Ende also noch gueltig.
+         */
         const platz = Math.floor(Math.random() * jetzt.length);
         /**
          * Ein Paar, wenn der Wuerfel es sagt UND es einen Partner gibt, der
@@ -182,7 +274,11 @@ export function MememoryBanner(): React.JSX.Element {
         if (paart) {
           const kennung = partner[Math.floor(Math.random() * partner.length)] ?? '';
           const zweiter = jetzt.findIndex((k, i) => i !== platz && k.kennung === kennung);
+
+          await wandere(platz, jetzt.length, 4000 + Math.random() * 6000);
+          if (!lebt) return;
           // Beide zudrehen — von hier an ist es eine Runde Memory.
+          setSchweber(null);
           setzeKarte(platz, { zu: true });
           setzeKarte(zweiter, { zu: true });
           await schlaf(DREH_MS + ZU_MS);
@@ -204,16 +300,24 @@ export function MememoryBanner(): React.JSX.Element {
           // ein Paar, und das ist der andere Zweig.
           const liegt = new Set(jetzt.map((k) => k.kennung));
           const frei = topf.current.filter((k) => !liegt.has(k));
-          if (frei.length === 0) continue;
+          if (frei.length === 0) {
+            await schlaf(2000);
+            if (!lebt) return;
+            continue;
+          }
           const kennung = frei[Math.floor(Math.random() * frei.length)] ?? '';
           /*
            * Vorladen, solange die Karte noch offen liegt. Ein Bild, das erst
            * beim Aufdecken laedt, blitzt als weisse Karte auf — genau der
-           * Fehler, den `decode()` am Brett verhindert. Hier reicht der
-           * Anstoss: Bis die Karte zurueckdreht, sind 720 ms vergangen.
+           * Fehler, den `decode()` am Brett verhindert. Seit der Zeiger
+           * wandert, hat es dafuer die ganze Wartezeit.
            */
           const bild = new Image();
           bild.src = motivBildPfad(kennung);
+
+          await wandere(platz, jetzt.length, 4000 + Math.random() * 6000);
+          if (!lebt) return;
+          setSchweber(null);
           setzeKarte(platz, { zu: true });
           await schlaf(DREH_MS + ZU_MS);
           if (!lebt) return;
@@ -253,6 +357,7 @@ export function MememoryBanner(): React.JSX.Element {
             key={i}
             className="mm-banner-karte"
             data-zu={karte.zu || undefined}
+            data-hebt={schweber === i || undefined}
             /*
              * Die Neigung kommt aus der Stelle in der Reihe und nicht aus
              * dem Zufall: Sie soll bei jedem Blick dieselbe sein, sonst

@@ -248,8 +248,20 @@ Fläche sieht nach Fehler aus, das Stillleben nach Absicht.
 
 ### Das Banner spielt sich selbst
 
-Alle vier bis zehn Sekunden dreht sich eine Karte um, bleibt kurz verdeckt
-liegen und kommt mit einem anderen Meme zurück. **In einem von vier Fällen**
+Während der Wartezeit wandert ein **Zeiger** über die Karten — die
+hervorgehobene hebt sich 5,5 px an, wächst um 9 % und bekommt einen goldenen
+Schein. Er springt nie auf die Karte, auf der er schon steht, wird von Sprung
+zu Sprung langsamer und bleibt am Ende auf **genau der Karte** stehen, die
+danach umgedreht wird. Aus dem Warten wird damit eine Ankündigung: Wer
+hinsieht, weiß eine Sekunde vorher, wo etwas passiert.
+
+Das hat eine Folge für den Aufbau: **Was als Nächstes passiert, steht schon
+VOR der Wartezeit fest.** Anders könnte der Zeiger nicht darauf zulaufen.
+Während des Wartens ändert sich am Stand nichts — es gibt nur diesen einen
+Takt —, die Entscheidung ist am Ende also noch gültig.
+
+Dann dreht sich die Karte um, bleibt kurz verdeckt liegen und kommt mit einem
+anderen Meme zurück. **In einem von vier Fällen**
 ist das andere Meme eines, das schon auf dem Banner liegt: Dann drehen BEIDE
 zu, werden nacheinander aufgedeckt — und es gibt Konfetti. Das ist das Spiel
 in fünf Sekunden erzählt, ohne ein Wort.
@@ -277,12 +289,30 @@ Drei Dinge daran sind für andere Bildschirme interessant:
    eine CSS-Animation. Ein Wurf, der bei jedem Bild neu rechnet, kostet die
    Bildrate der ganzen Spielauswahl — und die zeichnet sieben Banner.
 
-Nachgemessen über 87 Sekunden (Mutationen mit Zeitstempel, dazu eine Nummer je
-Knoten, um Neuaufbauten auszuschließen): zehn Umdrehungen, Abstände 6,2 bis
+Der Zeiger darf ausdrücklich **kein `filter`** auf der Karte benutzen. Ein
+Filter macht aus ihr eine eigene Zeichenebene und legt damit das
+`preserve-3d` ihres Blattes flach — aus der Umdrehung würde eine Stauchung.
+Der goldene Schein sitzt deshalb als Schatten auf der Vorderseite.
+
+**Nachgemessen.** Erst 87 Sekunden mit Zeitstempeln und einer Nummer je
+Knoten (um Neuaufbauten auszuschließen): zehn Umdrehungen, Abstände 6,2 bis
 10,7 s; je Umdrehung 730 ms zwischen Zudrehen und Tausch (Soll 720); zwei
 Paare, dabei 726 ms bis zum ersten Aufdecker, 293 ms bis zum zweiten (Soll
 280), 308 ms bis zum Konfetti (Soll 300), 902 ms bis es weg ist (Soll 900).
 Die Knotennummern blieben durchgehend dieselben — React baut nichts neu.
+
+Dann mit dem Zeiger, erst 57 Sekunden: **sieben von sieben Umdrehungen** trafen
+die Karte, auf der der Zeiger zuletzt stand, und der Schlusshalt war jedes Mal
+der längste (664 bis 1200 ms gegen 370 bis 915 ms unterwegs).
+
+Und zuletzt 25 Minuten am Stück, 180 Durchläufe: **53 Paare, also 29,4 %**
+(Soll 25 %, bei dieser Zahl an Versuchen 1,4 Standardabweichungen — unauffällig),
+53 Konfettiwürfe, also genau einer je Paar, und Abstände von 4,9 bis 12,2 s
+bei 8,3 s im Schnitt (rechnerisch 4,7 bis 11,3 s).
+
+Nebenbei aufgefallen: Eine kurze Strecke aus fünfzehn Durchläufen hatte sieben
+Paare und sah nach einem Fehler aus. Sie war keiner — nur eine Häufung. Wer
+eine Wahrscheinlichkeit prüfen will, braucht mehr als eine Handvoll Proben.
 
 ---
 
