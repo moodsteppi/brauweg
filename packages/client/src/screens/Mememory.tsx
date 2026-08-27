@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
@@ -6,6 +6,7 @@ import { Ecken } from '../minispiele/mememory/Ecken';
 import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/eckenplan';
 import { spieleKlang, setzeTon, tonAn } from '../minispiele/mememory/klaenge';
 import { KiMatch, type Stufe } from '../minispiele/mememory/KiMatch';
+import { OnlineMatch, type Gegnerzahl } from '../minispiele/mememory/OnlineMatch';
 import { Sammlung } from '../minispiele/mememory/Sammlung';
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
@@ -41,8 +42,12 @@ interface MememorySicht {
   punkte: Record<number, number>;
   namen: Record<number, string>;
   dran: number;
-  pause: 'treffer' | 'daneben' | null;
+  pause: 'treffer' | 'daneben' | 'mischen' | null;
   merkzeitMs: number;
+  /** Karten, die noch auf dem Nachschubstapel warten. Zu zweit immer 0. */
+  vorrat: number;
+  /** Wie oft schon gemischt wurde. Steigt, wird das Brett neu verteilt. */
+  mischung: number;
   fertig: boolean;
   sieger: number | null;
   leftSeats: number[];
@@ -85,6 +90,17 @@ const REAKTION_PAUSE_MS = 250;
  * belastet wird.
  */
 const MOTIV_PAUSE_MS = 1000;
+
+/**
+ * Der erste Teil der Mischbewegung: die Karten zur Mitte zusammenschieben.
+ *
+ * Die Mischpause des Moduls dauert 2200 ms (`pauseDauerMs` in partie.ts) und
+ * teilt sich in zwei Haelften: dieses Zusammenschieben, und danach das
+ * Austeilen der neuen Lage, sobald sie vom Server kommt. Wer die eine Zahl
+ * aendert, ohne die andere anzusehen, laesst die Bewegung entweder ins Leere
+ * laufen oder schneidet sie ab.
+ */
+const MISCH_SAMMELN_MS = 820;
 
 /** So viele Emojis duerfen hoechstens gleichzeitig fliegen. */
 const FLIEGER_MAX = 12;
@@ -161,6 +177,10 @@ export function Mememory({
   const [sammlungOffen, setSammlungOffen] = useState(false);
   /** Der Bildschirm "KI-Match erstellen" liegt STATT des Menues da. */
   const [kiOffen, setKiOffen] = useState(false);
+  /** Der Bildschirm "Online-Match" (gegen wie viele?) liegt STATT des Menues da. */
+  const [onlineOffen, setOnlineOffen] = useState(false);
+  /** Das Brett, auf dem gerade gezeichnet wird — Grundlage der Mischbewegung. */
+  const brettRef = useRef<HTMLDivElement | null>(null);
   /**
    * Die eigene Sammlung, wie sie beim Aufschlagen des Bildschirms stand.
    *
@@ -390,19 +410,28 @@ export function Mememory({
    * absichert, dass zwei gleichzeitige Beitritte nicht denselben Platz
    * bekommen — der Verlierer des Rennens bekommt einen Fehler und sucht weiter.
    */
-  const suche = useCallback(async (): Promise<void> => {
+  const suche = useCallback(async (gegner: Gegnerzahl): Promise<void> => {
     setFehler(null);
     setSucht(true);
+    /**
+     * Jede Gegnerzahl ist ein eigener Topf.
+     *
+     * Gesucht wird ausschliesslich unter Tischen mit GENAU dieser Platzzahl.
+     * Ohne den Vergleich landete, wer zu viert spielen will, am erstbesten
+     * Zweiertisch — und der startete sofort, ohne dass er es merkt.
+     */
+    const plaetze = gegner + 1;
     try {
       const zeilen = await api.tables('mememory');
       const offen = zeilen
-        .filter((zeile) => zeile.occupied < zeile.seats)
+        .filter((zeile) => zeile.seats === plaetze && zeile.occupied < zeile.seats)
         .sort((a, b) => a.id.localeCompare(b.id));
       const ziel = offen[0];
       if (ziel) {
         await api.joinTable(ziel.id);
         setEigenerTisch(null);
         setTischId(ziel.id);
+        setOnlineOffen(false);
         return;
       }
       /**
@@ -420,11 +449,12 @@ export function Mememory({
       const { id } = await api.createTable({
         gameId: 'mememory',
         config: zusatz.length > 0 ? { ...REGELSATZ, zusatz } : REGELSATZ,
-        seats: 2,
+        seats: plaetze,
         rounds: 1,
       });
       setEigenerTisch(id);
       setTischId(id);
+      setOnlineOffen(false);
     } catch {
       setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
@@ -484,6 +514,7 @@ export function Mememory({
    * dieselben, also braucht die Regel keine Absprache.
    */
   const wechseltGerade = useRef(false);
+  const eigenePlaetze = tisch.table?.seats.length ?? 2;
   useEffect(() => {
     if (!tischId || !eigenerTisch || tischId !== eigenerTisch) return;
     if (tisch.table && tisch.table.status !== 'waiting') return;
@@ -493,8 +524,10 @@ export function Mememory({
         .tables('mememory')
         .then(async (zeilen: TableRow[]) => {
           if (!lebt || wechseltGerade.current) return;
+          // Nur in den EIGENEN Topf wechseln: Ein Tisch fuer zwei ist keine
+          // Loesung fuer jemanden, der zu viert spielen wollte.
           const kleiner = zeilen
-            .filter((z) => z.occupied < z.seats && z.id < tischId)
+            .filter((z) => z.seats === eigenePlaetze && z.occupied < z.seats && z.id < tischId)
             .sort((a, b) => a.id.localeCompare(b.id))[0];
           if (!kleiner) return;
           wechseltGerade.current = true;
@@ -518,7 +551,7 @@ export function Mememory({
       lebt = false;
       window.clearInterval(takt);
     };
-  }, [tischId, eigenerTisch, tisch.table?.status]);
+  }, [tischId, eigenerTisch, tisch.table?.status, eigenePlaetze]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
@@ -637,6 +670,10 @@ export function Mememory({
         }
       } else if (sicht.pause === 'daneben') {
         spieleKlang('daneben');
+      } else if (sicht.pause === 'mischen') {
+        // Dasselbe Geraeusch wie beim Umdrehen: Es ist derselbe Vorgang,
+        // nur mit dem ganzen Brett auf einmal.
+        spieleKlang('dreh');
       }
       vorigePause.current = sicht.pause;
     }
@@ -682,6 +719,120 @@ export function Mememory({
     );
     return () => window.clearInterval(takt);
   }, [sicht !== null]);
+
+  // -------------------------------------------------------------------------
+  // Mischen
+  // -------------------------------------------------------------------------
+
+  /**
+   * Die Mischbewegung, in zwei Haelften.
+   *
+   * Sie laeuft ueber die Web-Animations-Schnittstelle und nicht ueber CSS,
+   * und der Grund ist der Weg: Jede Karte muss aus IHRER Ecke zur Mitte —
+   * das sind vierundzwanzig verschiedene Strecken, die kein Blatt kennt.
+   * Gemessen wird deshalb einmal je Haelfte, bewegt wird nur `transform`.
+   *
+   * Erste Haelfte: Sobald das Modul die Mischpause meldet, laufen alle
+   * Karten zur Mitte zusammen und BLEIBEN dort (`fill: forwards`). Waehrend
+   * der Pause aendert sich am Zustand nichts mehr, es wird also auch nicht
+   * neu gezeichnet.
+   */
+  const mischt = sicht?.pause === 'mischen';
+  const mischNr = sicht?.mischung ?? 0;
+  const ruhig = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** Mitte des Bretts in Bildschirmkoordinaten. */
+  const brettMitte = (brett: HTMLElement): { x: number; y: number } => {
+    const kasten = brett.getBoundingClientRect();
+    return { x: kasten.left + kasten.width / 2, y: kasten.top + kasten.height / 2 };
+  };
+
+  useLayoutEffect(() => {
+    const brett = brettRef.current;
+    if (!mischt || !brett) return;
+    const karten = [...brett.querySelectorAll<HTMLElement>('.mm-karte')];
+    /*
+     * **Erst abbrechen, dann messen** — dieselbe Regel wie unten, und hier
+     * kostete ihr Fehlen einen halben Nachmittag.
+     *
+     * Eine Bewegung mit `fill: forwards` haelt die Karten dort fest, wo sie
+     * geendet hat. Laeuft sie nicht zu Ende — weil das Telefon gesperrt wird
+     * oder der Reiter in den Hintergrund geht, dann steht die Uhr der
+     * Animation still —, kleben sie in der Mitte. Die naechste Messung
+     * bekaeme dann fuer JEDE Karte die Mitte, jede Strecke waere null, und
+     * das Einsammeln sah aus wie blosses Schrumpfen.
+     */
+    for (const karte of karten) for (const lauf of karte.getAnimations()) lauf.cancel();
+    if (ruhig()) return;
+
+    const ziel = brettMitte(brett);
+    for (const karte of karten) {
+      const kasten = karte.getBoundingClientRect();
+      const dx = ziel.x - (kasten.left + kasten.width / 2);
+      const dy = ziel.y - (kasten.top + kasten.height / 2);
+      karte.animate(
+        [
+          { transform: 'translate(0, 0) scale(1)' },
+          { transform: `translate(${dx}px, ${dy}px) scale(0.8)` },
+        ],
+        {
+          duration: MISCH_SAMMELN_MS,
+          easing: 'cubic-bezier(.55, 0, .25, 1)',
+          fill: 'forwards',
+        },
+      );
+    }
+
+    /*
+     * Beim Aufraeumen zurueck an den Platz.
+     *
+     * React raeumt diesen Effekt ab, sobald die Mischpause vorbei ist — also
+     * genau bevor der Austeil-Effekt misst. Ohne das Abbrechen haengt die
+     * `forwards`-Fuellung noch an den Karten, und auch der zweite Teil
+     * measste die Mitte. Ausserdem loest es den Haenger, wenn die neue Lage
+     * gar nicht mehr kommt (Verbindung weg): Dann stehen die Karten wieder
+     * da, wo sie hingehoeren, statt fuer immer in der Mitte.
+     */
+    return () => {
+      for (const karte of karten) for (const lauf of karte.getAnimations()) lauf.cancel();
+    };
+  }, [mischt]);
+
+  /**
+   * Zweite Haelfte: Die neue Lage ist da (`mischung` ist gestiegen), die
+   * Karten fliegen aus der Mitte auf ihre Plaetze.
+   *
+   * **Erst abbrechen, dann messen.** Die Bewegung der ersten Haelfte haelt
+   * die Karten in der Mitte fest; ohne `cancel()` bekaeme die Messung genau
+   * diese Mitte und jede Strecke waere null — die Karten stuenden einfach da.
+   */
+  useLayoutEffect(() => {
+    const brett = brettRef.current;
+    if (mischNr === 0 || !brett) return;
+    const karten = [...brett.querySelectorAll<HTMLElement>('.mm-karte')];
+    for (const karte of karten) for (const lauf of karte.getAnimations()) lauf.cancel();
+    if (ruhig()) return;
+    const ziel = brettMitte(brett);
+    karten.forEach((karte, i) => {
+      const kasten = karte.getBoundingClientRect();
+      const dx = ziel.x - (kasten.left + kasten.width / 2);
+      const dy = ziel.y - (kasten.top + kasten.height / 2);
+      karte.animate(
+        [
+          { transform: `translate(${dx}px, ${dy}px) scale(0.8)` },
+          { transform: 'translate(0, 0) scale(1)' },
+        ],
+        {
+          duration: 560,
+          // Gestaffelt austeilen — alle auf einmal saehe aus wie ein Schnitt,
+          // nicht wie Karten, die verteilt werden.
+          delay: i * 16,
+          easing: 'cubic-bezier(.2, .8, .25, 1)',
+          fill: 'backwards',
+        },
+      );
+    });
+  }, [mischNr]);
 
   /** Die Vorwegnahme faellt mit der naechsten Sicht — bestaetigt oder nicht. */
   const revision = tisch.view?.revision ?? -1;
@@ -805,6 +956,20 @@ export function Mememory({
     );
   }
 
+  if (!tischId && onlineOffen) {
+    return (
+      <OnlineMatch
+        laeuft={sucht}
+        fehler={fehler}
+        onSuchen={(gegner) => void suche(gegner)}
+        onBack={() => {
+          setOnlineOffen(false);
+          setFehler(null);
+        }}
+      />
+    );
+  }
+
   if (!tischId) {
     return (
       <main className="mm-menue">
@@ -818,7 +983,17 @@ export function Mememory({
           <h1 className="mm-titel">Mememory</h1>
           <p className="mm-untertitel">Zwei Bilder, ein Paar, zwei Spieler.</p>
 
-          <button className="mm-suchen" type="button" onClick={() => void suche()} disabled={sucht}>
+          {/* Der Knopf sucht nicht mehr selbst: Erst wird gewaehlt, gegen wie
+              viele man spielen will — jede Zahl ist ein eigener Topf. */}
+          <button
+            className="mm-suchen"
+            type="button"
+            onClick={() => {
+              setFehler(null);
+              setOnlineOffen(true);
+            }}
+            disabled={sucht}
+          >
             <span>Online Match suchen…</span>
             {/* Die Zahl steht in Klammern daneben und nicht im Satz: Sie
                 aendert sich alle fuenf Sekunden, und ein springendes Wort
@@ -862,6 +1037,10 @@ export function Mememory({
 
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
+    /** Plaetze, auf denen weder ein Mensch noch ein Bot sitzt. */
+    const freiePlaetze = (tisch.table?.seats ?? []).filter(
+      (platz) => !platz.accountId && !platz.isBot,
+    );
     return (
       <main className="mm-menue">
         <button className="mm-zurueck" type="button" onClick={brichAb}>
@@ -883,6 +1062,29 @@ export function Mememory({
             <span />
           </div>
           <p className="mm-untertitel">{aktiv ?? '…'} Spieler gerade in Mememory</p>
+
+          {/*
+            * "Mit Bots auffuellen" — nur an Tischen fuer drei oder vier.
+            *
+            * Zu zweit gibt es dafuer schon "Gegen die KI spielen" im Menue.
+            * An einem Vierertisch dagegen ist das Warten der Regelfall,
+            * solange nicht gerade vier Leute gleichzeitig dasselbe wollen —
+            * und ohne diesen Knopf saehe man nur zu, wie nichts passiert.
+            *
+            * Aufgefuellt wird ueber `addBot` je freiem Platz, denselben Weg
+            * nimmt der Wartebereich der anderen Spiele auch.
+            */}
+          {freiePlaetze.length > 0 && (tisch.table?.seats.length ?? 2) > 2 && (
+            <button
+              className="mm-zweitknopf mm-fuellen"
+              type="button"
+              onClick={() => {
+                for (const platz of freiePlaetze) tisch.addBot(platz.seat);
+              }}
+            >
+              Mit Bots auffüllen ({freiePlaetze.length})
+            </button>
+          )}
         </div>
         {tonKnopf}
       </main>
@@ -935,6 +1137,29 @@ export function Mememory({
   /** Die Sitze fuer den Abschlussstand: der eigene zuerst, dann der Reihe nach. */
   const ich = sitze.indexOf(eigenerSitz);
   const standReihe = ich < 0 ? sitze : [...sitze.slice(ich), ...sitze.slice(0, ich)];
+
+  /**
+   * Der eigene Platz: einer mehr, als es Bessere gibt.
+   *
+   * Gleiche Punkte ergeben denselben Platz — bei zwoelf Paaren koennen zwei
+   * Leute sechs haben, und dann sind beide Zweiter (bzw. Erster).
+   */
+  const eigenerPlatz =
+    sitze.filter((sitz) => (sicht.punkte[sitz] ?? 0) > (sicht.punkte[eigenerSitz] ?? 0)).length + 1;
+  const abschlussTitel =
+    eigenerSitz < 0
+      ? 'Partie zu Ende'
+      : sitze.length <= 2
+        ? sicht.sieger === null
+          ? 'Unentschieden'
+          : sicht.sieger === eigenerSitz
+            ? 'Gewonnen!'
+            : 'Verloren'
+        : sicht.sieger === eigenerSitz
+          ? 'Gewonnen!'
+          : eigenerPlatz === 1
+            ? 'Geteilter Sieg'
+            : `${eigenerPlatz}. Platz`;
 
   /**
    * Ein gewaehltes Motiv ueber den Tisch schicken.
@@ -1039,10 +1264,33 @@ export function Mememory({
         dran={sicht.fertig ? null : sicht.dran}
       />
 
+      {/*
+        * Der Nachschubstapel, oben in der Mitte zwischen den beiden oberen
+        * Ecken. Er steht nur da, wenn wirklich noch Karten warten — zu zweit
+        * also nie.
+        *
+        * Drei uebereinanderliegende Karten und eine Zahl: Ein Stapel ist ein
+        * Bild, das niemand erklaeren muss, und die Zahl beantwortet die
+        * einzige Frage, die man daran hat.
+        */}
+      {sicht.vorrat > 0 && (
+        <div className="mm-stapel" data-mischt={sicht.pause === 'mischen' ? '' : undefined}>
+          <span className="mm-stapel-bild" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <em>{sicht.vorrat}</em>
+          <span className="mm-verborgen">Karten warten auf dem Stapel</span>
+        </div>
+      )}
+
       <div className="mm-mitte">
         <div
           className="mm-brett"
+          ref={brettRef}
           data-warten={wartend || undefined}
+          data-mischt={sicht.pause === 'mischen' ? '' : undefined}
           style={
             {
               '--mm-spalten': sicht.spalten,
@@ -1194,13 +1442,12 @@ export function Mememory({
       {sicht.fertig && (
         <div className="mm-ende">
           <div className="mm-ende-blatt">
-            <h2>
-              {sicht.sieger === null
-                ? 'Unentschieden'
-                : sicht.sieger === eigenerSitz
-                  ? 'Gewonnen!'
-                  : 'Verloren'}
-            </h2>
+            {/*
+              * Zu zweit gibt es Sieg, Niederlage und Unentschieden. Ab drei
+              * Spielern ist "Verloren" fuer den Zweiten von vier schlicht
+              * falsch — dort steht der Platz.
+              */}
+            <h2>{abschlussTitel}</h2>
             {/* Der eigene Stand zuerst, dann die anderen in Sitzreihenfolge —
                 dieselbe Drehung wie bei den Ecken. "7 : 5" liest sich
                 anders als "5 : 7", und gemeint ist immer das eigene zuerst. */}

@@ -34,10 +34,13 @@ function ungleich(p: MememoryPartie): [number, number] {
   throw new Error('kein Fehlgriff');
 }
 
-test('das Modul meldet sich als spielbar, nur zu zweit', () => {
+test('das Modul meldet sich als spielbar, zu zweit bis zu viert', () => {
   assert.equal(mememory.meta.id, 'mememory');
   assert.equal(mememory.meta.availability, 'playable');
-  assert.deepEqual([...mememory.meta.seatCounts], [2]);
+  // Seit dem 27. August auch zu dritt und zu viert. Das Brett waechst dabei
+  // nicht — die zusaetzlichen Karten warten auf dem Nachschubstapel
+  // (nachschub.test.ts).
+  assert.deepEqual([...mememory.meta.seatCounts], [2, 3, 4]);
   assert.equal(mememory.meta.xpBasisZaehltKarten, false);
 });
 
@@ -144,7 +147,10 @@ test('ein Snapshot mit falscher Version wird abgewiesen, nicht falsch gedeutet',
 
 test('validateConfig winkt keinen Unsinn durch', () => {
   assert.deepEqual(mememory.validateConfig(DEFAULT_REGELN, 2, 1), []);
-  assert.ok(mememory.validateConfig(DEFAULT_REGELN, 3, 1).length > 0);
+  assert.deepEqual(mememory.validateConfig(DEFAULT_REGELN, 3, 1), []);
+  assert.deepEqual(mememory.validateConfig(DEFAULT_REGELN, 4, 1), []);
+  // Fuenf Ecken hat kein Bildschirm.
+  assert.ok(mememory.validateConfig(DEFAULT_REGELN, 5, 1).length > 0);
   assert.ok(mememory.validateConfig({}, 2, 1).length > 0);
   // 10 Spalten sind mehr als die erlaubten 8 -- der Regelsatz faellt durch.
   assert.ok(

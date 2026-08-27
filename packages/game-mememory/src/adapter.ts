@@ -29,6 +29,7 @@ import {
   fuehreAus,
   markiereVerlassen,
   amZug,
+  nachschubMenge,
   pauseDauerMs,
   platzierungen,
 } from './partie.js';
@@ -52,8 +53,12 @@ import { type MememorySicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * Gedaechtnis der Bots. `deserialize` nimmt die 1 weiterhin an und ergaenzt
  * die Felder — sonst braeche der Deploy jede laufende Partie, und das
  * ausgerechnet fuer eine Funktion, die diese Partien gar nicht benutzen.
+ *
+ * 3 am selben Tag: Der Zustand traegt den Nachschubstapel (`vorrat`) und die
+ * Zahl der Mischungen. Aeltere Snapshots bekommen einen leeren Stapel und
+ * die Null — sie sind Partien zu zweit, und dort hat es beides nie gegeben.
  */
-const SNAPSHOT_VERSION = 2;
+const SNAPSHOT_VERSION = 3;
 
 type GespeichertePartie = MememoryPartie & { readonly v: number };
 
@@ -91,8 +96,14 @@ export const mememory: GameModule<
    * Feld — sie zeigte das Emoji Nummer 0 und damit etwas anderes, als der
    * Absender geschickt hat. Der Gateway laesst Motive deshalb erst ab 3
    * durch; Emojis gehen weiterhin auch an 2.
+   *
+   * 4 seit dem 27. August 2026: Die Sicht traegt Nachschubstapel und
+   * Mischzaehler, und es gibt die Schaupause `mischen`. Ein Client der
+   * Version 3 kommt damit nicht durcheinander — er zeigt den Stapel nicht
+   * und mischt ohne Bewegung —, aber die Zahl haelt fest, ab wann er es
+   * koennte.
    */
-  protocolVersion: 3,
+  protocolVersion: 4,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -106,7 +117,10 @@ export const mememory: GameModule<
     // gaebe es vier gleiche Karten statt zwei. Zusatzmotive des Tisches
     // zaehlen mit; auf ihre Form hat pruefeRegeln schon gesehen.
     const topfGroesse = new Set([...MOTIVE, ...(regeln.zusatz ?? [])]).size;
-    if ((regeln.spalten * regeln.zeilen) / 2 > topfGroesse) {
+    // Der Nachschubstapel zaehlt mit: Zu viert sind es zwanzig Paare und
+    // nicht zwoelf.
+    const plaetze = regeln.spalten * regeln.zeilen;
+    if ((plaetze + nachschubMenge(plaetze, seats)) / 2 > topfGroesse) {
       probleme.push({
         path: 'spalten',
         messageKey: 'ruleset.zuWenigMotive',
@@ -169,28 +183,29 @@ export const mememory: GameModule<
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 2 && snap.v !== 1) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
     const { v, ...rest } = snap;
+    /**
+     * Aeltere Partien nachruesten statt abweisen.
+     *
+     * Version 1 kannte weder Zugnummer noch Saat noch Gedaechtnis (kein Sitz
+     * merkt sich etwas ohne `botStufen`), Version 2 keinen Nachschubstapel
+     * (sie sind alle zu zweit, dort gibt es keinen). Beides laesst sich
+     * gefahrlos ergaenzen — und muss es auch: Ein Deploy darf keine laufende
+     * Partie brechen, schon gar nicht fuer eine Funktion, die sie gar nicht
+     * benutzt.
+     */
+    const alt = rest as MememoryPartie;
     if (v === 1) {
-      /**
-       * Eine Partie aus der Zeit vor den Bot-Stufen.
-       *
-       * Sie hat weder Zugnummer noch Saat noch Gedaechtnis — und braucht
-       * nichts davon: Ohne `botStufen` in der `config` merkt sich kein Sitz
-       * etwas. Die Felder werden trotzdem gesetzt, damit der Zustand ab hier
-       * vollstaendig ist und niemand auf `undefined` laeuft.
-       */
-      return {
-        ...(rest as MememoryPartie),
-        zug: 0,
-        saat: 'alt',
-        erinnerung: {},
-      };
+      return { ...alt, zug: 0, saat: 'alt', erinnerung: {}, vorrat: [], mischung: 0 };
     }
-    return rest as MememoryPartie;
+    if (v === 2) {
+      return { ...alt, vorrat: [], mischung: 0 };
+    }
+    return alt;
   },
 };

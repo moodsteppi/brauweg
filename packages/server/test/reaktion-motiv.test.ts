@@ -15,6 +15,11 @@
  *   4. **Hoechstens eines je Sekunde** (seit dem 27. August). Ein Emoji darf
  *      viermal je Sekunde kommen; ein Bild quer ueber das Brett ist etwas
  *      anderes, und der Gegner will sich in derselben Zeit Karten merken.
+ *
+ * Punkt 2 hat sich am Nachmittag des 27. August verschoben: `protocolVersion`
+ * steht seit den Tischen zu dritt und zu viert auf 4, und damit faellt die 2
+ * aus dem Zwei-Versionen-Fenster. Sie kommt gar nicht mehr an den Tisch —
+ * geprueft wird jetzt genau diese Grenze.
  */
 
 import { test } from 'node:test';
@@ -77,21 +82,45 @@ test('Ein Motiv fliegt zur Gegenseite, der Absender bekommt nichts zurueck', asy
   await b.close();
 });
 
-test('Ein Client der Version 2 bekommt Emojis, aber kein Motiv', async (t) => {
+test('Ein Client der Version 2 kommt gar nicht mehr an den Tisch', async (t) => {
   const h = await startHarness();
   t.after(() => h.close());
   const { anna, bert, table } = await tischZuZweit(h);
 
+  /*
+   * Bis zum 27. August pruefte dieser Test etwas anderes: Ein Client der
+   * Version 2 kannte die Reaktionsnachricht, nicht aber das Feld `motiv` —
+   * er bekam Emojis, aber keine Motive. Seit `protocolVersion` auf 4 steht
+   * (Nachschubstapel, Mischpause), liegt die 2 ausserhalb des
+   * Zwei-Versionen-Fensters, und der Server laesst sie gar nicht mehr an
+   * einen Tisch.
+   *
+   * Das ist die richtige Grenze und keine Haerte: Ein Client von vor dem
+   * 26. August wuerde einen Tisch zu viert falsch zeichnen — zwei Leisten
+   * statt vier Ecken, und fuer Sitz 2 und 3 dieselbe Farbe. Lieber eine
+   * klare Absage beim Beitritt als ein Brett, das etwas anderes zeigt, als
+   * gespielt wird.
+   *
+   * Der Deckel `MOTIV_AB_MODULVERSION` im Gateway bleibt trotzdem stehen:
+   * Er kostet nichts und traegt, sobald das Fenster wieder breiter wird.
+   */
   const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
   const alt = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Alt');
   a.passive = true;
   alt.passive = true;
-  a.join(table.id, 3, 'mememory');
+  a.join(table.id, 4, 'mememory');
   await a.waitFor(() => a.lastView !== null, 'erste Sicht fuer Anna');
-  // Version 2: kennt Reaktionen, kennt das Feld `motiv` aber nicht.
-  alt.join(table.id, 2, 'mememory');
-  await alt.waitFor(() => alt.lastView !== null, 'erste Sicht fuer den alten Client');
 
+  alt.join(table.id, 2, 'mememory');
+  await alt.waitFor(() => alt.errors.length > 0, 'Absage fuer den alten Client');
+  assert.deepEqual(alt.errors, ['clientTooOld']);
+  assert.equal(alt.lastView, null, 'ohne Sicht bleibt auch kein Brett stehen');
+
+  // Die aktuelle Version kommt weiterhin durch und bekommt ihr Motiv.
+  const neu = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Neu');
+  neu.passive = true;
+  neu.join(table.id, 3, 'mememory');
+  await neu.waitFor(() => neu.lastView !== null, 'erste Sicht fuer den Client der Version 3');
   a.raw({
     v: ENVELOPE_VERSION,
     game: 'mememory',
@@ -100,25 +129,12 @@ test('Ein Client der Version 2 bekommt Emojis, aber kein Motiv', async (t) => {
     zeichen: 0,
     motiv: 'hoch-aabbccddee',
   });
-  // Warten, bis der Server die Bremse wieder freigibt (250 ms), sonst faellt
-  // das Emoji als zu schnell weg und der Test bewiese nichts.
-  await new Promise((r) => setTimeout(r, 320));
-  a.raw({
-    v: ENVELOPE_VERSION,
-    game: 'mememory',
-    type: 'reaktion',
-    tableId: table.id,
-    zeichen: 3,
-  });
-
-  await alt.waitFor(() => alt.messages('reaktion').length > 0, 'Emoji beim alten Client');
-  const alle = alt.messages('reaktion');
-  assert.equal(alle.length, 1, 'das Motiv haette nicht durchgehen duerfen');
-  assert.equal(alle[0]!.zeichen, 3);
-  assert.equal(alle[0]!.motiv, undefined);
+  await neu.waitFor(() => neu.messages('reaktion').length > 0, 'Motiv beim Client der Version 3');
+  assert.equal(neu.messages('reaktion')[0]!.motiv, 'hoch-aabbccddee');
 
   await a.close();
   await alt.close();
+  await neu.close();
 });
 
 test('Eine erfundene Motivform faellt still durch', async (t) => {

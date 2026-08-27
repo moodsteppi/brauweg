@@ -10804,6 +10804,103 @@ main.auth > .muted {
   color: #a595c4;
 }
 
+/* --- Gegnerzahl beim Online-Match ---------------------------------------- */
+
+/*
+ * Drei Zeilen untereinander statt drei Knöpfen nebeneinander: Neben dem Namen
+ * steht, wie viele Tische in diesem Topf gerade offen sind, und dafür braucht
+ * jede Zeile die volle Breite.
+ */
+.mm-zahlwahl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.mm-zahl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 14px;
+  color: #cbbde8;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), color 140ms ease;
+}
+.mm-zahl-name { font: 800 14px/1 system-ui; }
+.mm-zahl-warten {
+  font: 700 11.5px/1 system-ui;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+}
+.mm-zahl[data-an] {
+  color: #1a0e05;
+  background: linear-gradient(180deg, #ffd873, #e0a83c);
+  box-shadow: 0 10px 22px -14px rgba(224, 168, 60, 0.9);
+}
+.mm-zahl:active { transform: scale(0.985); }
+
+/* --- Mehrere KI-Gegner ---------------------------------------------------- */
+
+/* Ein Block je Gegner: Kopfzeile, vier Stufen, Satz. Die Linie darüber trennt
+   sie voneinander, ohne einen Rahmen um jeden zu ziehen. */
+.mm-gegner + .mm-gegner {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+.mm-gegner-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #a595c4;
+  font: 800 11.5px/1 system-ui;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.mm-gegner-weg {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: #d9c9ff;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+}
+.mm-gegner-weg:active { transform: scale(0.94); }
+
+.mm-gegner-mehr {
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 14px;
+  color: #e6dcff;
+  /* Gestrichelt: Der Knopf legt etwas an, das noch nicht da ist — dieselbe
+     Sprache wie ein leerer Platz. */
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  font: 800 14px/1 system-ui;
+  cursor: pointer;
+}
+.mm-gegner-mehr em {
+  font: 600 11.5px/1 system-ui;
+  font-style: normal;
+  opacity: 0.55;
+}
+.mm-gegner-mehr:active { transform: scale(0.985); }
+
 .mm-zweitknopf {
   width: 100%;
   margin-top: 10px;
@@ -10814,6 +10911,15 @@ main.auth > .muted {
   background: rgba(255, 255, 255, 0.06);
   font: 700 13px/1 system-ui;
   cursor: pointer;
+}
+/* Im Wartebereich ist „Mit Bots auffüllen" der einzige Ausweg aus dem
+   Warten — er darf nicht wie eine Fußnote aussehen. */
+.mm-fuellen {
+  margin-top: 18px;
+  color: #e6dcff;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  font-size: 14px;
 }
 
 .mm-fehler {
@@ -11594,6 +11700,70 @@ main.auth > .muted {
 .mm-ecke[data-farbe='gelb'] { --mm-puck-hell: #f3dc93; --mm-puck-dunkel: #a8862c; }
 .mm-ecke[data-farbe='gruen'] { --mm-puck-hell: #a6d9ad; --mm-puck-dunkel: #4c8a58; }
 
+/* --- Der Nachschubstapel --------------------------------------------------
+   Er sitzt oben in der Mitte, zwischen den beiden oberen Ecken — der einzige
+   Platz am oberen Rand, den kein Spieler beansprucht. Zu zweit steht er gar
+   nicht da: Dort passen alle Karten aufs Brett. */
+
+.mm-stapel {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 9px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  background: rgba(8, 4, 2, 0.46);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+/* Drei versetzte Kärtchen — dasselbe Bild wie der Sammlungsknopf im Menü. */
+.mm-stapel-bild {
+  position: relative;
+  width: 20px;
+  height: 22px;
+}
+.mm-stapel-bild i {
+  position: absolute;
+  width: 13px;
+  height: 17px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #4a3a1c, #2a2010);
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 140, 0.45);
+}
+.mm-stapel-bild i:nth-child(1) { left: 0; top: 4px; opacity: 0.55; }
+.mm-stapel-bild i:nth-child(2) { left: 3px; top: 2px; opacity: 0.78; }
+.mm-stapel-bild i:nth-child(3) { left: 6px; top: 0; }
+.mm-stapel em {
+  color: #ffd873;
+  font: 900 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: normal;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+/* Während gemischt wird, pocht der Stapel einmal — von dort kommen die
+   neuen Karten. */
+.mm-stapel[data-mischt] .mm-stapel-bild {
+  animation: mm-stapel-puls 820ms ease-in-out;
+}
+@keyframes mm-stapel-puls {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.28); }
+}
+
+/* Nur für Vorleseprogramme: Was der Stapel bedeutet, steht nicht im Bild. */
+.mm-verborgen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /*
  * Die Polsterung ist Anzeige, nicht Zierde.
  *
@@ -11660,6 +11830,15 @@ main.auth > .muted {
  * flachgelegt.
  */
 .mm-brett[data-warten] { opacity: 0.62; }
+/*
+ * Während gemischt wird, nimmt das Brett keine Tipper an.
+ *
+ * Der Server wiese einen Zug in dieser Zeit ohnehin ab (`Schaupause laeuft`).
+ * Aber die Karten fliegen gerade quer über das Feld, und ein Tipp träfe dann
+ * eine ganz andere als die, auf die gezielt wurde — das sähe nach Fehler aus
+ * und wäre keiner.
+ */
+.mm-brett[data-mischt] { pointer-events: none; }
 
 .mm-karte {
   position: relative;
