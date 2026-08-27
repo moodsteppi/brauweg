@@ -671,6 +671,8 @@ export const api = {
    * im Zustand `waiting`.
    */
   aktiveSpieler: (gameId: string) => request<{ aktiv: number }>(`/games/${gameId}/aktiv`),
+  /** Spieler an Tischen ueber alle Spiele — fuer die Kopfzeile des Homescreens. */
+  aktiveGesamt: () => request<{ aktiv: number }>('/aktiv'),
 
   tables: (gameId: string) => request<TableRow[]>(`/tables?game=${gameId}`),
   createTable: (body: {

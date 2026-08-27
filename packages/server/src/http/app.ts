@@ -1350,6 +1350,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ aktiv: zeile?.anzahl ?? 0 });
   });
 
+  /**
+   * Dasselbe ueber ALLE Spiele — fuer die Kopfzeile des Homescreens.
+   * `distinct` zaehlt jeden Menschen einmal, auch wenn er (Wartetisch plus
+   * laufende Partie) auf zwei Plaetzen sitzt.
+   */
+  app.get('/api/aktiv', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (_request, reply) => {
+    const [zeile] = await deps.db
+      .select({ anzahl: sql<number>`count(distinct ${s.tableSeat.accountId})::int` })
+      .from(s.tableSeat)
+      .innerJoin(s.gameTable, eq(s.tableSeat.tableId, s.gameTable.id))
+      .where(
+        and(
+          sql`${s.gameTable.status} in ('waiting','running')`,
+          sql`${s.tableSeat.accountId} is not null`,
+        ),
+      );
+    return reply.send({ aktiv: zeile?.anzahl ?? 0 });
+  });
+
   /** Vorbelegung fuer den Regelsatz-Editor. Der Inhalt kommt aus dem Modul. */
   app.get('/api/games/:gameId/defaults', async (request, reply) => {
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);

@@ -555,6 +555,11 @@ test('der Aktiv-Zaehler sieht auch laufende Partien - die Tischliste tut das nic
   const anderes = await app.inject({ method: 'GET', url: '/api/games/mememory/aktiv' });
   assert.equal(anderes.json().aktiv, 0);
 
+  // Der Gesamtzaehler (Homescreen) sieht beide, ohne nach Spiel zu fragen.
+  const gesamt = await app.inject({ method: 'GET', url: '/api/aktiv' });
+  assert.equal(gesamt.statusCode, 200);
+  assert.equal(gesamt.json().aktiv, 2);
+
   // Verlaesst Anna ihren Tisch, faellt der Zaehler auf den Spielenden zurueck.
   await leaveLobby(c.db, wartend.id, anna.accountId);
   const danach = await app.inject({ method: 'GET', url: '/api/games/doppelkopf/aktiv' });

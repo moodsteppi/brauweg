@@ -3150,6 +3150,33 @@ td {
   border: 1px solid rgba(226, 182, 79, 0.45);
 }
 
+/*
+ * Spieler gerade online — gruener Punkt statt Icon: Die Zeile ist mit vier
+ * Pillen auf einem Hochkant-Handy eng, ein Punkt braucht keine Iconbreite.
+ * Der Punkt pulst leicht, damit "lebt gerade" ablesbar ist, ohne zu blinken.
+ */
+.front-online {
+  color: #9fe8bf;
+  border: 1px solid rgba(120, 210, 165, 0.45);
+  padding-right: 0.55rem;
+}
+.front-online-punkt {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b8f5d3, #4ecb86 70%);
+  box-shadow: 0 0 6px rgba(78, 203, 134, 0.8);
+  animation: front-online-atmen 2.6s ease-in-out infinite;
+  flex: 0 0 auto;
+}
+@keyframes front-online-atmen {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .front-online-punkt { animation: none; }
+}
+
 .front-waehrung--vip {
   color: var(--lila);
   border: 1px solid rgba(166, 120, 242, 0.45);

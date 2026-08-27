@@ -151,6 +151,33 @@ export function GameSelect({
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
+   * Wie viele Menschen gerade an irgendeinem Tisch sitzen — die Zahl oben
+   * rechts. null, solange sie nie geladen wurde: Dann bleibt die Pille weg,
+   * eine geratene 0 saehe nach leerer Plattform aus, obwohl nur der Abruf
+   * scheiterte.
+   */
+  const [online, setOnline] = useState<number | null>(null);
+  useEffect(() => {
+    let lebt = true;
+    const hole = (): void => {
+      void api
+        .aktiveGesamt()
+        .then((antwort) => {
+          if (lebt) setOnline(antwort.aktiv);
+        })
+        .catch(() => {
+          /* Beiwerk. Ein Fehlversuch laesst die letzte Zahl stehen. */
+        });
+    };
+    hole();
+    const takt = window.setInterval(hole, 15000);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, []);
+
+  /**
    * Zwischen den Tabs wird gezogen, nicht nur getippt.
    *
    * Beim waagerechten Ziehen folgt der Inhalt dem Finger, und die Nachbarseite
@@ -400,6 +427,18 @@ export function GameSelect({
           {me.stage === 'production' && me.entitlements.staff && (
             <span className="front-stufe" title="Testkonto, hier wird nichts gewertet">
               Test
+            </span>
+          )}
+          {/* Oben rechts zuerst: wie viele gerade an Tischen sitzen. Nur wenn
+              die Zahl je geladen wurde — siehe Kommentar am Zustand. */}
+          {online !== null && (
+            <span
+              className="front-waehrung front-online"
+              aria-label={`${online} Spieler gerade online`}
+              title="Spieler gerade an Tischen"
+            >
+              <span className="front-online-punkt" aria-hidden="true" />
+              {kompakteZahl(online)}
             </span>
           )}
           <span className="front-waehrung front-waehrung--cups">
