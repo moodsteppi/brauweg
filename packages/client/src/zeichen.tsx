@@ -106,3 +106,50 @@ export function Note({ doppelt = false }: { doppelt?: boolean }): React.JSX.Elem
     </svg>
   );
 }
+
+/**
+ * Haus — das Hauptmenue.
+ *
+ * Dach als Dreieck, Wand als Rechteck darunter, beide um x = 12 gebaut. Die
+ * Zeichnung sitzt von y 3,5 bis 20,5, ihre Mitte also auf 12.
+ */
+export function Haus(): React.JSX.Element {
+  return (
+    <svg className="zeichen zeichen-haus" viewBox="0 0 24 24" aria-hidden="true">
+      {/*
+        * Haus und Tuer in EINEM Pfad, mit `evenodd`: Der zweite Zug laeuft
+        * innerhalb des ersten und wird dadurch zum Loch. Ein dunkles Rechteck
+        * an derselben Stelle waere nur auf einem bekannten Untergrund
+        * richtig — hier liegt aber mal ein goldenes Feld dahinter und mal
+        * keines, je nachdem, auf welcher Seite man steht.
+        */}
+      <path
+        d="M12 3.2 2.6 11.2h2.6v9.6h13.6v-9.6h2.6zM9.9 14.4h4.2v6.4H9.9z"
+        fill="currentColor"
+        fillRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Winkel — ein `‹` oder `›` als Pfad.
+ *
+ * Zeigt an, dass es in diese Richtung weitergeht. Der Knick liegt auf x = 12
+ * und die Enden auf y 5,5 und 18,5; damit sitzt die Zeichnung mittig, obwohl
+ * sie fuer sich genommen unsymmetrisch aussieht.
+ */
+export function Winkel({ nach }: { nach: 'links' | 'rechts' }): React.JSX.Element {
+  return (
+    <svg className="zeichen zeichen-winkel" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d={nach === 'links' ? 'M15.2 5.5 8.8 12l6.4 6.5' : 'M8.8 5.5 15.2 12l-6.4 6.5'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

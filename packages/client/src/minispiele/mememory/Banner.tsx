@@ -3,23 +3,26 @@
  *
  * Bis zum 27. August lag dort ein gemaltes Stillleben: eine Pinnwand voller
  * erfundener Tierkarten. Das sah nach Mememory aus, zeigte aber nichts, was
- * es im Spiel wirklich gibt. Jetzt haengen dort Bilder aus dem
- * Vorschlagskasten — dieselben, die im Spiel auf den Karten liegen.
+ * es im Spiel wirklich gibt. Jetzt haengen dort genau die Motive, die eine
+ * Partie auf die Karten legt.
  *
- * **Nur hochgeladene, ausdruecklich keine Grundmotive.** Die 88 aus dem
- * Katalog sind gezeichnet und gerechnet; das Banner soll zeigen, was die
- * Leute selbst eingeschickt haben. Deshalb kommt hier `hochgeladen` zum
- * Einsatz und nicht `grund`.
+ * **Gezogen wird aus dem ganzen Topf, der im Spiel liegt** — dem festen
+ * Katalog UND den freigegebenen Einsendungen. Das ist die Auskunft, die das
+ * Banner geben soll: So sieht dieses Spiel aus. Ein Banner nur aus
+ * Einsendungen war der erste Anlauf und ging am Ziel vorbei: Solange kaum
+ * jemand etwas eingereicht hat, zeigte es dieselben zwei Bilder oder fiel
+ * ganz auf das gemalte Stillleben zurueck — also auf alles ausser den
+ * Memes, um die es geht.
  *
  * **Und keine neue Datei.** Der Untergrund ist die rote Tischdecke aus dem
  * Spiel (`decke-rot.webp`, 19 kB, laedt am Tisch ohnehin), die Karten sind
- * die Motive selbst. Ein bestelltes Bild waere hier auch gar nicht moeglich:
- * Was darauf liegt, steht erst fest, wenn jemand etwas einreicht.
+ * die Motive selbst. Ein bestelltes Bild koennte das gar nicht leisten: Der
+ * Topf waechst mit jedem freigegebenen Vorschlag, ein gemaltes Banner nicht.
  *
- * **Faellt der Abruf aus oder ist noch nichts eingereicht, bleibt es beim
- * gemalten Banner.** Eine leere rote Flaeche sieht nach Fehler aus, das
- * Stillleben nach Absicht — dieselbe Regel wie ueberall in diesem Haus: kein
- * `<img>` auf etwas, das es noch nicht gibt.
+ * **Faellt der Abruf aus, bleibt es beim gemalten Banner.** Eine leere rote
+ * Flaeche sieht nach Fehler aus, das Stillleben nach Absicht — dieselbe
+ * Regel wie ueberall in diesem Haus: kein `<img>` auf etwas, das es gerade
+ * nicht gibt.
  */
 
 import { useEffect, useState } from 'react';
@@ -41,7 +44,7 @@ export function MememoryBanner(): React.JSX.Element {
       .mememoryMotive()
       .then((antwort) => {
         if (!lebt) return;
-        const alle = antwort.hochgeladen ?? [];
+        const alle = [...(antwort.grund ?? []), ...(antwort.hochgeladen ?? [])];
         if (alle.length === 0) return;
         setKarten(waehle(alle, KARTEN));
       })
@@ -98,7 +101,8 @@ export function MememoryBanner(): React.JSX.Element {
  * `anzahl` Stueck herausgreifen, ohne Wiederholung.
  *
  * Gewuerfelt und nicht die ersten: Wer die Spielauswahl aufmacht, soll
- * andere Bilder sehen als beim letzten Mal — das ist der halbe Reiz. Gezogen
+ * andere Bilder sehen als beim letzten Mal — bei ueber neunzig Motiven im
+ * Topf sind das jedes Mal andere fuenf, und das ist der halbe Reiz. Gezogen
  * wird einmal beim Laden und nicht beim Zeichnen, sonst sprangen die Karten
  * bei jedem Neuzeichnen des Hubs.
  */
