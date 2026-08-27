@@ -75,6 +75,8 @@ export interface TableConnection<V = GameView> {
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
+  /** Sofort mit den Anwesenden starten (mindestens zwei); leere Plätze fallen weg. */
+  startNow(): void;
   /** Spielstärke der Bots dieses Tisches setzen (gilt für alle Bots). */
   setBotLevel(level: BotLevel): void;
   /**
@@ -589,6 +591,13 @@ export function useTable<V = GameView>(
   const addBot = useCallback((seat: number) => command('addBot', seat), [command]);
   const removeBot = useCallback((seat: number) => command('removeBot', seat), [command]);
 
+  /** Sofort starten: Tisch schrumpft serverseitig auf die besetzten Plaetze. */
+  const startNow = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+    socket.send(JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'startNow', tableId }));
+  }, [tableId, gameId]);
+
   const setBotLevel = useCallback(
     (level: BotLevel) => {
       const socket = socketRef.current;
@@ -612,6 +621,7 @@ export function useTable<V = GameView>(
     sendEmote,
     addBot,
     removeBot,
+    startNow,
     setBotLevel,
     sendTakt,
     sendeReaktion,

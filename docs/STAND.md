@@ -15,8 +15,8 @@ Minuten live.
 
 **Prüfstand (gezählt am 27. August 2026 abends, nicht aus der Erinnerung):**
 161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 63 Mememory-Tests, 63 Easy-Poker-Tests, **328 Servertests**
-— zusammen 873, alle grün. `tsc --noEmit` sauber.
+15 Feldherr-Tests, 63 Mememory-Tests, 63 Easy-Poker-Tests, **335 Servertests**
+— zusammen 880, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
@@ -243,6 +243,45 @@ Minuten live.
 > im Spiel blitzt „Gesammelt" unter dem Namen auf. **Ein Meme je Sekunde**
 > statt vier: Emojis bleiben bei vier, ein Bild quer über das Brett bekommt
 > einen eigenen Deckel (Client und Gateway).
+
+> **Die Tür ist auf (27. August 2026, abends, auf `staging`).** Drei Dinge
+> für die Öffnung von `main`:
+>
+> 1. **Registrierung ohne Einladungscode.** `inviteCode` ist überall optional
+>    (Schema, Service, Client); ein EINGEGEBENER Code wird weiter geprüft und
+>    verbraucht — ein Tippfehler soll ein Fehler bleiben, kein stilles
+>    Ignorieren. Der Beta-Clan-Beitritt gilt weiterhin für jedes neue Konto.
+> 2. **Anmelden mit Google.** Neue Spalte `account.google_sub` (Migration
+>    `0022`), `POST /api/auth/google` prüft das ID-Token über Googles
+>    tokeninfo-Endpunkt (`aud` gegen die eigene Client-ID — DAS ist die
+>    Sicherung, nicht die Signatur allein). Zuordnung: erst `sub`, dann
+>    bestätigte E-Mail (verknüpft), sonst neues Konto ohne Passwort und ohne
+>    Bestätigungsmail. **Der Knopf erscheint nur, wenn der Server über
+>    `GET /api/auth/google/config` eine Client-ID nennt** — sie kommt aus der
+>    Railway-Variablen `GOOGLE_CLIENT_ID` und ist bewusst KEINE
+>    Build-Variable. Achtung CSP: `accounts.google.com` steht jetzt in
+>    `script-src`, `frame-src`, `style-src`, `connect-src` — auf dem
+>    Vite-Entwicklungsserver fällt ein Fehler dort nie auf (keine
+>    Richtlinie), dieselbe Falle wie beim Runner-Worker. **Offen:** Google-
+>    Konten haben keinen Geburtstag (Spalte bleibt null, die 16-Jahre-Frage
+>    stellt sich dort nicht), und die Client-ID muss in der Google Cloud
+>    Console angelegt und auf Railway gesetzt werden, sonst bleibt der Knopf
+>    einfach weg.
+> 3. **Poker: Start ab zwei Spielern.** Neue Nachricht `startNow` →
+>    `schrumpfeAufBesetzte` (tables/service): leere, nicht mit Bots belegte
+>    Plätze fallen weg, die restlichen rücken lückenlos auf 0..n-1 auf, die
+>    Rundenzahl geht aufs nächste Vielfache der Rotationsgröße, danach
+>    startet `ensureStarted` wie immer. Im Wartebereich steht der Knopf
+>    „Jetzt starten" ab zwei Anwesenden. Dazu der Tisch neu sortiert: Gegner
+>    in ZWEI REIHEN (drei oben, zwei darunter an den Kanten) statt auf 38 %
+>    Höhe — dort lagen sie auf den Brettkarten, auf 375 px bleiben neben fünf
+>    Karten keine 96 px je Seite. Einsatz-Pille auf −24 px (bei −8 verdeckte
+>    sie die Jetonzahl), Geber-Marke bricht um statt über die Sitzkante zu
+>    ragen. Geprüft am Gerät 375×812 mit 2, 3 und 6 Sitzen und zwei echten
+>    Konten (Wartebereich → „Jetzt starten" → Partie zu zweit). **Merke beim
+>    Prüfen im Sitzungsbrowser: Ein VERDECKTER Tab pausiert CSS-Animationen —
+>    halb transparente, versetzt hängende Karten sind dann kein Fehler,
+>    sondern die eingefrorene Austeil-Animation.**
 
 > **Poker ist neu auf `staging` (25. August 2026), noch nicht in der
 > Produktion.** Texas Hold'em zu zweit bis sechst, für ein Hochkant-Handy

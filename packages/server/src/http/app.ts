@@ -31,6 +31,7 @@ import {
   type AuthDeps,
   anonymizeAccount,
   login,
+  loginMitGoogle,
   logout,
   register,
   requestPasswordReset,
@@ -39,6 +40,7 @@ import {
   sessionFromToken,
   verifyEmail,
 } from '../auth/service.js';
+import { pruefeGoogleToken } from '../auth/google.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
@@ -174,6 +176,11 @@ export interface AppDeps {
    * eingerichtet ist und man trotzdem an die Daten muss.
    */
   readonly diagnoseSchluessel?: string | null;
+  /**
+   * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Fehlt
+   * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
+   */
+  readonly googleClientId?: string | null;
 }
 
 const gameIdSchema = z.enum([
@@ -201,7 +208,8 @@ const registerSchema = z.object({
   // Zeichenklassen-Zwang ist die heute empfohlene Vorgabe.
   password: z.string().min(12).max(200),
   displayName: z.string().min(2).max(30),
-  inviteCode: z.string().min(1),
+  /** Seit der Oeffnung optional; ein mitgeschickter Code wird weiter geprueft. */
+  inviteCode: z.string().min(1).optional(),
   /** Kalendertag YYYY-MM-DD — Mindestalter prueft der Auth-Service. */
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -276,8 +284,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        /**
+         * accounts.google.com ist fuer "Mit Google anmelden" (GIS-Knopf):
+         * Das Skript kommt von dort, der Knopf selbst ist ein iframe
+         * derselben Herkunft, und die Bibliothek funkt dorthin. Ohne die
+         * drei Eintraege laedt der Knopf auf Produktion nicht — auf dem
+         * Entwicklungsserver faellt das nie auf, Vite setzt keine
+         * Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         */
+        scriptSrc: ["'self'", 'https://accounts.google.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
+        frameSrc: ['https://accounts.google.com'],
         /**
          * `blob:` ist fuer die 3D-Figur noetig, und der Fehler war teuer zu
          * finden: Die Texturen stecken als JPEG **im** GLB. Der Lader von
@@ -306,7 +323,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          * Entwicklungsserver faellt das nie auf: Dort liefert Vite aus, und
          * Vite setzt gar keine Inhaltsrichtlinie.
          */
-        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com'],
         /**
          * DER Fehler, der Feldherr auf Produktion strittig gemacht hat —
          * und der in keiner Testfassung auftrat.
@@ -563,6 +580,29 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     setSession(reply, token);
     // Nur die App bekommt das Token in die Hand, und nur, weil ihre Herkunft
     // sich nicht faelschen laesst. Siehe APP_ORIGIN.
+    if (request.headers.origin === APP_ORIGIN) {
+      return reply.send({ ok: true, accountId, token });
+    }
+    return reply.send({ ok: true, accountId });
+  });
+
+  /**
+   * Ob "Mit Google anmelden" moeglich ist, entscheidet allein der Server —
+   * der Client fragt hier VOR der Anmeldung nach. Bewusst ein eigener kleiner
+   * Endpunkt statt einer Build-Variablen: Die Client-ID haengt an der
+   * Umgebung, nicht am gebauten Buendel.
+   */
+  app.get('/api/auth/google/config', async (_request, reply) => {
+    return reply.send({ clientId: deps.googleClientId ?? null });
+  });
+
+  app.post('/api/auth/google', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    if (!deps.googleClientId) throw badRequest('googleLoginDisabled');
+    const { credential } = z.object({ credential: z.string().min(1) }).parse(request.body);
+    const profil = await pruefeGoogleToken(credential, deps.googleClientId);
+    const { token, accountId } = await loginMitGoogle(deps.auth, profil);
+    setSession(reply, token);
+    // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
     if (request.headers.origin === APP_ORIGIN) {
       return reply.send({ ok: true, accountId, token });
     }
@@ -1308,6 +1348,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .where(
         and(
           eq(s.gameTable.gameId, gameId),
+          sql`${s.gameTable.status} in ('waiting','running')`,
+          sql`${s.tableSeat.accountId} is not null`,
+        ),
+      );
+    return reply.send({ aktiv: zeile?.anzahl ?? 0 });
+  });
+
+  /**
+   * Dasselbe ueber ALLE Spiele — fuer die Kopfzeile des Homescreens.
+   * `distinct` zaehlt jeden Menschen einmal, auch wenn er (Wartetisch plus
+   * laufende Partie) auf zwei Plaetzen sitzt.
+   */
+  app.get('/api/aktiv', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (_request, reply) => {
+    const [zeile] = await deps.db
+      .select({ anzahl: sql<number>`count(distinct ${s.tableSeat.accountId})::int` })
+      .from(s.tableSeat)
+      .innerJoin(s.gameTable, eq(s.tableSeat.tableId, s.gameTable.id))
+      .where(
+        and(
           sql`${s.gameTable.status} in ('waiting','running')`,
           sql`${s.tableSeat.accountId} is not null`,
         ),

@@ -104,6 +104,7 @@ async function main(): Promise<void> {
     sessionTtlDays: config.sessionTtlDays,
     stage: config.stage,
     diagnoseSchluessel: config.diagnoseSchluessel,
+    googleClientId: config.googleClientId,
     // In der Entwicklung liefert Vite den Client aus, dann gibt es hier nichts
     // auszuliefern und der Server bleibt reine API.
     clientDir: existsSync(CLIENT_DIR) ? CLIENT_DIR : undefined,

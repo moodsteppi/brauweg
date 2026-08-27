@@ -39,6 +39,11 @@ export interface Config {
    * Standardschluessel waere schlimmer als gar keiner.
    */
   readonly diagnoseSchluessel: string | null;
+  /**
+   * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Ohne sie
+   * gibt es den Knopf nicht; E-Mail+Passwort geht immer.
+   */
+  readonly googleClientId: string | null;
 }
 
 function required(name: string, fallbackInDev?: string): string {
@@ -79,5 +84,6 @@ export function loadConfig(): Config {
       (process.env.DIAGNOSE_SCHLUESSEL ?? '').length >= 20
         ? (process.env.DIAGNOSE_SCHLUESSEL as string)
         : null,
+    googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
   };
 }

@@ -21,6 +21,7 @@ import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
 import {
   isReadyToStart,
+  schrumpfeAufBesetzte,
   setSeatBot,
   setTableBotLevel,
   tableBotLevel,
@@ -161,6 +162,12 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('setBotLevel'),
     tableId: z.string().uuid(),
     level: z.enum(['anfaenger', 'standard', 'experte', 'genie']),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('startNow'),
+    tableId: z.string().uuid(),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -517,6 +524,9 @@ export class Gateway {
         case 'setBotLevel':
           await this.setBotLevel(connection, message.tableId, message.level);
           break;
+        case 'startNow':
+          await this.startNow(connection, message.tableId);
+          break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
       }
@@ -838,6 +848,16 @@ export class Gateway {
     level: BotLevel,
   ): Promise<void> {
     await setTableBotLevel(this.db, tableId, level, connection.accountId);
+    await this.broadcast(tableId);
+  }
+
+  /**
+   * Sofort losspielen, ohne die leeren Plaetze mit Bots zu fuellen: Der Tisch
+   * schrumpft auf die Besetzten, danach startet der uebliche Rundruf die
+   * Partie (nach dem Schrumpfen ist kein Platz mehr frei).
+   */
+  private async startNow(connection: Connection, tableId: string): Promise<void> {
+    await schrumpfeAufBesetzte(this.db, tableId, connection.accountId);
     await this.broadcast(tableId);
   }
 

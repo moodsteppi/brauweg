@@ -541,6 +541,68 @@ export async function setSeatBot(
   await touch(db, tableId);
 }
 
+/**
+ * Schrumpft einen wartenden Tisch auf die besetzten Plaetze, damit die Partie
+ * sofort losgehen kann, ohne die Luecken mit Bots zu fuellen.
+ *
+ * Sind zwei Menschen da, muss niemand auf sechs auffuellen: Die leeren, nicht
+ * mit Bots belegten Plaetze fallen weg, die restlichen ruecken auf 0..n-1 auf
+ * (die Spielmodule zaehlen Sitze lueckenlos), und die Rundenzahl wird auf das
+ * naechste Vielfache der Rotationsgroesse gehoben — dieselbe Regel wie beim
+ * Tischbau. Gestartet wird danach ueber den ueblichen Weg (`isReadyToStart`
+ * ist nach dem Schrumpfen wahr, ensureStarted springt an).
+ */
+export async function schrumpfeAufBesetzte(
+  db: Db,
+  tableId: string,
+  byAccountId: string,
+): Promise<void> {
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+
+  const bleiben = seats.filter((seat) => seat.accountId || seat.isBot);
+  if (bleiben.length < 2) throw conflict('tableNotFull');
+  if (bleiben.length === seats.length) return; // nichts zu schrumpfen — Start uebernimmt ensureStarted
+
+  const module = requireModule(table.gameId);
+  const config = await tableRules(db, tableId);
+  const probleme = module
+    .validateConfig(config, bleiben.length, table.maxRounds)
+    .filter((problem) => problem.severity === 'error' && problem.path === 'seats');
+  if (probleme.length > 0) throw conflict('seatCountUnsupported');
+
+  const rotation = Math.max(1, module.meta.rotationSize(bleiben.length));
+  const runden = Math.ceil(table.maxRounds / rotation) * rotation;
+
+  await db.transaction(async (tx) => {
+    // Erst die Luecken loeschen, dann aufruecken: So ist jeder Zielindex frei,
+    // bevor er vergeben wird, und der eindeutige Index (tableId, seatIndex)
+    // schlaegt nicht zu.
+    await tx
+      .delete(s.tableSeat)
+      .where(
+        and(
+          eq(s.tableSeat.tableId, tableId),
+          isNull(s.tableSeat.accountId),
+          eq(s.tableSeat.isBot, false),
+        ),
+      );
+    for (let ziel = 0; ziel < bleiben.length; ziel++) {
+      const alt = bleiben[ziel]!.seatIndex;
+      if (alt === ziel) continue;
+      await tx
+        .update(s.tableSeat)
+        .set({ seatIndex: ziel })
+        .where(and(eq(s.tableSeat.tableId, tableId), eq(s.tableSeat.seatIndex, alt)));
+    }
+    await tx
+      .update(s.gameTable)
+      .set({ seats: bleiben.length, maxRounds: runden, lastActivityAt: new Date() })
+      .where(eq(s.gameTable.id, tableId));
+  });
+}
+
 /** Gültige Bot-Stufen — Wache gegen Fremdwerte aus der Leitung. */
 const BOT_LEVELS: readonly BotLevel[] = ['anfaenger', 'standard', 'experte', 'genie'];
 

@@ -216,7 +216,9 @@ function gegnerOrte(sitze: readonly number[], ich: number): { sitz: number; ort:
   }
   const layout: Record<number, GegnerOrt[]> = {
     1: ['oben'],
-    2: ['links', 'rechts'],
+    // Zu dritt beide nach oben: zwei einsame Sitze an den Seitenkanten
+    // liessen die Tischmitte oben leer aussehen.
+    2: ['oben-links', 'oben-rechts'],
     3: ['links', 'oben', 'rechts'],
     4: ['links', 'oben-links', 'oben-rechts', 'rechts'],
     5: ['links', 'oben-links', 'oben', 'oben-rechts', 'rechts'],
@@ -320,7 +322,13 @@ function Spielkarte({
   );
 }
 
-/** Die Rueckseite: fremde Handkarten. Dieselbe Groesse, dieselbe Form. */
+/**
+ * Die Rueckseite: fremde Handkarten. Dieselbe Groesse, dieselbe Form.
+ *
+ * Seit der Bildbestellung (docs/ASSETS-POKER-TISCH.md) ein gemaltes Bild
+ * statt der SVG-Andeutung. Die Datei liegt im Repo — die Regel "kein <img>
+ * auf eine Datei, die es noch nicht gibt" ist eingehalten.
+ */
 function Kartenruecken({ verzoegerung }: { verzoegerung?: number }): React.JSX.Element {
   return (
     <span
@@ -328,12 +336,7 @@ function Kartenruecken({ verzoegerung }: { verzoegerung?: number }): React.JSX.E
       style={verzoegerung ? ({ '--poker-ab': `${verzoegerung}ms` } as React.CSSProperties) : undefined}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 100 145" preserveAspectRatio="xMidYMid meet">
-        <rect className="poker-ruecken-grund" x="1.5" y="1.5" width="97" height="142" rx="11" />
-        <rect className="poker-ruecken-rand" x="9" y="9" width="82" height="127" rx="7" />
-        <path className="poker-ruecken-raute" d="M50 42 L72 72 L50 102 L28 72 Z" />
-        <path className="poker-ruecken-raute is-innen" d="M50 57 L62 72 L50 87 L38 72 Z" />
-      </svg>
+      <img src="/poker/kartenruecken.webp" alt="" draggable={false} />
     </span>
   );
 }
@@ -1162,6 +1165,8 @@ export function EasyPoker({
   if (!sicht) {
     const plaetze = tisch.table?.seats ?? [];
     const besetzt = plaetze.filter((platz) => platz.accountId).length;
+    /** Wer beim Sofortstart mitspielt: Menschen und schon gesetzte Bots. */
+    const mitspieler = plaetze.filter((platz) => platz.accountId || platz.isBot).length;
     const frei = plaetze.filter((platz) => !platz.accountId && !platz.isBot);
     const gesamt = plaetze.length || ONLINE_SITZE;
     return (
@@ -1196,6 +1201,18 @@ export function EasyPoker({
             <span />
             <span />
           </div>
+          {/* Ab zwei Menschen muss niemand auf sechs auffuellen: Der Tisch
+              schrumpft serverseitig auf die Besetzten und legt los. */}
+          {tisch.status === 'open' && frei.length > 0 && mitspieler >= 2 && (
+            <button
+              className="poker-hauptknopf"
+              type="button"
+              onClick={() => tisch.startNow()}
+            >
+              <span>Jetzt starten</span>
+              <em>zu {mitspieler} · ohne Auffüllen</em>
+            </button>
+          )}
           {tisch.status === 'open' && frei.length > 0 && (
             <button
               className="poker-zweitknopf"
