@@ -12786,9 +12786,14 @@ span.hub-angebot-art.poker-jeton-stapel {
   position: absolute;
   inset: 0 2px;
   border-radius: 44% / 20%;
+  /* Unterste Lage ist seit der Bildbestellung ein gemalter Filz mit echtem
+     Korn (cover, EIN Bild, kein Kachelmuster — keine Naht moeglich). Die
+     Lichtkegel darueber bleiben CSS, und faellt das Bild aus, steht darunter
+     weiter der alte Verlauf. */
   background:
     radial-gradient(78% 40% at 50% 28%, rgba(126, 214, 170, 0.2), rgba(0, 0, 0, 0) 70%),
     radial-gradient(125% 80% at 50% 118%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 62%),
+    url(/poker/filz.webp) center / cover no-repeat,
     linear-gradient(180deg, #17402f 0%, var(--poker-filz) 46%, var(--poker-filz-tief) 100%);
   /* Zwei Ringe sind die Holzkante: heller Rand, dunkle Fuge. */
   box-shadow:
@@ -12875,10 +12880,12 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 0.78em;
   height: 0.78em;
   border-radius: 50%;
+  /* Seit der Bildbestellung ein gemalter Jeton; der alte CSS-Verlauf bleibt
+     als Unterlage stehen, bis das Bild geladen ist — so gibt es nie einen
+     leeren Kreis. */
   background:
-    radial-gradient(circle at 50% 50%, transparent 58%, rgba(255, 246, 208, 0.9) 59% 64%, transparent 65%),
+    url(/poker/jeton.webp) center / contain no-repeat,
     radial-gradient(circle at 35% 30%, #ffe8a8, #d8a63c 62%, #a97d24);
-  box-shadow: inset 0 0 0 0.11em rgba(168, 118, 28, 0.55);
   flex: 0 0 auto;
 }
 
@@ -13281,10 +13288,15 @@ span.hub-angebot-art.poker-jeton-stapel {
  * Sie ist damit die einzige Fläche am Tisch, die dieselbe Farbe hat wie der
  * „Bet"-Knopf — was zusammengehört, sieht auch gleich aus.
  */
-.poker-ruecken-grund { fill: #1f6b4d; stroke: rgba(0, 0, 0, 0.3); stroke-width: 1.5; }
-.poker-ruecken-rand { fill: none; stroke: rgba(226, 182, 79, 0.45); stroke-width: 1.6; }
-.poker-ruecken-raute { fill: rgba(226, 182, 79, 0.22); }
-.poker-ruecken-raute.is-innen { fill: rgba(226, 182, 79, 0.5); }
+.poker-karte.is-ruecken img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Dieselbe Rundung wie die Vorderseite — das Bild selbst ist eckig,
+     die Form macht wie bei den Vorderseiten der Container. */
+  border-radius: calc(var(--poker-kb, 60px) * 0.11);
+}
 
 .poker-karte.is-leer {
   filter: none;
@@ -13351,6 +13363,12 @@ span.hub-angebot-art.poker-jeton-stapel {
   background: linear-gradient(0deg, rgba(6, 14, 10, 0.9), rgba(6, 14, 10, 0));
 }
 
+/*
+ * Die vier Knoepfe sind gemalte Platten (docs/ASSETS-POKER-TISCH.md), per
+ * border-image auf jede Breite gezogen. Der Rahmen der Platten ist 30 px —
+ * genau das ist das Schnittmass, und es ist bei allen vier gleich, sonst
+ * wird die Reihe eine Treppe (die Lehre aus ASSETS-KNOEPFE.md).
+ */
 .poker-aktion {
   min-height: 58px;
   padding: 8px 4px;
@@ -13359,15 +13377,17 @@ span.hub-angebot-art.poker-jeton-stapel {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border: 0;
-  border-radius: 14px;
+  border: 11px solid transparent;
+  border-image: url(/poker/knopf-check.webp) 30 fill / 11px stretch;
+  border-radius: 0;
   color: #06120d;
-  background: #33413b;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+  background: none;
   cursor: pointer;
-  transition: transform 110ms ease, box-shadow 110ms ease, filter 180ms ease,
-    background 180ms ease;
+  transition: transform 110ms ease, filter 180ms ease;
 }
+.poker-aktion[data-art='fold'] { border-image-source: url(/poker/knopf-fold.webp); color: #fff3f1; }
+.poker-aktion[data-art='call'] { border-image-source: url(/poker/knopf-call.webp); color: #eaf2fc; }
+.poker-aktion[data-art='bet'] { border-image-source: url(/poker/knopf-bet.webp); color: #eefaf2; }
 .poker-aktion-wort {
   font: 800 clamp(12px, 3.7vw, 15px)/1 system-ui;
   letter-spacing: 0.01em;
@@ -13379,46 +13399,22 @@ span.hub-angebot-art.poker-jeton-stapel {
   opacity: 0.72;
 }
 
-/* Nicht möglich: blass, ohne Druckpunkt — aber es steht noch da. */
+/*
+ * Nicht möglich: die Platte bleibt stehen (der Daumen lernt Orte, keine
+ * wechselnde Reihe), aber sie wird dunkel und farblos. Die Schrift bleibt
+ * hell — auf der abgedunkelten Platte ist das lesbarer als das alte
+ * Graugrün auf Dunkelgrün.
+ */
 .poker-aktion[aria-disabled] {
-  /* Blass, aber lesbar: gemessen 5,2 zu 1 gegen den Knopfgrund. Bei #7b8f86
-     waren es 4,2 — unter der Grenze, ab der eine 15-px-Schrift auf einem
-     Handy im Sonnenlicht noch sicher zu lesen ist. */
-  color: #8ea298;
-  background: #222c28;
-  box-shadow: none;
-  filter: none;
+  filter: saturate(0.2) brightness(0.5);
+  /* Die Schriftfarbe bleibt die der Platte: Sie dunkelt mit dem filter mit,
+     das Verhaeltnis Schrift zu Grund aendert sich dadurch kaum. */
   cursor: default;
 }
 
-/*
- * Rot heisst „Vorsicht" (DESIGN.md) — und muss trotzdem lesbar sein.
- *
- * Der erste Anlauf hatte dunkle Schrift auf hellem Rot: gemessen 3,3 zu 1 und
- * damit unter der Grenze. Jetzt helle Schrift auf gedaempftem Rot, 4,9 zu 1
- * am hellen Ende des Verlaufs.
- */
-.poker-aktion[data-moeglich][data-art='fold'] {
-  background: linear-gradient(180deg, #b85146, #8f342b);
-  box-shadow: 0 4px 0 #6a231c;
-  color: #fff3f1;
-}
-.poker-aktion[data-moeglich][data-art='check'] {
-  background: linear-gradient(180deg, #dfe8e3, #b7c6bf);
-  box-shadow: 0 4px 0 #7c8a84;
-}
-.poker-aktion[data-moeglich][data-art='call'] {
-  background: linear-gradient(180deg, #79b3f5, #4d8ad9);
-  box-shadow: 0 4px 0 #35618f;
-  color: #06152a;
-}
-.poker-aktion[data-moeglich][data-art='bet'] {
-  background: linear-gradient(180deg, #63bd93, #3f8a68);
-  box-shadow: 0 4px 0 #2a5f47;
-}
 .poker-aktion[data-moeglich]:active {
   transform: translateY(3px);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  filter: brightness(0.92);
 }
 
 /* Wenn ich dran bin, hebt sich die ganze Leiste einmal kurz an. Das ist die
