@@ -1,0 +1,8 @@
+# Maschinell erzeugte Artefakte des Feldherr-Baus (Quelle:
+# packages/game-feldherr/quelle/teile/, Bau: node
+# packages/game-feldherr/werkzeug/bauen.mjs). linguist-generated faltet sie
+# in Review-Diffs zusammen — niemand soll 250-kB-Bauprodukte lesen oder
+# kommentieren. kern.d.ts fehlt hier bewusst: Die Typbeschreibung ist von
+# Hand gepflegt, nicht gebaut.
+packages/client/src/minispiele/feldherr/kern.js linguist-generated=true
+packages/game-feldherr/quelle/feldherr.html linguist-generated=true

@@ -1,3 +1,9 @@
+/**
+ * @generated MASCHINELL ERZEUGT — NICHT LESEN, NICHT VON HAND AENDERN.
+ * Quelle:  packages/game-feldherr/quelle/teile/
+ * Bau:     node packages/game-feldherr/werkzeug/bauen.mjs
+ * Der naechste Bau ueberschreibt diese Datei vollstaendig.
+ */
 "use strict";
 /* ============================================================
    FELDHERR — Teil 0: Karten und Charaktere
@@ -251,11 +257,9 @@ function charakterBlatt(id){
   };
 }
 /**
- * Feldherr — Spielkern des Clients.
- *
- * MASCHINELL ERZEUGT aus den Modulen unter packages/game-feldherr/quelle/
- * teile/ durch packages/game-feldherr/werkzeug/bauen.mjs.
- * Nicht von Hand aendern — die Teile anpassen und neu bauen.
+ * Feldherr — Spielkern des Clients. (Der ERZEUGT-Banner steht nicht mehr
+ * hier, sondern als allererste Zeilen des Artefakts — der Bauer setzt ihn
+ * selbst davor, damit ihn niemand erst hinter dem Kartenkatalog findet.)
  *
  * Der Kern zeichnet auf eine Leinwand und findet seine Teile ueber
  * getElementById. Er kennt kein React und soll es nicht kennen: Er muss auf
