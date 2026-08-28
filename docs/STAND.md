@@ -13,11 +13,15 @@ spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 27. August 2026 auf diesem Zweig, nicht aus der
+**Prüfstand (gezählt am 28. August 2026 auf diesem Zweig, nicht aus der
 Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-44 Skat-Tests, 15 Feldherr-Tests, 69 Mememory-Tests, **334 Servertests**
-— zusammen 820, alle grün. `tsc --noEmit` sauber.
+44 Skat-Tests, 15 Feldherr-Tests, 71 Mememory-Tests, **337 Servertests**
+— zusammen 825, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
+
+> Auf `staging` sind es 904: Dort liegen zusätzlich Easy Poker, die offene
+> Registrierung mit Google-Anmeldung und die gleichzeitige
+> Vorbehaltsabfrage. Dieser Zweig trägt bewusst nur die Mememory-Arbeit.
 
 > **Die Migration `0023_mememory_zufallsgurt` trägt auf `main` einen
 > anderen Zeitstempel als auf `staging`** (1787050000000 statt
@@ -30,6 +34,12 @@ Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
 > aus, die Spalten fehlten. Beim großen Merge kommt der staging-Wert nach,
 > und die Migration läuft einmal erneut — sie ist `IF NOT EXISTS` und damit
 > wiederholbar.
+>
+> **Am 28. August dasselbe noch einmal:** `0024_mememory_ton` steht hier mit
+> `when` 1787060000000 (auf `staging`: 1787400000000), also ebenfalls
+> zwischen 0023 und den beiden Nummern, die diesem Zweig fehlen. Das ist
+> kein Einzelfall, sondern die Regel, solange `main` Lücken im Journal hat:
+> **Jede Einzelübernahme muss den Zeitstempel ihrer Migration anfassen.**
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
 > wird abgewiesen, ohne den Tisch zu beschaedigen" fällt unter der Last des
