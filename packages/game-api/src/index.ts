@@ -368,3 +368,9 @@ export interface GameRegistry {
   /** Nur spielbare Module. Vorschau-Spiele haben keins. */
   get(id: GameId): AnyGameModule | undefined;
 }
+
+// ---------------------------------------------------------------------------
+// Gemeinsame Adapter-Helfer
+// ---------------------------------------------------------------------------
+
+export { pruefeSnapshotVersion, shapeProblems, snapshotCodec } from './helfer.js';
