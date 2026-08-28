@@ -30,7 +30,10 @@ Minuten live.
 > 1787050000000 nach `main` (statt 1787300000000), also VOR
 > `0021_bro_jetons` und `0022_google_login`, die dort noch fehlen. Beim
 > großen Merge holt `main` den staging-Wert nach und die Migration läuft
-> einmal erneut — sie ist `IF NOT EXISTS` und damit wiederholbar.
+> einmal erneut — sie ist `IF NOT EXISTS` und damit wiederholbar. Am
+> 28. August dasselbe mit `0024_mememory_ton`: hier 1787400000000, auf
+> `main` 1787060000000. Es ist kein Einzelfall, sondern die Regel, solange
+> `main` Lücken im Journal hat.
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
 > wird abgewiesen, ohne den Tisch zu beschaedigen" fällt unter der Last des
