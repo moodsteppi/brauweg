@@ -2224,17 +2224,35 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .from(s.account)
         .where(eq(s.account.id, accountId));
 
+      /*
+       * Der Titel kommt aus der Beschreibung, NICHT aus der Seite: Dieser
+       * Client ist eine Einzelseiten-Anwendung ohne Router, `seite` ist
+       * praktisch immer "/". Ein Board voller Karten namens "Feedback: /"
+       * waere unbrauchbar. Die Seite steht weiter im Rumpf.
+       */
+      const ersteZeile = body.beschreibung.split('\n')[0]!.trim();
+      const titel = ersteZeile.length > 80 ? `${ersteZeile.slice(0, 77)}…` : ersteZeile;
+
       const formular = new FormData();
-      formular.set('titel', `Feedback: ${body.seite}`);
-      formular.set(
-        'beschreibung',
-        `${body.beschreibung}\n\nSeite: ${body.seite}\nNutzer: ${konto?.displayName ?? accountId}`,
-      );
+      formular.set('titel', titel);
+      formular.set('beschreibung', `${body.beschreibung}\n\nSeite: ${body.seite}`);
+      formular.set('melder', konto?.displayName ?? accountId);
+      // Der Zielserver bedient mehrere Mandanten; ohne Angabe naehme er den
+      // aeltesten. Brauweg gehoert zu Broweg selbst.
+      formular.set('mandant', 'broweg');
+      formular.set('art', 'BUG');
       if (body.screenshot) {
         const passung = /^data:(image\/[a-z0-9+.-]+);base64,(.+)$/i.exec(body.screenshot);
         if (passung) {
           const [, mimeType, base64] = passung;
-          formular.set('bild', new Blob([Buffer.from(base64, 'base64')], { type: mimeType }), 'screenshot.png');
+          // Feldname `bilder`: die Gegenstelle nimmt bis zu fuenf Bilder
+          // entgegen (upload.array), auch wenn hier immer genau eines kommt.
+          const endung = mimeType === 'image/png' ? 'png' : 'jpg';
+          formular.set(
+            'bilder',
+            new Blob([Buffer.from(base64, 'base64')], { type: mimeType }),
+            `screenshot.${endung}`,
+          );
         }
       }
 

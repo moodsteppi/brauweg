@@ -46,12 +46,13 @@ export interface Config {
   readonly googleClientId: string | null;
   /**
    * Ziel-URL fuer das Feedback-Widget (nur Staging, siehe FeedbackWidget.tsx
-   * im Client): `.../extern/issues` auf dem internen bro-server. Fehlt sie,
-   * meldet der Feedback-Endpunkt einen Fehler statt still zu verwerfen — ein
-   * abgeschicktes Feedback soll nie unbemerkt verschwinden.
+   * im Client): `https://server.broweg.de/rueckmeldung`, der Eingang des
+   * Broweg-Issueboards. Fehlt sie, meldet der Feedback-Endpunkt einen Fehler
+   * statt still zu verwerfen — ein abgeschicktes Feedback soll nie unbemerkt
+   * verschwinden.
    */
   readonly feedbackZielUrl: string | null;
-  /** `Authorization: Bearer …` fuer obige URL, ein bromcp-Schluessel des bro-server. */
+  /** `Authorization: Bearer …` fuer obige URL — dort `FEEDBACK_SCHLUESSEL`. */
   readonly feedbackZielToken: string | null;
 }
 
