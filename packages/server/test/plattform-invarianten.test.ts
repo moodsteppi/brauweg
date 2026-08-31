@@ -32,6 +32,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 import type { AnyGameModule } from '@brauweg/game-api';
 
@@ -166,6 +169,96 @@ const spielbare = registry
   .filter((meta) => meta.availability === 'playable')
   .map((meta) => modulVon(meta.id))
   .filter((m): m is Modul => m !== null);
+
+/*
+ * Das Wörterbuch des Clients — als Text gelesen, nicht importiert.
+ *
+ * Der Server hängt nicht am Client und soll es nicht; geprüft wird hier aber
+ * genau die Fuge zwischen beiden: Module liefern ausschließlich Schlüssel,
+ * sichtbaren Text macht erst der Client. Fehlt ein Eintrag, gibt `t()` den
+ * Schlüssel zurück — und im Regelsatz-Editor steht wörtlich
+ * "ruleset.blindZuKlein" am Feld. Genau so war es bei den vier jüngeren
+ * Spielen (Poker, Filler, Mememory, Feldherr): 16 Meldungen fehlten, während
+ * die 15 der älteren gepflegt waren. Kein Bauwerkzeug hätte das gemeldet,
+ * denn beide Seiten sind für sich genommen fehlerfrei.
+ */
+const WOERTERBUCH = (() => {
+  const hier = dirname(fileURLToPath(import.meta.url));
+  // Der Test läuft aus dist/test/, die Quelle liegt vier Ebenen höher.
+  const pfad = join(hier, '..', '..', '..', 'client', 'src', 'i18n.ts');
+  const text = readFileSync(pfad, 'utf8');
+  const schluessel = new Set<string>();
+  for (const treffer of text.matchAll(/^\s*'([^']+)':\s*['"`]/gm)) schluessel.add(treffer[1]!);
+  return schluessel;
+})();
+
+test('das Wörterbuch des Clients ist überhaupt lesbar', () => {
+  assert.ok(
+    WOERTERBUCH.size > 100,
+    `nur ${WOERTERBUCH.size} Schlüssel gefunden — vermutlich hat sich der Pfad oder das Format geändert`,
+  );
+});
+
+for (const spiel of registry
+  .all()
+  .filter((meta) => meta.availability === 'playable')
+  .map((meta) => modulVon(meta.id))
+  .filter((m): m is Modul => m !== null)) {
+  test(`${spiel.meta.id}: jede Regelsatz-Meldung hat einen Text im Wörterbuch`, () => {
+    const gemeldet = new Set<string>();
+
+    /*
+     * Die Schlüssel kommen aus dem Verhalten, nicht aus dem Quelltext: Das
+     * Modul bekommt absichtlich Unsinn und muss ihn abweisen — genau dafür
+     * nimmt `validateConfig` `unknown` entgegen. So findet die Prüfung auch
+     * Meldungen, die erst bei kaputten Eingaben entstehen.
+     */
+    const unsinn: unknown[] = [
+      {},
+      null,
+      42,
+      'kaputt',
+      [],
+      { ...(spiel.defaultConfig() as Record<string, unknown>), tableSize: 99 },
+      { ...(spiel.defaultConfig() as Record<string, unknown>), rounds: -1 },
+      Object.fromEntries(
+        Object.entries(spiel.defaultConfig() as Record<string, unknown>).map(([k, v]) => [
+          k,
+          typeof v === 'number' ? -1 : typeof v === 'boolean' ? !v : v,
+        ]),
+      ),
+      Object.fromEntries(
+        Object.entries(spiel.defaultConfig() as Record<string, unknown>).map(([k, v]) => [
+          k,
+          typeof v === 'number' ? 999_999 : v,
+        ]),
+      ),
+    ];
+
+    for (const config of unsinn) {
+      for (const seats of [...spiel.meta.seatCounts, 1, 99]) {
+        for (const rounds of [1, 0, -1, 1000]) {
+          let probleme;
+          try {
+            probleme = spiel.validateConfig(config, seats, rounds);
+          } catch (fehler) {
+            assert.fail(
+              `${spiel.meta.id}: validateConfig wirft bei ${JSON.stringify(config)?.slice(0, 60)} — es soll Unsinn ABWEISEN, nicht daran scheitern: ${(fehler as Error).message}`,
+            );
+          }
+          for (const problem of probleme) gemeldet.add(problem.messageKey);
+        }
+      }
+    }
+
+    const ohneText = [...gemeldet].filter((k) => !WOERTERBUCH.has(k));
+    assert.deepEqual(
+      ohneText,
+      [],
+      `${spiel.meta.id}: diese Meldungen erscheinen im Regelsatz-Editor wörtlich als Schlüssel, weil sie im Wörterbuch fehlen`,
+    );
+  });
+}
 
 test('die Registrierung liefert zu jedem spielbaren Eintrag ein Modul', () => {
   const ohneModul = registry
