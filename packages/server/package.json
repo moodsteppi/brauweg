@@ -17,6 +17,7 @@
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",
     "@brauweg/game-feldherr": "*",
+    "@brauweg/game-filler": "*",
     "@brauweg/game-mememory": "*",
     "@brauweg/game-skat": "*",
     "@brauweg/game-wizard": "*",

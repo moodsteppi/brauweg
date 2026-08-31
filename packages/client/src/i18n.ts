@@ -21,6 +21,7 @@ const de: Record<string, string> = {
   // Memory und bleibt deshalb auch im Deutschen stehen — "Meme-Memory" waere
   // die Erklaerung, nicht der Name.
   'game.mememory': 'Mememory',
+  'game.filler': 'Filler',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',

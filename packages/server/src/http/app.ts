@@ -192,6 +192,7 @@ const gameIdSchema = z.enum([
   'wizard',
   'feldherr',
   'mememory',
+  'filler',
   'skat',
   'schafkopf',
   'romme',

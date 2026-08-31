@@ -61,6 +61,14 @@ export type GameId =
    * Schaupause (das Zurueckdrehen zweier ungleicher Karten).
    */
   | 'mememory'
+  /**
+   * Filler ist wie Mememory kein Kartenspiel: ein Flaechenduell zu zweit auf
+   * einem 8x7-Raster. Jeder startet auf einer Ecke und faerbt sein Gebiet um,
+   * bis nichts mehr frei ist. Die Abwandlung gegenueber dem Vorbild steckt
+   * ganz in `viewFor`: Sichtbar ist nur das eigene Gebiet und dessen Rand,
+   * alles andere bleibt grau — siehe packages/game-filler/src/sicht.ts.
+   */
+  | 'filler'
   | 'skat'
   | 'schafkopf'
   | 'romme'
