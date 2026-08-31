@@ -8,8 +8,10 @@ der Erinnerung.
 
 ## Wo das Projekt steht
 
-Brauweg läuft unter **www.brauweg-spielen.de**. **Zwei Spiele sind
-spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
+Brauweg läuft unter **www.brauweg-spielen.de**. **Acht Spiele sind spielbar:
+Doppelkopf, Zauberer, Skat, Cambio, Poker, Mememory, Filler und Feldherr**
+(Stand 01.09.2026 — der Absatz nannte bis dahin zwei), der Hub steht, Clans
+funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 

@@ -1,8 +1,16 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, zwei Spiele laufen (Doppelkopf, Zauberer). Diese Datei
-ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln in
-`docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
+Kartenspiel-Plattform, **acht Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Cambio, Poker (easypoker), Mememory, Filler und Feldherr. Diese Datei ist die
+Kurzfassung; sie steht hier, weil die ausführlichen Regeln in `docs/STAND.md`
+erst ab Zeile 55 kommen und sonst niemand sie findet.
+
+Zwei davon halten sich nicht an die üblichen Annahmen, und wer das nicht weiß,
+sucht lange: **Feldherr** ist ein Echtzeitduell ohne Zugfolge (`currentActor`
+ist immer null, `legalActions` immer leer, keine Rangliste — siehe
+`docs/FELDHERR-PLAN.md`), und bei **Skat** (Drücken, Ansage) sowie beim
+**Doppelkopf** (Armut) baut der Client die Aktion selbst aus der Sicht, weshalb
+`legalActions` dort leer ist, obwohl jemand am Zug ist.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und
