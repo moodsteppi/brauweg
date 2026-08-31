@@ -4386,9 +4386,17 @@ td {
   .pf-funke, .pf-schnee { opacity: 0.5; }
 }
 
-/* Anmeldung: schmale, mittige Karte - derselbe ruhige Auftritt wie danach. */
+/* Anmeldung: schmale, mittige Karte - derselbe ruhige Auftritt wie danach.
+
+   Die Breite darf hier NICHT begrenzt werden, obwohl das Formular schmal
+   bleiben soll: `.auth` traegt den Hintergrund und liegt als `position:
+   fixed; inset: 0` hinter allem. Ein `max-width` darauf (zusammen mit dem
+   `margin: 0 auto` aus der `main`-Regel) schnitt daraus eine 384 px breite
+   Bildsaeule in der Mitte - links und rechts die nackte body-Farbe. Am Handy
+   fiel es nicht auf, weil 384 px dort breiter als der Bildschirm sind.
+   Schmal bleibt das Formular ueber `.auth .panel` (max-width 22rem). */
 main.auth {
-  max-width: 24rem;
+  max-width: none;
   padding-top: max(3rem, 12vh);
 }
 
@@ -5305,6 +5313,24 @@ main.auth > .muted {
 .rechtliches a {
   color: var(--muted);
   text-decoration: underline;
+  /* Die Zeile ist nur 18 px hoch; empfohlen sind 44 px Antippflaeche.
+     Vergroessert wird sie ueber eine unsichtbare Flaeche, nicht ueber
+     Innenabstand: Innenabstand wuerde die Zeilenhoehe aufblaehen und den
+     Abstand zum Formular darueber veraendern. So bleibt die Optik gleich.
+
+     Nur auf der Anmeldung: Im Profil steht direkt darunter "Konto loeschen"
+     (Abstand 0,1 rem), eine unsichtbare 44-px-Flaeche wuerde genau darauf
+     liegen und dessen Klicks abfangen. */
+  position: relative;
+}
+.auth .rechtliches a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
 .rechtliches a:hover {
   color: var(--text);
