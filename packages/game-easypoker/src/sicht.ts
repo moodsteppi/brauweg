@@ -193,5 +193,17 @@ export function zuschauerSicht(partie: EasyPokerPartie): EasyPokerSicht {
     ...sicht,
     gegnerKarten: gezeigt.length > 0 ? gezeigt.flat() : null,
     gegnerVerdeckt: 0,
+    /*
+     * Ein Zuschauer hat keine eigene Staerke.
+     *
+     * `grundsicht` rechnet sie aus `[...eigene, ...brett]` — fuer den
+     * Zuschauer ist `eigene` leer, also ergibt sich ab dem Flop die Staerke
+     * des offenen BRETTS. Verraten wird damit nichts (das Brett liegt fuer
+     * alle sichtbar), aber der Client zeigt dieses Feld als Handkategorie
+     * fett an: Wer zuschaut, las dort "Zwei Paare", als haette er eine Hand.
+     * Alle anderen persoenlichen Felder werden fuer Zuschauer bereits geleert
+     * (meineKarten, gegnerKarten, zuZahlen, setzKosten); dieses fehlte.
+     */
+    meineStaerke: null,
   };
 }
