@@ -192,6 +192,10 @@ export interface AppDeps {
    * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
    */
   readonly googleClientId?: string | null;
+  /** Ziel-URL des bro-server-Endpunkts fuers Feedback-Widget, siehe config.ts. */
+  readonly feedbackZielUrl?: string | null;
+  /** Bearer-Schluessel fuer obige URL. */
+  readonly feedbackZielToken?: string | null;
 }
 
 const gameIdSchema = z.enum([
@@ -276,6 +280,14 @@ const createTableSchema = z.object({
 const LIMIT_AUTH = { max: 30, timeWindow: '15 minutes' };
 const LIMIT_SCHREIBEN = { max: 60, timeWindow: '1 minute' };
 const LIMIT_ALLGEMEIN = { max: 300, timeWindow: '1 minute' };
+
+/**
+ * Grenze fuer den Feedback-Screenshot (JPEG, im Client komprimiert) — deutlich
+ * groesser als BODY_LIMIT unten, deshalb bekommt die Route ihren eigenen
+ * `bodyLimit`.
+ */
+const FEEDBACK_BILD_MAX_ZEICHEN = 3_000_000;
+const FEEDBACK_BODY_LIMIT = 3_200_000;
 
 /**
  * Rumpfgrenze: Der groesste erlaubte Rumpf ist ein Bild (~60 kB) — das
@@ -2183,6 +2195,62 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.get('/api/health', async (_request, reply) => reply.send({ ok: true }));
+
+  /**
+   * Feedback vom Staging-Widget (nur `me.stage === 'staging'` zeigt es im
+   * Client, siehe FeedbackWidget.tsx). Reicht Screenshot und Beschreibung
+   * als Issue an den internen bro-server durch — der Nutzer sieht davon
+   * nichts, nur ob es geklappt hat.
+   */
+  app.post(
+    '/api/feedback',
+    { config: { rateLimit: LIMIT_SCHREIBEN }, bodyLimit: FEEDBACK_BODY_LIMIT },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const body = z
+        .object({
+          beschreibung: z.string().min(1).max(4000),
+          screenshot: z.string().max(FEEDBACK_BILD_MAX_ZEICHEN).optional(),
+          seite: z.string().max(500),
+        })
+        .parse(request.body);
+
+      if (!deps.feedbackZielUrl || !deps.feedbackZielToken) {
+        throw new AppError(503, 'feedbackNichtEingerichtet', 'error.feedbackNichtEingerichtet');
+      }
+
+      const [konto] = await deps.db
+        .select({ displayName: s.account.displayName })
+        .from(s.account)
+        .where(eq(s.account.id, accountId));
+
+      const formular = new FormData();
+      formular.set('titel', `Feedback: ${body.seite}`);
+      formular.set(
+        'beschreibung',
+        `${body.beschreibung}\n\nSeite: ${body.seite}\nNutzer: ${konto?.displayName ?? accountId}`,
+      );
+      if (body.screenshot) {
+        const passung = /^data:(image\/[a-z0-9+.-]+);base64,(.+)$/i.exec(body.screenshot);
+        if (passung) {
+          const [, mimeType, base64] = passung;
+          formular.set('bild', new Blob([Buffer.from(base64, 'base64')], { type: mimeType }), 'screenshot.png');
+        }
+      }
+
+      const antwort = await fetch(deps.feedbackZielUrl, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${deps.feedbackZielToken}` },
+        body: formular,
+      }).catch(() => null);
+
+      if (!antwort || !antwort.ok) {
+        throw new AppError(502, 'feedbackFehlgeschlagen', 'error.feedbackFehlgeschlagen');
+      }
+
+      return reply.send({ ok: true });
+    },
+  );
 
   // -------------------------------------------------------------------------
   // Client

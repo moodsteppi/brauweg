@@ -2,6 +2,7 @@ import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
+import { FeedbackWidget } from './FeedbackWidget';
 import { starteKlang } from './klang';
 import './styles.css';
 
@@ -106,7 +107,10 @@ createRoot(root).render(
     {werkzeug ? (
       <Suspense fallback={<p className="muted">Werkzeug wird geladen…</p>}>{werkzeug}</Suspense>
     ) : (
-      <App />
+      <>
+        <App />
+        <FeedbackWidget />
+      </>
     )}
   </StrictMode>,
 );

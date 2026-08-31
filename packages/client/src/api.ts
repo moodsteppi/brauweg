@@ -806,6 +806,10 @@ export const api = {
       { bild, titel, direkt },
     ),
 
+  /** Feedback vom Staging-Widget, siehe FeedbackWidget.tsx. */
+  feedbackSenden: (daten: { beschreibung: string; screenshot?: string; seite: string }) =>
+    post<{ ok: true }>('/feedback', daten),
+
   /** Was im Kasten liegt, plus der freigegebene Bestand. Nur Aufsicht. */
   mememoryVorschlaege: () =>
     request<{
