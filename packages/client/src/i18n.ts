@@ -22,6 +22,7 @@ const de: Record<string, string> = {
   // die Erklaerung, nicht der Name.
   'game.mememory': 'Mememory',
   'game.easypoker': 'Poker',
+  'game.filler': 'Filler',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',

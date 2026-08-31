@@ -18,6 +18,7 @@
     "@brauweg/game-doppelkopf": "*",
     "@brauweg/game-easypoker": "*",
     "@brauweg/game-feldherr": "*",
+    "@brauweg/game-filler": "*",
     "@brauweg/game-mememory": "*",
     "@brauweg/game-skat": "*",
     "@brauweg/game-wizard": "*",

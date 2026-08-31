@@ -7,6 +7,7 @@ import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { EasyPoker } from './screens/EasyPoker';
 import { FeldherrTisch } from './screens/FeldherrTisch';
+import { Filler } from './screens/Filler';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
 import { Mememory } from './screens/Mememory';
@@ -34,6 +35,11 @@ type Screen =
    * gegen den Computer oder Match-Suche, beides ohne Kartenlobby.
    */
   | { name: 'easypoker'; tisch?: string | null }
+  /**
+   * Filler bringt wie Mememory sein eigenes Hauptmenue mit: Match-Suche und
+   * Brett auf einem Bildschirm, ohne Kartenlobby.
+   */
+  | { name: 'filler'; tisch?: string | null }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
   /** Solo-Endless-Runner aus der Spielauswahl. */
@@ -209,6 +215,37 @@ export function App(): React.JSX.Element {
     );
   }
 
+  /**
+   * Filler laeuft ebenfalls nicht am Kartentisch: Ein Raster, sechs Farben,
+   * zwei Sitze. Alle drei Wege — Spielauswahl, Lobby, Weiterspielen — fuehren
+   * auf denselben Bildschirm.
+   */
+  if (screen.name === 'filler') {
+    return (
+      <Filler
+        startTisch={screen.tisch ?? null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+  if (
+    (screen.name === 'table' || screen.name === 'lobby') &&
+    screen.gameId === 'filler'
+  ) {
+    return (
+      <Filler
+        startTisch={screen.name === 'table' ? screen.tableId : null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -276,6 +313,7 @@ export function App(): React.JSX.Element {
         if (gameId === 'feldherr') return setScreen({ name: 'feldherr' });
         if (gameId === 'mememory') return setScreen({ name: 'mememory' });
         if (gameId === 'easypoker') return setScreen({ name: 'easypoker' });
+        if (gameId === 'filler') return setScreen({ name: 'filler' });
         return setScreen({ name: 'lobby', gameId });
       }}
       onSolo={(modusId) => {

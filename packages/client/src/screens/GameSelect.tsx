@@ -2392,6 +2392,7 @@ function Spielwahl({
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
                     {game.id === 'easypoker' ? ' · Hold’em' : ''}
+                    {game.id === 'filler' ? ' · Flächen im Nebel' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

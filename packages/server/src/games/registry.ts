@@ -21,6 +21,7 @@ import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { easypoker } from '@brauweg/game-easypoker';
 import { feldherr } from '@brauweg/game-feldherr';
+import { filler } from '@brauweg/game-filler';
 import { mememory } from '@brauweg/game-mememory';
 import { skat } from '@brauweg/game-skat';
 import { wizard } from '@brauweg/game-wizard';
@@ -34,6 +35,7 @@ const MODULES: readonly AnyGameModule[] = [
   skat as unknown as AnyGameModule,
   mememory as unknown as AnyGameModule,
   easypoker as unknown as AnyGameModule,
+  filler as unknown as AnyGameModule,
 ];
 
 /**

@@ -14936,3 +14936,336 @@ span.hub-angebot-art.poker-jeton-stapel {
   .mm-schalter-hilfe { animation: none; }
 }
 
+
+
+/* ==========================================================================
+   Filler — Flaechenduell im Nebel (screens/Filler.tsx)
+
+   Hell statt dunkel, anders als jeder andere Bildschirm hier. Das ist kein
+   Ausrutscher, sondern die Vorlage: Filler lebt von sechs kraeftigen Farben
+   auf einem hellen Grund, und derselbe Satz Farben auf dunklem Grund verliert
+   genau den Kontrast, an dem man die Felder auseinanderhaelt. Der Nebel
+   braucht ihn doppelt — seine fuenf Grautoene liegen dicht beieinander.
+   ========================================================================== */
+
+.fl-seite {
+  position: fixed;
+  inset: 0;
+  /* styles.css setzt weiter oben `main { max-width: 60rem; padding: 1rem }`.
+     Beides gilt auch fuer einen Vollbild-Bildschirm und muss hier ausdruecklich
+     zurueckgenommen werden — sonst haengt das Brett auf einem breiten Schirm
+     links in einer 960-px-Spalte. */
+  max-width: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #4a4a4a;
+  background: linear-gradient(180deg, #eeeeee, #dcdcdc);
+}
+
+/* Nicht ganz oben in der Ecke: Dort sitzt auf dem iPhone die Notch. */
+.fl-zurueck {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 14px;
+  z-index: 5;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  color: #2f2f2f;
+  background: rgba(0, 0, 0, 0.12);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+.fl-zurueck:active { transform: scale(0.96); }
+.fl-zurueck-tisch { position: absolute; }
+
+/* -- Menue und Suche ------------------------------------------------------ */
+
+.fl-menue { justify-content: center; padding: 20px; }
+.fl-menue-mitte { width: min(92vw, 420px); text-align: center; }
+
+.fl-titel {
+  margin: 0 0 10px;
+  font: 900 clamp(36px, 12vw, 56px)/1 system-ui;
+  letter-spacing: -0.045em;
+  color: #303030;
+}
+
+.fl-untertitel { margin: 0 0 14px; color: #6d6d6d; font: 600 14px/1.45 system-ui; }
+.fl-klein { margin-top: 18px; font-size: 13px; opacity: 0.8; }
+.fl-fehler { margin: 12px 0 0; color: #c02a45; font: 700 13px/1.4 system-ui; }
+
+/* Die sechs Farben als Kostprobe. Sie sagen ohne ein Wort, worum es geht —
+   und es sind dieselben Werte wie unten am Brett, damit niemand im Menue eine
+   Farbe sieht, die es im Spiel nicht gibt. */
+.fl-probe { display: flex; justify-content: center; gap: 6px; margin: 0 0 22px; }
+.fl-probe span {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  box-shadow: 0 4px 10px -6px rgba(0, 0, 0, 0.7);
+}
+
+.fl-suchen {
+  width: 100%;
+  padding: 18px 16px;
+  border: 0;
+  border-radius: 18px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #4cbcf5, #2b93d8);
+  box-shadow: 0 12px 26px -14px rgba(43, 147, 216, 0.95);
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms ease;
+}
+.fl-suchen:active { transform: scale(0.985); }
+.fl-suchen:disabled { filter: saturate(0.4) brightness(0.95); cursor: default; }
+
+.fl-regelknopf {
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px 16px;
+  border: 0;
+  border-radius: 14px;
+  color: #4a4a4a;
+  background: rgba(0, 0, 0, 0.07);
+  font: 700 14px/1 system-ui;
+  cursor: pointer;
+}
+
+.fl-punkte-lauf { display: flex; justify-content: center; gap: 8px; margin: 18px 0 4px; }
+.fl-punkte-lauf span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9a9a9a;
+  animation: fl-huepf 1.05s infinite ease-in-out;
+}
+.fl-punkte-lauf span:nth-child(2) { animation-delay: 0.16s; }
+.fl-punkte-lauf span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes fl-huepf {
+  0%, 70%, 100% { transform: translateY(0); opacity: 0.45; }
+  35% { transform: translateY(-7px); opacity: 1; }
+}
+/* Wer weniger Bewegung eingestellt hat, bekommt das Blinken statt des
+   Huepfens — nicht gar nichts: Ohne jedes Lebenszeichen sieht die Suche aus,
+   als haenge sie. */
+@media (prefers-reduced-motion: reduce) {
+  .fl-punkte-lauf span { animation-name: fl-blink; }
+  @keyframes fl-blink { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+}
+
+/* -- Tisch ---------------------------------------------------------------- */
+
+.fl-tisch { justify-content: space-between; padding: 0; }
+
+.fl-kopf {
+  position: relative;
+  width: 100%;
+  padding: max(14px, env(safe-area-inset-top)) 14px 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.fl-stand {
+  width: min(96vw, 560px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  /* Platz fuer den Zurueck-Knopf, der links darueber liegt. Ohne ihn rutscht
+     der eigene Punktestand unter den Knopf. */
+  padding-left: 52px;
+}
+
+.fl-spieler { display: flex; align-items: center; gap: 8px; }
+/* Der Gegner steht spiegelverkehrt: Bild aussen, Zahl innen — so wie im
+   Vorbild. Beide Zahlen wandern dadurch zur Mitte und lassen sich mit einem
+   Blick vergleichen. */
+.fl-spieler:not([data-eigen]) { flex-direction: row-reverse; }
+
+.fl-avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #c7c7c7;
+  color: #ffffff;
+  font: 800 16px/1 system-ui;
+}
+.fl-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.fl-punkte {
+  min-width: 46px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  text-align: center;
+  font: 800 19px/1 system-ui;
+  box-shadow: 0 5px 12px -8px rgba(0, 0, 0, 0.9);
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+/* Wer am Zug ist, steht ein wenig groesser da. Kein Blinken: Der Blick soll
+   am Brett bleiben, nicht am Kopf. */
+.fl-spieler[data-aktiv] .fl-punkte { transform: scale(1.09); }
+
+.fl-name { font: 700 12px/1 system-ui; color: #6d6d6d; }
+/* Auf schmalen Geraeten faellt der Name weg — die Zahl in Gebietsfarbe sagt
+   ohnehin, wer wer ist, und drei Elemente je Seite sprengen 360 px. */
+@media (max-width: 420px) { .fl-name { display: none; } }
+
+.fl-brett-huelle {
+  flex: 1;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 4px 12px;
+  min-height: 0;
+}
+
+.fl-brett {
+  display: grid;
+  /* Eine Feinheit mit Wirkung: 1 px Fuge in der Hintergrundfarbe des Bretts.
+     Im Vorbild stossen die Felder aneinander, dort tragen sie aber alle
+     kraeftige Farben. Hier ist der halbe Bildschirm grau in grau — ohne die
+     Fuge verschmelzen zwei benachbarte Nebelfelder zu einer Flaeche, und
+     genau das soll die Abwandlung nicht tun. */
+  gap: 1px;
+  background: rgba(0, 0, 0, 0.24);
+  padding: 1px;
+  border-radius: 4px;
+  box-shadow: 0 18px 30px -22px rgba(0, 0, 0, 0.85);
+  /* Am Brett zaehlt die HOEHE genauso wie die Breite: Es muss zwischen Kopf
+     und Farbauswahl passen, sonst schiebt es die Auswahl aus dem Bild. Beide
+     Grenzen stehen deshalb hier, und `aspect-ratio` am Feld haelt die Zellen
+     quadratisch. */
+  width: min(90vw, 520px);
+  max-width: calc((100vh - 300px) * 8 / 7);
+}
+
+.fl-feld {
+  aspect-ratio: 1;
+  /* Der Wechsel gehoert dem Feld und nicht dem Brett: Wenn ein Zug eine
+     Flaeche schluckt, sollen die Felder gemeinsam umschlagen, ohne dass
+     irgendwo etwas springt. */
+  transition: background-color 220ms ease;
+}
+/* Das eigene Gebiet bekommt einen Innenschimmer statt eines Rahmens: Ein
+   Rahmen zwischen zwei gleichfarbigen Nachbarn zerschnitte die Flaeche, und
+   gerade ihre Geschlossenheit ist das, was man sehen will. */
+.fl-feld[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); }
+.fl-feld[data-fremd] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28); }
+
+/* -- Farbauswahl ---------------------------------------------------------- */
+
+.fl-fuss {
+  width: 100%;
+  padding: 10px 12px max(18px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Feste Mindesthoehe, damit das Brett nicht springt, wenn die Auswahl dem
+     Wartetext weicht. */
+  min-height: 132px;
+  justify-content: center;
+  gap: 10px;
+}
+
+.fl-palette {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(96vw, 560px);
+}
+
+.fl-farbe {
+  width: min(13vw, 58px);
+  height: min(13vw, 58px);
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 7px 14px -8px rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+  /* Nicht `transform: scale`: Eine geschrumpfte Flaeche behielte ihren Platz,
+     und die uebrigen Felder blieben auseinandergezogen. Im Vorbild ruecken sie
+     zusammen — also muessen Breite und Hoehe selbst schrumpfen. */
+  transition: width 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    height 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 200ms ease, filter 200ms ease;
+}
+.fl-farbe:active { filter: brightness(1.08); }
+/* Die beiden Gebietsfarben: klein und flach, genau wie im Vorbild. Sie
+   verschwinden NICHT — dass die eigene und die gegnerische Farbe gerade
+   gesperrt sind, ist eine Auskunft, keine Leerstelle. */
+.fl-farbe[data-gesperrt] {
+  width: min(5.5vw, 24px);
+  height: min(5.5vw, 24px);
+  border-radius: 5px;
+  box-shadow: none;
+  cursor: default;
+}
+/* Der angetippte Zug, bevor der Server geantwortet hat. */
+.fl-farbe[data-getippt] { filter: brightness(1.15); box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2); }
+.fl-farbe:disabled:not([data-gesperrt]):not([data-getippt]) {
+  filter: saturate(0.75);
+  cursor: default;
+}
+
+.fl-palette-ruht .fl-farbe {
+  opacity: 0.32;
+  filter: saturate(0.4);
+  box-shadow: none;
+  cursor: default;
+}
+
+.fl-hinweis {
+  margin: 0;
+  color: #8a8a8a;
+  font: 800 17px/1 system-ui;
+  letter-spacing: 0.01em;
+}
+.fl-wartet { color: #9a9a9a; }
+
+.fl-abschluss { text-align: center; }
+.fl-abschluss h2 { margin: 0 0 4px; font: 900 26px/1 system-ui; color: #4a4a4a; }
+.fl-abschluss h2[data-sieg] { color: #2f9b4a; }
+.fl-abschluss p { margin: 0 0 12px; color: #7a7a7a; font: 700 14px/1 system-ui; }
+.fl-abschluss .fl-suchen { width: min(80vw, 260px); padding: 14px 16px; }
+
+/* -- Regelblatt ----------------------------------------------------------- */
+
+.fl-blatt {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow-y: auto;
+  padding: max(58px, calc(env(safe-area-inset-top) + 48px)) 24px 40px;
+  background: #ffffff;
+  color: #1d1d1d;
+}
+.fl-blatt h2 { margin: 0 0 18px; font: 800 24px/1.2 system-ui; text-align: center; }
+.fl-blatt h3 { margin: 22px 0 8px; font: 800 19px/1.2 Georgia, serif; }
+.fl-blatt p, .fl-blatt li { font: 400 16px/1.5 Georgia, serif; }
+.fl-blatt ol { margin: 0; padding-left: 22px; }
+.fl-blatt li { margin-bottom: 10px; }
+.fl-blatt-zu {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: 16px;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.14);
+  color: #333333;
+  font: 700 16px/1 system-ui;
+  cursor: pointer;
+}
