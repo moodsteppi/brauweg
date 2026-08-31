@@ -7,8 +7,11 @@ spielübergreifende Gesamtwertung.
 - **Domain:** `www.brauweg-spielen.de` (die nackte Domain leitet per 301 dorthin)
 - **Live:** https://www.brauweg-spielen.de
 - **Paket-Namensraum:** `@brauweg/*`
-- **Stand:** M4 (Server und Persistenz) und ein roher Web-Client stehen. Zwei
-  Browser können eine vollständige Doppelkopf-Partie beenden.
+- **Stand (01.09.2026):** Acht Spiele sind spielbar — Doppelkopf, Zauberer,
+  Skat, Cambio, Poker, Mememory, Filler und Feldherr. Dazu Konten, Tische,
+  Ranglisten und Trophäen, Klubs mit Klubkampf und Chat, Shop mit Truhen und
+  Aufgaben, die Meme-Werkstatt und die iOS-Hülle. Neun weitere Spiele stehen
+  als Vorschau in der Auswahl und lassen sich noch nicht starten.
 
 Das Produktversprechen ist nicht "viele Spiele", sondern *"spiel nach euren
 Regeln, über alle Spiele hinweg gewertet"*. Siehe
@@ -20,13 +23,29 @@ Regeln, über alle Spiele hinweg gewertet"*. Siehe
 packages/
   game-api/            @brauweg/game-api        Schnittstelle, kennt kein Spiel
   game-doppelkopf/     @brauweg/game-doppelkopf Engine + Adapter
+  game-wizard/         @brauweg/game-wizard     Zauberer
+  game-skat/           @brauweg/game-skat
+  game-cambio/         @brauweg/game-cambio
+  game-easypoker/      @brauweg/game-easypoker  Poker
+  game-mememory/       @brauweg/game-mememory   Memory-Duell, kein Kartenspiel
+  game-filler/         @brauweg/game-filler     Flächenduell zu zweit
+  game-feldherr/       @brauweg/game-feldherr   Echtzeitduell, ohne Zugfolge
   server/              @brauweg/server          Konten, Tische, WebSocket
   client/              @brauweg/client          React-PWA
 docs/
   plattform-plan.md    Umsetzungsplan der Plattform
+  STAND.md             Übergabezettel: offene Punkte, was schon schiefging
   doppelkopf-spec.md   Fachliche Spezifikation des Doppelkopf-Regelwerks
+  wizard-spec.md · cambio-spec.md · FELDHERR-PLAN.md · MEMEMORY-PLAN.md
   APPSTORE.md          Die iOS-App
 ```
+
+Ein neues Spiel heißt: ein Paket `game-<name>`, eine Zeile in
+[`packages/server/src/games/registry.ts`](packages/server/src/games/registry.ts)
+— und sonst nichts. Die Plattform-Invarianten
+([`packages/server/test/plattform-invarianten.test.ts`](packages/server/test/plattform-invarianten.test.ts))
+greifen dann automatisch: Sie spielen jedes registrierte Modul mit Bots durch
+und prüfen, was Lobby, Laufzeit und Client stillschweigend voraussetzen.
 
 Die **iOS-App** liegt in einem eigenen Repository, `Brauweg-spiel-ios`. Sie
 ist eine Hülle um einen `WKWebView` und liefert genau diesen Client aus dem
