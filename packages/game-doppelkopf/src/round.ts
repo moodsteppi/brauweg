@@ -739,8 +739,30 @@ function applyArmutReturn(
   // zum Annehmer schieben oder auseinanderreissen. Vorher war die Armut die
   // einzige Spielart, in der die Schweine zwar angezeigt wurden, aber nie in
   // die Kartenordnung kamen — die Faeuste stachen also nicht.
+  /*
+   * Ab hier ist es eine Armut — und das muss auch in `gameType` stehen.
+   *
+   * Bis zum 01.09.2026 blieb dort 'normal', obwohl Phase und Parteien längst
+   * die Armut abbildeten. Zwei Folgen, die zweite ist die schwere:
+   *
+   *   1. Die Spielart 'armut' wurde nie vergeben; der Anzeigetext war
+   *      unerreichbar.
+   *   2. Im Normalspiel ist Re, wer eine Kreuz-Dame hält — eine GELEGTE Dame
+   *      deckt die Partei ihres Spielers auf (weiter unten in `viewFor`, und
+   *      der Bot zieht denselben Schluss). In der Armut gilt das gerade
+   *      nicht: Re sind Ansager und Annehmer, die Damen liegen beliebig.
+   *      Weil die Runde als Normalspiel geführt wurde, verriet die erste
+   *      gelegte Kreuz-Dame eine Partei, die es so nicht gab — an alle, Bots
+   *      eingeschlossen.
+   *
+   * Für die Kartenordnung ändert das nichts: Dort zählt allein, ob ein Solo
+   * gespielt wird (siehe order.ts).
+   */
   return mitRundenbeginnPflichten({
-    ...mitSchweinen(state, state.gameType, hands),
+    // `mitSchweinen` setzt die Spielart mit — genau wie bei der Hochzeit
+    // ein paar Zeilen weiter oben. Hier stand `state.gameType`, und damit
+    // blieb die Armut eine „normale" Runde.
+    ...mitSchweinen(state, { kind: 'armut' }, hands),
     phase: 'playing',
     reSeats: [armut.seat, armut.partnerSeat],
     turn: state.vorhand,
