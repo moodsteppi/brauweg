@@ -11,12 +11,14 @@
  *   2. Eine Zuschauersicht ohne jede Karte.
  */
 
-import type {
-  ConfigProblem,
-  CreatePartyOptions,
-  GameMeta,
-  GameModule,
-  PartyStanding,
+import {
+  type ConfigProblem,
+  type CreatePartyOptions,
+  type GameMeta,
+  type GameModule,
+  type PartyStanding,
+  shapeProblems,
+  snapshotCodec,
 } from '@brauweg/game-api';
 
 import {
@@ -57,8 +59,6 @@ import { botAction as engineBotAction } from './bot.js';
  */
 const SNAPSHOT_VERSION = 1;
 
-type SerializedParty = PartyState & { readonly v: number };
-
 export interface CambioView {
   /** Rundensicht der Engine. Bei Zuschauern ohne jede Karte. */
   readonly round: PlayerView | null;
@@ -86,35 +86,6 @@ const meta: GameMeta = {
   suggestedRounds: (seats) => suggestedRounds(seats),
 };
 
-/**
- * Prueft, ob ueberhaupt ein Regelsatz vorliegt.
- *
- * Verglichen wird gegen die Felder des Standardregelsatzes: Jedes muss da sein
- * und denselben Typ haben. Das haelt auch eine spaetere neue Option
- * automatisch mit.
- */
-function shapeProblems(config: unknown): ConfigProblem[] {
-  if (typeof config !== 'object' || config === null) {
-    return [{ path: 'config', messageKey: 'ruleset.notAnObject', severity: 'error' }];
-  }
-
-  const given = config as Record<string, unknown>;
-  const problems: ConfigProblem[] = [];
-
-  for (const [key, standard] of Object.entries(DEFAULT_RULESET)) {
-    const value = given[key];
-    if (value === undefined) {
-      problems.push({ path: key, messageKey: 'ruleset.fieldMissing', severity: 'error' });
-      continue;
-    }
-    if (typeof value !== typeof standard) {
-      problems.push({ path: key, messageKey: 'ruleset.fieldWrongType', severity: 'error' });
-    }
-  }
-
-  return problems;
-}
-
 function wrap(party: PartyState, round: PlayerView | null, spectator: boolean): CambioView {
   return {
     round,
@@ -138,7 +109,7 @@ export const cambio: GameModule<PartyState, RoundAction, CambioView, RuleSet> = 
   validateConfig(config: unknown, seats: number, rounds: number): ConfigProblem[] {
     // Erst die Form, dann der Inhalt: Fehlt die Haelfte der Felder, findet der
     // Validator darin keinen Widerspruch und winkt Unsinn durch.
-    const malformed = shapeProblems(config);
+    const malformed = shapeProblems(config, DEFAULT_RULESET);
     if (malformed.length > 0) return malformed;
 
     const ruleSet: RuleSet = { ...(config as RuleSet), tableSize: seats, rounds };
@@ -239,23 +210,7 @@ export const cambio: GameModule<PartyState, RoundAction, CambioView, RuleSet> = 
     return Object.fromEntries(party.seats.map((seat) => [seat, karten]));
   },
 
-  /**
-   * PartyState ist reines JSON - keine Klasse, keine Methode, kein Datum.
-   * Die Version kommt trotzdem mit: Ein Snapshot aus einer aelteren Fassung
-   * soll als Fehler auffallen und nicht stillschweigend falsch gedeutet werden.
-   */
-  serialize(party) {
-    return { v: SNAPSHOT_VERSION, ...party };
-  },
-
-  deserialize(raw) {
-    const snap = raw as SerializedParty;
-    if (snap.v !== SNAPSHOT_VERSION) {
-      throw new Error(
-        `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
-      );
-    }
-    const { v: _v, ...rest } = snap;
-    return rest as PartyState;
-  },
+  // PartyState ist reines JSON - keine Klasse, keine Methode, kein Datum.
+  // Deshalb reicht der gemeinsame Codec mit Versionsstempel.
+  ...snapshotCodec<PartyState>(SNAPSHOT_VERSION),
 };

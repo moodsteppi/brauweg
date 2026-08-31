@@ -44,6 +44,16 @@ export interface Config {
    * gibt es den Knopf nicht; E-Mail+Passwort geht immer.
    */
   readonly googleClientId: string | null;
+  /**
+   * Ziel-URL fuer das Feedback-Widget (nur Staging, siehe FeedbackWidget.tsx
+   * im Client): `https://server.broweg.de/rueckmeldung`, der Eingang des
+   * Broweg-Issueboards. Fehlt sie, meldet der Feedback-Endpunkt einen Fehler
+   * statt still zu verwerfen — ein abgeschicktes Feedback soll nie unbemerkt
+   * verschwinden.
+   */
+  readonly feedbackZielUrl: string | null;
+  /** `Authorization: Bearer …` fuer obige URL — dort `FEEDBACK_SCHLUESSEL`. */
+  readonly feedbackZielToken: string | null;
 }
 
 function required(name: string, fallbackInDev?: string): string {
@@ -85,5 +95,7 @@ export function loadConfig(): Config {
         ? (process.env.DIAGNOSE_SCHLUESSEL as string)
         : null,
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
+    feedbackZielUrl: process.env.FEEDBACK_ZIEL_URL ?? null,
+    feedbackZielToken: process.env.FEEDBACK_ZIEL_TOKEN ?? null,
   };
 }

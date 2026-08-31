@@ -20,6 +20,7 @@ import type {
   GameModule,
   PartyStanding,
 } from '@brauweg/game-api';
+import { snapshotCodec } from '@brauweg/game-api';
 
 import { botZug } from './bot.js';
 import {
@@ -51,8 +52,6 @@ import { type EasyPokerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
 const SNAPSHOT_VERSION = 2;
-
-type GespeichertePartie = EasyPokerPartie & { readonly v: number };
 
 const meta: GameMeta = {
   id: 'easypoker',
@@ -134,21 +133,6 @@ export const easypoker: GameModule<
   xpBasis: (partie) =>
     Object.fromEntries(sitzeVon(partie).map((sitz) => [sitz, partie.abgeschlossen * 2])),
 
-  /**
-   * Der Zustand ist reines JSON. Die Version kommt trotzdem mit: Ein Snapshot
-   * aus einer aelteren Fassung soll als Fehler auffallen und nicht
-   * stillschweigend falsch gedeutet werden.
-   */
-  serialize: (partie) => ({ v: SNAPSHOT_VERSION, ...partie }),
-
-  deserialize(roh) {
-    const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION) {
-      throw new Error(
-        `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
-      );
-    }
-    const { v: _v, ...rest } = snap;
-    return rest as EasyPokerPartie;
-  },
+  // Der Zustand ist reines JSON — der gemeinsame Codec aus game-api reicht.
+  ...snapshotCodec<EasyPokerPartie>(SNAPSHOT_VERSION),
 };

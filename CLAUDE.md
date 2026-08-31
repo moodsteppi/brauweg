@@ -118,6 +118,11 @@ gefilterten Sicht und können deshalb bauartbedingt nicht schummeln.
 **Der Client bildet keine Regel nach.** Schaltflächen entstehen aus
 `legalActions`, die Kartenreihenfolge kommt als `order` vom Server.
 
+**Feldherr: `kern.js` und `feldherr.html` sind gebaut, nicht geschrieben.**
+Quelle ist `packages/game-feldherr/quelle/teile/`, gebaut wird mit
+`node packages/game-feldherr/werkzeug/bauen.mjs` — die Artefakte nie von Hand
+ändern und nie als Quelltext lesen, der nächste Bau überschreibt sie.
+
 **Preise stehen im Katalog, nie in der Datenbank** (`kosmetik.ts`,
 `tischware.ts`). Besitz liegt in `account_cosmetic` mit freier Kennung —
 deshalb ist eine neue Warenart eine Datei und keine Migration.
