@@ -32,7 +32,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -259,6 +259,51 @@ for (const spiel of registry
     );
   });
 }
+
+test('jeder Fehler des Servers hat einen Text im Wörterbuch', () => {
+  /*
+   * Dieselbe Fuge wie oben, andere Seite: `conflict('clubNameTaken')` baut
+   * `error.clubNameTaken`, und der Client zeigt an, was `t()` daraus macht —
+   * bei fehlendem Eintrag den Schlüssel selbst. Genau so stand in den
+   * jüngeren Bereichen (Klubs, Chat, Meme-Werkstatt, Sammlung) wörtlich
+   * "error.clubNameTaken" im Formular; 32 Meldungen hatten keinen Text.
+   *
+   * Gelesen wird der Quelltext, nicht das Verhalten: Diese Fehler entstehen
+   * tief in Abläufen mit Datenbank und Sitzung, und ein Test, der sie alle
+   * auslöst, wäre ein zweiter Integrationstest — die Kennungen stehen aber
+   * unverwechselbar im Aufruf.
+   */
+  const hier = dirname(fileURLToPath(import.meta.url));
+  const quelle = join(hier, '..', '..', 'src');
+  const codes = new Set<string>();
+
+  const durchsuchen = (ordner: string) => {
+    for (const eintrag of readdirSync(ordner, { withFileTypes: true })) {
+      const pfad = join(ordner, eintrag.name);
+      if (eintrag.isDirectory()) {
+        durchsuchen(pfad);
+        continue;
+      }
+      if (!eintrag.name.endsWith('.ts')) continue;
+      const text = readFileSync(pfad, 'utf8');
+      for (const treffer of text.matchAll(
+        /\b(?:badRequest|notFound|conflict|forbidden|unauthorized)\(\s*'([a-zA-Z][a-zA-Z0-9_]*)'/g,
+      )) {
+        codes.add(`error.${treffer[1]!}`);
+      }
+    }
+  };
+  durchsuchen(quelle);
+
+  assert.ok(codes.size > 40, `nur ${codes.size} Fehlerkennungen gefunden — hat sich die Schreibweise geändert?`);
+
+  const ohneText = [...codes].filter((k) => !WOERTERBUCH.has(k)).sort();
+  assert.deepEqual(
+    ohneText,
+    [],
+    'diese Fehler erscheinen dem Menschen wörtlich als Kennung, weil sie im Wörterbuch fehlen',
+  );
+});
 
 test('die Registrierung liefert zu jedem spielbaren Eintrag ein Modul', () => {
   const ohneModul = registry

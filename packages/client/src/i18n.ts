@@ -66,6 +66,49 @@ const de: Record<string, string> = {
   'error.partyFinished': 'Die Partie ist beendet.',
   'error.partyNotRunning': 'An diesem Tisch läuft gerade keine Partie.',
   'error.partyUnknown': 'Diese Partie gibt es nicht.',
+
+  /*
+   * Meldungen der jüngeren Bereiche: Clans, Chat, Meme-Werkstatt, Sammlung.
+   *
+   * Sie fehlten alle — 32 Stück. Der Server wirft `conflict('clubNameTaken')`
+   * und baut daraus `error.clubNameTaken`; fehlt der Eintrag, gibt `t()` den
+   * Schlüssel zurück, und im Formular steht wörtlich "error.clubNameTaken".
+   * Betroffen war alles, was nach der ersten Übersetzungsrunde dazukam.
+   */
+  'error.alreadyInClub': 'Du bist schon in einem Klub.',
+  'error.clubUnknown': 'Diesen Klub gibt es nicht.',
+  'error.clubFull': 'Dieser Klub ist voll.',
+  'error.clubNameTaken': 'Diesen Klubnamen gibt es schon.',
+  'error.clubNameLength': 'Der Klubname ist zu kurz oder zu lang.',
+  'error.clubMottoLength': 'Der Wahlspruch ist zu lang.',
+  'error.clubCrestUnknown': 'Dieses Wappen gibt es nicht.',
+  'error.clubTrophiesTooLow': 'Für diesen Klub fehlen dir noch Trophäen.',
+  'error.notClubMember': 'Das können nur Mitglieder dieses Klubs.',
+  'error.notClubAdmin': 'Das darf nur die Klubleitung.',
+  'error.memberUnknown': 'Dieses Mitglied gibt es nicht.',
+  'error.joinRequestUnknown': 'Diese Anfrage gibt es nicht mehr.',
+  'error.lastAdmin': 'Der letzte Leiter kann den Klub nicht verlassen — gib die Leitung vorher ab.',
+  'error.cannotChangeOwnRole': 'Die eigene Rolle kannst du nicht ändern.',
+  'error.cannotKickSelf': 'Dich selbst kannst du nicht ausschließen.',
+  'error.warUnknown': 'Diesen Klubkampf gibt es nicht.',
+  'error.warRunning': 'Es läuft schon ein Klubkampf.',
+  'error.warSelfChallenge': 'Der eigene Klub kann nicht herausgefordert werden.',
+  'error.messageEmpty': 'Die Nachricht ist leer.',
+  'error.messageTooLong': 'Die Nachricht ist zu lang.',
+  'error.messageUnknown': 'Diese Nachricht gibt es nicht.',
+  'error.systemMessage': 'Systemnachrichten lassen sich nicht ändern.',
+  'error.bildUngueltig': 'Dieses Bild lässt sich nicht lesen.',
+  'error.bildZuGross': 'Dieses Bild ist zu groß.',
+  'error.tonUnbekannt': 'Diesen Ton gibt es nicht.',
+  'error.tonUngueltig': 'Diese Tondatei lässt sich nicht lesen.',
+  'error.tonZuGross': 'Diese Tondatei ist zu groß.',
+  'error.motivUnbekannt': 'Dieses Motiv gibt es nicht.',
+  'error.zuVieleVorschlaege': 'Du hast schon genug offene Vorschläge — warte, bis sie geprüft sind.',
+  'error.nichtGesammelt': 'Das hast du noch nicht gesammelt.',
+  'error.gurtZuVoll': 'Am Gürtel ist kein Platz mehr.',
+  'error.botLevelUnknown': 'Diese Spielstärke gibt es nicht.',
+  'error.googleLoginDisabled': 'Die Anmeldung mit Google ist gerade abgeschaltet.',
+  'error.nurAufsicht': 'Das darf nur die Aufsicht.',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',
   'error.ruleSetUnknown': 'Diesen Regelsatz gibt es nicht.',
   'error.accountUnknown': 'Dieses Konto gibt es nicht.',
