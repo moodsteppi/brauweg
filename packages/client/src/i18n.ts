@@ -348,12 +348,81 @@ const de: Record<string, string> = {
 
   // Meldungen des Cambio-Regelsatzes.
   'ruleset.noActionCards': 'Ohne Aktionskarten bleibt wenig zu entscheiden.',
+
+  /*
+   * Regelsatz-Meldungen der jüngeren Spiele.
+   *
+   * Sie fehlten: Poker, Filler, Mememory und Feldherr kamen nach der ersten
+   * Übersetzungsrunde dazu, ihre Prüfmeldungen wurden nicht nachgetragen.
+   * `t()` gibt bei einem unbekannten Schlüssel den Schlüssel zurück — im
+   * Regelsatz-Editor stand also wörtlich "ruleset.blindZuKlein" am Feld. Die
+   * Texte nennen die Grenze, statt nur "ungültig" zu sagen: Wer sie liest,
+   * soll wissen, was er eintragen darf.
+   */
+  /*
+   * Denselben Sachverhalt gibt es unter zwei Präfixen: Doppelkopf, Wizard,
+   * Skat und Cambio bilden ihre Meldungen als `ruleset.${code}`, an anderer
+   * Stelle steht derselbe Code als `error.…`. Bis das vereinheitlicht ist
+   * (eigene Karte), braucht es beide Einträge — sonst steht im Editor der
+   * nackte Schlüssel.
+   */
+  'ruleset.roundsNotMultipleOfRotation': 'Die Rundenzahl muss eine volle Geberrunde ergeben.',
+
+  /*
+   * Regelsatz-Widersprüche aus den Validatoren von Doppelkopf und Skat.
+   *
+   * Die Erklärungen gab es längst — sie stehen als zweites Argument in
+   * `err(...)` im jeweiligen Validator. Nur landeten sie nirgends: Der Adapter
+   * baut aus dem Code `ruleset.${code}` und lässt den Text fallen. Im
+   * Regelsatz-Editor stand deshalb wörtlich "ruleset.PFLICHTANSAGE_NEEDS_ANNOUNCEMENTS"
+   * am Feld. Hier sind sie, mit Umlauten.
+   *
+   * Zwei Codes bedeuten in beiden Spielen NICHT dasselbe (TABLE_SIZE,
+   * TRAINING) — ein gemeinsames Wörterbuch kann nur einen Text haben, deshalb
+   * stehen dort bewusst die neutralen Fassungen.
+   */
+  'ruleset.ARMUT_ANNOUNCE': 'Die Ansage der Rückgabe-Trümpfe setzt aktivierte Armut voraus.',
+  'ruleset.BOCK_FACTOR': 'Der Bock-Multiplikator muss mindestens 2 betragen.',
+  'ruleset.BOCK_TRIGGER_ANNOUNCEMENTS': 'Der Auslöser „Re und Kontra" setzt Ansagen voraus.',
+  'ruleset.BOCK_WINDOW': 'Die Länge eines Bock-Fensters muss positiv sein.',
+  'ruleset.FEIGLING_NEEDS_ANNOUNCEMENTS': 'Feigling setzt aktivierte Ansagen voraus.',
+  'ruleset.HIRSCH_NEEDS_KONTRA': 'Hirsch setzt erlaubtes Kontra/Re voraus.',
+  'ruleset.HOCHZEIT_CLARIFY': 'Die Klärungsfrist der Hochzeit muss zwischen 1 und 3 Stichen liegen.',
+  'ruleset.JUNGFRAUEN_NEEDS_RAMSCH': 'Jungfrauen setzen Ramsch voraus.',
+  'ruleset.PFLICHTANSAGE_NEEDS_ANNOUNCEMENTS': 'Pflichtansage setzt aktivierte Ansagen voraus.',
+  'ruleset.PFLICHTANSAGE_THRESHOLDS': 'Die Schwellen der Pflichtansage müssen absteigend sein.',
+  'ruleset.PFLICHTSOLO_ROUNDS': 'Für ein Pflichtsolo je Spieler reichen die Runden nicht.',
+  'ruleset.PFLICHT_ARMUT_NEEDS_ARMUT': 'Der Armut-Auslöser setzt erlaubte Armut voraus.',
+  'ruleset.SCHIEBERAMSCH_NEEDS_RAMSCH': 'Schieberamsch setzt Ramsch voraus.',
+  'ruleset.SCHWEINCHEN_SOLO': 'Schweinchen im Solo setzt aktivierte Schweinchen voraus.',
+  'ruleset.TRAINING': 'Trainingstisch: keine Trophäen, keine Ranglistenwertung.',
+  'ruleset.blindZuKlein': 'Der kleine Blind muss mindestens 1 betragen.',
+  'ruleset.grosserBlindZuKlein': 'Der große Blind muss über dem kleinen liegen.',
+  'ruleset.stapelZuKlein': 'Zu wenig Jetons — es braucht mindestens zehn große Blinds.',
+  'ruleset.stapelZuGross': 'So viele Jetons vergibt der Tisch nicht (höchstens 100.000).',
+  'ruleset.spaltenAusserhalb': 'Zwischen 4 und 12 Spalten.',
+  'ruleset.zeilenAusserhalb': 'Zwischen 4 und 12 Zeilen.',
+  'ruleset.farbzahlAusserhalb': 'Zwischen 4 und 8 Farben.',
+  'ruleset.zuWenigFarben': 'So wenige Farben reichen für dieses Feld nicht.',
+  'ruleset.ungeradeKartenzahl': 'Das Feld braucht eine gerade Kartenzahl — sonst bleibt eine Karte ohne Paar.',
+  'ruleset.merkzeitAusserhalb': 'Die Merkzeit liegt zwischen 0,3 und 5 Sekunden.',
+  'ruleset.zuWenigMotive': 'Für dieses Feld gibt es zu wenige Motive.',
+  'ruleset.zusatzUngueltig': 'Die Liste eigener Motive ist nicht lesbar.',
+  'ruleset.botStufeUngueltig': 'Diese Spielstärke gibt es nicht.',
+  'feldherr.feldUnbekannt': 'Diese Feldgröße gibt es nicht.',
+  'feldherr.nurZuZweit': 'Feldherr wird zu zweit gespielt.',
+  'feldherr.eineRunde': 'Feldherr kennt keine Runden — ein Gefecht entscheidet.',
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
 
   // Meldungen des Skat-Regelsatzes.
-  'ruleset.TABLE_SIZE': 'Skat wird zu dritt gespielt.',
+  //
+  // TABLE_SIZE meldet auch der Doppelkopf-Validator — beide Module bilden
+  // ihre Schlüssel als `ruleset.${code}`, und dieselbe Kennung landet damit
+  // im selben Eintrag. Der Text darf deshalb nicht "Skat wird zu dritt
+  // gespielt." lauten: Am Doppelkopf-Tisch wäre er schlicht falsch.
+  'ruleset.TABLE_SIZE': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
   'ruleset.ROUNDS_MULTIPLE': 'Die Rundenzahl muss eine volle Geberrunde ergeben.',
   'ruleset.BOCK_NEEDS_KONTRA': 'Bockrunden brauchen erlaubtes Kontra und Re.',
   'ruleset.notAnObject': 'Der Regelsatz fehlt oder ist beschädigt.',
