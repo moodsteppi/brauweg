@@ -18,6 +18,7 @@ import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { createSession } from '../src/auth/service.js';
 import { gutschreiben } from '../src/waehrung.js';
+import { berlinToday } from '../src/birthday.js';
 import { fortschreiben } from '../src/quests.js';
 import { heute, tagesTruheId } from '../src/truhen.js';
 import { punkteFuerStufe } from '../src/level.js';
@@ -303,11 +304,20 @@ test('Ein unbekannter Platz kommt nicht durch die Pruefung', async () => {
 test('Die Geburtstagsbelohnung traegt das Outfit ins Eigentum ein', async () => {
   const a = await aufbau();
   try {
-    // Das Testkonto hat Geburtstag am 15. Juni; auf heute setzen.
-    const jetzt = new Date();
-    const heutigerTag = `1990-${String(jetzt.getMonth() + 1).padStart(2, '0')}-${String(
-      jetzt.getDate(),
-    ).padStart(2, '0')}`;
+    /*
+     * Das Testkonto hat Geburtstag am 15. Juni; auf heute setzen — und zwar
+     * auf das HEUTE DES SERVERS.
+     *
+     * Vorher stand hier `new Date().getMonth()/.getDate()`, also der Tag in
+     * der Zeitzone des Rechners. Der Server prüft aber mit `berlinToday()`.
+     * Läuft die Maschine nicht auf Europe/Berlin — eine CI meist auf UTC,
+     * dieser Rechner auf Etc/GMT-1 —, fallen beide Tage abends auseinander
+     * und die Route antwortet zu Recht mit `birthdayNotToday`. Der Test war
+     * damit jede Nacht zwischen Mitternacht und zwei Uhr Berliner Zeit rot,
+     * ohne dass sich am Produktcode etwas geändert hätte.
+     */
+    const heute = berlinToday();
+    const heutigerTag = `1990-${String(heute.m).padStart(2, '0')}-${String(heute.d).padStart(2, '0')}`;
     await a.ctx.db
       .update(schema.account)
       .set({ birthday: heutigerTag })
