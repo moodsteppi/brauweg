@@ -113,7 +113,7 @@ describe('Zuege', () => {
      *   Zeile 1: 1 1 1 3
      *   Zeile 2: 0 3 2 3     <- Platz 8 ist die Ecke von Sitz 0 (Farbe 0)
      */
-    const regeln = { spalten: 4, zeilen: 3, farben: 6 };
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     const gelegt = {
       ...partie,
@@ -136,7 +136,7 @@ describe('Zuege', () => {
   });
 
   it('beendet die Partie, wenn kein Feld mehr frei ist', () => {
-    const regeln = { spalten: 4, zeilen: 3, farben: 6 };
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     const fastFertig = {
       ...partie,
@@ -156,7 +156,7 @@ describe('Zuege', () => {
   it('bricht ab, wenn niemand mehr etwas erobert', () => {
     // Der Deckel aus LEERZUEGE_MAX. Ohne ihn liefe so ein Tisch bis zum
     // Verfall weiter.
-    const regeln = { spalten: 4, zeilen: 3, farben: 6 };
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     let lauf = {
       ...partie,
@@ -223,6 +223,70 @@ describe('Sicht', () => {
   });
 });
 
+describe('Offene Spielart', () => {
+  const KLAR = { ...DEFAULT_REGELN, variante: 'klar' } as const;
+
+  it('zeigt jedem das ganze Brett', () => {
+    const partie = erstellePartie(KLAR, [0, 1], SAAT);
+    const sicht = sichtFuer(partie, 0);
+    assert.equal(sicht.variante, 'klar');
+    assert.equal(sicht.feld.filter((f) => f === null).length, 0);
+    assert.deepEqual([...sicht.feld], [...partie.feld]);
+    // Auch die Besitzverhaeltnisse: Wer offen spielt, sieht das Gebiet des
+    // Gegners, sonst waere es kein offenes Brett.
+    assert.deepEqual([...sicht.besitzer], [...partie.besitzer]);
+  });
+
+  it('haelt dem Zuschauer nichts vor', () => {
+    const sicht = zuschauerSicht(erstellePartie(KLAR, [0, 1], SAAT));
+    assert.equal(sicht.feld.filter((f) => f === null).length, 0);
+  });
+
+  it('aendert an den Regeln nichts ausser der Sicht', () => {
+    // Gleiche Saat, andere Spielart: Das Brett muss identisch liegen. Waere es
+    // das nicht, waeren es zwei Spiele statt eines.
+    const nebel = erstellePartie(DEFAULT_REGELN, [0, 1], SAAT);
+    const klar = erstellePartie(KLAR, [0, 1], SAAT);
+    assert.deepEqual([...klar.feld], [...nebel.feld]);
+    assert.deepEqual([...klar.grau], [...nebel.grau]);
+    assert.deepEqual(erlaubteZuege(klar, 0), erlaubteZuege(nebel, 0));
+  });
+
+  it('laesst den Bot den grossen Zug sehen', () => {
+    /*
+     * Dasselbe Brett zweimal: Im Nebel zaehlt der Bot nur den ersten Ring, im
+     * Klaren die ganze Kette. Hier liegt hinter dem Nachbarn (Platz 4) noch
+     * eine Kette aus Farbe 1 (5, 6) und daneben ein einzelnes Feld der Farbe
+     * 2 - im Nebel sehen beide Farben gleich gross aus, offen nicht.
+     *
+     *   Zeile 0: 2 3 2 3
+     *   Zeile 1: 1 1 1 3
+     *   Zeile 2: 0 2 3 3   <- Platz 8 gehoert Sitz 0
+     */
+    const gelegt = {
+      feld: [2, 3, 2, 3, 1, 1, 1, 3, 0, 2, 3, 3],
+      besitzer: [null, null, null, 1, null, null, null, null, 0, null, null, null],
+      farbe: { 0: 0, 1: 3 },
+      punkte: { 0: 1, 1: 1 },
+      dran: 0,
+    };
+    const basis = erstellePartie(
+      { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const,
+      [0, 1],
+      1,
+    );
+    const imNebel = { ...basis, ...gelegt };
+    const imKlaren = { ...basis, ...gelegt, regeln: { ...basis.regeln, variante: 'klar' as const } };
+    // Im Nebel sieht der Bot je ein Feld beider Farben und nimmt die kleinere
+    // Nummer; offen sieht er, dass Farbe 1 drei Felder bringt.
+    assert.equal(botZug(sichtFuer(imNebel, 0)).farbe, 1);
+    assert.equal(botZug(sichtFuer(imKlaren, 0)).farbe, 1);
+    // Der Beleg, dass wirklich geflutet wird: offen zaehlt Farbe 1 die ganze
+    // Kette, und die Partie bestaetigt es.
+    assert.equal(fuehreAus(imKlaren, 0, { typ: 'faerben', farbe: 1 }).punkte[0], 4);
+  });
+});
+
 describe('Bot', () => {
   it('waehlt nur erlaubte Farben und spielt eine Partie zu Ende', () => {
     let partie = neu();
@@ -243,7 +307,7 @@ describe('Bot', () => {
   });
 
   it('nimmt die Farbe, die am meisten einbringt', () => {
-    const regeln = { spalten: 4, zeilen: 3, farben: 6 };
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     const gelegt = {
       ...partie,

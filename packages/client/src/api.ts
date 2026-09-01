@@ -328,6 +328,14 @@ export interface TableRow {
   host: string | null;
   /** Wie viele Sonderregeln an sind. 0 heißt Grundspiel. */
   ruleCount: number;
+  /**
+   * Spielart des Tisches, oder null wenn das Spiel keine kennt.
+   *
+   * Was die Zeichenkette bedeutet, weiss nur das jeweilige Spiel — der Server
+   * reicht sie unbesehen durch (`varianteVon` in tables/service.ts). Filler
+   * trennt daran seine beiden Match-Toepfe.
+   */
+  variante: string | null;
 }
 
 export interface GameDefaults {

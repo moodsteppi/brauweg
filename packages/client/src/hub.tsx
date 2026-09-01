@@ -66,7 +66,17 @@ export function Tafel({
  * nicht gibt, ist ein weisser Kasten — und der sieht nach Fehler aus, wo ein
  * erkennbarer Platzhalter nach Absicht aussieht.
  */
-const GEMALTE_BANNER = new Set(['doppelkopf', 'wizard', 'cambio', 'mememory', 'prosubway']);
+const GEMALTE_BANNER = new Set([
+  'doppelkopf',
+  'wizard',
+  'cambio',
+  'mememory',
+  'prosubway',
+  // Filler ist das einzige gezeichnete statt gemalte: Sein Motiv IST das
+  // Spielraster, und das steht schon als Farbliste im Quelltext. Erzeugt von
+  // scripts/filler-banner-zeichnen.py.
+  'filler',
+]);
 
 export function spielBanner(gameId: string): string {
   if (gameId === 'prosubway') return '/hub/spielwahl-prosubway.png';

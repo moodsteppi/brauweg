@@ -7,9 +7,15 @@
  * sein kann — auf dem Partiezustand haette er das ganze Brett und gewaenne
  * jede Partie.
  *
- * Seine Strategie ist gierig, und im Nebel ist das auch die einzige ehrliche:
- * Was hinter dem Rand liegt, weiss er nicht, also kann er nichts vorausplanen.
- * Er nimmt die Farbe, die JETZT am meisten Felder einbringt.
+ * Seine Strategie ist gierig: Er nimmt die Farbe, die JETZT am meisten Felder
+ * einbringt. Im Nebel ist das auch die einzige ehrliche Strategie — was hinter
+ * dem Rand liegt, weiss er nicht, also kann er nichts vorausplanen.
+ *
+ * Gezaehlt wird mit DERSELBEN Schleife wie im Zustand: ein Flutfuellen, das
+ * nur durch bekannte Felder laeuft. In der offenen Spielart faerbt das die
+ * ganze zusammenhaengende Flaeche und der Bot sieht den grossen Zug; im Nebel
+ * stoesst es nach einem Ring auf `null` und hoert von selbst auf. Ein zweiter
+ * Zaehlweg je Spielart waere zwei Wege, die auseinanderlaufen koennen.
  *
  * Die Spielstaerke (`level`) wertet er nicht aus. Das ist ausdruecklich
  * erlaubt (siehe BotLevel in game-api) und hier auch ehrlich: Ein schwaecherer
@@ -44,42 +50,53 @@ export function botZug(sicht: FillerSicht): FillerAktion {
   // Tisch mit, und das waere ein teurer Weg, das zu erfahren.
   if (erlaubt.length === 0) return { typ: 'faerben', farbe: 0 };
 
-  /**
-   * Der eigene Rand: freie Nachbarfelder des eigenen Gebiets.
-   *
-   * Nur EIN Ring — was dahinter liegt, steht in der Sicht als null. Der Bot
-   * unterschaetzt damit jeden Zug, der eine grosse gleichfarbige Flaeche
-   * anschneidet. Das ist kein Fehler, sondern derselbe blinde Fleck, den der
-   * Mensch am anderen Ende auch hat.
-   */
-  const rand = new Set<number>();
+  /** Die eigenen Felder — Ausgangspunkt jeder Zaehlung. */
+  const eigen: number[] = [];
   for (let platz = 0; platz < besitzer.length; platz++) {
-    if (besitzer[platz] !== ich) continue;
-    for (const n of nachbarn(platz, spalten, zeilen)) {
-      if (besitzer[n] === null && feld[n] !== null) rand.add(n);
+    if (besitzer[platz] === ich) eigen.push(platz);
+  }
+
+  /**
+   * Wie viele Felder Farbe `f` einbraechte, und wie viel Nebel danach ans
+   * eigene Gebiet grenzte.
+   *
+   * Der zweite Wert loest Gleichstaende auf: Ein Feld, hinter dem noch Nebel
+   * liegt, ist mehr wert als eines an der Wand — es macht den naechsten Rand
+   * groesser. Ohne ihn zoege der Bot bei Gleichstand immer die kleinste
+   * Farbnummer und liefe damit gern in Sackgassen. In der offenen Spielart
+   * ist er stets 0 und damit wirkungslos, was richtig ist: Dort gibt es
+   * nichts aufzudecken.
+   */
+  function bewerte(f: number): { mass: number; tiefe: number } {
+    const genommen = new Set(eigen);
+    const rand = [...eigen];
+    let mass = 0;
+    while (rand.length > 0) {
+      const platz = rand.pop()!;
+      for (const n of nachbarn(platz, spalten, zeilen)) {
+        if (genommen.has(n)) continue;
+        if (besitzer[n] !== null) continue;
+        // `null` ist Nebel: Was der Bot nicht sieht, zaehlt er nicht mit.
+        if (feld[n] !== f) continue;
+        genommen.add(n);
+        rand.push(n);
+        mass++;
+      }
     }
+    let tiefe = 0;
+    for (const platz of genommen) {
+      for (const n of nachbarn(platz, spalten, zeilen)) {
+        if (!genommen.has(n) && feld[n] === null) tiefe++;
+      }
+    }
+    return { mass, tiefe };
   }
 
   let beste = erlaubt[0]!;
   let bestesMass = -1;
   let besteTiefe = -1;
   for (const f of erlaubt) {
-    let mass = 0;
-    let tiefe = 0;
-    for (const platz of rand) {
-      if (feld[platz] !== f) continue;
-      mass++;
-      /*
-       * Gleichstand aufloesen ueber den Blick nach vorn: Ein Feld, hinter dem
-       * noch Nebel liegt, ist mehr wert als eines an der Wand — es macht den
-       * naechsten Rand groesser. Ohne dieses zweite Mass zoege der Bot bei
-       * Gleichstand immer die kleinste Farbnummer und liefe damit gern in
-       * Sackgassen.
-       */
-      for (const n of nachbarn(platz, spalten, zeilen)) {
-        if (feld[n] === null) tiefe++;
-      }
-    }
+    const { mass, tiefe } = bewerte(f);
     if (mass > bestesMass || (mass === bestesMass && tiefe > besteTiefe)) {
       beste = f;
       bestesMass = mass;

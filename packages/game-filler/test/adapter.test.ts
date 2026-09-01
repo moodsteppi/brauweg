@@ -52,6 +52,23 @@ describe('Adapter', () => {
     assert.throws(() => filler.deserialize({ v: 99 }));
   });
 
+  it('ruestet einen Snapshot der Fassung 1 auf die Nebel-Spielart nach', () => {
+    // Ein Deploy darf keine laufende Partie brechen. Fassung 1 kannte nur den
+    // Nebel, die Nachruestung ist deshalb kein Raten.
+    const p = partie();
+    const alt = { v: 1, ...p, regeln: { spalten: 8, zeilen: 7, farben: 6 } };
+    const zurueck = filler.deserialize(JSON.parse(JSON.stringify(alt)));
+    assert.equal((zurueck as { regeln: { variante: string } }).regeln.variante, 'nebel');
+  });
+
+  it('nimmt beide Spielarten im Regelsatz an und weist Unsinn ab', () => {
+    assert.deepEqual(filler.validateConfig({ ...DEFAULT_REGELN, variante: 'klar' }, 2, 1), []);
+    assert.ok(filler.validateConfig({ ...DEFAULT_REGELN, variante: 'halbnebel' }, 2, 1).length > 0);
+    // Ohne Feld: ein Tisch von vor dem 31. August. Der bleibt gueltig.
+    const { variante, ...ohne } = DEFAULT_REGELN;
+    assert.deepEqual(filler.validateConfig(ohne, 2, 1), []);
+  });
+
   it('liefert Platzierungen und markiert Aussteiger', () => {
     const p = filler.markLeft(partie(), 1);
     const stand = filler.standings(p);

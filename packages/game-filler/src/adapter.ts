@@ -43,7 +43,7 @@ import { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 
 type GespeichertePartie = FillerPartie & { readonly v: number };
 
@@ -64,7 +64,13 @@ const meta: GameMeta = {
 
 export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerRegeln> = {
   meta,
-  protocolVersion: 1,
+  /**
+   * 2 seit dem 31. August 2026: Die Sicht traegt die Spielart (`variante`).
+   * Ein Client der Version 1 kaeme damit nicht durcheinander — er zeichnet
+   * einfach, was in der Sicht steht, und das ist in der offenen Spielart
+   * vollstaendig —, aber er koennte sie nirgends benennen.
+   */
+  protocolVersion: 2,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -131,12 +137,22 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
     const { v, ...rest } = snap;
-    return rest as FillerPartie;
+    const alt = rest as FillerPartie;
+    /**
+     * Version 1 kannte die Spielart nicht — es gab nur eine. Sie hier
+     * nachzutragen ist deshalb kein Raten: Jede Partie aus dieser Fassung
+     * wurde im Nebel gespielt. Abzuweisen waere der falsche Weg; ein Deploy
+     * darf keine laufende Partie brechen.
+     */
+    if (v === 1) {
+      return { ...alt, regeln: { ...alt.regeln, variante: 'nebel' } };
+    }
+    return alt;
   },
 };

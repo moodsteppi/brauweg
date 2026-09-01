@@ -16,7 +16,7 @@
  * entsteht ausschliesslich in viewFor, der Client blendet nichts selbst aus.
  */
 
-import type { FillerRegeln } from './regeln.js';
+import { type FillerRegeln, istVariante } from './regeln.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
@@ -258,7 +258,15 @@ export function erstellePartie(
   }
 
   return {
-    regeln,
+    /*
+     * Die Spielart wird HIER festgeschrieben und nicht erst beim Lesen der
+     * Sicht ergaenzt. Ein Tisch von vor dem 31. August hat sie nicht in der
+     * `config`; ohne diese Zeile stuende im Snapshot ein `undefined`, und
+     * jede spaetere Stelle muesste raten, was es bedeutet. So steht ab dem
+     * ersten Zug eine der beiden Spielarten im Zustand — und zwar die, die
+     * damals gespielt wurde.
+     */
+    regeln: istVariante(regeln.variante) ? regeln : { ...regeln, variante: 'nebel' },
     feld,
     grau,
     besitzer,
