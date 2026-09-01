@@ -20,6 +20,7 @@ import type {
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { easypoker } from '@brauweg/game-easypoker';
+import { eiland } from '@brauweg/game-eiland';
 import { feldherr } from '@brauweg/game-feldherr';
 import { filler } from '@brauweg/game-filler';
 import { mememory } from '@brauweg/game-mememory';
@@ -36,6 +37,7 @@ const MODULES: readonly AnyGameModule[] = [
   mememory as unknown as AnyGameModule,
   easypoker as unknown as AnyGameModule,
   filler as unknown as AnyGameModule,
+  eiland as unknown as AnyGameModule,
 ];
 
 /**

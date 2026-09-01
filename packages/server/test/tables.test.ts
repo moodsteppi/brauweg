@@ -32,14 +32,24 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind acht', () => {
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind neun', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
 
   assert.deepEqual(
     playable.map((meta) => meta.id),
-    ['doppelkopf', 'wizard', 'cambio', 'feldherr', 'skat', 'mememory', 'easypoker', 'filler'],
+    [
+      'doppelkopf',
+      'wizard',
+      'cambio',
+      'feldherr',
+      'skat',
+      'mememory',
+      'easypoker',
+      'filler',
+      'eiland',
+    ],
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),

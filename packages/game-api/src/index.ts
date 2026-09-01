@@ -76,6 +76,15 @@ export type GameId =
    * alles andere bleibt grau — siehe packages/game-filler/src/sicht.ts.
    */
   | 'filler'
+  /**
+   * Eiland ist wie Filler kein Kartenspiel: eine Landnahme zu zweit auf einer
+   * 10x10-Karte aus Gras, Seen und Bergen. Zwei Dinge weichen von allem
+   * anderen ab — beide Spieler waehlen GLEICHZEITIG, und wollen beide dasselbe
+   * Feld, entscheidet ein Muenzwurf. `currentActor` nennt trotzdem einen Sitz,
+   * damit Zugzeit und Bot-Uebernahme greifen; wer handeln darf, entscheidet
+   * allein das Modul (siehe amZug in packages/game-eiland/src/partie.ts).
+   */
+  | 'eiland'
   | 'skat'
   | 'schafkopf'
   | 'romme'

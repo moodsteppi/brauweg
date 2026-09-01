@@ -2393,6 +2393,7 @@ function Spielwahl({
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
                     {game.id === 'easypoker' ? ' · Hold’em' : ''}
                     {game.id === 'filler' ? ' · Flächen im Nebel' : ''}
+                    {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

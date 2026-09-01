@@ -17,6 +17,7 @@
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",
     "@brauweg/game-easypoker": "*",
+    "@brauweg/game-eiland": "*",
     "@brauweg/game-feldherr": "*",
     "@brauweg/game-filler": "*",
     "@brauweg/game-mememory": "*",
