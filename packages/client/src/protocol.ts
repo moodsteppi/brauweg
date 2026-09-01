@@ -50,12 +50,20 @@ export const MEMEMORY_MODULE_VERSION = 4;
  */
 export const FILLER_MODULE_VERSION = 1;
 
+/**
+ * 1 seit dem 1. September 2026 — die erste Fassung. Wie oben ausgeschrieben
+ * und nicht als stiller Standardwert: Sobald Sicht oder Aktion sich aendern,
+ * ist die Zeile schon da, an der die Zahl steigen muss.
+ */
+export const EILAND_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
   feldherr: FELDHERR_MODULE_VERSION,
   mememory: MEMEMORY_MODULE_VERSION,
   filler: FILLER_MODULE_VERSION,
+  eiland: EILAND_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

@@ -22,6 +22,10 @@ const de: Record<string, string> = {
   // die Erklaerung, nicht der Name.
   'game.mememory': 'Mememory',
   'game.filler': 'Filler',
+  // Landnahme zu zweit auf einer Insel. Der Name ist das Wort fuer eine
+  // kleine Insel und bleibt so stehen — "Insel" waere die Erklaerung, nicht
+  // der Name.
+  'game.eiland': 'Eiland',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -349,6 +353,18 @@ const de: Record<string, string> = {
   'ruleset.TABLE_SIZE': 'Skat wird zu dritt gespielt.',
   'ruleset.ROUNDS_MULTIPLE': 'Die Rundenzahl muss eine volle Geberrunde ergeben.',
   'ruleset.BOCK_NEEDS_KONTRA': 'Bockrunden brauchen erlaubtes Kontra und Re.',
+  // Eiland. Die Zahlen stehen ausgeschrieben statt eingesetzt: Der Regelsatz
+  // ist die einzige Stelle, an der sie sich ändern können, und ein Text, der
+  // sie selbst ausrechnet, kann nicht falsch werden — er wird nur nie gelesen.
+  'ruleset.feldzahlUngerade': 'Die Karte braucht eine gerade Feldzahl — sonst lässt sie sich nicht spiegeln.',
+  'ruleset.seenAusserhalb': 'Zwischen 0 und 6 Seen je Kartenhälfte.',
+  'ruleset.bergeAusserhalb': 'Zwischen 0 und 12 Bergen je Kartenhälfte.',
+  'ruleset.ornamenteAusserhalb': 'Zwischen 1 und 8 Ornamenten auf der Karte.',
+  'ruleset.sichtweiteAusserhalb': 'So weit sieht hier niemand — die Sichtweite passt nicht zur Kartengröße.',
+  'ruleset.kontingentAusserhalb': 'Zwischen 1 und 20 Feldern je Runde.',
+  'ruleset.zuVieleHindernisse': 'So viel Wasser und Fels lässt kein Land mehr übrig.',
+  'ruleset.spaltenAusserhalb': 'Zwischen 4 und 12 Spalten.',
+  'ruleset.zeilenAusserhalb': 'Zwischen 4 und 12 Zeilen.',
   'ruleset.notAnObject': 'Der Regelsatz fehlt oder ist beschädigt.',
   'ruleset.fieldMissing': 'Dem Regelsatz fehlt ein Feld.',
   'ruleset.fieldWrongType': 'Ein Feld des Regelsatzes hat den falschen Typ.',

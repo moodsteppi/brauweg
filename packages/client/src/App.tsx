@@ -6,6 +6,7 @@ import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { FeldherrTisch } from './screens/FeldherrTisch';
+import { Eiland } from './screens/Eiland';
 import { Filler } from './screens/Filler';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
@@ -34,6 +35,11 @@ type Screen =
    * Brett auf einem Bildschirm, ohne Kartenlobby.
    */
   | { name: 'filler'; tisch?: string | null }
+  /**
+   * Eiland macht es wie Filler: eigenes Hauptmenue, Match-Suche und Karte auf
+   * einem Bildschirm, keine Kartenlobby.
+   */
+  | { name: 'eiland'; tisch?: string | null }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
   /** Solo-Endless-Runner aus der Spielauswahl. */
@@ -209,6 +215,37 @@ export function App(): React.JSX.Element {
     );
   }
 
+  /**
+   * Eiland: eine Karte, zwei Sitze, gleichzeitige Zuege. Wie bei Filler fuehren
+   * alle drei Wege — Spielauswahl, Lobby, Weiterspielen — auf denselben
+   * Bildschirm.
+   */
+  if (screen.name === 'eiland') {
+    return (
+      <Eiland
+        startTisch={screen.tisch ?? null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+  if (
+    (screen.name === 'table' || screen.name === 'lobby') &&
+    screen.gameId === 'eiland'
+  ) {
+    return (
+      <Eiland
+        startTisch={screen.name === 'table' ? screen.tableId : null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -276,6 +313,7 @@ export function App(): React.JSX.Element {
         if (gameId === 'feldherr') return setScreen({ name: 'feldherr' });
         if (gameId === 'mememory') return setScreen({ name: 'mememory' });
         if (gameId === 'filler') return setScreen({ name: 'filler' });
+        if (gameId === 'eiland') return setScreen({ name: 'eiland' });
         return setScreen({ name: 'lobby', gameId });
       }}
       onSolo={(modusId) => {

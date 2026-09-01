@@ -20,6 +20,7 @@ import type {
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { feldherr } from '@brauweg/game-feldherr';
+import { eiland } from '@brauweg/game-eiland';
 import { filler } from '@brauweg/game-filler';
 import { mememory } from '@brauweg/game-mememory';
 import { skat } from '@brauweg/game-skat';
@@ -34,6 +35,7 @@ const MODULES: readonly AnyGameModule[] = [
   skat as unknown as AnyGameModule,
   mememory as unknown as AnyGameModule,
   filler as unknown as AnyGameModule,
+  eiland as unknown as AnyGameModule,
 ];
 
 /**
