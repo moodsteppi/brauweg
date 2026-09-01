@@ -78,7 +78,7 @@ const VARIANTE_NAME: Record<Variante, string> = {
 const VARIANTE_TEXT: Record<Variante, string> = {
   nebel: 'Du siehst nur dein Gebiet und dessen Rand.',
   klar: 'Das ganze Brett liegt offen — wie im Original.',
-  build: 'Offenes Brett, dazu fünf Mauern je Spieler. Eine Mauer kostet einen Zug.',
+  build: 'Offenes Brett, dazu fünf Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
 };
 
 /**
@@ -575,10 +575,24 @@ function Brett({
    */
   const [baut, setBaut] = useState(false);
   const meineBarrieren = sicht.barrierenUebrig[eigenerSitz] ?? 0;
-  // Sobald ich nicht mehr dran bin oder nichts mehr habe, ist der Bau vorbei.
+  /**
+   * Darf ich JETZT mauern?
+   *
+   * Die Antwort steht in der Sicht und wird hier nicht nachgerechnet: Ob noch
+   * eine Kante frei ist, ob der Vorrat reicht und ob ich in diesem Zug schon
+   * gebaut habe, entscheidet das Modul (`barrierenMoeglich`). Der Client
+   * kennt die Regel nicht — er liest ab, ob es Ziele gibt.
+   */
+  const kannMauern = (sicht.barrierenMoeglich?.length ?? 0) > 0;
+  /*
+   * Der Bau-Zustand faellt von selbst zurueck, sobald es nichts zu setzen
+   * gibt — nach der gesetzten Mauer, am Ende des Zuges, beim leeren Vorrat.
+   * Ohne das stuende der Knopf beim naechsten eigenen Zug wieder gedrueckt
+   * da, ohne dass ihn jemand gedrueckt haette.
+   */
   useEffect(() => {
-    if (!binDran || meineBarrieren <= 0) setBaut(false);
-  }, [binDran, meineBarrieren]);
+    if (!kannMauern) setBaut(false);
+  }, [kannMauern]);
 
   const plaetze = sicht.spalten * sicht.zeilen;
   /**
@@ -602,7 +616,7 @@ function Brett({
    */
   const anzeigeIndex = (platz: number): number => (gedreht ? plaetze - 1 - platz : platz);
   /** Setzflaechen zeigen, solange der Bau-Knopf gedrueckt ist. */
-  const bautGerade = baut && (sicht.barrierenMoeglich?.length ?? 0) > 0;
+  const bautGerade = baut && kannMauern;
 
   const gegner = Object.keys(sicht.punkte)
     .map(Number)
@@ -854,7 +868,7 @@ function Brett({
                 className="fl-bauknopf"
                 type="button"
                 data-an={bautGerade ? '' : undefined}
-                disabled={meineBarrieren <= 0 || getippt !== null}
+                disabled={!kannMauern || getippt !== null}
                 onClick={() => setBaut((an) => !an)}
               >
                 Mauer <em>{meineBarrieren}</em>
@@ -1068,10 +1082,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       <p>
         <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem fünf
         Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
-        auf — auch dich. Sie zu setzen kostet einen ganzen Zug; in dieser Runde
-        färbst du also nicht. Und du darfst den Gegner damit nicht einsperren:
-        Kanten, nach denen er kein freies Feld mehr erreichen könnte, lassen
-        sich nicht bebauen.
+        auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
+        färben; erst das Färben gibt ab. Und du darfst den Gegner damit nicht
+        einsperren: Kanten, nach denen er kein freies Feld mehr erreichen
+        könnte, lassen sich nicht bebauen.
       </p>
       <h3>Ziel</h3>
       <p>Wer am Ende die meisten Felder hält, gewinnt.</p>

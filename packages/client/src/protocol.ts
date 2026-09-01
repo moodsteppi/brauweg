@@ -51,12 +51,12 @@ export const MEMEMORY_MODULE_VERSION = 4;
 export const EASYPOKER_MODULE_VERSION = 2;
 
 /**
- * 1 seit dem 31. August 2026 — die erste Fassung. Sie steht hier trotzdem
- * ausgeschrieben und nicht als stiller Standardwert: Sobald sich an Sicht
- * oder Aktion etwas aendert, ist die Zeile schon da, an der die Zahl steigen
- * muss.
+ * 4 seit dem 1. September 2026: Dieser Client kennt die Spielart `build` samt
+ * Mauern — und dass eine Mauer den Zug NICHT beendet. Der Sprung von 1 auf 4
+ * holt nach, was am Modul laengst stand (2 Spielart, 3 Barrieren, 4 Mauer je
+ * Zug); gemeldet hatte der Client bis eben die 1.
  */
-export const FILLER_MODULE_VERSION = 1;
+export const FILLER_MODULE_VERSION = 4;
 
 /**
  * 1 seit dem 1. September 2026 — die erste Fassung. Wie oben ausgeschrieben

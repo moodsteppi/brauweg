@@ -43,7 +43,7 @@ import { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 3;
+const SNAPSHOT_VERSION = 4;
 
 type GespeichertePartie = FillerPartie & { readonly v: number };
 
@@ -74,8 +74,14 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
    * Barrieren in Sicht und Aktion. Ein aelterer Client kann an einem
    * Build-Tisch nicht sinnvoll mitspielen — er zeichnet keine Waende und
    * kaeme so zu Zuegen, die der Server abweist.
+   *
+   * 4 seit dem 1. September 2026, abends: Eine Mauer beendet den Zug nicht
+   * mehr — man baut einmal je Zug und faerbt danach trotzdem. Sicht und
+   * Aktion sehen unveraendert aus, das VERHALTEN ist ein anderes: Ein Client
+   * der Version 3 erwartet nach dem Mauern den Gegner am Zug und zeigt
+   * seinen eigenen Spielzug als fremden an.
    */
-  protocolVersion: 3,
+  protocolVersion: 4,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -142,7 +148,7 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 2 && snap.v !== 1) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 3 && snap.v !== 2 && snap.v !== 1) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
@@ -162,6 +168,12 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
      */
     const nachgeruestet = {
       ...alt,
+      /*
+       * `mauerDiesenZug` gab es bis Fassung 3 nicht — dort beendete eine
+       * Mauer den Zug, es konnte also nie einen halb fertigen Zug geben.
+       * Die Null ist deshalb die Wahrheit und kein Notbehelf.
+       */
+      mauerDiesenZug: alt.mauerDiesenZug ?? false,
       barrieren: alt.barrieren ?? [],
       barrierenUebrig:
         alt.barrierenUebrig ??

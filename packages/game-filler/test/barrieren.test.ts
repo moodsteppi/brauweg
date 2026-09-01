@@ -21,6 +21,13 @@ function neu() {
   return erstellePartie(BUILD, [0, 1], SAAT);
 }
 
+/** Der erste erlaubte Faerbe-Zug eines Sitzes. */
+function farbzugVon(partie: ReturnType<typeof neu>, sitz: number): FillerAktion {
+  const zug = erlaubteZuege(partie, sitz).find((z) => z.typ === 'faerben');
+  assert.ok(zug, `Sitz ${sitz} hat keinen Faerbe-Zug`);
+  return zug;
+}
+
 /** Nur die Barriere-Zuege aus einer Zugliste. */
 function mauern(zuege: readonly FillerAktion[]): FillerAktion[] {
   return zuege.filter((z) => z.typ === 'barriere');
@@ -50,16 +57,51 @@ describe('Build: Aufbau', () => {
 });
 
 describe('Build: Setzen', () => {
-  it('kostet einen ganzen Zug und eine Barriere', () => {
+  it('kostet eine Barriere, aber nicht den Zug', () => {
     const partie = neu();
     const [von, nach] = moeglicheBarrieren(partie, 0)[0]!;
     const danach = fuehreAus(partie, 0, { typ: 'barriere', von, nach });
     assert.deepEqual([...danach.barrieren], [kante(von, nach)]);
     assert.equal(danach.barrierenUebrig[0], 4);
     assert.equal(danach.barrierenUebrig[1], 5);
-    // Der Zug ist damit vorbei: gefaerbt wird in dieser Runde nicht mehr.
-    assert.equal(danach.dran, 1);
+    // Der Zug geht weiter: Wer mauert, faerbt danach trotzdem.
+    assert.equal(danach.dran, 0);
+    assert.equal(danach.zug, partie.zug);
     assert.deepEqual(danach.punkte, partie.punkte);
+    assert.equal(danach.mauerDiesenZug, true);
+  });
+
+  it('laesst nach der Mauer noch faerben, und das gibt ab', () => {
+    const partie = neu();
+    const [von, nach] = moeglicheBarrieren(partie, 0)[0]!;
+    const gemauert = fuehreAus(partie, 0, { typ: 'barriere', von, nach });
+    const farbe = farbzugVon(gemauert, 0);
+    const gefaerbt = fuehreAus(gemauert, 0, farbe);
+    assert.equal(gefaerbt.dran, 1, 'erst das Faerben gibt ab');
+    assert.equal(gefaerbt.zug, partie.zug + 1);
+    // Und der naechste Zug darf wieder einmal mauern.
+    assert.equal(gefaerbt.mauerDiesenZug, false);
+    assert.ok(moeglicheBarrieren(gefaerbt, 1).length > 0);
+  });
+
+  it('laesst nur EINE Mauer je Zug zu', () => {
+    const partie = neu();
+    const [von, nach] = moeglicheBarrieren(partie, 0)[0]!;
+    const gemauert = fuehreAus(partie, 0, { typ: 'barriere', von, nach });
+    assert.deepEqual(
+      moeglicheBarrieren(gemauert, 0),
+      [],
+      'im selben Zug ist keine zweite mehr moeglich',
+    );
+    assert.deepEqual(mauern(erlaubteZuege(gemauert, 0)), []);
+    // Eine beliebige andere Kante muss ebenfalls abgewiesen werden — sonst
+    // liesse sich der ganze Vorrat in einem Zug verbauen.
+    const andere = moeglicheBarrieren(partie, 0).find(
+      ([a, b]) => kante(a, b) !== kante(von, nach),
+    )!;
+    assert.throws(() =>
+      fuehreAus(gemauert, 0, { typ: 'barriere', von: andere[0], nach: andere[1] }),
+    );
   });
 
   it('zaehlt einen Mauerzug nicht als Leerzug', () => {
@@ -72,16 +114,16 @@ describe('Build: Setzen', () => {
 
   it('geht aus, wenn der Vorrat leer ist', () => {
     let partie = neu();
+    // Fuenf eigene Zuege: je einmal mauern, dann faerben. Sitz 1 faerbt
+    // dazwischen, damit Sitz 0 wieder drankommt.
     for (let i = 0; i < 5; i++) {
-      const sitz = partie.dran;
-      const [von, nach] = moeglicheBarrieren(partie, sitz)[0]!;
-      partie = fuehreAus(partie, sitz, { typ: 'barriere', von, nach });
-      // Den anderen Sitz durchreichen, damit Sitz 0 wieder drankommt.
-      const gegner = partie.dran;
-      const farbe = erlaubteZuege(partie, gegner).find((z) => z.typ === 'faerben');
-      partie = fuehreAus(partie, gegner, farbe!);
+      const [von, nach] = moeglicheBarrieren(partie, 0)[0]!;
+      partie = fuehreAus(partie, 0, { typ: 'barriere', von, nach });
+      partie = fuehreAus(partie, 0, farbzugVon(partie, 0));
+      partie = fuehreAus(partie, 1, farbzugVon(partie, 1));
     }
     assert.equal(partie.barrierenUebrig[0], 0);
+    assert.equal(partie.barrieren.length, 5);
     assert.deepEqual(moeglicheBarrieren(partie, 0), []);
     assert.deepEqual(mauern(erlaubteZuege(partie, 0)), []);
   });
@@ -90,10 +132,17 @@ describe('Build: Setzen', () => {
     const partie = neu();
     const [von, nach] = moeglicheBarrieren(partie, 0)[0]!;
     const danach = fuehreAus(partie, 0, { typ: 'barriere', von, nach });
-    const wieder = { ...danach, dran: 0 };
-    assert.throws(() => fuehreAus(wieder, 0, { typ: 'barriere', von, nach }));
+    // Naechster eigener Zug: Der Merker ist zurueck, die Kante bleibt belegt.
+    const spaeter = fuehreAus(
+      fuehreAus(danach, 0, farbzugVon(danach, 0)),
+      1,
+      farbzugVon(fuehreAus(danach, 0, farbzugVon(danach, 0)), 1),
+    );
+    assert.equal(spaeter.dran, 0);
+    assert.equal(spaeter.mauerDiesenZug, false);
+    assert.throws(() => fuehreAus(spaeter, 0, { typ: 'barriere', von, nach }));
     // Auch andersherum benannt: Die Kante hat von beiden Seiten denselben Namen.
-    assert.throws(() => fuehreAus(wieder, 0, { typ: 'barriere', von: nach, nach: von }));
+    assert.throws(() => fuehreAus(spaeter, 0, { typ: 'barriere', von: nach, nach: von }));
   });
 
   it('weist eine Kante zwischen nicht benachbarten Feldern ab', () => {
