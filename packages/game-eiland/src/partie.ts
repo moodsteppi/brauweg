@@ -43,7 +43,7 @@ import {
   spiegel,
   startEcke,
 } from './karte.js';
-import type { EilandRegeln } from './regeln.js';
+import { type EilandRegeln, istVariante } from './regeln.js';
 
 export { BERG, GRAS, WASSER, nachbarn, startEcke };
 
@@ -142,13 +142,18 @@ export interface EilandPartie {
   readonly fertig: boolean;
 }
 
-export type EilandAktion =
-  /** Ein Feld zur eigenen Auswahl legen. */
-  | { readonly typ: 'waehlen'; readonly platz: number }
-  /** Das zuletzt gewaehlte Feld wieder herausnehmen. */
-  | { readonly typ: 'zuruecknehmen' }
-  /** Zettel abgeben, auch mit weniger Feldern als erlaubt. */
-  | { readonly typ: 'bereit' };
+/**
+ * Die einzige Aktion: der ausgefuellte Zettel.
+ *
+ * Frueher gab es drei — Feld waehlen, zuruecknehmen, abgeben —, jede mit
+ * einem eigenen Gang zum Server. Das kostete bei einem Kontingent von sechs
+ * sechs Umlaeufe, und der Bot brauchte sechsmal seine Bedenkzeit, waehrend
+ * der Mensch zusah. Jetzt waehlt jeder seine Felder bei sich und schickt
+ * einmal: ein Umlauf je Runde, egal wie gross das Kontingent ist.
+ *
+ * Eine leere Liste ist das Passen.
+ */
+export type EilandAktion = { readonly typ: 'plan'; readonly felder: readonly number[] };
 
 // ---------------------------------------------------------------------------
 // Aufbau
@@ -214,7 +219,13 @@ export function erstellePartie(
   }
 
   return {
-    regeln,
+    /*
+     * Die Spielart wird HIER festgeschrieben und nicht erst beim Lesen der
+     * Sicht ergaenzt. Ein Tisch aus der ersten Fassung hat sie nicht in der
+     * `config`; ohne diese Zeile stuende im Snapshot ein `undefined`, und jede
+     * spaetere Stelle muesste raten, was es bedeutet.
+     */
+    regeln: istVariante(regeln.variante) ? regeln : { ...regeln, variante: 'nebel' },
     gelaende,
     grau,
     besitzer,
@@ -375,15 +386,13 @@ export function waehlbare(partie: EilandPartie, sitz: number): number[] {
 /**
  * Hat dieser Sitz seinen Zettel abgegeben?
  *
- * Drei Wege fuehren dahin: Er hat "bereit" getippt, seine Auswahl ist voll,
- * oder es gibt nichts mehr zu waehlen. Der dritte ist der wichtige — ohne ihn
- * bliebe ein eingekesselter Spieler ewig "am Zug", und die Partie stuende
- * still, obwohl der andere noch Land vor sich hat.
+ * Zwei Wege fuehren dahin: Er hat abgegeben, oder es gibt fuer ihn nichts
+ * mehr zu waehlen. Der zweite ist der wichtige — ohne ihn bliebe ein
+ * eingekesselter Spieler ewig "am Zug", und die Partie stuende still, obwohl
+ * der andere noch Land vor sich hat.
  */
 export function istBereit(partie: EilandPartie, sitz: number): boolean {
   if (partie.bereit[sitz]) return true;
-  const gewaehlt = partie.wahl[sitz] ?? [];
-  if (gewaehlt.length >= kontingent(partie, sitz)) return true;
   return waehlbare(partie, sitz).length === 0;
 }
 
@@ -405,24 +414,24 @@ export function amZug(partie: EilandPartie): number | null {
   return null;
 }
 
-export function erlaubteZuege(partie: EilandPartie, sitz: number): EilandAktion[] {
-  if (partie.fertig) return [];
-  if (istBereit(partie, sitz)) return [];
-  const zuege: EilandAktion[] = waehlbare(partie, sitz).map((platz) => ({
-    typ: 'waehlen' as const,
-    platz,
-  }));
-  if ((partie.wahl[sitz] ?? []).length > 0) zuege.push({ typ: 'zuruecknehmen' });
-  zuege.push({ typ: 'bereit' });
-  /*
-   * Diese Liste ist vollstaendig — es gibt keine Aktion, die ein Sitz
-   * ausfuehren darf und die hier fehlt. Eine Aktion "ganze Auswahl auf einmal"
-   * gab es beim Bau, sie ist wieder herausgeflogen: Die Plattform prueft, dass
-   * jede Bot-Aktion in `legalActions` steht (plattform-invarianten.test.ts),
-   * und aufzaehlen liesse sich so eine Aktion nur als Liste aller
-   * Feldkombinationen.
-   */
-  return zuege;
+/**
+ * Immer leer — und das ist eine Aussage, kein Versehen.
+ *
+ * Eine Aktion ist hier eine MENGE von Feldern; sie aufzuzaehlen hiesse, alle
+ * Kombinationen aus bis zu sechs der freien Felder aufzuzaehlen. Der
+ * Bildschirm baut die Aktion deshalb selbst aus der Sicht — derselbe Weg,
+ * den Skat (Druecken, Ansage) und der Doppelkopf (Armut) schon gehen, und
+ * derselbe Grund. Was anwaehlbar ist, muss er trotzdem nicht raten: Es steht
+ * als `waehlbar` in der Sicht, und `fuehreAus` prueft die fertige Auswahl
+ * ohnehin noch einmal.
+ *
+ * Die Plattform kennt diesen Fall (`clientBautAktion` in
+ * plattform-invarianten.test.ts): Bei leerer Liste darf auch der Bot eine
+ * Aktion liefern, die nicht darin steht — und genau das braucht er, um seine
+ * ganze Runde in EINEM Zug abzugeben statt in sechs.
+ */
+export function erlaubteZuege(_partie: EilandPartie, _sitz: number): EilandAktion[] {
+  return [];
 }
 
 // ---------------------------------------------------------------------------
@@ -482,54 +491,23 @@ export function fuehreAus(
   if (partie.fertig) throw new Error('Partie ist zu Ende');
   if (partie.punkte[sitz] === undefined) throw new Error('Sitz gibt es nicht');
   /*
-   * Ein zweites "bereit" ist keine Regelverletzung, sondern ein doppelter
-   * Tipp oder eine Nachricht, die sich mit der Aufloesung ueberholt hat.
-   * Denselben Zustand zurueckzugeben ist genau richtig: Die Plattform
-   * verbucht eine wirkungslose Aktion nicht (siehe act in runtime/party.ts)
-   * und schickt keinen Rundruf, der bei allen wie eine Aenderung aussaehe.
+   * Ein zweiter Zettel ist keine Regelverletzung, sondern ein doppelter Tipp
+   * oder eine Nachricht, die sich mit der Aufloesung ueberholt hat. Denselben
+   * Zustand zurueckzugeben ist genau richtig: Die Plattform verbucht eine
+   * wirkungslose Aktion nicht (siehe act in runtime/party.ts) und schickt
+   * keinen Rundruf, der bei allen wie eine Aenderung aussaehe.
    */
-  if (istBereit(partie, sitz) && aktion.typ !== 'zuruecknehmen') return partie;
+  if (istBereit(partie, sitz)) return partie;
 
-  const gewaehlt = partie.wahl[sitz] ?? [];
-  let neueWahl: readonly number[];
-  let abgeben = false;
-
-  switch (aktion.typ) {
-    case 'waehlen': {
-      if (!waehlbare(partie, sitz).includes(aktion.platz)) {
-        throw new Error('Feld ist nicht waehlbar');
-      }
-      neueWahl = [...gewaehlt, aktion.platz];
-      pruefeWahl(partie, sitz, neueWahl);
-      break;
-    }
-    case 'zuruecknehmen': {
-      /*
-       * Zurueck geht es nur, solange der Zettel offen ist. Wer sein
-       * Kontingent ausgeschoepft hat, hat abgegeben — auch ohne "bereit" zu
-       * tippen. Das ist die Gegenleistung dafuer, dass eine volle Auswahl
-       * ohne zusaetzlichen Tipp gilt: Sonst waere jede Runde ein Tipp
-       * laenger, und bei einem Kontingent von eins waeren es doppelt so
-       * viele.
-       */
-      if (istBereit(partie, sitz)) throw new Error('Zettel ist schon abgegeben');
-      if (gewaehlt.length === 0) throw new Error('Nichts zurueckzunehmen');
-      neueWahl = gewaehlt.slice(0, -1);
-      break;
-    }
-    case 'bereit': {
-      neueWahl = gewaehlt;
-      abgeben = true;
-      break;
-    }
-    default:
-      throw new Error('Unbekannte Aktion');
-  }
+  if (aktion.typ !== 'plan') throw new Error('Unbekannte Aktion');
+  if (!Array.isArray(aktion.felder)) throw new Error('Zettel ohne Felder');
+  const neueWahl = [...aktion.felder];
+  pruefeWahl(partie, sitz, neueWahl);
 
   const naechste: EilandPartie = {
     ...partie,
     wahl: { ...partie.wahl, [sitz]: neueWahl },
-    bereit: { ...partie.bereit, [sitz]: abgeben || partie.bereit[sitz] === true },
+    bereit: { ...partie.bereit, [sitz]: true },
   };
 
   const alleFertig = sitzeVon(naechste).every((s) => istBereit(naechste, s));

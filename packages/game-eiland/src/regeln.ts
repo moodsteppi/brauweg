@@ -47,6 +47,40 @@ export interface EilandRegeln {
    * fuenf Ornamente voll wirken und deckelt erst danach.
    */
   readonly kontingentMax: number;
+  /**
+   * Spielart: mit Nebel oder offen.
+   *
+   * `nebel` ist die Abwandlung dieses Hauses (siehe sicht.ts), `klar` die
+   * offene Karte. Sie steht im REGELSATZ und nicht als Einstellung im
+   * Bildschirm, und das aus zwei Gruenden — denselben wie bei Filler:
+   *
+   *   1. Sichtbarkeit entsteht in `viewFor` (game-api, Grundsatz 2). Waere die
+   *      Spielart eine Client-Einstellung, muesste der Server die ganze Karte
+   *      schicken und der Client sie ausblenden — genau das soll nie
+   *      passieren.
+   *   2. Der Regelsatz eines Tisches steht seit dem Erstellen fest. Damit kann
+   *      niemand mitten in der Partie den Nebel abschalten.
+   *
+   * Eine Zeichenkette und kein `nebel: boolean`: Der Tischliste haengt der
+   * Server sie als `variante` an (siehe tables/service.ts), und dort ist ein
+   * lesbares Wort mehr wert als ein Ja/Nein, das man erst deuten muss.
+   */
+  readonly variante: EilandVariante;
+}
+
+/**
+ * Die beiden Spielarten.
+ *
+ * Ausgeschrieben und nicht `boolean`, damit eine dritte (etwa "der Gegner ist
+ * sichtbar, das Gelaende nicht") dazukommen kann, ohne dass irgendwo ein
+ * `!nebel` steht, das dann falsch waere.
+ */
+export type EilandVariante = 'nebel' | 'klar';
+
+export const VARIANTEN: readonly EilandVariante[] = ['nebel', 'klar'];
+
+export function istVariante(wert: unknown): wert is EilandVariante {
+  return typeof wert === 'string' && (VARIANTEN as readonly string[]).includes(wert);
 }
 
 /**
@@ -62,6 +96,11 @@ export const DEFAULT_REGELN: EilandRegeln = {
   ornamente: 4,
   sichtweite: 3,
   kontingentMax: 6,
+  /*
+   * Der Nebel ist die Vorgabe, nicht die Ausnahme. Er ist der Grund, warum es
+   * dieses Modul ueberhaupt gibt; wer die offene Karte will, schaltet um.
+   */
+  variante: 'nebel',
 };
 
 /**
@@ -168,6 +207,17 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   const haelfte = (spalten * zeilen) / 2;
   if (seen * 6 + berge > haelfte / 2) {
     probleme.push({ path: 'seen', messageKey: 'ruleset.zuVieleHindernisse', severity: 'error' });
+  }
+
+  /*
+   * Fehlt die Spielart, ist es ein Tisch aus der ersten Fassung: Damals gab es
+   * nur den Nebel. Ihn stillschweigend anzunehmen ist deshalb kein Raten,
+   * sondern die einzige Lesart, die stimmt — und `erstellePartie` traegt ihn
+   * dann auch ein, damit die Luecke nicht in den Snapshot wandert.
+   */
+  const variante = gegeben['variante'];
+  if (variante !== undefined && variante !== null && !istVariante(variante)) {
+    probleme.push({ path: 'variante', messageKey: 'ruleset.varianteUnbekannt', severity: 'error' });
   }
 
   return probleme;

@@ -24,6 +24,8 @@ interface EilandSicht {
   spalten: number;
   zeilen: number;
   sichtweite: number;
+  /** 'nebel' oder 'klar' — siehe packages/game-eiland/src/regeln.ts. */
+  variante: EilandVariante;
   /** 0 Gras, 1 Wasser, 2 Berg — oder null, solange das Feld im Nebel liegt. */
   gelaende: (number | null)[];
   ornament: (number | null)[];
@@ -50,12 +52,16 @@ interface EilandSicht {
   zuschauer: boolean;
 }
 
+/** Die beiden Spielarten, siehe packages/game-eiland/src/regeln.ts. */
+type EilandVariante = 'nebel' | 'klar';
+
 /**
  * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
  *
  * Muss zu DEFAULT_REGELN in packages/game-eiland/src/regeln.ts passen. Bewusst
  * ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll nicht auf
- * eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht.
+ * eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht. Die Spielart
+ * kommt beim Aufmachen dazu.
  */
 const REGELSATZ = {
   spalten: 10,
@@ -66,6 +72,19 @@ const REGELSATZ = {
   sichtweite: 3,
   kontingentMax: 6,
 };
+
+/**
+ * Wie lange die Auswahl gesperrt bleibt, wenn der Server auf einen
+ * abgeschickten Zettel nicht antwortet.
+ *
+ * Ohne diese Grenze war die Sperre eine Falle: Sie loeste sich nur, wenn eine
+ * NEUE Revision eintraf — und genau die bleibt aus, wenn der Server die
+ * Aktion als wirkungslos verwirft oder die Nachricht unterwegs verlorengeht.
+ * Wer dann nicht mehr tippen kann, gilt nach fuenf Minuten als ausgestiegen,
+ * und der Tisch loest sich auf. Sechs Sekunden sind mehr als jede Antwortzeit
+ * und weniger als jede Geduld.
+ */
+const SPERRE_MAX_MS = 6000;
 
 const GRAS = 0;
 const WASSER = 1;
@@ -95,6 +114,22 @@ function gebietsfarbe(sitz: number): string {
   return GEBIET[sitz % GEBIET.length] ?? GEBIET[0];
 }
 
+/**
+ * Die Tönung eines gewählten Feldes: die eigene Gebietsfarbe, halb
+ * durchsichtig über dem Gelände.
+ *
+ * Als `background-image` und nicht als `background-color`, weil die
+ * Geländefarbe aus dem Stylesheet kommt (`[data-art]`) — ein Verlauf aus
+ * einer einzigen Farbe legt sich darüber, ohne sie zu ersetzen. So sieht man
+ * beides: was das Feld IST und dass es gleich mir gehören soll.
+ */
+const GEBIET_TON = ['rgba(226, 96, 63, 0.62)', 'rgba(123, 79, 208, 0.62)'] as const;
+
+function auswahlton(sitz: number): string {
+  const ton = GEBIET_TON[sitz % GEBIET_TON.length] ?? GEBIET_TON[0];
+  return `linear-gradient(${ton}, ${ton})`;
+}
+
 export function Eiland({
   startTisch,
   onBack,
@@ -110,6 +145,11 @@ export function Eiland({
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
+  /**
+   * Spielart fuer den naechsten Tisch. Nur eine Vorauswahl fuers Menue — am
+   * Tisch gilt, was in dessen Regelsatz steht (siehe regeln.ts).
+   */
+  const [variante, setVariante] = useState<EilandVariante>('nebel');
 
   const tisch = useTable<EilandSicht>(tischId, 'eiland');
   const sicht = tisch.view?.view ?? null;
@@ -142,6 +182,13 @@ export function Eiland({
       const zeilen = await api.tables('eiland');
       const offen = zeilen
         .filter((zeile) => zeile.seats === 2 && zeile.occupied < zeile.seats)
+        /*
+         * Nur Tische derselben Spielart. Der Server reicht sie in der
+         * Tischliste durch (`varianteVon` in tables/service.ts); ein Tisch von
+         * vor dem Umbau hat dort `null` und gilt als Nebel — so wie es
+         * `pruefeRegeln` auch tut.
+         */
+        .filter((zeile) => (zeile.variante ?? 'nebel') === variante)
         .sort((a, b) => a.id.localeCompare(b.id));
       const ziel = offen[0];
       if (ziel) {
@@ -152,7 +199,7 @@ export function Eiland({
       }
       const { id } = await api.createTable({
         gameId: 'eiland',
-        config: REGELSATZ,
+        config: { ...REGELSATZ, variante },
         seats: 2,
         rounds: 1,
       });
@@ -162,7 +209,7 @@ export function Eiland({
       setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
     }
-  }, []);
+  }, [variante]);
 
   /**
    * Sofort gegen die KI. Ein eigener Tisch auf Anfrage, den der Server mit
@@ -175,7 +222,7 @@ export function Eiland({
     try {
       const { id } = await api.createTable({
         gameId: 'eiland',
-        config: REGELSATZ,
+        config: { ...REGELSATZ, variante },
         seats: 2,
         rounds: 1,
         visibility: 'on_request',
@@ -187,7 +234,7 @@ export function Eiland({
       setSucht(false);
       setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
     }
-  }, []);
+  }, [variante]);
 
   /**
    * Das Wettrennen aufloesen.
@@ -209,7 +256,13 @@ export function Eiland({
         .then(async (zeilen: TableRow[]) => {
           if (!lebt || wechseltGerade.current) return;
           const kleiner = zeilen
-            .filter((z) => z.seats === 2 && z.occupied < z.seats && z.id < tischId)
+            .filter(
+              (z) =>
+                z.seats === 2 &&
+                z.occupied < z.seats &&
+                z.id < tischId &&
+                (z.variante ?? 'nebel') === variante,
+            )
             .sort((a, b) => a.id.localeCompare(b.id))[0];
           if (!kleiner) return;
           wechseltGerade.current = true;
@@ -233,7 +286,7 @@ export function Eiland({
       lebt = false;
       window.clearInterval(takt);
     };
-  }, [tischId, eigenerTisch, tisch.table?.status]);
+  }, [tischId, eigenerTisch, tisch.table?.status, variante]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
@@ -283,31 +336,47 @@ export function Eiland({
   // -------------------------------------------------------------------------
 
   /**
-   * Der Tipp, der beim Server noch nicht angekommen ist — samt der Revision,
-   * die dabei galt.
+   * Der abgeschickte Zettel, auf dessen Antwort wir warten — samt der
+   * Revision, die dabei galt.
    *
-   * Er sperrt das Brett, bis die Antwort da ist. Ohne diese Sperre setzt ein
-   * zweiter Tipp im selben Moment einen zweiten Zug ab, den der Server als
-   * "nicht waehlbar" abweist — und der Spieler sieht einen Fehler fuer etwas,
-   * das er richtig gemacht hat.
+   * Er sperrt nur den ABSENDEKNOPF, nicht mehr die Karte: Gewaehlt wird
+   * seitdem bei uns (siehe Karte), und erst der fertige Zettel geht ueber die
+   * Leitung. Vorher war jedes einzelne Feld ein Gang zum Server, und wer sechs
+   * Felder hatte, wartete sechsmal.
    */
-  const [getippt, setGetippt] = useState<{ platz: number | null; revision: number } | null>(null);
+  const [gesendet, setGesendet] = useState<{ revision: number } | null>(null);
   const revision = tisch.view?.revision ?? -1;
   useEffect(() => {
-    setGetippt((alt) => (alt && revision > alt.revision ? null : alt));
+    setGesendet((alt) => (alt && revision > alt.revision ? null : alt));
   }, [revision]);
+
+  /**
+   * Die Notbremse zur Sperre.
+   *
+   * Die Sperre oben loest sich nur bei einer NEUEN Revision — und genau die
+   * bleibt aus, wenn der Server die Aktion als wirkungslos verwirft (siehe
+   * `act` in runtime/party.ts) oder die Nachricht unterwegs verlorengeht. Ohne
+   * diesen Wecker bliebe der Knopf dann fuer immer tot; nach fuenf Minuten
+   * ohne Zug gilt man als ausgestiegen, und der Tisch loest sich auf. Genau
+   * das ist einmal passiert.
+   */
+  useEffect(() => {
+    if (!gesendet) return;
+    const wecker = window.setTimeout(() => setGesendet(null), SPERRE_MAX_MS);
+    return () => window.clearTimeout(wecker);
+  }, [gesendet]);
 
   const binDabei = sicht !== null && !sicht.fertig && eigenerSitz >= 0;
   const binBereit = sicht?.bereit[eigenerSitz] === true;
-  const darfTippen = binDabei && !binBereit && getippt === null;
+  const darfPlanen = binDabei && !binBereit;
 
-  const sende = useCallback(
-    (aktion: Record<string, unknown>, platz: number | null): void => {
-      if (!darfTippen) return;
-      setGetippt({ platz, revision });
-      tisch.send(aktion);
+  const gibAb = useCallback(
+    (felder: readonly number[]): void => {
+      if (!darfPlanen || gesendet !== null) return;
+      setGesendet({ revision });
+      tisch.send({ typ: 'plan', felder: [...felder] });
     },
-    [darfTippen, revision, tisch],
+    [darfPlanen, gesendet, revision, tisch],
   );
 
   // -------------------------------------------------------------------------
@@ -333,7 +402,34 @@ export function Eiland({
             </span>
             <span data-art="wasser" />
             <span data-art="berg" />
-            <span data-art="nebel" />
+            {variante === 'nebel' && <span data-art="nebel" />}
+          </div>
+          {/*
+            Der Schalter zwischen den beiden Spielarten. Er gehoert HIERHER und
+            nicht an den Tisch: Die Spielart steht im Regelsatz und damit seit
+            dem Aufmachen fest — mitten in der Partie den Nebel abzuschalten
+            waere kein Knopf, sondern ein Schummelzettel.
+          */}
+          <div className="ei-schalter">
+            <button
+              type="button"
+              data-an={variante === 'nebel' ? '' : undefined}
+              onClick={() => setVariante('nebel')}
+            >
+              Im Nebel
+            </button>
+            <button
+              type="button"
+              data-an={variante === 'klar' ? '' : undefined}
+              onClick={() => setVariante('klar')}
+            >
+              Offene Karte
+            </button>
+            <p className="ei-schalter-text">
+              {variante === 'nebel'
+                ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
+                : 'Die ganze Insel liegt offen — für euch beide.'}
+            </p>
           </div>
           <button className="ei-suchen" type="button" onClick={() => void suche()} disabled={sucht}>
             Online Match suchen…
@@ -395,11 +491,9 @@ export function Eiland({
       sicht={sicht}
       eigenerSitz={eigenerSitz}
       sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
-      getippt={getippt?.platz ?? null}
-      darfTippen={darfTippen}
-      onWaehle={(platz) => sende({ typ: 'waehlen', platz }, platz)}
-      onZurueck={() => sende({ typ: 'zuruecknehmen' }, null)}
-      onBereit={() => sende({ typ: 'bereit' }, null)}
+      darfPlanen={darfPlanen}
+      wartet={gesendet !== null}
+      onAbgeben={gibAb}
       onVerlassen={verlasseUndZurueck}
     />
   );
@@ -408,6 +502,23 @@ export function Eiland({
 // ---------------------------------------------------------------------------
 // Die Karte
 // ---------------------------------------------------------------------------
+
+/**
+ * Die vier orthogonalen Nachbarn — dieselbe Rechnung wie im Modul.
+ *
+ * Sie steht hier, weil der Bildschirm die Auswahl zusammenstellt, bevor sie
+ * zum Server geht (siehe `waehlbar` in der Karte). Diagonalen zaehlen nicht.
+ */
+function nachbarnVon(platz: number, spalten: number, zeilen: number): number[] {
+  const x = platz % spalten;
+  const y = Math.floor(platz / spalten);
+  const raus: number[] = [];
+  if (x > 0) raus.push(platz - 1);
+  if (x < spalten - 1) raus.push(platz + 1);
+  if (y > 0) raus.push(platz - spalten);
+  if (y < zeilen - 1) raus.push(platz + spalten);
+  return raus;
+}
 
 interface SitzZeile {
   seat: number;
@@ -420,21 +531,17 @@ function Karte({
   sicht,
   eigenerSitz,
   sitze,
-  getippt,
-  darfTippen,
-  onWaehle,
-  onZurueck,
-  onBereit,
+  darfPlanen,
+  wartet,
+  onAbgeben,
   onVerlassen,
 }: {
   sicht: EilandSicht;
   eigenerSitz: number;
   sitze: readonly SitzZeile[];
-  getippt: number | null;
-  darfTippen: boolean;
-  onWaehle: (platz: number) => void;
-  onZurueck: () => void;
-  onBereit: () => void;
+  darfPlanen: boolean;
+  wartet: boolean;
+  onAbgeben: (felder: readonly number[]) => void;
   onVerlassen: () => void;
 }): React.JSX.Element {
   const plaetze = sicht.spalten * sicht.zeilen;
@@ -456,8 +563,94 @@ function Karte({
     .filter((s) => s !== eigenerSitz);
   const gegnerSitz = gegner[0] ?? (eigenerSitz === 0 ? 1 : 0);
 
-  const waehlbar = useMemo(() => new Set(sicht.waehlbar), [sicht.waehlbar]);
-  const gewaehlt = useMemo(() => new Set(sicht.wahl), [sicht.wahl]);
+  /**
+   * Die Auswahl, die noch bei uns liegt.
+   *
+   * Der ganze Zug wird hier zusammengestellt und erst am Ende abgeschickt —
+   * ein Umlauf je Runde statt einem je Feld. Der Preis dafuer ist, dass dieser
+   * Bildschirm EINE Regel kennen muss: Anwaehlbar ist ein freies Wiesenfeld,
+   * das an das eigene Gebiet grenzt oder an ein Feld, das schon auf dem Zettel
+   * steht. Das ist derselbe Weg, den Skat und der Doppelkopf gehen (der Client
+   * baut die Aktion selbst aus der Sicht, `legalActions` ist leer), und der
+   * Server prueft den fertigen Zettel ohnehin noch einmal — weicht die
+   * Rechnung hier je ab, weist er ihn ab, statt ihn falsch auszufuehren.
+   */
+  const [wahl, setWahl] = useState<number[]>([]);
+  /*
+   * Neue Runde, leerer Zettel. Am RUNDENZAEHLER aufgehaengt und nicht am
+   * Sichten-Objekt: Ein Effekt mit dem Objekt in der Abhaengigkeitsliste
+   * liefe bei jedem Serverfunk neu und wuerde die halbfertige Auswahl
+   * mitten im Ueberlegen wegwerfen.
+   */
+  useEffect(() => {
+    setWahl([]);
+  }, [sicht.runde]);
+
+  const kontingent = sicht.kontingent[eigenerSitz] ?? 1;
+  const binBereit = sicht.bereit[eigenerSitz] === true;
+  /** Nach dem Abgeben zeigt die Karte, was auf dem Zettel steht. */
+  const gewaehlt = useMemo(
+    () => new Set(binBereit ? sicht.wahl : wahl),
+    [binBereit, sicht.wahl, wahl],
+  );
+
+  /** Frei, Wiese, kein Nebel — die Bedingung, die ein Feld ueberhaupt zulaesst. */
+  const nehmbar = (platz: number): boolean =>
+    sicht.gelaende[platz] === GRAS && sicht.besitzer[platz] === null;
+
+  /**
+   * Was jetzt anwaehlbar ist: der Rand des eigenen Gebiets (kommt fertig vom
+   * Server) plus der Rand dessen, was schon auf dem Zettel steht.
+   */
+  const waehlbar = useMemo(() => {
+    const raus = new Set<number>(sicht.waehlbar);
+    for (const platz of wahl) {
+      for (const n of nachbarnVon(platz, sicht.spalten, sicht.zeilen)) {
+        if (nehmbar(n)) raus.add(n);
+      }
+    }
+    for (const platz of wahl) raus.delete(platz);
+    return raus;
+  }, [sicht.waehlbar, sicht.gelaende, sicht.besitzer, sicht.spalten, sicht.zeilen, wahl]);
+
+  /**
+   * Ein Feld an- oder abwaehlen.
+   *
+   * Beim Abwaehlen faellt alles mit, was nur ueber dieses Feld erreichbar war:
+   * Ein Vorstoss haengt an seinem ersten Feld, und eine Insel mitten im Freien
+   * wuerde der Server ohnehin abweisen. Wer es sieht, versteht es sofort — wer
+   * es nicht saehe, wuerde am Ende einen Zettel abschicken, der zurueckkommt.
+   */
+  const tippe = (platz: number): void => {
+    if (!darfPlanen || wartet) return;
+    if (gewaehlt.has(platz)) {
+      setWahl((alt) => haengtZusammen(alt.filter((p) => p !== platz)));
+      return;
+    }
+    if (wahl.length >= kontingent) return;
+    if (!waehlbar.has(platz)) return;
+    setWahl((alt) => [...alt, platz]);
+  };
+
+  /** Von den eigenen Feldern aus durch die Auswahl laufen; der Rest faellt weg. */
+  function haengtZusammen(auswahl: readonly number[]): number[] {
+    const offenListe = new Set(auswahl);
+    const erreicht = new Set<number>();
+    const rand: number[] = [];
+    for (let platz = 0; platz < sicht.besitzer.length; platz++) {
+      if (sicht.besitzer[platz] === eigenerSitz) rand.push(platz);
+    }
+    while (rand.length > 0) {
+      const platz = rand.pop()!;
+      for (const n of nachbarnVon(platz, sicht.spalten, sicht.zeilen)) {
+        if (!offenListe.has(n) || erreicht.has(n)) continue;
+        erreicht.add(n);
+        rand.push(n);
+      }
+    }
+    // Die urspruengliche Reihenfolge bleibt: Sie ist die des Tippens.
+    return auswahl.filter((p) => erreicht.has(p));
+  }
   /**
    * Die Kaempfe der letzten Runde. Sie liegen kurz als Marke auf dem Feld —
    * eine Runde lang, nicht als Zustand mit eigener Uhr: Was in `sicht.letzte`
@@ -469,8 +662,7 @@ function Karte({
     return karte;
   }, [sicht.letzte]);
 
-  const binBereit = sicht.bereit[eigenerSitz] === true;
-  const offen = (sicht.kontingent[eigenerSitz] ?? 1) - sicht.wahl.length;
+  const offen = kontingent - wahl.length;
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
   return (
@@ -492,7 +684,7 @@ function Karte({
             eigen
           />
           <span className="ei-runde">
-            Runde
+            {sicht.variante === 'nebel' ? 'Nebel · Runde' : 'Offen · Runde'}
             <strong>{sicht.runde}</strong>
           </span>
           <Spielerstand sitz={gegnerSitz} zeile={zeile(gegnerSitz)} sicht={sicht} />
@@ -512,8 +704,9 @@ function Karte({
              * niemandem.
              */
             const imNebel = art === null || art === undefined;
-            const kannWaehlen = darfTippen && waehlbar.has(platz);
             const mein = gewaehlt.has(platz);
+            const kannWaehlen =
+              darfPlanen && !wartet && (mein || (wahl.length < kontingent && waehlbar.has(platz)));
             const kampf = kaempfe.get(platz);
             return (
               <button
@@ -526,9 +719,9 @@ function Karte({
                 data-art={imNebel ? 'nebel' : art === WASSER ? 'wasser' : art === BERG ? 'berg' : 'gras'}
                 data-eigen={besitzer === eigenerSitz ? '' : undefined}
                 data-fremd={besitzer !== null && besitzer !== eigenerSitz ? '' : undefined}
-                data-waehlbar={kannWaehlen ? '' : undefined}
+                data-waehlbar={kannWaehlen && !mein ? '' : undefined}
                 data-gewaehlt={mein ? '' : undefined}
-                data-getippt={getippt === platz ? '' : undefined}
+                data-abgegeben={mein && binBereit ? '' : undefined}
                 data-kampf={kampf === undefined ? undefined : kampf === eigenerSitz ? 'sieg' : 'verlust'}
                 style={{
                   background: imNebel
@@ -536,8 +729,12 @@ function Karte({
                     : besitzer !== null
                       ? gebietsfarbe(besitzer)
                       : undefined,
+                  // Gewählt heißt: in meiner Farbe getönt. Der gelbe Rahmen im
+                  // Stylesheet sagt „noch nicht abgeschickt", die Tönung sagt
+                  // „das soll meins werden".
+                  backgroundImage: mein ? auswahlton(eigenerSitz) : undefined,
                 }}
-                onClick={() => onWaehle(platz)}
+                onClick={() => tippe(platz)}
                 aria-label={feldName(art ?? null, besitzer ?? null, eigenerSitz, sicht.ornament[platz] ?? null)}
               >
                 {sicht.ornament[platz] !== null && sicht.ornament[platz] !== undefined && (
@@ -564,25 +761,32 @@ function Karte({
           </>
         ) : (
           <>
+            {/*
+              Der Zaehler steht oben und zaehlt MIT, waehrend man tippt — er
+              ist die einzige Rueckmeldung darauf, wie viel man noch vergeben
+              darf, und war frueher erst nach der Serverantwort richtig.
+            */}
             <p className="ei-hinweis">
-              {offen > 0 ? `Noch ${offen} ${offen === 1 ? 'Feld' : 'Felder'}` : 'Zug steht'}
+              {offen > 0
+                ? `Noch ${offen} ${offen === 1 ? 'Feld' : 'Felder'}`
+                : 'Alle Felder vergeben'}
             </p>
             <div className="ei-knoepfe">
               <button
                 type="button"
                 className="ei-knopf"
-                disabled={!darfTippen || sicht.wahl.length === 0}
-                onClick={onZurueck}
+                disabled={wahl.length === 0 || wartet}
+                onClick={() => setWahl([])}
               >
-                Zurücknehmen
+                Zurücksetzen
               </button>
               <button
                 type="button"
                 className="ei-knopf ei-knopf-stark"
-                disabled={!darfTippen}
-                onClick={onBereit}
+                disabled={wartet}
+                onClick={() => onAbgeben(wahl)}
               >
-                Fertig
+                {wartet ? 'Wird gesendet…' : wahl.length === 0 ? 'Passen' : `Zug abschicken (${wahl.length})`}
               </button>
             </div>
           </>
@@ -749,10 +953,12 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         auf dem eines steht, nimmt von da an ein Feld mehr pro Runde. Es liegen
         immer vier auf der Karte — für jedes eingesammelte rückt eines nach.
       </p>
-      <h3>Der Nebel</h3>
+      <h3>Zwei Spielarten</h3>
       <p>
-        Du siehst dein Gebiet und drei Felder darüber hinaus. Alles andere liegt
-        grau im Nebel — auch für den Gegner.
+        <strong>Im Nebel</strong> siehst du dein Gebiet und drei Felder darüber
+        hinaus; alles andere liegt grau — auch für den Gegner. Auf der{' '}
+        <strong>offenen Karte</strong> seht ihr beide die ganze Insel. Was auf
+        dem Zettel des anderen steht, bleibt in beiden Fällen geheim.
       </p>
       <h3>Ziel</h3>
       <p>Wer am Ende die meisten Felder hält, gewinnt.</p>

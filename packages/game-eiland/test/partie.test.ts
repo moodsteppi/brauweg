@@ -34,28 +34,23 @@ function neu(saat: string | number = SAAT): EilandPartie {
   return erstellePartie(DEFAULT_REGELN, [0, 1], saat);
 }
 
-/** Spielt eine Runde zu Ende: beide nehmen, was der Bot vorschlaegt. */
+/** Spielt eine Runde zu Ende: beide geben ab, was der Bot vorschlaegt. */
 function rundeMitBot(partie: EilandPartie): EilandPartie {
   let stand = partie;
   for (const sitz of [0, 1]) {
-    // Der Bot waehlt EIN Feld je Aufruf, so wie ein Mensch. Bis sein Zettel
-    // voll ist, wird er erneut gefragt — genau das tut die Plattform auch.
-    while (!stand.fertig && !istBereit(stand, sitz)) {
-      stand = fuehreAus(stand, sitz, botZug(sichtFuer(stand, sitz)));
-    }
+    if (stand.fertig || istBereit(stand, sitz)) continue;
+    stand = fuehreAus(stand, sitz, botZug(sichtFuer(stand, sitz)));
   }
   return stand;
 }
 
-/** Mehrere Felder nacheinander waehlen, so wie es der Bildschirm tut. */
-function waehleAlle(
+/** Einen Zettel abgeben. */
+function plan(
   partie: EilandPartie,
   sitz: number,
   felder: readonly number[],
 ): EilandPartie {
-  let stand = partie;
-  for (const platz of felder) stand = fuehreAus(stand, sitz, { typ: 'waehlen', platz });
-  return stand;
+  return fuehreAus(partie, sitz, { typ: 'plan', felder });
 }
 
 describe('Karte', () => {
@@ -186,8 +181,8 @@ describe('Ornamente', () => {
     const gestellt: EilandPartie = { ...partie, ornament };
 
     assert.equal(kontingent(gestellt, 0), 1);
-    let stand = fuehreAus(gestellt, 0, { typ: 'waehlen', platz: ziel });
-    stand = fuehreAus(stand, 1, { typ: 'bereit' });
+    let stand = plan(gestellt, 0, [ziel]);
+    stand = plan(stand, 1, []);
 
     assert.equal(stand.besitzer[ziel], 0);
     assert.equal(stand.gesammelt[0], 1);
@@ -224,7 +219,7 @@ describe('Zug', () => {
   it('weist ein Feld ab, das nicht an das eigene Gebiet grenzt', () => {
     const partie = neu();
     const fern = startEcke(1, spalten, zeilen);
-    assert.throws(() => fuehreAus(partie, 0, { typ: 'waehlen', platz: fern }));
+    assert.throws(() => plan(partie, 0, [fern]));
   });
 
   it('weist gegnerisches Gebiet ab — auch am eigenen Rand', () => {
@@ -239,14 +234,14 @@ describe('Zug', () => {
     besitzer[nachbar] = 1;
     const gestellt: EilandPartie = { ...partie, besitzer };
     assert.ok(!waehlbare(gestellt, 0).includes(nachbar));
-    assert.throws(() => fuehreAus(gestellt, 0, { typ: 'waehlen', platz: nachbar }));
+    assert.throws(() => plan(gestellt, 0, [nachbar]));
   });
 
   it('nimmt hoechstens so viele Felder wie das Kontingent hergibt', () => {
     const partie = neu();
     const ecke = startEcke(0, spalten, zeilen);
     const erstes = waehlbare(partie, 0)[0]!;
-    const stand = fuehreAus(partie, 0, { typ: 'waehlen', platz: erstes });
+    const stand = plan(partie, 0, [erstes]);
     // Kontingent 1: Nach einem Feld ist der Zettel abgegeben.
     assert.ok(istBereit(stand, 0));
     assert.deepEqual(waehlbare(stand, 0), []);
@@ -261,7 +256,7 @@ describe('Zug', () => {
      */
     assert.equal(waehlbare(partie, 0).length, 2);
     const anderes = waehlbare(partie, 0).find((p) => p !== erstes)!;
-    assert.equal(fuehreAus(stand, 0, { typ: 'waehlen', platz: anderes }), stand);
+    assert.equal(plan(stand, 0, [anderes]), stand);
   });
 
   it('erlaubt einen Vorstoss ueber mehrere Felder, aber keine Insel', () => {
@@ -269,47 +264,45 @@ describe('Zug', () => {
     const drei: EilandPartie = { ...partie, gesammelt: { 0: 2, 1: 0 } };
     assert.equal(kontingent(drei, 0), 3);
 
-    // Kette: erstes Feld am Rand, zweites am ersten.
+    // Kette: erstes Feld am Rand, zweites daran. Genau das baut der Bildschirm
+    // zusammen, bevor er den Zettel abschickt.
+    const ecke = startEcke(0, spalten, zeilen);
     const erstes = waehlbare(drei, 0)[0]!;
-    const nachEinem = fuehreAus(drei, 0, { typ: 'waehlen', platz: erstes });
-    const weiter = waehlbare(nachEinem, 0).filter(
-      (p) => !nachbarn(startEcke(0, spalten, zeilen), spalten, zeilen).includes(p),
-    );
-    assert.ok(weiter.length > 0, 'hinter dem ersten Feld geht es weiter');
-    const zweites = weiter[0]!;
-    assert.ok(nachbarn(erstes, spalten, zeilen).includes(zweites));
+    const zweites = nachbarn(erstes, spalten, zeilen).find(
+      (p) =>
+        p !== ecke &&
+        drei.gelaende[p] === GRAS &&
+        drei.besitzer[p] === null &&
+        !nachbarn(ecke, spalten, zeilen).includes(p),
+    )!;
+    assert.ok(zweites !== undefined, 'hinter dem ersten Feld geht es weiter');
 
-    // Ohne das Zwischenfeld ist es eine Insel: Vor dem ersten Feld steht das
-    // zweite gar nicht zur Wahl.
+    // Die Reihenfolge im Zettel darf nichts aendern: Geprueft wird die Menge.
+    assert.doesNotThrow(() => plan(drei, 0, [erstes, zweites]));
+    assert.doesNotThrow(() => plan(drei, 0, [zweites, erstes]));
+
+    // Ohne das Zwischenfeld ist es eine Insel.
     assert.ok(!waehlbare(drei, 0).includes(zweites));
-    assert.throws(() => fuehreAus(drei, 0, { typ: 'waehlen', platz: zweites }), /nicht waehlbar/);
+    assert.throws(() => plan(drei, 0, [zweites]), /grenzt nicht/);
   });
 
-  it('nimmt ein Feld zurueck, solange der Zettel offen ist', () => {
+  it('nimmt einen Zettel mit weniger Feldern an', () => {
+    // Passen und Untermass sind erlaubt: Wer nur zwei von drei Feldern nehmen
+    // will, soll das duerfen — die Obergrenze ist eine Grenze, keine Pflicht.
     const partie = neu();
-    const zwei: EilandPartie = { ...partie, gesammelt: { 0: 1, 1: 0 } };
-    const erstes = waehlbare(zwei, 0)[0]!;
-    const gewaehlt = fuehreAus(zwei, 0, { typ: 'waehlen', platz: erstes });
-    assert.deepEqual(gewaehlt.wahl[0], [erstes]);
-    const zurueck = fuehreAus(gewaehlt, 0, { typ: 'zuruecknehmen' });
-    assert.deepEqual(zurueck.wahl[0], []);
-    assert.equal(zurueck.besitzer[erstes], null);
+    const drei: EilandPartie = { ...partie, gesammelt: { 0: 2, 1: 0 } };
+    const eins = plan(drei, 0, [waehlbare(drei, 0)[0]!]);
+    assert.equal(eins.wahl[0]?.length, 1);
+    assert.ok(istBereit(eins, 0));
+    assert.deepEqual(plan(drei, 0, []).wahl[0], []);
   });
 
-  it('laesst nach dem Abgeben nichts mehr zurueckholen', () => {
-    const partie = neu();
-    const erstes = waehlbare(partie, 0)[0]!;
-    // Kontingent 1: Mit dem einen Feld ist abgegeben.
-    const abgegeben = fuehreAus(partie, 0, { typ: 'waehlen', platz: erstes });
-    assert.throws(() => fuehreAus(abgegeben, 0, { typ: 'zuruecknehmen' }), /abgegeben/);
-  });
-
-  it('verbucht ein zweites Bereit nicht', () => {
+  it('verbucht einen zweiten Zettel nicht', () => {
     // Die Plattform verwirft eine wirkungslose Aktion (act in runtime/party.ts).
     // Dafuer muss dasselbe Objekt zurueckkommen, nicht nur ein gleiches.
     const partie = neu();
-    const stand = fuehreAus(partie, 0, { typ: 'bereit' });
-    assert.equal(fuehreAus(stand, 0, { typ: 'bereit' }), stand);
+    const stand = plan(partie, 0, []);
+    assert.equal(plan(stand, 0, []), stand);
   });
 });
 
@@ -317,7 +310,7 @@ describe('Gleichzeitigkeit', () => {
   it('nennt den Sitz am Zug, der noch nicht abgegeben hat', () => {
     const partie = neu();
     assert.equal(amZug(partie), 0);
-    const nachNull = fuehreAus(partie, 0, { typ: 'bereit' });
+    const nachNull = plan(partie, 0, []);
     assert.equal(amZug(nachNull), 1, 'jetzt fehlt nur noch Sitz 1');
   });
 
@@ -329,7 +322,7 @@ describe('Gleichzeitigkeit', () => {
      */
     const partie = neu();
     assert.equal(amZug(partie), 0);
-    const stand = fuehreAus(partie, 1, { typ: 'waehlen', platz: waehlbare(partie, 1)[0]! });
+    const stand = plan(partie, 1, [waehlbare(partie, 1)[0]!]);
     assert.ok(istBereit(stand, 1));
     assert.equal(amZug(stand), 0);
   });
@@ -337,12 +330,12 @@ describe('Gleichzeitigkeit', () => {
   it('loest erst auf, wenn beide abgegeben haben', () => {
     const partie = neu();
     const zielNull = waehlbare(partie, 0)[0]!;
-    const nachNull = fuehreAus(partie, 0, { typ: 'waehlen', platz: zielNull });
+    const nachNull = plan(partie, 0, [zielNull]);
     assert.equal(nachNull.besitzer[zielNull], null, 'noch nichts eingenommen');
     assert.equal(nachNull.runde, 1);
 
     const zielEins = waehlbare(nachNull, 1)[0]!;
-    const aufgeloest = fuehreAus(nachNull, 1, { typ: 'waehlen', platz: zielEins });
+    const aufgeloest = plan(nachNull, 1, [zielEins]);
     assert.equal(aufgeloest.besitzer[zielNull], 0);
     assert.equal(aufgeloest.besitzer[zielEins], 1);
     assert.equal(aufgeloest.runde, 2);
@@ -386,8 +379,8 @@ describe('Kampf', () => {
       [1, 1],
     ] as const) {
       const { partie, strittig } = streitStand(wurf);
-      let stand = fuehreAus(partie, 0, { typ: 'waehlen', platz: strittig });
-      stand = fuehreAus(stand, 1, { typ: 'waehlen', platz: strittig });
+      let stand = plan(partie, 0, [strittig]);
+      stand = plan(stand, 1, [strittig]);
       assert.equal(stand.besitzer[strittig], erwartet, `Wurf ${wurf}`);
       assert.equal(stand.letzte?.kaempfe.length, 1);
       assert.equal(stand.letzte?.kaempfe[0]?.platz, strittig);
@@ -403,16 +396,8 @@ describe('Kampf', () => {
     // Sonst waere der Schnellere im Vorteil, und das gleichzeitige Spiel waere
     // ein Wettrennen mit Zufallsanstrich.
     const { partie, strittig } = streitStand(0);
-    const erstNull = fuehreAus(
-      fuehreAus(partie, 0, { typ: 'waehlen', platz: strittig }),
-      1,
-      { typ: 'waehlen', platz: strittig },
-    );
-    const erstEins = fuehreAus(
-      fuehreAus(partie, 1, { typ: 'waehlen', platz: strittig }),
-      0,
-      { typ: 'waehlen', platz: strittig },
-    );
+    const erstNull = plan(plan(partie, 0, [strittig]), 1, [strittig]);
+    const erstEins = plan(plan(partie, 1, [strittig]), 0, [strittig]);
     assert.equal(erstNull.besitzer[strittig], erstEins.besitzer[strittig]);
   });
 
@@ -425,8 +410,8 @@ describe('Kampf', () => {
     const { partie, strittig } = streitStand(1); // Wurf 1 = Sitz 1 gewinnt
     const dahinter = strittig + spalten;
     const mitKontingent: EilandPartie = { ...partie, gesammelt: { 0: 1, 1: 0 } };
-    let stand = waehleAlle(mitKontingent, 0, [strittig, dahinter]);
-    stand = fuehreAus(stand, 1, { typ: 'waehlen', platz: strittig });
+    let stand = plan(mitKontingent, 0, [strittig, dahinter]);
+    stand = plan(stand, 1, [strittig]);
     assert.equal(stand.besitzer[strittig], 1);
     assert.equal(stand.besitzer[dahinter], null, 'das Feld dahinter bleibt frei');
     assert.deepEqual(stand.letzte?.verfallen[0], [dahinter]);
@@ -470,7 +455,7 @@ describe('Sicht', () => {
   it('haelt die Wahl des Gegners geheim', () => {
     const partie = neu();
     const ziel = waehlbare(partie, 1)[0]!;
-    const stand = fuehreAus(partie, 1, { typ: 'waehlen', platz: ziel });
+    const stand = plan(partie, 1, [ziel]);
     const sicht = sichtFuer(stand, 0);
     assert.deepEqual([...sicht.wahl], [], 'die eigene Wahl ist leer');
     assert.equal(sicht.bereit[1], true, 'dass er abgegeben hat, sieht man');
@@ -493,12 +478,54 @@ describe('Sicht', () => {
   it('beschneidet die Rundenmeldung auf das Sichtbare', () => {
     const partie = neu();
     const zielEins = waehlbare(partie, 1)[0]!;
-    let stand = fuehreAus(partie, 0, { typ: 'waehlen', platz: waehlbare(partie, 0)[0]! });
-    stand = fuehreAus(stand, 1, { typ: 'waehlen', platz: zielEins });
+    let stand = plan(partie, 0, [waehlbare(partie, 0)[0]!]);
+    stand = plan(stand, 1, [zielEins]);
     const sicht = sichtFuer(stand, 0);
     // Was Sitz 1 am anderen Ende der Karte genommen hat, geht Sitz 0 nichts an.
     assert.deepEqual(sicht.letzte?.genommen[1], []);
     assert.equal(sicht.letzte?.genommen[0]?.length, 1);
+  });
+});
+
+describe('Spielart klar', () => {
+  const KLAR = { ...DEFAULT_REGELN, variante: 'klar' as const };
+
+  it('zeigt die ganze Karte, aber sonst aendert sich nichts', () => {
+    const nebel = erstellePartie(DEFAULT_REGELN, [0, 1], SAAT);
+    const klar = erstellePartie(KLAR, [0, 1], SAAT);
+    // Dieselbe Saat, dieselbe Karte: Die Spielart ist eine Frage der SICHT und
+    // keine des Aufbaus. Waere hier ein Unterschied, waeren es zwei Spiele.
+    assert.deepEqual(klar.gelaende, nebel.gelaende);
+    assert.deepEqual(klar.ornament, nebel.ornament);
+    assert.deepEqual(waehlbare(klar, 0), waehlbare(nebel, 0));
+
+    const sicht = sichtFuer(klar, 0);
+    assert.equal(sicht.variante, 'klar');
+    assert.equal(sicht.gelaende.filter((g) => g === null).length, 0);
+    assert.equal(sicht.besitzer[startEcke(1, spalten, zeilen)], 1, 'auch der Gegner liegt offen');
+    assert.equal(sicht.ornament.filter((o) => o !== null).length, DEFAULT_REGELN.ornamente);
+  });
+
+  it('haelt auch offen die Wahl des Gegners geheim', () => {
+    // Offen heisst: die KARTE liegt offen. Was der andere gerade plant, ist
+    // etwas anderes — das bliebe sonst kein gleichzeitiger Zug.
+    const klar = erstellePartie(KLAR, [0, 1], SAAT);
+    const ziel = waehlbare(klar, 1)[0]!;
+    const stand = plan(klar, 1, [ziel]);
+    const sicht = sichtFuer(stand, 0);
+    assert.deepEqual([...sicht.wahl], []);
+    assert.equal(sicht.besitzer[ziel], null, 'genommen wird erst bei der Aufloesung');
+    assert.equal(sicht.bereit[1], true);
+  });
+
+  it('nimmt eine Partie aus der ersten Fassung als Nebelpartie an', () => {
+    // Ein Tisch ohne Spielart ist von vor dem Umbau: Damals gab es nur den
+    // Nebel. Das anzunehmen ist kein Raten, sondern die einzige Lesart.
+    const ohne = { ...DEFAULT_REGELN } as Record<string, unknown>;
+    delete ohne['variante'];
+    const partie = erstellePartie(ohne as never, [0, 1], SAAT);
+    assert.equal(partie.regeln.variante, 'nebel');
+    assert.equal(sichtFuer(partie, 0).variante, 'nebel');
   });
 });
 
@@ -563,17 +590,19 @@ describe('Partie', () => {
 });
 
 describe('Bot', () => {
-  it('waehlt je Aufruf ein Feld und schoepft das Kontingent aus', () => {
+  it('gibt seine ganze Runde in einem Zug ab', () => {
+    /*
+     * Der Grund steht in bot.ts: Die Plattform laesst zwischen zwei Botzuegen
+     * 0,8 Sekunden vergehen. Feld fuer Feld waeren das bei einem Kontingent
+     * von sechs fast fuenf Sekunden, in denen der Mensch vor einem Brett
+     * sitzt, auf dem nichts passiert.
+     */
     const partie = neu();
     const drei: EilandPartie = { ...partie, gesammelt: { 0: 2, 1: 0 } };
-    let stand = drei;
-    let aufrufe = 0;
-    while (!istBereit(stand, 0)) {
-      const aktion = botZug(sichtFuer(stand, 0));
-      assert.equal(aktion.typ, 'waehlen');
-      stand = fuehreAus(stand, 0, aktion);
-      assert.ok(++aufrufe <= 5);
-    }
+    const aktion = botZug(sichtFuer(drei, 0));
+    assert.equal(aktion.felder.length, 3);
+    const stand = fuehreAus(drei, 0, aktion);
+    assert.ok(istBereit(stand, 0));
     assert.equal(stand.wahl[0]?.length, 3);
   });
 
@@ -590,7 +619,7 @@ describe('Bot', () => {
     ornament[ziel] = 0;
     const gestellt: EilandPartie = { ...partie, ornament };
     const aktion = botZug(sichtFuer(gestellt, 0));
-    assert.deepEqual(aktion, { typ: 'waehlen', platz: ziel });
+    assert.deepEqual(aktion, { typ: 'plan', felder: [ziel] });
   });
 
   it('laeuft auch, wenn nichts mehr zu holen ist', () => {
@@ -599,7 +628,7 @@ describe('Bot', () => {
       ...partie,
       gelaende: partie.gelaende.map((g, platz) => (partie.besitzer[platz] === null ? WASSER : g)),
     };
-    // Nichts waehlbar: Er gibt ab, statt eine ungueltige Aktion zu liefern.
-    assert.deepEqual(botZug(sichtFuer(eingemauert, 0)), { typ: 'bereit' });
+    // Nichts waehlbar: Er passt, statt eine ungueltige Aktion zu liefern.
+    assert.deepEqual(botZug(sichtFuer(eingemauert, 0)), { typ: 'plan', felder: [] });
   });
 });

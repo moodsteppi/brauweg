@@ -30,6 +30,7 @@ import {
   sitzeVon,
   waehlbare,
 } from './partie.js';
+import type { EilandVariante } from './regeln.js';
 
 export interface EilandSicht {
   /**
@@ -44,6 +45,15 @@ export interface EilandSicht {
   readonly spalten: number;
   readonly zeilen: number;
   readonly sichtweite: number;
+  /**
+   * Spielart dieses Tisches.
+   *
+   * Der Client zeichnet in beiden Faellen dasselbe — was er nicht weiss, malt
+   * er grau —, aber er soll es BENENNEN koennen ("Nebel" am Kopf der Karte).
+   * Und ohne dieses Feld liesse sich nach einem Neuladen nicht mehr sagen, an
+   * welchem Tisch man eigentlich sitzt.
+   */
+  readonly variante: EilandVariante;
   /** Gelaende je Platz (0 Gras, 1 Wasser, 2 Berg), null im Nebel. */
   readonly gelaende: readonly (number | null)[];
   /** Ornamentart je Platz, null wenn keins da ist ODER das Feld im Nebel liegt. */
@@ -86,6 +96,12 @@ export interface EilandSicht {
  */
 function sichtbarePlaetze(partie: EilandPartie, sitz: number): boolean[] {
   const { spalten, zeilen, sichtweite } = partie.regeln;
+  /*
+   * Offene Spielart: alles sichtbar. Das ist der EINZIGE Unterschied zwischen
+   * den beiden Modi — Regeln, Zuege, Bot und Kartenaufbau sind identisch. Wer
+   * hier einen zweiten Unterschied einbaut, hat zwei Spiele statt einem.
+   */
+  if (partie.regeln.variante === 'klar') return partie.besitzer.map(() => true);
   const sichtbar = partie.besitzer.map((b) => b === sitz);
   let rand: number[] = [];
   for (let platz = 0; platz < partie.besitzer.length; platz++) {
@@ -159,6 +175,7 @@ function grundsicht(
     spalten: partie.regeln.spalten,
     zeilen: partie.regeln.zeilen,
     sichtweite: partie.regeln.sichtweite,
+    variante: partie.regeln.variante,
     grau: partie.grau,
     punkte: partie.punkte,
     gesammelt: partie.gesammelt,
@@ -202,7 +219,11 @@ export function sichtFuer(partie: EilandPartie, sitz: number): EilandSicht {
  * wo hinter seinem Rand das naechste Ornament liegt.
  */
 export function zuschauerSicht(partie: EilandPartie): EilandSicht {
-  const besetzt = partie.besitzer.map((b) => b !== null);
+  // In der offenen Spielart gibt es nichts zu verbergen: Dort liegt die Karte
+  // fuer beide Spieler ohnehin offen, ein Zuschauer erfaehrt also nichts, was
+  // nicht schon beide wissen.
+  const offen = partie.regeln.variante === 'klar';
+  const besetzt = partie.besitzer.map((b) => offen || b !== null);
   return {
     ...grundsicht(partie, null),
     gelaende: partie.gelaende.map((g, platz) => (besetzt[platz] ? g : null)),

@@ -15762,8 +15762,19 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .ei-feld[data-waehlbar]:active { filter: brightness(1.08); }
 .ei-feld[data-gewaehlt] {
-  box-shadow: inset 0 0 0 3px #f2c14e;
-  filter: saturate(1.15);
+  /* Kräftiger als der Wählbar-Rand und in einer Farbe, die weder Gelände noch
+     Gebiet trägt: Ein gewähltes Feld muss man auf einem 10x10-Raster mit einem
+     Blick finden, auch wenn zwei danebenliegen. Die Tönung in der eigenen
+     Gebietsfarbe kommt aus dem Bildschirm (siehe auswahlton). */
+  box-shadow:
+    inset 0 0 0 3px #ffd245,
+    inset 0 0 0 4px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+}
+/* Abgeschickt: derselbe Ton, aber ohne den gelben Rand — der Zettel liegt
+   nicht mehr in der eigenen Hand, es gibt nichts mehr zu ändern. */
+.ei-feld[data-abgegeben] {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75);
 }
 /* Der angetippte Zug, bevor der Server geantwortet hat. */
 .ei-feld[data-getippt] { filter: brightness(1.12); }
@@ -15836,6 +15847,46 @@ span.hub-angebot-art.poker-jeton-stapel {
 .ei-knopf-stark { color: #ffffff; background: linear-gradient(180deg, #5aa86a, #3d8a51); }
 .ei-knopf:active { transform: scale(0.985); }
 .ei-knopf:disabled { filter: saturate(0.35) opacity(0.6); cursor: default; }
+
+/* Der Schalter zwischen Nebel und offener Karte. Zwei Knöpfe in einer Rinne,
+   der gewählte liegt als heller Reiter darin — dieselbe Form, die auf jedem
+   Handy „eins von zweien" bedeutet. Wortgleich zum Filler-Schalter, damit
+   beide Spiele sich gleich anfühlen. */
+.ei-schalter {
+  width: 100%;
+  margin: 0 0 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.09);
+}
+.ei-schalter button {
+  padding: 11px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #6d6d6d;
+  font: 800 14px/1 system-ui;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.ei-schalter button[data-an] {
+  background: #ffffff;
+  color: #2b2b2b;
+  box-shadow: 0 3px 8px -4px rgba(0, 0, 0, 0.55);
+}
+/* Der erklärende Satz sitzt UNTER beiden Knöpfen und über die volle Breite:
+   Er gehört zur Wahl, nicht zu einem der beiden Knöpfe. */
+.ei-schalter-text {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 2px 6px 4px;
+  color: #7a7a7a;
+  font: 600 12px/1.35 system-ui;
+  text-align: center;
+}
 
 .ei-abschluss { text-align: center; }
 .ei-abschluss h2 { margin: 0 0 4px; font: 900 26px/1 system-ui; color: #4a4a4a; }

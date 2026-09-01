@@ -16,7 +16,10 @@ Server prüft `currentActor` beim Handeln nämlich gar nicht; das Modul nennt de
 Sitz nur, damit Zugzeit, Bot-Übernahme und die Verlassen-Regel greifen (ohne
 ihn bekäme ein Tisch von der Plattform keinen einzigen Timer). Wer handeln
 darf, entscheidet allein `amZug` in `packages/game-eiland/src/partie.ts`: jeder,
-dessen Zettel noch offen ist.
+dessen Zettel noch offen ist. Auch dort ist `legalActions` leer, und aus dem
+Skat-Grund: Eine Aktion ist eine MENGE von Feldern, die sich nicht aufzählen
+lässt — der Bildschirm stellt sie selbst zusammen und schickt sie als einen
+Zettel.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und

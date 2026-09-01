@@ -59,11 +59,12 @@ export const EASYPOKER_MODULE_VERSION = 2;
 export const FILLER_MODULE_VERSION = 4;
 
 /**
- * 1 seit dem 1. September 2026 — die erste Fassung. Wie oben ausgeschrieben
- * und nicht als stiller Standardwert: Sobald Sicht oder Aktion sich aendern,
- * ist die Zeile schon da, an der die Zahl steigen muss.
+ * 2 seit dem 1. September 2026, wenige Stunden nach der 1. Dieser Client
+ * schickt den ganzen Zug als EINEN Zettel (`plan`) statt Feld fuer Feld, und
+ * er kennt die Spielart in der Sicht. Wer die 1 meldet, wird beim Beitritt
+ * abgewiesen — seine Aktionen gibt es nicht mehr.
  */
-export const EILAND_MODULE_VERSION = 1;
+export const EILAND_MODULE_VERSION = 2;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
