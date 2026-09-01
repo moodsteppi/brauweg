@@ -2,7 +2,10 @@ export { eiland } from './adapter.js';
 export {
   DEFAULT_REGELN,
   SEAT_COUNTS,
+  VARIANTEN,
   type EilandRegeln,
+  type EilandVariante,
+  istVariante,
   pruefeRegeln,
 } from './regeln.js';
 export {

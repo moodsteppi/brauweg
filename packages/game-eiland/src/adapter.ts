@@ -47,7 +47,7 @@ import { type EilandSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 
 type GespeichertePartie = EilandPartie & { readonly v: number };
 
@@ -70,11 +70,14 @@ const meta: GameMeta = {
 export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandRegeln> = {
   meta,
   /**
-   * 1 — die erste Fassung. Sie steht trotzdem ausgeschrieben und nicht als
-   * stiller Standardwert: Sobald sich an Sicht oder Aktion etwas aendert, ist
-   * die Zeile schon da, an der die Zahl steigen muss.
+   * 2 seit dem 1. September 2026, wenige Stunden nach der 1. Zwei Aenderungen
+   * auf einmal, weil zwischen ihnen kein Deploy lag: Aus drei Aktionen (Feld
+   * waehlen, zuruecknehmen, abgeben) ist eine geworden — der fertige Zettel —,
+   * und die Sicht traegt jetzt die Spielart. Ein Client der Fassung 1 schickt
+   * Aktionen, die es nicht mehr gibt, und muss deshalb abgewiesen werden,
+   * statt mitten in der Partie zu scheitern.
    */
-  protocolVersion: 1,
+  protocolVersion: 2,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -138,12 +141,20 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
    */
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
-    const { v: _v, ...rest } = snap;
-    return rest as EilandPartie;
+    const { v, ...rest } = snap;
+    const alt = rest as EilandPartie;
+    /*
+     * Version 1 kannte die Spielart nicht — es gab nur eine. Sie hier
+     * nachzutragen ist deshalb kein Raten: Jede Partie aus dieser Fassung
+     * wurde im Nebel gespielt. Abzuweisen waere der falsche Weg; ein Deploy
+     * darf keine laufende Partie brechen.
+     */
+    if (v === 1) return { ...alt, regeln: { ...alt.regeln, variante: 'nebel' } };
+    return alt;
   },
 };

@@ -42,15 +42,17 @@ describe('Adapter', () => {
     assert.ok(eiland.validateConfig(DEFAULT_REGELN, 3, 1).length > 0);
   });
 
-  it('kennt den Sitz am Zug und seine Zuege', () => {
+  it('nennt einen Sitz am Zug und ueberlaesst dem Bildschirm die Aktion', () => {
     const p = partie();
     assert.equal(eiland.currentActor(p), 0);
-    const zuege = eiland.legalActions(p, 0);
-    // Ein "waehlen" je erreichbarem Feld, dazu "bereit". Kein
-    // "zuruecknehmen", solange nichts gewaehlt ist.
-    assert.equal(zuege.filter((z) => z.typ === 'waehlen').length, waehlbare(p, 0).length);
-    assert.equal(zuege.filter((z) => z.typ === 'bereit').length, 1);
-    assert.equal(zuege.filter((z) => z.typ === 'zuruecknehmen').length, 0);
+    /*
+     * Leer, und das ist die Aussage: Eine Aktion ist hier eine MENGE von
+     * Feldern, die sich nicht aufzaehlen laesst. Was anwaehlbar ist, steht
+     * stattdessen in der Sicht — derselbe Weg wie bei Skat und Doppelkopf.
+     */
+    assert.deepEqual(eiland.legalActions(p, 0), []);
+    assert.ok(eiland.viewFor(p, 0).waehlbar.length > 0);
+    assert.deepEqual(eiland.viewFor(p, 0).waehlbar, waehlbare(p, 0));
   });
 
   it('haelt einen Snapshot ueber Serialisieren hinweg', () => {
@@ -74,8 +76,8 @@ describe('Adapter', () => {
     let p = partie();
     let runden = 0;
     while (!eiland.isFinished(p) && runden < 1000) {
-      // Genau die Schleife der Plattform: Solange ein Sitz am Zug ist, wird
-      // sein Bot erneut gefragt (siehe schedule in runtime/party.ts).
+      // Genau die Schleife der Plattform: Wer am Zug ist, wird gefragt — hier
+      // gibt der Bot je Aufruf einen ganzen Zettel ab (siehe bot.ts).
       const sitz = eiland.currentActor(p);
       assert.notEqual(sitz, null, 'niemand am Zug, obwohl die Partie laeuft');
       p = eiland.act(p, sitz!, eiland.botAction(eiland.viewFor(p, sitz!)));

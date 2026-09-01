@@ -7,12 +7,12 @@
  * ueberhaupt fair sein kann — auf dem Partiezustand haette er die ganze Karte
  * samt aller Ornamente und wuesste immer, wohin.
  *
- * Er waehlt je Aufruf EIN Feld, so wie ein Mensch auch. Eine Aktion "ganze
- * Auswahl auf einmal" waere schneller, aber die Plattform prueft, dass jede
- * Bot-Aktion in `legalActions` steht (plattform-invarianten.test.ts) — und
- * aufzaehlen liesse sich so eine Aktion nur als Liste aller
- * Feldkombinationen. Die Plattform ruft ihn einfach erneut auf, solange sein
- * Zettel offen ist.
+ * Er gibt seine ganze Runde in EINEM Zug ab. Das ist keine Bequemlichkeit,
+ * sondern der Unterschied zwischen fluessig und zaeh: Die Plattform laesst
+ * zwischen zwei Botzuegen 0,8 Sekunden vergehen, und solange sie laufen,
+ * sitzt der Mensch vor einem Brett, auf dem nichts passiert. Feld fuer Feld
+ * waeren das bei einem Kontingent von sechs fast fuenf Sekunden je Runde —
+ * genau das Stocken, das man beim Spielen merkt.
  *
  * Die Spielstaerke (`level`) wertet er nicht aus — ausdruecklich erlaubt (siehe
  * BotLevel in game-api) und hier auch ehrlich: Ein schwaecherer Bot muesste
@@ -47,22 +47,54 @@ export function botZug(sicht: EilandSicht): EilandAktion {
   }
 
   /*
-   * Die Kandidaten stehen als `waehlbar` in der Sicht — der Server hat sie
-   * gerade erst ausgerechnet. Sie noch einmal herzuleiten waere dieselbe Regel
-   * ein zweites Mal, und die zweite waere die, die niemand testet.
+   * Das erste Feld steht als `waehlbar` in der Sicht — der Server hat es
+   * gerade erst ausgerechnet. Ab dem zweiten muss der Bot selbst weiter
+   * rechnen: Was nach dem ersten Feld anwaehlbar ist, haengt an einer Wahl,
+   * die der Server noch gar nicht kennt. Die Regel dafuer ist EINE Zeile —
+   * frei, Gras, grenzt an das eigene Gebiet einschliesslich der eben
+   * gewaehlten Felder — und `fuehreAus` prueft die fertige Auswahl ohnehin
+   * noch einmal.
    */
-  let bester = -1;
-  let bestesMass = -Infinity;
-  for (const platz of [...sicht.waehlbar].sort((a, b) => a - b)) {
-    const mass = bewerte(platz);
-    // Gleichstand geht an die kleinere Platznummer, weil die Liste sortiert
-    // ist und nur ein echtes ">" gewinnt. Ein Bot ohne Zufall muss bei
-    // Gleichstand irgendetwas nehmen, und "irgendetwas" soll wiederholbar
-    // sein: Ein Modul kennt keinen Zufall ausser dem Seed (Grundsatz 1).
-    if (mass > bestesMass) {
-      bestesMass = mass;
-      bester = platz;
+  const genommen: number[] = [...sicht.wahl];
+  const offen = Math.max(0, (sicht.kontingent[ich] ?? 1) - genommen.length);
+
+  for (let i = 0; i < offen; i++) {
+    const kandidaten = i === 0 ? [...sicht.waehlbar] : nachschub();
+    if (kandidaten.length === 0) break;
+
+    let bester = -1;
+    let bestesMass = -Infinity;
+    for (const platz of kandidaten.sort((a, b) => a - b)) {
+      const mass = bewerte(platz);
+      // Gleichstand geht an die kleinere Platznummer, weil die Liste sortiert
+      // ist und nur ein echtes ">" gewinnt. Ein Bot ohne Zufall muss bei
+      // Gleichstand irgendetwas nehmen, und "irgendetwas" soll wiederholbar
+      // sein: Ein Modul kennt keinen Zufall ausser dem Seed (Grundsatz 1).
+      if (mass > bestesMass) {
+        bestesMass = mass;
+        bester = platz;
+      }
     }
+    if (bester < 0) break;
+    mein.add(bester);
+    genommen.push(bester);
+  }
+
+  /** Was nach den bisher gewaehlten Feldern anwaehlbar ist. */
+  function nachschub(): number[] {
+    const raus = new Set<number>();
+    for (const platz of mein) {
+      for (const n of nachbarn(platz, spalten, zeilen)) {
+        if (mein.has(n)) continue;
+        // Nebel (`null`) ist kein Grasland: Was er nicht sieht, kann er nicht
+        // nehmen. Angrenzende Felder liegen immer im Blick, dieser Zweig
+        // greift also nur bei Sichtweite 0.
+        if (gelaende[n] !== GRAS) continue;
+        if (besitzer[n] !== null) continue;
+        raus.add(n);
+      }
+    }
+    return [...raus];
   }
 
   /**
@@ -99,13 +131,8 @@ export function botZug(sicht: EilandSicht): EilandAktion {
     return mass;
   }
 
-  /*
-   * Nichts mehr zu holen: abgeben. Von selbst kommt der Bot hier kaum je an —
-   * ein Sitz ohne waehlbare Felder gilt bereits als bereit und wird gar nicht
-   * erst gefragt (siehe istBereit). Uebrig bleibt der Fall, dass die Plattform
-   * ihn fuer einen abwesenden Menschen einspringen laesst, dessen Zettel voll
-   * ist.
-   */
-  if (bester < 0) return { typ: 'bereit' };
-  return { typ: 'waehlen', platz: bester };
+  // Eine leere Liste ist das Passen. Von selbst kommt der Bot da kaum je an —
+  // ein Sitz ohne waehlbare Felder gilt bereits als bereit und wird gar nicht
+  // erst gefragt (siehe istBereit).
+  return { typ: 'plan', felder: genommen };
 }
