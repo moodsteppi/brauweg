@@ -1,0 +1,61 @@
+name: CI
+
+# Bis zum 01.09.2026 hatte dieses Repo keine Prüfstrecke: 983 Tests, die nur
+# lief, wenn jemand von Hand daran dachte. Was das kostet, hat dieselbe Nacht
+# gezeigt — ein Test war seit Tagen rot, ohne dass es jemand bemerkte, und ein
+# Wörterbuch-Eintrag ging doppelt durch, weil niemand baute. Dazu kommt: Die
+# Orchestrator-Worker haben im Merge-Auftrag stehen „Prüfungen abwarten, bei
+# Grün zusammenführen" — wo es keine Prüfungen gibt, mergen sie sofort.
+#
+# Aufbau wie in bro-server und brotool, mit einer Besonderheit: Die Workspaces
+# müssen VOR den Tests gebaut werden. `npm test` ruft je Paket `tsc && node
+# --test dist/...`, und ohne die dist-Ordner der Geschwister findet TypeScript
+# `@brauweg/game-api` nicht.
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+
+jobs:
+  secret-scan:
+    name: Geheimnis-Suche
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Nicht die Action, sondern das Programm selbst: gitleaks-action verlangt
+      # für Organisationen eine bezahlte Lizenz und bricht ohne sie ab, bevor
+      # die erste Datei geprüft ist. Das Programm ist MIT-lizenziert und frei.
+      - name: Gitleaks holen
+        run: |
+          set -euo pipefail
+          V=8.18.4
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: Gitleaks
+        run: gitleaks detect --source . --redact --no-banner --verbose
+
+  build-test:
+    name: Bauen und prüfen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Abhängigkeiten
+        run: npm ci
+
+      # Muss vor den Tests laufen — siehe Kopf dieser Datei.
+      - name: Bauen
+        run: npm run build
+
+      - name: Tests
+        run: npm test
