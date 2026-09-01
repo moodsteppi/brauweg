@@ -160,6 +160,19 @@ export interface FillerPartie {
   readonly barrieren: readonly string[];
   /** Wie viele Barrieren einem Sitz noch bleiben. */
   readonly barrierenUebrig: Readonly<Record<number, number>>;
+  /**
+   * Hat der Sitz, der gerade am Zug ist, in DIESEM Zug schon gemauert?
+   *
+   * Eine Mauer beendet den Zug nicht — man baut und faerbt danach trotzdem.
+   * Ohne diesen Merker liesse sich in einem einzigen Zug der ganze Vorrat
+   * verbauen, und die Spielart waere nach dem ersten Zug entschieden.
+   *
+   * Er gehoert an den ZUG und nicht an den Sitz: Mit dem Faerben geht der Zug
+   * weiter, und der Merker faellt dabei zurueck. Ein Verzeichnis je Sitz
+   * muesste an derselben Stelle geleert werden und koennte dabei
+   * auseinanderlaufen.
+   */
+  readonly mauerDiesenZug: boolean;
 }
 
 export type FillerAktion =
@@ -341,6 +354,7 @@ export function erstellePartie(
     fertig: false,
     barrieren: [],
     barrierenUebrig,
+    mauerDiesenZug: false,
   };
 }
 
@@ -439,6 +453,9 @@ export function moeglicheBarrieren(
 ): [number, number][] {
   if (!mitBarrieren(partie.regeln.variante)) return [];
   if ((partie.barrierenUebrig[sitz] ?? 0) <= 0) return [];
+  // Eine je Zug. Wer schon gemauert hat, faerbt jetzt — mehr ist dieser Zug
+  // nicht mehr.
+  if (partie.mauerDiesenZug && partie.dran === sitz) return [];
 
   const { spalten, zeilen } = partie.regeln;
   const gesetzt = new Set(partie.barrieren);
@@ -525,6 +542,17 @@ export function fuehreAus(
       ([a, b]) => kante(a, b) === kante(aktion.von, aktion.nach),
     );
     if (!erlaubt) throw new Error('Barriere hier nicht erlaubt');
+    /*
+     * Der Zug geht WEITER: `dran` bleibt stehen, `zug` zaehlt nicht hoch.
+     *
+     * Eine Mauer ist keine Alternative zum Faerben, sondern etwas, das man
+     * davor tun darf — einmal je Zug. Wer baut, faerbt danach trotzdem; erst
+     * das Faerben gibt ab. Genau deshalb braucht es `mauerDiesenZug`: Sonst
+     * liesse sich der ganze Vorrat in einem einzigen Zug verbauen.
+     *
+     * `leerzuege` bleibt ebenfalls, wie es ist. Ob der Zug etwas eingebracht
+     * hat, entscheidet sich beim Faerben gleich danach.
+     */
     return {
       ...partie,
       barrieren: [...partie.barrieren, kante(aktion.von, aktion.nach)],
@@ -532,15 +560,7 @@ export function fuehreAus(
         ...partie.barrierenUebrig,
         [sitz]: (partie.barrierenUebrig[sitz] ?? 0) - 1,
       },
-      dran: naechster,
-      zug: partie.zug + 1,
-      /*
-       * `leerzuege` bleibt, wie es ist — weder hoch noch zurueck. Ein
-       * Mauerzug ist kein gescheiterter Versuch zu wachsen, sondern etwas
-       * anderes; zaehlte er mit, endete eine Partie, in der beide bauen,
-       * ueber den Notausgang aus LEERZUEGE_MAX. Eine Endlosschleife kann
-       * daraus nicht werden: Die Barrieren sind gezaehlt und gehen aus.
-       */
+      mauerDiesenZug: true,
     };
   }
 
@@ -567,6 +587,8 @@ export function fuehreAus(
     zug: partie.zug + 1,
     leerzuege,
     fertig: !frei || leerzuege >= LEERZUEGE_MAX,
+    // Der Zug ist vorbei, der naechste darf wieder einmal mauern.
+    mauerDiesenZug: false,
   };
 }
 
