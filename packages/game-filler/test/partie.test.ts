@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  type FillerAktion,
   DEFAULT_REGELN,
   GRAUTOENE,
   LEERZUEGE_MAX,
@@ -17,6 +18,17 @@ import { botZug } from '../src/bot.js';
 import { sichtFuer, zuschauerSicht } from '../src/sicht.js';
 
 const SAAT = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+
+/** Die Farbe, die der Bot gewaehlt hat. Wirft, wenn er gemauert hat. */
+function botFarbe(zug: FillerAktion): number {
+  assert.equal(zug.typ, 'faerben');
+  return zug.typ === 'faerben' ? zug.farbe : -1;
+}
+
+/** Nur die Faerbe-Zuege. In der Spielart `build` stehen auch Barrieren drin. */
+function farbzuege(zuege: readonly FillerAktion[]): number[] {
+  return zuege.flatMap((z) => (z.typ === 'faerben' ? [z.farbe] : []));
+}
 
 function neu(saat: string | number = SAAT) {
   return erstellePartie(DEFAULT_REGELN, [0, 1], saat);
@@ -79,8 +91,7 @@ describe('Brett', () => {
 describe('Zuege', () => {
   it('sperrt die Farben beider Sitze', () => {
     const partie = neu();
-    const zuege = erlaubteZuege(partie, 0);
-    const farben = zuege.map((z) => z.farbe);
+    const farben = farbzuege(erlaubteZuege(partie, 0));
     assert.equal(farben.length, DEFAULT_REGELN.farben - 2);
     assert.ok(!farben.includes(partie.farbe[0]!));
     assert.ok(!farben.includes(partie.farbe[1]!));
@@ -99,7 +110,7 @@ describe('Zuege', () => {
 
   it('weist einen Zug ausserhalb der Reihe ab', () => {
     const partie = neu();
-    const farbe = erlaubteZuege(partie, 0)[0]!.farbe;
+    const farbe = farbzuege(erlaubteZuege(partie, 0))[0]!;
     assert.throws(() => fuehreAus(partie, 1, { typ: 'faerben', farbe }));
   });
 
@@ -113,7 +124,7 @@ describe('Zuege', () => {
      *   Zeile 1: 1 1 1 3
      *   Zeile 2: 0 3 2 3     <- Platz 8 ist die Ecke von Sitz 0 (Farbe 0)
      */
-    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel', barrieren: 0 } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     const gelegt = {
       ...partie,
@@ -136,7 +147,7 @@ describe('Zuege', () => {
   });
 
   it('beendet die Partie, wenn kein Feld mehr frei ist', () => {
-    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel', barrieren: 0 } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     const fastFertig = {
       ...partie,
@@ -156,7 +167,7 @@ describe('Zuege', () => {
   it('bricht ab, wenn niemand mehr etwas erobert', () => {
     // Der Deckel aus LEERZUEGE_MAX. Ohne ihn liefe so ein Tisch bis zum
     // Verfall weiter.
-    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel', barrieren: 0 } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     let lauf = {
       ...partie,
@@ -173,7 +184,7 @@ describe('Zuege', () => {
     for (let i = 0; i < LEERZUEGE_MAX; i++) {
       // Farbe 1 und 2 wechseln sich ab: beide erobern nichts und bleiben
       // erlaubt, weil sie nie zugleich Gebietsfarbe beider Sitze sind.
-      const frei = erlaubteZuege(lauf, lauf.dran).map((z) => z.farbe).filter((f) => f !== 5);
+      const frei = farbzuege(erlaubteZuege(lauf, lauf.dran)).filter((f) => f !== 5);
       lauf = fuehreAus(lauf, lauf.dran, { typ: 'faerben', farbe: frei[0]! }) as typeof lauf;
     }
     assert.equal(lauf.fertig, true);
@@ -271,7 +282,7 @@ describe('Offene Spielart', () => {
       dran: 0,
     };
     const basis = erstellePartie(
-      { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const,
+      { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel', barrieren: 0 } as const,
       [0, 1],
       1,
     );
@@ -279,8 +290,8 @@ describe('Offene Spielart', () => {
     const imKlaren = { ...basis, ...gelegt, regeln: { ...basis.regeln, variante: 'klar' as const } };
     // Im Nebel sieht der Bot je ein Feld beider Farben und nimmt die kleinere
     // Nummer; offen sieht er, dass Farbe 1 drei Felder bringt.
-    assert.equal(botZug(sichtFuer(imNebel, 0)).farbe, 1);
-    assert.equal(botZug(sichtFuer(imKlaren, 0)).farbe, 1);
+    assert.equal(botFarbe(botZug(sichtFuer(imNebel, 0))), 1);
+    assert.equal(botFarbe(botZug(sichtFuer(imKlaren, 0))), 1);
     // Der Beleg, dass wirklich geflutet wird: offen zaehlt Farbe 1 die ganze
     // Kette, und die Partie bestaetigt es.
     assert.equal(fuehreAus(imKlaren, 0, { typ: 'faerben', farbe: 1 }).punkte[0], 4);
@@ -295,8 +306,8 @@ describe('Bot', () => {
       const sitz = partie.dran;
       const zug = botZug(sichtFuer(partie, sitz));
       assert.ok(
-        erlaubteZuege(partie, sitz).some((z) => z.farbe === zug.farbe),
-        `Bot waehlte die gesperrte Farbe ${zug.farbe}`,
+        farbzuege(erlaubteZuege(partie, sitz)).includes(botFarbe(zug)),
+        `Bot waehlte die gesperrte Farbe ${botFarbe(zug)}`,
       );
       partie = fuehreAus(partie, sitz, zug);
       schritte++;
@@ -307,7 +318,7 @@ describe('Bot', () => {
   });
 
   it('nimmt die Farbe, die am meisten einbringt', () => {
-    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel' } as const;
+    const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'nebel', barrieren: 0 } as const;
     const partie = erstellePartie(regeln, [0, 1], 1);
     const gelegt = {
       ...partie,
@@ -322,6 +333,6 @@ describe('Bot', () => {
     };
     // Rand von Platz 8: Platz 4 (Farbe 1) und Platz 9 (Farbe 1). Farbe 1
     // bringt zwei, jede andere keins.
-    assert.equal(botZug(sichtFuer(gelegt, 0)).farbe, 1);
+    assert.equal(botFarbe(botZug(sichtFuer(gelegt, 0))), 1);
   });
 });

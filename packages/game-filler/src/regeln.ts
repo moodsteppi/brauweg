@@ -40,6 +40,14 @@ export interface FillerRegeln {
    * lesbares Wort mehr wert als ein Ja/Nein, das man erst deuten muss.
    */
   readonly variante: FillerVariante;
+  /**
+   * Wie viele Barrieren jeder Spieler mitbringt. Nur in der Spielart `build`.
+   *
+   * Im Regelsatz und nicht als Konstante, weil die Zahl der einzige Hebel
+   * ist, an dem sich diese Spielart ueberhaupt drehen laesst — und weil ein
+   * Tisch, der sie einmal gesetzt hat, sie behaelt.
+   */
+  readonly barrieren: number;
 }
 
 /**
@@ -49,9 +57,19 @@ export interface FillerRegeln {
  * eigene Rand, aber der Gegner ist sichtbar") dazukommen kann, ohne dass
  * irgendwo ein `!nebel` steht, das dann falsch waere.
  */
-export type FillerVariante = 'nebel' | 'klar';
+export type FillerVariante = 'nebel' | 'klar' | 'build';
 
-export const VARIANTEN: readonly FillerVariante[] = ['nebel', 'klar'];
+export const VARIANTEN: readonly FillerVariante[] = ['nebel', 'klar', 'build'];
+
+/** Spielarten, in denen das ganze Brett offen liegt. */
+export function liegtOffen(variante: FillerVariante): boolean {
+  return variante !== 'nebel';
+}
+
+/** Spielarten, in denen es Barrieren gibt. */
+export function mitBarrieren(variante: FillerVariante): boolean {
+  return variante === 'build';
+}
 
 export function istVariante(wert: unknown): wert is FillerVariante {
   return typeof wert === 'string' && (VARIANTEN as readonly string[]).includes(wert);
@@ -74,6 +92,13 @@ export const DEFAULT_REGELN: FillerRegeln = {
    * dieses Modul ueberhaupt gibt; wer das Vorbild will, schaltet um.
    */
   variante: 'nebel',
+  /*
+   * Fuenf je Spieler — die Zahl aus dem Auftrag. Sie ist auch die Grenze, an
+   * der die Spielart kippt: Bei acht Spalten reichen sieben Barrieren, um
+   * eine Brettbreite quer zuzumauern, und dann waere es kein Filler mehr,
+   * sondern zwei getrennte Spiele nebeneinander.
+   */
+  barrieren: 5,
 };
 
 /**
@@ -147,6 +172,30 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   const variante = gegeben['variante'];
   if (variante !== undefined && variante !== null && !istVariante(variante)) {
     probleme.push({ path: 'variante', messageKey: 'ruleset.varianteUnbekannt', severity: 'error' });
+  }
+
+  /*
+   * Wie `variante` darf auch die Barrierenzahl fehlen: Jeder Tisch von vor
+   * dem 1. September kennt sie nicht, und ohne die Spielart `build` braucht
+   * er sie auch nicht. `erstellePartie` traegt dann die Vorgabe ein.
+   *
+   * Die Obergrenze ist nicht Geschmack: Mit genug Barrieren laesst sich das
+   * Brett in zwei Haelften teilen, und dann spielen beide allein vor sich hin.
+   */
+  const barrieren = gegeben['barrieren'];
+  if (barrieren !== undefined && barrieren !== null) {
+    const kaputt =
+      typeof barrieren !== 'number' ||
+      !Number.isInteger(barrieren) ||
+      barrieren < 0 ||
+      barrieren > 20;
+    if (kaputt) {
+      probleme.push({
+        path: 'barrieren',
+        messageKey: 'ruleset.barrierenzahlAusserhalb',
+        severity: 'error',
+      });
+    }
   }
 
   return probleme;

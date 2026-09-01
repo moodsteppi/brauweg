@@ -16,7 +16,7 @@
  * entsteht ausschliesslich in viewFor, der Client blendet nichts selbst aus.
  */
 
-import { type FillerRegeln, istVariante } from './regeln.js';
+import { type FillerRegeln, istVariante, mitBarrieren } from './regeln.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
@@ -142,9 +142,36 @@ export interface FillerPartie {
   readonly leerzuege: number;
   readonly leftSeats: readonly number[];
   readonly fertig: boolean;
+  /**
+   * Gesetzte Barrieren als Kantenschluessel (`"a:b"`, kleinerer Platz zuerst).
+   *
+   * Eine Barriere liegt ZWISCHEN zwei Feldern, nicht auf einem — sie ist eine
+   * Kante des Gitters, kein Feld. Deshalb ein Schluessel aus beiden Plaetzen
+   * und keine Liste je Feld: Eine Wand gehoert beiden Seiten gleichermassen,
+   * und zwei halbe Eintraege koennten auseinanderlaufen.
+   *
+   * **Sie sperrt fuer BEIDE Seiten.** Eine Wand, die nur den Gegner aufhaelt,
+   * waere kein Bauwerk, sondern ein Zauber: Man mauerte die Flaeche zu, die
+   * man haben will, und holte sie danach in Ruhe. Symmetrisch ist sie ein
+   * echter Handel — man gibt denselben Weg auf, den man dem anderen nimmt.
+   *
+   * Leer in jeder Spielart ausser `build`.
+   */
+  readonly barrieren: readonly string[];
+  /** Wie viele Barrieren einem Sitz noch bleiben. */
+  readonly barrierenUebrig: Readonly<Record<number, number>>;
 }
 
-export type FillerAktion = { readonly typ: 'faerben'; readonly farbe: number };
+export type FillerAktion =
+  | { readonly typ: 'faerben'; readonly farbe: number }
+  /**
+   * Eine Barriere setzen — ein ganzer Zug, keine Zugabe.
+   *
+   * Das ist die Entscheidung, an der die Spielart haengt: Wer mauert, faerbt
+   * in dieser Runde nicht und verschenkt die Felder, die er haette holen
+   * koennen. Waere die Wand gratis, setzte man alle fuenf sofort.
+   */
+  | { readonly typ: 'barriere'; readonly von: number; readonly nach: number };
 
 // ---------------------------------------------------------------------------
 // Brett
@@ -160,6 +187,26 @@ export function nachbarn(platz: number, spalten: number, zeilen: number): number
   if (y > 0) raus.push(platz - spalten);
   if (y < zeilen - 1) raus.push(platz + spalten);
   return raus;
+}
+
+/**
+ * Schluessel einer Gitterkante. Kleinerer Platz zuerst, damit dieselbe Wand
+ * von beiden Seiten aus denselben Namen hat.
+ */
+export function kante(a: number, b: number): string {
+  return a < b ? `${a}:${b}` : `${b}:${a}`;
+}
+
+/** Nachbarn, die nicht durch eine Barriere abgetrennt sind. */
+export function offeneNachbarn(
+  platz: number,
+  spalten: number,
+  zeilen: number,
+  sperren: ReadonlySet<string>,
+): number[] {
+  const alle = nachbarn(platz, spalten, zeilen);
+  if (sperren.size === 0) return alle;
+  return alle.filter((n) => !sperren.has(kante(platz, n)));
 }
 
 /**
@@ -215,6 +262,17 @@ export function erstellePartie(
   saat: Saat,
 ): FillerPartie {
   const zufall = baueZufall(saat);
+  /*
+   * Fehlende Felder EINMAL hier ergaenzen und nicht an jeder Lesestelle.
+   * Ein Tisch von vor dem 31. August hat keine Spielart, einer von vor dem
+   * 1. September keine Barrierenzahl — stuende beides als `undefined` im
+   * Snapshot, muesste jede spaetere Stelle raten, was es bedeutet.
+   */
+  const gueltigeRegeln: FillerRegeln = {
+    ...regeln,
+    variante: istVariante(regeln.variante) ? regeln.variante : 'nebel',
+    barrieren: typeof regeln.barrieren === 'number' ? regeln.barrieren : 0,
+  };
   const { spalten, zeilen, farben } = regeln;
   const feld = baueBrett(regeln, zufall);
 
@@ -229,6 +287,7 @@ export function erstellePartie(
   const besitzer: (number | null)[] = new Array(feld.length).fill(null);
   const farbe: Record<number, number> = {};
   const punkte: Record<number, number> = {};
+  const barrierenUebrig: Record<number, number> = {};
   const belegt = new Set<number>();
 
   for (const sitz of sitze) {
@@ -255,6 +314,9 @@ export function erstellePartie(
     besitzer[ecke] = sitz;
     farbe[sitz] = feld[ecke]!;
     punkte[sitz] = 1;
+    barrierenUebrig[sitz] = mitBarrieren(gueltigeRegeln.variante)
+      ? (gueltigeRegeln.barrieren ?? 0)
+      : 0;
   }
 
   return {
@@ -266,7 +328,7 @@ export function erstellePartie(
      * ersten Zug eine der beiden Spielarten im Zustand — und zwar die, die
      * damals gespielt wurde.
      */
-    regeln: istVariante(regeln.variante) ? regeln : { ...regeln, variante: 'nebel' },
+    regeln: gueltigeRegeln,
     feld,
     grau,
     besitzer,
@@ -277,6 +339,8 @@ export function erstellePartie(
     leerzuege: 0,
     leftSeats: [],
     fertig: false,
+    barrieren: [],
+    barrierenUebrig,
   };
 }
 
@@ -314,7 +378,90 @@ export function erlaubteZuege(partie: FillerPartie, sitz: number): FillerAktion[
   for (let f = 0; f < partie.regeln.farben; f++) {
     if (!gesperrt.has(f)) zuege.push({ typ: 'faerben', farbe: f });
   }
+  for (const [von, nach] of moeglicheBarrieren(partie, sitz)) {
+    zuege.push({ typ: 'barriere', von, nach });
+  }
   return zuege;
+}
+
+/**
+ * Freie Felder, die ein Sitz ueberhaupt noch erreichen kann.
+ *
+ * Gelaufen wird von seinem Gebiet aus ueber FREIE Felder — durch fremdes
+ * Gebiet kommt niemand, das ist die Grundregel des Spiels — und nicht durch
+ * Barrieren. Was dabei herauskommt, ist die Antwort auf "hat der noch etwas
+ * zu holen?".
+ */
+export function erreichbareFreie(
+  partie: FillerPartie,
+  sitz: number,
+  sperren: ReadonlySet<string>,
+): number {
+  const { spalten, zeilen } = partie.regeln;
+  const gesehen = new Set<number>();
+  const rand: number[] = [];
+  for (let platz = 0; platz < partie.besitzer.length; platz++) {
+    if (partie.besitzer[platz] === sitz) rand.push(platz);
+  }
+  let zahl = 0;
+  while (rand.length > 0) {
+    const platz = rand.pop()!;
+    for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
+      if (gesehen.has(n)) continue;
+      if (partie.besitzer[n] !== null) continue;
+      gesehen.add(n);
+      zahl++;
+      rand.push(n);
+    }
+  }
+  return zahl;
+}
+
+/**
+ * Die Barrieren, die dieser Sitz gerade setzen darf.
+ *
+ * **Die Einsperr-Regel.** Eine Wand ist verboten, wenn danach ein Sitz kein
+ * einziges freies Feld mehr erreichen kann, der vorher noch eines erreichte.
+ * Ohne sie waere die Spielart in zwei Zuegen entschieden: Wer den Gegner auf
+ * seiner Ecke zumauert, gewinnt mit 55 zu 1.
+ *
+ * Geprueft wird fuer JEDEN Sitz, auch den eigenen — nicht aus Fuersorge,
+ * sondern weil ein Brett, auf dem niemand mehr etwas holen kann, nur noch
+ * ueber LEERZUEGE_MAX endet und bis dahin wie eingefroren aussieht.
+ *
+ * Und geprueft wird gegen den Stand VORHER: Wer schon eingeschlossen ist —
+ * das kann im Grundspiel ganz ohne Waende passieren —, blockiert sonst jede
+ * weitere Barriere auf dem ganzen Brett.
+ */
+export function moeglicheBarrieren(
+  partie: FillerPartie,
+  sitz: number,
+): [number, number][] {
+  if (!mitBarrieren(partie.regeln.variante)) return [];
+  if ((partie.barrierenUebrig[sitz] ?? 0) <= 0) return [];
+
+  const { spalten, zeilen } = partie.regeln;
+  const gesetzt = new Set(partie.barrieren);
+  const sitze = sitzeVon(partie);
+  const vorher = new Map(sitze.map((s) => [s, erreichbareFreie(partie, s, gesetzt)]));
+
+  const aus: [number, number][] = [];
+  for (let platz = 0; platz < partie.feld.length; platz++) {
+    // Nur nach rechts und nach unten, sonst stuende jede Kante zweimal da.
+    for (const n of [platz + 1, platz + spalten]) {
+      if (n >= partie.feld.length) continue;
+      if (n === platz + 1 && platz % spalten === spalten - 1) continue;
+      const schluessel = kante(platz, n);
+      if (gesetzt.has(schluessel)) continue;
+      const probe = new Set(gesetzt);
+      probe.add(schluessel);
+      const sperrtJemanden = sitze.some(
+        (s) => (vorher.get(s) ?? 0) > 0 && erreichbareFreie(partie, s, probe) === 0,
+      );
+      if (!sperrtJemanden) aus.push([platz, n]);
+    }
+  }
+  return aus;
 }
 
 /**
@@ -332,6 +479,7 @@ function schlucke(
   neueFarbe: number,
 ): { besitzer: (number | null)[]; feld: number[]; gewonnen: number } {
   const { spalten, zeilen } = partie.regeln;
+  const sperren = new Set(partie.barrieren);
   const besitzer = [...partie.besitzer];
   const feld = [...partie.feld];
 
@@ -344,7 +492,7 @@ function schlucke(
   let gewonnen = 0;
   while (rand.length > 0) {
     const platz = rand.pop()!;
-    for (const n of nachbarn(platz, spalten, zeilen)) {
+    for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
       if (besitzer[n] !== null) continue;
       if (feld[n] !== neueFarbe) continue;
       besitzer[n] = sitz;
@@ -368,6 +516,34 @@ export function fuehreAus(
 ): FillerPartie {
   if (partie.fertig) throw new Error('Partie ist zu Ende');
   if (partie.dran !== sitz) throw new Error('Nicht am Zug');
+
+  const sitze = sitzeVon(partie);
+  const naechster = sitze[(sitze.indexOf(sitz) + 1) % sitze.length] ?? sitz;
+
+  if (aktion.typ === 'barriere') {
+    const erlaubt = moeglicheBarrieren(partie, sitz).some(
+      ([a, b]) => kante(a, b) === kante(aktion.von, aktion.nach),
+    );
+    if (!erlaubt) throw new Error('Barriere hier nicht erlaubt');
+    return {
+      ...partie,
+      barrieren: [...partie.barrieren, kante(aktion.von, aktion.nach)],
+      barrierenUebrig: {
+        ...partie.barrierenUebrig,
+        [sitz]: (partie.barrierenUebrig[sitz] ?? 0) - 1,
+      },
+      dran: naechster,
+      zug: partie.zug + 1,
+      /*
+       * `leerzuege` bleibt, wie es ist — weder hoch noch zurueck. Ein
+       * Mauerzug ist kein gescheiterter Versuch zu wachsen, sondern etwas
+       * anderes; zaehlte er mit, endete eine Partie, in der beide bauen,
+       * ueber den Notausgang aus LEERZUEGE_MAX. Eine Endlosschleife kann
+       * daraus nicht werden: Die Barrieren sind gezaehlt und gehen aus.
+       */
+    };
+  }
+
   if (aktion.typ !== 'faerben') throw new Error('Unbekannte Aktion');
   const { farbe } = aktion;
   if (!Number.isInteger(farbe) || farbe < 0 || farbe >= partie.regeln.farben) {
@@ -380,9 +556,6 @@ export function fuehreAus(
   const punkte = { ...partie.punkte, [sitz]: (partie.punkte[sitz] ?? 0) + gewonnen };
   const frei = besitzer.some((b) => b === null);
   const leerzuege = gewonnen > 0 ? 0 : partie.leerzuege + 1;
-
-  const sitze = sitzeVon(partie);
-  const naechster = sitze[(sitze.indexOf(sitz) + 1) % sitze.length] ?? sitz;
 
   return {
     ...partie,

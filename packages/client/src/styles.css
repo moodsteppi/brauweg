@@ -13691,7 +13691,10 @@ main.auth > .muted {
   width: 100%;
   margin: 0 0 16px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Drei Spielarten seit dem 1. September. Ausgeschrieben und nicht
+     auto-fit: Bei zwei Knoepfen sollen es zwei gleiche Haelften sein, nicht
+     zwei nach Inhalt bemessene Streifen. */
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
@@ -14209,3 +14212,109 @@ main.auth > .muted {
   font: 700 16px/1 system-ui;
   cursor: pointer;
 }
+
+/* -- Filler: Spielart Build — Mauern und Setzflaechen (01.09.) ------------ */
+
+/* Das Brett wird zum Bezugsrahmen: Waende und Setzflaechen liegen als eigene
+   Schicht darueber und rechnen ihre Lage in Prozent (siehe kantenLage in
+   Filler.tsx). Ohne `position: relative` bezoegen sie sich auf die Seite. */
+.fl-brett { position: relative; }
+
+/* Eine gesetzte Mauer.
+   Sie liegt MITTIG auf der Fuge zwischen zwei Feldern — deshalb die
+   Verschiebung um die halbe eigene Dicke. Als Rand an einem der beiden
+   Felder gezeichnet saesse sie um eine halbe Fuge daneben, und auf einem
+   8er-Raster sieht man das. */
+.fl-wand {
+  position: absolute;
+  z-index: 2;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  margin-top: -3.5px;
+  border-radius: 3px;
+  background: #1d1d1d;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+/* Die Ausrichtung kommt als `data-quer` aus dem Bildschirm und wird NICHT aus
+   der Stilzeichenkette geraten: Ein Selektor auf `[style*="width"]` haelt so
+   lange, bis jemand dem Element eine weitere Eigenschaft mitgibt. */
+.fl-wand:not([data-quer]) { margin-top: 0; }
+.fl-wand[data-quer] { margin-left: 0; }
+
+/* Die Setzflaeche: ein breiter Griff auf einer duennen Kante.
+   Ein 7 px schmales Ziel trifft kein Daumen. Der Knopf ist deshalb 22 px
+   breit und ragt in beide Nachbarfelder hinein — sichtbar ist davon nur ein
+   Strich in der Mitte. */
+.fl-kantenziel {
+  position: absolute;
+  z-index: 3;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fl-kantenziel:not([data-quer]) { width: 22px; margin-left: -11px; }
+.fl-kantenziel[data-quer] { height: 22px; margin-top: -11px; }
+/* Der sichtbare Strich. Als Pseudoelement, damit die Trefferflaeche gross
+   bleibt und die Anzeige klein. */
+.fl-kantenziel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 3px;
+  background: rgba(29, 29, 29, 0.34);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+}
+.fl-kantenziel:not([data-quer])::after { width: 5px; height: 78%; }
+.fl-kantenziel[data-quer]::after { height: 5px; width: 78%; }
+.fl-kantenziel:hover::after,
+.fl-kantenziel:focus-visible::after { background: rgba(29, 29, 29, 0.72); }
+.fl-kantenziel:active::after { background: #1d1d1d; }
+
+/* Solange gebaut wird, tritt das Brett zurueck — sonst konkurrieren
+   sechsundfuenfzig bunte Felder mit den Kanten, die man treffen soll. */
+.fl-brett[data-baut] .fl-feld { filter: saturate(0.55) brightness(1.06); }
+
+.fl-bauknopf {
+  flex: none;
+  min-width: 62px;
+  padding: 12px 12px;
+  border: 0;
+  border-radius: 12px;
+  color: #2b2b2b;
+  background: rgba(0, 0, 0, 0.09);
+  font: 800 13px/1 system-ui;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.fl-bauknopf em {
+  margin-left: 5px;
+  font: 800 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: normal;
+  opacity: 0.65;
+}
+.fl-bauknopf[data-an] {
+  color: #ffffff;
+  background: #1d1d1d;
+  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.9);
+}
+.fl-bauknopf[data-an] em { opacity: 0.8; }
+.fl-bauknopf:active { transform: scale(0.97); }
+.fl-bauknopf:disabled { opacity: 0.4; cursor: default; }
+
+/* Beim Bauen ruht die Farbwahl — sie ist in diesem Moment nicht der Zug, den
+   man macht. Sichtbar bleibt sie trotzdem: Der Knopf daneben schaltet
+   zurueck, und eine verschwundene Palette liesse ihn ins Leere zeigen. */
+.fl-palette[data-ruht] .fl-farbe {
+  opacity: 0.3;
+  filter: saturate(0.4);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* Die Farbwahl steht in einer Reihe mit dem Bau-Knopf. */
+.fl-fuss > .fl-palette + .fl-bauknopf { margin-top: -2px; }

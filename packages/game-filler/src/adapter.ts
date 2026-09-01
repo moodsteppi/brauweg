@@ -43,7 +43,7 @@ import { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 2;
+const SNAPSHOT_VERSION = 3;
 
 type GespeichertePartie = FillerPartie & { readonly v: number };
 
@@ -69,8 +69,13 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
    * Ein Client der Version 1 kaeme damit nicht durcheinander — er zeichnet
    * einfach, was in der Sicht steht, und das ist in der offenen Spielart
    * vollstaendig —, aber er koennte sie nirgends benennen.
+   *
+   * 3 seit dem 1. September 2026: Die Spielart `build` und mit ihr die
+   * Barrieren in Sicht und Aktion. Ein aelterer Client kann an einem
+   * Build-Tisch nicht sinnvoll mitspielen — er zeichnet keine Waende und
+   * kaeme so zu Zuegen, die der Server abweist.
    */
-  protocolVersion: 2,
+  protocolVersion: 3,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -137,7 +142,7 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 2 && snap.v !== 1) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
@@ -150,9 +155,22 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
      * wurde im Nebel gespielt. Abzuweisen waere der falsche Weg; ein Deploy
      * darf keine laufende Partie brechen.
      */
+    /*
+     * Barrieren nachruesten: Fassung 1 und 2 kannten sie nicht, also hatte
+     * keine dieser Partien welche — der leere Stapel ist die Wahrheit und
+     * kein Notbehelf.
+     */
+    const nachgeruestet = {
+      ...alt,
+      barrieren: alt.barrieren ?? [],
+      barrierenUebrig:
+        alt.barrierenUebrig ??
+        Object.fromEntries(Object.keys(alt.punkte).map((sitz) => [sitz, 0])),
+      regeln: { ...alt.regeln, barrieren: alt.regeln.barrieren ?? 0 },
+    };
     if (v === 1) {
-      return { ...alt, regeln: { ...alt.regeln, variante: 'nebel' } };
+      return { ...nachgeruestet, regeln: { ...nachgeruestet.regeln, variante: 'nebel' } };
     }
-    return alt;
+    return nachgeruestet;
   },
 };

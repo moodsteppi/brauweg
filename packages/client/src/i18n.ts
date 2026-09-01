@@ -365,6 +365,15 @@ const de: Record<string, string> = {
   'ruleset.zuVieleHindernisse': 'So viel Wasser und Fels lässt kein Land mehr übrig.',
   'ruleset.spaltenAusserhalb': 'Zwischen 4 und 12 Spalten.',
   'ruleset.zeilenAusserhalb': 'Zwischen 4 und 12 Zeilen.',
+  /*
+   * Filler. `spaltenAusserhalb` und `zeilenAusserhalb` teilt es sich mit
+   * Mememory — dieselbe Aussage, dieselben Grenzen. Die vier hier gehoeren
+   * ihm allein.
+   */
+  'ruleset.farbzahlAusserhalb': 'Zwischen 4 und 8 Farben.',
+  'ruleset.zuWenigFarben': 'So wenige Farben reichen für dieses Feld nicht.',
+  'ruleset.varianteUnbekannt': 'Diese Spielart gibt es nicht.',
+  'ruleset.barrierenzahlAusserhalb': 'Zwischen 0 und 20 Mauern je Spieler.',
   'ruleset.notAnObject': 'Der Regelsatz fehlt oder ist beschädigt.',
   'ruleset.fieldMissing': 'Dem Regelsatz fehlt ein Feld.',
   'ruleset.fieldWrongType': 'Ein Feld des Regelsatzes hat den falschen Typ.',
