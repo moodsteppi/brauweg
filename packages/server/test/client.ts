@@ -211,6 +211,35 @@ export class TestClient {
   }
 
   /** Wartet, bis die Bedingung erfuellt ist, oder scheitert nach timeoutMs. */
+  /**
+   * Wartet, bis sich die Sicht eine Weile nicht mehr ändert.
+   *
+   * Am Tisch sitzen neben den Testkonten auch Bots, und die Testumgebung
+   * lässt sie ohne Verzögerung ziehen (`botDelayMs: 0`). Nach dem Beitritt
+   * trudeln deren Züge deshalb noch ein, während der Test schon misst — wer
+   * in diesem Moment eine Revision festhält und sie später vergleicht,
+   * bekommt einen Unterschied, der mit der eigenen Aktion nichts zu tun hat.
+   *
+   * Erst wenn eine Weile nichts mehr passiert, wartet der Tisch tatsächlich
+   * auf den Menschen, und ab da ist die Revision ein belastbarer Bezugspunkt.
+   */
+  async waitForRuhe(stilleMs = 300, timeoutMs = 20_000): Promise<void> {
+    const until = Date.now() + timeoutMs;
+    let letzte = this.lastView?.revision ?? -1;
+    let seit = Date.now();
+    while (Date.now() - seit < stilleMs) {
+      if (Date.now() > until) {
+        throw new Error(`Zeit abgelaufen beim Warten auf Ruhe am Tisch (Revision ${letzte})`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      const jetzt = this.lastView?.revision ?? -1;
+      if (jetzt !== letzte) {
+        letzte = jetzt;
+        seit = Date.now();
+      }
+    }
+  }
+
   async waitFor(
     predicate: () => unknown,
     what: string,

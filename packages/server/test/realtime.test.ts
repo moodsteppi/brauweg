@@ -181,6 +181,17 @@ test('eine regelwidrige Aktion wird abgewiesen, ohne den Tisch zu beschaedigen',
 
   client.join(table.id);
   await client.waitFor(() => client.lastView !== null, 'erste Sicht');
+  /*
+   * Erst zur Ruhe kommen lassen, dann messen.
+   *
+   * Ohne das war dieser Test flakig — in etwa einem von drei Läufen rot mit
+   * „3 !== 2". Grund sind die beiden Bots am Tisch: Die Testumgebung lässt
+   * sie ohne Verzögerung ziehen, ihre Antworten auf die Vorbehaltsabfrage
+   * trudeln also noch ein, während der Test schon die Revision festhält. Der
+   * Unterschied stammte dann von einem Bot-Zug, nicht von der abgewiesenen
+   * Aktion — der Test hat also den Falschen beschuldigt.
+   */
+  await client.waitForRuhe();
   const revisionVorher = client.lastView!.revision;
 
   // Eine Karte, die dieser Sitz nicht hat, und ein fremder Sitz dazu.
