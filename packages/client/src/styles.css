@@ -15295,3 +15295,47 @@ span.hub-angebot-art.poker-jeton-stapel {
   font: 700 16px/1 system-ui;
   cursor: pointer;
 }
+
+/* ===========================================================================
+   Breite Bildschirme: Listen dürfen nebeneinander stehen
+   ===========================================================================
+
+   Brauweg ist fürs Handy gebaut, und das ist richtig so — dort ist alles
+   gemessen tadellos (kein waagerechter Überlauf, Bedienelemente 48 Pixel).
+   Am Rechner blieb davon eine schmale Säule übrig: 13.681 Zeilen Stylesheet
+   mit genau zwei Haltepunkten, keiner davon für Listen.
+
+   Diese Regeln greifen AUSSCHLIESSLICH ab 60rem (960px). Darunter ändert sich
+   nichts — das ist Absicht und die Bedingung dafür, dass man sie gefahrlos
+   einschalten kann.
+
+   Die Spieltische bleiben bewusst außen vor: Ein Doppelkopftisch ist kein
+   Raster, er ist eine Anordnung um die eigene Hand herum. Wer ihn
+   auseinanderzieht, macht ihn schlechter, nicht größer.
+
+   `auto-fill` statt fester Spaltenzahl: Die Zahl der Spalten ergibt sich aus
+   der Breite, nicht aus einer Annahme über den Bildschirm. Auf 60rem sind es
+   zwei, auf einem sehr breiten Fenster drei — ohne weitere Haltepunkte. */
+@media (min-width: 60rem) {
+  /* Die Tischliste der Lobby. Der Container scrollt, die Kacheln liegen
+     darin nebeneinander; `align-content: start` verhindert, dass zwei Tische
+     bei viel Platz senkrecht auseinandergezogen werden. */
+  .lobby-rolle {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    gap: 0.5rem;
+    align-content: start;
+  }
+  /* Was keine Kachel ist, läuft über die ganze Breite: Fehlermeldung und der
+     Hinweis auf den leeren Tisch. Sonst stünde „Gerade ist kein Tisch offen"
+     als schmale Spalte neben nichts. */
+  .lobby-rolle > .error,
+  .lobby-rolle > .lobby-leer {
+    grid-column: 1 / -1;
+  }
+  /* Der Abstand kommt jetzt aus `gap`; der alte Fußabstand je Kachel würde
+     ihn verdoppeln. */
+  .lobby-tisch {
+    margin-bottom: 0;
+  }
+}
