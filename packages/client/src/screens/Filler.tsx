@@ -40,6 +40,18 @@ interface FillerSicht {
   sieger: number | null;
   leftSeats: number[];
   zuschauer: boolean;
+  /** Gesetzte Barrieren als Plaetzepaare. Leer ausser in der Spielart `build`. */
+  barrieren: [number, number][];
+  /** Wie viele Barrieren jedem Sitz noch bleiben. */
+  barrierenUebrig: Record<number, number>;
+  /**
+   * Wohin ich gerade eine Barriere setzen darf. Fehlt, wenn ich nicht am Zug
+   * bin oder keine mehr habe.
+   *
+   * Kommt fertig vom Server, weil die Einsperr-Regel eine REGEL ist — der
+   * Client baut sie nicht nach (CLAUDE.md).
+   */
+  barrierenMoeglich?: [number, number][];
 }
 
 /**
@@ -49,15 +61,25 @@ interface FillerSicht {
  * ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll nicht auf
  * eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht.
  */
-const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6 };
+const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6, barrieren: 5 };
 
 /**
  * Die beiden Spielarten. Muss zu FillerVariante in
  * packages/game-filler/src/regeln.ts passen.
  */
-type Variante = 'nebel' | 'klar';
+type Variante = 'nebel' | 'klar' | 'build';
 
-const VARIANTE_NAME: Record<Variante, string> = { nebel: 'Nebel', klar: 'Normal' };
+const VARIANTE_NAME: Record<Variante, string> = {
+  nebel: 'Nebel',
+  klar: 'Normal',
+  build: 'Build',
+};
+
+const VARIANTE_TEXT: Record<Variante, string> = {
+  nebel: 'Du siehst nur dein Gebiet und dessen Rand.',
+  klar: 'Das ganze Brett liegt offen — wie im Original.',
+  build: 'Offenes Brett, dazu fünf Mauern je Spieler. Eine Mauer kostet einen Zug.',
+};
 
 /**
  * Die zuletzt gewaehlte Spielart ueberlebt das Schliessen.
@@ -68,9 +90,14 @@ const VARIANTE_NAME: Record<Variante, string> = { nebel: 'Nebel', klar: 'Normal'
  */
 const VARIANTE_SCHLUESSEL = 'filler.variante';
 
+function istVariante(wert: unknown): wert is Variante {
+  return wert === 'nebel' || wert === 'klar' || wert === 'build';
+}
+
 function gelesenevariante(): Variante {
   try {
-    return localStorage.getItem(VARIANTE_SCHLUESSEL) === 'klar' ? 'klar' : 'nebel';
+    const wert = localStorage.getItem(VARIANTE_SCHLUESSEL);
+    return istVariante(wert) ? wert : 'nebel';
   } catch {
     // Privates Fenster, gesperrte Seitendaten: Dann eben die Vorgabe.
     return 'nebel';
@@ -129,6 +156,37 @@ function farbeVon(nr: number): string {
 function passt(tischArt: string | null, gesucht: Variante): boolean {
   return (tischArt ?? 'nebel') === gesucht;
 }
+
+/** Kantenschluessel wie im Modul: kleinerer Platz zuerst. */
+function kante(a: number, b: number): string {
+  return a < b ? `${a}:${b}` : `${b}:${a}`;
+}
+
+/** Die vier Seiten eines Feldes, in der Reihenfolge oben, rechts, unten, links. */
+const SEITEN = ['oben', 'rechts', 'unten', 'links'] as const;
+type Seite = (typeof SEITEN)[number];
+
+function nachbarAn(
+  platz: number,
+  seite: Seite,
+  spalten: number,
+  zeilen: number,
+): number | null {
+  const x = platz % spalten;
+  const y = Math.floor(platz / spalten);
+  if (seite === 'oben') return y > 0 ? platz - spalten : null;
+  if (seite === 'unten') return y < zeilen - 1 ? platz + spalten : null;
+  if (seite === 'links') return x > 0 ? platz - 1 : null;
+  return x < spalten - 1 ? platz + 1 : null;
+}
+
+/** Die Innenschatten-Kante fuer eine Seite. Dicke in Pixeln. */
+const KANTENSCHATTEN: Record<Seite, (dick: number, farbe: string) => string> = {
+  oben: (d, f) => `inset 0 ${d}px 0 ${f}`,
+  unten: (d, f) => `inset 0 -${d}px 0 ${f}`,
+  links: (d, f) => `inset ${d}px 0 0 ${f}`,
+  rechts: (d, f) => `inset -${d}px 0 0 ${f}`,
+};
 
 export function Filler({
   startTisch,
@@ -360,6 +418,23 @@ export function Filler({
     [binDran, getippt, revision, tisch],
   );
 
+  /**
+   * Eine Mauer setzen.
+   *
+   * Dieselbe Sperre wie beim Faerben: Bis der Server geantwortet hat, geht
+   * kein zweiter Zug raus. `getippt` traegt dafuer die -1 — es gibt keine
+   * Farbe mit dieser Nummer, also kann die Palette sie nie hervorheben, und
+   * die Sperre gilt trotzdem.
+   */
+  const setzeBarriere = useCallback(
+    (von: number, nach: number): void => {
+      if (!binDran || getippt) return;
+      setGetippt({ farbe: -1, revision });
+      tisch.send({ typ: 'barriere', von, nach });
+    },
+    [binDran, getippt, revision, tisch],
+  );
+
   // -------------------------------------------------------------------------
   // Menue
   // -------------------------------------------------------------------------
@@ -451,6 +526,7 @@ export function Filler({
       gegenBot={(tisch.table?.seats ?? []).some((platz) => platz.isBot)}
       getippt={getippt?.farbe ?? null}
       onWaehle={waehle}
+      onBarriere={setzeBarriere}
       onZurueck={verlasseUndZurueck}
     />
   );
@@ -475,6 +551,7 @@ function Brett({
   gegenBot,
   getippt,
   onWaehle,
+  onBarriere,
   onZurueck,
 }: {
   sicht: FillerSicht;
@@ -485,8 +562,24 @@ function Brett({
   gegenBot: boolean;
   getippt: number | null;
   onWaehle: (farbe: number) => void;
+  onBarriere: (von: number, nach: number) => void;
   onZurueck: () => void;
 }): React.JSX.Element {
+  /**
+   * Der Bau-Knopf ist gedrueckt: Die Setzflaechen liegen ueber dem Brett.
+   *
+   * Ein Zustand und kein Dauerzustand — nach dem Setzen faellt er von selbst
+   * zurueck (siehe unten). Ohne diesen Schalter laegen 97 Schaltflaechen
+   * dauerhaft ueber dem Brett, und ein Daumen, der eine Farbe waehlen will,
+   * traefe staendig eine Kante.
+   */
+  const [baut, setBaut] = useState(false);
+  const meineBarrieren = sicht.barrierenUebrig[eigenerSitz] ?? 0;
+  // Sobald ich nicht mehr dran bin oder nichts mehr habe, ist der Bau vorbei.
+  useEffect(() => {
+    if (!binDran || meineBarrieren <= 0) setBaut(false);
+  }, [binDran, meineBarrieren]);
+
   const plaetze = sicht.spalten * sicht.zeilen;
   /**
    * Wer spielt, sitzt unten links.
@@ -499,6 +592,17 @@ function Brett({
    */
   const gedreht = eigenerSitz === 1;
   const platzVon = (i: number): number => (gedreht ? plaetze - 1 - i : i);
+  /**
+   * Umkehrung: Wo auf dem Bildschirm liegt Platz n?
+   *
+   * Bei einer Drehung um 180 Grad ist die Umkehrung dieselbe Rechnung. Sie
+   * steht trotzdem unter eigenem Namen da: Die Waende brauchen die Richtung
+   * Platz -> Bildschirm, und `platzVon` an dieser Stelle zu lesen hiesse,
+   * sich jedes Mal neu zu ueberlegen, warum das gutgeht.
+   */
+  const anzeigeIndex = (platz: number): number => (gedreht ? plaetze - 1 - platz : platz);
+  /** Setzflaechen zeigen, solange der Bau-Knopf gedrueckt ist. */
+  const bautGerade = baut && (sicht.barrierenMoeglich?.length ?? 0) > 0;
 
   const gegner = Object.keys(sicht.punkte)
     .map(Number)
@@ -508,6 +612,97 @@ function Brett({
   const gesperrt = new Set(Object.values(sicht.farbe));
 
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
+
+  /**
+   * Die weisse Kontur um das gegnerische Gebiet — nur im Nebel.
+   *
+   * In der offenen Spielart braucht sie niemand: Dort sieht man das ganze
+   * Brett und damit auch, wo der Gegner steht. Im Nebel dagegen taucht sein
+   * Gebiet nur stueckweise auf, sobald man an es heranwaechst — und ein
+   * aufgedecktes Feld sieht genauso aus wie jedes andere farbige Feld.
+   *
+   * Weiss wird eine Kante, an der sich der Besitz AENDERT: Auf der einen
+   * Seite der Gegner, auf der anderen nicht. Das zeichnet einen Umriss statt
+   * eines Gitters — wuerde jede Kante eines Gegnerfeldes weiss, laege ueber
+   * seinem Gebiet ein Raster, und man saehe die Form nicht mehr.
+   *
+   * `null` auf einer Seite heisst "weiss ich nicht" und faerbt nichts: Was
+   * hinter dem Nebel liegt, darf der Bildschirm nicht erraten.
+   */
+  const gegnerKante = (platz: number, seite: Seite): boolean => {
+    if (sicht.variante !== 'nebel') return false;
+    const n = nachbarAn(platz, seite, sicht.spalten, sicht.zeilen);
+    if (n === null) return false;
+    const hier = sicht.besitzer[platz] ?? null;
+    const dort = sicht.besitzer[n] ?? null;
+    const hierFremd = hier !== null && hier !== eigenerSitz;
+    const dortFremd = dort !== null && dort !== eigenerSitz;
+    return hierFremd !== dortFremd;
+  };
+
+  /**
+   * Der komplette Innenschatten eines Feldes.
+   *
+   * Er wird HIER zusammengesetzt und nicht im Stylesheet, weil `box-shadow`
+   * sich nicht stapeln laesst: Zwei Regeln fuer dasselbe Feld ueberschreiben
+   * einander, statt sich zu ergaenzen. Der Ring um das eigene Gebiet und die
+   * weissen Gegnerkanten muessen deshalb in EINER Zeichenkette stehen.
+   */
+  const schattenFuer = (platz: number): string | undefined => {
+    const teile: string[] = [];
+    const besitzer = sicht.besitzer[platz] ?? null;
+    if (besitzer === eigenerSitz) teile.push('inset 0 0 0 1px rgba(255, 255, 255, 0.55)');
+    else if (besitzer !== null) teile.push('inset 0 0 0 1px rgba(0, 0, 0, 0.28)');
+    for (const seite of SEITEN) {
+      if (gegnerKante(platz, seite)) teile.push(KANTENSCHATTEN[seite](3, '#ffffff'));
+    }
+    return teile.length > 0 ? teile.join(', ') : undefined;
+  };
+
+  /**
+   * Wo eine Kante auf dem Brett liegt, in Prozent des Rasters.
+   *
+   * Prozent und nicht Pixel: Das Brett skaliert mit der Bildschirmbreite
+   * (`min(90vw, 520px)`), und eine in Pixeln gerechnete Wand saesse auf einem
+   * schmalen Handy neben ihrer Kante. Gerechnet wird auf der GEDREHTEN
+   * Ansicht — sonst laege die Wand bei Sitz 1 spiegelverkehrt.
+   */
+  const kantenLage = (
+    a: number,
+    b: number,
+  ): { stil: React.CSSProperties; quer: boolean } | null => {
+    const ia = anzeigeIndex(a);
+    const ib = anzeigeIndex(b);
+    const links = Math.min(ia, ib);
+    const rechts = Math.max(ia, ib);
+    const sp = sicht.spalten;
+    const breite = 100 / sp;
+    const hoehe = 100 / sicht.zeilen;
+    if (rechts - links === 1 && Math.floor(links / sp) === Math.floor(rechts / sp)) {
+      // Senkrechte Wand zwischen zwei Nachbarn derselben Zeile.
+      return {
+        stil: {
+          left: `${(links % sp) * breite + breite}%`,
+          top: `${Math.floor(links / sp) * hoehe}%`,
+          height: `${hoehe}%`,
+        },
+        quer: false,
+      };
+    }
+    if (rechts - links === sp) {
+      // Waagerechte Wand zwischen zwei Zeilen.
+      return {
+        stil: {
+          left: `${(links % sp) * breite}%`,
+          top: `${Math.floor(links / sp) * hoehe + hoehe}%`,
+          width: `${breite}%`,
+        },
+        quer: true,
+      };
+    }
+    // Keine Nachbarschaft: nichts zeichnen statt irgendwo einen Strich.
+    return null;
+  };
 
   return (
     <main className="fl-seite fl-tisch">
@@ -548,6 +743,7 @@ function Brett({
       <div className="fl-brett-huelle">
         <div
           className="fl-brett"
+          data-baut={bautGerade ? '' : undefined}
           style={{ gridTemplateColumns: `repeat(${sicht.spalten}, 1fr)` }}
         >
           {Array.from({ length: plaetze }, (_, i) => {
@@ -571,10 +767,52 @@ function Brett({
                   background: imNebel
                     ? (GRAUTOENE[sicht.grau[platz] ?? 0] ?? GRAUTOENE[0])
                     : farbeVon(farbe),
+                  boxShadow: schattenFuer(platz),
                 }}
               />
             );
           })}
+
+          {/*
+            * Waende und Setzflaechen liegen als eigene Schicht ueber dem
+            * Raster und nicht als Rand an den Feldern.
+            *
+            * Der Grund ist die Fuge: Eine Wand steht ZWISCHEN zwei Feldern,
+            * also genau auf dem Millimeter, der beiden gehoert. Als Rand
+            * gezeichnet saesse sie in einem der beiden Felder und waere je
+            * nach Blickrichtung um eine halbe Fuge versetzt. Als eigene
+            * Schicht liegt sie mittig auf der Kante — und ueberdeckt dabei
+            * kein Feld, weil sie nur ein paar Pixel dick ist.
+            */}
+          {sicht.barrieren.map(([a, b]) => {
+            const lage = kantenLage(a, b);
+            if (!lage) return null;
+            return (
+              <span
+                key={kante(a, b)}
+                className="fl-wand"
+                data-quer={lage.quer ? '' : undefined}
+                style={lage.stil}
+              />
+            );
+          })}
+
+          {bautGerade &&
+            (sicht.barrierenMoeglich ?? []).map(([a, b]) => {
+              const lage = kantenLage(a, b);
+              if (!lage) return null;
+              return (
+                <button
+                  key={kante(a, b)}
+                  type="button"
+                  className="fl-kantenziel"
+                  data-quer={lage.quer ? '' : undefined}
+                  style={lage.stil}
+                  onClick={() => onBarriere(a, b)}
+                  aria-label={`Mauer zwischen Feld ${a + 1} und ${b + 1}`}
+                />
+              );
+            })}
         </div>
       </div>
 
@@ -588,7 +826,7 @@ function Brett({
           />
         ) : binDran ? (
           <>
-            <div className="fl-palette">
+            <div className="fl-palette" data-ruht={bautGerade ? '' : undefined}>
               {Array.from({ length: sicht.farbzahl }, (_, nr) => (
                 <button
                   key={nr}
@@ -606,7 +844,25 @@ function Brett({
                 />
               ))}
             </div>
-            <p className="fl-hinweis">Farbe wählen</p>
+            {/*
+              * Der Bau-Knopf steht NEBEN der Farbwahl und nicht darueber: Es
+              * sind zwei Zuege, zwischen denen man sich entscheidet, und
+              * nicht zwei Schritte nacheinander.
+              */}
+            {sicht.variante === 'build' && (
+              <button
+                className="fl-bauknopf"
+                type="button"
+                data-an={bautGerade ? '' : undefined}
+                disabled={meineBarrieren <= 0 || getippt !== null}
+                onClick={() => setBaut((an) => !an)}
+              >
+                Mauer <em>{meineBarrieren}</em>
+              </button>
+            )}
+            <p className="fl-hinweis">
+              {bautGerade ? 'Kante antippen' : 'Farbe wählen'}
+            </p>
           </>
         ) : (
           <Warteband gegenBot={gegenBot} farbzahl={sicht.farbzahl} />
@@ -686,7 +942,7 @@ function Spielartschalter({
   };
   return (
     <div className="fl-schalter" role="group" aria-label="Spielart">
-      {(['nebel', 'klar'] as const).map((v) => (
+      {(['nebel', 'klar', 'build'] as const).map((v) => (
         <button
           key={v}
           type="button"
@@ -697,11 +953,7 @@ function Spielartschalter({
           {VARIANTE_NAME[v]}
         </button>
       ))}
-      <span className="fl-schalter-text">
-        {wert === 'nebel'
-          ? 'Du siehst nur dein Gebiet und dessen Rand.'
-          : 'Das ganze Brett liegt offen — wie im Original.'}
-      </span>
+      <span className="fl-schalter-text">{VARIANTE_TEXT[wert]}</span>
     </div>
   );
 }
@@ -804,10 +1056,22 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         <li>Die Farbe des Gegners darf man nicht wählen.</li>
         <li>Die Partie endet, wenn kein Feld mehr frei ist.</li>
       </ol>
-      <h3>Der Unterschied</h3>
+      <h3>Die drei Spielarten</h3>
       <p>
-        Du siehst nur dein eigenes Gebiet und die Felder, die direkt daran
-        grenzen. Alles andere liegt grau im Nebel — auch für den Gegner.
+        <strong>Normal</strong> ist das Original: Das ganze Brett liegt offen.
+      </p>
+      <p>
+        <strong>Nebel</strong> zeigt dir nur dein eigenes Gebiet und die Felder,
+        die direkt daran grenzen. Alles andere liegt grau — auch für den Gegner.
+        Wo ein aufgedecktes Feld an sein Gebiet stößt, steht eine weiße Kante.
+      </p>
+      <p>
+        <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem fünf
+        Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
+        auf — auch dich. Sie zu setzen kostet einen ganzen Zug; in dieser Runde
+        färbst du also nicht. Und du darfst den Gegner damit nicht einsperren:
+        Kanten, nach denen er kein freies Feld mehr erreichen könnte, lassen
+        sich nicht bebauen.
       </p>
       <h3>Ziel</h3>
       <p>Wer am Ende die meisten Felder hält, gewinnt.</p>

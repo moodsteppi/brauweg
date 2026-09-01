@@ -42,6 +42,20 @@ export function botZug(sicht: FillerSicht): FillerAktion {
   const { spalten, zeilen, farbzahl, feld, besitzer, farbe } = sicht;
   const ich = sicht.ich ?? 0;
 
+  /*
+   * Waende zaehlen mit. Ohne diese Zeile zaehlte der Bot Felder hinter einer
+   * Barriere zu seinem naechsten Zug — und waehlte dann eine Farbe, die ihm
+   * gar nichts einbringt. Er SETZT keine Barrieren; das ist eine bewusste
+   * Luecke und keine vergessene: Wo eine Wand nuetzt, haengt daran, was der
+   * Gegner vorhat, und das steht in keiner Sicht.
+   */
+  const sperren = new Set(sicht.barrieren.map(([a, b]) => (a < b ? `${a}:${b}` : `${b}:${a}`)));
+  const erreichbar = (platz: number): number[] =>
+    nachbarn(platz, spalten, zeilen).filter((n) => {
+      const k = platz < n ? `${platz}:${n}` : `${n}:${platz}`;
+      return !sperren.has(k);
+    });
+
   const gesperrt = new Set(Object.values(farbe));
   const erlaubt: number[] = [];
   for (let f = 0; f < farbzahl; f++) if (!gesperrt.has(f)) erlaubt.push(f);
@@ -73,7 +87,7 @@ export function botZug(sicht: FillerSicht): FillerAktion {
     let mass = 0;
     while (rand.length > 0) {
       const platz = rand.pop()!;
-      for (const n of nachbarn(platz, spalten, zeilen)) {
+      for (const n of erreichbar(platz)) {
         if (genommen.has(n)) continue;
         if (besitzer[n] !== null) continue;
         // `null` ist Nebel: Was der Bot nicht sieht, zaehlt er nicht mit.
@@ -85,7 +99,7 @@ export function botZug(sicht: FillerSicht): FillerAktion {
     }
     let tiefe = 0;
     for (const platz of genommen) {
-      for (const n of nachbarn(platz, spalten, zeilen)) {
+      for (const n of erreichbar(platz)) {
         if (!genommen.has(n) && feld[n] === null) tiefe++;
       }
     }

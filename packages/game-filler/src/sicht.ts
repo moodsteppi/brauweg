@@ -21,8 +21,8 @@
  */
 
 import type { FillerPartie } from './partie.js';
-import { nachbarn, sieger } from './partie.js';
-import type { FillerVariante } from './regeln.js';
+import { moeglicheBarrieren, nachbarn, sieger } from './partie.js';
+import { type FillerVariante, liegtOffen } from './regeln.js';
 
 export interface FillerSicht {
   /**
@@ -63,6 +63,26 @@ export interface FillerSicht {
   readonly leftSeats: readonly number[];
   /** true = neutrale Zuschauersicht. */
   readonly zuschauer: boolean;
+  /**
+   * Gesetzte Barrieren als Plaetzepaare. Oeffentlich in jeder Sicht: Eine Wand
+   * steht sichtbar auf dem Brett, sie zu verstecken waere kein Geheimnis,
+   * sondern eine Falle.
+   *
+   * Auch in der Spielart `nebel` ginge das — dort gibt es nur keine.
+   */
+  readonly barrieren: readonly (readonly [number, number])[];
+  /** Wie viele Barrieren jedem Sitz noch bleiben. */
+  readonly barrierenUebrig: Readonly<Record<number, number>>;
+  /**
+   * Wohin DIESER Sitz gerade eine Barriere setzen duerfte.
+   *
+   * Sie steht in der Sicht, damit der Client die Einsperr-Regel nicht
+   * nachbaut (CLAUDE.md: "Der Client bildet keine Regel nach"). Sie zu
+   * rechnen heisst, je Kante einmal ueber das Brett zu laufen — deshalb steht
+   * sie nur da, wenn sie gebraucht wird: in der Spielart `build`, beim Sitz
+   * am Zug, solange er noch Barrieren hat.
+   */
+  readonly barrierenMoeglich?: readonly (readonly [number, number])[];
 }
 
 /**
@@ -80,7 +100,7 @@ function sichtbareplaetze(partie: FillerPartie, sitz: number): boolean[] {
    * den beiden Modi — Regeln, Zuege, Bot und Brettaufbau sind identisch. Wer
    * hier einen zweiten Unterschied einbaut, hat zwei Spiele statt einem.
    */
-  if (partie.regeln.variante === 'klar') return partie.besitzer.map(() => true);
+  if (liegtOffen(partie.regeln.variante)) return partie.besitzer.map(() => true);
   const sichtbar = partie.besitzer.map((b) => b === sitz);
   for (let platz = 0; platz < partie.besitzer.length; platz++) {
     if (partie.besitzer[platz] !== sitz) continue;
@@ -108,6 +128,11 @@ function grundsicht(
     sieger: sieger(partie),
     leftSeats: partie.leftSeats,
     zuschauer: ich === null,
+    barrieren: partie.barrieren.map((k) => {
+      const [a, b] = k.split(':');
+      return [Number(a), Number(b)] as const;
+    }),
+    barrierenUebrig: partie.barrierenUebrig,
   };
 }
 
@@ -121,10 +146,16 @@ function grundsicht(
  */
 export function sichtFuer(partie: FillerPartie, sitz: number): FillerSicht {
   const sichtbar = sichtbareplaetze(partie, sitz);
+  const moeglich =
+    !partie.fertig && partie.dran === sitz ? moeglicheBarrieren(partie, sitz) : [];
   return {
     ...grundsicht(partie, sitz),
     feld: partie.feld.map((f, platz) => (sichtbar[platz] ? f : null)),
     besitzer: partie.besitzer.map((b, platz) => (sichtbar[platz] ? b : null)),
+    // Leere Liste weglassen statt mitschicken: Ein Feld, das in den meisten
+    // Sichten nie etwas bedeutet, laedt zum Fehlschluss "es gibt hier keine
+    // Barrieren" ein — dabei heisst es nur "du kannst gerade keine setzen".
+    ...(moeglich.length > 0 ? { barrierenMoeglich: moeglich } : {}),
   };
 }
 
@@ -145,7 +176,7 @@ export function zuschauerSicht(partie: FillerPartie): FillerSicht {
   // In der offenen Spielart gibt es nichts zu verbergen: Dort liegt das Brett
   // fuer die Spieler ohnehin offen, ein Zuschauer erfaehrt also nichts, was
   // nicht schon beide wissen.
-  const offen = partie.regeln.variante === 'klar';
+  const offen = liegtOffen(partie.regeln.variante);
   return {
     ...grundsicht(partie, null),
     feld: partie.feld.map((f, platz) =>

@@ -449,6 +449,8 @@ const de: Record<string, string> = {
   'ruleset.zeilenAusserhalb': 'Zwischen 4 und 12 Zeilen.',
   'ruleset.farbzahlAusserhalb': 'Zwischen 4 und 8 Farben.',
   'ruleset.zuWenigFarben': 'So wenige Farben reichen für dieses Feld nicht.',
+  'ruleset.varianteUnbekannt': 'Diese Spielart gibt es nicht.',
+  'ruleset.barrierenzahlAusserhalb': 'Zwischen 0 und 20 Mauern je Spieler.',
   'ruleset.ungeradeKartenzahl': 'Das Feld braucht eine gerade Kartenzahl — sonst bleibt eine Karte ohne Paar.',
   'ruleset.merkzeitAusserhalb': 'Die Merkzeit liegt zwischen 0,3 und 5 Sekunden.',
   'ruleset.zuWenigMotive': 'Für dieses Feld gibt es zu wenige Motive.',
