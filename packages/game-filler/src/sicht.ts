@@ -22,6 +22,7 @@
 
 import type { FillerPartie } from './partie.js';
 import { nachbarn, sieger } from './partie.js';
+import type { FillerVariante } from './regeln.js';
 
 export interface FillerSicht {
   /**
@@ -37,6 +38,15 @@ export interface FillerSicht {
   readonly spalten: number;
   readonly zeilen: number;
   readonly farbzahl: number;
+  /**
+   * Spielart dieses Tisches.
+   *
+   * Der Client zeichnet in beiden Faellen dasselbe — was er nicht weiss,
+   * malt er grau —, aber er soll es BENENNEN koennen ("Nebel" am Kopf des
+   * Bretts). Und ohne dieses Feld liesse sich nach einem Neuladen nicht mehr
+   * sagen, an welchem Tisch man eigentlich sitzt.
+   */
+  readonly variante: FillerVariante;
   /** Farbnummer je Platz — nur fuer sichtbare Plaetze, sonst null. */
   readonly feld: readonly (number | null)[];
   /** Grauton je Platz, fuer die Zeichnung verdeckter Felder. */
@@ -65,6 +75,12 @@ export interface FillerSicht {
  */
 function sichtbareplaetze(partie: FillerPartie, sitz: number): boolean[] {
   const { spalten, zeilen } = partie.regeln;
+  /*
+   * Offene Spielart: alles sichtbar. Das ist der EINZIGE Unterschied zwischen
+   * den beiden Modi — Regeln, Zuege, Bot und Brettaufbau sind identisch. Wer
+   * hier einen zweiten Unterschied einbaut, hat zwei Spiele statt einem.
+   */
+  if (partie.regeln.variante === 'klar') return partie.besitzer.map(() => true);
   const sichtbar = partie.besitzer.map((b) => b === sitz);
   for (let platz = 0; platz < partie.besitzer.length; platz++) {
     if (partie.besitzer[platz] !== sitz) continue;
@@ -82,6 +98,7 @@ function grundsicht(
     spalten: partie.regeln.spalten,
     zeilen: partie.regeln.zeilen,
     farbzahl: partie.regeln.farben,
+    variante: partie.regeln.variante,
     grau: partie.grau,
     farbe: partie.farbe,
     punkte: partie.punkte,
@@ -125,9 +142,15 @@ export function sichtFuer(partie: FillerPartie, sitz: number): FillerSicht {
  * sie sind, steht ohnehin als Punktzahl ueber dem Brett.
  */
 export function zuschauerSicht(partie: FillerPartie): FillerSicht {
+  // In der offenen Spielart gibt es nichts zu verbergen: Dort liegt das Brett
+  // fuer die Spieler ohnehin offen, ein Zuschauer erfaehrt also nichts, was
+  // nicht schon beide wissen.
+  const offen = partie.regeln.variante === 'klar';
   return {
     ...grundsicht(partie, null),
-    feld: partie.feld.map((f, platz) => (partie.besitzer[platz] !== null ? f : null)),
+    feld: partie.feld.map((f, platz) =>
+      offen || partie.besitzer[platz] !== null ? f : null,
+    ),
     besitzer: partie.besitzer,
   };
 }

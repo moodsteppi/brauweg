@@ -284,6 +284,7 @@ export async function listTables(db: Db, filter: LobbyFilter) {
     .where(inArray(s.ruleSet.id, tables.map((t) => t.ruleSetId)));
   const regelZahl = new Map<string, number>();
   const stakesZahl = new Map<string, ReturnType<typeof stakesVon>>();
+  const varianten = new Map<string, string | null>();
   for (const rs of regelSaetze) {
     const config = rs.config as Record<string, unknown>;
     let anders = 0;
@@ -294,6 +295,7 @@ export async function listTables(db: Db, filter: LobbyFilter) {
     const key = `${rs.id}:${rs.version}`;
     regelZahl.set(key, anders);
     stakesZahl.set(key, stakesVon(rs.config));
+    varianten.set(key, varianteVon(rs.config));
   }
 
   return tables.map((table) => {
@@ -309,8 +311,35 @@ export async function listTables(db: Db, filter: LobbyFilter) {
       ruleCount: regelZahl.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? 0,
       /** Buy-in und Blinds, oder null wenn der Tisch keine Chips kennt. */
       stakes: stakesZahl.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? null,
+      /** Spielart des Tisches, oder null wenn das Spiel keine kennt. */
+      variante: varianten.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? null,
     };
   });
+}
+
+/**
+ * Die Spielart eines Regelsatzes, soweit er eine nennt.
+ *
+ * Absichtlich generisch und ohne jede Kenntnis eines Spiels: Es wird ein Feld
+ * `variante` durchgereicht, wenn dort eine kurze Zeichenkette steht - was sie
+ * BEDEUTET, weiss allein das Modul. Damit bleibt die Regel aus CLAUDE.md
+ * gewahrt ("Der Server kennt kein einzelnes Kartenspiel"), und dieselbe Zeile
+ * bedient das naechste Spiel mit zwei Spielarten, ohne dass hier etwas
+ * dazukommt. Dasselbe Muster wie `stakesVon` daneben.
+ *
+ * Wozu die Lobby sie braucht: Zwei Spielarten sind zwei getrennte Toepfe fuer
+ * die Match-Suche. Ohne dieses Feld landet, wer offen spielen will, am
+ * erstbesten Nebeltisch - und merkt es erst, wenn die Partie laeuft.
+ *
+ * Die Laengengrenze ist kein Geiz, sondern eine Grenze: Der Regelsatz kommt
+ * als JSON von aussen, und diese Zeichenkette geht ungeprueft an jeden, der
+ * die Tischliste abruft.
+ */
+function varianteVon(config: unknown): string | null {
+  if (typeof config !== 'object' || config === null) return null;
+  const wert = (config as Record<string, unknown>)['variante'];
+  if (typeof wert !== 'string' || wert.length === 0 || wert.length > 24) return null;
+  return wert;
 }
 
 /**

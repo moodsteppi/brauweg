@@ -339,6 +339,14 @@ export interface TableRow {
   ruleCount: number;
   /** Buy-in und Blinds, oder null wenn der Tisch keine Chips kennt. */
   stakes: { startJetons: number; kleinerBlind: number; grosserBlind: number } | null;
+  /**
+   * Spielart des Tisches, oder null wenn das Spiel keine kennt.
+   *
+   * Was die Zeichenkette bedeutet, weiss nur das jeweilige Spiel — der Server
+   * reicht sie unbesehen durch (`varianteVon` in tables/service.ts). Filler
+   * trennt daran seine beiden Match-Toepfe.
+   */
+  variante: string | null;
 }
 
 export interface GameDefaults {

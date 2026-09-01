@@ -22,6 +22,8 @@ import { useTable } from '../useTable';
 /** Sicht des Moduls, siehe packages/game-filler/src/sicht.ts. */
 interface FillerSicht {
   ich: number | null;
+  /** Spielart dieses Tisches. Der Kopf des Bretts schreibt sie hin. */
+  variante: Variante;
   spalten: number;
   zeilen: number;
   farbzahl: number;
@@ -48,6 +50,32 @@ interface FillerSicht {
  * eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht.
  */
 const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6 };
+
+/**
+ * Die beiden Spielarten. Muss zu FillerVariante in
+ * packages/game-filler/src/regeln.ts passen.
+ */
+type Variante = 'nebel' | 'klar';
+
+const VARIANTE_NAME: Record<Variante, string> = { nebel: 'Nebel', klar: 'Normal' };
+
+/**
+ * Die zuletzt gewaehlte Spielart ueberlebt das Schliessen.
+ *
+ * Wer einmal offen spielen wollte, will es beim naechsten Mal meistens wieder
+ * — und muesste den Schalter sonst jedes Mal neu suchen. Im Browser des
+ * Spielers, nicht auf dem Server: Es ist eine Bequemlichkeit und kein Besitz.
+ */
+const VARIANTE_SCHLUESSEL = 'filler.variante';
+
+function gelesenevariante(): Variante {
+  try {
+    return localStorage.getItem(VARIANTE_SCHLUESSEL) === 'klar' ? 'klar' : 'nebel';
+  } catch {
+    // Privates Fenster, gesperrte Seitendaten: Dann eben die Vorgabe.
+    return 'nebel';
+  }
+}
 
 /**
  * Die sechs Farben des Vorbilds, in dieser REIHENFOLGE.
@@ -91,6 +119,17 @@ function farbeVon(nr: number): string {
   return FARBEN[nr] ?? FARBEN[0];
 }
 
+/**
+ * Passt ein Tisch aus der Liste zur gesuchten Spielart?
+ *
+ * `null` heisst: Der Tisch nennt keine — er stammt vom 31. August, als es nur
+ * den Nebel gab. Solche Tische zaehlen deshalb als Nebeltische und nicht als
+ * "passt zu allem": Wer offen spielen will, soll dort nicht landen.
+ */
+function passt(tischArt: string | null, gesucht: Variante): boolean {
+  return (tischArt ?? 'nebel') === gesucht;
+}
+
 export function Filler({
   startTisch,
   onBack,
@@ -106,6 +145,15 @@ export function Filler({
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
+  /**
+   * Die Spielart, mit der gesucht wird.
+   *
+   * Sie ist eine Vorwahl fuer den naechsten Tisch und NICHT der Zustand des
+   * laufenden: Was am Tisch gilt, steht in `sicht.variante` und kommt vom
+   * Server. Wer das verwechselt, baut einen Schalter, der mitten in der Partie
+   * den Nebel abzuschalten scheint und nichts tut.
+   */
+  const [variante, setVariante] = useState<Variante>(gelesenevariante);
 
   const tisch = useTable<FillerSicht>(tischId, 'filler');
   const sicht = tisch.view?.view ?? null;
@@ -138,6 +186,7 @@ export function Filler({
       const zeilen = await api.tables('filler');
       const offen = zeilen
         .filter((zeile) => zeile.seats === 2 && zeile.occupied < zeile.seats)
+        .filter((zeile) => passt(zeile.variante, variante))
         .sort((a, b) => a.id.localeCompare(b.id));
       const ziel = offen[0];
       if (ziel) {
@@ -148,7 +197,7 @@ export function Filler({
       }
       const { id } = await api.createTable({
         gameId: 'filler',
-        config: REGELSATZ,
+        config: { ...REGELSATZ, variante },
         seats: 2,
         rounds: 1,
       });
@@ -158,7 +207,36 @@ export function Filler({
       setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
     }
-  }, []);
+  }, [variante]);
+
+  /**
+   * Einen Tisch gegen den Computer aufmachen.
+   *
+   * `fillWithBots` besetzt den freien Platz; `on_request` haelt den Tisch aus
+   * der Lobbyliste heraus. Beides wie bei Mememory und Easy Poker, und aus
+   * demselben Grund: Ein Bot-Tisch in der oeffentlichen Liste faengt genau die
+   * Leute ab, die gerade einen Menschen suchen.
+   */
+  const starteBot = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setSucht(true);
+    try {
+      const { id } = await api.createTable({
+        gameId: 'filler',
+        config: { ...REGELSATZ, variante },
+        seats: 2,
+        rounds: 1,
+        visibility: 'on_request',
+        fillWithBots: true,
+      });
+      setEigenerTisch(null);
+      setTischId(id);
+    } catch {
+      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+    } finally {
+      setSucht(false);
+    }
+  }, [variante]);
 
   /**
    * Das Wettrennen aufloesen.
@@ -181,6 +259,9 @@ export function Filler({
           if (!lebt || wechseltGerade.current) return;
           const kleiner = zeilen
             .filter((z) => z.seats === 2 && z.occupied < z.seats && z.id < tischId)
+            // Nur in den EIGENEN Topf wechseln: Ein Nebeltisch ist keine
+            // Loesung fuer jemanden, der offen spielen wollte.
+            .filter((z) => passt(z.variante, variante))
             .sort((a, b) => a.id.localeCompare(b.id))[0];
           if (!kleiner) return;
           wechseltGerade.current = true;
@@ -204,7 +285,7 @@ export function Filler({
       lebt = false;
       window.clearInterval(takt);
     };
-  }, [tischId, eigenerTisch, tisch.table?.status]);
+  }, [tischId, eigenerTisch, tisch.table?.status, variante]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
@@ -300,8 +381,20 @@ export function Filler({
               <span key={i} style={{ background: farbe }} />
             ))}
           </div>
+          {/*
+            * Der Schalter steht ÜBER den beiden Knoepfen und nicht darunter:
+            * Er entscheidet, WAS die Knoepfe aufmachen. Wer ihn erst nach dem
+            * Tippen sieht, hat ihn zu spaet gesehen.
+            */}
+          <Spielartschalter wert={variante} onWahl={setVariante} />
           <button className="fl-suchen" type="button" onClick={() => void suche()} disabled={sucht}>
             Online Match suchen…
+          </button>
+          {/* Ruhiger gefaerbt als die Match-Suche: Der Mensch bleibt das
+              Angebot, gegen das man zuerst spielt. Dieselbe Staffelung wie
+              bei Mememory. */}
+          <button className="fl-botknopf" type="button" onClick={() => void starteBot()} disabled={sucht}>
+            Gegen Bot spielen
           </button>
           <button className="fl-regelknopf" type="button" onClick={() => setRegelnOffen(true)}>
             So spielt man Filler
@@ -337,7 +430,9 @@ export function Filler({
             <span />
             <span />
           </div>
-          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
+          <p className="fl-untertitel fl-klein">
+            {aktiv ?? '…'} Spieler gerade in Filler · Spielart {VARIANTE_NAME[variante]}
+          </p>
         </div>
       </main>
     );
@@ -353,6 +448,7 @@ export function Filler({
       eigenerSitz={eigenerSitz}
       sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
       binDran={binDran}
+      gegenBot={(tisch.table?.seats ?? []).some((platz) => platz.isBot)}
       getippt={getippt?.farbe ?? null}
       onWaehle={waehle}
       onZurueck={verlasseUndZurueck}
@@ -376,6 +472,7 @@ function Brett({
   eigenerSitz,
   sitze,
   binDran,
+  gegenBot,
   getippt,
   onWaehle,
   onZurueck,
@@ -384,6 +481,8 @@ function Brett({
   eigenerSitz: number;
   sitze: readonly SitzZeile[];
   binDran: boolean;
+  /** Am Tisch sitzt ein Bot. Der Wartetext heisst dann anders. */
+  gegenBot: boolean;
   getippt: number | null;
   onWaehle: (farbe: number) => void;
   onZurueck: () => void;
@@ -433,6 +532,17 @@ function Brett({
             aktiv={!sicht.fertig && sicht.dran === gegnerSitz}
           />
         </div>
+        {/*
+          * Woran man spielt, steht am Tisch und nicht nur im Menue: Nach einem
+          * Neuladen ist die Vorwahl von vorhin keine Auskunft mehr ueber
+          * DIESEN Tisch. Die Spielart kommt deshalb aus der Sicht.
+          *
+          * Unter der Punktereihe und nicht in der Ecke: Oben rechts sitzt das
+          * Bild des Gegners, und die Marke lag genau darauf.
+          */}
+        <span className="fl-art" data-klar={sicht.variante === 'klar' ? '' : undefined}>
+          {VARIANTE_NAME[sicht.variante] ?? VARIANTE_NAME.nebel}
+        </span>
       </div>
 
       <div className="fl-brett-huelle">
@@ -499,17 +609,100 @@ function Brett({
             <p className="fl-hinweis">Farbe wählen</p>
           </>
         ) : (
-          <>
-            <div className="fl-palette fl-palette-ruht" aria-hidden="true">
-              {Array.from({ length: sicht.farbzahl }, (_, nr) => (
-                <span key={nr} className="fl-farbe" style={{ background: farbeVon(nr) }} />
-              ))}
-            </div>
-            <p className="fl-hinweis fl-wartet">Warten auf Gegner…</p>
-          </>
+          <Warteband gegenBot={gegenBot} farbzahl={sicht.farbzahl} />
         )}
       </div>
     </main>
+  );
+}
+
+/**
+ * Der Wartezustand: der Gegner ist am Zug.
+ *
+ * **Warum die Punkte laufen muessen.** Wer nicht am Zug ist, sieht ein Brett,
+ * an dem sich nichts bewegt, und eine Farbauswahl, die nicht reagiert — das
+ * ist von einem haengenden Bildschirm nicht zu unterscheiden. Am Handy, wo die
+ * Leitung beim Wegschauen ohnehin gerne stirbt (siehe useTable.ts), ist das
+ * der Moment, in dem Leute die App schliessen. Die drei laufenden Punkte sind
+ * deshalb keine Zierde, sondern die Auskunft "es lebt".
+ *
+ * Die Palette bleibt darunter stehen, nur blass: Sie verschwinden zu lassen
+ * hiesse, den Fuss um 60 px schrumpfen zu lassen, und dann huepft das Brett
+ * bei jedem Zugwechsel.
+ */
+function Warteband({
+  gegenBot,
+  farbzahl,
+}: {
+  gegenBot: boolean;
+  farbzahl: number;
+}): React.JSX.Element {
+  return (
+    <>
+      <div className="fl-palette fl-palette-ruht" aria-hidden="true">
+        {Array.from({ length: farbzahl }, (_, nr) => (
+          <span key={nr} className="fl-farbe" style={{ background: farbeVon(nr) }} />
+        ))}
+      </div>
+      {/*
+        * `aria-live` und ein vollstaendiger Text fuer Vorlesegeraete: Drei
+        * huepfende Punkte sind fuer sie nichts, und "Auf anderen Spieler
+        * warten" ohne Hinweis auf das Warten waere eine Halbaussage.
+        */}
+      <p className="fl-hinweis fl-wartet" aria-live="polite">
+        <span>{gegenBot ? 'Bot ist am Zug' : 'Auf anderen Spieler warten'}</span>
+        <span className="fl-lauf" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className="fl-nur-vorlesen">, bitte warten</span>
+      </p>
+    </>
+  );
+}
+
+/**
+ * Der Schalter zwischen den beiden Spielarten.
+ *
+ * Zwei Knoepfe und kein Kippschalter: Ein Kippschalter sagt nur, dass etwas an
+ * oder aus ist, und "Nebel aus" ist kein Name fuer eine Spielart. So stehen
+ * beide da und man liest, wofuer man sich entscheidet.
+ */
+function Spielartschalter({
+  wert,
+  onWahl,
+}: {
+  wert: Variante;
+  onWahl: (v: Variante) => void;
+}): React.JSX.Element {
+  const waehle = (v: Variante): void => {
+    onWahl(v);
+    try {
+      localStorage.setItem(VARIANTE_SCHLUESSEL, v);
+    } catch {
+      /* Gesperrte Seitendaten. Die Wahl gilt trotzdem — nur eben nicht morgen. */
+    }
+  };
+  return (
+    <div className="fl-schalter" role="group" aria-label="Spielart">
+      {(['nebel', 'klar'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          data-an={wert === v ? '' : undefined}
+          aria-pressed={wert === v}
+          onClick={() => waehle(v)}
+        >
+          {VARIANTE_NAME[v]}
+        </button>
+      ))}
+      <span className="fl-schalter-text">
+        {wert === 'nebel'
+          ? 'Du siehst nur dein Gebiet und dessen Rand.'
+          : 'Das ganze Brett liegt offen — wie im Original.'}
+      </span>
+    </div>
   );
 }
 

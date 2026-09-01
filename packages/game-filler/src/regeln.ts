@@ -22,6 +22,39 @@ export interface FillerRegeln {
    * Farben zwar noch bauen, aber nicht mehr sinnvoll spielen.
    */
   readonly farben: number;
+  /**
+   * Spielart: mit Nebel oder offen.
+   *
+   * `nebel` ist die Abwandlung dieses Hauses (siehe sicht.ts), `klar` das
+   * Vorbild mit offenem Brett. Sie steht im REGELSATZ und nicht als
+   * Einstellung im Bildschirm, und das aus zwei Gruenden:
+   *
+   *   1. Sichtbarkeit entsteht in `viewFor` (game-api, Grundsatz 2). Waere die
+   *      Spielart eine Client-Einstellung, muesste der Server das ganze Brett
+   *      schicken und der Client es ausblenden — genau das soll nie passieren.
+   *   2. Der Regelsatz eines Tisches steht seit dem Erstellen fest. Damit kann
+   *      niemand mitten in der Partie den Nebel abschalten.
+   *
+   * Eine Zeichenkette und kein `nebel: boolean`: Der Tischliste haengt der
+   * Server sie als `variante` an (siehe tables/service.ts), und dort ist ein
+   * lesbares Wort mehr wert als ein Ja/Nein, das man erst deuten muss.
+   */
+  readonly variante: FillerVariante;
+}
+
+/**
+ * Die beiden Spielarten.
+ *
+ * Ausgeschrieben und nicht `boolean`, damit eine dritte (etwa "nur der
+ * eigene Rand, aber der Gegner ist sichtbar") dazukommen kann, ohne dass
+ * irgendwo ein `!nebel` steht, das dann falsch waere.
+ */
+export type FillerVariante = 'nebel' | 'klar';
+
+export const VARIANTEN: readonly FillerVariante[] = ['nebel', 'klar'];
+
+export function istVariante(wert: unknown): wert is FillerVariante {
+  return typeof wert === 'string' && (VARIANTEN as readonly string[]).includes(wert);
 }
 
 /**
@@ -36,6 +69,11 @@ export const DEFAULT_REGELN: FillerRegeln = {
   spalten: 8,
   zeilen: 7,
   farben: 6,
+  /*
+   * Der Nebel ist die Vorgabe, nicht die Ausnahme. Er ist der Grund, warum es
+   * dieses Modul ueberhaupt gibt; wer das Vorbild will, schaltet um.
+   */
+  variante: 'nebel',
 };
 
 /**
@@ -98,6 +136,17 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   // Vier Farben sind die Untergrenze, nicht der Geschmack: siehe oben.
   if (farben < 4 || farben > 8) {
     probleme.push({ path: 'farben', messageKey: 'ruleset.farbzahlAusserhalb', severity: 'error' });
+  }
+
+  /*
+   * Fehlt die Spielart, ist es ein Tisch von vor dem 31. August: Damals gab es
+   * nur den Nebel. Ihn stillschweigend anzunehmen ist deshalb kein Raten,
+   * sondern die einzige Lesart, die stimmt — und `erstellePartie` traegt ihn
+   * dann auch ein, damit die Luecke nicht in den Snapshot wandert.
+   */
+  const variante = gegeben['variante'];
+  if (variante !== undefined && variante !== null && !istVariante(variante)) {
+    probleme.push({ path: 'variante', messageKey: 'ruleset.varianteUnbekannt', severity: 'error' });
   }
 
   return probleme;
