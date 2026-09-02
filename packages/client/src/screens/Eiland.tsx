@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import { GRAUTOENE, auswahlton, gebietsfarbe } from '../minispiele/eiland/farben';
+import {
+  type Modus,
+  type Punkt,
+  haengtZusammen,
+  laufe,
+  selberFleck,
+  treffer,
+  waehlbarMit,
+  zelleVon,
+} from '../minispiele/eiland/gesten';
+import { Ornamentbild } from '../minispiele/eiland/Ornament';
 import { useTable } from '../useTable';
 
 /**
@@ -29,6 +41,8 @@ interface EilandSicht {
   /** 0 Gras, 1 Wasser, 2 Berg — oder null, solange das Feld im Nebel liegt. */
   gelaende: (number | null)[];
   ornament: (number | null)[];
+  /** Eingesammelte Ornamente, die als Bauwerk stehen geblieben sind. */
+  bauwerk: (number | null)[];
   besitzer: (number | null)[];
   /** Grauton je Platz — nur Zeichnung, verraet nichts. */
   grau: number[];
@@ -86,49 +100,10 @@ const REGELSATZ = {
  */
 const SPERRE_MAX_MS = 6000;
 
-const GRAS = 0;
+/* GRAS (0) braucht dieser Bildschirm nicht mehr selbst — die Regel, was
+   nehmbar ist, liegt in minispiele/eiland/gesten.ts. */
 const WASSER = 1;
 const BERG = 2;
-
-/**
- * Die Farben der beiden Gebiete, in dieser REIHENFOLGE nach Sitznummer.
- *
- * Warm gegen kalt und nicht zwei Bunttoene: Auf einer Karte aus Gruen und Blau
- * muessen die Gebiete auf den ersten Blick vom Gelaende zu unterscheiden sein,
- * und Rot gegen Violett waere daneben nur "irgendeine Farbe mehr".
- */
-const GEBIET = ['#e2603f', '#7b4fd0'] as const;
-
-/**
- * Die Graustufen des Nebels.
- *
- * Sie muessen zwei Dinge zugleich: sich untereinander unterscheiden (sonst
- * sieht man das Raster nicht mehr) und sich klar vom Gelaende abheben. Deshalb
- * liegen sie alle im mittleren Band, weit weg von Gruen, Blau und Braun.
- *
- * Die Anzahl muss zu GRAUTOENE in packages/game-eiland/src/partie.ts passen.
- */
-const GRAUTOENE = ['#9a9a9a', '#a6a6a6', '#b1b1b1', '#bcbcbc', '#c6c6c6'] as const;
-
-function gebietsfarbe(sitz: number): string {
-  return GEBIET[sitz % GEBIET.length] ?? GEBIET[0];
-}
-
-/**
- * Die Tönung eines gewählten Feldes: die eigene Gebietsfarbe, halb
- * durchsichtig über dem Gelände.
- *
- * Als `background-image` und nicht als `background-color`, weil die
- * Geländefarbe aus dem Stylesheet kommt (`[data-art]`) — ein Verlauf aus
- * einer einzigen Farbe legt sich darüber, ohne sie zu ersetzen. So sieht man
- * beides: was das Feld IST und dass es gleich mir gehören soll.
- */
-const GEBIET_TON = ['rgba(226, 96, 63, 0.62)', 'rgba(123, 79, 208, 0.62)'] as const;
-
-function auswahlton(sitz: number): string {
-  const ton = GEBIET_TON[sitz % GEBIET_TON.length] ?? GEBIET_TON[0];
-  return `linear-gradient(${ton}, ${ton})`;
-}
 
 export function Eiland({
   startTisch,
@@ -503,28 +478,23 @@ export function Eiland({
 // Die Karte
 // ---------------------------------------------------------------------------
 
-/**
- * Die vier orthogonalen Nachbarn — dieselbe Rechnung wie im Modul.
- *
- * Sie steht hier, weil der Bildschirm die Auswahl zusammenstellt, bevor sie
- * zum Server geht (siehe `waehlbar` in der Karte). Diagonalen zaehlen nicht.
- */
-function nachbarnVon(platz: number, spalten: number, zeilen: number): number[] {
-  const x = platz % spalten;
-  const y = Math.floor(platz / spalten);
-  const raus: number[] = [];
-  if (x > 0) raus.push(platz - 1);
-  if (x < spalten - 1) raus.push(platz + 1);
-  if (y > 0) raus.push(platz - spalten);
-  if (y < zeilen - 1) raus.push(platz + spalten);
-  return raus;
-}
-
 interface SitzZeile {
   seat: number;
   displayName: string | null;
   avatarUrl: string | null;
   isBot: boolean;
+}
+
+/**
+ * Was die Gesten sich merken, solange ein Finger auf der Karte liegt. Die
+ * Rechnung dazu steht in minispiele/eiland/gesten.ts — hier nur, was an den
+ * Zeiger gebunden ist.
+ */
+interface Geste {
+  readonly pointerId: number;
+  readonly modus: Modus;
+  /** Zuletzt betretene Zelle (Anzeigeindex): Jede wirkt nur einmal je Betreten. */
+  zelle: number;
 }
 
 function Karte({
@@ -568,14 +538,27 @@ function Karte({
    *
    * Der ganze Zug wird hier zusammengestellt und erst am Ende abgeschickt —
    * ein Umlauf je Runde statt einem je Feld. Der Preis dafuer ist, dass dieser
-   * Bildschirm EINE Regel kennen muss: Anwaehlbar ist ein freies Wiesenfeld,
-   * das an das eigene Gebiet grenzt oder an ein Feld, das schon auf dem Zettel
-   * steht. Das ist derselbe Weg, den Skat und der Doppelkopf gehen (der Client
-   * baut die Aktion selbst aus der Sicht, `legalActions` ist leer), und der
-   * Server prueft den fertigen Zettel ohnehin noch einmal — weicht die
-   * Rechnung hier je ab, weist er ihn ab, statt ihn falsch auszufuehren.
+   * Bildschirm EINE Regel kennen muss (siehe waehlbarMit). Das ist derselbe
+   * Weg, den Skat und der Doppelkopf gehen (der Client baut die Aktion selbst
+   * aus der Sicht, `legalActions` ist leer), und der Server prueft den
+   * fertigen Zettel ohnehin noch einmal — weicht die Rechnung hier je ab,
+   * weist er ihn ab, statt ihn falsch auszufuehren.
+   *
+   * Sie steht ZWEIMAL: als Zustand fuers Zeichnen und als Ref fuer die
+   * Zeigergesten. Beim Wischen kommen mehrere Bewegungen an, bevor React
+   * einmal gezeichnet hat — wer da aus dem Zustand liest, sieht die Auswahl
+   * von vor drei Feldern und haengt dasselbe Feld dreimal an. Die Ref ist die
+   * Wahrheit waehrend der Geste, der Zustand ihr Abbild.
    */
-  const [wahl, setWahl] = useState<number[]>([]);
+  const [wahl, setWahlZustand] = useState<number[]>([]);
+  const wahlRef = useRef<number[]>([]);
+  const setzeWahl = (neu: number[]): void => {
+    wahlRef.current = neu;
+    setWahlZustand(neu);
+  };
+  const geste = useRef<Geste | null>(null);
+  const letzterTipp = useRef<{ punkt: Punkt; platz: number } | null>(null);
+  const karteRef = useRef<HTMLDivElement>(null);
   /*
    * Neue Runde, leerer Zettel. Am RUNDENZAEHLER aufgehaengt und nicht am
    * Sichten-Objekt: Ein Effekt mit dem Objekt in der Abhaengigkeitsliste
@@ -583,7 +566,10 @@ function Karte({
    * mitten im Ueberlegen wegwerfen.
    */
   useEffect(() => {
-    setWahl([]);
+    wahlRef.current = [];
+    setWahlZustand([]);
+    geste.current = null;
+    letzterTipp.current = null;
   }, [sicht.runde]);
 
   const kontingent = sicht.kontingent[eigenerSitz] ?? 1;
@@ -593,64 +579,145 @@ function Karte({
     () => new Set(binBereit ? sicht.wahl : wahl),
     [binBereit, sicht.wahl, wahl],
   );
+  const waehlbar = useMemo(() => waehlbarMit(sicht, wahl), [sicht, wahl]);
 
-  /** Frei, Wiese, kein Nebel — die Bedingung, die ein Feld ueberhaupt zulaesst. */
-  const nehmbar = (platz: number): boolean =>
-    sicht.gelaende[platz] === GRAS && sicht.besitzer[platz] === null;
+  // -- Waehlen ---------------------------------------------------------------
 
-  /**
-   * Was jetzt anwaehlbar ist: der Rand des eigenen Gebiets (kommt fertig vom
-   * Server) plus der Rand dessen, was schon auf dem Zettel steht.
-   */
-  const waehlbar = useMemo(() => {
-    const raus = new Set<number>(sicht.waehlbar);
-    for (const platz of wahl) {
-      for (const n of nachbarnVon(platz, sicht.spalten, sicht.zeilen)) {
-        if (nehmbar(n)) raus.add(n);
-      }
-    }
-    for (const platz of wahl) raus.delete(platz);
-    return raus;
-  }, [sicht.waehlbar, sicht.gelaende, sicht.besitzer, sicht.spalten, sicht.zeilen, wahl]);
-
-  /**
-   * Ein Feld an- oder abwaehlen.
-   *
-   * Beim Abwaehlen faellt alles mit, was nur ueber dieses Feld erreichbar war:
-   * Ein Vorstoss haengt an seinem ersten Feld, und eine Insel mitten im Freien
-   * wuerde der Server ohnehin abweisen. Wer es sieht, versteht es sofort — wer
-   * es nicht saehe, wuerde am Ende einen Zettel abschicken, der zurueckkommt.
-   */
-  const tippe = (platz: number): void => {
-    if (!darfPlanen || wartet) return;
-    if (gewaehlt.has(platz)) {
-      setWahl((alt) => haengtZusammen(alt.filter((p) => p !== platz)));
-      return;
-    }
-    if (wahl.length >= kontingent) return;
-    if (!waehlbar.has(platz)) return;
-    setWahl((alt) => [...alt, platz]);
+  const nimm = (platz: number): boolean => {
+    const auswahl = wahlRef.current;
+    if (auswahl.length >= kontingent) return false;
+    if (!waehlbarMit(sicht, auswahl).has(platz)) return false;
+    setzeWahl([...auswahl, platz]);
+    return true;
   };
 
-  /** Von den eigenen Feldern aus durch die Auswahl laufen; der Rest faellt weg. */
-  function haengtZusammen(auswahl: readonly number[]): number[] {
-    const offenListe = new Set(auswahl);
-    const erreicht = new Set<number>();
-    const rand: number[] = [];
-    for (let platz = 0; platz < sicht.besitzer.length; platz++) {
-      if (sicht.besitzer[platz] === eigenerSitz) rand.push(platz);
+  const lass = (platz: number): boolean => {
+    const auswahl = wahlRef.current;
+    if (!auswahl.includes(platz)) return false;
+    setzeWahl(haengtZusammen(sicht, eigenerSitz, auswahl.filter((p) => p !== platz)));
+    return true;
+  };
+
+  const wende = (platz: number, modus: Modus): boolean =>
+    modus === 'nehmen' ? nimm(platz) : lass(platz);
+
+  const zuruecksetzen = (): void => {
+    setzeWahl([]);
+    letzterTipp.current = null;
+  };
+
+  // -- Zeiger ----------------------------------------------------------------
+
+  /**
+   * Zeigerlage in Rasterkoordinaten.
+   *
+   * Aus der Geometrie der Karte gerechnet und nicht aus dem Ziel des
+   * Ereignisses: Waehrend einer Geste ist der Zeiger an die Karte gebunden
+   * (setPointerCapture), und das Ziel ist dann immer die Karte selbst. Rand
+   * und Fuge sind je 1 px (siehe .ei-karte), ein Rasterschritt ist Feld plus
+   * Fuge — bei einer 1-px-Fuge liegt die Fuge rechnerisch beim Feld davor,
+   * was niemand merkt.
+   */
+  const rasterPunkt = (ev: { clientX: number; clientY: number }): Punkt | null => {
+    const el = karteRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return null;
+    const schrittX = (rect.width - 1) / sicht.spalten;
+    const schrittY = (rect.height - 1) / sicht.zeilen;
+    return { u: (ev.clientX - rect.left - 1) / schrittX, v: (ev.clientY - rect.top - 1) / schrittY };
+  };
+
+  /**
+   * Die Geste auf jede betretene Zelle anwenden — die Rechnung des Weges
+   * steht in gesten.ts, hier nur die Anbindung an Auswahl und Drehung.
+   */
+  const wandere = (von: number, nach: number, modus: Modus): void => {
+    const taugt = (zelle: number): boolean => {
+      const auswahl = wahlRef.current;
+      return modus === 'nehmen'
+        ? waehlbarMit(sicht, auswahl).has(platzVon(zelle))
+        : auswahl.includes(platzVon(zelle));
+    };
+    laufe(von, nach, sicht.spalten, taugt, (zelle) => {
+      wende(platzVon(zelle), modus);
+    });
+  };
+
+  const beiZeigerAb = (ev: React.PointerEvent<HTMLDivElement>): void => {
+    if (!darfPlanen || wartet || geste.current) return;
+    if (ev.button !== 0) return;
+    const p = rasterPunkt(ev);
+    if (!p) return;
+    const zelle = zelleVon(sicht, p);
+    if (zelle === null) return;
+    // Kein Fokusrahmen, kein Textmarkieren — und keine Maus-Ersatzereignisse.
+    ev.preventDefault();
+    try {
+      ev.currentTarget.setPointerCapture(ev.pointerId);
+    } catch {
+      /*
+       * Kein aktiver Zeiger unter dieser Kennung (der Browser hat ihn schon
+       * losgelassen, oder das Ereignis kam aus einer Pruefung). Ohne Bindung
+       * endet ein Wischen am Rand der Karte — der Tipp selbst gilt trotzdem.
+       */
     }
-    while (rand.length > 0) {
-      const platz = rand.pop()!;
-      for (const n of nachbarnVon(platz, sicht.spalten, sicht.zeilen)) {
-        if (!offenListe.has(n) || erreicht.has(n)) continue;
-        erreicht.add(n);
-        rand.push(n);
+
+    let modus: Modus;
+    const vorher = letzterTipp.current;
+    if (vorher && selberFleck(vorher.punkt, p) && wahlRef.current.includes(vorher.platz)) {
+      // Derselbe Fleck noch einmal: zuruecknehmen, was der vorige Tipp nahm.
+      lass(vorher.platz);
+      letzterTipp.current = null;
+      modus = 'lassen';
+    } else {
+      const platz = platzVon(treffer(sicht, wahlRef.current, kontingent, platzVon, p, zelle));
+      if (wahlRef.current.includes(platz)) {
+        lass(platz);
+        letzterTipp.current = null;
+        modus = 'lassen';
+      } else {
+        // Auch wenn hier nichts zu nehmen war (eigenes Land, Wasser): Die
+        // Geste ist trotzdem ein Nehmen — wer auf seinem Gebiet ansetzt und
+        // ueber den Rand hinauswischt, will Land.
+        letzterTipp.current = nimm(platz) ? { punkt: p, platz } : null;
+        modus = 'nehmen';
       }
     }
-    // Die urspruengliche Reihenfolge bleibt: Sie ist die des Tippens.
-    return auswahl.filter((p) => erreicht.has(p));
-  }
+    geste.current = { pointerId: ev.pointerId, modus, zelle };
+  };
+
+  const beiZeigerZug = (ev: React.PointerEvent<HTMLDivElement>): void => {
+    const g = geste.current;
+    if (!g || g.pointerId !== ev.pointerId) return;
+    const p = rasterPunkt(ev);
+    if (!p) return;
+    const zelle = zelleVon(sicht, p);
+    if (zelle === null || zelle === g.zelle) return;
+    // Wer weiterzieht, wischt — der „selbe Fleck" gilt danach nicht mehr.
+    letzterTipp.current = null;
+    wandere(g.zelle, zelle, g.modus);
+    g.zelle = zelle;
+  };
+
+  const beiZeigerAuf = (ev: React.PointerEvent<HTMLDivElement>): void => {
+    const g = geste.current;
+    if (!g || g.pointerId !== ev.pointerId) return;
+    geste.current = null;
+  };
+
+  /**
+   * Tastatur: Leertaste oder Eingabe auf einem Feld. Ein Klick, der von
+   * einem Zeiger kommt, traegt `detail >= 1` und ist oben schon erledigt —
+   * ihn hier noch einmal auszuwerten hiesse, jedes Feld zweimal zu schalten.
+   */
+  const beiKlick = (ev: React.MouseEvent<HTMLButtonElement>, platz: number): void => {
+    if (ev.detail !== 0) return;
+    if (!darfPlanen || wartet) return;
+    if (wahlRef.current.includes(platz)) lass(platz);
+    else nimm(platz);
+  };
+
   /**
    * Die Kaempfe der letzten Runde. Sie liegen kurz als Marke auf dem Feld —
    * eine Runde lang, nicht als Zustand mit eigener Uhr: Was in `sicht.letzte`
@@ -662,7 +729,9 @@ function Karte({
     return karte;
   }, [sicht.letzte]);
 
-  const offen = kontingent - wahl.length;
+  const offen = Math.max(0, kontingent - wahl.length);
+  /** Leer, teils, voll — die Ampel des Abgabeknopfs. */
+  const stand = wahl.length === 0 ? 'leer' : offen === 0 ? 'voll' : 'teils';
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
   return (
@@ -692,7 +761,22 @@ function Karte({
       </div>
 
       <div className="ei-karte-huelle">
-        <div className="ei-karte" style={{ gridTemplateColumns: `repeat(${sicht.spalten}, 1fr)` }}>
+        {/*
+          Die Karte nimmt die Zeiger selbst entgegen, nicht die Felder: Nur so
+          laeuft ein Wischen ueber Feldgrenzen hinweg, und nur so kann ein Tipp
+          ein NACHBARFELD meinen (siehe treffer). Die Felder bleiben Knoepfe —
+          fuer Tastatur und Vorlesegeraet.
+        */}
+        <div
+          ref={karteRef}
+          className="ei-karte"
+          style={{ gridTemplateColumns: `repeat(${sicht.spalten}, 1fr)` }}
+          onPointerDown={beiZeigerAb}
+          onPointerMove={beiZeigerZug}
+          onPointerUp={beiZeigerAuf}
+          onPointerCancel={beiZeigerAuf}
+          onLostPointerCapture={beiZeigerAuf}
+        >
           {Array.from({ length: plaetze }, (_, i) => {
             const platz = platzVon(i);
             const art = sicht.gelaende[platz];
@@ -708,14 +792,22 @@ function Karte({
             const kannWaehlen =
               darfPlanen && !wartet && (mein || (wahl.length < kontingent && waehlbar.has(platz)));
             const kampf = kaempfe.get(platz);
+            const ornament = sicht.ornament[platz] ?? null;
+            const bauwerk = sicht.bauwerk[platz] ?? null;
             return (
               <button
                 key={platz}
                 type="button"
                 className="ei-feld"
-                // Ein Feld, das man nicht waehlen kann, ist keine Schaltflaeche
-                // fuer die Tastatur — aber es bleibt sichtbar und lesbar.
-                disabled={!kannWaehlen}
+                /*
+                 * Kein `disabled`: Ein abgeschalteter Knopf verschluckt in
+                 * manchen Browsern die Zeigerereignisse, die die Karte
+                 * darueber auswertet — dann risse jedes Wischen an Wasser
+                 * oder Nebel ab. Fuer die Tastatur ist ein Feld, das man
+                 * nicht waehlen kann, trotzdem keine Schaltflaeche.
+                 */
+                tabIndex={kannWaehlen ? 0 : -1}
+                aria-disabled={kannWaehlen ? undefined : true}
                 data-art={imNebel ? 'nebel' : art === WASSER ? 'wasser' : art === BERG ? 'berg' : 'gras'}
                 data-eigen={besitzer === eigenerSitz ? '' : undefined}
                 data-fremd={besitzer !== null && besitzer !== eigenerSitz ? '' : undefined}
@@ -734,12 +826,11 @@ function Karte({
                   // „das soll meins werden".
                   backgroundImage: mein ? auswahlton(eigenerSitz) : undefined,
                 }}
-                onClick={() => tippe(platz)}
-                aria-label={feldName(art ?? null, besitzer ?? null, eigenerSitz, sicht.ornament[platz] ?? null)}
+                onClick={(ev) => beiKlick(ev, platz)}
+                aria-label={feldName(art ?? null, besitzer ?? null, eigenerSitz, ornament, bauwerk)}
               >
-                {sicht.ornament[platz] !== null && sicht.ornament[platz] !== undefined && (
-                  <Ornamentbild art={sicht.ornament[platz]!} />
-                )}
+                {ornament !== null && <Ornamentbild art={ornament} />}
+                {bauwerk !== null && <Ornamentbild art={bauwerk} eingesammelt />}
               </button>
             );
           })}
@@ -762,33 +853,43 @@ function Karte({
         ) : (
           <>
             {/*
-              Der Zaehler steht oben und zaehlt MIT, waehrend man tippt — er
-              ist die einzige Rueckmeldung darauf, wie viel man noch vergeben
-              darf, und war frueher erst nach der Serverantwort richtig.
+              Was noch zu vergeben ist, steht als KACHEL da — in der eigenen
+              Gebietsfarbe, mit der Zahl darin, grau sobald nichts mehr
+              uebrig ist. Sie zaehlt MIT, waehrend man tippt: die einzige
+              Rueckmeldung darauf, wie viel man noch vergeben darf.
             */}
-            <p className="ei-hinweis">
-              {offen > 0
-                ? `Noch ${offen} ${offen === 1 ? 'Feld' : 'Felder'}`
-                : 'Alle Felder vergeben'}
-            </p>
-            <div className="ei-knoepfe">
-              <button
-                type="button"
-                className="ei-knopf"
-                disabled={wahl.length === 0 || wartet}
-                onClick={() => setWahl([])}
-              >
-                Zurücksetzen
-              </button>
-              <button
-                type="button"
-                className="ei-knopf ei-knopf-stark"
-                disabled={wartet}
-                onClick={() => onAbgeben(wahl)}
-              >
-                {wartet ? 'Wird gesendet…' : wahl.length === 0 ? 'Passen' : `Zug abschicken (${wahl.length})`}
-              </button>
-            </div>
+            <span
+              className="ei-rest"
+              data-leer={offen === 0 ? '' : undefined}
+              style={offen > 0 ? { background: gebietsfarbe(eigenerSitz) } : undefined}
+              role="status"
+              aria-label={offen === 1 ? 'Noch ein Feld' : `Noch ${offen} Felder`}
+            >
+              {offen}
+            </span>
+            {/*
+              Die Ampel: grau ohne Auswahl (Passen), gelb mit einer
+              angefangenen, gruen mit einer vollen. Der Knopf sagt damit auf
+              einen Blick, ob der Zug fertig ist, ohne dass man die Kachel
+              darueber lesen muss.
+            */}
+            <button
+              type="button"
+              className="ei-abgeben"
+              data-stand={stand}
+              disabled={wartet}
+              onClick={() => onAbgeben(wahl)}
+            >
+              {wartet ? 'Wird gesendet…' : wahl.length === 0 ? 'Passen' : 'Abgeben'}
+            </button>
+            <button
+              type="button"
+              className="ei-knopf ei-zuruecksetzen"
+              disabled={wahl.length === 0 || wartet}
+              onClick={zuruecksetzen}
+            >
+              Zurücksetzen
+            </button>
           </>
         )}
       </div>
@@ -802,42 +903,15 @@ function feldName(
   besitzer: number | null,
   eigenerSitz: number,
   ornament: number | null,
+  bauwerk: number | null,
 ): string {
   if (art === null) return 'Unbekanntes Feld';
   const grund = art === WASSER ? 'Wasser' : art === BERG ? 'Berg' : 'Wiese';
   const wem =
     besitzer === null ? 'frei' : besitzer === eigenerSitz ? 'dein Gebiet' : 'gegnerisches Gebiet';
   const zier = ornament === null ? '' : ornament === 0 ? ', Stadt' : ', Brunnen';
-  return `${grund}, ${wem}${zier}`;
-}
-
-/**
- * Stadt und Brunnen, gezeichnet statt geladen.
- *
- * Es gibt fuer dieses Spiel noch keine Bilder, und ein `<img>` auf eine Datei,
- * die es nicht gibt, ist ein weisser Kasten — der sieht nach Fehler aus, ein
- * gezeichnetes Zeichen nach Absicht (siehe CLAUDE.md). Zwei Pfade in einem
- * SVG kosten nichts und skalieren mit dem Feld.
- */
-function Ornamentbild({ art }: { art: number }): React.JSX.Element {
-  return (
-    <svg className="ei-ornament" viewBox="0 0 24 24" aria-hidden="true">
-      {art === 0 ? (
-        <>
-          {/* Stadt: drei Haeuser mit Giebel. */}
-          <path d="M3 21V12l4-3 4 3v9z" />
-          <path d="M13 21V8l4-3 4 3v13z" />
-        </>
-      ) : (
-        <>
-          {/* Brunnen: Dach, Pfosten, Schacht. */}
-          <path d="M4 8 12 3l8 5z" />
-          <path d="M7 10h2v11H7zM15 10h2v11h-2z" />
-          <path d="M9 15h6v6H9z" />
-        </>
-      )}
-    </svg>
-  );
+  const bau = bauwerk === null ? '' : bauwerk === 0 ? ', mit eingesammelter Stadt' : ', mit eingesammeltem Brunnen';
+  return `${grund}, ${wem}${zier}${bau}`;
 }
 
 /**

@@ -14043,7 +14043,18 @@ main.auth > .muted {
      Beide Grenzen stehen deshalb hier, `aspect-ratio` am Feld hält die Zellen
      quadratisch. */
   width: min(94vw, 520px);
-  max-width: calc(100vh - 300px);
+  max-width: calc(100vh - 290px);
+  /* Die Karte nimmt Wischgesten selbst entgegen (siehe beiZeigerZug in
+     Eiland.tsx). `touch-action: none` ist dabei keine Feinheit, sondern die
+     Bedingung: Sonst erklärt der Browser den zweiten Fingermillimeter zum
+     Rollen und schickt ein pointercancel — die Geste bräche nach dem ersten
+     Feld ab. Die Seite selbst rollt ohnehin nicht (position: fixed). Kein
+     Textmarkieren, kein iOS-Aufklappmenü beim Halten: Beides sind Gesten,
+     die hier ein Feld meinen. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .ei-feld {
@@ -14060,8 +14071,10 @@ main.auth > .muted {
   transition: background-color 220ms ease, box-shadow 160ms ease;
 }
 /* Ein Feld, das man nicht wählen kann, ist keine Schaltfläche — es soll
-   trotzdem aussehen wie Land und nicht wie ein toter Knopf. */
-.ei-feld:disabled { cursor: default; }
+   trotzdem aussehen wie Land und nicht wie ein toter Knopf. Über
+   `aria-disabled` statt `disabled`, weil die Karte darüber die
+   Zeigerereignisse auswertet (siehe Eiland.tsx). */
+.ei-feld[aria-disabled='true'] { cursor: default; }
 
 .ei-feld[data-art='gras'] { background: #a9c46c; }
 .ei-feld[data-art='wasser'] { background: #6aa7cf; }
@@ -14148,6 +14161,14 @@ main.auth > .muted {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
   pointer-events: none;
 }
+/* Ein eingesammeltes Ornament bleibt als Bauwerk auf dem Feld stehen (seit
+   02.09.): etwas kleiner und stiller als ein ausliegendes, damit man am Land
+   abzählen kann, was man hat — ohne dass es aussieht wie ein Ziel. */
+.ei-ornament.ei-bauwerk {
+  width: 56%;
+  height: 56%;
+  fill: rgba(255, 255, 255, 0.82);
+}
 
 /* -- Fußleiste ------------------------------------------------------------ */
 
@@ -14158,10 +14179,72 @@ main.auth > .muted {
   flex-direction: column;
   align-items: center;
   /* Feste Mindesthöhe, damit die Karte nicht springt, wenn die Knöpfe dem
-     Wartetext weichen. */
-  min-height: 118px;
+     Wartetext weichen. Sie deckt Kachel, Abgabeknopf und Zurücksetzen. */
+  min-height: 196px;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+/* Die Restkachel: ein Feld in der eigenen Gebietsfarbe mit der Zahl darin,
+   die noch zu vergeben ist. Grau mit hellerem Rand, sobald nichts mehr übrig
+   ist — dieselbe Form wie auf der Karte, damit man sie als „Feld" liest. */
+.ei-rest {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  color: #ffffff;
+  font: 800 22px/1 system-ui;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.55),
+    0 6px 14px -8px rgba(0, 0, 0, 0.8);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+.ei-rest[data-leer] {
+  color: #4a4a4a;
+  background: #b5b5b5;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.85),
+    0 6px 14px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* Der Abgabeknopf: eine eigene Zeile, groß genug für den Daumen — und eine
+   Ampel. Grau heißt „nichts gewählt" (Passen), Gelb „angefangen", Grün
+   „alle Felder vergeben". Die Farbe kommt aus `data-stand`, nicht aus dem
+   Text: Man soll den Zustand sehen, bevor man liest. */
+.ei-abgeben {
+  width: min(94vw, 420px);
+  padding: 20px 16px;
+  border: 0;
+  border-radius: 16px;
+  color: #ffffff;
+  background: #b5b0a8;
+  font: 800 22px/1 system-ui;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9);
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms ease, color 180ms ease, filter 160ms ease;
+}
+.ei-abgeben[data-stand='teils'] {
+  color: #3a3000;
+  background: linear-gradient(180deg, #f5d24a, #ecc22e);
+}
+.ei-abgeben[data-stand='voll'] {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(180deg, #a9cf6c, #8fbb52);
+}
+.ei-abgeben:active { transform: scale(0.985); }
+.ei-abgeben:disabled { filter: saturate(0.35) opacity(0.7); cursor: default; }
+
+/* Zurücksetzen steht UNTER dem Abgeben, kleiner und grau: eine Nebenhandlung,
+   die man nicht mit dem Daumen treffen soll, wenn man abgeben will. */
+.ei-zuruecksetzen {
+  flex: none;
+  width: min(60vw, 240px);
+  padding: 12px 12px;
+  font-size: 14px;
 }
 
 .ei-hinweis {
@@ -14172,7 +14255,6 @@ main.auth > .muted {
 }
 .ei-wartet { color: #9a9182; }
 
-.ei-knoepfe { display: flex; gap: 10px; width: min(94vw, 420px); }
 .ei-knopf {
   flex: 1;
   padding: 14px 12px;
@@ -14262,6 +14344,64 @@ main.auth > .muted {
   color: #333333;
   font: 700 16px/1 system-ui;
   cursor: pointer;
+}
+
+/* -- Banner in der Spielauswahl (02.09.) ---------------------------------- */
+
+/* Eine Partie, die sich selbst spielt (EilandBanner). Dieselbe Bauart wie das
+   gezeichnete Bild aus scripts/eiland-banner-zeichnen.py: dunkler Grund,
+   Karte rechts, unscharfe Kulisse unter der Titelzone links. Die Felder
+   tragen `.ei-feld`, damit Gelände, Gebiet und Ornamente GENAU so aussehen wie
+   im Spiel — ein zweiter Satz Farben liefe auseinander. */
+.ei-banner {
+  position: relative;
+  display: block;
+  width: 100%;
+  /* Dasselbe Verhältnis wie die gemalten Banner (1200 × 300). */
+  aspect-ratio: 4 / 1;
+  overflow: hidden;
+  background: linear-gradient(180deg, #141418, #22222e);
+}
+.ei-banner-schein {
+  position: absolute;
+  top: -45%;
+  right: -6%;
+  width: 62%;
+  height: 190%;
+  background: radial-gradient(closest-side, rgba(74, 112, 84, 0.6), rgba(74, 112, 84, 0));
+  pointer-events: none;
+}
+.ei-banner-kulisse {
+  position: absolute;
+  inset: 0 42% 0 0;
+  filter: blur(12px);
+  opacity: 0.2;
+  pointer-events: none;
+}
+.ei-banner-kulisse span {
+  position: absolute;
+  width: 38%;
+  aspect-ratio: 1;
+  border-radius: 12%;
+}
+.ei-banner-karte {
+  position: absolute;
+  top: 4%;
+  right: 5.5%;
+  height: 92%;
+  aspect-ratio: 1;
+  display: grid;
+  gap: 1px;
+  padding: 1px;
+  border-radius: 3px;
+  background: #0e0e12;
+  box-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.9);
+}
+/* Ein eben genommenes Feld blitzt kurz auf: aus der Mitte heraus, hell. */
+.ei-banner-feld[data-neu] { animation: ei-banner-neu 480ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes ei-banner-neu {
+  0% { transform: scale(0.55); filter: brightness(1.5); }
+  100% { transform: none; filter: none; }
 }
 
 /* -- Filler: Spielart Build — Mauern und Setzflaechen (01.09.) ------------ */

@@ -47,7 +47,7 @@ import { type EilandSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 2;
+const SNAPSHOT_VERSION = 3;
 
 type GespeichertePartie = EilandPartie & { readonly v: number };
 
@@ -76,6 +76,10 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
    * und die Sicht traegt jetzt die Spielart. Ein Client der Fassung 1 schickt
    * Aktionen, die es nicht mehr gibt, und muss deshalb abgewiesen werden,
    * statt mitten in der Partie zu scheitern.
+   *
+   * NICHT erhoeht am 2. September fuer die Bauwerke: Die Sicht bekam nur ein
+   * Feld dazu, das ein aelterer Client schlicht nicht liest. Eine neue
+   * Fassung wuerfe jeden offenen Tab aus der Partie — fuer eine Zeichnung.
    */
   protocolVersion: 2,
 
@@ -141,20 +145,28 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
    */
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1 && snap.v !== 2) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
     const { v, ...rest } = snap;
-    const alt = rest as EilandPartie;
+    let alt = rest as EilandPartie;
     /*
      * Version 1 kannte die Spielart nicht — es gab nur eine. Sie hier
      * nachzutragen ist deshalb kein Raten: Jede Partie aus dieser Fassung
      * wurde im Nebel gespielt. Abzuweisen waere der falsche Weg; ein Deploy
      * darf keine laufende Partie brechen.
      */
-    if (v === 1) return { ...alt, regeln: { ...alt.regeln, variante: 'nebel' } };
+    if (v === 1) alt = { ...alt, regeln: { ...alt.regeln, variante: 'nebel' } };
+    /*
+     * Bis Version 2 verschwand ein eingesammeltes Ornament von der Karte.
+     * Eine laufende Partie aus dieser Zeit bekommt eine leere Bauwerk-Liste:
+     * Was vor dem Deploy eingesammelt wurde, laesst sich nicht mehr
+     * nachzeichnen — und eine Karte ohne die alten Bauwerke ist immer noch
+     * dieselbe Partie, ein abgewiesener Snapshot waere es nicht.
+     */
+    if (v < 3) alt = { ...alt, bauwerk: alt.gelaende.map(() => null) };
     return alt;
   },
 };

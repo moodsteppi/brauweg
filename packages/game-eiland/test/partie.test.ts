@@ -188,6 +188,7 @@ describe('Ornamente', () => {
     assert.equal(stand.gesammelt[0], 1);
     assert.equal(kontingent(stand, 0), 2, 'ein Ornament ist ein Feld mehr je Runde');
     assert.equal(stand.ornament[ziel], null, 'das eingesammelte liegt nicht mehr da');
+    assert.equal(stand.bauwerk[ziel], 0, 'als Bauwerk bleibt es auf dem Feld stehen');
     const liegen = stand.ornament.filter((o) => o !== null).length;
     assert.equal(liegen, DEFAULT_REGELN.ornamente, 'ein neues ist nachgerueckt');
   });
@@ -473,6 +474,28 @@ describe('Sicht', () => {
       (g, platz) => g !== null && partie.besitzer[platz] === null,
     );
     assert.equal(freieMitGelaende.length, 0);
+  });
+
+  it('zeigt ein Bauwerk dem, der es sieht — und dem Zuschauer', () => {
+    // Gebaut wie oben bei den Ornamenten: eines direkt neben Sitz 0, in der
+    // ersten Runde eingesammelt.
+    const partie = neu();
+    const ecke = startEcke(0, spalten, zeilen);
+    const ziel = nachbarn(ecke, spalten, zeilen).find((n) => partie.gelaende[n] === GRAS)!;
+    const ornament = [...partie.ornament];
+    ornament[ziel] = 1;
+    let stand = plan({ ...partie, ornament }, 0, [ziel]);
+    stand = plan(stand, 1, []);
+
+    assert.equal(sichtFuer(stand, 0).bauwerk[ziel], 1, 'der Besitzer sieht sein Bauwerk');
+    // Sitz 1 sitzt in der Ecke gegenueber, weit ausserhalb der Sichtweite:
+    // Fuer ihn liegt das Feld im Nebel, Bauwerk eingeschlossen.
+    assert.equal(sichtFuer(stand, 1).bauwerk[ziel], null);
+    // Besetztes Land sieht der Zuschauer immer — samt dem, was darauf steht.
+    assert.equal(zuschauerSicht(stand).bauwerk[ziel], 1);
+    // Und als Ornament zaehlt es nicht mehr: nicht fuer die Sollzahl, nicht
+    // fuer den Bot, der nur `ornament` liest.
+    assert.equal(sichtFuer(stand, 0).ornament[ziel], null);
   });
 
   it('beschneidet die Rundenmeldung auf das Sichtbare', () => {

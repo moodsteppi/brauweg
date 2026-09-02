@@ -61,6 +61,7 @@ import {
   Tafel,
   spielBanner,
 } from '../hub';
+import { EilandBanner } from '../minispiele/eiland/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
 import { Kreuz, Note } from '../zeichen';
@@ -2287,6 +2288,11 @@ function Spielwahl({
                       Abruf aus, faellt es auf das gemalte Bild zurueck. */}
                   {game.id === 'mememory' ? (
                     <MememoryBanner />
+                  ) : game.id === 'eiland' ? (
+                    /* Eiland spielt sich im Banner selbst: zwei Gebiete
+                       wachsen aus ihren Ecken, der Nebel weicht. Wer weniger
+                       Bewegung will, bekommt das gezeichnete Bild. */
+                    <EilandBanner />
                   ) : (
                     <img src={spielBanner(game.id)} alt="" draggable={false} />
                   )}

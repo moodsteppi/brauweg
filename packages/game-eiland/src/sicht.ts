@@ -58,6 +58,12 @@ export interface EilandSicht {
   readonly gelaende: readonly (number | null)[];
   /** Ornamentart je Platz, null wenn keins da ist ODER das Feld im Nebel liegt. */
   readonly ornament: readonly (number | null)[];
+  /**
+   * Eingesammelte Ornamente, die als Bauwerk auf dem Feld stehen geblieben
+   * sind — gefiltert wie `ornament`. Ein Bauwerk steht immer auf besetztem
+   * Land und verraet deshalb nichts, was der Besitzer nicht ohnehin zeigt.
+   */
+  readonly bauwerk: readonly (number | null)[];
   /** Wem ein Platz gehoert — nur fuer sichtbare Plaetze, sonst null. */
   readonly besitzer: readonly (number | null)[];
   /** Grauton je Platz, fuer die Zeichnung verdeckter Felder. */
@@ -163,7 +169,10 @@ function beschneide(ausgang: EilandAusgang, sichtbar: readonly boolean[]): Eilan
 function grundsicht(
   partie: EilandPartie,
   ich: number | null,
-): Omit<EilandSicht, 'gelaende' | 'ornament' | 'besitzer' | 'wahl' | 'waehlbar' | 'letzte'> {
+): Omit<
+  EilandSicht,
+  'gelaende' | 'ornament' | 'bauwerk' | 'besitzer' | 'wahl' | 'waehlbar' | 'letzte'
+> {
   const kontingente: Record<number, number> = {};
   const bereit: Record<number, boolean> = {};
   for (const sitz of sitzeVon(partie)) {
@@ -202,6 +211,7 @@ export function sichtFuer(partie: EilandPartie, sitz: number): EilandSicht {
     ...grundsicht(partie, sitz),
     gelaende: partie.gelaende.map((g, platz) => (sichtbar[platz] ? g : null)),
     ornament: partie.ornament.map((o, platz) => (sichtbar[platz] ? o : null)),
+    bauwerk: partie.bauwerk.map((b, platz) => (sichtbar[platz] ? b : null)),
     besitzer: partie.besitzer.map((b, platz) => (sichtbar[platz] ? b : null)),
     wahl: partie.wahl[sitz] ?? [],
     waehlbar: waehlbare(partie, sitz),
@@ -228,6 +238,7 @@ export function zuschauerSicht(partie: EilandPartie): EilandSicht {
     ...grundsicht(partie, null),
     gelaende: partie.gelaende.map((g, platz) => (besetzt[platz] ? g : null)),
     ornament: partie.ornament.map((o, platz) => (besetzt[platz] ? o : null)),
+    bauwerk: partie.bauwerk.map((b, platz) => (besetzt[platz] ? b : null)),
     besitzer: partie.besitzer,
     wahl: [],
     waehlbar: [],

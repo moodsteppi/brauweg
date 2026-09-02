@@ -109,6 +109,20 @@ export interface EilandPartie {
   /** Ornamentart je Platz (0 Stadt, 1 Brunnen), sonst null. */
   readonly ornament: readonly (number | null)[];
   /**
+   * Bauwerk je Platz: die Art des Ornaments, das hier eingesammelt wurde,
+   * sonst null.
+   *
+   * Ein eingesammeltes Ornament verschwindet seit dem 2. September nicht mehr
+   * von der Karte, es wechselt nur die Liste: aus `ornament` (liegt aus,
+   * zaehlt fuers Nachlegen, lockt den Bot) hierher (steht auf eigenem Land,
+   * ist reine Zeichnung). Zwei Listen statt einer Markierung, damit keine
+   * Regel je fragen muss, ob ein Ornament "noch zaehlt" — was in `ornament`
+   * steht, zaehlt immer, was hier steht, nie. Der Sinn ist der Blick aufs
+   * Brett: Man sieht am Land, wie viele man schon hat, ohne die Zahl am Kopf
+   * zu lesen.
+   */
+  readonly bauwerk: readonly (number | null)[];
+  /**
    * Gemischte Plaetze, aus denen nachrueckende Ornamente gezogen werden, und
    * der Zeiger darauf. Beides bleibt im Zustand und geht nie in eine Sicht —
    * wer die Liste haette, wuesste, wo das naechste Ornament erscheint.
@@ -187,6 +201,7 @@ export function erstellePartie(
 
   const besitzer: (number | null)[] = new Array(felder).fill(null);
   const ornament: (number | null)[] = new Array(felder).fill(null);
+  const bauwerk: (number | null)[] = new Array(felder).fill(null);
   const punkte: Record<number, number> = {};
   const gesammelt: Record<number, number> = {};
   const wahl: Record<number, readonly number[]> = {};
@@ -230,6 +245,7 @@ export function erstellePartie(
     grau,
     besitzer,
     ornament,
+    bauwerk,
     nachschub,
     nachschubZeiger: zeiger,
     kaempfe,
@@ -562,6 +578,7 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
 
   const besitzer = [...partie.besitzer];
   const ornament = [...partie.ornament];
+  const bauwerk = [...partie.bauwerk];
   const punkte = { ...partie.punkte };
   const gesammelt = { ...partie.gesammelt };
   const genommen: Record<number, number[]> = {};
@@ -579,8 +596,12 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
       besitzer[platz] = sitz;
       punkte[sitz] = (punkte[sitz] ?? 0) + 1;
       wechsel++;
-      if (ornament[platz] !== null) {
+      const zier = ornament[platz];
+      if (zier !== null && zier !== undefined) {
+        // Von der einen Liste in die andere: Das Ornament ist eingesammelt
+        // und bleibt als Bauwerk auf dem Feld stehen (siehe EilandPartie).
         ornament[platz] = null;
+        bauwerk[platz] = zier;
         gesammelt[sitz] = (gesammelt[sitz] ?? 0) + 1;
         ornamenteRunde[sitz]++;
       }
@@ -621,6 +642,7 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
     ...partie,
     besitzer,
     ornament,
+    bauwerk,
     punkte,
     gesammelt,
     nachschubZeiger: zeiger,
