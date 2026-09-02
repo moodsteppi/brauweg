@@ -30,7 +30,10 @@ GRAUTOENE = ["#9a9a9a", "#a6a6a6", "#b1b1b1", "#bcbcbc", "#c6c6c6"]
 # Muss zu `.ei-feld[data-art=…]` in styles.css passen.
 GRAS = "#a9c46c"
 WASSER = "#6aa7cf"
-BERG = "#9a9187"
+BERG = "#8f857a"
+# Kegel und Schneekappe des Bergs, siehe `.ei-feld[data-art='berg']`.
+BERG_KEGEL = (87, 78, 69, 184)
+BERG_SCHNEE = (255, 255, 255, 245)
 
 BREITE, HOEHE = 1200, 300
 SPALTEN, ZEILEN = 10, 10
@@ -169,6 +172,28 @@ def ornament(
         schicht.polygon([p(u, v) for u, v in form], fill=weiss)
 
 
+def berg(schicht: ImageDraw.ImageDraw, x: int, y: int) -> None:
+    """Dunkler Kegel mit Schneekappe — dieselben Pfade wie das SVG in styles.css.
+
+    Die Pfade liegen in einer 24er-Box und werden auf 80 % der Kachel
+    skaliert, leicht nach unten gerueckt, so wie `background-size` und
+    `background-position` es im Stylesheet tun.
+    """
+    groesse = KACHEL * 0.8
+    x0 = x + (KACHEL - groesse) / 2
+    y0 = y + (KACHEL - groesse) * 0.58
+    k = groesse / 24
+
+    def p(u: float, v: float) -> tuple[float, float]:
+        return (x0 + u * k, y0 + v * k)
+
+    schicht.polygon([p(2.5, 20.5), p(12, 4.5), p(21.5, 20.5)], fill=BERG_KEGEL)
+    schicht.polygon(
+        [p(12, 4.5), p(15.6, 10.6), p(14.3, 9.7), p(13.1, 11.1), p(12, 9.9), p(10.9, 11.1), p(9.7, 9.7), p(8.4, 10.6)],
+        fill=BERG_SCHNEE,
+    )
+
+
 def male() -> Image.Image:
     bild = hintergrund()
     brett_breite = SPALTEN * KACHEL + (SPALTEN + 1) * FUGE
@@ -219,12 +244,7 @@ def male() -> Image.Image:
                 # Der Innenschimmer des Gebiets (`.ei-feld[data-eigen]`).
                 dz.rectangle([x, y, x + KACHEL - 1, y + KACHEL - 1], outline=(255, 255, 255, 128))
             if zeichen == "b":
-                # Die Bergspitze (`.ei-feld[data-art='berg']::after`).
-                mx = x + KACHEL / 2
-                dz.polygon(
-                    [(mx - KACHEL * 0.22, y + KACHEL * 0.67), (mx, y + KACHEL * 0.33), (mx + KACHEL * 0.22, y + KACHEL * 0.67)],
-                    fill=(255, 255, 255, 128),
-                )
+                berg(dz, x, y)
             if zeichen == "w":
                 # Die Welle (`.ei-feld[data-art='wasser']::after`).
                 dz.line(

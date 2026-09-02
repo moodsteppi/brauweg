@@ -13889,7 +13889,8 @@ main.auth > .muted {
 }
 .ei-probe span[data-art='gras'] { background: #a9c46c; }
 .ei-probe span[data-art='wasser'] { background: #6aa7cf; }
-.ei-probe span[data-art='berg'] { background: #9a9187; }
+/* Der Berg wird unten bei `.ei-feld[data-art='berg']` gezeichnet — ein
+   Selektor fuer Karte und Kostprobe, damit beide dieselbe Form zeigen. */
 .ei-probe span[data-art='nebel'] { background: #b1b1b1; }
 
 .ei-suchen {
@@ -14078,18 +14079,25 @@ main.auth > .muted {
 
 .ei-feld[data-art='gras'] { background: #a9c46c; }
 .ei-feld[data-art='wasser'] { background: #6aa7cf; }
-.ei-feld[data-art='berg'] { background: #9a9187; }
 /* Berg und Wasser bekommen eine Struktur, damit sie sich auch für jemanden
-   unterscheiden, der Blau und Grau schlecht trennt: der Berg eine Spitze,
-   das Wasser eine Welle. */
-.ei-feld[data-art='berg']::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 0;
-  border-left: 22% solid transparent;
-  border-right: 22% solid transparent;
-  border-bottom: 34% solid rgba(255, 255, 255, 0.5);
+   unterscheiden, der Blau und Grau schlecht trennt: das Wasser eine Welle,
+   der Berg einen Kegel mit Schneekappe.
+
+   Die Kappe ist seit dem 02.09. da, weil das Berggrau (#9a9187) mitten im
+   Nebel-Band (#9a9a9a bis #c6c6c6) lag und die alte, halb durchsichtige
+   Spitze auf dem Handy nicht reichte: Man hielt Berge für Nebel. Jetzt ist
+   der Grund wärmer und dunkler als jeder Nebelton, der Kegel dunkel, die
+   Kappe weiß — drei Kontraste statt einem. Als SVG-Hintergrund und nicht
+   als ::after, damit die Kostprobe im Menü und das Banner dieselbe Zeichnung
+   bekommen, ohne die Pseudo-Elemente der Felder zu belegen.
+   Die Farben müssen zu BERG in scripts/eiland-banner-zeichnen.py passen. */
+.ei-feld[data-art='berg'],
+.ei-probe span[data-art='berg'] {
+  background-color: #8f857a;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2.5 20.5 12 4.5l9.5 16z' fill='%23574e45' fill-opacity='.72'/%3E%3Cpath d='M12 4.5 15.6 10.6 14.3 9.7 13.1 11.1 12 9.9 10.9 11.1 9.7 9.7 8.4 10.6z' fill='%23fff' fill-opacity='.96'/%3E%3C/svg%3E");
+  background-size: 80% 80%;
+  background-position: center 58%;
+  background-repeat: no-repeat;
 }
 .ei-feld[data-art='wasser']::after {
   content: '';
@@ -14178,9 +14186,16 @@ main.auth > .muted {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Feste Mindesthöhe, damit die Karte nicht springt, wenn die Knöpfe dem
-     Wartetext weichen. Sie deckt Kachel, Abgabeknopf und Zurücksetzen. */
-  min-height: 196px;
+  /* Feste Höhe, damit die Karte nicht springt, wenn die Knöpfe dem
+     Wartetext weichen: Die Karte wird im Rest der Höhe zentriert, jede
+     Änderung hier verschiebt sie um die Hälfte davon. Gerechnet, nicht
+     geschätzt — Kachel 54 + Abgeben 62 + Zurücksetzen 38 + zwei Lücken 20
+     = 174 px Inhalt, plus 8 px oben; der Rand unten kommt als eigener
+     Posten dazu, weil er auf dem iPhone größer ist als hier (34 statt
+     18 px) und die Rechnung sonst genau dort wieder aufginge. 190 statt 182
+     ist Luft für die Schriftmessung. Vorher stand hier 196 px, und das war
+     bei 204 px Inhalt der 4-px-Ruck bei jedem „Warten auf den Gegner". */
+  min-height: calc(190px + max(18px, env(safe-area-inset-bottom)));
   justify-content: center;
   gap: 10px;
 }
