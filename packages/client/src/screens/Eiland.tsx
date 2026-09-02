@@ -55,7 +55,9 @@ interface EilandSicht {
   runde: number;
   letzte: {
     runde: number;
-    kaempfe: { platz: number; sieger: number }[];
+    /** In Entscheidungsreihenfolge; `einsatz` = Sitze, die ein Feld darauf gesetzt haben. */
+    kaempfe: { platz: number; sieger: number; einsatz: number[] }[];
+    reserve: Record<number, number>;
     genommen: Record<number, number[]>;
     verfallen: Record<number, number[]>;
     ornamente: Record<number, number>;
@@ -104,6 +106,16 @@ const SPERRE_MAX_MS = 6000;
    nehmbar ist, liegt in minispiele/eiland/gesten.ts. */
 const WASSER = 1;
 const BERG = 2;
+
+/**
+ * Der Flug eines Einsatzes aufs Streitfeld: so lange dauert einer, und so
+ * dicht folgen sie aufeinander. Schnell, weil sie eine Auskunft sind und
+ * kein Schauspiel — nach der dritten Runde will das niemand mehr abwarten.
+ * Die Kampfmarke auf dem Feld wartet, bis der Einsatz gelandet ist
+ * (`--ei-kampf-verzoegerung`), sonst staende das Ergebnis vor der Ursache.
+ */
+const FLUG_MS = 340;
+const FLUG_TAKT_MS = 150;
 
 export function Eiland({
   startTisch,
@@ -559,6 +571,7 @@ function Karte({
   const geste = useRef<Geste | null>(null);
   const letzterTipp = useRef<{ punkt: Punkt; platz: number } | null>(null);
   const karteRef = useRef<HTMLDivElement>(null);
+  const flugRef = useRef<HTMLDivElement>(null);
   /*
    * Neue Runde, leerer Zettel. Am RUNDENZAEHLER aufgehaengt und nicht am
    * Sichten-Objekt: Ein Effekt mit dem Objekt in der Abhaengigkeitsliste
@@ -724,12 +737,99 @@ function Karte({
    * steht, wird mit der naechsten Aufloesung ohnehin ersetzt.
    */
   const kaempfe = useMemo(() => {
-    const karte = new Map<number, number>();
-    for (const kampf of sicht.letzte?.kaempfe ?? []) karte.set(kampf.platz, kampf.sieger);
+    const karte = new Map<number, { sieger: number; verzoegerung: number }>();
+    (sicht.letzte?.kaempfe ?? []).forEach((kampf, i) => {
+      // Die Marke erscheint, wenn der Einsatz landet — ohne Einsatz sofort im
+      // Takt, damit die Reihenfolge der Entscheidung auch ohne Flug lesbar ist.
+      const landung = kampf.einsatz.length > 0 ? FLUG_MS * 0.8 : 0;
+      karte.set(kampf.platz, { sieger: kampf.sieger, verzoegerung: i * FLUG_TAKT_MS + landung });
+    });
     return karte;
   }, [sicht.letzte]);
 
+  /**
+   * Die Einsaetze fliegen aufs Streitfeld.
+   *
+   * Der eigene aus der Restkachel unten (dort lag er, seit man ihn nicht
+   * gesetzt hat), der des Gegners aus seinem Punktestand oben — in der
+   * Reihenfolge, in der der Server die Streitfelder entschieden hat. Es sind
+   * Kacheln in der Gebietsfarbe, ueber die Web-Animations-Schnittstelle
+   * bewegt und danach entfernt: kein Zustand, keine Uhr, und ein neuer
+   * Rundruf mitten im Flug raeumt ueber den Aufraeumer alles ab.
+   *
+   * Am RUNDENZAEHLER der Meldung aufgehaengt, nicht an der Sicht: Sie kommt
+   * bei jedem Serverfunk neu, die Runde nur einmal je Aufloesung.
+   */
+  const letzteRunde = sicht.letzte?.runde ?? -1;
+  useEffect(() => {
+    const letzte = sicht.letzte;
+    const buehne = flugRef.current;
+    const karte = karteRef.current;
+    if (!letzte || !buehne || !karte) return;
+    if (!letzte.kaempfe.some((k) => k.einsatz.length > 0)) return;
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+    const wurzel = buehne.getBoundingClientRect();
+    const startVon = (sitz: number): DOMRect | undefined => {
+      if (sitz === eigenerSitz) {
+        return (document.querySelector('.ei-rest') ?? document.querySelector('.ei-fuss'))?.getBoundingClientRect();
+      }
+      return document.querySelector('.ei-spieler:not([data-eigen]) .ei-punkte')?.getBoundingClientRect();
+    };
+    const gestartet: Animation[] = [];
+    const wecker: number[] = [];
+    letzte.kaempfe.forEach((kampf, i) => {
+      const feld = karte.children[gedreht ? plaetze - 1 - kampf.platz : kampf.platz];
+      if (!(feld instanceof HTMLElement)) return;
+      const ziel = feld.getBoundingClientRect();
+      kampf.einsatz.forEach((sitz, k) => {
+        const von = startVon(sitz);
+        if (!von) return;
+        const kachel = document.createElement('span');
+        kachel.className = 'ei-flug';
+        kachel.style.width = `${ziel.width}px`;
+        kachel.style.height = `${ziel.height}px`;
+        kachel.style.background = gebietsfarbe(sitz);
+        const x0 = von.left + von.width / 2 - ziel.width / 2 - wurzel.left;
+        const y0 = von.top + von.height / 2 - ziel.height / 2 - wurzel.top;
+        const x1 = ziel.left - wurzel.left;
+        const y1 = ziel.top - wurzel.top;
+        kachel.style.transform = `translate(${x0}px, ${y0}px) scale(0.7)`;
+        buehne.appendChild(kachel);
+        const flug = kachel.animate(
+          [
+            { transform: `translate(${x0}px, ${y0}px) scale(0.7)`, opacity: 0.95 },
+            { transform: `translate(${x1}px, ${y1}px) scale(1)`, opacity: 1, offset: 0.8 },
+            { transform: `translate(${x1}px, ${y1}px) scale(1.3)`, opacity: 0 },
+          ],
+          {
+            duration: FLUG_MS,
+            // Der Gegner-Einsatz einen Wimpernschlag nach dem eigenen: Zwei
+            // Kacheln, die zugleich landen, saehen aus wie eine.
+            delay: i * FLUG_TAKT_MS + k * 60,
+            easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
+            fill: 'backwards',
+          },
+        );
+        flug.onfinish = () => kachel.remove();
+        // Im Hintergrund-Tab laeuft die Animation nicht an und `onfinish`
+        // kommt nie — die Kachel bliebe als Fleck liegen, bis die naechste
+        // Runde aufraeumt. Deshalb ein Wecker als zweiter Weg hinaus.
+        wecker.push(window.setTimeout(() => kachel.remove(), i * FLUG_TAKT_MS + k * 60 + FLUG_MS + 250));
+        gestartet.push(flug);
+      });
+    });
+    return () => {
+      for (const flug of gestartet) flug.cancel();
+      for (const w of wecker) window.clearTimeout(w);
+      buehne.replaceChildren();
+    };
+  }, [letzteRunde]);
+
   const offen = Math.max(0, kontingent - wahl.length);
+  /** Nach dem Abgeben: Was nicht gesetzt wurde, ist der Einsatz bei Streitfeldern. */
+  const einsatz = Math.max(0, kontingent - sicht.wahl.length);
   /** Leer, teils, voll — die Ampel des Abgabeknopfs. */
   const stand = wahl.length === 0 ? 'leer' : offen === 0 ? 'voll' : 'teils';
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
@@ -794,6 +894,18 @@ function Karte({
             const kampf = kaempfe.get(platz);
             const ornament = sicht.ornament[platz] ?? null;
             const bauwerk = sicht.bauwerk[platz] ?? null;
+            const stil: React.CSSProperties & { '--ei-kampf-verzoegerung'?: string } = {
+              background: imNebel
+                ? (GRAUTOENE[sicht.grau[platz] ?? 0] ?? GRAUTOENE[0])
+                : besitzer !== null
+                  ? gebietsfarbe(besitzer)
+                  : undefined,
+              // Gewählt heißt: in meiner Farbe getönt. Der gelbe Rahmen im
+              // Stylesheet sagt „noch nicht abgeschickt", die Tönung sagt
+              // „das soll meins werden".
+              backgroundImage: mein ? auswahlton(eigenerSitz) : undefined,
+            };
+            if (kampf) stil['--ei-kampf-verzoegerung'] = `${kampf.verzoegerung}ms`;
             return (
               <button
                 key={platz}
@@ -814,18 +926,8 @@ function Karte({
                 data-waehlbar={kannWaehlen && !mein ? '' : undefined}
                 data-gewaehlt={mein ? '' : undefined}
                 data-abgegeben={mein && binBereit ? '' : undefined}
-                data-kampf={kampf === undefined ? undefined : kampf === eigenerSitz ? 'sieg' : 'verlust'}
-                style={{
-                  background: imNebel
-                    ? (GRAUTOENE[sicht.grau[platz] ?? 0] ?? GRAUTOENE[0])
-                    : besitzer !== null
-                      ? gebietsfarbe(besitzer)
-                      : undefined,
-                  // Gewählt heißt: in meiner Farbe getönt. Der gelbe Rahmen im
-                  // Stylesheet sagt „noch nicht abgeschickt", die Tönung sagt
-                  // „das soll meins werden".
-                  backgroundImage: mein ? auswahlton(eigenerSitz) : undefined,
-                }}
+                data-kampf={kampf === undefined ? undefined : kampf.sieger === eigenerSitz ? 'sieg' : 'verlust'}
+                style={stil}
                 onClick={(ev) => beiKlick(ev, platz)}
                 aria-label={feldName(art ?? null, besitzer ?? null, eigenerSitz, ornament, bauwerk)}
               >
@@ -837,6 +939,10 @@ function Karte({
         </div>
       </div>
 
+      {/* Hier landen die fliegenden Einsaetze (siehe den Effekt oben). Ueber
+          allem, ohne Zeiger — die Karte darunter bleibt bedienbar. */}
+      <div ref={flugRef} className="ei-flugbuehne" aria-hidden="true" />
+
       <div className="ei-fuss">
         {sicht.fertig ? (
           <Abschluss
@@ -847,8 +953,27 @@ function Karte({
           />
         ) : binBereit ? (
           <>
-            <p className="ei-hinweis ei-wartet">Warten auf den Gegner…</p>
-            <p className="ei-klein">Dein Zug steht. Gleich wird aufgelöst.</p>
+            {/*
+              Dieselben drei Bausteine wie beim Planen, nur still: So bleibt
+              die Fussleiste gleich hoch, und die Kachel zeigt, was auf dem
+              Spiel steht — die nicht gesetzten Felder sind der Einsatz bei
+              Streitfeldern, und genau von hier fliegen sie gleich los.
+            */}
+            <span
+              className="ei-rest"
+              data-leer={einsatz === 0 ? '' : undefined}
+              style={einsatz > 0 ? { background: gebietsfarbe(eigenerSitz) } : undefined}
+              role="status"
+              aria-label={einsatz === 1 ? 'Ein Feld als Einsatz' : `${einsatz} Felder als Einsatz`}
+            >
+              {einsatz}
+            </span>
+            <button type="button" className="ei-abgeben ei-wartet" data-stand="wartet" disabled>
+              Warten auf den Gegner…
+            </button>
+            <p className="ei-knopf ei-zuruecksetzen ei-zugsteht">
+              {einsatz > 0 ? `${einsatz} ${einsatz === 1 ? 'Feld' : 'Felder'} als Einsatz` : 'Dein Zug steht.'}
+            </p>
           </>
         ) : (
           <>
@@ -1018,6 +1143,14 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           sehen. Wollen beide dasselbe Feld, wird darum gekämpft — der Ausgang
           steht fünfzig zu fünfzig. Wer verliert, kommt an dieser Stelle nicht
           weiter; Felder dahinter bleiben frei.
+        </li>
+        <li>
+          Felder, die du in einer Runde <strong>nicht setzt</strong>, sind dein
+          Einsatz: Bei jedem Streitfeld fliegt einer aufs Feld. Hat nur einer
+          von euch einen, gewinnt er das Feld sicher; haben beide einen,
+          entscheidet wieder der Münzwurf. Die Streitfelder kommen in
+          zufälliger Reihenfolge dran, bis die Einsätze verbraucht sind — der
+          Rest bleibt fünfzig zu fünfzig.
         </li>
         <li>Die Partie endet, wenn keiner mehr irgendwohin kann.</li>
       </ol>

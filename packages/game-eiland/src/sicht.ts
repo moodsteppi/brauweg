@@ -154,6 +154,9 @@ function beschneide(ausgang: EilandAusgang, sichtbar: readonly boolean[]): Eilan
   return {
     runde: ausgang.runde,
     kaempfe: ausgang.kaempfe.filter((k) => sichtbar[k.platz]),
+    // Die Einsaetze bleiben vollstaendig: dass der Gegner Felder
+    // zurueckgehalten hat, sieht man an seinem Kontingent ohnehin.
+    reserve: ausgang.reserve,
     genommen: filterKarte(ausgang.genommen),
     verfallen: filterKarte(ausgang.verfallen),
     /*

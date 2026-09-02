@@ -47,7 +47,7 @@ import { type EilandSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 3;
+const SNAPSHOT_VERSION = 4;
 
 type GespeichertePartie = EilandPartie & { readonly v: number };
 
@@ -145,7 +145,7 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
    */
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 1 && snap.v !== 2) {
+    if (!Number.isInteger(snap.v) || snap.v < 1 || snap.v > SNAPSHOT_VERSION) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
@@ -167,6 +167,22 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
      * dieselbe Partie, ein abgewiesener Snapshot waere es nicht.
      */
     if (v < 3) alt = { ...alt, bauwerk: alt.gelaende.map(() => null) };
+    /*
+     * Bis Version 3 kannte ein Kampf keinen Einsatz. Die letzte Rundenmeldung
+     * einer laufenden Partie bekommt leere Einsaetze nachgetragen — sie ist
+     * nur Zeichnung, und der Client liest `einsatz` ohne Netz.
+     */
+    if (v < 4 && alt.letzte) {
+      const letzte = alt.letzte;
+      alt = {
+        ...alt,
+        letzte: {
+          ...letzte,
+          reserve: letzte.reserve ?? {},
+          kaempfe: letzte.kaempfe.map((k) => ({ ...k, einsatz: k.einsatz ?? [] })),
+        },
+      };
+    }
     return alt;
   },
 };

@@ -14,8 +14,12 @@
  *
  *   1. GLEICHZEITIG. Beide waehlen ihre Felder, ohne die Wahl des anderen zu
  *      sehen; erst wenn beide bereit sind, wird aufgeloest. Wollen beide
- *      dasselbe Feld, entscheidet ein Muenzwurf — es wird gekaempft, und ein
- *      Kampf hat keinen Favoriten.
+ *      dasselbe Feld, wird gekaempft — und seit dem 2. September ist der
+ *      Kampf eine Wette: Was ein Sitz in der Runde NICHT gesetzt hat, ist
+ *      sein Einsatz. Wer allein einen Einsatz hat, gewinnt das Feld sicher;
+ *      haben beide einen oder keiner, entscheidet der Muenzwurf. Jeder
+ *      Einsatz gilt fuer ein Streitfeld, die Streitfelder kommen in
+ *      zufaelliger Reihenfolge dran (siehe loeseAuf).
  *   2. NEBEL. Sichtbar ist das eigene Gebiet und drei Schritte darueber
  *      hinaus. Das steht nicht hier, sondern in `sicht.ts` — Grundsatz 2:
  *      Sichtbarkeit entsteht ausschliesslich in viewFor.
@@ -76,8 +80,20 @@ export const LEERRUNDEN_MAX = 4;
 /** Was in einer Runde geschehen ist. Der Client zeichnet es nach. */
 export interface EilandAusgang {
   readonly runde: number;
-  /** Felder, die beide wollten, samt Gewinner des Muenzwurfs. */
-  readonly kaempfe: readonly { readonly platz: number; readonly sieger: number }[];
+  /**
+   * Felder, die beide wollten — in der Reihenfolge, in der sie entschieden
+   * wurden (zufaellig, siehe loeseAuf), samt Gewinner und den Sitzen, die
+   * einen Einsatz darauf gesetzt haben. Die Reihenfolge ist keine Zierde:
+   * Der Client laesst die Einsaetze in genau dieser Folge aufs Feld fliegen.
+   */
+  readonly kaempfe: readonly {
+    readonly platz: number;
+    readonly sieger: number;
+    /** Sitze, die ein zurueckgehaltenes Feld auf diesen Kampf gesetzt haben. */
+    readonly einsatz: readonly number[];
+  }[];
+  /** Zurueckgehaltene Felder je Sitz zu Beginn der Aufloesung — der Einsatz. */
+  readonly reserve: Readonly<Record<number, number>>;
   /** Was jeder Sitz tatsaechlich bekommen hat. */
   readonly genommen: Readonly<Record<number, readonly number[]>>;
   /**
@@ -559,20 +575,84 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
   }
 
   const zuteilung = new Map<number, number[]>(sitze.map((s) => [s, []]));
-  const kaempfe: { platz: number; sieger: number }[] = [];
+  const kaempfe: { platz: number; sieger: number; einsatz: number[] }[] = [];
   let kampfZeiger = partie.kampfZeiger;
 
+  /**
+   * Zufall aus dem Vorrat: `kaempfe` ist eine Liste von Muenzwuerfen (0/1),
+   * und daraus kommen hier auch die Zahlen fuer die Reihenfolge — Bit fuer
+   * Bit, mit Verwerfen statt Rest, damit kein Platz bevorzugt wird. Ein
+   * zweiter Vorrat im Zustand haette eine Snapshot-Wanderung gekostet; die
+   * Bits sind da, und der Zeiger wandert ohnehin.
+   */
+  const bit = (): number => {
+    const wurf = partie.kaempfe[kampfZeiger % partie.kaempfe.length] ?? 0;
+    kampfZeiger++;
+    return wurf & 1;
+  };
+  const zahlUnter = (n: number): number => {
+    if (n <= 1) return 0;
+    const bits = Math.ceil(Math.log2(n));
+    let wert = 0;
+    for (let versuch = 0; versuch < 8; versuch++) {
+      wert = 0;
+      for (let i = 0; i < bits; i++) wert = (wert << 1) | bit();
+      if (wert < n) return wert;
+    }
+    // Achtmal verworfen: praktisch nie. Dann eben der Rest, statt endlos zu ziehen.
+    return wert % n;
+  };
+
+  /*
+   * Der Einsatz. Was ein Sitz in dieser Runde nicht gesetzt hat, setzt er auf
+   * die Streitfelder: je Streitfeld einen, solange der Vorrat reicht. Wer
+   * allein einen Einsatz hat, gewinnt das Feld sicher; haben beide einen oder
+   * keiner, entscheidet der Muenzwurf wie bisher. Gerechnet mit dem
+   * Kontingent VON DIESER Runde — was das eingesammelte Ornament dazugibt,
+   * zaehlt erst ab der naechsten. Der Einsatz verfaellt mit der Runde; ein
+   * Vorrat ueber Runden hinweg waere eine zweite Waehrung, und die will das
+   * Spiel nicht.
+   */
+  const reserve: Record<number, number> = {};
+  for (const sitz of sitze) {
+    reserve[sitz] = Math.max(0, kontingent(partie, sitz) - (partie.wahl[sitz] ?? []).length);
+  }
+  const reserveVorher = { ...reserve };
+
+  const umstritten: number[] = [];
   for (const platz of [...anspruch.keys()].sort((a, b) => a - b)) {
+    const bewerber = anspruch.get(platz)!;
+    if (bewerber.length > 1) umstritten.push(platz);
+    else zuteilung.get(bewerber[0]!)!.push(platz);
+  }
+  /*
+   * Die Streitfelder in ZUFAELLIGER Reihenfolge, nicht nach Platznummer: Mit
+   * einem Einsatz und zwei Streitfeldern entscheidet die Reihenfolge, welches
+   * Feld der Einsatz gewinnt — nach Platznummer waere oben links immer das
+   * sichere und unten rechts immer das unsichere Feld, und wer das weiss,
+   * plant danach. Gemischt aus der Saat (Fisher-Yates ueber die Bits des
+   * Vorrats), also fuer beide Sitze dieselbe Reihenfolge — und unabhaengig
+   * davon, wer zuerst getippt hat.
+   */
+  for (let i = umstritten.length - 1; i > 0; i--) {
+    const j = zahlUnter(i + 1);
+    const merke = umstritten[i]!;
+    umstritten[i] = umstritten[j]!;
+    umstritten[j] = merke;
+  }
+  for (const platz of umstritten) {
     const bewerber = anspruch.get(platz)!.slice().sort((a, b) => a - b);
-    let sieger = bewerber[0]!;
-    if (bewerber.length > 1) {
+    const einsatz = bewerber.filter((s) => (reserve[s] ?? 0) > 0);
+    for (const s of einsatz) reserve[s] = (reserve[s] ?? 0) - 1;
+    let sieger: number;
+    if (einsatz.length === 1) {
+      sieger = einsatz[0]!;
+    } else {
       // Der Muenzwurf. Fuenfzig zu fuenfzig, ohne Ruecksicht auf Gebietsgroesse
       // oder Anmarschweg: Es wird gekaempft, und ein Kampf hat keinen Favoriten.
-      const wurf = partie.kaempfe[kampfZeiger % partie.kaempfe.length] ?? 0;
-      kampfZeiger++;
-      sieger = bewerber[wurf % bewerber.length]!;
-      kaempfe.push({ platz, sieger });
+      sieger = bewerber[bit() % bewerber.length]!;
     }
+    kaempfe.push({ platz, sieger, einsatz });
     zuteilung.get(sieger)!.push(platz);
   }
 
@@ -654,6 +734,7 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
     letzte: {
       runde: partie.runde,
       kaempfe,
+      reserve: reserveVorher,
       genommen,
       verfallen,
       ornamente: ornamenteRunde,

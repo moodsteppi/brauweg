@@ -131,6 +131,25 @@ export function botZug(sicht: EilandSicht): EilandAktion {
     return mass;
   }
 
+  /*
+   * Ein Feld zurueckhalten, wenn es Streit geben kann.
+   *
+   * Was ein Sitz nicht setzt, setzt er auf die Streitfelder (siehe loeseAuf):
+   * Wer allein einen Einsatz hat, gewinnt das Feld sicher. Grenzt eines der
+   * gewaehlten Felder an den Gegner, kann der es ebenfalls wollen — dann ist
+   * ein zurueckgehaltenes Feld mehr wert als das letzte, schwaechste Feld der
+   * Liste. Das LETZTE, weil kein frueher gewaehltes Feld je an einem spaeteren
+   * haengt (Kandidaten grenzen immer an das, was schon da war): Es ist das
+   * einzige, das ohne Loch im Zettel wegkann. Bei einem Kontingent von eins
+   * hiesse Zurueckhalten Passen — dann lieber das Feld.
+   */
+  if (genommen.length >= 2) {
+    const amGegner = genommen.some((platz) =>
+      nachbarn(platz, spalten, zeilen).some((n) => besitzer[n] !== null && besitzer[n] !== ich),
+    );
+    if (amGegner) genommen.pop();
+  }
+
   // Eine leere Liste ist das Passen. Von selbst kommt der Bot da kaum je an —
   // ein Sitz ohne waehlbare Felder gilt bereits als bereit und wird gar nicht
   // erst gefragt (siehe istBereit).
