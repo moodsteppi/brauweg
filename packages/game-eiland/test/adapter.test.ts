@@ -61,6 +61,19 @@ describe('Adapter', () => {
     assert.deepEqual(eiland.deserialize(roh), p);
   });
 
+  it('nimmt einen Snapshot der zweiten Fassung ohne Bauwerke an', () => {
+    // Vor dem 2. September verschwand ein eingesammeltes Ornament von der
+    // Karte; solche Partien tragen keine Bauwerk-Liste und bekommen eine leere.
+    const roh = JSON.parse(JSON.stringify(eiland.serialize(partie()))) as Record<
+      string,
+      unknown
+    >;
+    delete roh['bauwerk'];
+    const alt = eiland.deserialize({ ...roh, v: 2 });
+    assert.equal(alt.bauwerk.length, alt.gelaende.length);
+    assert.ok(alt.bauwerk.every((b) => b === null));
+  });
+
   it('weist einen Snapshot aus einer fremden Fassung ab', () => {
     const roh = eiland.serialize(partie()) as Record<string, unknown>;
     assert.throws(() => eiland.deserialize({ ...roh, v: 99 }), /Snapshot-Version/);

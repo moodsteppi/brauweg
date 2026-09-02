@@ -77,6 +77,9 @@ const GEMALTE_BANNER = new Set([
   // Spielraster, und das steht schon als Farbliste im Quelltext. Erzeugt von
   // scripts/filler-banner-zeichnen.py.
   'filler',
+  // Eiland ebenso (scripts/eiland-banner-zeichnen.py) — das Bild ist der
+  // Stillstand des bewegten Banners aus der Spielauswahl.
+  'eiland',
 ]);
 
 export function spielBanner(gameId: string): string {
