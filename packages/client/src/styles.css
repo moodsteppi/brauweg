@@ -15810,6 +15810,12 @@ span.hub-angebot-art.poker-jeton-stapel {
   font: 800 min(3.2vw, 16px)/1 system-ui;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   animation: ei-kampf 900ms ease-out;
+  /* Die Marke wartet, bis der Einsatz gelandet ist (Eiland.tsx setzt die
+     Verzoegerung je Feld). `backwards` haelt sie bis dahin auf dem ersten
+     Bild der Animation — unsichtbar —, sonst staende das Ergebnis da, bevor
+     die Kachel ankommt. */
+  animation-delay: var(--ei-kampf-verzoegerung, 0ms);
+  animation-fill-mode: backwards;
 }
 .ei-feld[data-kampf='sieg']::before { color: #eaffe6; }
 .ei-feld[data-kampf='verlust']::before { color: #ffd9d9; }
@@ -15820,6 +15826,27 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 @media (prefers-reduced-motion: reduce) {
   .ei-feld[data-kampf]::before { animation: none; }
+}
+
+/* Die Buehne fuer die fliegenden Einsaetze: liegt ueber der ganzen Seite,
+   faengt keine Zeiger. Die Kacheln darin werden aus Eiland.tsx erzeugt und
+   nach dem Flug wieder entfernt. */
+.ei-flugbuehne {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ei-flug {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.7),
+    0 8px 16px -6px rgba(0, 0, 0, 0.8);
+  will-change: transform, opacity;
 }
 
 .ei-ornament {
@@ -15920,6 +15947,22 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: min(60vw, 240px);
   padding: 12px 12px;
   font-size: 14px;
+}
+/* Beim Warten steht an derselben Stelle eine Zeile statt des Knopfs — gleich
+   hoch, gleich breit, damit die Fußleiste nicht atmet (siehe min-height). */
+.ei-zugsteht {
+  margin: 0;
+  background: transparent;
+  color: #8a8072;
+  text-align: center;
+  white-space: nowrap;
+  cursor: default;
+}
+.ei-abgeben.ei-wartet:disabled {
+  filter: none;
+  color: #ffffff;
+  background: #b5b0a8;
+  opacity: 0.85;
 }
 
 .ei-hinweis {

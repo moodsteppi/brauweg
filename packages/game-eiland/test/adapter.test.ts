@@ -74,6 +74,22 @@ describe('Adapter', () => {
     assert.ok(alt.bauwerk.every((b) => b === null));
   });
 
+  it('traegt einem Snapshot der dritten Fassung leere Einsaetze nach', () => {
+    // Bis Version 3 kannte ein Kampf keinen Einsatz; die Rundenmeldung einer
+    // laufenden Partie bekommt ihn leer nachgetragen.
+    const roh = JSON.parse(JSON.stringify(eiland.serialize(partie()))) as Record<
+      string,
+      unknown
+    >;
+    const alt = eiland.deserialize({
+      ...roh,
+      v: 3,
+      letzte: { runde: 1, kaempfe: [{ platz: 5, sieger: 0 }], genommen: {}, verfallen: {}, ornamente: {} },
+    });
+    assert.deepEqual(alt.letzte?.kaempfe[0], { platz: 5, sieger: 0, einsatz: [] });
+    assert.deepEqual(alt.letzte?.reserve, {});
+  });
+
   it('weist einen Snapshot aus einer fremden Fassung ab', () => {
     const roh = eiland.serialize(partie()) as Record<string, unknown>;
     assert.throws(() => eiland.deserialize({ ...roh, v: 99 }), /Snapshot-Version/);

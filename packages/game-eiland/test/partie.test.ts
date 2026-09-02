@@ -393,6 +393,83 @@ describe('Kampf', () => {
     }
   });
 
+  it('wer allein ein Feld zurueckhaelt, gewinnt den Streit sicher', () => {
+    // Sitz 0 darf zwei Felder setzen (ein Ornament gesammelt), setzt aber nur
+    // das strittige — das zweite ist sein Einsatz. Sitz 1 hat nichts
+    // zurueckzuhalten. Der Wurf steht auf 1 (= Sitz 1 gewaenne) und zaehlt nicht.
+    const { partie, strittig } = streitStand(1);
+    const mitReserve: EilandPartie = { ...partie, gesammelt: { 0: 1, 1: 0 } };
+    let stand = plan(mitReserve, 0, [strittig]);
+    stand = plan(stand, 1, [strittig]);
+    assert.equal(stand.besitzer[strittig], 0);
+    assert.deepEqual(stand.letzte?.kaempfe[0]?.einsatz, [0]);
+    assert.deepEqual(stand.letzte?.reserve, { 0: 1, 1: 0 });
+  });
+
+  it('halten beide zurueck, entscheidet wieder der Muenzwurf', () => {
+    for (const [wurf, erwartet] of [
+      [0, 0],
+      [1, 1],
+    ] as const) {
+      const { partie, strittig } = streitStand(wurf);
+      const beide: EilandPartie = { ...partie, gesammelt: { 0: 1, 1: 1 } };
+      let stand = plan(beide, 0, [strittig]);
+      stand = plan(stand, 1, [strittig]);
+      assert.equal(stand.besitzer[strittig], erwartet, `Wurf ${wurf}`);
+      assert.deepEqual(stand.letzte?.kaempfe[0]?.einsatz, [0, 1]);
+    }
+  });
+
+  it('jeder Einsatz gilt fuer genau ein Streitfeld, der Rest ist Muenzwurf', () => {
+    /*
+     * Zwei Streitfelder (1 und 11), Sitz 0 haelt EIN Feld zurueck, Sitz 1
+     * keines, und der Wurf steht auf 1 (= Sitz 1 gewinnt jeden Muenzwurf).
+     * Erwartung: Genau ein Feld geht per Einsatz an Sitz 0, das andere per
+     * Wurf an Sitz 1 — welches, entscheidet die gemischte Reihenfolge.
+     */
+    const { partie } = streitStand(1);
+    const besitzer = [...partie.besitzer];
+    besitzer[spalten] = 0; //     unter Sitz 0
+    besitzer[spalten + 2] = 1; // unter Sitz 1
+    const zwei: EilandPartie = {
+      ...partie,
+      besitzer,
+      punkte: { 0: 2, 1: 2 },
+      gesammelt: { 0: 2, 1: 1 },
+    };
+    let stand = plan(zwei, 0, [1, spalten + 1]); // Kontingent 3, zwei gesetzt
+    stand = plan(stand, 1, [1, spalten + 1]); //   Kontingent 2, beide gesetzt
+    const kaempfe = stand.letzte?.kaempfe ?? [];
+    assert.equal(kaempfe.length, 2);
+    const mitEinsatz = kaempfe.filter((k) => k.einsatz.length > 0);
+    assert.equal(mitEinsatz.length, 1, 'ein Einsatz, ein Streitfeld');
+    assert.deepEqual(mitEinsatz[0]?.einsatz, [0]);
+    assert.equal(mitEinsatz[0]?.sieger, 0);
+    const ohne = kaempfe.find((k) => k.einsatz.length === 0)!;
+    assert.equal(ohne.sieger, 1, 'ohne Einsatz gilt der Wurf');
+    assert.equal(stand.punkte[0], 3);
+    assert.equal(stand.punkte[1], 3);
+  });
+
+  it('mischt die Streitfelder aus der Saat, nicht nach Platznummer', () => {
+    // Mit lauter Nullen im Vorrat tauscht Fisher-Yates jedes Feld an den
+    // Anfang: Die Reihenfolge ist dann die umgekehrte Platzreihenfolge. Nicht
+    // die Zahl ist der Punkt, sondern dass sie aus dem Vorrat kommt und
+    // fuer beide Sitze dieselbe ist.
+    const { partie } = streitStand(0);
+    const besitzer = [...partie.besitzer];
+    besitzer[spalten] = 0;
+    besitzer[spalten + 2] = 1;
+    const zwei: EilandPartie = { ...partie, besitzer, punkte: { 0: 2, 1: 2 }, gesammelt: { 0: 1, 1: 1 } };
+    const a = plan(plan(zwei, 0, [1, spalten + 1]), 1, [1, spalten + 1]);
+    const b = plan(plan(zwei, 1, [1, spalten + 1]), 0, [1, spalten + 1]);
+    assert.deepEqual(
+      a.letzte?.kaempfe.map((k) => k.platz),
+      [spalten + 1, 1],
+    );
+    assert.deepEqual(a.letzte?.kaempfe, b.letzte?.kaempfe);
+  });
+
   it('haengt nicht davon ab, wer zuerst getippt hat', () => {
     // Sonst waere der Schnellere im Vorteil, und das gleichzeitige Spiel waere
     // ein Wettrennen mit Zufallsanstrich.
@@ -643,6 +720,32 @@ describe('Bot', () => {
     const gestellt: EilandPartie = { ...partie, ornament };
     const aktion = botZug(sichtFuer(gestellt, 0));
     assert.deepEqual(aktion, { typ: 'plan', felder: [ziel] });
+  });
+
+  it('haelt ein Feld zurueck, wenn ein gewaehltes Feld an den Gegner grenzt', () => {
+    // Drei Felder in der obersten Zeile: 0 (Sitz 0) | 1 (frei) | 2 (Sitz 1).
+    // Auf 1 liegt ein Ornament, sonst mieden ihn die Grenz-Strafpunkte. Mit
+    // Kontingent 2 nimmt der Bot das strittige Feld 1 — und haelt das zweite
+    // als Einsatz zurueck, statt es zu setzen.
+    const partie = neu();
+    const besitzer: (number | null)[] = new Array(FELDER).fill(null);
+    besitzer[0] = 0;
+    besitzer[2] = 1;
+    const ornament: (number | null)[] = new Array(FELDER).fill(null);
+    ornament[1] = 0;
+    const kontakt: EilandPartie = {
+      ...partie,
+      gelaende: new Array(FELDER).fill(GRAS),
+      besitzer,
+      ornament,
+      punkte: { 0: 1, 1: 1 },
+      gesammelt: { 0: 1, 1: 0 },
+    };
+    const aktion = botZug(sichtFuer(kontakt, 0));
+    assert.deepEqual(aktion.felder, [1], 'das Ornamentfeld gesetzt, das zweite als Einsatz');
+    // Ohne Kontakt setzt er alles — sonst verschenkte er jede Runde ein Feld.
+    const allein: EilandPartie = { ...kontakt, besitzer: besitzer.map((b) => (b === 1 ? null : b)) };
+    assert.equal(botZug(sichtFuer(allein, 0)).felder.length, 2);
   });
 
   it('laeuft auch, wenn nichts mehr zu holen ist', () => {
