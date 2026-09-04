@@ -21,6 +21,47 @@ Minuten live.
 — zusammen 904, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
+> **Runenheer: der Regelkern des neunten Spiels steht (04.09.2026), die
+> Oberfläche fehlt noch.** Neues Paket `@brauweg/game-runenheer` mit
+> **86 eigenen Tests** — ein Auto-Battler mit Merge-Mechanik im
+> Fantasy-Gewand (Konzept: `docs/spiele/auto-battler-konzept.md`, Thema von
+> Robin entschieden). Enthalten ist die ganze Vorbereitungsphase: 22
+> Einheiten über drei Kostenstufen mit Klassen-Marken, ein gemeinsamer
+> Vorrat mit 30/25/18 Kopien, ein Fünfer-Laden mit levelabhängigen Chancen,
+> Gold (Grundeinkommen, Zins, Serienbonus), Verschmelzen samt
+> Kettenreaktion, Hex-Brett und Reservebank.
+>
+> **Was noch fehlt und warum das wichtig ist:** Es gibt **keine
+> Kampfsimulation** und **keine Synergie-Boni** — beide waren im Zuschnitt
+> ausdrücklich ausgenommen. Deshalb steht das Modul **nicht** in `MODULES`
+> in `packages/server/src/games/registry.ts`: Ein Eintrag dort macht ein
+> Spiel startbar (`isPlayable` liest `MODULES`, nicht `availability`), und
+> ein Tisch ohne Bildschirm wäre schlimmer als kein Tisch. Einzutragen ist
+> es zusammen mit dem Client-Bildschirm; dabei `availability` in
+> `adapter.ts` von `preview` auf `playable` stellen und `game.runenheer` in
+> `i18n.ts` ergänzen.
+>
+> **Drei Entscheidungen, die man sonst nachrecherchieren müsste:**
+>
+> 1. **Kein Reihum.** Alle Sitze rüsten gleichzeitig, wie bei Eiland.
+>    `currentActor` nennt trotzdem den kleinsten noch nicht bereiten Sitz,
+>    sonst bekäme der Tisch von der Plattform keinen Timer. Wer handeln
+>    darf, entscheidet allein `darfHandeln` in `partie.ts`.
+> 2. **Der Zufallsstrom hängt an (Saat, Sitz, Wurfnummer)** und nicht an
+>    einem Generatorzustand im Snapshot — sonst hinge der Ladeninhalt an
+>    der Reihenfolge, in der die Nachrichten gleichzeitig handelnder Sitze
+>    eintreffen.
+> 3. **`legalActions` zählt das Verschieben von Einheiten nicht auf.** Es
+>    wäre ein Paar aus 19 Plätzen, also bis zu 342 Einträge in jeder Sicht.
+>    Damit der Client trotzdem keine Regel nachbaut, steht die einzige
+>    Einschränkung als Zahl in der Sicht (`feldplaetze`/`belegt`).
+>
+> Die Kampfphase existiert als Naht: `wendeKampfausgang(partie, ausgaenge)`
+> bucht Schaden, Serie und Ausscheiden. Bis es eine Simulation gibt, löst
+> `ohneKampfWeiter` sie schadensfrei auf — ein ausdrücklicher Platzhalter,
+> damit kein Tisch in der Kampfphase hängen bleibt. Endlich bleibt die
+> Partie über `rundenGrenze` (Vorgabe 30).
+
 > **Eine Einzelübernahme nach `main` muss den Zeitstempel ihrer Migration
 > anfassen.** Der Drizzle-Migrator vergleicht ausschließlich Zeitstempel
 > (`pg-core/dialect.js`: `Number(lastDbMigration.created_at) <

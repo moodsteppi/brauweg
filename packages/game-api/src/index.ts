@@ -85,6 +85,16 @@ export type GameId =
    * allein das Modul (siehe amZug in packages/game-eiland/src/partie.ts).
    */
   | 'eiland'
+  /**
+   * Runenheer ist ein Auto-Battler und damit das erste Spiel ohne Blatt: Jeder
+   * baut zwischen den Runden aus einem eigenen Laden ein Heer auf, drei
+   * gleiche Einheiten verschmelzen zur naechsten Stufe. Der Kampf laeuft
+   * spaeter automatisch ab — im Regelkern steht bisher nur die Vorbereitung.
+   * Besonderheit: Es gibt keine Zugfolge. Alle Sitze ruesten GLEICHZEITIG,
+   * `currentActor` nennt trotzdem einen Sitz (wie bei Eiland), damit Zugzeit
+   * und Bot-Uebernahme der Plattform ueberhaupt greifen.
+   */
+  | 'runenheer'
   | 'skat'
   | 'schafkopf'
   | 'romme'
