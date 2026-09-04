@@ -32,8 +32,8 @@ function partie(seats = 2): TafelrundePartie {
 describe('Adapter', () => {
   it('meldet sich als spielbar fuer zwei bis acht Sitze', () => {
     assert.equal(tafelrunde.meta.id, 'tafelrunde');
-    // Spielbar, seit der Bildschirm steht. Die fehlende Kampfsimulation
-    // haelt niemanden auf: Die Vorbereitung laeuft vollstaendig.
+    // Spielbar, seit der Bildschirm steht — und seit der Kampfsimulation
+    // laeuft eine Runde auch vollstaendig durch.
     assert.equal(tafelrunde.meta.availability, 'playable');
     assert.deepEqual(tafelrunde.meta.seatCounts, SEAT_COUNTS);
     assert.equal(tafelrunde.meta.xpBasisZaehltKarten, false);
@@ -94,6 +94,28 @@ describe('Adapter', () => {
   it('weist einen Snapshot aus einer unbekannten Fassung ab', () => {
     // Lieber ein Fehler als eine falsch gedeutete Partie.
     assert.throws(() => tafelrunde.deserialize({ v: 99 }), /Snapshot-Version/);
+  });
+
+  /**
+   * Ein Tisch, der beim Deploy der Kampfsimulation gerade lief, muss
+   * weiterlaufen. Version 1 kennt das Feld `kaempfe` nicht; ohne die
+   * Nachsicht beim Laden waere die Partie verloren.
+   */
+  it('laedt einen Snapshot aus der Zeit vor der Kampfsimulation', () => {
+    const roh = JSON.parse(JSON.stringify(tafelrunde.serialize(partie()))) as Record<
+      string,
+      unknown
+    >;
+    delete roh['kaempfe'];
+    roh['v'] = 1;
+
+    const geladen = tafelrunde.deserialize(roh);
+    assert.deepEqual(geladen.kaempfe, []);
+    // Und die Kampfphase loest sich auf, statt an einem fehlenden Feld zu
+    // haengen.
+    let p = tafelrunde.act(geladen, 0, { typ: 'bereit' });
+    p = tafelrunde.act(p, 1, { typ: 'bereit' });
+    assert.equal(tafelrunde.advanceInterlude!(p).runde, 2);
   });
 
   it('liefert Platzierungen und Erfahrungsgrundlage fuer jeden Sitz', () => {

@@ -96,3 +96,41 @@ export function hexNachbarn(
   }
   return raus;
 }
+
+/**
+ * Achsen-Koordinaten eines Platzes.
+ *
+ * Gespeichert wird ein Feld als Platznummer und damit als Reihe und Spalte —
+ * das ist die Form, in der es der Bildschirm zeichnet. Fuer den ABSTAND
+ * zweier Felder taugt sie nicht: In einem versetzten Raster haengt jeder
+ * Schritt davon ab, ob die Reihe gerade oder ungerade ist, und eine
+ * Abstandsformel darueber ist eine Fallgrube (siehe `hexNachbarn`, das die
+ * beiden Faelle ausschreiben muss).
+ *
+ * In Achsen-Koordinaten ist der Abstand dagegen eine Zeile. Umgerechnet wird
+ * mit `q = spalte - floor(reihe / 2)` — genau die Umkehrung des Versatzes,
+ * den das odd-r-Raster einbaut.
+ */
+function achsen(platz: number, spalten: number): { q: number; r: number } {
+  const reihe = Math.floor(platz / spalten);
+  return { q: (platz % spalten) - Math.floor(reihe / 2), r: reihe };
+}
+
+/**
+ * Abstand zweier Plaetze in Feldern.
+ *
+ * Die Kubus-Formel ueber die dritte Achse (s = -q - r). Gebraucht wird sie von
+ * der Reichweite im Kampf; sie steht hier, weil sie zur Geometrie gehoert und
+ * nicht zur Kampfschleife.
+ *
+ * `spalten` ist wie bei `hexNachbarn` ein Parameter: Die Kampfarena ist
+ * dasselbe Raster mit doppelt so vielen Reihen, und eine zweite Formel dort
+ * waere die klassische Stelle, an der zwei Geometrien auseinanderlaufen.
+ */
+export function hexAbstand(a: number, b: number, spalten: number = BRETT_SPALTEN): number {
+  const eins = achsen(a, spalten);
+  const zwei = achsen(b, spalten);
+  const dq = eins.q - zwei.q;
+  const dr = eins.r - zwei.r;
+  return (Math.abs(dq) + Math.abs(dq + dr) + Math.abs(dr)) / 2;
+}
