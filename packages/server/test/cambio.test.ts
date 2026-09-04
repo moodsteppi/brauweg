@@ -144,7 +144,20 @@ test('Durchstich: zwei Clients beenden eine Cambio-Partie', async (t) => {
 test('Ein Spieler sieht seine bekannten Karten, aber keine fremde', async (t) => {
   // Die wichtigste Eigenschaft des Spiels ueberhaupt. Sie wird in der Engine
   // geprueft; hier zaehlt, dass sie auch ueber die Leitung haelt.
-  const h = await startHarness();
+  //
+  // Der Tisch muss dafuer STEHEN. Mit der Vorgabe des Pruefstands
+  // (botDelayMs: 0) und einem Testclient, der von selbst zieht, laeuft die
+  // Partie waehrend des Messens weiter: Gemessen trafen bis zum Ende des
+  // waitFor schon vier Sichten ein, nach drei Sekunden 211 - und ab etwa der
+  // zwanzigsten kennt Anna nur noch EINE eigene Karte (ein Bot hat eine
+  // bekannte weggetauscht), nach der Rundenabrechnung liegen ausserdem alle
+  // Haende offen. Genau daran ist dieser Test am 31.08.2026 unter Last
+  // gescheitert ("1 !== 2"), waehrend er allein laufend gruen war.
+  //
+  // Deshalb: Bots stillstellen und der Client zieht nicht. Dann bleibt der
+  // Zustand der ausgeteilten Runde stehen, und die Sicht ist das, was hier
+  // gemeint ist.
+  const h = await startHarness({ botDelayMs: 60_000 });
   t.after(() => h.close());
 
   const anna = await createVerifiedAccount(h.ctx, 'Anna');
@@ -158,6 +171,7 @@ test('Ein Spieler sieht seine bekannten Karten, aber keine fremde', async (t) =>
   });
 
   const spieler = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  spieler.passive = true;
   spieler.join(table.id, 1, 'cambio');
   await spieler.waitFor(() => spieler.lastView !== null, 'Sicht des Spielers');
 

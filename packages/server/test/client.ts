@@ -210,7 +210,6 @@ export class TestClient {
     return this.seen;
   }
 
-  /** Wartet, bis die Bedingung erfuellt ist, oder scheitert nach timeoutMs. */
   /**
    * Wartet, bis sich die Sicht eine Weile nicht mehr ändert.
    *
@@ -240,6 +239,20 @@ export class TestClient {
     }
   }
 
+  /**
+   * Wartet, bis die Bedingung erfuellt ist, oder scheitert nach timeoutMs.
+   *
+   * ACHTUNG bei `waitFor(() => lastView !== null)`: Das liest sich wie "warte
+   * auf die ERSTE Sicht", liefert aber die JEWEILS LETZTE. Die Schleife fragt
+   * alle 10 ms nach; bis dahin sind am Bottisch (`botDelayMs: 0`) laengst
+   * mehrere Zuege gelaufen — beim Cambio-Sichttest gemessen: vier Sichten bis
+   * zum Ende des waitFor, 211 in drei Sekunden. Wer danach den ANFANGSZUSTAND
+   * pruefen will, misst unter Last etwas anderes als ohne.
+   *
+   * Wer den Anfangszustand meint, stellt den Tisch still:
+   * `startHarness({ botDelayMs: 60_000 })` und `client.passive = true`.
+   * Wer einen Bezugspunkt MITTEN in der Partie braucht, nimmt `waitForRuhe`.
+   */
   async waitFor(
     predicate: () => unknown,
     what: string,
