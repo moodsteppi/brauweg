@@ -25,12 +25,20 @@
 import type { Einheit, EinheitId } from './katalog.js';
 import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
 import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN } from './brett.js';
-import type { Heer, Kaempfer, Phase, TafelrundePartie, Serie } from './partie.js';
+import type {
+  Heer,
+  Kaempfer,
+  Kampfpaarung,
+  Phase,
+  TafelrundePartie,
+  Serie,
+} from './partie.js';
 import {
   brettBelegung,
   darfHandeln,
   einkommen,
   heerVon,
+  kampfVon,
   sieger,
   sitzeVon,
 } from './partie.js';
@@ -121,6 +129,23 @@ export interface TafelrundeSicht {
   readonly gegner: readonly FremdeSicht[];
   readonly leftSeats: readonly number[];
   /**
+   * Die Kaempfe, denen dieser Empfaenger zusehen darf — mit vollem
+   * Ablaufprotokoll (siehe kampf.ts).
+   *
+   * Ein Spieler bekommt genau seinen eigenen, ein Zuschauer alle. Der eigene
+   * Kampf ist KEIN Geheimnis: Beide Bretter sind ohnehin oeffentlich (siehe
+   * Kopf dieser Datei), und ohne das Protokoll koennte die Anzeige den Kampf
+   * nicht abspielen, sondern nur das Ergebnis nennen.
+   *
+   * Ausserhalb der Kampfphase ist die Liste leer. Dass sie gross werden kann
+   * — ein Kampf sind schnell ein paar hundert Ereignisse — faellt nicht ins
+   * Gewicht: Waehrend der Kampfphase kann niemand handeln, es gibt also
+   * nichts, was einen Rundruf ausloest. Die Sicht geht beim Uebergang in den
+   * Kampf einmal heraus und beim Uebergang zurueck in die Vorbereitung wieder
+   * ohne sie.
+   */
+  readonly kaempfe: readonly Kampfpaarung[];
+  /**
    * Der Einheiten-Katalog — nur beim ersten Ausliefern (`seit === 0`).
    *
    * Er ist unveraenderlich und rund zweieinhalb Kilobyte gross. Ihn bei jedem
@@ -180,6 +205,7 @@ function grundsicht(
     maxStufe: MAX_STUFE,
     vorrat: partie.vorrat,
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
+    kaempfe: ich === null ? partie.kaempfe : [kampfVon(partie, ich)].filter((k) => k !== null),
     ...(seit === 0 ? { katalog: KATALOG } : {}),
   };
 }

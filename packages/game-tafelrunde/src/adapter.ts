@@ -33,8 +33,9 @@ import {
   erstellePartie,
   fuehreAus,
   heerVon,
+  kampfdauer,
+  loeseKampfAuf,
   markiereVerlassen,
-  ohneKampfWeiter,
   platzierungen,
   sitzeVon,
 } from './partie.js';
@@ -58,17 +59,28 @@ import {
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 
 /**
- * Wie lange die Kampfphase mindestens steht.
+ * Snapshots dieser Versionen lassen sich noch laden.
  *
- * Solange es keine Simulation gibt, ist das eine reine Atempause: Der Client
- * soll sehen, dass die Runde vorbei ist, bevor der naechste Laden aufgeht.
- * Mit Phase 2 wird daraus die Dauer des Kampfes — das Konzept nennt 15 bis 20
- * Sekunden.
+ * Die 1 stammt aus der Zeit vor der Kampfsimulation und kennt das Feld
+ * `kaempfe` nicht. Sie mitzunehmen kostet drei Zeilen und rettet jeden Tisch,
+ * der beim Deploy gerade laeuft — ohne sie wuerfe `deserialize` und die Partie
+ * waere verloren.
  */
-const KAMPF_PAUSE_MS = 3000;
+const LESBARE_VERSIONEN = [1, SNAPSHOT_VERSION];
+
+/**
+ * Was die Schaupause NACH dem letzten Ereignis eines Kampfes noch stehen
+ * bleibt.
+ *
+ * Die Kampfphase dauert so lange wie der laengste Kampf der Runde
+ * (`kampfdauer`) plus diesen Nachlauf. Ohne ihn ginge der naechste Laden in
+ * demselben Augenblick auf, in dem die letzte Einheit faellt — der Spieler
+ * saehe nie, wie es ausgegangen ist.
+ */
+const KAMPF_NACHLAUF_MS = 2500;
 
 type GespeichertePartie = TafelrundePartie & { readonly v: number };
 
@@ -81,9 +93,8 @@ const meta: GameMeta = {
    * sehen. Bis dahin stand hier `preview` — ein Tisch ohne Bildschirm ist
    * schlimmer als ein Spiel, das man noch nicht starten kann.
    *
-   * Die fehlende Kampfsimulation spricht NICHT dagegen: Die Vorbereitung ist
-   * vollstaendig spielbar, und die Kampfphase ist eine Schaupause, nach der
-   * es weitergeht (siehe `interludeMs`).
+   * Seit dem Nachziehen der Kampfsimulation laeuft eine Runde vollstaendig
+   * durch: Vorbereitung, Kampf, Schaden am Verlierer, naechste Runde.
    */
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
@@ -147,11 +158,14 @@ export const tafelrunde: GameModule<
 
   /**
    * Die Kampfphase laeuft von selbst ab — niemand ist am Zug, und es soll
-   * trotzdem weitergehen. Genau dafuer gibt es die Schaupause.
+   * trotzdem weitergehen. Die Pause ist genau so lang, wie der laengste Kampf
+   * der Runde zum Abspielen braucht: Sie hier zu kuerzen hiesse, dem Spieler
+   * das Ende seines eigenen Kampfes vorzuenthalten.
    */
-  interludeMs: (partie) => (partie.phase === 'kampf' ? KAMPF_PAUSE_MS : null),
+  interludeMs: (partie) =>
+    partie.phase === 'kampf' ? kampfdauer(partie) + KAMPF_NACHLAUF_MS : null,
 
-  advanceInterlude: (partie) => ohneKampfWeiter(partie),
+  advanceInterlude: (partie) => loeseKampfAuf(partie),
 
   standings: (partie): PartyStanding[] => platzierungen(partie),
 
@@ -195,12 +209,16 @@ export const tafelrunde: GameModule<
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION) {
+    if (!LESBARE_VERSIONEN.includes(snap.v)) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
     const { v, ...rest } = snap;
-    return rest as TafelrundePartie;
+    const partie = rest as TafelrundePartie;
+    // Version 1 kannte noch keine Kampfprotokolle. Eine leere Liste ist die
+    // richtige Antwort: Dann loest `advanceInterlude` die Kampfphase ohne
+    // Buchung auf, statt ueber ein fehlendes Feld zu stolpern.
+    return partie.kaempfe ? partie : { ...partie, kaempfe: [] };
   },
 };

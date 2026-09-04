@@ -336,8 +336,8 @@ describe('Kampfausgang', () => {
 
   it('beendet die Partie spaetestens an der Rundengrenze', () => {
     // Der Deckel aus dem Regelsatz. Ohne ihn liefe ein Tisch, an dem niemand
-    // Schaden nimmt, bis zum Verfall weiter — und genau so ist die Lage,
-    // solange es keine Kampfsimulation gibt.
+    // Schaden nimmt, bis zum Verfall weiter — hier gebaut mit
+    // `ohneKampfWeiter`, das genau diesen Zustand herstellt.
     let p = neu({ ...DEFAULT_REGELN, rundenGrenze: 5 });
     for (let i = 0; i < 20 && !p.fertig; i++) p = ohneKampfWeiter(beideBereit(p));
     assert.ok(p.fertig);

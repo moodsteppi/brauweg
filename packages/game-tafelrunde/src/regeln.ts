@@ -29,10 +29,18 @@ export interface TafelrundeRegeln {
   /**
    * Nach so vielen Runden ist Schluss, auch wenn noch mehrere leben.
    *
-   * Kein Teil des Spielgefuehls, sondern ein Deckel: Ohne ihn liefe ein Tisch,
-   * an dem niemand mehr Schaden nimmt, bis zum Verfall weiter — und genau das
-   * ist der Zustand, solange es die Kampfsimulation noch nicht gibt. Dieselbe
+   * Gedacht als Deckel und nicht als Spielgefuehl: Ohne ihn liefe ein Tisch, an
+   * dem niemand mehr Schaden nimmt, bis zum Verfall weiter — dieselbe
    * Ueberlegung wie LEERZUEGE_MAX bei Filler.
+   *
+   * ZUR ZEIT IST ER MEHR ALS DAS, und das ist ein bekannter Mangel: Gemessen
+   * ueber 20 Bot-Partien endet zu zweit keine an der Grenze, zu viert die
+   * Haelfte, zu acht jede. Mit 100 Startleben und rund 5 Punkten Schaden je
+   * Niederlage braucht ein Ausscheiden zwanzig verlorene Kaempfe, und so viele
+   * gibt es in dreissig Runden nicht. Die Zahl hier hochzusetzen waere die
+   * falsche Antwort — eine Runde dauert schon jetzt bis zu anderthalb Minuten;
+   * richtig ist mehr Schaden je Niederlage. Das gehoert zum Balancing und
+   * steht als eigener Punkt auf dem Board.
    */
   readonly rundenGrenze: number;
 }

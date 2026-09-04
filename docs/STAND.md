@@ -15,10 +15,11 @@ neun), der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 28. August 2026, nicht aus der Erinnerung):**
-161 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, **349 Servertests**
-— zusammen 904, alle grün. `tsc --noEmit` sauber.
+**Prüfstand (gezählt am 4. September 2026, nicht aus der Erinnerung):**
+167 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
+15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
+56 Eiland-Tests, 156 Tafelrunde-Tests, **402 Servertests** — zusammen 1237,
+dazu die Client-Tests (6 Dateien), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
@@ -27,7 +28,7 @@ Minuten live.
 > entschieden). Konzept und Issueboard nennen es „Spiel 9"; gezählt ist es
 > das zehnte spielbare, weil Feldherr in der Reihe mitläuft.
 >
-> **Der Kern** liegt in `@brauweg/game-tafelrunde` (**88 eigene Tests**) und
+> **Der Kern** liegt in `@brauweg/game-tafelrunde` (**156 eigene Tests**) und
 > deckt die ganze Vorbereitungsphase ab: 22 Einheiten über drei
 > Kostenstufen mit Klassen-Marken, ein gemeinsamer Vorrat mit 30/25/18
 > Kopien, ein Fünfer-Laden mit levelabhängigen Chancen, Gold
@@ -40,11 +41,27 @@ Minuten live.
 > `minispiele/tafelrunde/zuege.ts`; dazu **44 Client-Tests** — die ersten
 > Bildschirm-Tests dieses Pakets überhaupt.
 >
-> **Was noch fehlt:** Es gibt **keine Kampfsimulation** und **keine
-> Synergie-Boni** — beide waren im Zuschnitt ausdrücklich ausgenommen. Die
-> Kampfphase ist eine Schaupause von drei Sekunden, danach geht es weiter;
-> der Bildschirm schreibt „Die Heere treten an" hin, damit sie nicht wie
-> ein hängender Tisch aussieht. Das Regelblatt im Spiel sagt es ebenfalls.
+> **Die Kampfsimulation** kam am 04.09.2026 nach (`arena.ts`, `kampf.ts`,
+> `zufall.ts`; übertragen vom Zweig
+> `aufgabe/tafelrunde-die-kampfsimulation-6422b76f`, der noch auf der alten
+> Paketstruktur lag). Eine Runde läuft jetzt vollständig durch: Alle lebenden
+> Sitze werden paarweise angesetzt (bei ungerader Zahl bekommt der Übrige das
+> Brett eines anderen als **Geist**, keine Freirunde), beide Bretthälften
+> werden zu einer Arena mit vier Reihen zusammengelegt, der Kampf wird beim
+> Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
+> als **Ablaufprotokoll** (jede Bewegung, jeder Treffer, jeder Tod mit
+> Zeitpunkt) im Zustand und in der Sicht. Gleiche Saat plus gleiche Bretter
+> ergibt denselben Ablauf **Ereignis für Ereignis** — eine Probe vergleicht
+> zwei Läufe über `protokollText()`. Abbruchgrenze 45 s, danach entscheidet
+> der höhere Anteil am eigenen Gesamtleben. Die Schaupause ist nicht mehr
+> fest, sondern so lang wie der längste Kampf der Runde.
+>
+> **Was noch fehlt:** Der Kampf wird **noch nicht abgespielt** — der
+> Bildschirm schreibt weiter „Die Heere treten an" hin, obwohl das Protokoll
+> vorliegt. Ebenso fehlen die **Synergie-Boni**. Und die Werte tragen die
+> Partie noch nicht: Zu acht läuft **jede** Partie in die Rundengrenze von
+> 30, statt sich auszuspielen (100 Startleben gegen rund 5 Punkte Schaden je
+> Niederlage). Alle drei stehen als eigene Punkte auf dem Board.
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >
