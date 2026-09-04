@@ -1,0 +1,634 @@
+/**
+ * Die Kampfanzeige — spielt das Ablaufprotokoll eines Kampfes ab.
+ *
+ * Das Modul rechnet den Kampf beim Uebergang in die Kampfphase vollstaendig
+ * durch und legt ihn als Liste von Ereignissen in die Sicht
+ * (packages/game-tafelrunde/src/kampf.ts). HIER wird nichts gerechnet und
+ * nichts gewuerfelt: Die Anzeige liest die Uhr ab, nimmt alle Ereignisse bis
+ * zu diesem Zeitpunkt vom Stapel und zeichnet, was daraus folgt. Wer wen
+ * trifft, wie viel Leben bleibt, wer faellt — das steht im Protokoll
+ * (`lebenDanach` erspart sogar das Subtrahieren). Ein Client, der hier
+ * mitrechnete, koennte vom Server abweichen, und dann saehe der Spieler einen
+ * anderen Kampf als den, fuer den er Leben verliert.
+ *
+ * `requestAnimationFrame` treibt allein die UHR. Bewegen, Ausschlagen und
+ * Ausblenden sind CSS-Uebergaenge und -Animationen (KampfAnzeige.module.css);
+ * neu gezeichnet wird nur, wenn ein Ereignis faellig war oder eine Sekunde
+ * um ist — nicht sechzigmal je Sekunde. Wer weniger Bewegung eingestellt
+ * hat, bekommt dieselben Zustaende ohne Uebergaenge: Das steht im Stylesheet
+ * und nicht hier, damit die Logik in beiden Faellen dieselbe ist.
+ *
+ * WANN DER KAMPF ANFAENGT: beim Einhaengen dieser Komponente, also beim
+ * Eintritt in die Kampfphase. Die Schaupause des Servers ist so lang wie der
+ * laengste Kampf der Runde plus Nachlauf (`interludeMs` im Adapter). Wer
+ * mitten im Kampf wieder verbindet, bekaeme so einen Kampf, der laenger
+ * dauert als die Pause — deshalb rechnet `startVersatz` aus der Frist der
+ * Pause aus, wie viel schon vorbei sein muss, und springt dorthin. Das ist
+ * keine nachgebaute Regel, sondern das Abgleichen zweier Uhren.
+ *
+ * WANN ES ZURUECKGEHT: nie von selbst. Nach dem letzten Ereignis bleibt das
+ * Ergebnis stehen, bis der Server die Phase wechselt (Tafelrunde.tsx blendet
+ * dann aus). Die Dauer gibt der Server vor, nicht der Client.
+ *
+ * Die Figuren sind noch Platzhalter (Strichzeichnung je Rolle, uebergeben als
+ * `zeichen`). Liegt `figuren.ts` aus der Grafik-Aufgabe vor, wird genau diese
+ * Uebergabe ausgetauscht — sonst nichts.
+ */
+
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+
+import stil from './KampfAnzeige.module.css';
+import { type Rastermass, rastermass, wabenLage } from './zuege';
+
+// ---------------------------------------------------------------------------
+// Was das Modul liefert — Abschrift von kampf.ts und partie.ts
+// ---------------------------------------------------------------------------
+
+/*
+ * Der Client kennt die Spielmodule nicht (siehe Kopf von screens/Tafelrunde.tsx),
+ * deshalb stehen die Formen hier noch einmal. Wer in kampf.ts ein Ereignis
+ * ergaenzt, zieht es hier nach — `spieleBis` ignoriert Unbekanntes, damit ein
+ * neues Ereignis die Anzeige nicht zum Absturz bringt.
+ */
+
+export type Seite = 0 | 1;
+export type Endgrund = 'ausgeloescht' | 'zeit';
+
+/** Eine Einheit im Kampf. `platz` ist ein ARENAPLATZ (arena.ts), kein Brettplatz. */
+export interface Kaempferstand {
+  readonly id: number;
+  readonly seite: Seite;
+  readonly einheitId: string;
+  readonly stufe: number;
+  readonly platz: number;
+  readonly leben: number;
+  readonly hoechstesLeben: number;
+}
+
+export type Kampfereignis =
+  | { readonly art: 'bewegung'; readonly zeitMs: number; readonly wer: number; readonly von: number; readonly nach: number }
+  | {
+      readonly art: 'treffer';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly ziel: number;
+      readonly schaden: number;
+      readonly lebenDanach: number;
+    }
+  | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
+  | { readonly art: 'ende'; readonly zeitMs: number; readonly sieger: Seite | null; readonly grund: Endgrund };
+
+export interface Kampfbericht {
+  readonly saat: string;
+  readonly erstZieher: Seite;
+  readonly start: readonly Kaempferstand[];
+  readonly ereignisse: readonly Kampfereignis[];
+  readonly sieger: Seite | null;
+  readonly grund: Endgrund;
+  readonly dauerMs: number;
+  readonly ueberlebende: readonly Kaempferstand[];
+  readonly schaden: number;
+}
+
+/** Wer gegen wen: `a` steht auf Arenaseite 0, `b` auf Seite 1. */
+export interface Kampfpaarung {
+  readonly a: number;
+  /** Beim Geist: der Sitz, dessen Brett als Abbild antritt. Sonst der Gegner. */
+  readonly b: number;
+  readonly geist: boolean;
+  readonly bericht: Kampfbericht;
+}
+
+/** Was die Anzeige von einer Einheit des Katalogs wissen muss. */
+export interface Einheitenbild {
+  readonly id: string;
+  readonly name: string;
+  readonly kosten: number;
+}
+
+// ---------------------------------------------------------------------------
+// Welcher Kampf, welche Seite
+// ---------------------------------------------------------------------------
+
+/**
+ * Der Kampf, der abgespielt wird.
+ *
+ * Fuer einen Spieler sein eigener — derselbe Massstab wie `kampfVon` im
+ * Modul: Ich bin `a`, oder ich bin `b` und kein Abbild (ein Geist kaempft
+ * anderswo selbst). Ein Zuschauer bekommt alle Kaempfe und sieht den ersten;
+ * die uebrigen stehen als Ergebniszeile darunter.
+ */
+export function abzuspielen(
+  kaempfe: readonly Kampfpaarung[],
+  ich: number | null,
+): Kampfpaarung | null {
+  if (ich !== null) {
+    return kaempfe.find((k) => k.a === ich || (k.b === ich && !k.geist)) ?? null;
+  }
+  return kaempfe[0] ?? null;
+}
+
+/** Auf welcher Arenaseite ich stehe — null als Zuschauer. */
+export function meineSeite(kampf: Kampfpaarung, ich: number | null): Seite | null {
+  if (ich === null) return null;
+  if (kampf.a === ich) return 0;
+  if (kampf.b === ich && !kampf.geist) return 1;
+  return null;
+}
+
+/**
+ * Wie weit der Kampf schon sein muss, damit er vor der Frist endet.
+ *
+ * Null, wenn die Zeit reicht — der Normalfall beim Eintritt in die Phase.
+ * Sonst der Vorsprung, den die Anzeige beim Start ueberspringt: Ohne ihn
+ * saehe jemand nach einem Wiederverbinden den Anfang eines Kampfes, dessen
+ * Ende der Server schon abgeraeumt hat. Ist die Frist bereits vorbei, wird
+ * gleich das Ende gezeigt.
+ */
+export function startVersatz(dauerMs: number, frist: number | null, jetzt: number): number {
+  if (frist === null) return 0;
+  const rest = frist - jetzt;
+  if (rest >= dauerMs) return 0;
+  return Math.min(dauerMs, dauerMs - rest);
+}
+
+// ---------------------------------------------------------------------------
+// Der Abspielstand — reine Rechnung, ohne DOM
+// ---------------------------------------------------------------------------
+
+export interface Figur extends Kaempferstand {
+  readonly tot: boolean;
+  /** Wie oft diese Figur getroffen WURDE — Schluessel fuer den Blitz. */
+  readonly treffer: number;
+  readonly letzterSchaden: number;
+  /** Wie oft diese Figur selbst zugeschlagen hat — Schluessel fuer den Ausschlag. */
+  readonly schlaege: number;
+  /** Wohin der letzte Schlag ging (Arenaplatz), fuer die Richtung des Ausschlags. */
+  readonly zielPlatz: number | null;
+}
+
+export interface Abspielstand {
+  readonly figuren: readonly Figur[];
+  /** Zeiger auf das naechste noch nicht abgespielte Ereignis. */
+  readonly naechstes: number;
+  readonly ende: { readonly sieger: Seite | null; readonly grund: Endgrund } | null;
+}
+
+export function anfangsstand(bericht: Kampfbericht): Abspielstand {
+  return {
+    figuren: bericht.start.map((k) => ({
+      ...k,
+      tot: false,
+      treffer: 0,
+      letzterSchaden: 0,
+      schlaege: 0,
+      zielPlatz: null,
+    })),
+    naechstes: 0,
+    ende: null,
+  };
+}
+
+function veraendert(
+  figuren: readonly Figur[],
+  id: number,
+  aenderung: (f: Figur) => Figur,
+): readonly Figur[] {
+  return figuren.map((f) => (f.id === id ? aenderung(f) : f));
+}
+
+/**
+ * Ein Ereignis auf den Stand anwenden.
+ *
+ * Ausschliesslich Abschrift: Beim Treffer wird `lebenDanach` uebernommen und
+ * nichts abgezogen, beim Tod nur die Marke gesetzt. Eine unbekannte Art laesst
+ * den Stand, wie er ist.
+ */
+export function wendeAn(stand: Abspielstand, e: Kampfereignis): Abspielstand {
+  switch (e.art) {
+    case 'bewegung':
+      return { ...stand, figuren: veraendert(stand.figuren, e.wer, (f) => ({ ...f, platz: e.nach })) };
+    case 'treffer': {
+      const zielPlatz = stand.figuren.find((f) => f.id === e.ziel)?.platz ?? null;
+      const figuren = stand.figuren.map((f) => {
+        if (f.id === e.wer) return { ...f, schlaege: f.schlaege + 1, zielPlatz };
+        if (f.id === e.ziel) {
+          return { ...f, leben: e.lebenDanach, treffer: f.treffer + 1, letzterSchaden: e.schaden };
+        }
+        return f;
+      });
+      return { ...stand, figuren };
+    }
+    case 'tod':
+      return { ...stand, figuren: veraendert(stand.figuren, e.wer, (f) => ({ ...f, tot: true })) };
+    case 'ende':
+      return { ...stand, ende: { sieger: e.sieger, grund: e.grund } };
+    default:
+      return stand;
+  }
+}
+
+/**
+ * Alle Ereignisse bis einschliesslich `zeitMs` abspielen.
+ *
+ * Gibt DASSELBE Objekt zurueck, wenn nichts faellig war — daran erkennt die
+ * Uhr, ob sie neu zeichnen lassen muss. Die Liste ist nach Zeit sortiert
+ * (kampf.ts sichert das zu), also genuegt ein Zeiger, der nur vorwaerts geht.
+ */
+export function spieleBis(stand: Abspielstand, bericht: Kampfbericht, zeitMs: number): Abspielstand {
+  let jetzt = stand;
+  let i = stand.naechstes;
+  while (i < bericht.ereignisse.length && bericht.ereignisse[i]!.zeitMs <= zeitMs) {
+    jetzt = wendeAn(jetzt, bericht.ereignisse[i]!);
+    i += 1;
+  }
+  return i === stand.naechstes ? stand : { ...jetzt, naechstes: i };
+}
+
+// ---------------------------------------------------------------------------
+// Geometrie der Anzeige
+// ---------------------------------------------------------------------------
+
+/**
+ * Der gezeichnete Platz eines Arenaplatzes.
+ *
+ * Das eigene Heer steht UNTEN. Seite 0 liegt in der Arena schon unten
+ * (arena.ts); wer auf Seite 1 steht, bekommt die ganze Arena um 180 Grad
+ * gedreht — dieselbe Drehung wie `platzVon` fuer das Gegnerbrett, und aus
+ * demselben Grund erlaubt: Bei gerader Reihenzahl bildet sie das versetzte
+ * Raster auf sich selbst ab, alle Nachbarschaften bleiben erhalten.
+ */
+export function gezeichneterPlatz(platz: number, felder: number, gedreht: boolean): number {
+  return gedreht ? felder - 1 - platz : platz;
+}
+
+/**
+ * Richtung eines Ausschlags, in Prozent der eigenen Figurbreite bzw. -hoehe.
+ *
+ * Prozent der Figur und nicht des Bretts, weil `translate()` im Stylesheet
+ * sich auf das eigene Kaestchen bezieht. Gerechnet ueber die Wabenlage, damit
+ * der Versatz der ungeraden Reihen stimmt.
+ */
+export function ausschlagRichtung(
+  mass: Rastermass,
+  spalten: number,
+  von: number,
+  nach: number,
+): { dx: number; dy: number } {
+  const a = wabenLage(mass, Math.floor(von / spalten), von % spalten);
+  const b = wabenLage(mass, Math.floor(nach / spalten), nach % spalten);
+  return {
+    dx: ((b.links - a.links) / mass.wabenBreite) * 100,
+    dy: ((b.oben - a.oben) / mass.wabenHoehe) * 100,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Die Anzeige
+// ---------------------------------------------------------------------------
+
+interface Anzeige {
+  readonly stand: Abspielstand;
+  readonly zeitMs: number;
+}
+
+export function KampfAnzeige<E extends Einheitenbild>({
+  kaempfe,
+  ich,
+  brettReihen,
+  brettSpalten,
+  katalog,
+  nameVon,
+  zeichen,
+  farbeVon,
+  frist,
+  verblasst,
+}: {
+  kaempfe: readonly Kampfpaarung[];
+  ich: number | null;
+  /** Masse der eigenen Bretthaelfte aus der Sicht; die Arena hat doppelt so viele Reihen. */
+  brettReihen: number;
+  brettSpalten: number;
+  katalog: Record<string, E>;
+  nameVon: (sitz: number) => string;
+  /** Das Bild einer Einheit — heute eine Strichzeichnung, spaeter eine Figur. */
+  zeichen: (einheit: E) => ReactNode;
+  farbeVon: (einheit: E) => string;
+  /** Frist der Schaupause (`interludeDeadline`), fuer das Aufholen nach Wiederverbinden. */
+  frist: number | null;
+  /** Der Server hat die Phase gewechselt: ausblenden, nicht mehr abspielen. */
+  verblasst?: boolean;
+}): React.JSX.Element | null {
+  const kampf = abzuspielen(kaempfe, ich);
+  const bericht = kampf?.bericht ?? null;
+  const andere = kaempfe.filter((k) => k !== kampf);
+
+  const [anzeige, setAnzeige] = useState<Anzeige | null>(() =>
+    bericht ? { stand: anfangsstand(bericht), zeitMs: 0 } : null,
+  );
+
+  /*
+   * Bericht und Nebenkaempfe liegen in einer Referenz, und die Uhr haengt am
+   * SCHLUESSEL des Kampfes. Jeder Rundruf des Servers bringt ein neues
+   * Sicht-Objekt; hinge die Uhr daran, liefe sie bei jedem Funk von vorn los
+   * und der Kampf bliebe stehen, bis sie aufgeholt hat (CLAUDE.md:
+   * React-Effekte an einen Schluessel haengen, nicht an ein Objekt).
+   */
+  const quelle = useRef({ bericht, andere });
+  quelle.current = { bericht, andere };
+  const schluessel = kampf ? `${kampf.a}:${kampf.b}:${kampf.bericht.saat}` : null;
+
+  useEffect(() => {
+    if (schluessel === null) return;
+    const anfang = quelle.current.bericht;
+    if (!anfang) return;
+    let stand = anfangsstand(anfang);
+    const start = Date.now();
+    const versatz = startVersatz(anfang.dauerMs, frist, start);
+    let letzteSekunde = -1;
+    let letzteFertige = -1;
+    const uhr = baueUhr();
+    let lebt = true;
+
+    const tick = (): void => {
+      if (!lebt) return;
+      const { bericht: b, andere: a } = quelle.current;
+      if (!b) return;
+      const zeitMs = Date.now() - start + versatz;
+      const neu = spieleBis(stand, b, zeitMs);
+      const sekunde = Math.floor(zeitMs / 1000);
+      const fertige = a.filter((k) => k.bericht.dauerMs <= zeitMs).length;
+      if (neu !== stand || sekunde !== letzteSekunde || fertige !== letzteFertige) {
+        stand = neu;
+        letzteSekunde = sekunde;
+        letzteFertige = fertige;
+        setAnzeige({ stand: neu, zeitMs });
+      }
+      // Nach dem Ende steht das Bild still — es gibt nichts mehr abzulesen.
+      if (neu.ende && fertige === a.length) return;
+      uhr.naechstes(tick);
+    };
+    uhr.naechstes(tick);
+    return () => {
+      lebt = false;
+      uhr.anhalten();
+    };
+    // `frist` ist mit Absicht kein Ausloeser: Sie gilt fuer die ganze Phase,
+    // und ein Neustart der Uhr mitten im Kampf waere genau der Fehler von oben.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schluessel]);
+
+  if (!kampf || !bericht || !anzeige) return null;
+
+  const seite = meineSeite(kampf, ich);
+  const gedreht = seite === 1;
+  const reihen = brettReihen * 2;
+  const felder = reihen * brettSpalten;
+  const mass = rastermass(reihen, brettSpalten);
+  /** Welche Seite unten steht: die eigene, als Zuschauer Seite 0 (`a`). */
+  const unten: Seite = seite ?? 0;
+  const oben: Seite = unten === 0 ? 1 : 0;
+  const sitzVon = (s: Seite): number => (s === 0 ? kampf.a : kampf.b);
+  const beschriftung = (s: Seite): string => {
+    const name = s === seite ? 'Du' : nameVon(sitzVon(s));
+    return s === 1 && kampf.geist ? `Abbild von ${name}` : name;
+  };
+  const stehende = (s: Seite): number =>
+    anzeige.stand.figuren.filter((f) => f.seite === s && !f.tot).length;
+  const gesamt = (s: Seite): number => bericht.start.filter((f) => f.seite === s).length;
+
+  return (
+    <section
+      className={stil.arena}
+      data-verblasst={verblasst ? '' : undefined}
+      role="group"
+      aria-label="Kampf"
+    >
+      <Seitenzeile
+        name={beschriftung(oben)}
+        stehen={stehende(oben)}
+        gesamt={gesamt(oben)}
+        rechts={anzeige.stand.ende ? null : `${Math.floor(anzeige.zeitMs / 1000)} s`}
+      />
+
+      <div className={stil.brett} style={{ aspectRatio: `${mass.seitenverhaeltnis}` }}>
+        {Array.from({ length: felder }, (_, i) => {
+          const reihe = Math.floor(i / brettSpalten);
+          const lage = wabenLage(mass, reihe, i % brettSpalten);
+          return (
+            <i
+              key={i}
+              className={stil.wabe}
+              data-haelfte={reihe < brettReihen ? 'oben' : 'unten'}
+              style={{
+                left: `${lage.links}%`,
+                top: `${lage.oben}%`,
+                width: `${mass.wabenBreite}%`,
+                height: `${mass.wabenHoehe}%`,
+              }}
+            />
+          );
+        })}
+
+        {anzeige.stand.figuren.map((f) => {
+          const platz = gezeichneterPlatz(f.platz, felder, gedreht);
+          const lage = wabenLage(mass, Math.floor(platz / brettSpalten), platz % brettSpalten);
+          const richtung =
+            f.zielPlatz === null
+              ? null
+              : ausschlagRichtung(
+                  mass,
+                  brettSpalten,
+                  platz,
+                  gezeichneterPlatz(f.zielPlatz, felder, gedreht),
+                );
+          const einheit = katalog[f.einheitId];
+          const anteil = f.hoechstesLeben > 0 ? (f.leben / f.hoechstesLeben) * 100 : 0;
+          return (
+            <div
+              key={f.id}
+              className={stil.figur}
+              data-seite={f.seite === unten ? 'unten' : 'oben'}
+              data-tot={f.tot ? '' : undefined}
+              style={
+                {
+                  left: `${lage.links}%`,
+                  top: `${lage.oben}%`,
+                  width: `${mass.wabenBreite}%`,
+                  height: `${mass.wabenHoehe}%`,
+                  '--dx': `${richtung?.dx ?? 0}%`,
+                  '--dy': `${richtung?.dy ?? 0}%`,
+                  '--tr-kosten': einheit ? farbeVon(einheit) : undefined,
+                } as React.CSSProperties
+              }
+              aria-label={`${einheit?.name ?? f.einheitId}, Stufe ${f.stufe}, ${f.tot ? 'gefallen' : `${f.leben} von ${f.hoechstesLeben} Leben`}`}
+            >
+              {/* Der Schluessel wechselt mit jedem Schlag: So faengt die
+                  Ausschlag-Animation jedes Mal von vorn an, statt beim
+                  zweiten Schlag stumm zu bleiben. */}
+              <div
+                key={f.schlaege}
+                className={stil.koerper}
+                data-schlaegt={f.schlaege > 0 ? '' : undefined}
+              >
+                {einheit ? zeichen(einheit) : <span>?</span>}
+                <span className={stil.sterne} aria-hidden="true">
+                  {'★'.repeat(f.stufe)}
+                </span>
+              </div>
+              <span className={stil.leben} aria-hidden="true">
+                <b style={{ width: `${anteil}%` }} />
+              </span>
+              {f.treffer > 0 && (
+                <>
+                  <i key={`b${f.treffer}`} className={stil.blitz} aria-hidden="true" />
+                  <em key={`s${f.treffer}`} className={stil.schaden} aria-hidden="true">
+                    −{f.letzterSchaden}
+                  </em>
+                </>
+              )}
+            </div>
+          );
+        })}
+
+        {anzeige.stand.ende && (
+          <Ergebnis kampf={kampf} seite={seite} ende={anzeige.stand.ende} nameVon={nameVon} />
+        )}
+      </div>
+
+      <Seitenzeile name={beschriftung(unten)} stehen={stehende(unten)} gesamt={gesamt(unten)} />
+
+      {andere.length > 0 && (
+        <ul className={stil.andere} aria-label="Weitere Kämpfe">
+          {andere.map((k) => (
+            <li key={`${k.a}:${k.b}`}>
+              {nameVon(k.a)} gegen {k.geist ? `das Abbild von ${nameVon(k.b)}` : nameVon(k.b)}
+              {' · '}
+              {k.bericht.dauerMs > anzeige.zeitMs
+                ? 'läuft…'
+                : k.bericht.sieger === null
+                  ? 'unentschieden'
+                  : `${nameVon(k.bericht.sieger === 0 ? k.a : k.b)} gewinnt`}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function Seitenzeile({
+  name,
+  stehen,
+  gesamt,
+  rechts,
+}: {
+  name: string;
+  stehen: number;
+  gesamt: number;
+  rechts?: string | null;
+}): React.JSX.Element {
+  return (
+    <p className={stil.zeile}>
+      <strong>{name}</strong>
+      <span>
+        {gesamt === 0 ? 'nichts aufgestellt' : `${stehen} von ${gesamt} stehen`}
+        {rechts ? ` · ${rechts}` : ''}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * Das Ergebnis, sobald das letzte Ereignis abgespielt ist.
+ *
+ * Der Schaden steht im Bericht (`schaden`) und wird nicht aus den
+ * Ueberlebenden gerechnet — das ist die Rechnung des Moduls. Ein Abbild
+ * verliert nichts: Sein Besitzer kaempft anderswo seinen eigenen Kampf.
+ */
+function Ergebnis({
+  kampf,
+  seite,
+  ende,
+  nameVon,
+}: {
+  kampf: Kampfpaarung;
+  seite: Seite | null;
+  ende: { sieger: Seite | null; grund: Endgrund };
+  nameVon: (sitz: number) => string;
+}): React.JSX.Element {
+  const { bericht } = kampf;
+  const verlierer: Seite | null = ende.sieger === null ? null : ende.sieger === 0 ? 1 : 0;
+  const nameSeite = (s: Seite): string => (s === seite ? 'Du' : nameVon(s === 0 ? kampf.a : kampf.b));
+
+  let ausgang: 'sieg' | 'niederlage' | 'offen';
+  let wort: string;
+  if (ende.sieger === null) {
+    ausgang = 'offen';
+    wort = 'Unentschieden';
+  } else if (seite === null) {
+    ausgang = 'offen';
+    wort = `${nameSeite(ende.sieger)} gewinnt`;
+  } else {
+    ausgang = ende.sieger === seite ? 'sieg' : 'niederlage';
+    wort = ausgang === 'sieg' ? 'Gewonnen!' : 'Verloren';
+  }
+
+  let einzelheit: string;
+  if (verlierer === null) {
+    einzelheit = 'Niemand verliert Leben';
+  } else if (verlierer === 1 && kampf.geist) {
+    einzelheit = 'Ein Abbild verliert nichts';
+  } else if (verlierer === seite) {
+    einzelheit = `Du verlierst ${bericht.schaden} Leben`;
+  } else {
+    einzelheit = `${nameSeite(verlierer)} verliert ${bericht.schaden} Leben`;
+  }
+  if (ende.grund === 'zeit') einzelheit += ' · Zeit abgelaufen';
+
+  return (
+    <div className={stil.ergebnis} data-ausgang={ausgang} role="status">
+      <strong>{wort}</strong>
+      <span>{einzelheit}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Die Uhr
+// ---------------------------------------------------------------------------
+
+/*
+ * `requestAnimationFrame` mit einem Rueckfall auf `setTimeout` im Takt der
+ * Simulation: In einer Umgebung ohne Bildschirm (Tests) gibt es das erste
+ * nicht, und ein stehender Kampf waere dort nicht von einem kaputten zu
+ * unterscheiden. Der Rueckfall nimmt hundert Millisekunden — feiner ist das
+ * Protokoll ohnehin nicht (TAKT_MS in kampf.ts).
+ */
+const RUECKFALL_TAKT_MS = 100;
+
+interface Uhr {
+  naechstes(tick: () => void): void;
+  anhalten(): void;
+}
+
+/**
+ * Die Uhr merkt sich, WELCHE Art von Handgriff sie ausgegeben hat: Ein
+ * `requestAnimationFrame`-Handgriff bei `clearTimeout` (oder umgekehrt)
+ * trifft still irgendeinen fremden Timer mit derselben Nummer.
+ */
+function baueUhr(): Uhr {
+  const bild = typeof window.requestAnimationFrame === 'function';
+  let handle = 0;
+  return {
+    naechstes(tick) {
+      handle = bild
+        ? window.requestAnimationFrame(tick)
+        : window.setTimeout(tick, RUECKFALL_TAKT_MS);
+    },
+    anhalten() {
+      if (bild) window.cancelAnimationFrame(handle);
+      else window.clearTimeout(handle);
+    },
+  };
+}

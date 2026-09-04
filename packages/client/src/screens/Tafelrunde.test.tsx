@@ -581,6 +581,46 @@ describe('Bereit und Kampfpause', () => {
     expect(screen.getByText('Die Heere treten an')).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
   });
+
+  it('zeigt in der Kampfphase die Arena statt der Bretter, sobald ein Kampf da ist', () => {
+    // Das Protokoll kommt aus sicht.kaempfe (kampf.ts); der Bildschirm spielt
+    // es ab und rechnet nichts nach. Hier genuegt der kuerzeste Kampf, den es
+    // gibt: Start, Ende.
+    stelle(
+      sicht({
+        phase: 'kampf',
+        eigenes: { bereit: true, darfHandeln: false },
+        kaempfe: [
+          {
+            a: 0,
+            b: 1,
+            geist: false,
+            bericht: {
+              saat: 'probe',
+              erstZieher: 0,
+              start: [
+                { id: 0, seite: 0, einheitId: 'dorfwache', stufe: 1, platz: 12, leben: 650, hoechstesLeben: 650 },
+              ],
+              ereignisse: [{ art: 'ende', zeitMs: 100, sieger: 0, grund: 'ausgeloescht' }],
+              sieger: 0,
+              grund: 'ausgeloescht',
+              dauerMs: 100,
+              ueberlebende: [],
+              schaden: 3,
+            },
+          },
+        ],
+      }),
+    );
+    zeige();
+    const arena = screen.getByRole('group', { name: 'Kampf' });
+    expect(within(arena).getByText('KI')).toBeInTheDocument();
+    expect(within(arena).getByText('Du')).toBeInTheDocument();
+    expect(screen.queryByText('Die Heere treten an')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
+    // Die Bretter der Ruestkammer sind waehrenddessen weg — die Arena steht an ihrer Stelle.
+    expect(document.querySelector('.tr-bretter')).toBeNull();
+  });
 });
 
 describe('Mitspieler', () => {
