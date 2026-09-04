@@ -234,6 +234,118 @@ describe('Laden', () => {
   });
 });
 
+describe('Was gerade nicht geht, und warum', () => {
+  /*
+   * Vorher sahen alle gesperrten Karten gleich aus: blass. Ob das Gold
+   * fehlte, die Bank voll war oder man schon bereit ist, musste man
+   * ausprobieren — und am Handy probiert man nicht, dort tippt man einmal
+   * und legt weg.
+   *
+   * Wichtig an diesen Tests ist die Richtung: `legalActions` ENTSCHEIDET
+   * weiter allein. Die Zahlen der Sicht liefern nur die Beschriftung, und wo
+   * sie nichts erklaeren, steht auch nichts.
+   */
+  it('nennt zu wenig Gold als Grund, wenn der Kauf nicht in legalActions steht', () => {
+    stelle(sicht({ eigenes: { gold: 0 } }), [{ typ: 'bereit' }]);
+    zeige();
+    expect(screen.getAllByText('Zu wenig Gold').length).toBeGreaterThan(0);
+  });
+
+  it('nennt die volle Bank, wenn das Gold reicht', () => {
+    stelle(
+      sicht({
+        eigenes: {
+          gold: 20,
+          bank: Array.from({ length: 9 }, () => ({ id: 'astschuetze', stufe: 1 })),
+        },
+      }),
+      [{ typ: 'bereit' }],
+    );
+    zeige();
+    expect(screen.getAllByText('Bank voll').length).toBeGreaterThan(0);
+  });
+
+  it('raet nicht, wenn die Sperre woanders herkommt', () => {
+    // Schon bereit: Der Grund steht im Fuss und nicht an jeder Karte. Eine
+    // Karte, die dann "Zu wenig Gold" behauptet, waere schlicht falsch.
+    stelle(sicht({ eigenes: { bereit: true, gold: 0, darfHandeln: false } }), []);
+    zeige();
+    expect(screen.queryByText('Zu wenig Gold')).not.toBeInTheDocument();
+  });
+
+  it('faerbt den Preis von Neu wuerfeln, wenn das Gold nicht reicht', () => {
+    stelle(sicht({ eigenes: { gold: 1 } }), [{ typ: 'bereit' }]);
+    zeige();
+    const knopf = screen.getByRole('button', { name: /Neu w/ });
+    expect(knopf.querySelector('em')).toHaveAttribute('data-teuer');
+  });
+
+  it('faerbt den Preis nicht, wenn die Zahlen die Sperre nicht erklaeren', () => {
+    // Gold 7, Wuerfeln kostet 2 — gesperrt ist der Knopf aus einem anderen
+    // Grund. Ein roter Preis waere hier eine Behauptung.
+    stelle(sicht(), [{ typ: 'bereit' }]);
+    zeige();
+    const knopf = screen.getByRole('button', { name: /Neu w/ });
+    expect(knopf.querySelector('em')).not.toHaveAttribute('data-teuer');
+  });
+
+  it('zaehlt zum Verschmelzen mit der Zahl aus der Sicht, nicht mit einer 3', () => {
+    /*
+     * Hier stand "1 von 3" ausgeschrieben. Wer VERSCHMELZ_ZAHL im Modul auf
+     * vier stellte, bekam eine Karte, die "1 von 3" behauptet und bei drei
+     * Kopien nicht verschmilzt.
+     */
+    stelle(
+      sicht({
+        verschmelzZahl: 4,
+        eigenes: {
+          bank: [
+            { id: 'dorfwache', stufe: 1 },
+            { id: 'dorfwache', stufe: 1 },
+            ...Array.from({ length: 7 }, () => null),
+          ],
+        },
+      }),
+    );
+    zeige();
+    expect(screen.getByText('2 von 4')).toBeInTheDocument();
+  });
+});
+
+describe('Leere Flaechen erklaeren sich', () => {
+  // Eine leere Flaeche sagt nicht, dass sie zu fuellen ist — sie sieht aus
+  // wie ein Fehler. Je ein Satz statt einer stummen Flaeche.
+  it('sagt am leeren Brett, was zu tun ist', () => {
+    zeige();
+    expect(screen.getByText(/Dein Feld ist leer/)).toBeInTheDocument();
+  });
+
+  it('schweigt, sobald etwas im Feld steht', () => {
+    stelle(
+      sicht({
+        eigenes: {
+          belegt: 1,
+          brett: [{ id: 'dorfwache', stufe: 1 }, ...Array.from({ length: 9 }, () => null)],
+        },
+      }),
+    );
+    zeige();
+    expect(screen.queryByText(/Dein Feld ist leer/)).not.toBeInTheDocument();
+  });
+
+  it('sagt an der leeren Bank, wo Recken herkommen', () => {
+    stelle(sicht({ eigenes: { bank: Array.from({ length: 9 }, () => null) } }));
+    zeige();
+    expect(screen.getByText(/Deine Bank ist leer/)).toBeInTheDocument();
+  });
+
+  it('sagt am leergekauften Laden, wie es weitergeht', () => {
+    stelle(sicht({ eigenes: { laden: [null, null, null, null, null] } }));
+    zeige();
+    expect(screen.getByText(/Der Laden ist leergekauft/)).toBeInTheDocument();
+  });
+});
+
 describe('Setzen per Antippen', () => {
   it('wählt eine Einheit auf der Bank und setzt sie auf ein Feld', () => {
     zeige();
@@ -244,7 +356,7 @@ describe('Setzen per Antippen', () => {
     // bewirkt, und genau das merkt man am Handy sofort.
     expect(screen.getByText(/Dorfwache gewählt/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Feld 1' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Feld 1 / }));
     expect(gesendet).toHaveBeenCalledWith({
       typ: 'verschieben',
       von: { bereich: 'bank', platz: 0 },
@@ -252,7 +364,88 @@ describe('Setzen per Antippen', () => {
     });
   });
 
-  it('verkauft die gewählte Einheit', () => {
+  it('zeigt die erlaubten Felder an, sobald etwas gewaehlt ist', () => {
+    /*
+     * Ohne diese Markierung leuchtete beim Antipp-Weg die Bank, aber nicht
+     * das Brett — also alles ausser der Flaeche, auf die man will.
+     */
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    expect(screen.getByRole('button', { name: 'Feld 1' })).toBeInTheDocument();
+
+    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
+    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    // Der Name nennt das Ziel mit, damit ein Vorlesegeraet es auch hoert.
+    expect(screen.getByRole('button', { name: 'Feld 1 · Ziel' })).toBeInTheDocument();
+  });
+
+  it('markiert kein Feld als Ziel, wenn das Feld voll ist', () => {
+    stelle(
+      sicht({
+        eigenes: {
+          feldplaetze: 1,
+          belegt: 1,
+          brett: [{ id: 'astschuetze', stufe: 1 }, ...Array.from({ length: 9 }, () => null)],
+        },
+      }),
+    );
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
+    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    expect(screen.queryByRole('button', { name: /Ziel/ })).not.toBeInTheDocument();
+  });
+
+  it('nimmt die gewaehlte Einheit ueber einen leeren Bankplatz zurueck', () => {
+    // Der Rueckweg war ein angeklickter Kasten ohne Namen und ohne
+    // Tastaturweg — mit einem Vorlesegeraet gab es das Ziel gar nicht.
+    stelle(
+      sicht({
+        eigenes: {
+          belegt: 1,
+          brett: [{ id: 'dorfwache', stufe: 1 }, ...Array.from({ length: 9 }, () => null)],
+          bank: Array.from({ length: 9 }, () => null),
+        },
+      }),
+    );
+    zeige();
+    const marke = screen.getAllByTitle(/Dorfwache/)[0];
+    fireEvent.pointerDown(marke);
+    fireEvent.pointerUp(marke);
+    fireEvent.click(screen.getByRole('button', { name: 'Bankplatz 2' }));
+    expect(gesendet).toHaveBeenCalledWith({
+      typ: 'verschieben',
+      von: { bereich: 'brett', platz: 0 },
+      nach: { bereich: 'bank', platz: 1 },
+    });
+  });
+
+  it('waehlt auch mit der Tastatur — der Weg des Vorlesegeraets', () => {
+    /*
+     * Der Antipp-Weg lief allein ueber `pointerup`. VoiceOver und TalkBack
+     * loesen beim Doppeltippen aber einen KLICK aus, keine Zeigerfolge — die
+     * Zusage "geht mit einem Vorlesegeraet" war damit nicht eingeloest.
+     */
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    fireEvent.keyDown(within(bank).getByTitle(/Dorfwache/), { key: 'Enter' });
+    expect(screen.getByText(/Dorfwache gew/)).toBeInTheDocument();
+  });
+
+  it('macht aus einem Finger-Tipp keine doppelte Auswahl', () => {
+    // Der Browser schickt hinter jedem Tipp noch einen Klick her. Ohne die
+    // Pruefung auf `detail` wuerde er die eben getroffene Wahl gleich wieder
+    // aufheben — der Tipp saehe aus, als haette er nicht gezaehlt.
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    const marke = within(bank).getByTitle(/Dorfwache/);
+    fireEvent.pointerDown(marke);
+    fireEvent.pointerUp(marke);
+    fireEvent.click(marke, { detail: 1 });
+    expect(screen.getByText(/Dorfwache gew/)).toBeInTheDocument();
+  });
+
+  it('verkauft die gewaehlte Einheit', () => {
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));

@@ -16474,6 +16474,10 @@ span.hub-angebot-art.poker-jeton-stapel {
      einzige Stelle, an der man ueberhaupt etwas kaufen kann. */
   overflow-y: auto;
   overflow-x: hidden;
+  /* Am Ende des Rollens nicht an die Seite weiterreichen: Sonst zieht der
+     Daumen unter Android das Neuladen der Seite auf — mitten in der Partie.
+     Dieselbe Zeile aus demselben Grund wie in FeldherrTisch.tsx. */
+  overscroll-behavior: contain;
 }
 
 .tr-kopf {
@@ -16599,6 +16603,10 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .tr-wabe[data-leer] { background: rgba(255, 255, 255, 0.045); }
 .tr-wabe[data-gewaehlt] { background: rgba(226, 182, 79, 0.3); }
+/* Wohin die gewaehlte Einheit darf. Nur waehrend einer Auswahl sichtbar —
+   ein dauerhaft leuchtendes Brett waere Rauschen. Steht das Feld voll,
+   leuchtet nichts, und die Absage erklaert sich von selbst. */
+.tr-wabe[data-zielbar] { background: rgba(74, 156, 120, 0.28); }
 
 /* Die ganze Wabe ist das Ziel, nicht nur ihre Mitte: Ein Daumen trifft eine
    Flaeche, keinen Punkt. */
@@ -16612,6 +16620,29 @@ span.hub-angebot-art.poker-jeton-stapel {
   cursor: pointer;
 }
 .tr-wabe-ziel:disabled { cursor: default; }
+
+/* Der leere Bankplatz ist dasselbe Ziel wie eine leere Wabe, nur eckig.
+   Fuellt den Platz ganz aus: Ein Daumen trifft eine Flaeche, keinen Punkt. */
+.tr-bankplatz-ziel {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.tr-bankplatz-ziel:disabled { cursor: default; }
+
+/* Der Tastaturweg muss sichtbar sein, sonst waehlt man blind. `:focus-visible`
+   und nicht `:focus`: Nach einem Tipp mit dem Finger soll kein Rahmen
+   stehenbleiben. */
+.tr-einheit:focus-visible,
+.tr-wabe-ziel:focus-visible,
+.tr-bankplatz-ziel:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
 
 /* -- Eine Einheit --------------------------------------------------------- */
 
@@ -16727,6 +16758,11 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-bankplatz {
   position: relative;
   aspect-ratio: 1;
+  /* Neun Plaetze in einer Reihe sind auf einem 360-px-Handy je 32 px breit —
+     zu wenig zum Greifen UND zum Ablegen. Die Mindesthoehe macht aus dem
+     Quadrat dort ein Hochformat und die Flaeche wieder daumengerecht; auf
+     einem breiteren Schirm greift `aspect-ratio` wie bisher. */
+  min-height: 44px;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.25);
   overflow: hidden;
@@ -16798,8 +16834,11 @@ span.hub-angebot-art.poker-jeton-stapel {
   cursor: pointer;
 }
 .tr-karte:active:not(:disabled) { transform: scale(0.97); }
-/* Nicht kaufbar heisst nicht unsichtbar: Man soll sehen, worauf man spart. */
-.tr-karte:disabled { opacity: 0.42; cursor: default; }
+/* Nicht kaufbar heisst nicht unsichtbar: Man soll sehen, worauf man spart —
+   und seit die Karte ihren Grund mitschreibt, muss der auch LESBAR bleiben.
+   Von einer kaufbaren unterscheidet sie ohnehin der matte Rahmen und der
+   rote Preis, nicht das letzte Zehntel Deckkraft. */
+.tr-karte:disabled { opacity: 0.6; cursor: default; }
 .tr-karte-leer {
   min-height: 84px;
   border-radius: 12px;
@@ -16822,6 +16861,11 @@ span.hub-angebot-art.poker-jeton-stapel {
   font: 800 12px/1 system-ui;
 }
 .tr-karte-preis .tr-icon { width: 12px; height: 12px; }
+/* Ein Preis, den das Gold nicht deckt. Rot ist hier die Vorsicht aus
+   DESIGN.md und keine neue Farbe: Es sagt "geht gerade nicht", nicht
+   "kaputt". */
+.tr-karte-preis[data-teuer],
+.tr-ladenknopf em[data-teuer] { color: var(--danger); }
 .tr-karte-name {
   max-width: 100%;
   overflow: hidden;
@@ -16840,6 +16884,13 @@ span.hub-angebot-art.poker-jeton-stapel {
   font: 800 9px/1.4 system-ui;
 }
 .tr-karte-marke-leise { color: var(--muted); background: rgba(255, 255, 255, 0.08); }
+/* Warum die Karte gesperrt ist. Sie steht auf einer gedimmten Karte, deshalb
+   der kraeftige Grund — sonst ist ausgerechnet die Erklaerung das Blasseste
+   auf dem Bildschirm. */
+.tr-karte-marke-hindernis {
+  color: #2a0f0c;
+  background: var(--danger);
+}
 /* Der Kauf, der drei voll macht, blinkt einmal — sonst uebersieht man ihn
    zwischen fuenf gleich aussehenden Karten. */
 .tr-karte[data-verschmilzt] {
@@ -16888,6 +16939,39 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: var(--muted);
   background: var(--panel);
   border-color: var(--line);
+}
+
+/*
+ * Der Satz, der eine leere Flaeche erklaert — Brett, Bank, Laden.
+ *
+ * Eine leere Flaeche sagt nicht, dass sie zu fuellen ist; sie sieht aus wie
+ * ein Fehler. Ein Satz kostet nichts und beantwortet die einzige Frage, die
+ * ein neuer Spieler an dieser Stelle hat.
+ */
+.tr-leer-satz {
+  margin: 0;
+  padding: 0 14px;
+  max-width: min(94vw, 460px);
+  color: var(--muted);
+  font: 600 12px/1.4 system-ui;
+  text-align: center;
+}
+
+/*
+ * Ueber dem eigenen Brett statt darunter: Dort ist Platz, und der Satz zeigt
+ * auf die Flaeche, von der er redet. `pointer-events: none` ist keine
+ * Feinheit, sondern der Kern — sonst faengt der Satz genau das Ablegen ab,
+ * zu dem er auffordert, und `elementFromPoint` findet ihn statt der Wabe.
+ */
+.tr-leer-brett {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 .tr-hinweis { margin: 0; color: var(--muted); font: 600 12px/1.35 system-ui; text-align: center; }

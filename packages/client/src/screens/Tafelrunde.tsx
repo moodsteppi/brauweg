@@ -126,6 +126,17 @@ interface TafelrundeSicht {
   katalog?: Einheit[];
 }
 
+/**
+ * Warum ein Kauf gerade nicht geht — die AUSKUNFT, nicht die Entscheidung.
+ *
+ * Ob gekauft werden darf, sagt allein `legalActions`. Dieser Wert wird erst
+ * gebildet, wenn dort nichts steht, und beschriftet nur noch die schon
+ * gefallene Absage. Andersherum waere es der Fehler, vor dem der Kopf dieser
+ * Datei warnt: Ein Client, der selbst entscheidet, zeigt frueher oder spaeter
+ * einen Knopf, den der Server abweist.
+ */
+type Kaufhindernis = 'gold' | 'bank' | null;
+
 /** Aktion des Moduls, siehe partie.ts. */
 type Aktion =
   | { typ: 'kaufen'; platz: number }
@@ -771,6 +782,32 @@ function Ruestkammer({
     [bestand, sicht.verschmelzZahl],
   );
 
+  /**
+   * Warum ein Ladenplatz gesperrt ist.
+   *
+   * Beide Groessen stehen in der Sicht — das Gold und die Bank —, es wird
+   * also keine Regel nachgerechnet, sondern eine Absage beschriftet, die
+   * `legalActions` schon ausgesprochen hat (siehe `Kaufhindernis`). Die
+   * Reihenfolge ist Absicht: Fehlt beides, nennt der Bildschirm das Gold,
+   * denn daran laesst sich in derselben Runde noch etwas aendern.
+   *
+   * Gibt bewusst `null` zurueck, wenn die Zahlen die Sperre NICHT erklaeren.
+   * Dann steht der Grund woanders (Kampfphase, schon bereit, ausgeschieden),
+   * und eine geratene Beschriftung waere schlimmer als keine.
+   */
+  const hindernis = useCallback(
+    (angeboten: Einheit | undefined): Kaufhindernis => {
+      if (!angeboten || !eigenes) return null;
+      if (eigenes.gold < angeboten.kosten) return 'gold';
+      // Eine volle Bank verbietet den Kauf nur, wenn er nicht sofort
+      // verschmilzt — genau dann steht er aber in `legalActions`, und diese
+      // Funktion laeuft gar nicht erst.
+      if (!eigenes.bank.includes(null)) return 'bank';
+      return null;
+    },
+    [eigenes],
+  );
+
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
   const lebendeGegner = sicht.gegner.filter((g) => g.ausRunde === null);
@@ -901,6 +938,17 @@ function Ruestkammer({
         )}
 
         <section className="tr-brettteil">
+          {eigenes.belegt === 0 && (
+            /* Eine leere Flaeche sagt nicht, dass sie zu fuellen ist. Der Satz
+               liegt UEBER dem Brett und nimmt keine Zeiger an (CSS): Sonst
+               verschluckt ausgerechnet der Hinweis den ersten Zug, zu dem er
+               auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
+               das Brett nicht selbst ab. */
+            <p className="tr-leer-satz tr-leer-brett">
+              Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe
+              oder tipp erst ihn, dann die Wabe an.
+            </p>
+          )}
           <Hexbrett
             reihen={sicht.brettReihen}
             spalten={sicht.brettSpalten}
@@ -909,6 +957,13 @@ function Ruestkammer({
             maxStufe={sicht.maxStufe}
             eigen
             gewaehlt={gewaehlt}
+            /* Wohin die gewaehlte Einheit darf — auf dem Brett und nicht nur
+               auf der Bank. Ohne diese Zeile leuchtet beim Antipp-Weg
+               ausgerechnet die Flaeche nicht, auf die man will; und steht das
+               Feld voll, leuchtet nichts, was die Absage von selbst
+               erklaert. */
+            istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+            onWaehlen={tippeOrt}
             ziehtVon={zug?.zieht ? zug.von : null}
             fehlendeKopien={fehlen}
             frischVerschmolzen={verschmolzen}
@@ -944,9 +999,8 @@ function Ruestkammer({
                 gewaehlt?.bereich === 'bank' && gewaehlt.platz === platz ? '' : undefined
               }
               data-zielbar={gewaehlt && zielbar(gewaehlt, ort) ? '' : undefined}
-              onClick={k ? undefined : () => tippeOrt(ort)}
             >
-              {k && (
+              {k ? (
                 <Einheitenmarke
                   kaempfer={k}
                   katalog={katalog}
@@ -959,12 +1013,30 @@ function Ruestkammer({
                   onZeigerBewegung={beiZeigerBewegung}
                   onZeigerEnde={(e) => beiZeigerEnde(ort, e)}
                   onZeigerAbbruch={beiZeigerAbbruch}
+                  onWaehlen={() => tippeOrt(ort)}
+                />
+              ) : (
+                /* Dieselbe echte Schaltflaeche wie das leere Brettfeld, und
+                   aus demselben Grund: Ein `onClick` am Kasten hat weder
+                   Namen noch Tastaturweg — der Rueckweg auf die Bank waere
+                   mit einem Vorlesegeraet gar nicht vorhanden. */
+                <button
+                  type="button"
+                  className="tr-bankplatz-ziel"
+                  disabled={!darfHandeln}
+                  aria-label={`Bankplatz ${platz + 1}`}
+                  onClick={() => tippeOrt(ort)}
                 />
               )}
             </div>
           );
         })}
       </div>
+      {eigenes.bank.every((k) => k === null) && (
+        <p className="tr-leer-satz">
+          Deine Bank ist leer — kauf dir unten im Laden einen Recken.
+        </p>
+      )}
 
       {/* ---- Was mit der Auswahl geschehen kann ------------------------- */}
       {gewaehlt && darfHandeln && (
@@ -1001,22 +1073,37 @@ function Ruestkammer({
               aria-label="Laden"
               style={{ gridTemplateColumns: `repeat(${sicht.ladenPlaetze}, 1fr)` }}
             >
-              {Array.from({ length: sicht.ladenPlaetze }, (_, platz) => (
-                <Ladenkarte
-                  key={platz}
-                  einheit={eigenes.laden[platz] ? katalog[eigenes.laden[platz]!] : undefined}
-                  kaufbar={kaufbar.has(platz) && darfHandeln}
-                  /* "Der Kauf verschmilzt" heisst: Mir fehlt genau noch
-                     diese eine Kopie. Die Zahl kommt aus der Sicht, nicht
-                     aus einer 3 im Client. */
-                  verschmilzt={
-                    eigenes.laden[platz] ? fehlen(eigenes.laden[platz]!) === 1 : false
-                  }
-                  fehlt={eigenes.laden[platz] ? fehlen(eigenes.laden[platz]!) : 0}
-                  onKauf={() => schicke({ typ: 'kaufen', platz })}
-                />
-              ))}
+              {Array.from({ length: sicht.ladenPlaetze }, (_, platz) => {
+                const id = eigenes.laden[platz];
+                const angeboten = id ? katalog[id] : undefined;
+                const darfKaufen = kaufbar.has(platz) && darfHandeln;
+                return (
+                  <Ladenkarte
+                    key={platz}
+                    einheit={angeboten}
+                    kaufbar={darfKaufen}
+                    /* "Der Kauf verschmilzt" heisst: Mir fehlt genau noch
+                       diese eine Kopie. Die Zahl kommt aus der Sicht, nicht
+                       aus einer 3 im Client. */
+                    verschmilzt={id ? fehlen(id) === 1 : false}
+                    fehlt={id ? fehlen(id) : 0}
+                    verschmelzZahl={sicht.verschmelzZahl}
+                    /* Nur beschriften, was gerade wirklich am Spieler liegt:
+                       Wer schon bereit ist oder ausgeschieden, bekommt keinen
+                       Grund an die Karte geschrieben — dann steht er
+                       woanders. */
+                    grund={darfHandeln && !darfKaufen ? hindernis(angeboten) : null}
+                    onKauf={() => schicke({ typ: 'kaufen', platz })}
+                  />
+                );
+              })}
             </div>
+            {eigenes.laden.every((id) => id === null) && (
+              <p className="tr-leer-satz">
+                Der Laden ist leergekauft — würfle neu für frische Recken oder
+                mach dich bereit.
+              </p>
+            )}
             <div className="tr-ladenknoepfe">
               <button
                 type="button"
@@ -1025,7 +1112,19 @@ function Ruestkammer({
                 onClick={() => schicke({ typ: 'neuwuerfeln' })}
               >
                 Neu würfeln
-                <em>
+                {/* Der Preis wird rot, wenn das Gold nicht reicht — sonst
+                    sieht ein gesperrter Knopf aus wie ein kaputter. Beide
+                    Bedingungen muessen zutreffen: `legalActions` hat den Zug
+                    abgelehnt UND die Zahlen der Sicht erklaeren es auch.
+                    Erklaeren sie es nicht, bleibt der Preis ruhig statt zu
+                    raten. */}
+                <em
+                  data-teuer={
+                    darfHandeln && !darfWuerfeln && eigenes.gold < eigenes.neuwuerfelnKosten
+                      ? ''
+                      : undefined
+                  }
+                >
                   <GoldZeichen />
                   {eigenes.neuwuerfelnKosten}
                 </em>
@@ -1038,7 +1137,13 @@ function Ruestkammer({
               >
                 {eigenes.aufstiegKosten === null ? 'Höchster Rang' : 'Rang steigern'}
                 {eigenes.aufstiegKosten !== null && (
-                  <em>
+                  <em
+                    data-teuer={
+                      darfHandeln && !darfLevel && eigenes.gold < eigenes.aufstiegKosten
+                        ? ''
+                        : undefined
+                    }
+                  >
                     <GoldZeichen />
                     {eigenes.aufstiegKosten}
                   </em>
@@ -1187,6 +1292,8 @@ function Hexbrett({
   gespiegelt,
   eigen,
   gewaehlt,
+  istZiel,
+  onWaehlen,
   ziehtVon,
   fehlendeKopien,
   frischVerschmolzen,
@@ -1206,6 +1313,10 @@ function Hexbrett({
   gespiegelt?: boolean;
   eigen?: boolean;
   gewaehlt?: Ort | null;
+  /** Darf die gerade gewaehlte Einheit hierhin? Ohne Auswahl nicht gesetzt. */
+  istZiel?: (ort: Ort) => boolean;
+  /** Auswahl ueber Tastatur oder Vorlesegeraet, siehe Einheitenmarke. */
+  onWaehlen?: (ort: Ort) => void;
   ziehtVon?: Ort | null;
   fehlendeKopien?: (id: string, stufe?: number) => number;
   frischVerschmolzen?: { id: string; stufe: number } | null;
@@ -1244,6 +1355,7 @@ function Hexbrett({
             data-gewaehlt={
               gewaehlt?.bereich === 'brett' && gewaehlt.platz === platz ? '' : undefined
             }
+            data-zielbar={istZiel?.(ort) ? '' : undefined}
           >
             {k ? (
               <Einheitenmarke
@@ -1260,6 +1372,7 @@ function Hexbrett({
                 onZeigerBewegung={eigen ? onZeigerBewegung : undefined}
                 onZeigerEnde={eigen && onZeigerEnde ? (e) => onZeigerEnde(ort, e) : undefined}
                 onZeigerAbbruch={eigen ? onZeigerAbbruch : undefined}
+                onWaehlen={eigen && onWaehlen ? () => onWaehlen(ort) : undefined}
               />
             ) : (
               eigen && (
@@ -1270,7 +1383,10 @@ function Hexbrett({
                   type="button"
                   className="tr-wabe-ziel"
                   disabled={!aktiv}
-                  aria-label={`Feld ${platz + 1}`}
+                  /* Der Name sagt beim Vorlesen mit, ob dieses Feld gerade
+                     ein Ziel ist — sichtbar leuchtet es, hoerbar bisher
+                     nicht. */
+                  aria-label={`Feld ${platz + 1}${istZiel?.(ort) ? ' · Ziel' : ''}`}
                   /* Klick und nicht Zeiger-Loslassen: Ein abgelegtes Ziehen
                      endet dank Zeigererfassung IMMER an der gezogenen
                      Einheit, nie hier — und erzeugt deshalb auch keinen
@@ -1302,6 +1418,7 @@ function Einheitenmarke({
   onZeigerBewegung,
   onZeigerEnde,
   onZeigerAbbruch,
+  onWaehlen,
 }: {
   kaempfer: Kaempfer;
   katalog: Record<string, Einheit>;
@@ -1315,9 +1432,20 @@ function Einheitenmarke({
   onZeigerBewegung?: (e: React.PointerEvent) => void;
   onZeigerEnde?: (e: React.PointerEvent) => void;
   onZeigerAbbruch?: () => void;
+  /**
+   * Auswaehlen ohne Zeiger — Tastatur oder Vorlesegeraet.
+   *
+   * Der Antipp-Weg lief bisher allein ueber `pointerup`, und genau das
+   * erreicht ein Vorlesegeraet nicht: VoiceOver und TalkBack loesen beim
+   * Doppeltippen einen KLICK aus, keine Zeigerfolge. Ohne diesen Weg war die
+   * Zusage aus dem Kopf dieser Datei — Antippen sei der Weg, der mit einem
+   * Vorlesegeraet funktioniert — schlicht nicht eingeloest.
+   */
+  onWaehlen?: () => void;
 }): React.JSX.Element {
   const einheit = katalog[kaempfer.id];
   const farbe = KOSTEN_FARBE[einheit?.kosten ?? 1] ?? KOSTEN_FARBE[1];
+  const greifbar = aktiv && onWaehlen !== undefined;
   return (
     <div
       className="tr-einheit"
@@ -1325,15 +1453,47 @@ function Einheitenmarke({
       data-still={versteckt ? '' : undefined}
       data-fassbar={aktiv ? '' : undefined}
       style={{ '--tr-kosten': farbe } as React.CSSProperties}
+      role={greifbar ? 'button' : undefined}
+      tabIndex={greifbar ? 0 : undefined}
+      aria-label={
+        einheit
+          ? `${einheit.name}, ${ROLLE_NAME[einheit.rolle]}, Stufe ${kaempfer.stufe}`
+          : kaempfer.id
+      }
       onPointerDown={aktiv ? onZeigerStart : undefined}
       onPointerMove={aktiv ? onZeigerBewegung : undefined}
       onPointerUp={aktiv ? onZeigerEnde : undefined}
       onPointerCancel={aktiv ? onZeigerAbbruch : undefined}
+      /*
+       * `detail === 0` trennt den erzeugten Klick vom echten: Tastatur und
+       * Vorlesegeraet melden 0, Maus und Finger melden mindestens 1. Ohne
+       * diese Pruefung liefe jeder Tipp doppelt — einmal ueber `pointerup`
+       * und gleich darauf ueber den Klick, den der Browser hinterherschickt.
+       * Das Ergebnis waere waehlen und im selben Moment wieder abwaehlen.
+       */
+      onClick={
+        greifbar
+          ? (e) => {
+              if (e.detail === 0) onWaehlen?.();
+            }
+          : undefined
+      }
+      onKeyDown={
+        greifbar
+          ? (e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              // Sonst rollt die Leertaste den Bildschirm unter dem Brett weg.
+              e.preventDefault();
+              onWaehlen?.();
+            }
+          : undefined
+      }
       title={einheit ? `${einheit.name} · ${ROLLE_NAME[einheit.rolle]}` : kaempfer.id}
     >
       {einheit ? <RollenZeichen rolle={einheit.rolle} /> : <span>?</span>}
       <span className="tr-einheit-name">{einheit?.name ?? kaempfer.id}</span>
-      <span className="tr-sterne" aria-label={`Stufe ${kaempfer.stufe}`}>
+      {/* Der Name der Marke nennt die Stufe schon; hier waere sie doppelt. */}
+      <span className="tr-sterne" aria-hidden="true">
         {'★'.repeat(kaempfer.stufe)}
       </span>
       {/*
@@ -1359,12 +1519,18 @@ function Ladenkarte({
   kaufbar,
   verschmilzt,
   fehlt,
+  verschmelzZahl,
+  grund,
   onKauf,
 }: {
   einheit: Einheit | undefined;
   kaufbar: boolean;
   verschmilzt: boolean;
   fehlt: number;
+  /** Wie viele Kopien verschmelzen — aus der Sicht, nie als 3 im Client. */
+  verschmelzZahl: number;
+  /** Warum nicht kaufbar, falls die Zahlen der Sicht es erklaeren. */
+  grund: Kaufhindernis;
   onKauf: () => void;
 }): React.JSX.Element {
   if (!einheit) {
@@ -1385,18 +1551,35 @@ function Ladenkarte({
     >
       <span className="tr-karte-kopf">
         <RollenZeichen rolle={einheit.rolle} />
-        <span className="tr-karte-preis">
+        {/* Der Preis wird rot, wenn das Gold nicht reicht: Eine Karte, die
+            man sich nicht leisten kann, soll anders aussehen als eine, die
+            man gerade nicht kaufen kann, weil man schon bereit ist. */}
+        <span className="tr-karte-preis" data-teuer={grund === 'gold' ? '' : undefined}>
           <GoldZeichen />
           {einheit.kosten}
         </span>
       </span>
       <strong className="tr-karte-name">{einheit.name}</strong>
       <span className="tr-karte-rolle">{ROLLE_NAME[einheit.rolle]}</span>
-      {/* Der Hinweis, der aus einem Kauf eine Entscheidung macht. */}
-      {verschmilzt ? (
+      {/* Der Hinweis, der aus einem Kauf eine Entscheidung macht — und, wenn
+          nichts zu entscheiden ist, der Grund dafuer. Der Grund steht vorn:
+          Wer nicht kaufen kann, will zuerst wissen warum, und erst danach,
+          dass es verschmolzen waere.
+
+          Der Zaehler nennt `verschmelzZahl` und nicht "von 3". Hier stand
+          die 3 einmal ausgeschrieben — wer sie im Modul auf vier stellte,
+          bekam eine Karte, die "1 von 3" behauptet und bei drei Kopien nicht
+          verschmilzt. */}
+      {grund !== null ? (
+        <span className="tr-karte-marke tr-karte-marke-hindernis">
+          {grund === 'gold' ? 'Zu wenig Gold' : 'Bank voll'}
+        </span>
+      ) : verschmilzt ? (
         <span className="tr-karte-marke">verschmilzt!</span>
-      ) : fehlt === 2 ? (
-        <span className="tr-karte-marke tr-karte-marke-leise">1 von 3</span>
+      ) : fehlt < verschmelzZahl ? (
+        <span className="tr-karte-marke tr-karte-marke-leise">
+          {verschmelzZahl - fehlt} von {verschmelzZahl}
+        </span>
       ) : null}
     </button>
   );
