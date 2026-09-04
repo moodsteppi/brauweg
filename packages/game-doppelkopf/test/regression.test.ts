@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { isClubQueen } from '../src/cards.js';
-import { isTrump } from '../src/order.js';
+import { isTrump, servingSuit, strength } from '../src/order.js';
 import { makeRuleSet } from '../src/ruleset.js';
 import {
   type RoundState,
@@ -131,3 +131,180 @@ test('Armut: eine gespielte Kreuz-Dame deckt keine Partei auf', () => {
 
   assert.ok(dameGelegt, 'Der Fall ist nicht eingetreten: keine Kreuz-Dame der Kontra-Partei gelegt');
 });
+
+// --- Hochzeit ---------------------------------------------------------------
+
+/**
+ * Die Hochzeit haengt am Blatt: Ein Sitz muss beide Kreuz-Damen halten, und
+ * das ist selten (nachgemessen ueber 400 Gaben zu viert wird sie in 94 von
+ * 1600 Sitz-Gelegenheiten angeboten, knapp sechs Prozent). Deshalb wird sie
+ * hier GESTELLT statt erhofft — genau wie die Armut darueber. Die Simulation
+ * verlangt sie aus demselben Grund nicht mehr namentlich (siehe
+ * simulation.test.ts).
+ */
+const HOCHZEIT_RS = makeRuleSet({ hochzeit: true, armut: false, pflichtsolo: false });
+
+/**
+ * Baut eine Runde, in der genau der Sitz mit beiden Kreuz-Damen Hochzeit
+ * ansagt und alle anderen gesund sind. `null`, wenn der Keim keine Braut hat.
+ */
+function hochzeitAngesagt(seed: number): { state: RoundState; braut: number } | null {
+  let state = createRound(HOCHZEIT_RS, SEATS, 0, seed);
+  const braut = SEATS.find((s) => allowedVorbehalte(state, s).includes('hochzeit'));
+  if (braut === undefined) return null;
+
+  while (state.phase === 'vorbehalt') {
+    const dran = vorbehaltOffen(state)[0]!;
+    state = apply(state, {
+      type: 'vorbehalt',
+      seat: dran,
+      kind: dran === braut ? 'hochzeit' : null,
+    });
+  }
+  return state.phase === 'playing' ? { state, braut } : null;
+}
+
+/**
+ * Spielt genau einen Stich zu Ende. `schwach` legt seine schlechteste erlaubte
+ * Karte, alle anderen ihre beste — damit laesst sich steuern, WER den Stich
+ * macht, und darauf beruht die ganze Klaerung der Hochzeit.
+ */
+function spieleStich(state: RoundState, schwach: number): RoundState {
+  const vorher = state.tricks.length;
+  while (state.phase === 'playing' && state.tricks.length === vorher) {
+    const seat = currentActor(state)!;
+    const sicht = viewFor(state, seat);
+    const erste = sicht.currentTrick[0]?.card ?? null;
+    const wert = (c: (typeof sicht.legal)[number]) =>
+      strength(c, sicht.order, servingSuit(erste ?? c, sicht.order));
+    const sortiert = [...sicht.legal].sort((a, b) => wert(a) - wert(b));
+    const karte = seat === schwach ? sortiert[0]! : sortiert[sortiert.length - 1]!;
+    state = apply(state, { type: 'playCard', seat, cardId: karte.id });
+  }
+  return state;
+}
+
+/** Sucht einen Keim mit angesagter Hochzeit, den `bedingung` durchlaesst. */
+function sucheHochzeit(
+  bedingung: (state: RoundState, braut: number) => boolean,
+): { state: RoundState; braut: number } {
+  for (let seed = 0; seed < 20000; seed++) {
+    const treffer = hochzeitAngesagt(seed);
+    if (treffer === null) continue;
+    if (!bedingung(treffer.state, treffer.braut)) continue;
+    return treffer;
+  }
+  throw new Error('Kein Keim mit angesagter Hochzeit gefunden');
+}
+
+test('Hochzeit: der Klaerungsstich macht seinen Gewinner zum Partner', () => {
+  const { state: angesagt, braut } = sucheHochzeit(
+    (s, b) => spieleStich(s, b).tricks[0]!.winnerSeat !== b,
+  );
+
+  assert.equal(angesagt.gameType.kind, 'hochzeit', 'Die Ansage wurde nicht zur Hochzeit');
+  assert.equal(angesagt.hochzeitBride, braut);
+  assert.equal(
+    angesagt.hands[braut]!.filter(isClubQueen).length,
+    2,
+    'Die Braut haelt nicht beide Kreuz-Damen',
+  );
+  // Vor der Klaerung steht die Braut allein da — sie weiss selbst noch nicht,
+  // mit wem sie spielt.
+  assert.equal(angesagt.hochzeitResolved, false, 'Hochzeit schon vor dem ersten Stich geklaert');
+  assert.deepEqual(angesagt.reSeats, [braut], 'Vor der Klaerung ist nur die Braut Re');
+
+  const state = spieleStich(angesagt, braut);
+  const partner = state.tricks[0]!.winnerSeat;
+
+  assert.equal(state.hochzeitResolved, true, 'Der fremde Stich hat nicht geklaert');
+  assert.deepEqual(
+    [...state.reSeats].sort((a, b) => a - b),
+    [braut, partner].sort((a, b) => a - b),
+    'Re ist nicht Braut + Gewinner des Klaerungsstichs',
+  );
+});
+
+test('Hochzeit: klaert sich bis zur Frist niemand, spielt die Braut allein', () => {
+  // Gegenprobe zum Klaerungsstich: Gewinnt die Braut die ersten
+  // `hochzeitClarifyTricks` Stiche selbst, wird die Hochzeit zum Solo. Sie
+  // legt dafuer ihre beste Karte, alle anderen ihre schlechteste.
+  const frist = HOCHZEIT_RS.hochzeitClarifyTricks;
+  const { state: angesagt, braut } = sucheHochzeit((s, b) => {
+    let probe = s;
+    for (let i = 0; i < frist; i++) {
+      probe = spieleStich(probe, gegenspieler(b));
+      if (probe.tricks[i]!.winnerSeat !== b) return false;
+    }
+    return true;
+  });
+
+  let state = angesagt;
+  for (let i = 0; i < frist; i++) state = spieleStich(state, gegenspieler(braut));
+
+  assert.equal(state.hochzeitResolved, true, 'Nach Ablauf der Frist immer noch ungeklaert');
+  assert.deepEqual(state.reSeats, [braut], 'Die ungeklaerte Hochzeit hat einen Partner bekommen');
+});
+
+/** Irgendein Sitz, der nicht die Braut ist — als "schwacher" Spieler. */
+function gegenspieler(braut: number): number {
+  return SEATS.find((s) => s !== braut)!;
+}
+
+test('Stille Hochzeit: kein Partner, gewertet wie ein Solo', () => {
+  // Die Braut sagt NICHTS an. Dann bleibt die Spielart 'normal', aber die
+  // Parteibildung ueber die Kreuz-Damen laesst sie allein zurueck — und die
+  // Abrechnung muss sie trotzdem als Solo behandeln (dreifacher Wert gegen
+  // drei Gegner). Genau das ist der Unterschied zwischen GESPIELTER und
+  // GEWERTETER Spielart, und er faellt sonst niemandem auf.
+  const gefunden = sucheStilleHochzeit();
+  const { state, braut } = gefunden;
+
+  assert.equal(state.stilleHochzeit, true, 'Die Runde gilt nicht als stille Hochzeit');
+  assert.equal(state.gameType.kind, 'normal', 'Die stille Hochzeit ist keine angesagte Hochzeit');
+  assert.deepEqual(state.reSeats, [braut], 'Die stille Braut hat einen Partner bekommen');
+
+  const res = state.result!;
+  assert.equal(res.soloSeat, braut, 'Die stille Hochzeit wurde nicht als Solo abgerechnet');
+  for (const seat of SEATS) {
+    if (seat === braut) continue;
+    assert.equal(
+      res.scores[braut],
+      -3 * res.scores[seat]!,
+      `Sitz ${seat} bekommt nicht ein Drittel des Brautwerts mit umgekehrtem Vorzeichen`,
+    );
+  }
+});
+
+/**
+ * Sucht einen Keim, bei dem ein Sitz beide Kreuz-Damen haelt und niemand
+ * etwas ansagt, und spielt die Runde zu Ende.
+ *
+ * Verlangt wird zusaetzlich ein entschiedener Ausgang: Bei Gleichstand ist der
+ * Spielwert 0, alle bekommen 0, und die Drittel-Zusicherung waere leer.
+ */
+function sucheStilleHochzeit(): { state: RoundState; braut: number } {
+  for (let seed = 0; seed < 20000; seed++) {
+    let state = createRound(HOCHZEIT_RS, SEATS, 0, seed);
+    const braut = SEATS.find((s) => allowedVorbehalte(state, s).includes('hochzeit'));
+    if (braut === undefined) continue;
+
+    while (state.phase === 'vorbehalt') {
+      const dran = vorbehaltOffen(state)[0]!;
+      state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
+    }
+    if (state.phase !== 'playing') continue;
+
+    while (state.phase === 'playing') {
+      const seat = currentActor(state)!;
+      state = apply(state, {
+        type: 'playCard',
+        seat,
+        cardId: viewFor(state, seat).legal[0]!.id,
+      });
+    }
+    if (state.result === null || state.result.winner === null) continue;
+    return { state, braut };
+  }
+  throw new Error('Kein Keim mit entschiedener stiller Hochzeit gefunden');
+}
