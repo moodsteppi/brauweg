@@ -1,11 +1,11 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **neun Spiele laufen**: Doppelkopf, Zauberer, Skat,
-Cambio, Poker (easypoker), Mememory, Filler, Eiland und Feldherr. Diese Datei ist die
-Kurzfassung; sie steht hier, weil die ausführlichen Regeln in `docs/STAND.md`
-erst ab Zeile 55 kommen und sonst niemand sie findet.
+Kartenspiel-Plattform, **zehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr und Tafelrunde.
+Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
+in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
-Drei davon halten sich nicht an die üblichen Annahmen, und wer das nicht weiß,
+Vier davon halten sich nicht an die üblichen Annahmen, und wer das nicht weiß,
 sucht lange: **Feldherr** ist ein Echtzeitduell ohne Zugfolge (`currentActor`
 ist immer null, `legalActions` immer leer; Trophäen gibt es seit dem
 4.9.2026 wie überall, abgesichert nur durch die Doppelmeldung beider Geräte —
@@ -20,7 +20,12 @@ darf, entscheidet allein `amZug` in `packages/game-eiland/src/partie.ts`: jeder,
 dessen Zettel noch offen ist. Auch dort ist `legalActions` leer, und aus dem
 Skat-Grund: Eine Aktion ist eine MENGE von Feldern, die sich nicht aufzählen
 lässt — der Bildschirm stellt sie selbst zusammen und schickt sie als einen
-Zettel.
+Zettel. **Tafelrunde** (Auto-Battler, seit dem 4.9.2026) macht es wie Eiland —
+alle rüsten gleichzeitig, `currentActor` nennt trotzdem einen Sitz — hat aber
+noch einen eigenen Dreh: `legalActions` ist dort weder leer noch vollständig.
+Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das Verschieben nicht
+(es wäre ein Paar aus 19 Plätzen). Weil man das einer Liste nicht ansieht,
+sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und

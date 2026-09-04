@@ -28,6 +28,13 @@
  *   4. Feldherr ist kein Zugspiel. `currentActor` ist dort immer null und
  *      `legalActions` immer leer; beide Sonderfälle sind dokumentiert. Solche
  *      Module überspringt die Partieprüfung, statt an ihnen zu scheitern.
+ *   5. `legalActions` darf auch TEILWEISE gefüllt sein. Tafelrunde nennt
+ *      Kaufen, Würfeln, Aufsteigen und Verkaufen, aber nicht das Verschieben
+ *      — das wäre ein Paar aus 19 Plätzen. Anders als bei Falle 1 sieht man
+ *      das der Liste nicht an, deshalb sagt das Modul es in seiner Meta
+ *      (`legalActionsUnvollstaendig`). Geprüft bleibt der eigentliche Schutz:
+ *      `act` muss jeden unerlaubten Zug abweisen, und genau das tut diese
+ *      Schleife bei jedem einzelnen Bot-Zug.
  */
 
 import { test } from 'node:test';
@@ -109,7 +116,8 @@ function spieleDurch(spiel: Modul, seats: number, rounds: number, seed: number, 
 
     const legal = spiel.legalActions(partie, sitz);
     assert.ok(Array.isArray(legal), `${partieBezeichnung}: legalActions liefert kein Array`);
-    const clientBautAktion = legal.length === 0; // Falle 1
+    const clientBautAktion =
+      legal.length === 0 || spiel.meta.legalActionsUnvollstaendig === true; // Fallen 1 und 5
 
     const sicht = spiel.viewFor(partie, sitz);
     const aktion = spiel.botAction(sicht, STUFEN[zuege % STUFEN.length]);

@@ -1,0 +1,246 @@
+/**
+ * Die gefilterte Sicht.
+ *
+ * Was privat ist und was nicht, entscheidet sich HIER und nirgends sonst
+ * (game-api, Grundsatz 2). Drei Dinge gehoeren einem Sitz allein:
+ *
+ *   - der eigene LADEN. Er ist die Entscheidung der naechsten dreissig
+ *     Sekunden. Wer den Laden des Gegners sieht, weiss, was der gleich kauft,
+ *     und kann ihm die Karte vor der Nase wegnehmen.
+ *   - die eigene BANK. Was dort liegt, ist die halbe Verschmelzung: Zwei
+ *     Kopien auf der Bank verraten, worauf jemand hinspielt.
+ *   - das eigene GOLD. Es sagt, ob jemand gleich aufsteigt oder zehnmal neu
+ *     wuerfelt.
+ *
+ * Das BRETT dagegen ist oeffentlich, und zwar mit Absicht: Man kaempft
+ * dagegen. Es zu verbergen hiesse, es nur vor dem ehrlichen Client zu
+ * verbergen — spaetestens im Kampf sieht es ohnehin jeder, und dann waere die
+ * einzige Wirkung, dass man vorher nicht darauf reagieren kann.
+ *
+ * Der VORRAT ist ebenfalls oeffentlich. Er sagt, wie viele Kopien einer
+ * Einheit noch zu haben sind, aber nicht, WER die uebrigen haelt — mitzaehlen
+ * ist eine Faehigkeit und kein Leck.
+ */
+
+import type { Einheit, EinheitId } from './katalog.js';
+import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
+import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN } from './brett.js';
+import type { Heer, Kaempfer, Phase, TafelrundePartie, Serie } from './partie.js';
+import {
+  brettBelegung,
+  darfHandeln,
+  einkommen,
+  heerVon,
+  sieger,
+  sitzeVon,
+} from './partie.js';
+import { aufstiegKosten, feldplaetze } from './regeln.js';
+
+/** Alles, was nur dem eigenen Sitz gehoert. */
+export interface EigeneSicht {
+  readonly sitz: number;
+  readonly leben: number;
+  readonly gold: number;
+  readonly level: number;
+  readonly laden: readonly (EinheitId | null)[];
+  readonly bank: readonly (Kaempfer | null)[];
+  readonly brett: readonly (Kaempfer | null)[];
+  readonly serie: Serie;
+  readonly bereit: boolean;
+  /** Runde des Ausscheidens, sonst null. */
+  readonly ausRunde: number | null;
+  /**
+   * Wie viele Einheiten dieser Level aufstellen darf, und wie viele schon
+   * stehen.
+   *
+   * Beides steht in der Sicht, damit der Client die Grenze nicht selbst aus
+   * einer Leveltabelle rechnet — er hat sie gar nicht. Zusammen mit dem Brett
+   * genuegen die zwei Zahlen, um ein Ablegen zu verbieten, ohne eine Regel
+   * nachzubauen (siehe erlaubteZuege: `verschieben` steht bewusst nicht in
+   * den erlaubten Zuegen).
+   */
+  readonly feldplaetze: number;
+  readonly belegt: number;
+  /** Was die naechste Runde einbringt — Grundeinkommen, Zins und Serie. */
+  readonly einkommen: number;
+  readonly neuwuerfelnKosten: number;
+  /** Gold fuer den naechsten Level, null beim hoechsten. */
+  readonly aufstiegKosten: number | null;
+  /** Darf dieser Sitz gerade ueberhaupt handeln? */
+  readonly darfHandeln: boolean;
+}
+
+/** Was man von einem fremden Sitz sieht. */
+export interface FremdeSicht {
+  readonly sitz: number;
+  readonly leben: number;
+  readonly level: number;
+  readonly serie: Serie;
+  readonly brett: readonly (Kaempfer | null)[];
+  readonly bereit: boolean;
+  readonly ausRunde: number | null;
+  readonly verlassen: boolean;
+}
+
+export interface TafelrundeSicht {
+  /**
+   * Der eigene Sitz, oder null fuer Zuschauer. Steht in der Sicht und nicht
+   * nur in der Nachrichtenhuelle, weil der Bot nichts als die Sicht bekommt
+   * (`botAction` in game-api).
+   */
+  readonly ich: number | null;
+  readonly runde: number;
+  readonly rundenGrenze: number;
+  readonly phase: Phase;
+  readonly fertig: boolean;
+  readonly sieger: number | null;
+  readonly zuschauer: boolean;
+  readonly ladenPlaetze: number;
+  readonly bankPlaetze: number;
+  readonly brettFelder: number;
+  /** Reihen und Spalten der eigenen Bretthaelfte, siehe brett.ts. */
+  readonly brettReihen: number;
+  readonly brettSpalten: number;
+  /**
+   * Wie viele gleiche Einheiten verschmelzen und wie hoch es geht.
+   *
+   * Beide Zahlen stehen in der Sicht, weil der Bildschirm den FORTSCHRITT
+   * anzeigt ("zwei von drei", "dieser Kauf verschmilzt") — und dafuer die
+   * Zahl kennen muss. Sie im Client als 3 auszuschreiben hiesse, die
+   * Verschmelzregel ein zweites Mal zu haben: Wer sie hier auf vier stellte,
+   * bekaeme einen Bildschirm, der bei drei Kopien jubelt und nichts
+   * passiert (CLAUDE.md: der Client bildet keine Regel nach).
+   */
+  readonly verschmelzZahl: number;
+  readonly maxStufe: number;
+  /** Uebrige Kopien je Einheit. Oeffentlich, siehe Kopf dieser Datei. */
+  readonly vorrat: Readonly<Record<EinheitId, number>>;
+  /** Null fuer Zuschauer. */
+  readonly eigenes: EigeneSicht | null;
+  /** Alle anderen Sitze, aufsteigend. */
+  readonly gegner: readonly FremdeSicht[];
+  readonly leftSeats: readonly number[];
+  /**
+   * Der Einheiten-Katalog — nur beim ersten Ausliefern (`seit === 0`).
+   *
+   * Er ist unveraenderlich und rund zweieinhalb Kilobyte gross. Ihn bei jedem
+   * Rundruf mitzuschicken waere ueber eine Partie hinweg ein Megabyte fuer
+   * Daten, die sich nie aendern — genau der Fehler, vor dem `viewCursor` in
+   * game-api warnt. Deshalb faellt er unter dessen Zusage: Er geht bei jedem
+   * `join` heraus, also auch nach jedem Wiederverbinden, und danach nicht mehr.
+   *
+   * Der Katalog gehoert in die SICHT und nicht in den Client, weil sonst der
+   * Client die Werte kennen muesste, mit denen der Server rechnet — und dann
+   * gaebe es zwei Wahrheiten ueber jede Einheit.
+   */
+  readonly katalog?: readonly Einheit[];
+}
+
+/**
+ * Alles ausser Katalog ist unveraenderlich gross: eine Konstante.
+ *
+ * `viewCursor` liefert genau diese 1. Ein Empfaenger, der schon einmal
+ * beliefert wurde, meldet `seit = 1` und bekommt den Katalog nicht noch
+ * einmal.
+ */
+export const SICHT_MARKE = 1;
+
+function fremd(sitz: number, heer: Heer): FremdeSicht {
+  return {
+    sitz,
+    leben: heer.leben,
+    level: heer.level,
+    serie: heer.serie,
+    brett: heer.brett,
+    bereit: heer.bereit,
+    ausRunde: heer.ausRunde,
+    verlassen: heer.verlassen,
+  };
+}
+
+function grundsicht(
+  partie: TafelrundePartie,
+  ich: number | null,
+  seit: number,
+): Omit<TafelrundeSicht, 'eigenes' | 'gegner'> {
+  return {
+    ich,
+    runde: partie.runde,
+    rundenGrenze: partie.regeln.rundenGrenze,
+    phase: partie.phase,
+    fertig: partie.fertig,
+    sieger: sieger(partie),
+    zuschauer: ich === null,
+    ladenPlaetze: partie.regeln.ladenPlaetze,
+    bankPlaetze: partie.regeln.bankPlaetze,
+    brettFelder: BRETT_FELDER,
+    brettReihen: BRETT_REIHEN,
+    brettSpalten: BRETT_SPALTEN,
+    verschmelzZahl: VERSCHMELZ_ZAHL,
+    maxStufe: MAX_STUFE,
+    vorrat: partie.vorrat,
+    leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
+    ...(seit === 0 ? { katalog: KATALOG } : {}),
+  };
+}
+
+export function sichtFuer(
+  partie: TafelrundePartie,
+  sitz: number,
+  seit = 0,
+): TafelrundeSicht {
+  const heer = heerVon(partie, sitz);
+  const eigenes: EigeneSicht = {
+    sitz,
+    leben: heer.leben,
+    gold: heer.gold,
+    level: heer.level,
+    laden: heer.laden,
+    bank: heer.bank,
+    brett: heer.brett,
+    serie: heer.serie,
+    bereit: heer.bereit,
+    ausRunde: heer.ausRunde,
+    feldplaetze: feldplaetze(heer.level),
+    belegt: brettBelegung(heer),
+    einkommen: einkommen(heer, partie.regeln),
+    neuwuerfelnKosten: partie.regeln.neuwuerfelnKosten,
+    aufstiegKosten: aufstiegKosten(heer.level),
+    darfHandeln: darfHandeln(partie, sitz),
+  };
+
+  return {
+    ...grundsicht(partie, sitz, seit),
+    eigenes,
+    gegner: sitzeVon(partie)
+      .filter((s) => s !== sitz)
+      .map((s) => fremd(s, heerVon(partie, s))),
+  };
+}
+
+/**
+ * Zuschauersicht: alle Bretter, kein einziger Laden und keine Bank.
+ *
+ * Die Trennung ist nicht verhandelbar (game-api): Ein Zuschauer mit Einblick
+ * in fremde Laeden waere ein perfekter Komplize — er muesste einem Spieler nur
+ * sagen, welche Einheit beim Nachbarn gerade ausliegt.
+ */
+export function zuschauerSicht(partie: TafelrundePartie, seit = 0): TafelrundeSicht {
+  return {
+    ...grundsicht(partie, null, seit),
+    eigenes: null,
+    gegner: sitzeVon(partie).map((s) => fremd(s, heerVon(partie, s))),
+  };
+}
+
+/**
+ * Lebt der Sitz, dessen Sicht das ist?
+ *
+ * Steht als Funktion hier und nicht als Rechnung im Client: Ausgeschieden ist,
+ * wer eine Runde des Ausscheidens traegt — eine Null im Leben genuegt dafuer
+ * NICHT, denn zwischen dem Kampf und dem Rundenwechsel gibt es einen Moment,
+ * in dem beides auseinanderfaellt.
+ */
+export function eigenesLebt(sicht: TafelrundeSicht): boolean {
+  return sicht.eigenes !== null && sicht.eigenes.ausRunde === null;
+}

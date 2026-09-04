@@ -27,6 +27,10 @@ const de: Record<string, string> = {
   // kleine Insel und bleibt so stehen — "Insel" waere die Erklaerung, nicht
   // der Name.
   'game.eiland': 'Eiland',
+  // Auto-Battler mit Verschmelzen. Der Name ist deutsch und meint die Runde
+  // der Recken, die man sich zusammenkauft — kein Fremdwort und keine
+  // Anspielung auf ein anderes Spiel (Auflage aus dem Konzept).
+  'game.tafelrunde': 'Tafelrunde',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -486,6 +490,10 @@ const de: Record<string, string> = {
   'ruleset.notAnObject': 'Der Regelsatz fehlt oder ist beschädigt.',
   'ruleset.fieldMissing': 'Dem Regelsatz fehlt ein Feld.',
   'ruleset.fieldWrongType': 'Ein Feld des Regelsatzes hat den falschen Typ.',
+  // Tafelrunde meldet alle sechs Zahlen des Regelsatzes ueber DIESEN einen
+  // Schluessel, deshalb steht hier kein Zahlenbereich: Welches Feld gemeint
+  // ist, sagt der Regelsatz-Editor ueber `path`.
+  'ruleset.wertAusserhalb': 'Dieser Wert liegt außerhalb des erlaubten Bereichs.',
 };
 
 /**

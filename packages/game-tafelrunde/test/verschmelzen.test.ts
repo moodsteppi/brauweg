@@ -2,237 +2,198 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  EINHEITEN,
-  einheitVonId,
-  type Exemplar,
-  HOECHSTE_STUFE,
-  JE_VERSCHMELZUNG,
-  STUFEN_FAKTOR,
-  bausteine,
-  bausteineGesamt,
+  BRETT_FELDER,
+  DEFAULT_REGELN,
+  type EinheitId,
+  type Heer,
+  type Kaempfer,
+  type TafelrundePartie,
   type Stufe,
+  erlaubteZuege,
+  erstellePartie,
+  fuehreAus,
   verschmelze,
-  werte,
-  werteVonExemplar,
-  zaehle,
 } from '../src/index.js';
 
-/** n Exemplare derselben Einheit auf derselben Stufe. */
-function viele(einheitId: string, anzahl: number, stufe: Stufe = 1): Exemplar[] {
-  return Array.from({ length: anzahl }, () => ({ einheitId, stufe }));
+const SAAT = 'ffee0011223344556677889900aabbcc';
+
+function k(id: EinheitId, stufe: Stufe = 1): Kaempfer {
+  return { id, stufe };
 }
 
-/** Kurzschreibweise fuer die Probe: was steht am Ende da? */
-function abbild(bestand: readonly Exemplar[]): string[] {
-  return bestand.map((e) => `${e.einheitId}@${e.stufe}`);
+function leer(laenge: number): (Kaempfer | null)[] {
+  return new Array(laenge).fill(null);
 }
 
-describe('Verschmelzen: der einfache Fall', () => {
-  it('laesst zwei gleiche in Ruhe', () => {
-    const ergebnis = verschmelze(viele('moosbart', 2));
-    assert.deepEqual(abbild(ergebnis.bestand), ['moosbart@1', 'moosbart@1']);
-    assert.deepEqual(ergebnis.verschmelzungen, []);
+/** Alles, was auf Bank und Brett steht, als flache Liste. */
+function alle(...listen: readonly (readonly (Kaempfer | null)[])[]): Kaempfer[] {
+  return listen.flat().filter((x): x is Kaempfer => x !== null);
+}
+
+function mitHeer(
+  partie: TafelrundePartie,
+  sitz: number,
+  teil: Partial<Heer>,
+): TafelrundePartie {
+  return { ...partie, heere: { ...partie.heere, [sitz]: { ...partie.heere[sitz]!, ...teil } } };
+}
+
+describe('Verschmelzen', () => {
+  it('macht aus drei gleichen der Stufe 1 eine der Stufe 2', () => {
+    const bank = leer(9);
+    bank[0] = k('dorfwache');
+    bank[1] = k('dorfwache');
+    bank[2] = k('dorfwache');
+
+    const raus = verschmelze(leer(BRETT_FELDER), bank);
+    assert.equal(raus.verschmolzen, 1);
+    assert.deepEqual(alle(raus.bank, raus.brett), [k('dorfwache', 2)]);
   });
 
-  it('macht aus drei gleichen eine der naechsten Stufe', () => {
-    const ergebnis = verschmelze(viele('moosbart', 3));
-    assert.deepEqual(abbild(ergebnis.bestand), ['moosbart@2']);
-    assert.deepEqual(ergebnis.verschmelzungen, [
-      { einheitId: 'moosbart', vonStufe: 1, nachStufe: 2 },
-    ]);
+  it('verschmilzt nur, was WIRKLICH gleich ist', () => {
+    const bank = leer(9);
+    bank[0] = k('dorfwache');
+    bank[1] = k('dorfwache');
+    bank[2] = k('schildknappe');
+    // Auch verschiedene STUFEN derselben Einheit verschmelzen nicht: Sonst
+    // waere eine Stufe-2-Einheit plus zwei Karten so viel wert wie drei.
+    bank[3] = k('dorfwache', 2);
+
+    const raus = verschmelze(leer(BRETT_FELDER), bank);
+    assert.equal(raus.verschmolzen, 0);
+    assert.equal(alle(raus.bank).length, 4);
   });
 
-  it('laesst den Rest liegen: vier gleiche ergeben eine Stufe 2 und eine Stufe 1', () => {
-    const ergebnis = verschmelze(viele('wildherz', 4));
-    assert.deepEqual(abbild(ergebnis.bestand), ['wildherz@2', 'wildherz@1']);
-    assert.equal(ergebnis.verschmelzungen.length, 1);
+  it('loest die Kettenreaktion aus: neun gleiche ergeben EINE der Stufe 3', () => {
+    // Der Fall, der zaehlt. Ohne die Schleife bekaeme man drei Einheiten der
+    // Stufe 2 und muesste sie von Hand weiterverschmelzen — was gar nicht
+    // ginge, weil das automatisch passiert.
+    const bank = leer(9).map(() => k('gassendieb'));
+    const raus = verschmelze(leer(BRETT_FELDER), bank);
+    assert.equal(raus.verschmolzen, 4, 'dreimal Stufe 2, einmal Stufe 3');
+    assert.deepEqual(alle(raus.bank, raus.brett), [k('gassendieb', 3)]);
   });
 
-  it('verschmilzt verschiedene Einheiten nicht miteinander', () => {
-    const bestand: Exemplar[] = [
-      { einheitId: 'moosbart', stufe: 1 },
-      { einheitId: 'wildherz', stufe: 1 },
-      { einheitId: 'sturmrufer', stufe: 1 },
-    ];
-    const ergebnis = verschmelze(bestand);
-    assert.deepEqual(abbild(ergebnis.bestand), ['moosbart@1', 'wildherz@1', 'sturmrufer@1']);
-    assert.deepEqual(ergebnis.verschmelzungen, []);
+  it('laesst den Rest liegen, wenn es fuer die naechste Stufe nicht reicht', () => {
+    // Acht gleiche: zwei verschmelzen zu Stufe 2, zwei bleiben auf Stufe 1,
+    // und zwei Stufe-2-Einheiten sind noch keine Stufe 3.
+    const bank = leer(9);
+    for (let i = 0; i < 8; i++) bank[i] = k('irrlicht');
+    const raus = verschmelze(leer(BRETT_FELDER), bank);
+    const stand = alle(raus.bank, raus.brett);
+    assert.equal(stand.filter((e) => e.stufe === 2).length, 2);
+    assert.equal(stand.filter((e) => e.stufe === 1).length, 2);
   });
 
-  it('verschmilzt verschiedene Stufen derselben Einheit nicht miteinander', () => {
-    const bestand: Exemplar[] = [
-      { einheitId: 'moosbart', stufe: 1 },
-      { einheitId: 'moosbart', stufe: 2 },
-      { einheitId: 'moosbart', stufe: 1 },
-    ];
-    const ergebnis = verschmelze(bestand);
-    assert.deepEqual(abbild(ergebnis.bestand), ['moosbart@1', 'moosbart@2', 'moosbart@1']);
-    assert.deepEqual(ergebnis.verschmelzungen, []);
-  });
-});
+  it('geht ueber Bank UND Brett hinweg', () => {
+    // Sonst muesste man vor jedem Kauf erst aufraeumen.
+    const brett = leer(BRETT_FELDER);
+    brett[3] = k('nachtpfeil');
+    const bank = leer(9);
+    bank[0] = k('nachtpfeil');
+    bank[1] = k('nachtpfeil');
 
-describe('Verschmelzen: die Kettenreaktion', () => {
-  it('macht aus neun Stufe-1 eine Stufe-3 in vier Schritten', () => {
-    const ergebnis = verschmelze(viele('schildknappe', 9));
-    assert.deepEqual(abbild(ergebnis.bestand), ['schildknappe@3']);
-    assert.deepEqual(ergebnis.verschmelzungen, [
-      { einheitId: 'schildknappe', vonStufe: 1, nachStufe: 2 },
-      { einheitId: 'schildknappe', vonStufe: 1, nachStufe: 2 },
-      { einheitId: 'schildknappe', vonStufe: 1, nachStufe: 2 },
-      { einheitId: 'schildknappe', vonStufe: 2, nachStufe: 3 },
-    ]);
+    const raus = verschmelze(brett, bank);
+    assert.equal(raus.verschmolzen, 1);
+    // Und das Ergebnis bleibt auf dem BRETT: Wer eine Einheit aufgestellt
+    // hat, will sie danach nicht auf der Bank suchen muessen.
+    assert.deepEqual(raus.brett[3], k('nachtpfeil', 2));
+    assert.deepEqual(alle(raus.bank), []);
   });
 
-  it('macht aus drei Stufe-2 eine Stufe-3', () => {
-    const ergebnis = verschmelze(viele('frostkuender', 3, 2));
-    assert.deepEqual(abbild(ergebnis.bestand), ['frostkuender@3']);
-    assert.deepEqual(ergebnis.verschmelzungen, [
-      { einheitId: 'frostkuender', vonStufe: 2, nachStufe: 3 },
-    ]);
+  it('geht auf der Bank nicht ueber die hoechste Stufe hinaus', () => {
+    const bank = leer(9);
+    for (let i = 0; i < 3; i++) bank[i] = k('wurzelriese', 3);
+    const raus = verschmelze(leer(BRETT_FELDER), bank);
+    assert.equal(raus.verschmolzen, 0);
+    assert.equal(alle(raus.bank).length, 3);
   });
 
-  it('zieht die letzte Karte nach: zwei Stufe-2 plus drei Stufe-1 ergeben eine Stufe-3', () => {
-    // Genau der Fall am Tisch: Es liegen schon zwei Sterne-Zweier, und der
-    // dritte entsteht erst durch den gerade getaetigten Kauf.
-    const bestand = [...viele('klingentaenzer', 2, 2), ...viele('klingentaenzer', 3, 1)];
-    const ergebnis = verschmelze(bestand);
-    assert.deepEqual(abbild(ergebnis.bestand), ['klingentaenzer@3']);
-    assert.equal(ergebnis.verschmelzungen.length, 2);
-  });
-
-  it('verschmilzt ueber die hoechste Stufe hinaus nicht', () => {
-    const ergebnis = verschmelze(viele('erzwaechter', 6, HOECHSTE_STUFE));
-    assert.equal(ergebnis.bestand.length, 6);
-    assert.deepEqual(ergebnis.verschmelzungen, []);
-    assert.ok(ergebnis.bestand.every((e) => e.stufe === 3));
-  });
-
-  it('raeumt einen gemischten Bestand in einem Durchgang auf', () => {
-    const bestand = [
-      ...viele('moosbart', 9),
-      ...viele('wildherz', 4),
-      ...viele('sturmrufer', 2),
-      ...viele('frostkuender', 3, 2),
-    ];
-    const ergebnis = verschmelze(bestand);
-    const gezaehlt = zaehle(ergebnis.bestand);
-    assert.equal(gezaehlt.get('moosbart@3'), 1);
-    assert.equal(gezaehlt.get('wildherz@2'), 1);
-    assert.equal(gezaehlt.get('wildherz@1'), 1);
-    assert.equal(gezaehlt.get('sturmrufer@1'), 2);
-    assert.equal(gezaehlt.get('frostkuender@3'), 1);
-    assert.equal(ergebnis.bestand.length, 6);
+  it('ist bestimmt: dieselbe Ausgangslage ergibt immer dasselbe', () => {
+    const brett = leer(BRETT_FELDER);
+    brett[7] = k('frostweberin');
+    const bank = leer(9);
+    for (let i = 0; i < 5; i++) bank[i] = k('frostweberin');
+    assert.deepEqual(verschmelze(brett, bank), verschmelze(brett, bank));
   });
 });
 
-describe('Verschmelzen: Reihenfolge und Reinheit', () => {
-  it('setzt die verschmolzene Einheit an die Stelle der ersten von dreien', () => {
-    const bestand: Exemplar[] = [
-      { einheitId: 'wildherz', stufe: 1 },
-      { einheitId: 'moosbart', stufe: 1 },
-      { einheitId: 'moosbart', stufe: 1 },
-      { einheitId: 'sturmrufer', stufe: 1 },
-      { einheitId: 'moosbart', stufe: 1 },
+describe('Kaufen und Verschmelzen', () => {
+  const dreiZumVollen = (partie: TafelrundePartie): TafelrundePartie => {
+    // Bank randvoll: zwei Kopien der Zieleinheit und sieben verschiedene
+    // andere, damit nichts unbeabsichtigt mitverschmilzt.
+    const bank: (Kaempfer | null)[] = [
+      k('dorfwache'),
+      k('dorfwache'),
+      k('schildknappe'),
+      k('astschuetze'),
+      k('steinschleuderer'),
+      k('funkenlehrling'),
+      k('irrlicht'),
+      k('gassendieb'),
+      k('moosheiler'),
     ];
-    const ergebnis = verschmelze(bestand);
-    assert.deepEqual(abbild(ergebnis.bestand), ['wildherz@1', 'moosbart@2', 'sturmrufer@1']);
+    const laden: (EinheitId | null)[] = ['dorfwache', null, null, null, null];
+    return mitHeer(partie, 0, { bank, laden, gold: 10 });
+  };
+
+  it('erlaubt bei voller Bank den Kauf, der sofort verschmilzt', () => {
+    // Ohne diese Ausnahme stuende man mit vollem Beutel vor der dritten
+    // Kopie und koennte sie nicht holen, obwohl sie nirgends Platz braucht.
+    const partie = dreiZumVollen(erstellePartie(DEFAULT_REGELN, [0, 1], SAAT));
+    assert.ok(
+      erlaubteZuege(partie, 0).some((z) => z.typ === 'kaufen' && z.platz === 0),
+      'Der Kauf steht nicht in den erlaubten Zuegen',
+    );
+
+    const nachher = fuehreAus(partie, 0, { typ: 'kaufen', platz: 0 });
+    const heer = nachher.heere[0]!;
+    assert.equal(heer.bank.length, DEFAULT_REGELN.bankPlaetze);
+    assert.equal(alle(heer.bank).filter((e) => e.id === 'dorfwache').length, 1);
+    assert.deepEqual(
+      alle(heer.bank).find((e) => e.id === 'dorfwache'),
+      k('dorfwache', 2),
+    );
+    assert.equal(heer.gold, 9, 'Eine Dorfwache kostet 1 Gold');
   });
 
-  it('veraendert den uebergebenen Bestand nicht', () => {
-    const bestand = viele('moosbart', 9);
-    const vorher = abbild(bestand);
-    verschmelze(bestand);
-    assert.deepEqual(abbild(bestand), vorher);
-    assert.equal(bestand.length, 9);
-  });
-
-  it('gibt bei nichts zu tun ein neues, gleiches Feld zurueck', () => {
-    const bestand = viele('moosbart', 2);
-    const ergebnis = verschmelze(bestand);
-    assert.notEqual(ergebnis.bestand, bestand);
-    assert.deepEqual(abbild(ergebnis.bestand), abbild(bestand));
-  });
-
-  it('liefert bei gleichem Bestand zweimal dasselbe Ergebnis', () => {
-    // Grundsatz 1 aus game-api: Gleicher Zustand, gleiches Ergebnis. Hier ohne
-    // Saat pruefbar, weil das Verschmelzen selbst gar nicht wuerfelt.
-    const bestand = [
-      ...viele('moosbart', 5),
-      ...viele('wildherz', 3),
-      ...viele('moosbart', 4),
+  it('verbietet bei voller Bank den Kauf, der nichts verschmilzt', () => {
+    const roh = erstellePartie(DEFAULT_REGELN, [0, 1], SAAT);
+    const bank: (Kaempfer | null)[] = [
+      k('dorfwache'),
+      k('schildknappe'),
+      k('astschuetze'),
+      k('steinschleuderer'),
+      k('funkenlehrling'),
+      k('irrlicht'),
+      k('gassendieb'),
+      k('moosheiler'),
+      k('grimmbart'),
     ];
-    const eins = verschmelze(bestand);
-    const zwei = verschmelze(bestand);
-    assert.deepEqual(abbild(eins.bestand), abbild(zwei.bestand));
-    assert.deepEqual(eins.verschmelzungen, zwei.verschmelzungen);
+    const partie = mitHeer(roh, 0, {
+      bank,
+      laden: ['hainwaechterin', null, null, null, null],
+      gold: 10,
+    });
+
+    assert.ok(!erlaubteZuege(partie, 0).some((z) => z.typ === 'kaufen'));
+    assert.throws(() => fuehreAus(partie, 0, { typ: 'kaufen', platz: 0 }), /Platz/);
   });
 
-  it('ist stabil, wenn man es zweimal hintereinander laufen laesst', () => {
-    const einmal = verschmelze(viele('moosbart', 9));
-    const zweimal = verschmelze(einmal.bestand);
-    assert.deepEqual(abbild(zweimal.bestand), abbild(einmal.bestand));
-    assert.deepEqual(zweimal.verschmelzungen, []);
-  });
-});
-
-describe('Verschmelzen: Bausteine', () => {
-  it('rechnet eine Stufe in Stufe-1-Karten um', () => {
-    assert.equal(bausteine(1), 1);
-    assert.equal(bausteine(2), JE_VERSCHMELZUNG);
-    assert.equal(bausteine(3), JE_VERSCHMELZUNG * JE_VERSCHMELZUNG);
+  it('verbietet den Kauf ohne genug Gold', () => {
+    const roh = erstellePartie(DEFAULT_REGELN, [0, 1], SAAT);
+    const partie = mitHeer(roh, 0, {
+      laden: ['sturmrufer', null, null, null, null],
+      gold: 2,
+    });
+    assert.ok(!erlaubteZuege(partie, 0).some((z) => z.typ === 'kaufen'));
+    assert.throws(() => fuehreAus(partie, 0, { typ: 'kaufen', platz: 0 }), /Gold/);
   });
 
-  it('haelt die Zahl der Karten ueber das Verschmelzen hinweg konstant', () => {
-    // Verschmelzen darf nie Karten erzeugen oder vernichten - sonst stimmt
-    // die Vorratsrechnung nicht mehr.
-    const bestand = [...viele('moosbart', 9), ...viele('wildherz', 7), ...viele('sturmrufer', 3, 2)];
-    const ergebnis = verschmelze(bestand);
-    assert.equal(bausteineGesamt(ergebnis.bestand), bausteineGesamt(bestand));
-    assert.equal(bausteineGesamt(bestand), 9 + 7 + 9);
-  });
-});
-
-describe('Werte je Stufe', () => {
-  it('skaliert Leben und Angriff nicht linear', () => {
-    assert.equal(STUFEN_FAKTOR[1], 1);
-    assert.equal(STUFEN_FAKTOR[2], 1.8);
-    assert.equal(STUFEN_FAKTOR[3], 3.2);
-
-    const moosbart = einheitVonId('moosbart');
-    assert.equal(werte(moosbart, 1).leben, 550);
-    assert.equal(werte(moosbart, 2).leben, 990); // 550 * 1,8
-    assert.equal(werte(moosbart, 3).leben, 1760); // 550 * 3,2
-    assert.equal(werte(moosbart, 2).angriff, 72); // 40 * 1,8
-    assert.equal(werte(moosbart, 3).angriff, 128); // 40 * 3,2
-  });
-
-  it('laesst Tempo, Reichweite und Ruestung unveraendert', () => {
-    const erzwaechter = einheitVonId('erzwaechter');
-    for (const stufe of [1, 2, 3] as const) {
-      const w = werte(erzwaechter, stufe);
-      assert.equal(w.tempo, erzwaechter.tempo);
-      assert.equal(w.reichweite, erzwaechter.reichweite);
-      assert.equal(w.ruestung, erzwaechter.ruestung);
-    }
-  });
-
-  it('liefert fuer jede Einheit auf jeder Stufe ganze Zahlen', () => {
-    for (const einheit of EINHEITEN) {
-      for (const stufe of [1, 2, 3] as const) {
-        const w = werte(einheit, stufe);
-        assert.ok(Number.isInteger(w.leben), `${einheit.id}@${stufe}: Leben ${w.leben}`);
-        assert.ok(Number.isInteger(w.angriff), `${einheit.id}@${stufe}: Angriff ${w.angriff}`);
-      }
-    }
-  });
-
-  it('kommt auch ueber ein Exemplar an die Werte', () => {
-    const direkt = werte(einheitVonId('sturmrufer'), 2);
-    const ueberExemplar = werteVonExemplar({ einheitId: 'sturmrufer', stufe: 2 });
-    assert.deepEqual(ueberExemplar, direkt);
-  });
-
-  it('wirft bei einer unbekannten Kennung', () => {
-    assert.throws(() => werteVonExemplar({ einheitId: 'gibtsnicht', stufe: 1 }), /Unbekannte Einheit/);
+  it('nimmt keinen leeren Ladenplatz', () => {
+    const roh = erstellePartie(DEFAULT_REGELN, [0, 1], SAAT);
+    const partie = mitHeer(roh, 0, { laden: [null, null, null, null, null], gold: 10 });
+    assert.throws(() => fuehreAus(partie, 0, { typ: 'kaufen', platz: 0 }), /leer/);
+    assert.throws(() => fuehreAus(partie, 0, { typ: 'kaufen', platz: 99 }), /gibt es nicht/);
   });
 });

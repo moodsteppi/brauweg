@@ -206,6 +206,7 @@ const gameIdSchema = z.enum([
   'easypoker',
   'filler',
   'eiland',
+  'tafelrunde',
   'skat',
   'schafkopf',
   'romme',

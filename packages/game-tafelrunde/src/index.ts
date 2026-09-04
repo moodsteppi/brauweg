@@ -1,17 +1,99 @@
-/**
- * Tafelrunde — Auto-Battler mit Verschmelzen.
- *
- * ACHTUNG: Dieses Paket ist noch KEIN `GameModule`. Es liefert bisher den
- * Regelkern der Vorbereitungsphase — Katalog, Verschmelzen, Vorrat, Laden,
- * Gold und Brett; Partie, Sicht, Bot, Kampf und Adapter sind eigene Aufgaben.
- * Solange hier kein Modul steht, kennt der Server das Spiel auch nicht — die
- * Registrierung erfolgt bewusst erst, wenn eine Partie ueberhaupt spielbar
- * ist, damit in der Lobby kein Tisch auftaucht, den niemand eroeffnen kann.
- */
-
-export * from './einheiten.js';
-export * from './verschmelzen.js';
-export * from './vorrat.js';
-export * from './gold.js';
-export * from './brett.js';
-export * from './laden.js';
+export { tafelrunde } from './adapter.js';
+export {
+  type Einheit,
+  type EinheitId,
+  type Grundwerte,
+  type Kosten,
+  type Marke,
+  type Rolle,
+  type Stufe,
+  KATALOG,
+  KOSTENSTUFEN,
+  MARKEN,
+  MAX_STUFE,
+  STUFEN_FAKTOR,
+  VERSCHMELZ_ZAHL,
+  VORRAT_JE_KOSTEN,
+  einheit,
+  einheitenMitKosten,
+  gesamtkosten,
+  istEinheitId,
+  kartenZahl,
+  werteFuer,
+} from './katalog.js';
+export {
+  type Hexfeld,
+  BRETT_FELDER,
+  BRETT_REIHEN,
+  BRETT_SPALTEN,
+  hexfeld,
+  hexNachbarn,
+  istBrettplatz,
+  platzNummer,
+} from './brett.js';
+export {
+  type Levelstufe,
+  type TafelrundeRegeln,
+  DEFAULT_REGELN,
+  LEVEL_TABELLE,
+  MAX_LEVEL,
+  SEAT_COUNTS,
+  START_LEVEL,
+  ZINS_MAX,
+  ZINS_SCHRITT,
+  aufstiegKosten,
+  feldplaetze,
+  ladenChancen,
+  levelstufe,
+  pruefeRegeln,
+  serienBonus,
+  zins,
+} from './regeln.js';
+export {
+  type Bereich,
+  type Heer,
+  type Kaempfer,
+  type Kampfausgang,
+  type Ort,
+  type Phase,
+  type TafelrundeAktion,
+  type TafelrundePartie,
+  type Saat,
+  type Serie,
+  type Serienart,
+  KEINE_SERIE,
+  amZug,
+  baueZufall,
+  brettBelegung,
+  darfHandeln,
+  einkommen,
+  erlaubteZuege,
+  erstellePartie,
+  fuehreAus,
+  heerVon,
+  istKaempfer,
+  ladenSaat,
+  lebendeSitze,
+  lebt,
+  markiereVerlassen,
+  ohneKampfWeiter,
+  platzierungen,
+  sieger,
+  sitzeVon,
+  verschmelze,
+  vollerVorrat,
+  vorratSumme,
+  wendeKampfausgang,
+  zieheKarte,
+  zieheLaden,
+} from './partie.js';
+export {
+  type EigeneSicht,
+  type FremdeSicht,
+  type TafelrundeSicht,
+  SICHT_MARKE,
+  eigenesLebt,
+  sichtFuer,
+  zuschauerSicht,
+} from './sicht.js';
+export { botZug } from './bot.js';
