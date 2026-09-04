@@ -319,18 +319,116 @@ describe('Build: Sicht', () => {
 });
 
 describe('Build: Eine ganze Partie', () => {
-  it('kommt mit Bots zu Ende und verteilt alle Felder', () => {
+  it('kommt mit Bots zu Ende, und die Bots mauern dabei', () => {
     let partie = neu();
     let schritte = 0;
+    let waende = 0;
     while (!partie.fertig && schritte < 500) {
       const sitz = partie.dran;
-      partie = fuehreAus(partie, sitz, botZug(sichtFuer(partie, sitz)));
+      const sicht = sichtFuer(partie, sitz);
+      const zug = botZug(sicht);
+      if (zug.typ === 'barriere') {
+        waende++;
+        // Jede Wand des Bots stammt aus der Liste der Sicht — sonst koennte
+        // der Server sie abweisen, und der Tisch hinge (plattform-invarianten).
+        assert.ok(
+          sicht.barrierenMoeglich?.some(([a, b]) => kante(a, b) === kante(zug.von, zug.nach)),
+          `Wand ${zug.von}:${zug.nach} steht nicht in barrierenMoeglich`,
+        );
+      }
+      partie = fuehreAus(partie, sitz, zug);
       schritte++;
     }
     assert.equal(partie.fertig, true);
-    // Der Bot mauert nicht, also bleibt keine Flaeche hinter einer Wand
-    // liegen: Alle 56 Felder gehen an jemanden.
+    assert.ok(waende > 0, 'In einer ganzen Build-Partie hat kein Bot gemauert');
+    // Seit der Bot mauert, kann eine Flaeche fuer BEIDE hinter Waenden liegen
+    // bleiben — mehr als 56 Felder gehen aber nie weg, und leer bleibt keiner.
     const gesamt = (partie.punkte[0] ?? 0) + (partie.punkte[1] ?? 0);
-    assert.equal(gesamt, DEFAULT_REGELN.spalten * DEFAULT_REGELN.zeilen);
+    assert.ok(gesamt <= DEFAULT_REGELN.spalten * DEFAULT_REGELN.zeilen);
+    assert.ok((partie.punkte[0] ?? 0) > 0 && (partie.punkte[1] ?? 0) > 0);
+  });
+
+  it('mauert in jeder von mehreren Saaten mindestens einmal', () => {
+    // Eine einzelne Saat kann Glueck haben. Ueber fuenf Saaten muss die
+    // Wandrechnung in jeder Partie einmal anschlagen, sonst ist die Schwelle
+    // zu hoch und das Feature nur auf dem Papier da.
+    for (const saat of ['1f3a5c7e9b0d2f4a6c8e0b1d3f5a7c9e', SAAT, '00112233445566778899aabbccddeeff']) {
+      let partie = erstellePartie(BUILD, [0, 1], saat);
+      let waende = 0;
+      let schritte = 0;
+      while (!partie.fertig && schritte < 500) {
+        const zug = botZug(sichtFuer(partie, partie.dran));
+        if (zug.typ === 'barriere') waende++;
+        partie = fuehreAus(partie, partie.dran, zug);
+        schritte++;
+      }
+      assert.equal(partie.fertig, true, `Saat ${saat} endet nicht`);
+      assert.ok(waende > 0, `Saat ${saat}: keine Wand gebaut`);
+    }
+  });
+});
+
+describe('Build: Der Bot und die Wand', () => {
+  const REGELN = { spalten: 4, zeilen: 3, farben: 6, variante: 'build', barrieren: 5 } as const;
+
+  it('riegelt dem Gegner die grosse Flaeche ab, wenn ihn das nichts kostet', () => {
+    const partie = erstellePartie(REGELN, [0, 1], 1);
+    const gelegt = {
+      ...partie,
+      //  Zeile 0: 2 4 2 3   <- Ecke 3 gehoert Sitz 1 (Farbe 3)
+      //  Zeile 1: 4 1 1 1
+      //  Zeile 2: 0 1 1 1   <- Ecke 8 gehoert Sitz 0 (Farbe 0)
+      //
+      // Die Einser-Flaeche (5, 6, 7, 9, 10, 11) haengt am Gegner nur ueber
+      // die Kante 3:7 — mit der Wand davor bekommt er im naechsten Zug ein
+      // Feld statt sechs, und mich kostet sie nichts (ich komme ueber 8:9).
+      feld: [2, 4, 2, 3, 4, 1, 1, 1, 0, 1, 1, 1],
+      besitzer: [null, null, null, 1, null, null, null, null, 0, null, null, null],
+      farbe: { 0: 0, 1: 3 },
+      punkte: { 0: 1, 1: 1 },
+      dran: 0,
+    };
+    const zug = botZug(sichtFuer(gelegt, 0));
+    assert.deepEqual(zug, { typ: 'barriere', von: 3, nach: 7 });
+
+    // Danach faerbt er trotzdem: Die Wand hat den Zug nicht beendet, und in
+    // diesem Zug baut er keine zweite (die Sicht nennt dann keine Kandidaten).
+    const gebaut = fuehreAus(gelegt, 0, zug);
+    assert.equal(gebaut.dran, 0);
+    const danach = botZug(sichtFuer(gebaut, 0));
+    assert.deepEqual(danach, { typ: 'faerben', farbe: 1 });
+  });
+
+  it('laesst die Waende liegen, wenn keine etwas bewegt', () => {
+    const partie = erstellePartie(REGELN, [0, 1], 1);
+    const gelegt = {
+      ...partie,
+      //  Zeile 0: 2 4 2 3
+      //  Zeile 1: 1 2 4 2
+      //  Zeile 2: 0 1 2 4
+      // Lauter Einzelfelder: Keine Wand nimmt jemandem mehr als ein Feld,
+      // und ein halbes Feld liegt unter der Schwelle.
+      feld: [2, 4, 2, 3, 1, 2, 4, 2, 0, 1, 2, 4],
+      besitzer: [null, null, null, 1, null, null, null, null, 0, null, null, null],
+      farbe: { 0: 0, 1: 3 },
+      punkte: { 0: 1, 1: 1 },
+      dran: 0,
+    };
+    const sicht = sichtFuer(gelegt, 0);
+    assert.ok((sicht.barrierenMoeglich?.length ?? 0) > 0, 'die Sicht bietet Waende an');
+    assert.equal(botZug(sicht).typ, 'faerben');
+  });
+
+  it('mauert ausserhalb der Spielart Build nie', () => {
+    for (const variante of ['nebel', 'klar'] as const) {
+      let partie = erstellePartie({ ...DEFAULT_REGELN, variante }, [0, 1], SAAT);
+      let schritte = 0;
+      while (!partie.fertig && schritte < 500) {
+        const zug = botZug(sichtFuer(partie, partie.dran));
+        assert.equal(zug.typ, 'faerben', `${variante}: der Bot wollte mauern`);
+        partie = fuehreAus(partie, partie.dran, zug);
+        schritte++;
+      }
+    }
   });
 });
