@@ -31,6 +31,34 @@ export function gebietsfarbe(sitz: number): string {
 }
 
 /**
+ * Zwei `#rrggbb`-Farben zur Mitte gemischt, kanalweise.
+ *
+ * Kein `color-mix()`: Das Ergebnis geht als Inline-Stil in einen Verlauf,
+ * und dort muss es ein fertiger Wert sein — ein Verlauf mit `color-mix`
+ * darin faellt auf aelteren Safari-Staenden lautlos aus, und dann hat der
+ * Einschlag gar keine Farbe.
+ */
+export function mischfarbe(a: string, b: string): string {
+  const kanal = (hex: string, i: number): number => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) || 0;
+  const hex2 = (n: number): string => Math.round(n).toString(16).padStart(2, '0');
+  return `#${[0, 1, 2].map((i) => hex2((kanal(a, i) + kanal(b, i)) / 2)).join('')}`;
+}
+
+/**
+ * Die Farbe eines Einschlags: die Gebietsfarbe dessen, der den Einsatz
+ * gezahlt hat — zahlen beide, die Mischung. Das ist die Auskunft am Feld:
+ * einfarbig heisst „einer hat gesetzt und sicher gewonnen", gemischt heisst
+ * „beide haben gesetzt, die Muenze hat entschieden". Ohne Zahler gibt es
+ * keinen Einschlag; Weiss ist nur der Rueckfall, damit nie ein leerer
+ * Farbwert im Stil landet.
+ */
+export function kampffarbe(einsatz: readonly number[]): string {
+  const [erster, ...weitere] = einsatz;
+  if (erster === undefined) return '#ffffff';
+  return weitere.reduce((bisher, sitz) => mischfarbe(bisher, gebietsfarbe(sitz)), gebietsfarbe(erster));
+}
+
+/**
  * Die Tönung eines gewählten Feldes: die eigene Gebietsfarbe, halb
  * durchsichtig über dem Gelände.
  *

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
-import { GRAUTOENE, auswahlton, gebietsfarbe } from '../minispiele/eiland/farben';
+import { GRAUTOENE, auswahlton, gebietsfarbe, kampffarbe } from '../minispiele/eiland/farben';
 import {
   type Modus,
   type Punkt,
@@ -117,6 +117,19 @@ const BERG = 2;
 const FLUG_MS = 340;
 const FLUG_TAKT_MS = 150;
 
+/**
+ * Der Einschlag, wenn der Einsatz landet (04.09.2026, Nutzerwunsch: laenger
+ * und mit Funken): ein Schein und Funken in der Farbe dessen, der gezahlt
+ * hat — zahlen beide, tragen die Funken beide Farben und der Schein die
+ * Mischung. So liest man am Feld ab, WER hier ein Feld verwettet hat, ohne
+ * die Fussleiste zu suchen. Deutlich laenger als der Flug, weil er das
+ * Ergebnis ist und nicht der Weg dorthin; die Kampfmarke im Stylesheet
+ * (`ei-kampf`) haelt genauso lange durch.
+ */
+const SCHEIN_MS = 900;
+const FUNKEN_MS = 1100;
+const FUNKEN_JE_FARBE = 9;
+
 export function Eiland({
   startTisch,
   onBack,
@@ -135,8 +148,13 @@ export function Eiland({
   /**
    * Spielart fuer den naechsten Tisch. Nur eine Vorauswahl fuers Menue — am
    * Tisch gilt, was in dessen Regelsatz steht (siehe regeln.ts).
+   *
+   * Vorgabe ist seit dem 04.09.2026 die offene Karte (Nutzerwunsch): Sie ist
+   * die Spielart, die man ohne Erklaerung versteht, der Nebel die fuer den
+   * zweiten Abend. Der Regelsatz im Modul behaelt seine eigene Vorgabe —
+   * dieser Bildschirm schickt die Spielart ohnehin immer mit.
    */
-  const [variante, setVariante] = useState<EilandVariante>('nebel');
+  const [variante, setVariante] = useState<EilandVariante>('klar');
 
   const tisch = useTable<EilandSicht>(tischId, 'eiland');
   const sicht = tisch.view?.view ?? null;
@@ -398,19 +416,21 @@ export function Eiland({
             waere kein Knopf, sondern ein Schummelzettel.
           */}
           <div className="ei-schalter">
-            <button
-              type="button"
-              data-an={variante === 'nebel' ? '' : undefined}
-              onClick={() => setVariante('nebel')}
-            >
-              Im Nebel
-            </button>
+            {/* Die offene Karte links, weil sie die Vorgabe ist — der Reiter
+                sitzt beim Oeffnen dort, wo der Blick zuerst hinfaellt. */}
             <button
               type="button"
               data-an={variante === 'klar' ? '' : undefined}
               onClick={() => setVariante('klar')}
             >
               Offene Karte
+            </button>
+            <button
+              type="button"
+              data-an={variante === 'nebel' ? '' : undefined}
+              onClick={() => setVariante('nebel')}
+            >
+              Im Nebel
             </button>
             <p className="ei-schalter-text">
               {variante === 'nebel'
@@ -739,9 +759,10 @@ function Karte({
   const kaempfe = useMemo(() => {
     const karte = new Map<number, { sieger: number; verzoegerung: number }>();
     (sicht.letzte?.kaempfe ?? []).forEach((kampf, i) => {
-      // Die Marke erscheint, wenn der Einsatz landet — ohne Einsatz sofort im
+      // Die Marke erscheint, wenn der LETZTE Einsatz landet (der zweite
+      // fliegt 60 ms nach dem ersten, siehe unten) — ohne Einsatz sofort im
       // Takt, damit die Reihenfolge der Entscheidung auch ohne Flug lesbar ist.
-      const landung = kampf.einsatz.length > 0 ? FLUG_MS * 0.8 : 0;
+      const landung = kampf.einsatz.length > 0 ? (kampf.einsatz.length - 1) * 60 + FLUG_MS * 0.8 : 0;
       karte.set(kampf.platz, { sieger: kampf.sieger, verzoegerung: i * FLUG_TAKT_MS + landung });
     });
     return karte;
@@ -779,10 +800,30 @@ function Karte({
     };
     const gestartet: Animation[] = [];
     const wecker: number[] = [];
+    /**
+     * Ein Element auf die Buehne, das nach seiner Animation von selbst geht.
+     *
+     * Im Hintergrund-Tab laeuft die Animation nicht an und `onfinish` kommt
+     * nie — das Element bliebe als Fleck liegen, bis die naechste Runde
+     * aufraeumt. Deshalb ein Wecker als zweiter Weg hinaus.
+     */
+    const auftritt = (
+      element: HTMLElement,
+      bilder: Keyframe[],
+      takt: { duration: number; delay: number; easing: string },
+    ): void => {
+      buehne.appendChild(element);
+      const lauf = element.animate(bilder, { ...takt, fill: 'backwards' });
+      lauf.onfinish = () => element.remove();
+      wecker.push(window.setTimeout(() => element.remove(), takt.delay + takt.duration + 250));
+      gestartet.push(lauf);
+    };
     letzte.kaempfe.forEach((kampf, i) => {
       const feld = karte.children[gedreht ? plaetze - 1 - kampf.platz : kampf.platz];
       if (!(feld instanceof HTMLElement)) return;
       const ziel = feld.getBoundingClientRect();
+      const x1 = ziel.left - wurzel.left;
+      const y1 = ziel.top - wurzel.top;
       kampf.einsatz.forEach((sitz, k) => {
         const von = startVon(sitz);
         if (!von) return;
@@ -793,11 +834,9 @@ function Karte({
         kachel.style.background = gebietsfarbe(sitz);
         const x0 = von.left + von.width / 2 - ziel.width / 2 - wurzel.left;
         const y0 = von.top + von.height / 2 - ziel.height / 2 - wurzel.top;
-        const x1 = ziel.left - wurzel.left;
-        const y1 = ziel.top - wurzel.top;
         kachel.style.transform = `translate(${x0}px, ${y0}px) scale(0.7)`;
-        buehne.appendChild(kachel);
-        const flug = kachel.animate(
+        auftritt(
+          kachel,
           [
             { transform: `translate(${x0}px, ${y0}px) scale(0.7)`, opacity: 0.95 },
             { transform: `translate(${x1}px, ${y1}px) scale(1)`, opacity: 1, offset: 0.8 },
@@ -809,16 +848,79 @@ function Karte({
             // Kacheln, die zugleich landen, saehen aus wie eine.
             delay: i * FLUG_TAKT_MS + k * 60,
             easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
-            fill: 'backwards',
           },
         );
-        flug.onfinish = () => kachel.remove();
-        // Im Hintergrund-Tab laeuft die Animation nicht an und `onfinish`
-        // kommt nie — die Kachel bliebe als Fleck liegen, bis die naechste
-        // Runde aufraeumt. Deshalb ein Wecker als zweiter Weg hinaus.
-        wecker.push(window.setTimeout(() => kachel.remove(), i * FLUG_TAKT_MS + k * 60 + FLUG_MS + 250));
-        gestartet.push(flug);
       });
+      if (kampf.einsatz.length === 0) return;
+
+      /*
+       * Der Einschlag, sobald der letzte Einsatz gelandet ist: erst der
+       * Schein in der Kampffarbe (bei zwei Zahlern die Mischung — DAS ist der
+       * Hinweis, dass beide gesetzt haben), darueber die Funken, abwechselnd
+       * in den Farben der Zahler. Alles beginnt unsichtbar (`opacity: 0` im
+       * ersten Bild): `fill: backwards` zeigt sonst das erste Bild schon
+       * waehrend der Wartezeit, und dann laege der Einschlag auf dem Feld,
+       * bevor die Kachel ankommt.
+       */
+      const landung = i * FLUG_TAKT_MS + (kampf.einsatz.length - 1) * 60 + FLUG_MS * 0.8;
+      const farben = kampf.einsatz.map(gebietsfarbe);
+      const mitteX = x1 + ziel.width / 2;
+      const mitteY = y1 + ziel.height / 2;
+
+      const schein = document.createElement('span');
+      schein.className = 'ei-kampfschein';
+      schein.style.width = `${ziel.width}px`;
+      schein.style.height = `${ziel.height}px`;
+      schein.style.background = `radial-gradient(closest-side, ${kampffarbe(kampf.einsatz)}, transparent)`;
+      schein.style.transform = `translate(${x1}px, ${y1}px) scale(0.5)`;
+      auftritt(
+        schein,
+        [
+          { transform: `translate(${x1}px, ${y1}px) scale(0.5)`, opacity: 0 },
+          { transform: `translate(${x1}px, ${y1}px) scale(1.1)`, opacity: 0.95, offset: 0.12 },
+          { transform: `translate(${x1}px, ${y1}px) scale(2.8)`, opacity: 0 },
+        ],
+        { duration: SCHEIN_MS, delay: landung, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+      );
+
+      const anzahl = FUNKEN_JE_FARBE * farben.length;
+      for (let f = 0; f < anzahl; f++) {
+        const funke = document.createElement('span');
+        funke.className = 'ei-funke';
+        const groesse = ziel.width * (0.16 + Math.random() * 0.14);
+        funke.style.width = `${groesse}px`;
+        funke.style.height = `${groesse}px`;
+        funke.style.background = farben[f % farben.length] ?? farben[0]!;
+        // Gleichmaessig um den Kreis verteilt, mit etwas Streuung — sonst
+        // saehe jeder Einschlag gleich aus. Am Ende sinken sie ein Stueck,
+        // wie Splitter, die zu Boden gehen.
+        const winkel = (f / anzahl) * Math.PI * 2 + Math.random() * 0.6;
+        const weite = ziel.width * (0.8 + Math.random() * 1.1);
+        const sx = mitteX - groesse / 2;
+        const sy = mitteY - groesse / 2;
+        const ex = sx + Math.cos(winkel) * weite;
+        const ey = sy + Math.sin(winkel) * weite + ziel.height * 0.3;
+        const drehung = Math.round((Math.random() - 0.5) * 540);
+        funke.style.transform = `translate(${sx}px, ${sy}px)`;
+        auftritt(
+          funke,
+          [
+            { transform: `translate(${sx}px, ${sy}px) rotate(0deg) scale(1)`, opacity: 0 },
+            { transform: `translate(${sx}px, ${sy}px) rotate(0deg) scale(1.15)`, opacity: 1, offset: 0.06 },
+            {
+              transform: `translate(${(sx + ex) / 2}px, ${(sy + ey) / 2 - ziel.height * 0.25}px) rotate(${drehung / 2}deg) scale(0.95)`,
+              opacity: 1,
+              offset: 0.45,
+            },
+            { transform: `translate(${ex}px, ${ey}px) rotate(${drehung}deg) scale(0.2)`, opacity: 0 },
+          ],
+          {
+            duration: FUNKEN_MS + Math.random() * 300,
+            delay: landung + Math.random() * 80,
+            easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)',
+          },
+        );
+      }
     });
     return () => {
       for (const flug of gestartet) flug.cancel();
