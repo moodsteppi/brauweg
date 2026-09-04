@@ -22,6 +22,7 @@ vi.mock('../useTable', () => ({
   useTable: () => tischStand,
 }));
 
+import { FIGUREN, UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import { Tafelrunde } from './Tafelrunde';
 
 const KATALOG = [
@@ -620,6 +621,113 @@ describe('Bereit und Kampfpause', () => {
     expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
     // Die Bretter der Ruestkammer sind waehrenddessen weg — die Arena steht an ihrer Stelle.
     expect(document.querySelector('.tr-bretter')).toBeNull();
+  });
+});
+
+describe('Figuren und Untergrund', () => {
+  /*
+   * Die 22 CC0-Figuren liegen unter public/tafelrunde/, die Zuordnung steht
+   * in minispiele/tafelrunde/figuren.ts. Geprueft wird hier NICHT, wie sie
+   * aussehen, sondern dass ueberall dieselbe Quelle gilt: Ein Bildschirm, der
+   * den Pfad irgendwo selbst zusammensetzt, liefert beim ersten Umbenennen
+   * einen 404 statt eines Rueckfalls.
+   */
+  it('zeigt im Laden die Figur der ausliegenden Einheit', () => {
+    zeige();
+    const laden = screen.getByRole('group', { name: 'Laden' });
+    expect(within(laden).getByAltText('Dorfwache')).toHaveAttribute('src', FIGUREN.dorfwache);
+    expect(within(laden).getByAltText('Astschütze')).toHaveAttribute('src', FIGUREN.astschuetze);
+  });
+
+  it('zeigt auf der Bank die Figur — und daneben weiter die Stufe', () => {
+    stelle(
+      sicht({
+        eigenes: {
+          bank: [{ id: 'dorfwache', stufe: 2 }, ...Array.from({ length: 8 }, () => null)],
+        },
+      }),
+    );
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    expect(within(bank).getByAltText('Dorfwache')).toHaveAttribute('src', FIGUREN.dorfwache);
+    // Die Stufe steht NEBEN dem Bild und nicht an seiner Stelle.
+    expect(within(bank).getByText('★★')).toBeInTheDocument();
+  });
+
+  it('zeigt im Feld die Figur und legt Holz unter das Brett', () => {
+    stelle(
+      sicht({
+        eigenes: {
+          belegt: 1,
+          brett: [{ id: 'astschuetze', stufe: 1 }, ...Array.from({ length: 9 }, () => null)],
+        },
+      }),
+    );
+    const { container } = render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
+    const bretter = container.querySelectorAll('.tr-brett');
+    // Zwei Bretter: das gegnerische oben, das eigene unten. Beide auf Holz.
+    expect(bretter).toHaveLength(2);
+    for (const brett of bretter) expect(brett.getAttribute('style')).toContain(UNTERGRUND);
+    expect(within(bretter[1] as HTMLElement).getByAltText('Astschütze')).toHaveAttribute(
+      'src',
+      FIGUREN.astschuetze,
+    );
+  });
+
+  it('faellt auf das Rollenzeichen zurueck, wenn ein Bild nicht laedt', () => {
+    /*
+     * Ein fehlender Pfad darf den Tisch nicht leeren: Ein leerer Kasten sieht
+     * aus wie ein Fehler des Spiels, das Rollenzeichen nach Absicht
+     * (CLAUDE.md, "Kein `<img>` auf eine Datei, die es noch nicht gibt").
+     */
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    const marke = within(bank).getByTitle(/Dorfwache/);
+    expect(within(marke).getByAltText('Dorfwache')).toBeInTheDocument();
+
+    fireEvent.error(within(marke).getByAltText('Dorfwache'));
+
+    expect(within(marke).queryByAltText('Dorfwache')).not.toBeInTheDocument();
+    expect(marke.querySelector('svg.tr-rolle')).not.toBeNull();
+    // Die Einheit bleibt bedienbar — der Rueckfall ist ein Bildwechsel, kein
+    // Verlust der Marke.
+    expect(marke).toHaveAttribute('aria-label', 'Dorfwache, Wache, Stufe 1');
+  });
+
+  it('stellt auch in der Kampfanzeige die Figuren auf', () => {
+    // Die Arena bekommt die Figur nicht durchgereicht, sie holt sie selbst
+    // aus figuren.ts — hier zaehlt, dass die Verdrahtung am Tisch steht.
+    stelle(
+      sicht({
+        phase: 'kampf',
+        eigenes: { bereit: true, darfHandeln: false },
+        kaempfe: [
+          {
+            a: 0,
+            b: 1,
+            geist: false,
+            bericht: {
+              saat: 'probe',
+              erstZieher: 0,
+              start: [
+                { id: 0, seite: 0, einheitId: 'dorfwache', stufe: 1, platz: 12, leben: 650, hoechstesLeben: 650 },
+                { id: 1, seite: 1, einheitId: 'astschuetze', stufe: 1, platz: 7, leben: 480, hoechstesLeben: 480 },
+              ],
+              ereignisse: [],
+              sieger: null,
+              grund: 'zeit',
+              dauerMs: 5000,
+              ueberlebende: [],
+              schaden: 0,
+            },
+          },
+        ],
+      }),
+    );
+    zeige();
+    const arena = screen.getByRole('group', { name: 'Kampf' });
+    expect(within(arena).getByAltText('Dorfwache')).toHaveAttribute('src', FIGUREN.dorfwache);
+    expect(within(arena).getByAltText('Astschütze')).toHaveAttribute('src', FIGUREN.astschuetze);
   });
 });
 
