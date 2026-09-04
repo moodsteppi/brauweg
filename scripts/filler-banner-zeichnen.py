@@ -21,7 +21,9 @@ einer Bestellung.
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
-# Muss zu FARBEN in packages/client/src/screens/Filler.tsx passen.
+# Muss zu FARBEN in packages/client/src/minispiele/filler/farben.ts passen
+# (dort liegen die Farben seit dem 04.09.2026, weil Brett und bewegtes Banner
+# sie teilen).
 FARBEN = ["#f5325a", "#92d84e", "#fed42a", "#35b4f0", "#6b4fb5", "#3c3c3c"]
 # Muss zu GRAUTOENE ebendort passen.
 GRAUTOENE = ["#949494", "#a3a3a3", "#b2b2b2", "#c0c0c0", "#cbcbcb"]
