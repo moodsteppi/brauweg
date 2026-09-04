@@ -2348,7 +2348,7 @@ function Spielwahl({
 
       <div className="spielwahl-rolle">
         <Tafel titel="Alleine" zusatz="Minispiel">
-          <div className="hub-themenwahl">
+          <div className="hub-themenwahl kachelraster">
             <button
               type="button"
               className="hub-themenspiel"
@@ -2367,7 +2367,7 @@ function Spielwahl({
         </Tafel>
 
         <Tafel titel="Jetzt spielbar" zusatz={`${playable.length} von ${games.length}`}>
-          <div className="hub-themenwahl">
+          <div className="hub-themenwahl kachelraster">
             {playable.map((game) => (
               <button
                 key={game.id}
@@ -2424,7 +2424,7 @@ function Spielwahl({
 
         {preview.length > 0 && (
           <Tafel titel="Kommt bald" zusatz="Stimm ab, was zuerst kommt">
-            <div className="hub-themenwahl">
+            <div className="hub-themenwahl kachelraster">
               {preview.map((game) => (
                 <div key={game.id} className="hub-themenspiel is-bald">
                   <button className="spielwahl-flaeche" onClick={() => onBald(t(game.nameKey))}>
@@ -2463,7 +2463,7 @@ function Spielwahl({
           jemand lesen muss.
         */}
         <Tafel titel="Modus" zusatz="Über mehrere Spiele">
-          <div className="hub-themenwahl">
+          <div className="hub-themenwahl kachelraster">
             <div className="hub-themenspiel is-bald">
               <button
                 className="spielwahl-flaeche"

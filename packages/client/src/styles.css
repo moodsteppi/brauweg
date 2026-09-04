@@ -15319,26 +15319,82 @@ span.hub-angebot-art.poker-jeton-stapel {
    der Breite, nicht aus einer Annahme über den Bildschirm. Auf 60rem sind es
    zwei, auf einem sehr breiten Fenster drei — ohne weitere Haltepunkte. */
 @media (min-width: 60rem) {
-  /* Die Tischliste der Lobby. Der Container scrollt, die Kacheln liegen
-     darin nebeneinander; `align-content: start` verhindert, dass zwei Tische
-     bei viel Platz senkrecht auseinandergezogen werden. */
-  .lobby-rolle {
+  /*
+     `.kachelraster` ist DAS Muster für diesen Fall — eine Klasse, die man ins
+     Markup schreibt, nicht eine Regel je Bildschirm. Vorher stand hier
+     `.lobby-rolle` direkt; mit der Spielauswahl als zweitem Nutzer wären daraus
+     zwei Einzellösungen geworden, und bei der zwanzigsten weiß niemand mehr,
+     welche Spaltenbreite die verbindliche ist.
+
+     Warum eine Klasse und nicht weiter ein Selektor je Ansicht: `.lobby-rolle`
+     kommt in Lobby.tsx ZWEIMAL vor — einmal als Tischliste und einmal als
+     Formular „Tisch erstellen". Die alte Regel traf beide. Das Formular hat
+     genau ein Kind (eine `.lobby-tafel`), das damit ab 960px in der ersten
+     Spalte von vieren klebte statt die Breite zu nutzen. Eine Klasse im Markup
+     trifft genau das, was gemeint ist.
+
+     Die Maße sind über Custom Properties einstellbar, damit der Nutzer die
+     Spaltenbreite setzen kann, ohne die Regel zu kopieren. */
+  .kachelraster {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(var(--kachel-min, 22rem), 1fr));
+    gap: var(--kachel-abstand, 0.5rem);
+    /* Verhindert, dass zwei Kacheln bei viel Platz senkrecht
+       auseinandergezogen werden. */
     align-content: start;
   }
   /* Was keine Kachel ist, läuft über die ganze Breite: Fehlermeldung und der
      Hinweis auf den leeren Tisch. Sonst stünde „Gerade ist kein Tisch offen"
      als schmale Spalte neben nichts. */
-  .lobby-rolle > .error,
-  .lobby-rolle > .lobby-leer {
+  .kachelraster > .error,
+  .kachelraster > .lobby-leer {
     grid-column: 1 / -1;
   }
   /* Der Abstand kommt jetzt aus `gap`; der alte Fußabstand je Kachel würde
      ihn verdoppeln. */
   .lobby-tisch {
     margin-bottom: 0;
+  }
+
+  /*
+     „Tisch erstellen" ist kein Raster, sondern EIN Feld mit Knöpfen — es
+     bekommt die Klasse deshalb nicht. Ohne Deckel liefe es dann aber über die
+     volle Breite: gemessen 1434px auf einem 1440er Fenster, mit einem
+     „Tisch erstellen"-Knopf von 1370px. Ein Formular liest sich nicht besser,
+     weil es breiter ist.
+
+     34rem und mittig statt links: Bis eben klebte es (als Nebenwirkung der
+     alten Raster-Regel) in einer 486px-Spalte am linken Rand, der Rest war
+     leerer Filz. Die Breite bleibt also ungefähr, wie sie war — sie steht
+     jetzt nur da, wo man hinsieht, und weil es so gemeint ist. */
+  .doko--erstellen .lobby-rolle > .lobby-tafel {
+    max-width: 34rem;
+    margin-inline: auto;
+  }
+
+  /*
+     Die Spielauswahl ist ein Vollbild über dem Hub und trägt ihre Szene selbst
+     — deshalb darf sie breiter werden, ohne dass der Hub dahinter mitwachsen
+     muss. Gemessen lag sie bei 1440px auf 480px, also 33% der Fläche; die
+     19 Spiele brauchten dabei 3,2 Bildschirmhöhen Scroll.
+
+     72rem und nicht randlos: Ein Banner, das über 1900px läuft, ist kein
+     Knopf mehr, sondern eine Litfaßsäule. */
+  .spielwahl {
+    max-width: 72rem;
+  }
+  /*
+     20rem statt der 22rem der Lobby: Die Banner haben 4:1, eine Kachel von
+     22rem wäre auf 1440px nur noch zu zweit im Bild. Mit 20rem stehen dort
+     drei nebeneinander und bleiben mit ~89px hoch genug zum Tippen.
+
+     Wichtig ist hier vor allem, DASS das Raster greift: `.hub-themenwahl` ist
+     eine Flex-Spalte mit `width: 100%` je Kachel. Ohne Raster würde die
+     breitere Tafel die Banner einfach mitziehen — die einzelne Kachel unter
+     „Alleine" wäre bei 72rem 1082px breit und damit 270px hoch. */
+  .spielwahl .kachelraster {
+    --kachel-min: 20rem;
+    --kachel-abstand: 0.55rem;
   }
 }
 
