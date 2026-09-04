@@ -7,8 +7,9 @@ erst ab Zeile 55 kommen und sonst niemand sie findet.
 
 Drei davon halten sich nicht an die üblichen Annahmen, und wer das nicht weiß,
 sucht lange: **Feldherr** ist ein Echtzeitduell ohne Zugfolge (`currentActor`
-ist immer null, `legalActions` immer leer, keine Rangliste — siehe
-`docs/FELDHERR-PLAN.md`), bei **Skat** (Drücken, Ansage) sowie beim
+ist immer null, `legalActions` immer leer; Trophäen gibt es seit dem
+4.9.2026 wie überall, abgesichert nur durch die Doppelmeldung beider Geräte —
+siehe `docs/FELDHERR-PLAN.md`), bei **Skat** (Drücken, Ansage) sowie beim
 **Doppelkopf** (Armut) baut der Client die Aktion selbst aus der Sicht, weshalb
 `legalActions` dort leer ist, obwohl jemand am Zug ist — und bei **Eiland**
 ziehen beide **gleichzeitig**, obwohl `currentActor` einen Sitz nennt. Der

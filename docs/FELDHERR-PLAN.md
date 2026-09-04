@@ -176,6 +176,12 @@ gehört an die Entscheidung aus Frage 1, nicht davor.
    den nur der Client füllt, ist eine Münzquelle, und ein Tagesdeckel macht
    daraus nur eine langsamere.
 3. **Keine Rangliste** vorerst. Damit wird Weg C nicht gebraucht.
+   *Aufgehoben am 04.09.2026:* Seit `PLACEMENT_TROPHIES` zwei Sitze kennt,
+   bekommt auch Feldherr Trophäen (3 für den Sieger, −3 für den Verlierer,
+   0 bei strittigem Ausgang). Die Absicherung bleibt die Doppelmeldung:
+   Weichen die beiden Geräte ab, gilt die Partie als strittig, und niemand
+   gewinnt etwas — ein einzelner manipulierter Client kann sich also keinen
+   Sieg melden, nur eine Partie kaputt machen.
 4. **Erfahrung nach Dauer mit fallendem Ertrag:** 20 Punkte je Minute für die
    ersten drei, danach halbiert sich jede weitere. Hinziehen lohnt nicht.
 5. **Tagesaufgaben:** `partie-spielen`, `drei-partien` und `partie-gewinnen`
@@ -252,9 +258,10 @@ deterministisch nach). Dabei sind die letzten Lücken zugegangen:
   BEIDE Geräte ein. Am Handy passiert genau das bei jedem Blick woandershin.
 * **Die erste Zwei-Sitze-Abrechnung riss die Schlusswertung ab:**
   `awardForParty` kennt keine Verteilung für zwei Sitze und warf — still,
-  denn der Fehler landete als `actionRejected` beim meldenden Client. Jetzt
-  gilt: keine Trophäen ohne Verteilung (gewollt, Entscheidung 3), Erfahrung
-  aus `xpBasis` trotzdem. Und `GameMeta.xpBasisZaehltKarten: false` hält die
+  denn der Fehler landete als `actionRejected` beim meldenden Client. Seither
+  gilt: ohne Verteilung keine Trophäen, Erfahrung aus `xpBasis` trotzdem —
+  und seit dem 04.09.2026 gibt es die Verteilung für zwei Sitze (siehe
+  Entscheidung 3). Und `GameMeta.xpBasisZaehltKarten: false` hält die
   Dauer-Punkte aus der Kartenaufgabe des Tages heraus (Entscheidung 5).
 * **Tisch erstellen und beitreten** hat Feldherr jetzt selbst: Der
   Bildschirm erstellt den Tisch fest mit 2 Sitzen und 1 Runde und listet die

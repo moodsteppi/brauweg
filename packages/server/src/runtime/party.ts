@@ -1016,12 +1016,14 @@ export class PartyRuntime {
     }));
 
     /**
-     * Spiele ohne Trophaeenverteilung (Feldherr: zwei Sitze, bewusst keine
-     * Rangliste — Entscheidung in docs/FELDHERR-PLAN.md) bekommen trotzdem
-     * ihre Erfahrung aus xpBasis. Ohne diesen Zweig warf awardForParty fuer
-     * zwei Sitze eine Ausnahme und riss die GANZE Schlussabrechnung ab:
-     * keine Stats, keine Tagesaufgaben, keine Erfahrung — still, denn der
-     * Fehler landete als actionRejected beim meldenden Client.
+     * Sitzzahlen ohne Trophaeenverteilung bekommen trotzdem ihre Erfahrung
+     * aus xpBasis. Seit dem 04.09.2026 kennt PLACEMENT_TROPHIES auch zwei
+     * Sitze, dieser Zweig greift also nur noch fuer eine Sitzzahl, die es
+     * heute nicht gibt (eins, sieben) — er bleibt, weil er den Fehler vom
+     * ersten Feldherr-Duell verhindert: awardForParty warf fuer eine
+     * unbekannte Sitzzahl eine Ausnahme und riss die GANZE Schlussabrechnung
+     * ab — keine Stats, keine Tagesaufgaben, keine Erfahrung —, still, denn
+     * der Fehler landete als actionRejected beim meldenden Client.
      */
     if (!PLACEMENT_TROPHIES[placements.length]) {
       for (const standing of standings) {

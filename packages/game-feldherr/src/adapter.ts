@@ -11,11 +11,13 @@
  *      Normalfall und kein haengender Spieler.
  *   2. `legalActions` ist leer. Die Schaltflaechen entstehen aus dem
  *      Spielstand auf dem Geraet, nicht aus einer Liste vom Server. Das ist
- *      der Preis von Weg B (docs/FELDHERR-PLAN.md) und der Grund, warum
- *      Feldherr vorerst keine Rangliste bekommt: Der Server kennt den
- *      Spielstand nicht mit und muesste dem gemeldeten Ausgang glauben.
+ *      der Preis von Weg B (docs/FELDHERR-PLAN.md): Der Server kennt den
+ *      Spielstand nicht mit und muss dem gemeldeten Ausgang glauben.
  *      Beide Geraete melden getrennt; weichen sie ab, gilt die Partie als
- *      strittig und niemand gewinnt.
+ *      strittig und niemand gewinnt. Seit dem 04.09.2026 gibt es trotzdem
+ *      Trophaeen (PLACEMENT_TROPHIES kennt zwei Sitze) — die Doppelmeldung
+ *      ist die einzige Absicherung, und `standings` meldet eine strittige
+ *      Partie bewusst als Gleichstand, damit daraus null Trophaeen werden.
  */
 
 import type {
