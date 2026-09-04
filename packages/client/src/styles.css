@@ -16642,7 +16642,40 @@ span.hub-angebot-art.poker-jeton-stapel {
   text-align: center;
 }
 
-.tr-brett { position: relative; width: 100%; }
+/*
+ * Das Brett steht auf Holz — der Untergrund aus figuren.ts (Wood051,
+ * ambientCG, CC0). Das BILD setzt die Komponente ueber `style`, damit der
+ * Pfad nur an einer Stelle steht; hier steht, wie es liegt.
+ *
+ * 300 px und nicht die vollen 1024 der Textur: Bei Originalgroesse saehe man
+ * auf jedem Schirm einen Ausschnitt EINER Maserung, also gar keine Kachel.
+ * Bei 300 liegt sie auf dem Handy (94vw, rund 340 px) einmal und kachelt am
+ * Desktop sichtbar — so, wie es der Kopf von figuren.ts beschreibt.
+ */
+.tr-brett {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  background-repeat: repeat;
+  background-size: 300px auto;
+}
+/*
+ * Der Schleier ueber dem Holz. Ohne ihn verschwinden die Waben: Sie sind mit
+ * 4,5 % Weiss auf Dunkel gezeichnet, und auf hellem Holz ist das nichts.
+ *
+ * Als `::before` und nicht als zweite Hintergrundebene, weil das Bild per
+ * `style` von aussen kommt — eine `background-image`-Liste hier wuerde es
+ * ueberschreiben. Absolut gesetzt, damit es UNTER den ebenfalls absolut
+ * gesetzten Waben liegt: Bei gleichem z-index entscheidet die Reihenfolge im
+ * Baum, und das Pseudoelement kommt vor ihnen.
+ */
+.tr-brett::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(10, 14, 18, 0.58);
+}
 
 /*
  * Eine Wabe. `clip-path` statt eines Bildes: Sechsecke als PNG waeren sechs
@@ -16725,7 +16758,28 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-einheit[data-fassbar]:active { cursor: grabbing; }
 /* Beim Ziehen bleibt der Platz sichtbar leer, damit man sieht, woher es kommt. */
 .tr-einheit[data-still] { opacity: 0.25; }
+/* Das Ersatzzeichen, wenn zu einer Einheit keine Figur vorliegt. */
 .tr-einheit .tr-rolle { width: 40%; height: 40%; }
+
+/*
+ * Die Figur einer Einheit (figuren.ts, eingehaengt von `Figurbild`).
+ *
+ * Ueber die HOEHE bemessen und die Breite frei: Die Bilder sind quadratisch,
+ * und ein in beide Richtungen gesetztes Mass wuerde sie beim ersten
+ * nicht-quadratischen Nachschub verzerren, statt sie einzupassen.
+ *
+ * `pixelated`: Das Original ist 32 x 32 und liegt vierfach hochgezogen im
+ * Repo. Gezeichnet wird zwischen 30 und 55 px, also unterhalb der
+ * Dateigroesse — die Regel ist deshalb kein Muss, sondern die Absicherung
+ * nach oben: Waechst das Brett je ueber 128 px je Figur, verwischt der
+ * Browser sonst genau die Kanten, wegen derer der Satz gewaehlt wurde
+ * (siehe Kopf von figuren.ts).
+ */
+.tr-figur {
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.tr-einheit .tr-figur { width: auto; height: 52%; max-width: 92%; }
 
 .tr-einheit-name {
   max-width: 92%;
@@ -16830,6 +16884,9 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-bankplatz .tr-einheit { box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line)); }
 /* Zu schmal fuer einen Namen — das Zeichen und die Sterne muessen reichen. */
 .tr-bankplatz .tr-einheit-name { display: none; }
+/* Und weil der Name fehlt, darf die Figur den Platz nehmen: Auf der Bank ist
+   sie das Einzige, woran man eine Einheit erkennt. */
+.tr-bankplatz .tr-einheit .tr-figur { height: 68%; }
 
 /* -- Auswahlband ---------------------------------------------------------- */
 
@@ -16909,6 +16966,12 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 100%;
 }
 .tr-karte-kopf .tr-rolle { width: 18px; height: 18px; }
+/* Die Figur auf der Ladenkarte. Feste Pixel und nicht Prozent: Die Karte ist
+   eine Spalte von fuenf und auf einem 360er-Handy keine 70 px breit — ein
+   Prozentmass waere dort ein Punkt und auf dem Desktop ein Plakat. Und
+   genau 32, weil das die Groesse des Originals ist: Aus der vierfach
+   hochgezogenen Datei wird damit wieder Pixel fuer Pixel das gemalte Bild. */
+.tr-karte-kopf .tr-figur { width: 32px; height: 32px; }
 .tr-karte-preis {
   display: flex;
   align-items: center;

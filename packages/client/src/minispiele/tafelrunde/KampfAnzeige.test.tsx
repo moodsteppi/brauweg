@@ -1,12 +1,15 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { FIGUREN, UNTERGRUND } from './figuren';
 import {
   type Kampfbericht,
   type Kampfpaarung,
+  Figurbild,
   KampfAnzeige,
   abzuspielen,
   anfangsstand,
+  figurPfad,
   gezeichneterPlatz,
   meineSeite,
   spieleBis,
@@ -57,6 +60,9 @@ function paarung(teil: Partial<Kampfpaarung> = {}): Kampfpaarung {
 
 const KATALOG = {
   dorfwache: { id: 'dorfwache', name: 'Dorfwache', kosten: 1, rolle: 'wache' },
+  /* Eine Einheit, zu der es KEINE Figur gibt — der Fall, den figuren.ts beim
+     naechsten neuen Katalogeintrag von selbst herstellt. */
+  phantom: { id: 'phantom', name: 'Phantom', kosten: 1, rolle: 'magier' },
 };
 
 const NAMEN: Record<number, string> = { 0: 'Ich', 1: 'KI', 2: 'Robin', 3: 'Tom' };
@@ -70,7 +76,7 @@ function zeige(kaempfe: Kampfpaarung[], ich: number | null, frist: number | null
       brettSpalten={5}
       katalog={KATALOG}
       nameVon={(sitz) => NAMEN[sitz] ?? `Sitz ${sitz + 1}`}
-      zeichen={(e) => <span data-testid={`zeichen-${e.id}`} />}
+      ersatzzeichen={(e) => <span data-testid={`ersatz-${e.id}`} />}
       farbeVon={() => '#8fa3ad'}
       frist={frist}
     />,
@@ -174,6 +180,66 @@ describe('gezeichneterPlatz', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Die Figur einer Einheit
+// ---------------------------------------------------------------------------
+
+describe('figurPfad', () => {
+  it('nimmt den Pfad aus figuren.ts und erfindet keinen', () => {
+    // Der Pfad wird nirgends zusammengesetzt: Eine zweite Stelle, die
+    // "/tafelrunde/" + id + ".webp" rechnet, laeuft beim ersten Umbenennen
+    // auseinander und liefert dann einen 404 statt eines Rueckfalls.
+    expect(figurPfad('dorfwache')).toBe(FIGUREN.dorfwache);
+    expect(figurPfad('grabfuerstin')).toBe(FIGUREN.grabfuerstin);
+  });
+
+  it('gibt null fuer eine Kennung ohne Figur', () => {
+    expect(figurPfad('phantom')).toBeNull();
+  });
+});
+
+describe('Figurbild', () => {
+  it('zeigt die Figur mit dem Namen als alt-Text', () => {
+    render(<Figurbild einheit={KATALOG.dorfwache} ersatz={<span data-testid="ersatz" />} />);
+    const bild = screen.getByAltText('Dorfwache');
+    expect(bild).toHaveAttribute('src', FIGUREN.dorfwache);
+    expect(screen.queryByTestId('ersatz')).not.toBeInTheDocument();
+  });
+
+  it('zeigt das Ersatzzeichen, wenn es zu der Einheit keine Figur gibt', () => {
+    render(<Figurbild einheit={KATALOG.phantom} ersatz={<span data-testid="ersatz" />} />);
+    expect(screen.getByTestId('ersatz')).toBeInTheDocument();
+    // Kein `<img>` auf eine Datei, die es nicht gibt (CLAUDE.md).
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('faellt auf das Ersatzzeichen zurueck, wenn das Bild nicht laedt', () => {
+    // Der Kern der Sache: Ein fehlender Pfad darf keinen leeren Kasten
+    // hinterlassen — der sieht aus wie ein Fehler des Spiels.
+    render(<Figurbild einheit={KATALOG.dorfwache} ersatz={<span data-testid="ersatz" />} />);
+    fireEvent.error(screen.getByAltText('Dorfwache'));
+    expect(screen.getByTestId('ersatz')).toBeInTheDocument();
+    expect(screen.queryByAltText('Dorfwache')).not.toBeInTheDocument();
+  });
+
+  it('haelt den Rueckfall an der EINHEIT fest, nicht an der Stelle', () => {
+    /*
+     * Ein Bankplatz behaelt seine Komponente, wenn dort eine andere Einheit
+     * landet. Mit einem blossen Ja/Nein bliebe der Platzhalter der ersten
+     * Einheit an der zweiten kleben, deren Bild vollkommen in Ordnung ist.
+     */
+    const { rerender } = render(
+      <Figurbild einheit={KATALOG.dorfwache} ersatz={<span data-testid="ersatz" />} />,
+    );
+    fireEvent.error(screen.getByAltText('Dorfwache'));
+    expect(screen.getByTestId('ersatz')).toBeInTheDocument();
+
+    const andere = { id: 'grabfuerstin', name: 'Grabfürstin', kosten: 3 };
+    rerender(<Figurbild einheit={andere} ersatz={<span data-testid="ersatz" />} />);
+    expect(screen.getByAltText('Grabfürstin')).toHaveAttribute('src', FIGUREN.grabfuerstin);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Die Anzeige mit laufender Uhr
 // ---------------------------------------------------------------------------
 
@@ -214,6 +280,42 @@ describe('KampfAnzeige', () => {
       'unten',
     );
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('stellt die Figuren aus figuren.ts auf das Holz', () => {
+    const { container } = zeige([paarung()], 0);
+    const bilder = screen.getAllByAltText('Dorfwache');
+    // Beide Seiten kaempfen mit einer Dorfwache — beide zeigen ihre Figur.
+    expect(bilder).toHaveLength(2);
+    for (const bild of bilder) expect(bild).toHaveAttribute('src', FIGUREN.dorfwache);
+    expect(screen.queryByTestId('ersatz-dorfwache')).not.toBeInTheDocument();
+
+    // Der Untergrund kommt aus figuren.ts und nicht aus dem Stylesheet.
+    const brett = container.querySelector('section > div')!;
+    expect(brett.getAttribute('style')).toContain(UNTERGRUND);
+  });
+
+  it('nimmt das Ersatzzeichen, wenn zu einer Einheit keine Figur vorliegt', () => {
+    const ohneBild = {
+      ...bericht(),
+      start: [
+        { id: 0, seite: 0 as const, einheitId: 'phantom', stufe: 1, platz: 12, leben: 100, hoechstesLeben: 100 },
+      ],
+      ereignisse: [],
+    };
+    zeige([paarung({ bericht: ohneBild })], 0);
+    expect(screen.getByTestId('ersatz-phantom')).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('faellt in der Arena auf das Ersatzzeichen zurueck, wenn ein Bild nicht laedt', () => {
+    // Ein fehlender Pfad darf die Arena nicht leeren: Wer seinen Kampf nicht
+    // sieht, verliert Leben fuer etwas, das auf seinem Schirm nie stattfand.
+    zeige([paarung()], 0);
+    fireEvent.error(screen.getAllByAltText('Dorfwache')[0]!);
+    expect(screen.getByTestId('ersatz-dorfwache')).toBeInTheDocument();
+    // Die zweite Figur laedt weiter — der Rueckfall gilt nur fuer die eine.
+    expect(screen.getAllByAltText('Dorfwache')).toHaveLength(1);
   });
 
   it('spielt die Treffer nach der Uhr ab, nicht sofort', () => {
