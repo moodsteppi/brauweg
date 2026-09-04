@@ -2,6 +2,7 @@ import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
+import { installiereDruckabbruch } from './druckabbruch';
 import { FeedbackWidget } from './FeedbackWidget';
 import { starteKlang } from './klang';
 import './styles.css';
@@ -10,6 +11,10 @@ import './styles.css';
 // bevor irgendetwas klingt, sonst haelt iOS beim ersten Ton die Musik in
 // anderen Apps an. Geladen wird dabei noch nichts.
 starteKlang();
+
+// Ebenfalls vor dem ersten Bild und einmal fuer alles: Ein Knopf, von dem
+// der Finger weit weggezogen wurde, loest nicht aus (siehe druckabbruch.ts).
+installiereDruckabbruch();
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Kein Wurzelelement gefunden');
