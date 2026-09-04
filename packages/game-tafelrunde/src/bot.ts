@@ -11,10 +11,11 @@
  * beim ERSTEN, und ein Bot, der von der Belieferungsmarke abhinge, spielte je
  * nach Rundruf verschieden.
  *
- * Die Spielstaerke wertet er nicht aus. Ein Auto-Battler ohne Kampf hat noch
- * keine Stellschraube, an der sich "schwach" von "stark" unterscheiden liesse
- * — das kommt mit Phase 2. Bis dahin spielt er fuer jede Stufe dasselbe:
- * kaufen, aufstellen, aufsteigen, fertig melden.
+ * Die Spielstaerke wertet er nicht aus: Er spielt fuer jede Stufe dasselbe —
+ * kaufen, aufstellen, aufsteigen, fertig melden. Seit es die Kampfsimulation
+ * gibt, WAERE eine Bewertung moeglich (Werte, Reichweite, Stellung), aber sie
+ * ist eine eigene Aufgabe. Was er heute tut, genuegt fuer eine Uebernahme:
+ * Sein Brett ist besetzt, und er meldet sich zuverlaessig bereit.
  */
 
 import { einheit } from './katalog.js';

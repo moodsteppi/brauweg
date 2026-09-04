@@ -7,8 +7,9 @@
  * Das Spiel: Jeder Sitz hat seinen EIGENEN Laden, seine eigene Reservebank und
  * seine eigene Bretthaelfte. Zwischen den Runden kauft man Einheiten aus dem
  * Laden, stellt sie auf, verschmilzt drei gleiche zu einer staerkeren und
- * steigert seinen Level. Der Kampf laeuft spaeter automatisch ab — in diesem
- * Regelkern gibt es ihn noch nicht, siehe `wendeKampfausgang`.
+ * steigert seinen Level. Danach kaempfen die Sitze paarweise gegeneinander;
+ * gerechnet wird der Kampf in kampf.ts, angesetzt und abgerechnet hier
+ * (`setzeAn`, `beginneKampf`, `loeseKampfAuf`).
  *
  * Es gibt KEINE Zugfolge. Alle Sitze ruesten gleichzeitig, genau wie bei
  * Eiland; `amZug` nennt trotzdem einen Sitz, damit Zugzeit und Bot-Uebernahme
@@ -42,92 +43,21 @@ import {
   serienBonus,
   zins,
 } from './regeln.js';
+import { type Kampfbericht, simuliereKampf } from './kampf.js';
+import { type Saat, baueZufall, kampfSaat, ladenSaat, paarungsSaat } from './zufall.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
 // ---------------------------------------------------------------------------
 
-/**
- * Der Zufallsgenerator steht hier noch einmal, obwohl die anderen Spielmodule
- * denselben haben. Aus demselben Grund wie dort: Ein Spielmodul ist eine
- * eigenstaendige Bibliothek. Wanderte der Generator in ein gemeinsames Paket,
- * aenderte eine Verbesserung dort jeden Laden JEDER gespeicherten Partie.
+/*
+ * Der Generator und die Saatzeichenketten stehen in zufall.ts — nicht, weil
+ * sie dort besser aufgehoben waeren, sondern weil der Kampf sie ebenfalls
+ * braucht und diese Datei den Kampf braucht. Hier stehen sie weiter im
+ * Export, damit index.ts und die Proben nur eine Anlaufstelle haben.
  */
-export type Saat = number | string;
-
-function sfc32(a: number, b: number, c: number, d: number): () => number {
-  return function () {
-    a >>>= 0;
-    b >>>= 0;
-    c >>>= 0;
-    d >>>= 0;
-    let t = (a + b) | 0;
-    a = b ^ (b >>> 9);
-    b = (c + (c << 3)) | 0;
-    c = (c << 21) | (c >>> 11);
-    d = (d + 1) | 0;
-    t = (t + d) | 0;
-    c = (c + t) | 0;
-    return (t >>> 0) / 4294967296;
-  };
-}
-
-/**
- * Eine beliebige Zeichenkette zu 32 Hexstellen verruehren.
- *
- * Vier unabhaengige FNV-1a-Laeufe mit verschiedenen Startwerten. Vier und
- * nicht einer, weil sfc32 vier Woerter braucht und ein einzelner Hashwert,
- * viermal hintereinandergehaengt, einen Generator ergaebe, der bei aehnlichen
- * Eingaben aehnliche Folgen liefert — und die Eingaben hier sind aehnlich:
- * Sie unterscheiden sich oft nur in der Sitznummer.
- */
-function mische(text: string): string {
-  const basen = [0x811c9dc5, 0x01000193, 0x9e3779b9, 0x85ebca6b];
-  return basen
-    .map((basis) => {
-      let h = basis >>> 0;
-      for (let i = 0; i < text.length; i++) {
-        h ^= text.charCodeAt(i);
-        h = Math.imul(h, 16777619) >>> 0;
-      }
-      return h.toString(16).padStart(8, '0');
-    })
-    .join('');
-}
-
-function worte(hex: string): [number, number, number, number] {
-  const sauber = hex.replace(/[^0-9a-f]/gi, '').padEnd(32, '0').slice(0, 32);
-  return [
-    Number.parseInt(sauber.slice(0, 8), 16) >>> 0,
-    Number.parseInt(sauber.slice(8, 16), 16) >>> 0,
-    Number.parseInt(sauber.slice(16, 24), 16) >>> 0,
-    Number.parseInt(sauber.slice(24, 32), 16) >>> 0,
-  ];
-}
-
-export function baueZufall(saat: string): () => number {
-  const [a, b, c, d] = worte(mische(saat));
-  const zufall = sfc32(a, b, c, d);
-  // Zwoelf Leerlaeufe, damit die ersten Zahlen nicht noch nach dem Startwert
-  // aussehen. Ohne sie zeigen zwei benachbarte Saaten einen aehnlichen ersten
-  // Laden — und der erste Laden ist der, den jeder sieht.
-  for (let i = 0; i < 12; i++) zufall();
-  return zufall;
-}
-
-/**
- * Der Zufallsstrom EINER Ladenfuellung.
- *
- * Er haengt nur an Saat, Sitz und laufender Nummer des Wurfs — nicht an einem
- * Generatorzustand, der im Snapshot mitreisen muesste. Das ist bei diesem
- * Spiel keine Bequemlichkeit: Alle Sitze handeln GLEICHZEITIG, und ein
- * gemeinsamer Strom haenge davon ab, in welcher Reihenfolge die Nachrichten
- * eintreffen. Zwei Server mit denselben Aktionen kaemen dann zu verschiedenen
- * Laeden.
- */
-export function ladenSaat(saat: string, sitz: number, wurf: number): string {
-  return `${saat}|laden|${sitz}|${wurf}`;
-}
+export type { Saat };
+export { baueZufall, kampfSaat, ladenSaat, paarungsSaat };
 
 // ---------------------------------------------------------------------------
 // Zustand
@@ -176,10 +106,10 @@ export interface Heer {
 /**
  * Phasen einer Runde.
  *
- * `kampf` ist die Naht zu Phase 2. Sie steht schon hier, obwohl es noch keine
- * Simulation gibt: Ohne sie gaebe es keine Stelle, an der ein Kampfausgang je
- * ankommen koennte, und der Rundenwechsel muesste spaeter auseinandergenommen
- * werden. Wie sie derzeit aufgeloest wird, steht bei `ohneKampfWeiter`.
+ * In `kampf` ist bereits alles gerechnet: Der Uebergang dorthin simuliert alle
+ * Kaempfe der Runde in einem Rutsch (`beginneKampf`), und was danach vergeht,
+ * ist reine Zuschauzeit fuer die Anzeige. Aufgeloest wird die Phase von
+ * `loeseKampfAuf`, das die Plattform ueber `advanceInterlude` aufruft.
  */
 export type Phase = 'vorbereitung' | 'kampf' | 'ende';
 
@@ -200,7 +130,46 @@ export interface TafelrundePartie {
    */
   readonly vorrat: Readonly<Record<EinheitId, number>>;
   readonly heere: Readonly<Record<number, Heer>>;
+  /**
+   * Die Kaempfe DIESER Runde, samt vollstaendigem Ablaufprotokoll.
+   *
+   * Sie stehen im Zustand und nicht nur in der Sicht, weil die Abrechnung sie
+   * braucht: Wer gewonnen hat, entscheidet der Kampf und nicht der Server, der
+   * die Sicht gerade zusammenstellt. Zweimal simulieren waere der Weg, auf dem
+   * Anzeige und Abrechnung auseinanderlaufen.
+   *
+   * Ausserhalb der Kampfphase ist die Liste LEER (`naechsteRunde` raeumt sie
+   * ab). Ein Protokoll ist je nach Kampf ein paar hundert Ereignisse gross,
+   * und die brauchen im Snapshot nur genau so lange zu stehen, wie ihnen
+   * jemand zusieht.
+   */
+  readonly kaempfe: readonly Kampfpaarung[];
   readonly fertig: boolean;
+}
+
+/**
+ * Ein angesetzter Kampf: wer gegen wen, auf welcher Arenaseite.
+ *
+ * `a` steht auf Arenaseite 0, `b` auf Seite 1 (siehe arena.ts). Welcher Sitz
+ * wohin kommt, wuerfelt `setzeAn` aus — nicht aus Spielerei, sondern weil die
+ * Seite den Erstzieher mitbestimmt und ein fester Platz ein Vorteil waere,
+ * den niemand erspielt hat.
+ */
+export interface Kampfpaarung {
+  readonly a: number;
+  /** Beim Geist: der Sitz, dessen Brett als Abbild antritt. Sonst der Gegner. */
+  readonly b: number;
+  /**
+   * Kaempft `b` selbst mit, oder steht dort nur ein Abbild?
+   *
+   * Bei einer ungeraden Zahl lebender Sitze bleibt einer uebrig. Er bekommt
+   * KEINE Freirunde, sondern das Brett eines anderen als Geist vorgesetzt:
+   * Eine Freirunde waere ein Schadensfreibrief, und wer sie zufaellig oft
+   * bekaeme, gewaenne ohne Kampf. Der Geist nimmt seinerseits nichts mit —
+   * sein Besitzer kaempft an anderer Stelle seinen eigenen Kampf.
+   */
+  readonly geist: boolean;
+  readonly bericht: Kampfbericht;
 }
 
 export type Bereich = 'bank' | 'brett';
@@ -468,6 +437,7 @@ export function erstellePartie(
     phase: 'vorbereitung',
     vorrat: vollerVorrat(),
     heere,
+    kaempfe: [],
     fertig: false,
   };
 
@@ -799,7 +769,144 @@ function pruefePhase(partie: TafelrundePartie): TafelrundePartie {
     return !heer.bereit && !heer.verlassen;
   });
   if (offen.length > 0) return partie;
-  return { ...partie, phase: 'kampf' };
+  return beginneKampf(partie);
+}
+
+// ---------------------------------------------------------------------------
+// Der Kampf
+// ---------------------------------------------------------------------------
+
+/** Wer gegen wen antritt — ohne den Kampf selbst. */
+export interface Ansetzung {
+  readonly a: number;
+  readonly b: number;
+  readonly geist: boolean;
+}
+
+/**
+ * Die Paarungen einer Runde.
+ *
+ * Gemischt und dann der Reihe nach zu zweit — kein festes Reihum. Ein fester
+ * Turnus waere vorhersagbar, und wer weiss, gegen wen er in der naechsten
+ * Runde antritt, ruestet gezielt gegen dieses eine Brett. Genau das soll ein
+ * Auto-Battler nicht sein: Man baut gegen das FELD, nicht gegen einen Gegner.
+ *
+ * Absichtlich NICHT ausgeschlossen ist, zweimal hintereinander auf denselben
+ * Gegner zu treffen. Das kommt vor, und es auszuschliessen hiesse, sich die
+ * vorige Runde zu merken — ein Zustand mehr im Snapshot fuer einen Nachteil,
+ * den bei acht Sitzen kaum jemand bemerkt.
+ *
+ * Unter zwei lebenden Sitzen gibt es nichts anzusetzen: Dann ist die Partie
+ * ohnehin vorbei (siehe `naechsteRunde`).
+ */
+export function setzeAn(
+  sitze: readonly number[],
+  saat: string,
+  runde: number,
+): Ansetzung[] {
+  if (sitze.length < 2) return [];
+  const zufall = baueZufall(paarungsSaat(saat, runde));
+
+  // Von der sortierten Liste aus mischen, nicht von der uebergebenen: Sonst
+  // haenge die Paarung daran, in welcher Reihenfolge der Aufrufer die Sitze
+  // aufgezaehlt hat, und zwei Server kaemen zu verschiedenen Kaempfen.
+  const misch = [...sitze].sort((x, y) => x - y);
+  for (let i = misch.length - 1; i > 0; i--) {
+    const j = Math.floor(zufall() * (i + 1));
+    const merk = misch[i];
+    misch[i] = misch[j];
+    misch[j] = merk;
+  }
+
+  const an: Ansetzung[] = [];
+  let i = 0;
+  for (; i + 1 < misch.length; i += 2) {
+    an.push({ a: misch[i], b: misch[i + 1], geist: false });
+  }
+  if (i < misch.length) {
+    // Der Uebriggebliebene bekommt das Brett eines anderen als Geist, siehe
+    // `Kampfpaarung.geist`.
+    const allein = misch[i];
+    const andere = misch.filter((s) => s !== allein);
+    an.push({ a: allein, b: andere[Math.floor(zufall() * andere.length)], geist: true });
+  }
+  return an;
+}
+
+/**
+ * Alle Kaempfe der Runde rechnen und in den Zustand legen.
+ *
+ * Auf einen Schlag und nicht nach und nach: Ein Kampf ist eine reine Funktion
+ * ueber Brett und Saat, und wer ihn erst beim Zusehen rechnete, muesste den
+ * Zufallsstrom durch den Snapshot schleppen. So steht nach dem Uebergang alles
+ * fest, was diese Runde noch passieren wird — die Anzeige spielt nur noch ab.
+ */
+function beginneKampf(partie: TafelrundePartie): TafelrundePartie {
+  const kaempfe = setzeAn(lebendeSitze(partie), partie.saat, partie.runde).map((satz) => ({
+    ...satz,
+    bericht: simuliereKampf(
+      [heerVon(partie, satz.a).brett, heerVon(partie, satz.b).brett],
+      kampfSaat(partie.saat, partie.runde, satz.a, satz.b),
+    ),
+  }));
+  return { ...partie, phase: 'kampf', kaempfe };
+}
+
+/** Der Kampf, an dem dieser Sitz beteiligt ist — als Geistgeber gilt er nicht. */
+export function kampfVon(
+  partie: TafelrundePartie,
+  sitz: number,
+): Kampfpaarung | null {
+  return (
+    partie.kaempfe.find((k) => k.a === sitz || (k.b === sitz && !k.geist)) ?? null
+  );
+}
+
+/**
+ * Wie lange der laengste Kampf dieser Runde dauert.
+ *
+ * Danach richtet sich die Schaupause der Plattform (`interludeMs` in
+ * adapter.ts). Der laengste und nicht der Durchschnitt: Alle Kaempfe laufen
+ * gleichzeitig ab, und wer seinem noch zusieht, soll nicht mitten im Getuemmel
+ * in den naechsten Laden geworfen werden.
+ */
+export function kampfdauer(partie: TafelrundePartie): number {
+  return partie.kaempfe.reduce((laengste, k) => Math.max(laengste, k.bericht.dauerMs), 0);
+}
+
+/**
+ * Aus den Kampfberichten die Ausgaenge machen, die `wendeKampfausgang` bucht.
+ *
+ * Ein UNENTSCHIEDEN erzeugt gar keinen Eintrag. Das ist eine Entscheidung: Der
+ * Sitz nimmt keinen Schaden, und seine Serie bleibt stehen, statt als
+ * Niederlage zu zaehlen. Ein Unentschieden als Niederlage zu buchen hiesse,
+ * beiden Seiten Niederlagengold zu zahlen — in der ersten Runde, in der noch
+ * niemand etwas aufgestellt hat, treten regelmaessig zwei leere Bretter
+ * gegeneinander an.
+ */
+export function ausgaengeAus(kaempfe: readonly Kampfpaarung[]): Kampfausgang[] {
+  const raus: Kampfausgang[] = [];
+  for (const kampf of kaempfe) {
+    const { sieger, schaden } = kampf.bericht;
+    if (sieger === null) continue;
+    raus.push({ sitz: kampf.a, sieg: sieger === 0, schaden: sieger === 0 ? 0 : schaden });
+    // Ein Geist hat keinen Lebensbalken: Sein Besitzer kaempft anderswo seinen
+    // eigenen Kampf und darf nicht zweimal in einer Runde Schaden nehmen.
+    if (!kampf.geist) {
+      raus.push({ sitz: kampf.b, sieg: sieger === 1, schaden: sieger === 1 ? 0 : schaden });
+    }
+  }
+  return raus;
+}
+
+/**
+ * Die Kampfphase abschliessen: buchen, was die Berichte hergeben.
+ *
+ * Das ist der Weg, den die Plattform nach der Schaupause geht. Gerechnet wird
+ * hier nichts mehr — die Berichte stehen seit `beginneKampf` fest.
+ */
+export function loeseKampfAuf(partie: TafelrundePartie): TafelrundePartie {
+  return wendeKampfausgang(partie, ausgaengeAus(partie.kaempfe));
 }
 
 // ---------------------------------------------------------------------------
@@ -887,15 +994,17 @@ export function wendeKampfausgang(
 }
 
 /**
- * Aufloesung der Kampfphase, solange es keine Kampfsimulation gibt.
+ * Die Kampfphase beenden, ohne irgendetwas zu buchen.
  *
- * Niemand nimmt Schaden, niemand gewinnt, die Serien bleiben stehen. Das ist
- * ausdruecklich ein PLATZHALTER und keine Regel: Phase 2 ersetzt den Aufruf
- * durch die Simulation und ruft `wendeKampfausgang` mit echten Ausgaengen auf.
+ * Niemand nimmt Schaden, niemand gewinnt, die Serien bleiben stehen. Seit es
+ * die Simulation gibt, ist das nicht mehr der Normalweg — der heisst
+ * `loeseKampfAuf` —, sondern der Notausgang: Kaempfe, die gar nicht erst
+ * angesetzt werden konnten, und alte Snapshots aus der Zeit vor der
+ * Simulation, in denen `kaempfe` leer ist.
  *
- * Er steht hier trotzdem, weil ein Tisch sonst in der Kampfphase haengen
- * bliebe — und ein haengender Tisch ist der einzige Fehler, den ein Spieler
- * nicht selbst beheben kann.
+ * Er bleibt stehen, weil ein Tisch sonst in der Kampfphase haengen bliebe —
+ * und ein haengender Tisch ist der einzige Fehler, den ein Spieler nicht
+ * selbst beheben kann.
  */
 export function ohneKampfWeiter(partie: TafelrundePartie): TafelrundePartie {
   return wendeKampfausgang(partie, []);
@@ -915,7 +1024,7 @@ function naechsteRunde(partie: TafelrundePartie): TafelrundePartie {
   // Erst das Ende pruefen, dann auszahlen: Ein Einkommen in einer Runde, die
   // es nicht mehr gibt, stuende hinterher unerklaerlich im Snapshot.
   if (uebrig.length <= 1 || partie.runde >= partie.regeln.rundenGrenze) {
-    return { ...partie, phase: 'ende', fertig: true };
+    return { ...partie, phase: 'ende', kaempfe: [], fertig: true };
   }
 
   const heere: Record<number, Heer> = { ...partie.heere };
@@ -933,6 +1042,10 @@ function naechsteRunde(partie: TafelrundePartie): TafelrundePartie {
     runde: partie.runde + 1,
     phase: 'vorbereitung',
     heere,
+    // Die Protokolle der vorigen Runde sind abgespielt und abgerechnet. Sie
+    // stehen zu lassen hiesse, jede Runde ein paar hundert Ereignisse mehr
+    // durch die Datenbank und ueber die Leitung zu schleppen.
+    kaempfe: [],
   };
   /*
    * Die Phasenpruefung am Ende: Sitzen am Tisch nur noch verlassene Sitze,

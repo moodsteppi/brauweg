@@ -1592,10 +1592,16 @@ function Ladenkarte({
 /**
  * Die Kampfphase.
  *
- * Es gibt noch keine Simulation (Phase 2 des Konzepts) — das Modul haelt hier
- * nur eine Schaupause. Ein leerer Bildschirm waere von einem haengenden nicht
- * zu unterscheiden, deshalb steht wenigstens eine laufende Zeile da; dieselbe
- * Ueberlegung wie beim Warteband in Filler.
+ * Der Kampf LAEUFT inzwischen ab: Das Modul rechnet ihn beim Uebergang in
+ * diese Phase durch und liefert das vollstaendige Ablaufprotokoll in
+ * `sicht.kaempfe` mit (packages/game-tafelrunde/src/kampf.ts). Nur ABGESPIELT
+ * wird er hier noch nicht — das ist eine eigene Aufgabe, und bis dahin steht
+ * wenigstens eine laufende Zeile da, damit die Pause nicht wie ein haengender
+ * Tisch aussieht; dieselbe Ueberlegung wie beim Warteband in Filler.
+ *
+ * ACHTUNG BEIM AUSBAU: Die Pause ist nicht mehr fest, sondern so lang wie der
+ * laengste Kampf der Runde (`interludeMs` im Adapter, bis zu 47 Sekunden). Wer
+ * hier etwas einbaut, das eine feste Dauer annimmt, liegt daneben.
  */
 function Kampfband(): React.JSX.Element {
   return (
@@ -1678,10 +1684,11 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       </ol>
       <h3>Noch nicht dabei</h3>
       <p>
-        Die Kämpfe laufen noch nicht ab — zwischen den Runden liegt eine kurze
-        Pause statt eines Gefechts. Auch die Boni für gleiche Klassen fehlen
-        noch. Beides kommt als eigener Ausbau; aufrüsten, verschmelzen und
-        aufstellen ist vollständig da.
+        Die Kämpfe werden ausgefochten und kosten den Verlierer Leben — zu sehen
+        sind sie aber noch nicht: Zwischen den Runden steht statt des Gefechts
+        eine Pause. Auch die Boni für gleiche Klassen fehlen noch. Beides kommt
+        als eigener Ausbau; aufrüsten, verschmelzen und aufstellen ist
+        vollständig da.
       </p>
       <h3>Ziel</h3>
       <p>Als Letzter am Tisch stehen bleiben.</p>
