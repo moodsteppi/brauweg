@@ -30,13 +30,14 @@
  * Ergebnis stehen, bis der Server die Phase wechselt (Tafelrunde.tsx blendet
  * dann aus). Die Dauer gibt der Server vor, nicht der Client.
  *
- * Die Figuren sind noch Platzhalter (Strichzeichnung je Rolle, uebergeben als
- * `zeichen`). Liegt `figuren.ts` aus der Grafik-Aufgabe vor, wird genau diese
- * Uebergabe ausgetauscht — sonst nichts.
+ * Die Figuren kommen aus `figuren.ts` (CC0-Pixelkunst, 32 x 32, vierfach
+ * hochgezogen). Eingehaengt werden sie von `Figurbild` weiter unten; fehlt
+ * eine Datei, tritt das uebergebene `ersatzzeichen` an ihre Stelle.
  */
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
+import { type EinheitId, FIGUREN, UNTERGRUND } from './figuren';
 import stil from './KampfAnzeige.module.css';
 import { type Rastermass, rastermass, wabenLage } from './zuege';
 
@@ -104,6 +105,67 @@ export interface Einheitenbild {
   readonly id: string;
   readonly name: string;
   readonly kosten: number;
+}
+
+// ---------------------------------------------------------------------------
+// Die Figur einer Einheit
+// ---------------------------------------------------------------------------
+
+/**
+ * Der Pfad zur Figur — oder null, wenn es zu dieser Kennung keine gibt.
+ *
+ * `FIGUREN` ist ueber die 22 Kennungen des Katalogs typisiert, die Sicht
+ * liefert aber eine gewoehnliche Zeichenkette. Der Zugriff wird deshalb
+ * umgedeutet und das Ergebnis geprueft: Eine Einheit, die es im Katalog gibt
+ * und in `figuren.ts` noch nicht, faellt so auf das Ersatzzeichen statt auf
+ * `undefined` im `src` — und ein `<img src="undefined">` waere genau der
+ * weisse Kasten, vor dem CLAUDE.md warnt.
+ */
+export function figurPfad(einheitId: string): string | null {
+  return FIGUREN[einheitId as EinheitId] ?? null;
+}
+
+/**
+ * Die Figur einer Einheit, mit Rueckfall auf ein gezeichnetes Zeichen.
+ *
+ * Steht hier und nicht in einer eigenen Datei, weil die Ruestkammer
+ * (screens/Tafelrunde.tsx) dieselbe Behandlung braucht — Laden, Bank, Brett
+ * und Arena zeigen dieselben 22 Figuren. Zwei Fassungen davon liefen beim
+ * ersten fehlenden Bild auseinander: An einer Stelle staende der Platzhalter,
+ * an der anderen ein leerer Kasten.
+ *
+ * Der gescheiterte PFAD wird gemerkt und nicht bloss ein Ja/Nein: Ein
+ * Bankplatz behaelt seine Komponente, wenn dort eine andere Einheit landet
+ * (React setzt ueber die Stelle zusammen, nicht ueber den Inhalt). Mit einem
+ * Ja/Nein bliebe der Platzhalter der ersten Einheit an der zweiten kleben,
+ * deren Bild vollkommen in Ordnung ist.
+ */
+export function Figurbild({
+  einheit,
+  ersatz,
+  klasse,
+}: {
+  einheit: Einheitenbild;
+  /** Was statt der Figur steht, wenn es keine gibt oder sie nicht laedt. */
+  ersatz: ReactNode;
+  klasse?: string;
+}): React.JSX.Element {
+  const [kaputt, setKaputt] = useState<string | null>(null);
+  const pfad = figurPfad(einheit.id);
+  if (pfad === null || pfad === kaputt) return <>{ersatz}</>;
+  return (
+    <img
+      className={klasse}
+      src={pfad}
+      /* Der Name und nichts sonst: Die Stufe steht als Sterne daneben, und
+         die Rolle als Wort auf der Ladenkarte. */
+      alt={einheit.name}
+      /* Ein fehlendes Bild darf den Tisch nicht leeren. Ohne diese Zeile
+         bliebe an der Stelle der Einheit ein leerer Kasten stehen — und der
+         sieht aus wie ein Fehler des Spiels, nicht wie ein fehlender Pfad. */
+      onError={() => setKaputt(pfad)}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -299,7 +361,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
   brettSpalten,
   katalog,
   nameVon,
-  zeichen,
+  ersatzzeichen,
   farbeVon,
   frist,
   verblasst,
@@ -311,8 +373,13 @@ export function KampfAnzeige<E extends Einheitenbild>({
   brettSpalten: number;
   katalog: Record<string, E>;
   nameVon: (sitz: number) => string;
-  /** Das Bild einer Einheit — heute eine Strichzeichnung, spaeter eine Figur. */
-  zeichen: (einheit: E) => ReactNode;
+  /**
+   * Was an die Stelle der Figur tritt, wenn `figuren.ts` zu dieser Einheit
+   * keine kennt oder die Datei nicht laedt — in der Ruestkammer die
+   * Strichzeichnung der Rolle. Die Figur selbst holt `Figurbild` sich
+   * selbst; hier kommt nur der Rueckfall herein.
+   */
+  ersatzzeichen: (einheit: E) => ReactNode;
   farbeVon: (einheit: E) => string;
   /** Frist der Schaupause (`interludeDeadline`), fuer das Aufholen nach Wiederverbinden. */
   frist: number | null;
@@ -411,7 +478,18 @@ export function KampfAnzeige<E extends Einheitenbild>({
         rechts={anzeige.stand.ende ? null : `${Math.floor(anzeige.zeitMs / 1000)} s`}
       />
 
-      <div className={stil.brett} style={{ aspectRatio: `${mass.seitenverhaeltnis}` }}>
+      {/* Der Holz-Untergrund kommt als Pfad aus figuren.ts und nicht als
+          zweite Abschrift im Stylesheet: Wer die Textur tauscht, aendert
+          eine Zeile und nicht zwei. Der Schleier darueber liegt im Modul
+          (stil.brett::before) — ohne ihn verschwinden die hellen Waben auf
+          dem Holz. */}
+      <div
+        className={stil.brett}
+        style={{
+          aspectRatio: `${mass.seitenverhaeltnis}`,
+          backgroundImage: `url(${UNTERGRUND})`,
+        }}
+      >
         {Array.from({ length: felder }, (_, i) => {
           const reihe = Math.floor(i / brettSpalten);
           const lage = wabenLage(mass, reihe, i % brettSpalten);
@@ -471,7 +549,15 @@ export function KampfAnzeige<E extends Einheitenbild>({
                 className={stil.koerper}
                 data-schlaegt={f.schlaege > 0 ? '' : undefined}
               >
-                {einheit ? zeichen(einheit) : <span>?</span>}
+                {einheit ? (
+                  <Figurbild
+                    einheit={einheit}
+                    ersatz={ersatzzeichen(einheit)}
+                    klasse={stil.figurbild}
+                  />
+                ) : (
+                  <span>?</span>
+                )}
                 <span className={stil.sterne} aria-hidden="true">
                   {'★'.repeat(f.stufe)}
                 </span>

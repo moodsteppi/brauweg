@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import {
+  Figurbild,
   KampfAnzeige,
   type Kampfpaarung,
   abzuspielen,
@@ -214,10 +216,12 @@ const ROLLE_NAME: Record<Rolle, string> = {
 /**
  * Das Zeichen einer Rolle — gezeichnet, nicht geladen.
  *
- * Kein `<img>`: Fuer die fuenf Rollen gibt es noch keine Bilder, und ein
- * `<img>` auf eine Datei, die es nicht gibt, ist ein weisser Kasten (CLAUDE.md
- * und DESIGN.md). Fuenf schlichte Pfade sehen nach Absicht aus und wiegen
- * nichts. Kommen gemalte Zeichen, wird genau diese Funktion ausgetauscht.
+ * Seit es Figuren gibt (figuren.ts), ist das hier der RUECKFALL: Jede Einheit
+ * zeigt ihr Bild, und nur wenn dazu keins vorliegt oder es nicht laedt, tritt
+ * diese Strichzeichnung an seine Stelle (`Figurbild`). Fuer die fuenf Rollen
+ * selbst gibt es weiterhin keine Bilder, und ein `<img>` auf eine Datei, die
+ * es nicht gibt, ist ein weisser Kasten (CLAUDE.md und DESIGN.md) — deshalb
+ * bleiben es fuenf schlichte Pfade.
  */
 function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
   const pfade: Record<Rolle, React.JSX.Element> = {
@@ -848,9 +852,11 @@ function Ruestkammer({
       brettSpalten={sicht.brettSpalten}
       katalog={katalog}
       nameVon={(sitz) => spielername(zeile(sitz), sitz)}
-      /* Platzhalter, bis es Figuren gibt — dieselbe Strichzeichnung wie auf
-         dem Brett, damit man seine Einheiten im Kampf wiedererkennt. */
-      zeichen={(einheit) => <RollenZeichen rolle={einheit.rolle} />}
+      /* Die Figur holt sich die Arena selbst aus figuren.ts; hier kommt nur
+         der Rueckfall herein — dieselbe Strichzeichnung wie auf dem Brett,
+         damit man seine Einheiten auch dann wiedererkennt, wenn ein Bild
+         fehlt. */
+      ersatzzeichen={(einheit) => <RollenZeichen rolle={einheit.rolle} />}
       farbeVon={(einheit) => KOSTEN_FARBE[einheit.kosten] ?? KOSTEN_FARBE[1]!}
       frist={frist}
       verblasst={kampfbild.verblasst}
@@ -1448,7 +1454,17 @@ function Hexbrett({
   const mass = rastermass(reihen, spalten);
 
   return (
-    <div className="tr-brett" style={{ aspectRatio: `${mass.seitenverhaeltnis}` }}>
+    /* Der Holz-Untergrund kommt als Pfad aus figuren.ts und nicht als zweite
+       Abschrift im Stylesheet: Wer die Textur tauscht, aendert eine Zeile und
+       nicht zwei. Wie er kachelt und wie dunkel der Schleier darueber liegt,
+       steht in styles.css. */
+    <div
+      className="tr-brett"
+      style={{
+        aspectRatio: `${mass.seitenverhaeltnis}`,
+        backgroundImage: `url(${UNTERGRUND})`,
+      }}
+    >
       {Array.from({ length: reihen * spalten }, (_, i) => {
         const platz = platzVon(i, reihen, spalten, gespiegelt === true);
         const reihe = Math.floor(i / spalten);
@@ -1607,7 +1623,17 @@ function Einheitenmarke({
       }
       title={einheit ? `${einheit.name} · ${ROLLE_NAME[einheit.rolle]}` : kaempfer.id}
     >
-      {einheit ? <RollenZeichen rolle={einheit.rolle} /> : <span>?</span>}
+      {einheit ? (
+        <Figurbild
+          einheit={einheit}
+          klasse="tr-figur"
+          ersatz={<RollenZeichen rolle={einheit.rolle} />}
+        />
+      ) : (
+        /* Der Katalog kommt erst mit der ersten Sicht. Ein Fragezeichen ist
+           hier ehrlicher als ein Bild, dessen Namen wir noch nicht kennen. */
+        <span>?</span>
+      )}
       <span className="tr-einheit-name">{einheit?.name ?? kaempfer.id}</span>
       {/* Der Name der Marke nennt die Stufe schon; hier waere sie doppelt. */}
       <span className="tr-sterne" aria-hidden="true">
@@ -1667,7 +1693,14 @@ function Ladenkarte({
       onClick={onKauf}
     >
       <span className="tr-karte-kopf">
-        <RollenZeichen rolle={einheit.rolle} />
+        {/* Die Figur steht an der Stelle, an der bisher das Rollenzeichen
+            stand — die Rolle selbst steht als Wort darunter und geht damit
+            nicht verloren. */}
+        <Figurbild
+          einheit={einheit}
+          klasse="tr-figur"
+          ersatz={<RollenZeichen rolle={einheit.rolle} />}
+        />
         {/* Der Preis wird rot, wenn das Gold nicht reicht: Eine Karte, die
             man sich nicht leisten kann, soll anders aussehen als eine, die
             man gerade nicht kaufen kann, weil man schon bereit ist. */}
