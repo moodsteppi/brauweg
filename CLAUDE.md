@@ -30,7 +30,8 @@ sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`.
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und
 Musik — Herkunft, Lizenzen, Auslagerungsgrenze) ·
-`docs/plattform-plan.md` (das große Ganze) · **`docs/JETZT-AUSFUEHREN.md`
+`docs/plattform-plan.md` (das große Ganze) · `docs/TAFEL.md` (die
+Visual-Building-Tafel: lesen, pflegen, erzeugen) · **`docs/JETZT-AUSFUEHREN.md`
 (Bilder einbauen, Schritt für Schritt — die Werkzeuge stehen auf dem Rechner
 bereit)**.
 
@@ -109,7 +110,8 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 128 Doppelkopf + 117 Zauberer + 259 Server
+npm test          # 1.300 Tests in den Paketen (402 im Server), dazu
+                  # sieben Client-Testdateien (vitest)
 ```
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
