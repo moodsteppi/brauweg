@@ -403,7 +403,7 @@ export function Lobby({
         />
       </div>
 
-      <div className="lobby-rolle">
+      <div className="lobby-rolle kachelraster">
         {error && <p className="error">{error}</p>}
 
         {gefiltert.length === 0 && (
