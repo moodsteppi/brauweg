@@ -18,7 +18,7 @@ Minuten live.
 **Prüfstand (gezählt am 4. September 2026, nicht aus der Erinnerung):**
 167 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
-56 Eiland-Tests, 156 Tafelrunde-Tests, **402 Servertests** — zusammen 1237,
+56 Eiland-Tests, 180 Tafelrunde-Tests, **402 Servertests** — zusammen 1261,
 dazu die Client-Tests (6 Dateien), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
@@ -56,12 +56,25 @@ dazu die Client-Tests (6 Dateien), alle grün. `tsc --noEmit` sauber.
 > der höhere Anteil am eigenen Gesamtleben. Die Schaupause ist nicht mehr
 > fest, sondern so lang wie der längste Kampf der Runde.
 >
-> **Was noch fehlt:** Der Kampf wird **noch nicht abgespielt** — der
-> Bildschirm schreibt weiter „Die Heere treten an" hin, obwohl das Protokoll
-> vorliegt. Ebenso fehlen die **Synergie-Boni**. Und die Werte tragen die
-> Partie noch nicht: Zu acht läuft **jede** Partie in die Rundengrenze von
-> 30, statt sich auszuspielen (100 Startleben gegen rund 5 Punkte Schaden je
-> Niederlage). Alle drei stehen als eigene Punkte auf dem Board.
+> **Die Synergien** (Phase 3 des Konzepts) kamen am 04.09.2026 dazu:
+> `synergien.ts`. Je Marke zählt das eigene **Brett** (nicht die Bank), mit
+> Schwellen bei 2 / 4 / 6; Kopien zählen, eine Einheit mit zwei Marken
+> zählt für beide. Was eine Marke bekommt, steht als **Tabelle** in
+> `SYNERGIEN` (Krieger Rüstung, Elementar Angriff, Meuchler Tempo, Wächter
+> Leben + Rüstung, Naturwesen Leben, Untot Angriff + Leben, Drache Angriff +
+> Tempo), nicht in Bedingungen. Den Bonus bekommen nur die **Träger** der
+> Marke, angehängt an `werteFuer()` in `katalog.ts` — der Kampf ruft sie in
+> `baueStreiter` einmal je Seite und fasst die Werte danach nicht mehr an.
+> Rüstung ist bei `RUESTUNG_HOECHSTWERT` (75) gedeckelt. Die Sicht trägt je
+> Sitz `synergien` (Marke, Anzahl, erreichte und nächste Schwelle, Bonus)
+> und beim ersten Ausliefern die `synergieTabelle`, wie den Katalog.
+> **Die Anzeige im Client fehlt noch** — die Zahlen sind ein erster Wurf.
+>
+> **Was noch fehlt:** Die Werte tragen die Partie noch nicht: Zu acht läuft
+> **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
+> Startleben gegen rund 5 Punkte Schaden je Niederlage). Steht als eigener
+> Punkt auf dem Board. Der Kampf selbst wird seit #35 (04.09.2026) im
+> Client abgespielt (`minispiele/tafelrunde/KampfAnzeige.tsx`).
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >
