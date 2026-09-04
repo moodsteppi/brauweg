@@ -908,7 +908,7 @@ geänderte Kacheln überschreibt der nächste Lauf.</p>
 <p style="color:#8a93a5;font-size:.9em">Stand 05.09.2026: zehn Spiele
 spielbar (Doppelkopf, Zauberer, Skat, Cambio, Easy Poker, Mememory, Filler,
 Eiland, Feldherr, Tafelrunde) · neun weitere als Vorschau zur Abstimmung ·
-1.297 Tests in den Paketen (402 davon im Server) plus sieben Testdateien im
+1.300 Tests in den Paketen (402 davon im Server) plus sieben Testdateien im
 Client · live auf www.brauweg-spielen.de</p>`, 14), '#6ea8fe');
 
 /* =======================================================================

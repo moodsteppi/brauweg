@@ -16,9 +16,9 @@ Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
 **Prüfstand (gezählt am 5. September 2026, nicht aus der Erinnerung):**
-167 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
+170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
-56 Eiland-Tests, 216 Tafelrunde-Tests, **402 Servertests** — zusammen 1297,
+56 Eiland-Tests, 216 Tafelrunde-Tests, **402 Servertests** — zusammen 1300,
 dazu die Client-Tests (7 Dateien), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
