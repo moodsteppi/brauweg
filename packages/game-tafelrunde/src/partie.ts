@@ -1,5 +1,5 @@
 /**
- * Spielzustand und Regeln von Runenheer.
+ * Spielzustand und Regeln von Tafelrunde.
  *
  * Reine Logik: kein Netz, keine Datenbank, keine Uhr, kein Zufall ausser dem
  * uebergebenen Seed (game-api, Grundsatz 1).
@@ -34,7 +34,7 @@ import {
 import { BRETT_FELDER, istBrettplatz } from './brett.js';
 import {
   MAX_LEVEL,
-  type RunenheerRegeln,
+  type TafelrundeRegeln,
   START_LEVEL,
   aufstiegKosten,
   feldplaetze,
@@ -183,8 +183,8 @@ export interface Heer {
  */
 export type Phase = 'vorbereitung' | 'kampf' | 'ende';
 
-export interface RunenheerPartie {
-  readonly regeln: RunenheerRegeln;
+export interface TafelrundePartie {
+  readonly regeln: TafelrundeRegeln;
   /** Saat als Zeichenkette. Aus ihr entsteht jeder Laden, siehe ladenSaat. */
   readonly saat: string;
   readonly runde: number;
@@ -210,7 +210,7 @@ export interface Ort {
   readonly platz: number;
 }
 
-export type RunenheerAktion =
+export type TafelrundeAktion =
   /** Einen Ladenplatz kaufen. Die Einheit landet auf der Bank. */
   | { readonly typ: 'kaufen'; readonly platz: number }
   | { readonly typ: 'neuwuerfeln' }
@@ -336,7 +336,7 @@ function gibZurueck(
  * laeuft ein Vorrat leer, und zwar erst nach zwanzig Runden.
  */
 function fuelleLaden(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
 ): { heer: Heer; vorrat: Record<EinheitId, number> } {
   const heer = heerVon(partie, sitz);
@@ -437,7 +437,7 @@ export function verschmelze(
 // Aufbau
 // ---------------------------------------------------------------------------
 
-function neuesHeer(regeln: RunenheerRegeln): Heer {
+function neuesHeer(regeln: TafelrundeRegeln): Heer {
   return {
     leben: regeln.startLeben,
     gold: regeln.startGold,
@@ -454,14 +454,14 @@ function neuesHeer(regeln: RunenheerRegeln): Heer {
 }
 
 export function erstellePartie(
-  regeln: RunenheerRegeln,
+  regeln: TafelrundeRegeln,
   sitze: readonly number[],
   saat: Saat,
-): RunenheerPartie {
+): TafelrundePartie {
   const heere: Record<number, Heer> = {};
   for (const sitz of sitze) heere[sitz] = neuesHeer(regeln);
 
-  const roh: RunenheerPartie = {
+  const roh: TafelrundePartie = {
     regeln,
     saat: String(saat),
     runde: 1,
@@ -480,9 +480,9 @@ export function erstellePartie(
 }
 
 function fuelleAlleLaeden(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitze: readonly number[],
-): RunenheerPartie {
+): TafelrundePartie {
   let stand = partie;
   for (const sitz of sitze) {
     const { heer, vorrat } = fuelleLaden(stand, sitz);
@@ -495,13 +495,13 @@ function fuelleAlleLaeden(
 // Auskunft
 // ---------------------------------------------------------------------------
 
-export function sitzeVon(partie: RunenheerPartie): number[] {
+export function sitzeVon(partie: TafelrundePartie): number[] {
   return Object.keys(partie.heere)
     .map(Number)
     .sort((a, b) => a - b);
 }
 
-export function heerVon(partie: RunenheerPartie, sitz: number): Heer {
+export function heerVon(partie: TafelrundePartie, sitz: number): Heer {
   const heer = partie.heere[sitz];
   if (!heer) throw new Error(`Sitz ${sitz} sitzt an diesem Tisch nicht`);
   return heer;
@@ -512,7 +512,7 @@ export function lebt(heer: Heer): boolean {
 }
 
 /** Sitze, die noch im Rennen sind. */
-export function lebendeSitze(partie: RunenheerPartie): number[] {
+export function lebendeSitze(partie: TafelrundePartie): number[] {
   return sitzeVon(partie).filter((s) => lebt(heerVon(partie, s)));
 }
 
@@ -527,7 +527,7 @@ export function brettBelegung(heer: Heer): number {
  * Das ist die eigentliche Zugregel — nicht `amZug`. Alle ruesten gleichzeitig,
  * also darf jeder handeln, der lebt und noch nicht bereit gemeldet hat.
  */
-export function darfHandeln(partie: RunenheerPartie, sitz: number): boolean {
+export function darfHandeln(partie: TafelrundePartie, sitz: number): boolean {
   if (partie.fertig || partie.phase !== 'vorbereitung') return false;
   const heer = partie.heere[sitz];
   return heer !== undefined && lebt(heer) && !heer.bereit;
@@ -542,7 +542,7 @@ export function darfHandeln(partie: RunenheerPartie, sitz: number): boolean {
  * Waere es ein fester Sitz, liefe dessen Uhr auch dann, wenn er laengst
  * fertig ist, und die eines Truedlers nie.
  */
-export function amZug(partie: RunenheerPartie): number | null {
+export function amZug(partie: TafelrundePartie): number | null {
   if (partie.fertig || partie.phase !== 'vorbereitung') return null;
   return sitzeVon(partie).find((s) => darfHandeln(partie, s)) ?? null;
 }
@@ -558,7 +558,7 @@ export function amZug(partie: RunenheerPartie): number | null {
  * Zins auf Geld, das man noch gar nicht hat, und die Grenze von 5 waere bei
  * 45 statt bei 50 erreicht.
  */
-export function einkommen(heer: Heer, regeln: RunenheerRegeln): number {
+export function einkommen(heer: Heer, regeln: TafelrundeRegeln): number {
   return regeln.grundeinkommen + zins(heer.gold) + serienBonus(heer.serie.laenge);
 }
 
@@ -566,7 +566,7 @@ export function einkommen(heer: Heer, regeln: RunenheerRegeln): number {
 // Aktionen
 // ---------------------------------------------------------------------------
 
-function istOrt(wert: unknown, regeln: RunenheerRegeln): wert is Ort {
+function istOrt(wert: unknown, regeln: TafelrundeRegeln): wert is Ort {
   if (typeof wert !== 'object' || wert === null) return false;
   const o = wert as Record<string, unknown>;
   if (o['bereich'] !== 'bank' && o['bereich'] !== 'brett') return false;
@@ -641,12 +641,12 @@ function rechneKauf(heer: Heer, plaetze: number, id: EinheitId): Heer | null {
 }
 
 export function erlaubteZuege(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
-): RunenheerAktion[] {
+): TafelrundeAktion[] {
   if (!darfHandeln(partie, sitz)) return [];
   const heer = heerVon(partie, sitz);
-  const zuege: RunenheerAktion[] = [];
+  const zuege: TafelrundeAktion[] = [];
 
   heer.laden.forEach((id, platz) => {
     if (id === null) return;
@@ -680,10 +680,10 @@ export function erlaubteZuege(
 }
 
 export function fuehreAus(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
-  aktion: RunenheerAktion,
-): RunenheerPartie {
+  aktion: TafelrundeAktion,
+): TafelrundePartie {
   if (partie.fertig) throw new Error('Partie ist zu Ende');
   if (partie.phase !== 'vorbereitung') throw new Error('Gerade wird nicht geruestet');
   const heer = heerVon(partie, sitz);
@@ -781,7 +781,7 @@ export function fuehreAus(
   }
 }
 
-function setzeHeer(partie: RunenheerPartie, sitz: number, heer: Heer): RunenheerPartie {
+function setzeHeer(partie: TafelrundePartie, sitz: number, heer: Heer): TafelrundePartie {
   return { ...partie, heere: { ...partie.heere, [sitz]: heer } };
 }
 
@@ -792,7 +792,7 @@ function setzeHeer(partie: RunenheerPartie, sitz: number, heer: Heer): Runenheer
  * einem Bot weiterspielen, aber wenn der ausfaellt, wartete der ganze Tisch
  * bis zum Verfall auf jemanden, der nicht mehr da ist.
  */
-function pruefePhase(partie: RunenheerPartie): RunenheerPartie {
+function pruefePhase(partie: TafelrundePartie): TafelrundePartie {
   if (partie.phase !== 'vorbereitung') return partie;
   const offen = lebendeSitze(partie).filter((s) => {
     const heer = heerVon(partie, s);
@@ -830,9 +830,9 @@ export interface Kampfausgang {
  * Runde gegen niemanden antreten musste.
  */
 export function wendeKampfausgang(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   ausgaenge: readonly Kampfausgang[],
-): RunenheerPartie {
+): TafelrundePartie {
   if (partie.phase !== 'kampf') throw new Error('Es wird gerade nicht gekaempft');
 
   const heere: Record<number, Heer> = { ...partie.heere };
@@ -897,7 +897,7 @@ export function wendeKampfausgang(
  * bliebe — und ein haengender Tisch ist der einzige Fehler, den ein Spieler
  * nicht selbst beheben kann.
  */
-export function ohneKampfWeiter(partie: RunenheerPartie): RunenheerPartie {
+export function ohneKampfWeiter(partie: TafelrundePartie): TafelrundePartie {
   return wendeKampfausgang(partie, []);
 }
 
@@ -909,7 +909,7 @@ export function ohneKampfWeiter(partie: RunenheerPartie): RunenheerPartie {
  * saehe man in Runde 12 noch die Einheiten aus Runde 11 und muesste fuer
  * jeden Blick auf etwas Neues bezahlen.
  */
-function naechsteRunde(partie: RunenheerPartie): RunenheerPartie {
+function naechsteRunde(partie: TafelrundePartie): TafelrundePartie {
   const uebrig = lebendeSitze(partie);
 
   // Erst das Ende pruefen, dann auszahlen: Ein Einkommen in einer Runde, die
@@ -928,7 +928,7 @@ function naechsteRunde(partie: RunenheerPartie): RunenheerPartie {
     heere[sitz] = { ...heer, gold: heer.gold + einkommen(heer, partie.regeln), bereit: false };
   }
 
-  const naechste: RunenheerPartie = {
+  const naechste: TafelrundePartie = {
     ...partie,
     runde: partie.runde + 1,
     phase: 'vorbereitung',
@@ -947,9 +947,9 @@ function naechsteRunde(partie: RunenheerPartie): RunenheerPartie {
 // ---------------------------------------------------------------------------
 
 export function markiereVerlassen(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
-): RunenheerPartie {
+): TafelrundePartie {
   const heer = partie.heere[sitz];
   if (!heer || heer.verlassen) return partie;
   // Die Phasenpruefung gleich mit: Wartete der Tisch nur noch auf diesen
@@ -969,7 +969,7 @@ export function markiereVerlassen(
  * Unentschieden.
  */
 export function platzierungen(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
 ): { seat: number; points: number; place: number; left: boolean }[] {
   const reihe = sitzeVon(partie)
     .map((seat) => {
@@ -997,7 +997,7 @@ export function platzierungen(
 }
 
 /** Sieger, oder null bei Gleichstand bzw. laufender Partie. */
-export function sieger(partie: RunenheerPartie): number | null {
+export function sieger(partie: TafelrundePartie): number | null {
   if (!partie.fertig) return null;
   const [erster, zweiter] = platzierungen(partie);
   if (!erster) return null;

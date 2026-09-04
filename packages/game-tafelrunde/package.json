@@ -1,8 +1,8 @@
 {
-  "name": "@brauweg/game-runenheer",
+  "name": "@brauweg/game-tafelrunde",
   "private": true,
   "version": "1.0.0",
-  "description": "Regel-Engine fuer Runenheer - Auto-Battler mit Verschmelzen",
+  "description": "Regel-Engine fuer Tafelrunde - Auto-Battler mit Verschmelzen",
   "main": "dist/src/index.js",
   "directories": {
     "test": "test"

@@ -6,7 +6,7 @@ import {
   DEFAULT_REGELN,
   type Heer,
   type Kaempfer,
-  type RunenheerPartie,
+  type TafelrundePartie,
   amZug,
   brettBelegung,
   darfHandeln,
@@ -31,10 +31,10 @@ function neu(regeln = DEFAULT_REGELN, sitze: readonly number[] = [0, 1]) {
 }
 
 function mitHeer(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
   teil: Partial<Heer>,
-): RunenheerPartie {
+): TafelrundePartie {
   return { ...partie, heere: { ...partie.heere, [sitz]: { ...partie.heere[sitz]!, ...teil } } };
 }
 
@@ -43,7 +43,7 @@ function leer(laenge: number): (Kaempfer | null)[] {
 }
 
 /** Beide Sitze melden sich bereit — danach steht die Partie im Kampf. */
-function beideBereit(partie: RunenheerPartie): RunenheerPartie {
+function beideBereit(partie: TafelrundePartie): TafelrundePartie {
   let p = fuehreAus(partie, 0, { typ: 'bereit' });
   p = fuehreAus(p, 1, { typ: 'bereit' });
   return p;
@@ -88,7 +88,7 @@ describe('Aufbau', () => {
 });
 
 describe('Brett und Bank', () => {
-  const mitEinheiten = (partie: RunenheerPartie): RunenheerPartie => {
+  const mitEinheiten = (partie: TafelrundePartie): TafelrundePartie => {
     const bank = leer(DEFAULT_REGELN.bankPlaetze);
     bank[0] = { id: 'dorfwache', stufe: 1 };
     bank[1] = { id: 'schildknappe', stufe: 1 };

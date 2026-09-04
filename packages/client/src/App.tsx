@@ -16,6 +16,7 @@ import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
 import { CambioTable } from './screens/CambioTable';
 import { SkatTable } from './screens/SkatTable';
+import { Tafelrunde } from './screens/Tafelrunde';
 import { WizardTable } from './screens/WizardTable';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
@@ -46,6 +47,12 @@ type Screen =
    * einem Bildschirm, keine Kartenlobby.
    */
   | { name: 'eiland'; tisch?: string | null }
+  /**
+   * Tafelrunde ebenso: eigenes Hauptmenue, eigene Match-Suche, Ruestkammer
+   * auf einem Bildschirm. Es ist kein Kartenspiel und braucht keine
+   * Kartenlobby.
+   */
+  | { name: 'tafelrunde'; tisch?: string | null }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
   /** Solo-Endless-Runner aus der Spielauswahl. */
@@ -283,6 +290,37 @@ export function App(): React.JSX.Element {
     );
   }
 
+  /**
+   * Tafelrunde: Auto-Battler mit Verschmelzen. Wie bei Filler und Eiland
+   * fuehren alle drei Wege — Spielauswahl, Lobby, Weiterspielen — auf
+   * denselben Bildschirm.
+   */
+  if (screen.name === 'tafelrunde') {
+    return (
+      <Tafelrunde
+        startTisch={screen.tisch ?? null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+  if (
+    (screen.name === 'table' || screen.name === 'lobby') &&
+    screen.gameId === 'tafelrunde'
+  ) {
+    return (
+      <Tafelrunde
+        startTisch={screen.name === 'table' ? screen.tableId : null}
+        onBack={() => {
+          setScreen({ name: 'games' });
+          void reload();
+        }}
+      />
+    );
+  }
+
   if (screen.name === 'table') {
     /**
      * Jedes Spiel hat seinen eigenen Tisch: Der Doppelkopftisch kennt
@@ -352,6 +390,7 @@ export function App(): React.JSX.Element {
         if (gameId === 'easypoker') return setScreen({ name: 'easypoker' });
         if (gameId === 'filler') return setScreen({ name: 'filler' });
         if (gameId === 'eiland') return setScreen({ name: 'eiland' });
+        if (gameId === 'tafelrunde') return setScreen({ name: 'tafelrunde' });
         return setScreen({ name: 'lobby', gameId });
       }}
       onSolo={(modusId) => {

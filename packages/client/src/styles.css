@@ -16332,3 +16332,722 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* Die Farbwahl steht in einer Reihe mit dem Bau-Knopf. */
 .fl-fuss > .fl-palette + .fl-bauknopf { margin-top: -2px; }
+
+
+/* ==========================================================================
+   Tafelrunde — Auto-Battler mit Verschmelzen (screens/Tafelrunde.tsx)
+
+   Dunkel und golden, nicht hell wie Filler und Eiland. Das ist keine
+   Abweichung von der Plattform, sondern ihre Grundfarbe: `--bg`, `--panel`
+   und `--line` aus dem Kopf dieser Datei, dazu `--gold` fuer Gold und
+   `--danger` fuer Leben (DESIGN.md: Gold = wert, Rot = Vorsicht). Filler und
+   Eiland gehen ins Helle, weil ihre Bretter von kraeftigen Flaechenfarben
+   leben; hier sind die Einheiten die hellen Punkte, und die brauchen einen
+   dunklen Grund.
+
+   Aufbau und Klassennamen sind von Filler abgeschaut: `tr-seite`,
+   `tr-zurueck`, `tr-menue-mitte`, `tr-titel`, `tr-suchen`, `tr-punkte-lauf`,
+   `tr-blatt`. Wer dort etwas aendert, findet es hier wieder.
+   ========================================================================== */
+
+.tr-seite {
+  position: fixed;
+  inset: 0;
+  /* styles.css setzt weiter oben `main { max-width: 60rem; padding: 1rem }`.
+     Beides gilt auch fuer einen Vollbild-Bildschirm und muss hier
+     ausdruecklich zurueckgenommen werden — sonst haengt das Brett auf einem
+     breiten Schirm links in einer 960-px-Spalte. */
+  max-width: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text);
+  background:
+    radial-gradient(120% 80% at 50% 0%, #1d2830 0%, transparent 60%),
+    linear-gradient(180deg, #12181c, #0d1216);
+}
+
+/* Nicht ganz oben in der Ecke: Dort sitzt auf dem iPhone die Notch. */
+.tr-zurueck {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 14px;
+  z-index: 5;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+.tr-zurueck:active { transform: scale(0.96); }
+.tr-zurueck-tisch { position: absolute; }
+
+/* -- Menue und Suche ------------------------------------------------------ */
+
+.tr-menue { justify-content: center; padding: 20px; }
+.tr-menue-mitte { width: min(92vw, 420px); text-align: center; }
+
+.tr-titel {
+  margin: 0 0 10px;
+  font: 900 clamp(34px, 11vw, 52px)/1 system-ui;
+  letter-spacing: -0.04em;
+  color: var(--gold);
+}
+
+.tr-untertitel { margin: 0 0 14px; color: var(--muted); font: 600 14px/1.45 system-ui; }
+.tr-klein { margin-top: 18px; font-size: 13px; opacity: 0.8; }
+.tr-fehler { margin: 12px 0 0; color: var(--danger); font: 700 13px/1.4 system-ui; }
+
+/* Die fuenf Rollen als Kostprobe — dieselben Zeichen wie spaeter auf den
+   Einheiten, damit im Menue nichts steht, was es im Spiel nicht gibt. */
+.tr-probe { display: flex; justify-content: center; gap: 10px; margin: 4px 0 22px; }
+.tr-probe span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.tr-probe .tr-rolle { width: 22px; height: 22px; }
+
+.tr-suchen {
+  width: 100%;
+  padding: 18px 16px;
+  border: 0;
+  border-radius: 18px;
+  color: #1a1207;
+  background: linear-gradient(180deg, #f0cd72, #d8a63a);
+  box-shadow: 0 12px 26px -14px rgba(226, 182, 79, 0.9);
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms ease;
+}
+.tr-suchen:active { transform: scale(0.985); }
+.tr-suchen:disabled { filter: saturate(0.4) brightness(0.85); cursor: default; }
+
+/* Ruhiger als der Hauptknopf — dieselbe Staffelung wie bei Filler und
+   Mememory, nur andersherum belegt (siehe Kommentar bei `starteBots`). */
+.tr-nebenknopf {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--panel);
+  font: 700 14px/1 system-ui;
+  cursor: pointer;
+}
+.tr-nebenknopf:active { transform: scale(0.985); }
+.tr-nebenknopf:disabled { opacity: 0.45; cursor: default; }
+
+.tr-punkte-lauf { display: flex; justify-content: center; gap: 8px; margin: 18px 0 4px; }
+.tr-punkte-lauf span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: tr-huepf 1.05s infinite ease-in-out;
+}
+.tr-punkte-lauf span:nth-child(2) { animation-delay: 0.16s; }
+.tr-punkte-lauf span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes tr-huepf {
+  0%, 70%, 100% { transform: translateY(0); opacity: 0.45; }
+  35% { transform: translateY(-7px); opacity: 1; }
+}
+
+/* -- Der Tisch ------------------------------------------------------------ */
+
+.tr-tisch {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 0 max(8px, env(safe-area-inset-bottom));
+  /* Der Bildschirm rollt als Ganzes, wenn er nicht passt. Ohne das faellt der
+     Laden auf einem kurzen Handy unter den Rand — und der Laden ist die
+     einzige Stelle, an der man ueberhaupt etwas kaufen kann. */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.tr-kopf {
+  position: relative;
+  width: 100%;
+  padding: max(12px, env(safe-area-inset-top)) 12px 8px;
+}
+
+.tr-werte {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  /* Platz fuer den Zurueck-Knopf, der als eigene Ebene darueber liegt. */
+  margin-left: 52px;
+}
+.tr-wert {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 6px;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.tr-wert strong { font: 800 18px/1 system-ui; }
+.tr-wert em { font: 600 10px/1 system-ui; font-style: normal; color: var(--muted); }
+.tr-wert .tr-icon { width: 14px; height: 14px; }
+.tr-wert-leben { color: var(--danger); }
+.tr-wert-gold { color: var(--gold); }
+.tr-wert-level { color: var(--blau); }
+.tr-wert-leben em,
+.tr-wert-gold em,
+.tr-wert-level em { color: var(--muted); }
+
+/* Die Zeichen sind Striche, keine Flaechen: So bleiben sie auf jeder Groesse
+   gleich schwer und muessen nicht je Ort neu gefaerbt werden. */
+.tr-icon,
+.tr-rolle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* -- Gegnerleiste --------------------------------------------------------- */
+
+.tr-gegnerleiste {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 0 12px;
+  /* Die Seite selbst rollt nie quer (DESIGN.md) — dieser Streifen schon,
+     denn bei acht Sitzen passt er sonst nicht. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tr-gegnerleiste::-webkit-scrollbar { display: none; }
+.tr-gegner {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--muted);
+  font: 700 11px/1.2 system-ui;
+  cursor: pointer;
+}
+.tr-gegner[data-an] { border-color: var(--gold); color: var(--text); }
+.tr-gegner[data-aus] { opacity: 0.4; }
+.tr-gegner[data-bereit] { box-shadow: inset 0 0 0 1px var(--accent); }
+.tr-gegner-name {
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tr-gegner-leben { display: flex; align-items: center; gap: 3px; color: var(--danger); }
+.tr-gegner-leben .tr-icon { width: 11px; height: 11px; }
+
+/* -- Die beiden Bretthaelften --------------------------------------------- */
+
+.tr-bretter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(94vw, 460px);
+}
+.tr-brettteil { position: relative; }
+/* Die Gegnerhaelfte tritt zurueck: Sie ist Auskunft, nicht Bedienflaeche.
+   Ganz ausblenden waere falsch — man spielt gegen sie. */
+.tr-brettteil-fremd { opacity: 0.72; }
+.tr-brettteil-fremd .tr-brett { transform: scale(0.86); transform-origin: bottom center; }
+
+.tr-bretttitel {
+  margin: 0 0 2px;
+  font: 700 11px/1.2 system-ui;
+  color: var(--muted);
+  text-align: center;
+}
+
+.tr-brett { position: relative; width: 100%; }
+
+/*
+ * Eine Wabe. `clip-path` statt eines Bildes: Sechsecke als PNG waeren sechs
+ * Dateien (leer, belegt, gewaehlt, …), und jede muesste beim naechsten
+ * Farbwechsel neu geliefert werden.
+ */
+.tr-wabe {
+  position: absolute;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(255, 255, 255, 0.05);
+  display: grid;
+  place-items: center;
+  transition: background 140ms ease;
+}
+.tr-wabe[data-leer] { background: rgba(255, 255, 255, 0.045); }
+.tr-wabe[data-gewaehlt] { background: rgba(226, 182, 79, 0.3); }
+
+/* Die ganze Wabe ist das Ziel, nicht nur ihre Mitte: Ein Daumen trifft eine
+   Flaeche, keinen Punkt. */
+.tr-wabe-ziel {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.tr-wabe-ziel:disabled { cursor: default; }
+
+/* -- Eine Einheit --------------------------------------------------------- */
+
+.tr-einheit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  color: var(--tr-kosten, var(--muted));
+  background: linear-gradient(180deg, #232f37, #1a242a);
+  box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line));
+}
+/*
+ * `touch-action: none` ist die eine Zeile, ohne die das Ziehen am Handy nicht
+ * funktioniert: Sonst deutet der Browser die Fingerbewegung als Rollen, nimmt
+ * sich den Zeiger und schickt `pointercancel` — die Einheit bliebe am Start
+ * kleben, und das Brett waere genau dort unbedienbar, wo es gebraucht wird.
+ */
+.tr-einheit[data-fassbar] { cursor: grab; touch-action: none; }
+.tr-einheit[data-fassbar]:active { cursor: grabbing; }
+/* Beim Ziehen bleibt der Platz sichtbar leer, damit man sieht, woher es kommt. */
+.tr-einheit[data-still] { opacity: 0.25; }
+.tr-einheit .tr-rolle { width: 40%; height: 40%; }
+
+.tr-einheit-name {
+  max-width: 92%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font: 700 9px/1.1 system-ui;
+}
+.tr-sterne { color: var(--gold); font: 700 9px/1 system-ui; letter-spacing: -1px; }
+
+/* "noch 1" — die Auskunft, die aus dem naechsten Kauf eine Entscheidung
+   macht. Absolut gesetzt, damit sie die Wabe nicht auseinanderdrueckt. */
+.tr-fehlt {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  color: #1a1207;
+  background: var(--gold);
+  font: 800 8px/1.3 system-ui;
+}
+
+/* Das Verschmelzen sichtbar machen: ein kurzer goldener Puls auf der neuen
+   Einheit. Er laeuft genau so lange wie das Band darueber steht. */
+.tr-einheit[data-frisch] { animation: tr-puls 2.2s ease-out 1; }
+@keyframes tr-puls {
+  0% { box-shadow: inset 0 0 0 2px var(--gold), 0 0 0 0 rgba(226, 182, 79, 0.85); }
+  35% { box-shadow: inset 0 0 0 3px var(--gold), 0 0 0 14px rgba(226, 182, 79, 0); }
+  100% { box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line)); }
+}
+
+.tr-verschmolzen-band {
+  position: fixed;
+  left: 50%;
+  top: 22%;
+  z-index: 8;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  color: #1a1207;
+  background: linear-gradient(180deg, #f5d888, #dcae43);
+  box-shadow: 0 18px 34px -18px rgba(0, 0, 0, 0.9);
+  font: 800 14px/1 system-ui;
+  pointer-events: none;
+  animation: tr-band 2.2s ease-out 1 forwards;
+}
+.tr-verschmolzen-band .tr-sterne { color: #7a5410; font-size: 14px; }
+@keyframes tr-band {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); }
+  12% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Was am Finger haengt. `pointer-events: none`, sonst faende
+   `elementFromPoint` immer nur diesen Schatten und nie das Ziel darunter. */
+.tr-schatten {
+  position: fixed;
+  z-index: 9;
+  width: 68px;
+  height: 78px;
+  margin: -39px 0 0 -34px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  pointer-events: none;
+  opacity: 0.92;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.8));
+}
+
+/* -- Reservebank ---------------------------------------------------------- */
+
+.tr-bank {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  width: min(94vw, 460px);
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.tr-bankplatz {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.tr-bankplatz[data-gewaehlt] { box-shadow: inset 0 0 0 2px var(--gold); }
+/* Wohin die gewaehlte Einheit darf. Nur waehrend einer Auswahl sichtbar —
+   ein dauerhaft leuchtender Rahmen waere Rauschen. */
+.tr-bankplatz[data-zielbar] { box-shadow: inset 0 0 0 2px var(--accent); }
+.tr-bankplatz .tr-einheit { box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line)); }
+/* Zu schmal fuer einen Namen — das Zeichen und die Sterne muessen reichen. */
+.tr-bankplatz .tr-einheit-name { display: none; }
+
+/* -- Auswahlband ---------------------------------------------------------- */
+
+.tr-auswahlband {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(94vw, 460px);
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--gold);
+  font: 700 12px/1.2 system-ui;
+}
+.tr-auswahlband > span { flex: 1; min-width: 0; }
+.tr-verkaufen,
+.tr-abwaehlen {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.tr-verkaufen { color: var(--gold); }
+
+/* -- Laden ---------------------------------------------------------------- */
+
+.tr-fuss {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(96vw, 520px);
+  padding: 4px 0 10px;
+}
+
+.tr-laden {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  width: 100%;
+}
+.tr-karte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 84px;
+  padding: 7px 4px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--tr-kosten, var(--muted));
+  background: linear-gradient(180deg, #232f37, #182127);
+  box-shadow: inset 0 0 0 1.5px var(--tr-kosten, var(--line));
+  cursor: pointer;
+}
+.tr-karte:active:not(:disabled) { transform: scale(0.97); }
+/* Nicht kaufbar heisst nicht unsichtbar: Man soll sehen, worauf man spart. */
+.tr-karte:disabled { opacity: 0.42; cursor: default; }
+.tr-karte-leer {
+  min-height: 84px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.tr-karte-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+}
+.tr-karte-kopf .tr-rolle { width: 18px; height: 18px; }
+.tr-karte-preis {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--gold);
+  font: 800 12px/1 system-ui;
+}
+.tr-karte-preis .tr-icon { width: 12px; height: 12px; }
+.tr-karte-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font: 800 10px/1.2 system-ui;
+}
+.tr-karte-rolle { color: var(--muted); font: 600 9px/1 system-ui; }
+.tr-karte-marke {
+  margin-top: auto;
+  padding: 1px 5px;
+  border-radius: 6px;
+  color: #1a1207;
+  background: var(--gold);
+  font: 800 9px/1.4 system-ui;
+}
+.tr-karte-marke-leise { color: var(--muted); background: rgba(255, 255, 255, 0.08); }
+/* Der Kauf, der drei voll macht, blinkt einmal — sonst uebersieht man ihn
+   zwischen fuenf gleich aussehenden Karten. */
+.tr-karte[data-verschmilzt] {
+  box-shadow: inset 0 0 0 2px var(--gold);
+  animation: tr-winken 1.4s ease-in-out infinite;
+}
+@keyframes tr-winken {
+  0%, 100% { box-shadow: inset 0 0 0 2px var(--gold); }
+  50% { box-shadow: inset 0 0 0 2px var(--gold), 0 0 12px -2px rgba(226, 182, 79, 0.7); }
+}
+
+.tr-ladenknoepfe { display: flex; gap: 6px; width: 100%; }
+.tr-ladenknopf,
+.tr-bereitknopf {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+}
+.tr-ladenknopf em {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--gold);
+  font: 800 12px/1 system-ui;
+  font-style: normal;
+}
+.tr-ladenknopf em .tr-icon { width: 12px; height: 12px; }
+.tr-ladenknopf:disabled,
+.tr-bereitknopf:disabled { opacity: 0.4; cursor: default; }
+.tr-bereitknopf {
+  color: #10200f;
+  background: linear-gradient(180deg, #6cc48a, #3f8f5d);
+  border-color: transparent;
+  font-weight: 800;
+}
+.tr-bereitknopf[data-bereit] {
+  color: var(--muted);
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+.tr-hinweis { margin: 0; color: var(--muted); font: 600 12px/1.35 system-ui; text-align: center; }
+.tr-wartet { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.tr-lauf { display: inline-flex; gap: 4px; }
+.tr-lauf i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: tr-huepf 1.05s infinite ease-in-out;
+}
+.tr-lauf i:nth-child(2) { animation-delay: 0.16s; }
+.tr-lauf i:nth-child(3) { animation-delay: 0.32s; }
+
+.tr-regelzeile {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 12px/1 system-ui;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tr-abschluss { text-align: center; }
+.tr-abschluss h2 { margin: 0 0 4px; font: 900 26px/1 system-ui; color: var(--muted); }
+.tr-abschluss h2[data-sieg] { color: var(--gold); }
+.tr-abschluss p { margin: 0 0 12px; color: var(--muted); font: 700 14px/1 system-ui; }
+.tr-abschluss .tr-suchen { width: min(80vw, 260px); padding: 14px 16px; }
+
+/* -- Regelblatt ----------------------------------------------------------- */
+
+.tr-blatt {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  padding: max(56px, env(safe-area-inset-top)) 20px 40px;
+  color: var(--text);
+  background: var(--bg);
+}
+.tr-blatt h2 {
+  margin: 0 0 18px;
+  font: 800 24px/1.2 system-ui;
+  text-align: center;
+  color: var(--gold);
+}
+.tr-blatt h3 { margin: 22px 0 8px; font: 800 19px/1.2 Georgia, serif; }
+.tr-blatt p,
+.tr-blatt li { font: 400 16px/1.5 Georgia, serif; }
+.tr-blatt ol { margin: 0; padding-left: 22px; }
+.tr-blatt li { margin-bottom: 10px; }
+.tr-blatt-zu {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+
+/* Ab Tablet-Breite steht mehr Platz zur Verfuegung: Brett und Laden duerfen
+   groesser werden, statt in der Mitte eines leeren Schirms zu kleben. */
+@media (min-width: 40rem) {
+  .tr-bretter,
+  .tr-bank,
+  .tr-auswahlband { width: min(70vw, 560px); }
+  .tr-fuss { width: min(72vw, 600px); }
+  .tr-karte { min-height: 104px; }
+}
+
+/* Wer weniger Bewegung eingestellt hat, bekommt das Ergebnis ohne Zappeln —
+   die Auskunft steckt in Farbe und Text, nicht in der Animation. */
+@media (prefers-reduced-motion: reduce) {
+  .tr-punkte-lauf span,
+  .tr-lauf i,
+  .tr-karte[data-verschmilzt],
+  .tr-einheit[data-frisch],
+  .tr-verschmolzen-band { animation: none; }
+}
+
+
+/* -- Tafelrunde: das Banner der Spielauswahl (minispiele/tafelrunde) ------
+
+   Dieselbe Bauart wie bei Eiland und Filler, nur ohne gemaltes Gegenstueck:
+   Fuer Tafelrunde gibt es noch kein Bild, deshalb steht das Brett auch bei
+   „weniger Bewegung" da — nur eben still. Die Masse sind Prozente des
+   Banners, damit ein spaeter geliefertes Bild an derselben Stelle sitzt. */
+
+.tr-banner {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 1;
+  overflow: hidden;
+  background: linear-gradient(180deg, #12181c, #0d1216);
+}
+/* Der warme Schein rechts hinter dem Brett — er nimmt dem dunklen Kasten die
+   Leere und traegt die Farbe des Spiels (Gold) ins Banner. */
+.tr-banner-schein {
+  position: absolute;
+  top: -55%;
+  right: -4%;
+  width: 62%;
+  height: 210%;
+  background: radial-gradient(closest-side, rgba(226, 182, 79, 0.32), rgba(226, 182, 79, 0));
+  pointer-events: none;
+}
+.tr-banner-brett {
+  position: absolute;
+  top: 6%;
+  right: 5%;
+  height: 88%;
+  /* Die Breite ergibt sich aus dem Seitenverhaeltnis des Rasters, das die
+     Bauteil-Datei ausrechnet — hier steht deshalb nur die Hoehe. */
+  width: auto;
+}
+.tr-banner-wabe {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(255, 255, 255, 0.05);
+  transition: background-color 220ms ease;
+}
+.tr-banner-wabe svg {
+  width: 46%;
+  height: 46%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tr-banner-wabe i {
+  color: var(--gold);
+  font: 700 7px/1 system-ui;
+  font-style: normal;
+  letter-spacing: -1px;
+}
+/* Eine frisch verschmolzene Einheit wird kurz gross und golden. Das ist der
+   ganze Zweck dieses Banners: Wer zwei Sekunden hinsieht, hat die Mechanik
+   verstanden, ohne ein Wort gelesen zu haben. */
+.tr-banner-wabe[data-frisch] { animation: tr-banner-frisch 900ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes tr-banner-frisch {
+  0% { transform: scale(0.5); filter: brightness(2.2); background: rgba(226, 182, 79, 0.6); }
+  60% { transform: scale(1.12); background: rgba(226, 182, 79, 0.28); }
+  100% { transform: none; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-banner-wabe[data-frisch] { animation: none; }
+}

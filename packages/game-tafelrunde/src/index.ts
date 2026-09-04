@@ -1,4 +1,4 @@
-export { runenheer } from './adapter.js';
+export { tafelrunde } from './adapter.js';
 export {
   type Einheit,
   type EinheitId,
@@ -33,7 +33,7 @@ export {
 } from './brett.js';
 export {
   type Levelstufe,
-  type RunenheerRegeln,
+  type TafelrundeRegeln,
   DEFAULT_REGELN,
   LEVEL_TABELLE,
   MAX_LEVEL,
@@ -56,8 +56,8 @@ export {
   type Kampfausgang,
   type Ort,
   type Phase,
-  type RunenheerAktion,
-  type RunenheerPartie,
+  type TafelrundeAktion,
+  type TafelrundePartie,
   type Saat,
   type Serie,
   type Serienart,
@@ -90,7 +90,7 @@ export {
 export {
   type EigeneSicht,
   type FremdeSicht,
-  type RunenheerSicht,
+  type TafelrundeSicht,
   SICHT_MARKE,
   eigenesLebt,
   sichtFuer,

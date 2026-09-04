@@ -86,7 +86,7 @@ export type GameId =
    */
   | 'eiland'
   /**
-   * Runenheer ist ein Auto-Battler und damit das erste Spiel ohne Blatt: Jeder
+   * Tafelrunde ist ein Auto-Battler und damit das erste Spiel ohne Blatt: Jeder
    * baut zwischen den Runden aus einem eigenen Laden ein Heer auf, drei
    * gleiche Einheiten verschmelzen zur naechsten Stufe. Der Kampf laeuft
    * spaeter automatisch ab — im Regelkern steht bisher nur die Vorbereitung.
@@ -94,7 +94,7 @@ export type GameId =
    * `currentActor` nennt trotzdem einen Sitz (wie bei Eiland), damit Zugzeit
    * und Bot-Uebernahme der Plattform ueberhaupt greifen.
    */
-  | 'runenheer'
+  | 'tafelrunde'
   | 'skat'
   | 'schafkopf'
   | 'romme'
@@ -146,6 +146,30 @@ export interface GameMeta {
    * zu zaehlen hiesse, die Kartenaufgabe mit jedem Gefecht zu fuellen.
    */
   readonly xpBasisZaehltKarten?: boolean;
+  /**
+   * `legalActions` zaehlt NICHT jeden erlaubten Zug auf. Fehlt das Feld, gilt
+   * nein — die Liste ist dann vollstaendig.
+   *
+   * Es gibt genau zwei Arten, unvollstaendig zu sein, und sie sehen von aussen
+   * verschieden aus:
+   *
+   *   1. GAR NICHTS aufzaehlen. Skat (Druecken, Ansage), Doppelkopf (Armut)
+   *      und Eiland tun das: Der Zug ist eine Menge von Karten oder Feldern,
+   *      der Client baut ihn aus der Sicht. Eine leere Liste sagt das schon,
+   *      dieses Feld braucht es dafuer nicht.
+   *   2. Nur EINEN TEIL aufzaehlen. Tafelrunde tut das: Kaufen, Wuerfeln,
+   *      Aufsteigen und Verkaufen stehen drin, das Verschieben nicht — es
+   *      waere ein Paar aus 19 Plaetzen und damit bis zu 342 Eintraege in
+   *      jeder Sicht, die ueber die Leitung geht.
+   *
+   * Nur der zweite Fall braucht dieses Feld, denn von aussen ist eine
+   * unvollstaendige Liste nicht von einer vollstaendigen zu unterscheiden.
+   * Wer es setzt, nimmt sich damit eine Pruefung weg (siehe
+   * plattform-invarianten.test.ts) — und muss dafuer sicherstellen, dass
+   * `act` jeden unerlaubten Zug abweist. Das tut es ohnehin, aber hier haengt
+   * es allein daran.
+   */
+  readonly legalActionsUnvollstaendig?: boolean;
   /**
    * Name des Regelsatz-Felds, das den Chip-Stapel je Sitz angibt.
    *

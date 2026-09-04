@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  BRETT_REIHEN,
+  BRETT_SPALTEN,
   DEFAULT_REGELN,
   type Heer,
-  type RunenheerPartie,
+  MAX_STUFE,
+  type TafelrundePartie,
   KATALOG,
+  VERSCHMELZ_ZAHL,
   erstellePartie,
   fuehreAus,
   sichtFuer,
@@ -19,10 +23,10 @@ function neu(sitze: readonly number[] = [0, 1]) {
 }
 
 function mitHeer(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
   teil: Partial<Heer>,
-): RunenheerPartie {
+): TafelrundePartie {
   return { ...partie, heere: { ...partie.heere, [sitz]: { ...partie.heere[sitz]!, ...teil } } };
 }
 
@@ -132,5 +136,16 @@ describe('Oeffentliches', () => {
     assert.equal(typeof sicht.vorrat[gekauft.id], 'number');
     // Auf der Bank des Gegners steht sie trotzdem nirgends.
     assert.ok(!JSON.stringify(sicht.gegner).includes('bank'));
+  });
+});
+
+describe('Masse in der Sicht', () => {
+  it('nennt Brettmasse und Verschmelzzahl, damit der Bildschirm sie nicht raet', () => {
+    const s = sichtFuer(neu(), 0);
+    assert.equal(s.brettReihen, BRETT_REIHEN);
+    assert.equal(s.brettSpalten, BRETT_SPALTEN);
+    assert.equal(s.brettReihen * s.brettSpalten, s.brettFelder);
+    assert.equal(s.verschmelzZahl, VERSCHMELZ_ZAHL);
+    assert.equal(s.maxStufe, MAX_STUFE);
   });
 });

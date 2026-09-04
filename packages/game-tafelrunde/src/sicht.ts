@@ -23,9 +23,9 @@
  */
 
 import type { Einheit, EinheitId } from './katalog.js';
-import { KATALOG } from './katalog.js';
-import { BRETT_FELDER } from './brett.js';
-import type { Heer, Kaempfer, Phase, RunenheerPartie, Serie } from './partie.js';
+import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
+import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN } from './brett.js';
+import type { Heer, Kaempfer, Phase, TafelrundePartie, Serie } from './partie.js';
 import {
   brettBelegung,
   darfHandeln,
@@ -82,7 +82,7 @@ export interface FremdeSicht {
   readonly verlassen: boolean;
 }
 
-export interface RunenheerSicht {
+export interface TafelrundeSicht {
   /**
    * Der eigene Sitz, oder null fuer Zuschauer. Steht in der Sicht und nicht
    * nur in der Nachrichtenhuelle, weil der Bot nichts als die Sicht bekommt
@@ -98,6 +98,21 @@ export interface RunenheerSicht {
   readonly ladenPlaetze: number;
   readonly bankPlaetze: number;
   readonly brettFelder: number;
+  /** Reihen und Spalten der eigenen Bretthaelfte, siehe brett.ts. */
+  readonly brettReihen: number;
+  readonly brettSpalten: number;
+  /**
+   * Wie viele gleiche Einheiten verschmelzen und wie hoch es geht.
+   *
+   * Beide Zahlen stehen in der Sicht, weil der Bildschirm den FORTSCHRITT
+   * anzeigt ("zwei von drei", "dieser Kauf verschmilzt") — und dafuer die
+   * Zahl kennen muss. Sie im Client als 3 auszuschreiben hiesse, die
+   * Verschmelzregel ein zweites Mal zu haben: Wer sie hier auf vier stellte,
+   * bekaeme einen Bildschirm, der bei drei Kopien jubelt und nichts
+   * passiert (CLAUDE.md: der Client bildet keine Regel nach).
+   */
+  readonly verschmelzZahl: number;
+  readonly maxStufe: number;
   /** Uebrige Kopien je Einheit. Oeffentlich, siehe Kopf dieser Datei. */
   readonly vorrat: Readonly<Record<EinheitId, number>>;
   /** Null fuer Zuschauer. */
@@ -144,10 +159,10 @@ function fremd(sitz: number, heer: Heer): FremdeSicht {
 }
 
 function grundsicht(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   ich: number | null,
   seit: number,
-): Omit<RunenheerSicht, 'eigenes' | 'gegner'> {
+): Omit<TafelrundeSicht, 'eigenes' | 'gegner'> {
   return {
     ich,
     runde: partie.runde,
@@ -159,6 +174,10 @@ function grundsicht(
     ladenPlaetze: partie.regeln.ladenPlaetze,
     bankPlaetze: partie.regeln.bankPlaetze,
     brettFelder: BRETT_FELDER,
+    brettReihen: BRETT_REIHEN,
+    brettSpalten: BRETT_SPALTEN,
+    verschmelzZahl: VERSCHMELZ_ZAHL,
+    maxStufe: MAX_STUFE,
     vorrat: partie.vorrat,
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
     ...(seit === 0 ? { katalog: KATALOG } : {}),
@@ -166,10 +185,10 @@ function grundsicht(
 }
 
 export function sichtFuer(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
   seit = 0,
-): RunenheerSicht {
+): TafelrundeSicht {
   const heer = heerVon(partie, sitz);
   const eigenes: EigeneSicht = {
     sitz,
@@ -206,7 +225,7 @@ export function sichtFuer(
  * in fremde Laeden waere ein perfekter Komplize — er muesste einem Spieler nur
  * sagen, welche Einheit beim Nachbarn gerade ausliegt.
  */
-export function zuschauerSicht(partie: RunenheerPartie, seit = 0): RunenheerSicht {
+export function zuschauerSicht(partie: TafelrundePartie, seit = 0): TafelrundeSicht {
   return {
     ...grundsicht(partie, null, seit),
     eigenes: null,
@@ -222,6 +241,6 @@ export function zuschauerSicht(partie: RunenheerPartie, seit = 0): RunenheerSich
  * NICHT, denn zwischen dem Kampf und dem Rundenwechsel gibt es einen Moment,
  * in dem beides auseinanderfaellt.
  */
-export function eigenesLebt(sicht: RunenheerSicht): boolean {
+export function eigenesLebt(sicht: TafelrundeSicht): boolean {
   return sicht.eigenes !== null && sicht.eigenes.ausRunde === null;
 }

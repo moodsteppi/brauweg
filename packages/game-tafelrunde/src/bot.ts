@@ -18,8 +18,8 @@
  */
 
 import { einheit } from './katalog.js';
-import type { RunenheerAktion } from './partie.js';
-import type { RunenheerSicht } from './sicht.js';
+import type { TafelrundeAktion } from './partie.js';
+import type { TafelrundeSicht } from './sicht.js';
 
 /**
  * Wie viel Gold der Bot nach einem Aufstieg uebrig behalten will.
@@ -30,7 +30,7 @@ import type { RunenheerSicht } from './sicht.js';
  */
 const AUFSTIEGS_RESERVE = 5;
 
-export function botZug(sicht: RunenheerSicht): RunenheerAktion {
+export function botZug(sicht: TafelrundeSicht): TafelrundeAktion {
   const eigen = sicht.eigenes;
   // Ohne eigenes Heer gibt es nichts zu entscheiden. Bereit zu melden ist die
   // einzige Aktion, die in jeder Lage etwas bewirkt oder wenigstens nicht

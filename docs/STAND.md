@@ -8,10 +8,10 @@ der Erinnerung.
 
 ## Wo das Projekt steht
 
-Brauweg läuft unter **www.brauweg-spielen.de**. **Neun Spiele sind spielbar:
-Doppelkopf, Zauberer, Skat, Cambio, Poker, Mememory, Filler, Eiland und
-Feldherr** (Stand 01.09.2026 — der Absatz nannte bis dahin zwei), der Hub
-steht, Clans funktionieren.
+Brauweg läuft unter **www.brauweg-spielen.de**. **Zehn Spiele sind spielbar:
+Doppelkopf, Zauberer, Skat, Cambio, Poker, Mememory, Filler, Eiland,
+Feldherr und Tafelrunde** (Stand 04.09.2026 — der Absatz nannte bis dahin
+neun), der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
@@ -21,27 +21,32 @@ Minuten live.
 — zusammen 904, alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
-> **Runenheer: der Regelkern des neunten Spiels steht (04.09.2026), die
-> Oberfläche fehlt noch.** Neues Paket `@brauweg/game-runenheer` mit
-> **86 eigenen Tests** — ein Auto-Battler mit Merge-Mechanik im
-> Fantasy-Gewand (Konzept: `docs/spiele/auto-battler-konzept.md`, Thema von
-> Robin entschieden). Enthalten ist die ganze Vorbereitungsphase: 22
-> Einheiten über drei Kostenstufen mit Klassen-Marken, ein gemeinsamer
-> Vorrat mit 30/25/18 Kopien, ein Fünfer-Laden mit levelabhängigen Chancen,
-> Gold (Grundeinkommen, Zins, Serienbonus), Verschmelzen samt
-> Kettenreaktion, Hex-Brett und Reservebank.
+> **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
+> Oberfläche. Ein Auto-Battler mit Merge-Mechanik im Fantasy-Gewand
+> (Konzept: `docs/spiele/auto-battler-konzept.md`, Thema von Robin
+> entschieden). Konzept und Issueboard nennen es „Spiel 9"; gezählt ist es
+> das zehnte spielbare, weil Feldherr in der Reihe mitläuft.
 >
-> **Was noch fehlt und warum das wichtig ist:** Es gibt **keine
-> Kampfsimulation** und **keine Synergie-Boni** — beide waren im Zuschnitt
-> ausdrücklich ausgenommen. Deshalb steht das Modul **nicht** in `MODULES`
-> in `packages/server/src/games/registry.ts`: Ein Eintrag dort macht ein
-> Spiel startbar (`isPlayable` liest `MODULES`, nicht `availability`), und
-> ein Tisch ohne Bildschirm wäre schlimmer als kein Tisch. Einzutragen ist
-> es zusammen mit dem Client-Bildschirm; dabei `availability` in
-> `adapter.ts` von `preview` auf `playable` stellen und `game.runenheer` in
-> `i18n.ts` ergänzen.
+> **Der Kern** liegt in `@brauweg/game-tafelrunde` (**88 eigene Tests**) und
+> deckt die ganze Vorbereitungsphase ab: 22 Einheiten über drei
+> Kostenstufen mit Klassen-Marken, ein gemeinsamer Vorrat mit 30/25/18
+> Kopien, ein Fünfer-Laden mit levelabhängigen Chancen, Gold
+> (Grundeinkommen, Zins, Serienbonus), Verschmelzen samt Kettenreaktion,
+> Hex-Brett und Reservebank.
 >
-> **Drei Entscheidungen, die man sonst nachrecherchieren müsste:**
+> **Die Oberfläche** ist `packages/client/src/screens/Tafelrunde.tsx`,
+> eingetragen wie Filler und Eiland (eigenes Menü, eigene Match-Suche, kein
+> Kartentisch). Die Rechnerei daraus liegt geprüft in
+> `minispiele/tafelrunde/zuege.ts`; dazu **44 Client-Tests** — die ersten
+> Bildschirm-Tests dieses Pakets überhaupt.
+>
+> **Was noch fehlt:** Es gibt **keine Kampfsimulation** und **keine
+> Synergie-Boni** — beide waren im Zuschnitt ausdrücklich ausgenommen. Die
+> Kampfphase ist eine Schaupause von drei Sekunden, danach geht es weiter;
+> der Bildschirm schreibt „Die Heere treten an" hin, damit sie nicht wie
+> ein hängender Tisch aussieht. Das Regelblatt im Spiel sagt es ebenfalls.
+>
+> **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >
 > 1. **Kein Reihum.** Alle Sitze rüsten gleichzeitig, wie bei Eiland.
 >    `currentActor` nennt trotzdem den kleinsten noch nicht bereiten Sitz,
@@ -54,13 +59,40 @@ Minuten live.
 > 3. **`legalActions` zählt das Verschieben von Einheiten nicht auf.** Es
 >    wäre ein Paar aus 19 Plätzen, also bis zu 342 Einträge in jeder Sicht.
 >    Damit der Client trotzdem keine Regel nachbaut, steht die einzige
->    Einschränkung als Zahl in der Sicht (`feldplaetze`/`belegt`).
+>    Einschränkung als Zahl in der Sicht (`feldplaetze`/`belegt`). Weil man
+>    einer Liste nicht ansieht, dass sie unvollständig ist, sagt die Meta
+>    des Moduls es ausdrücklich: **`legalActionsUnvollstaendig: true`** —
+>    ein neues, optionales Feld in `GameMeta`, das
+>    `plattform-invarianten.test.ts` auswertet (dort „Falle 5"). Ohne das
+>    Feld scheitert die Invariante zu Recht daran, dass der Bot einen Zug
+>    wählt, den die Liste nicht nennt.
+> 4. **Der Katalog kommt nur einmal.** `viewFor` liefert ihn ausschließlich
+>    bei `seit === 0`, also bei jedem `join` und danach nie wieder
+>    (`SICHT_MARKE`). Der Bildschirm **muss** ihn deshalb festhalten — wer
+>    das vergisst, hat ab dem zweiten Rundruf weder Namen noch Werte und
+>    zeichnet leere Karten.
+> 5. **Ziehen läuft über Pointer-Ereignisse, nicht über HTML5-Drag.**
+>    `dragstart` gibt es auf iOS und Android nicht. Getroffen wird über
+>    `document.elementFromPoint`, weil die Zeigererfassung jedes
+>    `pointerup` an die gezogene Einheit zurückschickt; die entscheidende
+>    CSS-Zeile ist `touch-action: none` auf `.tr-einheit[data-fassbar]`,
+>    ohne sie deutet der Browser die Bewegung als Rollen. Daneben steht
+>    **immer** der zweite Weg: antippen — auswählen — antippen.
 >
 > Die Kampfphase existiert als Naht: `wendeKampfausgang(partie, ausgaenge)`
 > bucht Schaden, Serie und Ausscheiden. Bis es eine Simulation gibt, löst
 > `ohneKampfWeiter` sie schadensfrei auf — ein ausdrücklicher Platzhalter,
 > damit kein Tisch in der Kampfphase hängen bleibt. Endlich bleibt die
 > Partie über `rundenGrenze` (Vorgabe 30).
+>
+> **Zwei Kerne, ein Spiel — was mit dem zweiten Zweig geschah.** Am
+> 04.09.2026 lagen zwei unabhängig gebaute Regelkerne für dasselbe Spiel
+> auf zwei Zweigen: `…-regelkern-als-paket-72f4bf8d` (vollständig, als
+> `game-runenheer`) und `…-9cc7e1e2` (nur Katalog und Verschmelzen, als
+> `game-tafelrunde`). Übernommen ist der **vollständige**, umbenannt auf
+> den entschiedenen Namen `game-tafelrunde`. Der zweite Zweig ist damit
+> gegenstandslos; sein Katalog hat 15 Einheiten statt 22, sonst deckt er
+> sich in der Absicht. Beide Zweige liegen noch auf `origin`.
 
 > **Eine Einzelübernahme nach `main` muss den Zeitstempel ihrer Migration
 > anfassen.** Der Drizzle-Migrator vergleicht ausschließlich Zeitstempel

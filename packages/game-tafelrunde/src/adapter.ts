@@ -1,5 +1,5 @@
 /**
- * Runenheer als Spielmodul der Plattform.
+ * Tafelrunde als Spielmodul der Plattform.
  *
  * Einzige Stelle, an der Plattform und Engine einander kennen.
  *
@@ -26,8 +26,8 @@ import type {
 
 import { botZug } from './bot.js';
 import {
-  type RunenheerAktion,
-  type RunenheerPartie,
+  type TafelrundeAktion,
+  type TafelrundePartie,
   amZug,
   erlaubteZuege,
   erstellePartie,
@@ -40,14 +40,14 @@ import {
 } from './partie.js';
 import {
   DEFAULT_REGELN,
-  type RunenheerRegeln,
+  type TafelrundeRegeln,
   SEAT_COUNTS,
   pruefeRegeln,
   rotationSize,
   suggestedRounds,
 } from './regeln.js';
 import {
-  type RunenheerSicht,
+  type TafelrundeSicht,
   SICHT_MARKE,
   sichtFuer,
   zuschauerSicht,
@@ -70,20 +70,22 @@ const SNAPSHOT_VERSION = 1;
  */
 const KAMPF_PAUSE_MS = 3000;
 
-type GespeichertePartie = RunenheerPartie & { readonly v: number };
+type GespeichertePartie = TafelrundePartie & { readonly v: number };
 
 const meta: GameMeta = {
-  id: 'runenheer',
-  nameKey: 'game.runenheer',
+  id: 'tafelrunde',
+  nameKey: 'game.tafelrunde',
   /**
-   * Vorschau, nicht spielbar: Es gibt noch keinen Bildschirm im Client und
-   * keine Kampfsimulation. Ein Tisch liesse sich zwar starten, aber niemand
-   * koennte etwas darauf sehen — und ein Spiel, das man startet und dann
-   * anstarrt, ist schlimmer als eines, das man noch nicht starten kann.
+   * Spielbar seit dem 04.09.2026: Der Bildschirm steht
+   * (packages/client/src/screens/Tafelrunde.tsx), also gibt es etwas zu
+   * sehen. Bis dahin stand hier `preview` — ein Tisch ohne Bildschirm ist
+   * schlimmer als ein Spiel, das man noch nicht starten kann.
    *
-   * Umgestellt wird auf `playable`, sobald der Bildschirm steht.
+   * Die fehlende Kampfsimulation spricht NICHT dagegen: Die Vorbereitung ist
+   * vollstaendig spielbar, und die Kampfphase ist eine Schaupause, nach der
+   * es weitergeht (siehe `interludeMs`).
    */
-  availability: 'preview',
+  availability: 'playable',
   seatCounts: SEAT_COUNTS,
   rotationSize: () => rotationSize(),
   suggestedRounds: () => suggestedRounds(),
@@ -93,13 +95,21 @@ const meta: GameMeta = {
    * Ueberlegung wie bei Filler, Eiland und Feldherr.
    */
   xpBasisZaehltKarten: false,
+  /*
+   * Siehe Punkt 2 im Kopf dieser Datei: `legalActions` laesst das Verschieben
+   * aus. Ohne diese Angabe scheitert die Plattform-Invariante daran, dass der
+   * Bot einen Zug waehlt, den die Liste nicht nennt — und zwar zu Recht: Von
+   * aussen ist eine unvollstaendige Liste nicht von einer vollstaendigen zu
+   * unterscheiden.
+   */
+  legalActionsUnvollstaendig: true,
 };
 
-export const runenheer: GameModule<
-  RunenheerPartie,
-  RunenheerAktion,
-  RunenheerSicht,
-  RunenheerRegeln
+export const tafelrunde: GameModule<
+  TafelrundePartie,
+  TafelrundeAktion,
+  TafelrundeSicht,
+  TafelrundeRegeln
 > = {
   meta,
   protocolVersion: 1,
@@ -116,7 +126,7 @@ export const runenheer: GameModule<
     return probleme;
   },
 
-  createParty({ config, seats, seed, seedHex }: CreatePartyOptions<RunenheerRegeln>) {
+  createParty({ config, seats, seed, seedHex }: CreatePartyOptions<TafelrundeRegeln>) {
     const sitze = Array.from({ length: seats }, (_, i) => i);
     /*
      * Die Hexkette, wenn es sie gibt — und hier ist das keine Vorsicht,
@@ -191,6 +201,6 @@ export const runenheer: GameModule<
       );
     }
     const { v, ...rest } = snap;
-    return rest as RunenheerPartie;
+    return rest as TafelrundePartie;
   },
 };

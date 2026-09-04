@@ -66,6 +66,14 @@ export const FILLER_MODULE_VERSION = 4;
  */
 export const EILAND_MODULE_VERSION = 2;
 
+/**
+ * 1 seit dem 4. September 2026 — die erste Fassung ueberhaupt. Tafelrunde ist
+ * das neunte Spiel und hat noch keine Protokollgeschichte; die Zeile steht
+ * trotzdem ausgeschrieben da, damit die naechste Aenderung eine Zahl zum
+ * Hochsetzen findet und nicht die stille 1 aus `moduleVersionFor`.
+ */
+export const TAFELRUNDE_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
@@ -74,6 +82,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   easypoker: EASYPOKER_MODULE_VERSION,
   filler: FILLER_MODULE_VERSION,
   eiland: EILAND_MODULE_VERSION,
+  tafelrunde: TAFELRUNDE_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

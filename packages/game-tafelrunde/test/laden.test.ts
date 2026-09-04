@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import {
   DEFAULT_REGELN,
   type EinheitId,
-  type RunenheerPartie,
+  type TafelrundePartie,
   KATALOG,
   baueZufall,
   einheit,
@@ -30,7 +30,7 @@ function vorratGesamt(vorrat: Readonly<Record<EinheitId, number>>): number {
 }
 
 /** Alle Karten, die gerade im Umlauf sind: Laeden, Baenke, Bretter. */
-function imUmlauf(partie: RunenheerPartie): number {
+function imUmlauf(partie: TafelrundePartie): number {
   let zahl = 0;
   for (const heer of Object.values(partie.heere)) {
     zahl += heer.laden.filter((k) => k !== null).length;
@@ -136,7 +136,7 @@ describe('Bestimmtheit', () => {
   });
 
   it('liefert bei gleichem Seed nach gleichen Aktionen denselben Zustand', () => {
-    const lauf = (): RunenheerPartie => {
+    const lauf = (): TafelrundePartie => {
       let p = neu();
       p = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
       p = fuehreAus(p, 1, { typ: 'neuwuerfeln' });

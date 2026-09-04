@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { runenheer } from '../src/adapter.js';
+import { tafelrunde } from '../src/adapter.js';
 import { DEFAULT_REGELN, SEAT_COUNTS } from '../src/regeln.js';
-import { type RunenheerPartie, vollerVorrat } from '../src/partie.js';
+import { type TafelrundePartie, vollerVorrat } from '../src/partie.js';
 import { kartenZahl } from '../src/katalog.js';
 
 /** Wie viele Karten es insgesamt gibt. Diese Zahl darf sich nie aendern. */
 const KARTEN_INSGESAMT = Object.values(vollerVorrat()).reduce((a, b) => a + b, 0);
 
 /** Vorrat plus alles, was gerade in Laeden, Baenken und auf Brettern liegt. */
-function alleKarten(partie: RunenheerPartie): number {
+function alleKarten(partie: TafelrundePartie): number {
   let zahl = Object.values(partie.vorrat).reduce((a, b) => a + b, 0);
   for (const heer of Object.values(partie.heere)) {
     zahl += heer.laden.filter((k) => k !== null).length;
@@ -19,8 +19,8 @@ function alleKarten(partie: RunenheerPartie): number {
   return zahl;
 }
 
-function partie(seats = 2): RunenheerPartie {
-  return runenheer.createParty({
+function partie(seats = 2): TafelrundePartie {
+  return tafelrunde.createParty({
     config: DEFAULT_REGELN,
     seats,
     rounds: 1,
@@ -30,80 +30,81 @@ function partie(seats = 2): RunenheerPartie {
 }
 
 describe('Adapter', () => {
-  it('meldet sich als Vorschau fuer zwei bis acht Sitze', () => {
-    assert.equal(runenheer.meta.id, 'runenheer');
-    // Vorschau, solange es keinen Bildschirm und keine Kampfsimulation gibt.
-    assert.equal(runenheer.meta.availability, 'preview');
-    assert.deepEqual(runenheer.meta.seatCounts, SEAT_COUNTS);
-    assert.equal(runenheer.meta.xpBasisZaehltKarten, false);
+  it('meldet sich als spielbar fuer zwei bis acht Sitze', () => {
+    assert.equal(tafelrunde.meta.id, 'tafelrunde');
+    // Spielbar, seit der Bildschirm steht. Die fehlende Kampfsimulation
+    // haelt niemanden auf: Die Vorbereitung laeuft vollstaendig.
+    assert.equal(tafelrunde.meta.availability, 'playable');
+    assert.deepEqual(tafelrunde.meta.seatCounts, SEAT_COUNTS);
+    assert.equal(tafelrunde.meta.xpBasisZaehltKarten, false);
   });
 
   it('nimmt den Vorgabe-Regelsatz an', () => {
-    assert.deepEqual(runenheer.validateConfig(DEFAULT_REGELN, 4, 1), []);
+    assert.deepEqual(tafelrunde.validateConfig(DEFAULT_REGELN, 4, 1), []);
   });
 
   it('weist Unsinn im Regelsatz ab', () => {
-    assert.ok(runenheer.validateConfig(null, 2, 1).length > 0);
-    assert.ok(runenheer.validateConfig({ startLeben: 100 }, 2, 1).length > 0);
+    assert.ok(tafelrunde.validateConfig(null, 2, 1).length > 0);
+    assert.ok(tafelrunde.validateConfig({ startLeben: 100 }, 2, 1).length > 0);
     assert.ok(
-      runenheer.validateConfig({ ...DEFAULT_REGELN, startLeben: 9999 }, 2, 1).length > 0,
+      tafelrunde.validateConfig({ ...DEFAULT_REGELN, startLeben: 9999 }, 2, 1).length > 0,
     );
     assert.ok(
-      runenheer.validateConfig({ ...DEFAULT_REGELN, ladenPlaetze: 1.5 }, 2, 1).length > 0,
+      tafelrunde.validateConfig({ ...DEFAULT_REGELN, ladenPlaetze: 1.5 }, 2, 1).length > 0,
     );
     // Neun Sitze passen an keinen Tisch dieser Plattform.
-    assert.ok(runenheer.validateConfig(DEFAULT_REGELN, 9, 1).length > 0);
+    assert.ok(tafelrunde.validateConfig(DEFAULT_REGELN, 9, 1).length > 0);
   });
 
   it('weist eine Bank ab, die kleiner als das Brett des hoechsten Levels ist', () => {
     // Sonst liesse sich ein volles Brett nicht einmal mehr umbauen.
     assert.ok(
-      runenheer.validateConfig({ ...DEFAULT_REGELN, bankPlaetze: 3 }, 2, 1).length > 0,
+      tafelrunde.validateConfig({ ...DEFAULT_REGELN, bankPlaetze: 3 }, 2, 1).length > 0,
     );
   });
 
   it('kennt einen Sitz am Zug und seine Zuege', () => {
     const p = partie();
-    assert.equal(runenheer.currentActor(p), 0);
-    assert.ok(runenheer.legalActions(p, 0).length > 0);
+    assert.equal(tafelrunde.currentActor(p), 0);
+    assert.ok(tafelrunde.legalActions(p, 0).length > 0);
     // Anders als bei einem Kartenspiel darf hier JEDER handeln.
-    assert.ok(runenheer.legalActions(p, 1).length > 0);
-    assert.equal(runenheer.isFinished(p), false);
+    assert.ok(tafelrunde.legalActions(p, 1).length > 0);
+    assert.equal(tafelrunde.isFinished(p), false);
   });
 
   it('haelt in der Kampfphase eine Schaupause und geht danach weiter', () => {
     let p = partie();
-    p = runenheer.act(p, 0, { typ: 'bereit' });
-    assert.equal(runenheer.interludeMs!(p), null, 'Noch ist nicht alles bereit');
-    p = runenheer.act(p, 1, { typ: 'bereit' });
-    assert.ok(runenheer.interludeMs!(p)! > 0);
-    assert.equal(runenheer.currentActor(p), null);
+    p = tafelrunde.act(p, 0, { typ: 'bereit' });
+    assert.equal(tafelrunde.interludeMs!(p), null, 'Noch ist nicht alles bereit');
+    p = tafelrunde.act(p, 1, { typ: 'bereit' });
+    assert.ok(tafelrunde.interludeMs!(p)! > 0);
+    assert.equal(tafelrunde.currentActor(p), null);
 
-    const weiter = runenheer.advanceInterlude!(p);
+    const weiter = tafelrunde.advanceInterlude!(p);
     assert.equal(weiter.runde, 2);
-    assert.equal(runenheer.interludeMs!(weiter), null);
+    assert.equal(tafelrunde.interludeMs!(weiter), null);
   });
 
   it('ueberlebt Speichern und Laden', () => {
-    const p = runenheer.act(partie(), 0, { typ: 'kaufen', platz: 0 });
-    const roh = JSON.parse(JSON.stringify(runenheer.serialize(p)));
-    assert.deepEqual(runenheer.deserialize(roh), p);
+    const p = tafelrunde.act(partie(), 0, { typ: 'kaufen', platz: 0 });
+    const roh = JSON.parse(JSON.stringify(tafelrunde.serialize(p)));
+    assert.deepEqual(tafelrunde.deserialize(roh), p);
   });
 
   it('weist einen Snapshot aus einer unbekannten Fassung ab', () => {
     // Lieber ein Fehler als eine falsch gedeutete Partie.
-    assert.throws(() => runenheer.deserialize({ v: 99 }), /Snapshot-Version/);
+    assert.throws(() => tafelrunde.deserialize({ v: 99 }), /Snapshot-Version/);
   });
 
   it('liefert Platzierungen und Erfahrungsgrundlage fuer jeden Sitz', () => {
     const p = partie(4);
-    assert.equal(runenheer.standings(p).length, 4);
-    assert.deepEqual(Object.keys(runenheer.xpBasis!(p)), ['0', '1', '2', '3']);
+    assert.equal(tafelrunde.standings(p).length, 4);
+    assert.deepEqual(Object.keys(tafelrunde.xpBasis!(p)), ['0', '1', '2', '3']);
   });
 
   it('laesst den Bot nicht auf der Zuschauersicht laufen', () => {
     assert.throws(
-      () => runenheer.botAction(runenheer.spectatorView(partie())),
+      () => tafelrunde.botAction(tafelrunde.spectatorView(partie())),
       /Zuschauersicht/,
     );
   });
@@ -117,19 +118,19 @@ describe('Bot', () => {
     let p = partie(8);
     let schritte = 0;
 
-    while (!runenheer.isFinished(p) && schritte < 20000) {
+    while (!tafelrunde.isFinished(p) && schritte < 20000) {
       schritte++;
-      if (runenheer.interludeMs!(p) !== null) {
-        p = runenheer.advanceInterlude!(p);
+      if (tafelrunde.interludeMs!(p) !== null) {
+        p = tafelrunde.advanceInterlude!(p);
         continue;
       }
-      const sitz = runenheer.currentActor(p);
+      const sitz = tafelrunde.currentActor(p);
       assert.notEqual(sitz, null, 'Niemand am Zug und keine Schaupause: Der Tisch haengt');
-      p = runenheer.act(p, sitz!, runenheer.botAction(runenheer.viewFor(p, sitz!)));
+      p = tafelrunde.act(p, sitz!, tafelrunde.botAction(tafelrunde.viewFor(p, sitz!)));
     }
 
-    assert.ok(runenheer.isFinished(p), `nach ${schritte} Schritten nicht fertig`);
-    assert.equal(runenheer.standings(p).length, 8);
+    assert.ok(tafelrunde.isFinished(p), `nach ${schritte} Schritten nicht fertig`);
+    assert.equal(tafelrunde.standings(p).length, 8);
     // Kein Vorrat darf dabei ins Minus gelaufen sein.
     for (const [id, zahl] of Object.entries(p.vorrat)) {
       assert.ok(zahl >= 0, `${id} steht bei ${zahl}`);
@@ -147,13 +148,13 @@ describe('Bot', () => {
     // Ein Bot, der nur hamstert, sieht beim Zusehen aus wie ein Fehler.
     let p = partie(2);
     for (let i = 0; i < 200; i++) {
-      if (runenheer.interludeMs!(p) !== null) {
-        p = runenheer.advanceInterlude!(p);
+      if (tafelrunde.interludeMs!(p) !== null) {
+        p = tafelrunde.advanceInterlude!(p);
         continue;
       }
-      const sitz = runenheer.currentActor(p);
+      const sitz = tafelrunde.currentActor(p);
       if (sitz === null) break;
-      p = runenheer.act(p, sitz, runenheer.botAction(runenheer.viewFor(p, sitz)));
+      p = tafelrunde.act(p, sitz, tafelrunde.botAction(tafelrunde.viewFor(p, sitz)));
       if (p.heere[0]!.brett.some((k) => k !== null)) return;
     }
     assert.fail('Der Bot hat in 200 Schritten keine Einheit aufgestellt');

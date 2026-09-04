@@ -1,5 +1,5 @@
 /**
- * Regelsatz und Stellschrauben von Runenheer.
+ * Regelsatz und Stellschrauben von Tafelrunde.
  *
  * Was hier NICHT hineingehoert: Einsatz, Topf, Preise (game-api, Grundsatz 4).
  * Und ebenso wenig die Ladenchancen oder die Vorratsgroessen — die stehen als
@@ -13,7 +13,7 @@
 
 import type { Kosten } from './katalog.js';
 
-export interface RunenheerRegeln {
+export interface TafelrundeRegeln {
   /** Leben, mit denen jeder anfaengt. Bei 0 scheidet man aus. */
   readonly startLeben: number;
   /** Gold in der ersten Vorbereitung. */
@@ -45,7 +45,7 @@ export interface RunenheerRegeln {
  * leer, und die ersten drei Runden waeren entschieden, bevor jemand eine
  * Entscheidung getroffen hat.
  */
-export const DEFAULT_REGELN: RunenheerRegeln = {
+export const DEFAULT_REGELN: TafelrundeRegeln = {
   startLeben: 100,
   startGold: 2,
   ladenPlaetze: 5,
@@ -190,7 +190,7 @@ export interface RegelProblem {
 }
 
 /** Untere und obere Schranke je Feld. Beides einschliesslich. */
-const SCHRANKEN: Readonly<Record<keyof RunenheerRegeln, readonly [number, number]>> = {
+const SCHRANKEN: Readonly<Record<keyof TafelrundeRegeln, readonly [number, number]>> = {
   startLeben: [10, 200],
   startGold: [0, 50],
   // Weniger als drei Ladenplaetze hiesse, dass ein Verschmelzen nie in einem
@@ -217,7 +217,7 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   const gegeben = config as Record<string, unknown>;
   const probleme: RegelProblem[] = [];
 
-  for (const feld of Object.keys(SCHRANKEN) as (keyof RunenheerRegeln)[]) {
+  for (const feld of Object.keys(SCHRANKEN) as (keyof TafelrundeRegeln)[]) {
     const wert = gegeben[feld];
     if (wert === undefined) {
       probleme.push({ path: feld, messageKey: 'ruleset.fieldMissing', severity: 'error' });

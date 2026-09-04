@@ -7,7 +7,7 @@ import {
   type EinheitId,
   type Heer,
   type Kaempfer,
-  type RunenheerPartie,
+  type TafelrundePartie,
   type Stufe,
   erlaubteZuege,
   erstellePartie,
@@ -31,10 +31,10 @@ function alle(...listen: readonly (readonly (Kaempfer | null)[])[]): Kaempfer[] 
 }
 
 function mitHeer(
-  partie: RunenheerPartie,
+  partie: TafelrundePartie,
   sitz: number,
   teil: Partial<Heer>,
-): RunenheerPartie {
+): TafelrundePartie {
   return { ...partie, heere: { ...partie.heere, [sitz]: { ...partie.heere[sitz]!, ...teil } } };
 }
 
@@ -119,7 +119,7 @@ describe('Verschmelzen', () => {
 });
 
 describe('Kaufen und Verschmelzen', () => {
-  const dreiZumVollen = (partie: RunenheerPartie): RunenheerPartie => {
+  const dreiZumVollen = (partie: TafelrundePartie): TafelrundePartie => {
     // Bank randvoll: zwei Kopien der Zieleinheit und sieben verschiedene
     // andere, damit nichts unbeabsichtigt mitverschmilzt.
     const bank: (Kaempfer | null)[] = [

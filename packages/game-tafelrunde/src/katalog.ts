@@ -1,5 +1,5 @@
 /**
- * Der Einheiten-Katalog von Runenheer.
+ * Der Einheiten-Katalog von Tafelrunde.
  *
  * Reine Daten, keine Regel. Wer balanciert, aendert nur diese Datei — deshalb
  * stehen die Werte ausgeschrieben da und werden nicht aus der Kostenstufe
