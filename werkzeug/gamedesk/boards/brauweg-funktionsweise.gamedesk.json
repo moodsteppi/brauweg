@@ -826,7 +826,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<p>Stand 05.09.2026 — alle zehn spielbar:</p>\n<ul>\n<li><b>Doppelkopf</b> 3–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>\n<li><b>Cambio</b> 2–6 · <b>Easy Poker</b> 2–6 · <b>Mememory</b> 2–4</li>\n<li><b>Filler</b> 2 · <b>Eiland</b> 2 · <b>Feldherr</b> 2</li>\n<li><b>Tafelrunde</b> 2–8</li>\n</ul>\n<p>Dazu neun Vorschau-Spiele: in der Lobby sichtbar, nicht startbar,\nabstimmbar.</p>\n<p><b>Vier der zehn sind keine Kartenspiele</b> (Feldherr, Mememory, Filler,\nEiland, Tafelrunde) — die Schnittstelle trägt sie trotzdem.</p>",
+    "html": "\n<p>Stand 05.09.2026 — alle zehn spielbar:</p>\n<ul>\n<li><b>Doppelkopf</b> 4–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>\n<li><b>Cambio</b> 2–6 · <b>Easy Poker</b> 2–6 · <b>Mememory</b> 2–4</li>\n<li><b>Filler</b> 2 · <b>Eiland</b> 2 · <b>Feldherr</b> 2</li>\n<li><b>Tafelrunde</b> 2–8</li>\n</ul>\n<p>Dazu neun Vorschau-Spiele: in der Lobby sichtbar, nicht startbar,\nabstimmbar.</p>\n<p><b>Fünf der zehn sind keine Kartenspiele</b> (Feldherr, Mememory, Filler,\nEiland, Tafelrunde) — die Schnittstelle trägt sie trotzdem.</p>",
     "fontSize": 13
    }
   },
@@ -842,7 +842,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-doppelkopf</h3>\n<p>Die größte Engine im Haus: <code>round.ts</code> allein 43 kB.</p>\n<ul><li><code>ruleset.ts</code>, <code>validator.ts</code> — Regelsatz</li>\n<li><code>deal.ts</code>, <code>order.ts</code>, <code>trick.ts</code></li>\n<li>Vorbehalte, Hochzeit, <b>Armut</b>, Pflichtsolo, Schmeiß, Bock</li>\n<li><code>scoring.ts</code>, <code>trophies.ts</code>, <code>bot.ts</code></li></ul>\n<p>3 bis 5 Sitze · das einzige Modul, das die <b>Bot-Stufe</b> auswertet.</p>\n<p>Bei der <b>Armut</b> ist <code>legalActions</code> leer, obwohl jemand am\nZug ist — siehe Befund.</p>",
+    "html": "\n<h3>packages/game-doppelkopf</h3>\n<p>Die größte Engine im Haus: <code>round.ts</code> allein 43 kB.</p>\n<ul><li><code>ruleset.ts</code>, <code>validator.ts</code> — Regelsatz</li>\n<li><code>deal.ts</code>, <code>order.ts</code>, <code>trick.ts</code></li>\n<li>Vorbehalte, Hochzeit, <b>Armut</b>, Pflichtsolo, Schmeiß, Bock</li>\n<li><code>scoring.ts</code>, <code>trophies.ts</code>, <code>bot.ts</code></li></ul>\n<p>4 oder 5 Sitze. Die Engine kann auch 3 (Validator und Tests), aber die\nLobby bietet es nicht mehr an: Ein Dreiertisch war ohnehin ein Vierertisch\nmit Dauerbot, und genau das verwirrte.</p>\n<p>Wertet die <b>Bot-Stufe</b> in\n<code>botAction</code> aus — wie Easy Poker; Mememory zieht sie schon beim\nAufbau der Partie heran, weil sein Bot ein Gedächtnis hat. Die übrigen\nsieben Module ignorieren sie.</p>\n<p>Bei der <b>Armut</b> ist <code>legalActions</code> leer, obwohl jemand am\nZug ist — siehe Befund.</p>",
     "fontSize": 13
    }
   },
@@ -922,7 +922,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-tafelrunde</h3>\n<p>2 bis 8 Sitze, seit 04.09.2026. Das erste Spiel <b>ohne Blatt</b>: Jeder\nkauft zwischen den Runden aus einem eigenen Laden ein Heer, drei gleiche\nEinheiten verschmelzen zur nächsten Stufe, danach kämpfen die Bretter\nautomatisch.</p>\n<p>Wie Eiland: <b>alle rüsten gleichzeitig</b>, <code>currentActor</code>\nnennt trotzdem einen Sitz.</p>\n<p>Eigener Dreh: <code>legalActions</code> ist hier weder leer noch\nvollständig — das Verschieben fehlt darin, und die Meta sagt es\n(<code>legalActionsUnvollstaendig: true</code>). Siehe Befunde.</p>",
+    "html": "\n<h3>packages/game-tafelrunde</h3>\n<p>2 bis 8 Sitze, seit 04.09.2026. <b>Ohne Blatt</b>: Jeder\nkauft zwischen den Runden aus einem eigenen Laden ein Heer, drei gleiche\nEinheiten verschmelzen zur nächsten Stufe, danach kämpfen die Bretter\nautomatisch.</p>\n<p>Wie Eiland: <b>alle rüsten gleichzeitig</b>, <code>currentActor</code>\nnennt trotzdem einen Sitz.</p>\n<p>Eigener Dreh: <code>legalActions</code> ist hier weder leer noch\nvollständig — das Verschieben fehlt darin, und die Meta sagt es\n(<code>legalActionsUnvollstaendig: true</code>). Siehe Befunde.</p>",
     "fontSize": 13
    }
   },

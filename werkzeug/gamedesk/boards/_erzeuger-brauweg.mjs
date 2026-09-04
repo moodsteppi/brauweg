@@ -478,14 +478,14 @@ nicht im Betrieb.</p>`), '#b78cf7');
 win('game-liste', 'notes', 'Zehn Module, eine Schnittstelle', GX + 1080, -960, 420, 290, note(`
 <p>Stand 05.09.2026 — alle zehn spielbar:</p>
 <ul>
-<li><b>Doppelkopf</b> 3–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>
+<li><b>Doppelkopf</b> 4–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>
 <li><b>Cambio</b> 2–6 · <b>Easy Poker</b> 2–6 · <b>Mememory</b> 2–4</li>
 <li><b>Filler</b> 2 · <b>Eiland</b> 2 · <b>Feldherr</b> 2</li>
 <li><b>Tafelrunde</b> 2–8</li>
 </ul>
 <p>Dazu neun Vorschau-Spiele: in der Lobby sichtbar, nicht startbar,
 abstimmbar.</p>
-<p><b>Vier der zehn sind keine Kartenspiele</b> (Feldherr, Mememory, Filler,
+<p><b>Fünf der zehn sind keine Kartenspiele</b> (Feldherr, Mememory, Filler,
 Eiland, Tafelrunde) — die Schnittstelle trägt sie trotzdem.</p>`), '#b78cf7');
 
 win('game-doko', 'notes', 'Doppelkopf', GX + 1080, -640, 420, 300, note(`
@@ -495,7 +495,13 @@ win('game-doko', 'notes', 'Doppelkopf', GX + 1080, -640, 420, 300, note(`
 <li><code>deal.ts</code>, <code>order.ts</code>, <code>trick.ts</code></li>
 <li>Vorbehalte, Hochzeit, <b>Armut</b>, Pflichtsolo, Schmeiß, Bock</li>
 <li><code>scoring.ts</code>, <code>trophies.ts</code>, <code>bot.ts</code></li></ul>
-<p>3 bis 5 Sitze · das einzige Modul, das die <b>Bot-Stufe</b> auswertet.</p>
+<p>4 oder 5 Sitze. Die Engine kann auch 3 (Validator und Tests), aber die
+Lobby bietet es nicht mehr an: Ein Dreiertisch war ohnehin ein Vierertisch
+mit Dauerbot, und genau das verwirrte.</p>
+<p>Wertet die <b>Bot-Stufe</b> in
+<code>botAction</code> aus — wie Easy Poker; Mememory zieht sie schon beim
+Aufbau der Partie heran, weil sein Bot ein Gedächtnis hat. Die übrigen
+sieben Module ignorieren sie.</p>
 <p>Bei der <b>Armut</b> ist <code>legalActions</code> leer, obwohl jemand am
 Zug ist — siehe Befund.</p>`), '#b78cf7');
 
@@ -538,7 +544,7 @@ ein Münzwurf. Eine Aktion ist eine <b>Menge</b> von Feldern, deshalb ist
 
 win('game-tafelrunde', 'notes', 'Tafelrunde — Auto-Battler', GX + 2020, -630, 420, 320, note(`
 <h3>packages/game-tafelrunde</h3>
-<p>2 bis 8 Sitze, seit 04.09.2026. Das erste Spiel <b>ohne Blatt</b>: Jeder
+<p>2 bis 8 Sitze, seit 04.09.2026. <b>Ohne Blatt</b>: Jeder
 kauft zwischen den Runden aus einem eigenen Laden ein Heer, drei gleiche
 Einheiten verschmelzen zur nächsten Stufe, danach kämpfen die Bretter
 automatisch.</p>
