@@ -1,0 +1,260 @@
+/*
+ * Die Kampfanzeige von Tafelrunde (KampfAnzeige.tsx).
+ *
+ * Ein eigenes Modul und kein Abschnitt in styles.css: Die Anzeige ist ein
+ * abgeschlossenes Bauteil mit eigenem Zustand, und die Klassennamen sollen
+ * nirgends sonst greifen. Farben und Masse lehnen sich an die Ruestkammer an
+ * (tr-brett, tr-wabe, tr-einheit in styles.css), damit die Arena wie
+ * dasselbe Brett aussieht — nur eben mit vier Reihen und in Bewegung.
+ *
+ * Alle Bewegung liegt HIER: Zug und Ausblenden als Uebergang, Ausschlag und
+ * Blitz als Animation. Die Komponente setzt nur Zustaende. Deshalb genuegt am
+ * Ende ein einziger Block fuer „weniger Bewegung": Dieselben Zustaende, nur
+ * ohne die Wege dazwischen.
+ */
+
+.arena {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(94vw, 460px);
+  transition: opacity 400ms ease;
+}
+/* Der Server hat die Phase gewechselt: weich zurueck zur Ruestkammer. */
+.arena[data-verblasst] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.zeile {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 0 4px;
+  color: var(--muted);
+  font: 600 11px/1.2 system-ui;
+}
+.zeile strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 800;
+}
+.zeile span { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+.brett {
+  position: relative;
+  width: 100%;
+}
+
+/* Dieselbe Wabe wie auf dem Brett (clip-path statt Bild, aus demselben
+   Grund). Die beiden Haelften sind leicht getoent, damit man die Mittellinie
+   sieht, ohne dass eine Linie das Raster durchschneidet. */
+.wabe {
+  position: absolute;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(255, 255, 255, 0.045);
+}
+.wabe[data-haelfte='oben'] { background: rgba(255, 126, 110, 0.07); }
+.wabe[data-haelfte='unten'] { background: rgba(110, 200, 160, 0.07); }
+
+/* -- Eine Figur ----------------------------------------------------------- */
+
+/*
+ * Die Figur sitzt ABSOLUT auf ihrem Arenaplatz, und der Platz ist ein
+ * Uebergang: Ein Zug im Protokoll aendert nur `left` und `top`, den Weg
+ * dazwischen malt der Browser. 380 ms sind etwas kuerzer als ein Schritt der
+ * Simulation (SCHRITT_MS = 500), damit die Figur steht, bevor der naechste
+ * Schritt faellig ist — sonst schiebt sich Zug ueber Zug.
+ */
+.figur {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* KEIN Innenabstand in Prozent: Die Figur ist absolut gesetzt, und ein
+     Prozent-Padding bezoege sich auf die Breite des BRETTS, nicht der Figur —
+     bei 13 % waere der Kasten damit restlos aufgefressen und Koerper wie
+     Lebensbalken null Pixel gross. Die Luft entsteht stattdessen ueber die
+     Groesse von Koerper und Balken, die sich auf die Figur beziehen. */
+  padding: 0;
+  color: var(--tr-kosten, var(--muted));
+  pointer-events: none;
+  transition:
+    left 380ms ease-in-out,
+    top 380ms ease-in-out,
+    opacity 420ms ease,
+    transform 420ms ease;
+}
+/* Gefallen: ausblenden statt entfernen. Bleibt die Figur im Baum, laeuft der
+   Uebergang; ein entferntes Element kann nicht mehr verblassen. */
+.figur[data-tot] {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.koerper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 74%;
+  height: 62%;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #232f37, #1a242a);
+  box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line));
+}
+/* Die obere Seite ist waermer getoent — man soll die Seiten auch dann
+   unterscheiden, wenn die Figuren sich in der Mitte vermischen. */
+.figur[data-seite='oben'] .koerper { background: linear-gradient(180deg, #37272b, #281a1e); }
+.koerper > svg,
+.koerper > img {
+  width: 48%;
+  height: 48%;
+}
+
+/*
+ * Der Ausschlag beim Angriff: ein kurzer Satz in Richtung des Ziels und
+ * zurueck. `--dx`/`--dy` kommen aus der Komponente, in Prozent der eigenen
+ * Breite und Hoehe; knapp der halbe Weg genuegt, damit klar ist, WOHIN
+ * geschlagen wird, ohne dass die Figur ihr Feld verlaesst.
+ */
+.koerper[data-schlaegt] {
+  animation: ka-schlag 360ms cubic-bezier(0.3, 0.7, 0.3, 1) 1;
+}
+@keyframes ka-schlag {
+  0% { transform: none; }
+  40% {
+    transform: translate(calc(var(--dx, 0%) * 0.42), calc(var(--dy, 0%) * 0.42)) scale(1.06);
+  }
+  100% { transform: none; }
+}
+
+.sterne {
+  color: var(--gold);
+  font: 700 8px/1 system-ui;
+  letter-spacing: -1px;
+}
+
+.leben {
+  display: block;
+  width: 74%;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+}
+.leben b {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+.figur[data-seite='oben'] .leben b { background: var(--danger); }
+
+/* Der Treffer: ein weisser Blitz ueber der ganzen Figur, der sofort wieder
+   weg ist. Der Schluessel am Element wechselt je Treffer (KampfAnzeige.tsx),
+   sonst liefe die Animation nur beim ersten. */
+.blitz {
+  position: absolute;
+  inset: 8% 6%;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.6);
+  animation: ka-blitz 220ms ease-out 1 forwards;
+}
+@keyframes ka-blitz {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Die Zahl zum Treffer steigt auf und verblasst. Klein und am Rand: Der
+   Lebensbalken ist die Auskunft, die Zahl nur die Bestaetigung. */
+.schaden {
+  position: absolute;
+  top: 4%;
+  right: 2%;
+  color: #ff9b8a;
+  font: 800 10px/1 system-ui;
+  font-style: normal;
+  animation: ka-schaden 720ms ease-out 1 forwards;
+}
+@keyframes ka-schaden {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-14px); }
+}
+
+/* -- Das Ergebnis --------------------------------------------------------- */
+
+.ergebnis {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 55%;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(13, 18, 22, 0.9);
+  box-shadow: 0 0 0 2px var(--line), 0 12px 30px rgba(0, 0, 0, 0.45);
+  text-align: center;
+  animation: ka-auftritt 320ms ease-out 1;
+}
+.ergebnis strong {
+  display: block;
+  color: var(--muted);
+  font: 900 22px/1.1 system-ui;
+}
+.ergebnis[data-ausgang='sieg'] strong { color: var(--gold); }
+.ergebnis[data-ausgang='niederlage'] strong { color: var(--danger); }
+.ergebnis span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font: 600 12px/1.3 system-ui;
+}
+@keyframes ka-auftritt {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* -- Die uebrigen Kaempfe (Zuschauer) ------------------------------------- */
+
+.andere {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font: 600 11px/1.3 system-ui;
+  text-align: center;
+}
+
+/* Ab Tablet-Breite darf die Arena breiter werden — dieselbe Stufe wie die
+   Bretter der Ruestkammer (styles.css). */
+@media (min-width: 40rem) {
+  .arena { width: min(70vw, 560px); }
+  .sterne { font-size: 10px; }
+  .schaden { font-size: 12px; }
+}
+
+/* Weniger Bewegung: Sprung von Zustand zu Zustand. Lebensbalken, Platz und
+   Ausblenden wechseln sofort; Blitz und Schadenszahl entfallen ganz — sie
+   sind nichts als Bewegung, die Auskunft steckt im Balken. */
+@media (prefers-reduced-motion: reduce) {
+  .arena,
+  .figur,
+  .leben b { transition: none; }
+  .koerper[data-schlaegt],
+  .ergebnis { animation: none; }
+  .blitz,
+  .schaden { display: none; }
+}

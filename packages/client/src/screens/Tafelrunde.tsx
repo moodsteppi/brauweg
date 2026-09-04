@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
 import {
+  KampfAnzeige,
+  type Kampfpaarung,
+  abzuspielen,
+} from '../minispiele/tafelrunde/KampfAnzeige';
+import {
   type Kaempfer,
   type Ort,
   bestandVon,
@@ -122,6 +127,14 @@ interface TafelrundeSicht {
   eigenes: EigeneSicht | null;
   gegner: FremdeSicht[];
   leftSeats: number[];
+  /**
+   * Die Kaempfe der laufenden Kampfphase mit vollem Ablaufprotokoll — ein
+   * Spieler bekommt seinen eigenen, ein Zuschauer alle; ausserhalb der
+   * Kampfphase leer (sicht.ts). Als wahlfrei gefuehrt, weil eine Sicht aus
+   * der Zeit vor der Kampfsimulation das Feld nicht hat — der Bildschirm
+   * zeigt dann die Wartezeile statt zu stolpern.
+   */
+  kaempfe?: Kampfpaarung[];
   /** Kommt NUR in der ersten Sicht nach dem Beitritt, siehe sicht.ts. */
   katalog?: Einheit[];
 }
@@ -514,6 +527,7 @@ export function Tafelrunde({
          die Umdeutung hier korrekt und nicht bloss bequem. */
       legaleZuege={(tisch.view?.legalActions ?? []) as unknown as Aktion[]}
       revision={tisch.view?.revision ?? -1}
+      frist={tisch.view?.interludeDeadline ?? null}
       sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
       onAktion={(aktion) => tisch.send(aktion)}
       onZurueck={verlasseUndZurueck}
@@ -537,6 +551,7 @@ function Ruestkammer({
   katalog,
   legaleZuege,
   revision,
+  frist,
   sitze,
   onAktion,
   onZurueck,
@@ -545,11 +560,14 @@ function Ruestkammer({
   katalog: Record<string, Einheit>;
   legaleZuege: Aktion[];
   revision: number;
+  /** Frist der Schaupause (`interludeDeadline`), waehrend des Kampfes gesetzt. */
+  frist: number | null;
   sitze: readonly SitzZeile[];
   onAktion: (aktion: Aktion) => void;
   onZurueck: () => void;
 }): React.JSX.Element {
   const eigenes = sicht.eigenes;
+  const kampfbild = useKampfbild(sicht);
   /** Gegner, dessen Brett oben liegt. Null = niemand ausgewaehlt. */
   const [gezeigterGegner, setGezeigterGegner] = useState<number | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
@@ -814,6 +832,31 @@ function Ruestkammer({
   const gegner =
     sicht.gegner.find((g) => g.sitz === gezeigterGegner) ?? lebendeGegner[0] ?? sicht.gegner[0];
 
+  /**
+   * Die Arena an der Stelle der beiden Bretter, solange ein Kampf zu zeigen
+   * ist — und noch einen Wimpernschlag darueber hinaus, damit sie verblassen
+   * kann statt zu verschwinden (siehe `useKampfbild`). Der Schluessel ist der
+   * Kampf selbst: Ein neuer Kampf ist eine neue Anzeige mit frischer Uhr, ein
+   * weiterer Rundruf desselben Kampfes nicht.
+   */
+  const arena = kampfbild && (
+    <KampfAnzeige
+      key={kampfSchluessel(kampfbild.kaempfe, sicht.ich)}
+      kaempfe={kampfbild.kaempfe}
+      ich={sicht.ich}
+      brettReihen={sicht.brettReihen}
+      brettSpalten={sicht.brettSpalten}
+      katalog={katalog}
+      nameVon={(sitz) => spielername(zeile(sitz), sitz)}
+      /* Platzhalter, bis es Figuren gibt — dieselbe Strichzeichnung wie auf
+         dem Brett, damit man seine Einheiten im Kampf wiedererkennt. */
+      zeichen={(einheit) => <RollenZeichen rolle={einheit.rolle} />}
+      farbeVon={(einheit) => KOSTEN_FARBE[einheit.kosten] ?? KOSTEN_FARBE[1]!}
+      frist={frist}
+      verblasst={kampfbild.verblasst}
+    />
+  );
+
   if (!eigenes) {
     // Zuschauer: kein Laden, keine Bank, kein Gold (sicht.ts). Es bleibt das
     // Brett — und das ist oeffentlich.
@@ -836,20 +879,21 @@ function Ruestkammer({
           sitze={sitze}
           onWahl={setGezeigterGegner}
         />
-        {gegner && (
-          <div className="tr-bretter">
-            <section className="tr-brettteil">
-              <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
-              <Hexbrett
-                reihen={sicht.brettReihen}
-                spalten={sicht.brettSpalten}
-                felder={gegner.brett}
-                katalog={katalog}
-                maxStufe={sicht.maxStufe}
-              />
-            </section>
-          </div>
-        )}
+        {arena ||
+          (gegner && (
+            <div className="tr-bretter">
+              <section className="tr-brettteil">
+                <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
+                <Hexbrett
+                  reihen={sicht.brettReihen}
+                  spalten={sicht.brettSpalten}
+                  felder={gegner.brett}
+                  katalog={katalog}
+                  maxStufe={sicht.maxStufe}
+                />
+              </section>
+            </div>
+          ))}
       </main>
     );
   }
@@ -915,67 +959,71 @@ function Ruestkammer({
         onWahl={setGezeigterGegner}
       />
 
-      <div className="tr-bretter">
-        {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
-            Heere spaeter aufeinandertreffen. Es ist oeffentlich (sicht.ts),
-            also gibt es hier nichts auszublenden. Zusammen mit der eigenen
-            Haelfte sind das die vier Reihen aus dem Konzept. */}
-        {gegner && (
-          <section className="tr-brettteil tr-brettteil-fremd">
-            <h2 className="tr-bretttitel">
-              {spielername(zeile(gegner.sitz), gegner.sitz)}
-              {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
-            </h2>
+      {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
+          gleiche Breite, gleiche Stelle, damit nichts springt. */}
+      {arena || (
+        <div className="tr-bretter">
+          {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
+              Heere spaeter aufeinandertreffen. Es ist oeffentlich (sicht.ts),
+              also gibt es hier nichts auszublenden. Zusammen mit der eigenen
+              Haelfte sind das die vier Reihen aus dem Konzept. */}
+          {gegner && (
+            <section className="tr-brettteil tr-brettteil-fremd">
+              <h2 className="tr-bretttitel">
+                {spielername(zeile(gegner.sitz), gegner.sitz)}
+                {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
+              </h2>
+              <Hexbrett
+                reihen={sicht.brettReihen}
+                spalten={sicht.brettSpalten}
+                felder={gegner.brett}
+                katalog={katalog}
+                gespiegelt
+                maxStufe={sicht.maxStufe}
+              />
+            </section>
+          )}
+  
+          <section className="tr-brettteil">
+            {eigenes.belegt === 0 && (
+              /* Eine leere Flaeche sagt nicht, dass sie zu fuellen ist. Der Satz
+                 liegt UEBER dem Brett und nimmt keine Zeiger an (CSS): Sonst
+                 verschluckt ausgerechnet der Hinweis den ersten Zug, zu dem er
+                 auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
+                 das Brett nicht selbst ab. */
+              <p className="tr-leer-satz tr-leer-brett">
+                Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe
+                oder tipp erst ihn, dann die Wabe an.
+              </p>
+            )}
             <Hexbrett
               reihen={sicht.brettReihen}
               spalten={sicht.brettSpalten}
-              felder={gegner.brett}
+              felder={eigenes.brett}
               katalog={katalog}
-              gespiegelt
               maxStufe={sicht.maxStufe}
+              eigen
+              gewaehlt={gewaehlt}
+              /* Wohin die gewaehlte Einheit darf — auf dem Brett und nicht nur
+                 auf der Bank. Ohne diese Zeile leuchtet beim Antipp-Weg
+                 ausgerechnet die Flaeche nicht, auf die man will; und steht das
+                 Feld voll, leuchtet nichts, was die Absage von selbst
+                 erklaert. */
+              istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+              onWaehlen={tippeOrt}
+              ziehtVon={zug?.zieht ? zug.von : null}
+              fehlendeKopien={fehlen}
+              frischVerschmolzen={verschmolzen}
+              aktiv={darfHandeln}
+              onZeigerStart={beiZeigerStart}
+              onZeigerBewegung={beiZeigerBewegung}
+              onZeigerEnde={beiZeigerEnde}
+              onZeigerAbbruch={beiZeigerAbbruch}
+              onLeeresZiel={tippeOrt}
             />
           </section>
-        )}
-
-        <section className="tr-brettteil">
-          {eigenes.belegt === 0 && (
-            /* Eine leere Flaeche sagt nicht, dass sie zu fuellen ist. Der Satz
-               liegt UEBER dem Brett und nimmt keine Zeiger an (CSS): Sonst
-               verschluckt ausgerechnet der Hinweis den ersten Zug, zu dem er
-               auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
-               das Brett nicht selbst ab. */
-            <p className="tr-leer-satz tr-leer-brett">
-              Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe
-              oder tipp erst ihn, dann die Wabe an.
-            </p>
-          )}
-          <Hexbrett
-            reihen={sicht.brettReihen}
-            spalten={sicht.brettSpalten}
-            felder={eigenes.brett}
-            katalog={katalog}
-            maxStufe={sicht.maxStufe}
-            eigen
-            gewaehlt={gewaehlt}
-            /* Wohin die gewaehlte Einheit darf — auf dem Brett und nicht nur
-               auf der Bank. Ohne diese Zeile leuchtet beim Antipp-Weg
-               ausgerechnet die Flaeche nicht, auf die man will; und steht das
-               Feld voll, leuchtet nichts, was die Absage von selbst
-               erklaert. */
-            istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-            onWaehlen={tippeOrt}
-            ziehtVon={zug?.zieht ? zug.von : null}
-            fehlendeKopien={fehlen}
-            frischVerschmolzen={verschmolzen}
-            aktiv={darfHandeln}
-            onZeigerStart={beiZeigerStart}
-            onZeigerBewegung={beiZeigerBewegung}
-            onZeigerEnde={beiZeigerEnde}
-            onZeigerAbbruch={beiZeigerAbbruch}
-            onLeeresZiel={tippeOrt}
-          />
-        </section>
-      </div>
+        </div>
+      )}
 
       {/* ---- Reservebank ------------------------------------------------ */}
       {/* Die Spaltenzahl kommt aus der Sicht und nicht aus dem Stylesheet:
@@ -1060,7 +1108,16 @@ function Ruestkammer({
         {sicht.fertig ? (
           <Abschluss sicht={sicht} onZurueck={onZurueck} />
         ) : sicht.phase === 'kampf' ? (
-          <Kampfband />
+          arena ? (
+            /* Der Kampf laeuft oben in der Arena. Hier nur der Satz, der
+               erklaert, warum der Laden zu ist — und dass er von selbst
+               wieder aufgeht, denn die Dauer bestimmt der Server. */
+            <p className="tr-hinweis">
+              Der Kampf läuft von selbst — danach geht der Laden wieder auf.
+            </p>
+          ) : (
+            <Kampfband />
+          )
         ) : eigenes.ausRunde !== null ? (
           <p className="tr-hinweis">
             In Runde {eigenes.ausRunde} ausgeschieden. Du kannst weiter zusehen.
@@ -1215,6 +1272,66 @@ function Ruestkammer({
  */
 function spielername(zeile: SitzZeile | undefined, sitz: number): string {
   return zeile?.displayName ?? (zeile?.isBot ? 'KI' : `Sitz ${sitz + 1}`);
+}
+
+// ---------------------------------------------------------------------------
+// Die Kampfphase
+// ---------------------------------------------------------------------------
+
+/** Wie lange die Arena nach dem Phasenwechsel noch verblasst. */
+const AUSKLANG_MS = 400;
+
+/**
+ * Welche Kaempfe die Arena zeigt — und ob sie gerade verblasst.
+ *
+ * Waehrend der Kampfphase sind es die Kaempfe der Sicht. Wechselt der Server
+ * die Phase, verschwindet `kaempfe` aus der Sicht im selben Rundruf; die
+ * Arena soll aber nicht schlagartig weg sein, sondern kurz verblassen. Dafuer
+ * haelt dieser Hook die zuletzt gezeigten Kaempfe noch `AUSKLANG_MS` fest.
+ *
+ * Nur der Server beendet die Anzeige: Der Client blendet nie frueher aus, auch
+ * nicht, wenn sein eigener Kampf laengst vorbei ist — die Schaupause richtet
+ * sich nach dem laengsten Kampf der Runde (adapter.ts), und wer frueher zum
+ * Laden zurueckkehrte, koennte dort ohnehin noch nichts kaufen.
+ *
+ * An die PHASE gehaengt und nicht an das Sichtobjekt: Sonst liefe der Effekt
+ * bei jedem Rundruf neu und raeumte seinen Timer ab (CLAUDE.md).
+ */
+function useKampfbild(
+  sicht: TafelrundeSicht,
+): { kaempfe: Kampfpaarung[]; verblasst: boolean } | null {
+  const kaempfe = sicht.phase === 'kampf' ? (sicht.kaempfe ?? []) : [];
+  const laeuft = kaempfe.length > 0;
+  const zuletzt = useRef<Kampfpaarung[]>([]);
+  const [ausklang, setAusklang] = useState<Kampfpaarung[] | null>(null);
+  if (laeuft) zuletzt.current = kaempfe;
+
+  useEffect(() => {
+    if (sicht.phase === 'kampf') {
+      setAusklang(null);
+      return;
+    }
+    const alte = zuletzt.current;
+    if (alte.length === 0) return;
+    zuletzt.current = [];
+    setAusklang(alte);
+    const uhr = window.setTimeout(() => setAusklang(null), AUSKLANG_MS);
+    return () => window.clearTimeout(uhr);
+  }, [sicht.phase]);
+
+  if (laeuft) return { kaempfe, verblasst: false };
+  if (ausklang) return { kaempfe: ausklang, verblasst: true };
+  return null;
+}
+
+/**
+ * Der Schluessel eines Kampfes fuer React: die Saat des abgespielten
+ * Kampfes. Sie ist je Runde und Paarung eindeutig (kampfSaat in partie.ts),
+ * und derselbe Kampf ueber mehrere Rundrufe behaelt so seine laufende Uhr.
+ */
+function kampfSchluessel(kaempfe: readonly Kampfpaarung[], ich: number | null): string {
+  const kampf = abzuspielen(kaempfe, ich);
+  return kampf ? `${kampf.a}:${kampf.b}:${kampf.bericht.saat}` : 'keiner';
 }
 
 /**
@@ -1590,18 +1707,18 @@ function Ladenkarte({
 // ---------------------------------------------------------------------------
 
 /**
- * Die Kampfphase.
+ * Die Kampfphase OHNE eigenen Kampf.
  *
- * Der Kampf LAEUFT inzwischen ab: Das Modul rechnet ihn beim Uebergang in
- * diese Phase durch und liefert das vollstaendige Ablaufprotokoll in
- * `sicht.kaempfe` mit (packages/game-tafelrunde/src/kampf.ts). Nur ABGESPIELT
- * wird er hier noch nicht — das ist eine eigene Aufgabe, und bis dahin steht
- * wenigstens eine laufende Zeile da, damit die Pause nicht wie ein haengender
- * Tisch aussieht; dieselbe Ueberlegung wie beim Warteband in Filler.
+ * Wer einen Kampf hat, sieht ihn oben in der Arena (KampfAnzeige.tsx). Diese
+ * Zeile bleibt fuer die uebrigen: Ausgeschiedene bekommen keinen Kampf mehr
+ * (`sicht.kaempfe` ist bei ihnen leer), und eine Sicht aus der Zeit vor der
+ * Kampfsimulation kennt das Feld gar nicht. Fuer sie steht wenigstens eine
+ * laufende Zeile da, damit die Pause nicht wie ein haengender Tisch aussieht;
+ * dieselbe Ueberlegung wie beim Warteband in Filler.
  *
- * ACHTUNG BEIM AUSBAU: Die Pause ist nicht mehr fest, sondern so lang wie der
- * laengste Kampf der Runde (`interludeMs` im Adapter, bis zu 47 Sekunden). Wer
- * hier etwas einbaut, das eine feste Dauer annimmt, liegt daneben.
+ * Die Pause ist so lang wie der laengste Kampf der Runde (`interludeMs` im
+ * Adapter, bis zu 47 Sekunden). Wer hier etwas einbaut, das eine feste Dauer
+ * annimmt, liegt daneben.
  */
 function Kampfband(): React.JSX.Element {
   return (
@@ -1680,15 +1797,17 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           ein Bonus für Serien. Was die nächste Runde bringt, steht klein neben
           deinem Gold.
         </li>
+        <li>
+          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers — von
+          selbst, du siehst nur zu. Der Verlierer verliert Leben: je mehr
+          Gegner noch stehen, desto mehr.
+        </li>
         <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>
       </ol>
       <h3>Noch nicht dabei</h3>
       <p>
-        Die Kämpfe werden ausgefochten und kosten den Verlierer Leben — zu sehen
-        sind sie aber noch nicht: Zwischen den Runden steht statt des Gefechts
-        eine Pause. Auch die Boni für gleiche Klassen fehlen noch. Beides kommt
-        als eigener Ausbau; aufrüsten, verschmelzen und aufstellen ist
-        vollständig da.
+        Die Boni für gleiche Klassen fehlen noch; sie kommen als eigener Ausbau.
+        Aufrüsten, verschmelzen, aufstellen und kämpfen ist vollständig da.
       </p>
       <h3>Ziel</h3>
       <p>Als Letzter am Tisch stehen bleiben.</p>
