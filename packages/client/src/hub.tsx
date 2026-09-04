@@ -72,9 +72,10 @@ const GEMALTE_BANNER = new Set([
   'cambio',
   'mememory',
   'prosubway',
-  // Filler ist das einzige gezeichnete statt gemalte: Sein Motiv IST das
-  // Spielraster, und das steht schon als Farbliste im Quelltext. Erzeugt von
-  // scripts/filler-banner-zeichnen.py.
+  // Filler ist gezeichnet statt gemalt: Sein Motiv IST das Spielraster, und
+  // das steht schon als Farbliste im Quelltext (minispiele/filler/farben.ts).
+  // Erzeugt von scripts/filler-banner-zeichnen.py; seit 04.09. ist das Bild
+  // der Stillstand des bewegten Banners aus der Spielauswahl.
   'filler',
   // Eiland ebenso (scripts/eiland-banner-zeichnen.py) — das Bild ist der
   // Stillstand des bewegten Banners aus der Spielauswahl.

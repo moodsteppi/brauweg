@@ -62,6 +62,7 @@ import {
   spielBanner,
 } from '../hub';
 import { EilandBanner } from '../minispiele/eiland/Banner';
+import { FillerBanner } from '../minispiele/filler/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
 import { Kreuz, Note } from '../zeichen';
@@ -2293,6 +2294,10 @@ function Spielwahl({
                        wachsen aus ihren Ecken, der Nebel weicht. Wer weniger
                        Bewegung will, bekommt das gezeichnete Bild. */
                     <EilandBanner />
+                  ) : game.id === 'filler' ? (
+                    /* Filler ebenso (seit 04.09.): zwei Gebiete faerben sich
+                       Feld um Feld ueber das Brett, der Nebel weicht. */
+                    <FillerBanner />
                   ) : (
                     <img src={spielBanner(game.id)} alt="" draggable={false} />
                   )}

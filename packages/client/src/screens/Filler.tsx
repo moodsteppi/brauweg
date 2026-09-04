@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import { FARBEN, GRAUTOENE, farbeVon } from '../minispiele/filler/farben';
 import { useTable } from '../useTable';
 
 /**
@@ -104,21 +105,11 @@ function gelesenevariante(): Variante {
   }
 }
 
-/**
- * Die sechs Farben des Vorbilds, in dieser REIHENFOLGE.
- *
- * Die Reihenfolge ist Protokoll: Ueber die Leitung geht nur die Nummer. Wer
- * hier etwas einschiebt, faerbt jede laufende Partie um — und zwar auf beiden
- * Geraeten verschieden, solange nur eines neu geladen hat.
+/*
+ * FARBEN, GRAUTOENE und farbeVon liegen seit dem 04.09.2026 in
+ * minispiele/filler/farben.ts, weil das bewegte Banner der Spielauswahl
+ * dieselben Werte braucht — ein zweiter Satz liefe auseinander.
  */
-const FARBEN = [
-  '#f5325a', // 0 Rot
-  '#92d84e', // 1 Gruen
-  '#fed42a', // 2 Gelb
-  '#35b4f0', // 3 Blau
-  '#6b4fb5', // 4 Lila
-  '#3c3c3c', // 5 Dunkelgrau
-] as const;
 
 /**
  * Farben, auf denen weisse Schrift nicht mehr lesbar ist.
@@ -128,23 +119,6 @@ const FARBEN = [
  * Ergebnis ausrechnet.
  */
 const DUNKLE_SCHRIFT = new Set([1, 2]);
-
-/**
- * Die Graustufen des Nebels.
- *
- * Sie muessen zwei Dinge zugleich: sich untereinander unterscheiden (sonst
- * saehe man das Raster nicht mehr) und sich klar vom dunklen Spielgrau
- * abheben (sonst haelt man ein verdecktes Feld fuer ein besetztes). Deshalb
- * liegen sie alle im mittleren Band — dunkler als der Hintergrund, viel
- * heller als `#3c3c3c`.
- *
- * Die Anzahl muss zu GRAUTOENE in packages/game-filler/src/partie.ts passen.
- */
-const GRAUTOENE = ['#949494', '#a3a3a3', '#b2b2b2', '#c0c0c0', '#cbcbcb'] as const;
-
-function farbeVon(nr: number): string {
-  return FARBEN[nr] ?? FARBEN[0];
-}
 
 /**
  * Passt ein Tisch aus der Liste zur gesuchten Spielart?

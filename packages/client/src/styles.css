@@ -14484,6 +14484,89 @@ main.auth > .muted {
   100% { transform: none; filter: none; }
 }
 
+/* Filler (04.09.): dieselbe Bauart wie bei Eiland, und dieselbe Aufteilung
+   wie das gezeichnete Bild aus scripts/filler-banner-zeichnen.py — Brett
+   rechts (306 × 268 von 1200 × 300), links daneben die sechs Farben als
+   Saeule, unter der Titelzone die unscharfe Kulisse. Die Masse stehen in
+   Prozent des Banners, damit Bild und Bewegung an derselben Stelle liegen
+   und der Wechsel bei „weniger Bewegung" nicht springt. */
+.fl-banner {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 1;
+  overflow: hidden;
+  background: linear-gradient(180deg, #141418, #22222e);
+}
+.fl-banner-schein {
+  position: absolute;
+  top: -45%;
+  right: -8%;
+  width: 60%;
+  height: 190%;
+  background: radial-gradient(closest-side, rgba(74, 96, 128, 0.55), rgba(74, 96, 128, 0));
+  pointer-events: none;
+}
+.fl-banner-kulisse {
+  position: absolute;
+  inset: 0 55% 0 0;
+  filter: blur(12px);
+  opacity: 0.18;
+  pointer-events: none;
+}
+.fl-banner-kulisse span {
+  position: absolute;
+  width: 28%;
+  aspect-ratio: 1;
+  border-radius: 6%;
+}
+.fl-banner-palette {
+  position: absolute;
+  top: 4.5%;
+  right: 36%;
+  height: 91%;
+  width: 3.7%;
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  gap: 2px;
+}
+.fl-banner-palette span {
+  place-self: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 18%;
+  /* Ein heller Rand um JEDE Kachel: Auf dem dunklen Grund verschwaende sonst
+     ausgerechnet das Dunkelgrau, und das Banner zeigte fuenf Farben statt
+     sechs — dieselbe Regel wie im Zeichenskript. */
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.95);
+}
+/* Die beiden Gebietsfarben klein — im Spiel sind sie gerade nicht waehlbar. */
+.fl-banner-palette span[data-klein] { width: 50%; }
+.fl-banner-brett {
+  position: absolute;
+  top: 5.3%;
+  right: 6.2%;
+  height: 89.4%;
+  aspect-ratio: 306 / 268;
+  display: grid;
+  gap: 1px;
+  padding: 1px;
+  border-radius: 3px;
+  background: #0c0c10;
+  box-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.9);
+}
+.fl-banner-feld {
+  display: block;
+  transition: background-color 220ms ease;
+}
+.fl-banner-feld[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45); }
+/* Ein eben geschlucktes Feld blitzt kurz auf: aus der Mitte heraus, hell. */
+.fl-banner-feld[data-neu] { animation: fl-banner-neu 480ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes fl-banner-neu {
+  0% { transform: scale(0.55); filter: brightness(1.5); }
+  100% { transform: none; filter: none; }
+}
+
 /* -- Filler: Spielart Build — Mauern und Setzflaechen (01.09.) ------------ */
 
 /* Das Brett wird zum Bezugsrahmen: Waende und Setzflaechen liegen als eigene
