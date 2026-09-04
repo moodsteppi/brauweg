@@ -6,11 +6,43 @@ import { applyDelta, awardForParty, checkpointFor } from '../src/trophies.js';
 const place = (seat: number, place: number, left = false) => ({ seat, place, left });
 
 test('die Grundverteilung ist nullsummig', () => {
-  for (const seats of [3, 4, 5, 6]) {
+  for (const seats of [2, 3, 4, 5, 6]) {
     const placements = Array.from({ length: seats }, (_, i) => place(i, i + 1));
     const total = awardForParty(placements).reduce((sum, a) => sum + a.delta, 0);
     assert.equal(total, 0, `${seats} Sitze ergeben ${total} statt 0`);
   }
+});
+
+test('Zwei Sitze: der Sieger bekommt drei, der Verlierer gibt drei', () => {
+  // Die Duelle (Filler, Eiland, Mememory zu zweit, Feldherr) liefen bis zum
+  // 04.09.2026 ohne Trophaeen, weil es fuer zwei Sitze keine Verteilung gab.
+  const awards = awardForParty([place(0, 1), place(1, 2)]);
+  assert.deepEqual(
+    awards.map((a) => [a.seat, a.delta]),
+    [
+      [0, 3],
+      [1, -3],
+    ],
+  );
+});
+
+test('Zwei Sitze: ein Unentschieden ist fuer beide null', () => {
+  // Feldherr meldet bei einer strittigen Partie beide auf Platz 1 — daraus
+  // darf kein halber Pokal werden.
+  const awards = awardForParty([place(0, 1), place(1, 1)]);
+  assert.deepEqual(
+    awards.map((a) => a.delta),
+    [0, 0],
+  );
+  assert.ok(awards.every((a) => Number.isInteger(a.delta)));
+});
+
+test('Zwei Sitze: Verlassen kostet die Strafe obendrauf', () => {
+  const awards = awardForParty([place(0, 1), place(1, 2, true)]);
+  const strafe = awards.find((a) => a.reason === 'leave_penalty');
+  assert.ok(strafe);
+  assert.equal(strafe.seat, 1);
+  assert.equal(strafe.delta, -10);
 });
 
 test('Gleichstand teilt den Mittelwert und bleibt ganzzahlig', () => {

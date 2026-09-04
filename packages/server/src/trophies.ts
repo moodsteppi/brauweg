@@ -17,6 +17,11 @@
  * Groesse teilbare Summe.
  */
 export const PLACEMENT_TROPHIES: Readonly<Record<number, readonly number[]>> = {
+  // Zwei Sitze seit 04.09.2026: die Duelle (Filler, Eiland, Mememory zu
+  // zweit, Feldherr, Easy Poker) zaehlen wie jeder andere Tisch. Der Wert
+  // setzt die Reihe nach unten fort — Abstand 6 zwischen zwei Plaetzen, und
+  // ein Unentschieden ergibt (3 + -3) / 2 = 0 fuer beide, ganzzahlig.
+  2: [3, -3],
   3: [6, 0, -6],
   4: [9, 3, -3, -9],
   5: [12, 6, 0, -6, -12],
