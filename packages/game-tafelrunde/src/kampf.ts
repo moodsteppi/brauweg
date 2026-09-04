@@ -12,11 +12,13 @@
  * werden nie veraendert — die Streiter sind Kopien, die nur innerhalb dieser
  * Datei leben.
  *
- * NOCH NICHT DABEI: Faehigkeiten und Mana, Synergie-Boni. Beides sind eigene
- * Auftraege, und beides greift an genau zwei Stellen ein, die deshalb schon
- * benannt sind: `baueStreiter` (dort kaemen die Boni auf die Werte) und die
- * Zugschleife in `simuliereKampf` (dort kaeme das Wirken einer Faehigkeit vor
- * dem Angriff, mit Mana aus Treffern).
+ * Die Synergie-Boni (synergien.ts) greifen an genau einer Stelle ein:
+ * `baueStreiter` rechnet sie einmal je Seite aus und gibt sie an `werteFuer`
+ * — danach stehen die Werte und werden nicht mehr angefasst.
+ *
+ * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift in
+ * die Zugschleife in `simuliereKampf` ein (dort kaeme das Wirken einer
+ * Faehigkeit vor dem Angriff, mit Mana aus Treffern).
  *
  * ZUR ZEIT: Gerechnet wird in ganzen Millisekunden und in festen Takten von
  * `TAKT_MS`. Keine Gleitkommazeit, kein `Date.now()`. Sekundenbruchteile als
@@ -26,6 +28,7 @@
  */
 
 import { type EinheitId, type Grundwerte, type Stufe, werteFuer } from './katalog.js';
+import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
 import {
   type Seite,
   SEITEN,
@@ -315,15 +318,17 @@ function standVon(s: Streiter): Kaempferstand {
  * der Saat: Zwei Kaempfe derselben Bretter mit verschiedenen Saaten reden
  * trotzdem von denselben Einheiten, und ein Fehlerbericht bleibt vergleichbar.
  *
- * Hier kaemen spaeter die Synergie-Boni auf die Werte — an genau einer Stelle,
- * weil `werte` danach nicht mehr angefasst wird.
+ * Hier kommen die Synergie-Boni auf die Werte — an genau einer Stelle, weil
+ * `werte` danach nicht mehr angefasst wird. Gezaehlt wird je Seite ueber die
+ * EIGENE Bretthaelfte: Die Krieger des Gegners staerken nicht meine.
  */
 function baueStreiter(bretter: readonly [Brettseite, Brettseite]): Streiter[] {
   const streiter: Streiter[] = [];
   for (const seite of SEITEN) {
+    const zaehlung = zaehleMarken(bretter[seite]);
     bretter[seite].forEach((einheit, brettPlatz) => {
       if (!einheit) return;
-      const w = werteFuer(einheit.id, einheit.stufe);
+      const w = werteFuer(einheit.id, einheit.stufe, bonusFuerEinheit(einheit.id, zaehlung));
       streiter.push({
         id: streiter.length,
         seite,

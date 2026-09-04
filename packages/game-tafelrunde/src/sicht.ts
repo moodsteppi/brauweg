@@ -24,6 +24,7 @@
 
 import type { Einheit, EinheitId } from './katalog.js';
 import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
+import { type Synergie, type Synergiestand, SYNERGIEN, synergienVon } from './synergien.js';
 import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN } from './brett.js';
 import type {
   Heer,
@@ -76,6 +77,13 @@ export interface EigeneSicht {
   readonly aufstiegKosten: number | null;
   /** Darf dieser Sitz gerade ueberhaupt handeln? */
   readonly darfHandeln: boolean;
+  /**
+   * Die Marken auf dem eigenen Brett mit Anzahl, erreichter und naechster
+   * Schwelle (synergien.ts). Nur das Brett zaehlt, die Bank nicht — und der
+   * Bildschirm rechnet das nicht selbst aus dem Brett nach, weil er die
+   * Schwellen und die Tabelle nicht kennen soll.
+   */
+  readonly synergien: readonly Synergiestand[];
 }
 
 /** Was man von einem fremden Sitz sieht. */
@@ -88,6 +96,13 @@ export interface FremdeSicht {
   readonly bereit: boolean;
   readonly ausRunde: number | null;
   readonly verlassen: boolean;
+  /**
+   * Auch beim Gegner: Das Brett ist oeffentlich (siehe Kopf), also sind es
+   * seine Synergien ebenso. Sie stehen hier fertig gerechnet, damit die
+   * Uebersicht der sieben Gegner "4 Krieger" zeigen kann, ohne je Brett zu
+   * zaehlen.
+   */
+  readonly synergien: readonly Synergiestand[];
 }
 
 export interface TafelrundeSicht {
@@ -159,6 +174,12 @@ export interface TafelrundeSicht {
    * gaebe es zwei Wahrheiten ueber jede Einheit.
    */
   readonly katalog?: readonly Einheit[];
+  /**
+   * Die Synergie-Tabelle — wie der Katalog nur beim ersten Ausliefern, aus
+   * demselben Grund: unveraenderlich, und der Bildschirm soll "bei 4: +30 %
+   * Angriff" anzeigen koennen, ohne die Zahlen selbst zu kennen.
+   */
+  readonly synergieTabelle?: readonly Synergie[];
 }
 
 /**
@@ -180,6 +201,7 @@ function fremd(sitz: number, heer: Heer): FremdeSicht {
     bereit: heer.bereit,
     ausRunde: heer.ausRunde,
     verlassen: heer.verlassen,
+    synergien: synergienVon(heer.brett),
   };
 }
 
@@ -206,7 +228,7 @@ function grundsicht(
     vorrat: partie.vorrat,
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
     kaempfe: ich === null ? partie.kaempfe : [kampfVon(partie, ich)].filter((k) => k !== null),
-    ...(seit === 0 ? { katalog: KATALOG } : {}),
+    ...(seit === 0 ? { katalog: KATALOG, synergieTabelle: SYNERGIEN } : {}),
   };
 }
 
@@ -233,6 +255,7 @@ export function sichtFuer(
     neuwuerfelnKosten: partie.regeln.neuwuerfelnKosten,
     aufstiegKosten: aufstiegKosten(heer.level),
     darfHandeln: darfHandeln(partie, sitz),
+    synergien: synergienVon(heer.brett),
   };
 
   return {

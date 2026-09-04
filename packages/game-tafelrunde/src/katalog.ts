@@ -28,13 +28,12 @@
 export type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
 
 /**
- * Klassen-Marken. Aus ihnen entstehen SPAETER die Synergie-Boni (Schwellen
- * bei 2, 4 und 6 gleichen Marken auf dem Feld) — die gehoeren ausdruecklich
- * nicht in diesen Regelkern.
+ * Klassen-Marken. Aus ihnen entstehen die Synergie-Boni (Schwellen bei 2, 4
+ * und 6 gleichen Marken auf dem Brett) — die Tabelle dazu steht in
+ * synergien.ts, nicht hier.
  *
- * Sie stehen hier trotzdem vollstaendig, denn sie sind eine Eigenschaft der
- * EINHEIT, nicht des Bonus. Wer sie erst mit den Boni nachtruege, muesste den
- * ganzen Katalog ein zweites Mal anfassen.
+ * Die Marken sind eine Eigenschaft der EINHEIT, nicht des Bonus: Der Katalog
+ * sagt, wer Krieger ist; synergien.ts sagt, was vier Krieger bekommen.
  */
 export type Marke =
   | 'krieger'
@@ -71,13 +70,52 @@ export const VERSCHMELZ_ZAHL = 3;
 export interface Grundwerte {
   readonly leben: number;
   readonly angriff: number;
-  /** Angriffe je Sekunde. Der Kampf wertet sie spaeter aus. */
+  /** Angriffe je Sekunde. Der Kampf rechnet sie in ganze Takte um (kampf.ts). */
   readonly tempo: number;
   /** Reichweite in Feldern. 1 = Nahkampf. */
   readonly reichweite: number;
-  /** Ruestung mindert eingehenden Schaden. Spaeter, siehe oben. */
+  /** Ruestung mindert eingehenden Schaden in Prozent (schadenNach in kampf.ts). */
   readonly ruestung: number;
 }
+
+/**
+ * Ein Aufschlag auf die Grundwerte, wie ihn die Synergien geben (synergien.ts).
+ *
+ * Leben, Angriff und Tempo in PROZENT, Ruestung als feste Zahl. Der Grund ist
+ * die Spreizung der Werte: Leben reicht von 430 bis 1150 und wird auf Stufe 3
+ * noch verdreifacht — ein fester Aufschlag waere fuer den Funkenlehrling ein
+ * Geschenk und fuer den Wurzelriesen unsichtbar. Ruestung dagegen ist selbst
+ * schon ein Prozentwert (10 bis 50), da ist ein fester Zuschlag genau das,
+ * was man meint, wenn man "zehn Ruestung mehr" sagt.
+ *
+ * Reichweite bekommt keinen Bonus, aus demselben Grund wie bei der Stufe: Eine
+ * Wache, die auf einmal weit schiesst, ist eine andere Einheit.
+ */
+export interface Wertebonus {
+  readonly lebenProzent: number;
+  readonly angriffProzent: number;
+  readonly tempoProzent: number;
+  readonly ruestung: number;
+}
+
+export const KEIN_BONUS: Wertebonus = {
+  lebenProzent: 0,
+  angriffProzent: 0,
+  tempoProzent: 0,
+  ruestung: 0,
+};
+
+/**
+ * Mehr Ruestung gibt es nicht, egal wie viele Boni zusammenkommen.
+ *
+ * Bei 100 naehme eine Einheit nur noch den Mindestschaden von 1 je Treffer
+ * (schadenNach), und ein Kampf liefe bis zur Hoechstdauer. Eine Dorfwache
+ * (40) mit Krieger UND Waechter auf der hoechsten Schwelle kaeme auf 90 und
+ * stoesst hier an — mit Absicht: Sechs Krieger und sechs Waechter auf einem
+ * Brett sind ein Aufwand, der sich lohnen soll, aber nicht unverwundbar
+ * machen darf.
+ */
+export const RUESTUNG_HOECHSTWERT = 75;
 
 export interface Einheit extends Grundwerte {
   readonly id: EinheitId;
@@ -458,21 +496,28 @@ export const STUFEN_FAKTOR: Readonly<Record<Stufe, number>> = {
 };
 
 /**
- * Die Werte einer Einheit auf einer Sternstufe.
+ * Die Werte einer Einheit auf einer Sternstufe, wahlweise mit Bonus.
+ *
+ * Das ist DIE Stelle, an der aus Katalogwerten Kampfwerte werden: erst die
+ * Stufe, dann der Bonus, beides hier und nirgends im Kampf. Wer nachrechnen
+ * will, warum eine Dorfwache im Kampf 780 Leben hatte, liest nur diese
+ * Funktion und die Tabelle in synergien.ts.
  *
  * Gerundet, weil Leben und Angriff als ganze Zahlen angezeigt werden und ein
- * Kampf, der spaeter mit 989.9999999 rechnet, bei gleichem Seed auf zwei
- * Rechnern verschieden enden koennte (Grundsatz 1).
+ * Kampf, der mit 989.9999999 rechnet, bei gleichem Seed auf zwei Rechnern
+ * verschieden enden koennte (Grundsatz 1). Das Tempo wird auf Tausendstel
+ * gerundet — der Kampf macht daraus ohnehin ganze Takte, aber ein Wert wie
+ * 0.7475000000000001 in der Sicht saehe nach einem Fehler aus.
  */
-export function werteFuer(id: EinheitId, stufe: Stufe): Grundwerte {
+export function werteFuer(id: EinheitId, stufe: Stufe, bonus: Wertebonus = KEIN_BONUS): Grundwerte {
   const e = einheit(id);
   const faktor = STUFEN_FAKTOR[stufe];
   return {
-    leben: Math.round(e.leben * faktor),
-    angriff: Math.round(e.angriff * faktor),
-    tempo: e.tempo,
+    leben: Math.round((e.leben * faktor * (100 + bonus.lebenProzent)) / 100),
+    angriff: Math.round((e.angriff * faktor * (100 + bonus.angriffProzent)) / 100),
+    tempo: Math.round(e.tempo * (100 + bonus.tempoProzent) * 10) / 1000,
     reichweite: e.reichweite,
-    ruestung: e.ruestung,
+    ruestung: Math.min(RUESTUNG_HOECHSTWERT, e.ruestung + bonus.ruestung),
   };
 }
 

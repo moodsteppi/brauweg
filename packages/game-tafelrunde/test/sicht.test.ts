@@ -76,6 +76,8 @@ describe('Fremde Sicht', () => {
       'level',
       'serie',
       'sitz',
+      // Aus dem Brett gerechnet, das ohnehin oeffentlich ist — kein Leck.
+      'synergien',
       'verlassen',
     ]);
   });
