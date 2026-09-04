@@ -176,7 +176,10 @@ test('Durchstich: zwei Clients beenden eine Sechser-Zauberpartie', async (t) => 
 });
 
 test('Die Zuschauersicht eines Zaubertisches zeigt keine Hand', async (t) => {
-  const h = await startHarness();
+  // Gleiche Vorsichtsmassnahme wie beim Cambio-Sichttest: Bots stillstellen
+  // und der Client zieht nicht. Sonst spielt der Tisch waehrend des Messens
+  // weiter, und `runde` kann bei einer Dreirundenpartie schon null sein.
+  const h = await startHarness({ botDelayMs: 60_000 });
   t.after(() => h.close());
 
   const anna = await createVerifiedAccount(h.ctx, 'Anna');
@@ -190,6 +193,7 @@ test('Die Zuschauersicht eines Zaubertisches zeigt keine Hand', async (t) => {
   });
 
   const spieler = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  spieler.passive = true;
   spieler.join(table.id, 1, 'wizard');
   await spieler.waitFor(() => spieler.lastView !== null, 'Sicht des Spielers');
 
