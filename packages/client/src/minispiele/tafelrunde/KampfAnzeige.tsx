@@ -18,6 +18,14 @@
  * hat, bekommt dieselben Zustaende ohne Uebergaenge: Das steht im Stylesheet
  * und nicht hier, damit die Logik in beiden Faellen dieselbe ist.
  *
+ * DIE BILDFOLGEN HAENGEN AN DERSELBEN UHR und bekommen ausdruecklich keine
+ * zweite. Der Takt schiebt das Blatt jeder Figur ueber ihren Ausschnitt
+ * (`bildSchieben` weiter unten) — direkt am Element und nicht ueber den
+ * Zustand: Ein Bildwechsel ist keine Aenderung des KAMPFES, und React deshalb
+ * dreissigmal je Sekunde zeichnen zu lassen waere genau die Verschwendung, die
+ * der Absatz darueber vermeidet. Welches Bild wann dran ist, rechnet
+ * `bildfolge.ts` aus.
+ *
  * WANN DER KAMPF ANFAENGT: beim Einhaengen dieser Komponente, also beim
  * Eintritt in die Kampfphase. Die Schaupause des Servers ist so lang wie der
  * laengste Kampf der Runde plus Nachlauf (`interludeMs` im Adapter). Wer
@@ -30,13 +38,18 @@
  * Ergebnis stehen, bis der Server die Phase wechselt (Tafelrunde.tsx blendet
  * dann aus). Die Dauer gibt der Server vor, nicht der Client.
  *
- * Die Figuren kommen aus `figuren.ts` (CC0-Pixelkunst, 32 x 32, vierfach
- * hochgezogen). Eingehaengt werden sie von `Figurbild` weiter unten; fehlt
- * eine Datei, tritt das uebergebene `ersatzzeichen` an ihre Stelle.
+ * DIE FIGUREN SIND DIE VORGERENDERTEN 3D-BILDFOLGEN (`src/figuren3d/`), je
+ * Rolle ein Blatt fuer alle Einheiten dieser Rolle. Faellt ein Blatt aus, tritt
+ * die Pixelfigur der Einheit aus `figuren.ts` an seine Stelle, und faellt auch
+ * die aus, das uebergebene `ersatzzeichen` — lieber ein Platzhalter als ein
+ * leeres Feld (CLAUDE.md). Ausserhalb der Arena bleibt es bei den Pixelfiguren:
+ * In Laden, Bank und Ruestkammer ist die EINHEIT die Auskunft, hier die
+ * Bewegung.
  */
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
+import { type Bildstand, GLEITEN_MS, bildstand, blattPfad, blattVersatz } from './bildfolge';
 import { type EinheitId, FIGUREN, UNTERGRUND } from './figuren';
 import stil from './KampfAnzeige.module.css';
 import { type Rastermass, rastermass, wabenLage } from './zuege';
@@ -123,6 +136,13 @@ export interface Einheitenbild {
   readonly id: string;
   readonly name: string;
   readonly kosten: number;
+  /**
+   * Die Kampfrolle, wie die Sicht sie liefert — als Zeichenkette und nicht als
+   * Vereinigungstyp, weil sie das auch am Draht ist (protocol.ts). Sie
+   * entscheidet, WELCHES Blatt die Figur spielt; `blattPfad` prueft sie und
+   * faellt bei einer unbekannten Rolle auf die Pixelfigur zurueck.
+   */
+  readonly rolle: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,6 +204,76 @@ export function Figurbild({
       onError={() => setKaputt(pfad)}
     />
   );
+}
+
+/**
+ * Die Figur als Ausschnitt aus dem Blatt ihrer Rolle.
+ *
+ * DER AUFBAU: ein Kasten mit `overflow: hidden`, darin das ganze Blatt,
+ * sechsmal so breit und fuenfmal so hoch. Verschoben wird es vom Takt der
+ * Anzeige (`bildSchieben`), nicht von hier — deshalb steht am `<img>` kein
+ * `transform`: Es waere die Angabe, die der Takt gleich darauf ueberschreibt,
+ * und beim naechsten Zeichnen setzte React sie zurueck. Bis der erste Takt
+ * laeuft, steht die Zelle links oben im Blatt, und das ist das erste Bild des
+ * Standes — also eine gueltige Figur und kein Loch.
+ *
+ * WARUM EIN `<img>` UND KEIN HINTERGRUNDBILD: `onError`. Ein ausgefallener
+ * Hintergrund ist ein leeres Feld; ein ausgefallenes `<img>` meldet sich, und
+ * dann tritt die Pixelfigur an seine Stelle. Der gescheiterte PFAD wird
+ * gemerkt und nicht bloss ein Ja/Nein — aus demselben Grund wie bei
+ * `Figurbild`: Eine Figur, die auf demselben Platz durch eine andere ersetzt
+ * wird, behaelt ihre Komponente.
+ *
+ * SPIEGELN: Alle Blaetter schauen nach rechts (`FIGUREN3D_BLICKT`). Wer nach
+ * links schauen soll, bekommt den Kasten gespiegelt — dafuer ist die Konstante
+ * da. Gespiegelt wird der Kasten und nicht das Bild: Sonst liefe das Spiegeln
+ * dem Schieben in dieselbe `transform`-Angabe.
+ */
+function Figur3D({
+  einheit,
+  ersatz,
+  blatt,
+  spiegeln,
+  gib,
+}: {
+  einheit: Einheitenbild;
+  /** Was an die Stelle tritt, wenn es kein Blatt gibt oder es nicht laedt. */
+  ersatz: ReactNode;
+  blatt: string | null;
+  spiegeln: boolean;
+  /** Meldet das Bild an den Takt, damit er es schieben kann. */
+  gib: (el: HTMLImageElement | null) => void;
+}): React.JSX.Element {
+  const [kaputt, setKaputt] = useState<string | null>(null);
+  if (blatt === null || blatt === kaputt) return <>{ersatz}</>;
+  return (
+    <span className={stil.figur3d} data-spiegel={spiegeln ? '' : undefined}>
+      <img
+        ref={gib}
+        className={stil.blatt}
+        src={blatt}
+        /* Der Name der Einheit und nicht der der Rolle: Fuer den Leser ist die
+           Figur eine Dorfwache, dass sie sich das Blatt mit sieben anderen
+           teilt, ist eine Auskunft ueber die Dateien. */
+        alt={einheit.name}
+        onError={() => setKaputt(blatt)}
+      />
+    </span>
+  );
+}
+
+/**
+ * Das Blatt einer Figur ueber ihren Ausschnitt schieben.
+ *
+ * Wird vom Takt der Anzeige aufgerufen und fasst ausschliesslich `transform`
+ * an: keine Zustandsaenderung, kein Umbruch, kein neues Zeichnen des Baums.
+ * Ist die Angabe dieselbe wie zuvor, wird gar nichts geschrieben — bei einer
+ * Bildrate von vier (Stand) waeren das sonst 56 von 60 Schreibvorgaengen je
+ * Sekunde ohne jede Wirkung.
+ */
+function bildSchieben(el: HTMLImageElement, stand: Bildstand): void {
+  const versatz = blattVersatz(stand);
+  if (el.style.transform !== versatz) el.style.transform = versatz;
 }
 
 // ---------------------------------------------------------------------------
@@ -286,6 +376,12 @@ export function startVersatz(dauerMs: number, frist: number | null, jetzt: numbe
 // Der Abspielstand — reine Rechnung, ohne DOM
 // ---------------------------------------------------------------------------
 
+/**
+ * `Figur` erfuellt `Bewegungsspur` (bildfolge.ts) — die vier `…Ab`-Felder sind
+ * genau das, was die Bildfolge braucht. Sie stehen hier und nicht daneben,
+ * damit es je Figur EINEN Stand gibt: Ein zweiter, der nur die Zeitstempel
+ * fuehrt, muesste an denselben Ereignissen mitgezogen werden.
+ */
 export interface Figur extends Kaempferstand {
   readonly tot: boolean;
   /** Wie oft diese Figur getroffen WURDE — Schluessel fuer den Blitz. */
@@ -295,6 +391,15 @@ export interface Figur extends Kaempferstand {
   readonly schlaege: number;
   /** Wohin der letzte Schlag ging (Arenaplatz), fuer die Richtung des Ausschlags. */
   readonly zielPlatz: number | null;
+  /*
+   * Die vier Zeitpunkte sind woertlich das `zeitMs` ihres Ereignisses. Nichts
+   * daran ist gerechnet — auch keine Dauer: Wie lange eine Folge laeuft,
+   * entscheidet ihre Bildrate in figuren3d.ts und nicht das Protokoll.
+   */
+  readonly schlagAb: number | null;
+  readonly getroffenAb: number | null;
+  readonly zugAb: number | null;
+  readonly totAb: number | null;
 }
 
 export interface Abspielstand {
@@ -313,6 +418,10 @@ export function anfangsstand(bericht: Kampfbericht): Abspielstand {
       letzterSchaden: 0,
       schlaege: 0,
       zielPlatz: null,
+      schlagAb: null,
+      getroffenAb: null,
+      zugAb: null,
+      totAb: null,
     })),
     naechstes: 0,
     ende: null,
@@ -337,20 +446,38 @@ function veraendert(
 export function wendeAn(stand: Abspielstand, e: Kampfereignis): Abspielstand {
   switch (e.art) {
     case 'bewegung':
-      return { ...stand, figuren: veraendert(stand.figuren, e.wer, (f) => ({ ...f, platz: e.nach })) };
+      return {
+        ...stand,
+        figuren: veraendert(stand.figuren, e.wer, (f) => ({
+          ...f,
+          platz: e.nach,
+          zugAb: e.zeitMs,
+        })),
+      };
     case 'treffer': {
       const zielPlatz = stand.figuren.find((f) => f.id === e.ziel)?.platz ?? null;
       const figuren = stand.figuren.map((f) => {
-        if (f.id === e.wer) return { ...f, schlaege: f.schlaege + 1, zielPlatz };
+        if (f.id === e.wer) {
+          return { ...f, schlaege: f.schlaege + 1, zielPlatz, schlagAb: e.zeitMs };
+        }
         if (f.id === e.ziel) {
-          return { ...f, leben: e.lebenDanach, treffer: f.treffer + 1, letzterSchaden: e.schaden };
+          return {
+            ...f,
+            leben: e.lebenDanach,
+            treffer: f.treffer + 1,
+            letzterSchaden: e.schaden,
+            getroffenAb: e.zeitMs,
+          };
         }
         return f;
       });
       return { ...stand, figuren };
     }
     case 'tod':
-      return { ...stand, figuren: veraendert(stand.figuren, e.wer, (f) => ({ ...f, tot: true })) };
+      return {
+        ...stand,
+        figuren: veraendert(stand.figuren, e.wer, (f) => ({ ...f, tot: true, totAb: e.zeitMs })),
+      };
     case 'ende':
       return { ...stand, ende: { sieger: e.sieger, grund: e.grund } };
     default:
@@ -469,6 +596,44 @@ export function KampfAnzeige<E extends Einheitenbild>({
     bericht ? { stand: anfangsstand(bericht), zeitMs: 0 } : null,
   );
 
+  /**
+   * Weniger Bewegung: einmal beim Aufbau abgefragt und dann festgehalten.
+   *
+   * Anders als beim Rest der Anzeige laesst sich das hier NICHT dem Stylesheet
+   * ueberlassen — welches Bild eines Blattes zu sehen ist, entscheidet keine
+   * CSS-Regel. `bildstand` bekommt die Angabe deshalb mit und liefert dann das
+   * Standbild der jeweiligen Bewegung statt einer Folge.
+   */
+  const [ruhig] = useState<boolean>(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+
+  /**
+   * Die Blaetter der aufgestellten Figuren, nach Kennung.
+   *
+   * Der Takt braucht sie, um sie zu schieben, und darf dafuer nicht durch den
+   * Zustand gehen — siehe den Kopf dieser Datei. Eintraege kommen und gehen mit
+   * den Elementen: Der Koerper einer Figur wird bei jedem Schlag neu aufgebaut
+   * (`key={f.schlaege}`), und ein gemerktes Element aus dem vorigen Aufbau
+   * zeigte auf einen Knoten, den niemand mehr sieht.
+   */
+  const blaetter = useRef(new Map<number, HTMLImageElement>());
+
+  /**
+   * Was der Takt zuletzt fuer jede Figur ausgerechnet hat.
+   *
+   * NICHT bloss ein Zwischenspeicher: Ein frisch aufgebautes Blatt muss beim
+   * Anhaengen sofort das richtige Bild zeigen, und das darf NICHT aus
+   * `anzeige.zeitMs` kommen. React zeichnet, wenn es dazu kommt — gemessen lag
+   * ein Aufbau schon 65 ms hinter dem Takt, der ihn ausgeloest hat. Das Blatt
+   * sprang dann um zwei Bilder zurueck, und die naechsten Takte spielten die
+   * Folge ein zweites Mal an. Der Takt ist die Uhr, nicht das Zeichnen.
+   */
+  const zuletzt = useRef(new Map<number, Bildstand>());
+
   /*
    * Bericht und Nebenkaempfe liegen in einer Referenz, und die Uhr haengt am
    * SCHLUESSEL des Kampfes. Jeder Rundruf des Servers bringt ein neues
@@ -489,6 +654,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
     const versatz = startVersatz(anfang.dauerMs, frist, start);
     let letzteSekunde = -1;
     let letzteFertige = -1;
+    let stillAb: number | null = null;
     const uhr = baueUhr();
     let lebt = true;
 
@@ -506,8 +672,26 @@ export function KampfAnzeige<E extends Einheitenbild>({
         letzteFertige = fertige;
         setAnzeige({ stand: neu, zeitMs });
       }
-      // Nach dem Ende steht das Bild still — es gibt nichts mehr abzulesen.
-      if (neu.ende && fertige === a.length) return;
+      /* Die Bildfolgen: EIN Durchgang je Takt, ohne Zustandsaenderung. Er
+         steht hinter dem Zeichnen, damit er den frisch gesetzten Stand
+         benutzt und nicht den vom letzten Bild. */
+      for (const f of stand.figuren) {
+        const bild = bildstand(f, zeitMs, ruhig);
+        zuletzt.current.set(f.id, bild);
+        const el = blaetter.current.get(f.id);
+        if (el) bildSchieben(el, bild);
+      }
+      /*
+       * Nach dem Ende steht das Bild still — es gibt nichts mehr abzulesen.
+       * Aber erst NACH dem Nachspiel: Das letzte Ereignis eines Kampfes ist
+       * fast immer ein Tod kurz vor dem Ende, und ohne die Zugabe fiele seine
+       * Bildfolge mitten im Einsacken aus. Frueher fiel das nicht auf, weil
+       * das Sterben eine CSS-Animation war und die auch ohne Uhr weiterlief.
+       */
+      if (neu.ende && fertige === a.length) {
+        if (stillAb === null) stillAb = zeitMs;
+        if (zeitMs - stillAb >= NACHSPIEL_MS) return;
+      }
       uhr.naechstes(tick);
     };
     uhr.naechstes(tick);
@@ -618,6 +802,20 @@ export function KampfAnzeige<E extends Einheitenbild>({
                      Takt der Serverfunke statt zu atmen. Negativ, damit die
                      Bewegung schon laeuft, statt erst anzufangen. */
                   '--schwebe': `${-(f.id % 7) * 0.53}s`,
+                  /* Der Weg von Feld zu Feld. Die Zahl steht in bildfolge.ts,
+                     weil die Lauffolge genau so lange laufen muss wie er —
+                     zwei Zahlen liefen beim ersten Nachstellen auseinander,
+                     und die Figur ruderte dann noch, wenn sie schon steht. */
+                  '--gleiten': `${GLEITEN_MS}ms`,
+                  /*
+                   * Die Reihe stapelt die Figuren: Wer weiter vorn steht,
+                   * liegt darueber. Noetig, seit eine Figur ihr Feld nach oben
+                   * ueberragt (die Zelle des Blattes ist hoeher als die Karte)
+                   * — vorher beruehrten sich zwei Figuren nie, und die
+                   * Baumreihenfolge liess die HINTERE ueber der vorderen
+                   * liegen, wenn sie zufaellig spaeter im Bericht stand.
+                   */
+                  zIndex: Math.floor(platz / brettSpalten),
                 } as React.CSSProperties
               }
               aria-label={`${einheit?.name ?? f.einheitId}, Stufe ${f.stufe}, ${f.tot ? 'gefallen' : `${f.leben} von ${f.hoechstesLeben} Leben`}`}
@@ -636,10 +834,53 @@ export function KampfAnzeige<E extends Einheitenbild>({
                 data-schlaegt={f.schlaege > 0 ? '' : undefined}
               >
                 {einheit ? (
-                  <Figurbild
+                  <Figur3D
                     einheit={einheit}
-                    ersatz={ersatzzeichen(einheit)}
-                    klasse={stil.figurbild}
+                    blatt={blattPfad(einheit.rolle)}
+                    /*
+                     * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT).
+                     * Gespiegelt wird, wer OBEN steht — dann sehen die beiden
+                     * Heere einander an, statt in dieselbe Richtung zu
+                     * blicken. Nach der eigenen Seite und nicht nach der
+                     * Arenaseite: Wer als `b` antritt, bekommt die Arena
+                     * gedreht, und mit `f.seite` haetten sich beim Drehen alle
+                     * Figuren mitgedreht.
+                     */
+                    spiegeln={f.seite !== unten}
+                    gib={(el) => {
+                      if (!el) {
+                        blaetter.current.delete(f.id);
+                        return;
+                      }
+                      blaetter.current.set(f.id, el);
+                      /*
+                       * Gleich hier schieben und nicht erst im naechsten Takt:
+                       * Der Koerper wird bei JEDEM Schlag neu aufgebaut
+                       * (`key={f.schlaege}`), also 155-mal im Kampf der Probe.
+                       * Ohne diese Zeile zeigte das frische Blatt bis zum
+                       * naechsten Bild die linke obere Zelle — ausgerechnet in
+                       * dem Augenblick, in dem die Figur ausholt.
+                       *
+                       * Und zwar den Stand des TAKTES, nicht den dieses
+                       * Zeichnens (siehe `zuletzt`). Nur beim allerersten
+                       * Aufbau gibt es noch keinen — dann steht die Uhr auf
+                       * null, und beides ist dasselbe.
+                       */
+                      bildSchieben(
+                        el,
+                        zuletzt.current.get(f.id) ?? bildstand(f, anzeige.zeitMs, ruhig),
+                      );
+                    }}
+                    /* Zwei Rueckfaelle, in dieser Reihenfolge: Faellt das Blatt
+                       aus, steht dort die Pixelfigur der Einheit; faellt auch
+                       die aus, das gezeichnete Zeichen. */
+                    ersatz={
+                      <Figurbild
+                        einheit={einheit}
+                        ersatz={ersatzzeichen(einheit)}
+                        klasse={stil.figurbild}
+                      />
+                    }
                   />
                 ) : (
                   <span>?</span>
@@ -791,6 +1032,17 @@ function Ergebnis({
  * Protokoll ohnehin nicht (TAKT_MS in kampf.ts).
  */
 const RUECKFALL_TAKT_MS = 100;
+
+/**
+ * Wie lange der Takt nach dem Ende noch laeuft — nur fuer die Bildfolgen.
+ *
+ * Der Kampf ist vorbei, aber die letzte Todesfolge nicht: Sie faellt fast immer
+ * kurz vor das Ende und braucht bei sechs Bildern und doppelter Bildrate rund
+ * 200 ms. Grosszuegig gerundet, weil ein Takt zu viel nichts kostet (es
+ * aendert sich nichts mehr, also wird auch nichts neu gezeichnet) — ein Takt
+ * zu wenig aber die Figur mitten im Einsacken einfriert.
+ */
+const NACHSPIEL_MS = 600;
 
 interface Uhr {
   naechstes(tick: () => void): void;

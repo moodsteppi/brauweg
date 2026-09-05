@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { FIGUREN3D_BEWEGUNGEN, folgeVon } from '../../figuren3d/figuren3d';
+import { type Bildstand, GLEITEN_MS, blattPfad } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import {
   type Kampfbericht,
@@ -68,12 +70,32 @@ function ergebnis(teil: Partial<Paarungsergebnis> = {}): Paarungsergebnis {
 
 const KATALOG = {
   dorfwache: { id: 'dorfwache', name: 'Dorfwache', kosten: 1, rolle: 'wache' },
-  /* Eine Einheit, zu der es KEINE Figur gibt — der Fall, den figuren.ts beim
-     naechsten neuen Katalogeintrag von selbst herstellt. */
-  phantom: { id: 'phantom', name: 'Phantom', kosten: 1, rolle: 'magier' },
+  /* Eine Einheit, zu der es WEDER Blatt NOCH Figur gibt: eine Rolle, die
+     bildfolge.ts nicht kennt, und eine Kennung, die figuren.ts nicht kennt.
+     Beides stellt der naechste neue Katalogeintrag von selbst her. */
+  phantom: { id: 'phantom', name: 'Phantom', kosten: 1, rolle: 'kanonier' },
 };
 
 const NAMEN: Record<number, string> = { 0: 'Ich', 1: 'KI', 2: 'Robin', 3: 'Tom' };
+
+/**
+ * Welche Zelle des Blattes ein Bild gerade zeigt — `blattVersatz` rueckwaerts.
+ *
+ * Ueber die Zeile und nicht ueber den Pfad: Alle fuenf Blaetter sind gleich
+ * aufgebaut, die BEWEGUNG steht in der Zeile. Rueckwaerts gelesen statt gegen
+ * eine erwartete Zeichenkette geprueft, damit im Fehlerfall „schlag statt
+ * lauf" dasteht und nicht „translate(0%, -40%) statt translate(0%, -20%)".
+ */
+function gelesen(bild: HTMLElement): Bildstand {
+  const treffer = /translate\((-?[\d.]+)%, (-?[\d.]+)%\)/.exec(bild.style.transform);
+  if (!treffer) throw new Error(`kein Versatz am Blatt: "${bild.style.transform}"`);
+  const zeile = Math.round(Number(treffer[2]) / -20);
+  const folge = FIGUREN3D_BEWEGUNGEN.find((f) => f.zeile === zeile);
+  if (!folge) throw new Error(`keine Bewegung in Zeile ${zeile}`);
+  /* `+ 0` gegen die minus-Null: `Math.round(-0/-16.667)` ist -0, und -0 ist
+     fuer `toEqual` etwas anderes als 0. */
+  return { bewegung: folge.bewegung, bild: Math.round(Number(treffer[1]) / -16.667) + 0 };
+}
 
 function zeige(
   kaempfe: Kampfpaarung[],
@@ -314,7 +336,7 @@ describe('Figurbild', () => {
     fireEvent.error(screen.getByAltText('Dorfwache'));
     expect(screen.getByTestId('ersatz')).toBeInTheDocument();
 
-    const andere = { id: 'grabfuerstin', name: 'Grabfürstin', kosten: 3 };
+    const andere = { id: 'grabfuerstin', name: 'Grabfürstin', kosten: 3, rolle: 'magier' };
     rerender(<Figurbild einheit={andere} ersatz={<span data-testid="ersatz" />} />);
     expect(screen.getByAltText('Grabfürstin')).toHaveAttribute('src', FIGUREN.grabfuerstin);
   });
@@ -363,13 +385,24 @@ describe('KampfAnzeige', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('stellt die Figuren aus figuren.ts auf das Holz', () => {
+  it('stellt die Bildfolge der ROLLE auf das Holz, die Gegenseite gespiegelt', () => {
     const { container } = zeige([paarung()], 0);
     const bilder = screen.getAllByAltText('Dorfwache');
     // Beide Seiten kaempfen mit einer Dorfwache — beide zeigen ihre Figur.
     expect(bilder).toHaveLength(2);
-    for (const bild of bilder) expect(bild).toHaveAttribute('src', FIGUREN.dorfwache);
+    /* Nicht die Pixelfigur der EINHEIT, sondern das Blatt ihrer ROLLE: Es gibt
+       fuenf Blaetter fuer 22 Einheiten. */
+    for (const bild of bilder) expect(bild).toHaveAttribute('src', blattPfad('wache'));
     expect(screen.queryByTestId('ersatz-dorfwache')).not.toBeInTheDocument();
+
+    /* Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT); die Gegenseite
+       entsteht durch Spiegeln. Genau eine der beiden Figuren ist gespiegelt —
+       sonst blickten beide Heere in dieselbe Richtung. */
+    const gespiegelt = container.querySelectorAll('[data-spiegel]');
+    expect(gespiegelt).toHaveLength(1);
+    expect(gespiegelt[0]!.querySelector('img')).toBe(
+      screen.getByLabelText('Dorfwache, Stufe 2, 100 von 100 Leben').querySelector('img'),
+    );
 
     // Der Untergrund kommt aus figuren.ts und nicht aus dem Stylesheet.
     const brett = container.querySelector('section > div')!;
@@ -389,13 +422,80 @@ describe('KampfAnzeige', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('faellt in der Arena auf das Ersatzzeichen zurueck, wenn ein Bild nicht laedt', () => {
+  it('spielt die Bildfolge mit der Uhr weiter — ohne dafuer neu zu zeichnen', () => {
+    /*
+     * Der Bildwechsel geht am Zustand VORBEI: Der Takt schiebt das Blatt
+     * unmittelbar am Element. Wuerde er dafuer neu zeichnen lassen, zeichnete
+     * die Anzeige dreissigmal je Sekunde statt nur bei einem Ereignis — genau
+     * das, was ihr Kopf ausschliesst.
+     *
+     * Geprueft wird die BEWEGUNG (die Zeile im Blatt) und nicht die genaue
+     * Bildnummer: Wann ein Takt faellt, bestimmt der Browser, und mit
+     * gestellter Uhr liegt er je nach Vorgeschichte ein paar Millisekunden
+     * anders. Was feststehen muss, ist die Abfolge.
+     */
+    const { container } = zeige([paarung()], 0);
+    /* Die gespiegelte Figur ist die gegnerische — und die zieht als erstes
+       (Ereignis `bewegung` zur Zeit 0). */
+    const gezeigt = (): Bildstand => gelesen(container.querySelector('[data-spiegel] img')!);
+
+    lauf(60);
+    expect(gezeigt()).toEqual({ bewegung: 'lauf', bild: 0 });
+    lauf(200);
+    // Weitergeblaettert, ohne dass ein Ereignis faellig war — das ist der Punkt.
+    expect(gezeigt().bewegung).toBe('lauf');
+    expect(gezeigt().bild).toBeGreaterThan(0);
+    /* Nach dem Gleiten steht sie wieder: Die Lauffolge dauert genau so lange
+       wie der Uebergang von Feld zu Feld. Bei 410 ms ist sie sicher angekommen
+       und der erste Treffer (500 ms) noch nicht gefallen — danach zuckt sie,
+       und das waere eine andere Auskunft. */
+    expect(GLEITEN_MS).toBeGreaterThan(260);
+    expect(GLEITEN_MS).toBeLessThan(410);
+    lauf(150);
+    expect(gezeigt().bewegung).toBe('stand');
+  });
+
+  it('laesst die Todesfolge nach dem letzten Ereignis auslaufen', () => {
+    /*
+     * Der letzte Tod faellt fast immer kurz vor das Ende des Kampfes (hier:
+     * 1000 ms, Ende bei 1100). Ohne das Nachspiel hielte die Uhr mit dem
+     * Ergebnis an, und die Figur bliebe mitten im Einsacken stehen.
+     */
+    zeige([paarung()], 0);
+    const gezeigt = (): Bildstand =>
+      gelesen(
+        screen.getByLabelText('Dorfwache, Stufe 2, gefallen').querySelector('img')!,
+      );
+
+    lauf(1100);
+    // Angefangen, aber noch nicht durch: Der Kampf endet bei 1100, der Tod
+    // faellt bei 1000, und die Folge braucht rund 200 ms.
+    expect(gezeigt().bewegung).toBe('tod');
+    expect(gezeigt().bild).toBeLessThan(folgeVon('tod').bilder - 1);
+    // Durchgelaufen und stehengeblieben — die Folge hat `schleife: false`.
+    lauf(500);
+    expect(gezeigt()).toEqual({ bewegung: 'tod', bild: folgeVon('tod').bilder - 1 });
+    lauf(30_000);
+    expect(gezeigt()).toEqual({ bewegung: 'tod', bild: folgeVon('tod').bilder - 1 });
+  });
+
+  it('faellt in der Arena zweistufig zurueck, wenn Bilder nicht laden', () => {
     // Ein fehlender Pfad darf die Arena nicht leeren: Wer seinen Kampf nicht
     // sieht, verliert Leben fuer etwas, das auf seinem Schirm nie stattfand.
     zeige([paarung()], 0);
-    fireEvent.error(screen.getAllByAltText('Dorfwache')[0]!);
+    const erstes = screen.getAllByAltText('Dorfwache')[0]!;
+    expect(erstes).toHaveAttribute('src', blattPfad('wache'));
+
+    // Erste Stufe: kein Blatt — dann die Pixelfigur der Einheit.
+    fireEvent.error(erstes);
+    const pixel = screen.getAllByAltText('Dorfwache')[0]!;
+    expect(pixel).toHaveAttribute('src', FIGUREN.dorfwache);
+    // Die zweite Figur behaelt ihr Blatt — der Rueckfall gilt nur fuer die eine.
+    expect(screen.getAllByAltText('Dorfwache')[1]).toHaveAttribute('src', blattPfad('wache'));
+
+    // Zweite Stufe: auch die Pixelfigur fehlt — dann das gezeichnete Zeichen.
+    fireEvent.error(pixel);
     expect(screen.getByTestId('ersatz-dorfwache')).toBeInTheDocument();
-    // Die zweite Figur laedt weiter — der Rueckfall gilt nur fuer die eine.
     expect(screen.getAllByAltText('Dorfwache')).toHaveLength(1);
   });
 

@@ -47,10 +47,12 @@ import {
 import rohszene from './kampf-szene.json?raw';
 import css from './ProbeKampf.module.css';
 
-/** Ein Katalogeintrag, wie die Sicht ihn liefert — hier nur, was gezeigt wird. */
-interface Katalogeintrag extends Einheitenbild {
-  readonly rolle: string;
-}
+/*
+ * Ein Katalogeintrag ist genau das, was die Anzeige braucht (`Einheitenbild`):
+ * Kennung, Name, Kosten und die ROLLE — an der haengt seit dem 6.9.2026, welche
+ * der fuenf Bildfolgen eine Figur spielt.
+ */
+type Katalogeintrag = Einheitenbild;
 
 interface Markenstand {
   readonly marke: string;
