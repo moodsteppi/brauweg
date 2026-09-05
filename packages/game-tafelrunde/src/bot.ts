@@ -113,17 +113,58 @@ interface Gangart {
  *
  * DASS DIESE REIHENFOLGE STIMMT, IST GEMESSEN und nicht geschaetzt — je 400
  * Partien zu viert, ein Sitz mit der starken Gangart gegen drei mit der
- * schwachen, gezaehlt werden eindeutige Siege (Stand 05.09.2026):
+ * schwachen, gezaehlt werden eindeutige Siege. Rechts steht der SCHNITT der
+ * drei schwachen Sitze, und ueber zwei unabhaengige Saatbasen, weil eine
+ * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 05.09.2026):
  *
- *     hart : sanft   241 : 53     (rechts der Schnitt der drei schwachen Sitze)
- *     hart : normal  119 : 94
- *     normal : sanft 274 : 42
+ *                    gebaut (14 Leben, x2)   langer Stand (20 Leben, x1)
+ *     hart : normal   140 : 87   139 : 87      169 : 77   147 : 84
+ *     hart : sanft    341 : 20   367 : 11      357 : 14   373 :  9
+ *     normal : sanft  359 : 14   354 : 15      350 : 17   348 : 17
  *
- * ZU VIERT UND NICHT MEHR ZU ZWEIT, und das ist selbst ein Befund: Solange die
+ * DASS BEIDE SPALTEN DASELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
+ * nicht an der Partielaenge. Die zweite Spalte ist der Stand von gestern (20
+ * Leben, kein Zeitraffer, rund fuenfzehn Runden) und wird von der letzten
+ * Probe in bot.test.ts mitgeprueft — die Rundenzahl ist die Zahl, an der Robin
+ * dreht, und eine darauf geeichte Gangart faellt sonst erst der uebernaechsten
+ * Umstellung auf.
+ *
+ * WARUM DAS HIER SO AUSFUEHRLICH STEHT: Am 05.09.2026 verlor `hart` gegen
+ * `normal` — 77 : 107,7. Gemessen wurde das auf dem Zweig, der die 14
+ * Startleben und den Zeitraffer brachte, aber die Ladenregel noch nicht hatte.
+ * Nachgemessen ist die Ursache NICHT die kurze Partie und schon gar nicht der
+ * Zeitraffer (bei 20 Leben aendert er die Zahl von 110 auf 114, also gar
+ * nichts), sondern die damalige LADENREGEL:
+ *
+ *   - Vor dem 05.09.2026 leerte ein Kauf nur seinen Platz, und ein Wurf
+ *     kostete 2 Gold. Wer sich frueh Feldplaetze erkaufte, bekam sie in der
+ *     elf Runden kurzen Partie nicht mehr voll — `hart` steigt ohne Reserve
+ *     und ohne volles Brett auf (siehe unten), und das war dort Tempo ins
+ *     Leere.
+ *     Beleg: Auf demselben Stand mit GEZAEHMTEM Aufstieg (`aufstiegsReserve`
+ *     3, `nurBeiVollemBrett`) stand es 112 : 96,0 statt 77 : 107,7.
+ *   - Seit ein Kauf den GANZEN Laden neu zieht, laesst sich ein grosses Brett
+ *     auch fuellen, und der Aufstieg traegt sich wieder.
+ *
+ * Der Wurfpreis war es dagegen nicht: Auf dem heutigen Stand mit wieder
+ * eingeschaltetem Preis von 2 Gold gewinnt `hart` sogar deutlicher (174 :
+ * 75,3). Wer die naechste Umstellung misst, misst deshalb bitte die Gangarten
+ * MIT — eine Regel, die den Laden anfasst, verschiebt sie.
+ *
+ * WAS `HART` HEUTE TRAEGT, ist die fehlende Patzerquote und nicht das Tempo:
+ * Setzt man `hart` in allem auf `normal`, steht es 102 : 99,3 (Kontrolllauf,
+ * die Messung ist also unverzerrt); nimmt man nur den Patzer weg, steht es
+ * 149 : 83,7; mit den Tempo-Schrauben obendrauf 140 : 86,7. Die beiden
+ * letzten Zahlen liegen innerhalb eines Standardfehlers (rund 10 Siege bei 400
+ * Partien) — die Tempo-Schrauben sind heute weder Vorteil noch Nachteil. Sie
+ * bleiben trotzdem stehen: Sie geben der Gangart ihr Verhalten, und eine
+ * Aenderung auf eine Zahl innerhalb der Streuung waere geraten, nicht
+ * gemessen. Als Befund steht das auf dem Board.
+ *
+ * ZU VIERT UND NICHT ZU ZWEIT, und das ist selbst ein Befund: Solange die
  * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
- * 125:75. Seit dem kuerzeren Lebensbalken (20 Leben, 05.09.2026) dauert ein
- * Duell 11 statt 21 Runden, und in dieser Zeit verdient sich der aggressive
- * Ausbau nicht mehr: Ueber 200 Duelle steht es 96:104 fuer `normal`. Am Tisch
+ * 125:75. Mit dem kuerzeren Lebensbalken (20 Leben, 05.09.2026) dauerte ein
+ * Duell 11 statt 21 Runden, und dort stand es 96:104 fuer `normal`. Am Tisch
  * zu viert — der Besetzung, auf die das Spiel eingestellt ist — bleibt der
  * Abstand stehen. Wer die Gangarten fuer das Duell zurechtruecken will, misst
  * bitte beide Besetzungen; die Zahlen fallen in Sekunden an.
@@ -131,7 +172,8 @@ interface Gangart {
  * Der erste Anlauf hatte die Schrauben andersherum gesetzt — der harte Gegner
  * sparte am meisten und stieg am vorsichtigsten auf — und lag danach ueber 40
  * Partien mit 19:21 GLEICHAUF mit dem sanften. Wer hier etwas verstellt, misst
- * bitte nach; die Probe dazu steht in test/bot.test.ts (imFeld).
+ * bitte nach: `node packages/game-tafelrunde/werkzeug/gangarten.mjs`, die
+ * Probe dazu steht in test/bot.test.ts (imFeld).
  */
 const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
   sanft: {
@@ -581,11 +623,16 @@ function kaufZug(
  * einem groesseren Brett und leerem Beutel da.
  *
  * Das ist die Regel, nach der `normal` spielt. Die beiden anderen Gangarten
- * weichen in verschiedene Richtungen ab, und zwar gemessen (siehe GANGARTEN):
- * `hart` laesst BEIDE Haelften weg und steigt auf, sobald es geht — Tempo ist
- * in diesem Spiel mehr wert als ein gefuelltes Brett eine Runde frueher.
- * `sanft` haelt sich an die Regel und legt sechs Gold obendrauf, steigt also
- * spaeter auf als beide.
+ * weichen in verschiedene Richtungen ab: `hart` laesst BEIDE Haelften weg und
+ * steigt auf, sobald es geht; `sanft` haelt sich an die Regel und legt sechs
+ * Gold obendrauf, steigt also spaeter auf als beide.
+ *
+ * DASS DAS TEMPO SICH LOHNT, HAENGT AM LADEN und ist nicht fuer alle Zeiten
+ * gemessen: Solange ein Kauf nur seinen Ladenplatz leerte, blieben die frueh
+ * gekauften Feldplaetze in einer kurzen Partie leer, und `hart` verlor daran
+ * gegen `normal` (77 : 107,7). Heute — ein Kauf zieht den ganzen Laden neu —
+ * kostet der frueh Aufstieg nichts mehr, bringt aber auch nichts Messbares.
+ * Die Zahlen und der Nachweis stehen bei GANGARTEN.
  */
 function aufstiegsZug(eigen: EigeneSicht, gangart: Gangart): TafelrundeAktion | null {
   if (eigen.aufstiegKosten === null) return null;

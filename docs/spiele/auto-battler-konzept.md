@@ -338,7 +338,7 @@ vierte Messung 102,0 % / 3,3 % / 11 Fälle.
 ### Wie gemessen wurde
 
 `packages/game-tafelrunde/test/messen.ts` spielt vollständige Partien mit Bots
-durch, ohne Oberfläche, alles aus dem Seed. Zwei Aufrufer benutzen ihn:
+durch, ohne Oberfläche, alles aus dem Seed. Drei Aufrufer benutzen ihn:
 
 - **Das Werkzeug** `packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs` —
   von Hand zu starten, mit der großen Zahl. Es druckt die Tabellen dieses
@@ -354,6 +354,21 @@ durch, ohne Oberfläche, alles aus dem Seed. Zwei Aufrufer benutzen ihn:
   die vier Stellschrauben der Spielzeit (`--leben`, `--teiler`, `--zeitraffer`,
   `--takt`), mit denen sich ein vorgeschlagener Stand ansehen lässt, ohne ihn
   einzubauen.
+
+- **Das Werkzeug für die Gangarten** `werkzeug/gangarten.mjs` — dieselbe
+  Partieschleife, aber ein Sitz spielt `hart` und die drei anderen `normal`.
+  Es beantwortet die Frage, die `ausgewogenheit.mjs` bauartbedingt offen lässt
+  (dort sind alle Sitze gleich besetzt, sonst misst man die Gangarten statt
+  des Katalogs):
+
+  ```
+  node packages/game-tafelrunde/werkzeug/gangarten.mjs --partien 400 --stark hart --schwach normal
+  ```
+
+  Schalter: `--stark`, `--schwach`, `--partien`, `--sitze`, `--saat` sowie
+  `--leben`, `--teiler`, `--zeitraffer`, `--takt` und `--wuerfelkosten`. Die
+  letzten fünf stellen einen **vorgeschlagenen** Stand nach, ohne ihn
+  einzubauen — genau damit ist Befund 7 unten aufgeklärt worden.
 
 - **Die Probe** `test/ausgewogenheit.test.ts` — 400 Partien zu viert, rund
   anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was
@@ -433,18 +448,51 @@ Robin rechnet das Balancing selbst durch; hier steht nur, was die Zahlen sagen.
    `kampf.ts` noch gar nicht, ohne Fähigkeit ist eine Beistand-Einheit nur eine
    schwache Wache. Was sich geändert hat: Der Bot stellt ihn seit dem neuen
    Laden kaum noch auf, weil er sich etwas Besseres aussuchen kann.
-7. **Die Gangart `hart` schlägt `normal` wieder.** Über 400 Partien zu viert
-   (`imFeld` in `bot.test.ts`, Sitz 0 hart gegen drei normale) steht es
-   **140 : 86,7** für den harten Sitz. Nach der dritten Messung stand dieselbe
-   Zahl bei 77 : 107,7, also umgekehrt. Auch die beiden anderen Sprossen sind
-   gewandert: `hart` gegen drei sanfte 341 : 19,7 (vorher 223 : 59), `normal`
-   gegen drei sanfte 359 : 13,7 (vorher 267 : 44) — der neue Laden nützt den
-   ausbauenden Gangarten weit mehr als der sparsamen. **Folgerung:** Die
-   Board-Karte „`hart` ist schwächer als `normal`" ist auf diesem Stand nicht
-   mehr nachstellbar. Die Probe in `bot.test.ts` behauptet trotzdem weiter
-   keine Reihenfolge, sondern hält nur fest, dass der Abstand kein Absturz ist:
-   Die Reihenfolge ist an einem einzigen Tag zweimal gekippt, und eine Probe,
-   die bei jedem Balancing-Eingriff rot wird, sagt nichts über den Bot.
+7. **Die Gangart `hart` schlägt `normal` wieder — und diesmal ist auch klar,
+   woran es lag.** Über 400 Partien zu viert (`imFeld` in `bot.test.ts`, Sitz 0
+   hart gegen drei normale) steht es **140 : 86,7** für den harten Sitz; nach
+   der dritten Messung stand dieselbe Zahl bei 77 : 107,7, also umgekehrt. Auch
+   die beiden anderen Sprossen sind gewandert: `hart` gegen drei sanfte
+   341 : 19,7 (vorher 223 : 59), `normal` gegen drei sanfte 359 : 13,7 (vorher
+   267 : 44) — der neue Laden nützt den ausbauenden Gangarten weit mehr als der
+   sparsamen. Zwei unabhängig gelaufene Messungen kommen hier Ziffer für Ziffer
+   auf dieselben Zahlen.
+
+   **Die Ursache ist eingekreist** (`werkzeug/gangarten.mjs`, je 400 Partien).
+   Es war weder die kurze Partie — der Zeitraffer allein bewegt die Zahl bei 20
+   Leben von 110 auf 114 — noch der Würfelpreis: Mit wieder eingeschaltetem
+   Preis gewinnt `hart` auf dem heutigen Stand sogar deutlicher (174 : 75,3).
+   Es war die **alte Ladenregel**: Solange ein Kauf nur seinen Platz leerte,
+   bekam `hart` die Feldplätze, die es sich früh erkauft, in einer elf Runden
+   kurzen Partie nicht mehr voll — sein Aufstieg war Tempo ins Leere. Beleg auf
+   demselben Stand: mit gezähmtem Aufstieg (`aufstiegsReserve` 3, nur bei
+   vollem Brett) stand es dort 112 : 96,0 statt 77 : 107,7.
+
+   **Gegenprobe über zwei Saatbasen** (`…-feld` und `gegenprobe-b`), je 400
+   Partien, alle vier Werte in dieselbe Richtung:
+
+   | Paarung | gebaut (14 Leben, x2) | langer Stand (20 Leben, x1) |
+   |---|---|---|
+   | hart : normal | 140 : 86,7 · 139 : 87,0 | 169 : 77,0 · 147 : 84,3 |
+
+   Dazu ein Kontrolllauf: `hart` in allem auf `normal` gesetzt ergibt
+   102 : 99,3 — die Messung ist unverzerrt, es gewinnt die Gangart und nicht
+   der Sitz 0.
+
+   **Folgerung:** Die Board-Karte „`hart` ist schwächer als `normal`" ist auf
+   diesem Stand nicht mehr nachstellbar, und die Probe in `bot.test.ts`
+   behauptet die Reihenfolge wieder — mit Saatbasis und Partienzahl im
+   Kommentar, und ergänzt um eine vierte Probe, die dasselbe beim langen Stand
+   prüft. Die frühere Vorsicht („an einem Tag zweimal gekippt") war richtig,
+   solange niemand wusste, warum; was beide Male kippte, war der Laden.
+   **Wer den Laden das nächste Mal anfasst, misst die Gangarten mit.**
+
+   Was `hart` dabei trägt, ist die fehlende Patzerquote und nicht das Tempo:
+   Kontrolllauf 102 : 99,3, nur ohne Patzer 149 : 83,7, mit den Tempo-Schrauben
+   obendrauf 140 : 86,7 — die letzten beiden liegen innerhalb eines
+   Standardfehlers (rund 10 Siege bei 400 Partien). Nichts verstellt, weil eine
+   Änderung auf eine Zahl innerhalb der Streuung geraten wäre; als eigene Karte
+   steht es auf dem Board.
 8. **Kein Kandidat für einen Katalogeingriff.** Alle gezählten Marken bleiben
    innerhalb ×0,7 bis ×1,4, alle 22 Einheiten werden aufgestellt, jede Marke
    erreicht ihre erste Schwelle, keine Partie endet an der Rundengrenze oder

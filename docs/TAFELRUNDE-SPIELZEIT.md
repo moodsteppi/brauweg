@@ -355,10 +355,14 @@ Die fünfte ist ein Befund und keine Anpassung: **Die Gangart `hart` schlägt
 harten Sitz (vorher 119 : 94 für ihn); gegen `sanft` kommt `hart` auf 223 : 59,
 `normal` dagegen auf 267 : 44. Der aggressive Ausbau von `hart` braucht Runden,
 die es nicht mehr gibt — derselbe Effekt, der beim Wechsel von 100 auf 20 Leben
-schon das Duell zu zweit gekippt hat. Die Probe in `bot.test.ts` behauptet
-deshalb keine Reihenfolge mehr, sondern hält nur noch fest, dass der Abstand
-kein Absturz ist. **Repariert ist das nicht**, es steht als eigene Karte auf dem
-Board: Eine neue Gangart muss gemessen und entschieden werden.
+schon das Duell zu zweit gekippt hat. Die Probe in `bot.test.ts` behauptete
+daraufhin keine Reihenfolge mehr, sondern hielt nur noch fest, dass der Abstand
+kein Absturz ist; repariert war nichts, es ging als eigene Karte auf das Board.
+
+**Diese Erklärung war falsch, und Abschnitt 6 sagt, warum** — es lag nicht an
+den fehlenden Runden, sondern an der Ladenregel, die auf diesem Stand noch die
+alte war. Der Absatz bleibt trotzdem stehen: Er ist das, was an diesem Tag
+gemessen und geschlossen wurde.
 
 ---
 
@@ -463,7 +467,19 @@ in `bot.test.ts`) steht es **140 : 86,7** für den harten Sitz; nach dem
 Zeitraffer allein stand dieselbe Zahl bei 77 : 107,7. Der neue Laden nützt den
 ausbauenden Gangarten mehr als der sparsamen: `hart` gegen drei sanfte
 341 : 19,7 (vorher 223 : 59), `normal` gegen drei sanfte 359 : 13,7 (vorher
-267 : 44). Die Probe behauptet trotzdem weiter keine Reihenfolge, sondern hält
-nur fest, dass der Abstand kein Absturz ist — sie ist an einem einzigen Tag
-zweimal gekippt, und eine Probe, die bei jedem Balancing-Eingriff rot wird,
-sagt nichts über den Bot.
+267 : 44).
+
+**Die Probe behauptet die Reihenfolge seitdem wieder** (`hart > normal`). Sie
+hatte sie zwischenzeitlich aufgegeben, weil sie an einem einzigen Tag zweimal
+gekippt war — richtig, solange niemand wusste, warum. Inzwischen ist das
+eingekreist (`werkzeug/gangarten.mjs`, Befund 7 in
+`docs/spiele/auto-battler-konzept.md`): Gekippt ist sie beide Male am **Laden**
+und nicht an der Partielänge. Der Zeitraffer allein bewegt die Zahl bei 20
+Leben von 110 auf 114, der Würfelpreis gar in die andere Richtung (174 : 75,3
+mit wieder eingeschaltetem Preis); was `hart` in der kurzen Partie umwarf, war
+die alte Regel „ein Kauf leert nur seinen Platz" — mit gezähmtem Aufstieg stand
+es auf demselben Stand 112 : 96,0 statt 77 : 107,7. Die Aussage ruht heute auf
+vier Messungen über zwei Saatbasen (140 : 86,7 · 139 : 87,0 beim gebauten
+Stand, 169 : 77,0 · 147 : 84,3 bei 20 Leben) plus einem Kontrolllauf mit
+gleichen Gangarten (102 : 99,3). Fallen darf sie wieder bei der nächsten
+Änderung am Laden — die misst man mit.

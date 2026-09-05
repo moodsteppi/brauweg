@@ -234,7 +234,11 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > (77 : 107,7 über 400 Partien zu viert, davor 119 : 94) und schlägt sie jetzt
 > wieder (140 : 86,7, nachgemessen am 05.09.2026). Die Board-Karte dazu ist auf
 > diesem Stand nicht mehr nachstellbar. Die Probe in `bot.test.ts` behauptet
-> trotzdem weiter keine Reihenfolge — sie ist an einem Tag zweimal gekippt.
+> die Reihenfolge seitdem wieder: Sie hatte sie aufgegeben, weil sie an einem
+> Tag zweimal gekippt war — inzwischen ist eingekreist, dass beide Male der
+> **Laden** und nicht die Partielänge dahinterstand (Befund 7 in
+> `docs/spiele/auto-battler-konzept.md`, Werkzeug `werkzeug/gangarten.mjs`).
+> Vier Messungen über zwei Saatbasen zeigen in dieselbe Richtung.
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >
