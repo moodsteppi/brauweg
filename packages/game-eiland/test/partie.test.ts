@@ -7,12 +7,17 @@ import {
   type EilandPartie,
   GRAS,
   GRAUTOENE,
+  KAMPFRUNDEN_MAX,
+  STUFEN_MAX,
   WASSER,
   abstand,
   amZug,
+  angreifbare,
   erlaubteZuege,
   erstellePartie,
   fuehreAus,
+  gefallene,
+  heimat,
   istBespielbar,
   istBereit,
   kontingent,
@@ -21,6 +26,8 @@ import {
   sieger,
   spiegel,
   startEcke,
+  stufe,
+  umfeld,
   waehlbare,
 } from '../src/index.js';
 import { botZug } from '../src/bot.js';
@@ -223,10 +230,12 @@ describe('Zug', () => {
     assert.throws(() => plan(partie, 0, [fern]));
   });
 
-  it('weist gegnerisches Gebiet ab — auch am eigenen Rand', () => {
+  it('weist gegnerisches Gebiet gleicher Stufe ab — auch am eigenen Rand', () => {
     /*
-     * Der Kern der Regel "auf einen Gegner treffen heisst: hier ist Schluss".
-     * Gebaut wird ein Feld neben Sitz 0, das Sitz 1 gehoert.
+     * Die Grenze: Auf einen Gegner treffen heisst "hier ist Schluss", solange
+     * sein Feld nicht schwaecher ist als das eigene (siehe Angriff unten).
+     * Gebaut wird ein Feld neben Sitz 0, das Sitz 1 gehoert — beide stehen
+     * allein, beide haben Stufe 0.
      */
     const partie = neu();
     const ecke = startEcke(0, spalten, zeilen);
@@ -235,7 +244,8 @@ describe('Zug', () => {
     besitzer[nachbar] = 1;
     const gestellt: EilandPartie = { ...partie, besitzer };
     assert.ok(!waehlbare(gestellt, 0).includes(nachbar));
-    assert.throws(() => plan(gestellt, 0, [nachbar]));
+    assert.deepEqual(angreifbare(gestellt, 0), []);
+    assert.throws(() => plan(gestellt, 0, [nachbar]), /nicht angreifen/);
   });
 
   it('nimmt hoechstens so viele Felder wie das Kontingent hergibt', () => {
@@ -662,15 +672,22 @@ describe('Partie', () => {
     assert.deepEqual(waehlbare(stand, 1), []);
   });
 
-  it('kuert den mit dem meisten Land', () => {
+  it('kuert den mit dem meisten Land — sofern beide Heimaten stehen', () => {
     let stand = erstellePartie(DEFAULT_REGELN, [0, 1], 5);
     while (!stand.fertig) stand = rundeMitBot(stand);
     const tafel = platzierungen(stand);
     assert.equal(tafel.length, 2);
-    assert.ok(tafel[0]!.points >= tafel[1]!.points);
-    const gewinner = sieger(stand);
-    if (tafel[0]!.points === tafel[1]!.points) assert.equal(gewinner, null);
-    else assert.equal(gewinner, tafel[0]!.seat);
+    const gefallen = gefallene(stand);
+    if (gefallen.length === 0) {
+      assert.ok(tafel[0]!.points >= tafel[1]!.points);
+      const gewinner = sieger(stand);
+      if (tafel[0]!.points === tafel[1]!.points) assert.equal(gewinner, null);
+      else assert.equal(gewinner, tafel[0]!.seat);
+    } else if (gefallen.length === 1) {
+      // Eine Heimat ist gefallen: Der andere steht vorn, egal wie viel Land.
+      assert.notEqual(tafel[0]!.seat, gefallen[0]);
+      assert.equal(sieger(stand), tafel[0]!.seat);
+    }
   });
 
   it('ergibt bei gleicher Saat dieselbe Partie', () => {
@@ -756,5 +773,341 @@ describe('Bot', () => {
     };
     // Nichts waehlbar: Er passt, statt eine ungueltige Aktion zu liefern.
     assert.deepEqual(botZug(sichtFuer(eingemauert, 0)), { typ: 'plan', felder: [] });
+  });
+
+  it('greift ein schwaches Feld an, statt daneben Land zu nehmen', () => {
+    // Block von Sitz 0 oben links, ein einzelnes Feld von Sitz 1 daneben
+    // (Stufe 0 gegen Stufe 3). Der Angriff nimmt dem Gegner ein Feld und
+    // gibt es mir — mehr als jedes freie Feld ohne Ornament.
+    const { partie, ziel } = angriffsStand();
+    const aktion = botZug(sichtFuer(partie, 0));
+    assert.deepEqual(aktion.felder, [ziel]);
+  });
+
+  it('nimmt die Heimat des Gegners, wenn sie in Reichweite liegt', () => {
+    const { partie, ecke } = heimatStand();
+    const aktion = botZug(sichtFuer(partie, 0));
+    assert.ok(aktion.felder.includes(ecke), 'der Sieg steht ueber allem');
+  });
+
+  it('laesst die Finger von einem Feld, das der Gegner gleich zurueckholt', () => {
+    // Dasselbe Hin und Her wie bei der Stellungswiederholung: 3 waere zu
+    // nehmen, aber Feld 4 daneben holte es sich mit Stufe 3 gegen 2 zurueck.
+    // Der Bot nimmt lieber freies Land.
+    const { partie } = angriffsStand();
+    const besitzer = [...partie.besitzer];
+    for (const p of [3, 4, 5, 14, 15]) besitzer[p] = 1;
+    const stand = gestellt(besitzer);
+    assert.deepEqual(angreifbare(stand, 0), [3]);
+    const aktion = botZug(sichtFuer(stand, 0));
+    assert.ok(!aktion.felder.includes(3), 'kein Angriff ohne Aussicht, das Feld zu halten');
+    assert.equal(aktion.felder.length, 1, 'stattdessen ein freies Feld');
+  });
+
+  it('haelt keinen Angriff als Einsatz zurueck', () => {
+    // Kontingent 2, ein Angriff und ein freies Feld am Gegner: Zurueckgehalten
+    // wird hoechstens das freie Feld — um ein angegriffenes gibt es keinen
+    // Streit, dort nuetzte der Einsatz nichts.
+    const { partie, ziel } = angriffsStand();
+    const zwei: EilandPartie = { ...partie, gesammelt: { 0: 1, 1: 0 } };
+    const aktion = botZug(sichtFuer(zwei, 0));
+    assert.ok(aktion.felder.includes(ziel));
+  });
+});
+
+/**
+ * Ein gestellter Zustand fuer Angriffe: Sitz 0 haelt einen Block von sechs
+ * Feldern oben links (0, 1, 2, 10, 11, 12), Sitz 1 ein einzelnes Feld rechts
+ * daneben (3). Feld 2 hat Stufe 3 (1, 11, 12 im Umfeld), Feld 3 Stufe 0 —
+ * Sitz 0 kann 3 angreifen, Sitz 1 kann 2 nicht angreifen.
+ *
+ *   0  1  2 | 3 .  .  .  .  .  .
+ *  10 11 12 | .  .  .  .  .  .  .
+ */
+function angriffsStand(): { partie: EilandPartie; ziel: number } {
+  const besitzer: (number | null)[] = new Array(FELDER).fill(null);
+  for (const p of [0, 1, 2, 10, 11, 12]) besitzer[p] = 0;
+  besitzer[3] = 1;
+  return { partie: gestellt(besitzer), ziel: 3 };
+}
+
+/**
+ * Sitz 0 steht mit fuenf Feldern vor der Heimat von Sitz 1 (Ecke 9, oben
+ * rechts), Sitz 1 haelt sie allein — und dazu eine ganze Zeile in der Mitte,
+ * also mehr Land als Sitz 0. Genau darum geht es: Die Heimat schlaegt das Land.
+ */
+function heimatStand(): { partie: EilandPartie; ecke: number } {
+  const ecke = startEcke(1, spalten, zeilen);
+  const besitzer: (number | null)[] = new Array(FELDER).fill(null);
+  for (const p of [ecke - 1, ecke - 2, ecke + spalten - 2, ecke + spalten - 1, ecke + spalten]) {
+    besitzer[p] = 0;
+  }
+  besitzer[ecke] = 1;
+  for (let x = 0; x < 8; x++) besitzer[5 * spalten + x] = 1;
+  return { partie: gestellt(besitzer), ecke };
+}
+
+/**
+ * Eine offene Wiese ohne Ornamente mit dem gegebenen Besitz. Beide Heimaten
+ * gehoeren ihren Sitzen — sonst waere die Partie nach der ersten Aufloesung
+ * aus, weil eine Heimat als gefallen gilt.
+ */
+function gestellt(besitz: readonly (number | null)[]): EilandPartie {
+  const partie = neu();
+  const besitzer = [...besitz];
+  for (const sitz of [0, 1]) besitzer[startEcke(sitz, spalten, zeilen)] = sitz;
+  const punkte: Record<number, number> = { 0: 0, 1: 0 };
+  for (const b of besitzer) if (b !== null) punkte[b] = (punkte[b] ?? 0) + 1;
+  return {
+    ...partie,
+    regeln: { ...partie.regeln, variante: 'klar' },
+    gelaende: new Array(FELDER).fill(GRAS),
+    besitzer,
+    ornament: new Array(FELDER).fill(null),
+    bauwerk: new Array(FELDER).fill(null),
+    punkte,
+    gesammelt: { 0: 0, 1: 0 },
+  };
+}
+
+describe('Stufe', () => {
+  it('zaehlt die gleichfarbigen Felder im Umfeld, freies Land hat keine', () => {
+    const { partie } = angriffsStand();
+    const s = (platz: number) => stufe(partie.besitzer, platz, spalten, zeilen);
+    assert.equal(s(2), 3, 'Feld 2: 1, 11 und 12 sind eigen');
+    assert.equal(s(11), 5, 'Feld 11 hat alle fuenf Nachbarn im Block');
+    assert.equal(s(0), 3, 'die Ecke: 1, 10 und 11');
+    assert.equal(s(3), 0, 'Sitz 1 steht allein');
+    assert.equal(s(4), null, 'freies Land');
+    assert.equal(umfeld(11, spalten, zeilen).length, 8);
+    assert.equal(umfeld(0, spalten, zeilen).length, 3);
+    assert.equal(STUFEN_MAX, 8);
+  });
+
+  it('erreicht die Hoechststufe nur mitten im eigenen Land', () => {
+    const partie = neu();
+    const besitzer: (number | null)[] = new Array(FELDER).fill(null);
+    for (const p of umfeld(11, spalten, zeilen)) besitzer[p] = 0;
+    besitzer[11] = 0;
+    assert.equal(stufe(besitzer, 11, spalten, zeilen), STUFEN_MAX);
+    assert.equal(stufe(partie.besitzer, startEcke(0, spalten, zeilen), spalten, zeilen), 0);
+  });
+});
+
+describe('Angriff', () => {
+  it('laesst nur das schwaechere Feld angreifen', () => {
+    const { partie, ziel } = angriffsStand();
+    assert.deepEqual(angreifbare(partie, 0), [ziel]);
+    assert.deepEqual(angreifbare(partie, 1), [], 'Stufe 0 greift keine Stufe 3 an');
+  });
+
+  it('greift ueber die Kante an, nicht ueber die Ecke', () => {
+    // Ohne 12 haelt Sitz 0 nur 0, 1, 2, 10, 11. Sitz 1 bekommt 13 dazu: Es
+    // liegt schraeg unter 2 (Stufe 2 gegen Stufe 1), aber an keiner Kante
+    // eines eigenen Feldes — also kein Ziel. 3 dagegen grenzt an 2.
+    const { partie } = angriffsStand();
+    const besitzer = [...partie.besitzer];
+    besitzer[12] = null;
+    besitzer[13] = 1;
+    const ohneZwoelf = gestellt(besitzer);
+    assert.equal(stufe(besitzer, 2, spalten, zeilen), 2);
+    assert.equal(stufe(besitzer, 13, spalten, zeilen), 1);
+    assert.deepEqual(angreifbare(ohneZwoelf, 0), [3]);
+  });
+
+  it('haelt bei gleicher Stufe: glatte Fronten greifen einander nicht an', () => {
+    // Sitz 1 bekommt einen 2x2-Block (3, 4, 13, 14) neben dem 2x3-Block von
+    // Sitz 0. An der Front stehen 2 gegen 3 und 12 gegen 13, alle mit Stufe 3.
+    const { partie } = angriffsStand();
+    const besitzer = [...partie.besitzer];
+    for (const p of [3, 4, 13, 14]) besitzer[p] = 1;
+    const fest = gestellt(besitzer);
+    for (const p of [2, 3, 12, 13]) assert.equal(stufe(besitzer, p, spalten, zeilen), 3, `Feld ${p}`);
+    assert.deepEqual(angreifbare(fest, 0), []);
+    assert.deepEqual(angreifbare(fest, 1), []);
+  });
+
+  it('nimmt das Feld, zaehlt es um und meldet es als erobert', () => {
+    const { partie, ziel } = angriffsStand();
+    let stand = plan(partie, 0, [ziel]);
+    stand = plan(stand, 1, []);
+    assert.equal(stand.besitzer[ziel], 0);
+    assert.equal(stand.punkte[0], partie.punkte[0]! + 1);
+    assert.equal(stand.punkte[1], partie.punkte[1]! - 1);
+    assert.deepEqual(stand.letzte?.erobert[0], [ziel]);
+    assert.deepEqual(stand.letzte?.genommen[0], [], 'erobert ist nicht genommen');
+    assert.deepEqual(stand.letzte?.kaempfe, [], 'um fremdes Land gibt es keinen Muenzwurf');
+  });
+
+  it('zaehlt gegen das Kontingent und faellt weg, sobald es voll ist', () => {
+    const { partie, ziel } = angriffsStand();
+    assert.equal(kontingent(partie, 0), 1);
+    assert.throws(() => plan(partie, 0, [ziel, 13]), /Zu viele/);
+    const stand = plan(partie, 0, [ziel]);
+    assert.deepEqual(angreifbare(stand, 0), []);
+    assert.ok(istBereit(stand, 0));
+  });
+
+  it('ist ein Ziel und kein Weg: dahinter geht es in derselben Runde nicht weiter', () => {
+    const { partie, ziel } = angriffsStand();
+    const zwei: EilandPartie = { ...partie, gesammelt: { 0: 1, 1: 0 } };
+    // 4 grenzt nur an das angegriffene 3 — eine Insel.
+    assert.throws(() => plan(zwei, 0, [ziel, 4]), /grenzt nicht/);
+    // 13 grenzt an das eigene 12: Angriff plus freies Feld, das geht.
+    const stand = plan(plan(zwei, 0, [ziel, 13]), 1, []);
+    assert.equal(stand.besitzer[ziel], 0);
+    assert.equal(stand.besitzer[13], 0);
+  });
+
+  it('nimmt ein Bauwerk samt Kontingent mit', () => {
+    const { partie, ziel } = angriffsStand();
+    const bauwerk = [...partie.bauwerk];
+    bauwerk[ziel] = 1;
+    const mitBau: EilandPartie = { ...partie, bauwerk, gesammelt: { 0: 0, 1: 1 } };
+    assert.equal(kontingent(mitBau, 1), 2);
+    const stand = plan(plan(mitBau, 0, [ziel]), 1, []);
+    assert.equal(stand.bauwerk[ziel], 1, 'das Bauwerk bleibt stehen');
+    assert.equal(stand.gesammelt[0], 1);
+    assert.equal(stand.gesammelt[1], 0);
+    assert.equal(kontingent(stand, 0), 2);
+    assert.equal(kontingent(stand, 1), 1);
+  });
+
+  it('geht gleichzeitig: beide koennen einander im selben Zug ein Feld nehmen', () => {
+    /*
+     * Sitz 1 bekommt einen Block rechts neben dem von Sitz 0, dazu das Feld
+     * 22 unter 12, das nur an 13 und 23 haengt:
+     *
+     *    0  1  2 | 3  4
+     *   10 11 12 | 13 14
+     *         22 | 23 24
+     *
+     * Stufen: 12 hat 3 (1, 2, 11), 22 hat 2 (13, 23), 13 hat 6. Sitz 0 kann
+     * also von 12 aus 22 nehmen — und Sitz 1 von 13 aus 12, genau das Feld,
+     * von dem aus Sitz 0 angreift. Beides gelingt, weil beides nach dem Stand
+     * VOR der Runde gerechnet wird: Wer zuerst gerechnet wird, macht keinen
+     * Unterschied.
+     */
+    const { partie } = angriffsStand();
+    const besitzer = [...partie.besitzer];
+    for (const p of [3, 4, 13, 14, 22, 23, 24]) besitzer[p] = 1;
+    const beide = gestellt(besitzer);
+    const s = (p: number) => stufe(besitzer, p, spalten, zeilen);
+    assert.equal(s(12), 3);
+    assert.equal(s(22), 2);
+    assert.equal(s(13), 6);
+    assert.deepEqual(angreifbare(beide, 0), [22]);
+    assert.deepEqual(angreifbare(beide, 1), [12], '2 hat Stufe 3 wie 3 selbst — gleich ist nicht kleiner');
+    const stand = plan(plan(beide, 0, [22]), 1, [12]);
+    assert.equal(stand.besitzer[22], 0, 'Sitz 0 hat 22 genommen');
+    assert.equal(stand.besitzer[12], 1, 'Sitz 1 hat 12 genommen — gleichzeitig');
+    assert.equal(stand.punkte[0], beide.punkte[0]);
+    assert.equal(stand.punkte[1], beide.punkte[1]);
+    assert.deepEqual(stand.letzte?.erobert, { 0: [22], 1: [12] });
+  });
+
+  it('beendet die Partie, wenn eine Heimat faellt — der andere gewinnt trotz weniger Land', () => {
+    const { partie, ecke } = heimatStand();
+    assert.deepEqual(heimat(partie), { 0: startEcke(0, spalten, zeilen), 1: ecke });
+    assert.ok(partie.punkte[1]! > partie.punkte[0]!, 'Sitz 1 hat mehr Land');
+    assert.ok(angreifbare(partie, 0).includes(ecke));
+    const stand = plan(plan(partie, 0, [ecke]), 1, []);
+    assert.ok(stand.fertig);
+    assert.deepEqual(gefallene(stand), [1]);
+    assert.equal(sieger(stand), 0);
+    const tafel = platzierungen(stand);
+    assert.equal(tafel[0]!.seat, 0);
+    assert.equal(tafel[0]!.place, 1);
+    assert.equal(tafel[1]!.place, 2);
+    assert.ok(tafel[1]!.points > tafel[0]!.points, 'die Punkte bleiben das Land');
+  });
+
+  it('fallen beide Heimaten in derselben Runde, entscheidet das Land', () => {
+    const { partie, ecke } = heimatStand();
+    const meine = startEcke(0, spalten, zeilen);
+    // Sitz 1 steht mit drei Feldern neben der Heimat von Sitz 0 (90): 91 hat
+    // dann Stufe 2 (92, 81 — 82 liegt ausserhalb des Umfelds von 91? nein,
+    // 82 liegt schraeg oben rechts von 91 und zaehlt). Heimat 90 hat Stufe 0.
+    const besitzer = [...partie.besitzer];
+    for (const p of [meine + 1, meine + 2, meine - spalten + 1, meine - spalten + 2]) besitzer[p] = 1;
+    const beide = gestellt(besitzer);
+    assert.ok(angreifbare(beide, 1).includes(meine));
+    const stand = plan(plan(beide, 0, [ecke]), 1, [meine]);
+    assert.ok(stand.fertig);
+    assert.deepEqual(gefallene(stand), [0, 1]);
+    // Beide gefallen: Es zaehlt das Land, und Sitz 1 hat mehr.
+    assert.equal(sieger(stand), 1);
+  });
+
+  it('endet bei der dritten Wiederholung derselben Stellung', () => {
+    /*
+     * Das Hin und Her: Sitz 1 haelt 3, 4, 5, 14, 15. Feld 3 hat Stufe 2
+     * (4, 14), Feld 2 von Sitz 0 Stufe 3 — Sitz 0 nimmt 3. Danach hat 3 als
+     * Feld von Sitz 0 die Stufe 2 (2, 12), und Feld 4 von Sitz 1 die Stufe 3
+     * (5, 14, 15) — Sitz 1 nimmt es zurueck. Und so weiter, bis die Stellung
+     * zum dritten Mal steht.
+     */
+    const { partie } = angriffsStand();
+    const besitzer = [...partie.besitzer];
+    for (const p of [3, 4, 5, 14, 15]) besitzer[p] = 1;
+    let stand = gestellt(besitzer);
+    let runden = 0;
+    while (!stand.fertig && runden < 12) {
+      const dran = runden % 2 === 0 ? 0 : 1;
+      assert.deepEqual(angreifbare(stand, dran), [3], `Runde ${runden + 1}`);
+      assert.deepEqual(angreifbare(stand, 1 - dran), [], `Runde ${runden + 1}: der andere kann nichts`);
+      stand = plan(plan(stand, dran, [3]), 1 - dran, []);
+      runden++;
+    }
+    assert.ok(stand.fertig);
+    // Stellung A (3 bei Sitz 0) nach Runde 1, 3, 5 — die dritte beendet.
+    assert.equal(runden, 5);
+    assert.ok(stand.kampfrunden < KAMPFRUNDEN_MAX, 'nicht die Notbremse, die Wiederholung');
+    assert.deepEqual(gefallene(stand), []);
+    assert.equal(stand.stellungen.filter((s) => s === stand.stellungen.at(-1)).length, 3);
+  });
+
+  it('vergisst die Stellungen, sobald freies Land genommen wird', () => {
+    const { partie, ziel } = angriffsStand();
+    const stand = plan(plan(partie, 0, [ziel]), 1, []);
+    assert.equal(stand.stellungen.length, partie.stellungen.length + 1, 'nur Angriff: die Liste waechst');
+    const mitLand = plan(plan(stand, 0, [13]), 1, []);
+    assert.equal(mitLand.stellungen.length, 1, 'neues Land: die Liste beginnt neu');
+  });
+
+  it('zieht die Notbremse nach KAMPFRUNDEN_MAX Runden ohne neues Land', () => {
+    const { partie, ziel } = angriffsStand();
+    const kurzVorher: EilandPartie = { ...partie, kampfrunden: KAMPFRUNDEN_MAX - 1 };
+    const stand = plan(plan(kurzVorher, 0, [ziel]), 1, []);
+    assert.equal(stand.kampfrunden, KAMPFRUNDEN_MAX);
+    assert.ok(stand.fertig, 'nur ein Angriff, kein freies Feld: die Notbremse greift');
+    // Ein freies Feld setzt den Zaehler zurueck.
+    const mitLand = plan(plan(kurzVorher, 0, [13]), 1, []);
+    assert.equal(mitLand.kampfrunden, 0);
+    assert.ok(!mitLand.fertig);
+  });
+
+  it('steht in der Sicht: Stufen, Angriffsziele, Heimat und Eroberungen', () => {
+    const { partie, ziel } = angriffsStand();
+    const sicht = sichtFuer(partie, 0);
+    assert.equal(sicht.stufe[2], 3);
+    assert.equal(sicht.stufe[ziel], 0, 'die Stufe des Gegners ist oeffentlich');
+    assert.equal(sicht.stufe[4], null);
+    assert.deepEqual([...sicht.angreifbar], [ziel]);
+    assert.deepEqual(sicht.heimat, heimat(partie));
+    assert.deepEqual([...sicht.gefallen], []);
+    const stand = plan(plan(partie, 0, [ziel]), 1, []);
+    assert.deepEqual(sichtFuer(stand, 0).letzte?.erobert[0], [ziel]);
+    assert.deepEqual(sichtFuer(stand, 1).letzte?.erobert[0], [ziel], 'der Verlierer sieht es auch');
+    const besetzt = stand.besitzer.filter((b) => b !== null).length;
+    assert.equal(zuschauerSicht(stand).stufe.filter((s) => s !== null).length, besetzt);
+    assert.deepEqual([...zuschauerSicht(stand).angreifbar], []);
+  });
+
+  it('haelt die Stufen im Nebel verdeckt', () => {
+    const partie = neu();
+    const sicht = sichtFuer(partie, 0);
+    assert.equal(sicht.stufe[startEcke(0, spalten, zeilen)], 0);
+    assert.equal(sicht.stufe[startEcke(1, spalten, zeilen)], null, 'die Ecke des Gegners liegt im Nebel');
   });
 });

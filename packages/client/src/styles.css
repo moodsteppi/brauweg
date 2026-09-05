@@ -15837,6 +15837,47 @@ span.hub-angebot-art.poker-jeton-stapel {
 .ei-feld[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
 .ei-feld[data-fremd] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
 
+/* Die Heimat (05.09.): ein goldener Rahmen und ein kleines goldenes Rechteck
+   in der Mitte — symmetrisch, damit es auf der gedrehten Karte von Sitz 1
+   genauso aussieht. Gold liegt in keiner Farbrolle der Karte (Gelände,
+   Besitz, Nebel) und meint deshalb genau ein Ding: die Ecke, um die es
+   geht. Der Rahmen steht VOR dem Wählbar- und dem Gewählt-Rahmen, weil die
+   beiden ihn überdecken sollen — wer die fremde Heimat angreift, sieht sein
+   Gelb; das Rechteck in der Mitte bleibt in jedem Fall. Die Farbe muss zu
+   GOLD in minispiele/eiland/farben.ts passen. */
+.ei-feld[data-heimat],
+.ei-probe span[data-heimat] {
+  box-shadow:
+    inset 0 0 0 2px #e4b23c,
+    inset 0 0 0 3px rgba(0, 0, 0, 0.3);
+}
+.ei-feld[data-heimat]::after,
+.ei-probe span[data-heimat]::after {
+  content: '';
+  position: absolute;
+  width: 46%;
+  height: 26%;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #f3cf6a, #d9a32c);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.28),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Die Stufe als Zahl (05.09.): klein in der Ecke, weiß mit Schatten, damit
+   sie auf der blassen Stufe 0 wie auf der tiefen Stufe 8 lesbar bleibt. Die
+   Farbe des Feldes (siehe stufenfarbe) trägt die Auskunft, die Zahl ist die
+   Rückversicherung für zwei Töne, die zu nah beieinanderliegen. */
+.ei-stufe {
+  position: absolute;
+  right: 6%;
+  bottom: 3%;
+  font: 800 min(2.6vw, 11px)/1 system-ui;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
 /* Wählbar: ein heller Rand. Er liegt INNEN, damit er das Raster nicht
    verschiebt — ein wachsender Außenrahmen würde die ganze Karte ruckeln
    lassen. */
@@ -15845,6 +15886,14 @@ span.hub-angebot-art.poker-jeton-stapel {
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
 }
 .ei-feld[data-waehlbar]:active { filter: brightness(1.08); }
+/* Angreifbar (05.09.): derselbe Rand, nur rot — dasselbe Signal („hier
+   kannst du hin"), aber mit dem Hinweis, dass es fremdes Land ist. Steht
+   nach dem Wählbar-Rand, weil beide Merkmale zugleich am Feld hängen. */
+.ei-feld[data-angreifbar] {
+  box-shadow:
+    inset 0 0 0 2px #ff6259,
+    inset 0 0 0 3px rgba(255, 255, 255, 0.75);
+}
 .ei-feld[data-gewaehlt] {
   /* Kräftiger als der Wählbar-Rand und in einer Farbe, die weder Gelände noch
      Gebiet trägt: Ein gewähltes Feld muss man auf einem 10x10-Raster mit einem
@@ -15866,7 +15915,8 @@ span.hub-angebot-art.poker-jeton-stapel {
 /* Wo gekämpft wurde: ein Kreuz für die Dauer einer Runde. Hell, wenn ich das
    Feld bekommen habe, rötlich sonst — die Farbe ist die Auskunft, das Zeichen
    nur der Anlass hinzusehen. */
-.ei-feld[data-kampf]::before {
+.ei-feld[data-kampf]::before,
+.ei-feld[data-erobert]::before {
   content: '\2715';
   position: absolute;
   z-index: 1;
@@ -15884,6 +15934,12 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .ei-feld[data-kampf='sieg']::before { color: #eaffe6; }
 .ei-feld[data-kampf='verlust']::before { color: #ffd9d9; }
+/* Eine Eroberung (05.09.) traegt einen Stern statt des Kreuzes: kein
+   Muenzwurf, kein Einsatz, kein Flug — das Feld hat schlicht die Farbe
+   gewechselt, und die Marke sagt nur, dass es eben erst geschah. */
+.ei-feld[data-erobert]::before { content: '\2726'; }
+.ei-feld[data-erobert='sieg']::before { color: #eaffe6; }
+.ei-feld[data-erobert='verlust']::before { color: #ffd9d9; }
 @keyframes ei-kampf {
   0% { transform: scale(2.4); opacity: 0; }
   22% { transform: scale(1); opacity: 1; }
@@ -15891,7 +15947,8 @@ span.hub-angebot-art.poker-jeton-stapel {
   100% { transform: scale(1); opacity: 0.85; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ei-feld[data-kampf]::before { animation: none; }
+  .ei-feld[data-kampf]::before,
+  .ei-feld[data-erobert]::before { animation: none; }
 }
 
 /* Die Buehne fuer die fliegenden Einsaetze: liegt ueber der ganzen Seite,

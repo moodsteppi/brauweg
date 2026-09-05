@@ -111,6 +111,34 @@ export function nachbarn(platz: number, spalten: number, zeilen: number): number
   return raus;
 }
 
+/**
+ * Die bis zu acht Felder rund um einen Platz — die Diagonalen eingeschlossen.
+ *
+ * Anders als `nachbarn`: Gezogen wird ueber Kanten, aber die STUFE eines
+ * Feldes (siehe stufe in partie.ts) zaehlt sein ganzes Umfeld. Mit vier
+ * Nachbarn laege jede Stufe zwischen 0 und 4, und die Spitze eines breiten
+ * Vorstosses saehe genauso aus wie die Mitte einer schmalen Front — das
+ * Umfeld unterscheidet die beiden, und genau darum geht es.
+ */
+export function umfeld(platz: number, spalten: number, zeilen: number): number[] {
+  const x = platz % spalten;
+  const y = Math.floor(platz / spalten);
+  const raus: number[] = [];
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= spalten || ny >= zeilen) continue;
+      raus.push(ny * spalten + nx);
+    }
+  }
+  return raus;
+}
+
+/** Die hoechste Stufe: alle acht Felder im Umfeld in derselben Farbe. */
+export const STUFEN_MAX = 8;
+
 /** Schrittabstand ueber das Raster (Manhattan). Hindernisse zaehlen nicht mit. */
 export function abstand(a: number, b: number, spalten: number): number {
   const ax = a % spalten;

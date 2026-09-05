@@ -45,6 +45,85 @@ export function mischfarbe(a: string, b: string): string {
 }
 
 /**
+ * So viele Stufen hat ein Feld hoechstens: acht Felder im Umfeld. Muss zu
+ * STUFEN_MAX in packages/game-eiland/src/karte.ts passen.
+ */
+export const STUFEN_MAX = 8;
+
+/**
+ * Das Gold der Heimat — die Startecke, um die es geht. Nicht das Gelb des
+ * gewaehlten Feldes (#ffd245): Das eine ist ein Rahmen fuer eine Sekunde, das
+ * andere steht die ganze Partie, und beide liegen im selben Feld, wenn man
+ * die fremde Heimat angreift.
+ */
+export const GOLD = '#e4b23c';
+
+/**
+ * Die Helligkeit der Stufenleiter, von Stufe 0 (blass) bis STUFEN_MAX (tief),
+ * in Prozent. Ein Farbton, neun Helligkeiten: Die Stufe eines Feldes soll man
+ * am Ton ablesen, und derselbe Ton bei beiden Spielern soll dieselbe Stufe
+ * heissen — deshalb steht die Leiter HIER und nicht je Gebietsfarbe. Sieben
+ * Prozent je Schritt sind auf dem Handy gerade noch als Schritt erkennbar;
+ * die Zahl im Feld ist fuer den Fall, dass sie es nicht sind.
+ */
+const HELL_STUFE_0 = 82;
+const HELL_STUFE_MAX = 26;
+
+/**
+ * Die Farbe eines besetzten Feldes: die Gebietsfarbe des Sitzes in der
+ * Helligkeit seiner Stufe. Farbton und Saettigung bleiben, damit Orange
+ * Orange und Violett Violett bleibt — nur wie tief es liegt, sagt die Stufe.
+ */
+export function stufenfarbe(sitz: number, stufe: number): string {
+  const [h, s] = hsl(gebietsfarbe(sitz));
+  const t = Math.min(STUFEN_MAX, Math.max(0, stufe)) / STUFEN_MAX;
+  const l = HELL_STUFE_0 + (HELL_STUFE_MAX - HELL_STUFE_0) * t;
+  return hex(h, s, l);
+}
+
+/** `#rrggbb` nach Farbton (0–360), Saettigung und Helligkeit (0–100). */
+function hsl(farbe: string): [number, number, number] {
+  const kanal = (i: number): number => (parseInt(farbe.slice(1 + i * 2, 3 + i * 2), 16) || 0) / 255;
+  const r = kanal(0);
+  const g = kanal(1);
+  const b = kanal(2);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return [h * 60, s * 100, l * 100];
+}
+
+/** Farbton, Saettigung, Helligkeit zurueck nach `#rrggbb`. */
+function hex(h: number, s: number, l: number): string {
+  const sat = s / 100;
+  const hell = l / 100;
+  const c = (1 - Math.abs(2 * hell - 1)) * sat;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = hell - c / 2;
+  const sechstel = Math.floor(h / 60) % 6;
+  const [r, g, b] = [
+    [c, x, 0],
+    [x, c, 0],
+    [0, c, x],
+    [0, x, c],
+    [x, 0, c],
+    [c, 0, x],
+  ][sechstel] ?? [0, 0, 0];
+  const hex2 = (n: number): string =>
+    Math.round((n + m) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${hex2(r!)}${hex2(g!)}${hex2(b!)}`;
+}
+
+/**
  * Die Farbe eines Einschlags: die Gebietsfarbe dessen, der den Einsatz
  * gezahlt hat — zahlen beide, die Mischung. Das ist die Auskunft am Feld:
  * einfarbig heisst „einer hat gesetzt und sicher gewonnen", gemischt heisst
