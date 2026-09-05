@@ -547,6 +547,11 @@ export function KampfAnzeige<E extends Einheitenbild>({
               }
               aria-label={`${einheit?.name ?? f.einheitId}, Stufe ${f.stufe}, ${f.tot ? 'gefallen' : `${f.leben} von ${f.hoechstesLeben} Leben`}`}
             >
+              {/* Der Schatten liegt UNTER dem Koerper und damit auch im
+                  Baum vor ihm. Er haelt sich mit einer Gegenbewegung am
+                  Boden, waehrend die Figur atmet — siehe `.schatten` im
+                  Stylesheet. */}
+              <i className={stil.schatten} aria-hidden="true" />
               {/* Der Schluessel wechselt mit jedem Schlag: So faengt die
                   Ausschlag-Animation jedes Mal von vorn an, statt beim
                   zweiten Schlag stumm zu bleiben. */}

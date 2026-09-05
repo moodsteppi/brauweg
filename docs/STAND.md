@@ -121,7 +121,8 @@ dazu die Client-Tests (26 Dateien, 316 Tests), alle grün. `tsc --noEmit` sauber
 > Rüstung ist bei `RUESTUNG_HOECHSTWERT` (75) gedeckelt. Die Sicht trägt je
 > Sitz `synergien` (Marke, Anzahl, erreichte und nächste Schwelle, Bonus)
 > und beim ersten Ausliefern die `synergieTabelle`, wie den Katalog.
-> **Die Anzeige im Client fehlt noch** — die Zahlen sind ein erster Wurf.
+> Am Bildschirm stehen sie seit dem 05.09.2026 als **Zähler** (Zeichen und
+> „2/4"), nicht mehr als Textliste — siehe den Absatz zum Bildschirmaufbau.
 >
 > **Die Dateien kommen seit dem 05.09.2026 vor der ersten Runde**
 > (`minispiele/tafelrunde/vorladen.ts`, `Ladebildschirm.tsx`). Vorher ging
@@ -142,6 +143,37 @@ dazu die Client-Tests (26 Dateien, 316 Tests), alle grün. `tsc --noEmit` sauber
 > und keine Gesamtzeit: Gemessen gegen Chromes „Slow 3G" braucht der Satz
 > über HTTP/1.1 **9,3 s**, eine Gesamtfrist von 10 s hätte dort auf einer
 > völlig gesunden Leitung zugeschlagen.
+>
+> **Der Bildschirmaufbau folgt seit dem 05.09.2026 einem fertigen
+> Auto-Battler** (Vorlagen von Robin; nachgebaut wurde die ANORDNUNG, keine
+> Grafik — unsere CC0-Figuren bleiben). Von oben nach unten: eine
+> **festgeheftete Kopfleiste** (`.tr-oben` in styles.css) mit der
+> Mitspielerleiste als waagerechtem Kachelstreifen (Bild, Lebensbalken mit
+> Zahl, Name; Gegner der Runde in Gold, Ausgeschiedene ausgegraut) und
+> darunter der **Phasenzeile** — links „Runde 3 / Kampfphase", rechts die
+> Restzeit. Die Mitspielerleiste ist dabei ihre Klappmechanik losgeworden:
+> Zugeklappt war sie die halbe Auskunft der Partie, und zugeklappt wurde
+> sie, weil acht Zeilen den Laden unter den Rand drückten.
+>
+> **Die Restzeit gibt es nur in der Kampfphase.** Sie kommt aus
+> `interludeDeadline` — eine echte Frist. Für die **Platzierungsphase gibt
+> es keine**: Das Modul beendet sie, wenn der Letzte bereit ist, nicht nach
+> Zeit (`beginneKampf` in `partie.ts`), und die Zugzeit der Plattform ist
+> keine Ersatzuhr — `schedule()` stellt sie bei JEDER Aktion irgendeines
+> Sitzes neu und lässt sie ganz weg, sobald `currentActor` ein Bot ist.
+> Statt einer erfundenen Zahl steht dort „2 von 4 bereit". Wer dort eine
+> echte Uhr will, braucht sie im Modul; das ist ein Punkt fürs Board.
+>
+> Dazu, alles in `packages/client/src`: **sichtbares Feldraster** (die Wabe
+> trägt die Randfarbe, ihr `::before` liegt 1,5 px innen und trägt die
+> Füllung — ein `border` geht an einem `clip-path` nicht), **Schatten** unter
+> den Figuren (auf dem Brett ein `drop-shadow` am Sprite, in der Arena eine
+> Bodenellipse, die sich gegen das Schweben bewegt), die **Bank als Leiste
+> an der Brettkante**, im Laden die **Kostenmarke in der Ecke** und das
+> **Gold groß daneben** statt oben in der Werteleiste, gedämpfte
+> unbezahlbare Karten — und beim Ziehen leuchtet **das Feld unter dem
+> Finger** (nur, wenn die Einheit dort auch landen darf; geprüft mit
+> derselben Funktion wie das Ablegen).
 >
 > **Was noch fehlt:** Die Werte tragen die Partie noch nicht: Zu acht läuft
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100

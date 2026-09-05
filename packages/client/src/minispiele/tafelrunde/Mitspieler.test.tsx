@@ -70,7 +70,10 @@ describe('Mitspielerleiste', () => {
       eigenes: stand({ sitz: 0 }),
       gegner: [stand({ sitz: 1, ausRunde: 4 }), stand({ sitz: 2, ausRunde: 6 }), stand({ sitz: 3 })],
     });
-    expect(screen.getByText('noch 2 von 4')).toBeInTheDocument();
+    /* Sichtbar sagen es die ausgegrauten Kacheln; als Satz steht die Zahl im
+       Namen der Gruppe, damit ein Vorlesegeraet sie nennt, ohne dass eine
+       Zeile in der festgehefteten Kopfleiste dafuer draufgeht. */
+    expect(screen.getByRole('group', { name: 'Mitspieler — noch 2 von 4' })).toBeInTheDocument();
   });
 
   it('markiert den Gegner der Runde mit einem Wort, nicht nur mit Farbe', () => {
@@ -91,7 +94,7 @@ describe('Mitspielerleiste', () => {
     /* Die Leiste darf `ausgeschieden` nicht aus dem Leben ableiten: Zwischen
        Kampf und Rundenwechsel faellt beides auseinander (sicht.ts). */
     zeichne({ eigenes: stand({ sitz: 0, leben: 0 }) });
-    expect(screen.getByText('noch 4 von 4')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /noch 4 von 4/ })).toBeInTheDocument();
   });
 
   it('macht aus dem eigenen Sitz keine Schaltflaeche', () => {
@@ -116,20 +119,69 @@ describe('Mitspielerleiste', () => {
     expect(screen.getAllByText('bereit')).toHaveLength(1);
   });
 
-  it('laesst sich zuklappen, ohne aus dem Baum zu verschwinden', () => {
-    /* `data-offen` statt `{offen && …}`: Am Desktop gibt es keinen
-       Klappknopf, dort waere die Leiste sonst fuer immer weg. */
+  it('laesst sich nicht mehr zuklappen — sie steht oben und bleibt', () => {
+    /* Bis zum 05.09.2026 war sie eine zuklappbare Liste. Wer sie zuklappte —
+       und das tat man, weil acht Zeilen den Laden unter den Rand drueckten —,
+       hatte die halbe Auskunft der Partie nicht mehr. Jetzt ist sie ein
+       Streifen, der seitlich rollt; einen Klappknopf gibt es nicht mehr, und
+       genau darauf prueft dieser Fall. */
     zeichne();
-    const kopf = screen.getByRole('button', { expanded: true });
-    fireEvent.click(kopf);
-    expect(screen.getByRole('button', { expanded: false })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { expanded: true })).toBeNull();
+    expect(screen.queryByRole('button', { expanded: false })).toBeNull();
     expect(screen.getByText('Tom')).toBeInTheDocument();
+  });
+
+  it('zeigt das Bild eines Sitzes, sonst seinen Anfangsbuchstaben', () => {
+    /* Kein `<img>` auf eine Datei, die es nicht gibt (CLAUDE.md): Wo kein
+       Profilbild vorliegt — und bei Bots liegt nie eins vor —, steht ein
+       Buchstabe statt eines weissen Kastens. */
+    render(
+      <Mitspielerleiste
+        eigenes={stand({ sitz: 0 })}
+        gegner={[stand({ sitz: 1 })]}
+        gegnerJetzt={null}
+        gezeigt={null}
+        sitze={[
+          { seat: 0, displayName: 'Robin', avatarUrl: '/bilder/robin.webp', isBot: false },
+          { seat: 1, displayName: null, avatarUrl: null, isBot: true },
+        ]}
+        onWahl={() => {}}
+      />,
+    );
+    const bilder = document.querySelectorAll('img');
+    expect(bilder).toHaveLength(1);
+    expect(bilder[0]).toHaveAttribute('src', '/bilder/robin.webp');
+    // Die KI hat keins — dort steht das K.
+    expect(screen.getByText('K')).toBeInTheDocument();
+  });
+
+  it('faellt auf den Buchstaben zurueck, wenn ein Bild nicht laedt', () => {
+    render(
+      <Mitspielerleiste
+        eigenes={null}
+        gegner={[stand({ sitz: 2 })]}
+        gegnerJetzt={null}
+        gezeigt={null}
+        sitze={[{ seat: 2, displayName: 'Tom', avatarUrl: '/weg.webp', isBot: false }]}
+        onWahl={() => {}}
+      />,
+    );
+    fireEvent.error(document.querySelector('img')!);
+    expect(document.querySelector('img')).toBeNull();
+    expect(screen.getByText('T')).toBeInTheDocument();
+  });
+
+  it('nennt das Leben als Zahl und nicht nur als Balken', () => {
+    /* Ein Balken ohne Zahl beantwortet "wer fuehrt", aber nicht "reicht mein
+       Vorsprung fuer noch eine Niederlage". */
+    zeichne({ gegner: [stand({ sitz: 1, leben: 7 }), stand({ sitz: 2 }), stand({ sitz: 3 })] });
+    expect(screen.getByText('7')).toBeInTheDocument();
   });
 
   it('kommt ohne eigenen Sitz aus — der Zuschauer hat keinen', () => {
     zeichne({ eigenes: null, gegner: [stand({ sitz: 0 }), stand({ sitz: 1 })] });
     expect(screen.queryByText('Du')).toBeNull();
-    expect(screen.getByText('noch 2 von 2')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /noch 2 von 2/ })).toBeInTheDocument();
   });
 
   it('zeichnet gar nichts, wenn kein Sitz bekannt ist', () => {

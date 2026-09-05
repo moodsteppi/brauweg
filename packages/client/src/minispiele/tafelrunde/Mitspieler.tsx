@@ -1,11 +1,17 @@
 /**
  * Die Mitspielerleiste von Tafelrunde.
  *
- * Sie beantwortet die drei Fragen, die man während einer Partie ständig hat
- * und bisher nirgends beantwortet bekam: Wer ist noch dabei, wie viel Leben
- * hat wer, und gegen wen spiele ich diese Runde? Vorher stand hier nur ein
- * Streifen mit Name und Leben der GEGNER — der eigene Sitz fehlte, damit auch
- * jeder Vergleich, und die Paarung der Runde stand gar nicht am Bildschirm.
+ * Sie beantwortet die drei Fragen, die man während einer Partie ständig hat:
+ * Wer ist noch dabei, wie viel Leben hat wer, und gegen wen spiele ich diese
+ * Runde? Je Sitz eine Kachel: Bild, Lebensbalken mit Zahl, Name darunter.
+ *
+ * SIE STEHT GANZ OBEN UND IMMER. Bis zum 05.09.2026 war sie eine zuklappbare
+ * Liste im Fluss über dem Brett (am Desktop an der rechten Kante) — acht
+ * Zeilen hoch, also klappte man sie zu, und dann war die halbe Auskunft der
+ * Partie weg. Ein fertiger Auto-Battler hält diesen Streifen dauerhaft am
+ * oberen Rand, weil er das Einzige ist, was den eigenen Tisch mit dem Turnier
+ * verbindet. Deshalb: keine Klappmechanik mehr, ein waagerechter Streifen,
+ * der bei acht Sitzen seitlich rollt statt in die Höhe zu wachsen.
  *
  * HIER WIRD NICHTS ENTSCHIEDEN. Alle Zahlen kommen aus der Sicht (sicht.ts);
  * die einzigen Rechnungen stehen in platzierung.ts und sind dort begründet.
@@ -13,14 +19,9 @@
  * Zwischen dem Kampf und dem Rundenwechsel fällt beides auseinander (siehe
  * `eigenesLebt` in sicht.ts).
  *
- * WO SIE STEHT, entscheidet allein Mitspieler.module.css — am Handy im Fluss
- * über dem Brett und zuklappbar, ab 64rem fest an der rechten Kante. Rechts
- * und nicht links, weil dort schon die Synergieleiste hängt.
- *
- * Wie bei der Synergieleiste wird die Liste beim Zuklappen NICHT aus dem Baum
- * genommen, sondern nur `data-offen` gesetzt: Ein `{offen && …}` ließe die
- * Leiste am Desktop, wo es keinen Klappknopf gibt, für immer verschwinden,
- * sobald jemand sie einmal am Handy zugeklappt hat.
+ * WO SIE STEHT, entscheidet weiterhin allein das Stylesheet: Der Streifen
+ * füllt die Breite, die ihm die Kopfleiste des Tisches gibt (`.tr-oben` in
+ * styles.css).
  */
 
 import { useState } from 'react';
@@ -48,7 +49,7 @@ export interface Sitzzeile {
  * Wie ein Sitz heißt.
  *
  * Wortgleich zu `spielername` im Bildschirm. Doppelt geführt und nicht
- * herausgereicht, damit dieses Bauteil ohne den 1900-Zeilen-Bildschirm
+ * herausgereicht, damit dieses Bauteil ohne den 2700-Zeilen-Bildschirm
  * geprüft werden kann; der Rückfall ist derselbe, und ein Auseinanderlaufen
  * fiele sofort auf — der Name steht in Leiste und Bretttitel nebeneinander.
  */
@@ -56,7 +57,19 @@ export function sitzname(zeile: Sitzzeile | undefined, sitz: number): string {
   return zeile?.displayName ?? (zeile?.isBot ? 'KI' : `Sitz ${sitz + 1}`);
 }
 
-/** Herz und Ring — dieselben Striche wie die Zeichen im Bildschirm. */
+/**
+ * Der Buchstabe, der einsteht, wenn es kein Bild gibt.
+ *
+ * Ein Buchstabe und kein leerer Kasten: `<img>` auf eine Datei, die es nicht
+ * gibt, ist genau der weiße Fleck, vor dem CLAUDE.md warnt. Groß geschrieben,
+ * damit „ich" und „Ich" nicht wie zwei verschiedene Sitze aussehen.
+ */
+function anfangsbuchstabe(name: string): string {
+  const erstes = [...name.trim()][0];
+  return erstes ? erstes.toUpperCase() : '?';
+}
+
+/** Herz — dieselben Striche wie das Zeichen im Bildschirm. */
 function Herz(): React.JSX.Element {
   return (
     <svg className={stil.zeichen} viewBox="0 0 24 24" aria-hidden="true">
@@ -111,7 +124,6 @@ export function Mitspielerleiste({
   /** Ein Tipp auf einen fremden Sitz legt sein Brett nach oben. */
   onWahl: (sitz: number) => void;
 }): React.JSX.Element | null {
-  const [offen, setOffen] = useState(true);
   const plaetze = leistenplaetze(eigenes, gegner, gegnerJetzt);
   if (plaetze.length === 0) return null;
 
@@ -119,66 +131,57 @@ export function Mitspielerleiste({
   const hoechstes = plaetze.reduce((m, p) => Math.max(m, p.leben), 0);
 
   return (
-    /* `role="group"` ausdruecklich: Ein `<section>` mit Beschriftung waere
-       eine `region` — ein Landmark, und acht Sitze sind keine Landschaft. */
+    /* `role="group"` ausdrücklich: Ein `<section>` mit Beschriftung wäre eine
+       `region` — ein Landmark, und acht Sitze sind keine Landschaft.
+
+       Die Zahl der Überlebenden steht im Namen der Gruppe und nicht mehr als
+       eigene Zeile: Sichtbar sagen es die ausgegrauten Kacheln, und eine
+       zusätzliche Zeile in der festgehefteten Kopfleiste kostet Bretthöhe. */
     <section
       className={stil.leiste}
       role="group"
-      data-offen={offen ? '' : undefined}
-      aria-label="Mitspieler"
+      aria-label={`Mitspieler — noch ${lebend} von ${plaetze.length}`}
     >
-      <button
-        type="button"
-        className={stil.kopf}
-        aria-expanded={offen}
-        onClick={() => setOffen((a) => !a)}
-      >
-        <span>Mitspieler</span>
-        {/* Die Zahl steht auch zugeklappt da — „noch 3 von 8" ist die halbe
-            Auskunft der ganzen Leiste und soll nicht erst nach einem Tipp
-            erscheinen. */}
-        <span className={stil.kopfzahl}>
-          noch {lebend} von {plaetze.length}
-        </span>
-        <span className={stil.pfeil} aria-hidden="true" />
-      </button>
-
       <ul className={stil.liste}>
-        {plaetze.map((p) => (
-          <Zeile
-            key={p.sitz}
-            platz={p}
-            name={sitzname(
-              sitze.find((s) => s.seat === p.sitz),
-              p.sitz,
-            )}
-            anteil={lebensanteil(p.leben, hoechstes)}
-            gezeigt={p.sitz === gezeigt}
-            onWahl={onWahl}
-          />
-        ))}
+        {plaetze.map((p) => {
+          const zeile = sitze.find((s) => s.seat === p.sitz);
+          return (
+            <Kachel
+              key={p.sitz}
+              platz={p}
+              name={sitzname(zeile, p.sitz)}
+              bild={zeile?.avatarUrl ?? null}
+              anteil={lebensanteil(p.leben, hoechstes)}
+              gezeigt={p.sitz === gezeigt}
+              onWahl={onWahl}
+            />
+          );
+        })}
       </ul>
     </section>
   );
 }
 
 /**
- * Eine Zeile der Leiste.
+ * Eine Kachel der Leiste.
  *
  * Der eigene Sitz ist KEINE Schaltfläche: Sein Brett liegt ohnehin unten, ein
  * Tipp hätte nichts zu tun — und ein Knopf, der nichts tut, ist schlimmer als
  * keiner. Deshalb `<div>` für mich und `<button>` für die anderen, in einem
  * Bauteil zusammengehalten, damit beide Fassungen nie auseinanderlaufen.
  */
-function Zeile({
+function Kachel({
   platz,
   name,
+  bild,
   anteil,
   gezeigt,
   onWahl,
 }: {
   platz: Leistenplatz;
   name: string;
+  /** Das Profilbild des Sitzes, oder null — dann steht dort ein Buchstabe. */
+  bild: string | null;
   anteil: number;
   gezeigt: boolean;
   onWahl: (sitz: number) => void;
@@ -186,28 +189,44 @@ function Zeile({
   const aus = platz.ausRunde !== null;
   const inhalt = (
     <>
-      <span className={stil.zeile}>
-        <span className={stil.name}>{name}</span>
-        {/* Zwei Marken, beide auch als Wort — eine Farbe allein unterscheidet
-            sie nicht (DESIGN.md, und auf einem 10-px-Punkt schon gar nicht). */}
-        {platz.ich && <span className={stil.marke}>Du</span>}
-        {platz.gegnerJetzt && <span className={`${stil.marke} ${stil.gegnerMarke}`}>Gegner</span>}
-      </span>
-      <span className={stil.werte}>
+      <Bild bild={bild} name={name} />
+
+      {/* Balken und Zahl in einer Zeile: Der Balken zeigt das Verhältnis zum
+          Feld, die Zahl den Wert. Der Balken selbst wird nicht vorgelesen —
+          die Zahl daneben sagt dasselbe genauer. */}
+      <span className={stil.lebenzeile}>
+        <span className={stil.balken} aria-hidden="true">
+          <i style={{ width: `${Math.round(anteil * 100)}%` }} />
+        </span>
         <span className={stil.leben}>
           <Herz />
           {platz.leben}
         </span>
-        <span className={stil.rang}>Rang {platz.level}</span>
-        {/* „bereit" nur, solange der Sitz noch spielt: Ein ausgeschiedener
-            Sitz steht dauerhaft auf bereit, und ein grüner Punkt an ihm sähe
-            aus, als warte der Tisch auf ihn. */}
-        {platz.bereit && !aus && <span className={stil.bereit}>bereit</span>}
-        {platz.verlassen && <span className={stil.weg}>weg</span>}
       </span>
-      {/* Der Balken ist Beiwerk zur Zahl daneben und wird nicht vorgelesen. */}
-      <span className={stil.balken} aria-hidden="true">
-        <i style={{ width: `${Math.round(anteil * 100)}%` }} />
+
+      <span className={stil.name}>{name}</span>
+
+      {/* Die Zustandszeile. Sie steht immer da, auch leer: Sonst wären die
+          Kacheln unterschiedlich hoch und der Streifen wackelte bei jedem
+          „bereit". Zwei Marken tragen Wörter und nicht nur Farbe — eine Farbe
+          allein unterscheidet sie nicht (DESIGN.md). */}
+      <span className={stil.zustand}>
+        {platz.gegnerJetzt ? (
+          <span className={stil.gegnerMarke}>Gegner</span>
+        ) : platz.ich ? (
+          <span className={stil.marke}>Du</span>
+        ) : aus ? (
+          <span className={stil.raus}>raus</span>
+        ) : platz.verlassen ? (
+          <span className={stil.raus}>weg</span>
+        ) : platz.bereit ? (
+          /* „bereit" nur, solange der Sitz noch spielt: Ein ausgeschiedener
+             Sitz steht dauerhaft auf bereit, und ein grüner Punkt an ihm sähe
+             aus, als warte der Tisch auf ihn. */
+          <span className={stil.bereit}>bereit</span>
+        ) : (
+          <span className={stil.rang}>Rang {platz.level}</span>
+        )}
       </span>
     </>
   );
@@ -216,7 +235,7 @@ function Zeile({
     <li className={stil.reihe}>
       {platz.ich ? (
         <div
-          className={stil.eintrag}
+          className={stil.kachel}
           data-ich=""
           data-aus={aus ? '' : undefined}
           data-gegner={platz.gegnerJetzt ? '' : undefined}
@@ -226,7 +245,7 @@ function Zeile({
       ) : (
         <button
           type="button"
-          className={stil.eintrag}
+          className={stil.kachel}
           data-aus={aus ? '' : undefined}
           data-gegner={platz.gegnerJetzt ? '' : undefined}
           data-an={gezeigt ? '' : undefined}
@@ -242,5 +261,29 @@ function Zeile({
         </button>
       )}
     </li>
+  );
+}
+
+/**
+ * Das Bild eines Sitzes.
+ *
+ * Der gescheiterte PFAD wird gemerkt und nicht bloß ein Ja/Nein — dieselbe
+ * Bauart und derselbe Grund wie bei `Figurbild` in KampfAnzeige.tsx: Eine
+ * Kachel behält ihre Komponente, wenn dort ein anderer Sitz landet, und mit
+ * einem Ja/Nein bliebe der Buchstabe des ersten am zweiten kleben.
+ */
+function Bild({ bild, name }: { bild: string | null; name: string }): React.JSX.Element {
+  const [kaputt, setKaputt] = useState<string | null>(null);
+  const zeigen = bild !== null && bild !== kaputt;
+  return (
+    <span className={stil.bild} aria-hidden="true">
+      {zeigen ? (
+        /* `alt=""`: Der Name steht zwei Zeilen tiefer und im Namen der
+           Schaltfläche. Ein zweites Mal vorgelesen wäre er nur Lärm. */
+        <img src={bild} alt="" onError={() => setKaputt(bild)} />
+      ) : (
+        <span className={stil.buchstabe}>{anfangsbuchstabe(name)}</span>
+      )}
+    </span>
   );
 }
