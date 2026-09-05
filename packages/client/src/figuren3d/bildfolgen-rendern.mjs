@@ -361,21 +361,78 @@ const GRIFF_DREHUNG = [0, 1, 0, 0];
  * - `getroffen`: `Hit_A` faengt in der Ruhepose an und endet auch dort. Zwei
  *   Bilder ueber die ganze Laenge waeren zweimal "steht da". Genommen wird das
  *   mittlere Drittel, in dem das Zurueckzucken sitzt.
- * - `tod`: nur die erste Haelfte, also das Zusammensacken — nicht das Liegen.
- *   Die liegende Figur ist gut dreimal so breit wie die stehende hoch ist
- *   (gemessen: bis 2,1 Einheiten neben der Mitte, vor allem der Hut des
- *   Magiers). Sie wuerde in den Ausschnitt passen, aber nur wenn man ihn so
- *   weit aufzieht, dass die stehende Figur auf halbe Groesse schrumpft — und
- *   die sieht man die ganze Partie, die liegende eine halbe Sekunde. Teil 2
- *   blendet die Figur nach dem letzten Todesbild aus.
+ * - `tod`: lief bis zum 06.09.2026 nur bis zur Haelfte — das Zusammensacken,
+ *   nicht das Liegen. Grund war der GEMEINSAME Ausschnitt: Die liegende Figur
+ *   greift viel weiter zur Seite als die stehende, und alle Zellen waren
+ *   gleich breit. Seit `weite` gibt es das nicht mehr, siehe dort.
+ *
+ * `weite` ist die Breite der Zelle als Vielfaches ihrer HOEHE. Nur die
+ * Todeszeile braucht mehr als 1: Sie bekommt einen eigenen, breiteren
+ * Ausschnitt, waehrend alle anderen Zeilen quadratisch bleiben.
+ *
+ * `proZeile` sagt, wie viele Bilder in einer Blattzeile stehen; der Rest
+ * rutscht in die naechste. Sonst waere das Blatt so breit wie die laengste
+ * Zeile mal ihrer Weite (8 * 1,5 = 12 Zellen), und die vier oberen Zeilen
+ * liessen zwei Drittel davon leer. Mit 4 * 1,5 = 6 passt die Todeszeile auf
+ * genau die Breite der anderen und das Blatt bleibt 768 px breit.
+ *
+ * GEMESSEN am 06.09.2026 ueber alle fuenf Rollen, als halber Platzbedarf in
+ * der Waagerechten, in Weltmetern: ohne Todeszeile 1,717 — mit der halben
+ * 2,023 — mit der vollen 2,483. Die alte Loesung hat den gemeinsamen
+ * Ausschnitt damit von 1,878 auf 2,145 aufgezogen, also um 14 %, ohne dass die
+ * Figur je zu Ende fiel. Jetzt bestimmt ihn wieder die SENKRECHTE (1,878), und
+ * die Todeszelle hat mit 1,5 * 1,878 = 2,817 mehr Platz, als sie braucht.
+ *
+ * DIE FIGUREN WERDEN DADURCH NICHT GROESSER. Ein engerer Ausschnitt bei
+ * gleicher Zellhoehe hiesse 14 % mehr Figur auf dem Brett — das waere eine
+ * Entscheidung ueber die Optik und keine ueber den Tod. Die Anzeige rechnet
+ * deshalb in Metern gegen (`FIGURENKASTEN` in
+ * `minispiele/tafelrunde/bildfolge.ts`), und dort steht auch, an welcher Zahl
+ * man drehen wuerde, wenn man sie doch groesser will.
  */
 const BEWEGUNGEN = [
   { name: 'stand', bilder: 4, schleife: true, spanne: [0, 1] },
   { name: 'lauf', bilder: 6, schleife: true, spanne: [0, 1] },
   { name: 'schlag', bilder: 6, schleife: false, spanne: [0, 1] },
   { name: 'getroffen', bilder: 2, schleife: false, spanne: [0.22, 0.5] },
-  { name: 'tod', bilder: 6, schleife: false, spanne: [0, 0.5] },
+  { name: 'tod', bilder: 8, schleife: false, spanne: [0, 1], weite: 1.5, proZeile: 4 },
 ];
+
+/**
+ * Zellweite und Zeilenumbruch einer Bewegung, mit den Vorgaben.
+ *
+ * Steht als eigene Funktion da, weil beide Seiten sie brauchen: Node rechnet
+ * daraus das Raster, die Seite im Browser stellt Kamera und Leinwand danach
+ * ein. Die Vorgabe (quadratisch, alles in einer Zeile) ist der Normalfall —
+ * nur die Todeszeile weicht ab.
+ */
+function masseVon(bewegung) {
+  const weite = bewegung.weite ?? 1;
+  return { weite, proZeile: bewegung.proZeile ?? bewegung.bilder };
+}
+
+/**
+ * Das Raster eines Blattes: welche Bewegung wo anfaengt, wie gross es wird.
+ *
+ * Gerechnet wird es in NODE und als Angabe an die Seite gereicht — nicht dort
+ * ein zweites Mal. Zwei Fassungen liefen beim ersten Umsortieren der Zeilen
+ * auseinander, und das Ergebnis waere ein Blatt, dessen Zellen woanders liegen
+ * als figuren3d.ts glaubt: lauter falsche Bilder, kein einziger Fehler.
+ */
+function rasterVon(bewegungen) {
+  let zeile = 0;
+  const je = bewegungen.map((bewegung) => {
+    const { weite, proZeile } = masseVon(bewegung);
+    const eintrag = { zeile, weite, proZeile };
+    zeile += Math.ceil(bewegung.bilder / proZeile);
+    return eintrag;
+  });
+  const spalten = Math.max(...bewegungen.map((b) => {
+    const { weite, proZeile } = masseVon(b);
+    return Math.min(b.bilder, proZeile) * weite;
+  }));
+  return { je, spalten, zeilen: zeile };
+}
 
 /** Kantenlaenge eines Einzelbildes im fertigen Sheet. */
 const KANTE = 128;
@@ -822,11 +879,18 @@ szene.add(sonne);
 /**
  * Baut die Kamera aus dem WINKEL, nicht aus einem rohen Vektor.
  * Blickrichtung bei g Grad ueber der Waagerechten: (0, sin g, cos g).
+ *
+ * "weite" zieht den Ausschnitt NUR ZUR SEITE auf und laesst die Hoehe stehen.
+ * Genau deshalb schrumpft die Figur in einer breiten Zelle nicht: Ein
+ * Weltmeter ist dort so viele Pixel wie ueberall sonst, die Zelle traegt nur
+ * mehr davon. Und weil der Ausschnitt symmetrisch aufgeht, steht der Fusspunkt
+ * weiter in ihrer Mitte — die Anzeige muss nichts nachrechnen.
  */
-function baueKamera({ grad, halbeHoehe, mitteY }) {
+function baueKamera({ grad, halbeHoehe, mitteY }, weite = 1) {
   const rad = (grad * Math.PI) / 180;
   const blick = new THREE.Vector3(0, Math.sin(rad), Math.cos(rad));
-  const kamera = new THREE.OrthographicCamera(-halbeHoehe, halbeHoehe, halbeHoehe, -halbeHoehe, 0.1, 60);
+  const halbeBreite = halbeHoehe * weite;
+  const kamera = new THREE.OrthographicCamera(-halbeBreite, halbeBreite, halbeHoehe, -halbeHoehe, 0.1, 60);
   kamera.position.copy(blick).multiplyScalar(12).add(new THREE.Vector3(0, mitteY, 0));
   kamera.lookAt(0, mitteY, 0);
   return kamera;
@@ -853,7 +917,7 @@ const ANKERKNOCHEN = 'hips';
  * Durchlauf, passte der gemessene Ausschnitt nicht zu den Bildern, die
  * hinterher entstehen.
  */
-async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
+async function durchlaufen(url, bewegungen, raster, kameraKonfig, jeBild) {
   const gltf = await ladeModell(url);
   const figur = gltf.scene;
   // PLUS 90 Grad, MINUS die Drehung — und beide Vorzeichen haengen daran, dass
@@ -899,6 +963,9 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   halter.add(figur);
   szene.add(halter);
 
+  // Die SCHMALE Kamera. Sie ist es, aus der spaeter der Fusspunkt gerechnet
+  // wird, und sie rendert jede Zeile mit weite 1. Breite Zeilen bekommen ihre
+  // eigene, gleich unten in der Schleife.
   const kamera = baueKamera(kameraKonfig);
 
   let anker = null;
@@ -945,11 +1012,19 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   const clips = new Map(gltf.animations.map((c) => [c.name, c]));
   const laengen = {};
 
-  for (let zeile = 0; zeile < bewegungen.length; zeile++) {
-    const bewegung = bewegungen[zeile];
+  for (let nr = 0; nr < bewegungen.length; nr++) {
+    const bewegung = bewegungen[nr];
     const clip = clips.get(bewegung.name);
     if (!clip) throw new Error('Animation fehlt: ' + bewegung.name);
     laengen[bewegung.name] = clip.duration;
+
+    // Leinwand und Kamera je Bewegung: Eine breite Zelle ist eine breitere
+    // Leinwand bei GLEICHER Hoehe. Beides muss zusammen umgestellt werden —
+    // eine breitere Leinwand mit quadratischer Kamera zoege die Figur in die
+    // Laenge, eine breitere Kamera auf quadratischer Leinwand staucht sie.
+    const weite = raster.je[nr].weite;
+    const zeilenKamera = weite === 1 ? kamera : baueKamera(kameraKonfig, weite);
+    renderer.setSize(Math.round(KANTE * weite), KANTE, false);
 
     mischer.stopAllAction();
     const aktion = mischer.clipAction(clip);
@@ -977,9 +1052,9 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
       // Der Bezugspunkt kommt aus dem allerersten Bild (stand, Zeit 0) und
       // gilt fuer ALLE Bewegungen. Naehme jede Bewegung ihren eigenen, spraenge
       // die Figur beim Wechsel von stand auf lauf um die Differenz.
-      anStelleHalten(zeile === 0 && i === 0);
-      renderer.render(szene, kamera);
-      jeBild(zeile, i);
+      anStelleHalten(nr === 0 && i === 0);
+      renderer.render(szene, zeilenKamera);
+      jeBild(nr, i, weite);
     }
   }
 
@@ -992,65 +1067,77 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   return { laengen, kamera };
 }
 
-/** Ein Abtast-Blatt fuer die Messung, so gross wie ein Einzelbild. */
+/** Ein Abtast-Blatt fuer die Messung, so gross wie das breiteste Einzelbild. */
 const messblatt = document.createElement('canvas');
-messblatt.width = KANTE;
-messblatt.height = KANTE;
 const messstift = messblatt.getContext('2d', { willReadFrequently: true });
 
 /**
- * Misst, wie weit die Figur ueber ALLE Bilder aus der Bildmitte ragt.
+ * Misst JE BEWEGUNG, wie weit die Figur aus der Bildmitte ragt.
  *
  * Gemessen wird der ALPHAKANAL des fertig gerenderten Bildes, nicht die
  * Geometrie: Was zaehlt, ist was man sieht. Ein Umhang, der durch den Koerper
  * faellt, macht die Geometrie breiter als das Bild; ein Stab, der aus dem
  * Ausschnitt ragt, faellt in der Geometrie gar nicht auf.
  *
- * Rueckgabe in Weltmetern, bezogen auf den Kameramittelpunkt: "halbBreite" die
- * groesste Ausdehnung nach links oder rechts, "unten"/"oben" die senkrechten
- * Kanten (negativ ist unterhalb der Mitte).
+ * JE BEWEGUNG und nicht in einer Summe, seit es breite Zellen gibt: Die
+ * Todeszeile darf breiter sein als alle anderen, also darf ihre Breite den
+ * gemeinsamen Ausschnitt auch nicht mehr mitbestimmen. In einer Summe waere
+ * sie nicht mehr herauszurechnen.
+ *
+ * Rueckgabe je Bewegung, in Weltmetern und bezogen auf den Kameramittelpunkt:
+ * "halbBreite" die groesste Ausdehnung nach links oder rechts, "unten"/"oben"
+ * die senkrechten Kanten (negativ ist unterhalb der Mitte).
  */
-window.messeRolle = async (url, bewegungen, kameraKonfig) => {
-  let halbBreite = 0;
-  let unten = Infinity;
-  let oben = -Infinity;
+window.messeRolle = async (url, bewegungen, raster, kameraKonfig) => {
+  const je = bewegungen.map(() => ({ halbBreite: 0, unten: Infinity, oben: -Infinity }));
   const h = kameraKonfig.halbeHoehe;
 
-  await durchlaufen(url, bewegungen, kameraKonfig, () => {
-    messstift.clearRect(0, 0, KANTE, KANTE);
+  await durchlaufen(url, bewegungen, raster, kameraKonfig, (nr, i, weite) => {
+    const mass = je[nr];
+    const breite = Math.round(KANTE * weite);
+    messblatt.width = breite;
+    messblatt.height = KANTE;
+    messstift.clearRect(0, 0, breite, KANTE);
     messstift.drawImage(renderer.domElement, 0, 0);
-    const daten = messstift.getImageData(0, 0, KANTE, KANTE).data;
+    const daten = messstift.getImageData(0, 0, breite, KANTE).data;
     for (let y = 0; y < KANTE; y++) {
-      for (let x = 0; x < KANTE; x++) {
+      for (let x = 0; x < breite; x++) {
         // Schwelle 8 statt 0: Die Kantenglaettung legt einen Saum aus fast
         // durchsichtigen Pixeln um die Figur. Bei 0 misst man den Saum mit und
         // zieht den Ausschnitt bei jedem Lauf ein Stueck weiter auf.
-        if (daten[(y * KANTE + x) * 4 + 3] <= 8) continue;
-        const nx = ((x + 0.5) / KANTE) * 2 - 1;
+        if (daten[(y * breite + x) * 4 + 3] <= 8) continue;
+        const nx = ((x + 0.5) / breite) * 2 - 1;
         const ny = 1 - ((y + 0.5) / KANTE) * 2;
-        const bx = Math.abs(nx) * h;
-        if (bx > halbBreite) halbBreite = bx;
+        // Waagerecht mal der halben BREITE des Ausschnitts, nicht der Hoehe:
+        // In einer breiten Zelle sind das zwei verschiedene Zahlen.
+        const bx = Math.abs(nx) * h * weite;
+        if (bx > mass.halbBreite) mass.halbBreite = bx;
         const by = ny * h;
-        if (by < unten) unten = by;
-        if (by > oben) oben = by;
+        if (by < mass.unten) mass.unten = by;
+        if (by > mass.oben) mass.oben = by;
       }
     }
   });
 
-  if (unten === Infinity) throw new Error('Nichts im Bild: ' + url);
-  return { halbBreite, unten, oben };
+  const leer = je.findIndex((m) => m.unten === Infinity);
+  if (leer >= 0) throw new Error('Nichts im Bild: ' + url + ' / ' + bewegungen[leer].name);
+  return je;
 };
 
 /** Rendert ein Blatt (eine Zeile je Bewegung) und gibt es als PNG zurueck. */
-window.rendereRolle = async (url, bewegungen, kameraKonfig) => {
-  const spalten = Math.max(...bewegungen.map((b) => b.bilder));
+window.rendereRolle = async (url, bewegungen, raster, kameraKonfig) => {
   const blatt = document.createElement('canvas');
-  blatt.width = spalten * KANTE;
-  blatt.height = bewegungen.length * KANTE;
+  blatt.width = raster.spalten * KANTE;
+  blatt.height = raster.zeilen * KANTE;
   const stift = blatt.getContext('2d');
 
-  const { laengen, kamera } = await durchlaufen(url, bewegungen, kameraKonfig, (zeile, i) => {
-    stift.drawImage(renderer.domElement, i * KANTE, zeile * KANTE);
+  const { laengen, kamera } = await durchlaufen(url, bewegungen, raster, kameraKonfig, (nr, i) => {
+    // Wo im Blatt das Bild landet, sagt das Raster: Eine Bewegung faengt in
+    // ihrer Zeile an, laeuft "proZeile" Bilder weit und bricht dann um.
+    const { zeile, weite, proZeile } = raster.je[nr];
+    const x = (i % proZeile) * weite * KANTE;
+    const y = (zeile + Math.floor(i / proZeile)) * KANTE;
+    stift.drawImage(renderer.domElement, x, y);
   });
 
   // Wo in der Zelle steht die Figur auf dem Boden? Der Punkt (0,0,0) der Szene
@@ -1061,7 +1148,7 @@ window.rendereRolle = async (url, bewegungen, kameraKonfig) => {
   const fuss = new THREE.Vector3(0, 0, 0).project(kamera);
   const fusspunkt = { x: (fuss.x + 1) / 2, y: (1 - fuss.y) / 2 };
 
-  return { bild: blatt.toDataURL('image/png'), spalten, laengen, fusspunkt };
+  return { bild: blatt.toDataURL('image/png'), laengen, fusspunkt };
 };
 
 window.bereit = true;
@@ -1086,41 +1173,73 @@ async function messeAusschnitt(seite, rollen, { grad: winkel, drehungGrad }) {
     halbeHoehe: PROBE_HALBE_HOEHE,
     mitteY: PROBE_MITTE_Y,
   };
-  let halbBreite = 0;
+  const raster = rasterVon(BEWEGUNGEN);
+  // Je Bewegung der groesste Bedarf ueber alle Rollen. Die Waagerechte bleibt
+  // getrennt, weil breite Zeilen ihre eigene bekommen; die Senkrechte laeuft
+  // gleich zusammen, denn die Zellhoehe ist fuer ALLE Zeilen dieselbe.
+  const halbBreiten = BEWEGUNGEN.map(() => 0);
   let unten = Infinity;
   let oben = -Infinity;
   for (const rolle of rollen) {
     const mass = await seite.evaluate(
-      ([url, bewegungen, konfig]) => window.messeRolle(url, bewegungen, konfig),
-      [`/modelle/${rolle}.glb`, BEWEGUNGEN, probe],
+      ([url, bewegungen, r, konfig]) => window.messeRolle(url, bewegungen, r, konfig),
+      [`/modelle/${rolle}.glb`, BEWEGUNGEN, raster, probe],
     );
-    halbBreite = Math.max(halbBreite, mass.halbBreite);
-    unten = Math.min(unten, mass.unten);
-    oben = Math.max(oben, mass.oben);
+    for (let nr = 0; nr < BEWEGUNGEN.length; nr++) {
+      halbBreiten[nr] = Math.max(halbBreiten[nr], mass[nr].halbBreite);
+      unten = Math.min(unten, mass[nr].unten);
+      oben = Math.max(oben, mass[nr].oben);
+    }
   }
   // Senkrecht wird die Figur MITTIG in die Zelle gelegt, waagerecht bleibt sie
   // um ihren Fusspunkt zentriert: Die Figur soll ueber ihrem Feld stehen und
   // nicht daneben, auch wenn sie beim Ausholen weit nach links greift.
   const mitte = (unten + oben) / 2;
-  const halbeHoehe = Math.max(halbBreite, (oben - unten) / 2) * LUFT;
+  // NUR die quadratischen Zeilen bestimmen die gemeinsame Breite. Genau das ist
+  // der Gewinn der breiten Zelle: Die liegende Figur zieht den Ausschnitt aller
+  // anderen Bilder nicht mehr mit auf.
+  const schmalste = Math.max(
+    ...halbBreiten.filter((_, nr) => raster.je[nr].weite === 1),
+  );
+  const halbeHoehe = Math.max(schmalste, (oben - unten) / 2) * LUFT;
   // Die Kamera zielt auf (0, mitteY, 0); sie um dy anzuheben verschiebt das
   // Bild senkrecht um dy * cos(Winkel). Deshalb die Division.
   const mitteY = PROBE_MITTE_Y + mitte / Math.cos((winkel * Math.PI) / 180);
-  return { grad: winkel, drehungGrad, halbeHoehe, mitteY };
+
+  // Und jetzt die Gegenprobe fuer die breiten Zeilen. Sie ist der Grund, warum
+  // `weite` eine feste Zahl ist und keine gemessene: Ein festes Raster laesst
+  // sich in figuren3d.ts aufschreiben, ein gemessenes waere nach jedem Lauf ein
+  // anderes. Passt eine Figur eines Tages nicht mehr hinein, soll das Skript
+  // ABBRECHEN und nicht stillschweigend abschneiden — ein halb aus der Zelle
+  // ragender Arm faellt am Bildschirm niemandem auf, der ihn nicht sucht.
+  for (let nr = 0; nr < BEWEGUNGEN.length; nr++) {
+    const { weite } = raster.je[nr];
+    if (weite === 1) continue;
+    const bedarf = halbBreiten[nr] * LUFT;
+    const platz = halbeHoehe * weite;
+    if (bedarf > platz) {
+      throw new Error(
+        `Zelle zu schmal fuer "${BEWEGUNGEN[nr].name}": braucht ${bedarf.toFixed(3)}, ` +
+          `hat ${platz.toFixed(3)} (weite ${weite}). weite in BEWEGUNGEN erhoehen.`,
+      );
+    }
+  }
+  return { grad: winkel, drehungGrad, halbeHoehe, mitteY, halbBreiten };
 }
 
 /** Rendert ein Blatt und gibt es als PNG-Puffer in Zielgroesse zurueck. */
 async function rendereBlatt(seite, sharp, rolle, kameraKonfig) {
-  const { bild, spalten, laengen, fusspunkt } = await seite.evaluate(
-    ([url, bewegungen, konfig]) => window.rendereRolle(url, bewegungen, konfig),
-    [`/modelle/${rolle}.glb`, BEWEGUNGEN, kameraKonfig],
+  const raster = rasterVon(BEWEGUNGEN);
+  const { bild, laengen, fusspunkt } = await seite.evaluate(
+    ([url, bewegungen, r, konfig]) => window.rendereRolle(url, bewegungen, r, konfig),
+    [`/modelle/${rolle}.glb`, BEWEGUNGEN, raster, kameraKonfig],
   );
   const roh = Buffer.from(bild.slice('data:image/png;base64,'.length), 'base64');
   const png = await sharp(roh)
-    .resize(spalten * KANTE, BEWEGUNGEN.length * KANTE, { kernel: 'lanczos3' })
+    .resize(raster.spalten * KANTE, raster.zeilen * KANTE, { kernel: 'lanczos3' })
     .png()
     .toBuffer();
-  return { png, spalten, laengen, fusspunkt };
+  return { png, raster, laengen, fusspunkt };
 }
 
 // ---------------------------------------------------------------------------
@@ -1143,7 +1262,16 @@ const { server, port } = await starteServer(SEITE, zwischen);
 const { chromium } = await ladePaket('playwright');
 const { default: sharp } = await ladePaket('sharp');
 
-const browser = await chromium.launch();
+// `channel: 'chromium'` ist der VOLLE Browser, nicht die Standard-Auslieferung
+// von Playwright. Die heisst seit 1.49 "chromium-headless-shell" und bringt
+// unter Windows GAR KEINEN WebGL-Kontext mit: `getContext('webgl2')` gibt null
+// zurueck, three.js meldet "Error creating WebGL context", und der Lauf stirbt
+// dreissig Sekunden spaeter in `waitForFunction` — an einer Stelle, die nach
+// einem haengenden Skript aussieht und nicht nach fehlender Grafik. Auf dem Mac
+// fiel das nie auf, dort hat die Shell einen Kontext. Nachgemessen am
+// 06.09.2026: Der volle Browser rendert hier ueber ANGLE/D3D11, die Shell auch
+// mit `--use-angle=swiftshader` nicht.
+const browser = await chromium.launch({ channel: 'chromium' });
 const seite = await browser.newPage();
 seite.on('pageerror', (fehler) => console.error('Seite:', fehler.message));
 await seite.goto(`http://127.0.0.1:${port}/seite.html`);
@@ -1209,7 +1337,7 @@ async function baueBlaetter() {
 
   const bericht = [];
   for (const eintrag of ROLLEN) {
-    const { png, spalten, laengen, fusspunkt } = await rendereBlatt(
+    const { png, laengen, fusspunkt } = await rendereBlatt(
       seite,
       sharp,
       eintrag.rolle,
@@ -1223,7 +1351,7 @@ async function baueBlaetter() {
       .webp({ quality: 70, alphaQuality: 100, effort: 6 })
       .toFile(ziel);
     const groesse = (await readFile(ziel)).byteLength;
-    bericht.push({ rolle: eintrag.rolle, groesse, laengen, fusspunkt, spalten });
+    bericht.push({ rolle: eintrag.rolle, groesse, laengen, fusspunkt });
   }
 
   let summe = 0;
@@ -1235,12 +1363,35 @@ async function baueBlaetter() {
     console.log(`${z.rolle.padEnd(10)} ${kb(z.groesse).padStart(9)}   ${dauern}`);
   }
   console.log(`${'zusammen'.padEnd(10)} ${kb(summe).padStart(9)}`);
+
+  // Alles ab hier gehoert nach figuren3d.ts. Es steht als Zahl da, damit es
+  // niemand aus dem Bild abmisst: Wer den Fusspunkt um zwei Pixel danebensetzt,
+  // sucht spaeter, warum die Figuren im Getuemmel nicht auf einer Linie stehen,
+  // und wer eine Zeile falsch abzaehlt, bekommt lauter richtige Bilder an der
+  // falschen Stelle.
+  const raster = rasterVon(BEWEGUNGEN);
   console.log(
-    `Raster je Blatt: ${Math.max(...BEWEGUNGEN.map((b) => b.bilder))} x ${BEWEGUNGEN.length} Zellen zu ${KANTE} px`,
+    `Raster je Blatt: ${raster.spalten} x ${raster.zeilen} Zellen zu ${KANTE} px` +
+      ` (${raster.spalten * KANTE} x ${raster.zeilen * KANTE} px)`,
   );
-  // Der Fusspunkt gehoert in figuren3d.ts. Er steht hier als Zahl, damit ihn
-  // niemand aus dem Bild abmisst: Wer ihn um zwei Pixel danebensetzt, sucht
-  // spaeter, warum die Figuren im Getuemmel nicht auf einer Linie stehen.
+  for (let nr = 0; nr < BEWEGUNGEN.length; nr++) {
+    const b = BEWEGUNGEN[nr];
+    const { zeile, weite, proZeile } = raster.je[nr];
+    const dauer = bericht[0].laengen[b.name];
+    const [von, bis] = b.spanne;
+    // Die MODELLRATE: so viele Bilder je Sekunde waeren es, liefe die Bewegung
+    // so schnell ab wie im Modell. Sie ist ein Anhalt und keine Vorschrift —
+    // `bildrate` in figuren3d.ts weicht bewusst davon ab, wo die Anzeige es
+    // besser weiss (die Zuckung ist dort schneller, der Schlag laenger; die
+    // Gruende stehen an Ort und Stelle).
+    const teiler = b.schleife ? b.bilder : Math.max(1, b.bilder - 1);
+    const modellrate = teiler / ((bis - von) * dauer);
+    console.log(
+      `  ${b.name.padEnd(10)} zeile ${zeile}  bilder ${String(b.bilder).padStart(2)}` +
+        `  weite ${weite}  proZeile ${proZeile}  Modellrate ${modellrate.toFixed(1)}` +
+        `  Bedarf ${ausschnitt.halbBreiten[nr].toFixed(3)} von ${(ausschnitt.halbeHoehe * weite).toFixed(3)}`,
+    );
+  }
   const f = bericht[0].fusspunkt;
   console.log(
     `Fusspunkt in der Zelle: x ${f.x.toFixed(4)}  y ${f.y.toFixed(4)} (Anteil der Kante)`,
@@ -1315,15 +1466,36 @@ async function baueVergleich() {
     });
   }
 
-  // Aus jedem Blatt die vier ausgewaehlten Zellen schneiden.
+  // Aus jedem Blatt die vier ausgewaehlten Zellen schneiden. Wo sie liegen und
+  // wie breit sie sind, sagt das Raster — seit der Todeszeile ist beides nicht
+  // mehr "Bild mal Kante".
+  const blattRaster = rasterVon(BEWEGUNGEN);
+  const auswahl = VERGLEICH_ZELLEN.map((wahl) => {
+    const nr = BEWEGUNGEN.findIndex((b) => b.name === wahl.bewegung);
+    const { zeile, weite, proZeile } = blattRaster.je[nr];
+    return {
+      ...wahl,
+      breite: Math.round(KANTE * weite),
+      links: Math.round((wahl.bild % proZeile) * weite * KANTE),
+      oben: (zeile + Math.floor(wahl.bild / proZeile)) * KANTE,
+    };
+  });
+  // Wo jede Spalte des Vergleichsbildes anfaengt — aufaddiert, weil die
+  // Spalten seit der breiten Todeszelle nicht mehr gleich breit sind.
+  const spaltenX = [];
+  let lauf = V_SPALTE;
+  for (const zelle of auswahl) {
+    spaltenX.push(lauf);
+    lauf += zelle.breite;
+  }
+
   const reihen = [];
   for (const zeile of zeilen) {
     const zellen = [];
-    for (const wahl of VERGLEICH_ZELLEN) {
-      const y = BEWEGUNGEN.findIndex((b) => b.name === wahl.bewegung);
+    for (const wahl of auswahl) {
       zellen.push(
         await sharp(zeile.png)
-          .extract({ left: wahl.bild * KANTE, top: y * KANTE, width: KANTE, height: KANTE })
+          .extract({ left: wahl.links, top: wahl.oben, width: wahl.breite, height: KANTE })
           .png()
           .toBuffer(),
       );
@@ -1331,7 +1503,7 @@ async function baueVergleich() {
     reihen.push({ ...zeile, zellen });
   }
 
-  const breite = V_SPALTE + VERGLEICH_ZELLEN.length * KANTE;
+  const breite = lauf;
   const hoehe =
     V_KOPF + trenner * KANTE + V_LUECKE + V_KOPF + (reihen.length - trenner) * KANTE + 12;
 
@@ -1353,9 +1525,9 @@ async function baueVergleich() {
   texte.push(
     `<text x="14" y="${V_KOPF - 22}" fill="#e8c98a" font-family="sans-serif" font-size="15" font-weight="600">Entschieden am 05.09.2026 von Robin: ${grad(KAMERA_GRAD)} — so sind die Blaetter gerendert.</text>`,
   );
-  VERGLEICH_ZELLEN.forEach((wahl, i) => {
+  auswahl.forEach((wahl, i) => {
     texte.push(
-      `<text x="${V_SPALTE + i * KANTE + KANTE / 2}" y="${V_KOPF - 8}" fill="#9c8d7c" font-family="sans-serif" font-size="14" text-anchor="middle">${wahl.bewegung}</text>`,
+      `<text x="${spaltenX[i] + wahl.breite / 2}" y="${V_KOPF - 8}" fill="#9c8d7c" font-family="sans-serif" font-size="14" text-anchor="middle">${wahl.bewegung}</text>`,
     );
   });
 
@@ -1364,7 +1536,7 @@ async function baueVergleich() {
     const zeileOben = versatz + (i < trenner ? i : i - trenner) * KANTE;
     texte.push(beschriftung(reihe.titel, reihe.unter, 14, zeileOben + 52));
     reihe.zellen.forEach((zelle, s) => {
-      teile.push({ input: zelle, left: V_SPALTE + s * KANTE, top: zeileOben });
+      teile.push({ input: zelle, left: spaltenX[s], top: zeileOben });
     });
   });
 
@@ -1379,8 +1551,8 @@ async function baueVergleich() {
     ),
   );
 
-  // Trennlinie und Zeilenraster als eine SVG-Ebene ueber dem Hintergrund.
-  const raster = reihen
+  // Trennlinie und Zeilenstreifen als eine SVG-Ebene ueber dem Hintergrund.
+  const streifen = reihen
     .map((_, i) => {
       const versatz = i < trenner ? V_KOPF : untenOben + V_KOPF;
       const y = versatz + (i < trenner ? i : i - trenner) * KANTE;
@@ -1388,7 +1560,7 @@ async function baueVergleich() {
     })
     .join('');
 
-  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">${raster}<line x1="0" y1="${untenOben + 14}" x2="${breite}" y2="${untenOben + 14}" stroke="#4a3b2e" stroke-width="2"/>${texte.join('')}</svg>`;
+  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">${streifen}<line x1="0" y1="${untenOben + 14}" x2="${breite}" y2="${untenOben + 14}" stroke="#4a3b2e" stroke-width="2"/>${texte.join('')}</svg>`;
 
   await mkdir(dirname(VERGLEICHSBILD), { recursive: true });
   await sharp({

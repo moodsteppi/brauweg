@@ -148,7 +148,7 @@ describe('vorladen', () => {
     it('gewichtet ein Blatt schwerer als den Untergrund', () => {
       const blatt = VORZULADEN.find((p) => p.pfad === BLATT_PFADE[0]);
       const untergrund = VORZULADEN.find((p) => p.pfad === UNTERGRUND);
-      // Ein Blatt liegt bei rund 43 kB, die Textur bei 35. Fuenf Blaetter sind
+      // Ein Blatt liegt bei rund 58 kB, die Textur bei 35. Fuenf Blaetter sind
       // damit gut zwei Drittel des Gewichts — der Balken muss das abbilden.
       expect(blatt?.kb).toBeGreaterThan(untergrund?.kb ?? 0);
     });

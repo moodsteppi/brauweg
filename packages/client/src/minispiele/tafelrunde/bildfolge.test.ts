@@ -1,15 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
-import { FIGUREN3D, FIGUREN3D_BEWEGUNGEN, folgeVon } from '../../figuren3d/figuren3d';
+import {
+  FIGUREN3D,
+  FIGUREN3D_BEWEGUNGEN,
+  FIGUREN3D_FUSSPUNKT,
+  FIGUREN3D_SPALTEN,
+  FIGUREN3D_ZEILEN,
+  FIGUREN3D_ZELLHOEHE_METER,
+  folgeVon,
+} from '../../figuren3d/figuren3d';
 import {
   type Bewegungsspur,
   BLATT_PFADE,
+  FIGURENKASTEN,
   GLEITEN_MS,
   KAMPF_TEMPO,
   bildstand,
   blattPfad,
   blattVersatz,
   istRolle3D,
+  zellWeite,
 } from './bildfolge';
 
 /*
@@ -160,28 +170,76 @@ describe('bildstand — weniger Bewegung', () => {
 
 describe('blattVersatz', () => {
   it('trifft jede Zelle des Blattes', () => {
-    /* Sechs Spalten, fuenf Zeilen: Eine Spalte ist ein Sechstel der Bildbreite,
-       eine Zeile ein Fuenftel der Bildhoehe — `translate()` rechnet in Prozent
+    /* Sechs Spalten, sechs Zeilen: Eine Spalte ist ein Sechstel der Bildbreite,
+       eine Zeile ein Sechstel der Bildhoehe — `translate()` rechnet in Prozent
        der eigenen Groesse des Blattes. */
     expect(blattVersatz({ bewegung: 'stand', bild: 0 })).toBe('translate(0%, 0%)');
-    expect(blattVersatz({ bewegung: 'lauf', bild: 1 })).toBe('translate(-16.667%, -20%)');
-    expect(blattVersatz({ bewegung: 'schlag', bild: 5 })).toBe('translate(-83.333%, -40%)');
-    expect(blattVersatz({ bewegung: 'getroffen', bild: 1 })).toBe('translate(-16.667%, -60%)');
-    expect(blattVersatz({ bewegung: 'tod', bild: 5 })).toBe('translate(-83.333%, -80%)');
+    expect(blattVersatz({ bewegung: 'lauf', bild: 1 })).toBe('translate(-16.667%, -16.667%)');
+    expect(blattVersatz({ bewegung: 'schlag', bild: 5 })).toBe('translate(-83.333%, -33.333%)');
+    expect(blattVersatz({ bewegung: 'getroffen', bild: 1 })).toBe('translate(-16.667%, -50%)');
+    /* Die Todeszeile hat breite Zellen (1,5 Kanten) und bricht nach vier
+       Bildern um: Bild 3 steht ganz rechts in Zeile 4, Bild 4 wieder links in
+       Zeile 5. Eine breite Spalte ist ein Viertel der Bildbreite. */
+    expect(blattVersatz({ bewegung: 'tod', bild: 3 })).toBe('translate(-75%, -66.667%)');
+    expect(blattVersatz({ bewegung: 'tod', bild: 4 })).toBe('translate(0%, -83.333%)');
+    expect(blattVersatz({ bewegung: 'tod', bild: 7 })).toBe('translate(-75%, -83.333%)');
   });
 
   it('bleibt fuer jede Bewegung und jedes Bild im Blatt', () => {
     for (const folge of FIGUREN3D_BEWEGUNGEN) {
       for (let bild = 0; bild < folge.bilder; bild += 1) {
-        const treffer = /translate\((-?[\d.]+)%, (-?[\d.]+)%\)/.exec(
-          blattVersatz({ bewegung: folge.bewegung, bild }),
-        );
+        const stand = { bewegung: folge.bewegung, bild };
+        const treffer = /translate\((-?[\d.]+)%, (-?[\d.]+)%\)/.exec(blattVersatz(stand));
         expect(treffer).not.toBeNull();
-        // Nie ueber den Rand: hoechstens fuenf Spalten und vier Zeilen weit.
-        expect(Number(treffer![1])).toBeLessThanOrEqual(0);
-        expect(Number(treffer![1])).toBeGreaterThanOrEqual(-83.334);
-        expect(Number(treffer![2])).toBe(-folge.zeile * 20 + 0);
+        // Die Zelle muss GANZ im Blatt liegen — beim breiten Ausschnitt der
+        // Todeszeile ist das kein Selbstlaeufer mehr: Ihre rechte Kante liegt
+        // eine halbe Kante weiter rechts als ihre linke.
+        const links = -Number(treffer![1]) / 100;
+        const oben = -Number(treffer![2]) / 100;
+        expect(links).toBeGreaterThanOrEqual(0);
+        expect(links + zellWeite(stand) / FIGUREN3D_SPALTEN).toBeLessThanOrEqual(1.0001);
+        expect(oben).toBeGreaterThanOrEqual(0);
+        expect(oben + 1 / FIGUREN3D_ZEILEN).toBeLessThanOrEqual(1.0001);
+        // Und in einer Zeile DIESER Bewegung, nicht in der einer fremden.
+        const zeile = Math.round(oben * FIGUREN3D_ZEILEN);
+        expect(zeile).toBeGreaterThanOrEqual(folge.zeile);
+        expect(zeile).toBeLessThan(folge.zeile + Math.ceil(folge.bilder / folge.proZeile));
       }
     }
+  });
+
+  it('macht den Ausschnitt nur fuer die Todesfolge breiter', () => {
+    // Der Kasten der Anzeige haengt daran (`bildSchieben`): Bliebe er
+    // quadratisch, saehe man von der liegenden Figur zwei Drittel.
+    for (const folge of FIGUREN3D_BEWEGUNGEN) {
+      const erwartet = folge.bewegung === 'tod' ? 1.5 : 1;
+      for (let bild = 0; bild < folge.bilder; bild += 1) {
+        expect(zellWeite({ bewegung: folge.bewegung, bild })).toBe(erwartet);
+      }
+    }
+  });
+});
+
+describe('FIGURENKASTEN', () => {
+  /*
+   * Die Probe auf die Rechnung, und sie hat einen Anlass: Bis zum 06.09.2026
+   * standen Hoehe und Boden als feste Prozentzahlen im Stylesheet. Sie haengen
+   * aber am gemessenen Ausschnitt der Blaetter, und als der mit der eigenen
+   * Todeszelle enger wurde, waere jede Figur der Arena um 14 % gewachsen,
+   * ohne dass jemand an der Groesse etwas geaendert haette.
+   */
+  it('stellt die Figur auf 78 Prozent der Kartenhoehe', () => {
+    const hoehe = FIGURENKASTEN.hoehe / 100;
+    const boden = FIGURENKASTEN.boden / 100;
+    // Oberkante des Ausschnitts ueber der Kartenunterkante, minus der Weg vom
+    // Zellrand bis zum Fusspunkt: Da steht die Figur.
+    const fussVonUnten = boden + hoehe * (1 - FIGUREN3D_FUSSPUNKT.y);
+    expect(1 - fussVonUnten).toBeCloseTo(0.78, 3);
+  });
+
+  it('haelt den Massstab, wenn der Ausschnitt sich aendert', () => {
+    // Eine Kartenhoehe zeigt so viele Weltmeter, wie der Massstab sagt — egal,
+    // wie viel Welt gerade in einer Zelle steckt.
+    expect(FIGUREN3D_ZELLHOEHE_METER / (FIGURENKASTEN.hoehe / 100)).toBeCloseTo(2.383, 2);
   });
 });

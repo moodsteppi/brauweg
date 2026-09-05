@@ -49,7 +49,18 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
-import { type Bildstand, GLEITEN_MS, bildstand, blattPfad, blattVersatz } from './bildfolge';
+import { FIGUREN3D_SPALTEN, FIGUREN3D_ZEILEN } from '../../figuren3d/figuren3d';
+
+import {
+  type Bildstand,
+  FIGURENKASTEN,
+  GLEITEN_MS,
+  TOD_MS,
+  bildstand,
+  blattPfad,
+  blattVersatz,
+  zellWeite,
+} from './bildfolge';
 import { type EinheitId, FIGUREN, UNTERGRUND } from './figuren';
 import stil from './KampfAnzeige.module.css';
 import { type Rastermass, rastermass, wabenLage } from './zuege';
@@ -251,6 +262,16 @@ function Figur3D({
       <img
         ref={gib}
         className={stil.blatt}
+        /* Das Raster des Blattes gehoert nach figuren3d.ts und nicht ins
+           Stylesheet: Dort stand es bis zum 06.09.2026 als `width: 600%;
+           height: 500%`, und eine Zeile mehr im Blatt haette lauter richtige
+           Bilder an der falschen Stelle ergeben. */
+        style={
+          {
+            '--tr-blattspalten': FIGUREN3D_SPALTEN,
+            '--tr-blattzeilen': FIGUREN3D_ZEILEN,
+          } as React.CSSProperties
+        }
         src={blatt}
         /* Der Name der Einheit und nicht der der Rolle: Fuer den Leser ist die
            Figur eine Dorfwache, dass sie sich das Blatt mit sieben anderen
@@ -274,6 +295,34 @@ function Figur3D({
 function bildSchieben(el: HTMLImageElement, stand: Bildstand): void {
   const versatz = blattVersatz(stand);
   if (el.style.transform !== versatz) el.style.transform = versatz;
+  /*
+   * Und den Ausschnitt auf die Breite DIESER Zelle stellen. Fast immer ist das
+   * eine Selbstverstaendlichkeit (quadratisch), einmal je Figur nicht: Die
+   * Todeszeile hat breitere Zellen, weil eine liegende Figur breiter ist als
+   * eine stehende hoch (siehe `weite` in figuren3d.ts). Ohne diese Zeile saehe
+   * man von der Gefallenen zwei Drittel und vom Rest nichts — kein Fehler,
+   * nur ein abgeschnittener Arm.
+   *
+   * AM KASTEN und nicht am Bild: Der Kasten IST der Ausschnitt (`overflow:
+   * hidden`), das Bild dahinter bleibt unveraendert gross. Die Figur wird also
+   * nicht gestreckt, es wird nur mehr von ihr freigegeben.
+   *
+   * Nicht ueber `data-tot` im Stylesheet, obwohl das dieselben Bilder traefe:
+   * Das Merkmal kommt aus dem Zustand des Bauteils, die Bildwahl aus dem Takt.
+   * Zwischen beiden liegt ein Zeichnen, und genau in dieser Luecke stuende die
+   * breite Zelle in einem quadratischen Ausschnitt.
+   *
+   * ALS EIGENE EIGENSCHAFT UND NICHT DIREKT ALS `aspectRatio`: jsdom kennt
+   * `aspect-ratio` nicht und verwirft die Zuweisung stillschweigend. Am
+   * Bildschirm faellt das nicht auf, im Test aber sehr wohl — die Breite waere
+   * dort gar nicht pruefbar, und der Vergleich unten (nur schreiben, wenn sich
+   * etwas aendert) liefe bei jedem Takt ins Leere.
+   */
+  const weite = String(zellWeite(stand));
+  const kasten = el.parentElement;
+  if (kasten && kasten.style.getPropertyValue('--tr-zellweite') !== weite) {
+    kasten.style.setProperty('--tr-zellweite', weite);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -807,6 +856,21 @@ export function KampfAnzeige<E extends Einheitenbild>({
                      zwei Zahlen liefen beim ersten Nachstellen auseinander,
                      und die Figur ruderte dann noch, wenn sie schon steht. */
                   '--gleiten': `${GLEITEN_MS}ms`,
+                  /* Der Fall und was danach kommt. Die Karte verblasst erst,
+                     wenn die Todesfolge durchgelaufen ist — sonst waere die
+                     liegende Figur, wegen derer die Zeile ueberhaupt bis zum
+                     Ende gerendert wird, schon durchsichtig, bevor sie liegt.
+                     Die Dauer steht in figuren3d.ts und wird hier nur
+                     durchgereicht. */
+                  '--tr-tod-warten': `${TOD_MS}ms`,
+                  '--tr-tod-verblassen': `${TOD_HALT_MS}ms`,
+                  /* Der Ausschnitt, durch den man die Figur sieht. Beide Masse
+                     kommen aus bildfolge.ts, weil sie am gemessenen Ausschnitt
+                     der Blaetter haengen und nicht am Geschmack — steht die
+                     Zahl im Stylesheet, wachsen die Figuren beim naechsten
+                     Rendern stillschweigend mit. */
+                  '--tr-kasten-hoehe': `${FIGURENKASTEN.hoehe}%`,
+                  '--tr-kasten-boden': `${FIGURENKASTEN.boden}%`,
                   /*
                    * Die Reihe stapelt die Figuren: Wer weiter vorn steht,
                    * liegt darueber. Noetig, seit eine Figur ihr Feld nach oben
@@ -1034,15 +1098,27 @@ function Ergebnis({
 const RUECKFALL_TAKT_MS = 100;
 
 /**
+ * Wie lange die Gefallene liegt und dabei verblasst, in Millisekunden.
+ *
+ * Sie verschwindet nicht auf der Stelle: Das Liegen ist die Auskunft ("die ist
+ * weg"), und ein Bild, das im selben Augenblick ausgeht, in dem es entsteht,
+ * liest niemand. Die Zahl geht als `--tr-tod-verblassen` ins Stylesheet, damit
+ * sie nicht an zwei Stellen steht — der Takt unten rechnet mit ihr weiter.
+ */
+const TOD_HALT_MS = 420;
+
+/**
  * Wie lange der Takt nach dem Ende noch laeuft — nur fuer die Bildfolgen.
  *
  * Der Kampf ist vorbei, aber die letzte Todesfolge nicht: Sie faellt fast immer
- * kurz vor das Ende und braucht bei sechs Bildern und doppelter Bildrate rund
- * 200 ms. Grosszuegig gerundet, weil ein Takt zu viel nichts kostet (es
- * aendert sich nichts mehr, also wird auch nichts neu gezeichnet) — ein Takt
- * zu wenig aber die Figur mitten im Einsacken einfriert.
+ * kurz vor das Ende. `TOD_MS` ist ihre Dauer (aus figuren3d.ts gerechnet, seit
+ * dem 06.09.2026 fuer den ganzen Fall bis zum Liegen — vorher war es nur das
+ * halbe Einsacken), `TOD_HALT_MS` die Zeit, die die Gefallene danach noch liegt
+ * und verblasst. Grosszuegig aufgerundet, weil ein Takt zu viel nichts kostet
+ * (es aendert sich nichts mehr, also wird auch nichts neu gezeichnet) — ein
+ * Takt zu wenig aber die Figur mitten im Fall einfriert.
  */
-const NACHSPIEL_MS = 600;
+const NACHSPIEL_MS = TOD_MS + TOD_HALT_MS + 100;
 
 interface Uhr {
   naechstes(tick: () => void): void;

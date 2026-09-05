@@ -21,9 +21,11 @@
 import {
   type Bewegung3D,
   type Rolle3D,
+  FIGUREN3D_FUSSPUNKT,
   FIGUREN3D_KANTE,
   FIGUREN3D_SPALTEN,
   FIGUREN3D_ZEILEN,
+  FIGUREN3D_ZELLHOEHE_METER,
   blattVon,
   folgeVon,
   zelleVon,
@@ -258,6 +260,89 @@ export function blattVersatz(stand: Bildstand): string {
   const y = -(zelle.y / FIGUREN3D_KANTE / FIGUREN3D_ZEILEN) * 100;
   return `translate(${runde(x)}%, ${runde(y)}%)`;
 }
+
+/**
+ * Wie breit der Ausschnitt bei diesem Bild sein muss — als Vielfaches seiner
+ * Hoehe.
+ *
+ * Fast immer 1: Eine Zelle ist quadratisch. Die Todeszeile ist es nicht, weil
+ * eine liegende Figur breiter ist als eine stehende hoch (siehe `weite` in
+ * figuren3d.ts). Der Ausschnitt muss deshalb im Augenblick des Todes breiter
+ * werden — die Figur darin bleibt gleich gross, sie liegt nur quer.
+ *
+ * Nicht abgeschrieben, sondern aus der Zelle gerechnet: Wer die Zeilen im
+ * Renderskript umbaut, aendert eine Zahl und nicht zwei.
+ */
+export function zellWeite(stand: Bildstand): number {
+  return zelleVon(stand.bewegung, stand.bild).breite / FIGUREN3D_KANTE;
+}
+
+/**
+ * Wie lange die Todesfolge am Bildschirm dauert, in Millisekunden.
+ *
+ * Gerechnet und nicht gesetzt: acht Bilder mit der Bildrate aus figuren3d.ts,
+ * im Zeitraffer des Kampfes. Wer dort Bildzahl oder Bildrate anfasst, bekommt
+ * hier die neue Dauer — und mit ihr das Ausblenden der Figur und das Nachspiel
+ * des Taktes in KampfAnzeige.tsx, die beide daran haengen.
+ *
+ * `bilder - 1` Abstaende und nicht `bilder`: Das letzte Bild ist der Zustand,
+ * in dem die Figur liegen bleibt, und keine weitere Wegstrecke.
+ */
+export const TOD_MS = Math.round(
+  ((folgeVon('tod').bilder - 1) / (folgeVon('tod').bildrate * KAMPF_TEMPO)) * 1000,
+);
+
+// ---------------------------------------------------------------------------
+// Wie gross der Ausschnitt auf der Karte ist
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie viele Weltmeter die HOEHE einer Wabenkarte abbildet — der Massstab der
+ * Arena.
+ *
+ * DAS IST DIE ENTSCHEIDUNG, alles andere hier ist Rechnung. Sie stammt aus dem
+ * Augenmass, mit dem der Ausschnitt am 05.09.2026 eingestellt wurde (180 % der
+ * Kartenhoehe bei einer Zelle von damals 4,29 Metern) — nur steht sie jetzt in
+ * Metern statt in Prozent, und damit ueberlebt sie den naechsten Satz
+ * Blaetter. Wer die Figuren groesser oder kleiner will, aendert DIESE Zahl:
+ * kleiner heisst groessere Figuren.
+ */
+const MASSSTAB_METER = 2.383;
+
+/**
+ * Wo die Figur auf der Karte aufsetzt, als Anteil der Kartenhoehe von OBEN.
+ *
+ * 78 % ist knapp ueber den Sternen am unteren Kartenrand. Tiefer, und die Figur
+ * steht auf ihrer eigenen Stufenanzeige.
+ */
+const STANDLINIE = 0.78;
+
+/**
+ * Hoehe und Bodenversatz des Figurenausschnitts, in Prozent der Kartenhoehe.
+ *
+ * GERECHNET UND NICHT PROBIERT, und zwar aus dem Massstab: Eine Zelle traegt
+ * `FIGUREN3D_ZELLHOEHE_METER` Meter Welt, eine Kartenhoehe soll `MASSSTAB_METER`
+ * zeigen — daraus folgt die Hoehe. Der Fusspunkt sagt, wo in der Zelle die
+ * Figur aufsetzt; daraus folgt, wie weit die Zelle unter die Karte reichen
+ * muss, damit sie auf der Standlinie steht.
+ *
+ * WARUM NICHT ZWEI FESTE PROZENTZAHLEN, wie bis zum 06.09.2026: Die haengen am
+ * gemessenen Ausschnitt, ohne ihn zu nennen. Als die Todeszeile ihre eigene
+ * Zelle bekam, wurde der Ausschnitt von 4,29 auf 3,76 Meter enger — dieselben
+ * 180 % haetten jede Figur der Arena um 14 % wachsen lassen, ohne dass jemand
+ * an der Groesse etwas geaendert haette.
+ */
+export const FIGURENKASTEN = {
+  /** Hoehe des Ausschnitts, in Prozent der Kartenhoehe. */
+  hoehe: runde((FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * 100),
+  /** Unterkante gegen die der Karte, in Prozent — negativ heisst tiefer. */
+  boden: runde(
+    (1 -
+      STANDLINIE -
+      (FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * (1 - FIGUREN3D_FUSSPUNKT.y)) *
+      100,
+  ),
+} as const;
 
 function runde(wert: number): number {
   return Math.round(wert * 1000) / 1000;

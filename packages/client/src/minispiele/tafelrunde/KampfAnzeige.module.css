@@ -278,16 +278,22 @@
   border-radius: 9px;
   background: linear-gradient(180deg, #232f37, #1a242a);
   box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line));
-  transition:
-    opacity 420ms ease,
-    transform 420ms ease;
+  transition: opacity var(--tr-tod-verblassen, 420ms) ease;
 }
-/* Der Fall: einsacken und verblassen, nicht verschwinden. Die leichte Drehung
-   nimmt dem Vorgang das Maschinelle — senkrecht kleiner werden sieht aus wie
-   ein Ladefehler. */
+/*
+ * Der Fall ist die BILDFOLGE, nicht mehr diese Regel: `tod` in figuren3d.ts
+ * laeuft seit dem 06.09.2026 bis zum Liegen durch. Die Karte wartet ihn ab
+ * (`--tr-tod-warten`, die Dauer der Folge) und verblasst dann.
+ *
+ * FRUEHER STAND HIER ZUSAETZLICH `transform: scale(0.55) rotate(-9deg)` — ein
+ * Einsacken als Ersatz fuer eine Todesanimation, die die Bilder nicht hergaben
+ * (sie endeten auf halbem Weg). Ueber einer wirklich liegenden Figur saehe es
+ * aus, als wuerde die Leiche weggezogen; deshalb ist es raus. Was bleibt, ist
+ * das Verblassen: verschwinden soll sie schon, nur nicht sofort.
+ */
 .figur[data-tot] .koerper {
   opacity: 0;
-  transform: scale(0.55) rotate(-9deg);
+  transition-delay: var(--tr-tod-warten, 0ms);
 }
 /* Der Lebensbalken einer Gefallenen ist keine Auskunft mehr, sondern ein
    leerer Streifen ueber dem Staub. */
@@ -327,11 +333,16 @@
 /*
  * -- Die 3D-Figur: ein Ausschnitt aus dem Blatt ihrer Rolle ----------------
  *
- * Der Kasten ist QUADRATISCH, weil eine Zelle des Blattes es ist (128 x 128,
- * siehe figuren3d.ts). Er ist breiter als die Karte und ragt nach oben ueber
- * sie hinaus: Der Ausschnitt umfasst alle Bewegungen, auch den weit
- * ausgeholten Schlag, und traegt darum viel Luft ueber dem Kopf. Wer ihn in
- * die Karte zwingt, bekommt eine Figur, die halb so gross ist wie ihr Feld.
+ * Der Kasten ist so breit wie die Zelle, die er zeigt, und die ist meistens
+ * quadratisch (128 x 128, siehe figuren3d.ts). Die Todeszeile ist es nicht —
+ * eine liegende Figur ist breiter als eine stehende hoch —, und deshalb setzt
+ * `bildSchieben` das Seitenverhaeltnis je Bild. Die Angabe hier ist der
+ * Normalfall und das, was vor dem ersten Takt gilt.
+ *
+ * Er ist breiter als die Karte und ragt nach oben ueber sie hinaus: Der
+ * Ausschnitt umfasst alle Bewegungen, auch den weit ausgeholten Schlag, und
+ * traegt darum viel Luft ueber dem Kopf. Wer ihn in die Karte zwingt, bekommt
+ * eine Figur, die halb so gross ist wie ihr Feld.
  *
  * Ueber `left`/`right`/`bottom` gesetzt und nicht ueber `translate`: Das
  * Spiegeln der Gegenseite braucht eine eigene Angabe, und zwei Dinge in
@@ -345,25 +356,27 @@
   position: absolute;
   left: 50%;
   /*
-   * DIE ZWEI ZAHLEN SIND GERECHNET, nicht probiert — mit dem Fusspunkt aus
-   * figuren3d.ts (73,94 % der Zellhoehe, weil der Ausschnitt oben Luft fuer
-   * den Schlag laesst). Gewuenscht ist: Die Figur steht auf 78 % der
-   * Kartenhoehe, also knapp ueber den Sternen, und ist so hoch wie 79 % der
-   * Karte. Daraus folgt eine Zelle von 180 % Kartenhoehe, deren Unterkante
-   * 25 % darunter liegt: 0,25 − 1,80 + 0,7394 · 1,80 = 0,78.
+   * BEIDE MASSE KOMMEN AUS `FIGURENKASTEN` in bildfolge.ts und stehen hier
+   * bewusst nicht als Zahl. Sie haengen am gemessenen Ausschnitt der Blaetter
+   * — wie viel Welt in einer Zelle steckt —, und der aendert sich mit jedem
+   * neuen Satz. Bis zum 06.09.2026 standen hier 180 % und −25 %; als die
+   * Todeszeile ihre eigene, breitere Zelle bekam, wurde der Ausschnitt enger,
+   * und dieselben 180 % haetten jede Figur der Arena um 14 % wachsen lassen.
    *
-   * GROESSER GEHT NICHT SINNVOLL: Bei 200 % ragt der Meuchler mit Kopf und
-   * Klingen seitlich ueber die Karte hinaus und sieht aus wie ein Aufkleber,
-   * der sich loest. Bei 180 % steht nur der Kopf ueber dem oberen Rand — die
-   * Figur steht dann VOR ihrer Karte, statt neben ihr zu liegen.
+   * Die Rueckfallwerte sind die von damals: Wer die Regel ohne die Komponente
+   * ansieht, bekommt etwas Vernuenftiges statt einer Figur der Hoehe null.
    *
    * Ueber die HOEHE bemessen und nicht ueber die Breite: Dann haengt die
    * Rechnung nur an der Kartenhoehe und nicht zusaetzlich am
    * Seitenverhaeltnis der Wabe, das sich mit der Spaltenzahl aendert.
+   *
+   * `--tr-zellweite` ist die Breite der Zelle, gemessen in ihrer Hoehe. 1 ist
+   * der Normalfall; die Todeszeile bekommt ihre 1,5 von `bildSchieben` je Bild
+   * gesetzt.
    */
-  bottom: -25%;
-  height: 180%;
-  aspect-ratio: 1;
+  bottom: var(--tr-kasten-boden, -25%);
+  height: var(--tr-kasten-hoehe, 180%);
+  aspect-ratio: var(--tr-zellweite, 1);
   overflow: hidden;
   pointer-events: none;
   /* `translate` und `scale` als eigenstaendige Eigenschaften: In EINEM
@@ -375,7 +388,19 @@
 }
 
 /*
- * Das ganze Blatt, sechsmal so breit und fuenfmal so hoch wie der Ausschnitt.
+ * Das ganze Blatt: so viele Zellen hoch und breit, wie es hat.
+ *
+ * ES HAENGT AN DER HOEHE DES AUSSCHNITTS, nicht an seiner Breite — und das ist
+ * seit der breiten Todeszelle keine Feinheit mehr, sondern die Bedingung dafuer,
+ * dass das Ganze aufgeht: Der Ausschnitt wird beim Sterben um die Haelfte
+ * breiter, seine Hoehe bleibt. Waere das Blatt in Prozent SEINER BREITE
+ * bemessen (frueher `width: 600%`), spraenge es im selben Augenblick um die
+ * Haelfte groesser, und aus der liegenden Figur saehe man einen Ausschnitt aus
+ * ihrer Schulter.
+ *
+ * Darum die Hoehe in Zellen und die Breite ueber `aspect-ratio`; beide Zahlen
+ * kommen als Variablen aus der Komponente und damit aus figuren3d.ts.
+ *
  * Verschoben wird es von der Komponente (`bildSchieben`) ueber `transform` —
  * hier steht deshalb KEINE Angabe dazu: Sie waere die, die beim naechsten
  * Zeichnen wieder zurueckgesetzt wuerde.
@@ -388,8 +413,9 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 600%;
-  height: 500%;
+  height: calc(var(--tr-blattzeilen, 6) * 100%);
+  width: auto;
+  aspect-ratio: var(--tr-blattspalten, 6) / var(--tr-blattzeilen, 6);
   max-width: none;
   will-change: transform;
 }
