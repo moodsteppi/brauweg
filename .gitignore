@@ -36,3 +36,10 @@ tmp-*/
 # obwohl weder der Build noch ein Nutzer sie je anfasst. Ausgeliefert wird
 # ausschliesslich die WebP-Fassung unter packages/client/public/.
 packages/client/art/
+
+# Sicherung unverfolgter Dateien, die der Worker vor einer Aufgabe anlegt.
+# Sie gehoert auf die Platte des jeweiligen Rechners, nicht ins Repo: Sie
+# traegt fremde Benutzerpfade und schachtelt sich bei jedem Lauf in sich
+# selbst (gemessen am 05.09.2026: vier Dateien, 700 Zeilen, eine enthielt
+# die andere).
+altlasten/
