@@ -52,6 +52,10 @@ describe('Adapter', () => {
     assert.ok(
       tafelrunde.validateConfig({ ...DEFAULT_REGELN, ladenPlaetze: 1.5 }, 2, 1).length > 0,
     );
+    // Eine halbe Sekunde Vorbereitung ist keine, sondern ein Reflextest.
+    assert.ok(
+      tafelrunde.validateConfig({ ...DEFAULT_REGELN, vorbereitungMs: 500 }, 2, 1).length > 0,
+    );
     // Neun Sitze passen an keinen Tisch dieser Plattform.
     assert.ok(tafelrunde.validateConfig(DEFAULT_REGELN, 9, 1).length > 0);
   });
@@ -116,6 +120,79 @@ describe('Adapter', () => {
     let p = tafelrunde.act(geladen, 0, { typ: 'bereit' });
     p = tafelrunde.act(p, 1, { typ: 'bereit' });
     assert.equal(tafelrunde.advanceInterlude!(p).runde, 2);
+  });
+
+  /**
+   * Die Frist der Platzierungsphase (Karte 6a9d03d4, 06.09.2026).
+   *
+   * Sie ist das Gegenstueck zur Schaupause: Diese laeuft, wenn NIEMAND
+   * handeln darf, jene, waehrend alle gleichzeitig ruesten. Die Plattform
+   * unterscheidet beide daran, dass `phaseMs` ausserhalb der Vorbereitung
+   * null liefert — ohne dieses null stellte sie die Frist der vorigen Runde
+   * nie neu (siehe phaseMs in game-api).
+   */
+  it('nennt die Rundenfrist nur waehrend der Vorbereitung', () => {
+    const p = partie(2);
+    assert.equal(tafelrunde.phaseMs!(p), DEFAULT_REGELN.vorbereitungMs);
+
+    const imKampf = tafelrunde.act(
+      tafelrunde.act(p, 0, { typ: 'bereit' }),
+      1,
+      { typ: 'bereit' },
+    );
+    assert.equal(imKampf.phase, 'kampf');
+    assert.equal(tafelrunde.phaseMs!(imKampf), null);
+  });
+
+  it('macht mit der Frist alle offenen Sitze bereit und beginnt den Kampf', () => {
+    // Ein Sitz meldet sich, der andere sieht nicht mehr hin. Ohne die Frist
+    // stuende der Tisch bis zum Verfall in der Vorbereitung.
+    const p = tafelrunde.act(partie(2), 0, { typ: 'bereit' });
+    assert.equal(p.phase, 'vorbereitung');
+
+    const weiter = tafelrunde.advancePhase!(p);
+    assert.equal(weiter.phase, 'kampf');
+    assert.ok(weiter.kaempfe.length > 0, 'die Kaempfe stehen nicht');
+    // Gebucht wird nichts: Der Truedler tritt mit dem Brett an, das er hat.
+    assert.deepEqual(weiter.heere[1]!.brett, p.heere[1]!.brett);
+    assert.equal(weiter.heere[1]!.gold, p.heere[1]!.gold);
+  });
+
+  it('laesst die abgelaufene Frist ausserhalb der Vorbereitung unberuehrt', () => {
+    // Die Plattform kann knapp zu spaet melden: Im selben Augenblick hat der
+    // letzte Sitz "bereit" getippt.
+    let p = tafelrunde.act(partie(2), 0, { typ: 'bereit' });
+    p = tafelrunde.act(p, 1, { typ: 'bereit' });
+    assert.equal(tafelrunde.advancePhase!(p), p);
+  });
+
+  /**
+   * Ein Snapshot aus der Zeit vor der Frist.
+   *
+   * Ohne das Nachziehen liefe die Partie nach dem Deploy bis zum Ende ohne
+   * Deckel weiter — und zwar unauffaellig, denn die Phase endet ja weiterhin,
+   * sobald alle bereit sind.
+   */
+  it('ergaenzt einem alten Snapshot die fehlende Rundenfrist', () => {
+    const roh = tafelrunde.serialize(partie(2)) as Record<string, unknown>;
+    const regeln = { ...(roh['regeln'] as Record<string, unknown>) };
+    delete regeln['vorbereitungMs'];
+    roh['regeln'] = regeln;
+
+    const geladen = tafelrunde.deserialize(roh);
+    assert.equal(geladen.regeln.vorbereitungMs, DEFAULT_REGELN.vorbereitungMs);
+    assert.equal(tafelrunde.phaseMs!(geladen), DEFAULT_REGELN.vorbereitungMs);
+  });
+
+  it('ergaenzt einem alten Tisch die fehlende Rundenfrist beim Anlegen', () => {
+    const { vorbereitungMs, ...ohne } = DEFAULT_REGELN;
+    const p = tafelrunde.createParty({
+      config: ohne as typeof DEFAULT_REGELN,
+      seats: 2,
+      rounds: 1,
+      seed: 42,
+    });
+    assert.equal(p.regeln.vorbereitungMs, vorbereitungMs);
   });
 
   it('liefert Platzierungen und Erfahrungsgrundlage fuer jeden Sitz', () => {

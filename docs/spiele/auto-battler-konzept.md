@@ -88,7 +88,11 @@ und bringt Feldplätze.
 
 ### Rundenablauf
 
-1. **Vorbereitung** (ca. 30 s): kaufen, setzen, verschmelzen.
+1. **Vorbereitung** (ca. 30 s): kaufen, setzen, verschmelzen. Sie endet,
+   sobald der letzte Sitz „Bereit" tippt — spätestens aber nach
+   `vorbereitungMs` (45 s, seit dem 06.09.2026); danach gelten offene Sitze
+   als bereit. Gemessen dauert sie im Median 15,5 s, siehe
+   `docs/TAFELRUNDE-SPIELZEIT.md`.
 2. **Kampf** (ca. 15–20 s): läuft automatisch, wird nur zugesehen.
    Gemessen 17,3 s — erreicht wird das über den Zeitraffer, siehe unten.
 3. **Ergebnis**: Schaden am Verlierer nach verbliebenen Gegnereinheiten.

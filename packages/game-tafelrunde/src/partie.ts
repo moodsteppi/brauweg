@@ -838,6 +838,34 @@ function pruefePhase(partie: TafelrundePartie): TafelrundePartie {
   return beginneKampf(partie);
 }
 
+/**
+ * Die Vorbereitungsfrist ist um: Wer noch offen ist, gilt jetzt als bereit.
+ *
+ * Das ist der Deckel auf die Platzierungsphase (`vorbereitungMs` im
+ * Regelsatz). Gemessen hat die Zeit die Plattform — dieses Paket hat keine Uhr
+ * (game-api, Grundsatz 1) und erfaehrt vom Ablauf nur dadurch, dass jemand
+ * diese Funktion ruft.
+ *
+ * Gebucht wird NICHTS: kein Zwangskauf, kein Aufstellen, keine Strafe. Wer die
+ * Frist verstreichen laesst, tritt mit dem Brett an, das er hat — dieselbe
+ * Antwort, die das Spiel schon fuer einen verlassenen Sitz kennt. Alles andere
+ * hiesse, fuer jemanden zu entscheiden, der gerade nicht da ist.
+ *
+ * Ausserhalb der Vorbereitung ist es ein Nulldurchgang: Die Plattform kann die
+ * Frist knapp zu spaet melden, wenn im selben Augenblick der letzte Sitz
+ * "bereit" getippt hat.
+ */
+export function fristAbgelaufen(partie: TafelrundePartie): TafelrundePartie {
+  if (partie.fertig || partie.phase !== 'vorbereitung') return partie;
+
+  const heere: Record<number, Heer> = { ...partie.heere };
+  for (const sitz of lebendeSitze(partie)) {
+    const heer = heere[sitz]!;
+    if (!heer.bereit) heere[sitz] = { ...heer, bereit: true };
+  }
+  return pruefePhase({ ...partie, heere });
+}
+
 // ---------------------------------------------------------------------------
 // Der Kampf
 // ---------------------------------------------------------------------------

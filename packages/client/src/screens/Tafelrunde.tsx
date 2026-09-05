@@ -1023,6 +1023,7 @@ export function Tafelrunde({
         legaleZuege={(tisch.view?.legalActions ?? []) as unknown as Aktion[]}
         revision={tisch.view?.revision ?? -1}
         frist={tisch.view?.interludeDeadline ?? null}
+        rundenfrist={tisch.view?.phaseDeadline ?? null}
         sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
         onAktion={(aktion) => tisch.send(aktion)}
         onZurueck={verlasseUndZurueck}
@@ -1235,6 +1236,7 @@ function Ruestkammer({
   legaleZuege,
   revision,
   frist,
+  rundenfrist,
   sitze,
   onAktion,
   onZurueck,
@@ -1247,6 +1249,15 @@ function Ruestkammer({
   revision: number;
   /** Frist der Schaupause (`interludeDeadline`), waehrend des Kampfes gesetzt. */
   frist: number | null;
+  /**
+   * Frist der Platzierungsphase (`phaseDeadline`), waehrend der Vorbereitung
+   * gesetzt. Zwei Felder und nicht eins, weil sie zwei verschiedene Dinge
+   * meinen: Die Schaupause laeuft, waehrend NIEMAND handeln darf, und die
+   * Kampfanzeige rechnet ihr Aufholen daraus aus (`startVersatz`). Ihr die
+   * Frist der Ruestphase unterzuschieben hiesse, den Kampf mitten im Getuemmel
+   * beginnen zu lassen.
+   */
+  rundenfrist: number | null;
   sitze: readonly SitzZeile[];
   onAktion: (aktion: Aktion) => void;
   onZurueck: () => void;
@@ -1683,7 +1694,7 @@ function Ruestkammer({
           <Phasenzeile
             runde={sicht.runde}
             phase={sicht.phase}
-            frist={frist}
+            frist={frist ?? rundenfrist}
             bereit={bereitZahl}
             offen={offeneSitze}
           />
@@ -1782,7 +1793,7 @@ function Ruestkammer({
         <Phasenzeile
           runde={sicht.runde}
           phase={sicht.phase}
-          frist={frist}
+          frist={frist ?? rundenfrist}
           bereit={bereitZahl}
           offen={offeneSitze}
         />

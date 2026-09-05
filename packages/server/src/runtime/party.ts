@@ -54,6 +54,12 @@ export interface RuntimeOptions {
    */
   readonly interludeMaxMs?: number;
   /**
+   * Obergrenze fuer jede Phasenfrist des Moduls (`phaseMs`). Aus demselben
+   * Grund wie `interludeMaxMs` und aus demselben Grund hier und nicht im
+   * Modul: Die Platzierungsphase von Tafelrunde dauert echte 45 Sekunden.
+   */
+  readonly phaseMaxMs?: number;
+  /**
    * Ab wann ein Sitz als verlassen gilt: so lange weg, ohne wiederzukommen.
    *
    * Gemessen an der Uhr und nicht in verpassten Zuegen. Ein Sitz kommt je
@@ -119,6 +125,13 @@ export interface LiveParty {
    * sonst schoebe jeder Tipp die Frist wieder auf.
    */
   interludeDeadline: number | null;
+  /**
+   * Ende der laufenden Phase (phaseMs des Moduls), z.B. der Platzierungsphase
+   * von Tafelrunde. Anders als die Zugzeit gilt sie fuer den ganzen Tisch und
+   * bleibt ueber Aktionen hinweg stehen — sonst faellt sie bei einem Spiel, in
+   * dem alle gleichzeitig handeln, bei jedem Kauf auf den vollen Wert zurueck.
+   */
+  phaseDeadline: number | null;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   /** Gesetzt, solange der Clantisch pausiert ist. */
@@ -151,6 +164,7 @@ const DEFAULTS = {
   // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt.
   botDelayMs: 800,
   interludeMaxMs: Number.POSITIVE_INFINITY,
+  phaseMaxMs: Number.POSITIVE_INFINITY,
   absenceMs: 5 * 60_000,
   finishedRetentionMs: 10 * 60_000,
 };
@@ -340,6 +354,7 @@ export class PartyRuntime {
       endAfterRound: false,
       turnDeadline: null,
       interludeDeadline: null,
+      phaseDeadline: null,
       timer: null,
       offlineTimer: null,
       paused: false,
@@ -414,6 +429,7 @@ export class PartyRuntime {
       endAfterRound: false,
       turnDeadline: null,
       interludeDeadline: null,
+      phaseDeadline: null,
       timer: null,
       offlineTimer: null,
       paused: table.pausedAt !== null,
@@ -492,6 +508,7 @@ export class PartyRuntime {
       currentActor: party.module.currentActor(party.state),
       turnDeadline: party.turnDeadline,
       interludeDeadline: party.interludeDeadline,
+      phaseDeadline: party.phaseDeadline,
       botSeats: [...party.botControlled],
       leftSeats: [...party.leftSeats],
       finished: party.finished,
@@ -583,6 +600,7 @@ export class PartyRuntime {
       party.timer = null;
       party.turnDeadline = null;
       party.interludeDeadline = null;
+      party.phaseDeadline = null;
       return;
     }
     if (party.timer) clearTimeout(party.timer);
@@ -591,10 +609,14 @@ export class PartyRuntime {
 
     const actor = party.module.currentActor(party.state);
     if (actor === null) {
+      // Niemand am Zug heisst Schaupause, und die hat ihre eigene Frist. Zwei
+      // Uhren nebeneinander waeren zwei Antworten auf dieselbe Frage.
+      party.phaseDeadline = null;
       this.scheduleInterlude(party);
       return;
     }
     party.interludeDeadline = null;
+    this.schedulePhase(party);
 
     const seat = party.seats.find((candidate) => candidate.index === actor);
 
@@ -604,6 +626,23 @@ export class PartyRuntime {
     // die Verlassen-Regel liefe ins Leere. `botControlled` ist deshalb nur
     // eine Anzeige, kein Steuerflag.
     const isBot = !seat || !seat.accountId || party.leftSeats.has(actor);
+
+    /*
+     * Ein Timer fuer zwei Fristen: Der naechste Weckruf ist der fruehere von
+     * Zugzeit (bzw. Botpause) und Phasenfrist. Zwei Timeouts nebeneinander
+     * waeren zwei Stellen, an denen `party.timer` haengt — und die zweite
+     * ueberschriebe die erste.
+     */
+    const bisPhase =
+      party.phaseDeadline === null ? null : Math.max(0, party.phaseDeadline - Date.now());
+    const bisZug = isBot ? this.opts.botDelayMs : this.opts.turnTimeoutMs;
+
+    if (bisPhase !== null && bisPhase < bisZug) {
+      party.timer = setTimeout(() => {
+        void this.advancePhase(party, actor);
+      }, bisPhase);
+      return;
+    }
 
     if (isBot) {
       party.timer = setTimeout(() => {
@@ -616,6 +655,66 @@ export class PartyRuntime {
     party.timer = setTimeout(() => {
       void this.onTimeout(party, actor);
     }, this.opts.turnTimeoutMs);
+  }
+
+  /**
+   * Frist der laufenden Phase (phaseMs des Moduls), obwohl jemand am Zug ist.
+   *
+   * Sie wird nur EINMAL gestellt und danach nicht mehr angefasst — genau das
+   * unterscheidet sie von der Zugzeit, die bei jeder Aktion irgendeines Sitzes
+   * neu anlaeuft. Zurueckgesetzt wird sie, wenn das Modul keine Frist mehr
+   * nennt; bei Tafelrunde ist das die Kampfphase zwischen zwei Vorbereitungen
+   * (siehe phaseMs in game-api).
+   */
+  private schedulePhase(party: LiveParty): void {
+    const ms = party.module.phaseMs?.(party.state) ?? null;
+    if (ms === null) {
+      party.phaseDeadline = null;
+      return;
+    }
+    if (party.phaseDeadline === null) {
+      party.phaseDeadline = Date.now() + Math.min(ms, this.opts.phaseMaxMs);
+    }
+  }
+
+  /**
+   * Die Phasenfrist ist um: Das Modul entscheidet, was mit den Sitzen
+   * geschieht, die nicht gehandelt haben.
+   *
+   * `actor` ist der Sitz, den das Modul zuletzt genannt hat — bei einem Spiel
+   * ohne Zugfolge der, auf den der Tisch wartet. Fuer ihn zaehlt die Frist wie
+   * ein verpasster Zug, sonst liefe die Verlassen-Regel bei Tafelrunde ins
+   * Leere: Die Phasenfrist ist kuerzer als die Zugzeit, `onTimeout` kaeme also
+   * nie mehr dran (siehe amZug in packages/game-tafelrunde/src/partie.ts).
+   */
+  private async advancePhase(party: LiveParty, actor: number): Promise<void> {
+    if (party.finished || party.paused || !this.live.has(party.tableId)) return;
+    const advance = party.module.advancePhase;
+    // Zwischen Timerstellung und -ablauf kann die Phase schon vorbei sein.
+    if (!advance || party.module.phaseMs?.(party.state) === null) return;
+    party.phaseDeadline = null;
+
+    /*
+     * KEIN `botControlled`: Anders als beim Zug-Timeout spielt hier niemand
+     * fuer den Sitz weiter — das Modul verbucht ihn nur so, wie seine Regeln
+     * eine versaeumte Phase verbuchen. Ein Bot-Zeichen an einem Sitz, den kein
+     * Bot spielt, waere eine Auskunft, die nicht stimmt.
+     */
+    const seat = party.seats.find((candidate) => candidate.index === actor);
+    if (seat?.accountId && !party.leftSeats.has(actor)) {
+      if (!party.absentSince.has(actor)) party.absentSince.set(actor, Date.now());
+      const wegSeit = party.absentSince.get(actor)!;
+      if (Date.now() - wegSeit >= this.opts.absenceMs) this.markLeft(party, actor);
+    }
+
+    try {
+      party.state = advance.call(party.module, party.state);
+      await this.afterAction(party);
+    } catch (err) {
+      // Wie beim Bot: Ein Fehler hier darf den Tisch nicht einfrieren.
+      // eslint-disable-next-line no-console
+      console.error(`Phasenfrist an Tisch ${party.tableId}:`, err);
+    }
   }
 
   /**
@@ -760,6 +859,7 @@ export class PartyRuntime {
     party.timer = null;
     party.offlineTimer = null;
     party.turnDeadline = null;
+    party.phaseDeadline = null;
     this.live.delete(tableId);
 
     await this.db
@@ -870,6 +970,7 @@ export class PartyRuntime {
     party.timer = null;
     party.offlineTimer = null;
     party.turnDeadline = null;
+    party.phaseDeadline = null;
 
     const standings = party.module.standings(party.state);
     await this.persist(party);
