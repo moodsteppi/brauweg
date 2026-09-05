@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 
 import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { easypoker } from '@brauweg/game-easypoker';
+import { tafelrunde } from '@brauweg/game-tafelrunde';
 
 import { AppError } from '../src/errors.js';
 import { registry } from '../src/games/registry.js';
@@ -17,6 +18,7 @@ import {
   listTables,
   saveRuleSet,
   schrumpfeAufBesetzte,
+  tableRules,
   tableWithSeats,
 } from '../src/tables/service.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
@@ -360,6 +362,77 @@ test('ein unvollstaendiger Regelsatz wird nicht angenommen', async (t) => {
       }),
     (err: AppError) => err.code === 'ruleSetInvalid',
   );
+});
+
+test('ohne Regelsatz gilt der des Moduls', async (t) => {
+  /*
+   * Der Gegenentwurf zum Test darueber: Ein unvollstaendiger Regelsatz wird
+   * abgewiesen, GAR KEINER heisst "nimm den des Moduls".
+   *
+   * Das ist der Weg fuer jeden Bildschirm, der nichts einstellen laesst.
+   * Ohne ihn muss er die Vorgabezahlen abschreiben — und diese Kopie
+   * ueberstimmt dann das Modul, weil der Server eine mitgeschickte `config`
+   * als Regelsatz des Tisches festschreibt. Bei Tafelrunde waere genau das am
+   * 05.09.2026 zweimal durchgerutscht: erst haetten alle Tische mit 100 statt
+   * 20 Startleben gelaufen, dann mit 20 statt 14.
+   */
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  const table = await createTable(c.db, {
+    accountId,
+    gameId: 'tafelrunde',
+    seats: 4,
+    rounds: 1,
+  });
+
+  assert.deepEqual(await tableRules(c.db, table.id), tafelrunde.defaultConfig());
+
+  // `null` ist etwas anderes als weggelassen: ein gesetzter, falscher Wert.
+  // Er darf NICHT still durch die Vorgabe ersetzt werden, sonst deckt die
+  // Bequemlichkeit einen Fehler im Aufrufer zu.
+  await assert.rejects(
+    () =>
+      createTable(c.db, {
+        accountId,
+        gameId: 'tafelrunde',
+        config: null,
+        seats: 4,
+        rounds: 1,
+      }),
+    (err: AppError) => err.code === 'ruleSetInvalid',
+  );
+});
+
+test('POST /api/tables nimmt einen Rumpf ohne Regelsatz an', async (t) => {
+  // Die Zod-Pruefung ist das eigentliche Tor: Stuende dort weiter
+  // `config: z.unknown()` ohne `.optional()`, kaeme der Bildschirm gar nicht
+  // erst bis zur Vorgabe oben.
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+
+  const app = await buildApp({
+    db: c.db,
+    runtime: new PartyRuntime(c.db),
+    auth: c.auth,
+    cookieSecure: false,
+    sessionTtlDays: 30,
+  });
+  t.after(() => app.close());
+
+  const token = await createSession(c.auth, anna.accountId);
+  const antwort = await app.inject({
+    method: 'POST',
+    url: '/api/tables',
+    headers: { cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}`, 'content-type': 'application/json' },
+    payload: { gameId: 'tafelrunde', seats: 4, rounds: 1, visibility: 'on_request' },
+  });
+
+  assert.equal(antwort.statusCode, 201, antwort.body);
+  const { id } = antwort.json() as { id: string };
+  assert.deepEqual(await tableRules(c.db, id), tafelrunde.defaultConfig());
 });
 
 test('die Lobby vor Spielstart zu verlassen ist straffrei', async (t) => {

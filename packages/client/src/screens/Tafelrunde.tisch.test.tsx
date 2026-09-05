@@ -168,6 +168,14 @@ describe('Tafelrunde: Tisch erstellen und beitreten', () => {
         fillWithBots: false,
       }),
     );
+
+    /*
+     * UND KEIN EIGENER REGELSATZ. Bis zum 05.09.2026 ging hier eine
+     * abgeschriebene Kopie von DEFAULT_REGELN als `config` mit; der Server
+     * schreibt so etwas als Regelsatz des Tisches fest und fragt das Modul
+     * dann gar nicht mehr. Ohne das Feld nimmt er `defaultConfig()`.
+     */
+    expect(createTable.mock.calls[0]?.[0]).not.toHaveProperty('config');
   });
 
   it('zeigt dem Gastgeber seinen Code und die Beigetretenen', async () => {
