@@ -711,20 +711,33 @@ describe('Bot: das fertige Heer', () => {
    * Saat jeder Partie ist `SAAT-feld-<stark>-<schwach>-<i>`; wer die Zahlen von
    * Hand nachstellen will, gibt dem Werkzeug
    * `--saat 0123456789abcdef0123456789abcdef-feld` mit.
+   *
+   * FUER `hart` GEGEN `normal` REICHEN HUNDERT NICHT MEHR, und das ist keine
+   * Schwaeche der Aussage, sondern ihre Groesse: Die beiden liegen ueber 400
+   * Partien bei 137 : 87,7, also gut dreissig Siege auseinander — bei hundert
+   * Partien sind das noch acht, und die verschwinden im Rauschen. Am
+   * 05.09.2026 stand die Probe dort auf 25 : 25 und war rot, waehrend
+   * dieselbe Paarung ueber 400 Partien auf zwei unabhaengigen Saatbasen klar
+   * fuer `hart` ausging (137 : 87,7 und 124 : 92,0). Gegen `sanft` ist der
+   * Abstand rund zwanzigfach; dort genuegen hundert Partien weiterhin.
    */
   const PARTIEN_JE_PAARUNG = 100;
+
+  /** Wo der Abstand klein ist, braucht die Aussage mehr Partien. Siehe oben. */
+  const PARTIEN_KNAPPE_PAARUNG = 400;
 
   function imFeld(
     stark: Schwierigkeit,
     schwach: Schwierigkeit,
     regeln: TafelrundeRegeln = DEFAULT_REGELN,
     regler: Kampfregler = STANDARD_REGLER,
+    partien: number = PARTIEN_JE_PAARUNG,
   ): [number, number] {
     const sitze = [0, 1, 2, 3];
     // Sitz 0 spielt stark, die drei uebrigen schwach.
     const besetzung = sitze.map((sitz) => (sitz === 0 ? stark : schwach));
     const siege = [0, 0, 0, 0];
-    for (let i = 0; i < PARTIEN_JE_PAARUNG; i++) {
+    for (let i = 0; i < partien; i++) {
       // `sieger` ist der EINDEUTIGE erste Platz; ein geteilter Sieg sagt ueber
       // die Gangart nichts und steht in messen.ts deshalb als null.
       const befund = spieleParte(
@@ -771,14 +784,19 @@ describe('Bot: das fertige Heer', () => {
    *
    * WORAUF DIE AUSSAGE HEUTE RUHT — vier Messungen zu je 400 Partien ueber
    * zwei unabhaengige Saatbasen (`…-feld` und `gegenprobe-b`), alle in
-   * dieselbe Richtung:
+   * dieselbe Richtung (zuletzt aufgenommen am 05.09.2026 abends, nach der
+   * Kuerzung auf 12 Startleben):
    *
-   *     gebauter Stand (14 Leben, x2)   140 : 86,7   139 : 87,0
-   *     langer Stand (20 Leben, x1)     169 : 77,0   147 : 84,3
+   *     gebauter Stand (12 Leben, x2)   132 : 89,3   130 : 90,0
+   *     langer Stand (20 Leben, x1)     138 : 87,3   132 : 89,3
    *
-   * Dazu ein Kontrolllauf: Setzt man `hart` in allem auf `normal`, steht es
-   * 102 : 99,3 — die Messung ist also unverzerrt und nicht der Sitz 0 gewinnt
-   * hier, sondern die Gangart.
+   * Dazu ein Kontrolllauf, und der ist seit dem Markengewicht NICHT mehr
+   * neutral: Setzt man `hart` in allem auf `normal`, gewinnt Sitz 0 mit
+   * 110 : 96,7. Der Grund ist der gemeinsame Vorrat und die Reihenfolge, in
+   * der der Messstand die Sitze ruesten laesst — die Begruendung steht bei
+   * GANGARTEN in bot.ts. Von den 132 Siegen sind also rund 110 schon der
+   * Sitz; die Gangart traegt den Rest, und das reicht ueber alle vier
+   * Messungen.
    *
    * WANN SIE WIEDER FALLEN DARF: bei der naechsten Aenderung am LADEN. Genau
    * die hat sie beide Male gekippt, und die Zahlen dazu fallen in Sekunden an
@@ -786,28 +804,40 @@ describe('Bot: das fertige Heer', () => {
    * dagegen faengt die Probe darunter ab.
    */
   it('gewinnt als harter Gegner oefter als drei normale', () => {
-    const [hart, normal] = imFeld('hart', 'normal');
+    const [hart, normal] = imFeld(
+      'hart',
+      'normal',
+      DEFAULT_REGELN,
+      STANDARD_REGLER,
+      PARTIEN_KNAPPE_PAARUNG,
+    );
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal`);
   });
 
   /**
    * DIESELBE AUSSAGE NOCH EINMAL, ABER BEI EINER ANDEREN PARTIELAENGE.
    *
-   * Der gebaute Stand ist seit dem 05.09.2026 der kurze (14 Leben, Zeitraffer
-   * x2, rund elf Runden); die drei Proben darueber messen ihn. Diese hier
+   * Der gebaute Stand ist seit dem 05.09.2026 der kurze (12 Leben, Zeitraffer
+   * x2, rund neun Runden); die drei Proben darueber messen ihn. Diese hier
    * misst den LANGEN Stand von gestern — 20 Leben, kein Zeitraffer, rund
    * fuenfzehn Runden — und behauptet dort dasselbe.
    *
    * Sie steht da, weil die Rundenzahl genau die Zahl ist, an der Robin dreht:
    * 100 Leben, dann 20, dann 14. Eine Gangart, die nur bei der Laenge von
    * heute vorne liegt, ist auf eine Zahl geeicht statt auf das Spiel — und das
-   * faellt sonst erst der uebernaechsten Umstellung auf. Ueber diese 100
-   * Partien steht es 48 : 17,3, ueber 400 sind es 169 : 77,0.
+   * faellt sonst erst der uebernaechsten Umstellung auf. Ueber die 400 Partien
+   * dieser Probe steht es 138 : 87,3, auf der zweiten Saatbasis 132 : 89,3.
    */
   it('gewinnt als harter Gegner auch in der langen Partie oefter', () => {
     const lang: TafelrundeRegeln = { ...DEFAULT_REGELN, startLeben: 20 };
     const gemaechlich: Kampfregler = { ...STANDARD_REGLER, zeitraffer: 1 };
-    const [hart, normal] = imFeld('hart', 'normal', lang, gemaechlich);
+    const [hart, normal] = imFeld(
+      'hart',
+      'normal',
+      lang,
+      gemaechlich,
+      PARTIEN_KNAPPE_PAARUNG,
+    );
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal (20 Leben, x1)`);
   });
 });

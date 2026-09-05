@@ -41,6 +41,7 @@ import {
   einkommen,
   heerVon,
   kampfVon,
+  platzierungen,
   sieger,
   sitzeVon,
 } from './partie.js';
@@ -159,6 +160,31 @@ function ergebnis(kampf: Kampfpaarung): Paarungsergebnis {
   };
 }
 
+/**
+ * Ein Sitz in der Rangliste.
+ *
+ * Das ist `platzierungen` aus partie.ts, in der Benennung der Sicht. Es steht
+ * hier, weil `sieger` (ein Sitz oder null) fuer eine Anzeige nicht reicht:
+ * Daraus laesst sich weder "Platz 1 von 8" noch "Platz 5 von 8" bilden.
+ *
+ * Und es steht hier, damit es NUR hier steht. Bis zum 6.9.2026 rechnete der
+ * Bildschirm die Platzierung selbst nach — eine wortgetreue Abschrift der
+ * Formel, moeglich, weil alle Eingaben (`ausRunde`, `leben`, `runde`) in
+ * jeder Sicht stehen. Wer im Modul das zweite Kriterium aendert (etwa Leben
+ * durch gehaltenes Gold ersetzt), haette dort eine Platzierung bekommen, die
+ * der Server anders sieht (CLAUDE.md: der Client bildet keine Regel nach).
+ */
+export interface Platzstand {
+  readonly sitz: number;
+  /** 1 ist der beste. Bei Gleichstand teilen sich zwei Sitze eine Zahl. */
+  readonly platz: number;
+  /**
+   * Ueberstandene Runden — die Zahl, nach der sortiert wird. Wer noch lebt,
+   * zaehlt die laufende Runde mit (siehe `platzierungen` in partie.ts).
+   */
+  readonly runden: number;
+}
+
 export interface TafelrundeSicht {
   /**
    * Der eigene Sitz, oder null fuer Zuschauer. Steht in der Sicht und nicht
@@ -171,6 +197,14 @@ export interface TafelrundeSicht {
   readonly phase: Phase;
   readonly fertig: boolean;
   readonly sieger: number | null;
+  /**
+   * Die Rangliste aller Sitze, der beste zuerst (siehe `Platzstand`).
+   *
+   * Sie steht in JEDER Sicht und nicht erst am Ende: Wer in Runde vier
+   * ausscheidet, bekommt sein Endbild, waehrend die Partie weiterlaeuft — und
+   * "Platz 5 von 8" ist dann schon die richtige Auskunft.
+   */
+  readonly platzierung: readonly Platzstand[];
   readonly zuschauer: boolean;
   readonly ladenPlaetze: number;
   readonly bankPlaetze: number;
@@ -282,6 +316,15 @@ function grundsicht(
     phase: partie.phase,
     fertig: partie.fertig,
     sieger: sieger(partie),
+    // Umbenannt und nicht durchgereicht: `platzierungen` liefert die Form von
+    // `PartyStanding` (game-api, fuer die Plattform-Wertung), die Sicht
+    // spricht Deutsch. `left` faellt dabei weg — dass ein Sitz den Tisch
+    // verlassen hat, steht schon an `FremdeSicht.verlassen`.
+    platzierung: platzierungen(partie).map((p) => ({
+      sitz: p.seat,
+      platz: p.place,
+      runden: p.points,
+    })),
     zuschauer: ich === null,
     ladenPlaetze: partie.regeln.ladenPlaetze,
     bankPlaetze: partie.regeln.bankPlaetze,

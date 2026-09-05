@@ -6,18 +6,16 @@ import {
   gegnerDieseRunde,
   leistenplaetze,
   nochDabei,
-  platzTabelle,
 } from './platzierung';
 
 /*
- * Die Rechnungen hinter Mitspielerleiste und Endbild.
+ * Die Ableitungen hinter Mitspielerleiste und Endbild.
  *
- * Der wichtigste Teil ist `platzTabelle`: Sie ist die Abschrift von
- * `platzierungen` aus packages/game-tafelrunde/src/partie.ts (siehe der Kopf
- * von platzierung.ts). Die Faelle hier sind deshalb bewusst genau die
- * Unterscheidungen, an denen die beiden Fassungen auseinanderlaufen wuerden:
- * ueberstandene Runden vor Leben, Leben als zweites Kriterium, und ein
- * geteilter Platz nur bei Gleichstand in BEIDEM.
+ * Hier stand bis zum 6.9.2026 der Pruefstand fuer `platzTabelle` — die
+ * Abschrift der Platzierungsformel aus dem Modul. Die Formel liegt jetzt nur
+ * noch dort, die Sicht liefert sie als `platzierung` mit, und die Faelle sind
+ * nach packages/game-tafelrunde/test/sicht.test.ts gewandert. Was bleibt,
+ * ist Nachschlagen und Ablesen.
  */
 
 function sitz(teil: Partial<Sitzstand> & { sitz: number }): Sitzstand {
@@ -93,56 +91,17 @@ describe('gegnerDieseRunde', () => {
   });
 });
 
-describe('platzTabelle', () => {
-  it('setzt die Lebenden vor die Ausgeschiedenen', () => {
-    const tabelle = platzTabelle(
-      [
-        sitz({ sitz: 0, ausRunde: 3, leben: 0 }),
-        sitz({ sitz: 1, leben: 20 }),
-        sitz({ sitz: 2, ausRunde: 7, leben: 0 }),
-      ],
-      9,
-    );
-    expect(tabelle.map((p) => p.sitz)).toEqual([1, 2, 0]);
-    expect(tabelle.map((p) => p.platz)).toEqual([1, 2, 3]);
-  });
-
-  it('zaehlt die laufende Runde fuer alle mit, die noch stehen', () => {
-    const tabelle = platzTabelle([sitz({ sitz: 0 }), sitz({ sitz: 1, ausRunde: 12 })], 12);
-    expect(tabelle.find((p) => p.sitz === 0)?.runden).toBe(12);
-    expect(tabelle.find((p) => p.sitz === 1)?.runden).toBe(12);
-  });
-
-  it('entscheidet bei gleichen Runden ueber das Leben', () => {
-    const tabelle = platzTabelle([sitz({ sitz: 0, leben: 12 }), sitz({ sitz: 1, leben: 44 })], 6);
-    expect(tabelle.map((p) => p.sitz)).toEqual([1, 0]);
-    expect(tabelle.map((p) => p.platz)).toEqual([1, 2]);
-  });
-
-  it('teilt einen Platz nur bei Gleichstand in Runden UND Leben', () => {
-    const tabelle = platzTabelle(
-      [sitz({ sitz: 0, leben: 30 }), sitz({ sitz: 1, leben: 30 }), sitz({ sitz: 2, leben: 10 })],
-      5,
-    );
-    /* Zwei erste Plaetze, und der Dritte ist dann der DRITTE — nicht der
-       zweite. Genau so zaehlt das Modul (platzierungen in partie.ts). */
-    expect(tabelle.map((p) => p.platz)).toEqual([1, 1, 3]);
-  });
-
-  it('liefert eine feste Reihenfolge bei voelligem Gleichstand', () => {
-    /* Ohne den Sitz als letztes Kriterium haengt die Reihung von der
-       Eingabereihenfolge ab — und die Anzeige spraenge bei jedem Rundruf. */
-    const a = platzTabelle([sitz({ sitz: 3 }), sitz({ sitz: 1 })], 4);
-    const b = platzTabelle([sitz({ sitz: 1 }), sitz({ sitz: 3 })], 4);
-    expect(a.map((p) => p.sitz)).toEqual([1, 3]);
-    expect(b.map((p) => p.sitz)).toEqual([1, 3]);
-  });
-});
-
 describe('eigenerPlatz', () => {
-  it('findet den eigenen Sitz in der Tabelle', () => {
-    const tabelle = platzTabelle([sitz({ sitz: 0, leben: 10 }), sitz({ sitz: 1, leben: 90 })], 8);
+  it('findet den eigenen Sitz in der Rangliste der Sicht', () => {
+    /* Die Rangliste kommt fertig aus dem Modul (sicht.ts, `platzierung`);
+       hier wird nur noch darin gesucht. */
+    const tabelle = [
+      { sitz: 1, platz: 1, runden: 8 },
+      { sitz: 0, platz: 2, runden: 8 },
+    ];
     expect(eigenerPlatz(tabelle, 0)?.platz).toBe(2);
+    expect(eigenerPlatz(tabelle, 1)?.runden).toBe(8);
+    /* Zuschauer haben keinen Sitz, und ein fremder Tisch keinen Sitz 5. */
     expect(eigenerPlatz(tabelle, null)).toBeNull();
     expect(eigenerPlatz(tabelle, 5)).toBeNull();
   });
