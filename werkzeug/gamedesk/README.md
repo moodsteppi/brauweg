@@ -373,8 +373,11 @@ Unter `boards/` liegen zwei fertige Tafeln, die mit „Öffnen…" geladen werde
 > lässt sich das nicht durchhalten: Am 05.09. nannte sie noch drei spielbare
 > Spiele — es waren zehn. Von Hand hinzugefügt war bis dahin genau eine Kachel, die
 > Projekt-Vorschau auf Feldherr; der Erzeuger baut sie jetzt selbst aus der
-> Nachbardatei. Wer im Editor etwas ergänzt, trägt es in den Erzeuger nach —
-> sonst ist es beim nächsten Lauf weg.
+> Nachbardatei. Das Änderungsdatum darin kommt aus dem letzten Commit der
+> Nachbardatei (`git log -1 --format=%ct`), nicht aus ihrer Dateizeit: Die
+> setzen Klonen und Auschecken auf jedem Rechner neu, und die eingecheckte
+> Tafel galt dadurch überall als geändert. Wer im Editor etwas ergänzt, trägt
+> es in den Erzeuger nach — sonst ist es beim nächsten Lauf weg.
 
 Das Muster einer Themenfläche, an dem sich weitere orientieren:
 
