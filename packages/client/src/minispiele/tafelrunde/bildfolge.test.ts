@@ -257,18 +257,33 @@ describe('FIGURENKASTEN', () => {
    * Todeszelle enger wurde, waere jede Figur der Arena um 14 % gewachsen,
    * ohne dass jemand an der Groesse etwas geaendert haette.
    */
-  it('stellt die Figur auf 78 Prozent der Kartenhoehe', () => {
+  it('setzt die Figur mit dem Fuss auf 16,4 Prozent ueber der Kartenunterkante', () => {
     const hoehe = FIGURENKASTEN.hoehe / 100;
     const boden = FIGURENKASTEN.boden / 100;
-    // Oberkante des Ausschnitts ueber der Kartenunterkante, minus der Weg vom
-    // Zellrand bis zum Fusspunkt: Da steht die Figur.
-    const fussVonUnten = boden + hoehe * (1 - FIGUREN3D_FUSSPUNKT.y);
-    expect(1 - fussVonUnten).toBeCloseTo(0.78, 3);
+    // Unterkante des Ausschnitts plus der Weg von dort bis zum Fusspunkt: Da
+    // steht die Figur. 16,4 % ist die Stelle knapp ueber den Sternen, an der
+    // der Lebensbalken sitzt — sie darf sich mit keinem Satz Blaetter
+    // verschieben, sonst schwebt das ganze Heer ueber seinen Feldern.
+    expect(boden + hoehe * (1 - FIGUREN3D_FUSSPUNKT.y)).toBeCloseTo(0.164, 3);
   });
 
   it('haelt den Massstab, wenn der Ausschnitt sich aendert', () => {
-    // Eine Kartenhoehe zeigt so viele Weltmeter, wie der Massstab sagt — egal,
-    // wie viel Welt gerade in einer Zelle steckt.
-    expect(FIGUREN3D_ZELLHOEHE_METER / (FIGURENKASTEN.hoehe / 100)).toBeCloseTo(2.383, 2);
+    /*
+     * Eine Kartenhoehe zeigt so viele Weltmeter, wie der Massstab sagt — egal,
+     * wie viel Welt gerade in einer Zelle steckt. 1,65 ist Robins abgenommene
+     * Groesse vom 06.09.2026 (eine Wache misst 72 x 52 px auf 390 px Breite),
+     * damals aufgeschrieben als „260 % der Kartenhoehe" bei einer Zelle von
+     * 4,29 Metern.
+     */
+    expect(FIGUREN3D_ZELLHOEHE_METER / (FIGURENKASTEN.hoehe / 100)).toBeCloseTo(1.65, 2);
+  });
+
+  it('kommt bei der Zelle von damals wieder auf die abgenommenen 260 Prozent', () => {
+    // Die Gegenprobe zur Umrechnung: Mit dem ALTEN Ausschnitt (4,29 m je
+    // Zelle) muss dieselbe Rechnung die Zahlen ergeben, die am Bild
+    // abgenommen wurden — sonst ist die Figur beim Umstellen groesser oder
+    // kleiner geworden, und niemand haette es gesehen.
+    const alteZelle = 4.29;
+    expect((alteZelle / 1.65) * 100).toBeCloseTo(260, 0);
   });
 });

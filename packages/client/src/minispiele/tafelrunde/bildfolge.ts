@@ -313,22 +313,33 @@ export function zellWeite(stand: Bildstand): number {
  * Wie viele Weltmeter die HOEHE einer Wabenkarte abbildet — der Massstab der
  * Arena.
  *
- * DAS IST DIE ENTSCHEIDUNG, alles andere hier ist Rechnung. Sie stammt aus dem
- * Augenmass, mit dem der Ausschnitt am 05.09.2026 eingestellt wurde (180 % der
- * Kartenhoehe bei einer Zelle von damals 4,29 Metern) — nur steht sie jetzt in
- * Metern statt in Prozent, und damit ueberlebt sie den naechsten Satz
- * Blaetter. Wer die Figuren groesser oder kleiner will, aendert DIESE Zahl:
- * kleiner heisst groessere Figuren.
+ * DAS IST DIE ENTSCHEIDUNG, alles andere hier ist Rechnung. Sie ist Robins vom
+ * 06.09.2026, gemessen auf /probe/kampf bei 390 px: Eine Wache soll 72 auf 52
+ * Pixel gross sein und nicht 50 auf 36 — bei der kleineren Groesse blieb von
+ * der vorgerenderten 3D-Figur eine farbige Silhouette ohne Ruestung, Gesicht
+ * oder Waffe. Im Stylesheet stand sie als „260 % der Kartenhoehe"; das war
+ * dieselbe Aussage, aber nur solange eine Zelle 4,29 Meter Welt trug.
+ *
+ * IN METERN UND NICHT IN PROZENT, weil sie sonst den naechsten Satz Blaetter
+ * nicht ueberlebt: Wie viel Figur in einer Zelle steckt, entscheidet der
+ * gemessene Ausschnitt. Seit die Todeszeile ihre eigene, breitere Zelle hat,
+ * sind es 3,76 Meter — dieselben 260 % waeren 82 statt 72 Pixel gewesen, also
+ * 14 % mehr, als abgenommen wurde. 4,29 / 2,60 = 1,65 sagt dasselbe, ohne den
+ * Ausschnitt zu kennen.
+ *
+ * Wer die Figuren groesser oder kleiner will, aendert DIESE Zahl: kleiner
+ * heisst groessere Figuren.
  */
-const MASSSTAB_METER = 2.383;
+const MASSSTAB_METER = 1.65;
 
 /**
  * Wo die Figur auf der Karte aufsetzt, als Anteil der Kartenhoehe von OBEN.
  *
- * 78 % ist knapp ueber den Sternen am unteren Kartenrand. Tiefer, und die Figur
- * steht auf ihrer eigenen Stufenanzeige.
+ * 83,6 % heisst: Der Fuss steht 16,4 % ueber der Kartenunterkante, knapp ueber
+ * den Sternen und auf der Hoehe des Lebensbalkens. Tiefer, und die Figur steht
+ * auf ihrer eigenen Stufenanzeige; hoeher, und sie schwebt ueber dem Feld.
  */
-const STANDLINIE = 0.78;
+const STANDLINIE = 0.836;
 
 /**
  * Hoehe und Bodenversatz des Figurenausschnitts, in Prozent der Kartenhoehe.
@@ -342,8 +353,9 @@ const STANDLINIE = 0.78;
  * WARUM NICHT ZWEI FESTE PROZENTZAHLEN, wie bis zum 06.09.2026: Die haengen am
  * gemessenen Ausschnitt, ohne ihn zu nennen. Als die Todeszeile ihre eigene
  * Zelle bekam, wurde der Ausschnitt von 4,29 auf 3,76 Meter enger — dieselben
- * 180 % haetten jede Figur der Arena um 14 % wachsen lassen, ohne dass jemand
- * an der Groesse etwas geaendert haette.
+ * 260 % haetten jede Figur der Arena um 14 % wachsen lassen, ohne dass jemand
+ * an der Groesse etwas geaendert haette. Und zwar genau die 260 %, die am
+ * selben Tag an einem Bild abgenommen worden waren.
  */
 export const FIGURENKASTEN = {
   /** Hoehe des Ausschnitts, in Prozent der Kartenhoehe. */

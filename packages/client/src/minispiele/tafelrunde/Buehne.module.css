@@ -27,6 +27,31 @@
   flex-direction: column;
   align-items: center;
   /*
+   * DIE BUEHNE NIMMT DEN PLATZ, DEN DER KAMPF FREIMACHT.
+   *
+   * Waehrend der Kampfphase klappen Werte-Kasten, Bank und Laden zusammen
+   * (screens/Tafelrunde.tsx) — auf einem 390-px-Schirm rund 170 Pixel. Ohne
+   * diese Zeile blieben sie einfach leer: Der Tisch ist eine Spalte mit
+   * `justify-content: flex-start`, alles rutscht nach oben, und die Arena
+   * saesse als schmales Band im oberen Drittel ueber einer schwarzen Flaeche.
+   * Genau so sah es aus, bevor das hier stand — im Bild links auf
+   * `docs/bilder/tafelrunde-arena-groesse.webp`.
+   *
+   * Also waechst die Buehne in den Platz hinein. Das Brett selbst wird davon
+   * nicht groesser — es haengt an der Breite (KampfAnzeige.module.css) —, aber
+   * der Raum darum wird es: mehr Halle ueber dem Horizont, viel mehr Boden
+   * davor. Wie sich der Zuwachs auf beides verteilt, entscheidet die
+   * Polsterung gleich darunter.
+   *
+   * WACHSEN JA, SCHRUMPFEN NEIN — daher die 0 in der Mitte. Die Buehne
+   * schneidet ab, was ueber sie hinausgeht (`overflow: hidden` weiter unten),
+   * und ein Flex-Kind, das unter seine Inhaltsgroesse schrumpfen darf, wuerde
+   * auf einem kurzen Schirm genau das tun: die Arena unten abschneiden. Passt
+   * es nicht, rollt lieber der Tisch — `.tr-tisch` in styles.css kann das, und
+   * bis heute hat er es in der Kampfphase getan, ohne dass etwas fehlte.
+   */
+  flex: 1 0 auto;
+  /*
    * Die Polsterung ist der ganze Trick am Handy. Das Brett ist dort
    * min(94vw, 460px) breit — links und rechts bleiben elf Pixel, und in elf
    * Pixel passt kein Raum. Der Raum entsteht deshalb OBEN UND UNTEN: heller
@@ -37,8 +62,18 @@
    * Der Platz dafuer ist da: Waehrend der Kampfphase steht statt des Ladens
    * nur eine Zeile am Fuss. Genommen wird er trotzdem knapp und mit `clamp`,
    * denn abgeschnitten werden darf am Handy nichts.
+   *
+   * OBEN WAECHST DIE POLSTERUNG MIT DEM SCHIRM, UNTEN NICHT — und das ist die
+   * Aufteilung des Platzes, den `flex: 1` darunter holt. Der Rest faellt hinter
+   * das Brett, also auf den BODEN, und dort gehoert er hin: Der Boden hat ein
+   * Raster, das nach hinten zusammenlaeuft, und aufsteigende Funken. Der
+   * Himmel hat einen weichen Schein und sonst nichts. Am Bild gesehen
+   * (390 px, echter Tisch): Bei gleicher Teilung standen ueber dem Brett
+   * 180 Pixel leerer Verlauf — das sah nicht nach Halle aus, sondern nach
+   * vergessenem Rand. So sind es 90, und davor liegt ein Boden, auf dem man
+   * die Tiefe sieht.
    */
-  padding: clamp(16px, 5vw, 34px) 0 clamp(12px, 4vw, 24px);
+  padding: clamp(16px, 9vh, 90px) 0 clamp(12px, 4vw, 24px);
   /* Boden und Dunst greifen ueber den Rand hinaus, damit an den Seiten keine
      Kante steht. Was drueber ist, wird hier abgeschnitten. */
   overflow: hidden;
@@ -370,7 +405,11 @@
  */
 @media (min-width: 40rem) {
   .buehne {
-    padding: 40px 0 28px;
+    /* Dieselbe Aufteilung wie am Handy — oben mitwachsend, unten fest —, nur
+       mit hoeherem Boden. Stuende hier wieder ein fester Wert, faenge die
+       Buehne den Platz, den `flex: 1` ihr holt, ausschliesslich unter dem
+       Brett auf, und ueber ihm klebte das Brett an der Phasenzeile. */
+    padding: clamp(40px, 9vh, 110px) 0 28px;
   }
   .horizont {
     height: 34%;

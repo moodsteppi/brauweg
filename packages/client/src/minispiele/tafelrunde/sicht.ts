@@ -106,6 +106,11 @@ export interface TafelrundeSicht {
   brettFelder: number;
   brettReihen: number;
   brettSpalten: number;
+  /**
+   * Reihen der Kampfarena (arena.ts). Nicht `brettReihen * 2`: Zwischen den
+   * beiden Haelften liegen leere Reihen, und wie viele, weiss nur das Modul.
+   */
+  arenaReihen: number;
   verschmelzZahl: number;
   maxStufe: number;
   vorrat: Record<string, number>;

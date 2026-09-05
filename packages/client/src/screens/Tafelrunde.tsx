@@ -1694,6 +1694,7 @@ function Ruestkammer({
         paarungen={kampfbild.paarungen}
         ich={sicht.ich}
         brettReihen={sicht.brettReihen}
+        arenaReihen={sicht.arenaReihen}
         brettSpalten={sicht.brettSpalten}
         katalog={katalog}
         nameVon={(sitz) => spielername(zeile(sitz), sitz)}
@@ -1708,6 +1709,16 @@ function Ruestkammer({
       />
     </Buehne>
   );
+
+  /**
+   * Laeuft gerade ein Kampf auf dem Schirm?
+   *
+   * An `kampfbild` und nicht an `sicht.phase === 'kampf'`: Die Arena bleibt
+   * nach dem Phasenwechsel noch einen Wimpernschlag stehen, um zu verblassen
+   * (`useKampfbild`). Ginge das Eingeklappte schon beim Wechsel wieder auf,
+   * spraenge die halbe Seite unter der verblassenden Buehne hervor.
+   */
+  const kampfLaeuft = kampfbild !== null;
 
   if (!eigenes) {
     // Zuschauer: kein Laden, keine Bank, kein Gold (sicht.ts). Es bleibt das
@@ -1850,22 +1861,31 @@ function Ruestkammer({
       {/* Leben und Rang, mehr nicht: Die Runde steht jetzt ausgeschrieben in
           der Phasenzeile darueber, und das Gold gross am Laden, wo es
           ausgegeben wird. Zweimal dieselbe Zahl auf einem Schirm ist kein
-          Dienst, sondern Suchen. */}
-      <header className="tr-kopf">
-        <div className="tr-werte">
-          <span className="tr-wert tr-wert-leben">
-            <LebenZeichen />
-            <strong>{eigenes.leben}</strong>
-            <em>Leben</em>
-          </span>
-          <span className="tr-wert tr-wert-level">
-            <strong>{eigenes.level}</strong>
-            <em>
-              {eigenes.belegt}/{eigenes.feldplaetze} Feld
-            </em>
-          </span>
-        </div>
-      </header>
+          Dienst, sondern Suchen.
+
+          WAEHREND DES KAMPFES STEHT DER KASTEN NICHT DA. Er kostet auf einem
+          390-px-Schirm 62 Pixel, und beide Zahlen darin sind dort entbehrlich:
+          Das eigene Leben steht ohnehin auf der eigenen Kachel in der
+          Mitspielerleiste darueber, und Rang wie Feldplaetze kann man im Kampf
+          weder aendern noch brauchen. Der Platz gehoert in dieser Minute der
+          Arena. */}
+      {!kampfLaeuft && (
+        <header className="tr-kopf">
+          <div className="tr-werte">
+            <span className="tr-wert tr-wert-leben">
+              <LebenZeichen />
+              <strong>{eigenes.leben}</strong>
+              <em>Leben</em>
+            </span>
+            <span className="tr-wert tr-wert-level">
+              <strong>{eigenes.level}</strong>
+              <em>
+                {eigenes.belegt}/{eigenes.feldplaetze} Feld
+              </em>
+            </span>
+          </div>
+        </header>
+      )}
 
       {/* ---- Die Marken auf dem eigenen Brett ---------------------------- */}
       {/* Sie steht ueber dem Brett und damit auch waehrend des Kampfes da:
@@ -1963,61 +1983,70 @@ function Ruestkammer({
           (`.tr-bank`); hier steht nur, dass sie danach kommt.
 
           Die Spaltenzahl kommt aus der Sicht und nicht aus dem Stylesheet:
-          `bankPlaetze` steht im Regelsatz und ist damit je Tisch verstellbar. */}
-      <div
-        className="tr-bank"
-        role="group"
-        aria-label="Reservebank"
-        style={{ gridTemplateColumns: `repeat(${sicht.bankPlaetze}, 1fr)` }}
-      >
-        {Array.from({ length: sicht.bankPlaetze }, (_, platz) => {
-          const ort: Ort = { bereich: 'bank', platz };
-          const k = eigenes.bank[platz] ?? null;
-          return (
-            <div
-              key={platz}
-              className="tr-bankplatz"
-              data-ziel={ortSchluessel(ort)}
-              data-leer={k ? undefined : ''}
-              data-gewaehlt={
-                gewaehlt?.bereich === 'bank' && gewaehlt.platz === platz ? '' : undefined
-              }
-              data-zielbar={gewaehlt && zielbar(gewaehlt, ort) ? '' : undefined}
-              data-unterzeiger={ablegeZiel === ortSchluessel(ort) ? '' : undefined}
-            >
-              {k ? (
-                <Einheitenmarke
-                  kaempfer={k}
-                  katalog={katalog}
-                  maxStufe={sicht.maxStufe}
-                  fehlt={fehlen(k.id, k.stufe)}
-                  frisch={verschmolzen?.id === k.id && verschmolzen.stufe === k.stufe}
-                  aktiv={darfHandeln}
-                  versteckt={zug?.zieht === true && zug.von.bereich === 'bank' && zug.von.platz === platz}
-                  onZeigerStart={(e) => beiZeigerStart(ort, e)}
-                  onZeigerBewegung={beiZeigerBewegung}
-                  onZeigerEnde={(e) => beiZeigerEnde(ort, e)}
-                  onZeigerAbbruch={beiZeigerAbbruch}
-                  onWaehlen={() => tippeOrt(ort)}
-                />
-              ) : (
-                /* Dieselbe echte Schaltflaeche wie das leere Brettfeld, und
-                   aus demselben Grund: Ein `onClick` am Kasten hat weder
-                   Namen noch Tastaturweg — der Rueckweg auf die Bank waere
-                   mit einem Vorlesegeraet gar nicht vorhanden. */
-                <button
-                  type="button"
-                  className="tr-bankplatz-ziel"
-                  disabled={!darfHandeln}
-                  aria-label={`Bankplatz ${platz + 1}`}
-                  onClick={() => tippeOrt(ort)}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {eigenes.bank.every((k) => k === null) && (
+          `bankPlaetze` steht im Regelsatz und ist damit je Tisch verstellbar.
+
+          WAEHREND DES KAMPFES IST SIE ZU — aus demselben Grund, aus dem der
+          Laden darunter zu ist: Es geht nichts von ihr aufs Feld und nichts
+          zurueck, sie ist in dieser Minute ein Bild. Als Streifen unter dem
+          Brett kostet sie auf einem 390-px-Schirm 55 Pixel, und die stehen der
+          Arena besser. Der Satz „Deine Bank ist leer" faellt mit ihr weg: Er
+          schickt zum Laden, und der ist im Kampf ebenfalls zu. */}
+      {!kampfLaeuft && (
+        <div
+          className="tr-bank"
+          role="group"
+          aria-label="Reservebank"
+          style={{ gridTemplateColumns: `repeat(${sicht.bankPlaetze}, 1fr)` }}
+        >
+          {Array.from({ length: sicht.bankPlaetze }, (_, platz) => {
+            const ort: Ort = { bereich: 'bank', platz };
+            const k = eigenes.bank[platz] ?? null;
+            return (
+              <div
+                key={platz}
+                className="tr-bankplatz"
+                data-ziel={ortSchluessel(ort)}
+                data-leer={k ? undefined : ''}
+                data-gewaehlt={
+                  gewaehlt?.bereich === 'bank' && gewaehlt.platz === platz ? '' : undefined
+                }
+                data-zielbar={gewaehlt && zielbar(gewaehlt, ort) ? '' : undefined}
+                data-unterzeiger={ablegeZiel === ortSchluessel(ort) ? '' : undefined}
+              >
+                {k ? (
+                  <Einheitenmarke
+                    kaempfer={k}
+                    katalog={katalog}
+                    maxStufe={sicht.maxStufe}
+                    fehlt={fehlen(k.id, k.stufe)}
+                    frisch={verschmolzen?.id === k.id && verschmolzen.stufe === k.stufe}
+                    aktiv={darfHandeln}
+                    versteckt={zug?.zieht === true && zug.von.bereich === 'bank' && zug.von.platz === platz}
+                    onZeigerStart={(e) => beiZeigerStart(ort, e)}
+                    onZeigerBewegung={beiZeigerBewegung}
+                    onZeigerEnde={(e) => beiZeigerEnde(ort, e)}
+                    onZeigerAbbruch={beiZeigerAbbruch}
+                    onWaehlen={() => tippeOrt(ort)}
+                  />
+                ) : (
+                  /* Dieselbe echte Schaltflaeche wie das leere Brettfeld, und
+                     aus demselben Grund: Ein `onClick` am Kasten hat weder
+                     Namen noch Tastaturweg — der Rueckweg auf die Bank waere
+                     mit einem Vorlesegeraet gar nicht vorhanden. */
+                  <button
+                    type="button"
+                    className="tr-bankplatz-ziel"
+                    disabled={!darfHandeln}
+                    aria-label={`Bankplatz ${platz + 1}`}
+                    onClick={() => tippeOrt(ort)}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {!kampfLaeuft && eigenes.bank.every((k) => k === null) && (
         <p className="tr-leer-satz">
           Deine Bank ist leer — kauf dir unten im Laden einen Recken.
         </p>
