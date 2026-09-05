@@ -18,9 +18,13 @@
  * Winkel wieder anfasst, aendert die Zahlen hier mit.
  *
  * WOZU DAS GANZE: Die Figuren sollen wie 3D aussehen, aber nicht live gerendert
- * werden. Die Probe mit Three.js (`proben/arena-3d/`) lief auf dem Handy mit 20
- * Bildern je Sekunde und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es
- * 232 kB, und das Abspielen kostet so viel wie ein `background-position`.
+ * werden. Die Probe mit Three.js lief auf dem Handy mit 20 Bildern je Sekunde
+ * und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es 232 kB, und das
+ * Abspielen kostet so viel wie ein `background-position`. Genau deshalb ist
+ * die Probe selbst am 06.09.2026 geloescht worden — die Entscheidung gegen sie
+ * war gefallen, und ein zweiter Weg auf den Bildschirm haette nur Pflege
+ * gekostet. Sie lag unter `packages/client/src/proben/arena-3d/`; wer sie
+ * sehen will, findet sie in der Historie vor diesem Datum.
  *
  * LIZENZ ALLER FUENF BLAETTER: Kay Lousberg (kaylousberg.com), CC0 1.0
  * Universal — freie Verwendung auch kommerziell, Namensnennung nicht verlangt.
