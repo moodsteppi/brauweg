@@ -41,23 +41,27 @@ function isDevFlag(name: string): boolean {
 }
 
 /**
- * Die Arena-Proben. Eigene Adressen statt eines `dev`-Kennzeichens, weil sie
- * verschickt werden sollen: Robin vergleicht `/probe/arena-2d` und
- * `/probe/arena-3d` nebeneinander am Bildschirm, und `?dev=…` ueberlebt kein
- * Kopieren in einen Chat unbeschadet.
+ * Proben unter `/probe/…` — Entwuerfe, die nebeneinander verglichen werden
+ * sollen, bevor einer davon ins Spiel kommt.
  *
- * Beide sind bewusst NICHT im Spiel verlinkt. Sie sind eine Entscheidungshilfe
- * mit begrenzter Haltbarkeit — was von ihnen bleibt, wird spaeter eingebaut,
- * die Blaetter selbst nicht.
+ * Getrennt von den `?dev=`-Werkzeugen oben, weil sie etwas anderes sind: Ein
+ * Werkzeug bleibt, eine Probe wird verworfen oder eingebaut. Sie sind im Spiel
+ * nirgends verlinkt und nur ueber die Adresse erreichbar; der Server liefert
+ * fuer jeden Pfad ohne Dateiendung die index.html aus (siehe
+ * `setNotFoundHandler` in `packages/server/src/http/app.ts`), Vite tut das in
+ * der Entwicklung von selbst.
  *
- * Der Server liefert fuer jede Adresse ohne Dateiendung die index.html aus
- * (app.ts, setNotFoundHandler), hier ist also nichts weiter einzurichten.
+ * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
+ * - /probe/arena-3d — DIESELBE Szene in 3D mit Three.js (Probe B)
  */
 function istProbe(name: string): boolean {
-  const pfad = window.location.pathname.replace(/\/+$/, '');
-  return pfad === `/probe/${name}` || pfad.endsWith(`/probe/${name}`);
+  const { pathname, hash, search } = window.location;
+  if (pathname === `/probe/${name}`) return true;
+  if (hash === `#/probe/${name}`) return true;
+  return new URLSearchParams(search).get('probe') === name;
 }
 
+const probeArena2d = istProbe('arena-2d');
 const probeArena3d = istProbe('arena-3d');
 
 const devAvatar = isDevFlag('avatar');
@@ -105,15 +109,25 @@ const Avatarwerkstatt = lazy(() =>
   import('./screens/Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
 );
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
+/*
+ * Aus demselben Grund `lazy` wie die Werkzeuge darueber: Die Probe zieht die
+ * aufgezeichnete Szene (16 kB JSON) mit ins Buendel. Die gehoert nicht in das
+ * Stueck, das jeder Spieler beim Anmelden laedt.
+ */
+const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ default: m.Arena2D })));
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
-/* Dieselbe Ueberlegung, derselbe Weg: Die Probe zieht `three` samt Figuren
-   nach und geht deshalb in ein eigenes Stueck. Sie ist nicht verlinkt — sie
-   darf im Hauptbuendel keine einzige Zeile kosten. */
-const Arena3D = lazy(() => import('./proben/Arena3D'));
+/* Aus demselben Grund `lazy`, hier aber mit deutlich mehr Gewicht dahinter:
+   Probe B zieht `three` und `@react-three/fiber` nach. Was davon schon im
+   Hauptbuendel steckt, ist eine andere Baustelle (Avatarwerkstatt wird von
+   GameSelect statisch importiert und landet deshalb dort) — die Probe selbst
+   soll jedenfalls nichts dazulegen. */
+const Arena3D = lazy(() => import('./proben/arena-3d/Arena3D').then((m) => ({ default: m.Arena3D })));
 
-const werkzeug = probeArena3d ? (
+const werkzeug = probeArena2d ? (
+  <Arena2D />
+) : probeArena3d ? (
   <Arena3D />
 ) : devAvatar ? (
   <AvatarAligner />

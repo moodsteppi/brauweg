@@ -1,114 +1,77 @@
 /**
- * Erzeugt `arena-szene.json` — den aufgezeichneten Kampf, den BEIDE Proben
- * abspielen (A in 2D, B in 3D).
+ * Erzeugt `arena-szene.json` — den EINEN aufgezeichneten Kampf, den beide
+ * Arena-Proben (2D und 3D) abspielen.
  *
- * NICHT Teil des Builds. Die JSON-Datei liegt im Repo; dieses Skript steht
- * daneben, damit sie nachrechenbar bleibt. Neu erzeugen:
+ * Aufruf aus dem Wurzelverzeichnis, nachdem `npm run build` gelaufen ist:
  *
- *   node packages/client/src/proben/szene-erzeugen.mjs
+ *     node packages/client/src/proben/szene-erzeugen.mjs
  *
- * (setzt voraus, dass `packages/game-tafelrunde` gebaut ist — `npm run build`
- * im Wurzelverzeichnis).
+ * WARUM EINE AUFZEICHNUNG UND KEIN LAUF ZUR ANZEIGEZEIT: Die beiden Proben
+ * sollen NEBENEINANDER dieselbe Szene zeigen. Wuerde jede Probe selbst
+ * `simuliereKampf()` aufrufen, haenge der Vergleich an zwei Importen des
+ * Spielpakets in den Client — und der Client importiert aus keinem Spielpaket
+ * (CLAUDE.md). Eine Datei ist die einzige Fassung, die beide teilen koennen.
  *
- * WARUM EINE AUFGEZEICHNETE DATEI UND KEIN AUFRUF ZUR LAUFZEIT: Die beiden
- * Proben sollen DIESELBE Szene zeigen, sonst vergleicht man am Bildschirm
- * zwei Kaempfe statt zwei Darstellungen. Ausserdem darf der Client die
- * Spielpakete nicht importieren (CLAUDE.md: er beschreibt jede Sicht ein
- * zweites Mal und importiert sonst nichts aus den Spielpaketen) — eine
- * abgelegte Aufzeichnung umgeht das sauber.
+ * Die Datei wird bewusst mitgeliefert und nicht beim Bauen erzeugt: Ohne sie
+ * zeigt die Probe nichts, und ein Bauschritt fuer eine Wegwerf-Probe waere
+ * mehr Apparat als Ertrag. Dieses Skript ist die Quittung, wie sie entstand.
  *
- * WIE DIE AUFSTELLUNG ZUSTANDE KAM: gesucht wurde ueber alle Paarungen aus
- * 2- und 3-Gold-Einheiten (4374 Aufstellungen, drei Saaten) nach einem
- * Kampf, der
- *   - alle FUENF Rollen zeigt (Wache, Schuetze, Magier, Meuchler, Beistand),
- *     damit jede der fuenf Figuren wenigstens einmal auf dem Feld steht,
- *   - auf BEIDEN Seiten Tote hat (sonst sieht man die Todesanimation nur an
- *     einer Farbe),
- *   - unter 19 Sekunden bleibt und
- *   - genug Bewegung enthaelt, dass die Laufanimation ueberhaupt vorkommt.
- * Von 10.893 Treffern blieben 105 uebrig; genommen wurde der mit der
- * ausgeglichensten Verlustbilanz (2 zu 4).
+ * DIE AUFSTELLUNG erfuellt die Vorgabe der Aufgabe: vier Einheiten je Seite,
+ * eine Wache vorn (Brettreihe 0), ein Schuetze hinten (Brettreihe 1), ein
+ * Meuchler am Rand (Spalte 0 bzw. 4). Dazu je eine fuenfte Rolle, damit alle
+ * fuenf Figurensaetze der Probe auch wirklich zu sehen sind: Beistand auf
+ * Seite 0, Magier auf Seite 1.
  *
- * WARUM DIE EINHEITEN AUF DEN PLAETZEN 0, 1, 5 UND 6 STEHEN: Die Arena legt
- * die Gegenseite PUNKTGESPIEGELT an (arena.ts) — wer links aufstellt, steht
- * dem Gegner diagonal gegenueber. Bei der ueblichen Aufstellung (Wachen
- * mittig vorne) stehen sich beide Seiten sofort im Nacken und es gibt so gut
- * wie keine Bewegung: gemessen 7 Schritte gegen 11 hier. Fuer eine Probe, in
- * der die LAUFANIMATION beurteilt werden soll, waere das die falsche Szene.
+ * WARUM GENAU DIESE: Von fuenf durchgerechneten Aufstellungen ist es die
+ * kuerzeste, die trotzdem alles zeigt, was die Aufgabe verlangt — 19,3 s,
+ * 6 Bewegungen, 97 Treffer, 6 Tode, Ende durch Ausloeschung. Die anderen
+ * liefen 23 bis 30 s, ohne mehr zu zeigen.
+ *
+ * DIE SAAT ist hier fast folgenlos: Die Simulation ist deterministisch, der
+ * Zufall entscheidet nur, wer innerhalb eines Taktes zuerst zieht. Ueber die
+ * ersten 59 Saaten kam bei dieser Aufstellung jedes Mal derselbe Bericht
+ * heraus. Sie steht trotzdem im Bericht, weil ein Bericht ohne seine Saat
+ * nicht nachspielbar ist.
  */
 
-import { writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { simuliereKampf } from '../../../game-tafelrunde/dist/src/kampf.js';
-import { einheit } from '../../../game-tafelrunde/dist/src/katalog.js';
 
-const HIER = dirname(fileURLToPath(import.meta.url));
-
-/** Die Saat entscheidet im Modul nur ueber den Erstzieher — siehe kampf.ts. */
-const SAAT = 'tafelrunde-probe';
-
-/** Brettplaetze: 0 und 1 sind die vordere Reihe links, 5 und 6 die hintere. */
-const AUFSTELLUNG = [
-  [
-    [0, 'grimmbart'],
-    [1, 'schattenklinge'],
-    [5, 'drachenkind'],
-    [6, 'sturmrufer'],
-  ],
-  [
-    [0, 'grimmbart'],
-    [1, 'schattenklinge'],
-    [5, 'nachtpfeil'],
-    [6, 'runenpriester'],
-  ],
-];
-
-function brett(paare) {
+/** Brettplatz = reihe * 5 + spalte. Reihe 0 ist die vordere, an der Mittellinie. */
+function brettseite(paare) {
   const felder = Array.from({ length: 10 }, () => null);
   for (const [platz, id] of paare) felder[platz] = { id, stufe: 1 };
   return felder;
 }
 
-const bericht = simuliereKampf([brett(AUFSTELLUNG[0]), brett(AUFSTELLUNG[1])], SAAT);
+const SEITE_0 = brettseite([
+  [1, 'grimmbart'], // Wache, vorn
+  [0, 'klingentaenzerin'], // Meuchler, vorn am linken Rand
+  [8, 'bogenmeisterin'], // Schuetze, hintere Reihe
+  [9, 'moosheiler'], // Beistand, hintere Reihe
+]);
 
-/**
- * Die Aufzeichnung traegt zu jeder Einheit Name und Rolle mit.
- *
- * Der Bericht des Moduls nennt nur die `einheitId`. Der Client duerfte den
- * Katalog nachschlagen — dann stuenden die 22 Einheiten aber ein zweites Mal
- * in `packages/client`, und beim naechsten Balancing waere die Probe still
- * veraltet. Beides steht deshalb hier mit in der Datei.
- */
-const figuren = bericht.start.map((k) => {
-  const e = einheit(k.einheitId);
-  return { id: k.id, name: e.name, rolle: e.rolle, reichweite: e.reichweite };
-});
+const SEITE_1 = brettseite([
+  [3, 'dorfwache'], // Wache, vorn
+  [4, 'schattenklinge'], // Meuchler, vorn am rechten Rand
+  [6, 'nachtpfeil'], // Schuetze, hintere Reihe
+  [5, 'funkenlehrling'], // Magier, hintere Reihe
+]);
 
-const zaehlung = { bewegung: 0, treffer: 0, tod: 0, ende: 0 };
-for (const e of bericht.ereignisse) zaehlung[e.art]++;
+const bericht = simuliereKampf([SEITE_0, SEITE_1], 'arena-probe');
 
-const szene = {
-  _hinweis:
-    'Erzeugt von szene-erzeugen.mjs — nicht von Hand aendern. Gemeinsame Vorlage der Arena-Proben A (2D) und B (3D).',
-  saat: SAAT,
-  aufstellung: AUFSTELLUNG,
-  figuren,
-  bericht,
-};
+const zaehle = (art) => bericht.ereignisse.filter((e) => e.art === art).length;
+if (bericht.grund !== 'ausgeloescht') throw new Error('Die Szene soll nicht an der Zeit enden');
+if (zaehle('tod') < 2) throw new Error('Die Szene braucht mindestens zwei Tode');
+if (zaehle('bewegung') < 1) throw new Error('Die Szene braucht Bewegung');
 
-const ziel = join(HIER, 'arena-szene.json');
-await writeFile(ziel, `${JSON.stringify(szene, null, 2)}\n`, 'utf8');
+const ziel = fileURLToPath(new URL('./arena-szene.json', import.meta.url));
+writeFileSync(ziel, `${JSON.stringify(bericht, null, 2)}\n`, 'utf8');
 
-console.log('geschrieben:', ziel);
 console.log(
-  `Dauer ${bericht.dauerMs} ms, Sieger Seite ${bericht.sieger}, Grund ${bericht.grund}`,
+  `arena-szene.json geschrieben: ${bericht.dauerMs} ms, ${bericht.ereignisse.length} Ereignisse ` +
+    `(${zaehle('bewegung')} Bewegungen, ${zaehle('treffer')} Treffer, ${zaehle('tod')} Tode), ` +
+    `Sieger Seite ${bericht.sieger}.`,
 );
-console.log(
-  `Ereignisse: ${bericht.ereignisse.length} (${zaehlung.bewegung} Bewegung, ${zaehlung.treffer} Treffer, ${zaehlung.tod} Tod, ${zaehlung.ende} Ende)`,
-);
-for (const f of figuren) {
-  const seite = bericht.start.find((k) => k.id === f.id).seite;
-  console.log(`  Seite ${seite}  ${f.rolle.padEnd(9)} ${f.name}`);
-}
