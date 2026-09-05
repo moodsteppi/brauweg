@@ -310,6 +310,18 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > `docs/spiele/auto-battler-konzept.md`, Werkzeug `werkzeug/gangarten.mjs`).
 > Vier Messungen über zwei Saatbasen zeigen in dieselbe Richtung.
 >
+> **Am 06.09.2026 nachgezogen — die Zahl 140 : 86,7 gilt nicht mehr, sie steht
+> jetzt bei 228 : 57,3.** Was `hart` damals trug, war allein die fehlende
+> Patzerquote; die beiden Tempo-Schrauben lagen in der Streuung und blieben
+> deshalb stehen. Über sechs Saatbasen gemessen ist eine der beiden aber kein
+> Nullwert, sondern ein Minus: Ohne die Bedingung „Brett voll" kauft der Bot
+> Feldplätze, auf denen nichts steht. `nurBeiVollemBrett` steht bei `hart`
+> seitdem auf `true`, `polster` auf 2 statt 4; die Reserve bleibt bei 0 und
+> trägt das Tempo. Damit wirkt jede der vier Schrauben messbar, und der
+> Kontrolllauf ist wieder neutral (98,7 statt der 110 bis 116, die über drei
+> Basen gemessen waren). Neu am Werkzeug: `--schraube name=wert` stellt eine
+> einzelne Schraube um, ohne `bot.ts` anzufassen.
+>
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >
 > 1. **Kein Reihum.** Alle Sitze rüsten gleichzeitig, wie bei Eiland.
