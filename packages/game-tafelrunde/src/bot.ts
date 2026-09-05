@@ -183,9 +183,16 @@ export interface Gangart {
  * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 06.09.2026):
  *
  *                    gebaut (12 Leben, x2)     langer Stand (20 Leben, x1)
- *     hart : normal   228 : 57,3  231 : 56,3    190 : 70,0  201 : 66,3
- *     hart : sanft    386 :  4,7  389 :  3,7    384 :  5,3  385 :  5,0
- *     normal : sanft  372 :  9,3  367 : 11,0    362 : 12,7  349 : 17,0
+ *     hart : normal   183 : 72,3  173 : 75,7    157 : 81,0  159 : 80,3
+ *     hart : sanft    394 :  2,0  378 :  7,3    365 : 11,7  352 : 16,0
+ *     normal : sanft  363 : 12,3  355 : 15,0    326 : 24,7  333 : 22,3
+ *
+ * NEU AUFGENOMMEN AM 06.09.2026, nachdem die Bewertung die Reichweite bekam
+ * (`REICHWEITEN_GEWICHT`). Die Reihenfolge steht unveraendert in allen vier
+ * Spalten, der Abstand zwischen `hart` und `normal` ist kleiner geworden (228
+ * auf 183): Ein Bot, der besser einkauft, holt einen Teil dessen auf, was
+ * `hart` sich ueber Tempo verschafft. Die Zahlen davor lauteten 228 : 57,3 ·
+ * 231 : 56,3 · 190 : 70,0 · 201 : 66,3.
  *
  * DASS BEIDE SPALTEN DASSELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
  * nicht an der Partielaenge. Die zweite Spalte ist der lange Stand (20 Leben,
@@ -227,16 +234,19 @@ export interface Gangart {
  *
  * DER KONTROLLLAUF IST WIEDER NEUTRAL, und das gehoert vor jede dieser Zahlen:
  * Besetzt man ALLE VIER Sitze gleich, gewinnt Sitz 0 ueber sechs Saatbasen zu
- * je 400 Partien 98,7 mal mit `normal`, 100,2 mit `hart` und 107,5 mit `sanft`
- * — gegen 100 im Schnitt. Am 05.09.2026 stand hier noch ein Sitzvorteil von
+ * je 400 Partien 94,0 mal mit `normal`, 101,5 mit `hart` und 100,7 mit `sanft`
+ * — gegen 100 im Schnitt (nachgemessen am 06.09.2026 mit dem Reichweitenfaktor;
+ * ohne ihn standen dort 98,7 · 100,2 · 107,5). Am 05.09.2026 stand hier noch ein Sitzvorteil von
  * 110 bis 116 mit `normal`, gemessen ueber drei Basen; ueber sechs sind es
  * 101,7 (bei 14 Leben) und 98,7 (bei 12). Der Vorteil war eine Stichprobe.
  * DIE URSACHE IST TROTZDEM NICHT WEG und kann jederzeit wiederkommen: Der
  * VORRAT ist gemeinsam (partie.ts, `vorrat`), Bots auf Marken wollen alle
  * dieselben Einheiten, und der Messstand laesst die Sitze der Reihe nach
  * ruesten — wer zuerst kauft, bekommt sie. Am echten Tisch ruesten alle
- * gleichzeitig; der Druck auf den Vorrat ist aber derselbe. Dass ausgerechnet
- * `sanft` ueber 100 liegt, passt dazu: Wer hortet, kauft spaeter. Wer eine
+ * gleichzeitig; der Druck auf den Vorrat ist aber derselbe. Vor dem
+ * Reichweitenfaktor lag ausgerechnet `sanft` mit 107,5 vorn, was dazu passte —
+ * wer hortet, kauft spaeter; heute liegen alle drei innerhalb von sechs
+ * Siegen um 100, und keine Deutung traegt mehr als die Streuung. Wer eine
  * Gangart misst, misst den Kontrolllauf mit.
  *
  * WAS DIE ZAHLEN SCHON ZWEIMAL GEKIPPT HAT, WAR DER LADEN. Am 05.09.2026
@@ -309,65 +319,76 @@ const STAERKE_TEILER = 100;
  * Ein Schuetze hinter der eigenen Linie schiesst vom ersten Takt an und wird
  * erst getroffen, wenn die Linie faellt; ein Nahkaempfer laeuft erst einmal
  * los (`schrittZiel` in kampf.ts) und kassiert dabei, ohne zurueckzuschlagen.
- * Mit 0,15 ist eine gedeckte Bogenmeisterin (Reichweite 3) das 1,30-fache
- * wert und der Sturmrufer (Reichweite 4) das 1,45-fache.
+ * Mit 0,25 ist eine gedeckte Bogenmeisterin (Reichweite 3) das 1,50-fache
+ * wert und der Sturmrufer (Reichweite 4) das 1,75-fache.
+ *
+ * GEMESSEN AUF EINEM BRETT VON 5 x 4 FELDERN JE SEITE (`brett.ts`), also einer
+ * Arena von 5 x 10 mit zwei leeren Reihen dazwischen (`arena.ts`). Das steht
+ * VOR den Zahlen und nicht hinter ihnen: Was Reichweite wert ist, haengt
+ * daran, wie weit gelaufen werden muss. Auf dem alten Brett (5 x 2 je Seite,
+ * Arena 5 x 4) stand fast jede Einheit vom ersten Takt an im Ziel, und dort
+ * lag dieselbe Messung bei 0,15. Mit dem tieferen Brett ist der Wert
+ * gestiegen — wer die Arena wieder anfasst, misst diese Zahl neu.
  *
  * DIE ZAHL IST GEMESSEN, nicht geschaetzt. Gemessen wird mit
- * `werkzeug/gangarten.mjs`: Ein Sitz rechnet mit Reichweitenfaktor, die drei
- * anderen ohne, sonst spielen alle vier dieselbe Gangart. Je 400 Partien ueber
- * sechs Saatbasen, gezaehlt werden die eindeutigen Siege des einen Sitzes.
+ * `werkzeug/gangarten.mjs --schraube reichweitenGewicht=…`: Alle vier Sitze
+ * spielen `normal`, nur Sitz 0 rechnet mit dem Faktor. Die Saat haengt nicht
+ * an der Schraube, zwei Laeufe spielen also DIESELBEN Partien. Je 400 Partien
+ * ueber sechs Saatbasen, gezaehlt werden die eindeutigen Siege von Sitz 0:
  *
- *     ohne Faktor (Kontrolllauf)   605 von 2.400
- *     mit 0,10                     707 von 2.400
- *     mit 0,15                     710 von 2.400   auf JEDER Basis mehr
- *     mit 0,25                     673 von 2.400
+ *     ohne Faktor (Kontrolllauf)   645 von 2.400
+ *     mit 0,15                     808
+ *     mit 0,20                     823
+ *     mit 0,25                     804   <- gebaut
+ *     mit 0,30                     817
+ *     mit 0,35                     805
+ *     mit 0,50                     701
+ *     mit 0,70                     520
+ *     mit 1,00                     373
  *
- * Nach oben ist die Zahl begrenzt, und zwar messbar: Bei 0,40 steht es ueber
- * die ersten drei Basen 281 gegen 297 im Kontrolllauf — der Faktor ist dort
- * vom Vorteil zum Nachteil gekippt, weil der Bot Fernkaempfer kauft, wo er
- * eine Wache braeuchte. Zwischen 0,10 und 0,15 entscheidet die Messung nicht;
- * 0,15 steht hier, weil es den groessten gemessenen Abstand hat.
+ * VON 0,15 BIS 0,35 IST DAS EINE EBENE UND KEINE KURVE: Die vier Werte liegen
+ * innerhalb eines Standardfehlers (rund 22 Siege auf 2.400 Partien),
+ * unterscheidbar sind sie nicht. Erst ab 0,50 faellt der Faktor ab, bei 0,70
+ * ist er unter dem Kontrolllauf und bei 1,00 ein Desaster — dort kauft der Bot
+ * Fernkaempfer, wo er eine Wache braeuchte.
  *
- * GEMESSEN AUF EINEM BRETT VON 5 x 2 FELDERN JE SEITE (`brett.ts`), also einer
- * Arena von 5 x 4 ohne Zwischenraum. Das ist keine Nebensache: Was Reichweite
- * wert ist, haengt daran, wie weit gelaufen werden muss. Waechst die Arena —
- * vier Reihen je Seite und zwei Reihen Abstand stehen als Aufgabe an —, gilt
- * diese Zahl nicht mehr ungeprueft, und der Lauf kostet Minuten.
+ * 0,25 IST DIE MITTE DIESER EBENE und nicht ihr hoechster Punkt. Absichtlich:
+ * Die Ebene ist gemessen, ihr Maximum ist Rauschen. Wer die Mitte nimmt,
+ * verliert nichts und faellt bei der naechsten Aenderung an Brett oder Katalog
+ * nicht sofort ueber eine Kante — in BEIDE Richtungen ist gleich viel Luft.
  */
-const REICHWEITEN_GEWICHT = 0.15;
+const REICHWEITEN_GEWICHT = 0.25;
 
 /**
  * Wie viele Fernkaempfer eine Einheit der Vorderreihe deckt.
  *
- * DIE MESSUNG UNTERSCHEIDET DIESE ZAHL NICHT — auch nicht von "gar keine
- * Deckung", und das gehoert offen hierhin. Ueber drei Basen zu je 400 Partien,
- * Kontrolllauf 297:
+ * DIESE ZAHL KOSTET HEUTE EHER, ALS SIE BRINGT, und das gehoert offen
+ * hierhin. Gemessen wie oben, Gewicht 0,25, sechs Basen zu je 400 Partien,
+ * Kontrolllauf 645:
  *
- *     Deckkraft 1     341      jede Wache deckt genau einen Fernkaempfer
- *     Deckkraft 2     348      der gebaute Stand
- *     Deckkraft 8     342      eine Wache genuegt praktisch fuer alles
- *     ohne Deckung    342      der Faktor gilt immer voll
+ *     Deckkraft 1     742      jede Wache deckt genau einen Fernkaempfer
+ *     Deckkraft 2     804      der gebaute Stand
+ *     ohne Bremse     819      der Faktor gilt immer voll
  *
- * DIE DECKUNG STEHT TROTZDEM DA, und zwar als Sperre und nicht als Gewinn.
- * Sie verhindert genau das Brett, an dem die Marke Elementar am 05.09.2026
- * gescheitert ist: fuenf Traeger, alle mit Reichweite 3 oder 4, niemand haelt
- * die Linie, Siegquote x0,25 (siehe Irrlicht in katalog.ts). Dass die Sperre
- * heute nichts kostet und nichts bringt, liegt am Katalog desselben Tages —
- * seit dem Irrlicht und dem Schildknappen hat JEDE Marke einen Traeger in der
- * Vorderreihe, und ein Brett ganz ohne Nahkaempfer kommt gar nicht mehr
- * zustande. Wer eine Marke aus lauter Fernkaempfern nachlegt, bekommt die
- * Sperre geschenkt; wer sie vorher herausnimmt, merkt es erst an der
- * Ausgewogenheit.
+ * Der Abstand zwischen 2 und "ohne Bremse" ist ein Standardfehler, also keine
+ * Aussage — die Richtung war es beim letzten Mal aber auch schon, und sie ist
+ * seitdem nicht besser geworden. Deckkraft 1 dagegen ist zu streng und kostet
+ * messbar.
  *
- * WAS DAGEGEN SEHR WOHL GEMESSEN IST, steht bei `kandidaten`: Der
- * Reichweitenwert darf nicht am Verschmelzfaktor haengen. Das kostet ueber
- * sechs Basen 487 Siege statt 702 — mehr als der ganze Faktor wert ist.
+ * DIE BREMSE BLEIBT TROTZDEM, und mit dem hoeheren Gewicht mehr denn je: Sie
+ * verhindert das Brett, an dem die Marke Elementar am 05.09.2026 gescheitert
+ * ist — fuenf Traeger, alle mit Reichweite 3 oder 4, niemand haelt die Linie,
+ * Siegquote x0,25 (siehe Irrlicht in katalog.ts). Dass sie heute nichts
+ * abfaengt, liegt am Katalog desselben Tages: Seit dem Irrlicht und dem
+ * Schildknappen hat JEDE Marke einen Traeger in der Vorderreihe, ein Brett
+ * ganz ohne Nahkaempfer kommt gar nicht mehr zustande. Wer eine Marke aus
+ * lauter Fernkaempfern nachlegt, bekommt die Sperre geschenkt — und je
+ * hoeher `REICHWEITEN_GEWICHT`, desto teurer waere ihr Fehlen.
  *
- * ZWEI UND NICHT EINS ODER ACHT: Die Zwei steht in der Mitte der gemessenen
- * Ebene und hat dort den groessten Wert — innerhalb der Streuung, also keine
- * Aussage, aber auch kein Griff ins Blaue. Sachlich heisst sie "eine Wache
- * haelt zwei Fernkaempfer den Ruecken frei", und das ist die Zahl, die man an
- * einem Brett von fuenf Spalten je Reihe auch abzaehlt.
+ * ZWEI UND NICHT EINS: Sachlich heisst die Zwei "eine Wache haelt zwei
+ * Fernkaempfern den Ruecken frei", und das ist die Zahl, die man an einem
+ * Brett von fuenf Spalten je Reihe auch abzaehlt. Die Eins ist gemessen zu
+ * streng.
  *
  * KEIN HARTER SCHALTER bei "gar keine Wache": Ein Brett mit einer Wache und
  * sechs Schuetzen ist nicht gedeckt, und ein Umschalten bei genau einer Wache
@@ -391,11 +412,11 @@ const VOLLE_DECKUNG = 1;
  * alle mit Reichweite 3 oder 4, und eine Siegquote von x0,25. Ein Bot, der
  * Reichweite pauschal aufwertet, baut genau dieses Brett.
  *
- * AUF DEM HEUTIGEN KATALOG IST DAS NICHT MEHR MESSBAR, und das steht als Zahl
- * bei `DECKKRAFT`: Weil jede Marke inzwischen einen Traeger in der
+ * AUF DEM HEUTIGEN KATALOG IST DAS NICHT MEHR MESSBAR, und die Zahlen dazu
+ * stehen bei `DECKKRAFT`: Weil jede Marke inzwischen einen Traeger in der
  * Vorderreihe hat, kommt ein Brett ohne Nahkaempfer nicht mehr zustande, und
- * ein pauschaler Faktor spielt gleich gut. Die Funktion bleibt als SPERRE
- * gegen den naechsten Katalog, nicht als gemessener Gewinn.
+ * ein pauschaler Faktor spielt einen Standardfehler besser. Die Funktion
+ * bleibt als SPERRE gegen den naechsten Katalog, nicht als gemessener Gewinn.
  *
  * Ein Verhaeltnis und kein feiner ausgedachtes Mass: so viele Fernkaempfer,
  * wie die Vorderreihe traegt (`DECKKRAFT`), sind gedeckt, der Rest drueckt den

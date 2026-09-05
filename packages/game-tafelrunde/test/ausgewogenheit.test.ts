@@ -66,25 +66,30 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * grundlos an.
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
- * 05.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
- * SIEBEN Marken. Waechter 649, Krieger 619, Meuchler 475, Elementar 443,
- * Drache 319, Untot 167, Naturwesen 127. Die Mindestzahl unten verlangt sechs
+ * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
+ * SIEBEN Marken. Krieger 635, Waechter 596, Elementar 506, Meuchler 442,
+ * Drache 360, Naturwesen 190, Untot 123. Die Mindestzahl unten verlangt sechs
  * und laesst der duennsten Zeile damit genau einen Ausfall Luft. WER DEN
  * KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER HUNDERT FALLEN, SIEHT HIER
  * "nur 5 Marken mit genug Antritten" und nicht den eigentlichen Befund; die
- * Zahl 127 (Naturwesen) ist die knappste der Datei.
+ * Zahl 123 (Untot) ist die knappste der Datei.
  *
- * DREI ZEILEN HABEN AM 05.09.2026 IHREN PLATZ HIER ERST BEKOMMEN, aus drei
+ * DREI ZEILEN HABEN IHREN PLATZ HIER ERST NACHTRAEGLICH BEKOMMEN, aus drei
  * verschiedenen Gruenden — und keiner davon ist eine Aenderung an dieser
  * Probe. Untot stand bei einem einzigen Antritt, weil nur Knochenspaeher und
  * Grabfuerstin die Marke trugen ("Untot zu zweit" hiess zwei Kopien derselben
  * Einheit); seit der Schildknappe sie mittraegt, zaehlt die Zeile. Elementar
  * und Drache hingen daran, dass Elementar keinen Traeger in der Vorderreihe
  * hatte; seit das Irrlicht dort steht, zaehlen beide. Und NATURWESEN stand mit
- * 91 knapp darunter, bis die Bot-Bewertung die Reichweite bekam (bot.ts,
+ * 85 knapp darunter, bis die Bot-Bewertung die Reichweite bekam (bot.ts,
  * `REICHWEITEN_GEWICHT`): Der Bot kauft seitdem den Astschuetzen deutlich
- * oefter, und mit ihm kommt die Marke ueber die Schwelle. Alles drei steht
- * ausfuehrlich im Konzeptdokument.
+ * oefter — 1.141 auf 4.761 Antritte ueber 5.000 Partien —, und mit ihm kommt
+ * die Marke auf 190. Alles drei steht ausfuehrlich im Konzeptdokument.
+ *
+ * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (295 auf 123) und ist jetzt
+ * die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und der Bot
+ * kauft die seitdem seltener. Die Marke haelt die Schwelle noch, aber sie ist
+ * die naechste, die faellt.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -112,18 +117,17 @@ describe('Ausgewogenheit: Marken', () => {
    * sondern DIE Wahl: Wer eine Aufstellung findet, die doppelt so oft gewinnt
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
-   * In dieser Auswahl reicht der weiteste Ausschlag von x1,43 (Krieger) bis
-   * x0,72 (Elementar) — nach beiden Seiten ist also Platz, aber weniger als
-   * noch am Nachmittag des 05.09.2026 (x1,12 bis x0,89). Am Morgen desselben
-   * Tages stand er bei x1,65 bis x0,25.
+   * In dieser Auswahl reicht der weiteste Ausschlag von x1,49 (Waechter) bis
+   * x0,74 (Drache) — nach beiden Seiten ist also Platz, aber weniger als ohne
+   * den Reichweitenfaktor im Bot (x1,34 bis x0,71 auf demselben Stand).
    *
-   * DASS DIE SPANNE WIEDER AUFGEGANGEN IST, hat einen benannten Grund und ist
-   * kein Rueckschritt am Katalog: Die Bot-Bewertung kennt seitdem die
+   * DASS DIE SPANNE AUFGEGANGEN IST, hat einen benannten Grund und ist kein
+   * Rueckschritt am Katalog: Die Bot-Bewertung kennt seit dem 06.09.2026 die
    * Reichweite (bot.ts, `REICHWEITEN_GEWICHT`). Ein Bot, der besser spielt,
    * trennt staerkere von schwaecheren Marken schaerfer — Krieger und Waechter
-   * gehen hoch, Elementar, Drache und Meuchler runter, ohne dass an einer
-   * Katalogzeile etwas geaendert wurde. Eine Meta ist gewollt; angefasst wird,
-   * was die Schranke reisst, und die ist x0,5 bis x2.
+   * gehen hoch, Naturwesen, Elementar, Drache und Meuchler runter, ohne dass
+   * an einer Katalogzeile etwas geaendert wurde. Eine Meta ist gewollt;
+   * angefasst wird, was die Schranke reisst, und die ist x0,5 bis x2.
    *
    * Alle sieben Zeilen stehen inzwischen in der Tabelle, es faellt also keine
    * mehr unbeobachtet aus. Wer den Katalog anfasst, laesst trotzdem das
