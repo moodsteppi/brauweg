@@ -7,6 +7,15 @@
  * Bildzahl, Rasterweite oder Ausschnitt dreht, aendert die Zahlen hier mit —
  * das Skript gibt sie am Ende seines Laufs aus.
  *
+ * ACHTUNG, DIE BILDER SIND NOCH NICHT DIE ENDGUELTIGEN. Sie sind mit der
+ * Kamera der 3D-Probe gerendert (38,6 Grad ueber der Waagerechten, eine Kamera
+ * fuer ein BRETT): Man sieht den Scheitel und kein Gesicht, beim Meuchler fast
+ * nie. Drei flachere Winkel stehen zur Wahl und liegen als Vergleichsbild unter
+ * `docs/bilder/tafelrunde-kamerawinkel.webp`; sobald einer entschieden ist,
+ * laeuft `bildfolgen-rendern.mjs` noch einmal, und die Zahlen unten
+ * (FIGUREN3D_FUSSPUNKT vor allem) aendern sich mit. Wer bis dahin gegen diese
+ * Datei baut, baut richtig — nur die Bilder darin werden noch getauscht.
+ *
  * WOZU DAS GANZE: Die Figuren sollen wie 3D aussehen, aber nicht live gerendert
  * werden. Die Probe mit Three.js (`proben/arena-3d/`) lief auf dem Handy mit 20
  * Bildern je Sekunde und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es

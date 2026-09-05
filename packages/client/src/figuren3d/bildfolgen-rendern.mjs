@@ -16,6 +16,9 @@
  *   npx playwright install chromium
  *   node packages/client/src/figuren3d/bildfolgen-rendern.mjs
  *
+ * Mit `--vergleich` rendert es stattdessen KEINE Blaetter fuers Spiel, sondern
+ * ein einzelnes Vergleichsbild mehrerer Kamerawinkel (siehe KAMERA_GRAD).
+ *
  * Findet das Skript `sharp` oder `playwright` nicht im Repo, greift es auf
  * `~/bildwerkzeug/node_modules` zurueck — dort liegen beide auf diesem Rechner
  * bereits (siehe CLAUDE.md, Abschnitt Bilder).
@@ -48,6 +51,7 @@ import { prune } from '@gltf-transform/functions';
 const HIER = dirname(fileURLToPath(import.meta.url));
 const WURZEL = resolve(HIER, '..', '..', '..', '..');
 const ZIEL = join(WURZEL, 'packages', 'client', 'public', 'tafelrunde', 'figuren3d');
+const VERGLEICHSBILD = join(WURZEL, 'docs', 'bilder', 'tafelrunde-kamerawinkel.webp');
 const LIZENZ_QUELLE = join(
   WURZEL,
   'packages',
@@ -60,6 +64,92 @@ const LIZENZ_QUELLE = join(
 
 const QUELLE =
   'https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures';
+
+// ---------------------------------------------------------------------------
+// Kamera
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie hoch die Kamera ueber der Waagerechten steht, in Grad.
+ *
+ * DAS IST DIE WICHTIGSTE ZAHL DER DATEI. Aus ihr wird die Blickrichtung
+ * gerechnet — (0, sin, cos) —, nicht umgekehrt; ein roher Vektor sagt niemandem,
+ * ob er 12 oder 40 Grad bedeutet.
+ *
+ * 38,6 Grad ist die Kamera der 3D-Probe, die von oben auf ein BRETT schaut
+ * (`proben/arena-3d/Arena3D.tsx`: Kamera (0, 7.4, 8.2) auf (0, 0.85, 0)). Fuer
+ * Figurenbilder ist dieser Winkel FALSCH: Man sieht den Scheitel statt des
+ * Gesichts, und beim Meuchler mit dem grossen KayKit-Kopf verschwindet das
+ * Gesicht fast ganz. Die Vorbilder (Merge Tactics) zeigen Gesicht, Brust und
+ * Waffe, also einen deutlich flacheren Blick.
+ *
+ * Der endgueltige Winkel ist noch nicht entschieden. `--vergleich` rendert
+ * VERGLEICH_WINKEL nebeneinander; das Ergebnis liegt als
+ * `docs/bilder/tafelrunde-kamerawinkel.webp` im Repo. Gemessen wurde am
+ * 05.09.2026 am Auge des Meuchlers: Bei 38,6 Grad ist es gar nicht zu sehen,
+ * bei 22 Grad taucht es auf, ab 16 Grad liegen Auge, Wange und Kinn frei.
+ * VORSCHLAG ist deshalb 16 Grad — 12 Grad zeigt kaum mehr Gesicht, nimmt aber
+ * die letzte Andeutung von oben und laesst die Figur auf dem Brett schweben.
+ *
+ * Bis die Entscheidung faellt, bleibt hier der Winkel stehen, mit dem die
+ * heutigen Blaetter unter `public/tafelrunde/figuren3d/` entstanden sind —
+ * damit Skript und Bilder zusammenpassen und niemand aus dem Code einen
+ * falschen Schluss zieht. Wer den Winkel setzt, laesst das Skript OHNE
+ * `--vergleich` laufen und traegt die ausgegebenen Zahlen in figuren3d.ts nach.
+ */
+const KAMERA_GRAD = 38.6;
+
+/**
+ * Wie weit die Figur aus dem Bild gedreht steht, in Grad.
+ *
+ * Sie schaut nach rechts (+X), denn genau so werden die beiden Seiten spaeter
+ * gegeneinander gestellt und die Gegenseite wird gespiegelt. Reines Profil
+ * (0 Grad) waere flach; die Drehung zur Kamera hin macht daraus eine
+ * Dreiviertelansicht, in der man Gesicht und Waffe sieht.
+ *
+ * 17 Grad ist der Wert der steilen Kamera. Die Vermutung war, dass eine
+ * flachere Kamera mehr Drehung vertraegt. GEPRUEFT am 05.09.2026 (unterer Block
+ * des Vergleichsbildes, 17 / 26 / 34 Grad bei 16 Grad Kamera): Sie vertraegt
+ * sie, aber sie gewinnt fast nichts. Der KayKit-Kopf ist eine glatte Kugel ohne
+ * Nase; ob er 17 oder 34 Grad steht, aendert am Gesicht kaum etwas, waehrend
+ * ab etwa 30 Grad der zweite Dolch hinter dem Koerper verschwindet. Das Gesicht
+ * kommt vom KAMERAWINKEL, nicht von der Drehung — deshalb bleibt es bei 17.
+ */
+const DREHUNG_GRAD = 17;
+
+/**
+ * Luft zwischen der Figur und dem Zellrand, als Faktor auf den gemessenen
+ * Halbbedarf. 6 Prozent decken die Kantenglaettung und ein bis zwei Pixel
+ * Schlagschatten ab, ohne die Figur sichtbar zu verkleinern.
+ */
+const LUFT = 1.06;
+
+/**
+ * Ausschnitt der Probemessung, in Weltmetern.
+ *
+ * Der Bildausschnitt wird nicht mehr geraten, sondern GEMESSEN (siehe
+ * `messeAusschnitt`): Erst laeuft ein Durchgang mit diesem grosszuegigen
+ * Ausschnitt, dabei wird der Alphakanal jedes Bildes abgetastet, und aus der
+ * groessten Ausdehnung ueber ALLE Rollen und ALLE Bewegungen ergibt sich der
+ * echte Ausschnitt.
+ *
+ * WARUM NICHT MEHR DIE FESTE 1,5: Die war fuer 38,6 Grad von Hand gesucht. Wie
+ * hoch eine Figur im Bild steht, haengt aber am Kamerawinkel — eine senkrechte
+ * Strecke der Laenge h misst auf dem Bildschirm h * cos(Winkel), und die Tiefe
+ * der Figur schlaegt mit sin(Winkel) auf. Wer den Winkel aendert und die 1,5
+ * stehen laesst, bekommt entweder eine geschrumpfte Figur oder einen
+ * abgeschnittenen Stab.
+ *
+ * GEMESSEN am 05.09.2026 ueber Wache und Meuchler: 1,94 — und zwar bei 12, 16,
+ * 22 UND 38,6 Grad derselbe Wert. Der Ausschnitt haengt also gar nicht am
+ * Winkel, weil ihn nicht die Hoehe bestimmt, sondern die WAAGERECHTE Reichweite
+ * beim Schlag (die Dolche des Meuchlers, das Schwert der Wache) — und die
+ * steht quer zur Blickachse und aendert sich mit dem Winkel nicht. Die alte
+ * 1,5 war zu klein: Sie hat diese Reichweite abgeschnitten, und was aus dem
+ * Bild ragt, sieht man erst in der Bewegung.
+ */
+const PROBE_HALBE_HOEHE = 2.8;
+const PROBE_MITTE_Y = 1.0;
 
 // ---------------------------------------------------------------------------
 // Was gerendert wird
@@ -196,6 +286,38 @@ const UEBERABTASTUNG = 2;
 const KOERPER = /(_Body|_Head|_Head_Hooded|_ArmLeft|_ArmRight|_LegLeft|_LegRight)$/;
 
 // ---------------------------------------------------------------------------
+// Was der Vergleichslauf zeigt
+// ---------------------------------------------------------------------------
+
+/**
+ * Die Winkel des Vergleichsbildes. Der erste ist die heutige Bretterkamera und
+ * steht als Vergleichsmass dabei — ohne ihn sieht man nicht, wie viel die
+ * flacheren Winkel wirklich gewinnen.
+ */
+const VERGLEICH_WINKEL = [KAMERA_GRAD, 22, 16, 12];
+
+/**
+ * Zwei Rollen genuegen: Die Wache traegt Helm und Schild (viel Verdeckung von
+ * oben), der Meuchler hat den groessten Kopf des Pakets und zeigt deshalb am
+ * deutlichsten, ab wann ein Gesicht zu sehen ist.
+ */
+const VERGLEICH_ROLLEN = ['wache', 'meuchler'];
+
+/** Vier aussagekraeftige Einzelbilder je Zeile statt des ganzen Blattes. */
+const VERGLEICH_ZELLEN = [
+  { bewegung: 'stand', bild: 0 },
+  { bewegung: 'lauf', bild: 2 },
+  { bewegung: 'schlag', bild: 3 },
+  { bewegung: 'tod', bild: 3 },
+];
+
+/** Drehungen, die im unteren Block des Vergleichsbildes gegenuebergestellt werden. */
+const VERGLEICH_DREHUNGEN = [17, 26, 34];
+
+/** Bei welchem Kamerawinkel der Drehungsblock gerendert wird (die mittlere Stufe). */
+const VERGLEICH_DREHUNG_GRAD = 16;
+
+// ---------------------------------------------------------------------------
 // Kleinkram
 // ---------------------------------------------------------------------------
 
@@ -244,6 +366,9 @@ async function hole(url, ziel) {
 
 const kb = (n) => `${(n / 1024).toFixed(1)} kB`;
 
+/** Winkelangaben im Dateinamen und in der Beschriftung: 38.6 -> "38,6". */
+const grad = (g) => `${g.toFixed(1).replace('.', ',').replace(',0', '')}°`;
+
 // ---------------------------------------------------------------------------
 // Schritt 1: aus dem Original ein Modell mit genau fuenf Animationen bauen
 // ---------------------------------------------------------------------------
@@ -258,9 +383,10 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
  * wird (CLAUDE.md, Regel 7: ein `git add` auf einen ignorierten Pfad hat hier
  * schon 932 Dateien gekostet).
  */
-async function baueModelle(zwischen) {
+async function baueModelle(zwischen, nurRollen) {
   const pfade = new Map();
   for (const eintrag of ROLLEN) {
+    if (nurRollen && !nurRollen.includes(eintrag.rolle)) continue;
     const roh = join(zwischen, `${eintrag.figur}.glb`);
     await hole(`${QUELLE}/Characters/gltf/${eintrag.figur}.glb`, roh);
 
@@ -369,12 +495,13 @@ function starteServer(seite, zwischen) {
  * `src/` wuerde sie wie Anwendungscode aussehen, der Client baut sie aber nie
  * mit. Alles, was mit dem Rendern zu tun hat, gehoert in diese eine Datei.
  *
- * DIE KAMERA IST DIE DER PROBE, nur orthografisch. Die Probe schaut mit einer
- * perspektivischen Kamera von (0, 7.4, 8.2) auf (0, 0.85, 0) — das sind 38,6
- * Grad ueber dem Brett. Derselbe Winkel wird hier benutzt, aber ohne Fluchtung:
- * Eine perspektivische Kamera bildet eine Figur am Bildrand anders ab als in
- * der Mitte, und ein Sprite steht spaeter ueberall auf dem Brett. Orthografisch
- * ist jedes Bild derselben Figur gleich gross, egal wo es hinkommt.
+ * DIE KAMERA IST ORTHOGRAFISCH, anders als die perspektivische der Probe: Eine
+ * perspektivische Kamera bildet eine Figur am Bildrand anders ab als in der
+ * Mitte, und ein Sprite steht spaeter ueberall auf dem Brett. Orthografisch ist
+ * jedes Bild derselben Figur gleich gross, egal wo es hinkommt.
+ *
+ * Winkel, Drehung und Ausschnitt kommen als Argument herein und stehen NICHT
+ * in der Seite: Der Vergleichslauf braucht mehrere davon in einem Durchgang.
  */
 const SEITE = `<!doctype html>
 <html lang="de">
@@ -390,35 +517,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const KANTE = ${KANTE * UEBERABTASTUNG};
-
-/** Blickrichtung der Probe: (0, 7.4, 8.2) - (0, 0.85, 0). */
-const BLICK = new THREE.Vector3(0, 6.55, 8.2).normalize();
-
-/**
- * Wie weit die Figur aus dem Bild gedreht steht.
- *
- * Sie schaut nach rechts (+X), denn genau so werden die beiden Seiten spaeter
- * gegeneinander gestellt und die Gegenseite wird gespiegelt. Reines Profil
- * waere flach; die 0,30 Radiant (17 Grad) zur Kamera hin machen daraus eine
- * Dreiviertelansicht, in der man Gesicht und Waffe sieht.
- */
-const DREHUNG = -Math.PI / 2 + 0.30;
-
-/**
- * Bildausschnitt in Weltmetern. Die Figuren sind rund 1,7 hoch, der Ausschnitt
- * ist 3,0 hoch — die Figur fuellt also gut die Haelfte der Zelle.
- *
- * ALLE Bilder haben denselben Ausschnitt und denselben Bezugspunkt. Das ist die
- * wichtigste Eigenschaft der ganzen Datei: Nur so kann Teil 2 jede Zelle an
- * dieselbe Stelle malen, ohne je Bewegung nachzurechnen. Wo die Figur auf dem
- * Boden aufsetzt, steht als `fusspunkt` in figuren3d.ts.
- *
- * 1,5 ist gemessen und nicht geraten: Bei 1,2 ragten Schwert und Stab aus dem
- * Bild, bei 1,7 wurde die stehende Figur zu klein. Das einzige, was auch jetzt
- * noch anstoesst, ist der Hut des Magiers im allerletzten Todesbild.
- */
-const HALBE_HOEHE = 1.5;
-const MITTE_Y = 0.95;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
@@ -439,19 +537,49 @@ const sonne = new THREE.DirectionalLight('#fff3dc', 2.1);
 sonne.position.set(5.5, 9, 4.5);
 szene.add(sonne);
 
-const kamera = new THREE.OrthographicCamera(-HALBE_HOEHE, HALBE_HOEHE, HALBE_HOEHE, -HALBE_HOEHE, 0.1, 60);
-kamera.position.copy(BLICK).multiplyScalar(12).add(new THREE.Vector3(0, MITTE_Y, 0));
-kamera.lookAt(0, MITTE_Y, 0);
+/**
+ * Baut die Kamera aus dem WINKEL, nicht aus einem rohen Vektor.
+ * Blickrichtung bei g Grad ueber der Waagerechten: (0, sin g, cos g).
+ */
+function baueKamera({ grad, halbeHoehe, mitteY }) {
+  const rad = (grad * Math.PI) / 180;
+  const blick = new THREE.Vector3(0, Math.sin(rad), Math.cos(rad));
+  const kamera = new THREE.OrthographicCamera(-halbeHoehe, halbeHoehe, halbeHoehe, -halbeHoehe, 0.1, 60);
+  kamera.position.copy(blick).multiplyScalar(12).add(new THREE.Vector3(0, mitteY, 0));
+  kamera.lookAt(0, mitteY, 0);
+  return kamera;
+}
 
 const lader = new GLTFLoader();
+// Ein Modell je URL genuegt: Der Vergleichslauf rendert dieselbe Rolle mit
+// mehreren Kameras, und jedes Mal 300 kB neu zu laden und zu riggen kostet
+// mehr Zeit als der ganze Rest des Skripts.
+const modelle = new Map();
+async function ladeModell(url) {
+  if (!modelle.has(url)) modelle.set(url, await lader.loadAsync(url));
+  return modelle.get(url);
+}
 
 /** Der Knochen, an dem die Figur "haengt" — an ihm wird der Ort gemessen. */
 const ANKERKNOCHEN = 'hips';
 
-window.rendereRolle = async (url, bewegungen) => {
-  const gltf = await lader.loadAsync(url);
+/**
+ * Laeuft alle Bewegungen ab und ruft "jeBild" fuer jedes gerenderte Bild.
+ *
+ * Der ganze Ablauf steht genau einmal hier, weil Messen und Rendern DIESELBEN
+ * Bilder sehen muessen: Waere die Messung ein zweiter, leicht anderer
+ * Durchlauf, passte der gemessene Ausschnitt nicht zu den Bildern, die
+ * hinterher entstehen.
+ */
+async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
+  const gltf = await ladeModell(url);
   const figur = gltf.scene;
-  figur.rotation.y = DREHUNG;
+  // MINUS, nicht plus: Eine Drehung um -a fuehrt die Blickachse +X nach
+  // (cos a, 0, sin a), also ZUR Kamera (+Z). Mit Plus dreht sich die Figur von
+  // ihr weg — die erste Fassung hatte das Vorzeichen falsch, und bei der
+  // steilen Bretterkamera fiel es nicht auf, weil man ohnehin von oben auf den
+  // Scheitel sah. Bei flacher Kamera sieht man dann den Hinterkopf.
+  figur.rotation.y = -Math.PI / 2 - (kameraKonfig.drehungGrad * Math.PI) / 180;
   // Die Figur haengt in einem Halter, der sie in jedem Bild zurueckschiebt
   // (siehe anStelleHalten weiter unten). Deshalb ein Halter und nicht die
   // Figur selbst: Die traegt schon die Drehung, und zwei Dinge an einem
@@ -459,6 +587,8 @@ window.rendereRolle = async (url, bewegungen) => {
   const halter = new THREE.Group();
   halter.add(figur);
   szene.add(halter);
+
+  const kamera = baueKamera(kameraKonfig);
 
   let anker = null;
   figur.traverse((teil) => {
@@ -502,14 +632,8 @@ window.rendereRolle = async (url, bewegungen) => {
 
   const mischer = new THREE.AnimationMixer(figur);
   const clips = new Map(gltf.animations.map((c) => [c.name, c]));
-
-  const spalten = Math.max(...bewegungen.map((b) => b.bilder));
-  const blatt = document.createElement('canvas');
-  blatt.width = spalten * KANTE;
-  blatt.height = bewegungen.length * KANTE;
-  const stift = blatt.getContext('2d');
-
   const laengen = {};
+
   for (let zeile = 0; zeile < bewegungen.length; zeile++) {
     const bewegung = bewegungen[zeile];
     const clip = clips.get(bewegung.name);
@@ -544,18 +668,85 @@ window.rendereRolle = async (url, bewegungen) => {
       // die Figur beim Wechsel von stand auf lauf um die Differenz.
       anStelleHalten(zeile === 0 && i === 0);
       renderer.render(szene, kamera);
-      stift.drawImage(renderer.domElement, i * KANTE, zeile * KANTE);
+      jeBild(zeile, i);
     }
   }
 
   mischer.stopAllAction();
   szene.remove(halter);
+  // Der Mischer haelt das Rig in der zuletzt gesetzten Pose fest. Ohne
+  // Zuruecksetzen faengt der naechste Durchlauf derselben Figur (anderer
+  // Winkel!) mit der Todespose an — und misst dann Unsinn.
+  mischer.uncacheRoot(figur);
+  return { laengen, kamera };
+}
+
+/** Ein Abtast-Blatt fuer die Messung, so gross wie ein Einzelbild. */
+const messblatt = document.createElement('canvas');
+messblatt.width = KANTE;
+messblatt.height = KANTE;
+const messstift = messblatt.getContext('2d', { willReadFrequently: true });
+
+/**
+ * Misst, wie weit die Figur ueber ALLE Bilder aus der Bildmitte ragt.
+ *
+ * Gemessen wird der ALPHAKANAL des fertig gerenderten Bildes, nicht die
+ * Geometrie: Was zaehlt, ist was man sieht. Ein Umhang, der durch den Koerper
+ * faellt, macht die Geometrie breiter als das Bild; ein Stab, der aus dem
+ * Ausschnitt ragt, faellt in der Geometrie gar nicht auf.
+ *
+ * Rueckgabe in Weltmetern, bezogen auf den Kameramittelpunkt: "halbBreite" die
+ * groesste Ausdehnung nach links oder rechts, "unten"/"oben" die senkrechten
+ * Kanten (negativ ist unterhalb der Mitte).
+ */
+window.messeRolle = async (url, bewegungen, kameraKonfig) => {
+  let halbBreite = 0;
+  let unten = Infinity;
+  let oben = -Infinity;
+  const h = kameraKonfig.halbeHoehe;
+
+  await durchlaufen(url, bewegungen, kameraKonfig, () => {
+    messstift.clearRect(0, 0, KANTE, KANTE);
+    messstift.drawImage(renderer.domElement, 0, 0);
+    const daten = messstift.getImageData(0, 0, KANTE, KANTE).data;
+    for (let y = 0; y < KANTE; y++) {
+      for (let x = 0; x < KANTE; x++) {
+        // Schwelle 8 statt 0: Die Kantenglaettung legt einen Saum aus fast
+        // durchsichtigen Pixeln um die Figur. Bei 0 misst man den Saum mit und
+        // zieht den Ausschnitt bei jedem Lauf ein Stueck weiter auf.
+        if (daten[(y * KANTE + x) * 4 + 3] <= 8) continue;
+        const nx = ((x + 0.5) / KANTE) * 2 - 1;
+        const ny = 1 - ((y + 0.5) / KANTE) * 2;
+        const bx = Math.abs(nx) * h;
+        if (bx > halbBreite) halbBreite = bx;
+        const by = ny * h;
+        if (by < unten) unten = by;
+        if (by > oben) oben = by;
+      }
+    }
+  });
+
+  if (unten === Infinity) throw new Error('Nichts im Bild: ' + url);
+  return { halbBreite, unten, oben };
+};
+
+/** Rendert ein Blatt (eine Zeile je Bewegung) und gibt es als PNG zurueck. */
+window.rendereRolle = async (url, bewegungen, kameraKonfig) => {
+  const spalten = Math.max(...bewegungen.map((b) => b.bilder));
+  const blatt = document.createElement('canvas');
+  blatt.width = spalten * KANTE;
+  blatt.height = bewegungen.length * KANTE;
+  const stift = blatt.getContext('2d');
+
+  const { laengen, kamera } = await durchlaufen(url, bewegungen, kameraKonfig, (zeile, i) => {
+    stift.drawImage(renderer.domElement, i * KANTE, zeile * KANTE);
+  });
 
   // Wo in der Zelle steht die Figur auf dem Boden? Der Punkt (0,0,0) der Szene
   // ist die Stelle, an der die Fuesse aufsetzen; Teil 2 muss sie kennen, um
   // das Sprite auf ein Feld zu setzen. Sie liegt NICHT in der Zellmitte: Die
-  // Kamera schaut schraeg von oben, der Ausschnitt ist nach oben verschoben,
-  // damit die stehende Figur hineinpasst. Ausgerechnet statt geschaetzt.
+  // Kamera schaut schraeg, der Ausschnitt ist gegen die Figur verschoben.
+  // Ausgerechnet statt geschaetzt.
   const fuss = new THREE.Vector3(0, 0, 0).project(kamera);
   const fusspunkt = { x: (fuss.x + 1) / 2, y: (1 - fuss.y) / 2 };
 
@@ -567,8 +758,65 @@ window.bereit = true;
 </body></html>`;
 
 // ---------------------------------------------------------------------------
-// Schritt 3: rendern, verkleinern, als WebP ablegen
+// Schritt 3: messen, rendern, verkleinern
 // ---------------------------------------------------------------------------
+
+/**
+ * Sucht den Ausschnitt, in den ALLE Rollen bei diesem Winkel hineinpassen.
+ *
+ * Ein gemeinsamer Ausschnitt fuer alle Rollen und alle Bewegungen ist die
+ * wichtigste Eigenschaft der ganzen Datei: Nur so kann Teil 2 jede Zelle an
+ * dieselbe Stelle malen, ohne je Bewegung oder je Rolle nachzurechnen.
+ */
+async function messeAusschnitt(seite, rollen, { grad: winkel, drehungGrad }) {
+  const probe = {
+    grad: winkel,
+    drehungGrad,
+    halbeHoehe: PROBE_HALBE_HOEHE,
+    mitteY: PROBE_MITTE_Y,
+  };
+  let halbBreite = 0;
+  let unten = Infinity;
+  let oben = -Infinity;
+  for (const rolle of rollen) {
+    const mass = await seite.evaluate(
+      ([url, bewegungen, konfig]) => window.messeRolle(url, bewegungen, konfig),
+      [`/modelle/${rolle}.glb`, BEWEGUNGEN, probe],
+    );
+    halbBreite = Math.max(halbBreite, mass.halbBreite);
+    unten = Math.min(unten, mass.unten);
+    oben = Math.max(oben, mass.oben);
+  }
+  // Senkrecht wird die Figur MITTIG in die Zelle gelegt, waagerecht bleibt sie
+  // um ihren Fusspunkt zentriert: Die Figur soll ueber ihrem Feld stehen und
+  // nicht daneben, auch wenn sie beim Ausholen weit nach links greift.
+  const mitte = (unten + oben) / 2;
+  const halbeHoehe = Math.max(halbBreite, (oben - unten) / 2) * LUFT;
+  // Die Kamera zielt auf (0, mitteY, 0); sie um dy anzuheben verschiebt das
+  // Bild senkrecht um dy * cos(Winkel). Deshalb die Division.
+  const mitteY = PROBE_MITTE_Y + mitte / Math.cos((winkel * Math.PI) / 180);
+  return { grad: winkel, drehungGrad, halbeHoehe, mitteY };
+}
+
+/** Rendert ein Blatt und gibt es als PNG-Puffer in Zielgroesse zurueck. */
+async function rendereBlatt(seite, sharp, rolle, kameraKonfig) {
+  const { bild, spalten, laengen, fusspunkt } = await seite.evaluate(
+    ([url, bewegungen, konfig]) => window.rendereRolle(url, bewegungen, konfig),
+    [`/modelle/${rolle}.glb`, BEWEGUNGEN, kameraKonfig],
+  );
+  const roh = Buffer.from(bild.slice('data:image/png;base64,'.length), 'base64');
+  const png = await sharp(roh)
+    .resize(spalten * KANTE, BEWEGUNGEN.length * KANTE, { kernel: 'lanczos3' })
+    .png()
+    .toBuffer();
+  return { png, spalten, laengen, fusspunkt };
+}
+
+// ---------------------------------------------------------------------------
+// Vorbereitung (fuer beide Betriebsarten dieselbe)
+// ---------------------------------------------------------------------------
+
+const nurVergleich = process.argv.includes('--vergleich');
 
 // Fester Name statt `mkdtemp`: Die 17,6 MB Originale sollen beim zweiten Lauf
 // nicht noch einmal aus dem Netz kommen (`hole()` ueberspringt, was schon da
@@ -577,9 +825,8 @@ const zwischen = join(tmpdir(), 'brauweg-figuren3d');
 await mkdir(zwischen, { recursive: true });
 console.log(`Zwischenstand: ${zwischen}`);
 
-const modelle = await baueModelle(zwischen);
-await mkdir(ZIEL, { recursive: true });
-await copyFile(LIZENZ_QUELLE, join(ZIEL, 'LIZENZ.txt'));
+const gebraucht = nurVergleich ? VERGLEICH_ROLLEN : null;
+await baueModelle(zwischen, gebraucht);
 
 const { server, port } = await starteServer(SEITE, zwischen);
 const { chromium } = await ladePaket('playwright');
@@ -591,44 +838,227 @@ seite.on('pageerror', (fehler) => console.error('Seite:', fehler.message));
 await seite.goto(`http://127.0.0.1:${port}/seite.html`);
 await seite.waitForFunction('window.bereit === true', null, { timeout: 30_000 });
 
-const bericht = [];
-for (const eintrag of ROLLEN) {
-  const { bild, spalten, laengen, fusspunkt } = await seite.evaluate(
-    ([url, bewegungen]) => window.rendereRolle(url, bewegungen),
-    [`/modelle/${eintrag.rolle}.glb`, BEWEGUNGEN],
+// Der Aufruf steht ganz UNTEN in der Datei, nicht hier: Die Konstanten des
+// Vergleichsbildes stehen weiter hinten, und ein `const` ist vor seiner Zeile
+// nicht benutzbar. Funktionen darf man vorziehen, ihre Konstanten nicht.
+
+// ---------------------------------------------------------------------------
+// Betriebsart A: die fuenf Blaetter fuers Spiel
+// ---------------------------------------------------------------------------
+
+async function baueBlaetter() {
+  await mkdir(ZIEL, { recursive: true });
+  await copyFile(LIZENZ_QUELLE, join(ZIEL, 'LIZENZ.txt'));
+
+  const alle = ROLLEN.map((r) => r.rolle);
+  const ausschnitt = await messeAusschnitt(seite, alle, {
+    grad: KAMERA_GRAD,
+    drehungGrad: DREHUNG_GRAD,
+  });
+  console.log(
+    `Kamera ${grad(KAMERA_GRAD)} ueber der Waagerechten, Figur ${DREHUNG_GRAD}° zur Kamera gedreht`,
+  );
+  console.log(
+    `Ausschnitt gemessen: halbe Hoehe ${ausschnitt.halbeHoehe.toFixed(3)}  Mitte y ${ausschnitt.mitteY.toFixed(3)}`,
   );
 
-  const roh = Buffer.from(bild.slice('data:image/png;base64,'.length), 'base64');
-  const ziel = join(ZIEL, `${eintrag.rolle}.webp`);
-  await sharp(roh)
-    .resize(spalten * KANTE, BEWEGUNGEN.length * KANTE, { kernel: 'lanczos3' })
-    // Verlustbehaftet mit `alphaQuality: 100`: Die Farbflaechen der Figuren
-    // vertragen die Kompression gut, ein weicher Alphakanal nicht — ein
-    // ausgefranster Umriss faellt sofort auf, ein leicht anderes Braun nie.
-    .webp({ quality: 70, alphaQuality: 100, effort: 6 })
-    .toFile(ziel);
+  const bericht = [];
+  for (const eintrag of ROLLEN) {
+    const { png, spalten, laengen, fusspunkt } = await rendereBlatt(
+      seite,
+      sharp,
+      eintrag.rolle,
+      ausschnitt,
+    );
+    const ziel = join(ZIEL, `${eintrag.rolle}.webp`);
+    await sharp(png)
+      // Verlustbehaftet mit `alphaQuality: 100`: Die Farbflaechen der Figuren
+      // vertragen die Kompression gut, ein weicher Alphakanal nicht — ein
+      // ausgefranster Umriss faellt sofort auf, ein leicht anderes Braun nie.
+      .webp({ quality: 70, alphaQuality: 100, effort: 6 })
+      .toFile(ziel);
+    const groesse = (await readFile(ziel)).byteLength;
+    bericht.push({ rolle: eintrag.rolle, groesse, laengen, fusspunkt, spalten });
+  }
 
-  const groesse = (await readFile(ziel)).byteLength;
-  bericht.push({ rolle: eintrag.rolle, groesse, laengen, fusspunkt });
+  let summe = 0;
+  for (const z of bericht) {
+    summe += z.groesse;
+    const dauern = Object.entries(z.laengen)
+      .map(([name, s]) => `${name} ${s.toFixed(2)}s`)
+      .join('  ');
+    console.log(`${z.rolle.padEnd(10)} ${kb(z.groesse).padStart(9)}   ${dauern}`);
+  }
+  console.log(`${'zusammen'.padEnd(10)} ${kb(summe).padStart(9)}`);
+  console.log(
+    `Raster je Blatt: ${Math.max(...BEWEGUNGEN.map((b) => b.bilder))} x ${BEWEGUNGEN.length} Zellen zu ${KANTE} px`,
+  );
+  // Der Fusspunkt gehoert in figuren3d.ts. Er steht hier als Zahl, damit ihn
+  // niemand aus dem Bild abmisst: Wer ihn um zwei Pixel danebensetzt, sucht
+  // spaeter, warum die Figuren im Getuemmel nicht auf einer Linie stehen.
+  const f = bericht[0].fusspunkt;
+  console.log(
+    `Fusspunkt in der Zelle: x ${f.x.toFixed(4)}  y ${f.y.toFixed(4)} (Anteil der Kante)`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Betriebsart B: das Vergleichsbild
+// ---------------------------------------------------------------------------
+
+/** Zeilenhoehe, Beschriftungsspalte und Kopfzeilen des Vergleichsbildes. */
+const V_SPALTE = 172;
+const V_KOPF = 76;
+const V_LUECKE = 30;
+const V_GRUND = '#241d18';
+
+function beschriftung(text, unterzeile, x, y) {
+  const zweite = unterzeile
+    ? `<text x="${x}" y="${y + 22}" fill="#c8b9a6" font-family="sans-serif" font-size="15">${unterzeile}</text>`
+    : '';
+  return `<text x="${x}" y="${y}" fill="#f4ece0" font-family="sans-serif" font-size="19" font-weight="600">${text}</text>${zweite}`;
+}
+
+/**
+ * Rendert die Vergleichswinkel nebeneinander und legt sie als EIN Bild ab.
+ *
+ * Ein Bild und nicht zwoelf Dateien: Robin soll die Winkel nebeneinander sehen
+ * und nicht zwischen Tabs springen — der Unterschied zwischen 16 und 22 Grad
+ * ist genau die Art Unterschied, die man im Vergleich sofort und einzeln gar
+ * nicht sieht.
+ */
+async function baueVergleich() {
+  const zeilen = [];
+
+  // Oberer Block: ein Winkel je Zeilenpaar, beide Rollen.
+  for (const winkel of VERGLEICH_WINKEL) {
+    const ausschnitt = await messeAusschnitt(seite, VERGLEICH_ROLLEN, {
+      grad: winkel,
+      drehungGrad: DREHUNG_GRAD,
+    });
+    console.log(
+      `Kamera ${grad(winkel)}: halbe Hoehe ${ausschnitt.halbeHoehe.toFixed(3)}  Mitte y ${ausschnitt.mitteY.toFixed(3)}`,
+    );
+    for (const rolle of VERGLEICH_ROLLEN) {
+      const { png } = await rendereBlatt(seite, sharp, rolle, ausschnitt);
+      zeilen.push({
+        png,
+        titel: `${grad(winkel)} · ${rolle}`,
+        unter:
+          winkel === KAMERA_GRAD
+            ? `heute · Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)}`
+            : `Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)}`,
+      });
+    }
+  }
+
+  const trenner = zeilen.length;
+
+  // Unterer Block: eine Rolle, ein Winkel, drei Drehungen.
+  for (const drehung of VERGLEICH_DREHUNGEN) {
+    const ausschnitt = await messeAusschnitt(seite, ['meuchler'], {
+      grad: VERGLEICH_DREHUNG_GRAD,
+      drehungGrad: drehung,
+    });
+    const { png } = await rendereBlatt(seite, sharp, 'meuchler', ausschnitt);
+    zeilen.push({
+      png,
+      titel: `Drehung ${drehung}°`,
+      unter: `bei ${grad(VERGLEICH_DREHUNG_GRAD)} · meuchler`,
+    });
+  }
+
+  // Aus jedem Blatt die vier ausgewaehlten Zellen schneiden.
+  const reihen = [];
+  for (const zeile of zeilen) {
+    const zellen = [];
+    for (const wahl of VERGLEICH_ZELLEN) {
+      const y = BEWEGUNGEN.findIndex((b) => b.name === wahl.bewegung);
+      zellen.push(
+        await sharp(zeile.png)
+          .extract({ left: wahl.bild * KANTE, top: y * KANTE, width: KANTE, height: KANTE })
+          .png()
+          .toBuffer(),
+      );
+    }
+    reihen.push({ ...zeile, zellen });
+  }
+
+  const breite = V_SPALTE + VERGLEICH_ZELLEN.length * KANTE;
+  const hoehe =
+    V_KOPF + trenner * KANTE + V_LUECKE + V_KOPF + (reihen.length - trenner) * KANTE + 12;
+
+  const teile = [];
+  const texte = [];
+
+  // Kopfzeile des oberen Blocks, samt Spaltenbeschriftung.
+  texte.push(
+    beschriftung(
+      'Kamerawinkel · Tafelrunde-Figuren',
+      `Drehung ${DREHUNG_GRAD}° · Ausschnitt je Winkel neu gemessen`,
+      14,
+      26,
+    ),
+  );
+  VERGLEICH_ZELLEN.forEach((wahl, i) => {
+    texte.push(
+      `<text x="${V_SPALTE + i * KANTE + KANTE / 2}" y="${V_KOPF - 8}" fill="#9c8d7c" font-family="sans-serif" font-size="14" text-anchor="middle">${wahl.bewegung}</text>`,
+    );
+  });
+
+  reihen.forEach((reihe, i) => {
+    const versatz = i < trenner ? V_KOPF : V_KOPF + trenner * KANTE + V_LUECKE + V_KOPF;
+    const zeileOben = versatz + (i < trenner ? i : i - trenner) * KANTE;
+    texte.push(beschriftung(reihe.titel, reihe.unter, 14, zeileOben + 52));
+    reihe.zellen.forEach((zelle, s) => {
+      teile.push({ input: zelle, left: V_SPALTE + s * KANTE, top: zeileOben });
+    });
+  });
+
+  // Kopfzeile des unteren Blocks.
+  const untenOben = V_KOPF + trenner * KANTE + V_LUECKE;
+  texte.push(
+    beschriftung(
+      'Wie weit die Figur zur Kamera gedreht steht',
+      'je flacher die Kamera, desto mehr Drehung vertraegt sie',
+      14,
+      untenOben + 26,
+    ),
+  );
+
+  // Trennlinie und Zeilenraster als eine SVG-Ebene ueber dem Hintergrund.
+  const raster = reihen
+    .map((_, i) => {
+      const versatz = i < trenner ? V_KOPF : untenOben + V_KOPF;
+      const y = versatz + (i < trenner ? i : i - trenner) * KANTE;
+      return `<rect x="0" y="${y}" width="${breite}" height="${KANTE}" fill="${i % 2 ? '#2b231d' : '#241d18'}"/>`;
+    })
+    .join('');
+
+  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">${raster}<line x1="0" y1="${untenOben + 14}" x2="${breite}" y2="${untenOben + 14}" stroke="#4a3b2e" stroke-width="2"/>${texte.join('')}</svg>`;
+
+  await mkdir(dirname(VERGLEICHSBILD), { recursive: true });
+  await sharp({
+    create: { width: breite, height: hoehe, channels: 4, background: V_GRUND },
+  })
+    .composite([{ input: Buffer.from(svg), left: 0, top: 0 }, ...teile])
+    // Verlustbehaftet und ohne Alpha: Das Bild wird angesehen, nicht verbaut.
+    .webp({ quality: 82, effort: 6 })
+    .toFile(VERGLEICHSBILD);
+
+  const groesse = (await readFile(VERGLEICHSBILD)).byteLength;
+  console.log(`Vergleichsbild: ${VERGLEICHSBILD} (${breite}x${hoehe}, ${kb(groesse)})`);
+}
+
+// ---------------------------------------------------------------------------
+// Los
+// ---------------------------------------------------------------------------
+
+if (nurVergleich) {
+  await baueVergleich();
+} else {
+  await baueBlaetter();
 }
 
 await browser.close();
 server.close();
-
-let summe = 0;
-for (const z of bericht) {
-  summe += z.groesse;
-  const dauern = Object.entries(z.laengen)
-    .map(([name, s]) => `${name} ${s.toFixed(2)}s`)
-    .join('  ');
-  console.log(`${z.rolle.padEnd(10)} ${kb(z.groesse).padStart(9)}   ${dauern}`);
-}
-console.log(`${'zusammen'.padEnd(10)} ${kb(summe).padStart(9)}`);
-console.log(
-  `Raster je Blatt: ${Math.max(...BEWEGUNGEN.map((b) => b.bilder))} x ${BEWEGUNGEN.length} Zellen zu ${KANTE} px`,
-);
-// Der Fusspunkt gehoert in figuren3d.ts. Er steht hier als Zahl, damit ihn
-// niemand aus dem Bild abmisst: Wer ihn um zwei Pixel danebensetzt, sucht
-// spaeter, warum die Figuren im Getuemmel nicht auf einer Linie stehen.
-const f = bericht[0].fusspunkt;
-console.log(`Fusspunkt in der Zelle: x ${f.x.toFixed(4)}  y ${f.y.toFixed(4)} (Anteil der Kante)`);
