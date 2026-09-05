@@ -844,6 +844,44 @@ describe('Bereit und Kampfpause', () => {
     expect(liste).toHaveTextContent('Sitz 3 gegen Sitz 4');
   });
 
+  /*
+   * WAS IM KAMPF ZUSAMMENKLAPPT, und warum das eine Regel ist und keine
+   * Anordnung.
+   *
+   * Auf 390 Pixeln — der Zielgroesse — kosten Werte-Kasten und Bank zusammen
+   * 117 Pixel ueber und unter dem Brett, und keines von beiden laesst sich im
+   * Kampf gebrauchen: Das eigene Leben steht ohnehin auf der eigenen Kachel in
+   * der Mitspielerleiste, und von der Bank geht nichts aufs Feld, solange
+   * gekaempft wird. Der Platz gehoert der Arena; wie viel sie damit anfaengt,
+   * steht in Buehne.module.css.
+   *
+   * Geprueft wird es hier und nicht am Bild, weil es genau die Art Aenderung
+   * ist, die jemand beim naechsten Umbau versehentlich zurueckdreht — man
+   * sieht einem wieder eingehaengten Kasten nicht an, dass er weg sein soll.
+   */
+  it('klappt Werte-Kasten und Bank waehrend des Kampfes zusammen', () => {
+    stelle(
+      sicht({
+        phase: 'kampf',
+        eigenes: { bereit: true, darfHandeln: false },
+        kaempfe: [kampfProbe()],
+      }),
+    );
+    zeige();
+    expect(screen.getByRole('group', { name: 'Kampf' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Reservebank' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Leben')).not.toBeInTheDocument();
+    // Der Satz zur leeren Bank geht mit ihr: Er schickt in den Laden, und der
+    // ist im Kampf ebenfalls zu.
+    expect(screen.queryByText(/Deine Bank ist leer/)).not.toBeInTheDocument();
+  });
+
+  it('stellt Werte-Kasten und Bank in der Platzierungsphase wieder hin', () => {
+    zeige();
+    expect(screen.getByRole('group', { name: 'Reservebank' })).toBeInTheDocument();
+    expect(screen.getByText('Leben')).toBeInTheDocument();
+  });
+
   it('baut in der Vorbereitung keine Buehne auf', () => {
     // Die Ruestkammer ist ein Werktisch und kein Schauplatz. Stuende die
     // Ansage auch hier, kaeme sie bei jedem Rundruf des Servers wieder.
