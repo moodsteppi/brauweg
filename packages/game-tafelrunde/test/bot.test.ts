@@ -29,9 +29,12 @@ import {
   type EinheitId,
   type Heer,
   type Kaempfer,
+  type Kampfregler,
   type Stufe,
   type TafelrundeAktion,
   type TafelrundePartie,
+  type TafelrundeRegeln,
+  STANDARD_REGLER,
   darfHandeln,
   einheit,
   erlaubteZuege,
@@ -41,10 +44,10 @@ import {
   hexfeld,
   lebendeSitze,
   loeseKampfAuf,
-  platzierungen,
   platzNummer,
   sichtFuer,
 } from '../src/index.js';
+import { spieleParte } from './messen.js';
 
 const SAAT = '0123456789abcdef0123456789abcdef';
 
@@ -534,9 +537,12 @@ describe('Bot: Aufstieg', () => {
 
   /**
    * Der harte Gegner laesst beide Bedingungen weg und steigt auf, sobald es
-   * geht. Das sieht nach Leichtsinn aus und ist gemessen die staerkere Wahl:
-   * Ein Feldplatz mehr wiegt schwerer als ein Brett, das eine Runde frueher
-   * voll ist (siehe GANGARTEN in bot.ts).
+   * geht. Frueher stand hier, das sei "gemessen die staerkere Wahl" — das
+   * stimmt seit dem 05.09.2026 nicht mehr: Nachgemessen ist der frueh Aufstieg
+   * heute weder Vorteil noch Nachteil, und unter der alten Ladenregel war er
+   * sogar der Grund, aus dem `hart` gegen `normal` verlor (Zahlen bei GANGARTEN
+   * in bot.ts). Geprueft wird deshalb nur noch das VERHALTEN — dass die Gangart
+   * tut, was ihre Beschreibung sagt.
    */
   it('steigt als harter Gegner auch mit leerem Brett auf', () => {
     assert.deepEqual(zug(mitBrett(20, false), 'hart'), { typ: 'levelAuf' });
@@ -687,38 +693,53 @@ describe('Bot: das fertige Heer', () => {
   /**
    * Die Gangarten sind kein Zierrat.
    *
-   * GEMESSEN WIRD IM FELD ZU VIERT und nicht mehr im Duell zu zweit — aus
-   * einem Grund, der am 05.09.2026 aufgefallen ist: Seit der Lebensvorrat 20
-   * statt 100 betraegt, dauert ein Duell 11 statt 21 Runden, und in dieser
-   * Zeit verdient sich der aggressive Ausbau von `hart` nicht mehr. Ueber 200
-   * Duelle stand es 96:104 fuer `normal` (vorher 125:75 fuer `hart`). Zu viert
-   * — der Besetzung, auf die das Spiel eingestellt ist — bleibt die
-   * Reihenfolge dagegen deutlich stehen: ueber 400 Partien 119 Siege fuer den
-   * harten Sitz gegen durchschnittlich 94 der drei normalen, und 241 : 53 fuer
-   * hart gegen sanft.
+   * GEMESSEN WIRD IM FELD ZU VIERT und nicht im Duell zu zweit — aus einem
+   * Grund, der am 05.09.2026 aufgefallen ist: Seit der Lebensvorrat 20 statt
+   * 100 betraegt, dauert ein Duell 11 statt 21 Runden, und in dieser Zeit
+   * verdient sich der aggressive Ausbau von `hart` im Duell nicht mehr (ueber
+   * 200 Duelle 96:104 fuer `normal`, vorher 125:75 fuer `hart`). Zu viert —
+   * der Besetzung, auf die das Spiel eingestellt ist — steht die Reihenfolge.
    *
-   * Hundert Partien und nicht zwanzig, weil die Laeden mitentscheiden: Ueber
+   * DIE PARTIESCHLEIFE KOMMT AUS messen.ts und ist hier nicht noch einmal
+   * hingeschrieben. Sie stand frueher als eigene Fassung an dieser Stelle, und
+   * genau daran haengt eine Zahl, die man sonst nicht nachrechnen kann:
+   * Dieselbe Paarung ueber `werkzeug/gangarten.mjs` ergibt dieselben Siege wie
+   * diese Probe (am 05.09.2026 Ziffer fuer Ziffer geprueft).
+   *
+   * HUNDERT PARTIEN und nicht zwanzig, weil die Laeden mitentscheiden: Ueber
    * drei Saatbasen lag `hart` bei 30 zu 23 gegen den Schnitt der drei anderen
-   * Sitze — der Abstand ist stabil, aber nicht gross. Eine Probe an zwanzig
-   * Partien faellt beim naechsten Balancing grundlos um.
+   * Sitze. Eine Probe an zwanzig Partien faellt beim naechsten Balancing
+   * grundlos um. Die Saat jeder Partie ist `SAAT-feld-<stark>-<schwach>-<i>`;
+   * wer die Zahlen von Hand nachstellen will, gibt dem Werkzeug
+   * `--saat 0123456789abcdef0123456789abcdef-feld` mit.
    */
-  function imFeld(stark: Schwierigkeit, schwach: Schwierigkeit): [number, number] {
+  const PARTIEN_JE_PAARUNG = 100;
+
+  function imFeld(
+    stark: Schwierigkeit,
+    schwach: Schwierigkeit,
+    regeln: TafelrundeRegeln = DEFAULT_REGELN,
+    regler: Kampfregler = STANDARD_REGLER,
+  ): [number, number] {
+    const sitze = [0, 1, 2, 3];
+    // Sitz 0 spielt stark, die drei uebrigen schwach.
+    const besetzung = sitze.map((sitz) => (sitz === 0 ? stark : schwach));
     const siege = [0, 0, 0, 0];
-    for (let i = 0; i < 100; i++) {
-      let p = neu([0, 1, 2, 3], `${SAAT}-feld-${stark}-${schwach}-${i}`);
-      for (let runde = 0; runde < 300 && !p.fertig; runde++) {
-        for (const sitz of lebendeSitze(p)) {
-          if (darfHandeln(p, sitz)) p = ruesteAus(p, sitz, sitz === 0 ? stark : schwach).partie;
-        }
-        if (p.phase === 'kampf') p = loeseKampfAuf(p);
-      }
-      // Nur der EINDEUTIGE erste Platz zaehlt; ein geteilter Sieg sagt ueber
-      // die Gangart nichts.
-      const beste = platzierungen(p).filter((z) => z.place === 1);
-      if (beste.length === 1) siege[beste[0]!.seat]!++;
+    for (let i = 0; i < PARTIEN_JE_PAARUNG; i++) {
+      // `sieger` ist der EINDEUTIGE erste Platz; ein geteilter Sieg sagt ueber
+      // die Gangart nichts und steht in messen.ts deshalb als null.
+      const befund = spieleParte(
+        `${SAAT}-feld-${stark}-${schwach}-${i}`,
+        sitze,
+        besetzung,
+        regeln,
+        regler,
+      );
+      if (befund.sieger !== null) siege[befund.sieger]! += 1;
     }
-    const schnittDerAnderen = (siege[1]! + siege[2]! + siege[3]!) / 3;
-    return [siege[0]!, schnittDerAnderen];
+    // Der SCHNITT der drei anderen und nicht ihre Summe: Sonst traete die
+    // starke Gangart gegen drei Spieler an, und die Zahl hiesse nichts.
+    return [siege[0]!, (siege[1]! + siege[2]! + siege[3]!) / 3];
   }
 
   it('gewinnt als harter Gegner oefter als drei sanfte', () => {
@@ -734,5 +755,31 @@ describe('Bot: das fertige Heer', () => {
   it('gewinnt als harter Gegner oefter als drei normale', () => {
     const [hart, normal] = imFeld('hart', 'normal');
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal`);
+  });
+
+  /**
+   * DIESELBE AUSSAGE NOCH EINMAL, ABER IN DER KURZEN PARTIE — und das ist die
+   * Probe, um die es hier eigentlich geht.
+   *
+   * Am 05.09.2026 verlor `hart` gegen `normal`, gemessen auf dem Zweig, der die
+   * Partie von 15 auf 11 Runden verkuerzte: 77 : 107,7 ueber 400 Partien. Der
+   * Grund lag nicht an der kurzen Partie allein, sondern an der damaligen
+   * Ladenregel: Solange ein Kauf nur einen Platz leerte und ein Wurf Gold
+   * kostete, konnte `hart` die Feldplaetze, die es sich frueh erkauft, nicht
+   * fuellen — sein Aufstieg war Tempo ins Leere. Seit ein Kauf den GANZEN Laden
+   * neu zieht, traegt er sich wieder.
+   *
+   * Die Lehre steht als Probe da: Eine Gangart, die nur bei der Rundenzahl von
+   * heute vorne liegt, ist auf eine Zahl geeicht, die jederzeit wieder anders
+   * lautet. Geprueft wird deshalb zusaetzlich bei 14 Startleben und Zeitraffer
+   * x2 — dem kuerzesten Stand, der je gemessen wurde, und dem, der als
+   * naechster gebaut wird. Ueber diese 100 Partien steht es 34 : 22,0; ueber
+   * 400 sind es 140 : 86,7 gegen 139 : 87,0 auf einer zweiten Saatbasis.
+   */
+  it('gewinnt als harter Gegner auch in der kurzen Partie oefter', () => {
+    const kurz: TafelrundeRegeln = { ...DEFAULT_REGELN, startLeben: 14 };
+    const schnell: Kampfregler = { ...STANDARD_REGLER, zeitraffer: 2 };
+    const [hart, normal] = imFeld('hart', 'normal', kurz, schnell);
+    assert.ok(hart > normal, `hart ${hart} : ${normal} normal (14 Leben, x2)`);
   });
 });

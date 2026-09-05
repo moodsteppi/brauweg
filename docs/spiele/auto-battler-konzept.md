@@ -317,6 +317,21 @@ durch, ohne Oberfläche, alles aus dem Seed. Zwei Aufrufer benutzen ihn:
   anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was
   wirklich kaputt wäre, und ist keine Abnahme des Katalogs.
 
+- **Das Werkzeug für die Gangarten** `werkzeug/gangarten.mjs` — dieselbe
+  Partieschleife, aber ein Sitz spielt `hart` und die drei anderen `normal`.
+  Es beantwortet die Frage, die `ausgewogenheit.mjs` bauartbedingt offen lässt
+  (dort sind alle Sitze gleich besetzt, sonst misst man die Gangarten statt
+  des Katalogs):
+
+  ```
+  node packages/game-tafelrunde/werkzeug/gangarten.mjs --partien 400 --stark hart --schwach normal
+  ```
+
+  Schalter: `--stark`, `--schwach`, `--partien`, `--sitze`, `--saat` sowie
+  `--leben`, `--teiler`, `--zeitraffer`, `--takt` und `--wuerfelkosten`. Die
+  letzten fünf stellen einen **vorgeschlagenen** Stand nach, ohne ihn
+  einzubauen — genau damit ist Befund 7 unten aufgeklärt worden.
+
 Die Grundmessung sind **5.000 Partien zu viert**, alle Sitze mit der Gangart
 `normal` besetzt (sonst misst man die Gangarten und nicht den Katalog). Fünf-
 statt fünfhundert Tausend, weil eine Partie zu viert seit der Umstellung 1,8
@@ -482,13 +497,33 @@ dem Board.
 ohne Fähigkeit ist eine Beistand-Einheit nur eine schwache Wache.
 **Folgerung:** nichts, bis es Fähigkeiten gibt.
 
-**7. Die Gangarten des Bots messen sich zu viert anders als zu zweit.** Im
-Duell schlug `hart` den normalen Gegner vorher mit 125:75; seit die Partie zu
-zweit 11 statt 21 Runden dauert, steht es 96:104 — der aggressive Ausbau
-verdient sich in der kurzen Zeit nicht mehr. Zu viert bleibt die Reihenfolge
-stehen (119 : 94 für den harten Sitz gegen drei normale, 241 : 53 gegen drei
-sanfte). Die Probe in `bot.test.ts` misst deshalb seitdem im Feld zu viert und
-nicht mehr im Duell.
+**7. Die Gangarten des Bots hängen an der Ladenregel, nicht an der
+Rundenzahl.** Im Duell schlug `hart` den normalen Gegner vorher mit 125:75;
+seit die Partie zu zweit 11 statt 21 Runden dauert, steht es 96:104. Die Probe
+in `bot.test.ts` misst deshalb im Feld zu viert und nicht mehr im Duell.
+
+Dort fiel `hart` am 05.09.2026 trotzdem durch — 77 : 107,7 über 400 Partien,
+gemessen auf dem Zweig mit 14 Startleben und Zeitraffer x2. **Ursache ist
+nicht die kurze Partie** (der Zeitraffer allein bewegt die Zahl von 110 auf
+114, also gar nichts) **und auch nicht der Würfelpreis** (mit wieder
+eingeschaltetem Preis gewinnt `hart` sogar deutlicher, 174 : 75,3), sondern
+die damalige Ladenregel: Solange ein Kauf nur seinen Platz leerte, bekam
+`hart` die Feldplätze, die es sich früh erkauft, in einer kurzen Partie nicht
+mehr voll. Beleg: derselbe Stand mit gezähmtem Aufstieg stand 112 : 96,0 statt
+77 : 107,7. Seit ein Kauf den **ganzen** Laden neu zieht, trägt sich der
+Aufstieg wieder — gemessen über zwei Saatbasen, je 400 Partien:
+
+| Paarung | gebaut (20 Leben) | kurze Partie (14 Leben, x2) |
+|---|---|---|
+| hart : normal | 169 : 77 · 147 : 84 | 140 : 87 · 139 : 87 |
+| hart : sanft | 357 : 14 · 373 : 9 | 341 : 20 · 367 : 11 |
+| normal : sanft | 350 : 17 · 348 : 17 | 359 : 14 · 354 : 15 |
+
+Was `hart` heute trägt, ist die fehlende Patzerquote und nicht das Tempo:
+Kontrolllauf mit `hart` = `normal` 102 : 99,3, nur ohne Patzer 149 : 83,7, mit
+den Tempo-Schrauben obendrauf 140 : 86,7 — die letzten beiden liegen
+innerhalb eines Standardfehlers. **Folgerung:** nichts verstellen, aber jede
+Regeländerung am Laden künftig mit `werkzeug/gangarten.mjs` gegenmessen.
 
 **8. Gut jede dritte Partie steht zur Halbzeit fest** (36,7 % zu viert, vorher
 43,0 %). Für einen Auto-Battler nicht ungewöhnlich — wer früh gewinnt, hat mehr

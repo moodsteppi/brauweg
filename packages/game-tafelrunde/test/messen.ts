@@ -88,13 +88,22 @@ export const VIER_SITZE: readonly number[] = ACHT_SITZE.slice(0, 4);
  * Katalog. Die gemischte Besetzung ist die Gegenprobe dazu — wenn eine Marke
  * nur bei lauter gleich starken Gegnern gut aussieht, ist das eine eigene
  * Auskunft.
+ *
+ * EINE LISTE besetzt Sitz fuer Sitz und ist der Fall, in dem man die Gangarten
+ * WIRKLICH messen will: ein Sitz mit der starken, der Rest mit der schwachen
+ * (`werkzeug/gangarten.mjs`, `imFeld` in test/bot.test.ts). Ohne sie muesste
+ * jeder Aufrufer die Partieschleife noch einmal schreiben — und maesse dann
+ * seine eigene Kopie.
  */
-export type Besetzung = Schwierigkeit | 'gemischt';
+export type Besetzung = Schwierigkeit | 'gemischt' | readonly Schwierigkeit[];
 
 const GEMISCHT: readonly Schwierigkeit[] = ['sanft', 'normal', 'hart'];
 
 export function gangartFuer(besetzung: Besetzung, sitz: number): Schwierigkeit {
-  if (besetzung !== 'gemischt') return besetzung;
+  // Reihum und nicht abgeschnitten: Eine Liste, die kuerzer ist als der Tisch,
+  // soll eine Besetzung ergeben und keinen Absturz an Sitz 5.
+  if (Array.isArray(besetzung)) return besetzung[sitz % besetzung.length]!;
+  if (besetzung !== 'gemischt') return besetzung as Schwierigkeit;
   return GEMISCHT[sitz % GEMISCHT.length]!;
 }
 
