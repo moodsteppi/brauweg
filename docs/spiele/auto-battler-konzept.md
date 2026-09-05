@@ -44,9 +44,17 @@ ab; entschieden wird zwischen den Runden.
 
 ### Spielfeld
 
-Hexagonales Raster, etwa 4 Reihen zu 5 Spalten, versetzt. Eigene Hälfte zum
-Platzieren, das gegnerische Brett wird für die Vorschau gespiegelt. Unterhalb
-eine Reservebank mit 5–9 Plätzen.
+Hexagonales Raster, versetzt. Die eigene Hälfte zum Platzieren hat **4 Reihen
+zu 5 Spalten**; das gegnerische Brett wird für die Vorschau gespiegelt.
+Unterhalb eine Reservebank mit 5–9 Plätzen.
+
+Im Kampf werden beide Hälften zu einer Arena von **5 × 10** zusammengelegt —
+vier Reihen je Seite und **zwei leere Reihen dazwischen**. Das Konzept nannte
+ursprünglich vier Reihen für die ganze Arena; geändert am 06.09.2026, nachdem
+gemessen war, dass 68,4 % der Einheiten dort schon im ersten Takt in
+Reichweite standen und Schützen und Magier praktisch nie liefen
+(`docs/TAFELRUNDE-LAUFWEGE.md`). Seither läuft jede Einheit mindestens einen
+Schritt.
 
 ### Einheiten und Verschmelzen
 

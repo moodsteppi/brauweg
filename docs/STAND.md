@@ -100,8 +100,9 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > Paketstruktur lag). Eine Runde läuft jetzt vollständig durch: Alle lebenden
 > Sitze werden paarweise angesetzt (bei ungerader Zahl bekommt der Übrige das
 > Brett eines anderen als **Geist**, keine Freirunde), beide Bretthälften
-> werden zu einer Arena mit vier Reihen zusammengelegt, der Kampf wird beim
-> Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
+> werden zu einer Arena zusammengelegt (seit dem 06.09.2026 vier Reihen je
+> Seite und zwei leere dazwischen, also 5 × 10 — vorher 5 × 4), der Kampf wird
+> beim Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
 > als **Ablaufprotokoll** (jede Bewegung, jeder Treffer, jeder Tod mit
 > Zeitpunkt) im Zustand und in der Sicht. Gleiche Saat plus gleiche Bretter
 > ergibt denselben Ablauf **Ereignis für Ereignis** — eine Probe vergleicht

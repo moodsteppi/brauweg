@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url';
 
 import { botZug } from '../../../../game-tafelrunde/dist/src/bot.js';
 import {
+  ARENA_REIHEN,
   BRETT_REIHEN,
   BRETT_SPALTEN,
   DEFAULT_REGELN,
@@ -61,15 +62,23 @@ import {
  * sich seine eigene Saat aus der Partie (`kampfSaat`) — von Hand gesetzt
  * waere sie eine zweite Wahrheit.
  *
- * WARUM AUSGERECHNET DIESE: Von 25 durchgerechneten Partien liefert sie in
+ * WARUM AUSGERECHNET DIESE: Von 500 durchgerechneten Partien liefert sie in
  * Runde 10 den Kampf, der am meisten zeigt und dabei typisch bleibt —
- * 18,1 s (Median unter Zeitraffer x2 sind 18,3 s), vier gegen vier, auf
- * beiden Seiten zwei erreichte Markenschwellen, sechs Tode ABWECHSELND auf
- * beiden Seiten und ein Ende durch Ausloeschung. Die kurzen Kaempfe (7 s)
- * zeigen kaum Bewegung, die langen (45 s) enden in `entscheideNachZeit` und
- * damit ohne Schlussbild, und in vielen faellt keine einzige eigene Einheit.
+ * 18,2 s (Median unter Zeitraffer x2 sind 18,3 s), vier gegen vier, kein
+ * Kaempfer unter Stufe 2 und einer auf Stufe 3, auf beiden Seiten zwei
+ * erreichte Markenschwellen, fuenf Tode ABWECHSELND auf beiden Seiten und
+ * ein Ende durch Ausloeschung. Die kurzen Kaempfe zeigen kaum Bewegung, die
+ * langen enden in `entscheideNachZeit` und damit ohne Schlussbild, und in
+ * vielen faellt keine einzige eigene Einheit.
+ *
+ * AM 06.09.2026 NEU GESUCHT: Vorher stand hier `probe-kampf-16` mit der
+ * Paarung 2:3. Mit vier Reihen je Seite und der Luecke in der Arena spielt
+ * der Bot andere Runden, und in Runde 10 jener Partie gibt es die Paarung
+ * gar nicht mehr. Der neue Kampf zeigt nebenbei genau das, worum es bei der
+ * Aenderung ging: 26 Bewegungen statt 6, bei fast gleich vielen Ereignissen
+ * (171 statt 168).
  */
-const SAAT = 'probe-kampf-16';
+const SAAT = 'probe-kampf-420';
 
 /** Runde 10: das erste ausgebaute Brett. Vorher steht fast alles auf Stufe 1. */
 const RUNDE = 10;
@@ -79,7 +88,7 @@ const RUNDE = 10;
  * Blick die Anzeige laeuft. Er gewinnt: Das Siegbild ist einer der vier
  * Punkte, um die es Robin geht, und ein verlorener Kampf zeigt es nicht.
  */
-const PAARUNG = { a: 2, b: 3 };
+const PAARUNG = { a: 3, b: 1 };
 
 /** Vier Sitze, alle mit derselben Gangart — so misst auch der Messstand. */
 const SITZE = [0, 1, 2, 3];
@@ -159,6 +168,7 @@ const szene = {
   zeitraffer: ZEITRAFFER,
   ich: PAARUNG.a,
   brettReihen: BRETT_REIHEN,
+  arenaReihen: ARENA_REIHEN,
   brettSpalten: BRETT_SPALTEN,
   kampf,
   katalog,

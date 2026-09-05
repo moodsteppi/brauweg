@@ -5,7 +5,7 @@
  * abgeschlossenes Bauteil mit eigenem Zustand, und die Klassennamen sollen
  * nirgends sonst greifen. Farben und Masse lehnen sich an die Ruestkammer an
  * (tr-brett, tr-wabe, tr-einheit in styles.css), damit die Arena wie
- * dasselbe Brett aussieht — nur eben mit vier Reihen und in Bewegung.
+ * dasselbe Brett aussieht — nur eben mit zehn Reihen und in Bewegung.
  *
  * Alle Bewegung liegt HIER: Zug und Ausblenden als Uebergang, Ausschlag und
  * Blitz als Animation. Die Komponente setzt nur Zustaende. Deshalb genuegt am
@@ -142,6 +142,13 @@
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   background: rgba(10, 14, 18, 0.3);
 }
+/*
+ * Rot oben, gruen unten — und die beiden Reihen dazwischen behalten absichtlich
+ * das neutrale Dunkel von oben (`data-haelfte='mitte'`, seit dem 06.09.2026).
+ * Sie gehoeren zu keiner Seite: Dort steht nie eine Einheit, dort wird nur
+ * gelaufen. Faerbte man sie mit ein, saehe die Arena aus, als duerfte man dort
+ * aufstellen.
+ */
 .wabe[data-haelfte='oben']::before { background: rgba(255, 126, 110, 0.12); }
 .wabe[data-haelfte='unten']::before { background: rgba(110, 200, 160, 0.12); }
 

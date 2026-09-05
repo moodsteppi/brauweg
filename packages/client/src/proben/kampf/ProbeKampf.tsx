@@ -70,6 +70,7 @@ interface Szene {
   readonly zeitraffer: number;
   readonly ich: number;
   readonly brettReihen: number;
+  readonly arenaReihen: number;
   readonly brettSpalten: number;
   readonly kampf: Kampfpaarung;
   readonly katalog: readonly Katalogeintrag[];
@@ -233,6 +234,7 @@ export function ProbeKampf(): React.JSX.Element {
            */
           ich={SZENE.ich}
           brettReihen={SZENE.brettReihen}
+          arenaReihen={SZENE.arenaReihen}
           brettSpalten={SZENE.brettSpalten}
           katalog={KATALOG}
           nameVon={nameVon}

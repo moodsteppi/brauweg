@@ -114,13 +114,17 @@ function zeige(
       dauerMs: k.bericht.dauerMs,
     }),
   ),
+  /* Die Masse der Arena. Vorgabe ist die kleine Probearena aus `bericht()`:
+     zwei Reihen je Seite, keine Luecke. Am Tisch sind es vier und zwei. */
+  masse: { brettReihen: number; arenaReihen: number } = { brettReihen: 2, arenaReihen: 4 },
 ) {
   return render(
     <KampfAnzeige
       kaempfe={kaempfe}
       paarungen={paarungen}
       ich={ich}
-      brettReihen={2}
+      brettReihen={masse.brettReihen}
+      arenaReihen={masse.arenaReihen}
       brettSpalten={5}
       katalog={KATALOG}
       nameVon={(sitz) => NAMEN[sitz] ?? `Sitz ${sitz + 1}`}
@@ -271,6 +275,29 @@ describe('spieleBis', () => {
     const stand = spieleBis(anfangsstand(fremd), fremd, 0);
     expect(stand.figuren).toEqual(anfangsstand(fremd).figuren);
     expect(stand.naechstes).toBe(1);
+  });
+});
+
+describe('das Wabenraster der Arena', () => {
+  /**
+   * Die Arena ist so hoch, wie die SICHT sagt — nicht doppelt so hoch wie die
+   * eigene Bretthaelfte. Seit dem 06.09.2026 liegen zwei leere Reihen
+   * dazwischen (arena.ts); haette der Bildschirm sie weiter selbst gerechnet,
+   * fehlten ihm zwei Reihen und jede Figur staende auf dem falschen Feld.
+   */
+  it('zeichnet so viele Waben, wie die Arena Reihen hat', () => {
+    const { container } = zeige([paarung()], 0, undefined, undefined, {
+      brettReihen: 2,
+      arenaReihen: 6,
+    });
+    const waben = container.querySelectorAll('[data-haelfte]');
+    expect(waben.length).toBe(6 * 5);
+    const zaehle = (art: string) =>
+      container.querySelectorAll(`[data-haelfte="${art}"]`).length;
+    expect(zaehle('oben')).toBe(2 * 5);
+    expect(zaehle('unten')).toBe(2 * 5);
+    // Die Luecke gehoert zu keiner Seite und bleibt ungefaerbt.
+    expect(zaehle('mitte')).toBe(2 * 5);
   });
 });
 
