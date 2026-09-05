@@ -2802,9 +2802,23 @@ function Abschluss({
 /**
  * Das Regelblatt.
  *
- * Wortlaut nach dem Muster von Filler und Eiland. Der letzte Absatz nennt
- * ausdruecklich, was noch FEHLT — sonst haelt der erste Spieler die
- * uebersprungene Kampfphase fuer einen Fehler.
+ * Wortlaut nach dem Muster von Filler und Eiland.
+ *
+ * BIS ZUM 05.09.2026 STAND HIER EIN ABSCHNITT "Noch nicht dabei": Solange die
+ * Kampfphase uebersprungen wurde und die Marken-Boni fehlten, nannte das Blatt
+ * beides ausdruecklich, damit der erste Spieler die folgenlose Runde nicht fuer
+ * einen Fehler haelt. Beide Gruende sind weg — die Kaempfe laufen ab
+ * (`loeseKampfAuf`) und die Synergien greifen im Modul (synergien.ts, Schwellen
+ * 2/3/5) —, also ist der Abschnitt weg und die Synergie steht als Regel bei den
+ * anderen. Ein Regelblatt, das ein vorhandenes Spielelement als fehlend
+ * ankuendigt, ist schlimmer als keins: Wer die Leiste sieht, glaubt dann eher
+ * dem Text als dem Bildschirm.
+ *
+ * Die Schwellen stehen hier als Zahlen im Fliesstext, weil ein Regeltext sie
+ * nennen muss, um verstaendlich zu sein. Gerechnet wird mit ihnen NICHT — das
+ * tut allein das Modul, und die Leiste zeichnet nur, was in der Sicht steht
+ * (siehe Synergien.tsx). Wer die Schwellen im Modul verschiebt, zieht diesen
+ * Satz mit.
  */
 function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
@@ -2835,6 +2849,14 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           bessere Karten im Laden.
         </li>
         <li>
+          Recken gehören Klassen an wie Krieger, Wächter oder Untot. Stehen{' '}
+          <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die
+          Klasse stärker; ab drei und ab fünf noch einmal deutlicher. Der Bonus
+          gilt nur für die Träger selbst und nur auf dem Feld — was auf der Bank
+          liegt, zählt nicht mit. Was gerade greift und wie weit es bis zur
+          nächsten Stufe ist, zeigt die Synergie-Leiste.
+        </li>
+        <li>
           Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und
           ein Bonus für Serien. Was die nächste Runde bringt, steht klein neben
           deinem Gold.
@@ -2846,11 +2868,6 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         </li>
         <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>
       </ol>
-      <h3>Noch nicht dabei</h3>
-      <p>
-        Die Boni für gleiche Klassen fehlen noch; sie kommen als eigener Ausbau.
-        Aufrüsten, verschmelzen, aufstellen und kämpfen ist vollständig da.
-      </p>
       <h3>Ziel</h3>
       <p>Als Letzter am Tisch stehen bleiben.</p>
     </div>
