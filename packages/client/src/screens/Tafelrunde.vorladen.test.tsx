@@ -50,8 +50,18 @@ const paket = vi.hoisted(() => {
 
 vi.mock('../minispiele/tafelrunde/paket', () => paket.modul);
 
-import { vorratZuruecksetzen } from '../minispiele/tafelrunde/vorladen';
+import { VORZULADEN, vorratZuruecksetzen } from '../minispiele/tafelrunde/vorladen';
 import { Tafelrunde } from './Tafelrunde';
+
+/*
+ * Beide Zahlen kommen aus der Liste und stehen nicht daneben. Sie haben sich
+ * seit dem ersten Bau schon zweimal geaendert (Spielpaket, dann die fuenf
+ * Blaetter der Bildfolgen), und jedes Mal war es dieser Test, der rot wurde —
+ * ohne dass an dem, was er prueft, etwas falsch war.
+ */
+/** Die Posten, die ueber ein `<img>` kommen: alles ausser dem Spielpaket. */
+const BILDER = VORZULADEN.filter((p) => !p.holen).length;
+const GESAMT = VORZULADEN.length;
 
 /**
  * Ein Bild, das erst laedt, wenn der Test es sagt.
@@ -80,7 +90,7 @@ class BildAttrappe {
 
 /**
  * Einen Umlauf der Mikroaufgaben abwarten und React dabei die Zustaende setzen
- * lassen. Ohne `act` warnt React bei jedem der 23 Zwischenstaende.
+ * lassen. Ohne `act` warnt React bei jedem Zwischenstand.
  */
 const umlauf = (): Promise<void> =>
   act(async () => {
@@ -192,25 +202,28 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
 
   it('fragt jede Figur und den Untergrund an, nicht erst bei Bedarf', () => {
     render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
-    // 22 Figuren plus Untergrund — und zwar bevor irgendetwas gezeichnet ist.
-    // Das Spielpaket ist kein Bild und taucht hier deshalb nicht auf; es
-    // zaehlt trotzdem im selben Lauf mit (siehe der Test darunter).
-    expect(wartende).toHaveLength(23);
+    // 22 Figuren, fuenf Blaetter der Bildfolgen und der Untergrund — und zwar
+    // bevor irgendetwas gezeichnet ist. Das Spielpaket ist kein Bild und
+    // taucht hier deshalb nicht auf; es zaehlt trotzdem im selben Lauf mit
+    // (siehe der Test darunter).
+    expect(wartende).toHaveLength(BILDER);
     expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/untergrund-holz.webp');
     expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/dorfwache.webp');
+    expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/figuren3d/wache.webp');
   });
 
   it('zaehlt sichtbar mit, waehrend die Dateien eintreffen', async () => {
     render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
-    // 24 und nicht 23: Das Spielpaket haengt im selben Lauf.
-    expect(screen.getByText('0 von 24 Dateien')).toBeInTheDocument();
+    // Einer mehr als Bilder: Das Spielpaket haengt im selben Lauf.
+    expect(GESAMT).toBe(BILDER + 1);
+    expect(screen.getByText(`0 von ${GESAMT} Dateien`)).toBeInTheDocument();
 
     const erste = wartende.splice(0, 3);
     await act(async () => {
       for (const bild of erste) bild.fertig();
     });
 
-    expect(screen.getByText('3 von 24 Dateien')).toBeInTheDocument();
+    expect(screen.getByText(`3 von ${GESAMT} Dateien`)).toBeInTheDocument();
   });
 
   /*
@@ -228,9 +241,9 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
     });
     await umlauf();
 
-    // Alle 23 Bilder da, das Paket fehlt: Der Vorhang bleibt, und der Balken
+    // Alle Bilder da, das Paket fehlt: Der Vorhang bleibt, und der Balken
     // steht nicht bei 100 %.
-    expect(screen.getByText('23 von 24 Dateien')).toBeInTheDocument();
+    expect(screen.getByText(`${BILDER} von ${GESAMT} Dateien`)).toBeInTheDocument();
     expect(Number(screen.getByRole('progressbar').getAttribute('aria-valuenow'))).toBeLessThan(
       100,
     );

@@ -232,29 +232,85 @@ export const KATALOG: readonly Einheit[] = [
    * Danach steht Drache bei x1,15 — und hat genug Antritte, um ueberhaupt
    * messbar zu sein (394 statt 60 in 5.000 Partien).
    */
+  /**
+   * Werte am 05.09.2026 angehoben (vorher 450 / 50 / 0,6 / Ruestung 10).
+   *
+   * Er war zusammen mit dem Irrlicht die schwaechste Einheit seiner
+   * Kostenstufe ausserhalb des Beistands — rund ein Viertel unter der Mitte,
+   * gemessen mit demselben Mass, das der Bot benutzt (`staerke` in bot.ts:
+   * Leben mal Ruestungsfaktor mal Angriff mal Tempo). Die Ursache war ein
+   * unbezahlter Tausch: Ein Magier bekommt laut Konzept mehr Angriff und
+   * weniger Leben als seine Stufe — er hatte zusaetzlich das NIEDRIGSTE Tempo
+   * und die NIEDRIGSTE Ruestung des ganzen Katalogs. Mit Tempo 0,6 blieben von
+   * 50 Angriff dreissig Schaden je Sekunde, weniger als der Astschuetze mit
+   * seinen 45 bei Tempo 0,8 — der Angriffsvorteil war nur auf dem Papier da.
+   *
+   * Jetzt liegt er auf der Mitte seiner Stufe. Am Tausch selbst aendert das
+   * nichts: Er hat weiterhin das wenigste Leben und die geringste Ruestung
+   * unter den Ein-Gold-Kaempfern und dafuer den haertesten einzelnen Treffer.
+   */
   {
     id: 'funkenlehrling',
     name: 'Funkenlehrling',
     kosten: 1,
     rolle: 'magier',
     marken: ['elementar', 'drache'],
-    leben: 450,
-    angriff: 50,
-    tempo: 0.6,
+    leben: 470,
+    angriff: 56,
+    tempo: 0.65,
     reichweite: 3,
-    ruestung: 10,
+    ruestung: 15,
   },
+  /**
+   * DIE VORDERREIHE DER MARKE ELEMENTAR (seit dem 05.09.2026). Vorher ein
+   * Magier: 430 / 52 / 0,6, Reichweite 3, Ruestung 10, Marken Elementar und
+   * Naturwesen.
+   *
+   * Elementar gewann 6,0 % seiner Antritte gegen einen Schnitt von 24,2 %
+   * (x0,25, 1.500 Partien zu viert) und war damit die einzige Marke weit
+   * ausserhalb der Schranke. Der Grund stand nicht in der Synergietabelle,
+   * sondern hier: Alle fuenf Traeger waren Fernkaempfer mit Reichweite 3 oder
+   * 4 — kein einziger stand vorn. Ein Brett, das auf Elementar setzt, hatte
+   * niemanden, der die Linie haelt; die Magier wurden erreicht und
+   * niedergemacht, bevor ihr Angriffsbonus etwas eintrug. Zum Vergleich:
+   * Naturwesen hat zwei Wachen unter fuenf Traegern und stand bei x1,04,
+   * Waechter vier unter sechs und bei x1,23.
+   *
+   * BELEGT, BEVOR HIER ETWAS GEAENDERT WURDE. Drei Verdaechtige, einzeln
+   * gemessen (Werkzeuge in werkzeug/, Wegwerf-Laeufe):
+   *   - Bonus zu klein? Mit Elementar-Bonus NULL blieb die Siegquote bei
+   *     6,1 %. Der Bonus bewegt nur, wie oft der Bot die Marke waehlt, nicht
+   *     ob sie traegt.
+   *   - Traeger zu schwach? Hebt man alle vier auf die Mitte ihrer Stufe,
+   *     kommt Elementar auf x0,54 bis x0,60 — besser, aber weiter draussen.
+   *   - Zusammensetzung? Gibt man der Marke EINEN zaehen Traeger fuer die
+   *     Vorderreihe, ohne einen einzigen Wert zu aendern, springt sie auf
+   *     x0,78. Das war die Ursache.
+   *
+   * Warum ausgerechnet das Irrlicht: Es ist der billigste Elementar-Traeger,
+   * und billig muss die Vorderreihe sein — sonst haelt sie erst ab Level 4.
+   * Und es ist die einzige Figur der Reihe, die kein Werkzeug in der Hand
+   * haelt (public/tafelrunde/irrlicht.webp ist eine Kugel), also die einzige,
+   * die vorn nicht falsch aussieht. Neue Grafik kaeme hier nicht in Frage: Ein
+   * neuer Traeger braucht eine bestellte Datei, und bis die da ist, zeigt der
+   * Bildschirm einen weissen Kasten.
+   *
+   * Die Ruestung 35 ist die Zaehigkeit eines Irrlichts und keine Ruestung: Es
+   * ist ein Licht, das schwer zu treffen ist. Naturwesen ist weggefallen —
+   * ein Flammengeist gehoert nicht in den Wald, und Naturwesen hat mit
+   * Hainwaechterin und Wurzelriese seine Vorderreihe laengst.
+   */
   {
     id: 'irrlicht',
     name: 'Irrlicht',
     kosten: 1,
-    rolle: 'magier',
-    marken: ['elementar', 'naturwesen'],
-    leben: 430,
-    angriff: 52,
-    tempo: 0.6,
-    reichweite: 3,
-    ruestung: 10,
+    rolle: 'wache',
+    marken: ['elementar'],
+    leben: 560,
+    angriff: 34,
+    tempo: 0.7,
+    reichweite: 1,
+    ruestung: 35,
   },
   {
     id: 'gassendieb',
@@ -330,17 +386,30 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 3,
     ruestung: 15,
   },
+  /**
+   * Werte am 05.09.2026 angehoben (vorher 580 / 70 / 0,6 / Ruestung 10).
+   *
+   * Dieselbe unbezahlte Rechnung wie beim Funkenlehrling, nur noch deutlicher:
+   * Sie war mit x0,66 die schwaechste Zwei-Gold-Einheit ausserhalb des
+   * Beistands und stand in 1.500 gemessenen Partien auf ganzen 15 Brettern —
+   * der Bot kaufte sie schlicht nie. Eine Einheit, die niemand aufstellt, ist
+   * fuer das Balancing dasselbe wie eine, die es nicht gibt.
+   *
+   * Sie bleibt Magier: Elementar hat seine Vorderreihe seit demselben Tag im
+   * Irrlicht (siehe dort), und eine Marke aus lauter Wachen waere der Fehler
+   * von vorhin mit umgekehrtem Vorzeichen.
+   */
   {
     id: 'frostweberin',
     name: 'Frostweberin',
     kosten: 2,
     rolle: 'magier',
     marken: ['elementar'],
-    leben: 580,
-    angriff: 70,
-    tempo: 0.6,
+    leben: 600,
+    angriff: 80,
+    tempo: 0.65,
     reichweite: 3,
-    ruestung: 10,
+    ruestung: 20,
   },
   {
     id: 'schattenklinge',
@@ -414,17 +483,25 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 3,
     ruestung: 25,
   },
+  /**
+   * Werte am 05.09.2026 angehoben (vorher 760 / 92 / 0,6 / Ruestung 15).
+   *
+   * Dritter Fall derselben Sache (siehe Funkenlehrling): x0,77 seiner Stufe,
+   * und in 1.500 Partien stand er auf DREI Brettern. Seine Reichweite 4 —
+   * als einzige im Katalog, sie reicht bis in die hintere Reihe des Gegners —
+   * war den Aufschlag nicht wert, den er dafuer an Tempo und Ruestung zahlte.
+   */
   {
     id: 'sturmrufer',
     name: 'Sturmrufer',
     kosten: 3,
     rolle: 'magier',
     marken: ['elementar'],
-    leben: 760,
-    angriff: 92,
-    tempo: 0.6,
+    leben: 800,
+    angriff: 104,
+    tempo: 0.65,
     reichweite: 4,
-    ruestung: 15,
+    ruestung: 20,
   },
   {
     id: 'grabfuerstin',

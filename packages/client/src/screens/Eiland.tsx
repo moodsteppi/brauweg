@@ -13,6 +13,7 @@ import {
   zelleVon,
 } from '../minispiele/eiland/gesten';
 import { Ornamentbild } from '../minispiele/eiland/Ornament';
+import type { EilandSicht, EilandVariante } from '../minispiele/eiland/sicht';
 import { useTable } from '../useTable';
 
 /**
@@ -30,46 +31,12 @@ import { useTable } from '../useTable';
  * nicht: Dort steht `null`, und ein `null` wird grau gezeichnet.
  */
 
-/** Sicht des Moduls, siehe packages/game-eiland/src/sicht.ts. */
-interface EilandSicht {
-  ich: number | null;
-  spalten: number;
-  zeilen: number;
-  sichtweite: number;
-  /** 'nebel' oder 'klar' — siehe packages/game-eiland/src/regeln.ts. */
-  variante: EilandVariante;
-  /** 0 Gras, 1 Wasser, 2 Berg — oder null, solange das Feld im Nebel liegt. */
-  gelaende: (number | null)[];
-  ornament: (number | null)[];
-  /** Eingesammelte Ornamente, die als Bauwerk stehen geblieben sind. */
-  bauwerk: (number | null)[];
-  besitzer: (number | null)[];
-  /** Grauton je Platz — nur Zeichnung, verraet nichts. */
-  grau: number[];
-  punkte: Record<number, number>;
-  gesammelt: Record<number, number>;
-  kontingent: Record<number, number>;
-  bereit: Record<number, boolean>;
-  wahl: number[];
-  waehlbar: number[];
-  runde: number;
-  letzte: {
-    runde: number;
-    /** In Entscheidungsreihenfolge; `einsatz` = Sitze, die ein Feld darauf gesetzt haben. */
-    kaempfe: { platz: number; sieger: number; einsatz: number[] }[];
-    reserve: Record<number, number>;
-    genommen: Record<number, number[]>;
-    verfallen: Record<number, number[]>;
-    ornamente: Record<number, number>;
-  } | null;
-  fertig: boolean;
-  sieger: number | null;
-  leftSeats: number[];
-  zuschauer: boolean;
-}
-
-/** Die beiden Spielarten, siehe packages/game-eiland/src/regeln.ts. */
-type EilandVariante = 'nebel' | 'klar';
+/*
+ * Die Sicht des Moduls steht seit dem 06.09.2026 in
+ * minispiele/eiland/sicht.ts. Grund: Der Vertrag unter src/vertrag/ haelt
+ * sie gegen die echte Modulsicht, und ein Import aus DIESEM Bildschirm
+ * zoege React samt aller Bauteile in einen Test, der nur Typen vergleicht.
+ */
 
 /**
  * Takt, in dem der Stand der Suche abgefragt wird.

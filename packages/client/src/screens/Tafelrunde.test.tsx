@@ -34,6 +34,7 @@ vi.mock('../minispiele/tafelrunde/vorladen', async (echtes) => ({
   useVorladen: () => ({ fertig: true, erledigt: 23, gesamt: 23, anteil: 1, fehlend: [] }),
 }));
 
+import { blattPfad } from '../minispiele/tafelrunde/bildfolge';
 import { FIGUREN, UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import { KARTE_TRIFFT } from '../minispiele/tafelrunde/Synergien';
 import { Tafelrunde } from './Tafelrunde';
@@ -908,8 +909,11 @@ describe('Figuren und Untergrund', () => {
   });
 
   it('stellt auch in der Kampfanzeige die Figuren auf', () => {
-    // Die Arena bekommt die Figur nicht durchgereicht, sie holt sie selbst
-    // aus figuren.ts — hier zaehlt, dass die Verdrahtung am Tisch steht.
+    /* Die Arena bekommt die Figur nicht durchgereicht, sie holt sie selbst —
+       hier zaehlt, dass die Verdrahtung am Tisch steht. Seit dem 6.9.2026 sind
+       es dort die 3D-Bildfolgen, und die haengen an der ROLLE der Einheit
+       (bildfolge.ts): Die Dorfwache ist eine Wache, der Astschuetze ein
+       Schuetze. Genau diese Rolle muss aus dem Katalog der Sicht ankommen. */
     stelle(
       sicht({
         phase: 'kampf',
@@ -939,8 +943,11 @@ describe('Figuren und Untergrund', () => {
     );
     zeige();
     const arena = screen.getByRole('group', { name: 'Kampf' });
-    expect(within(arena).getByAltText('Dorfwache')).toHaveAttribute('src', FIGUREN.dorfwache);
-    expect(within(arena).getByAltText('Astschütze')).toHaveAttribute('src', FIGUREN.astschuetze);
+    expect(within(arena).getByAltText('Dorfwache')).toHaveAttribute('src', blattPfad('wache'));
+    expect(within(arena).getByAltText('Astschütze')).toHaveAttribute(
+      'src',
+      blattPfad('schuetze'),
+    );
   });
 });
 

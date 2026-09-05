@@ -2,6 +2,10 @@
  * Die vorgerenderten Bildfolgen der Tafelrunde-Figuren — die EINE Stelle, an
  * der steht, was unter `public/tafelrunde/figuren3d/` liegt.
  *
+ * ABGESPIELT WERDEN SIE VON `minispiele/tafelrunde/bildfolge.ts`: Dort steht,
+ * welches Ereignis welche Folge ausloest und welches Bild wann dran ist. Diese
+ * Datei beschreibt nur, WAS da liegt — sie kennt weder Kampf noch Uhr.
+ *
  * Erzeugt hat sie `bildfolgen-rendern.mjs` (danebenliegend, laeuft einmal von
  * Hand, ist NICHT Teil des Builds). Wer die Bilder neu rendert und dabei an
  * Bildzahl, Rasterweite oder Ausschnitt dreht, aendert die Zahlen hier mit —

@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 
+import { BLATT_PFADE } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import { PAKET } from './paket';
 
 /**
  * Alles holen, bevor die erste Runde laeuft.
+ *
+ * Seit dem 6.9.2026 haengen ausserdem die fuenf Blaetter der 3D-Bildfolgen mit
+ * drin (bildfolge.ts). Sie wiegen gut 200 kB — mehr als alles andere an
+ * Bildern zusammen — und werden erst in der Kampfphase gebraucht; genau
+ * deshalb muessen sie vorher da sein.
  *
  * Der Anlass ist gemessen (05.09.2026): Die 22 Figuren und der Holz-Untergrund
  * wurden nirgends vorgeladen. Jede Datei ging erst los, wenn eine Einheit zum
@@ -75,8 +81,19 @@ export const VORZULADEN: readonly Posten[] = [
      denselben Lauf wie die Bilder, damit der Balken EINE Wartezeit zeigt und
      nicht zwei hintereinander — siehe paket.ts. */
   PAKET,
-  /* Die Textur zuerst: mit Abstand die groesste Datei und die einzige, deren
-     Fehlen man auf jedem Bildschirm sofort sieht. */
+  /*
+   * Die fuenf Blaetter der Bildfolgen (figuren3d.ts): zusammen gut 200 kB und
+   * damit der schwerste Posten nach dem Spielpaket. Vor die Textur gezogen,
+   * weil ohne sie im Kampf gar keine Figur steht — der Rueckfall auf die
+   * Pixelfigur greift zwar (KampfAnzeige.tsx), aber der Kampf ist das
+   * Schauspiel der Runde und soll nicht in der Ersatzbesetzung laufen.
+   *
+   * Aus BLATT_PFADE abgeleitet und nicht danebengeschrieben, aus demselben
+   * Grund wie bei den Figuren (Punkt 1 oben).
+   */
+  ...BLATT_PFADE.map((pfad) => ({ pfad, kb: 43 })),
+  /* Die Textur: die groesste Einzeldatei nach den Blaettern und die einzige,
+     deren Fehlen man auf jedem Bildschirm sofort sieht. */
   { pfad: UNTERGRUND, kb: 35 },
   ...Object.values(FIGUREN).map((pfad) => ({ pfad, kb: 1 })),
 ];

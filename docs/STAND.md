@@ -270,6 +270,19 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > offen: Krieger steht bei ×1,56, Elementar bei ×0,22 — beide Zeilen stehen
 > auf dem Board.
 >
+> **Beide Zeilen sind am 05.09.2026 erledigt** (siebte Messung, Abschnitt in
+> `docs/spiele/auto-battler-konzept.md`). Die Ursache lag bei Elementar, und
+> zwar nicht im Bonus, sondern in der Zusammensetzung: Alle fünf Träger waren
+> Fernkämpfer, die Marke hatte keine Vorderreihe. Das **Irrlicht** ist jetzt
+> eine Wache mit Reichweite 1 (und hat dafür Naturwesen abgegeben);
+> Funkenlehrling, Frostweberin und Sturmrufer sind auf die Mitte ihrer
+> Kostenstufe gehoben. Elementar steht damit bei **×0,83** (Gegenprobe ×0,92)
+> statt ×0,25, und **Krieger ist von selbst auf ×1,13 gefallen** — an ihm wurde
+> nichts geändert, er stand nur über einem Schnitt, den eine kaputte Zeile nach
+> unten zog. Die Spanne der gezählten Marken ist ×0,83 bis ×1,24. Startleben,
+> Zeitraffer, Schwellen und Synergieboni sind unangetastet, die Spielzeit liegt
+> unverändert bei 7:10 im Median.
+>
 > Der zweite Befund von damals hat sich mit der Ladenregel **von selbst
 > erledigt**: Die Bot-Gangart `hart` lag nach dem Zeitraffer hinter `normal`
 > (77 : 107,7 über 400 Partien zu viert, davor 119 : 94) und schlägt sie jetzt

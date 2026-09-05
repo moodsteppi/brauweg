@@ -66,10 +66,47 @@ was das Modul nicht kennt. Genau das hält die Datei fest.
 abschreiben ist nur dann richtig, wenn der Bildschirm sie auch wirklich
 einstellen lässt. Sonst weglassen.
 
+## Die Minispiele: die Sicht steht neben dem Bildschirm
+
+Die vier Kartenspiele beschreiben ihre Sichten in `protocol.ts`. Die
+Minispiele taten es bis zum 06.09.2026 **im eigenen Bildschirm** —
+`interface TafelrundeSicht` stand mitten in `screens/Tafelrunde.tsx`, dasselbe
+Muster in Eiland, Filler, Mememory, EasyPoker und FeldherrTisch.
+
+Das ging so nicht: Ein Vertrag, der von dort importiert, zöge den ganzen
+Bildschirm samt React in einen Test, der nur Typen vergleichen will. Deshalb
+liegt der Sicht-Typ jetzt je Spiel in einer eigenen Datei neben dem
+Bildschirm, `src/minispiele/<spiel>/sicht.ts`, und der Bildschirm importiert
+ihn von dort. **Für ein neues Minispiel gilt das von Anfang an** — die Sicht
+gehört nicht in die `.tsx`.
+
+Wo ein solcher Typ auf Client-Typen zurückgreift, die in einem Bauteil stehen
+(`Kampfpaarung` in `KampfAnzeige.tsx`, `Stufe` in `Stufenregler.tsx`), wird
+`import type` benutzt und nichts anderes: Ein Wert-Import wäre React im
+Vertrag.
+
+### Drei Besonderheiten, die dabei angefallen sind
+
+**`Beweglich` behält Tupel.** Fillers Barrieren sind
+`readonly (readonly [number, number])[]`. Pauschal zu `number[][]` verflacht,
+passte das auf keinen Client-Typ, der `[number, number]` schreibt — der
+Vertrag wäre rot geworden, obwohl beide Seiten dasselbe meinen.
+
+**`felderEinerPartie` nimmt eine `config`.** Manche Felder hängen an einer
+Spielart: `barrierenMoeglich` gibt es bei Filler nur in `build`. Eine Partie
+in der Vorgabe-Spielart ließe genau dieses Feld ungeprüft.
+
+**`felderEinerPartie` nimmt `unterobjekte`.** Die Kartenspiele haben genau
+eine zweite Ebene, `round`, und die kennt das Werkzeug fest. Tafelrundes
+Sicht hat zwei weitere (`eigenes`, `gegner`) — und dort steht, was der
+Bildschirm am meisten liest. Die Namen kommen als Liste mit, die Felder
+stehen danach unter `gesehen.unter.<name>`.
+
 ## Was hier (noch) nicht steht
 
-Nur die vier Kartenspiele aus `protocol.ts`: Doppelkopf, Skat, Zauberer,
-Cambio. Die Minispiele (Feldherr, Mememory, Filler, Eiland, Tafelrunde,
-Poker) beschreiben ihre Sichten nicht in `protocol.ts`, sondern jeweils im
-eigenen Bildschirm (`interface TafelrundeSicht` in `src/screens/Tafelrunde.tsx`
-und so weiter) — dieselbe Lücke, nur an anderer Stelle, und noch ungedeckt.
+Feldherrs Spielkern. `minispiele/feldherr/kern.js` ist gebaut, nicht
+geschrieben (Quelle: `packages/game-feldherr/quelle/teile/`), und der ganze
+Spielstand lebt dort auf den Geräten — der Server sieht ihn nie. Gedeckt ist
+die **Naht**: Die Zugform des Vertrags kommt aus `kern.d.ts` und wird gegen
+die des Moduls gehalten. Laufen Kern und Modul auseinander, bricht der Bau;
+vorher wurde daraus eine strittige Partie.
