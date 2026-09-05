@@ -212,9 +212,13 @@ afterEach(() => {
 describe('Kopfzeile', () => {
   it('zeigt Leben, Gold, Runde und Rang aus der Sicht', () => {
     zeige();
-    expect(screen.getByText('92')).toBeInTheDocument();
-    expect(screen.getByText('7')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    // In der KOPFZEILE gesucht und nicht auf der ganzen Seite: Seit die
+    // Mitspielerleiste auch den eigenen Sitz zeigt, steht das eigene Leben
+    // zweimal am Bildschirm — beide Male aus derselben Sicht.
+    const kopf = screen.getByText('0/3 Feld').closest('header')!;
+    expect(within(kopf).getByText('92')).toBeInTheDocument();
+    expect(within(kopf).getByText('7')).toBeInTheDocument();
+    expect(within(kopf).getByText('3')).toBeInTheDocument();
     // Der Rang steht mit den Feldplaetzen daneben — beide Zahlen kommen aus
     // der Sicht, damit der Client die Leveltabelle nicht nachbaut.
     expect(screen.getByText('0/3 Feld')).toBeInTheDocument();
@@ -866,6 +870,106 @@ describe('Mitspieler', () => {
     expect(within(leiste).getByText('84')).toBeInTheDocument();
     // Ein Bot ohne Namen heißt "KI" und nicht "null".
     expect(within(leiste).getByText('KI')).toBeInTheDocument();
+  });
+
+  it('zeigt auch den eigenen Sitz — man vergleicht sich mit den anderen', () => {
+    zeige();
+    const leiste = screen.getByRole('group', { name: 'Mitspieler' });
+    expect(within(leiste).getByText('Ich')).toBeInTheDocument();
+    expect(within(leiste).getByText('92')).toBeInTheDocument();
+    expect(within(leiste).getByText('noch 2 von 2')).toBeInTheDocument();
+  });
+
+  it('nennt in der Kampfphase, gegen wen ich antrete', () => {
+    // Die Paarung steht NUR in `kaempfe`, und die Sicht führt sie nur während
+    // des Kampfes (sicht.ts) — vorher gibt es die Auskunft nirgends.
+    stelle(
+      sicht({
+        phase: 'kampf',
+        kaempfe: [
+          {
+            a: 0,
+            b: 1,
+            geist: false,
+            // Ein leerer, aber vollständiger Bericht: Die Arena spielt ihn
+            // mit ab, und ohne ihn stolpert sie über `bericht.saat`.
+            bericht: {
+              saat: 'probe',
+              erstZieher: 0,
+              start: [],
+              ereignisse: [],
+              sieger: 0,
+              grund: 'ausgeloescht',
+              dauerMs: 0,
+              ueberlebende: [],
+              schaden: 0,
+            },
+          },
+        ],
+      }),
+    );
+    zeige();
+    const leiste = screen.getByRole('group', { name: 'Mitspieler' });
+    expect(within(leiste).getByText('Gegner')).toBeInTheDocument();
+  });
+
+  it('nennt in der Vorbereitung keinen Gegner der Runde', () => {
+    zeige();
+    const leiste = screen.getByRole('group', { name: 'Mitspieler' });
+    expect(within(leiste).queryByText('Gegner')).toBeNull();
+  });
+});
+
+describe('Endbild', () => {
+  it('bleibt weg, solange die Partie läuft und ich dabei bin', () => {
+    zeige();
+    expect(screen.queryByRole('dialog', { name: 'Partie beendet' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Ausgeschieden' })).toBeNull();
+  });
+
+  it('nennt am Ende Platz, Runden und den Weg zurück', () => {
+    stelle(
+      sicht({
+        fertig: true,
+        phase: 'ende',
+        sieger: 0,
+        runde: 11,
+        gegner: [
+          {
+            sitz: 1,
+            leben: 0,
+            level: 2,
+            serie: { art: null, laenge: 0 },
+            brett: Array.from({ length: 10 }, () => null),
+            bereit: true,
+            ausRunde: 10,
+            verlassen: false,
+            synergien: [],
+          },
+        ],
+        eigenes: { brett: [{ id: 'dorfwache', stufe: 2 }, ...Array.from({ length: 9 }, () => null)] },
+      }),
+    );
+    zeige();
+    const bild = screen.getByRole('dialog', { name: 'Partie beendet' });
+    expect(within(bild).getByRole('heading', { name: 'Gewonnen!' })).toBeInTheDocument();
+    expect(within(bild).getByText(/Platz 1 von 2/)).toBeInTheDocument();
+    expect(within(bild).getByText(/11 Runden durchgestanden/)).toBeInTheDocument();
+    // Die letzte Aufstellung, damit man sieht, womit man gewonnen hat.
+    expect(within(bild).getByText('Dorfwache')).toBeInTheDocument();
+    expect(within(bild).getByRole('button', { name: 'Zur Spielauswahl' })).toBeInTheDocument();
+  });
+
+  it('lässt sich nach dem eigenen Ausscheiden wegklicken', () => {
+    // Zusehen ist bei einem Auto-Battler kein Trostpreis — man sieht, gegen
+    // wen man verloren hätte. Deshalb ein Überblender und kein Ortswechsel.
+    stelle(sicht({ eigenes: { ausRunde: 6, leben: 0 } }));
+    zeige();
+    const bild = screen.getByRole('dialog', { name: 'Ausgeschieden' });
+    expect(within(bild).getByText(/6 Runden überstanden/)).toBeInTheDocument();
+    fireEvent.click(within(bild).getByRole('button', { name: 'Weiter zusehen' }));
+    expect(screen.queryByRole('dialog', { name: 'Ausgeschieden' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Mitspieler' })).toBeInTheDocument();
   });
 });
 
