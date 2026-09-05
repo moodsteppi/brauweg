@@ -15,6 +15,7 @@ import {
   Figurbild,
   KampfAnzeige,
   type Kampfpaarung,
+  type Paarungsergebnis,
   abzuspielen,
 } from '../minispiele/tafelrunde/KampfAnzeige';
 import {
@@ -169,6 +170,16 @@ interface TafelrundeSicht {
    * zeigt dann die Wartezeile statt zu stolpern.
    */
   kaempfe?: Kampfpaarung[];
+  /**
+   * ALLE Kaempfe der laufenden Runde als blosses Ergebnis, ohne Protokoll —
+   * auch die, denen dieser Sitz nicht zusieht (sicht.ts). Daraus entstehen die
+   * Ergebniszeilen unter der Arena; aus `kaempfe` koennte sie nur ein
+   * Zuschauer bauen.
+   *
+   * Wahlfrei wie `kaempfe`, und aus demselben Grund: Ein Tisch aus der Zeit
+   * davor hat das Feld nicht.
+   */
+  paarungen?: Paarungsergebnis[];
   /** Kommt NUR in der ersten Sicht nach dem Beitritt, siehe sicht.ts. */
   katalog?: Einheit[];
   /**
@@ -1730,6 +1741,7 @@ function Ruestkammer({
       <KampfAnzeige
         key={kampfSchluessel(kampfbild.kaempfe, sicht.ich)}
         kaempfe={kampfbild.kaempfe}
+        paarungen={kampfbild.paarungen}
         ich={sicht.ich}
         brettReihen={sicht.brettReihen}
         brettSpalten={sicht.brettSpalten}
@@ -2306,14 +2318,13 @@ const AUSKLANG_MS = 400;
  * An die PHASE gehaengt und nicht an das Sichtobjekt: Sonst liefe der Effekt
  * bei jedem Rundruf neu und raeumte seinen Timer ab (CLAUDE.md).
  */
-function useKampfbild(
-  sicht: TafelrundeSicht,
-): { kaempfe: Kampfpaarung[]; verblasst: boolean } | null {
+function useKampfbild(sicht: TafelrundeSicht): (Kampfbild & { verblasst: boolean }) | null {
   const kaempfe = sicht.phase === 'kampf' ? (sicht.kaempfe ?? []) : [];
   const laeuft = kaempfe.length > 0;
-  const zuletzt = useRef<Kampfpaarung[]>([]);
-  const [ausklang, setAusklang] = useState<Kampfpaarung[] | null>(null);
-  if (laeuft) zuletzt.current = kaempfe;
+  const bild: Kampfbild = { kaempfe, paarungen: paarungenAus(sicht, kaempfe) };
+  const zuletzt = useRef<Kampfbild | null>(null);
+  const [ausklang, setAusklang] = useState<Kampfbild | null>(null);
+  if (laeuft) zuletzt.current = bild;
 
   useEffect(() => {
     if (sicht.phase === 'kampf') {
@@ -2321,16 +2332,46 @@ function useKampfbild(
       return;
     }
     const alte = zuletzt.current;
-    if (alte.length === 0) return;
-    zuletzt.current = [];
+    if (!alte) return;
+    zuletzt.current = null;
     setAusklang(alte);
     const uhr = window.setTimeout(() => setAusklang(null), AUSKLANG_MS);
     return () => window.clearTimeout(uhr);
   }, [sicht.phase]);
 
-  if (laeuft) return { kaempfe, verblasst: false };
-  if (ausklang) return { kaempfe: ausklang, verblasst: true };
+  if (laeuft) return { ...bild, verblasst: false };
+  if (ausklang) return { ...ausklang, verblasst: true };
   return null;
+}
+
+/** Was die Arena zeigt: der abzuspielende Kampf und die Ergebnisse daneben. */
+interface Kampfbild {
+  kaempfe: Kampfpaarung[];
+  paarungen: Paarungsergebnis[];
+}
+
+/**
+ * Die Ergebnisliste der Runde — notfalls aus den Kaempfen abgeleitet.
+ *
+ * Ein Tisch, der vor dieser Sicht aufgemacht wurde, fuehrt `paarungen` nicht.
+ * Dann bleibt, was schon vorher da war: Ein Zuschauer hat alle Kaempfe und
+ * bekommt daraus dieselbe Liste, ein Spieler nur seinen eigenen — und der
+ * faellt in der Anzeige ohnehin heraus, die Ergebniszeilen bleiben also leer
+ * wie bisher. Kein Stolpern, nur kein Zugewinn.
+ */
+function paarungenAus(
+  sicht: TafelrundeSicht,
+  kaempfe: readonly Kampfpaarung[],
+): Paarungsergebnis[] {
+  if (sicht.paarungen) return sicht.paarungen;
+  return kaempfe.map((k) => ({
+    a: k.a,
+    b: k.b,
+    geist: k.geist,
+    sieger: k.bericht.sieger,
+    schaden: k.bericht.sieger === null ? 0 : k.bericht.schaden,
+    dauerMs: k.bericht.dauerMs,
+  }));
 }
 
 /**

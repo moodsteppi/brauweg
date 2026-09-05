@@ -5,13 +5,16 @@ import { FIGUREN, UNTERGRUND } from './figuren';
 import {
   type Kampfbericht,
   type Kampfpaarung,
+  type Paarungsergebnis,
   Figurbild,
   KampfAnzeige,
   abzuspielen,
   anfangsstand,
+  ergebniszeile,
   figurPfad,
   gezeichneterPlatz,
   meineSeite,
+  nebenkaempfe,
   spieleBis,
   startVersatz,
 } from './KampfAnzeige';
@@ -58,6 +61,11 @@ function paarung(teil: Partial<Kampfpaarung> = {}): Kampfpaarung {
   return { a: 0, b: 1, geist: false, bericht: bericht(), ...teil };
 }
 
+/** Dasselbe ohne Protokoll — so kommt es als `paarungen` aus der Sicht. */
+function ergebnis(teil: Partial<Paarungsergebnis> = {}): Paarungsergebnis {
+  return { a: 0, b: 1, geist: false, sieger: 0, schaden: 3, dauerMs: 1100, ...teil };
+}
+
 const KATALOG = {
   dorfwache: { id: 'dorfwache', name: 'Dorfwache', kosten: 1, rolle: 'wache' },
   /* Eine Einheit, zu der es KEINE Figur gibt — der Fall, den figuren.ts beim
@@ -67,10 +75,28 @@ const KATALOG = {
 
 const NAMEN: Record<number, string> = { 0: 'Ich', 1: 'KI', 2: 'Robin', 3: 'Tom' };
 
-function zeige(kaempfe: Kampfpaarung[], ich: number | null, frist: number | null = null) {
+function zeige(
+  kaempfe: Kampfpaarung[],
+  ich: number | null,
+  frist: number | null = null,
+  /* Ohne Angabe: genau die uebergebenen Kaempfe als Ergebnis. Am Tisch
+     bekommt ein Spieler hier MEHR, als in `kaempfe` steht — das ist der
+     eigene Fall weiter unten. */
+  paarungen: Paarungsergebnis[] = kaempfe.map((k) =>
+    ergebnis({
+      a: k.a,
+      b: k.b,
+      geist: k.geist,
+      sieger: k.bericht.sieger,
+      schaden: k.bericht.schaden,
+      dauerMs: k.bericht.dauerMs,
+    }),
+  ),
+) {
   return render(
     <KampfAnzeige
       kaempfe={kaempfe}
+      paarungen={paarungen}
       ich={ich}
       brettReihen={2}
       brettSpalten={5}
@@ -111,6 +137,61 @@ describe('abzuspielen und meineSeite', () => {
 
   it('liefert null, wenn ich keinen Kampf habe (ausgeschieden)', () => {
     expect(abzuspielen([paarung({ a: 2, b: 3 })], 0)).toBeNull();
+  });
+});
+
+describe('nebenkaempfe', () => {
+  it('nimmt den abgespielten Kampf ueber die Sitze heraus, nicht ueber die Gleichheit', () => {
+    /* Paarung und Ergebnis sind zwei Objekte aus zwei Feldern der Sicht —
+       ein Vergleich mit === fiele hier immer negativ aus, und der eigene
+       Kampf staende doppelt am Bild. */
+    const alle = [ergebnis({ a: 0, b: 1 }), ergebnis({ a: 2, b: 3 })];
+    expect(nebenkaempfe(alle, paarung({ a: 0, b: 1 }))).toEqual([alle[1]]);
+  });
+
+  it('laesst alle stehen, wenn gar nichts abgespielt wird', () => {
+    // Ausgeschieden: Es gibt keinen eigenen Kampf, aber die Runde laeuft.
+    const alle = [ergebnis({ a: 0, b: 1 }), ergebnis({ a: 2, b: 3 })];
+    expect(nebenkaempfe(alle, null)).toEqual(alle);
+  });
+});
+
+describe('ergebniszeile', () => {
+  const namen = (sitz: number): string => NAMEN[sitz] ?? `Sitz ${sitz + 1}`;
+
+  it('haelt den Ausgang zurueck, solange der fremde Kampf noch liefe', () => {
+    /* Alle Kaempfe der Runde beginnen gleichzeitig. Das Ergebnis steht zwar
+       schon in der Sicht, darf aber nicht vor seiner Zeit dastehen — sonst
+       kennte man die ganze Runde in der ersten Sekunde. */
+    expect(ergebniszeile(ergebnis({ a: 2, b: 3, dauerMs: 3000 }), namen, 2999)).toBe(
+      'Robin gegen Tom · läuft…',
+    );
+  });
+
+  it('nennt Sieger und Schaden, sobald die Zeit um ist', () => {
+    expect(
+      ergebniszeile(ergebnis({ a: 2, b: 3, sieger: 1, schaden: 4, dauerMs: 3000 }), namen, 3000),
+    ).toBe('Robin gegen Tom · Tom gewinnt, Robin verliert 4 Leben');
+  });
+
+  it('nennt beim Unentschieden keinen Schaden', () => {
+    expect(ergebniszeile(ergebnis({ a: 2, b: 3, sieger: null, schaden: 0 }), namen, 9000)).toBe(
+      'Robin gegen Tom · unentschieden',
+    );
+  });
+
+  it('nennt keinen Schaden, wenn ein Abbild verliert', () => {
+    // Das Abbild hat keinen Lebensbalken; sein Besitzer kaempft anderswo.
+    expect(ergebniszeile(ergebnis({ a: 2, b: 3, geist: true, sieger: 0 }), namen, 9000)).toBe(
+      'Robin gegen das Abbild von Tom · Robin gewinnt',
+    );
+  });
+
+  it('nennt den Schaden, wenn der Sitz gegen ein Abbild verliert', () => {
+    // Umgekehrt gilt das nicht: Wer gegen ein Abbild verliert, zahlt.
+    expect(
+      ergebniszeile(ergebnis({ a: 2, b: 3, geist: true, sieger: 1, schaden: 5 }), namen, 9000),
+    ).toBe('Robin gegen das Abbild von Tom · das Abbild gewinnt, Robin verliert 5 Leben');
   });
 });
 
@@ -378,6 +459,25 @@ describe('KampfAnzeige', () => {
     expect(liste).toHaveTextContent('läuft…');
     lauf(2000);
     expect(liste).toHaveTextContent('Robin gegen Tom · Tom gewinnt');
+  });
+
+  /*
+   * Der Grund, aus dem `paarungen` ueberhaupt in der Sicht steht: Ein Spieler
+   * bekommt in `kaempfe` NUR seinen eigenen Kampf (sicht.ts). Baute die
+   * Anzeige die Ergebniszeilen daraus, saehe er nie, wie die Runde an den
+   * anderen Tischen ausging.
+   */
+  it('zeigt auch einem Spieler die uebrigen Kaempfe der Runde', () => {
+    zeige([paarung({ a: 0, b: 1 })], 0, null, [
+      ergebnis({ a: 0, b: 1 }),
+      ergebnis({ a: 2, b: 3, sieger: 1, schaden: 4, dauerMs: 3000 }),
+    ]);
+    const liste = screen.getByRole('list', { name: 'Weitere Kämpfe' });
+    // Der eigene Kampf steht in der Arena und nicht noch einmal als Zeile.
+    expect(liste).not.toHaveTextContent('Ich gegen KI');
+    expect(liste).toHaveTextContent('Robin gegen Tom · läuft…');
+    lauf(3200);
+    expect(liste).toHaveTextContent('Robin gegen Tom · Tom gewinnt, Robin verliert 4 Leben');
   });
 
   it('rendert nichts, wenn es keinen Kampf gibt', () => {

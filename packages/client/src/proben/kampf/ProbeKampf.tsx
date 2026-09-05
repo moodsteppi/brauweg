@@ -221,6 +221,9 @@ export function ProbeKampf(): React.JSX.Element {
       <Buehne key={durchgang} runde={SZENE.runde}>
         <KampfAnzeige
           kaempfe={[SZENE.kampf]}
+          /* Die Probe zeigt einen einzelnen Kampf: Es gibt keine anderen
+             Tische der Runde, also auch keine Ergebniszeilen darunter. */
+          paarungen={[]}
           /*
            * Aus dem Blick eines SPIELERS und nicht eines Zuschauers: Nur so
            * steht die eigene Seite unten, heisst „Du" und bekommt am Ende
