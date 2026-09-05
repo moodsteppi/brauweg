@@ -53,7 +53,7 @@ export interface TafelrundeRegeln {
 }
 
 /**
- * 14 Leben, 2 Gold zum Start.
+ * 12 Leben, 2 Gold zum Start.
  *
  * NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja ein kurzes
  * Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit 100 Leben
@@ -62,19 +62,37 @@ export interface TafelrundeRegeln {
  * zweistellige Zahl ist ausserdem eine, die man am Handy noch als Balken
  * lesen kann — bei 100 zaehlt niemand mit.
  *
- * VIERZEHN UND NICHT ZWANZIG (05.09.2026, nach der Messung in
+ * VON 20 AUF 14 (05.09.2026 vormittags, nach der Messung in
  * docs/TAFELRUNDE-SPIELZEIT.md). Mit 20 dauerte eine Partie 13:31 im Median
  * bei 15 Runden, das Ziel sind acht Minuten. Die Startleben kaufen Zeit ueber
- * die Rundenzahl, und 14 ist die Stelle, an der die Partie kurz wird, ohne
- * ausgeduennt zu werden: bei 10 Leben (8 Runden) steht vor dem Ende kein
- * ausgebautes Brett mehr. Die zweite Haelfte der Aenderung ist
- * `zeitraffer: 2` in STANDARD_REGLER (kampf.ts) — die beiden Zahlen wurden
- * zusammen gemessen und gehoeren zusammen.
+ * die Rundenzahl. Die zweite Haelfte jener Aenderung ist `zeitraffer: 2` in
+ * STANDARD_REGLER (kampf.ts) — die beiden Zahlen wurden zusammen gemessen und
+ * gehoeren zusammen.
  *
- * HEUTE SIND ES 10 RUNDEN und nicht mehr die damals gemessenen 11: Seit ein
- * Kauf den ganzen Laden neu zieht (partie.ts, `fuelleLaden`), steht ein Brett
- * eine Runde frueher. Damit liegt die Partie an der unteren Kante dessen, was
- * ein ausgebautes Brett braucht — wer noch einmal kuerzt, streicht es.
+ * UND VON 14 AUF 12 (05.09.2026 abends, Robins Entscheidung). Anlass war
+ * nicht die Zeit an sich, sondern was sie gekostet hat: Seit der Bot auf
+ * Marken spielt (bot.ts, `heerStaerke`), baut er staerkere Bretter, die
+ * laenger kaempfen — die Partie war von 7:27 auf 8:25 gewachsen und lag damit
+ * ueber den acht Minuten. Zur Wahl standen die Marken zurueckzudrehen oder
+ * die Startleben; entschieden wurden die Startleben, weil die Marken gerade
+ * erst repariert worden sind. Gemessen ueber 5.000 Partien zu viert:
+ * 7:23 im Median bei 9 Runden, Gegenprobe 7:24.
+ *
+ * NEUN RUNDEN SIND WENIG, und die Zahl ist mit Absicht nachgemessen worden:
+ * In dieser Datei stand lange, vor Runde 10 stehe kein ausgebautes Brett, wer
+ * da ausscheide, habe nicht verloren, sondern nicht gespielt. Ueber 500
+ * Partien nachgezaehlt trifft das NICHT zu — wer ausscheidet, hat im Schnitt
+ * 3,35 Einheiten auf dem Brett (bei 14 Leben waren es 3,67), KEIN einziges
+ * Ausscheiden geschah mit hoechstens zwei Einheiten, und das frueheste liegt
+ * in Runde 5. Was die Runde wirklich kostet, ist die Brettgroesse am oberen
+ * Ende: Vier Einheiten stehen in 15,2 % der Antritte statt in 21,0 %, fuenf
+ * in 0,9 % statt 2,7 %. Daran haengt die hoechste Synergieschwelle, die
+ * fuenf Traeger braucht — sie faellt von 0,9 % auf 0,3 % der Antritte. Die
+ * mittlere haelt sich bei 35,2 % (vorher 42,4 %).
+ *
+ * WER NOCH EINMAL KUERZT, streicht das ausgebaute Brett wirklich: Bei 10
+ * Leben sind es 8 Runden, und dort steht die obere Haelfte der Schwellen
+ * nicht mehr. Zehn ist ausserdem die untere Schranke aus `pruefeRegeln`.
  *
  * Der Schaden je Niederlage gehoert mit dazu: 20 Leben bei altem Schaden
  * waeren nach acht Runden vorbei gewesen (gemessen). Wer hier dreht, dreht
@@ -94,7 +112,7 @@ export interface TafelrundeRegeln {
  * ist die einzige Bremse, die es hier noch gibt.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
-  startLeben: 14,
+  startLeben: 12,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,

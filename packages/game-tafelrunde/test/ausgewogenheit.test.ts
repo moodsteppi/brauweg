@@ -162,23 +162,29 @@ describe('Ausgewogenheit: Marken', () => {
 
 describe('Ausgewogenheit: Schwellen', () => {
   /**
-   * Die Schwellen 2 und 4 werden wenigstens erreicht.
+   * JEDE der drei Schwellen wird wenigstens einmal erreicht — auch die
+   * hoechste.
    *
    * Das ist die schwaechste denkbare Aussage und trotzdem eine noetige: Wer an
    * den Feldplaetzen oder am Katalog dreht, kann eine Schwelle ohne Absicht
    * ganz abschalten. Auf einen ANTEIL laesst sich das nicht pruefen — dafuer
-   * sind die hoeheren Schwellen zu selten und die Auswahl hier zu klein.
+   * ist die hoechste Schwelle zu selten und die Auswahl hier zu klein.
    *
-   * DIE SCHWELLE 6 IST HIER AUSGENOMMEN, und das ist ein Befund und kein
-   * Versehen: Ueber 5.000 Partien zu viert stand sie in 7 von 261.233
-   * Antritten. In vierhundert Partien kommt sie also im Mittel nicht ein
-   * einziges Mal vor, und eine Probe darauf waere ein Muenzwurf. Sechs Traeger
-   * brauchen mindestens Level 6, und seit die Partie zu viert nach 15 statt 27
-   * Runden endet, kommt dort kaum noch jemand hin. Das steht als offener Punkt
-   * auf dem Board ("die Schwellen 4 und 6 sind praktisch unerreichbar") und
-   * wird nicht dadurch besser, dass man es hier gruen faerbt.
+   * DIE HOECHSTE WAR BIS ZUM 05.09.2026 AUSGENOMMEN, und das war ein Befund
+   * und kein Versehen: Solange sie bei SECHS Traegern lag, stand sie ueber
+   * 2.000 Partien zu viert in 0 von 75.028 Antritten. Sechs Traeger brauchen
+   * mindestens Level 6, und gemessen kommt ein Bot in 0,04 % der Antritte
+   * dorthin — die Bretter dieser Partie sind drei bis fuenf Einheiten gross.
+   * Eine Probe darauf waere kein Muenzwurf gewesen, sondern immer rot.
+   *
+   * Seit die Schwellen bei 2/3/5 liegen und der Bot ein echtes Markengewicht
+   * hat (bot.ts, `heerStaerke`), steht die hoechste in 0,9 % der Antritte —
+   * ueber 400 Partien also rund hundertmal. Fuer ein "wenigstens einmal"
+   * reicht das mit grossem Abstand, und genau dieser Abstand ist es, den die
+   * Probe kuenftig ueberwacht: Faellt sie, ist die hoechste Schwelle wieder
+   * unerreichbar geworden.
    */
-  for (const schwelle of SCHWELLEN.filter((s) => s < 6)) {
+  for (const schwelle of SCHWELLEN) {
     it(`erreicht die Schwelle ${schwelle} wenigstens einmal`, () => {
       assert.ok(
         AUSWERTUNG.schwellenGesamt[schwelle] > 0,
