@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { tafelrunde } from '../src/adapter.js';
+import { BOT_TAKT_MS, KAMPF_NACHLAUF_MS, tafelrunde } from '../src/adapter.js';
 import { DEFAULT_REGELN, SEAT_COUNTS } from '../src/regeln.js';
 import { type TafelrundePartie, vollerVorrat } from '../src/partie.js';
 import { kartenZahl } from '../src/katalog.js';
@@ -83,6 +83,45 @@ describe('Adapter', () => {
     const weiter = tafelrunde.advanceInterlude!(p);
     assert.equal(weiter.runde, 2);
     assert.equal(tafelrunde.interludeMs!(weiter), null);
+  });
+
+  /**
+   * Der Nachlauf hat einen BODEN, und der steht nicht in diesem Paket: Nach
+   * dem letzten Ereignis laeuft die Todesfolge noch 500 ms (NACHSPIEL_MS in
+   * KampfAnzeige.tsx minus einem Takt), und das Ergebnisschild braucht 420 ms
+   * zum Auffahren (ka-auftritt im Stylesheet). Wer darunter geht, kuerzt nicht
+   * das Zusehen, sondern schneidet die Anzeige mitten in der Bewegung ab.
+   *
+   * Die Zahlen stehen hier als Konstanten und nicht als Import: Der Client
+   * darf aus einem Spielpaket importieren, umgekehrt nicht. Dass die Probe
+   * dann zwei Abschriften prueft, ist genau ihr Zweck — sie schlaegt an, wenn
+   * jemand den Nachlauf senkt, ohne im Client nachzusehen.
+   */
+  it('laesst nach dem letzten Ereignis Zeit fuer Todesfolge und Ergebnisschild', () => {
+    const nachspielUeberstandMs = 500;
+    const schildAuftrittMs = 420;
+    assert.ok(
+      KAMPF_NACHLAUF_MS >= nachspielUeberstandMs + schildAuftrittMs,
+      'Der Nachlauf schneidet in die laufende Anzeige',
+    );
+    // Und danach muss noch etwas STEHEN bleiben, sonst hat man es nicht
+    // gelesen, sondern nur aufblitzen sehen.
+    assert.ok(KAMPF_NACHLAUF_MS - nachspielUeberstandMs >= 800);
+  });
+
+  /**
+   * Der Takt der Plattform (0,8 s) ist auf ein Kartenspiel gemuenzt. Hier
+   * macht ein Bot je Runde ein Dutzend Handgriffe, und weil `amZug` immer nur
+   * den kleinsten offenen Sitz nennt, arbeitet die Plattform sie NACHEINANDER
+   * ab — wer schon bereit ist, sieht zu. Gemessen: 16 fremde Handgriffe je
+   * Runde im Median, mit 0,8 s also 12,8 s reines Warten.
+   */
+  it('kuerzt der Plattform den Takt zwischen zwei Botzuegen', () => {
+    assert.equal(tafelrunde.meta.botTaktHoechstMs, BOT_TAKT_MS);
+    assert.ok(BOT_TAKT_MS < 800, 'sonst waere die Angabe wirkungslos');
+    // Nicht null: Die Bretter der Gegner sind oeffentlich, ein Bot soll sich
+    // aufbauen und nicht erscheinen.
+    assert.ok(BOT_TAKT_MS > 0);
   });
 
   it('ueberlebt Speichern und Laden', () => {

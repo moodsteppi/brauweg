@@ -180,6 +180,28 @@ export interface GameMeta {
    * (Grundsatz 4: der Regelsatz enthaelt keinen Geldbeutel).
    */
   readonly chipStackField?: string;
+  /**
+   * Obergrenze fuer die Pause der Plattform zwischen zwei Botzuegen.
+   *
+   * Die Plattform wartet zwischen zwei Botzuegen `botDelayMs` (0,8 s), damit
+   * man jede gelegte Karte einzeln wahrnimmt. Das passt fuer ein Kartenspiel,
+   * in dem ein Sitz je Stich EINMAL dran ist. Es passt nicht fuer ein Spiel,
+   * in dem ein Bot je Runde ein Dutzend Handgriffe macht: Bei Tafelrunde
+   * ruesten alle gleichzeitig, `currentActor` nennt aber immer nur einen Sitz
+   * — die Bots arbeiten also NACHEINANDER ihre Kaeufe ab, und wer schon
+   * "Bereit" getippt hat, sitzt so lange davor. Gemessen am 06.09.2026 zu
+   * viert: 16 fremde Handgriffe je Runde im Median, 30 im neunten Zehntel —
+   * mit 0,8 s sind das 12,8 s bzw. 24 s reines Warten je Runde.
+   *
+   * EINE OBERGRENZE UND KEIN WERT: Verrechnet wird `Math.min` mit der
+   * Einstellung der Laufzeit. Ein Modul kann den Takt damit kuerzen, aber
+   * keiner kann ihn verlaengern — sonst saesse ein Test, der die Laufzeit
+   * ausdruecklich auf `botDelayMs: 0` stellt, die Pause dieses Moduls trotzdem
+   * ab.
+   *
+   * Fehlt das Feld, gilt der Takt der Plattform. Das ist der Normalfall.
+   */
+  readonly botTaktHoechstMs?: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -68,12 +68,14 @@ export const SCHRITT_MS = 500;
  * WARUM AUSGERECHNET 45 SEKUNDEN: Eine Abbruchgrenze taugt nur etwas, wenn sie
  * die Ausnahme bleibt — sonst entscheidet nicht mehr der Kampf, sondern
  * `entscheideNachZeit`. Auf Brettern aus ECHTEN Partien dauert ein Kampf heute
- * 20,2 s im Median, und 9,9 % laufen in die Grenze (500 Partien zu viert,
- * werkzeug/spielzeit.mjs, 05.09.2026 abends). Das ist noch die
- * Groessenordnung, fuer die die 45 s gedacht sind — ein Rettungsseil —, aber
- * es ist nicht mehr weit bis zum Regelfall. Die Zahl ist an zwei Tagen von
- * 1,8 auf 4,6 und dann auf 9,9 Prozent gestiegen; unten steht, woran jeder
- * Schritt lag.
+ * 17,0 s im Median, und 6,1 % laufen in die Grenze (500 Partien zu viert,
+ * werkzeug/spielzeit.mjs, nachgemessen am 06.09.2026). Das ist die
+ * Groessenordnung, fuer die die 45 s gedacht sind: ein Rettungsseil. Die Zahl
+ * ist an zwei Tagen von 1,8 auf 4,6 und dann auf 9,9 Prozent gestiegen und
+ * seither wieder auf 6,1 gefallen — dazwischen liegen die beiden
+ * Katalogeingriffe vom 05.09. abends (Elementar bekam eine Vorderreihe, der
+ * Schildknappe die Marke Untot). Unten steht, woran jeder Schritt lag; hier
+ * steht der Grund, aus dem die Zahl ueberhaupt beobachtet wird.
  *
  * DIESE 17 SEKUNDEN HAENGEN AM ZEITRAFFER, und das ist der Satz, um den es
  * hier geht. Die Zahl stand schon einmal an dieser Stelle — damals aus einer
@@ -112,6 +114,46 @@ export const SCHRITT_MS = 500;
  * Wer sie senkt, laesst mehr Kaempfe von der Uhr entscheiden statt weniger.
  * Kuerzer werden Kaempfe ueber den Ablauf (den Zeitraffer) oder ueber den
  * Katalog.
+ *
+ * AM 06.09.2026 IST DIESER SATZ NACHGERECHNET WORDEN, weil Robin nach
+ * kuerzeren Wartezeiten gefragt hat und die Grenze der einzige Hebel ist, der
+ * den SCHWANZ der Kampfdauer trifft (der Median liegt bei 17 s, das neunte
+ * Zehntel bei 40 s). Gemessen wurde mit ZWEI Werkzeugen, und die Trennung ist
+ * kein Zufall — die eine Frage laesst sich mit dem anderen Verfahren gar
+ * nicht beantworten:
+ *
+ *   werkzeug/hoechstdauer.mjs (300 Partien zu viert, 5.125 Kaempfe): Jede
+ *   Paarung wird nach dem gebauten Lauf NOCH EINMAL gerechnet — dieselben
+ *   Bretter, dieselbe Kampfsaat, nur die Grenze anders. Nur so laesst sich
+ *   sagen, ob derselbe Kampf ANDERS ausgeht; sobald einer das tut, laufen die
+ *   Partien auseinander.
+ *
+ *              Kampf (Mittel)   von der Uhr   anderer Sieger   unentschieden
+ *     45 s          20,1 s          6,0 %           —                0,1 %
+ *     30 s          18,3 s         19,7 %         1,3 %              0,6 %
+ *     25 s          17,1 s         26,6 %         3,0 %              1,4 %
+ *     20 s          15,5 s         38,8 %         4,5 %              1,5 %
+ *
+ *   werkzeug/spielzeit.mjs --nur hoechstdauer (dieselben 300 Partien, aber
+ *   jede Zeile mit ihren EIGENEN Partien): Spielzeit im Median 6:32 heute,
+ *   6:11 bei 30 s, 6:00 bei 25 s. Die Markenspanne bewegt sich dabei gar
+ *   nicht (x0,74-1,34 gegen x0,75-1,33), und ein eindeutiger Sieger kommt
+ *   weiterhin in jeder Partie zustande.
+ *
+ * Zwei Auskuenfte stecken darin, und sie zeigen in verschiedene Richtungen.
+ * Die eine: Die Uhr urteilt fast immer wie das Brett — bei 30 s bekommt nur
+ * jeder 77. Kampf einen anderen Sieger. Die Ausgewogenheit haelt also. Die
+ * andere: Der ANTEIL verdreifacht sich. Bei 30 s endet jeder fuenfte Kampf
+ * mit "Zeit abgelaufen", waehrend auf beiden Seiten noch Einheiten stehen —
+ * das ist keine Ausnahme mehr, sondern eine Spielart, und "Rettungsseil"
+ * waere das falsche Wort dafuer. Dafuer wird die Partie um 5 % kuerzer.
+ *
+ * DIE ZAHL BLEIBT DESHALB BEI 45_000, und die Entscheidung liegt bei Robin
+ * (Karte im Issueboard). Die Wartezeit, um die es ihm ging, kam ohnehin
+ * ueberwiegend woanders her: aus dem Takt der Botzuege (`BOT_TAKT_MS` in
+ * adapter.ts, 12,8 s im Median je Runde) und aus dem Nachlauf
+ * (`KAMPF_NACHLAUF_MS`, 2,5 s je Runde). Beide sind am 06.09.2026 gefallen,
+ * ohne eine einzige Regel anzufassen.
  *
  * Zwei Proben halten das fest: die in test/kampf.test.ts auf zufaelligen
  * Brettern (sie sagt etwas ueber den Katalog — dort sind es mit dem
@@ -228,10 +270,12 @@ export interface Kampfregler {
  * erst beim Zusammenfuehren gemeinsam wirksam geworden — die Messung dazu ist
  * Abschnitt 6 in docs/TAFELRUNDE-SPIELZEIT.md.
  *
- * HEUTE — 12 Startleben und ein Bot, der auf Marken spielt — sind es 20,2 s
- * im Median und 7:23 bei 9 Runden. Der Kampf ist dabei laenger geworden und
- * nicht kuerzer: Staerkere Bretter halten laenger durch. Die Partie ist
- * trotzdem kuerzer, weil sie weniger Runden hat.
+ * HEUTE — 12 Startleben und ein Bot, der auf Marken spielt — sind es 17,0 s
+ * im Median und 7:04 bei 9 Runden (nachgemessen am 06.09.2026, 500 Partien zu
+ * viert; die 20,2 s und 7:23, die hier bis dahin standen, stammen von vor den
+ * Katalogeingriffen des 05.09. abends). Der Kampf ist gegenueber dem Stand vor
+ * dem Zeitraffer laenger geworden und nicht kuerzer: Staerkere Bretter halten
+ * laenger durch. Die Partie ist trotzdem kuerzer, weil sie weniger Runden hat.
  *
  * ACHTUNG: Er wirkt auch am Bildschirm. Die Oberflaeche spielt das
  * Ablaufprotokoll in Echtzeit ab, die Figuren laufen und schlagen also

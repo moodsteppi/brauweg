@@ -1,4 +1,4 @@
-export { KAMPF_NACHLAUF_MS, tafelrunde } from './adapter.js';
+export { BOT_TAKT_MS, KAMPF_NACHLAUF_MS, tafelrunde } from './adapter.js';
 export {
   type Einheit,
   type EinheitId,

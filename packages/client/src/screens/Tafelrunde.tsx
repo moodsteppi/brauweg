@@ -2694,8 +2694,8 @@ function Ladenkarte({
  * dieselbe Ueberlegung wie beim Warteband in Filler.
  *
  * Die Pause ist so lang wie der laengste Kampf der Runde (`interludeMs` im
- * Adapter, bis zu 47 Sekunden). Wer hier etwas einbaut, das eine feste Dauer
- * annimmt, liegt daneben.
+ * Adapter, bis zu 46,5 Sekunden). Wer hier etwas einbaut, das eine feste
+ * Dauer annimmt, liegt daneben.
  */
 function Kampfband(): React.JSX.Element {
   return (
