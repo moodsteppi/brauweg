@@ -53,6 +53,10 @@ function isDevFlag(name: string): boolean {
  *
  * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
  * - /probe/arena-3d — DIESELBE Szene in 3D mit Three.js (Probe B)
+ * - /probe/kampf — die ECHTE Kampfanzeige des Spiels mit einem aufgezeichneten
+ *   Kampf aus Runde 10. Die einzige der drei, die bleiben soll: Sie ist die
+ *   Stelle, an der man Aenderungen an der Kampfanzeige ansieht, ohne eine
+ *   Partie zu spielen (siehe Kopf von `proben/kampf/ProbeKampf.tsx`).
  */
 function istProbe(name: string): boolean {
   const { pathname, hash, search } = window.location;
@@ -63,6 +67,7 @@ function istProbe(name: string): boolean {
 
 const probeArena2d = istProbe('arena-2d');
 const probeArena3d = istProbe('arena-3d');
+const probeKampf = istProbe('kampf');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -124,11 +129,21 @@ const TruhenOeffnung = lazy(() =>
    GameSelect statisch importiert und landet deshalb dort) — die Probe selbst
    soll jedenfalls nichts dazulegen. */
 const Arena3D = lazy(() => import('./proben/arena-3d/Arena3D').then((m) => ({ default: m.Arena3D })));
+/* Aus demselben Grund `lazy` wie die Proben darueber, hier aber mit einem
+   zweiten dazu: Die Probe zieht den aufgezeichneten Kampf (rund 30 kB JSON)
+   UND die Bauteile des Tafelrunde-Tisches nach. Beides gehoert nicht in das
+   Stueck, das jeder Spieler beim Anmelden laedt — und am Client wird gerade
+   ohnehin daran gearbeitet, die Spielschirme einzeln nachzuladen. */
+const ProbeKampf = lazy(() =>
+  import('./proben/kampf/ProbeKampf').then((m) => ({ default: m.ProbeKampf })),
+);
 
 const werkzeug = probeArena2d ? (
   <Arena2D />
 ) : probeArena3d ? (
   <Arena3D />
+) : probeKampf ? (
+  <ProbeKampf />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (
