@@ -19,7 +19,7 @@ Minuten live.
 170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
 56 Eiland-Tests, 216 Tafelrunde-Tests, **402 Servertests** — zusammen 1300,
-dazu die Client-Tests (7 Dateien), alle grün. `tsc --noEmit` sauber.
+dazu die Client-Tests (8 Dateien, 135 Tests), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
@@ -1306,6 +1306,49 @@ durchzieht. Das Browserwerkzeug erzeugt beim Ziehen nur drei, vier
 Zeigerereignisse; die liegen weiter auseinander als `SPRUNG` und bleiben
 deshalb Tupfer. Ein Finger liefert sechzig je Sekunde. **Sollte ein Strich in
 der Hand zerfallen, ist `SPRUNG` die Zahl, an der man dreht.**
+
+## Am 5. September: die Anordnung im Profil
+
+Der Profil-Tab hatte seit dem 5. August die richtigen Bausteine, aber nicht
+die Reihenfolge, die er sich selbst aufgeschrieben hatte. Im Quelltext stand
+als Rangfolge „erst wer ich bin, dann was mir gehört, dann was ich geleistet
+habe, dann meine Leute — und ganz zum Schluss, was man ein Mal im Jahr
+braucht"; auf dem Bildschirm stand es anders. Drei Dinge sind gerichtet:
+
+**Das Namensschild steht jetzt vor dem Stufenbalken.** Vorher war das Erste
+im eigenen Profil ein Fortschrittsbalken, und die Zahl, die er erklärt, kam
+als Stufenplakette erst darunter im Schild. Jetzt stehen Plakette und Balken
+beieinander. Der Fortschritt geht dabei nirgends verloren: Die Kopfleiste
+zeigt ihn auf **jedem** Tab (`front-xp`) — das Profil muss ihn nicht als
+Erstes wiederholen.
+
+**Die Geburtstagstafel wandert.** An 364 Tagen im Jahr ist sie eine
+Ankündigung („noch 87 Tage") und stand trotzdem mitten im Profil, oberhalb
+von Trophäen und Freunden. Sie sitzt jetzt unten, direkt über dem Konto — bei
+den anderen Sachen, die man ein Mal im Jahr braucht. **An dem einen Tag, an
+dem es etwas abzuholen gibt, springt sie nach ganz oben**, unter das
+Namensschild. Der Grund ist konkret: Auf den Profil-Reiter zeigt kein Punkt,
+der auf ein Geschenk hinwiese — läge die Tafel an diesem Tag unten, müsste
+man am eigenen Geburtstag durch das ganze Profil rollen, um sie zu finden.
+
+**Der Countdown steht nur noch einmal auf dem Bildschirm.** Er stand
+wortgleich zweimal da: unter dem Namen im Schild und noch einmal als Zusatz
+der Geburtstagstafel. Der Zusatz sagt beim Warten jetzt „Einmal im Jahr".
+
+**Die Anordnung ist von jetzt an geprüft** —
+`packages/client/src/screens/Profil.test.tsx`, vier Tests. Sie rendern den
+echten Startbildschirm, wechseln auf den Profil-Tab und vergleichen die
+Reihenfolge der Tafelüberschriften im Baum. Eine Rangfolge, die nur als
+Kommentar existiert, fällt beim nächsten Umbau unbemerkt zurück: Man schiebt
+eine Tafel ein und liest den Kommentar zwanzig Zeilen weiter oben nicht mit.
+Genau das war ja passiert.
+
+> **Nebenbei gebraucht:** `vitest.setup.ts` hat jetzt einen stummen
+> `ResizeObserver`. jsdom kennt keinen, der Trophäenpfad legt beim Aufbau
+> einen an (`Pfad.tsx`) — ohne Ersatz stirbt **jeder** Test, der den
+> Startbildschirm rendert, an einer Stelle, die mit dem Geprüften nichts zu
+> tun hat. Messen muss der Ersatz nichts: In jsdom hat ohnehin alles die
+> Größe null.
 
 ## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
 

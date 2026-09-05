@@ -700,19 +700,76 @@ function ProfilTab({
       .finally(() => setClaimBusy(false));
   };
 
+  /*
+    Die Geburtstagstafel steht an zwei moeglichen Plaetzen — sie wandert.
+
+    An 364 Tagen im Jahr ist sie eine Ankuendigung ("noch 87 Tage") und stand
+    trotzdem mitten im Profil, oberhalb von Trophaeen und Freunden. Das ist die
+    Rangfolge, die der Kommentar weiter unten selbst aufschreibt, und sie ist
+    genau andersherum: Was man selten braucht, gehoert nach unten.
+
+    An dem einen Tag, an dem es etwas abzuholen gibt, ist es umgekehrt richtig:
+    Dann steht sie ganz oben unter dem Namensschild. Sie hat keinen Punkt am
+    Profil-Reiter, der auf sie zeigt — waere sie an diesem Tag unten, muesste
+    man am Geburtstag durch das ganze Profil rollen, um sein Geschenk zu
+    finden.
+
+    Der Zusatz sagt beim Warten nicht mehr den Countdown: Der steht wortgleich
+    unter dem Namen im Schild darueber, und zweimal derselbe Satz auf einem
+    Bildschirm liest sich wie ein Fehler.
+  */
+  const geburtstagTafel = (
+    <Tafel titel="Geburtstag" zusatz={me.birthdayRewardClaimable ? 'Heute!' : 'Einmal im Jahr'}>
+      <section
+        className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
+      >
+        <div className="hub-geburtstag-art">
+          <img
+            src="/hub/pinguin-geburtstag.png"
+            alt="Geburtstags-Pinguin"
+            draggable={false}
+          />
+        </div>
+        <div className="hub-geburtstag-text">
+          <strong>Geburtstags-Pinguin</strong>
+          {me.birthdayRewardClaimable ? (
+            <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
+          ) : me.hasBirthdayOutfit ? (
+            <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
+          ) : (
+            <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
+          )}
+          {me.birthdayRewardClaimable ? (
+            <button
+              className="hub-knopf hub-knopf--a-gold"
+              disabled={claimBusy}
+              onClick={claimReward}
+            >
+              {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
+            </button>
+          ) : null}
+          {claimError && <p className="error">{claimError}</p>}
+        </div>
+      </section>
+    </Tafel>
+  );
+
   return (
     <HubSzene bg="/hub/bg-profil.webp" className="front-profil front-profil--a">
       <HubBanner />
 
-      {/* Als Erstes im Profil: Wo stehe ich, und wie weit ist es noch bis
-          zur naechsten Stufe? Angetippt oeffnet sich die ganze Leiter. */}
-      <Stufenbalken
-        stufe={me.level.stufe}
-        imLevel={me.level.imLevel}
-        fuerLevel={me.level.fuerLevel}
-        onClick={onStufen}
-      />
+      {/*
+        Als Erstes das Namensschild, dann der Stufenbalken.
 
+        Vorher stand der Balken oben und das Schild darunter. Damit war das
+        Erste im eigenen Profil ein Fortschrittsbalken — und die Zahl, die er
+        erklaert, stand als Stufenplakette erst darunter im Schild. Beides
+        gehoert zusammen, also stehen sie jetzt beieinander: Schild mit Bild,
+        Name und Plakette, direkt darunter der Balken zu genau dieser Plakette.
+
+        Der Fortschritt geht dabei nicht verloren: Die Kopfleiste zeigt ihn auf
+        JEDEM Tab (`front-xp`), das Profil muss ihn nicht als Erstes wiederholen.
+      */}
       <div className="hub-profilkopf hub-profilkopf--a">
         <ProfilBild me={me} onChanged={onAvatarChange} />
         <div className="hub-profilkopf-text">
@@ -727,6 +784,17 @@ function ProfilTab({
         </span>
       </div>
 
+      {/* Angetippt oeffnet sich die ganze Leiter. */}
+      <Stufenbalken
+        stufe={me.level.stufe}
+        imLevel={me.level.imLevel}
+        fuerLevel={me.level.fuerLevel}
+        onClick={onStufen}
+      />
+
+      {/* Nur am Geburtstag, dann aber als Erstes — siehe oben. */}
+      {me.birthdayRewardClaimable && geburtstagTafel}
+
       {/*
         Ab hier: Tafeln, und zwar durchgehend.
 
@@ -738,8 +806,8 @@ function ProfilTab({
 
         Die Tafeln geben zugleich die Rangfolge, die vorher fehlte: erst wer
         ich bin, dann was mir gehoert, dann was ich geleistet habe, dann meine
-        Leute — und ganz zum Schluss die Konto-Sachen, die man ein Mal im Jahr
-        braucht.
+        Leute — und ganz zum Schluss die Sachen, die man ein Mal im Jahr
+        braucht (Geburtstag, Konto).
       */}
       {/*
         Die Figur bekommt eine eigene Tafel ueber die volle Breite.
@@ -797,43 +865,6 @@ function ProfilTab({
         </div>
       </Tafel>
 
-      <Tafel
-        titel="Geburtstag"
-        zusatz={me.birthdayRewardClaimable ? 'Heute!' : geburtstagText}
-      >
-        <section
-          className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
-        >
-          <div className="hub-geburtstag-art">
-            <img
-              src="/hub/pinguin-geburtstag.png"
-              alt="Geburtstags-Pinguin"
-              draggable={false}
-            />
-          </div>
-          <div className="hub-geburtstag-text">
-            <strong>Geburtstags-Pinguin</strong>
-            {me.birthdayRewardClaimable ? (
-              <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
-            ) : me.hasBirthdayOutfit ? (
-              <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
-            ) : (
-              <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
-            )}
-            {me.birthdayRewardClaimable ? (
-              <button
-                className="hub-knopf hub-knopf--a-gold"
-                disabled={claimBusy}
-                onClick={claimReward}
-              >
-                {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
-              </button>
-            ) : null}
-            {claimError && <p className="error">{claimError}</p>}
-          </div>
-        </section>
-      </Tafel>
-
       <Tafel titel="Trophäen" zusatz={`${partien} Partien`}>
         <StatHero wert={trophaeen} />
 
@@ -871,6 +902,9 @@ function ProfilTab({
           Mitgliederliste den Bildschirm, und Freunde sind ohnehin kein
           Clan: Sie gehoeren zum eigenen Konto. */}
       <Freunde onShowProfile={onShowProfile} />
+
+      {/* Der andere Platz der wandernden Tafel: das Jahr ueber hier unten. */}
+      {!me.birthdayRewardClaimable && geburtstagTafel}
 
       {/*
         Konto — alles, was man selten braucht, an einem Ort und als richtige
