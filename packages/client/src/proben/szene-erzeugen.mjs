@@ -1,16 +1,19 @@
 /**
- * Erzeugt `arena-szene.json` — den EINEN aufgezeichneten Kampf, den beide
- * Arena-Proben (2D und 3D) abspielen.
+ * Erzeugt `arena-szene.json` — den EINEN aufgezeichneten Kampf, den die
+ * Arena-Probe abspielt.
  *
  * Aufruf aus dem Wurzelverzeichnis, nachdem `npm run build` gelaufen ist:
  *
  *     node packages/client/src/proben/szene-erzeugen.mjs
  *
- * WARUM EINE AUFZEICHNUNG UND KEIN LAUF ZUR ANZEIGEZEIT: Die beiden Proben
- * sollen NEBENEINANDER dieselbe Szene zeigen. Wuerde jede Probe selbst
- * `simuliereKampf()` aufrufen, haenge der Vergleich an zwei Importen des
- * Spielpakets in den Client — und der Client importiert aus keinem Spielpaket
- * (CLAUDE.md). Eine Datei ist die einzige Fassung, die beide teilen koennen.
+ * WARUM EINE AUFZEICHNUNG UND KEIN LAUF ZUR ANZEIGEZEIT: Angelegt wurde die
+ * Datei fuer den Vergleich zweier Proben (2D und 3D), die NEBENEINANDER
+ * dieselbe Szene zeigen sollten; ein `simuliereKampf()` je Probe haette den
+ * Vergleich an zwei Importe des Spielpakets in den Client gehaengt — und der
+ * Client importiert aus keinem Spielpaket (CLAUDE.md). Seit die 3D-Probe am
+ * 06.09.2026 geloescht ist, traegt derselbe Satz nur noch die zweite Haelfte:
+ * Der Client darf das Spielpaket nicht importieren, also muss der Kampf als
+ * Datei kommen.
  *
  * Die Datei wird bewusst mitgeliefert und nicht beim Bauen erzeugt: Ohne sie
  * zeigt die Probe nichts, und ein Bauschritt fuer eine Wegwerf-Probe waere

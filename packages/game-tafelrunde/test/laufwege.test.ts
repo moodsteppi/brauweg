@@ -12,8 +12,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  ARENA_LUECKE,
   type Brettseite,
   BRETT_FELDER,
+  BRETT_REIHEN,
   type EinheitId,
   type Stufe,
   einheit,
@@ -75,30 +77,49 @@ describe('laufbefund', () => {
   });
 
   /*
-   * Die Kernaussage der ganzen Messung, hier als Probe festgehalten: Auf dem
-   * heutigen Brett steht eine Einheit der hinteren Reihe hoechstens zwei
-   * Felder von der naechsten gegnerischen entfernt. Wer die Brettmasse
-   * aendert, aendert diese Zahl — und diese Zeile faellt.
+   * Die Kernaussage der ganzen Messung, hier als Probe festgehalten — und die
+   * Zeile, an der man den Umbau vom 06.09.2026 sieht.
+   *
+   * BIS DAHIN stand hier "hoechstens zwei": Vorderste und hinterste Reihe
+   * lagen 1 bzw. 2 Felder von der naechsten gegnerischen entfernt, und damit
+   * stand jede Reichweite ab 2 vom ersten Takt an im Ziel (das war der
+   * gemessene Grund, aus dem kaum gelaufen wurde). Seit der Luecke ist der
+   * kleinste moegliche Startabstand `ARENA_LUECKE + 1` — dieselbe Zahl, die
+   * arena.test.ts als "Kopf an Kopf" prueft.
+   *
+   * Gerechnet und nicht abgeschrieben: Wer die Luecke wieder aendert, soll
+   * hier keine Zahl nachziehen muessen, sondern nur die Aussage lesen.
    */
-  it('rechnet den Startabstand auf dem heutigen Brett zu hoechstens zwei', () => {
+  it('haelt jeden Startabstand auf mindestens Luecke plus eins', () => {
+    const hinten = BRETT_REIHEN - 1;
     const bericht = simuliereKampf(
       [
         stelleAuf([
-          ['astschuetze', 1, 0, 1],
+          ['astschuetze', 1, 0, hinten],
           ['dorfwache', 1, 0, 0],
         ]),
         stelleAuf([
-          ['astschuetze', 1, 4, 1],
+          ['astschuetze', 1, 4, hinten],
           ['dorfwache', 1, 4, 0],
         ]),
       ],
       'laufprobe-3',
     );
-    for (const zeile of laufbefund(bericht).einheiten) {
-      assert.ok(zeile.startAbstand <= 2, `Startabstand ${zeile.startAbstand} ist groesser als 2`);
-      // Reichweite 3 beim Schuetzen, 1 bei der Wache — der Schuetze steht
-      // damit von Anfang an im Ziel und braucht keinen Schritt.
-      if (zeile.rolle === 'schuetze') assert.ok(zeile.sofortInReichweite);
+    const befund = laufbefund(bericht);
+    for (const zeile of befund.einheiten) {
+      assert.ok(
+        zeile.startAbstand >= ARENA_LUECKE + 1,
+        `Startabstand ${zeile.startAbstand} unterschreitet ${ARENA_LUECKE + 1}`,
+      );
+    }
+    /*
+     * Und die Folge davon, um die es in der ganzen Karte ging: Ein Schuetze
+     * (Reichweite 3) in seiner eigenen HINTERSTEN Reihe steht nicht mehr von
+     * Anfang an im Ziel. Vor dem Umbau war genau das der Fall — bei 14.862
+     * gemessenen Schuetzen ausnahmslos.
+     */
+    for (const zeile of befund.einheiten) {
+      if (zeile.rolle === 'schuetze') assert.equal(zeile.sofortInReichweite, false);
     }
   });
 
@@ -168,7 +189,15 @@ describe('werteLaufAus', () => {
 
     assert.equal(zeile.kaempfe, 3);
     assert.equal(zeile.einheiten, befunde.reduce((s, b) => s + b.einheiten.length, 0));
-    assert.ok(zeile.anteilSofortInReichweite > 0 && zeile.anteilSofortInReichweite <= 1);
+    /*
+     * Anteil und Auszaehlung muessen dasselbe sagen — und zwar OHNE eine
+     * Annahme ueber die Geometrie. Ein `> 0` stand hier bis zum 06.09.2026
+     * und fiel mit der Luecke: Seitdem beginnt kein Kampf mehr in Kontakt,
+     * der Anteil ist glatt null, und die Probe waere rot geworden, obwohl
+     * die Auswertung genau das Richtige zaehlt.
+     */
+    const sofort = befunde.flatMap((b) => b.einheiten).filter((e) => e.sofortInReichweite).length;
+    assert.equal(zeile.anteilSofortInReichweite, sofort / zeile.einheiten);
     // Jede Rolle steht in der Tabelle, auch die leeren: Eine fehlende Zeile
     // laese sich beim Vergleich zweier Laeufe als Null missdeuten.
     assert.equal(zeile.jeRolle.length, 5);

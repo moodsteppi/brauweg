@@ -34,6 +34,26 @@
  * hat: Solange ein Wurf 2 Gold kostete, zahlte `hart` seinen Tempovorsprung
  * an der Ladentheke wieder ein (siehe die Zahlen in GANGARTEN, bot.ts).
  *
+ * UND DIE SCHRAUBEN DER STARKEN GANGART SELBST:
+ *
+ *     --schraube polster=0          Eine Schraube von Sitz 0 verstellen,
+ *     --schraube patzerQuote=0.3    mehrfach erlaubt.
+ *
+ * WOZU: `hart` hiess in bot.ts "spielt auf TEMPO", und ob seine Schrauben
+ * ueberhaupt etwas tragen, konnte bis zum 06.09.2026 niemand nachsehen, ohne
+ * bot.ts zu aendern und neu zu bauen. Genau daran ist die Frage zweimal
+ * liegengeblieben; mit diesem Schalter fiel die Antwort in einer Viertelstunde
+ * an (zwei der drei Tempo-Schrauben waren nicht wirkungslos, sondern
+ * schaedlich — Zahlen bei GANGARTEN in bot.ts).
+ *
+ * ZWEI LAEUFE MIT `--schraube` SIND GEPAART: Die Saat einer Partie entsteht aus
+ * Saatbasis und den NAMEN der Gangarten, nicht aus ihren Werten. Beide Laeufe
+ * sehen also dieselben Laeden und dieselben Gegner, und verglichen wird die
+ * Entscheidung statt der Stichprobe. Ueber `--stark` gilt das NICHT — dort
+ * wechselt der Name und damit die Stichprobe. Und weil der Standardfehler bei
+ * 400 Partien um zehn Siege liegt, gehoert jede Aussage ueber MEHRERE
+ * Saatbasen belegt.
+ *
  * GEZAEHLT WIRD NUR DER EINDEUTIGE ERSTE PLATZ, und verglichen wird mit dem
  * SCHNITT der uebrigen Sitze und nicht mit ihrer Summe: Am Tisch zu viert
  * sitzen drei schwache Gegner, ihre Siege zusammenzuzaehlen hiesse, die starke
@@ -62,6 +82,9 @@ const laden = (pfad) => import(pathToFileURL(pfad).href);
 
 const { ACHT_SITZE, spieleParte } = await laden(MESSSTAND);
 const { DEFAULT_REGELN, STANDARD_REGLER } = await laden(resolve(HIER, '../dist/src/index.js'));
+// Nicht ueber index.js: Die Gangarten sind kein Teil der Modulschnittstelle,
+// sondern der Stand, gegen den hier gemessen wird.
+const { GANGARTEN: GEBAUT } = await laden(resolve(HIER, '../dist/src/bot.js'));
 
 // ---------------------------------------------------------------------------
 // Schalter
@@ -99,6 +122,70 @@ if (!Number.isInteger(SITZZAHL) || SITZZAHL < 2 || SITZZAHL > 8) {
 }
 
 const SITZE = ACHT_SITZE.slice(0, SITZZAHL);
+
+// ---------------------------------------------------------------------------
+// Die Schrauben der starken Gangart
+// ---------------------------------------------------------------------------
+
+/**
+ * Alle Vorkommen eines mehrfach erlaubten Schalters.
+ *
+ * `schalter` oben nimmt nur das erste (`indexOf`) und ist damit fuer
+ * `--schraube` unbrauchbar — dort ist gerade der zweite Aufruf der
+ * interessante Fall (zwei Schrauben zugleich, wie bei den Tempo-Schrauben).
+ */
+function alleSchalter(name) {
+  const gefunden = [];
+  process.argv.forEach((teil, stelle) => {
+    if (teil !== `--${name}`) return;
+    const wert = process.argv[stelle + 1];
+    if (wert !== undefined) gefunden.push(wert);
+  });
+  return gefunden;
+}
+
+const SCHRAUBEN = {};
+for (const angabe of alleSchalter('schraube')) {
+  const trenner = angabe.indexOf('=');
+  if (trenner < 1) {
+    console.error(`--schraube braucht die Form name=wert, nicht "${angabe}"`);
+    process.exit(1);
+  }
+  const name = angabe.slice(0, trenner);
+  const roh = angabe.slice(trenner + 1);
+  // `Object.hasOwn` und nicht `!== undefined`: Sonst liesse sich ueber
+  // `--schraube toString=1` ein Feld setzen, das keine Schraube ist.
+  const gebaut = GEBAUT[STARK][name];
+  if (!Object.hasOwn(GEBAUT[STARK], name)) {
+    console.error(
+      `--schraube kennt "${name}" nicht. Es gibt: ${Object.keys(GEBAUT[STARK]).join(', ')}`,
+    );
+    process.exit(1);
+  }
+  // Der Typ kommt vom gebauten Stand und nicht von der Eingabe: "false" ist
+  // sonst eine wahre Zeichenkette, und `nurBeiVollemBrett=false` bewirkte
+  // stillschweigend nichts — der Fehler, um den es bei dieser Karte geht.
+  let wert;
+  if (typeof gebaut === 'boolean') {
+    if (roh !== 'true' && roh !== 'false') {
+      console.error(`--schraube ${name} ist ein Schalter: true oder false, nicht "${roh}"`);
+      process.exit(1);
+    }
+    wert = roh === 'true';
+  } else {
+    wert = Number(roh);
+    if (!Number.isFinite(wert)) {
+      console.error(`--schraube ${name} braucht eine Zahl, nicht "${roh}"`);
+      process.exit(1);
+    }
+  }
+  SCHRAUBEN[name] = wert;
+}
+
+const VERSTELLT = Object.keys(SCHRAUBEN).length > 0;
+// Sitz 0 bekommt dann die Gangart als OBJEKT statt als Namen; botZug nimmt
+// beides (siehe src/bot.ts). Die uebrigen Sitze bleiben beim gebauten Stand.
+const GANGART_STARK = VERSTELLT ? { ...GEBAUT[STARK], ...SCHRAUBEN } : STARK;
 
 const REGELN = {
   ...DEFAULT_REGELN,
@@ -141,6 +228,7 @@ const ABWEICHUNGEN = [
   REGELN.neuwuerfelnKosten === DEFAULT_REGELN.neuwuerfelnKosten
     ? null
     : `Wurf kostet ${REGELN.neuwuerfelnKosten}`,
+  ...Object.entries(SCHRAUBEN).map(([name, wert]) => `${STARK}.${name} = ${wert}`),
 ].filter(Boolean);
 
 // ---------------------------------------------------------------------------
@@ -148,7 +236,7 @@ const ABWEICHUNGEN = [
 // ---------------------------------------------------------------------------
 
 /** Sitz 0 bekommt die starke Gangart, alle uebrigen die schwache. */
-const besetzung = SITZE.map((_, sitz) => (sitz === 0 ? STARK : SCHWACH));
+const besetzung = SITZE.map((_, sitz) => (sitz === 0 ? GANGART_STARK : SCHWACH));
 
 const beginn = Date.now();
 const siege = SITZE.map(() => 0);

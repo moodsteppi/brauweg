@@ -44,9 +44,17 @@ ab; entschieden wird zwischen den Runden.
 
 ### Spielfeld
 
-Hexagonales Raster, etwa 4 Reihen zu 5 Spalten, versetzt. Eigene Hälfte zum
-Platzieren, das gegnerische Brett wird für die Vorschau gespiegelt. Unterhalb
-eine Reservebank mit 5–9 Plätzen.
+Hexagonales Raster, versetzt. Die eigene Hälfte zum Platzieren hat **4 Reihen
+zu 5 Spalten**; das gegnerische Brett wird für die Vorschau gespiegelt.
+Unterhalb eine Reservebank mit 5–9 Plätzen.
+
+Im Kampf werden beide Hälften zu einer Arena von **5 × 10** zusammengelegt —
+vier Reihen je Seite und **zwei leere Reihen dazwischen**. Das Konzept nannte
+ursprünglich vier Reihen für die ganze Arena; geändert am 06.09.2026, nachdem
+gemessen war, dass 68,4 % der Einheiten dort schon im ersten Takt in
+Reichweite standen und Schützen und Magier praktisch nie liefen
+(`docs/TAFELRUNDE-LAUFWEGE.md`). Seither läuft jede Einheit mindestens einen
+Schritt.
 
 ### Einheiten und Verschmelzen
 
@@ -88,7 +96,11 @@ und bringt Feldplätze.
 
 ### Rundenablauf
 
-1. **Vorbereitung** (ca. 30 s): kaufen, setzen, verschmelzen.
+1. **Vorbereitung** (ca. 30 s): kaufen, setzen, verschmelzen. Sie endet,
+   sobald der letzte Sitz „Bereit" tippt — spätestens aber nach
+   `vorbereitungMs` (45 s, seit dem 06.09.2026); danach gelten offene Sitze
+   als bereit. Gemessen dauert sie im Median 15,5 s, siehe
+   `docs/TAFELRUNDE-SPIELZEIT.md`.
 2. **Kampf** (ca. 15–20 s): läuft automatisch, wird nur zugesehen.
    Gemessen 17,3 s — erreicht wird das über den Zeitraffer, siehe unten.
 3. **Ergebnis**: Schaden am Verlierer nach verbliebenen Gegnereinheiten.
@@ -370,6 +382,72 @@ durchschnittlich höchstens acht Minuten hält mit Abstand.
    dieser Messung: Ein zäher Körper in der Vorderreihe (×0,78) brachte mehr,
    als die Träger auf Stärkegleichstand zu heben (×0,54) — und die Wache war
    auch für Untot der Kandidat, der die Marke in die Mitte holte.
+
+### Nachtrag 06.09.2026: die Gangart `hart` hat ihre Tempo-Schrauben getauscht
+
+**Die Tabelle oben ist davon nicht betroffen.** Die Katalogmessung besetzt alle
+Sitze mit `normal` — sonst misst sie die Gangarten statt der Marken. Was hier
+steht, betrifft nur den Gegner auf den Stufen *Experte* und *Genie*.
+
+**Der Befund war richtig, die Folgerung zu vorsichtig.** Am 05.09.2026 stand in
+`bot.ts`, `hart` spiele „auf TEMPO", und die Zerlegung zeigte: Es trägt allein
+die fehlende Patzerquote. Die beiden Tempo-Schrauben — `aufstiegsReserve` 0 und
+`nurBeiVollemBrett` false — lagen innerhalb eines Standardfehlers, und deshalb
+wurde nichts verstellt (Punkt 7 in der überholten fünften Messung, Karte auf dem
+Board). Auf dem heutigen Stand sind sie es nicht mehr: Die zweite ist **kein
+Nullwert, sondern ein Minus**.
+
+Sechs unabhängige Saatbasen zu je 400 Partien zu viert, Sitz 0 hart gegen drei
+normale, Schnitt der Siege je 400 (100 wäre unentschieden). Die Läufe sind
+**gepaart** — `gangarten.mjs` baut die Saat aus Basis und Gangart-*Namen*, nicht
+aus ihren Werten, also sehen alle Zeilen dieselben Partien:
+
+| Stand von `hart` | Siege je 400 |
+|---|---|
+| wie vorher: Polster 4, ohne volles Brett | 133 |
+| nur das volle Brett wieder gefordert | 190 |
+| nur das Polster auf 2 | 156 |
+| **beides — der neue Stand** | **221** |
+
+**Geändert wurde deshalb zweierlei:** `nurBeiVollemBrett` steht bei `hart` jetzt
+auf `true` wie bei den anderen beiden, und `polster` fällt von 4 auf 2. Die
+`aufstiegsReserve` bleibt bei 0 — sie ist die Schraube, die das Tempo trägt (auf
+3 gesetzt fällt `hart` auf 166, auf 5 auf 32). Damit hat jede der vier Schrauben
+eine messbare Wirkung; die Zerlegung steht bei `GANGARTEN` in `bot.ts`.
+
+**Das Polster hat ein Optimum und keine Richtung** — 0/1/2/3/4 ergeben
+175/193/221/208/190. Wer bis auf den letzten Goldtaler kauft, füllt seine Bank
+mit Kleinkram, und eine volle Bank lässt nur noch Verschmelzungskäufe zu. „Nicht
+sparen" ist also nicht dasselbe wie „alles ausgeben".
+
+**Die Rangfolge steht jetzt deutlich** (je 400 Partien, zwei Saatbasen):
+
+| Paarung | gebaut (12 Leben, x2) | langer Stand (20 Leben, x1) |
+|---|---|---|
+| hart : normal | 228 : 57,3 · 231 : 56,3 | 190 : 70,0 · 201 : 66,3 |
+| hart : sanft | 386 : 4,7 · 389 : 3,7 | 384 : 5,3 · 385 : 5,0 |
+| normal : sanft | 372 : 9,3 · 367 : 11,0 | 362 : 12,7 · 349 : 17,0 |
+
+Auch das **Duell zu zweit** trägt sie inzwischen (315 : 84,5). Dort war `hart`
+nach der Kürzung des Lebensbalkens einmal durchgefallen (96 : 104) — das war der
+Grund, aus dem zu viert gemessen wird. Der Grund ist weg, die Besetzung bleibt.
+
+**Der Kontrolllauf ist wieder neutral, und das korrigiert eine ältere Zahl.**
+Alle vier Sitze gleich besetzt gewinnt Sitz 0 über sechs Basen 98,7 mal mit
+`normal`, 100,2 mit `hart` und 107,5 mit `sanft`. Am 05.09.2026 standen dort 110
+bis 116 mit `normal` — gemessen über drei Basen, und das war eine Stichprobe;
+über sechs sind es 101,7 bei 14 Leben und 98,7 bei 12. Die Ursache (gemeinsamer
+Vorrat, Sitze rüsten der Reihe nach) besteht fort und kann wiederkommen; dass
+ausgerechnet `sanft` über 100 liegt, passt dazu — wer hortet, kauft später.
+
+**Neu am Werkzeug:** `gangarten.mjs` kennt `--schraube name=wert` und stellt
+damit eine einzelne Schraube der starken Gangart um, ohne dass `bot.ts` angefasst
+und neu gebaut werden muss. Genau daran war die Frage „was trägt `hart`
+eigentlich?" zweimal liegengeblieben.
+
+```bash
+node packages/game-tafelrunde/werkzeug/gangarten.mjs --partien 400 --schraube polster=0
+```
 
 ## Überholt: die sechste Messung (Stand 05.09.2026, Schwellen 2/3/5, Elementar noch bei ×0,25)
 
@@ -794,7 +872,10 @@ durch, ohne Oberfläche, alles aus dem Seed. Drei Aufrufer benutzen ihn:
   Schalter: `--stark`, `--schwach`, `--partien`, `--sitze`, `--saat` sowie
   `--leben`, `--teiler`, `--zeitraffer`, `--takt` und `--wuerfelkosten`. Die
   letzten fünf stellen einen **vorgeschlagenen** Stand nach, ohne ihn
-  einzubauen — genau damit ist Befund 7 unten aufgeklärt worden.
+  einzubauen — genau damit ist Befund 7 unten aufgeklärt worden. Seit dem
+  06.09.2026 gilt dasselbe für die Schrauben der Gangart selbst
+  (`--schraube polster=0`, mehrfach erlaubt); siehe den Nachtrag im gültigen
+  Abschnitt.
 
 - **Die Probe** `test/ausgewogenheit.test.ts` — 400 Partien zu viert, rund
   anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was
@@ -975,9 +1056,11 @@ Zeitraffer ist die einzige Schraube, die kürzt, ohne eine Runde zu streichen:
 Der einzelne Kampf fiel von 35,2 s auf 17,3 s, die an der Höchstdauer
 abgeschnittenen Kämpfe von 27,7 % auf 1,8 %, die Partie auf 7:25. Welche
 Stellschraube wie viel bringt, steht in **`docs/TAFELRUNDE-SPIELZEIT.md`**.
-Warum im Kampf kaum gelaufen wird — und was Brettbreite, Reihenzahl,
-Reichweiten und Startabstand daran ändern würden — steht in
-**`docs/TAFELRUNDE-LAUFWEGE.md`** (gemessen, nicht eingebaut).
+Warum im Kampf kaum gelaufen WURDE — und was Brettbreite, Reihenzahl,
+Reichweiten und Startabstand daran ändern — steht in
+**`docs/TAFELRUNDE-LAUFWEGE.md`**. Die Empfehlung von dort ist am 06.09.2026
+eingebaut (Arena 5×10); Abschnitt 1 der Datei hält den gebauten Stand fest,
+die Abschnitte 2 bis 5 sind die Herleitung auf dem alten Brett.
 
 **Vierte Messung (kostenloses Würfeln, Laden zieht beim Kauf ganz neu).**
 Robin: „wir wollen nicht mehr, dass man fürs Rollen Geld ausgeben soll" und

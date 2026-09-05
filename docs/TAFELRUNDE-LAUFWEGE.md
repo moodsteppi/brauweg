@@ -1,40 +1,103 @@
 # Tafelrunde: warum im Kampf kaum gelaufen wird
 
-**Stand: 06.09.2026.** Anlass ist Robins Beobachtung beim Zusehen: In der
+**Stand: 06.09.2026.** Anlass war Robins Beobachtung beim Zusehen: In der
 aufgezeichneten Probe (`/probe/kampf`, Runde 10, acht Einheiten auf Stufe 2
-und 3) stehen 168 Ereignisse — **155 Treffer, 6 Bewegungen**, 6 Tode, 1 Ende.
-Die Einheiten stehen sich gegenüber und schlagen; gelaufen wird praktisch nie.
-Für ein Spiel, dessen Figuren seit dem 06.09.2026 vorgerenderte Laufzyklen
-haben, ist das schade.
+und 3) standen 168 Ereignisse — **155 Treffer, 6 Bewegungen**, 6 Tode, 1 Ende.
+Die Einheiten standen sich gegenüber und schlugen; gelaufen wurde praktisch
+nie. Für ein Spiel, dessen Figuren vorgerenderte Laufzyklen haben, war das
+schade.
 
-> **HIER IST NICHTS EINGEBAUT.** Diese Datei ist die Messung und die
-> Empfehlung — Brettgröße, Reihenzahl, Reichweiten und Startabstand sind
-> Spielentscheidungen und werden nach dieser Tabelle getroffen, nicht in ihr.
+> **DIE EMPFEHLUNG IST EINGEBAUT (06.09.2026, PR #93).** Robin hat nach dieser
+> Messung entschieden — und beide wirksamen Schrauben zusammen genommen statt
+> nur einer: Aus der Arena 5×4 wurde **5×10**, vier Reihen je Bretthälfte und
+> zwei leere dazwischen (`ARENA_LUECKE` in `arena.ts`).
+>
+> **DIE ZAHLEN IN DEN ABSCHNITTEN 2 BIS 5 SIND AUF DEM ALTEN BRETT GEMESSEN**
+> (5 Spalten × 2 Reihen je Seite, ohne Lücke) und beschreiben **nicht** den
+> gebauten Stand. Sie stehen weiter hier, weil sie die Herleitung sind: Ohne
+> sie ist die Entscheidung eine Geschmacksfrage. Was heute gilt, steht in
+> Abschnitt 1 — nachgemessen mit demselben Werkzeug und derselben Saatbasis,
+> nicht aus dem Umbau-Commit abgeschrieben.
+>
 > Startleben (12), Zeitraffer (2), Schwellen und Boni sind unangetastet.
 
 Nachrechnen:
 
 ```bash
-npm run build --workspace @brauweg/game-tafelrunde
+npm run build                      # im Wurzelverzeichnis
 node packages/game-tafelrunde/werkzeug/laufwege.mjs --partien 2000
 
-# eine Variante, ohne das Spiel zu ändern (siehe Abschnitt 4):
-node packages/game-tafelrunde/werkzeug/laufwege-variante.mjs abstand2 --luecke 2
+# das alte Brett noch einmal, ohne das Spiel zu ändern (siehe Abschnitt 5):
+node packages/game-tafelrunde/werkzeug/laufwege-variante.mjs alt5x2 --reihen 2 --luecke 0
 node packages/game-tafelrunde/werkzeug/laufwege.mjs \
-     --dist packages/game-tafelrunde/tmp-varianten/abstand2 --partien 2000
+     --dist packages/game-tafelrunde/tmp-varianten/alt5x2 --partien 2000
 ```
 
 Alle Zahlen stammen aus **2.000 Partien je Zeile, zu viert, Besetzung
-`normal`, Saatbasis `laufwege-v1`** — rund 34.600 echte Kämpfe und 180.000
-angetretene Einheiten je Zeile. Gemessen wird an Brettern aus **laufenden
-Partien** und nicht an zufällig besetzten: Der Unterschied ist groß und in
-`docs/TAFELRUNDE-SPIELZEIT.md` nachgerechnet — ein Bot kauft nicht zufällig,
-er verschmilzt, sammelt Marken und stellt nach Rolle auf, und genau die
-Aufstellung entscheidet, wer laufen muss.
+`normal`, Saatbasis `laufwege-v1`** — 34.600 bis 35.300 echte Kämpfe und rund
+180.000 angetretene Einheiten je Zeile. Gemessen wird an Brettern aus
+**laufenden Partien** und nicht an zufällig besetzten: Der Unterschied ist
+groß und in `docs/TAFELRUNDE-SPIELZEIT.md` nachgerechnet — ein Bot kauft nicht
+zufällig, er verschmilzt, sammelt Marken und stellt nach Rolle auf, und genau
+die Aufstellung entscheidet, wer laufen muss.
 
 ---
 
-## 1. Die Beobachtung stimmt, und sie ist kein Einzelfall
+## 1. Der gebaute Stand: Arena 5×10
+
+Nachgemessen am 06.09.2026 auf dem zusammengeführten Stand — 2.000 Partien,
+**35.287 Kämpfe, 184.956 angetretene Einheiten**:
+
+| Zahl | vorher (5×2) | **gebaut (5×4, Lücke 2)** |
+| --- | ---: | ---: |
+| Bewegungen je Kampf, Median | 4 | **9** |
+| Bewegungen je Kampf, Mittel | 3,52 | **10,04** |
+| Verteilung (P10 / P90) | 2 / 6 | 4 / 17 |
+| Einheiten, die überhaupt einmal laufen | 46,6 % | **99,98 %** |
+| Einheiten, die schon im Start in Reichweite stehen | 68,4 % | **0,0 %** |
+| **Anteil der Kampfzeit mit Laufbild** | 1,2 % | **3,2 %** |
+| Schritte je Einheit und Kampf | 0,68 | 1,92 |
+| Schritte bis zum ersten eigenen Treffer, Median | 0 | 1 |
+| Kämpfe ganz ohne einen Schritt | 3,6 % | 0,0 % |
+| Bewegungen je Treffer | 0,030 | 0,085 |
+| Kampfdauer, Median | 17,0 s | 18,0 s |
+| von der Uhr entschiedene Kämpfe | 6,0 % | 4,4 % |
+| Partie / Runden | 6,9 min / 9 | 6,7 min / 10 |
+| Markenspanne | x0,78–x1,31 | x0,73–x1,35 |
+
+**Die beiden Zahlen aus dem Umbau-Commit sind bestätigt**, mit einer
+Genauigkeit mehr: 10,04 Bewegungen je Kampf stimmen auf die Stelle, und die
+„100 % laufende Einheiten" sind gerundet — ausgezählt laufen **42 von 184.956
+Einheiten nicht** (0,023 %), alles Wachen und Meuchler, die fielen, bevor sie
+losgehen konnten.
+
+Eine Zahl weicht ab, und zwar nachvollziehbar: Der Umbau-Commit nennt eine
+Partie von **7,5 min**, gemessen werden jetzt **6,7 min**. Dazwischen liegt
+PR #90 („das längste Warten war der Bot-Takt der Plattform"), der nach #93 auf
+`staging` kam und das Zeitmodell in `test/messen.ts` geändert hat. Die
+Laufweg-Zahlen sind davon unberührt.
+
+Je Rolle:
+
+| Rolle | Einheiten | läuft je einmal | Schritte, Median | bis 1. Treffer | sofort in RW | Startabstand |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Wache | 98.532 | 100,0 % | 1 | 1 | 0,0 % | 3 |
+| Meuchler | 54.138 | 100,0 % | 2 | 1 | 0,0 % | 3 |
+| Beistand | 866 | 100,0 % | 3 | 2 | 0,0 % | 6 |
+| **Schütze** | 15.428 | **100,0 %** | 2 | 2 | 0,0 % | 6 |
+| **Magier** | 15.992 | **100,0 %** | 2 | 2 | 0,0 % | 6 |
+
+Der eigentliche Befund der ganzen Untersuchung ist damit erledigt: Schütze und
+Magier liefen vorher in 0,10 % bzw. 0,06 % der Fälle, jetzt ausnahmslos. Ihr
+Startabstand ist von 2 auf 6 gestiegen, und **kein einziger Kampf beginnt mehr
+in Kontakt**.
+
+---
+
+## 2. Die Beobachtung, die dazu geführt hat
+
+> Ab hier bis Abschnitt 5: gemessen auf dem **alten** Brett (5 Spalten × 2
+> Reihen je Seite, keine Lücke), also auf dem Stand vor dem 06.09.2026.
 
 | Zahl | heute |
 | --- | --- |
@@ -51,10 +114,10 @@ Robins Probe hatte 6 Bewegungen auf 155 Treffer, also 0,039 — der Messwert
 über 34.600 Kämpfe ist 0,030. **Die aufgezeichnete Probe ist ein ganz
 normaler Kampf**, kein Ausreißer.
 
-## 2. Woran es liegt: an der Geometrie, nicht am Laufcode
+## 3. Woran es lag: an der Geometrie, nicht am Laufcode
 
-Die Arena ist 5 Spalten mal 4 Reihen (zwei je Seite, `arena.ts`). Rechnet man
-die Abstände über alle 100 Feldpaare aus, kommt heraus:
+Die Arena war 5 Spalten mal 4 Reihen (zwei je Seite, ohne Lücke). Rechnet
+man die Abstände über alle 100 Feldpaare aus, kommt heraus:
 
 - Jedes Feld der **vorderen** Reihe liegt **1 Feld** vom nächsten
   gegnerischen Feld entfernt — Kopf an Kopf über die Mittellinie.
@@ -68,7 +131,7 @@ Für Wache, Beistand, Schütze und Magier war der größte über alle 34.600
 Kämpfe gemessene Startabstand **3**; nur der Meuchler kam auf 5, und zwar
 genau deshalb, weil der Bot ihn ausdrücklich an den Rand stellt.
 
-Aufgeschlüsselt nach Rolle (heutiger Stand, 179.665 Einheiten):
+Aufgeschlüsselt nach Rolle (damaliger Stand, 179.665 Einheiten):
 
 | Rolle | Einheiten | läuft je einmal | Schritte, Median | Schritte, Mittel | bis 1. Treffer | sofort in Reichweite | Startabstand |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -91,26 +154,34 @@ zum ersten Schlag, und das sind ausschließlich Einheiten, die vorher fielen
 (Wache 68, Meuchler 128, bei den drei anderen Rollen keine einzige). **Die
 Fernkämpfer laufen nicht, weil sie nicht müssen.**
 
-## 3. Und wie viel Bildschirmzeit hängt daran?
+## 4. Und wie viel Bildschirmzeit hing daran?
 
 Das ist die Zahl, die man beim Zusehen wirklich sieht, und sie fällt anders
 aus als „vier Bewegungen je Kampf" vermuten lässt. Ein Schritt dauert
 `schrittdauer(STANDARD_REGLER)` = **300 ms**, ein Kampf **17,0 s** im Median.
 
-| | heute |
+| | damals (5×2) |
 | --- | --- |
 | Schritte je Einheit und Kampf | 0,68 |
 | **Anteil der Kampfzeit mit Laufbild** | **1,2 %** |
 | Median des letzten Schritts im Kampf | 10,9 s |
 
-**Eine Figur zeigt ihren Laufzyklus in gut einem Prozent der Kampfzeit**, und
-die wenigen Schritte fallen über den ganzen Kampf verteilt (der letzte im
-Median erst nach 10,9 s, wenn Lücken durch Tote aufgehen) — nicht gebündelt
-als sichtbarer Anlauf.
+**Eine Figur zeigte ihren Laufzyklus in gut einem Prozent der Kampfzeit**,
+und die wenigen Schritte fielen über den ganzen Kampf verteilt (der letzte
+im Median erst nach 10,9 s, wenn Lücken durch Tote aufgehen) — nicht
+gebündelt als sichtbarer Anlauf. Das ist die Zahl, die der Umbau am
+deutlichsten bewegt hat, und trotzdem nur auf 3,2 % (Abschnitt 1): Ein
+Kampf ist eben 18 Sekunden lang und ein Schritt drei Zehntel davon.
 
 ---
 
-## 4. Jede Stellschraube einzeln
+## 5. Jede Stellschraube einzeln — die Herleitung
+
+**Diese Tabelle ist der Grund, aus dem der Umbau so aussieht, wie er
+aussieht.** Sie vergleicht sieben Bretter, die es damals alle noch nicht
+gab; die Ausgangszeile „heute (5×2)" ist der Stand vor dem 06.09.2026, und
+keine Zeile beschreibt den gebauten. Gebaut wurden am Ende die beiden
+untersten Zeilen **zusammen** — siehe Abschnitt 1.
 
 Jede Zeile rechnet **dieselben Saaten** wie die erste; ein Unterschied
 zwischen zwei Zeilen ist die Wirkung der Schraube und nicht die Wirkung
@@ -158,7 +229,7 @@ der Tabelle, obwohl die Aufgabe sie nicht nennt.
   `docs/TAFELRUNDE-SPIELZEIT.md` ist keine, von der viel Luft übrig ist.
 - **Reichweiten −1** (Untergrenze 1, damit niemand ohne Angriff dasteht) ist
   die Schraube, die man zuerst vermutet und die am wenigsten bringt: Von 3,52
-  auf 3,72 Bewegungen. Der Grund steht in Abschnitt 2 — bindend ist nicht die
+  auf 3,72 Bewegungen. Der Grund steht in Abschnitt 3 — bindend ist nicht die
   Reichweite, sondern **dass der Gegner ohnehin 1 bis 2 Felder entfernt
   steht**. Wer die Reichweite senkt, verschiebt nur, welche Einheit als
   erste zuschlägt, und zieht die Markenspanne mit x0,80–x1,33 leicht
@@ -186,64 +257,88 @@ der Tabelle, obwohl die Aufgabe sie nicht nennt.
 
 ---
 
-## 5. Empfehlung
+## 6. Die Empfehlung — und was daraus wurde
 
-**Den Startabstand um zwei Reihen vergrößern (Arena 5×6 statt 5×4, die beiden
-mittleren Reihen bleiben leer) und sonst nichts anfassen.** Sie ist die
-einzige gemessene Schraube, die die Ursache trifft statt ihrer Nebenwirkungen:
-Bewegungen je Kampf 3,52 → 7,81, Einheiten die laufen 46,6 % → 93,1 %, Kämpfe
-die in Kontakt beginnen 68,4 % → 0,2 % — und das für 0,7 Sekunden je Kampf,
-bei unveränderter Partielänge, weniger Uhr-Entscheidungen und einer eher
-engeren Markenspanne. Wer zusätzlich Breite will, nimmt 6 Spalten dazu (auch
-kostenlos); die Reichweiten sollten unangetastet bleiben, weil sie nachweislich
-nicht die bindende Größe sind.
+**Empfohlen war:** den Startabstand um zwei Reihen vergrößern (Arena 5×6
+statt 5×4, die beiden mittleren Reihen bleiben leer) und sonst nichts
+anfassen. Sie war die einzige gemessene Schraube, die die Ursache trifft
+statt ihrer Nebenwirkungen: Bewegungen je Kampf 3,52 → 7,81, Einheiten die
+laufen 46,6 % → 93,1 %, Kämpfe die in Kontakt beginnen 68,4 % → 0,2 % — und
+das für 0,7 Sekunden je Kampf, bei unveränderter Partielänge, weniger
+Uhr-Entscheidungen und einer eher engeren Markenspanne. Die Reichweiten
+sollten unangetastet bleiben, weil sie nachweislich nicht die bindende Größe
+sind.
 
-### Was der Einbau kosten würde (nicht gemacht, nur benannt)
+**Entschieden hat Robin am 06.09.2026 mehr als das:** Lücke 2 **und** vier
+Reihen je Seite, also die beiden wirksamen Zeilen zusammen (PR #93). Die
+Kombination stand in dieser Tabelle nicht — sie ist vor dem Bauen eigens
+gemessen worden und steht jetzt in Abschnitt 1. Sie bringt mehr als jede
+Einzelzeile (10,04 Bewegungen statt 7,81) und kostet dafür die Runde, die
+die Vier-Reihen-Zeile schon angekündigt hatte. Nicht genommen wurden die
+sechs Spalten; die Reichweiten sind unangetastet geblieben.
 
-- `ARENA_REIHEN` und `nachArena` in `arena.ts` bekämen die Lücke — zwei
-  Zeilen. `haelfteVon`/`vonArena` bräuchten einen dritten Fall, weil eine
-  Arenareihe dann zu keiner Seite gehört (im Kampf selbst werden beide nicht
-  benutzt, wohl aber in der Anzeige).
-- Der Bildschirm (`packages/client/src/minispiele/tafelrunde/`, `Buehne.tsx`)
-  und die beiden Proben unter `/probe/arena-2d` und `/probe/arena-3d` zeichnen
-  über `ARENA_REIHEN` und ziehen automatisch mit; die **Höhe** der Arena
-  wächst aber um die Hälfte, und das ist am schmalen Gerät anzusehen (es gibt
-  dazu schon eine offene Karte, dass der Aufbau nie an einem Gerät geprüft
-  wurde).
-- `arena.test.ts` prüft heute ausdrücklich „vorderste Reihen stehen Kopf an
-  Kopf" (`arenaAbstand(vorn0, vorn1) === 1`) — die Zeile wäre nachzuziehen,
-  und zwar mit dem neuen Sollwert 3.
+### Was der Einbau tatsächlich gekostet hat
+
+Die Vorhersage von hier, daneben das, was PR #93 wirklich anfassen musste:
+
+- **Getroffen:** `arena.ts` bekam die Lücke — als eigene Konstante
+  `ARENA_LUECKE`, nicht als zwei verstreute Rechnungen. `haelfteVon` gibt
+  jetzt `Seite | null` zurück und `vonArena` wirft dort, weil zwei
+  Arenareihen zu keiner Seite gehören.
+- **Getroffen:** `arena.test.ts` prüfte „vorderste Reihen stehen Kopf an
+  Kopf" mit dem Sollwert 1. Er ist jetzt `ARENA_LUECKE + 1`, also aus der
+  Geometrie gerechnet statt eingetragen.
+- **Übersehen:** Der Bildschirm zieht **nicht** von allein mit. Er rechnete
+  `brettReihen * 2` — das ergäbe acht Reihen statt zehn und ließe die untere
+  Hälfte samt Figuren aus dem Raster fallen. Die Sicht führt seitdem
+  `arenaReihen`/`arenaSpalten` selbst (CLAUDE.md: was das Modul weiß,
+  schreibt der Client nicht ab).
+- **Übersehen:** `vorbereitungMs` musste von 45 s auf 75 s. Mehr Felder
+  heißen mehr Handgriffe, und der Schwanz der Vorbereitung wurde länger,
+  auch wenn der Median bei sieben Handgriffen blieb.
+
+Offen ist die dritte Vorhersage: Die **Höhe** der Arena ist um mehr als die
+Hälfte gewachsen, und ob das am schmalen Gerät trägt, hat noch niemand
+angesehen — dafür gibt es weiterhin eine eigene Karte.
 
 ---
 
-## 6. Ist weniger Laufen überhaupt ein Fehler?
+## 7. War weniger Laufen überhaupt ein Fehler?
 
-Die ehrliche Antwort ist **zweigeteilt**.
+Die Frage stand vor der Entscheidung, und die Antwort war **zweigeteilt**.
+Sie steht hier unverändert, weil sie erklärt, warum überhaupt etwas geändert
+wurde — und weil der zweite Teil auch nach dem Umbau gilt.
 
-**Nein, der Kampf ist nicht kaputt.** Ein Auto-Battler, in dem zwei Reihen
+**Nein, der Kampf war nicht kaputt.** Ein Auto-Battler, in dem zwei Reihen
 aufeinanderprallen und dann stehen bleiben, ist eine legitime Form; das ist
-das Bild, das das Genre prägt. Und ganz stillgestellt ist heute auch nichts:
-Fast die Hälfte aller Einheiten macht mindestens einen Schritt, der Median
-liegt bei vier Bewegungen je Kampf. Die Regel, die dahintersteht — nur ein
-strikt näheres, freies Feld —, ist bewusst so gebaut und richtig.
+das Bild, das das Genre prägt. Ganz stillgestellt war auch damals nichts:
+Fast die Hälfte aller Einheiten machte mindestens einen Schritt, der Median
+lag bei vier Bewegungen je Kampf. Die Regel, die dahintersteht — nur ein
+strikt näheres, freies Feld —, ist bewusst so gebaut, richtig, und **beim
+Umbau nicht angefasst worden**. Geändert wurde die Geometrie, nicht der
+Kampf.
 
-**Ja, an einer Stelle ist es einer, und die ist nicht ästhetisch.** Zwei der
-fünf Rollen laufen praktisch **nie**: Schütze und Magier, 29.460 Einheiten,
-25 Schritte insgesamt. Damit fehlt die Aufstellungsentscheidung
+**Ja, an einer Stelle war es einer, und die war nicht ästhetisch.** Zwei der
+fünf Rollen liefen praktisch **nie**: Schütze und Magier, 29.460 Einheiten,
+25 Schritte insgesamt. Damit fehlte der Aufstellungsentscheidung
 „vorne/hinten" für den halben Katalog ihre Konsequenz im Kampf, weil hinten
-und vorne beide von Anfang an im Ziel stehen. Das ist ein Spielinhalt, der
-verpufft, und kein Anzeigeproblem.
+und vorne beide von Anfang an im Ziel standen. Das war ein Spielinhalt, der
+verpuffte, und kein Anzeigeproblem. **Genau das ist behoben:** Beide Rollen
+laufen jetzt ausnahmslos, ihr Startabstand ist 6 statt 2.
 
-**Und die Anzeige löst es nicht.** Es liegt nahe, die Antwort dort zu suchen —
-sie liegt dort nicht, und die Zahl aus Abschnitt 3 sagt warum: Ein Schritt
-dauert 300 ms, ein Kampf 17 Sekunden. Selbst die beste gemessene Zeile bringt
-das Laufbild nur von 1,2 % auf 2,5 % der Kampfzeit. **Wer die vorgerenderten
-Laufzyklen sehen will, bekommt sie nicht über die Menge der Schritte, sondern
-über ihre Bündelung**: Mit +2 Startabstand laufen *alle* Figuren in der ersten
-Sekunde gleichzeitig los — ein sichtbarer Anlauf zu Beginn jedes Kampfes statt
-vereinzelter Schritte nach zehn Sekunden, wenn Lücken durch Tote aufgehen. Das
-ist der eigentliche Gewinn dieser Zeile, und er steht in keiner der Zahlen,
-die die Aufgabe verlangt hat.
+**Und die Anzeige löst es nicht** — der Satz gilt weiter, und die
+gemessenen 3,2 % belegen ihn. Es liegt nahe, die Antwort dort zu suchen;
+sie liegt dort nicht, und die Zahl aus Abschnitt 4 sagt warum: Ein Schritt
+dauert 300 ms, ein Kampf 18 Sekunden. Der Umbau hat die Bewegungen
+verdreifacht und das Laufbild trotzdem nur von 1,2 % auf **3,2 %** der
+Kampfzeit gebracht. **Wer die vorgerenderten Laufzyklen sehen will, bekommt
+sie nicht über die Menge der Schritte, sondern über ihre Bündelung**: Seit
+der Lücke laufen *alle* Figuren zu Beginn gleichzeitig los — ein sichtbarer
+Anlauf am Anfang jedes Kampfes statt vereinzelter Schritte nach zehn
+Sekunden, wenn Lücken durch Tote aufgehen. Das ist der eigentliche Gewinn,
+und er steht in keiner der Zahlen, die die Aufgabe verlangt hatte.
 
-Der Rest — dass die Figuren die übrigen 97 % der Zeit stehen und schlagen —
-ist keine Panne, sondern das Spiel.
+Der Rest — dass die Figuren die übrigen knapp 97 % der Zeit stehen und
+schlagen — ist keine Panne, sondern das Spiel. Wer daran noch etwas ändern
+will, dreht nicht mehr am Brett: Dort ist die Luft raus, wie Abschnitt 1
+zeigt.

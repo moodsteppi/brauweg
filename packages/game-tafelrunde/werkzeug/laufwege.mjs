@@ -14,15 +14,16 @@
  *     --json               Statt der Tabelle eine JSON-Zeile.
  *     --dist <pfad>        Anderes uebersetztes Paket messen (siehe unten).
  *
- * WOZU `--dist`: Brettbreite, Reihenzahl und Reichweiten stehen als
+ * WOZU `--dist`: Brettbreite, Reihenzahl, Luecke und Reichweiten stehen als
  * Konstanten im Modul und nicht in einem Regler — anders als Zeitraffer und
  * Startleben lassen sie sich also nicht von aussen drehen. Um sie trotzdem zu
- * MESSEN, ohne das Spiel zu aendern, kopiert man das uebersetzte `dist/`,
- * aendert dort die eine Zahl und zeigt mit `--dist` darauf. Gemessen wird
- * damit weiterhin das echte Modul und keine nachgebaute Kopie (dieselbe
- * Ueberlegung wie bei `Kampfregler` in kampf.ts, nur eine Stufe tiefer).
- * Gedreht wird deshalb hier NICHTS — die Entscheidung ueber das Brett faellt
- * nach der Tabelle, nicht in ihr.
+ * MESSEN, ohne das Spiel zu aendern, kopiert `laufwege-variante.mjs` das
+ * uebersetzte `dist/`, aendert dort die eine Zahl, und `--dist` zeigt darauf.
+ * Gemessen wird damit weiterhin das echte Modul und keine nachgebaute Kopie
+ * (dieselbe Ueberlegung wie bei `Kampfregler` in kampf.ts, nur eine Stufe
+ * tiefer). Gedreht wird hier NICHTS: Ohne `--dist` misst dieses Werkzeug den
+ * gebauten Stand, und der ist seit dem 06.09.2026 die Arena 5x10 (vier Reihen
+ * je Seite, zwei leere dazwischen).
  *
  * WARUM ECHTE PARTIEN UND KEINE ZUFAELLIGEN BRETTER: Der Unterschied ist
  * gross und in docs/TAFELRUNDE-SPIELZEIT.md nachgerechnet — ein Bot kauft
@@ -57,6 +58,7 @@ const laden = (pfad) => import(pathToFileURL(pfad).href);
 const { ACHT_SITZE, messe, schnittQuote, werteAus } = await laden(MESSSTAND);
 const { werteLaufAus } = await laden(LAUFWEGE);
 const {
+  ARENA_LUECKE,
   ARENA_REIHEN,
   ARENA_SPALTEN,
   BRETT_REIHEN,
@@ -127,6 +129,7 @@ const zeile = {
     brettReihen: BRETT_REIHEN,
     arenaSpalten: ARENA_SPALTEN,
     arenaReihen: ARENA_REIHEN,
+    arenaLuecke: ARENA_LUECKE,
     reichweiten: Object.fromEntries(
       [...new Set(KATALOG.map((e) => e.reichweite))].sort().map((r) => [
         r,
@@ -194,6 +197,7 @@ if (ALS_JSON) {
   console.log(`Laufwege — ${MARKE}`);
   console.log(
     `Brett ${BRETT_SPALTEN} x ${BRETT_REIHEN} je Seite, Arena ${ARENA_SPALTEN} x ${ARENA_REIHEN}` +
+      ` (Luecke ${ARENA_LUECKE})` +
       ` · ${PARTIEN} Partien zu ${SITZZAHL}, Saatbasis ${SAAT_BASIS} · ${lauf.kaempfe} Kaempfe`,
   );
   console.log('');

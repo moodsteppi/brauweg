@@ -154,6 +154,13 @@ export interface ViewMessage {
    * beim Doppelkopf die gleichzeitige Vorbehaltsabfrage.
    */
   readonly interludeDeadline: number | null;
+  /**
+   * Frist der laufenden Phase, oder null. Gilt wie die Schaupause fuer ALLE
+   * Sitze — anders als sie aber, waehrend noch gehandelt werden darf: Bei
+   * Tafelrunde ruesten alle gleichzeitig, und die Zugzeit taugt dort als
+   * Restzeit nicht (siehe phaseMs in game-api).
+   */
+  readonly phaseDeadline: number | null;
   readonly botSeats: readonly number[];
   readonly leftSeats: readonly number[];
   readonly finished: boolean;

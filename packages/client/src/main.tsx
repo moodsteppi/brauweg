@@ -52,11 +52,16 @@ function isDevFlag(name: string): boolean {
  * der Entwicklung von selbst.
  *
  * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
- * - /probe/arena-3d — DIESELBE Szene in 3D mit Three.js (Probe B)
  * - /probe/kampf — die ECHTE Kampfanzeige des Spiels mit einem aufgezeichneten
- *   Kampf aus Runde 10. Die einzige der drei, die bleiben soll: Sie ist die
+ *   Kampf aus Runde 10. Die einzige der beiden, die bleiben soll: Sie ist die
  *   Stelle, an der man Aenderungen an der Kampfanzeige ansieht, ohne eine
  *   Partie zu spielen (siehe Kopf von `proben/kampf/ProbeKampf.tsx`).
+ *
+ * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
+ * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
+ * wie 3D aussehen, aber nicht live gerendert werden — sie sind jetzt
+ * vorgerenderte Bildfolgen (`src/figuren3d/`). Damit war die Probe erledigt und
+ * ist samt ihrer Modelle geloescht.
  */
 function istProbe(name: string): boolean {
   const { pathname, hash, search } = window.location;
@@ -66,7 +71,6 @@ function istProbe(name: string): boolean {
 }
 
 const probeArena2d = istProbe('arena-2d');
-const probeArena3d = istProbe('arena-3d');
 const probeKampf = istProbe('kampf');
 
 const devAvatar = isDevFlag('avatar');
@@ -123,13 +127,7 @@ const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ de
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
-/* Aus demselben Grund `lazy`, hier aber mit deutlich mehr Gewicht dahinter:
-   Probe B zieht `three` und `@react-three/fiber` nach. Seit dem 5.9.2026 liegt
-   davon nichts mehr im Hauptbuendel — der letzte Weg dorthin lief ueber
-   Feldherrs `Buehne3D`, und App.tsx laedt die Spielschirme jetzt einzeln nach.
-   Die Probe selbst soll jedenfalls nichts dazulegen. */
-const Arena3D = lazy(() => import('./proben/arena-3d/Arena3D').then((m) => ({ default: m.Arena3D })));
-/* Aus demselben Grund `lazy` wie die Proben darueber, hier aber mit einem
+/* Aus demselben Grund `lazy` wie die Probe darueber, hier aber mit einem
    zweiten dazu: Die Probe zieht den aufgezeichneten Kampf (rund 30 kB JSON)
    UND die Bauteile des Tafelrunde-Tisches nach. Beides gehoert nicht in das
    Stueck, das jeder Spieler beim Anmelden laedt — und am Client wird gerade
@@ -140,8 +138,6 @@ const ProbeKampf = lazy(() =>
 
 const werkzeug = probeArena2d ? (
   <Arena2D />
-) : probeArena3d ? (
-  <Arena3D />
 ) : probeKampf ? (
   <ProbeKampf />
 ) : devAvatar ? (

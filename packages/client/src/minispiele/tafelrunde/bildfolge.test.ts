@@ -6,6 +6,7 @@ import {
   BLATT_PFADE,
   GLEITEN_MS,
   KAMPF_TEMPO,
+  SACKEN_MS,
   bildstand,
   blattPfad,
   blattVersatz,
@@ -23,6 +24,27 @@ import {
 function spur(teil: Partial<Bewegungsspur> = {}): Bewegungsspur {
   return { id: 0, schlagAb: null, getroffenAb: null, zugAb: null, totAb: null, ...teil };
 }
+
+describe('SACKEN_MS', () => {
+  /*
+   * Das Stylesheet laesst eine Gefallene erst NACH dem Einsacken verblassen
+   * (`--sacken` an `.figur`). Waere die Dauer dort als Zahl geschrieben,
+   * liefe sie beim ersten geaenderten Bild oder Tempo aus der Todesfolge
+   * heraus — und man saehe eine halb durchsichtige Figur zusammensacken.
+   */
+  it('faellt aus Bildzahl, Bildrate und Zeitraffer der Todesfolge', () => {
+    const tod = folgeVon('tod');
+    expect(SACKEN_MS).toBe(Math.round((tod.bilder / (tod.bildrate * KAMPF_TEMPO)) * 1000));
+  });
+
+  it('ist kuerzer als der Nachlauf, den die Anzeige der Todesfolge laesst', () => {
+    // NACHSPIEL_MS in KampfAnzeige.tsx steht auf 600 und ist bewusst
+    // grosszuegig: Ein Takt zu wenig friert die Figur mitten im Einsacken
+    // ein. Diese Schranke haelt beide Zahlen beieinander.
+    expect(SACKEN_MS).toBeGreaterThan(0);
+    expect(SACKEN_MS).toBeLessThan(600);
+  });
+});
 
 describe('blattPfad', () => {
   it('kennt fuer jede der fuenf Rollen ein Blatt', () => {

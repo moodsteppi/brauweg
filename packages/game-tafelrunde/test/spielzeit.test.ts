@@ -73,15 +73,46 @@ describe('Spielzeit: das Zeitmodell', () => {
   });
 
   /**
-   * Der Deckel ist keine Zierde: Die Plattform nimmt einem Sitz nach
-   * `turnTimeoutMs` die Entscheidung ab und laesst den Bot ziehen. Eine
-   * geschaetzte Vorbereitung, die darueber liegt, beschreibt einen Zustand,
-   * den es am Tisch gar nicht gibt.
+   * Der Deckel ist keine Zierde: Nach `vorbereitungMs` gelten offene Sitze als
+   * bereit und der Kampf beginnt (`fristAbgelaufen`). Eine geschaetzte
+   * Vorbereitung, die darueber liegt, beschreibt einen Zustand, den es am
+   * Tisch gar nicht gibt.
    */
-  it('deckelt die Vorbereitung bei der Zugzeit der Plattform', () => {
+  it('deckelt die Vorbereitung bei der Rundenfrist des Regelsatzes', () => {
     assert.equal(
       vorbereitungsdauer(1000, STANDARD_ZEITMODELL),
-      STANDARD_ZEITMODELL.vorbereitungHoechstMs,
+      DEFAULT_REGELN.vorbereitungMs,
+    );
+  });
+
+  /**
+   * Die Zahl hinter `vorbereitungMs` (regeln.ts): Sie liegt UEBER der
+   * laengsten Vorbereitung, die eine zuegig gespielte Runde braucht — sonst
+   * schnitte die Frist nicht den Truedler ab, sondern den Kauf, den jemand
+   * gerade tippt.
+   *
+   * Gemessen wird der fleissigste Sitz je Runde, denn auf den wartet die
+   * Phase. 800 Partien sind rund 7.600 Runden; die Schranke steht ueber dem
+   * gemessenen Hoechstwert (23 Handgriffe, 39,5 s) und nicht darauf, damit
+   * eine Katalogaenderung sie nicht sofort rot faerbt.
+   */
+  it('haelt die Rundenfrist ueber der laengsten gemessenen Vorbereitung', () => {
+    const befunde = messe({
+      partien: 800,
+      sitze: VIER_SITZE,
+      besetzung: 'normal',
+      saatBasis: 'frist-v1',
+    });
+    const laengste = Math.max(
+      ...befunde.flatMap((b) => b.zuegeJeRunde).map((zuege) =>
+        // Ohne Deckel gerechnet: Der Deckel ist ja gerade das, was geprueft
+        // wird — mit ihm kaeme immer die Frist selbst heraus.
+        vorbereitungsdauer(zuege, { ...STANDARD_ZEITMODELL, vorbereitungHoechstMs: Infinity }),
+      ),
+    );
+    assert.ok(
+      laengste <= DEFAULT_REGELN.vorbereitungMs,
+      `laengste Vorbereitung ${laengste} ms ueber der Frist ${DEFAULT_REGELN.vorbereitungMs} ms`,
     );
   });
 
@@ -180,7 +211,9 @@ describe('Spielzeit: der heutige Stand', () => {
    * Probe haelt die Rangfolge fest, damit die Empfehlung nicht still veraltet.
    * Gemessen am 05.09.2026 abends: 59,8 / 34,9 / 5,3 (vormittags 57,4 / 36,7 /
    * 6,0 — der Kampf hat zugelegt, weil der Bot seitdem staerkere Bretter
-   * baut).
+   * baut). Am 06.09.2026 sind es 57,3 / 39,2 / 3,6: Der Nachlauf ist von 2,5
+   * auf 1,5 s gefallen, und damit verschiebt sich der Rest anteilig nach oben,
+   * ohne dass jemand an ihm gedreht haette.
    *
    * VOR DEM ZEITRAFFER waren es 70 / 25 / 5. Dass der Kampf nur noch knapp
    * ueber der Haelfte liegt, ist die Wirkung von x2 und kein neuer Befund —
@@ -230,6 +263,59 @@ describe('Spielzeit: der heutige Stand', () => {
       AUSWERTUNG.kampfMedianMs <= HOECHSTDAUER_MS,
       'der mittlere Kampf laeuft in die Abbruchgrenze',
     );
+  });
+
+  /**
+   * DER BEFUND VOM 06.09.2026: Nicht die Spielzeit war zu lang, sondern das
+   * WARTEN darin — und der groesste Posten stand in keiner Regel dieses
+   * Moduls.
+   *
+   * Robin: "Die Wartezeiten, wenn die Runde vorbei ist bzw. alle bereit sind,
+   * sollten deutlich kuerzer." Zerlegt in die zwei Stellen, an denen ein Sitz
+   * nichts zu tun hat (die Zahlen sind Median / neuntes Zehntel je Runde, zu
+   * viert):
+   *
+   *                                          vorher        nachher
+   *     auf die Bots nach dem "Bereit"    12,8 / 24,0 s   3,2 / 6,0 s
+   *     auf die fremden Kaempfe            2,5 / 21,4 s   1,5 / 20,4 s
+   *
+   * Die erste Zeile ist der Takt der Plattform vor jedem Botzug (0,8 s,
+   * gedacht fuer eine gelegte Karte je Stich) mal den 16 Handgriffen, die die
+   * drei Bots je Runde machen — `BOT_TAKT_MS` in adapter.ts deckelt ihn jetzt
+   * auf 200 ms. Die zweite ist `KAMPF_NACHLAUF_MS`, von 2,5 auf 1,5 s.
+   *
+   * WAS DIESE PROBE FAENGT: dass jemand eine der beiden Zahlen wieder
+   * hochzieht, ohne es zu merken — etwa indem er dem Bot mehr Handgriffe je
+   * Runde gibt. Die Schranken liegen bewusst weit, siehe oben.
+   */
+  it('laesst einen Sitz nach seinem "Bereit" nicht wieder minutenlang zusehen', () => {
+    const botMedian = AUSWERTUNG.botWartenMedianMs / 1000;
+    assert.ok(
+      botMedian < 8,
+      `${botMedian.toFixed(1)} s wartet ein Sitz je Runde auf die Bots ` +
+        `(gemessen am 06.09.2026: 3,2 s, davor 12,8 s)`,
+    );
+    // Der Nachlauf ist der einzige Posten, der auch OHNE fremde Kaempfe
+    // anfaellt: Wessen Kampf der laengste der Runde war, wartet nur ihn ab.
+    assert.equal(AUSWERTUNG.wartenMedianMs, 0);
+    assert.ok(AUSWERTUNG.zeitmodell.kampfNachlaufMs <= 2_000);
+  });
+
+  /**
+   * Der Schwanz ist der Befund, nicht der Median.
+   *
+   * Ein Kampf dauert 16,2 s im Median und 38,6 s im neunten Zehntel; die
+   * Kampfphase (der laengste Kampf der Runde) 21,7 s und 43,4 s. Deshalb steht
+   * `kampfP90Ms` ueberhaupt in der Auswertung: Wer nur den Median liest, haelt
+   * diese Aufgabe fuer erledigt und sieht die Runde nicht, in der jemand eine
+   * halbe Minute vor einem fertigen Bildschirm sitzt.
+   */
+  it('misst den Schwanz und nicht nur die Mitte', () => {
+    assert.ok(AUSWERTUNG.kampfP90Ms > AUSWERTUNG.kampfMedianMs);
+    assert.ok(AUSWERTUNG.kampfphaseP90Ms >= AUSWERTUNG.kampfP90Ms);
+    // Die Phase ist immer der laengste Kampf, also nie kuerzer als der
+    // mittlere Kampf — eine Umkehrung waere ein Rechenfehler, kein Balancing.
+    assert.ok(AUSWERTUNG.kampfphaseMedianMs >= AUSWERTUNG.kampfMedianMs);
   });
 });
 

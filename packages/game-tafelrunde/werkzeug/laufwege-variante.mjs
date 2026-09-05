@@ -5,8 +5,9 @@
  *     node packages/game-tafelrunde/werkzeug/laufwege.mjs \
  *          --dist packages/game-tafelrunde/tmp-varianten/breit6 --marke "6 Spalten"
  *
- * WARUM ES DAS GIBT: Brettbreite, Reihenzahl, Reichweiten und der Abstand der
- * beiden Haelften stehen als Konstanten im Modul — anders als Zeitraffer und
+ * WARUM ES DAS GIBT: Brettbreite (`BRETT_SPALTEN`), Reihenzahl
+ * (`BRETT_REIHEN`), Reichweiten (Katalog) und der Abstand der beiden Haelften
+ * (`ARENA_LUECKE`) stehen als Konstanten im Modul — anders als Zeitraffer und
  * Startleben lassen sie sich nicht von aussen drehen (`Kampfregler` in
  * kampf.ts, `TafelrundeRegeln` in regeln.ts). Um zu beantworten, was ein
  * breiteres Brett am Kampf aendern WUERDE, muss man sie trotzdem drehen
@@ -29,12 +30,20 @@
  * Die Ersetzungen unten sind absichtlich stur und pruefen jede einzelne — wo
  * eine nicht greift, bricht der Lauf ab, statt still das Original zu messen.
  *
- * ACHTUNG BEI UNGERADER REIHENZAHL: Die Punktspiegelung in arena.ts ist nur
- * abstandstreu, wenn die Reihen je Seite GERADE sind (der Versatz des
- * odd-r-Rasters hebt sich sonst nicht weg — siehe Kopf von arena.ts). Eine
- * Variante mit 3 Reihen laesst sich rechnen, ihre Zahlen sind aber
- * INDIKATIV: Auf ihr sind die Nachbarschaften der beiden Haelften nicht mehr
- * dieselben. Das Werkzeug sagt es beim Bauen dazu.
+ * ACHTUNG BEI UNGERADEN MASSEN: Die Punktspiegelung in arena.ts ist nur
+ * abstandstreu, wenn `ARENA_REIHEN` gerade ist — und das ist
+ * `BRETT_REIHEN * 2 + ARENA_LUECKE`. Reihenzahl UND Luecke muessen also gerade
+ * bleiben (der Versatz des odd-r-Rasters hebt sich sonst nicht weg, siehe Kopf
+ * von arena.ts). Eine Variante mit 3 Reihen oder einer Luecke von 1 laesst
+ * sich rechnen, ihre Zahlen sind aber INDIKATIV: Auf ihr sind die
+ * Nachbarschaften der beiden Haelften nicht mehr dieselben. Das Werkzeug sagt
+ * es beim Bauen dazu.
+ *
+ * SEIT DEM 06.09.2026 IST DER GEBAUTE STAND 5x4 JE SEITE MIT LUECKE 2
+ * (Robins Entscheidung nach der Messung, PR #93). Die Vorgabewerte unten sind
+ * deshalb 5 / 4 / 2, und die Zeilen der alten Herleitungstabelle in
+ * docs/TAFELRUNDE-LAUFWEGE.md lassen sich mit `--reihen 2 --luecke 0`
+ * nachstellen.
  */
 
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -64,8 +73,15 @@ if (!existsSync(resolve(QUELLE, 'test/messen.js'))) {
 
 const SPALTEN = Number(schalter('spalten', '0'));
 const REIHEN = Number(schalter('reihen', '0'));
-const LUECKE = Number(schalter('luecke', '0'));
 const REICHWEITE_MINUS = Number(schalter('reichweite-minus', '0'));
+
+/*
+ * `null` heisst "nicht angegeben" und nicht "0". Die Luecke ist der einzige
+ * Schalter, dessen sinnvoller Wert die Null EINSCHLIESST — die Arena ohne
+ * Luecke ist genau der Stand vor dem 06.09.2026. Mit 0 als Vorgabe waere jede
+ * Variante stillschweigend auch eine Luecken-Variante.
+ */
+const LUECKE = process.argv.includes('--luecke') ? Number(schalter('luecke', '2')) : null;
 
 const ZIEL = resolve(PAKET, 'tmp-varianten', NAME);
 rmSync(ZIEL, { recursive: true, force: true });
@@ -91,7 +107,7 @@ if (SPALTEN > 0) {
 }
 
 if (REIHEN > 0) {
-  ersetze('src/brett.js', 'export const BRETT_REIHEN = 2;', `export const BRETT_REIHEN = ${REIHEN};`);
+  ersetze('src/brett.js', 'export const BRETT_REIHEN = 4;', `export const BRETT_REIHEN = ${REIHEN};`);
   getan.push(`${REIHEN} Reihen je Seite`);
   if (REIHEN % 2 === 1) {
     console.warn(
@@ -102,21 +118,17 @@ if (REIHEN > 0) {
   }
 }
 
-if (LUECKE > 0) {
-  // Eine Luecke von leeren Reihen zwischen den beiden Haelften: der
-  // Startabstand als Stellschraube. Sie muss GERADE sein, sonst kippt die
-  // Spiegelung (dieselbe Rechnung wie bei der Reihenzahl).
-  ersetze(
-    'src/arena.js',
-    'export const ARENA_REIHEN = BRETT_REIHEN * 2;',
-    `export const ARENA_REIHEN = BRETT_REIHEN * 2 + ${LUECKE};`,
-  );
-  ersetze(
-    'src/arena.js',
-    'return (reihe + BRETT_REIHEN) * ARENA_SPALTEN + spalte;',
-    `return (reihe + BRETT_REIHEN + ${LUECKE}) * ARENA_SPALTEN + spalte;`,
-  );
-  getan.push(`Startabstand +${LUECKE}`);
+if (LUECKE !== null) {
+  /*
+   * Die leeren Reihen zwischen den beiden Haelften — der Startabstand als
+   * Stellschraube. Seit dem 06.09.2026 ist das eine EIGENE Konstante im
+   * Modul (`ARENA_LUECKE`), vorher musste dieses Werkzeug dafuer noch an zwei
+   * Stellen von arena.js schrauben. Angegeben wird der Wert absolut, nicht
+   * als Zuschlag: `--luecke 0` ist die Arena ohne Luecke, wie sie bis zum
+   * 06.09.2026 gebaut war.
+   */
+  ersetze('src/arena.js', 'export const ARENA_LUECKE = 2;', `export const ARENA_LUECKE = ${LUECKE};`);
+  getan.push(`Luecke ${LUECKE}`);
   if (LUECKE % 2 === 1) {
     console.warn(
       `ACHTUNG: Eine Luecke von ${LUECKE} ist UNGERADE — die Spiegelung ist dann ` +

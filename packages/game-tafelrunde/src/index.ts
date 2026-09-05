@@ -1,4 +1,4 @@
-export { KAMPF_NACHLAUF_MS, tafelrunde } from './adapter.js';
+export { BOT_TAKT_MS, KAMPF_NACHLAUF_MS, tafelrunde } from './adapter.js';
 export {
   type Einheit,
   type EinheitId,
@@ -38,6 +38,7 @@ export {
 export {
   type Seite,
   ARENA_FELDER,
+  ARENA_LUECKE,
   ARENA_REIHEN,
   ARENA_SPALTEN,
   SEITEN,
@@ -85,6 +86,7 @@ export {
   feldplaetze,
   ladenChancen,
   levelstufe,
+  mitFrist,
   pruefeRegeln,
   serienBonus,
   zins,
@@ -112,6 +114,7 @@ export {
   einkommen,
   erlaubteZuege,
   erstellePartie,
+  fristAbgelaufen,
   fuehreAus,
   heerVon,
   istKaempfer,

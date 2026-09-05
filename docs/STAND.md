@@ -100,8 +100,9 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > Paketstruktur lag). Eine Runde läuft jetzt vollständig durch: Alle lebenden
 > Sitze werden paarweise angesetzt (bei ungerader Zahl bekommt der Übrige das
 > Brett eines anderen als **Geist**, keine Freirunde), beide Bretthälften
-> werden zu einer Arena mit vier Reihen zusammengelegt, der Kampf wird beim
-> Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
+> werden zu einer Arena zusammengelegt (seit dem 06.09.2026 vier Reihen je
+> Seite und zwei leere dazwischen, also 5 × 10 — vorher 5 × 4), der Kampf wird
+> beim Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
 > als **Ablaufprotokoll** (jede Bewegung, jeder Treffer, jeder Tod mit
 > Zeitpunkt) im Zustand und in der Sicht. Gleiche Saat plus gleiche Bretter
 > ergibt denselben Ablauf **Ereignis für Ereignis** — eine Probe vergleicht
@@ -155,14 +156,30 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > Zugeklappt war sie die halbe Auskunft der Partie, und zugeklappt wurde
 > sie, weil acht Zeilen den Laden unter den Rand drückten.
 >
-> **Die Restzeit gibt es nur in der Kampfphase.** Sie kommt aus
-> `interludeDeadline` — eine echte Frist. Für die **Platzierungsphase gibt
-> es keine**: Das Modul beendet sie, wenn der Letzte bereit ist, nicht nach
-> Zeit (`beginneKampf` in `partie.ts`), und die Zugzeit der Plattform ist
-> keine Ersatzuhr — `schedule()` stellt sie bei JEDER Aktion irgendeines
-> Sitzes neu und lässt sie ganz weg, sobald `currentActor` ein Bot ist.
-> Statt einer erfundenen Zahl steht dort „2 von 4 bereit". Wer dort eine
-> echte Uhr will, braucht sie im Modul; das ist ein Punkt fürs Board.
+> **Die Restzeit gibt es in beiden Phasen** — im Kampf aus
+> `interludeDeadline`, in der Platzierungsphase aus `phaseDeadline`. Bis zum
+> 06.09.2026 gab es die zweite nicht: Das Modul beendete die Vorbereitung
+> nur, wenn der Letzte bereit war (`beginneKampf` in `partie.ts`), und die
+> Zugzeit der Plattform ist keine Ersatzuhr — `schedule()` stellt sie bei
+> JEDER Aktion irgendeines Sitzes neu und lässt sie ganz weg, sobald
+> `currentActor` ein Bot ist. Statt einer erfundenen Zahl stand dort „2 von
+> 4 bereit"; ohne Frist steht das dort weiterhin.
+>
+> Seitdem hat die Vorbereitung eine **Rundenfrist im Modul**:
+> `vorbereitungMs` im Regelsatz, **45 Sekunden**, danach gelten offene Sitze
+> als bereit (`fristAbgelaufen` in `partie.ts`). Gebucht wird dabei nichts —
+> wer die Frist verstreichen lässt, tritt mit dem Brett an, das er hat.
+> Getragen wird sie von einem neuen Paar in `GameModule`: **`phaseMs` /
+> `advancePhase`**, das Gegenstück zu `interludeMs` / `advanceInterlude` für
+> Spiele, in denen alle GLEICHZEITIG handeln. Das Modul bleibt uhrlos und
+> nennt nur die Dauer; gemessen wird sie in `runtime/party.ts`
+> (`schedulePhase`, ein Timer auf den früheren von Zugzeit und Phasenfrist).
+> Damit die Plattform einen Phasenwechsel bemerkt, **muss `phaseMs`
+> zwischen zwei Fristen einmal null liefern** — bei Tafelrunde liegt dazwischen
+> die Kampfphase. 45 s sind gemessen und nicht gegriffen: Über 7.637 Runden
+> braucht der fleißigste Sitz im Median 15,5 s und höchstens 39,5 s
+> (Zeitmodell in `test/messen.ts`), die Frist liegt also über jeder zügig
+> gespielten Runde.
 >
 > Dazu, alles in `packages/client/src`: **sichtbares Feldraster** (die Wabe
 > trägt die Randfarbe, ihr `::before` liegt 1,5 px innen und trägt die
@@ -293,6 +310,18 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > **Laden** und nicht die Partielänge dahinterstand (Befund 7 in
 > `docs/spiele/auto-battler-konzept.md`, Werkzeug `werkzeug/gangarten.mjs`).
 > Vier Messungen über zwei Saatbasen zeigen in dieselbe Richtung.
+>
+> **Am 06.09.2026 nachgezogen — die Zahl 140 : 86,7 gilt nicht mehr, sie steht
+> jetzt bei 228 : 57,3.** Was `hart` damals trug, war allein die fehlende
+> Patzerquote; die beiden Tempo-Schrauben lagen in der Streuung und blieben
+> deshalb stehen. Über sechs Saatbasen gemessen ist eine der beiden aber kein
+> Nullwert, sondern ein Minus: Ohne die Bedingung „Brett voll" kauft der Bot
+> Feldplätze, auf denen nichts steht. `nurBeiVollemBrett` steht bei `hart`
+> seitdem auf `true`, `polster` auf 2 statt 4; die Reserve bleibt bei 0 und
+> trägt das Tempo. Damit wirkt jede der vier Schrauben messbar, und der
+> Kontrolllauf ist wieder neutral (98,7 statt der 110 bis 116, die über drei
+> Basen gemessen waren). Neu am Werkzeug: `--schraube name=wert` stellt eine
+> einzelne Schraube um, ohne `bot.ts` anzufassen.
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >

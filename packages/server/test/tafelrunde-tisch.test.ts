@@ -28,6 +28,7 @@ import {
   tischPerCode,
 } from '../src/tables/service.js';
 import { tafelrunde } from '@brauweg/game-tafelrunde';
+import { botTaktMs } from '../src/runtime/party.js';
 
 const SPIEL = 'tafelrunde';
 
@@ -243,4 +244,38 @@ test('Niemand sitzt an einem Tisch und steht zugleich in der Schnellsuche', asyn
   const ergebnis = await vermittlung.abruf(SPIEL, bert);
   assert.ok(ergebnis.tischId);
   assert.notEqual(ergebnis.tischId, tisch.id);
+});
+
+/**
+ * Der Takt der Botzuege — die groesste Wartezeit an einem Tafelrundentisch,
+ * und sie steht in keiner Regel des Spiels.
+ *
+ * Die Laufzeit wartet zwischen zwei Botzuegen 0,8 s, damit man beim
+ * Kartenspiel jede gelegte Karte einzeln wahrnimmt. Bei Tafelrunde ruesten
+ * alle gleichzeitig, `currentActor` nennt aber immer nur den kleinsten Sitz,
+ * der noch nicht bereit ist — die Bots arbeiten ihre Kaeufe also nacheinander
+ * ab, und wer schon "Bereit" getippt hat, sitzt so lange davor. Gemessen zu
+ * viert: 16 fremde Handgriffe je Runde im Median, mit 0,8 s also 12,8 s.
+ */
+test('Tafelrunde kuerzt der Laufzeit den Takt zwischen zwei Botzuegen', () => {
+  const modul = tafelrunde.meta.botTaktHoechstMs;
+  assert.ok(modul !== undefined && modul < 800, 'Tafelrunde nennt keinen kuerzeren Takt');
+  assert.equal(botTaktMs(800, modul), modul);
+});
+
+test('Ein Modul ohne eigenen Takt behaelt den der Laufzeit', () => {
+  assert.equal(botTaktMs(800, undefined), 800);
+  assert.equal(botTaktMs(0, undefined), 0);
+});
+
+/**
+ * Die Richtung des Deckels ist das Einzige, was man hier falsch machen kann:
+ * `botDelayMs: 0` stellen die Testhuellen ausdruecklich ein, damit ein
+ * Bottisch ohne Wartezeit durchlaeuft. Duerfte ein Modul den Takt
+ * VERLAENGERN, saesse jeder dieser Tests die Pause trotzdem ab — je Zug jeder
+ * Partie.
+ */
+test('Ein Modul kann den Takt nur kuerzen, nie verlaengern', () => {
+  assert.equal(botTaktMs(0, 200), 0);
+  assert.equal(botTaktMs(800, 5_000), 800);
 });

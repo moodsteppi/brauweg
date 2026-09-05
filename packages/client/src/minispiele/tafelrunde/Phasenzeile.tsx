@@ -7,22 +7,27 @@
  * Werteleiste, aber ohne das Wort daneben — und wer zum ersten Mal spielt,
  * liest aus einer 3 nicht ab, dass er gerade aufstellen darf.
  *
- * HIER WIRD NICHTS GERECHNET, was nicht in der Sicht steht. Insbesondere:
+ * HIER WIRD NICHTS GERECHNET, was nicht in der Sicht steht. Insbesondere
+ * kommt die Frist FERTIG von der Plattform, in beiden Phasen:
  *
- * DIE RESTZEIT GIBT ES NUR IN DER KAMPFPHASE. Sie kommt aus
- * `interludeDeadline` der Plattform (runtime/party.ts) — dem Ende der
- * Schaupause, die so lang ist wie der längste Kampf der Runde. Das ist eine
- * echte Frist: Sie steht ab Beginn der Pause fest und verschiebt sich nicht.
+ * IN DER KAMPFPHASE aus `interludeDeadline` (runtime/party.ts) — dem Ende der
+ * Schaupause, die so lang ist wie der längste Kampf der Runde.
  *
- * FÜR DIE PLATZIERUNGSPHASE GIBT ES KEINE. Das Modul beendet sie nicht nach
- * Zeit, sondern erst, wenn ALLE bereit sind (`beginneKampf` läuft in
- * partie.ts nur, wenn kein Sitz mehr offen ist). Die einzige Uhr, die dort
- * läuft, ist die Zugzeit der Plattform — und die wird bei JEDER Aktion
- * irgendeines Sitzes neu gestellt (`schedule` in party.ts) und steht auf
- * null, sobald der genannte Sitz ein Bot ist. Eine Zahl daraus wäre keine
- * Restzeit, sondern eine, die beim Kauf einer Einheit wieder hochspringt.
- * Deshalb steht dort statt einer Uhr der WAHRE Druck: wie viele Mitspieler
- * schon bereit sind. Wer eine echte Frist will, braucht sie im Modul.
+ * IN DER PLATZIERUNGSPHASE aus `phaseDeadline`, seit das Modul eine
+ * Rundenfrist kennt (`vorbereitungMs` im Regelsatz von Tafelrunde, 45 s;
+ * danach gelten offene Sitze als bereit). Beides sind ECHTE Fristen: Sie
+ * stehen ab Beginn der Phase fest und verschieben sich nicht.
+ *
+ * WAS HIER NIE STEHEN DARF, ist die Zugzeit der Plattform. Sie wird bei JEDER
+ * Aktion irgendeines Sitzes neu gestellt (`schedule` in party.ts) — alle
+ * rüsten gleichzeitig — und steht auf null, sobald der genannte Sitz ein Bot
+ * ist. Eine Zahl daraus wäre keine Restzeit, sondern eine, die beim Kauf einer
+ * Einheit wieder hochspringt. Bis zum 06.09.2026 gab es deshalb gar keine
+ * Uhr in der Platzierungsphase.
+ *
+ * OHNE FRIST bleibt es beim WAHREN Druck: wie viele Mitspieler schon bereit
+ * sind. Diesen Fall gibt es weiterhin — ein Tisch, der vor dem 06.09.2026
+ * aufgemacht wurde, und jede Phase, für die das Modul keine Frist nennt.
  */
 
 import { useEffect, useState } from 'react';
@@ -92,7 +97,7 @@ export function Phasenzeile({
 }: {
   runde: number;
   phase: Phase;
-  /** Ende der Schaupause (`interludeDeadline`), null außerhalb der Kampfphase. */
+  /** Ende der laufenden Phase, null wenn dort keine Uhr läuft (siehe Kopf). */
   frist: number | null;
   /** Wie viele Sitze schon bereit sind — nur für die Platzierungsphase. */
   bereit: number;
@@ -103,8 +108,8 @@ export function Phasenzeile({
    * Die Uhr hängt an der FRIST und nicht am Sicht-Objekt: Jeder Rundruf des
    * Servers bringt ein neues Objekt, und ein Effekt daran ließe den Takt bei
    * jedem Funk abräumen und neu anlaufen (CLAUDE.md: Effekte an einen
-   * Schlüssel hängen). Ohne Frist läuft gar kein Timer — in der
-   * Platzierungsphase gibt es nichts zu zählen.
+   * Schlüssel hängen). Ohne Frist läuft gar kein Timer — dann gibt es nichts
+   * zu zählen.
    */
   const [jetzt, setJetzt] = useState(() => Date.now());
   useEffect(() => {
