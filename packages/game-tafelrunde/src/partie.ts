@@ -1167,7 +1167,12 @@ export function platzierungen(
         left: heer.verlassen,
       };
     })
-    .sort((a, b) => b.points - a.points || b.leben - a.leben);
+    // Der Sitz als letztes Kriterium ist keine Wertung, sondern eine Zusage:
+    // Die Reihenfolge geht seit dem 6.9.2026 als `platzierung` in die Sicht
+    // (sicht.ts) und damit auf den Bildschirm. Ohne ihn haengt sie bei
+    // voelligem Gleichstand an der Stabilitaet von `sort` — und die Anzeige
+    // spraenge, sobald jemand daran etwas aendert.
+    .sort((a, b) => b.points - a.points || b.leben - a.leben || a.seat - b.seat);
 
   let platz = 0;
   let letzter: string | null = null;

@@ -104,6 +104,12 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     phase: 'vorbereitung',
     fertig: false,
     sieger: null,
+    /* Die Rangliste kommt fertig aus dem Modul (sicht.ts) — hier wird sie
+       gestellt, nicht nachgerechnet. Beide stehen noch, Runde 3. */
+    platzierung: [
+      { sitz: 0, platz: 1, runden: 3 },
+      { sitz: 1, platz: 2, runden: 3 },
+    ],
     zuschauer: false,
     ladenPlaetze: 5,
     bankPlaetze: 9,
@@ -1083,6 +1089,10 @@ describe('Endbild', () => {
         phase: 'ende',
         sieger: 0,
         runde: 11,
+        platzierung: [
+          { sitz: 0, platz: 1, runden: 11 },
+          { sitz: 1, platz: 2, runden: 10 },
+        ],
         gegner: [
           {
             sitz: 1,
@@ -1112,7 +1122,15 @@ describe('Endbild', () => {
   it('lässt sich nach dem eigenen Ausscheiden wegklicken', () => {
     // Zusehen ist bei einem Auto-Battler kein Trostpreis — man sieht, gegen
     // wen man verloren hätte. Deshalb ein Überblender und kein Ortswechsel.
-    stelle(sicht({ eigenes: { ausRunde: 6, leben: 0 } }));
+    stelle(
+      sicht({
+        eigenes: { ausRunde: 6, leben: 0 },
+        platzierung: [
+          { sitz: 1, platz: 1, runden: 8 },
+          { sitz: 0, platz: 2, runden: 6 },
+        ],
+      }),
+    );
     zeige();
     const bild = screen.getByRole('dialog', { name: 'Ausgeschieden' });
     expect(within(bild).getByText(/6 Runden überstanden/)).toBeInTheDocument();

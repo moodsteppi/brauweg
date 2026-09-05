@@ -18,13 +18,13 @@
  * langsamer Schein hinter dem Kranz dazu und sonst nichts — „darf feiern, im
  * Ton des Startbildschirms, nicht bunter".
  *
- * Alle Zahlen kommen aus der Sicht. Die einzige Rechnung ist die
- * Platzierung; sie steht in platzierung.ts und ist dort begründet (die Sicht
- * liefert nur `sieger`, nicht den Platz).
+ * Alle Zahlen kommen aus der Sicht, auch die Platzierung: Das Modul liefert
+ * sie seit dem 6.9.2026 als `platzierung` mit (je Sitz Platz und überstandene
+ * Runden). Hier wird darin nur noch der eigene Sitz nachgeschlagen.
  */
 
 import { type Einheitenbild, Figurbild } from './KampfAnzeige';
-import { type Sitzstand, eigenerPlatz, platzTabelle } from './platzierung';
+import { type Platz, eigenerPlatz } from './platzierung';
 import { type Sitzzeile, sitzname } from './Mitspieler';
 import stil from './Endbild.module.css';
 
@@ -59,14 +59,13 @@ export function platzsatz(platz: number | null, von: number): string {
 /**
  * Die überstandenen Runden.
  *
- * Wer ausgeschieden ist, hat seine `ausRunde` NICHT überstanden — in ihr ist
- * er gefallen. Wer bis zum Schluss stand, hat die laufende Runde voll
- * mitgespielt. Genau diese Unterscheidung macht das Modul in
- * `platzierungen` (points = ausRunde ?? runde), hier steht sie als Satz.
+ * Die ZAHL kommt aus der Sicht (`platzierung[].runden`) — dass die Runde des
+ * Ausscheidens nicht als überstanden zählt, entscheidet das Modul und nicht
+ * dieser Bildschirm. `ausRunde` sagt hier nur noch, welches der beiden Worte
+ * darunter passt: Wer bis zum Schluss stand, hat durchgestanden.
  */
-export function rundensatz(ausRunde: number | null, runde: number): string {
-  const gestanden = ausRunde ?? runde;
-  const zahl = gestanden === 1 ? '1 Runde' : `${gestanden} Runden`;
+export function rundensatz(ausRunde: number | null, runden: number): string {
+  const zahl = runden === 1 ? '1 Runde' : `${runden} Runden`;
   return ausRunde === null ? `${zahl} durchgestanden` : `${zahl} überstanden`;
 }
 
@@ -74,9 +73,8 @@ export function Endbild({
   sitz,
   brett,
   katalog,
-  eigenes,
-  gegner,
-  runde,
+  platzierung,
+  ausRunde,
   fertig,
   sitze,
   onZurueck,
@@ -87,9 +85,10 @@ export function Endbild({
   /** Die eigene Aufstellung, so wie sie zuletzt stand. */
   brett: readonly (Aufsteller | null)[];
   katalog: Record<string, Einheitenbild & { rolle?: string }>;
-  eigenes: Sitzstand;
-  gegner: readonly Sitzstand[];
-  runde: number;
+  /** Die Rangliste aus der Sicht, der beste zuerst. */
+  platzierung: readonly Platz[];
+  /** Die eigene Runde des Ausscheidens, sonst null — nur für die Wortwahl. */
+  ausRunde: number | null;
   /** Ist die ganze Partie vorbei, oder bin nur ich raus? */
   fertig: boolean;
   sitze: readonly Sitzzeile[];
@@ -100,10 +99,9 @@ export function Endbild({
    */
   onZusehen?: () => void;
 }): React.JSX.Element {
-  const tabelle = platzTabelle([eigenes, ...gegner], runde);
-  const meiner = eigenerPlatz(tabelle, sitz);
+  const meiner = eigenerPlatz(platzierung, sitz);
   const platz = meiner?.platz ?? null;
-  const geteilt = platz !== null && tabelle.filter((p) => p.platz === platz).length > 1;
+  const geteilt = platz !== null && platzierung.filter((p) => p.platz === platz).length > 1;
   const gesiegt = platz === 1;
 
   const aufstellung = brett
@@ -131,12 +129,13 @@ export function Endbild({
 
         <h2 className={stil.wort}>{abschlusswort(platz, geteilt)}</h2>
         <p className={stil.unterzeile}>
-          {platzsatz(platz, tabelle.length)} · {rundensatz(eigenes.ausRunde, runde)}
+          {platzsatz(platz, platzierung.length)}
+          {meiner && ` · ${rundensatz(ausRunde, meiner.runden)}`}
         </p>
 
         {/* Wer gewonnen hat, wenn nicht ich. Ohne diese Zeile endet die Partie
             mit „Ausgeschieden" und ohne Antwort auf die erste Frage danach. */}
-        {fertig && !gesiegt && <p className={stil.sieger}>{siegerzeile(tabelle, sitze)}</p>}
+        {fertig && !gesiegt && <p className={stil.sieger}>{siegerzeile(platzierung, sitze)}</p>}
 
         <h3 className={stil.titel}>Deine letzte Aufstellung</h3>
         {aufstellung.length === 0 ? (

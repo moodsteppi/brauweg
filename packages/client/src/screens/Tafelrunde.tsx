@@ -9,7 +9,11 @@ import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../minispiele/tafelrunde/Phasenzeile';
-import { gegnerDieseRunde, leistenplaetze } from '../minispiele/tafelrunde/platzierung';
+import {
+  type Platz,
+  gegnerDieseRunde,
+  leistenplaetze,
+} from '../minispiele/tafelrunde/platzierung';
 import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
 import {
   Figurbild,
@@ -150,6 +154,12 @@ interface TafelrundeSicht {
   phase: 'vorbereitung' | 'kampf' | 'ende';
   fertig: boolean;
   sieger: number | null;
+  /**
+   * Die Rangliste aller Sitze, der beste zuerst (sicht.ts). Sie steht in
+   * jeder Sicht und nicht erst am Ende — wer in Runde vier ausscheidet,
+   * bekommt sein Endbild, waehrend die Partie weiterlaeuft.
+   */
+  platzierung: Platz[];
   zuschauer: boolean;
   ladenPlaetze: number;
   bankPlaetze: number;
@@ -2264,9 +2274,8 @@ function Ruestkammer({
           sitz={eigenes.sitz}
           brett={eigenes.brett}
           katalog={katalog}
-          eigenes={eigenes}
-          gegner={sicht.gegner}
-          runde={sicht.runde}
+          platzierung={sicht.platzierung}
+          ausRunde={eigenes.ausRunde}
           fertig={sicht.fertig}
           sitze={sitze}
           onZurueck={onZurueck}
