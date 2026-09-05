@@ -35,18 +35,23 @@
  * QUELLE UND LIZENZ: KayKit "Character Pack : Adventurers" 1.0 von Kay
  * Lousberg (kaylousberg.com), CC0 1.0 Universal. Die LICENSE.txt des Pakets
  * wird als LIZENZ.txt neben die Bilder gelegt.
+ *
+ * ZWEITE QUELLE SEIT DEM 06.09.2026: der Beistand kommt aus "Adventurers 2.0"
+ * und "Character Animations 1.1" desselben Urhebers, ebenfalls CC0. Warum ein
+ * zweites Paket noetig war und warum es aus einem Spiegel geholt wird, steht
+ * bei `QUELLE_SAMMLUNG` weiter unten.
  */
 
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { prune } from '@gltf-transform/functions';
+import { dedup, mergeDocuments, prune, unpartition } from '@gltf-transform/functions';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const WURZEL = resolve(HIER, '..', '..', '..', '..');
@@ -64,6 +69,49 @@ const LIZENZ_QUELLE = join(
 
 const QUELLE =
   'https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures';
+
+/**
+ * Die zweite Quelle: "The Complete KayKit Collection v6.1".
+ *
+ * WARUM SIE SEIN MUSS: Vier der fuenf Rollen kommen aus dem Paket oben, der
+ * Beistand nicht. Er ist ein Heiler (Moosheiler, Runenpriester, Lichtwahrerin),
+ * und "Adventurers 1.0" hat genau fuenf Figuren — Knight, Mage, Rogue,
+ * Rogue_Hooded, Barbarian. Keine davon ist ein Heiler. Bis zum 06.09.2026 trug
+ * der Beistand deshalb den BARBAREN mit Axt und Schild; fuer die Probe war das
+ * tragbar, im fertigen Spiel sieht ein Axtkaempfer als Heiler falsch aus.
+ * "Adventurers 2.0" hat vier Figuren mehr, darunter den DRUIDEN.
+ *
+ * WARUM EIN SPIEGEL UND NICHT DAS ORIGINAL: Kay Lousberg legt nur die
+ * 1.0-Pakete als Repository unter `KayKit-Game-Assets` ab (nachgesehen am
+ * 06.09.2026: dort liegen Adventures 1.0, Skeletons 1.0, Dungeon, Hexagon und
+ * die Bits-Pakete — 2.0 ist nicht dabei). Alles Neuere gibt es auf itch.io und
+ * Patreon, beides hinter einem Formular und damit nicht abrufbar. Der Spiegel
+ * `SY227/kaykit-complete-v6-1-assets` traegt die Sammlung samt ihrer
+ * `License.txt` — dieselbe CC0-Erklaerung wie im 1.0-Paket, woertlich
+ * nachgelesen: "free to use in personal, educational and commercial projects",
+ * Namensnennung ausdruecklich nicht verlangt.
+ *
+ * WAS ZU TUN IST, WENN DER SPIEGEL VERSCHWINDET: Nichts Dringendes — die
+ * fertigen Blaetter liegen im Repo und haengen an keinem Netz. Wer neu rendern
+ * will, holt sich die Sammlung von kaylousberg.com (itch.io, CC0) und legt die
+ * fuenf Dateien aus `TEILE_BEISTAND` von Hand in den Zwischenordner; `hole()`
+ * ueberspringt, was schon da ist.
+ */
+const QUELLE_SAMMLUNG =
+  'https://media.githubusercontent.com/media/SY227/kaykit-complete-v6-1-assets/main';
+
+/**
+ * Dieselbe Sammlung ueber `raw.` statt `media.`.
+ *
+ * DER UNTERSCHIED IST KEINE GESCHMACKSFRAGE: Das Repository liegt in Git LFS.
+ * Binaerdateien (.glb, .bin, .png) sind dort nur Zeiger, und erst
+ * `media.githubusercontent.com` loest sie auf. Textdateien (.gltf) liegen
+ * NICHT in LFS — fuer sie antwortet `media.` mit 0 Bytes und Status 200. Genau
+ * das ist beim Bau passiert: eine leere .gltf, und der Fehler stand dann in
+ * `JSON.parse` statt beim Holen. Deshalb prueft `hole()` auf Laenge null.
+ */
+const QUELLE_SAMMLUNG_TEXT =
+  'https://raw.githubusercontent.com/SY227/kaykit-complete-v6-1-assets/main';
 
 // ---------------------------------------------------------------------------
 // Kamera
@@ -154,10 +202,14 @@ const PROBE_MITTE_Y = 1.0;
 /**
  * Je Rolle eine Figur, eine Garnitur und fuenf Animationen.
  *
- * Zuordnung und Ausruestung sind aus `proben/arena-3d/modelle-bauen.mjs`
- * uebernommen — dort steht auch, warum der Beistand (ein Heiler) den Barbaren
- * bekommt: Das Paket hat keinen Heiler. NEU ist hier nur `getroffen`; die
- * Probe kam ohne aus, eine Kampfanzeige nicht.
+ * Zuordnung und Ausruestung der ersten vier sind aus
+ * `proben/arena-3d/modelle-bauen.mjs` uebernommen. NEU ist dort gegenueber nur
+ * `getroffen`; die Probe kam ohne aus, eine Kampfanzeige nicht.
+ *
+ * DER BEISTAND FAELLT AUS DER REIHE und traegt deshalb `sammlung: true`. Er
+ * kommt aus einem zweiten Paket (siehe `QUELLE_SAMMLUNG`) und ist dort auf drei
+ * Dateien verteilt statt auf eine: Figur, Animationen und Ausruestung. Was das
+ * fuers Bauen heisst, steht bei `baueAusTeilen`.
  *
  * GERENDERT WIRD AUS DEM ORIGINAL, nicht aus den GLB-Dateien der Probe: Die
  * tragen nur vier Animationen, `Hit_A` ist beim Eindampfen weggefallen. Und
@@ -215,17 +267,80 @@ const ROLLEN = [
   },
   {
     rolle: 'beistand',
-    figur: 'Barbarian',
-    behalten: ['1H_Axe', 'Barbarian_Round_Shield', 'Barbarian_Hat', 'Barbarian_Cape'],
+    figur: 'Druid',
+    sammlung: true,
+    // Der Rucksack ist das einzige Beiwerk, das die 2.0-Figur mitbringt; alles
+    // andere (Stab, Trank, Beutel) liegt dort als eigene Datei. Er bleibt drin,
+    // weil er die Silhouette gegen den Magier abgrenzt: Der hat Spitzhut und
+    // Umhang, der Druide Kapuze und Rucksack.
+    behalten: ['Druid_Backpack'],
+    ausruestung: [{ teil: 'druid_staff', knochen: 'handslot.r' }],
     animationen: {
-      stand: 'Idle',
+      // `Idle_A` statt `Idle`: In 2.0 heisst die Ruhepose so, und es gibt
+      // dazu ein `Idle_B`. Fuer die vier 1.0-Figuren heisst sie weiter `Idle`.
+      stand: 'Idle_A',
       lauf: 'Walking_A',
-      schlag: '1H_Melee_Attack_Chop',
+      // KEIN Nahkampfschlag. Ein Heiler haut nicht zu, er hebt die Hand — und
+      // `Ranged_Magic_Raise` ist genau das: Stab hoch, Handflaeche nach vorn.
+      // Der Magier nimmt daneben `Spellcast_Shoot`, ein Stoss nach vorn; die
+      // beiden sind damit auch in der Bewegung auseinanderzuhalten und nicht
+      // nur an der Figur.
+      schlag: 'Ranged_Magic_Raise',
       getroffen: 'Hit_A',
       tod: 'Death_A',
     },
   },
 ];
+
+/**
+ * Die Dateien, aus denen der Beistand zusammengesetzt wird.
+ *
+ * Drei Sorten, und die Aufteilung ist nicht unsere: KayKit hat mit 2.0 die
+ * Animationen aus den Figuren herausgeloest. Eine Figur aus 2.0 traegt gar
+ * keine Animation mehr (nachgezaehlt: `Druid.glb` hat null), dafuer passen die
+ * Bewegungen des Animationspakets auf JEDE Figur mit demselben Rig.
+ *
+ * DASS DAS AUFGEHT, HAENGT AN EINER EINZIGEN TATSACHE: Die 23 Knochen des
+ * Druiden heissen genau wie die 23 Ziele der Animationen — geprueft, nicht
+ * gehofft (`baueAusTeilen` bricht ab, wenn ein Name fehlt).
+ */
+const TEILE_BEISTAND = {
+  /** Die Figur selbst: Koerper, Kapuze, Rucksack — ohne Animation, ohne Waffe. */
+  figur: 'KayKit%20Adventurers%202.0/Characters/gltf',
+  /**
+   * Die Bewegungen, drei Dateien fuer fuenf Animationen.
+   *
+   * Genommen wird das Paket "Character Animations 1.1" und NICHT der
+   * Animationsordner, der in Adventurers 2.0 mitliegt: Der hat nur `General`
+   * und `MovementBasic`, und `Ranged_Magic_Raise` steckt in `CombatRanged`.
+   * Alle drei aus einer Quelle zu holen ist billiger zu erklaeren als zwei.
+   */
+  bewegungen: 'KayKit%20Character%20Animations%201.1/Animations/gltf/Rig_Medium',
+  bewegungsdateien: [
+    'Rig_Medium_General.glb', // Idle_A, Hit_A, Death_A
+    'Rig_Medium_MovementBasic.glb', // Walking_A
+    'Rig_Medium_CombatRanged.glb', // Ranged_Magic_Raise
+  ],
+  /** Die Ausruestung, je Teil drei Dateien: .gltf (Text), .bin und die Textur. */
+  ausruestung: 'KayKit%20Adventurers%202.0/Assets/gltf',
+  textur: 'druid_texture.png',
+};
+
+/**
+ * Wie ein Ausruestungsteil in der Hand sitzt.
+ *
+ * NICHT GERATEN, SONDERN ABGELESEN: In den 1.0-Figuren haengen Schwert, Stab
+ * und Axt als Kinder von `handslot.r` und tragen alle dieselbe Drehung — eine
+ * halbe Umdrehung um die Y-Achse (Quaternion 0,1,0,0), Verschiebung praktisch
+ * null. Nachgesehen an `Mage.glb` (2H_Staff, 1H_Wand) und `Knight.glb`
+ * (1H_Sword). Der Griffpunkt steckt also im Modell des Teils, nicht in einer
+ * Zahl, die jemand suchen muesste; die 2.0-Teile folgen derselben Konvention.
+ *
+ * WORAN MAN SIEHT, DASS ES STIMMT: Der Stab liegt IN der Faust, nicht daneben
+ * und nicht verkehrt herum (Krone oben). Steht er auf dem Kopf, ist es diese
+ * Drehung; schwebt er neben der Hand, ist es der falsche Knochen.
+ */
+const GRIFF_DREHUNG = [0, 1, 0, 0];
 
 /**
  * Die fuenf Bewegungen, ihre Bildzahl und der Ausschnitt der Animation.
@@ -360,7 +475,13 @@ async function hole(url, ziel) {
   if (await existiert(ziel)) return;
   const antwort = await fetch(url);
   if (!antwort.ok) throw new Error(`${url} antwortet ${antwort.status}`);
-  await writeFile(ziel, Buffer.from(await antwort.arrayBuffer()));
+  const inhalt = Buffer.from(await antwort.arrayBuffer());
+  // Null Bytes mit Status 200 ist der Normalfall, wenn man eine NICHT in LFS
+  // liegende Datei ueber `media.githubusercontent.com` anfragt (siehe
+  // QUELLE_SAMMLUNG_TEXT). Ohne diese Zeile landet der Fehler erst im Parser
+  // und zeigt dann auf die Datei statt auf die Adresse.
+  if (inhalt.byteLength === 0) throw new Error(`${url} antwortet mit 0 Bytes`);
+  await writeFile(ziel, inhalt);
 }
 
 const kb = (n) => `${(n / 1024).toFixed(1)} kB`;
@@ -382,51 +503,213 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
  * wird (CLAUDE.md, Regel 7: ein `git add` auf einen ignorierten Pfad hat hier
  * schon 932 Dateien gekostet).
  */
-async function baueModelle(zwischen, nurRollen) {
-  const pfade = new Map();
-  for (const eintrag of ROLLEN) {
-    if (nurRollen && !nurRollen.includes(eintrag.rolle)) continue;
-    const roh = join(zwischen, `${eintrag.figur}.glb`);
-    await hole(`${QUELLE}/Characters/gltf/${eintrag.figur}.glb`, roh);
+/** Wirft alle Mesh-Knoten weg, die weder Koerper noch gewuenschte Garnitur sind. */
+function beschneideMeshes(root, behalten) {
+  const erlaubt = new Set(behalten);
+  for (const knoten of root.listNodes()) {
+    if (!knoten.getMesh()) continue;
+    const name = knoten.getName();
+    if (KOERPER.test(name) || erlaubt.has(name)) continue;
+    knoten.dispose();
+  }
+}
 
-    const doc = await io.read(roh);
-    const root = doc.getRoot();
+/**
+ * Wirft eine Animation samt ihrer Kanaele und Abtaster weg.
+ *
+ * Kanaele und Abtaster einzeln — ein blosses `anim.dispose()` laesst sie im
+ * Graphen stehen, und dann haelt eine geloeschte Animation ihre Daten am Leben
+ * (der Befund steht ausfuehrlich in modelle-bauen.mjs).
+ */
+function wirfAnimationWeg(anim) {
+  for (const kanal of anim.listChannels()) kanal.dispose();
+  for (const abtaster of anim.listSamplers()) abtaster.dispose();
+  anim.dispose();
+}
 
-    const erlaubt = new Set(eintrag.behalten);
-    for (const knoten of root.listNodes()) {
-      if (!knoten.getMesh()) continue;
-      const name = knoten.getName();
-      if (KOERPER.test(name) || erlaubt.has(name)) continue;
-      knoten.dispose();
+/**
+ * Behaelt aus `animationen` genau die fuenf gewuenschten und benennt sie
+ * deutsch. Was fehlt, ist ein Abbruch und keine leere Zeile im Blatt.
+ */
+function benenneAnimationen(animationen, wunsch, figur) {
+  const gewuenscht = new Map(Object.entries(wunsch).map(([neu, alt]) => [alt, neu]));
+  const gefunden = new Set();
+  for (const anim of animationen) {
+    const neu = gewuenscht.get(anim.getName());
+    if (!neu) {
+      wirfAnimationWeg(anim);
+      continue;
     }
+    gefunden.add(anim.getName());
+    anim.setName(neu);
+  }
+  return { gewuenscht, gefunden, figur };
+}
 
-    // Animationen eindampfen und deutsch benennen. Kanaele und Abtaster
-    // einzeln wegwerfen — ein blosses `anim.dispose()` laesst sie im Graphen
-    // stehen, und dann haelt eine geloeschte Animation ihre Daten am Leben
-    // (der Befund steht ausfuehrlich in modelle-bauen.mjs).
-    const gewuenscht = new Map(
-      Object.entries(eintrag.animationen).map(([neu, alt]) => [alt, neu]),
-    );
-    const gefunden = new Set();
+/** Bricht ab, wenn eine der fuenf Animationen nicht aufgetaucht ist. */
+function pruefeVollstaendig({ gewuenscht, gefunden, figur }) {
+  for (const alt of gewuenscht.keys()) {
+    if (!gefunden.has(alt)) throw new Error(`${figur}: Animation ${alt} fehlt`);
+  }
+}
+
+/**
+ * Der Normalfall: eine Figur aus "Adventurers 1.0".
+ *
+ * Dort steckt alles in EINER Datei — Koerper, jede Waffe des Pakets und 76
+ * Animationen. Zu tun ist deshalb nur Wegwerfen und Umbenennen.
+ */
+async function baueAusEinemStueck(eintrag, zwischen) {
+  const roh = join(zwischen, `${eintrag.figur}.glb`);
+  await hole(`${QUELLE}/Characters/gltf/${eintrag.figur}.glb`, roh);
+
+  const doc = await io.read(roh);
+  const root = doc.getRoot();
+
+  beschneideMeshes(root, eintrag.behalten);
+  pruefeVollstaendig(
+    benenneAnimationen(root.listAnimations(), eintrag.animationen, eintrag.figur),
+  );
+  return doc;
+}
+
+/**
+ * Der Sonderfall: eine Figur aus "Adventurers 2.0" plus Animationspaket.
+ *
+ * DREI DINGE SIND HIER ANDERS ALS OBEN, und alle drei kommen daher, dass
+ * KayKit mit 2.0 auseinandergezogen hat, was in 1.0 in einer Datei lag:
+ *
+ * 1. DIE FIGUR HAT KEINE ANIMATION. Sie kommen aus eigenen Dateien und werden
+ *    hier hineinkopiert. `mergeDocuments` bringt dabei die Knochen der Quelle
+ *    mit, und die Kanaele zeigen danach auf DIESE Kopie statt auf das Skelett
+ *    der Figur. Ohne das Umhaengen weiter unten steht die Figur still, waehrend
+ *    ein unsichtbares zweites Skelett daneben laeuft — und zwar ohne Fehler.
+ * 2. DIE FIGUR HAT KEINE WAFFE. Der Stab ist eine eigene Datei und wird an
+ *    `handslot.r` gehaengt (siehe GRIFF_DREHUNG).
+ * 3. JEDE ZUSAMMENFUEHRUNG BRINGT EINEN EIGENEN BUFFER MIT. Ein GLB darf
+ *    hoechstens einen haben, deshalb `unpartition()` am Ende. Ohne das bricht
+ *    erst `io.write` ab, mit einer Meldung, die nichts mit dem Grund zu tun hat.
+ */
+async function baueAusTeilen(eintrag, zwischen) {
+  const ordner = join(zwischen, eintrag.rolle);
+  await mkdir(ordner, { recursive: true });
+
+  const figurDatei = join(ordner, `${eintrag.figur}.glb`);
+  await hole(`${QUELLE_SAMMLUNG}/${TEILE_BEISTAND.figur}/${eintrag.figur}.glb`, figurDatei);
+
+  const doc = await io.read(figurDatei);
+  const root = doc.getRoot();
+  beschneideMeshes(root, eintrag.behalten);
+
+  // Die Knochen der FIGUR, nach Namen. Sie sind das Ziel, auf das gleich jeder
+  // Animationskanal umgehaengt wird.
+  const knochen = new Map(root.listNodes().map((n) => [n.getName(), n]));
+
+  const gewuenscht = new Map(
+    Object.entries(eintrag.animationen).map(([neu, alt]) => [alt, neu]),
+  );
+  const gefunden = new Set();
+
+  for (const datei of TEILE_BEISTAND.bewegungsdateien) {
+    const pfad = join(ordner, datei);
+    await hole(`${QUELLE_SAMMLUNG}/${TEILE_BEISTAND.bewegungen}/${datei}`, pfad);
+    const quelle = await io.read(pfad);
+
+    // Vorher merken, was schon da war: `mergeDocuments` gibt zwar eine Karte
+    // zurueck, aber der Weg ueber "alles Neue" liest sich hier kuerzer als
+    // der ueber die Karte, und die Datei enthaelt bis zu 20 Animationen.
+    const vorher = new Set(root.listAnimations());
+    mergeDocuments(doc, quelle);
+
     for (const anim of root.listAnimations()) {
+      if (vorher.has(anim)) continue;
       const neu = gewuenscht.get(anim.getName());
       if (!neu) {
-        for (const kanal of anim.listChannels()) kanal.dispose();
-        for (const abtaster of anim.listSamplers()) abtaster.dispose();
-        anim.dispose();
+        wirfAnimationWeg(anim);
         continue;
       }
       gefunden.add(anim.getName());
       anim.setName(neu);
+      for (const kanal of anim.listChannels()) {
+        const name = kanal.getTargetNode().getName();
+        const ziel = knochen.get(name);
+        // Kein stilles Ueberspringen: Passt ein Knochenname nicht, ist das
+        // Animationspaket nicht fuer dieses Rig — und das Ergebnis waere eine
+        // Figur, die halb steht und halb zuckt.
+        if (!ziel) throw new Error(`${eintrag.figur}: Knochen ${name} fehlt`);
+        kanal.setTargetNode(ziel);
+      }
     }
-    for (const alt of gewuenscht.keys()) {
-      if (!gefunden.has(alt)) throw new Error(`${eintrag.figur}: Animation ${alt} fehlt`);
+    wirfNebenszenenWeg(root);
+  }
+  pruefeVollstaendig({ gewuenscht, gefunden, figur: eintrag.figur });
+
+  for (const { teil, knochen: knochenName } of eintrag.ausruestung ?? []) {
+    // Drei Dateien je Teil, und die .gltf MUSS ueber `raw.` kommen (siehe
+    // QUELLE_SAMMLUNG_TEXT). Die Textur liegt daneben, weil die .gltf sie ueber
+    // einen relativen Pfad sucht — `io.read` loest ihn im selben Ordner auf.
+    const basis = `${QUELLE_SAMMLUNG}/${TEILE_BEISTAND.ausruestung}`;
+    await hole(
+      `${QUELLE_SAMMLUNG_TEXT}/${TEILE_BEISTAND.ausruestung}/${teil}.gltf`,
+      join(ordner, `${teil}.gltf`),
+    );
+    await hole(`${basis}/${teil}.bin`, join(ordner, `${teil}.bin`));
+    await hole(
+      `${basis}/${TEILE_BEISTAND.textur}`,
+      join(ordner, TEILE_BEISTAND.textur),
+    );
+
+    const teilDoc = await io.read(join(ordner, `${teil}.gltf`));
+    const karte = mergeDocuments(doc, teilDoc);
+    const knoten = karte.get(teilDoc.getRoot().getDefaultScene().listChildren()[0]);
+    knoten.setRotation(GRIFF_DREHUNG);
+
+    const hand = knochen.get(knochenName);
+    if (!hand) throw new Error(`${eintrag.figur}: Knochen ${knochenName} fehlt`);
+    hand.addChild(knoten);
+    wirfNebenszenenWeg(root, knoten);
+  }
+
+  // `dedup()` nur hier: Der Stab benutzt dieselbe Textur wie die Figur, und
+  // ohne das Zusammenlegen liegt sie zweimal im Modell.
+  await doc.transform(dedup());
+  return doc;
+}
+
+/**
+ * Wirft alle Szenen ausser der ersten weg, samt ihrem Inhalt.
+ *
+ * Jede Zusammenfuehrung bringt die Szene ihrer Quelle mit: beim Animationspaket
+ * ein zweites Skelett, beim Stab dessen Ursprungsszene. Beides ist nach dem
+ * Umhaengen ueberfluessig — aber es haengt noch an den Daten, und `prune()`
+ * raeumt nur weg, was NIRGENDS mehr haengt. Was `behalten` nennt, wird
+ * uebersprungen: Der Stab sitzt zu diesem Zeitpunkt schon in der Hand und ist
+ * nur noch zufaellig auch Kind seiner alten Szene.
+ */
+function wirfNebenszenenWeg(root, behalten) {
+  const haupt = root.getDefaultScene();
+  for (const szene of root.listScenes()) {
+    if (szene === haupt) continue;
+    for (const kind of szene.listChildren()) {
+      if (kind !== behalten) kind.dispose();
     }
+    szene.dispose();
+  }
+}
+
+async function baueModelle(zwischen, nurRollen) {
+  const pfade = new Map();
+  for (const eintrag of ROLLEN) {
+    if (nurRollen && !nurRollen.includes(eintrag.rolle)) continue;
+
+    const doc = eintrag.sammlung
+      ? await baueAusTeilen(eintrag, zwischen)
+      : await baueAusEinemStueck(eintrag, zwischen);
 
     // Kein `quantize()` und kein `textureCompress()`: Das Modell wird hier
     // nicht ausgeliefert, sondern nur angesehen. Beides wuerde die Bildqualitaet
     // kosten, ohne irgendetwas zu sparen, was jemand je herunterlaedt.
-    await doc.transform(prune({ keepLeaves: false }));
+    await doc.transform(prune({ keepLeaves: false }), unpartition());
 
     const ausgabe = join(zwischen, `${eintrag.rolle}.glb`);
     await io.write(ausgabe, doc);
@@ -874,9 +1157,43 @@ await seite.waitForFunction('window.bereit === true', null, { timeout: 30_000 })
 // Betriebsart A: die fuenf Blaetter fuers Spiel
 // ---------------------------------------------------------------------------
 
+/**
+ * Legt die LIZENZ.txt neben die Bilder.
+ *
+ * FRUEHER WAR DAS EIN `copyFile` der LICENSE.txt aus Adventurers 1.0. Seit der
+ * Beistand ein Druide ist, deckt die aber nur noch vier der fuenf Blaetter —
+ * und eine Lizenzdatei, die das fuenfte nicht nennt, ist schlechter als keine:
+ * Sie sieht vollstaendig aus. Deshalb steht davor jetzt eine deutsche Zeile je
+ * Blatt, die sagt, welche Figur aus welchem Paket kommt.
+ *
+ * Beide Pakete sind CC0 vom selben Urheber; der zweite Lizenztext steht
+ * wortgleich in der `License.txt` der Sammlung (siehe QUELLE_SAMMLUNG) und
+ * wird deshalb nicht ein zweites Mal abgedruckt, sondern benannt.
+ */
+async function schreibeLizenz() {
+  const kopf = [
+    'Die Figuren der Tafelrunde — Herkunft und Lizenz',
+    '',
+    'Alles hier ist CC0 1.0 Universal von Kay Lousberg (www.kaylousberg.com):',
+    'frei verwendbar, auch kommerziell, Namensnennung nicht verlangt.',
+    '',
+    'Aus "KayKit Character Pack : Adventurers" 1.0 — Lizenztext siehe unten:',
+    ...ROLLEN.filter((r) => !r.sammlung).map((r) => `  ${r.rolle.padEnd(10)} ${r.figur}`),
+    '',
+    'Aus "KayKit Adventurers 2.0" (Figur und Stab) und "KayKit Character',
+    'Animations 1.1" (die Bewegungen) — beide CC0, Lizenztext wortgleich zum',
+    'unten stehenden, nachzulesen als License.txt der Complete Collection:',
+    ...ROLLEN.filter((r) => r.sammlung).map((r) => `  ${r.rolle.padEnd(10)} ${r.figur}`),
+    '',
+    '------------------------------------------------------------------',
+    '',
+  ].join('\n');
+  await writeFile(join(ZIEL, 'LIZENZ.txt'), kopf + (await readFile(LIZENZ_QUELLE, 'utf8')));
+}
+
 async function baueBlaetter() {
   await mkdir(ZIEL, { recursive: true });
-  await copyFile(LIZENZ_QUELLE, join(ZIEL, 'LIZENZ.txt'));
+  await schreibeLizenz();
 
   const alle = ROLLEN.map((r) => r.rolle);
   const ausschnitt = await messeAusschnitt(seite, alle, {
