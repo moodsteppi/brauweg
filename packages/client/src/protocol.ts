@@ -457,6 +457,13 @@ export interface ViewMessage<V = GameView> {
   turnDeadline: number | null;
   /** Frist einer Schaupause (Abrechnung, gleichzeitige Vorbehaltsabfrage). */
   interludeDeadline: number | null;
+  /**
+   * Frist der laufenden PHASE — anders als die Schaupause laeuft sie, waehrend
+   * noch gehandelt werden darf. Heute setzt sie nur Tafelrunde: Dort ruesten
+   * alle gleichzeitig, und `turnDeadline` faellt bei jeder Aktion irgendeines
+   * Sitzes auf den vollen Wert zurueck.
+   */
+  phaseDeadline: number | null;
   botSeats: number[];
   leftSeats: number[];
   finished: boolean;

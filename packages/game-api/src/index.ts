@@ -318,6 +318,40 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
   /** Beendet die laufende Schaupause nach Ablauf der Zeit. */
   advanceInterlude?(party: TParty): TParty;
 
+  /**
+   * Frist der laufenden PHASE — anders als die Schaupause auch dann, wenn
+   * jemand am Zug ist.
+   *
+   * Liefert die Solldauer der Phase in Millisekunden, sonst null. Das Modul
+   * bleibt uhrlos wie ueberall (Grundsatz 1): Es nennt nur die Dauer, gemessen
+   * wird sie von der Plattform, und nach Ablauf ruft sie advancePhase auf. Die
+   * Frist steht ab Beginn der Phase FEST — eine Aktion irgendeines Sitzes
+   * verschiebt sie nicht.
+   *
+   * WARUM ES DAS NEBEN interludeMs GIBT: Eine Schaupause heisst, dass niemand
+   * handeln darf; die Plattform fragt sie deshalb nur, wenn currentActor null
+   * ist. Ein Spiel, in dem alle GLEICHZEITIG handeln (Tafelrunde, Eiland),
+   * nennt aber trotzdem einen Sitz, damit Zugzeit und Bot-Uebernahme greifen —
+   * und hat damit gar keine Frist mehr: Die Zugzeit wird bei jeder Aktion
+   * irgendeines Sitzes neu gestellt und faellt beim Botsitz ganz weg. Genau
+   * diese Luecke schliesst diese Frist.
+   *
+   * Sie taugt NICHT als zweite Zugzeit: Sie gilt fuer die Phase und damit fuer
+   * alle Sitze, nicht fuer einen einzelnen. Wer nach Ablauf noch nicht
+   * gehandelt hat, bekommt vom Modul das, was seine Regeln dafuer vorsehen.
+   *
+   * Damit die Plattform merkt, dass eine neue Phase begonnen hat, MUSS die
+   * Methode zwischen zwei Fristen einmal null liefern — sonst laeuft die alte
+   * Frist in der neuen Phase weiter. Bei Tafelrunde liegt dazwischen die
+   * Kampfphase.
+   *
+   * Optional: Ein Spiel mit fester Zugfolge laesst beide Methoden weg.
+   */
+  phaseMs?(party: TParty): number | null;
+
+  /** Beendet die laufende Phase nach Ablauf der Frist. */
+  advancePhase?(party: TParty): TParty;
+
   standings(party: TParty): PartyStanding[];
 
   /** Markiert einen Sitz als ausgestiegen. Die Partie laeuft mit Bot weiter. */

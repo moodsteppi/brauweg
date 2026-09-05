@@ -211,9 +211,11 @@ function stelle(
     { typ: 'levelAuf' },
     { typ: 'bereit' },
   ],
+  /** Frist der Platzierungsphase, wie die Plattform sie schickt. */
+  phaseDeadline: number | null = null,
 ): void {
   tischStand = {
-    view: { view: s, revision: 5, legalActions, seat: 0 },
+    view: { view: s, revision: 5, legalActions, seat: 0, phaseDeadline },
     party: null,
     table: {
       seats: [
@@ -283,16 +285,28 @@ describe('Kopfzeile', () => {
     expect(within(ladenkopf).getByText('7')).toBeInTheDocument();
   });
 
-  it('zeigt in der Platzierungsphase keine Uhr, sondern wer schon bereit ist', () => {
+  it('zeigt ohne Frist der Plattform, wer schon bereit ist', () => {
     /*
-     * DIE RESTZEIT GIBT ES DORT NICHT, und sie wird auch nicht erfunden: Das
-     * Modul beendet die Phase, wenn der Letzte bereit ist, nicht nach Zeit
-     * (siehe Kopf von Phasenzeile.tsx). Die Zugzeit der Plattform waere keine
-     * Restzeit — sie wird bei jeder Aktion neu gestellt.
+     * DIE RESTZEIT WIRD NICHT ERFUNDEN. Schickt der Server keine
+     * `phaseDeadline` — ein Tisch aus der Zeit vor der Rundenfrist —, steht
+     * dort der wahre Druck und keine gerechnete Zahl (Kopf von
+     * Phasenzeile.tsx). Die Zugzeit der Plattform waere keine Restzeit: Sie
+     * wird bei jeder Aktion irgendeines Sitzes neu gestellt.
      */
     stelle(sicht({ eigenes: { bereit: true } }));
     zeige();
     expect(screen.getByText('1 von 2 bereit')).toBeInTheDocument();
+  });
+
+  it('zeigt in der Platzierungsphase die Frist der Plattform als Uhr', () => {
+    // Seit dem 06.09.2026 hat die Vorbereitung einen Deckel im Modul
+    // (`vorbereitungMs`); die Plattform misst ihn und schickt den Zeitpunkt
+    // als `phaseDeadline`. Erst damit gibt es hier etwas zu zaehlen.
+    vi.spyOn(Date, 'now').mockReturnValue(100_000);
+    stelle(sicht({ eigenes: { bereit: true } }), undefined, 130_000);
+    zeige();
+    expect(screen.getByText('0:30')).toBeInTheDocument();
+    expect(screen.queryByText('1 von 2 bereit')).toBeNull();
   });
 
   it('schreibt hin, was die nächste Runde einbringt', () => {

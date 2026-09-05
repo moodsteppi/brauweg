@@ -324,6 +324,20 @@ test('die Registrierung liefert zu jedem spielbaren Eintrag ein Modul', () => {
 for (const spiel of spielbare) {
   const id = spiel.meta.id;
 
+  /**
+   * Eine Frist ohne Weg heraus haengt den Tisch auf — dieselbe Falle wie
+   * `interludeMs` ohne `advanceInterlude`, nur schlimmer: Die Phasenfrist
+   * laeuft, WAEHREND jemand am Zug ist, ein fehlendes `advancePhase` faellt
+   * also erst dem auf, der als Einziger noch nicht bereit ist.
+   */
+  test(`${id}: Phasenfrist und ihr Weiter gehören zusammen`, () => {
+    assert.equal(
+      spiel.phaseMs !== undefined,
+      spiel.advancePhase !== undefined,
+      'phaseMs und advancePhase müssen beide da sein oder beide fehlen',
+    );
+  });
+
   test(`${id}: Sitzzahlen und Rundenvorschläge passen zusammen`, () => {
     assert.ok(spiel.meta.seatCounts.length > 0, 'keine Sitzzahl angeboten');
     for (const seats of spiel.meta.seatCounts) {
