@@ -40,6 +40,28 @@ function isDevFlag(name: string): boolean {
   return false;
 }
 
+/**
+ * Proben unter `/probe/…` — Entwuerfe, die nebeneinander verglichen werden
+ * sollen, bevor einer davon ins Spiel kommt.
+ *
+ * Getrennt von den `?dev=`-Werkzeugen oben, weil sie etwas anderes sind: Ein
+ * Werkzeug bleibt, eine Probe wird verworfen oder eingebaut. Sie sind im Spiel
+ * nirgends verlinkt und nur ueber die Adresse erreichbar; der Server liefert
+ * fuer jeden Pfad ohne Dateiendung die index.html aus (siehe
+ * `setNotFoundHandler` in `packages/server/src/http/app.ts`), Vite tut das in
+ * der Entwicklung von selbst.
+ *
+ * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
+ */
+function istProbe(name: string): boolean {
+  const { pathname, hash, search } = window.location;
+  if (pathname === `/probe/${name}`) return true;
+  if (hash === `#/probe/${name}`) return true;
+  return new URLSearchParams(search).get('probe') === name;
+}
+
+const probeArena2d = istProbe('arena-2d');
+
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
 const devWerkstatt = isDevFlag('werkstatt');
@@ -85,11 +107,19 @@ const Avatarwerkstatt = lazy(() =>
   import('./screens/Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
 );
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
+/*
+ * Aus demselben Grund `lazy` wie die Werkzeuge darueber: Die Probe zieht die
+ * aufgezeichnete Szene (16 kB JSON) mit ins Buendel. Die gehoert nicht in das
+ * Stueck, das jeder Spieler beim Anmelden laedt.
+ */
+const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ default: m.Arena2D })));
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
 
-const werkzeug = devAvatar ? (
+const werkzeug = probeArena2d ? (
+  <Arena2D />
+) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (
   <ChestAligner />
