@@ -58,6 +58,16 @@ import {
 export const ACHT_SITZE: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7];
 
 /**
+ * Der Normalfall: vier Sitze.
+ *
+ * Seit dem 05.09.2026 ist das die Besetzung, auf die das Spiel eingestellt ist
+ * (Robin: "stell auf 4 spieler um das reicht voellig") — der Bildschirm sucht
+ * nur Tische zu viert. Gemessen wird deshalb zu viert; acht bleibt als
+ * Gegenprobe moeglich, ist aber nicht mehr der Massstab.
+ */
+export const VIER_SITZE: readonly number[] = ACHT_SITZE.slice(0, 4);
+
+/**
  * Wie das Feld besetzt wird.
  *
  * `gemischt` reihum sanft/normal/hart. Gemessen wird sonst mit lauter

@@ -252,6 +252,9 @@ describe('In der Sicht', () => {
       [
         ['elementar', 2, 2],
         ['naturwesen', 1, null],
+        // Der Funkenlehrling traegt seit dem 05.09.2026 die Marke Drache mit
+        // (siehe katalog.ts) — allein, also unter der ersten Schwelle.
+        ['drache', 1, null],
       ],
     );
   });

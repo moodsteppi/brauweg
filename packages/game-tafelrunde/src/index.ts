@@ -58,6 +58,7 @@ export {
   type Kampfbericht,
   HOECHSTDAUER_MS,
   SCHADEN_GRUNDWERT,
+  SCHADEN_STUFEN_TEILER,
   SCHRITT_MS,
   TAKT_MS,
   angriffstakt,
