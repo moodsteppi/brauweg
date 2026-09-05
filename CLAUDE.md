@@ -215,6 +215,47 @@ Wirtschaftsmodell.
   seine Nachbarn, obwohl alle `width: 100%` haben, und die Schrift steht über
   die Platte hinaus. Gemessen wird der Alphakanal auf der Mittelzeile, nicht
   die Dateigröße. Bestellung und Sollmaße: `docs/ASSETS-KNOEPFE.md`.
+- **Vor Server- und Modultests erst die Spielpakete bauen.** `npm test
+  --workspace @brauweg/server` und `--workspace @brauweg/game-tafelrunde`
+  brechen mit `TS2307: Cannot find module '@brauweg/game-…'` oder `TS7006:
+  … implicitly has an 'any' type` ab, solange die Pakete kein `dist` haben:
+  Ihre `exports.types` zeigen auf `dist/src/index.d.ts`, und was nicht da ist,
+  kann `tsc` nicht lesen. Das sieht nach einem kaputten Zweig aus und ist
+  keiner — am 05.09.2026 zweimal genau daran gesucht. `npm run build` im
+  Wurzelverzeichnis genügt: npm läuft die Pakete alphabetisch ab, `game-api`
+  steht vor `game-tafelrunde` und beide vor `server`.
+- **Keine Prüfkopie unter `AppData/Local/Temp`.** Liegt der Arbeitsbaum dort,
+  sammelt Vite eine fremde `vite.config.ts` aus dem Wurzelverzeichnis ein, und
+  der Testlauf stirbt schon beim Laden der Konfiguration. Der Fehler zeigt dann
+  auf eine Datei, die gar nicht zum Repo gehört — gesucht wird er trotzdem im
+  eigenen Zweig. Arbeitskopien bekommen einen eigenen Pfad.
+- **Was das Modul weiß, schreibt der Client nicht ab.** Die Regel selbst steht
+  oben unter „Wie der Code gebaut ist"; hier stehen die Fälle, an denen sie
+  geschärft wurde — drei an einem Tag, dem 05.09.2026, alle drei in
+  Tafelrunde. Der **Regelsatz**: `REGELSATZ` in `Tafelrunde.tsx` war eine
+  wörtliche Kopie von `DEFAULT_REGELN` und ging als `config` an `createTable`.
+  Der Server schreibt eine mitgeschickte `config` als Regelsatz des Tisches
+  fest, die Kopie überstimmte also das Modul, ohne dass irgendwo ein Fehler
+  auffiel; bei der Umstellung der Startleben (100 → 20 → 14) wäre das zweimal
+  an jedem echten Tisch vorbeigelaufen. Die **Platzierung**: `platzTabelle` im
+  Client war eine wortgetreue Abschrift von `platzierungen` aus `partie.ts` —
+  möglich, weil alle Eingaben in jeder Sicht stehen, und trotzdem eine zweite
+  Wahrheit über eine Regel. Wer im Modul das zweite Kriterium ändert, bekommt
+  am Bildschirm eine andere Rangfolge als der Server. Der **Markenchip**: fast
+  abgeschrieben statt herausgelöst. Zwei Fassungen wären beim ersten geänderten
+  Zähler auseinandergelaufen, und der Gegner sähe anders aus als man selbst,
+  obwohl beides dieselbe Zahl aus derselben Sicht ist. **Liefert die Sicht
+  etwas nicht, das der Bildschirm braucht, ist die Antwort ein neues Feld in
+  der Sicht — nicht eine zweite Rechnung im Client.**
+- **`dist/` räumt sich nicht von selbst.** Getestet wird nicht aus den `.ts`,
+  sondern aus `dist/test/*.js` (`tsc && node --test …`). `tsc` löscht nichts,
+  was es nicht selbst neu schreibt, und weil `dist/` in `.gitignore` steht,
+  räumt auch kein Zweigwechsel auf: Eine kompilierte Testdatei, deren Quelle es
+  nicht mehr gibt, läuft weiter mit und färbt den Lauf rot, obwohl an der
+  Quelle nichts falsch ist. Getroffen hat es Tafelrunde (Reste des abgelösten
+  Regelkerns) und den Server (`suche.test.js`). Solange das Räumen nicht im Bau
+  steckt, gehört `dist/` nach einem Zweigwechsel gelöscht — und wer ein Paket
+  neu anlegt, sorgt dafür, dass dessen `dist/` beim Räumen mitkommt.
 
 ---
 
