@@ -10,6 +10,7 @@ import { ladeMemeToene, spieleKlang, spieleMemeTon } from '../minispiele/mememor
 import { KiMatch } from '../minispiele/mememory/KiMatch';
 import { MehrSeite } from '../minispiele/mememory/MehrSeite';
 import { OnlineMatch, type Gegnerzahl } from '../minispiele/mememory/OnlineMatch';
+import type { MememorySicht } from '../minispiele/mememory/sicht';
 import { SammlungSeite } from '../minispiele/mememory/SammlungSeite';
 import {
   Stufenregler,
@@ -39,40 +40,12 @@ import { useTable } from '../useTable';
  * zurueckgenommen.
  */
 
-/** Sicht des Moduls, siehe packages/game-mememory/src/sicht.ts. */
-interface MememorySicht {
-  spalten: number;
-  zeilen: number;
-  /** Die Motive dieser Partie, sortiert — Grundlage des Vorladens. */
-  motive: string[];
-  /** Motivkennung je Platz, oder null solange die Karte verdeckt liegt. */
-  feld: (string | null)[];
-  besitzer: (number | null)[];
-  offen: number[];
-  punkte: Record<number, number>;
-  namen: Record<number, string>;
-  dran: number;
-  pause: 'treffer' | 'daneben' | 'mischen' | null;
-  merkzeitMs: number;
-  /** Karten, die noch auf dem Nachschubstapel warten. Zu zweit immer 0. */
-  vorrat: number;
-  /** Wie oft schon gemischt wurde. Steigt, wird das Brett neu verteilt. */
-  mischung: number;
-  fertig: boolean;
-  sieger: number | null;
-  leftSeats: number[];
-  zuschauer: boolean;
-  /**
-   * Welcher Sitz von einem Bot welcher Staerke gespielt wird. Fehlt, wenn
-   * kein Bot am Tisch sitzt.
-   *
-   * Sie steht in JEDER Sicht (siehe sicht.ts im Modul) und nicht nur im
-   * Gedaechtnis dieses Bildschirms: Wer nach einem Neuladen an seinen Tisch
-   * zurueckkommt, soll an der Ecke weiterhin lesen, gegen wen er spielt.
-   */
-  stufen?: Record<number, Stufe>;
-}
-
+/*
+ * Die Sicht des Moduls steht seit dem 06.09.2026 in
+ * minispiele/mememory/sicht.ts. Grund: Der Vertrag unter src/vertrag/ haelt
+ * sie gegen die echte Modulsicht, und ein Import aus DIESEM Bildschirm zoege
+ * React samt aller Bauteile in einen Test, der nur Typen vergleicht.
+ */
 
 /**
  * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.

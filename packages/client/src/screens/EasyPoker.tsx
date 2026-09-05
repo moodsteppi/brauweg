@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, ApiError, type TableRow } from '../api';
 import { cardName, isRed, rankLabel, suitSymbol } from '../i18n';
+import type {
+  Aktionsart,
+  EasyPokerSicht,
+  HandErgebnis,
+  Karte,
+  LetzteAktion,
+} from '../minispiele/easypoker/sicht';
 import { useTable } from '../useTable';
 
 /**
@@ -26,72 +33,16 @@ import { useTable } from '../useTable';
  */
 
 // ---------------------------------------------------------------------------
-// Was vom Server kommt (siehe packages/game-easypoker/src/sicht.ts)
+// Was vom Server kommt
 // ---------------------------------------------------------------------------
 
-interface Karte {
-  farbe: string;
-  wert: string;
-  id: number;
-}
-
-interface Bewertung {
-  kategorie: number;
-  werte: number[];
-  karten: Karte[];
-}
-
-type Aktionsart = 'passen' | 'schieben' | 'mitgehen' | 'setzen';
-
-interface LetzteAktion {
-  sitz: number;
-  art: Aktionsart;
-  betrag: number | null;
-}
-
-interface HandErgebnis {
-  gewinner: number[];
-  durchAufgabe: boolean;
-  topf: number;
-  gezeigt: Record<number, Karte[]>;
-  bewertung: Record<number, Bewertung>;
-  gewinn: Record<number, number>;
-}
-
-interface EasyPokerSicht {
-  handNr: number;
-  handMax: number;
-  strasse: 'preflop' | 'flop' | 'turn' | 'river';
-  brett: Karte[];
-  meineKarten: Karte[];
-  gegnerKarten: Karte[] | null;
-  gegnerVerdeckt: number;
-  fremdeKarten: Record<number, Karte[] | null>;
-  fremdeVerdeckt: Record<number, number>;
-  sitze: number[];
-  imSpiel: number[];
-  kleinerSitz: number;
-  grosserSitz: number;
-  meineStaerke: Bewertung | null;
-  jetons: Record<number, number>;
-  einsatz: Record<number, number>;
-  topf: number;
-  geber: number;
-  dran: number | null;
-  zuZahlen: number;
-  setzKosten: number | null;
-  letzteAktion: LetzteAktion | null;
-  ergebnis: HandErgebnis | null;
-  pauseMs: number | null;
-  kleinerBlind: number;
-  grosserBlind: number;
-  startJetons: number;
-  namen: Record<number, string>;
-  fertig: boolean;
-  sieger: number | null;
-  leftSeats: number[];
-  zuschauer: boolean;
-}
+/*
+ * Die Sicht steht seit dem 06.09.2026 in minispiele/easypoker/sicht.ts.
+ * Grund: Der Vertrag unter src/vertrag/ haelt sie gegen die echte Modulsicht
+ * (packages/game-easypoker/src/sicht.ts), und ein Import aus DIESEM
+ * Bildschirm zoege React samt aller Bauteile in einen Test, der nur Typen
+ * vergleicht.
+ */
 
 type Aktion =
   | { typ: 'passen' }

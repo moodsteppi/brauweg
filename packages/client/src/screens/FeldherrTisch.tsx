@@ -18,6 +18,7 @@ import {
   type FeldherrZug,
   starteFeldherr,
 } from '../minispiele/feldherr/kern.js';
+import type { Feld, FeldherrSicht } from '../minispiele/feldherr/sicht';
 import { moduleVersionFor, type TaktMessage, type ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
 
@@ -46,29 +47,13 @@ import { useTable } from '../useTable';
  */
 type Modus = 'ki';
 type Stufe = 'leicht' | 'normal' | 'schwer';
-type Feld = 'klein' | 'mittel' | 'gross';
 
-/** Sicht des Feldherr-Moduls, siehe packages/game-feldherr/src/adapter.ts. */
-interface FeldherrSicht {
-  saat: number;
-  regeln: { feld: Feld };
-  /**
-   * Ausschnitt der Zugliste, nicht zwingend die ganze — `abIndex` sagt, wo
-   * er anfaengt. Beim `join` (und damit nach jedem Wiederverbinden) ist er
-   * 0 und die Liste vollstaendig; nach einem Zug enthaelt sie nur den
-   * Zuwachs. Der Grund steht in `viewCursor` in packages/game-api.
-   */
-  zuege: (FeldherrZug & { sitz: number })[];
-  abIndex?: number;
-  /**
-   * Die Ergebnismeldung je Sitz. Der Bildschirm rechnet nicht damit — sie
-   * steht hier fuer die Aufzeichnung: Weichen Sieger oder Pruefsumme der
-   * beiden Geraete ab, gilt die Partie als strittig, und dann ist genau
-   * dieses Paar der Beweis, WIE weit sie auseinanderlagen.
-   */
-  meldungen?: Record<number, { sieger: number; takt: number; pruef: string }>;
-  ausgang: { sieger: number | null; strittig: boolean; aufgegeben: boolean } | null;
-}
+/*
+ * Die Feldgroesse und die Sicht des Moduls stehen seit dem 06.09.2026 in
+ * minispiele/feldherr/sicht.ts. Grund: Der Vertrag unter src/vertrag/ haelt
+ * sie gegen die echte Modulsicht, und ein Import aus DIESEM Bildschirm zoege
+ * React samt aller Bauteile in einen Test, der nur Typen vergleicht.
+ */
 
 /**
  * Im Netzspiel darf das obere HUD nicht auf dem Kopf stehen: Die Drehung

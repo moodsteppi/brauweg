@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
 import { FARBEN, GRAUTOENE, farbeVon } from '../minispiele/filler/farben';
+import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useTable } from '../useTable';
 
 /**
@@ -20,40 +21,13 @@ import { useTable } from '../useTable';
  * gezeichnet; der Client kennt die Farbe dahinter gar nicht.
  */
 
-/** Sicht des Moduls, siehe packages/game-filler/src/sicht.ts. */
-interface FillerSicht {
-  ich: number | null;
-  /** Spielart dieses Tisches. Der Kopf des Bretts schreibt sie hin. */
-  variante: Variante;
-  spalten: number;
-  zeilen: number;
-  farbzahl: number;
-  /** Farbnummer je Platz, oder null solange das Feld im Nebel liegt. */
-  feld: (number | null)[];
-  /** Grauton je Platz — nur Zeichnung, verraet nichts. */
-  grau: number[];
-  besitzer: (number | null)[];
-  farbe: Record<number, number>;
-  punkte: Record<number, number>;
-  dran: number;
-  zug: number;
-  fertig: boolean;
-  sieger: number | null;
-  leftSeats: number[];
-  zuschauer: boolean;
-  /** Gesetzte Barrieren als Plaetzepaare. Leer ausser in der Spielart `build`. */
-  barrieren: [number, number][];
-  /** Wie viele Barrieren jedem Sitz noch bleiben. */
-  barrierenUebrig: Record<number, number>;
-  /**
-   * Wohin ich gerade eine Barriere setzen darf. Fehlt, wenn ich nicht am Zug
-   * bin oder keine mehr habe.
-   *
-   * Kommt fertig vom Server, weil die Einsperr-Regel eine REGEL ist — der
-   * Client baut sie nicht nach (CLAUDE.md).
-   */
-  barrierenMoeglich?: [number, number][];
-}
+/*
+ * Die Sicht des Moduls steht seit dem 06.09.2026 in
+ * minispiele/filler/sicht.ts — zusammen mit der Spielart. Grund: Der Vertrag
+ * unter src/vertrag/ haelt sie gegen die echte Modulsicht, und ein Import aus
+ * DIESEM Bildschirm zoege React samt aller Bauteile in einen Test, der nur
+ * Typen vergleicht.
+ */
 
 /**
  * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
@@ -63,12 +37,6 @@ interface FillerSicht {
  * eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht.
  */
 const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6, barrieren: 5 };
-
-/**
- * Die beiden Spielarten. Muss zu FillerVariante in
- * packages/game-filler/src/regeln.ts passen.
- */
-type Variante = 'nebel' | 'klar' | 'build';
 
 const VARIANTE_NAME: Record<Variante, string> = {
   nebel: 'Nebel',
