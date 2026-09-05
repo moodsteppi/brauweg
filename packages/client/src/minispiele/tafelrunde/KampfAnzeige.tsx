@@ -42,14 +42,30 @@
  * Rolle ein Blatt fuer alle Einheiten dieser Rolle. Faellt ein Blatt aus, tritt
  * die Pixelfigur der Einheit aus `figuren.ts` an seine Stelle, und faellt auch
  * die aus, das uebergebene `ersatzzeichen` — lieber ein Platzhalter als ein
- * leeres Feld (CLAUDE.md). Ausserhalb der Arena bleibt es bei den Pixelfiguren:
- * In Laden, Bank und Ruestkammer ist die EINHEIT die Auskunft, hier die
- * Bewegung.
+ * leeres Feld (CLAUDE.md). Das Bauteil dafuer steht seit dem 6.9.2026 in
+ * `Figur3D.tsx`: Brett, Bank und Ladenkarte zeichnen dieselbe Figur, nur ohne
+ * Bildwechsel. Hier ist der einzige Ort, an dem sich das Blatt bewegt.
+ *
+ * OHNE PLATTE. Bis zum 6.9.2026 sass jede Figur auf einem dunklen Rechteck mit
+ * kostenfarbenem Innenrand. Robin: „der laesst es mehr 2D wirken" — und das
+ * stimmt, eine Figur, die auf einer Kachel klebt, steht nicht auf dem Feld.
+ * Die Platte tat nebenbei drei Dinge, die weiterleben: Die SEITEN
+ * unterscheidet jetzt der getoente Bodenschatten (`.schatten`, dazu der
+ * Lebensbalken, der die Seitenfarbe ohnehin schon trug), die KOSTEN ein Punkt
+ * am Fuss (`.kosten`), und das STERBEN uebernimmt die Todesfolge selbst.
  */
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
-import { type Bildstand, GLEITEN_MS, bildstand, blattPfad, blattVersatz } from './bildfolge';
+import {
+  type Bildstand,
+  GLEITEN_MS,
+  SACKEN_MS,
+  bildstand,
+  blattPfad,
+  blattVersatz,
+} from './bildfolge';
+import { Figur3D } from './Figur3D';
 import { type EinheitId, FIGUREN, UNTERGRUND } from './figuren';
 import stil from './KampfAnzeige.module.css';
 import { type Rastermass, rastermass, wabenLage } from './zuege';
@@ -203,62 +219,6 @@ export function Figurbild({
          sieht aus wie ein Fehler des Spiels, nicht wie ein fehlender Pfad. */
       onError={() => setKaputt(pfad)}
     />
-  );
-}
-
-/**
- * Die Figur als Ausschnitt aus dem Blatt ihrer Rolle.
- *
- * DER AUFBAU: ein Kasten mit `overflow: hidden`, darin das ganze Blatt,
- * sechsmal so breit und fuenfmal so hoch. Verschoben wird es vom Takt der
- * Anzeige (`bildSchieben`), nicht von hier — deshalb steht am `<img>` kein
- * `transform`: Es waere die Angabe, die der Takt gleich darauf ueberschreibt,
- * und beim naechsten Zeichnen setzte React sie zurueck. Bis der erste Takt
- * laeuft, steht die Zelle links oben im Blatt, und das ist das erste Bild des
- * Standes — also eine gueltige Figur und kein Loch.
- *
- * WARUM EIN `<img>` UND KEIN HINTERGRUNDBILD: `onError`. Ein ausgefallener
- * Hintergrund ist ein leeres Feld; ein ausgefallenes `<img>` meldet sich, und
- * dann tritt die Pixelfigur an seine Stelle. Der gescheiterte PFAD wird
- * gemerkt und nicht bloss ein Ja/Nein — aus demselben Grund wie bei
- * `Figurbild`: Eine Figur, die auf demselben Platz durch eine andere ersetzt
- * wird, behaelt ihre Komponente.
- *
- * SPIEGELN: Alle Blaetter schauen nach rechts (`FIGUREN3D_BLICKT`). Wer nach
- * links schauen soll, bekommt den Kasten gespiegelt — dafuer ist die Konstante
- * da. Gespiegelt wird der Kasten und nicht das Bild: Sonst liefe das Spiegeln
- * dem Schieben in dieselbe `transform`-Angabe.
- */
-function Figur3D({
-  einheit,
-  ersatz,
-  blatt,
-  spiegeln,
-  gib,
-}: {
-  einheit: Einheitenbild;
-  /** Was an die Stelle tritt, wenn es kein Blatt gibt oder es nicht laedt. */
-  ersatz: ReactNode;
-  blatt: string | null;
-  spiegeln: boolean;
-  /** Meldet das Bild an den Takt, damit er es schieben kann. */
-  gib: (el: HTMLImageElement | null) => void;
-}): React.JSX.Element {
-  const [kaputt, setKaputt] = useState<string | null>(null);
-  if (blatt === null || blatt === kaputt) return <>{ersatz}</>;
-  return (
-    <span className={stil.figur3d} data-spiegel={spiegeln ? '' : undefined}>
-      <img
-        ref={gib}
-        className={stil.blatt}
-        src={blatt}
-        /* Der Name der Einheit und nicht der der Rolle: Fuer den Leser ist die
-           Figur eine Dorfwache, dass sie sich das Blatt mit sieben anderen
-           teilt, ist eine Auskunft ueber die Dateien. */
-        alt={einheit.name}
-        onError={() => setKaputt(blatt)}
-      />
-    </span>
   );
 }
 
@@ -807,6 +767,12 @@ export function KampfAnzeige<E extends Einheitenbild>({
                      zwei Zahlen liefen beim ersten Nachstellen auseinander,
                      und die Figur ruderte dann noch, wenn sie schon steht. */
                   '--gleiten': `${GLEITEN_MS}ms`,
+                  /* Wie lange das Einsacken dauert. Auch diese Zahl steht in
+                     bildfolge.ts und nicht hier: Sie faellt aus Bildzahl und
+                     Bildrate der Todesfolge, und das Verblassen soll erst
+                     danach anfangen — sonst ist die Figur halb durchsichtig,
+                     waehrend sie noch zusammensackt. */
+                  '--sacken': `${SACKEN_MS}ms`,
                   /*
                    * Die Reihe stapelt die Figuren: Wer weiter vorn steht,
                    * liegt darueber. Noetig, seit eine Figur ihr Feld nach oben
@@ -835,8 +801,9 @@ export function KampfAnzeige<E extends Einheitenbild>({
               >
                 {einheit ? (
                   <Figur3D
-                    einheit={einheit}
+                    name={einheit.name}
                     blatt={blattPfad(einheit.rolle)}
+                    klasse={stil.figur3d}
                     /*
                      * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT).
                      * Gespiegelt wird, wer OBEN steht — dann sehen die beiden
@@ -889,6 +856,12 @@ export function KampfAnzeige<E extends Einheitenbild>({
                   {'★'.repeat(f.stufe)}
                 </span>
               </div>
+              {/* Was die Einheit im Laden gekostet hat — bis zum 6.9.2026 der
+                  Innenrand der Platte, jetzt ein Punkt am Fuss. Kein neuer
+                  Ring: Der waere die Platte in duenn, und genau die soll weg.
+                  Er sitzt in der Ecke und nicht unter der Figur, weil dort
+                  schon der Bodenschatten liegt. */}
+              <i className={stil.kosten} aria-hidden="true" />
               <span className={stil.leben} aria-hidden="true">
                 <b style={{ width: `${anteil}%` }} />
               </span>
