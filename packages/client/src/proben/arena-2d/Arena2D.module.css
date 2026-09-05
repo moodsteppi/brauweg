@@ -1,0 +1,330 @@
+/*
+ * Probe A — die Arena in 2D mit animierten Sprites.
+ *
+ * Eigenes CSS-Modul, damit keine Klasse dieser Wegwerf-Probe je eine Klasse
+ * des laufenden Spiels trifft. Die ganze Bewegung liegt hier; Arena2D.tsx
+ * setzt nur Zustaende und Orte.
+ *
+ * DIE SPRITE-BOEGEN WERDEN IN PROZENT ANGESPROCHEN, nicht in Pixeln. Ein Bogen
+ * ist 8 Bilder breit und 5 oder 6 Reihen hoch, und die Buehne skaliert mit dem
+ * Fenster. In Pixeln muesste jede Regel die Figurgroesse kennen; in Prozent
+ * rechnet der Browser. Merkposten dazu: Bei einem Hintergrund, der `n` mal so
+ * breit ist wie sein Kasten, verteilt `background-position-x` seine 0 bis 100 %
+ * auf `n - 1` Schritte. Das achte Bild liegt deshalb bei 100 % und das Ende
+ * einer umlaufenden Bewegung bei 8/7 * 100 % = 114,2857 %.
+ */
+
+.seite {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 0.6rem 1.2rem;
+  box-sizing: border-box;
+}
+
+.kopf {
+  width: min(100%, 520px);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.titel {
+  margin: 0;
+  font-size: clamp(0.95rem, 3.4vw, 1.15rem);
+  font-weight: 600;
+}
+
+.uhr {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.knopf {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.knopf:hover {
+  border-color: var(--accent);
+}
+
+/*
+ * Die Buehne.
+ *
+ * Breite UND Hoehe sind gedeckelt, denn die Vorgabe lautet: am Handy
+ * vollstaendig sichtbar. `100dvh` und nicht `100vh` — auf iOS waere die
+ * Adressleiste sonst nicht eingerechnet und der untere Rand der Arena laege
+ * unter ihr (dieselbe Falle wie in DashboardShell).
+ */
+.buehne {
+  position: relative;
+  width: min(100%, 520px, calc((100dvh - 9.5rem) * 0.8));
+  aspect-ratio: 4 / 5;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background-color: #2a1f16;
+  background-image: url('/tafelrunde/untergrund-holz.webp');
+  background-size: cover;
+  background-position: center;
+  /* Eigener Stapelraum, damit die Figuren untereinander sortieren koennen,
+     ohne mit dem Kopf der Seite zu konkurrieren. */
+  isolation: isolate;
+}
+
+/* Das Holz allein ist zu hell und zu unruhig fuer helle Pixelfiguren. Ein
+   dunkler Schleier legt sich darueber, die Mitte bleibt am hellsten. */
+.schleier {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgb(0 0 0 / 18%) 0%, rgb(0 0 0 / 62%) 100%);
+  pointer-events: none;
+}
+
+/* Die Mittellinie zwischen den beiden Haelften. Sie steht senkrecht, weil das
+   Gitter gekippt ist (siehe ortVon in ablauf.ts). */
+.mitte {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-1px);
+  background: linear-gradient(to bottom, transparent, rgb(226 182 79 / 35%), transparent);
+  pointer-events: none;
+}
+
+.seitenschild {
+  position: absolute;
+  top: 0.4rem;
+  font-size: clamp(0.6rem, 2.2vw, 0.75rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(232 238 241 / 65%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 90%);
+  pointer-events: none;
+}
+
+.linksSchild {
+  left: 0.6rem;
+}
+
+.rechtsSchild {
+  right: 0.6rem;
+}
+
+/*
+ * Das Spielfeld innerhalb der Buehne.
+ *
+ * `ortVon` rechnet den Standpunkt einer Figur auf 0 bis 100 Prozent aus und
+ * laesst dabei keinen Rand — es kennt weder Namen noch Lebensbalken. Die
+ * haengen aber ueber der Figur, und die oberste stand deshalb mit
+ * abgeschnittener Beschriftung da. Der Rand kommt hier dazu, oben mehr als
+ * unten: Ueber einer Figur haengt etwas, unter ihr nichts.
+ */
+.feld {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9%;
+  bottom: 4%;
+}
+
+/*
+ * Eine Figur.
+ *
+ * Der Kasten ist GENAU SO GROSS WIE DAS SPRITE, und Name und Lebensbalken
+ * haengen absolut darueber. Das ist der Unterschied zwischen "die Figur steht
+ * auf ihrem Feld" und "irgendwo in der Naehe": Waeren Name und Balken Teil des
+ * Flusses, waere der Kasten je nach Namenslaenge unterschiedlich hoch, und die
+ * Figur ruckte mit. Beim ersten Anlauf hing die Beschriftung dadurch ueber der
+ * Figur des NACHBARN.
+ *
+ * `-87 %` senkrecht und nicht `-50 %`: Verankert wird am FUSS. Wer nach vorn
+ * laeuft, soll mit den Fuessen auf dem Feld stehen und nicht mit dem Bauch.
+ * Die 87 statt 100 sind der leere Streifen unter der Figur — im Bogen liegt
+ * die Standlinie sechs von 48 Pixeln ueber dem unteren Rand.
+ */
+.figur {
+  position: absolute;
+  width: 36%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -87%);
+  /* Kein `transition` auf left/top: Der Ort wird in ablauf.ts Bild fuer Bild
+     zwischenberechnet. Eine Ueberblendung obendrauf liefe der Uhr hinterher
+     und die Figur kaeme spaeter an, als das Protokoll sagt. */
+}
+
+/*
+ * Name und Lebensbalken sitzen dicht ueber dem KOPF, nicht ueber dem Kasten.
+ *
+ * Der Unterschied ist gross: Die Figur ist 21 Pixel hoch, ihr Einzelbild aber
+ * 48 — ueber ihrem Scheitel liegen also rund 44 Prozent leerer Kasten. Am
+ * oberen Kastenrand aufgehaengt schwebte die Beschriftung eine halbe
+ * Figurhoehe zu hoch und sah aus, als gehoere sie zum Nachbarn darueber.
+ */
+.beschriftung {
+  position: absolute;
+  bottom: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.figur[data-tot='ja'] {
+  /* Gefallene bleiben liegen, treten aber zurueck. Ganz ausblenden waere
+     falsch: Man soll sehen, dass dort jemand gefallen ist. */
+  opacity: 0.55;
+}
+
+.name {
+  font-size: clamp(0.45rem, 1.9vw, 0.62rem);
+  line-height: 1.1;
+  white-space: nowrap;
+  color: rgb(232 238 241 / 85%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 95%);
+  margin-bottom: 1px;
+}
+
+.balken {
+  width: 3.2rem;
+  max-width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: rgb(0 0 0 / 65%);
+  border: 1px solid rgb(0 0 0 / 60%);
+  overflow: hidden;
+}
+
+.balkenFuellung {
+  display: block;
+  height: 100%;
+  /* Nur der Balken blendet ueber. Er zeigt eine Zahl, keine Stellung — und
+     ein Ruck bei jedem Treffer waere unruhiger als der Kampf selbst. */
+  transition: width 140ms linear;
+}
+
+.figur[data-seite='0'] .balkenFuellung {
+  background: var(--accent);
+}
+
+.figur[data-seite='1'] .balkenFuellung {
+  background: var(--danger);
+}
+
+/*
+ * Das eigentliche Sprite.
+ *
+ * `image-rendering: pixelated` ist Pflicht: 48 echte Pixel auf ein Viertel der
+ * Buehnenbreite hochgezogen sind ohne den Hinweis Matsch.
+ */
+.sprite {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  /* Die Boegen zeigen nach links. Seite 0 steht links und muss nach rechts
+     schauen — gespiegelt wird deshalb dort und nicht drueben. */
+}
+
+.figur[data-seite='0'] .sprite {
+  transform: scaleX(-1);
+}
+
+@keyframes bildlauf {
+  from {
+    background-position-x: 0%;
+  }
+
+  to {
+    background-position-x: 114.2857%;
+  }
+}
+
+@keyframes bildeinmal {
+  from {
+    background-position-x: 0%;
+  }
+
+  to {
+    background-position-x: 100%;
+  }
+}
+
+.ruhig {
+  animation: bildlauf 2s steps(8) infinite;
+}
+
+.lauf {
+  animation: bildlauf 0.6s steps(8) infinite;
+}
+
+.schlag {
+  animation: bildlauf 0.5s steps(8) infinite;
+}
+
+.zucken {
+  animation: bildlauf 0.4s steps(8) infinite;
+}
+
+/*
+ * Das Umfallen laeuft genau einmal und bleibt auf dem letzten Bild stehen.
+ *
+ * `jump-none` und nicht das uebliche `steps(8)`: Bei jump-end springt der Wert
+ * am Ende auf 114,2857 % — das waere das neunte Bild, und das gibt es nicht.
+ * Die Figur verschwaende im letzten Augenblick. jump-none verteilt acht Halte
+ * auf 0 bis 100 % und bleibt mit `forwards` auf dem liegenden Bild.
+ */
+.tod {
+  animation: bildeinmal 0.8s steps(8, jump-none) 1 forwards;
+}
+
+.ergebnis {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 0.5rem 0.8rem 0.7rem;
+  text-align: center;
+  background: linear-gradient(to top, rgb(0 0 0 / 85%), transparent);
+  font-size: clamp(0.8rem, 3vw, 1rem);
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 95%);
+}
+
+.fuss {
+  width: min(100%, 520px);
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.fuss a {
+  color: var(--muted);
+}
+
+/*
+ * Weniger Bewegung: Die Sprite-Bewegungen bleiben — sie SIND der Gegenstand
+ * dieser Probe, und ohne sie zeigt die Seite nichts. Was geht, ist das
+ * Nachziehen des Lebensbalkens.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .balkenFuellung {
+    transition: none;
+  }
+}
