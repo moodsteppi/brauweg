@@ -840,17 +840,29 @@ describe('Bereit und Kampfpause', () => {
 
 describe('Figuren und Untergrund', () => {
   /*
-   * Die 22 CC0-Figuren liegen unter public/tafelrunde/, die Zuordnung steht
-   * in minispiele/tafelrunde/figuren.ts. Geprueft wird hier NICHT, wie sie
-   * aussehen, sondern dass ueberall dieselbe Quelle gilt: Ein Bildschirm, der
-   * den Pfad irgendwo selbst zusammensetzt, liefert beim ersten Umbenennen
-   * einen 404 statt eines Rueckfalls.
+   * SEIT DEM 6.9.2026 ZEIGT DIE RUESTKAMMER DIESELBEN FIGUREN WIE DIE ARENA:
+   * die vorgerenderten 3D-Bildfolgen, je ROLLE ein Blatt fuer alle Einheiten
+   * dieser Rolle (bildfolge.ts). Vorher liefen sie nur im Kampf, und auf
+   * Brett, Bank und Ladenkarte standen die 32er-Pixelbilder aus figuren.ts —
+   * wer spielt, ist die meiste Zeit in der Vorbereitung und sah dort also
+   * etwas anderes als im Kampf. Genau dieser Bruch war gemeint.
+   *
+   * Die Pixelfiguren sind seitdem der RUECKFALL. Geprueft wird hier nicht,
+   * wie etwas aussieht, sondern dass ueberall dieselbe Quelle gilt und der
+   * Rueckfall an jedem Ort derselbe ist: Ein Bildschirm, der den Pfad
+   * irgendwo selbst zusammensetzt, liefert beim ersten Umbenennen einen 404
+   * statt eines Rueckfalls.
    */
-  it('zeigt im Laden die Figur der ausliegenden Einheit', () => {
+  it('zeigt im Laden die Figur zur Rolle der ausliegenden Einheit', () => {
     zeige();
     const laden = screen.getByRole('group', { name: 'Laden' });
-    expect(within(laden).getByAltText('Dorfwache')).toHaveAttribute('src', FIGUREN.dorfwache);
-    expect(within(laden).getByAltText('Astschütze')).toHaveAttribute('src', FIGUREN.astschuetze);
+    // Die Dorfwache ist eine Wache, der Astschuetze ein Schuetze — die KARTE
+    // bleibt eine Karte, nur die Figur darauf kommt aus dem Blatt.
+    expect(within(laden).getByAltText('Dorfwache')).toHaveAttribute('src', blattPfad('wache'));
+    expect(within(laden).getByAltText('Astschütze')).toHaveAttribute(
+      'src',
+      blattPfad('schuetze'),
+    );
   });
 
   it('zeigt auf der Bank die Figur — und daneben weiter die Stufe', () => {
@@ -863,7 +875,7 @@ describe('Figuren und Untergrund', () => {
     );
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
-    expect(within(bank).getByAltText('Dorfwache')).toHaveAttribute('src', FIGUREN.dorfwache);
+    expect(within(bank).getByAltText('Dorfwache')).toHaveAttribute('src', blattPfad('wache'));
     // Die Stufe steht NEBEN dem Bild und nicht an seiner Stelle.
     expect(within(bank).getByText('★★')).toBeInTheDocument();
   });
@@ -884,28 +896,61 @@ describe('Figuren und Untergrund', () => {
     for (const brett of bretter) expect(brett.getAttribute('style')).toContain(UNTERGRUND);
     expect(within(bretter[1] as HTMLElement).getByAltText('Astschütze')).toHaveAttribute(
       'src',
-      FIGUREN.astschuetze,
+      blattPfad('schuetze'),
     );
   });
 
-  it('faellt auf das Rollenzeichen zurueck, wenn ein Bild nicht laedt', () => {
+  it('faellt in der Ruestkammer zweistufig zurueck, wenn Bilder nicht laden', () => {
     /*
      * Ein fehlender Pfad darf den Tisch nicht leeren: Ein leerer Kasten sieht
      * aus wie ein Fehler des Spiels, das Rollenzeichen nach Absicht
      * (CLAUDE.md, "Kein `<img>` auf eine Datei, die es noch nicht gibt").
+     *
+     * ZWEI STUFEN, dieselben wie in der Arena: erst das Blatt der Rolle, dann
+     * die Pixelfigur der Einheit, dann das gezeichnete Zeichen. Ein
+     * Rueckfall, der sich je Ort unterschiede, gaebe einen Bildschirm mit
+     * zwei Sorten Platzhalter.
      */
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     const marke = within(bank).getByTitle(/Dorfwache/);
-    expect(within(marke).getByAltText('Dorfwache')).toBeInTheDocument();
+    expect(within(marke).getByAltText('Dorfwache')).toHaveAttribute('src', blattPfad('wache'));
 
+    // Erste Stufe: kein Blatt — dann die Pixelfigur der Einheit.
     fireEvent.error(within(marke).getByAltText('Dorfwache'));
+    const pixel = within(marke).getByAltText('Dorfwache');
+    expect(pixel).toHaveAttribute('src', FIGUREN.dorfwache);
 
+    // Zweite Stufe: auch die fehlt — dann das gezeichnete Rollenzeichen.
+    fireEvent.error(pixel);
     expect(within(marke).queryByAltText('Dorfwache')).not.toBeInTheDocument();
     expect(marke.querySelector('svg.tr-rolle')).not.toBeNull();
     // Die Einheit bleibt bedienbar — der Rueckfall ist ein Bildwechsel, kein
     // Verlust der Marke.
     expect(marke).toHaveAttribute('aria-label', 'Dorfwache, Wache, Stufe 1');
+  });
+
+  it('spiegelt die Figuren des gegnerischen Bretts, damit die Heere sich ansehen', () => {
+    /*
+     * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT). Das gegnerische
+     * Brett steht ohnehin auf dem Kopf; ohne Spiegeln blickten beide Heere in
+     * dieselbe Richtung, statt einander gegenueberzustehen — dieselbe
+     * Ueberlegung wie in der Arena.
+     */
+    stelle(
+      sicht({
+        eigenes: {
+          belegt: 1,
+          brett: [{ id: 'astschuetze', stufe: 1 }, ...Array.from({ length: 9 }, () => null)],
+        },
+      }),
+    );
+    const { container } = render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
+    const bretter = container.querySelectorAll('.tr-brett');
+    // Das eigene Brett unten steht aufrecht, das gegnerische oben gespiegelt.
+    expect((bretter[1] as HTMLElement).querySelectorAll('[data-spiegel]')).toHaveLength(0);
+    const oben = (bretter[0] as HTMLElement).querySelectorAll('.tr-einheit');
+    for (const marke of oben) expect(marke.querySelector('[data-spiegel]')).not.toBeNull();
   });
 
   it('stellt auch in der Kampfanzeige die Figuren auf', () => {
