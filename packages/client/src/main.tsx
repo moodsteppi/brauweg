@@ -124,10 +124,10 @@ const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
 /* Aus demselben Grund `lazy`, hier aber mit deutlich mehr Gewicht dahinter:
-   Probe B zieht `three` und `@react-three/fiber` nach. Was davon schon im
-   Hauptbuendel steckt, ist eine andere Baustelle (Avatarwerkstatt wird von
-   GameSelect statisch importiert und landet deshalb dort) — die Probe selbst
-   soll jedenfalls nichts dazulegen. */
+   Probe B zieht `three` und `@react-three/fiber` nach. Seit dem 5.9.2026 liegt
+   davon nichts mehr im Hauptbuendel — der letzte Weg dorthin lief ueber
+   Feldherrs `Buehne3D`, und App.tsx laedt die Spielschirme jetzt einzeln nach.
+   Die Probe selbst soll jedenfalls nichts dazulegen. */
 const Arena3D = lazy(() => import('./proben/arena-3d/Arena3D').then((m) => ({ default: m.Arena3D })));
 /* Aus demselben Grund `lazy` wie die Proben darueber, hier aber mit einem
    zweiten dazu: Die Probe zieht den aufgezeichneten Kampf (rund 30 kB JSON)

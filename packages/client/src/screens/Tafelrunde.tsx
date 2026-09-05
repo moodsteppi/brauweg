@@ -10,6 +10,7 @@ import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../minispiele/tafelrunde/Phasenzeile';
 import { gegnerDieseRunde, leistenplaetze } from '../minispiele/tafelrunde/platzierung';
+import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
 import {
   Figurbild,
   KampfAnzeige,
@@ -270,21 +271,6 @@ const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
   { id: 'standard', name: 'Normal' },
   { id: 'experte', name: 'Hart' },
 ];
-
-/**
- * Der Name des Suchparameters im geteilten Link.
- *
- * `/?tisch=KX7M9Q` fuehrt direkt in die Beitreten-Ansicht mit ausgefuelltem
- * Code (App.tsx springt dafuer beim Start auf diesen Bildschirm). Beigetreten
- * wird trotzdem erst auf Knopfdruck: Ein Link, der einen ungefragt an einen
- * Tisch setzt, ist ein Link, den man nicht mehr anklicken mag.
- */
-export const TISCH_PARAMETER = 'tisch';
-
-/** Der Link, den der Gastgeber weitergibt. */
-function beitrittsLink(code: string): string {
-  return `${window.location.origin}/?${TISCH_PARAMETER}=${code}`;
-}
 
 /**
  * Wie viele Runden ein Tisch gehen soll.
