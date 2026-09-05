@@ -22,7 +22,7 @@
  * ist eine Faehigkeit und kein Leck.
  */
 
-import type { Seite } from './arena.js';
+import { type Seite, ARENA_REIHEN } from './arena.js';
 import type { Einheit, EinheitId } from './katalog.js';
 import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
 import { type Synergie, type Synergiestand, SYNERGIEN, synergienVon } from './synergien.js';
@@ -213,6 +213,18 @@ export interface TafelrundeSicht {
   readonly brettReihen: number;
   readonly brettSpalten: number;
   /**
+   * Reihen der KAMPFARENA, siehe arena.ts. Breit ist sie wie das Brett.
+   *
+   * Sie steht ausdruecklich in der Sicht, obwohl sie aus `brettReihen`
+   * herzuleiten waere: `brettReihen * 2` stimmt seit der leeren Luecke
+   * zwischen den Haelften nicht mehr, und genau diese Rechnung stand im
+   * Client (KampfAnzeige.tsx). Eine Geometrie, die der Bildschirm nachrechnet,
+   * ist eine zweite Wahrheit ueber eine Regel des Moduls — CLAUDE.md, "was das
+   * Modul weiss, schreibt der Client nicht ab". Wie viele Reihen leer in der
+   * Mitte liegen, ergibt sich als `arenaReihen - brettReihen * 2`.
+   */
+  readonly arenaReihen: number;
+  /**
    * Wie viele gleiche Einheiten verschmelzen und wie hoch es geht.
    *
    * Beide Zahlen stehen in der Sicht, weil der Bildschirm den FORTSCHRITT
@@ -331,6 +343,7 @@ function grundsicht(
     brettFelder: BRETT_FELDER,
     brettReihen: BRETT_REIHEN,
     brettSpalten: BRETT_SPALTEN,
+    arenaReihen: ARENA_REIHEN,
     verschmelzZahl: VERSCHMELZ_ZAHL,
     maxStufe: MAX_STUFE,
     vorrat: partie.vorrat,

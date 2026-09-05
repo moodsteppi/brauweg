@@ -100,8 +100,9 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > Paketstruktur lag). Eine Runde läuft jetzt vollständig durch: Alle lebenden
 > Sitze werden paarweise angesetzt (bei ungerader Zahl bekommt der Übrige das
 > Brett eines anderen als **Geist**, keine Freirunde), beide Bretthälften
-> werden zu einer Arena mit vier Reihen zusammengelegt, der Kampf wird beim
-> Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
+> werden zu einer Arena zusammengelegt (seit dem 06.09.2026 vier Reihen je
+> Seite und zwei leere dazwischen, also 5 × 10 — vorher 5 × 4), der Kampf wird
+> beim Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
 > als **Ablaufprotokoll** (jede Bewegung, jeder Treffer, jeder Tod mit
 > Zeitpunkt) im Zustand und in der Sicht. Gleiche Saat plus gleiche Bretter
 > ergibt denselben Ablauf **Ereignis für Ereignis** — eine Probe vergleicht
@@ -309,6 +310,18 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > **Laden** und nicht die Partielänge dahinterstand (Befund 7 in
 > `docs/spiele/auto-battler-konzept.md`, Werkzeug `werkzeug/gangarten.mjs`).
 > Vier Messungen über zwei Saatbasen zeigen in dieselbe Richtung.
+>
+> **Am 06.09.2026 nachgezogen — die Zahl 140 : 86,7 gilt nicht mehr, sie steht
+> jetzt bei 228 : 57,3.** Was `hart` damals trug, war allein die fehlende
+> Patzerquote; die beiden Tempo-Schrauben lagen in der Streuung und blieben
+> deshalb stehen. Über sechs Saatbasen gemessen ist eine der beiden aber kein
+> Nullwert, sondern ein Minus: Ohne die Bedingung „Brett voll" kauft der Bot
+> Feldplätze, auf denen nichts steht. `nurBeiVollemBrett` steht bei `hart`
+> seitdem auf `true`, `polster` auf 2 statt 4; die Reserve bleibt bei 0 und
+> trägt das Tempo. Damit wirkt jede der vier Schrauben messbar, und der
+> Kontrolllauf ist wieder neutral (98,7 statt der 110 bis 116, die über drei
+> Basen gemessen waren). Neu am Werkzeug: `--schraube name=wert` stellt eine
+> einzelne Schraube um, ohne `bot.ts` anzufassen.
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >

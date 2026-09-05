@@ -11,19 +11,31 @@
  * nicht als Paar. Ein Paar in einem JSON-Snapshot waere ein Objekt je Feld,
  * und der Snapshot geht nach jeder Aktion in die Datenbank.
  *
- * Das Konzept nennt vier Reihen zu fuenf Spalten. Das ist die KAMPFARENA:
- * zwei eigene Reihen und die zwei gespiegelten des Gegners. Aufstellen darf
- * man nur in der eigenen Haelfte, und genau die steht hier. Die Arena entsteht
- * erst in Phase 2, wenn es einen Kampf gibt.
+ * Hier steht nur die EIGENE Haelfte — aufstellen darf man nirgendwo sonst.
+ * Die Kampfarena setzt zwei davon gegeneinander und legt zwei leere Reihen
+ * dazwischen (arena.ts); sie entsteht erst in Phase 2, wenn es einen Kampf
+ * gibt.
  */
 
 /** Spalten der eigenen Haelfte. */
 export const BRETT_SPALTEN = 5;
 
-/** Reihen der eigenen Haelfte. Die Arena hat spaeter doppelt so viele. */
-export const BRETT_REIHEN = 2;
+/**
+ * Reihen der eigenen Haelfte.
+ *
+ * VIER SEIT DEM 06.09.2026, vorher zwei. Robins Begruendung: "dann bewegen
+ * sie sich auch mehr und man kann taktischer aufstellen". Gemessen ist beides
+ * (docs/TAFELRUNDE-LAUFWEGE.md) — zusammen mit der Luecke in der Arena laeuft
+ * seither jede Einheit mindestens einen Schritt statt 46,6 %, und Schuetze
+ * und Magier starten sechs Felder vom Gegner entfernt statt zwei.
+ *
+ * DIE ZAHL MUSS GERADE BLEIBEN: Die Punktspiegelung in arena.ts ist nur dann
+ * abstandstreu, und daran haengt die Fairness des Kampfes. Der Kopf von
+ * arena.ts rechnet es vor, eine Probe in arena.test.ts faengt es ab.
+ */
+export const BRETT_REIHEN = 4;
 
-/** Felder der eigenen Haelfte: 10. Mehr Einheiten als das passen nie darauf. */
+/** Felder der eigenen Haelfte: 20. Mehr Einheiten als das passen nie darauf. */
 export const BRETT_FELDER = BRETT_SPALTEN * BRETT_REIHEN;
 
 export interface Hexfeld {

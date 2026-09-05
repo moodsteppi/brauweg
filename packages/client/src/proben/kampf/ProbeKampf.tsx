@@ -14,9 +14,10 @@
  *     `Buehne.tsx` oder deren Stylesheets arbeitet, prueft das Ergebnis
  *     hier — eine Partie bis Runde 10 zu spielen, nur um zu sehen, ob ein
  *     Lebensbalken richtig sitzt, kostet mehr als die Aenderung selbst.
- *     Deshalb ist diese Seite kein Wegwerf-Entwurf wie `/probe/arena-2d` und
- *     `/probe/arena-3d`: Die beiden vergleichen zwei Entwuerfe und
- *     verschwinden mit der Entscheidung, diese hier zeigt das Gebaute.
+ *     Deshalb ist diese Seite kein Wegwerf-Entwurf wie `/probe/arena-2d`:
+ *     Der vergleicht Entwuerfe und verschwindet mit der Entscheidung — sein
+ *     Gegenstueck `/probe/arena-3d` ist am 06.09.2026 genau so verschwunden —,
+ *     diese hier zeigt das Gebaute.
  *
  * DESHALB WIRD HIER NICHTS NACHGEBAUT. Es laufen `Buehne` und `KampfAnzeige`
  * aus `minispiele/tafelrunde/` — dieselben Bauteile, die
@@ -70,6 +71,7 @@ interface Szene {
   readonly zeitraffer: number;
   readonly ich: number;
   readonly brettReihen: number;
+  readonly arenaReihen: number;
   readonly brettSpalten: number;
   readonly kampf: Kampfpaarung;
   readonly katalog: readonly Katalogeintrag[];
@@ -233,6 +235,7 @@ export function ProbeKampf(): React.JSX.Element {
            */
           ich={SZENE.ich}
           brettReihen={SZENE.brettReihen}
+          arenaReihen={SZENE.arenaReihen}
           brettSpalten={SZENE.brettSpalten}
           katalog={KATALOG}
           nameVon={nameVon}

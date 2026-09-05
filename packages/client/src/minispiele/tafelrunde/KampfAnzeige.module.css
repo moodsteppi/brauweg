@@ -5,7 +5,7 @@
  * abgeschlossenes Bauteil mit eigenem Zustand, und die Klassennamen sollen
  * nirgends sonst greifen. Farben und Masse lehnen sich an die Ruestkammer an
  * (tr-brett, tr-wabe, tr-einheit in styles.css), damit die Arena wie
- * dasselbe Brett aussieht — nur eben mit vier Reihen und in Bewegung.
+ * dasselbe Brett aussieht — nur eben mit zehn Reihen und in Bewegung.
  *
  * Alle Bewegung liegt HIER: Zug und Ausblenden als Uebergang, Ausschlag und
  * Blitz als Animation. Die Komponente setzt nur Zustaende. Deshalb genuegt am
@@ -142,6 +142,13 @@
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   background: rgba(10, 14, 18, 0.3);
 }
+/*
+ * Rot oben, gruen unten — und die beiden Reihen dazwischen behalten absichtlich
+ * das neutrale Dunkel von oben (`data-haelfte='mitte'`, seit dem 06.09.2026).
+ * Sie gehoeren zu keiner Seite: Dort steht nie eine Einheit, dort wird nur
+ * gelaufen. Faerbte man sie mit ein, saehe die Arena aus, als duerfte man dort
+ * aufstellen.
+ */
 .wabe[data-haelfte='oben']::before { background: rgba(255, 126, 110, 0.12); }
 .wabe[data-haelfte='unten']::before { background: rgba(110, 200, 160, 0.12); }
 
@@ -399,24 +406,49 @@
   position: absolute;
   left: 50%;
   /*
-   * DIE ZWEI ZAHLEN SIND GERECHNET, nicht probiert — mit dem Fusspunkt aus
-   * figuren3d.ts (73,94 % der Zellhoehe, weil der Ausschnitt oben Luft fuer
-   * den Schlag laesst). Gewuenscht ist: Die Figur steht auf 78 % der
-   * Kartenhoehe, also knapp ueber den Sternen, und ist so hoch wie 79 % der
-   * Karte. Daraus folgt eine Zelle von 180 % Kartenhoehe, deren Unterkante
-   * 25 % darunter liegt: 0,25 − 1,80 + 0,7394 · 1,80 = 0,78.
+   * DIE ZWEI ZAHLEN GEHOEREN ZUSAMMEN und sind gerechnet, nicht probiert.
    *
-   * GROESSER GEHT NICHT SINNVOLL: Bei 200 % ragt der Meuchler mit Kopf und
-   * Klingen seitlich ueber die Karte hinaus und sieht aus wie ein Aufkleber,
-   * der sich loest. Bei 180 % steht nur der Kopf ueber dem oberen Rand — die
-   * Figur steht dann VOR ihrer Karte, statt neben ihr zu liegen.
+   * Der Ausschnitt ist eine ZELLE des Blattes, und die Figur steht darin
+   * nicht mittig: Ihr Fusspunkt liegt bei 77 % der Zellhoehe (FIGUREN3D_FUSSPUNKT
+   * in figuren3d.ts), weil oben Luft fuer den ausgeholten Schlag bleiben muss.
+   * Wo die Figur AUF DEM FELD aufsetzt, ist damit
+   *
+   *     Fuss ueber der Kartenunterkante = bottom + (1 − 0,77) · Hoehe.
+   *
+   * Dieser Wert ist 0,164 und muss es bleiben — er ist die Stelle knapp ueber
+   * den Sternen, an der der Lebensbalken sitzt. Wer die Hoehe aendert, rechnet
+   * `bottom` daraus zurueck: bottom = 0,164 − 0,23 · Hoehe. Fuer 260 % sind
+   * das −43,4 %. Vergisst man das, schwebt das ganze Heer ueber seinen Feldern.
+   *
+   * WARUM 260 % UND NICHT MEHR 180 % — belegt am Vergleichsbild
+   * `docs/bilder/tafelrunde-arena-groesse.webp`: Bei 180 % war eine Figur auf einem
+   * 390-px-Schirm — der Zielgroesse — rund 50 Pixel hoch und 36 breit. Von
+   * einer vorgerenderten 3D-Figur blieb darin eine farbige Silhouette; man sah
+   * weder Ruestung noch Gesicht noch Waffe, wofuer die Blaetter gerendert
+   * wurden. 260 % machen daraus 72 auf 52 Pixel, und das ist der Unterschied
+   * zwischen „da steht etwas Gruenes" und „da steht der Druide".
+   *
+   * HIER STAND, GROESSER GEHE NICHT: „Bei 200 % ragt der Meuchler mit Kopf
+   * und Klingen seitlich ueber die Karte hinaus." Der Satz stimmt und der
+   * Schluss daraus war trotzdem falsch, weil er die ZELLE fuer die Figur hielt.
+   * Nachgemessen am Alphakanal der fuenf Blaetter: Die Figur belegt in ihrer
+   * Zelle 26 bis 51 % der Breite und 52 bis 77 % der Hoehe — alles andere ist
+   * durchsichtiger Rand fuer den ausgeholten Schlag. Ueber die Karte hinaus
+   * ragt bei 260 % also der Rand, und der ist nicht zu sehen.
+   *
+   * NACH OBEN BEGRENZT ES DER NACHBAR, nicht die Karte. Am Bild gesehen
+   * (390 px, /probe/kampf): Bei 300 % verdeckt die vordere Reihe die hintere
+   * bis zur Brust, und die oberste Figur laeuft ueber den Brettrand in die
+   * Seitenzeile. Bei 260 % ueberlappen sich die Reihen nur so weit, wie
+   * Figuren es tun, die hintereinander stehen — dafuer stapelt die Anzeige sie
+   * ohnehin nach Reihe (`zIndex` in KampfAnzeige.tsx).
    *
    * Ueber die HOEHE bemessen und nicht ueber die Breite: Dann haengt die
    * Rechnung nur an der Kartenhoehe und nicht zusaetzlich am
    * Seitenverhaeltnis der Wabe, das sich mit der Spaltenzahl aendert.
    */
-  bottom: -25%;
-  height: 180%;
+  bottom: -43.4%;
+  height: 260%;
   /* `translate` und nicht `transform`: Das Spiegeln der Gegenseite steht in
      `scale` (Figur3D.module.css), und zwei Dinge in demselben `transform`
      schliessen einander aus. */
