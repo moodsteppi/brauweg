@@ -18,6 +18,7 @@
  */
 import { writeFileSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 /* Neben das Skript, nicht auf einen Desktop-Pfad: Die Tafel liegt im Repo
@@ -89,6 +90,35 @@ function link(a, b, label, opts = {}) {
  */
 const note = (html, fontSize = 13, boardRef = null) =>
   (boardRef ? { html, fontSize, boardRef } : { html, fontSize });
+
+/*
+ * Wann wurde eine Nachbardatei zuletzt geaendert? Antwort aus der
+ * Git-Historie, NICHT aus statSync().mtimeMs.
+ *
+ * Die Dateizeit ist auf jedem Rechner eine andere: Klonen und Auschecken
+ * setzen sie neu. Am 05.09.2026 belegt — zwei Erzeugerlaeufe auf zwei
+ * Rechnern waren in 60 Fenstern und 45 Verbindungen zeichengleich und
+ * unterschieden sich allein in dieser Zahl. Damit galt die eingecheckte
+ * Tafel ueberall als veraendert, jeder Lauf machte einen Diff ohne Inhalt,
+ * und beim Zusammenfuehren kollidierte genau diese Stelle.
+ *
+ * Der Commit-Zeitpunkt ist dagegen in jedem Klon derselbe. Laesst er sich
+ * nicht ermitteln (Datei noch nicht eingecheckt, flacher Klon, kein git),
+ * bleibt es bei 0 — die Projekt-Kachel laesst die Datumszeile dann weg
+ * (js/modules/project.js, `datum.textContent`), statt eine erfundene Zahl
+ * zu zeigen.
+ */
+function commitZeit(pfad) {
+  try {
+    const sekunden = execFileSync('git', ['log', '-1', '--format=%ct', '--', pfad], {
+      cwd: dirname(pfad), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+    return sekunden ? Number(sekunden) * 1000 : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /*
  * Vorschau auf eine Nachbartafel. Baut denselben Zustand, den GameDesks
  * Projekt-Modul beim „Auffrischen" schreibt (js/modules/project.js,
@@ -114,12 +144,14 @@ function projekt(datei) {
       x: Math.round(w.x), y: Math.round(w.y),
       w: Math.round(w.w), h: Math.round(w.collapsed ? 34 : w.h), t: w.type
     })),
-    geaendert: statSync(pfad).mtimeMs,
+    // Aus der Git-Historie, nicht aus der Dateizeit — siehe commitZeit().
+    geaendert: commitZeit(pfad),
     groesse: statSync(pfad).size,
-    // Bewusst die Dateizeit statt Date.now(): Sonst erzeugt jeder Lauf einen
-    // Unterschied in der eingecheckten Tafel, und man sieht im Diff nicht
-    // mehr, ob sich etwas Inhaltliches geaendert hat.
-    geholt: statSync(pfad).mtimeMs
+    // Das Projekt-Modul traegt hier den Zeitpunkt des Auffrischens ein
+    // (Date.now(), js/modules/project.js). Der Erzeuger darf das nicht: Er
+    // laeuft auf jedem Rechner neu und checkte jedes Mal eine andere Zahl
+    // ein. Gezeigt wird das Feld ohnehin nirgends — es bleibt 0.
+    geholt: 0
   };
 }
 
