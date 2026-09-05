@@ -16505,6 +16505,16 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-nebenknopf:active { transform: scale(0.985); }
 .tr-nebenknopf:disabled { opacity: 0.45; cursor: default; }
 
+/* Der Countdown der Mitspielersuche. Tabellenziffern, damit die Zahl beim
+   Herunterzaehlen nicht in der Breite springt — bei proportionalen Ziffern
+   wandert die ganze Zeile im Sekundentakt hin und her. */
+.tr-countdown {
+  margin: 14px 0 2px;
+  color: var(--gold, var(--text));
+  font: 800 46px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
 .tr-punkte-lauf { display: flex; justify-content: center; gap: 8px; margin: 18px 0 4px; }
 .tr-punkte-lauf span {
   width: 9px;

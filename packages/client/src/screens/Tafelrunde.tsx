@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api, type TableRow } from '../api';
+import { api, type Suchstand } from '../api';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
@@ -216,14 +216,24 @@ const REGELSATZ = {
 };
 
 /**
- * Vier Sitze und nicht acht.
+ * Sitze am Bot-Tisch: vier.
  *
- * Das Konzept nennt acht, und das Modul kann sie auch. Aber ein Tisch fuellt
- * sich hier ueber die gewoehnliche Tischliste, und auf acht Menschen wartet
- * man in einer Beta bis zum Verfall. Vier gehen schneller auf und spielen
- * sich genauso — jeder hat ohnehin seinen eigenen Laden.
+ * Nur fuer "Gegen Bots spielen". Die Mitspielersuche baut ihren Tisch
+ * serverseitig und nimmt dort die volle Acht — dort wartet niemand auf
+ * Menschen, die freien Plaetze fuellt der Server nach 30 Sekunden mit Bots.
+ * Hier gegen die KI sind vier genug: Acht Bots rechnen laenger, ohne dass es
+ * sich anders spielt.
  */
 const SITZE = 4;
+
+/**
+ * Takt, in dem der Stand der Suche abgefragt wird.
+ *
+ * Eine Sekunde, weil daneben ein Countdown laeuft: Bei einem traegeren Takt
+ * springt die Zahl. Der Abruf ist zugleich das Lebenszeichen an den Server —
+ * hoert er auf, faellt man von selbst aus der Schlange (siehe suche/schlange.ts).
+ */
+const SUCH_TAKT_MS = 1000;
 
 /**
  * Farbe je Kostenstufe. Reine Zeichnung, kein Bedeutungstraeger der
@@ -309,9 +319,10 @@ export function Tafelrunde({
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
-  /** Tisch, den ich selbst aufgemacht habe — nur dann wird gewechselt. */
-  const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
-  const [sucht, setSucht] = useState(false);
+  /** Stand der Mitspielersuche. `null` heisst: es wird nicht gesucht. */
+  const [suchstand, setSuchstand] = useState<Suchstand | null>(null);
+  /** Ein Knopf ist gedrueckt, die Antwort steht noch aus. */
+  const [startet, setStartet] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
@@ -343,50 +354,109 @@ export function Tafelrunde({
   // -------------------------------------------------------------------------
 
   /**
-   * Einen Tisch finden: an einem offenen Platz nehmen, sonst selbst einen
-   * aufmachen. Wortgleich zu Filler und Mememory — die Plattform hat keine
-   * Warteschlange, gesucht wird ueber die gewoehnliche Tischliste.
+   * Mitspieler suchen — seit dem 05.09.2026 ueber die Suchschlange des
+   * Servers und nicht mehr ueber die Tischliste.
+   *
+   * Der alte Weg (offenen Tisch suchen, sonst selbst einen aufmachen, und ein
+   * Wettrennen zweier gleichzeitiger Tische per Kennungsvergleich aufloesen)
+   * ist damit weg: Er konnte zwei Menschen in zwei getrennten Tischen
+   * festsetzen, und vor allem hatte er kein Ende — wer als Einziger suchte,
+   * wartete bis zum Verfall des Tisches. Jetzt sammelt der Server 30 Sekunden
+   * lang, setzt danach alle Gefundenen an EINEN Tisch und fuellt den Rest mit
+   * Bots.
    */
-  const suche = useCallback(async (): Promise<void> => {
+  const starteSuche = useCallback(async (): Promise<void> => {
     setFehler(null);
-    setSucht(true);
+    setStartet(true);
     try {
-      const zeilen = await api.tables('tafelrunde');
-      const offen = zeilen
-        .filter((zeile) => zeile.seats === SITZE && zeile.occupied < zeile.seats)
-        .sort((a, b) => a.id.localeCompare(b.id));
-      const ziel = offen[0];
-      if (ziel) {
-        await api.joinTable(ziel.id);
-        setEigenerTisch(null);
-        setTischId(ziel.id);
-        return;
-      }
-      const { id } = await api.createTable({
-        gameId: 'tafelrunde',
-        config: REGELSATZ,
-        seats: SITZE,
-        rounds: 1,
-      });
-      setEigenerTisch(id);
-      setTischId(id);
+      const stand = await api.sucheStarten('tafelrunde');
+      if (stand.tischId) setTischId(stand.tischId);
+      else setSuchstand(stand);
     } catch {
-      setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+    } finally {
+      setStartet(false);
     }
+  }, []);
+
+  /**
+   * Nachfragen, solange gesucht wird.
+   *
+   * Abhaengig ist der Effekt vom SCHLUESSEL `suchstand !== null` und nicht vom
+   * Objekt: Er setzt bei jedem Takt einen neuen Stand, und mit dem Objekt in
+   * der Liste raeumte er dabei jedes Mal seinen eigenen Zeitgeber ab (siehe
+   * CLAUDE.md).
+   */
+  const suchtGerade = suchstand !== null;
+  useEffect(() => {
+    if (!suchtGerade) return;
+    let lebt = true;
+    const frage = (): void => {
+      void api
+        .sucheStand('tafelrunde')
+        .then((stand) => {
+          if (!lebt) return;
+          if (stand.tischId) {
+            // Ohne Rueckfrage hinueber: Wer 30 Sekunden gewartet hat, will
+            // spielen und keinen zweiten Knopf.
+            setSuchstand(null);
+            setTischId(stand.tischId);
+            return;
+          }
+          if (!stand.sucht) {
+            // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart
+            // des Servers. Lieber ehrlich melden als stumm weiterdrehen.
+            setSuchstand(null);
+            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            return;
+          }
+          setSuchstand(stand);
+        })
+        .catch(() => {
+          /* Ein einzelner Fehlversuch ist kein Abbruch: Der Server wirft uns
+             erst nach mehreren stillen Sekunden aus der Schlange. */
+        });
+    };
+    const takt = window.setInterval(frage, SUCH_TAKT_MS);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, [suchtGerade]);
+
+  /**
+   * Den Bildschirm verlassen heisst die Suche verlassen.
+   *
+   * Ohne das stuende man nach dem Weggehen noch bis zu acht Sekunden in der
+   * Schlange und wuerde womoeglich an einen Tisch gesetzt, den niemand mehr
+   * ansieht.
+   */
+  const suchtRef = useRef(false);
+  suchtRef.current = suchtGerade;
+  useEffect(
+    () => () => {
+      if (suchtRef.current) void api.sucheAbbrechen('tafelrunde').catch(() => {});
+    },
+    [],
+  );
+
+  const brichSucheAb = useCallback((): void => {
+    setSuchstand(null);
+    void api.sucheAbbrechen('tafelrunde').catch(() => {});
   }, []);
 
   /**
    * Einen Tisch gegen den Computer aufmachen.
    *
-   * Steht hier ueber der Match-Suche und nicht darunter — anders als bei
-   * Filler. Der Grund ist die Tischgroesse: Filler braucht einen zweiten
-   * Menschen, Tafelrunde drei. Wer als Erster hier ankommt, wartet sonst auf
-   * eine Runde, die es an diesem Abend nicht gibt.
+   * Steht seit dem 05.09.2026 UNTER der Suche statt darueber. Der Grund fuer
+   * die alte Reihenfolge war, dass die Suche kein Ende hatte und man als
+   * Erster auf eine Runde wartete, die es an diesem Abend nicht gab. Das
+   * 30-Sekunden-Fenster nimmt ihr diesen Nachteil: Die Suche endet immer, im
+   * schlechtesten Fall mit demselben Bot-Tisch.
    */
   const starteBots = useCallback(async (): Promise<void> => {
     setFehler(null);
-    setSucht(true);
+    setStartet(true);
     try {
       const { id } = await api.createTable({
         gameId: 'tafelrunde',
@@ -396,63 +466,22 @@ export function Tafelrunde({
         visibility: 'on_request',
         fillWithBots: true,
       });
-      setEigenerTisch(null);
       setTischId(id);
     } catch {
       setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
     } finally {
-      setSucht(false);
+      setStartet(false);
     }
   }, []);
 
   /**
-   * Das Wettrennen aufloesen — dieselbe Regel wie bei Filler: Machen zwei
-   * gleichzeitig einen Tisch auf, wechselt nur der mit der groesseren
-   * Kennung. Die Kennungen sind auf beiden Geraeten dieselben, also braucht
-   * die Regel keine Absprache.
+   * Zurueck ins Menue, bevor die Partie laeuft. Der Platz am Tisch wird dabei
+   * geraeumt — der Server schliesst einen Tisch, an dem danach kein Mensch
+   * mehr sitzt.
    */
-  const wechseltGerade = useRef(false);
-  useEffect(() => {
-    if (!tischId || !eigenerTisch || tischId !== eigenerTisch) return;
-    if (tisch.table && tisch.table.status !== 'waiting') return;
-    let lebt = true;
-    const pruefe = (): void => {
-      void api
-        .tables('tafelrunde')
-        .then(async (zeilen: TableRow[]) => {
-          if (!lebt || wechseltGerade.current) return;
-          const kleiner = zeilen
-            .filter((z) => z.seats === SITZE && z.occupied < z.seats && z.id < tischId)
-            .sort((a, b) => a.id.localeCompare(b.id))[0];
-          if (!kleiner) return;
-          wechseltGerade.current = true;
-          try {
-            // Kein leaveTable davor: joinTable raeumt serverseitig alle
-            // anderen Warteplaetze desselben Kontos ab.
-            await api.joinTable(kleiner.id);
-            if (!lebt) return;
-            setEigenerTisch(null);
-            setTischId(kleiner.id);
-          } catch {
-            /* Der Tisch war schneller voll. Beim naechsten Takt weiter. */
-          } finally {
-            wechseltGerade.current = false;
-          }
-        })
-        .catch(() => {});
-    };
-    const takt = window.setInterval(pruefe, 2500);
-    return () => {
-      lebt = false;
-      window.clearInterval(takt);
-    };
-  }, [tischId, eigenerTisch, tisch.table?.status]);
-
   const brichAb = useCallback((): void => {
     const id = tischId;
-    setSucht(false);
     setTischId(null);
-    setEigenerTisch(null);
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
@@ -486,6 +515,41 @@ export function Tafelrunde({
   }, [sicht !== null]);
 
   // -------------------------------------------------------------------------
+  // Mitspieler suchen
+  // -------------------------------------------------------------------------
+
+  if (!tischId && suchstand) {
+    const sekunden = Math.ceil(suchstand.restMs / 1000);
+    const gefunden = suchstand.suchende;
+    return (
+      <main className="tr-seite tr-menue">
+        <button className="tr-zurueck" type="button" onClick={brichSucheAb}>
+          ← Abbrechen
+        </button>
+        <div className="tr-menue-mitte">
+          <h1 className="tr-titel">Mitspieler suchen</h1>
+          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
+              beantwortet damit die einzige Frage, die man hier hat. */}
+          <p className="tr-countdown" aria-live="polite">
+            {sekunden}
+          </p>
+          <p className="tr-untertitel">
+            {gefunden === 1
+              ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
+              : `${gefunden} Spieler gefunden`}
+          </p>
+          <div className="tr-punkte-lauf" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p className="tr-untertitel tr-klein">{aktiv ?? '…'} Spieler gerade in Tafelrunde</p>
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Menue
   // -------------------------------------------------------------------------
 
@@ -511,18 +575,18 @@ export function Tafelrunde({
           <button
             className="tr-suchen"
             type="button"
-            onClick={() => void starteBots()}
-            disabled={sucht}
+            onClick={() => void starteSuche()}
+            disabled={startet}
           >
-            Gegen Bots spielen
+            Mitspieler suchen
           </button>
           <button
             className="tr-nebenknopf"
             type="button"
-            onClick={() => void suche()}
-            disabled={sucht}
+            onClick={() => void starteBots()}
+            disabled={startet}
           >
-            Online Match suchen…
+            Gegen Bots spielen
           </button>
           <button
             className="tr-nebenknopf"
@@ -540,7 +604,7 @@ export function Tafelrunde({
   }
 
   // -------------------------------------------------------------------------
-  // Suche laeuft
+  // Der Tisch steht, die Partie laeuft an
   // -------------------------------------------------------------------------
 
   if (!sicht) {
@@ -551,7 +615,7 @@ export function Tafelrunde({
           ← Abbrechen
         </button>
         <div className="tr-menue-mitte">
-          <h1 className="tr-titel">Suche läuft</h1>
+          <h1 className="tr-titel">Tisch wird aufgebaut</h1>
           <p className="tr-untertitel">
             {tisch.status === 'open'
               ? `${besetzt} von ${tisch.table?.seats.length ?? SITZE} Plätzen besetzt`

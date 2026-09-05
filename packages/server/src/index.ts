@@ -17,6 +17,7 @@ import { createMailer } from './mail/index.js';
 import { APP_ORIGIN, buildApp } from './http/app.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
+import { Vermittlung } from './suche/vermittlung.js';
 import { applyStaffEmails } from './staff.js';
 import { aufraeumen } from './diagnose.js';
 import { expireStaleTables } from './tables/service.js';
@@ -90,10 +91,16 @@ async function main(): Promise<void> {
     );
   }
   const runtime = new PartyRuntime(db);
+  const vermittlung = new Vermittlung(db, runtime, {
+    beiFehler: (gameId, fehler) =>
+      // eslint-disable-next-line no-console
+      console.error(`Mitspielersuche ${gameId}: kein Tisch zustande gekommen`, fehler),
+  });
 
   const app = await buildApp({
     db,
     runtime,
+    vermittlung,
     auth: {
       db,
       mailer,

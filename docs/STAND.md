@@ -41,6 +41,26 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > `minispiele/tafelrunde/zuege.ts`; dazu **44 Client-Tests** — die ersten
 > Bildschirm-Tests dieses Pakets überhaupt.
 >
+> **Mitspieler suchen** ist seit dem 05.09.2026 eine Sache des Servers und
+> nicht mehr der Tischliste (`packages/server/src/suche/`). Wer sucht, kommt
+> in eine Schlange je Spiel; **30 Sekunden ab dem ERSTEN Suchenden** (ein
+> später Hinzukommender verlängert nichts, sonst wartet der Erste beliebig
+> lange), dann entsteht **ein** Tisch mit allen Gefundenen und Bots auf den
+> restlichen Plätzen — bei Tafelrunde acht Sitze. Sind vorher schon acht
+> Menschen beisammen, geht es sofort los.
+>
+> Die Schlange liegt **im Arbeitsspeicher**, absichtlich: Eine Suche lebt 30
+> Sekunden und soll einen Deploy nicht überleben. Zugestellt wird nichts —
+> der Client fragt im Sekundentakt nach (`GET /api/suche/:gameId`), und genau
+> dieses Nachfragen ist sein Lebenszeichen: Wer aufhört (Tab zu, Netz weg),
+> fällt nach acht Sekunden von selbst aus der Schlange. Der WebSocket taugte
+> dafür nicht, er kennt nur Räume je Tisch, und ein Suchender hat noch
+> keinen. Zeit kommt als Funktion herein (`jetzt`), deshalb prüfen die sieben
+> Proben in `packages/server/test/suche.test.ts` das Fenster, ohne es
+> abzusitzen. **Achtung beim Schreiben weiterer Proben:** Wer die Uhr um 30
+> Sekunden vorstellt, ohne zwischendurch abzurufen, prüft nicht das Fenster,
+> sondern die Stille-Regel — dafür gibt es dort den Helfer `warte()`.
+>
 > **Die Kampfsimulation** kam am 04.09.2026 nach (`arena.ts`, `kampf.ts`,
 > `zufall.ts`; übertragen vom Zweig
 > `aufgabe/tafelrunde-die-kampfsimulation-6422b76f`, der noch auf der alten

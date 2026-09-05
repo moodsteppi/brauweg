@@ -9,6 +9,7 @@ import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { Gateway } from '../src/realtime/gateway.js';
 import { PartyRuntime, type RuntimeOptions } from '../src/runtime/party.js';
+import { Vermittlung } from '../src/suche/vermittlung.js';
 import { createSession, sessionFromToken } from '../src/auth/service.js';
 import { createTable, joinTable } from '../src/tables/service.js';
 import { createTestContext, createVerifiedAccount, seedInvite, type TestContext } from './helpers.js';
@@ -19,6 +20,14 @@ export interface Harness {
   readonly ctx: TestContext;
   readonly runtime: PartyRuntime;
   readonly wsUrl: string;
+  readonly baseUrl: string;
+  readonly vermittlung: Vermittlung;
+  /**
+   * Stellt NUR die Uhr der Mitspielersuche vor. Der Rest des Servers behaelt
+   * die echte Zeit — sonst muesste jeder Test, der die Suche anfasst, auch
+   * Sitzungen und Tischverfall im Griff behalten.
+   */
+  vorstellen(ms: number): void;
   cookieFor(accountId: string): Promise<string>;
   close(): Promise<void>;
 }
@@ -46,9 +55,15 @@ export async function startHarness(
     ...options,
   });
 
+  // Vorgestellte Uhr fuer die Suche: Ein Fenster von 30 Sekunden laesst sich
+  // sonst nur durch 30 Sekunden Warten pruefen.
+  let suchZeit = Date.now();
+  const vermittlung = new Vermittlung(ctx.db, runtime, { jetzt: () => suchZeit });
+
   const app = await buildApp({
     db: ctx.db,
     runtime,
+    vermittlung,
     auth: ctx.auth,
     cookieSecure: false,
     sessionTtlDays: 30,
@@ -70,7 +85,12 @@ export async function startHarness(
   return {
     ctx,
     runtime,
+    vermittlung,
     wsUrl: `ws://127.0.0.1:${port}/ws`,
+    baseUrl: `http://127.0.0.1:${port}`,
+    vorstellen(ms: number) {
+      suchZeit += ms;
+    },
     async cookieFor(accountId: string) {
       const token = await createSession(ctx.auth, accountId);
       return `${SESSION_COOKIE}=${encodeURIComponent(token)}`;
