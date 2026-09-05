@@ -68,9 +68,12 @@ export const SCHRITT_MS = 500;
  * WARUM AUSGERECHNET 45 SEKUNDEN: Eine Abbruchgrenze taugt nur etwas, wenn sie
  * die Ausnahme bleibt — sonst entscheidet nicht mehr der Kampf, sondern
  * `entscheideNachZeit`. Auf Brettern aus ECHTEN Partien dauert ein Kampf heute
- * 17,6 s im Median, und 4,6 % laufen in die Grenze (500 Partien zu viert,
- * werkzeug/spielzeit.mjs, 05.09.2026). Das ist die Groessenordnung, fuer die
- * die 45 s gedacht sind: ein Rettungsseil, kein Regelfall.
+ * 20,2 s im Median, und 9,9 % laufen in die Grenze (500 Partien zu viert,
+ * werkzeug/spielzeit.mjs, 05.09.2026 abends). Das ist noch die
+ * Groessenordnung, fuer die die 45 s gedacht sind — ein Rettungsseil —, aber
+ * es ist nicht mehr weit bis zum Regelfall. Die Zahl ist an zwei Tagen von
+ * 1,8 auf 4,6 und dann auf 9,9 Prozent gestiegen; unten steht, woran jeder
+ * Schritt lag.
  *
  * DIESE 17 SEKUNDEN HAENGEN AM ZEITRAFFER, und das ist der Satz, um den es
  * hier geht. Die Zahl stand schon einmal an dieser Stelle — damals aus einer
@@ -94,6 +97,16 @@ export const SCHRITT_MS = 500;
  * weiterhin ein Rettungsseil, aber es ist die Zahl, die ein Eingriff am
  * Katalog oder am Laden zuerst bewegt. Die volle Auswertung steht in
  * docs/TAFELRUNDE-SPIELZEIT.md, Abschnitt 6.
+ *
+ * DIE DRITTE IST DER BOT, und sie zieht am staerksten: Seit er auf Marken
+ * spielt (bot.ts, `heerStaerke`), stellt er Synergien auf, die Leben und
+ * Ruestung dazulegen — aus 4,6 % sind 9,9 % geworden. Es ist DIESELBE Ursache
+ * wie oben, nur eine Stufe weiter: ein besser besetztes Brett. Die kuerzere
+ * Partie (12 statt 14 Startleben) hat daran nichts geaendert, sie nimmt die
+ * Rundenzahl und nicht die Kampfdauer (9,5 % gegen 9,7 %). WENN DIESE ZAHL
+ * WEITER STEIGT, ist es Zeit fuer die Frage, die hier bisher immer mit "nein"
+ * beantwortet wurde: nicht die Grenze senken, sondern den Katalog
+ * entschaerfen — Ruestung ist der Wert, der jeden Kampf doppelt verlaengert.
  *
  * DIE ZAHL 45_000 SELBST BLEIBT UNVERAENDERT, weil sie das falsche Ende war:
  * Wer sie senkt, laesst mehr Kaempfe von der Uhr entscheiden statt weniger.
@@ -131,18 +144,23 @@ export const SCHADEN_GRUNDWERT = 1;
  * dann 15.
  *
  * DREI, WEIL DIE RUNDE NICHT DIE SCHRAUBE IST, an der gekuerzt wurde. Nach
- * unten begrenzt die Rundenzahl das Spiel selbst: Vor Runde 10 steht kein
- * ausgebautes Brett, wer da ausscheidet, hat nicht verloren, sondern nicht
- * gespielt. Genau deshalb ging die Kuerzung der Partie auf acht Minuten
- * ueberwiegend ueber den Zeitraffer und nur zum kleineren Teil ueber die
- * Startleben (20 auf 14): Der Teiler blieb, wo er ist. Heute liegt der Median
- * bei 10 Runden — das ist die untere Kante, nicht die Mitte, und wer hier noch
- * einmal kuerzt, streicht das ausgebaute Brett. (Elf waren es, solange der
- * gekaufte Ladenplatz leer blieb; seit ein Kauf den ganzen Laden neu zieht,
- * steht ein Brett eine Runde frueher.)
+ * unten begrenzt die Rundenzahl das Spiel selbst: Wer ausscheidet, bevor sein
+ * Brett steht, hat nicht verloren, sondern nicht gespielt. Genau deshalb ging
+ * die Kuerzung der Partie auf acht Minuten ueberwiegend ueber den Zeitraffer
+ * und nur zum kleineren Teil ueber die Startleben (20 auf 14, spaeter auf
+ * 12): Der Teiler blieb, wo er ist.
+ *
+ * HEUTE LIEGT DER MEDIAN BEI 9 RUNDEN (12 Startleben seit dem 05.09.2026
+ * abends; 10 waren es bei 14). Die Grenze, ab der die Runde zu kurz wird,
+ * steht damit nicht mehr im Gefuehl, sondern gemessen in regeln.ts: Wer
+ * ausscheidet, hat im Schnitt 3,35 Einheiten auf dem Brett, und kein
+ * einziges Ausscheiden ueber 500 Partien geschah mit hoechstens zweien. Was
+ * die Runde kostet, ist das obere Ende — vier Einheiten stehen in 15,2 %
+ * statt 21,0 % der Antritte, und die hoechste Synergieschwelle faellt von
+ * 0,9 % auf 0,3 %.
  *
  * Wer den Teiler doch anfasst, misst danach mit werkzeug/spielzeit.mjs: Von 3
- * auf 2 sind es heute 9 Runden und 6:50 statt 10 und 7:34.
+ * auf 2 sind es heute 8 Runden und 6:42 statt 9 und 7:27.
  *
  * `ceil` und nicht `round`: Eine Niederlage gegen einen einzelnen Ueberlebenden
  * der Stufe 1 soll die vollen zwei Punkte kosten (Grundwert plus eins) und
@@ -209,6 +227,11 @@ export interface Kampfregler {
  * Beide Aenderungen sind am 05.09.2026 auf getrennten Zweigen entstanden und
  * erst beim Zusammenfuehren gemeinsam wirksam geworden — die Messung dazu ist
  * Abschnitt 6 in docs/TAFELRUNDE-SPIELZEIT.md.
+ *
+ * HEUTE — 12 Startleben und ein Bot, der auf Marken spielt — sind es 20,2 s
+ * im Median und 7:23 bei 9 Runden. Der Kampf ist dabei laenger geworden und
+ * nicht kuerzer: Staerkere Bretter halten laenger durch. Die Partie ist
+ * trotzdem kuerzer, weil sie weniger Runden hat.
  *
  * ACHTUNG: Er wirkt auch am Bildschirm. Die Oberflaeche spielt das
  * Ablaufprotokoll in Echtzeit ab, die Figuren laufen und schlagen also
