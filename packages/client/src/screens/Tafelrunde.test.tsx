@@ -662,6 +662,19 @@ describe('Bereit und Kampfpause', () => {
     expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
     // Die Bretter der Ruestkammer sind waehrenddessen weg — die Arena steht an ihrer Stelle.
     expect(document.querySelector('.tr-bretter')).toBeNull();
+
+    // Und sie steht auf der Buehne: Zum Auftakt nennt die Ansage die Runde
+    // (Buehne.tsx). Das Verhalten der Ansage selbst prueft Buehne.test.tsx —
+    // hier zaehlt allein, dass die Rundenzahl der SICHT ankommt und nicht
+    // irgendeine.
+    expect(screen.getByText('Runde 3')).toBeInTheDocument();
+  });
+
+  it('baut in der Vorbereitung keine Buehne auf', () => {
+    // Die Ruestkammer ist ein Werktisch und kein Schauplatz. Stuende die
+    // Ansage auch hier, kaeme sie bei jedem Rundruf des Servers wieder.
+    zeige();
+    expect(screen.queryByText(/^Runde \d+$/)).not.toBeInTheDocument();
   });
 });
 

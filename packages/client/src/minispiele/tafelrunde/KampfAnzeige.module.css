@@ -58,12 +58,22 @@
  * Desktop (bis 560 px) sichtbar — so, wie es der Kopf von figuren.ts
  * beschreibt.
  */
+/*
+ * Gerahmt und beleuchtet, seit die Buehne darunter liegt (Buehne.module.css):
+ * ein goldener Grat aussen, ein Schlagschatten darunter. Ohne den Schatten
+ * schwaemme das Brett im Raum, statt darin zu stehen — der Schatten ist es,
+ * der aus „davor" ein „darauf" macht.
+ */
 .brett {
   position: relative;
   width: 100%;
   border-radius: 12px;
   background-repeat: repeat;
   background-size: 300px auto;
+  box-shadow:
+    inset 0 0 0 2px rgba(226, 182, 79, 0.34),
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 20px 38px -16px rgba(0, 0, 0, 0.9);
 }
 /*
  * Der Schleier ueber dem Holz. Ohne ihn verschwinden die Waben: Sie sind mit
@@ -81,6 +91,27 @@
   inset: 0;
   border-radius: inherit;
   background: rgba(10, 14, 18, 0.58);
+}
+
+/*
+ * Das Licht auf dem Brett: ein Schein von oben und eine dunkle Ecke rundum.
+ *
+ * Als `::after` und damit ueber den Figuren — das ist Absicht und nicht
+ * Versehen: Ein Lichtkegel UNTER den Figuren waere kein Licht, sondern eine
+ * Tapete. Deshalb sind beide Verlaeufe schwach gehalten; das Randdunkel
+ * erreicht erst ganz aussen seine volle Staerke, wo keine Figur mehr steht,
+ * die man ablesen muesste. `pointer-events: none` ist Pflicht, sonst laege
+ * ein Fangschirm ueber dem ganzen Brett.
+ */
+.brett::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(78% 52% at 50% -6%, rgba(255, 226, 165, 0.16), transparent 70%),
+    radial-gradient(128% 98% at 50% 50%, transparent 66%, rgba(5, 8, 11, 0.34));
 }
 
 /* Dieselbe Wabe wie auf dem Brett (clip-path statt Bild, aus demselben
@@ -120,15 +151,41 @@
   pointer-events: none;
   transition:
     left 380ms ease-in-out,
-    top 380ms ease-in-out,
-    opacity 420ms ease,
-    transform 420ms ease;
+    top 380ms ease-in-out;
+  /*
+   * Das Schweben im Stand: Wer wartet, atmet. Ohne das steht zwischen zwei
+   * Schritten ein Standbild, und ein Standbild sieht nach haengender
+   * Verbindung aus statt nach Aufstellung. Der Versatz kommt je Figur aus der
+   * Komponente (`--schwebe`), sonst huepfte das ganze Heer im Gleichschritt.
+   *
+   * Auf DIESER Ebene und nicht auf dem Koerper, weil der Koerper den
+   * Ausschlag beim Angriff traegt: Zwei Animationen auf demselben `transform`
+   * schliessen einander aus, die zweite gewinnt und die erste faellt stumm
+   * aus. Eine Ebene, eine Bewegung.
+   */
+  animation: ka-schweben 3.6s ease-in-out infinite;
+  animation-delay: var(--schwebe, 0s);
 }
-/* Gefallen: ausblenden statt entfernen. Bleibt die Figur im Baum, laeuft der
-   Uebergang; ein entferntes Element kann nicht mehr verblassen. */
+@keyframes ka-schweben {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7%);
+  }
+}
+/*
+ * Gefallen: ausblenden statt entfernen. Bleibt die Figur im Baum, laeuft der
+ * Uebergang; ein entferntes Element kann nicht mehr verblassen.
+ *
+ * Ausgeblendet wird der KOERPER und nicht die ganze Figur — an ihr haengen
+ * Staub und Funken, und die sollen ja gerade dann noch zu sehen sein, wenn
+ * die Figur schon weg ist. Das Schweben endet mit dem Tod: Eine Gefallene
+ * atmet nicht mehr.
+ */
 .figur[data-tot] {
-  opacity: 0;
-  transform: scale(0.6);
+  animation: none;
 }
 
 .koerper {
@@ -143,6 +200,22 @@
   border-radius: 9px;
   background: linear-gradient(180deg, #232f37, #1a242a);
   box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line));
+  transition:
+    opacity 420ms ease,
+    transform 420ms ease;
+}
+/* Der Fall: einsacken und verblassen, nicht verschwinden. Die leichte Drehung
+   nimmt dem Vorgang das Maschinelle — senkrecht kleiner werden sieht aus wie
+   ein Ladefehler. */
+.figur[data-tot] .koerper {
+  opacity: 0;
+  transform: scale(0.55) rotate(-9deg);
+}
+/* Der Lebensbalken einer Gefallenen ist keine Auskunft mehr, sondern ein
+   leerer Streifen ueber dem Staub. */
+.figur[data-tot] .leben {
+  opacity: 0;
+  transition: opacity 260ms ease;
 }
 /* Die obere Seite ist waermer getoent — man soll die Seiten auch dann
    unterscheiden, wenn die Figuren sich in der Mitte vermischen. */
@@ -180,12 +253,17 @@
  * geschlagen wird, ohne dass die Figur ihr Feld verlaesst.
  */
 .koerper[data-schlaegt] {
-  animation: ka-schlag 360ms cubic-bezier(0.3, 0.7, 0.3, 1) 1;
+  animation: ka-schlag 420ms cubic-bezier(0.3, 0.7, 0.3, 1) 1;
 }
 @keyframes ka-schlag {
   0% { transform: none; }
-  40% {
-    transform: translate(calc(var(--dx, 0%) * 0.42), calc(var(--dy, 0%) * 0.42)) scale(1.06);
+  /* Erst zurueck, dann vor: Das Ausholen ist es, was den Schlag zu einem
+     Schlag macht — ohne es rutscht die Figur nur kurz zur Seite. */
+  18% {
+    transform: translate(calc(var(--dx, 0%) * -0.16), calc(var(--dy, 0%) * -0.16)) scale(0.94);
+  }
+  46% {
+    transform: translate(calc(var(--dx, 0%) * 0.55), calc(var(--dy, 0%) * 0.55)) scale(1.12);
   }
   100% { transform: none; }
 }
@@ -217,14 +295,89 @@
    sonst liefe die Animation nur beim ersten. */
 .blitz {
   position: absolute;
-  inset: 8% 6%;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.6);
-  animation: ka-blitz 220ms ease-out 1 forwards;
+  inset: 6% 4%;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 16px 5px rgba(255, 238, 205, 0.5);
+  animation: ka-blitz 260ms ease-out 1 forwards;
 }
 @keyframes ka-blitz {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
+  0% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 0; transform: scale(0.97); }
+}
+
+/*
+ * Der Einschlag: ein Ring, der aus dem Getroffenen herausfaehrt. Er sagt, WO
+ * getroffen wurde — der Blitz allein leuchtet nur die ganze Figur an, und bei
+ * acht gleichzeitigen Kaempfern sah man am Ende bloss ein Flackern.
+ *
+ * Eigenes Element und kein Zustand am Koerper: Der Koerper haengt am
+ * Schluessel `f.schlaege` (KampfAnzeige.tsx) und wuerde beim Treffer den
+ * eigenen Ausschlag von vorn anfangen.
+ */
+.einschlag {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44%;
+  height: 44%;
+  border: 2px solid rgba(255, 232, 180, 0.9);
+  border-radius: 50%;
+  animation: ka-einschlag 420ms cubic-bezier(0.2, 0.8, 0.3, 1) 1 forwards;
+}
+@keyframes ka-einschlag {
+  0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.35); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.1); }
+}
+
+/*
+ * Staub und Funken beim Sterben.
+ *
+ * Sechs Koerner, drei golden (Funken) und drei grau (Staub), die auseinander
+ * fahren und verloeschen. Ihre Wege stehen als feste Werte je Korn im
+ * Stylesheet und kommen nicht aus einem Zufallsgenerator: Gewuerfelt wuerde
+ * bei jedem Zeichnen neu, und die Koerner sprangen im Takt der Serverfunke.
+ *
+ * Die Wege sind in PIXEL angegeben und nicht in Prozent. Prozent bezoege sich
+ * bei `translate()` auf die eigene Groesse — und die ist 4 px, also waere der
+ * ganze Staubwolke sechs Pixel breit.
+ */
+.staub {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.staub i {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  animation: ka-staub 720ms ease-out 1 forwards;
+}
+.staub i:nth-child(odd) {
+  background: var(--gold);
+  box-shadow: 0 0 7px 1px rgba(226, 182, 79, 0.5);
+}
+.staub i:nth-child(even) {
+  background: rgba(198, 206, 214, 0.7);
+}
+.staub i:nth-child(1) { --sx: -17px; --sy: -14px; animation-duration: 640ms; }
+.staub i:nth-child(2) { --sx: 15px; --sy: -12px; animation-duration: 720ms; }
+.staub i:nth-child(3) { --sx: -10px; --sy: 15px; animation-duration: 800ms; }
+.staub i:nth-child(4) { --sx: 12px; --sy: 14px; animation-duration: 760ms; }
+.staub i:nth-child(5) { --sx: -21px; --sy: 3px; animation-duration: 880ms; }
+.staub i:nth-child(6) { --sx: 20px; --sy: 2px; animation-duration: 840ms; }
+@keyframes ka-staub {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--sx, 0px)), calc(-50% + var(--sy, 0px))) scale(0.3);
+  }
 }
 
 /* Die Zahl zum Treffer steigt auf und verblasst. Klein und am Rand: Der
@@ -256,7 +409,24 @@
   background: rgba(13, 18, 22, 0.9);
   box-shadow: 0 0 0 2px var(--line), 0 12px 30px rgba(0, 0, 0, 0.45);
   text-align: center;
-  animation: ka-auftritt 320ms ease-out 1;
+  /* Der dritte Uebergang der Phase (Vorbereitung -> Kampf -> Ergebnis): Der
+     Kampf endet nicht damit, dass nichts mehr passiert, sondern damit, dass
+     etwas kommt. Kurz ueberschossen und wieder eingerastet — dieselbe Kurve
+     wie beim Auffahren der Buehne (Buehne.module.css). */
+  animation: ka-auftritt 420ms cubic-bezier(0.22, 1, 0.32, 1) 1;
+}
+/* Sieg und Niederlage haben schon ihre Schriftfarbe; der Rahmen nimmt sie
+   auf, damit der Ausgang auch aus dem Augenwinkel abzulesen ist. */
+.ergebnis[data-ausgang='sieg'] {
+  box-shadow:
+    0 0 0 2px rgba(226, 182, 79, 0.75),
+    0 0 34px -6px rgba(226, 182, 79, 0.4),
+    0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.ergebnis[data-ausgang='niederlage'] {
+  box-shadow:
+    0 0 0 2px rgba(194, 86, 76, 0.7),
+    0 12px 30px rgba(0, 0, 0, 0.45);
 }
 .ergebnis strong {
   display: block;
@@ -272,7 +442,8 @@
   font: 600 12px/1.3 system-ui;
 }
 @keyframes ka-auftritt {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.82); }
+  60% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
@@ -299,14 +470,20 @@
 }
 
 /* Weniger Bewegung: Sprung von Zustand zu Zustand. Lebensbalken, Platz und
-   Ausblenden wechseln sofort; Blitz und Schadenszahl entfallen ganz — sie
-   sind nichts als Bewegung, die Auskunft steckt im Balken. */
+   Ausblenden wechseln sofort; Blitz, Einschlag, Staub und Schadenszahl
+   entfallen ganz — sie sind nichts als Bewegung, die Auskunft steckt im
+   Balken und in der gefallenen Figur. Das Schweben im Stand faellt weg,
+   ohne dass etwas fehlt: Es sagt nichts, es lebt nur. */
 @media (prefers-reduced-motion: reduce) {
   .arena,
   .figur,
+  .koerper,
   .leben b { transition: none; }
+  .figur,
   .koerper[data-schlaegt],
   .ergebnis { animation: none; }
   .blitz,
+  .einschlag,
+  .staub,
   .schaden { display: none; }
 }

@@ -384,4 +384,36 @@ describe('KampfAnzeige', () => {
     const { container } = zeige([], 0);
     expect(container).toBeEmptyDOMElement();
   });
+
+  /*
+   * Treffer und Tod sollen zu SEHEN sein. Wie sie aussehen, steht im
+   * Stylesheet und wird hier nicht geprueft — wohl aber, dass die Anzeige die
+   * Elemente ueberhaupt stellt und im richtigen Augenblick. Ohne das faellt
+   * ein versehentlich entfernter Zweig erst am Tisch auf, und dort fehlt dann
+   * wortlos die halbe Rueckmeldung des Kampfes.
+   */
+  it('stellt beim Treffer Blitz und Einschlag, und zwar erst beim Treffer', () => {
+    zeige([paarung()], 0);
+    const getroffen = (): Element => screen.getByLabelText(/Dorfwache, Stufe 2/);
+
+    // Vor dem ersten Treffer (500 ms) ist an der Figur nichts als ihr Koerper
+    // und der Lebensbalken.
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(0);
+
+    lauf(600);
+    // Zwei unmittelbare Kinder vom Typ <i>: das Aufleuchten und der
+    // Einschlagring. Der Staub kommt erst mit dem Tod und liegt in einem
+    // <span>.
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(2);
+  });
+
+  it('wirbelt beim Tod Staub auf, und die Gefallene bleibt im Baum', () => {
+    zeige([paarung()], 0);
+    lauf(1100);
+    const gefallen = screen.getByLabelText('Dorfwache, Stufe 2, gefallen');
+    expect(gefallen).toHaveAttribute('data-tot');
+    // Sechs Koerner in ihrem eigenen Behaelter. Sie haengen an der FIGUR und
+    // nicht am Koerper: Der Koerper verblasst, der Staub soll bleiben.
+    expect(gefallen.querySelectorAll(':scope > span > i')).toHaveLength(6);
+  });
 });

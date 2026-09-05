@@ -16782,6 +16782,29 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .tr-einheit .tr-figur { width: auto; height: 52%; max-width: 92%; }
 
+/*
+ * Das Schweben im Stand. Dieselbe Art Bewegung wie beim Pinguin auf der
+ * Weltkarte (`hub-huepf`) und bei den Figuren in der Arena
+ * (KampfAnzeige.module.css `ka-schweben`): langsam, klein, endlos.
+ *
+ * Nur auf dem BRETT, nicht auf der Bank und nicht im Laden. Auf dem Brett
+ * stehen die Recken, die gleich antreten — dort sieht Stillstand tot aus. Auf
+ * der Bank liegt Ware, und ein wogendes Lager waere Unruhe ohne Aussage.
+ *
+ * Gegeneinander versetzt ueber die Stellung der Wabe, sonst wippt das ganze
+ * Feld im Gleichschritt. Fuenf Gruppen genuegen: Bei 19 Plaetzen erkennt
+ * niemand ein Muster.
+ */
+.tr-brett .tr-einheit .tr-figur { animation: tr-schwebt 3.8s ease-in-out infinite; }
+.tr-brett .tr-wabe:nth-child(5n + 2) .tr-figur { animation-delay: -0.7s; }
+.tr-brett .tr-wabe:nth-child(5n + 3) .tr-figur { animation-delay: -1.5s; }
+.tr-brett .tr-wabe:nth-child(5n + 4) .tr-figur { animation-delay: -2.2s; }
+.tr-brett .tr-wabe:nth-child(5n + 5) .tr-figur { animation-delay: -3s; }
+@keyframes tr-schwebt {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
 .tr-einheit-name {
   max-width: 92%;
   overflow: hidden;
@@ -17178,6 +17201,7 @@ span.hub-angebot-art.poker-jeton-stapel {
   .tr-lauf i,
   .tr-karte[data-verschmilzt],
   .tr-einheit[data-frisch],
+  .tr-brett .tr-einheit .tr-figur,
   .tr-verschmolzen-band { animation: none; }
 }
 
