@@ -19,7 +19,7 @@ Minuten live.
 170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
 56 Eiland-Tests, 216 Tafelrunde-Tests, **402 Servertests** — zusammen 1300,
-dazu die Client-Tests (8 Dateien, 135 Tests), alle grün. `tsc --noEmit` sauber.
+dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
