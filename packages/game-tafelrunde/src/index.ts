@@ -139,6 +139,7 @@ export {
 export {
   type EigeneSicht,
   type FremdeSicht,
+  type Paarungsergebnis,
   type TafelrundeSicht,
   SICHT_MARKE,
   eigenesLebt,

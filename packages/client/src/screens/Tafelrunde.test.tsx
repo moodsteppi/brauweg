@@ -170,6 +170,31 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
   return { ...grund, eigenes: { ...grund.eigenes, ...(eigenesTeil as object) } };
 }
 
+/**
+ * Der kuerzeste Kampf, den es gibt: Start, Ende. Mehr braucht der Bildschirm
+ * nicht — das Abspielen selbst prueft KampfAnzeige.test.tsx.
+ */
+function kampfProbe(): Record<string, unknown> {
+  return {
+    a: 0,
+    b: 1,
+    geist: false,
+    bericht: {
+      saat: 'probe',
+      erstZieher: 0,
+      start: [
+        { id: 0, seite: 0, einheitId: 'dorfwache', stufe: 1, platz: 12, leben: 650, hoechstesLeben: 650 },
+      ],
+      ereignisse: [{ art: 'ende', zeitMs: 100, sieger: 0, grund: 'ausgeloescht' }],
+      sieger: 0,
+      grund: 'ausgeloescht',
+      dauerMs: 100,
+      ueberlebende: [],
+      schaden: 3,
+    },
+  };
+}
+
 function stelle(
   s: Record<string, unknown> = sicht(),
   legalActions: unknown[] = [
@@ -749,26 +774,7 @@ describe('Bereit und Kampfpause', () => {
       sicht({
         phase: 'kampf',
         eigenes: { bereit: true, darfHandeln: false },
-        kaempfe: [
-          {
-            a: 0,
-            b: 1,
-            geist: false,
-            bericht: {
-              saat: 'probe',
-              erstZieher: 0,
-              start: [
-                { id: 0, seite: 0, einheitId: 'dorfwache', stufe: 1, platz: 12, leben: 650, hoechstesLeben: 650 },
-              ],
-              ereignisse: [{ art: 'ende', zeitMs: 100, sieger: 0, grund: 'ausgeloescht' }],
-              sieger: 0,
-              grund: 'ausgeloescht',
-              dauerMs: 100,
-              ueberlebende: [],
-              schaden: 3,
-            },
-          },
-        ],
+        kaempfe: [kampfProbe()],
       }),
     );
     zeige();
@@ -790,6 +796,31 @@ describe('Bereit und Kampfpause', () => {
     expect(within(vorhang).getByText('Runde 3')).toBeInTheDocument();
     // Und die Phasenzeile sagt daneben, was gerade laeuft.
     expect(screen.getByText('Kampfphase')).toBeInTheDocument();
+  });
+
+  /*
+   * `kaempfe` haelt fuer einen Spieler nur seinen EIGENEN Kampf (sicht.ts) —
+   * die uebrigen Tische der Runde stehen in `paarungen`, ohne Protokoll.
+   * Geprueft wird hier die Verdrahtung: dass das zweite Feld der Sicht bis in
+   * die Arena durchkommt. Was in der Zeile steht, prueft KampfAnzeige.test.
+   */
+  it('reicht die Paarungen der Runde bis in die Ergebniszeilen durch', () => {
+    stelle(
+      sicht({
+        phase: 'kampf',
+        eigenes: { bereit: true, darfHandeln: false },
+        kaempfe: [kampfProbe()],
+        paarungen: [
+          { a: 0, b: 1, geist: false, sieger: 0, schaden: 3, dauerMs: 100 },
+          { a: 2, b: 3, geist: false, sieger: 1, schaden: 5, dauerMs: 100 },
+        ],
+      }),
+    );
+    zeige();
+    const liste = screen.getByRole('list', { name: 'Weitere Kämpfe' });
+    // Der eigene Kampf laeuft in der Arena und nicht noch einmal als Zeile.
+    expect(liste).not.toHaveTextContent('Ich gegen');
+    expect(liste).toHaveTextContent('Sitz 3 gegen Sitz 4');
   });
 
   it('baut in der Vorbereitung keine Buehne auf', () => {
