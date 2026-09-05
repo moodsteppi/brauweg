@@ -76,28 +76,24 @@ const QUELLE =
  * gerechnet — (0, sin, cos) —, nicht umgekehrt; ein roher Vektor sagt niemandem,
  * ob er 12 oder 40 Grad bedeutet.
  *
- * 38,6 Grad ist die Kamera der 3D-Probe, die von oben auf ein BRETT schaut
+ * 16 GRAD, ENTSCHIEDEN VON ROBIN AM 05.09.2026. Der erste Anlauf hatte hier
+ * 38,6 Grad — die Kamera der 3D-Probe, die von oben auf ein BRETT schaut
  * (`proben/arena-3d/Arena3D.tsx`: Kamera (0, 7.4, 8.2) auf (0, 0.85, 0)). Fuer
- * Figurenbilder ist dieser Winkel FALSCH: Man sieht den Scheitel statt des
+ * Figurenbilder ist dieser Winkel falsch: Man sieht den Scheitel statt des
  * Gesichts, und beim Meuchler mit dem grossen KayKit-Kopf verschwindet das
- * Gesicht fast ganz. Die Vorbilder (Merge Tactics) zeigen Gesicht, Brust und
- * Waffe, also einen deutlich flacheren Blick.
+ * Gesicht ganz. Die Vorbilder (Merge Tactics) zeigen Gesicht, Brust und Waffe.
  *
- * Der endgueltige Winkel ist noch nicht entschieden. `--vergleich` rendert
- * VERGLEICH_WINKEL nebeneinander; das Ergebnis liegt als
- * `docs/bilder/tafelrunde-kamerawinkel.webp` im Repo. Gemessen wurde am
- * 05.09.2026 am Auge des Meuchlers: Bei 38,6 Grad ist es gar nicht zu sehen,
- * bei 22 Grad taucht es auf, ab 16 Grad liegen Auge, Wange und Kinn frei.
- * VORSCHLAG ist deshalb 16 Grad — 12 Grad zeigt kaum mehr Gesicht, nimmt aber
+ * Entschieden wurde am Vergleichsbild `docs/bilder/tafelrunde-kamerawinkel.webp`
+ * (`--vergleich` rendert es neu). Das Mass war das Auge des Meuchlers: Bei
+ * 38,6 Grad ist es gar nicht zu sehen, bei 22 Grad taucht es auf, ab 16 Grad
+ * liegen Auge, Wange und Kinn frei. 12 Grad zeigt kaum mehr Gesicht, nimmt aber
  * die letzte Andeutung von oben und laesst die Figur auf dem Brett schweben.
  *
- * Bis die Entscheidung faellt, bleibt hier der Winkel stehen, mit dem die
- * heutigen Blaetter unter `public/tafelrunde/figuren3d/` entstanden sind —
- * damit Skript und Bilder zusammenpassen und niemand aus dem Code einen
- * falschen Schluss zieht. Wer den Winkel setzt, laesst das Skript OHNE
- * `--vergleich` laufen und traegt die ausgegebenen Zahlen in figuren3d.ts nach.
+ * Wer den Winkel spaeter noch einmal aendert, laesst das Skript OHNE
+ * `--vergleich` laufen und traegt die ausgegebenen Zahlen in figuren3d.ts nach —
+ * vor allem den Fusspunkt, der sich mit dem Winkel verschiebt.
  */
-const KAMERA_GRAD = 38.6;
+const KAMERA_GRAD = 16;
 
 /**
  * Wie weit die Figur aus dem Bild gedreht steht, in Grad.
@@ -290,11 +286,14 @@ const KOERPER = /(_Body|_Head|_Head_Hooded|_ArmLeft|_ArmRight|_LegLeft|_LegRight
 // ---------------------------------------------------------------------------
 
 /**
- * Die Winkel des Vergleichsbildes. Der erste ist die heutige Bretterkamera und
- * steht als Vergleichsmass dabei — ohne ihn sieht man nicht, wie viel die
- * flacheren Winkel wirklich gewinnen.
+ * Der Winkel der Bretterkamera aus `proben/arena-3d/`. Er wird nicht mehr
+ * gerendert, steht im Vergleichsbild aber als Vergleichsmass mit — ohne ihn
+ * sieht man nicht, wie viel die flacheren Winkel wirklich gewinnen.
  */
-const VERGLEICH_WINKEL = [KAMERA_GRAD, 22, 16, 12];
+const BRETTKAMERA_GRAD = 38.6;
+
+/** Die Winkel des Vergleichsbildes, vom steilsten zum flachsten. */
+const VERGLEICH_WINKEL = [BRETTKAMERA_GRAD, 22, 16, 12];
 
 /**
  * Zwei Rollen genuegen: Die Wache traegt Helm und Schild (viel Verdeckung von
@@ -574,11 +573,21 @@ const ANKERKNOCHEN = 'hips';
 async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   const gltf = await ladeModell(url);
   const figur = gltf.scene;
-  // MINUS, nicht plus: Eine Drehung um -a fuehrt die Blickachse +X nach
-  // (cos a, 0, sin a), also ZUR Kamera (+Z). Mit Plus dreht sich die Figur von
-  // ihr weg — die erste Fassung hatte das Vorzeichen falsch, und bei der
-  // steilen Bretterkamera fiel es nicht auf, weil man ohnehin von oben auf den
-  // Scheitel sah. Bei flacher Kamera sieht man dann den Hinterkopf.
+  // MINUS, nicht plus. Eine Drehung um -a fuehrt die Blickachse +X nach
+  // (cos a, 0, sin a), also ZUR Kamera (+Z); mit Plus dreht sich die Figur von
+  // ihr weg. Die erste Fassung hatte hier ein Plus.
+  //
+  // WORAN MAN ES MERKT, WENN ES KIPPT: Die Figur zeigt den HINTERKOPF. Kein
+  // Auge, kein Ohr auf der Kameraseite, dafuer der Umhang vorn und die Waffe
+  // hinter dem Koerper. Das ist das Zeichen, und man muss es kennen, weil das
+  // Bild sonst nur "irgendwie falsch herum" aussieht.
+  //
+  // UND HIER IST DIE FALLE: Bei STEILER Kamera faellt es nicht auf. Von 38,6
+  // Grad sieht man ohnehin nur den Scheitel, und der ist von vorn wie von
+  // hinten derselbe runde Kopf — das falsche Vorzeichen ist ueber einen ganzen
+  // Satz Blaetter unbemerkt durchgelaufen. Sichtbar wurde es erst, als die
+  // Kamera auf 16 Grad herunterging. Wer am Vorzeichen zweifelt, rendert
+  // deshalb NICHT bei 38,6 gegen, sondern flach.
   figur.rotation.y = -Math.PI / 2 - (kameraKonfig.drehungGrad * Math.PI) / 180;
   // Die Figur haengt in einem Halter, der sie in jedem Bild zurueckschiebt
   // (siehe anStelleHalten weiter unten). Deshalb ein Halter und nicht die
@@ -908,7 +917,7 @@ async function baueBlaetter() {
 
 /** Zeilenhoehe, Beschriftungsspalte und Kopfzeilen des Vergleichsbildes. */
 const V_SPALTE = 172;
-const V_KOPF = 76;
+const V_KOPF = 100;
 const V_LUECKE = 30;
 const V_GRUND = '#241d18';
 
@@ -945,9 +954,11 @@ async function baueVergleich() {
         png,
         titel: `${grad(winkel)} · ${rolle}`,
         unter:
-          winkel === KAMERA_GRAD
-            ? `heute · Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)}`
-            : `Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)}`,
+          winkel === BRETTKAMERA_GRAD
+            ? `Brettkamera · Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)}`
+            : winkel === KAMERA_GRAD
+              ? `GEWAEHLT · Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)}`
+              : `Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)}`,
       });
     }
   }
@@ -999,6 +1010,12 @@ async function baueVergleich() {
       14,
       26,
     ),
+  );
+  // Der Satz gehoert INS BILD und nicht nur in eine Notiz daneben: Das Bild
+  // wandert herum, die Notiz nicht — und ohne ihn sieht es in einem halben Jahr
+  // wie eine offene Frage aus statt wie eine beantwortete.
+  texte.push(
+    `<text x="14" y="${V_KOPF - 22}" fill="#e8c98a" font-family="sans-serif" font-size="15" font-weight="600">Entschieden am 05.09.2026 von Robin: ${grad(KAMERA_GRAD)} — so sind die Blaetter gerendert.</text>`,
   );
   VERGLEICH_ZELLEN.forEach((wahl, i) => {
     texte.push(

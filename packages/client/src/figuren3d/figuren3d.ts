@@ -7,19 +7,16 @@
  * Bildzahl, Rasterweite oder Ausschnitt dreht, aendert die Zahlen hier mit —
  * das Skript gibt sie am Ende seines Laufs aus.
  *
- * ACHTUNG, DIE BILDER SIND NOCH NICHT DIE ENDGUELTIGEN. Sie sind mit der
- * Kamera der 3D-Probe gerendert (38,6 Grad ueber der Waagerechten, eine Kamera
- * fuer ein BRETT): Man sieht den Scheitel und kein Gesicht, beim Meuchler fast
- * nie. Drei flachere Winkel stehen zur Wahl und liegen als Vergleichsbild unter
- * `docs/bilder/tafelrunde-kamerawinkel.webp`; sobald einer entschieden ist,
- * laeuft `bildfolgen-rendern.mjs` noch einmal, und die Zahlen unten
- * (FIGUREN3D_FUSSPUNKT vor allem) aendern sich mit. Wer bis dahin gegen diese
- * Datei baut, baut richtig — nur die Bilder darin werden noch getauscht.
+ * DIE KAMERA STEHT AUF 16 GRAD ueber der Waagerechten — entschieden von Robin
+ * am 05.09.2026, belegt am Vergleichsbild `docs/bilder/tafelrunde-kamerawinkel.webp`.
+ * Der erste Satz Blaetter war mit 38,6 Grad gerendert, der Kamera der 3D-Probe,
+ * die auf ein BRETT schaut: Man sah den Scheitel und kein Gesicht. Wer den
+ * Winkel wieder anfasst, aendert die Zahlen hier mit.
  *
  * WOZU DAS GANZE: Die Figuren sollen wie 3D aussehen, aber nicht live gerendert
  * werden. Die Probe mit Three.js (`proben/arena-3d/`) lief auf dem Handy mit 20
  * Bildern je Sekunde und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es
- * 302 kB, und das Abspielen kostet so viel wie ein `background-position`.
+ * 204 kB, und das Abspielen kostet so viel wie ein `background-position`.
  *
  * LIZENZ ALLER FUENF BLAETTER: KayKit "Character Pack : Adventurers" 1.0 von
  * Kay Lousberg (kaylousberg.com), CC0 1.0 Universal — freie Verwendung auch
@@ -73,12 +70,13 @@ export const FIGUREN3D_ZEILEN = 5;
 /**
  * Wo die Figur in ihrer Zelle auf dem Boden aufsetzt, als Anteil der Kante.
  *
- * NICHT die Zellmitte: Die Kamera schaut schraeg von oben, und der Ausschnitt
- * steht hoeher als die Figur, damit Hut und Waffe hineinpassen. Wer die Zelle
- * mittig auf ein Feld setzt, stellt die Figur ein Stueck zu hoch — bei 128
- * Pixeln sind das gut 30. Ausgerechnet aus der Kamera, nicht im Bild gemessen.
+ * NICHT die Zellmitte: Der Ausschnitt umfasst ALLE Bewegungen, auch den weit
+ * ausgeholten Schlag und das Zusammensacken, und liegt deshalb hoeher als die
+ * stehende Figur. Wer die Zelle mittig auf ein Feld setzt, stellt die Figur ein
+ * Stueck zu hoch — bei 128 Pixeln sind das gut 35. Ausgerechnet aus der Kamera,
+ * nicht im Bild gemessen.
  */
-export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7474 } as const;
+export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7729 } as const;
 
 /**
  * Alle Figuren schauen nach RECHTS.
@@ -87,6 +85,9 @@ export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7474 } as const;
  * Kamera gedreht). Die andere Seite entsteht durch Spiegeln — `transform:
  * scaleX(-1)`. Deshalb darf in die Bilder nichts hinein, das seitenrichtig
  * sein muss: keine Schrift, keine Zahl, kein Wappen.
+ *
+ * Zeigt eine Figur den Hinterkopf statt des Gesichts, ist im Renderskript das
+ * Vorzeichen der Drehung gekippt — nicht dieses Spiegeln.
  */
 export const FIGUREN3D_BLICKT = 'rechts' as const;
 
