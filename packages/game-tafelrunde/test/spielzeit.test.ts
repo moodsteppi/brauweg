@@ -149,19 +149,22 @@ const AUSWERTUNG = werteAus(
 describe('Spielzeit: der heutige Stand', () => {
   /**
    * DER BEFUND, DEN DIESE DATEI FESTHAELT: Eine Partie dauert rund
-   * dreizehneinhalb Minuten und damit deutlich mehr als Robins acht.
+   * siebeneinhalb Minuten und liegt damit unter Robins acht.
    *
-   * Die Schranken liegen bewusst weit um den gemessenen Wert (13:31 am
-   * 05.09.2026): Diese Probe soll nicht bei jeder Katalogaenderung anschlagen,
-   * sondern dann, wenn jemand die Spielzeit ohne Absicht verdoppelt oder
-   * halbiert. Wer sie ABSICHTLICH aendert, aendert hier die Zahlen mit — und
-   * traegt den neuen Stand in docs/TAFELRUNDE-SPIELZEIT.md nach.
+   * Sie lag am selben Tag noch bei 13,5 Minuten; kuerzer wurde sie durch
+   * Zeitraffer x2 und 14 Startleben (siehe STANDARD_REGLER und
+   * DEFAULT_REGELN). Die Schranken liegen bewusst weit um den gemessenen Wert
+   * (7,4 am 05.09.2026): Diese Probe soll nicht bei jeder Katalogaenderung
+   * anschlagen, sondern dann, wenn jemand die Spielzeit ohne Absicht
+   * verdoppelt oder halbiert. Wer sie ABSICHTLICH aendert, aendert hier die
+   * Zahlen mit — und traegt den neuen Stand in docs/TAFELRUNDE-SPIELZEIT.md
+   * nach.
    */
-  it('dauert im Median zwischen sechs und zwanzig Minuten', () => {
+  it('dauert im Median zwischen vier und vierzehn Minuten', () => {
     const minuten = AUSWERTUNG.spielzeitMedianMs / 60_000;
     assert.ok(
-      minuten > 6 && minuten < 20,
-      `Median ${minuten.toFixed(1)} Minuten (gemessen am 05.09.2026: 13,5)`,
+      minuten > 4 && minuten < 14,
+      `Median ${minuten.toFixed(1)} Minuten (gemessen am 05.09.2026: 7,4)`,
     );
   });
 
@@ -169,9 +172,15 @@ describe('Spielzeit: der heutige Stand', () => {
    * Der Kampf ist der groesste Posten — mit Abstand.
    *
    * Das ist die Antwort auf die eigentliche Frage der Aufgabe ("miss, woraus
-   * die elf Minuten bestehen"): rund 70 % Kampf, 25 % Vorbereitung, 5 %
-   * Nachlauf. Wer an der Vorbereitung dreht, dreht am kleinen Posten. Diese
+   * die elf Minuten bestehen"): rund 57 % Kampf, 37 % Vorbereitung, 6 %
+   * Nachlauf. Wer an der Vorbereitung dreht, dreht am kleineren Posten. Diese
    * Probe haelt die Rangfolge fest, damit die Empfehlung nicht still veraltet.
+   *
+   * VOR DEM ZEITRAFFER waren es 70 / 25 / 5. Dass der Kampf nur noch knapp
+   * ueber der Haelfte liegt, ist die Wirkung von x2 und kein neuer Befund —
+   * der Anteil, den man wegnehmen wollte, ist weg. Die Schranke bleibt bei
+   * der Haelfte: Faellt der Kampf DARUNTER, ist die Vorbereitung der groesste
+   * Posten geworden, und dann gilt die Empfehlung von damals nicht mehr.
    */
   it('steckt seine Zeit vor allem in die Kaempfe', () => {
     const gesamt = AUSWERTUNG.vorbereitungMs + AUSWERTUNG.kampfMs + AUSWERTUNG.nachlaufMs;
@@ -184,27 +193,29 @@ describe('Spielzeit: der heutige Stand', () => {
   });
 
   /**
-   * DER ZWEITE BEFUND, und der unangenehmere: Fast jeder dritte Kampf einer
-   * echten Partie laeuft in `HOECHSTDAUER_MS` und wird von
-   * `entscheideNachZeit` entschieden statt vom Brett.
+   * DER BEFUND, DER DEN ZEITRAFFER AUSGELOEST HAT — und seine Aufloesung.
    *
-   * Die Probe in kampf.test.ts sieht das nicht, und zwar aus einem Grund, den
-   * man kennen muss: Sie besetzt die Bretter ZUFAELLIG aus dem Katalog. Ein
-   * Bot kauft aber nicht zufaellig — er kauft das Beste, verschmilzt auf Stufe
-   * 2 und 3 und sammelt Marken, deren Boni Leben und Ruestung dazulegen. Auf
-   * solchen Brettern dauert derselbe Kampf doppelt so lange (Median 35 s statt
-   * 17 s).
+   * Vorher lief fast jeder dritte Kampf einer echten Partie in
+   * `HOECHSTDAUER_MS` und wurde von `entscheideNachZeit` entschieden statt vom
+   * Brett (29 %). Mit Zeitraffer x2 sind es 1,9 %: Die Grenze ist wieder das
+   * Rettungsseil, das sie sein soll.
    *
-   * Deshalb steht die Messung hier NOCH EINMAL, auf Brettern aus echten
-   * Partien. Die Schranke ist mit 45 % ueber dem heutigen Wert von rund 29 %:
-   * Sie faerbt den Befund nicht gruen, sondern haelt ihn fest und schlaegt an,
-   * wenn er schlimmer wird.
+   * Die Probe in kampf.test.ts misst dasselbe auf ZUFAELLIG besetzten
+   * Brettern und kommt deshalb tiefer heraus. Ein Bot kauft nicht zufaellig —
+   * er kauft das Beste, verschmilzt auf Stufe 2 und 3 und sammelt Marken,
+   * deren Boni Leben und Ruestung dazulegen; solche Bretter halten laenger
+   * durch. Deshalb steht die Messung hier NOCH EINMAL, auf Brettern aus
+   * echten Partien.
+   *
+   * Die Schranke ist von 45 % auf 10 % nachgezogen, weil sie sonst nichts
+   * mehr faengt: Sie liegt damit weiter deutlich ueber dem gemessenen Wert,
+   * schlaegt aber an, wenn der alte Zustand zurueckkommt.
    */
   it('haelt fest, wie oft ein Kampf in die Hoechstdauer laeuft', () => {
     assert.ok(
-      AUSWERTUNG.zeitAbbruchAnteil < 0.45,
+      AUSWERTUNG.zeitAbbruchAnteil < 0.1,
       `${(AUSWERTUNG.zeitAbbruchAnteil * 100).toFixed(1)} % der Kaempfe enden durch Zeitablauf ` +
-        `(gemessen am 05.09.2026: 29 %)`,
+        `(gemessen am 05.09.2026: 1,9 %, vor dem Zeitraffer 29 %)`,
     );
     assert.ok(
       AUSWERTUNG.kampfMedianMs <= HOECHSTDAUER_MS,
@@ -225,6 +236,15 @@ function stelleAuf(
   for (const [id, stufe, spalte, reihe] of liste) brett[platzNummer(reihe, spalte)] = { id, stufe };
   return brett;
 }
+
+/**
+ * Der Regler OHNE Zeitraffer — der ungeraffte Ablauf als Bezugsgroesse.
+ *
+ * Er ist der Stand vor dem 05.09.2026. Jede Probe, die die WIRKUNG des
+ * Reglers zeigen will, braucht ihn: Gegen den Standard verglichen (x2) waere
+ * ein Zeitraffer von 1,5 laenger und einer von 2 gleich lang.
+ */
+const UNGERAFFT = { ...STANDARD_REGLER, zeitraffer: 1 };
 
 /** Zwei kleine Bretter, die einander sicher ausloeschen — kein Zeitablauf im Weg. */
 const ZWEI_BRETTER: readonly [Brettseite, Brettseite] = [
@@ -264,15 +284,20 @@ describe('Spielzeit: der Kampfregler', () => {
 
   /**
    * Der Zeitraffer macht denselben Kampf kuerzer — und zwar spuerbar, nicht um
-   * eine Rundung. Zwei Drittel sind die grosszuegige Schranke fuer den Faktor
-   * 1,5; gemessen liegt der Kampf bei rund 70 % seiner alten Dauer, weil die
-   * Wartezeiten auf ganze Takte aufgerundet werden.
+   * eine Rundung. Gemessen liegt der Kampf bei Faktor 1,5 auf rund 70 % seiner
+   * ungerafften Dauer, weil die Wartezeiten auf ganze Takte aufgerundet
+   * werden.
+   *
+   * Verglichen wird ausdruecklich gegen UNGERAFFT und nicht gegen den
+   * Standardregler: Der steht seit dem 05.09.2026 selbst auf x2, und x1,5
+   * waere dagegen LAENGER. Die Probe pruefte dann die Voreinstellung statt der
+   * Wirkung des Reglers.
    */
   it('verkuerzt denselben Kampf mit Zeitraffer', () => {
     for (let i = 0; i < 20; i++) {
-      const normal = simuliereKampf(ZWEI_BRETTER, `z${i}`);
+      const normal = simuliereKampf(ZWEI_BRETTER, `z${i}`, UNGERAFFT);
       const schnell = simuliereKampf(ZWEI_BRETTER, `z${i}`, {
-        ...STANDARD_REGLER,
+        ...UNGERAFFT,
         zeitraffer: 1.5,
       });
       assert.ok(
@@ -314,13 +339,13 @@ describe('Spielzeit: der Kampfregler', () => {
       besetzung: 'normal' as const,
       saatBasis: 'regler-durchgereicht',
     };
-    const normal = werteAus(messe(auftrag));
-    const schnell = werteAus(
-      messe({ ...auftrag, regler: { ...STANDARD_REGLER, zeitraffer: 2 } }),
-    );
+    // Gegen UNGERAFFT und nicht gegen den Standard: Der ist seit dem
+    // 05.09.2026 selbst x2, ein zweites x2 daneben waere derselbe Lauf.
+    const langsam = werteAus(messe({ ...auftrag, regler: UNGERAFFT }));
+    const schnell = werteAus(messe({ ...auftrag, regler: STANDARD_REGLER }));
     assert.ok(
-      schnell.kampfMedianMs < normal.kampfMedianMs * 0.75,
-      `Kampf im Median ${schnell.kampfMedianMs} ms gegen ${normal.kampfMedianMs} ms`,
+      schnell.kampfMedianMs < langsam.kampfMedianMs * 0.75,
+      `Kampf im Median ${schnell.kampfMedianMs} ms gegen ${langsam.kampfMedianMs} ms`,
     );
   });
 });

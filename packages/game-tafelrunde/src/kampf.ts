@@ -67,34 +67,38 @@ export const SCHRITT_MS = 500;
  *
  * WARUM AUSGERECHNET 45 SEKUNDEN: Eine Abbruchgrenze taugt nur etwas, wenn sie
  * die Ausnahme bleibt — sonst entscheidet nicht mehr der Kampf, sondern
- * `entscheideNachZeit`. Die Zahl ist am heutigen Katalog gemessen und nicht
- * geraten. Ueber 800 zufaellig besetzte Bretterpaare je Groesse (2 bis 4, 6
- * und 9 Einheiten, Werte aus dem heutigen Katalog) und OHNE Deckel gerechnet:
- * Median 17 s, Mittel 20 s, das neunte Zehntel bei 35 s, das 95. bei 40 s, das
- * 99. bei 50 s, der laengste 78 s. Bei 45 s werden also rund 2 bis 4 Prozent
- * abgeschnitten; bei 30 s waere es jeder sechste gewesen und bei 20 s zwei von
- * fuenf.
+ * `entscheideNachZeit`. Auf Brettern aus ECHTEN Partien dauert ein Kampf heute
+ * 17,3 s im Median, und 1,8 % laufen in die Grenze (500 Partien zu viert,
+ * werkzeug/spielzeit.mjs, 05.09.2026). Das ist die Groessenordnung, fuer die
+ * die 45 s gedacht sind: ein Rettungsseil, kein Regelfall.
  *
- * DIESE MESSUNG GILT NUR FUER ZUFAELLIG BESETZTE BRETTER, und das ist ihr
- * Fehler (gefunden am 05.09.2026 beim Zerlegen der Spielzeit). Ein Bot kauft
- * nicht zufaellig: Er nimmt das Beste, verschmilzt auf Stufe 2 und 3 und
- * sammelt Marken, deren Boni Leben und Ruestung dazulegen. Auf Brettern aus
- * ECHTEN Partien dauert derselbe Kampf doppelt so lange — Median 35 s statt
- * 17 s —, und abgeschnitten werden nicht 2 bis 4 Prozent, sondern 29
- * (500 Partien zu viert, werkzeug/spielzeit.mjs). Die Grenze ist damit kein
- * Rettungsseil mehr, sondern entscheidet jeden dritten Kampf ueber
- * `entscheideNachZeit`.
+ * DIESE 17 SEKUNDEN HAENGEN AM ZEITRAFFER, und das ist der Satz, um den es
+ * hier geht. Die Zahl stand schon einmal an dieser Stelle — damals aus einer
+ * anderen Messung: 800 zufaellig besetzte Bretterpaare OHNE Deckel, Median
+ * 17 s, das neunte Zehntel bei 35 s, rund 2 bis 4 Prozent abgeschnitten. Auf
+ * echten Brettern stimmte sie nie: Ein Bot kauft nicht zufaellig, er nimmt das
+ * Beste, verschmilzt auf Stufe 2 und 3 und sammelt Marken, deren Boni Leben
+ * und Ruestung dazulegen. Solche Kaempfe dauerten 35,2 s, und abgeschnitten
+ * wurden 27,7 % — jeder dritte Kampf ging an die Uhr statt ans Brett
+ * (gefunden am 05.09.2026 beim Zerlegen der Spielzeit).
  *
- * DIE ZAHL 45_000 BLEIBT TROTZDEM STEHEN, weil sie das falsche Ende ist: Wer
- * sie senkt, laesst noch mehr Kaempfe von der Uhr entscheiden. Kuerzer werden
- * die Kaempfe ueber den Ablauf selbst (`Kampfregler.zeitraffer`) oder ueber den
- * Katalog — mit Zeitraffer x1,5 faellt der Anteil auf 8 %, mit x2 auf 1 %. Die
- * Auswertung dazu steht in docs/TAFELRUNDE-SPIELZEIT.md.
+ * Repariert hat das nicht die Grenze, sondern `STANDARD_REGLER.zeitraffer`:
+ * Er steht seit demselben Tag auf 2, und damit sind aus 35,2 s wieder 17,3 s
+ * geworden und aus 27,7 % noch 1,8 %. WER IHN AUF 1 ZURUECKSTELLT, HOLT DEN
+ * ALTEN ZUSTAND MIT ZURUECK — die Begruendung dieser Konstante gilt dann nicht
+ * mehr. Die volle Auswertung steht in docs/TAFELRUNDE-SPIELZEIT.md.
+ *
+ * DIE ZAHL 45_000 SELBST BLEIBT UNVERAENDERT, weil sie das falsche Ende war:
+ * Wer sie senkt, laesst mehr Kaempfe von der Uhr entscheiden statt weniger.
+ * Kuerzer werden Kaempfe ueber den Ablauf (den Zeitraffer) oder ueber den
+ * Katalog.
  *
  * Zwei Proben halten das fest: die in test/kampf.test.ts auf zufaelligen
- * Brettern (sie sagt etwas ueber den Katalog) und die in test/spielzeit.test.ts
- * auf Brettern aus echten Partien (sie sagt etwas ueber das Spiel). Wer nur
- * die erste liest, glaubt weiter an die 2 bis 4 Prozent.
+ * Brettern (sie sagt etwas ueber den Katalog — dort sind es mit dem
+ * Standardregler 10,5 s und 0,3 %) und die in test/spielzeit.test.ts auf
+ * Brettern aus echten Partien (sie sagt etwas ueber das Spiel). Die beiden
+ * Zahlenpaare liegen auseinander, und zwar immer; wer nur eines liest, zieht
+ * den falschen Schluss.
  *
  * WER GEWINNT DANN: siehe `entscheideNachZeit`.
  */
@@ -115,15 +119,21 @@ export const SCHADEN_GRUNDWERT = 1;
  * Der Teiler kam am 05.09.2026 mit den 20 Startleben (vorher 100, siehe
  * regeln.ts). Ohne ihn kostet eine Niederlage im spaeten Spiel acht bis zehn
  * Punkte, und eine Partie zu viert war nach acht Runden vorbei — gemessen ueber
- * 300 Partien, nicht geschaetzt. Die Reihe, jeweils Median der Runden zu viert:
- * ohne Teiler 8, mit Teiler 2 dann 13, mit Teiler 3 dann 15.
+ * 300 Partien, nicht geschaetzt. Die Reihe, jeweils Median der Runden zu viert
+ * und noch bei 20 Startleben: ohne Teiler 8, mit Teiler 2 dann 13, mit Teiler 3
+ * dann 15.
  *
- * DREI, WEIL DIE ZIELSPANNE 14 BIS 20 RUNDEN IST. Nach unten begrenzt sie das
- * Spiel selbst: Vor Runde 10 steht kein ausgebautes Brett, wer da ausscheidet,
- * hat nicht verloren, sondern nicht gespielt. Nach oben begrenzt sie das Handy
- * — eine Runde dauert Vorbereitung plus Kampf, also bis zu anderthalb Minuten.
- * Gemessen liegt der Median bei 15 Runden, die laengste von 5.000 Partien bei
- * 22.
+ * DREI, WEIL DIE RUNDE NICHT DIE SCHRAUBE IST, an der gekuerzt wurde. Nach
+ * unten begrenzt die Rundenzahl das Spiel selbst: Vor Runde 10 steht kein
+ * ausgebautes Brett, wer da ausscheidet, hat nicht verloren, sondern nicht
+ * gespielt. Genau deshalb ging die Kuerzung der Partie auf acht Minuten
+ * ueberwiegend ueber den Zeitraffer und nur zum kleineren Teil ueber die
+ * Startleben (20 auf 14): Der Teiler blieb, wo er ist. Heute liegt der Median
+ * bei 11 Runden — das ist die untere Kante der Spanne, nicht ihre Mitte, und
+ * wer hier noch einmal kuerzt, streicht das ausgebaute Brett.
+ *
+ * Wer den Teiler doch anfasst, misst danach mit werkzeug/spielzeit.mjs: Von 3
+ * auf 2 sind es heute 10 Runden und 6:48 statt 11 und 7:25.
  *
  * `ceil` und nicht `round`: Eine Niederlage gegen einen einzelnen Ueberlebenden
  * der Stufe 1 soll die vollen zwei Punkte kosten (Grundwert plus eins) und
@@ -160,8 +170,9 @@ export interface Kampfregler {
   /**
    * Wie viel schneller alles ablaeuft: Angriffstempo UND Schrittweite.
    *
-   * 1 ist der gebaute Ablauf, 1,5 macht denselben Kampf in zwei Dritteln der
-   * Zeit. Ein Faktor und keine zwei Zahlen, weil beides zusammengehoert: Wer
+   * 1 ist der ungeraffte Ablauf, 1,5 macht denselben Kampf in zwei Dritteln
+   * der Zeit; der Standard steht auf 2, siehe `STANDARD_REGLER`. Ein Faktor
+   * und keine zwei Zahlen, weil beides zusammengehoert: Wer
    * nur schneller schlagen, aber gleich langsam laufen laesst, verschiebt das
    * Kraefteverhaeltnis zwischen Nah- und Fernkampf, statt den Kampf zu
    * raffen.
@@ -173,12 +184,26 @@ export interface Kampfregler {
   readonly zeitraffer: number;
 }
 
-/** Der gebaute Ablauf: die vier Konstanten dieser Datei. */
+/**
+ * Der gebaute Ablauf: drei Konstanten dieser Datei und der Zeitraffer.
+ *
+ * DER ZEITRAFFER STEHT AUF 2 (seit dem 05.09.2026, Robins Entscheidung nach
+ * der Messung in docs/TAFELRUNDE-SPIELZEIT.md). Er ist die einzige Schraube,
+ * die die Partie kuerzt, ohne eine Runde zu streichen: Der Kampf fiel von
+ * 35,2 s auf 17,3 s im Median, die Partie von 13:31 auf 7:25 — bei
+ * gleichzeitig 14 Startleben, siehe `DEFAULT_REGELN` in regeln.ts. Die beiden
+ * Zahlen gehoeren zusammen und wurden zusammen gemessen; wer eine davon
+ * anfasst, misst mit werkzeug/spielzeit.mjs neu.
+ *
+ * ACHTUNG: Er wirkt auch am Bildschirm. Die Oberflaeche spielt das
+ * Ablaufprotokoll in Echtzeit ab, die Figuren laufen und schlagen also
+ * tatsaechlich doppelt so schnell.
+ */
 export const STANDARD_REGLER: Kampfregler = {
   taktMs: TAKT_MS,
   hoechstdauerMs: HOECHSTDAUER_MS,
   schadenStufenTeiler: SCHADEN_STUFEN_TEILER,
-  zeitraffer: 1,
+  zeitraffer: 2,
 };
 
 // ---------------------------------------------------------------------------

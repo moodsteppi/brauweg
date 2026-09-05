@@ -20,7 +20,7 @@ der Erinnerung):**
 170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
 56 Eiland-Tests, 239 Tafelrunde-Tests, **417 Servertests** — zusammen 1338,
-dazu die Client-Tests (26 Dateien, 316 Tests), alle grün. `tsc --noEmit` sauber.
+dazu die Client-Tests (27 Dateien, 335 Tests), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
@@ -175,26 +175,47 @@ dazu die Client-Tests (26 Dateien, 316 Tests), alle grün. `tsc --noEmit` sauber
 > Finger** (nur, wenn die Einheit dort auch landen darf; geprüft mit
 > derselben Funktion wie das Ablegen).
 >
-> **Was noch fehlt:** Die Werte tragen die Partie noch nicht: Zu acht läuft
+> **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
-> Startleben gegen rund 5 Punkte Schaden je Niederlage). Steht als eigener
-> Punkt auf dem Board. Der Kampf selbst wird seit #35 (04.09.2026) im
-> Client abgespielt (`minispiele/tafelrunde/KampfAnzeige.tsx`).
+> Startleben gegen rund 5 Punkte Schaden je Niederlage). Seit den 14
+> Startleben und dem Schadensteiler endet keine einzige mehr an der Grenze,
+> zu keiner Sitzzahl (5.000 Partien zu viert, je 500 zu sechst und zu acht).
+> Der Kampf selbst wird seit #35 (04.09.2026) im Client abgespielt
+> (`minispiele/tafelrunde/KampfAnzeige.tsx`).
 >
-> **Wie lange eine Partie dauert, ist seit dem 05.09.2026 gemessen:
-> `docs/TAFELRUNDE-SPIELZEIT.md`.** Kurzfassung, weil sie zwei verbreitete
-> Annahmen widerlegt: Eine Partie zu viert dauert im Median **13:31** und
-> nicht die geschätzten 11 Minuten, und **70 % davon sind Kampf** — die
-> Vorbereitung zu straffen bringt selbst mit hartem 10-Sekunden-Countdown
-> nur 8 %, ein feinerer `TAKT_MS` unter 1 %. Der zweite Befund wiegt
-> schwerer: Der Kommentar an `HOECHSTDAUER_MS` nannte 17 s Median und 2–4 %
-> Zeitabbrüche; auf Brettern aus **echten** Partien sind es **35,2 s und
-> 27,7 %**. Die Zahlen im Code stammten von zufällig besetzten Brettern, und
-> so kauft kein Bot. Gemessen wird das jetzt mit
-> `werkzeug/spielzeit.mjs` (Tabelle je Stellschraube) und festgehalten in
-> `test/spielzeit.test.ts`. **Geändert wurde am Spiel nichts** — der
-> `Kampfregler` in `kampf.ts` ist das Messwerkzeug dafür und steht auf den
-> gebauten Werten.
+> **Eine Partie dauert seit dem 05.09.2026 rund acht Minuten statt
+> dreizehneinhalb.** Gemessen, entschieden und eingebaut am selben Tag; die
+> ganze Auswertung steht in `docs/TAFELRUNDE-SPIELZEIT.md`. Geändert wurden
+> zwei Zahlen: `STANDARD_REGLER.zeitraffer` von 1 auf **2** (`kampf.ts`) und
+> `DEFAULT_REGELN.startLeben` von 20 auf **14** (`regeln.ts`) — dazu die
+> ausgeschriebene Kopie `REGELSATZ` in `screens/Tafelrunde.tsx`, die als
+> `config` an den Tisch geht und die Änderung sonst überstimmt hätte.
+>
+> Gemessen vorher → nachher (500 Partien zu viert, `werkzeug/spielzeit.mjs`):
+> Spielzeit **13:31 → 7:25**, Runden **15 → 11**, einzelner Kampf
+> **35,2 s → 17,3 s**, von der Uhr entschiedene Kämpfe **27,7 % → 1,8 %**,
+> Markenspanne ×0,74–1,09 → ×0,71–1,30 (Schranke ist ×0,5 bis ×2, am Katalog
+> wurde deshalb nichts geändert).
+>
+> **Der Zeitraffer ist die Schraube, die keine Runde streicht** — er
+> beschleunigt Angriffstempo und Schrittweite zusammen und ändert damit auch,
+> wie schnell die Figuren am Bildschirm laufen. Er steht bewusst **nicht** in
+> `TafelrundeRegeln`: Der Regelsatz kommt als JSON von außen an den Tisch, ein
+> selbstgebauter Tisch könnte sich sonst eine 10 einstellen. Nur der
+> Standardwert hat sich geändert.
+>
+> Nebenbei hat das den älteren Befund erledigt, der die Änderung ausgelöst
+> hat: Der Kommentar an `HOECHSTDAUER_MS` nannte 17 s Median und 2–4 %
+> Zeitabbrüche, auf Brettern aus **echten** Partien waren es 35,2 s und
+> 27,7 % — jeder dritte Kampf ging an die Uhr statt ans Brett. Die
+> Begründung dort sagt jetzt, woher die Zahl kommt und dass sie am Zeitraffer
+> hängt.
+>
+> **Was dabei kaputtging und offen ist:** Die Bot-Gangart `hart` schlägt
+> `normal` nicht mehr (77 : 107,7 über 400 Partien zu viert, vorher 119 : 94)
+> — der aggressive Ausbau braucht Runden, die es nicht mehr gibt. Und die
+> Marken-Schwelle 6 steht in 196.314 Antritten **kein einziges Mal** mehr,
+> die Schwelle 4 nur noch in 0,6 %. Beides steht auf dem Board.
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >

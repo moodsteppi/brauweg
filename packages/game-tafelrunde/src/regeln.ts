@@ -47,18 +47,27 @@ export interface TafelrundeRegeln {
 }
 
 /**
- * 20 Leben, 2 Gold zum Start.
+ * 14 Leben, 2 Gold zum Start.
  *
- * ZWANZIG UND NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja
- * ein kurzes Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit
- * 100 Leben und dem damaligen Schaden brauchte ein Ausscheiden rund zwanzig
- * verlorene Kaempfe, und die Partie lief in die Rundengrenze statt zu Ende.
- * Zwanzig Leben sind ausserdem eine Zahl, die man am Handy noch als Balken
+ * NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja ein kurzes
+ * Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit 100 Leben
+ * und dem damaligen Schaden brauchte ein Ausscheiden rund zwanzig verlorene
+ * Kaempfe, und die Partie lief in die Rundengrenze statt zu Ende. Eine
+ * zweistellige Zahl ist ausserdem eine, die man am Handy noch als Balken
  * lesen kann — bei 100 zaehlt niemand mit.
  *
- * Der Schaden je Niederlage wurde MIT geaendert und gehoert dazu: 20 Leben bei
- * altem Schaden waeren nach acht Runden vorbei gewesen (gemessen). Wer hier
- * dreht, dreht auch an SCHADEN_STUFEN_TEILER in kampf.ts und misst danach mit
+ * VIERZEHN UND NICHT ZWANZIG (05.09.2026, nach der Messung in
+ * docs/TAFELRUNDE-SPIELZEIT.md). Mit 20 dauerte eine Partie 13:31 im Median
+ * bei 15 Runden, das Ziel sind acht Minuten. Die Startleben kaufen Zeit ueber
+ * die Rundenzahl, und 14 ist die Stelle, an der die Partie kurz wird, ohne
+ * ausgeduennt zu werden: 11 Runden reichen noch fuer ein ausgebautes Brett,
+ * bei 10 Leben (8 Runden) steht vor dem Ende keines mehr. Die zweite Haelfte
+ * der Aenderung ist `zeitraffer: 2` in STANDARD_REGLER (kampf.ts) — die
+ * beiden Zahlen wurden zusammen gemessen und gehoeren zusammen.
+ *
+ * Der Schaden je Niederlage gehoert mit dazu: 20 Leben bei altem Schaden
+ * waeren nach acht Runden vorbei gewesen (gemessen). Wer hier dreht, dreht
+ * auch an SCHADEN_STUFEN_TEILER in kampf.ts und misst danach mit
  * werkzeug/ausgewogenheit.mjs.
  *
  * Zwei Gold und nicht fuenf: In der ersten Vorbereitung soll man EINE Einheit
@@ -67,7 +76,7 @@ export interface TafelrundeRegeln {
  * Entscheidung getroffen hat.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
-  startLeben: 20,
+  startLeben: 14,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,
