@@ -22,22 +22,171 @@ jobs:
   secret-scan:
     name: Geheimnis-Suche
     runs-on: ubuntu-latest
+
+    # Die Suche zerfällt bewusst in ZWEI Schritte mit sprechenden Namen, weil
+    # beide Fälle bis zum 06.09.2026 gleich aussahen: „Die Prüfungen sind nicht
+    # durchgegangen". Am 05.09.2026 um 22:04 scheiterte der Merge von PR #93
+    # nicht an einem Fund, sondern an `curl: (35) Recv failure` beim Holen von
+    # gitleaks. Wer diese Meldung dreimal grundlos liest, sieht beim vierten
+    # Mal nicht mehr hin — und dann ist es ein echter Fund. Ab jetzt sagen der
+    # Schrittname in der Prüfliste UND die Zusammenfassung des Laufs, welcher
+    # der beiden Fälle vorliegt.
+    env:
+      GITLEAKS_VERSION: 8.18.4
+      # Prüfsumme aus gitleaks_8.18.4_checksums.txt der Freigabe. Kein Beiwerk:
+      # Ein mitten im Strom abgerissener Download ergibt eine Datei, die erst
+      # beim Auspacken stirbt („gzip: stdin: unexpected end of file"). Die
+      # Prüfsumme fängt das ab, solange ein neuer Versuch noch etwas nützt.
+      GITLEAKS_SHA256: ba6dbb656933921c775ee5a2d1c13a91046e7952e9d919f9bac4cec61d628e7d
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       # Nicht die Action, sondern das Programm selbst: gitleaks-action verlangt
       # für Organisationen eine bezahlte Lizenz und bricht ohne sie ab, bevor
       # die erste Datei geprüft ist. Das Programm ist MIT-lizenziert und frei.
-      - name: Gitleaks holen
+      # Genau daher rührt aber auch der Ärger: Wer das Programm selbst holt,
+      # holt es über das Netz — und das Netz fällt aus. Deshalb das Folgende.
+      #
+      # Der Zwischenspeicher ist der eigentliche Gewinn: Bei einem Treffer wird
+      # gar nichts geholt, und ein Netzaussetzer kann den Lauf nicht mehr
+      # umbringen. Fällt der Zwischenspeicher selbst aus, meldet actions/cache
+      # nur eine Warnung und der Schritt darunter lädt wie bisher — eine
+      # Zwischenspeicherung, die den Lauf mitreißt, wäre keine Verbesserung.
+      - name: Gitleaks aus dem Zwischenspeicher
+        id: zwischenspeicher
+        uses: actions/cache@v4
+        with:
+          # Derselbe Ort wie $HOME/.cache/gitleaks im Schritt darunter.
+          path: ~/.cache/gitleaks
+          key: gitleaks-${{ runner.os }}-x64-${{ env.GITLEAKS_VERSION }}
+
+      # Scheitert DIESER Schritt, ist nichts geprüft und nichts gefunden.
+      - name: Gitleaks bereitstellen — ein Fehler hier ist KEIN Fund
         run: |
-          set -euo pipefail
-          V=8.18.4
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" \
-            | sudo tar -xz -C /usr/local/bin gitleaks
-          gitleaks version
-      - name: Gitleaks
-        run: gitleaks detect --source . --redact --no-banner --verbose
+          set -uo pipefail
+
+          ablage="$HOME/.cache/gitleaks"
+          binaer="$ablage/gitleaks"
+          echo "$ablage" >> "$GITHUB_PATH"
+
+          scheitern() {
+            {
+              echo "## ⚠️ Die Geheimnis-Suche ist nicht gelaufen"
+              echo
+              echo "**Das ist KEIN Fund.** Das Werkzeug ließ sich nicht bereitstellen:"
+              echo
+              echo "> $1"
+              echo
+              echo "Am Code ist damit gar nichts geprüft — weder gut noch schlecht."
+              echo "Den Lauf wiederholen (Re-run failed jobs)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Gitleaks nicht ladbar (kein Fund)::$1"
+            exit 1
+          }
+
+          # Ein Treffer im Zwischenspeicher kann trotzdem Bruch sein (halb
+          # geschriebener Eintrag). Deshalb wird nicht die Existenz geprüft,
+          # sondern ob das Programm läuft; sonst wird neu geladen.
+          if [ -x "$binaer" ] && "$binaer" version >/dev/null 2>&1; then
+            echo "Aus dem Zwischenspeicher: $("$binaer" version)"
+            exit 0
+          fi
+
+          rm -rf "$ablage"
+          mkdir -p "$ablage"
+          roh="$(mktemp -d)/gitleaks.tar.gz"
+          quelle="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+
+          # Die alte Fassung war `curl … | sudo tar -xz`. In einer Pipe nützt
+          # curls eigener Wiederholungsversuch nichts: tar hat die halbe Datei
+          # schon geschluckt, wenn die Verbindung abreißt. Deshalb erst in eine
+          # Datei, dann prüfen, dann auspacken — und die Wiederholung umfasst
+          # ausdrücklich auch die Prüfsumme.
+          geladen=nein
+          for versuch in 1 2 3; do
+            if curl -sSfL --connect-timeout 10 --max-time 120 \
+                 --retry 3 --retry-delay 2 --retry-all-errors \
+                 -o "$roh" "$quelle" \
+               && echo "${GITLEAKS_SHA256}  ${roh}" | sha256sum -c --status -; then
+              geladen=ja
+              break
+            fi
+            echo "Versuch $versuch von 3 fehlgeschlagen (Download oder Prüfsumme)."
+            rm -f "$roh"
+            sleep $((versuch * 3))
+          done
+          [ "$geladen" = ja ] || scheitern "Download von $quelle nach drei Versuchen unvollständig oder Prüfsumme falsch."
+
+          tar -xzf "$roh" -C "$ablage" gitleaks || scheitern "Das geladene Archiv ließ sich nicht auspacken."
+          chmod +x "$binaer"
+          "$binaer" version || scheitern "Das ausgepackte Programm startet nicht."
+
+      # Scheitert DIESER Schritt, hat die Suche etwas gefunden — oder gitleaks
+      # selbst ist abgebrochen; die Zusammenfassung unterscheidet beides.
+      - name: Geheimnisse suchen — ein Fehler hier IST ein Fund
+        run: |
+          set -uo pipefail
+
+          # `gitleaks detect` durchsucht die Git-HISTORIE. Steht es vor einem
+          # Ordner ohne .git, protokolliert es den Fehler nur und endet mit
+          # „no leaks found" und Code 0 (nachgemessen an 8.18.4 am 06.09.2026)
+          # — ein grüner Haken, der nichts geprüft hat. Deshalb hier vorher
+          # nachsehen, statt sich auf den Exit-Code zu verlassen.
+          if ! git rev-parse --git-dir >/dev/null 2>&1; then
+            {
+              echo "## ⚠️ Die Geheimnis-Suche ist nicht gelaufen"
+              echo
+              echo "**Das ist KEIN Fund.** Im Arbeitsverzeichnis liegt kein Git-Repository;"
+              echo "gitleaks hätte hier wortlos „nichts gefunden\" gemeldet."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Kein Git-Repository (kein Fund)::Der Checkout ist unvollständig."
+            exit 1
+          fi
+
+          # --exit-code 2 trennt den Fund vom Werkzeugfehler: Ohne das Flag
+          # meldet gitleaks BEIDES als 1 (nachgemessen an 8.18.4 am 06.09.2026:
+          # 0 sauber, 1 Fund, 1 auch bei unlesbarer Quelle).
+          gitleaks detect --source . --redact --no-banner --verbose \
+            --report-path gitleaks-bericht.json --exit-code 2
+          code=$?
+
+          if [ "$code" -eq 0 ]; then
+            echo "## ✅ Kein Geheimnis gefunden" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "$code" -eq 2 ]; then
+            {
+              echo "## 🔴 Geheimnis gefunden"
+              echo
+              echo "**Das ist ein echter Fund, kein Netzproblem.** Der Schlüssel gilt als"
+              echo "offengelegt: erst zurückziehen und neu ausstellen, dann aus der Historie"
+              echo "entfernen. Ein Commit obendrauf genügt nicht."
+              echo
+              echo "| Datei | Zeile | Regel |"
+              echo "| --- | --- | --- |"
+              if [ -s gitleaks-bericht.json ]; then
+                jq -r '.[] | "| `\(.File)` | \(.StartLine) | \(.RuleID) |"' gitleaks-bericht.json \
+                  || echo "| (Bericht nicht lesbar — siehe Protokoll) | | |"
+              else
+                echo "| (kein Bericht geschrieben — siehe Protokoll) | | |"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          {
+            echo "## ⚠️ Die Geheimnis-Suche ist abgebrochen"
+            echo
+            echo "**Das ist KEIN Fund.** gitleaks selbst endete mit Code $code"
+            echo "(ein Fund wäre 2). Am Code ist damit nichts geprüft."
+            echo "Grund im Protokoll dieses Schritts, dann den Lauf wiederholen."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error title=Gitleaks abgebrochen (kein Fund)::Exit-Code $code"
+          exit 1
 
   build-test:
     name: Bauen und prüfen
