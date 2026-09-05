@@ -17,14 +17,16 @@
  * aus `naechsteSchwelle - anzahl`, "dieser Kauf trifft" aus `anzahl + 1 >=
  * naechsteSchwelle`).
  *
- * Drei Orte zeigen dieselbe Sache, deshalb stehen sie in einer Datei:
+ * Vier Orte zeigen dieselbe Sache, deshalb stehen sie in einer Datei:
  *   - die LEISTE mit einem Eintrag je Marke (Anzahl, Schwellen als Punkte,
  *     Bonus als Satz),
+ *   - dieselben Eintraege, nur kleiner, als ZEILE UNTER DEM BRETTTITEL DES
+ *     GEGNERS — sein Brett ist oeffentlich, also sind es seine Marken,
  *   - die MARKEN AN EINER EINHEIT auf Bank und Brett (nur Zeichen, kein
  *     Text — dort ist kein Platz),
  *   - dieselben Zeichen auf der LADENKARTE, wo eins hervortritt, wenn der
  *     Kauf eine Schwelle erreicht.
- * Zeichen und Farbe kommen fuer alle drei aus `MARKEN_ZEICHEN` und
+ * Zeichen und Farbe kommen fuer alle vier aus `MARKEN_ZEICHEN` und
  * `MARKEN_FARBE` — sonst haette die Leiste einen gruenen Punkt fuer eine
  * Marke, die an der Einheit blau ist, und niemand brauchte lange, um beides
  * fuer zwei verschiedene Dinge zu halten.
@@ -310,6 +312,69 @@ export function Markenzeichen({
 export const KARTE_TRIFFT: string = stil.karteTrifft;
 
 // ---------------------------------------------------------------------------
+// Ein Zaehler — einmal, fuer beide Orte
+// ---------------------------------------------------------------------------
+
+/**
+ * Der Chip einer Marke: Zeichen, Zaehler, und die ganze Auskunft am Zeiger
+ * und fuer das Vorlesegeraet.
+ *
+ * Er steht in der eigenen Leiste UND unter dem Bretttitel des gezeigten
+ * Gegners. Zwei Abschriften waeren zwei Wahrheiten: Beim ersten Mal, dass
+ * jemand den Zaehler von "3/4" auf "3 von 4" umstellt, saehe der Gegner
+ * anders aus als man selbst, obwohl beides dieselbe Zahl aus derselben Sicht
+ * ist. Unterschiedlich ist allein die GROESSE, und die entscheidet `klasse`.
+ */
+function Markenchip({
+  stand,
+  synergie,
+  klasse,
+}: {
+  stand: Synergiestand;
+  synergie: Synergie | undefined;
+  klasse: string;
+}): React.JSX.Element {
+  const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
+  const satz = standSatz(stand, synergie);
+  /*
+   * „2/4“, solange es eine naechste Schwelle gibt, sonst nur die Zahl:
+   * Auf der hoechsten Stufe waere jeder Nenner erfunden.
+   */
+  const zaehler =
+    stand.naechsteSchwelle !== null
+      ? `${stand.anzahl}/${stand.naechsteSchwelle}`
+      : `${stand.anzahl}`;
+  return (
+    <li
+      className={klasse}
+      /* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Nicht
+         "anzahl >= 2" — die 2 stuende dann im Client. */
+      data-aktiv={stand.schwelle !== null ? '' : undefined}
+      style={{ '--marke': farbe } as React.CSSProperties}
+      /* Am Zeiger die ganze Auskunft. Am Handy gibt es keinen Zeiger;
+         dort ist der Vorlese-Text unten dieselbe Auskunft. */
+      title={satz ? `${stand.name} · ${satz}` : stand.name}
+    >
+      <span className={stil.zeichen} style={{ color: farbe }}>
+        <svg className={stil.glyphe} viewBox="0 0 24 24" aria-hidden="true">
+          {MARKEN_ZEICHEN[stand.marke] ?? <circle cx="12" cy="12" r="7" />}
+        </svg>
+      </span>
+      <span className={stil.zahl} aria-hidden="true">
+        {zaehler}
+      </span>
+      {/* Der ganze Satz fuer das Vorlesegeraet. Sichtbar waere er
+          genau die Textliste, die diese Leiste losgeworden ist. */}
+      <span className={stil.nurVorlesen}>
+        {stand.name}: {stand.anzahl}
+        {stand.naechsteSchwelle !== null ? ` von ${stand.naechsteSchwelle}` : ''}
+        {satz ? ` · ${satz}` : ''}
+      </span>
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Die Leiste
 // ---------------------------------------------------------------------------
 
@@ -349,49 +414,71 @@ export function Synergieleiste({
             Noch keine Marken auf dem Feld — jeder Recke bringt ein bis zwei mit.
           </li>
         )}
-        {staende.map((stand) => {
-          const synergie = nachMarke.get(stand.marke);
-          const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
-          const satz = standSatz(stand, synergie);
-          /*
-           * „2/4", solange es eine naechste Schwelle gibt, sonst nur die Zahl:
-           * Auf der hoechsten Stufe waere jeder Nenner erfunden.
-           */
-          const zaehler =
-            stand.naechsteSchwelle !== null
-              ? `${stand.anzahl}/${stand.naechsteSchwelle}`
-              : `${stand.anzahl}`;
-          return (
-            <li
-              key={stand.marke}
-              className={stil.chip}
-              /* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Nicht
-                 "anzahl >= 2" — die 2 stuende dann im Client. */
-              data-aktiv={stand.schwelle !== null ? '' : undefined}
-              style={{ '--marke': farbe } as React.CSSProperties}
-              /* Am Zeiger die ganze Auskunft. Am Handy gibt es keinen Zeiger;
-                 dort ist der Vorlese-Text unten dieselbe Auskunft. */
-              title={satz ? `${stand.name} · ${satz}` : stand.name}
-            >
-              <span className={stil.zeichen} style={{ color: farbe }}>
-                <svg className={stil.glyphe} viewBox="0 0 24 24" aria-hidden="true">
-                  {MARKEN_ZEICHEN[stand.marke] ?? <circle cx="12" cy="12" r="7" />}
-                </svg>
-              </span>
-              <span className={stil.zahl} aria-hidden="true">
-                {zaehler}
-              </span>
-              {/* Der ganze Satz fuer das Vorlesegeraet. Sichtbar waere er
-                  genau die Textliste, die diese Leiste losgeworden ist. */}
-              <span className={stil.nurVorlesen}>
-                {stand.name}: {stand.anzahl}
-                {stand.naechsteSchwelle !== null ? ` von ${stand.naechsteSchwelle}` : ''}
-                {satz ? ` · ${satz}` : ''}
-              </span>
-            </li>
-          );
-        })}
+        {staende.map((stand) => (
+          <Markenchip
+            key={stand.marke}
+            stand={stand}
+            synergie={nachMarke.get(stand.marke)}
+            klasse={stil.chip}
+          />
+        ))}
       </ul>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Die Marken eines fremden Bretts
+// ---------------------------------------------------------------------------
+
+/**
+ * Die schmale Markenzeile unter dem Bretttitel des gezeigten Gegners.
+ *
+ * Warum es sie gibt: Das gegnerische Brett ist oeffentlich, und `sicht.ts`
+ * legt an JEDEN Gegner dasselbe Feld `synergien`, das auch der eigene Sitz
+ * bekommt. Am Bildschirm kam davon bis zum 05.09.2026 nichts an — wer wissen
+ * wollte, ob der Gegner auf sechs Waechter zugeht, musste dessen Figuren
+ * einzeln abzaehlen. Genau diese Frage beantwortet die Zeile in einem Blick.
+ *
+ * Dieselben Chips wie in der eigenen Leiste, nur kleiner: Das Brett darueber
+ * ist schmal, und die Zeile soll ihm keine Hoehe nehmen. Ein zweites Aussehen
+ * fuer dieselbe Sache waere zudem eine zweite Zeichensprache — die Farben und
+ * Zeichen sind ja bereits die von den Figuren auf dem Brett darunter.
+ *
+ * Steht keine Marke auf dem fremden Brett (erste Runde, oder ein Tisch aus
+ * der Zeit vor den Synergien — dort fehlt das Feld ganz), kommt gar nichts:
+ * Ein „Noch keine Marken" ist eine Aufforderung, und aufzustellen hat man auf
+ * dem Brett des Gegners nichts.
+ */
+export function Fremdmarken({
+  staende,
+  tabelle,
+  beschriftung,
+}: {
+  staende: readonly Synergiestand[];
+  tabelle: readonly Synergie[];
+  /**
+   * Wessen Marken das sind, fuer das Vorlesegeraet — z. B. „Marken von Ada".
+   * Sichtbar steht der Name schon im Bretttitel direkt darueber; ein Vorleser
+   * springt aber in Listen hinein, ohne die Ueberschrift davor gehoert zu
+   * haben.
+   */
+  beschriftung: string;
+}): React.JSX.Element | null {
+  const nachMarke = useMemo(() => new Map(tabelle.map((s) => [s.marke, s])), [tabelle]);
+
+  if (staende.length === 0) return null;
+
+  return (
+    <ul className={stil.fremdzeile} aria-label={beschriftung}>
+      {staende.map((stand) => (
+        <Markenchip
+          key={stand.marke}
+          stand={stand}
+          synergie={nachMarke.get(stand.marke)}
+          klasse={`${stil.chip} ${stil.fremd}`}
+        />
+      ))}
+    </ul>
   );
 }

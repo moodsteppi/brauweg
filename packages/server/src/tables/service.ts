@@ -33,8 +33,14 @@ export interface CreateTableInput {
   readonly accountId: string;
   readonly gameId: GameId;
   readonly name?: string;
-  /** Vollstaendiger Regelsatz. Wird immer als eigene Version festgeschrieben. */
-  readonly config: unknown;
+  /**
+   * Vollstaendiger Regelsatz. Wird immer als eigene Version festgeschrieben.
+   *
+   * WEGLASSEN HEISST: der Regelsatz des Moduls (`defaultConfig()`). Das ist
+   * der Normalfall fuer einen Bildschirm, der gar nichts einstellen laesst —
+   * die Begruendung steht unten in `createTable`.
+   */
+  readonly config?: unknown;
   readonly seats: number;
   readonly rounds: number;
   readonly visibility?: s.TableVisibility;
@@ -221,6 +227,22 @@ export async function createTable(db: Db, input: CreateTableInput) {
     throw badRequest('seatCountUnsupported');
   }
 
+  /*
+   * Ohne `config` gilt der Regelsatz des Moduls.
+   *
+   * Sonst muss jeder Bildschirm, der gar nichts einstellen laesst, die
+   * Vorgabezahlen abschreiben, um ueberhaupt einen Tisch aufmachen zu koennen
+   * — und diese Kopie UEBERSTIMMT dann das Modul, ohne dass irgendwo ein
+   * Fehler auffaellt. Bei Tafelrunde waere das am 05.09.2026 zweimal beinahe
+   * passiert: erst waere jeder Tisch mit 100 statt 20 Startleben gelaufen,
+   * dann mit 20 statt 14. Beide Male haette der Server die veraltete Kopie
+   * brav festgeschrieben.
+   *
+   * `null` zaehlt nicht als weggelassen: Das ist ein gesetzter Wert, und
+   * `validateConfig` soll ihn wie jeden anderen falschen abweisen.
+   */
+  const config = input.config === undefined ? module.defaultConfig() : input.config;
+
   // Die Geberrotation ist spielabhaengig, also fragt der Server das Modul,
   // statt eine Zahl fest zu verdrahten.
   const rotation = module.meta.rotationSize(input.seats);
@@ -232,7 +254,7 @@ export async function createTable(db: Db, input: CreateTableInput) {
     accountId: input.accountId,
     gameId: input.gameId,
     name: input.name ?? 'Tischregeln',
-    config: input.config,
+    config,
     seats: input.seats,
     rounds: input.rounds,
     clubId,
@@ -240,7 +262,7 @@ export async function createTable(db: Db, input: CreateTableInput) {
 
   const chipFeld = module.meta.chipStackField;
   if (chipFeld) {
-    await verlangen(db, input.accountId, einsatzVon(input.config, chipFeld));
+    await verlangen(db, input.accountId, einsatzVon(config, chipFeld));
   }
 
   // Erst nach allen Pruefungen (auch der des Regelsatzes in saveRuleSet):

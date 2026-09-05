@@ -189,7 +189,15 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > zwei Zahlen: `STANDARD_REGLER.zeitraffer` von 1 auf **2** (`kampf.ts`) und
 > `DEFAULT_REGELN.startLeben` von 20 auf **14** (`regeln.ts`) — dazu die
 > ausgeschriebene Kopie `REGELSATZ` in `screens/Tafelrunde.tsx`, die als
-> `config` an den Tisch geht und die Änderung sonst überstimmt hätte.
+> `config` an den Tisch ging und die Änderung sonst überstimmt hätte.
+>
+> **Diese Kopie ist seit dem 05.09.2026 weg.** Der Bildschirm schickt beim
+> Tischanlegen keine `config` mehr; fehlt sie, setzt der Server
+> `defaultConfig()` des Moduls ein (`tables/service.ts`). Damit gibt es für
+> Tafelrunde wieder **eine** Quelle für die Regelzahlen, und eine Änderung an
+> `DEFAULT_REGELN` erreicht jeden Tisch von selbst. Der Weg steht allen
+> Bildschirmen offen, die nichts einstellen lassen — Filler, Eiland und
+> Mememory tragen ihre Kopien noch (eigener Punkt auf dem Board).
 >
 > Gemessen vorher → nachher (500 Partien zu viert, `werkzeug/spielzeit.mjs`):
 > Spielzeit **13:31 → 7:25**, Runden **15 → 11**, einzelner Kampf

@@ -21,6 +21,7 @@ import {
 import {
   type Synergie,
   type Synergiestand,
+  Fremdmarken,
   KARTE_TRIFFT,
   Markennamen,
   Markenzeichen,
@@ -214,30 +215,20 @@ type Aktion =
 // Feste Werte
 // ---------------------------------------------------------------------------
 
-/**
- * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
+/*
+ * HIER STAND BIS ZUM 05.09.2026 DER REGELSATZ, wortgleich abgeschrieben von
+ * DEFAULT_REGELN (packages/game-tafelrunde/src/regeln.ts): sieben Zahlen, die
+ * `createTable` als `config` mitbekam. Der Server schreibt eine mitgeschickte
+ * `config` als Regelsatz des Tisches fest — die Kopie UEBERSTIMMTE also das
+ * Modul, ohne dass irgendwo ein Fehler auffiel. Zweimal an einem Tag waere
+ * genau das durchgerutscht: bei der Umstellung auf 20 Startleben und noch
+ * einmal bei der auf 14.
  *
- * Muss zu DEFAULT_REGELN in packages/game-tafelrunde/src/regeln.ts passen.
- * Bewusst ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll
- * nicht auf eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht —
- * dieselbe Ueberlegung wie bei Filler.
- *
- * ACHTUNG, DIESE KOPIE WIRD MITGESCHICKT und nicht nur angezeigt: `config`
- * geht an `createTable`, der Server nimmt sie als Regelsatz des Tisches. Eine
- * veraltete Zahl hier ueberstimmt also DEFAULT_REGELN, ohne dass irgendwo ein
- * Fehler auffaellt. Genau das waere am 05.09.2026 zweimal passiert: erst bei
- * der Umstellung auf 20 Leben, dann noch am selben Tag bei der auf 14. Dass
- * diese Liste ueberhaupt doppelt steht, ist ein eigener Punkt auf dem Board.
+ * Heute laesst dieser Bildschirm `config` weg. Der Server nimmt dann
+ * `defaultConfig()` des Moduls (tables/service.ts) — dieselbe Quelle, aus der
+ * auch die serverseitige Mitspielersuche ihren Tisch baut. Wer wieder etwas
+ * mitschickt, holt die Doppelung zurueck.
  */
-const REGELSATZ = {
-  startLeben: 14,
-  startGold: 2,
-  ladenPlaetze: 5,
-  bankPlaetze: 9,
-  neuwuerfelnKosten: 0,
-  grundeinkommen: 5,
-  rundenGrenze: 30,
-};
 
 /**
  * Sitze am Bot-Tisch: vier.
@@ -247,8 +238,12 @@ const REGELSATZ = {
  * Menschen, die freien Plaetze fuellt der Server nach 30 Sekunden mit Bots.
  * Hier gegen die KI sind vier genug: Acht Bots rechnen laenger, ohne dass es
  * sich anders spielt.
+ *
+ * Exportiert wie SITZ_WAHL nur fuer den Vertrag: Eine Sitzzahl, die das Modul
+ * nicht kennt, weist der Server ab (`seatCountUnsupported`), und der Knopf
+ * fuehrt dann ins Leere.
  */
-const SITZE = 4;
+export const SITZE = 4;
 
 /**
  * Takt, in dem der Stand der Suche abgefragt wird.
@@ -260,14 +255,18 @@ const SITZE = 4;
 const SUCH_TAKT_MS = 1000;
 
 /**
- * Sitzzahlen des geplanten Tisches. Muss zu SEAT_COUNTS in
- * packages/game-tafelrunde/src/regeln.ts passen; der Server weist ab, was
- * das Modul nicht kennt (`seatCountUnsupported`).
+ * Sitzzahlen des geplanten Tisches.
  *
  * Zwei bis acht, aber nicht alles als Knopf: Sieben Knoepfe nebeneinander
  * liest niemand. Angeboten wird, was man sich verabredet.
+ *
+ * Das ist bewusst eine AUSWAHL und keine Kopie — anders als der Regelsatz,
+ * der hier bis zum 05.09.2026 abgeschrieben stand. Der Server weist ab, was
+ * das Modul nicht kennt (`seatCountUnsupported`), und dass jede Zahl von hier
+ * in SEAT_COUNTS steht, haelt `src/vertrag/tafelrunde-tisch.test.ts` fest.
+ * Exportiert allein dafuer.
  */
-const SITZ_WAHL = [2, 3, 4, 6, 8] as const;
+export const SITZ_WAHL = [2, 3, 4, 6, 8] as const;
 
 /**
  * Die Bot-Stufen, wie sie hier heissen.
@@ -556,7 +555,6 @@ export function Tafelrunde({
     try {
       const { id } = await api.createTable({
         gameId: 'tafelrunde',
-        config: REGELSATZ,
         seats: SITZE,
         rounds: 1,
         visibility: 'on_request',
@@ -603,7 +601,6 @@ export function Tafelrunde({
     try {
       const antwort = await api.createTable({
         gameId: 'tafelrunde',
-        config: REGELSATZ,
         seats: sitze,
         rounds: RUNDEN,
         visibility: oeffentlich ? 'public' : 'on_request',
@@ -1802,6 +1799,14 @@ function Ruestkammer({
             <div className="tr-bretter">
               <section className="tr-brettteil">
                 <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
+                {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
+                    Feld `synergien` an jedem Sitz genau wie ein Spieler
+                    (sicht.ts) — bis heute stand hier nichts davon. */}
+                <Fremdmarken
+                  staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                  tabelle={synergieTabelle}
+                  beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                />
                 <Hexbrett
                   reihen={sicht.brettReihen}
                   spalten={sicht.brettSpalten}
@@ -1930,6 +1935,16 @@ function Ruestkammer({
                 {spielername(zeile(gegner.sitz), gegner.sitz)}
                 {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
               </h2>
+              {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
+                  in der eigenen Leiste. Ohne sie muesste man seine Figuren
+                  einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
+                  zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
+                  auch hier nichts. */}
+              <Fremdmarken
+                staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                tabelle={synergieTabelle}
+                beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+              />
               <Hexbrett
                 reihen={sicht.brettReihen}
                 spalten={sicht.brettSpalten}

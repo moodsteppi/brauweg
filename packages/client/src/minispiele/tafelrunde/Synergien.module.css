@@ -75,6 +75,45 @@
 .zahl { letter-spacing: -0.01em; }
 .chip[data-aktiv] .zahl { color: var(--text); }
 
+/* -- Die Marken eines fremden Bretts -------------------------------------- */
+
+/*
+ * Die Zeile unter dem Bretttitel des gezeigten Gegners (Fremdmarken in
+ * Synergien.tsx). Sie liegt IM FLUSS zwischen Titel und Brett und bleibt es
+ * auch am breiten Schirm — anders als die eigene Leiste, die dort seitlich
+ * haengt: Diese Zeile gehoert zu genau einem Brett und muesste mitwandern,
+ * sobald man den gezeigten Gegner wechselt.
+ *
+ * Zentriert wie der Titel darueber, und umbrechend: Sieben Marken passen auf
+ * 340 px nicht in eine Reihe, und ein waagerechtes Rollen an dieser Stelle
+ * saehe niemand.
+ */
+.fremdzeile {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin: 0 0 3px;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Kleiner als in der eigenen Leiste. Der Gegner ist Auskunft, das eigene
+ * Brett ist Arbeitsflaeche — und die Zeile sitzt ueber einem Brett, dem jede
+ * Zeile Hoehe nimmt. Alles andere (Farbe, Ring bei erreichter Schwelle,
+ * Zeichen) kommt unveraendert von `.chip`.
+ */
+.fremd {
+  gap: 2px;
+  padding: 1px 5px 1px 4px;
+  font-size: 9px;
+}
+.fremd .zeichen .glyphe {
+  width: 11px;
+  height: 11px;
+}
+
 /* -- Die Zeichen ---------------------------------------------------------- */
 
 .reihe {

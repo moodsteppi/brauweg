@@ -1122,6 +1122,63 @@ describe('Endbild', () => {
   });
 });
 
+/**
+ * Ein Gegnersitz mit Marken auf dem Brett — die Zahlen passen bewusst NICHT
+ * zur Tabelle (vier Waechter, laut Sicht aber erst Schwelle 4 und als
+ * naechste die 6). Wer sie abzaehlte oder nachrechnete, kaeme auf etwas
+ * anderes als das, was hier geprueft wird.
+ */
+function gegnerMitMarken(teil: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    sitz: 1,
+    leben: 84,
+    level: 2,
+    serie: { art: null, laenge: 0 },
+    brett: Array.from({ length: 10 }, () => null),
+    bereit: false,
+    ausRunde: null,
+    verlassen: false,
+    synergien: [
+      {
+        marke: 'waechter',
+        name: 'Wächter',
+        anzahl: 4,
+        schwelle: 4,
+        naechsteSchwelle: 6,
+        bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 20 },
+      },
+    ],
+    ...teil,
+  };
+}
+
+describe('Marken des Gegners', () => {
+  it('stehen unter dem Bretttitel des gezeigten Gegners', () => {
+    // Die Frage, wegen der es die Zeile gibt: Geht der Gegner auf sechs
+    // Wächter zu? Vorher musste man dafür seine Figuren einzeln abzählen.
+    stelle(sicht({ gegner: [gegnerMitMarken()] }));
+    zeige();
+    const zeile = screen.getByRole('list', { name: 'Marken von KI' });
+    expect(within(zeile).getByText('4/6')).toBeInTheDocument();
+  });
+
+  it('sind auch für einen Zuschauer da — er bekommt dasselbe Feld', () => {
+    stelle(sicht({ zuschauer: true, ich: null, eigenes: null, gegner: [gegnerMitMarken()] }));
+    zeige();
+    expect(
+      within(screen.getByRole('list', { name: 'Marken von KI' })).getByText('4/6'),
+    ).toBeInTheDocument();
+  });
+
+  it('bleiben weg, wenn auf dem fremden Brett noch keine Marke steht', () => {
+    // Auch der Fall eines Tisches aus der Zeit vor den Synergien: Dort fehlt
+    // das Feld ganz, und eine leere Zeile unter dem Titel wäre nur Luft.
+    stelle(sicht({ gegner: [gegnerMitMarken({ synergien: undefined })] }));
+    zeige();
+    expect(screen.queryByRole('list', { name: /^Marken von/ })).toBeNull();
+  });
+});
+
 describe('Zuschauer', () => {
   it('bekommt kein Gold, keinen Laden und keine Bank', () => {
     // Die Trennung entsteht im Modul (zuschauerSicht liefert eigenes: null).

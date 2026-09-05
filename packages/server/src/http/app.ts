@@ -264,7 +264,12 @@ const diagnoseSchema = z.object({
 const createTableSchema = z.object({
   gameId: gameIdSchema,
   name: z.string().min(1).max(60).optional(),
-  config: z.unknown(),
+  /*
+   * Weggelassen heisst: der Regelsatz des Moduls (`defaultConfig()`, siehe
+   * `createTable`). Ausdruecklich `.optional()` und nicht bloss `z.unknown()`,
+   * obwohl beides dasselbe parst — hier liest man die Absicht.
+   */
+  config: z.unknown().optional(),
   seats: z.number().int().min(2).max(8),
   rounds: z.number().int().min(1).max(100),
   visibility: z.enum(['public', 'on_request', 'club_only']).optional(),
