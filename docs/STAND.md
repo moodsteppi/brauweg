@@ -61,6 +61,38 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > Sekunden vorstellt, ohne zwischendurch abzurufen, prüft nicht das Fenster,
 > sondern die Stille-Regel — dafür gibt es dort den Helfer `warte()`.
 >
+> **Der verabredete Tisch** steht seit dem 05.09.2026 daneben: „Tisch
+> erstellen" und „Tisch beitreten" im Tafelrunde-Menü, gebaut auf der
+> vorhandenen Tischschicht (`tables/service.ts`) und nicht auf einem zweiten
+> Weg. Neu ist dort nur der **Beitrittscode**: sechs Zeichen ohne 0/O und
+> 1/I/L, eigene Spalte `table_.join_code` mit Unique-Index (Migration
+> `0025`), dazu `GET /api/tables/code/:code` (ansehen) und
+> `POST /api/tables/code/:code/join` (beitreten). Ein Link
+> `/?tisch=CODE` öffnet die Beitreten-Ansicht mit ausgefülltem Code — er
+> tritt bewusst nicht von selbst bei.
+>
+> Der Gastgeber startet, **wann er will**: Der Tisch entsteht mit
+> `fillWithBots: false`, sonst wäre er in dem Augenblick startklar, in dem
+> der Gastgeber sich hinsetzt (`isReadyToStart`), und die Partie liefe los,
+> bevor der erste Freund den Code eingetippt hat. Beim Druck auf „Partie
+> starten" besetzt der Bildschirm die freien Plätze per `addBot` — oder
+> schrumpft den Tisch per `startNow`, wenn ohne Bots gespielt wird. Beides
+> sind die Zurufe, die der Doppelkopf-Wartebereich schon benutzt.
+>
+> **Suche und Tisch schließen einander aus**, in beide Richtungen: Wer einen
+> Tisch aufmacht oder betritt, fliegt aus jeder Suchschlange
+> (`Vermittlung.verlaesstAlle`); wer die Schnellsuche drückt, gibt seine
+> Warteplätze auf (`leaveOtherWaitingTables` in `Vermittlung.betritt`). Ohne
+> die zweite Richtung setzt die Vermittlung den Gastgeber 30 Sekunden später
+> an einen anderen Tisch, und seine Freunde warten vor einem Tisch, den
+> niemand mehr startet.
+>
+> Seit demselben Tag wertet Tafelrunde die **Bot-Stufe des Tisches** aus:
+> `gangartVon` in `adapter.ts` bildet die vier Plattformstufen auf die drei
+> Gangarten von `bot.ts` ab (`experte` und `genie` fallen beide auf `hart` —
+> eine vierte Gangart, die genauso spielt wie die dritte, wäre eine
+> Beschriftung ohne Unterschied).
+>
 > **Die Kampfsimulation** kam am 04.09.2026 nach (`arena.ts`, `kampf.ts`,
 > `zufall.ts`; übertragen vom Zweig
 > `aufgabe/tafelrunde-die-kampfsimulation-6422b76f`, der noch auf der alten

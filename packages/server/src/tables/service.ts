@@ -7,6 +7,8 @@
  * anbietet, beantwortet immer das Modul.
  */
 
+import { randomInt } from 'node:crypto';
+
 import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { type BotLevel, DEFAULT_BOT_LEVEL, type GameId } from '@brauweg/game-api';
 
@@ -128,6 +130,80 @@ export async function listRuleSets(db: Db, accountId: string, gameId: GameId) {
 // Tische
 // ---------------------------------------------------------------------------
 
+/**
+ * Zeichenvorrat des Beitrittscodes.
+ *
+ * Ohne 0/O und 1/I/L: Der Code wird vorgelesen und abgetippt, und genau diese
+ * Paare verwechselt jeder. Kleinbuchstaben fehlen aus demselben Grund —
+ * gelesen wird der Code als Grossbuchstabe, verglichen ebenso
+ * (`codeNormalisieren`).
+ */
+const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+/** Sechs Zeichen aus 31 sind rund 900 Millionen Moeglichkeiten. */
+export const CODE_LAENGE = 6;
+
+/**
+ * Ein eingetippter Code in die Form, in der er in der Datenbank steht.
+ *
+ * Leerzeichen und Bindestriche fliegen raus: Wer "KX7 M9Q" oder "KX7-M9Q"
+ * abschreibt, meint denselben Tisch.
+ */
+export function codeNormalisieren(eingabe: string): string {
+  return eingabe.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function wuerfleCode(): string {
+  let code = '';
+  for (let i = 0; i < CODE_LAENGE; i += 1) {
+    code += CODE_ZEICHEN[randomInt(CODE_ZEICHEN.length)];
+  }
+  return code;
+}
+
+/**
+ * Ein Code, den es noch nicht gibt.
+ *
+ * Vorher nachsehen statt auf den Unique-Index zu laufen: Ein Zusammenstoss ist
+ * bei 900 Millionen Moeglichkeiten und einer Handvoll wartender Tische so
+ * selten, dass die Abfrage praktisch immer beim ersten Versuch durch ist — und
+ * der Index bleibt als letzte Sicherung darunter stehen, falls doch zwei
+ * gleichzeitig denselben ziehen.
+ */
+async function freierCode(db: Db): Promise<string> {
+  for (let versuch = 0; versuch < 5; versuch += 1) {
+    const code = wuerfleCode();
+    const [belegt] = await db
+      .select({ id: s.gameTable.id })
+      .from(s.gameTable)
+      .where(eq(s.gameTable.joinCode, code))
+      .limit(1);
+    if (!belegt) return code;
+  }
+  throw conflict('joinCodeUnavailable');
+}
+
+/**
+ * Der wartende Tisch zu einem Beitrittscode.
+ *
+ * Nur wartende Tische: Ein Code, dessen Partie schon laeuft, soll nicht in
+ * `joinTable` laufen und dort `tableAlreadyStarted` melden — das klaenge, als
+ * haette man sich vertippt. Der eigene Fehlercode sagt, was los ist.
+ */
+export async function tischPerCode(db: Db, eingabe: string) {
+  const code = codeNormalisieren(eingabe);
+  if (code.length === 0) throw notFound('joinCodeUnknown');
+
+  const [table] = await db
+    .select()
+    .from(s.gameTable)
+    .where(eq(s.gameTable.joinCode, code))
+    .limit(1);
+  if (!table) throw notFound('joinCodeUnknown');
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  return table;
+}
+
 export async function createTable(db: Db, input: CreateTableInput) {
   const module = requireModule(input.gameId);
   const visibility = input.visibility ?? 'public';
@@ -181,6 +257,14 @@ export async function createTable(db: Db, input: CreateTableInput) {
       clubId,
       seats: input.seats,
       maxRounds: input.rounds,
+      /*
+       * Jeder Tisch bekommt einen Code, nicht nur der private.
+       *
+       * Er kostet sechs Zeichen und macht jeden Tisch weitersagbar — auch den
+       * oeffentlichen, den ein Freund sonst in der Liste suchen muesste. Wer
+       * ihn nicht braucht, sieht ihn nie.
+       */
+      joinCode: await freierCode(db),
       // Nur gültige Stufen in die Filter — tableBotLevel fällt sonst ohnehin auf
       // die Vorgabe zurück, aber ein sauberer Filter erspart Rätselraten.
       filters: {

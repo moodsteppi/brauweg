@@ -135,6 +135,27 @@ export class Suchschlange {
     if (fenster.suchende.size === 0) this.fenster.delete(gameId);
   }
 
+  /**
+   * Aus JEDER Schlange austreten, ohne das Spiel zu kennen.
+   *
+   * Gebraucht wird das vom Tisch her: Wer einen Tisch aufmacht oder einem
+   * beitritt, darf nicht nebenher weitersuchen — sonst setzt ihn die
+   * Vermittlung 30 Sekunden spaeter an einen zweiten Tisch und zieht ihn aus
+   * dem ersten (`leaveOtherWaitingTables`), waehrend seine Freunde dort noch
+   * auf den Start warten. Die Tischrouten kennen den Spielausweis zwar, aber
+   * eine Schlange je Spiel durchzugehen ist billiger als die Fallunterscheidung
+   * an jeder Aufrufstelle.
+   */
+  verlaesstUeberall(accountId: string): void {
+    for (const [gameId, fenster] of this.fenster) {
+      if (!fenster.suchende.delete(accountId)) continue;
+      if (fenster.suchende.size === 0) this.fenster.delete(gameId);
+    }
+    // Auch ein schon vermitteltes Ergebnis: Es wuerde den Spieler beim
+    // naechsten Abruf an den Tisch von vorhin schicken.
+    this.ergebnisse.delete(accountId);
+  }
+
   stand(gameId: GameId, accountId: string): Suchstand {
     const ergebnis = this.ergebnisse.get(accountId);
     if (ergebnis) {

@@ -142,6 +142,7 @@ import {
   saveRuleSet,
   tableRules,
   tableWithSeats,
+  tischPerCode,
   verlasseKiTisch,
 } from '../tables/service.js';
 import type { Vermittlung } from '../suche/vermittlung.js';
@@ -1685,8 +1686,56 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       clubId = clubs[0]?.id;
     }
     const table = await createTable(deps.db, { accountId, ...body, clubId });
+    // Wer einen Tisch aufmacht, sucht nicht mehr: Sonst zieht ihn die
+    // Vermittlung 30 Sekunden spaeter aus dem eigenen Tisch an einen fremden.
+    deps.vermittlung?.verlaesstAlle(accountId);
     return reply.status(201).send(table);
   });
+
+  /**
+   * Der Tisch zu einem Beitrittscode — ohne beizutreten.
+   *
+   * Zwei Wege statt einem, weil man vor dem Beitritt sehen will, WOHIN man
+   * geht: Ein vertippter Code soll nicht stumm an irgendeinen Tisch fuehren.
+   * Die Route steht vor `/api/tables/:tableId` in der Datei, liegt aber
+   * ohnehin auf einer anderen Segmentzahl.
+   */
+  app.get('/api/tables/code/:code', async (request, reply) => {
+    await requireAccount(request);
+    const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
+    const table = await tischPerCode(deps.db, code);
+    const { seats } = await tableWithSeats(deps.db, table.id);
+    const gastgeber = seats.find((seat) => seat.accountId)?.accountId ?? null;
+    const [konto] = gastgeber
+      ? await deps.db
+          .select({ displayName: s.account.displayName })
+          .from(s.account)
+          .where(eq(s.account.id, gastgeber))
+      : [];
+    return reply.send({
+      tableId: table.id,
+      gameId: table.gameId,
+      seats: table.seats,
+      occupied: seats.filter((seat) => seat.accountId).length,
+      host: konto?.displayName ?? null,
+      visibility: table.visibility,
+    });
+  });
+
+  /** Beitreten per Code. Ein Aufruf, damit zwischen Suchen und Setzen nichts passt. */
+  app.post(
+    '/api/tables/code/:code/join',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
+      const table = await tischPerCode(deps.db, code);
+      await joinTable(deps.db, table.id, accountId);
+      deps.vermittlung?.verlaesstAlle(accountId);
+      deps.runtime.notify(table.id);
+      return reply.send({ tableId: table.id });
+    },
+  );
 
   /** Clantisch pausieren — Zugtimer und 24h-Verfall stehen still. */
   app.post('/api/tables/:tableId/pause', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
@@ -1734,6 +1783,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await joinTable(deps.db, tableId, accountId);
+    // Wer sich an einen Tisch setzt, steht nicht mehr in der Schnellsuche.
+    deps.vermittlung?.verlaesstAlle(accountId);
     // Die schon Verbundenen sollen sehen, dass sich der Tisch fuellt - und
     // wenn er damit voll ist, startet die Partie von selbst.
     deps.runtime.notify(tableId);

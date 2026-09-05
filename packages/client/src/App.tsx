@@ -16,7 +16,7 @@ import { Profile } from './screens/Profile';
 import { Table } from './screens/Table';
 import { CambioTable } from './screens/CambioTable';
 import { SkatTable } from './screens/SkatTable';
-import { Tafelrunde } from './screens/Tafelrunde';
+import { TISCH_PARAMETER, Tafelrunde } from './screens/Tafelrunde';
 import { WizardTable } from './screens/WizardTable';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
@@ -68,7 +68,19 @@ type Screen =
 export function App(): React.JSX.Element {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
-  const [screen, setScreen] = useState<Screen>({ name: 'games' });
+  /**
+   * `/?tisch=KX7M9Q` fuehrt direkt zu Tafelrunde.
+   *
+   * Der Link, den ein Gastgeber weitergibt, landet sonst auf der Startseite,
+   * und der Eingeladene muesste den Code aus der Adresszeile abschreiben.
+   * Beigetreten wird nicht von selbst — der Bildschirm oeffnet nur die
+   * Beitreten-Ansicht mit ausgefuelltem Code (siehe TISCH_PARAMETER).
+   */
+  const [screen, setScreen] = useState<Screen>(() =>
+    new URLSearchParams(window.location.search).get(TISCH_PARAMETER)
+      ? { name: 'tafelrunde' }
+      : { name: 'games' },
+  );
 
   const reload = async (): Promise<void> => {
     setMe(await api.me().catch(() => null));

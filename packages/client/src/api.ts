@@ -360,6 +360,17 @@ export interface TableRow {
   variante: string | null;
 }
 
+/** Was hinter einem Beitrittscode steckt, bevor man ihn benutzt. */
+export interface TischVorschau {
+  tableId: string;
+  gameId: string;
+  seats: number;
+  occupied: number;
+  /** Anzeigename dessen, der den Tisch aufgemacht hat. */
+  host: string | null;
+  visibility: string;
+}
+
 export interface GameDefaults {
   config: Record<string, unknown>;
   protocolVersion: number;
@@ -716,8 +727,21 @@ export const api = {
     clubId?: string;
     fillWithBots?: boolean;
     botLevel?: BotLevel;
-  }) => post<{ id: string }>('/tables', body),
+    /* Die Antwort traegt den Beitrittscode gleich mit — ihn danach ueber
+       `/tables/:id` nachzuholen waere ein zweiter Ruf fuer eine Zeile, die
+       schon vorliegt. */
+  }) => post<{ id: string; joinCode: string | null }>('/tables', body),
   joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
+  /**
+   * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
+   *
+   * Zwei Rufe statt einem, weil ein vertippter Code sonst stumm an
+   * irgendeinen fremden Tisch fuehrte.
+   */
+  tischPerCode: (code: string) =>
+    request<TischVorschau>(`/tables/code/${encodeURIComponent(code)}`),
+  beitretenPerCode: (code: string) =>
+    post<{ tableId: string }>(`/tables/code/${encodeURIComponent(code)}/join`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
   pauseTable: (id: string) => post<{ ok: true }>(`/tables/${id}/pause`),
   resumeTable: (id: string) => post<{ ok: true }>(`/tables/${id}/resume`),

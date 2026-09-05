@@ -17,6 +17,7 @@
  */
 
 import type {
+  BotLevel,
   ConfigProblem,
   CreatePartyOptions,
   GameMeta,
@@ -24,7 +25,7 @@ import type {
   PartyStanding,
 } from '@brauweg/game-api';
 
-import { botZug } from './bot.js';
+import { type Schwierigkeit, botZug } from './bot.js';
 import {
   type TafelrundeAktion,
   type TafelrundePartie,
@@ -83,6 +84,23 @@ const LESBARE_VERSIONEN = [1, SNAPSHOT_VERSION];
 const KAMPF_NACHLAUF_MS = 2500;
 
 type GespeichertePartie = TafelrundePartie & { readonly v: number };
+
+/**
+ * Die vier Stufen der Plattform auf die drei Gangarten des Bots.
+ *
+ * Vier auf drei geht nicht auf, und das ist kein Versehen: `bot.ts` hat drei
+ * Gangarten, weil sich mehr nicht messbar unterscheiden liessen (die Zahlen
+ * stehen dort). `experte` und `genie` fallen deshalb beide auf `hart` — die
+ * ehrlichere Zuordnung als eine vierte Gangart, die genauso spielt wie die
+ * dritte und nur anders heisst.
+ *
+ * Ohne Stufe gilt `normal`: dieselbe Vorgabe wie in `botZug` selbst.
+ */
+function gangartVon(level: BotLevel | undefined): Schwierigkeit {
+  if (level === 'anfaenger') return 'sanft';
+  if (level === 'experte' || level === 'genie') return 'hart';
+  return 'normal';
+}
 
 const meta: GameMeta = {
   id: 'tafelrunde',
@@ -185,9 +203,9 @@ export const tafelrunde: GameModule<
    */
   viewCursor: () => SICHT_MARKE,
 
-  botAction(sicht) {
+  botAction(sicht, level) {
     if (sicht.zuschauer) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
-    return botZug(sicht);
+    return botZug(sicht, gangartVon(level));
   },
 
   /**

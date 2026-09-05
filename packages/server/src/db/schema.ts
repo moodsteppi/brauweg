@@ -801,6 +801,16 @@ export const gameTable = pgTable(
      * feste Verdrahtung im Server. Deshalb jsonb.
      */
     filters: jsonb().notNull().default(sql`'{}'::jsonb`),
+    /**
+     * Kurzer Beitrittscode, den man weitersagen kann ("KX7M9Q").
+     *
+     * Eine eigene Spalte und nicht die Tisch-Kennung: Eine UUID diktiert
+     * niemand ins Telefon. Und nicht in `filters`, obwohl das eine Migration
+     * gespart haette — der Code muss EINDEUTIG sein, und das kann nur ein
+     * Index. Nullbar, weil Tische von vor diesem Deploy keinen haben; in
+     * Postgres stoeren mehrere NULL einen Unique-Index nicht.
+     */
+    joinCode: text(),
   },
   (t) => [
     foreignKey({
@@ -810,6 +820,7 @@ export const gameTable = pgTable(
     }),
     index('table_lobby_idx').on(t.gameId, t.status, t.visibility),
     index('table_activity_idx').on(t.lastActivityAt),
+    uniqueIndex('table_join_code_idx').on(t.joinCode),
   ],
 );
 

@@ -16505,6 +16505,104 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-nebenknopf:active { transform: scale(0.985); }
 .tr-nebenknopf:disabled { opacity: 0.45; cursor: default; }
 
+/* -- Der verabredete Tisch: erstellen, beitreten, warten ------------------- */
+
+/* Zwei Knoepfe nebeneinander statt untereinander: "Tisch erstellen" und
+   "Tisch beitreten" sind zwei Haelften einer Entscheidung, nicht zwei
+   Angebote hintereinander. */
+.tr-menue-paar { display: flex; gap: 10px; }
+.tr-menue-paar .tr-nebenknopf { flex: 1; }
+
+/* Auf den Formularseiten steht der Titel ueber einer ganzen Seite Inhalt und
+   darf deshalb nicht die Haelfte davon einnehmen. */
+.tr-titel-klein { font-size: clamp(26px, 8vw, 36px); margin-bottom: 16px; }
+
+.tr-feldtitel {
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font: 800 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.tr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tr-chip {
+  flex: 1 1 auto;
+  /* 44 px hoch: Fingerkuppen-Mass, dieselbe Untergrenze wie ueberall sonst. */
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel);
+  font: 700 14px/1 system-ui;
+  cursor: pointer;
+}
+.tr-chip.is-an {
+  border-color: var(--gold);
+  color: #1a1207;
+  background: linear-gradient(180deg, #f0cd72, #d8a63a);
+}
+
+/* Der Code wird abgetippt und vorgelesen: gross, weit gesperrt und in
+   Tabellenziffern, damit I und 1 nicht verschmelzen. */
+.tr-codefeld,
+.tr-code {
+  width: 100%;
+  margin: 6px 0 12px;
+  font: 800 30px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.tr-codefeld {
+  box-sizing: border-box;
+  padding: 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+.tr-code { color: var(--gold); }
+
+.tr-sitzliste { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 4px; }
+.tr-sitz {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font: 700 14px/1.2 system-ui;
+  text-align: left;
+}
+.tr-sitz.is-besetzt { color: var(--text); background: var(--panel); }
+.tr-sitzmarke { color: var(--gold); font: 800 11px/1 system-ui; letter-spacing: 0.06em; }
+
+.tr-tischliste { display: flex; flex-direction: column; gap: 6px; }
+.tr-tischzeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel);
+  font: 700 14px/1.2 system-ui;
+  text-align: left;
+  cursor: pointer;
+}
+.tr-tischzeile:disabled { opacity: 0.5; cursor: default; }
+.tr-tischzahl { color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* Der Countdown der Mitspielersuche. Tabellenziffern, damit die Zahl beim
    Herunterzaehlen nicht in der Breite springt — bei proportionalen Ziffern
    wandert die ganze Zeile im Sekundentakt hin und her. */

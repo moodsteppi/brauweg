@@ -26,6 +26,13 @@ const { sucheStarten, sucheStand, sucheAbbrechen, createTable, leaveTable } = vi
 }));
 
 vi.mock('../api', () => ({
+  // Die Fehlerklasse gehoert in jede Attrappe dieses Moduls: Der Bildschirm
+  // prueft mit `instanceof`, und gegen `undefined` wirft das.
+  ApiError: class ApiError extends Error {
+    constructor(readonly messageKey: string) {
+      super(messageKey);
+    }
+  },
   api: {
     sucheStarten,
     sucheStand,
