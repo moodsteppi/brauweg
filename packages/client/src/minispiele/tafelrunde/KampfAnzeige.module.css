@@ -317,13 +317,15 @@
   width: 74%;
   height: 62%;
   /*
-   * Verblassen ERST NACH dem Einsacken (`--sacken`, gerechnet in
-   * bildfolge.ts). Hier stand bis zum 6.9.2026 zusaetzlich ein `scale(0.55)
-   * rotate(-9deg)` mit der Begruendung, senkrecht kleiner werden sehe aus wie
-   * ein Ladefehler. Der Grund ist entfallen: Damals schrumpfte eine Platte,
-   * heute sackt die FIGUR selbst zusammen (Zeile `tod` des Blattes). Zwei
-   * Sterbebewegungen uebereinander sehen falsch aus — und die schnellere
-   * haette die gerenderte unsichtbar gemacht, bevor sie durch ist.
+   * Verblassen ERST NACH dem Fall (`--sacken`, gerechnet in bildfolge.ts).
+   * Hier stand bis zum 6.9.2026 zusaetzlich ein `scale(0.55) rotate(-9deg)`
+   * mit der Begruendung, senkrecht kleiner werden sehe aus wie ein
+   * Ladefehler. Der Grund ist entfallen: Damals schrumpfte eine Platte, heute
+   * faellt die FIGUR selbst (Zeile `tod` des Blattes). Zwei Sterbebewegungen
+   * uebereinander sehen falsch aus — und die schnellere haette die gerenderte
+   * unsichtbar gemacht, bevor sie durch ist. Seit die Todeszeile bis zum
+   * LIEGEN durchlaeuft, gilt das doppelt: Das Liegen ist genau das Bild, das
+   * man sehen soll, und es kommt zuletzt.
    */
   transition: opacity 420ms ease var(--sacken, 200ms);
 }
@@ -391,11 +393,11 @@
 /*
  * -- Wo die 3D-Figur steht -------------------------------------------------
  *
- * Der Ausschnitt selbst (quadratisch, `overflow: hidden`, das Blatt darin,
- * das Spiegeln) steht in `Figur3D.module.css` — er ist an allen vier Orten
- * derselbe. HIER steht nur, wo die Figur auf einer Arenakarte steht und wie
- * gross sie ist; auf einer Wabe der Ruestkammer oder im Kopf einer Ladenkarte
- * sind es andere Zahlen (`.tr-figur3d…` in styles.css).
+ * Der Ausschnitt selbst (seine Form, das Blatt darin, das Spiegeln) steht in
+ * `Figur3D.module.css` — er ist an allen vier Orten derselbe. HIER steht nur,
+ * wo die Figur auf einer Arenakarte steht und wie gross sie ist; auf einer
+ * Wabe der Ruestkammer oder im Kopf einer Ladenkarte sind es andere Zahlen
+ * (`.tr-figur3d…` in styles.css).
  *
  * Der Kasten ist breiter als die Karte und ragt nach oben ueber sie hinaus:
  * Der Ausschnitt umfasst alle Bewegungen, auch den weit ausgeholten Schlag,
@@ -406,49 +408,69 @@
   position: absolute;
   left: 50%;
   /*
+   * BEIDE MASSE KOMMEN AUS `FIGURENKASTEN` in bildfolge.ts und stehen hier
+   * bewusst nicht mehr als Zahl. WAS sie ausdruecken, ist unveraendert Robins
+   * Entscheidung vom 06.09.2026 — nur die Form ist eine andere, und der Grund
+   * dafuer steht ganz unten.
+   *
    * DIE ZWEI ZAHLEN GEHOEREN ZUSAMMEN und sind gerechnet, nicht probiert.
    *
    * Der Ausschnitt ist eine ZELLE des Blattes, und die Figur steht darin
-   * nicht mittig: Ihr Fusspunkt liegt bei 77 % der Zellhoehe (FIGUREN3D_FUSSPUNKT
+   * nicht mittig: Ihr Fusspunkt liegt bei 80 % der Zellhoehe (FIGUREN3D_FUSSPUNKT
    * in figuren3d.ts), weil oben Luft fuer den ausgeholten Schlag bleiben muss.
    * Wo die Figur AUF DEM FELD aufsetzt, ist damit
    *
-   *     Fuss ueber der Kartenunterkante = bottom + (1 − 0,77) · Hoehe.
+   *     Fuss ueber der Kartenunterkante = bottom + (1 − 0,80) · Hoehe.
    *
    * Dieser Wert ist 0,164 und muss es bleiben — er ist die Stelle knapp ueber
-   * den Sternen, an der der Lebensbalken sitzt. Wer die Hoehe aendert, rechnet
-   * `bottom` daraus zurueck: bottom = 0,164 − 0,23 · Hoehe. Fuer 260 % sind
-   * das −43,4 %. Vergisst man das, schwebt das ganze Heer ueber seinen Feldern.
+   * den Sternen, an der der Lebensbalken sitzt. Vergisst man ihn, schwebt das
+   * ganze Heer ueber seinen Feldern. Genau diese Rechnung fuehrt
+   * `FIGURENKASTEN` aus, mit `STANDLINIE` als der 0,164.
    *
-   * WARUM 260 % UND NICHT MEHR 180 % — belegt am Vergleichsbild
-   * `docs/bilder/tafelrunde-arena-groesse.webp`: Bei 180 % war eine Figur auf einem
-   * 390-px-Schirm — der Zielgroesse — rund 50 Pixel hoch und 36 breit. Von
-   * einer vorgerenderten 3D-Figur blieb darin eine farbige Silhouette; man sah
-   * weder Ruestung noch Gesicht noch Waffe, wofuer die Blaetter gerendert
-   * wurden. 260 % machen daraus 72 auf 52 Pixel, und das ist der Unterschied
-   * zwischen „da steht etwas Gruenes" und „da steht der Druide".
+   * WARUM SO GROSS UND NICHT MEHR WIE FRUEHER — belegt am Vergleichsbild
+   * `docs/bilder/tafelrunde-arena-groesse.webp`: Bei der alten Groesse war eine
+   * Figur auf einem 390-px-Schirm — der Zielgroesse — rund 50 Pixel hoch und 36
+   * breit. Von einer vorgerenderten 3D-Figur blieb darin eine farbige
+   * Silhouette; man sah weder Ruestung noch Gesicht noch Waffe, wofuer die
+   * Blaetter gerendert wurden. Jetzt sind es 72 auf 52 Pixel, und das ist der
+   * Unterschied zwischen „da steht etwas Gruenes" und „da steht der Druide".
    *
    * HIER STAND, GROESSER GEHE NICHT: „Bei 200 % ragt der Meuchler mit Kopf
    * und Klingen seitlich ueber die Karte hinaus." Der Satz stimmt und der
    * Schluss daraus war trotzdem falsch, weil er die ZELLE fuer die Figur hielt.
    * Nachgemessen am Alphakanal der fuenf Blaetter: Die Figur belegt in ihrer
-   * Zelle 26 bis 51 % der Breite und 52 bis 77 % der Hoehe — alles andere ist
-   * durchsichtiger Rand fuer den ausgeholten Schlag. Ueber die Karte hinaus
-   * ragt bei 260 % also der Rand, und der ist nicht zu sehen.
+   * Zelle nur einen Teil, alles andere ist durchsichtiger Rand fuer den
+   * ausgeholten Schlag. Ueber die Karte hinaus ragt also der Rand, und der ist
+   * nicht zu sehen.
    *
    * NACH OBEN BEGRENZT ES DER NACHBAR, nicht die Karte. Am Bild gesehen
-   * (390 px, /probe/kampf): Bei 300 % verdeckt die vordere Reihe die hintere
-   * bis zur Brust, und die oberste Figur laeuft ueber den Brettrand in die
-   * Seitenzeile. Bei 260 % ueberlappen sich die Reihen nur so weit, wie
+   * (390 px, /probe/kampf): Eine Stufe groesser verdeckt die vordere Reihe die
+   * hintere bis zur Brust, und die oberste Figur laeuft ueber den Brettrand in
+   * die Seitenzeile. So wie jetzt ueberlappen sich die Reihen nur so weit, wie
    * Figuren es tun, die hintereinander stehen — dafuer stapelt die Anzeige sie
    * ohnehin nach Reihe (`zIndex` in KampfAnzeige.tsx).
+   *
+   * UND WARUM KEINE ZAHL MEHR: Sie waere eine ueber die ZELLE, die Entscheidung
+   * ist aber eine ueber die FIGUR. Wie viel Figur in einer Zelle steckt,
+   * entscheidet der gemessene Ausschnitt der Blaetter, und der aendert sich mit
+   * jedem neuen Satz. Am 06.09.2026 gleich zweimal: Die 260 %, mit denen die
+   * Wache 72 Pixel misst, gehoeren zu einem Ausschnitt von 4,29 Metern je
+   * Zelle; seit die Todeszeile ihre eigene, breitere Zelle hat, sind es 3,76.
+   * Dieselben 260 % waeren jetzt 82 Pixel — 14 % mehr, als abgenommen wurde.
+   * `FIGURENKASTEN` haelt stattdessen den MASSSTAB fest (`MASSSTAB_METER`,
+   * 1,65 Meter je Kartenhoehe) und rechnet die Prozente daraus aus. Wer die
+   * Figuren wirklich groesser will, aendert dort eine Zahl — und bekommt sie
+   * ueberall gleich.
    *
    * Ueber die HOEHE bemessen und nicht ueber die Breite: Dann haengt die
    * Rechnung nur an der Kartenhoehe und nicht zusaetzlich am
    * Seitenverhaeltnis der Wabe, das sich mit der Spaltenzahl aendert.
+   *
+   * Die Rueckfallwerte sind die von staging: Wer die Regel ohne die Komponente
+   * ansieht, bekommt etwas Vernuenftiges statt einer Figur der Hoehe null.
    */
-  bottom: -43.4%;
-  height: 260%;
+  bottom: var(--tr-kasten-boden, -43.4%);
+  height: var(--tr-kasten-hoehe, 260%);
   /* `translate` und nicht `transform`: Das Spiegeln der Gegenseite steht in
      `scale` (Figur3D.module.css), und zwei Dinge in demselben `transform`
      schliessen einander aus. */

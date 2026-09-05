@@ -8,7 +8,7 @@ import { PAKET } from './paket';
  * Alles holen, bevor die erste Runde laeuft.
  *
  * Seit dem 6.9.2026 haengen ausserdem die fuenf Blaetter der 3D-Bildfolgen mit
- * drin (bildfolge.ts). Sie wiegen gut 200 kB — mehr als alles andere an
+ * drin (bildfolge.ts). Sie wiegen gut 280 kB — mehr als alles andere an
  * Bildern zusammen — und werden erst in der Kampfphase gebraucht; genau
  * deshalb muessen sie vorher da sein.
  *
@@ -47,7 +47,7 @@ import { PAKET } from './paket';
  *     gelesenem Stueck. Alles, was laenger als die Ruhefrist am Stueck laden
  *     kann, gehoert an den zweiten — sonst schreibt die Uhr es mitten im
  *     Herunterladen ab (siehe `FRIST_MS`). Heute ist kein Posten so schwer:
- *     Das dickste Bild ist ein Blatt mit 43 kB.
+ *     Das dickste Bild ist ein Blatt mit 78 kB.
  */
 
 // ---------------------------------------------------------------------------
@@ -97,7 +97,7 @@ export const VORZULADEN: readonly Posten[] = [
      nicht zwei hintereinander — siehe paket.ts. */
   PAKET,
   /*
-   * Die fuenf Blaetter der Bildfolgen (figuren3d.ts): zusammen gut 200 kB und
+   * Die fuenf Blaetter der Bildfolgen (figuren3d.ts): zusammen gut 280 kB und
    * damit der schwerste Posten nach dem Spielpaket. Vor die Textur gezogen,
    * weil ohne sie im Kampf gar keine Figur steht — der Rueckfall auf die
    * Pixelfigur greift zwar (KampfAnzeige.tsx), aber der Kampf ist das
@@ -106,7 +106,7 @@ export const VORZULADEN: readonly Posten[] = [
    * Aus BLATT_PFADE abgeleitet und nicht danebengeschrieben, aus demselben
    * Grund wie bei den Figuren (Punkt 1 oben).
    */
-  ...BLATT_PFADE.map((pfad) => ({ pfad, kb: 43 })),
+  ...BLATT_PFADE.map((pfad) => ({ pfad, kb: 58 })),
   /* Die Textur: die groesste Einzeldatei nach den Blaettern und die einzige,
      deren Fehlen man auf jedem Bildschirm sofort sieht. */
   { pfad: UNTERGRUND, kb: 35 },
@@ -139,7 +139,7 @@ export const VORZULADEN: readonly Posten[] = [
  * letzten Dateiende".
  *
  * WER SICH NICHT ZWISCHENMELDET, ist deshalb nicht falsch bedient: `bildHolen`
- * kann es gar nicht (ein `<img>` hat keinen Zaehler), und bei 43 kB je Blatt
+ * kann es gar nicht (ein `<img>` hat keinen Zaehler), und bei 58 kB je Blatt
  * braucht es das auch nicht — auf gedrosseltem 3G ist ein Blatt in rund einer
  * Sekunde durch. Die Regel dahinter: Ein Posten, der laenger als `FRIST_MS`
  * am Stueck laden kann, gehoert an `stromPosten` und nicht an `bildHolen`.

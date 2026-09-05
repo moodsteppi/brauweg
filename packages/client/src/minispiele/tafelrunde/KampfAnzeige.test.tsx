@@ -1,8 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FIGUREN3D_BEWEGUNGEN, folgeVon } from '../../figuren3d/figuren3d';
-import { type Bildstand, GLEITEN_MS, blattPfad } from './bildfolge';
+import {
+  FIGUREN3D_BEWEGUNGEN,
+  FIGUREN3D_SPALTEN,
+  FIGUREN3D_ZEILEN,
+  folgeVon,
+} from '../../figuren3d/figuren3d';
+import { type Bildstand, GLEITEN_MS, SACKEN_MS, blattPfad } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import {
   type Kampfbericht,
@@ -89,12 +94,22 @@ const NAMEN: Record<number, string> = { 0: 'Ich', 1: 'KI', 2: 'Robin', 3: 'Tom' 
 function gelesen(bild: HTMLElement): Bildstand {
   const treffer = /translate\((-?[\d.]+)%, (-?[\d.]+)%\)/.exec(bild.style.transform);
   if (!treffer) throw new Error(`kein Versatz am Blatt: "${bild.style.transform}"`);
-  const zeile = Math.round(Number(treffer[2]) / -20);
-  const folge = FIGUREN3D_BEWEGUNGEN.find((f) => f.zeile === zeile);
+  const zeile = Math.round((Number(treffer[2]) / -100) * FIGUREN3D_ZEILEN);
+  /* Eine Bewegung kann MEHRERE Zeilen belegen: Die Todesfolge hat acht Bilder
+     zu vier je Zeile. Deshalb ein Bereich und kein Vergleich. */
+  const folge = FIGUREN3D_BEWEGUNGEN.find(
+    (f) => zeile >= f.zeile && zeile < f.zeile + Math.ceil(f.bilder / f.proZeile),
+  );
   if (!folge) throw new Error(`keine Bewegung in Zeile ${zeile}`);
-  /* `+ 0` gegen die minus-Null: `Math.round(-0/-16.667)` ist -0, und -0 ist
-     fuer `toEqual` etwas anderes als 0. */
-  return { bewegung: folge.bewegung, bild: Math.round(Number(treffer[1]) / -16.667) + 0 };
+  /* Und ihre Zellen koennen breiter sein als eine Grundspalte — die der
+     Todeszeile decken anderthalb ab. Deshalb durch die Weite geteilt. */
+  const spalte = Math.round(((Number(treffer[1]) / -100) * FIGUREN3D_SPALTEN) / folge.weite);
+  /* `+ 0` gegen die minus-Null: `Math.round(-0)` ist -0, und -0 ist fuer
+     `toEqual` etwas anderes als 0. */
+  return {
+    bewegung: folge.bewegung,
+    bild: (zeile - folge.zeile) * folge.proZeile + spalte + 0,
+  };
 }
 
 function zeige(
@@ -486,7 +501,7 @@ describe('KampfAnzeige', () => {
     /*
      * Der letzte Tod faellt fast immer kurz vor das Ende des Kampfes (hier:
      * 1000 ms, Ende bei 1100). Ohne das Nachspiel hielte die Uhr mit dem
-     * Ergebnis an, und die Figur bliebe mitten im Einsacken stehen.
+     * Ergebnis an, und die Figur bliebe mitten im Fall stehen.
      */
     zeige([paarung()], 0);
     const gezeigt = (): Bildstand =>
@@ -496,7 +511,9 @@ describe('KampfAnzeige', () => {
 
     lauf(1100);
     // Angefangen, aber noch nicht durch: Der Kampf endet bei 1100, der Tod
-    // faellt bei 1000, und die Folge braucht rund 200 ms.
+    // faellt bei 1000, und die Folge braucht seit dem 06.09.2026 400 ms — den
+    // ganzen Fall bis zum Liegen, vorher nur das halbe Einsacken.
+    expect(SACKEN_MS).toBe(400);
     expect(gezeigt().bewegung).toBe('tod');
     expect(gezeigt().bild).toBeLessThan(folgeVon('tod').bilder - 1);
     // Durchgelaufen und stehengeblieben — die Folge hat `schleife: false`.
@@ -504,6 +521,27 @@ describe('KampfAnzeige', () => {
     expect(gezeigt()).toEqual({ bewegung: 'tod', bild: folgeVon('tod').bilder - 1 });
     lauf(30_000);
     expect(gezeigt()).toEqual({ bewegung: 'tod', bild: folgeVon('tod').bilder - 1 });
+  });
+
+  it('macht den Ausschnitt beim Sterben breiter und danach nicht wieder schmal', () => {
+    /*
+     * Die Todeszeile hat breitere Zellen als alle anderen — eine liegende Figur
+     * ist breiter als eine stehende hoch (siehe `weite` in figuren3d.ts). Bliebe
+     * der Ausschnitt quadratisch, saehe man von der Gefallenen zwei Drittel und
+     * vom Rest nichts, und zwar ohne dass irgendwo ein Fehler entstuende.
+     */
+    zeige([paarung()], 0);
+    const kasten = (): HTMLElement =>
+      screen.getByLabelText(/^Dorfwache, Stufe 2/).querySelector('[data-spiegel]')!;
+    const weite = (): string => kasten().style.getPropertyValue('--tr-zellweite');
+
+    lauf(60);
+    expect(weite()).toBe('1');
+    // Der Tod faellt bei 1000 ms — ab da, und nicht erst am letzten Bild.
+    lauf(1000);
+    expect(weite()).toBe('1.5');
+    lauf(30_000);
+    expect(weite()).toBe('1.5');
   });
 
   it('faellt in der Arena zweistufig zurueck, wenn Bilder nicht laden', () => {
