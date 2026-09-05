@@ -222,7 +222,7 @@ const REGELSATZ = {
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,
-  neuwuerfelnKosten: 2,
+  neuwuerfelnKosten: 0,
   grundeinkommen: 5,
   rundenGrenze: 30,
 };
@@ -2146,10 +2146,15 @@ function Ruestkammer({
                 );
               })}
             </div>
+            {/* Seit das Nachbesetzen greift, steht hier kein Platz mehr leer,
+                weil jemand gekauft hat — nur noch, wenn der Vorrat nichts mehr
+                hergibt. Der alte Satz ("würfle neu für frische Recken")
+                schickte den Spieler dann auf einen Knopf, der nichts mehr
+                ändern kann. */}
             {eigenes.laden.every((id) => id === null) && (
               <p className="tr-leer-satz">
-                Der Laden ist leergekauft — würfle neu für frische Recken oder
-                mach dich bereit.
+                Der Vorrat gibt nichts mehr her — alle Recken sind im Umlauf.
+                Mach dich bereit.
               </p>
             )}
             <div className="tr-ladenknoepfe">
@@ -2160,22 +2165,30 @@ function Ruestkammer({
                 onClick={() => schicke({ typ: 'neuwuerfeln' })}
               >
                 Neu würfeln
-                {/* Der Preis wird rot, wenn das Gold nicht reicht — sonst
+                {/* Kostet das Wuerfeln nichts (Vorgabe seit dem 05.09.2026),
+                    faellt die Preisangabe ganz weg. "0 Gold" waere schlechter
+                    als nichts: Es liest sich wie ein Preis, den man erst
+                    nachrechnen muss. Ein Tisch darf den Preis weiterhin
+                    setzen, dann steht er wieder da.
+
+                    Der Preis wird rot, wenn das Gold nicht reicht — sonst
                     sieht ein gesperrter Knopf aus wie ein kaputter. Beide
                     Bedingungen muessen zutreffen: `legalActions` hat den Zug
                     abgelehnt UND die Zahlen der Sicht erklaeren es auch.
                     Erklaeren sie es nicht, bleibt der Preis ruhig statt zu
                     raten. */}
-                <em
-                  data-teuer={
-                    darfHandeln && !darfWuerfeln && eigenes.gold < eigenes.neuwuerfelnKosten
-                      ? ''
-                      : undefined
-                  }
-                >
-                  <GoldZeichen />
-                  {eigenes.neuwuerfelnKosten}
-                </em>
+                {eigenes.neuwuerfelnKosten > 0 && (
+                  <em
+                    data-teuer={
+                      darfHandeln && !darfWuerfeln && eigenes.gold < eigenes.neuwuerfelnKosten
+                        ? ''
+                        : undefined
+                    }
+                  >
+                    <GoldZeichen />
+                    {eigenes.neuwuerfelnKosten}
+                  </em>
+                )}
               </button>
               <button
                 type="button"

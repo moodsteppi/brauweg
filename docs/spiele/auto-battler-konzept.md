@@ -71,7 +71,18 @@ aktiven Boni gehören **sichtbar** in die Oberfläche.
 Gold je Runde: Grundeinkommen, Zins (1 Gold je 10 auf der Hand, höchstens 5),
 Bonus bei Sieges- oder Niederlagenserie. Der Laden zeigt fünf zufällige
 Einheiten; die Wahrscheinlichkeit teurer Einheiten steigt mit dem Spielerlevel.
-Neu würfeln kostet Gold. Level steigern kostet Gold und bringt Feldplätze.
+Neu würfeln ist seit dem 05.09.2026 **kostenlos** (Robin: „wir wollen nicht
+mehr, dass man fürs Rollen Geld ausgeben soll"), und **ein Kauf zieht den
+ganzen Laden neu** — nicht nur den gekauften Platz (Robin: „Nicht nur der
+gekaufte, dein ganzer Shop aktualisiert sich wenn du etwas kaufst, du musst
+dich also immer entscheiden. Es darf dann auch weniger Optionen geben."). Zwei
+Einheiten aus demselben Laden zu holen geht damit nicht mehr: Wer kauft, gibt
+die übrigen Angebote auf. Der Laden ist danach wieder voll, solange der Vorrat
+reicht — reicht er nicht, bleibt er kleiner. Gold gibt man nur noch für
+Einheiten und Aufstiege aus; was das Nachziehen begrenzt, ist allein der
+Vorrat. Das Feld `neuwuerfelnKosten` steht weiterhin im Regelsatz, damit ein
+selbstgebauter Tisch den Preis wieder setzen kann. Level steigern kostet Gold
+und bringt Feldplätze.
 
 ### Rundenablauf
 
@@ -147,7 +158,130 @@ und keine Probe reproduzierbar.
 
 ---
 
+## Gemessen: Ausgewogenheit (Stand 05.09.2026, vierte Messung — der gültige Stand)
+
+**Was geändert wurde:** `neuwuerfelnKosten` steht auf **0**, und **ein Kauf
+zieht den ganzen Laden neu** (`fuelleLaden` in `partie.ts`, Fall `kaufen`).
+Sonst nichts — Zins, Serienbonus, Leveln, Katalog und Schwellen sind
+unangetastet. Gemessen mit demselben Werkzeug und derselben Saatbasis wie die
+Messungen davor, **5.000 Partien zu viert, Besetzung `normal`,
+`--mindest 100`**.
+
+Drei Spalten, weil zwischendurch eine dritte Fassung gemessen wurde:
+
+- **jetzt** — ein Kauf zieht den ganzen Laden neu.
+- **nur der Platz** — Zwischenstand: kostenloses Würfeln, aber nur der
+  gekaufte Ladenplatz wurde nachbesetzt. Diese Fassung stand kurz auf dem
+  Aufgabenzweig und setzte die Regel falsch um; sie steht hier als Vergleich.
+- **staging** — der Stand vor beiden Änderungen (Würfeln kostet 2 Gold, ein
+  gekaufter Platz bleibt bis zum nächsten Wurf leer). Das ist die zweite
+  Messung weiter unten.
+
+### Wie lange eine Partie dauert
+
+| | jetzt | nur der Platz | staging |
+|---|---|---|---|
+| Runden ⌀ | 14,1 | 14,2 | 14,7 |
+| Median | 14 | 14 | 15 |
+| kürzeste / längste | 10 / 21 | 10 / 21 | 11 / 22 |
+| an der Grenze geendet | 0,0 % | 0,0 % | 0,0 % |
+| erstes Ausscheiden | Runde 10,1 | Runde 10,2 | Runde 10,5 |
+| zur Halbzeit entschieden | **47,3 %** | 44,0 % | 36,7 % |
+| Antritte insgesamt | 250.329 | 252.843 | 261.233 |
+
+Die Dauer bewegt sich kaum noch — die halbe Runde hat schon das kostenlose
+Würfeln gebracht. Weiter gewandert ist die vorletzte Zeile: **Fast jede zweite
+Partie steht zur Halbzeit fest** (47,3 % gegen 36,7 % auf `staging`). Wer den
+Laden ohnehin bei jedem Kauf neu sieht, holt einen Rückstand schwerer auf.
+
+### Siegquote je Marke
+
+Schnitt der gezählten Zeilen: 35,3 % (nur der Platz: 32,9 %, staging: 31,9 %).
+
+| Marke | Antritte | Siege | Quote | zum Schnitt | nur der Platz | staging |
+|---|---|---|---|---|---|---|
+| Untot | 128 | 64 | 50,0 % | **×1,42** | zu dünn | zu dünn |
+| Naturwesen | 2.304 | 888 | 38,5 % | ×1,09 | ×1,04 | ×1,06 |
+| Krieger | 7.274 | 2.672 | 36,7 % | ×1,04 | ×1,10 | ×1,13 |
+| Drache | 63 | 22 | 34,9 % | zu dünn | ×1,27 | ×1,15 |
+| Elementar | 156 | 51 | 32,7 % | ×0,93 | ×0,93 | ×0,80 |
+| Meuchler | 13.019 | 3.532 | 27,1 % | ×0,77 | ×0,79 | ×0,79 |
+| Wächter | 12.001 | 3.221 | 26,8 % | ×0,76 | ×0,86 | ×1,07 |
+
+Der Zielrahmen — keine gezählte Marke über ×1,4, keine unter ×0,7 — ist
+**oben knapp gerissen**: Untot steht auf ×1,42. Siehe Befund 1.
+
+### Siegquote je Einheit, die Ränder
+
+Schnitt 33,5 % (nur der Platz: 34,3 %, staging: 31,1 %). „—" heißt: Die
+älteren Tabellen führen nur die Ränder, diese Zeile lag damals in der Mitte
+und wurde nicht mitgeschrieben.
+
+| Einheit | Gold | Antritte | Quote | zum Schnitt | nur der Platz | staging |
+|---|---|---|---|---|---|---|
+| Grabfürstin | 3 | 125 | 60,0 % | ×1,79 | ×1,48 | ×0,88 |
+| Sturmrufer | 3 | 225 | 53,8 % | ×1,60 | — | — |
+| Lichtwahrerin | 3 | 140 | 52,9 % | ×1,58 | ×1,64 | ×1,31 |
+| Nachtpfeil | 2 | 2.317 | 43,2 % | ×1,29 | ×1,39 | ×1,59 |
+| … | | | | | | |
+| Gassendieb | 1 | 17.149 | 22,8 % | ×0,68 | ×0,63 | ×0,67 |
+| Schildknappe | 1 | 12.061 | 21,7 % | ×0,65 | ×0,73 | ×0,93 |
+| Astschütze | 1 | 2.831 | 17,1 % | ×0,51 | ×0,59 | ×0,76 |
+| Irrlicht | 1 | 253 | 16,6 % | ×0,50 | ×0,50 | ×0,56 |
+| Funkenlehrling | 1 | 208 | 12,0 % | ×0,36 | ×0,39 | ×0,51 |
+
+### Wie oft eine Schwelle überhaupt stand
+
+250.329 Antritte.
+
+| Marke | ab 2 | ab 4 | ab 6 | Träger im Katalog |
+|---|---|---|---|---|
+| Krieger | 46.115 | 914 | 0 | 5 |
+| Elementar | 1.132 | 1 | 0 | 5 |
+| Meuchler | 97.374 | 3.475 | 7 | 4 |
+| Wächter | 96.573 | 3.790 | 4 | 6 |
+| Naturwesen | 13.248 | 88 | 0 | 5 |
+| Untot | 460 | 0 | 0 | 2 |
+| Drache | 367 | 0 | 0 | 2 |
+| **zusammen** | **255.269 (102,0 %)** | **8.268 (3,3 %)** | **11 (0,0 %)** | |
+
+### Was auffällt — zum Nachrechnen, nicht nachjustiert
+
+Robin rechnet das Balancing selbst durch; hier steht nur, was die Zahlen sagen.
+
+1. **Untot steht mit ×1,42 knapp über dem Zielrahmen** — und zählt überhaupt
+   erst zum ersten Mal mit, weil die Antritte von 45 auf 128 gestiegen sind.
+   128 ist gerade eben über der Zählschwelle von 100; eine Marke mit zwei
+   Trägern schwankt bei so wenigen Antritten stark. Die Zahl ist ein Hinweis,
+   keine Aussage (eigene Karte zu Untot liegt auf dem Board).
+2. **Wächter fällt weiter und ist jetzt die schwächste Marke:** ×1,07
+   (staging) → ×0,86 (nur der Platz) → ×0,76. Meuchler steht mit ×0,77 direkt
+   daneben. Beide liegen noch über der unteren Grenze von ×0,7, aber die
+   Bewegung geht in dieselbe Richtung wie beim Zwischenstand: Wer sich
+   aussuchen kann, was er kauft, greift seltener zur häufigsten Marke.
+3. **Die dünnen Marken bewegen sich in beide Richtungen.** Drache 394 → 129 →
+   **63** Antritte (fällt jetzt unter die Zählschwelle und sagt gar nichts
+   mehr), Elementar 1.260 → 373 → **156** (zählt gerade noch), Untot 65 → 45 →
+   **128** (siehe Befund 1). Zwei der sieben Marken sind damit praktisch nicht
+   mehr messbar.
+4. **Der Preisgraben wird tiefer.** Die 3-Gold-Einheiten stehen ganz oben
+   (Grabfürstin ×1,79, Sturmrufer ×1,60, Lichtwahrerin ×1,58), die
+   1-Gold-Einheiten ganz unten (Funkenlehrling ×0,36, Irrlicht ×0,50,
+   Astschütze ×0,51). Schildknappe ist von ×0,93 auf ×0,65 gefallen. Wer bei
+   jedem Kauf einen frischen Laden sieht, wartet eher auf die teure Karte,
+   statt die billige mitzunehmen.
+5. **Die Schwelle 4 steht seltener als im Zwischenstand** (3,3 % gegen 3,5 %),
+   aber immer noch häufiger als auf `staging` (2,2 %). Die Schwelle 6 kam auf
+   11 Fälle von 250.329 — unverändert unerreichbar (eigene Karte auf dem
+   Board).
+
+---
+
 ## Gemessen: Ausgewogenheit (Stand 05.09.2026, zweite Messung)
+
+> **Überholt.** Diese Messung ist der Stand VOR dem kostenlosen Würfeln und
+> dem Neuziehen des Ladens beim Kauf; sie steht als Vergleichsgrundlage der
+> vierten Messung hier (Spalte „staging").
 
 **Was geändert wurde:** Der Lebensvorrat ist von 100 auf **20** gefallen, der
 Schaden je Niederlage wird dafür durch drei geteilt (`SCHADEN_STUFEN_TEILER`

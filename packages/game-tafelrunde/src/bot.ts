@@ -520,6 +520,17 @@ function wurf(sicht: TafelrundeSicht, eigen: EigeneSicht, zweck: string): number
   return baueZufall(saat)();
 }
 
+/**
+ * GENAU EIN Kauf, danach ist Schluss.
+ *
+ * `kandidaten` liefert zwar eine sortierte Liste, aber sie darf nie als
+ * Einkaufszettel abgearbeitet werden: Seit dem 05.09.2026 zieht ein Kauf den
+ * GANZEN Laden neu (partie.ts, Fall 'kaufen'). Der zweitbeste Platz von eben
+ * liegt danach nicht mehr aus — wer hier zwei Aktionen hintereinander baute,
+ * kaufte den Platz einer Karte, die inzwischen eine andere ist. Der Bot wird
+ * ohnehin so lange gerufen, bis er "bereit" meldet, und sieht bei jedem Ruf
+ * den frischen Laden.
+ */
 function kaufZug(
   sicht: TafelrundeSicht,
   eigen: EigeneSicht,
@@ -596,6 +607,16 @@ function aufstiegsZug(eigen: EigeneSicht, gangart: Gangart): TafelrundeAktion | 
 const KAUF_RUECKLAGE = 3;
 
 /**
+ * Wie oft ein Bot in EINER Runde hoechstens neu wuerfelt.
+ *
+ * Die Zahl ist kein Feintuning, sondern der Abbruch: Ohne sie hat der Bot seit
+ * dem kostenlosen Wuerfeln keinen Grund mehr aufzuhoeren (siehe wuerfelZug).
+ * Vier reichen — er wuerfelt nur in der Lage "Brett voll, nichts passt", und
+ * die loest sich in aller Regel beim ersten oder zweiten Wurf.
+ */
+const WUERFE_JE_RUNDE = 4;
+
+/**
  * Neu wuerfeln, wenn das Brett voll ist und KEIN Ladenplatz zum eigenen Heer
  * passt.
  *
@@ -614,8 +635,13 @@ const KAUF_RUECKLAGE = 3;
  * Deshalb steht diese Regel auch VOR dem Kauf: Sie greift nur in der Lage, in
  * der ein Kauf ohnehin nur die Bank fuellte, und danach kaeme sie nie zum Zug.
  *
- * Dass der Bot sich nicht festwuerfelt, garantiert das Gold: Jeder Wurf
- * kostet, und in der Vorbereitung kommt keines nach.
+ * DASS ER SICH NICHT FESTWUERFELT, GARANTIERT SEIT DEM 05.09.2026 DER DECKEL
+ * und nicht mehr das Gold. Vorher kostete jeder Wurf, und in der Vorbereitung
+ * kam keines nach — das war die Bremse. Seit die Vorgabe 0 Gold lautet, gibt
+ * es sie nicht mehr: Passt im Laden nichts, wuerfelte der Bot ohne
+ * WUERFE_JE_RUNDE endlos weiter, denn die Plattform ruft ihn so lange, bis er
+ * "bereit" meldet. Die Goldregel bleibt trotzdem stehen, weil ein Tisch den
+ * Preis wieder setzen darf.
  */
 function wuerfelZug(
   sicht: TafelrundeSicht,
@@ -625,9 +651,17 @@ function wuerfelZug(
   if (!gangart.wuerfeltNeu) return null;
   if (eigen.belegt < eigen.feldplaetze) return null;
   if (!eigen.bank.includes(null)) return null;
+  if (eigen.wuerfeRunde >= WUERFE_JE_RUNDE) return null;
 
-  const polster = sicht.runde >= POLSTER_AB_RUNDE ? gangart.polster : 0;
-  if (eigen.gold - eigen.neuwuerfelnKosten < polster + KAUF_RUECKLAGE) return null;
+  /*
+   * Die Ruecklage nur, wenn das Wuerfeln ueberhaupt etwas kostet. Ein
+   * kostenloser Wurf ist auch dann richtig, wenn danach kein Gold mehr da
+   * ist: Er nimmt nichts weg.
+   */
+  if (eigen.neuwuerfelnKosten > 0) {
+    const polster = sicht.runde >= POLSTER_AB_RUNDE ? gangart.polster : 0;
+    if (eigen.gold - eigen.neuwuerfelnKosten < polster + KAUF_RUECKLAGE) return null;
+  }
 
   const eigene = eigeneEinheiten(eigen);
   const marken = markenZaehlung(eigene);

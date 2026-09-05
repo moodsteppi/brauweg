@@ -96,8 +96,23 @@ export interface Heer {
   readonly serie: Serie;
   /** Hat der Sitz seine Vorbereitung beendet? */
   readonly bereit: boolean;
-  /** Wie oft der Laden fuer diesen Sitz schon gefuellt wurde. Siehe ladenSaat. */
+  /**
+   * Wie oft aus dem Ladenstrom dieses Sitzes schon gezogen wurde — Rundenanfang,
+   * Neu-Wuerfeln UND jedes Nachbesetzen nach einem Kauf. Die Zahl ist die
+   * Wurfnummer in ladenSaat und muss deshalb bei JEDER Ziehung steigen, sonst
+   * liefert derselbe Strom zweimal dieselbe Karte.
+   */
   readonly wuerfe: number;
+  /**
+   * Wie oft dieser Sitz IN DIESER RUNDE neu gewuerfelt hat. Nachbesetzen zaehlt
+   * nicht mit, nur das ausdrueckliche Neu-Wuerfeln.
+   *
+   * Gebraucht wird die Zahl vom Bot: Seit das Wuerfeln nichts mehr kostet,
+   * begrenzt ihn kein Gold mehr, und ohne einen Deckel wuerfelte er in einer
+   * Lage, in der ihm nichts passt, bis in alle Ewigkeit — die Plattform ruft
+   * ihn so lange, bis er "bereit" meldet.
+   */
+  readonly wuerfeRunde: number;
   /** Runde des Ausscheidens, sonst null. */
   readonly ausRunde: number | null;
   readonly verlassen: boolean;
@@ -317,9 +332,15 @@ function gibZurueck(
 /**
  * Den Laden eines Sitzes neu fuellen: alte Karten zurueck, neue ziehen.
  *
- * Eine Funktion fuer beides — Rundenanfang und Neu-Wuerfeln —, weil ein
- * zweiter Weg unweigerlich das Zurueckgeben vergessen wuerde. Genau daran
- * laeuft ein Vorrat leer, und zwar erst nach zwanzig Runden.
+ * Eine Funktion fuer ALLE DREI Anlaesse — Rundenanfang, Neu-Wuerfeln und Kauf
+ * —, weil ein zweiter Weg unweigerlich das Zurueckgeben vergessen wuerde.
+ * Genau daran laeuft ein Vorrat leer, und zwar erst nach zwanzig Runden. Der
+ * Kauf legt die gekaufte Karte vorher auf null, damit sie eben NICHT
+ * zurueckgeht (siehe fuehreAus, Fall 'kaufen').
+ *
+ * Die Wurfnummer steigt bei jedem Aufruf. Daran haengt die Bestimmtheit:
+ * dieselbe Saat und dieselbe Folge von Kaeufen ergeben denselben Laden, und
+ * zwei Aufrufe hintereinander ziehen trotzdem Verschiedenes.
  */
 function fuelleLaden(
   partie: TafelrundePartie,
@@ -434,6 +455,7 @@ function neuesHeer(regeln: TafelrundeRegeln): Heer {
     serie: KEINE_SERIE,
     bereit: false,
     wuerfe: 0,
+    wuerfeRunde: 0,
     ausRunde: null,
     verlassen: false,
   };
@@ -694,11 +716,27 @@ export function fuehreAus(
       const gekauft = rechneKauf(heer, regeln.bankPlaetze, id);
       if (!gekauft) throw new Error('Kein Gold oder kein Platz');
       /*
-       * Die Karte bleibt aus dem Vorrat heraus — sie war es schon, seit sie
-       * im Laden lag. Zurueck geht sie erst beim Verkaufen.
+       * DER GANZE LADEN WIRD NEU GEZOGEN, nicht nur der gekaufte Platz (Robin,
+       * 05.09.2026: "Nicht nur der gekaufte, dein ganzer Shop aktualisiert
+       * sich wenn du etwas kaufst, du musst dich also immer entscheiden"). Ein
+       * Kauf nimmt die uebrigen Angebote mit — zwei Einheiten aus demselben
+       * Laden zu holen geht nicht mehr, und genau das macht die Wahl teuer.
+       *
+       * Die gekaufte Karte bleibt aus dem Vorrat heraus: Sie war es schon,
+       * seit sie im Laden lag, und zurueck geht sie erst beim Verkaufen.
+       * Deshalb steht ihr Platz VOR dem Fuellen auf null — fuelleLaden gibt
+       * alles zurueck, was noch ausliegt, und ueberspringt dabei jedes null.
+       *
+       * Reicht der Vorrat nicht fuer alle Plaetze, bleibt der Laden kleiner.
+       * Das ist ausdruecklich so gewollt und seit dem Wegfall der
+       * Wuerfelkosten die einzige Bremse am Nachziehen.
        */
-      const laden = heer.laden.map((k, i) => (i === platz ? null : k));
-      return setzeHeer(partie, sitz, { ...gekauft, laden });
+      const ohneGekaufte = setzeHeer(partie, sitz, {
+        ...gekauft,
+        laden: gekauft.laden.map((k, i) => (i === platz ? null : k)),
+      });
+      const { heer: gefuellt, vorrat } = fuelleLaden(ohneGekaufte, sitz);
+      return { ...ohneGekaufte, vorrat, heere: { ...ohneGekaufte.heere, [sitz]: gefuellt } };
     }
 
     case 'neuwuerfeln': {
@@ -708,7 +746,14 @@ export function fuehreAus(
         gold: heer.gold - regeln.neuwuerfelnKosten,
       });
       const { heer: gefuellt, vorrat } = fuelleLaden(bezahlt, sitz);
-      return { ...bezahlt, vorrat, heere: { ...bezahlt.heere, [sitz]: gefuellt } };
+      return {
+        ...bezahlt,
+        vorrat,
+        heere: {
+          ...bezahlt.heere,
+          [sitz]: { ...gefuellt, wuerfeRunde: heer.wuerfeRunde + 1 },
+        },
+      };
     }
 
     case 'levelAuf': {
@@ -1056,7 +1101,13 @@ function naechsteRunde(partie: TafelrundePartie): TafelrundePartie {
       heere[sitz] = { ...heer, bereit: true };
       continue;
     }
-    heere[sitz] = { ...heer, gold: heer.gold + einkommen(heer, partie.regeln), bereit: false };
+    heere[sitz] = {
+      ...heer,
+      gold: heer.gold + einkommen(heer, partie.regeln),
+      bereit: false,
+      // Der Wuerfel-Deckel des Bots gilt je Runde, nicht je Partie.
+      wuerfeRunde: 0,
+    };
   }
 
   const naechste: TafelrundePartie = {

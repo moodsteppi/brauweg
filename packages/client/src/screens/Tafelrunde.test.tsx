@@ -394,6 +394,14 @@ describe('Was gerade nicht geht, und warum', () => {
     expect(knopf.querySelector('em')).not.toHaveAttribute('data-teuer');
   });
 
+  it('zeigt gar keinen Preis, wenn Neu wuerfeln nichts kostet', () => {
+    // Vorgabe seit dem 05.09.2026. "0 Gold" waere schlechter als nichts.
+    stelle(sicht({ eigenes: { neuwuerfelnKosten: 0 } }), [{ typ: 'neuwuerfeln' }]);
+    zeige();
+    const knopf = screen.getByRole('button', { name: /Neu w/ });
+    expect(knopf.querySelector('em')).toBeNull();
+  });
+
   it('zaehlt zum Verschmelzen mit der Zahl aus der Sicht, nicht mit einer 3', () => {
     /*
      * Hier stand "1 von 3" ausgeschrieben. Wer VERSCHMELZ_ZAHL im Modul auf
@@ -444,10 +452,12 @@ describe('Leere Flaechen erklaeren sich', () => {
     expect(screen.getByText(/Deine Bank ist leer/)).toBeInTheDocument();
   });
 
-  it('sagt am leergekauften Laden, wie es weitergeht', () => {
+  it('sagt am leeren Laden, dass der Vorrat nichts mehr hergibt', () => {
+    // Seit dem Nachbesetzen steht der Laden nur noch leer, wenn wirklich
+    // nichts mehr da ist — ein Verweis aufs Wuerfeln waere dann eine Sackgasse.
     stelle(sicht({ eigenes: { laden: [null, null, null, null, null] } }));
     zeige();
-    expect(screen.getByText(/Der Laden ist leergekauft/)).toBeInTheDocument();
+    expect(screen.getByText(/Der Vorrat gibt nichts mehr her/)).toBeInTheDocument();
   });
 });
 

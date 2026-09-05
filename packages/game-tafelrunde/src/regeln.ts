@@ -22,7 +22,13 @@ export interface TafelrundeRegeln {
   readonly ladenPlaetze: number;
   /** Plaetze auf der Reservebank. Das Konzept nennt 5 bis 9. */
   readonly bankPlaetze: number;
-  /** Was ein Neu-Wuerfeln kostet. */
+  /**
+   * Was ein Neu-Wuerfeln kostet. Vorgabe 0 — siehe DEFAULT_REGELN.
+   *
+   * Das Feld bleibt bestehen, obwohl die Vorgabe nichts mehr verlangt: Ein
+   * selbstgebauter Tisch soll den Preis wieder setzen koennen, ohne dass
+   * dafuer eine Regel zurueckgebaut werden muss.
+   */
   readonly neuwuerfelnKosten: number;
   /** Grundeinkommen je Runde, vor Zins und Serienbonus. */
   readonly grundeinkommen: number;
@@ -65,13 +71,20 @@ export interface TafelrundeRegeln {
  * kaufen und danach leer sein. Wer mit fuenf anfinge, kaufte den halben Laden
  * leer, und die ersten drei Runden waeren entschieden, bevor jemand eine
  * Entscheidung getroffen hat.
+ *
+ * NEU-WUERFELN KOSTET NICHTS (seit dem 05.09.2026, Robins Vorgabe: "wir wollen
+ * nicht mehr, dass man fuers Rollen Geld ausgeben soll"). Zusammen mit dem
+ * Nachfuellen nach dem Kauf (partie.ts, `fuelleNach`) heisst das: Gold wird nur
+ * noch fuer Einheiten und Aufstiege ausgegeben. Was das Nachziehen begrenzt,
+ * ist allein der Vorrat — wer ihn leerkauft, sieht leere Ladenplaetze, und das
+ * ist die einzige Bremse, die es hier noch gibt.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
   startLeben: 20,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,
-  neuwuerfelnKosten: 2,
+  neuwuerfelnKosten: 0,
   grundeinkommen: 5,
   rundenGrenze: 30,
 };
