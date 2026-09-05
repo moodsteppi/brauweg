@@ -70,6 +70,17 @@ export interface GameSummary {
   votes: number;
 }
 
+/** Stand der Mitspielersuche. Spiegelt `Suchstand` aus dem Server. */
+export interface Suchstand {
+  sucht: boolean;
+  /** Wie viele gerade in derselben Schlange stehen, man selbst mitgezaehlt. */
+  suchende: number;
+  /** Millisekunden bis zum Ablauf des Fensters. */
+  restMs: number;
+  /** Gesetzt heisst: Die Suche ist vorbei, dorthin geht es ohne Rueckfrage. */
+  tischId: string | null;
+}
+
 export interface ActiveTable {
   tableId: string;
   gameId: string;
@@ -681,6 +692,19 @@ export const api = {
   aktiveSpieler: (gameId: string) => request<{ aktiv: number }>(`/games/${gameId}/aktiv`),
   /** Spieler an Tischen ueber alle Spiele — fuer die Kopfzeile des Homescreens. */
   aktiveGesamt: () => request<{ aktiv: number }>('/aktiv'),
+
+  /**
+   * Mitspieler suchen. Der Server sammelt 30 Sekunden lang alle Suchenden und
+   * setzt sie danach an EINEN Tisch, freie Plaetze mit Bots.
+   *
+   * Abgefragt statt zugestellt: Der WebSocket kennt nur Raeume je Tisch, und
+   * wer sucht, hat noch keinen. Das Nachfragen ist zugleich das Lebenszeichen
+   * — hoert der Client damit auf (Netz weg, Tab zu), faellt er von selbst aus
+   * der Schlange.
+   */
+  sucheStarten: (gameId: string) => post<Suchstand>(`/suche/${gameId}`),
+  sucheStand: (gameId: string) => request<Suchstand>(`/suche/${gameId}`),
+  sucheAbbrechen: (gameId: string) => post<{ ok: true }>(`/suche/${gameId}/abbrechen`),
 
   tables: (gameId: string) => request<TableRow[]>(`/tables?game=${gameId}`),
   createTable: (body: {

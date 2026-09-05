@@ -144,6 +144,7 @@ import {
   tableWithSeats,
   verlasseKiTisch,
 } from '../tables/service.js';
+import type { Vermittlung } from '../suche/vermittlung.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
 export const SESSION_COOKIE = 'brauweg_session';
@@ -170,6 +171,12 @@ export interface AppDeps {
   readonly db: Db;
   readonly auth: AuthDeps;
   readonly runtime: PartyRuntime;
+  /**
+   * Die Mitspielersuche. Fehlt sie, antworten die Suchrouten mit 404 — der
+   * Server laeuft trotzdem, und ein Test, der die Suche nicht braucht, muss
+   * sie nicht aufbauen.
+   */
+  readonly vermittlung?: Vermittlung;
   readonly cookieSecure: boolean;
   readonly sessionTtlDays: number;
   /** Verzeichnis des gebauten Clients. Fehlt es, liefert der Server nur die API. */
@@ -1750,6 +1757,50 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await leaveLobby(deps.db, tableId, accountId);
     }
     deps.runtime.notify(tableId);
+    return reply.send({ ok: true });
+  });
+
+  // -------------------------------------------------------------------------
+  // Mitspieler suchen
+  // -------------------------------------------------------------------------
+
+  /**
+   * Die Suche hat keine offene Leitung, sondern wird abgefragt.
+   *
+   * Der WebSocket taugt hier nicht: Er kennt nur Raeume je Tisch, und ein
+   * Suchender hat noch keinen Tisch (`realtime/gateway.ts`). Statt eine
+   * kontobezogene Zweitverbindung zu bauen, fragt der Client im Sekundentakt
+   * nach — dasselbe Nachfragen ist zugleich sein Lebenszeichen, und damit
+   * loest ein Weg beide Aufgaben.
+   */
+  function sucheVermittlung(): Vermittlung {
+    if (!deps.vermittlung) throw notFound('matchmakingUnavailable');
+    return deps.vermittlung;
+  }
+
+  /** Suche beginnen. Antwortet schon mit dem ersten Stand. */
+  app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    return reply.send(await sucheVermittlung().betritt(gameId, accountId));
+  });
+
+  /**
+   * Nachfragen. Der Client ruft das im Sekundentakt — deshalb die
+   * grosszuegige Ratengrenze und nicht die des Schreibens (60/Minute waeren
+   * nach einer Minute Suchen erschoepft).
+   */
+  app.get('/api/suche/:gameId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    return reply.send(await sucheVermittlung().abruf(gameId, accountId));
+  });
+
+  /** Suche abbrechen. */
+  app.post('/api/suche/:gameId/abbrechen', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    sucheVermittlung().verlaesst(gameId, accountId);
     return reply.send({ ok: true });
   });
 
