@@ -29,6 +29,15 @@
  * konstant). Bei einer ungeraden Reihenzahl kaeme dieselbe Formel um ein
  * halbes Feld verschoben heraus, und die Probe "erhaelt alle Abstaende"
  * fiele. Wer die Bretthoehe aendert, aendert sie also in Zweierschritten.
+ *
+ * WAS DIESE MASSE FUER DEN KAMPF BEDEUTEN, ist am 06.09.2026 ueber 34.600
+ * Kaempfe ausgemessen worden (docs/TAFELRUNDE-LAUFWEGE.md): Weil die beiden
+ * vorderen Reihen ueber die Mittellinie hinweg genau EIN Feld auseinander
+ * stehen und die hinteren zwei, steht jede Einheit mit Reichweite 2 oder mehr
+ * vom ersten Takt an im Ziel. Schuetze und Magier laufen deshalb so gut wie
+ * nie — 24 von 29.460 gemessenen Einheiten machten ueberhaupt einen Schritt.
+ * Das ist kein Fehler dieser Datei, aber es ist der Grund, aus dem eine
+ * Aenderung an den Brettmassen zuerst hier ansetzen wuerde.
  */
 
 import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN, hexAbstand, hexNachbarn } from './brett.js';

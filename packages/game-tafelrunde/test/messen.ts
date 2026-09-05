@@ -36,6 +36,7 @@
  */
 
 import { type Schwierigkeit, botZug } from '../src/bot.js';
+import { type Laufbefund, laufbefund } from './laufwege.js';
 import {
   type EinheitId,
   type Kaempfer,
@@ -231,6 +232,15 @@ export interface Messauftrag {
    * Messstand den Kampf nachbauen — und maesse dann seine eigene Kopie.
    */
   readonly regler?: Kampfregler;
+  /**
+   * Auch aufzeichnen, wie viel in den Kaempfen GELAUFEN wird (laufwege.ts).
+   *
+   * Ausgeschaltet, solange niemand danach fragt, und zwar wegen des
+   * Speichers: Ein Laufbefund haelt je Kampf einen Eintrag pro Einheit, und
+   * die Ausgewogenheitsmessung rechnet 5.000 Partien. Das waeren ueber eine
+   * Million Objekte fuer eine Zahl, die dort niemand liest.
+   */
+  readonly laufwege?: boolean;
 }
 
 /** Was eine einzelne Partie hergibt. */
@@ -285,6 +295,11 @@ export interface Partiebefund {
   readonly schwellenTreffer: Readonly<Record<Marke, Readonly<Record<Schwelle, number>>>>;
   /** Wie oft jede Einheit ueberhaupt auf einem antretenden Brett stand. */
   readonly einheitAntritte: Readonly<Record<EinheitId, number>>;
+  /**
+   * Je Kampf die Auswertung auf Bewegung. Leer, solange `laufwege` im Auftrag
+   * nicht gesetzt ist — siehe dort, warum.
+   */
+  readonly laufbefunde: readonly Laufbefund[];
 }
 
 // ---------------------------------------------------------------------------
@@ -325,12 +340,14 @@ export function spieleParte(
   besetzung: Besetzung,
   regeln: TafelrundeRegeln = DEFAULT_REGELN,
   regler?: Kampfregler,
+  laufwege = false,
 ): Partiebefund {
   let p: TafelrundePartie = erstellePartie(regeln, sitze, saat, regler);
 
   const letzteBretter: Record<number, readonly (Kaempfer | null)[]> = {};
   const kampfphasen: number[] = [];
   const kampfDauern: number[] = [];
+  const laufbefunde: Laufbefund[] = [];
   const zuegeJeRunde: number[] = [];
   let zeitAbbrueche = 0;
   const lebenVerlauf: { runde: number; leben: Record<number, number> }[] = [];
@@ -364,6 +381,7 @@ export function spieleParte(
     for (const kampf of p.kaempfe) {
       kampfDauern.push(kampf.bericht.dauerMs);
       if (kampf.bericht.grund === 'zeit') zeitAbbrueche++;
+      if (laufwege) laufbefunde.push(laufbefund(kampf.bericht));
     }
 
     /*
@@ -426,6 +444,7 @@ export function spieleParte(
     zuegeJeRunde,
     schwellenTreffer,
     einheitAntritte,
+    laufbefunde,
   };
 }
 
@@ -472,6 +491,7 @@ export function messe(auftrag: Messauftrag): Partiebefund[] {
         auftrag.besetzung,
         auftrag.regeln ?? DEFAULT_REGELN,
         auftrag.regler,
+        auftrag.laufwege ?? false,
       ),
     );
   }
