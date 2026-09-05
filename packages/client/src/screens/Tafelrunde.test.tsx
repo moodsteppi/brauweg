@@ -22,6 +22,18 @@ vi.mock('../useTable', () => ({
   useTable: () => tischStand,
 }));
 
+/*
+ * Das Vorladen ist ausgehaengt. `useVorladen` haelt die Ruestkammer zurueck,
+ * bis Figuren und Untergrund entpackt sind (vorladen.ts) — und in jsdom laedt
+ * kein Bild, `decode()` gibt es dort gar nicht. Der Vorhang bliebe also bis zur
+ * Frist stehen, und jeder Test hier prueft eine leere Seite. Der Vorhang selbst
+ * wird in vorladen.test.ts und Ladebildschirm.test.tsx geprueft.
+ */
+vi.mock('../minispiele/tafelrunde/vorladen', async (echtes) => ({
+  ...(await echtes<typeof import('../minispiele/tafelrunde/vorladen')>()),
+  useVorladen: () => ({ fertig: true, erledigt: 23, gesamt: 23, anteil: 1, fehlend: [] }),
+}));
+
 import { FIGUREN, UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import { KARTE_TRIFFT } from '../minispiele/tafelrunde/Synergien';
 import { Tafelrunde } from './Tafelrunde';

@@ -90,6 +90,26 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > und beim ersten Ausliefern die `synergieTabelle`, wie den Katalog.
 > **Die Anzeige im Client fehlt noch** — die Zahlen sind ein erster Wurf.
 >
+> **Die Dateien kommen seit dem 05.09.2026 vor der ersten Runde**
+> (`minispiele/tafelrunde/vorladen.ts`, `Ladebildschirm.tsx`). Vorher ging
+> jede der 23 Dateien (22 Figuren + Holztextur, zusammen 47 kB) erst los,
+> wenn die Einheit zum ersten Mal auf dem Schirm auftauchte — verteilt über
+> die ersten Runden, mit leeren Plätzen dazwischen. Jetzt startet das
+> Vorladen beim **Betreten des Bildschirms** (also schon während Menü,
+> Mitspielersuche und Tischaufbau), und die Rüstkammer wartet darauf.
+> Solange steht „Dateien werden heruntergeladen" mit Balken und Zähler.
+> Vier Dinge, die man dem Code sonst nicht ansieht: Die Liste leitet sich
+> aus `FIGUREN` ab, damit eine neue Figur nicht an zwei Stellen einzutragen
+> ist. Gewartet wird auf `decode()` und über **denselben** Pfad, den die
+> `<img>` später benutzen — der Browser führt seinen Bildspeicher über die
+> Adresse, ein Umweg über `blob:` wäre umsonst. Der Balken rechnet in
+> **Kilobyte** statt in Dateien (nach Dateien stünde er bei 96 %, während
+> die 35-kB-Textur noch unterwegs ist) — für die 3D-Fassung ist genau das
+> der Punkt. Und die Frist ist eine **Ruhefrist** (15 s ohne jede Antwort)
+> und keine Gesamtzeit: Gemessen gegen Chromes „Slow 3G" braucht der Satz
+> über HTTP/1.1 **9,3 s**, eine Gesamtfrist von 10 s hätte dort auf einer
+> völlig gesunden Leitung zugeschlagen.
+>
 > **Was noch fehlt:** Die Werte tragen die Partie noch nicht: Zu acht läuft
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
 > Startleben gegen rund 5 Punkte Schaden je Niederlage). Steht als eigener
