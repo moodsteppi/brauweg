@@ -9,6 +9,16 @@ import {
   abzuspielen,
 } from '../minispiele/tafelrunde/KampfAnzeige';
 import {
+  type Synergie,
+  type Synergiestand,
+  KARTE_TRIFFT,
+  Markennamen,
+  Markenzeichen,
+  Synergieleiste,
+  markennamen,
+  schwellenPruefer,
+} from '../minispiele/tafelrunde/Synergien';
+import {
   type Kaempfer,
   type Ort,
   bestandVon,
@@ -97,6 +107,16 @@ interface EigeneSicht {
   neuwuerfelnKosten: number;
   aufstiegKosten: number | null;
   darfHandeln: boolean;
+  /**
+   * Die Marken auf dem eigenen BRETT mit Anzahl, erreichter und naechster
+   * Schwelle (sicht.ts). Nur Marken mit mindestens einem Traeger stehen
+   * drin — das Modul laesst die uebrigen weg.
+   *
+   * Wahlfrei gefuehrt wie `kaempfe`: Ein Tisch, der vor den Synergien
+   * aufgemacht wurde, hat das Feld nicht. Dann bleibt die Leiste leer,
+   * statt dass der Bildschirm stolpert.
+   */
+  synergien?: Synergiestand[];
 }
 
 interface FremdeSicht {
@@ -108,6 +128,8 @@ interface FremdeSicht {
   bereit: boolean;
   ausRunde: number | null;
   verlassen: boolean;
+  /** Auch beim Gegner: Das Brett ist oeffentlich, also sind es seine Marken. */
+  synergien?: Synergiestand[];
 }
 
 interface TafelrundeSicht {
@@ -139,6 +161,12 @@ interface TafelrundeSicht {
   kaempfe?: Kampfpaarung[];
   /** Kommt NUR in der ersten Sicht nach dem Beitritt, siehe sicht.ts. */
   katalog?: Einheit[];
+  /**
+   * Die Synergie-Tabelle mit allen Stufen — wie der Katalog nur in der ersten
+   * Sicht und aus demselben Grund: Sie aendert sich nie. Wer sie nicht
+   * festhaelt, hat ab dem zweiten Rundruf keine Schwellen mehr.
+   */
+  synergieTabelle?: Synergie[];
 }
 
 /**
@@ -204,6 +232,14 @@ const KOSTEN_FARBE: Record<number, string> = {
   2: '#5aa86a',
   3: '#5ea0f0',
 };
+
+/**
+ * Ein Tisch aus der Zeit vor den Synergien schickt das Feld nicht mit. Die
+ * leere Liste steht als KONSTANTE hier und nicht als `?? []` an der
+ * Verwendung: Ein frisches Array bei jedem Rundruf waere eine neue
+ * Abhaengigkeit und wuerde den Pruefer darunter jedes Mal neu bauen.
+ */
+const OHNE_SYNERGIEN: Synergiestand[] = [];
 
 const ROLLE_NAME: Record<Rolle, string> = {
   wache: 'Wache',
@@ -290,6 +326,13 @@ export function Tafelrunde({
     if (!sicht?.katalog) return;
     setKatalog(Object.fromEntries(sicht.katalog.map((e) => [e.id, e])));
   }, [sicht?.katalog]);
+
+  /** Und aus demselben Grund die Synergie-Tabelle: auch sie kommt nur einmal. */
+  const [synergieTabelle, setSynergieTabelle] = useState<Synergie[]>([]);
+  useEffect(() => {
+    if (!sicht?.synergieTabelle) return;
+    setSynergieTabelle(sicht.synergieTabelle);
+  }, [sicht?.synergieTabelle]);
 
   // -------------------------------------------------------------------------
   // Match-Suche
@@ -522,20 +565,26 @@ export function Tafelrunde({
   }
 
   return (
-    <Ruestkammer
-      sicht={sicht}
-      katalog={katalog}
-      /* `legalActions` ist im Protokoll als Kartenspiel-Aktion typisiert
-         ({type, seat}); dieses Modul schickt seine eigene Form. Der Server
-         reicht die Liste unveraendert durch (runtime/party.ts), deshalb ist
-         die Umdeutung hier korrekt und nicht bloss bequem. */
-      legaleZuege={(tisch.view?.legalActions ?? []) as unknown as Aktion[]}
-      revision={tisch.view?.revision ?? -1}
-      frist={tisch.view?.interludeDeadline ?? null}
-      sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
-      onAktion={(aktion) => tisch.send(aktion)}
-      onZurueck={verlasseUndZurueck}
-    />
+    /* Die Anzeigenamen der Marken stehen tief im Baum an jeder Einheit — auf
+       neunzehn Feldern, neun Bankplaetzen und fuenf Ladenkarten. Als Kontext
+       und nicht als durchgereichte Eigenschaft, siehe Synergien.tsx. */
+    <Markennamen.Provider value={markennamen(synergieTabelle)}>
+      <Ruestkammer
+        sicht={sicht}
+        katalog={katalog}
+        synergieTabelle={synergieTabelle}
+        /* `legalActions` ist im Protokoll als Kartenspiel-Aktion typisiert
+           ({type, seat}); dieses Modul schickt seine eigene Form. Der Server
+           reicht die Liste unveraendert durch (runtime/party.ts), deshalb ist
+           die Umdeutung hier korrekt und nicht bloss bequem. */
+        legaleZuege={(tisch.view?.legalActions ?? []) as unknown as Aktion[]}
+        revision={tisch.view?.revision ?? -1}
+        frist={tisch.view?.interludeDeadline ?? null}
+        sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
+        onAktion={(aktion) => tisch.send(aktion)}
+        onZurueck={verlasseUndZurueck}
+      />
+    </Markennamen.Provider>
   );
 }
 
@@ -553,6 +602,7 @@ interface SitzZeile {
 function Ruestkammer({
   sicht,
   katalog,
+  synergieTabelle,
   legaleZuege,
   revision,
   frist,
@@ -562,6 +612,8 @@ function Ruestkammer({
 }: {
   sicht: TafelrundeSicht;
   katalog: Record<string, Einheit>;
+  /** Alle Stufen aller Marken — einmal beim Beitritt geholt und festgehalten. */
+  synergieTabelle: Synergie[];
   legaleZuege: Aktion[];
   revision: number;
   /** Frist der Schaupause (`interludeDeadline`), waehrend des Kampfes gesetzt. */
@@ -830,6 +882,27 @@ function Ruestkammer({
     [eigenes],
   );
 
+  // -------------------------------------------------------------------------
+  // Synergien
+  // -------------------------------------------------------------------------
+
+  /**
+   * Was die Sicht ueber die eigenen Marken sagt — nicht mehr und nicht
+   * weniger. Der Bildschirm zaehlt das Brett dafuer NICHT ab: Die Schwellen
+   * und die Boni stehen im Modul (synergien.ts), und zwei Wahrheiten ueber
+   * einen Bonus waeren eine zu viel.
+   */
+  const eigeneSynergien = eigenes?.synergien ?? OHNE_SYNERGIEN;
+
+  /**
+   * Erreicht der Kauf einer Marke gerade eine Schwelle? Einmal gebunden, damit
+   * der Rahmen der Karte und das Leuchten am Zeichen dieselbe Antwort geben.
+   */
+  const trifftSchwelle = useMemo(
+    () => schwellenPruefer(eigeneSynergien, synergieTabelle),
+    [eigeneSynergien, synergieTabelle],
+  );
+
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
   const lebendeGegner = sicht.gegner.filter((g) => g.ausRunde === null);
@@ -964,6 +1037,13 @@ function Ruestkammer({
         sitze={sitze}
         onWahl={setGezeigterGegner}
       />
+
+      {/* ---- Die Marken auf dem eigenen Brett ---------------------------- */}
+      {/* Sie steht ueber dem Brett und damit auch waehrend des Kampfes da:
+          Wer gerade zusieht, plant schon die naechste Runde — und nach dem
+          Kampf ist sie ohnehin die erste Frage. Am Desktop haengt sie
+          seitlich, das entscheidet allein Synergien.module.css. */}
+      <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} />
 
       {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
           gleiche Breite, gleiche Stelle, damit nichts springt. */}
@@ -1151,6 +1231,11 @@ function Ruestkammer({
                     verschmilzt={id ? fehlen(id) === 1 : false}
                     fehlt={id ? fehlen(id) : 0}
                     verschmelzZahl={sicht.verschmelzZahl}
+                    /* Die Marken der Einheit und die Frage, ob EINE davon mit
+                       diesem Kauf voll wuerde. Beides aus der Sicht: die
+                       Marken aus dem Katalog, die Schwelle aus `synergien`. */
+                    marken={angeboten?.marken ?? []}
+                    trifftSchwelle={trifftSchwelle}
                     /* Nur beschriften, was gerade wirklich am Spieler liegt:
                        Wer schon bereit ist oder ausgeschieden, bekommt keinen
                        Grund an die Karte geschrieben — dann steht er
@@ -1634,6 +1719,11 @@ function Einheitenmarke({
            hier ehrlicher als ein Bild, dessen Namen wir noch nicht kennen. */
         <span>?</span>
       )}
+      {/* Die Marken als Zeichen in der Ecke — dieselben Zeichen und Farben wie
+          in der Leiste, damit man eine Aufstellung im Vorbeisehen zaehlen
+          kann. Kein Text: Auf einer Wabe ist dafuer kein Platz, und vorgelesen
+          wird ohnehin das `aria-label` oben. */}
+      {einheit && <Markenzeichen marken={einheit.marken} ort="einheit" />}
       <span className="tr-einheit-name">{einheit?.name ?? kaempfer.id}</span>
       {/* Der Name der Marke nennt die Stufe schon; hier waere sie doppelt. */}
       <span className="tr-sterne" aria-hidden="true">
@@ -1663,6 +1753,8 @@ function Ladenkarte({
   verschmilzt,
   fehlt,
   verschmelzZahl,
+  marken,
+  trifftSchwelle,
   grund,
   onKauf,
 }: {
@@ -1672,6 +1764,10 @@ function Ladenkarte({
   fehlt: number;
   /** Wie viele Kopien verschmelzen — aus der Sicht, nie als 3 im Client. */
   verschmelzZahl: number;
+  /** Die Klassen-Marken dieser Einheit (Katalog). Leer, solange er fehlt. */
+  marken: string[];
+  /** Wuerde ein Traeger dieser Marke eine Schwelle erreichen? Siehe Synergien.tsx. */
+  trifftSchwelle: (marke: string) => boolean;
   /** Warum nicht kaufbar, falls die Zahlen der Sicht es erklaeren. */
   grund: Kaufhindernis;
   onKauf: () => void;
@@ -1683,10 +1779,14 @@ function Ladenkarte({
     return <div className="tr-karte tr-karte-leer" aria-hidden="true" />;
   }
   const farbe = KOSTEN_FARBE[einheit.kosten] ?? KOSTEN_FARBE[1];
+  /* Der Rahmen sagt "hier wird eine Schwelle voll", das leuchtende Zeichen
+     darunter sagt welche. Genug fuer den Rahmen ist EINE Marke — eine Einheit
+     traegt bis zu zwei. */
+  const trifft = marken.some(trifftSchwelle);
   return (
     <button
       type="button"
-      className="tr-karte"
+      className={trifft ? `tr-karte ${KARTE_TRIFFT}` : 'tr-karte'}
       disabled={!kaufbar}
       data-verschmilzt={verschmilzt ? '' : undefined}
       style={{ '--tr-kosten': farbe } as React.CSSProperties}
@@ -1711,6 +1811,10 @@ function Ladenkarte({
       </span>
       <strong className="tr-karte-name">{einheit.name}</strong>
       <span className="tr-karte-rolle">{ROLLE_NAME[einheit.rolle]}</span>
+      {/* Beschriftet, weil die Karte eine Schaltflaeche ist und ihren Namen
+          aus dem Inhalt bezieht: "Dorfwache, Wache, Krieger" ist genau die
+          Auskunft, die ein Vorlesegeraet fuer den Kauf braucht. */}
+      <Markenzeichen marken={einheit.marken} trifft={trifftSchwelle} beschriftet ort="laden" />
       {/* Der Hinweis, der aus einem Kauf eine Entscheidung macht — und, wenn
           nichts zu entscheiden ist, der Grund dafuer. Der Grund steht vorn:
           Wer nicht kaufen kann, will zuerst wissen warum, und erst danach,

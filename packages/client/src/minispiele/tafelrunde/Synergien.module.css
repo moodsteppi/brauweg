@@ -1,0 +1,314 @@
+/*
+ * Die Synergie-Anzeige von Tafelrunde (Synergien.tsx).
+ *
+ * Ein eigenes Modul und kein Abschnitt in styles.css — dieselbe Ueberlegung
+ * wie bei KampfAnzeige.module.css: Die Anzeige ist ein abgeschlossenes
+ * Bauteil, und ihre Klassennamen sollen nirgends sonst greifen. Farben und
+ * Masse kommen aus den Variablen der Plattform (--panel, --line, --muted,
+ * --text, --gold), damit die Leiste wie ein Teil der Ruestkammer aussieht und
+ * nicht wie ein aufgeklebter Kasten.
+ *
+ * WO DIE LEISTE STEHT, entscheidet allein diese Datei:
+ *
+ *   Am Handy liegt sie IM FLUSS ueber dem Brett und laesst sich zuklappen —
+ *   ein hoher Kasten wuerde den Laden sonst unter den Rand druecken, und der
+ *   ist die einzige Stelle, an der man kaufen kann.
+ *
+ *   Ab 64rem haengt sie FEST an der linken Kante neben dem Brett. Fest und
+ *   nicht im Fluss, weil der Tisch (.tr-tisch in styles.css) eine zentrierte
+ *   Spalte fester Breite ist: Ein Element im Fluss haette entweder die Spalte
+ *   aufgerissen oder das Brett aus der Mitte geschoben — und styles.css
+ *   gehoert nicht zu dieser Aufgabe. Die 480 px sind die halbe Spaltenbreite
+ *   bei 40rem-Aufwaerts-Mass (min(70vw, 560px)) plus Luft; unter 64rem
+ *   Fensterbreite bliebe daneben kein Platz, deshalb greift die Regel erst
+ *   dort.
+ */
+
+/* -- Die Leiste ----------------------------------------------------------- */
+
+.leiste {
+  width: min(94vw, 460px);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 800 11px/1.2 system-ui;
+  text-align: left;
+  cursor: pointer;
+}
+.kopf > span:first-child { flex: 1; }
+.kopfzahl {
+  padding: 0 5px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 800 10px/1.5 system-ui;
+}
+/* Ein Winkel aus zwei Strichen statt eines Zeichens: Ein Schriftzeichen faellt
+   je nach Geraet anders aus, dieser Winkel nicht. */
+.pfeil {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+}
+.leiste[data-offen] .pfeil { transform: rotate(45deg); }
+
+.liste {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px 8px;
+  list-style: none;
+}
+.leiste[data-offen] .liste { display: flex; }
+
+.leer {
+  padding: 4px 2px;
+  color: var(--muted);
+  font: 600 11px/1.35 system-ui;
+}
+
+/* -- Ein Eintrag ---------------------------------------------------------- */
+
+.eintrag {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 2px 6px;
+  padding: 5px 7px;
+  border-radius: 9px;
+  border-left: 3px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+}
+/* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Der Balken traegt
+   die Farbe der Marke — dieselbe wie das Zeichen daneben und wie die Zeichen
+   an den Einheiten auf dem Brett. */
+.eintrag[data-aktiv] {
+  border-left-color: var(--marke);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.zeile {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font: 800 11px/1.2 system-ui;
+}
+.eintrag[data-aktiv] .name { color: var(--text); }
+.anzahl {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font: 700 10px/1.2 system-ui;
+}
+.eintrag[data-aktiv] .anzahl { color: var(--gold); }
+
+/* Die Schwellen als Punkte: einer je Stufe der Tabelle. Voll = erreicht, mit
+   Ring = die naechste. Wer mehr wissen will, liest den Satz darunter. */
+.punkte {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 5px;
+  padding: 1px 0 0 1px;
+  color: var(--marke);
+}
+.punkt {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px currentColor;
+  opacity: 0.45;
+}
+.punkt[data-voll] {
+  background: currentColor;
+  opacity: 1;
+}
+.punkt[data-naechste] {
+  opacity: 1;
+  box-shadow: inset 0 0 0 1px currentColor, 0 0 0 2px rgba(255, 255, 255, 0.14);
+}
+
+.satz {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font: 600 10px/1.35 system-ui;
+}
+.eintrag[data-aktiv] .satz { color: rgba(255, 255, 255, 0.78); }
+
+/* -- Die Zeichen ---------------------------------------------------------- */
+
+.reihe {
+  display: flex;
+  gap: 2px;
+}
+.zeichen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Striche und keine Flaechen, wie die Rollen- und Wertzeichen des Bildschirms
+   (.tr-icon in styles.css): So bleiben sie auf 8 px genauso lesbar wie auf
+   16 und muessen nicht je Ort neu gefaerbt werden. */
+.glyphe {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.zeichen .glyphe {
+  width: 13px;
+  height: 13px;
+}
+
+/*
+ * Der Kauf, der eine Schwelle trifft.
+ *
+ * Das Leuchten sitzt an der MARKE und nicht an der ganzen Karte: Eine Einheit
+ * traegt bis zu zwei, und welche von beiden voll wird, ist genau die
+ * Auskunft, wegen der man hinsieht. Der Rahmen der Karte (siehe unten) sagt
+ * nur "hier ist etwas", das Zeichen sagt was.
+ */
+.zeichen[data-trifft] {
+  border-radius: 50%;
+  /* Erst ein Weiss fuer alle, dann die Farbe der Marke fuer die Browser, die
+     `color-mix` koennen. Ohne die erste Zeile bliebe das Zeichen auf einem
+     aelteren Safari ohne jede Fuellung — und damit ununterscheidbar von den
+     anderen. */
+  background: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, currentColor 26%, transparent);
+  box-shadow: 0 0 0 1.5px currentColor;
+}
+
+/* Nur fuer Vorlesegeraete. Nicht `display: none` und nicht `visibility:
+   hidden` — beides nimmt den Text auch dem Vorleser weg. */
+.nurVorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* -- Die Zeichen an einer Einheit ----------------------------------------- */
+
+/*
+ * Auf Bank und Brett. Absolut gesetzt und oben LINKS, weil oben rechts schon
+ * das "noch 1" der Verschmelzung sitzt (.tr-fehlt in styles.css) und unten
+ * die Sterne stehen. Ohne Zeigerannahme: Die ganze Wabe ist Greif- und
+ * Ablegeflaeche, und ein Zeichen, das den Finger abfaengt, machte genau das
+ * Feld unbedienbar, auf das man zieht.
+ */
+.anEinheit {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  gap: 1px;
+  pointer-events: none;
+}
+.anEinheit .glyphe {
+  width: 9px;
+  height: 9px;
+  /* Auf dem gemusterten Holz und ueber der Figur braucht der Strich einen
+     Rand, sonst verschwindet er in der Maserung. */
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.9));
+}
+
+/* -- Die Zeichen auf der Ladenkarte --------------------------------------- */
+
+.imLaden {
+  justify-content: center;
+  gap: 3px;
+}
+.imLaden .glyphe {
+  width: 11px;
+  height: 11px;
+}
+
+/*
+ * Die Karte, deren Kauf eine Schwelle voll macht.
+ *
+ * Ein ruhiger Rahmen und kein Blinken: Das Blinken gehoert der Verschmelzung
+ * (.tr-karte[data-verschmilzt] in styles.css), und zwei blinkende Gruende
+ * nebeneinander heben sich gegenseitig auf. Die Farbe ist absichtlich das
+ * kuehle Weiss der Linie und nicht Gold — Gold heisst auf diesem Bildschirm
+ * "kostet etwas" (Preis, Sterne, Verschmelzung).
+ */
+.karteTrifft {
+  box-shadow:
+    inset 0 0 0 1.5px var(--tr-kosten, var(--line)),
+    inset 0 0 0 3px rgba(255, 255, 255, 0.22);
+}
+
+/* Zwischen Handy und breitem Schirm liegt sie weiter im Fluss, nur so breit
+   wie Brett und Bank daneben (.tr-bretter, .tr-bank in styles.css) — sonst
+   steht sie als einziger Teil des Tisches eingerueckt da. */
+@media (min-width: 40rem) {
+  .leiste { width: min(70vw, 560px); }
+}
+
+/* -- Seitlich ab dem breiten Schirm --------------------------------------- */
+
+/*
+ * Erst ab 75rem (1200 px), und die Zahl ist gerechnet und nicht geraten:
+ * Der breiteste Teil des Tisches ist der Laden mit `min(72vw, 600px)`
+ * (.tr-fuss in styles.css), zentriert — seine linke Kante liegt also bei
+ * `50% - 300px`. Daneben muessen 208 px Leiste plus zweimal 12 px Luft
+ * passen, das sind 232; bei 1200 px Fensterbreite stehen 300 zur Verfuegung.
+ * Bei 64rem waeren es 212 gewesen, und die Leiste haette den Laden um
+ * 20 px ueberdeckt — genau so ist es beim ersten Bau passiert.
+ */
+@media (min-width: 75rem) {
+  .leiste {
+    position: fixed;
+    /* Immer 12 px links vom Laden, bis zum linken Rand des Fensters. */
+    left: max(12px, calc(50% - 520px));
+    top: 96px;
+    width: 208px;
+    max-height: calc(100dvh - 128px);
+    overflow-y: auto;
+    /* Am Ende des Rollens nicht an die Seite weiterreichen — dieselbe Zeile
+       aus demselben Grund wie an .tr-tisch: Sonst zieht der Daumen unter
+       Android das Neuladen der Seite auf. */
+    overscroll-behavior: contain;
+  }
+  /* Seitlich gibt es keinen Grund zuzuklappen, und ein Klappknopf, der am
+     Handy zugeklappt wurde, duerfte die Leiste hier nicht leeren. Deshalb ist
+     der Knopf weg UND die Liste immer offen. */
+  .kopf { display: none; }
+  .liste,
+  .leiste[data-offen] .liste { display: flex; padding: 8px; }
+}
+
+/* Wer weniger Bewegung eingestellt hat, bekommt denselben Zustand ohne den
+   Weg dorthin — wie im Rest des Spiels. */
+@media (prefers-reduced-motion: reduce) {
+  .pfeil { transition: none; }
+}

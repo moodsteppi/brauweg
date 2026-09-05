@@ -23,7 +23,30 @@ vi.mock('../useTable', () => ({
 }));
 
 import { FIGUREN, UNTERGRUND } from '../minispiele/tafelrunde/figuren';
+import { KARTE_TRIFFT } from '../minispiele/tafelrunde/Synergien';
 import { Tafelrunde } from './Tafelrunde';
+
+/** Die Synergie-Tabelle, wie sie mit der ersten Sicht kommt (synergien.ts). */
+const SYNERGIE_TABELLE = [
+  {
+    marke: 'krieger',
+    name: 'Krieger',
+    stufen: [
+      { schwelle: 2, bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 10 } },
+      { schwelle: 4, bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 20 } },
+      { schwelle: 6, bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 30 } },
+    ],
+  },
+  {
+    marke: 'naturwesen',
+    name: 'Naturwesen',
+    stufen: [
+      { schwelle: 2, bonus: { lebenProzent: 15, angriffProzent: 0, tempoProzent: 0, ruestung: 0 } },
+      { schwelle: 4, bonus: { lebenProzent: 30, angriffProzent: 0, tempoProzent: 0, ruestung: 0 } },
+      { schwelle: 6, bonus: { lebenProzent: 50, angriffProzent: 0, tempoProzent: 0, ruestung: 0 } },
+    ],
+  },
+];
 
 const KATALOG = [
   {
@@ -80,6 +103,7 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     vorrat: { dorfwache: 28, astschuetze: 30 },
     leftSeats: [],
     katalog: KATALOG,
+    synergieTabelle: SYNERGIE_TABELLE,
     gegner: [
       {
         sitz: 1,
@@ -90,6 +114,7 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
         bereit: false,
         ausRunde: null,
         verlassen: false,
+        synergien: [],
       },
     ],
     eigenes: {
@@ -109,6 +134,22 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
       neuwuerfelnKosten: 2,
       aufstiegKosten: 4,
       darfHandeln: true,
+      /*
+       * Drei Krieger stehen, die naechste Schwelle ist die 4 — der Kauf einer
+       * vierten Krieger-Einheit macht sie also voll. Genau der Fall, an dem
+       * die Hervorhebung im Laden haengt. Naturwesen steht NICHT drin: Das
+       * Modul schickt nur Marken mit mindestens einem Traeger.
+       */
+      synergien: [
+        {
+          marke: 'krieger',
+          name: 'Krieger',
+          anzahl: 3,
+          schwelle: 2,
+          naechsteSchwelle: 4,
+          bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 10 },
+        },
+      ],
     },
     ...rest,
   };
@@ -728,6 +769,80 @@ describe('Figuren und Untergrund', () => {
     const arena = screen.getByRole('group', { name: 'Kampf' });
     expect(within(arena).getByAltText('Dorfwache')).toHaveAttribute('src', FIGUREN.dorfwache);
     expect(within(arena).getByAltText('Astschütze')).toHaveAttribute('src', FIGUREN.astschuetze);
+  });
+});
+
+describe('Synergien', () => {
+  /*
+   * Was die Leiste ANZEIGT, prueft Synergien.test.tsx. Hier geht es allein um
+   * die Verdrahtung: Kommt an, was in der Sicht steht — und faellt der
+   * Bildschirm um, wenn es fehlt?
+   */
+  it('zeigt die Marken des eigenen Bretts aus der Sicht', () => {
+    zeige();
+    const leiste = screen.getByRole('region', { name: 'Synergien' });
+    expect(within(leiste).getByText('Krieger')).toBeInTheDocument();
+    expect(within(leiste).getByText('3 von 4')).toBeInTheDocument();
+    // Der Bonus kommt aus der Tabelle der Sicht, nicht aus einer Zahl hier.
+    expect(within(leiste).getByText(/ab 2: \+10 Rüstung/)).toBeInTheDocument();
+  });
+
+  it('hebt im Laden die Karte hervor, deren Kauf eine Schwelle erreicht', () => {
+    // Dorfwache traegt Krieger (3 von 4 — der Kauf macht die vier voll),
+    // Astschuetze traegt Naturwesen (steht noch gar nicht auf dem Brett).
+    zeige();
+    const laden = screen.getByRole('group', { name: 'Laden' });
+    const wache = within(laden).getByText('Dorfwache').closest('button')!;
+    const schuetze = within(laden).getByText('Astschütze').closest('button')!;
+    expect(wache.className).toContain(KARTE_TRIFFT);
+    expect(schuetze.className).not.toContain(KARTE_TRIFFT);
+    // Und am Zeichen sieht man, WELCHE Marke voll wird.
+    expect(wache.querySelector('[data-trifft]')).not.toBeNull();
+    expect(schuetze.querySelector('[data-trifft]')).toBeNull();
+  });
+
+  it('hebt nicht hervor, was eine Schwelle nur naeher bringt', () => {
+    // Zwei Krieger, naechste Schwelle vier: Der Kauf macht drei. Ein Leuchten
+    // waere hier ein Versprechen, das die Runde nicht haelt.
+    stelle(
+      sicht({
+        eigenes: {
+          synergien: [
+            {
+              marke: 'krieger',
+              name: 'Krieger',
+              anzahl: 2,
+              schwelle: 2,
+              naechsteSchwelle: 4,
+              bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 10 },
+            },
+          ],
+        },
+      }),
+    );
+    zeige();
+    const laden = screen.getByRole('group', { name: 'Laden' });
+    const wache = within(laden).getByText('Dorfwache').closest('button')!;
+    expect(wache.className).not.toContain(KARTE_TRIFFT);
+  });
+
+  it('zeigt die Marken auch an den Einheiten auf der Bank', () => {
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    // Die Dorfwache traegt Krieger — ein Zeichen, kein Text.
+    expect(within(bank).getByTitle('Krieger')).toBeInTheDocument();
+  });
+
+  it('haelt einen Tisch aus, der die Synergien noch gar nicht mitschickt', () => {
+    // Ein Tisch aus der Zeit vor den Synergien. Die Leiste bleibt leer, der
+    // Laden zeigt keine Hervorhebung — und nichts stolpert.
+    stelle(sicht({ synergieTabelle: undefined, eigenes: { synergien: undefined } }));
+    zeige();
+    expect(screen.getByText(/Noch keine Marken auf dem Feld/)).toBeInTheDocument();
+    const laden = screen.getByRole('group', { name: 'Laden' });
+    expect(within(laden).getByText('Dorfwache').closest('button')!.className).not.toContain(
+      KARTE_TRIFFT,
+    );
   });
 });
 
