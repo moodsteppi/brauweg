@@ -35,7 +35,7 @@
  * sie als Aussage ueber das SPIELFELD, nicht ueber die beste Strategie darauf.
  */
 
-import { type Schwierigkeit, botZug } from '../src/bot.js';
+import { type Gangart, type Schwierigkeit, botZug } from '../src/bot.js';
 import {
   type EinheitId,
   type Kaempfer,
@@ -96,16 +96,22 @@ export const VIER_SITZE: readonly number[] = ACHT_SITZE.slice(0, 4);
  * (`werkzeug/gangarten.mjs`, `imFeld` in test/bot.test.ts). Ohne sie muesste
  * jeder Aufrufer die Partieschleife noch einmal schreiben — und maesse dann
  * seine eigene Kopie.
+ *
+ * In dieser Liste darf statt des Namens auch eine GANGART selbst stehen — ein
+ * Stand, den es im Spiel (noch) nicht gibt. Damit misst `werkzeug/gangarten.mjs`
+ * einen Vorschlag, ohne ihn einzubauen; siehe botZug in src/bot.ts.
  */
-export type Besetzung = Schwierigkeit | 'gemischt' | readonly Schwierigkeit[];
+export type Besetzung = Schwierigkeit | 'gemischt' | readonly (Schwierigkeit | Gangart)[];
 
 const GEMISCHT: readonly Schwierigkeit[] = ['sanft', 'normal', 'hart'];
 
-export function gangartFuer(besetzung: Besetzung, sitz: number): Schwierigkeit {
+export function gangartFuer(besetzung: Besetzung, sitz: number): Schwierigkeit | Gangart {
   // Reihum und nicht abgeschnitten: Eine Liste, die kuerzer ist als der Tisch,
   // soll eine Besetzung ergeben und keinen Absturz an Sitz 5.
-  if (Array.isArray(besetzung)) return besetzung[sitz % besetzung.length]!;
-  if (besetzung !== 'gemischt') return besetzung as Schwierigkeit;
+  // Ueber `instanceof Array` statt `Array.isArray`: Letzteres verengt eine
+  // `readonly`-Liste nicht, seit die Liste auch Gangart-Objekte tragen darf.
+  if (besetzung instanceof Array) return besetzung[sitz % besetzung.length]!;
+  if (besetzung !== 'gemischt') return besetzung;
   return GEMISCHT[sitz % GEMISCHT.length]!;
 }
 
@@ -153,11 +159,15 @@ export interface Zeitmodell {
   /**
    * Deckel auf die Vorbereitung.
    *
-   * Die Plattform nimmt einem Sitz die Entscheidung nach `turnTimeoutMs` ab
-   * (packages/server/src/runtime/party.ts, heute 60 Sekunden) und laesst den
-   * Bot ziehen. Laenger als das kann eine Vorbereitung nicht dauern, ohne dass
-   * jemand eingreift — deshalb ist das die Obergrenze und nicht eine Zahl aus
-   * diesem Modul.
+   * SEIT DEM 06.09.2026 IST DAS EINE ZAHL AUS DIESEM MODUL: `vorbereitungMs`
+   * im Regelsatz. Nach ihrem Ablauf gelten offene Sitze als bereit
+   * (`fristAbgelaufen` in partie.ts), laenger kann eine Vorbereitung also gar
+   * nicht dauern.
+   *
+   * Bis dahin stand hier die Zugzeit der Plattform (`turnTimeoutMs`,
+   * 60 Sekunden): Sie war der einzige Deckel, den es gab, und sie war ein
+   * schlechter — sie laeuft je Sitz, wird bei jeder Aktion irgendeines Sitzes
+   * neu gestellt und faellt am Botsitz ganz weg.
    */
   readonly vorbereitungHoechstMs: number;
   /** Was nach dem letzten Kampfereignis stehen bleibt (`KAMPF_NACHLAUF_MS`). */
@@ -194,7 +204,7 @@ export interface Zeitmodell {
 export const STANDARD_ZEITMODELL: Zeitmodell = {
   vorbereitungGrundMs: 5_000,
   vorbereitungJeZugMs: 1_500,
-  vorbereitungHoechstMs: 60_000,
+  vorbereitungHoechstMs: DEFAULT_REGELN.vorbereitungMs,
   kampfNachlaufMs: KAMPF_NACHLAUF_MS,
   botTaktMs: BOT_TAKT_MS,
 };

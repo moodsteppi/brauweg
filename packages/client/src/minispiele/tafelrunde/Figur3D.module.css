@@ -1,0 +1,70 @@
+/*
+ * Der Ausschnitt, durch den man EINE Zelle eines Figurenblattes sieht.
+ *
+ * Nur das, was an jedem Ort gleich ist: die Form des Ausschnitts, das Blatt
+ * darin und das Spiegeln. WO die Figur steht und WIE GROSS sie ist, steht
+ * beim Aufrufer — in der Arena in KampfAnzeige.module.css, in der Ruestkammer
+ * unter `.tr-figur3d` in styles.css. Beides hier festzulegen ginge nicht: Auf
+ * einer Wabe steht die Figur frei und ragt ueber ihr Feld hinaus, auf einer
+ * Ladenkarte sitzt sie im Kopf einer Karte.
+ *
+ * DESHALB SETZT DIESE DATEI KEINE POSITION. Der Aufrufer bringt `position`,
+ * `left`/`bottom` und `height` mit; stuende hier auch nur `position`,
+ * entschiede beim naechsten Bau die Reihenfolge der Stylesheets, welche der
+ * beiden Angaben gilt — zwei Klassen gleicher Staerke.
+ */
+
+.ausschnitt {
+  /* Eine Zelle ist quadratisch (FIGUREN3D_KANTE), also ist es der Ausschnitt. */
+  aspect-ratio: 1;
+  /* Kein Beiwerk, sondern der Kern der Sache: Das hier IST der Ausschnitt,
+     durch den genau eine von dreissig Zellen zu sehen ist. */
+  overflow: hidden;
+  /* Die Figur ist Anzeige, kein Ziel: Greifen und Ablegen gehoeren dem Feld
+     darunter. Ohne diese Zeile faende `elementFromPoint` beim Ziehen das Bild
+     statt der Wabe. */
+  pointer-events: none;
+}
+
+/*
+ * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT). Wer nach links schauen
+ * soll, bekommt den AUSSCHNITT gespiegelt und nicht das Bild: Sonst liefe das
+ * Spiegeln dem Schieben in dieselbe `transform`-Angabe.
+ *
+ * `scale` als eigenstaendige Eigenschaft und nicht als Funktion in
+ * `transform` — der Aufrufer braucht `transform` fuer sein Schweben und
+ * `translate` fuer seine Mitte.
+ */
+.ausschnitt[data-spiegel] {
+  scale: -1 1;
+}
+
+/*
+ * Das ganze Blatt, sechsmal so breit und fuenfmal so hoch wie der Ausschnitt
+ * (FIGUREN3D_SPALTEN x FIGUREN3D_ZEILEN).
+ *
+ * Ohne Versatz steht die Zelle links oben im Ausschnitt, und das ist Zeile 0,
+ * Bild 0 — das erste Bild der Ruhefolge. Wer eine STEHENDE Figur will,
+ * schreibt deshalb gar nichts; wer sie bewegen will, schiebt das Blatt von
+ * aussen (`bildSchieben` in KampfAnzeige.tsx).
+ */
+.blatt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 600%;
+  height: 500%;
+  max-width: none;
+}
+
+/*
+ * Nur fuer Blaetter, die wirklich geschoben werden: eine eigene Ebene.
+ *
+ * Bei bis zu sechzehn Figuren, die dreissigmal je Sekunde ihr Bild wechseln,
+ * ist das der Unterschied zwischen einem Verschieben und einem Neuzeichnen.
+ * Ein STEHENDES Blatt bekommt es nicht — neunzehn Waben plus Bank und Laden
+ * waeren ein Dutzend Ebenen fuer Bilder, die sich nie bewegen.
+ */
+.bewegt {
+  will-change: transform;
+}

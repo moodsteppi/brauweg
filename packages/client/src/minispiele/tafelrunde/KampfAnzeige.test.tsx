@@ -596,15 +596,16 @@ describe('KampfAnzeige', () => {
     zeige([paarung()], 0);
     const getroffen = (): Element => screen.getByLabelText(/Dorfwache, Stufe 2/);
 
-    // Vor dem ersten Treffer (500 ms) haengt an der Figur genau EIN <i>: der
-    // Schatten unter ihren Fuessen. Er ist immer da — er sagt, dass sie auf
-    // dem Feld steht, nicht dass sie getroffen wurde.
-    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(1);
+    // Vor dem ersten Treffer (500 ms) haengen an der Figur genau ZWEI <i>:
+    // der Schatten unter ihren Fuessen und der Kostenpunkt. Beide sind immer
+    // da — sie sagen, dass die Figur auf dem Feld steht und was sie gekostet
+    // hat, nicht dass sie getroffen wurde.
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(2);
 
     lauf(600);
     // Dazu zwei weitere: das Aufleuchten und der Einschlagring. Der Staub
     // kommt erst mit dem Tod und liegt in einem <span>.
-    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(3);
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(4);
   });
 
   it('wirbelt beim Tod Staub auf, und die Gefallene bleibt im Baum', () => {

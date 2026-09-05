@@ -33,6 +33,24 @@ export interface TafelrundeRegeln {
   /** Grundeinkommen je Runde, vor Zins und Serienbonus. */
   readonly grundeinkommen: number;
   /**
+   * Wie lange eine Vorbereitung hoechstens dauert. Danach gelten alle offenen
+   * Sitze als bereit und der Kampf beginnt (`fristAbgelaufen` in partie.ts).
+   *
+   * DAS MODUL MISST DIE ZEIT NICHT. Es nennt nur die Dauer; gemessen wird sie
+   * von der Plattform, die nach Ablauf `advancePhase` ruft (game-api,
+   * Grundsatz 1 und `phaseMs`). Deshalb steht hier eine Dauer und kein
+   * Zeitpunkt — einen Zeitpunkt koennte dieses Paket gar nicht bilden.
+   *
+   * WARUM ES SIE UEBERHAUPT GIBT: Bis zum 06.09.2026 endete die Vorbereitung
+   * ausschliesslich, wenn der LETZTE Sitz "bereit" meldete. Einen Deckel
+   * darauf gab es nur mittelbar ueber die Zugzeit der Plattform, und die taugt
+   * hier nicht: Sie wird bei JEDER Aktion IRGENDEINES Sitzes neu gestellt
+   * (alle ruesten gleichzeitig) und faellt ganz weg, sobald der genannte Sitz
+   * ein Bot ist. Am Bildschirm stand deshalb keine Restzeit, sondern
+   * "2 von 4 bereit".
+   */
+  readonly vorbereitungMs: number;
+  /**
    * Nach so vielen Runden ist Schluss, auch wenn noch mehrere leben.
    *
    * Gedacht als Deckel und nicht als Spielgefuehl: Ohne ihn liefe ein Tisch, an
@@ -110,6 +128,22 @@ export interface TafelrundeRegeln {
  * noch fuer Einheiten und Aufstiege ausgegeben. Was das Nachziehen begrenzt,
  * ist allein der Vorrat — wer ihn leerkauft, sieht leere Ladenplaetze, und das
  * ist die einzige Bremse, die es hier noch gibt.
+ *
+ * FUENFUNDVIERZIG SEKUNDEN VORBEREITUNG (seit dem 06.09.2026) sind gemessen
+ * und nicht gegriffen. Ueber 7.637 Runden aus 800 Partien zu viert
+ * (`werkzeug/spielzeit.mjs`, Saatbasis frist-v1) macht der fleissigste Sitz
+ * einer Runde im Median 7 Handgriffe, im 99. Hundertstel 17 und hoechstens 23.
+ * Ueber das Zeitmodell des Messstands (5 s Grundzeit + 1,5 s je Handgriff,
+ * `Zeitmodell` in test/messen.ts) sind das 15,5 s, 30,5 s und 39,5 s. Die
+ * Frist liegt damit UEBER der laengsten gemessenen Runde: Sie schneidet keine
+ * zuegige Vorbereitung ab, sondern beendet die Phase fuer jemanden, der nicht
+ * mehr hinsieht. Nach unten begrenzt sie die Partie trotzdem hart — neun
+ * Runden mal 45 s sind 6:45 im schlimmsten Fall, und darunter passen die
+ * Kaempfe noch in Robins acht Minuten.
+ *
+ * KUERZER MACHEN heisst, jemandem den Kauf wegzunehmen, den er gerade tippt.
+ * Wer es trotzdem tut, misst vorher nach: Die drei Zahlen oben stehen als
+ * Probe in test/spielzeit.ts.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
   startLeben: 12,
@@ -118,6 +152,7 @@ export const DEFAULT_REGELN: TafelrundeRegeln = {
   bankPlaetze: 9,
   neuwuerfelnKosten: 0,
   grundeinkommen: 5,
+  vorbereitungMs: 45_000,
   rundenGrenze: 30,
 };
 
@@ -277,6 +312,9 @@ const SCHRANKEN: Readonly<Record<keyof TafelrundeRegeln, readonly [number, numbe
   bankPlaetze: [MAX_LEVEL, 12],
   neuwuerfelnKosten: [0, 10],
   grundeinkommen: [1, 20],
+  // Unter zehn Sekunden ist keine Vorbereitung, sondern ein Reflextest; ueber
+  // fuenf Minuten je Runde waere der Deckel keiner mehr.
+  vorbereitungMs: [10_000, 300_000],
   rundenGrenze: [5, 100],
 };
 
@@ -309,4 +347,20 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   }
 
   return probleme;
+}
+
+/**
+ * Fehlende Frist aus der Vorgabe ergaenzen.
+ *
+ * `vorbereitungMs` kam am 06.09.2026 dazu. Ein Regelsatz, der VORHER
+ * gespeichert wurde — in einem Partie-Snapshot oder an einem wartenden Tisch —
+ * hat das Feld nicht, und `undefined` waere hier keine harmlose Luecke: Das
+ * Modul nennte der Plattform keine Frist mehr, und die Platzierungsphase
+ * stuende wieder ohne Deckel da. Genau derselbe Griff wie bei `wuerfeRunde`
+ * in adapter.ts.
+ */
+export function mitFrist(regeln: TafelrundeRegeln): TafelrundeRegeln {
+  return regeln.vorbereitungMs === undefined
+    ? { ...regeln, vorbereitungMs: DEFAULT_REGELN.vorbereitungMs }
+    : regeln;
 }

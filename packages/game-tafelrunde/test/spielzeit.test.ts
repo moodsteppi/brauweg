@@ -73,15 +73,46 @@ describe('Spielzeit: das Zeitmodell', () => {
   });
 
   /**
-   * Der Deckel ist keine Zierde: Die Plattform nimmt einem Sitz nach
-   * `turnTimeoutMs` die Entscheidung ab und laesst den Bot ziehen. Eine
-   * geschaetzte Vorbereitung, die darueber liegt, beschreibt einen Zustand,
-   * den es am Tisch gar nicht gibt.
+   * Der Deckel ist keine Zierde: Nach `vorbereitungMs` gelten offene Sitze als
+   * bereit und der Kampf beginnt (`fristAbgelaufen`). Eine geschaetzte
+   * Vorbereitung, die darueber liegt, beschreibt einen Zustand, den es am
+   * Tisch gar nicht gibt.
    */
-  it('deckelt die Vorbereitung bei der Zugzeit der Plattform', () => {
+  it('deckelt die Vorbereitung bei der Rundenfrist des Regelsatzes', () => {
     assert.equal(
       vorbereitungsdauer(1000, STANDARD_ZEITMODELL),
-      STANDARD_ZEITMODELL.vorbereitungHoechstMs,
+      DEFAULT_REGELN.vorbereitungMs,
+    );
+  });
+
+  /**
+   * Die Zahl hinter `vorbereitungMs` (regeln.ts): Sie liegt UEBER der
+   * laengsten Vorbereitung, die eine zuegig gespielte Runde braucht — sonst
+   * schnitte die Frist nicht den Truedler ab, sondern den Kauf, den jemand
+   * gerade tippt.
+   *
+   * Gemessen wird der fleissigste Sitz je Runde, denn auf den wartet die
+   * Phase. 800 Partien sind rund 7.600 Runden; die Schranke steht ueber dem
+   * gemessenen Hoechstwert (23 Handgriffe, 39,5 s) und nicht darauf, damit
+   * eine Katalogaenderung sie nicht sofort rot faerbt.
+   */
+  it('haelt die Rundenfrist ueber der laengsten gemessenen Vorbereitung', () => {
+    const befunde = messe({
+      partien: 800,
+      sitze: VIER_SITZE,
+      besetzung: 'normal',
+      saatBasis: 'frist-v1',
+    });
+    const laengste = Math.max(
+      ...befunde.flatMap((b) => b.zuegeJeRunde).map((zuege) =>
+        // Ohne Deckel gerechnet: Der Deckel ist ja gerade das, was geprueft
+        // wird — mit ihm kaeme immer die Frist selbst heraus.
+        vorbereitungsdauer(zuege, { ...STANDARD_ZEITMODELL, vorbereitungHoechstMs: Infinity }),
+      ),
+    );
+    assert.ok(
+      laengste <= DEFAULT_REGELN.vorbereitungMs,
+      `laengste Vorbereitung ${laengste} ms ueber der Frist ${DEFAULT_REGELN.vorbereitungMs} ms`,
     );
   });
 

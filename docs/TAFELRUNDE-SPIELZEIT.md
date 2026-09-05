@@ -84,10 +84,15 @@ einem Viertel; wer den Kampf halbiert, spart mehr als ein Drittel der Partie.
 * **Kampf und Nachlauf sind Zahlen, keine Annahmen.** Die Kampfphase dauert so
   lange wie der längste Kampf der Runde (`kampfdauer` in `partie.ts`), und
   genau so lange läuft die Schaupause der Plattform (`interludeMs` im
-  Adapter). Der Nachlauf sind die 2,5 Sekunden aus `KAMPF_NACHLAUF_MS`.
+  Adapter). Der Nachlauf sind die 2,5 Sekunden aus `KAMPF_NACHLAUF_MS` — seit
+  dem 06.09.2026 steht dort 1,5 s, warum, steht in Abschnitt 7.
 * **Die Vorbereitung ist ein Modell** (`Zeitmodell` in `test/messen.ts`): 5
-  Sekunden Grundzeit plus 1,5 Sekunden je Handgriff, gedeckelt bei der Zugzeit
-  der Plattform (60 s). Sie **kann** nicht gemessen werden — im Messstand
+  Sekunden Grundzeit plus 1,5 Sekunden je Handgriff, gedeckelt bei der
+  Rundenfrist des Regelsatzes (`vorbereitungMs`, 45 s — bis zum 06.09.2026
+  stand dort die Zugzeit der Plattform, 60 s, weil es keine eigene Frist gab).
+  Am gemessenen Ergebnis ändert der neue Deckel nichts: Die längste
+  Vorbereitung im Bestand sind 39,5 s, er greift also in keiner einzigen
+  gemessenen Runde. Sie **kann** nicht gemessen werden — im Messstand
   sitzen nur Bots, und die sind sofort bereit. Die Phase endet, wenn der
   **letzte** Sitz „Bereit" tippt, deshalb zählt der fleißigste und nicht der
   Durchschnitt. Über die 6 Handgriffe, die der fleißigste Sitz im Median macht
@@ -177,10 +182,19 @@ ist sie zu grob.
 die am meisten Arbeit spart. Selbst ein harter Countdown von 10 Sekunden
 schneidet nur 8 % der Spielzeit ab, weil die Vorbereitung schon heute im
 Median bei rund 14 Sekunden liegt; ein Deckel von 25 oder 20 Sekunden ist
-messbar wirkungslos. Dazu kommt: **Diesen Countdown gibt es gar nicht.** Die
-Plattform kennt nur `turnTimeoutMs` (60 s), und Tafelrunde hat keine eigene
-Vorbereitungsfrist. Die Schraube kostet also Arbeit in Server und Client und
-zahlt am wenigsten zurück.
+messbar wirkungslos. Dazu kam damals: **Diesen Countdown gibt es gar nicht.**
+Die Plattform kannte nur `turnTimeoutMs` (60 s), und Tafelrunde hatte keine
+eigene Vorbereitungsfrist. Die Schraube kostete also Arbeit in Server und
+Client und zahlte am wenigsten zurück.
+
+> **Nachtrag 06.09.2026:** Die Frist ist inzwischen gebaut — `vorbereitungMs`
+> im Regelsatz, getragen von `phaseMs` / `advancePhase` in `GameModule`. Sie
+> steht auf **45 s** und ist damit ausdrücklich **keine** Zeitschraube: Sie
+> liegt über der längsten gemessenen Vorbereitung (39,5 s) und schneidet
+> deshalb nichts ab. Gebaut wurde sie, weil am Bildschirm keine Restzeit stand
+> und ein Tisch auf jemanden warten konnte, der nicht mehr hinsieht. Wer sie
+> als Zeitschraube benutzen will, hat mit dieser Tabelle die Zahlen dafür —
+> und nimmt jemandem den Kauf weg, den er gerade tippt.
 
 **4a. Ein feinerer Takt bringt nichts** (−0,5 % bei 50 ms, −0,9 % bei 25 ms).
 `TAKT_MS` ist die Auflösung der Rechnung, nicht das Tempo: Ein feinerer Takt
@@ -244,6 +258,8 @@ fällt nur die Zeit weg, in der man zusieht, wie zwei Wachen einander nicht
 umbringen. Die Startleben sind der Feinregler daneben. **An der Vorbereitung
 und an `TAKT_MS` sollte niemand Arbeit investieren** — zusammen bringen sie
 unter einem Zehntel, und die Vorbereitungsfrist müsste erst gebaut werden.
+(Sie ist es seit dem 06.09.2026, aber als Deckel über der längsten Runde und
+nicht als Zeitschraube — siehe den Nachtrag in Abschnitt 4.)
 
 Wer x2 am Bildschirm zu hektisch findet, nimmt x1,5 und dafür 12 Startleben:
 7:42 bei 10 Runden, gemessen. Das kostet aber zwei Dinge — eine Runde weniger
@@ -341,11 +357,18 @@ Der Kampf bleibt der größte Posten, aber knapper. **Die Aussage „an der
 Vorbereitung lohnt sich keine Arbeit" gilt damit weniger deutlich als vorher**:
 Ihr Anteil ist von einem Viertel auf gut ein Drittel gestiegen, weil der andere
 Posten kleiner wurde und nicht, weil sie länger geworden wäre. Ein harter
-Countdown von 10 Sekunden bringt jetzt 13 % statt 8 %. Gebaut ist er weiterhin
-nicht (siehe die Board-Karte zur fehlenden Vorbereitungsfrist).
+Countdown von 10 Sekunden bringt jetzt 13 % statt 8 %. Eine Frist gibt es seit
+dem 06.09.2026 (`vorbereitungMs`), aber mit 45 s über jeder gemessenen Runde —
+als harter Countdown müsste sie erst kurz gestellt werden.
 
 ### Ausgewogenheit, gemessen
 
+**Hier stehen zwei Läufe, und lange stand nur einer davon da.** Die Tabelle
+kommt aus 1.500 Partien, die beiden Nebenbefunde darunter aus 5.000 — beide
+Angaben stimmen, keine ist ein Tippfehler. Die Gegenprobe dazu steht unter den
+Nebenbefunden.
+
+Der Lauf zur Tabelle:
 `node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 1500
 --sitze 4`, Saatbasis `ausgewogenheit-v1`, gegen denselben Lauf mit
 `--leben 20 --zeitraffer 1`:
@@ -365,11 +388,25 @@ deshalb wurde am Katalog nichts geändert.** Der Krieger zieht wie vorhergesagt
 an, und aus dem vorhergesagten Grund: Wo vorher jeder dritte Kampf an der Uhr
 entschieden wurde, gewinnt jetzt das Brett, das sonst auf Zeit gespielt hätte.
 Die Vorhersage aus Abschnitt 4 lautete ×1,34 für den Krieger, gemessen sind es
-×1,30; sie stammte aus einem Lauf mit anderer Grundlage (vor dem kostenlosen
-Neu-Würfeln) und liegt entsprechend leicht daneben.
+×1,30; sie stammte aus einem Lauf mit anderer Grundlage und liegt entsprechend
+leicht daneben.
 
-Zwei Nebenbefunde aus demselben Lauf, beide **nicht** durch diese Änderung
-verursacht, aber durch sie sichtbar geworden:
+> **Welche Grundlage das war, steht hier nicht mehr richtig (06.09.2026).**
+> Bis heute stand an dieser Stelle „vor dem kostenlosen Neu-Würfeln". Das kann
+> es nicht sein: Die Ladenregel kam mit `625f626` und damit **nach** beiden
+> Läufen — die Vorhersage steht schon in `fcae0fd`, und die ×1,30 dieser
+> Tabelle sind auf genau demselben `fcae0fd` Zeile für Zeile nachgestellt
+> worden. Beide Zahlen sind also vor der Ladenregel gemessen. Woran die vier
+> Hundertstel wirklich liegen, ist offen und steht als Karte auf dem Board;
+> geraten wird es hier nicht.
+
+Zwei Nebenbefunde, beide **nicht** durch diese Änderung verursacht, aber durch
+sie sichtbar geworden. Sie stammen aus dem **zweiten, größeren Lauf** —
+`--partien 5000 --sitze 4 --mindest 150`, sonst alles gleich —, und deshalb
+nennen sie andere Antrittszahlen als die Tabelle oben. Der große Lauf war
+nötig, weil genau diese Zeilen im kleinen zu dünn bleiben: Über 1.500 Partien
+tritt der Drache 59-mal an, der Untote 7-mal, und der Moosheiler kommt in der
+Vorher-Spalte auf 60 — Zahlen, aus denen sich keine Quote ablesen lässt:
 
 * **Drache und Untot sind noch dünner geworden** (204 bzw. 32 Antritte über
   5.000 Partien, vorher 394 und 65). Beide haben dafür schon eine Karte auf dem
@@ -379,6 +416,26 @@ verursacht, aber durch sie sichtbar geworden:
   aufgestellt, weil in elf Runden seltener ein ausgebautes Brett steht — und
   gewinnt praktisch nie. Die Ursache ist bekannt und unverändert: Heilen gibt
   es in `kampf.ts` noch gar nicht.
+
+**Nachgerechnet am 06.09.2026** (Karte „TAFELRUNDE-SPIELZEIT.md Abschnitt 5:
+Aufruf und zitierte Zahlen passen nicht zusammen"). Beide Läufe wurden mit
+beiden Partienzahlen wiederholt; sie treffen ihre Zeile jeweils auf den
+Antritt:
+
+| | 1.500 Partien | 5.000 Partien |
+| --- | --- | --- |
+| Drache | 111 → 59 *(Tabelle)* | 394 → 204 *(Nebenbefund)* |
+| Untot | 17 → 7 *(Tabelle)* | 65 → 32 *(Nebenbefund)* |
+| Moosheiler | 60 → 156 | 237 (×0,25) → 541 (×0,15) *(Nebenbefund)* |
+
+Die ×0,25 des Moosheilers gibt es dabei nur mit `--mindest 150`; mit der
+Vorgabe 100 stünde dort ×0,24. **Nachstellen lässt sich das nur auf dem Stand
+dieses Abschnitts** — Zweigbasis `fcae0fd` mit `--leben 14 --zeitraffer 2` für
+die Nachher-Spalte und ohne Schalter für die Vorher-Spalte. Auf `bdb50c1`,
+also nach dem Zusammenführen mit der Ladenregel, wirft derselbe Aufruf ganz
+andere Antritte aus (Drache 8, Untot 9 über 1.500 Partien), und auf dem
+heutigen Bot erst recht. Das ist kein Widerspruch, sondern der Grund für
+Abschnitt 6.
 
 ### Was die Änderung an den Proben geändert hat
 
@@ -463,7 +520,7 @@ Die Zerlegung rechnet im **Mittel** je Partie, die Zeile oben ist der **Median**
 Die Aussage aus Abschnitt 4 gilt unverändert: **An der Vorbereitung lohnt sich
 weiterhin keine Arbeit** — ein harter Countdown von 10 Sekunden bringt 12,5 %,
 ein feinerer `TAKT_MS` von 100 auf 25 ms 3,5 %, und die Vorbereitungsfrist
-müsste erst gebaut werden.
+liegt mit 45 s bewusst über jeder gemessenen Runde.
 
 ### Jede Schraube einzeln, auf dem heutigen Stand
 
@@ -522,6 +579,15 @@ Stand, 169 : 77,0 · 147 : 84,3 bei 20 Leben) plus einem Kontrolllauf mit
 gleichen Gangarten (102 : 99,3). Fallen darf sie wieder bei der nächsten
 Änderung am Laden — die misst man mit.
 
+**Nachtrag 06.09.2026.** Die Zahlen dieses Abschnitts beschreiben den Stand von
+damals. `hart` verlangt beim Aufstieg seitdem wieder ein volles Brett und hält
+nur noch zwei Gold zurück, weil die alte Schraube nachgemessen kein Nullwert
+war, sondern ein Minus; die Paarung steht damit bei **212 : 62,7** statt
+140 : 86,7, und die Probe misst wieder über eine Saatbasis statt über drei. Der
+Kontrolllauf ist über sechs Basen neutral (98,7). Zerlegung und Begründung
+stehen bei `GANGARTEN` in `bot.ts`, nachzustellen mit
+`werkzeug/gangarten.mjs --schraube …`.
+
 ---
 
 ## 7. Nicht die Spielzeit, sondern das Warten (06.09.2026)
@@ -561,6 +627,40 @@ treffen nicht in derselben Runde zusammen.
 
 Über neun Runden sind das rund **1:00 statt 3:00** je Partie an Zeit, in der
 ein Spieler nichts zu tun und nichts zu entscheiden hat.
+
+#### Gegenprobe auf dem tiefen Brett
+
+Die Zahlen oben stammen vom **flachen** Brett (5 × 4, `BRETT_REIHEN = 2`) —
+dem Stand, der auf `staging` liegt. Der Umbau auf vier Reihen je Hälfte plus
+zwei leere Reihen dazwischen (5 × 10) wartet noch auf einem eigenen Zweig. Die
+naheliegende Sorge dabei: Auf einem tieferen Brett laufen die Einheiten
+weiter, die Kämpfe dauern länger, und die Bots machen mehr Handgriffe je
+Runde — dann wären beide Zeilen wieder hinfällig.
+
+Gemessen (dieselben 300 Partien, dieselbe Saatbasis, der Arena-Zweig mit
+diesem Messwerkzeug darauf) trägt die Sorge **nicht**:
+
+| | flach (5 × 4) | tief (5 × 10) |
+| --- | --- | --- |
+| auf die Bots, Median / P90 | 3,2 s / 6,0 s | 3,2 s / **5,6 s** |
+| auf die fremden Kämpfe, Median / P90 | 1,5 s / 20,4 s | 1,5 s / **20,3 s** |
+| beides zusammen, P90 | 24,2 s | **24,1 s** |
+| einzelner Kampf im Median | 16,9 s | 17,7 s |
+| an der Höchstdauer abgeschnitten | 6,0 % | **4,5 %** |
+| Spielzeit / Runden | 6:32 bei 9 | 6:33 bei 10 |
+
+Der Kampf wird um 0,8 s länger, aber der **Schwanz** wird kürzer, nicht
+länger: Der Anteil der an der Grenze abgeschnittenen Kämpfe fällt von 6,0 auf
+4,5 %. Und die Bots machen auf dem tiefen Brett eher *weniger* Handgriffe je
+Runde, nicht mehr — das neunte Zehntel der Bot-Wartezeit sinkt von 6,0 auf
+5,6 s. Beide Stellschrauben dieses Abschnitts bleiben damit richtig
+eingestellt, wenn der Arena-Umbau kommt.
+
+**Auch der Nachlauf bleibt tragfähig.** Der Überstand der letzten Todesfolge
+über das Ende der Kampfphase ist auf dem tiefen Brett unverändert 500 ms
+(Median wie Maximum, in 52,3 % der Kämpfe gegen 51,5 % auf dem flachen). Die
+1,5 s lassen also weiterhin eine volle Sekunde lesbares Standbild stehen — er
+ist nicht zu knapp geworden und braucht nicht erhöht zu werden.
 
 **Die erste Zeile stand in keiner Regel dieses Moduls**, und das ist der
 eigentliche Befund. Die Plattform wartet vor jedem Botzug 0,8 s

@@ -1,10 +1,12 @@
 /**
  * Name und Rolle je Einheit — die Nachschlagetabelle zu `arena-szene.json`.
  *
- * Sie liegt neben der Szene und nicht in einem der beiden Proben-Ordner, weil
- * beide Proben (2D und 3D) dieselbe Auskunft brauchen: Der Kampfbericht nennt
- * je Streiter nur `einheitId`, aber gezeigt werden muessen ein lesbarer Name
- * und — fuer die Figurenwahl — die Rolle.
+ * Sie liegt neben der Szene und nicht im Ordner der Probe, weil sie zur SZENE
+ * gehoert und nicht zu einer Anzeige: Der Kampfbericht nennt je Streiter nur
+ * `einheitId`, aber gezeigt werden muessen ein lesbarer Name und — fuer die
+ * Figurenwahl — die Rolle. Bis zum 06.09.2026 brauchten zwei Proben (2D und
+ * 3D) dieselbe Auskunft; die 3D-Probe ist mit Robins Entscheidung geloescht,
+ * die Aufteilung bleibt aus dem erstgenannten Grund.
  *
  * ABGESCHRIEBEN, NICHT EINGEBUNDEN: Die Werte stammen aus
  * `packages/game-tafelrunde/src/katalog.ts`. Der Client importiert aus keinem
@@ -59,7 +61,8 @@ export const EINHEITEN: Readonly<Record<string, Einheitsangabe>> = {
 /**
  * Rolle einer Einheit. Faellt auf `wache` zurueck, damit eine Szene mit einer
  * unbekannten Kennung eine Figur zeigt statt einer Luecke — ein leerer Platz
- * saehe im Vergleich der beiden Proben nach einem Fehler der Anzeige aus.
+ * saehe nach einem Fehler der Anzeige aus (CLAUDE.md: lieber ein Platzhalter
+ * als nichts).
  */
 export function rolleVon(einheitId: string): Rolle {
   return EINHEITEN[einheitId]?.rolle ?? 'wache';
