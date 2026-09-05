@@ -88,6 +88,7 @@ und bringt Feldplätze.
 
 1. **Vorbereitung** (ca. 30 s): kaufen, setzen, verschmelzen.
 2. **Kampf** (ca. 15–20 s): läuft automatisch, wird nur zugesehen.
+   Gemessen 17,3 s — erreicht wird das über den Zeitraffer, siehe unten.
 3. **Ergebnis**: Schaden am Verlierer nach verbliebenen Gegnereinheiten.
 4. Bei 0 Leben scheidet ein Spieler aus. Der Letzte gewinnt.
 
@@ -158,148 +159,186 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 05.09.2026, vierte Messung — der gültige Stand)
+## Gemessen: Ausgewogenheit (Stand 05.09.2026, fünfte Messung — der gültige Stand)
 
-**Was geändert wurde:** `neuwuerfelnKosten` steht auf **0**, und **ein Kauf
-zieht den ganzen Laden neu** (`fuelleLaden` in `partie.ts`, Fall `kaufen`).
-Sonst nichts — Zins, Serienbonus, Leveln, Katalog und Schwellen sind
-unangetastet. Gemessen mit demselben Werkzeug und derselben Saatbasis wie die
-Messungen davor, **5.000 Partien zu viert, Besetzung `normal`,
-`--mindest 100`**.
+**Warum es eine fünfte gibt.** Am 05.09.2026 sind vier Zahlen geändert worden,
+aber auf zwei getrennten Zweigen — und jede der beiden Messungen davor hat nur
+die eigene Hälfte gesehen:
 
-Drei Spalten, weil zwischendurch eine dritte Fassung gemessen wurde:
+- Die **dritte Messung** stand für Zeitraffer x2 und 14 Startleben. Sie wurde
+  mit dem **alten Laden** gerechnet (Würfeln kostet 2 Gold, ein gekaufter Platz
+  bleibt leer).
+- Die **vierte Messung** stand für das kostenlose Würfeln und den Laden, der
+  sich bei jedem Kauf ganz erneuert. Sie wurde **ohne Zeitraffer und mit 20
+  Leben** gerechnet.
 
-- **jetzt** — ein Kauf zieht den ganzen Laden neu.
-- **nur der Platz** — Zwischenstand: kostenloses Würfeln, aber nur der
-  gekaufte Ladenplatz wurde nachbesetzt. Diese Fassung stand kurz auf dem
-  Aufgabenzweig und setzte die Regel falsch um; sie steht hier als Vergleich.
-- **staging** — der Stand vor beiden Änderungen (Würfeln kostet 2 Gold, ein
-  gekaufter Platz bleibt bis zum nächsten Wurf leer). Das ist die zweite
-  Messung weiter unten.
+Beide waren richtig, und beide sind seit dem Zusammenführen falsch: Auf
+`staging` steht seitdem der Zustand mit **allen vier** Änderungen, und den hatte
+niemand gemessen. Dieser Abschnitt ist dieser Lauf. Was hier steht, ist der
+gültige Stand; die Zahlen der Messungen davor stehen unten unter
+„Vorgeschichte".
+
+**Was zusammen gemessen wurde** — sonst nichts, Zins, Serienbonus, Leveln,
+Katalog und Schwellen sind unangetastet:
+
+| Datei | Stelle | vorher | jetzt |
+|---|---|---|---|
+| `kampf.ts` | `STANDARD_REGLER.zeitraffer` | 1 | **2** |
+| `regeln.ts` | `DEFAULT_REGELN.startLeben` | 20 | **14** |
+| `regeln.ts` | `DEFAULT_REGELN.neuwuerfelnKosten` | 2 | **0** |
+| `partie.ts` | Laden nach dem Kauf (`fuelleLaden`) | nur der gekaufte Platz | **der ganze Laden** |
+
+Gemessen mit demselben Werkzeug und derselben Saatbasis wie die Messungen
+davor, **5.000 Partien zu viert, Besetzung `normal`, `--mindest 100`**. Die
+Vergleichsspalten heißen durchweg **dritte** (Zeitraffer, alter Laden) und
+**vierte** (neuer Laden, kein Zeitraffer).
 
 ### Wie lange eine Partie dauert
 
-| | jetzt | nur der Platz | staging |
+| | jetzt | dritte | vierte |
 |---|---|---|---|
-| Runden ⌀ | 14,1 | 14,2 | 14,7 |
-| Median | 14 | 14 | 15 |
-| kürzeste / längste | 10 / 21 | 10 / 21 | 11 / 22 |
+| Runden ⌀ | 10,6 | 11,1 | 14,1 |
+| Median | 10 | 11 | 14 |
+| kürzeste / längste | 8 / 16 | 8 / 17 | 10 / 21 |
 | an der Grenze geendet | 0,0 % | 0,0 % | 0,0 % |
-| erstes Ausscheiden | Runde 10,1 | Runde 10,2 | Runde 10,5 |
-| zur Halbzeit entschieden | **47,3 %** | 44,0 % | 36,7 % |
-| Antritte insgesamt | 250.329 | 252.843 | 261.233 |
+| erstes Ausscheiden | Runde 7,4 | Runde 7,8 | Runde 10,1 |
+| **zur Halbzeit entschieden** | **43,0 %** | 30,6 % | 47,3 % |
+| Spielzeit im Median | **7:25** | 7:21 | nicht festgehalten |
+| einzelner Kampf im Median | 17,3 s | 17,3 s | nicht festgehalten |
+| von der Uhr entschieden | **4,3 %** | 1,8 % | nicht festgehalten |
+| Antritte insgesamt | 187.730 | 196.314 | 250.329 |
 
-Die Dauer bewegt sich kaum noch — die halbe Runde hat schon das kostenlose
-Würfeln gebracht. Weiter gewandert ist die vorletzte Zeile: **Fast jede zweite
-Partie steht zur Halbzeit fest** (47,3 % gegen 36,7 % auf `staging`). Wer den
-Laden ohnehin bei jedem Kauf neu sieht, holt einen Rückstand schwerer auf.
+Die vierte Messung hat Spielzeit und Kampfdauer zwar mitgedruckt, aber nicht
+ins Dokument geschrieben; die Felder bleiben deshalb leer statt geraten.
+
+Die Spielzeit steht hier bei 7:25, in `docs/TAFELRUNDE-SPIELZEIT.md` bei 7:34.
+Das ist kein Widerspruch, sondern derselbe Stand auf zwei Stichproben: Dort
+rechnet `werkzeug/spielzeit.mjs` 500 Partien auf der Saatbasis `spielzeit-v1`,
+hier `werkzeug/ausgewogenheit.mjs` 5.000 auf `ausgewogenheit-v1`. Neun
+Sekunden Abstand sind die Streuung zwischen zwei Stichproben und keine Wirkung
+von irgendetwas.
+
+**Die beiden Änderungen ziehen die Partie in dieselbe Richtung und die
+Halbzeit-Zeile in entgegengesetzte.** Die Dauer sinkt weiter — zehn Runden
+statt elf (dritte) bzw. vierzehn (vierte): Ein Brett steht schneller, wenn der
+Laden nichts kostet und bei jedem Kauf frisch ist. Die Zeile „zur Halbzeit
+entschieden" landet mit 43,0 % zwischen den beiden Vorgängern: Der neue Laden
+treibt sie hoch (dort 47,3 %), die kürzere Partie drückt sie herunter (dort
+30,6 %). Wer den Laden bei jedem Kauf neu sieht, holt einen Rückstand schwerer
+auf; wer nur zehn Runden hat, kann einen Vorsprung schlechter ausbauen. Unterm
+Strich steht es schlechter als nach dem Zeitraffer allein und besser als nach
+der Ladenregel allein.
+
+**Von der Uhr entschiedene Kämpfe steigen wieder**, von 1,8 % auf 4,3 %
+(`werkzeug/spielzeit.mjs` misst auf seiner eigenen Saatbasis 4,6 %). Das ist
+die Kehrseite des neuen Ladens: Er baut stärkere Bretter, und zwei starke
+Bretter brauchen länger als zwei schwache. Die Größenordnung ist die, für die
+`HOECHSTDAUER_MS` gedacht ist — ein Rettungsseil und kein Regelfall —, aber sie
+ist die Zahl, die man beim nächsten Eingriff zuerst nachsieht: Bei 27,7 % (vor
+dem Zeitraffer) entschied nicht mehr das Brett, sondern die Uhr.
+
+### Andere Sitzzahlen
+
+Der **Normalfall sind vier Sitze**: Der Bildschirm sucht ausschließlich Tische
+zu viert, gemessen wird deshalb zu viert. Die übrigen Sitzzahlen sind
+mitgemessen, damit ein selbstgebauter Tisch nicht ins Leere läuft — zu zweit
+und zu dritt je 1.000 Partien, zu sechst und zu acht je 500.
+
+| Sitze | Partien | Runden ⌀ | Median | Spielzeit (Median) | an der Grenze | erstes Ausscheiden | zur Halbzeit entschieden |
+|---|---|---|---|---|---|---|---|
+| 2 | 1.000 | 8,1 | 8 | 4:51 | 0,0 % | Runde 8,1 | 40,6 % |
+| 3 | 1.000 | 9,5 | 9 | 6:18 | 0,0 % | Runde 7,7 | 44,5 % |
+| **4** | **5.000** | **10,6** | **10** | **7:25** | **0,0 %** | **Runde 7,4** | **43,0 %** |
+| 6 | 500 | 12,5 | 12 | 9:22 | 0,0 % | Runde 7,2 | 32,8 % |
+| 8 | 500 | 13,7 | 13,5 | 10:39 | 0,0 % | Runde 7,0 | 26,0 % |
+
+Keine einzige Partie endete an der Rundengrenze von 30, zu keiner Sitzzahl; die
+längste von allen lief 19 Runden (zu acht).
+
+„Zur Halbzeit entschieden" heißt: Der spätere Sieger lag spätestens ab der
+halben Partie ununterbrochen beim meisten Leben.
 
 ### Siegquote je Marke
 
-Schnitt der gezählten Zeilen: 35,3 % (nur der Platz: 32,9 %, staging: 31,9 %).
+5.000 Partien zu viert. Gezählt wird ein Sitz, dessen **letztes** Brett die
+Marke mindestens zweimal trug (erste Schwelle) — nicht der Endzustand, denn wer
+ausscheidet, gibt sein Brett vollständig in den Vorrat zurück. Schnitt der
+gezählten Zeilen: 32,0 %.
 
-| Marke | Antritte | Siege | Quote | zum Schnitt | nur der Platz | staging |
-|---|---|---|---|---|---|---|
-| Untot | 128 | 64 | 50,0 % | **×1,42** | zu dünn | zu dünn |
-| Naturwesen | 2.304 | 888 | 38,5 % | ×1,09 | ×1,04 | ×1,06 |
-| Krieger | 7.274 | 2.672 | 36,7 % | ×1,04 | ×1,10 | ×1,13 |
-| Drache | 63 | 22 | 34,9 % | zu dünn | ×1,27 | ×1,15 |
-| Elementar | 156 | 51 | 32,7 % | ×0,93 | ×0,93 | ×0,80 |
-| Meuchler | 13.019 | 3.532 | 27,1 % | ×0,77 | ×0,79 | ×0,79 |
-| Wächter | 12.001 | 3.221 | 26,8 % | ×0,76 | ×0,86 | ×1,07 |
+| Marke | Antritte | Siege | Quote | zum Schnitt | zweite Saat | dritte | vierte |
+|---|---|---|---|---|---|---|---|
+| Untot | 42 | 27 | 64,3 % | zu dünn | zu dünn (33) | zu dünn (32) | ×1,42 |
+| Drache | 43 | 27 | 62,8 % | zu dünn | zu dünn (54) | ×1,13 | zu dünn |
+| Krieger | 4.928 | 2.091 | 42,4 % | **×1,32** | ×1,37 | ×1,27 | ×1,04 |
+| Naturwesen | 1.494 | 523 | 35,0 % | ×1,09 | ×1,09 | ×0,92 | ×1,09 |
+| Meuchler | 10.597 | 3.177 | 30,0 % | ×0,94 | ×0,93 | ×0,77 | ×0,77 |
+| Wächter | 10.612 | 2.865 | 27,0 % | ×0,84 | ×0,86 | ×1,13 | ×0,76 |
+| Elementar | 175 | 45 | 25,7 % | ×0,80 | ×0,75 | ×0,78 | ×0,93 |
 
-Der Zielrahmen — keine gezählte Marke über ×1,4, keine unter ×0,7 — ist
-**oben knapp gerissen**: Untot steht auf ×1,42. Siehe Befund 1.
+**Das Ziel war: keine gezählte Marke über ×1,4 und keine unter ×0,7.** Der
+gemessene Bereich ist **×0,80 bis ×1,32** und bleibt damit innerhalb — enger
+als nach der Ladenregel allein (×0,76–1,42, dort oben gerissen) und in etwa so
+weit wie nach dem Zeitraffer allein (×0,77–1,27). Der Krieger ist mit ×1,32 die
+Zeile, die man zuerst ansieht; auf der zweiten Saatbasis steht er auf ×1,37 und
+damit dicht an der Kante. Geändert wurde am Katalog nichts.
 
-### Siegquote je Einheit, die Ränder
+Der Schnitt ist nicht 1/4: Ein Brett trägt in der Regel drei bis fünf Marken
+gleichzeitig, die Quoten summieren sich deshalb nicht auf 100 %.
 
-Schnitt 33,5 % (nur der Platz: 34,3 %, staging: 31,1 %). „—" heißt: Die
-älteren Tabellen führen nur die Ränder, diese Zeile lag damals in der Mitte
-und wurde nicht mitgeschrieben.
+### Siegquote je Einheit auf dem letzten Brett
 
-| Einheit | Gold | Antritte | Quote | zum Schnitt | nur der Platz | staging |
-|---|---|---|---|---|---|---|
-| Grabfürstin | 3 | 125 | 60,0 % | ×1,79 | ×1,48 | ×0,88 |
-| Sturmrufer | 3 | 225 | 53,8 % | ×1,60 | — | — |
-| Lichtwahrerin | 3 | 140 | 52,9 % | ×1,58 | ×1,64 | ×1,31 |
-| Nachtpfeil | 2 | 2.317 | 43,2 % | ×1,29 | ×1,39 | ×1,59 |
-| … | | | | | | |
-| Gassendieb | 1 | 17.149 | 22,8 % | ×0,68 | ×0,63 | ×0,67 |
-| Schildknappe | 1 | 12.061 | 21,7 % | ×0,65 | ×0,73 | ×0,93 |
-| Astschütze | 1 | 2.831 | 17,1 % | ×0,51 | ×0,59 | ×0,76 |
-| Irrlicht | 1 | 253 | 16,6 % | ×0,50 | ×0,50 | ×0,56 |
-| Funkenlehrling | 1 | 208 | 12,0 % | ×0,36 | ×0,39 | ×0,51 |
+5.000 Partien zu viert, Schnitt der gezählten Zeilen 34,8 %. Gekürzt auf die
+Ränder; die volle Tabelle druckt das Werkzeug.
+
+| Einheit | Gold | Antritte | Quote | zum Schnitt |
+|---|---|---|---|---|
+| Sturmrufer | 3 | 129 | 55,8 % | ×1,60 |
+| Drachenkind | 3 | 600 | 54,8 % | ×1,57 |
+| Klingentänzerin | 3 | 2.779 | 54,5 % | ×1,56 |
+| Wurzelriese | 3 | 2.217 | 53,9 % | ×1,55 |
+| Bogenmeisterin | 2 | 2.028 | 48,7 % | ×1,40 |
+| … | | | | |
+| Dorfwache | 1 | 9.120 | 25,9 % | ×0,74 |
+| Gassendieb | 1 | 17.208 | 23,3 % | ×0,67 |
+| Schildknappe | 1 | 12.386 | 21,5 % | ×0,62 |
+| Astschütze | 1 | 2.902 | 14,9 % | ×0,43 |
+| Funkenlehrling | 1 | 315 | 9,2 % | ×0,26 |
+| Irrlicht | 1 | 432 | 8,8 % | ×0,25 |
+
+Drei Zeilen fallen unter die Zählschwelle von 100 Antritten und stehen deshalb
+nicht in der Wertung: Grabfürstin (80), Moosheiler (74), Lichtwahrerin (72) —
+darunter die Einheit, die in der dritten Messung noch die auffälligste Zahl der
+ganzen Tabelle war (siehe Befund 6).
+
+**Die Spitze ist reine 3-Gold-Ware, der Boden reine 1-Gold-Ware**, und der
+Abstand ist größer als in jeder Messung davor: ×1,60 oben gegen ×0,25 unten.
+Wer bei jedem Kauf einen frischen Laden sieht, wartet eher auf die teure Karte,
+statt die billige mitzunehmen — dieselbe Bewegung, die schon in der vierten
+Messung stand, jetzt zusätzlich durch die kürzere Partie verschärft.
 
 ### Wie oft eine Schwelle überhaupt stand
 
-250.329 Antritte.
+187.730 Antritte (je Runde ein Eintrag für jeden lebenden Sitz). Gezählt werden
+(Antritt, Marke)-Paare — ein Brett kann mehrere Schwellen gleichzeitig halten.
 
 | Marke | ab 2 | ab 4 | ab 6 | Träger im Katalog |
 |---|---|---|---|---|
-| Krieger | 46.115 | 914 | 0 | 5 |
-| Elementar | 1.132 | 1 | 0 | 5 |
-| Meuchler | 97.374 | 3.475 | 7 | 4 |
-| Wächter | 96.573 | 3.790 | 4 | 6 |
-| Naturwesen | 13.248 | 88 | 0 | 5 |
-| Untot | 460 | 0 | 0 | 2 |
-| Drache | 367 | 0 | 0 | 2 |
-| **zusammen** | **255.269 (102,0 %)** | **8.268 (3,3 %)** | **11 (0,0 %)** | |
+| Krieger | 24.954 | 220 | 0 | 5 |
+| Elementar | 667 | 0 | 0 | 5 |
+| Meuchler | 61.594 | 883 | 0 | 4 |
+| Wächter | 62.948 | 1.095 | 0 | 6 |
+| Naturwesen | 6.379 | 38 | 0 | 5 |
+| Untot | 99 | 0 | 0 | 2 |
+| Drache | 202 | 0 | 0 | 2 |
+| **zusammen** | **156.843 (83,5 %)** | **2.236 (1,2 %)** | **0 (0,0 %)** | |
 
-### Was auffällt — zum Nachrechnen, nicht nachjustiert
-
-Robin rechnet das Balancing selbst durch; hier steht nur, was die Zahlen sagen.
-
-1. **Untot steht mit ×1,42 knapp über dem Zielrahmen** — und zählt überhaupt
-   erst zum ersten Mal mit, weil die Antritte von 45 auf 128 gestiegen sind.
-   128 ist gerade eben über der Zählschwelle von 100; eine Marke mit zwei
-   Trägern schwankt bei so wenigen Antritten stark. Die Zahl ist ein Hinweis,
-   keine Aussage (eigene Karte zu Untot liegt auf dem Board).
-2. **Wächter fällt weiter und ist jetzt die schwächste Marke:** ×1,07
-   (staging) → ×0,86 (nur der Platz) → ×0,76. Meuchler steht mit ×0,77 direkt
-   daneben. Beide liegen noch über der unteren Grenze von ×0,7, aber die
-   Bewegung geht in dieselbe Richtung wie beim Zwischenstand: Wer sich
-   aussuchen kann, was er kauft, greift seltener zur häufigsten Marke.
-3. **Die dünnen Marken bewegen sich in beide Richtungen.** Drache 394 → 129 →
-   **63** Antritte (fällt jetzt unter die Zählschwelle und sagt gar nichts
-   mehr), Elementar 1.260 → 373 → **156** (zählt gerade noch), Untot 65 → 45 →
-   **128** (siehe Befund 1). Zwei der sieben Marken sind damit praktisch nicht
-   mehr messbar.
-4. **Der Preisgraben wird tiefer.** Die 3-Gold-Einheiten stehen ganz oben
-   (Grabfürstin ×1,79, Sturmrufer ×1,60, Lichtwahrerin ×1,58), die
-   1-Gold-Einheiten ganz unten (Funkenlehrling ×0,36, Irrlicht ×0,50,
-   Astschütze ×0,51). Schildknappe ist von ×0,93 auf ×0,65 gefallen. Wer bei
-   jedem Kauf einen frischen Laden sieht, wartet eher auf die teure Karte,
-   statt die billige mitzunehmen.
-5. **Die Schwelle 4 steht seltener als im Zwischenstand** (3,3 % gegen 3,5 %),
-   aber immer noch häufiger als auf `staging` (2,2 %). Die Schwelle 6 kam auf
-   11 Fälle von 250.329 — unverändert unerreichbar (eigene Karte auf dem
-   Board).
-
----
-
-## Gemessen: Ausgewogenheit (Stand 05.09.2026, zweite Messung)
-
-> **Überholt.** Diese Messung ist der Stand VOR dem kostenlosen Würfeln und
-> dem Neuziehen des Ladens beim Kauf; sie steht als Vergleichsgrundlage der
-> vierten Messung hier (Spalte „staging").
-
-**Was geändert wurde:** Der Lebensvorrat ist von 100 auf **20** gefallen, der
-Schaden je Niederlage wird dafür durch drei geteilt (`SCHADEN_STUFEN_TEILER`
-in `kampf.ts`), die Marke **Drache** hat mit dem Funkenlehrling einen zweiten
-Träger bekommen und ihr Bonus wurde halbiert, und das **Drachenkind** ist von
-Tempo 0,85 auf 0,75 heruntergesetzt. Anlass war Robins Vorgabe („stell auf 4
-Spieler um, das reicht völlig, und reduzier auf 20 Leben — es soll ja ein
-kurzes Handyspiel sein"). Die Zahlen unten sind die Messung **nach** diesen
-Änderungen; die alten stehen jeweils daneben.
-
-Der **Normalfall sind vier Sitze**. Der Bildschirm sucht ausschließlich Tische
-zu viert, gemessen wird deshalb zu viert. Die übrigen Sitzzahlen bleiben
-erlaubt und sind mitgemessen.
+Zum Vergleich, jeweils dieselbe Zeile: dritte Messung 76,4 % / 0,6 % / 0 Fälle,
+vierte Messung 102,0 % / 3,3 % / 11 Fälle.
 
 ### Wie gemessen wurde
 
 `packages/game-tafelrunde/test/messen.ts` spielt vollständige Partien mit Bots
-durch, ohne Oberfläche, alles aus dem Seed. Zwei Aufrufer benutzen ihn:
+durch, ohne Oberfläche, alles aus dem Seed. Drei Aufrufer benutzen ihn:
 
 - **Das Werkzeug** `packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs` —
   von Hand zu starten, mit der großen Zahl. Es druckt die Tabellen dieses
@@ -307,15 +346,14 @@ durch, ohne Oberfläche, alles aus dem Seed. Zwei Aufrufer benutzen ihn:
 
   ```
   npm run build --workspace @brauweg/game-tafelrunde
-  node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 150
+  node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 100
   ```
 
   Schalter: `--partien`, `--sitze` (2–8), `--besetzung`
-  (`normal`/`sanft`/`hart`/`gemischt`), `--saat`, `--mindest`, `--json`.
-
-- **Die Probe** `test/ausgewogenheit.test.ts` — 400 Partien zu viert, rund
-  anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was
-  wirklich kaputt wäre, und ist keine Abnahme des Katalogs.
+  (`normal`/`sanft`/`hart`/`gemischt`), `--saat`, `--mindest`, `--json`, dazu
+  die vier Stellschrauben der Spielzeit (`--leben`, `--teiler`, `--zeitraffer`,
+  `--takt`), mit denen sich ein vorgeschlagener Stand ansehen lässt, ohne ihn
+  einzubauen.
 
 - **Das Werkzeug für die Gangarten** `werkzeug/gangarten.mjs` — dieselbe
   Partieschleife, aber ein Sitz spielt `hart` und die drei anderen `normal`.
@@ -332,204 +370,186 @@ durch, ohne Oberfläche, alles aus dem Seed. Zwei Aufrufer benutzen ihn:
   letzten fünf stellen einen **vorgeschlagenen** Stand nach, ohne ihn
   einzubauen — genau damit ist Befund 7 unten aufgeklärt worden.
 
+- **Die Probe** `test/ausgewogenheit.test.ts` — 400 Partien zu viert, rund
+  anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was
+  wirklich kaputt wäre, und ist keine Abnahme des Katalogs.
+
 Die Grundmessung sind **5.000 Partien zu viert**, alle Sitze mit der Gangart
-`normal` besetzt (sonst misst man die Gangarten und nicht den Katalog). Fünf-
-statt fünfhundert Tausend, weil eine Partie zu viert seit der Umstellung 1,8
-statt 20 Millisekunden kostet — und weil die dünnen Marken sonst gar keine
-Aussage hergeben. Zwei Gegenproben bestätigen sie: eine zweite Saatbasis über
-5.000 Partien und eine gemischte Besetzung (reihum sanft/normal/hart) über
-5.000 Partien.
+`normal` besetzt (sonst misst man die Gangarten und nicht den Katalog). Der
+Lauf kostet rund 33 Sekunden — deshalb fünf- und nicht fünfhundert Tausend, und
+deshalb überhaupt so viele: Die dünnen Marken geben sonst gar keine Aussage
+her.
+
+**Zwei Gegenproben, und nur eine bestätigt.** Eine zweite Saatbasis über
+dieselben 5.000 Partien (`--saat gegenprobe-v2`) liefert dasselbe Bild —
+Krieger ×1,37, Naturwesen ×1,09, Meuchler ×0,93, Wächter ×0,86, Elementar
+×0,75, Untot und Drache zu dünn. Eine **gemischte Besetzung** (reihum
+sanft/normal/hart, ebenfalls 5.000 Partien) liefert dagegen ein ganz anderes:
+Untot ×1,93, Meuchler ×1,32, Krieger ×1,19, Wächter ×0,91, Naturwesen ×0,89,
+Drache ×0,55, Elementar ×0,21. Das ist keine Gegenprobe des Katalogs, sondern
+eine Aussage über die Gangarten — wer die Sitze ungleich besetzt, misst, wie
+verschieden gut die Bots spielen. Der frühere Satz, die gemischte Besetzung
+bestätige die Grundmessung, gilt für diesen Stand nicht mehr.
 
 **Was diese Zahlen nicht sind:** eine Aussage über die beste Strategie.
 Gemessen ist das Spiel, wie die **Bots** es spielen. Alles, was der Bot nicht
 tut — gezielt auf eine Schwelle hinspielen, den Vorrat mitzählen, zwischen
 zwei Runden umbauen —, fällt heraus.
 
-### Wie lange eine Partie dauert
+### Was auffällt — zum Nachrechnen, nicht nachjustiert
 
-Rundengrenze ist 30. Zu viert 5.000 Partien, zu zweit und zu dritt je 1.000,
-zu sechst und zu acht je 500.
+Robin rechnet das Balancing selbst durch; hier steht nur, was die Zahlen sagen.
 
-| Sitze | Runden ⌀ | Median | an der Grenze geendet | erstes Ausscheiden | zur Halbzeit entschieden |
-|---|---|---|---|---|---|
-| 2 | 11,3 | 11 | 0,0 % | Runde 11,3 | 40,0 % |
-| 3 | 13,3 | 13 | 0,0 % | Runde 10,8 | 38,1 % |
-| **4** | **14,7** | **15** | **0,0 %** | **Runde 10,5** | **36,7 %** |
-| 6 | 16,6 | 16 | 0,0 % | Runde 10,1 | 34,2 % |
-| 8 | 18,0 | 18 | 0,0 % | Runde 9,8 | 29,6 % |
+1. **Der Krieger ist mit ×1,32 die stärkste gezählte Marke** und auf der
+   zweiten Saatbasis mit ×1,37 dicht an der oberen Kante von ×1,4. Er zieht
+   seit dem Zeitraffer an, und zwar aus einem verstandenen Grund: Wo vorher
+   jeder dritte Kampf an der Uhr entschieden wurde, gewinnt jetzt das Brett,
+   das sonst auf Zeit gespielt hätte. Die Ladenregel hat daran wenig geändert
+   (dritte Messung ×1,27). **Folgerung:** nichts tun, aber beim nächsten
+   Eingriff diese Zeile zuerst ansehen.
+2. **Drei von sieben Marken sind nicht mehr messbar.** Untot 42, Drache 43,
+   Elementar 175 Antritte in 5.000 Partien — die ersten beiden fallen unter die
+   Zählschwelle, die dritte steht knapp darüber. Der Weg dorthin ging über
+   beide Änderungen: Untot 65 → 32 (dritte) bzw. 128 (vierte) → **42**, Drache
+   394 → 204 bzw. 63 → **43**, Elementar 1.260 → 924 bzw. 156 → **175**.
+   **Folgerung:** unverändert — ein dritter Träger, dann messen. Am Bonus zu
+   drehen, solange die Marke nur über zwei Kopien derselben Einheit zu haben
+   ist, misst nicht die Marke. Die Karten dazu liegen auf dem Board; die
+   kürzere Partie hat das Problem nicht verursacht, macht es aber schlechter
+   messbar.
+3. **Die Schwelle 6 bleibt tot, die Schwelle 4 steht in 1,2 %.** Von 187.730
+   Antritten hält kein einziger irgendeine Marke sechsfach (dritte Messung 0,
+   vierte 11 Fälle). Sechs Träger brauchen mindestens Level 6, und dorthin
+   kommt in zehn Runden niemand. Dazu die schon bekannte Ursache — der Bot
+   spielt gar nicht auf Marken hin (`MARKEN_GEWICHT` in `bot.ts` ist 25 gegen
+   Einheitenstärken von 130 bis 970). **Folgerung:** unverändert — erst dem Bot
+   ein echtes Markengewicht geben und neu messen; bleibt die Sechs auch dann
+   leer, sind die Schwellen zu hoch angesetzt (2/3/5 statt 2/4/6). Die Probe
+   prüft die Sechs nicht mehr — sie käme in 400 Partien nicht ein einziges Mal
+   vor.
+4. **Fast jede zweite Partie steht zur Halbzeit fest** (43,0 %). Das ist die
+   Zeile, an der die beiden Änderungen gegeneinander ziehen. Die Reihe: 100
+   Leben 43,0 %, 20 Leben 36,7 %, Zeitraffer 30,6 %, Ladenregel allein 47,3 %,
+   jetzt wieder 43,0 %. **Der neue Laden hat den Gewinn des Zeitraffers wieder
+   aufgezehrt.** Für einen Auto-Battler ist das nicht ungewöhnlich — wer früh
+   gewinnt, hat mehr Gold —, aber es ist die Stelle, an der man sieht, dass die
+   beiden Änderungen nicht unabhängig sind.
+5. **Der Preisgraben ist tiefer als je zuvor**: ×1,60 (Sturmrufer, 3 Gold)
+   gegen ×0,25 (Irrlicht, 1 Gold). Funkenlehrling steht bei ×0,26, Astschütze
+   bei ×0,43. Beim Funkenlehrling und beim Irrlicht ist die Ursache bekannt und
+   unverändert — Ein-Gold-Magier mit 430 bis 450 Leben und 10 Rüstung sterben,
+   bevor sie zweimal geschossen haben. Neu ist der Abstand: Der frische Laden
+   bei jedem Kauf macht aus „nimm mit, was da ist" ein „warte auf das Gute".
+6. **Der Moosheiler ist unter die Zählschwelle gerutscht** — 74 Antritte statt
+   541 in der dritten Messung, mit 2 Siegen. Die Board-Karte zu ihm nennt 541
+   Antritte bei ×0,15; diese Zahl stammt aus der Messung **ohne** die
+   Ladenregel und gilt für den heutigen Stand nicht mehr. Was bleibt: Er
+   gewinnt praktisch nie, und die Ursache ist dieselbe — Heilen gibt es in
+   `kampf.ts` noch gar nicht, ohne Fähigkeit ist eine Beistand-Einheit nur eine
+   schwache Wache. Was sich geändert hat: Der Bot stellt ihn seit dem neuen
+   Laden kaum noch auf, weil er sich etwas Besseres aussuchen kann.
+7. **Die Gangart `hart` schlägt `normal` wieder — und diesmal ist auch klar,
+   woran es lag.** Über 400 Partien zu viert (`imFeld` in `bot.test.ts`, Sitz 0
+   hart gegen drei normale) steht es **140 : 86,7** für den harten Sitz; nach
+   der dritten Messung stand dieselbe Zahl bei 77 : 107,7, also umgekehrt. Auch
+   die beiden anderen Sprossen sind gewandert: `hart` gegen drei sanfte
+   341 : 19,7 (vorher 223 : 59), `normal` gegen drei sanfte 359 : 13,7 (vorher
+   267 : 44) — der neue Laden nützt den ausbauenden Gangarten weit mehr als der
+   sparsamen. Zwei unabhängig gelaufene Messungen kommen hier Ziffer für Ziffer
+   auf dieselben Zahlen.
 
-Vorher (100 Leben): zu viert 26,5 Runden bei 18,5 % an der Grenze (5.000
-Partien, derselbe Lauf mit dem alten Stand), zu zweit 21,3 bei 2,3 %, zu sechst
-28,8 bei 47,8 %, zu acht 29,6 bei 72,6 %.
+   **Die Ursache ist eingekreist** (`werkzeug/gangarten.mjs`, je 400 Partien).
+   Es war weder die kurze Partie — der Zeitraffer allein bewegt die Zahl bei 20
+   Leben von 110 auf 114 — noch der Würfelpreis: Mit wieder eingeschaltetem
+   Preis gewinnt `hart` auf dem heutigen Stand sogar deutlicher (174 : 75,3).
+   Es war die **alte Ladenregel**: Solange ein Kauf nur seinen Platz leerte,
+   bekam `hart` die Feldplätze, die es sich früh erkauft, in einer elf Runden
+   kurzen Partie nicht mehr voll — sein Aufstieg war Tempo ins Leere. Beleg auf
+   demselben Stand: mit gezähmtem Aufstieg (`aufstiegsReserve` 3, nur bei
+   vollem Brett) stand es dort 112 : 96,0 statt 77 : 107,7.
 
-**Die angesteuerte Spanne war 14 bis 20 Runden zu viert.** Nach unten begrenzt
-sie das Spiel selbst: Vor Runde 10 steht kein ausgebautes Brett, wer da
-ausscheidet, hat nicht verloren, sondern nicht gespielt. Nach oben begrenzt sie
-das Handy — eine Runde ist Vorbereitung plus Kampf und dauert bis zu anderthalb
-Minuten, zwanzig Runden sind also schon eine gute Viertelstunde. Getroffen
-wurde 15 im Median, 11 bis 22 in den Rändern.
+   **Gegenprobe über zwei Saatbasen** (`…-feld` und `gegenprobe-b`), je 400
+   Partien, alle vier Werte in dieselbe Richtung:
 
-„Zur Halbzeit entschieden" heißt: Der spätere Sieger lag spätestens ab der
-halben Partie ununterbrochen beim meisten Leben.
+   | Paarung | gebaut (14 Leben, x2) | langer Stand (20 Leben, x1) |
+   |---|---|---|
+   | hart : normal | 140 : 86,7 · 139 : 87,0 | 169 : 77,0 · 147 : 84,3 |
 
-### Siegquote je Marke
+   Dazu ein Kontrolllauf: `hart` in allem auf `normal` gesetzt ergibt
+   102 : 99,3 — die Messung ist unverzerrt, es gewinnt die Gangart und nicht
+   der Sitz 0.
 
-5.000 Partien zu viert. Gezählt wird ein Sitz, dessen **letztes** Brett die
-Marke mindestens zweimal trug (erste Schwelle) — nicht der Endzustand, denn wer
-ausscheidet, gibt sein Brett vollständig in den Vorrat zurück.
+   **Folgerung:** Die Board-Karte „`hart` ist schwächer als `normal`" ist auf
+   diesem Stand nicht mehr nachstellbar, und die Probe in `bot.test.ts`
+   behauptet die Reihenfolge wieder — mit Saatbasis und Partienzahl im
+   Kommentar, und ergänzt um eine vierte Probe, die dasselbe beim langen Stand
+   prüft. Die frühere Vorsicht („an einem Tag zweimal gekippt") war richtig,
+   solange niemand wusste, warum; was beide Male kippte, war der Laden.
+   **Wer den Laden das nächste Mal anfasst, misst die Gangarten mit.**
 
-| Marke | Antritte | Siege | Quote | zum Schnitt | vorher |
-|---|---|---|---|---|---|
-| Drache | 394 | 145 | 36,8 % | ×1,15 | ×1,65 |
-| Krieger | 9.624 | 3.471 | 36,1 % | ×1,13 | ×0,87 |
-| Wächter | 13.458 | 4.585 | 34,1 % | ×1,07 | ×0,87 |
-| Naturwesen | 4.304 | 1.464 | 34,0 % | ×1,06 | ×0,94 |
-| Elementar | 1.260 | 320 | 25,4 % | ×0,80 | ×1,02 |
-| Meuchler | 9.097 | 2.302 | 25,3 % | ×0,79 | ×0,72 |
-| Untot | 65 | 11 | 16,9 % | zu dünn | ×0,93 |
-
-Die Spalte „vorher" ist derselbe Lauf mit dem alten Stand (5.000 Partien zu
-viert, 100 Startleben) und nicht die alte Grundmessung zu acht — sonst
-verglichen sich zwei verschiedene Besetzungen. Untot hatte dort 256 Antritte
-und fällt heute unter die Mindestzahl, weil die Partie kürzer ist: Wer eine
-Marke sammeln will, hat fünfzehn Runden Zeit statt siebenundzwanzig.
-
-Schnitt der gezählten Zeilen: 31,9 %. Der Schnitt ist nicht 1/4 — ein Brett
-trägt in der Regel drei bis fünf Marken gleichzeitig, die Quoten summieren sich
-deshalb nicht auf 100 %.
-
-**Das Ziel war: keine gezählte Marke über ×1,4 und keine unter ×0,7.** Der
-gemessene Bereich ist ×1,15 bis ×0,79. Beide Gegenproben bestätigen ihn:
-zweite Saatbasis ×1,16 bis ×0,80, gemischte Besetzung ×1,21 bis ×0,77 (dort
-kommt Untot auf 314 Antritte und ×0,64 — die einzige Zahl außerhalb, siehe
-Befund 3).
-
-### Siegquote je Einheit auf dem letzten Brett
-
-5.000 Partien zu viert, Schnitt der gezählten Zeilen 30,6 %. Gekürzt auf die
-Ränder; die volle Tabelle druckt das Werkzeug.
-
-| Einheit | Gold | Antritte | Quote | zum Schnitt |
-|---|---|---|---|---|
-| Bogenmeisterin | 2 | 1.439 | 52,6 % | ×1,72 |
-| Nachtpfeil | 2 | 1.117 | 49,2 % | ×1,61 |
-| Hainwächterin | 2 | 2.033 | 42,5 % | ×1,39 |
-| Wurzelriese | 3 | 3.829 | 41,0 % | ×1,34 |
-| … | | | | |
-| Astschütze | 1 | 9.630 | 23,5 % | ×0,77 |
-| Gassendieb | 1 | 15.920 | 20,9 % | ×0,68 |
-| Irrlicht | 1 | 1.633 | 17,5 % | ×0,57 |
-| Funkenlehrling | 1 | 2.339 | 15,7 % | ×0,51 |
-| Moosheiler | 1 | 237 | 7,6 % | ×0,25 |
-
-Das Drachenkind steht nach der Tempo-Senkung bei ×1,08 (vorher ×1,17).
-
-### Wie oft eine Schwelle überhaupt stand
-
-261.233 Antritte (je Runde ein Eintrag für jeden lebenden Sitz). Gezählt werden
-(Antritt, Marke)-Paare — ein Brett kann mehrere Schwellen gleichzeitig halten.
-
-| Marke | ab 2 | ab 4 | ab 6 | Träger im Katalog |
-|---|---|---|---|---|
-| Krieger | 64.703 | 1.090 | 1 | 5 |
-| Elementar | 8.285 | 18 | 0 | 5 |
-| Meuchler | 57.114 | 846 | 0 | 4 |
-| Wächter | 104.772 | 3.772 | 6 | 6 |
-| Naturwesen | 28.722 | 100 | 0 | 5 |
-| Untot | 284 | 0 | 0 | 2 |
-| Drache | 1.966 | 0 | 0 | 2 |
-| **zusammen** | **265.846 (101,8 %)** | **5.826 (2,2 %)** | **7 (0,0 %)** | |
+   Was `hart` dabei trägt, ist die fehlende Patzerquote und nicht das Tempo:
+   Kontrolllauf 102 : 99,3, nur ohne Patzer 149 : 83,7, mit den Tempo-Schrauben
+   obendrauf 140 : 86,7 — die letzten beiden liegen innerhalb eines
+   Standardfehlers (rund 10 Siege bei 400 Partien). Nichts verstellt, weil eine
+   Änderung auf eine Zahl innerhalb der Streuung geraten wäre; als eigene Karte
+   steht es auf dem Board.
+8. **Kein Kandidat für einen Katalogeingriff.** Alle gezählten Marken bleiben
+   innerhalb ×0,7 bis ×1,4, alle 22 Einheiten werden aufgestellt, jede Marke
+   erreicht ihre erste Schwelle, keine Partie endet an der Rundengrenze oder
+   ohne eindeutigen Sieger. Was auffällt, sind Befunde über den **Bot** (2, 3,
+   7) und über die **Ladenregel** (4, 5, 6) — nicht über die Werte in der
+   Tabelle weiter oben.
 
 ---
 
-### Was auffiel — und was daraus folgen sollte
+## Vorgeschichte: die Messungen davor
 
-**1. Die Rundengrenze ist keine Ausgangstür mehr.** In 5.000 Partien zu viert
-endete keine einzige an Runde 30, und auch zu sechst und zu acht keine von je
-500. Vorher waren es zu viert 18 % und zu acht 73 %. Der Grund ist nicht die
-Grenze, sondern die Uhr davor: 20 Leben und zwei bis fünf Punkte Schaden je
-Niederlage machen aus einem Ausscheiden sieben bis zehn verlorene Kämpfe statt
-zwanzig. Die Zahl 30 bleibt trotzdem stehen — sie ist wieder das Rettungsseil,
-als das sie gedacht war.
+Vier Messungen sind dieser vorausgegangen, jede nach einem Eingriff. Sie stehen
+hier in Kurzform, weil ihre vollen Tabellen Zustände beschreiben, die es nicht
+mehr gibt; wer sie braucht, findet sie in der Geschichte dieser Datei.
 
-**2. Die Schwelle 6 ist tot, die Schwelle 4 seltener als vorher.** Sieben von
-261.233 Antritten halten irgendeine Marke sechsfach — 0,003 % gegen 0,1 % im
-selben Lauf mit 100 Leben —, und die Vier steht in 2,2 % statt 13,7 %. Das ist die **Kehrseite der kürzeren
-Partie**: Sechs Träger brauchen mindestens Level 6, und dorthin kommt in
-fünfzehn Runden kaum noch jemand. Dazu kommt die schon bekannte Ursache — der
-Bot spielt gar nicht auf Marken hin (`MARKEN_GEWICHT` in `bot.ts` ist 25 gegen
-Einheitenstärken von 130 bis 970). **Folgerung:** Erst dem Bot ein echtes
-Markengewicht geben und neu messen; bleibt die Sechs auch dann leer, sind die
-Schwellen zu hoch angesetzt (2/3/5 statt 2/4/6). Steht als eigener Punkt auf
-dem Board. Die Probe prüft die Sechs deshalb nicht mehr — sie käme in 400
-Partien nicht ein einziges Mal vor.
+| | erste | zweite | dritte | vierte | **fünfte (gültig)** |
+|---|---|---|---|---|---|
+| Startleben | 100 | 20 | **14** | 20 | **14** |
+| Zeitraffer | x1 | x1 | **x2** | x1 | **x2** |
+| Neu-Würfeln | 2 Gold | 2 Gold | 2 Gold | **0** | **0** |
+| Laden nach dem Kauf | nur der Platz | nur der Platz | nur der Platz | **ganz neu** | **ganz neu** |
+| Runden ⌀ zu viert | 26,5 | 14,7 | 11,1 | 14,1 | **10,6** |
+| an der Grenze geendet | 18,5 % | 0,0 % | 0,0 % | 0,0 % | **0,0 %** |
+| zur Halbzeit entschieden | 43,0 % | 36,7 % | 30,6 % | 47,3 % | **43,0 %** |
+| Markenspanne (gezählt) | — | ×0,79–1,15 | ×0,77–1,27 | ×0,76–1,42 | **×0,80–1,32** |
 
-**3. Untot ist jetzt zu dünn für eine Aussage** — 65 Antritte in 5.000 Partien
-(mit 100 Leben waren es 256), zwei Träger im Katalog, die Schwelle 4 nie
-erreicht. In der gemischten
-Besetzung, wo die Marke 314-mal antritt, liegt sie bei ×0,64 und damit als
-einzige Zahl unter der Grenze von 0,7. **Folgerung:** dasselbe Rezept wie bei
-Drache — ein dritter Träger, dann messen. Am Bonus zu drehen, solange die Marke
-nur über zwei Kopien derselben Einheit zu haben ist, misst nicht die Marke.
+**Erste Messung (100 Startleben).** Die Werte trugen die Partie nicht: Zu viert
+liefen 18,5 % aller Partien in die Rundengrenze von 30, zu acht 72,6 %, ohne
+dass jemand gewonnen hatte. Ein Ausscheiden brauchte rund zwanzig verlorene
+Kämpfe.
 
-**4. Was bei Drache wirklich half, war der zweite Träger, nicht der Bonus.**
-Der Weg in Zahlen, jeweils 5.000 Partien zu viert und alle nach der
-Lebensumstellung: Ausgangslage ×1,83 (70,3 %), nach dem halbierten Bonus ×1,59, ein erster, zu harter
-Griff ans Drachenkind (Tempo 0,65 statt 0,85) ließ nur noch 27 Antritte übrig —
-der Bot stellte die Einheit kaum noch auf, und Elementar fiel mit ihr auf
-×0,66 — erst der Funkenlehrling
-als zweiter Träger brachte ×1,15 bei 394 Antritten. Die Gegenprobe erklärt,
-warum: Mit dem Drachen-Bonus auf **null** stand die Marke immer noch bei ×1,37.
-Gemessen wurde also gar nicht die Synergie, sondern „ein Brett, auf dem zwei
-teure Einheiten stehen".
+**Zweite Messung (20 Startleben).** Der Lebensvorrat fiel von 100 auf 20, der
+Schaden je Niederlage wird seitdem durch drei geteilt
+(`SCHADEN_STUFEN_TEILER`), die Marke **Drache** bekam mit dem Funkenlehrling
+einen zweiten Träger und ihr Bonus wurde halbiert, das **Drachenkind** ging von
+Tempo 0,85 auf 0,75. Anlass war Robins Vorgabe („stell auf 4 Spieler um, das
+reicht völlig, und reduzier auf 20 Leben — es soll ja ein kurzes Handyspiel
+sein"). Seitdem endet keine Partie mehr an der Rundengrenze. Ein Nebenbefund
+von damals gilt weiter: Was bei Drache half, war der zweite Träger und nicht
+der Bonus — mit dem Drachen-Bonus auf null stand die Marke immer noch bei
+×1,37. Gemessen wurde also gar nicht die Synergie, sondern „ein Brett, auf dem
+zwei teure Einheiten stehen".
 
-**5. Der Funkenlehrling ist immer noch die zweitschwächste Einheit** (×0,51),
-und der Irrlicht daneben (×0,57) — beide Ein-Gold-Magier mit 430 bis 450 Leben
-und 10 Rüstung. Sie sterben, bevor sie zweimal geschossen haben. Der
-Gassendieb liegt mit ×0,68 über 15.920 Antritten ebenfalls unten, obwohl der
-Bot ihn für die stärkste Ein-Gold-Einheit hält. **Folgerung:** unverändert —
-die Bewertung `staerke` in `bot.ts` rechnet Leben × Rüstung × Schaden und lässt
-die Reichweite weg. Befund über den **Bot**, nicht über den Katalog; steht auf
-dem Board.
+**Dritte Messung (Zeitraffer x2, 14 Startleben).** Robins Ziel war
+„durchschnittlich 8 Minuten maximum"; eine Partie dauerte 13:31 im Median. Der
+Zeitraffer ist die einzige Schraube, die kürzt, ohne eine Runde zu streichen:
+Der einzelne Kampf fiel von 35,2 s auf 17,3 s, die an der Höchstdauer
+abgeschnittenen Kämpfe von 27,7 % auf 1,8 %, die Partie auf 7:25. Welche
+Stellschraube wie viel bringt, steht in **`docs/TAFELRUNDE-SPIELZEIT.md`**.
 
-**6. Der Moosheiler wird fast nie aufgestellt** (237 von 261.233 Antritten,
-×0,25). Kein Katalogfehler: Heilen gibt es in `kampf.ts` noch gar nicht, und
-ohne Fähigkeit ist eine Beistand-Einheit nur eine schwache Wache.
-**Folgerung:** nichts, bis es Fähigkeiten gibt.
+**Vierte Messung (kostenloses Würfeln, Laden zieht beim Kauf ganz neu).**
+Robin: „wir wollen nicht mehr, dass man fürs Rollen Geld ausgeben soll" und
+„Nicht nur der gekaufte, dein ganzer Shop aktualisiert sich wenn du etwas
+kaufst, du musst dich also immer entscheiden." Gemessen wurde vor allem eines:
+Die Zeile „zur Halbzeit entschieden" sprang von 36,7 % auf 47,3 %.
 
-**7. Die Gangarten des Bots hängen an der Ladenregel, nicht an der
-Rundenzahl.** Im Duell schlug `hart` den normalen Gegner vorher mit 125:75;
-seit die Partie zu zweit 11 statt 21 Runden dauert, steht es 96:104. Die Probe
-in `bot.test.ts` misst deshalb im Feld zu viert und nicht mehr im Duell.
-
-Dort fiel `hart` am 05.09.2026 trotzdem durch — 77 : 107,7 über 400 Partien,
-gemessen auf dem Zweig mit 14 Startleben und Zeitraffer x2. **Ursache ist
-nicht die kurze Partie** (der Zeitraffer allein bewegt die Zahl von 110 auf
-114, also gar nichts) **und auch nicht der Würfelpreis** (mit wieder
-eingeschaltetem Preis gewinnt `hart` sogar deutlicher, 174 : 75,3), sondern
-die damalige Ladenregel: Solange ein Kauf nur seinen Platz leerte, bekam
-`hart` die Feldplätze, die es sich früh erkauft, in einer kurzen Partie nicht
-mehr voll. Beleg: derselbe Stand mit gezähmtem Aufstieg stand 112 : 96,0 statt
-77 : 107,7. Seit ein Kauf den **ganzen** Laden neu zieht, trägt sich der
-Aufstieg wieder — gemessen über zwei Saatbasen, je 400 Partien:
-
-| Paarung | gebaut (20 Leben) | kurze Partie (14 Leben, x2) |
-|---|---|---|
-| hart : normal | 169 : 77 · 147 : 84 | 140 : 87 · 139 : 87 |
-| hart : sanft | 357 : 14 · 373 : 9 | 341 : 20 · 367 : 11 |
-| normal : sanft | 350 : 17 · 348 : 17 | 359 : 14 · 354 : 15 |
-
-Was `hart` heute trägt, ist die fehlende Patzerquote und nicht das Tempo:
-Kontrolllauf mit `hart` = `normal` 102 : 99,3, nur ohne Patzer 149 : 83,7, mit
-den Tempo-Schrauben obendrauf 140 : 86,7 — die letzten beiden liegen
-innerhalb eines Standardfehlers. **Folgerung:** nichts verstellen, aber jede
-Regeländerung am Laden künftig mit `werkzeug/gangarten.mjs` gegenmessen.
-
-**8. Gut jede dritte Partie steht zur Halbzeit fest** (36,7 % zu viert, vorher
-43,0 %). Für einen Auto-Battler nicht ungewöhnlich — wer früh gewinnt, hat mehr
-Gold —, und mit dem höheren Schaden je Niederlage ist es nicht schlimmer
-geworden, sondern etwas besser.
-
-**Was NICHT auffiel:** Keine Partie endete vor Runde fünf (die kürzeste lief
-11 Runden), jede der 22 Einheiten wurde aufgestellt, und jede der sieben Marken
-erreichte ihre erste Schwelle. Genau diese Punkte hält die Probe fest.
+Zwischen der dritten und der vierten stand kurz eine Fassung auf einem
+Aufgabenzweig, die die Ladenregel falsch umsetzte (kostenloses Würfeln, aber
+nur der gekaufte Platz wurde nachbesetzt). Sie ist nie auf `staging` gelandet
+und zählt hier nicht mit.

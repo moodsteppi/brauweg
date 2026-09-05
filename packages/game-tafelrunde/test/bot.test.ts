@@ -694,11 +694,11 @@ describe('Bot: das fertige Heer', () => {
    * Die Gangarten sind kein Zierrat.
    *
    * GEMESSEN WIRD IM FELD ZU VIERT und nicht im Duell zu zweit — aus einem
-   * Grund, der am 05.09.2026 aufgefallen ist: Seit der Lebensvorrat 20 statt
-   * 100 betraegt, dauert ein Duell 11 statt 21 Runden, und in dieser Zeit
-   * verdient sich der aggressive Ausbau von `hart` im Duell nicht mehr (ueber
-   * 200 Duelle 96:104 fuer `normal`, vorher 125:75 fuer `hart`). Zu viert —
-   * der Besetzung, auf die das Spiel eingestellt ist — steht die Reihenfolge.
+   * Grund, der am 05.09.2026 aufgefallen ist: Je kuerzer die Partie, desto
+   * weniger verdient sich der aggressive Ausbau von `hart`. Beim Wechsel von
+   * 100 auf 20 Startleben fiel er im Duell durch (ueber 200 Duelle 96:104 fuer
+   * `normal`, vorher 125:75 fuer `hart`). Zu viert — der Besetzung, auf die das
+   * Spiel eingestellt ist — steht die Reihenfolge.
    *
    * DIE PARTIESCHLEIFE KOMMT AUS messen.ts und ist hier nicht noch einmal
    * hingeschrieben. Sie stand frueher als eigene Fassung an dieser Stelle, und
@@ -706,11 +706,10 @@ describe('Bot: das fertige Heer', () => {
    * Dieselbe Paarung ueber `werkzeug/gangarten.mjs` ergibt dieselben Siege wie
    * diese Probe (am 05.09.2026 Ziffer fuer Ziffer geprueft).
    *
-   * HUNDERT PARTIEN und nicht zwanzig, weil die Laeden mitentscheiden: Ueber
-   * drei Saatbasen lag `hart` bei 30 zu 23 gegen den Schnitt der drei anderen
-   * Sitze. Eine Probe an zwanzig Partien faellt beim naechsten Balancing
-   * grundlos um. Die Saat jeder Partie ist `SAAT-feld-<stark>-<schwach>-<i>`;
-   * wer die Zahlen von Hand nachstellen will, gibt dem Werkzeug
+   * HUNDERT PARTIEN und nicht zwanzig, weil die Laeden mitentscheiden: Eine
+   * Probe an zwanzig Partien faellt beim naechsten Balancing grundlos um. Die
+   * Saat jeder Partie ist `SAAT-feld-<stark>-<schwach>-<i>`; wer die Zahlen von
+   * Hand nachstellen will, gibt dem Werkzeug
    * `--saat 0123456789abcdef0123456789abcdef-feld` mit.
    */
   const PARTIEN_JE_PAARUNG = 100;
@@ -752,34 +751,63 @@ describe('Bot: das fertige Heer', () => {
     assert.ok(normal > sanft, `normal ${normal} : ${sanft} sanft`);
   });
 
+  /**
+   * Die dritte Sprosse — und die, um die es hier geht.
+   *
+   * SIE HAT ZWEI TAGE LANG KEINE REIHENFOLGE BEHAUPTET, weil sie an einem
+   * einzigen Tag zweimal gekippt war: Mit 20 Leben schlug `hart` drei normale
+   * Gegner 119 : 94, mit 14 Leben und Zeitraffer x2 nur noch 77 : 107,7 — und
+   * seit ein Kauf den ganzen Laden neu zieht, wieder 140 : 86,7 (je 400
+   * Partien). Die Vorsicht war richtig, solange niemand wusste, WARUM.
+   *
+   * SEIT DEM 05.09.2026 IST DAS BEKANNT, und deshalb steht die Aussage wieder
+   * da. Es lag nicht an der kurzen Partie: Der Zeitraffer allein bewegt die
+   * Zahl bei 20 Leben von 110 auf 114, und auch der Wuerfelpreis war es nicht
+   * (mit wieder eingeschaltetem Preis gewinnt `hart` sogar deutlicher, 174 :
+   * 75,3). Es lag an der ALTEN Ladenregel: Solange ein Kauf nur seinen Platz
+   * leerte, bekam `hart` die Feldplaetze, die es sich frueh erkauft, in einer
+   * elf Runden kurzen Partie nicht mehr voll. Beleg auf demselben Stand: mit
+   * gezaehmtem Aufstieg stand es dort 112 : 96,0 statt 77 : 107,7.
+   *
+   * WORAUF DIE AUSSAGE HEUTE RUHT — vier Messungen zu je 400 Partien ueber
+   * zwei unabhaengige Saatbasen (`…-feld` und `gegenprobe-b`), alle in
+   * dieselbe Richtung:
+   *
+   *     gebauter Stand (14 Leben, x2)   140 : 86,7   139 : 87,0
+   *     langer Stand (20 Leben, x1)     169 : 77,0   147 : 84,3
+   *
+   * Dazu ein Kontrolllauf: Setzt man `hart` in allem auf `normal`, steht es
+   * 102 : 99,3 — die Messung ist also unverzerrt und nicht der Sitz 0 gewinnt
+   * hier, sondern die Gangart.
+   *
+   * WANN SIE WIEDER FALLEN DARF: bei der naechsten Aenderung am LADEN. Genau
+   * die hat sie beide Male gekippt, und die Zahlen dazu fallen in Sekunden an
+   * (`werkzeug/gangarten.mjs`). Eine Aenderung an Leben oder Zeitraffer
+   * dagegen faengt die Probe darunter ab.
+   */
   it('gewinnt als harter Gegner oefter als drei normale', () => {
     const [hart, normal] = imFeld('hart', 'normal');
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal`);
   });
 
   /**
-   * DIESELBE AUSSAGE NOCH EINMAL, ABER IN DER KURZEN PARTIE — und das ist die
-   * Probe, um die es hier eigentlich geht.
+   * DIESELBE AUSSAGE NOCH EINMAL, ABER BEI EINER ANDEREN PARTIELAENGE.
    *
-   * Am 05.09.2026 verlor `hart` gegen `normal`, gemessen auf dem Zweig, der die
-   * Partie von 15 auf 11 Runden verkuerzte: 77 : 107,7 ueber 400 Partien. Der
-   * Grund lag nicht an der kurzen Partie allein, sondern an der damaligen
-   * Ladenregel: Solange ein Kauf nur einen Platz leerte und ein Wurf Gold
-   * kostete, konnte `hart` die Feldplaetze, die es sich frueh erkauft, nicht
-   * fuellen — sein Aufstieg war Tempo ins Leere. Seit ein Kauf den GANZEN Laden
-   * neu zieht, traegt er sich wieder.
+   * Der gebaute Stand ist seit dem 05.09.2026 der kurze (14 Leben, Zeitraffer
+   * x2, rund elf Runden); die drei Proben darueber messen ihn. Diese hier
+   * misst den LANGEN Stand von gestern — 20 Leben, kein Zeitraffer, rund
+   * fuenfzehn Runden — und behauptet dort dasselbe.
    *
-   * Die Lehre steht als Probe da: Eine Gangart, die nur bei der Rundenzahl von
-   * heute vorne liegt, ist auf eine Zahl geeicht, die jederzeit wieder anders
-   * lautet. Geprueft wird deshalb zusaetzlich bei 14 Startleben und Zeitraffer
-   * x2 — dem kuerzesten Stand, der je gemessen wurde, und dem, der als
-   * naechster gebaut wird. Ueber diese 100 Partien steht es 34 : 22,0; ueber
-   * 400 sind es 140 : 86,7 gegen 139 : 87,0 auf einer zweiten Saatbasis.
+   * Sie steht da, weil die Rundenzahl genau die Zahl ist, an der Robin dreht:
+   * 100 Leben, dann 20, dann 14. Eine Gangart, die nur bei der Laenge von
+   * heute vorne liegt, ist auf eine Zahl geeicht statt auf das Spiel — und das
+   * faellt sonst erst der uebernaechsten Umstellung auf. Ueber diese 100
+   * Partien steht es 48 : 17,3, ueber 400 sind es 169 : 77,0.
    */
-  it('gewinnt als harter Gegner auch in der kurzen Partie oefter', () => {
-    const kurz: TafelrundeRegeln = { ...DEFAULT_REGELN, startLeben: 14 };
-    const schnell: Kampfregler = { ...STANDARD_REGLER, zeitraffer: 2 };
-    const [hart, normal] = imFeld('hart', 'normal', kurz, schnell);
-    assert.ok(hart > normal, `hart ${hart} : ${normal} normal (14 Leben, x2)`);
+  it('gewinnt als harter Gegner auch in der langen Partie oefter', () => {
+    const lang: TafelrundeRegeln = { ...DEFAULT_REGELN, startLeben: 20 };
+    const gemaechlich: Kampfregler = { ...STANDARD_REGLER, zeitraffer: 1 };
+    const [hart, normal] = imFeld('hart', 'normal', lang, gemaechlich);
+    assert.ok(hart > normal, `hart ${hart} : ${normal} normal (20 Leben, x1)`);
   });
 });

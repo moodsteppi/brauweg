@@ -15,6 +15,7 @@ import {
   SCHRITT_MS,
   type Saat,
   SEITEN,
+  STANDARD_REGLER,
   type Seite,
   type Stufe,
   TAKT_MS,
@@ -25,6 +26,7 @@ import {
   protokollText,
   schadenFuerVerlierer,
   schadenNach,
+  schrittdauer,
   simuliereKampf,
   ueberlebendeVon,
   werteFuer,
@@ -71,6 +73,16 @@ const DREI_GEGEN_DREI: readonly [Brettseite, Brettseite] = [
     ['astschuetze', 1, 2, 1],
   ]),
 ];
+
+/**
+ * Der Regler OHNE Zeitraffer.
+ *
+ * Der Standard steht seit dem 05.09.2026 auf x2 (siehe STANDARD_REGLER). Wo
+ * eine Probe eine ABSOLUTE Zeit nachrechnet oder den Zeitablauf ueberhaupt
+ * erst braucht, rechnet sie mit diesem hier — sonst pruefte sie nicht mehr,
+ * was sie zu pruefen vorgibt, sondern nur noch die Voreinstellung.
+ */
+const UNGERAFFT = { ...STANDARD_REGLER, zeitraffer: 1 };
 
 /**
  * Baut ein Bretterpaar aus einer Saat — zwei bis neun Einheiten je Seite.
@@ -277,7 +289,9 @@ describe('Kampf — das Ablaufprotokoll', () => {
       assert.equal(arenaAbstand(e.von, e.nach), 1, 'ein Schritt ist ein Feld');
       const vorher = zuletzt.get(e.wer);
       if (vorher !== undefined) {
-        assert.ok(e.zeitMs - vorher >= SCHRITT_MS, `Kennung ${e.wer} zieht zu schnell`);
+        // `schrittdauer()` und nicht SCHRITT_MS: Der Standardregler rafft die
+        // Schrittweite mit (Zeitraffer 2), die rohe Konstante waere zu gross.
+        assert.ok(e.zeitMs - vorher >= schrittdauer(), `Kennung ${e.wer} zieht zu schnell`);
       }
       zuletzt.set(e.wer, e.zeitMs);
     }
@@ -393,14 +407,25 @@ describe('Kampf — Schaden', () => {
     assert.equal(bericht.sieger, 1, 'Stufe 3 sollte Stufe 1 schlagen');
   });
 
+  /**
+   * Geprueft wird die AUFRUNDUNG, nicht der Zeitraffer — deshalb rechnen die
+   * beiden festen Zahlen ausdruecklich mit `UNGERAFFT`. Mit dem Standardregler
+   * (Zeitraffer 2) waeren sie halb so gross, und die Probe saehe wie eine
+   * Aussage ueber die Rundung aus, waere aber eine ueber die Voreinstellung.
+   */
   it('rechnet den Angriffstakt in ganze Takte und nie auf null', () => {
     assert.equal(angriffstakt(1) % TAKT_MS, 0);
-    assert.equal(angriffstakt(0.5), 2000);
-    assert.equal(angriffstakt(1), 1000);
+    assert.equal(angriffstakt(0.5, UNGERAFFT), 2000);
+    assert.equal(angriffstakt(1, UNGERAFFT), 1000);
     assert.ok(angriffstakt(1000) >= TAKT_MS);
     for (const tempo of new Set(KATALOG.map((e) => e.tempo))) {
       assert.equal(angriffstakt(tempo) % TAKT_MS, 0, `Tempo ${tempo}`);
-      assert.ok(angriffstakt(tempo) >= 1000 / tempo, `Tempo ${tempo} darf nicht schneller werden`);
+      // Die Aufrundung darf nur langsamer machen, nie schneller. Bezugsgroesse
+      // ist deshalb das GERAFFTE Tempo und nicht das des Katalogs.
+      assert.ok(
+        angriffstakt(tempo) >= 1000 / (tempo * STANDARD_REGLER.zeitraffer),
+        `Tempo ${tempo} darf nicht schneller werden`,
+      );
     }
   });
 });
@@ -544,19 +569,25 @@ describe('Kampf — die Abbruchgrenze', () => {
    *
    * Eine Abbruchgrenze taugt nur etwas, wenn sie die Ausnahme bleibt: Sobald
    * ein nennenswerter Teil der Kaempfe durch die Zeit entschieden wird,
-   * entscheidet nicht mehr der Kampf, sondern `entscheideNachZeit`. Gemessen
-   * lag der Anteil bei 2 bis 4 Prozent; die Schranke hier liegt bewusst hoeher,
-   * damit ein bisschen Balancing die Probe nicht sofort rot faerbt — ein
-   * Katalog, der jeden zehnten Kampf in die Zeit laufen laesst, ist aber ein
-   * Befund und keine Schwankung.
+   * entscheidet nicht mehr der Kampf, sondern `entscheideNachZeit`. Die
+   * Schranken hier liegen bewusst hoeher als der gemessene Stand, damit ein
+   * bisschen Balancing die Probe nicht sofort rot faerbt — ein Katalog, der
+   * jeden zehnten Kampf in die Zeit laufen laesst, ist aber ein Befund und
+   * keine Schwankung.
+   *
+   * SIE RECHNET MIT DEM STANDARDREGLER, also seit dem 05.09.2026 mit
+   * Zeitraffer x2. Das ist Absicht: Gemessen werden soll der Kampf, wie er im
+   * Spiel ablaeuft, und nicht ein Ablauf, den es nicht mehr gibt.
    *
    * WAS SIE NICHT SAGT, und das ist wichtig: Die Bretter hier sind ZUFAELLIG
    * besetzt (`zufaelligesPaar`) — gleichverteilt aus dem Katalog, fast alles
    * Stufe 1, keine Marken, die zusammenpassen. So sieht kein Brett aus, das
-   * jemand gespielt hat. Auf Brettern aus echten Partien laeuft nicht jeder
-   * fuenfundzwanzigste Kampf in die Zeit, sondern fast jeder dritte; gemessen
-   * wird das in test/spielzeit.test.ts. Diese Probe ist eine Aussage ueber den
-   * KATALOG, jene eine ueber das SPIEL. Man braucht beide.
+   * jemand gespielt hat. Bretter aus echten Partien halten laenger durch, und
+   * ihr Zeitanteil liegt hoeher; gemessen wird das in test/spielzeit.test.ts.
+   * Diese Probe ist eine Aussage ueber den KATALOG, jene eine ueber das SPIEL.
+   * Man braucht beide. Vor dem Zeitraffer lagen die beiden Zahlen bei 2 bis 4
+   * Prozent hier und 27,7 Prozent dort — genau dieser Abstand war der Anlass,
+   * beide Proben nebeneinander zu stellen.
    */
   it('laesst den Zeitablauf die Ausnahme bleiben', () => {
     const dauern: number[] = [];
@@ -586,7 +617,10 @@ describe('Kampf — die Abbruchgrenze', () => {
   it('entscheidet nach dem hoeheren Lebensanteil', () => {
     let geprueft = 0;
     for (let i = 0; i < 200; i++) {
-      const bericht = simuliereKampf(zufaelligesPaar(`z${i}`), `z${i}`);
+      // UNGERAFFT und nicht der Standardregler: Mit Zeitraffer x2 laeuft von
+      // diesen 200 zufaelligen Brettern kein einziges in die Grenze — die
+      // Probe haette dann nichts mehr zu pruefen und meldete genau das.
+      const bericht = simuliereKampf(zufaelligesPaar(`z${i}`), `z${i}`, UNGERAFFT);
       if (bericht.grund !== 'zeit') continue;
       geprueft++;
 

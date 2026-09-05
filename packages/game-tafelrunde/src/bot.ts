@@ -117,22 +117,30 @@ interface Gangart {
  * drei schwachen Sitze, und ueber zwei unabhaengige Saatbasen, weil eine
  * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 05.09.2026):
  *
- *                    gebaut (20 Leben)   kurze Partie (14 Leben, x2)
- *     hart : normal   169 : 77   147 : 84    140 : 87   139 : 87
- *     hart : sanft    357 : 14   373 :  9    341 : 20   367 : 11
- *     normal : sanft  350 : 17   348 : 17    359 : 14   354 : 15
+ *                    gebaut (14 Leben, x2)   langer Stand (20 Leben, x1)
+ *     hart : normal   140 : 87   139 : 87      169 : 77   147 : 84
+ *     hart : sanft    341 : 20   367 : 11      357 : 14   373 :  9
+ *     normal : sanft  359 : 14   354 : 15      350 : 17   348 : 17
  *
- * DIE ZWEITE SPALTE IST DER GRUND, WARUM DAS HIER SO AUSFUEHRLICH STEHT. Am
- * 05.09.2026 verlor `hart` gegen `normal` — 77 : 107,7 —, und zwar auf dem
- * Zweig, der die Partie von 15 auf 11 Runden verkuerzte (14 Startleben,
- * Zeitraffer x2). Nachgemessen ist die Ursache NICHT die kurze Partie und
- * schon gar nicht der Zeitraffer (bei 20 Leben aendert er die Zahl von 110 auf
- * 114, also gar nichts), sondern die damalige LADENREGEL:
+ * DASS BEIDE SPALTEN DASELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
+ * nicht an der Partielaenge. Die zweite Spalte ist der Stand von gestern (20
+ * Leben, kein Zeitraffer, rund fuenfzehn Runden) und wird von der letzten
+ * Probe in bot.test.ts mitgeprueft — die Rundenzahl ist die Zahl, an der Robin
+ * dreht, und eine darauf geeichte Gangart faellt sonst erst der uebernaechsten
+ * Umstellung auf.
+ *
+ * WARUM DAS HIER SO AUSFUEHRLICH STEHT: Am 05.09.2026 verlor `hart` gegen
+ * `normal` — 77 : 107,7. Gemessen wurde das auf dem Zweig, der die 14
+ * Startleben und den Zeitraffer brachte, aber die Ladenregel noch nicht hatte.
+ * Nachgemessen ist die Ursache NICHT die kurze Partie und schon gar nicht der
+ * Zeitraffer (bei 20 Leben aendert er die Zahl von 110 auf 114, also gar
+ * nichts), sondern die damalige LADENREGEL:
  *
  *   - Vor dem 05.09.2026 leerte ein Kauf nur seinen Platz, und ein Wurf
  *     kostete 2 Gold. Wer sich frueh Feldplaetze erkaufte, bekam sie in der
- *     kurzen Partie nicht mehr voll — `hart` steigt ohne Reserve und ohne
- *     volles Brett auf (siehe unten), und genau das war dort Tempo ins Leere.
+ *     elf Runden kurzen Partie nicht mehr voll — `hart` steigt ohne Reserve
+ *     und ohne volles Brett auf (siehe unten), und das war dort Tempo ins
+ *     Leere.
  *     Beleg: Auf demselben Stand mit GEZAEHMTEM Aufstieg (`aufstiegsReserve`
  *     3, `nurBeiVollemBrett`) stand es 112 : 96,0 statt 77 : 107,7.
  *   - Seit ein Kauf den GANZEN Laden neu zieht, laesst sich ein grosses Brett
@@ -155,8 +163,8 @@ interface Gangart {
  *
  * ZU VIERT UND NICHT ZU ZWEIT, und das ist selbst ein Befund: Solange die
  * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
- * 125:75. Seit dem kuerzeren Lebensbalken (20 Leben, 05.09.2026) dauert ein
- * Duell 11 statt 21 Runden, und dort steht es 96:104 fuer `normal`. Am Tisch
+ * 125:75. Mit dem kuerzeren Lebensbalken (20 Leben, 05.09.2026) dauerte ein
+ * Duell 11 statt 21 Runden, und dort stand es 96:104 fuer `normal`. Am Tisch
  * zu viert — der Besetzung, auf die das Spiel eingestellt ist — bleibt der
  * Abstand stehen. Wer die Gangarten fuer das Duell zurechtruecken will, misst
  * bitte beide Besetzungen; die Zahlen fallen in Sekunden an.
