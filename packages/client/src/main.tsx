@@ -52,6 +52,7 @@ function isDevFlag(name: string): boolean {
  * der Entwicklung von selbst.
  *
  * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
+ * - /probe/arena-3d — DIESELBE Szene in 3D mit Three.js (Probe B)
  */
 function istProbe(name: string): boolean {
   const { pathname, hash, search } = window.location;
@@ -61,6 +62,7 @@ function istProbe(name: string): boolean {
 }
 
 const probeArena2d = istProbe('arena-2d');
+const probeArena3d = istProbe('arena-3d');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -116,9 +118,17 @@ const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ de
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
+/* Aus demselben Grund `lazy`, hier aber mit deutlich mehr Gewicht dahinter:
+   Probe B zieht `three` und `@react-three/fiber` nach. Was davon schon im
+   Hauptbuendel steckt, ist eine andere Baustelle (Avatarwerkstatt wird von
+   GameSelect statisch importiert und landet deshalb dort) — die Probe selbst
+   soll jedenfalls nichts dazulegen. */
+const Arena3D = lazy(() => import('./proben/arena-3d/Arena3D').then((m) => ({ default: m.Arena3D })));
 
 const werkzeug = probeArena2d ? (
   <Arena2D />
+) : probeArena3d ? (
+  <Arena3D />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (

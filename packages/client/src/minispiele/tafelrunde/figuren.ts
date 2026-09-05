@@ -69,6 +69,11 @@ const ORDNER = '/tafelrunde';
  * Figur je Einheit. Jede Zeile nennt die Originaldatei im Crawl-Paket
  * (Ordner dc-mon/), damit sich der Tausch einer Figur nachvollziehen laesst.
  * Alle: Dungeon Crawl 32x32 tiles, DCSS-Team, CC0 1.0 — siehe Kopf.
+ *
+ * **Wer hier eine Zeile ergaenzt, ist fertig.** Das Vorladen (vorladen.ts)
+ * leitet seine Liste aus dieser Tabelle ab und nicht aus einer zweiten
+ * Aufzaehlung — sonst waere ausgerechnet die neue Figur die einzige, die nicht
+ * vorgeladen wird.
  */
 export const FIGUREN: Readonly<Record<EinheitId, string>> = {
   // --- 1 Gold ---------------------------------------------------------------
