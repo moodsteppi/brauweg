@@ -119,9 +119,12 @@ Server, ist die `.d.ts` von `@brauweg/game-api` der alte Stand, und `tsc`
 meldet Felder als fehlend, die im Quelltext längst stehen (`xpBasis`,
 `interludeMs`).
 
-Testdateien liegen unter `packages/server/test/`; nach einem Zweigwechsel
-`rm -rf packages/server/dist`, sonst laufen Tests aus einem alten Übersetzer-
-Stand mit und melden Fehler, die es nicht gibt.
+Testdateien liegen unter `packages/server/test/`. Von Hand aufräumen muss man
+nach einem Zweigwechsel nichts mehr: Jedes `build` räumt sein `dist/` vorher
+selbst (`werkzeug/dist-raeumen.mjs`), und `test` läuft über `build`. Der Grund
+steht im Kopf des Skripts — getestet wird aus `dist/test/*.js`, und eine
+kompilierte Testdatei ohne `.ts` bleibt sonst liegen und färbt den Lauf rot,
+obwohl die Quelle sauber ist.
 
 `gh` ist **nicht** installiert, das Remote läuft über SSH — Pull Requests
 gehen aus einer Sitzung heraus nicht. Gemerged wird direkt.
