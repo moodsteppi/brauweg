@@ -43,7 +43,7 @@ import {
   serienBonus,
   zins,
 } from './regeln.js';
-import { type Kampfbericht, simuliereKampf } from './kampf.js';
+import { type Kampfbericht, type Kampfregler, simuliereKampf } from './kampf.js';
 import { type Saat, baueZufall, kampfSaat, ladenSaat, paarungsSaat } from './zufall.js';
 
 // ---------------------------------------------------------------------------
@@ -145,6 +145,23 @@ export interface TafelrundePartie {
    */
   readonly kaempfe: readonly Kampfpaarung[];
   readonly fertig: boolean;
+  /**
+   * Die Stellschrauben der Kampfsimulation, wenn dieser Tisch von den
+   * gebauten abweicht — sonst gar nicht gesetzt.
+   *
+   * Kein Tisch der Plattform setzt das Feld: `createParty` im Adapter gibt
+   * nichts mit, also fehlt es in jedem echten Snapshot und `simuliereKampf`
+   * nimmt `STANDARD_REGLER`. Es steht hier fuer den Messstand, der dieselbe
+   * Partie mit anderem Zeitraffer oder anderem Schadensteiler durchrechnen
+   * muss, um zu beantworten, welche Schraube wie viel bringt
+   * (docs/TAFELRUNDE-SPIELZEIT.md).
+   *
+   * IM ZUSTAND UND NICHT ALS PARAMETER, weil der Kampf tief drin beginnt:
+   * `loeseKampfAuf` -> `naechsteRunde` -> `pruefePhase` -> `beginneKampf`.
+   * Ihn durch diese Kette zu reichen hiesse, vier Signaturen um ein Argument
+   * zu erweitern, das im Betrieb nie jemand setzt.
+   */
+  readonly regler?: Kampfregler;
 }
 
 /**
@@ -426,6 +443,7 @@ export function erstellePartie(
   regeln: TafelrundeRegeln,
   sitze: readonly number[],
   saat: Saat,
+  regler?: Kampfregler,
 ): TafelrundePartie {
   const heere: Record<number, Heer> = {};
   for (const sitz of sitze) heere[sitz] = neuesHeer(regeln);
@@ -439,6 +457,9 @@ export function erstellePartie(
     heere,
     kaempfe: [],
     fertig: false,
+    // Nur setzen, wenn wirklich einer mitkam: Ein Feld mit `undefined` steht
+    // sonst in jedem Snapshot und in jedem `deepEqual` einer Probe.
+    ...(regler ? { regler } : {}),
   };
 
   /*
@@ -847,6 +868,7 @@ function beginneKampf(partie: TafelrundePartie): TafelrundePartie {
     bericht: simuliereKampf(
       [heerVon(partie, satz.a).brett, heerVon(partie, satz.b).brett],
       kampfSaat(partie.saat, partie.runde, satz.a, satz.b),
+      partie.regler,
     ),
   }));
   return { ...partie, phase: 'kampf', kaempfe };

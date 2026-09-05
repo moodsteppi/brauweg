@@ -549,6 +549,14 @@ describe('Kampf — die Abbruchgrenze', () => {
    * damit ein bisschen Balancing die Probe nicht sofort rot faerbt — ein
    * Katalog, der jeden zehnten Kampf in die Zeit laufen laesst, ist aber ein
    * Befund und keine Schwankung.
+   *
+   * WAS SIE NICHT SAGT, und das ist wichtig: Die Bretter hier sind ZUFAELLIG
+   * besetzt (`zufaelligesPaar`) — gleichverteilt aus dem Katalog, fast alles
+   * Stufe 1, keine Marken, die zusammenpassen. So sieht kein Brett aus, das
+   * jemand gespielt hat. Auf Brettern aus echten Partien laeuft nicht jeder
+   * fuenfundzwanzigste Kampf in die Zeit, sondern fast jeder dritte; gemessen
+   * wird das in test/spielzeit.test.ts. Diese Probe ist eine Aussage ueber den
+   * KATALOG, jene eine ueber das SPIEL. Man braucht beide.
    */
   it('laesst den Zeitablauf die Ausnahme bleiben', () => {
     const dauern: number[] = [];

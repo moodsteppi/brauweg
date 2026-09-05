@@ -80,8 +80,12 @@ const LESBARE_VERSIONEN = [1, SNAPSHOT_VERSION];
  * (`kampfdauer`) plus diesen Nachlauf. Ohne ihn ginge der naechste Laden in
  * demselben Augenblick auf, in dem die letzte Einheit faellt — der Spieler
  * saehe nie, wie es ausgegangen ist.
+ *
+ * Ausgefuehrt, weil der Messstand ihn mitrechnet (`Zeitmodell` in
+ * test/messen.ts): Er ist ein Posten der Spielzeit, und die Zahl zweimal
+ * hinzuschreiben waere der Weg, sie einmal zu aendern und einmal zu vergessen.
  */
-const KAMPF_NACHLAUF_MS = 2500;
+export const KAMPF_NACHLAUF_MS = 2500;
 
 type GespeichertePartie = TafelrundePartie & { readonly v: number };
 

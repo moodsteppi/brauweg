@@ -15,11 +15,12 @@ neun), der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 5. September 2026, nicht aus der Erinnerung):**
+**Prüfstand (gezählt am 5. September 2026 aus einem vollen Lauf, nicht aus
+der Erinnerung):**
 170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
-56 Eiland-Tests, 216 Tafelrunde-Tests, **402 Servertests** — zusammen 1300,
-dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
+56 Eiland-Tests, 239 Tafelrunde-Tests, **417 Servertests** — zusammen 1338,
+dazu die Client-Tests (26 Dateien, 316 Tests), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
@@ -147,6 +148,21 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > Startleben gegen rund 5 Punkte Schaden je Niederlage). Steht als eigener
 > Punkt auf dem Board. Der Kampf selbst wird seit #35 (04.09.2026) im
 > Client abgespielt (`minispiele/tafelrunde/KampfAnzeige.tsx`).
+>
+> **Wie lange eine Partie dauert, ist seit dem 05.09.2026 gemessen:
+> `docs/TAFELRUNDE-SPIELZEIT.md`.** Kurzfassung, weil sie zwei verbreitete
+> Annahmen widerlegt: Eine Partie zu viert dauert im Median **13:31** und
+> nicht die geschätzten 11 Minuten, und **70 % davon sind Kampf** — die
+> Vorbereitung zu straffen bringt selbst mit hartem 10-Sekunden-Countdown
+> nur 8 %, ein feinerer `TAKT_MS` unter 1 %. Der zweite Befund wiegt
+> schwerer: Der Kommentar an `HOECHSTDAUER_MS` nannte 17 s Median und 2–4 %
+> Zeitabbrüche; auf Brettern aus **echten** Partien sind es **35,2 s und
+> 27,7 %**. Die Zahlen im Code stammten von zufällig besetzten Brettern, und
+> so kauft kein Bot. Gemessen wird das jetzt mit
+> `werkzeug/spielzeit.mjs` (Tabelle je Stellschraube) und festgehalten in
+> `test/spielzeit.test.ts`. **Geändert wurde am Spiel nichts** — der
+> `Kampfregler` in `kampf.ts` ist das Messwerkzeug dafür und steht auf den
+> gebauten Werten.
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >
