@@ -38,6 +38,11 @@
       "@brauweg/game-api": ["../game-api/src/index.ts"],
       "@brauweg/game-cambio": ["../game-cambio/src/index.ts"],
       "@brauweg/game-doppelkopf": ["../game-doppelkopf/src/index.ts"],
+      "@brauweg/game-easypoker": ["../game-easypoker/src/index.ts"],
+      "@brauweg/game-eiland": ["../game-eiland/src/index.ts"],
+      "@brauweg/game-feldherr": ["../game-feldherr/src/index.ts"],
+      "@brauweg/game-filler": ["../game-filler/src/index.ts"],
+      "@brauweg/game-mememory": ["../game-mememory/src/index.ts"],
       "@brauweg/game-skat": ["../game-skat/src/index.ts"],
       "@brauweg/game-tafelrunde": ["../game-tafelrunde/src/index.ts"],
       "@brauweg/game-wizard": ["../game-wizard/src/index.ts"]

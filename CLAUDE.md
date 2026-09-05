@@ -110,8 +110,8 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.300 Tests in den Paketen (402 im Server), dazu
-                  # 191 Client-Tests in 14 Dateien (vitest)
+npm test          # 1.359 Tests in den Paketen (419 im Server), dazu
+                  # 402 Client-Tests in 37 Dateien (vitest)
 ```
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
@@ -156,8 +156,10 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Bisher gedeckt: Doppelkopf, Skat, Zauberer,
-Cambio. Ein neues Spiel bekommt eine Datei nach demselben Muster.
+Feld auch wirklich liefern). Gedeckt sind alle zehn Spiele. Ein neues Spiel
+bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
+im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
+der aus einer `.tsx` importiert, zieht React in den Test.
 
 **Feldherr: `kern.js` und `feldherr.html` sind gebaut, nicht geschrieben.**
 Quelle ist `packages/game-feldherr/quelle/teile/`, gebaut wird mit

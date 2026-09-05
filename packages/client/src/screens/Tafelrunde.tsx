@@ -14,6 +14,7 @@ import {
   gegnerDieseRunde,
   leistenplaetze,
 } from '../minispiele/tafelrunde/platzierung';
+import type { Einheit, Rolle, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
 import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
 import {
   Figurbild,
@@ -78,128 +79,12 @@ import { useTable } from '../useTable';
 // Die Sicht des Moduls
 // ---------------------------------------------------------------------------
 
-/** Kampfrolle. Siehe packages/game-tafelrunde/src/katalog.ts. */
-type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
-
-interface Einheit {
-  id: string;
-  name: string;
-  kosten: number;
-  rolle: Rolle;
-  marken: string[];
-  leben: number;
-  angriff: number;
-  tempo: number;
-  reichweite: number;
-  ruestung: number;
-}
-
 /*
- * `Kaempfer` und `Ort` stehen in minispiele/tafelrunde/zuege.ts — zusammen
- * mit der Rechnerei, die sie benutzt. Ein zweiter Satz hier liefe beim ersten
- * neuen Feld auseinander.
+ * Sie steht seit dem 06.09.2026 in minispiele/tafelrunde/sicht.ts und nicht
+ * mehr hier. Grund: Der Vertrag unter src/vertrag/ haelt diese Typen gegen
+ * die echte Modulsicht, und ein Import aus DIESEM Bildschirm zoege React
+ * samt aller Bauteile in einen Test, der nur Typen vergleichen will.
  */
-
-interface Serie {
-  art: 'sieg' | 'niederlage' | null;
-  laenge: number;
-}
-
-/** Alles, was nur dem eigenen Sitz gehoert. */
-interface EigeneSicht {
-  sitz: number;
-  leben: number;
-  gold: number;
-  level: number;
-  laden: (string | null)[];
-  bank: (Kaempfer | null)[];
-  brett: (Kaempfer | null)[];
-  serie: Serie;
-  bereit: boolean;
-  ausRunde: number | null;
-  feldplaetze: number;
-  belegt: number;
-  einkommen: number;
-  neuwuerfelnKosten: number;
-  aufstiegKosten: number | null;
-  darfHandeln: boolean;
-  /**
-   * Die Marken auf dem eigenen BRETT mit Anzahl, erreichter und naechster
-   * Schwelle (sicht.ts). Nur Marken mit mindestens einem Traeger stehen
-   * drin — das Modul laesst die uebrigen weg.
-   *
-   * Wahlfrei gefuehrt wie `kaempfe`: Ein Tisch, der vor den Synergien
-   * aufgemacht wurde, hat das Feld nicht. Dann bleibt die Leiste leer,
-   * statt dass der Bildschirm stolpert.
-   */
-  synergien?: Synergiestand[];
-}
-
-interface FremdeSicht {
-  sitz: number;
-  leben: number;
-  level: number;
-  serie: Serie;
-  brett: (Kaempfer | null)[];
-  bereit: boolean;
-  ausRunde: number | null;
-  verlassen: boolean;
-  /** Auch beim Gegner: Das Brett ist oeffentlich, also sind es seine Marken. */
-  synergien?: Synergiestand[];
-}
-
-interface TafelrundeSicht {
-  ich: number | null;
-  runde: number;
-  rundenGrenze: number;
-  phase: 'vorbereitung' | 'kampf' | 'ende';
-  fertig: boolean;
-  sieger: number | null;
-  /**
-   * Die Rangliste aller Sitze, der beste zuerst (sicht.ts). Sie steht in
-   * jeder Sicht und nicht erst am Ende — wer in Runde vier ausscheidet,
-   * bekommt sein Endbild, waehrend die Partie weiterlaeuft.
-   */
-  platzierung: Platz[];
-  zuschauer: boolean;
-  ladenPlaetze: number;
-  bankPlaetze: number;
-  brettFelder: number;
-  brettReihen: number;
-  brettSpalten: number;
-  verschmelzZahl: number;
-  maxStufe: number;
-  vorrat: Record<string, number>;
-  eigenes: EigeneSicht | null;
-  gegner: FremdeSicht[];
-  leftSeats: number[];
-  /**
-   * Die Kaempfe der laufenden Kampfphase mit vollem Ablaufprotokoll — ein
-   * Spieler bekommt seinen eigenen, ein Zuschauer alle; ausserhalb der
-   * Kampfphase leer (sicht.ts). Als wahlfrei gefuehrt, weil eine Sicht aus
-   * der Zeit vor der Kampfsimulation das Feld nicht hat — der Bildschirm
-   * zeigt dann die Wartezeile statt zu stolpern.
-   */
-  kaempfe?: Kampfpaarung[];
-  /**
-   * ALLE Kaempfe der laufenden Runde als blosses Ergebnis, ohne Protokoll —
-   * auch die, denen dieser Sitz nicht zusieht (sicht.ts). Daraus entstehen die
-   * Ergebniszeilen unter der Arena; aus `kaempfe` koennte sie nur ein
-   * Zuschauer bauen.
-   *
-   * Wahlfrei wie `kaempfe`, und aus demselben Grund: Ein Tisch aus der Zeit
-   * davor hat das Feld nicht.
-   */
-  paarungen?: Paarungsergebnis[];
-  /** Kommt NUR in der ersten Sicht nach dem Beitritt, siehe sicht.ts. */
-  katalog?: Einheit[];
-  /**
-   * Die Synergie-Tabelle mit allen Stufen — wie der Katalog nur in der ersten
-   * Sicht und aus demselben Grund: Sie aendert sich nie. Wer sie nicht
-   * festhaelt, hat ab dem zweiten Rundruf keine Schwellen mehr.
-   */
-  synergieTabelle?: Synergie[];
-}
 
 /**
  * Warum ein Kauf gerade nicht geht — die AUSKUNFT, nicht die Entscheidung.
