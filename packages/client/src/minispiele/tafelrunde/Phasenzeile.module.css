@@ -1,0 +1,105 @@
+/*
+ * Die Phasenzeile von Tafelrunde (Phasenzeile.tsx).
+ *
+ * Eine Zeile, zwei Enden: links die Lage (Runde und Phase), rechts die Zeit
+ * bzw. der Bereit-Zähler. Sie sitzt in der festgehefteten Kopfleiste des
+ * Tisches (`.tr-oben` in styles.css) und muss deshalb flach bleiben — jeder
+ * Pixel hier fehlt dem Brett.
+ *
+ * Farben aus den Variablen der Plattform, damit sie zur Rüstkammer gehört.
+ */
+
+.zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 22px;
+  padding: 0 2px;
+}
+
+.lage {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+  min-width: 0;
+  color: var(--text);
+  font: 800 12px/1.2 system-ui;
+}
+.lage strong {
+  flex: 0 0 auto;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.trenner { color: var(--line); }
+
+/* Die Phase trägt die Farbe ihrer Aufgabe: Gold heißt „du bist dran",
+   Rot heißt „jetzt wird gekämpft". Das Wort steht daneben — Farbe allein
+   trägt hier so wenig Auskunft wie überall sonst (DESIGN.md). */
+.phase {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+.phase[data-phase='vorbereitung'] { color: var(--gold); }
+.phase[data-phase='kampf'] { color: var(--danger); }
+.phase[data-phase='ende'] { color: var(--muted); }
+
+.rest,
+.bereit {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  font: 800 12px/1.4 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
+.rest { color: var(--text); }
+/* Die letzten Sekunden werden rot. KEIN Blinken: Ein pochender Kasten am
+   oberen Rand ist auf einem Handy in der Hand kaum auszuhalten, und mit
+   „weniger Bewegung" wäre er ohnehin weg — die Farbe bleibt in beiden
+   Fällen. */
+.rest[data-knapp] { color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
+
+.uhr {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Alle bereit heißt: Es geht gleich los, und zwar nicht mehr an mir. */
+.bereit[data-voll] { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* Nur für das Vorlesegerät — sichtbar steht die Zahl daneben. Dieselbe
+   Bauart wie `nurVorlesen` in Synergien.module.css. */
+.nurVorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 40rem) {
+  .lage { font-size: 13px; }
+  .rest,
+  .bereit { font-size: 13px; }
+}

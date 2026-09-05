@@ -16442,7 +16442,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   cursor: pointer;
 }
 .tr-zurueck:active { transform: scale(0.96); }
-.tr-zurueck-tisch { position: absolute; }
 
 /* -- Menue und Suche ------------------------------------------------------ */
 
@@ -16645,18 +16644,77 @@ span.hub-angebot-art.poker-jeton-stapel {
   overscroll-behavior: contain;
 }
 
+/* -- Die festgeheftete Kopfleiste ----------------------------------------- */
+
+/*
+ * Mitspielerleiste und Phasenzeile in einem Kasten, der beim Rollen oben
+ * kleben bleibt (Umbau vom 05.09.2026).
+ *
+ * `position: sticky` und nicht `fixed`: Der Tisch (.tr-tisch) ist selbst der
+ * rollende Kasten, und ein `fixed` Element haette weder seine Breite noch
+ * seinen Platz im Fluss — der Laden liefe darunter durch. Sticky bleibt ein
+ * gewoehnliches Kind, nimmt seine Hoehe mit und klebt trotzdem.
+ *
+ * Der Grund ueberhaupt: Vorher war die Mitspielerleiste ein Kasten mitten im
+ * Fluss. Wer zum Laden runterrollte — und dort spielt sich die halbe Runde
+ * ab —, sah weder Leben noch Gegner noch Phase.
+ *
+ * Undurchsichtig hinterlegt, denn darunter rollt das Brett durch. Der
+ * Weichzeichner ist Zierde und darf fehlen; die Farbe darunter ist es nicht.
+ */
+.tr-oben {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  /* So breit wie der Laden darunter (.tr-fuss) und nicht wie der Schirm:
+     Sonst steht der Streifen am Desktop als einziges Band ueber einer
+     zentrierten Spalte. */
+  width: min(96vw, 520px);
+  padding: max(8px, env(safe-area-inset-top)) 8px 5px;
+  background: rgba(13, 18, 22, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 0 var(--line), 0 10px 18px -14px rgba(0, 0, 0, 0.9);
+}
+
+.tr-oben-reihe {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Der Zurueck-Knopf steht jetzt IN der Reihe. 40 px breit statt 44: Er ist
+   das Einzige hier, was man nicht im Spiel braucht, und jeder Pixel gehoert
+   den Spielerkacheln. Die Hoehe kommt aus der Reihe, damit er so hoch ist wie
+   sie — das macht die 44 px wieder wett. */
+.tr-zurueck-oben {
+  flex: 0 0 auto;
+  width: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.09);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+.tr-zurueck-oben:active { transform: scale(0.96); }
+
 .tr-kopf {
   position: relative;
   width: 100%;
-  padding: max(12px, env(safe-area-inset-top)) 12px 8px;
+  padding: 6px 12px 0;
 }
 
+/* Zwei Kacheln, und die duerfen sich nicht ueber einen breiten Schirm
+   ziehen: Sie sind ein Anzeigefeld, kein Band. */
 .tr-werte {
   display: flex;
   justify-content: center;
   gap: 6px;
-  /* Platz fuer den Zurueck-Knopf, der als eigene Ebene darueber liegt. */
-  margin-left: 52px;
+  max-width: 320px;
+  margin: 0 auto;
 }
 .tr-wert {
   display: flex;
@@ -16790,21 +16848,57 @@ span.hub-angebot-art.poker-jeton-stapel {
  * Eine Wabe. `clip-path` statt eines Bildes: Sechsecke als PNG waeren sechs
  * Dateien (leer, belegt, gewaehlt, …), und jede muesste beim naechsten
  * Farbwechsel neu geliefert werden.
+ *
+ * DAS RASTER IST SICHTBAR, seit dem Umbau vom 05.09.2026: Die Wabe selbst
+ * traegt die Randfarbe, ihr `::before` liegt 1,5 px innen und traegt die
+ * Fuellung. Zusammen ergibt das eine Umrisslinie — die ein `border` an einem
+ * `clip-path` nicht liefern kann, weil der Beschnitt den Rahmen gleich mit
+ * abschneidet. Vorher war das Feld eine kaum sichtbare Aufhellung auf Holz,
+ * und man sah nicht, wo eine Einheit landen wuerde, bevor sie dort lag.
+ *
+ * Die Zustandsfarben stehen deshalb am `::before` und nicht mehr an der Wabe:
+ * Am aeusseren Element wuerden sie den Umriss ueberschreiben.
  */
 .tr-wabe {
   position: absolute;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.22);
   display: grid;
   place-items: center;
+}
+.tr-wabe::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(255, 255, 255, 0.05);
   transition: background 140ms ease;
 }
-.tr-wabe[data-leer] { background: rgba(255, 255, 255, 0.045); }
-.tr-wabe[data-gewaehlt] { background: rgba(226, 182, 79, 0.3); }
+.tr-wabe[data-leer]::before { background: rgba(10, 14, 18, 0.34); }
+.tr-wabe[data-gewaehlt]::before { background: rgba(226, 182, 79, 0.3); }
 /* Wohin die gewaehlte Einheit darf. Nur waehrend einer Auswahl sichtbar —
    ein dauerhaft leuchtendes Brett waere Rauschen. Steht das Feld voll,
    leuchtet nichts, und die Absage erklaert sich von selbst. */
-.tr-wabe[data-zielbar] { background: rgba(74, 156, 120, 0.28); }
+.tr-wabe[data-zielbar]::before { background: rgba(74, 156, 120, 0.28); }
+/*
+ * Das Feld unter dem Finger: Hier landet die Einheit, wenn jetzt losgelassen
+ * wird. Kraeftiger als „zielbar", denn von zehn erlaubten Feldern ist genau
+ * dieses gemeint — und der Schatten am Finger verdeckt es zur Haelfte.
+ */
+.tr-wabe[data-unterzeiger] { background: var(--gold); }
+.tr-wabe[data-unterzeiger]::before { background: rgba(226, 182, 79, 0.42); }
+
+/*
+ * Ein Kind der Wabe muss NACH dem `::before` gezeichnet werden, sonst liegt
+ * die Fuellung ueber der Figur. Ein absolut gesetztes Pseudoelement zeichnet
+ * spaeter als jedes nicht positionierte Kind — deshalb bekommen die Kinder
+ * hier ausdruecklich eine Position. Ohne diese Zeilen ist das Brett leer.
+ */
+.tr-wabe > .tr-einheit,
+.tr-wabe > .tr-wabe-ziel {
+  position: relative;
+  z-index: 1;
+}
 
 /* Die ganze Wabe ist das Ziel, nicht nur ihre Mitte: Ein Daumen trifft eine
    Flaeche, keinen Punkt. */
@@ -16865,6 +16959,11 @@ span.hub-angebot-art.poker-jeton-stapel {
  */
 .tr-einheit[data-fassbar] { cursor: grab; touch-action: none; }
 .tr-einheit[data-fassbar]:active { cursor: grabbing; }
+
+/* Das Feld unter dem Finger ist auch dann zu sehen, wenn eine Einheit darauf
+   steht — beim Tausch zweier Einheiten ist genau das der Fall. */
+.tr-wabe[data-unterzeiger] .tr-einheit,
+.tr-bankplatz[data-unterzeiger] .tr-einheit { box-shadow: inset 0 0 0 3px var(--gold); }
 /* Beim Ziehen bleibt der Platz sichtbar leer, damit man sieht, woher es kommt. */
 .tr-einheit[data-still] { opacity: 0.25; }
 /* Das Ersatzzeichen, wenn zu einer Einheit keine Figur vorliegt. */
@@ -16903,6 +17002,19 @@ span.hub-angebot-art.poker-jeton-stapel {
  * Feld im Gleichschritt. Fuenf Gruppen genuegen: Bei 19 Plaetzen erkennt
  * niemand ein Muster.
  */
+/*
+ * Und der SCHATTEN, den sie dabei wirft — nur auf dem Brett.
+ *
+ * `drop-shadow` und keine Ellipse darunter: Der Filter folgt dem Alphakanal
+ * der Figur, wirft also den Umriss der Figur und nicht ein allgemeines
+ * Oval. Ohne ihn klebt das Bild auf der Wabe, statt darauf zu stehen — bei
+ * einer Figur, die dazu noch schwebt, sieht das nach Aufkleber aus.
+ *
+ * Auf Bank und Ladenkarte nicht: Dort liegt Ware in einem Fach, es gibt
+ * keinen Boden, auf dem etwas stehen koennte.
+ */
+.tr-brett .tr-einheit .tr-figur,
+.tr-brett .tr-einheit .tr-rolle { filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.75)); }
 .tr-brett .tr-einheit .tr-figur { animation: tr-schwebt 3.8s ease-in-out infinite; }
 .tr-brett .tr-wabe:nth-child(5n + 2) .tr-figur { animation-delay: -0.7s; }
 .tr-brett .tr-wabe:nth-child(5n + 3) .tr-figur { animation-delay: -1.5s; }
@@ -16987,14 +17099,27 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* -- Reservebank ---------------------------------------------------------- */
 
+/*
+ * Die Bank liegt an der UNTERKANTE des Bretts, nicht als eigener Kasten
+ * darunter (Umbau vom 05.09.2026).
+ *
+ * Sie ist der Rand des Spielfelds: Der Weg von der Bank auf die erste Wabe
+ * ist die Bewegung, die man hundertmal je Partie macht, und je kuerzer er
+ * ist, desto sicherer trifft der Daumen. Deshalb oben eckig und ohne Luft
+ * zum Brett, unten gerundet — eine Leiste am Brett und kein zweites Moebel.
+ *
+ * Der negative Abstand haelt sie auch dann an der Kante, wenn zwischen Brett
+ * und Bank der Abstand von `.tr-tisch` (8 px) steht.
+ */
 .tr-bank {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
   gap: 4px;
   width: min(94vw, 460px);
-  padding: 6px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  margin-top: -8px;
+  padding: 5px 6px 6px;
+  border-radius: 0 0 14px 14px;
+  background: rgba(255, 255, 255, 0.05);
   box-shadow: inset 0 0 0 1px var(--line);
 }
 .tr-bankplatz {
@@ -17013,6 +17138,11 @@ span.hub-angebot-art.poker-jeton-stapel {
 /* Wohin die gewaehlte Einheit darf. Nur waehrend einer Auswahl sichtbar —
    ein dauerhaft leuchtender Rahmen waere Rauschen. */
 .tr-bankplatz[data-zielbar] { box-shadow: inset 0 0 0 2px var(--accent); }
+/* Und hier landet sie, wenn der Finger jetzt loslaesst. */
+.tr-bankplatz[data-unterzeiger] {
+  background: rgba(226, 182, 79, 0.28);
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
 .tr-bankplatz .tr-einheit { box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line)); }
 /* Zu schmal fuer einen Namen — das Zeichen und die Sterne muessen reichen. */
 .tr-bankplatz .tr-einheit-name { display: none; }
@@ -17058,6 +17188,41 @@ span.hub-angebot-art.poker-jeton-stapel {
   padding: 4px 0 10px;
 }
 
+/* -- Der Ladenkopf: das Wort und das Gold --------------------------------- */
+
+.tr-ladenkopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0 2px;
+}
+.tr-ladenwort {
+  color: var(--muted);
+  font: 800 11px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * Das Gold, gross und unmittelbar ueber den Preisen.
+ *
+ * Es stand bis zum 05.09.2026 als eine von vier gleich grossen Kacheln ganz
+ * oben am Schirm — also am anderen Ende von den Zahlen, gegen die man es
+ * rechnet. Hier ist es die groesste Zahl des Ladens, und das ist richtig so:
+ * Jede Kaufentscheidung ist ein Vergleich mit ihr.
+ */
+.tr-goldstand {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--gold);
+}
+.tr-goldstand strong { font: 900 22px/1 system-ui; font-variant-numeric: tabular-nums; }
+.tr-goldstand em { color: var(--muted); font: 700 11px/1 system-ui; font-style: normal; }
+.tr-goldstand .tr-icon { width: 16px; height: 16px; align-self: center; }
+
 .tr-laden {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -17065,6 +17230,7 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 100%;
 }
 .tr-karte {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17084,6 +17250,18 @@ span.hub-angebot-art.poker-jeton-stapel {
    Von einer kaufbaren unterscheidet sie ohnehin der matte Rahmen und der
    rote Preis, nicht das letzte Zehntel Deckkraft. */
 .tr-karte:disabled { opacity: 0.6; cursor: default; }
+/*
+ * Zu teuer: zusaetzlich entfaerbt.
+ *
+ * Der Unterschied zur gewoehnlichen Sperre ist Absicht. „Gerade nicht dran"
+ * (Kampfphase, schon bereit) betrifft alle fuenf Karten gleich und ist eine
+ * Frage der Zeit; „zu teuer" betrifft einzelne und ist eine Frage der
+ * Entscheidung. Wer den Laden ueberfliegt, soll die bezahlbaren sofort
+ * herausgreifen, ohne fuenf Preise zu lesen. Farbe ist hier NICHT der
+ * einzige Traeger: Der Preis ist rot, und „Zu wenig Gold" steht als Wort
+ * auf der Karte.
+ */
+.tr-karte[data-teuer]:disabled { opacity: 0.45; filter: saturate(0.25); }
 .tr-karte-leer {
   min-height: 84px;
   border-radius: 12px;
@@ -17093,7 +17271,7 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-karte-kopf {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 4px;
   width: 100%;
 }
@@ -17104,12 +17282,28 @@ span.hub-angebot-art.poker-jeton-stapel {
    genau 32, weil das die Groesse des Originals ist: Aus der vierfach
    hochgezogenen Datei wird damit wieder Pixel fuer Pixel das gemalte Bild. */
 .tr-karte-kopf .tr-figur { width: 32px; height: 32px; }
+/*
+ * Die Kostenmarke sitzt in der oberen rechten ECKE der Karte.
+ *
+ * Absolut gesetzt und nicht mehr in einer Zeile neben der Figur: So steht sie
+ * bei allen fuenf Karten an derselben Stelle — man ueberfliegt eine Spalte
+ * Zahlen statt fuenf verschieden hoher Zeilen. Sie klebt an der Kante und
+ * nicht in ihr: Ein Preis, der ueber den Rahmen laeuft, sieht aus wie ein
+ * Fehler.
+ */
 .tr-karte-preis {
+  position: absolute;
+  top: 3px;
+  right: 3px;
   display: flex;
   align-items: center;
   gap: 2px;
+  padding: 1px 5px 1px 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
   color: var(--gold);
-  font: 800 12px/1 system-ui;
+  font: 800 12px/1.3 system-ui;
+  font-variant-numeric: tabular-nums;
 }
 .tr-karte-preis .tr-icon { width: 12px; height: 12px; }
 /* Ein Preis, den das Gold nicht deckt. Rot ist hier die Vorsicht aus
@@ -17298,12 +17492,16 @@ span.hub-angebot-art.poker-jeton-stapel {
   .tr-bretter,
   .tr-bank,
   .tr-auswahlband { width: min(70vw, 560px); }
+  .tr-oben,
   .tr-fuss { width: min(72vw, 600px); }
   .tr-karte { min-height: 104px; }
+  .tr-goldstand strong { font-size: 26px; }
 }
 
 /* Wer weniger Bewegung eingestellt hat, bekommt das Ergebnis ohne Zappeln —
-   die Auskunft steckt in Farbe und Text, nicht in der Animation. */
+   die Auskunft steckt in Farbe und Text, nicht in der Animation. Die
+   Zustaende bleiben vollstaendig: Das Feld unter dem Finger leuchtet
+   weiterhin, es wechselt nur ohne Uebergang. */
 @media (prefers-reduced-motion: reduce) {
   .tr-punkte-lauf span,
   .tr-lauf i,
@@ -17311,6 +17509,7 @@ span.hub-angebot-art.poker-jeton-stapel {
   .tr-einheit[data-frisch],
   .tr-brett .tr-einheit .tr-figur,
   .tr-verschmolzen-band { animation: none; }
+  .tr-wabe::before { transition: none; }
 }
 
 

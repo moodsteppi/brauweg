@@ -174,11 +174,13 @@ describe('standSatz', () => {
 // ---------------------------------------------------------------------------
 
 describe('Synergieleiste', () => {
-  it('zeigt Name, Anzahl und nächste Schwelle aus der Sicht', () => {
+  it('zeigt die Anzahl gegen die naechste Schwelle als Zaehler', () => {
     render(<Synergieleiste staende={[stand({ anzahl: 3 })]} tabelle={TABELLE} />);
     const leiste = screen.getByRole('region', { name: 'Synergien' });
-    expect(within(leiste).getByText('Krieger')).toBeInTheDocument();
-    expect(within(leiste).getByText('3 von 4')).toBeInTheDocument();
+    // Sichtbar: das Zeichen und "3/4". Die Marke steht daran, aber nicht als
+    // Zeile — das war die Textliste, die diese Leiste losgeworden ist.
+    expect(within(leiste).getByText('3/4')).toBeInTheDocument();
+    expect(within(leiste).getByText(/Krieger: 3 von 4/)).toBeInTheDocument();
     expect(within(leiste).getByText(/ab 2: \+10 Rüstung/)).toBeInTheDocument();
   });
 
@@ -197,37 +199,38 @@ describe('Synergieleiste', () => {
         tabelle={TABELLE}
       />,
     );
-    expect(screen.getByText('5 von 6')).toBeInTheDocument();
+    expect(screen.getByText('5/6')).toBeInTheDocument();
     expect(screen.getByText(/ab 2: \+99 Rüstung/)).toBeInTheDocument();
+  });
+
+  it('nennt auf der hoechsten Stufe nur noch die Anzahl', () => {
+    // Ohne nächste Schwelle wäre jeder Nenner erfunden.
+    render(
+      <Synergieleiste
+        staende={[stand({ anzahl: 6, schwelle: 6, naechsteSchwelle: null })]}
+        tabelle={TABELLE}
+      />,
+    );
+    expect(screen.getByText('6')).toBeInTheDocument();
+    expect(screen.queryByText(/6[/]/)).toBeNull();
   });
 
   it('zeigt nur die Marken, die in der Sicht stehen — nicht alle aus der Tabelle', () => {
     // Das Modul lässt Marken ohne Träger weg. Wer sie hier ergänzte, hätte
-    // sieben Zeilen "0 von 2" statt einer Auskunft.
+    // sieben Zähler "0/2" statt einer Auskunft.
     render(<Synergieleiste staende={[stand()]} tabelle={TABELLE} />);
-    expect(screen.getByText('Krieger')).toBeInTheDocument();
-    expect(screen.queryByText('Naturwesen')).not.toBeInTheDocument();
+    expect(screen.getByText(/Krieger:/)).toBeInTheDocument();
+    expect(screen.queryByText(/Naturwesen:/)).toBeNull();
   });
 
-  it('setzt einen Punkt je Stufe der Tabelle und füllt, was die Anzahl erreicht', () => {
-    const { container } = render(
-      <Synergieleiste staende={[stand({ anzahl: 3 })]} tabelle={TABELLE} />,
-    );
-    const punkte = container.querySelectorAll('li i');
-    expect(punkte).toHaveLength(3);
-    // Drei Krieger: die 2 ist voll, die 4 ist die nächste, die 6 ist offen.
-    expect(punkte[0]!.hasAttribute('data-voll')).toBe(true);
-    expect(punkte[1]!.hasAttribute('data-voll')).toBe(false);
-    expect(punkte[1]!.hasAttribute('data-naechste')).toBe(true);
-    expect(punkte[2]!.hasAttribute('data-voll')).toBe(false);
-  });
-
-  it('lässt die Punkte weg, solange die Tabelle noch nicht da ist', () => {
-    // Sie kommt nur mit der ersten Sicht. Bis dahin lieber keine Punkte als
-    // drei geratene.
-    const { container } = render(<Synergieleiste staende={[stand()]} tabelle={[]} />);
-    expect(container.querySelectorAll('li i')).toHaveLength(0);
-    expect(screen.getByText('Krieger')).toBeInTheDocument();
+  it('erfindet ohne Tabelle keinen Bonus, den Zaehler zeigt sie trotzdem', () => {
+    // Die Tabelle kommt nur mit der ersten Sicht. Bis dahin steht der Zähler
+    // da und der geltende Bonus (der kommt aus dem Stand), aber NICHT, was
+    // die nächste Schwelle brächte — die Zahl kennt niemand.
+    render(<Synergieleiste staende={[stand({ anzahl: 3 })]} tabelle={[]} />);
+    expect(screen.getByText('3/4')).toBeInTheDocument();
+    expect(screen.getByText(/noch 1 bis 4$/)).toBeInTheDocument();
+    expect(screen.queryByText(/Leben/)).toBeNull();
   });
 
   it('hebt eine Marke mit erreichter Schwelle hervor', () => {
@@ -250,33 +253,11 @@ describe('Synergieleiste', () => {
     expect(screen.getByText(/Noch keine Marken auf dem Feld/)).toBeInTheDocument();
   });
 
-  it('lässt sich zuklappen und wieder aufklappen', () => {
-    // Am Handy liegt sie über dem Brett und darf weichen. Der Inhalt bleibt
-    // dabei im Baum — ob er zu sehen ist, entscheidet das Stylesheet, damit
-    // die am Handy zugeklappte Leiste am Desktop nicht leer bleibt.
-    const { container } = render(<Synergieleiste staende={[stand()]} tabelle={TABELLE} />);
-    const knopf = screen.getByRole('button', { name: /Synergien/ });
-    const leiste = container.querySelector('section')!;
-    expect(knopf).toHaveAttribute('aria-expanded', 'true');
-    expect(leiste.hasAttribute('data-offen')).toBe(true);
-
-    fireEvent.click(knopf);
-    expect(knopf).toHaveAttribute('aria-expanded', 'false');
-    expect(leiste.hasAttribute('data-offen')).toBe(false);
-    expect(screen.getByText('Krieger')).toBeInTheDocument();
-
-    fireEvent.click(knopf);
-    expect(leiste.hasAttribute('data-offen')).toBe(true);
-  });
-
-  it('nennt die Zahl der Marken auch am zugeklappten Kopf', () => {
-    render(
-      <Synergieleiste
-        staende={[stand(), stand({ marke: 'naturwesen', name: 'Naturwesen' })]}
-        tabelle={TABELLE}
-      />,
-    );
-    expect(screen.getByRole('button', { name: /Synergien/ })).toHaveTextContent('2');
+  it('laesst sich nicht mehr zuklappen — dafuer ist sie zu flach', () => {
+    // Vorher eine Liste mit Sätzen und einem Klappknopf, der selbst so hoch
+    // war wie die Zähler heute zusammen.
+    render(<Synergieleiste staende={[stand()]} tabelle={TABELLE} />);
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
 

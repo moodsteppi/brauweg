@@ -114,16 +114,32 @@
     radial-gradient(128% 98% at 50% 50%, transparent 66%, rgba(5, 8, 11, 0.34));
 }
 
-/* Dieselbe Wabe wie auf dem Brett (clip-path statt Bild, aus demselben
-   Grund). Die beiden Haelften sind leicht getoent, damit man die Mittellinie
-   sieht, ohne dass eine Linie das Raster durchschneidet. */
+/*
+ * Dieselbe Wabe wie auf dem Brett (clip-path statt Bild, aus demselben
+ * Grund) — und seit dem 05.09.2026 mit sichtbarem UMRISS, ebenfalls wie
+ * dort: Die Wabe traegt die Randfarbe, ihr `::before` liegt 1,5 px innen und
+ * traegt die Fuellung. Ein `border` kann das nicht leisten, weil der
+ * Beschnitt ihn gleich mit abschneidet.
+ *
+ * Der Umriss ist der Grund, warum man im Kampf ueberhaupt sieht, WO eine
+ * Figur steht und wohin sie laeuft: Ohne ihn schwebten die Figuren ueber
+ * einer Holzflaeche. Die beiden Haelften sind leicht getoent, damit man die
+ * Mittellinie sieht, ohne dass eine Linie das Raster durchschneidet.
+ */
 .wabe {
   position: absolute;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.2);
 }
-.wabe[data-haelfte='oben'] { background: rgba(255, 126, 110, 0.07); }
-.wabe[data-haelfte='unten'] { background: rgba(110, 200, 160, 0.07); }
+.wabe::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(10, 14, 18, 0.3);
+}
+.wabe[data-haelfte='oben']::before { background: rgba(255, 126, 110, 0.12); }
+.wabe[data-haelfte='unten']::before { background: rgba(110, 200, 160, 0.12); }
 
 /* -- Eine Figur ----------------------------------------------------------- */
 
@@ -186,6 +202,58 @@
  */
 .figur[data-tot] {
   animation: none;
+}
+
+/*
+ * Der Schatten unter der Figur.
+ *
+ * Ohne ihn schwebt jede Figur ueber dem Holz, statt darauf zu stehen — und
+ * mit dem Atmen (`ka-schweben`) sieht es vollends nach einem Aufkleber aus,
+ * der auf und ab wackelt.
+ *
+ * DER SCHATTEN BEWEGT SICH GEGEN DIE FIGUR. Er ist ihr Kind, wird von ihrem
+ * `transform` also mitgehoben; die Gegenbewegung haelt ihn am Boden. Die
+ * 78 % sind gerechnet und nicht probiert: Die Figur hebt sich um 7 % IHRER
+ * Hoehe, der Schatten ist 9 % davon hoch, und `translate()` rechnet in
+ * Prozent der EIGENEN Groesse — 7 / 9 = 78 %. Wer die Hoehe hier aendert,
+ * rechnet die Zahl mit. Dazu wird er kleiner und blasser, wie ein Schatten,
+ * dessen Werfer sich entfernt.
+ *
+ * Ganz unten und nicht unter dem Koerper: Zwischen Koerper und Unterkante
+ * liegt der Lebensbalken, und ein dunkler Fleck dahinter waere genau an der
+ * Zahl, die man im Kampf abliest.
+ *
+ * Derselbe Versatz (`--schwebe`) wie bei der Figur, sonst liefen beide
+ * auseinander und der Schatten wanderte unter ihr weg.
+ */
+.schatten {
+  position: absolute;
+  left: 50%;
+  bottom: 3%;
+  width: 44%;
+  height: 9%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0));
+  transform: translate(-50%, 0);
+  animation: ka-schatten 3.6s ease-in-out infinite;
+  animation-delay: var(--schwebe, 0s);
+}
+@keyframes ka-schatten {
+  0%,
+  100% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, 78%) scale(0.84);
+    opacity: 0.66;
+  }
+}
+/* Eine Gefallene wirft keinen Schatten mehr — er geht mit dem Koerper. */
+.figur[data-tot] .schatten {
+  animation: none;
+  opacity: 0;
+  transition: opacity 320ms ease;
 }
 
 .koerper {
@@ -486,4 +554,8 @@
   .einschlag,
   .staub,
   .schaden { display: none; }
+  /* Der Schatten BLEIBT — er ist keine Bewegung, sondern die Auskunft, dass
+     die Figur auf dem Feld steht. Nur seine Gegenbewegung entfaellt, und die
+     braucht er auch nicht mehr: Die Figur atmet ja nicht mehr. */
+  .schatten { animation: none; }
 }

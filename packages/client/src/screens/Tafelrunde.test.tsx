@@ -222,18 +222,45 @@ afterEach(() => {
 });
 
 describe('Kopfzeile', () => {
-  it('zeigt Leben, Gold, Runde und Rang aus der Sicht', () => {
+  it('zeigt Leben und Rang aus der Sicht', () => {
     zeige();
     // In der KOPFZEILE gesucht und nicht auf der ganzen Seite: Seit die
     // Mitspielerleiste auch den eigenen Sitz zeigt, steht das eigene Leben
     // zweimal am Bildschirm — beide Male aus derselben Sicht.
     const kopf = screen.getByText('0/3 Feld').closest('header')!;
     expect(within(kopf).getByText('92')).toBeInTheDocument();
-    expect(within(kopf).getByText('7')).toBeInTheDocument();
-    expect(within(kopf).getByText('3')).toBeInTheDocument();
     // Der Rang steht mit den Feldplaetzen daneben — beide Zahlen kommen aus
     // der Sicht, damit der Client die Leveltabelle nicht nachbaut.
     expect(screen.getByText('0/3 Feld')).toBeInTheDocument();
+  });
+
+  it('nennt Runde und Phase im Klartext', () => {
+    // Eine 3 allein sagt niemandem, dass er gerade aufstellen darf.
+    zeige();
+    expect(screen.getByText('Runde 3')).toBeInTheDocument();
+    expect(screen.getByText('Platzierungsphase')).toBeInTheDocument();
+  });
+
+  it('zeigt das Gold gross am Laden und nicht mehr in der Kopfzeile', () => {
+    // Es ist die Zahl, gegen die man jeden Preis rechnet — sie gehoert
+    // neben die Preise und nicht ans andere Ende des Schirms.
+    zeige();
+    const kopf = screen.getByText('0/3 Feld').closest('header')!;
+    expect(within(kopf).queryByText('7')).toBeNull();
+    const ladenkopf = screen.getByText('Laden').closest('div')!;
+    expect(within(ladenkopf).getByText('7')).toBeInTheDocument();
+  });
+
+  it('zeigt in der Platzierungsphase keine Uhr, sondern wer schon bereit ist', () => {
+    /*
+     * DIE RESTZEIT GIBT ES DORT NICHT, und sie wird auch nicht erfunden: Das
+     * Modul beendet die Phase, wenn der Letzte bereit ist, nicht nach Zeit
+     * (siehe Kopf von Phasenzeile.tsx). Die Zugzeit der Plattform waere keine
+     * Restzeit — sie wird bei jeder Aktion neu gestellt.
+     */
+    stelle(sicht({ eigenes: { bereit: true } }));
+    zeige();
+    expect(screen.getByText('1 von 2 bereit')).toBeInTheDocument();
   });
 
   it('schreibt hin, was die nächste Runde einbringt', () => {
@@ -307,6 +334,26 @@ describe('Was gerade nicht geht, und warum', () => {
     stelle(sicht({ eigenes: { gold: 0 } }), [{ typ: 'bereit' }]);
     zeige();
     expect(screen.getAllByText('Zu wenig Gold').length).toBeGreaterThan(0);
+  });
+
+  it('daempft eine Karte, die man sich nicht leisten kann', () => {
+    /* Wer den Laden ueberfliegt, soll die bezahlbaren herausgreifen, ohne
+       fuenf Preise zu lesen. Das Wort steht trotzdem an der Karte — Farbe
+       allein traegt keine Auskunft. */
+    stelle(sicht({ eigenes: { gold: 0 } }), [{ typ: 'bereit' }]);
+    zeige();
+    const laden = screen.getByRole('group', { name: 'Laden' });
+    const wache = within(laden).getByText('Dorfwache').closest('button')!;
+    expect(wache).toHaveAttribute('data-teuer');
+  });
+
+  it('daempft nicht, wenn die Sperre nichts mit dem Gold zu tun hat', () => {
+    // Schon bereit: Alle fuenf Karten sind gesperrt, aber keine ist zu teuer.
+    stelle(sicht({ eigenes: { bereit: true, darfHandeln: false } }), []);
+    zeige();
+    const laden = screen.getByRole('group', { name: 'Laden' });
+    const wache = within(laden).getByText('Dorfwache').closest('button')!;
+    expect(wache).not.toHaveAttribute('data-teuer');
   });
 
   it('nennt die volle Bank, wenn das Gold reicht', () => {
@@ -557,6 +604,50 @@ describe('Setzen per Ziehen', () => {
     });
   });
 
+  it('zeigt beim Ziehen, auf welchem Feld die Einheit landen wuerde', () => {
+    /*
+     * Der Schatten haengt am Finger und verdeckt genau die Wabe, auf die man
+     * zielt — ohne diese Vorschau laesst man blind los. Geprueft wird, dass
+     * die Vorschau AN DEMSELBEN Feld haengt, das das Ablegen treffen wuerde:
+     * beide gehen durch `zielUnter`.
+     */
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    const marke = within(bank).getByTitle(/Dorfwache/);
+    const wabe = screen.getByRole('button', { name: 'Feld 4' }).parentElement!;
+    (document as unknown as { elementFromPoint: unknown }).elementFromPoint = () => wabe;
+
+    fireEvent.pointerDown(marke, { clientX: 10, clientY: 10 });
+    expect(wabe.hasAttribute('data-unterzeiger')).toBe(false);
+
+    fireEvent.pointerMove(marke, { clientX: 90, clientY: 140 });
+    expect(wabe.hasAttribute('data-unterzeiger')).toBe(true);
+
+    // Und nach dem Loslassen ist die Vorschau weg — sie gehoert zum Ziehen.
+    fireEvent.pointerUp(marke, { clientX: 90, clientY: 140 });
+    expect(
+      screen.getByRole('button', { name: 'Feld 4' }).parentElement!.hasAttribute(
+        'data-unterzeiger',
+      ),
+    ).toBe(false);
+  });
+
+  it('zeigt kein Ziel an, wo die Einheit gar nicht landen darf', () => {
+    /* Die Vorschau darf nicht mehr versprechen, als das Ablegen einloest:
+       Ist das Feld voll, leuchtet nichts — und genau das ist die Auskunft.
+       Geprueft wird mit denselben zwei Zahlen der Sicht wie beim Ablegen. */
+    stelle(sicht({ eigenes: { belegt: 3, feldplaetze: 3 } }));
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    const marke = within(bank).getByTitle(/Dorfwache/);
+    const wabe = screen.getByRole('button', { name: 'Feld 4' }).parentElement!;
+    (document as unknown as { elementFromPoint: unknown }).elementFromPoint = () => wabe;
+
+    fireEvent.pointerDown(marke, { clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(marke, { clientX: 90, clientY: 140 });
+    expect(wabe.hasAttribute('data-unterzeiger')).toBe(false);
+  });
+
   it('macht aus einem Zittern keinen Zug', () => {
     // Ein Finger steht nie ganz still. Unter der Schwelle bleibt es ein Tipp,
     // sonst schiebt jeder Auswahlversuch die Einheit irgendwohin.
@@ -683,14 +774,19 @@ describe('Bereit und Kampfpause', () => {
     // (Buehne.tsx). Das Verhalten der Ansage selbst prueft Buehne.test.tsx —
     // hier zaehlt allein, dass die Rundenzahl der SICHT ankommt und nicht
     // irgendeine.
-    expect(screen.getByText('Runde 3')).toBeInTheDocument();
+    // Im Vorhang gesucht und nicht auf der ganzen Seite: Die Phasenzeile
+    // oben nennt dieselbe Runde, und beide sollen es auch tun.
+    const vorhang = screen.getByText('Zum Kampf').parentElement!;
+    expect(within(vorhang).getByText('Runde 3')).toBeInTheDocument();
+    // Und die Phasenzeile sagt daneben, was gerade laeuft.
+    expect(screen.getByText('Kampfphase')).toBeInTheDocument();
   });
 
   it('baut in der Vorbereitung keine Buehne auf', () => {
     // Die Ruestkammer ist ein Werktisch und kein Schauplatz. Stuende die
     // Ansage auch hier, kaeme sie bei jedem Rundruf des Servers wieder.
     zeige();
-    expect(screen.queryByText(/^Runde \d+$/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Zum Kampf')).not.toBeInTheDocument();
   });
 });
 
@@ -810,8 +906,8 @@ describe('Synergien', () => {
   it('zeigt die Marken des eigenen Bretts aus der Sicht', () => {
     zeige();
     const leiste = screen.getByRole('region', { name: 'Synergien' });
-    expect(within(leiste).getByText('Krieger')).toBeInTheDocument();
-    expect(within(leiste).getByText('3 von 4')).toBeInTheDocument();
+    expect(within(leiste).getByText('3/4')).toBeInTheDocument();
+    expect(within(leiste).getByText(/Krieger: 3 von 4/)).toBeInTheDocument();
     // Der Bonus kommt aus der Tabelle der Sicht, nicht aus einer Zahl hier.
     expect(within(leiste).getByText(/ab 2: \+10 Rüstung/)).toBeInTheDocument();
   });
@@ -878,7 +974,7 @@ describe('Synergien', () => {
 describe('Mitspieler', () => {
   it('zeigt jeden Gegner mit seinem Leben', () => {
     zeige();
-    const leiste = screen.getByRole('group', { name: 'Mitspieler' });
+    const leiste = screen.getByRole('group', { name: /Mitspieler/ });
     expect(within(leiste).getByText('84')).toBeInTheDocument();
     // Ein Bot ohne Namen heißt "KI" und nicht "null".
     expect(within(leiste).getByText('KI')).toBeInTheDocument();
@@ -886,10 +982,10 @@ describe('Mitspieler', () => {
 
   it('zeigt auch den eigenen Sitz — man vergleicht sich mit den anderen', () => {
     zeige();
-    const leiste = screen.getByRole('group', { name: 'Mitspieler' });
+    const leiste = screen.getByRole('group', { name: /Mitspieler/ });
     expect(within(leiste).getByText('Ich')).toBeInTheDocument();
     expect(within(leiste).getByText('92')).toBeInTheDocument();
-    expect(within(leiste).getByText('noch 2 von 2')).toBeInTheDocument();
+    expect(leiste).toHaveAccessibleName('Mitspieler — noch 2 von 2');
   });
 
   it('nennt in der Kampfphase, gegen wen ich antrete', () => {
@@ -921,13 +1017,13 @@ describe('Mitspieler', () => {
       }),
     );
     zeige();
-    const leiste = screen.getByRole('group', { name: 'Mitspieler' });
+    const leiste = screen.getByRole('group', { name: /Mitspieler/ });
     expect(within(leiste).getByText('Gegner')).toBeInTheDocument();
   });
 
   it('nennt in der Vorbereitung keinen Gegner der Runde', () => {
     zeige();
-    const leiste = screen.getByRole('group', { name: 'Mitspieler' });
+    const leiste = screen.getByRole('group', { name: /Mitspieler/ });
     expect(within(leiste).queryByText('Gegner')).toBeNull();
   });
 });
@@ -981,7 +1077,7 @@ describe('Endbild', () => {
     expect(within(bild).getByText(/6 Runden überstanden/)).toBeInTheDocument();
     fireEvent.click(within(bild).getByRole('button', { name: 'Weiter zusehen' }));
     expect(screen.queryByRole('dialog', { name: 'Ausgeschieden' })).toBeNull();
-    expect(screen.getByRole('group', { name: 'Mitspieler' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /Mitspieler/ })).toBeInTheDocument();
   });
 });
 

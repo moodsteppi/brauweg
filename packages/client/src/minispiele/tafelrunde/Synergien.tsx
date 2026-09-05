@@ -30,7 +30,7 @@
  * fuer zwei verschiedene Dinge zu halten.
  */
 
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 
 import stil from './Synergien.module.css';
 
@@ -314,19 +314,23 @@ export const KARTE_TRIFFT: string = stil.karteTrifft;
 // ---------------------------------------------------------------------------
 
 /**
- * Die Synergie-Leiste.
+ * Die Synergie-Leiste — kleine Zähler, keine Textliste.
  *
- * Am Handy liegt sie ueber dem Brett und laesst sich zuklappen, am Desktop
- * steht sie seitlich daneben — WO, entscheidet allein das Stylesheet
- * (Synergien.module.css). Deshalb wird die Liste hier nie aus dem Baum
- * genommen, sondern nur `data-offen` gesetzt: Ein `{offen && …}` haette am
- * Desktop, wo es gar keinen Klappknopf gibt, die Leiste fuer immer
- * verschwinden lassen, sobald jemand sie einmal am Handy zugeklappt hat.
+ * Je Marke ein Chip: das Zeichen, dann die Anzahl gegen die nächste Schwelle
+ * („2/4"). Bis zum 05.09.2026 stand hier eine Liste mit Name, Punktreihe und
+ * ganzem Bonussatz je Marke — bei sieben Marken über 200 px Höhe, und die
+ * gingen dem Brett ab. Der Satz ist nicht verloren: Er steht als Vorlese-Text
+ * im Chip und als `title` am Zeiger.
  *
- * `staende` kommt aus der Sicht und ist die einzige Wahrheit ueber Anzahl
- * und Schwelle. Die Tabelle steuert nur die PUNKTE bei — wie viele Stufen es
- * gibt und wo sie liegen; fehlt sie noch, bleiben die Punkte weg und der
- * Rest steht trotzdem da.
+ * WO SIE STEHT, entscheidet weiterhin allein das Stylesheet
+ * (Synergien.module.css): am Handy als Reihe über dem Brett, ab 75rem als
+ * Spalte an der linken Kante. Zugeklappt wird nichts mehr — eine Reihe aus
+ * 22 px hohen Chips ist nichts, was man wegräumen müsste, und der Klappknopf
+ * war selbst so hoch wie sie.
+ *
+ * `staende` kommt aus der Sicht und ist die einzige Wahrheit über Anzahl und
+ * Schwelle. Die Tabelle steuert nur den Bonus-Satz bei; fehlt sie noch,
+ * bleibt der Satz kürzer und der Zähler steht trotzdem da.
  */
 export function Synergieleiste({
   staende,
@@ -335,27 +339,10 @@ export function Synergieleiste({
   staende: readonly Synergiestand[];
   tabelle: readonly Synergie[];
 }): React.JSX.Element {
-  const [offen, setOffen] = useState(true);
-  const nachMarke = useMemo(
-    () => new Map(tabelle.map((s) => [s.marke, s])),
-    [tabelle],
-  );
+  const nachMarke = useMemo(() => new Map(tabelle.map((s) => [s.marke, s])), [tabelle]);
 
   return (
-    <section className={stil.leiste} data-offen={offen ? '' : undefined} aria-label="Synergien">
-      <button
-        type="button"
-        className={stil.kopf}
-        aria-expanded={offen}
-        onClick={() => setOffen((a) => !a)}
-      >
-        <span>Synergien</span>
-        {/* Die Zahl steht auch im zugeklappten Zustand da — sonst muesste man
-            aufklappen, um zu sehen, ob es ueberhaupt etwas zu sehen gibt. */}
-        <span className={stil.kopfzahl}>{staende.length}</span>
-        <span className={stil.pfeil} aria-hidden="true" />
-      </button>
-
+    <section className={stil.leiste} aria-label="Synergien">
       <ul className={stil.liste}>
         {staende.length === 0 && (
           <li className={stil.leer}>
@@ -365,47 +352,42 @@ export function Synergieleiste({
         {staende.map((stand) => {
           const synergie = nachMarke.get(stand.marke);
           const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
+          const satz = standSatz(stand, synergie);
+          /*
+           * „2/4", solange es eine naechste Schwelle gibt, sonst nur die Zahl:
+           * Auf der hoechsten Stufe waere jeder Nenner erfunden.
+           */
+          const zaehler =
+            stand.naechsteSchwelle !== null
+              ? `${stand.anzahl}/${stand.naechsteSchwelle}`
+              : `${stand.anzahl}`;
           return (
             <li
               key={stand.marke}
-              className={stil.eintrag}
+              className={stil.chip}
               /* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Nicht
                  "anzahl >= 2" — die 2 stuende dann im Client. */
               data-aktiv={stand.schwelle !== null ? '' : undefined}
               style={{ '--marke': farbe } as React.CSSProperties}
+              /* Am Zeiger die ganze Auskunft. Am Handy gibt es keinen Zeiger;
+                 dort ist der Vorlese-Text unten dieselbe Auskunft. */
+              title={satz ? `${stand.name} · ${satz}` : stand.name}
             >
-              <span className={stil.zeile}>
-                <span className={stil.zeichen} style={{ color: farbe }}>
-                  <svg className={stil.glyphe} viewBox="0 0 24 24" aria-hidden="true">
-                    {MARKEN_ZEICHEN[stand.marke] ?? <circle cx="12" cy="12" r="7" />}
-                  </svg>
-                </span>
-                <span className={stil.name}>{stand.name}</span>
-                <span className={stil.anzahl}>
-                  {stand.anzahl}
-                  {stand.naechsteSchwelle !== null ? ` von ${stand.naechsteSchwelle}` : ''}
-                </span>
+              <span className={stil.zeichen} style={{ color: farbe }}>
+                <svg className={stil.glyphe} viewBox="0 0 24 24" aria-hidden="true">
+                  {MARKEN_ZEICHEN[stand.marke] ?? <circle cx="12" cy="12" r="7" />}
+                </svg>
               </span>
-
-              {/* Die Punkte sind die Schwellen der Tabelle, nicht die
-                  Einheiten: drei Punkte, einer je Stufe. Voll ist, was die
-                  Anzahl aus der Sicht erreicht; der naechste traegt einen
-                  Ring. Vorgelesen wird davon nichts — der Satz darunter sagt
-                  dasselbe in Worten. */}
-              {synergie && (
-                <span className={stil.punkte} aria-hidden="true">
-                  {synergie.stufen.map((stufe) => (
-                    <i
-                      key={stufe.schwelle}
-                      className={stil.punkt}
-                      data-voll={stand.anzahl >= stufe.schwelle ? '' : undefined}
-                      data-naechste={stand.naechsteSchwelle === stufe.schwelle ? '' : undefined}
-                    />
-                  ))}
-                </span>
-              )}
-
-              <span className={stil.satz}>{standSatz(stand, synergie)}</span>
+              <span className={stil.zahl} aria-hidden="true">
+                {zaehler}
+              </span>
+              {/* Der ganze Satz fuer das Vorlesegeraet. Sichtbar waere er
+                  genau die Textliste, die diese Leiste losgeworden ist. */}
+              <span className={stil.nurVorlesen}>
+                {stand.name}: {stand.anzahl}
+                {stand.naechsteSchwelle !== null ? ` von ${stand.naechsteSchwelle}` : ''}
+                {satz ? ` · ${satz}` : ''}
+              </span>
             </li>
           );
         })}

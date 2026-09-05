@@ -396,15 +396,15 @@ describe('KampfAnzeige', () => {
     zeige([paarung()], 0);
     const getroffen = (): Element => screen.getByLabelText(/Dorfwache, Stufe 2/);
 
-    // Vor dem ersten Treffer (500 ms) ist an der Figur nichts als ihr Koerper
-    // und der Lebensbalken.
-    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(0);
+    // Vor dem ersten Treffer (500 ms) haengt an der Figur genau EIN <i>: der
+    // Schatten unter ihren Fuessen. Er ist immer da — er sagt, dass sie auf
+    // dem Feld steht, nicht dass sie getroffen wurde.
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(1);
 
     lauf(600);
-    // Zwei unmittelbare Kinder vom Typ <i>: das Aufleuchten und der
-    // Einschlagring. Der Staub kommt erst mit dem Tod und liegt in einem
-    // <span>.
-    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(2);
+    // Dazu zwei weitere: das Aufleuchten und der Einschlagring. Der Staub
+    // kommt erst mit dem Tod und liegt in einem <span>.
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(3);
   });
 
   it('wirbelt beim Tod Staub auf, und die Gefallene bleibt im Baum', () => {

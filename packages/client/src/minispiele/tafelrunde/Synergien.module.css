@@ -10,151 +10,70 @@
  *
  * WO DIE LEISTE STEHT, entscheidet allein diese Datei:
  *
- *   Am Handy liegt sie IM FLUSS ueber dem Brett und laesst sich zuklappen —
- *   ein hoher Kasten wuerde den Laden sonst unter den Rand druecken, und der
- *   ist die einzige Stelle, an der man kaufen kann.
+ *   Am Handy liegt sie IM FLUSS ueber dem Brett, als eine Reihe von Chips.
+ *   Zuklappen gibt es nicht mehr: Seit sie Zaehler zeigt statt Saetze, ist sie
+ *   eine Zeile hoch — der Klappknopf war selbst so hoch wie sie.
  *
- *   Ab 64rem haengt sie FEST an der linken Kante neben dem Brett. Fest und
- *   nicht im Fluss, weil der Tisch (.tr-tisch in styles.css) eine zentrierte
- *   Spalte fester Breite ist: Ein Element im Fluss haette entweder die Spalte
- *   aufgerissen oder das Brett aus der Mitte geschoben — und styles.css
- *   gehoert nicht zu dieser Aufgabe. Die 480 px sind die halbe Spaltenbreite
- *   bei 40rem-Aufwaerts-Mass (min(70vw, 560px)) plus Luft; unter 64rem
- *   Fensterbreite bliebe daneben kein Platz, deshalb greift die Regel erst
- *   dort.
+ *   Ab 75rem haengt sie FEST an der linken Kante neben dem Brett, dann als
+ *   Spalte. Fest und nicht im Fluss, weil der Tisch (.tr-tisch in styles.css)
+ *   eine zentrierte Spalte fester Breite ist: Ein Element im Fluss haette
+ *   entweder die Spalte aufgerissen oder das Brett aus der Mitte geschoben.
  */
 
-/* -- Die Leiste ----------------------------------------------------------- */
+/* -- Die Leiste: eine Reihe kleiner Zaehler ------------------------------- */
 
+/*
+ * Kein Kasten mehr, sondern eine Reihe Chips: Sie soll neben dem Brett
+ * liegen wie eine Zeile Beiwerk und nicht wie ein zweites Bedienfeld. Kein
+ * eigener Hintergrund und keine Kante — den Rahmen gibt jeder Chip selbst.
+ */
 .leiste {
   width: min(94vw, 460px);
-  border-radius: 12px;
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--line);
-  overflow: hidden;
 }
-
-.kopf {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 7px 10px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font: 800 11px/1.2 system-ui;
-  text-align: left;
-  cursor: pointer;
-}
-.kopf > span:first-child { flex: 1; }
-.kopfzahl {
-  padding: 0 5px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  font: 800 10px/1.5 system-ui;
-}
-/* Ein Winkel aus zwei Strichen statt eines Zeichens: Ein Schriftzeichen faellt
-   je nach Geraet anders aus, dieser Winkel nicht. */
-.pfeil {
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 160ms ease;
-}
-.leiste[data-offen] .pfeil { transform: rotate(45deg); }
 
 .liste {
-  display: none;
-  flex-direction: column;
+  display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin: 0;
-  padding: 0 8px 8px;
+  padding: 0;
   list-style: none;
 }
-.leiste[data-offen] .liste { display: flex; }
 
 .leer {
-  padding: 4px 2px;
-  color: var(--muted);
-  font: 600 11px/1.35 system-ui;
-}
-
-/* -- Ein Eintrag ---------------------------------------------------------- */
-
-.eintrag {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 2px 6px;
-  padding: 5px 7px;
-  border-radius: 9px;
-  border-left: 3px solid transparent;
-  background: rgba(255, 255, 255, 0.03);
-}
-/* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Der Balken traegt
-   die Farbe der Marke — dieselbe wie das Zeichen daneben und wie die Zeichen
-   an den Einheiten auf dem Brett. */
-.eintrag[data-aktiv] {
-  border-left-color: var(--marke);
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.zeile {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-  font: 800 11px/1.2 system-ui;
-}
-.eintrag[data-aktiv] .name { color: var(--text); }
-.anzahl {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font: 700 10px/1.2 system-ui;
-}
-.eintrag[data-aktiv] .anzahl { color: var(--gold); }
-
-/* Die Schwellen als Punkte: einer je Stufe der Tabelle. Voll = erreicht, mit
-   Ring = die naechste. Wer mehr wissen will, liest den Satz darunter. */
-.punkte {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 5px;
-  padding: 1px 0 0 1px;
-  color: var(--marke);
-}
-.punkt {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px currentColor;
-  opacity: 0.45;
-}
-.punkt[data-voll] {
-  background: currentColor;
-  opacity: 1;
-}
-.punkt[data-naechste] {
-  opacity: 1;
-  box-shadow: inset 0 0 0 1px currentColor, 0 0 0 2px rgba(255, 255, 255, 0.14);
-}
-
-.satz {
-  grid-column: 1 / -1;
+  padding: 1px 2px;
   color: var(--muted);
   font: 600 10px/1.35 system-ui;
 }
-.eintrag[data-aktiv] .satz { color: rgba(255, 255, 255, 0.78); }
+
+/* -- Ein Zaehler ---------------------------------------------------------- */
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  font: 800 10px/1.4 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+/*
+ * Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Der Chip nimmt dann
+ * die Farbe SEINER Marke an — dieselbe wie das Zeichen darin und wie die
+ * Zeichen an den Einheiten auf dem Brett. Farbe und Ring zusammen, weil ein
+ * halbdurchsichtiger Farbton allein auf dem dunklen Grund kaum auffaellt.
+ */
+.chip[data-aktiv] {
+  background: color-mix(in srgb, var(--marke) 18%, transparent);
+  box-shadow: inset 0 0 0 1px var(--marke);
+  color: var(--text);
+}
+
+.zahl { letter-spacing: -0.01em; }
+.chip[data-aktiv] .zahl { color: var(--text); }
 
 /* -- Die Zeichen ---------------------------------------------------------- */
 
@@ -280,35 +199,30 @@
  * Erst ab 75rem (1200 px), und die Zahl ist gerechnet und nicht geraten:
  * Der breiteste Teil des Tisches ist der Laden mit `min(72vw, 600px)`
  * (.tr-fuss in styles.css), zentriert — seine linke Kante liegt also bei
- * `50% - 300px`. Daneben muessen 208 px Leiste plus zweimal 12 px Luft
- * passen, das sind 232; bei 1200 px Fensterbreite stehen 300 zur Verfuegung.
- * Bei 64rem waeren es 212 gewesen, und die Leiste haette den Laden um
- * 20 px ueberdeckt — genau so ist es beim ersten Bau passiert.
+ * `50% - 300px`. Daneben muessen die Leiste plus zweimal 12 px Luft passen;
+ * bei 1200 px Fensterbreite stehen 300 zur Verfuegung. Bei 64rem waeren es
+ * 212 gewesen, und die Leiste haette den Laden ueberdeckt — genau so ist es
+ * beim ersten Bau passiert.
  */
 @media (min-width: 75rem) {
   .leiste {
     position: fixed;
     /* Immer 12 px links vom Laden, bis zum linken Rand des Fensters. */
     left: max(12px, calc(50% - 520px));
-    top: 96px;
-    width: 208px;
-    max-height: calc(100dvh - 128px);
+    top: 108px;
+    width: auto;
+    max-height: calc(100dvh - 140px);
     overflow-y: auto;
     /* Am Ende des Rollens nicht an die Seite weiterreichen — dieselbe Zeile
        aus demselben Grund wie an .tr-tisch: Sonst zieht der Daumen unter
        Android das Neuladen der Seite auf. */
     overscroll-behavior: contain;
   }
-  /* Seitlich gibt es keinen Grund zuzuklappen, und ein Klappknopf, der am
-     Handy zugeklappt wurde, duerfte die Leiste hier nicht leeren. Deshalb ist
-     der Knopf weg UND die Liste immer offen. */
-  .kopf { display: none; }
-  .liste,
-  .leiste[data-offen] .liste { display: flex; padding: 8px; }
-}
-
-/* Wer weniger Bewegung eingestellt hat, bekommt denselben Zustand ohne den
-   Weg dorthin — wie im Rest des Spiels. */
-@media (prefers-reduced-motion: reduce) {
-  .pfeil { transition: none; }
+  /* Untereinander statt nebeneinander: Seitlich ist Hoehe da und Breite
+     knapp, am Handy genau andersherum. */
+  .liste {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .leer { max-width: 180px; }
 }

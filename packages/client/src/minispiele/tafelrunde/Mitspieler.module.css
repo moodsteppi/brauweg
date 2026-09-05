@@ -7,166 +7,124 @@
  * --line, --muted, --text, --gold, --accent, --danger), damit die Leiste wie
  * ein Teil der Rüstkammer aussieht.
  *
- * WO SIE STEHT, entscheidet allein diese Datei:
+ * EIN WAAGERECHTER STREIFEN, keine Liste mehr. Je Sitz eine schmale Kachel;
+ * bei acht Sitzen rollt der Streifen seitlich, statt in die Höhe zu wachsen.
+ * Das ist der Grund für die feste Kachelbreite: Eine Kachel, die sich die
+ * Breite teilt, wäre bei acht Sitzen 44 px schmal, und darin steht kein Name.
  *
- *   Am Handy liegt sie IM FLUSS über dem Brett und lässt sich zuklappen. Ein
- *   hoher Kasten mit acht Zeilen würde den Laden sonst unter den Rand drücken,
- *   und der ist die einzige Stelle, an der man kaufen kann.
- *
- *   Ab 64rem hängt sie FEST an der RECHTEN Kante neben dem Brett — links hängt
- *   schon die Synergieleiste. Fest und nicht im Fluss, weil der Tisch
- *   (.tr-tisch in styles.css) eine zentrierte Spalte fester Breite ist: Ein
- *   Element im Fluss risse entweder die Spalte auf oder schöbe das Brett aus
- *   der Mitte. Die 480 px sind dieselbe halbe Spaltenbreite plus Luft wie bei
- *   der Synergieleiste; darunter bliebe daneben kein Platz.
+ * Die Leiste positioniert sich NICHT selbst — sie sitzt in der
+ * festgehefteten Kopfleiste des Tisches (`.tr-oben` in styles.css) und füllt
+ * deren Breite. Bis zum 05.09.2026 hing sie am Desktop fest an der rechten
+ * Kante; das ist entfallen, weil sie jetzt oben steht und dort für jede
+ * Bildschirmbreite dasselbe tut.
  */
 
-/* -- Die Leiste ----------------------------------------------------------- */
-
 .leiste {
-  width: min(94vw, 460px);
-  border-radius: 12px;
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--line);
-  overflow: hidden;
+  min-width: 0;
+  flex: 1 1 auto;
 }
-
-.kopf {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px 10px;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: 800 12px/1 system-ui;
-  text-align: left;
-  cursor: pointer;
-}
-
-.kopfzahl {
-  margin-left: auto;
-  color: var(--muted);
-  font: 700 11px/1 system-ui;
-}
-
-.pfeil {
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(-45deg);
-  transition: transform 0.16s ease;
-}
-.leiste[data-offen] .pfeil { transform: rotate(45deg); }
 
 .liste {
-  display: none;
+  display: flex;
+  gap: 5px;
   margin: 0;
-  padding: 0 8px 8px;
+  padding: 0;
   list-style: none;
+  /* Acht Kacheln sind breiter als ein Handy. Seitlich rollen und einrasten —
+     und die Rollleiste selbst weg: Sie wäre über einer 70 px hohen Kachel
+     ein Fünftel der Höhe. */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
 }
-.leiste[data-offen] .liste { display: block; }
+.liste::-webkit-scrollbar { display: none; }
 
-.reihe { margin: 0 0 4px; }
-.reihe:last-child { margin-bottom: 0; }
+.reihe {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
 
-/* -- Eine Zeile ----------------------------------------------------------- */
+/* -- Eine Kachel ---------------------------------------------------------- */
 
-.eintrag {
-  display: block;
-  width: 100%;
-  padding: 6px 8px 7px;
+.kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* 60 px: breit genug für einen Namen mit Auslassungspunkten und für einen
+     Daumen, schmal genug, dass bei vier Sitzen alle vier auf ein 390er-Handy
+     passen (4 x 60 + Lücken + Zurück-Knopf = 325 von 374). */
+  width: 60px;
+  padding: 3px 3px 2px;
   border: 1px solid var(--line);
-  border-radius: 9px;
-  background: rgba(0, 0, 0, 0.16);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.24);
   color: var(--text);
-  font: 700 11px/1.2 system-ui;
-  text-align: left;
+  font: 700 10px/1.15 system-ui;
+  text-align: center;
 }
-button.eintrag { cursor: pointer; }
+button.kachel { cursor: pointer; }
 
 /* Der eigene Sitz tritt hervor, ohne zu schreien: eine ruhige Kante, keine
-   Farbfläche — er steht acht Zeilen lang neben den anderen. */
-.eintrag[data-ich] { border-color: var(--accent); background: rgba(74, 156, 120, 0.12); }
+   Farbfläche — er steht acht Kacheln lang neben den anderen. */
+.kachel[data-ich] { border-color: var(--accent); background: rgba(74, 156, 120, 0.14); }
 
-/* Der Gegner dieser Runde ist die auffälligste Zeile der Leiste. Gold, weil
+/* Der Gegner dieser Runde ist die auffälligste Kachel der Leiste. Gold, weil
    das die Hervorhebungsfarbe der Plattform ist (DESIGN.md) — und zusätzlich
-   die Marke „Gegner" im Text, denn Farbe allein trägt keine Auskunft. */
-.eintrag[data-gegner] {
+   das Wort „Gegner" darunter, denn Farbe allein trägt keine Auskunft. */
+.kachel[data-gegner] {
   border-color: var(--gold);
-  box-shadow: 0 0 0 1px var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 14px -4px rgba(226, 182, 79, 0.8);
 }
 
-/* Wessen Brett gerade oben liegt. Ein feiner Ring, damit er nicht mit der
-   Gegnermarkierung verwechselt wird. */
-.eintrag[data-an] { box-shadow: inset 0 0 0 1px var(--text); }
-.eintrag[data-an][data-gegner] { box-shadow: 0 0 0 1px var(--gold), inset 0 0 0 1px var(--text); }
+/* Wessen Brett gerade oben liegt. Ein feiner Ring nach innen, damit er nicht
+   mit der Gegnermarkierung verwechselt wird. */
+.kachel[data-an] { box-shadow: inset 0 0 0 1px var(--text); }
+.kachel[data-an][data-gegner] { box-shadow: 0 0 0 1px var(--gold), inset 0 0 0 1px var(--text); }
 
 /* Ausgeschieden: ausgegraut, aber lesbar. Ganz wegnehmen wäre falsch — man
-   will sehen, wer schon draußen ist. */
-.eintrag[data-aus] { opacity: 0.45; }
+   will sehen, wer schon draußen ist. Die Sättigung kommt mit heraus: Ein
+   ausgeschiedener Sitz soll auch aus dem Augenwinkel tot aussehen. */
+.kachel[data-aus] { opacity: 0.42; filter: saturate(0.35); }
 
-.zeile {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+/* -- Bild ----------------------------------------------------------------- */
 
-.name {
-  flex: 1 1 auto;
+.bild {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
-
-.marke {
-  flex: 0 0 auto;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: var(--line);
-  color: var(--text);
-  font: 800 9px/1.5 system-ui;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.bild img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.gegnerMarke { background: var(--gold); color: #1a1408; }
-
-.werte {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 3px;
+.buchstabe {
   color: var(--muted);
-  font: 700 10px/1 system-ui;
+  font: 800 14px/1 system-ui;
 }
+.kachel[data-ich] .buchstabe { color: var(--accent); }
+.kachel[data-gegner] .buchstabe { color: var(--gold); }
 
-.leben {
+/* -- Leben ---------------------------------------------------------------- */
+
+.lebenzeile {
   display: flex;
   align-items: center;
   gap: 3px;
-  color: var(--danger);
+  width: 100%;
 }
-
-.zeichen {
-  width: 11px;
-  height: 11px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.rang { color: var(--muted); }
-.bereit { color: var(--accent); }
-.weg { color: var(--danger); }
 
 .balken {
-  display: block;
-  height: 3px;
-  margin-top: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 4px;
   border-radius: 999px;
   background: var(--line);
   overflow: hidden;
@@ -178,31 +136,73 @@ button.eintrag { cursor: pointer; }
   background: var(--danger);
   transition: width 0.3s ease;
 }
-.eintrag[data-ich] .balken i { background: var(--accent); }
+.kachel[data-ich] .balken i { background: var(--accent); }
 
-/* -- Am Desktop: fest an der rechten Kante -------------------------------- */
+.leben {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1px;
+  color: var(--danger);
+  font: 800 10px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
 
-@media (min-width: 64rem) {
-  .leiste {
-    position: fixed;
-    top: 96px;
-    /* Halbe Spaltenbreite des Tisches plus Luft — dieselbe Rechnung wie bei
-       der Synergieleiste, nur zur anderen Seite. */
-    left: calc(50% + 300px);
-    width: min(260px, calc(50vw - 300px));
-    max-height: calc(100dvh - 140px);
-    overflow-y: auto;
-    z-index: 3;
-  }
-  /* Am Desktop gibt es keinen Klappknopf — die Liste steht immer. */
-  .kopf { pointer-events: none; }
-  .pfeil { display: none; }
-  .liste { display: block; }
+.zeichen {
+  width: 9px;
+  height: 9px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* -- Name und Zustand ----------------------------------------------------- */
+
+.name {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+/* Immer da, auch leer — sonst wackelt die Höhe des Streifens bei jedem
+   „bereit". */
+.zustand {
+  display: block;
+  min-height: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marke,
+.gegnerMarke {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--text);
+  font: 800 8px/1.4 system-ui;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.gegnerMarke { background: var(--gold); color: #1a1408; }
+
+.rang { color: var(--muted); font: 700 9px/1.2 system-ui; }
+.bereit { color: var(--accent); font: 800 9px/1.2 system-ui; }
+.raus { color: var(--danger); font: 800 9px/1.2 system-ui; }
+
+@media (min-width: 40rem) {
+  .kachel { width: 74px; }
+  .bild { width: 36px; height: 36px; }
+  .buchstabe { font-size: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pfeil,
-  .balken i {
-    transition: none;
-  }
+  .balken i { transition: none; }
+  .liste { scroll-behavior: auto; }
 }
