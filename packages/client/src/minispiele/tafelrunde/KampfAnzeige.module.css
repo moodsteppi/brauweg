@@ -109,6 +109,10 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
+  /* Ueber allen Figuren, und deshalb mit einer Zahl: Seit die Figuren nach
+     ihrer Reihe gestapelt werden (`.figur`, hoechstens einstellig), reicht die
+     Baumreihenfolge dafuer nicht mehr. */
+  z-index: 10;
   background:
     radial-gradient(78% 52% at 50% -6%, rgba(255, 226, 165, 0.16), transparent 70%),
     radial-gradient(128% 98% at 50% 50%, transparent 66%, rgba(5, 8, 11, 0.34));
@@ -146,9 +150,15 @@
 /*
  * Die Figur sitzt ABSOLUT auf ihrem Arenaplatz, und der Platz ist ein
  * Uebergang: Ein Zug im Protokoll aendert nur `left` und `top`, den Weg
- * dazwischen malt der Browser. 380 ms sind etwas kuerzer als ein Schritt der
- * Simulation (SCHRITT_MS = 500), damit die Figur steht, bevor der naechste
- * Schritt faellig ist — sonst schiebt sich Zug ueber Zug.
+ * dazwischen malt der Browser. Er muss etwas kuerzer sein als ein Schritt der
+ * Simulation, damit die Figur steht, bevor der naechste faellig ist — sonst
+ * schiebt sich Zug ueber Zug.
+ *
+ * DIE DAUER KOMMT AUS `bildfolge.ts` (`GLEITEN_MS`, gesetzt als `--gleiten`),
+ * und dort steht auch die Rechnung dahinter. Sie muss dort stehen, weil die
+ * Lauf-Bildfolge genau so lange laufen muss wie dieser Uebergang; zwei Zahlen
+ * an zwei Stellen liefen beim ersten Nachstellen auseinander. Der Wert hier
+ * ist nur der Rueckfall, falls die Angabe ausbleibt.
  */
 .figur {
   position: absolute;
@@ -166,8 +176,8 @@
   color: var(--tr-kosten, var(--muted));
   pointer-events: none;
   transition:
-    left 380ms ease-in-out,
-    top 380ms ease-in-out;
+    left var(--gleiten, 280ms) ease-in-out,
+    top var(--gleiten, 280ms) ease-in-out;
   /*
    * Das Schweben im Stand: Wer wartet, atmet. Ohne das steht zwischen zwei
    * Schritten ein Standbild, und ein Standbild sieht nach haengender
@@ -315,6 +325,76 @@
 }
 
 /*
+ * -- Die 3D-Figur: ein Ausschnitt aus dem Blatt ihrer Rolle ----------------
+ *
+ * Der Kasten ist QUADRATISCH, weil eine Zelle des Blattes es ist (128 x 128,
+ * siehe figuren3d.ts). Er ist breiter als die Karte und ragt nach oben ueber
+ * sie hinaus: Der Ausschnitt umfasst alle Bewegungen, auch den weit
+ * ausgeholten Schlag, und traegt darum viel Luft ueber dem Kopf. Wer ihn in
+ * die Karte zwingt, bekommt eine Figur, die halb so gross ist wie ihr Feld.
+ *
+ * Ueber `left`/`right`/`bottom` gesetzt und nicht ueber `translate`: Das
+ * Spiegeln der Gegenseite braucht eine eigene Angabe, und zwei Dinge in
+ * demselben `transform` schliessen einander aus. Deshalb steht das Spiegeln
+ * in `scale` — der eigenstaendigen Eigenschaft, nicht der Funktion.
+ *
+ * `overflow: hidden` ist hier keine Vorsichtsmassnahme, sondern der Kern der
+ * Sache: Es IST der Ausschnitt, durch den man eine von dreissig Zellen sieht.
+ */
+.figur3d {
+  position: absolute;
+  left: 50%;
+  /*
+   * DIE ZWEI ZAHLEN SIND GERECHNET, nicht probiert — mit dem Fusspunkt aus
+   * figuren3d.ts (73,94 % der Zellhoehe, weil der Ausschnitt oben Luft fuer
+   * den Schlag laesst). Gewuenscht ist: Die Figur steht auf 78 % der
+   * Kartenhoehe, also knapp ueber den Sternen, und ist so hoch wie 79 % der
+   * Karte. Daraus folgt eine Zelle von 180 % Kartenhoehe, deren Unterkante
+   * 25 % darunter liegt: 0,25 − 1,80 + 0,7394 · 1,80 = 0,78.
+   *
+   * GROESSER GEHT NICHT SINNVOLL: Bei 200 % ragt der Meuchler mit Kopf und
+   * Klingen seitlich ueber die Karte hinaus und sieht aus wie ein Aufkleber,
+   * der sich loest. Bei 180 % steht nur der Kopf ueber dem oberen Rand — die
+   * Figur steht dann VOR ihrer Karte, statt neben ihr zu liegen.
+   *
+   * Ueber die HOEHE bemessen und nicht ueber die Breite: Dann haengt die
+   * Rechnung nur an der Kartenhoehe und nicht zusaetzlich am
+   * Seitenverhaeltnis der Wabe, das sich mit der Spaltenzahl aendert.
+   */
+  bottom: -25%;
+  height: 180%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  pointer-events: none;
+  /* `translate` und `scale` als eigenstaendige Eigenschaften: In EINEM
+     `transform` schloessen Mitte-Setzen und Spiegeln einander aus. */
+  translate: -50% 0;
+}
+.figur3d[data-spiegel] {
+  scale: -1 1;
+}
+
+/*
+ * Das ganze Blatt, sechsmal so breit und fuenfmal so hoch wie der Ausschnitt.
+ * Verschoben wird es von der Komponente (`bildSchieben`) ueber `transform` —
+ * hier steht deshalb KEINE Angabe dazu: Sie waere die, die beim naechsten
+ * Zeichnen wieder zurueckgesetzt wuerde.
+ *
+ * `will-change: transform` haelt das Blatt auf einer eigenen Ebene. Bei bis zu
+ * sechzehn Figuren, die dreissigmal je Sekunde ihr Bild wechseln, ist das der
+ * Unterschied zwischen einem Verschieben und einem Neuzeichnen.
+ */
+.blatt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 600%;
+  height: 500%;
+  max-width: none;
+  will-change: transform;
+}
+
+/*
  * Der Ausschlag beim Angriff: ein kurzer Satz in Richtung des Ziels und
  * zurueck. `--dx`/`--dy` kommen aus der Komponente, in Prozent der eigenen
  * Breite und Hoehe; knapp der halbe Weg genuegt, damit klar ist, WOHIN
@@ -336,10 +416,23 @@
   100% { transform: none; }
 }
 
+/*
+ * Die Stufe. Absolut an den unteren Rand der Karte geheftet und nicht in der
+ * Spalte mitlaufend: Die Figur liegt seit den Bildfolgen absolut ueber der
+ * Karte, und ohne Gegenstueck saessen die Sterne dann in ihrer Mitte — quer
+ * ueber dem Bauch der Figur. Ganz oben liegen sie, weil sie sonst hinter ihr
+ * verschwinden.
+ */
 .sterne {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1px;
+  z-index: 1;
   color: var(--gold);
   font: 700 8px/1 system-ui;
   letter-spacing: -1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .leben {
@@ -468,6 +561,9 @@
 
 .ergebnis {
   position: absolute;
+  /* Ueber dem Lichtkegel und damit ueber allem: Das Ergebnis ist die einzige
+     Auskunft, die nichts vor sich haben darf. */
+  z-index: 11;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -558,4 +654,8 @@
      die Figur auf dem Feld steht. Nur seine Gegenbewegung entfaellt, und die
      braucht er auch nicht mehr: Die Figur atmet ja nicht mehr. */
   .schatten { animation: none; }
+  /* Die BILDFOLGE steht hier nicht: Welche Zelle eines Blattes zu sehen ist,
+     ist kein Uebergang und keine Animation, sondern eine Angabe, die die
+     Komponente setzt. Sie fragt dieselbe Einstellung selbst ab und zeigt dann
+     das Standbild der jeweiligen Bewegung (`bildstand` in bildfolge.ts). */
 }

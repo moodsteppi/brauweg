@@ -25,8 +25,8 @@ const SITZE: Sitzzeile[] = [
 ];
 
 const KATALOG = {
-  dorfwache: { id: 'dorfwache', name: 'Dorfwache', kosten: 1 },
-  waldlaeufer: { id: 'waldlaeufer', name: 'Waldläufer', kosten: 2 },
+  dorfwache: { id: 'dorfwache', name: 'Dorfwache', kosten: 1, rolle: 'wache' },
+  waldlaeufer: { id: 'waldlaeufer', name: 'Waldläufer', kosten: 2, rolle: 'schuetze' },
 };
 
 function stand(teil: { sitz: number; leben?: number; ausRunde?: number | null }) {

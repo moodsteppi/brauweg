@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  *      eigenen Weg mit. Ohne das zerfiele die eine Wartezeit wieder in zwei.
  */
 
+import { BLATT_PFADE } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import { PAKET_KB, PAKET_KENNUNG } from './paket';
 import {
@@ -71,12 +72,24 @@ describe('vorladen', () => {
   });
 
   describe('die Liste', () => {
-    it('enthaelt jede Figur, den Untergrund und das Spielpaket', () => {
+    it('enthaelt jede Figur, jedes Blatt, den Untergrund und das Spielpaket', () => {
       const pfade = VORZULADEN.map((p) => p.pfad);
       for (const figur of Object.values(FIGUREN)) expect(pfade).toContain(figur);
+      /* Die fuenf Blaetter der Bildfolgen: Sie kommen erst in der Kampfphase
+         zum Einsatz, wiegen aber mehr als alles andere an Bildern zusammen —
+         wer sie erst dann holt, sieht seinen ersten Kampf ohne Figuren. */
+      for (const blatt of BLATT_PFADE) expect(pfade).toContain(blatt);
       expect(pfade).toContain(UNTERGRUND);
       expect(pfade).toContain(PAKET_KENNUNG);
-      expect(pfade).toHaveLength(Object.keys(FIGUREN).length + 2);
+      expect(pfade).toHaveLength(Object.keys(FIGUREN).length + BLATT_PFADE.length + 2);
+    });
+
+    it('gewichtet ein Blatt schwerer als den Untergrund', () => {
+      const blatt = VORZULADEN.find((p) => p.pfad === BLATT_PFADE[0]);
+      const untergrund = VORZULADEN.find((p) => p.pfad === UNTERGRUND);
+      // Ein Blatt liegt bei rund 43 kB, die Textur bei 35. Fuenf Blaetter sind
+      // damit gut zwei Drittel des Gewichts — der Balken muss das abbilden.
+      expect(blatt?.kb).toBeGreaterThan(untergrund?.kb ?? 0);
     });
 
     it('nennt keinen Pfad doppelt', () => {
@@ -118,13 +131,19 @@ describe('vorladen', () => {
      * deshalb nur die Groessenordnung, nicht der Wert. Steht das Paket eines
      * Tages bei 1 oder bei 500, sagt der Balken etwas Falsches ueber die
      * laengste Wartezeit des Spiels.
+     *
+     * DIE UNTERE SCHRANKE WAR EINMAL EIN ZEHNTEL. Seit die fuenf Blaetter der
+     * Bildfolgen mit in der Liste stehen (6.9.2026), wiegen die Bilder rund
+     * 272 statt 57 kB — das Paket liegt damit knapp unter einem Zehntel, ohne
+     * dass sich an ihm etwas geaendert haette. Ein Zwanzigstel ist immer noch
+     * eng genug, um eine 1 oder eine 500 zu fangen.
      */
     it('gibt dem Spielpaket ein Gewicht in der Groessenordnung der Bilder', () => {
       const bilder = VORZULADEN.filter((p) => p.pfad !== PAKET_KENNUNG).reduce(
         (summe, p) => summe + p.kb,
         0,
       );
-      expect(PAKET_KB).toBeGreaterThan(bilder / 10);
+      expect(PAKET_KB).toBeGreaterThan(bilder / 20);
       expect(PAKET_KB).toBeLessThan(bilder * 3);
     });
   });

@@ -86,7 +86,11 @@ export function Endbild({
   sitz: number;
   /** Die eigene Aufstellung, so wie sie zuletzt stand. */
   brett: readonly (Aufsteller | null)[];
-  katalog: Record<string, Einheitenbild & { rolle?: string }>;
+  /* `Einheitenbild` fuehrt die Rolle inzwischen selbst (KampfAnzeige.tsx):
+     Sie entscheidet dort, welches 3D-Blatt eine Figur spielt. Das Endbild
+     braucht sie nicht, nimmt sie aber mit — ein zweiter Katalogtyp waere die
+     Stelle, an der beim naechsten Feld nachgezogen werden muesste. */
+  katalog: Record<string, Einheitenbild>;
   eigenes: Sitzstand;
   gegner: readonly Sitzstand[];
   runde: number;
