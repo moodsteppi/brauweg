@@ -39,8 +39,8 @@ import { KATALOG, MARKEN, SCHWELLEN } from '../src/index.js';
  *
  * Vierhundert und nicht achtzig: Eine Partie zu viert dauert seit dem kuerzeren
  * Lebensbalken 15 statt 27 Runden und kostet damit ein Vielfaches weniger. Bei
- * vierhundert traegt die schwaechste gezaehlte Marke 171 Antritte und die
- * naechste schon 367; bei achtzig waere die schwaechste unter vierzig und ihr
+ * vierhundert traegt die schwaechste gezaehlte Marke 184 Antritte und die
+ * naechste schon 272; bei achtzig waere die schwaechste unter vierzig und ihr
  * Standardfehler groesser als der Abstand, den die Probe messen soll. Mehr
  * waeren besser und gehoeren ins Werkzeug, nicht in einen Testlauf, den jemand
  * vor jedem Commit abwartet.
@@ -66,20 +66,22 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * grundlos an.
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Ueber 400
- * Partien zu viert fallen Drache (14 Antritte) und Elementar (49) heraus.
- * Uebrig bleiben fuenf Zeilen — Waechter 1054, Krieger 819, Meuchler 498,
- * Untot 367, Naturwesen 171 —, und die Mindestzahl unten verlangt fuenf.
- * WER DEN KATALOG SO AENDERT, DASS NATURWESEN UNTER HUNDERT FAELLT, SIEHT HIER
- * "nur 4 Marken mit genug Antritten" und nicht den eigentlichen Befund; die
- * Zahl 171 ist die knappste der Datei.
+ * Partien zu viert faellt nur noch NATURWESEN heraus (91 Antritte, seit es mit
+ * dem Irrlicht einen Traeger an Elementar abgegeben hat). Gezaehlt werden
+ * sechs Zeilen — Waechter 871, Krieger 681, Meuchler 493, Elementar 315,
+ * Untot 272, Drache 184 —, und die Mindestzahl unten verlangt sechs. WER DEN
+ * KATALOG SO AENDERT, DASS EINE DIESER ZEILEN UNTER HUNDERT FAELLT, SIEHT HIER
+ * "nur 5 Marken mit genug Antritten" und nicht den eigentlichen Befund; die
+ * Zahl 184 (Drache) ist die knappste der Datei, und Naturwesen liegt mit 91
+ * knapp unter der Schwelle — es kann also auch nach oben kippen.
  *
- * UNTOT STAND HIER BIS ZUM 05.09.2026 BEI EINEM ANTRITT und fiel damit selbst
- * ueber 5.000 Partien im Werkzeug durch. Gefehlt hat nicht die Stichprobe,
- * sondern ein dritter Traeger im Katalog: Solange nur Knochenspaeher und
- * Grabfuerstin die Marke trugen, hiess "Untot zu zweit" zwei Kopien derselben
- * Einheit. Seit der Schildknappe sie mittraegt (katalog.ts), zaehlt die Zeile
- * mit. Die beiden duennen Marken stehen im Konzeptdokument und gehoeren ins
- * Werkzeug, wo eine Messung ueber 5.000 Partien mehr Antritte bringt.
+ * ZWEI ZEILEN HABEN AM 05.09.2026 IHREN PLATZ HIER ERST BEKOMMEN, aus zwei
+ * verschiedenen Gruenden. Untot stand bei einem einzigen Antritt, weil nur
+ * Knochenspaeher und Grabfuerstin die Marke trugen — "Untot zu zweit" hiess
+ * zwei Kopien derselben Einheit; seit der Schildknappe sie mittraegt, zaehlt
+ * die Zeile. Drache und Elementar hingen daran, dass Elementar keinen Traeger
+ * in der Vorderreihe hatte; seit das Irrlicht dort steht, zaehlen beide.
+ * Beides steht ausfuehrlich im Konzeptdokument.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -107,14 +109,17 @@ describe('Ausgewogenheit: Marken', () => {
    * sondern DIE Wahl: Wer eine Aufstellung findet, die doppelt so oft gewinnt
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
-   * In dieser Auswahl reicht der weiteste Ausschlag von x1,25 (Krieger) bis
-   * x0,71 (Naturwesen) — nach beiden Seiten ist also Platz (Stand 05.09.2026).
+   * In dieser Auswahl reicht der weiteste Ausschlag von x1,12 (Krieger) bis
+   * x0,89 (Meuchler) — nach beiden Seiten ist also viel Platz. Das war am
+   * Morgen des 05.09.2026 noch x1,65 bis x0,25; enger wurde es durch die
+   * Elementar-Arbeit und den dritten Untot-Traeger, nicht durch eine
+   * Aenderung an dieser Probe.
    *
-   * ABER: Die Zeilen, die wirklich ausschlagen koennen, sind genau die, die
-   * hier herausfallen — Drache und Elementar mit vierzehn bzw. neunundvierzig
-   * Antritten ueber 400 Partien. Wer den Katalog anfasst, laesst deshalb das
-   * Werkzeug ueber 5.000 Partien laufen und verlaesst sich nicht auf diese
-   * Probe allein; die Auswertung steht im Konzeptdokument.
+   * ABER: Die einzige Zeile, die hier herausfaellt, ist Naturwesen mit 91
+   * Antritten — und sie kann ausschlagen, ohne dass es jemand sieht. Wer den
+   * Katalog anfasst, laesst deshalb das Werkzeug ueber 5.000 Partien laufen
+   * und verlaesst sich nicht auf diese Probe allein; die Auswertung steht im
+   * Konzeptdokument.
    */
   it('haelt jede gezaehlte Marke zwischen der Haelfte und dem Doppelten des Schnitts', () => {
     const schnitt = schnittQuote(AUSWERTUNG.marken, MINDEST_ANTRITTE);
@@ -122,7 +127,7 @@ describe('Ausgewogenheit: Marken', () => {
 
     // Ohne Zeilen gibt es nichts zu vergleichen — und eine Probe, die bei
     // leerer Tabelle gruen ist, prueft nichts.
-    assert.ok(gezaehlt.length >= 5, `nur ${gezaehlt.length} Marken mit genug Antritten`);
+    assert.ok(gezaehlt.length >= 6, `nur ${gezaehlt.length} Marken mit genug Antritten`);
     assert.ok(schnitt > 0, 'der Schnitt der Siegquoten ist null');
 
     for (const zeile of gezaehlt) {

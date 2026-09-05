@@ -37,7 +37,19 @@ import { defineConfig } from 'vitest/config';
  */
 // Die Schnittstelle der Plattform steht mit in der Liste: Die Spielpakete
 // selbst importieren sie, also braucht auch der Vertrag sie aus der Quelle.
-const pakete = ['api', 'cambio', 'doppelkopf', 'skat', 'tafelrunde', 'wizard'];
+const pakete = [
+  'api',
+  'cambio',
+  'doppelkopf',
+  'easypoker',
+  'eiland',
+  'feldherr',
+  'filler',
+  'mememory',
+  'skat',
+  'tafelrunde',
+  'wizard',
+];
 const alias = Object.fromEntries(
   pakete.map((name) => [
     `@brauweg/game-${name}`,

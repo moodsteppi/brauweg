@@ -279,3 +279,54 @@ test('Die Suche ueber HTTP: beginnen, nachfragen, abbrechen', async (t) => {
   const fertig = (await (await ruf('')).json()) as { tischId: string | null };
   assert.ok(fertig.tischId, 'nach dem Fenster nennt der Abruf den Tisch');
 });
+
+/**
+ * Die drei Bildschirme, die am 06.09.2026 dazugekommen sind.
+ *
+ * Filler, Eiland und Mememory suchten bis dahin ueber die Tischliste und
+ * schickten dabei Sitzzahl, Rundenzahl und Regelsatz selbst mit. Jetzt tut das
+ * die Vermittlung — und weil sie ihre Zahlen aus dem Modul holt, faellt ein
+ * Fehler dort nicht am Bildschirm auf, sondern erst an einem Tisch, der nicht
+ * losgeht oder zwanzig Partien lang spielt. Genau das steht hier unter
+ * Pruefung, je Spiel einmal:
+ *
+ *   - `zielSitze` nimmt die groesste Sitzzahl des Moduls (Filler/Eiland 2,
+ *     Mememory 4). Fuer Mememory ist das die bewusste Entscheidung dieser
+ *     Aufgabe: Am Vierertisch wird keiner der Gefundenen abgewiesen, und
+ *     laenger dauert eine Partie dadurch nicht (`vorrat` in partie.ts).
+ *   - `runden` muss die Eins des Moduls treffen. Alle drei Spiele sind EIN
+ *     Brett; zwanzig Runden waeren zwanzig Partien hintereinander.
+ *   - Der Tisch muss allein mit Bots startklar sein, sonst wartet der Erste
+ *     wieder auf jemanden, der nicht kommt.
+ */
+for (const [spiel, sitze] of [
+  ['filler', 2],
+  ['eiland', 2],
+  ['mememory', 4],
+] as const) {
+  test(`${spiel}: ein Suchender allein bekommt einen startklaren Tisch`, async (t) => {
+    const s = await stand();
+    t.after(() => s.close());
+
+    const anna = await s.konto('Anna');
+    await s.vermittlung.betritt(spiel, anna);
+    for (let offen = FENSTER_MS; offen > 0; offen -= 2_000) {
+      s.vor(2_000);
+      await s.vermittlung.abruf(spiel, anna);
+    }
+
+    const ergebnis = await s.vermittlung.abruf(spiel, anna);
+    assert.ok(ergebnis.tischId, 'nach dem Fenster steht der Tisch');
+
+    const { table, seats } = await tableWithSeats(s.ctx.db, ergebnis.tischId);
+    assert.equal(table.gameId, spiel);
+    assert.equal(table.seats, sitze);
+    // Ein Brett, eine Partie. Die Rundenzahl kommt aus `suggestedRounds` des
+    // Moduls und ist bei allen dreien die Eins.
+    assert.equal(table.maxRounds, 1);
+    // Nicht oeffentlich: Der Tisch ist vergeben, er gehoert nicht in die Lobby.
+    assert.equal(table.visibility, 'on_request');
+    assert.equal(seats.filter((sitz) => sitz.accountId).length, 1);
+    assert.equal(isReadyToStart(table, seats), true, 'die Bots fuellen auf, der Tisch startet');
+  });
+}

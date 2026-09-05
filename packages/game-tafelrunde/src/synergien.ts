@@ -132,6 +132,14 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'elementar',
     name: 'Elementar',
+    /*
+     * DIESE ZAHLEN WAREN NICHT SCHULD, als Elementar am 05.09.2026 bei x0,25
+     * stand — wer das nachsehen will, misst es nach: Mit Bonus NULL blieb die
+     * Siegquote bei 6,1 % statt 6,0 %. Ein Angriffsbonus traegt nur, wenn
+     * seine Traeger lange genug stehen, um ihn auszuspielen, und genau das
+     * konnten sie nicht. Repariert wurde deshalb der Katalog (Irrlicht,
+     * Funkenlehrling, Frostweberin, Sturmrufer), nicht diese Tabelle.
+     */
     stufen: [
       { schwelle: 2, bonus: bonus({ angriffProzent: 15 }) },
       { schwelle: 3, bonus: bonus({ angriffProzent: 25 }) },

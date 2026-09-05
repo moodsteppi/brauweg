@@ -726,28 +726,38 @@ describe('Bot: das fertige Heer', () => {
   /** Wo der Abstand klein ist, braucht die Aussage mehr Partien. Siehe oben. */
   const PARTIEN_KNAPPE_PAARUNG = 400;
 
+  /**
+   * Drei unabhaengige Saatbasen fuer die knappste Paarung (`hart` gegen
+   * `normal`). Eine einzelne Basis reicht dort nicht mehr — warum, steht bei
+   * der Probe selbst.
+   */
+  const DREI_BASEN: readonly string[] = [SAAT, `${SAAT}-b`, `${SAAT}-c`];
+
   function imFeld(
     stark: Schwierigkeit,
     schwach: Schwierigkeit,
     regeln: TafelrundeRegeln = DEFAULT_REGELN,
     regler: Kampfregler = STANDARD_REGLER,
     partien: number = PARTIEN_JE_PAARUNG,
+    basen: readonly string[] = [SAAT],
   ): [number, number] {
     const sitze = [0, 1, 2, 3];
     // Sitz 0 spielt stark, die drei uebrigen schwach.
     const besetzung = sitze.map((sitz) => (sitz === 0 ? stark : schwach));
     const siege = [0, 0, 0, 0];
-    for (let i = 0; i < partien; i++) {
-      // `sieger` ist der EINDEUTIGE erste Platz; ein geteilter Sieg sagt ueber
-      // die Gangart nichts und steht in messen.ts deshalb als null.
-      const befund = spieleParte(
-        `${SAAT}-feld-${stark}-${schwach}-${i}`,
-        sitze,
-        besetzung,
-        regeln,
-        regler,
-      );
-      if (befund.sieger !== null) siege[befund.sieger]! += 1;
+    for (const basis of basen) {
+      for (let i = 0; i < partien; i++) {
+        // `sieger` ist der EINDEUTIGE erste Platz; ein geteilter Sieg sagt ueber
+        // die Gangart nichts und steht in messen.ts deshalb als null.
+        const befund = spieleParte(
+          `${basis}-feld-${stark}-${schwach}-${i}`,
+          sitze,
+          besetzung,
+          regeln,
+          regler,
+        );
+        if (befund.sieger !== null) siege[befund.sieger]! += 1;
+      }
     }
     // Der SCHNITT der drei anderen und nicht ihre Summe: Sonst traete die
     // starke Gangart gegen drei Spieler an, und die Zahl hiesse nichts.
@@ -802,6 +812,22 @@ describe('Bot: das fertige Heer', () => {
    * die hat sie beide Male gekippt, und die Zahlen dazu fallen in Sekunden an
    * (`werkzeug/gangarten.mjs`). Eine Aenderung an Leben oder Zeitraffer
    * dagegen faengt die Probe darunter ab.
+   *
+   * SIE MISST SEIT DEM 05.09.2026 UEBER DREI SAATBASEN statt ueber eine, und
+   * das ist keine Abschwaechung, sondern der Grund, warum sie ueberhaupt noch
+   * etwas behaupten darf. Die Elementar-Reparatur desselben Tages (katalog.ts,
+   * Irrlicht) hat sie auf der EINEN alten Basis auf 100 : 100 gestellt — auf
+   * fuenf anderen Basen blieb `hart` mit 112 bis 126 Siegen vorne. Nachgezaehlt
+   * ueber sechs Basen zu je 400 Partien: vorher 715 : 561,7, nachher
+   * 689 : 570,3. Der Vorsprung ist also kleiner geworden und immer noch da; was
+   * kippte, war nicht die Aussage, sondern eine Stichprobe von 400 Partien.
+   *
+   * DASS DAS PASSIEREN KONNTE, IST DER EIGENTLICHE BEFUND: `hart` traegt ueber
+   * 400 Partien rund 20 bis 35 Siege gegenueber dem Kontrolllauf, und das ist
+   * dieselbe Groessenordnung wie das Rauschen. Solange die Gangart so duenn
+   * wirkt, braucht die Probe die dreifache Zahl — oder die Gangart mehr
+   * Substanz (offener Punkt auf dem Board: die Tempo-Schrauben von `hart`
+   * sind messbar wirkungslos).
    */
   it('gewinnt als harter Gegner oefter als drei normale', () => {
     const [hart, normal] = imFeld(
@@ -810,6 +836,7 @@ describe('Bot: das fertige Heer', () => {
       DEFAULT_REGELN,
       STANDARD_REGLER,
       PARTIEN_KNAPPE_PAARUNG,
+      DREI_BASEN,
     );
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal`);
   });
