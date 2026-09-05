@@ -16965,6 +16965,25 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* -- Eine Einheit --------------------------------------------------------- */
 
+/*
+ * OHNE PLATTE, seit dem 6.9.2026.
+ *
+ * Hier stand ein dunkler Verlauf mit kostenfarbenem Innenrand — die Kachel,
+ * auf der jede Einheit sass. Robin am 5.9.2026: „Kannst du noch den Rahmen um
+ * die Figuren entfernen, der laesst es mehr 2D wirken." Eine Figur auf einer
+ * Kachel klebt darauf; eine ohne steht auf der Wabe, und die Wabe hat ihren
+ * Umriss ja selbst (`.tr-wabe`).
+ *
+ * Was die Platte nebenbei trug, steht jetzt woanders: die KOSTEN am Punkt
+ * (`.tr-kosten`), das Ziel unter dem Finger an der Wabe bzw. am Bankplatz
+ * (die leuchten ohnehin), das Verschmelzen am Aufleuchten der Figur
+ * (`tr-puls`). Uebrig bleibt ein durchsichtiger Kasten in der Groesse des
+ * Feldes — er ist das Mass, an dem Figur, Name und Sterne haengen.
+ *
+ * Name und Sterne stehen nicht mehr im Fluss unter der Figur, sondern absolut
+ * (siehe unten): Die Figur ist aus dem Fluss heraus, und eine Spalte aus zwei
+ * Woertern zentrierte sich sonst quer ueber ihrem Bauch.
+ */
 .tr-einheit {
   position: relative;
   display: flex;
@@ -16975,8 +16994,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 100%;
   height: 100%;
   color: var(--tr-kosten, var(--muted));
-  background: linear-gradient(180deg, #232f37, #1a242a);
-  box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line));
 }
 /*
  * `touch-action: none` ist die eine Zeile, ohne die das Ziehen am Handy nicht
@@ -16988,9 +17005,12 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-einheit[data-fassbar]:active { cursor: grabbing; }
 
 /* Das Feld unter dem Finger ist auch dann zu sehen, wenn eine Einheit darauf
-   steht — beim Tausch zweier Einheiten ist genau das der Fall. */
-.tr-wabe[data-unterzeiger] .tr-einheit,
-.tr-bankplatz[data-unterzeiger] .tr-einheit { box-shadow: inset 0 0 0 3px var(--gold); }
+   steht — beim Tausch zweier Einheiten ist genau das der Fall.
+   Es leuchtet seit dem 6.9.2026 allein die WABE bzw. der Bankplatz: Der
+   goldene Innenrand, der frueher zusaetzlich um die Einheit lag, waere ohne
+   Platte ein Rechteck um eine frei stehende Figur — also genau der Rahmen,
+   der weg sollte. Beide faerben sich ohnehin kraeftig gold und decken die
+   ganze Flaeche. */
 /* Beim Ziehen bleibt der Platz sichtbar leer, damit man sieht, woher es kommt. */
 .tr-einheit[data-still] { opacity: 0.25; }
 /* Das Ersatzzeichen, wenn zu einer Einheit keine Figur vorliegt. */
@@ -17017,6 +17037,63 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-einheit .tr-figur { width: auto; height: 52%; max-width: 92%; }
 
 /*
+ * -- Die 3D-Figur auf Wabe und Bankplatz ----------------------------------
+ *
+ * Der Ausschnitt selbst steht in `Figur3D.module.css`; hier steht nur, wo die
+ * Figur steht und wie gross sie ist. Absolut gesetzt, weil eine Zelle des
+ * Blattes ALLE Bewegungen umfasst — auch den weit ausgeholten Schlag — und
+ * darum viel Luft ueber dem Kopf traegt: Im Fluss waere die Zelle so hoch wie
+ * ihr Platz, und die Figur darin halb so gross wie ihr Feld.
+ *
+ * SIE MUSS IN DIE WABE PASSEN, anders als in der Arena. Dort ist die Figur ein
+ * Geschwister der Wabe und darf darueber hinausragen; hier ist sie ihr KIND,
+ * und `clip-path` beschneidet auch den Inhalt. Was ueber das Sechseck
+ * hinausreicht, waere kein Ueberstand, sondern ein abgeschnittener Kopf.
+ *
+ * DIE ZAHLEN, und woher sie kommen: Eine stehende Figur setzt bei 80 % der
+ * Zellhoehe von oben auf (FIGUREN3D_FUSSPUNKT). Bei einer Zelle von 71,8 %
+ * Wabenhoehe, deren Unterkante 23,1 % ueber dem Wabenfuss liegt, steht die
+ * Figur also mit den Fuessen auf 37 % der Wabe und reicht bis rund 93 % —
+ * ueberall dort ist das Sechseck noch breit genug. Darunter bleibt Platz fuer
+ * Namen und Sterne.
+ *
+ * SIE HAENGEN AM GEMESSENEN AUSSCHNITT DER BLAETTER, und das sieht man ihnen
+ * nicht an: Wie gross die Figur wird, ist die Zellhoehe geteilt durch die
+ * Weltmeter, die in einer Zelle stecken (FIGUREN3D_ZELLHOEHE_METER). Als die
+ * Todeszeile am 06.09.2026 ihre eigene, breitere Zelle bekam, wurde der
+ * gemeinsame Ausschnitt von 4,29 auf 3,76 Meter enger — hier standen bis dahin
+ * 82 % und 18,6 %, und dieselben Zahlen haetten jede Figur der Ruestkammer um
+ * 14 % wachsen und hoeher stehen lassen, ohne dass jemand an der Groesse etwas
+ * geaendert haette. Wer die Blaetter neu rendert, rechnet diese vier Zahlen
+ * (hier und am Bankplatz) mit dem Verhaeltnis der beiden Ausschnitte um. In
+ * der Arena erledigt das `FIGURENKASTEN` in bildfolge.ts von selbst; hier ist
+ * es Handarbeit, weil eine Wabe kein Prozentmass mit der Karte teilt.
+ */
+.tr-figur3d {
+  position: absolute;
+  left: 50%;
+  bottom: 23.1%;
+  height: 71.8%;
+  /* `translate` und nicht `transform`: Das Spiegeln steht in `scale`
+     (Figur3D.module.css), das Schweben in `transform` — drei Dinge, drei
+     Eigenschaften. In EINEM `transform` schloesse jedes das andere aus. */
+  translate: -50% 0;
+}
+/*
+ * Auf der Bank ist der Platz ein Rechteck und kein Sechseck: Dort darf die
+ * Figur die volle Hoehe nehmen. `overflow: hidden` am Fach schneidet nur die
+ * leeren Raender der Zelle ab — der hoechste Kopf des Satzes bleibt bei 92,8 %
+ * drin. Und weil kein Name darunter steht, sitzt sie tiefer.
+ *
+ * NACHGEMESSEN am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
+ * 0/0): Der hoechste Punkt liegt 3,1 % unter der Zellenoberkante, und das ist
+ * das GEWEIH DES DRUIDEN — nicht mehr der Spitzhut des Magiers (9,4 %), wie es
+ * hier vorher stand. Mit 92,8 % Zellhoehe ueber einer Unterkante von 2,8 %
+ * steht der Scheitel damit bei 92,8 % des Fachs.
+ */
+.tr-bankplatz .tr-figur3d { bottom: 2.8%; height: 92.8%; }
+
+/*
  * Das Schweben im Stand. Dieselbe Art Bewegung wie beim Pinguin auf der
  * Weltkarte (`hub-huepf`) und bei den Figuren in der Arena
  * (KampfAnzeige.module.css `ka-schweben`): langsam, klein, endlos.
@@ -17041,15 +17118,75 @@ span.hub-angebot-art.poker-jeton-stapel {
  * keinen Boden, auf dem etwas stehen koennte.
  */
 .tr-brett .tr-einheit .tr-figur,
+.tr-brett .tr-einheit .tr-figur3d,
 .tr-brett .tr-einheit .tr-rolle { filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.75)); }
-.tr-brett .tr-einheit .tr-figur { animation: tr-schwebt 3.8s ease-in-out infinite; }
-.tr-brett .tr-wabe:nth-child(5n + 2) .tr-figur { animation-delay: -0.7s; }
-.tr-brett .tr-wabe:nth-child(5n + 3) .tr-figur { animation-delay: -1.5s; }
-.tr-brett .tr-wabe:nth-child(5n + 4) .tr-figur { animation-delay: -2.2s; }
-.tr-brett .tr-wabe:nth-child(5n + 5) .tr-figur { animation-delay: -3s; }
+.tr-brett .tr-einheit .tr-figur,
+.tr-brett .tr-einheit .tr-figur3d { animation: tr-schwebt 3.8s ease-in-out infinite; }
+.tr-brett .tr-wabe:nth-child(5n + 2) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 2) .tr-figur3d { animation-delay: -0.7s; }
+.tr-brett .tr-wabe:nth-child(5n + 3) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 3) .tr-figur3d { animation-delay: -1.5s; }
+.tr-brett .tr-wabe:nth-child(5n + 4) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 4) .tr-figur3d { animation-delay: -2.2s; }
+.tr-brett .tr-wabe:nth-child(5n + 5) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 5) .tr-figur3d { animation-delay: -3s; }
 @keyframes tr-schwebt {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
+}
+
+/*
+ * Name und Sterne stehen UNTER der Figur und UEBER dem Holz.
+ *
+ * Absolut gesetzt, seit die Figur es ist: Im Fluss zentrierte sich die Spalte
+ * aus beiden quer ueber dem Bauch der Figur. Die Prozente beziehen sich bei
+ * `bottom` auf die HOEHE der Wabe — genau das, was hier gebraucht wird, denn
+ * das Sechseck laeuft nach unten spitz zu. Die Sterne stehen auf 14 %, der
+ * Name auf 24 %; darunter ist die Wabe schmaler als das Wort.
+ *
+ * Der Schatten holt beide vom gemusterten Holz ab — dieselbe Ueberlegung wie
+ * bei den Sternen in der Arena, und noetig, seit unter ihnen kein dunkles
+ * Plattchen mehr liegt.
+ */
+.tr-einheit-name,
+.tr-einheit .tr-sterne {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  z-index: 1;
+  /* Beide waren im Fluss Kinder einer Spalte mit `align-items: center` und
+     damit nur so breit wie ihr Inhalt. Absolut gesetzt sind sie so breit wie
+     die Wabe, und ohne diese Zeile stuenden sie linksbuendig an deren Kante —
+     dort, wo das Sechseck schon zulaeuft und sie beschneidet. */
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+}
+.tr-einheit-name { bottom: 24%; }
+.tr-einheit .tr-sterne { bottom: 14%; }
+
+/*
+ * Was die Einheit gekostet hat — der Traeger von `--tr-kosten`, seit die
+ * Platte keinen Innenrand mehr hat. Ein Punkt und kein Ring: Ein Ring waere
+ * die Platte in duenn.
+ *
+ * MITTIG UNTEN UND NICHT IN DER ECKE. In der Ecke sass er zuerst, und auf dem
+ * Brett war er weg: Das Sechseck laeuft nach unten spitz zu, und `clip-path`
+ * schneidet den Inhalt mit ab — bei 3 px vom Rand lag der Punkt ausserhalb
+ * der Wabe. In der Mitte ist das Sechseck auch ganz unten noch ein
+ * Fingerbreit weit. Er steht damit unter den Sternen, wie ein Sockel unter
+ * der Figur.
+ */
+.tr-kosten {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  z-index: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tr-kosten, var(--line));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8);
+  translate: -50% 0;
 }
 
 .tr-einheit-name {
@@ -17075,13 +17212,21 @@ span.hub-angebot-art.poker-jeton-stapel {
   font: 800 8px/1.3 system-ui;
 }
 
-/* Das Verschmelzen sichtbar machen: ein kurzer goldener Puls auf der neuen
-   Einheit. Er laeuft genau so lange wie das Band darueber steht. */
+/*
+ * Das Verschmelzen sichtbar machen: ein kurzer goldener Puls auf der neuen
+ * Einheit. Er laeuft genau so lange wie das Band darueber steht.
+ *
+ * Seit dem 6.9.2026 ein SCHEIN und kein Rahmen mehr. Vorher wuchs ein
+ * goldener Innenrand auf der Platte; ohne Platte waere das ein Rechteck um
+ * eine frei stehende Figur. `drop-shadow` folgt dem Alphakanal, leuchtet also
+ * die Figur selbst an — und wirkt auch dann, wenn statt ihrer die Pixelfigur
+ * oder das Rollenzeichen dasteht.
+ */
 .tr-einheit[data-frisch] { animation: tr-puls 2.2s ease-out 1; }
 @keyframes tr-puls {
-  0% { box-shadow: inset 0 0 0 2px var(--gold), 0 0 0 0 rgba(226, 182, 79, 0.85); }
-  35% { box-shadow: inset 0 0 0 3px var(--gold), 0 0 0 14px rgba(226, 182, 79, 0); }
-  100% { box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line)); }
+  0% { filter: drop-shadow(0 0 3px rgba(226, 182, 79, 0.95)) brightness(1.7); }
+  35% { filter: drop-shadow(0 0 12px rgba(226, 182, 79, 0.8)) brightness(1.25); }
+  100% { filter: drop-shadow(0 0 0 rgba(226, 182, 79, 0)) brightness(1); }
 }
 
 .tr-verschmolzen-band {
@@ -17111,14 +17256,19 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 
 /* Was am Finger haengt. `pointer-events: none`, sonst faende
-   `elementFromPoint` immer nur diesen Schatten und nie das Ziel darunter. */
+   `elementFromPoint` immer nur diesen Schatten und nie das Ziel darunter.
+
+   Der Wabenbeschnitt ist mit dem 6.9.2026 entfallen: Er gab der PLATTE ihre
+   Sechseckform, und ohne sie schnitte er nur noch der Figur den Kopf ab. Sie
+   ist hoeher als das Feld (siehe `.tr-figur3d`); auf dem Brett faengt das
+   Sechseck der Wabe sie auf, am Finger gibt es nichts, was sie auffangen
+   muesste. */
 .tr-schatten {
   position: fixed;
   z-index: 9;
   width: 68px;
   height: 78px;
   margin: -39px 0 0 -34px;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   pointer-events: none;
   opacity: 0.92;
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.8));
@@ -17170,11 +17320,13 @@ span.hub-angebot-art.poker-jeton-stapel {
   background: rgba(226, 182, 79, 0.28);
   box-shadow: inset 0 0 0 2px var(--gold);
 }
-.tr-bankplatz .tr-einheit { box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line)); }
 /* Zu schmal fuer einen Namen — das Zeichen und die Sterne muessen reichen. */
 .tr-bankplatz .tr-einheit-name { display: none; }
 /* Und weil der Name fehlt, darf die Figur den Platz nehmen: Auf der Bank ist
-   sie das Einzige, woran man eine Einheit erkennt. */
+   sie das Einzige, woran man eine Einheit erkennt. Der kostenfarbene
+   Innenrand, der hier bis zum 6.9.2026 zusaetzlich um die Einheit lag, ist
+   weg: Das Fach ist der Rahmen, ein zweiter darin waere die Platte. Die
+   Kosten stehen jetzt am Punkt (`.tr-kosten`). */
 .tr-bankplatz .tr-einheit .tr-figur { height: 68%; }
 
 /* -- Auswahlband ---------------------------------------------------------- */
@@ -17295,14 +17447,50 @@ span.hub-angebot-art.poker-jeton-stapel {
   background: rgba(0, 0, 0, 0.25);
   box-shadow: inset 0 0 0 1px var(--line);
 }
+/*
+ * Der Kopf der Ladenkarte: die Figur, und sonst nichts.
+ *
+ * Er hat seit dem 6.9.2026 eine feste HOEHE, weil die Figur darin absolut
+ * steht (`.tr-figur3d-karte`) und ohne Angabe nichts mehr da waere, das die
+ * Karte auseinanderhaelt. 40 px sind das Mass der stehenden Figur — dass sie
+ * bei den grossen Huetten (Magier) ein, zwei Pixel in die obere Polsterung
+ * ragt, ist Absicht: Die Karte schneidet nicht ab.
+ */
 .tr-karte-kopf {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   width: 100%;
+  height: 40px;
 }
 .tr-karte-kopf .tr-rolle { width: 18px; height: 18px; }
+/*
+ * Die 3D-Figur auf der Ladenkarte — dieselbe, die nach dem Kauf auf der Bank
+ * steht. Feste Pixel und nicht Prozent: Die Karte ist eine Spalte von fuenf
+ * und auf einem 360er-Handy keine 70 px breit; ein Prozentmass waere dort ein
+ * Punkt und am Desktop ein Plakat.
+ *
+ * 51 px Zelle ergeben rund 34 px Figur — etwas mehr als die 32 px des
+ * Pixelbilds, das hier vorher stand. Der Fuss liegt bei 20 % der Zellhoehe
+ * ueber deren Unterkante (FIGUREN3D_FUSSPUNKT), also bei −9 px + 10 px = 1 px
+ * ueber dem unteren Rand des Kopfes. Die KARTE bleibt dabei eine Karte: Ihr
+ * Rahmen ist richtig, weggenommen wurde nur die Platte unter der Figur.
+ *
+ * WER DIE BLAETTER NEU RENDERT, rechnet auch diese beiden Zahlen um: Wie gross
+ * die Figur wird, haengt am gemessenen Ausschnitt (FIGUREN3D_ZELLHOEHE_METER),
+ * nicht an der Zellhoehe allein. Hier standen bis zum 06.09.2026 58 px und
+ * −12 px — mit dem engeren Ausschnitt der eigenen Todeszelle waere die Figur
+ * davon um 14 % gewachsen. Die lange Fassung steht bei `.tr-figur3d`.
+ */
+.tr-figur3d-karte {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  height: 51px;
+  translate: -50% 0;
+}
 /* Die Figur auf der Ladenkarte. Feste Pixel und nicht Prozent: Die Karte ist
    eine Spalte von fuenf und auf einem 360er-Handy keine 70 px breit — ein
    Prozentmass waere dort ein Punkt und auf dem Desktop ein Plakat. Und
@@ -17535,6 +17723,7 @@ span.hub-angebot-art.poker-jeton-stapel {
   .tr-karte[data-verschmilzt],
   .tr-einheit[data-frisch],
   .tr-brett .tr-einheit .tr-figur,
+  .tr-brett .tr-einheit .tr-figur3d,
   .tr-verschmolzen-band { animation: none; }
   .tr-wabe::before { transition: none; }
 }

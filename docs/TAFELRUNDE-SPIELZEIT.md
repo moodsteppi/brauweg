@@ -347,6 +347,12 @@ als harter Countdown müsste sie erst kurz gestellt werden.
 
 ### Ausgewogenheit, gemessen
 
+**Hier stehen zwei Läufe, und lange stand nur einer davon da.** Die Tabelle
+kommt aus 1.500 Partien, die beiden Nebenbefunde darunter aus 5.000 — beide
+Angaben stimmen, keine ist ein Tippfehler. Die Gegenprobe dazu steht unter den
+Nebenbefunden.
+
+Der Lauf zur Tabelle:
 `node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 1500
 --sitze 4`, Saatbasis `ausgewogenheit-v1`, gegen denselben Lauf mit
 `--leben 20 --zeitraffer 1`:
@@ -366,11 +372,25 @@ deshalb wurde am Katalog nichts geändert.** Der Krieger zieht wie vorhergesagt
 an, und aus dem vorhergesagten Grund: Wo vorher jeder dritte Kampf an der Uhr
 entschieden wurde, gewinnt jetzt das Brett, das sonst auf Zeit gespielt hätte.
 Die Vorhersage aus Abschnitt 4 lautete ×1,34 für den Krieger, gemessen sind es
-×1,30; sie stammte aus einem Lauf mit anderer Grundlage (vor dem kostenlosen
-Neu-Würfeln) und liegt entsprechend leicht daneben.
+×1,30; sie stammte aus einem Lauf mit anderer Grundlage und liegt entsprechend
+leicht daneben.
 
-Zwei Nebenbefunde aus demselben Lauf, beide **nicht** durch diese Änderung
-verursacht, aber durch sie sichtbar geworden:
+> **Welche Grundlage das war, steht hier nicht mehr richtig (06.09.2026).**
+> Bis heute stand an dieser Stelle „vor dem kostenlosen Neu-Würfeln". Das kann
+> es nicht sein: Die Ladenregel kam mit `625f626` und damit **nach** beiden
+> Läufen — die Vorhersage steht schon in `fcae0fd`, und die ×1,30 dieser
+> Tabelle sind auf genau demselben `fcae0fd` Zeile für Zeile nachgestellt
+> worden. Beide Zahlen sind also vor der Ladenregel gemessen. Woran die vier
+> Hundertstel wirklich liegen, ist offen und steht als Karte auf dem Board;
+> geraten wird es hier nicht.
+
+Zwei Nebenbefunde, beide **nicht** durch diese Änderung verursacht, aber durch
+sie sichtbar geworden. Sie stammen aus dem **zweiten, größeren Lauf** —
+`--partien 5000 --sitze 4 --mindest 150`, sonst alles gleich —, und deshalb
+nennen sie andere Antrittszahlen als die Tabelle oben. Der große Lauf war
+nötig, weil genau diese Zeilen im kleinen zu dünn bleiben: Über 1.500 Partien
+tritt der Drache 59-mal an, der Untote 7-mal, und der Moosheiler kommt in der
+Vorher-Spalte auf 60 — Zahlen, aus denen sich keine Quote ablesen lässt:
 
 * **Drache und Untot sind noch dünner geworden** (204 bzw. 32 Antritte über
   5.000 Partien, vorher 394 und 65). Beide haben dafür schon eine Karte auf dem
@@ -380,6 +400,26 @@ verursacht, aber durch sie sichtbar geworden:
   aufgestellt, weil in elf Runden seltener ein ausgebautes Brett steht — und
   gewinnt praktisch nie. Die Ursache ist bekannt und unverändert: Heilen gibt
   es in `kampf.ts` noch gar nicht.
+
+**Nachgerechnet am 06.09.2026** (Karte „TAFELRUNDE-SPIELZEIT.md Abschnitt 5:
+Aufruf und zitierte Zahlen passen nicht zusammen"). Beide Läufe wurden mit
+beiden Partienzahlen wiederholt; sie treffen ihre Zeile jeweils auf den
+Antritt:
+
+| | 1.500 Partien | 5.000 Partien |
+| --- | --- | --- |
+| Drache | 111 → 59 *(Tabelle)* | 394 → 204 *(Nebenbefund)* |
+| Untot | 17 → 7 *(Tabelle)* | 65 → 32 *(Nebenbefund)* |
+| Moosheiler | 60 → 156 | 237 (×0,25) → 541 (×0,15) *(Nebenbefund)* |
+
+Die ×0,25 des Moosheilers gibt es dabei nur mit `--mindest 150`; mit der
+Vorgabe 100 stünde dort ×0,24. **Nachstellen lässt sich das nur auf dem Stand
+dieses Abschnitts** — Zweigbasis `fcae0fd` mit `--leben 14 --zeitraffer 2` für
+die Nachher-Spalte und ohne Schalter für die Vorher-Spalte. Auf `bdb50c1`,
+also nach dem Zusammenführen mit der Ladenregel, wirft derselbe Aufruf ganz
+andere Antritte aus (Drache 8, Untot 9 über 1.500 Partien), und auf dem
+heutigen Bot erst recht. Das ist kein Widerspruch, sondern der Grund für
+Abschnitt 6.
 
 ### Was die Änderung an den Proben geändert hat
 
@@ -522,3 +562,12 @@ vier Messungen über zwei Saatbasen (140 : 86,7 · 139 : 87,0 beim gebauten
 Stand, 169 : 77,0 · 147 : 84,3 bei 20 Leben) plus einem Kontrolllauf mit
 gleichen Gangarten (102 : 99,3). Fallen darf sie wieder bei der nächsten
 Änderung am Laden — die misst man mit.
+
+**Nachtrag 06.09.2026.** Die Zahlen dieses Abschnitts beschreiben den Stand von
+damals. `hart` verlangt beim Aufstieg seitdem wieder ein volles Brett und hält
+nur noch zwei Gold zurück, weil die alte Schraube nachgemessen kein Nullwert
+war, sondern ein Minus; die Paarung steht damit bei **212 : 62,7** statt
+140 : 86,7, und die Probe misst wieder über eine Saatbasis statt über drei. Der
+Kontrolllauf ist über sechs Basen neutral (98,7). Zerlegung und Begründung
+stehen bei `GANGARTEN` in `bot.ts`, nachzustellen mit
+`werkzeug/gangarten.mjs --schraube …`.

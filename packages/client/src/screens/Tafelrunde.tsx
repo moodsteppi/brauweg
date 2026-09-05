@@ -3,8 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
+import { blattPfad } from '../minispiele/tafelrunde/bildfolge';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
+import { Figur3D } from '../minispiele/tafelrunde/Figur3D';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
@@ -236,6 +238,51 @@ function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
     <svg className="tr-rolle" viewBox="0 0 24 24" aria-hidden="true">
       {pfade[rolle]}
     </svg>
+  );
+}
+
+/**
+ * Die Figur einer Einheit — dieselbe wie in der Arena, nur stehend.
+ *
+ * DREI STUFEN, in dieser Reihenfolge: das vorgerenderte 3D-Blatt ihrer ROLLE
+ * (`Figur3D`), sonst die Pixelfigur der EINHEIT (`Figurbild`), sonst die
+ * gezeichnete Strichfigur (`RollenZeichen`). Genau die Reihenfolge, die auch
+ * die Arena nimmt — ein Rueckfall, der sich je Ort unterscheidet, waere beim
+ * ersten fehlenden Bild ein Bildschirm mit zwei Sorten Platzhalter.
+ *
+ * WARUM DAS BLATT DER ROLLE UND NICHT DAS BILD DER EINHEIT: Bis zum 6.9.2026
+ * standen die 3D-Figuren nur in der Arena, und in der Vorbereitung — dort, wo
+ * man die meiste Zeit verbringt — sah man Pixelbilder. Der Bruch war genau
+ * das, was Robin meinte. Der Preis ist, dass sich acht Einheiten eine Figur
+ * teilen; ihr NAME steht daneben, ihre Marken darueber, ihre Kosten am Punkt.
+ *
+ * Kein Bildwechsel: Es ist immer Bild 0 der Ruhefolge. Wer aufstellt, soll
+ * nicht von zappelnden Figuren abgelenkt werden — bewegt wird nur im Kampf.
+ */
+function EinheitenFigur({
+  einheit,
+  klasse,
+  spiegeln,
+}: {
+  einheit: Einheit;
+  /** Wo die Figur steht: `tr-figur3d` auf Wabe und Bank, `…-karte` im Laden. */
+  klasse: string;
+  spiegeln?: boolean;
+}): React.JSX.Element {
+  return (
+    <Figur3D
+      name={einheit.name}
+      blatt={blattPfad(einheit.rolle)}
+      klasse={klasse}
+      spiegeln={spiegeln}
+      ersatz={
+        <Figurbild
+          einheit={einheit}
+          klasse="tr-figur"
+          ersatz={<RollenZeichen rolle={einheit.rolle} />}
+        />
+      }
+    />
   );
 }
 
@@ -2428,6 +2475,7 @@ function Hexbrett({
                   frischVerschmolzen?.id === k.id && frischVerschmolzen.stufe === k.stufe
                 }
                 aktiv={eigen === true && aktiv === true}
+                spiegeln={gespiegelt === true}
                 versteckt={ziehtVon?.bereich === 'brett' && ziehtVon.platz === platz}
                 onZeigerStart={eigen && onZeigerStart ? (e) => onZeigerStart(ort, e) : undefined}
                 onZeigerBewegung={eigen ? onZeigerBewegung : undefined}
@@ -2475,6 +2523,7 @@ function Einheitenmarke({
   frisch,
   aktiv,
   versteckt,
+  spiegeln,
   onZeigerStart,
   onZeigerBewegung,
   onZeigerEnde,
@@ -2489,6 +2538,13 @@ function Einheitenmarke({
   frisch?: boolean;
   aktiv: boolean;
   versteckt?: boolean;
+  /**
+   * Nach links schauen lassen. Alle Blaetter schauen nach rechts
+   * (FIGUREN3D_BLICKT); gespiegelt wird das Brett des GEGNERS, das ohnehin
+   * auf dem Kopf steht — so sehen die beiden Heere einander an, statt in
+   * dieselbe Richtung zu blicken. Dieselbe Ueberlegung wie in der Arena.
+   */
+  spiegeln?: boolean;
   onZeigerStart?: (e: React.PointerEvent) => void;
   onZeigerBewegung?: (e: React.PointerEvent) => void;
   onZeigerEnde?: (e: React.PointerEvent) => void;
@@ -2552,16 +2608,17 @@ function Einheitenmarke({
       title={einheit ? `${einheit.name} · ${ROLLE_NAME[einheit.rolle]}` : kaempfer.id}
     >
       {einheit ? (
-        <Figurbild
-          einheit={einheit}
-          klasse="tr-figur"
-          ersatz={<RollenZeichen rolle={einheit.rolle} />}
-        />
+        <EinheitenFigur einheit={einheit} klasse="tr-figur3d" spiegeln={spiegeln} />
       ) : (
         /* Der Katalog kommt erst mit der ersten Sicht. Ein Fragezeichen ist
            hier ehrlicher als ein Bild, dessen Namen wir noch nicht kennen. */
         <span>?</span>
       )}
+      {/* Was die Einheit gekostet hat. Bis zum 6.9.2026 war es der Innenrand
+          der Platte, auf der sie sass — die ist weg, weil sie die Figur flach
+          aussehen liess (Robin, 5.9.2026). Ein Punkt und kein neuer Ring:
+          Derselbe Traeger wie in der Arena (`.kosten` dort). */}
+      {einheit && <i className="tr-kosten" aria-hidden="true" />}
       {/* Die Marken als Zeichen in der Ecke — dieselben Zeichen und Farben wie
           in der Leiste, damit man eine Aufstellung im Vorbeisehen zaehlen
           kann. Kein Text: Auf einer Wabe ist dafuer kein Platz, und vorgelesen
@@ -2650,15 +2707,12 @@ function Ladenkarte({
         <GoldZeichen />
         {einheit.kosten}
       </span>
+      {/* Die KARTE bleibt eine Karte: Ein Rahmen um Name, Rolle und Preis ist
+          richtig, weggenommen wurde nur die Platte unter der FIGUR. Und die
+          Figur ist seit dem 6.9.2026 dieselbe wie auf dem Brett — wer eine
+          Dorfwache kauft, soll sehen, was gleich auf seiner Wabe steht. */}
       <span className="tr-karte-kopf">
-        {/* Die Figur steht an der Stelle, an der bisher das Rollenzeichen
-            stand — die Rolle selbst steht als Wort darunter und geht damit
-            nicht verloren. */}
-        <Figurbild
-          einheit={einheit}
-          klasse="tr-figur"
-          ersatz={<RollenZeichen rolle={einheit.rolle} />}
-        />
+        <EinheitenFigur einheit={einheit} klasse="tr-figur3d-karte" />
       </span>
       <strong className="tr-karte-name">{einheit.name}</strong>
       <span className="tr-karte-rolle">{ROLLE_NAME[einheit.rolle]}</span>
@@ -2748,9 +2802,23 @@ function Abschluss({
 /**
  * Das Regelblatt.
  *
- * Wortlaut nach dem Muster von Filler und Eiland. Der letzte Absatz nennt
- * ausdruecklich, was noch FEHLT — sonst haelt der erste Spieler die
- * uebersprungene Kampfphase fuer einen Fehler.
+ * Wortlaut nach dem Muster von Filler und Eiland.
+ *
+ * BIS ZUM 05.09.2026 STAND HIER EIN ABSCHNITT "Noch nicht dabei": Solange die
+ * Kampfphase uebersprungen wurde und die Marken-Boni fehlten, nannte das Blatt
+ * beides ausdruecklich, damit der erste Spieler die folgenlose Runde nicht fuer
+ * einen Fehler haelt. Beide Gruende sind weg — die Kaempfe laufen ab
+ * (`loeseKampfAuf`) und die Synergien greifen im Modul (synergien.ts, Schwellen
+ * 2/3/5) —, also ist der Abschnitt weg und die Synergie steht als Regel bei den
+ * anderen. Ein Regelblatt, das ein vorhandenes Spielelement als fehlend
+ * ankuendigt, ist schlimmer als keins: Wer die Leiste sieht, glaubt dann eher
+ * dem Text als dem Bildschirm.
+ *
+ * Die Schwellen stehen hier als Zahlen im Fliesstext, weil ein Regeltext sie
+ * nennen muss, um verstaendlich zu sein. Gerechnet wird mit ihnen NICHT — das
+ * tut allein das Modul, und die Leiste zeichnet nur, was in der Sicht steht
+ * (siehe Synergien.tsx). Wer die Schwellen im Modul verschiebt, zieht diesen
+ * Satz mit.
  */
 function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
@@ -2781,6 +2849,14 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           bessere Karten im Laden.
         </li>
         <li>
+          Recken gehören Klassen an wie Krieger, Wächter oder Untot. Stehen{' '}
+          <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die
+          Klasse stärker; ab drei und ab fünf noch einmal deutlicher. Der Bonus
+          gilt nur für die Träger selbst und nur auf dem Feld — was auf der Bank
+          liegt, zählt nicht mit. Was gerade greift und wie weit es bis zur
+          nächsten Stufe ist, zeigt die Synergie-Leiste.
+        </li>
+        <li>
           Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und
           ein Bonus für Serien. Was die nächste Runde bringt, steht klein neben
           deinem Gold.
@@ -2792,11 +2868,6 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         </li>
         <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>
       </ol>
-      <h3>Noch nicht dabei</h3>
-      <p>
-        Die Boni für gleiche Klassen fehlen noch; sie kommen als eigener Ausbau.
-        Aufrüsten, verschmelzen, aufstellen und kämpfen ist vollständig da.
-      </p>
       <h3>Ziel</h3>
       <p>Als Letzter am Tisch stehen bleiben.</p>
     </div>

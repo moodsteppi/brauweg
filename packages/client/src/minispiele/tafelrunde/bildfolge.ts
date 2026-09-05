@@ -13,9 +13,11 @@
  * eine Uhr laufen zu lassen.
  *
  * DIE ZUORDNUNG IST DIE ROLLE, NICHT DIE EINHEIT. Es gibt fuenf Blaetter fuer
- * 22 Einheiten; jede Einheit spielt das Blatt ihrer Rolle. Wer die 22 Figuren
- * einzeln sehen will, sieht sie in der Ruestkammer (`figuren.ts`) — dort ist
- * die Einheit die Auskunft, in der Arena ist es die Bewegung.
+ * 22 Einheiten; jede Einheit spielt das Blatt ihrer Rolle. Seit dem 6.9.2026
+ * gilt das ueberall: Brett, Bank und Ladenkarte zeigen dieselbe Figur wie die
+ * Arena, nur stehend (`Figur3D.tsx`). Die 22 Pixelfiguren aus `figuren.ts`
+ * sind seitdem der RUECKFALL — sie treten an, wenn ein Blatt fehlt oder nicht
+ * laedt, und der Name der Einheit steht ohnehin daneben.
  */
 
 import {
@@ -109,6 +111,32 @@ export const KAMPF_TEMPO = 2;
  * faellig ist.
  */
 export const GLEITEN_MS = 280;
+
+/**
+ * Wie lange der Fall einer Gefallenen dauert, in Millisekunden.
+ *
+ * GERECHNET UND NICHT GESCHRIEBEN: Bildzahl der Todesfolge geteilt durch ihre
+ * Bildrate, im Zeitraffer des Kampfes. Wer im Renderskript ein Bild ergaenzt
+ * oder die Rate aendert, bekommt die neue Dauer geschenkt. Genau das ist am
+ * 06.09.2026 passiert: Die Todeszeile laeuft seitdem bis zum LIEGEN durch
+ * statt nur bis zum Zusammensacken (acht Bilder statt sechs, Bildrate 10 statt
+ * 15), und aus 200 ms wurden 400 — ohne dass hier eine Zahl zu aendern war.
+ *
+ * Gebraucht wird sie vom Stylesheet (`--sacken` an `.figur`): Das Verblassen
+ * der Gefallenen faengt erst NACH dem Fall an. Frueher schrumpfte und
+ * drehte sich dort die Platte, weil es keine Todesfolge gab — heute waeren
+ * das zwei Sterbebewegungen uebereinander, und die zweite machte die erste
+ * unsichtbar, bevor sie zu Ende ist. Und das Liegen ist das Bild, wegen dessen
+ * die Zeile ueberhaupt bis zum Ende gerendert wird.
+ *
+ * `bilder` und nicht `bilder - 1`: Das letzte Bild ist die liegende Figur, und
+ * die soll ihren eigenen Taktschlag lang stehen, bevor sie zu verblassen
+ * anfaengt. Mit `bilder - 1` faenge das Verblassen genau in dem Augenblick an,
+ * in dem sie ankommt.
+ */
+export const SACKEN_MS: number = Math.round(
+  (folgeVon('tod').bilder / (folgeVon('tod').bildrate * KAMPF_TEMPO)) * 1000,
+);
 
 // ---------------------------------------------------------------------------
 // Welche Bewegung, welches Bild
@@ -276,21 +304,6 @@ export function blattVersatz(stand: Bildstand): string {
 export function zellWeite(stand: Bildstand): number {
   return zelleVon(stand.bewegung, stand.bild).breite / FIGUREN3D_KANTE;
 }
-
-/**
- * Wie lange die Todesfolge am Bildschirm dauert, in Millisekunden.
- *
- * Gerechnet und nicht gesetzt: acht Bilder mit der Bildrate aus figuren3d.ts,
- * im Zeitraffer des Kampfes. Wer dort Bildzahl oder Bildrate anfasst, bekommt
- * hier die neue Dauer — und mit ihr das Ausblenden der Figur und das Nachspiel
- * des Taktes in KampfAnzeige.tsx, die beide daran haengen.
- *
- * `bilder - 1` Abstaende und nicht `bilder`: Das letzte Bild ist der Zustand,
- * in dem die Figur liegen bleibt, und keine weitere Wegstrecke.
- */
-export const TOD_MS = Math.round(
-  ((folgeVon('tod').bilder - 1) / (folgeVon('tod').bildrate * KAMPF_TEMPO)) * 1000,
-);
 
 // ---------------------------------------------------------------------------
 // Wie gross der Ausschnitt auf der Karte ist

@@ -7,7 +7,7 @@ import {
   FIGUREN3D_ZEILEN,
   folgeVon,
 } from '../../figuren3d/figuren3d';
-import { type Bildstand, GLEITEN_MS, TOD_MS, blattPfad } from './bildfolge';
+import { type Bildstand, GLEITEN_MS, SACKEN_MS, blattPfad } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import {
   type Kampfbericht,
@@ -484,9 +484,9 @@ describe('KampfAnzeige', () => {
 
     lauf(1100);
     // Angefangen, aber noch nicht durch: Der Kampf endet bei 1100, der Tod
-    // faellt bei 1000, und die Folge braucht seit dem 06.09.2026 350 ms — der
-    // ganze Fall bis zum Liegen, vorher nur das halbe Einsacken.
-    expect(TOD_MS).toBe(350);
+    // faellt bei 1000, und die Folge braucht seit dem 06.09.2026 400 ms — den
+    // ganzen Fall bis zum Liegen, vorher nur das halbe Einsacken.
+    expect(SACKEN_MS).toBe(400);
     expect(gezeigt().bewegung).toBe('tod');
     expect(gezeigt().bild).toBeLessThan(folgeVon('tod').bilder - 1);
     // Durchgelaufen und stehengeblieben — die Folge hat `schleife: false`.
@@ -634,15 +634,16 @@ describe('KampfAnzeige', () => {
     zeige([paarung()], 0);
     const getroffen = (): Element => screen.getByLabelText(/Dorfwache, Stufe 2/);
 
-    // Vor dem ersten Treffer (500 ms) haengt an der Figur genau EIN <i>: der
-    // Schatten unter ihren Fuessen. Er ist immer da — er sagt, dass sie auf
-    // dem Feld steht, nicht dass sie getroffen wurde.
-    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(1);
+    // Vor dem ersten Treffer (500 ms) haengen an der Figur genau ZWEI <i>:
+    // der Schatten unter ihren Fuessen und der Kostenpunkt. Beide sind immer
+    // da — sie sagen, dass die Figur auf dem Feld steht und was sie gekostet
+    // hat, nicht dass sie getroffen wurde.
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(2);
 
     lauf(600);
     // Dazu zwei weitere: das Aufleuchten und der Einschlagring. Der Staub
     // kommt erst mit dem Tod und liegt in einem <span>.
-    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(3);
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(4);
   });
 
   it('wirbelt beim Tod Staub auf, und die Gefallene bleibt im Baum', () => {

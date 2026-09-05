@@ -42,25 +42,32 @@
  * Rolle ein Blatt fuer alle Einheiten dieser Rolle. Faellt ein Blatt aus, tritt
  * die Pixelfigur der Einheit aus `figuren.ts` an seine Stelle, und faellt auch
  * die aus, das uebergebene `ersatzzeichen` — lieber ein Platzhalter als ein
- * leeres Feld (CLAUDE.md). Ausserhalb der Arena bleibt es bei den Pixelfiguren:
- * In Laden, Bank und Ruestkammer ist die EINHEIT die Auskunft, hier die
- * Bewegung.
+ * leeres Feld (CLAUDE.md). Das Bauteil dafuer steht seit dem 6.9.2026 in
+ * `Figur3D.tsx`: Brett, Bank und Ladenkarte zeichnen dieselbe Figur, nur ohne
+ * Bildwechsel. Hier ist der einzige Ort, an dem sich das Blatt bewegt.
+ *
+ * OHNE PLATTE. Bis zum 6.9.2026 sass jede Figur auf einem dunklen Rechteck mit
+ * kostenfarbenem Innenrand. Robin: „der laesst es mehr 2D wirken" — und das
+ * stimmt, eine Figur, die auf einer Kachel klebt, steht nicht auf dem Feld.
+ * Die Platte tat nebenbei drei Dinge, die weiterleben: Die SEITEN
+ * unterscheidet jetzt der getoente Bodenschatten (`.schatten`, dazu der
+ * Lebensbalken, der die Seitenfarbe ohnehin schon trug), die KOSTEN ein Punkt
+ * am Fuss (`.kosten`), und das STERBEN uebernimmt die Todesfolge selbst.
  */
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-
-import { FIGUREN3D_SPALTEN, FIGUREN3D_ZEILEN } from '../../figuren3d/figuren3d';
 
 import {
   type Bildstand,
   FIGURENKASTEN,
   GLEITEN_MS,
-  TOD_MS,
+  SACKEN_MS,
   bildstand,
   blattPfad,
   blattVersatz,
   zellWeite,
 } from './bildfolge';
+import { Figur3D } from './Figur3D';
 import { type EinheitId, FIGUREN, UNTERGRUND } from './figuren';
 import stil from './KampfAnzeige.module.css';
 import { type Rastermass, rastermass, wabenLage } from './zuege';
@@ -214,72 +221,6 @@ export function Figurbild({
          sieht aus wie ein Fehler des Spiels, nicht wie ein fehlender Pfad. */
       onError={() => setKaputt(pfad)}
     />
-  );
-}
-
-/**
- * Die Figur als Ausschnitt aus dem Blatt ihrer Rolle.
- *
- * DER AUFBAU: ein Kasten mit `overflow: hidden`, darin das ganze Blatt,
- * sechsmal so breit und fuenfmal so hoch. Verschoben wird es vom Takt der
- * Anzeige (`bildSchieben`), nicht von hier — deshalb steht am `<img>` kein
- * `transform`: Es waere die Angabe, die der Takt gleich darauf ueberschreibt,
- * und beim naechsten Zeichnen setzte React sie zurueck. Bis der erste Takt
- * laeuft, steht die Zelle links oben im Blatt, und das ist das erste Bild des
- * Standes — also eine gueltige Figur und kein Loch.
- *
- * WARUM EIN `<img>` UND KEIN HINTERGRUNDBILD: `onError`. Ein ausgefallener
- * Hintergrund ist ein leeres Feld; ein ausgefallenes `<img>` meldet sich, und
- * dann tritt die Pixelfigur an seine Stelle. Der gescheiterte PFAD wird
- * gemerkt und nicht bloss ein Ja/Nein — aus demselben Grund wie bei
- * `Figurbild`: Eine Figur, die auf demselben Platz durch eine andere ersetzt
- * wird, behaelt ihre Komponente.
- *
- * SPIEGELN: Alle Blaetter schauen nach rechts (`FIGUREN3D_BLICKT`). Wer nach
- * links schauen soll, bekommt den Kasten gespiegelt — dafuer ist die Konstante
- * da. Gespiegelt wird der Kasten und nicht das Bild: Sonst liefe das Spiegeln
- * dem Schieben in dieselbe `transform`-Angabe.
- */
-function Figur3D({
-  einheit,
-  ersatz,
-  blatt,
-  spiegeln,
-  gib,
-}: {
-  einheit: Einheitenbild;
-  /** Was an die Stelle tritt, wenn es kein Blatt gibt oder es nicht laedt. */
-  ersatz: ReactNode;
-  blatt: string | null;
-  spiegeln: boolean;
-  /** Meldet das Bild an den Takt, damit er es schieben kann. */
-  gib: (el: HTMLImageElement | null) => void;
-}): React.JSX.Element {
-  const [kaputt, setKaputt] = useState<string | null>(null);
-  if (blatt === null || blatt === kaputt) return <>{ersatz}</>;
-  return (
-    <span className={stil.figur3d} data-spiegel={spiegeln ? '' : undefined}>
-      <img
-        ref={gib}
-        className={stil.blatt}
-        /* Das Raster des Blattes gehoert nach figuren3d.ts und nicht ins
-           Stylesheet: Dort stand es bis zum 06.09.2026 als `width: 600%;
-           height: 500%`, und eine Zeile mehr im Blatt haette lauter richtige
-           Bilder an der falschen Stelle ergeben. */
-        style={
-          {
-            '--tr-blattspalten': FIGUREN3D_SPALTEN,
-            '--tr-blattzeilen': FIGUREN3D_ZEILEN,
-          } as React.CSSProperties
-        }
-        src={blatt}
-        /* Der Name der Einheit und nicht der der Rolle: Fuer den Leser ist die
-           Figur eine Dorfwache, dass sie sich das Blatt mit sieben anderen
-           teilt, ist eine Auskunft ueber die Dateien. */
-        alt={einheit.name}
-        onError={() => setKaputt(blatt)}
-      />
-    </span>
   );
 }
 
@@ -856,14 +797,12 @@ export function KampfAnzeige<E extends Einheitenbild>({
                      zwei Zahlen liefen beim ersten Nachstellen auseinander,
                      und die Figur ruderte dann noch, wenn sie schon steht. */
                   '--gleiten': `${GLEITEN_MS}ms`,
-                  /* Der Fall und was danach kommt. Die Karte verblasst erst,
-                     wenn die Todesfolge durchgelaufen ist — sonst waere die
-                     liegende Figur, wegen derer die Zeile ueberhaupt bis zum
-                     Ende gerendert wird, schon durchsichtig, bevor sie liegt.
-                     Die Dauer steht in figuren3d.ts und wird hier nur
-                     durchgereicht. */
-                  '--tr-tod-warten': `${TOD_MS}ms`,
-                  '--tr-tod-verblassen': `${TOD_HALT_MS}ms`,
+                  /* Wie lange der Fall dauert. Auch diese Zahl steht in
+                     bildfolge.ts und nicht hier: Sie faellt aus Bildzahl und
+                     Bildrate der Todesfolge, und das Verblassen soll erst
+                     danach anfangen — sonst ist die Figur halb durchsichtig,
+                     waehrend sie noch faellt. */
+                  '--sacken': `${SACKEN_MS}ms`,
                   /* Der Ausschnitt, durch den man die Figur sieht. Beide Masse
                      kommen aus bildfolge.ts, weil sie am gemessenen Ausschnitt
                      der Blaetter haengen und nicht am Geschmack — steht die
@@ -899,8 +838,9 @@ export function KampfAnzeige<E extends Einheitenbild>({
               >
                 {einheit ? (
                   <Figur3D
-                    einheit={einheit}
+                    name={einheit.name}
                     blatt={blattPfad(einheit.rolle)}
+                    klasse={stil.figur3d}
                     /*
                      * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT).
                      * Gespiegelt wird, wer OBEN steht — dann sehen die beiden
@@ -953,6 +893,12 @@ export function KampfAnzeige<E extends Einheitenbild>({
                   {'★'.repeat(f.stufe)}
                 </span>
               </div>
+              {/* Was die Einheit im Laden gekostet hat — bis zum 6.9.2026 der
+                  Innenrand der Platte, jetzt ein Punkt am Fuss. Kein neuer
+                  Ring: Der waere die Platte in duenn, und genau die soll weg.
+                  Er sitzt in der Ecke und nicht unter der Figur, weil dort
+                  schon der Bodenschatten liegt. */}
+              <i className={stil.kosten} aria-hidden="true" />
               <span className={stil.leben} aria-hidden="true">
                 <b style={{ width: `${anteil}%` }} />
               </span>
@@ -1098,27 +1044,32 @@ function Ergebnis({
 const RUECKFALL_TAKT_MS = 100;
 
 /**
- * Wie lange die Gefallene liegt und dabei verblasst, in Millisekunden.
+ * Wie lange die Gefallene danach noch verblasst, in Millisekunden.
  *
- * Sie verschwindet nicht auf der Stelle: Das Liegen ist die Auskunft ("die ist
- * weg"), und ein Bild, das im selben Augenblick ausgeht, in dem es entsteht,
- * liest niemand. Die Zahl geht als `--tr-tod-verblassen` ins Stylesheet, damit
- * sie nicht an zwei Stellen steht — der Takt unten rechnet mit ihr weiter.
+ * Die Zahl steht so auch im Stylesheet (`.figur[data-tot] .koerper`, hinter
+ * `--sacken`) — hier steht sie, damit der Takt sie mitrechnen kann. Sie ist
+ * bewusst KEINE Variable an der Figur: Anders als der Fall haengt sie an
+ * keiner Bildzahl, sie ist eine Angabe ueber das Verblassen und gehoert
+ * deshalb ins Stylesheet.
  */
-const TOD_HALT_MS = 420;
+const VERBLASSEN_MS = 420;
 
 /**
  * Wie lange der Takt nach dem Ende noch laeuft — nur fuer die Bildfolgen.
  *
  * Der Kampf ist vorbei, aber die letzte Todesfolge nicht: Sie faellt fast immer
- * kurz vor das Ende. `TOD_MS` ist ihre Dauer (aus figuren3d.ts gerechnet, seit
- * dem 06.09.2026 fuer den ganzen Fall bis zum Liegen — vorher war es nur das
- * halbe Einsacken), `TOD_HALT_MS` die Zeit, die die Gefallene danach noch liegt
- * und verblasst. Grosszuegig aufgerundet, weil ein Takt zu viel nichts kostet
- * (es aendert sich nichts mehr, also wird auch nichts neu gezeichnet) — ein
- * Takt zu wenig aber die Figur mitten im Fall einfriert.
+ * kurz vor das Ende. `SACKEN_MS` ist die Dauer des Falls (aus figuren3d.ts
+ * gerechnet, seit dem 06.09.2026 fuer den ganzen Weg bis zum Liegen — vorher
+ * war es nur das halbe Einsacken), `VERBLASSEN_MS` das Ausblenden danach.
+ * Grosszuegig aufgerundet, weil ein Takt zu viel nichts kostet (es aendert
+ * sich nichts mehr, also wird auch nichts neu gezeichnet) — ein Takt zu wenig
+ * aber die Figur mitten im Fall einfriert.
+ *
+ * GERECHNET UND NICHT GESETZT: Hier standen fest 600 ms, und die waren an
+ * sechs Bildern halber Todesfolge gemessen. Mit dem vollen Fall reichen sie
+ * nicht mehr, und niemand haette es an einer Zahl gesehen.
  */
-const NACHSPIEL_MS = TOD_MS + TOD_HALT_MS + 100;
+const NACHSPIEL_MS = SACKEN_MS + VERBLASSEN_MS + 100;
 
 interface Uhr {
   naechstes(tick: () => void): void;

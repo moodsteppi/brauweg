@@ -76,7 +76,7 @@ import { baueZufall } from './zufall.js';
  */
 export type Schwierigkeit = 'sanft' | 'normal' | 'hart';
 
-interface Gangart {
+export interface Gangart {
   /**
    * Gold, das ab `POLSTER_AB_RUNDE` liegen bleibt.
    *
@@ -86,11 +86,31 @@ interface Gangart {
    * zurueckgehaltenes Gold weniger ein, als eine Einheit auf dem Brett wert
    * ist. Deshalb haelt hier der SANFTE Gegner am meisten zurueck, nicht der
    * harte — Horten ist die Schwaeche, die Robin an einem Menschen wiedererkennt.
+   *
+   * GAR NICHTS ZURUECKZUHALTEN IST TROTZDEM SCHLECHTER als ein kleines
+   * Polster, und das ist keine Feinheit, sondern ein Vorzeichenwechsel: Auf 0
+   * gestellt faellt `hart` unter seinen Wert bei 2 zurueck. Wer bis auf den
+   * letzten Goldtaler kauft, fuellt die Bank mit Kleinkram — und eine volle
+   * Bank laesst nur noch Verschmelzungskaeufe zu. Die Kurve steht bei
+   * GANGARTEN; wer sie neu aufnehmen will, braucht dafuer keinen Eingriff hier
+   * (`gangarten.mjs --schraube polster=…`).
    */
   readonly polster: number;
-  /** Was nach einem Aufstieg uebrig bleiben soll, um das neue Feld zu fuellen. */
+  /**
+   * Was nach einem Aufstieg uebrig bleiben soll, um das neue Feld zu fuellen.
+   *
+   * Die schaerfste Schraube im Feld: zwischen 0 und 5 liegt bei `hart` der
+   * Unterschied zwischen 221 und 32 Siegen je 400 Partien. Wer sie anfasst,
+   * misst — die Zahlen stehen bei GANGARTEN.
+   */
   readonly aufstiegsReserve: number;
-  /** Steigt er nur auf, wenn das Brett voll ist? Siehe AUFSTIEG BEI VOLLEM BRETT. */
+  /**
+   * Steigt er nur auf, wenn das Brett voll ist? Siehe AUFSTIEG BEI VOLLEM BRETT.
+   *
+   * Seit dem 06.09.2026 sagen ALLE DREI Gangarten hier ja. `hart` sagte bis
+   * dahin nein, und das kostete es rund 57 Siege je 400 Partien: Ein Feldplatz
+   * ohne Einheit darauf ist bezahlter Leerstand.
+   */
   readonly nurBeiVollemBrett: boolean;
   /** Wuerfelt er einen Laden neu, der nicht zu ihm passt? */
   readonly wuerfeltNeu: boolean;
@@ -118,95 +138,123 @@ interface Gangart {
  * Die drei Gangarten.
  *
  * `normal` ist die Vorgabe und zugleich die Fassung, die nach Lehrbuch spielt:
- * ab Runde 4 ein kleines Polster, Aufstieg nur bei vollem Brett, selten ein
- * Fehlgriff. `hart` spielt auf TEMPO — kein Zoegern beim Aufstieg, keine
- * Reserve, kein Fehlgriff. `sanft` sitzt auf seinem Gold, steigt spaet auf,
- * greift meist blind zu und verpasst Verschmelzungen.
+ * ab Runde 4 ein Polster von vier Gold, Aufstieg nur bei vollem Brett und erst
+ * mit drei Gold Reserve darauf, selten ein Fehlgriff. `hart` spielt auf TEMPO —
+ * halb so grosses Polster, keine Reserve nach dem Aufstieg, kein Fehlgriff.
+ * `sanft` sitzt auf seinem Gold, steigt spaet auf, greift meist blind zu und
+ * verpasst Verschmelzungen.
  *
- * DASS DIESE REIHENFOLGE STIMMT, IST GEMESSEN und nicht geschaetzt — je 400
+ * TEMPO HEISST SEIT DEM 06.09.2026 ETWAS ANDERES, und das ist die Aenderung,
+ * um die es in diesem Absatz geht. Vorher liess `hart` beim Aufstieg BEIDE
+ * Bedingungen von `normal` weg — keine Reserve UND kein volles Brett —, und
+ * das hiess zusammen "kein Zoegern". Von den beiden traegt nur die erste: Ein
+ * Bot ohne die Bedingung "Brett voll" kauft Feldplaetze, auf denen nichts
+ * steht, und in einer Partie ueber neun Runden holt er das nicht mehr ein.
+ * Sie war also nicht wirkungslos, wie es einen Tag lang aussah, sondern ein
+ * Nachteil. Beide Haelften einzeln gemessen (sechs unabhaengige Saatbasen zu
+ * je 400 Partien zu viert, Schnitt der Siege von Sitz 0 je 400 — 100 waere
+ * unentschieden):
+ *
+ *     wie vorher: Polster 4, ohne volles Brett          133
+ *     nur das volle Brett wieder gefordert              190
+ *     nur das Polster auf 2                             156
+ *     beides zusammen — der heutige Stand               221
+ *
+ * Die Reserve bleibt bei 0, und sie ist die Schraube, die das Tempo heute
+ * traegt: `hart` steigt auf, sobald das Brett voll ist und das Gold GENAU
+ * reicht, waehrend `normal` noch drei Gold obendrauf sehen will. Auf drei
+ * gesetzt faellt er von 221 auf 166, auf fuenf auf 32 — die Reserve ist die
+ * schaerfste Schraube im Feld, und der sanfte Gegner ist mit seinen sechs
+ * genau deshalb schwach.
+ *
+ * DAS POLSTER HAT EIN OPTIMUM UND KEINE RICHTUNG. Von 4 auf 2 gewinnt `hart`
+ * (190 → 221), von 2 auf 0 verliert es wieder (175). Wer daraus "weniger
+ * sparen ist immer besser" liest, hat die Kurve nicht gemessen: Wer bis auf
+ * den letzten Goldtaler kauft, fuellt seine Bank mit Kleinkram, und eine volle
+ * Bank laesst nur noch Verschmelzungskaeufe zu (`passeBankAn` in partie.ts).
+ * Gemessen wurde 0/1/2/3/4 — 175 / 193 / 221 / 208 / 190.
+ *
+ * DASS DIE REIHENFOLGE STIMMT, IST GEMESSEN und nicht geschaetzt — je 400
  * Partien zu viert, ein Sitz mit der starken Gangart gegen drei mit der
  * schwachen, gezaehlt werden eindeutige Siege. Rechts steht der SCHNITT der
  * drei schwachen Sitze, und ueber zwei unabhaengige Saatbasen, weil eine
- * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 05.09.2026):
+ * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 06.09.2026):
  *
- *                    gebaut (12 Leben, x2)   langer Stand (20 Leben, x1)
- *     hart : normal   132 : 89   130 : 90      138 : 87   132 : 89
- *     hart : sanft    346 : 18   364 : 12      354 : 15   360 : 13
- *     normal : sanft  365 : 12   364 : 12      354 : 15   357 : 14
+ *                    gebaut (12 Leben, x2)     langer Stand (20 Leben, x1)
+ *     hart : normal   228 : 57,3  231 : 56,3    190 : 70,0  201 : 66,3
+ *     hart : sanft    386 :  4,7  389 :  3,7    384 :  5,3  385 :  5,0
+ *     normal : sanft  372 :  9,3  367 : 11,0    362 : 12,7  349 : 17,0
  *
- * AM 05.09.2026 ZWEIMAL NEU AUFGENOMMEN: einmal, weil der Bot seitdem auf
- * Marken spielt (siehe `heerStaerke`), und einmal nach der Kuerzung auf 12
- * Startleben. Die Reihenfolge steht durch alle drei Staende; der Abstand
- * zwischen `hart` und `normal` ist etwas kleiner geworden (bei 14 Leben und
- * markenblindem Bot waren es 140 : 87), und dazu gehoert die naechste Zeile.
+ * DASS BEIDE SPALTEN DASSELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
+ * nicht an der Partielaenge. Die zweite Spalte ist der lange Stand (20 Leben,
+ * kein Zeitraffer, rund fuenfzehn Runden) und wird von der letzten Probe in
+ * bot.test.ts mitgeprueft — die Rundenzahl ist die Zahl, an der Robin dreht,
+ * und eine darauf geeichte Gangart faellt sonst erst der uebernaechsten
+ * Umstellung auf. Auch das DUELL zu zweit traegt sie inzwischen (315 : 84,5 je
+ * 400 Partien, sechs Basen); dort lag `hart` nach der Kuerzung des
+ * Lebensbalkens einmal hinten — 96 : 104 —, und das war der Grund, aus dem zu
+ * viert gemessen wird. Der Grund ist damit weg, die Besetzung bleibt: Zu viert
+ * ist die Besetzung, auf die das Spiel eingestellt ist.
  *
- * DASS BEIDE SPALTEN DASELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
- * nicht an der Partielaenge. Die zweite Spalte ist der Stand von gestern (20
- * Leben, kein Zeitraffer, rund fuenfzehn Runden) und wird von der letzten
- * Probe in bot.test.ts mitgeprueft — die Rundenzahl ist die Zahl, an der Robin
- * dreht, und eine darauf geeichte Gangart faellt sonst erst der uebernaechsten
- * Umstellung auf.
+ * WAS `HART` TRAEGT, traegt es aus vier Schrauben und nicht aus einer. Je eine
+ * davon auf den Wert einer schwaecheren Gangart zurueckgedreht (die drei
+ * Zahlen auf `normal`, das Neu-Wuerfeln auf `sanft`), sechs Saatbasen zu je
+ * 400 Partien, Schnitt je 400:
  *
- * WARUM DAS HIER SO AUSFUEHRLICH STEHT: Am 05.09.2026 verlor `hart` gegen
- * `normal` — 77 : 107,7. Gemessen wurde das auf dem Zweig, der die 14
- * Startleben und den Zeitraffer brachte, aber die Ladenregel noch nicht hatte.
- * Nachgemessen ist die Ursache NICHT die kurze Partie und schon gar nicht der
- * Zeitraffer (bei 20 Leben aendert er die Zahl von 110 auf 114, also gar
- * nichts), sondern die damalige LADENREGEL:
+ *     `hart` wie gebaut                          221
+ *     mit dem Polster von `normal` (4)           190
+ *     ohne die Patzerfreiheit (0,15)             177
+ *     ohne das Neu-Wuerfeln                      172
+ *     mit der Reserve von `normal` (3)           166
+ *     alle drei Zahlen zugleich auf `normal`     110
  *
- *   - Vor dem 05.09.2026 leerte ein Kauf nur seinen Platz, und ein Wurf
- *     kostete 2 Gold. Wer sich frueh Feldplaetze erkaufte, bekam sie in der
- *     elf Runden kurzen Partie nicht mehr voll — `hart` steigt ohne Reserve
- *     und ohne volles Brett auf (siehe unten), und das war dort Tempo ins
- *     Leere.
- *     Beleg: Auf demselben Stand mit GEZAEHMTEM Aufstieg (`aufstiegsReserve`
- *     3, `nurBeiVollemBrett`) stand es 112 : 96,0 statt 77 : 107,7.
- *   - Seit ein Kauf den GANZEN Laden neu zieht, laesst sich ein grosses Brett
- *     auch fuellen, und der Aufstieg traegt sich wieder.
+ * Jede einzelne liegt weit ausserhalb des Standardfehlers (rund 10 Siege bei
+ * 400 Partien). Bis zum 06.09.2026 stand hier das Gegenteil: Damals trug allein
+ * die fehlende Patzerquote, und die Tempo-Schrauben lagen innerhalb der
+ * Streuung. Das war richtig gemessen und ist der Anlass dieser Aenderung
+ * gewesen — eine Charakterisierung ohne Wirkung ist keine.
  *
- * Der Wurfpreis war es dagegen nicht: Auf dem heutigen Stand mit wieder
- * eingeschaltetem Preis von 2 Gold gewinnt `hart` sogar deutlicher (174 :
- * 75,3). Wer die naechste Umstellung misst, misst deshalb bitte die Gangarten
- * MIT — eine Regel, die den Laden anfasst, verschiebt sie.
+ * DIE VERGLEICHE OBEN SIND GEPAART, und deshalb zaehlen dort auch kleine
+ * Unterschiede: `werkzeug/gangarten.mjs` baut die Saat jeder Partie aus der
+ * Saatbasis und den NAMEN der beiden Gangarten, nicht aus ihren Werten. Zwei
+ * Laeufe mit `--schraube` sehen also dieselben Laeden, dieselben Gegner und
+ * dieselben Kaempfe; verglichen wird die Entscheidung und nicht die
+ * Stichprobe. Nur der Sprung nach `--stark normal` zieht eine andere
+ * Stichprobe — daher steht in der letzten Zeile 110 und nicht die 98,7 des
+ * Kontrolllaufs. Diese Differenz ist Streuung und kein Sitzvorteil.
  *
- * WAS `HART` HEUTE TRAEGT, ist die fehlende Patzerquote und nicht das Tempo:
- * nimmt man nur den Patzer weg, steht es 149 : 83,7; mit den Tempo-Schrauben
- * obendrauf 140 : 86,7 (beides gemessen, bevor der Bot auf Marken spielte).
- * Die beiden Zahlen liegen innerhalb eines Standardfehlers (rund 10 Siege bei
- * 400 Partien) — die Tempo-Schrauben sind weder Vorteil noch Nachteil. Sie
- * bleiben trotzdem stehen: Sie geben der Gangart ihr Verhalten, und eine
- * Aenderung auf eine Zahl innerhalb der Streuung waere geraten, nicht
- * gemessen. Als Befund steht das auf dem Board.
+ * DER KONTROLLLAUF IST WIEDER NEUTRAL, und das gehoert vor jede dieser Zahlen:
+ * Besetzt man ALLE VIER Sitze gleich, gewinnt Sitz 0 ueber sechs Saatbasen zu
+ * je 400 Partien 98,7 mal mit `normal`, 100,2 mit `hart` und 107,5 mit `sanft`
+ * — gegen 100 im Schnitt. Am 05.09.2026 stand hier noch ein Sitzvorteil von
+ * 110 bis 116 mit `normal`, gemessen ueber drei Basen; ueber sechs sind es
+ * 101,7 (bei 14 Leben) und 98,7 (bei 12). Der Vorteil war eine Stichprobe.
+ * DIE URSACHE IST TROTZDEM NICHT WEG und kann jederzeit wiederkommen: Der
+ * VORRAT ist gemeinsam (partie.ts, `vorrat`), Bots auf Marken wollen alle
+ * dieselben Einheiten, und der Messstand laesst die Sitze der Reihe nach
+ * ruesten — wer zuerst kauft, bekommt sie. Am echten Tisch ruesten alle
+ * gleichzeitig; der Druck auf den Vorrat ist aber derselbe. Dass ausgerechnet
+ * `sanft` ueber 100 liegt, passt dazu: Wer hortet, kauft spaeter. Wer eine
+ * Gangart misst, misst den Kontrolllauf mit.
  *
- * DER KONTROLLLAUF IST NICHT MEHR NEUTRAL, und das gehoert vor jede dieser
- * Zahlen. Besetzt man ALLE VIER Sitze mit `normal`, gewinnt Sitz 0 trotzdem
- * oefter: 110 Siege bei 12 Startleben, 115/116/108 ueber drei Saatbasen bei
- * 14, gegen 100 im Schnitt. Vor dem Markengewicht war der Lauf sauber (101,
- * 106, 99). Die Ursache ist der GEMEINSAME VORRAT (partie.ts, `vorrat`):
- * Bots, die auf Synergien spielen, wollen alle dieselben Einheiten, und der
- * Messstand laesst die Sitze der Reihe nach ruesten — wer zuerst kauft,
- * bekommt sie. Am echten Tisch ruesten alle gleichzeitig, dort ist die
- * Reihenfolge keine Sitznummer; der Druck auf den Vorrat ist aber derselbe.
- * Fuer die Tabelle oben heisst das: Von den rund 1,48-fachen Siegen von
- * `hart` sind gut 1,10 schon im Sitz enthalten. Die Reihenfolge der Gangarten
- * traegt das immer noch, aber wer den Abstand als Zahl braucht, misst gegen
- * 110 und nicht gegen 100. Steht als Befund auf dem Board.
- *
- * ZU VIERT UND NICHT ZU ZWEIT, und das ist selbst ein Befund: Solange die
- * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
- * 125:75. Mit dem kuerzeren Lebensbalken (20 Leben, 05.09.2026) dauerte ein
- * Duell 11 statt 21 Runden, und dort stand es 96:104 fuer `normal`. Am Tisch
- * zu viert — der Besetzung, auf die das Spiel eingestellt ist — bleibt der
- * Abstand stehen. Wer die Gangarten fuer das Duell zurechtruecken will, misst
- * bitte beide Besetzungen; die Zahlen fallen in Sekunden an.
+ * WAS DIE ZAHLEN SCHON ZWEIMAL GEKIPPT HAT, WAR DER LADEN. Am 05.09.2026
+ * verlor `hart` gegen `normal` (77 : 107,7) — nicht wegen der kurzen Partie
+ * und schon gar nicht wegen des Zeitraffers (bei 20 Leben bewegt er die Zahl
+ * von 110 auf 114), sondern weil ein Kauf damals nur SEINEN Ladenplatz leerte:
+ * Ein frueh vergroessertes Brett bekam man nicht mehr voll. Seit ein Kauf den
+ * ganzen Laden neu zieht, traegt sich der Ausbau wieder. Der Wurfpreis war es
+ * dagegen nie — mit wieder eingeschaltetem Preis von 2 Gold gewinnt `hart`
+ * sogar deutlicher. WER DEN LADEN ANFASST, MISST DIE GANGARTEN MIT.
  *
  * Der erste Anlauf hatte die Schrauben andersherum gesetzt — der harte Gegner
  * sparte am meisten und stieg am vorsichtigsten auf — und lag danach ueber 40
  * Partien mit 19:21 GLEICHAUF mit dem sanften. Wer hier etwas verstellt, misst
- * bitte nach: `node packages/game-tafelrunde/werkzeug/gangarten.mjs`, die
- * Probe dazu steht in test/bot.test.ts (imFeld).
+ * bitte nach, und zwar ohne diese Datei anzufassen:
+ * `node packages/game-tafelrunde/werkzeug/gangarten.mjs --schraube polster=0`
+ * stellt eine einzelne Schraube um. Die Probe steht in test/bot.test.ts
+ * (imFeld).
  */
-const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
+export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
   sanft: {
     polster: 8,
     aufstiegsReserve: 6,
@@ -224,9 +272,9 @@ const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     nimmtVerschmelzungImmer: true,
   },
   hart: {
-    polster: 4,
+    polster: 2,
     aufstiegsReserve: 0,
-    nurBeiVollemBrett: false,
+    nurBeiVollemBrett: true,
     wuerfeltNeu: true,
     patzerQuote: 0,
     nimmtVerschmelzungImmer: true,
@@ -768,17 +816,25 @@ function kaufZug(
  * Ohne die Reserve steigt er auf, sobald er es gerade eben kann, und steht mit
  * einem groesseren Brett und leerem Beutel da.
  *
- * Das ist die Regel, nach der `normal` spielt. Die beiden anderen Gangarten
- * weichen in verschiedene Richtungen ab: `hart` laesst BEIDE Haelften weg und
- * steigt auf, sobald es geht; `sanft` haelt sich an die Regel und legt sechs
- * Gold obendrauf, steigt also spaeter auf als beide.
+ * An "Brett voll" halten sich seit dem 06.09.2026 alle drei Gangarten; sie
+ * weichen nur noch in der RESERVE voneinander ab. `hart` legt nichts obendrauf
+ * und steigt auf, sobald das volle Brett und das blanke Aufstiegsgeld da sind;
+ * `normal` will drei Gold uebrig sehen, `sanft` sechs.
+ *
+ * DIE ERSTE HAELFTE WEGZULASSEN WAR EIN FEHLER, und er hat zwei Tage
+ * ueberlebt, weil er sich als Charakterzug las. `hart` liess bis zum
+ * 06.09.2026 beide Haelften weg — "kein Zoegern beim Aufstieg" —, und weil
+ * eine Messung vom Vortag das fuer folgenlos hielt, blieb es stehen. Auf dem
+ * heutigen Stand ist es das nicht: Allein die Bedingung "Brett voll"
+ * zurueckzuholen bringt `hart` von 133 auf 190 Siege je 400 Partien. Ein
+ * Feldplatz, den niemand besetzt, ist in einer Partie ueber neun Runden
+ * bezahlter Leerstand.
  *
  * DASS DAS TEMPO SICH LOHNT, HAENGT AM LADEN und ist nicht fuer alle Zeiten
  * gemessen: Solange ein Kauf nur seinen Ladenplatz leerte, blieben die frueh
  * gekauften Feldplaetze in einer kurzen Partie leer, und `hart` verlor daran
- * gegen `normal` (77 : 107,7). Heute — ein Kauf zieht den ganzen Laden neu —
- * kostet der frueh Aufstieg nichts mehr, bringt aber auch nichts Messbares.
- * Die Zahlen und der Nachweis stehen bei GANGARTEN.
+ * gegen `normal` (77 : 107,7). Die Zahlen und der Nachweis stehen bei
+ * GANGARTEN.
  */
 function aufstiegsZug(eigen: EigeneSicht, gangart: Gangart): TafelrundeAktion | null {
   if (eigen.aufstiegKosten === null) return null;
@@ -888,10 +944,18 @@ function wuerfelZug(
  *   3. Dann das NEU-WUERFELN. Auch das steht vor dem Kauf, und dort steht es
  *      begruendet: Nach dem Kauf kaeme es nie zum Zug.
  *   4. Und erst dann KAUFEN — oder bereit melden.
+ *
+ * STATT DES NAMENS DARF AUCH EINE GANGART SELBST UEBERGEBEN WERDEN. Der Tisch
+ * tut das nie — er kennt nur `sanft`, `normal`, `hart` (siehe `gangartVon` im
+ * Adapter). Die Oeffnung ist fuer den Messstand da: `werkzeug/gangarten.mjs`
+ * kann damit EINE Schraube verstellen und den Vorschlag messen, ohne ihn
+ * einzubauen (`--schraube polster=0`). Vorher ging das nur ueber eine Aenderung
+ * an dieser Datei samt Neubau, und genau daran ist die Frage "was traegt `hart`
+ * eigentlich?" zweimal liegengeblieben.
  */
 export function botZug(
   sicht: TafelrundeSicht,
-  schwierigkeit: Schwierigkeit = 'normal',
+  wahl: Schwierigkeit | Gangart = 'normal',
 ): TafelrundeAktion {
   const eigen = sicht.eigenes;
   // Ohne eigenes Heer gibt es nichts zu entscheiden. Bereit zu melden ist die
@@ -899,7 +963,7 @@ export function botZug(
   // wirft — und der Adapter faengt den Zuschauerfall ohnehin vorher ab.
   if (!eigen) return { typ: 'bereit' };
 
-  const gangart = GANGARTEN[schwierigkeit];
+  const gangart = typeof wahl === 'string' ? GANGARTEN[wahl] : wahl;
   return (
     stellungsZug(sicht, eigen) ??
     aufstiegsZug(eigen, gangart) ??

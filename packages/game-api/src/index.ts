@@ -33,8 +33,18 @@
  * noch aussichtslos (zu stark) ist. `genie` zaehlt Karten und spielt auf
  * groesste Siegwahrscheinlichkeit — die uebrigen kommen ohne Gedaechtnis aus.
  * Nicht jedes Spiel muss alle Stufen unterscheiden; ein Modul, das nur eine
- * Strategie kennt, spielt sie fuer jede Stufe. Bisher wertet nur Doppelkopf
- * die Stufe aus.
+ * Strategie kennt, spielt sie fuer jede Stufe. Nachgezaehlt am 05.09.2026
+ * werten vier von zehn Modulen sie aus: Doppelkopf, Easy Poker und
+ * Tafelrunde im Zug (`botAction`), Mememory dagegen schon beim Aufbau der
+ * Partie (`createParty`) — sein Bot hat ein Gedaechtnis, und wie viel er
+ * sich merkt, steht vor dem ersten Zug fest. Die uebrigen sechs ignorieren
+ * die Stufe.
+ *
+ * Diese Aufzaehlung veraltet, sobald ein Modul nachzieht, und ein Grep nach
+ * `BotLevel` traegt nicht: Eiland und Filler nennen den Typ nur, um zu
+ * begruenden, warum sie ihn NICHT auswerten. Wer es genau wissen will,
+ * sieht in `botAction` und `createParty` des Moduls nach, ob der Parameter
+ * ankommt.
  */
 export type BotLevel = 'anfaenger' | 'standard' | 'experte' | 'genie';
 

@@ -28,9 +28,18 @@
  * Renderer beleuchten als die 3D-Probe, an der die Optik abgenommen wurde —
  * Licht, Tone Mapping und Materialauslegung muessten von Hand nachgebaut
  * werden. Hier laeuft stattdessen dasselbe three.js mit denselben Lichtwerten
- * wie in `proben/arena-3d/Buehne.tsx`, nur in einem Chromium ohne Fenster.
- * Was herauskommt, sieht deshalb aus wie die Probe, und es haengt an keiner
- * zusaetzlichen Installation.
+ * wie in der 3D-Probe, nur in einem Chromium ohne Fenster. Was herauskommt,
+ * sieht deshalb aus wie die Probe, und es haengt an keiner zusaetzlichen
+ * Installation.
+ *
+ * DIE 3D-PROBE GIBT ES NICHT MEHR. `packages/client/src/proben/arena-3d/`
+ * (Route `/probe/arena-3d`, Buehne.tsx, modelle-bauen.mjs) war der Entwurf, an
+ * dem Robin die Optik abgenommen und gegen das LIVE-Rendern entschieden hat;
+ * mit dieser Entscheidung ist sie am 06.09.2026 geloescht worden. Alles, was
+ * dieses Skript von ihr uebernommen hat — Lichtwerte, Tone Mapping, die
+ * Zuordnung Rolle→Figur, der Bretterwinkel von 38,6 Grad — steht hier
+ * ausgeschrieben und braucht sie nicht. Wer den Entwurf trotzdem sehen will,
+ * findet ihn in der Historie vor diesem Datum.
  *
  * QUELLE UND LIZENZ: KayKit "Character Pack : Adventurers" 1.0 von Kay
  * Lousberg (kaylousberg.com), CC0 1.0 Universal. Die LICENSE.txt des Pakets
@@ -57,15 +66,16 @@ const HIER = dirname(fileURLToPath(import.meta.url));
 const WURZEL = resolve(HIER, '..', '..', '..', '..');
 const ZIEL = join(WURZEL, 'packages', 'client', 'public', 'tafelrunde', 'figuren3d');
 const VERGLEICHSBILD = join(WURZEL, 'docs', 'bilder', 'tafelrunde-kamerawinkel.webp');
-const LIZENZ_QUELLE = join(
-  WURZEL,
-  'packages',
-  'client',
-  'public',
-  'proben',
-  'arena-3d',
-  'LIZENZ.txt',
-);
+/**
+ * Der Lizenztext, den `schreibeLizenz()` unter die eigene Kopfzeile setzt.
+ *
+ * ER LIEGT NEBEN DIESEM SKRIPT, nicht unter `public/`: Bis zum 06.09.2026 kam
+ * er aus `public/proben/arena-3d/LIZENZ.txt` — dem Ordner der Three.js-Probe,
+ * die mit Robins Entscheidung geloescht wurde. Ein Werkzeug, dessen Eingabe im
+ * Ordner einer Wegwerf-Probe liegt, faellt beim naechsten Aufraeumen um; das
+ * hier ist dieselbe Datei, nur an einem Platz, der ihr gehoert.
+ */
+const LIZENZ_QUELLE = join(HIER, 'kaykit-adventurers-1.0-lizenz.txt');
 
 const QUELLE =
   'https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures';
@@ -126,7 +136,7 @@ const QUELLE_SAMMLUNG_TEXT =
  *
  * 16 GRAD, ENTSCHIEDEN VON ROBIN AM 05.09.2026. Der erste Anlauf hatte hier
  * 38,6 Grad — die Kamera der 3D-Probe, die von oben auf ein BRETT schaut
- * (`proben/arena-3d/Arena3D.tsx`: Kamera (0, 7.4, 8.2) auf (0, 0.85, 0)). Fuer
+ * (dort stand sie auf (0, 7.4, 8.2) und blickte auf (0, 0.85, 0)). Fuer
  * Figurenbilder ist dieser Winkel falsch: Man sieht den Scheitel statt des
  * Gesichts, und beim Meuchler mit dem grossen KayKit-Kopf verschwindet das
  * Gesicht ganz. Die Vorbilder (Merge Tactics) zeigen Gesicht, Brust und Waffe.
@@ -202,9 +212,9 @@ const PROBE_MITTE_Y = 1.0;
 /**
  * Je Rolle eine Figur, eine Garnitur und fuenf Animationen.
  *
- * Zuordnung und Ausruestung der ersten vier sind aus
- * `proben/arena-3d/modelle-bauen.mjs` uebernommen. NEU ist dort gegenueber nur
- * `getroffen`; die Probe kam ohne aus, eine Kampfanzeige nicht.
+ * Zuordnung und Ausruestung der ersten vier sind aus dem `modelle-bauen.mjs`
+ * der 3D-Probe uebernommen. NEU ist dort gegenueber nur `getroffen`; die Probe
+ * kam ohne aus, eine Kampfanzeige nicht.
  *
  * DER BEISTAND FAELLT AUS DER REIHE und traegt deshalb `sammlung: true`. Er
  * kommt aus einem zweiten Paket (siehe `QUELLE_SAMMLUNG`) und ist dort auf drei
@@ -458,7 +468,7 @@ const KOERPER = /(_Body|_Head|_Head_Hooded|_ArmLeft|_ArmRight|_LegLeft|_LegRight
 // ---------------------------------------------------------------------------
 
 /**
- * Der Winkel der Bretterkamera aus `proben/arena-3d/`. Er wird nicht mehr
+ * Der Winkel der Bretterkamera aus der 3D-Probe. Er wird nicht mehr
  * gerendert, steht im Vergleichsbild aber als Vergleichsmass mit — ohne ihn
  * sieht man nicht, wie viel die flacheren Winkel wirklich gewinnen.
  */
@@ -861,8 +871,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserv
 renderer.setPixelRatio(1);
 renderer.setSize(KANTE, KANTE, false);
 renderer.setClearColor(0x000000, 0);
-// Dieselben zwei Zeilen wie in Arena3D.tsx — ohne sie sind die Figuren
-// merklich blasser als in der Probe, an der die Optik abgenommen wurde.
+// Dieselben zwei Zeilen wie in der 3D-Probe — ohne sie sind die Figuren
+// merklich blasser als dort, und abgenommen wurde die Optik an ihr.
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);

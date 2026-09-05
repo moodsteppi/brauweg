@@ -15,6 +15,7 @@ import {
   FIGURENKASTEN,
   GLEITEN_MS,
   KAMPF_TEMPO,
+  SACKEN_MS,
   bildstand,
   blattPfad,
   blattVersatz,
@@ -33,6 +34,34 @@ import {
 function spur(teil: Partial<Bewegungsspur> = {}): Bewegungsspur {
   return { id: 0, schlagAb: null, getroffenAb: null, zugAb: null, totAb: null, ...teil };
 }
+
+describe('SACKEN_MS', () => {
+  /*
+   * Das Stylesheet laesst eine Gefallene erst NACH dem Fall verblassen
+   * (`--sacken` an `.figur`). Waere die Dauer dort als Zahl geschrieben,
+   * liefe sie beim ersten geaenderten Bild oder Tempo aus der Todesfolge
+   * heraus — und man saehe eine halb durchsichtige Figur fallen.
+   */
+  it('faellt aus Bildzahl, Bildrate und Zeitraffer der Todesfolge', () => {
+    const tod = folgeVon('tod');
+    expect(SACKEN_MS).toBe(Math.round((tod.bilder / (tod.bildrate * KAMPF_TEMPO)) * 1000));
+  });
+
+  it('deckt die ganze Todesfolge ab, bis zum letzten Bild', () => {
+    /*
+     * Das letzte Bild ist die LIEGENDE Figur, und seit dem 06.09.2026 ist
+     * genau sie der Grund, warum die Zeile bis zum Ende gerendert wird. Faengt
+     * das Verblassen vorher an, sieht man das Ergebnis des Falls nie: Die
+     * Figur waere schon durchsichtig, wenn sie ankommt.
+     *
+     * Nachgerechnet mit derselben Formel, die `bildstand` benutzt — das letzte
+     * Bild ist bei `(bilder - 1) / (bildrate * tempo)` erreicht.
+     */
+    const tod = folgeVon('tod');
+    const letztesBildAb = ((tod.bilder - 1) / (tod.bildrate * KAMPF_TEMPO)) * 1000;
+    expect(SACKEN_MS).toBeGreaterThan(letztesBildAb);
+  });
+});
 
 describe('blattPfad', () => {
   it('kennt fuer jede der fuenf Rollen ein Blatt', () => {
