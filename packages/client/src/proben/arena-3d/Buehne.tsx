@@ -35,7 +35,7 @@ import {
   type Spur,
   stellungBei,
   weltVonPlatz,
-} from './arena-szene';
+} from './ablauf';
 
 /** Ein geladenes Rollenmodell: die Vorlage und ihre vier Animationen. */
 export interface Modell {

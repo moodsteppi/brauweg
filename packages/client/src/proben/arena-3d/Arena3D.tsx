@@ -36,8 +36,8 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-import { Arena3DBuehne, type Modell } from './Arena3DBuehne';
-import { SZENE, baueSpuren, dauerMs } from './arena-szene';
+import { Arena3DBuehne, type Modell } from './Buehne';
+import { BERICHT, baueSpuren, dauerMs } from './ablauf';
 import stil from './Arena3D.module.css';
 
 /** Wo die Figuren liegen. Eine Datei je Rolle, siehe modelle-bauen.mjs. */
@@ -55,7 +55,7 @@ interface Messung {
   schlechtestes: number;
 }
 
-export default function Arena3D(): React.JSX.Element {
+export function Arena3D(): React.JSX.Element {
   /**
    * Der Nullpunkt der Ladezeit.
    *
@@ -80,8 +80,8 @@ export default function Arena3D(): React.JSX.Element {
   /** Nur ein Zaehler: Ein Wechsel baut die Wiedergabe neu auf ("nochmal"). */
   const [lauf, setLauf] = useState(0);
 
-  const spuren = useMemo(() => baueSpuren(SZENE), []);
-  const gesamt = useMemo(() => dauerMs(SZENE), []);
+  const spuren = useMemo(() => baueSpuren(BERICHT), []);
+  const gesamt = useMemo(() => dauerMs(BERICHT), []);
 
   // Wiedergabezeit. Ein Ref und kein Zustand: Die Buehne liest ihn in jedem
   // Bild, und ein `setState` je Bild waere sechzig Durchlaeufe der ganzen
@@ -192,7 +192,7 @@ export default function Arena3D(): React.JSX.Element {
     );
   }, []);
 
-  const sieger = SZENE.bericht.sieger;
+  const sieger = BERICHT.sieger;
 
   return (
     <div className={stil.blatt}>
@@ -288,7 +288,7 @@ export default function Arena3D(): React.JSX.Element {
       <p className={stil.fussnote}>
         Figuren: KayKit „Character Pack: Adventurers" von Kay Lousberg, CC0 1.0 — frei
         verwendbar, Namensnennung nicht verlangt. Herkunft und Bearbeitung stehen in
-        <code> packages/client/src/proben/modelle-bauen.mjs</code>.
+        <code> packages/client/src/proben/arena-3d/modelle-bauen.mjs</code>.
       </p>
     </div>
   );

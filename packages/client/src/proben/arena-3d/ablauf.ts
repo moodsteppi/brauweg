@@ -1,15 +1,21 @@
 /**
- * Die aufgezeichnete Kampfszene lesen und in eine Zeitleiste verwandeln.
+ * Die aufgezeichnete Kampfszene in eine Zeitleiste verwandeln — 3D-Fassung.
  *
- * Gemeinsame Grundlage der beiden Arena-Proben: Probe A zeigt dieselbe Szene
- * in 2D, Probe B (Arena3D.tsx) in 3D. Was hier steht, ist reine Rechnerei
- * ohne React und ohne three — damit es sich ohne Bildschirm pruefen laesst
- * (arena-szene.test.ts).
+ * Gelesen wird `../arena-szene.json`, dieselbe Datei, die Probe A abspielt.
+ * Sie ist verbindlich: Verglichen werden sollen zwei DARSTELLUNGEN, nicht zwei
+ * Kaempfe. Erzeugt wird sie von `../szene-erzeugen.mjs`.
  *
- * WOHER DIE DATEN KOMMEN: `arena-szene.json`, erzeugt von
- * `szene-erzeugen.mjs` aus `simuliereKampf()` des Spielpakets. Der Client
- * importiert die Spielpakete NICHT (CLAUDE.md) — deshalb die abgelegte
- * Aufzeichnung und nicht der Aufruf.
+ * WARUM DAS HIER TROTZDEM NEBEN `arena-2d/ablauf.ts` STEHT, statt geteilt zu
+ * werden: Die beiden Proben brauchen aus demselben Protokoll verschiedene
+ * Dinge. Probe A rechnet Bildschirmorte in Prozent und kennt Haltungen wie
+ * "Zuruckzucken", die es nur als Sprite gibt; hier fallen Weltkoordinaten in
+ * Metern an und vier Animationsspuren, die im Modell stecken. Eine gemeinsame
+ * Zwischenschicht muesste beides koennen und waere fuer eine Wegwerf-Probe
+ * mehr Aufwand als die doppelte Rechnung. Geteilt ist, was wirklich dasselbe
+ * ist: die Szene selbst und `../arena-einheiten.ts`.
+ *
+ * Reine Rechnerei ohne React und ohne three — damit sie sich ohne Bildschirm
+ * pruefen laesst (ablauf.test.ts).
  *
  * WARUM `?raw` UND NICHT EIN JSON-IMPORT: Die tsconfig des Clients hat
  * `resolveJsonModule` nicht an, und eine Probe ist kein Anlass, an den
@@ -17,7 +23,8 @@
  * `vite/client` und ist bereits typisiert.
  */
 
-import roh from './arena-szene.json?raw';
+import roh from '../arena-szene.json?raw';
+import { type Rolle, namenVon, rolleVon } from '../arena-einheiten';
 
 // ---------------------------------------------------------------------------
 // Was in der Datei steht
@@ -25,8 +32,6 @@ import roh from './arena-szene.json?raw';
 
 /** Seite 0 steht unten in der Arena, Seite 1 oben. */
 export type Seite = 0 | 1;
-
-export type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
 
 export interface Kaempferstand {
   readonly id: number;
@@ -39,7 +44,13 @@ export interface Kaempferstand {
 }
 
 export type Ereignis =
-  | { readonly art: 'bewegung'; readonly zeitMs: number; readonly wer: number; readonly von: number; readonly nach: number }
+  | {
+      readonly art: 'bewegung';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly von: number;
+      readonly nach: number;
+    }
   | {
       readonly art: 'treffer';
       readonly zeitMs: number;
@@ -49,29 +60,25 @@ export type Ereignis =
       readonly lebenDanach: number;
     }
   | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
-  | { readonly art: 'ende'; readonly zeitMs: number; readonly sieger: Seite | null; readonly grund: string };
+  | {
+      readonly art: 'ende';
+      readonly zeitMs: number;
+      readonly sieger: Seite | null;
+      readonly grund: string;
+    };
 
-/** Name und Rolle je Kaempfer — steht mit in der Datei, siehe szene-erzeugen.mjs. */
-export interface Figur {
-  readonly id: number;
-  readonly name: string;
-  readonly rolle: Rolle;
-  readonly reichweite: number;
-}
-
-export interface Szene {
+/** Der Bericht, wie ihn `simuliereKampf()` ausgibt und die Datei ihn traegt. */
+export interface Kampfbericht {
   readonly saat: string;
-  readonly figuren: readonly Figur[];
-  readonly bericht: {
-    readonly start: readonly Kaempferstand[];
-    readonly ereignisse: readonly Ereignis[];
-    readonly sieger: Seite | null;
-    readonly grund: string;
-    readonly dauerMs: number;
-  };
+  readonly erstZieher: Seite;
+  readonly start: readonly Kaempferstand[];
+  readonly ereignisse: readonly Ereignis[];
+  readonly sieger: Seite | null;
+  readonly grund: string;
+  readonly dauerMs: number;
 }
 
-export const SZENE = JSON.parse(roh) as Szene;
+export const BERICHT = JSON.parse(roh) as Kampfbericht;
 
 // ---------------------------------------------------------------------------
 // Die Geometrie der Arena
@@ -115,7 +122,8 @@ export const ANGRIFF_MS = 500;
 export function weltVonPlatz(platz: number): { x: number; z: number } {
   const reihe = Math.floor(platz / ARENA_SPALTEN);
   const spalte = platz % ARENA_SPALTEN;
-  const x = Math.sqrt(3) * (spalte + 0.5 * (reihe % 2)) - Math.sqrt(3) * (ARENA_SPALTEN - 1 + 0.5) / 2;
+  const x =
+    Math.sqrt(3) * (spalte + 0.5 * (reihe % 2)) - (Math.sqrt(3) * (ARENA_SPALTEN - 1 + 0.5)) / 2;
   const z = 1.5 * reihe - (1.5 * (ARENA_REIHEN - 1)) / 2;
   return { x, z };
 }
@@ -125,7 +133,7 @@ export function weltVonPlatz(platz: number): { x: number; z: number } {
 // ---------------------------------------------------------------------------
 
 /** Ein Schritt von einem Feld aufs naechste. */
-interface Schritt {
+export interface Schritt {
   readonly abMs: number;
   readonly bisMs: number;
   readonly von: number;
@@ -160,40 +168,46 @@ export interface Stellung {
   readonly haltung: Haltung;
   /** Anteil des Lebens, 0 bis 1. */
   readonly lebenAnteil: number;
-  /** Sekunden seit Beginn der laufenden Haltung — fuer den Anschluss der Animation. */
+  /** Millisekunden seit Beginn der laufenden Haltung. */
   readonly seitMs: number;
 }
 
 /**
  * Baut aus dem Protokoll je Figur eine Spur.
  *
- * Einmal beim Aufbau der Buehne, nicht je Bild: Ueber 112 Ereignisse in jedem
+ * Einmal beim Aufbau der Buehne, nicht je Bild: Ueber 110 Ereignisse in jedem
  * von 60 Bildern der Sekunde zu laufen waere die teuerste Schleife der ganzen
  * Anzeige, und sie liefert immer dasselbe Ergebnis.
  */
-export function baueSpuren(szene: Szene = SZENE): Spur[] {
-  const nachId = new Map(szene.figuren.map((f) => [f.id, f]));
-  const spuren = new Map<number, {
-    schritte: Schritt[];
-    angriffe: number[];
-    treffer: { zeitMs: number; leben: number }[];
-    todMs: number | null;
-  }>();
-  for (const k of szene.bericht.start) {
-    spuren.set(k.id, { schritte: [], angriffe: [], treffer: [], todMs: null });
+export function baueSpuren(bericht: Kampfbericht = BERICHT): Spur[] {
+  const roh = new Map<
+    number,
+    {
+      schritte: Schritt[];
+      angriffe: number[];
+      treffer: { zeitMs: number; leben: number }[];
+      todMs: number | null;
+    }
+  >();
+  for (const k of bericht.start) {
+    roh.set(k.id, { schritte: [], angriffe: [], treffer: [], todMs: null });
   }
 
-  for (const e of szene.bericht.ereignisse) {
-    const eintrag = 'wer' in e ? spuren.get(e.wer) : undefined;
+  for (const e of bericht.ereignisse) {
+    const eintrag = 'wer' in e ? roh.get(e.wer) : undefined;
     switch (e.art) {
       case 'bewegung':
-        eintrag?.schritte.push({ abMs: e.zeitMs, bisMs: e.zeitMs + SCHRITT_MS, von: e.von, nach: e.nach });
+        eintrag?.schritte.push({
+          abMs: e.zeitMs,
+          bisMs: e.zeitMs + SCHRITT_MS,
+          von: e.von,
+          nach: e.nach,
+        });
         break;
-      case 'treffer': {
+      case 'treffer':
         eintrag?.angriffe.push(e.zeitMs);
-        spuren.get(e.ziel)?.treffer.push({ zeitMs: e.zeitMs, leben: e.lebenDanach });
+        roh.get(e.ziel)?.treffer.push({ zeitMs: e.zeitMs, leben: e.lebenDanach });
         break;
-      }
       case 'tod':
         if (eintrag) eintrag.todMs = e.zeitMs;
         break;
@@ -202,20 +216,19 @@ export function baueSpuren(szene: Szene = SZENE): Spur[] {
     }
   }
 
-  return szene.bericht.start.map((k) => {
-    const roh = spuren.get(k.id)!;
-    const figur = nachId.get(k.id);
+  return bericht.start.map((k) => {
+    const eintrag = roh.get(k.id)!;
     return {
       id: k.id,
       seite: k.seite,
-      rolle: figur?.rolle ?? 'wache',
-      name: figur?.name ?? k.einheitId,
+      rolle: rolleVon(k.einheitId),
+      name: namenVon(k.einheitId),
       hoechstesLeben: k.hoechstesLeben,
       startPlatz: k.platz,
-      schritte: roh.schritte,
-      angriffe: roh.angriffe,
-      treffer: roh.treffer,
-      todMs: roh.todMs,
+      schritte: eintrag.schritte,
+      angriffe: eintrag.angriffe,
+      treffer: eintrag.treffer,
+      todMs: eintrag.todMs,
     };
   });
 }
@@ -290,10 +303,12 @@ export function stellungBei(spur: Spur, zeitMs: number): Stellung {
  *
  * Der Bericht endet einen Takt nach dem letzten Ereignis (siehe kampf.ts);
  * dazu kommt hier ein Nachlauf, damit die Todesanimation der letzten Figur
- * noch zu Ende laeuft, bevor das Ergebnis eingeblendet wird.
+ * noch zu Ende laeuft, bevor das Ergebnis eingeblendet wird. Dieselben zwei
+ * Sekunden wie `NACHSPANN_MS` in Probe A — beide Proben sollen gleich lang
+ * laufen, sonst vergleicht man am Bildschirm auch noch zwei Taktgefuehle.
  */
 export const NACHLAUF_MS = 2000;
 
-export function dauerMs(szene: Szene = SZENE): number {
-  return szene.bericht.dauerMs + NACHLAUF_MS;
+export function dauerMs(bericht: Kampfbericht = BERICHT): number {
+  return bericht.dauerMs + NACHLAUF_MS;
 }

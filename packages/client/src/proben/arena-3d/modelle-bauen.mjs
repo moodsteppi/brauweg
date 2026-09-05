@@ -11,7 +11,7 @@
  * Ausfuehren (die Werkzeuge stehen bewusst NICHT in der package.json des
  * Clients — sie werden einmal gebraucht, nicht bei jedem Build):
  *
- *   cd packages/client/src/proben
+ *   cd packages/client/src/proben/arena-3d
  *   npm i --no-save @gltf-transform/core @gltf-transform/functions \
  *                   @gltf-transform/extensions sharp
  *   node modelle-bauen.mjs
@@ -42,7 +42,7 @@ import { dedup, prune, quantize, resample, textureCompress } from '@gltf-transfo
 import sharp from 'sharp';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
-const ZIEL = join(HIER, '..', '..', 'public', 'proben', 'arena-3d');
+const ZIEL = join(HIER, '..', '..', '..', 'public', 'proben', 'arena-3d');
 const ZWISCHEN = join(HIER, '.roh');
 
 const QUELLE =

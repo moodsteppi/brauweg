@@ -1,7 +1,7 @@
 /**
  * Pruefungen fuer die Zeitleiste der Arena-Proben.
  *
- * Warum ausgerechnet hier: `arena-szene.ts` ist die einzige Stelle der Probe,
+ * Warum ausgerechnet hier: `ablauf.ts` ist die einzige Stelle der Probe,
  * die RECHNET statt zu zeichnen — und sie rechnet etwas nach, das im Modul
  * schon feststeht (Position, Abstand, Reihenfolge der Haltungen). Genau die
  * Sorte Code, die still falsch wird: Eine vertauschte Achse faellt am
@@ -19,22 +19,23 @@ import {
   ARENA_REIHEN,
   ARENA_SPALTEN,
   SCHRITT_MS,
-  SZENE,
+  BERICHT,
   baueSpuren,
   dauerMs,
   stellungBei,
   weltVonPlatz,
-} from './arena-szene';
+} from './ablauf';
+import { EINHEITEN, rolleVon } from '../arena-einheiten';
 
 describe('die aufgezeichnete Szene', () => {
   it('hat vier Einheiten je Seite', () => {
-    const je = [0, 1].map((s) => SZENE.bericht.start.filter((k) => k.seite === s).length);
+    const je = [0, 1].map((s) => BERICHT.start.filter((k) => k.seite === s).length);
     expect(je).toEqual([4, 4]);
   });
 
   it('enthaelt Bewegung, Treffer, Tode und genau ein Ende', () => {
     const zaehlung = { bewegung: 0, treffer: 0, tod: 0, ende: 0 };
-    for (const e of SZENE.bericht.ereignisse) zaehlung[e.art] += 1;
+    for (const e of BERICHT.ereignisse) zaehlung[e.art] += 1;
     expect(zaehlung.bewegung).toBeGreaterThan(0);
     expect(zaehlung.treffer).toBeGreaterThan(0);
     expect(zaehlung.tod).toBeGreaterThan(1);
@@ -42,8 +43,8 @@ describe('die aufgezeichnete Szene', () => {
   });
 
   it('zeigt Tode auf beiden Seiten', () => {
-    const seiteVon = new Map(SZENE.bericht.start.map((k) => [k.id, k.seite]));
-    const tode = SZENE.bericht.ereignisse.filter((e) => e.art === 'tod');
+    const seiteVon = new Map(BERICHT.start.map((k) => [k.id, k.seite]));
+    const tode = BERICHT.ereignisse.filter((e) => e.art === 'tod');
     for (const seite of [0, 1]) {
       expect(tode.filter((t) => seiteVon.get(t.wer) === seite).length).toBeGreaterThan(0);
     }
@@ -56,7 +57,7 @@ describe('die aufgezeichnete Szene', () => {
    * Bild. Beides soll hier auffallen und nicht erst am Bildschirm.
    */
   it('besetzt genau die fuenf Rollen, fuer die es Modelle gibt', () => {
-    const rollen = new Set(SZENE.figuren.map((f) => f.rolle));
+    const rollen = new Set(BERICHT.start.map((k) => rolleVon(k.einheitId)));
     expect([...rollen].sort()).toEqual([
       'beistand',
       'magier',
@@ -66,15 +67,21 @@ describe('die aufgezeichnete Szene', () => {
     ]);
   });
 
-  it('nennt zu jedem Kaempfer eine Figur', () => {
-    for (const k of SZENE.bericht.start) {
-      expect(SZENE.figuren.find((f) => f.id === k.id)).toBeDefined();
+  /*
+   * `rolleVon` faellt bei einer unbekannten Kennung stillschweigend auf
+   * `wache` zurueck — richtig fuer die Anzeige, gefaehrlich fuer die Probe:
+   * Eine umbenannte Einheit stuende als Ritter auf dem Feld, und niemand
+   * saehe, dass die Zuordnung verloren ist. Hier faellt es auf.
+   */
+  it('kennt jede Einheit der Szene beim Namen', () => {
+    for (const k of BERICHT.start) {
+      expect(EINHEITEN[k.einheitId], `unbekannte Einheit ${k.einheitId}`).toBeDefined();
     }
   });
 
   it('haelt die Ereignisse aufsteigend nach Zeit', () => {
     let letzte = -1;
-    for (const e of SZENE.bericht.ereignisse) {
+    for (const e of BERICHT.ereignisse) {
       expect(e.zeitMs).toBeGreaterThanOrEqual(letzte);
       letzte = e.zeitMs;
     }
@@ -113,7 +120,7 @@ describe('weltVonPlatz', () => {
 });
 
 describe('stellungBei', () => {
-  const spuren = baueSpuren(SZENE);
+  const spuren = baueSpuren(BERICHT);
 
   it('setzt jede Figur zu Beginn auf ihren Startplatz', () => {
     for (const spur of spuren) {
@@ -166,7 +173,7 @@ describe('stellungBei', () => {
     const spur = spuren.find((s) => s.todMs !== null);
     expect(spur).toBeDefined();
     expect(stellungBei(spur!, spur!.todMs! - 1).haltung).not.toBe('tod');
-    for (const t of [spur!.todMs!, spur!.todMs! + 3000, dauerMs(SZENE)]) {
+    for (const t of [spur!.todMs!, spur!.todMs! + 3000, dauerMs(BERICHT)]) {
       const stellung = stellungBei(spur!, t);
       expect(stellung.haltung).toBe('tod');
       expect(stellung.lebenAnteil).toBe(0);
@@ -176,7 +183,7 @@ describe('stellungBei', () => {
   it('laesst das Leben nur sinken', () => {
     for (const spur of spuren) {
       let vorher = 1;
-      for (let t = 0; t <= SZENE.bericht.dauerMs; t += 100) {
+      for (let t = 0; t <= BERICHT.dauerMs; t += 100) {
         const jetzt = stellungBei(spur, t).lebenAnteil;
         expect(jetzt).toBeLessThanOrEqual(vorher + 1e-9);
         vorher = jetzt;
