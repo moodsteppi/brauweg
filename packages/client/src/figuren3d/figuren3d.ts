@@ -20,12 +20,13 @@
  * WOZU DAS GANZE: Die Figuren sollen wie 3D aussehen, aber nicht live gerendert
  * werden. Die Probe mit Three.js (`proben/arena-3d/`) lief auf dem Handy mit 20
  * Bildern je Sekunde und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es
- * 204 kB, und das Abspielen kostet so viel wie ein `background-position`.
+ * 232 kB, und das Abspielen kostet so viel wie ein `background-position`.
  *
- * LIZENZ ALLER FUENF BLAETTER: KayKit "Character Pack : Adventurers" 1.0 von
- * Kay Lousberg (kaylousberg.com), CC0 1.0 Universal — freie Verwendung auch
- * kommerziell, Namensnennung nicht verlangt. Der Lizenztext des Pakets liegt
- * als `LIZENZ.txt` neben den Bildern.
+ * LIZENZ ALLER FUENF BLAETTER: Kay Lousberg (kaylousberg.com), CC0 1.0
+ * Universal — freie Verwendung auch kommerziell, Namensnennung nicht verlangt.
+ * Vier Blaetter stammen aus "Character Pack : Adventurers" 1.0, der Beistand
+ * seit dem 06.09.2026 aus "Adventurers 2.0" und "Character Animations 1.1"
+ * derselben Hand. Beide Lizenztexte liegen als `LIZENZ.txt` neben den Bildern.
  */
 
 /** Die fuenf Rollen der Tafelrunde, fuer die es Figuren gibt. */
@@ -55,6 +56,15 @@ export interface Bewegungsfolge3D {
    * Bilder je Sekunde, wie schnell die Bewegung im Modell wirklich ablief.
    * Wer schneller abspielt, bekommt keinen fluessigeren Ablauf, sondern eine
    * hektische Figur — die Zwischenbilder fehlen ja.
+   *
+   * EINE ZAHL JE BEWEGUNG, NICHT JE ROLLE — und bei `schlag` passt sie
+   * deshalb nicht ueberall gleich gut. Die vier Angriffe aus Adventurers 1.0
+   * dauern im Modell 0,93 bis 1,17 Sekunden, das Segnen des Beistands
+   * (`Ranged_Magic_Raise`) 2,10. Abgespielt wird trotzdem eine Folge in 500 ms,
+   * denn danach faellt der naechste Schlag (die Rechnung steht bei
+   * `KAMPF_TEMPO` in bildfolge.ts). Der Druide hebt den Stab also zuegiger als
+   * im Modell. Das ist Absicht: Eine Geste, die nie durchlaeuft, sieht kaputter
+   * aus als eine schnelle.
    */
   readonly bildrate: number;
 }
@@ -79,8 +89,16 @@ export const FIGUREN3D_ZEILEN = 5;
  * stehende Figur. Wer die Zelle mittig auf ein Feld setzt, stellt die Figur ein
  * Stueck zu hoch — bei 128 Pixeln sind das gut 30. Ausgerechnet aus der Kamera,
  * nicht im Bild gemessen.
+ *
+ * ER GILT FUER ALLE FUENF BLAETTER und aendert sich, sobald EINE Figur weiter
+ * ausgreift als bisher: Der Ausschnitt ist einer fuer alle. Als der Beistand am
+ * 06.09.2026 vom Barbaren auf den Druiden wechselte, hob dessen erhobener
+ * Stab den Ausschnitt um vier Pixel — alle vier anderen Blaetter sind seitdem
+ * um genau diese vier Pixel nach unten gerendert, und dieser Wert (vorher
+ * 0,7394) hebt sie wieder auf. Wer nur die Blaetter tauscht und die Zahl hier
+ * vergisst, stellt das ganze Feld vier Pixel daneben.
  */
-export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7394 } as const;
+export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.77 } as const;
 
 /**
  * Alle Figuren schauen nach RECHTS.
@@ -119,9 +137,16 @@ export const FIGUREN3D: readonly Blatt3D[] = [
     herkunft: 'KayKit Rogue_Hooded',
   },
   { rolle: 'magier', datei: '/tafelrunde/figuren3d/magier.webp', herkunft: 'KayKit Mage' },
-  // Der Beistand ist ein Heiler, das Paket hat keinen — er bekommt den Barbaren
-  // mit Axt und Schild. Bewusst so, siehe bildfolgen-rendern.mjs.
-  { rolle: 'beistand', datei: '/tafelrunde/figuren3d/beistand.webp', herkunft: 'KayKit Barbarian' },
+  // Der Beistand ist ein Heiler (Moosheiler, Runenpriester, Lichtwahrerin) und
+  // trug bis zum 06.09.2026 den Barbaren mit Axt und Schild — "Adventurers 1.0"
+  // hat keinen Heiler. Der Druide aus 2.0 ist einer: gruene Kapuze, Geweih,
+  // Aststab. Er kommt aus einem anderen Paket als die vier ueber ihm, deshalb
+  // steht das Paket in der Herkunft mit.
+  {
+    rolle: 'beistand',
+    datei: '/tafelrunde/figuren3d/beistand.webp',
+    herkunft: 'KayKit Druid (Adventurers 2.0)',
+  },
 ];
 
 /** Das Blatt einer Rolle, oder undefined, wenn es fuer sie keines gibt. */
