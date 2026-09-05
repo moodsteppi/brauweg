@@ -141,6 +141,65 @@ describe('Oeffentliches', () => {
   });
 });
 
+describe('Rangliste in der Sicht', () => {
+  // Bis zum 6.9.2026 lieferte die Sicht nur `sieger` — einen Sitz oder null.
+  // Der Bildschirm rechnete die Platzierung deshalb selbst nach, wortgetreu
+  // abgeschrieben aus partie.ts. Diese Faelle standen vorher im Client
+  // (platzierung.test.ts) und pruefen jetzt die einzige verbliebene Fassung.
+
+  it('setzt die Lebenden vor die Ausgeschiedenen und zaehlt die laufende Runde mit', () => {
+    const p = mitHeer(mitHeer({ ...neu([0, 1, 2]), runde: 9 }, 0, { ausRunde: 3, leben: 0 }), 2, {
+      ausRunde: 7,
+      leben: 0,
+    });
+    const rang = sichtFuer(p, 1).platzierung;
+    assert.deepEqual(
+      rang.map((r) => r.sitz),
+      [1, 2, 0],
+    );
+    assert.deepEqual(
+      rang.map((r) => r.platz),
+      [1, 2, 3],
+    );
+    // Wer noch steht, hat die laufende Runde voll mitgespielt.
+    assert.equal(rang.find((r) => r.sitz === 1)!.runden, 9);
+    assert.equal(rang.find((r) => r.sitz === 0)!.runden, 3);
+  });
+
+  it('entscheidet bei gleichen Runden ueber das Leben', () => {
+    const p = mitHeer(mitHeer(neu([0, 1]), 0, { leben: 12 }), 1, { leben: 44 });
+    assert.deepEqual(
+      sichtFuer(p, 0).platzierung.map((r) => r.sitz),
+      [1, 0],
+    );
+  });
+
+  it('teilt einen Platz nur bei Gleichstand in Runden UND Leben', () => {
+    // Zwei erste Plaetze, und der Dritte ist dann der DRITTE, nicht der
+    // zweite. Bei voelligem Gleichstand entscheidet der Sitz die Reihenfolge:
+    // Ohne ihn spraenge die Anzeige bei jedem Rundruf.
+    const p = mitHeer(neu([0, 1, 2]), 2, { leben: 10 });
+    const rang = sichtFuer(p, 0).platzierung;
+    assert.deepEqual(
+      rang.map((r) => r.platz),
+      [1, 1, 3],
+    );
+    assert.deepEqual(
+      rang.map((r) => r.sitz),
+      [0, 1, 2],
+    );
+  });
+
+  it('steht auch dem Zuschauer und schon vor dem Ende zur Verfuegung', () => {
+    // Wer in Runde vier ausscheidet, bekommt sein Endbild, waehrend die
+    // Partie weiterlaeuft — "Platz 5 von 8" muss dann schon stimmen.
+    const p = neu([0, 1, 2]);
+    assert.equal(p.fertig, false);
+    assert.equal(zuschauerSicht(p).platzierung.length, 3);
+    assert.equal(sichtFuer(p, 0).platzierung.length, 3);
+  });
+});
+
 describe('Masse in der Sicht', () => {
   it('nennt Brettmasse und Verschmelzzahl, damit der Bildschirm sie nicht raet', () => {
     const s = sichtFuer(neu(), 0);
