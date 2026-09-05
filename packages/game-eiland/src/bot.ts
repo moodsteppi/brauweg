@@ -20,7 +20,7 @@
  * kaputter Experte.
  */
 
-import { GRAS } from './karte.js';
+import { GRAS, umfeld } from './karte.js';
 import type { EilandAktion } from './partie.js';
 import type { EilandSicht } from './sicht.js';
 
@@ -37,7 +37,8 @@ function nachbarn(platz: number, spalten: number, zeilen: number): number[] {
 }
 
 export function botZug(sicht: EilandSicht): EilandAktion {
-  const { spalten, zeilen, gelaende, ornament, besitzer } = sicht;
+  const { spalten, zeilen, gelaende, ornament, bauwerk, besitzer, heimat } = sicht;
+  const stufen = sicht.stufe;
   const ich = sicht.ich ?? 0;
 
   /** Alles, was schon mir gehoert oder in dieser Runde dazukommen soll. */
@@ -58,14 +59,55 @@ export function botZug(sicht: EilandSicht): EilandAktion {
   const genommen: number[] = [...sicht.wahl];
   const offen = Math.max(0, (sicht.kontingent[ich] ?? 1) - genommen.length);
 
+  /*
+   * Angriffe kommen fertig vom Server (`angreifbar`) und bleiben die ganze
+   * Runde dieselben: Sie haengen am Stand der Karte, nicht am Zettel. Ein
+   * angegriffenes Feld verlaengert den Zettel nicht (siehe pruefeWahl) —
+   * deshalb wandert es unten nicht in `mein`.
+   *
+   * Nur HALTBARE Angriffe: Ein Feld, das der Gegner in der naechsten Runde
+   * zurueckholen kann, ist kein Gewinn, sondern ein Hin und Her — gemessen:
+   * Ohne diesen Filter endeten 29 von 30 Bot-Partien erst an der Notbremse,
+   * mit ueber hundert Eroberungen je Partie. Die Heimat ist die Ausnahme,
+   * sie beendet die Partie auf der Stelle.
+   */
+  const angriffe = sicht.angreifbar.filter(
+    (platz) => !genommen.includes(platz) && (istHeimat(platz) || haltbar(platz)),
+  );
+
+  function istHeimat(platz: number): boolean {
+    const gegner = besitzer[platz];
+    return gegner !== null && gegner !== undefined && heimat[gegner] === platz;
+  }
+
+  /**
+   * Bleibt ein erobertes Feld meins? Seine Stufe waere danach die Zahl
+   * meiner Felder in seinem Umfeld. Jedes fremde Feld an seiner Kante
+   * verliert mit ihm einen Nachbarn — hat danach trotzdem eines eine
+   * hoehere Stufe, holt der Gegner es sich zurueck.
+   */
+  function haltbar(platz: number): boolean {
+    const gegner = besitzer[platz];
+    let meineStufe = 0;
+    for (const n of umfeld(platz, spalten, zeilen)) {
+      if (besitzer[n] === ich) meineStufe++;
+    }
+    for (const n of nachbarn(platz, spalten, zeilen)) {
+      if (besitzer[n] !== gegner) continue;
+      if ((stufen[n] ?? 0) - 1 > meineStufe) return false;
+    }
+    return true;
+  }
+
   for (let i = 0; i < offen; i++) {
-    const kandidaten = i === 0 ? [...sicht.waehlbar] : nachschub();
+    const frei = i === 0 ? [...sicht.waehlbar] : nachschub();
+    const kandidaten = [...frei, ...angriffe.filter((platz) => !genommen.includes(platz))];
     if (kandidaten.length === 0) break;
 
     let bester = -1;
     let bestesMass = -Infinity;
     for (const platz of kandidaten.sort((a, b) => a - b)) {
-      const mass = bewerte(platz);
+      const mass = besitzer[platz] === null ? bewerte(platz) : bewerteAngriff(platz);
       // Gleichstand geht an die kleinere Platznummer, weil die Liste sortiert
       // ist und nur ein echtes ">" gewinnt. Ein Bot ohne Zufall muss bei
       // Gleichstand irgendetwas nehmen, und "irgendetwas" soll wiederholbar
@@ -76,7 +118,7 @@ export function botZug(sicht: EilandSicht): EilandAktion {
       }
     }
     if (bester < 0) break;
-    mein.add(bester);
+    if (besitzer[bester] === null) mein.add(bester);
     genommen.push(bester);
   }
 
@@ -131,21 +173,49 @@ export function botZug(sicht: EilandSicht): EilandAktion {
     return mass;
   }
 
+  /**
+   * Was ein Angriff wert ist.
+   *
+   * Ein erobertes Feld zaehlt doppelt — eins fuer mich, eins weniger fuer
+   * ihn —, deshalb steht es ueber jedem freien Feld ohne Ornament, aber unter
+   * dem Ornament selbst: Das bringt in JEDER folgenden Runde ein Feld. Die
+   * Heimat des Gegners schlaegt alles, sie ist der Sieg. Ein Bauwerk nimmt
+   * ihm das Kontingent und gibt es mir. Und je mehr eigene Felder um das Ziel
+   * herum liegen, desto hoeher seine Stufe, sobald es meins ist — und desto
+   * eher bleibt es das auch.
+   */
+  function bewerteAngriff(platz: number): number {
+    const gegner = besitzer[platz];
+    let mass = 14;
+    if (gegner !== null && gegner !== undefined && heimat[gegner] === platz) mass += 1000;
+    if (bauwerk[platz] !== null && bauwerk[platz] !== undefined) mass += 40;
+    for (const n of umfeld(platz, spalten, zeilen)) {
+      if (mein.has(n)) mass += 3;
+    }
+    mass -= 2 * (stufen[platz] ?? 0);
+    return mass;
+  }
+
   /*
    * Ein Feld zurueckhalten, wenn es Streit geben kann.
    *
    * Was ein Sitz nicht setzt, setzt er auf die Streitfelder (siehe loeseAuf):
    * Wer allein einen Einsatz hat, gewinnt das Feld sicher. Grenzt eines der
-   * gewaehlten Felder an den Gegner, kann der es ebenfalls wollen — dann ist
-   * ein zurueckgehaltenes Feld mehr wert als das letzte, schwaechste Feld der
-   * Liste. Das LETZTE, weil kein frueher gewaehltes Feld je an einem spaeteren
-   * haengt (Kandidaten grenzen immer an das, was schon da war): Es ist das
-   * einzige, das ohne Loch im Zettel wegkann. Bei einem Kontingent von eins
-   * hiesse Zurueckhalten Passen — dann lieber das Feld.
+   * gewaehlten freien Felder an den Gegner, kann der es ebenfalls wollen —
+   * dann ist ein zurueckgehaltenes Feld mehr wert als das letzte, schwaechste
+   * Feld der Liste. Das LETZTE, weil kein frueher gewaehltes Feld je an einem
+   * spaeteren haengt (Kandidaten grenzen immer an das, was schon da war): Es
+   * ist das einzige, das ohne Loch im Zettel wegkann. Bei einem Kontingent
+   * von eins hiesse Zurueckhalten Passen — dann lieber das Feld.
+   *
+   * Nur ein FREIES Feld wird zurueckgehalten: Um ein angegriffenes gibt es
+   * keinen Streit, es gehoert schon jemandem — der Einsatz nuetzte dort nichts.
    */
-  if (genommen.length >= 2) {
-    const amGegner = genommen.some((platz) =>
-      nachbarn(platz, spalten, zeilen).some((n) => besitzer[n] !== null && besitzer[n] !== ich),
+  if (genommen.length >= 2 && besitzer[genommen[genommen.length - 1]!] === null) {
+    const amGegner = genommen.some(
+      (platz) =>
+        besitzer[platz] === null &&
+        nachbarn(platz, spalten, zeilen).some((n) => besitzer[n] !== null && besitzer[n] !== ich),
     );
     if (amGegner) genommen.pop();
   }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type Suchstand } from '../api';
-import { GRAUTOENE, auswahlton, gebietsfarbe, kampffarbe } from '../minispiele/eiland/farben';
+import { GRAUTOENE, auswahlton, gebietsfarbe, kampffarbe, stufenfarbe } from '../minispiele/eiland/farben';
 import {
   type Modus,
   type Punkt,
@@ -414,8 +414,9 @@ export function Eiland({
         <div className="ei-menue-mitte">
           <h1 className="ei-titel">Eiland</h1>
           <p className="ei-untertitel">
-            Nimm Land, sammle Ornamente und komm dem anderen zuvor. Ihr zieht
-            gleichzeitig — und wer dasselbe Feld will, muss darum kämpfen.
+            Nimm Land, sammle Ornamente, greif schwache Felder an — und halte
+            deine Heimat. Ihr zieht gleichzeitig, und wer dasselbe Feld will,
+            muss darum kämpfen.
           </p>
           <div className="ei-probe" aria-hidden="true">
             <span data-art="gras" />
@@ -424,6 +425,8 @@ export function Eiland({
             </span>
             <span data-art="wasser" />
             <span data-art="berg" />
+            {/* Die Heimat als Kostprobe: das goldene Feld, um das es geht. */}
+            <span data-art="gras" data-heimat="eigen" style={{ background: stufenfarbe(0, 3) }} />
             {variante === 'nebel' && <span data-art="nebel" />}
           </div>
           <button
@@ -799,6 +802,26 @@ function Karte({
   }, [sicht.letzte]);
 
   /**
+   * Die Eroberungen der letzten Runde: Platz → wer es jetzt hat. Dieselbe
+   * Art Marke wie bei den Kaempfen, nur ohne Flug — um ein fremdes Feld gibt
+   * es keinen Einsatz, das Ergebnis steht sofort.
+   */
+  const eroberungen = useMemo(() => {
+    const karte = new Map<number, number>();
+    for (const [sitz, plaetze] of Object.entries(sicht.letzte?.erobert ?? {})) {
+      for (const platz of plaetze) karte.set(platz, Number(sitz));
+    }
+    return karte;
+  }, [sicht.letzte]);
+
+  /** Platz → Sitz, dessen Heimat dort liegt. */
+  const heimatVon = useMemo(() => {
+    const karte = new Map<number, number>();
+    for (const [sitz, platz] of Object.entries(sicht.heimat)) karte.set(platz, Number(sitz));
+    return karte;
+  }, [sicht.heimat]);
+
+  /**
    * Die Einsaetze fliegen aufs Streitfeld.
    *
    * Der eigene aus der Restkachel unten (dort lag er, seit man ihn nicht
@@ -1021,20 +1044,37 @@ function Karte({
              */
             const imNebel = art === null || art === undefined;
             const mein = gewaehlt.has(platz);
+            const fremd = besitzer !== null && besitzer !== eigenerSitz;
             const kannWaehlen =
               darfPlanen && !wartet && (mein || (wahl.length < kontingent && waehlbar.has(platz)));
             const kampf = kaempfe.get(platz);
+            const erobert = eroberungen.get(platz);
+            const heimat = heimatVon.get(platz);
+            const stufe = imNebel ? null : (sicht.stufe[platz] ?? null);
             const ornament = sicht.ornament[platz] ?? null;
             const bauwerk = sicht.bauwerk[platz] ?? null;
             const stil: React.CSSProperties & { '--ei-kampf-verzoegerung'?: string } = {
-              background: imNebel
+              /*
+               * Besetztes Land traegt seine Farbe in der Helligkeit seiner
+               * Stufe (siehe stufenfarbe): Je tiefer, desto fester sitzt das
+               * Feld — und gleich tief heisst bei beiden gleich stark. Das ist
+               * die Auskunft, die man fuer einen Angriff braucht, ohne zu
+               * zaehlen.
+               *
+               * `backgroundColor` und nicht die Kurzform `background`: Neben
+               * `backgroundImage` (die Toenung unten) warnt React bei jedem
+               * Neuzeichnen vor der Mischung aus Kurz- und Langform — 155
+               * Meldungen in einer Partie, und im Zweifel ein Feld, das seine
+               * Toenung verliert.
+               */
+              backgroundColor: imNebel
                 ? (GRAUTOENE[sicht.grau[platz] ?? 0] ?? GRAUTOENE[0])
                 : besitzer !== null
-                  ? gebietsfarbe(besitzer)
+                  ? stufenfarbe(besitzer, stufe ?? 0)
                   : undefined,
               // Gewählt heißt: in meiner Farbe getönt. Der gelbe Rahmen im
               // Stylesheet sagt „noch nicht abgeschickt", die Tönung sagt
-              // „das soll meins werden".
+              // „das soll meins werden" — auf einem fremden Feld genauso.
               backgroundImage: mein ? auswahlton(eigenerSitz) : undefined,
             };
             if (kampf) stil['--ei-kampf-verzoegerung'] = `${kampf.verzoegerung}ms`;
@@ -1054,17 +1094,24 @@ function Karte({
                 aria-disabled={kannWaehlen ? undefined : true}
                 data-art={imNebel ? 'nebel' : art === WASSER ? 'wasser' : art === BERG ? 'berg' : 'gras'}
                 data-eigen={besitzer === eigenerSitz ? '' : undefined}
-                data-fremd={besitzer !== null && besitzer !== eigenerSitz ? '' : undefined}
+                data-fremd={fremd ? '' : undefined}
+                data-stufe={stufe ?? undefined}
+                data-heimat={heimat === undefined || imNebel ? undefined : heimat === eigenerSitz ? 'eigen' : 'fremd'}
                 data-waehlbar={kannWaehlen && !mein ? '' : undefined}
+                data-angreifbar={kannWaehlen && !mein && fremd ? '' : undefined}
                 data-gewaehlt={mein ? '' : undefined}
                 data-abgegeben={mein && binBereit ? '' : undefined}
                 data-kampf={kampf === undefined ? undefined : kampf.sieger === eigenerSitz ? 'sieg' : 'verlust'}
+                data-erobert={erobert === undefined ? undefined : erobert === eigenerSitz ? 'sieg' : 'verlust'}
                 style={stil}
                 onClick={(ev) => beiKlick(ev, platz)}
-                aria-label={feldName(art ?? null, besitzer ?? null, eigenerSitz, ornament, bauwerk)}
+                aria-label={feldName(art ?? null, besitzer ?? null, eigenerSitz, ornament, bauwerk, stufe, heimat, kannWaehlen && !mein && fremd)}
               >
                 {ornament !== null && <Ornamentbild art={ornament} />}
                 {bauwerk !== null && <Ornamentbild art={bauwerk} eingesammelt />}
+                {/* Die Stufe als Zahl in der Ecke — fuer den Fall, dass zwei
+                    Toene zu nah beieinanderliegen, um sie zu unterscheiden. */}
+                {stufe !== null && <span className="ei-stufe">{stufe}</span>}
               </button>
             );
           })}
@@ -1161,6 +1208,9 @@ function feldName(
   eigenerSitz: number,
   ornament: number | null,
   bauwerk: number | null,
+  stufe: number | null,
+  heimat: number | undefined,
+  angreifbar: boolean,
 ): string {
   if (art === null) return 'Unbekanntes Feld';
   const grund = art === WASSER ? 'Wasser' : art === BERG ? 'Berg' : 'Wiese';
@@ -1168,7 +1218,10 @@ function feldName(
     besitzer === null ? 'frei' : besitzer === eigenerSitz ? 'dein Gebiet' : 'gegnerisches Gebiet';
   const zier = ornament === null ? '' : ornament === 0 ? ', Stadt' : ', Brunnen';
   const bau = bauwerk === null ? '' : bauwerk === 0 ? ', mit eingesammelter Stadt' : ', mit eingesammeltem Brunnen';
-  return `${grund}, ${wem}${zier}${bau}`;
+  const heim = heimat === undefined ? '' : heimat === eigenerSitz ? ', deine Heimat' : ', Heimat des Gegners';
+  const rang = stufe === null ? '' : `, Stufe ${stufe}`;
+  const angriff = angreifbar ? ', angreifbar' : '';
+  return `${grund}, ${wem}${heim}${rang}${zier}${bau}${angriff}`;
 }
 
 /**
@@ -1231,11 +1284,32 @@ function Abschluss({
   const seine = sicht.punkte[gegnerSitz] ?? 0;
   const wort =
     sicht.sieger === null ? 'Unentschieden' : sicht.sieger === eigenerSitz ? 'Gewonnen!' : 'Verloren';
+  /*
+   * Warum es aus ist, wenn nicht das Land entschieden hat: Ohne diese Zeile
+   * stuende „Verloren" ueber „14 zu 9 Feldern", und das saehe aus wie ein
+   * Fehler — dabei ist die Heimat gefallen, und genau das ist die Regel.
+   */
+  const ichGefallen = sicht.gefallen.includes(eigenerSitz);
+  const erGefallen = sicht.gefallen.includes(gegnerSitz);
+  const grund =
+    ichGefallen && erGefallen
+      ? 'Beide Heimaten sind gefallen — das Land entscheidet.'
+      : erGefallen
+        ? 'Du hast die Heimat des Gegners erobert.'
+        : ichGefallen
+          ? 'Deine Heimat ist gefallen.'
+          : null;
   return (
     <div className="ei-abschluss">
       <h2 data-sieg={sicht.sieger === eigenerSitz ? '' : undefined}>{wort}</h2>
       <p>
         {meine} zu {seine} Feldern
+        {grund !== null && (
+          <>
+            <br />
+            {grund}
+          </>
+        )}
       </p>
       <button className="ei-suchen" type="button" onClick={onZurueck}>
         Zurück
@@ -1247,10 +1321,11 @@ function Abschluss({
 /**
  * Das Regelblatt.
  *
- * Es erklaert vier Dinge, die man dem Brett nicht ansieht: dass gleichzeitig
- * gezogen wird, was bei einem Streitfeld passiert, was Ornamente bringen und
- * wie weit man sieht. Ohne den letzten Punkt haelt der erste Spieler den Nebel
- * fuer einen Fehler.
+ * Es erklaert, was man dem Brett nicht ansieht: dass gleichzeitig gezogen
+ * wird, was bei einem Streitfeld passiert, was Ornamente bringen, wie weit
+ * man sieht — und seit dem 05.09.2026, was die Stufe eines Feldes ist, wann
+ * man angreifen darf und dass die goldene Ecke die Partie entscheidet. Ohne
+ * den Nebel-Punkt haelt der erste Spieler den Nebel fuer einen Fehler.
  */
 function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
@@ -1266,9 +1341,24 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           Pro Runde nimmst du ein freies Wiesenfeld, das an dein Gebiet grenzt —
           und ein Feld mehr für jedes Ornament, das du eingesammelt hast.
         </li>
+        <li>Wasser und Berge gehören niemandem.</li>
         <li>
-          Wasser und Berge gehören niemandem. Gegnerisches Gebiet kannst du
-          nicht nehmen: Dort ist deine Grenze.
+          Jedes besetzte Feld hat eine <strong>Stufe</strong>: die Zahl der
+          gleichfarbigen Felder rundherum, null bis acht. Je höher, desto
+          dunkler die Farbe — und dieselbe Tiefe heißt bei euch beiden
+          dieselbe Stufe.
+        </li>
+        <li>
+          Gegnerisches Gebiet kannst du <strong>angreifen</strong>, wenn es an
+          dein Gebiet grenzt und eine niedrigere Stufe hat als dein Feld
+          daneben. Ein Angriff kostet ein Feld deines Kontingents und gelingt
+          sicher; von dort aus geht es in derselben Runde aber nicht weiter.
+          Ein Bauwerk wechselt mit dem Feld den Besitzer.
+        </li>
+        <li>
+          Das goldene Feld in der Ecke ist die <strong>Heimat</strong>. Wer
+          die Heimat des anderen erobert, hat gewonnen — egal wie viel Land
+          der andere hält.
         </li>
         <li>
           Ihr wählt <strong>gleichzeitig</strong>, ohne die Wahl des anderen zu
@@ -1284,7 +1374,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           zufälliger Reihenfolge dran, bis die Einsätze verbraucht sind — der
           Rest bleibt fünfzig zu fünfzig.
         </li>
-        <li>Die Partie endet, wenn keiner mehr irgendwohin kann.</li>
+        <li>
+          Fällt keine Heimat, endet die Partie, wenn keiner mehr irgendwohin
+          kann — weder auf freies Land noch auf ein angreifbares Feld.
+        </li>
       </ol>
       <h3>Ornamente</h3>
       <p>
@@ -1300,7 +1393,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         dem Zettel des anderen steht, bleibt in beiden Fällen geheim.
       </p>
       <h3>Ziel</h3>
-      <p>Wer am Ende die meisten Felder hält, gewinnt.</p>
+      <p>
+        Erobere die Heimat des Gegners — oder halte am Ende die meisten
+        Felder, wenn beide Heimaten stehen.
+      </p>
     </div>
   );
 }

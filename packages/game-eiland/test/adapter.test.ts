@@ -90,6 +90,31 @@ describe('Adapter', () => {
     assert.deepEqual(alt.letzte?.reserve, {});
   });
 
+  it('traegt einem Snapshot der vierten Fassung Kampfrunden und Eroberungen nach', () => {
+    // Bis Version 4 gab es keine Angriffe: Zaehler und Eroberungen beginnen
+    // bei null, die laufende Partie bekommt die Regel ab der naechsten Runde.
+    const roh = JSON.parse(JSON.stringify(eiland.serialize(partie()))) as Record<
+      string,
+      unknown
+    >;
+    delete roh['kampfrunden'];
+    const alt = eiland.deserialize({
+      ...roh,
+      v: 4,
+      letzte: {
+        runde: 1,
+        kaempfe: [],
+        reserve: {},
+        genommen: { 0: [1] },
+        verfallen: {},
+        ornamente: {},
+      },
+    });
+    assert.equal(alt.kampfrunden, 0);
+    assert.deepEqual(alt.letzte?.erobert, {});
+    assert.deepEqual(alt.letzte?.genommen, { 0: [1] });
+  });
+
   it('weist einen Snapshot aus einer fremden Fassung ab', () => {
     const roh = eiland.serialize(partie()) as Record<string, unknown>;
     assert.throws(() => eiland.deserialize({ ...roh, v: 99 }), /Snapshot-Version/);

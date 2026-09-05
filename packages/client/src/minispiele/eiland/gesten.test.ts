@@ -29,15 +29,34 @@ const spalten = 5;
 const zeilen = 5;
 const gelaende = Array.from({ length: 25 }, (_, i) => (i === 22 ? WASSER : GRAS));
 const besitzer = Array.from({ length: 25 }, (_, i) => (i === 20 ? 0 : null));
-const karte: Gestenkarte = { spalten, zeilen, gelaende, besitzer, waehlbar: [15, 21] };
+const karte: Gestenkarte = { spalten, zeilen, gelaende, besitzer, waehlbar: [15, 21], angreifbar: [] };
 const gleich = (zelle: number): number => zelle;
 const mitte = (zelle: number) => ({ u: (zelle % spalten) + 0.5, v: Math.floor(zelle / spalten) + 0.5 });
+
+/*
+ * Dieselbe Karte mit einem Gegner: Sitz 1 haelt 16 (ueber 21) und 10, und
+ * der Server hat 16 als angreifbar gemeldet. 15 bleibt waehlbar, 21 auch.
+ */
+const mitGegner: Gestenkarte = {
+  ...karte,
+  besitzer: besitzer.map((b, i) => (i === 16 || i === 10 ? 1 : b)),
+  angreifbar: [16],
+};
 
 describe('waehlbarMit', () => {
   it('nimmt den Rand des Gebiets und den Rand der Auswahl, nie die Auswahl selbst', () => {
     expect([...waehlbarMit(karte, [])].sort()).toEqual([15, 21]);
     // 21 auf dem Zettel: 16 und 22 grenzen daran — 22 ist Wasser und faellt weg.
     expect([...waehlbarMit(karte, [21])].sort()).toEqual([15, 16]);
+  });
+
+  it('nimmt die Angriffsziele dazu, laesst sie aber keinen Rand bilden', () => {
+    expect([...waehlbarMit(mitGegner, [])].sort()).toEqual([15, 16, 21]);
+    // 16 angegriffen: 11 und 17 dahinter werden NICHT waehlbar — ein Angriff
+    // ist ein Ziel, kein Weg. 16 selbst faellt aus der Liste, weil es drauf ist.
+    expect([...waehlbarMit(mitGegner, [16])].sort()).toEqual([15, 21]);
+    // 21 dazu: 22 ist Wasser, 16 fremd — nur der Rand von 21 selbst kommt nicht mehr dazu.
+    expect([...waehlbarMit(mitGegner, [16, 21])].sort()).toEqual([15]);
   });
 });
 
@@ -46,6 +65,12 @@ describe('haengtZusammen', () => {
     // 21 -> 16 -> 17 ist ein Vorstoss; ohne 16 haengt 17 in der Luft.
     expect(haengtZusammen(karte, 0, [21, 17])).toEqual([21]);
     expect(haengtZusammen(karte, 0, [21, 16, 17])).toEqual([21, 16, 17]);
+  });
+
+  it('behaelt ein angegriffenes Feld und laesst nichts daran haengen', () => {
+    // 16 (fremd) bleibt, 11 dahinter faellt: Es hing nur am Angriff.
+    expect(haengtZusammen(mitGegner, 0, [16, 11])).toEqual([16]);
+    expect(haengtZusammen(mitGegner, 0, [21, 16])).toEqual([21, 16]);
   });
 });
 
