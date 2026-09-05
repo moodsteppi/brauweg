@@ -562,3 +562,12 @@ vier Messungen über zwei Saatbasen (140 : 86,7 · 139 : 87,0 beim gebauten
 Stand, 169 : 77,0 · 147 : 84,3 bei 20 Leben) plus einem Kontrolllauf mit
 gleichen Gangarten (102 : 99,3). Fallen darf sie wieder bei der nächsten
 Änderung am Laden — die misst man mit.
+
+**Nachtrag 06.09.2026.** Die Zahlen dieses Abschnitts beschreiben den Stand von
+damals. `hart` verlangt beim Aufstieg seitdem wieder ein volles Brett und hält
+nur noch zwei Gold zurück, weil die alte Schraube nachgemessen kein Nullwert
+war, sondern ein Minus; die Paarung steht damit bei **212 : 62,7** statt
+140 : 86,7, und die Probe misst wieder über eine Saatbasis statt über drei. Der
+Kontrolllauf ist über sechs Basen neutral (98,7). Zerlegung und Begründung
+stehen bei `GANGARTEN` in `bot.ts`, nachzustellen mit
+`werkzeug/gangarten.mjs --schraube …`.

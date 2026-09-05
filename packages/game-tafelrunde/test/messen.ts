@@ -35,7 +35,7 @@
  * sie als Aussage ueber das SPIELFELD, nicht ueber die beste Strategie darauf.
  */
 
-import { type Schwierigkeit, botZug } from '../src/bot.js';
+import { type Gangart, type Schwierigkeit, botZug } from '../src/bot.js';
 import {
   type EinheitId,
   type Kaempfer,
@@ -94,16 +94,22 @@ export const VIER_SITZE: readonly number[] = ACHT_SITZE.slice(0, 4);
  * (`werkzeug/gangarten.mjs`, `imFeld` in test/bot.test.ts). Ohne sie muesste
  * jeder Aufrufer die Partieschleife noch einmal schreiben — und maesse dann
  * seine eigene Kopie.
+ *
+ * In dieser Liste darf statt des Namens auch eine GANGART selbst stehen — ein
+ * Stand, den es im Spiel (noch) nicht gibt. Damit misst `werkzeug/gangarten.mjs`
+ * einen Vorschlag, ohne ihn einzubauen; siehe botZug in src/bot.ts.
  */
-export type Besetzung = Schwierigkeit | 'gemischt' | readonly Schwierigkeit[];
+export type Besetzung = Schwierigkeit | 'gemischt' | readonly (Schwierigkeit | Gangart)[];
 
 const GEMISCHT: readonly Schwierigkeit[] = ['sanft', 'normal', 'hart'];
 
-export function gangartFuer(besetzung: Besetzung, sitz: number): Schwierigkeit {
+export function gangartFuer(besetzung: Besetzung, sitz: number): Schwierigkeit | Gangart {
   // Reihum und nicht abgeschnitten: Eine Liste, die kuerzer ist als der Tisch,
   // soll eine Besetzung ergeben und keinen Absturz an Sitz 5.
-  if (Array.isArray(besetzung)) return besetzung[sitz % besetzung.length]!;
-  if (besetzung !== 'gemischt') return besetzung as Schwierigkeit;
+  // Ueber `instanceof Array` statt `Array.isArray`: Letzteres verengt eine
+  // `readonly`-Liste nicht, seit die Liste auch Gangart-Objekte tragen darf.
+  if (besetzung instanceof Array) return besetzung[sitz % besetzung.length]!;
+  if (besetzung !== 'gemischt') return besetzung;
   return GEMISCHT[sitz % GEMISCHT.length]!;
 }
 

@@ -536,17 +536,21 @@ describe('Bot: Aufstieg', () => {
   });
 
   /**
-   * Der harte Gegner laesst beide Bedingungen weg und steigt auf, sobald es
-   * geht. Frueher stand hier, das sei "gemessen die staerkere Wahl" — das
-   * stimmt seit dem 05.09.2026 nicht mehr: Nachgemessen ist der frueh Aufstieg
-   * heute weder Vorteil noch Nachteil, und unter der alten Ladenregel war er
-   * sogar der Grund, aus dem `hart` gegen `normal` verlor (Zahlen bei GANGARTEN
-   * in bot.ts). Geprueft wird deshalb nur noch das VERHALTEN — dass die Gangart
-   * tut, was ihre Beschreibung sagt.
+   * Der harte Gegner haelt sich an das volle Brett wie `normal`, legt aber
+   * KEINE Reserve obendrauf: volles Brett und das Gold reicht genau — er
+   * steigt auf.
+   *
+   * Bis zum 06.09.2026 liess er beide Bedingungen weg, und die Probe hier
+   * pruefte das ausdruecklich nur als VERHALTEN, weil der frueh Aufstieg
+   * "weder Vorteil noch Nachteil" sei. Nachgemessen war er beides nicht mehr,
+   * sondern ein Nachteil: Allein das volle Brett wieder einzufordern brachte
+   * `hart` von 133 auf 190 Siege je 400 Partien. Zahlen und Zerlegung stehen
+   * bei GANGARTEN in bot.ts.
    */
-  it('steigt als harter Gegner auch mit leerem Brett auf', () => {
-    assert.deepEqual(zug(mitBrett(20, false), 'hart'), { typ: 'levelAuf' });
+  it('steigt als harter Gegner ohne Reserve auf, aber nicht mit leerem Brett', () => {
+    // Level 1 kostet 2 — genau so viel hat er, und `hart` will nichts uebrig.
     assert.deepEqual(zug(mitBrett(2, true), 'hart'), { typ: 'levelAuf' });
+    assert.notEqual(zug(mitBrett(20, false), 'hart').typ, 'levelAuf');
   });
 
   /** Und der sanfte wartet am laengsten: volles Brett und sechs Gold obendrauf. */
@@ -693,12 +697,12 @@ describe('Bot: das fertige Heer', () => {
   /**
    * Die Gangarten sind kein Zierrat.
    *
-   * GEMESSEN WIRD IM FELD ZU VIERT und nicht im Duell zu zweit — aus einem
-   * Grund, der am 05.09.2026 aufgefallen ist: Je kuerzer die Partie, desto
-   * weniger verdient sich der aggressive Ausbau von `hart`. Beim Wechsel von
-   * 100 auf 20 Startleben fiel er im Duell durch (ueber 200 Duelle 96:104 fuer
-   * `normal`, vorher 125:75 fuer `hart`). Zu viert — der Besetzung, auf die das
-   * Spiel eingestellt ist — steht die Reihenfolge.
+   * GEMESSEN WIRD IM FELD ZU VIERT und nicht im Duell zu zweit, weil das die
+   * Besetzung ist, auf die das Spiel eingestellt ist. Frueher stand hier ein
+   * zweiter Grund: Beim Wechsel von 100 auf 20 Startleben fiel `hart` im Duell
+   * durch (96 : 104 statt 125 : 75), weil sich sein Ausbau in der kurzen
+   * Partie nicht mehr verdiente. Der Grund ist seit dem 06.09.2026 weg — im
+   * Duell steht es 315 : 84,5 je 400 Partien —, die Besetzung bleibt.
    *
    * DIE PARTIESCHLEIFE KOMMT AUS messen.ts und ist hier nicht noch einmal
    * hingeschrieben. Sie stand frueher als eigene Fassung an dieser Stelle, und
@@ -712,26 +716,21 @@ describe('Bot: das fertige Heer', () => {
    * Hand nachstellen will, gibt dem Werkzeug
    * `--saat 0123456789abcdef0123456789abcdef-feld` mit.
    *
-   * FUER `hart` GEGEN `normal` REICHEN HUNDERT NICHT MEHR, und das ist keine
-   * Schwaeche der Aussage, sondern ihre Groesse: Die beiden liegen ueber 400
-   * Partien bei 137 : 87,7, also gut dreissig Siege auseinander — bei hundert
-   * Partien sind das noch acht, und die verschwinden im Rauschen. Am
-   * 05.09.2026 stand die Probe dort auf 25 : 25 und war rot, waehrend
-   * dieselbe Paarung ueber 400 Partien auf zwei unabhaengigen Saatbasen klar
-   * fuer `hart` ausging (137 : 87,7 und 124 : 92,0). Gegen `sanft` ist der
-   * Abstand rund zwanzigfach; dort genuegen hundert Partien weiterhin.
+   * FUER `hart` GEGEN `normal` STEHEN HIER TROTZDEM 400 PARTIEN, obwohl auch
+   * hundert reichten (50 : 16,7 auf der Basis dieser Probe). Der Grund ist die
+   * Geschichte dieser Paarung: Sie war am 05.09.2026 die knappste im Feld, lag
+   * bei 137 : 87,7 und stand ueber hundert Partien auf 25 : 25 — rot, obwohl
+   * die Aussage stimmte. Seit dem 06.09.2026 ist der Abstand ein Vielfaches
+   * davon (212 : 62,7 ueber 400 Partien), weil `hart` beim Aufstieg wieder ein
+   * volles Brett verlangt; die Zahlen stehen bei GANGARTEN in bot.ts. Die
+   * grosse Partienzahl bleibt als Vorsprung fuer den naechsten Eingriff am
+   * Laden — der hat diese Paarung schon zweimal gedreht, und vier Sekunden
+   * Rechenzeit sind dafuer ein guter Preis.
    */
   const PARTIEN_JE_PAARUNG = 100;
 
-  /** Wo der Abstand klein ist, braucht die Aussage mehr Partien. Siehe oben. */
+  /** Wo der Abstand schon einmal klein war, bleibt die Aussage gross. Siehe oben. */
   const PARTIEN_KNAPPE_PAARUNG = 400;
-
-  /**
-   * Drei unabhaengige Saatbasen fuer die knappste Paarung (`hart` gegen
-   * `normal`). Eine einzelne Basis reicht dort nicht mehr — warum, steht bei
-   * der Probe selbst.
-   */
-  const DREI_BASEN: readonly string[] = [SAAT, `${SAAT}-b`, `${SAAT}-c`];
 
   function imFeld(
     stark: Schwierigkeit,
@@ -739,25 +738,22 @@ describe('Bot: das fertige Heer', () => {
     regeln: TafelrundeRegeln = DEFAULT_REGELN,
     regler: Kampfregler = STANDARD_REGLER,
     partien: number = PARTIEN_JE_PAARUNG,
-    basen: readonly string[] = [SAAT],
   ): [number, number] {
     const sitze = [0, 1, 2, 3];
     // Sitz 0 spielt stark, die drei uebrigen schwach.
     const besetzung = sitze.map((sitz) => (sitz === 0 ? stark : schwach));
     const siege = [0, 0, 0, 0];
-    for (const basis of basen) {
-      for (let i = 0; i < partien; i++) {
-        // `sieger` ist der EINDEUTIGE erste Platz; ein geteilter Sieg sagt ueber
-        // die Gangart nichts und steht in messen.ts deshalb als null.
-        const befund = spieleParte(
-          `${basis}-feld-${stark}-${schwach}-${i}`,
-          sitze,
-          besetzung,
-          regeln,
-          regler,
-        );
-        if (befund.sieger !== null) siege[befund.sieger]! += 1;
-      }
+    for (let i = 0; i < partien; i++) {
+      // `sieger` ist der EINDEUTIGE erste Platz; ein geteilter Sieg sagt ueber
+      // die Gangart nichts und steht in messen.ts deshalb als null.
+      const befund = spieleParte(
+        `${SAAT}-feld-${stark}-${schwach}-${i}`,
+        sitze,
+        besetzung,
+        regeln,
+        regler,
+      );
+      if (befund.sieger !== null) siege[befund.sieger]! += 1;
     }
     // Der SCHNITT der drei anderen und nicht ihre Summe: Sonst traete die
     // starke Gangart gegen drei Spieler an, und die Zahl hiesse nichts.
@@ -783,51 +779,47 @@ describe('Bot: das fertige Heer', () => {
    * seit ein Kauf den ganzen Laden neu zieht, wieder 140 : 86,7 (je 400
    * Partien). Die Vorsicht war richtig, solange niemand wusste, WARUM.
    *
-   * SEIT DEM 05.09.2026 IST DAS BEKANNT, und deshalb steht die Aussage wieder
-   * da. Es lag nicht an der kurzen Partie: Der Zeitraffer allein bewegt die
-   * Zahl bei 20 Leben von 110 auf 114, und auch der Wuerfelpreis war es nicht
-   * (mit wieder eingeschaltetem Preis gewinnt `hart` sogar deutlicher, 174 :
-   * 75,3). Es lag an der ALTEN Ladenregel: Solange ein Kauf nur seinen Platz
-   * leerte, bekam `hart` die Feldplaetze, die es sich frueh erkauft, in einer
-   * elf Runden kurzen Partie nicht mehr voll. Beleg auf demselben Stand: mit
-   * gezaehmtem Aufstieg stand es dort 112 : 96,0 statt 77 : 107,7.
+   * ES LAG AN DER ALTEN LADENREGEL, und das ist seit dem 05.09.2026 bekannt.
+   * Nicht an der kurzen Partie (der Zeitraffer allein bewegt die Zahl bei 20
+   * Leben von 110 auf 114) und nicht am Wuerfelpreis (mit wieder
+   * eingeschaltetem Preis gewinnt `hart` sogar deutlicher, 174 : 75,3):
+   * Solange ein Kauf nur seinen Platz leerte, bekam `hart` die Feldplaetze,
+   * die es sich frueh erkauft, in einer kurzen Partie nicht mehr voll.
+   *
+   * SEIT DEM 06.09.2026 IST SIE NICHT MEHR KNAPP, und das ist die eigentliche
+   * Neuigkeit an dieser Probe. `hart` verlangt beim Aufstieg wieder ein volles
+   * Brett und haelt dafuer nur noch zwei Gold zurueck; damit steht die Paarung
+   * nicht mehr bei 130, sondern bei gut 210 Siegen je 400 Partien. Die
+   * Zerlegung — welche Schraube welchen Anteil traegt — steht bei GANGARTEN in
+   * bot.ts und ist mit `werkzeug/gangarten.mjs --schraube …` nachzustellen,
+   * ohne bot.ts anzufassen.
    *
    * WORAUF DIE AUSSAGE HEUTE RUHT — vier Messungen zu je 400 Partien ueber
    * zwei unabhaengige Saatbasen (`…-feld` und `gegenprobe-b`), alle in
-   * dieselbe Richtung (zuletzt aufgenommen am 05.09.2026 abends, nach der
-   * Kuerzung auf 12 Startleben):
+   * dieselbe Richtung (aufgenommen am 06.09.2026):
    *
-   *     gebauter Stand (12 Leben, x2)   132 : 89,3   130 : 90,0
-   *     langer Stand (20 Leben, x1)     138 : 87,3   132 : 89,3
+   *     gebauter Stand (12 Leben, x2)   212 : 62,7   215 : 61,7
+   *     langer Stand (20 Leben, x1)     176 : 74,7   182 : 72,7
    *
-   * Dazu ein Kontrolllauf, und der ist seit dem Markengewicht NICHT mehr
-   * neutral: Setzt man `hart` in allem auf `normal`, gewinnt Sitz 0 mit
-   * 110 : 96,7. Der Grund ist der gemeinsame Vorrat und die Reihenfolge, in
-   * der der Messstand die Sitze ruesten laesst — die Begruendung steht bei
-   * GANGARTEN in bot.ts. Von den 132 Siegen sind also rund 110 schon der
-   * Sitz; die Gangart traegt den Rest, und das reicht ueber alle vier
-   * Messungen.
+   * Dazu der Kontrolllauf, und der ist wieder neutral: Alle vier Sitze mit
+   * `normal` besetzt ergibt fuer Sitz 0 ueber sechs Basen 98,7 Siege je 400.
+   * Am 05.09.2026 standen dort noch 110 bis 116 — ueber nur drei Basen
+   * gemessen, und das war eine Stichprobe. Die Ursache (gemeinsamer Vorrat,
+   * Sitze ruesten der Reihe nach) besteht fort und kann wiederkommen; die
+   * Begruendung steht bei GANGARTEN in bot.ts.
    *
    * WANN SIE WIEDER FALLEN DARF: bei der naechsten Aenderung am LADEN. Genau
    * die hat sie beide Male gekippt, und die Zahlen dazu fallen in Sekunden an
    * (`werkzeug/gangarten.mjs`). Eine Aenderung an Leben oder Zeitraffer
    * dagegen faengt die Probe darunter ab.
    *
-   * SIE MISST SEIT DEM 05.09.2026 UEBER DREI SAATBASEN statt ueber eine, und
-   * das ist keine Abschwaechung, sondern der Grund, warum sie ueberhaupt noch
-   * etwas behaupten darf. Die Elementar-Reparatur desselben Tages (katalog.ts,
-   * Irrlicht) hat sie auf der EINEN alten Basis auf 100 : 100 gestellt — auf
-   * fuenf anderen Basen blieb `hart` mit 112 bis 126 Siegen vorne. Nachgezaehlt
-   * ueber sechs Basen zu je 400 Partien: vorher 715 : 561,7, nachher
-   * 689 : 570,3. Der Vorsprung ist also kleiner geworden und immer noch da; was
-   * kippte, war nicht die Aussage, sondern eine Stichprobe von 400 Partien.
-   *
-   * DASS DAS PASSIEREN KONNTE, IST DER EIGENTLICHE BEFUND: `hart` traegt ueber
-   * 400 Partien rund 20 bis 35 Siege gegenueber dem Kontrolllauf, und das ist
-   * dieselbe Groessenordnung wie das Rauschen. Solange die Gangart so duenn
-   * wirkt, braucht die Probe die dreifache Zahl — oder die Gangart mehr
-   * Substanz (offener Punkt auf dem Board: die Tempo-Schrauben von `hart`
-   * sind messbar wirkungslos).
+   * SIE MASS EINEN TAG LANG UEBER DREI SAATBASEN und tut es nicht mehr. Das
+   * war kein Zierrat: Die Elementar-Reparatur vom 05.09.2026 (katalog.ts,
+   * Irrlicht) hatte sie auf der EINEN alten Basis auf 100 : 100 gestellt,
+   * waehrend `hart` auf fuenf anderen Basen vorne blieb. Der Grund dafuer war
+   * die Duenne der Gangart — rund 20 bis 35 Siege ueber dem Kontrolllauf, also
+   * die Groessenordnung des Rauschens. Der ist weg; drei Basen kosteten nur
+   * noch Rechenzeit. WER DEN ABSTAND WIEDER KLEIN MACHT, HOLT SIE ZURUECK.
    */
   it('gewinnt als harter Gegner oefter als drei normale', () => {
     const [hart, normal] = imFeld(
@@ -836,7 +828,6 @@ describe('Bot: das fertige Heer', () => {
       DEFAULT_REGELN,
       STANDARD_REGLER,
       PARTIEN_KNAPPE_PAARUNG,
-      DREI_BASEN,
     );
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal`);
   });
@@ -853,7 +844,7 @@ describe('Bot: das fertige Heer', () => {
    * 100 Leben, dann 20, dann 14. Eine Gangart, die nur bei der Laenge von
    * heute vorne liegt, ist auf eine Zahl geeicht statt auf das Spiel — und das
    * faellt sonst erst der uebernaechsten Umstellung auf. Ueber die 400 Partien
-   * dieser Probe steht es 138 : 87,3, auf der zweiten Saatbasis 132 : 89,3.
+   * dieser Probe steht es 176 : 74,7, auf der zweiten Saatbasis 182 : 72,7.
    */
   it('gewinnt als harter Gegner auch in der langen Partie oefter', () => {
     const lang: TafelrundeRegeln = { ...DEFAULT_REGELN, startLeben: 20 };
