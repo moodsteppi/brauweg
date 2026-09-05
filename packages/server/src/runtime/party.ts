@@ -158,10 +158,29 @@ export interface LiveParty {
  */
 export type RuntimeListener = (tableId: string, nurSicht: boolean) => void;
 
+/**
+ * Wie lange vor dem naechsten Botzug gewartet wird: der Takt der Laufzeit,
+ * gedeckelt durch den des Moduls (`meta.botTaktHoechstMs`, game-api).
+ *
+ * NUR NACH UNTEN. Ein Modul, dessen Bot je Runde ein Dutzend Handgriffe macht
+ * (Tafelrunde), kuerzt den Takt damit; verlaengern kann ihn keines. Sonst
+ * saesse ein Test, der die Laufzeit ausdruecklich auf `botDelayMs: 0` stellt,
+ * die Pause dieses Moduls trotzdem ab — und zwar in jedem Zug jeder Partie.
+ *
+ * Eigene Funktion und nicht drei Zeichen an der Aufrufstelle, weil es zwei
+ * Aufrufstellen sind (Zug und Schaupause) und weil die Richtung des `min` das
+ * Einzige ist, was man hier falsch machen kann.
+ */
+export function botTaktMs(plattform: number, modul: number | undefined): number {
+  return modul === undefined ? plattform : Math.min(plattform, modul);
+}
+
 const DEFAULTS = {
   turnTimeoutMs: 60_000,
   // 0,8 s zwischen den Botzuegen: schnell genug, dass der Tisch fliesst,
-  // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt.
+  // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt. Ein Spiel,
+  // in dem ein Bot je Runde ein Dutzend Handgriffe macht statt einen Stich zu
+  // bedienen, kuerzt das ueber `meta.botTaktHoechstMs` — siehe `botTaktMs`.
   botDelayMs: 800,
   interludeMaxMs: Number.POSITIVE_INFINITY,
   phaseMaxMs: Number.POSITIVE_INFINITY,
@@ -594,6 +613,11 @@ export class PartyRuntime {
   // Timer und Bot
   // -------------------------------------------------------------------------
 
+  /** Siehe `botTaktMs`: Takt der Laufzeit, gedeckelt durch den des Moduls. */
+  private botTakt(party: LiveParty): number {
+    return botTaktMs(this.opts.botDelayMs, party.module.meta.botTaktHoechstMs);
+  }
+
   private schedule(party: LiveParty): void {
     if (party.paused || party.finished) {
       if (party.timer) clearTimeout(party.timer);
@@ -635,7 +659,12 @@ export class PartyRuntime {
      */
     const bisPhase =
       party.phaseDeadline === null ? null : Math.max(0, party.phaseDeadline - Date.now());
-    const bisZug = isBot ? this.opts.botDelayMs : this.opts.turnTimeoutMs;
+    // `botTakt` und nicht `opts.botDelayMs`: Ein Modul darf den Takt kuerzen
+    // (`meta.botTaktHoechstMs`), und der Vergleich muss dieselbe Zahl benutzen
+    // wie der Timer darunter. Sonst haelt die Phasenfrist einen Botzug fuer
+    // weiter entfernt, als er ist, und uebernimmt eine Runde, die der Bot noch
+    // rechtzeitig zu Ende gebracht haette.
+    const bisZug = isBot ? this.botTakt(party) : this.opts.turnTimeoutMs;
 
     if (bisPhase !== null && bisPhase < bisZug) {
       party.timer = setTimeout(() => {
@@ -647,7 +676,7 @@ export class PartyRuntime {
     if (isBot) {
       party.timer = setTimeout(() => {
         void this.playBot(party, actor);
-      }, this.opts.botDelayMs);
+      }, this.botTakt(party));
       return;
     }
 
@@ -745,7 +774,7 @@ export class PartyRuntime {
     if (botSeat) {
       party.timer = setTimeout(() => {
         void this.playBot(party, botSeat.index);
-      }, this.opts.botDelayMs);
+      }, this.botTakt(party));
       return;
     }
 

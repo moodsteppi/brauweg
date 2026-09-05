@@ -12,7 +12,8 @@
  *     --besetzung normal   normal | sanft | hart | gemischt
  *     --saat spielzeit-v1  Saatbasis. Andere Basis = unabhaengige Stichprobe.
  *     --nur teiler         Nur eine Gruppe rechnen (leben, teiler, vorbereitung,
- *                          takt, kombination). Mehrere mit Komma.
+ *                          takt, hoechstdauer, botTakt, kombination).
+ *                          Mehrere mit Komma.
  *     --json               Statt der Tabelle die rohen Zeilen als JSON.
  *
  * WOZU ES DA IST, UND WARUM ES NICHT IM AUSGEWOGENHEITS-WERKZEUG STEHT: Dort
@@ -156,6 +157,29 @@ const ZEILEN = [
   ),
 
   /*
+   * 5. Die Abbruchgrenze — die einzige Schraube, die den SCHWANZ der
+   * Kampfdauer trifft und nicht den Median. Deshalb steht sie hier trotz der
+   * ausdruecklichen Warnung im Kopf von HOECHSTDAUER_MS: Wer sie senkt, laesst
+   * mehr Kaempfe von der Uhr entscheiden statt vom Brett. Die Spalte
+   * "Abbruch" ist bei dieser Gruppe die WICHTIGERE der beiden Zahlen.
+   */
+  ...[30_000, 25_000, 20_000].map((grenze) =>
+    zeile('hoechstdauer', 'Hoechstdauer', `${grenze / 1000} s`, {
+      regler: { hoechstdauerMs: grenze },
+    }),
+  ),
+
+  /*
+   * 6. Der Takt, in dem die PLATTFORM Botzuege abarbeitet. Er steht in keiner
+   * Regel dieses Moduls, sondern in meta.botTaktHoechstMs (adapter.ts) und
+   * runtime/party.ts — und er ist trotzdem der groesste Posten der Wartezeit,
+   * siehe die Tabelle "Woran ein Sitz wartet" unter der Ausgabe.
+   */
+  ...[800, 400, 200, 100].map((takt) =>
+    zeile('botTakt', 'Bot-Takt', `${takt} ms`, { zeitmodell: { botTaktMs: takt } }),
+  ),
+
+  /*
    * Kombinationen, ausdruecklich als solche gekennzeichnet.
    *
    * Sie stehen hier, weil die Antwort auf Robins Frage sonst unvollstaendig
@@ -221,6 +245,16 @@ const ergebnisse = ZEILEN.map((z) => {
     kampfMs: a.kampfMs,
     nachlaufMs: a.nachlaufMs,
     kampfMedianMs: a.kampfMedianMs,
+    kampfP90Ms: a.kampfP90Ms,
+    kampfphaseMedianMs: a.kampfphaseMedianMs,
+    kampfphaseP90Ms: a.kampfphaseP90Ms,
+    wartenMedianMs: a.wartenMedianMs,
+    wartenP90Ms: a.wartenP90Ms,
+    botWartenMedianMs: a.botWartenMedianMs,
+    botWartenP90Ms: a.botWartenP90Ms,
+    wartenGesamtMedianMs: a.wartenGesamtMedianMs,
+    wartenGesamtP90Ms: a.wartenGesamtP90Ms,
+    nachlaufJeRundeMs: z.zeitmodell.kampfNachlaufMs,
     rundenMedian: a.rundenMedian,
     rundenSchnitt: a.rundenSchnitt,
     siegerAnteil: a.mitSieger / a.partien,
@@ -326,6 +360,35 @@ console.log('');
 console.log(`  Einzelner Kampf im Median: ${sek(heute.kampfMedianMs)}. ` +
   `Davon an der Hoechstdauer abgeschnitten: ${p1(heute.zeitAbbruchAnteil)}.`);
 
+/*
+ * Die zweite Tabelle, und die eigentliche Antwort auf Robins Frage: Nicht wie
+ * lange eine Partie DAUERT, sondern wie lange man in ihr WARTET. Beide Posten
+ * haben einen langen Schwanz, deshalb steht das neunte Zehntel daneben — im
+ * Median ist an dieser Stelle nichts zu sehen.
+ */
+console.log('');
+console.log('WORAN EIN SITZ WARTET (je Runde, Stand wie gebaut)');
+tabelle(
+  ['Wartezeit', 'Median', 'P90'],
+  [
+    [
+      `auf die Bots nach dem eigenen "Bereit" (Takt ${STANDARD_ZEITMODELL.botTaktMs} ms)`,
+      sek(heute.botWartenMedianMs),
+      sek(heute.botWartenP90Ms),
+    ],
+    [
+      'auf die fremden Kaempfe nach dem eigenen',
+      sek(heute.wartenMedianMs + heute.nachlaufJeRundeMs),
+      sek(heute.wartenP90Ms + heute.nachlaufJeRundeMs),
+    ],
+  ],
+);
+console.log('');
+console.log('  Die erste Zeile ist eine OBERGRENZE und fuer Sitz 0 scharf: Vor ihm ist');
+console.log('  niemand dran, also faengt kein Bot an, bevor er bereit gemeldet hat');
+console.log('  (amZug in partie.ts nennt immer den kleinsten offenen Sitz).');
+console.log(`  Die zweite enthaelt den Nachlauf von ${sek(heute.nachlaufJeRundeMs)}.`);
+
 console.log('');
 console.log('JEDE SCHRAUBE EINZELN (die letzten Zeilen sind KOMBINATIONEN)');
 const zeilen = [];
@@ -344,6 +407,10 @@ for (const e of ergebnisse) {
     )}`,
     String(e.rundenMedian),
     sek(e.kampfMedianMs),
+    /* Das neunte Zehntel des WARTENS je Runde, nicht der Phase: Die Aufgabe kam
+       aus dem Schwanz, nicht aus dem Median. Gebildet als Summe JE (Runde,
+       Sitz) und erst dann als Perzentil — siehe wartenGesamtP90Ms. */
+    sek(e.wartenGesamtP90Ms),
     p1(e.zeitAbbruchAnteil),
     p1(e.siegerAnteil),
     markenSpanne(e),
@@ -358,6 +425,7 @@ tabelle(
     'zu heute',
     'Runden',
     'Kampf',
+    'Warten P90',
     'Abbruch',
     'Sieger',
     'Marken',
@@ -370,6 +438,9 @@ console.log('');
 console.log('  Spielzeit ist der MEDIAN ueber die Partien; "Runden" ebenfalls.');
 console.log('  "Kampf" ist der Median eines einzelnen Kampfes, "Abbruch" der Anteil');
 console.log('  der Kaempfe, die an HOECHSTDAUER_MS abgeschnitten wurden.');
+console.log('  "Warten P90" ist das neunte Zehntel BEIDER Wartezeiten je Runde');
+console.log('  zusammen (Bots plus fremde Kaempfe plus Nachlauf) — die Zahl, um die');
+console.log('  es Robin ging. Sie steht als P90 da, weil der Median nichts zeigt.');
 console.log('');
 console.log(
   `  Zeitmodell der Vorbereitung: ${STANDARD_ZEITMODELL.vorbereitungGrundMs / 1000} s Grundzeit ` +
