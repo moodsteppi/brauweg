@@ -529,32 +529,48 @@ gleichen Gangarten (102 : 99,3). Fallen darf sie wieder bei der nächsten
 seit dem 05.09.2026 geht sie ein, aber nur so weit, wie das eigene Heer eine
 Vorderreihe hat (`deckungIm`, Begründung und Messung im Konzeptdokument,
 achte Messung). Die Regeln sind unberührt — die vier Zahlen aus Abschnitt 4
-stehen unverändert.
+stehen unverändert, und der Katalog ist der von Abschnitt 6 samt Irrlicht und
+drittem Untot-Träger.
 
-**Die Spielzeit ist trotzdem gefallen**, und deutlich. 5.000 Partien zu viert,
-`ausgewogenheit.mjs`, dieselbe Saatbasis vorher und nachher:
+**Die Spielzeit ist trotzdem gefallen.** 5.000 Partien zu viert,
+`ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 150`, Saatbasis
+`ausgewogenheit-v1` vorher wie nachher — es unterscheidet die beiden Läufe nur
+der Bot:
 
 | | vorher | nachher |
 |---|---|---|
-| Spielzeit im Median | 7:11 | **6:26** |
-| davon Kampf | 4:20 | **3:34** |
-| einzelner Kampf im Median | 18,3 s | **15,5 s** |
-| Kampfphase je Runde im Median | 25,7 s | **19,3 s** |
-| an der Höchstdauer abgebrochen | 7,9 % | **2,3 %** |
+| Spielzeit im Median | 6:51 | **6:13** |
+| davon Kampf | 3:59 | **3:20** |
+| davon Vorbereitung (geschätzt) | 2:37 | 2:39 |
+| einzelner Kampf im Median | 16,9 s | **14,5 s** |
+| Kampfphase je Runde im Median | 22,6 s | **17,7 s** |
+| an der Höchstdauer abgebrochen | 5,8 % | **1,8 %** |
 | Runden im Median | 9 | 9 |
 
 **Der Grund steht in der letzten Zeile: Die Runden sind gleich geblieben.**
 Kürzer geworden ist der einzelne Kampf, nicht die Partie. Ein Bot, der
 Fernkämpfer angemessen bewertet, stellt Bretter auf, die in derselben Zeit mehr
 Schaden austeilen — und ein Kampf, der ausgeht, statt in die Höchstdauer zu
-laufen, ist der ganze Unterschied zwischen 7,9 % und 2,3 % Abbrüchen.
+laufen, ist der ganze Unterschied zwischen 5,8 % und 1,8 % Abbrüchen.
 
-**Damit liegt der einzelne Kampf erstmals im geplanten Fenster** von 15 bis 20
-Sekunden (offene Karte „Kämpfe dauern rund 30 s statt der geplanten 15-20 s",
-gemessen bei 30,3 s vor Zeitraffer und Kürzung). Erreicht wurde das ohne eine
-einzige geänderte Regel.
+**Der einzelne Kampf liegt jetzt knapp unter dem geplanten Fenster** von 15 bis
+20 Sekunden (offene Karte „Kämpfe dauern rund 30 s statt der geplanten
+15-20 s", gemessen bei 30,3 s vor Zeitraffer und Kürzung). Nachgedreht wurde
+deswegen nichts: Eine halbe Sekunde unter einer gerundeten Zielmarke ist kein
+Befund, und die anstehende Vergrößerung der Arena — vier Reihen je Seite plus
+zwei Reihen Abstand — verlängert die Anmarschwege wieder.
 
-**Was danach zu prüfen wäre, wenn jemand weiter kürzen will:** Die
-Höchstdauer greift jetzt in einem von vierzig Kämpfen. Sie war als Rettungsseil
-gedacht und ist es damit wieder — wer sie senkt, senkt sie gegen fast nichts.
-Die Schrauben aus Abschnitt 2 sind davon unberührt und gelten weiter.
+**Die Probe in `test/spielzeit.test.ts` hat dabei eine Schranke, die jetzt
+näher liegt als vorher, und zwar von unten:** Sie verlangt, dass mehr als die
+Hälfte der Spielzeit Kampf ist. Gemessen sind es 3:20 von 6:23, also 52 %
+(vorher 57 %). Wer die Kämpfe weiter verkürzt, ohne die Vorbereitung
+mitzunehmen, reißt diese Zeile — und das ist der Sinn der Schranke: Ab dort ist
+die Vorbereitung der größte Posten geworden, und die Empfehlung aus Abschnitt 4
+gilt nicht mehr.
+
+**Was danach zu prüfen wäre, wenn jemand weiter kürzen will:** Die Höchstdauer
+greift jetzt in einem von fünfundfünfzig Kämpfen. Sie war als Rettungsseil
+gedacht und ist es damit wieder — wer sie senkt, senkt sie gegen fast nichts
+(dazu läuft die eigene Karte „Entscheidung: HOECHSTDAUER_MS von 45 s auf 30 s
+senken?"). Die Schrauben aus Abschnitt 2 sind davon unberührt und gelten
+weiter.

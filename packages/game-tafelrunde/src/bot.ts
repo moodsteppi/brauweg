@@ -133,18 +133,16 @@ interface Gangart {
  * 05.09.2026, nachdem die Bewertung die Reichweite bekam):
  *
  *                    gebaut (12 Leben, x2)   langer Stand (20 Leben, x1)
- *     hart : normal   105 :  98    97 : 101     114 : 95   106 : 98
- *     hart : sanft    339 :  20   328 :  24     327 : 24   321 : 26
- *     normal : sanft  364 :  12   370 :  10     348 : 17   358 : 14
+ *     hart : normal   118 :  94   101 : 100     125 : 92   117 : 94
+ *     hart : sanft    342 :  19   333 :  22     329 : 24   335 : 22
+ *     normal : sanft  364 :  12   360 :  13     346 : 18   347 : 18
  *
- * DIE ERSTE ZEILE IST DUENN GEWORDEN, und das gehoert vor jede Lesung dieser
- * Tabelle: `hart` gegen `normal` steht auf der zweiten Basis bei 97 : 101, also
- * hinten. Die Probe in bot.test.ts misst diese Paarung deshalb ueber DREI
- * Basen und 1.200 Partien (124 + 105 + 103 = 332 gegen 289,3) — und selbst das
- * ist kaum mehr als der Kontrolllauf unten. Der Reichweitenfaktor hat daran
- * uebrigens wenig geaendert: Auf denselben drei Basen stand es vorher
- * 100 + 126 + 122 = 348 gegen 284, und der Unterschied liegt innerhalb eines
- * Standardfehlers von rund 15 Siegen. `hart` war schon vorher duenn.
+ * DIE ERSTE ZEILE IST DUENN, und das gehoert vor jede Lesung dieser Tabelle:
+ * `hart` gegen `normal` steht auf der zweiten Basis bei 101 : 100, also
+ * gleichauf. Die Probe in bot.test.ts misst diese Paarung deshalb ueber DREI
+ * Basen und 1.200 Partien (115 + 116 + 120 = 351 gegen 283) und haelt sie
+ * gegen einen Kontrolllauf von 302 auf denselben Basen. Der Abstand ist damit
+ * rund 50 Siege auf 1.200 Partien — vorhanden, aber klein.
  *
  * AM 05.09.2026 ZWEIMAL NEU AUFGENOMMEN: einmal, weil der Bot seitdem auf
  * Marken spielt (siehe `heerStaerke`), und einmal nach der Kuerzung auf 12
@@ -192,23 +190,25 @@ interface Gangart {
  *
  * DER KONTROLLLAUF IST NICHT MEHR NEUTRAL, und das gehoert vor jede dieser
  * Zahlen. Besetzt man ALLE VIER Sitze mit `normal`, gewinnt Sitz 0 trotzdem
- * oefter: 118 und 107 Siege ueber die beiden Basen der Tabelle, gegen 100 im
+ * oefter: 120 und 123 Siege ueber die beiden Basen der Tabelle, gegen 100 im
  * Schnitt. Vor dem Markengewicht war der Lauf sauber (101, 106, 99), mit ihm
  * stand er bei 102 und 108 — der Reichweitenfaktor hat den Sitzvorteil also
- * noch etwas vergroessert, und auch das hat denselben Grund wie unten: Ein Bot,
- * der genauer weiss, was er will, will es haeufiger gleichzeitig mit den
- * anderen. Die Ursache ist der GEMEINSAME VORRAT (partie.ts, `vorrat`):
+ * noch einmal vergroessert, und das hat denselben Grund wie unten: Ein Bot, der
+ * genauer weiss, was er will, will es haeufiger gleichzeitig mit den anderen.
+ * Auf den drei Basen der Probe in bot.test.ts faellt der Vorteil kleiner aus
+ * (105, 97, 100) — er haengt an der Saat und ist keine feste Zahl. Die Ursache
+ * ist der GEMEINSAME VORRAT (partie.ts, `vorrat`):
  * Bots, die auf Synergien spielen, wollen alle dieselben Einheiten, und der
  * Messstand laesst die Sitze der Reihe nach ruesten — wer zuerst kauft,
  * bekommt sie. Am echten Tisch ruesten alle gleichzeitig, dort ist die
  * Reihenfolge keine Sitznummer; der Druck auf den Vorrat ist aber derselbe.
- * Fuer die Tabelle oben heisst das: `hart` gewinnt auf der ersten Basis 105
- * Partien — und derselbe Sitz gewinnt 118, wenn er `normal` spielt wie alle
- * anderen. Die Paarung `hart : normal` sagt fuer sich genommen also gar
- * nichts mehr; getragen wird die Reihenfolge von den 1.200 Partien der Probe
- * in bot.test.ts, und auch dort knapp: 332 Siege gegen 315 im Kontrolllauf
- * ueber dieselben drei Basen. Wer den Abstand als Zahl braucht, misst
- * gegen den Kontrolllauf und nicht gegen 100. Steht als Befund auf dem Board.
+ * Fuer die Tabelle oben heisst das: `hart` gewinnt auf der ersten Basis 118
+ * Partien — und derselbe Sitz gewinnt 120, wenn er `normal` spielt wie alle
+ * anderen. Auf DIESEN beiden Basen sagt die Paarung also gar nichts; getragen
+ * wird die Reihenfolge von den 1.200 Partien der Probe in bot.test.ts, wo 351
+ * Siegen ein Kontrolllauf von 302 gegenuebersteht. Wer den Abstand als Zahl
+ * braucht, misst gegen den Kontrolllauf und nicht gegen 100. Steht als Befund
+ * auf dem Board.
  *
  * ZU VIERT UND NICHT ZU ZWEIT, und das ist selbst ein Befund: Solange die
  * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
@@ -285,40 +285,62 @@ const STAERKE_TEILER = 100;
  * anderen ohne, sonst spielen alle vier dieselbe Gangart. Je 400 Partien ueber
  * sechs Saatbasen, gezaehlt werden die eindeutigen Siege des einen Sitzes.
  *
- *     ohne Faktor (Kontrolllauf)   595 von 2.400
- *     mit 0,15                     708 von 2.400   auf JEDER Basis mehr
+ *     ohne Faktor (Kontrolllauf)   605 von 2.400
+ *     mit 0,10                     707 von 2.400
+ *     mit 0,15                     710 von 2.400   auf JEDER Basis mehr
+ *     mit 0,25                     673 von 2.400
  *
- * Nach oben ist die Zahl begrenzt, und zwar messbar: ueber die ersten drei
- * Basen steht 0,10 bei 355, 0,15 bei 360, 0,25 bei 313 und 0,40 bei 249 —
- * gegen 301 im Kontrolllauf. Ab etwa einem Viertel kippt der Faktor also von
- * Vorteil zu Nachteil, weil der Bot dann Fernkaempfer kauft, wo er eine Wache
- * braeuchte. Zwischen 0,10 und 0,15 entscheidet die Messung nicht; 0,15 steht
- * hier, weil es den groessten gemessenen Abstand hat.
+ * Nach oben ist die Zahl begrenzt, und zwar messbar: Bei 0,40 steht es ueber
+ * die ersten drei Basen 281 gegen 297 im Kontrolllauf — der Faktor ist dort
+ * vom Vorteil zum Nachteil gekippt, weil der Bot Fernkaempfer kauft, wo er
+ * eine Wache braeuchte. Zwischen 0,10 und 0,15 entscheidet die Messung nicht;
+ * 0,15 steht hier, weil es den groessten gemessenen Abstand hat.
+ *
+ * GEMESSEN AUF EINEM BRETT VON 5 x 2 FELDERN JE SEITE (`brett.ts`), also einer
+ * Arena von 5 x 4 ohne Zwischenraum. Das ist keine Nebensache: Was Reichweite
+ * wert ist, haengt daran, wie weit gelaufen werden muss. Waechst die Arena —
+ * vier Reihen je Seite und zwei Reihen Abstand stehen als Aufgabe an —, gilt
+ * diese Zahl nicht mehr ungeprueft, und der Lauf kostet Minuten.
  */
 const REICHWEITEN_GEWICHT = 0.15;
 
 /**
  * Wie viele Fernkaempfer eine Einheit der Vorderreihe deckt.
  *
- * DIE MESSUNG UNTERSCHEIDET DIESE ZAHL NICHT, und das gehoert dazu: Mit 1
- * (jede Wache deckt genau eine) stehen ueber drei Basen 359 Siege, mit 8 (also
- * praktisch "eine einzige Wache genuegt fuer alles") 358. Das ganze Gewicht
- * des Modells liegt im Fall NULL — ein Brett voellig ohne Vorderreihe. Genau
- * dort trennen sich die 208 Siege des pauschalen Faktors von den 360 des
- * gedeckten (siehe `deckungIm`).
+ * DIE MESSUNG UNTERSCHEIDET DIESE ZAHL NICHT — auch nicht von "gar keine
+ * Deckung", und das gehoert offen hierhin. Ueber drei Basen zu je 400 Partien,
+ * Kontrolllauf 297:
  *
- * ZWEI UND NICHT EINS, obwohl die Messung schweigt, und dafuer gibt es einen
- * Grund ausserhalb der Siegzahlen: Mit 1 kauft der Bot die Grabfuerstin in 400
- * Partien kein einziges Mal mehr, und die Probe "stellt jede der 22 Einheiten
- * wenigstens einmal auf ein Brett" (test/ausgewogenheit.test.ts) faellt. Sie
- * stand vorher bei zwei Antritten, war also ohnehin am Rand — aber eine
- * Bot-Aenderung, die eine Katalogzeile ganz aus dem Spiel nimmt, ist zu scharf.
- * Ab 1,5 steht die Probe wieder, an den Siegzahlen aendert sich nichts.
+ *     Deckkraft 1     341      jede Wache deckt genau einen Fernkaempfer
+ *     Deckkraft 2     348      der gebaute Stand
+ *     Deckkraft 8     342      eine Wache genuegt praktisch fuer alles
+ *     ohne Deckung    342      der Faktor gilt immer voll
  *
- * KEIN HARTER SCHALTER bei "gar keine Wache", obwohl die Messung genau das
- * traegt: Ein Brett mit einer Wache und sechs Schuetzen ist nicht gedeckt, und
- * ein Umschalten bei genau einer Wache waere eine Kante, hinter der der Bot
- * ploetzlich anders einkauft. Das Verhaeltnis sagt dasselbe stetig.
+ * DIE DECKUNG STEHT TROTZDEM DA, und zwar als Sperre und nicht als Gewinn.
+ * Sie verhindert genau das Brett, an dem die Marke Elementar am 05.09.2026
+ * gescheitert ist: fuenf Traeger, alle mit Reichweite 3 oder 4, niemand haelt
+ * die Linie, Siegquote x0,25 (siehe Irrlicht in katalog.ts). Dass die Sperre
+ * heute nichts kostet und nichts bringt, liegt am Katalog desselben Tages —
+ * seit dem Irrlicht und dem Schildknappen hat JEDE Marke einen Traeger in der
+ * Vorderreihe, und ein Brett ganz ohne Nahkaempfer kommt gar nicht mehr
+ * zustande. Wer eine Marke aus lauter Fernkaempfern nachlegt, bekommt die
+ * Sperre geschenkt; wer sie vorher herausnimmt, merkt es erst an der
+ * Ausgewogenheit.
+ *
+ * WAS DAGEGEN SEHR WOHL GEMESSEN IST, steht bei `kandidaten`: Der
+ * Reichweitenwert darf nicht am Verschmelzfaktor haengen. Das kostet ueber
+ * sechs Basen 487 Siege statt 702 — mehr als der ganze Faktor wert ist.
+ *
+ * ZWEI UND NICHT EINS ODER ACHT: Die Zwei steht in der Mitte der gemessenen
+ * Ebene und hat dort den groessten Wert — innerhalb der Streuung, also keine
+ * Aussage, aber auch kein Griff ins Blaue. Sachlich heisst sie "eine Wache
+ * haelt zwei Fernkaempfer den Ruecken frei", und das ist die Zahl, die man an
+ * einem Brett von fuenf Spalten je Reihe auch abzaehlt.
+ *
+ * KEIN HARTER SCHALTER bei "gar keine Wache": Ein Brett mit einer Wache und
+ * sechs Schuetzen ist nicht gedeckt, und ein Umschalten bei genau einer Wache
+ * waere eine Kante, hinter der der Bot ploetzlich anders einkauft. Das
+ * Verhaeltnis sagt dasselbe stetig.
  */
 const DECKKRAFT = 2;
 
@@ -331,16 +353,17 @@ const VOLLE_DECKUNG = 1;
 /**
  * Wie gut die Vorderreihe dieses Heeres seine Fernkaempfer deckt — 0 bis 1.
  *
- * WARUM DIE REICHWEITE NICHT FUER SICH ALLEIN ZAEHLT, und das ist der Kern
- * dieser Datei: Reichweite ist nichts wert, solange niemand die Linie haelt.
- * Genau daran ist die Marke Elementar am 05.09.2026 gescheitert (siehe
- * Irrlicht in katalog.ts) — fuenf Traeger, alle mit Reichweite 3 oder 4, und
- * eine Siegquote von x0,25. Ein Bot, der Reichweite pauschal aufwertet, baut
- * genau dieses Brett. Gemessen ist er damit deutlich SCHWAECHER als der ohne
- * Faktor: 208 Siege statt 301 (je 400 Partien ueber drei Saatbasen, sonst
- * gleiche Gangart). Der Deckungsanteil macht aus dem Faktor eine Aussage
- * ueber die ZUSAMMENSTELLUNG statt ueber die einzelne Einheit — und erst so
- * traegt er.
+ * WARUM DIE REICHWEITE NICHT FUER SICH ALLEIN ZAEHLT: Reichweite ist nichts
+ * wert, solange niemand die Linie haelt. Genau daran ist die Marke Elementar
+ * am 05.09.2026 gescheitert (siehe Irrlicht in katalog.ts) — fuenf Traeger,
+ * alle mit Reichweite 3 oder 4, und eine Siegquote von x0,25. Ein Bot, der
+ * Reichweite pauschal aufwertet, baut genau dieses Brett.
+ *
+ * AUF DEM HEUTIGEN KATALOG IST DAS NICHT MEHR MESSBAR, und das steht als Zahl
+ * bei `DECKKRAFT`: Weil jede Marke inzwischen einen Traeger in der
+ * Vorderreihe hat, kommt ein Brett ohne Nahkaempfer nicht mehr zustande, und
+ * ein pauschaler Faktor spielt gleich gut. Die Funktion bleibt als SPERRE
+ * gegen den naechsten Katalog, nicht als gemessener Gewinn.
  *
  * Ein Verhaeltnis und kein feiner ausgedachtes Mass: so viele Fernkaempfer,
  * wie die Vorderreihe traegt (`DECKKRAFT`), sind gedeckt, der Rest drueckt den
@@ -779,6 +802,17 @@ interface Kandidat {
  * Die feste Reihenfolge ist kein Schoenheitsfehler: Derselbe Laden muss
  * denselben Kauf ergeben, sonst haengt die Partie an der Sortierung der
  * Laufzeit (Grundsatz 1).
+ *
+ * DASS `staerke` HIER OHNE DECKUNG GERUFEN WIRD, IST DIE WICHTIGSTE ZEILE DER
+ * GANZEN REICHWEITEN-RECHNUNG. Der Reichweitenwert kommt ueber `umfeldGewinn`
+ * herein und wird damit NICHT von `VERSCHMELZ_FAKTOR` und `PAAR_FAKTOR`
+ * mitmultipliziert. Reicht man ihn stattdessen hier durch, verdreifacht sich
+ * der Reichweitenvorteil an jedem Verschmelzungskauf, und der Bot jagt
+ * Schuetzenpaare statt Verschmelzungen: gemessen 487 Siege statt 702, je 400
+ * Partien ueber sechs Saatbasen gegen einen Kontrolllauf von 605
+ * (`werkzeug/gangarten.mjs`, 05.09.2026). Das ist ein groesserer Ausschlag als
+ * der Faktor selbst — wer hier eine Deckung einsetzt, macht den Bot schlechter
+ * als ganz ohne Reichweite.
  */
 function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number): Kandidat[] {
   const eigene = eigeneEinheiten(eigen);
