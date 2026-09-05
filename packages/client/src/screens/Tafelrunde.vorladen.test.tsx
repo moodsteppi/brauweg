@@ -13,6 +13,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * `useTable` ist ersetzt wie im Nachbartest; das Vorladen ist es NICHT — es
  * laeuft echt, nur mit einer Bild-Attrappe, weil jsdom keine Bilder laedt und
  * `decode()` dort gar nicht kennt.
+ *
+ * Der Posten „Spielpaket" ist seit dem 6.9.2026 ebenfalls ersetzt. Echt waere
+ * er hier ein `import()` auf den Schirm, den dieser Test gerade selbst
+ * geladen hat: Er ginge also sofort durch, und der Zaehler spraenge mitten in
+ * den Erwartungen. Die Attrappe laesst den Test entscheiden, wann das Paket
+ * da ist — genau wie bei den Bildern.
  */
 
 const gesendet = vi.fn();
@@ -21,6 +27,28 @@ let tischStand: unknown;
 vi.mock('../useTable', () => ({
   useTable: () => tischStand,
 }));
+
+/** Das Spielpaket als Posten, dessen Ankunft der Test bestimmt. */
+const paket = vi.hoisted(() => {
+  let loesen: () => void = () => {};
+  return {
+    fertig: (): void => loesen(),
+    modul: {
+      PAKET_KB: 28,
+      PAKET_KENNUNG: 'paket:tafelrunde',
+      PAKET: {
+        pfad: 'paket:tafelrunde',
+        kb: 28,
+        holen: (): Promise<void> =>
+          new Promise<void>((gut) => {
+            loesen = () => gut();
+          }),
+      },
+    },
+  };
+});
+
+vi.mock('../minispiele/tafelrunde/paket', () => paket.modul);
 
 import { vorratZuruecksetzen } from '../minispiele/tafelrunde/vorladen';
 import { Tafelrunde } from './Tafelrunde';
@@ -59,12 +87,13 @@ const umlauf = (): Promise<void> =>
     await new Promise((f) => setTimeout(f, 0));
   });
 
-/** Alles, was aussteht, laden lassen. */
+/** Alles, was aussteht, laden lassen — Bilder UND Spielpaket. */
 async function alleLaden(): Promise<void> {
   const offen = [...wartende];
   wartende.length = 0;
   await act(async () => {
     for (const bild of offen) bild.fertig();
+    paket.fertig();
   });
   await umlauf();
 }
@@ -164,6 +193,8 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
   it('fragt jede Figur und den Untergrund an, nicht erst bei Bedarf', () => {
     render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
     // 22 Figuren plus Untergrund — und zwar bevor irgendetwas gezeichnet ist.
+    // Das Spielpaket ist kein Bild und taucht hier deshalb nicht auf; es
+    // zaehlt trotzdem im selben Lauf mit (siehe der Test darunter).
     expect(wartende).toHaveLength(23);
     expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/untergrund-holz.webp');
     expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/dorfwache.webp');
@@ -171,14 +202,45 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
 
   it('zaehlt sichtbar mit, waehrend die Dateien eintreffen', async () => {
     render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
-    expect(screen.getByText('0 von 23 Dateien')).toBeInTheDocument();
+    // 24 und nicht 23: Das Spielpaket haengt im selben Lauf.
+    expect(screen.getByText('0 von 24 Dateien')).toBeInTheDocument();
 
     const erste = wartende.splice(0, 3);
     await act(async () => {
       for (const bild of erste) bild.fertig();
     });
 
-    expect(screen.getByText('3 von 23 Dateien')).toBeInTheDocument();
+    expect(screen.getByText('3 von 24 Dateien')).toBeInTheDocument();
+  });
+
+  /*
+   * Der Punkt der ganzen Aufgabe: EIN Balken ueber Paket und Bilder. Zaehlte
+   * er nur die Bilder, staende er schon bei 100 %, waehrend der Spieler noch
+   * auf den Schirm wartet — die Haelfte der Wartezeit ohne jede Anzeige.
+   */
+  it('haelt den Vorhang, bis auch das Spielpaket da ist', async () => {
+    render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
+
+    const bilder = [...wartende];
+    wartende.length = 0;
+    await act(async () => {
+      for (const bild of bilder) bild.fertig();
+    });
+    await umlauf();
+
+    // Alle 23 Bilder da, das Paket fehlt: Der Vorhang bleibt, und der Balken
+    // steht nicht bei 100 %.
+    expect(screen.getByText('23 von 24 Dateien')).toBeInTheDocument();
+    expect(Number(screen.getByRole('progressbar').getAttribute('aria-valuenow'))).toBeLessThan(
+      100,
+    );
+    expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      paket.fertig();
+    });
+    await umlauf();
+    expect(screen.getByRole('group', { name: 'Laden' })).toBeInTheDocument();
   });
 
   it('gibt die Ruestkammer frei, sobald alles da ist', async () => {
@@ -211,6 +273,7 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
     await act(async () => {
       erstes.kaputt();
       for (const bild of rest) bild.fertig();
+      paket.fertig();
     });
     await umlauf();
 

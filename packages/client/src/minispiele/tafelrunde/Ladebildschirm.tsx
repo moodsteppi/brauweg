@@ -10,9 +10,19 @@ import stil from './Ladebildschirm.module.css';
  * da auch ruhig stehen Dateien werden heruntergeladen". Der Satz steht also
  * woertlich so da und wird nicht in etwas Hoefliches umformuliert.
  *
+ * Gezeigt wird er an ZWEI Stellen, und beide meinen denselben Lauf: als
+ * Rueckfall von `<Suspense>`, solange das Spielpaket unterwegs ist
+ * (Ladevorhang.tsx, eingehaengt in App.tsx), und danach vom Schirm selbst,
+ * solange noch Bilder fehlen. Fuer den Spieler ist das ein Bildschirm mit
+ * einem Balken — der Wechsel dazwischen ist nicht zu sehen.
+ *
  * Zwei Anzeigen und nicht eine: der Balken fuer „es geht voran" (nach Gewicht,
- * siehe vorladen.ts) und die Zahl fuer „wie weit noch" (nach Dateien, weil
- * Kilobyte niemandem etwas sagen). Der Balken ist ein `progressbar` mit
+ * siehe vorladen.ts) und die Zahl fuer „wie weit noch" (nach Posten, weil
+ * Kilobyte niemandem etwas sagen). „Dateien" steht dort trotzdem: Das
+ * Spielpaket ist als EIN Posten gezaehlt, obwohl fuenf Dateien darin stecken
+ * (paket.ts) — „24 Teile" waere genauer und saehe nach Fachsprache aus, und
+ * gefragt war die Zeile, die Robin genannt hat. Der Balken ist ein
+ * `progressbar` mit
  * `aria-valuenow` — damit sagt ein Vorlesegeraet den Fortschritt an, ohne dass
  * ein `aria-live` die Zahl 23-mal vorliest.
  *

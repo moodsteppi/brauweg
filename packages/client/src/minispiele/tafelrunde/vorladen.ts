@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { FIGUREN, UNTERGRUND } from './figuren';
+import { PAKET } from './paket';
 
 /**
  * Alles holen, bevor die erste Runde laeuft.
@@ -11,6 +12,11 @@ import { FIGUREN, UNTERGRUND } from './figuren';
  * ueber die ersten Runden. Zusammen sind das nur 47 kB, aber wer im Laden
  * kauft, sieht den leeren Platz genau so lange, wie die Anfrage braucht. Auf
  * einer langsamen Leitung sind das die ersten Runden.
+ *
+ * Seit dem 6.9.2026 haengt das SPIELPAKET mit im selben Lauf (paket.ts). Es
+ * ist der erste Posten der Liste und wiegt gut ein Drittel — ohne ihn zeigte
+ * der Balken die zweite Haelfte einer Wartezeit, deren erste der Spieler vor
+ * einem leeren Bildschirm verbracht hat.
  *
  * Drei Entscheidungen, die man dem Code sonst nicht ansieht:
  *
@@ -47,6 +53,16 @@ export interface Posten {
    * Groessenordnung genuegt, damit der Balken nicht luegt.
    */
   readonly kb: number;
+  /**
+   * Ein eigener Weg fuer Posten, die kein Bild sind.
+   *
+   * Bisher gibt es genau einen: das Spielpaket (paket.ts). Es kommt nicht
+   * ueber eine Adresse, sondern ueber `import()` — den Dateinamen kennt nur
+   * der Bauvorgang. Ohne diesen Haken muesste `bildHolen` Sonderfaelle nach
+   * dem Pfad unterscheiden, und das waere die Stelle, an der die naechste
+   * Sonderbehandlung dazukaeme.
+   */
+  readonly holen?: () => Promise<void>;
 }
 
 /**
@@ -54,6 +70,11 @@ export interface Posten {
  * fertig — sie steht hier sofort mit drin.
  */
 export const VORZULADEN: readonly Posten[] = [
+  /* Das Spielpaket ganz vorn: Ohne den Schirm gibt es nichts zu zeigen, und
+     die Anfragen gehen in der Reihenfolge dieser Liste raus. Es gehoert in
+     denselben Lauf wie die Bilder, damit der Balken EINE Wartezeit zeigt und
+     nicht zwei hintereinander — siehe paket.ts. */
+  PAKET,
   /* Die Textur zuerst: mit Abstand die groesste Datei und die einzige, deren
      Fehlen man auf jedem Bildschirm sofort sieht. */
   { pfad: UNTERGRUND, kb: 35 },
@@ -261,7 +282,11 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
        Warteschlange (sechs Verbindungen je Gegenstelle); ein selbstgebauter
        Takt waere hier nur langsamer. */
     for (const p of posten) {
-      void holen(p.pfad).then(
+      /* Bringt der Posten seinen eigenen Weg mit, gilt der — `holen` ist der
+         Weg fuer Bilder, und das Spielpaket ist keines (siehe `Posten.holen`).
+         Der Lauf selbst merkt keinen Unterschied: Er sieht ein Versprechen,
+         das haelt oder nicht. */
+      void (p.holen ? p.holen() : holen(p.pfad)).then(
         () => abgehakt(p, true),
         () => abgehakt(p, false),
       );
