@@ -187,24 +187,103 @@ describe('Neu-Wuerfeln', () => {
     assert.equal(vorratGesamt(nachher.vorrat) + imUmlauf(nachher), KARTEN_INSGESAMT);
   });
 
-  it('kostet Gold und zieht einen neuen Laden', () => {
+  it('kostet in der Vorgabe nichts und zieht trotzdem einen neuen Laden', () => {
+    // Robins Vorgabe vom 05.09.2026: Gold gibt man fuer Einheiten aus, nicht
+    // fuers Rollen. Das Feld bleibt trotzdem im Regelsatz.
+    assert.equal(DEFAULT_REGELN.neuwuerfelnKosten, 0);
     const p = neu();
     const nachher = fuehreAus(p, 0, { typ: 'neuwuerfeln' });
-    assert.equal(
-      nachher.heere[0]!.gold,
-      p.heere[0]!.gold - DEFAULT_REGELN.neuwuerfelnKosten,
-    );
+    assert.equal(nachher.heere[0]!.gold, p.heere[0]!.gold);
     assert.equal(nachher.heere[0]!.wuerfe, p.heere[0]!.wuerfe + 1);
     // Der Laden des anderen Sitzes bleibt unberuehrt.
     assert.deepEqual(nachher.heere[1]!.laden, p.heere[1]!.laden);
   });
 
-  it('geht nicht ohne Gold', () => {
+  it('geht auch ohne einen Goldstueck', () => {
     const p = neu();
     const arm = {
       ...p,
-      heere: { ...p.heere, 0: { ...p.heere[0]!, gold: 1 } },
+      heere: { ...p.heere, 0: { ...p.heere[0]!, gold: 0 } },
     };
+    const nachher = fuehreAus(arm, 0, { typ: 'neuwuerfeln' });
+    assert.equal(nachher.heere[0]!.gold, 0);
+    assert.notDeepEqual(nachher.heere[0]!.laden, arm.heere[0]!.laden);
+  });
+
+  it('kostet Gold, wenn ein Tisch einen Preis setzt', () => {
+    // Das Feld ist nicht entfernt worden, damit genau das moeglich bleibt.
+    const teuer = erstellePartie(
+      { ...DEFAULT_REGELN, neuwuerfelnKosten: 2, startGold: 3 },
+      [0, 1],
+      SAAT,
+    );
+    const nachher = fuehreAus(teuer, 0, { typ: 'neuwuerfeln' });
+    assert.equal(nachher.heere[0]!.gold, 1);
+    const arm = { ...teuer, heere: { ...teuer.heere, 0: { ...teuer.heere[0]!, gold: 1 } } };
     assert.throws(() => fuehreAus(arm, 0, { typ: 'neuwuerfeln' }), /Gold/);
+  });
+});
+
+describe('Nachfuellen nach dem Kauf', () => {
+  /** Eine Partie, in der Sitz 0 genug Gold zum Kaufen hat. */
+  function reich(saat: string = SAAT): TafelrundePartie {
+    const p = neu(saat);
+    return { ...p, heere: { ...p.heere, 0: { ...p.heere[0]!, gold: 50 } } };
+  }
+
+  it('besetzt den gekauften Platz sofort neu', () => {
+    const p = reich();
+    const gekauft = p.heere[0]!.laden[0];
+    const nachher = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
+    const neuerPlatz = nachher.heere[0]!.laden[0];
+    assert.notEqual(neuerPlatz, null, 'Der Platz blieb leer');
+    // Die uebrigen Plaetze ruehrt der Kauf nicht an.
+    assert.deepEqual(nachher.heere[0]!.laden.slice(1), p.heere[0]!.laden.slice(1));
+    assert.equal(typeof gekauft, 'string');
+  });
+
+  it('nimmt die nachgezogene Karte aus dem Vorrat', () => {
+    // Sonst waere eine Einheit oefter im Spiel, als es Kopien von ihr gibt.
+    const p = reich();
+    const nachher = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
+    assert.equal(vorratGesamt(nachher.vorrat), vorratGesamt(p.vorrat) - 1);
+    assert.equal(vorratGesamt(nachher.vorrat) + imUmlauf(nachher), KARTEN_INSGESAMT);
+  });
+
+  it('laesst den Platz leer, wenn der Vorrat erschoepft ist', () => {
+    // DIE einzige Bremse, seit das Wuerfeln nichts mehr kostet: Wer den
+    // Vorrat leerkauft, bekommt keine Einheit, die es nicht mehr gibt.
+    const p = reich();
+    const leer = {} as Record<EinheitId, number>;
+    for (const e of KATALOG) leer[e.id] = 0;
+    const ohneVorrat = { ...p, vorrat: leer };
+    const nachher = fuehreAus(ohneVorrat, 0, { typ: 'kaufen', platz: 0 });
+    assert.equal(nachher.heere[0]!.laden[0], null);
+    assert.equal(vorratGesamt(nachher.vorrat), 0);
+  });
+
+  it('zieht bei jedem Kauf aus einem neuen Strom', () => {
+    // Haenge der Nachzug an der Platznummer statt an einer laufenden
+    // Wurfnummer, gaebe derselbe Platz immer wieder dieselbe Karte.
+    const gesehen = new Set<string>();
+    let p = reich('nachzug-strom');
+    for (let i = 0; i < 6; i++) {
+      p = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
+      const karte = p.heere[0]!.laden[0];
+      if (karte) gesehen.add(karte);
+    }
+    assert.ok(gesehen.size >= 2, `sechs Kaeufe brachten nur ${gesehen.size} Einheit(en)`);
+  });
+
+  it('liefert bei gleicher Saat und gleichen Kaeufen denselben Laden', () => {
+    const lauf = (): TafelrundePartie => {
+      let p = reich('nachzug-bestimmt');
+      p = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
+      p = fuehreAus(p, 0, { typ: 'kaufen', platz: 2 });
+      p = fuehreAus(p, 0, { typ: 'neuwuerfeln' });
+      p = fuehreAus(p, 0, { typ: 'kaufen', platz: 1 });
+      return p;
+    };
+    assert.deepEqual(lauf(), lauf());
   });
 });

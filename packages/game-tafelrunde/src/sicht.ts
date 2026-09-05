@@ -73,6 +73,14 @@ export interface EigeneSicht {
   /** Was die naechste Runde einbringt — Grundeinkommen, Zins und Serie. */
   readonly einkommen: number;
   readonly neuwuerfelnKosten: number;
+  /**
+   * Wie oft dieser Sitz in DIESER Runde schon neu gewuerfelt hat.
+   *
+   * Steht in der Sicht, weil der Bot auf derselben gefilterten Sicht laeuft wie
+   * ein Mensch und seit dem kostenlosen Wuerfeln eine eigene Bremse braucht
+   * (bot.ts, WUERFE_JE_RUNDE). Fuer den Bildschirm ist die Zahl ohne Belang.
+   */
+  readonly wuerfeRunde: number;
   /** Gold fuer den naechsten Level, null beim hoechsten. */
   readonly aufstiegKosten: number | null;
   /** Darf dieser Sitz gerade ueberhaupt handeln? */
@@ -253,6 +261,7 @@ export function sichtFuer(
     belegt: brettBelegung(heer),
     einkommen: einkommen(heer, partie.regeln),
     neuwuerfelnKosten: partie.regeln.neuwuerfelnKosten,
+    wuerfeRunde: heer.wuerfeRunde,
     aufstiegKosten: aufstiegKosten(heer.level),
     darfHandeln: darfHandeln(partie, sitz),
     synergien: synergienVon(heer.brett),

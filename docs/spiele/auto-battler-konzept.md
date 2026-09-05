@@ -71,7 +71,13 @@ aktiven Boni gehören **sichtbar** in die Oberfläche.
 Gold je Runde: Grundeinkommen, Zins (1 Gold je 10 auf der Hand, höchstens 5),
 Bonus bei Sieges- oder Niederlagenserie. Der Laden zeigt fünf zufällige
 Einheiten; die Wahrscheinlichkeit teurer Einheiten steigt mit dem Spielerlevel.
-Neu würfeln kostet Gold. Level steigern kostet Gold und bringt Feldplätze.
+Neu würfeln ist seit dem 05.09.2026 **kostenlos** (Robin: „wir wollen nicht
+mehr, dass man fürs Rollen Geld ausgeben soll"), und ein gekaufter Ladenplatz
+wird **sofort nachbesetzt** — der Laden ist immer voll, solange der Vorrat
+reicht. Gold gibt man damit nur noch für Einheiten und Aufstiege aus; was das
+Nachziehen begrenzt, ist allein der Vorrat. Das Feld `neuwuerfelnKosten` steht
+weiterhin im Regelsatz, damit ein selbstgebauter Tisch den Preis wieder setzen
+kann. Level steigern kostet Gold und bringt Feldplätze.
 
 ### Rundenablauf
 
@@ -147,7 +153,112 @@ und keine Probe reproduzierbar.
 
 ---
 
+## Gemessen: Ausgewogenheit (Stand 05.09.2026, dritte Messung — der gültige Stand)
+
+**Was geändert wurde:** `neuwuerfelnKosten` steht auf **0**, und ein gekaufter
+Ladenplatz wird **sofort nachbesetzt** (`fuelleNach` in `partie.ts`). Sonst
+nichts — Zins, Serienbonus, Leveln, Katalog und Schwellen sind unangetastet.
+Gemessen mit demselben Werkzeug und derselben Saatbasis wie die zweite Messung,
+**5.000 Partien zu viert, Besetzung `normal`**; die Spalte „vorher" ist genau
+jene zweite Messung (Tabellen weiter unten).
+
+### Wie lange eine Partie dauert
+
+| | jetzt | vorher |
+|---|---|---|
+| Runden ⌀ | 14,2 | 14,7 |
+| Median | 14 | 15 |
+| kürzeste / längste | 10 / 21 | 11 / 22 |
+| an der Grenze geendet | 0,0 % | 0,0 % |
+| erstes Ausscheiden | Runde 10,2 | Runde 10,5 |
+| zur Halbzeit entschieden | **44,0 %** | 36,7 % |
+| Antritte insgesamt | 252.843 | 261.233 |
+
+Die Partie ist eine halbe Runde kürzer — erwartbar, weil dasselbe Gold jetzt
+vollständig in Einheiten geht. Deutlich ist die zweite Zeile: **Gut vier von
+zehn Partien stehen zur Halbzeit fest** statt knapp vier von zehn. Wer früh
+Gold hat, baut jetzt schneller aus, und der Rückstand holt sich schwerer auf.
+
+### Siegquote je Marke
+
+| Marke | Antritte | Siege | Quote | zum Schnitt | vorher |
+|---|---|---|---|---|---|
+| Untot | 45 | 25 | 55,6 % | zu dünn | zu dünn |
+| Drache | 129 | 54 | 41,9 % | ×1,27 | ×1,15 |
+| Krieger | 8.713 | 3.151 | 36,2 % | ×1,10 | ×1,13 |
+| Naturwesen | 2.560 | 875 | 34,2 % | ×1,04 | ×1,06 |
+| Elementar | 373 | 114 | 30,6 % | ×0,93 | ×0,80 |
+| Wächter | 14.437 | 4.081 | 28,3 % | ×0,86 | ×1,07 |
+| Meuchler | 11.284 | 2.947 | 26,1 % | ×0,79 | ×0,79 |
+
+Schnitt der gezählten Zeilen: 32,9 % (vorher 31,9 %). Der Zielrahmen — keine
+gezählte Marke über ×1,4, keine unter ×0,7 — ist eingehalten: ×1,27 bis ×0,79.
+
+### Siegquote je Einheit, die Ränder
+
+5.000 Partien zu viert, Schnitt 34,3 % (vorher 31,1 %). Beide Läufe mit
+`--mindest 100`, damit die Spalte „vorher" dieselbe Schwelle hat.
+
+| Einheit | Gold | Antritte | Quote | zum Schnitt | vorher |
+|---|---|---|---|---|---|
+| Lichtwahrerin | 3 | 114 | 56,1 % | ×1,64 | ×1,31 |
+| Grabfürstin | 3 | 132 | 50,8 % | ×1,48 | ×0,88 |
+| Nachtpfeil | 2 | 1.629 | 47,8 % | ×1,39 | ×1,59 |
+| Bogenmeisterin | 2 | 2.248 | 45,1 % | ×1,32 | ×1,69 |
+| … | | | | | |
+| Gassendieb | 1 | 17.083 | 21,6 % | ×0,63 | ×0,67 |
+| Astschütze | 1 | 4.832 | 20,1 % | ×0,59 | ×0,76 |
+| Irrlicht | 1 | 571 | 17,0 % | ×0,50 | ×0,56 |
+| Funkenlehrling | 1 | 528 | 13,3 % | ×0,39 | ×0,51 |
+| Moosheiler | 1 | 36 | 8,3 % | zu dünn | ×0,24 |
+
+### Wie oft eine Schwelle überhaupt stand
+
+252.843 Antritte.
+
+| Marke | ab 2 | ab 4 | ab 6 | Träger im Katalog |
+|---|---|---|---|---|
+| Krieger | 57.614 | 1.261 | 0 | 5 |
+| Elementar | 2.429 | 5 | 0 | 5 |
+| Meuchler | 79.523 | 1.873 | 0 | 4 |
+| Wächter | 114.314 | 5.571 | 7 | 6 |
+| Naturwesen | 15.316 | 135 | 0 | 5 |
+| Untot | 152 | 0 | 0 | 2 |
+| Drache | 725 | 0 | 0 | 2 |
+| **zusammen** | **270.073 (106,8 %)** | **8.845 (3,5 %)** | **7 (0,0 %)** | |
+
+### Was auffällt — zum Nachrechnen, nicht nachjustiert
+
+Robin rechnet das Balancing selbst durch; hier steht nur, was die Zahlen sagen.
+
+1. **Starke Marken kommen häufiger zustande, wie erwartet.** Die Schwelle 4
+   steht in 3,5 % der Antritte statt in 2,2 % — ein gutes Drittel mehr. Die
+   Schwelle 6 bleibt mit 7 Fällen so unerreichbar wie vorher (eigene Karte auf
+   dem Board).
+2. **Wächter ist von ×1,07 auf ×0,86 gefallen** und damit die einzige große
+   Marke, die sich stark bewegt hat. Sie ist zugleich die häufigste (14.437
+   Antritte) und die mit den meisten Trägern — ein volleres Regal führt
+   offenbar von ihr weg, weil man sie nicht mehr mangels Alternative nimmt.
+3. **Die dünnen Marken werden dünner:** Elementar 1.260 → 373 Antritte, Drache
+   394 → 129, Untot 65 → 45. Elementar zählt gerade noch, Drache und Untot
+   sagen weiterhin nichts (eigene Karte für Untot liegt auf dem Board). Der
+   Grund ist derselbe wie bei Befund 2: Wer sich aussuchen kann, was er kauft,
+   greift seltener zur Elementar- oder Drachen-Einheit.
+4. **Die 3-Gold-Einheiten gewinnen, die 1-Gold-Einheiten verlieren.**
+   Lichtwahrerin ×1,31 → ×1,64, Grabfürstin ×0,88 → ×1,48, Drachenkind ×1,06 →
+   ×1,12; dagegen Dorfwache ×0,96 → ×0,80, Schildknappe ×0,93 → ×0,73,
+   Astschütze ×0,76 → ×0,59. Wer nie ein Gold fürs Würfeln ausgibt, kauft öfter
+   die teure Karte. Einzige Ausnahme nach oben unter den billigen ist der
+   Steinschleuderer (×0,77 → ×0,89). Funkenlehrling ×0,39 und Irrlicht ×0,50
+   liegen am weitesten unten — beides sind Elementare, siehe Befund 3.
+
+---
+
 ## Gemessen: Ausgewogenheit (Stand 05.09.2026, zweite Messung)
+
+> **Überholt.** Diese Messung ist der Stand VOR dem kostenlosen Würfeln und dem
+> Nachfüllen nach dem Kauf; sie steht als Vergleichsgrundlage der dritten
+> Messung hier.
 
 **Was geändert wurde:** Der Lebensvorrat ist von 100 auf **20** gefallen, der
 Schaden je Niederlage wird dafür durch drei geteilt (`SCHADEN_STUFEN_TEILER`

@@ -592,10 +592,27 @@ describe('Bot: neu wuerfeln', () => {
     assert.notEqual(zug(fremderLaden(passend), 'normal').typ, 'neuwuerfeln');
   });
 
-  it('wuerfelt nicht, wenn danach kein Kauf mehr drin waere', () => {
-    // 8 Gold: nach dem Wurf blieben 6, das Polster von normal ist 4, und drei
-    // Gold Ruecklage passen nicht mehr daneben.
-    assert.notEqual(zug(fremderLaden(FREMD, 8), 'normal').typ, 'neuwuerfeln');
+  it('wuerfelt auch ohne Gold, solange der Wurf nichts kostet', () => {
+    // Seit der Vorgabe 0 nimmt ein Wurf nichts weg — die Ruecklage, die frueher
+    // 8 Gold zur Sperre machte, gilt nur noch bei einem Tisch mit Preis.
+    assert.deepEqual(zug(fremderLaden(FREMD, 0), 'normal'), { typ: 'neuwuerfeln' });
+  });
+
+  it('wuerfelt nicht, wenn ein Preis gesetzt ist und danach kein Kauf drin waere', () => {
+    // 8 Gold, Wurf kostet 2: danach blieben 6, das Polster von normal ist 4,
+    // und drei Gold Ruecklage passen nicht mehr daneben.
+    const teuer = {
+      ...fremderLaden(FREMD, 8),
+      regeln: { ...DEFAULT_REGELN, neuwuerfelnKosten: 2 },
+    };
+    assert.notEqual(zug(teuer, 'normal').typ, 'neuwuerfeln');
+  });
+
+  it('hoert nach vier Wuerfen in derselben Runde auf', () => {
+    // DER ABBRUCH: Ohne ihn wuerfelte der Bot in dieser Lage endlos, weil ihn
+    // seit dem kostenlosen Wurf kein Gold mehr bremst.
+    const satt = mitHeer(fremderLaden(FREMD), 0, { wuerfeRunde: 4 });
+    assert.notEqual(zug(satt, 'normal').typ, 'neuwuerfeln');
   });
 
   it('wuerfelt als sanfter Gegner nie', () => {

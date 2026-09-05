@@ -27,6 +27,7 @@ import type {
 
 import { type Schwierigkeit, botZug } from './bot.js';
 import {
+  type Heer,
   type TafelrundeAktion,
   type TafelrundePartie,
   amZug,
@@ -237,6 +238,17 @@ export const tafelrunde: GameModule<
     // Version 1 kannte noch keine Kampfprotokolle. Eine leere Liste ist die
     // richtige Antwort: Dann loest `advanceInterlude` die Kampfphase ohne
     // Buchung auf, statt ueber ein fehlendes Feld zu stolpern.
-    return partie.kaempfe ? partie : { ...partie, kaempfe: [] };
+    const mitKaempfen = partie.kaempfe ? partie : { ...partie, kaempfe: [] };
+    /*
+     * Ebenso fuer `wuerfeRunde` (seit dem kostenlosen Wuerfeln, 05.09.2026):
+     * Ein Snapshot aus der Zeit davor hat das Feld nicht, und ein `undefined`
+     * im Vergleich des Bots waere still immer falsch — er wuerfelte dann in
+     * einer alten Partie ohne Deckel weiter. Null ist der richtige Anfang.
+     */
+    const heere: Record<number, Heer> = {};
+    for (const [sitz, heer] of Object.entries(mitKaempfen.heere)) {
+      heere[Number(sitz)] = heer.wuerfeRunde === undefined ? { ...heer, wuerfeRunde: 0 } : heer;
+    }
+    return { ...mitKaempfen, heere };
   },
 };
