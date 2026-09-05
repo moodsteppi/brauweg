@@ -18,9 +18,11 @@
  * eigenen Ueberschrift weiter unten:
  *
  *   1. KAUFEN NACH WERT — eine Verschmelzung schlaegt alles, danach zaehlen
- *      Paare, vertretene Marken und die reine Staerke.
+ *      Paare, die Synergien der Marken und die reine Staerke.
  *   2. AUFSTELLEN NACH ROLLE — Wachen und Meuchler nach vorn, Schuetzen,
  *      Magier und Beistand nach hinten, Meuchler zusaetzlich an den Rand.
+ *      WELCHE aufgestellt wird, entscheidet seit dem 05.09.2026 das ganze
+ *      Brett und nicht die staerkste Einzelne (siehe `heerStaerke`).
  *   3. AUFSTIEG BEI VOLLEM BRETT — ein Feldplatz nuetzt nur, wenn etwas
  *      darauf steht.
  *   4. NEU-WUERFELN NUR BEI FREMDEM LADEN — wenn das Brett voll ist, kein
@@ -37,7 +39,9 @@
  *   - Die drei Stellungszuege verkleinern das Tripel (freie Feldplaetze,
  *     -Brettstaerke, Stellungskosten) der Reihe nach: Aufstellen den ersten
  *     Wert, Austauschen den zweiten, Umstellen den dritten. Jeder von ihnen
- *     laesst die davorstehenden unberuehrt.
+ *     laesst die davorstehenden unberuehrt. "Brettstaerke" ist dabei
+ *     `heerStaerke` ueber das Brett — auch sie faellt nie und ist nach oben
+ *     beschraenkt, der Beweis traegt also weiter.
  *
  * KEIN Math.random. Wo der Bot wuerfelt — und das tut er nur bei der
  * Patzerregel der leichten Gangarten —, kommt die Zahl aus `baueZufall` ueber
@@ -47,7 +51,15 @@
 
 import type { Kaempfer, TafelrundeAktion } from './partie.js';
 import type { EigeneSicht, TafelrundeSicht } from './sicht.js';
-import { type EinheitId, type Marke, einheit, werteFuer } from './katalog.js';
+import {
+  type EinheitId,
+  type Marke,
+  type Wertebonus,
+  KEIN_BONUS,
+  einheit,
+  werteFuer,
+} from './katalog.js';
+import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
 import { baueZufall } from './zufall.js';
 
 // ---------------------------------------------------------------------------
@@ -118,9 +130,14 @@ interface Gangart {
  * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 05.09.2026):
  *
  *                    gebaut (14 Leben, x2)   langer Stand (20 Leben, x1)
- *     hart : normal   140 : 87   139 : 87      169 : 77   147 : 84
- *     hart : sanft    341 : 20   367 : 11      357 : 14   373 :  9
- *     normal : sanft  359 : 14   354 : 15      350 : 17   348 : 17
+ *     hart : normal   137 : 88   124 : 92      138 : 87   132 : 89
+ *     hart : sanft    352 : 16   368 : 11      354 : 15   360 : 13
+ *     normal : sanft  362 : 13   365 : 12      354 : 15   357 : 14
+ *
+ * AM 05.09.2026 NEU AUFGENOMMEN, weil der Bot seitdem auf Marken spielt
+ * (siehe `heerStaerke`). Die Reihenfolge steht unveraendert; der Abstand
+ * zwischen `hart` und `normal` ist etwas kleiner geworden, und dazu gehoert
+ * die naechste Zeile.
  *
  * DASS BEIDE SPALTEN DASELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
  * nicht an der Partielaenge. Die zweite Spalte ist der Stand von gestern (20
@@ -152,14 +169,27 @@ interface Gangart {
  * MIT — eine Regel, die den Laden anfasst, verschiebt sie.
  *
  * WAS `HART` HEUTE TRAEGT, ist die fehlende Patzerquote und nicht das Tempo:
- * Setzt man `hart` in allem auf `normal`, steht es 102 : 99,3 (Kontrolllauf,
- * die Messung ist also unverzerrt); nimmt man nur den Patzer weg, steht es
- * 149 : 83,7; mit den Tempo-Schrauben obendrauf 140 : 86,7. Die beiden
- * letzten Zahlen liegen innerhalb eines Standardfehlers (rund 10 Siege bei 400
- * Partien) — die Tempo-Schrauben sind heute weder Vorteil noch Nachteil. Sie
+ * nimmt man nur den Patzer weg, steht es 149 : 83,7; mit den Tempo-Schrauben
+ * obendrauf 140 : 86,7 (beides gemessen, bevor der Bot auf Marken spielte).
+ * Die beiden Zahlen liegen innerhalb eines Standardfehlers (rund 10 Siege bei
+ * 400 Partien) — die Tempo-Schrauben sind weder Vorteil noch Nachteil. Sie
  * bleiben trotzdem stehen: Sie geben der Gangart ihr Verhalten, und eine
  * Aenderung auf eine Zahl innerhalb der Streuung waere geraten, nicht
  * gemessen. Als Befund steht das auf dem Board.
+ *
+ * DER KONTROLLLAUF IST NICHT MEHR NEUTRAL, und das gehoert vor jede dieser
+ * Zahlen. Besetzt man ALLE VIER Sitze mit `normal`, gewinnt Sitz 0 trotzdem
+ * oefter: 115, 116 und 108 Siege ueber drei Saatbasen zu je 400 Partien,
+ * gegen 100 im Schnitt. Vor dem Markengewicht war der Lauf sauber (101, 106,
+ * 99). Die Ursache ist der GEMEINSAME VORRAT (partie.ts, `vorrat`): Bots, die
+ * auf Synergien spielen, wollen alle dieselben Einheiten, und der Messstand
+ * laesst die Sitze der Reihe nach ruesten — wer zuerst kauft, bekommt sie.
+ * Am echten Tisch ruesten alle gleichzeitig, dort ist die Reihenfolge keine
+ * Sitznummer; der Druck auf den Vorrat ist aber derselbe. Fuer die Tabelle
+ * oben heisst das: Von den rund 1,56-fachen Siegen von `hart` sind gut 1,15
+ * schon im Sitz enthalten. Die Reihenfolge der Gangarten traegt das immer
+ * noch, aber wer den Abstand als Zahl braucht, misst gegen 113 und nicht
+ * gegen 100. Steht als Befund auf dem Board.
  *
  * ZU VIERT UND NICHT ZU ZWEIT, und das ist selbst ein Befund: Solange die
  * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
@@ -244,12 +274,51 @@ const STAERKE_TEILER = 100;
  * Den Kampf wirklich durchrechnen zu lassen waere verlockend und falsch: Der
  * Bot entscheidet mehrmals je Runde, und `simuliereKampf` ist die teuerste
  * Rechnung des Moduls.
+ *
+ * Der `bonus` ist der Synergie-Aufschlag, den die Einheit in IHRER Umgebung
+ * bekommt (siehe `heerStaerke`). Ohne ihn misst die Funktion die nackte
+ * Einheit — das ist der richtige Wert ueberall dort, wo zwei Einheiten
+ * unabhaengig von ihren Nachbarn verglichen werden.
  */
-function staerke(k: Kaempfer): number {
-  const w = werteFuer(k.id, k.stufe);
+function staerke(k: Kaempfer, bonus: Wertebonus = KEIN_BONUS): number {
+  const w = werteFuer(k.id, k.stufe, bonus);
   const haelt = (w.leben * 100) / Math.max(1, 100 - w.ruestung);
   const teiltAus = w.angriff * w.tempo;
   return Math.round((haelt * teiltAus) / STAERKE_TEILER);
+}
+
+/**
+ * Was eine ZUSAMMENSTELLUNG wert ist: die Summe der Staerken, jede mit dem
+ * Bonus, den ihre Marken bei genau dieser Zusammenstellung geben.
+ *
+ * Damit sieht der Bot die Synergien ueberhaupt erst. Bis zum 05.09.2026 tat er
+ * das nicht: Sein einziger Markenbegriff war ein Aufschlag von 25 Punkten je
+ * schon vertretenem Gefaehrten (`MARKEN_GEWICHT`), gegen Einheitenstaerken von
+ * 130 bis 970. Gemessen ueber 2.000 Partien zu viert hielt eine Marke die
+ * Schwelle 4 in 1,2 % der Antritte und die Schwelle 6 in KEINEM einzigen —
+ * die halbe Synergietabelle war damit tot, und ob sie zu hoch angesetzt ist,
+ * war gar nicht entscheidbar, solange niemand auf sie hinspielte.
+ *
+ * Der Aufschlag ist eine STUFENFUNKTION und keine Gerade — genau das konnte
+ * die alte Zahl nicht abbilden. Der vierte Krieger ist ein Sprung fuer alle
+ * vier, der fuenfte bringt bis zur naechsten Schwelle nichts. Wer diesen
+ * Unterschied nicht sieht, sammelt breit statt tief und kommt nie an.
+ *
+ * Gezaehlt wird ueber die uebergebene Liste, und WELCHE das ist, entscheidet
+ * die Aufrufstelle: Beim Aufstellen ist es das Brett (nur dort zaehlen die
+ * Marken, siehe synergien.ts), beim Kaufen das ganze Heer samt Bank (die
+ * vierte Einheit einer Marke liegt zuerst auf der Bank — wer nur das Brett
+ * zaehlte, kaufte sie nie).
+ *
+ * Der Preis ist eine Zaehlung und eine Bonusrechnung je Einheit, bei
+ * hoechstens 18 Einheiten. Das ist etwas anderes als `simuliereKampf`, vor dem
+ * der Kommentar oben warnt: Hier wird nichts iteriert, nur addiert.
+ */
+function heerStaerke(einheiten: readonly Kaempfer[]): number {
+  const zaehlung = zaehleMarken(einheiten);
+  let summe = 0;
+  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung));
+  return summe;
 }
 
 /** Alle eigenen Einheiten, Brett und Bank zusammen. */
@@ -352,6 +421,56 @@ interface Stelle {
 }
 
 /**
+ * Welche Einheit der Bank das Brett am meisten hebt. Bei Gleichstand die am
+ * weitesten links — die feste Reihenfolge ist dieselbe Zusage wie bei
+ * `kandidaten`: dieselbe Lage, derselbe Zug (Grundsatz 1).
+ */
+function besteZugabe(brett: readonly Kaempfer[], bank: readonly Stelle[]): Stelle {
+  let beste = bank[0]!;
+  let bester = heerStaerke([...brett, beste.k]);
+  for (const stelle of bank.slice(1)) {
+    const wert = heerStaerke([...brett, stelle.k]);
+    if (wert > bester) {
+      beste = stelle;
+      bester = wert;
+    }
+  }
+  return beste;
+}
+
+/**
+ * Der beste Tausch Bank gegen Brett, oder null, wenn keiner das Brett ECHT
+ * staerker macht.
+ *
+ * Das "echt" ist kein Feinschliff, sondern der Abbruch: Ohne es schoebe der
+ * Bot zwei gleichwertige Einheiten bis zum Zeitablauf hin und her (siehe
+ * `stellungsZug`). Jeder Tausch hebt `heerStaerke` des Bretts um mindestens
+ * einen Punkt, und die Zahl ist nach oben beschraenkt — damit endet die
+ * Aufrufschleife.
+ */
+function besterTausch(
+  brett: readonly Kaempfer[],
+  stehen: readonly Stelle[],
+  bank: readonly Stelle[],
+): { readonly vonBank: number; readonly aufsBrett: number } | null {
+  let bester = heerStaerke(brett);
+  let gefunden: { vonBank: number; aufsBrett: number } | null = null;
+
+  for (const vonBank of bank) {
+    for (let i = 0; i < stehen.length; i += 1) {
+      const danach = brett.slice();
+      danach[i] = vonBank.k;
+      const wert = heerStaerke(danach);
+      if (wert > bester) {
+        bester = wert;
+        gefunden = { vonBank: vonBank.platz, aufsBrett: stehen[i]!.platz };
+      }
+    }
+  }
+  return gefunden;
+}
+
+/**
  * Der naechste Zug am eigenen Brett, oder null, wenn nichts zu ruecken ist.
  *
  * Drei Faelle in dieser Reihenfolge, und die Reihenfolge ist zugleich der
@@ -382,35 +501,46 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
     if (k !== null) bank.push({ platz, k });
   });
 
-  // Die staerkste Einheit der Bank, bei Gleichstand die am weitesten links.
-  const vonBank: Stelle | null = bank.reduce<Stelle | null>(
-    (bisher, jetzt) => (bisher === null || staerke(jetzt.k) > staerke(bisher.k) ? jetzt : bisher),
-    null,
-  );
+  /*
+   * Gemessen wird das BRETT und nicht das Heer: Die Synergien zaehlen nur, was
+   * aufgestellt ist (synergien.ts). Deshalb steht hier `heerStaerke` ueber
+   * `aufDemBrett` und nicht ueber `eigeneEinheiten` — sonst bekaeme eine
+   * Einheit den Bonus von Gefaehrten angerechnet, die auf der Bank zusehen.
+   */
+  const aufDemBrett = stehen.map((s) => s.k);
 
   // a) Aufstellen. Ein freies Brettfeld allein genuegt nicht — die Grenze ist
   //    `feldplaetze`, und darueber hinaus weist `fuehreAus` den Zug ab.
-  if (eigen.belegt < eigen.feldplaetze && freie.length > 0 && vonBank !== null) {
+  //
+  //    Welche der Bank hinaufkommt, entscheidet seit dem 05.09.2026 das ganze
+  //    Brett und nicht mehr die nackte Staerke der Einzelnen: Der vierte
+  //    Krieger kann schwaecher sein als der zweite Meuchler und trotzdem der
+  //    richtige Zug, weil er drei andere mit hebt. Wer hier nach Einzelstaerke
+  //    aufstellt, kauft zwar auf Marken hin (siehe KAUFEN NACH WERT), stellt
+  //    sie aber nie auf — und die Schwelle bleibt so leer wie vorher.
+  if (eigen.belegt < eigen.feldplaetze && freie.length > 0 && bank.length > 0) {
+    const beste = besteZugabe(aufDemBrett, bank);
     return {
       typ: 'verschieben',
-      von: { bereich: 'bank', platz: vonBank.platz },
-      nach: { bereich: 'brett', platz: bestesFeld(vonBank.k, freie, reihen, spalten) },
+      von: { bereich: 'bank', platz: beste.platz },
+      nach: { bereich: 'brett', platz: bestesFeld(beste.k, freie, reihen, spalten) },
     };
   }
 
   // b) Austauschen. Ein Tausch aendert die Belegung nicht und ist deshalb auch
   //    bei vollem Brett erlaubt (siehe `verschieben` in fuehreAus).
-  if (vonBank !== null && stehen.length > 0) {
-    const schwaechste = stehen.reduce((bisher, jetzt) =>
-      staerke(jetzt.k) < staerke(bisher.k) ? jetzt : bisher,
-    );
-    if (staerke(vonBank.k) > staerke(schwaechste.k)) {
-      return {
-        typ: 'verschieben',
-        von: { bereich: 'bank', platz: vonBank.platz },
-        nach: { bereich: 'brett', platz: schwaechste.platz },
-      };
-    }
+  //
+  //    Gesucht wird das beste PAAR aus Bank und Brett und nicht mehr die
+  //    staerkste gegen die schwaechste: Ein Tausch kann die Marke des
+  //    Abgeloesten unter eine Schwelle druecken und damit trotz staerkerer
+  //    Einzeleinheit ein schwaecheres Brett hinterlassen.
+  const tausch = besterTausch(aufDemBrett, stehen, bank);
+  if (tausch !== null) {
+    return {
+      typ: 'verschieben',
+      von: { bereich: 'bank', platz: tausch.vonBank },
+      nach: { bereich: 'brett', platz: tausch.aufsBrett },
+    };
   }
 
   // c) Umstellen: erst der Umzug auf ein freies Feld, dann der Tausch zweier
@@ -467,15 +597,31 @@ const VERSCHMELZ_FAKTOR = 3;
 const PAAR_FAKTOR = 1.5;
 
 /**
- * Was jede schon vertretene Einheit derselben Marke zusaetzlich wert ist.
+ * Was die MARKEN dieses Kaufs zusaetzlich wert sind — der Zuwachs, den das
+ * Heer allein aus den Synergien hat, wenn diese Einheit dazukommt.
  *
- * Fuenfundzwanzig gegen eine Einheitenstaerke von 130 (billigste) bis 970
- * (teuerste): Vier Gefaehrten derselben Marke wiegen etwa eine halbe
- * Ein-Gold-Einheit auf. Mehr waere falsch, solange es die Synergie-Boni noch
- * nicht gibt (sie sind eine eigene Aufgabe) — der Bot soll auf die Marken
- * hinspielen, nicht blind sammeln.
+ * Er enthaelt beides: was die Neue von den schon vertretenen bekommt, und was
+ * sie allen anderen Traegern ihrer Marken gibt. Abgezogen wird ihre nackte
+ * Staerke, denn die steht in `kandidaten` schon in der Rechnung.
+ *
+ * BIS ZUM 05.09.2026 STAND HIER EINE ZAHL: `MARKEN_GEWICHT = 25` je schon
+ * vertretenem Gefaehrten, gegen Einheitenstaerken von 130 bis 970 — und linear
+ * obendrein, wo die Synergietabelle Stufen kennt. Der Bot spielte damit
+ * messbar gar nicht auf Marken hin. Die Zahl ist ersatzlos weg: Was eine Marke
+ * wert ist, steht in synergien.ts und wird hier ausgerechnet, nicht geschaetzt.
+ * Wer dort einen Bonus aendert, aendert das Kaufverhalten mit — vorher musste
+ * er daran denken, hier eine zweite Zahl nachzuziehen.
+ *
+ * Die Verschmelzung ist hier NICHT abgebildet: Drei Kopien werden zu einer,
+ * die Marke faellt also von drei Traegern auf einen zurueck. Diese Einbusse
+ * sieht der Bot nicht — sie waere eine zweite Fassung der Verschmelzregel im
+ * Haus (siehe `kandidaten`), und der Aufstieg auf die naechste Sternstufe
+ * ueberwiegt sie ohnehin deutlich.
  */
-const MARKEN_GEWICHT = 25;
+function markenGewinn(eigene: readonly Kaempfer[], id: EinheitId): number {
+  const neu: Kaempfer = { id, stufe: 1 };
+  return heerStaerke([...eigene, neu]) - heerStaerke(eigene) - staerke(neu);
+}
 
 interface Kandidat {
   readonly platz: number;
@@ -495,7 +641,6 @@ interface Kandidat {
  */
 function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number): Kandidat[] {
   const eigene = eigeneEinheiten(eigen);
-  const marken = markenZaehlung(eigene);
   const bankFrei = eigen.bank.includes(null);
   const noetig = sicht.verschmelzZahl - 1;
 
@@ -527,7 +672,7 @@ function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number)
     let wert = staerke({ id, stufe: 1 });
     if (verschmilzt) wert *= VERSCHMELZ_FAKTOR;
     else if (kopien > 0) wert *= PAAR_FAKTOR;
-    for (const marke of art.marken) wert += MARKEN_GEWICHT * (marken.get(marke) ?? 0);
+    wert += markenGewinn(eigene, id);
 
     gefunden.push({ platz, id, verschmilzt, wert });
   });

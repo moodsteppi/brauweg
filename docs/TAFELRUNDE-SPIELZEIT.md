@@ -135,7 +135,9 @@ fünf, und keine Marke verlässt die Spanne x0,5 bis x2.
 die das Ziel allein erreicht (10 Leben → 7:33). Sie kauft die Zeit aber
 ausschließlich über die Rundenzahl: acht Runden sind das, was Robin und die
 Regeldatei bisher als zu wenig angesehen haben — vor Runde 10 steht kein
-ausgebautes Brett, die Schwelle 4 wird noch seltener erreicht als heute, und
+ausgebautes Brett, die mittlere Marken-Schwelle wird noch seltener erreicht
+als heute (die Schwellen liegen seit dem 05.09.2026 bei 2/3/5, siehe
+`synergien.ts`), und
 die Markenspanne wird mit x0,70–1,34 spürbar unruhiger, weil weniger Antritte
 zusammenkommen. Bei 14 bis 16 Leben ist der Effekt sauber und die Partie
 bleibt ausgebaut.

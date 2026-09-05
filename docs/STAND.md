@@ -225,9 +225,29 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > Begründung dort sagt jetzt, woher die Zahl kommt und dass sie am Zeitraffer
 > hängt.
 >
-> **Was dabei kaputtging und offen ist:** Die Marken-Schwelle 6 steht in
-> 187.730 Antritten **kein einziges Mal** mehr, die Schwelle 4 nur noch in
-> 1,2 %. Steht auf dem Board.
+> **Was dabei kaputtging, ist am 05.09.2026 behoben:** Die Marken-Schwelle 6
+> stand in 187.730 Antritten **kein einziges Mal** mehr, die Schwelle 4 nur
+> noch in 1,2 %. Ursache waren zwei Dinge, und in dieser Reihenfolge sind sie
+> angegangen worden. Erstens spielte der Bot gar nicht auf Marken hin
+> (`MARKEN_GEWICHT` in `bot.ts` war 25 gegen Einheitenstärken von 130 bis
+> 970); er rechnet den Synergie-Zuwachs jetzt aus der Tabelle aus
+> (`heerStaerke`) und stellt danach auch auf. Zweitens standen die Schwellen
+> zu hoch: Ein Brett fasst so viele Einheiten, wie der Sitz Level hat, und auf
+> Level 6 kommt ein Bot in 0,04 % der Antritte — sechs Träger waren
+> arithmetisch unmöglich. Die Schwellen liegen deshalb bei **2/3/5**, die Boni
+> der beiden oberen Stufen um den Trägeranteil gekürzt. Heute: 80,0 % / 42,4 %
+> / 0,9 % über 5.000 Partien zu viert. Die Probe prüft die höchste Schwelle
+> wieder. Volle Zahlen: sechste Messung in
+> `docs/spiele/auto-battler-konzept.md`.
+>
+> **Was das gekostet hat und offen bleibt:** Die Partie dauert 8:25 statt 7:27
+> im Median (Ziel sind acht Minuten), und 9,7 % der Kämpfe laufen in die
+> Höchstdauer statt 4,4 %. Beides kommt vom **Bot**, nicht von den Schwellen —
+> wer auf Synergien spielt, baut stärkere Bretter, und stärkere Bretter
+> kämpfen länger. Nicht nachgezogen, weil `startLeben` und `zeitraffer` am
+> selben Tag nach eigener Messung entschieden worden sind. Ebenfalls offen:
+> Krieger steht bei ×1,49, Elementar bei ×0,24 — beide Zeilen stehen auf dem
+> Board.
 >
 > Der zweite Befund von damals hat sich mit der Ladenregel **von selbst
 > erledigt**: Die Bot-Gangart `hart` lag nach dem Zeitraffer hinter `normal`

@@ -63,7 +63,9 @@ Veröffentlichung sind 30–40 über fünf Stufen gedacht.
 
 Jede Einheit trägt ein bis zwei Klassen-Marken (etwa Krieger, Elementar,
 Meuchler, Wächter, Naturwesen). Je mehr Einheiten einer Marke gleichzeitig auf
-dem Feld stehen, desto stärker der Bonus — Schwellen bei 2, 4 und 6. Die
+dem Feld stehen, desto stärker der Bonus — Schwellen bei 2, 3 und 5 (das
+Konzept nannte 2/4/6; warum daraus 2/3/5 wurde, steht unter „Gemessen:
+Ausgewogenheit“, sechste Messung). Die
 aktiven Boni gehören **sichtbar** in die Oberfläche.
 
 ### Wirtschaft
@@ -159,7 +161,164 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 05.09.2026, fünfte Messung — der gültige Stand)
+## Gemessen: Ausgewogenheit (Stand 05.09.2026, sechste Messung — der gültige Stand)
+
+**Warum es eine sechste gibt.** Die fünfte Messung endete mit zwei offenen
+Folgerungen, und beide sind jetzt abgearbeitet — in der Reihenfolge, die dort
+verlangt wurde:
+
+1. **Der Bot spielte gar nicht auf Marken hin.** Sein einziger Markenbegriff
+   war ein Aufschlag von 25 Punkten je schon vertretenem Gefährten
+   (`MARKEN_GEWICHT` in `bot.ts`), gegen Einheitenstärken von 130 bis 970 —
+   und linear, wo die Synergietabelle Stufen kennt. Er hat deshalb nie
+   entschieden, ob eine Schwelle sich lohnt; er hat sie nur zufällig getroffen.
+2. **Erst danach war entscheidbar, ob die Schwellen zu hoch stehen.** Sie
+   standen zu hoch.
+
+**Was geändert wurde** — Katalog, Wirtschaft, Leveln, Startleben und Zeitraffer
+sind unangetastet:
+
+| Datei | Stelle | vorher | jetzt |
+|---|---|---|---|
+| `bot.ts` | Markengewicht beim Kauf | `MARKEN_GEWICHT = 25`, linear | **`heerStaerke`: der gerechnete Synergie-Zuwachs des ganzen Heeres** |
+| `bot.ts` | welche Einheit aufgestellt wird | die stärkste Einzelne | **die, die das ganze Brett am meisten hebt** |
+| `synergien.ts` | `SCHWELLEN` | 2 / 4 / 6 | **2 / 3 / 5** |
+| `synergien.ts` | die Boni der beiden oberen Stufen | — | **um den Trägeranteil gekürzt (¾ bzw. ⅚)** |
+
+Gemessen mit demselben Werkzeug und derselben Saatbasis wie die Messungen
+davor, **5.000 Partien zu viert, Besetzung `normal`, `--mindest 100`**, dazu
+eine Gegenprobe auf der zweiten Saatbasis (`gegenprobe-b`).
+
+### Die drei Schritte, einzeln gemessen
+
+Alle vier Spalten über 2.000 Partien zu viert, gleiche Saatbasis, damit sie
+vergleichbar sind. **A** ist der Stand der fünften Messung, **B** nur das
+Markengewicht des Bots, **C** zusätzlich die Schwellen 2/3/5 mit den
+unveränderten Boni, **D** der ausgelieferte Stand (Boni mitgezogen).
+
+| | A (vorher) | B (Bot) | C (+ 2/3/5, alte Boni) | **D (ausgeliefert)** |
+|---|---|---|---|---|
+| erste Schwelle | 83,6 % | 111,6 % | 60,5 % | **80,4 %** |
+| mittlere Schwelle | 1,2 % | 11,2 % | 60,9 % | **42,5 %** |
+| höchste Schwelle | **0,0 % (0 Fälle)** | 0,0 % (6 Fälle) | 1,1 % | **0,9 %** |
+| Spielzeit (Median) | 7:27 | 8:24 | 8:55 | **8:23** |
+| Kämpfe an der Höchstdauer | 4,4 % | 8,8 % | 16,5 % | **9,6 %** |
+| zur Halbzeit entschieden | 42,5 % | 35,7 % | 32,3 % | **38,0 %** |
+
+Drei Dinge stehen in dieser Tabelle, die man einzeln nicht sähe:
+
+- **Der Bot allein (A→B) hat die mittlere Schwelle wiederbelebt** — von 1,2 %
+  auf 11,2 % —, aber die höchste nicht. Sechs Fälle in 75.096 Antritten sind
+  keine Schwelle, sondern ein Zufall. Damit war die Frage der fünften Messung
+  beantwortet: Die Zahlen selbst stehen zu hoch.
+- **Die Schwellen mit den alten Boni (C) waren zu billig.** Jeder sechste Kampf
+  lief in die Höchstdauer, und die Partie wuchs auf 8:55. Ursache sind die
+  Rüstungsboni: Sie verlängern jeden Kampf doppelt, weil beide Seiten länger
+  stehen.
+- **Die gekürzten Boni (D) nehmen das wieder zurück**, ohne die Schwelle zu
+  verlieren: 42,5 % statt 60,9 % in der Mitte, 0,9 % statt 1,1 % oben, und die
+  Kampfdauer liegt wieder auf dem Wert, den der Bot allein schon gekostet hat.
+
+### Warum 2/3/5 und nicht 2/4/6
+
+Der Grund ist arithmetisch. Ein Brett fasst so viele Einheiten, wie der Sitz
+Level hat (`LEVEL_TABELLE` in `regeln.ts`, `feldplaetze` = `level`). Über 400
+Partien zu viert verteilt sich das so:
+
+| Level (= Felder auf dem Brett) | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Anteil der Antritte | 10,8 % | 32,3 % | 33,3 % | 21,0 % | 2,5 % | **0,04 %** |
+
+Sechs Träger einer Marke setzen mindestens Level 6 voraus. Die Schwelle 6 war
+damit nicht selten, sondern in 99,96 % aller Antritte **unmöglich** — an ihr zu
+messen hieß, an einer Zahl zu messen, die es nicht geben kann. Bei zehn bis elf
+Runden je Partie ist das keine Frage des Spielstils mehr.
+
+### Wie oft eine Schwelle überhaupt stand
+
+187.638 Antritte. Gezählt werden (Antritt, Marke)-Paare; ein Brett hält immer
+nur seine höchste Schwelle, die Spalten schließen sich also aus.
+
+| Marke | ab 2 | ab 3 | ab 5 | Träger im Katalog |
+|---|---|---|---|---|
+| Krieger | 48.690 | 20.643 | 459 | 5 |
+| Elementar | 2.753 | 558 | 0 | 5 |
+| Meuchler | 35.921 | 13.108 | 105 | 4 |
+| Wächter | 53.015 | 42.889 | 1.151 | 6 |
+| Naturwesen | 8.161 | 2.347 | 5 | 5 |
+| Untot | 139 | 5 | 0 | 2 |
+| Drache | 1.348 | 87 | 0 | 2 |
+| **zusammen** | **150.027 (80,0 %)** | **79.637 (42,4 %)** | **1.720 (0,9 %)** | |
+
+Zweite Saatbasis: 79,9 % / 42,1 % / 1,0 % — die Zahlen hängen nicht am Wurf. Zu
+acht (500 Partien) steht die höchste Schwelle sogar in 3,3 % der Antritte, weil
+dort dreizehn statt elf Runden gespielt werden.
+
+**Drei Marken erreichen die höchste Schwelle weiterhin nie**: Elementar, Untot
+und Drache. Bei Untot und Drache ist die Ursache der Katalog — je zwei Träger,
+die fünfte Einheit wäre nur über Kopien zu haben, und Kopien verschmelzen. Das
+ist derselbe Befund, der schon als Karte auf dem Board liegt, und keine Frage
+der Schwellenhöhe.
+
+### Siegquote je Marke
+
+Schnitt der gezählten Zeilen 22,0 %; die zweite Saatbasis in Klammern.
+
+| Marke | Antritte | Quote | zum Schnitt |
+|---|---|---|---|
+| Krieger | 11.602 | 32,8 % | **×1,49** (×1,56) |
+| Wächter | 13.674 | 28,9 % | ×1,32 (×1,39) |
+| Naturwesen | 2.450 | 28,4 % | ×1,29 (×1,30) |
+| Meuchler | 7.460 | 25,0 % | ×1,14 (×1,13) |
+| Drache | 243 | 11,5 % | ×0,52 (×0,43) |
+| Elementar | 705 | 5,2 % | **×0,24** (×0,19) |
+| Untot | 54 | 29,6 % | zu dünn |
+
+### Was auffällt — zum Nachrechnen, nicht nachjustiert
+
+1. **Die Spanne der Marken ist weiter geworden, nicht enger** — ×1,49 bis ×0,24
+   gegen ×1,32 bis ×0,80 in der fünften Messung. Das ist zum größten Teil kein
+   neuer Schaden, sondern ein sichtbar gewordener: Elementar und Drache standen
+   vorher mit 175 bzw. 43 Antritten unter der Zählschwelle und waren schon
+   damals die schwächsten Zeilen. Jetzt spielt der Bot sie — 705 bzw. 243
+   Antritte —, und man sieht, wie schlecht sie sind. **Folgerung:** Der Befund
+   gehört zum Katalog, nicht zu den Schwellen. Elementars Träger sind zugleich
+   die schwächsten Einheiten des Spiels (Irrlicht ×0,08, Funkenlehrling ×0,23);
+   solange das so ist, ist ein Angriffsbonus auf sie verschenkt.
+2. **Krieger steht mit ×1,49 erstmals über der ×1,4-Kante**, die die fünfte
+   Messung als obere Grenze notiert hat. Der Rüstungsbonus ist in diesem
+   Kampfmodell der stärkste — er wirkt auf jeden eingehenden Treffer —, und
+   seit die mittlere Schwelle mit drei Trägern statt vier zu haben ist, steht
+   er in 42 % der Antritte. **Folgerung:** die erste Zeile, die man ansieht,
+   wenn als Nächstes am Balancing gedreht wird. Der Bonus ist hier bewusst nur
+   um den Trägeranteil gekürzt worden und nicht zusätzlich — sonst wären zwei
+   Änderungen in einer Messung.
+3. **Die Partie ist um eine knappe Minute länger geworden** (7:27 → 8:25 im
+   Median), und das Ziel sind acht Minuten. Verursacht hat das der **Bot**,
+   nicht die Schwellen: Schon B allein steht bei 8:24. Ein Bot, der auf
+   Synergien spielt, baut stärkere Bretter, und stärkere Bretter kämpfen
+   länger. Dasselbe gilt für die Kämpfe, die an der Höchstdauer abgeschnitten
+   werden: 4,4 % → 9,7 %. Ein solcher Kampf ist kein Unentschieden — die
+   Wertung entscheidet nach Punkten (`entscheideNachZeit` in `kampf.ts`) —,
+   aber jeder zehnte Kampf, der die 45 Sekunden ausreizt, ist die Stelle, an
+   der man das Spiel als zäh empfindet. **Folgerung:** Beides steht als Karte
+   auf dem Board. Hier wurde nichts nachgezogen, weil `startLeben` und
+   `zeitraffer` erst am selben Tag nach eigener Messung entschieden worden sind
+   (docs/TAFELRUNDE-SPIELZEIT.md); sie im Vorbeigehen wieder zu drehen, hieße
+   diese Entscheidung ohne Zahlen zu überschreiben.
+4. **Die Partien werden seltener früh entschieden** — 42,5 % → 37,9 % standen
+   spätestens zur Halbzeit fest. Das ist die einzige Zeile, die sich ohne Zutun
+   verbessert hat: Wer zurückliegt, kann jetzt über eine Synergie aufholen,
+   statt nur schwächere Einheiten zu kaufen.
+
+---
+
+## Überholt: die fünfte Messung (Stand 05.09.2026, Bot ohne Markengewicht, Schwellen 2/4/6)
+
+> Dieser Abschnitt beschreibt den Stand VOR dem 05.09.2026 abends. Der gültige
+> Stand steht darüber unter „Gemessen: Ausgewogenheit (sechste Messung)“.
+> Was hier als Folgerung steht, ist inzwischen abgearbeitet — insbesondere die
+> Punkte 2 und 3.
 
 **Warum es eine fünfte gibt.** Am 05.09.2026 sind vier Zahlen geändert worden,
 aber auf zwei getrennten Zweigen — und jede der beiden Messungen davor hat nur
@@ -504,20 +663,26 @@ Robin rechnet das Balancing selbst durch; hier steht nur, was die Zahlen sagen.
 
 ## Vorgeschichte: die Messungen davor
 
-Vier Messungen sind dieser vorausgegangen, jede nach einem Eingriff. Sie stehen
-hier in Kurzform, weil ihre vollen Tabellen Zustände beschreiben, die es nicht
-mehr gibt; wer sie braucht, findet sie in der Geschichte dieser Datei.
+Fünf Messungen sind dieser vorausgegangen, jede nach einem Eingriff. Die ersten
+vier stehen hier in Kurzform, weil ihre vollen Tabellen Zustände beschreiben,
+die es nicht mehr gibt; wer sie braucht, findet sie in der Geschichte dieser
+Datei. Die fünfte steht oben noch vollständig da, weil die sechste sich Zeile
+für Zeile mit ihr vergleicht.
 
-| | erste | zweite | dritte | vierte | **fünfte (gültig)** |
-|---|---|---|---|---|---|
-| Startleben | 100 | 20 | **14** | 20 | **14** |
-| Zeitraffer | x1 | x1 | **x2** | x1 | **x2** |
-| Neu-Würfeln | 2 Gold | 2 Gold | 2 Gold | **0** | **0** |
-| Laden nach dem Kauf | nur der Platz | nur der Platz | nur der Platz | **ganz neu** | **ganz neu** |
-| Runden ⌀ zu viert | 26,5 | 14,7 | 11,1 | 14,1 | **10,6** |
-| an der Grenze geendet | 18,5 % | 0,0 % | 0,0 % | 0,0 % | **0,0 %** |
-| zur Halbzeit entschieden | 43,0 % | 36,7 % | 30,6 % | 47,3 % | **43,0 %** |
-| Markenspanne (gezählt) | — | ×0,79–1,15 | ×0,77–1,27 | ×0,76–1,42 | **×0,80–1,32** |
+| | erste | zweite | dritte | vierte | fünfte | **sechste (gültig)** |
+|---|---|---|---|---|---|---|
+| Startleben | 100 | 20 | **14** | 20 | 14 | **14** |
+| Zeitraffer | x1 | x1 | **x2** | x1 | x2 | **x2** |
+| Neu-Würfeln | 2 Gold | 2 Gold | 2 Gold | **0** | 0 | **0** |
+| Laden nach dem Kauf | nur der Platz | nur der Platz | nur der Platz | **ganz neu** | ganz neu | **ganz neu** |
+| Schwellen | 2/4/6 | 2/4/6 | 2/4/6 | 2/4/6 | 2/4/6 | **2/3/5** |
+| Bot spielt auf Marken | nein | nein | nein | nein | nein | **ja** |
+| Runden ⌀ zu viert | 26,5 | 14,7 | 11,1 | 14,1 | 10,6 | **10,7** |
+| an der Grenze geendet | 18,5 % | 0,0 % | 0,0 % | 0,0 % | 0,0 % | **0,0 %** |
+| zur Halbzeit entschieden | 43,0 % | 36,7 % | 30,6 % | 47,3 % | 43,0 % | **37,9 %** |
+| mittlere Schwelle gehalten | — | — | 0,6 % | 3,3 % | 1,2 % | **42,4 %** |
+| höchste Schwelle gehalten | — | — | 0 Fälle | 11 Fälle | 0 Fälle | **0,9 %** |
+| Markenspanne (gezählt) | — | ×0,79–1,15 | ×0,77–1,27 | ×0,76–1,42 | ×0,80–1,32 | **×0,24–1,49** |
 
 **Erste Messung (100 Startleben).** Die Werte trugen die Partie nicht: Zu viert
 liefen 18,5 % aller Partien in die Rundengrenze von 30, zu acht 72,6 %, ohne
