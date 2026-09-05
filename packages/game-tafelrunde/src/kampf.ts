@@ -75,17 +75,26 @@ export const SCHRITT_MS = 500;
  * abgeschnitten; bei 30 s waere es jeder sechste gewesen und bei 20 s zwei von
  * fuenf.
  *
- * Der Median liegt mit 17 s genau in den 15 bis 20 Sekunden des Konzepts —
- * lang sind nicht die Kaempfe, sondern ihr Schwanz: zwei Bretter aus lauter
- * Wachen (40 bis 50 Punkte Ruestung gegen 28 bis 45 Angriff) brauchen
- * einander sehr lange. Das ist eine Sache des Katalogs und nicht dieser Zahl;
- * kuerzer werden diese Kaempfe erst, wenn Faehigkeiten und Synergien Schaden
- * dazulegen — nicht dadurch, dass man sie hier abschneidet. Bis dahin ist die
- * Grenze ein Rettungsseil und keine Regel.
+ * DIESE MESSUNG GILT NUR FUER ZUFAELLIG BESETZTE BRETTER, und das ist ihr
+ * Fehler (gefunden am 05.09.2026 beim Zerlegen der Spielzeit). Ein Bot kauft
+ * nicht zufaellig: Er nimmt das Beste, verschmilzt auf Stufe 2 und 3 und
+ * sammelt Marken, deren Boni Leben und Ruestung dazulegen. Auf Brettern aus
+ * ECHTEN Partien dauert derselbe Kampf doppelt so lange — Median 35 s statt
+ * 17 s —, und abgeschnitten werden nicht 2 bis 4 Prozent, sondern 29
+ * (500 Partien zu viert, werkzeug/spielzeit.mjs). Die Grenze ist damit kein
+ * Rettungsseil mehr, sondern entscheidet jeden dritten Kampf ueber
+ * `entscheideNachZeit`.
  *
- * Dass die Messung nicht mit dem naechsten Balancing veraltet, sichert eine
- * Probe in test/kampf.test.ts: Sie laeuft bei jedem Testlauf mit und schlaegt
- * an, sobald der Zeitablauf vom Ausnahmefall zum Normalfall wird.
+ * DIE ZAHL 45_000 BLEIBT TROTZDEM STEHEN, weil sie das falsche Ende ist: Wer
+ * sie senkt, laesst noch mehr Kaempfe von der Uhr entscheiden. Kuerzer werden
+ * die Kaempfe ueber den Ablauf selbst (`Kampfregler.zeitraffer`) oder ueber den
+ * Katalog — mit Zeitraffer x1,5 faellt der Anteil auf 8 %, mit x2 auf 1 %. Die
+ * Auswertung dazu steht in docs/TAFELRUNDE-SPIELZEIT.md.
+ *
+ * Zwei Proben halten das fest: die in test/kampf.test.ts auf zufaelligen
+ * Brettern (sie sagt etwas ueber den Katalog) und die in test/spielzeit.test.ts
+ * auf Brettern aus echten Partien (sie sagt etwas ueber das Spiel). Wer nur
+ * die erste liest, glaubt weiter an die 2 bis 4 Prozent.
  *
  * WER GEWINNT DANN: siehe `entscheideNachZeit`.
  */
@@ -121,6 +130,56 @@ export const SCHADEN_GRUNDWERT = 1;
  * nicht durch die Rundung zum halben Preis werden.
  */
 export const SCHADEN_STUFEN_TEILER = 3;
+
+// ---------------------------------------------------------------------------
+// Die Stellschrauben als Buendel
+// ---------------------------------------------------------------------------
+
+/**
+ * Dieselben vier Zahlen, aber einstellbar.
+ *
+ * WOZU: Um zu beantworten, welche Stellschraube eine Partie wie viel kuerzer
+ * macht, muss man jede EINZELN drehen und dieselben 500 Partien noch einmal
+ * rechnen (docs/TAFELRUNDE-SPIELZEIT.md). Mit vier `const` im Modul ginge das
+ * nur, indem der Messstand den Kampf ein zweites Mal nachbaut — und dann misst
+ * er seine eigene Kopie und nicht das Spiel.
+ *
+ * WAS ES NICHT IST: eine Regel des Tisches. Der Regler steht bewusst NICHT in
+ * `TafelrundeRegeln` (regeln.ts), denn der Regelsatz kommt als JSON von aussen
+ * — ein selbstgebauter Tisch koennte sich sonst einen Zeitraffer von 10
+ * einstellen. Wer den Standard aendern will, aendert die Konstanten oben; der
+ * Regler ist der Weg, das vorher zu messen.
+ */
+export interface Kampfregler {
+  /** Taktlaenge der Simulation, siehe `TAKT_MS`. */
+  readonly taktMs: number;
+  /** Abbruchgrenze, siehe `HOECHSTDAUER_MS`. */
+  readonly hoechstdauerMs: number;
+  /** Teiler der Stufensumme beim Schaden, siehe `SCHADEN_STUFEN_TEILER`. */
+  readonly schadenStufenTeiler: number;
+  /**
+   * Wie viel schneller alles ablaeuft: Angriffstempo UND Schrittweite.
+   *
+   * 1 ist der gebaute Ablauf, 1,5 macht denselben Kampf in zwei Dritteln der
+   * Zeit. Ein Faktor und keine zwei Zahlen, weil beides zusammengehoert: Wer
+   * nur schneller schlagen, aber gleich langsam laufen laesst, verschiebt das
+   * Kraefteverhaeltnis zwischen Nah- und Fernkampf, statt den Kampf zu
+   * raffen.
+   *
+   * ACHTUNG, DAS AENDERT DIE ANZEIGE MIT. Die Oberflaeche spielt das
+   * Ablaufprotokoll in Echtzeit ab (`zeitMs`); ein Zeitraffer macht den Kampf
+   * am Bildschirm tatsaechlich schneller und nicht nur die Rechnung kuerzer.
+   */
+  readonly zeitraffer: number;
+}
+
+/** Der gebaute Ablauf: die vier Konstanten dieser Datei. */
+export const STANDARD_REGLER: Kampfregler = {
+  taktMs: TAKT_MS,
+  hoechstdauerMs: HOECHSTDAUER_MS,
+  schadenStufenTeiler: SCHADEN_STUFEN_TEILER,
+  zeitraffer: 1,
+};
 
 // ---------------------------------------------------------------------------
 // Was hinein geht
@@ -281,9 +340,21 @@ interface Streiter {
  * Mindestens ein Takt: Ein Tempo ueber 10 gibt es heute nicht, aber eine
  * Wartezeit von 0 waere eine Endlosschleife im Takt.
  */
-export function angriffstakt(tempo: number): number {
-  const roh = Math.round(1000 / tempo);
-  return Math.max(TAKT_MS, Math.ceil(roh / TAKT_MS) * TAKT_MS);
+export function angriffstakt(tempo: number, regler: Kampfregler = STANDARD_REGLER): number {
+  const roh = Math.round(1000 / (tempo * regler.zeitraffer));
+  return Math.max(regler.taktMs, Math.ceil(roh / regler.taktMs) * regler.taktMs);
+}
+
+/**
+ * Wie lange ein Feld weit ziehen dauert, in ganzen Takten.
+ *
+ * Dieselbe Aufrundung wie beim Angriff und aus demselben Grund: Ein Schritt,
+ * der zwischen zwei Takten faellig wird, wartet sonst auf den naechsten und
+ * dauert damit effektiv laenger, als `SCHRITT_MS` sagt.
+ */
+export function schrittdauer(regler: Kampfregler = STANDARD_REGLER): number {
+  const roh = Math.round(SCHRITT_MS / regler.zeitraffer);
+  return Math.max(regler.taktMs, Math.ceil(roh / regler.taktMs) * regler.taktMs);
 }
 
 /**
@@ -314,9 +385,12 @@ export function schadenNach(angriff: number, ruestung: number): number {
  *
  * Warum ueberhaupt geteilt wird, steht bei `SCHADEN_STUFEN_TEILER`.
  */
-export function schadenFuerVerlierer(ueberlebende: readonly Kaempferstand[]): number {
+export function schadenFuerVerlierer(
+  ueberlebende: readonly Kaempferstand[],
+  teiler: number = SCHADEN_STUFEN_TEILER,
+): number {
   const stufen = ueberlebende.reduce((summe, k) => summe + k.stufe, 0);
-  return SCHADEN_GRUNDWERT + Math.ceil(stufen / SCHADEN_STUFEN_TEILER);
+  return SCHADEN_GRUNDWERT + Math.ceil(stufen / teiler);
 }
 
 // ---------------------------------------------------------------------------
@@ -530,8 +604,10 @@ function entscheideNachZeit(alle: readonly Streiter[]): Seite | null {
 export function simuliereKampf(
   bretter: readonly [Brettseite, Brettseite],
   saat: Saat,
+  regler: Kampfregler = STANDARD_REGLER,
 ): Kampfbericht {
   const alsText = String(saat);
+  const schritt = schrittdauer(regler);
   const zufall = baueZufall(alsText);
   const erstZieher: Seite = zufall() < 0.5 ? 0 : 1;
 
@@ -557,7 +633,7 @@ export function simuliereKampf(
       grund = 'ausgeloescht';
       break;
     }
-    if (jetzt >= HOECHSTDAUER_MS) {
+    if (jetzt >= regler.hoechstdauerMs) {
       grund = 'zeit';
       break;
     }
@@ -572,7 +648,7 @@ export function simuliereKampf(
         if (jetzt < wer.angriffFreiAb) continue;
         const schaden = schadenNach(wer.werte.angriff, ziel.werte.ruestung);
         ziel.leben = Math.max(0, ziel.leben - schaden);
-        wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo);
+        wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
         ereignisse.push({
           art: 'treffer',
           zeitMs: jetzt,
@@ -595,11 +671,11 @@ export function simuliereKampf(
       belegt.delete(von);
       belegt.set(nach, wer.id);
       wer.platz = nach;
-      wer.schrittFreiAb = jetzt + SCHRITT_MS;
+      wer.schrittFreiAb = jetzt + schritt;
       ereignisse.push({ art: 'bewegung', zeitMs: jetzt, wer: wer.id, von, nach });
     }
 
-    jetzt += TAKT_MS;
+    jetzt += regler.taktMs;
   }
 
   // `dauerMs` liegt damit einen Takt hinter dem letzten Ereignis: Der Takt, in
@@ -621,7 +697,12 @@ export function simuliereKampf(
 
   const ueberlebende = alle.filter((s) => s.leben > 0).map(standVon);
   const schaden =
-    sieger === null ? 0 : schadenFuerVerlierer(ueberlebende.filter((k) => k.seite === sieger));
+    sieger === null
+      ? 0
+      : schadenFuerVerlierer(
+          ueberlebende.filter((k) => k.seite === sieger),
+          regler.schadenStufenTeiler,
+        );
 
   return {
     saat: alsText,

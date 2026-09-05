@@ -1,4 +1,4 @@
-export { tafelrunde } from './adapter.js';
+export { KAMPF_NACHLAUF_MS, tafelrunde } from './adapter.js';
 export {
   type Einheit,
   type EinheitId,
@@ -56,15 +56,18 @@ export {
   type Ereignis,
   type Kaempferstand,
   type Kampfbericht,
+  type Kampfregler,
   HOECHSTDAUER_MS,
   SCHADEN_GRUNDWERT,
   SCHADEN_STUFEN_TEILER,
   SCHRITT_MS,
+  STANDARD_REGLER,
   TAKT_MS,
   angriffstakt,
   protokollText,
   schadenFuerVerlierer,
   schadenNach,
+  schrittdauer,
   simuliereKampf,
   ueberlebendeVon,
 } from './kampf.js';
