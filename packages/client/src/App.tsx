@@ -361,7 +361,7 @@ export function App(): React.JSX.Element {
      *
      * Als einziger Schirm bekommt Tafelrunde ein eigenes <Suspense> mit
      * eigenem Rueckfall: seinem Ladebildschirm statt des Lade-Pinguins. Der
-     * Grund ist Robins Beschwerde vom 5.9.2026 — hier hingen zwei Vorhaende
+     * Grund ist Robins Beschwerde vom 5.9.2026 — hier hingen zwei Vorhaenge
      * hintereinander (erst das Paket, dann die Bilder), und der zweite zeigte
      * einen Balken, der die erste Haelfte der Wartezeit unterschlug. Jetzt ist
      * es ein Balken ueber beides; der Rueckfall und der nachgeladene Schirm

@@ -114,7 +114,7 @@ describe('vorladen', () => {
     });
 
     /*
-     * Das Gewicht ist eine Schaetzung (siehe paket.ts) — gepruefft wird
+     * Das Gewicht ist eine Schaetzung (siehe paket.ts) — geprueft wird
      * deshalb nur die Groessenordnung, nicht der Wert. Steht das Paket eines
      * Tages bei 1 oder bei 500, sagt der Balken etwas Falsches ueber die
      * laengste Wartezeit des Spiels.
