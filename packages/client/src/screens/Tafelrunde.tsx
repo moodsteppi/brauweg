@@ -204,9 +204,16 @@ type Aktion =
  * Bewusst ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll
  * nicht auf eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht —
  * dieselbe Ueberlegung wie bei Filler.
+ *
+ * ACHTUNG, DIESE KOPIE WIRD MITGESCHICKT und nicht nur angezeigt: `config`
+ * geht an `createTable`, der Server nimmt sie als Regelsatz des Tisches. Eine
+ * veraltete Zahl hier ueberstimmt also DEFAULT_REGELN, ohne dass irgendwo ein
+ * Fehler auffaellt. Genau das waere am 05.09.2026 bei der Umstellung auf 20
+ * Leben passiert. Dass diese Liste ueberhaupt doppelt steht, ist ein eigener
+ * Punkt auf dem Board.
  */
 const REGELSATZ = {
-  startLeben: 100,
+  startLeben: 20,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,
