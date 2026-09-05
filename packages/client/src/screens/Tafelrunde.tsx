@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
@@ -940,23 +941,31 @@ function Ruestkammer({
    * weiterer Rundruf desselben Kampfes nicht.
    */
   const arena = kampfbild && (
-    <KampfAnzeige
-      key={kampfSchluessel(kampfbild.kaempfe, sicht.ich)}
-      kaempfe={kampfbild.kaempfe}
-      ich={sicht.ich}
-      brettReihen={sicht.brettReihen}
-      brettSpalten={sicht.brettSpalten}
-      katalog={katalog}
-      nameVon={(sitz) => spielername(zeile(sitz), sitz)}
-      /* Die Figur holt sich die Arena selbst aus figuren.ts; hier kommt nur
-         der Rueckfall herein — dieselbe Strichzeichnung wie auf dem Brett,
-         damit man seine Einheiten auch dann wiedererkennt, wenn ein Bild
-         fehlt. */
-      ersatzzeichen={(einheit) => <RollenZeichen rolle={einheit.rolle} />}
-      farbeVon={(einheit) => KOSTEN_FARBE[einheit.kosten] ?? KOSTEN_FARBE[1]!}
-      frist={frist}
-      verblasst={kampfbild.verblasst}
-    />
+    /*
+     * Die Buehne steht UM die Arena herum und nicht in ihr: Sie entsteht mit
+     * der Kampfphase und vergeht mit ihr, und daran haengt ihre Rundenansage
+     * (Buehne.tsx). Zwischen den Kaempfen gibt es sie nicht — die
+     * Ruestkammer ist kein Schauplatz, sondern ein Werktisch.
+     */
+    <Buehne runde={sicht.runde} verblasst={kampfbild.verblasst}>
+      <KampfAnzeige
+        key={kampfSchluessel(kampfbild.kaempfe, sicht.ich)}
+        kaempfe={kampfbild.kaempfe}
+        ich={sicht.ich}
+        brettReihen={sicht.brettReihen}
+        brettSpalten={sicht.brettSpalten}
+        katalog={katalog}
+        nameVon={(sitz) => spielername(zeile(sitz), sitz)}
+        /* Die Figur holt sich die Arena selbst aus figuren.ts; hier kommt nur
+           der Rueckfall herein — dieselbe Strichzeichnung wie auf dem Brett,
+           damit man seine Einheiten auch dann wiedererkennt, wenn ein Bild
+           fehlt. */
+        ersatzzeichen={(einheit) => <RollenZeichen rolle={einheit.rolle} />}
+        farbeVon={(einheit) => KOSTEN_FARBE[einheit.kosten] ?? KOSTEN_FARBE[1]!}
+        frist={frist}
+        verblasst={kampfbild.verblasst}
+      />
+    </Buehne>
   );
 
   if (!eigenes) {

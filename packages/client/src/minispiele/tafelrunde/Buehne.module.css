@@ -1,0 +1,411 @@
+/*
+ * Die Buehne der Kampfphase (Buehne.tsx).
+ *
+ * Ein eigenes Modul wie bei der Kampfanzeige daneben: abgeschlossenes
+ * Bauteil, eigene Klassennamen, die nirgends sonst greifen sollen.
+ *
+ * ALLE Bewegung liegt hier, die Komponente setzt nur Zustaende. Deshalb
+ * genuegt am Ende ein einziger Block fuer „weniger Bewegung".
+ *
+ * Gebaut wird der Raum aus Farbverlaeufen und EINER gedrehten Flaeche, nicht
+ * aus Bildern: Fuer die Arena gibt es kein gemaltes Hintergrundbild (die 22
+ * Figuren und das Holz sind alles, was geliefert wurde), und ein erfundenes
+ * waere gegen CLAUDE.md Regel 5. Die Tiefe entsteht deshalb so, wie Tiefe
+ * ohne Bild entsteht: heller Horizont oben, dunkler Boden unten, ein Raster
+ * darauf, das in die Ferne zusammenlaeuft.
+ */
+
+.buehne {
+  position: relative;
+  /* Die Buehne nimmt die GANZE Breite, die Arena darin bleibt bei ihren
+     min(94vw, 460px). Ohne `align-self` zoege der Elternteil
+     (`.tr-tisch`, align-items: center) sie auf Inhaltsbreite zusammen — dann
+     waere der Raum genauso breit wie das Brett und damit kein Raum. */
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /*
+   * Die Polsterung ist der ganze Trick am Handy. Das Brett ist dort
+   * min(94vw, 460px) breit — links und rechts bleiben elf Pixel, und in elf
+   * Pixel passt kein Raum. Der Raum entsteht deshalb OBEN UND UNTEN: heller
+   * Horizont ueber dem Brett, auslaufender Boden darunter. Am Desktop kommen
+   * die Seiten von selbst dazu, weil die Buehne dort viel breiter ist als die
+   * Arena darin.
+   *
+   * Der Platz dafuer ist da: Waehrend der Kampfphase steht statt des Ladens
+   * nur eine Zeile am Fuss. Genommen wird er trotzdem knapp und mit `clamp`,
+   * denn abgeschnitten werden darf am Handy nichts.
+   */
+  padding: clamp(16px, 5vw, 34px) 0 clamp(12px, 4vw, 24px);
+  /* Boden und Dunst greifen ueber den Rand hinaus, damit an den Seiten keine
+     Kante steht. Was drueber ist, wird hier abgeschnitten. */
+  overflow: hidden;
+  /* Eigener Stapelraum: Die Kulissenebenen sollen unter der Arena liegen und
+     nicht mit den fixen Bauteilen des Tisches (Zieh-Schatten,
+     Verschmelz-Band) um z-index streiten. */
+  isolation: isolate;
+  transition: opacity 400ms ease;
+}
+/* Der Server hat die Phase gewechselt: weich zurueck zur Ruestkammer.
+   Dieselbe Dauer wie AUSKLANG_MS in screens/Tafelrunde.tsx — laenger, und
+   die Buehne waere weg, bevor sie verblasst ist. */
+.buehne[data-verblasst] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* -- Die Kulisse ---------------------------------------------------------- */
+
+/*
+ * Der Himmel: die Halle ueber dem Brett. Derselbe Aufbau wie `.tr-seite` —
+ * ein warmer Schein oben auf dunklem Verlauf — nur golden statt blaugrau,
+ * weil hier das Fackellicht der Arena gemeint ist und nicht der Tag.
+ */
+.himmel {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(75% 46% at 50% 6%, rgba(226, 182, 79, 0.16), transparent 72%),
+    linear-gradient(180deg, #0b1013 0%, #151d22 44%, #0a0e11 100%);
+}
+
+/*
+ * Der Horizont: die Linie, an der Boden und Halle sich treffen. Ein weiches
+ * Band statt eines Strichs — ein Strich sieht nach Rahmen aus, ein Band nach
+ * Ferne. Es atmet langsam, das ist die „sanfte Bewegung" der Tiefe.
+ */
+.horizont {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  /* Oben, wo das Brett noch nicht steht: Was hinter dem Brett liegt, sieht
+     niemand — es ist undurchsichtig. Der Schein gehoert deshalb in den
+     Streifen darueber und darf von dort hinter das Brett auslaufen. */
+  top: -4%;
+  height: 30%;
+  background: radial-gradient(
+    60% 50% at 50% 50%,
+    rgba(255, 214, 140, 0.3),
+    rgba(226, 182, 79, 0.07) 55%,
+    transparent 78%
+  );
+  animation: tr-horizont-atmet 9s ease-in-out infinite;
+}
+@keyframes tr-horizont-atmet {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.18);
+  }
+}
+
+/*
+ * Der Boden. Die eine Stelle, an der echte Perspektive im Spiel ist: eine
+ * liegende Flaeche mit einem Raster darauf, um die X-Achse gekippt. Das
+ * Raster laeuft dadurch nach hinten zusammen — genau das macht aus einer
+ * Flaeche einen Raum, und es kostet kein Bild und keine Bibliothek.
+ *
+ * Breiter als die Buehne (`left`/`right` negativ), weil die FERNE Kante beim
+ * Kippen schmaler wird: Ohne den Ueberstand blieben oben links und rechts
+ * zwei leere Keile stehen. Abgeschnitten wird oben mit einer Maske, damit das
+ * Raster in den Horizont hinein verschwindet, statt an einer Kante zu enden.
+ *
+ * Zu sehen ist am Handy nur der Streifen UNTER dem Brett, keine 25 Pixel
+ * hoch. Die Flaeche reicht trotzdem weit dahinter: Ein Boden, der genau am
+ * Brettrand aufhoert, ist ein Band; einer, der dahinter weiterlaeuft, ist ein
+ * Boden, auf dem das Brett steht.
+ */
+.boden {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  bottom: -6%;
+  height: 70%;
+  /*
+   * Der Drehpunkt liegt an der UNTEREN Kante, nicht an der oberen. Das ist
+   * der Unterschied zwischen einem Boden und einer Wand, die einem
+   * entgegenkippt: Mit dem Drehpunkt unten bleibt die nahe Kante stehen und
+   * die ferne laeuft nach hinten zusammen. Mit dem Drehpunkt oben waere es
+   * andersherum — die nahe Kante schoesse auf den Betrachter zu, waechse
+   * dabei ins Riesenhafte und liefe gegen die Perspektivebene.
+   */
+  /*
+   * 700 px Betrachterabstand und nicht die uebliche Handvoll hundert: Je
+   * kleiner die Zahl, desto haerter die Perspektive — und desto flacher
+   * gedrueckt der projizierte Boden. Bei 340 blieb vom Raster unter dem Brett
+   * ein Band von zwanzig Pixeln uebrig, in dem keine einzige Linie mehr
+   * auseinanderlief. 700 streckt es auf gut das Vierfache, und erst dann
+   * sieht man, dass da ein Boden nach hinten geht.
+   */
+  transform: perspective(700px) rotateX(58deg);
+  transform-origin: 50% 100%;
+  /* Enger als das Brettraster (34/30 gegen die 46/42 des ersten Versuchs):
+     Im sichtbaren Streifen sollen mehrere Linien stehen, nicht eine. */
+  background:
+    repeating-linear-gradient(90deg, rgba(226, 182, 79, 0.09) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(0deg, rgba(226, 182, 79, 0.07) 0 1px, transparent 1px 30px),
+    linear-gradient(180deg, #141c21 0%, #0a0e11 100%);
+  /* `-webkit-` mit dabei: Auf dem iPhone laeuft die Beta, und aeltere
+     WebKit-Fassungen kennen `mask-image` nur mit Praefix. Ohne die Maske
+     stuende dort eine harte Kante quer durch den Horizont. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 26%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 26%, #000 100%);
+  /* Das Raster zieht langsam auf den Betrachter zu. Der Weg ist genau eine
+     Rasterweite (30px), deshalb springt es beim Umlauf nicht. */
+  animation: tr-boden-zieht 14s linear infinite;
+}
+@keyframes tr-boden-zieht {
+  from {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      0 0,
+      0 30px,
+      0 0;
+  }
+}
+
+/*
+ * Der Dunst: zwei breite, weiche Schwaden, die gegeneinander ziehen. Sie
+ * nehmen dem Boden die Regelmaessigkeit — ohne sie sieht das Raster nach
+ * Millimeterpapier aus.
+ */
+.dunst {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.dunst i {
+  position: absolute;
+  left: -30%;
+  width: 70%;
+  height: 34%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(150, 190, 210, 0.09), transparent 72%);
+  animation: tr-dunst-zieht 26s ease-in-out infinite alternate;
+}
+/* Oben am Horizont und unten ueber dem Boden — also dort, wo man sie sieht.
+   In der Mitte steht das Brett, und das ist undurchsichtig. */
+.dunst i:nth-child(1) {
+  top: 4%;
+}
+.dunst i:nth-child(2) {
+  top: 62%;
+  width: 88%;
+  animation-duration: 34s;
+  animation-delay: -12s;
+  animation-direction: alternate-reverse;
+}
+@keyframes tr-dunst-zieht {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(90%);
+  }
+}
+
+/*
+ * Die Glut: einzelne Funken, die vom Boden aufsteigen und verloeschen.
+ * Derselbe Gedanke wie `pf-steigen` auf den Pfad-Inseln (styles.css) —
+ * aufsteigen, kurz hell werden, verschwinden.
+ */
+.glut {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.glut i {
+  position: absolute;
+  /* Am unteren Rand, wo der Boden zu sehen ist. Die Funken steigen von dort
+     auf und verschwinden HINTER dem Brett — das ist keine Panne, sondern die
+     Tiefe: Was hinter dem Brett aufsteigt, ist hinter dem Brett. */
+  bottom: 2%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px 1px rgba(226, 182, 79, 0.55);
+  opacity: 0;
+  animation-name: tr-funke-steigt;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes tr-funke-steigt {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-160px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* -- Die Arena darin ------------------------------------------------------ */
+
+/*
+ * Die Buehne faehrt auf, wenn die Ansage verklingt: Sie kommt von unten und
+ * aus der Ferne, wie ein Vorhang, der den Blick freigibt.
+ *
+ * Die Verzoegerung ist etwas kuerzer als ANSAGE_MS (900 ms), damit sich
+ * beides ueberschneidet — eine Ansage, die erst ganz weg ist und dann eine
+ * leere Flaeche zeigt, waere zwei Uebergaenge statt einem. `both` haelt den
+ * Anfangszustand bis dahin fest: Vorher soll unter der Ansage nichts
+ * hervorlugen.
+ *
+ * Dieselbe Kurve wie die Weltkarte des Startbildschirms
+ * (`cubic-bezier(0.22, 1, 0.36, 1)`, styles.css `.hub-karte-welt`).
+ */
+.mitte {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: tr-auffahrt 620ms cubic-bezier(0.22, 1, 0.36, 1) 560ms both;
+}
+@keyframes tr-auffahrt {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* -- Die Rundenansage ----------------------------------------------------- */
+
+/*
+ * Der Vorhang: verdeckt die Buehne, nennt die Runde, geht auf. Er liegt ueber
+ * allem, faengt aber nichts ab (`pointer-events: none`) — waehrend der
+ * Kampfphase gibt es hier ohnehin nichts zu bedienen, und ein unsichtbarer
+ * Fangschirm ueber dem Brett waere der naechste Fehlerbericht.
+ */
+.vorhang {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(70% 62% at 50% 50%, rgba(11, 16, 19, 0.86), rgba(9, 13, 16, 0.97));
+  animation: tr-vorhang-auf 900ms ease-out both;
+}
+@keyframes tr-vorhang-auf {
+  0% {
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  58% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.vorhang strong {
+  color: var(--gold);
+  font: 900 clamp(28px, 9vw, 44px) / 1 system-ui;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 26px rgba(226, 182, 79, 0.45);
+  animation: tr-ansage-tritt-auf 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes tr-ansage-tritt-auf {
+  0% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+.vorhang span {
+  color: var(--muted);
+  font: 800 11px/1 system-ui;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+/* -- Groessere Schirme ----------------------------------------------------- */
+
+/*
+ * Am Handy ist die Buehne knapp — sie soll das Brett tragen und nicht von ihm
+ * ablenken. Ab Tablet darf sie hoeher werden: mehr Luft ueber dem Horizont,
+ * ein tieferer Boden. Nichts davon aendert die Breite der Arena darin, die
+ * regelt KampfAnzeige.module.css.
+ */
+@media (min-width: 40rem) {
+  .buehne {
+    padding: 40px 0 28px;
+  }
+  .horizont {
+    height: 34%;
+  }
+  .boden {
+    height: 76%;
+  }
+  .glut i {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/*
+ * Weniger Bewegung: Der Raum bleibt, die Bewegung geht.
+ *
+ * Der Vorhang behaelt seine Deckkraft (kein Ein- und Ausblenden) und
+ * verschwindet nach ANSAGE_MS in einem Schritt — die Rundenzahl ist Auskunft
+ * und keine Zierde, die darf nicht wegfallen. Dunst und Glut sind reine
+ * Zierde und werden ganz abgeschaltet: Ein stehender Funke ist ein Fleck auf
+ * dem Bildschirm, kein Funke.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .buehne {
+    transition: none;
+  }
+  .horizont,
+  .boden,
+  .mitte,
+  .vorhang,
+  .vorhang strong {
+    animation: none;
+  }
+  .dunst,
+  .glut {
+    display: none;
+  }
+}

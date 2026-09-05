@@ -537,6 +537,12 @@ export function KampfAnzeige<E extends Einheitenbild>({
                   '--dx': `${richtung?.dx ?? 0}%`,
                   '--dy': `${richtung?.dy ?? 0}%`,
                   '--tr-kosten': einheit ? farbeVon(einheit) : undefined,
+                  /* Der Versatz des Schwebens im Stand. Aus der Kennung
+                     gerechnet und nicht gewuerfelt: Ein Zufallswert waere bei
+                     jedem Zeichnen ein anderer, und die Figuren zappelten im
+                     Takt der Serverfunke statt zu atmen. Negativ, damit die
+                     Bewegung schon laeuft, statt erst anzufangen. */
+                  '--schwebe': `${-(f.id % 7) * 0.53}s`,
                 } as React.CSSProperties
               }
               aria-label={`${einheit?.name ?? f.einheitId}, Stufe ${f.stufe}, ${f.tot ? 'gefallen' : `${f.leben} von ${f.hoechstesLeben} Leben`}`}
@@ -568,10 +574,31 @@ export function KampfAnzeige<E extends Einheitenbild>({
               {f.treffer > 0 && (
                 <>
                   <i key={`b${f.treffer}`} className={stil.blitz} aria-hidden="true" />
+                  {/* Der Einschlag: ein Ring, der aus dem Getroffenen
+                      herausfaehrt. Er steht NEBEN dem Koerper und nicht darin
+                      — der Koerper haengt am Schluessel `f.schlaege`, und ein
+                      Treffer wuerde von dort aus den Ausschlag des eigenen
+                      Angriffs mitten in der Bewegung neu starten. */}
+                  <i key={`e${f.treffer}`} className={stil.einschlag} aria-hidden="true" />
                   <em key={`s${f.treffer}`} className={stil.schaden} aria-hidden="true">
                     −{f.letzterSchaden}
                   </em>
                 </>
+              )}
+
+              {/* Der Tod: Staub und Funken, wo die Figur stand. Sie bleibt im
+                  Baum und verblasst (siehe unten), die Koerner fahren
+                  auseinander. Beides zusammen ist der Unterschied zwischen
+                  „ist weg" und „ist gefallen". */}
+              {f.tot && (
+                <span className={stil.staub} aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                </span>
               )}
             </div>
           );
