@@ -161,7 +161,125 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 05.09.2026, sechste Messung — der gültige Stand)
+## Gemessen: Ausgewogenheit (Stand 05.09.2026, siebte Messung — der gültige Stand)
+
+**Warum es eine siebte gibt.** Die sechste hinterließ genau einen Ausreißer:
+**Elementar bei ×0,25** — nicht knapp neben der Schranke (×0,5 bis ×2), sondern
+um das Doppelte darunter. Wer auf Elementar spielte, verlor. Der Befund war
+älter als seine Sichtbarkeit: Vorher hatte die Marke zu wenige Antritte, um
+gezählt zu werden.
+
+### Erst die Ursache, dann die Zahlen
+
+Drei Verdächtige, einzeln gemessen, **bevor** irgendetwas geändert wurde:
+
+| Verdacht | Probe | Ergebnis |
+|---|---|---|
+| Der Bonus ist zu klein | Elementar-Bonus auf **null** gesetzt | Siegquote **6,1 %** statt 6,0 % — der Bonus bewegt nur, wie oft der Bot die Marke wählt, nicht ob sie trägt |
+| Die Träger sind zu schwach | alle vier auf die **Mitte ihrer Kostenstufe** gehoben | ×0,54 bis ×0,60 — besser, aber weiter draußen |
+| Die Träger passen nicht zusammen | **ein** zäher Träger für die Vorderreihe, **kein Wert geändert** | ×0,78 |
+
+**Die dritte war es.** Alle fünf Elementar-Träger waren Fernkämpfer mit
+Reichweite 3 oder 4 — kein einziger stand vorn. Ein Brett, das auf Elementar
+setzte, hatte niemanden, der die Linie hält; die Magier wurden erreicht und
+niedergemacht, bevor ihr Angriffsbonus etwas eintrug. Der Vergleich über alle
+Marken ist fast monoton in dieser einen Zahl:
+
+| Marke | Träger vorn (Reichweite 1) | zum Schnitt (sechste Messung) |
+|---|---|---|
+| Wächter | 4 von 6 | ×1,23 |
+| Krieger | 2 von 5 | ×1,40 |
+| Meuchler | 3 von 4 | ×1,09 |
+| Naturwesen | 2 von 5 | ×1,04 |
+| **Elementar** | **0 von 5** | **×0,25** |
+
+Ein zweiter Befund fiel dabei ab und erklärt, warum die Träger auch einzeln zu
+schwach waren: **Der Magier zahlte sein niedriges Tempo nie ein.** Ein Magier
+bekommt laut Konzept mehr Angriff und weniger Leben als seine Stufe — er hatte
+zusätzlich das niedrigste Tempo (0,6) und die niedrigste Rüstung (10) des
+Katalogs. Aus 50 Angriff bei Tempo 0,6 werden 30 Schaden je Sekunde, weniger
+als beim Astschützen mit 45 bei Tempo 0,8. Der Angriffsvorteil stand nur auf
+dem Papier. Alle fünf Magier lagen deshalb 22 bis 34 % unter der Mitte ihrer
+Kostenstufe, und Elementar ist die Marke der Magier.
+
+### Was geändert wurde
+
+Nur der Katalog. **Nichts** an Startleben, Zeitraffer, Schwellen, Synergieboni
+oder am Bot — die sind am selben Tag nach eigener Messung festgelegt worden.
+
+| Einheit | vorher | jetzt |
+|---|---|---|
+| Irrlicht | Magier, Reichweite 3, 430 / 52 / 0,6 / R10, Elementar + Naturwesen | **Wache, Reichweite 1, 560 / 34 / 0,7 / R35, nur Elementar** |
+| Funkenlehrling | 450 / 50 / 0,6 / R10 | **470 / 56 / 0,65 / R15** |
+| Frostweberin | 580 / 70 / 0,6 / R10 | **600 / 80 / 0,65 / R20** |
+| Sturmrufer | 760 / 92 / 0,6 / R15 | **800 / 104 / 0,65 / R20** |
+
+**Warum ausgerechnet das Irrlicht die Vorderreihe wird:** Es ist der billigste
+Elementar-Träger, und billig muss die Vorderreihe sein — sonst hält sie erst ab
+Level 4. Und es ist die einzige Figur der Reihe, die kein Werkzeug in der Hand
+hält (`public/tafelrunde/irrlicht.webp` ist eine Kugel), also die einzige, die
+vorn nicht falsch aussieht. Ein **neuer** Träger kam nicht in Frage: Jede
+Einheitenkennung braucht eine ausgelieferte `.webp`, und Grafik wird bestellt,
+nicht erfunden.
+
+Die Frostweberin bleibt Magier — eine Marke aus lauter Wachen wäre derselbe
+Fehler mit umgekehrtem Vorzeichen.
+
+### Siegquote je Marke
+
+**1.500 Partien zu viert, Besetzung `normal`, `--mindest 100`**, zweite
+Saatbasis (`ausgewogenheit-v2`) in Klammern. Schnitt der gezählten Zeilen
+28,9 % (28,8 %).
+
+| Marke | Antritte | Quote | zum Schnitt | vorher |
+|---|---|---|---|---|
+| Naturwesen | 323 (324) | 35,9 % | ×1,24 (×1,15) | ×1,04 |
+| Krieger | 2.921 (2.947) | 32,7 % | ×1,13 (×1,15) | **×1,40** |
+| Wächter | 3.594 (3.538) | 27,9 % | ×0,97 (×0,97) | ×1,23 |
+| Meuchler | 2.023 (2.103) | 27,0 % | ×0,93 (×0,90) | ×1,09 |
+| Drache | 477 (428) | 25,8 % | ×0,89 (×0,91) | zu dünn (75) |
+| **Elementar** | **757 (689)** | **24,0 %** | **×0,83 (×0,92)** | **×0,25** |
+| Untot | 8 (7) | — | zu dünn | zu dünn |
+
+**Die Spanne der gezählten Zeilen ist ×0,83 bis ×1,24** (Gegenprobe ×0,90 bis
+×1,15) gegen ×0,25 bis ×1,40 vorher. Damit hält sie zum ersten Mal das engere
+Ziel — keine Zeile über ×1,4, keine unter ×0,7 — und nicht nur die Schranke.
+
+### Was auffällt
+
+1. **Krieger ist von selbst heruntergekommen**, von ×1,40 auf ×1,13 (×1,15).
+   An ihm wurde nichts geändert: Er stand nur deshalb so weit oben, weil der
+   Schnitt, an dem er gemessen wird, von einer kaputten Zeile nach unten
+   gezogen wurde. Das war die Sorge bei diesem Auftrag — sie hat sich in die
+   Gegenrichtung aufgelöst.
+2. **Drache ist zählbar geworden** (75 → 477 Antritte) und liegt bei ×0,89.
+   Der Funkenlehrling trägt beide Marken; was Elementar hilft, hilft ihm mit.
+3. **Naturwesen hat einen Träger abgegeben** (5 → 4) und wird seltener gespielt
+   (633 → 323 Antritte). Über 1.500 Partien bleibt es zählbar; in der kleinen
+   Probe in `test/ausgewogenheit.test.ts` (400 Partien) fällt es mit 85
+   Antritten unter die Schwelle, während Drache mit 113 darüber steigt — die
+   Probe zählt jetzt fünf Marken statt vier.
+4. **Die Spielzeit ist nicht gestiegen**: 7:21 Median vorher, 7:10 (7:22)
+   nachher, bei 7,6 % statt 9,4 % an der Höchstdauer abgebrochenen Kämpfen.
+   Die Vorgabe von durchschnittlich höchstens acht Minuten hält.
+5. **Der Beistand ist die nächste kaputte Rolle.** Im Monokultur-Turnier (drei
+   Kopien einer Einheit gegen drei einer anderen, jede mit ihren eigenen
+   Marken) gewinnen Moosheiler, Runenpriester und Lichtwahrerin **null** ihrer
+   Kämpfe — in jeder Kostenstufe die letzte Zeile. Der Kampf kennt keine
+   Rollen, nur `reichweite`; ein Beistand ist dort schlicht eine schwache
+   Einheit ohne Ausgleich. Nicht angefasst, gehört zur offenen Karte über den
+   Moosheiler.
+6. **Die Bot-Bewertung überschätzt Schaden gegenüber Zähigkeit.** `staerke` in
+   `bot.ts` multipliziert Aushalten mal Austeilen und behandelt beides als
+   austauschbar. Im Monokultur-Turnier sagt diese Zahl die Rangfolge nicht
+   vorher: Astschütze (×1,01 der Stufe) gewinnt 28,6 %, Irrlicht (×0,74)
+   dagegen 42,9 %; Dorfwache (×1,05) gewinnt 89,3 %, Steinschleuderer (×0,98)
+   nur 57,1 %. Wer stirbt, teilt nicht mehr aus — Zähigkeit ist in einem
+   Gruppenkampf mehr wert als das Produkt hergibt. Das erklärt, warum die
+   Träger auf Stärkegleichstand zu heben (×0,54) so viel weniger brachte als
+   ein zäher Körper in der Vorderreihe (×0,78).
+
+## Überholt: die sechste Messung (Stand 05.09.2026, Schwellen 2/3/5, Elementar noch bei ×0,25)
 
 **Warum es eine sechste gibt.** Die fünfte Messung endete mit zwei offenen
 Folgerungen, und beide sind jetzt abgearbeitet — in der Reihenfolge, die dort

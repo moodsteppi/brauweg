@@ -251,9 +251,11 @@ describe('In der Sicht', () => {
       gegner.synergien.map((s) => [s.marke, s.anzahl, s.schwelle]),
       [
         ['elementar', 2, 2],
-        ['naturwesen', 1, null],
         // Der Funkenlehrling traegt seit dem 05.09.2026 die Marke Drache mit
         // (siehe katalog.ts) — allein, also unter der ersten Schwelle.
+        // Naturwesen stand hier bis zur Elementar-Reparatur desselben Tages
+        // ebenfalls: Das Irrlicht hat die Marke abgegeben, als es die
+        // Vorderreihe von Elementar wurde.
         ['drache', 1, null],
       ],
     );
