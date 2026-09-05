@@ -249,8 +249,13 @@ export class TestClient {
    * zum Ende des waitFor, 211 in drei Sekunden. Wer danach den ANFANGSZUSTAND
    * pruefen will, misst unter Last etwas anderes als ohne.
    *
-   * Wer den Anfangszustand meint, stellt den Tisch still:
-   * `startHarness({ botDelayMs: 60_000 })` und `client.passive = true`.
+   * Wer den Anfangszustand meint, stellt den Tisch still
+   * (`startHarness({ botDelayMs: 60_000 })` und `client.passive = true`) UND
+   * wartet auf einen definierten Zustand, statt auf das blosse Vorhandensein
+   * einer Sicht: Das Stillstellen ist eine Annahme, die unter Last einmal
+   * nicht getragen hat, und dann misst der Test etwas anderes, als er prueft
+   * (Cambio, 05.09.2026 - siehe `rundenanfang` in cambio.test.ts, das ueber
+   * `verlauf` auch genau die Sicht misst, auf die es gewartet hat).
    * Wer einen Bezugspunkt MITTEN in der Partie braucht, nimmt `waitForRuhe`.
    */
   async waitFor(
