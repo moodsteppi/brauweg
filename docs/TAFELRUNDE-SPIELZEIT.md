@@ -3,6 +3,21 @@
 **Stand: 05.09.2026.** Robins Vorgabe: Das Vorbild (Merge Tactics) dauert 5 bis
 6 Minuten, unser Ziel ist „durchschnittlich 8 Minuten maximum".
 
+> **DIE EMPFEHLUNG IST EINGEBAUT (05.09.2026).** `zeitraffer: 2` steht in
+> `STANDARD_REGLER` (`kampf.ts`), `startLeben: 14` in `DEFAULT_REGELN`
+> (`regeln.ts`) und in der Kopie `REGELSATZ` im Client
+> (`screens/Tafelrunde.tsx`), die den Regelsatz an den Tisch schickt.
+>
+> **Der heutige Stand steht in Abschnitt 6**, nicht in Abschnitt 5. Am selben
+> Tag kam auf einem zweiten Zweig die Ladenregel dazu (Neu-Würfeln kostenlos,
+> ein Kauf zieht den ganzen Laden neu); erst beim Zusammenführen waren alle
+> vier Zahlen gleichzeitig aktiv, und diesen Zustand hatte keine der beiden
+> Messungen gesehen. Gemessen mit allen vieren: **7:34 im Median bei 10
+> Runden**, einzelner Kampf 17,6 s, 4,6 % der Kämpfe von der Uhr entschieden.
+> Abschnitt 5 hält den Zwischenschritt fest (7:25 bei 11 Runden, 1,8 %), alles
+> davor ist die Messung, die zu der Entscheidung geführt hat, und beschreibt
+> den Stand **davor**.
+
 Diese Datei beantwortet zwei Fragen, und die Reihenfolge ist wichtig:
 **woraus** die Spielzeit besteht, und **welche Stellschraube wie viel bringt**.
 Ohne die erste Antwort dreht man an der falschen Schraube.
@@ -14,14 +29,18 @@ npm run build --workspace @brauweg/game-tafelrunde
 node packages/game-tafelrunde/werkzeug/spielzeit.mjs --partien 500
 ```
 
-Alle Zahlen unten stammen aus genau diesem Aufruf (Saatbasis `spielzeit-v1`,
-500 Partien je Zeile, zu viert, Besetzung `normal`). Jede Zeile rechnet
-dieselben 500 Saaten — ein Unterschied zwischen zwei Zeilen ist die Wirkung
+Alle Zahlen in den Abschnitten 1 bis 4 stammen aus genau diesem Aufruf
+(Saatbasis `spielzeit-v1`, 500 Partien je Zeile, zu viert, Besetzung
+`normal`) — **vor** dem Einbau der Empfehlung. Wer ihn heute startet,
+bekommt die Tabelle aus Abschnitt 6, weil „wie gebaut" inzwischen die
+Empfehlung samt Ladenregel ist. Jede Zeile rechnet dieselben 500 Saaten — ein Unterschied zwischen zwei Zeilen ist die Wirkung
 der Schraube und nicht die Wirkung anderer Würfel.
 
 ---
 
-## 1. Woraus die Spielzeit besteht
+## 1. Woraus die Spielzeit bestand
+
+Der Stand **vor** der Änderung — die Zerlegung, aus der die Empfehlung folgt:
 
 | Stück | Zeit je Partie | Anteil |
 | --- | --- | --- |
@@ -49,11 +68,12 @@ einem Viertel; wer den Kampf halbiert, spart mehr als ein Drittel der Partie.
   Durchschnitt. Über die 6 Handgriffe, die der fleißigste Sitz im Median macht
   (Mittel 5,9, Höchstwert 19), ergibt das rund 14 Sekunden je Runde.
 
-### Der Kampf dauert doppelt so lange, wie im Code steht
+### Der Kampf dauerte doppelt so lange, wie im Code stand
 
-Der wichtigste Nebenbefund. `HOECHSTDAUER_MS` in `kampf.ts` trug bis heute die
-Begründung: „Median 17 s, bei 45 s werden rund 2 bis 4 Prozent abgeschnitten."
-Auf Brettern aus **echten** Partien stimmt beides nicht:
+Der wichtigste Nebenbefund — und der Grund, warum die Wahl am Ende auf den
+Zeitraffer fiel. `HOECHSTDAUER_MS` in `kampf.ts` trug die Begründung: „Median
+17 s, bei 45 s werden rund 2 bis 4 Prozent abgeschnitten." Auf Brettern aus
+**echten** Partien stimmte beides nicht:
 
 | | zufällig besetzte Bretter | Bretter aus echten Partien |
 | --- | --- | --- |
@@ -66,12 +86,17 @@ Marken, die zusammenpassen. Ein Bot kauft aber das Beste, verschmilzt auf Stufe
 2 und 3 und sammelt Marken, deren Boni Leben und Rüstung dazulegen. Solche
 Bretter halten einander doppelt so lange aus.
 
-Damit entscheidet heute **jeder dritte Kampf** nicht am Brett, sondern in
-`entscheideNachZeit`. Das ist ein eigener Befund, unabhängig von der Spielzeit:
-Die Abbruchgrenze ist vom Rettungsseil zum Regelfall geworden. Seit heute misst
-`test/spielzeit.test.ts` den Anteil auf echten Brettern mit; die Probe in
-`kampf.test.ts` bleibt daneben stehen und sagt jetzt dazu, worüber sie
-**nicht** aussagt.
+Damit entschied **jeder dritte Kampf** nicht am Brett, sondern in
+`entscheideNachZeit`. Das war ein eigener Befund, unabhängig von der Spielzeit:
+Die Abbruchgrenze war vom Rettungsseil zum Regelfall geworden. `test/spielzeit.test.ts`
+misst den Anteil auf echten Brettern seitdem mit; die Probe in `kampf.test.ts`
+steht daneben und sagt dazu, worüber sie **nicht** aussagt.
+
+**Erledigt ist das mit dem Zeitraffer**, nicht mit einer neuen Grenze: erst
+1,8 % statt 27,7 % (Abschnitt 5), mit der Ladenregel dazu 4,6 % (Abschnitt 6).
+Die Begründung an `HOECHSTDAUER_MS` sagt
+seitdem ausdrücklich, dass ihre 17 Sekunden am Zeitraffer hängen — wer ihn auf
+1 zurückstellt, holt den alten Zustand mit zurück.
 
 ---
 
@@ -173,7 +198,7 @@ Partien je Zeile): 13:24 statt 13:31 für den gebauten Stand, **7:23** statt
 
 ---
 
-## 4. Empfehlung
+## 4. Empfehlung — von Robin angenommen
 
 **Zeitraffer x2 und Startleben 14.** Das ergibt 7:25 im Median bei 11 Runden,
 lässt jede Partie mit einem eindeutigen Sieger enden und hält jede Marke
@@ -215,21 +240,230 @@ den Katalog neu. Der bereits offene Punkt „die Schwellen 4 und 6 sind praktisc
 unerreichbar" wird durch die kürzere Partie außerdem **schlechter**: Bei 11
 statt 15 Runden kommt noch seltener jemand auf Level 6.
 
-### Was hier NICHT entschieden ist
+### Was hier nicht mitentschieden wurde
 
-Diese Aufgabe hat gemessen, nicht umgebaut. Im Code steht weiterhin der alte
-Stand: `startLeben: 20` in `regeln.ts`, `zeitraffer: 1` in `STANDARD_REGLER`.
-Der `Kampfregler` ist ausschließlich das Werkzeug, mit dem man die Tabellen
-oben rechnet — er ist bewusst **kein** Teil von `TafelrundeRegeln`, weil der
-Regelsatz als JSON von außen kommt und ein selbstgebauter Tisch sich sonst
-einen Zeitraffer von 10 einstellen könnte.
+Der **Kampfregler bleibt Werkzeug** und wird nicht Teil von `TafelrundeRegeln`.
+Geändert hat sich nur sein Standardwert. Der Regelsatz kommt als JSON von außen
+an den Tisch; stünde der Zeitraffer darin, könnte sich ein selbstgebauter Tisch
+eine 10 einstellen und säße vor einem Kampf, den niemand sehen kann.
 
-Wer die Empfehlung übernimmt, hat es kurz: `zeitraffer: 2` in
-`STANDARD_REGLER` (kampf.ts) und `startLeben: 14` in `DEFAULT_REGELN`
-(regeln.ts). Der Regler steckt bereits überall dort, wo die Konstanten früher
-standen; ihn auf einen anderen Standardwert zu setzen ist deshalb eine Zeile
-und kein Umbau. Danach beide Werkzeuge laufen lassen:
-`werkzeug/spielzeit.mjs` für die Zeit und `werkzeug/ausgewogenheit.mjs` für
-die Siegquoten. Letzteres nimmt dieselben Stellschrauben als Schalter
-(`--leben`, `--teiler`, `--zeitraffer`, `--takt`), damit man einen Vorschlag
-ansehen kann, bevor man ihn einbaut.
+---
+
+## 5. Was eingebaut wurde — und was danach herauskam
+
+> **Dieser Abschnitt beschreibt den Stand vom 05.09.2026 mittags, also VOR der
+> Ladenregel** (kostenloses Neu-Würfeln, ein Kauf zieht den ganzen Laden neu).
+> Beides ist am selben Tag entstanden, auf zwei getrennten Zweigen, und war
+> beim Zusammenführen zum ersten Mal gleichzeitig aktiv. Die Zahlen für den
+> heutigen Stand stehen in **Abschnitt 6**; die hier sind der Zwischenschritt
+> und bleiben stehen, weil sie zeigen, was der Zeitraffer allein bewirkt hat.
+
+Am 05.09.2026 übernommen, drei Zeilen:
+
+| Datei | Zeile | vorher | nachher |
+| --- | --- | --- | --- |
+| `packages/game-tafelrunde/src/kampf.ts` | `STANDARD_REGLER.zeitraffer` | 1 | **2** |
+| `packages/game-tafelrunde/src/regeln.ts` | `DEFAULT_REGELN.startLeben` | 20 | **14** |
+| `packages/client/src/screens/Tafelrunde.tsx` | `REGELSATZ.startLeben` | 20 | **14** |
+
+Die dritte ist keine Kosmetik: `REGELSATZ` ist eine ausgeschriebene Kopie von
+`DEFAULT_REGELN` und wird als `config` an `createTable` **mitgeschickt**. Wäre
+sie auf 20 stehen geblieben, hätte jeder über den Bildschirm eröffnete Tisch
+weiter mit 20 Leben gespielt, und die Änderung wäre nur in den Messwerkzeugen
+angekommen. Die Doppelung selbst steht als eigener Punkt auf dem Board.
+
+### Spielzeit, gemessen
+
+`node packages/game-tafelrunde/werkzeug/spielzeit.mjs --partien 500`, dieselbe
+Saatbasis `spielzeit-v1` wie oben:
+
+| | vorher | nachher | Vorhersage aus Abschnitt 3 |
+| --- | --- | --- | --- |
+| Spielzeit im Median | 13:31 | **7:25** | 7:25 |
+| Runden im Median | 15 | **11** | 11 |
+| einzelner Kampf im Median | 35,2 s | **17,3 s** | 17,3 s |
+| von der Uhr entschieden | 27,7 % | **1,8 %** | 1,8 % |
+| Markenspanne | ×0,74–1,09 | **×0,71–1,30** | ×0,71–1,30 |
+| Partien mit eindeutigem Sieger | 100 % | **100 %** | 100 % |
+
+Die Vorhersage traf auf die Sekunde — sie musste, denn die Zeile „Zeitraffer x2
++ Startleben 14" aus Abschnitt 3 rechnet dieselben 500 Saaten mit denselben
+Werten. Die Zeile ist damit keine Bestätigung, sondern eine Gegenprobe darauf,
+dass die Werte auch wirklich dort angekommen sind, wo die Partie sie liest.
+
+Die Zerlegung verschiebt sich mit:
+
+| Stück | vorher | nachher |
+| --- | --- | --- |
+| Vorbereitung (geschätzt) | 3:25 (25,2 %) | 2:44 (36,5 %) |
+| Kampf (gemessen) | 9:33 (70,3 %) | **4:18 (57,4 %)** |
+| Nachlauf (gemessen) | 0:37 (4,5 %) | 0:28 (6,2 %) |
+
+Der Kampf bleibt der größte Posten, aber knapper. **Die Aussage „an der
+Vorbereitung lohnt sich keine Arbeit" gilt damit weniger deutlich als vorher**:
+Ihr Anteil ist von einem Viertel auf gut ein Drittel gestiegen, weil der andere
+Posten kleiner wurde und nicht, weil sie länger geworden wäre. Ein harter
+Countdown von 10 Sekunden bringt jetzt 13 % statt 8 %. Gebaut ist er weiterhin
+nicht (siehe die Board-Karte zur fehlenden Vorbereitungsfrist).
+
+### Ausgewogenheit, gemessen
+
+`node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 1500
+--sitze 4`, Saatbasis `ausgewogenheit-v1`, gegen denselben Lauf mit
+`--leben 20 --zeitraffer 1`:
+
+| Marke | vorher | nachher |
+| --- | --- | --- |
+| Krieger | ×1,12 | **×1,30** |
+| Wächter | ×1,07 | ×1,17 |
+| Naturwesen | ×1,09 | ×0,94 |
+| Meuchler | ×0,78 | ×0,81 |
+| Elementar | ×0,78 | ×0,78 |
+| Drache | ×1,16 (111 Antritte) | zu dünn (59) |
+| Untot | zu dünn (17) | zu dünn (7) |
+
+**Die Spanne bleibt mit ×0,78 bis ×1,30 innerhalb der Schranke ×0,5 bis ×2 —
+deshalb wurde am Katalog nichts geändert.** Der Krieger zieht wie vorhergesagt
+an, und aus dem vorhergesagten Grund: Wo vorher jeder dritte Kampf an der Uhr
+entschieden wurde, gewinnt jetzt das Brett, das sonst auf Zeit gespielt hätte.
+Die Vorhersage aus Abschnitt 4 lautete ×1,34 für den Krieger, gemessen sind es
+×1,30; sie stammte aus einem Lauf mit anderer Grundlage (vor dem kostenlosen
+Neu-Würfeln) und liegt entsprechend leicht daneben.
+
+Zwei Nebenbefunde aus demselben Lauf, beide **nicht** durch diese Änderung
+verursacht, aber durch sie sichtbar geworden:
+
+* **Drache und Untot sind noch dünner geworden** (204 bzw. 32 Antritte über
+  5.000 Partien, vorher 394 und 65). Beide haben dafür schon eine Karte auf dem
+  Board; die kürzere Partie macht es schlimmer, nicht anders.
+* **Der Moosheiler steht jetzt über der Mindestzahl und liegt bei ×0,15**
+  (541 Antritte über 5.000 Partien, vorher 237 und ×0,25). Er wird häufiger
+  aufgestellt, weil in elf Runden seltener ein ausgebautes Brett steht — und
+  gewinnt praktisch nie. Die Ursache ist bekannt und unverändert: Heilen gibt
+  es in `kampf.ts` noch gar nicht.
+
+### Was die Änderung an den Proben geändert hat
+
+Fünf Proben in `game-tafelrunde` hingen am alten Standard und mussten
+nachgezogen werden. Vier davon rechnen seitdem gegen einen ausdrücklich
+ungerafften Regler (`UNGERAFFT` in `kampf.test.ts` und `spielzeit.test.ts`) —
+sie prüfen die **Wirkung** des Reglers, und die ist gegen den Standard nicht
+mehr messbar, wenn der Standard selbst x2 ist.
+
+Die fünfte ist ein Befund und keine Anpassung: **Die Gangart `hart` schlägt
+`normal` nicht mehr.** Über 400 Partien zu viert steht es 77 : 107,7 gegen den
+harten Sitz (vorher 119 : 94 für ihn); gegen `sanft` kommt `hart` auf 223 : 59,
+`normal` dagegen auf 267 : 44. Der aggressive Ausbau von `hart` braucht Runden,
+die es nicht mehr gibt — derselbe Effekt, der beim Wechsel von 100 auf 20 Leben
+schon das Duell zu zweit gekippt hat. Die Probe in `bot.test.ts` behauptet
+deshalb keine Reihenfolge mehr, sondern hält nur noch fest, dass der Abstand
+kein Absturz ist. **Repariert ist das nicht**, es steht als eigene Karte auf dem
+Board: Eine neue Gangart muss gemessen und entschieden werden.
+
+---
+
+## 6. Nachgemessen, als die Ladenregel dazukam
+
+Der Zweig mit Zeitraffer und 14 Startleben wartete auf die Freigabe, während
+auf `staging` eine zweite Änderung landete: **Neu-Würfeln kostet nichts mehr,
+und ein Kauf zieht den ganzen Laden neu** (`neuwuerfelnKosten` auf 0,
+`fuelleLaden` in `partie.ts`). Beide Seiten waren gemessen, aber jede nur für
+sich: der Zeitraffer mit dem alten Laden, die Ladenregel ohne Zeitraffer und
+mit 20 Leben. Seit dem Zusammenführen sind alle vier Zahlen gleichzeitig aktiv,
+und **dieser Zustand ist von keiner der beiden Messungen abgedeckt**. Deshalb
+hier derselbe Lauf noch einmal.
+
+`node packages/game-tafelrunde/werkzeug/spielzeit.mjs --partien 500`, dieselbe
+Saatbasis `spielzeit-v1` wie in allen Abschnitten davor:
+
+| | vor allem (20 Leben, x1) | nur Zeitraffer + 14 Leben | **jetzt (alle vier)** |
+| --- | --- | --- | --- |
+| Spielzeit im Median | 13:31 | 7:25 | **7:34** |
+| Runden im Median | 15 | 11 | **10** |
+| einzelner Kampf im Median | 35,2 s | 17,3 s | **17,6 s** |
+| von der Uhr entschieden | 27,7 % | 1,8 % | **4,6 %** |
+| Markenspanne | ×0,74–1,09 | ×0,71–1,30 | **×0,85–1,26** |
+| Partien mit eindeutigem Sieger | 100 % | 100 % | **100 %** |
+
+**Die Spielzeit bleibt bei rund siebeneinhalb Minuten und damit unter Robins
+Ziel von acht.** Neun Sekunden mehr als vorhergesagt, dafür eine Runde weniger:
+Die Ladenregel kürzt die Partie (ein Brett steht schneller, wenn der Laden
+nichts kostet und bei jedem Kauf frisch ist), verlängert aber den einzelnen
+Kampf, weil die Bretter besser besetzt sind. Beides zusammen hebt sich fast
+auf.
+
+**Die Zeile, die wirklich gewandert ist, ist die vierte.** Von der Uhr
+entschiedene Kämpfe steigen von 1,8 % auf 4,6 % — immer noch weit weg von den
+27,7 %, die den Zeitraffer überhaupt ausgelöst haben, aber die Richtung ist die
+falsche, und die Ursache ist verstanden: Zwei starke Bretter brauchen länger
+als zwei schwache. Wer die Bretter noch einmal stärker macht, sieht hier
+zuerst, was es kostet.
+
+Die Markenspanne ist **enger** geworden (×0,85–1,26 statt ×0,71–1,30), aber die
+Zeile darunter ist es nicht: Der Krieger steht in der großen Messung über 5.000
+Partien auf **×1,32** und auf einer zweiten Saatbasis auf ×1,37 — dichter an
+der Kante von ×1,4 als je zuvor. Die Spanne dieser Tabelle stammt aus 500
+Partien und ist die schwächere Stichprobe; maßgeblich ist die Tabelle in
+`docs/spiele/auto-battler-konzept.md`.
+
+### Die Zerlegung
+
+| Stück | vor allem | nur Zeitraffer | **jetzt** |
+| --- | --- | --- | --- |
+| Vorbereitung (geschätzt) | 3:25 (25,2 %) | 2:44 (36,5 %) | **2:43 (35,8 %)** |
+| Kampf (gemessen) | 9:33 (70,3 %) | 4:18 (57,4 %) | **4:27 (58,4 %)** |
+| Nachlauf (gemessen) | 0:37 (4,5 %) | 0:28 (6,2 %) | **0:27 (5,9 %)** |
+| zusammen | — | — | **7:37** |
+
+Die 7:37 dieser Tabelle und die 7:34 der Tabelle darüber sind derselbe Lauf:
+Die Zerlegung rechnet im **Mittel** je Partie, die Zeile oben ist der **Median**.
+
+Die Aussage aus Abschnitt 4 gilt unverändert: **An der Vorbereitung lohnt sich
+weiterhin keine Arbeit** — ein harter Countdown von 10 Sekunden bringt 12,5 %,
+ein feinerer `TAKT_MS` von 100 auf 25 ms 3,5 %, und die Vorbereitungsfrist
+müsste erst gebaut werden.
+
+### Jede Schraube einzeln, auf dem heutigen Stand
+
+Die Tabelle aus Abschnitt 2 noch einmal, damit ein späterer Eingriff nicht
+gegen alte Zahlen rechnet. 500 Partien je Zeile, zu viert, Besetzung `normal`,
+Saatbasis `spielzeit-v1`. „zu heute" ist der Abstand zur ersten Zeile.
+
+| Stellschraube | Wert | Spielzeit | zu heute | Runden | Kampf | von der Uhr |
+| --- | --- | --- | --- | --- | --- | --- |
+| **wie gebaut** | — | **7:34** | ±0 | **10** | **17,6 s** | **4,6 %** |
+| Startleben | 16 | 8:18 | +9,7 % | 12 | 17,8 s | 4,4 % |
+| Startleben | 12 | 6:34 | −13,2 % | 9 | 17,3 s | 4,3 % |
+| Startleben | 10 | 5:43 | −24,4 % | 8 | 16,6 s | 4,2 % |
+| Schadensteiler | 2 | 6:50 | −9,6 % | 9 | 17,6 s | 4,6 % |
+| Schadensteiler | 1 | 5:04 | −33,2 % | 7 | 16,2 s | 3,8 % |
+| Vorbereitung höchstens | 15 s | 7:14 | −4,5 % | 10 | 17,6 s | 4,6 % |
+| Vorbereitung höchstens | 10 s | 6:38 | −12,5 % | 10 | 17,6 s | 4,6 % |
+| Takt | 50 ms | 7:23 | −2,4 % | 10 | 16,9 s | 4,2 % |
+| Takt | 25 ms | 7:18 | −3,5 % | 10 | 16,3 s | 2,7 % |
+| Zeitraffer | x1,25 | 9:09 | +20,7 % | 11 | 26,9 s | 20,2 % |
+| Zeitraffer | x1,5 | 8:37 | +13,7 % | 11 | 23,5 s | 14,7 % |
+
+**Der Zeitraffer bleibt die stärkste Schraube**, und die Zeile x1,25 zeigt
+warum: Ohne ihn wäre die Partie nicht nur länger, sondern jeder fünfte Kampf
+ginge wieder an die Uhr. Die Startleben sind weiterhin der Feinregler daneben —
+zwei Leben weniger sind eine Runde weniger und rund eine Minute.
+
+### Was am Code nachgezogen wurde
+
+Nichts an den Regeln — die vier Zahlen bleiben, wie sie sind. Nachgezogen
+wurden nur Zahlen in Kommentaren, die den Zustand vor dem Zusammenführen
+beschrieben: die Begründung an `HOECHSTDAUER_MS` (aus 1,8 % sind 4,6 %
+geworden), die an `SCHADEN_STUFEN_TEILER` (aus 11 Runden sind 10 geworden) und
+die Erklärung an der Gangart-Probe in `bot.test.ts`.
+
+**Die Gangart `hart` schlägt `normal` wieder** — der Befund aus Abschnitt 5 ist
+auf diesem Stand nicht mehr nachstellbar. Über 400 Partien zu viert (`imFeld`
+in `bot.test.ts`) steht es **140 : 86,7** für den harten Sitz; nach dem
+Zeitraffer allein stand dieselbe Zahl bei 77 : 107,7. Der neue Laden nützt den
+ausbauenden Gangarten mehr als der sparsamen: `hart` gegen drei sanfte
+341 : 19,7 (vorher 223 : 59), `normal` gegen drei sanfte 359 : 13,7 (vorher
+267 : 44). Die Probe behauptet trotzdem weiter keine Reihenfolge, sondern hält
+nur fest, dass der Abstand kein Absturz ist — sie ist an einem einzigen Tag
+zweimal gekippt, und eine Probe, die bei jedem Balancing-Eingriff rot wird,
+sagt nichts über den Bot.

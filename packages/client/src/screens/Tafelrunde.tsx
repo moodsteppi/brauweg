@@ -213,12 +213,12 @@ type Aktion =
  * ACHTUNG, DIESE KOPIE WIRD MITGESCHICKT und nicht nur angezeigt: `config`
  * geht an `createTable`, der Server nimmt sie als Regelsatz des Tisches. Eine
  * veraltete Zahl hier ueberstimmt also DEFAULT_REGELN, ohne dass irgendwo ein
- * Fehler auffaellt. Genau das waere am 05.09.2026 bei der Umstellung auf 20
- * Leben passiert. Dass diese Liste ueberhaupt doppelt steht, ist ein eigener
- * Punkt auf dem Board.
+ * Fehler auffaellt. Genau das waere am 05.09.2026 zweimal passiert: erst bei
+ * der Umstellung auf 20 Leben, dann noch am selben Tag bei der auf 14. Dass
+ * diese Liste ueberhaupt doppelt steht, ist ein eigener Punkt auf dem Board.
  */
 const REGELSATZ = {
-  startLeben: 20,
+  startLeben: 14,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,

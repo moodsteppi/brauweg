@@ -65,11 +65,17 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * die das als Ausschlag laese, schluege bei jeder zweiten Katalogaenderung
  * grundlos an.
  *
- * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Drache (rund
- * 30 Antritte ueber 400 Partien zu viert) und Untot (rund 5) fallen immer
- * heraus. Beide haben nur zwei Traeger im Katalog. Sie stehen im
- * Konzeptdokument und gehoeren ins Werkzeug, wo eine Messung ueber 5.000
- * Partien ihnen genug Antritte gibt.
+ * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Ueber 400
+ * Partien zu viert fallen Drache (1 Antritt), Untot (3) und seit dem 05.09.2026
+ * auch Elementar (8) heraus. Uebrig bleiben genau vier Zeilen — Krieger 410,
+ * Naturwesen 110, Meuchler 852, Waechter 858 —, und die Mindestzahl unten
+ * verlangt vier. WER DEN KATALOG SO AENDERT, DASS NATURWESEN UNTER HUNDERT
+ * FAELLT, SIEHT HIER "nur 3 Marken mit genug Antritten" und nicht den
+ * eigentlichen Befund; die Zahl 110 ist die knappste der Datei.
+ *
+ * Die drei duennen Marken stehen im Konzeptdokument und gehoeren ins Werkzeug,
+ * wo eine Messung ueber 5.000 Partien mehr Antritte bringt — aber auch dort
+ * reicht es seit dem kuerzeren Lebensbalken fuer Drache und Untot nicht mehr.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -97,13 +103,14 @@ describe('Ausgewogenheit: Marken', () => {
    * sondern DIE Wahl: Wer eine Aufstellung findet, die doppelt so oft gewinnt
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
-   * In dieser Auswahl reicht der weiteste Ausschlag von x1,52 (Elementar) bis
-   * x0,64 (Meuchler) — nach beiden Seiten ist also Platz. ABER: Ueber die 500
-   * Partien des Werkzeugs steht die Marke Drache bei x1,86, und das ist
-   * knapp. Hier faellt sie mit rund 35 Antritten unter die Mindestzahl und
-   * wird gar nicht geprueft; sie steht als Befund im Konzeptdokument. Wer den
-   * Katalog anfasst, laesst deshalb das Werkzeug laufen und verlaesst sich
-   * nicht auf diese Probe allein.
+   * In dieser Auswahl reicht der weiteste Ausschlag von x1,31 (Krieger) bis
+   * x0,80 (Waechter) — nach beiden Seiten ist also Platz (Stand 05.09.2026).
+   *
+   * ABER: Die Zeilen, die wirklich ausschlagen koennen, sind genau die, die
+   * hier herausfallen — Drache, Untot und Elementar mit ein bis acht Antritten
+   * ueber 400 Partien. Wer den Katalog anfasst, laesst deshalb das Werkzeug
+   * ueber 5.000 Partien laufen und verlaesst sich nicht auf diese Probe
+   * allein; die Auswertung steht im Konzeptdokument.
    */
   it('haelt jede gezaehlte Marke zwischen der Haelfte und dem Doppelten des Schnitts', () => {
     const schnitt = schnittQuote(AUSWERTUNG.marken, MINDEST_ANTRITTE);

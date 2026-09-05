@@ -42,29 +42,43 @@ export interface TafelrundeRegeln {
    * BIS ZUM 05.09.2026 WAR ER MEHR ALS DAS: Mit 100 Startleben endeten zu
    * viert 18 % und zu acht 73 % aller Partien hier, ohne dass jemand gewonnen
    * hatte. Behoben wurde das nicht an dieser Zahl, sondern am Lebensvorrat
-   * (20 statt 100) und am Schaden je Niederlage (SCHADEN_STUFEN_TEILER in
-   * kampf.ts) — eine Runde dauert bis zu anderthalb Minuten, mehr Runden waeren
-   * die falsche Antwort gewesen. Gemessen ueber 5.000 Partien zu viert und je
-   * 500 zu sechst und zu acht endet seitdem KEINE einzige hier; die laengste
-   * lief 25 Runden. Dreissig sind damit wieder das, was sie sein sollen: ein
-   * Rettungsseil.
+   * (heute 14 statt 100) und am Schaden je Niederlage (SCHADEN_STUFEN_TEILER
+   * in kampf.ts) — mehr Runden waeren die falsche Antwort gewesen. Gemessen
+   * ueber 5.000 Partien zu viert und je 500 zu sechst und zu acht endet
+   * seitdem KEINE einzige hier; die laengste von allen lief 19 Runden (zu
+   * acht), zu viert waren es 16. Dreissig sind damit wieder das, was sie sein
+   * sollen: ein Rettungsseil.
    */
   readonly rundenGrenze: number;
 }
 
 /**
- * 20 Leben, 2 Gold zum Start.
+ * 14 Leben, 2 Gold zum Start.
  *
- * ZWANZIG UND NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja
- * ein kurzes Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit
- * 100 Leben und dem damaligen Schaden brauchte ein Ausscheiden rund zwanzig
- * verlorene Kaempfe, und die Partie lief in die Rundengrenze statt zu Ende.
- * Zwanzig Leben sind ausserdem eine Zahl, die man am Handy noch als Balken
+ * NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja ein kurzes
+ * Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit 100 Leben
+ * und dem damaligen Schaden brauchte ein Ausscheiden rund zwanzig verlorene
+ * Kaempfe, und die Partie lief in die Rundengrenze statt zu Ende. Eine
+ * zweistellige Zahl ist ausserdem eine, die man am Handy noch als Balken
  * lesen kann — bei 100 zaehlt niemand mit.
  *
- * Der Schaden je Niederlage wurde MIT geaendert und gehoert dazu: 20 Leben bei
- * altem Schaden waeren nach acht Runden vorbei gewesen (gemessen). Wer hier
- * dreht, dreht auch an SCHADEN_STUFEN_TEILER in kampf.ts und misst danach mit
+ * VIERZEHN UND NICHT ZWANZIG (05.09.2026, nach der Messung in
+ * docs/TAFELRUNDE-SPIELZEIT.md). Mit 20 dauerte eine Partie 13:31 im Median
+ * bei 15 Runden, das Ziel sind acht Minuten. Die Startleben kaufen Zeit ueber
+ * die Rundenzahl, und 14 ist die Stelle, an der die Partie kurz wird, ohne
+ * ausgeduennt zu werden: bei 10 Leben (8 Runden) steht vor dem Ende kein
+ * ausgebautes Brett mehr. Die zweite Haelfte der Aenderung ist
+ * `zeitraffer: 2` in STANDARD_REGLER (kampf.ts) — die beiden Zahlen wurden
+ * zusammen gemessen und gehoeren zusammen.
+ *
+ * HEUTE SIND ES 10 RUNDEN und nicht mehr die damals gemessenen 11: Seit ein
+ * Kauf den ganzen Laden neu zieht (partie.ts, `fuelleLaden`), steht ein Brett
+ * eine Runde frueher. Damit liegt die Partie an der unteren Kante dessen, was
+ * ein ausgebautes Brett braucht — wer noch einmal kuerzt, streicht es.
+ *
+ * Der Schaden je Niederlage gehoert mit dazu: 20 Leben bei altem Schaden
+ * waeren nach acht Runden vorbei gewesen (gemessen). Wer hier dreht, dreht
+ * auch an SCHADEN_STUFEN_TEILER in kampf.ts und misst danach mit
  * werkzeug/ausgewogenheit.mjs.
  *
  * Zwei Gold und nicht fuenf: In der ersten Vorbereitung soll man EINE Einheit
@@ -80,7 +94,7 @@ export interface TafelrundeRegeln {
  * ist die einzige Bremse, die es hier noch gibt.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
-  startLeben: 20,
+  startLeben: 14,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,
@@ -102,9 +116,9 @@ export const DEFAULT_REGELN: TafelrundeRegeln = {
  * (SITZE in Tafelrunde.tsx), die Lobby steht auf vier, und gemessen wird zu
  * viert. Die uebrigen Groessen bleiben trotzdem in der Liste: Sie sind seit dem
  * kuerzeren Lebensbalken nachweislich in Ordnung — je 500 Partien zu sechst
- * (Median 16 Runden) und zu acht (18), keine einzige an der Rundengrenze. Eine
- * Zahl aus dieser Liste zu streichen, die funktioniert, verbietet nur den
- * selbstgebauten Tisch und gewinnt nichts.
+ * (Median 12 Runden, 9:22) und zu acht (13,5 Runden, 10:39), keine einzige an
+ * der Rundengrenze. Eine Zahl aus dieser Liste zu streichen, die funktioniert,
+ * verbietet nur den selbstgebauten Tisch und gewinnt nichts.
  */
 export const SEAT_COUNTS: readonly number[] = [2, 3, 4, 5, 6, 7, 8];
 
