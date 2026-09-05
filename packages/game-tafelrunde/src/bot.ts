@@ -111,17 +111,27 @@ interface Gangart {
  * Reserve, kein Fehlgriff. `sanft` sitzt auf seinem Gold, steigt spaet auf,
  * greift meist blind zu und verpasst Verschmelzungen.
  *
- * DASS DIESE REIHENFOLGE STIMMT, IST GEMESSEN und nicht geschaetzt — je 60
- * Partien zu zweit, mit eigenen Saaten und einmal mit vertauschten Sitzen:
+ * DASS DIESE REIHENFOLGE STIMMT, IST GEMESSEN und nicht geschaetzt — je 400
+ * Partien zu viert, ein Sitz mit der starken Gangart gegen drei mit der
+ * schwachen, gezaehlt werden eindeutige Siege (Stand 05.09.2026):
  *
- *     hart : sanft   54 : 6      (vertauscht 48 : 12)
- *     hart : normal  42 : 18
- *     normal : sanft 41 : 19
+ *     hart : sanft   241 : 53     (rechts der Schnitt der drei schwachen Sitze)
+ *     hart : normal  119 : 94
+ *     normal : sanft 274 : 42
+ *
+ * ZU VIERT UND NICHT MEHR ZU ZWEIT, und das ist selbst ein Befund: Solange die
+ * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
+ * 125:75. Seit dem kuerzeren Lebensbalken (20 Leben, 05.09.2026) dauert ein
+ * Duell 11 statt 21 Runden, und in dieser Zeit verdient sich der aggressive
+ * Ausbau nicht mehr: Ueber 200 Duelle steht es 96:104 fuer `normal`. Am Tisch
+ * zu viert — der Besetzung, auf die das Spiel eingestellt ist — bleibt der
+ * Abstand stehen. Wer die Gangarten fuer das Duell zurechtruecken will, misst
+ * bitte beide Besetzungen; die Zahlen fallen in Sekunden an.
  *
  * Der erste Anlauf hatte die Schrauben andersherum gesetzt — der harte Gegner
  * sparte am meisten und stieg am vorsichtigsten auf — und lag danach ueber 40
  * Partien mit 19:21 GLEICHAUF mit dem sanften. Wer hier etwas verstellt, misst
- * bitte nach; die Zahlen fallen in ein paar Sekunden an.
+ * bitte nach; die Probe dazu steht in test/bot.test.ts (imFeld).
  */
 const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
   sanft: {

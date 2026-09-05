@@ -21,8 +21,8 @@
  *
  * Gezaehlt werden EINHEITEN, nicht verschiedene Einheiten: Zwei Dorfwachen
  * sind zwei Krieger. Andere Spiele zaehlen nur Verschiedene; hier ginge das
- * nicht auf, weil der Katalog fuer Untot nur zwei und fuer Drache nur eine
- * Einheit kennt — die Schwellen 4 und 6 waeren dort unerreichbar, die Marke
+ * nicht auf, weil der Katalog fuer Untot und Drache nur je zwei
+ * Einheiten kennt — die Schwellen 4 und 6 waeren dort unerreichbar, die Marke
  * tot. Kopien zaehlen zu lassen hat ausserdem einen Preis, den der Spieler
  * abwaegen muss: Drei Kopien verschmelzen zu einer, und die zaehlt einfach.
  *
@@ -74,8 +74,8 @@ function bonus(teil: Partial<Wertebonus>): Wertebonus {
  *   Waechter   — Leben und etwas Ruestung: die Mauer.
  *   Naturwesen — Leben: der Wald waechst nach.
  *   Untot      — Angriff und Leben, beides massvoll: zaeh und unerbittlich.
- *   Drache     — Angriff und Tempo, kraeftig: selten und deshalb teuer erkauft
- *                (im Katalog traegt nur das Drachenkind die Marke, zwei davon
+ *   Drache     — Angriff und Tempo, massvoll: selten und deshalb teuer erkauft
+ *                (Traeger sind Drachenkind und Funkenlehrling; zwei Einheiten
  *                sind schon die erste Schwelle).
  *
  * Die Zahlen sind ein erster Wurf und zum Nachjustieren gedacht, wie die
@@ -140,10 +140,20 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'drache',
     name: 'Drache',
+    /*
+     * Am 05.09.2026 halbiert (vorher 25/10, 50/20 und 80/30).
+     *
+     * Drache war mit 34,1 % Siegquote der Ausreisser des Katalogs (x1,86 des
+     * Schnitts). Der Bonus allein erklaerte das nicht — mit Bonus null stand
+     * die Marke immer noch bei x1,37, weil sie bis dahin nur ueber zwei Kopien
+     * derselben Drei-Gold-Einheit zu haben war. Gegen den Rest half deshalb
+     * erst der zweite Traeger (Funkenlehrling, siehe katalog.ts). Die kleineren
+     * Zahlen hier bleiben trotzdem: Zusammen ergeben sie x1,15.
+     */
     stufen: [
-      { schwelle: 2, bonus: bonus({ angriffProzent: 25, tempoProzent: 10 }) },
-      { schwelle: 4, bonus: bonus({ angriffProzent: 50, tempoProzent: 20 }) },
-      { schwelle: 6, bonus: bonus({ angriffProzent: 80, tempoProzent: 30 }) },
+      { schwelle: 2, bonus: bonus({ angriffProzent: 10, tempoProzent: 5 }) },
+      { schwelle: 4, bonus: bonus({ angriffProzent: 25, tempoProzent: 10 }) },
+      { schwelle: 6, bonus: bonus({ angriffProzent: 45, tempoProzent: 20 }) },
     ],
   },
 ];

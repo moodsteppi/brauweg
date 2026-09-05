@@ -27,26 +27,31 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ACHT_SITZE, messe, schnittQuote, werteAus } from './messen.js';
+import { ACHT_SITZE, VIER_SITZE, messe, schnittQuote, werteAus } from './messen.js';
 import { KATALOG, MARKEN, SCHWELLEN } from '../src/index.js';
 
 /**
- * Achtzig Partien zu acht, rund vier Sekunden.
+ * Vierhundert Partien zu viert, rund anderthalb Sekunden.
  *
- * Weniger waeren schneller und wertlos: Bei vierzig Partien traegt die
- * schwaechste gezaehlte Marke noch rund 230 Antritte, ihr Standardfehler
- * liegt bei anderthalb Prozentpunkten — bei zwanzig Partien waere er dreimal
- * so gross wie der Abstand, den die Probe messen soll. Mehr waeren besser und
- * gehoeren ins Werkzeug, nicht in einen Testlauf, den jemand vor jedem Commit
- * abwartet.
+ * ZU VIERT, weil das seit dem 05.09.2026 der Normalfall ist (SEAT_COUNTS in
+ * regeln.ts) — eine Probe auf acht Sitzen wuerde eine Besetzung absichern, die
+ * am Bildschirm gar nicht zustande kommt.
+ *
+ * Vierhundert und nicht achtzig: Eine Partie zu viert dauert seit dem kuerzeren
+ * Lebensbalken 15 statt 27 Runden und kostet damit ein Vielfaches weniger. Bei
+ * vierhundert traegt die schwaechste gezaehlte Marke rund siebenhundert
+ * Antritte, ihr Standardfehler liegt unter zwei Prozentpunkten — bei achtzig
+ * waere er dreimal so gross wie der Abstand, den die Probe messen soll. Mehr
+ * waeren besser und gehoeren ins Werkzeug, nicht in einen Testlauf, den jemand
+ * vor jedem Commit abwartet.
  */
-const PARTIEN = 80;
+const PARTIEN = 400;
 
 /**
  * Eine eigene Saatbasis, nicht die des Werkzeugs.
  *
  * Sonst waere die Probe genau die Stichprobe, auf die der Katalog eingestellt
- * wurde — und ein Balancing, das nur bei diesen 80 Saaten aufgeht, faellt
+ * wurde — und ein Balancing, das nur bei diesen 400 Saaten aufgeht, faellt
  * dann nirgends mehr auf.
  */
 const SAAT_BASIS = 'ausgewogenheit-probe';
@@ -54,18 +59,17 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
 /**
  * Ab wie vielen Antritten eine Zeile ueberhaupt mitgerechnet wird.
  *
- * Hundert ist keine Zierde: Bei einer Siegquote um 15 % liegt der
- * Standardfehler dort noch bei 3,6 Prozentpunkten, also bei rund einem
- * Viertel des Werts. Darunter wird der Faktor zum Schnitt zur Zufallszahl —
- * die Marke Drache hat ueber 80 Partien rund 35 Antritte und schwankte in den
- * Messungen zwischen 22 % und 39 %. Eine Probe, die das als Ausschlag laese,
- * schluege bei jeder zweiten Katalogaenderung grundlos an.
+ * Hundert ist keine Zierde: Bei einer Siegquote um 30 % liegt der
+ * Standardfehler dort noch bei 4,6 Prozentpunkten, also bei rund einem Sechstel
+ * des Werts. Darunter wird der Faktor zum Schnitt zur Zufallszahl — eine Probe,
+ * die das als Ausschlag laese, schluege bei jeder zweiten Katalogaenderung
+ * grundlos an.
  *
- * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Drache und
- * Untot fallen bei dieser Partienzahl immer heraus. Beide sind Befunde des
- * Werkzeugs und stehen im Konzeptdokument — Drache mit 34 % Siegquote ueber
- * 500 Partien ist der eigentliche Ausreisser des Katalogs, und ihn hier zu
- * pruefen ginge nur mit einem zehnmal so langen Testlauf.
+ * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Drache (rund
+ * 30 Antritte ueber 400 Partien zu viert) und Untot (rund 5) fallen immer
+ * heraus. Beide haben nur zwei Traeger im Katalog. Sie stehen im
+ * Konzeptdokument und gehoeren ins Werkzeug, wo eine Messung ueber 5.000
+ * Partien ihnen genug Antritte gibt.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -77,7 +81,7 @@ const MINDEST_ANTRITTE = 100;
  * Messstand: `messe` haelt keinen Zustand und haengt allein an der Saat.
  */
 const AUSWERTUNG = werteAus(
-  messe({ partien: PARTIEN, sitze: ACHT_SITZE, besetzung: 'normal', saatBasis: SAAT_BASIS }),
+  messe({ partien: PARTIEN, sitze: VIER_SITZE, besetzung: 'normal', saatBasis: SAAT_BASIS }),
 );
 
 // ---------------------------------------------------------------------------
@@ -151,17 +155,23 @@ describe('Ausgewogenheit: Marken', () => {
 
 describe('Ausgewogenheit: Schwellen', () => {
   /**
-   * Jede der drei Schwellen wird wenigstens erreicht.
+   * Die Schwellen 2 und 4 werden wenigstens erreicht.
    *
-   * Das ist die schwaechste denkbare Aussage und trotzdem eine noetige: Ueber
-   * 500 Partien stand die Schwelle 6 in 187 von 99.391 Antritten, also in
-   * zwei von tausend. Sie ist damit heute schon fast eine Tabellenzeile ohne
-   * Spiel (siehe Konzeptdokument), und wer an den Feldplaetzen oder am
-   * Katalog dreht, kann sie ohne Absicht ganz abschalten. Auf einen ANTEIL
-   * laesst sich das nicht pruefen — dafuer ist das Ereignis zu selten und die
-   * Auswahl hier zu klein.
+   * Das ist die schwaechste denkbare Aussage und trotzdem eine noetige: Wer an
+   * den Feldplaetzen oder am Katalog dreht, kann eine Schwelle ohne Absicht
+   * ganz abschalten. Auf einen ANTEIL laesst sich das nicht pruefen — dafuer
+   * sind die hoeheren Schwellen zu selten und die Auswahl hier zu klein.
+   *
+   * DIE SCHWELLE 6 IST HIER AUSGENOMMEN, und das ist ein Befund und kein
+   * Versehen: Ueber 5.000 Partien zu viert stand sie in 7 von 261.233
+   * Antritten. In vierhundert Partien kommt sie also im Mittel nicht ein
+   * einziges Mal vor, und eine Probe darauf waere ein Muenzwurf. Sechs Traeger
+   * brauchen mindestens Level 6, und seit die Partie zu viert nach 15 statt 27
+   * Runden endet, kommt dort kaum noch jemand hin. Das steht als offener Punkt
+   * auf dem Board ("die Schwellen 4 und 6 sind praktisch unerreichbar") und
+   * wird nicht dadurch besser, dass man es hier gruen faerbt.
    */
-  for (const schwelle of SCHWELLEN) {
+  for (const schwelle of SCHWELLEN.filter((s) => s < 6)) {
     it(`erreicht die Schwelle ${schwelle} wenigstens einmal`, () => {
       assert.ok(
         AUSWERTUNG.schwellenGesamt[schwelle] > 0,
@@ -228,6 +238,27 @@ describe('Ausgewogenheit: Laenge der Partien', () => {
     assert.ok(
       AUSWERTUNG.rundenMin >= 5,
       `die kuerzeste Partie dauerte nur ${AUSWERTUNG.rundenMin} Runden`,
+    );
+  });
+
+  /**
+   * Eine Partie spielt sich aus, statt an der Rundengrenze abgeschnitten zu
+   * werden.
+   *
+   * Das ist die Zusage aus Robins Vorgabe vom 05.09.2026 ("kurzes
+   * Handyspiel"): Wer bis zum Schluss spielt, soll einen Sieger sehen und kein
+   * "Zeit abgelaufen". Vor der Umstellung endeten zu viert 18 % und zu acht
+   * 73 % der Partien an der Grenze; heute sind es zu viert 0 von 5.000.
+   *
+   * Jede zehnte ist die abgenommene Obergrenze und nicht die Messung — sie
+   * laesst Luft fuer eine Katalogaenderung, schlaegt aber an, sobald die Grenze
+   * wieder vom Rettungsseil zum Regelfall wird.
+   */
+  it('spielt sich aus, statt an der Rundengrenze zu enden', () => {
+    const anteil = AUSWERTUNG.anDerGrenze / AUSWERTUNG.partien;
+    assert.ok(
+      anteil < 0.1,
+      `${AUSWERTUNG.anDerGrenze} von ${AUSWERTUNG.partien} Partien endeten an der Rundengrenze`,
     );
   });
 });

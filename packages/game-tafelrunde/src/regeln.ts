@@ -33,20 +33,33 @@ export interface TafelrundeRegeln {
    * dem niemand mehr Schaden nimmt, bis zum Verfall weiter — dieselbe
    * Ueberlegung wie LEERZUEGE_MAX bei Filler.
    *
-   * ZUR ZEIT IST ER MEHR ALS DAS, und das ist ein bekannter Mangel: Gemessen
-   * ueber 20 Bot-Partien endet zu zweit keine an der Grenze, zu viert die
-   * Haelfte, zu acht jede. Mit 100 Startleben und rund 5 Punkten Schaden je
-   * Niederlage braucht ein Ausscheiden zwanzig verlorene Kaempfe, und so viele
-   * gibt es in dreissig Runden nicht. Die Zahl hier hochzusetzen waere die
-   * falsche Antwort — eine Runde dauert schon jetzt bis zu anderthalb Minuten;
-   * richtig ist mehr Schaden je Niederlage. Das gehoert zum Balancing und
-   * steht als eigener Punkt auf dem Board.
+   * BIS ZUM 05.09.2026 WAR ER MEHR ALS DAS: Mit 100 Startleben endeten zu
+   * viert 18 % und zu acht 73 % aller Partien hier, ohne dass jemand gewonnen
+   * hatte. Behoben wurde das nicht an dieser Zahl, sondern am Lebensvorrat
+   * (20 statt 100) und am Schaden je Niederlage (SCHADEN_STUFEN_TEILER in
+   * kampf.ts) — eine Runde dauert bis zu anderthalb Minuten, mehr Runden waeren
+   * die falsche Antwort gewesen. Gemessen ueber 5.000 Partien zu viert und je
+   * 500 zu sechst und zu acht endet seitdem KEINE einzige hier; die laengste
+   * lief 25 Runden. Dreissig sind damit wieder das, was sie sein sollen: ein
+   * Rettungsseil.
    */
   readonly rundenGrenze: number;
 }
 
 /**
- * 100 Leben, 2 Gold zum Start.
+ * 20 Leben, 2 Gold zum Start.
+ *
+ * ZWANZIG UND NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja
+ * ein kurzes Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit
+ * 100 Leben und dem damaligen Schaden brauchte ein Ausscheiden rund zwanzig
+ * verlorene Kaempfe, und die Partie lief in die Rundengrenze statt zu Ende.
+ * Zwanzig Leben sind ausserdem eine Zahl, die man am Handy noch als Balken
+ * lesen kann — bei 100 zaehlt niemand mit.
+ *
+ * Der Schaden je Niederlage wurde MIT geaendert und gehoert dazu: 20 Leben bei
+ * altem Schaden waeren nach acht Runden vorbei gewesen (gemessen). Wer hier
+ * dreht, dreht auch an SCHADEN_STUFEN_TEILER in kampf.ts und misst danach mit
+ * werkzeug/ausgewogenheit.mjs.
  *
  * Zwei Gold und nicht fuenf: In der ersten Vorbereitung soll man EINE Einheit
  * kaufen und danach leer sein. Wer mit fuenf anfinge, kaufte den halben Laden
@@ -54,7 +67,7 @@ export interface TafelrundeRegeln {
  * Entscheidung getroffen hat.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
-  startLeben: 100,
+  startLeben: 20,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,
@@ -70,6 +83,15 @@ export const DEFAULT_REGELN: TafelrundeRegeln = {
  * Nach unten sind zwei moeglich, weil jeder Sitz seinen EIGENEN Laden, seine
  * eigene Bank und sein eigenes Brett hat — es gibt nichts, was erst ab vier
  * Spielern funktioniert.
+ *
+ * DER NORMALFALL SIND VIER (Robin, 05.09.2026: "stell auf 4 spieler um das
+ * reicht voellig"). Der Bildschirm sucht ausschliesslich Tische zu viert
+ * (SITZE in Tafelrunde.tsx), die Lobby steht auf vier, und gemessen wird zu
+ * viert. Die uebrigen Groessen bleiben trotzdem in der Liste: Sie sind seit dem
+ * kuerzeren Lebensbalken nachweislich in Ordnung — je 500 Partien zu sechst
+ * (Median 16 Runden) und zu acht (18), keine einzige an der Rundengrenze. Eine
+ * Zahl aus dieser Liste zu streichen, die funktioniert, verbietet nur den
+ * selbstgebauten Tisch und gewinnt nichts.
  */
 export const SEAT_COUNTS: readonly number[] = [2, 3, 4, 5, 6, 7, 8];
 
