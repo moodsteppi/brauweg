@@ -100,6 +100,24 @@ export interface Kampfpaarung {
   readonly bericht: Kampfbericht;
 }
 
+/**
+ * Ein Kampf der Runde als blosses Ergebnis, ohne Protokoll (sicht.ts).
+ *
+ * Daraus entstehen die Ergebniszeilen unter der Arena. Sie kommen NICHT aus
+ * `kaempfe`: Dort steht fuer einen Spieler nur sein eigener Kampf — das
+ * Protokoll der sieben fremden mitzuschicken waere ein Vielfaches der
+ * Datenmenge fuer etwas, das niemand abspielt.
+ */
+export interface Paarungsergebnis {
+  readonly a: number;
+  readonly b: number;
+  readonly geist: boolean;
+  /** Arenaseite des Siegers, null bei Unentschieden. */
+  readonly sieger: Seite | null;
+  readonly schaden: number;
+  readonly dauerMs: number;
+}
+
 /** Was die Anzeige von einer Einheit des Katalogs wissen muss. */
 export interface Einheitenbild {
   readonly id: string;
@@ -177,8 +195,11 @@ export function Figurbild({
  *
  * Fuer einen Spieler sein eigener — derselbe Massstab wie `kampfVon` im
  * Modul: Ich bin `a`, oder ich bin `b` und kein Abbild (ein Geist kaempft
- * anderswo selbst). Ein Zuschauer bekommt alle Kaempfe und sieht den ersten;
- * die uebrigen stehen als Ergebniszeile darunter.
+ * anderswo selbst). Ein Zuschauer bekommt alle Kaempfe und sieht den ersten.
+ *
+ * Die UEBRIGEN Kaempfe der Runde stehen als Ergebniszeile darunter, und die
+ * kommen nicht von hier, sondern aus `paarungen` — sonst haette sie nur ein
+ * Zuschauer (siehe `Paarungsergebnis`).
  */
 export function abzuspielen(
   kaempfe: readonly Kampfpaarung[],
@@ -188,6 +209,53 @@ export function abzuspielen(
     return kaempfe.find((k) => k.a === ich || (k.b === ich && !k.geist)) ?? null;
   }
   return kaempfe[0] ?? null;
+}
+
+/**
+ * Die uebrigen Kaempfe der Runde: alle Paarungen ausser der abgespielten.
+ *
+ * Verglichen wird ueber die beiden Sitze und nicht ueber die Objektgleichheit,
+ * denn Paarung und Ergebnis sind zwei verschiedene Objekte aus zwei Feldern
+ * der Sicht. Je Runde tritt ein Sitz genau einmal an (setzeAn in partie.ts),
+ * also ist das Paar eindeutig.
+ */
+export function nebenkaempfe(
+  paarungen: readonly Paarungsergebnis[],
+  abgespielt: Kampfpaarung | null,
+): readonly Paarungsergebnis[] {
+  if (!abgespielt) return paarungen;
+  return paarungen.filter((p) => p.a !== abgespielt.a || p.b !== abgespielt.b);
+}
+
+/**
+ * Die Zeile zu einem fremden Kampf: wer gegen wen, und wie es ausging.
+ *
+ * `zeitMs` ist der Stand der eigenen Uhr. Solange der fremde Kampf danach noch
+ * liefe, steht dort „läuft…" statt des Ausgangs — alle Kaempfe der Runde
+ * beginnen gleichzeitig, und das Ergebnis steht zwar schon in der Sicht, darf
+ * aber nicht vor seiner Zeit verraten werden. Ohne diese Bremse saehe man in
+ * der ersten Sekunde, wie die ganze Runde ausgeht.
+ *
+ * Ein Abbild verliert nichts — sein Besitzer kaempft anderswo seinen eigenen
+ * Kampf (siehe `Kampfpaarung.geist` in partie.ts). Deshalb wird der Schaden in
+ * diesem Fall gar nicht erst genannt.
+ */
+export function ergebniszeile(
+  k: Paarungsergebnis,
+  nameVon: (sitz: number) => string,
+  zeitMs: number,
+): string {
+  const gegen = `${nameVon(k.a)} gegen ${k.geist ? `das Abbild von ${nameVon(k.b)}` : nameVon(k.b)}`;
+  if (k.dauerMs > zeitMs) return `${gegen} · läuft…`;
+  if (k.sieger === null) return `${gegen} · unentschieden`;
+  if (k.sieger === 0) {
+    // Verloren hat `b`. Ist das ein Abbild, kostet es niemanden etwas.
+    if (k.geist) return `${gegen} · ${nameVon(k.a)} gewinnt`;
+    return `${gegen} · ${nameVon(k.a)} gewinnt, ${nameVon(k.b)} verliert ${k.schaden} Leben`;
+  }
+  // Umgekehrt gilt das nicht: Wer gegen ein Abbild verliert, zahlt.
+  const sieger = k.geist ? 'das Abbild' : nameVon(k.b);
+  return `${gegen} · ${sieger} gewinnt, ${nameVon(k.a)} verliert ${k.schaden} Leben`;
 }
 
 /** Auf welcher Arenaseite ich stehe — null als Zuschauer. */
@@ -356,6 +424,7 @@ interface Anzeige {
 
 export function KampfAnzeige<E extends Einheitenbild>({
   kaempfe,
+  paarungen,
   ich,
   brettReihen,
   brettSpalten,
@@ -367,6 +436,12 @@ export function KampfAnzeige<E extends Einheitenbild>({
   verblasst,
 }: {
   kaempfe: readonly Kampfpaarung[];
+  /**
+   * Alle Kaempfe der Runde als Ergebnis — daraus entstehen die Zeilen unter
+   * der Arena. Der abgespielte Kampf steht mit drin und wird hier
+   * herausgenommen (`nebenkaempfe`).
+   */
+  paarungen: readonly Paarungsergebnis[];
   ich: number | null;
   /** Masse der eigenen Bretthaelfte aus der Sicht; die Arena hat doppelt so viele Reihen. */
   brettReihen: number;
@@ -388,7 +463,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
 }): React.JSX.Element | null {
   const kampf = abzuspielen(kaempfe, ich);
   const bericht = kampf?.bericht ?? null;
-  const andere = kaempfe.filter((k) => k !== kampf);
+  const andere = nebenkaempfe(paarungen, kampf);
 
   const [anzeige, setAnzeige] = useState<Anzeige | null>(() =>
     bericht ? { stand: anfangsstand(bericht), zeitMs: 0 } : null,
@@ -424,7 +499,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
       const zeitMs = Date.now() - start + versatz;
       const neu = spieleBis(stand, b, zeitMs);
       const sekunde = Math.floor(zeitMs / 1000);
-      const fertige = a.filter((k) => k.bericht.dauerMs <= zeitMs).length;
+      const fertige = a.filter((k) => k.dauerMs <= zeitMs).length;
       if (neu !== stand || sekunde !== letzteSekunde || fertige !== letzteFertige) {
         stand = neu;
         letzteSekunde = sekunde;
@@ -619,15 +694,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
       {andere.length > 0 && (
         <ul className={stil.andere} aria-label="Weitere Kämpfe">
           {andere.map((k) => (
-            <li key={`${k.a}:${k.b}`}>
-              {nameVon(k.a)} gegen {k.geist ? `das Abbild von ${nameVon(k.b)}` : nameVon(k.b)}
-              {' · '}
-              {k.bericht.dauerMs > anzeige.zeitMs
-                ? 'läuft…'
-                : k.bericht.sieger === null
-                  ? 'unentschieden'
-                  : `${nameVon(k.bericht.sieger === 0 ? k.a : k.b)} gewinnt`}
-            </li>
+            <li key={`${k.a}:${k.b}`}>{ergebniszeile(k, nameVon, anzeige.zeitMs)}</li>
           ))}
         </ul>
       )}

@@ -22,6 +22,7 @@
  * ist eine Faehigkeit und kein Leck.
  */
 
+import type { Seite } from './arena.js';
 import type { Einheit, EinheitId } from './katalog.js';
 import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
 import { type Synergie, type Synergiestand, SYNERGIEN, synergienVon } from './synergien.js';
@@ -113,6 +114,51 @@ export interface FremdeSicht {
   readonly synergien: readonly Synergiestand[];
 }
 
+/**
+ * Ein Kampf der laufenden Runde als blosses ERGEBNIS — ohne Ablaufprotokoll.
+ *
+ * Das ist die Auskunft "wer gegen wen, wer gewinnt" fuer alle uebrigen Tische
+ * der Runde. Sie geht an JEDEN, Spieler wie Zuschauer, und zwar aus demselben
+ * Grund, aus dem die Bretter oeffentlich sind (siehe Kopf dieser Datei): Wer
+ * wen schlaegt, sieht man eine Sekunde spaeter ohnehin an den Lebensbalken der
+ * Mitspielerleiste. Es zu verschweigen hiesse nur, dass der eigene Bildschirm
+ * die Runde schlechter erklaert als das Ergebnis, das er danach zeigt.
+ *
+ * OHNE PROTOKOLL, und das ist der ganze Witz dieser Liste: Ein Kampfbericht
+ * sind schnell ein paar hundert Ereignisse. Sie fuer sieben fremde Kaempfe
+ * mitzuschicken hiesse, jedem Spieler je Runde ein Vielfaches dessen zu
+ * senden, was er ansehen kann — er spielt genau einen Kampf ab. Ein Ergebnis
+ * dagegen sind sechs Zahlen.
+ *
+ * `dauerMs` steht dabei nicht zum Anzeigen drin, sondern zum Zurueckhalten:
+ * Alle Kaempfe der Runde laufen gleichzeitig, und die Anzeige darf ein
+ * Ergebnis erst nennen, wenn der fremde Kampf auch abgelaufen WAERE. Ohne die
+ * Dauer stuende der Ausgang aller Tische schon in der ersten Sekunde da.
+ */
+export interface Paarungsergebnis {
+  readonly a: number;
+  /** Beim Geist: der Sitz, dessen Brett als Abbild antritt. Sonst der Gegner. */
+  readonly b: number;
+  readonly geist: boolean;
+  /** Arenaseite des Siegers (0 = `a`, 1 = `b`), null bei Unentschieden. */
+  readonly sieger: Seite | null;
+  /** Leben, die der Verlierer abgibt. Beim Unentschieden 0. */
+  readonly schaden: number;
+  readonly dauerMs: number;
+}
+
+/** Aus einer Paarung wird ihr Ergebnis: alles ausser dem Protokoll. */
+function ergebnis(kampf: Kampfpaarung): Paarungsergebnis {
+  return {
+    a: kampf.a,
+    b: kampf.b,
+    geist: kampf.geist,
+    sieger: kampf.bericht.sieger,
+    schaden: kampf.bericht.sieger === null ? 0 : kampf.bericht.schaden,
+    dauerMs: kampf.bericht.dauerMs,
+  };
+}
+
 export interface TafelrundeSicht {
   /**
    * Der eigene Sitz, oder null fuer Zuschauer. Steht in der Sicht und nicht
@@ -168,6 +214,17 @@ export interface TafelrundeSicht {
    * ohne sie.
    */
   readonly kaempfe: readonly Kampfpaarung[];
+  /**
+   * ALLE Kaempfe der laufenden Runde als Ergebnis, ohne Protokoll — auch die,
+   * denen dieser Empfaenger nicht zusieht (siehe `Paarungsergebnis`).
+   *
+   * Der eigene Kampf steht mit drin. Ihn wegzulassen hiesse, die Liste je
+   * Empfaenger anders zu schneiden, obwohl sie fuer alle dieselbe ist; welchen
+   * Eintrag die Anzeige gerade abspielt, weiss sie ohnehin selbst.
+   *
+   * Ausserhalb der Kampfphase leer, wie `kaempfe`.
+   */
+  readonly paarungen: readonly Paarungsergebnis[];
   /**
    * Der Einheiten-Katalog — nur beim ersten Ausliefern (`seit === 0`).
    *
@@ -236,6 +293,7 @@ function grundsicht(
     vorrat: partie.vorrat,
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
     kaempfe: ich === null ? partie.kaempfe : [kampfVon(partie, ich)].filter((k) => k !== null),
+    paarungen: partie.kaempfe.map(ergebnis),
     ...(seit === 0 ? { katalog: KATALOG, synergieTabelle: SYNERGIEN } : {}),
   };
 }

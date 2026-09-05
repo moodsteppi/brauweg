@@ -311,5 +311,48 @@ describe('Kaempfe in der Sicht', () => {
     const p = neu();
     assert.deepEqual(sichtFuer(p, 0).kaempfe, []);
     assert.deepEqual(zuschauerSicht(p).kaempfe, []);
+    assert.deepEqual(sichtFuer(p, 0).paarungen, []);
+    assert.deepEqual(zuschauerSicht(p).paarungen, []);
+  });
+
+  /*
+   * Der Kampf ist einer, das ERGEBNIS der Runde gehoert allen: Wer wen
+   * schlaegt, sieht man eine Sekunde spaeter ohnehin an den Lebensbalken.
+   */
+  it('gibt jedem Sitz alle Paarungen der Runde als Ergebnis', () => {
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    const erwartet = zuschauerSicht(p).paarungen;
+    assert.equal(erwartet.length, 2);
+    for (const sitz of [0, 1, 2, 3]) {
+      assert.deepEqual(sichtFuer(p, sitz).paarungen, erwartet, `Sitz ${sitz}`);
+    }
+  });
+
+  it('liefert die Paarungen ohne Protokoll — genau das ist ihr Zweck', () => {
+    // Ein Bericht sind ein paar hundert Ereignisse; sieben fremde davon
+    // mitzuschicken waere ein Vielfaches dessen, was jemand ansehen kann.
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    const roh = JSON.stringify(sichtFuer(p, 0).paarungen);
+    assert.ok(!roh.includes('ereignisse'));
+    assert.ok(!roh.includes('bericht'));
+  });
+
+  it('sagt an jeder Paarung, wer gewinnt, was es kostet und wie lange es dauert', () => {
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    for (const paarung of sichtFuer(p, 0).paarungen) {
+      const kampf = p.kaempfe.find((k) => k.a === paarung.a && k.b === paarung.b)!;
+      assert.equal(paarung.geist, kampf.geist);
+      assert.equal(paarung.sieger, kampf.bericht.sieger);
+      assert.equal(paarung.dauerMs, kampf.bericht.dauerMs);
+      // Beim Unentschieden nimmt niemand Schaden (ausgaengeAus in partie.ts).
+      assert.equal(paarung.schaden, kampf.bericht.sieger === null ? 0 : kampf.bericht.schaden);
+    }
+  });
+
+  it('enthaelt auch den eigenen Kampf — die Liste ist fuer alle dieselbe', () => {
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    const eigener = kampfVon(p, 0)!;
+    const sicht = sichtFuer(p, 0);
+    assert.ok(sicht.paarungen.some((x) => x.a === eigener.a && x.b === eigener.b));
   });
 });
