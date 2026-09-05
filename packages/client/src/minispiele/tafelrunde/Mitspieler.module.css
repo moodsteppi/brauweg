@@ -1,0 +1,208 @@
+/*
+ * Die Mitspielerleiste von Tafelrunde (Mitspieler.tsx).
+ *
+ * Eigenes Modul wie Synergien.module.css und KampfAnzeige.module.css, aus
+ * demselben Grund: ein abgeschlossenes Bauteil, dessen Klassennamen nirgends
+ * sonst greifen sollen. Farben aus den Variablen der Plattform (--panel,
+ * --line, --muted, --text, --gold, --accent, --danger), damit die Leiste wie
+ * ein Teil der Rüstkammer aussieht.
+ *
+ * WO SIE STEHT, entscheidet allein diese Datei:
+ *
+ *   Am Handy liegt sie IM FLUSS über dem Brett und lässt sich zuklappen. Ein
+ *   hoher Kasten mit acht Zeilen würde den Laden sonst unter den Rand drücken,
+ *   und der ist die einzige Stelle, an der man kaufen kann.
+ *
+ *   Ab 64rem hängt sie FEST an der RECHTEN Kante neben dem Brett — links hängt
+ *   schon die Synergieleiste. Fest und nicht im Fluss, weil der Tisch
+ *   (.tr-tisch in styles.css) eine zentrierte Spalte fester Breite ist: Ein
+ *   Element im Fluss risse entweder die Spalte auf oder schöbe das Brett aus
+ *   der Mitte. Die 480 px sind dieselbe halbe Spaltenbreite plus Luft wie bei
+ *   der Synergieleiste; darunter bliebe daneben kein Platz.
+ */
+
+/* -- Die Leiste ----------------------------------------------------------- */
+
+.leiste {
+  width: min(94vw, 460px);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: 800 12px/1 system-ui;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kopfzahl {
+  margin-left: auto;
+  color: var(--muted);
+  font: 700 11px/1 system-ui;
+}
+
+.pfeil {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.16s ease;
+}
+.leiste[data-offen] .pfeil { transform: rotate(45deg); }
+
+.liste {
+  display: none;
+  margin: 0;
+  padding: 0 8px 8px;
+  list-style: none;
+}
+.leiste[data-offen] .liste { display: block; }
+
+.reihe { margin: 0 0 4px; }
+.reihe:last-child { margin-bottom: 0; }
+
+/* -- Eine Zeile ----------------------------------------------------------- */
+
+.eintrag {
+  display: block;
+  width: 100%;
+  padding: 6px 8px 7px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.16);
+  color: var(--text);
+  font: 700 11px/1.2 system-ui;
+  text-align: left;
+}
+button.eintrag { cursor: pointer; }
+
+/* Der eigene Sitz tritt hervor, ohne zu schreien: eine ruhige Kante, keine
+   Farbfläche — er steht acht Zeilen lang neben den anderen. */
+.eintrag[data-ich] { border-color: var(--accent); background: rgba(74, 156, 120, 0.12); }
+
+/* Der Gegner dieser Runde ist die auffälligste Zeile der Leiste. Gold, weil
+   das die Hervorhebungsfarbe der Plattform ist (DESIGN.md) — und zusätzlich
+   die Marke „Gegner" im Text, denn Farbe allein trägt keine Auskunft. */
+.eintrag[data-gegner] {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+/* Wessen Brett gerade oben liegt. Ein feiner Ring, damit er nicht mit der
+   Gegnermarkierung verwechselt wird. */
+.eintrag[data-an] { box-shadow: inset 0 0 0 1px var(--text); }
+.eintrag[data-an][data-gegner] { box-shadow: 0 0 0 1px var(--gold), inset 0 0 0 1px var(--text); }
+
+/* Ausgeschieden: ausgegraut, aber lesbar. Ganz wegnehmen wäre falsch — man
+   will sehen, wer schon draußen ist. */
+.eintrag[data-aus] { opacity: 0.45; }
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marke {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--text);
+  font: 800 9px/1.5 system-ui;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.gegnerMarke { background: var(--gold); color: #1a1408; }
+
+.werte {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  color: var(--muted);
+  font: 700 10px/1 system-ui;
+}
+
+.leben {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--danger);
+}
+
+.zeichen {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rang { color: var(--muted); }
+.bereit { color: var(--accent); }
+.weg { color: var(--danger); }
+
+.balken {
+  display: block;
+  height: 3px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.balken i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--danger);
+  transition: width 0.3s ease;
+}
+.eintrag[data-ich] .balken i { background: var(--accent); }
+
+/* -- Am Desktop: fest an der rechten Kante -------------------------------- */
+
+@media (min-width: 64rem) {
+  .leiste {
+    position: fixed;
+    top: 96px;
+    /* Halbe Spaltenbreite des Tisches plus Luft — dieselbe Rechnung wie bei
+       der Synergieleiste, nur zur anderen Seite. */
+    left: calc(50% + 300px);
+    width: min(260px, calc(50vw - 300px));
+    max-height: calc(100dvh - 140px);
+    overflow-y: auto;
+    z-index: 3;
+  }
+  /* Am Desktop gibt es keinen Klappknopf — die Liste steht immer. */
+  .kopf { pointer-events: none; }
+  .pfeil { display: none; }
+  .liste { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pfeil,
+  .balken i {
+    transition: none;
+  }
+}

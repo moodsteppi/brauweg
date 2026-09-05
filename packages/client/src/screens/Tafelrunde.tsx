@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
+import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
+import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
+import { gegnerDieseRunde } from '../minispiele/tafelrunde/platzierung';
 import {
   Figurbild,
   KampfAnzeige,
@@ -629,6 +632,16 @@ function Ruestkammer({
   const [regelnOffen, setRegelnOffen] = useState(false);
 
   /**
+   * Welches Endbild schon weggeklickt wurde.
+   *
+   * Es gibt ZWEI Anlaesse — ich scheide aus, und die Partie endet — und der
+   * zweite kommt nach dem ersten. Deshalb wird der Anlass gemerkt und nicht
+   * bloss ein `false`: Wer sein Ausscheiden wegklickt, um weiter zuzusehen,
+   * bekaeme sonst am Ende der Partie kein Schlussbild mehr.
+   */
+  const [endbildWeg, setEndbildWeg] = useState<'aus' | 'ende' | null>(null);
+
+  /**
    * Was ich angetippt habe und noch nicht losgelassen — der ausgewaehlte Ort.
    *
    * Der zweite Bedienweg neben dem Ziehen: antippen, dann Ziel antippen. Er
@@ -905,6 +918,16 @@ function Ruestkammer({
 
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
+  /**
+   * Gegen wen ich diese Runde antrete — null, solange es niemand weiss.
+   *
+   * Die Sicht fuehrt `kaempfe` nur waehrend der Kampfphase, und das Modul
+   * setzt die Paarungen auch erst beim Phasenwechsel an (setzeAn in
+   * partie.ts). In der Vorbereitung gibt es die Auskunft also nirgends —
+   * nicht nur hier nicht.
+   */
+  const gegnerJetzt = gegnerDieseRunde(sicht.kaempfe, sicht.ich);
+
   const lebendeGegner = sicht.gegner.filter((g) => g.ausRunde === null);
   const gegner =
     sicht.gegner.find((g) => g.sitz === gezeigterGegner) ?? lebendeGegner[0] ?? sicht.gegner[0];
@@ -952,8 +975,12 @@ function Ruestkammer({
           </button>
           <p className="tr-hinweis">Du schaust zu · Runde {sicht.runde}</p>
         </header>
-        <Gegnerleiste
+        {/* Ein Zuschauer bekommt alle Sitze als `gegner` (sicht.ts) und hat
+            selbst keinen — deshalb `eigenes={null}` und keine Gegnermarke. */}
+        <Mitspielerleiste
+          eigenes={null}
           gegner={sicht.gegner}
+          gegnerJetzt={null}
           gezeigt={gegner?.sitz ?? null}
           sitze={sitze}
           onWahl={setGezeigterGegner}
@@ -976,6 +1003,20 @@ function Ruestkammer({
       </main>
     );
   }
+
+  /**
+   * Warum gerade ein Endbild faellig ist — oder null.
+   *
+   * `ausRunde` und nicht `leben <= 0`: Zwischen dem Kampf und dem
+   * Rundenwechsel faellt beides auseinander (siehe `eigenesLebt` in
+   * sicht.ts). Das Ende der Partie sticht das Ausscheiden, damit ein
+   * weggeklicktes Ausscheiden das Schlussbild nicht verschluckt.
+   */
+  const endanlass: 'aus' | 'ende' | null = sicht.fertig
+    ? 'ende'
+    : eigenes.ausRunde !== null
+      ? 'aus'
+      : null;
 
   /** Die gewaehlte Einheit, fuer die Beschriftung des Auswahlbands. */
   const gewaehlterKaempfer = gewaehlt
@@ -1030,9 +1071,11 @@ function Ruestkammer({
         </div>
       </header>
 
-      {/* ---- Gegner: wer lebt, wie viel Leben, wessen Brett man sieht --- */}
-      <Gegnerleiste
+      {/* ---- Mitspieler: wer lebt, wie viel Leben, gegen wen ich spiele -- */}
+      <Mitspielerleiste
+        eigenes={eigenes}
         gegner={sicht.gegner}
+        gegnerJetzt={gegnerJetzt}
         gezeigt={gegner?.sitz ?? null}
         sitze={sitze}
         onWahl={setGezeigterGegner}
@@ -1348,6 +1391,25 @@ function Ruestkammer({
         </div>
       )}
 
+      {/* ---- Endbild ---------------------------------------------------- */}
+      {/* Es liegt UEBER dem Tisch und nimmt ihn nicht weg: Wer ausscheidet,
+          klickt es weg und sieht weiter zu. Beim Ende der Partie gibt es
+          nichts mehr zuzusehen — dann fehlt der Knopf. */}
+      {endanlass && endanlass !== endbildWeg && (
+        <Endbild
+          sitz={eigenes.sitz}
+          brett={eigenes.brett}
+          katalog={katalog}
+          eigenes={eigenes}
+          gegner={sicht.gegner}
+          runde={sicht.runde}
+          fertig={sicht.fertig}
+          sitze={sitze}
+          onZurueck={onZurueck}
+          onZusehen={endanlass === 'aus' ? () => setEndbildWeg('aus') : undefined}
+        />
+      )}
+
       {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
     </main>
   );
@@ -1425,55 +1487,14 @@ function kampfSchluessel(kaempfe: readonly Kampfpaarung[], ich: number | null): 
   return kampf ? `${kampf.a}:${kampf.b}:${kampf.bericht.saat}` : 'keiner';
 }
 
-/**
- * Die Leiste der Mitspieler.
- *
- * Sie ist nicht nur Auskunft, sondern die Bedienung fuer das obere Brett: Ein
- * Tipp waehlt aus, wessen Aufstellung man sich ansieht. Bei acht Sitzen rollt
- * sie quer — die Seite selbst nie (DESIGN.md).
+/*
+ * Die Leiste der Mitspieler stand bis zum 05.09.2026 HIER als `Gegnerleiste`
+ * — ein Streifen mit Name und Leben der Gegner, ohne den eigenen Sitz und
+ * ohne die Paarung der Runde. Sie ist nach
+ * minispiele/tafelrunde/Mitspieler.tsx gezogen und dort geprueft; die
+ * Klassen `.tr-gegnerleiste` und `.tr-gegner` in styles.css sind damit
+ * verwaist (styles.css gehoert nicht zu dieser Aufgabe).
  */
-function Gegnerleiste({
-  gegner,
-  gezeigt,
-  sitze,
-  onWahl,
-}: {
-  gegner: readonly FremdeSicht[];
-  gezeigt: number | null;
-  sitze: readonly SitzZeile[];
-  onWahl: (sitz: number) => void;
-}): React.JSX.Element | null {
-  if (gegner.length === 0) return null;
-  return (
-    <div className="tr-gegnerleiste" role="group" aria-label="Mitspieler">
-      {gegner.map((g) => (
-        <button
-          key={g.sitz}
-          type="button"
-          className="tr-gegner"
-          data-an={g.sitz === gezeigt ? '' : undefined}
-          data-aus={g.ausRunde !== null ? '' : undefined}
-          /* Wer bereit ist, wartet auf die anderen — daran sieht man, auf wen
-             der Tisch noch wartet, ohne dass es jemand sagen muss. */
-          data-bereit={g.bereit ? '' : undefined}
-          aria-pressed={g.sitz === gezeigt}
-          onClick={() => onWahl(g.sitz)}
-        >
-          <span className="tr-gegner-name">
-            {spielername(
-              sitze.find((s) => s.seat === g.sitz),
-              g.sitz,
-            )}
-          </span>
-          <span className="tr-gegner-leben">
-            <LebenZeichen />
-            {g.leben}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Das Hexbrett
