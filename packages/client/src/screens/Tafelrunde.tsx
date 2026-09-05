@@ -21,6 +21,7 @@ import {
 import {
   type Synergie,
   type Synergiestand,
+  Fremdmarken,
   KARTE_TRIFFT,
   Markennamen,
   Markenzeichen,
@@ -1798,6 +1799,14 @@ function Ruestkammer({
             <div className="tr-bretter">
               <section className="tr-brettteil">
                 <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
+                {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
+                    Feld `synergien` an jedem Sitz genau wie ein Spieler
+                    (sicht.ts) — bis heute stand hier nichts davon. */}
+                <Fremdmarken
+                  staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                  tabelle={synergieTabelle}
+                  beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                />
                 <Hexbrett
                   reihen={sicht.brettReihen}
                   spalten={sicht.brettSpalten}
@@ -1926,6 +1935,16 @@ function Ruestkammer({
                 {spielername(zeile(gegner.sitz), gegner.sitz)}
                 {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
               </h2>
+              {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
+                  in der eigenen Leiste. Ohne sie muesste man seine Figuren
+                  einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
+                  zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
+                  auch hier nichts. */}
+              <Fremdmarken
+                staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                tabelle={synergieTabelle}
+                beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+              />
               <Hexbrett
                 reihen={sicht.brettReihen}
                 spalten={sicht.brettSpalten}

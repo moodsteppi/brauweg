@@ -18,6 +18,7 @@ import {
   type Synergie,
   type Synergiestand,
   type Wertebonus,
+  Fremdmarken,
   Markennamen,
   Markenzeichen,
   Synergieleiste,
@@ -316,5 +317,87 @@ describe('Markenzeichen', () => {
   it('zeichnet nichts, wenn eine Einheit keine Marke trägt', () => {
     const container = zeige([]);
     expect(container.querySelectorAll('svg')).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('Fremdmarken', () => {
+  it('zeigt die Marken des fremden Bretts mit demselben Zaehler wie die eigene Leiste', () => {
+    // Die Frage aus der Aufgabe: Geht der Gegner gerade auf sechs Wächter zu?
+    render(
+      <Fremdmarken
+        staende={[stand({ marke: 'waechter', name: 'Wächter', anzahl: 4, schwelle: 4, naechsteSchwelle: 6 })]}
+        tabelle={TABELLE}
+        beschriftung="Marken von Ada"
+      />,
+    );
+    const zeile = screen.getByRole('list', { name: 'Marken von Ada' });
+    expect(within(zeile).getByText('4/6')).toBeInTheDocument();
+  });
+
+  it('rechnet nichts nach — auch hier stehen die Zahlen der Sicht', () => {
+    /*
+     * Dieselbe Probe wie bei der eigenen Leiste, mit Zahlen, die zur Tabelle
+     * nicht passen: fünf Krieger, aber laut Sicht Schwelle 2 und als nächste
+     * die 6. Wer hier abzählte, käme auf etwas anderes.
+     */
+    render(
+      <Fremdmarken
+        staende={[stand({ anzahl: 5, schwelle: 2, naechsteSchwelle: 6, bonus: bonus({ ruestung: 99 }) })]}
+        tabelle={TABELLE}
+        beschriftung="Marken von Ada"
+      />,
+    );
+    expect(screen.getByText('5/6')).toBeInTheDocument();
+    expect(screen.getByText(/ab 2: \+99 Rüstung/)).toBeInTheDocument();
+  });
+
+  it('hebt eine erreichte Schwelle hervor, eine unerreichte nicht', () => {
+    const { container } = render(
+      <Fremdmarken
+        staende={[
+          stand({ anzahl: 3 }),
+          stand({
+            marke: 'naturwesen',
+            name: 'Naturwesen',
+            anzahl: 1,
+            schwelle: null,
+            naechsteSchwelle: 2,
+            bonus: null,
+          }),
+        ]}
+        tabelle={TABELLE}
+        beschriftung="Marken von Ada"
+      />,
+    );
+    const eintraege = container.querySelectorAll('li');
+    expect(eintraege[0]!.hasAttribute('data-aktiv')).toBe(true);
+    expect(eintraege[1]!.hasAttribute('data-aktiv')).toBe(false);
+  });
+
+  it('zeichnet gar nichts, solange keine Marke auf dem fremden Brett steht', () => {
+    // Kein „Noch keine Marken" wie in der eigenen Leiste: Das ist eine
+    // Aufforderung, und aufzustellen hat man auf fremdem Brett nichts. Der
+    // leere Fall trifft auch einen Tisch aus der Zeit vor den Synergien —
+    // dort fehlt das Feld ganz.
+    const { container } = render(
+      <Fremdmarken staende={[]} tabelle={TABELLE} beschriftung="Marken von Ada" />,
+    );
+    expect(container.querySelector('ul')).toBeNull();
+  });
+
+  it('nennt dem Vorlesegeraet, wessen Marken das sind', () => {
+    // In der Liste steht nur „Wächter: 4 von 6" — wem das Brett gehört, sagt
+    // sichtbar der Bretttitel darüber, den ein Vorleser überspringen kann.
+    render(
+      <Fremdmarken
+        staende={[stand({ marke: 'waechter', name: 'Wächter', anzahl: 4, naechsteSchwelle: 6 })]}
+        tabelle={TABELLE}
+        beschriftung="Marken von Ada"
+      />,
+    );
+    expect(screen.getByRole('list', { name: 'Marken von Ada' })).toBeInTheDocument();
+    expect(screen.getByText(/Wächter: 4 von 6/)).toBeInTheDocument();
   });
 });
