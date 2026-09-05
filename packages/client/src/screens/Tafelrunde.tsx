@@ -3,8 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
+import { blattPfad } from '../minispiele/tafelrunde/bildfolge';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
+import { Figur3D } from '../minispiele/tafelrunde/Figur3D';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
@@ -236,6 +238,51 @@ function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
     <svg className="tr-rolle" viewBox="0 0 24 24" aria-hidden="true">
       {pfade[rolle]}
     </svg>
+  );
+}
+
+/**
+ * Die Figur einer Einheit — dieselbe wie in der Arena, nur stehend.
+ *
+ * DREI STUFEN, in dieser Reihenfolge: das vorgerenderte 3D-Blatt ihrer ROLLE
+ * (`Figur3D`), sonst die Pixelfigur der EINHEIT (`Figurbild`), sonst die
+ * gezeichnete Strichfigur (`RollenZeichen`). Genau die Reihenfolge, die auch
+ * die Arena nimmt — ein Rueckfall, der sich je Ort unterscheidet, waere beim
+ * ersten fehlenden Bild ein Bildschirm mit zwei Sorten Platzhalter.
+ *
+ * WARUM DAS BLATT DER ROLLE UND NICHT DAS BILD DER EINHEIT: Bis zum 6.9.2026
+ * standen die 3D-Figuren nur in der Arena, und in der Vorbereitung — dort, wo
+ * man die meiste Zeit verbringt — sah man Pixelbilder. Der Bruch war genau
+ * das, was Robin meinte. Der Preis ist, dass sich acht Einheiten eine Figur
+ * teilen; ihr NAME steht daneben, ihre Marken darueber, ihre Kosten am Punkt.
+ *
+ * Kein Bildwechsel: Es ist immer Bild 0 der Ruhefolge. Wer aufstellt, soll
+ * nicht von zappelnden Figuren abgelenkt werden — bewegt wird nur im Kampf.
+ */
+function EinheitenFigur({
+  einheit,
+  klasse,
+  spiegeln,
+}: {
+  einheit: Einheit;
+  /** Wo die Figur steht: `tr-figur3d` auf Wabe und Bank, `…-karte` im Laden. */
+  klasse: string;
+  spiegeln?: boolean;
+}): React.JSX.Element {
+  return (
+    <Figur3D
+      name={einheit.name}
+      blatt={blattPfad(einheit.rolle)}
+      klasse={klasse}
+      spiegeln={spiegeln}
+      ersatz={
+        <Figurbild
+          einheit={einheit}
+          klasse="tr-figur"
+          ersatz={<RollenZeichen rolle={einheit.rolle} />}
+        />
+      }
+    />
   );
 }
 
@@ -1023,6 +1070,7 @@ export function Tafelrunde({
         legaleZuege={(tisch.view?.legalActions ?? []) as unknown as Aktion[]}
         revision={tisch.view?.revision ?? -1}
         frist={tisch.view?.interludeDeadline ?? null}
+        rundenfrist={tisch.view?.phaseDeadline ?? null}
         sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
         onAktion={(aktion) => tisch.send(aktion)}
         onZurueck={verlasseUndZurueck}
@@ -1235,6 +1283,7 @@ function Ruestkammer({
   legaleZuege,
   revision,
   frist,
+  rundenfrist,
   sitze,
   onAktion,
   onZurueck,
@@ -1247,6 +1296,15 @@ function Ruestkammer({
   revision: number;
   /** Frist der Schaupause (`interludeDeadline`), waehrend des Kampfes gesetzt. */
   frist: number | null;
+  /**
+   * Frist der Platzierungsphase (`phaseDeadline`), waehrend der Vorbereitung
+   * gesetzt. Zwei Felder und nicht eins, weil sie zwei verschiedene Dinge
+   * meinen: Die Schaupause laeuft, waehrend NIEMAND handeln darf, und die
+   * Kampfanzeige rechnet ihr Aufholen daraus aus (`startVersatz`). Ihr die
+   * Frist der Ruestphase unterzuschieben hiesse, den Kampf mitten im Getuemmel
+   * beginnen zu lassen.
+   */
+  rundenfrist: number | null;
   sitze: readonly SitzZeile[];
   onAktion: (aktion: Aktion) => void;
   onZurueck: () => void;
@@ -1683,7 +1741,7 @@ function Ruestkammer({
           <Phasenzeile
             runde={sicht.runde}
             phase={sicht.phase}
-            frist={frist}
+            frist={frist ?? rundenfrist}
             bereit={bereitZahl}
             offen={offeneSitze}
           />
@@ -1782,7 +1840,7 @@ function Ruestkammer({
         <Phasenzeile
           runde={sicht.runde}
           phase={sicht.phase}
-          frist={frist}
+          frist={frist ?? rundenfrist}
           bereit={bereitZahl}
           offen={offeneSitze}
         />
@@ -2417,6 +2475,7 @@ function Hexbrett({
                   frischVerschmolzen?.id === k.id && frischVerschmolzen.stufe === k.stufe
                 }
                 aktiv={eigen === true && aktiv === true}
+                spiegeln={gespiegelt === true}
                 versteckt={ziehtVon?.bereich === 'brett' && ziehtVon.platz === platz}
                 onZeigerStart={eigen && onZeigerStart ? (e) => onZeigerStart(ort, e) : undefined}
                 onZeigerBewegung={eigen ? onZeigerBewegung : undefined}
@@ -2464,6 +2523,7 @@ function Einheitenmarke({
   frisch,
   aktiv,
   versteckt,
+  spiegeln,
   onZeigerStart,
   onZeigerBewegung,
   onZeigerEnde,
@@ -2478,6 +2538,13 @@ function Einheitenmarke({
   frisch?: boolean;
   aktiv: boolean;
   versteckt?: boolean;
+  /**
+   * Nach links schauen lassen. Alle Blaetter schauen nach rechts
+   * (FIGUREN3D_BLICKT); gespiegelt wird das Brett des GEGNERS, das ohnehin
+   * auf dem Kopf steht — so sehen die beiden Heere einander an, statt in
+   * dieselbe Richtung zu blicken. Dieselbe Ueberlegung wie in der Arena.
+   */
+  spiegeln?: boolean;
   onZeigerStart?: (e: React.PointerEvent) => void;
   onZeigerBewegung?: (e: React.PointerEvent) => void;
   onZeigerEnde?: (e: React.PointerEvent) => void;
@@ -2541,16 +2608,17 @@ function Einheitenmarke({
       title={einheit ? `${einheit.name} · ${ROLLE_NAME[einheit.rolle]}` : kaempfer.id}
     >
       {einheit ? (
-        <Figurbild
-          einheit={einheit}
-          klasse="tr-figur"
-          ersatz={<RollenZeichen rolle={einheit.rolle} />}
-        />
+        <EinheitenFigur einheit={einheit} klasse="tr-figur3d" spiegeln={spiegeln} />
       ) : (
         /* Der Katalog kommt erst mit der ersten Sicht. Ein Fragezeichen ist
            hier ehrlicher als ein Bild, dessen Namen wir noch nicht kennen. */
         <span>?</span>
       )}
+      {/* Was die Einheit gekostet hat. Bis zum 6.9.2026 war es der Innenrand
+          der Platte, auf der sie sass — die ist weg, weil sie die Figur flach
+          aussehen liess (Robin, 5.9.2026). Ein Punkt und kein neuer Ring:
+          Derselbe Traeger wie in der Arena (`.kosten` dort). */}
+      {einheit && <i className="tr-kosten" aria-hidden="true" />}
       {/* Die Marken als Zeichen in der Ecke — dieselben Zeichen und Farben wie
           in der Leiste, damit man eine Aufstellung im Vorbeisehen zaehlen
           kann. Kein Text: Auf einer Wabe ist dafuer kein Platz, und vorgelesen
@@ -2639,15 +2707,12 @@ function Ladenkarte({
         <GoldZeichen />
         {einheit.kosten}
       </span>
+      {/* Die KARTE bleibt eine Karte: Ein Rahmen um Name, Rolle und Preis ist
+          richtig, weggenommen wurde nur die Platte unter der FIGUR. Und die
+          Figur ist seit dem 6.9.2026 dieselbe wie auf dem Brett — wer eine
+          Dorfwache kauft, soll sehen, was gleich auf seiner Wabe steht. */}
       <span className="tr-karte-kopf">
-        {/* Die Figur steht an der Stelle, an der bisher das Rollenzeichen
-            stand — die Rolle selbst steht als Wort darunter und geht damit
-            nicht verloren. */}
-        <Figurbild
-          einheit={einheit}
-          klasse="tr-figur"
-          ersatz={<RollenZeichen rolle={einheit.rolle} />}
-        />
+        <EinheitenFigur einheit={einheit} klasse="tr-figur3d-karte" />
       </span>
       <strong className="tr-karte-name">{einheit.name}</strong>
       <span className="tr-karte-rolle">{ROLLE_NAME[einheit.rolle]}</span>

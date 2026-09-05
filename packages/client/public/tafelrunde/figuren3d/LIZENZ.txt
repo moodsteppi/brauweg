@@ -1,3 +1,20 @@
+Die Figuren der Tafelrunde — Herkunft und Lizenz
+
+Alles hier ist CC0 1.0 Universal von Kay Lousberg (www.kaylousberg.com):
+frei verwendbar, auch kommerziell, Namensnennung nicht verlangt.
+
+Aus "KayKit Character Pack : Adventurers" 1.0 — Lizenztext siehe unten:
+  wache      Knight
+  meuchler   Rogue
+  schuetze   Rogue_Hooded
+  magier     Mage
+
+Aus "KayKit Adventurers 2.0" (Figur und Stab) und "KayKit Character
+Animations 1.1" (die Bewegungen) — beide CC0, Lizenztext wortgleich zum
+unten stehenden, nachzulesen als License.txt der Complete Collection:
+  beistand   Druid
+
+------------------------------------------------------------------
 
 	KayKit : Adventurers Character Pack (1.0)
 

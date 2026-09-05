@@ -243,7 +243,7 @@
   width: 44%;
   height: 9%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0));
+  background: radial-gradient(closest-side, var(--boden, rgba(0, 0, 0, 0.66)), rgba(0, 0, 0, 0));
   transform: translate(-50%, 0);
   animation: ka-schatten 3.6s ease-in-out infinite;
   animation-delay: var(--schwebe, 0s);
@@ -259,6 +259,23 @@
     opacity: 0.66;
   }
 }
+/*
+ * DIE SEITEN AM BODEN, seit die Platte weg ist.
+ *
+ * Bis zum 6.9.2026 war die obere Haelfte am waermeren Verlauf ihrer Platte zu
+ * erkennen — „man soll die Seiten auch dann unterscheiden, wenn die Figuren
+ * sich in der Mitte vermischen". Der Satz gilt weiter, die Platte gibt es
+ * nicht mehr. Die Blickrichtung allein reicht nicht: Im Getuemmel stehen
+ * Figuren voreinander, und wer gerade laeuft oder zuschlaegt, dreht sich
+ * ohnehin nicht um.
+ *
+ * Also traegt es der Boden. Ein farbiger RING um die Figur waere die Platte in
+ * duenn; der Schatten dagegen liegt ohnehin da und ist ohnehin dunkel — er
+ * bekommt nur einen Stich. Zusammen mit dem Lebensbalken, der die Seitenfarbe
+ * schon immer trug (`.leben b` weiter unten), sind es zwei Traeger.
+ */
+.figur[data-seite='unten'] { --boden: rgba(6, 40, 30, 0.7); }
+.figur[data-seite='oben'] { --boden: rgba(52, 14, 12, 0.72); }
 /* Eine Gefallene wirft keinen Schatten mehr — er geht mit dem Koerper. */
 .figur[data-tot] .schatten {
   animation: none;
@@ -266,6 +283,23 @@
   transition: opacity 320ms ease;
 }
 
+/*
+ * Der Koerper — seit dem 6.9.2026 OHNE PLATTE.
+ *
+ * Er hat keine Farbe und keinen Rand mehr: kein Verlauf, kein Innenrand, kein
+ * abgerundetes Rechteck. Uebrig ist ein unsichtbarer Kasten, und der wird
+ * gebraucht, denn er tut zwei Dinge weiter. Er ist das MASS, an dem die Zelle
+ * des Blattes haengt (`.figur3d` rechnet in Prozent von ihm), und er ist die
+ * Ebene des AUSSCHLAGS (`ka-schlag`) — die Figur darf nicht auf derselben
+ * Ebene ausschlagen wie sie atmet, sonst faellt eine der beiden Bewegungen
+ * stumm aus.
+ *
+ * WARUM DIE PLATTE WEG IST: Robin, 5.9.2026 — „der laesst es mehr 2D wirken".
+ * Eine Figur auf einer Kachel klebt darauf; eine ohne steht auf dem Feld. Was
+ * die Platte nebenbei erledigte, steht jetzt woanders: die Seiten am
+ * getoenten Bodenschatten und am Lebensbalken, die Kosten am Punkt
+ * (`.kosten`), das Sterben in der Todesfolge selbst.
+ */
 .koerper {
   position: relative;
   display: flex;
@@ -275,33 +309,56 @@
   gap: 1px;
   width: 74%;
   height: 62%;
-  border-radius: 9px;
-  background: linear-gradient(180deg, #232f37, #1a242a);
-  box-shadow: inset 0 0 0 2px var(--tr-kosten, var(--line));
-  transition:
-    opacity 420ms ease,
-    transform 420ms ease;
+  /*
+   * Verblassen ERST NACH dem Einsacken (`--sacken`, gerechnet in
+   * bildfolge.ts). Hier stand bis zum 6.9.2026 zusaetzlich ein `scale(0.55)
+   * rotate(-9deg)` mit der Begruendung, senkrecht kleiner werden sehe aus wie
+   * ein Ladefehler. Der Grund ist entfallen: Damals schrumpfte eine Platte,
+   * heute sackt die FIGUR selbst zusammen (Zeile `tod` des Blattes). Zwei
+   * Sterbebewegungen uebereinander sehen falsch aus — und die schnellere
+   * haette die gerenderte unsichtbar gemacht, bevor sie durch ist.
+   */
+  transition: opacity 420ms ease var(--sacken, 200ms);
 }
-/* Der Fall: einsacken und verblassen, nicht verschwinden. Die leichte Drehung
-   nimmt dem Vorgang das Maschinelle — senkrecht kleiner werden sieht aus wie
-   ein Ladefehler. */
+/* Der Fall: verblassen, nicht verschwinden. Bleibt die Figur im Baum, laeuft
+   der Uebergang; ein entferntes Element kann nicht mehr verblassen. */
 .figur[data-tot] .koerper {
   opacity: 0;
-  transform: scale(0.55) rotate(-9deg);
 }
 /* Der Lebensbalken einer Gefallenen ist keine Auskunft mehr, sondern ein
    leerer Streifen ueber dem Staub. */
-.figur[data-tot] .leben {
+.figur[data-tot] .leben,
+.figur[data-tot] .kosten {
   opacity: 0;
   transition: opacity 260ms ease;
 }
-/* Die obere Seite ist waermer getoent — man soll die Seiten auch dann
-   unterscheiden, wenn die Figuren sich in der Mitte vermischen. */
-.figur[data-seite='oben'] .koerper { background: linear-gradient(180deg, #37272b, #281a1e); }
 /* Das Ersatzzeichen (Strichzeichnung der Rolle), wenn es keine Figur gibt. */
 .koerper > svg {
   width: 48%;
   height: 48%;
+}
+
+/*
+ * Was die Einheit gekostet hat — der Traeger von `--tr-kosten`, seit die
+ * Platte keinen Innenrand mehr hat.
+ *
+ * Ein Punkt und kein Ring: Ein Ring um die Figur waere die Platte in duenn.
+ * Er sitzt links neben dem Lebensbalken, in dessen Randstreifen: Der Balken
+ * ist 74 % breit und mittig, laesst also an jeder Seite 13 % frei. Unten
+ * mittig ginge nicht, dort liegt der Bodenschatten.
+ */
+.kosten {
+  position: absolute;
+  left: 2%;
+  bottom: 0;
+  z-index: 1;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tr-kosten, var(--line));
+  /* Auf Holz und Waben braucht der Punkt eine Kante, sonst verschwindet die
+     dunkelste Kostenfarbe in der Maserung. */
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.75);
 }
 
 /*
@@ -325,21 +382,18 @@
 }
 
 /*
- * -- Die 3D-Figur: ein Ausschnitt aus dem Blatt ihrer Rolle ----------------
+ * -- Wo die 3D-Figur steht -------------------------------------------------
  *
- * Der Kasten ist QUADRATISCH, weil eine Zelle des Blattes es ist (128 x 128,
- * siehe figuren3d.ts). Er ist breiter als die Karte und ragt nach oben ueber
- * sie hinaus: Der Ausschnitt umfasst alle Bewegungen, auch den weit
- * ausgeholten Schlag, und traegt darum viel Luft ueber dem Kopf. Wer ihn in
- * die Karte zwingt, bekommt eine Figur, die halb so gross ist wie ihr Feld.
+ * Der Ausschnitt selbst (quadratisch, `overflow: hidden`, das Blatt darin,
+ * das Spiegeln) steht in `Figur3D.module.css` — er ist an allen vier Orten
+ * derselbe. HIER steht nur, wo die Figur auf einer Arenakarte steht und wie
+ * gross sie ist; auf einer Wabe der Ruestkammer oder im Kopf einer Ladenkarte
+ * sind es andere Zahlen (`.tr-figur3d…` in styles.css).
  *
- * Ueber `left`/`right`/`bottom` gesetzt und nicht ueber `translate`: Das
- * Spiegeln der Gegenseite braucht eine eigene Angabe, und zwei Dinge in
- * demselben `transform` schliessen einander aus. Deshalb steht das Spiegeln
- * in `scale` — der eigenstaendigen Eigenschaft, nicht der Funktion.
- *
- * `overflow: hidden` ist hier keine Vorsichtsmassnahme, sondern der Kern der
- * Sache: Es IST der Ausschnitt, durch den man eine von dreissig Zellen sieht.
+ * Der Kasten ist breiter als die Karte und ragt nach oben ueber sie hinaus:
+ * Der Ausschnitt umfasst alle Bewegungen, auch den weit ausgeholten Schlag,
+ * und traegt darum viel Luft ueber dem Kopf. Wer ihn in die Karte zwingt,
+ * bekommt eine Figur, die halb so gross ist wie ihr Feld.
  */
 .figur3d {
   position: absolute;
@@ -363,35 +417,10 @@
    */
   bottom: -25%;
   height: 180%;
-  aspect-ratio: 1;
-  overflow: hidden;
-  pointer-events: none;
-  /* `translate` und `scale` als eigenstaendige Eigenschaften: In EINEM
-     `transform` schloessen Mitte-Setzen und Spiegeln einander aus. */
+  /* `translate` und nicht `transform`: Das Spiegeln der Gegenseite steht in
+     `scale` (Figur3D.module.css), und zwei Dinge in demselben `transform`
+     schliessen einander aus. */
   translate: -50% 0;
-}
-.figur3d[data-spiegel] {
-  scale: -1 1;
-}
-
-/*
- * Das ganze Blatt, sechsmal so breit und fuenfmal so hoch wie der Ausschnitt.
- * Verschoben wird es von der Komponente (`bildSchieben`) ueber `transform` —
- * hier steht deshalb KEINE Angabe dazu: Sie waere die, die beim naechsten
- * Zeichnen wieder zurueckgesetzt wuerde.
- *
- * `will-change: transform` haelt das Blatt auf einer eigenen Ebene. Bei bis zu
- * sechzehn Figuren, die dreissigmal je Sekunde ihr Bild wechseln, ist das der
- * Unterschied zwischen einem Verschieben und einem Neuzeichnen.
- */
-.blatt {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 600%;
-  height: 500%;
-  max-width: none;
-  will-change: transform;
 }
 
 /*

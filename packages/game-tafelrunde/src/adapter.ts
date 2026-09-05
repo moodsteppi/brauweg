@@ -3,7 +3,7 @@
  *
  * Einzige Stelle, an der Plattform und Engine einander kennen.
  *
- * Zwei Dinge weichen von einem Kartenspiel ab, und beide stehen an ihren
+ * Drei Dinge weichen von einem Kartenspiel ab, und alle drei stehen an ihren
  * Stellen ausfuehrlich begruendet:
  *
  *   1. Es gibt keine Zugfolge. `currentActor` nennt trotzdem einen Sitz —
@@ -14,6 +14,11 @@
  *      ein Paar aus 19 Plaetzen; die Liste waere laenger als die uebrige
  *      Sicht. Die einzige Einschraenkung steht stattdessen als Zahl in der
  *      Sicht (`feldplaetze`), damit der Client trotzdem keine Regel nachbaut.
+ *   3. Die Vorbereitung hat eine eigene FRIST (`phaseMs`), obwohl jemand am
+ *      Zug ist. Die Zugzeit der Plattform taugt hier nicht: Sie laeuft je
+ *      Sitz, wird bei jeder Aktion irgendeines Sitzes neu gestellt und faellt
+ *      am Botsitz ganz weg — bei einem Spiel, in dem alle gleichzeitig
+ *      ruesten, ist sie damit keine Restzeit.
  */
 
 import type {
@@ -33,6 +38,7 @@ import {
   amZug,
   erlaubteZuege,
   erstellePartie,
+  fristAbgelaufen,
   fuehreAus,
   heerVon,
   kampfdauer,
@@ -45,6 +51,7 @@ import {
   DEFAULT_REGELN,
   type TafelrundeRegeln,
   SEAT_COUNTS,
+  mitFrist,
   pruefeRegeln,
   rotationSize,
   suggestedRounds,
@@ -168,7 +175,14 @@ export const tafelrunde: GameModule<
      * Laden JEDES Sitzes vorausrechnen. Wer das taete, wuesste, welche Einheit
      * der Nachbar gleich bekommt, und koennte sie ihm wegkaufen.
      */
-    return erstellePartie(config, sitze, seedHex ?? seed);
+    /*
+     * `mitFrist`: Ein Tisch, der VOR dem 06.09.2026 aufgemacht wurde, hat
+     * seinen Regelsatz ohne `vorbereitungMs` in der Datenbank stehen. Er
+     * startet trotzdem — nur eben ohne Deckel auf der Vorbereitung, und das
+     * faellt niemandem auf, weil die Phase ja weiterhin endet, sobald alle
+     * bereit sind. Genau solche Luecken sieht man erst, wenn einer wegbleibt.
+     */
+    return erstellePartie(mitFrist(config), sitze, seedHex ?? seed);
   },
 
   act: (partie, sitz, aktion) => fuehreAus(partie, sitz, aktion),
@@ -189,6 +203,23 @@ export const tafelrunde: GameModule<
     partie.phase === 'kampf' ? kampfdauer(partie) + KAMPF_NACHLAUF_MS : null,
 
   advanceInterlude: (partie) => loeseKampfAuf(partie),
+
+  /**
+   * Der Deckel auf die Platzierungsphase.
+   *
+   * Anders als die Schaupause laeuft diese Frist, WAEHREND geruestet wird —
+   * dafuer gibt es sie (siehe `phaseMs` in game-api). Die Plattform misst,
+   * dieses Paket nennt nur die Dauer.
+   *
+   * Ausserhalb der Vorbereitung ausdruecklich null, und das ist keine
+   * Formalie: Die Plattform erkennt am null, dass eine neue Phase begonnen
+   * hat, und stellt die Frist erst dann wieder. Ohne die Kampfphase
+   * dazwischen liefe die Frist der vorigen Runde weiter.
+   */
+  phaseMs: (partie) =>
+    !partie.fertig && partie.phase === 'vorbereitung' ? partie.regeln.vorbereitungMs : null,
+
+  advancePhase: (partie) => fristAbgelaufen(partie),
 
   standings: (partie): PartyStanding[] => platzierungen(partie),
 
@@ -253,6 +284,9 @@ export const tafelrunde: GameModule<
     for (const [sitz, heer] of Object.entries(mitKaempfen.heere)) {
       heere[Number(sitz)] = heer.wuerfeRunde === undefined ? { ...heer, wuerfeRunde: 0 } : heer;
     }
-    return { ...mitKaempfen, heere };
+    // Und fuer `vorbereitungMs` (seit dem 06.09.2026): Eine Partie, die den
+    // Deploy im Snapshot ueberlebt, soll ihren Deckel bekommen und nicht bis
+    // zum Partieende ohne Frist weiterlaufen (siehe `mitFrist`).
+    return { ...mitKaempfen, regeln: mitFrist(mitKaempfen.regeln), heere };
   },
 };

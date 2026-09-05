@@ -71,8 +71,12 @@ einem Viertel; wer den Kampf halbiert, spart mehr als ein Drittel der Partie.
   genau so lange läuft die Schaupause der Plattform (`interludeMs` im
   Adapter). Der Nachlauf sind die 2,5 Sekunden aus `KAMPF_NACHLAUF_MS`.
 * **Die Vorbereitung ist ein Modell** (`Zeitmodell` in `test/messen.ts`): 5
-  Sekunden Grundzeit plus 1,5 Sekunden je Handgriff, gedeckelt bei der Zugzeit
-  der Plattform (60 s). Sie **kann** nicht gemessen werden — im Messstand
+  Sekunden Grundzeit plus 1,5 Sekunden je Handgriff, gedeckelt bei der
+  Rundenfrist des Regelsatzes (`vorbereitungMs`, 45 s — bis zum 06.09.2026
+  stand dort die Zugzeit der Plattform, 60 s, weil es keine eigene Frist gab).
+  Am gemessenen Ergebnis ändert der neue Deckel nichts: Die längste
+  Vorbereitung im Bestand sind 39,5 s, er greift also in keiner einzigen
+  gemessenen Runde. Sie **kann** nicht gemessen werden — im Messstand
   sitzen nur Bots, und die sind sofort bereit. Die Phase endet, wenn der
   **letzte** Sitz „Bereit" tippt, deshalb zählt der fleißigste und nicht der
   Durchschnitt. Über die 6 Handgriffe, die der fleißigste Sitz im Median macht
@@ -162,10 +166,19 @@ ist sie zu grob.
 die am meisten Arbeit spart. Selbst ein harter Countdown von 10 Sekunden
 schneidet nur 8 % der Spielzeit ab, weil die Vorbereitung schon heute im
 Median bei rund 14 Sekunden liegt; ein Deckel von 25 oder 20 Sekunden ist
-messbar wirkungslos. Dazu kommt: **Diesen Countdown gibt es gar nicht.** Die
-Plattform kennt nur `turnTimeoutMs` (60 s), und Tafelrunde hat keine eigene
-Vorbereitungsfrist. Die Schraube kostet also Arbeit in Server und Client und
-zahlt am wenigsten zurück.
+messbar wirkungslos. Dazu kam damals: **Diesen Countdown gibt es gar nicht.**
+Die Plattform kannte nur `turnTimeoutMs` (60 s), und Tafelrunde hatte keine
+eigene Vorbereitungsfrist. Die Schraube kostete also Arbeit in Server und
+Client und zahlte am wenigsten zurück.
+
+> **Nachtrag 06.09.2026:** Die Frist ist inzwischen gebaut — `vorbereitungMs`
+> im Regelsatz, getragen von `phaseMs` / `advancePhase` in `GameModule`. Sie
+> steht auf **45 s** und ist damit ausdrücklich **keine** Zeitschraube: Sie
+> liegt über der längsten gemessenen Vorbereitung (39,5 s) und schneidet
+> deshalb nichts ab. Gebaut wurde sie, weil am Bildschirm keine Restzeit stand
+> und ein Tisch auf jemanden warten konnte, der nicht mehr hinsieht. Wer sie
+> als Zeitschraube benutzen will, hat mit dieser Tabelle die Zahlen dafür —
+> und nimmt jemandem den Kauf weg, den er gerade tippt.
 
 **4a. Ein feinerer Takt bringt nichts** (−0,5 % bei 50 ms, −0,9 % bei 25 ms).
 `TAKT_MS` ist die Auflösung der Rechnung, nicht das Tempo: Ein feinerer Takt
@@ -229,6 +242,8 @@ fällt nur die Zeit weg, in der man zusieht, wie zwei Wachen einander nicht
 umbringen. Die Startleben sind der Feinregler daneben. **An der Vorbereitung
 und an `TAKT_MS` sollte niemand Arbeit investieren** — zusammen bringen sie
 unter einem Zehntel, und die Vorbereitungsfrist müsste erst gebaut werden.
+(Sie ist es seit dem 06.09.2026, aber als Deckel über der längsten Runde und
+nicht als Zeitschraube — siehe den Nachtrag in Abschnitt 4.)
 
 Wer x2 am Bildschirm zu hektisch findet, nimmt x1,5 und dafür 12 Startleben:
 7:42 bei 10 Runden, gemessen. Das kostet aber zwei Dinge — eine Runde weniger
@@ -326,8 +341,9 @@ Der Kampf bleibt der größte Posten, aber knapper. **Die Aussage „an der
 Vorbereitung lohnt sich keine Arbeit" gilt damit weniger deutlich als vorher**:
 Ihr Anteil ist von einem Viertel auf gut ein Drittel gestiegen, weil der andere
 Posten kleiner wurde und nicht, weil sie länger geworden wäre. Ein harter
-Countdown von 10 Sekunden bringt jetzt 13 % statt 8 %. Gebaut ist er weiterhin
-nicht (siehe die Board-Karte zur fehlenden Vorbereitungsfrist).
+Countdown von 10 Sekunden bringt jetzt 13 % statt 8 %. Eine Frist gibt es seit
+dem 06.09.2026 (`vorbereitungMs`), aber mit 45 s über jeder gemessenen Runde —
+als harter Countdown müsste sie erst kurz gestellt werden.
 
 ### Ausgewogenheit, gemessen
 
@@ -448,7 +464,7 @@ Die Zerlegung rechnet im **Mittel** je Partie, die Zeile oben ist der **Median**
 Die Aussage aus Abschnitt 4 gilt unverändert: **An der Vorbereitung lohnt sich
 weiterhin keine Arbeit** — ein harter Countdown von 10 Sekunden bringt 12,5 %,
 ein feinerer `TAKT_MS` von 100 auf 25 ms 3,5 %, und die Vorbereitungsfrist
-müsste erst gebaut werden.
+liegt mit 45 s bewusst über jeder gemessenen Runde.
 
 ### Jede Schraube einzeln, auf dem heutigen Stand
 

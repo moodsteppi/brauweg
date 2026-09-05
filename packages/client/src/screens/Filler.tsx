@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { api, type TableRow } from '../api';
+import { api, type Suchstand } from '../api';
 import { FARBEN, GRAUTOENE, farbeVon } from '../minispiele/filler/farben';
 import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useTable } from '../useTable';
@@ -10,9 +10,9 @@ import { useTable } from '../useTable';
  *
  * Ein Bildschirm mit zwei Gesichtern, wie bei Mememory: ohne Tisch das
  * Hauptmenue mit der Match-Suche, mit Tisch das Brett. Der Tisch wird HIER
- * gehalten und nicht ueber App.tsx geroutet — die Match-Suche muss den Tisch
- * unter Umstaenden wechseln (siehe die Wettrennen-Regel unten), und ein
- * Wechsel ueber zwei Bildschirmzustaende hinweg waere ein Flackern.
+ * gehalten und nicht ueber App.tsx geroutet — die Suche reicht ihre
+ * Tischkennung mitten im Bildschirm nach, und ein Wechsel ueber zwei
+ * Bildschirmzustaende hinweg waere ein Flackern.
  *
  * Arbeitsteilung mit dem Spielmodul: Der Bildschirm bildet KEINE Regel nach.
  * Welche Farben waehlbar sind, steht nicht hier, sondern kommt als
@@ -30,13 +30,28 @@ import { useTable } from '../useTable';
  */
 
 /**
- * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
+ * Regelsatz, mit dem der BOT-Tisch aufgemacht wird.
  *
  * Muss zu DEFAULT_REGELN in packages/game-filler/src/regeln.ts passen. Bewusst
- * ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll nicht auf
- * eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht.
+ * ausgeschrieben statt ueber `api.defaults()` geholt: Der Knopf soll nicht auf
+ * eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht.
+ *
+ * Nur noch hier und nicht mehr in der Mitspielersuche: Die baut ihren Tisch
+ * seit dem 06.09.2026 serverseitig und nimmt dort `defaultConfig()` des
+ * Moduls. Wer diese Zahlen anfasst, aendert also den Bot-Tisch und sonst
+ * nichts — die Spielart eingeschlossen.
  */
 const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6, barrieren: 5 };
+
+/**
+ * Takt, in dem der Stand der Suche abgefragt wird.
+ *
+ * Eine Sekunde, weil daneben ein Countdown laeuft: Bei einem traegeren Takt
+ * springt die Zahl. Der Abruf ist zugleich das Lebenszeichen an den Server —
+ * hoert er auf, faellt man von selbst aus der Schlange (siehe
+ * packages/server/src/suche/schlange.ts).
+ */
+const SUCH_TAKT_MS = 1000;
 
 const VARIANTE_NAME: Record<Variante, string> = {
   nebel: 'Nebel',
@@ -88,17 +103,6 @@ function gelesenevariante(): Variante {
  */
 const DUNKLE_SCHRIFT = new Set([1, 2]);
 
-/**
- * Passt ein Tisch aus der Liste zur gesuchten Spielart?
- *
- * `null` heisst: Der Tisch nennt keine — er stammt vom 31. August, als es nur
- * den Nebel gab. Solche Tische zaehlen deshalb als Nebeltische und nicht als
- * "passt zu allem": Wer offen spielen will, soll dort nicht landen.
- */
-function passt(tischArt: string | null, gesucht: Variante): boolean {
-  return (tischArt ?? 'nebel') === gesucht;
-}
-
 /** Kantenschluessel wie im Modul: kleinerer Platz zuerst. */
 function kante(a: number, b: number): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`;
@@ -139,19 +143,26 @@ export function Filler({
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
-  /** Tisch, den ich selbst aufgemacht habe — nur dann wird gewechselt. */
-  const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
+  /** Stand der Mitspielersuche. `null` heisst: es wird nicht gesucht. */
+  const [suchstand, setSuchstand] = useState<Suchstand | null>(null);
+  /** Ein Knopf ist gedrueckt, die Antwort steht noch aus. */
   const [sucht, setSucht] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
   /**
-   * Die Spielart, mit der gesucht wird.
+   * Die Spielart des BOT-Tisches.
    *
    * Sie ist eine Vorwahl fuer den naechsten Tisch und NICHT der Zustand des
    * laufenden: Was am Tisch gilt, steht in `sicht.variante` und kommt vom
    * Server. Wer das verwechselt, baut einen Schalter, der mitten in der Partie
    * den Nebel abzuschalten scheint und nichts tut.
+   *
+   * Fuer die Mitspielersuche gilt sie seit dem 06.09.2026 NICHT mehr: Die
+   * Schlange kennt nur die `gameId` und baut ihren Tisch mit `defaultConfig()`
+   * des Moduls. Deshalb steht der Schalter jetzt beim Bot-Knopf und nicht mehr
+   * ueber beiden — einer, der auf den oberen Knopf nicht wirkt, waere eine
+   * Beschriftung, die nicht stimmt.
    */
   const [variante, setVariante] = useState<Variante>(gelesenevariante);
 
@@ -170,44 +181,96 @@ export function Filler({
   // -------------------------------------------------------------------------
 
   /**
-   * Einen Gegner finden: an einem offenen Tisch Platz nehmen, sonst selbst
-   * einen aufmachen.
+   * Einen Gegner finden — seit dem 06.09.2026 ueber die Suchschlange des
+   * Servers und nicht mehr ueber die Tischliste.
    *
-   * Wortgleich zu Mememory, und das ist Absicht — die Plattform hat keine
-   * Warteschlange, gesucht wird ueber die gewoehnliche Tischliste. Das reicht,
-   * weil `joinTable` serverseitig absichert, dass zwei gleichzeitige Beitritte
-   * nicht denselben Platz bekommen: Der Verlierer des Rennens bekommt einen
-   * Fehler und sucht weiter.
+   * Der alte Weg (offenen Tisch suchen, sonst selbst einen aufmachen, und ein
+   * Wettrennen zweier gleichzeitig aufgemachter Tische per Kennungsvergleich
+   * im 2,5-Sekunden-Takt aufloesen) ist damit weg. Er konnte zwei Menschen in
+   * zwei getrennten Tischen festsetzen, und vor allem hatte er kein Ende: Wer
+   * als Einziger suchte, wartete bis zum Verfall seines Tisches. Jetzt sammelt
+   * der Server 30 Sekunden lang, setzt danach alle Gefundenen an EINEN Tisch
+   * und fuellt den Rest mit Bots — bei zwei Sitzen also hoechstens einen.
    */
-  const suche = useCallback(async (): Promise<void> => {
+  const starteSuche = useCallback(async (): Promise<void> => {
     setFehler(null);
     setSucht(true);
     try {
-      const zeilen = await api.tables('filler');
-      const offen = zeilen
-        .filter((zeile) => zeile.seats === 2 && zeile.occupied < zeile.seats)
-        .filter((zeile) => passt(zeile.variante, variante))
-        .sort((a, b) => a.id.localeCompare(b.id));
-      const ziel = offen[0];
-      if (ziel) {
-        await api.joinTable(ziel.id);
-        setEigenerTisch(null);
-        setTischId(ziel.id);
-        return;
-      }
-      const { id } = await api.createTable({
-        gameId: 'filler',
-        config: { ...REGELSATZ, variante },
-        seats: 2,
-        rounds: 1,
-      });
-      setEigenerTisch(id);
-      setTischId(id);
+      const stand = await api.sucheStarten('filler');
+      if (stand.tischId) setTischId(stand.tischId);
+      else setSuchstand(stand);
     } catch {
-      setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+    } finally {
+      setSucht(false);
     }
-  }, [variante]);
+  }, []);
+
+  /**
+   * Nachfragen, solange gesucht wird.
+   *
+   * Abhaengig ist der Effekt vom SCHLUESSEL `suchstand !== null` und nicht vom
+   * Objekt: Er setzt bei jedem Takt einen neuen Stand, und mit dem Objekt in
+   * der Liste raeumte er dabei jedes Mal seinen eigenen Zeitgeber ab (siehe
+   * CLAUDE.md).
+   */
+  const suchtGerade = suchstand !== null;
+  useEffect(() => {
+    if (!suchtGerade) return;
+    let lebt = true;
+    const frage = (): void => {
+      void api
+        .sucheStand('filler')
+        .then((stand) => {
+          if (!lebt) return;
+          if (stand.tischId) {
+            // Ohne Rueckfrage hinueber: Wer 30 Sekunden gewartet hat, will
+            // spielen und keinen zweiten Knopf.
+            setSuchstand(null);
+            setTischId(stand.tischId);
+            return;
+          }
+          if (!stand.sucht) {
+            // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart des
+            // Servers. Lieber ehrlich melden als stumm weiterdrehen.
+            setSuchstand(null);
+            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            return;
+          }
+          setSuchstand(stand);
+        })
+        .catch(() => {
+          /* Ein einzelner Fehlversuch ist kein Abbruch: Der Server wirft uns
+             erst nach mehreren stillen Sekunden aus der Schlange. */
+        });
+    };
+    const takt = window.setInterval(frage, SUCH_TAKT_MS);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, [suchtGerade]);
+
+  /**
+   * Den Bildschirm verlassen heisst die Suche verlassen.
+   *
+   * Ohne das stuende man nach dem Weggehen noch bis zu acht Sekunden in der
+   * Schlange und wuerde womoeglich an einen Tisch gesetzt, den niemand mehr
+   * ansieht.
+   */
+  const suchtRef = useRef(false);
+  suchtRef.current = suchtGerade;
+  useEffect(
+    () => () => {
+      if (suchtRef.current) void api.sucheAbbrechen('filler').catch(() => {});
+    },
+    [],
+  );
+
+  const brichSucheAb = useCallback((): void => {
+    setSuchstand(null);
+    void api.sucheAbbrechen('filler').catch(() => {});
+  }, []);
 
   /**
    * Einen Tisch gegen den Computer aufmachen.
@@ -229,7 +292,6 @@ export function Filler({
         visibility: 'on_request',
         fillWithBots: true,
       });
-      setEigenerTisch(null);
       setTischId(id);
     } catch {
       setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
@@ -238,60 +300,10 @@ export function Filler({
     }
   }, [variante]);
 
-  /**
-   * Das Wettrennen aufloesen.
-   *
-   * Tippen zwei Leute gleichzeitig auf "Suchen", sieht keiner den Tisch des
-   * anderen und beide machen einen auf. Wechselten danach BEIDE zum jeweils
-   * anderen, taeten sie das fuer immer. Deshalb bewegt sich nur einer: der mit
-   * der groesseren Tischkennung. Die Kennungen sind auf beiden Geraeten
-   * dieselben, also braucht die Regel keine Absprache.
-   */
-  const wechseltGerade = useRef(false);
-  useEffect(() => {
-    if (!tischId || !eigenerTisch || tischId !== eigenerTisch) return;
-    if (tisch.table && tisch.table.status !== 'waiting') return;
-    let lebt = true;
-    const pruefe = (): void => {
-      void api
-        .tables('filler')
-        .then(async (zeilen: TableRow[]) => {
-          if (!lebt || wechseltGerade.current) return;
-          const kleiner = zeilen
-            .filter((z) => z.seats === 2 && z.occupied < z.seats && z.id < tischId)
-            // Nur in den EIGENEN Topf wechseln: Ein Nebeltisch ist keine
-            // Loesung fuer jemanden, der offen spielen wollte.
-            .filter((z) => passt(z.variante, variante))
-            .sort((a, b) => a.id.localeCompare(b.id))[0];
-          if (!kleiner) return;
-          wechseltGerade.current = true;
-          try {
-            // Kein leaveTable davor: joinTable raeumt serverseitig alle
-            // anderen Warteplaetze desselben Kontos ab.
-            await api.joinTable(kleiner.id);
-            if (!lebt) return;
-            setEigenerTisch(null);
-            setTischId(kleiner.id);
-          } catch {
-            /* Der Tisch war schneller voll. Beim naechsten Takt weiter. */
-          } finally {
-            wechseltGerade.current = false;
-          }
-        })
-        .catch(() => {});
-    };
-    const takt = window.setInterval(pruefe, 2500);
-    return () => {
-      lebt = false;
-      window.clearInterval(takt);
-    };
-  }, [tischId, eigenerTisch, tisch.table?.status, variante]);
-
   const brichAb = useCallback((): void => {
     const id = tischId;
     setSucht(false);
     setTischId(null);
-    setEigenerTisch(null);
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
@@ -378,6 +390,41 @@ export function Filler({
   );
 
   // -------------------------------------------------------------------------
+  // Mitspieler suchen
+  // -------------------------------------------------------------------------
+
+  if (!tischId && suchstand) {
+    const sekunden = Math.ceil(suchstand.restMs / 1000);
+    const gefunden = suchstand.suchende;
+    return (
+      <main className="fl-seite fl-menue">
+        <button className="fl-zurueck" type="button" onClick={brichSucheAb}>
+          ← Abbrechen
+        </button>
+        <div className="fl-menue-mitte">
+          <h1 className="fl-titel">Gegner suchen</h1>
+          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
+              beantwortet damit die einzige Frage, die man hier hat. */}
+          <p className="fl-countdown" aria-live="polite">
+            {sekunden}
+          </p>
+          <p className="fl-untertitel">
+            {gefunden === 1
+              ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen einen Bot.'
+              : `${gefunden} Spieler gefunden`}
+          </p>
+          <div className="fl-punkte-lauf" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Menue
   // -------------------------------------------------------------------------
 
@@ -398,21 +445,37 @@ export function Filler({
               <span key={i} style={{ background: farbe }} />
             ))}
           </div>
-          {/*
-            * Der Schalter steht ÜBER den beiden Knoepfen und nicht darunter:
-            * Er entscheidet, WAS die Knoepfe aufmachen. Wer ihn erst nach dem
-            * Tippen sieht, hat ihn zu spaet gesehen.
-            */}
-          <Spielartschalter wert={variante} onWahl={setVariante} />
-          <button className="fl-suchen" type="button" onClick={() => void suche()} disabled={sucht}>
+          <button
+            className="fl-suchen"
+            type="button"
+            onClick={() => void starteSuche()}
+            disabled={sucht}
+          >
             Online Match suchen…
           </button>
-          {/* Ruhiger gefaerbt als die Match-Suche: Der Mensch bleibt das
-              Angebot, gegen das man zuerst spielt. Dieselbe Staffelung wie
-              bei Mememory. */}
-          <button className="fl-botknopf" type="button" onClick={() => void starteBot()} disabled={sucht}>
-            Gegen Bot spielen
-          </button>
+          {/*
+            * Der Schalter sass bis zum 06.09.2026 ÜBER beiden Knoepfen, weil er
+            * entschied, WAS beide aufmachen. Seit die Suche ueber die Schlange
+            * des Servers laeuft, entscheidet er nur noch ueber den Bot-Tisch —
+            * die Schlange nimmt den Regelsatz des Moduls. Deshalb steht er
+            * jetzt IN diesem Block: Ein Schalter ueber einem Knopf, auf den er
+            * nicht wirkt, ist schlimmer als gar keiner.
+            */}
+          <div className="fl-botblock">
+            <p className="fl-blocktitel">Gegen Bot — hier wählst du die Spielart</p>
+            <Spielartschalter wert={variante} onWahl={setVariante} />
+            {/* Ruhiger gefaerbt als die Match-Suche: Der Mensch bleibt das
+                Angebot, gegen das man zuerst spielt. Dieselbe Staffelung wie
+                bei Mememory. */}
+            <button
+              className="fl-botknopf"
+              type="button"
+              onClick={() => void starteBot()}
+              disabled={sucht}
+            >
+              Gegen Bot spielen
+            </button>
+          </div>
           <button className="fl-regelknopf" type="button" onClick={() => setRegelnOffen(true)}>
             So spielt man Filler
           </button>
@@ -425,7 +488,7 @@ export function Filler({
   }
 
   // -------------------------------------------------------------------------
-  // Suche laeuft
+  // Tisch wird aufgebaut
   // -------------------------------------------------------------------------
 
   if (!sicht) {
@@ -436,7 +499,7 @@ export function Filler({
           ← Abbrechen
         </button>
         <div className="fl-menue-mitte">
-          <h1 className="fl-titel">Suche läuft</h1>
+          <h1 className="fl-titel">Tisch wird aufgebaut</h1>
           <p className="fl-untertitel">
             {tisch.status === 'open'
               ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
@@ -447,9 +510,10 @@ export function Filler({
             <span />
             <span />
           </div>
-          <p className="fl-untertitel fl-klein">
-            {aktiv ?? '…'} Spieler gerade in Filler · Spielart {VARIANTE_NAME[variante]}
-          </p>
+          {/* Ohne Spielart: Der Tisch aus der Schlange traegt den Regelsatz
+              des Moduls, nicht den Schalter aus dem Menue — die Zeile haette
+              dort schlicht gelogen. Was gilt, steht am Brett (`sicht.variante`). */}
+          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
         </div>
       </main>
     );

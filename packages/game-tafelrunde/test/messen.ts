@@ -144,11 +144,15 @@ export interface Zeitmodell {
   /**
    * Deckel auf die Vorbereitung.
    *
-   * Die Plattform nimmt einem Sitz die Entscheidung nach `turnTimeoutMs` ab
-   * (packages/server/src/runtime/party.ts, heute 60 Sekunden) und laesst den
-   * Bot ziehen. Laenger als das kann eine Vorbereitung nicht dauern, ohne dass
-   * jemand eingreift — deshalb ist das die Obergrenze und nicht eine Zahl aus
-   * diesem Modul.
+   * SEIT DEM 06.09.2026 IST DAS EINE ZAHL AUS DIESEM MODUL: `vorbereitungMs`
+   * im Regelsatz. Nach ihrem Ablauf gelten offene Sitze als bereit
+   * (`fristAbgelaufen` in partie.ts), laenger kann eine Vorbereitung also gar
+   * nicht dauern.
+   *
+   * Bis dahin stand hier die Zugzeit der Plattform (`turnTimeoutMs`,
+   * 60 Sekunden): Sie war der einzige Deckel, den es gab, und sie war ein
+   * schlechter — sie laeuft je Sitz, wird bei jeder Aktion irgendeines Sitzes
+   * neu gestellt und faellt am Botsitz ganz weg.
    */
   readonly vorbereitungHoechstMs: number;
   /** Was nach dem letzten Kampfereignis stehen bleibt (`KAMPF_NACHLAUF_MS`). */
@@ -173,7 +177,7 @@ export interface Zeitmodell {
 export const STANDARD_ZEITMODELL: Zeitmodell = {
   vorbereitungGrundMs: 5_000,
   vorbereitungJeZugMs: 1_500,
-  vorbereitungHoechstMs: 60_000,
+  vorbereitungHoechstMs: DEFAULT_REGELN.vorbereitungMs,
   kampfNachlaufMs: KAMPF_NACHLAUF_MS,
 };
 

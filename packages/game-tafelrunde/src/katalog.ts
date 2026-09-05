@@ -183,17 +183,73 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 1,
     ruestung: 40,
   },
+  /**
+   * DRITTER TRAEGER DER MARKE UNTOT, dafuer Ruestung 42 statt 45
+   * (beides am 05.09.2026).
+   *
+   * Vorher trugen die Marke nur Knochenspaeher (2 Gold) und Grabfuerstin
+   * (3 Gold), und weil die Grabfuerstin ueber 5.000 Partien zu viert nur
+   * 19-mal auf einem Schlussbrett stand, hiess "Untot zu zweit" praktisch
+   * immer "zwei Knochenspaeher". Gemessen trat die Marke damit noch 35-mal an
+   * — unter jeder Mindestzahl, mit der sich etwas aussagen laesst. AM BONUS ZU
+   * DREHEN HAETTE NICHTS GEMESSEN: Solange eine Marke nur ueber zwei Kopien
+   * derselben Einheit zu haben ist, misst man die Einheit und nicht die Marke
+   * — genau das war schon bei Drache der Befund (siehe Funkenlehrling unten).
+   *
+   * Der Knappe ist der Traeger, weil er als einziger Kandidat beides
+   * mitbringt: Er steht oft genug auf einem Brett, dass die Marke ueberhaupt
+   * zustande kommt, und er zieht sie nicht aus der Mitte. Fuenf weitere
+   * Kandidaten wurden ueber je 1.500 Partien gegengemessen: Steinschleuderer
+   * x1,57 und Gassendieb x1,36 zogen die Marke nach oben, bei Nachtpfeil,
+   * Runenpriester und Moosheiler blieb sie unter hundert Antritten und damit
+   * unmessbar. Dazu passt die Rolle: Knochenspaeher und Grabfuerstin teilen
+   * aus, keiner von beiden haelt etwas aus — mit einer Wache bekommt "zaeh und
+   * unerbittlich" (der Untot-Bonus auf Leben und Angriff, synergien.ts)
+   * endlich eine Front. Beide alten Traeger stehen seitdem oefter, weil der
+   * Bot ueberhaupt auf Untot hinspielen kann: Knochenspaeher 535 -> 1.315
+   * Antritte, Grabfuerstin 19 -> 40.
+   *
+   * Zusammen mit der Elementar-Arbeit desselben Tages (Irrlicht in die
+   * Vorderreihe, siehe unten) steht Untot ueber 5.000 Partien zu viert bei
+   * 3.422 Antritten und x0,90 des Schnitts. Beide Aenderungen sind getrennt
+   * gefunden und getrennt gemessen worden; die gemeinsame Tabelle steht in
+   * docs/spiele/auto-battler-konzept.md.
+   *
+   * DIE DREI PUNKTE RUESTUNG GEHOEREN ZU DERSELBEN AENDERUNG. Mit der zweiten
+   * Marke wird der Knappe oefter gekauft und lebt laenger, und beides
+   * verlaengert die Kaempfe. Gemessen auf dem Stand vor der Elementar-Arbeit
+   * stiegen die an der Hoechstdauer abgeschnittenen Kaempfe allein durch die
+   * Marke von 9,5 auf 12,9 % und die Spielzeit von 7:24 auf 7:43 — die Probe
+   * in test/spielzeit.test.ts faengt genau das ab (Schranke 10 %), und sie hat
+   * es getan. DER EFFEKT IST NACH DEM ZUSAMMENFUEHREN NICHT KLEINER GEWORDEN,
+   * sondern groesser: Setzt man den Knappen auf dem heutigen Stand wieder auf
+   * 45, stehen 10,6 % und 7:32 statt 5,6 % und 6:50 (je 1.500 Partien). Die
+   * drei Punkte tragen also weiter.
+   *
+   * WARUM RUESTUNG UND NICHT DER BONUS: Ruestung wirkt auf JEDEN eingehenden
+   * Treffer und verlaengert einen Kampf doppelt, weil beide Seiten laenger
+   * stehen (ausfuehrlich in synergien.ts). Am Untot-Bonus zu drehen half
+   * dagegen kaum — rein auf Angriff gelegt (15/25/40) blieb er bei 10,6 % und
+   * haette der Marke ihren eigenen Charakter genommen: Sie waere ein zweites
+   * Elementar geworden. Die Laenge haengt am Knappen, also nimmt der Knappe
+   * sie zurueck.
+   *
+   * Zur Figur: Sie zeigt weiter den lebenden Knappen im Kettenhemd
+   * (figuren.ts im Client). Der Name traegt es — ein Knappe, der seinen Posten
+   * auch dann nicht verlassen hat, als er gefallen war —, aber wer neue Grafik
+   * bestellt, sollte ihn als Wiedergaenger zeichnen lassen.
+   */
   {
     id: 'schildknappe',
     name: 'Schildknappe',
     kosten: 1,
     rolle: 'wache',
-    marken: ['waechter'],
+    marken: ['waechter', 'untot'],
     leben: 700,
     angriff: 28,
     tempo: 0.6,
     reichweite: 1,
-    ruestung: 45,
+    ruestung: 42,
   },
   {
     id: 'astschuetze',

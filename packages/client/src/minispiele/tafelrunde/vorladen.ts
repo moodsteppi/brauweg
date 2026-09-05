@@ -42,6 +42,12 @@ import { PAKET } from './paket';
  *     3D-Fassung ist das der eigentliche Punkt — dort stehen GLB-Modelle im
  *     Megabyte-Bereich neben Kleinkram, und ein Dateizaehler haenge
  *     minutenlang auf demselben Strich.
+ *  4. **Es gibt zwei Holer, und die Wahl haengt an der Groesse.** `bildHolen`
+ *     meldet sich genau einmal, naemlich fertig; `stromHolen` meldet je
+ *     gelesenem Stueck. Alles, was laenger als die Ruhefrist am Stueck laden
+ *     kann, gehoert an den zweiten — sonst schreibt die Uhr es mitten im
+ *     Herunterladen ab (siehe `FRIST_MS`). Heute ist kein Posten so schwer:
+ *     Das dickste Bild ist ein Blatt mit 43 kB.
  */
 
 // ---------------------------------------------------------------------------
@@ -57,6 +63,11 @@ export interface Posten {
    * erzeugter Groessenkatalog waere die zweite Stelle, an der eine neue Figur
    * einzutragen waere (siehe Punkt 1 oben). Ein Wert in der richtigen
    * Groessenordnung genuegt, damit der Balken nicht luegt.
+   *
+   * Seit es Zwischenberichte gibt (`stromHolen`), ist der Wert ausserdem der
+   * Massstab fuer eine halb geladene Datei — aber nur dann, wenn die
+   * Gegenstelle keine `Content-Length` mitschickt. Sonst gilt fuer diesen
+   * einen Posten die echte Groesse.
    */
   readonly kb: number;
   /**
@@ -67,8 +78,12 @@ export interface Posten {
    * der Bauvorgang. Ohne diesen Haken muesste `bildHolen` Sonderfaelle nach
    * dem Pfad unterscheiden, und das waere die Stelle, an der die naechste
    * Sonderbehandlung dazukaeme.
+   *
+   * Der Parameter ist der Draht fuer Zwischenberichte (siehe `Fortschritt`).
+   * Das Spielpaket braucht ihn nicht — ein `import()` hat keinen Zaehler —,
+   * ein Posten aus `stromPosten` benutzt ihn.
    */
-  readonly holen?: () => Promise<void>;
+  readonly holen?: (melden: Fortschritt) => Promise<void>;
 }
 
 /**
@@ -115,11 +130,19 @@ export const VORZULADEN: readonly Posten[] = [
  * fehlenden Bild auf ein gezeichnetes Zeichen zurueck (KampfAnzeige.tsx).
  * Lieber ein Platzhalter als ein haengender Ladebildschirm.
  *
- * GRENZE, die beim Sprung auf 3D auffallen wird: Ein einzelner Posten meldet
- * sich nur EINMAL, naemlich fertig. Eine Datei, die laenger als die Ruhefrist
- * am Stueck laedt, sieht von hier aus wie eine tote. Bei 35 kB ist das keine;
- * bei einem Modell im Megabyte-Bereich braucht `Holer` dann einen Zwischen-
- * bericht (fetch mit Reader statt `<img>`), der die Frist mit anstoesst.
+ * DER LANGE DOWNLOAD IST ABGEDECKT, seit es `stromHolen` gibt (6.9.2026).
+ * Vorher meldete sich ein Posten nur EINMAL, naemlich fertig — eine Datei, die
+ * laenger als die Ruhefrist am Stueck laedt, sah von hier aus wie eine tote
+ * aus, und die Uhr haette sie mitten im Herunterladen abgeschrieben. Ein
+ * Zwischenbericht stellt die Uhr jetzt genauso zurueck wie ein fertiger
+ * Posten; gezaehlt wird damit wirklich Stillstand und nicht mehr „seit dem
+ * letzten Dateiende".
+ *
+ * WER SICH NICHT ZWISCHENMELDET, ist deshalb nicht falsch bedient: `bildHolen`
+ * kann es gar nicht (ein `<img>` hat keinen Zaehler), und bei 43 kB je Blatt
+ * braucht es das auch nicht — auf gedrosseltem 3G ist ein Blatt in rund einer
+ * Sekunde durch. Die Regel dahinter: Ein Posten, der laenger als `FRIST_MS`
+ * am Stueck laden kann, gehoert an `stromPosten` und nicht an `bildHolen`.
  */
 export const FRIST_MS = 15_000;
 
@@ -147,8 +170,30 @@ const NOCH_NICHTS: Ladestand = {
   fehlend: [],
 };
 
-/** Wie ein einzelner Posten geholt wird. Austauschbar, damit es pruefbar ist. */
-export type Holer = (pfad: string) => Promise<void>;
+/**
+ * Ein Zwischenbericht EINES Postens: wie viele Bytes davon da sind — und wie
+ * viele es werden, oder `null`, wenn die Gegenstelle keine `Content-Length`
+ * mitschickt (dann rechnet der Lauf mit `Posten.kb`).
+ *
+ * Zwei Dinge haengen daran, und das zweite ist das wichtigere: Der Balken
+ * fuellt sich waehrend einer grossen Datei weiter — und die Ruhefrist laeuft
+ * neu an, statt mitten im Herunterladen abzulaufen (siehe `FRIST_MS`).
+ *
+ * Gemeldet wird der STAND, nicht der Zuwachs: Ein verlorener Bericht heilt
+ * damit von selbst beim naechsten, und wer zweimal dasselbe meldet, verschiebt
+ * nichts.
+ */
+export type Fortschritt = (gelesen: number, gesamt: number | null) => void;
+
+/**
+ * Wie ein einzelner Posten geholt wird. Austauschbar, damit es pruefbar ist.
+ *
+ * Der zweite Parameter ist der Draht fuer Zwischenberichte. Wer ihn nicht
+ * braucht, laesst ihn in seiner Unterschrift weg — `bildHolen` und die Holer
+ * der Tests tun genau das, und TypeScript nimmt eine Funktion mit weniger
+ * Parametern klaglos an.
+ */
+export type Holer = (pfad: string, melden: Fortschritt) => Promise<void>;
 
 export interface Optionen {
   readonly posten?: readonly Posten[];
@@ -177,6 +222,72 @@ export function bildHolen(pfad: string): Promise<void> {
     bild.onload = () => erfuellen();
     bild.onerror = schiefgegangen;
   });
+}
+
+/**
+ * Eine grosse Datei holen und dabei laufend melden, wie weit sie ist.
+ *
+ * DER ZWEITE WEG NEBEN `bildHolen` — und ausdruecklich nicht dessen
+ * Nachfolger. Fuer ein Bild bleibt `bildHolen` richtig, aus dem Grund in
+ * Punkt 2 oben: Dort wird ueber `<img>` auch ENTPACKT, und zwar unter
+ * derselben Adresse, die das spaetere `<img>` benutzt. Ein `fetch` legt die
+ * Bytes zwar in den HTTP-Speicher des Browsers, entpackt aber nichts — das
+ * Bild blitzte beim ersten Zeichnen trotzdem auf. Beides nacheinander waere
+ * ein Weg, kostete aber im ungluecklichen Fall (Antwort ohne Freigabe zum
+ * Speichern) zwei Uebertragungen. Fuer 43-kB-Blaetter ein schlechter Tausch.
+ *
+ * Gedacht ist er fuer alles, was gross ist und kein Bild: heute nichts, ab dem
+ * ersten GLB-Modell der 3D-Arena jeder einzelne Posten. Dort ist der
+ * Zwischenbericht kein Komfort, sondern der Unterschied zwischen „laedt" und
+ * „gilt als tot" (siehe `FRIST_MS`).
+ *
+ * DIE BYTES WERDEN WEGGEWORFEN, und das ist der ganze Zweck: Was bleibt, ist
+ * der Eintrag im HTTP-Speicher. Der spaetere Lader fordert dieselbe Adresse an
+ * und bekommt sie von dort — sie zwischenzuhalten hiesse, ein Modell im
+ * Megabyte-Bereich ein zweites Mal im Arbeitsspeicher zu fuehren.
+ *
+ * Fehlt `Content-Length` — bei `Transfer-Encoding: chunked` oder hinter
+ * gzip —, meldet er die gelesenen Bytes mit `null` als Gesamtwert. Der Lauf
+ * rechnet dann mit `Posten.kb`; angestossen wird die Ruhefrist so oder so,
+ * und das ist der wichtigere Teil.
+ */
+export function stromHolen(pfad: string, melden?: Fortschritt): Promise<void> {
+  return fetch(pfad).then(async (antwort) => {
+    /* Ein 404 kommt bei `fetch` als ganz gewoehnliche Antwort an. Ohne diese
+       Zeile haekelte der Lauf eine fehlende Datei als geladen ab — und der
+       Ladebildschirm meldete Vollzug ueber eine Datei, die es nicht gibt. */
+    if (!antwort.ok) throw new Error(`${pfad}: HTTP ${antwort.status}`);
+    const laenge = Number(antwort.headers.get('content-length'));
+    const gesamt = Number.isFinite(laenge) && laenge > 0 ? laenge : null;
+    const leser = antwort.body?.getReader();
+    /* Kein Koerper zum Mitlesen (jsdom kennt keinen, aeltere Browser auch
+       nicht): dann eben in einem Stueck. Der Posten meldet sich damit wie
+       frueher nur einmal — das ist schlechter als ein Zwischenbericht und
+       immer noch viel besser als eine Ausnahme, denn die kostete die Datei. */
+    if (!leser) {
+      await antwort.arrayBuffer();
+      return;
+    }
+    let gelesen = 0;
+    for (;;) {
+      const stueck = await leser.read();
+      if (stueck.done) break;
+      gelesen += stueck.value.byteLength;
+      melden?.(gelesen, gesamt);
+    }
+  });
+}
+
+/**
+ * Ein Posten, der ueber `stromHolen` kommt — die Fassung fuer grosse Dateien.
+ *
+ * Steht hier und nicht als Handarbeit in der Liste, damit der Pfad EINMAL
+ * genannt wird. Von Hand hiesse es `{ pfad, kb, holen: (m) => stromHolen(pfad,
+ * m) }`, und die beiden Nennungen koennen auseinanderlaufen: Der Lauf haekelte
+ * dann einen Posten ab, dessen Datei er nie geholt hat.
+ */
+export function stromPosten(pfad: string, kb: number): Posten {
+  return { pfad, kb, holen: (melden) => stromHolen(pfad, melden) };
 }
 
 // ---------------------------------------------------------------------------
@@ -235,6 +346,11 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
 
   const offen = new Set(posten.map((p) => p.pfad));
   const kaputt: string[] = [];
+  /* Angefangene Posten: Pfad -> das schon geladene Gewicht in kB. Wer hier
+     steht, ist NOCH offen; `abgehakt` raeumt ihn heraus, bevor sein volles
+     Gewicht nach `fertigeKb` wandert — sonst zaehlte es doppelt und der
+     Balken stuende ueber dem, was wirklich da ist. */
+  const teilKb = new Map<string, number>();
   let erledigt = 0;
   let fertigeKb = 0;
   let abgeschlossen = false;
@@ -242,6 +358,13 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
   const melde = (stand: Ladestand): void => {
     dieser.stand = stand;
     for (const hoerer of [...dieser.hoerer]) hoerer(stand);
+  };
+
+  /** Die Breite des Balkens: fertiges Gewicht plus das der angefangenen. */
+  const anteilJetzt = (): number => {
+    let summe = fertigeKb;
+    for (const kb of teilKb.values()) summe += kb;
+    return Math.min(1, summe / gesamtKb);
   };
 
   dieser.versprechen = new Promise<Ladestand>((erfuellen) => {
@@ -274,9 +397,37 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
     };
     uhrStellen();
 
+    /**
+     * Ein Posten ist ein Stueck weiter. Das tut ZWEIERLEI, und das zweite ist
+     * das wichtigere: Es fuellt den Balken feiner — und es stellt die
+     * Ruhefrist zurueck. Ohne das gilt eine Datei, die laenger als `fristMs`
+     * am Stueck laedt, als tot (siehe `FRIST_MS`).
+     *
+     * Ein Bericht nach dem Schluss wird verworfen, genau wie ein Nachzuegler
+     * in `abgehakt`: Sonst spraenge der Balken zurueck, waehrend die Partie
+     * laengst laeuft.
+     */
+    const gemeldet = (p: Posten, gelesen: number, gesamt: number | null): void => {
+      if (abgeschlossen || !offen.has(p.pfad)) return;
+      /* Ohne `Content-Length` bleibt nur das geschaetzte Gewicht des Postens.
+         Es kann danebenliegen; der Deckel bei eins sorgt dafuer, dass der
+         Balken davon hoechstens zu frueh voll aussieht und nicht ueberlaeuft. */
+      const erwartet = gesamt ?? p.kb * 1024;
+      teilKb.set(p.pfad, Math.min(1, gelesen / Math.max(1, erwartet)) * p.kb);
+      uhrStellen();
+      melde({
+        fertig: false,
+        erledigt,
+        gesamt: posten.length,
+        anteil: anteilJetzt(),
+        fehlend: [...kaputt],
+      });
+    };
+
     const abgehakt = (p: Posten, geklappt: boolean): void => {
       if (abgeschlossen || !offen.has(p.pfad)) return;
       offen.delete(p.pfad);
+      teilKb.delete(p.pfad);
       if (!geklappt) kaputt.push(p.pfad);
       erledigt += 1;
       fertigeKb += p.kb;
@@ -285,7 +436,7 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
         fertig: false,
         erledigt,
         gesamt: posten.length,
-        anteil: Math.min(1, fertigeKb / gesamtKb),
+        anteil: anteilJetzt(),
         fehlend: [...kaputt],
       });
       if (offen.size === 0) beenden(false);
@@ -303,7 +454,8 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
          Weg fuer Bilder, und das Spielpaket ist keines (siehe `Posten.holen`).
          Der Lauf selbst merkt keinen Unterschied: Er sieht ein Versprechen,
          das haelt oder nicht. */
-      void (p.holen ? p.holen() : holen(p.pfad)).then(
+      const melden: Fortschritt = (gelesen, gesamt) => gemeldet(p, gelesen, gesamt);
+      void (p.holen ? p.holen(melden) : holen(p.pfad, melden)).then(
         () => abgehakt(p, true),
         () => abgehakt(p, false),
       );
