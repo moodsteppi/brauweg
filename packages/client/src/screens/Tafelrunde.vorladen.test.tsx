@@ -120,6 +120,8 @@ const SICHT = {
   bankPlaetze: 9,
   brettFelder: 10,
   brettReihen: 2,
+  // Kleine Probearena ohne Luecke; am Tisch sind es 4 und 10 (arena.ts).
+  arenaReihen: 4,
   brettSpalten: 5,
   verschmelzZahl: 3,
   maxStufe: 3,
