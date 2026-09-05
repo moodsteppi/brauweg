@@ -1,5 +1,5 @@
 /**
- * Wer wo steht und wer gegen wen antritt — die Rechnungen hinter der
+ * Wer wo steht und wer gegen wen antritt — die Ableitungen hinter der
  * Mitspielerleiste und dem Endbild.
  *
  * Reine Funktionen ohne React, damit sie geprüft werden können, ohne einen
@@ -7,27 +7,16 @@
  * Frage aus zwei Blickwinkeln beantworten: „wer ist noch dabei" während der
  * Partie und „auf welchem Platz bin ich gelandet" danach.
  *
- * ACHTUNG, HIER STEHT EINE NACHGEBAUTE REGEL — bewusst und befristet.
+ * HIER STEHT KEINE REGEL. Das ist seit dem 6.9.2026 wieder wahr: Bis dahin
+ * rechnete `platzTabelle` die Platzierung selbst nach — eine wortgetreue
+ * Abschrift von `platzierungen` aus packages/game-tafelrunde/src/partie.ts,
+ * nötig, weil die Sicht nur `sieger` lieferte (einen Sitz oder null), und
+ * „Platz 5 von 8" daraus nicht zu bilden ist. Inzwischen liefert die Sicht
+ * das Feld `platzierung` (je Sitz Platz und überstandene Runden), und diese
+ * Datei schlägt darin nur noch nach.
  *
- * `platzTabelle` ist die Abschrift von `platzierungen` in
- * packages/game-tafelrunde/src/partie.ts. Der Bildschirm rechnet sie selbst
- * nach, weil die Sicht (sicht.ts) den PLATZ nicht liefert: Dort steht nur
- * `sieger` (ein einziger Sitz oder null) — und „1 von 8" lässt sich daraus
- * nicht bilden, „5 von 8" schon gar nicht. Alle Eingaben der Formel stehen
- * dagegen in jeder Sicht (`ausRunde`, `leben`, `runde`), die Abschrift ist
- * also wortgetreu möglich und nicht geraten.
- *
- * Das bleibt trotzdem der Fehler, vor dem CLAUDE.md warnt: Wer die Formel im
- * Modul ändert (etwa das Leben als zweites Kriterium durch das gehaltene Gold
- * ersetzt), bekommt hier eine Platzierung, die der Server anders sieht. Die
- * Auflösung ist, `platzierungen` in die Sicht zu legen und diese Datei auf
- * das Nachschlagen einzudampfen; solange das nicht geschehen ist, hält der
- * Prüfstand (platzierung.test.ts) die Fälle fest, an denen ein Auseinander-
- * laufen auffällt.
- *
- * Der Rest der Datei ist keine Regel, sondern Ablesen: `gegnerDieseRunde`
- * sucht in den Kämpfen der Sicht denselben Kampf heraus wie `abzuspielen` in
- * der Kampfanzeige.
+ * Der Rest ist Ablesen: `gegnerDieseRunde` sucht in den Kämpfen der Sicht
+ * denselben Kampf heraus wie `abzuspielen` in der Kampfanzeige.
  */
 
 /**
@@ -116,41 +105,16 @@ export function gegnerDieseRunde(
   return kampf.a === ich ? kampf.b : kampf.a;
 }
 
-/** Ein Platz in der Schlussrechnung. */
+/**
+ * Ein Platz in der Schlussrechnung — dieselbe Form wie `Platzstand` in
+ * sicht.ts, hier ein zweites Mal beschrieben wie jede Sicht (protocol.ts).
+ */
 export interface Platz {
   sitz: number;
   /** 1 ist der beste. Bei Gleichstand teilen sich zwei Sitze eine Zahl. */
   platz: number;
-  /** Überstandene Runden — die Zahl, nach der sortiert wird. */
+  /** Überstandene Runden — die Zahl, nach der das Modul sortiert. */
   runden: number;
-}
-
-/**
- * Die Platzierung aller Sitze.
- *
- * ABSCHRIFT von `platzierungen` in partie.ts, siehe der Kopf dieser Datei.
- * Wortgetreu heißt: gezählt werden die überstandenen Runden (wer noch lebt,
- * zählt die laufende mit), bei Gleichstand entscheidet das verbliebene Leben,
- * und erst bei Gleichstand in beidem teilen sich zwei Sitze einen Platz.
- */
-export function platzTabelle(
-  staende: readonly Sitzstand[],
-  runde: number,
-): Platz[] {
-  const reihe = [...staende]
-    .map((s) => ({ sitz: s.sitz, runden: s.ausRunde ?? runde, leben: s.leben }))
-    .sort((a, b) => b.runden - a.runden || b.leben - a.leben || a.sitz - b.sitz);
-
-  let platz = 0;
-  let letzter: string | null = null;
-  return reihe.map((eintrag, index) => {
-    const schluessel = `${eintrag.runden}:${eintrag.leben}`;
-    if (letzter === null || schluessel !== letzter) {
-      platz = index + 1;
-      letzter = schluessel;
-    }
-    return { sitz: eintrag.sitz, platz, runden: eintrag.runden };
-  });
 }
 
 /** Der eigene Platz, oder null, wenn der eigene Sitz nicht dabei ist. */
