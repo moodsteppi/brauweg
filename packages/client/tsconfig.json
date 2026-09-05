@@ -10,7 +10,37 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    /*
+     * Die Spielpakete kommen aus ihrer QUELLE, nicht aus ihrem `dist`.
+     * Gebraucht werden sie nur von den Vertraegen unter `src/vertrag/`, die
+     * die Sicht-Typen aus `protocol.ts` gegen die echten Modulsichten
+     * halten — der Client selbst importiert aus keinem Spielpaket.
+     *
+     * Warum die Quelle und nicht das gebaute `dist`: `npm run build` im
+     * Wurzelverzeichnis laeuft die Workspaces alphabetisch ab, und `client`
+     * steht vor `game-…`. Auf einer frischen Kopie (CI: `npm ci`, dann
+     * `npm run build`) gaebe es die `dist`-Ordner also noch gar nicht. Dazu
+     * kommt: Ein liegengebliebenes `dist` aus einem anderen Zweig liesse die
+     * Vertraege gruen werden, obwohl die Quelle etwas anderes sagt — genau
+     * der Fehler, den sie verhindern sollen.
+     *
+     * `game-api` steht mit in der Liste, obwohl kein Vertrag es nennt: Die
+     * Spielpakete importieren es selbst, und `tsc` folgt hier ihrer Quelle.
+     * Deshalb fehlt es umgekehrt bei den `devDependencies` — der Client
+     * haengt nicht daran, nur seine Quellenaufloesung tut es.
+     *
+     * Dieselbe Zuordnung steht als `resolve.alias` in `vitest.config.ts`;
+     * beide muessen zusammen gepflegt werden.
+     */
+    "baseUrl": ".",
+    "paths": {
+      "@brauweg/game-api": ["../game-api/src/index.ts"],
+      "@brauweg/game-cambio": ["../game-cambio/src/index.ts"],
+      "@brauweg/game-doppelkopf": ["../game-doppelkopf/src/index.ts"],
+      "@brauweg/game-skat": ["../game-skat/src/index.ts"],
+      "@brauweg/game-wizard": ["../game-wizard/src/index.ts"]
+    }
   },
   /*
    * `vitest.setup.ts` steht mit in der Liste, seit es Bildschirm-Tests gibt.
