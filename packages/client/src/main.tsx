@@ -40,6 +40,26 @@ function isDevFlag(name: string): boolean {
   return false;
 }
 
+/**
+ * Die Arena-Proben. Eigene Adressen statt eines `dev`-Kennzeichens, weil sie
+ * verschickt werden sollen: Robin vergleicht `/probe/arena-2d` und
+ * `/probe/arena-3d` nebeneinander am Bildschirm, und `?dev=…` ueberlebt kein
+ * Kopieren in einen Chat unbeschadet.
+ *
+ * Beide sind bewusst NICHT im Spiel verlinkt. Sie sind eine Entscheidungshilfe
+ * mit begrenzter Haltbarkeit — was von ihnen bleibt, wird spaeter eingebaut,
+ * die Blaetter selbst nicht.
+ *
+ * Der Server liefert fuer jede Adresse ohne Dateiendung die index.html aus
+ * (app.ts, setNotFoundHandler), hier ist also nichts weiter einzurichten.
+ */
+function istProbe(name: string): boolean {
+  const pfad = window.location.pathname.replace(/\/+$/, '');
+  return pfad === `/probe/${name}` || pfad.endsWith(`/probe/${name}`);
+}
+
+const probeArena3d = istProbe('arena-3d');
+
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
 const devWerkstatt = isDevFlag('werkstatt');
@@ -88,8 +108,14 @@ const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.R
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
+/* Dieselbe Ueberlegung, derselbe Weg: Die Probe zieht `three` samt Figuren
+   nach und geht deshalb in ein eigenes Stueck. Sie ist nicht verlinkt — sie
+   darf im Hauptbuendel keine einzige Zeile kosten. */
+const Arena3D = lazy(() => import('./proben/Arena3D'));
 
-const werkzeug = devAvatar ? (
+const werkzeug = probeArena3d ? (
+  <Arena3D />
+) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (
   <ChestAligner />

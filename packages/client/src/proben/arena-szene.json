@@ -1,0 +1,1061 @@
+{
+  "_hinweis": "Erzeugt von szene-erzeugen.mjs — nicht von Hand aendern. Gemeinsame Vorlage der Arena-Proben A (2D) und B (3D).",
+  "saat": "tafelrunde-probe",
+  "aufstellung": [
+    [
+      [
+        0,
+        "grimmbart"
+      ],
+      [
+        1,
+        "schattenklinge"
+      ],
+      [
+        5,
+        "drachenkind"
+      ],
+      [
+        6,
+        "sturmrufer"
+      ]
+    ],
+    [
+      [
+        0,
+        "grimmbart"
+      ],
+      [
+        1,
+        "schattenklinge"
+      ],
+      [
+        5,
+        "nachtpfeil"
+      ],
+      [
+        6,
+        "runenpriester"
+      ]
+    ]
+  ],
+  "figuren": [
+    {
+      "id": 0,
+      "name": "Grimmbart",
+      "rolle": "wache",
+      "reichweite": 1
+    },
+    {
+      "id": 1,
+      "name": "Schattenklinge",
+      "rolle": "meuchler",
+      "reichweite": 1
+    },
+    {
+      "id": 2,
+      "name": "Drachenkind",
+      "rolle": "schuetze",
+      "reichweite": 3
+    },
+    {
+      "id": 3,
+      "name": "Sturmrufer",
+      "rolle": "magier",
+      "reichweite": 4
+    },
+    {
+      "id": 4,
+      "name": "Grimmbart",
+      "rolle": "wache",
+      "reichweite": 1
+    },
+    {
+      "id": 5,
+      "name": "Schattenklinge",
+      "rolle": "meuchler",
+      "reichweite": 1
+    },
+    {
+      "id": 6,
+      "name": "Nachtpfeil",
+      "rolle": "schuetze",
+      "reichweite": 3
+    },
+    {
+      "id": 7,
+      "name": "Runenpriester",
+      "rolle": "beistand",
+      "reichweite": 2
+    }
+  ],
+  "bericht": {
+    "saat": "tafelrunde-probe",
+    "erstZieher": 1,
+    "start": [
+      {
+        "id": 0,
+        "seite": 0,
+        "einheitId": "grimmbart",
+        "stufe": 1,
+        "platz": 10,
+        "leben": 900,
+        "hoechstesLeben": 900
+      },
+      {
+        "id": 1,
+        "seite": 0,
+        "einheitId": "schattenklinge",
+        "stufe": 1,
+        "platz": 11,
+        "leben": 660,
+        "hoechstesLeben": 660
+      },
+      {
+        "id": 2,
+        "seite": 0,
+        "einheitId": "drachenkind",
+        "stufe": 1,
+        "platz": 15,
+        "leben": 820,
+        "hoechstesLeben": 820
+      },
+      {
+        "id": 3,
+        "seite": 0,
+        "einheitId": "sturmrufer",
+        "stufe": 1,
+        "platz": 16,
+        "leben": 760,
+        "hoechstesLeben": 760
+      },
+      {
+        "id": 4,
+        "seite": 1,
+        "einheitId": "grimmbart",
+        "stufe": 1,
+        "platz": 9,
+        "leben": 900,
+        "hoechstesLeben": 900
+      },
+      {
+        "id": 5,
+        "seite": 1,
+        "einheitId": "schattenklinge",
+        "stufe": 1,
+        "platz": 8,
+        "leben": 660,
+        "hoechstesLeben": 660
+      },
+      {
+        "id": 6,
+        "seite": 1,
+        "einheitId": "nachtpfeil",
+        "stufe": 1,
+        "platz": 4,
+        "leben": 600,
+        "hoechstesLeben": 600
+      },
+      {
+        "id": 7,
+        "seite": 1,
+        "einheitId": "runenpriester",
+        "stufe": 1,
+        "platz": 3,
+        "leben": 720,
+        "hoechstesLeben": 720
+      }
+    ],
+    "ereignisse": [
+      {
+        "art": "bewegung",
+        "zeitMs": 0,
+        "wer": 4,
+        "von": 9,
+        "nach": 14
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 0,
+        "wer": 5,
+        "von": 8,
+        "nach": 7
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 0,
+        "wer": 6,
+        "von": 4,
+        "nach": 8
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 0,
+        "wer": 7,
+        "von": 3,
+        "nach": 2
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 0,
+        "wer": 0,
+        "von": 10,
+        "nach": 5
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 0,
+        "wer": 1,
+        "von": 11,
+        "nach": 12
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 0,
+        "wer": 2,
+        "ziel": 5,
+        "schaden": 80,
+        "lebenDanach": 580
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 0,
+        "wer": 3,
+        "ziel": 5,
+        "schaden": 90,
+        "lebenDanach": 490
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 100,
+        "wer": 5,
+        "ziel": 1,
+        "schaden": 58,
+        "lebenDanach": 602
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 100,
+        "wer": 6,
+        "ziel": 1,
+        "schaden": 55,
+        "lebenDanach": 547
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 100,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 877
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 100,
+        "wer": 1,
+        "ziel": 5,
+        "schaden": 58,
+        "lebenDanach": 432
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 500,
+        "wer": 4,
+        "von": 14,
+        "nach": 13
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 500,
+        "wer": 0,
+        "von": 5,
+        "nach": 6
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 600,
+        "wer": 4,
+        "ziel": 1,
+        "schaden": 38,
+        "lebenDanach": 509
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 600,
+        "wer": 0,
+        "ziel": 5,
+        "schaden": 38,
+        "lebenDanach": 394
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 1000,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 836
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 1100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 859
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 1200,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 797
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 1200,
+        "wer": 2,
+        "ziel": 4,
+        "schaden": 56,
+        "lebenDanach": 803
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 1600,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 774
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 1700,
+        "wer": 3,
+        "ziel": 4,
+        "schaden": 64,
+        "lebenDanach": 739
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 1900,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 733
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 2100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 698
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 2300,
+        "wer": 4,
+        "ziel": 1,
+        "schaden": 38,
+        "lebenDanach": 471
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 2300,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 694
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 2300,
+        "wer": 0,
+        "ziel": 5,
+        "schaden": 38,
+        "lebenDanach": 356
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 2400,
+        "wer": 2,
+        "ziel": 4,
+        "schaden": 56,
+        "lebenDanach": 642
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 2800,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 653
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 3100,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 630
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 3100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 601
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 3400,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 591
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 3400,
+        "wer": 3,
+        "ziel": 4,
+        "schaden": 64,
+        "lebenDanach": 537
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 3600,
+        "wer": 2,
+        "ziel": 4,
+        "schaden": 56,
+        "lebenDanach": 481
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 3700,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 550
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 4000,
+        "wer": 4,
+        "ziel": 1,
+        "schaden": 38,
+        "lebenDanach": 433
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 4000,
+        "wer": 0,
+        "ziel": 5,
+        "schaden": 38,
+        "lebenDanach": 318
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 4100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 440
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 4500,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 511
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 4600,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 470
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 4600,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 447
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 4800,
+        "wer": 2,
+        "ziel": 4,
+        "schaden": 56,
+        "lebenDanach": 384
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 5100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 343
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 5100,
+        "wer": 3,
+        "ziel": 4,
+        "schaden": 64,
+        "lebenDanach": 279
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 5500,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 406
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 5600,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 367
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 5700,
+        "wer": 4,
+        "ziel": 1,
+        "schaden": 38,
+        "lebenDanach": 395
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 5700,
+        "wer": 0,
+        "ziel": 5,
+        "schaden": 38,
+        "lebenDanach": 280
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 6000,
+        "wer": 2,
+        "ziel": 4,
+        "schaden": 56,
+        "lebenDanach": 223
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 6100,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 344
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 6100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 182
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 6400,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 303
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 6700,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 264
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 6800,
+        "wer": 3,
+        "ziel": 4,
+        "schaden": 64,
+        "lebenDanach": 118
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 7100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 77
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 7200,
+        "wer": 2,
+        "ziel": 4,
+        "schaden": 56,
+        "lebenDanach": 21
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 7300,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 223
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 7400,
+        "wer": 4,
+        "ziel": 1,
+        "schaden": 38,
+        "lebenDanach": 357
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 7400,
+        "wer": 0,
+        "ziel": 5,
+        "schaden": 38,
+        "lebenDanach": 242
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 7600,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 200
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 7800,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 161
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 8100,
+        "wer": 1,
+        "ziel": 4,
+        "schaden": 41,
+        "lebenDanach": 0
+      },
+      {
+        "art": "tod",
+        "zeitMs": 8100,
+        "wer": 4
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 8200,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 120
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 8400,
+        "wer": 2,
+        "ziel": 5,
+        "schaden": 80,
+        "lebenDanach": 162
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 8500,
+        "wer": 3,
+        "ziel": 5,
+        "schaden": 90,
+        "lebenDanach": 72
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 8900,
+        "wer": 6,
+        "ziel": 0,
+        "schaden": 39,
+        "lebenDanach": 81
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 9100,
+        "wer": 5,
+        "ziel": 0,
+        "schaden": 41,
+        "lebenDanach": 40
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 9100,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 17
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 9100,
+        "wer": 0,
+        "ziel": 5,
+        "schaden": 38,
+        "lebenDanach": 34
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 9100,
+        "wer": 1,
+        "ziel": 5,
+        "schaden": 58,
+        "lebenDanach": 0
+      },
+      {
+        "art": "tod",
+        "zeitMs": 9100,
+        "wer": 5
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 9200,
+        "wer": 1,
+        "von": 12,
+        "nach": 13
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 9600,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 649
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 10000,
+        "wer": 6,
+        "ziel": 1,
+        "schaden": 55,
+        "lebenDanach": 302
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 10100,
+        "wer": 1,
+        "ziel": 6,
+        "schaden": 58,
+        "lebenDanach": 542
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 10200,
+        "wer": 3,
+        "ziel": 6,
+        "schaden": 90,
+        "lebenDanach": 452
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 10600,
+        "wer": 7,
+        "ziel": 0,
+        "schaden": 23,
+        "lebenDanach": 0
+      },
+      {
+        "art": "tod",
+        "zeitMs": 10600,
+        "wer": 0
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 10800,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 578
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 11100,
+        "wer": 6,
+        "ziel": 1,
+        "schaden": 55,
+        "lebenDanach": 247
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 11100,
+        "wer": 1,
+        "ziel": 6,
+        "schaden": 58,
+        "lebenDanach": 394
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 11900,
+        "wer": 3,
+        "ziel": 6,
+        "schaden": 90,
+        "lebenDanach": 304
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 12000,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 507
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 12100,
+        "wer": 7,
+        "ziel": 1,
+        "schaden": 32,
+        "lebenDanach": 215
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 12100,
+        "wer": 1,
+        "ziel": 6,
+        "schaden": 58,
+        "lebenDanach": 246
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 12200,
+        "wer": 6,
+        "ziel": 1,
+        "schaden": 55,
+        "lebenDanach": 160
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 13100,
+        "wer": 1,
+        "ziel": 6,
+        "schaden": 58,
+        "lebenDanach": 188
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 13200,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 436
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 13300,
+        "wer": 6,
+        "ziel": 1,
+        "schaden": 55,
+        "lebenDanach": 105
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 13600,
+        "wer": 7,
+        "ziel": 1,
+        "schaden": 32,
+        "lebenDanach": 73
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 13600,
+        "wer": 3,
+        "ziel": 6,
+        "schaden": 90,
+        "lebenDanach": 98
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 14100,
+        "wer": 1,
+        "ziel": 6,
+        "schaden": 58,
+        "lebenDanach": 40
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 14400,
+        "wer": 6,
+        "ziel": 1,
+        "schaden": 55,
+        "lebenDanach": 18
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 14400,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 365
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 15100,
+        "wer": 7,
+        "ziel": 1,
+        "schaden": 32,
+        "lebenDanach": 0
+      },
+      {
+        "art": "tod",
+        "zeitMs": 15100,
+        "wer": 1
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 15200,
+        "wer": 7,
+        "von": 2,
+        "nach": 6
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 15300,
+        "wer": 3,
+        "ziel": 7,
+        "schaden": 80,
+        "lebenDanach": 285
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 15500,
+        "wer": 6,
+        "ziel": 3,
+        "schaden": 55,
+        "lebenDanach": 705
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 15600,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 214
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 16600,
+        "wer": 6,
+        "ziel": 3,
+        "schaden": 55,
+        "lebenDanach": 650
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 16600,
+        "wer": 7,
+        "ziel": 2,
+        "schaden": 29,
+        "lebenDanach": 791
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 16800,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 143
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 17000,
+        "wer": 3,
+        "ziel": 7,
+        "schaden": 80,
+        "lebenDanach": 63
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 17700,
+        "wer": 6,
+        "ziel": 3,
+        "schaden": 55,
+        "lebenDanach": 595
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 18000,
+        "wer": 2,
+        "ziel": 7,
+        "schaden": 71,
+        "lebenDanach": 0
+      },
+      {
+        "art": "tod",
+        "zeitMs": 18000,
+        "wer": 7
+      },
+      {
+        "art": "bewegung",
+        "zeitMs": 18100,
+        "wer": 2,
+        "von": 15,
+        "nach": 11
+      },
+      {
+        "art": "treffer",
+        "zeitMs": 18700,
+        "wer": 3,
+        "ziel": 6,
+        "schaden": 90,
+        "lebenDanach": 0
+      },
+      {
+        "art": "tod",
+        "zeitMs": 18700,
+        "wer": 6
+      },
+      {
+        "art": "ende",
+        "zeitMs": 18800,
+        "sieger": 0,
+        "grund": "ausgeloescht"
+      }
+    ],
+    "sieger": 0,
+    "grund": "ausgeloescht",
+    "dauerMs": 18800,
+    "ueberlebende": [
+      {
+        "id": 2,
+        "seite": 0,
+        "einheitId": "drachenkind",
+        "stufe": 1,
+        "platz": 11,
+        "leben": 791,
+        "hoechstesLeben": 820
+      },
+      {
+        "id": 3,
+        "seite": 0,
+        "einheitId": "sturmrufer",
+        "stufe": 1,
+        "platz": 16,
+        "leben": 595,
+        "hoechstesLeben": 760
+      }
+    ],
+    "schaden": 4
+  }
+}
