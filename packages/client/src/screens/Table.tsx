@@ -30,6 +30,7 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
+import { aktionenAufteilen, armutKartenwahl } from '../tisch-armut';
 import { useTischklang } from '../tisch/klangtisch';
 import { type ConnectionStatus, useCountdown, useTable } from '../useTable';
 
@@ -657,37 +658,23 @@ export function Table({
     );
   }
 
-  const playable = new Set(
-    view.legalActions
-      .filter((action) => action.type === 'playCard')
-      .map((action) => action.cardId as number),
-  );
-  const otherActions = view.legalActions.filter((action) => action.type !== 'playCard');
+  // Die Aufteilung steht als reine Funktion in `tisch-armut.ts`. Sie ist
+  // keine Kosmetik: Die Vorbehaltsabfrage ist ein eigener Dialog (gesund
+  // ja/nein, dann Auswahl, dann Bestaetigung) und die Armut-Entscheidung ein
+  // eigenes Blatt mit Erklaerung — beides gehoert nicht in die Knopfreihe am
+  // unteren Rand, wo ein Fehltipp eine ganze Runde entscheidet.
+  const {
+    spielbar: playable,
+    vorbehalt: vorbehaltActions,
+    weiter: weiterAction,
+    entscheidung: armutEntscheidung,
+    knoepfe: knopfActions,
+  } = aktionenAufteilen(view.legalActions);
 
   // Vormerken geht nur mitten im Spiel, wenn man gerade NICHT dran ist: Der
   // Tipp legt die Karte bereit, gespielt wird von selbst, sobald der Zug
   // kommt und die Karte dann zulaessig ist.
   const darfVormerken = playable.size === 0 && round?.phase === 'playing';
-
-  // Die Vorbehaltsabfrage ist ein eigener Dialog (gesund ja/nein, dann
-  // Auswahl, dann Bestaetigung) - keine Knopfreihe am unteren Rand, auf der
-  // ein Fehltipp eine ganze Runde entscheidet.
-  const vorbehaltActions = otherActions.filter((action) => action.type === 'vorbehalt');
-  // "Weiter" gehoert aufs Zwischenstand-Blatt, nicht in die Knopfreihe.
-  const weiterAction = otherActions.find((action) => action.type === 'weiter');
-  const rowActions = otherActions.filter(
-    (action) => action.type !== 'vorbehalt' && action.type !== 'weiter',
-  );
-
-  // Die Armut-Entscheidung (annehmen/ablehnen) ist keine beilaeufige Knopfreihe,
-  // sondern eine echte Verpflichtung — sie bekommt ein eigenes Blatt mit
-  // Erklaerung. Die uebrigen Reihen-Aktionen (Ansagen) bleiben unten.
-  const armutAccept = rowActions.find((a) => a.type === 'armutAccept');
-  const armutDecline = rowActions.find((a) => a.type === 'armutDecline');
-  const armutEntscheidung = armutAccept && armutDecline ? { armutAccept, armutDecline } : null;
-  const knopfActions = rowActions.filter(
-    (a) => a.type !== 'armutAccept' && a.type !== 'armutDecline',
-  );
 
   const opponents = Array.from({ length: seatCount }, (_, s) => s).filter(
     (s) => view.seat === null || s !== view.seat,
@@ -756,10 +743,9 @@ export function Table({
       ? 'Spielart wird noch bestimmt'
       : gameTypeLabel(round.gameType) + (soloName ? ` · ${soloName} solo` : '');
 
-  const needReturn = round?.armut.awaiting === 'return';
-  const needHandover =
-    round?.armut.awaiting === 'handover' &&
-    !otherActions.some((a) => a.type === 'armutHandover');
+  // Welche Armut-Kartenauswahl faellig ist — die Asymmetrie steht in
+  // `tisch-armut.ts`, sie ist der Grund fuer die eigene Datei.
+  const kartenwahl = armutKartenwahl(round?.armut, view.legalActions);
   const roundResult = round?.phase === 'finished' && round.result ? round.result : null;
   const abrechnungOffen = abschlussStep === 'abrechnung' && roundResult !== null;
   const zwischenstandOffen = abschlussStep === 'zwischenstand' && roundResult !== null;
@@ -966,8 +952,8 @@ export function Table({
               ? nameOf(round!.vorbehalte.find((v) => v.kind === 'armut')!.seat)
               : null
           }
-          onAnnehmen={() => send(armutEntscheidung.armutAccept)}
-          onAblehnen={() => send(armutEntscheidung.armutDecline)}
+          onAnnehmen={() => send(armutEntscheidung.annehmen)}
+          onAblehnen={() => send(armutEntscheidung.ablehnen)}
         />
       )}
 
@@ -1138,7 +1124,7 @@ export function Table({
       )}
 
       {/* Kartenauswahl (Armut) als Overlay */}
-      {round && needReturn && (
+      {round && kartenwahl === 'rueckgabe' && (
         <CardPicker
           title={`Gib ${round.armut.handoverSize} Karten zurück`}
           hand={hand}
@@ -1147,7 +1133,7 @@ export function Table({
           onPick={(cards) => send({ type: 'armutReturn', seat: view.seat!, cards })}
         />
       )}
-      {round && needHandover && (
+      {round && kartenwahl === 'abgabe' && (
         <CardPicker
           title={`Gib ${round.armut.handoverSize} Karten ab`}
           hand={hand}

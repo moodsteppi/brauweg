@@ -111,7 +111,7 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
 npm test          # 1.300 Tests in den Paketen (402 im Server), dazu
-                  # sieben Client-Testdateien (vitest)
+                  # 191 Client-Tests in 14 Dateien (vitest)
 ```
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
@@ -142,6 +142,19 @@ gefilterten Sicht und können deshalb bauartbedingt nicht schummeln.
 
 **Der Client bildet keine Regel nach.** Schaltflächen entstehen aus
 `legalActions`, die Kartenreihenfolge kommt als `order` vom Server.
+Wo er es doch tut, weil das Modul die Aktion nicht aufzählen kann (Skat
+Drücken/Schieben, Doppelkopf Armut), steht die Regel als reine Funktion in
+`packages/client/src/tisch-auswahl.ts` bzw. `tisch-armut.ts` — geprüft, weil
+sie sonst niemand abfängt.
+
+**Der Client beschreibt jede Sicht ein zweites Mal** (`protocol.ts`) und
+importiert sonst nichts aus den Spielpaketen. Damit ein umbenanntes Feld
+nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
+Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
+Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
+Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
+Feld auch wirklich liefern). Bisher gedeckt: Doppelkopf, Skat, Zauberer,
+Cambio. Ein neues Spiel bekommt eine Datei nach demselben Muster.
 
 **Feldherr: `kern.js` und `feldherr.html` sind gebaut, nicht geschrieben.**
 Quelle ist `packages/game-feldherr/quelle/teile/`, gebaut wird mit

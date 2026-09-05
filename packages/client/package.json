@@ -20,6 +20,10 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@brauweg/game-cambio": "*",
+    "@brauweg/game-doppelkopf": "*",
+    "@brauweg/game-skat": "*",
+    "@brauweg/game-wizard": "*",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.6",
