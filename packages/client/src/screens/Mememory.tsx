@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import { api, type TableRow } from '../api';
+import { api, type Suchstand } from '../api';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
 import { Ecken } from '../minispiele/mememory/Ecken';
 import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/eckenplan';
@@ -9,7 +9,6 @@ import { Heim } from '../minispiele/mememory/Heim';
 import { ladeMemeToene, spieleKlang, spieleMemeTon } from '../minispiele/mememory/klaenge';
 import { KiMatch } from '../minispiele/mememory/KiMatch';
 import { MehrSeite } from '../minispiele/mememory/MehrSeite';
-import { OnlineMatch, type Gegnerzahl } from '../minispiele/mememory/OnlineMatch';
 import type { MememorySicht } from '../minispiele/mememory/sicht';
 import { SammlungSeite } from '../minispiele/mememory/SammlungSeite';
 import {
@@ -28,9 +27,9 @@ import { useTable } from '../useTable';
  *
  * Ein Bildschirm mit zwei Gesichtern, wie beim Feldherr: ohne Tisch das
  * Hauptmenue mit der Match-Suche, mit Tisch das Brett. Der Tisch wird HIER
- * gehalten und nicht ueber App.tsx geroutet — die Match-Suche muss den Tisch
- * unter Umstaenden wechseln (siehe die Wettrennen-Regel unten), und ein
- * Wechsel ueber zwei Bildschirmzustaende hinweg waere ein Flackern.
+ * gehalten und nicht ueber App.tsx geroutet — die Suche reicht ihre
+ * Tischkennung mitten im Bildschirm nach, und ein Wechsel ueber zwei
+ * Bildschirmzustaende hinweg waere ein Flackern.
  *
  * Arbeitsteilung mit dem Spielmodul: Der Bildschirm bildet KEINE Regel nach.
  * Er schickt genau das, was der Spieler antippt, und zeichnet, was in der
@@ -48,14 +47,31 @@ import { useTable } from '../useTable';
  */
 
 /**
- * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
+ * Regelsatz, mit dem der KI-Tisch aufgemacht wird.
  *
  * Muss zu DEFAULT_REGELN in packages/game-mememory/src/regeln.ts passen —
  * dort steht auch, warum es vier Spalten sind und nicht fuenf. Bewusst
- * ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll nicht
- * auf eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht.
+ * ausgeschrieben statt ueber `api.defaults()` geholt: Der Knopf soll nicht
+ * auf eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht.
+ *
+ * Nur noch hier und nicht mehr in der Mitspielersuche: Die baut ihren Tisch
+ * seit dem 06.09.2026 serverseitig und nimmt dort `defaultConfig()` des
+ * Moduls. Was dabei WEGFAELLT, ist `zusatz` — die hochgeladenen Motive kommen
+ * an einem Tisch aus der Schlange nicht vor. Das steht als Karte auf dem
+ * Issueboard und laesst sich hier nicht heilen: Der Client hat gar keine
+ * Gelegenheit mehr, dem Tisch etwas mitzugeben.
  */
 const REGELSATZ = { spalten: 4, zeilen: 6, merkzeitMs: 1100 };
+
+/**
+ * Takt, in dem der Stand der Suche abgefragt wird.
+ *
+ * Eine Sekunde, weil daneben ein Countdown laeuft: Bei einem traegeren Takt
+ * springt die Zahl. Der Abruf ist zugleich das Lebenszeichen an den Server —
+ * hoert er auf, faellt man von selbst aus der Schlange (siehe
+ * packages/server/src/suche/schlange.ts).
+ */
+const SUCH_TAKT_MS = 1000;
 
 /**
  * Zeichenvorrat der Reaktionen.
@@ -178,8 +194,9 @@ export function Mememory({
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
-  /** Tisch, den ich selbst aufgemacht habe — nur dann wird gewechselt. */
-  const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
+  /** Stand der Mitspielersuche. `null` heisst: es wird nicht gesucht. */
+  const [suchstand, setSuchstand] = useState<Suchstand | null>(null);
+  /** Ein Knopf ist gedrueckt, die Antwort steht noch aus. */
   const [sucht, setSucht] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -244,8 +261,6 @@ export function Mememory({
   const [gurt, setGurt] = useState<string[]>([]);
   /** Der Bildschirm "KI-Match erstellen" liegt STATT des Menues da. */
   const [kiOffen, setKiOffen] = useState(false);
-  /** Der Bildschirm "Online-Match" (gegen wie viele?) liegt STATT des Menues da. */
-  const [onlineOffen, setOnlineOffen] = useState(false);
   /** Das Brett, auf dem gerade gezeichnet wird — Grundlage der Mischbewegung. */
   const brettRef = useRef<HTMLDivElement | null>(null);
   /**
@@ -659,63 +674,104 @@ export function Mememory({
   // -------------------------------------------------------------------------
 
   /**
-   * Einen Gegner finden: an einem offenen Tisch Platz nehmen, sonst selbst
-   * einen aufmachen.
+   * Mitspieler finden — seit dem 06.09.2026 ueber die Suchschlange des Servers
+   * und nicht mehr ueber die Tischliste.
    *
-   * Die Plattform hat keine Warteschlange; gesucht wird deshalb ueber die
-   * gewoehnliche Tischliste. Das reicht, weil `joinTable` serverseitig
-   * absichert, dass zwei gleichzeitige Beitritte nicht denselben Platz
-   * bekommen — der Verlierer des Rennens bekommt einen Fehler und sucht weiter.
+   * Der alte Weg (offenen Tisch suchen, sonst selbst einen aufmachen, und ein
+   * Wettrennen zweier gleichzeitig aufgemachter Tische per Kennungsvergleich
+   * im 2,5-Sekunden-Takt aufloesen) ist damit weg. Er konnte zwei Menschen in
+   * zwei getrennten Tischen festsetzen, und vor allem hatte er kein Ende: Wer
+   * als Einziger suchte, wartete bis zum Verfall seines Tisches.
+   *
+   * Mit ihm faellt auch die Frage "gegen wie viele?" weg, und das ist kein
+   * Verlust, sondern der Kern der Sache: Jede Gegnerzahl war ein eigener Topf,
+   * und drei Toepfe auf einer Plattform mit einer Handvoll Leuten heisst, dass
+   * in jedem einzelnen niemand steht. Die Schlange hat nur einen. Sie baut
+   * einen Tisch fuer VIER — die groesste Sitzzahl, die das Modul zulaesst
+   * (SEAT_COUNTS in packages/game-mememory/src/regeln.ts), damit keiner der
+   * Gefundenen abgewiesen wird. Laenger wird die Partie davon nicht: Ab dem
+   * dritten Spieler bringt jeder acht Karten mit, die vom Stapel nachruecken,
+   * statt das Brett zu vergroessern (`vorrat` in partie.ts). Wer lieber zu
+   * zweit spielt, findet das unter "Gegen die KI spielen".
    */
-  const suche = useCallback(async (gegner: Gegnerzahl): Promise<void> => {
+  const starteSuche = useCallback(async (): Promise<void> => {
     setFehler(null);
     setSucht(true);
-    /**
-     * Jede Gegnerzahl ist ein eigener Topf.
-     *
-     * Gesucht wird ausschliesslich unter Tischen mit GENAU dieser Platzzahl.
-     * Ohne den Vergleich landete, wer zu viert spielen will, am erstbesten
-     * Zweiertisch — und der startete sofort, ohne dass er es merkt.
-     */
-    const plaetze = gegner + 1;
     try {
-      const zeilen = await api.tables('mememory');
-      const offen = zeilen
-        .filter((zeile) => zeile.seats === plaetze && zeile.occupied < zeile.seats)
-        .sort((a, b) => a.id.localeCompare(b.id));
-      const ziel = offen[0];
-      if (ziel) {
-        await api.joinTable(ziel.id);
-        setEigenerTisch(null);
-        setTischId(ziel.id);
-        setOnlineOffen(false);
-        return;
-      }
-      /**
-       * Die hochgeladenen Motive kommen als `zusatz` mit an den Tisch.
-       *
-       * Erst hier und nicht beim Aufbau des Bildschirms: Wer beitritt,
-       * braucht sie nicht — der Topf steht am Tisch, den der andere
-       * aufgemacht hat. Und faellt der Abruf aus, spielt der Tisch eben mit
-       * den 88 Grundmotiven; ein Fehlschlag darf keine Partie verhindern.
-       */
-      const zusatz = await api
-        .mememoryMotive()
-        .then((antwort) => antwort.hochgeladen)
-        .catch(() => []);
-      const { id } = await api.createTable({
-        gameId: 'mememory',
-        config: zusatz.length > 0 ? { ...REGELSATZ, zusatz } : REGELSATZ,
-        seats: plaetze,
-        rounds: 1,
-      });
-      setEigenerTisch(id);
-      setTischId(id);
-      setOnlineOffen(false);
+      const stand = await api.sucheStarten('mememory');
+      if (stand.tischId) setTischId(stand.tischId);
+      else setSuchstand(stand);
     } catch {
-      setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+    } finally {
+      setSucht(false);
     }
+  }, []);
+
+  /**
+   * Nachfragen, solange gesucht wird.
+   *
+   * Abhaengig ist der Effekt vom SCHLUESSEL `suchstand !== null` und nicht vom
+   * Objekt: Er setzt bei jedem Takt einen neuen Stand, und mit dem Objekt in
+   * der Liste raeumte er dabei jedes Mal seinen eigenen Zeitgeber ab (siehe
+   * CLAUDE.md).
+   */
+  const suchtGerade = suchstand !== null;
+  useEffect(() => {
+    if (!suchtGerade) return;
+    let lebt = true;
+    const frage = (): void => {
+      void api
+        .sucheStand('mememory')
+        .then((stand) => {
+          if (!lebt) return;
+          if (stand.tischId) {
+            // Ohne Rueckfrage hinueber: Wer 30 Sekunden gewartet hat, will
+            // spielen und keinen zweiten Knopf.
+            setSuchstand(null);
+            setTischId(stand.tischId);
+            return;
+          }
+          if (!stand.sucht) {
+            // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart des
+            // Servers. Lieber ehrlich melden als stumm weiterdrehen.
+            setSuchstand(null);
+            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            return;
+          }
+          setSuchstand(stand);
+        })
+        .catch(() => {
+          /* Ein einzelner Fehlversuch ist kein Abbruch: Der Server wirft uns
+             erst nach mehreren stillen Sekunden aus der Schlange. */
+        });
+    };
+    const takt = window.setInterval(frage, SUCH_TAKT_MS);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, [suchtGerade]);
+
+  /**
+   * Den Bildschirm verlassen heisst die Suche verlassen.
+   *
+   * Ohne das stuende man nach dem Weggehen noch bis zu acht Sekunden in der
+   * Schlange und wuerde womoeglich an einen Tisch gesetzt, den niemand mehr
+   * ansieht.
+   */
+  const suchtRef = useRef(false);
+  suchtRef.current = suchtGerade;
+  useEffect(
+    () => () => {
+      if (suchtRef.current) void api.sucheAbbrechen('mememory').catch(() => {});
+    },
+    [],
+  );
+
+  const brichSucheAb = useCallback((): void => {
+    setSuchstand(null);
+    void api.sucheAbbrechen('mememory').catch(() => {});
   }, []);
 
   /**
@@ -752,7 +808,6 @@ export function Mememory({
         fillWithBots: true,
       });
       setKiOffen(false);
-      setEigenerTisch(null);
       setTischId(id);
     } catch {
       setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
@@ -761,60 +816,10 @@ export function Mememory({
     }
   }, []);
 
-  /**
-   * Das Wettrennen aufloesen.
-   *
-   * Tippen zwei Leute gleichzeitig auf "Suchen", sieht keiner den Tisch des
-   * anderen und beide machen einen auf. Wechselten danach BEIDE zum jeweils
-   * anderen, taeten sie das fuer immer. Deshalb bewegt sich nur einer: der mit
-   * der groesseren Tischkennung. Die Kennungen sind auf beiden Geraeten
-   * dieselben, also braucht die Regel keine Absprache.
-   */
-  const wechseltGerade = useRef(false);
-  const eigenePlaetze = tisch.table?.seats.length ?? 2;
-  useEffect(() => {
-    if (!tischId || !eigenerTisch || tischId !== eigenerTisch) return;
-    if (tisch.table && tisch.table.status !== 'waiting') return;
-    let lebt = true;
-    const pruefe = (): void => {
-      void api
-        .tables('mememory')
-        .then(async (zeilen: TableRow[]) => {
-          if (!lebt || wechseltGerade.current) return;
-          // Nur in den EIGENEN Topf wechseln: Ein Tisch fuer zwei ist keine
-          // Loesung fuer jemanden, der zu viert spielen wollte.
-          const kleiner = zeilen
-            .filter((z) => z.seats === eigenePlaetze && z.occupied < z.seats && z.id < tischId)
-            .sort((a, b) => a.id.localeCompare(b.id))[0];
-          if (!kleiner) return;
-          wechseltGerade.current = true;
-          try {
-            // Kein leaveTable davor: joinTable raeumt serverseitig alle
-            // anderen Warteplaetze desselben Kontos ab.
-            await api.joinTable(kleiner.id);
-            if (!lebt) return;
-            setEigenerTisch(null);
-            setTischId(kleiner.id);
-          } catch {
-            /* Der Tisch war schneller voll. Beim naechsten Takt weiter. */
-          } finally {
-            wechseltGerade.current = false;
-          }
-        })
-        .catch(() => {});
-    };
-    const takt = window.setInterval(pruefe, 2500);
-    return () => {
-      lebt = false;
-      window.clearInterval(takt);
-    };
-  }, [tischId, eigenerTisch, tisch.table?.status, eigenePlaetze]);
-
   const brichAb = useCallback((): void => {
     const id = tischId;
     setSucht(false);
     setTischId(null);
-    setEigenerTisch(null);
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
@@ -1231,17 +1236,34 @@ export function Mememory({
     );
   }
 
-  if (!tischId && onlineOffen) {
+  if (!tischId && suchstand) {
+    const sekunden = Math.ceil(suchstand.restMs / 1000);
+    const gefunden = suchstand.suchende;
     return (
-      <OnlineMatch
-        laeuft={sucht}
-        fehler={fehler}
-        onSuchen={(gegner) => void suche(gegner)}
-        onBack={() => {
-          setOnlineOffen(false);
-          setFehler(null);
-        }}
-      />
+      <main className="mm-menue">
+        <button className="mm-zurueck" type="button" onClick={brichSucheAb}>
+          ← Abbrechen
+        </button>
+        <div className="mm-menue-mitte">
+          <h1 className="mm-titel mm-titel-klein">Mitspieler suchen</h1>
+          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
+              beantwortet damit die einzige Frage, die man hier hat. */}
+          <p className="mm-countdown" aria-live="polite">
+            {sekunden}
+          </p>
+          <p className="mm-untertitel">
+            {gefunden === 1
+              ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
+              : `${gefunden} Spieler gefunden`}
+          </p>
+          <div className="mm-punkte-lauf" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p className="mm-untertitel">{aktiv ?? '…'} Spieler gerade in Mememory</p>
+        </div>
+      </main>
     );
   }
 
@@ -1281,16 +1303,14 @@ export function Mememory({
                 <h1 className="mm-titel">Mememory</h1>
                 <p className="mm-untertitel">Zwei Bilder, ein Paar, zwei bis vier Spieler.</p>
 
-                {/* Der Knopf sucht nicht mehr selbst: Erst wird gewaehlt,
-                    gegen wie viele man spielen will — jede Zahl ist ein
-                    eigener Topf. */}
+                {/* Der Knopf sucht seit dem 06.09.2026 wieder selbst. Der
+                    Zwischenschritt "gegen wie viele?" hing an den drei
+                    getrennten Toepfen der alten Suche; die Schlange hat nur
+                    einen und setzt alle Gefundenen an einen Vierertisch. */}
                 <button
                   className="mm-suchen"
                   type="button"
-                  onClick={() => {
-                    setFehler(null);
-                    setOnlineOffen(true);
-                  }}
+                  onClick={() => void starteSuche()}
                   disabled={sucht}
                 >
                   <span>Online Match suchen…</span>
@@ -1351,7 +1371,7 @@ export function Mememory({
           ← Abbrechen
         </button>
         <div className="mm-menue-mitte">
-          <h1 className="mm-titel">Suche läuft</h1>
+          <h1 className="mm-titel">Tisch wird aufgebaut</h1>
           <p className="mm-untertitel">
             {/* Die Platzzahl kommt vom Tisch und steht nicht als 2 im Text:
                 Sobald es Tische zu dritt und zu viert gibt, stimmt eine
@@ -1837,7 +1857,6 @@ export function Mememory({
                 setGetippt(null);
                 setFlieger([]);
                 setTischId(null);
-                setEigenerTisch(null);
                 setSucht(false);
               }}
             >
