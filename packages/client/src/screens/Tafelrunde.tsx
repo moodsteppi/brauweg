@@ -4,6 +4,7 @@ import { api, type Suchstand } from '../api';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
+import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
 import { gegnerDieseRunde } from '../minispiele/tafelrunde/platzierung';
 import {
@@ -36,6 +37,7 @@ import {
   tippfolge,
   wabenLage,
 } from '../minispiele/tafelrunde/zuege';
+import { useVorladen } from '../minispiele/tafelrunde/vorladen';
 import { useTable } from '../useTable';
 
 /**
@@ -338,6 +340,22 @@ export function Tafelrunde({
   const sicht = tisch.view?.view ?? null;
 
   /**
+   * Figuren und Untergrund holen, ab dem ersten Bild dieses Bildschirms.
+   *
+   * Angestossen wird HIER und nicht erst am Tisch: Vom Antippen im Hub bis zur
+   * ersten Runde liegen Menue, Suche und Tischaufbau — Zeit, in der die Leitung
+   * nichts zu tun hat. Wer 30 Sekunden auf Mitspieler wartet, soll danach
+   * keinen Ladebildschirm mehr sehen.
+   *
+   * Gewartet wird trotzdem, und zwar unten vor der Ruestkammer: Sonst kauft man
+   * in Runde 1 eine Einheit und sieht einen leeren Platz, bis die Datei da ist
+   * (der Befund vom 05.09.2026). Haengen kann das nicht — bleibt eine Datei
+   * aus, gibt der Lauf nach seiner Ruhefrist auf und laesst weiterspielen
+   * (`FRIST_MS`, siehe vorladen.ts).
+   */
+  const vorrat = useVorladen();
+
+  /**
    * Der Katalog kommt nur EINMAL, in der ersten Sicht nach dem Beitritt
    * (`seit === 0`, siehe sicht.ts). Danach steht in jeder Sicht `katalog:
    * undefined` — wer ihn nicht festhaelt, hat ab dem zweiten Rundruf keine
@@ -638,6 +656,22 @@ export function Tafelrunde({
       </main>
     );
   }
+
+  // -------------------------------------------------------------------------
+  // Dateien werden heruntergeladen
+  // -------------------------------------------------------------------------
+
+  /*
+   * Erst der Tisch, dann die Dateien — die Reihenfolge ist Absicht. Waehrend
+   * der Mitspielersuche steht die nuetzlichere Auskunft auf dem Schirm ("3 von
+   * 4 Plaetzen besetzt"), und in deren 30 Sekunden sind die 47 kB ohnehin
+   * durch. Sichtbar wird dieser Vorhang deshalb vor allem beim Bot-Tisch, der
+   * sofort steht — und auf einer langsamen Leitung.
+   *
+   * Beim ZWEITEN Mal kommt er nicht wieder: `useVorladen` merkt sich den Lauf
+   * modulweit, `fertig` steht dann schon beim ersten Bild.
+   */
+  if (!vorrat.fertig) return <Ladebildschirm stand={vorrat} onAbbrechen={brichAb} />;
 
   return (
     /* Die Anzeigenamen der Marken stehen tief im Baum an jeder Einheit — auf
