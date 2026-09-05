@@ -130,6 +130,42 @@ describe('Adapter', () => {
       /Zuschauersicht/,
     );
   });
+
+  /**
+   * Die Bot-Stufe des Tisches kommt seit dem 05.09.2026 im Modul an.
+   *
+   * Der sanfte Bot sitzt auf seinem Gold, der harte gibt es aus — ueber viele
+   * Zuege ist das der Unterschied, den man am Tisch merkt. Geprueft wird
+   * deshalb, dass ueberhaupt UNTERSCHIEDLICH gespielt wird: Waere die Stufe
+   * wie vorher weggeworfen, kaeme dreimal dieselbe Zugfolge heraus, und der
+   * Regler am Tisch waere eine Beschriftung ohne Wirkung.
+   */
+  it('waehlt die Gangart nach der Bot-Stufe des Tisches', () => {
+    const zugfolge = (stufe: 'anfaenger' | 'standard' | 'genie'): string => {
+      let p = partie(2);
+      const zuege: string[] = [];
+      for (let i = 0; i < 60 && !tafelrunde.isFinished(p); i += 1) {
+        if (tafelrunde.interludeMs!(p) !== null) {
+          p = tafelrunde.advanceInterlude!(p);
+          continue;
+        }
+        const sitz = tafelrunde.currentActor(p);
+        if (sitz === null) break;
+        const aktion = tafelrunde.botAction(tafelrunde.viewFor(p, sitz), stufe);
+        if (sitz === 0) zuege.push(JSON.stringify(aktion));
+        p = tafelrunde.act(p, sitz, aktion);
+      }
+      return zuege.join('|');
+    };
+
+    assert.notEqual(
+      zugfolge('anfaenger'),
+      zugfolge('genie'),
+      'sanft und hart spielen dieselbe Partie gleich — die Stufe kommt nicht an',
+    );
+    // `standard` ist die Vorgabe und damit die Gangart `normal`.
+    assert.equal(zugfolge('standard'), zugfolge('standard'));
+  });
 });
 
 describe('Bot', () => {

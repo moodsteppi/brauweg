@@ -67,6 +67,8 @@ const de: Record<string, string> = {
   'error.tableNotStartable': 'Dieser Tisch lässt sich nicht mehr starten.',
   'error.tableAlreadyStarted': 'Die Partie läuft bereits.',
   'error.tableUnknown': 'Diesen Tisch gibt es nicht.',
+  'error.joinCodeUnknown': 'Zu diesem Code gibt es keinen offenen Tisch.',
+  'error.joinCodeUnavailable': 'Gerade ließ sich kein Code vergeben. Noch einmal versuchen?',
   'error.seatTaken': 'Der Platz war schneller weg.',
   'error.seatCountUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
   'error.roundsTooFew': 'Das ist weniger als eine volle Geberrunde.',

@@ -176,6 +176,13 @@
       "when": 1787400000000,
       "tag": "0024_mememory_ton",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787500000000,
+      "tag": "0025_tisch_beitrittscode",
+      "breakpoints": true
     }
   ]
 }

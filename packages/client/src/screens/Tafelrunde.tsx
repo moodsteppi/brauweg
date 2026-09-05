@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api, type Suchstand } from '../api';
+import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
+import { t } from '../i18n';
+import type { BotLevel } from '../protocol';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
@@ -243,6 +245,54 @@ const SITZE = 4;
 const SUCH_TAKT_MS = 1000;
 
 /**
+ * Sitzzahlen des geplanten Tisches. Muss zu SEAT_COUNTS in
+ * packages/game-tafelrunde/src/regeln.ts passen; der Server weist ab, was
+ * das Modul nicht kennt (`seatCountUnsupported`).
+ *
+ * Zwei bis acht, aber nicht alles als Knopf: Sieben Knoepfe nebeneinander
+ * liest niemand. Angeboten wird, was man sich verabredet.
+ */
+const SITZ_WAHL = [2, 3, 4, 6, 8] as const;
+
+/**
+ * Die Bot-Stufen, wie sie hier heissen.
+ *
+ * Drei statt der vier der Plattform, weil das Modul nur drei Gangarten hat
+ * (`gangartVon` in packages/game-tafelrunde/src/adapter.ts) — ein vierter
+ * Knopf, der genauso spielt wie der dritte, waere eine Beschriftung ohne
+ * Unterschied.
+ */
+const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
+  { id: 'anfaenger', name: 'Sanft' },
+  { id: 'standard', name: 'Normal' },
+  { id: 'experte', name: 'Hart' },
+];
+
+/**
+ * Der Name des Suchparameters im geteilten Link.
+ *
+ * `/?tisch=KX7M9Q` fuehrt direkt in die Beitreten-Ansicht mit ausgefuelltem
+ * Code (App.tsx springt dafuer beim Start auf diesen Bildschirm). Beigetreten
+ * wird trotzdem erst auf Knopfdruck: Ein Link, der einen ungefragt an einen
+ * Tisch setzt, ist ein Link, den man nicht mehr anklicken mag.
+ */
+export const TISCH_PARAMETER = 'tisch';
+
+/** Der Link, den der Gastgeber weitergibt. */
+function beitrittsLink(code: string): string {
+  return `${window.location.origin}/?${TISCH_PARAMETER}=${code}`;
+}
+
+/**
+ * Wie viele Runden ein Tisch gehen soll.
+ *
+ * Tafelrunde ist ein Turnier bis zum letzten Ueberlebenden, es gibt nichts zu
+ * rotieren — `suggestedRounds` liefert genau diese Eins, und die Partie endet,
+ * wenn sie endet (`rundenGrenze` im Regelsatz).
+ */
+const RUNDEN = 1;
+
+/**
  * Farbe je Kostenstufe. Reine Zeichnung, kein Bedeutungstraeger der
  * Plattform — deshalb steht sie hier und nicht als CSS-Variable in
  * styles.css (DESIGN.md: Variablen sind fuer Gruen/Gold/Lila/Rot reserviert,
@@ -328,6 +378,29 @@ export function Tafelrunde({
   const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
   /** Stand der Mitspielersuche. `null` heisst: es wird nicht gesucht. */
   const [suchstand, setSuchstand] = useState<Suchstand | null>(null);
+  /**
+   * Welche Menueseite offen ist. Der geplante Tisch braucht zwei eigene
+   * Bildschirme; ein Langformular unter der Schnellsuche waere im Weg fuer
+   * alle, die nur schnell spielen wollen.
+   *
+   * Ein Link mit `?tisch=CODE` fuehrt gleich in die Beitreten-Ansicht.
+   */
+  const [menue, setMenue] = useState<'start' | 'erstellen' | 'beitreten'>(() =>
+    new URLSearchParams(window.location.search).get(TISCH_PARAMETER) ? 'beitreten' : 'start',
+  );
+  /**
+   * Gesetzt, solange man in einem VERABREDETEN Tisch sitzt und die Partie noch
+   * nicht laeuft — dann steht der Wartesaal statt des Ladehinweises.
+   *
+   * Der Unterschied ist wichtig: Der Tisch der Schnellsuche und der Bot-Tisch
+   * starten von selbst, dort gibt es nichts zu bedienen. Beim verabredeten
+   * Tisch entscheidet der Gastgeber, wann es losgeht.
+   */
+  const [wartesaal, setWartesaal] = useState<{
+    code: string | null;
+    gastgeber: boolean;
+    botsFuellen: boolean;
+  } | null>(null);
   /** Ein Knopf ist gedrueckt, die Antwort steht noch aus. */
   const [startet, setStartet] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
@@ -481,6 +554,139 @@ export function Tafelrunde({
     }
   }, []);
 
+  // -------------------------------------------------------------------------
+  // Der verabredete Tisch
+  // -------------------------------------------------------------------------
+
+  /** Einstellungen des Erstellen-Formulars. */
+  const [sitze, setSitze] = useState(4);
+  const [oeffentlich, setOeffentlich] = useState(false);
+  const [botsFuellen, setBotsFuellen] = useState(true);
+  const [botStufe, setBotStufe] = useState<BotLevel>('standard');
+
+  /** Beitreten: der eingetippte Code, sein Tisch und die offene Tischliste. */
+  const [code, setCode] = useState(
+    () => new URLSearchParams(window.location.search).get(TISCH_PARAMETER) ?? '',
+  );
+  const [vorschau, setVorschau] = useState<TischVorschau | null>(null);
+  const [offeneTische, setOffeneTische] = useState<TableRow[]>([]);
+
+  /**
+   * Ein Tisch, den Freunde betreten koennen.
+   *
+   * `fillWithBots` bleibt aus, obwohl der Gastgeber die Auffuellung gewaehlt
+   * haben kann: Mit dem Haken waere der Tisch in dem Augenblick startklar, in
+   * dem der Gastgeber sich hinsetzt (`isReadyToStart` im Server), und die
+   * Partie liefe los, bevor der erste Freund den Code eingetippt hat. Die
+   * freien Plaetze werden deshalb erst beim Druck auf "Partie starten"
+   * besetzt — dieselben Zurufe, die auch der Doppelkopf-Wartebereich schickt.
+   */
+  const erstelleTisch = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setStartet(true);
+    try {
+      const antwort = await api.createTable({
+        gameId: 'tafelrunde',
+        config: REGELSATZ,
+        seats: sitze,
+        rounds: RUNDEN,
+        visibility: oeffentlich ? 'public' : 'on_request',
+        fillWithBots: false,
+        botLevel: botStufe,
+      });
+      setWartesaal({ code: antwort.joinCode, gastgeber: true, botsFuellen });
+      setTischId(antwort.id);
+    } catch (err) {
+      setFehler(
+        err instanceof ApiError ? t(err.messageKey) : 'Der Tisch ließ sich nicht aufmachen.',
+      );
+    } finally {
+      setStartet(false);
+    }
+  }, [sitze, oeffentlich, botStufe, botsFuellen]);
+
+  /** Beitreten per Code. Ein Ruf, damit zwischen Nachsehen und Setzen nichts passt. */
+  const treteBeiPerCode = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setStartet(true);
+    try {
+      const { tableId } = await api.beitretenPerCode(code);
+      setWartesaal({ code: code.toUpperCase(), gastgeber: false, botsFuellen: false });
+      setTischId(tableId);
+    } catch (err) {
+      setFehler(err instanceof ApiError ? t(err.messageKey) : 'Beitreten fehlgeschlagen.');
+    } finally {
+      setStartet(false);
+    }
+  }, [code]);
+
+  /** Beitreten aus der Liste der oeffentlichen Tische. */
+  const treteBeiTisch = useCallback(async (id: string): Promise<void> => {
+    setFehler(null);
+    setStartet(true);
+    try {
+      await api.joinTable(id);
+      setWartesaal({ code: null, gastgeber: false, botsFuellen: false });
+      setTischId(id);
+    } catch (err) {
+      setFehler(err instanceof ApiError ? t(err.messageKey) : 'Beitreten fehlgeschlagen.');
+    } finally {
+      setStartet(false);
+    }
+  }, []);
+
+  /**
+   * In der Beitreten-Ansicht: den Tisch hinter dem Code ansehen und die
+   * offenen Tische holen.
+   *
+   * Der Effekt haengt am Code als Zeichenkette und an der Ansicht, nicht an
+   * einem Objekt — sonst raeumte er bei jedem Tastendruck seinen eigenen
+   * Zeitgeber ab (siehe CLAUDE.md).
+   */
+  const codeFertig = code.replace(/[^A-Za-z0-9]/g, '').length >= 6;
+  useEffect(() => {
+    if (menue !== 'beitreten' || !codeFertig) {
+      setVorschau(null);
+      return;
+    }
+    let lebt = true;
+    void api
+      .tischPerCode(code)
+      .then((v) => {
+        if (lebt) setVorschau(v);
+      })
+      .catch(() => {
+        // Ein unbekannter Code ist hier kein Fehler zum Anschreien: Man tippt
+        // noch. Die Absage kommt beim Beitreten.
+        if (lebt) setVorschau(null);
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [menue, code, codeFertig]);
+
+  useEffect(() => {
+    if (menue !== 'beitreten') return;
+    let lebt = true;
+    const hole = (): void => {
+      void api
+        .tables('tafelrunde')
+        .then((zeilen) => {
+          // Nur Tische mit freiem Platz — ein voller ist kein Angebot.
+          if (lebt) setOffeneTische(zeilen.filter((z) => z.occupied < z.seats));
+        })
+        .catch(() => {
+          /* Die Liste ist Beiwerk; der Code ist der Hauptweg. */
+        });
+    };
+    hole();
+    const takt = window.setInterval(hole, 4000);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, [menue]);
+
   /**
    * Zurueck ins Menue, bevor die Partie laeuft. Der Platz am Tisch wird dabei
    * geraeumt — der Server schliesst einen Tisch, an dem danach kein Mensch
@@ -489,6 +695,8 @@ export function Tafelrunde({
   const brichAb = useCallback((): void => {
     const id = tischId;
     setTischId(null);
+    setWartesaal(null);
+    setMenue('start');
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
@@ -557,6 +765,185 @@ export function Tafelrunde({
   }
 
   // -------------------------------------------------------------------------
+  // Tisch erstellen
+  // -------------------------------------------------------------------------
+
+  if (!tischId && menue === 'erstellen') {
+    return (
+      <main className="tr-seite tr-menue">
+        <button className="tr-zurueck" type="button" onClick={() => setMenue('start')}>
+          ← Zurück
+        </button>
+        <div className="tr-menue-mitte">
+          <h1 className="tr-titel tr-titel-klein">Tisch erstellen</h1>
+
+          <h2 className="tr-feldtitel">Plätze</h2>
+          <div className="tr-chips">
+            {SITZ_WAHL.map((zahl) => (
+              <button
+                key={zahl}
+                type="button"
+                className={`tr-chip${sitze === zahl ? ' is-an' : ''}`}
+                aria-pressed={sitze === zahl}
+                onClick={() => setSitze(zahl)}
+              >
+                {zahl}
+              </button>
+            ))}
+          </div>
+
+          <h2 className="tr-feldtitel">Für wen</h2>
+          <div className="tr-chips">
+            <button
+              type="button"
+              className={`tr-chip${oeffentlich ? '' : ' is-an'}`}
+              aria-pressed={!oeffentlich}
+              onClick={() => setOeffentlich(false)}
+            >
+              Nur mit Code
+            </button>
+            <button
+              type="button"
+              className={`tr-chip${oeffentlich ? ' is-an' : ''}`}
+              aria-pressed={oeffentlich}
+              onClick={() => setOeffentlich(true)}
+            >
+              Offen für alle
+            </button>
+          </div>
+
+          <h2 className="tr-feldtitel">Freie Plätze</h2>
+          <div className="tr-chips">
+            <button
+              type="button"
+              className={`tr-chip${botsFuellen ? ' is-an' : ''}`}
+              aria-pressed={botsFuellen}
+              onClick={() => setBotsFuellen(true)}
+            >
+              Mit Bots füllen
+            </button>
+            <button
+              type="button"
+              className={`tr-chip${botsFuellen ? '' : ' is-an'}`}
+              aria-pressed={!botsFuellen}
+              onClick={() => setBotsFuellen(false)}
+            >
+              Frei lassen
+            </button>
+          </div>
+
+          {/* Die Stufe zeigt nur, wer Bots will — sonst stellt man etwas ein,
+              das an diesem Tisch nie zum Zug kommt. */}
+          {botsFuellen && (
+            <>
+              <h2 className="tr-feldtitel">Wie hart spielen die Bots</h2>
+              <div className="tr-chips">
+                {BOT_STUFEN.map((stufe) => (
+                  <button
+                    key={stufe.id}
+                    type="button"
+                    className={`tr-chip${botStufe === stufe.id ? ' is-an' : ''}`}
+                    aria-pressed={botStufe === stufe.id}
+                    onClick={() => setBotStufe(stufe.id)}
+                  >
+                    {stufe.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          <button
+            className="tr-suchen"
+            type="button"
+            onClick={() => void erstelleTisch()}
+            disabled={startet}
+          >
+            Tisch aufmachen
+          </button>
+          <p className="tr-untertitel tr-klein">
+            {oeffentlich
+              ? 'Der Tisch steht in der Liste und ist zusätzlich über seinen Code erreichbar.'
+              : 'Nur wer den Code hat, kommt an diesen Tisch. Du startest, wann du willst.'}
+          </p>
+          {fehler && <p className="tr-fehler">{fehler}</p>}
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Tisch beitreten
+  // -------------------------------------------------------------------------
+
+  if (!tischId && menue === 'beitreten') {
+    return (
+      <main className="tr-seite tr-menue">
+        <button className="tr-zurueck" type="button" onClick={() => setMenue('start')}>
+          ← Zurück
+        </button>
+        <div className="tr-menue-mitte">
+          <h1 className="tr-titel tr-titel-klein">Tisch beitreten</h1>
+          <p className="tr-untertitel">
+            Tippe den Code ein, den du bekommen hast — oder nimm einen offenen Tisch.
+          </p>
+
+          <input
+            className="tr-codefeld"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="CODE"
+            aria-label="Beitrittscode"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={12}
+          />
+          {vorschau && (
+            <p className="tr-untertitel">
+              {vorschau.host ? `Tisch von ${vorschau.host}` : 'Offener Tisch'} ·{' '}
+              {vorschau.occupied}/{vorschau.seats} Plätzen besetzt
+            </p>
+          )}
+          <button
+            className="tr-suchen"
+            type="button"
+            onClick={() => void treteBeiPerCode()}
+            disabled={startet || !codeFertig}
+          >
+            Beitreten
+          </button>
+
+          <h2 className="tr-feldtitel">Offene Tische</h2>
+          {offeneTische.length === 0 ? (
+            <p className="tr-untertitel">
+              Gerade steht kein offener Tisch. Mach selbst einen auf.
+            </p>
+          ) : (
+            <div className="tr-tischliste">
+              {offeneTische.map((zeile) => (
+                <button
+                  key={zeile.id}
+                  type="button"
+                  className="tr-tischzeile"
+                  onClick={() => void treteBeiTisch(zeile.id)}
+                  disabled={startet}
+                >
+                  <span>{zeile.host ? `Tisch von ${zeile.host}` : 'Offener Tisch'}</span>
+                  <span className="tr-tischzahl">
+                    {zeile.occupied}/{zeile.seats}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {fehler && <p className="tr-fehler">{fehler}</p>}
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Menue
   // -------------------------------------------------------------------------
 
@@ -587,6 +974,34 @@ export function Tafelrunde({
           >
             Mitspieler suchen
           </button>
+          {/* Der geplante Weg neben der Schnellsuche: einen Tisch aufmachen
+              und den Code weitergeben. Zwei Knoepfe statt eines, weil
+              Aufmachen und Beitreten zwei verschiedene Rollen sind — wer den
+              Code bekommen hat, sucht keinen Erstellen-Knopf. */}
+          <div className="tr-menue-paar">
+            <button
+              className="tr-nebenknopf"
+              type="button"
+              onClick={() => {
+                setFehler(null);
+                setMenue('erstellen');
+              }}
+              disabled={startet}
+            >
+              Tisch erstellen
+            </button>
+            <button
+              className="tr-nebenknopf"
+              type="button"
+              onClick={() => {
+                setFehler(null);
+                setMenue('beitreten');
+              }}
+              disabled={startet}
+            >
+              Tisch beitreten
+            </button>
+          </div>
           <button
             className="tr-nebenknopf"
             type="button"
@@ -613,6 +1028,35 @@ export function Tafelrunde({
   // -------------------------------------------------------------------------
   // Der Tisch steht, die Partie laeuft an
   // -------------------------------------------------------------------------
+
+  if (!sicht && wartesaal) {
+    return (
+      <Wartesaal
+        wartesaal={wartesaal}
+        sitze={tisch.table?.seats ?? []}
+        botStufe={tisch.table?.botLevel ?? botStufe}
+        onBotStufe={(stufe) => {
+          setBotStufe(stufe);
+          tisch.setBotLevel(stufe);
+        }}
+        onBotsFuellen={(an) => setWartesaal({ ...wartesaal, botsFuellen: an })}
+        onStart={() => {
+          if (wartesaal.botsFuellen) {
+            // Jeden freien Platz mit einem Bot besetzen. Mit dem letzten faellt
+            // `isReadyToStart` im Server auf wahr und die Partie geht los —
+            // derselbe Weg wie im Doppelkopf-Wartebereich.
+            for (const platz of tisch.table?.seats ?? []) {
+              if (!platz.accountId && !platz.isBot) tisch.addBot(platz.seat);
+            }
+          } else {
+            // Ohne Bots: Der Tisch schrumpft serverseitig auf die Besetzten.
+            tisch.startNow();
+          }
+        }}
+        onAbbrechen={brichAb}
+      />
+    );
+  }
 
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
@@ -664,12 +1108,179 @@ export function Tafelrunde({
 }
 
 // ---------------------------------------------------------------------------
+// Der Wartesaal des verabredeten Tisches
+// ---------------------------------------------------------------------------
+
+/**
+ * Was zwischen "Tisch aufgemacht" und "Partie laeuft" auf dem Schirm steht.
+ *
+ * Der Gastgeber sieht seinen Code, die Beigetretenen und den Startknopf; die
+ * Gaeste sehen dasselbe ohne Knoepfe. Beide sehen dieselbe Sitzliste — sie
+ * kommt aus dem Rundruf des Tisches und nicht aus einer eigenen Abfrage,
+ * deshalb fuellt sie sich ohne Zutun, sobald jemand beitritt.
+ *
+ * Der Wartesaal bildet keine Regel nach: WANN gestartet werden darf,
+ * entscheidet der Server (`isReadyToStart`, `schrumpfeAufBesetzte`). Hier
+ * steht nur, wann der Knopf grau ist — und das ist dieselbe Zahl, die
+ * daneben steht.
+ */
+function Wartesaal({
+  wartesaal,
+  sitze,
+  botStufe,
+  onBotStufe,
+  onBotsFuellen,
+  onStart,
+  onAbbrechen,
+}: {
+  wartesaal: { code: string | null; gastgeber: boolean; botsFuellen: boolean };
+  sitze: SitzZeile[];
+  botStufe: BotLevel;
+  onBotStufe: (stufe: BotLevel) => void;
+  onBotsFuellen: (an: boolean) => void;
+  onStart: () => void;
+  onAbbrechen: () => void;
+}): React.JSX.Element {
+  const [kopiert, setKopiert] = useState<'code' | 'link' | null>(null);
+  const menschen = sitze.filter((platz) => platz.accountId).length;
+
+  const kopiere = (was: 'code' | 'link', text: string): void => {
+    // Ohne Zwischenablage (aeltere Browser, unsicherer Kontext) passiert
+    // nichts Schlimmes: Der Code steht gross daneben und laesst sich ablesen.
+    void navigator.clipboard
+      ?.writeText(text)
+      .then(() => setKopiert(was))
+      .catch(() => {});
+  };
+
+  return (
+    <main className="tr-seite tr-menue">
+      <button className="tr-zurueck" type="button" onClick={onAbbrechen}>
+        ← Verlassen
+      </button>
+      <div className="tr-menue-mitte">
+        <h1 className="tr-titel tr-titel-klein">Dein Tisch</h1>
+
+        {wartesaal.code && (
+          <>
+            <p className="tr-code" aria-label={`Beitrittscode ${wartesaal.code}`}>
+              {wartesaal.code}
+            </p>
+            <div className="tr-menue-paar">
+              <button
+                className="tr-nebenknopf"
+                type="button"
+                onClick={() => kopiere('code', wartesaal.code!)}
+              >
+                {kopiert === 'code' ? 'Code kopiert' : 'Code kopieren'}
+              </button>
+              <button
+                className="tr-nebenknopf"
+                type="button"
+                onClick={() => kopiere('link', beitrittsLink(wartesaal.code!))}
+              >
+                {kopiert === 'link' ? 'Link kopiert' : 'Link kopieren'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {sitze.length === 0 ? (
+          <p className="tr-untertitel">Verbindung wird aufgebaut…</p>
+        ) : (
+          <div className="tr-sitzliste">
+            {sitze.map((platz) => (
+              <div
+                key={platz.seat}
+                className={`tr-sitz${platz.accountId || platz.isBot ? ' is-besetzt' : ''}`}
+              >
+                <span>
+                  {platz.displayName ?? (platz.isBot ? 'Bot' : 'Freier Platz')}
+                </span>
+                {platz.seat === 0 && <span className="tr-sitzmarke">Gastgeber</span>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {wartesaal.gastgeber ? (
+          <>
+            <h2 className="tr-feldtitel">Freie Plätze beim Start</h2>
+            <div className="tr-chips">
+              <button
+                type="button"
+                className={`tr-chip${wartesaal.botsFuellen ? ' is-an' : ''}`}
+                aria-pressed={wartesaal.botsFuellen}
+                onClick={() => onBotsFuellen(true)}
+              >
+                Mit Bots füllen
+              </button>
+              <button
+                type="button"
+                className={`tr-chip${wartesaal.botsFuellen ? '' : ' is-an'}`}
+                aria-pressed={!wartesaal.botsFuellen}
+                onClick={() => onBotsFuellen(false)}
+              >
+                Weglassen
+              </button>
+            </div>
+
+            {wartesaal.botsFuellen && (
+              <div className="tr-chips">
+                {BOT_STUFEN.map((stufe) => (
+                  <button
+                    key={stufe.id}
+                    type="button"
+                    className={`tr-chip${botStufe === stufe.id ? ' is-an' : ''}`}
+                    aria-pressed={botStufe === stufe.id}
+                    onClick={() => onBotStufe(stufe.id)}
+                  >
+                    {stufe.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button
+              className="tr-suchen"
+              type="button"
+              onClick={onStart}
+              disabled={!wartesaal.botsFuellen && menschen < 2}
+            >
+              Partie starten
+            </button>
+            <p className="tr-untertitel tr-klein">
+              {wartesaal.botsFuellen
+                ? 'Freie Plätze übernehmen Bots — du kannst sofort losspielen.'
+                : menschen < 2
+                  ? 'Ohne Bots braucht es mindestens einen Mitspieler.'
+                  : `Es spielen ${menschen} Menschen, die leeren Plätze fallen weg.`}
+            </p>
+          </>
+        ) : (
+          <p className="tr-untertitel">
+            {menschen} {menschen === 1 ? 'Spieler ist' : 'Spieler sind'} da. Der Gastgeber
+            startet die Partie.
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Die Ruestkammer
 // ---------------------------------------------------------------------------
 
 interface SitzZeile {
   seat: number;
   displayName: string | null;
+  /**
+   * Kennung des Menschen auf diesem Platz, null bei Bots und freien Plaetzen.
+   * Der Wartesaal unterscheidet daran "wartet noch" von "sitzt schon" — ein
+   * Bot hat einen Anzeigenamen, ist aber kein Mitspieler, auf den man wartet.
+   */
+  accountId: string | null;
   avatarUrl: string | null;
   isBot: boolean;
 }

@@ -12,7 +12,12 @@ import type { GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import { requireModule } from '../games/registry.js';
-import { MAX_ROUNDS, createTable, joinTable } from '../tables/service.js';
+import {
+  MAX_ROUNDS,
+  createTable,
+  joinTable,
+  leaveOtherWaitingTables,
+} from '../tables/service.js';
 import { type SchlangeOptionen, Suchschlange, type Suchstand } from './schlange.js';
 
 /**
@@ -78,8 +83,27 @@ export class Vermittlung {
     // Wirft, wenn das Spiel gar nicht spielbar ist — vor dem Eintragen, damit
     // niemand in einer Schlange steht, aus der nie ein Tisch werden kann.
     requireModule(gameId);
+    /*
+     * Suchen und an einem Wartetisch sitzen schliessen einander aus.
+     *
+     * Ohne diese Zeile blieb der eben verabredete Freundestisch bestehen,
+     * waehrend sein Gastgeber schon wieder in der Schnellsuche stand: Nach
+     * 30 Sekunden baut die Vermittlung ihm einen zweiten Tisch, und die
+     * Freunde sitzen vor einem Tisch, den niemand mehr startet. Dieselbe
+     * Regel, die `createTable` und `joinTable` schon von der anderen Seite
+     * durchsetzen.
+     */
+    await leaveOtherWaitingTables(this.db, accountId);
     this.schlange.betritt(gameId, accountId);
     return this.abruf(gameId, accountId);
+  }
+
+  /**
+   * Aus jeder Suche austreten — die Gegenrichtung zu `betritt`, gerufen von
+   * den Tischrouten, sobald jemand einen Tisch aufmacht oder betritt.
+   */
+  verlaesstAlle(accountId: string): void {
+    this.schlange.verlaesstUeberall(accountId);
   }
 
   /**
