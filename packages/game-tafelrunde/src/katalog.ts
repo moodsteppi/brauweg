@@ -219,12 +219,25 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 3,
     ruestung: 20,
   },
+  /**
+   * ZWEITER TRAEGER DER MARKE DRACHE (seit dem 05.09.2026).
+   *
+   * Vorher trug nur das Drachenkind sie, und damit hiess "Drache zu zweit"
+   * immer "zweimal dieselbe Drei-Gold-Einheit". Gemessen war das die staerkste
+   * Marke im Katalog (34,1 % Siegquote, x1,86 des Schnitts) — nur lag das kaum
+   * am Bonus: Mit auf null gesetztem Drachen-Bonus stand sie immer noch bei
+   * x1,37. Gemessen wurde also gar nicht die Marke, sondern "ein Brett, auf dem
+   * zwei teure Einheiten stehen". Ein Lehrling, der Drachenfeuer ruft, macht
+   * daraus wieder eine ENTSCHEIDUNG: billig, schwach, aber der zweite Traeger.
+   * Danach steht Drache bei x1,15 — und hat genug Antritte, um ueberhaupt
+   * messbar zu sein (394 statt 60 in 5.000 Partien).
+   */
   {
     id: 'funkenlehrling',
     name: 'Funkenlehrling',
     kosten: 1,
     rolle: 'magier',
-    marken: ['elementar'],
+    marken: ['elementar', 'drache'],
     leben: 450,
     angriff: 50,
     tempo: 0.6,
@@ -379,6 +392,16 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 1,
     ruestung: 50,
   },
+  /**
+   * Tempo 0,75 und Ruestung 25 (vorher 0,85 und 25, geaendert am 05.09.2026).
+   *
+   * Das Drachenkind war unter den Drei-Gold-Fernkaempfern in jeder Zahl vorn:
+   * 82 x 0,85 = 70 Schaden je Sekunde gegen 55 beim Sturmrufer, dazu mehr Leben
+   * und mehr Ruestung als beide Magier. Mit 0,75 sind es 62 — noch der beste
+   * Wert der Reihe, aber kein Selbstlaeufer mehr. Tempo 0,65 war ausprobiert
+   * und zu viel: Der Bot stellte die Einheit dann fast nicht mehr auf (Antritte
+   * von 249 auf 27), und die Marke Elementar fiel mit ihr auf x0,66.
+   */
   {
     id: 'drachenkind',
     name: 'Drachenkind',
@@ -387,7 +410,7 @@ export const KATALOG: readonly Einheit[] = [
     marken: ['drache', 'elementar'],
     leben: 820,
     angriff: 82,
-    tempo: 0.85,
+    tempo: 0.75,
     reichweite: 3,
     ruestung: 25,
   },

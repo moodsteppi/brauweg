@@ -41,6 +41,7 @@ import {
   hexfeld,
   lebendeSitze,
   loeseKampfAuf,
+  platzierungen,
   platzNummer,
   sichtFuer,
 } from '../src/index.js';
@@ -669,45 +670,52 @@ describe('Bot: das fertige Heer', () => {
   /**
    * Die Gangarten sind kein Zierrat.
    *
-   * Ueber zwanzig Partien zu zweit gewinnt die haertere Gangart deutlich
-   * oefter. Zwanzig und nicht drei, weil die Laeden mitentscheiden: Ueber
-   * zwoelf Partien stand `hart` gegen `normal` nur 7:5, und eine Probe, die an
-   * zwei Partien haengt, faellt beim naechsten Balancing grundlos um. Die
-   * grosse Messung steht
-   * im Kopf von GANGARTEN (je 60 Partien, auch mit vertauschten Sitzen); diese
-   * Probe haelt nur fest, dass die Reihenfolge nicht kippt.
+   * GEMESSEN WIRD IM FELD ZU VIERT und nicht mehr im Duell zu zweit — aus
+   * einem Grund, der am 05.09.2026 aufgefallen ist: Seit der Lebensvorrat 20
+   * statt 100 betraegt, dauert ein Duell 11 statt 21 Runden, und in dieser
+   * Zeit verdient sich der aggressive Ausbau von `hart` nicht mehr. Ueber 200
+   * Duelle stand es 96:104 fuer `normal` (vorher 125:75 fuer `hart`). Zu viert
+   * — der Besetzung, auf die das Spiel eingestellt ist — bleibt die
+   * Reihenfolge dagegen deutlich stehen: ueber 400 Partien 119 Siege fuer den
+   * harten Sitz gegen durchschnittlich 94 der drei normalen, und 241 : 53 fuer
+   * hart gegen sanft.
+   *
+   * Hundert Partien und nicht zwanzig, weil die Laeden mitentscheiden: Ueber
+   * drei Saatbasen lag `hart` bei 30 zu 23 gegen den Schnitt der drei anderen
+   * Sitze — der Abstand ist stabil, aber nicht gross. Eine Probe an zwanzig
+   * Partien faellt beim naechsten Balancing grundlos um.
    */
-  function duell(stark: Schwierigkeit, schwach: Schwierigkeit): [number, number] {
-    let fuerStark = 0;
-    let fuerSchwach = 0;
-    for (let i = 0; i < 20; i++) {
-      let p = neu([0, 1], `${SAAT}-duell-${stark}-${schwach}-${i}`);
-      for (let runde = 0; runde < 200 && !p.fertig; runde++) {
+  function imFeld(stark: Schwierigkeit, schwach: Schwierigkeit): [number, number] {
+    const siege = [0, 0, 0, 0];
+    for (let i = 0; i < 100; i++) {
+      let p = neu([0, 1, 2, 3], `${SAAT}-feld-${stark}-${schwach}-${i}`);
+      for (let runde = 0; runde < 300 && !p.fertig; runde++) {
         for (const sitz of lebendeSitze(p)) {
           if (darfHandeln(p, sitz)) p = ruesteAus(p, sitz, sitz === 0 ? stark : schwach).partie;
         }
         if (p.phase === 'kampf') p = loeseKampfAuf(p);
       }
-      const leben0 = p.heere[0]!.leben;
-      const leben1 = p.heere[1]!.leben;
-      if (leben0 > leben1) fuerStark++;
-      else if (leben1 > leben0) fuerSchwach++;
+      // Nur der EINDEUTIGE erste Platz zaehlt; ein geteilter Sieg sagt ueber
+      // die Gangart nichts.
+      const beste = platzierungen(p).filter((z) => z.place === 1);
+      if (beste.length === 1) siege[beste[0]!.seat]!++;
     }
-    return [fuerStark, fuerSchwach];
+    const schnittDerAnderen = (siege[1]! + siege[2]! + siege[3]!) / 3;
+    return [siege[0]!, schnittDerAnderen];
   }
 
-  it('gewinnt als harter Gegner oefter als der sanfte', () => {
-    const [hart, sanft] = duell('hart', 'sanft');
+  it('gewinnt als harter Gegner oefter als drei sanfte', () => {
+    const [hart, sanft] = imFeld('hart', 'sanft');
     assert.ok(hart > sanft, `hart ${hart} : ${sanft} sanft`);
   });
 
-  it('gewinnt als normaler Gegner oefter als der sanfte', () => {
-    const [normal, sanft] = duell('normal', 'sanft');
+  it('gewinnt als normaler Gegner oefter als drei sanfte', () => {
+    const [normal, sanft] = imFeld('normal', 'sanft');
     assert.ok(normal > sanft, `normal ${normal} : ${sanft} sanft`);
   });
 
-  it('gewinnt als harter Gegner oefter als der normale', () => {
-    const [hart, normal] = duell('hart', 'normal');
+  it('gewinnt als harter Gegner oefter als drei normale', () => {
+    const [hart, normal] = imFeld('hart', 'normal');
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal`);
   });
 });

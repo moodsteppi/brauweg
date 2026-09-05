@@ -266,10 +266,13 @@ describe('Kampfausgang', () => {
     const p = beideBereit(neu());
     const nachher = wendeKampfausgang(p, [
       { sitz: 0, sieg: true, schaden: 0 },
-      { sitz: 1, sieg: false, schaden: 12 },
+      { sitz: 1, sieg: false, schaden: 3 },
     ]);
-    assert.equal(nachher.heere[0]!.leben, 100);
-    assert.equal(nachher.heere[1]!.leben, 88);
+    // Gegen DEFAULT_REGELN und nicht gegen eine ausgeschriebene Zahl: Der
+    // Lebensvorrat ist eine Stellschraube (am 05.09.2026 von 100 auf 20), und
+    // eine Probe, die dabei umfaellt, prueft die Zahl statt der Buchung.
+    assert.equal(nachher.heere[0]!.leben, DEFAULT_REGELN.startLeben);
+    assert.equal(nachher.heere[1]!.leben, DEFAULT_REGELN.startLeben - 3);
     assert.deepEqual(nachher.heere[0]!.serie, { art: 'sieg', laenge: 1 });
     assert.deepEqual(nachher.heere[1]!.serie, { art: 'niederlage', laenge: 1 });
     assert.equal(nachher.heere[1]!.ausRunde, null);

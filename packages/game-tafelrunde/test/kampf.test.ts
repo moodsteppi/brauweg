@@ -11,6 +11,7 @@ import {
   type Kaempferstand,
   type Kampfbericht,
   SCHADEN_GRUNDWERT,
+  SCHADEN_STUFEN_TEILER,
   SCHRITT_MS,
   type Saat,
   SEITEN,
@@ -453,7 +454,11 @@ describe('Kampf — der Ausgang', () => {
       }
       const sieger = ueberlebendeVon(bericht, bericht.sieger);
       assert.equal(bericht.schaden, schadenFuerVerlierer(sieger));
-      assert.equal(bericht.schaden, SCHADEN_GRUNDWERT + sieger.reduce((s, k) => s + k.stufe, 0));
+      assert.equal(
+        bericht.schaden,
+        SCHADEN_GRUNDWERT +
+          Math.ceil(sieger.reduce((s, k) => s + k.stufe, 0) / SCHADEN_STUFEN_TEILER),
+      );
       assert.ok(bericht.schaden >= SCHADEN_GRUNDWERT, 'eine Niederlage kostet immer');
     }
   });
@@ -468,10 +473,24 @@ describe('Kampf — der Ausgang', () => {
       leben: 1,
       hoechstesLeben: 1,
     });
+    // Gerechnet wird die Stufensumme geteilt durch SCHADEN_STUFEN_TEILER und
+    // aufgerundet: 0 Ueberlebende kosten nur den Grundwert, ein Stufe-1-Gegner
+    // einen Punkt mehr, drei Stufen zusammen (Teiler 3) genauso viel wie eine
+    // einzelne Stufe-3-Einheit.
     assert.equal(schadenFuerVerlierer([]), SCHADEN_GRUNDWERT);
     assert.equal(schadenFuerVerlierer([stand(0, 1)]), SCHADEN_GRUNDWERT + 1);
-    assert.equal(schadenFuerVerlierer([stand(0, 3)]), SCHADEN_GRUNDWERT + 3);
-    assert.equal(schadenFuerVerlierer([stand(0, 1), stand(1, 2)]), SCHADEN_GRUNDWERT + 3);
+    assert.equal(schadenFuerVerlierer([stand(0, 3)]), SCHADEN_GRUNDWERT + 1);
+    assert.equal(schadenFuerVerlierer([stand(0, 1), stand(1, 2)]), SCHADEN_GRUNDWERT + 1);
+    assert.equal(
+      schadenFuerVerlierer([stand(0, 3), stand(1, 3), stand(2, 3)]),
+      SCHADEN_GRUNDWERT + 3,
+    );
+    // Mehr Ueberlebende kosten mehr — die Teilung darf die Ordnung nicht
+    // einebnen, sonst waere eine knappe Niederlage so teuer wie eine klare.
+    assert.ok(
+      schadenFuerVerlierer([stand(0, 1), stand(1, 1), stand(2, 1), stand(3, 1)]) >
+        schadenFuerVerlierer([stand(0, 1)]),
+    );
   });
 
   /**

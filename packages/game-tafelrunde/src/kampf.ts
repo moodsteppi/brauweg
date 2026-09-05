@@ -98,7 +98,29 @@ export const HOECHSTDAUER_MS = 45_000;
  * weiterspielen, sobald der Gegner mit einer einzigen Einheit gewinnt. Der
  * Grundschaden sorgt dafuer, dass eine Niederlage immer kostet.
  */
-export const SCHADEN_GRUNDWERT = 2;
+export const SCHADEN_GRUNDWERT = 1;
+
+/**
+ * Durch so viel wird die Stufensumme der ueberlebenden Gegner geteilt.
+ *
+ * Der Teiler kam am 05.09.2026 mit den 20 Startleben (vorher 100, siehe
+ * regeln.ts). Ohne ihn kostet eine Niederlage im spaeten Spiel acht bis zehn
+ * Punkte, und eine Partie zu viert war nach acht Runden vorbei — gemessen ueber
+ * 300 Partien, nicht geschaetzt. Die Reihe, jeweils Median der Runden zu viert:
+ * ohne Teiler 8, mit Teiler 2 dann 13, mit Teiler 3 dann 15.
+ *
+ * DREI, WEIL DIE ZIELSPANNE 14 BIS 20 RUNDEN IST. Nach unten begrenzt sie das
+ * Spiel selbst: Vor Runde 10 steht kein ausgebautes Brett, wer da ausscheidet,
+ * hat nicht verloren, sondern nicht gespielt. Nach oben begrenzt sie das Handy
+ * — eine Runde dauert Vorbereitung plus Kampf, also bis zu anderthalb Minuten.
+ * Gemessen liegt der Median bei 15 Runden, die laengste von 5.000 Partien bei
+ * 22.
+ *
+ * `ceil` und nicht `round`: Eine Niederlage gegen einen einzelnen Ueberlebenden
+ * der Stufe 1 soll die vollen zwei Punkte kosten (Grundwert plus eins) und
+ * nicht durch die Rundung zum halben Preis werden.
+ */
+export const SCHADEN_STUFEN_TEILER = 3;
 
 // ---------------------------------------------------------------------------
 // Was hinein geht
@@ -283,14 +305,18 @@ export function schadenNach(angriff: number, ruestung: number): number {
 /**
  * Der Schaden, den der Verlierer am Lebensbalken nimmt.
  *
- * Grundschaden plus die Stufe jeder ueberlebenden Gegnereinheit — so steht es
- * im Konzept ("Schaden am Verlierer nach verbliebenen Gegnereinheiten"). Die
- * Stufe und nicht die Kopfzahl, weil ein einzelner Stufe-3-Riese ein
- * knapperes Ergebnis ist als drei unversehrte Stufe-1-Einheiten, aber ein
- * schwererer Gegner als eine einzelne Stufe-1-Einheit.
+ * Grundschaden plus die geteilte Stufe jeder ueberlebenden Gegnereinheit — so
+ * steht es im Konzept ("Schaden am Verlierer nach verbliebenen
+ * Gegnereinheiten"). Die Stufe und nicht die Kopfzahl, weil ein einzelner
+ * Stufe-3-Riese ein knapperes Ergebnis ist als drei unversehrte
+ * Stufe-1-Einheiten, aber ein schwererer Gegner als eine einzelne
+ * Stufe-1-Einheit.
+ *
+ * Warum ueberhaupt geteilt wird, steht bei `SCHADEN_STUFEN_TEILER`.
  */
 export function schadenFuerVerlierer(ueberlebende: readonly Kaempferstand[]): number {
-  return ueberlebende.reduce((summe, k) => summe + k.stufe, SCHADEN_GRUNDWERT);
+  const stufen = ueberlebende.reduce((summe, k) => summe + k.stufe, 0);
+  return SCHADEN_GRUNDWERT + Math.ceil(stufen / SCHADEN_STUFEN_TEILER);
 }
 
 // ---------------------------------------------------------------------------
