@@ -554,6 +554,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
   paarungen,
   ich,
   brettReihen,
+  arenaReihen,
   brettSpalten,
   katalog,
   nameVon,
@@ -570,8 +571,23 @@ export function KampfAnzeige<E extends Einheitenbild>({
    */
   paarungen: readonly Paarungsergebnis[];
   ich: number | null;
-  /** Masse der eigenen Bretthaelfte aus der Sicht; die Arena hat doppelt so viele Reihen. */
+  /**
+   * Reihen der eigenen Bretthaelfte aus der Sicht — gebraucht wird sie hier
+   * nur noch, um die drei Baender der Arena auseinanderzuhalten: oben der
+   * Gegner, unten man selbst, dazwischen das Niemandsland.
+   */
   brettReihen: number;
+  /**
+   * Reihen der ARENA, ebenfalls aus der Sicht.
+   *
+   * Bis zum 06.09.2026 stand hier `brettReihen * 2` als Rechnung im Client.
+   * Seit die Arena zwei leere Reihen zwischen den Haelften hat, stimmt die
+   * Rechnung nicht mehr — sie ergaebe acht Reihen statt zehn, und die untere
+   * Haelfte samt ihrer Figuren fiele aus dem Raster. Die Zahl kommt deshalb
+   * aus der Sicht (CLAUDE.md: was das Modul weiss, schreibt der Client nicht
+   * ab).
+   */
+  arenaReihen: number;
   brettSpalten: number;
   katalog: Record<string, E>;
   nameVon: (sitz: number) => string;
@@ -708,7 +724,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
 
   const seite = meineSeite(kampf, ich);
   const gedreht = seite === 1;
-  const reihen = brettReihen * 2;
+  const reihen = arenaReihen;
   const felder = reihen * brettSpalten;
   const mass = rastermass(reihen, brettSpalten);
   /** Welche Seite unten steht: die eigene, als Zuschauer Seite 0 (`a`). */
@@ -756,7 +772,13 @@ export function KampfAnzeige<E extends Einheitenbild>({
             <i
               key={i}
               className={stil.wabe}
-              data-haelfte={reihe < brettReihen ? 'oben' : 'unten'}
+              /* Drei Baender und nicht zwei: Zwischen den Haelften liegen die
+                 leeren Reihen der Arena (arena.ts, `ARENA_LUECKE`). Sie
+                 gehoeren keiner Seite, und sie als "unten" einzufaerben hiesse,
+                 dem eigenen Heer zwei Reihen anzudichten, die es nicht hat. */
+              data-haelfte={
+                reihe < brettReihen ? 'oben' : reihe < reihen - brettReihen ? 'mitte' : 'unten'
+              }
               style={{
                 left: `${lage.links}%`,
                 top: `${lage.oben}%`,

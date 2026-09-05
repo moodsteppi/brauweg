@@ -144,6 +144,14 @@
 }
 .wabe[data-haelfte='oben']::before { background: rgba(255, 126, 110, 0.12); }
 .wabe[data-haelfte='unten']::before { background: rgba(110, 200, 160, 0.12); }
+/*
+ * Das Niemandsland zwischen den Haelften (arena.ts, ARENA_LUECKE): kein
+ * Parteiton, sondern der neutrale Grund von oben. Es BLEIBT sichtbar und wird
+ * nicht weggelassen — ueber diese Reihen wird gelaufen, und eine Figur, die
+ * ueber eine Luecke im Raster gleitet, saehe nach einem Fehler aus. Etwas
+ * dunkler als die beiden Seiten, damit man die Mittellinie findet.
+ */
+.wabe[data-haelfte='mitte']::before { background: rgba(10, 14, 18, 0.42); }
 
 /* -- Eine Figur ----------------------------------------------------------- */
 

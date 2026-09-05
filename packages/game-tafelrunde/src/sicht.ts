@@ -23,6 +23,7 @@
  */
 
 import type { Seite } from './arena.js';
+import { ARENA_REIHEN, ARENA_SPALTEN } from './arena.js';
 import type { Einheit, EinheitId } from './katalog.js';
 import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
 import { type Synergie, type Synergiestand, SYNERGIEN, synergienVon } from './synergien.js';
@@ -213,6 +214,18 @@ export interface TafelrundeSicht {
   readonly brettReihen: number;
   readonly brettSpalten: number;
   /**
+   * Reihen und Spalten der KAMPFARENA, siehe arena.ts.
+   *
+   * Sie stehen hier, seit die Arena eine Luecke hat: Frueher war
+   * `arenaReihen` genau `brettReihen * 2`, und der Bildschirm hat das
+   * ausgerechnet. Seit dem 06.09.2026 liegen zwei leere Reihen zwischen den
+   * Haelften — wer weiterrechnet, zeichnet acht Reihen statt zehn und verliert
+   * die untere Haelfte samt ihrer Figuren. Die Zahl gehoert in die Sicht und
+   * nicht in eine zweite Rechnung im Client (CLAUDE.md).
+   */
+  readonly arenaReihen: number;
+  readonly arenaSpalten: number;
+  /**
    * Wie viele gleiche Einheiten verschmelzen und wie hoch es geht.
    *
    * Beide Zahlen stehen in der Sicht, weil der Bildschirm den FORTSCHRITT
@@ -331,6 +344,8 @@ function grundsicht(
     brettFelder: BRETT_FELDER,
     brettReihen: BRETT_REIHEN,
     brettSpalten: BRETT_SPALTEN,
+    arenaReihen: ARENA_REIHEN,
+    arenaSpalten: ARENA_SPALTEN,
     verschmelzZahl: VERSCHMELZ_ZAHL,
     maxStufe: MAX_STUFE,
     vorrat: partie.vorrat,

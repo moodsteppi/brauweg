@@ -82,6 +82,8 @@ const FELDER = [
   'brettFelder',
   'brettReihen',
   'brettSpalten',
+  'arenaReihen',
+  'arenaSpalten',
   'verschmelzZahl',
   'maxStufe',
   'vorrat',

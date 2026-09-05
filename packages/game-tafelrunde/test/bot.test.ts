@@ -24,6 +24,7 @@ import { describe, it } from 'node:test';
 import { type Schwierigkeit, botZug } from '../src/bot.js';
 import {
   BRETT_FELDER,
+  BRETT_REIHEN,
   BRETT_SPALTEN,
   DEFAULT_REGELN,
   type EinheitId,
@@ -415,7 +416,10 @@ describe('Bot: aufstellen', () => {
         assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
       }
       if (art.rolle === 'magier') {
-        assert.equal(reihe(platz), 1, `${art.name} gehoert nach hinten`);
+        // Die HINTERSTE Reihe und nicht die Nummer 1: Seit dem 06.09.2026 hat
+        // eine Bretthaelfte vier Reihen, und `platzStrafe` rechnet in
+        // "wie weit nach hinten", nicht in festen Nummern.
+        assert.equal(reihe(platz), BRETT_REIHEN - 1, `${art.name} gehoert nach hinten`);
       }
       if (art.rolle === 'meuchler') {
         assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
@@ -446,7 +450,7 @@ describe('Bot: aufstellen', () => {
 
     const { partie } = ruesteAus(p, 0);
     const steht = partie.heere[0]!.brett.findIndex((k) => k !== null);
-    assert.equal(reihe(steht), 1, 'der Magier gehoert in die hintere Reihe');
+    assert.equal(reihe(steht), BRETT_REIHEN - 1, 'der Magier gehoert in die hinterste Reihe');
   });
 
   /**

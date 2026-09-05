@@ -92,8 +92,8 @@ describe('Spielzeit: das Zeitmodell', () => {
    * gerade tippt.
    *
    * Gemessen wird der fleissigste Sitz je Runde, denn auf den wartet die
-   * Phase. 800 Partien sind rund 7.600 Runden; die Schranke steht ueber dem
-   * gemessenen Hoechstwert (23 Handgriffe, 39,5 s) und nicht darauf, damit
+   * Phase. 800 Partien sind rund 7.700 Runden; die Schranke steht ueber dem
+   * gemessenen Hoechstwert (43 Handgriffe, 69,5 s) und nicht darauf, damit
    * eine Katalogaenderung sie nicht sofort rot faerbt.
    */
   it('haelt die Rundenfrist ueber der laengsten gemessenen Vorbereitung', () => {

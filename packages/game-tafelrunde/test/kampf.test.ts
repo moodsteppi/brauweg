@@ -21,6 +21,7 @@ import {
   TAKT_MS,
   angriffstakt,
   arenaAbstand,
+  gegenseite,
   nachArena,
   platzNummer,
   protokollText,
@@ -337,20 +338,36 @@ describe('Kampf — Bewegung und Reichweite', () => {
     assert.ok(bewegungen.length > 0, 'ohne Bewegung kaeme niemand in Reichweite');
 
     // Beide ziehen im Gleichschritt, treffen sich in der Mitte und schlagen
-    // erst dann zu.
+    // erst dann zu: Vor dem ersten Treffer steht ein Anlauf, kein Schlag im
+    // Takt null.
+    //
+    // SEIT DEM 06.09.2026 IST DAS LETZTE KOMMEN UND DER ERSTE SCHLAG DERSELBE
+    // TAKT, und deshalb steht hier `<=` und nicht `<`: Wer im Takt vor dem
+    // anderen zieht, geht auf Reichweite heran — und der Nachziehende steht
+    // damit schon im Ziel und schlaegt im selben Takt zu. Ueber die alte
+    // Strecke von zwei Feldern fiel der Schritt in den Takt davor; ueber die
+    // sechs, die es aus den hinteren Reihen jetzt sind, faellt er hinein.
     const ersterTreffer = bericht.ereignisse.find((e) => e.art === 'treffer');
     assert.ok(ersterTreffer, 'sie sollten sich erreichen');
-    for (const b of bewegungen) assert.ok(b.zeitMs < ersterTreffer.zeitMs);
+    assert.ok(ersterTreffer.zeitMs > 0, 'ohne Anlauf waere es kein Zulaufen');
+    for (const b of bewegungen) assert.ok(b.zeitMs <= ersterTreffer.zeitMs);
     assert.equal(bericht.grund, 'ausgeloescht');
   });
 
   it('laesst einen Schuetzen aus der Ferne treffen, ohne einen Schritt zu tun', () => {
-    // Sturmrufer hat Reichweite 4. Aus der eigenen hinteren Reihe quer ueber
-    // die Mittellinie in die hintere Reihe des Gegners sind es drei Felder —
-    // das reicht ihm, einem Nahkaempfer nicht.
-    const schuetze = stelleAuf([['sturmrufer', 1, 2, 1]]);
+    // Sturmrufer hat Reichweite 4. Aus der eigenen VORDERSTEN Reihe quer ueber
+    // die Luecke in die vorderste Reihe des Gegners sind es drei Felder — das
+    // reicht ihm, einem Nahkaempfer nicht.
+    //
+    // Bis zum 06.09.2026 stand hier Reihe 1 und der Sollwert 3: Ohne Luecke
+    // lagen sich auch die hinteren Reihen nah genug. Seit der Luecke sind es
+    // von Reihe 1 zu Reihe 1 fuenf Felder, und selbst der Sturmrufer muesste
+    // laufen — genau die Wirkung, um die es bei der Aenderung ging. Der Fall,
+    // den diese Probe festhaelt, ist aber der Fernkampf ohne Schritt, und den
+    // gibt es weiterhin: vorn.
+    const schuetze = stelleAuf([['sturmrufer', 1, 2, 0]]);
     const bericht = simuliereKampf([schuetze, schuetze], 'fernkampf');
-    assert.equal(arenaAbstand(nachArena(platzNummer(1, 2), 0), nachArena(platzNummer(1, 2), 1)), 3);
+    assert.equal(arenaAbstand(nachArena(platzNummer(0, 2), 0), nachArena(platzNummer(0, 2), 1)), 3);
     assert.equal(bericht.ereignisse.filter((e) => e.art === 'bewegung').length, 0);
     assert.equal(bericht.ereignisse[0]!.art, 'treffer');
     assert.equal(bericht.ereignisse[0]!.zeitMs, 0);
@@ -519,15 +536,33 @@ describe('Kampf — der Ausgang', () => {
   });
 
   /**
-   * Im Spiegelkampf ist alles gleich ausser einem: Wer zuerst schlaegt. Also
-   * muss der Erstzieher gewinnen — oder es bleibt beim Unentschieden, wenn
-   * beide Seiten sich im selben Takt gegenseitig erledigen.
+   * Im Spiegelkampf ist alles gleich ausser einem: die Zugreihenfolge. Sie
+   * entscheidet also — und SEIT DEM 06.09.2026 ZUGUNSTEN DES ZWEITZIEHERS,
+   * nicht mehr des Erstziehers.
+   *
+   * Das ist kein Fehler in der Zugschleife, sondern die Folge davon, dass seit
+   * der Luecke in der Arena kein Kampf mehr in Reichweite beginnt
+   * (`ARENA_LUECKE`, docs/TAFELRUNDE-LAUFWEGE.md). Wer zuerst zieht, hat
+   * naemlich nichts zu schlagen: Er geht heran — und schliesst damit die
+   * Strecke fuer BEIDE. Der Nachziehende steht im selben Takt schon im Ziel
+   * und fuehrt den ersten Schlag. Frueher standen die Fronten Kopf an Kopf,
+   * da war der erste Zug ein Treffer und der Vorteil lag beim Erstzieher.
+   *
+   * FAIR BLEIBT ES, weil der Erstzieher aus der Saat kommt und ueber die
+   * Saaten auf beide Seiten faellt — das prueft die Probe "verteilt den
+   * Erstzieher ueber die Saaten auf beide Seiten" gleich darueber. Gedreht hat
+   * sich die Richtung des Muenzwurfs, nicht seine Muenze.
+   *
+   * Nachgezaehlt beim Einbau: ueber 400 Saaten gewinnt 400-mal der
+   * Zweitzieher, kein einziges Mal der Erstzieher. Die Probe haelt das fest,
+   * damit ein spaeterer Eingriff in die Zugschleife nicht stillschweigend
+   * wieder daran dreht.
    */
-  it('gibt im Spiegelkampf dem Erstzieher recht', () => {
+  it('gibt im Spiegelkampf dem Zweitzieher recht, seit kein Kampf in Reichweite beginnt', () => {
     for (let i = 0; i < 25; i++) {
       const bericht = simuliereKampf([DREI_GEGEN_DREI[0], DREI_GEGEN_DREI[0]], `spiegel${i}`);
       assert.ok(
-        bericht.sieger === bericht.erstZieher || bericht.sieger === null,
+        bericht.sieger === gegenseite(bericht.erstZieher) || bericht.sieger === null,
         `Saat spiegel${i}: Seite ${bericht.sieger} gewinnt, obwohl ${bericht.erstZieher} zuerst zieht`,
       );
     }

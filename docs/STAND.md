@@ -100,7 +100,9 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > Paketstruktur lag). Eine Runde läuft jetzt vollständig durch: Alle lebenden
 > Sitze werden paarweise angesetzt (bei ungerader Zahl bekommt der Übrige das
 > Brett eines anderen als **Geist**, keine Freirunde), beide Bretthälften
-> werden zu einer Arena mit vier Reihen zusammengelegt, der Kampf wird beim
+> werden zu einer Arena zusammengelegt (bis zum 06.09.2026 vier Reihen, seit
+> Robins Entscheidung nach der Laufwege-Messung **zehn**: vier je Seite und
+> zwei leere dazwischen), der Kampf wird beim
 > Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
 > als **Ablaufprotokoll** (jede Bewegung, jeder Treffer, jeder Tod mit
 > Zeitpunkt) im Zustand und in der Sicht. Gleiche Saat plus gleiche Bretter
@@ -165,7 +167,8 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > 4 bereit"; ohne Frist steht das dort weiterhin.
 >
 > Seitdem hat die Vorbereitung eine **Rundenfrist im Modul**:
-> `vorbereitungMs` im Regelsatz, **45 Sekunden**, danach gelten offene Sitze
+> `vorbereitungMs` im Regelsatz, **75 Sekunden** (bis zum 06.09.2026 45 —
+> siehe unten), danach gelten offene Sitze
 > als bereit (`fristAbgelaufen` in `partie.ts`). Gebucht wird dabei nichts —
 > wer die Frist verstreichen lässt, tritt mit dem Brett an, das er hat.
 > Getragen wird sie von einem neuen Paar in `GameModule`: **`phaseMs` /
@@ -175,10 +178,18 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > (`schedulePhase`, ein Timer auf den früheren von Zugzeit und Phasenfrist).
 > Damit die Plattform einen Phasenwechsel bemerkt, **muss `phaseMs`
 > zwischen zwei Fristen einmal null liefern** — bei Tafelrunde liegt dazwischen
-> die Kampfphase. 45 s sind gemessen und nicht gegriffen: Über 7.637 Runden
-> braucht der fleißigste Sitz im Median 15,5 s und höchstens 39,5 s
+> die Kampfphase. Die Frist ist gemessen und nicht gegriffen: Über 7.689
+> Runden braucht der fleißigste Sitz im Median 15,5 s und höchstens 69,5 s
 > (Zeitmodell in `test/messen.ts`), die Frist liegt also über jeder zügig
 > gespielten Runde.
+>
+> **Sie stand bis zum 06.09.2026 auf 45 s**, und das war für ein Brett mit
+> ZWEI Reihen je Seite richtig gemessen (Median 15,5 s, höchstens 39,5 s).
+> Mit vier Reihen bleibt der Median gleich, aber der Schwanz wird länger: Es
+> gibt mehr Felder, auf denen eine Einheit falsch stehen kann, und der Bot
+> räumt das mit `verschieben` auf. Bei 45 s wären 55 von 7.689 Runden
+> (0,72 %) abgeschnitten worden, bei 75 s keine einzige. Die typische Runde
+> wird davon nicht länger — die Frist ist ein Deckel, kein Takt.
 >
 > Dazu, alles in `packages/client/src`: **sichtbares Feldraster** (die Wabe
 > trägt die Randfarbe, ihr `::before` liegt 1,5 px innen und trägt die

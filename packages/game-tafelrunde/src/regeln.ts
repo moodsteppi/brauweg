@@ -129,17 +129,25 @@ export interface TafelrundeRegeln {
  * ist allein der Vorrat — wer ihn leerkauft, sieht leere Ladenplaetze, und das
  * ist die einzige Bremse, die es hier noch gibt.
  *
- * FUENFUNDVIERZIG SEKUNDEN VORBEREITUNG (seit dem 06.09.2026) sind gemessen
- * und nicht gegriffen. Ueber 7.637 Runden aus 800 Partien zu viert
- * (`werkzeug/spielzeit.mjs`, Saatbasis frist-v1) macht der fleissigste Sitz
- * einer Runde im Median 7 Handgriffe, im 99. Hundertstel 17 und hoechstens 23.
- * Ueber das Zeitmodell des Messstands (5 s Grundzeit + 1,5 s je Handgriff,
- * `Zeitmodell` in test/messen.ts) sind das 15,5 s, 30,5 s und 39,5 s. Die
- * Frist liegt damit UEBER der laengsten gemessenen Runde: Sie schneidet keine
- * zuegige Vorbereitung ab, sondern beendet die Phase fuer jemanden, der nicht
- * mehr hinsieht. Nach unten begrenzt sie die Partie trotzdem hart — neun
- * Runden mal 45 s sind 6:45 im schlimmsten Fall, und darunter passen die
- * Kaempfe noch in Robins acht Minuten.
+ * FUENFUNDSIEBZIG SEKUNDEN VORBEREITUNG sind gemessen und nicht gegriffen.
+ * Ueber 7.689 Runden aus 800 Partien zu viert (`werkzeug/spielzeit.mjs`,
+ * Saatbasis frist-v1) macht der fleissigste Sitz einer Runde im Median 7
+ * Handgriffe, im 99. Hundertstel 25 und hoechstens 43. Ueber das Zeitmodell
+ * des Messstands (5 s Grundzeit + 1,5 s je Handgriff, `Zeitmodell` in
+ * test/messen.ts) sind das 15,5 s, 42,5 s und 69,5 s. Die Frist liegt damit
+ * UEBER der laengsten gemessenen Runde: Sie schneidet keine zuegige
+ * Vorbereitung ab, sondern beendet die Phase fuer jemanden, der nicht mehr
+ * hinsieht.
+ *
+ * SIE STAND BIS ZUM 06.09.2026 AUF 45 SEKUNDEN, und das war fuer ein Brett mit
+ * ZWEI Reihen je Seite richtig gemessen (Median 7, P99 17, hoechstens 23
+ * Handgriffe = 39,5 s). Mit vier Reihen ist der MEDIAN unveraendert — 7
+ * Handgriffe, 15,5 s —, aber der Schwanz wird laenger: Es gibt mehr Felder,
+ * auf denen eine Einheit falsch stehen kann, und der Bot raeumt das mit
+ * `verschieben` auf (12.320 solcher Zuege ueber 200 Partien vorher, 16.216
+ * nachher). Bei 45 s waeren 55 von 7.689 Runden (0,72 %) abgeschnitten worden,
+ * bei 75 s ist es keine einzige. Die typische Runde wird davon NICHT laenger:
+ * Die Frist ist ein Deckel, kein Takt.
  *
  * KUERZER MACHEN heisst, jemandem den Kauf wegzunehmen, den er gerade tippt.
  * Wer es trotzdem tut, misst vorher nach: Die drei Zahlen oben stehen als
@@ -152,7 +160,7 @@ export const DEFAULT_REGELN: TafelrundeRegeln = {
   bankPlaetze: 9,
   neuwuerfelnKosten: 0,
   grundeinkommen: 5,
-  vorbereitungMs: 45_000,
+  vorbereitungMs: 75_000,
   rundenGrenze: 30,
 };
 

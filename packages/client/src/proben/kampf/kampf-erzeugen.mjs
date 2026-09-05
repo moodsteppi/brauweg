@@ -37,6 +37,8 @@ import { fileURLToPath } from 'node:url';
 
 import { botZug } from '../../../../game-tafelrunde/dist/src/bot.js';
 import {
+  ARENA_REIHEN,
+  ARENA_SPALTEN,
   BRETT_REIHEN,
   BRETT_SPALTEN,
   DEFAULT_REGELN,
@@ -61,15 +63,24 @@ import {
  * sich seine eigene Saat aus der Partie (`kampfSaat`) — von Hand gesetzt
  * waere sie eine zweite Wahrheit.
  *
- * WARUM AUSGERECHNET DIESE: Von 25 durchgerechneten Partien liefert sie in
+ * WARUM AUSGERECHNET DIESE: Von 400 durchgerechneten Partien liefert sie in
  * Runde 10 den Kampf, der am meisten zeigt und dabei typisch bleibt —
- * 18,1 s (Median unter Zeitraffer x2 sind 18,3 s), vier gegen vier, auf
- * beiden Seiten zwei erreichte Markenschwellen, sechs Tode ABWECHSELND auf
- * beiden Seiten und ein Ende durch Ausloeschung. Die kurzen Kaempfe (7 s)
- * zeigen kaum Bewegung, die langen (45 s) enden in `entscheideNachZeit` und
- * damit ohne Schlussbild, und in vielen faellt keine einzige eigene Einheit.
+ * 17,4 s (Median der Kampfdauer unter Zeitraffer x2 sind 18,0 s), vier gegen
+ * vier, kein Kaempfer mehr auf Stufe 1 und einer auf Stufe 3, auf beiden
+ * Seiten zwei erreichte Markenschwellen, sieben Tode ABWECHSELND auf beiden
+ * Seiten und ein Ende durch Ausloeschung. Die kurzen Kaempfe zeigen kaum
+ * Bewegung, die langen enden in `entscheideNachZeit` und damit ohne
+ * Schlussbild, und in vielen faellt keine einzige eigene Einheit.
+ *
+ * SIE IST AM 06.09.2026 NEU GESUCHT WORDEN. Vorher stand hier
+ * `probe-kampf-16` — deren Paarung 2:3 gibt es seit der neuen Arena (vier
+ * Reihen je Seite, zwei leere dazwischen) in Runde 10 gar nicht mehr: Die
+ * Bots ziehen anders, also fallen andere Paarungen. Das Skript bricht in so
+ * einem Fall ab, statt irgendeinen Kampf zu nehmen; gesucht wurde nach
+ * denselben Kriterien wie beim ersten Mal. Nebenbei sichtbar, worum es bei
+ * der Aenderung ging: 19 Bewegungen statt 6 im alten Bericht.
  */
-const SAAT = 'probe-kampf-16';
+const SAAT = 'probe-kampf-229';
 
 /** Runde 10: das erste ausgebaute Brett. Vorher steht fast alles auf Stufe 1. */
 const RUNDE = 10;
@@ -160,6 +171,8 @@ const szene = {
   ich: PAARUNG.a,
   brettReihen: BRETT_REIHEN,
   brettSpalten: BRETT_SPALTEN,
+  arenaReihen: ARENA_REIHEN,
+  arenaSpalten: ARENA_SPALTEN,
   kampf,
   katalog,
   seiten: [

@@ -1647,6 +1647,7 @@ function Ruestkammer({
         paarungen={kampfbild.paarungen}
         ich={sicht.ich}
         brettReihen={sicht.brettReihen}
+        arenaReihen={sicht.arenaReihen}
         brettSpalten={sicht.brettSpalten}
         katalog={katalog}
         nameVon={(sitz) => spielername(zeile(sitz), sitz)}

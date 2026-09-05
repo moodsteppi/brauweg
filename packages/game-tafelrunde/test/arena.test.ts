@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   ARENA_FELDER,
+  ARENA_LUECKE,
   ARENA_REIHEN,
   ARENA_SPALTEN,
   BRETT_FELDER,
@@ -77,11 +78,23 @@ describe('Abstand auf dem Sechseckraster', () => {
 });
 
 describe('Arena — das Gitter', () => {
-  it('ist doppelt so hoch wie eine Bretthaelfte und genauso breit', () => {
-    assert.equal(ARENA_REIHEN, BRETT_REIHEN * 2);
+  it('ist zwei Bretthaelften hoch plus die Luecke, und genauso breit', () => {
+    assert.equal(ARENA_REIHEN, BRETT_REIHEN * 2 + ARENA_LUECKE);
     assert.equal(ARENA_SPALTEN, BRETT_SPALTEN);
     assert.equal(ARENA_FELDER, ARENA_REIHEN * ARENA_SPALTEN);
-    assert.equal(ARENA_FELDER, BRETT_FELDER * 2);
+    assert.equal(ARENA_FELDER, BRETT_FELDER * 2 + ARENA_LUECKE * ARENA_SPALTEN);
+  });
+
+  /**
+   * Die Luecke muss GERADE sein, aus demselben Grund wie die Reihenzahl: Sie
+   * verschiebt Seite 0 nach unten und geht damit in die Punktspiegelung ein.
+   * Bei einer ungeraden Luecke waere die Abbildung um ein halbes Feld
+   * verschoben, und die Probe "erhaelt alle Abstaende" faende es — aber erst,
+   * nachdem jemand die Zahl geaendert hat. Hier steht der Grund dazu.
+   */
+  it('haelt die Luecke gerade — sonst kippt die Spiegelung', () => {
+    assert.equal(ARENA_LUECKE % 2, 0);
+    assert.equal(BRETT_REIHEN % 2, 0);
   });
 
   it('haelt Zahlen ausserhalb heraus', () => {
@@ -105,7 +118,7 @@ describe('Arena — das Gitter', () => {
 });
 
 describe('Arena — die Bretter hineinlegen', () => {
-  it('legt beide Bretter ueberschneidungsfrei und lueckenlos in die Arena', () => {
+  it('legt beide Bretter ueberschneidungsfrei in die Arena und laesst genau die Luecke frei', () => {
     const belegt = new Set<number>();
     for (const seite of SEITEN) {
       for (let platz = 0; platz < BRETT_FELDER; platz++) {
@@ -115,7 +128,14 @@ describe('Arena — die Bretter hineinlegen', () => {
         belegt.add(arena);
       }
     }
-    assert.equal(belegt.size, ARENA_FELDER);
+    // Nicht mehr lueckenlos: Seit dem 06.09.2026 bleiben `ARENA_LUECKE` Reihen
+    // leer. Dass es GENAU die sind, prueft der Rest — sonst waere ein
+    // Rechenfehler, der eine Haelfte um eine Reihe verschiebt, hier unsichtbar.
+    assert.equal(belegt.size, BRETT_FELDER * 2);
+    assert.equal(ARENA_FELDER - belegt.size, ARENA_LUECKE * ARENA_SPALTEN);
+    for (let platz = 0; platz < ARENA_FELDER; platz++) {
+      assert.equal(belegt.has(platz), haelfteVon(platz) !== null, `Arenaplatz ${platz}`);
+    }
   });
 
   it('findet zu jedem Arenaplatz wieder den Brettplatz', () => {
@@ -138,6 +158,30 @@ describe('Arena — die Bretter hineinlegen', () => {
     const fremd = nachArena(0, 0);
     assert.throws(() => vonArena(fremd, 1), /gehoert nicht zu Seite 1/);
     assert.throws(() => vonArena(ARENA_FELDER, 0), /gibt es nicht/);
+  });
+
+  /**
+   * Der dritte Fall, den die Luecke gebracht hat: Die mittleren Reihen gehoeren
+   * KEINER Seite. Ohne diese Probe waere der naheliegende Fehler — `null` still
+   * zu Seite 0 zu runden — von aussen nicht zu sehen, weil im Kampf niemand
+   * dort startet. Die Anzeige zeichnet die Reihen aber.
+   */
+  it('gibt fuer die leeren Reihen zwischen den Haelften keine Seite zurueck', () => {
+    for (let reihe = BRETT_REIHEN; reihe < BRETT_REIHEN + ARENA_LUECKE; reihe++) {
+      for (let spalte = 0; spalte < ARENA_SPALTEN; spalte++) {
+        const platz = reihe * ARENA_SPALTEN + spalte;
+        assert.equal(haelfteVon(platz), null, `Arenaplatz ${platz}`);
+        for (const seite of SEITEN) {
+          assert.throws(() => vonArena(platz, seite), /gehoert nicht zu Seite/);
+        }
+      }
+    }
+    // Und kein Brettplatz landet je in der Luecke.
+    for (const seite of SEITEN) {
+      for (let platz = 0; platz < BRETT_FELDER; platz++) {
+        assert.notEqual(haelfteVon(nachArena(platz, seite)), null);
+      }
+    }
   });
 
   /**
@@ -183,13 +227,24 @@ describe('Arena — die Bretter hineinlegen', () => {
 
   it('legt die eigene Reihe 0 bei beiden Seiten an die Mittellinie', () => {
     // Reihe 0 ist die vorderste Reihe. Wer dort steht, hat den Gegner direkt
-    // vor sich — allerdings SPIEGELVERKEHRT: Die eigene linke Spalte trifft
+    // gegenueber — allerdings SPIEGELVERKEHRT: Die eigene linke Spalte trifft
     // auf die rechte des anderen, wie zwei Leute, die sich an einem Tisch
     // gegenuebersitzen.
+    //
+    // BIS ZUM 06.09.2026 STAND HIER EINE 1 — "Kopf an Kopf". Genau das war der
+    // gemessene Befund (docs/TAFELRUNDE-LAUFWEGE.md): Die Fronten begannen in
+    // Kontakt, und alles dahinter stand vom ersten Takt an in Reichweite. Mit
+    // der Luecke ist der kleinste Startabstand `ARENA_LUECKE + 1`, also 3, und
+    // das ist mehr als die groesste Reichweite des Katalogs bis auf eine.
+    const kopfAnKopf = ARENA_LUECKE + 1;
     for (let spalte = 0; spalte < BRETT_SPALTEN; spalte++) {
       const vorn0 = nachArena(brettplatz(spalte, 0), 0);
       const vorn1 = nachArena(brettplatz(BRETT_SPALTEN - 1 - spalte, 0), 1);
-      assert.equal(arenaAbstand(vorn0, vorn1), 1, `Spalte ${spalte} steht nicht Kopf an Kopf`);
+      assert.equal(
+        arenaAbstand(vorn0, vorn1),
+        kopfAnKopf,
+        `Spalte ${spalte} steht nicht ${kopfAnKopf} Felder auseinander`,
+      );
     }
     // Die eigene hinterste Reihe steht entsprechend quer durch die ganze Arena.
     const hinten0 = nachArena(brettplatz(0, BRETT_REIHEN - 1), 0);

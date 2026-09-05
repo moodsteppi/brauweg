@@ -44,7 +44,9 @@ ab; entschieden wird zwischen den Runden.
 
 ### Spielfeld
 
-Hexagonales Raster, etwa 4 Reihen zu 5 Spalten, versetzt. Eigene Hälfte zum
+Hexagonales Raster, 4 Reihen zu 5 Spalten je Seite, versetzt (bis zum
+06.09.2026 waren es 2). Die Kampfarena ist deshalb 5 × 10: beide Hälften und
+zwei leere Reihen dazwischen. Eigene Hälfte zum
 Platzieren, das gegnerische Brett wird für die Vorschau gespiegelt. Unterhalb
 eine Reservebank mit 5–9 Plätzen.
 
@@ -90,7 +92,7 @@ und bringt Feldplätze.
 
 1. **Vorbereitung** (ca. 30 s): kaufen, setzen, verschmelzen. Sie endet,
    sobald der letzte Sitz „Bereit" tippt — spätestens aber nach
-   `vorbereitungMs` (45 s, seit dem 06.09.2026); danach gelten offene Sitze
+   `vorbereitungMs` (75 s, seit dem 06.09.2026); danach gelten offene Sitze
    als bereit. Gemessen dauert sie im Median 15,5 s, siehe
    `docs/TAFELRUNDE-SPIELZEIT.md`.
 2. **Kampf** (ca. 15–20 s): läuft automatisch, wird nur zugesehen.

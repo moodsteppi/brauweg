@@ -120,7 +120,8 @@ function zeige(
       kaempfe={kaempfe}
       paarungen={paarungen}
       ich={ich}
-      brettReihen={2}
+      brettReihen={4}
+      arenaReihen={10}
       brettSpalten={5}
       katalog={KATALOG}
       nameVon={(sitz) => NAMEN[sitz] ?? `Sitz ${sitz + 1}`}

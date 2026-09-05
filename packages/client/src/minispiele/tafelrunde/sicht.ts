@@ -106,6 +106,9 @@ export interface TafelrundeSicht {
   brettFelder: number;
   brettReihen: number;
   brettSpalten: number;
+  /** Masse der Kampfarena (arena.ts). Seit der Luecke NICHT `brettReihen * 2`. */
+  arenaReihen: number;
+  arenaSpalten: number;
   verschmelzZahl: number;
   maxStufe: number;
   vorrat: Record<string, number>;
