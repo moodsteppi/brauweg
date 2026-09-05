@@ -18,38 +18,98 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  *      Balken bei 96 %, waehrend die dickste Datei noch unterwegs ist.
  *   6. Das Spielpaket haengt im SELBEN Lauf wie die Bilder und bringt seinen
  *      eigenen Weg mit. Ohne das zerfiele die eine Wartezeit wieder in zwei.
+ *   7. Ein Posten darf sich UNTERWEGS melden. Das fuellt den Balken feiner —
+ *      vor allem aber stoesst es die Ruhefrist an, sonst schriebe die Uhr eine
+ *      Datei ab, die gerade laedt (siehe FRIST_MS).
  */
 
 import { BLATT_PFADE } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import { PAKET_KB, PAKET_KENNUNG } from './paket';
 import {
+  type Fortschritt,
+  type Holer,
   type Ladestand,
   type Posten,
   VORZULADEN,
+  stromHolen,
+  stromPosten,
   vorratLaden,
   vorratStand,
   vorratZuruecksetzen,
 } from './vorladen';
 
-/** Ein Holer, dessen Ausgang der Test von Hand entscheidet. */
+/** Ein Holer, dessen Ausgang und Zwischenberichte der Test von Hand setzt. */
 function handbetrieb(): {
-  holen: (pfad: string) => Promise<void>;
+  holen: Holer;
   fertig: (pfad: string) => void;
   fehlschlag: (pfad: string) => void;
+  /** Ein Zwischenbericht, wie ihn `stromHolen` je gelesenem Stueck schickt. */
+  bericht: (pfad: string, gelesen: number, gesamt?: number | null) => void;
   angefragt: string[];
 } {
-  const offen = new Map<string, { gut: () => void; schlecht: () => void }>();
+  const offen = new Map<
+    string,
+    { gut: () => void; schlecht: () => void; melden: Fortschritt }
+  >();
   const angefragt: string[] = [];
   return {
     angefragt,
-    holen: (pfad) =>
+    holen: (pfad, melden) =>
       new Promise<void>((gut, schlecht) => {
         angefragt.push(pfad);
-        offen.set(pfad, { gut: () => gut(), schlecht: () => schlecht(new Error(pfad)) });
+        offen.set(pfad, { gut: () => gut(), schlecht: () => schlecht(new Error(pfad)), melden });
       }),
     fertig: (pfad) => offen.get(pfad)?.gut(),
     fehlschlag: (pfad) => offen.get(pfad)?.schlecht(),
+    bericht: (pfad, gelesen, gesamt = null) => offen.get(pfad)?.melden(gelesen, gesamt),
+  };
+}
+
+/** Das Gewicht des dicken Postens in Bytes — 30 kB, siehe `POSTEN`. */
+const DICK_BYTES = 30 * 1024;
+
+/**
+ * Eine Antwort von Hand, wie `stromHolen` sie von `fetch` bekommt.
+ *
+ * Von Hand und nicht als echte `Response`: Der Test soll die Stuecke selbst
+ * schneiden und auch die Faelle bauen koennen, die eine echte Antwort nicht
+ * hergibt — keine `Content-Length`, kein mitlesbarer Koerper.
+ */
+function fetchProbe(opt: {
+  status?: number;
+  laenge?: string | null;
+  /** Die Groessen der Stuecke; `null` heisst: gar kein lesbarer Koerper. */
+  stuecke?: readonly number[] | null;
+}): { holer: ReturnType<typeof vi.fn>; amStueck: () => number } {
+  const stuecke = opt.stuecke ?? [];
+  let naechstes = 0;
+  let amStueck = 0;
+  const antwort = {
+    ok: (opt.status ?? 200) < 400,
+    status: opt.status ?? 200,
+    headers: { get: (name: string) => (name === 'content-length' ? (opt.laenge ?? null) : null) },
+    body:
+      opt.stuecke === null
+        ? null
+        : {
+            getReader: () => ({
+              read: () =>
+                Promise.resolve(
+                  naechstes < stuecke.length
+                    ? { done: false, value: new Uint8Array(stuecke[naechstes++]!) }
+                    : { done: true, value: undefined },
+                ),
+            }),
+          },
+    arrayBuffer: () => {
+      amStueck += 1;
+      return Promise.resolve(new ArrayBuffer(0));
+    },
+  };
+  return {
+    holer: vi.fn(() => Promise.resolve(antwort as unknown as Response)),
+    amStueck: () => amStueck,
   };
 }
 
@@ -68,6 +128,7 @@ describe('vorladen', () => {
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -229,6 +290,68 @@ describe('vorladen', () => {
     });
   });
 
+  /*
+   * Der Zwischenbericht (`Fortschritt`). Er ist fuer die grossen Dateien
+   * gebaut, die mit der 3D-Arena kommen: Ein Posten, der sich nur einmal
+   * meldet, laesst den Balken waehrend seines ganzen Downloads stehen — und
+   * schlimmer, die Ruhefrist laeuft ihm davon.
+   */
+  describe('der Zwischenbericht', () => {
+    it('fuellt den Balken schon waehrend einer Datei', async () => {
+      const hand = handbetrieb();
+      void vorratLaden({ posten: POSTEN, holen: hand.holen });
+      await durchatmen();
+
+      hand.bericht('/dick.webp', DICK_BYTES / 2, DICK_BYTES);
+      await durchatmen();
+      // 15 von 32 kB, obwohl noch keine einzige Datei fertig ist. Ohne den
+      // Bericht stuende der Balken hier auf null.
+      expect(vorratStand().anteil).toBeCloseTo(15 / 32, 3);
+      expect(vorratStand().erledigt).toBe(0);
+    });
+
+    it('zaehlt das Gewicht nicht doppelt, wenn der Posten fertig wird', async () => {
+      const hand = handbetrieb();
+      void vorratLaden({ posten: POSTEN, holen: hand.holen });
+      await durchatmen();
+
+      hand.bericht('/dick.webp', DICK_BYTES, DICK_BYTES);
+      await durchatmen();
+      expect(vorratStand().anteil).toBeCloseTo(30 / 32, 3);
+
+      hand.fertig('/dick.webp');
+      await durchatmen();
+      // Dieselben 30 kB, jetzt als erledigt gebucht. Bliebe der Teilstand
+      // stehen, staende der Balken bei 60 von 32 — also am Deckel, waehrend
+      // zwei Dateien noch unterwegs sind.
+      expect(vorratStand().anteil).toBeCloseTo(30 / 32, 3);
+      expect(vorratStand().erledigt).toBe(1);
+    });
+
+    it('rechnet ohne Content-Length gegen das geschaetzte Gewicht', async () => {
+      const hand = handbetrieb();
+      void vorratLaden({ posten: POSTEN, holen: hand.holen });
+      await durchatmen();
+
+      // Kein Gesamtwert (chunked, gzip): Massstab ist dann `Posten.kb`.
+      hand.bericht('/dick.webp', DICK_BYTES / 2, null);
+      await durchatmen();
+      expect(vorratStand().anteil).toBeCloseTo(15 / 32, 3);
+    });
+
+    it('laesst den Balken nicht ueberlaufen, wenn die Schaetzung zu klein war', async () => {
+      const hand = handbetrieb();
+      void vorratLaden({ posten: POSTEN, holen: hand.holen });
+      await durchatmen();
+
+      // Doppelt so viele Bytes wie geschaetzt. Ohne Deckel waere der Posten
+      // allein schon 60 von 32 kB schwer.
+      hand.bericht('/dick.webp', DICK_BYTES * 2, null);
+      await durchatmen();
+      expect(vorratStand().anteil).toBeCloseTo(30 / 32, 3);
+    });
+  });
+
   describe('wenn etwas fehlt', () => {
     it('spielt weiter und nennt die ausgefallene Datei', async () => {
       const warnung = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -294,6 +417,51 @@ describe('vorladen', () => {
       expect(vorratStand().fertig).toBe(true);
     });
 
+    /*
+     * DER EIGENTLICHE GRUND fuer den Zwischenbericht. Eine Datei im
+     * Megabyte-Bereich laedt laenger am Stueck, als die Ruhefrist lang ist —
+     * ohne Bericht schriebe die Uhr sie mitten im Herunterladen ab, obwohl
+     * jede Sekunde Bytes ankommen.
+     */
+    it('stoesst die Ruhefrist mit jedem Zwischenbericht an', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const hand = handbetrieb();
+      let stand: Ladestand | null = null;
+      void vorratLaden({ posten: POSTEN, holen: hand.holen, fristMs: 500 }).then(
+        (s) => (stand = s),
+      );
+
+      // Eine einzige Datei, die im 400-ms-Takt Stuecke liefert und nach 1,2 s
+      // immer noch laedt. Ohne die Anstoesse waere die Frist bei 500 gefallen.
+      await vi.advanceTimersByTimeAsync(400);
+      hand.bericht('/dick.webp', DICK_BYTES / 3, DICK_BYTES);
+      await vi.advanceTimersByTimeAsync(400);
+      hand.bericht('/dick.webp', (DICK_BYTES * 2) / 3, DICK_BYTES);
+      await vi.advanceTimersByTimeAsync(400);
+      expect(stand).toBeNull();
+      expect(vorratStand().fertig).toBe(false);
+
+      // Und sie faellt weiterhin, wenn wirklich nichts mehr kommt.
+      await vi.advanceTimersByTimeAsync(501);
+      expect(vorratStand().fertig).toBe(true);
+      expect(vorratStand().fehlend).toHaveLength(3);
+    });
+
+    it('nimmt nach der Frist keinen Zwischenbericht mehr an', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const hand = handbetrieb();
+      void vorratLaden({ posten: POSTEN, holen: hand.holen, fristMs: 500 });
+      await vi.advanceTimersByTimeAsync(501);
+      const nachDerFrist = vorratStand();
+
+      hand.bericht('/dick.webp', DICK_BYTES / 2, DICK_BYTES);
+      await vi.advanceTimersByTimeAsync(1);
+      // Der Balken steht auf voll und muss dort bleiben: Die Partie laeuft.
+      expect(vorratStand()).toBe(nachDerFrist);
+    });
+
     it('meldet nach der Frist nicht noch einmal, wenn ein Nachzuegler eintrifft', async () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -337,6 +505,112 @@ describe('vorladen', () => {
       expect(vorratLaden({ posten: POSTEN, holen: zweitesHand.holen })).toBe(erstes);
       await durchatmen();
       expect(zweitesHand.angefragt).toEqual([]);
+    });
+  });
+
+  /*
+   * `stromHolen` — der zweite Holer neben `bildHolen`. Er ist der Weg fuer
+   * alles, was gross ist und kein Bild (GLB-Modelle der 3D-Arena) und
+   * unterscheidet sich in genau einem Punkt: Er meldet unterwegs.
+   */
+  describe('stromHolen', () => {
+    it('meldet die gelesenen Bytes gegen die Content-Length', async () => {
+      const probe = fetchProbe({ laenge: '60', stuecke: [10, 20, 30] });
+      vi.stubGlobal('fetch', probe.holer);
+      const berichte: [number, number | null][] = [];
+
+      await stromHolen('/modell.glb', (gelesen, gesamt) => berichte.push([gelesen, gesamt]));
+
+      expect(probe.holer).toHaveBeenCalledWith('/modell.glb');
+      // Gemeldet wird der STAND, nicht der Zuwachs: 10, 30, 60 — nicht
+      // 10, 20, 30. Sonst muesste der Lauf selbst mitzaehlen, und ein
+      // verlorener Bericht verschoebe den Balken dauerhaft.
+      expect(berichte).toEqual([
+        [10, 60],
+        [30, 60],
+        [60, 60],
+      ]);
+    });
+
+    it('meldet ohne Content-Length einen unbekannten Gesamtwert', async () => {
+      const probe = fetchProbe({ laenge: null, stuecke: [10, 20] });
+      vi.stubGlobal('fetch', probe.holer);
+      const berichte: [number, number | null][] = [];
+
+      await stromHolen('/modell.glb', (gelesen, gesamt) => berichte.push([gelesen, gesamt]));
+
+      // `null` und nicht etwa null Bytes: Der Lauf soll die Schaetzung aus
+      // `Posten.kb` nehmen und nicht durch null teilen.
+      expect(berichte).toEqual([
+        [10, null],
+        [30, null],
+      ]);
+    });
+
+    it('lehnt eine Antwort mit Fehlerstatus ab', async () => {
+      const probe = fetchProbe({ status: 404, laenge: '0', stuecke: [] });
+      vi.stubGlobal('fetch', probe.holer);
+
+      // Ein 404 kommt bei `fetch` als gewoehnliche Antwort an. Ginge er als
+      // Erfolg durch, haekelte der Lauf eine Datei ab, die es nicht gibt —
+      // und der Ladebildschirm meldete Vollzug.
+      await expect(stromHolen('/fehlt.glb')).rejects.toThrow('404');
+    });
+
+    it('kommt auch ohne mitlesbaren Koerper durch', async () => {
+      const probe = fetchProbe({ laenge: '60', stuecke: null });
+      vi.stubGlobal('fetch', probe.holer);
+      const berichte: number[] = [];
+
+      // Kein `body` (jsdom, aeltere Browser): Dann eben in einem Stueck. Die
+      // Datei ist da, nur ohne Zwischenbericht — ein Rueckfall, der still
+      // weiterlaeuft, statt den Posten zu verlieren.
+      await expect(stromHolen('/modell.glb', (g) => berichte.push(g))).resolves.toBeUndefined();
+      expect(probe.amStueck()).toBe(1);
+      expect(berichte).toEqual([]);
+    });
+
+    it('laesst sich ohne Zuhoerer aufrufen', async () => {
+      const probe = fetchProbe({ laenge: '10', stuecke: [10] });
+      vi.stubGlobal('fetch', probe.holer);
+      await expect(stromHolen('/modell.glb')).resolves.toBeUndefined();
+    });
+  });
+
+  /*
+   * `stromPosten` ist der Bauplan fuer den kuenftigen GLB-Posten. Geprueft
+   * wird die eine Eigenschaft, die man ihm sonst nicht ansieht: Der Pfad steht
+   * genau EINMAL da und ist derselbe, den der Holer anfordert.
+   */
+  describe('stromPosten', () => {
+    it('holt genau den Pfad, unter dem der Posten abgehakt wird', async () => {
+      const probe = fetchProbe({ laenge: '2048', stuecke: [1024, 1024] });
+      vi.stubGlobal('fetch', probe.holer);
+      const berichte: number[] = [];
+
+      const posten = stromPosten('/tafelrunde/modelle/wache.glb', 2400);
+      expect(posten.pfad).toBe('/tafelrunde/modelle/wache.glb');
+      expect(posten.kb).toBe(2400);
+
+      await posten.holen?.((gelesen) => berichte.push(gelesen));
+      expect(probe.holer).toHaveBeenCalledWith(posten.pfad);
+      expect(berichte).toEqual([1024, 2048]);
+    });
+
+    it('laeuft im Lauf wie jeder andere Posten', async () => {
+      const probe = fetchProbe({ laenge: '2048', stuecke: [1024, 1024] });
+      vi.stubGlobal('fetch', probe.holer);
+      const modell = stromPosten('/wache.glb', 2);
+
+      // Zwei kB Modell neben einem kB Bild: Der Lauf sieht keinen
+      // Unterschied — er sieht ein Versprechen, das haelt.
+      const stand = await vorratLaden({
+        posten: [modell, POSTEN[1]!],
+        holen: () => Promise.resolve(),
+      });
+      expect(stand.fertig).toBe(true);
+      expect(stand.fehlend).toEqual([]);
+      expect(stand.erledigt).toBe(2);
     });
   });
 
