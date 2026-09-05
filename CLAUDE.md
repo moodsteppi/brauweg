@@ -215,3 +215,12 @@ Wirtschaftsmodell.
   seine Nachbarn, obwohl alle `width: 100%` haben, und die Schrift steht über
   die Platte hinaus. Gemessen wird der Alphakanal auf der Mittelzeile, nicht
   die Dateigröße. Bestellung und Sollmaße: `docs/ASSETS-KNOEPFE.md`.
+
+---
+
+## Übergreifende Arbeitsregeln
+
+Für alle Broweg- und goodFil-Repos gelten zusätzlich die gemeinsamen
+Regeln — Git-Weg, Orchestrator, **Tafel-Pflicht (Visual Building)**:
+
+@ARBEITSREGELN.md
