@@ -39,6 +39,7 @@
       "@brauweg/game-cambio": ["../game-cambio/src/index.ts"],
       "@brauweg/game-doppelkopf": ["../game-doppelkopf/src/index.ts"],
       "@brauweg/game-skat": ["../game-skat/src/index.ts"],
+      "@brauweg/game-tafelrunde": ["../game-tafelrunde/src/index.ts"],
       "@brauweg/game-wizard": ["../game-wizard/src/index.ts"]
     }
   },

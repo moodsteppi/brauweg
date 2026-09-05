@@ -44,6 +44,28 @@ Weg, auf dem ein Modul vorangeht. Weniger dürfen sie nicht.
    `Leer<…>`-Zeilen darunter brechen den Bau, sobald ein Feld dazukommt oder
    verschwindet.
 
+## Die andere Richtung: was der Bildschirm schickt
+
+`tafelrunde-tisch.test.ts` fällt aus dem Muster, weil es nicht um eine Sicht
+geht, sondern um die Werte, mit denen ein Bildschirm einen **Tisch aufmacht**.
+Die Kehrseite ist dieselbe: Bis zum 05.09.2026 stand `DEFAULT_REGELN` in
+`screens/Tafelrunde.tsx` ein zweites Mal, wortgleich abgeschrieben, und ging
+als `config` an `createTable`. Der Server schreibt eine mitgeschickte
+`config` als Regelsatz des Tisches fest — die Kopie **überstimmte** also das
+Modul, und die Umstellung der Startleben (100 → 20 → 14) wäre zweimal an
+jedem echten Tisch vorbeigelaufen, ohne dass etwas rot geworden wäre.
+
+Behoben ist das nicht hier, sondern an der Wurzel: Der Bildschirm lässt
+`config` weg, und der Server setzt `defaultConfig()` des Moduls ein
+(`tables/service.ts`, geprüft in `packages/server/test/tables.test.ts`). Was
+im Bildschirm an Zahlen bleibt, ist die **Auswahl** der angebotenen
+Sitzzahlen — die darf kürzer sein als `SEAT_COUNTS`, aber nichts enthalten,
+was das Modul nicht kennt. Genau das hält die Datei fest.
+
+**Merksatz für neue Bildschirme:** Zahlen aus einem Spielmodul im Client
+abschreiben ist nur dann richtig, wenn der Bildschirm sie auch wirklich
+einstellen lässt. Sonst weglassen.
+
 ## Was hier (noch) nicht steht
 
 Nur die vier Kartenspiele aus `protocol.ts`: Doppelkopf, Skat, Zauberer,

@@ -4,9 +4,11 @@
 6 Minuten, unser Ziel ist „durchschnittlich 8 Minuten maximum".
 
 > **DIE EMPFEHLUNG IST EINGEBAUT (05.09.2026).** `zeitraffer: 2` steht in
-> `STANDARD_REGLER` (`kampf.ts`), `startLeben: 14` in `DEFAULT_REGELN`
-> (`regeln.ts`) und in der Kopie `REGELSATZ` im Client
-> (`screens/Tafelrunde.tsx`), die den Regelsatz an den Tisch schickt.
+> `STANDARD_REGLER` (`kampf.ts`) und `startLeben: 14` in `DEFAULT_REGELN`
+> (`regeln.ts`). Die Kopie `REGELSATZ` im Client, die es damals ein zweites
+> Mal brauchte, gibt es **seit dem 05.09.2026 nicht mehr**: Der Bildschirm
+> lässt `config` weg, der Server setzt `defaultConfig()` ein. Wer heute an
+> diesen Zahlen dreht, fasst nur noch das Modul an.
 >
 > **Der heutige Stand steht in Abschnitt 6**, nicht in Abschnitt 5. Am selben
 > Tag kam auf einem zweiten Zweig die Ladenregel dazu (Neu-Würfeln kostenlos,
@@ -266,11 +268,17 @@ Am 05.09.2026 übernommen, drei Zeilen:
 | `packages/game-tafelrunde/src/regeln.ts` | `DEFAULT_REGELN.startLeben` | 20 | **14** |
 | `packages/client/src/screens/Tafelrunde.tsx` | `REGELSATZ.startLeben` | 20 | **14** |
 
-Die dritte ist keine Kosmetik: `REGELSATZ` ist eine ausgeschriebene Kopie von
-`DEFAULT_REGELN` und wird als `config` an `createTable` **mitgeschickt**. Wäre
-sie auf 20 stehen geblieben, hätte jeder über den Bildschirm eröffnete Tisch
-weiter mit 20 Leben gespielt, und die Änderung wäre nur in den Messwerkzeugen
-angekommen. Die Doppelung selbst steht als eigener Punkt auf dem Board.
+Die dritte war keine Kosmetik: `REGELSATZ` war eine ausgeschriebene Kopie von
+`DEFAULT_REGELN` und wurde als `config` an `createTable` **mitgeschickt**.
+Wäre sie auf 20 stehen geblieben, hätte jeder über den Bildschirm eröffnete
+Tisch weiter mit 20 Leben gespielt, und die Änderung wäre nur in den
+Messwerkzeugen angekommen.
+
+**Diese Zeile gibt es nicht mehr** (noch am 05.09.2026): Der Bildschirm
+schickt keine `config` mehr, und der Server setzt dann `defaultConfig()` des
+Moduls ein (`packages/server/src/tables/service.ts`). Eine Änderung an
+`DEFAULT_REGELN` erreicht damit jeden Tisch von selbst; die Tabelle oben
+hätte heute zwei Zeilen statt drei.
 
 ### Spielzeit, gemessen
 

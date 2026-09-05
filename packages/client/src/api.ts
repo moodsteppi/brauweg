@@ -720,7 +720,14 @@ export const api = {
   tables: (gameId: string) => request<TableRow[]>(`/tables?game=${gameId}`),
   createTable: (body: {
     gameId: string;
-    config: unknown;
+    /*
+     * Weglassen heisst: der Regelsatz des Spielmoduls. Wer hier etwas
+     * mitschickt, UEBERSTIMMT das Modul — dieselben Zahlen im Client noch
+     * einmal auszuschreiben ist deshalb nur richtig, solange ein Bildschirm
+     * sie auch wirklich einstellen laesst (Regelsatz-Editor). Ein Bildschirm
+     * ohne Einstellungen laesst das Feld weg.
+     */
+    config?: unknown;
     seats: number;
     rounds: number;
     visibility?: 'public' | 'on_request' | 'club_only';

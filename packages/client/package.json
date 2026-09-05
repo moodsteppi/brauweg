@@ -23,6 +23,7 @@
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",
     "@brauweg/game-skat": "*",
+    "@brauweg/game-tafelrunde": "*",
     "@brauweg/game-wizard": "*",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
