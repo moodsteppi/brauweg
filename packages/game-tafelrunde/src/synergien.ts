@@ -21,7 +21,7 @@
  *
  * Gezaehlt werden EINHEITEN, nicht verschiedene Einheiten: Zwei Dorfwachen
  * sind zwei Krieger. Andere Spiele zaehlen nur Verschiedene; hier ginge das
- * nicht auf, weil der Katalog fuer Untot und Drache nur je zwei
+ * nicht auf, weil der Katalog fuer Drache nur zwei und fuer Untot nur drei
  * Einheiten kennt — die oberen Schwellen waeren dort unerreichbar, die Marke
  * tot. Kopien zaehlen zu lassen hat ausserdem einen Preis, den der Spieler
  * abwaegen muss: Drei Kopien verschmelzen zu einer, und die zaehlt einfach.
@@ -98,7 +98,10 @@ function bonus(teil: Partial<Wertebonus>): Wertebonus {
  *   Meuchler   — Tempo: schneller als der Gegner reagieren kann.
  *   Waechter   — Leben und etwas Ruestung: die Mauer.
  *   Naturwesen — Leben: der Wald waechst nach.
- *   Untot      — Angriff und Leben, beides massvoll: zaeh und unerbittlich.
+ *   Untot      — Angriff und Leben, beides massvoll: zaeh und unerbittlich
+ *                (Traeger sind Knochenspaeher, Grabfuerstin und seit dem
+ *                05.09.2026 der Schildknappe — mit ihm ist die Marke zum
+ *                ersten Mal ohne zwei Kopien derselben Einheit zu haben).
  *   Drache     — Angriff und Tempo, massvoll: selten und deshalb teuer erkauft
  *                (Traeger sind Drachenkind und Funkenlehrling; zwei Einheiten
  *                sind schon die erste Schwelle).

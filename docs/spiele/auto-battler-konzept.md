@@ -161,6 +161,94 @@ und keine Probe reproduzierbar.
 
 ---
 
+## Nachgemessen: Untot bekommt einen dritten Träger (Stand 05.09.2026)
+
+> **Dieser Nachtrag gilt ÜBER der sechsten Messung darunter.** Geändert sind
+> zwei Zahlen im Katalog, beide an derselben Einheit; alles, was unten steht
+> und hier nicht neu gemessen wird, gilt weiter.
+
+**Der Befund.** Untot trat über 5.000 Partien zu viert **35-mal** an und fiel
+damit unter jede Mindestzahl — die Zeile stand seit drei Messungen als „zu
+dünn" in der Tabelle. Die Ursache war nicht die Stichprobe, sondern der
+Katalog: Die Marke hatten nur **Knochenspäher** (2 Gold) und **Grabfürstin**
+(3 Gold), und weil die Grabfürstin nur 19-mal auf einem Schlussbrett stand,
+hieß „Untot zu zweit" praktisch immer „zwei Knochenspäher". Das ist derselbe
+Befund wie bei Drache, und die Folgerung von damals gilt unverändert: **Am
+Bonus zu drehen, solange eine Marke nur über zwei Kopien derselben Einheit zu
+haben ist, misst die Einheit und nicht die Marke.**
+
+**Was geändert wurde.** Zwei Zahlen, beide am Schildknappen:
+
+| Datei | Stelle | vorher | jetzt |
+|---|---|---|---|
+| `katalog.ts` | `schildknappe.marken` | `['waechter']` | **`['waechter', 'untot']`** |
+| `katalog.ts` | `schildknappe.ruestung` | 45 | **42** |
+
+Der Schildknappe ist der dritte Träger, weil er als einziger Kandidat beides
+mitbringt: Er steht oft genug auf einem Brett, dass die Marke überhaupt
+zustande kommt, und er zieht sie nicht aus der Mitte. Fünf weitere Kandidaten
+wurden über je 1.500 Partien gegengemessen — Steinschleuderer ×1,57 und
+Gassendieb ×1,36 zogen die Marke nach oben, bei Nachtpfeil, Runenpriester und
+Moosheiler blieb sie unter hundert Antritten und damit unmessbar. Dass die
+Wahl auf eine **Wache** fiel, passt zum Bonus: Knochenspäher und Grabfürstin
+teilen aus, keiner von beiden hält etwas aus — „zäh und unerbittlich" bekommt
+mit dem Knappen zum ersten Mal eine Front.
+
+**Die drei Punkte Rüstung gehören zur selben Änderung.** Mit der zweiten Marke
+wird der Knappe öfter gekauft und lebt länger, und beides verlängert die
+Kämpfe: Über 2.000 Partien stiegen die an der Höchstdauer abgeschnittenen
+Kämpfe allein durch die Marke von 9,5 auf 12,9 % und die Spielzeit von 7:24 auf
+7:43. Die Probe in `test/spielzeit.test.ts` fängt genau das ab (Schranke 10 %)
+— und sie hat es getan. Am Untot-Bonus zu drehen half dagegen kaum: rein auf
+Angriff gelegt (15/25/40 statt 10/10, 15/15, 30/30) blieb er bei 10,6 % und
+hätte der Marke ihren eigenen Charakter genommen, sie wäre ein zweites
+Elementar geworden. Rüstung wirkt dagegen auf **jeden** eingehenden Treffer und
+verlängert einen Kampf doppelt, weil beide Seiten länger stehen.
+
+**Gemessen** mit demselben Werkzeug, denselben Saatbasen und denselben
+Schaltern wie die sechste Messung: 5.000 Partien zu viert, Besetzung `normal`.
+Die zweite Saatbasis (`gegenprobe-b`) in Klammern.
+
+| Marke | Antritte vorher | Antritte nachher | zum Schnitt vorher | zum Schnitt nachher |
+|---|---|---|---|---|
+| Krieger | 10.718 | 10.186 | ×1,56 (×1,63) | ×1,55 (×1,59) |
+| Wächter | 12.978 | 13.291 | ×1,36 (×1,42) | ×1,31 (×1,34) |
+| **Untot** | **35** | **4.349 (4.452)** | **zu dünn** | **×1,23 (×1,24)** |
+| Meuchler | 6.832 | 6.238 | ×1,22 (×1,20) | ×1,16 (×1,15) |
+| Naturwesen | 2.047 | 2.238 | ×1,11 (×1,13) | ×0,92 (×0,93) |
+| Drache | 227 | 263 | ×0,55 (×0,44) | ×0,54 (×0,52) |
+| Elementar | 658 | 709 | ×0,22 (×0,17) | ×0,28 (×0,23) |
+
+**Die Marke ist damit messbar, und sie liegt in der Mitte** — ×1,23 zwischen
+Wächter ×1,31 und Meuchler ×1,16, auf beiden Saatbasen gleich. Mitgezogen haben
+ihre beiden alten Träger, weil der Bot jetzt überhaupt auf Untot hinspielen
+kann: Knochenspäher 535 → **1.383** Antritte, Grabfürstin 19 → **63**. Auch die
+höchste Schwelle steht bei Untot nicht mehr bei null:
+
+| Marke | ab 2 | ab 3 | ab 5 | Träger im Katalog |
+|---|---|---|---|---|
+| Untot vorher | 76 | 1 | 0 | 2 |
+| **Untot nachher** | **18.560** | **1.144** | **1** | **3** |
+
+**Die Spielzeit ist dabei nicht gewachsen**, sondern leicht gefallen: 7:15 im
+Median statt 7:23, einzelner Kampf 18,6 s statt 19,3 s, 8,9 % statt 9,5 % der
+Kämpfe von der Uhr entschieden. Das ist die Wirkung der drei Punkte Rüstung;
+ohne sie stünden dort 7:42 und 12,8 %.
+
+**Was offen bleibt.**
+
+* **Elementar (×0,28) und Drache (×0,54)** sind unverändert die beiden
+  Ausreißer nach unten, beide mit eigener Karte auf dem Board. Drache hat
+  dasselbe Problem, das Untot hatte — zwei Träger —, aber eine andere Ursache
+  für die Quote: Sein zweiter Träger ist der Funkenlehrling, und der ist eine
+  der schwächsten Einheiten des Spiels. Ein dritter Träger allein löst das dort
+  nicht.
+* **Naturwesen ist von ×1,11 auf ×0,92 gefallen** und damit die Zeile, die sich
+  am stärksten mitbewegt hat, ohne angefasst worden zu sein. Es bleibt weit
+  innerhalb der Schranken; wer als Nächstes misst, sieht sie sich trotzdem an.
+
+---
+
 ## Gemessen: Ausgewogenheit (Stand 05.09.2026, sechste Messung — der gültige Stand)
 
 **Warum es eine sechste gibt.** Die fünfte Messung endete mit zwei offenen
@@ -197,6 +285,10 @@ unangetastet:
 Gemessen mit demselben Werkzeug und derselben Saatbasis wie die Messungen
 davor, **5.000 Partien zu viert, Besetzung `normal`, `--mindest 100`**, dazu
 eine Gegenprobe auf der zweiten Saatbasis (`gegenprobe-b`).
+
+> **Für die Marke Untot gilt der Nachtrag darüber.** Sie hat seit dem
+> 05.09.2026 einen dritten Träger; alle Untot-Zeilen in diesem Abschnitt sind
+> der Stand davor.
 
 ### Die drei Schritte, einzeln gemessen
 
@@ -288,7 +380,8 @@ dieser Arbeit stand die mittlere bei 1,2 % und die höchste bei null.
 und Drache. Bei Untot und Drache ist die Ursache der Katalog — je zwei Träger,
 die fünfte Einheit wäre nur über Kopien zu haben, und Kopien verschmelzen. Das
 ist derselbe Befund, der schon als Karte auf dem Board liegt, und keine Frage
-der Schwellenhöhe.
+der Schwellenhöhe. *(Für Untot erledigt: Mit dem dritten Träger steht die
+höchste Schwelle zweimal — siehe den Nachtrag oben.)*
 
 ### Reichen neun Runden?
 
