@@ -573,22 +573,41 @@ const ANKERKNOCHEN = 'hips';
 async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   const gltf = await ladeModell(url);
   const figur = gltf.scene;
-  // MINUS, nicht plus. Eine Drehung um -a fuehrt die Blickachse +X nach
-  // (cos a, 0, sin a), also ZUR Kamera (+Z); mit Plus dreht sich die Figur von
-  // ihr weg. Die erste Fassung hatte hier ein Plus.
+  // PLUS 90 Grad, MINUS die Drehung — und beide Vorzeichen haengen daran, dass
+  // das KayKit-Modell nach +Z schaut. Das ist nicht geraten, sondern an der
+  // Rogue.glb abgelesen: Rogue_ArmRight liegt bei x -0,97..-0,09 (der rechte
+  // Arm einer nach +Z schauenden Figur liegt links), Rogue_Cape ganz bei
+  // z -0,39..-0,04 (ein Umhang haengt hinten), die Zehen ragen nach +Z.
   //
-  // WORAN MAN ES MERKT, WENN ES KIPPT: Die Figur zeigt den HINTERKOPF. Kein
-  // Auge, kein Ohr auf der Kameraseite, dafuer der Umhang vorn und die Waffe
-  // hinter dem Koerper. Das ist das Zeichen, und man muss es kennen, weil das
-  // Bild sonst nur "irgendwie falsch herum" aussieht.
+  // Ry(a) bildet +Z auf (sin a, 0, cos a) ab. Die Kamera steht auf +Z und hat
+  // Weltachse +X rechts im Bild (baueKamera). Also:
+  //   +90° - d  ->  (cos d, 0, sin d)   rechts, d Grad ZUR Kamera   <- gewollt
+  //   +90° + d  ->  (cos d, 0, -sin d)  rechts, d Grad von ihr WEG
+  //   -90° - d  ->  (-cos d, 0, -sin d) links,  d Grad von ihr weg
+  //   -90° + d  ->  (-cos d, 0, sin d)  links,  d Grad zur Kamera
   //
-  // UND HIER IST DIE FALLE: Bei STEILER Kamera faellt es nicht auf. Von 38,6
-  // Grad sieht man ohnehin nur den Scheitel, und der ist von vorn wie von
-  // hinten derselbe runde Kopf — das falsche Vorzeichen ist ueber einen ganzen
-  // Satz Blaetter unbemerkt durchgelaufen. Sichtbar wurde es erst, als die
-  // Kamera auf 16 Grad herunterging. Wer am Vorzeichen zweifelt, rendert
+  // WORAN MAN ES MERKT, WENN ES KIPPT — zwei verschiedene Fehler, und genau
+  // deshalb kommt man mit "einmal das Vorzeichen umdrehen" nicht hin:
+  //
+  // 1. VORNE/HINTEN falsch (das Vorzeichen VOR der Drehung d): Die Figur zeigt
+  //    den HINTERKOPF. Kein Auge, kein Ohr auf der Kameraseite, dafuer der
+  //    Umhang vorn und die Waffe hinter dem Koerper.
+  // 2. LINKS/RECHTS falsch (das Vorzeichen vor den 90 Grad): Die Figur zeigt
+  //    ihr Gesicht, aber nach LINKS — Waffe links vor dem Koerper, Umhang
+  //    rechts dahinter. figuren3d.ts verspricht der Oberflaeche rechts, und
+  //    gespiegelt wird dort nur die Gegenseite; ein linksblickendes Blatt
+  //    dreht damit BEIDE Seiten falsch herum.
+  //
+  // Beides ist hier schon passiert. Die erste Fassung stand auf +90° + d
+  // (Fehler 1). Wer den dann "umdreht", landet auf -90° - d — und das ist
+  // Fehler 1 UND 2 zugleich, nur faellt Fehler 1 dabei weniger auf. Genau so
+  // ging der zweite Satz Blaetter am 05.09.2026 raus.
+  //
+  // UND HIER IST DIE FALLE: Bei STEILER Kamera faellt Fehler 1 gar nicht auf.
+  // Von 38,6 Grad sieht man ohnehin nur den Scheitel, und der ist von vorn wie
+  // von hinten derselbe runde Kopf. Wer am Vorzeichen zweifelt, rendert
   // deshalb NICHT bei 38,6 gegen, sondern flach.
-  figur.rotation.y = -Math.PI / 2 - (kameraKonfig.drehungGrad * Math.PI) / 180;
+  figur.rotation.y = Math.PI / 2 - (kameraKonfig.drehungGrad * Math.PI) / 180;
   // Die Figur haengt in einem Halter, der sie in jedem Bild zurueckschiebt
   // (siehe anStelleHalten weiter unten). Deshalb ein Halter und nicht die
   // Figur selbst: Die traegt schon die Drehung, und zwei Dinge an einem

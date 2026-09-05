@@ -73,10 +73,10 @@ export const FIGUREN3D_ZEILEN = 5;
  * NICHT die Zellmitte: Der Ausschnitt umfasst ALLE Bewegungen, auch den weit
  * ausgeholten Schlag und das Zusammensacken, und liegt deshalb hoeher als die
  * stehende Figur. Wer die Zelle mittig auf ein Feld setzt, stellt die Figur ein
- * Stueck zu hoch — bei 128 Pixeln sind das gut 35. Ausgerechnet aus der Kamera,
+ * Stueck zu hoch — bei 128 Pixeln sind das gut 30. Ausgerechnet aus der Kamera,
  * nicht im Bild gemessen.
  */
-export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7729 } as const;
+export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7394 } as const;
 
 /**
  * Alle Figuren schauen nach RECHTS.
@@ -86,8 +86,11 @@ export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7729 } as const;
  * scaleX(-1)`. Deshalb darf in die Bilder nichts hinein, das seitenrichtig
  * sein muss: keine Schrift, keine Zahl, kein Wappen.
  *
- * Zeigt eine Figur den Hinterkopf statt des Gesichts, ist im Renderskript das
- * Vorzeichen der Drehung gekippt — nicht dieses Spiegeln.
+ * WORAN MAN SIEHT, DASS ES STIMMT, ohne den Renderer zu befragen: Die Waffe
+ * liegt RECHTS vor dem Koerper, der Umhang haengt LINKS dahinter, und beim
+ * Meuchler steht das Auge auf der rechten Kopfhaelfte. Stimmt eines davon
+ * nicht, liegt es am Vorzeichen im Renderskript und nicht an diesem Spiegeln —
+ * dort steht, welcher der beiden moeglichen Fehler es ist.
  */
 export const FIGUREN3D_BLICKT = 'rechts' as const;
 
