@@ -38,6 +38,7 @@ export {
 export {
   type Seite,
   ARENA_FELDER,
+  ARENA_LUECKE,
   ARENA_REIHEN,
   ARENA_SPALTEN,
   SEITEN,

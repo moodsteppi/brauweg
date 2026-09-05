@@ -336,21 +336,43 @@ describe('Kampf — Bewegung und Reichweite', () => {
     const bewegungen = bericht.ereignisse.filter((e) => e.art === 'bewegung');
     assert.ok(bewegungen.length > 0, 'ohne Bewegung kaeme niemand in Reichweite');
 
-    // Beide ziehen im Gleichschritt, treffen sich in der Mitte und schlagen
-    // erst dann zu.
+    /*
+     * Beide ziehen im Gleichschritt, treffen sich in der Mitte und schlagen
+     * erst dann zu: Kein Treffer faellt, bevor gelaufen wurde, und keine
+     * Bewegung nach dem ersten Treffer.
+     *
+     * DER LETZTE SCHRITT UND DER ERSTE TREFFER LIEGEN AUF DEMSELBEN TAKT, und
+     * das ist keine Schlamperei, sondern die Zugschleife: Wer im Takt vorn
+     * dran ist, macht den Schritt, der die Reichweite schliesst — und der
+     * andere steht danach im selben Takt im Ziel und schlaegt zu. Vor dem
+     * 06.09.2026 stand hier `<` statt `<=`; das ging nur durch, weil die
+     * Bretter Kopf an Kopf standen und der Startabstand ungerade war. Bei
+     * geradem Abstand (hier 6) laufen beide gleich weit, und der letzte
+     * Schritt faellt mit dem ersten Schlag zusammen.
+     */
     const ersterTreffer = bericht.ereignisse.find((e) => e.art === 'treffer');
     assert.ok(ersterTreffer, 'sie sollten sich erreichen');
-    for (const b of bewegungen) assert.ok(b.zeitMs < ersterTreffer.zeitMs);
+    for (const b of bewegungen) assert.ok(b.zeitMs <= ersterTreffer.zeitMs);
+    assert.ok(bewegungen[0]!.zeitMs < ersterTreffer.zeitMs, 'erst laufen, dann schlagen');
     assert.equal(bericht.grund, 'ausgeloescht');
   });
 
   it('laesst einen Schuetzen aus der Ferne treffen, ohne einen Schritt zu tun', () => {
-    // Sturmrufer hat Reichweite 4. Aus der eigenen hinteren Reihe quer ueber
-    // die Mittellinie in die hintere Reihe des Gegners sind es drei Felder —
-    // das reicht ihm, einem Nahkaempfer nicht.
-    const schuetze = stelleAuf([['sturmrufer', 1, 2, 1]]);
+    /*
+     * Sturmrufer hat Reichweite 4. Aus der eigenen VORDERSTEN Reihe ueber die
+     * zwei leeren Reihen der Arena hinweg in die vorderste Reihe des Gegners
+     * sind es drei Felder — das reicht ihm, einem Nahkaempfer nicht.
+     *
+     * BIS ZUM 06.09.2026 STAND HIER DIE HINTERE REIHE: Ohne die Luecke waren
+     * es von dort ebenfalls drei Felder. Genau das war der gemessene Grund,
+     * aus dem im Kampf kaum gelaufen wurde (docs/TAFELRUNDE-LAUFWEGE.md) —
+     * jede Reichweite ab 2 stand vom ersten Takt an im Ziel, egal wo sie
+     * stand. Heute muss auch ein Sturmrufer aus der hintersten Reihe laufen;
+     * dass er es aus der vordersten nicht muss, ist die Probe hier.
+     */
+    const schuetze = stelleAuf([['sturmrufer', 1, 2, 0]]);
     const bericht = simuliereKampf([schuetze, schuetze], 'fernkampf');
-    assert.equal(arenaAbstand(nachArena(platzNummer(1, 2), 0), nachArena(platzNummer(1, 2), 1)), 3);
+    assert.equal(arenaAbstand(nachArena(platzNummer(0, 2), 0), nachArena(platzNummer(0, 2), 1)), 3);
     assert.equal(bericht.ereignisse.filter((e) => e.art === 'bewegung').length, 0);
     assert.equal(bericht.ereignisse[0]!.art, 'treffer');
     assert.equal(bericht.ereignisse[0]!.zeitMs, 0);
@@ -523,14 +545,54 @@ describe('Kampf — der Ausgang', () => {
    * muss der Erstzieher gewinnen — oder es bleibt beim Unentschieden, wenn
    * beide Seiten sich im selben Takt gegenseitig erledigen.
    */
-  it('gibt im Spiegelkampf dem Erstzieher recht', () => {
-    for (let i = 0; i < 25; i++) {
-      const bericht = simuliereKampf([DREI_GEGEN_DREI[0], DREI_GEGEN_DREI[0]], `spiegel${i}`);
-      assert.ok(
-        bericht.sieger === bericht.erstZieher || bericht.sieger === null,
-        `Saat spiegel${i}: Seite ${bericht.sieger} gewinnt, obwohl ${bericht.erstZieher} zuerst zieht`,
-      );
+  /**
+   * Der Spiegelkampf: zwei gleiche Bretter, und keine Seite darf bevorzugt
+   * sein. Was hier NICHT geprueft wird, ist genauso wichtig wie das, was
+   * geprueft wird.
+   *
+   * BIS ZUM 06.09.2026 STAND HIER "gibt im Spiegelkampf dem Erstzieher
+   * recht" — die Probe lief ueber eine einzige Aufstellung und ging durch.
+   * Sie beschrieb aber keine Regel des Kampfes, sondern eine Eigenschaft
+   * genau dieser drei Einheiten: Nachgemessen ueber 500 zufaellige
+   * Spiegelkaempfe gewann der Zweitzieher schon in der alten Geometrie in
+   * 108 Faellen (21,6 %), heute in 226 (45,2 %). Sobald gelaufen wird,
+   * entscheidet nicht mehr, wer zuerst zieht: Beide Seiten teilen sich eine
+   * Belegungskarte, der Erstzieher raeumt und besetzt Felder vor dem
+   * anderen, und schon laufen die zwei Haelften auseinander. Wer im Takt
+   * vorn ist, macht ausserdem den Schritt, der die Reichweite schliesst —
+   * und faengt sich dafuer den ersten Schlag ein (siehe "aufeinander
+   * zulaufen").
+   *
+   * WAS BLEIBT, ist die Zusicherung, um die es wirklich geht und die
+   * `erstZieher` ueberhaupt erst begruendet: Keine SEITE ist im Vorteil.
+   * Waere sie es, haette in jeder Runde derselbe Sitz recht, je nachdem, wen
+   * die Paarung auf Seite 0 setzt.
+   */
+  it('bevorzugt im Spiegelkampf keine der beiden Seiten', () => {
+    const N = 300;
+    let seite0 = 0;
+    let seite1 = 0;
+    for (let i = 0; i < N; i++) {
+      // Zufaellige, aber feste Aufstellungen — eine einzelne beweist nichts
+      // (siehe oben). Beide Seiten bekommen DASSELBE Brett; genommen wird
+      // deshalb nur die erste Haelfte des Paares.
+      const brett = zufaelligesPaar(`spiegelaufstellung${i}`)[0];
+      const bericht = simuliereKampf([brett, brett], `spiegel${i}`);
+      if (bericht.sieger === 0) seite0++;
+      if (bericht.sieger === 1) seite1++;
     }
+    /*
+     * Die Schranke ist grosszuegig und trotzdem scharf: Bei einer echten
+     * Muenze liegt die Standardabweichung ueber 300 Kaempfe bei knapp 9
+     * Siegen, 60 % waeren also mehr als drei davon daneben. Ein Lauf, der
+     * hier anschlaegt, hat eine Seitenschieflage und kein Pech — der Kampf
+     * ist deterministisch, die Saaten stehen fest.
+     */
+    const anteil = seite0 / (seite0 + seite1);
+    assert.ok(
+      anteil > 0.4 && anteil < 0.6,
+      `Seite 0 gewinnt ${seite0} von ${seite0 + seite1} Spiegelkaempfen`,
+    );
   });
 });
 

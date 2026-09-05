@@ -24,6 +24,7 @@ import { describe, it } from 'node:test';
 import { type Schwierigkeit, botZug } from '../src/bot.js';
 import {
   BRETT_FELDER,
+  BRETT_REIHEN,
   BRETT_SPALTEN,
   DEFAULT_REGELN,
   type EinheitId,
@@ -415,7 +416,7 @@ describe('Bot: aufstellen', () => {
         assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
       }
       if (art.rolle === 'magier') {
-        assert.equal(reihe(platz), 1, `${art.name} gehoert nach hinten`);
+        assert.equal(reihe(platz), BRETT_REIHEN - 1, `${art.name} gehoert nach hinten`);
       }
       if (art.rolle === 'meuchler') {
         assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
@@ -444,9 +445,20 @@ describe('Bot: aufstellen', () => {
       laden: ladenMit([]),
     });
 
-    const { partie } = ruesteAus(p, 0);
+    const { partie, zuege } = ruesteAus(p, 0);
     const steht = partie.heere[0]!.brett.findIndex((k) => k !== null);
-    assert.equal(reihe(steht), 1, 'der Magier gehoert in die hintere Reihe');
+    assert.equal(reihe(steht), BRETT_REIHEN - 1, 'der Magier gehoert in die hinterste Reihe');
+
+    /*
+     * Und zwar in EINEM Zug. Seit dem 06.09.2026 nimmt `stellungsZug` das
+     * beste freie Feld statt des erstbesten besseren — vorher wanderte ein
+     * Magier von Reihe 0 aus Zug um Zug eine Reihe weiter nach hinten, was
+     * auf vier Reihen bis zu drei Handgriffe kostete (siehe bot.ts).
+     */
+    const umzuege = zuege.filter(
+      (z) => z.typ === 'verschieben' && z.von.bereich === 'brett' && z.nach.bereich === 'brett',
+    );
+    assert.equal(umzuege.length, 1, 'ein Umzug genuegt');
   });
 
   /**

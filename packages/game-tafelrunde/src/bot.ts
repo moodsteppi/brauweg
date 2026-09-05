@@ -596,14 +596,31 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
   //    Einheiten. Beides bewegt nur, was schon steht — die Belegung bleibt.
   for (const { platz, k } of stehen) {
     const jetzt = platzStrafe(k, platz, reihen, spalten);
-    for (const frei of freie) {
-      if (platzStrafe(k, frei, reihen, spalten) < jetzt) {
-        return {
-          typ: 'verschieben',
-          von: { bereich: 'brett', platz },
-          nach: { bereich: 'brett', platz: frei },
-        };
-      }
+    if (freie.length === 0) break;
+    /*
+     * Auf das BESTE freie Feld und nicht auf das erstbeste bessere.
+     *
+     * Bis zum 06.09.2026 nahm diese Schleife das erste Feld aus `freie`, das
+     * ueberhaupt eine Verbesserung war. `freie` laeuft aufsteigend, also von
+     * Reihe 0 nach hinten — fuer eine Wache ist das gerade richtig, fuer
+     * Schuetze, Magier und Beistand aber genau verkehrt herum: Sie bekamen
+     * zuerst ein etwas besseres Feld in derselben Reihe, im naechsten Aufruf
+     * eine Reihe weiter, und so fort. Ein Umzug wurde so zu bis zu drei.
+     *
+     * Auf zwei Reihen fiel das kaum auf, auf vieren schon: Der fleissigste
+     * Sitz einer Runde kam damit auf 43 Handgriffe statt 23 und riss in
+     * 0,72 % der Runden die Rundenfrist von 45 s (spielzeit.test.ts). Mit dem
+     * besten Feld sind es 18 — weniger als die 23 von vorher, auf zwei Reihen
+     * 17 statt 23. Der Bot stellt dasselbe auf, nur in einem Zug statt in
+     * dreien.
+     */
+    const bestes = bestesFeld(k, freie, reihen, spalten);
+    if (platzStrafe(k, bestes, reihen, spalten) < jetzt) {
+      return {
+        typ: 'verschieben',
+        von: { bereich: 'brett', platz },
+        nach: { bereich: 'brett', platz: bestes },
+      };
     }
   }
   for (const eins of stehen) {

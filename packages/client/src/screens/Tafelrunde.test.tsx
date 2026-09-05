@@ -114,8 +114,17 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     zuschauer: false,
     ladenPlaetze: 5,
     bankPlaetze: 9,
+    /*
+     * Eine kleine Probearena: zwei Reihen je Seite, keine Luecke dazwischen.
+     * Am Tisch sind es seit dem 06.09.2026 vier und zwei (Arena 5 x 10,
+     * arena.ts) — die Fixture bleibt klein, weil ihre Arenaplaetze
+     * (`kampfProbe`) von Hand gesetzt sind. Wichtig ist, dass sie zu SICH
+     * passt: Der Bildschirm rechnet die Arenahoehe nicht mehr aus
+     * `brettReihen`, er liest `arenaReihen`.
+     */
     brettFelder: 10,
     brettReihen: 2,
+    arenaReihen: 4,
     brettSpalten: 5,
     verschmelzZahl: 3,
     maxStufe: 3,

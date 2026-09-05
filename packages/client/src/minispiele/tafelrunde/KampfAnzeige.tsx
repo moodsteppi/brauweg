@@ -514,6 +514,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
   paarungen,
   ich,
   brettReihen,
+  arenaReihen,
   brettSpalten,
   katalog,
   nameVon,
@@ -530,8 +531,19 @@ export function KampfAnzeige<E extends Einheitenbild>({
    */
   paarungen: readonly Paarungsergebnis[];
   ich: number | null;
-  /** Masse der eigenen Bretthaelfte aus der Sicht; die Arena hat doppelt so viele Reihen. */
+  /** Reihen der eigenen Bretthaelfte, aus der Sicht (brett.ts). */
   brettReihen: number;
+  /**
+   * Reihen der Arena, ebenfalls aus der Sicht (arena.ts) — nicht gerechnet.
+   *
+   * Bis zum 06.09.2026 stand hier `brettReihen * 2`. Seit die beiden Haelften
+   * zwei leere Reihen Abstand haben, ist das falsch, und der Bildschirm haette
+   * ein zu kleines Gitter gezeichnet. Eine Geometrie, die der Client
+   * nachrechnet, ist eine zweite Wahrheit ueber eine Regel des Moduls
+   * (CLAUDE.md). Wie viele Reihen leer in der Mitte liegen, ist die Differenz
+   * zu `brettReihen * 2`.
+   */
+  arenaReihen: number;
   brettSpalten: number;
   katalog: Record<string, E>;
   nameVon: (sitz: number) => string;
@@ -668,9 +680,8 @@ export function KampfAnzeige<E extends Einheitenbild>({
 
   const seite = meineSeite(kampf, ich);
   const gedreht = seite === 1;
-  const reihen = brettReihen * 2;
-  const felder = reihen * brettSpalten;
-  const mass = rastermass(reihen, brettSpalten);
+  const felder = arenaReihen * brettSpalten;
+  const mass = rastermass(arenaReihen, brettSpalten);
   /** Welche Seite unten steht: die eigene, als Zuschauer Seite 0 (`a`). */
   const unten: Seite = seite ?? 0;
   const oben: Seite = unten === 0 ? 1 : 0;
@@ -716,7 +727,16 @@ export function KampfAnzeige<E extends Einheitenbild>({
             <i
               key={i}
               className={stil.wabe}
-              data-haelfte={reihe < brettReihen ? 'oben' : 'unten'}
+              // Drei Faelle seit der Luecke: oben, unten — und die leeren
+              // Reihen dazwischen, die zu keiner Seite gehoeren (arena.ts,
+              // `haelfteVon` gibt dort null zurueck).
+              data-haelfte={
+                reihe < brettReihen
+                  ? 'oben'
+                  : reihe >= arenaReihen - brettReihen
+                    ? 'unten'
+                    : 'mitte'
+              }
               style={{
                 left: `${lage.links}%`,
                 top: `${lage.oben}%`,
