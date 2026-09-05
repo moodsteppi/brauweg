@@ -224,41 +224,68 @@ describe('Neu-Wuerfeln', () => {
   });
 });
 
-describe('Nachfuellen nach dem Kauf', () => {
+describe('Kauf zieht den ganzen Laden neu', () => {
   /** Eine Partie, in der Sitz 0 genug Gold zum Kaufen hat. */
   function reich(saat: string = SAAT): TafelrundePartie {
     const p = neu(saat);
     return { ...p, heere: { ...p.heere, 0: { ...p.heere[0]!, gold: 50 } } };
   }
 
-  it('besetzt den gekauften Platz sofort neu', () => {
+  it('wechselt AUCH die Plaetze, die niemand gekauft hat', () => {
+    /*
+     * Der Kern der Regel (Robin, 05.09.2026): "Nicht nur der gekaufte, dein
+     * ganzer Shop aktualisiert sich wenn du etwas kaufst, du musst dich also
+     * immer entscheiden." Blieben die uebrigen Plaetze stehen, koennte man
+     * sich in Ruhe zwei Einheiten aus demselben Laden holen — und der Kauf
+     * kostete nur Gold statt einer Entscheidung.
+     */
     const p = reich();
-    const gekauft = p.heere[0]!.laden[0];
     const nachher = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
-    const neuerPlatz = nachher.heere[0]!.laden[0];
-    assert.notEqual(neuerPlatz, null, 'Der Platz blieb leer');
-    // Die uebrigen Plaetze ruehrt der Kauf nicht an.
-    assert.deepEqual(nachher.heere[0]!.laden.slice(1), p.heere[0]!.laden.slice(1));
-    assert.equal(typeof gekauft, 'string');
+    assert.notDeepEqual(nachher.heere[0]!.laden.slice(1), p.heere[0]!.laden.slice(1));
+    // Der Laden des anderen Sitzes bleibt unberuehrt.
+    assert.deepEqual(nachher.heere[1]!.laden, p.heere[1]!.laden);
   });
 
-  it('nimmt die nachgezogene Karte aus dem Vorrat', () => {
-    // Sonst waere eine Einheit oefter im Spiel, als es Kopien von ihr gibt.
+  it('ist danach wieder voll, solange der Vorrat reicht', () => {
+    const p = reich();
+    const nachher = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
+    assert.equal(nachher.heere[0]!.laden.length, DEFAULT_REGELN.ladenPlaetze);
+    assert.ok(
+      nachher.heere[0]!.laden.every((k) => k !== null),
+      'Ein Platz blieb leer, obwohl der Vorrat voll ist',
+    );
+  });
+
+  it('gibt die nicht gekauften Karten zurueck und zieht neu', () => {
+    /*
+     * Unterm Strich fehlt genau EINE Karte: die gekaufte. Die vier uebrigen
+     * gehen in den Vorrat zurueck, fuenf frische kommen heraus. Wer das
+     * Zurueckgeben vergisst, merkt es erst nach zwanzig Runden an einem
+     * leeren Vorrat — deshalb steht die Gesamtsumme mit im Test.
+     */
     const p = reich();
     const nachher = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
     assert.equal(vorratGesamt(nachher.vorrat), vorratGesamt(p.vorrat) - 1);
     assert.equal(vorratGesamt(nachher.vorrat) + imUmlauf(nachher), KARTEN_INSGESAMT);
   });
 
-  it('laesst den Platz leer, wenn der Vorrat erschoepft ist', () => {
+  it('laesst den Laden kleiner, wenn der Vorrat nichts mehr hergibt', () => {
     // DIE einzige Bremse, seit das Wuerfeln nichts mehr kostet: Wer den
     // Vorrat leerkauft, bekommt keine Einheit, die es nicht mehr gibt.
+    // Hier liegt nur noch die eine Karte aus, die gekauft wird.
     const p = reich();
     const leer = {} as Record<EinheitId, number>;
     for (const e of KATALOG) leer[e.id] = 0;
-    const ohneVorrat = { ...p, vorrat: leer };
-    const nachher = fuehreAus(ohneVorrat, 0, { typ: 'kaufen', platz: 0 });
-    assert.equal(nachher.heere[0]!.laden[0], null);
+    const einzeln = {
+      ...p,
+      vorrat: leer,
+      heere: {
+        ...p.heere,
+        0: { ...p.heere[0]!, laden: [p.heere[0]!.laden[0]!, null, null, null, null] },
+      },
+    };
+    const nachher = fuehreAus(einzeln, 0, { typ: 'kaufen', platz: 0 });
+    assert.deepEqual(nachher.heere[0]!.laden, [null, null, null, null, null]);
     assert.equal(vorratGesamt(nachher.vorrat), 0);
   });
 

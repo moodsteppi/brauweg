@@ -315,9 +315,15 @@ function gibZurueck(
 /**
  * Den Laden eines Sitzes neu fuellen: alte Karten zurueck, neue ziehen.
  *
- * Eine Funktion fuer beides — Rundenanfang und Neu-Wuerfeln —, weil ein
- * zweiter Weg unweigerlich das Zurueckgeben vergessen wuerde. Genau daran
- * laeuft ein Vorrat leer, und zwar erst nach zwanzig Runden.
+ * Eine Funktion fuer ALLE DREI Anlaesse — Rundenanfang, Neu-Wuerfeln und Kauf
+ * —, weil ein zweiter Weg unweigerlich das Zurueckgeben vergessen wuerde.
+ * Genau daran laeuft ein Vorrat leer, und zwar erst nach zwanzig Runden. Der
+ * Kauf legt die gekaufte Karte vorher auf null, damit sie eben NICHT
+ * zurueckgeht (siehe fuehreAus, Fall 'kaufen').
+ *
+ * Die Wurfnummer steigt bei jedem Aufruf. Daran haengt die Bestimmtheit:
+ * dieselbe Saat und dieselbe Folge von Kaeufen ergeben denselben Laden, und
+ * zwei Aufrufe hintereinander ziehen trotzdem Verschiedenes.
  */
 function fuelleLaden(
   partie: TafelrundePartie,
@@ -332,39 +338,6 @@ function fuelleLaden(
     partie.regeln.ladenPlaetze,
     baueZufall(ladenSaat(partie.saat, sitz, wurf)),
   );
-  return { heer: { ...heer, laden, wuerfe: wurf }, vorrat };
-}
-
-/**
- * EINEN Ladenplatz nachbesetzen — nach einem Kauf.
- *
- * Der Laden ist damit immer voll, solange der Vorrat reicht (Robin,
- * 05.09.2026: "wenn man einen Unit gekauft hat aus dem aktuellen Shop, dann
- * kommen wieder neue Units"). Die gekaufte Karte bleibt aus dem Vorrat heraus,
- * die nachgezogene geht zusaetzlich heraus — leert man den Vorrat leer, kommt
- * `zieheKarte` mit null zurueck und der Platz bleibt frei. Das ist seit dem
- * Wegfall der Wuerfelkosten die EINZIGE Bremse am Nachziehen.
- *
- * Gezogen wird aus einem eigenen Zufallsstrom mit der naechsten Wurfnummer,
- * nicht aus dem des laufenden Ladens. Sonst bekaeme derselbe Platz beim
- * zweiten Kauf dieselbe Karte, und der Laden waere kein Laden mehr, sondern
- * ein Automat.
- */
-function fuelleNach(
-  partie: TafelrundePartie,
-  sitz: number,
-  heer: Heer,
-  platz: number,
-): { heer: Heer; vorrat: Record<EinheitId, number> } {
-  const wurf = heer.wuerfe + 1;
-  const gezogen = zieheKarte(
-    partie.vorrat,
-    heer.level,
-    baueZufall(ladenSaat(partie.saat, sitz, wurf)),
-  );
-  const vorrat = { ...partie.vorrat } as Record<EinheitId, number>;
-  if (gezogen !== null) vorrat[gezogen] = (vorrat[gezogen] ?? 0) - 1;
-  const laden = heer.laden.map((k, i) => (i === platz ? gezogen : k));
   return { heer: { ...heer, laden, wuerfe: wurf }, vorrat };
 }
 
@@ -722,12 +695,27 @@ export function fuehreAus(
       const gekauft = rechneKauf(heer, regeln.bankPlaetze, id);
       if (!gekauft) throw new Error('Kein Gold oder kein Platz');
       /*
-       * Die Karte bleibt aus dem Vorrat heraus — sie war es schon, seit sie
-       * im Laden lag. Zurueck geht sie erst beim Verkaufen. Der frei
-       * gewordene Platz wird sofort nachbesetzt, siehe fuelleNach.
+       * DER GANZE LADEN WIRD NEU GEZOGEN, nicht nur der gekaufte Platz (Robin,
+       * 05.09.2026: "Nicht nur der gekaufte, dein ganzer Shop aktualisiert
+       * sich wenn du etwas kaufst, du musst dich also immer entscheiden"). Ein
+       * Kauf nimmt die uebrigen Angebote mit — zwei Einheiten aus demselben
+       * Laden zu holen geht nicht mehr, und genau das macht die Wahl teuer.
+       *
+       * Die gekaufte Karte bleibt aus dem Vorrat heraus: Sie war es schon,
+       * seit sie im Laden lag, und zurueck geht sie erst beim Verkaufen.
+       * Deshalb steht ihr Platz VOR dem Fuellen auf null — fuelleLaden gibt
+       * alles zurueck, was noch ausliegt, und ueberspringt dabei jedes null.
+       *
+       * Reicht der Vorrat nicht fuer alle Plaetze, bleibt der Laden kleiner.
+       * Das ist ausdruecklich so gewollt und seit dem Wegfall der
+       * Wuerfelkosten die einzige Bremse am Nachziehen.
        */
-      const { heer: nachgefuellt, vorrat } = fuelleNach(partie, sitz, gekauft, platz);
-      return { ...partie, vorrat, heere: { ...partie.heere, [sitz]: nachgefuellt } };
+      const ohneGekaufte = setzeHeer(partie, sitz, {
+        ...gekauft,
+        laden: gekauft.laden.map((k, i) => (i === platz ? null : k)),
+      });
+      const { heer: gefuellt, vorrat } = fuelleLaden(ohneGekaufte, sitz);
+      return { ...ohneGekaufte, vorrat, heere: { ...ohneGekaufte.heere, [sitz]: gefuellt } };
     }
 
     case 'neuwuerfeln': {

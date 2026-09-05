@@ -520,6 +520,17 @@ function wurf(sicht: TafelrundeSicht, eigen: EigeneSicht, zweck: string): number
   return baueZufall(saat)();
 }
 
+/**
+ * GENAU EIN Kauf, danach ist Schluss.
+ *
+ * `kandidaten` liefert zwar eine sortierte Liste, aber sie darf nie als
+ * Einkaufszettel abgearbeitet werden: Seit dem 05.09.2026 zieht ein Kauf den
+ * GANZEN Laden neu (partie.ts, Fall 'kaufen'). Der zweitbeste Platz von eben
+ * liegt danach nicht mehr aus — wer hier zwei Aktionen hintereinander baute,
+ * kaufte den Platz einer Karte, die inzwischen eine andere ist. Der Bot wird
+ * ohnehin so lange gerufen, bis er "bereit" meldet, und sieht bei jedem Ruf
+ * den frischen Laden.
+ */
 function kaufZug(
   sicht: TafelrundeSicht,
   eigen: EigeneSicht,
