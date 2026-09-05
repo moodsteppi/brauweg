@@ -243,19 +243,32 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > zu hoch: Ein Brett fasst so viele Einheiten, wie der Sitz Level hat, und auf
 > Level 6 kommt ein Bot in 0,04 % der Antritte — sechs Träger waren
 > arithmetisch unmöglich. Die Schwellen liegen deshalb bei **2/3/5**, die Boni
-> der beiden oberen Stufen um den Trägeranteil gekürzt. Heute: 80,0 % / 42,4 %
-> / 0,9 % über 5.000 Partien zu viert. Die Probe prüft die höchste Schwelle
-> wieder. Volle Zahlen: sechste Messung in
+> der beiden oberen Stufen um den Trägeranteil gekürzt. Die Probe prüft die
+> höchste Schwelle wieder. Volle Zahlen: sechste Messung in
 > `docs/spiele/auto-battler-konzept.md`.
 >
-> **Was das gekostet hat und offen bleibt:** Die Partie dauert 8:25 statt 7:27
-> im Median (Ziel sind acht Minuten), und 9,7 % der Kämpfe laufen in die
-> Höchstdauer statt 4,4 %. Beides kommt vom **Bot**, nicht von den Schwellen —
-> wer auf Synergien spielt, baut stärkere Bretter, und stärkere Bretter
-> kämpfen länger. Nicht nachgezogen, weil `startLeben` und `zeitraffer` am
-> selben Tag nach eigener Messung entschieden worden sind. Ebenfalls offen:
-> Krieger steht bei ×1,49, Elementar bei ×0,24 — beide Zeilen stehen auf dem
-> Board.
+> **Was das gekostet hat, ist am selben Abend zurückgeholt worden:** Ein Bot,
+> der auf Synergien spielt, baut stärkere Bretter, und stärkere Bretter
+> kämpfen länger — die Partie war von 7:27 auf 8:25 gewachsen und lag über
+> Robins acht Minuten. Robin hat entschieden, die Marken zu lassen und die
+> Partie über die Startleben zu kürzen: **`startLeben` steht seitdem auf 12**
+> (vorher 14). Gemessen über 5.000 Partien zu viert: **7:23 im Median bei 9
+> Runden**, Schwellen 78,9 % / 35,2 % / 0,3 %.
+>
+> **Neun Runden sind nachgezählt worden**, weil in `kampf.ts` und `regeln.ts`
+> lange stand, vor Runde 10 stehe kein ausgebautes Brett. Über 500 Partien
+> trifft das nicht zu: Wer ausscheidet, hat im Schnitt 3,35 Einheiten auf dem
+> Brett, kein einziges Ausscheiden geschah mit höchstens zweien, und das
+> früheste liegt in Runde 5. Was die Runde kostet, ist das obere Ende — vier
+> Einheiten stehen in 15,2 % statt 21,0 % der Antritte, und daran hängt die
+> höchste Schwelle (0,3 % statt 0,9 %). Die Sätze im Code sagen das jetzt mit
+> Zahlen.
+>
+> **Was offen bleibt:** 9,5 % der Kämpfe laufen in die Höchstdauer von 45 s
+> statt der 4,4 % von vorher. Die Startleben können daran nichts ändern, sie
+> nehmen Runden und nicht Sekunden; das Ziel wäre der Rüstungsbonus. Ebenfalls
+> offen: Krieger steht bei ×1,56, Elementar bei ×0,22 — beide Zeilen stehen
+> auf dem Board.
 >
 > Der zweite Befund von damals hat sich mit der Ladenregel **von selbst
 > erledigt**: Die Bot-Gangart `hart` lag nach dem Zeitraffer hinter `normal`

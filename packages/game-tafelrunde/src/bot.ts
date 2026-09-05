@@ -129,15 +129,16 @@ interface Gangart {
  * drei schwachen Sitze, und ueber zwei unabhaengige Saatbasen, weil eine
  * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 05.09.2026):
  *
- *                    gebaut (14 Leben, x2)   langer Stand (20 Leben, x1)
- *     hart : normal   137 : 88   124 : 92      138 : 87   132 : 89
- *     hart : sanft    352 : 16   368 : 11      354 : 15   360 : 13
- *     normal : sanft  362 : 13   365 : 12      354 : 15   357 : 14
+ *                    gebaut (12 Leben, x2)   langer Stand (20 Leben, x1)
+ *     hart : normal   132 : 89   130 : 90      138 : 87   132 : 89
+ *     hart : sanft    346 : 18   364 : 12      354 : 15   360 : 13
+ *     normal : sanft  365 : 12   364 : 12      354 : 15   357 : 14
  *
- * AM 05.09.2026 NEU AUFGENOMMEN, weil der Bot seitdem auf Marken spielt
- * (siehe `heerStaerke`). Die Reihenfolge steht unveraendert; der Abstand
- * zwischen `hart` und `normal` ist etwas kleiner geworden, und dazu gehoert
- * die naechste Zeile.
+ * AM 05.09.2026 ZWEIMAL NEU AUFGENOMMEN: einmal, weil der Bot seitdem auf
+ * Marken spielt (siehe `heerStaerke`), und einmal nach der Kuerzung auf 12
+ * Startleben. Die Reihenfolge steht durch alle drei Staende; der Abstand
+ * zwischen `hart` und `normal` ist etwas kleiner geworden (bei 14 Leben und
+ * markenblindem Bot waren es 140 : 87), und dazu gehoert die naechste Zeile.
  *
  * DASS BEIDE SPALTEN DASELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
  * nicht an der Partielaenge. Die zweite Spalte ist der Stand von gestern (20
@@ -179,17 +180,17 @@ interface Gangart {
  *
  * DER KONTROLLLAUF IST NICHT MEHR NEUTRAL, und das gehoert vor jede dieser
  * Zahlen. Besetzt man ALLE VIER Sitze mit `normal`, gewinnt Sitz 0 trotzdem
- * oefter: 115, 116 und 108 Siege ueber drei Saatbasen zu je 400 Partien,
- * gegen 100 im Schnitt. Vor dem Markengewicht war der Lauf sauber (101, 106,
- * 99). Die Ursache ist der GEMEINSAME VORRAT (partie.ts, `vorrat`): Bots, die
- * auf Synergien spielen, wollen alle dieselben Einheiten, und der Messstand
- * laesst die Sitze der Reihe nach ruesten — wer zuerst kauft, bekommt sie.
- * Am echten Tisch ruesten alle gleichzeitig, dort ist die Reihenfolge keine
- * Sitznummer; der Druck auf den Vorrat ist aber derselbe. Fuer die Tabelle
- * oben heisst das: Von den rund 1,56-fachen Siegen von `hart` sind gut 1,15
- * schon im Sitz enthalten. Die Reihenfolge der Gangarten traegt das immer
- * noch, aber wer den Abstand als Zahl braucht, misst gegen 113 und nicht
- * gegen 100. Steht als Befund auf dem Board.
+ * oefter: 110 Siege bei 12 Startleben, 115/116/108 ueber drei Saatbasen bei
+ * 14, gegen 100 im Schnitt. Vor dem Markengewicht war der Lauf sauber (101,
+ * 106, 99). Die Ursache ist der GEMEINSAME VORRAT (partie.ts, `vorrat`):
+ * Bots, die auf Synergien spielen, wollen alle dieselben Einheiten, und der
+ * Messstand laesst die Sitze der Reihe nach ruesten — wer zuerst kauft,
+ * bekommt sie. Am echten Tisch ruesten alle gleichzeitig, dort ist die
+ * Reihenfolge keine Sitznummer; der Druck auf den Vorrat ist aber derselbe.
+ * Fuer die Tabelle oben heisst das: Von den rund 1,48-fachen Siegen von
+ * `hart` sind gut 1,10 schon im Sitz enthalten. Die Reihenfolge der Gangarten
+ * traegt das immer noch, aber wer den Abstand als Zahl braucht, misst gegen
+ * 110 und nicht gegen 100. Steht als Befund auf dem Board.
  *
  * ZU VIERT UND NICHT ZU ZWEIT, und das ist selbst ein Befund: Solange die
  * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit

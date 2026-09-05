@@ -784,18 +784,19 @@ describe('Bot: das fertige Heer', () => {
    *
    * WORAUF DIE AUSSAGE HEUTE RUHT — vier Messungen zu je 400 Partien ueber
    * zwei unabhaengige Saatbasen (`…-feld` und `gegenprobe-b`), alle in
-   * dieselbe Richtung (neu aufgenommen am 05.09.2026, seit der Bot auf
-   * Marken spielt):
+   * dieselbe Richtung (zuletzt aufgenommen am 05.09.2026 abends, nach der
+   * Kuerzung auf 12 Startleben):
    *
-   *     gebauter Stand (14 Leben, x2)   137 : 87,7   124 : 92,0
+   *     gebauter Stand (12 Leben, x2)   132 : 89,3   130 : 90,0
    *     langer Stand (20 Leben, x1)     138 : 87,3   132 : 89,3
    *
-   * Dazu ein Kontrolllauf, und der ist seitdem NICHT mehr neutral: Setzt man
-   * `hart` in allem auf `normal`, gewinnt Sitz 0 mit 115 : 95,0. Der Grund
-   * ist der gemeinsame Vorrat und die Reihenfolge, in der der Messstand die
-   * Sitze ruesten laesst — die Begruendung steht bei GANGARTEN in bot.ts.
-   * Von den 137 Siegen sind also rund 115 schon der Sitz; die Gangart traegt
-   * den Rest, und das reicht ueber alle vier Messungen.
+   * Dazu ein Kontrolllauf, und der ist seit dem Markengewicht NICHT mehr
+   * neutral: Setzt man `hart` in allem auf `normal`, gewinnt Sitz 0 mit
+   * 110 : 96,7. Der Grund ist der gemeinsame Vorrat und die Reihenfolge, in
+   * der der Messstand die Sitze ruesten laesst — die Begruendung steht bei
+   * GANGARTEN in bot.ts. Von den 132 Siegen sind also rund 110 schon der
+   * Sitz; die Gangart traegt den Rest, und das reicht ueber alle vier
+   * Messungen.
    *
    * WANN SIE WIEDER FALLEN DARF: bei der naechsten Aenderung am LADEN. Genau
    * die hat sie beide Male gekippt, und die Zahlen dazu fallen in Sekunden an
@@ -816,8 +817,8 @@ describe('Bot: das fertige Heer', () => {
   /**
    * DIESELBE AUSSAGE NOCH EINMAL, ABER BEI EINER ANDEREN PARTIELAENGE.
    *
-   * Der gebaute Stand ist seit dem 05.09.2026 der kurze (14 Leben, Zeitraffer
-   * x2, rund elf Runden); die drei Proben darueber messen ihn. Diese hier
+   * Der gebaute Stand ist seit dem 05.09.2026 der kurze (12 Leben, Zeitraffer
+   * x2, rund neun Runden); die drei Proben darueber messen ihn. Diese hier
    * misst den LANGEN Stand von gestern — 20 Leben, kein Zeitraffer, rund
    * fuenfzehn Runden — und behauptet dort dasselbe.
    *

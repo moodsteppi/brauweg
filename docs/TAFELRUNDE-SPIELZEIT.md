@@ -4,21 +4,29 @@
 6 Minuten, unser Ziel ist „durchschnittlich 8 Minuten maximum".
 
 > **DIE EMPFEHLUNG IST EINGEBAUT (05.09.2026).** `zeitraffer: 2` steht in
-> `STANDARD_REGLER` (`kampf.ts`) und `startLeben: 14` in `DEFAULT_REGELN`
+> `STANDARD_REGLER` (`kampf.ts`) und `startLeben: 12` in `DEFAULT_REGELN`
 > (`regeln.ts`). Die Kopie `REGELSATZ` im Client, die es damals ein zweites
 > Mal brauchte, gibt es **seit dem 05.09.2026 nicht mehr**: Der Bildschirm
 > lässt `config` weg, der Server setzt `defaultConfig()` ein. Wer heute an
 > diesen Zahlen dreht, fasst nur noch das Modul an.
 >
-> **Der heutige Stand steht in Abschnitt 6**, nicht in Abschnitt 5. Am selben
-> Tag kam auf einem zweiten Zweig die Ladenregel dazu (Neu-Würfeln kostenlos,
-> ein Kauf zieht den ganzen Laden neu); erst beim Zusammenführen waren alle
-> vier Zahlen gleichzeitig aktiv, und diesen Zustand hatte keine der beiden
-> Messungen gesehen. Gemessen mit allen vieren: **7:34 im Median bei 10
-> Runden**, einzelner Kampf 17,6 s, 4,6 % der Kämpfe von der Uhr entschieden.
-> Abschnitt 5 hält den Zwischenschritt fest (7:25 bei 11 Runden, 1,8 %), alles
-> davor ist die Messung, die zu der Entscheidung geführt hat, und beschreibt
-> den Stand **davor**.
+> **DER HEUTIGE STAND STEHT NICHT MEHR IN DIESER DATEI**, sondern in
+> `docs/spiele/auto-battler-konzept.md` unter „Gemessen: Ausgewogenheit
+> (sechste Messung)". Diese Datei hält die Untersuchung fest, die zu der
+> Entscheidung geführt hat, und die Zwischenstände danach — sie ist die
+> Vorgeschichte und keine Beschreibung von heute.
+>
+> Was seitdem passiert ist, in zwei Sätzen: Am Abend des 05.09.2026 hat der
+> Bot ein echtes Markengewicht bekommen (`heerStaerke` in `bot.ts`), und weil
+> er seitdem stärkere Bretter baut, die länger kämpfen, wuchs die Partie von
+> 7:27 auf 8:25. Zurückgeholt hat das Robins Entscheidung, die Startleben von
+> 14 auf **12** zu senken: **7:23 im Median bei 9 Runden**, einzelner Kampf
+> 20,2 s, 9,5 % der Kämpfe von der Uhr entschieden.
+>
+> Zum Weiterlesen in dieser Datei: Abschnitt 6 ist der Stand mit 14 Leben und
+> allen vier Zahlen des Vormittags (7:34 bei 10 Runden, 17,6 s, 4,6 %),
+> Abschnitt 5 der Zwischenschritt davor (7:25 bei 11 Runden, 1,8 %), alles
+> darüber beschreibt den Stand mit 20 Leben.
 
 Diese Datei beantwortet zwei Fragen, und die Reihenfolge ist wichtig:
 **woraus** die Spielzeit besteht, und **welche Stellschraube wie viel bringt**.
@@ -203,6 +211,11 @@ Partien je Zeile): 13:24 statt 13:31 für den gebauten Stand, **7:23** statt
 ---
 
 ## 4. Empfehlung — von Robin angenommen
+
+> Historisch. Die Empfehlung wurde am 05.09.2026 vormittags angenommen und
+> eingebaut; am Abend desselben Tages sind die Startleben noch einmal von 14
+> auf **12** gesenkt worden (Begründung im Kasten ganz oben). Der Zeitraffer
+> steht unverändert auf 2.
 
 **Zeitraffer x2 und Startleben 14.** Das ergibt 7:25 im Median bei 11 Runden,
 lässt jede Partie mit einem eindeutigen Sieger enden und hält jede Marke

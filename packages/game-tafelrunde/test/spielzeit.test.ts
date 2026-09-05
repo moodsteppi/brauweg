@@ -152,20 +152,22 @@ describe('Spielzeit: der heutige Stand', () => {
    * siebeneinhalb Minuten und liegt damit unter Robins acht.
    *
    * Sie lag am selben Tag noch bei 13,5 Minuten; kuerzer wurde sie durch
-   * Zeitraffer x2 und 14 Startleben (siehe STANDARD_REGLER und
-   * DEFAULT_REGELN) und danach noch einmal durch den Laden, der sich bei jedem
-   * Kauf ganz erneuert. Die Schranken liegen bewusst weit um den gemessenen
-   * Wert (7,3 am 05.09.2026): Diese Probe soll nicht bei jeder Katalogaenderung
-   * anschlagen, sondern dann, wenn jemand die Spielzeit ohne Absicht
-   * verdoppelt oder halbiert. Wer sie ABSICHTLICH aendert, aendert hier die
-   * Zahlen mit — und traegt den neuen Stand in docs/TAFELRUNDE-SPIELZEIT.md
-   * nach.
+   * Zeitraffer x2 und die Startleben (20 auf 14, spaeter auf 12 — siehe
+   * STANDARD_REGLER und DEFAULT_REGELN) und dazwischen durch den Laden, der
+   * sich bei jedem Kauf ganz erneuert. Dagegen zog der Bot, seit er auf Marken
+   * spielt: Er baut staerkere Bretter, die laenger kaempfen, und kostete
+   * knapp eine Minute. Die Schranken liegen bewusst weit um den gemessenen
+   * Wert (7,2 am 05.09.2026 abends, davor 7,3): Diese Probe soll nicht bei
+   * jeder Katalogaenderung anschlagen, sondern dann, wenn jemand die Spielzeit
+   * ohne Absicht verdoppelt oder halbiert. Wer sie ABSICHTLICH aendert,
+   * aendert hier die Zahlen mit — und traegt den neuen Stand in
+   * docs/TAFELRUNDE-SPIELZEIT.md nach.
    */
   it('dauert im Median zwischen vier und vierzehn Minuten', () => {
     const minuten = AUSWERTUNG.spielzeitMedianMs / 60_000;
     assert.ok(
       minuten > 4 && minuten < 14,
-      `Median ${minuten.toFixed(1)} Minuten (gemessen am 05.09.2026: 7,3)`,
+      `Median ${minuten.toFixed(1)} Minuten (gemessen am 05.09.2026: 7,2)`,
     );
   });
 
@@ -173,10 +175,12 @@ describe('Spielzeit: der heutige Stand', () => {
    * Der Kampf ist der groesste Posten — mit Abstand.
    *
    * Das ist die Antwort auf die eigentliche Frage der Aufgabe ("miss, woraus
-   * die elf Minuten bestehen"): rund 57 % Kampf, 37 % Vorbereitung, 6 %
+   * die elf Minuten bestehen"): rund 60 % Kampf, 35 % Vorbereitung, 5 %
    * Nachlauf. Wer an der Vorbereitung dreht, dreht am kleineren Posten. Diese
    * Probe haelt die Rangfolge fest, damit die Empfehlung nicht still veraltet.
-   * Gemessen am 05.09.2026: 57,4 / 36,7 / 6,0.
+   * Gemessen am 05.09.2026 abends: 59,8 / 34,9 / 5,3 (vormittags 57,4 / 36,7 /
+   * 6,0 — der Kampf hat zugelegt, weil der Bot seitdem staerkere Bretter
+   * baut).
    *
    * VOR DEM ZEITRAFFER waren es 70 / 25 / 5. Dass der Kampf nur noch knapp
    * ueber der Haelfte liegt, ist die Wirkung von x2 und kein neuer Befund —

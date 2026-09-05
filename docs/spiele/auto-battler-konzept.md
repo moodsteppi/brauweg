@@ -175,8 +175,16 @@ verlangt wurde:
 2. **Erst danach war entscheidbar, ob die Schwellen zu hoch stehen.** Sie
    standen zu hoch.
 
-**Was geändert wurde** — Katalog, Wirtschaft, Leveln, Startleben und Zeitraffer
-sind unangetastet:
+Dazu kam ein dritter Schritt, der aus den ersten beiden folgte und **eine
+Entscheidung von Robin** war, keine Messung: Ein Bot, der auf Synergien spielt,
+baut stärkere Bretter, und stärkere Bretter kämpfen länger — die Partie wuchs
+von 7:27 auf 8:25 und lag damit über den acht Minuten. Zur Wahl standen, die
+Marken wieder abzuschwächen oder die Partie über die Startleben zu kürzen.
+Entschieden wurden **die Startleben (14 auf 12)**, weil die Marken gerade erst
+repariert worden sind.
+
+**Was geändert wurde** — Katalog, Wirtschaft, Leveln und Zeitraffer sind
+unangetastet:
 
 | Datei | Stelle | vorher | jetzt |
 |---|---|---|---|
@@ -184,6 +192,7 @@ sind unangetastet:
 | `bot.ts` | welche Einheit aufgestellt wird | die stärkste Einzelne | **die, die das ganze Brett am meisten hebt** |
 | `synergien.ts` | `SCHWELLEN` | 2 / 4 / 6 | **2 / 3 / 5** |
 | `synergien.ts` | die Boni der beiden oberen Stufen | — | **um den Trägeranteil gekürzt (¾ bzw. ⅚)** |
+| `regeln.ts` | `DEFAULT_REGELN.startLeben` | 14 | **12** |
 
 Gemessen mit demselben Werkzeug und derselben Saatbasis wie die Messungen
 davor, **5.000 Partien zu viert, Besetzung `normal`, `--mindest 100`**, dazu
@@ -191,21 +200,24 @@ eine Gegenprobe auf der zweiten Saatbasis (`gegenprobe-b`).
 
 ### Die drei Schritte, einzeln gemessen
 
-Alle vier Spalten über 2.000 Partien zu viert, gleiche Saatbasis, damit sie
+Alle fünf Spalten über 2.000 Partien zu viert, gleiche Saatbasis, damit sie
 vergleichbar sind. **A** ist der Stand der fünften Messung, **B** nur das
 Markengewicht des Bots, **C** zusätzlich die Schwellen 2/3/5 mit den
-unveränderten Boni, **D** der ausgelieferte Stand (Boni mitgezogen).
+unveränderten Boni, **D** dieselben Schwellen mit gekürzten Boni, **E** der
+ausgelieferte Stand (zusätzlich 12 statt 14 Startleben).
 
-| | A (vorher) | B (Bot) | C (+ 2/3/5, alte Boni) | **D (ausgeliefert)** |
-|---|---|---|---|---|
-| erste Schwelle | 83,6 % | 111,6 % | 60,5 % | **80,4 %** |
-| mittlere Schwelle | 1,2 % | 11,2 % | 60,9 % | **42,5 %** |
-| höchste Schwelle | **0,0 % (0 Fälle)** | 0,0 % (6 Fälle) | 1,1 % | **0,9 %** |
-| Spielzeit (Median) | 7:27 | 8:24 | 8:55 | **8:23** |
-| Kämpfe an der Höchstdauer | 4,4 % | 8,8 % | 16,5 % | **9,6 %** |
-| zur Halbzeit entschieden | 42,5 % | 35,7 % | 32,3 % | **38,0 %** |
+| | A (vorher) | B (Bot) | C (+ 2/3/5, alte Boni) | D (Boni gekürzt) | **E (ausgeliefert)** |
+|---|---|---|---|---|---|
+| Startleben | 14 | 14 | 14 | 14 | **12** |
+| erste Schwelle | 83,6 % | 111,6 % | 60,5 % | 80,4 % | **79,3 %** |
+| mittlere Schwelle | 1,2 % | 11,2 % | 60,9 % | 42,5 % | **35,4 %** |
+| höchste Schwelle | **0,0 % (0 Fälle)** | 0,0 % (6 Fälle) | 1,1 % | 0,9 % | **0,3 %** |
+| Runden (Median) | 10 | 11 | 11 | 11 | **9** |
+| Spielzeit (Median) | 7:27 | 8:24 | 8:55 | 8:23 | **7:24** |
+| Kämpfe an der Höchstdauer | 4,4 % | 8,8 % | 16,5 % | 9,6 % | **9,5 %** |
+| zur Halbzeit entschieden | 42,5 % | 35,7 % | 32,3 % | 38,0 % | **33,4 %** |
 
-Drei Dinge stehen in dieser Tabelle, die man einzeln nicht sähe:
+Vier Dinge stehen in dieser Tabelle, die man einzeln nicht sähe:
 
 - **Der Bot allein (A→B) hat die mittlere Schwelle wiederbelebt** — von 1,2 %
   auf 11,2 % —, aber die höchste nicht. Sechs Fälle in 75.096 Antritten sind
@@ -218,6 +230,13 @@ Drei Dinge stehen in dieser Tabelle, die man einzeln nicht sähe:
 - **Die gekürzten Boni (D) nehmen das wieder zurück**, ohne die Schwelle zu
   verlieren: 42,5 % statt 60,9 % in der Mitte, 0,9 % statt 1,1 % oben, und die
   Kampfdauer liegt wieder auf dem Wert, den der Bot allein schon gekostet hat.
+- **Die zwei Startleben (D→E) holen die Minute zurück, und sie kosten oben.**
+  7:24 statt 8:23 ist genau der Betrag, den der Bot vorher gekostet hatte. Die
+  Rechnung dafür steht in der Spalte darüber: zwei Runden weniger, und mit
+  ihnen fällt die höchste Schwelle von 0,9 % auf 0,3 %. Die **Kampfdauer** ist
+  dabei unberührt geblieben (9,5 % gegen 9,6 %) — die Startleben nehmen
+  Runden, nicht Sekunden. Ob neun Runden reichen, steht unten in einem eigenen
+  Abschnitt.
 
 ### Warum 2/3/5 und nicht 2/4/6
 
@@ -227,32 +246,43 @@ Partien zu viert verteilt sich das so:
 
 | Level (= Felder auf dem Brett) | 1 | 2 | 3 | 4 | 5 | 6 |
 |---|---|---|---|---|---|---|
-| Anteil der Antritte | 10,8 % | 32,3 % | 33,3 % | 21,0 % | 2,5 % | **0,04 %** |
+| Anteil der Antritte, 14 Leben | 10,7 % | 32,1 % | 33,1 % | 21,4 % | 2,7 % | **0,04 %** |
+| Anteil der Antritte, 12 Leben | 12,1 % | 36,4 % | 35,3 % | 15,2 % | 0,9 % | **0 %** |
 
 Sechs Träger einer Marke setzen mindestens Level 6 voraus. Die Schwelle 6 war
 damit nicht selten, sondern in 99,96 % aller Antritte **unmöglich** — an ihr zu
-messen hieß, an einer Zahl zu messen, die es nicht geben kann. Bei zehn bis elf
+messen hieß, an einer Zahl zu messen, die es nicht geben kann. Bei neun bis elf
 Runden je Partie ist das keine Frage des Spielstils mehr.
+
+Dieselbe Tabelle erklärt auch, was die Kürzung auf 12 Startleben gekostet hat:
+Sie nimmt nichts am unteren Ende weg, sondern am oberen. Ein Brett mit vier
+Einheiten steht in 15,2 % statt 21,0 % der Antritte, eines mit fünf in 0,9 %
+statt 2,7 % — und an der Fünf hängt die höchste Schwelle.
 
 ### Wie oft eine Schwelle überhaupt stand
 
-187.638 Antritte. Gezählt werden (Antritt, Marke)-Paare; ein Brett hält immer
+165.054 Antritte. Gezählt werden (Antritt, Marke)-Paare; ein Brett hält immer
 nur seine höchste Schwelle, die Spalten schließen sich also aus.
 
 | Marke | ab 2 | ab 3 | ab 5 | Träger im Katalog |
 |---|---|---|---|---|
-| Krieger | 48.690 | 20.643 | 459 | 5 |
-| Elementar | 2.753 | 558 | 0 | 5 |
-| Meuchler | 35.921 | 13.108 | 105 | 4 |
-| Wächter | 53.015 | 42.889 | 1.151 | 6 |
-| Naturwesen | 8.161 | 2.347 | 5 | 5 |
-| Untot | 139 | 5 | 0 | 2 |
-| Drache | 1.348 | 87 | 0 | 2 |
-| **zusammen** | **150.027 (80,0 %)** | **79.637 (42,4 %)** | **1.720 (0,9 %)** | |
+| Krieger | 41.836 | 13.808 | 156 | 5 |
+| Elementar | 2.094 | 272 | 0 | 5 |
+| Meuchler | 31.308 | 9.761 | 30 | 4 |
+| Wächter | 47.776 | 32.954 | 353 | 6 |
+| Naturwesen | 6.144 | 1.286 | 0 | 5 |
+| Untot | 76 | 1 | 0 | 2 |
+| Drache | 1.021 | 40 | 0 | 2 |
+| **zusammen** | **130.255 (78,9 %)** | **58.122 (35,2 %)** | **539 (0,3 %)** | |
 
-Zweite Saatbasis: 79,9 % / 42,1 % / 1,0 % — die Zahlen hängen nicht am Wurf. Zu
-acht (500 Partien) steht die höchste Schwelle sogar in 3,3 % der Antritte, weil
-dort dreizehn statt elf Runden gespielt werden.
+Zweite Saatbasis: 79,1 % / 35,0 % / 0,4 % — die Zahlen hängen nicht am Wurf. Zu
+acht (500 Partien) steht die höchste Schwelle in 2,0 % der Antritte, weil dort
+zwölf statt neun Runden gespielt werden.
+
+Zum Vergleich derselbe Stand mit 14 Startleben: 80,0 % / 42,4 % / 0,9 %. Die
+mittlere Schwelle kostet die kürzere Partie also ein Sechstel, die höchste zwei
+Drittel. **Beide leben, und das ist die Aussage, auf die es hier ankommt** — vor
+dieser Arbeit stand die mittlere bei 1,2 % und die höchste bei null.
 
 **Drei Marken erreichen die höchste Schwelle weiterhin nie**: Elementar, Untot
 und Drache. Bei Untot und Drache ist die Ursache der Katalog — je zwei Träger,
@@ -260,56 +290,83 @@ die fünfte Einheit wäre nur über Kopien zu haben, und Kopien verschmelzen. Da
 ist derselbe Befund, der schon als Karte auf dem Board liegt, und keine Frage
 der Schwellenhöhe.
 
+### Reichen neun Runden?
+
+Die Frage steht seit Langem in `kampf.ts` und in `regeln.ts`, bisher als Satz
+ohne Zahl: *Vor Runde 10 steht kein ausgebautes Brett, wer da ausscheidet, hat
+nicht verloren, sondern nicht gespielt.* Weil die Partie jetzt neun Runden hat,
+ist der Satz nachgezählt worden — 500 Partien zu viert, 1.500 Ausscheiden:
+
+| | 14 Leben | **12 Leben** |
+|---|---|---|
+| Brett beim Ausscheiden, im Schnitt | 3,67 Einheiten | **3,35 Einheiten** |
+| davon mit höchstens 2 Einheiten | 0 | **0** |
+| Ausscheiden in Runde, im Schnitt | 8,9 | **7,8** |
+| frühestes Ausscheiden überhaupt | Runde 5 | **Runde 5** |
+
+**Der Satz trifft nicht zu.** Niemand scheidet mit einem halb leeren Brett aus;
+das früheste Ausscheiden liegt in Runde 5, und bis dahin stehen drei Einheiten.
+Was die Kürzung wirklich kostet, ist das obere Ende der Brettgrößen und damit
+die höchste Synergieschwelle — nicht der Fall, den der Satz beschreibt.
+
+**Wo die Grenze wirklich liegt:** bei 10 Startleben. Dort sind es acht Runden,
+und die Markenspanne wird mit ×0,79–1,21 spürbar unruhiger, weil weniger
+Antritte zusammenkommen (`werkzeug/spielzeit.mjs`). Zehn ist zugleich die untere
+Schranke aus `pruefeRegeln`.
+
 ### Siegquote je Marke
 
-Schnitt der gezählten Zeilen 22,0 %; die zweite Saatbasis in Klammern.
+Schnitt der gezählten Zeilen 21,7 %; die zweite Saatbasis in Klammern.
 
-| Marke | Antritte | Quote | zum Schnitt |
-|---|---|---|---|
-| Krieger | 11.602 | 32,8 % | **×1,49** (×1,56) |
-| Wächter | 13.674 | 28,9 % | ×1,32 (×1,39) |
-| Naturwesen | 2.450 | 28,4 % | ×1,29 (×1,30) |
-| Meuchler | 7.460 | 25,0 % | ×1,14 (×1,13) |
-| Drache | 243 | 11,5 % | ×0,52 (×0,43) |
-| Elementar | 705 | 5,2 % | **×0,24** (×0,19) |
-| Untot | 54 | 29,6 % | zu dünn |
+| Marke | Antritte | Quote | zum Schnitt | bei 14 Leben |
+|---|---|---|---|---|
+| Krieger | 10.718 | 33,9 % | **×1,56** (×1,63) | ×1,49 |
+| Wächter | 12.978 | 29,4 % | ×1,36 (×1,42) | ×1,32 |
+| Meuchler | 6.832 | 26,4 % | ×1,22 (×1,20) | ×1,14 |
+| Naturwesen | 2.047 | 24,0 % | ×1,11 (×1,13) | ×1,29 |
+| Drache | 227 | 11,9 % | ×0,55 (×0,44) | ×0,52 |
+| Elementar | 658 | 4,7 % | **×0,22** (×0,17) | ×0,24 |
+| Untot | 35 | 45,7 % | zu dünn | zu dünn |
 
 ### Was auffällt — zum Nachrechnen, nicht nachjustiert
 
-1. **Die Spanne der Marken ist weiter geworden, nicht enger** — ×1,49 bis ×0,24
+1. **Die Spanne der Marken ist weiter geworden, nicht enger** — ×1,56 bis ×0,22
    gegen ×1,32 bis ×0,80 in der fünften Messung. Das ist zum größten Teil kein
    neuer Schaden, sondern ein sichtbar gewordener: Elementar und Drache standen
    vorher mit 175 bzw. 43 Antritten unter der Zählschwelle und waren schon
-   damals die schwächsten Zeilen. Jetzt spielt der Bot sie — 705 bzw. 243
+   damals die schwächsten Zeilen. Jetzt spielt der Bot sie — 658 bzw. 227
    Antritte —, und man sieht, wie schlecht sie sind. **Folgerung:** Der Befund
    gehört zum Katalog, nicht zu den Schwellen. Elementars Träger sind zugleich
    die schwächsten Einheiten des Spiels (Irrlicht ×0,08, Funkenlehrling ×0,23);
    solange das so ist, ist ein Angriffsbonus auf sie verschenkt.
-2. **Krieger steht mit ×1,49 erstmals über der ×1,4-Kante**, die die fünfte
-   Messung als obere Grenze notiert hat. Der Rüstungsbonus ist in diesem
-   Kampfmodell der stärkste — er wirkt auf jeden eingehenden Treffer —, und
-   seit die mittlere Schwelle mit drei Trägern statt vier zu haben ist, steht
-   er in 42 % der Antritte. **Folgerung:** die erste Zeile, die man ansieht,
+2. **Krieger steht mit ×1,56 über der ×1,4-Kante**, die die fünfte Messung als
+   obere Grenze notiert hat, und er ist mit der kürzeren Partie noch einmal
+   gestiegen (×1,49 bei 14 Leben). Der Rüstungsbonus ist in diesem Kampfmodell
+   der stärkste — er wirkt auf jeden eingehenden Treffer —, und seit die
+   mittlere Schwelle mit drei Trägern statt vier zu haben ist, steht er in
+   35 % der Antritte. Dass er bei kürzerer Partie zulegt, passt dazu: Wer nur
+   neun Runden hat, kommt seltener an ein großes Brett, und ein billiger
+   Frühbonus wiegt dann mehr. **Folgerung:** die erste Zeile, die man ansieht,
    wenn als Nächstes am Balancing gedreht wird. Der Bonus ist hier bewusst nur
    um den Trägeranteil gekürzt worden und nicht zusätzlich — sonst wären zwei
-   Änderungen in einer Messung.
-3. **Die Partie ist um eine knappe Minute länger geworden** (7:27 → 8:25 im
-   Median), und das Ziel sind acht Minuten. Verursacht hat das der **Bot**,
-   nicht die Schwellen: Schon B allein steht bei 8:24. Ein Bot, der auf
-   Synergien spielt, baut stärkere Bretter, und stärkere Bretter kämpfen
-   länger. Dasselbe gilt für die Kämpfe, die an der Höchstdauer abgeschnitten
-   werden: 4,4 % → 9,7 %. Ein solcher Kampf ist kein Unentschieden — die
+   Änderungen in einer Messung. Es steht als Karte auf dem Board.
+3. **Die Spielzeit ist wieder da, wo sie war** — 7:23 im Median gegen 7:27 vor
+   dieser Arbeit, bei 9 statt 10 Runden. Den Umweg zeigt die Schritt-Tabelle:
+   Der Bot hatte die Partie auf 8:25 getrieben (stärkere Bretter kämpfen
+   länger), die zwei Startleben holen das zurück. **Was NICHT zurückkam, ist
+   die Kampfdauer:** 9,5 % der Kämpfe laufen in die Höchstdauer von 45 s, vor
+   dieser Arbeit waren es 4,4 %. Ein solcher Kampf ist kein Unentschieden — die
    Wertung entscheidet nach Punkten (`entscheideNachZeit` in `kampf.ts`) —,
    aber jeder zehnte Kampf, der die 45 Sekunden ausreizt, ist die Stelle, an
-   der man das Spiel als zäh empfindet. **Folgerung:** Beides steht als Karte
-   auf dem Board. Hier wurde nichts nachgezogen, weil `startLeben` und
-   `zeitraffer` erst am selben Tag nach eigener Messung entschieden worden sind
-   (docs/TAFELRUNDE-SPIELZEIT.md); sie im Vorbeigehen wieder zu drehen, hieße
-   diese Entscheidung ohne Zahlen zu überschreiben.
-4. **Die Partien werden seltener früh entschieden** — 42,5 % → 37,9 % standen
-   spätestens zur Halbzeit fest. Das ist die einzige Zeile, die sich ohne Zutun
-   verbessert hat: Wer zurückliegt, kann jetzt über eine Synergie aufholen,
-   statt nur schwächere Einheiten zu kaufen.
+   der man das Spiel als zäh empfindet. Die Startleben können daran nichts
+   ändern: Sie nehmen Runden, nicht Sekunden. **Folgerung:** Wenn diese Zahl
+   weiter steigt, ist der Rüstungsbonus das Ziel und nicht `HOECHSTDAUER_MS` —
+   die Begründung steht bei der Konstante selbst.
+4. **Die Partien werden seltener früh entschieden** — 42,5 % → 34,1 % standen
+   spätestens zur Halbzeit fest. Das ist die Zeile, die sich am deutlichsten
+   verbessert hat, und beide Änderungen ziehen hier in dieselbe Richtung: Wer
+   zurückliegt, kann über eine Synergie aufholen, und eine kurze Partie gibt
+   einem Vorsprung weniger Zeit, sich auszubauen.
 
 ---
 
@@ -671,18 +728,19 @@ für Zeile mit ihr vergleicht.
 
 | | erste | zweite | dritte | vierte | fünfte | **sechste (gültig)** |
 |---|---|---|---|---|---|---|
-| Startleben | 100 | 20 | **14** | 20 | 14 | **14** |
+| Startleben | 100 | 20 | **14** | 20 | 14 | **12** |
 | Zeitraffer | x1 | x1 | **x2** | x1 | x2 | **x2** |
 | Neu-Würfeln | 2 Gold | 2 Gold | 2 Gold | **0** | 0 | **0** |
 | Laden nach dem Kauf | nur der Platz | nur der Platz | nur der Platz | **ganz neu** | ganz neu | **ganz neu** |
 | Schwellen | 2/4/6 | 2/4/6 | 2/4/6 | 2/4/6 | 2/4/6 | **2/3/5** |
 | Bot spielt auf Marken | nein | nein | nein | nein | nein | **ja** |
-| Runden ⌀ zu viert | 26,5 | 14,7 | 11,1 | 14,1 | 10,6 | **10,7** |
+| Runden ⌀ zu viert | 26,5 | 14,7 | 11,1 | 14,1 | 10,6 | **9,5** |
+| Spielzeit ⌀ zu viert | — | — | — | — | 7:27 | **7:23** |
 | an der Grenze geendet | 18,5 % | 0,0 % | 0,0 % | 0,0 % | 0,0 % | **0,0 %** |
-| zur Halbzeit entschieden | 43,0 % | 36,7 % | 30,6 % | 47,3 % | 43,0 % | **37,9 %** |
-| mittlere Schwelle gehalten | — | — | 0,6 % | 3,3 % | 1,2 % | **42,4 %** |
-| höchste Schwelle gehalten | — | — | 0 Fälle | 11 Fälle | 0 Fälle | **0,9 %** |
-| Markenspanne (gezählt) | — | ×0,79–1,15 | ×0,77–1,27 | ×0,76–1,42 | ×0,80–1,32 | **×0,24–1,49** |
+| zur Halbzeit entschieden | 43,0 % | 36,7 % | 30,6 % | 47,3 % | 43,0 % | **34,1 %** |
+| mittlere Schwelle gehalten | — | — | 0,6 % | 3,3 % | 1,2 % | **35,2 %** |
+| höchste Schwelle gehalten | — | — | 0 Fälle | 11 Fälle | 0 Fälle | **0,3 %** |
+| Markenspanne (gezählt) | — | ×0,79–1,15 | ×0,77–1,27 | ×0,76–1,42 | ×0,80–1,32 | **×0,22–1,56** |
 
 **Erste Messung (100 Startleben).** Die Werte trugen die Partie nicht: Zu viert
 liefen 18,5 % aller Partien in die Rundengrenze von 30, zu acht 72,6 %, ohne
