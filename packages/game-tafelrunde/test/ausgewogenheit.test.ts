@@ -66,16 +66,20 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * grundlos an.
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Ueber 400
- * Partien zu viert fallen Drache (1 Antritt), Untot (3) und seit dem 05.09.2026
- * auch Elementar (8) heraus. Uebrig bleiben genau vier Zeilen — Krieger 410,
- * Naturwesen 110, Meuchler 852, Waechter 858 —, und die Mindestzahl unten
- * verlangt vier. WER DEN KATALOG SO AENDERT, DASS NATURWESEN UNTER HUNDERT
- * FAELLT, SIEHT HIER "nur 3 Marken mit genug Antritten" und nicht den
- * eigentlichen Befund; die Zahl 110 ist die knappste der Datei.
+ * Partien zu viert faellt seit dem 05.09.2026 nur noch UNTOT heraus (1
+ * Antritt). Gezaehlt werden sechs Zeilen — Krieger 725, Waechter 683,
+ * Meuchler 508, Elementar 357, Drache 256, Naturwesen 147 —, und die
+ * Mindestzahl unten verlangt vier. WER DEN KATALOG SO AENDERT, DASS
+ * NATURWESEN UNTER HUNDERT FAELLT, SIEHT HIER "nur 5 Marken mit genug
+ * Antritten" und nicht den eigentlichen Befund; die Zahl 147 ist die
+ * knappste der Datei.
  *
- * Die drei duennen Marken stehen im Konzeptdokument und gehoeren ins Werkzeug,
- * wo eine Messung ueber 5.000 Partien mehr Antritte bringt — aber auch dort
- * reicht es seit dem kuerzeren Lebensbalken fuer Drache und Untot nicht mehr.
+ * DASS ES SECHS STATT VIER SIND, IST NEU und kommt nicht vom Katalog: Seit die
+ * Bot-Bewertung die Reichweite kennt (bot.ts, `deckungIm`), kauft der Bot die
+ * Fernkaempfer haeufiger, und mit ihnen sind Elementar (8 -> 357) und Drache
+ * (1 -> 256) ueberhaupt erst zaehlbar geworden. Untot bleibt duenn; die Zeile
+ * gehoert ins Werkzeug, wo eine Messung ueber 5.000 Partien mehr Antritte
+ * bringt — aber auch dort reicht es seit dem kuerzeren Lebensbalken nicht.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -103,14 +107,18 @@ describe('Ausgewogenheit: Marken', () => {
    * sondern DIE Wahl: Wer eine Aufstellung findet, die doppelt so oft gewinnt
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
-   * In dieser Auswahl reicht der weiteste Ausschlag von x1,31 (Krieger) bis
-   * x0,80 (Waechter) — nach beiden Seiten ist also Platz (Stand 05.09.2026).
+   * In dieser Auswahl reicht der weiteste Ausschlag von x1,48 (Waechter) bis
+   * x0,65 (Drache) — nach beiden Seiten ist also noch Platz, aber weniger als
+   * vorher (Stand 05.09.2026, nachdem die Bot-Bewertung die Reichweite bekam;
+   * davor x1,31 bis x0,80).
    *
-   * ABER: Die Zeilen, die wirklich ausschlagen koennen, sind genau die, die
-   * hier herausfallen — Drache, Untot und Elementar mit ein bis acht Antritten
-   * ueber 400 Partien. Wer den Katalog anfasst, laesst deshalb das Werkzeug
-   * ueber 5.000 Partien laufen und verlaesst sich nicht auf diese Probe
-   * allein; die Auswertung steht im Konzeptdokument.
+   * DASS DIE SPANNE MIT DEM BOT GEWACHSEN IST, ist selbst der Befund und kein
+   * Fehler der Probe: Elementar und Drache standen vorher mit acht bzw. einem
+   * Antritt gar nicht in der Tabelle. Sie sind nicht schlechter geworden — sie
+   * sind zum ersten Mal messbar, und gemessen liegen sie unten. Wer den
+   * Katalog anfasst, laesst deshalb das Werkzeug ueber 5.000 Partien laufen und
+   * verlaesst sich nicht auf diese Probe allein; die Auswertung steht im
+   * Konzeptdokument.
    */
   it('haelt jede gezaehlte Marke zwischen der Haelfte und dem Doppelten des Schnitts', () => {
     const schnitt = schnittQuote(AUSWERTUNG.marken, MINDEST_ANTRITTE);

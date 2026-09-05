@@ -506,3 +506,39 @@ vier Messungen über zwei Saatbasen (140 : 86,7 · 139 : 87,0 beim gebauten
 Stand, 169 : 77,0 · 147 : 84,3 bei 20 Leben) plus einem Kontrolllauf mit
 gleichen Gangarten (102 : 99,3). Fallen darf sie wieder bei der nächsten
 Änderung am Laden — die misst man mit.
+
+## 7. Nachgemessen, als die Bot-Bewertung die Reichweite bekam
+
+**Anlass war kein Zeitproblem.** `staerke` in `bot.ts` ließ die Reichweite weg;
+seit dem 05.09.2026 geht sie ein, aber nur so weit, wie das eigene Heer eine
+Vorderreihe hat (`deckungIm`, Begründung und Messung im Konzeptdokument,
+achte Messung). Die Regeln sind unberührt — die vier Zahlen aus Abschnitt 4
+stehen unverändert.
+
+**Die Spielzeit ist trotzdem gefallen**, und deutlich. 5.000 Partien zu viert,
+`ausgewogenheit.mjs`, dieselbe Saatbasis vorher und nachher:
+
+| | vorher | nachher |
+|---|---|---|
+| Spielzeit im Median | 7:11 | **6:26** |
+| davon Kampf | 4:20 | **3:34** |
+| einzelner Kampf im Median | 18,3 s | **15,5 s** |
+| Kampfphase je Runde im Median | 25,7 s | **19,3 s** |
+| an der Höchstdauer abgebrochen | 7,9 % | **2,3 %** |
+| Runden im Median | 9 | 9 |
+
+**Der Grund steht in der letzten Zeile: Die Runden sind gleich geblieben.**
+Kürzer geworden ist der einzelne Kampf, nicht die Partie. Ein Bot, der
+Fernkämpfer angemessen bewertet, stellt Bretter auf, die in derselben Zeit mehr
+Schaden austeilen — und ein Kampf, der ausgeht, statt in die Höchstdauer zu
+laufen, ist der ganze Unterschied zwischen 7,9 % und 2,3 % Abbrüchen.
+
+**Damit liegt der einzelne Kampf erstmals im geplanten Fenster** von 15 bis 20
+Sekunden (offene Karte „Kämpfe dauern rund 30 s statt der geplanten 15-20 s",
+gemessen bei 30,3 s vor Zeitraffer und Kürzung). Erreicht wurde das ohne eine
+einzige geänderte Regel.
+
+**Was danach zu prüfen wäre, wenn jemand weiter kürzen will:** Die
+Höchstdauer greift jetzt in einem von vierzig Kämpfen. Sie war als Rettungsseil
+gedacht und ist es damit wieder — wer sie senkt, senkt sie gegen fast nichts.
+Die Schrauben aus Abschnitt 2 sind davon unberührt und gelten weiter.

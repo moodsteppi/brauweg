@@ -161,7 +161,110 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 05.09.2026, siebte Messung — der gültige Stand)
+## Gemessen: Ausgewogenheit (Stand 05.09.2026, achte Messung — der gültige Stand)
+
+**Warum es eine achte gibt, und diesmal ohne eine Zeile am Katalog.** Geändert
+wurde allein die Bot-Bewertung `staerke` in `packages/game-tafelrunde/src/bot.ts`:
+Sie rechnete Leben × Rüstung × (Angriff × Tempo) und ließ die **Reichweite**
+ausdrücklich weg, mit dem Vermerk, die Stellung (Schützen nach hinten) fange
+das ab. Das tut sie nicht — wohin eine Einheit gestellt wird, ändert nichts
+daran, **welche** gekauft wird.
+
+### Der pauschale Faktor macht den Bot schlechter, nicht besser
+
+Erst gemessen, dann gebaut. Gemessen wird mit `werkzeug/gangarten.mjs`: Ein
+Sitz rechnet mit Reichweitenfaktor, die drei anderen ohne, **sonst spielen alle
+vier dieselbe Gangart**. Je 400 Partien, gezählt werden die eindeutigen Siege
+des einen Sitzes.
+
+| Bewertung | Siege des einen Sitzes | Basen |
+|---|---|---|
+| ohne Reichweite (Kontrolllauf) | 595 von 2.400 | sechs |
+| **× (1 + (Reichweite − 1) × 0,15), pauschal** | **208 von 1.200** (gegen 301) | drei |
+| **× (1 + (Reichweite − 1) × 0,15 × Deckung)** | **708 von 2.400** | sechs, auf **jeder** mehr |
+
+Der pauschale Faktor baut genau das Brett, an dem Elementar in der siebten
+Messung gescheitert ist: lauter Fernkämpfer, niemand hält die Linie. **Erst der
+Deckungsanteil macht aus dem Faktor eine Aussage über die Zusammenstellung** —
+`Deckung = min(1, 2 × Nahkämpfer / Fernkämpfer)`.
+
+Zwei Grenzen der Messung gehören dazu:
+
+1. **Die Höhe des Faktors ist nach oben begrenzt.** Über drei Basen: 0,10 →
+   355, 0,15 → 360, 0,25 → 313, 0,40 → 249, Kontrolllauf 301. Ab etwa einem
+   Viertel kippt er.
+2. **Die Steigung der Deckung ist es nicht.** Ob eine Wache einen Fernkämpfer
+   deckt (359) oder acht (358), ist nicht unterscheidbar. Das ganze Gewicht
+   liegt im Fall **null** — ein Brett ganz ohne Vorderreihe. Die Zwei steht
+   trotzdem da: Mit Eins kauft der Bot die Grabfürstin in 400 Partien kein
+   einziges Mal mehr, und die Probe „stellt jede der 22 Einheiten wenigstens
+   einmal auf ein Brett" fällt.
+
+### Siegquote je Marke
+
+**5.000 Partien zu viert, Besetzung `normal`, `--mindest 150`, Saatbasis
+`ausgewogenheit-v1`** — dieselbe Saat vorher und nachher, es unterscheidet sie
+nur der Bot. Schnitt der gezählten Zeilen 29,2 % vorher, 26,0 % nachher.
+
+| Marke | Antritte vorher → nachher | zum Schnitt vorher | nachher |
+|---|---|---|---|
+| Wächter | 11.995 → 8.802 | ×0,96 | **×1,46** |
+| Krieger | 9.827 → 9.228 | ×1,11 | **×1,43** |
+| Naturwesen | 1.064 → 1.778 | ×1,30 | ×0,96 |
+| Meuchler | 6.648 → 6.134 | ×0,92 | ×0,78 |
+| Elementar | 2.459 → 4.483 | ×0,84 | **×0,70** |
+| Drache | 1.557 → 3.147 | ×0,89 | **×0,67** |
+| Untot | 30 → 20 | zu dünn | zu dünn |
+
+**Die Spanne ist von ×0,84…×1,30 auf ×0,67…×1,46 aufgegangen.** Sie hält die
+Schranke der Probe (×0,5 bis ×2) weiter, aber mit weniger Luft. Das ist kein
+Schaden am Katalog, sondern eine schärfere Linse: Ein Bot, der besser spielt,
+bestraft eine schwache Marke deutlicher. Die Folgerung gehört auf das Board und
+nicht in diese Datei.
+
+### Siegquote je Einheit — woran man den Eingriff wirklich sieht
+
+Nicht an den Quoten (die sind auf dem letzten Brett verzerrt: Eine
+Ein-Gold-Einheit steht dort vor allem dann, wenn ihr Besitzer nicht
+aufgestiegen ist), sondern an den **Antritten**. Sie sagen, was der Bot kauft:
+
+| Einheit | Reichweite | Antritte vorher → nachher |
+|---|---|---|
+| Astschütze | 3 | 1.095 → **3.622** |
+| Funkenlehrling | 3 | 2.468 → **5.232** |
+| Steinschleuderer | 3 | 2.897 → **6.320** |
+| Bogenmeisterin | 3 | 1.057 → 1.744 |
+| Sturmrufer | 4 | 214 → 441 |
+| Drachenkind | 3 | 310 → 558 |
+| Schildknappe | 1 | 9.741 → **5.196** |
+| Dorfwache | 1 | 11.903 → 9.452 |
+| Hainwächterin | 1 | 2.361 → 1.879 |
+| Grimmbart | 1 | 1.534 → 985 |
+
+**Der Gassendieb bleibt, wo er war** (8.822 → 8.563 Antritte, ×0,58 → ×0,43).
+Er hat Reichweite 1, der Faktor rührt ihn nicht an. Dass der Bot ihn trotzdem
+am zweithäufigsten kauft, ist der **andere** Befund über `staerke`: Aushalten
+mal Austeilen behandelt beides als austauschbar (Karte „die Bot-Bewertung
+`staerke` sagt die Rangfolge im Kampf nicht vorher"). Diese Messung räumt ihn
+nicht ab.
+
+### Was noch mit gekippt ist
+
+| | vorher | nachher |
+|---|---|---|
+| Spielzeit im Median | 7:11 | **6:26** |
+| einzelner Kampf im Median | 18,3 s | **15,5 s** |
+| Kämpfe an der Höchstdauer abgebrochen | 7,9 % | **2,3 %** |
+| vorzeitig einseitig | 33,4 % | 28,0 % |
+
+Mehr Fernkämpfer heißt mehr Schaden in derselben Zeit: Die Kämpfe laufen aus,
+statt in die Höchstdauer zu laufen. **Der einzelne Kampf liegt damit erstmals
+im geplanten Fenster von 15 bis 20 Sekunden** (Karte „Kämpfe dauern rund 30 s
+statt der geplanten 15-20 s"). Die Gangart-Reihenfolge `hart > normal > sanft`
+steht weiter, aber knapp — Zahlen und Warnung stehen bei `GANGARTEN` in
+`bot.ts`.
+
+## Überholt: die siebte Messung (Stand 05.09.2026, Bot ohne Reichweitenfaktor)
 
 **Warum es eine siebte gibt.** Die sechste hinterließ genau einen Ausreißer:
 **Elementar bei ×0,25** — nicht knapp neben der Schranke (×0,5 bis ×2), sondern

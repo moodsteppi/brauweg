@@ -18,7 +18,9 @@
  * eigenen Ueberschrift weiter unten:
  *
  *   1. KAUFEN NACH WERT — eine Verschmelzung schlaegt alles, danach zaehlen
- *      Paare, die Synergien der Marken und die reine Staerke.
+ *      Paare, die Synergien der Marken und die Staerke. In die geht seit dem
+ *      05.09.2026 auch die REICHWEITE ein, aber nur so weit, wie das eigene
+ *      Heer eine Vorderreihe hat (`deckungIm`).
  *   2. AUFSTELLEN NACH ROLLE — Wachen und Meuchler nach vorn, Schuetzen,
  *      Magier und Beistand nach hinten, Meuchler zusaetzlich an den Rand.
  *      WELCHE aufgestellt wird, entscheidet seit dem 05.09.2026 das ganze
@@ -127,12 +129,22 @@ interface Gangart {
  * Partien zu viert, ein Sitz mit der starken Gangart gegen drei mit der
  * schwachen, gezaehlt werden eindeutige Siege. Rechts steht der SCHNITT der
  * drei schwachen Sitze, und ueber zwei unabhaengige Saatbasen, weil eine
- * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 05.09.2026):
+ * einzelne nichts beweist (`werkzeug/gangarten.mjs`, neu aufgenommen am
+ * 05.09.2026, nachdem die Bewertung die Reichweite bekam):
  *
  *                    gebaut (12 Leben, x2)   langer Stand (20 Leben, x1)
- *     hart : normal   132 : 89   130 : 90      138 : 87   132 : 89
- *     hart : sanft    346 : 18   364 : 12      354 : 15   360 : 13
- *     normal : sanft  365 : 12   364 : 12      354 : 15   357 : 14
+ *     hart : normal   105 :  98    97 : 101     114 : 95   106 : 98
+ *     hart : sanft    339 :  20   328 :  24     327 : 24   321 : 26
+ *     normal : sanft  364 :  12   370 :  10     348 : 17   358 : 14
+ *
+ * DIE ERSTE ZEILE IST DUENN GEWORDEN, und das gehoert vor jede Lesung dieser
+ * Tabelle: `hart` gegen `normal` steht auf der zweiten Basis bei 97 : 101, also
+ * hinten. Die Probe in bot.test.ts misst diese Paarung deshalb ueber DREI
+ * Basen und 1.200 Partien (124 + 105 + 103 = 332 gegen 289,3) — und selbst das
+ * ist kaum mehr als der Kontrolllauf unten. Der Reichweitenfaktor hat daran
+ * uebrigens wenig geaendert: Auf denselben drei Basen stand es vorher
+ * 100 + 126 + 122 = 348 gegen 284, und der Unterschied liegt innerhalb eines
+ * Standardfehlers von rund 15 Siegen. `hart` war schon vorher duenn.
  *
  * AM 05.09.2026 ZWEIMAL NEU AUFGENOMMEN: einmal, weil der Bot seitdem auf
  * Marken spielt (siehe `heerStaerke`), und einmal nach der Kuerzung auf 12
@@ -180,17 +192,23 @@ interface Gangart {
  *
  * DER KONTROLLLAUF IST NICHT MEHR NEUTRAL, und das gehoert vor jede dieser
  * Zahlen. Besetzt man ALLE VIER Sitze mit `normal`, gewinnt Sitz 0 trotzdem
- * oefter: 110 Siege bei 12 Startleben, 115/116/108 ueber drei Saatbasen bei
- * 14, gegen 100 im Schnitt. Vor dem Markengewicht war der Lauf sauber (101,
- * 106, 99). Die Ursache ist der GEMEINSAME VORRAT (partie.ts, `vorrat`):
+ * oefter: 118 und 107 Siege ueber die beiden Basen der Tabelle, gegen 100 im
+ * Schnitt. Vor dem Markengewicht war der Lauf sauber (101, 106, 99), mit ihm
+ * stand er bei 102 und 108 — der Reichweitenfaktor hat den Sitzvorteil also
+ * noch etwas vergroessert, und auch das hat denselben Grund wie unten: Ein Bot,
+ * der genauer weiss, was er will, will es haeufiger gleichzeitig mit den
+ * anderen. Die Ursache ist der GEMEINSAME VORRAT (partie.ts, `vorrat`):
  * Bots, die auf Synergien spielen, wollen alle dieselben Einheiten, und der
  * Messstand laesst die Sitze der Reihe nach ruesten — wer zuerst kauft,
  * bekommt sie. Am echten Tisch ruesten alle gleichzeitig, dort ist die
  * Reihenfolge keine Sitznummer; der Druck auf den Vorrat ist aber derselbe.
- * Fuer die Tabelle oben heisst das: Von den rund 1,48-fachen Siegen von
- * `hart` sind gut 1,10 schon im Sitz enthalten. Die Reihenfolge der Gangarten
- * traegt das immer noch, aber wer den Abstand als Zahl braucht, misst gegen
- * 110 und nicht gegen 100. Steht als Befund auf dem Board.
+ * Fuer die Tabelle oben heisst das: `hart` gewinnt auf der ersten Basis 105
+ * Partien — und derselbe Sitz gewinnt 118, wenn er `normal` spielt wie alle
+ * anderen. Die Paarung `hart : normal` sagt fuer sich genommen also gar
+ * nichts mehr; getragen wird die Reihenfolge von den 1.200 Partien der Probe
+ * in bot.test.ts, und auch dort knapp: 332 Siege gegen 315 im Kontrolllauf
+ * ueber dieselben drei Basen. Wer den Abstand als Zahl braucht, misst
+ * gegen den Kontrolllauf und nicht gegen 100. Steht als Befund auf dem Board.
  *
  * ZU VIERT UND NICHT ZU ZWEIT, und das ist selbst ein Befund: Solange die
  * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
@@ -253,8 +271,102 @@ const POLSTER_AB_RUNDE = 4;
 const STAERKE_TEILER = 100;
 
 /**
+ * Was ein Feld Reichweite ueber den Nahkampf hinaus wert ist — bei voller
+ * Deckung, und je Feld.
+ *
+ * Ein Schuetze hinter der eigenen Linie schiesst vom ersten Takt an und wird
+ * erst getroffen, wenn die Linie faellt; ein Nahkaempfer laeuft erst einmal
+ * los (`schrittZiel` in kampf.ts) und kassiert dabei, ohne zurueckzuschlagen.
+ * Mit 0,15 ist eine gedeckte Bogenmeisterin (Reichweite 3) das 1,30-fache
+ * wert und der Sturmrufer (Reichweite 4) das 1,45-fache.
+ *
+ * DIE ZAHL IST GEMESSEN, nicht geschaetzt. Gemessen wird mit
+ * `werkzeug/gangarten.mjs`: Ein Sitz rechnet mit Reichweitenfaktor, die drei
+ * anderen ohne, sonst spielen alle vier dieselbe Gangart. Je 400 Partien ueber
+ * sechs Saatbasen, gezaehlt werden die eindeutigen Siege des einen Sitzes.
+ *
+ *     ohne Faktor (Kontrolllauf)   595 von 2.400
+ *     mit 0,15                     708 von 2.400   auf JEDER Basis mehr
+ *
+ * Nach oben ist die Zahl begrenzt, und zwar messbar: ueber die ersten drei
+ * Basen steht 0,10 bei 355, 0,15 bei 360, 0,25 bei 313 und 0,40 bei 249 —
+ * gegen 301 im Kontrolllauf. Ab etwa einem Viertel kippt der Faktor also von
+ * Vorteil zu Nachteil, weil der Bot dann Fernkaempfer kauft, wo er eine Wache
+ * braeuchte. Zwischen 0,10 und 0,15 entscheidet die Messung nicht; 0,15 steht
+ * hier, weil es den groessten gemessenen Abstand hat.
+ */
+const REICHWEITEN_GEWICHT = 0.15;
+
+/**
+ * Wie viele Fernkaempfer eine Einheit der Vorderreihe deckt.
+ *
+ * DIE MESSUNG UNTERSCHEIDET DIESE ZAHL NICHT, und das gehoert dazu: Mit 1
+ * (jede Wache deckt genau eine) stehen ueber drei Basen 359 Siege, mit 8 (also
+ * praktisch "eine einzige Wache genuegt fuer alles") 358. Das ganze Gewicht
+ * des Modells liegt im Fall NULL — ein Brett voellig ohne Vorderreihe. Genau
+ * dort trennen sich die 208 Siege des pauschalen Faktors von den 360 des
+ * gedeckten (siehe `deckungIm`).
+ *
+ * ZWEI UND NICHT EINS, obwohl die Messung schweigt, und dafuer gibt es einen
+ * Grund ausserhalb der Siegzahlen: Mit 1 kauft der Bot die Grabfuerstin in 400
+ * Partien kein einziges Mal mehr, und die Probe "stellt jede der 22 Einheiten
+ * wenigstens einmal auf ein Brett" (test/ausgewogenheit.test.ts) faellt. Sie
+ * stand vorher bei zwei Antritten, war also ohnehin am Rand — aber eine
+ * Bot-Aenderung, die eine Katalogzeile ganz aus dem Spiel nimmt, ist zu scharf.
+ * Ab 1,5 steht die Probe wieder, an den Siegzahlen aendert sich nichts.
+ *
+ * KEIN HARTER SCHALTER bei "gar keine Wache", obwohl die Messung genau das
+ * traegt: Ein Brett mit einer Wache und sechs Schuetzen ist nicht gedeckt, und
+ * ein Umschalten bei genau einer Wache waere eine Kante, hinter der der Bot
+ * ploetzlich anders einkauft. Das Verhaeltnis sagt dasselbe stetig.
+ */
+const DECKKRAFT = 2;
+
+/** Kein Rueckhalt: Reichweite bringt der Einheit dann gar nichts. */
+const KEINE_DECKUNG = 0;
+
+/** Voller Rueckhalt: Reichweite zaehlt mit `REICHWEITEN_GEWICHT` je Feld. */
+const VOLLE_DECKUNG = 1;
+
+/**
+ * Wie gut die Vorderreihe dieses Heeres seine Fernkaempfer deckt — 0 bis 1.
+ *
+ * WARUM DIE REICHWEITE NICHT FUER SICH ALLEIN ZAEHLT, und das ist der Kern
+ * dieser Datei: Reichweite ist nichts wert, solange niemand die Linie haelt.
+ * Genau daran ist die Marke Elementar am 05.09.2026 gescheitert (siehe
+ * Irrlicht in katalog.ts) — fuenf Traeger, alle mit Reichweite 3 oder 4, und
+ * eine Siegquote von x0,25. Ein Bot, der Reichweite pauschal aufwertet, baut
+ * genau dieses Brett. Gemessen ist er damit deutlich SCHWAECHER als der ohne
+ * Faktor: 208 Siege statt 301 (je 400 Partien ueber drei Saatbasen, sonst
+ * gleiche Gangart). Der Deckungsanteil macht aus dem Faktor eine Aussage
+ * ueber die ZUSAMMENSTELLUNG statt ueber die einzelne Einheit — und erst so
+ * traegt er.
+ *
+ * Ein Verhaeltnis und kein feiner ausgedachtes Mass: so viele Fernkaempfer,
+ * wie die Vorderreihe traegt (`DECKKRAFT`), sind gedeckt, der Rest drueckt den
+ * Anteil. Ueber 1 wird gekappt — zwei Wachen je Schuetze decken nicht doppelt.
+ *
+ * Gezaehlt wird nach `reichweite` und nicht nach `rolle`: Die Rolle steuert
+ * die Stellung (`platzStrafe`), und das Irrlicht ist seit dem 05.09.2026 der
+ * Fall, an dem beides auseinandergeht — Rolle `wache`, aber im Katalog steht
+ * eine Reichweite, und die entscheidet hier.
+ */
+function deckungIm(einheiten: readonly Kaempfer[]): number {
+  let nah = 0;
+  let fern = 0;
+  for (const k of einheiten) {
+    if (einheit(k.id).reichweite <= 1) nah += 1;
+    else fern += 1;
+  }
+  // Ohne Fernkaempfer geht die Zahl niemanden etwas an; sie darf nur nicht
+  // durch null teilen.
+  if (fern === 0) return VOLLE_DECKUNG;
+  return Math.min(VOLLE_DECKUNG, (nah * DECKKRAFT) / fern);
+}
+
+/**
  * Wie viel eine Einheit dem Bot wert ist: was sie aushaelt MAL dem, was sie
- * austeilt.
+ * austeilt — mal dem, was ihre Reichweite in DIESEM Heer wert ist.
  *
  * Das Produkt und nicht die Summe, und das ist der Kern der Bewertung: Eine
  * Einheit teilt so lange aus, wie sie steht, ihr Beitrag ist also beides
@@ -267,10 +379,13 @@ const STAERKE_TEILER = 100;
  * mindert jeden Treffer um ihren Prozentsatz (`schadenNach` in kampf.ts), 50
  * Ruestung verdoppeln also das, was eine Einheit aushaelt.
  *
- * Was hier NICHT eingeht, ist die Reichweite — ein Schuetze mit denselben
- * Werten ist mehr wert als ein Nahkaempfer. Der Bot faengt das ueber die
- * Stellung ab (Schuetzen nach hinten) und nicht ueber einen weiteren
- * geschaetzten Faktor.
+ * DIE REICHWEITE STAND BIS ZUM 05.09.2026 NICHT DRIN, mit dem Vermerk, die
+ * Stellung (Schuetzen nach hinten) fange das ab. Sie tut es nicht: Wohin eine
+ * Einheit gestellt wird, aendert nichts daran, WELCHE gekauft wird, und genau
+ * das entscheidet `staerke`. Sie geht deshalb jetzt ein — aber nur so weit,
+ * wie das Heer eine Vorderreihe hat (`deckungIm`). Die Vorgabe ist
+ * `KEINE_DECKUNG`: Wer eine Einheit ohne ihr Heer bewertet, weiss nichts ueber
+ * ihren Rueckhalt und soll ihr keinen andichten.
  *
  * Den Kampf wirklich durchrechnen zu lassen waere verlockend und falsch: Der
  * Bot entscheidet mehrmals je Runde, und `simuliereKampf` ist die teuerste
@@ -280,12 +395,22 @@ const STAERKE_TEILER = 100;
  * bekommt (siehe `heerStaerke`). Ohne ihn misst die Funktion die nackte
  * Einheit — das ist der richtige Wert ueberall dort, wo zwei Einheiten
  * unabhaengig von ihren Nachbarn verglichen werden.
+ *
+ * GERUNDET WIRD ZUM SCHLUSS, und das ist kein Schoenheitsfehler: Der Beweis,
+ * dass die Zugschleife endet (Dateikopf), haengt daran, dass jeder Tausch
+ * `heerStaerke` um mindestens einen ganzen Punkt hebt. Ein Faktor, der eine
+ * Kommazahl stehen laesst, macht aus dem Schritt eine beliebig kleine Zahl.
  */
-function staerke(k: Kaempfer, bonus: Wertebonus = KEIN_BONUS): number {
+function staerke(
+  k: Kaempfer,
+  bonus: Wertebonus = KEIN_BONUS,
+  deckung: number = KEINE_DECKUNG,
+): number {
   const w = werteFuer(k.id, k.stufe, bonus);
   const haelt = (w.leben * 100) / Math.max(1, 100 - w.ruestung);
   const teiltAus = w.angriff * w.tempo;
-  return Math.round((haelt * teiltAus) / STAERKE_TEILER);
+  const ausDerFerne = 1 + (w.reichweite - 1) * REICHWEITEN_GEWICHT * deckung;
+  return Math.round((haelt * teiltAus * ausDerFerne) / STAERKE_TEILER);
 }
 
 /**
@@ -311,14 +436,20 @@ function staerke(k: Kaempfer, bonus: Wertebonus = KEIN_BONUS): number {
  * vierte Einheit einer Marke liegt zuerst auf der Bank — wer nur das Brett
  * zaehlte, kaufte sie nie).
  *
+ * SEIT DEM 05.09.2026 ENTSTEHT HIER AUCH DIE DECKUNG (`deckungIm`), und aus
+ * demselben Grund wie der Markenbonus: Was eine Reichweite wert ist, haengt
+ * nicht an der Einheit, sondern daran, wer vor ihr steht. Nur die Liste weiss
+ * das — die einzelne Einheit weiss es nie.
+ *
  * Der Preis ist eine Zaehlung und eine Bonusrechnung je Einheit, bei
  * hoechstens 18 Einheiten. Das ist etwas anderes als `simuliereKampf`, vor dem
  * der Kommentar oben warnt: Hier wird nichts iteriert, nur addiert.
  */
 function heerStaerke(einheiten: readonly Kaempfer[]): number {
   const zaehlung = zaehleMarken(einheiten);
+  const deckung = deckungIm(einheiten);
   let summe = 0;
-  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung));
+  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung), deckung);
   return summe;
 }
 
@@ -598,12 +729,21 @@ const VERSCHMELZ_FAKTOR = 3;
 const PAAR_FAKTOR = 1.5;
 
 /**
- * Was die MARKEN dieses Kaufs zusaetzlich wert sind — der Zuwachs, den das
- * Heer allein aus den Synergien hat, wenn diese Einheit dazukommt.
+ * Was dieser Kauf dem Heer UEBER DIE EINHEIT HINAUS bringt — der Zuwachs, den
+ * das ganze Heer hat, wenn sie dazukommt.
  *
- * Er enthaelt beides: was die Neue von den schon vertretenen bekommt, und was
- * sie allen anderen Traegern ihrer Marken gibt. Abgezogen wird ihre nackte
- * Staerke, denn die steht in `kandidaten` schon in der Rechnung.
+ * Er enthaelt drei Dinge: was die Neue von den schon vertretenen Marken
+ * bekommt, was sie allen anderen Traegern ihrer Marken gibt — und seit dem
+ * 05.09.2026, was sich an der DECKUNG aendert (`deckungIm`). Eine Wache hebt
+ * damit auch die Schuetzen, die schon dastehen, und ein sechster Schuetze
+ * drueckt sie. Abgezogen wird die nackte Staerke der Neuen, denn die steht in
+ * `kandidaten` schon in der Rechnung; was uebrig bleibt, ist genau das
+ * Umfeld.
+ *
+ * Die Funktion hiess bis dahin `markenGewinn`. Der Name stimmte nicht mehr,
+ * sobald die Deckung mitkam — und ein Name, der die Haelfte verschweigt, ist
+ * schlimmer als keiner: Wer die Zeile in `kandidaten` liest, haelt den
+ * Deckungsanteil sonst fuer verloren.
  *
  * BIS ZUM 05.09.2026 STAND HIER EINE ZAHL: `MARKEN_GEWICHT = 25` je schon
  * vertretenem Gefaehrten, gegen Einheitenstaerken von 130 bis 970 — und linear
@@ -619,7 +759,7 @@ const PAAR_FAKTOR = 1.5;
  * Haus (siehe `kandidaten`), und der Aufstieg auf die naechste Sternstufe
  * ueberwiegt sie ohnehin deutlich.
  */
-function markenGewinn(eigene: readonly Kaempfer[], id: EinheitId): number {
+function umfeldGewinn(eigene: readonly Kaempfer[], id: EinheitId): number {
   const neu: Kaempfer = { id, stufe: 1 };
   return heerStaerke([...eigene, neu]) - heerStaerke(eigene) - staerke(neu);
 }
@@ -673,7 +813,7 @@ function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number)
     let wert = staerke({ id, stufe: 1 });
     if (verschmilzt) wert *= VERSCHMELZ_FAKTOR;
     else if (kopien > 0) wert *= PAAR_FAKTOR;
-    wert += markenGewinn(eigene, id);
+    wert += umfeldGewinn(eigene, id);
 
     gefunden.push({ platz, id, verschmilzt, wert });
   });
