@@ -7,6 +7,7 @@ import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
+import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
 import { TISCH_PARAMETER } from './minispiele/tafelrunde/tischlink';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
@@ -162,6 +163,19 @@ export function App(): React.JSX.Element {
 
   const zeigeProfil = (accountId: string): void =>
     setScreen({ name: 'profil', accountId, vorher: screen });
+
+  /**
+   * Zurueck in die Spielauswahl, mit frischem `me`.
+   *
+   * Als benannte Funktion, weil sie bei Tafelrunde an ZWEI Stellen haengt: am
+   * Schirm und am Abbrechen-Knopf seines Ladevorhangs. Zwei Kopien derselben
+   * Zeile gingen beim naechsten Zusatz (etwa einem Klang) auseinander, und
+   * zwar so, dass nur der Weg ueber den Vorhang ihn nicht bekaeme.
+   */
+  const zurueckZuDenSpielen = (): void => {
+    setScreen({ name: 'games' });
+    void reload();
+  };
 
   /**
    * Welcher Bildschirm gezeigt wird.
@@ -344,16 +358,20 @@ export function App(): React.JSX.Element {
      * Tafelrunde: Auto-Battler mit Verschmelzen. Wie bei Filler und Eiland
      * fuehren alle drei Wege — Spielauswahl, Lobby, Weiterspielen — auf
      * denselben Bildschirm.
+     *
+     * Als einziger Schirm bekommt Tafelrunde ein eigenes <Suspense> mit
+     * eigenem Rueckfall: seinem Ladebildschirm statt des Lade-Pinguins. Der
+     * Grund ist Robins Beschwerde vom 5.9.2026 — hier hingen zwei Vorhaende
+     * hintereinander (erst das Paket, dann die Bilder), und der zweite zeigte
+     * einen Balken, der die erste Haelfte der Wartezeit unterschlug. Jetzt ist
+     * es ein Balken ueber beides; der Rueckfall und der nachgeladene Schirm
+     * lesen denselben Lauf mit (Ladevorhang.tsx).
      */
     if (screen.name === 'tafelrunde') {
       return (
-        <Tafelrunde
-          startTisch={screen.tisch ?? null}
-          onBack={() => {
-            setScreen({ name: 'games' });
-            void reload();
-          }}
-        />
+        <Suspense fallback={<Ladevorhang onAbbrechen={zurueckZuDenSpielen} />}>
+          <Tafelrunde startTisch={screen.tisch ?? null} onBack={zurueckZuDenSpielen} />
+        </Suspense>
       );
     }
     if (
@@ -361,13 +379,12 @@ export function App(): React.JSX.Element {
       screen.gameId === 'tafelrunde'
     ) {
       return (
-        <Tafelrunde
-          startTisch={screen.name === 'table' ? screen.tableId : null}
-          onBack={() => {
-            setScreen({ name: 'games' });
-            void reload();
-          }}
-        />
+        <Suspense fallback={<Ladevorhang onAbbrechen={zurueckZuDenSpielen} />}>
+          <Tafelrunde
+            startTisch={screen.name === 'table' ? screen.tableId : null}
+            onBack={zurueckZuDenSpielen}
+          />
+        </Suspense>
       );
     }
 

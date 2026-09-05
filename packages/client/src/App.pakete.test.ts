@@ -77,6 +77,22 @@ describe('Paketaufteilung von App.tsx', () => {
   });
 
   /*
+   * Tafelrunde wartet beim Antippen auf sein Paket UND auf 23 Bilder. Bis zum
+   * 6.9.2026 waren das zwei Vorhaenge hintereinander: der Lade-Pinguin fuer
+   * das Paket, danach der Ladebildschirm mit dem Balken fuer die Bilder.
+   * Faellt der Rueckfall wieder auf `AppLaedt` zurueck, sieht man den ersten
+   * Teil der Wartezeit erneut als Spinner ohne Fortschritt — und der Balken
+   * danach unterschlaegt ihn. Der Import muss statisch bleiben: Ein
+   * nachgeladener Rueckfall ist keiner.
+   */
+  it('zeigt beim Nachladen von Tafelrunde seinen Ladebildschirm, nicht den Spinner', () => {
+    expect(APP).toMatch(/^import \{ Ladevorhang \} from '\.\/minispiele\/tafelrunde\/Ladevorhang';$/m);
+    expect(APP).toContain('<Ladevorhang onAbbrechen=');
+    // Und zwar an BEIDEN Wegen zum Schirm: Spielauswahl und Lobby/Tisch.
+    expect(APP.split('<Ladevorhang onAbbrechen=')).toHaveLength(3);
+  });
+
+  /*
    * `three` und `@react-three/*` wiegen zusammen rund 900 kB. Sie haengen an
    * Avatar3D, Truhe3D, dem Runner, den Ausricht-Werkzeugen und Feldherrs
    * Buehne — alle nur ueber `lazy` erreichbar. Ein direkter Import hier holt
