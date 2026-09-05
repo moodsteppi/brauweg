@@ -119,10 +119,11 @@ const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
 /* Aus demselben Grund `lazy`, hier aber mit deutlich mehr Gewicht dahinter:
-   Probe B zieht `three` und `@react-three/fiber` nach. Was davon schon im
-   Hauptbuendel steckt, ist eine andere Baustelle (Avatarwerkstatt wird von
-   GameSelect statisch importiert und landet deshalb dort) — die Probe selbst
-   soll jedenfalls nichts dazulegen. */
+   Probe B zieht `three` und `@react-three/fiber` nach. Bis zum 06.09.2026
+   stand hier der Zusatz, ein Teil davon liege ohnehin schon im Hauptbuendel
+   (ueber die von GameSelect statisch eingebundene Avatarwerkstatt). Das gilt
+   nicht mehr: `three` liegt seither in einem eigenen Stueck und kommt nur, wenn
+   es jemand braucht (vite.config.ts). */
 const Arena3D = lazy(() => import('./proben/arena-3d/Arena3D').then((m) => ({ default: m.Arena3D })));
 
 const werkzeug = probeArena2d ? (

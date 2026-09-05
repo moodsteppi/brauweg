@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type TableRow } from '../api';
 import {
@@ -8,7 +8,6 @@ import {
   sendeAufzeichnung,
   starteAufzeichnung,
 } from '../aufzeichnung';
-import { Buehne3D } from '../minispiele/feldherr/Buehne3D';
 import {
   CHARAKTERE,
   HUELLE,
@@ -20,6 +19,23 @@ import {
 } from '../minispiele/feldherr/kern.js';
 import { moduleVersionFor, type TaktMessage, type ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
+
+/**
+ * Die 3D-Buehne wird nachgeladen: Sie zieht ganz `three` nach.
+ *
+ * Bis zum 06.09.2026 stand sie hier als gewoehnlicher Import — und weil
+ * App.tsx diesen Bildschirm damals ebenfalls statisch einband, lagen rund
+ * 780 kB `three` im Hauptbuendel jedes Spielers. Betroffen war davon niemand
+ * ausser dem, der den 3D-Knopf drueckt: `dreiD` faengt bei `false` an, und wer
+ * ihn nie antippt, sieht die Buehne kein einziges Mal.
+ *
+ * Der Rueckfall ist absichtlich leer statt eines Ladetextes: Darunter liegt
+ * die 2D-Buehne und zeichnet weiter. Ein „Wird geladen…" ueber einem
+ * laufenden Spiel waere eine Behauptung, die nicht stimmt.
+ */
+const Buehne3D = lazy(() =>
+  import('../minispiele/feldherr/Buehne3D').then((m) => ({ default: m.Buehne3D })),
+);
 
 /**
  * Feldherr — Echtzeitspiel im Browser.
@@ -1175,7 +1191,11 @@ export function FeldherrTisch({
           {dreiD ? '2D' : '3D'}
         </button>
         <div ref={buehne} />
-        {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
+        {dreiD && (
+          <Suspense fallback={null}>
+            <Buehne3D sitzungRef={sitzungRef} />
+          </Suspense>
+        )}
         {verworfen && !fremdesEnde && !strittigLokal && (
           <div className="feldherr-hinweis">
             Der Zug kam nicht durch — der Tisch war gerade nicht bereit. Leg
@@ -1226,7 +1246,11 @@ export function FeldherrTisch({
           {dreiD ? '2D' : '3D'}
         </button>
         <div ref={buehne} />
-        {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
+        {dreiD && (
+          <Suspense fallback={null}>
+            <Buehne3D sitzungRef={sitzungRef} />
+          </Suspense>
+        )}
       </main>
     );
   }

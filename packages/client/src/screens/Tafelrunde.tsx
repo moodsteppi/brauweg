@@ -6,7 +6,7 @@ import type { BotLevel } from '../protocol';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
-import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
+import { Ladebildschirm } from '../Ladebildschirm';
 import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../minispiele/tafelrunde/Phasenzeile';
 import { gegnerDieseRunde, leistenplaetze } from '../minispiele/tafelrunde/platzierung';
@@ -40,6 +40,7 @@ import {
   tippfolge,
   wabenLage,
 } from '../minispiele/tafelrunde/zuege';
+import { TISCH_PARAMETER } from '../minispiele/tafelrunde/paket';
 import { useVorladen } from '../minispiele/tafelrunde/vorladen';
 import { useTable } from '../useTable';
 
@@ -272,14 +273,12 @@ const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
 ];
 
 /**
- * Der Name des Suchparameters im geteilten Link.
- *
- * `/?tisch=KX7M9Q` fuehrt direkt in die Beitreten-Ansicht mit ausgefuelltem
- * Code (App.tsx springt dafuer beim Start auf diesen Bildschirm). Beigetreten
- * wird trotzdem erst auf Knopfdruck: Ein Link, der einen ungefragt an einen
- * Tisch setzt, ist ein Link, den man nicht mehr anklicken mag.
+ * Der Name des Suchparameters steht in `paket.ts` und wird hier nur
+ * weitergereicht: App.tsx muss ihn lesen koennen, BEVOR dieses Paket ueber
+ * die Leitung ist (siehe die Begruendung dort). Wer ihn bisher von hier
+ * geholt hat, merkt nichts.
  */
-export const TISCH_PARAMETER = 'tisch';
+export { TISCH_PARAMETER };
 
 /** Der Link, den der Gastgeber weitergibt. */
 function beitrittsLink(code: string): string {
@@ -1116,7 +1115,8 @@ export function Tafelrunde({
    * Beim ZWEITEN Mal kommt er nicht wieder: `useVorladen` merkt sich den Lauf
    * modulweit, `fertig` steht dann schon beim ersten Bild.
    */
-  if (!vorrat.fertig) return <Ladebildschirm stand={vorrat} onAbbrechen={brichAb} />;
+  if (!vorrat.fertig)
+    return <Ladebildschirm titel="Tafelrunde" stand={vorrat} onAbbrechen={brichAb} />;
 
   return (
     /* Die Anzeigenamen der Marken stehen tief im Baum an jeder Einheit — auf

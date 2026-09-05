@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { FIGUREN, UNTERGRUND } from './figuren';
+import { tafelrundePaket } from './paket';
 
 /**
  * Alles holen, bevor die erste Runde laeuft.
@@ -12,7 +13,15 @@ import { FIGUREN, UNTERGRUND } from './figuren';
  * kauft, sieht den leeren Platz genau so lange, wie die Anfrage braucht. Auf
  * einer langsamen Leitung sind das die ersten Runden.
  *
- * Drei Entscheidungen, die man dem Code sonst nicht ansieht:
+ * Seit dem 06.09.2026 steht ein Posten VOR den Bildern: das Spielpaket selbst.
+ * Der Grund ist derselbe Befund von der anderen Seite — Robin sah den
+ * Ladebildschirm gar nicht, weil es ihn zum Zeitpunkt des Wartens noch nicht
+ * gab. Die 47 kB Bilder waren nie das Problem; davor lag ein Hauptbuendel von
+ * 1,95 MB, in dem elf Spielbildschirme und `three` steckten. Jetzt laedt jedes
+ * Spiel als eigenes Stueck nach (App.tsx), und dieser Lauf deckt beides in
+ * EINEM Balken ab: erst das Paket, dann die Bilder.
+ *
+ * Vier Entscheidungen, die man dem Code sonst nicht ansieht:
  *
  *  1. **Die Liste wird aus `FIGUREN` abgeleitet, nicht danebengeschrieben.**
  *     Eine zweite Aufzaehlung ginge beim ersten neuen Recken auseinander — und
@@ -30,6 +39,13 @@ import { FIGUREN, UNTERGRUND } from './figuren';
  *     3D-Fassung ist das der eigentliche Punkt — dort stehen GLB-Modelle im
  *     Megabyte-Bereich neben Kleinkram, und ein Dateizaehler haenge
  *     minutenlang auf demselben Strich.
+ *  4. **Das Spielpaket ist ein Posten wie jeder andere.** Es haette auch eine
+ *     zweite Anzeige davor werden koennen — erst ein Balken fuers Paket, dann
+ *     einer fuer die Bilder. Zwei Balken hintereinander sehen aber aus wie ein
+ *     Fehlschlag: Der erste laeuft voll, verschwindet, und ein zweiter faengt
+ *     wieder bei null an. Weil Punkt 3 ohnehin nach Gewicht rechnet, genuegt
+ *     hier ein Eintrag mit dem Gewicht des Stuecks, und der eine Balken deckt
+ *     beides ab.
  */
 
 // ---------------------------------------------------------------------------
@@ -47,15 +63,60 @@ export interface Posten {
    * Groessenordnung genuegt, damit der Balken nicht luegt.
    */
   readonly kb: number;
+  /**
+   * Ein eigener Weg, diesen einen Posten zu holen. Ohne Angabe gilt der Holer
+   * des Laufs (`bildHolen`, also ein `<img>`).
+   *
+   * Es gibt genau einen Posten, der das braucht: das Spielpaket. Ein `<img>`
+   * auf eine .js-Datei laedt sie zwar — und meldet dann `onerror`, weil kein
+   * Bild darin steht. Der Balken haette dann eine „fehlende Datei" gezaehlt,
+   * die in Wahrheit da ist.
+   */
+  readonly holen?: () => Promise<unknown>;
 }
+
+/**
+ * Die Kennung des Spielpakets im Balken.
+ *
+ * Kein Pfad, sondern ein Name: WELCHE Datei Vite daraus macht, entscheidet
+ * der Bau (`assets/Tafelrunde-<hash>.js`), und dieser Text steht nur in der
+ * Buchfuehrung des Laufs und im Protokoll, wenn etwas fehlt.
+ */
+export const PAKET = 'paket:tafelrunde';
+
+/**
+ * Das Gewicht des Spielpakets, gemessen am Bau vom 06.09.2026.
+ *
+ * Es sind DREI Dateien und nicht eine — `Tafelrunde-*.js` (17 kB),
+ * `Tafelrunde-*.css` (5 kB) und das gemeinsame `useTable-*.js` (4 kB), alle
+ * drei mit gzip ueber die Leitung. Gewartet wird auf alle: Vites Vorladehelfer
+ * loest das Versprechen eines `import()` erst auf, wenn auch das Stylesheet
+ * steht. Ein Bildschirm ohne sein Stylesheet waere ohnehin kein Bild, sondern
+ * ein Stapel unformatierter Absaetze.
+ *
+ * Hier steht die UEBERTRAGENE Groesse und nicht die auf der Platte: Genau die
+ * wartet der Spieler ab. Bei den Bildern daneben ist beides dasselbe — WebP
+ * wird nicht noch einmal komprimiert.
+ *
+ * Wie bei jedem `kb` gilt Punkt 3: Der Wert muss nicht stimmen, er muss die
+ * Groessenordnung treffen. Wandert das Paket um ein Drittel, sieht man davon
+ * am Balken nichts.
+ */
+const PAKET_KB = 26;
 
 /**
  * Die vollstaendige Liste. Wer eine Figur in `figuren.ts` ergaenzt, ist damit
  * fertig — sie steht hier sofort mit drin.
  */
 export const VORZULADEN: readonly Posten[] = [
-  /* Die Textur zuerst: mit Abstand die groesste Datei und die einzige, deren
-     Fehlen man auf jedem Bildschirm sofort sieht. */
+  /* Das Paket zuerst, obwohl es nicht der schwerste Posten ist (die Textur
+     wiegt mehr): Es ist der einzige, ohne den gar nichts geht — bis es da ist,
+     gibt es keinen Bildschirm, auf den ein Bild koennte. Angestossen werden
+     alle gleichzeitig, aber der Browser arbeitet die Warteschlange der Reihe
+     nach ab, und in der ersten Welle soll dieser drin sein. */
+  { pfad: PAKET, kb: PAKET_KB, holen: tafelrundePaket },
+  /* Dann die Textur: die groesste Bilddatei und die einzige, deren Fehlen man
+     auf jedem Bildschirm sofort sieht. */
   { pfad: UNTERGRUND, kb: 35 },
   ...Object.values(FIGUREN).map((pfad) => ({ pfad, kb: 1 })),
 ];
@@ -261,7 +322,9 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
        Warteschlange (sechs Verbindungen je Gegenstelle); ein selbstgebauter
        Takt waere hier nur langsamer. */
     for (const p of posten) {
-      void holen(p.pfad).then(
+      /* `p.holen` schlaegt den Holer des Laufs: Das Spielpaket kommt ueber
+         `import()`, alles andere ueber ein `<img>` (siehe Posten.holen). */
+      void (p.holen ? p.holen() : holen(p.pfad)).then(
         () => abgehakt(p, true),
         () => abgehakt(p, false),
       );

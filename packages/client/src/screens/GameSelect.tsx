@@ -71,7 +71,6 @@ import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Klanghalle } from './Klanghalle';
-import { Avatarwerkstatt } from './Avatarwerkstatt';
 import { LEERE_BEMALUNG } from '../bemalung';
 
 /**
@@ -80,6 +79,16 @@ import { LEERE_BEMALUNG } from '../bemalung';
  * Profil-Tab.
  */
 const Avatar3D = lazy(() => import('../Avatar3D'));
+/**
+ * Die Werkstatt ebenfalls, und zwar aus einem zweiten Grund: `main.tsx` holt
+ * sie fuer `/?dev=werkstatt` schon per `import()`. Solange sie hier zusaetzlich
+ * fest eingebunden war, half das nichts — Vite meldete das woertlich
+ * („dynamically imported … but also statically imported, dynamic import will
+ * not move module into another chunk") und legte sie ins Hauptbuendel.
+ */
+const Avatarwerkstatt = lazy(() =>
+  import('./Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
+);
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -578,14 +587,26 @@ export function GameSelect({
       )}
       {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
       {werkstattOffen && (
-        <Avatarwerkstatt
-          bemalung={me.figur ?? null}
-          getragen={me.avatar}
-          onClose={() => setWerkstattOffen(false)}
-          // Neu laden, damit die Figur im Profil sofort so aussieht wie
-          // gerade gespeichert.
-          onGespeichert={() => onAvatarChange()}
-        />
+        /* Rueckfall ist der Ladekreis und nicht der Ladebildschirm: Die
+           Werkstatt ist ein Blatt ueber dem Hub, kein eigener Bildschirm —
+           ein Vollbild-Vorhang mit „Dateien werden heruntergeladen" saehe
+           danach aus, als waere man aus dem Hub herausgefallen. */
+        <Suspense
+          fallback={
+            <main className="app-laden">
+              <Ladekreis bild="/hub/lade-pinguin.webp" text="Werkstatt…" />
+            </main>
+          }
+        >
+          <Avatarwerkstatt
+            bemalung={me.figur ?? null}
+            getragen={me.avatar}
+            onClose={() => setWerkstattOffen(false)}
+            // Neu laden, damit die Figur im Profil sofort so aussieht wie
+            // gerade gespeichert.
+            onGespeichert={() => onAvatarChange()}
+          />
+        </Suspense>
       )}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (

@@ -11,7 +11,6 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
 import { api } from './api';
 
 const POSITION_SCHLUESSEL = 'front-feedback-pos';
@@ -33,8 +32,19 @@ function gespeichertePosition(): Position {
   return STANDARD_POSITION;
 }
 
-/** Screenshot als komprimiertes JPEG-DataURL, damit er unter FEEDBACK_BILD_MAX_ZEICHEN bleibt. */
+/**
+ * Screenshot als komprimiertes JPEG-DataURL, damit er unter
+ * FEEDBACK_BILD_MAX_ZEICHEN bleibt.
+ *
+ * `html2canvas` wird HIER geholt und nicht oben importiert: Die Bibliothek
+ * wiegt gebaut rund 200 kB und lag als gewoehnlicher Import im Hauptbuendel —
+ * also bei jedem Spieler, obwohl dieser Knopf nur auf Staging ueberhaupt
+ * erscheint und auch dort erst beim Melden eines Fehlers etwas zu tun hat.
+ * Der Import steht in der Funktion und nicht in einem `lazy`, weil hier
+ * nichts zu zeichnen ist: Gewartet wird erst, wenn der Knopf gedrueckt wurde.
+ */
 async function screenshotMachen(): Promise<string> {
+  const { default: html2canvas } = await import('html2canvas');
   const leinwand = await html2canvas(document.body, { logging: false, useCORS: true });
   return leinwand.toDataURL('image/jpeg', 0.6);
 }

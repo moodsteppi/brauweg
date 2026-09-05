@@ -1,25 +1,123 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 
 import { api, type Me } from './api';
+import { t } from './i18n';
+import { Ladebildschirm } from './Ladebildschirm';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
+import { TISCH_PARAMETER, tafelrundePaket } from './minispiele/tafelrunde/paket';
+import { useVorladen } from './minispiele/tafelrunde/vorladen';
 import { Auth } from './screens/Auth';
-import { EasyPoker } from './screens/EasyPoker';
-import { FeldherrTisch } from './screens/FeldherrTisch';
-import { Eiland } from './screens/Eiland';
-import { Filler } from './screens/Filler';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
-import { Mememory } from './screens/Mememory';
-import { Profile } from './screens/Profile';
-import { Table } from './screens/Table';
-import { CambioTable } from './screens/CambioTable';
-import { SkatTable } from './screens/SkatTable';
-import { TISCH_PARAMETER, Tafelrunde } from './screens/Tafelrunde';
-import { WizardTable } from './screens/WizardTable';
 
+/**
+ * Jeder Spielbildschirm ist ein eigenes Stueck und kommt erst, wenn er
+ * gebraucht wird.
+ *
+ * Der Anlass ist gemessen (05.09.2026, `npm run build`): Das Hauptbuendel wog
+ * 1.952 kB (574 kB gzip), weil hier ELF Spielbildschirme statisch standen —
+ * und ueber `FeldherrTisch` haengte `three` mit drin. Wer Tafelrunde antippte,
+ * lud vorher zehn andere Spiele und eine 3D-Bibliothek herunter, und zwar
+ * BEVOR ueberhaupt etwas gezeichnet werden konnte. Deshalb sah Robin den
+ * Ladebildschirm nie: Zum Zeitpunkt des Wartens gab es ihn noch nicht.
+ *
+ * Drei bleiben absichtlich hier: `Auth`, `GameSelect` und `Lobby`. Sie sind
+ * das, was jeder Spieler in jeder Sitzung als Erstes sieht — sie nachzuladen
+ * hiesse, die Wartezeit nur zu verschieben.
+ *
+ * Der Rueckfall waehrend des Ladens ist KEIN Ladekreis, sondern der
+ * `Ladebildschirm` mit dem Namen des Spiels und dem Satz „Dateien werden
+ * heruntergeladen" — Robins Wortlaut. Siehe `Vorhang` weiter unten.
+ */
+const EasyPoker = lazy(() => import('./screens/EasyPoker').then((m) => ({ default: m.EasyPoker })));
+const FeldherrTisch = lazy(() =>
+  import('./screens/FeldherrTisch').then((m) => ({ default: m.FeldherrTisch })),
+);
+const Eiland = lazy(() => import('./screens/Eiland').then((m) => ({ default: m.Eiland })));
+const Filler = lazy(() => import('./screens/Filler').then((m) => ({ default: m.Filler })));
+const Mememory = lazy(() => import('./screens/Mememory').then((m) => ({ default: m.Mememory })));
+const Profile = lazy(() => import('./screens/Profile').then((m) => ({ default: m.Profile })));
+const Table = lazy(() => import('./screens/Table').then((m) => ({ default: m.Table })));
+const CambioTable = lazy(() =>
+  import('./screens/CambioTable').then((m) => ({ default: m.CambioTable })),
+);
+const SkatTable = lazy(() => import('./screens/SkatTable').then((m) => ({ default: m.SkatTable })));
+const WizardTable = lazy(() =>
+  import('./screens/WizardTable').then((m) => ({ default: m.WizardTable })),
+);
+/* Ueber `tafelrundePaket` und nicht ueber ein eigenes `import(…)`: Dasselbe
+   Stueck steht auch als Posten im Ladebalken (vorladen.ts). Zwei Schreibweisen
+   desselben Pfades gingen beim naechsten Verschieben auseinander. */
+const Tafelrunde = lazy(() => tafelrundePaket().then((m) => ({ default: m.Tafelrunde })));
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
+
+/**
+ * Der Vorhang, waehrend ein Spielpaket ueber die Leitung kommt.
+ *
+ * Ein eigenes Bauteil und keine zehn `<Suspense fallback={…}>`: Der Rueckfall
+ * ist bei jedem Spiel derselbe, nur der Name wechselt.
+ */
+function Vorhang({
+  titel,
+  onAbbrechen,
+  children,
+}: {
+  titel: string;
+  onAbbrechen: () => void;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <Suspense fallback={<Ladebildschirm titel={titel} onAbbrechen={onAbbrechen} />}>
+      {children}
+    </Suspense>
+  );
+}
+
+/**
+ * Der Name eines Spiels fuer den Vorhang.
+ *
+ * `t()` gibt bei einem unbekannten Schluessel den Schluessel zurueck — das
+ * waere hier die Zeichenkette „game.irgendwas" in Riesenschrift. Der Fall ist
+ * nicht erfunden: Der Server liefert die Spieleliste, und ein Spiel, das
+ * dieser Client noch nicht kennt, kommt frueher oder spaeter durch.
+ */
+function spielName(gameId: string): string {
+  const name = t(`game.${gameId}`);
+  return name === `game.${gameId}` ? 'Spiel' : name;
+}
+
+/**
+ * Derselbe Vorhang fuer Tafelrunde — mit einem Balken, der schon zaehlt.
+ *
+ * `useVorladen` steht HIER und nicht erst im Bildschirm, und das ist der
+ * eigentliche Punkt der Aenderung: Der Lauf fuehrt seit dem 06.09.2026 das
+ * Spielpaket als ersten Posten (vorladen.ts). Ihn hier anzustossen heisst
+ * also, den Balken zu starten, BEVOR das Paket da ist — sonst faengt er erst
+ * an, wenn das Warten schon vorbei ist.
+ *
+ * Der Bildschirm ruft `useVorladen` danach ein zweites Mal auf und haelt die
+ * Ruestkammer zurueck, bis auch die Bilder durch sind. Das ist derselbe Lauf
+ * (modulweit, siehe dort) und deshalb derselbe Balken: Er laeuft ueber den
+ * Wechsel vom Vorhang zum Bildschirm einfach weiter.
+ */
+function TafelrundeVorhang({
+  onAbbrechen,
+  children,
+}: {
+  onAbbrechen: () => void;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  const vorrat = useVorladen();
+  return (
+    <Suspense
+      fallback={<Ladebildschirm titel="Tafelrunde" stand={vorrat} onAbbrechen={onAbbrechen} />}
+    >
+      {children}
+    </Suspense>
+  );
+}
 
 type Screen =
   | { name: 'games' }
@@ -127,27 +225,35 @@ export function App(): React.JSX.Element {
   const zeigeProfil = (accountId: string): void =>
     setScreen({ name: 'profil', accountId, vorher: screen });
 
+  /**
+   * Zurueck auf den Startbildschirm — mit frischem `me`.
+   *
+   * Das `reload()` ist der Grund fuer diese Zeile: Ohne es zeigt
+   * „Weiterspielen" den Stand von vorhin (Wartetisch weg / Partie noch offen).
+   * Die Fassung stand vor dem Nachladen dreizehnmal woertlich im Code; seit
+   * die Bildschirme in einem `Vorhang` stecken, braucht sie jeder von ihnen
+   * zweimal — einmal fuer das Spiel und einmal fuer den Abbruch waehrend des
+   * Ladens.
+   */
+  const zurueckZumHub = (): void => {
+    setScreen({ name: 'games' });
+    void reload();
+  };
+
   if (screen.name === 'profil') {
-    return <Profile accountId={screen.accountId} onBack={() => setScreen(screen.vorher)} />;
+    const zurueck = (): void => setScreen(screen.vorher);
+    return (
+      <Vorhang titel="Profil" onAbbrechen={zurueck}>
+        <Profile accountId={screen.accountId} onBack={zurueck} />
+      </Vorhang>
+    );
   }
 
   if (screen.name === 'prosubway') {
     return (
-      <Suspense
-        fallback={
-          <main className="app-laden">
-            <Ladekreis bild="/hub/lade-pinguin.webp" text="Pro-Subway…" />
-          </main>
-        }
-      >
-        <Runner
-          hubMode
-          onBack={() => {
-            setScreen({ name: 'games' });
-            void reload();
-          }}
-        />
-      </Suspense>
+      <Vorhang titel={t('modus.prosubway')} onAbbrechen={zurueckZumHub}>
+        <Runner hubMode onBack={zurueckZumHub} />
+      </Vorhang>
     );
   }
 
@@ -159,19 +265,22 @@ export function App(): React.JSX.Element {
    * Stichanzeige und Zugtimer waere hier nur im Weg.
    */
   if (screen.name === 'table' && screen.gameId === 'feldherr') {
+    const zurueck = (): void => setScreen({ name: 'lobby', gameId: screen.gameId });
     return (
-      <FeldherrTisch
-        tableId={screen.tableId}
-        onBack={() => setScreen({ name: 'lobby', gameId: screen.gameId })}
-      />
+      <Vorhang titel={spielName('feldherr')} onAbbrechen={zurueck}>
+        <FeldherrTisch tableId={screen.tableId} onBack={zurueck} />
+      </Vorhang>
     );
   }
   if (screen.name === 'lobby' && screen.gameId === 'feldherr') {
+    const zurueck = (): void => setScreen({ name: 'games' });
     return (
-      <FeldherrTisch
-        onBack={() => setScreen({ name: 'games' })}
-        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
-      />
+      <Vorhang titel={spielName('feldherr')} onAbbrechen={zurueck}>
+        <FeldherrTisch
+          onBack={zurueck}
+          onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+        />
+      </Vorhang>
     );
   }
 
@@ -183,14 +292,13 @@ export function App(): React.JSX.Element {
    */
   if (screen.name === 'mememory') {
     return (
-      <Mememory
-        startTisch={screen.tisch ?? null}
-        istAufsicht={me.entitlements.staff}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('mememory')} onAbbrechen={zurueckZumHub}>
+        <Mememory
+          startTisch={screen.tisch ?? null}
+          istAufsicht={me.entitlements.staff}
+          onBack={zurueckZumHub}
+        />
+      </Vorhang>
     );
   }
   if (
@@ -198,14 +306,13 @@ export function App(): React.JSX.Element {
     screen.gameId === 'mememory'
   ) {
     return (
-      <Mememory
-        startTisch={screen.name === 'table' ? screen.tableId : null}
-        istAufsicht={me.entitlements.staff}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('mememory')} onAbbrechen={zurueckZumHub}>
+        <Mememory
+          startTisch={screen.name === 'table' ? screen.tableId : null}
+          istAufsicht={me.entitlements.staff}
+          onBack={zurueckZumHub}
+        />
+      </Vorhang>
     );
   }
 
@@ -216,13 +323,9 @@ export function App(): React.JSX.Element {
    */
   if (screen.name === 'easypoker') {
     return (
-      <EasyPoker
-        startTisch={screen.tisch ?? null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('easypoker')} onAbbrechen={zurueckZumHub}>
+        <EasyPoker startTisch={screen.tisch ?? null} onBack={zurueckZumHub} />
+      </Vorhang>
     );
   }
   if (
@@ -230,13 +333,12 @@ export function App(): React.JSX.Element {
     screen.gameId === 'easypoker'
   ) {
     return (
-      <EasyPoker
-        startTisch={screen.name === 'table' ? screen.tableId : null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('easypoker')} onAbbrechen={zurueckZumHub}>
+        <EasyPoker
+          startTisch={screen.name === 'table' ? screen.tableId : null}
+          onBack={zurueckZumHub}
+        />
+      </Vorhang>
     );
   }
 
@@ -247,13 +349,9 @@ export function App(): React.JSX.Element {
    */
   if (screen.name === 'filler') {
     return (
-      <Filler
-        startTisch={screen.tisch ?? null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('filler')} onAbbrechen={zurueckZumHub}>
+        <Filler startTisch={screen.tisch ?? null} onBack={zurueckZumHub} />
+      </Vorhang>
     );
   }
   if (
@@ -261,13 +359,12 @@ export function App(): React.JSX.Element {
     screen.gameId === 'filler'
   ) {
     return (
-      <Filler
-        startTisch={screen.name === 'table' ? screen.tableId : null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('filler')} onAbbrechen={zurueckZumHub}>
+        <Filler
+          startTisch={screen.name === 'table' ? screen.tableId : null}
+          onBack={zurueckZumHub}
+        />
+      </Vorhang>
     );
   }
 
@@ -278,13 +375,9 @@ export function App(): React.JSX.Element {
    */
   if (screen.name === 'eiland') {
     return (
-      <Eiland
-        startTisch={screen.tisch ?? null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('eiland')} onAbbrechen={zurueckZumHub}>
+        <Eiland startTisch={screen.tisch ?? null} onBack={zurueckZumHub} />
+      </Vorhang>
     );
   }
   if (
@@ -292,13 +385,12 @@ export function App(): React.JSX.Element {
     screen.gameId === 'eiland'
   ) {
     return (
-      <Eiland
-        startTisch={screen.name === 'table' ? screen.tableId : null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName('eiland')} onAbbrechen={zurueckZumHub}>
+        <Eiland
+          startTisch={screen.name === 'table' ? screen.tableId : null}
+          onBack={zurueckZumHub}
+        />
+      </Vorhang>
     );
   }
 
@@ -309,13 +401,9 @@ export function App(): React.JSX.Element {
    */
   if (screen.name === 'tafelrunde') {
     return (
-      <Tafelrunde
-        startTisch={screen.tisch ?? null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <TafelrundeVorhang onAbbrechen={zurueckZumHub}>
+        <Tafelrunde startTisch={screen.tisch ?? null} onBack={zurueckZumHub} />
+      </TafelrundeVorhang>
     );
   }
   if (
@@ -323,13 +411,12 @@ export function App(): React.JSX.Element {
     screen.gameId === 'tafelrunde'
   ) {
     return (
-      <Tafelrunde
-        startTisch={screen.name === 'table' ? screen.tableId : null}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <TafelrundeVorhang onAbbrechen={zurueckZumHub}>
+        <Tafelrunde
+          startTisch={screen.name === 'table' ? screen.tableId : null}
+          onBack={zurueckZumHub}
+        />
+      </TafelrundeVorhang>
     );
   }
 
@@ -347,33 +434,35 @@ export function App(): React.JSX.Element {
     };
     const Spieltisch = TISCHE[screen.gameId] ?? Table;
     return (
-      <Spieltisch
-        tableId={screen.tableId}
-        /* Blatt und Rueckseite sind zwei Einstellungen, aber ein Objekt:
-           So bleiben alle Stellen, die eine Kartenrueckseite zeichnen,
-           unveraendert. */
-        deck={deckMitRuecken(
-          deckForGame(screen.gameId, themeFuer(screen.gameId).cardDeck),
-          themeFuer(screen.gameId).cardBack,
-        )}
-        szene={themeFuer(screen.gameId).tableScene}
-        onShowProfile={zeigeProfil}
-        // Zurueck zum Start: me neu laden, damit „Weiterspielen" den
-        // echten Stand zeigt (Wartetisch weg / Partie noch offen).
-        onLeave={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
-      />
+      <Vorhang titel={spielName(screen.gameId)} onAbbrechen={zurueckZumHub}>
+        <Spieltisch
+          tableId={screen.tableId}
+          /* Blatt und Rueckseite sind zwei Einstellungen, aber ein Objekt:
+             So bleiben alle Stellen, die eine Kartenrueckseite zeichnen,
+             unveraendert. */
+          deck={deckMitRuecken(
+            deckForGame(screen.gameId, themeFuer(screen.gameId).cardDeck),
+            themeFuer(screen.gameId).cardBack,
+          )}
+          szene={themeFuer(screen.gameId).tableScene}
+          onShowProfile={zeigeProfil}
+          // Zurueck zum Start: me neu laden, damit „Weiterspielen" den
+          // echten Stand zeigt (Wartetisch weg / Partie noch offen).
+          onLeave={zurueckZumHub}
+        />
+      </Vorhang>
     );
   }
 
   if (screen.name === 'feldherr') {
+    const zurueck = (): void => setScreen({ name: 'games' });
     return (
-      <FeldherrTisch
-        onBack={() => setScreen({ name: 'games' })}
-        onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
-      />
+      <Vorhang titel={spielName('feldherr')} onAbbrechen={zurueck}>
+        <FeldherrTisch
+          onBack={zurueck}
+          onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
+        />
+      </Vorhang>
     );
   }
 
@@ -381,10 +470,7 @@ export function App(): React.JSX.Element {
     return (
       <Lobby
         gameId={screen.gameId}
-        onBack={() => {
-          setScreen({ name: 'games' });
-          void reload();
-        }}
+        onBack={zurueckZumHub}
         onEnter={(tableId) => setScreen({ name: 'table', gameId: screen.gameId, tableId })}
       />
     );

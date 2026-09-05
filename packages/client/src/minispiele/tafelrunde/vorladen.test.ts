@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import {
   type Ladestand,
+  PAKET,
   type Posten,
   VORZULADEN,
   vorratLaden,
@@ -68,11 +69,34 @@ describe('vorladen', () => {
   });
 
   describe('die Liste', () => {
-    it('enthaelt jede Figur und den Untergrund', () => {
+    it('enthaelt jede Figur, den Untergrund und das Spielpaket', () => {
       const pfade = VORZULADEN.map((p) => p.pfad);
       for (const figur of Object.values(FIGUREN)) expect(pfade).toContain(figur);
       expect(pfade).toContain(UNTERGRUND);
-      expect(pfade).toHaveLength(Object.keys(FIGUREN).length + 1);
+      expect(pfade).toContain(PAKET);
+      expect(pfade).toHaveLength(Object.keys(FIGUREN).length + 2);
+    });
+
+    it('holt das Spielpaket auf eigenem Weg und nicht als Bild', () => {
+      // Ein `<img>` auf eine .js-Datei laedt sie und meldet dann `onerror` —
+      // der Balken haette eine „fehlende Datei" gezaehlt, die in Wahrheit da
+      // ist. Deshalb bringt genau dieser Posten seinen Holer selbst mit.
+      const paket = VORZULADEN.find((p) => p.pfad === PAKET);
+      expect(paket?.holen).toBeTypeOf('function');
+      for (const bild of VORZULADEN.filter((p) => p.pfad !== PAKET)) {
+        expect(bild.holen).toBeUndefined();
+      }
+    });
+
+    it('gewichtet das Spielpaket deutlich schwerer als eine Figur', () => {
+      // Nicht der schwerste Posten — die Textur wiegt mehr (35 gegen 26 kB,
+      // gemessen 06.09.2026). Aber ein spuerbarer Teil des Balkens: Stuende
+      // das Paket bei 1 wie eine Figur, spraenge der Balken beim Eintreffen
+      // der Bilder auf fast voll, waehrend der Spieler noch auf das Stueck
+      // wartet, das ueberhaupt erst einen Bildschirm ergibt.
+      const paket = VORZULADEN.find((p) => p.pfad === PAKET);
+      const figur = VORZULADEN.find((p) => p.pfad !== UNTERGRUND && p.pfad !== PAKET);
+      expect(paket?.kb).toBeGreaterThan((figur?.kb ?? 0) * 10);
     });
 
     it('nennt keinen Pfad doppelt', () => {
@@ -82,7 +106,7 @@ describe('vorladen', () => {
 
     it('gewichtet den Untergrund schwerer als eine Figur', () => {
       const untergrund = VORZULADEN.find((p) => p.pfad === UNTERGRUND);
-      const figur = VORZULADEN.find((p) => p.pfad !== UNTERGRUND);
+      const figur = VORZULADEN.find((p) => p.pfad !== UNTERGRUND && p.pfad !== PAKET);
       // Die Textur wiegt 35 kB, eine Figur unter einem. Waere beides gleich
       // schwer, sagte der Balken das Gegenteil dessen, was passiert.
       expect(untergrund?.kb).toBeGreaterThan((figur?.kb ?? 0) * 10);
@@ -95,6 +119,27 @@ describe('vorladen', () => {
       void vorratLaden({ posten: POSTEN, holen: hand.holen });
       await durchatmen();
       expect(hand.angefragt).toEqual(['/dick.webp', '/duenn-a.webp', '/duenn-b.webp']);
+    });
+
+    it('nimmt den eigenen Holer eines Postens statt des allgemeinen', async () => {
+      // Die Stelle, an der das Spielpaket haengt: Es kommt ueber `import()`
+      // und nicht ueber ein `<img>` (siehe Posten.holen).
+      const hand = handbetrieb();
+      const eigener = vi.fn(() => Promise.resolve());
+      let fertig: Ladestand | null = null;
+      void vorratLaden({
+        posten: [{ pfad: 'paket:probe', kb: 50, holen: eigener }, ...POSTEN],
+        holen: hand.holen,
+      }).then((s) => (fertig = s));
+      await durchatmen();
+
+      expect(eigener).toHaveBeenCalledTimes(1);
+      expect(hand.angefragt).not.toContain('paket:probe');
+
+      for (const p of POSTEN) hand.fertig(p.pfad);
+      await durchatmen();
+      expect(fertig).not.toBeNull();
+      expect(vorratStand().fehlend).toEqual([]);
     });
 
     it('ist erst fertig, wenn alle durch sind', async () => {
