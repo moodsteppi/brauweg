@@ -821,6 +821,15 @@
   .figur,
   .koerper,
   .leben b { transition: none; }
+  /* Balken und Kostenpunkt einer GEFALLENEN brauchen den langen Selektor:
+     Ihren Uebergang setzt nicht die Grundregel, sondern erst
+     `.figur[data-tot] .leben` weiter oben. Ein blosses `.leben` in der Liste
+     darueber waere schwaecher als die dortige Angabe (eine Klasse gegen Klasse
+     plus Merkmal plus Klasse) und wuerde sie nicht ueberschreiben — der Balken
+     bliebe als einziges Teil bei 260 ms weich, waehrend alles andere springt.
+     Genau so war es bis zum 6.9.2026. */
+  .figur[data-tot] .leben,
+  .figur[data-tot] .kosten { transition: none; }
   .figur,
   .koerper[data-schlaegt],
   .ergebnis { animation: none; }
