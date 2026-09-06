@@ -291,15 +291,44 @@
 }
 
 /*
+ * Der Stellplatz — der Kasten, an dem sich alles bemisst, was zur FIGUR
+ * gehoert und nicht zur Wabenkarte.
+ *
+ * Er hat genau die Masse, die bis zum 6.9.2026 der Koerper selbst trug (74 x
+ * 62 % der Karte), und der Koerper liegt jetzt deckungsgleich darin. An der
+ * Anzeige aendert das nichts; gebraucht wird die Ebene fuer den TREFFER.
+ *
+ * WARUM ES SIE GIBT: Blitz und Einschlag lagen auf der KARTE (`inset: 6% 4%`
+ * an `.figur`) und leuchteten damit ein helles Rechteck UNTER der Figur auf —
+ * die steht seit den Bildfolgen laengst nicht mehr in ihrer Karte, ihre Zelle
+ * ragt weit darueber hinaus. In den Koerper konnten sie nicht: Der haengt am
+ * Schluessel `f.schlaege` (KampfAnzeige.tsx) und wird bei JEDEM eigenen Schlag
+ * neu aufgebaut, was eine laufende Treffer-Animation mitten in der Bewegung
+ * abschnitte. Also eine gemeinsame Bezugsebene daneben, in der beide dieselben
+ * Masse benutzen koennen wie die Figur.
+ *
+ * MERKE — die Prozentangaben der Figur (`--tr-kasten-hoehe`,
+ * `--tr-kasten-boden` aus `FIGURENKASTEN`) beziehen sich auf DIESEN Kasten und
+ * nicht auf die ganze Wabenkarte. Die 16,4 %, auf denen die Figur aufsetzt,
+ * sind 16,4 % seiner Hoehe, also knapp ueber den Sternen an seiner Unterkante.
+ */
+.stellplatz {
+  position: relative;
+  width: 74%;
+  height: 62%;
+}
+
+/*
  * Der Koerper — seit dem 6.9.2026 OHNE PLATTE.
  *
  * Er hat keine Farbe und keinen Rand mehr: kein Verlauf, kein Innenrand, kein
  * abgerundetes Rechteck. Uebrig ist ein unsichtbarer Kasten, und der wird
  * gebraucht, denn er tut zwei Dinge weiter. Er ist das MASS, an dem die Zelle
- * des Blattes haengt (`.figur3d` rechnet in Prozent von ihm), und er ist die
- * Ebene des AUSSCHLAGS (`ka-schlag`) — die Figur darf nicht auf derselben
- * Ebene ausschlagen wie sie atmet, sonst faellt eine der beiden Bewegungen
- * stumm aus.
+ * des Blattes haengt (`.figur3d` rechnet in Prozent von ihm — er fuellt den
+ * Stellplatz und ist deshalb genauso gross), und er ist die Ebene des
+ * AUSSCHLAGS (`ka-schlag`) — die Figur darf nicht auf derselben Ebene
+ * ausschlagen wie sie atmet, sonst faellt eine der beiden Bewegungen stumm
+ * aus.
  *
  * WARUM DIE PLATTE WEG IST: Robin, 5.9.2026 — „der laesst es mehr 2D wirken".
  * Eine Figur auf einer Kachel klebt darauf; eine ohne steht auf dem Feld. Was
@@ -308,14 +337,16 @@
  * (`.kosten`), das Sterben in der Todesfolge selbst.
  */
 .koerper {
-  position: relative;
+  /* Absolut im Stellplatz und nicht mehr selbst im Fluss: Der Ausschlag darf
+     die Trefferebene nicht mitreissen, und beide muessen sich trotzdem an
+     demselben Kasten bemessen. */
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1px;
-  width: 74%;
-  height: 62%;
   /*
    * Verblassen ERST NACH dem Fall (`--sacken`, gerechnet in bildfolge.ts).
    * Hier stand bis zum 6.9.2026 zusaetzlich ein `scale(0.55) rotate(-9deg)`
@@ -403,6 +434,13 @@
  * Der Ausschnitt umfasst alle Bewegungen, auch den weit ausgeholten Schlag,
  * und traegt darum viel Luft ueber dem Kopf. Wer ihn in die Karte zwingt,
  * bekommt eine Figur, die halb so gross ist wie ihr Feld.
+ *
+ * WORAUF SICH DIE PROZENTE BEZIEHEN: auf den Koerper und damit auf den
+ * Stellplatz (74 x 62 % der Karte), nicht auf die ganze Wabenkarte. Wer nur
+ * „Prozent der Kartenhoehe" liest — so steht es der Kuerze halber auch an
+ * `FIGURENKASTEN` —, rechnet die Figur um 61 % zu gross. Dieselben Variablen
+ * bemassen `.treffer` weiter unten, damit Blitz und Einschlag dort
+ * aufleuchten, wo die Figur wirklich steht.
  */
 .figur3d {
   position: absolute;
@@ -534,15 +572,61 @@
 }
 .figur[data-seite='oben'] .leben b { background: var(--danger); }
 
-/* Der Treffer: ein weisser Blitz ueber der ganzen Figur, der sofort wieder
-   weg ist. Der Schluessel am Element wechselt je Treffer (KampfAnzeige.tsx),
-   sonst liefe die Animation nur beim ersten. */
+/*
+ * Die Trefferebene — dieselbe Zelle, in der auch die Figur steht.
+ *
+ * Bis zum 6.9.2026 lagen Blitz und Einschlag auf der Wabenkarte, und das war
+ * genau eine Ebene zu tief: Der Blitz leuchtete als weisses Rechteck UNTER
+ * der Figur auf, der Einschlagring fuhr aus der Kartenmitte statt aus dem
+ * Getroffenen. Bei 155 Treffern in 18 Sekunden und acht Kaempfern standen
+ * dauernd mehrere solcher hellen Karten im Bild (Vergleichsbild
+ * `docs/bilder/tafelrunde-arena-groesse.webp`, Reihe 2 links).
+ *
+ * DIE MASSE SIND DIESELBEN ZWEI VARIABLEN WIE BEI `.figur3d` und keine
+ * zweiten: Wer den Massstab in `bildfolge.ts` aendert, verschiebt Figur und
+ * Treffer gemeinsam. Deshalb genuegt hier auch die Mitte der Zelle als Ziel —
+ * am Alphakanal aller fuenf Blaetter gemessen (Standzeile, vier Bilder) liegt
+ * die stehende Figur bei 50,7 % der Zellhoehe und 54,5 % ihrer Breite, also
+ * praktisch mittig. Der viele durchsichtige Rand liegt oben, wo die Waffe
+ * ausholt, und faellt unten fast genauso weg.
+ *
+ * `aspect-ratio: 1` und nicht `--tr-zellweite` wie beim Ausschnitt: Breit ist
+ * nur die Todeszelle, und wer liegt, wird nicht mehr getroffen.
+ *
+ * Der Schluessel wechselt je Treffer AN DIESER EBENE (KampfAnzeige.tsx) und
+ * nicht mehr an ihren beiden Kindern — ein neu aufgebauter Behaelter faengt
+ * beide Animationen von vorn an, und der Koerper daneben bleibt unberuehrt.
+ */
+.treffer {
+  position: absolute;
+  left: 50%;
+  bottom: var(--tr-kasten-boden, -43.4%);
+  height: var(--tr-kasten-hoehe, 260%);
+  aspect-ratio: 1;
+  /* `translate` und nicht `transform`: dieselbe Aufteilung wie bei `.figur3d`,
+     damit die beiden Ebenen sich Zeile fuer Zeile vergleichen lassen. */
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+/*
+ * Der Treffer: ein weisser Blitz ueber der Figur, der sofort wieder weg ist.
+ *
+ * Ein VERLAUF und kein abgerundetes Rechteck mehr. Auf der Karte war die Form
+ * gleichgueltig, weil sie ungefaehr die Karte war; ueber der Figur waere ein
+ * Rechteck von der Groesse der Zelle ein weisser Kasten mit Kanten, wo gar
+ * keine Figur ist. Der Verlauf verlischt vor dem Rand — zu sehen ist Licht auf
+ * der Figur und keine Flaeche.
+ */
 .blitz {
   position: absolute;
-  inset: 6% 4%;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 16px 5px rgba(255, 238, 205, 0.5);
+  inset: 0;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 238, 205, 0.5) 42%,
+    rgba(255, 238, 205, 0) 70%
+  );
   animation: ka-blitz 260ms ease-out 1 forwards;
 }
 @keyframes ka-blitz {
@@ -557,14 +641,25 @@
  *
  * Eigenes Element und kein Zustand am Koerper: Der Koerper haengt am
  * Schluessel `f.schlaege` (KampfAnzeige.tsx) und wuerde beim Treffer den
- * eigenen Ausschlag von vorn anfangen.
+ * eigenen Ausschlag von vorn anfangen. Er liegt jetzt in der Trefferebene,
+ * also in der Zelle der Figur — vorher fuhr er aus der Mitte der Wabenkarte
+ * heraus, und dort steht die Figur seit den Bildfolgen nicht mehr.
+ *
+ * 22 % UND NICHT MEHR 44 %: Der Bezug ist ein anderer geworden. Die alte Zahl
+ * war an der Karte gemessen (auf 390 px Bildschirmbreite 67 x 77 px), die
+ * neue an der Zelle (109 x 109 px). Am Ende der Animation steht der Ring bei
+ * 2,1 x 22 % = 46 % der Zelle, und das ist die Breite einer Figur (ueber die
+ * fuenf Blaetter gemessen 30 bis 58 %, im Mittel 47 %) — er endet also an
+ * ihren Schultern, wie zuvor an den Kanten der Karte. Nebenbei ist er dabei
+ * rund geworden: Auf der Karte machten 44 % von Breite UND Hoehe eine Ellipse,
+ * die Zelle ist quadratisch.
  */
 .einschlag {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 44%;
-  height: 44%;
+  width: 22%;
+  height: 22%;
   border: 2px solid rgba(255, 232, 180, 0.9);
   border-radius: 50%;
   animation: ka-einschlag 420ms cubic-bezier(0.2, 0.8, 0.3, 1) 1 forwards;
