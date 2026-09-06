@@ -17,10 +17,28 @@
  * Arena gelegt, also um 180 Grad gedreht wie ein Brett, das dem Gegner
  * gegenuebersteht. Das ist eine abstandstreue Abbildung (eine Probe prueft das
  * ueber alle Feldpaare), und genau darauf steht die Fairness des Kampfes:
- * Tauscht man die beiden Aufstellungen, laeuft derselbe Kampf gespiegelt ab.
- * Wuerde man Seite 1 nur nach unten schieben statt zu drehen, waere die
- * Aufstellung des einen Spielers gegenueber der des anderen verdreht — und
- * eine Einheit auf demselben Feld haette je nach Seite eine andere Stellung.
+ * Tauscht man die beiden Aufstellungen UND den Erstzieher, laeuft derselbe
+ * Kampf gespiegelt ab. Wuerde man Seite 1 nur nach unten schieben statt zu
+ * drehen, waere die Aufstellung des einen Spielers gegenueber der des anderen
+ * verdreht — und eine Einheit auf demselben Feld haette je nach Seite eine
+ * andere Stellung.
+ *
+ * DEN ERSTZIEHER MITZUTAUSCHEN GEHOERT ZUR ZUSICHERUNG und ist keine
+ * Feinheit: Wer im Takt vorn ist, raeumt und besetzt Felder vor dem anderen,
+ * und beide Seiten teilen sich EINE Belegungskarte. Bleibt der Erstzieher
+ * beim Tauschen derselbe Sitz, bekommt die andere Aufstellung den Vorteil,
+ * und dann ist es nicht mehr derselbe Kampf. Genau das ist der Grund, warum
+ * ein Spiegelkampf (dasselbe Brett gegen sich selbst) NICHT immer der
+ * Erstzieher gewinnt — siehe kampf.test.ts, "bevorzugt im Spiegelkampf keine
+ * der beiden Seiten".
+ *
+ * ABSTANDSTREUE ALLEIN GENUEGT NICHT, und daran ist die Zusicherung bis zum
+ * 06.09.2026 gescheitert: Der Kampf entscheidet Gleichstaende beim Ziehen
+ * ueber die Reihenfolge der Nachbarfelder, und die ist im odd-r-Raster von
+ * der Paritaet der Reihe abhaengig — die Spiegelung wechselt sie. Gemessen
+ * liefen 498 von 500 Spiegelpaaren auseinander. Deshalb fragt der Kampf
+ * seine Nachbarn heute ueber `arenaNachbarnFuer(platz, seite)` ab; die
+ * Begruendung steht dort.
  *
  * DASS DAS AUFGEHT, HAENGT AN EINER GERADEN ZAHL: In einem odd-r-Raster
  * verschiebt sich mit jeder Reihe der Versatz. Eine Spiegelung ueber
@@ -96,13 +114,67 @@ export function istArenaplatz(platz: unknown): boolean {
 /**
  * Die Nachbarn eines Arenaplatzes, die noch in der Arena liegen.
  *
- * Dieselbe Rechnung wie auf dem Brett, nur mit vier Reihen — genau der Fall,
+ * Dieselbe Rechnung wie auf dem Brett, nur mit zehn Reihen — genau der Fall,
  * fuer den `hexNachbarn` seine Parameter hat. Die Reihenfolge ist damit
  * dieselbe und fest. Beim Ziehen entscheidet sie den Gleichstand zwischen zwei
  * gleich guten Feldern; waere sie zufaellig, waere der ganze Kampf es auch.
+ *
+ * WER ZIEHT, NIMMT NICHT DIESE LISTE, sondern `arenaNachbarnFuer` — diese
+ * hier kennt die Seite nicht und ist deshalb nicht spiegelaequivariant. Sie
+ * bleibt, weil die Nachbarschaft als MENGE von keiner Seite abhaengt: Sie ist
+ * die Grundlage, auf der `arenaNachbarnFuer` die Ordnung je Seite dreht, und
+ * die Form, in der die Proben in arena.test.ts das Raster nachmessen. Wer eine
+ * neue Stelle damit baut, an der jemand ZIEHT, baut die Schieflage wieder ein.
  */
 export function arenaNachbarn(platz: number): number[] {
   return hexNachbarn(platz, ARENA_REIHEN, ARENA_SPALTEN);
+}
+
+/**
+ * Derselbe Platz von der anderen Seite aus gesehen — die Punktspiegelung der
+ * Arena als eine Zeile.
+ *
+ * `(reihe, spalte) -> (ARENA_REIHEN - 1 - reihe, ARENA_SPALTEN - 1 - spalte)`
+ * ist auf der durchnummerierten Arena genau `ARENA_FELDER - 1 - platz`. Es ist
+ * dieselbe Abbildung, die `nachArena` fuer Seite 1 anwendet — deshalb steht
+ * sie hier einmal mit Namen und wird nicht an jeder Stelle nachgerechnet.
+ */
+export function gespiegelterPlatz(arenaPlatz: number): number {
+  return ARENA_FELDER - 1 - arenaPlatz;
+}
+
+/**
+ * Die Nachbarn eines Arenaplatzes IN DER ORDNUNG DIESER SEITE.
+ *
+ * Warum das noetig ist: Im odd-r-Raster haengt die Reihenfolge der sechs
+ * Versaetze davon ab, ob die Reihe gerade oder ungerade ist (`hexNachbarn`
+ * schreibt beide Faelle aus). Die Punktspiegelung dreht Reihe `r` auf
+ * `ARENA_REIHEN - 1 - r` und wechselt damit die Paritaet — die MENGE der
+ * Nachbarn spiegelt sauber mit, ihre REIHENFOLGE nicht. Und die Reihenfolge
+ * ist keine Nebensache: `schrittZiel` in kampf.ts bricht mit ihr den
+ * Gleichstand zwischen zwei gleich guten Zielfeldern.
+ *
+ * WAS DAS GEKOSTET HAT, gemessen am 06.09.2026 ueber 500 Spiegelpaare
+ * (dasselbe Brettpaar einmal so und einmal getauscht aufgestellt, Erstzieher
+ * mitgetauscht): 498 der 500 Kaempfe liefen AUSEINANDER, und die erste
+ * Abweichung war jedes Mal ein Ausweichschritt in die andere Richtung. Der
+ * Kopf dieser Datei versprach das Gegenteil.
+ *
+ * Der Ausweg ist keine zweite Versatzliste, sondern die Spiegelung selbst:
+ * Seite 1 liegt punktgespiegelt in der Arena (`nachArena`), also fragt sie
+ * ihre Nachbarn auch punktgespiegelt ab. Damit gilt fuer jeden Platz
+ * `arenaNachbarnFuer(gespiegelterPlatz(p), 1) === arenaNachbarn(p).map(gespiegelterPlatz)`
+ * — die Ordnung ist unter der Spiegelung invariant, und der Kampf ist es
+ * mit ihr. Eine Probe in arena.test.ts haelt das fest, eine in
+ * kampf.test.ts prueft den ganzen Ablauf.
+ *
+ * Anschaulich: Jede Seite bricht den Gleichstand in der Ordnung ihres EIGENEN
+ * Bretts. Dass Seite 0 dabei die ungedrehte Liste bekommt, ist reine
+ * Bezugswahl — gespiegelt wird immer nur die andere.
+ */
+export function arenaNachbarnFuer(platz: number, seite: Seite): number[] {
+  if (seite === 0) return arenaNachbarn(platz);
+  return arenaNachbarn(gespiegelterPlatz(platz)).map(gespiegelterPlatz);
 }
 
 /** Abstand zweier Arenaplaetze in Feldern. */
