@@ -89,6 +89,26 @@ const KATALOG = [
 ];
 
 /**
+ * Werte und Erloes je Sternstufe, wie sie mit dem Katalog kommen (sicht.ts).
+ *
+ * Die Zahlen sind die des Moduls: Stufe 2 das 1,8-fache, Stufe 3 das
+ * 3,2-fache — und zwar NUR auf Leben und Angriff. Der Erloes ist der volle
+ * Preis aller steckenden Karten (1, 3, 9 Karten mal Kosten).
+ */
+const STUFENWERTE = {
+  dorfwache: [
+    { stufe: 1, leben: 650, angriff: 30, tempo: 0.65, reichweite: 1, ruestung: 40, erloes: 1 },
+    { stufe: 2, leben: 1170, angriff: 54, tempo: 0.65, reichweite: 1, ruestung: 40, erloes: 3 },
+    { stufe: 3, leben: 2080, angriff: 96, tempo: 0.65, reichweite: 1, ruestung: 40, erloes: 9 },
+  ],
+  astschuetze: [
+    { stufe: 1, leben: 480, angriff: 45, tempo: 0.8, reichweite: 3, ruestung: 15, erloes: 1 },
+    { stufe: 2, leben: 864, angriff: 81, tempo: 0.8, reichweite: 3, ruestung: 15, erloes: 3 },
+    { stufe: 3, leben: 1536, angriff: 144, tempo: 0.8, reichweite: 3, ruestung: 15, erloes: 9 },
+  ],
+};
+
+/**
  * Eine Sicht wie das Modul sie liefert, mit Abweichungen je Test.
  *
  * `eigenes` wird zusammengefuehrt und nicht ersetzt: Ein Test, der nur das
@@ -132,6 +152,7 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     leftSeats: [],
     katalog: KATALOG,
     synergieTabelle: SYNERGIE_TABELLE,
+    stufenwerte: STUFENWERTE,
     gegner: [
       {
         sitz: 1,
@@ -218,6 +239,12 @@ function stelle(
     { typ: 'kaufen', platz: 1 },
     { typ: 'neuwuerfeln' },
     { typ: 'levelAuf' },
+    /* Das Modul schickt je BESETZTEM Platz ein `verkaufen` mit (partie.ts,
+       `erlaubteZuege`). Hier stehen die beiden ersten, weil die Fixture dort
+       eine Einheit hat — die Verkaufen-Knoepfe fragen die Liste, statt selbst
+       zu entscheiden. */
+    { typ: 'verkaufen', ort: { bereich: 'bank', platz: 0 } },
+    { typ: 'verkaufen', ort: { bereich: 'brett', platz: 0 } },
     { typ: 'bereit' },
   ],
   /** Frist der Platzierungsphase, wie die Plattform sie schickt. */
@@ -516,12 +543,101 @@ describe('Leere Flaechen erklaeren sich', () => {
   });
 });
 
-describe('Setzen per Antippen', () => {
-  it('wählt eine Einheit auf der Bank und setzt sie auf ein Feld', () => {
+/**
+ * Antippen und dann im Blatt „Aufstellen" — der Weg, der seit dem 6.9.2026
+ * zur Auswahl fuehrt.
+ *
+ * Als Helfer, weil er in jeder Probe dieses Abschnitts vorkommt: Ein Tipp
+ * schlaegt zuerst das Blatt der Einheit auf (siehe `blattOrt` im Bildschirm),
+ * und erst der Knopf darin waehlt sie fuer den naechsten Tipp aus.
+ */
+function tippeUndWaehle(marke: HTMLElement): void {
+  fireEvent.pointerDown(marke);
+  fireEvent.pointerUp(marke);
+  fireEvent.click(screen.getByRole('button', { name: /^(Aufstellen|Verschieben)$/ }));
+}
+
+describe('Das Blatt einer angetippten Einheit', () => {
+  it('schlaegt beim Tipp auf, mit Werten aus der Sicht statt aus dem Katalog', () => {
+    /*
+     * Der Anlass: Ein Tipp waehlte die Einheit nur aus und sagte nichts ueber
+     * sie — „ein Spieler muss raten, wofuer er drei Muenzen ausgibt".
+     *
+     * Und die Zahlen gelten fuer die STERNSTUFE, auf der die Einheit steht.
+     * Die Dorfwache hier ist Stufe 2: 1170 Leben aus `stufenwerte`, nicht die
+     * 650 des Katalogs. Wer das im Client hochrechnete, haette eine zweite
+     * Wahrheit ueber `STUFEN_FAKTOR`.
+     */
+    stelle(
+      sicht({
+        eigenes: {
+          bank: [{ id: 'dorfwache', stufe: 2 }, ...Array.from({ length: 8 }, () => null)],
+        },
+      }),
+    );
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
     fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+
+    const blatt = screen.getByRole('dialog');
+    expect(blatt).toHaveTextContent('1170');
+    expect(blatt).not.toHaveTextContent('650');
+    // Der Erloes steht am Knopf und kommt ebenfalls aus der Sicht: In einer
+    // Stufe-2-Einheit stecken drei Karten zu je 1 Gold.
+    expect(within(blatt).getByRole('button', { name: /Verkaufen/ })).toHaveTextContent('3');
+  });
+
+  it('verkauft aus dem Blatt heraus — mit dem Ort, den der Server erwartet', () => {
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
+    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    fireEvent.click(screen.getByRole('button', { name: /Verkaufen/ }));
+    expect(gesendet).toHaveBeenCalledWith({
+      typ: 'verkaufen',
+      ort: { bereich: 'bank', platz: 0 },
+    });
+  });
+
+  it('legt eine Einheit vom Brett auf den ersten freien Bankplatz zurueck', () => {
+    stelle(
+      sicht({
+        eigenes: {
+          belegt: 1,
+          brett: [{ id: 'dorfwache', stufe: 1 }, ...Array.from({ length: 9 }, () => null)],
+          bank: Array.from({ length: 9 }, () => null),
+        },
+      }),
+    );
+    zeige();
+    fireEvent.pointerDown(screen.getAllByTitle(/Dorfwache/)[0]!);
+    fireEvent.pointerUp(screen.getAllByTitle(/Dorfwache/)[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Ablegen' }));
+    expect(gesendet).toHaveBeenCalledWith({
+      typ: 'verschieben',
+      von: { bereich: 'brett', platz: 0 },
+      nach: { bereich: 'bank', platz: 0 },
+    });
+  });
+
+  it('bietet einer Einheit auf der Bank kein Ablegen an', () => {
+    // Sie liegt schon dort. Ein Knopf, der nichts taete, waere schlimmer als
+    // keiner.
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
+    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    expect(screen.queryByRole('button', { name: 'Ablegen' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aufstellen' })).toBeInTheDocument();
+  });
+});
+
+describe('Setzen per Antippen', () => {
+  it('wählt eine Einheit auf der Bank und setzt sie auf ein Feld', () => {
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    tippeUndWaehle(within(bank).getByTitle(/Dorfwache/));
     // Erst danach steht das Auswahlband da — sonst hätte der Tipp nichts
     // bewirkt, und genau das merkt man am Handy sofort.
     expect(screen.getByText(/Dorfwache gewählt/)).toBeInTheDocument();
@@ -543,8 +659,7 @@ describe('Setzen per Antippen', () => {
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     expect(screen.getByRole('button', { name: 'Feld 1' })).toBeInTheDocument();
 
-    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
-    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    tippeUndWaehle(within(bank).getByTitle(/Dorfwache/));
     // Der Name nennt das Ziel mit, damit ein Vorlesegeraet es auch hoert.
     expect(screen.getByRole('button', { name: 'Feld 1 · Ziel' })).toBeInTheDocument();
   });
@@ -561,8 +676,7 @@ describe('Setzen per Antippen', () => {
     );
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
-    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
-    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    tippeUndWaehle(within(bank).getByTitle(/Dorfwache/));
     expect(screen.queryByRole('button', { name: /Ziel/ })).not.toBeInTheDocument();
   });
 
@@ -579,9 +693,7 @@ describe('Setzen per Antippen', () => {
       }),
     );
     zeige();
-    const marke = screen.getAllByTitle(/Dorfwache/)[0];
-    fireEvent.pointerDown(marke);
-    fireEvent.pointerUp(marke);
+    tippeUndWaehle(screen.getAllByTitle(/Dorfwache/)[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'Bankplatz 2' }));
     expect(gesendet).toHaveBeenCalledWith({
       typ: 'verschieben',
@@ -599,27 +711,31 @@ describe('Setzen per Antippen', () => {
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     fireEvent.keyDown(within(bank).getByTitle(/Dorfwache/), { key: 'Enter' });
+    // Auch hier steht zuerst das Blatt — und aus ihm heraus geht es weiter.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Aufstellen' }));
     expect(screen.getByText(/Dorfwache gew/)).toBeInTheDocument();
   });
 
-  it('macht aus einem Finger-Tipp keine doppelte Auswahl', () => {
+  it('macht aus einem Finger-Tipp kein doppeltes Blatt', () => {
     // Der Browser schickt hinter jedem Tipp noch einen Klick her. Ohne die
-    // Pruefung auf `detail` wuerde er die eben getroffene Wahl gleich wieder
-    // aufheben — der Tipp saehe aus, als haette er nicht gezaehlt.
+    // Pruefung auf `detail` liefe der Tipp zweimal — und der zweite Lauf
+    // naehme das eben Aufgeschlagene gleich wieder zurueck.
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     const marke = within(bank).getByTitle(/Dorfwache/);
     fireEvent.pointerDown(marke);
     fireEvent.pointerUp(marke);
     fireEvent.click(marke, { detail: 1 });
-    expect(screen.getByText(/Dorfwache gew/)).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('verkauft die gewaehlte Einheit', () => {
+  it('verkauft die gewaehlte Einheit auch ueber das Auswahlband', () => {
+    // Der zweite Weg zum Verkaufen: Wer die Einheit schon gewaehlt hat, soll
+    // nicht erst das Blatt wieder aufschlagen muessen.
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
-    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
-    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    tippeUndWaehle(within(bank).getByTitle(/Dorfwache/));
     fireEvent.click(screen.getByRole('button', { name: 'Verkaufen' }));
     expect(gesendet).toHaveBeenCalledWith({
       typ: 'verkaufen',
@@ -633,8 +749,7 @@ describe('Setzen per Antippen', () => {
     stelle(sicht({ eigenes: { feldplaetze: 1, belegt: 1, brett: [{ id: 'astschuetze', stufe: 1 }, ...Array.from({ length: 9 }, () => null)] } }));
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
-    fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
-    fireEvent.pointerUp(within(bank).getByTitle(/Dorfwache/));
+    tippeUndWaehle(within(bank).getByTitle(/Dorfwache/));
     fireEvent.click(screen.getByRole('button', { name: 'Feld 2' }));
     expect(gesendet).not.toHaveBeenCalled();
   });
@@ -723,7 +838,8 @@ describe('Setzen per Ziehen', () => {
     fireEvent.pointerMove(marke, { clientX: 13, clientY: 12 });
     fireEvent.pointerUp(marke, { clientX: 13, clientY: 12 });
     expect(gesendet).not.toHaveBeenCalled();
-    expect(screen.getByText(/Dorfwache gewählt/)).toBeInTheDocument();
+    // Ein Tipp und kein Zug: Es steht das Blatt da, keine verschobene Einheit.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
 

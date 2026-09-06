@@ -39,6 +39,27 @@ export interface Einheit {
  * neuen Feld auseinander.
  */
 
+/**
+ * Was eine Einheit auf einer Sternstufe mitbringt — und was sie beim
+ * Verkaufen einbringt (sicht.ts im Modul).
+ *
+ * Fertig gerechnet, und das ist der ganze Zweck: Der Katalog nennt nur die
+ * Werte der ersten Stufe, eine verschmolzene Einheit hat aber mehr Leben und
+ * mehr Angriff — Tempo, Reichweite und Ruestung dagegen nicht. Welcher Wert
+ * mit der Stufe waechst und welcher nicht, ist eine Regel des Moduls; hier
+ * wird sie gelesen und nicht nachgerechnet.
+ */
+export interface Stufenwerte {
+  stufe: number;
+  leben: number;
+  angriff: number;
+  tempo: number;
+  reichweite: number;
+  ruestung: number;
+  /** Gold, das ein Verkauf auf dieser Stufe einbringt. */
+  erloes: number;
+}
+
 export interface Serie {
   art: 'sieg' | 'niederlage' | null;
   laenge: number;
@@ -143,4 +164,11 @@ export interface TafelrundeSicht {
    * festhaelt, hat ab dem zweiten Rundruf keine Schwellen mehr.
    */
   synergieTabelle?: Synergie[];
+  /**
+   * Werte und Verkaufserloes je Sternstufe, je Einheit — wie der Katalog nur
+   * in der ersten Sicht und aus demselben Grund: Sie aendern sich nie. Wer
+   * sie nicht festhaelt, hat ab dem zweiten Rundruf kein Blatt mehr, das die
+   * Werte einer angetippten Einheit nennen koennte.
+   */
+  stufenwerte?: Record<string, Stufenwerte[]>;
 }

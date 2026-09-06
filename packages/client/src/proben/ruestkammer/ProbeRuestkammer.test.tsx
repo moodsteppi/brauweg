@@ -21,8 +21,9 @@ import { ProbeRuestkammer } from './ProbeRuestkammer';
  *      `Bankreihe` und `Ladenkarte` laufen. Genau das war der Anlass der
  *      Seite: Die Wegwerf-Probe vom 6.9.2026 hatte diese Klassen von Hand
  *      nachgestellt.
- *   3. DIE SEITE BEDIENT SICH. Antippen waehlt, das zweite Antippen
- *      verschiebt, „am Zug" aus sperrt alles, „zuruecksetzen" stellt her.
+ *   3. DIE SEITE BEDIENT SICH. Antippen schlaegt das Blatt der Einheit auf,
+ *      „Aufstellen" darin waehlt sie, der Tipp aufs Ziel verschiebt sie,
+ *      „am Zug" aus sperrt alles, „zuruecksetzen" stellt her.
  *
  * Was Brett, Bank und Karte selbst tun, steht in den Proben des Bildschirms
  * (`screens/Tafelrunde.test.tsx`) und wird hier nicht noch einmal geprueft.
@@ -166,7 +167,24 @@ describe('ProbeRuestkammer', () => {
     }
   });
 
-  it('waehlt beim Antippen aus und verschiebt beim zweiten Antippen', () => {
+  it('schlaegt beim Antippen das Blatt der Einheit auf', () => {
+    // Der Anlass der ganzen Aenderung: Ein Tipp waehlte bis zum 6.9.2026 nur
+    // aus und sagte nichts ueber die Einheit.
+    const { container } = render(<ProbeRuestkammer />);
+    const erste = belegt(E.bank)[0]!;
+    const platz = E.bank.findIndex((k) => k === erste);
+    fireEvent.click(
+      container.querySelector<HTMLElement>(`.tr-bankplatz:nth-child(${platz + 1}) .tr-einheit`)!,
+      { detail: 0 },
+    );
+
+    const blatt = screen.getByRole('dialog');
+    expect(blatt).toHaveTextContent(KATALOG.get(erste.id)!.name);
+    // Und die Auswahl steht NICHT schon: Erst „Aufstellen" schaltet sie ein.
+    expect(container.querySelectorAll('[data-gewaehlt]')).toHaveLength(0);
+  });
+
+  it('waehlt ueber das Blatt aus und verschiebt beim Tipp auf das Ziel', () => {
     const { container } = render(<ProbeRuestkammer />);
     const erste = belegt(E.bank)[0]!;
     const platz = E.bank.findIndex((k) => k === erste);
@@ -175,6 +193,8 @@ describe('ProbeRuestkammer', () => {
     )!;
 
     fireEvent.click(marke, { detail: 0 });
+    fireEvent.click(screen.getByRole('button', { name: 'Aufstellen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(
       container.querySelector(`.tr-bankplatz:nth-child(${platz + 1})`),
     ).toHaveAttribute('data-gewaehlt');
@@ -203,6 +223,7 @@ describe('ProbeRuestkammer', () => {
       container.querySelector<HTMLElement>(`.tr-bankplatz:nth-child(${platz + 1}) .tr-einheit`)!,
       { detail: 0 },
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Aufstellen' }));
     fireEvent.click(
       container.querySelector<HTMLElement>(
         `.tr-bankplatz:nth-child(${frei + 1}) .tr-bankplatz-ziel`,

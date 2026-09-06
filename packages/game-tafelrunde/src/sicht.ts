@@ -23,8 +23,14 @@
  */
 
 import { type Seite, ARENA_REIHEN } from './arena.js';
-import type { Einheit, EinheitId } from './katalog.js';
-import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
+import type { Einheit, EinheitId, Grundwerte, Stufe } from './katalog.js';
+import {
+  KATALOG,
+  MAX_STUFE,
+  VERSCHMELZ_ZAHL,
+  gesamtkosten,
+  werteFuer,
+} from './katalog.js';
 import { type Synergie, type Synergiestand, SYNERGIEN, synergienVon } from './synergien.js';
 import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN } from './brett.js';
 import type {
@@ -185,6 +191,58 @@ export interface Platzstand {
   readonly runden: number;
 }
 
+/**
+ * Was eine Einheit auf einer Sternstufe WIRKLICH mitbringt — und was sie beim
+ * Verkaufen einbringt.
+ *
+ * Der Katalog nennt nur die Werte der ersten Stufe. Eine verschmolzene
+ * Dorfwache hat aber das 3,2-fache Leben (`STUFEN_FAKTOR`), und zwar nur im
+ * Leben und im Angriff: Tempo, Reichweite und Ruestung bleiben, wie sie sind.
+ * Genau diese Unterscheidung ist eine REGEL, und deshalb steht das Ergebnis
+ * hier fertig gerechnet, statt dass der Bildschirm einen Faktor bekommt und
+ * selbst multipliziert (CLAUDE.md: was das Modul weiss, schreibt der Client
+ * nicht ab). Wer den Faktor aendert oder ihn eines Tages auch auf die
+ * Ruestung legt, aendert damit die Anzeige mit.
+ *
+ * `erloes` aus demselben Grund: Dass eine Stufe-2-Einheit das Dreifache
+ * zurueckgibt, ist keine Multiplikation, sondern die Entscheidung, beim
+ * Verkaufen den vollen Preis aller steckenden Karten zu erstatten
+ * (`gesamtkosten` in katalog.ts). Ein Client, der `kosten * 3` rechnet, zeigt
+ * am Tag der ersten Verkaufsgebuehr eine Zahl, die es nicht gibt.
+ */
+export interface Stufenwerte extends Grundwerte {
+  readonly stufe: Stufe;
+  /** Gold, das ein Verkauf auf dieser Stufe einbringt. */
+  readonly erloes: number;
+}
+
+/**
+ * Die Tabelle dazu: je Einheit ihre Stufen, aufsteigend ab Stufe 1.
+ *
+ * EINMAL gerechnet und nicht je Sicht: Sie haengt an nichts als am Katalog,
+ * ist also ueber die ganze Laufzeit dieselbe. Sie geht mit dem Katalog
+ * zusammen heraus (nur bei `seit === 0`) und faellt damit unter dessen
+ * Zusage — sonst laegen 22 Einheiten mal drei Stufen in jedem Rundruf.
+ *
+ * OHNE SYNERGIE-BONUS, mit Absicht: Der Bonus haengt am Brett und wechselt
+ * mit jeder Einheit, die dazukommt. Was er tut, sagt das Blatt der Marke
+ * (`wirkung` in synergien.ts); diese Tabelle sagt, was die Einheit selbst
+ * mitbringt.
+ */
+const STUFENWERTE: Readonly<Record<EinheitId, readonly Stufenwerte[]>> = (() => {
+  // Dieselbe Bauart wie `vollerVorrat` in partie.ts: Ein leerer Datensatz mit
+  // der Kennung als Schluessel laesst sich nicht anders anlegen, ohne alle 22
+  // Namen ein zweites Mal auszuschreiben.
+  const tabelle = {} as Record<EinheitId, readonly Stufenwerte[]>;
+  for (const e of KATALOG) {
+    tabelle[e.id] = Array.from({ length: MAX_STUFE }, (_, i) => {
+      const stufe = (i + 1) as Stufe;
+      return { stufe, ...werteFuer(e.id, stufe), erloes: gesamtkosten(e.id, stufe) };
+    });
+  }
+  return tabelle;
+})();
+
 export interface TafelrundeSicht {
   /**
    * Der eigene Sitz, oder null fuer Zuschauer. Steht in der Sicht und nicht
@@ -291,6 +349,11 @@ export interface TafelrundeSicht {
    * Angriff" anzeigen koennen, ohne die Zahlen selbst zu kennen.
    */
   readonly synergieTabelle?: readonly Synergie[];
+  /**
+   * Werte und Verkaufserloes je Sternstufe — wie der Katalog nur beim ersten
+   * Ausliefern, aus demselben Grund (siehe `Stufenwerte`).
+   */
+  readonly stufenwerte?: Readonly<Record<EinheitId, readonly Stufenwerte[]>>;
 }
 
 /**
@@ -350,7 +413,9 @@ function grundsicht(
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
     kaempfe: ich === null ? partie.kaempfe : [kampfVon(partie, ich)].filter((k) => k !== null),
     paarungen: partie.kaempfe.map(ergebnis),
-    ...(seit === 0 ? { katalog: KATALOG, synergieTabelle: SYNERGIEN } : {}),
+    ...(seit === 0
+      ? { katalog: KATALOG, synergieTabelle: SYNERGIEN, stufenwerte: STUFENWERTE }
+      : {}),
   };
 }
 

@@ -72,13 +72,18 @@ export function Einheitenmarke({
   onZeigerEnde?: (e: React.PointerEvent) => void;
   onZeigerAbbruch?: () => void;
   /**
-   * Auswaehlen ohne Zeiger — Tastatur oder Vorlesegeraet.
+   * Ein Tipp auf diese Einheit ohne Zeiger — Tastatur oder Vorlesegeraet.
    *
    * Der Antipp-Weg lief bisher allein ueber `pointerup`, und genau das
    * erreicht ein Vorlesegeraet nicht: VoiceOver und TalkBack loesen beim
    * Doppeltippen einen KLICK aus, keine Zeigerfolge. Ohne diesen Weg war die
    * Zusage aus dem Kopf von screens/Tafelrunde.tsx — Antippen sei der Weg,
    * der mit einem Vorlesegeraet funktioniert — schlicht nicht eingeloest.
+   *
+   * WAS DER TIPP AUSLOEST, entscheidet der Aufrufer und nicht diese Datei:
+   * Am Tisch schlaegt er seit dem 6.9.2026 das Blatt der Einheit auf, wenn
+   * noch nichts gewaehlt ist, und setzt sonst die gewaehlte Einheit hierher
+   * ab (`tippfolge` in zuege.ts). Die Wabe zeichnet nur.
    */
   onWaehlen?: () => void;
 }): React.JSX.Element {

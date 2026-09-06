@@ -144,6 +144,7 @@ export {
   type FremdeSicht,
   type Paarungsergebnis,
   type Platzstand,
+  type Stufenwerte,
   type TafelrundeSicht,
   SICHT_MARKE,
   eigenesLebt,

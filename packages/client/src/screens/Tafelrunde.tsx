@@ -5,6 +5,7 @@ import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
 import { Bankreihe, Einheitenmarke, Hexbrett } from '../minispiele/tafelrunde/Brett';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
+import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { type Kaufhindernis, Ladenkarte, kaufhindernis } from '../minispiele/tafelrunde/Ladenkarte';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
@@ -15,7 +16,7 @@ import {
   gegnerDieseRunde,
   leistenplaetze,
 } from '../minispiele/tafelrunde/platzierung';
-import type { Einheit, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
+import type { Einheit, Stufenwerte, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
 import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
 import { GoldZeichen, KOSTEN_FARBE, LebenZeichen, RollenZeichen } from '../minispiele/tafelrunde/Zeichen';
 import {
@@ -259,6 +260,18 @@ export function Tafelrunde({
     if (!sicht?.synergieTabelle) return;
     setSynergieTabelle(sicht.synergieTabelle);
   }, [sicht?.synergieTabelle]);
+
+  /**
+   * Und die Werte je Sternstufe — dritter Fall derselben Sache: Sie reisen
+   * mit dem Katalog in der ersten Sicht und danach nie wieder. Ohne sie
+   * bliebe das Blatt einer angetippten Einheit ohne Zahlen; nachgerechnet
+   * wird nichts (siehe Kopf von Einheitenblatt.tsx).
+   */
+  const [stufenwerte, setStufenwerte] = useState<Record<string, Stufenwerte[]>>({});
+  useEffect(() => {
+    if (!sicht?.stufenwerte) return;
+    setStufenwerte(sicht.stufenwerte);
+  }, [sicht?.stufenwerte]);
 
   // -------------------------------------------------------------------------
   // Match-Suche
@@ -937,6 +950,7 @@ export function Tafelrunde({
         sicht={sicht}
         katalog={katalog}
         synergieTabelle={synergieTabelle}
+        stufenwerte={stufenwerte}
         /* `legalActions` ist im Protokoll als Kartenspiel-Aktion typisiert
            ({type, seat}); dieses Modul schickt seine eigene Form. Der Server
            reicht die Liste unveraendert durch (runtime/party.ts), deshalb ist
@@ -1154,6 +1168,7 @@ function Ruestkammer({
   sicht,
   katalog,
   synergieTabelle,
+  stufenwerte,
   legaleZuege,
   revision,
   frist,
@@ -1166,6 +1181,7 @@ function Ruestkammer({
   katalog: Record<string, Einheit>;
   /** Alle Stufen aller Marken — einmal beim Beitritt geholt und festgehalten. */
   synergieTabelle: Synergie[];
+  stufenwerte: Record<string, Stufenwerte[]>;
   legaleZuege: Aktion[];
   revision: number;
   /** Frist der Schaupause (`interludeDeadline`), waehrend des Kampfes gesetzt. */
@@ -1210,6 +1226,23 @@ function Ruestkammer({
   const [gewaehlt, setGewaehlt] = useState<Ort | null>(null);
 
   /**
+   * Welche Einheit gerade ihr Blatt aufgeschlagen hat — der Ort, nicht die
+   * Einheit: Was dort steht, kann sich unter dem offenen Blatt aendern (ein
+   * Kauf verschmilzt still), und ein festgehaltener Kaempfer zeigte dann
+   * Werte einer Einheit, die es nicht mehr gibt.
+   *
+   * SEIT DEM 6.9.2026 IST DAS DIE ANTWORT AUF EINEN TIPP. Vorher waehlte ein
+   * Tipp die Einheit nur aus und sagte nichts ueber sie — was ein Recke kann,
+   * stand nirgends (Robin: „ein Spieler muss raten, wofuer er drei Muenzen
+   * ausgibt"). Der Auswahl-Weg geht darueber weiter: Im Blatt steht ein Knopf,
+   * der es schliesst und die Einheit gewaehlt LAESST, und danach ist alles wie
+   * bisher — Ziele leuchten, der naechste Tipp setzt ab. Ohne diesen Weg waere
+   * Antippen—Ziel-antippen zu Ende, und das ist der einzige Bedienweg, der mit
+   * einem Vorlesegeraet funktioniert (siehe `Einheitenmarke` in Brett.tsx).
+   */
+  const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
+
+  /**
    * Eine abgesetzte Aktion sperrt die Bedienung, bis der Server geantwortet
    * hat (also bis die Revision steigt). Ohne diese Sperre setzt ein zweiter
    * Tipp im selben Moment einen zweiten Kauf ab, den der Server abweist — und
@@ -1239,6 +1272,10 @@ function Ruestkammer({
       if (wartet) return;
       setGesendet(revision);
       setGewaehlt(null);
+      // Und das Blatt zu: Es beschreibt eine Einheit an einem Ort, und genau
+      // der aendert sich gleich. Ein stehenbleibendes Blatt zeigte nach dem
+      // Verkaufen die Werte von jemandem, der nicht mehr da ist.
+      setBlattOrt(null);
       onAktion(aktion);
     },
     [wartet, revision, onAktion],
@@ -1354,7 +1391,15 @@ function Ruestkammer({
     (ort: Ort): void => {
       if (!darfHandeln || !eigenes) return;
       const folge = tippfolge(eigenes, gewaehlt, ort);
-      if (folge.art === 'waehlen') setGewaehlt(folge.ort);
+      /*
+       * `waehlen` heisst: Der Tipp gilt der Einheit selbst und keinem Ziel —
+       * es ist ja noch nichts ausgewaehlt. Seit dem 6.9.2026 antwortet der
+       * Bildschirm darauf mit ihrem Blatt statt mit einer stummen Auswahl
+       * (siehe `blattOrt` oben). Die Auswahl setzt danach das Blatt selbst,
+       * ueber seinen Verschieben-Knopf; die drei anderen Faelle sind
+       * unveraendert, damit der Weg zum Ziel derselbe bleibt.
+       */
+      if (folge.art === 'waehlen') setBlattOrt(folge.ort);
       else if (folge.art === 'abwaehlen') setGewaehlt(null);
       else if (folge.art === 'schieben') schiebe(folge.von, folge.nach);
     },
@@ -1453,6 +1498,39 @@ function Ruestkammer({
   }, [legaleZuege]);
   const darfWuerfeln = legaleZuege.some((z) => z.typ === 'neuwuerfeln');
   const darfLevel = legaleZuege.some((z) => z.typ === 'levelAuf');
+
+  /**
+   * Welche Plaetze der Server gerade zum Verkauf freigibt, als Schluessel.
+   *
+   * Auch das kommt aus `legalActions` und nicht aus einer Bedingung hier:
+   * Verkaufen geht heute immer, wenn jemand handeln darf — aber „heute immer"
+   * ist keine Zusage, und ein Knopf, den der Server abweist, ist genau der
+   * Fehler, vor dem der Kopf dieser Datei warnt.
+   */
+  const verkaufbar = useMemo(() => {
+    const raus = new Set<string>();
+    for (const zug of legaleZuege) {
+      if (zug.typ === 'verkaufen') raus.add(ortSchluessel(zug.ort));
+    }
+    return raus;
+  }, [legaleZuege]);
+
+  /**
+   * Der erste freie Bankplatz — das Ziel des Ablegen-Knopfes im Blatt.
+   *
+   * Dieselbe Wahl, die auch das Modul beim Kauf trifft (`bank.indexOf(null)`
+   * in partie.ts): der erste freie. Ist keiner frei, gibt es den Knopf nicht,
+   * statt dass Ablegen still zu einem Tausch mit einem Nachbarn wird — das
+   * waere etwas anderes, als auf dem Knopf steht. `bankPlaetze` kommt aus der
+   * Sicht, weil die Zahl im Regelsatz steht.
+   */
+  const freierBankplatz = useMemo<number | null>(() => {
+    if (!eigenes) return null;
+    for (let platz = 0; platz < sicht.bankPlaetze; platz += 1) {
+      if (!(eigenes.bank[platz] ?? null)) return platz;
+    }
+    return null;
+  }, [eigenes, sicht.bankPlaetze]);
 
   const bestand = useMemo<Map<string, number>>(
     () => (eigenes ? bestandVon(eigenes) : new Map()),
@@ -1668,6 +1746,26 @@ function Ruestkammer({
     : null;
   const gewaehlteEinheit = gewaehlterKaempfer ? katalog[gewaehlterKaempfer.id] : undefined;
 
+  /**
+   * Die Einheit, deren Blatt offen ist — frisch aus der Sicht geholt und
+   * nicht beim Antippen festgehalten: Unter dem offenen Blatt kann ein Zug
+   * des Servers den Platz raeumen (eine Runde endet, ein Kauf verschmilzt),
+   * und dann ist `null` die richtige Antwort und nicht ein altes Abbild.
+   */
+  const blattKaempfer =
+    blattOrt && darfHandeln
+      ? blattOrt.bereich === 'bank'
+        ? (eigenes.bank[blattOrt.platz] ?? null)
+        : (eigenes.brett[blattOrt.platz] ?? null)
+      : null;
+  const blattEinheit = blattKaempfer ? katalog[blattKaempfer.id] : undefined;
+  /* Die Werte GENAU dieser Sternstufe — die Tabelle zaehlt ab 1, das Feld ab
+     0. Fehlt sie (Tisch aus der Zeit davor), bleibt der Wertekasten weg. */
+  const blattWerte =
+    blattKaempfer && blattEinheit
+      ? stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
+      : undefined;
+
   const gezogeneEinheit =
     zug?.zieht === true
       ? zug.von.bereich === 'bank'
@@ -1873,17 +1971,66 @@ function Ruestkammer({
         />
       )}
 
+      {/* ---- Das Blatt einer angetippten Einheit ------------------------ */}
+      {/*
+        Es liegt als Ueberblender ueber allem (Einheitenblatt.module.css) und
+        steht deshalb im Baum, wo es will — hier, weil es zu Brett und Bank
+        darueber gehoert. Ein Tipp daneben, die Escape-Taste und der Knopf
+        oben rechts schliessen es; das steht im Bauteil, damit es sich wie das
+        Markenblatt anfuehlt und nicht wie ein zweites Fenster.
+      */}
+      {blattOrt && blattKaempfer && blattEinheit && (
+        <Einheitenblatt
+          einheit={blattEinheit}
+          kaempfer={blattKaempfer}
+          werte={blattWerte}
+          tabelle={synergieTabelle}
+          maxStufe={sicht.maxStufe}
+          erloes={blattWerte?.erloes}
+          /* Verkaufen nur, wenn der Server es anbietet — nicht, wenn der
+             Bildschirm meint, es muesste gehen. */
+          onVerkaufen={
+            verkaufbar.has(ortSchluessel(blattOrt))
+              ? () => schicke({ typ: 'verkaufen', ort: blattOrt })
+              : undefined
+          }
+          /* Ablegen gibt es nur vom Brett und nur auf einen freien Platz.
+             Abgesetzt wird es ueber `schiebe`, also denselben Weg wie ein
+             Zug mit dem Finger — samt dessen Pruefung mit den zwei Zahlen der
+             Sicht (`zielbar`). Hier wird keine Regel nachgebaut. */
+          onAblegen={
+            blattOrt.bereich === 'brett' && freierBankplatz !== null
+              ? () => schiebe(blattOrt, { bereich: 'bank', platz: freierBankplatz })
+              : undefined
+          }
+          /* Und der Weg zurueck in den Antipp-Bedienweg: Blatt zu, Einheit
+             bleibt gewaehlt, die Ziele leuchten. */
+          onVerschieben={() => {
+            setGewaehlt(blattOrt);
+            setBlattOrt(null);
+          }}
+          verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+          onSchliessen={() => setBlattOrt(null)}
+        />
+      )}
+
       {/* ---- Was mit der Auswahl geschehen kann ------------------------- */}
       {gewaehlt && darfHandeln && (
         <div className="tr-auswahlband">
           <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt — Ziel antippen</span>
-          <button
-            type="button"
-            className="tr-verkaufen"
-            onClick={() => schicke({ typ: 'verkaufen', ort: gewaehlt })}
-          >
-            Verkaufen
-          </button>
+          {/* Derselbe Riegel wie im Blatt: Verkauft wird, was `legalActions`
+              anbietet. Zwei Verkaufen-Knoepfe auf einem Bildschirm, von denen
+              der eine fragt und der andere nicht, waeren zwei Antworten auf
+              dieselbe Frage. */}
+          {verkaufbar.has(ortSchluessel(gewaehlt)) && (
+            <button
+              type="button"
+              className="tr-verkaufen"
+              onClick={() => schicke({ typ: 'verkaufen', ort: gewaehlt })}
+            >
+              Verkaufen
+            </button>
+          )}
           <button type="button" className="tr-abwaehlen" onClick={() => setGewaehlt(null)}>
             Abbrechen
           </button>

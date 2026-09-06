@@ -51,9 +51,9 @@ type _fremdePasst = PasstAuf<FremdeSicht, EchteFremde>;
 /**
  * Und kein Feld darf nur noch im Client stehen. Nötig neben den Zuweisungen
  * oben, weil ein optionales Client-Feld sonst lautlos durchginge — und davon
- * gibt es hier fünf (`kaempfe`, `paarungen`, `katalog`, `synergieTabelle`,
- * `synergien`), alle aus der Rücksicht auf Tische, die vor der jeweiligen
- * Erweiterung aufgemacht wurden.
+ * gibt es hier sechs (`kaempfe`, `paarungen`, `katalog`, `synergieTabelle`,
+ * `stufenwerte`, `synergien`), alle aus der Rücksicht auf Tische, die vor der
+ * jeweiligen Erweiterung aufgemacht wurden.
  */
 type _keinFeldNurImClient = Leer<Exclude<keyof TafelrundeSicht, keyof EchteSicht>>;
 type _keinEigenesNurImClient = Leer<Exclude<keyof EigeneSicht, keyof EchteEigene>>;
@@ -93,6 +93,7 @@ const FELDER = [
   'paarungen',
   'katalog',
   'synergieTabelle',
+  'stufenwerte',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof TafelrundeSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof TafelrundeSicht>>;
@@ -161,11 +162,13 @@ describe('Vertrag Tafelrunde', () => {
     expect(fehlendeFelder(FREMDE_FELDER, gesehen.unter.gegner ?? new Set())).toEqual([]);
   });
 
-  it('schickt Katalog und Synergie-Tabelle in der ersten Sicht mit', () => {
-    // Beide kommen nur beim ersten Ausliefern (`seit === 0`, siehe sicht.ts im
-    // Modul). Wer sie nicht festhält, hat ab dem zweiten Rundruf weder
-    // Einheitennamen noch Schwellen — und der Bildschirm zeigt leere Karten.
+  it('schickt Katalog, Synergie-Tabelle und Stufenwerte in der ersten Sicht mit', () => {
+    // Alle drei kommen nur beim ersten Ausliefern (`seit === 0`, siehe sicht.ts
+    // im Modul). Wer sie nicht festhält, hat ab dem zweiten Rundruf weder
+    // Einheitennamen noch Schwellen noch Werte — und der Bildschirm zeigt
+    // leere Karten und ein leeres Blatt.
     expect(gesehen.oben.has('katalog')).toBe(true);
     expect(gesehen.oben.has('synergieTabelle')).toBe(true);
+    expect(gesehen.oben.has('stufenwerte')).toBe(true);
   });
 });
