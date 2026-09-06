@@ -21,6 +21,9 @@ import { describe, expect, it } from 'vitest';
  * die Zeile, und alles hier waere still immer gruen.
  */
 const APP = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8').split('\r\n').join('\n');
+const GAME_SELECT = readFileSync(resolve(process.cwd(), 'src/screens/GameSelect.tsx'), 'utf8')
+  .split('\r\n')
+  .join('\n');
 
 /** Schirme, die erst auf Antippen ueber die Leitung gehen duerfen. */
 const NACHGELADEN = [
@@ -100,5 +103,34 @@ describe('Paketaufteilung von App.tsx', () => {
    */
   it('zieht three nicht ins Hauptpaket', () => {
     expect(APP).not.toMatch(new RegExp("^import .* from '(three|@react-three/[^']*)';$", 'm'));
+  });
+});
+
+/**
+ * Derselbe Waechter eine Ebene tiefer.
+ *
+ * Die Avatar-Werkstatt haengt an einem Knopf im Profil-Tab; die allermeisten
+ * Besucher oeffnen sie nie. `main.tsx` holt sie deshalb fuer `?dev=werkstatt`
+ * per `lazy`. Stand sie in GameSelect zugleich als gewoehnlicher Import, gewann
+ * der statische: Das Stueck blieb im Hauptpaket, und Vite meldete bei jedem Bau
+ * "dynamically imported by main.tsx but also statically imported by
+ * GameSelect.tsx" — eine Hinweiszeile, die nach einem Fehler aussieht und
+ * keiner ist. Rutscht der Import zurueck, faellt es hier auf und nicht erst im
+ * ueberlesenen Bauprotokoll.
+ */
+describe('Paketaufteilung von GameSelect.tsx', () => {
+  it('laedt die Avatar-Werkstatt nach, statt sie statisch zu importieren', () => {
+    expect(GAME_SELECT).not.toMatch(/^import .* from '\.\/Avatarwerkstatt';$/m);
+    expect(GAME_SELECT).toContain("import('./Avatarwerkstatt')");
+  });
+
+  /*
+   * Nachgeladen heisst: Zwischen Tipp und Blatt liegt eine Wartezeit. Ohne
+   * eigenen Rueckfall faengt die naechste Suspense-Grenze darueber den Fall
+   * ab — im schlimmsten Fall die des ganzen Schirms, und dann verschwindet
+   * fuer den Moment des Nachladens die halbe Startseite.
+   */
+  it('haelt einen eigenen Rueckfall bereit, solange die Werkstatt laedt', () => {
+    expect(GAME_SELECT).toMatch(/<Suspense(?:(?!<\/Suspense>)[\s\S])*?<Avatarwerkstatt/);
   });
 });
