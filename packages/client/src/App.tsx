@@ -39,6 +39,9 @@ const FeldherrTisch = lazy(() =>
   import('./screens/FeldherrTisch').then((m) => ({ default: m.FeldherrTisch })),
 );
 const Filler = lazy(() => import('./screens/Filler').then((m) => ({ default: m.Filler })));
+/* Golf zieht seinen kompletten Spielkern nach (Physik, Bots, 40 Bahnen) —
+   nichts davon braucht jemand, der Doppelkopf spielt. */
+const Golf = lazy(() => import('./screens/Golf').then((m) => ({ default: m.Golf })));
 const Mememory = lazy(() => import('./screens/Mememory').then((m) => ({ default: m.Mememory })));
 const Profile = lazy(() => import('./screens/Profile').then((m) => ({ default: m.Profile })));
 const SkatTable = lazy(() =>
@@ -75,6 +78,13 @@ type Screen =
    * einem Bildschirm, keine Kartenlobby.
    */
   | { name: 'eiland'; tisch?: string | null }
+  /**
+   * Golf ebenso: eigenes Hauptmenue mit "Online spielen" und "Gegen Bots",
+   * die Gruppe und die Bahn auf einem Bildschirm. Es ist kein Kartenspiel
+   * und braucht keine Kartenlobby — die Lochzahl waehlt der Erste in der
+   * Gruppe, nicht ein Regelsatz-Editor.
+   */
+  | { name: 'golf'; tisch?: string | null }
   /**
    * Tafelrunde ebenso: eigenes Hauptmenue, eigene Match-Suche, Ruestkammer
    * auf einem Bildschirm. Es ist kein Kartenspiel und braucht keine
@@ -355,6 +365,34 @@ export function App(): React.JSX.Element {
     }
 
     /**
+     * Golf: Minigolf von oben, bis zu acht Baelle gleichzeitig auf einer
+     * Bahn. Wie bei Filler und Eiland fuehren alle drei Wege —
+     * Spielauswahl, Lobby, Weiterspielen — auf denselben Bildschirm.
+     */
+    if (screen.name === 'golf') {
+      return (
+        <Golf
+          startTisch={screen.tisch ?? null}
+          onBack={() => {
+            setScreen({ name: 'games' });
+            void reload();
+          }}
+        />
+      );
+    }
+    if ((screen.name === 'table' || screen.name === 'lobby') && screen.gameId === 'golf') {
+      return (
+        <Golf
+          startTisch={screen.name === 'table' ? screen.tableId : null}
+          onBack={() => {
+            setScreen({ name: 'games' });
+            void reload();
+          }}
+        />
+      );
+    }
+
+    /**
      * Tafelrunde: Auto-Battler mit Verschmelzen. Wie bei Filler und Eiland
      * fuehren alle drei Wege — Spielauswahl, Lobby, Weiterspielen — auf
      * denselben Bildschirm.
@@ -457,6 +495,7 @@ export function App(): React.JSX.Element {
           if (gameId === 'easypoker') return setScreen({ name: 'easypoker' });
           if (gameId === 'filler') return setScreen({ name: 'filler' });
           if (gameId === 'eiland') return setScreen({ name: 'eiland' });
+          if (gameId === 'golf') return setScreen({ name: 'golf' });
           if (gameId === 'tafelrunde') return setScreen({ name: 'tafelrunde' });
           return setScreen({ name: 'lobby', gameId });
         }}

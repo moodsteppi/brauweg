@@ -691,24 +691,41 @@ export async function schrumpfeAufBesetzte(
   db: Db,
   tableId: string,
   byAccountId: string,
+  /**
+   * Gewuenschte Rundenzahl, falls der Startende sie erst in der Lobby waehlt
+   * (Golf: Loecher per Regler). Fehlt sie, bleibt die Rundenzahl des Tisches.
+   */
+  rundenWunsch?: number,
 ): Promise<void> {
   const { table, seats } = await tableWithSeats(db, tableId);
   if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
   if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
 
-  const bleiben = seats.filter((seat) => seat.accountId || seat.isBot);
-  if (bleiben.length < 2) throw conflict('tableNotFull');
-  if (bleiben.length === seats.length) return; // nichts zu schrumpfen — Start uebernimmt ensureStarted
-
   const module = requireModule(table.gameId);
+  const bleiben = seats.filter((seat) => seat.accountId || seat.isBot);
+  /**
+   * Zwei ist die Untergrenze der Kartenspiele; ein Modul, das laut
+   * `seatCounts` auch allein spielbar ist (Golf), darf mit einem einzigen
+   * Besetzten losgehen — ein Tisch laesst sich nur mit >= 2 Plaetzen anlegen,
+   * also fuehrt fuer den Alleinspieler nur dieser Weg zur Partie.
+   */
+  const mindestens = module.meta.seatCounts.includes(1) ? 1 : 2;
+  if (bleiben.length < mindestens) throw conflict('tableNotFull');
+
   const config = await tableRules(db, tableId);
   const probleme = module
-    .validateConfig(config, bleiben.length, table.maxRounds)
-    .filter((problem) => problem.severity === 'error' && problem.path === 'seats');
+    .validateConfig(config, bleiben.length, rundenWunsch ?? table.maxRounds)
+    .filter(
+      (problem) =>
+        problem.severity === 'error' &&
+        (problem.path === 'seats' || (rundenWunsch !== undefined && problem.path === 'rounds')),
+    );
   if (probleme.length > 0) throw conflict('seatCountUnsupported');
 
   const rotation = Math.max(1, module.meta.rotationSize(bleiben.length));
-  const runden = Math.ceil(table.maxRounds / rotation) * rotation;
+  const runden = Math.ceil((rundenWunsch ?? table.maxRounds) / rotation) * rotation;
+  // nichts zu schrumpfen und keine neue Rundenzahl — Start uebernimmt ensureStarted
+  if (bleiben.length === seats.length && runden === table.maxRounds) return;
 
   await db.transaction(async (tx) => {
     // Erst die Luecken loeschen, dann aufruecken: So ist jeder Zielindex frei,

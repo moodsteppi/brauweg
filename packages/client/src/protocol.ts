@@ -74,6 +74,13 @@ export const EILAND_MODULE_VERSION = 2;
  */
 export const TAFELRUNDE_MODULE_VERSION = 1;
 
+/**
+ * 1 seit dem 6. September 2026 — die erste Fassung. Golf ist wie Feldherr
+ * Echtzeit im Gleichschritt (siehe SPEZIFIKATION-GOLF.md): Ueber die Leitung
+ * gehen nur Schlaege, die eigentliche Ballphysik rechnet jedes Geraet selbst.
+ */
+export const GOLF_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
@@ -83,6 +90,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   filler: FILLER_MODULE_VERSION,
   eiland: EILAND_MODULE_VERSION,
   tafelrunde: TAFELRUNDE_MODULE_VERSION,
+  golf: GOLF_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

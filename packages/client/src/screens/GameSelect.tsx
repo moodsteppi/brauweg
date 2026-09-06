@@ -63,6 +63,7 @@ import {
 } from '../hub';
 import { EilandBanner } from '../minispiele/eiland/Banner';
 import { FillerBanner } from '../minispiele/filler/Banner';
+import { GolfBanner } from '../minispiele/golf/Banner';
 import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
@@ -2446,6 +2447,14 @@ function Spielwahl({
                     /* Filler ebenso (seit 04.09.): zwei Gebiete faerben sich
                        Feld um Feld ueber das Brett, der Nebel weicht. */
                     <FillerBanner />
+                  ) : game.id === 'golf' ? (
+                    /* Golf spielt sich im Banner selbst — und zwar mit dem
+                       echten Kern: Physik, Bots und Zeichner liegen im
+                       Client, das Banner darf sie also einfach benutzen.
+                       Auch hier gibt es noch kein gemaltes Bild, das
+                       bewegte ist deshalb der Rueckfall bei "weniger
+                       Bewegung" (dann steht es still). */
+                    <GolfBanner />
                   ) : game.id === 'tafelrunde' ? (
                     /* Tafelrunde stellt sich selbst auf: Recken erscheinen
                        auf den Waben, drei gleiche werden golden zu einem
@@ -2469,6 +2478,7 @@ function Spielwahl({
                     {game.id === 'easypoker' ? ' · Hold’em' : ''}
                     {game.id === 'filler' ? ' · Flächen im Nebel' : ''}
                     {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
+                    {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
                   </span>
                 </span>

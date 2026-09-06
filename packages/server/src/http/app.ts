@@ -226,6 +226,7 @@ const gameIdSchema = z.enum([
   'cambio',
   'phase10',
   'drecksau',
+  'golf',
 ]);
 
 const registerSchema = z.object({
