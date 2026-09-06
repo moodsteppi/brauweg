@@ -17,14 +17,22 @@ import stil from './Ladebildschirm.module.css';
  * einem Balken — der Wechsel dazwischen ist nicht zu sehen.
  *
  * Zwei Anzeigen und nicht eine: der Balken fuer „es geht voran" (nach Gewicht,
- * siehe vorladen.ts) und die Zahl fuer „wie weit noch" (nach Posten, weil
- * Kilobyte niemandem etwas sagen). „Dateien" steht dort trotzdem: Das
- * Spielpaket ist als EIN Posten gezaehlt, obwohl fuenf Dateien darin stecken
- * (paket.ts) — „24 Teile" waere genauer und saehe nach Fachsprache aus, und
- * gefragt war die Zeile, die Robin genannt hat. Der Balken ist ein
- * `progressbar` mit
- * `aria-valuenow` — damit sagt ein Vorlesegeraet den Fortschritt an, ohne dass
- * ein `aria-live` die Zahl 23-mal vorliest.
+ * siehe vorladen.ts) und die Zahl fuer „wie weit noch" (nach Dateien, weil
+ * Kilobyte niemandem etwas sagen). „Dateien" ist dort seit dem 6.9.2026
+ * woertlich zu nehmen: Das Spielpaket zaehlt mit fuenf statt mit eins
+ * (`Posten.stueck`, paket.ts), obwohl es EIN Posten mit einer Wartezeit ist.
+ * Vorher stand hier „29 Dateien", waehrend 33 ueber die Leitung gingen — der
+ * Balken stimmte, die Zahl daneben untertrieb.
+ *
+ * „29 Teile" waere die andere Loesung gewesen und haette genauso gestimmt, sagt
+ * aber Fachsprache, wo Robin ausdruecklich „Dateien" wollte. Die Zahl kostet
+ * ein Feld und behaelt sein Wort. Aufzaehlen lassen sich die fuenf naemlich
+ * nicht: Ihre Namen tragen eine Pruefsumme, die erst beim Bauen entsteht — die
+ * ANZAHL kennt man trotzdem.
+ *
+ * Der Balken ist ein `progressbar` mit `aria-valuenow` — damit sagt ein
+ * Vorlesegeraet den Fortschritt an, ohne dass ein `aria-live` die Zahl 33-mal
+ * vorliest.
  *
  * Der Bildschirm hat KEINEN eigenen Zeitgeber und keine eigene Frist: Dass
  * nach `FRIST_MS` weitergespielt wird, entscheidet der Lauf in vorladen.ts.

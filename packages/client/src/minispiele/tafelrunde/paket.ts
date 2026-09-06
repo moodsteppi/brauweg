@@ -24,7 +24,10 @@ import type { Posten } from './vorladen';
  *     tatsaechlich ueber die Leitung geht, sind Tafelrunde.js, seine CSS,
  *     KampfAnzeige (js und CSS) und useTable.js — alle mit einer Pruefsumme im
  *     Namen, die erst beim Bauen entsteht. Von hier aus ist das eine
- *     Wartezeit mit einem Ende, und genau so zaehlt der Balken sie.
+ *     Wartezeit mit einem Ende, und genau so zaehlt der BALKEN sie. Die ZAHL
+ *     daneben zaehlt Dateien und bekommt deshalb `stueck: 5` (siehe
+ *     `PAKET_STUECK`) — bis zum 6.9.2026 sagte sie „29 Dateien", waehrend 33
+ *     unterwegs waren.
  */
 
 /**
@@ -69,9 +72,26 @@ export const PAKET_KB = 27;
 /** Die Kennung des Postens. Kein Pfad — es gibt keinen, siehe oben. */
 export const PAKET_KENNUNG = 'paket:tafelrunde';
 
+/**
+ * Wie viele Dateien das Paket ist — die Zahl neben dem Balken zaehlt Dateien
+ * und nicht Posten (`Posten.stueck` in vorladen.ts).
+ *
+ * Es sind dieselben fuenf, die oben unter `PAKET_KB` einzeln aufgelistet
+ * stehen: Tafelrunde.js/css, KampfAnzeige.js/css, useTable.js. Aufzaehlen
+ * lassen sie sich hier nicht — ihre Namen tragen eine Pruefsumme, die erst der
+ * Bauvorgang kennt —, gezaehlt werden schon.
+ *
+ * WANN NACHZUTRAGEN: zusammen mit `PAKET_KB`. Wer den Schirm aufteilt oder
+ * etwas hineinzieht, aendert beides; die Liste im `__vite__mapDeps` des
+ * Hauptpakets sagt, wie viele es geworden sind. Ein Griff daneben kostet hier
+ * nichts als eine schiefe Zahl — der Balken haengt an `kb`, nicht hieran.
+ */
+export const PAKET_STUECK = 5;
+
 export const PAKET: Posten = {
   pfad: PAKET_KENNUNG,
   kb: PAKET_KB,
+  stueck: PAKET_STUECK,
   /*
    * `.then(() => undefined)` und nicht das Modul durchreichen: Der Lauf will
    * nur wissen, DASS es da ist. Gaebe er das Modul weiter, haenge an ihm eine

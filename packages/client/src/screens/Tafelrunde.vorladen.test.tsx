@@ -36,9 +36,14 @@ const paket = vi.hoisted(() => {
     modul: {
       PAKET_KB: 28,
       PAKET_KENNUNG: 'paket:tafelrunde',
+      /* Wie das echte: EIN Posten, aber fuenf Dateien (siehe paket.ts). Ohne
+         die Stueckzahl pruefte dieser Test eine Zaehlweise, die es nicht
+         gibt — und der Zaehler am Bildschirm untertriebe wieder um vier. */
+      PAKET_STUECK: 5,
       PAKET: {
         pfad: 'paket:tafelrunde',
         kb: 28,
+        stueck: 5,
         holen: (): Promise<void> =>
           new Promise<void>((gut) => {
             loesen = () => gut();
@@ -55,13 +60,20 @@ import { Tafelrunde } from './Tafelrunde';
 
 /*
  * Beide Zahlen kommen aus der Liste und stehen nicht daneben. Sie haben sich
- * seit dem ersten Bau schon zweimal geaendert (Spielpaket, dann die fuenf
- * Blaetter der Bildfolgen), und jedes Mal war es dieser Test, der rot wurde —
- * ohne dass an dem, was er prueft, etwas falsch war.
+ * seit dem ersten Bau schon dreimal geaendert (Spielpaket, dann die fuenf
+ * Blaetter der Bildfolgen, dann die Stueckzahl des Pakets), und jedes Mal war
+ * es dieser Test, der rot wurde — ohne dass an dem, was er prueft, etwas
+ * falsch war.
  */
 /** Die Posten, die ueber ein `<img>` kommen: alles ausser dem Spielpaket. */
 const BILDER = VORZULADEN.filter((p) => !p.holen).length;
-const GESAMT = VORZULADEN.length;
+/**
+ * Die Zahl am Bildschirm zaehlt DATEIEN und nicht Posten: Das Spielpaket ist
+ * ein Posten und fuenf Dateien (`Posten.stueck`). `VORZULADEN.length` waere
+ * hier also die falsche Zahl — und zwar dieselbe falsche, die bis zum
+ * 6.9.2026 am Bildschirm stand.
+ */
+const GESAMT = VORZULADEN.reduce((summe, p) => summe + (p.stueck ?? 1), 0);
 
 /**
  * Ein Bild, das erst laedt, wenn der Test es sagt.
@@ -216,8 +228,9 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
 
   it('zaehlt sichtbar mit, waehrend die Dateien eintreffen', async () => {
     render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
-    // Einer mehr als Bilder: Das Spielpaket haengt im selben Lauf.
-    expect(GESAMT).toBe(BILDER + 1);
+    // Fuenf mehr als Bilder: Das Spielpaket haengt im selben Lauf und ist
+    // fuenf Dateien, obwohl es als ein Posten geholt wird.
+    expect(GESAMT).toBe(BILDER + 5);
     expect(screen.getByText(`0 von ${GESAMT} Dateien`)).toBeInTheDocument();
 
     const erste = wartende.splice(0, 3);

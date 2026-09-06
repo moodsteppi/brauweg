@@ -21,11 +21,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  *   7. Ein Posten darf sich UNTERWEGS melden. Das fuellt den Balken feiner —
  *      vor allem aber stoesst es die Ruhefrist an, sonst schriebe die Uhr eine
  *      Datei ab, die gerade laedt (siehe FRIST_MS).
+ *   8. Die Zahl neben dem Balken zaehlt DATEIEN, nicht Posten. Das Spielpaket
+ *      ist ein Posten und fuenf Dateien; als eine gezaehlt untertrieb der
+ *      Bildschirm um vier (siehe `Posten.stueck`).
  */
 
 import { BLATT_PFADE } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
-import { PAKET_KB, PAKET_KENNUNG } from './paket';
+import { PAKET_KB, PAKET_KENNUNG, PAKET_STUECK } from './paket';
 import {
   type Fortschritt,
   type Holer,
@@ -199,6 +202,26 @@ describe('vorladen', () => {
      * dass sich an ihm etwas geaendert haette. Ein Zwanzigstel ist immer noch
      * eng genug, um eine 1 oder eine 500 zu fangen.
      */
+    /*
+     * Der Posten ist einer, die Dateien sind fuenf. Stuende hier nichts,
+     * zaehlte der Bildschirm 29, waehrend 33 Dateien ueber die Leitung gehen —
+     * genau der Befund vom 6.9.2026. Aufzaehlen lassen sich die fuenf nicht
+     * (Pruefsummen im Namen), zaehlen schon.
+     */
+    it('zaehlt das Spielpaket als fuenf Dateien, nicht als eine', () => {
+      expect(VORZULADEN[0]?.stueck).toBe(PAKET_STUECK);
+      expect(PAKET_STUECK).toBe(5);
+    });
+
+    /* Jeder ANDERE Posten ist genau eine Datei und sagt das nicht eigens.
+       Traege eines Tages ein Bild ein `stueck`, waere das ein Tippfehler. */
+    it('laesst jedes Bild bei seiner einen Datei', () => {
+      for (const p of VORZULADEN) {
+        if (p.pfad === PAKET_KENNUNG) continue;
+        expect(p.stueck).toBeUndefined();
+      }
+    });
+
     it('gibt dem Spielpaket ein Gewicht in der Groessenordnung der Bilder', () => {
       const bilder = VORZULADEN.filter((p) => p.pfad !== PAKET_KENNUNG).reduce(
         (summe, p) => summe + p.kb,
@@ -251,6 +274,52 @@ describe('vorladen', () => {
       hand.fertig('/dick.webp');
       await durchatmen();
       expect(vorratStand().anteil).toBe(1);
+    });
+
+    /*
+     * Die Zahl neben dem Balken zaehlt Dateien und nicht Posten. Ein Posten
+     * mit `stueck` bringt sie in EINEM Schritt um so viel weiter — die fuenf
+     * Dateien des Spielpakets kommen ja auch zusammen an, oder gar nicht.
+     */
+    it('zaehlt einen Posten mit Stueckzahl als so viele Dateien', async () => {
+      const hand = handbetrieb();
+      const buendel: Posten = { pfad: '/buendel', kb: 10, stueck: 5 };
+      void vorratLaden({ posten: [buendel, POSTEN[1]!], holen: hand.holen });
+      await durchatmen();
+
+      // Zwei Posten, aber sechs Dateien. Ohne `stueck` staende hier 0 von 2.
+      expect(vorratStand().gesamt).toBe(6);
+      expect(vorratStand().erledigt).toBe(0);
+
+      hand.fertig('/duenn-a.webp');
+      await durchatmen();
+      expect(vorratStand().erledigt).toBe(1);
+
+      hand.fertig('/buendel');
+      await durchatmen();
+      // Am Ende deckt sich der Zaehler mit der Gesamtzahl. Zaehlte das
+      // Buendel als eines, bliebe der Bildschirm auf „2 von 6" stehen,
+      // waehrend die Partie laeuft.
+      expect(vorratStand().erledigt).toBe(6);
+      expect(vorratStand().fertig).toBe(true);
+    });
+
+    /* Auch ein AUSGEFALLENES Buendel ist erledigt: Es kommt nichts mehr. Ein
+       Zaehler, der bei 1 von 6 stehen bleibt, sieht nach Haenger aus. */
+    it('zaehlt ein ausgefallenes Buendel mit seiner vollen Stueckzahl ab', async () => {
+      const warnung = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const hand = handbetrieb();
+      const buendel: Posten = { pfad: '/buendel', kb: 10, stueck: 5 };
+      const versprechen = vorratLaden({ posten: [buendel, POSTEN[1]!], holen: hand.holen });
+
+      hand.fehlschlag('/buendel');
+      hand.fertig('/duenn-a.webp');
+      const stand = await versprechen;
+
+      expect(stand.erledigt).toBe(6);
+      expect(stand.gesamt).toBe(6);
+      expect(stand.fehlend).toEqual(['/buendel']);
+      expect(warnung).toHaveBeenCalled();
     });
 
     /*
