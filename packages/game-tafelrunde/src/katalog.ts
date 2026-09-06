@@ -245,10 +245,12 @@ export const KATALOG: readonly Einheit[] = [
    * Elementar geworden. Die Laenge haengt am Knappen, also nimmt der Knappe
    * sie zurueck.
    *
-   * Zur Figur: Sie zeigt weiter den lebenden Knappen im Kettenhemd
-   * (figuren.ts im Client). Der Name traegt es — ein Knappe, der seinen Posten
-   * auch dann nicht verlassen hat, als er gefallen war —, aber wer neue Grafik
-   * bestellt, sollte ihn als Wiedergaenger zeichnen lassen.
+   * Zur Figur: Sie zeigt weiter den lebenden Knappen — seit dem 06.09.2026
+   * das Ritterblatt der ROLLE Wache (figuren3d.ts im Client, fuenf Blaetter
+   * fuer 22 Einheiten), und daran aendert kein Bild je Einheit etwas. Der
+   * Name traegt es — ein Knappe, der seinen Posten auch dann nicht verlassen
+   * hat, als er gefallen war. Ein Blatt je Rolle UND Gestalt (lebend/untot)
+   * ist als Bestellung beschrieben: docs/ASSETS-TAFELRUNDE-UNTOT.md.
    */
   {
     id: 'schildknappe',
