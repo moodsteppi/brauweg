@@ -89,11 +89,78 @@ const LESBARE_VERSIONEN = [1, SNAPSHOT_VERSION];
  * demselben Augenblick auf, in dem die letzte Einheit faellt — der Spieler
  * saehe nie, wie es ausgegangen ist.
  *
+ * SEIT DEM 06.09.2026 EINEINHALB STATT ZWEIEINHALB SEKUNDEN (Robin: "Die
+ * Wartezeiten, wenn die Runde vorbei ist bzw. alle bereit sind, sollten
+ * deutlich kuerzer"). Die Zahl ist kein Gefuehl, sondern der Boden aus einer
+ * Messung und zwei Zahlen, die im Client stehen:
+ *
+ *   - Der letzte Tod eines Kampfes faellt immer GENAU EINEN TAKT vor das Ende
+ *     (`TAKT_MS` = 100 ms in kampf.ts), und seine Bildfolge laeuft danach
+ *     noch `NACHSPIEL_MS` = 600 ms weiter (KampfAnzeige.tsx). Ueber das Ende
+ *     der Kampfphase ragt sie damit um 500 ms hinaus — gemessen ueber 3.411
+ *     Kaempfe aus 200 Partien zu viert, in 51,5 % der Kaempfe (naemlich in
+ *     denen, die durch Ausloeschen enden).
+ *   - Das Ergebnisschild faehrt in 420 ms auf (`ka-auftritt` in
+ *     KampfAnzeige.module.css). Lesbar ist es also ab 420 ms.
+ *
+ * Bei 1500 ms bleibt danach eine Sekunde stehendes, lesbares Ergebnis (1000 ms
+ * ueber einer stillen Arena). Bei den 1200 ms, die die Aufgabe vorschlug,
+ * waeren es 780 ms — und davon geht noch ab, was die Leitung frisst:
+ * `startVersatz` in KampfAnzeige.tsx laesst einen spaet eintreffenden Client
+ * vorspulen, der Nachlauf ist am Bildschirm also nie laenger als hier, oft
+ * kuerzer. Deshalb 1500 und nicht 1200.
+ *
+ * WER IHN WEITER SENKEN WILL, muss zuerst an `NACHSPIEL_MS` und `ka-auftritt`:
+ * Unter 920 ms schneidet der Nachlauf in die Bildfolge und in den Auftritt
+ * des Schildes, und dann sieht man nicht kuerzer zu, sondern gar nicht.
+ *
+ * AUF DEM TIEFEN BRETT GEPRUEFT (5x10 statt 5x4, der Arena-Umbau, der noch
+ * auf seinem Zweig wartet): Der Ueberstand bleibt bei 500 ms — Median wie
+ * Maximum, in 52,3 % der Kaempfe statt 51,5 %. Das ist kein Zufall, sondern
+ * folgt aus dem Takt: Der letzte Tod faellt immer einen Takt vor das Ende,
+ * egal wie weit gelaufen wurde. Die 1500 ms bleiben also auch dann richtig.
+ *
  * Ausgefuehrt, weil der Messstand ihn mitrechnet (`Zeitmodell` in
  * test/messen.ts): Er ist ein Posten der Spielzeit, und die Zahl zweimal
  * hinzuschreiben waere der Weg, sie einmal zu aendern und einmal zu vergessen.
  */
-export const KAMPF_NACHLAUF_MS = 2500;
+export const KAMPF_NACHLAUF_MS = 1500;
+
+/**
+ * Wie lange die Plattform hoechstens vor einem Botzug wartet
+ * (`meta.botTaktHoechstMs`, game-api).
+ *
+ * DAS IST DER GROESSTE EINZELNE POSTEN DER WARTEZEIT, und er stand bis zum
+ * 06.09.2026 gar nicht in diesem Paket. Die Plattform wartet zwischen zwei
+ * Botzuegen 0,8 s, damit man beim Kartenspiel jede gelegte Karte einzeln
+ * wahrnimmt. Bei Tafelrunde ruesten alle gleichzeitig, `currentActor` nennt
+ * aber immer nur EINEN Sitz (den kleinsten, der noch nicht bereit ist) — die
+ * Bots arbeiten ihre Kaeufe also nacheinander ab, und wer schon "Bereit"
+ * getippt hat, sieht ihnen dabei zu.
+ *
+ * Gemessen zu viert (300 Partien, werkzeug/spielzeit.mjs --nur botTakt): 16
+ * fremde Handgriffe je Runde im Median, 30 im neunten Zehntel. Mit 0,8 s sind
+ * das 12,8 s bzw. 24 s je Runde — mehr als das Warten nach dem eigenen Kampf
+ * (2,5 s bzw. 21,4 s) und ueber neun Runden knapp zwei Minuten je Partie.
+ *
+ * WARUM 200 MS UND NICHT WENIGER: Jeder Botzug ist ein Snapshot in der
+ * Datenbank und ein Rundruf an alle Sitze (`afterAction` in
+ * runtime/party.ts). Die ANZAHL aendert sich nicht, nur die Rate; 200 ms sind
+ * fuenf Schreibvorgaenge je Sekunde und Tisch. Die Haelfte davon brachte
+ * gemessen noch 1,6 s statt 3,2 s im Median — fuer anderthalb Sekunden die
+ * Schreiblast eines Tisches zu verdoppeln, lohnt nicht.
+ *
+ * WARUM NICHT NULL: Die Bretter der Gegner sind oeffentlich (sicht.ts). Ein
+ * Bot, der seine ganze Ruestung in einem Augenblick hinstellt, laesst die
+ * Mitspielerleiste springen statt sich fuellen.
+ *
+ * AUF DEM TIEFEN BRETT GEGENGEPRUEFT (5x10 statt 5x4, der Arena-Umbau, der
+ * noch auf seinem Zweig wartet): Ein groesseres Brett heisst NICHT mehr
+ * Handgriffe. Das neunte Zehntel der Wartezeit faellt sogar von 6,0 auf 5,6 s,
+ * der Median bleibt bei 3,2 s — was der Bot kauft, haengt am Gold und am
+ * Laden, nicht an der Zahl der Felder.
+ */
+export const BOT_TAKT_MS = 200;
 
 type GespeichertePartie = TafelrundePartie & { readonly v: number };
 
@@ -144,6 +211,13 @@ const meta: GameMeta = {
    * unterscheiden.
    */
   legalActionsUnvollstaendig: true,
+  /*
+   * Der Takt der Plattform (0,8 s) ist auf ein Kartenspiel gemuenzt, in dem
+   * ein Bot je Stich einmal dran ist. Hier macht er je Runde ein Dutzend
+   * Handgriffe — die Begruendung mit den gemessenen Zahlen steht bei
+   * `BOT_TAKT_MS`.
+   */
+  botTaktHoechstMs: BOT_TAKT_MS,
 };
 
 export const tafelrunde: GameModule<

@@ -15,8 +15,21 @@
  */
 
 .ausschnitt {
-  /* Eine Zelle ist quadratisch (FIGUREN3D_KANTE), also ist es der Ausschnitt. */
-  aspect-ratio: 1;
+  /*
+   * So breit wie die Zelle, die er zeigt — gemessen in ihrer Hoehe.
+   *
+   * FAST IMMER 1, denn eine Zelle ist quadratisch (FIGUREN3D_KANTE). Die
+   * Todeszeile ist es seit dem 06.09.2026 nicht: Eine liegende Figur ist
+   * breiter als eine stehende hoch, und ihre Zellen sind deshalb 1,5 Kanten
+   * breit. Wer sie durch einen quadratischen Ausschnitt ansieht, bekommt zwei
+   * Drittel der Gefallenen und vom Rest nichts — kein Fehler, nur ein
+   * abgeschnittener Arm.
+   *
+   * Gesetzt wird die Abweichung von `bildSchieben` (KampfAnzeige.tsx) je Bild,
+   * und deshalb nur in der Arena: An den drei anderen Orten steht die Figur
+   * still auf Bild 0 der Ruhefolge, also immer in einer quadratischen Zelle.
+   */
+  aspect-ratio: var(--tr-zellweite, 1);
   /* Kein Beiwerk, sondern der Kern der Sache: Das hier IST der Ausschnitt,
      durch den genau eine von dreissig Zellen zu sehen ist. */
   overflow: hidden;
@@ -40,20 +53,33 @@
 }
 
 /*
- * Das ganze Blatt, sechsmal so breit und fuenfmal so hoch wie der Ausschnitt
- * (FIGUREN3D_SPALTEN x FIGUREN3D_ZEILEN).
+ * Das ganze Blatt: so viele Zellen hoch und breit, wie es hat
+ * (FIGUREN3D_ZEILEN x FIGUREN3D_SPALTEN, als Variablen aus der Komponente).
  *
  * Ohne Versatz steht die Zelle links oben im Ausschnitt, und das ist Zeile 0,
  * Bild 0 — das erste Bild der Ruhefolge. Wer eine STEHENDE Figur will,
  * schreibt deshalb gar nichts; wer sie bewegen will, schiebt das Blatt von
  * aussen (`bildSchieben` in KampfAnzeige.tsx).
+ *
+ * BEMESSEN AN DER HOEHE DES AUSSCHNITTS, nicht an seiner Breite — und das ist
+ * seit der breiten Todeszelle keine Feinheit mehr, sondern die Bedingung
+ * dafuer, dass das Ganze aufgeht: Der Ausschnitt wird beim Sterben um die
+ * Haelfte breiter, seine Hoehe bleibt. Hier stand bis zum 06.09.2026
+ * `width: 600%`; das Blatt spraenge im selben Augenblick um die Haelfte
+ * groesser, und aus der liegenden Figur saehe man einen Ausschnitt ihrer
+ * Schulter.
+ *
+ * Und die Zahlen als Variablen, weil `height: 500%` genau dann still falsch
+ * wird, wenn das Blatt eine Zeile mehr bekommt — was es an demselben Tag tat:
+ * lauter richtige Bilder an der falschen Stelle, kein einziger Fehler.
  */
 .blatt {
   position: absolute;
   left: 0;
   top: 0;
-  width: 600%;
-  height: 500%;
+  height: calc(var(--tr-blattzeilen, 6) * 100%);
+  width: auto;
+  aspect-ratio: var(--tr-blattspalten, 6) / var(--tr-blattzeilen, 6);
   max-width: none;
 }
 

@@ -1196,6 +1196,11 @@ Zeitraffer ist die einzige Schraube, die kürzt, ohne eine Runde zu streichen:
 Der einzelne Kampf fiel von 35,2 s auf 17,3 s, die an der Höchstdauer
 abgeschnittenen Kämpfe von 27,7 % auf 1,8 %, die Partie auf 7:25. Welche
 Stellschraube wie viel bringt, steht in **`docs/TAFELRUNDE-SPIELZEIT.md`**.
+Warum im Kampf kaum gelaufen WURDE — und was Brettbreite, Reihenzahl,
+Reichweiten und Startabstand daran ändern — steht in
+**`docs/TAFELRUNDE-LAUFWEGE.md`**. Die Empfehlung von dort ist am 06.09.2026
+eingebaut (Arena 5×10); Abschnitt 1 der Datei hält den gebauten Stand fest,
+die Abschnitte 2 bis 5 sind die Herleitung auf dem alten Brett.
 
 **Vierte Messung (kostenloses Würfeln, Laden zieht beim Kauf ganz neu).**
 Robin: „wir wollen nicht mehr, dass man fürs Rollen Geld ausgeben soll" und

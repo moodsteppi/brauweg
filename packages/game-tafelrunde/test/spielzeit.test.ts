@@ -211,7 +211,9 @@ describe('Spielzeit: der heutige Stand', () => {
    * Probe haelt die Rangfolge fest, damit die Empfehlung nicht still veraltet.
    * Gemessen am 05.09.2026 abends: 59,8 / 34,9 / 5,3 (vormittags 57,4 / 36,7 /
    * 6,0 — der Kampf hat zugelegt, weil der Bot seitdem staerkere Bretter
-   * baut).
+   * baut). Am 06.09.2026 sind es 57,3 / 39,2 / 3,6: Der Nachlauf ist von 2,5
+   * auf 1,5 s gefallen, und damit verschiebt sich der Rest anteilig nach oben,
+   * ohne dass jemand an ihm gedreht haette.
    *
    * VOR DEM ZEITRAFFER waren es 70 / 25 / 5. Dass der Kampf nur noch knapp
    * ueber der Haelfte liegt, ist die Wirkung von x2 und kein neuer Befund —
@@ -261,6 +263,59 @@ describe('Spielzeit: der heutige Stand', () => {
       AUSWERTUNG.kampfMedianMs <= HOECHSTDAUER_MS,
       'der mittlere Kampf laeuft in die Abbruchgrenze',
     );
+  });
+
+  /**
+   * DER BEFUND VOM 06.09.2026: Nicht die Spielzeit war zu lang, sondern das
+   * WARTEN darin — und der groesste Posten stand in keiner Regel dieses
+   * Moduls.
+   *
+   * Robin: "Die Wartezeiten, wenn die Runde vorbei ist bzw. alle bereit sind,
+   * sollten deutlich kuerzer." Zerlegt in die zwei Stellen, an denen ein Sitz
+   * nichts zu tun hat (die Zahlen sind Median / neuntes Zehntel je Runde, zu
+   * viert):
+   *
+   *                                          vorher        nachher
+   *     auf die Bots nach dem "Bereit"    12,8 / 24,0 s   3,2 / 6,0 s
+   *     auf die fremden Kaempfe            2,5 / 21,4 s   1,5 / 20,4 s
+   *
+   * Die erste Zeile ist der Takt der Plattform vor jedem Botzug (0,8 s,
+   * gedacht fuer eine gelegte Karte je Stich) mal den 16 Handgriffen, die die
+   * drei Bots je Runde machen — `BOT_TAKT_MS` in adapter.ts deckelt ihn jetzt
+   * auf 200 ms. Die zweite ist `KAMPF_NACHLAUF_MS`, von 2,5 auf 1,5 s.
+   *
+   * WAS DIESE PROBE FAENGT: dass jemand eine der beiden Zahlen wieder
+   * hochzieht, ohne es zu merken — etwa indem er dem Bot mehr Handgriffe je
+   * Runde gibt. Die Schranken liegen bewusst weit, siehe oben.
+   */
+  it('laesst einen Sitz nach seinem "Bereit" nicht wieder minutenlang zusehen', () => {
+    const botMedian = AUSWERTUNG.botWartenMedianMs / 1000;
+    assert.ok(
+      botMedian < 8,
+      `${botMedian.toFixed(1)} s wartet ein Sitz je Runde auf die Bots ` +
+        `(gemessen am 06.09.2026: 3,2 s, davor 12,8 s)`,
+    );
+    // Der Nachlauf ist der einzige Posten, der auch OHNE fremde Kaempfe
+    // anfaellt: Wessen Kampf der laengste der Runde war, wartet nur ihn ab.
+    assert.equal(AUSWERTUNG.wartenMedianMs, 0);
+    assert.ok(AUSWERTUNG.zeitmodell.kampfNachlaufMs <= 2_000);
+  });
+
+  /**
+   * Der Schwanz ist der Befund, nicht der Median.
+   *
+   * Ein Kampf dauert 16,2 s im Median und 38,6 s im neunten Zehntel; die
+   * Kampfphase (der laengste Kampf der Runde) 21,7 s und 43,4 s. Deshalb steht
+   * `kampfP90Ms` ueberhaupt in der Auswertung: Wer nur den Median liest, haelt
+   * diese Aufgabe fuer erledigt und sieht die Runde nicht, in der jemand eine
+   * halbe Minute vor einem fertigen Bildschirm sitzt.
+   */
+  it('misst den Schwanz und nicht nur die Mitte', () => {
+    assert.ok(AUSWERTUNG.kampfP90Ms > AUSWERTUNG.kampfMedianMs);
+    assert.ok(AUSWERTUNG.kampfphaseP90Ms >= AUSWERTUNG.kampfP90Ms);
+    // Die Phase ist immer der laengste Kampf, also nie kuerzer als der
+    // mittlere Kampf — eine Umkehrung waere ein Rechenfehler, kein Balancing.
+    assert.ok(AUSWERTUNG.kampfphaseMedianMs >= AUSWERTUNG.kampfMedianMs);
   });
 });
 

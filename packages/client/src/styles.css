@@ -17050,20 +17050,30 @@ span.hub-angebot-art.poker-jeton-stapel {
  * und `clip-path` beschneidet auch den Inhalt. Was ueber das Sechseck
  * hinausreicht, waere kein Ueberstand, sondern ein abgeschnittener Kopf.
  *
- * DIE ZAHLEN, und woher sie kommen: Eine stehende Figur fuellt gemessen 52 bis
- * 64 % ihrer Zelle in der Hoehe (Alphakanal der fuenf Blaetter, Zelle 0/0) und
- * setzt bei 74 % von oben auf (FIGUREN3D_FUSSPUNKT). Bei einer Zelle von 82 %
- * Wabenhoehe, deren Unterkante 18,6 % ueber dem Wabenfuss liegt, steht die
- * Figur also mit den Fuessen auf 40 % der Wabe und reicht bis rund 88 % —
- * ueberall dort ist das Sechseck noch breit genug. Sie ist damit so gross wie
- * das Pixelbild, das hier vorher stand (52 % der Wabenhoehe), und laesst
- * darunter Platz fuer Namen und Sterne.
+ * DIE ZAHLEN, und woher sie kommen: Eine stehende Figur setzt bei 80 % der
+ * Zellhoehe von oben auf (FIGUREN3D_FUSSPUNKT). Bei einer Zelle von 71,8 %
+ * Wabenhoehe, deren Unterkante 23,1 % ueber dem Wabenfuss liegt, steht die
+ * Figur also mit den Fuessen auf 37 % der Wabe und reicht bis rund 93 % —
+ * ueberall dort ist das Sechseck noch breit genug. Darunter bleibt Platz fuer
+ * Namen und Sterne.
+ *
+ * SIE HAENGEN AM GEMESSENEN AUSSCHNITT DER BLAETTER, und das sieht man ihnen
+ * nicht an: Wie gross die Figur wird, ist die Zellhoehe geteilt durch die
+ * Weltmeter, die in einer Zelle stecken (FIGUREN3D_ZELLHOEHE_METER). Als die
+ * Todeszeile am 06.09.2026 ihre eigene, breitere Zelle bekam, wurde der
+ * gemeinsame Ausschnitt von 4,29 auf 3,76 Meter enger — hier standen bis dahin
+ * 82 % und 18,6 %, und dieselben Zahlen haetten jede Figur der Ruestkammer um
+ * 14 % wachsen und hoeher stehen lassen, ohne dass jemand an der Groesse etwas
+ * geaendert haette. Wer die Blaetter neu rendert, rechnet diese vier Zahlen
+ * (hier und am Bankplatz) mit dem Verhaeltnis der beiden Ausschnitte um. In
+ * der Arena erledigt das `FIGURENKASTEN` in bildfolge.ts von selbst; hier ist
+ * es Handarbeit, weil eine Wabe kein Prozentmass mit der Karte teilt.
  */
 .tr-figur3d {
   position: absolute;
   left: 50%;
-  bottom: 18.6%;
-  height: 82%;
+  bottom: 23.1%;
+  height: 71.8%;
   /* `translate` und nicht `transform`: Das Spiegeln steht in `scale`
      (Figur3D.module.css), das Schweben in `transform` — drei Dinge, drei
      Eigenschaften. In EINEM `transform` schloesse jedes das andere aus. */
@@ -17072,11 +17082,16 @@ span.hub-angebot-art.poker-jeton-stapel {
 /*
  * Auf der Bank ist der Platz ein Rechteck und kein Sechseck: Dort darf die
  * Figur die volle Hoehe nehmen. `overflow: hidden` am Fach schneidet nur die
- * leeren Raender der Zelle ab — der hoechste Kopf des Satzes (Magier, 12,5 %
- * unter der Zellenoberkante) bleibt bei 106 % gerade drin. Und weil kein Name
- * darunter steht, sitzt sie tiefer.
+ * leeren Raender der Zelle ab — der hoechste Kopf des Satzes bleibt bei 92,8 %
+ * drin. Und weil kein Name darunter steht, sitzt sie tiefer.
+ *
+ * NACHGEMESSEN am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
+ * 0/0): Der hoechste Punkt liegt 3,1 % unter der Zellenoberkante, und das ist
+ * das GEWEIH DES DRUIDEN — nicht mehr der Spitzhut des Magiers (9,4 %), wie es
+ * hier vorher stand. Mit 92,8 % Zellhoehe ueber einer Unterkante von 2,8 %
+ * steht der Scheitel damit bei 92,8 % des Fachs.
  */
-.tr-bankplatz .tr-figur3d { bottom: -3%; height: 106%; }
+.tr-bankplatz .tr-figur3d { bottom: 2.8%; height: 92.8%; }
 
 /*
  * Das Schweben im Stand. Dieselbe Art Bewegung wie beim Pinguin auf der
@@ -17457,18 +17472,23 @@ span.hub-angebot-art.poker-jeton-stapel {
  * und auf einem 360er-Handy keine 70 px breit; ein Prozentmass waere dort ein
  * Punkt und am Desktop ein Plakat.
  *
- * 58 px Zelle ergeben rund 34 px Figur (eine stehende Figur fuellt gemessen
- * 52 bis 64 % ihrer Zelle) — etwas mehr als die 32 px des Pixelbilds, das
- * hier vorher stand. Der Fuss liegt bei 26 % der Zellhoehe ueber deren
- * Unterkante (FIGUREN3D_FUSSPUNKT), also bei −12 px + 15 px = 3 px ueber dem
- * unteren Rand des Kopfes. Die KARTE bleibt dabei eine Karte: Ihr Rahmen ist
- * richtig, weggenommen wurde nur die Platte unter der Figur.
+ * 51 px Zelle ergeben rund 34 px Figur — etwas mehr als die 32 px des
+ * Pixelbilds, das hier vorher stand. Der Fuss liegt bei 20 % der Zellhoehe
+ * ueber deren Unterkante (FIGUREN3D_FUSSPUNKT), also bei −9 px + 10 px = 1 px
+ * ueber dem unteren Rand des Kopfes. Die KARTE bleibt dabei eine Karte: Ihr
+ * Rahmen ist richtig, weggenommen wurde nur die Platte unter der Figur.
+ *
+ * WER DIE BLAETTER NEU RENDERT, rechnet auch diese beiden Zahlen um: Wie gross
+ * die Figur wird, haengt am gemessenen Ausschnitt (FIGUREN3D_ZELLHOEHE_METER),
+ * nicht an der Zellhoehe allein. Hier standen bis zum 06.09.2026 58 px und
+ * −12 px — mit dem engeren Ausschnitt der eigenen Todeszelle waere die Figur
+ * davon um 14 % gewachsen. Die lange Fassung steht bei `.tr-figur3d`.
  */
 .tr-figur3d-karte {
   position: absolute;
   left: 50%;
-  bottom: -12px;
-  height: 58px;
+  bottom: -9px;
+  height: 51px;
   translate: -50% 0;
 }
 /* Die Figur auf der Ladenkarte. Feste Pixel und nicht Prozent: Die Karte ist

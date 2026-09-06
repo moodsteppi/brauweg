@@ -19,7 +19,7 @@
  *
  * WOZU DAS GANZE: Die Figuren sollen wie 3D aussehen, aber nicht live gerendert
  * werden. Die Probe mit Three.js lief auf dem Handy mit 20 Bildern je Sekunde
- * und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es 232 kB, und das
+ * und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es 284 kB, und das
  * Abspielen kostet so viel wie ein `background-position`. Genau deshalb ist
  * die Probe selbst am 06.09.2026 geloescht worden — die Entscheidung gegen sie
  * war gefallen, und ein zweiter Weg auf den Bildschirm haette nur Pflege
@@ -50,12 +50,36 @@ export interface Blatt3D {
 
 export interface Bewegungsfolge3D {
   readonly bewegung: Bewegung3D;
-  /** Zeile im Blatt, von oben, ab 0. */
+  /** ERSTE Zeile im Blatt, von oben, ab 0. Lange Folgen belegen mehrere. */
   readonly zeile: number;
-  /** Wie viele Zellen dieser Zeile belegt sind, von links. */
+  /** Wie viele Bilder die Folge hat. */
   readonly bilder: number;
   /** Ob die Folge von vorn beginnt oder auf dem letzten Bild stehenbleibt. */
   readonly schleife: boolean;
+  /**
+   * Breite einer Zelle als Vielfaches ihrer Hoehe. 1 heisst quadratisch.
+   *
+   * NUR DIE TODESZEILE IST BREITER. Eine liegende Figur greift viel weiter zur
+   * Seite als eine stehende hoch ist; solange alle Zellen gleich breit waren,
+   * zog sie den Ausschnitt ALLER Bilder mit auf, und deshalb endete die
+   * Todesfolge bis zum 06.09.2026 im Zusammensacken statt im Liegen.
+   *
+   * Der Ausschnitt ist nur ZUR SEITE aufgezogen, nicht insgesamt groesser: Ein
+   * Weltmeter ist in der breiten Zelle so viele Pixel wie in jeder anderen, die
+   * Figur ist also gleich gross. Wer die Zelle anzeigt, macht deshalb den
+   * KASTEN breiter und skaliert nichts.
+   */
+  readonly weite: number;
+  /**
+   * Wie viele Bilder dieser Folge in EINER Blattzeile stehen; der Rest bricht
+   * in die naechste um.
+   *
+   * Damit bleibt das Blatt 768 px breit. Ohne den Umbruch waere es so breit wie
+   * die laengste Zeile mal ihrer Weite (8 * 1,5 = 12 Zellen = 1536 px), und die
+   * vier oberen Zeilen liessen die Haelfte davon leer — auf dem Handy sind das
+   * mehrere Megabyte entpackter Bildspeicher je Blatt, fuer nichts.
+   */
+  readonly proZeile: number;
   /**
    * Bilder je Sekunde, wie schnell die Bewegung im Modell wirklich ablief.
    * Wer schneller abspielt, bekommt keinen fluessigeren Ablauf, sondern eine
@@ -74,35 +98,60 @@ export interface Bewegungsfolge3D {
 }
 
 /**
- * Raster eines Blattes: 6 Spalten mal 5 Zeilen zu je 128 Pixel (768 x 640).
+ * Raster eines Blattes: 6 Spalten mal 6 Zeilen zu je 128 Pixel (768 x 768).
  *
- * Zeilen mit weniger als sechs Bildern lassen ihre rechten Zellen leer. Das
- * kostet nichts — leere Zellen sind durchsichtig und wiegen im WebP fast
- * nichts — und haelt die Rechnung einfach: Zelle (zeile, bild) liegt immer bei
- * (bild * 128, zeile * 128).
+ * Die Kante ist die HOEHE einer Zelle und die Breite einer quadratischen. Wie
+ * breit eine Zelle wirklich ist, sagt `weite` ihrer Bewegung — die Todeszeile
+ * hat 1,5 Kanten (192 px) und passt mit vier Bildern je Zeile genau in die
+ * sechs Spalten der anderen.
+ *
+ * Zeilen mit weniger Bildern lassen ihre rechten Zellen leer. Das kostet
+ * nichts: Leere Zellen sind durchsichtig und wiegen im WebP fast nichts.
  */
 export const FIGUREN3D_KANTE = 128;
 export const FIGUREN3D_SPALTEN = 6;
-export const FIGUREN3D_ZEILEN = 5;
+export const FIGUREN3D_ZEILEN = 6;
 
 /**
  * Wo die Figur in ihrer Zelle auf dem Boden aufsetzt, als Anteil der Kante.
  *
  * NICHT die Zellmitte: Der Ausschnitt umfasst ALLE Bewegungen, auch den weit
- * ausgeholten Schlag und das Zusammensacken, und liegt deshalb hoeher als die
- * stehende Figur. Wer die Zelle mittig auf ein Feld setzt, stellt die Figur ein
- * Stueck zu hoch — bei 128 Pixeln sind das gut 30. Ausgerechnet aus der Kamera,
- * nicht im Bild gemessen.
+ * ausgeholten Schlag, und liegt deshalb hoeher als die stehende Figur. Wer die
+ * Zelle mittig auf ein Feld setzt, stellt die Figur ein Stueck zu hoch — bei
+ * 128 Pixeln sind das gut 38. Ausgerechnet aus der Kamera, nicht im Bild
+ * gemessen.
  *
- * ER GILT FUER ALLE FUENF BLAETTER und aendert sich, sobald EINE Figur weiter
- * ausgreift als bisher: Der Ausschnitt ist einer fuer alle. Als der Beistand am
- * 06.09.2026 vom Barbaren auf den Druiden wechselte, hob dessen erhobener
- * Stab den Ausschnitt um vier Pixel — alle vier anderen Blaetter sind seitdem
- * um genau diese vier Pixel nach unten gerendert, und dieser Wert (vorher
- * 0,7394) hebt sie wieder auf. Wer nur die Blaetter tauscht und die Zahl hier
- * vergisst, stellt das ganze Feld vier Pixel daneben.
+ * ER GILT FUER ALLE FUENF BLAETTER UND FUER JEDE ZELLE, auch die breite der
+ * Todeszeile: Die ist nur zur Seite aufgezogen, nicht verschoben, und ihre
+ * Mitte ist dieselbe. Er aendert sich, sobald EINE Figur weiter ausgreift als
+ * bisher — der Ausschnitt ist einer fuer alle. Zwei Male hat es das schon
+ * verschoben: als der Beistand vom Barbaren auf den Druiden wechselte (der
+ * erhobene Stab hob ihn von 0,7394 auf 0,77) und als die Todeszeile ihre
+ * eigene Zelle bekam (0,77 auf 0,80 — ohne die liegende Figur wird der
+ * gemeinsame Ausschnitt enger, die Figuren also groesser). Wer nur die
+ * Blaetter tauscht und die Zahl hier vergisst, stellt das ganze Feld daneben.
  */
-export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.77 } as const;
+export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.8 } as const;
+
+/**
+ * Wie viele Weltmeter die HOEHE einer Zelle abdeckt.
+ *
+ * Das ist die Zahl, ohne die niemand sagen kann, wie gross eine Figur am
+ * Bildschirm wird: Eine Zelle ist immer 128 Pixel hoch, aber wie viel Welt in
+ * diesen 128 Pixeln steckt, entscheidet der gemessene Ausschnitt — und der
+ * aendert sich, sobald eine Figur weiter ausgreift als bisher.
+ *
+ * WOZU SIE GEBRAUCHT WIRD: Wer den Ausschnitt in Prozent der Karte setzt und
+ * diese Zahl nicht kennt, aendert bei jedem neuen Satz Blaetter unbemerkt die
+ * Groesse aller Figuren. Genau das waere am 06.09.2026 passiert: Als die
+ * Todeszeile ihre eigene Zelle bekam, wurde der gemeinsame Ausschnitt von 4,29
+ * auf 3,76 Meter enger, und dieselbe Kastenhoehe haette alle Figuren um 14 %
+ * wachsen lassen. `FIGURENKASTEN` in `minispiele/tafelrunde/bildfolge.ts`
+ * rechnet mit ihr dagegen.
+ *
+ * Das Skript gibt sie als "halbe Hoehe" aus — hier steht das Doppelte.
+ */
+export const FIGUREN3D_ZELLHOEHE_METER = 3.756;
 
 /**
  * Alle Figuren schauen nach RECHTS.
@@ -121,15 +170,31 @@ export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.77 } as const;
 export const FIGUREN3D_BLICKT = 'rechts' as const;
 
 export const FIGUREN3D_BEWEGUNGEN: readonly Bewegungsfolge3D[] = [
-  { bewegung: 'stand', zeile: 0, bilder: 4, schleife: true, bildrate: 4 },
-  { bewegung: 'lauf', zeile: 1, bilder: 6, schleife: true, bildrate: 6 },
-  { bewegung: 'schlag', zeile: 2, bilder: 6, schleife: false, bildrate: 6 },
-  { bewegung: 'getroffen', zeile: 3, bilder: 2, schleife: false, bildrate: 11 },
-  // Die Todesfolge endet im Zusammensacken, NICHT im Liegen: Die liegende
-  // Figur ist dreimal so breit wie die stehende hoch und haette den Ausschnitt
-  // aller anderen Bilder mit aufgezogen (Begruendung steht in
-  // bildfolgen-rendern.mjs). Nach dem letzten Bild blendet die Anzeige aus.
-  { bewegung: 'tod', zeile: 4, bilder: 6, schleife: false, bildrate: 15 },
+  { bewegung: 'stand', zeile: 0, bilder: 4, schleife: true, bildrate: 4, weite: 1, proZeile: 4 },
+  { bewegung: 'lauf', zeile: 1, bilder: 6, schleife: true, bildrate: 6, weite: 1, proZeile: 6 },
+  { bewegung: 'schlag', zeile: 2, bilder: 6, schleife: false, bildrate: 6, weite: 1, proZeile: 6 },
+  {
+    bewegung: 'getroffen',
+    zeile: 3,
+    bilder: 2,
+    schleife: false,
+    bildrate: 11,
+    weite: 1,
+    proZeile: 2,
+  },
+  // Die Todesfolge laeuft seit dem 06.09.2026 bis zum Liegen durch und belegt
+  // dafuer die Zeilen 4 UND 5, mit vier breiten Zellen je Zeile. Vorher zeigte
+  // sie nur die erste Haelfte der Animation — das Zusammensacken —, weil die
+  // liegende Figur den gemeinsamen Ausschnitt aller Bilder aufgezogen haette.
+  // Die Begruendung der Zahlen steht bei `weite`.
+  //
+  // BILDRATE 10 IST DIE DES MODELLS: `Death_A` dauert 0,80 s, acht Bilder mit
+  // sieben Abstaenden also 8,75 — aufgerundet auf 10, damit die Folge im
+  // Zeitraffer x2 in 400 ms durchlaeuft und nicht in 457. Vorher stand hier 15,
+  // was mit sechs Bildern auf dieselben 200 ms fuer die halbe Animation kam.
+  // Wer sie aendert, sieht in KampfAnzeige.tsx nach: Das Nachspiel des Taktes
+  // und das Ausblenden der Figur haengen an dieser Dauer.
+  { bewegung: 'tod', zeile: 4, bilder: 8, schleife: false, bildrate: 10, weite: 1.5, proZeile: 4 },
 ];
 
 export const FIGUREN3D: readonly Blatt3D[] = [
@@ -166,16 +231,26 @@ export function folgeVon(bewegung: Bewegung3D): Bewegungsfolge3D {
 }
 
 /**
- * Der Versatz einer Zelle im Blatt, in Pixeln.
+ * Der Versatz einer Zelle im Blatt und ihre Breite, in Pixeln.
  *
- * Gedacht fuer `background-position`, das den Versatz NEGATIV erwartet:
- * `backgroundPosition = `-${x}px -${y}px``.
+ * `breite` steht mit dabei, weil sie nicht mehr immer `FIGUREN3D_KANTE` ist:
+ * Die Todeszeile hat 192 statt 128. Wer nur den Versatz nimmt und die Breite
+ * annimmt, zeigt von der liegenden Figur zwei Drittel und schneidet den Rest
+ * ab — und zwar ohne dass irgendwo ein Fehler entsteht.
  */
-export function zelleVon(bewegung: Bewegung3D, bild: number): { x: number; y: number } {
+export function zelleVon(
+  bewegung: Bewegung3D,
+  bild: number,
+): { x: number; y: number; breite: number } {
   const folge = folgeVon(bewegung);
   // Modulo statt Fehler: Ein Abspieler, der ueber das Ende hinauszaehlt, soll
   // von vorn anfangen und nicht abstuerzen. Bei einer Einmal-Bewegung bleibt
   // die Entscheidung, ob stehenbleiben oder ausblenden, beim Aufrufer.
-  const spalte = ((bild % folge.bilder) + folge.bilder) % folge.bilder;
-  return { x: spalte * FIGUREN3D_KANTE, y: folge.zeile * FIGUREN3D_KANTE };
+  const nummer = ((bild % folge.bilder) + folge.bilder) % folge.bilder;
+  const breite = FIGUREN3D_KANTE * folge.weite;
+  return {
+    x: (nummer % folge.proZeile) * breite,
+    y: (folge.zeile + Math.floor(nummer / folge.proZeile)) * FIGUREN3D_KANTE,
+    breite,
+  };
 }

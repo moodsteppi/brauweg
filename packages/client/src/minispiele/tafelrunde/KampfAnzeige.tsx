@@ -59,11 +59,13 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import {
   type Bildstand,
+  FIGURENKASTEN,
   GLEITEN_MS,
   SACKEN_MS,
   bildstand,
   blattPfad,
   blattVersatz,
+  zellWeite,
 } from './bildfolge';
 import { Figur3D } from './Figur3D';
 import { type EinheitId, FIGUREN, UNTERGRUND } from './figuren';
@@ -234,6 +236,34 @@ export function Figurbild({
 function bildSchieben(el: HTMLImageElement, stand: Bildstand): void {
   const versatz = blattVersatz(stand);
   if (el.style.transform !== versatz) el.style.transform = versatz;
+  /*
+   * Und den Ausschnitt auf die Breite DIESER Zelle stellen. Fast immer ist das
+   * eine Selbstverstaendlichkeit (quadratisch), einmal je Figur nicht: Die
+   * Todeszeile hat breitere Zellen, weil eine liegende Figur breiter ist als
+   * eine stehende hoch (siehe `weite` in figuren3d.ts). Ohne diese Zeile saehe
+   * man von der Gefallenen zwei Drittel und vom Rest nichts — kein Fehler,
+   * nur ein abgeschnittener Arm.
+   *
+   * AM KASTEN und nicht am Bild: Der Kasten IST der Ausschnitt (`overflow:
+   * hidden`), das Bild dahinter bleibt unveraendert gross. Die Figur wird also
+   * nicht gestreckt, es wird nur mehr von ihr freigegeben.
+   *
+   * Nicht ueber `data-tot` im Stylesheet, obwohl das dieselben Bilder traefe:
+   * Das Merkmal kommt aus dem Zustand des Bauteils, die Bildwahl aus dem Takt.
+   * Zwischen beiden liegt ein Zeichnen, und genau in dieser Luecke stuende die
+   * breite Zelle in einem quadratischen Ausschnitt.
+   *
+   * ALS EIGENE EIGENSCHAFT UND NICHT DIREKT ALS `aspectRatio`: jsdom kennt
+   * `aspect-ratio` nicht und verwirft die Zuweisung stillschweigend. Am
+   * Bildschirm faellt das nicht auf, im Test aber sehr wohl — die Breite waere
+   * dort gar nicht pruefbar, und der Vergleich unten (nur schreiben, wenn sich
+   * etwas aendert) liefe bei jedem Takt ins Leere.
+   */
+  const weite = String(zellWeite(stand));
+  const kasten = el.parentElement;
+  if (kasten && kasten.style.getPropertyValue('--tr-zellweite') !== weite) {
+    kasten.style.setProperty('--tr-zellweite', weite);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -787,12 +817,19 @@ export function KampfAnzeige<E extends Einheitenbild>({
                      zwei Zahlen liefen beim ersten Nachstellen auseinander,
                      und die Figur ruderte dann noch, wenn sie schon steht. */
                   '--gleiten': `${GLEITEN_MS}ms`,
-                  /* Wie lange das Einsacken dauert. Auch diese Zahl steht in
+                  /* Wie lange der Fall dauert. Auch diese Zahl steht in
                      bildfolge.ts und nicht hier: Sie faellt aus Bildzahl und
                      Bildrate der Todesfolge, und das Verblassen soll erst
                      danach anfangen — sonst ist die Figur halb durchsichtig,
-                     waehrend sie noch zusammensackt. */
+                     waehrend sie noch faellt. */
                   '--sacken': `${SACKEN_MS}ms`,
+                  /* Der Ausschnitt, durch den man die Figur sieht. Beide Masse
+                     kommen aus bildfolge.ts, weil sie am gemessenen Ausschnitt
+                     der Blaetter haengen und nicht am Geschmack — steht die
+                     Zahl im Stylesheet, wachsen die Figuren beim naechsten
+                     Rendern stillschweigend mit. */
+                  '--tr-kasten-hoehe': `${FIGURENKASTEN.hoehe}%`,
+                  '--tr-kasten-boden': `${FIGURENKASTEN.boden}%`,
                   /*
                    * Die Reihe stapelt die Figuren: Wer weiter vorn steht,
                    * liegt darueber. Noetig, seit eine Figur ihr Feld nach oben
@@ -1027,15 +1064,32 @@ function Ergebnis({
 const RUECKFALL_TAKT_MS = 100;
 
 /**
+ * Wie lange die Gefallene danach noch verblasst, in Millisekunden.
+ *
+ * Die Zahl steht so auch im Stylesheet (`.figur[data-tot] .koerper`, hinter
+ * `--sacken`) — hier steht sie, damit der Takt sie mitrechnen kann. Sie ist
+ * bewusst KEINE Variable an der Figur: Anders als der Fall haengt sie an
+ * keiner Bildzahl, sie ist eine Angabe ueber das Verblassen und gehoert
+ * deshalb ins Stylesheet.
+ */
+const VERBLASSEN_MS = 420;
+
+/**
  * Wie lange der Takt nach dem Ende noch laeuft — nur fuer die Bildfolgen.
  *
  * Der Kampf ist vorbei, aber die letzte Todesfolge nicht: Sie faellt fast immer
- * kurz vor das Ende und braucht bei sechs Bildern und doppelter Bildrate rund
- * 200 ms. Grosszuegig gerundet, weil ein Takt zu viel nichts kostet (es
- * aendert sich nichts mehr, also wird auch nichts neu gezeichnet) — ein Takt
- * zu wenig aber die Figur mitten im Einsacken einfriert.
+ * kurz vor das Ende. `SACKEN_MS` ist die Dauer des Falls (aus figuren3d.ts
+ * gerechnet, seit dem 06.09.2026 fuer den ganzen Weg bis zum Liegen — vorher
+ * war es nur das halbe Einsacken), `VERBLASSEN_MS` das Ausblenden danach.
+ * Grosszuegig aufgerundet, weil ein Takt zu viel nichts kostet (es aendert
+ * sich nichts mehr, also wird auch nichts neu gezeichnet) — ein Takt zu wenig
+ * aber die Figur mitten im Fall einfriert.
+ *
+ * GERECHNET UND NICHT GESETZT: Hier standen fest 600 ms, und die waren an
+ * sechs Bildern halber Todesfolge gemessen. Mit dem vollen Fall reichen sie
+ * nicht mehr, und niemand haette es an einer Zahl gesehen.
  */
-const NACHSPIEL_MS = 600;
+const NACHSPIEL_MS = SACKEN_MS + VERBLASSEN_MS + 100;
 
 interface Uhr {
   naechstes(tick: () => void): void;

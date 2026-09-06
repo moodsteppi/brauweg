@@ -8,10 +8,10 @@
  * laengsten hinsieht. Seitdem zeichnen alle vier Orte dieselbe Figur, und
  * damit sie es auch morgen noch tun, steht sie hier und nicht zweimal.
  *
- * DER AUFBAU: ein Kasten mit `overflow: hidden`, darin das ganze Blatt,
- * sechsmal so breit und fuenfmal so hoch. Ohne Versatz steht die Zelle links
- * oben, und das ist Bild 0 der Ruhefolge — eine STEHENDE Figur bekommt
- * deshalb gar keine Angabe. Nur die Arena schiebt das Blatt weiter, und zwar
+ * DER AUFBAU: ein Kasten mit `overflow: hidden`, darin das ganze Blatt, so
+ * viele Zellen breit und hoch, wie figuren3d.ts sagt. Ohne Versatz steht die
+ * Zelle links oben, und das ist Bild 0 der Ruhefolge — eine STEHENDE Figur
+ * bekommt deshalb gar keine Angabe. Nur die Arena schiebt das Blatt weiter, und zwar
  * unmittelbar am Element (`bildSchieben` in KampfAnzeige.tsx); dafuer ist
  * `gib` da. Am `<img>` steht deshalb kein `transform`: Es waere die Angabe,
  * die der Takt gleich darauf ueberschreibt, und beim naechsten Zeichnen
@@ -30,6 +30,8 @@
  */
 
 import { type ReactNode, useState } from 'react';
+
+import { FIGUREN3D_SPALTEN, FIGUREN3D_ZEILEN } from '../../figuren3d/figuren3d';
 
 import stil from './Figur3D.module.css';
 
@@ -72,6 +74,16 @@ export function Figur3D({
       <img
         ref={gib}
         className={gib ? `${stil.blatt} ${stil.bewegt}` : stil.blatt}
+        /* Das Raster des Blattes gehoert nach figuren3d.ts und nicht ins
+           Stylesheet: Dort stand es bis zum 06.09.2026 als `width: 600%;
+           height: 500%`, und die Zeile, die das Blatt am selben Tag dazubekam,
+           haette lauter richtige Bilder an der falschen Stelle ergeben. */
+        style={
+          {
+            '--tr-blattspalten': FIGUREN3D_SPALTEN,
+            '--tr-blattzeilen': FIGUREN3D_ZEILEN,
+          } as React.CSSProperties
+        }
         src={blatt}
         alt={name}
         onError={() => setKaputt(blatt)}
