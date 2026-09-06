@@ -515,12 +515,52 @@ export function erreichbareFreie(
 }
 
 /**
+ * Freie Felder, die IRGENDEIN Sitz noch erreichen kann.
+ *
+ * Gelaufen wird von allen Gebieten zugleich ueber freie Felder, nicht durch
+ * Barrieren. Was dabei nicht erreicht wird, ist eingemauert: Ein Feld, das
+ * niemand mehr holen kann und das die Partie bis zum Ende als Loch traegt.
+ */
+export function vonIrgendwemErreichbareFreie(
+  partie: FillerPartie,
+  sperren: ReadonlySet<string>,
+): number {
+  const { spalten, zeilen } = partie.regeln;
+  const gesehen = new Set<number>();
+  const rand: number[] = [];
+  for (let platz = 0; platz < partie.besitzer.length; platz++) {
+    if (partie.besitzer[platz] !== null) rand.push(platz);
+  }
+  let zahl = 0;
+  while (rand.length > 0) {
+    const platz = rand.pop()!;
+    for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
+      if (gesehen.has(n)) continue;
+      if (partie.besitzer[n] !== null) continue;
+      gesehen.add(n);
+      zahl++;
+      rand.push(n);
+    }
+  }
+  return zahl;
+}
+
+/**
  * Die Barrieren, die dieser Sitz gerade setzen darf.
  *
- * **Die Einsperr-Regel.** Eine Wand ist verboten, wenn danach ein Sitz kein
- * einziges freies Feld mehr erreichen kann, der vorher noch eines erreichte.
- * Ohne sie waere die Spielart in zwei Zuegen entschieden: Wer den Gegner auf
- * seiner Ecke zumauert, gewinnt mit 55 zu 1.
+ * **Die Einmauer-Regel (seit dem 06.09.2026).** Eine Wand ist verboten, wenn
+ * danach ein freies Feld fuer NIEMANDEN mehr erreichbar waere. Jedes Feld
+ * muss bis zum Ende zu holen sein — ein eingemauertes Loch gehoert niemandem,
+ * zaehlt fuer niemanden und laesst die Partie nur noch ueber LEERZUEGE_MAX
+ * enden. Gezaehlt wird gegen den Stand VORHER: Eine Wand darf die Zahl der
+ * erreichbaren freien Felder nicht verkleinern.
+ *
+ * **Die Einsperr-Regel** bleibt daneben bestehen: Eine Wand ist auch
+ * verboten, wenn danach ein Sitz kein einziges freies Feld mehr erreichen
+ * kann, der vorher noch eines erreichte. Ohne sie waere die Spielart in zwei
+ * Zuegen entschieden: Wer den Gegner auf seiner Ecke zumauert, gewinnt mit
+ * 55 zu 1. Sie folgt NICHT aus der ersten — die Felder hinter dem Gegner
+ * bleiben ja fuer mich erreichbar.
  *
  * Geprueft wird fuer JEDEN Sitz, auch den eigenen — nicht aus Fuersorge,
  * sondern weil ein Brett, auf dem niemand mehr etwas holen kann, nur noch
@@ -546,6 +586,7 @@ export function moeglicheBarrieren(
   const gesetzt = new Set(partie.barrieren);
   const sitze = sitzeVon(partie);
   const vorher = new Map(sitze.map((s) => [s, erreichbareFreie(partie, s, gesetzt)]));
+  const erreichbarVorher = vonIrgendwemErreichbareFreie(partie, gesetzt);
 
   const aus: [number, number][] = [];
   for (let platz = 0; platz < partie.feld.length; platz++) {
@@ -557,6 +598,9 @@ export function moeglicheBarrieren(
       if (gesetzt.has(schluessel)) continue;
       const probe = new Set(gesetzt);
       probe.add(schluessel);
+      // Erst die billige Frage: Mauert die Wand ein Feld ein? Dann sind die
+      // Sitze gar nicht mehr dran.
+      if (vonIrgendwemErreichbareFreie(partie, probe) < erreichbarVorher) continue;
       const sperrtJemanden = sitze.some(
         (s) => (vorher.get(s) ?? 0) > 0 && erreichbareFreie(partie, s, probe) === 0,
       );

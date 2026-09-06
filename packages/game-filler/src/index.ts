@@ -31,6 +31,7 @@ export {
   platzierungen,
   sieger,
   startEcke,
+  vonIrgendwemErreichbareFreie,
 } from './partie.js';
 export { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
 export { botZug } from './bot.js';

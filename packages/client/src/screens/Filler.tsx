@@ -1020,7 +1020,11 @@ function Brett({
             </p>
           </>
         ) : (
-          <Warteband gegenBot={gegenBot} farbzahl={sicht.farbzahl} />
+          <Warteband
+            gegenBot={gegenBot}
+            farbzahl={sicht.farbzahl}
+            mitMauern={mitMauern(sicht.variante)}
+          />
         )}
       </div>
     </main>
@@ -1044,13 +1048,34 @@ function Brett({
 function Warteband({
   gegenBot,
   farbzahl,
+  mitMauern,
 }: {
   gegenBot: boolean;
   farbzahl: number;
+  /** Am Tisch gibt es Mauern: Dann steht hier ein unsichtbarer Bau-Knopf. */
+  mitMauern: boolean;
 }): React.JSX.Element {
   return (
     <>
-      <div className="fl-palette fl-palette-ruht" aria-hidden="true">
+      {/*
+        * Derselbe Knopf wie beim eigenen Zug, nur unsichtbar: Er haelt die
+        * Hoehe. Ohne ihn waere der Fuss beim Gegnerzug um eine Knopfhoehe
+        * kuerzer, und das Brett spraenge bei jedem Zugwechsel (Handy, 06.09.).
+        * Ein <button> und kein <div>, weil ein div mit denselben Klassen zwei
+        * Pixel niedriger ausfiel — gemessen, nicht geraten.
+        */}
+      {mitMauern && (
+        <button className="fl-bauknopf" type="button" data-platz="" aria-hidden="true" disabled tabIndex={-1}>
+          <Mauericon />
+          <span>Mauer</span>
+          <em>0</em>
+        </button>
+      )}
+      <div
+        className="fl-palette fl-palette-ruht"
+        data-viele={farbzahl > 6 ? '' : undefined}
+        aria-hidden="true"
+      >
         {Array.from({ length: farbzahl }, (_, nr) => (
           <span key={nr} className="fl-farbe" style={{ background: farbeVon(nr) }} />
         ))}
@@ -1392,10 +1417,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
         färben; erst das Färben gibt ab. Die ersten drei Züge der Partie sind
         mauerfrei — das Schloss auf dem Knopf zählt sie herunter; ab dem
-        zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst den
-        Gegner damit nicht
-        einsperren: Kanten, nach denen er kein freies Feld mehr erreichen
-        könnte, lassen sich nicht bebauen.
+        zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst
+        kein Feld einmauern: Eine Kante, nach der ein freies Feld für niemanden
+        mehr erreichbar wäre, lässt sich nicht bebauen — jedes Feld bleibt bis
+        zum Ende zu holen. Auch den Gegner kannst du nicht einsperren.
       </p>
       <p>
         <strong>Extreme</strong> ist Build mit sieben Farben und drei
