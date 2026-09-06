@@ -409,11 +409,20 @@ export function Synergieleiste({
   return (
     <section className={stil.leiste} aria-label="Synergien">
       <ul className={stil.liste}>
-        {staende.length === 0 && (
-          <li className={stil.leer}>
-            Noch keine Marken auf dem Feld — jeder Recke bringt ein bis zwei mit.
-          </li>
-        )}
+        {/*
+          KURZ, seit dem 06.09.2026. Hier stand „Noch keine Marken auf dem
+          Feld — jeder Recke bringt ein bis zwei mit." Der Satz war richtig
+          und stand am falschen Ort: Die Leiste teilt sich am Handy jetzt
+          eine Zeile mit Leben, Rang und Feldplaetzen
+          (`.tr-statuszeile` in styles.css), und ein Satz dieser Laenge
+          sprengte sie in eine zweite — 20 Pixel, ausgerechnet in Runde 1,
+          wo man den Laden darunter braucht. Dazu stand er dort als DRITTE
+          Lehrzeile neben „Dein Feld ist leer …" auf dem Brett und „Deine
+          Bank ist leer — kauf dir unten im Laden einen Recken." Was eine
+          Marke ist, sagen die Ladenkarten selbst (sie tragen ihre Zeichen)
+          und das Regelblatt; hier genuegt, dass noch keine da ist.
+        */}
+        {staende.length === 0 && <li className={stil.leer}>Noch keine Marken</li>}
         {staende.map((stand) => (
           <Markenchip
             key={stand.marke}

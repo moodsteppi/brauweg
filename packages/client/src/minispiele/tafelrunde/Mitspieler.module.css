@@ -7,10 +7,11 @@
  * --line, --muted, --text, --gold, --accent, --danger), damit die Leiste wie
  * ein Teil der Rüstkammer aussieht.
  *
- * EIN WAAGERECHTER STREIFEN, keine Liste mehr. Je Sitz eine schmale Kachel;
- * bei acht Sitzen rollt der Streifen seitlich, statt in die Höhe zu wachsen.
- * Das ist der Grund für die feste Kachelbreite: Eine Kachel, die sich die
- * Breite teilt, wäre bei acht Sitzen 44 px schmal, und darin steht kein Name.
+ * EIN WAAGERECHTER STREIFEN, keine Liste mehr. Je Sitz eine flache Kachel:
+ * Bild links, Name, Leben und Zustand rechts daneben. Bei acht Sitzen rollt
+ * der Streifen seitlich, statt in die Höhe zu wachsen. Das ist der Grund für
+ * die feste Kachelbreite: Eine Kachel, die sich die Breite teilt, wäre bei
+ * acht Sitzen 44 px schmal, und darin steht kein Name.
  *
  * Die Leiste positioniert sich NICHT selbst — sie sitzt in der
  * festgehefteten Kopfleiste des Tisches (`.tr-oben` in styles.css) und füllt
@@ -47,22 +48,58 @@
 
 /* -- Eine Kachel ---------------------------------------------------------- */
 
+/*
+ * BILD LINKS, TEXT RECHTS — seit dem 06.09.2026 und aus einem einzigen Grund:
+ * der Höhe. Die Kachel stand als Spalte da (Bild über Lebenszeile über Name
+ * über Zustand) und war damit 74 px hoch. Die Leiste klebt oben fest, ihre
+ * Höhe fehlt dem Brett und dem Laden auf jedem Bildschirm der Partie — und
+ * auf Robins iPhone (440 x 956, aus dem Homescreen gestartet) kamen zu den
+ * 74 noch die 59 px des Notch-Randes und die Phasenzeile: 160 für eine
+ * Kopfzeile, gemessen auf IMG_1047.
+ *
+ * Nebeneinander sind es 44,5. Der NAME steht dabei ueber beiden Spalten,
+ * Bild und die zwei kurzen Zeilen darunter nebeneinander:
+ *
+ *     Brunhild            <- ueber die ganze Breite, 70 px
+ *     [Bild]  ---- 74     <- Balken und Zahl
+ *             Rang 2      <- Zustand
+ *
+ * Der Name quer und nicht in der rechten Spalte, weil er dort schlechter
+ * dastuende als vorher: neben dem Bild blieben ihm 39 px, in der alten
+ * Kachel hatte er 52. Quer sind es 70 — die Auslassungspunkte greifen also
+ * SPAETER als vor dem Umbau, obwohl die Kachel niedriger ist. Hoehe kostet
+ * die Zeile fast nichts: Das Bild ist ohnehin hoeher als Balken und Zustand
+ * zusammen.
+ *
+ * Der Preis ist die Breite: 82 statt 60 px je Kachel. Bei vier Sitzen passen
+ * sie weiter nebeneinander (4 x 82 + drei Luecken = 343 von 360 px, die
+ * neben dem Zurueck-Knopf auf einem 440er-Schirm bleiben); ab sechs rollt
+ * der Streifen seitlich — was er bei sechs Sitzen vorher auch schon tat.
+ *
+ * Die Zuordnung läuft über `grid-template-areas` und die Klassen der Kinder.
+ * Das Markup bleibt damit unangetastet: Mitspieler.tsx setzt vier Kinder in
+ * den Fluss, und wo sie landen, entscheidet allein diese Datei.
+ */
 .kachel {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'name name'
+    'bild leben'
+    'bild zustand';
   align-items: center;
-  gap: 2px;
-  /* 60 px: breit genug für einen Namen mit Auslassungspunkten und für einen
-     Daumen, schmal genug, dass bei vier Sitzen alle vier auf ein 390er-Handy
-     passen (4 x 60 + Lücken + Zurück-Knopf = 325 von 374). */
-  width: 60px;
-  padding: 3px 3px 2px;
+  gap: 1px 5px;
+  width: 82px;
+  padding: 2px 5px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.24);
   color: var(--text);
   font: 700 10px/1.15 system-ui;
-  text-align: center;
+  /* Links statt zentriert: Die drei Zeilen stehen jetzt als Block neben dem
+     Bild, und ein zentrierter Block neben einem Bild sieht aus wie ein
+     Satzfehler. */
+  text-align: left;
 }
 button.kachel { cursor: pointer; }
 
@@ -91,10 +128,18 @@ button.kachel { cursor: pointer; }
 /* -- Bild ----------------------------------------------------------------- */
 
 .bild {
+  grid-area: bild;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  /*
+   * 26 statt 28. Zwei Gruende, beide gemessen: Das Bild steht neben Balken
+   * und Zustand und gibt der Kachel damit die HOEHE vor — jeder Pixel hier
+   * ist einer weniger fuer das Brett darunter. Und es nimmt der Spalte
+   * daneben BREITE: Bei 28 blieben ihr 37 px, bei 26 sind es 39 — und
+   * genau so breit ist das Wort „Gegner" darin (siehe `.gegnerMarke`).
+   */
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
@@ -115,6 +160,7 @@ button.kachel { cursor: pointer; }
 /* -- Leben ---------------------------------------------------------------- */
 
 .lebenzeile {
+  grid-area: leben;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -161,6 +207,7 @@ button.kachel { cursor: pointer; }
 /* -- Name und Zustand ----------------------------------------------------- */
 
 .name {
+  grid-area: name;
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -171,6 +218,7 @@ button.kachel { cursor: pointer; }
 /* Immer da, auch leer — sonst wackelt die Höhe des Streifens bei jedem
    „bereit". */
 .zustand {
+  grid-area: zustand;
   display: block;
   min-height: 11px;
   max-width: 100%;
@@ -182,7 +230,10 @@ button.kachel { cursor: pointer; }
 .marke,
 .gegnerMarke {
   display: inline-block;
-  padding: 0 5px;
+  /* 2 px Luft und nicht 5: „Gegner" ist das laengste dieser Woerter und
+     braucht mit 5 px genau 44 — die rechte Spalte der Kachel hat 39 (siehe
+     `.bild`), es stand also abgeschnitten da. Mit 2 px sind es 38. */
+  padding: 0 2px;
   border-radius: 999px;
   background: var(--line);
   color: var(--text);

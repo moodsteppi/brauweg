@@ -10,9 +10,11 @@
  *
  * WO DIE LEISTE STEHT, entscheidet allein diese Datei:
  *
- *   Am Handy liegt sie IM FLUSS ueber dem Brett, als eine Reihe von Chips.
- *   Zuklappen gibt es nicht mehr: Seit sie Zaehler zeigt statt Saetze, ist sie
- *   eine Zeile hoch — der Klappknopf war selbst so hoch wie sie.
+ *   Am Handy liegt sie IM FLUSS ueber dem Brett, als eine Reihe von Chips —
+ *   seit dem 06.09.2026 in derselben Zeile wie Leben, Rang und Feldplaetze
+ *   (`.tr-statuszeile` in styles.css). Zuklappen gibt es nicht mehr: Seit sie
+ *   Zaehler zeigt statt Saetze, ist sie eine Zeile hoch — der Klappknopf war
+ *   selbst so hoch wie sie.
  *
  *   Ab 75rem haengt sie FEST an der linken Kante neben dem Brett, dann als
  *   Spalte. Fest und nicht im Fluss, weil der Tisch (.tr-tisch in styles.css)
@@ -26,9 +28,18 @@
  * Kein Kasten mehr, sondern eine Reihe Chips: Sie soll neben dem Brett
  * liegen wie eine Zeile Beiwerk und nicht wie ein zweites Bedienfeld. Kein
  * eigener Hintergrund und keine Kante — den Rahmen gibt jeder Chip selbst.
+ *
+ * KEINE EIGENE BREITE MEHR, seit dem 06.09.2026: Die Leiste steht am Handy
+ * in derselben Reihe wie Leben, Rang und Feldplaetze (`.tr-statuszeile` in
+ * styles.css), und die Reihe bringt die Breite mit. Stuende hier weiter
+ * `min(94vw, 460px)`, fuellte die Leiste die Zeile allein und draengte die
+ * drei Werte in eine zweite — genau die 88 Pixel, die der Umbau loswerden
+ * wollte.
  */
 .leiste {
-  width: min(94vw, 460px);
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .liste {
@@ -84,16 +95,20 @@
  * haengt: Diese Zeile gehoert zu genau einem Brett und muesste mitwandern,
  * sobald man den gezeigten Gegner wechselt.
  *
- * Zentriert wie der Titel darueber, und umbrechend: Sieben Marken passen auf
+ * Zentriert wie der Titel daneben, und umbrechend: Sieben Marken passen auf
  * 340 px nicht in eine Reihe, und ein waagerechtes Rollen an dieser Stelle
  * saehe niemand.
+ *
+ * DANEBEN, nicht darunter — seit dem 06.09.2026 steht sie mit dem Bretttitel
+ * in einer Reihe (`.tr-brettkopf` in styles.css). Der eigene Abstand nach
+ * unten ist deshalb weg: Ihn setzt jetzt die Reihe fuer beide.
  */
 .fremdzeile {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 3px;
-  margin: 0 0 3px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -225,12 +240,9 @@
     inset 0 0 0 3px rgba(255, 255, 255, 0.22);
 }
 
-/* Zwischen Handy und breitem Schirm liegt sie weiter im Fluss, nur so breit
-   wie Brett und Bank daneben (.tr-bretter, .tr-bank in styles.css) — sonst
-   steht sie als einziger Teil des Tisches eingerueckt da. */
-@media (min-width: 40rem) {
-  .leiste { width: min(70vw, 560px); }
-}
+/* Zwischen Handy und breitem Schirm liegt sie weiter im Fluss — die Breite
+   der Reihe bringt `.tr-statuszeile` in styles.css mit, dort steht die
+   Tablet-Stufe. Hier bleibt nichts zu tun. */
 
 /* -- Seitlich ab dem breiten Schirm --------------------------------------- */
 
@@ -248,9 +260,12 @@
     position: fixed;
     /* Immer 12 px links vom Laden, bis zum linken Rand des Fensters. */
     left: max(12px, calc(50% - 520px));
-    top: 108px;
+    /* Knapp unter der festgehefteten Kopfleiste. 96 und nicht mehr 108: Seit
+       dem 06.09.2026 sind die Mitspielerkacheln flach (Bild neben Text), die
+       Leiste endet am breiten Schirm bei 89 px. */
+    top: 96px;
     width: auto;
-    max-height: calc(100dvh - 140px);
+    max-height: calc(100dvh - 128px);
     overflow-y: auto;
     /* Am Ende des Rollens nicht an die Seite weiterreichen — dieselbe Zeile
        aus demselben Grund wie an .tr-tisch: Sonst zieht der Daumen unter

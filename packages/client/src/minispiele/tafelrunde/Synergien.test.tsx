@@ -251,7 +251,7 @@ describe('Synergieleiste', () => {
 
   it('sagt es, wenn noch keine Marke auf dem Feld steht', () => {
     render(<Synergieleiste staende={[]} tabelle={TABELLE} />);
-    expect(screen.getByText(/Noch keine Marken auf dem Feld/)).toBeInTheDocument();
+    expect(screen.getByText(/Noch keine Marken/)).toBeInTheDocument();
   });
 
   it('laesst sich nicht mehr zuklappen — dafuer ist sie zu flach', () => {

@@ -1762,15 +1762,20 @@ function Ruestkammer({
           (gegner && (
             <div className="tr-bretter">
               <section className="tr-brettteil">
-                <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
-                {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
-                    Feld `synergien` an jedem Sitz genau wie ein Spieler
-                    (sicht.ts) — bis heute stand hier nichts davon. */}
-                <Fremdmarken
-                  staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                  tabelle={synergieTabelle}
-                  beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
-                />
+                {/* Name und Marken in einer Zeile, wie am Spielertisch
+                    (`.tr-brettkopf`): Zwei Zeilen Beiwerk ueber einem Brett
+                    kosten am Handy 33 Pixel, nebeneinander 18. */}
+                <div className="tr-brettkopf">
+                  <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
+                  {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
+                      Feld `synergien` an jedem Sitz genau wie ein Spieler
+                      (sicht.ts) — bis heute stand hier nichts davon. */}
+                  <Fremdmarken
+                    staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                    tabelle={synergieTabelle}
+                    beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                  />
+                </div>
                 <Hexbrett
                   reihen={sicht.brettReihen}
                   spalten={sicht.brettSpalten}
@@ -1857,42 +1862,51 @@ function Ruestkammer({
         />
       </div>
 
-      {/* ---- Die eigenen Werte ------------------------------------------ */}
-      {/* Leben und Rang, mehr nicht: Die Runde steht jetzt ausgeschrieben in
-          der Phasenzeile darueber, und das Gold gross am Laden, wo es
-          ausgegeben wird. Zweimal dieselbe Zahl auf einem Schirm ist kein
-          Dienst, sondern Suchen.
+      {/* ---- Die Statuszeile: eigene Werte und Marken in EINER Reihe ----- */}
+      {/*
+        Bis zum 06.09.2026 waren das zwei Baender untereinander: ein Kasten
+        mit zwei grossen Kacheln (Leben, Rang/Feld) und darunter die
+        Markenleiste. Auf Robins Handybild (440 x 956, IMG_1047) kosteten
+        fuenf kleine Angaben zusammen 88 Pixel — Platz, der dem Brett und dem
+        Laden fehlte. Nebeneinander in einer Reihe sind es 22.
 
-          WAEHREND DES KAMPFES STEHT DER KASTEN NICHT DA. Er kostet auf einem
-          390-px-Schirm 62 Pixel, und beide Zahlen darin sind dort entbehrlich:
-          Das eigene Leben steht ohnehin auf der eigenen Kachel in der
-          Mitspielerleiste darueber, und Rang wie Feldplaetze kann man im Kampf
-          weder aendern noch brauchen. Der Platz gehoert in dieser Minute der
-          Arena. */}
-      {!kampfLaeuft && (
-        <header className="tr-kopf">
-          <div className="tr-werte">
+        Die Werte sehen jetzt aus wie die Markenchips daneben, weil sie
+        dasselbe sind: kurze Auskunft, kein Bedienfeld. Ihre Masse stehen in
+        styles.css (`.tr-wert`), die der Marken in Synergien.module.css — der
+        Chip des Nachbarn wird NICHT abgeschrieben, beide Bauteile behalten
+        ihr eigenes Stylesheet.
+
+        WAEHREND DES KAMPFES STEHEN NUR DIE MARKEN DA. Leben und Rang sind
+        dort entbehrlich: Das eigene Leben steht ohnehin auf der eigenen
+        Kachel in der Mitspielerleiste darueber, und Rang wie Feldplaetze kann
+        man im Kampf weder aendern noch brauchen. Die Marken bleiben, denn wer
+        zusieht, plant schon die naechste Runde.
+      */}
+      <div className="tr-statuszeile">
+        {!kampfLaeuft && (
+          <header className="tr-kopf">
             <span className="tr-wert tr-wert-leben">
               <LebenZeichen />
               <strong>{eigenes.leben}</strong>
               <em>Leben</em>
             </span>
             <span className="tr-wert tr-wert-level">
+              <em>Rang</em>
               <strong>{eigenes.level}</strong>
-              <em>
-                {eigenes.belegt}/{eigenes.feldplaetze} Feld
-              </em>
             </span>
-          </div>
-        </header>
-      )}
-
-      {/* ---- Die Marken auf dem eigenen Brett ---------------------------- */}
-      {/* Sie steht ueber dem Brett und damit auch waehrend des Kampfes da:
-          Wer gerade zusieht, plant schon die naechste Runde — und nach dem
-          Kampf ist sie ohnehin die erste Frage. Am Desktop haengt sie
-          seitlich, das entscheidet allein Synergien.module.css. */}
-      <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} />
+            <span className="tr-wert tr-wert-feld">
+              <strong>
+                {eigenes.belegt}/{eigenes.feldplaetze} Feld
+              </strong>
+            </span>
+          </header>
+        )}
+        {/* Am Desktop haengt die Leiste seitlich statt hier — das entscheidet
+            allein Synergien.module.css, und weil sie sich dort selbst aus dem
+            Fluss nimmt (`position: fixed`), bleibt diese Reihe davon
+            unberuehrt. */}
+        <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} />
+      </div>
 
       {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
           gleiche Breite, gleiche Stelle, damit nichts springt. */}
@@ -1904,20 +1918,29 @@ function Ruestkammer({
               Haelfte sind das die vier Reihen aus dem Konzept. */}
           {gegner && (
             <section className="tr-brettteil tr-brettteil-fremd">
-              <h2 className="tr-bretttitel">
-                {spielername(zeile(gegner.sitz), gegner.sitz)}
-                {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
-              </h2>
-              {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
-                  in der eigenen Leiste. Ohne sie muesste man seine Figuren
-                  einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
-                  zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
-                  auch hier nichts. */}
-              <Fremdmarken
-                staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                tabelle={synergieTabelle}
-                beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
-              />
+              {/* Name und Marken in EINER Zeile, seit dem 06.09.2026 — aus
+                  demselben Grund wie bei der eigenen Statuszeile darueber:
+                  Zwei Zeilen Beiwerk ueber einem Brett kosteten am Handy
+                  33 Pixel, nebeneinander sind es 18. Der Gegnerteil ist die
+                  Haelfte, die ohnehin schon zurueckgenommen ist; ihm zwei
+                  volle Zeilen zu geben und dem Laden darunter keinen Platz
+                  waere die falsche Reihenfolge. */}
+              <div className="tr-brettkopf">
+                <h2 className="tr-bretttitel">
+                  {spielername(zeile(gegner.sitz), gegner.sitz)}
+                  {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
+                </h2>
+                {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
+                    in der eigenen Leiste. Ohne sie muesste man seine Figuren
+                    einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
+                    zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
+                    auch hier nichts. */}
+                <Fremdmarken
+                  staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                  tabelle={synergieTabelle}
+                  beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                />
+              </div>
               <Hexbrett
                 reihen={sicht.brettReihen}
                 spalten={sicht.brettSpalten}
