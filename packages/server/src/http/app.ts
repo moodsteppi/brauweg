@@ -1838,7 +1838,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
-    return reply.send(await sucheVermittlung().betritt(gameId, accountId));
+    // Optionaler Regelsatz (Spielart); ohne Rumpf gilt die Vorgabe des Moduls.
+    const { config } = z
+      .object({ config: z.unknown().optional() })
+      .parse(request.body ?? {});
+    return reply.send(await sucheVermittlung().betritt(gameId, accountId, config ?? null));
   });
 
   /**

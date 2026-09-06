@@ -12,7 +12,7 @@ import test from 'node:test';
 
 import { createTestContext, createVerifiedAccount, seedInvite, type TestContext } from './helpers.js';
 import { Vermittlung } from '../src/suche/vermittlung.js';
-import { isReadyToStart, tableWithSeats } from '../src/tables/service.js';
+import { isReadyToStart, tableRules, tableWithSeats } from '../src/tables/service.js';
 
 const SPIEL = 'tafelrunde';
 const FENSTER_MS = 30_000;
@@ -85,6 +85,75 @@ async function tischeVon(s: Stand, accountId: string): Promise<string[]> {
   });
   return rows.map((row) => row.tableId);
 }
+
+test('Filler: die Spielart trennt die Toepfe, und der Tisch traegt den Regelsatz des Suchenden', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  const bert = await s.konto('Bert');
+  const cara = await s.konto('Cara');
+  const nebel = { spalten: 8, zeilen: 7, farben: 6, barrieren: 10, variante: 'nebel' };
+  const extreme = { spalten: 8, zeilen: 7, farben: 7, barrieren: 10, variante: 'extreme' };
+
+  await s.vermittlung.betritt('filler', anna, nebel);
+  const bertsStand = await s.vermittlung.betritt('filler', bert, extreme);
+  // Zwei Toepfe: Bert sieht nur sich selbst, nicht Anna.
+  assert.equal(bertsStand.suchende, 1);
+  assert.equal((await s.vermittlung.abruf('filler', anna)).suchende, 1);
+
+  // Cara sucht dieselbe Spielart wie Bert: Der Zweiertisch ist voll, es geht sofort los.
+  const carasStand = await s.vermittlung.betritt('filler', cara, extreme);
+  assert.ok(carasStand.tischId, 'Cara bekommt sofort ihren Tisch');
+  const bertsTisch = (await s.vermittlung.abruf('filler', bert)).tischId;
+  assert.equal(bertsTisch, carasStand.tischId, 'Bert und Cara sitzen zusammen');
+  const regeln = await tableRules(s.ctx.db, carasStand.tischId!);
+  assert.equal(regeln['variante'], 'extreme');
+  assert.equal(regeln['farben'], 7);
+
+  // Anna wartet ihr Fenster ab und bekommt einen Nebeltisch — mit Bot.
+  assert.equal((await s.vermittlung.abruf('filler', anna)).sucht, true, 'Anna sucht noch');
+  for (let offen = FENSTER_MS; offen > 0; offen -= 2_000) {
+    s.vor(2_000);
+    await s.vermittlung.abruf('filler', anna);
+  }
+  const annasTisch = (await s.vermittlung.abruf('filler', anna)).tischId;
+  assert.ok(annasTisch, 'Anna bekommt ihren eigenen Tisch');
+  assert.notEqual(annasTisch, carasStand.tischId);
+  assert.equal((await tableRules(s.ctx.db, annasTisch!))['variante'], 'nebel');
+});
+
+test('Filler: ein unbrauchbarer Regelsatz wird beim Eintritt abgewiesen, nicht erst nach 30 Sekunden', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+  const anna = await s.konto('Anna');
+  await assert.rejects(
+    s.vermittlung.betritt('filler', anna, { spalten: 8, zeilen: 7, farben: 6, variante: 'gibtEsNicht' }),
+  );
+  assert.equal((await s.vermittlung.abruf('filler', anna)).sucht, false, 'Anna steht in keiner Schlange');
+});
+
+test('Ohne Regelsatz steht man im Topf der Modulvorgabe (Nebel), nicht daneben', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+  const anna = await s.konto('Anna');
+  const bert = await s.konto('Bert');
+  await s.vermittlung.betritt('filler', anna);
+  const bertsStand = await s.vermittlung.betritt('filler', bert, { spalten: 8, zeilen: 7, farben: 6, barrieren: 10, variante: 'nebel' });
+  assert.ok(bertsStand.tischId, 'alter und neuer Client finden sich im Nebeltopf');
+});
+
+test('Wer die Spielart wechselt, steht nur noch im neuen Topf', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+  const anna = await s.konto('Anna');
+  const bert = await s.konto('Bert');
+  await s.vermittlung.betritt('filler', anna, { spalten: 8, zeilen: 7, farben: 6, barrieren: 10, variante: 'nebel' });
+  await s.vermittlung.betritt('filler', anna, { spalten: 8, zeilen: 7, farben: 6, barrieren: 10, variante: 'build' });
+  const bertsStand = await s.vermittlung.betritt('filler', bert, { spalten: 8, zeilen: 7, farben: 6, barrieren: 10, variante: 'nebel' });
+  assert.equal(bertsStand.suchende, 1, 'im Nebeltopf steht Anna nicht mehr');
+  assert.equal((await s.vermittlung.abruf('filler', anna)).suchende, 1);
+});
 
 test('Das Fenster laeuft ab dem ersten Suchenden - ein spaeterer verlaengert es nicht', async (t) => {
   const s = await stand();
