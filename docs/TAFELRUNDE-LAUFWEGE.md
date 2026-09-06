@@ -21,6 +21,11 @@ schade.
 >
 > Startleben (12), Zeitraffer (2), Schwellen und Boni sind unangetastet.
 
+> **ABSCHNITT 8 IST DIE FORTSETZUNG (06.09.2026).** Die vier Reihen waren da,
+> benutzt hat der Bot zwei davon — dort steht, welche Reihe seither zu welcher
+> Rolle gehoert, warum, und was die Umstellung gemessen gekostet und gebracht
+> hat.
+
 Nachrechnen:
 
 ```bash
@@ -342,3 +347,134 @@ Der Rest — dass die Figuren die übrigen knapp 97 % der Zeit stehen und
 schlagen — ist keine Panne, sondern das Spiel. Wer daran noch etwas ändern
 will, dreht nicht mehr am Brett: Dort ist die Luft raus, wie Abschnitt 1
 zeigt.
+
+
+---
+
+## 8. Die Wunschreihe je Rolle (06.09.2026)
+
+Die vier Reihen aus Abschnitt 1 waren da — **benutzt hat der Bot zwei davon.**
+Über 26.395 aufgestellte Einheiten stand er zu 100 % in Reihe 0 oder Reihe 3,
+und daran war nichts kaputt: `platzStrafe` in `bot.ts` kannte genau zwei
+Wünsche, ganz vorn (Wache, Meuchler) und ganz hinten (alles andere). Auf zwei
+Reihen war das vollständig. Robin hat die Tiefe aber bestellt, damit man
+„taktischer aufstellen" kann — gegen einen Gegner, der die Hälfte des Bretts
+nicht anfasst, bringt sie nichts.
+
+### Wo eine Rolle stehen will, und warum
+
+Der Kampf kennt von einer Rolle nur zweierlei: die Werte und die
+**Reichweite**. Nur der `beistand` hat eine eigene Zeile (er heilt, statt zu
+schlagen). Die Wunschreihe folgt deshalb der Frage, aus welcher Reihe eine
+Einheit überhaupt **handeln** kann, sobald die beiden Fronten sich treffen.
+Ein Gegner, der an unserer vordersten Reihe steht, ist von Reihe `d` genau
+`d + 1` Felder entfernt — treffen kann ihn also, wer `d ≤ reichweite - 1`
+steht. Gemessen bestätigt: Schütze und Magier starten seither mit Abstand 5
+statt 6 und schlagen nach **einem** Schritt statt nach zweien.
+
+| Rolle | RW | Reihe | Warum |
+| --- | --- | --- | --- |
+| `wache` | 1 | **0** | Der einzige Fall, in dem nicht die Reichweite entscheidet, sondern die Aufgabe: Sie **soll** das nächste Ziel sein (`sucheZiel` nimmt den Nächsten), sie hat das meiste Leben und den geringsten Angriff je Gold. |
+| `meuchler` | 1 | **1** | Muss genauso heran, ist aber der Schaden und nicht der Schild. In Reihe 0 stünde er neben der Wache gleich weit vorn und finge die halbe Eröffnung ab; eine Reihe dahinter bleibt die Wache das nächste Ziel. Der eine Schritt mehr ist bei seinem Tempo der billigste im Heer. Weiter an den **Rand** — dort läuft er an der Front vorbei statt hinein. |
+| `beistand` | 2 | **2** | Seine Reichweite ist der **Heilradius**, gemessen zu den eigenen Leuten. Aus Reihe 2 erreicht er die Wache in Reihe 0 (Abstand 2), aus Reihe 3 nicht mehr (Abstand 3). Das ist der Unterschied zwischen „heilt die Front" und „heilt niemanden" — und die Erklärung dafür, dass er hinten neben den Schützen kaum je jemanden zu heilen hatte. |
+| `schuetze` | 3 | **2** | So weit hinten, wie die Reichweite es erlaubt, ohne den Gegner an der eigenen Front zu verfehlen. Weiter hinten wäre nicht sicherer, sondern nur langsamer: Gedeckt ist man, sobald jemand näher steht. |
+| `magier` | 3 (Sturmrufer 4) | **2** bzw. **3** | Dieselbe Zeile, kein Sonderfall: Der Sturmrufer ist die einzige Einheit des Katalogs mit Reichweite 4 und steht deshalb als einzige eine Reihe weiter hinten. |
+
+Neu ist außerdem, dass eine Reihe **zu weit vorn** mehr kostet als eine zu
+weit hinten (`VORRUECK_GEWICHT` 15 gegen `REIHEN_GEWICHT` 10) — aber nur für
+Einheiten mit Reichweite. Wer vorrückt, wird zum nächsten Ziel und verliert
+genau die Deckung, für die er hinten steht; wer zurückfällt, verliert einen
+Schritt (300 ms). Wache und Meuchler rechnen in beide Richtungen gleich: Bei
+ihnen ist Vornstehen die Aufgabe, und ein Meuchler, dessen Reihe voll ist,
+weicht nach vorn aus statt nach hinten.
+
+### Was sich gemessen geändert hat
+
+**5.000 Partien zu viert, Saatbasis `laufwege-v1`, gleiche Saat vorher und
+nachher** (87.476 bzw. 87.265 Kämpfe):
+
+| | vorher | nachher |
+| --- | --- | --- |
+| Einheiten in Reihe 0 / 1 / 2 / 3 | **61,6 / 0,0 / 0,0 / 38,4 %** | **36,5 / 25,2 / 37,9 / 0,4 %** |
+| Bewegungen je Kampf (Median / Schnitt) | 12 / 12,49 | 11 / **11,11** |
+| Einheiten, die einmal liefen | 100,0 % | 100,0 % |
+| Schritte je Einheit | 2,385 | 2,121 |
+| Schritte bis zum ersten Treffer (Median) | 2 | **1** |
+| Kampfdauer (Median) | 14,8 s | 14,5 s |
+| Spielzeit (Median, mit Vorbereitungsmodell) | 5:56 | **5:49** |
+| Markenspanne | x0,541 … x1,600 | x0,534 … x1,591 |
+
+Dieselbe Rechnung auf der unabhängigen Saatbasis `ausgewogenheit-v1`
+(`werkzeug/ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 150`):
+Spielzeit **5:52 → 5:49**, Markenspanne **x0,52 … x1,58 → x0,53 … x1,57**
+(unten Naturwesen, oben Wächter). Die **Acht-Minuten-Schranke ist nicht in
+Gefahr**: Die Partie wird kürzer, nicht länger — die Schützen fangen früher
+an zu schießen, statt drei Felder anzumarschieren.
+
+**Naturwesen wird nicht weiter nach unten gedrückt.** Die Marke steht seit
+dem Symmetrie-Fix dicht an der Schranke x0,5, deshalb ist sie eigens
+nachgerechnet: Auf der Saatfamilie der Testprobe (`ausgewogenheit-probe`)
+liegt sie bei 3.000 Partien vorher **wie** nachher bei **x0,55**, ihre
+Siegquote selbst geht von 15,0 auf 15,2 %. Bei 400 Partien — der Größe, mit
+der die Probe in `test/ausgewogenheit.test.ts` läuft — schwankt dieselbe
+Schätzung zwischen x0,48 und x0,53, bei 800 / 1.200 / 1.600 Partien über
+x0,51 / x0,52 / x0,50. Die Probe rechnet deshalb seit dem 06.09.2026 den
+**Standardfehler ihrer eigenen Stichprobe** mit; die Schranken x0,5 und x2
+sind unverändert.
+
+### Was die Reihe gegen die Spalte wiegt
+
+Die zweite Frage der Aufgabe: `REIHEN_GEWICHT` steht bei 10, die
+Spaltenstrafe erreicht höchstens 4 — soll eine gute Spalte eine schlechte
+Reihe aufwiegen können? **Gemessen: Es macht keinen Unterschied.** 2.000
+Partien, dieselbe Saat, nur die Zahl gedreht:
+
+| `REIHEN_GEWICHT` | Reihen 0 / 1 / 2 / 3 | Bewegungen je Kampf | Markenspanne |
+| --- | --- | --- | --- |
+| 10 (gebaut) | 36,8 / 24,9 / 37,8 / 0,4 % | 11,07 | x0,542 … x1,600 |
+| 3 | 36,8 / 24,9 / 37,8 / 0,4 % | 11,07 | x0,542 … x1,600 |
+| 1 | 37,3 / 24,5 / 37,7 / 0,5 % | 11,08 | x0,542 … x1,607 |
+
+Bei 3 kommt Zeile für Zeile dieselbe Tabelle heraus; erst bei 1 bewegt sich
+ein halber Prozentpunkt (2 % der Meuchler stehen dann eine Reihe zu weit
+vorn). **Der Grund ist die Belegung:** Auf 20 Feldern je Hälfte stehen im
+Mittel 2,6 Einheiten, die Wunschreihe ist also fast immer frei. Das
+Verhältnis entscheidet nur den vollen Fall — und dort soll die Reihe
+entscheiden, weil sie bestimmt, was eine Einheit im Kampf überhaupt tun kann,
+während die Spalte nur bestimmt, wie gut (sechs Nachbarn in der Mitte, vier
+am Rand). **Die 10 bleibt.**
+
+### Die Alternative, die gemessen und nicht genommen wurde
+
+Naheliegend wäre gewesen, Schütze und Magier ganz hinten zu lassen und nur
+Meuchler und Beistand zu verschieben. Auch das ist gemessen (2.000 Partien,
+dieselbe Saat):
+
+| Stand | Reihen 0 / 1 / 2 / 3 | Bewegungen je Kampf | Kampfdauer | Spielzeit | Markenspanne |
+| --- | --- | --- | --- | --- | --- |
+| vorher | 61,5 / 0,0 / 0,0 / 38,5 % | 12,52 | 14,9 s | 358,5 s | x0,545 … x1,593 |
+| Schützen hinten lassen | 36,8 / 24,9 / 2,5 / 35,8 % | **13,13** | 15,0 s | 356,6 s | x0,537 … x1,562 |
+| **gebaut** | 36,8 / 24,9 / 37,8 / 0,4 % | 11,07 | 14,6 s | 350,6 s | x0,542 … x1,600 |
+
+Die Zeile in der Mitte **läuft mehr** — sie ist die einzige, die die
+Beobachtung aus Abschnitt 2 weiter verbessert. Sie tut es aber, indem sie
+Wege verlängert, die niemandem nützen: Ein Schütze, der drei Felder
+anmarschiert, bevor er zum ersten Mal schießt, hat drei Felder lang nichts
+getan. Genommen wurde deshalb die untere Zeile — und **Reihe 2 statt Reihe 3
+ist keine Geschmacksfrage, sondern die Reihe, aus der die Reichweite trägt.**
+
+### Was offen bleibt: die vierte Reihe
+
+**Reihe 3 steht jetzt fast leer (0,4 %)** — dorthin will nur der Sturmrufer,
+die einzige Einheit mit Reichweite 4. Das ist keine Lücke der Regel, sondern
+eine Aussage über die vierte Reihe: Mit dem heutigen Katalog gibt es keinen
+Grund, weiter hinten zu stehen, als die eigene Reichweite verlangt. Wenn die
+vierte Reihe sich lohnen soll, muss sie etwas bieten — Reichweiten, die sie
+brauchen, oder einen Vorteil fürs Hintenstehen. Das ist eine Entscheidung
+über den Katalog und keine über den Bot; sie steht als Karte auf dem Board.
+
+**Ebenfalls offen: ob der neue Bot STÄRKER spielt.** Alle Zahlen oben sind an
+Tischen gemessen, an denen jeder Bot dieselbe Regel benutzt — sie zeigen, wie
+sich die Meta verschiebt, nicht, welche Aufstellung gewinnt. Die Antwort
+darauf wäre ein Duell Aufstellung gegen Aufstellung, dasselbe Heer einmal so
+und einmal so gestellt; ein Werkzeug dafür gibt es noch nicht.

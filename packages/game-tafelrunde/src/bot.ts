@@ -611,11 +611,18 @@ const VORDERSTE_REIHE = 0;
  * Mitte hat sechs Nachbarn, eines am Rand vier). Ein Beistand in der Mitte
  * der falschen Reihe heilt trotzdem niemanden.
  *
- * GEMESSEN am 06.09.2026, 5.000 Partien zu viert: Mit 3 statt 10 — also mit
- * einer Spaltenstrafe, die eine Reihe aufwiegen kann — verschiebt sich die
- * Reihenverteilung um weniger als einen Prozentpunkt. Die Reihe bleibt also
- * ohnehin das entscheidende Merkmal, nur ohne dass man es an einer Zahl
- * ablesen koennte. Die Zahlen stehen in docs/TAFELRUNDE-LAUFWEGE.md.
+ * GEMESSEN am 06.09.2026 (2.000 Partien zu viert, Saatbasis laufwege-v1,
+ * je 34.853 Kaempfe): Mit 3 statt 10 kommt Zeile fuer Zeile DIESELBE Tabelle
+ * heraus — Reihen 36,8 / 24,9 / 37,8 / 0,4 %, 11,07 Bewegungen je Kampf,
+ * Markenspanne x0,542 bis x1,600. Erst bei 1 (dort wiegt die Mitte eine
+ * Reihe wirklich auf) bewegt sich ueberhaupt etwas, und zwar um einen halben
+ * Prozentpunkt: 2 % der Meuchler stehen dann eine Reihe zu weit vorn.
+ *
+ * DER GRUND IST DIE BELEGUNG: Auf 20 Feldern je Haelfte stehen im Mittel
+ * 2,6 Einheiten. Die Wunschreihe ist also fast immer frei, und dann kommt es
+ * auf das Verhaeltnis gar nicht an — es entscheidet nur den vollen Fall, und
+ * dort soll die Reihe entscheiden. Die Zahlen stehen in
+ * docs/TAFELRUNDE-LAUFWEGE.md, Abschnitt 8.
  */
 const REIHEN_GEWICHT = 10;
 
