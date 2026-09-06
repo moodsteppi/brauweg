@@ -16,9 +16,20 @@
  * `baueStreiter` rechnet sie einmal je Seite aus und gibt sie an `werteFuer`
  * — danach stehen die Werte und werden nicht mehr angefasst.
  *
- * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift in
- * die Zugschleife in `simuliereKampf` ein (dort kaeme das Wirken einer
- * Faehigkeit vor dem Angriff, mit Mana aus Treffern).
+ * DIE ROLLE WIRKT SEIT DEM 06.09.2026 — genau EINE von fuenf. Ein `beistand`
+ * heilt, statt zu schlagen (`HEILUNG_FAKTOR`, `sucheWunde`); Wache, Schuetze,
+ * Magier und Meuchler unterscheiden sich weiterhin allein ueber ihre Werte
+ * und ihre `reichweite`. Das ist Absicht und keine halbe Arbeit: Die vier
+ * kaempfen alle dadurch, dass sie zuschlagen, und ein Meuchler, der doppelten
+ * Schaden gegen die hinterste Reihe macht, waere eine neue Regel und keine
+ * Reparatur. Der Beistand war der einzige, dessen Rolle ohne Wirkung
+ * bedeutungslos war — er teilte am wenigsten aus UND hielt am wenigsten aus.
+ *
+ * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift an
+ * derselben Stelle in die Zugschleife ein, an der jetzt die Heilung steht
+ * (dort kaeme das Wirken einer Faehigkeit vor dem Angriff, mit Mana aus
+ * Treffern). Die Heilung ist NICHT die Faehigkeit des Beistands, sondern das,
+ * was seine Rolle im Grundkampf ausmacht — eine Faehigkeit kommt zusaetzlich.
  *
  * ZUR ZEIT: Gerechnet wird in ganzen Millisekunden und in festen Takten von
  * `TAKT_MS`. Keine Gleitkommazeit, kein `Date.now()`. Sekundenbruchteile als
@@ -27,7 +38,14 @@
  * genau das darf hier nicht passieren.
  */
 
-import { type EinheitId, type Grundwerte, type Stufe, werteFuer } from './katalog.js';
+import {
+  type EinheitId,
+  type Grundwerte,
+  type Rolle,
+  type Stufe,
+  einheit,
+  werteFuer,
+} from './katalog.js';
 import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
 import {
   type Seite,
@@ -210,12 +228,107 @@ export const SCHADEN_GRUNDWERT = 1;
  */
 export const SCHADEN_STUFEN_TEILER = 3;
 
+/**
+ * Wie viel Leben ein Beistand je Handgriff zurueckgibt — als Vielfaches
+ * seines eigenen Angriffs.
+ *
+ * WARUM DIE HEILUNG AM ANGRIFF HAENGT und nicht als sechster Grundwert im
+ * Katalog steht: Der Angriff ist der Wert, der bei einem Beistand sonst
+ * brachliegt (Moosheiler 26, Runenpriester 38, Lichtwahrerin 50 — jeweils der
+ * niedrigste seiner Kostenstufe). Er skaliert schon mit der Sternstufe und mit
+ * dem Synergie-Bonus auf Angriff (`werteFuer` in katalog.ts), und beides soll
+ * fuer eine Heilung genauso gelten wie fuer einen Schlag. Ein eigener
+ * Grundwert waere ein zweiter Weg, dasselbe zu sagen — und der erste, den
+ * jemand beim Balancieren vergisst.
+ *
+ * WARUM ES UEBERHAUPT EINE WIRKUNG GIBT. Bis zum 06.09.2026 wertete diese
+ * Datei die Rolle gar nicht aus, nur `reichweite`. Damit war ein Beistand eine
+ * schwache Einheit ohne jeden Ausgleich: Im Monokultur-Turnier (drei Kopien
+ * gegen drei, `werkzeug/turnier.mjs`) gewannen Moosheiler, Runenpriester und
+ * Lichtwahrerin ZUSAMMEN 0 von 114 Kaempfen — in jeder Kostenstufe die letzte
+ * Zeile. Zur Wahl stand auch, ihnen einfach Werte auf Stufenniveau zu geben
+ * und die Rolle zum blossen Aufstellungshinweis zu erklaeren; dagegen sprach,
+ * dass der Laden die Rolle anzeigt und das Konzept sie als Kampfart fuehrt
+ * (docs/spiele/auto-battler-konzept.md, "Einheiten und Verschmelzen"). Eine
+ * angezeigte Eigenschaft, die nichts tut, ist schlimmer als keine.
+ *
+ * DIE ZAHL IST GEMESSEN, nicht geschaetzt. Entschieden hat sie die
+ * Beistandsprobe in `werkzeug/turnier.mjs` — nicht die Rollenquote im
+ * Monokultur-Turnier, und der Unterschied ist wichtig: Drei Heiler
+ * gegeneinander koennen nur an der Uhr gewinnen (ausfuehrlich bei
+ * `beistandsprobe` in test/turnier.ts). Die Probe fragt stattdessen, was ein
+ * Spieler fragt — lohnt ein Brettplatz fuer einen Heiler? Zwei Kopien einer
+ * Einheit plus ein Beistand gegen drei Kopien derselben Einheit, je 190
+ * Kaempfe:
+ *
+ *     Faktor    Platz gut angelegt?
+ *       0,0           21,1 %            (der alte Zustand)
+ *       1,0           28,9 %
+ *       1,25          37,4 %
+ *       1,5           46,3 %
+ *       1,6           53,7 %
+ *       2,0           64,7 %
+ *       3,0           74,2 %
+ *
+ * Die 21,1 % in der ersten Zeile sind kein Widerspruch zu den null Siegen im
+ * Monokultur-Turnier: Zwei Dorfwachen mit einem nutzlosen Dritten daneben
+ * gewinnen manchmal trotzdem. Sie sind die Messlatte — so viel gewinnt die
+ * Seite, die den Platz WEGGIBT.
+ *
+ * 1,5 liegt knapp UNTER dem Gleichstand, und das mit Absicht: Die Probe gibt
+ * dem Heiler zwei Verbuendete, das Spiel gibt ihm bis zu acht — der Wert einer
+ * Rolle, die auf andere wirkt, waechst mit der Zahl der anderen. Gegengeprueft
+ * mit vier und fuenf Einheiten je Seite (`--kopien`) steht die Probe bei 55,3
+ * und 42,1 %; ein klarer Trend nach oben ist das nicht, ein Gleichstand rund
+ * um 50 % schon. Wer auf 1,6 geht, macht den Heilerplatz zur besseren Wahl als
+ * einen dritten Kaempfer, und dann steht in jedem Heer ein Heiler.
+ *
+ * DIE ZWEITE SCHRANKE IST DIE UHR, und sie ist der Grund, aus dem hier nicht
+ * hoeher gedreht wurde. Heilung verlaengert jeden Kampf doppelt, weil beide
+ * Seiten laenger stehen — dieselbe Falle wie bei der Ruestung (siehe
+ * `RUESTUNG_HOECHSTWERT` in katalog.ts und `HOECHSTDAUER_MS` oben). Ueber 1.500
+ * echte Partien zu viert sind aus 0,6 % an der Hoechstdauer 1,7 % geworden und
+ * aus 14,5 s Kampf 14,8 s; die Spielzeit blieb bei 6:00 im Median. Das ist
+ * bezahlbar. Wie schnell es das nicht mehr ist, zeigt der Gegenversuch, den
+ * Angriff des Moosheilers von 26 auf 34 zu heben: 15,7 % an der Uhr und 6:54
+ * Spielzeit — die Probe in test/spielzeit.test.ts (Schranke 10 %) waere
+ * gefallen. Der Katalog ist deshalb unangetastet geblieben.
+ *
+ * WER HIER DREHT, MISST BEIDES: `werkzeug/turnier.mjs --heilung <faktor>`
+ * fuer die Rolle und `werkzeug/ausgewogenheit.mjs` fuer die Partie. Die Probe
+ * in test/spielzeit.test.ts faengt den Rueckschlag ab, die in
+ * test/turnier.test.ts die Rolle.
+ */
+export const HEILUNG_FAKTOR = 1.5;
+
+/**
+ * Was ein Handgriff eines Beistands an Leben zurueckgibt.
+ *
+ * Gerundet und mindestens 1, aus denselben zwei Gruenden wie bei
+ * `schadenNach`: Ganze Zahlen, weil sie angezeigt werden und weil zwei Laeufe
+ * derselben Saat sonst auseinanderlaufen koennten — und ein Boden, damit ein
+ * kleiner Angriffswert nicht aus der Heilung eine Handlung ohne Wirkung macht.
+ * Eine Heilung um 0 waere kein kleiner Effekt, sondern ein Ereignis im
+ * Protokoll, das die Anzeige zeichnet und an dem nichts passiert.
+ *
+ * DER BODEN GILT NICHT FUER DEN FAKTOR 0 — dort heilt gar niemand, und die
+ * Entscheidung darueber faellt beim Aufrufer (`simuliereKampf`). Der Grund
+ * steht dort: Mit Boden waere ein Faktor von 0 nicht "die Rolle ohne Wirkung",
+ * sondern "ein Beistand, der seine Zuege verschenkt".
+ *
+ * Ueberheilt wird nicht — das begrenzt der Aufrufer am fehlenden Leben des
+ * Ziels, weil nur er es kennt.
+ */
+export function heilkraft(angriff: number, faktor: number = HEILUNG_FAKTOR): number {
+  return Math.max(1, Math.round(angriff * faktor));
+}
+
 // ---------------------------------------------------------------------------
 // Die Stellschrauben als Buendel
 // ---------------------------------------------------------------------------
 
 /**
- * Dieselben vier Zahlen, aber einstellbar.
+ * Dieselben fuenf Zahlen, aber einstellbar.
  *
  * WOZU: Um zu beantworten, welche Stellschraube eine Partie wie viel kuerzer
  * macht, muss man jede EINZELN drehen und dieselben 500 Partien noch einmal
@@ -251,6 +364,21 @@ export interface Kampfregler {
    * am Bildschirm tatsaechlich schneller und nicht nur die Rechnung kuerzer.
    */
   readonly zeitraffer: number;
+  /**
+   * Heilkraft eines Beistands als Vielfaches seines Angriffs, siehe
+   * `HEILUNG_FAKTOR`. Eine 0 nimmt der Rolle ihre Wirkung und stellt damit
+   * genau den Stand vor dem 06.09.2026 her — der Vergleichslauf, mit dem der
+   * Faktor gewaehlt wurde.
+   *
+   * ACHTUNG, DIESER REGLER WIRKT NUR AUF DEN KAMPF. Der Bot bewertet einen
+   * Beistand mit `HEILUNG_FAKTOR` selbst (`leistung` in bot.ts) und kennt
+   * keinen Regler — er simuliert ja keinen Kampf. In `werkzeug/turnier.mjs`
+   * ist das genau richtig, dort spielt kein Bot mit. Wer dagegen GANZE
+   * PARTIEN mit einem anderen Faktor messen will, aendert die Konstante und
+   * baut neu; sonst heilt der Kampf anders, als der Bot einkauft, und die
+   * Tabelle beantwortet keine Frage.
+   */
+  readonly heilungFaktor: number;
 }
 
 /**
@@ -286,6 +414,7 @@ export const STANDARD_REGLER: Kampfregler = {
   hoechstdauerMs: HOECHSTDAUER_MS,
   schadenStufenTeiler: SCHADEN_STUFEN_TEILER,
   zeitraffer: 2,
+  heilungFaktor: HEILUNG_FAKTOR,
 };
 
 // ---------------------------------------------------------------------------
@@ -371,6 +500,26 @@ export type Ereignis =
       readonly schaden: number;
       readonly lebenDanach: number;
     }
+  /**
+   * Ein Beistand hat einen Verbuendeten geheilt (`sucheWunde`).
+   *
+   * Gleiche Form wie `treffer`, nur mit `menge` statt `schaden` — und
+   * absichtlich ein EIGENES Ereignis und kein Treffer mit negativer Zahl: Die
+   * Anzeige zeichnet beides verschieden, und ein Vorzeichen, das die Bedeutung
+   * umdreht, ist die Art Falle, bei der ein vergessenes `Math.abs` einen
+   * Heilblitz zum Schadensblitz macht.
+   *
+   * `menge` ist immer mindestens 1 und nie mehr, als dem Ziel fehlte:
+   * Ueberheilen gibt es nicht, `lebenDanach` ist hoechstens `hoechstesLeben`.
+   */
+  | {
+      readonly art: 'heilung';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly ziel: number;
+      readonly menge: number;
+      readonly lebenDanach: number;
+    }
   /** Eine Einheit ist gefallen. Kommt immer unmittelbar nach dem toedlichen Treffer. */
   | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
   /** Der Kampf ist vorbei. Immer das letzte Ereignis, genau einmal. */
@@ -423,6 +572,15 @@ interface Streiter {
   readonly seite: Seite;
   readonly einheitId: EinheitId;
   readonly stufe: Stufe;
+  /**
+   * Die Kampfrolle, einmal beim Aufbau aus dem Katalog gelesen.
+   *
+   * Sie steht hier und wird nicht je Takt nachgeschlagen: Die Zugschleife
+   * fragt fuer JEDE Einheit in JEDEM Takt danach, und `einheit()` ist eine
+   * Kartensuche. Nach aussen dringt sie nicht — ein `Kaempferstand` traegt
+   * `einheitId`, und wer die Rolle braucht, holt sie sich aus dem Katalog.
+   */
+  readonly rolle: Rolle;
   readonly werte: Grundwerte;
   readonly hoechstesLeben: number;
   /** Rang in der Zugreihenfolge. Entscheidet auch den Gleichstand bei der Zielwahl. */
@@ -533,14 +691,21 @@ function baueStreiter(bretter: readonly [Brettseite, Brettseite]): Streiter[] {
   const streiter: Streiter[] = [];
   for (const seite of SEITEN) {
     const zaehlung = zaehleMarken(bretter[seite]);
-    bretter[seite].forEach((einheit, brettPlatz) => {
-      if (!einheit) return;
-      const w = werteFuer(einheit.id, einheit.stufe, bonusFuerEinheit(einheit.id, zaehlung));
+    // `aufgestellt` und nicht `einheit`: Der Name wuerde die gleichnamige
+    // Katalogfunktion verdecken, aus der die Rolle kommt.
+    bretter[seite].forEach((aufgestellt, brettPlatz) => {
+      if (!aufgestellt) return;
+      const w = werteFuer(
+        aufgestellt.id,
+        aufgestellt.stufe,
+        bonusFuerEinheit(aufgestellt.id, zaehlung),
+      );
       streiter.push({
         id: streiter.length,
         seite,
-        einheitId: einheit.id,
-        stufe: einheit.stufe,
+        einheitId: aufgestellt.id,
+        stufe: aufgestellt.stufe,
+        rolle: einheit(aufgestellt.id).rolle,
         werte: w,
         hoechstesLeben: w.leben,
         rang: 0, // wird gleich vergeben, sobald der Erstzieher feststeht
@@ -600,6 +765,54 @@ function sucheZiel(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
       bestes = anderer;
       besterAbstand = d;
     }
+  }
+  return bestes;
+}
+
+/**
+ * Der verwundete Verbuendete in Reichweite, der dem Tod am naechsten ist —
+ * oder null.
+ *
+ * DER ANTEIL ENTSCHEIDET, nicht das fehlende Leben. Wer nach dem groessten
+ * Loch heilt, versorgt immer den zaehsten Koerper: Ein Wurzelriese mit 1150
+ * Leben hat bei halber Fuellung 575 fehlend, ein Funkenlehrling mit 470 kann
+ * gar nicht so viel verlieren — der Lehrling stuerbe mit 30 Leben daneben,
+ * waehrend der Riese aufgefuellt wird. Der Anteil misst dagegen, wen der
+ * naechste Treffer umbringt, und das ist die Frage, auf die eine Heilung
+ * antwortet.
+ *
+ * Verglichen wird mit Kreuzmultiplikation statt mit einer Division, aus
+ * demselben Grund wie in `entscheideNachZeit`: Zwei gleiche Anteile koennen
+ * als Gleitkommazahl um ein Bit auseinanderliegen, und dann haengt das
+ * Heilziel an einem Rundungsrest. Bei Gleichstand gewinnt der niedrigere
+ * Rang — dieselbe feste Ordnung wie bei der Zielwahl.
+ *
+ * SICH SELBST HEILT EIN BEISTAND NICHT, und das ist die wichtigste Zeile hier.
+ * Zum einen ist es die Rolle: Ein Beistand steht anderen bei. Zum anderen
+ * endet der Kampf sonst womoeglich nie — ein einzeln uebrig gebliebener
+ * Heiler, dessen Heilkraft ueber dem eingehenden Schaden liegt, koennte sich
+ * bis `HOECHSTDAUER_MS` selbst am Leben halten, ohne dem Gegner je etwas
+ * anzutun. So faellt er auf den Angriff zurueck, sobald niemand mehr da ist,
+ * dem er helfen kann, und der Kampf geht zu Ende.
+ *
+ * Ein Ziel mit vollem Leben kommt nicht in Frage: Sonst waere die Handlung
+ * eine Heilung um 0, und der Beistand haette einen Takt lang nichts getan,
+ * statt anzugreifen.
+ */
+function sucheWunde(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
+  let bestes: Streiter | null = null;
+  for (const anderer of alle) {
+    if (anderer.id === wer.id) continue;
+    if (anderer.seite !== wer.seite || anderer.leben <= 0) continue;
+    if (anderer.leben >= anderer.hoechstesLeben) continue;
+    if (arenaAbstand(wer.platz, anderer.platz) > wer.werte.reichweite) continue;
+    if (bestes === null) {
+      bestes = anderer;
+      continue;
+    }
+    const links = anderer.leben * bestes.hoechstesLeben;
+    const rechts = bestes.leben * anderer.hoechstesLeben;
+    if (links < rechts || (links === rechts && anderer.rang < bestes.rang)) bestes = anderer;
   }
   return bestes;
 }
@@ -751,6 +964,51 @@ export function simuliereKampf(
       const ziel = sucheZiel(wer, alle);
       if (!ziel) break; // Gegenseite ausgeloescht — der Rest des Taktes entfaellt
 
+      /*
+       * DIE EINZIGE STELLE, AN DER DIE ROLLE ZAEHLT: Ein Beistand heilt,
+       * solange es in seiner Reichweite einen Verwundeten gibt — auch dann,
+       * wenn er selbst gerade einen Gegner treffen koennte. Heilen GEHT VOR
+       * schlagen, sonst waere die Wirkung auf die Faelle beschraenkt, in denen
+       * der Heiler ohnehin nichts zu tun hat, und das ist im Nahkampf nie.
+       *
+       * Nach der Zielsuche und nicht davor: Ist die Gegenseite schon
+       * ausgeloescht, ist der Kampf entschieden, und dann soll niemand mehr
+       * ein Ereignis erzeugen (siehe die Pruefung am Kopf der Schleife).
+       *
+       * Findet er niemanden, faellt er auf Angriff und Bewegung zurueck — ein
+       * Beistand ist keine wehrlose Einheit, sein Angriff ist nur der
+       * niedrigste seiner Stufe.
+       *
+       * `heilungFaktor > 0` gehoert in DIESE Bedingung und nicht nach innen:
+       * `heilkraft` hat einen Boden von 1, damit ein kleiner Angriffswert
+       * keine Heilung um null erzeugt. Bei einem Faktor von 0 wuerde derselbe
+       * Boden dafuer sorgen, dass ein Beistand jeden Takt einen einzigen
+       * Lebenspunkt verschenkt, statt anzugreifen — und dann waere der
+       * Vergleichslauf mit 0 nicht der Stand VOR der Rolle, sondern ein
+       * schlechterer.
+       */
+      if (wer.rolle === 'beistand' && regler.heilungFaktor > 0) {
+        const wunde = sucheWunde(wer, alle);
+        if (wunde) {
+          if (jetzt < wer.angriffFreiAb) continue;
+          const menge = Math.min(
+            heilkraft(wer.werte.angriff, regler.heilungFaktor),
+            wunde.hoechstesLeben - wunde.leben,
+          );
+          wunde.leben += menge;
+          wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
+          ereignisse.push({
+            art: 'heilung',
+            zeitMs: jetzt,
+            wer: wer.id,
+            ziel: wunde.id,
+            menge,
+            lebenDanach: wunde.leben,
+          });
+          continue;
+        }
+      }
+
       if (arenaAbstand(wer.platz, ziel.platz) <= wer.werte.reichweite) {
         if (jetzt < wer.angriffFreiAb) continue;
         const schaden = schadenNach(wer.werte.angriff, ziel.werte.ruestung);
@@ -841,6 +1099,8 @@ export function protokollText(bericht: Kampfbericht): string {
         return `${zeit} bewegung ${e.wer} ${e.von} -> ${e.nach}`;
       case 'treffer':
         return `${zeit} treffer  ${e.wer} -> ${e.ziel} ${e.schaden} (${e.lebenDanach})`;
+      case 'heilung':
+        return `${zeit} heilung  ${e.wer} -> ${e.ziel} +${e.menge} (${e.lebenDanach})`;
       case 'tod':
         return `${zeit} tod      ${e.wer}`;
       case 'ende':

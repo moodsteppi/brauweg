@@ -20,10 +20,21 @@
 
 /**
  * Kampfrolle einer Einheit. Sie beschreibt, WIE sie kaempft (vorne, hinten,
- * heilend) — im Regelkern ist sie noch reine Auskunft, weil es keinen Kampf
- * gibt. Sie steht trotzdem schon hier, weil der Laden sie anzeigt und weil
- * eine Rolle nachtraeglich zu vergeben hiesse, jeden Wert noch einmal zu
- * pruefen.
+ * heilend).
+ *
+ * GENAU EINE VON FUENF WIRKT IM KAMPF, seit dem 06.09.2026: Ein `beistand`
+ * heilt Verbuendete, statt zu schlagen (`HEILUNG_FAKTOR` und `sucheWunde` in
+ * kampf.ts). Die anderen vier unterscheiden sich weiterhin allein ueber ihre
+ * WERTE — vor allem ueber `reichweite`, die einzige Zahl, die der Kampf ausser
+ * den Grundwerten liest. Fuer sie ist die Rolle Auskunft: Der Laden zeigt sie
+ * an, und der Bot stellt nach ihr auf (`platzStrafe` in bot.ts).
+ *
+ * WARUM AUSGERECHNET DER BEISTAND EINE WIRKUNG BEKAM: Bei den anderen vier
+ * ergibt sich aus den Werten eine Spielweise — eine Wache haelt aus, ein
+ * Schuetze steht weit weg, ein Meuchler schlaegt schnell. Ein Beistand hatte
+ * dagegen den niedrigsten Angriff seiner Stufe UND keinen Ausgleich dafuer:
+ * Gemessen gewannen die drei Traeger zusammen null von 114 Kaempfen
+ * (werkzeug/turnier.mjs). Die Rolle war nicht schwach, sie war leer.
  */
 export type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
 

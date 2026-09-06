@@ -19,8 +19,8 @@ Minuten live.
 der Erinnerung):**
 170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
-56 Eiland-Tests, 248 Tafelrunde-Tests, **417 Servertests** — zusammen 1347,
-dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber.
+56 Eiland-Tests, 298 Tafelrunde-Tests, **439 Servertests** — zusammen 1419,
+dazu die Client-Tests (41 Dateien, 464 Tests), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
@@ -109,6 +109,32 @@ dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber
 > zwei Läufe über `protokollText()`. Abbruchgrenze 45 s, danach entscheidet
 > der höhere Anteil am eigenen Gesamtleben. Die Schaupause ist nicht mehr
 > fest, sondern so lang wie der längste Kampf der Runde.
+>
+> **Die ROLLE wirkt seit dem 06.09.2026 — genau eine von fünf.** Bis dahin
+> wertete `kampf.ts` nur `reichweite` aus, und ein `beistand` war damit
+> schlicht eine schwache Einheit ohne Ausgleich: Moosheiler, Runenpriester und
+> Lichtwahrerin gewannen im Monokultur-Turnier zusammen **0 von 114** Kämpfen.
+> Jetzt **heilt** ein Beistand, statt zu schlagen, solange in seiner Reichweite
+> ein Verwundeter steht (`sucheWunde`): `HEILUNG_FAKTOR` (1,5) mal seinem
+> Angriff, gedeckelt am fehlenden Leben, nie an sich selbst. Neues Ereignis
+> `heilung` im Protokoll — die Anzeige zieht es nach (grünes Aufleuchten an
+> der Figur, grüne Zahl am Kartenrand), und der **Client-Vertrag** hat genau
+> das erzwungen: Ein neuer Zweig in der Ereignis-Union bricht `npm run build`,
+> bis er auch im Client steht. Der Bot bewertet die Heilung als Leistung
+> (`leistung` in `bot.ts`) — ohne diese Zeile kauft er keinen Heiler, und die
+> Reparatur wäre nirgends zu sehen. Die vier anderen Rollen unterscheiden sich
+> weiter allein über ihre Werte; das ist Absicht und keine halbe Arbeit
+> (Begründung im Kopf von `kampf.ts` und bei `Rolle` in `katalog.ts`).
+>
+> **Das Monokultur-Turnier ist kein Wegwerf-Werkzeug mehr:**
+> `packages/game-tafelrunde/werkzeug/turnier.mjs` (Kern `test/turnier.ts`).
+> Es beantwortet, was `ausgewogenheit.mjs` nicht kann — wie eine Einheit im
+> Kampf dasteht, unabhängig davon, ob der Bot sie kauft. Dazu die
+> **Beistandsprobe**: zwei Kopien einer Einheit plus ein Beistand gegen drei
+> Kopien derselben. An ihr hängt der Heilfaktor, nicht an der Rollenquote —
+> drei Heiler gegeneinander können gar nicht anders enden als an der Uhr.
+> Zahlen und die beiden gemessenen, aber **nicht** gemachten Eingriffe stehen
+> in der neunten Messung in `docs/spiele/auto-battler-konzept.md`.
 >
 > **Die Synergien** (Phase 3 des Konzepts) kamen am 04.09.2026 dazu:
 > `synergien.ts`. Je Marke zählt das eigene **Brett** (nicht die Bank), mit

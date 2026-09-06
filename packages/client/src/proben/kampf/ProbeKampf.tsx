@@ -269,8 +269,11 @@ export function ProbeKampf(): React.JSX.Element {
         {nameVon(SZENE.kampf.b)} an — {BERICHT.start.length} Einheiten ({stufenSatz()}), erreichte
         Markenschwellen {markenSatz(0)} gegen {markenSatz(1)}. Gerechnet mit Zeitraffer x
         {SZENE.zeitraffer}, dem Tempo, das beurteilt werden soll: {sekunden(BERICHT.dauerMs)},{' '}
-        {zaehle('bewegung')} Bewegungen, {zaehle('treffer')} Treffer, {zaehle('tod')} Tode, Ende
-        durch {ENDGRUND[BERICHT.grund] ?? BERICHT.grund}.
+        {zaehle('bewegung')} Bewegungen, {zaehle('treffer')} Treffer,{' '}
+        {/* Die Heilungen nur, wenn welche vorkommen: In einer Szene ohne
+            Beistand stuende sonst „0 Heilungen" als Rauschen in der Zeile. */}
+        {zaehle('heilung') > 0 ? `${zaehle('heilung')} Heilungen, ` : ''}
+        {zaehle('tod')} Tode, Ende durch {ENDGRUND[BERICHT.grund] ?? BERICHT.grund}.
       </p>
     </main>
   );

@@ -61,6 +61,7 @@ import {
   einheit,
   werteFuer,
 } from './katalog.js';
+import { HEILUNG_FAKTOR } from './kampf.js';
 import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
 import { baueZufall } from './zufall.js';
 
@@ -484,9 +485,46 @@ function staerke(
 ): number {
   const w = werteFuer(k.id, k.stufe, bonus);
   const haelt = (w.leben * 100) / Math.max(1, 100 - w.ruestung);
-  const teiltAus = w.angriff * w.tempo;
+  const teiltAus = leistung(k.id, w.angriff) * w.tempo;
   const ausDerFerne = 1 + (w.reichweite - 1) * REICHWEITEN_GEWICHT * deckung;
   return Math.round((haelt * teiltAus * ausDerFerne) / STAERKE_TEILER);
+}
+
+/**
+ * Was der Angriffswert einer Einheit je Handgriff wirklich bewegt.
+ *
+ * Bei vier der fuenf Rollen ist das der Angriff selbst. Bei einem `beistand`
+ * ist es die Heilung, die er stattdessen wirkt: Er schlaegt im Kampf gar
+ * nicht, solange in seiner Reichweite ein Verwundeter steht (`sucheWunde` in
+ * kampf.ts), und gibt dafuer `HEILUNG_FAKTOR` mal seinen Angriff an Leben
+ * zurueck.
+ *
+ * OHNE DIESE ZEILE WAERE DIE BEISTAND-WIRKUNG IM SPIEL UNSICHTBAR. Der Bot
+ * bewertet mit `staerke`, was er kauft und aufstellt; ein Heiler, dessen
+ * Beitrag mit seinen 26 bis 50 Angriff gemessen wird, ist in jedem Vergleich
+ * die schwaechste Einheit seiner Stufe und wird nie gekauft. Gemessen war
+ * genau das der Grund, aus dem der Moosheiler am 05.09.2026 auf 74 Antritte in
+ * 5.000 Partien fiel und damit unter jede Zaehlschwelle — die Rolle waere
+ * repariert und die Reparatur nirgends zu sehen.
+ *
+ * WARUM DERSELBE FAKTOR WIE IM KAMPF und nicht ein eigenes Bot-Gewicht: Ein
+ * geheilter Lebenspunkt und ein verhinderter Schadenspunkt sind fuer die
+ * Standzeit eines Heeres dasselbe. Ein zweiter Faktor waere eine zweite
+ * Wahrheit ueber dieselbe Zahl und liefe beim ersten Nachjustieren auseinander
+ * (CLAUDE.md, "Was das Modul weiss, schreibt der Client nicht ab" — hier
+ * dieselbe Regel innerhalb des Moduls).
+ *
+ * WAS DIE ZAHL NICHT WEISS: dass eine Heilung Verbuendete braucht. Ein
+ * einzelner Beistand auf leerem Brett bekommt dieselbe Staerke wie einer
+ * hinter vier Wachen. Dieselbe Vereinfachung steckt in `ausDerFerne` und wird
+ * dort ueber `deckungIm` gemildert; fuer die Heilung waere das Gegenstueck ein
+ * eigener Faktor auf die ZAHL der Nachbarn — noch nicht gebaut, weil dieses
+ * Heer beim Kauf oft aus einer einzigen Einheit besteht und ein Heiler dann
+ * grundsaetzlich nichts wert waere. Gemessen ist der Beistand mit dieser
+ * Vereinfachung dort, wo er sein soll (docs/spiele/auto-battler-konzept.md).
+ */
+function leistung(id: EinheitId, angriff: number): number {
+  return einheit(id).rolle === 'beistand' ? angriff * HEILUNG_FAKTOR : angriff;
 }
 
 /**

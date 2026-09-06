@@ -62,23 +62,32 @@ import {
  * sich seine eigene Saat aus der Partie (`kampfSaat`) — von Hand gesetzt
  * waere sie eine zweite Wahrheit.
  *
- * WARUM AUSGERECHNET DIESE: Von 500 durchgerechneten Partien liefert sie in
- * Runde 10 den Kampf, der am meisten zeigt und dabei typisch bleibt —
- * 18,2 s (Median unter Zeitraffer x2 sind 18,3 s), vier gegen vier, kein
+ * WORAUF BEI DER SUCHE GEACHTET WIRD: der Kampf, der am meisten zeigt und
+ * dabei typisch bleibt — eine Dauer nahe am Median, vier gegen vier, kein
  * Kaempfer unter Stufe 2 und einer auf Stufe 3, auf beiden Seiten zwei
- * erreichte Markenschwellen, fuenf Tode ABWECHSELND auf beiden Seiten und
- * ein Ende durch Ausloeschung. Die kurzen Kaempfe zeigen kaum Bewegung, die
- * langen enden in `entscheideNachZeit` und damit ohne Schlussbild, und in
- * vielen faellt keine einzige eigene Einheit.
+ * erreichte Markenschwellen, mehrere Tode ABWECHSELND auf beiden Seiten, ein
+ * Ende durch Ausloeschung und ein Sieg fuer `ICH`. Die kurzen Kaempfe zeigen
+ * kaum Bewegung, die langen enden in `entscheideNachZeit` und damit ohne
+ * Schlussbild, und in vielen faellt keine einzige eigene Einheit.
  *
- * AM 06.09.2026 NEU GESUCHT: Vorher stand hier `probe-kampf-16` mit der
- * Paarung 2:3. Mit vier Reihen je Seite und der Luecke in der Arena spielt
- * der Bot andere Runden, und in Runde 10 jener Partie gibt es die Paarung
- * gar nicht mehr. Der neue Kampf zeigt nebenbei genau das, worum es bei der
- * Aenderung ging: 26 Bewegungen statt 6, bei fast gleich vielen Ereignissen
- * (171 statt 168).
+ * AM 06.09.2026 ZUM ZWEITEN MAL NEU GESUCHT, und beide Male aus demselben
+ * Grund: Eine Aenderung an der Regel laesst den Bot andere Runden spielen,
+ * und dann gibt es die aufgezeichnete Paarung nicht mehr. Erst fiel
+ * `probe-kampf-16` (Arena mit vier Reihen je Seite und Luecke), dann
+ * `probe-kampf-420` — dessen Partie erreicht Runde 10 gar nicht mehr, seit
+ * ein Beistand heilt (`HEILUNG_FAKTOR` in kampf.ts).
+ *
+ * EIN KRITERIUM IST DAZUGEKOMMEN: Im Kampf muss GEHEILT werden. Die Probe ist
+ * der Ort, an dem man die Anzeige ansieht, und die Heilung ist seit dem
+ * 06.09.2026 das Neueste daran (gruenes Aufleuchten an der Figur, gruene Zahl
+ * am Kartenrand). Eine Szene ohne Beistand zeigte davon nichts. Das
+ * verkleinert die Auswahl erheblich: Von 2.500 durchgerechneten Partien
+ * erfuellen VIER alle Kriterien zugleich.
+ *
+ * Der gewaehlte Kampf: 11,7 s (Median 14,8 s), 124 Ereignisse, davon 22
+ * Bewegungen und 8 Heilungen, sechs Tode auf beiden Seiten.
  */
-const SAAT = 'probe-kampf-420';
+const SAAT = 'probe-kampf-2127';
 
 /** Runde 10: das erste ausgebaute Brett. Vorher steht fast alles auf Stufe 1. */
 const RUNDE = 10;
@@ -88,7 +97,7 @@ const RUNDE = 10;
  * Blick die Anzeige laeuft. Er gewinnt: Das Siegbild ist einer der vier
  * Punkte, um die es Robin geht, und ein verlorener Kampf zeigt es nicht.
  */
-const PAARUNG = { a: 3, b: 1 };
+const PAARUNG = { a: 3, b: 2 };
 
 /** Vier Sitze, alle mit derselben Gangart — so misst auch der Messstand. */
 const SITZE = [0, 1, 2, 3];
@@ -97,10 +106,11 @@ const GANGART = 'normal';
 /**
  * Zeitraffer x2, wie er seit dem 05.09.2026 gespielt wird.
  *
- * Ausdruecklich gesetzt und nicht `STANDARD_REGLER` uebernommen, solange der
- * gebaute Standard noch auf 1 steht (der Zweig dazu ist noch nicht
- * zusammengefuehrt). Steht `STANDARD_REGLER.zeitraffer` erst selbst auf 2,
- * ist diese Zeile wirkungslos und kann weg.
+ * Der gebaute Standard steht seit dem 05.09.2026 selbst auf 2
+ * (`STANDARD_REGLER`), diese Zeile setzt also nur noch fest, was ohnehin
+ * gilt. Sie bleibt trotzdem stehen: Die Szene ist eine AUFZEICHNUNG, und wenn
+ * jemand den Standard aendert, soll die aufgezeichnete Zeit nicht stillschwei-
+ * gend eine andere Bedeutung bekommen. Der Wert steht mit in der Datei.
  */
 const ZEITRAFFER = 2;
 const REGLER = { ...STANDARD_REGLER, zeitraffer: ZEITRAFFER };
@@ -187,6 +197,7 @@ console.log(
   `${ziel}\n  Runde ${partie.runde}, Sitz ${kampf.a} gegen ${kampf.b}, ` +
     `${(b.dauerMs / 1000).toFixed(1)} s bei Zeitraffer x${ZEITRAFFER}\n` +
     `  ${b.start.length} Einheiten, ${b.ereignisse.length} Ereignisse ` +
-    `(${zaehle('bewegung')} Bewegungen, ${zaehle('treffer')} Treffer, ${zaehle('tod')} Tode), ` +
+    `(${zaehle('bewegung')} Bewegungen, ${zaehle('treffer')} Treffer, ` +
+    `${zaehle('heilung')} Heilungen, ${zaehle('tod')} Tode), ` +
     `Sieger Seite ${b.sieger}, Ende durch ${b.grund}`,
 );

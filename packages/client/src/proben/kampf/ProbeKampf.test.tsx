@@ -72,9 +72,18 @@ describe('die Szene aus kampf-erzeugen.mjs', () => {
     expect(SZENE.ich).toBe(SZENE.kampf.a);
   });
 
-  it('zeigt alle vier Vorgaenge: Bewegung, Treffer, Sterben, Ende', () => {
+  it('zeigt jeden Vorgang: Bewegung, Treffer, Heilung, Sterben, Ende', () => {
     const arten = new Set(BERICHT.ereignisse.map((e) => e.art));
-    expect([...arten].sort()).toEqual(['bewegung', 'ende', 'tod', 'treffer']);
+    /*
+     * GENAU diese fuenf und keine Teilmenge: Die Probe ist der Ort, an dem man
+     * die Anzeige ansieht, und was nicht in der Szene vorkommt, sieht dort
+     * niemand. Die Heilung ist seit dem 06.09.2026 dabei (`HEILUNG_FAKTOR` in
+     * kampf.ts) und ausdruecklich ein Suchkriterium in kampf-erzeugen.mjs —
+     * ohne sie waere das gruene Aufleuchten an der Figur ungeprueft und
+     * ungesehen. Kommt ein sechster Vorgang dazu (Faehigkeiten, Mana), faellt
+     * diese Zeile, und das ist ihr Zweck: Die Szene gehoert dann neu erzeugt.
+     */
+    expect([...arten].sort()).toEqual(['bewegung', 'ende', 'heilung', 'tod', 'treffer']);
     // Auf BEIDEN Seiten faellt jemand — sonst sieht man das Sterben nur drueben.
     const gefallen = new Set(
       BERICHT.ereignisse
@@ -86,9 +95,11 @@ describe('die Szene aus kampf-erzeugen.mjs', () => {
 
   it('laeuft mit dem Zeitraffer, der beurteilt werden soll', () => {
     expect(SZENE.zeitraffer).toBe(2);
-    // Unter x2 liegt der Median bei 18,3 s (docs/TAFELRUNDE-SPIELZEIT.md).
-    // Ein Kampf ausserhalb dieser Spanne ist kein Massstab fuer das Tempo.
-    expect(BERICHT.dauerMs).toBeGreaterThan(10_000);
+    // Unter x2 liegt der Median bei 14,8 s (5.000 Partien zu viert, neunte
+    // Messung in docs/spiele/auto-battler-konzept.md; bis zum 06.09.2026 stand
+    // hier 18,3 s). Ein Kampf ausserhalb dieser Spanne ist kein Massstab fuer
+    // das Tempo — die Schranken sind weit, weil ein einzelner Kampf streut.
+    expect(BERICHT.dauerMs).toBeGreaterThan(8_000);
     expect(BERICHT.dauerMs).toBeLessThan(30_000);
   });
 
