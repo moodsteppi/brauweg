@@ -14749,3 +14749,41 @@ main.auth > .muted {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+.fl-wischhinweis {
+  display: block;
+  margin-top: 3px;
+  opacity: 0.75;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+/* Mit Maus und Zeiger wischt niemand — dann bleibt der Hinweis weg. */
+@media (hover: hover) and (pointer: fine) {
+  .fl-wischhinweis { display: none; }
+}
+
+/* -- Wischen zwischen den Spielarten -------------------------------------- */
+
+/* pan-y: Der Browser behaelt das senkrechte Rollen, waagerechte Bewegungen
+   kommen als Zeigerereignisse an (useWischen in Filler.tsx). */
+.fl-menue-mitte[data-wischbar] { touch-action: pan-y; }
+
+/* Beschreibung und Vorschau kommen aus der Wischrichtung herein: nach links
+   gewischt = die neue Spielart faehrt von rechts ins Bild. Nur transform
+   und opacity, damit es auch am Handy fluessig bleibt. */
+@keyframes fl-einwisch-links {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fl-einwisch-rechts {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: none; }
+}
+.fl-vorschau[data-richtung='links'],
+.fl-schalter-text[data-richtung='links'] { animation: fl-einwisch-links 220ms ease-out; }
+.fl-vorschau[data-richtung='rechts'],
+.fl-schalter-text[data-richtung='rechts'] { animation: fl-einwisch-rechts 220ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .fl-vorschau[data-richtung],
+  .fl-schalter-text[data-richtung] { animation: none; }
+}
