@@ -84,6 +84,37 @@ export interface Posten {
    * ein Posten aus `stromPosten` benutzt ihn.
    */
   readonly holen?: (melden: Fortschritt) => Promise<void>;
+  /**
+   * Wie viele DATEIEN dieser Posten ist. Vorgabe: eine.
+   *
+   * Nur fuer die Zahl neben dem Balken („x von y Dateien"), nie fuer seine
+   * Breite — die rechnet mit `kb`. Ein Posten ist EINE Wartezeit mit einem
+   * Ende, aber nicht zwangslaeufig eine Datei, und der Bildschirm nennt
+   * Dateien.
+   *
+   * Es gibt genau einen mit mehr als einer: das Spielpaket (paket.ts). Vite
+   * fordert beim `import()` fuenf Dateien gemeinsam an; ihre Namen tragen eine
+   * Pruefsumme, die erst beim Bauen entsteht — aufzaehlen lassen sie sich hier
+   * also nicht, mitzaehlen schon. Als eine gezaehlt stand der Bildschirm auf
+   * „29 Dateien", waehrend 33 ueber die Leitung gingen.
+   */
+  readonly stueck?: number;
+}
+
+/** Wie viele Dateien ein Posten ist. Siehe `Posten.stueck`. */
+function stueckZahl(posten: Posten): number {
+  return posten.stueck ?? 1;
+}
+
+/**
+ * Die Zahl neben dem Balken: Dateien, nicht Posten.
+ *
+ * Steht als Funktion da und nicht als `posten.length` an vier Stellen, weil
+ * genau das der Fehler war — vier Stellen, die alle „Dateien" sagten und
+ * Posten zaehlten.
+ */
+function stueckSumme(posten: readonly Posten[]): number {
+  return posten.reduce((summe, p) => summe + stueckZahl(p), 0);
 }
 
 /**
@@ -153,8 +184,9 @@ export const FRIST_MS = 15_000;
 export interface Ladestand {
   /** Fertig heisst: Es darf gespielt werden — auch wenn etwas fehlt. */
   readonly fertig: boolean;
-  /** Erledigte Posten (geladen ODER ausgefallen). */
+  /** Erledigte Dateien (geladen ODER ausgefallen). Siehe `Posten.stueck`. */
   readonly erledigt: number;
+  /** Alle Dateien des Laufs — nicht alle Posten. Siehe `Posten.stueck`. */
   readonly gesamt: number;
   /** 0 bis 1, nach Gewicht. Die Breite des Balkens. */
   readonly anteil: number;
@@ -165,7 +197,7 @@ export interface Ladestand {
 const NOCH_NICHTS: Ladestand = {
   fertig: false,
   erledigt: 0,
-  gesamt: VORZULADEN.length,
+  gesamt: stueckSumme(VORZULADEN),
   anteil: 0,
   fehlend: [],
 };
@@ -334,9 +366,12 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
   /* Ohne Untergrenze teilte der Anteil durch null, sobald jemand eine leere
      Liste vorladen laesst. */
   const gesamtKb = posten.reduce((summe, p) => summe + p.kb, 0) || 1;
+  /* Die Zahl neben dem Balken zaehlt Dateien; das Spielpaket ist eine mehr
+     wert als es Posten sind (siehe `Posten.stueck`). */
+  const gesamtStueck = stueckSumme(posten);
 
   const dieser: Lauf = {
-    stand: { fertig: false, erledigt: 0, gesamt: posten.length, anteil: 0, fehlend: [] },
+    stand: { fertig: false, erledigt: 0, gesamt: gesamtStueck, anteil: 0, fehlend: [] },
     hoerer: new Set(),
     // Wird unten ersetzt, sobald das Versprechen steht. Es zuerst zu bauen
     // ginge nicht: Der Lauf muss schon stehen, wenn der erste Posten meldet.
@@ -381,12 +416,12 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
            schon. */
         console.warn(
           durchFrist
-            ? `[Tafelrunde] Vorladen abgebrochen, seit ${fristMs} ms kam nichts mehr — ${fehlend.length} von ${posten.length} Dateien fehlen:`
-            : `[Tafelrunde] Vorladen fertig, ${fehlend.length} von ${posten.length} Dateien fehlen:`,
+            ? `[Tafelrunde] Vorladen abgebrochen, seit ${fristMs} ms kam nichts mehr — ${fehlend.length} von ${posten.length} Posten fehlen:`
+            : `[Tafelrunde] Vorladen fertig, ${fehlend.length} von ${posten.length} Posten fehlen:`,
           fehlend.join(', '),
         );
       }
-      melde({ fertig: true, erledigt, gesamt: posten.length, anteil: 1, fehlend });
+      melde({ fertig: true, erledigt, gesamt: gesamtStueck, anteil: 1, fehlend });
       erfuellen(dieser.stand);
     };
 
@@ -418,7 +453,7 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
       melde({
         fertig: false,
         erledigt,
-        gesamt: posten.length,
+        gesamt: gesamtStueck,
         anteil: anteilJetzt(),
         fehlend: [...kaputt],
       });
@@ -429,13 +464,13 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
       offen.delete(p.pfad);
       teilKb.delete(p.pfad);
       if (!geklappt) kaputt.push(p.pfad);
-      erledigt += 1;
+      erledigt += stueckZahl(p);
       fertigeKb += p.kb;
       uhrStellen();
       melde({
         fertig: false,
         erledigt,
-        gesamt: posten.length,
+        gesamt: gesamtStueck,
         anteil: anteilJetzt(),
         fehlend: [...kaputt],
       });
