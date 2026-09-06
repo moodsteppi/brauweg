@@ -142,12 +142,16 @@ function zeige(
   /* Die Masse der Arena. Vorgabe ist die kleine Probearena aus `bericht()`:
      zwei Reihen je Seite, keine Luecke. Am Tisch sind es vier und zwei. */
   masse: { brettReihen: number; arenaReihen: number } = { brettReihen: 2, arenaReihen: 4 },
+  /* Wessen Kampf gezeigt wird. Ohne Angabe der eigene — genau wie am Tisch,
+     solange niemand oben eine fremde Kachel angetippt hat. */
+  zeigt: number | null | undefined = undefined,
 ) {
   return render(
     <KampfAnzeige
       kaempfe={kaempfe}
       paarungen={paarungen}
       ich={ich}
+      zeigt={zeigt === undefined ? ich : zeigt}
       brettReihen={masse.brettReihen}
       arenaReihen={masse.arenaReihen}
       brettSpalten={5}
@@ -823,5 +827,115 @@ describe('KampfAnzeige', () => {
     // Sechs Koerner in ihrem eigenen Behaelter. Sie haengen an der FIGUR und
     // nicht am Koerper: Der Koerper verblasst, der Staub soll bleiben.
     expect(gefallen.querySelectorAll(':scope > span > i')).toHaveLength(6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Zusehen: ein FREMDER Kampf in derselben Arena
+// ---------------------------------------------------------------------------
+
+/*
+ * Seit dem 06.09.2026 stehen alle Kaempfe der Runde in jeder Sicht, und ein
+ * Tipp auf eine fremde Kachel legt DESSEN Kampf in die Arena (`zeigt`).
+ * Geprueft wird das, woran man beim Spielen sofort merken wuerde, dass etwas
+ * nicht stimmt: dass der richtige Kampf laeuft, dass keine Reihe faelschlich
+ * „Du" heisst, und dass das Ergebnis nicht so tut, als haette ich gewonnen.
+ */
+describe('KampfAnzeige beim Zusehen', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'Date',
+      ],
+    });
+    vi.setSystemTime(100_000);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const lauf = (ms: number): void => {
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+  };
+
+  const meiner = paarung({ a: 0, b: 1 });
+  const fremder = paarung({ a: 2, b: 3 });
+
+  it('spielt den Kampf des angetippten Sitzes statt des eigenen', () => {
+    const { container } = zeige([meiner, fremder], 0, null, undefined, undefined, 2);
+    const zeilen = container.querySelectorAll('p');
+    // Sitz 2 steht unten, denn ihm sehe ich zu; sein Gegner 3 oben.
+    expect(zeilen[0]).toHaveTextContent('Tom');
+    expect(zeilen[1]).toHaveTextContent('Robin');
+  });
+
+  it('nennt beim fremden Kampf keine Reihe „Du"', () => {
+    const { container } = zeige([meiner, fremder], 0, null, undefined, undefined, 2);
+    expect(container.textContent).not.toContain('Du');
+  });
+
+  it('meldet den Ausgang eines fremden Kampfes ohne Sieg und ohne Niederlage', () => {
+    zeige([meiner, fremder], 0, null, undefined, undefined, 2);
+    lauf(1200);
+    const stand = screen.getByRole('status');
+    expect(stand).toHaveAttribute('data-ausgang', 'offen');
+    expect(stand).toHaveTextContent('Robin gewinnt');
+    expect(stand).toHaveTextContent('Tom verliert 3 Leben');
+  });
+
+  it('bleibt beim eigenen Kampf, solange niemand angetippt ist', () => {
+    const { container } = zeige([meiner, fremder], 0);
+    const zeilen = container.querySelectorAll('p');
+    expect(zeilen[1]).toHaveTextContent('Du');
+  });
+
+  /*
+   * Der Ausgeschiedene: kein eigener Kampf in der Runde, aber alle anderen in
+   * der Sicht. Bis zum 06.09.2026 sah er ueberhaupt keinen.
+   */
+  it('zeigt einem Ausgeschiedenen den Kampf, den er gewaehlt hat', () => {
+    const { container } = zeige([fremder], 4, null, undefined, undefined, 2);
+    const zeilen = container.querySelectorAll('p');
+    expect(zeilen[0]).toHaveTextContent('Tom');
+    expect(zeilen[1]).toHaveTextContent('Robin');
+    expect(container.textContent).not.toContain('Du');
+  });
+
+  /*
+   * Umschalten MITTEN im Kampf. Beide Kaempfe der Runde fangen gleichzeitig
+   * an — wer nach 600 ms hinuebersieht, muss den fremden bei 600 ms
+   * vorfinden und nicht bei null. Der erste Treffer dort faellt bei 500 ms,
+   * die getroffene Figur steht also schon auf 70 Leben.
+   */
+  it('nimmt den fremden Kampf an der Stelle auf, an der er gerade steht', () => {
+    const { rerender } = zeige([meiner, fremder], 0);
+    lauf(600);
+    rerender(
+      <KampfAnzeige
+        kaempfe={[meiner, fremder]}
+        paarungen={[
+          ergebnis({ a: 0, b: 1 }),
+          ergebnis({ a: 2, b: 3 }),
+        ]}
+        ich={0}
+        zeigt={2}
+        brettReihen={2}
+        arenaReihen={4}
+        brettSpalten={5}
+        katalog={KATALOG}
+        nameVon={(sitz) => NAMEN[sitz] ?? `Sitz ${sitz + 1}`}
+        ersatzzeichen={(e) => <span data-testid={`ersatz-${e.id}`} />}
+        farbeVon={() => '#8fa3ad'}
+        frist={null}
+      />,
+    );
+    lauf(100);
+    expect(screen.getByLabelText('Dorfwache, Stufe 2, 70 von 100 Leben')).toBeInTheDocument();
   });
 });

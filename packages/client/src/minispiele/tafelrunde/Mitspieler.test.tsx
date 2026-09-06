@@ -184,6 +184,41 @@ describe('Mitspielerleiste', () => {
     expect(screen.getByRole('group', { name: /noch 2 von 2/ })).toBeInTheDocument();
   });
 
+  /*
+   * Das Zusehen. Bis zum 06.09.2026 war die Kachel des Sitzes, dessen Brett
+   * gerade unten liegt, nur an einem Ring von einem Pixel zu erkennen — man
+   * tippte, das Brett wechselte, und nichts sagte einem, dass man das getan
+   * hatte. Geprueft wird deshalb, was man SIEHT und was ein Vorlesegeraet
+   * HOERT, nicht die Farbe.
+   */
+  it('markiert den Sitz, dessen Brett gerade unten liegt', () => {
+    zeichne({ gezeigt: 2 });
+    const kachel = screen.getByRole('button', { name: /^Tom,/ });
+    expect(kachel).toHaveAttribute('aria-pressed', 'true');
+    expect(kachel).toHaveAttribute('data-an');
+    expect(kachel.getAttribute('aria-label')).toContain('Brett liegt oben');
+    /* Und das Auge steht sichtbar daneben, genau EINMAL in der ganzen Leiste.
+       Erkannt an seiner Pupille: Das Herz an jeder Kachel ist ein reiner
+       Pfad, der Kreis kommt nur im Auge vor. */
+    expect(kachel.querySelectorAll('svg circle')).toHaveLength(1);
+    expect(document.querySelectorAll('svg circle')).toHaveLength(1);
+  });
+
+  it('markiert ohne Wahl niemanden', () => {
+    zeichne();
+    for (const knopf of screen.getAllByRole('button')) {
+      expect(knopf).toHaveAttribute('aria-pressed', 'false');
+      expect(knopf.getAttribute('aria-label')).not.toContain('Brett liegt oben');
+    }
+    expect(document.querySelectorAll('svg circle')).toHaveLength(0);
+  });
+
+  it('meldet den angetippten Sitz nach oben', () => {
+    const { onWahl } = zeichne();
+    fireEvent.click(screen.getByRole('button', { name: /^Tom,/ }));
+    expect(onWahl).toHaveBeenCalledWith(2);
+  });
+
   it('zeichnet gar nichts, wenn kein Sitz bekannt ist', () => {
     const { container } = render(
       <Mitspielerleiste

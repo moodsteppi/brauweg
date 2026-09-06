@@ -9,7 +9,7 @@ import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
 import { type Kaufhindernis, Ladenkarte, kaufhindernis } from '../minispiele/tafelrunde/Ladenkarte';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
-import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
+import { AugeZeichen, Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../minispiele/tafelrunde/Phasenzeile';
 import {
   type Platz,
@@ -1201,7 +1201,12 @@ function Ruestkammer({
 }): React.JSX.Element {
   const eigenes = sicht.eigenes;
   const kampfbild = useKampfbild(sicht);
-  /** Gegner, dessen Brett oben liegt. Null = niemand ausgewaehlt. */
+  /**
+   * Wem ich gerade zusehe — der Sitz, dessen Brett oben liegt bzw. dessen
+   * Kampf die Arena abspielt. Null heisst: nichts gewaehlt, es gilt die
+   * Vorgabe (in der Ruestphase der erste lebende Gegner, im Kampf mein
+   * eigener).
+   */
   const [gezeigterGegner, setGezeigterGegner] = useState<number | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
 
@@ -1611,6 +1616,51 @@ function Ruestkammer({
   const gegner =
     sicht.gegner.find((g) => g.sitz === gezeigterGegner) ?? lebendeGegner[0] ?? sicht.gegner[0];
 
+  /*
+   * DIE WAHL GILT BIS ZUM PHASENWECHSEL, dann faellt sie zurueck.
+   *
+   * Ohne dieses Zuruecksetzen haette ein Tipp aus der Ruestphase eine Folge,
+   * die niemand erwartet: Wer sich dort das Brett eines Mitspielers ansieht —
+   * der Normalfall, dafuer ist die Leiste da —, saehe gleich darauf DESSEN
+   * Kampf statt seines eigenen. Ein Blick aufs Nachbarbrett darf einen den
+   * eigenen Kampf nicht kosten.
+   *
+   * An der PHASE und nicht am Sichtobjekt: Ein Effekt mit `sicht` in der
+   * Abhaengigkeitsliste liefe bei jedem Rundruf des Servers (CLAUDE.md) und
+   * setzte die Wahl mitten im Zusehen zurueck.
+   */
+  useEffect(() => {
+    setGezeigterGegner(null);
+  }, [sicht.phase]);
+
+  /**
+   * Wessen Kampf die Arena abspielt — in dieser Reihenfolge:
+   *
+   *   1. der Angetippte, WENN er diese Runde ueberhaupt antritt. Ein
+   *      ausgeschiedener Sitz hat keinen Kampf mehr; seine Kachel ist aber
+   *      weiter eine Schaltflaeche, und ohne diese Pruefung stuende nach einem
+   *      Tipp darauf eine leere Buehne da.
+   *   2. mein eigener, solange ich einen habe.
+   *   3. irgendeiner. Das trifft, wer selbst ausgeschieden ist oder nur
+   *      zusieht: Bis zum 06.09.2026 sah genau diese Person als Einzige gar
+   *      keinen Kampf, weil ihre Sicht keinen enthielt.
+   *
+   * Gefragt wird `kampfbild` und nicht `sicht.kaempfe`: Nach dem
+   * Phasenwechsel steht die Arena noch einen Wimpernschlag zum Verblassen da
+   * (`useKampfbild`), und in der Sicht sind die Kaempfe dann schon weg — der
+   * gezeigte Kampf duerfte im Ausklang nicht noch einmal wechseln.
+   */
+  const schauKaempfe = kampfbild?.kaempfe ?? [];
+  const eigenerKampf = eigenes !== null && eigenes.ausRunde === null;
+  const kampfSitz =
+    gezeigterGegner !== null && abzuspielen(schauKaempfe, gezeigterGegner) !== null
+      ? gezeigterGegner
+      : eigenerKampf
+        ? sicht.ich
+        : (schauKaempfe[0]?.a ?? null);
+  /** Ich sehe einem fremden Kampf zu und kann zu meinem zurueck. */
+  const zuschauendImKampf = eigenerKampf && kampfSitz !== sicht.ich;
+
   /**
    * Die Arena an der Stelle der beiden Bretter, solange ein Kampf zu zeigen
    * ist — und noch einen Wimpernschlag darueber hinaus, damit sie verblassen
@@ -1627,10 +1677,14 @@ function Ruestkammer({
      */
     <Buehne runde={sicht.runde} verblasst={kampfbild.verblasst}>
       <KampfAnzeige
-        key={kampfSchluessel(kampfbild.kaempfe, sicht.ich)}
+        key={kampfSchluessel(kampfbild.kaempfe)}
         kaempfe={kampfbild.kaempfe}
         paarungen={kampfbild.paarungen}
         ich={sicht.ich}
+        /* Wessen Kampf: meiner, oder der des Angetippten. Die Anzeige rechnet
+           daraus auch, welche Reihe unten steht — man sieht einen fremden
+           Kampf so, wie sein Besitzer ihn sieht. */
+        zeigt={kampfSitz}
         brettReihen={sicht.brettReihen}
         arenaReihen={sicht.arenaReihen}
         brettSpalten={sicht.brettSpalten}
@@ -1704,7 +1758,10 @@ function Ruestkammer({
                     (`.tr-brettkopf`): Zwei Zeilen Beiwerk ueber einem Brett
                     kosten am Handy 33 Pixel, nebeneinander 18. */}
                 <div className="tr-brettkopf">
-                  <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
+                  <h2 className="tr-bretttitel">
+                    <AugeZeichen />
+                    {spielername(zeile(gegner.sitz), gegner.sitz)}
+                  </h2>
                   {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
                       Feld `synergien` an jedem Sitz genau wie ein Spieler
                       (sicht.ts) — bis heute stand hier nichts davon. */}
@@ -1885,7 +1942,12 @@ function Ruestkammer({
                   volle Zeilen zu geben und dem Laden darunter keinen Platz
                   waere die falsche Reihenfolge. */}
               <div className="tr-brettkopf">
+                {/* Das Auge vor dem Namen — dasselbe Zeichen wie an der Kachel
+                    oben, die gerade leuchtet. Es beantwortet die Frage, die
+                    Robin gestellt hat („was passiert, wenn man oben einen
+                    antippt?"): Das hier ist das Brett, das du dir ansiehst. */}
                 <h2 className="tr-bretttitel">
+                  <AugeZeichen />
                   {spielername(zeile(gegner.sitz), gegner.sitz)}
                   {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
                 </h2>
@@ -2063,12 +2125,40 @@ function Ruestkammer({
           <Abschluss sicht={sicht} onZurueck={onZurueck} />
         ) : sicht.phase === 'kampf' ? (
           arena ? (
-            /* Der Kampf laeuft oben in der Arena. Hier nur der Satz, der
-               erklaert, warum der Laden zu ist — und dass er von selbst
-               wieder aufgeht, denn die Dauer bestimmt der Server. */
-            <p className="tr-hinweis">
-              Der Kampf läuft von selbst — danach geht der Laden wieder auf.
-            </p>
+            zuschauendImKampf ? (
+              /* DER WEG ZURUECK. Er steht nur hier: In der Ruestphase liegt
+                 das eigene Brett samt Laden ohnehin unter dem fremden, es gibt
+                 also nichts, wohin man zurueckkehren muesste. Im Kampf ist die
+                 Arena die ganze Anzeige — wer dort einen fremden Kampf
+                 aufgeschlagen hat, sieht seinen eigenen nicht mehr, und ohne
+                 diesen Knopf muesste er raten, wie er hinkommt. Breit und mit
+                 demselben Auge wie die Kachel oben, damit man beide als ein
+                 Angebot liest. */
+              <button
+                type="button"
+                className="tr-zuschauen-zurueck"
+                onClick={() => setGezeigterGegner(null)}
+              >
+                <AugeZeichen />
+                Zurück zu deinem Kampf
+              </button>
+            ) : eigenerKampf ? (
+              /* Der Kampf laeuft oben in der Arena. Hier nur der Satz, der
+                 erklaert, warum der Laden zu ist — und dass er von selbst
+                 wieder aufgeht, denn die Dauer bestimmt der Server. */
+              <p className="tr-hinweis">
+                Der Kampf läuft von selbst — danach geht der Laden wieder auf.
+              </p>
+            ) : (
+              /* Ausgeschieden: Fuer ihn geht kein Laden mehr auf, der Satz
+                 darueber waere also eine Luege. Er sieht seit dem 06.09.2026
+                 einen echten Kampf statt einer Textzeile — und hier steht,
+                 wessen. Ein Zurueck gibt es nicht, weil es nichts gibt, wohin. */
+              <p className="tr-hinweis">
+                Du siehst {spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0)} zu — tippe oben
+                einen anderen Sitz an, um dessen Kampf zu sehen.
+              </p>
+            )
           ) : (
             <Kampfband />
           )
@@ -2338,10 +2428,12 @@ interface Kampfbild {
  * Die Ergebnisliste der Runde — notfalls aus den Kaempfen abgeleitet.
  *
  * Ein Tisch, der vor dieser Sicht aufgemacht wurde, fuehrt `paarungen` nicht.
- * Dann bleibt, was schon vorher da war: Ein Zuschauer hat alle Kaempfe und
- * bekommt daraus dieselbe Liste, ein Spieler nur seinen eigenen — und der
- * faellt in der Anzeige ohnehin heraus, die Ergebniszeilen bleiben also leer
- * wie bisher. Kein Stolpern, nur kein Zugewinn.
+ * Dann tritt die Liste der Kaempfe an ihre Stelle. An einem Tisch von HEUTE
+ * ist das dieselbe Auskunft — seit dem 06.09.2026 bekommt jeder alle Kaempfe
+ * (sicht.ts im Modul). An einem alten Tisch hatte ein Spieler nur seinen
+ * eigenen, und der faellt in der Anzeige ohnehin heraus (`nebenkaempfe`): Die
+ * Ergebniszeilen bleiben dort leer wie bisher. Kein Stolpern, nur kein
+ * Zugewinn.
  */
 function paarungenAus(
   sicht: TafelrundeSicht,
@@ -2359,13 +2451,23 @@ function paarungenAus(
 }
 
 /**
- * Der Schluessel eines Kampfes fuer React: die Saat des abgespielten
- * Kampfes. Sie ist je Runde und Paarung eindeutig (kampfSaat in partie.ts),
- * und derselbe Kampf ueber mehrere Rundrufe behaelt so seine laufende Uhr.
+ * Der Schluessel der RUNDE fuer React: die Saaten aller Kaempfe zusammen. Sie
+ * sind je Runde und Paarung eindeutig (kampfSaat in partie.ts), derselbe
+ * Kampfsatz ueber mehrere Rundrufe behaelt also seine laufende Uhr.
+ *
+ * BEWUSST NICHT der abgespielte Kampf, obwohl es bis zum 06.09.2026 der war.
+ * Seit man mitten in der Phase auf einen fremden Kampf umschalten kann, waere
+ * das ein Schluesselwechsel — die Arena wuerde neu aufgebaut, und mit ihr der
+ * Nullpunkt der Runde, an dem sie ablesen muss, wie weit die Kaempfe schon
+ * sind (`nullpunkt` in KampfAnzeige.tsx). Der fremde Kampf finge dann von vorn
+ * an, obwohl er seit zehn Sekunden laeuft. Der zweite Grund ist der
+ * Ausgeschiedene: Er hat gar keinen eigenen Kampf, sein Schluessel hiess also
+ * jede Runde „keiner" — die Arena blieb ueber den Rundenwechsel hinweg
+ * dieselbe Komponente.
  */
-function kampfSchluessel(kaempfe: readonly Kampfpaarung[], ich: number | null): string {
-  const kampf = abzuspielen(kaempfe, ich);
-  return kampf ? `${kampf.a}:${kampf.b}:${kampf.bericht.saat}` : 'keiner';
+function kampfSchluessel(kaempfe: readonly Kampfpaarung[]): string {
+  if (kaempfe.length === 0) return 'keiner';
+  return kaempfe.map((k) => k.bericht.saat).join('|');
 }
 
 /*

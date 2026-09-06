@@ -46,7 +46,6 @@ import {
   darfHandeln,
   einkommen,
   heerVon,
-  kampfVon,
   platzierungen,
   sieger,
   sitzeVon,
@@ -302,20 +301,28 @@ export interface TafelrundeSicht {
   readonly gegner: readonly FremdeSicht[];
   readonly leftSeats: readonly number[];
   /**
-   * Die Kaempfe, denen dieser Empfaenger zusehen darf — mit vollem
-   * Ablaufprotokoll (siehe kampf.ts).
+   * ALLE Kaempfe der laufenden Runde — mit vollem Ablaufprotokoll (kampf.ts).
    *
-   * Ein Spieler bekommt genau seinen eigenen, ein Zuschauer alle. Der eigene
-   * Kampf ist KEIN Geheimnis: Beide Bretter sind ohnehin oeffentlich (siehe
-   * Kopf dieser Datei), und ohne das Protokoll koennte die Anzeige den Kampf
-   * nicht abspielen, sondern nur das Ergebnis nennen.
+   * Jeder bekommt jeden, Spieler wie Zuschauer. Bis zum 06.09.2026 bekam ein
+   * Spieler genau seinen eigenen, und damit war das ZUSEHEN unmoeglich: Ein
+   * Tipp auf einen Mitspieler legt dessen Brett nach oben, aber in der
+   * Kampfphase steht an der Stelle der Bretter die Arena — und die konnte nur
+   * den eigenen Kampf abspielen, weil kein anderer in der Sicht stand. Wer
+   * ausgeschieden war, sah gar keinen mehr.
    *
-   * Ausserhalb der Kampfphase ist die Liste leer. Dass sie gross werden kann
-   * — ein Kampf sind schnell ein paar hundert Ereignisse — faellt nicht ins
-   * Gewicht: Waehrend der Kampfphase kann niemand handeln, es gibt also
-   * nichts, was einen Rundruf ausloest. Die Sicht geht beim Uebergang in den
-   * Kampf einmal heraus und beim Uebergang zurueck in die Vorbereitung wieder
-   * ohne sie.
+   * ES IST KEIN LECK. Alle Bretter sind ohnehin oeffentlich (siehe Kopf dieser
+   * Datei), der Kampf ist beim Phasenwechsel fertig gerechnet, und sein
+   * AUSGANG steht fuer jede Paarung schon in `paarungen` — Sieger und Schaden
+   * inbegriffen. Das Protokoll sagt also nichts, was der Empfaenger nicht
+   * schon haette; es sagt nur, wie es dazu kam. (Dass die Anzeige ein fremdes
+   * Ergebnis nicht vor seiner Zeit verraet, ist eine Frage des Anstands und
+   * steht im Client, `ergebniszeile` in KampfAnzeige.tsx.)
+   *
+   * WAS ES KOSTET, gemessen an einer Bot-Partie zu acht (Saat 7, die groesste
+   * Runde): die Sicht beim Eintritt in den Kampf 29,5 kB statt 69,1 kB. Das
+   * faellt genau einmal je Runde an — waehrend der Kampfphase kann niemand
+   * handeln, es gibt also nichts, was einen zweiten Rundruf ausloest. Ausserhalb
+   * der Kampfphase ist die Liste leer.
    */
   readonly kaempfe: readonly Kampfpaarung[];
   /**
@@ -411,7 +418,7 @@ function grundsicht(
     maxStufe: MAX_STUFE,
     vorrat: partie.vorrat,
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
-    kaempfe: ich === null ? partie.kaempfe : [kampfVon(partie, ich)].filter((k) => k !== null),
+    kaempfe: partie.kaempfe,
     paarungen: partie.kaempfe.map(ergebnis),
     ...(seit === 0
       ? { katalog: KATALOG, synergieTabelle: SYNERGIEN, stufenwerte: STUFENWERTE }

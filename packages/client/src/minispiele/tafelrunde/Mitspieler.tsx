@@ -69,6 +69,30 @@ function anfangsbuchstabe(name: string): string {
   return erstes ? erstes.toUpperCase() : '?';
 }
 
+/**
+ * Das Auge — das Zeichen fuers Zusehen.
+ *
+ * Es steht an genau zwei Stellen: an der Kachel, deren Brett gerade oben
+ * liegt, und auf der Schaltflaeche, die von dort zurueckfuehrt. Deshalb wird
+ * es hier EINMAL gezeichnet und vom Bildschirm importiert (Tafelrunde.tsx) —
+ * zwei Augen mit leicht verschiedenen Pfaden waeren zwei Zeichen, und dann
+ * gehoerte der Knopf nicht sichtbar zur Kachel.
+ *
+ * OHNE eigene Klasse: Wie gross und in welcher Farbe es steht, entscheidet der
+ * Ort — in der Kachel `.auge svg` (Mitspieler.module.css), im Bretttitel und
+ * auf dem Knopf `.tr-bretttitel svg` bzw. `.tr-zuschauen-zurueck svg`
+ * (styles.css). Eine mitgebrachte Klasse aus DIESEM Modul haenge sonst am
+ * Bildschirm, der das Zeichen nur einbindet.
+ */
+export function AugeZeichen(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M2.5 12S6.2 5.8 12 5.8 21.5 12 21.5 12 17.8 18.2 12 18.2 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3.1" />
+    </svg>
+  );
+}
+
 /** Herz — dieselben Striche wie das Zeichen im Bildschirm. */
 function Herz(): React.JSX.Element {
   return (
@@ -204,7 +228,18 @@ function Kachel({
         </span>
       </span>
 
-      <span className={stil.name}>{name}</span>
+      {/* Das Auge steht VOR dem Namen und nicht als Marke in einer Ecke.
+          Zwei Gruende, beide gemessen: Der Streifen rollt seitlich
+          (`overflow-x` an `.liste`), und alles, was ueber die Kachelkante
+          hinausragt, wird dabei abgeschnitten — eine Eckmarke war oben zur
+          Haelfte weg. Und so steht es genau wie ueber dem Brett darunter
+          („👁 Tom", `.tr-bretttitel`): dasselbe Zeichen vor demselben Namen,
+          also erkennbar dieselbe Aussage. Der Name kuerzt sich weiterhin
+          selbst, das Auge laeuft in derselben Zeile mit. */}
+      <span className={stil.name}>
+        {gezeigt && <AugeZeichen />}
+        {name}
+      </span>
 
       {/* Die Zustandszeile. Sie steht immer da, auch leer: Sonst wären die
           Kacheln unterschiedlich hoch und der Streifen wackelte bei jedem
@@ -254,7 +289,7 @@ function Kachel({
              vorlesen lässt, hört sonst acht gleich klingende Knöpfe. */
           aria-label={`${name}, ${platz.leben} Leben${aus ? ', ausgeschieden' : ''}${
             platz.gegnerJetzt ? ', dein Gegner diese Runde' : ''
-          }`}
+          }${gezeigt ? ', Brett liegt oben' : ''}`}
           onClick={() => onWahl(platz.sitz)}
         >
           {inhalt}

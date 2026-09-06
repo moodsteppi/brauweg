@@ -56,6 +56,7 @@ import { useMemo, useState } from 'react';
 import { Bankreihe, Hexbrett } from '../../minispiele/tafelrunde/Brett';
 import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
 import { Ladenkarte, kaufhindernis } from '../../minispiele/tafelrunde/Ladenkarte';
+import { AugeZeichen } from '../../minispiele/tafelrunde/Mitspieler';
 import {
   type Synergie,
   type Synergiestand,
@@ -361,9 +362,13 @@ export function ProbeRuestkammer(): React.JSX.Element {
               hier. */}
           <section className="tr-brettteil tr-brettteil-fremd">
             {/* Name und Marken nebeneinander, wie am Tisch
-                (`.tr-brettkopf`). */}
+                (`.tr-brettkopf`) — samt dem Auge davor, das seit dem
+                06.09.2026 sagt, wessen Brett man sich gerade ansieht. */}
             <div className="tr-brettkopf">
-              <h2 className="tr-bretttitel">{nameVon(SZENE.gegner.sitz)}</h2>
+              <h2 className="tr-bretttitel">
+                <AugeZeichen />
+                {nameVon(SZENE.gegner.sitz)}
+              </h2>
               <Fremdmarken
                 staende={SZENE.gegner.synergien}
                 tabelle={SZENE.synergieTabelle}
