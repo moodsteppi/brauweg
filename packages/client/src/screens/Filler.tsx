@@ -1057,7 +1057,9 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem zehn
         Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
         auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
-        färben; erst das Färben gibt ab. Und du darfst den Gegner damit nicht
+        färben; erst das Färben gibt ab. Nur der allererste Zug der Partie ist
+        mauerfrei: Wer anfängt, färbt zuerst einmal, der zweite darf sofort
+        bauen. Und du darfst den Gegner damit nicht
         einsperren: Kanten, nach denen er kein freies Feld mehr erreichen
         könnte, lassen sich nicht bebauen.
       </p>
