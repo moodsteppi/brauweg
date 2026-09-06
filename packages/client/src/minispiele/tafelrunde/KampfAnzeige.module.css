@@ -821,6 +821,19 @@
   .figur,
   .koerper,
   .leben b { transition: none; }
+  /*
+   * Die Uebergaenge der TODESFOLGE brauchen ihren vollen Selektor: Sie haengen
+   * nicht an `.leben`, `.kosten`, `.schatten`, sondern an
+   * `.figur[data-tot] .leben` — drei Klassen gegen eine, und ein Medienblock
+   * erhoeht die Spezifitaet nicht. Mit den schlichten Klassen gemessen (Edge,
+   * --force-prefers-reduced-motion) meldet getComputedStyle weiter
+   * `opacity 0.26s` bzw. `0.32s`: Balken, Kostenpunkt und Schatten einer
+   * Gefallenen blendeten weich aus, waehrend ihr Koerper sprang. `.koerper`
+   * steht oben richtig — sein Uebergang liegt auf der schlichten Klasse.
+   */
+  .figur[data-tot] .leben,
+  .figur[data-tot] .kosten,
+  .figur[data-tot] .schatten { transition: none; }
   .figur,
   .koerper[data-schlaegt],
   .ergebnis { animation: none; }
