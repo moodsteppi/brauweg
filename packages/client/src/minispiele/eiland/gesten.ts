@@ -25,12 +25,6 @@ export interface Gestenkarte {
   readonly besitzer: readonly (number | null)[];
   /** Der Rand des eigenen Gebiets, fertig vom Server. */
   readonly waehlbar: readonly number[];
-  /**
-   * Fremde Felder, die sich angreifen lassen — ebenfalls fertig vom Server.
-   * Sie haengen am Stand der Karte, nicht am Zettel, und aendern sich
-   * deshalb waehrend des Waehlens nicht.
-   */
-  readonly angreifbar: readonly number[];
 }
 
 /** Eine Lage auf dem Raster. */
@@ -105,19 +99,15 @@ export function nehmbar(karte: Gestenkarte, platz: number): boolean {
 
 /**
  * Was nach einer gegebenen Auswahl anwaehlbar ist: der Rand des eigenen
- * Gebiets und die Angriffsziele (beides kommt fertig vom Server) plus der
- * Rand dessen, was schon auf dem Zettel steht — und nichts, was selbst schon
- * darauf steht.
+ * Gebiets (kommt fertig vom Server) plus der Rand dessen, was schon auf dem
+ * Zettel steht — und nichts, was selbst schon darauf steht.
  *
  * Das ist die EINE Regel, die der Bildschirm kennen muss; der Server prueft
- * den fertigen Zettel ohnehin noch einmal. Ein angegriffenes Feld auf dem
- * Zettel verlaengert den Rand NICHT: Ein Angriff ist ein Ziel, kein Weg —
- * dieselbe Regel wie in pruefeWahl im Modul.
+ * den fertigen Zettel ohnehin noch einmal.
  */
 export function waehlbarMit(karte: Gestenkarte, auswahl: readonly number[]): Set<number> {
-  const raus = new Set<number>([...karte.waehlbar, ...karte.angreifbar]);
+  const raus = new Set<number>(karte.waehlbar);
   for (const platz of auswahl) {
-    if (karte.besitzer[platz] !== null) continue;
     for (const n of nachbarnVon(platz, karte.spalten, karte.zeilen)) {
       if (nehmbar(karte, n)) raus.add(n);
     }
@@ -133,10 +123,6 @@ export function waehlbarMit(karte: Gestenkarte, auswahl: readonly number[]): Set
  * Ein Vorstoss haengt an seinem ersten Feld, und eine Insel mitten im Freien
  * wuerde der Server ohnehin abweisen. Wer es sieht, versteht es sofort — wer
  * es nicht saehe, wuerde am Ende einen Zettel abschicken, der zurueckkommt.
- *
- * Angegriffene Felder bleiben immer: Sie grenzen nach der Regel an eigenes
- * Land, haengen also an nichts, was wegfallen koennte — und sie tragen
- * selbst nichts, weil ein Angriff kein Weg ist.
  */
 export function haengtZusammen(
   karte: Gestenkarte,
@@ -154,11 +140,11 @@ export function haengtZusammen(
     for (const n of nachbarnVon(platz, karte.spalten, karte.zeilen)) {
       if (!offenListe.has(n) || erreicht.has(n)) continue;
       erreicht.add(n);
-      if (karte.besitzer[n] === null) rand.push(n);
+      rand.push(n);
     }
   }
   // Die urspruengliche Reihenfolge bleibt: Sie ist die des Tippens.
-  return auswahl.filter((p) => erreicht.has(p) || karte.besitzer[p] !== null);
+  return auswahl.filter((p) => erreicht.has(p));
 }
 
 /** Anzeigeindex der Zelle unter dem Punkt, null ausserhalb der Karte. */

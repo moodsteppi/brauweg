@@ -33,7 +33,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { spielBanner } from '../../hub';
-import { GEBIET, GRAUTOENE, stufenfarbe } from './farben';
+import { GEBIET, GRAUTOENE, gebietsfarbe } from './farben';
 import { Ornamentbild } from './Ornament';
 
 /** Dieselbe Karte wie im Vorgabe-Regelsatz (DEFAULT_REGELN im Modul). */
@@ -54,12 +54,6 @@ const BERG = 2;
 const TAKT_MS = 1100;
 /** So lange bleibt eine fertige Karte stehen, bevor die naechste beginnt. */
 const ENDE_MS = 2600;
-/**
- * So viele Runden ohne neues Land, dann ist die Karte zu Ende — das Banner
- * soll den Endkampf zeigen, nicht ihn austragen. Im Modul steht 40; hier
- * reicht ein Bruchteil, weil niemand eine halbe Minute Hin und Her ansieht.
- */
-const KAMPFRUNDEN_MAX = 8;
 
 interface Stand {
   readonly gelaende: readonly number[];
@@ -70,8 +64,6 @@ interface Stand {
   readonly gesammelt: readonly [number, number];
   /** In der letzten Runde genommene Felder — sie blitzen kurz auf. */
   readonly neu: ReadonlySet<number>;
-  /** Runden in Folge ohne neu genommenes freies Feld. */
-  readonly kampfrunden: number;
   readonly fertig: boolean;
 }
 
@@ -84,48 +76,6 @@ function nachbarn(platz: number): number[] {
   if (y > 0) raus.push(platz - SPALTEN);
   if (y < ZEILEN - 1) raus.push(platz + SPALTEN);
   return raus;
-}
-
-/** Die bis zu acht Felder rundherum — wie `umfeld` im Modul. */
-function umfeld(platz: number): number[] {
-  const x = platz % SPALTEN;
-  const y = Math.floor(platz / SPALTEN);
-  const raus: number[] = [];
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const nx = x + dx;
-      const ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= SPALTEN || ny >= ZEILEN) continue;
-      raus.push(ny * SPALTEN + nx);
-    }
-  }
-  return raus;
-}
-
-/** Die Stufe eines Feldes: gleichfarbige Felder im Umfeld — wie im Modul. */
-function stufeVon(besitzer: readonly (number | null)[], platz: number): number {
-  const wem = besitzer[platz];
-  if (wem === null || wem === undefined) return 0;
-  return umfeld(platz).filter((n) => besitzer[n] === wem).length;
-}
-
-/**
- * Fremde Felder am Rand, deren Stufe unter der des eigenen Feldes daneben
- * liegt — die Abschrift von `angreifbare` im Modul.
- */
-function angriffsziele(besitzer: readonly (number | null)[], sitz: number): number[] {
-  const raus = new Set<number>();
-  besitzer.forEach((b, p) => {
-    if (b !== sitz) return;
-    const eigene = stufeVon(besitzer, p);
-    for (const n of nachbarn(p)) {
-      const wem = besitzer[n];
-      if (wem === null || wem === sitz) continue;
-      if (stufeVon(besitzer, n) < eigene) raus.add(n);
-    }
-  });
-  return [...raus];
 }
 
 function abstand(a: number, b: number): number {
@@ -240,7 +190,6 @@ function neuePartie(): Stand {
     bauwerk: new Array<number | null>(FELDER).fill(null),
     gesammelt: [0, 0],
     neu: new Set<number>([ECKEN[0], ECKEN[1]]),
-    kampfrunden: 0,
     fertig: false,
   };
 }
@@ -261,29 +210,16 @@ function randVon(stand: Stand, mein: ReadonlySet<number>): number[] {
  * und was hinter einem verlorenen Feld liegt, verfaellt. Der Spieler des
  * Banners nimmt ein Ornament, wenn eines am Rand liegt, sonst irgendein Feld:
  * dumm genug, dass es nach zwei Menschen aussieht, und nicht nach einer
- * Maschine, die immer dasselbe tut. Seit dem 05.09. greift er auch an, wenn
- * ein fremdes Feld schwaecher ist als seines daneben — und die fremde
- * Heimat immer, denn die beendet die Karte.
+ * Maschine, die immer dasselbe tut.
  */
 function spieleRunde(stand: Stand): Stand {
   const wahl: [number[], number[]] = [[], []];
-  const angriffe: [number[], number[]] = [[], []];
   for (const sitz of [0, 1] as const) {
     const mein = new Set<number>();
     stand.besitzer.forEach((b, p) => {
       if (b === sitz) mein.add(p);
     });
-    let kontingent = Math.min(1 + stand.gesammelt[sitz], KONTINGENT_MAX);
-    const ziele = angriffsziele(stand.besitzer, sitz);
-    const fremdeHeimat = ECKEN[sitz === 0 ? 1 : 0];
-    if (ziele.length > 0 && (ziele.includes(fremdeHeimat) || Math.random() < 0.6)) {
-      // Die Heimat, wenn sie geht — sonst das schwaechste Feld.
-      const ziel = ziele.includes(fremdeHeimat)
-        ? fremdeHeimat
-        : ziele.reduce((a, b) => (stufeVon(stand.besitzer, b) < stufeVon(stand.besitzer, a) ? b : a));
-      angriffe[sitz].push(ziel);
-      kontingent--;
-    }
+    const kontingent = Math.min(1 + stand.gesammelt[sitz], KONTINGENT_MAX);
     for (let k = 0; k < kontingent; k++) {
       const rand = randVon(stand, mein);
       if (rand.length === 0) break;
@@ -335,42 +271,19 @@ function spieleRunde(stand: Stand): Stand {
       }
     }
   }
-  const landGenommen = neu.size > 0;
-  /*
-   * Die Angriffe, nach dem Stand VOR der Runde gerechnet und deshalb fuer
-   * beide zugleich gueltig — auch wenn jeder dem anderen gerade das Feld
-   * nimmt, von dem aus er angreift. Ein Bauwerk wechselt mit dem Feld den
-   * Besitzer, wie im Modul.
-   */
-  for (const sitz of [0, 1] as const) {
-    for (const ziel of angriffe[sitz]) {
-      const vorher = stand.besitzer[ziel];
-      besitzer[ziel] = sitz;
-      neu.add(ziel);
-      if (bauwerk[ziel] !== null && vorher !== null && vorher !== undefined) {
-        gesammelt[vorher as 0 | 1] = Math.max(0, gesammelt[vorher as 0 | 1] - 1);
-        gesammelt[sitz]++;
-      }
-    }
-  }
   legeNach(stand.gelaende, besitzer, ornament);
 
-  const kampfrunden = landGenommen ? 0 : stand.kampfrunden + 1;
-  const naechster: Stand = { ...stand, besitzer, ornament, bauwerk, gesammelt, neu, kampfrunden, fertig: false };
-  const heimatGefallen = ECKEN.some((ecke, sitz) => besitzer[ecke] !== sitz);
+  const naechster: Stand = { ...stand, besitzer, ornament, bauwerk, gesammelt, neu, fertig: false };
   const keinerKann = ([0, 1] as const).every((sitz) => {
     const mein = new Set<number>();
     besitzer.forEach((b, p) => {
       if (b === sitz) mein.add(p);
     });
-    return randVon(naechster, mein).length === 0 && angriffsziele(besitzer, sitz).length === 0;
+    return randVon(naechster, mein).length === 0;
   });
   // Konnte keiner etwas nehmen, obwohl Rand da war, ist die Karte trotzdem
   // zu Ende — sonst stuende ein Banner ewig auf einer Stelle.
-  return {
-    ...naechster,
-    fertig: heimatGefallen || keinerKann || neu.size === 0 || kampfrunden >= KAMPFRUNDEN_MAX,
-  };
+  return { ...naechster, fertig: keinerKann || neu.size === 0 };
 }
 
 /** Was mindestens einer der beiden sieht: sein Gebiet und drei Schritte darueber hinaus. */
@@ -471,13 +384,12 @@ export function EilandBanner(): React.JSX.Element {
               className="ei-feld ei-banner-feld"
               data-art={imNebel ? 'nebel' : art === WASSER ? 'wasser' : art === BERG ? 'berg' : 'gras'}
               data-eigen={!imNebel && besitzer !== null ? '' : undefined}
-              data-heimat={!imNebel && (platz === ECKEN[0] || platz === ECKEN[1]) ? '' : undefined}
               data-neu={!imNebel && s.neu.has(platz) ? '' : undefined}
               style={{
                 background: imNebel
                   ? (GRAUTOENE[s.grau[platz] ?? 0] ?? GRAUTOENE[0])
                   : besitzer !== null
-                    ? stufenfarbe(besitzer, stufeVon(s.besitzer, platz))
+                    ? gebietsfarbe(besitzer)
                     : undefined,
               }}
             >

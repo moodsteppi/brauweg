@@ -24,14 +24,10 @@
 import {
   type EilandAusgang,
   type EilandPartie,
-  angreifbare,
-  gefallene,
-  heimat,
   istBereit,
   kontingent,
   sieger,
   sitzeVon,
-  stufe,
   waehlbare,
 } from './partie.js';
 import type { EilandVariante } from './regeln.js';
@@ -70,22 +66,6 @@ export interface EilandSicht {
   readonly bauwerk: readonly (number | null)[];
   /** Wem ein Platz gehoert — nur fuer sichtbare Plaetze, sonst null. */
   readonly besitzer: readonly (number | null)[];
-  /**
-   * Stufe je Platz (0 bis 8, siehe stufe in partie.ts) — fuer sichtbares
-   * besetztes Land, sonst null. Der Client rechnet sie nicht selbst: Fuer
-   * ein fremdes Feld am Rand des Nebels koennte er es gar nicht, weil deren
-   * Umfeld zum Teil verdeckt ist. Dass die Zahl damit verraet, WIE VIELE
-   * fremde Felder hinter dem Nebel an dieses eine grenzen, ist der Preis der
-   * Regel — ohne die Stufe liesse sich kein Angriff planen.
-   */
-  readonly stufe: readonly (number | null)[];
-  /**
-   * Die Heimat jedes Sitzes: seine Startecke. Kein Geheimnis — die Ecken
-   * stehen fest —, aber der Client soll sie nicht aus einer Regel herleiten.
-   */
-  readonly heimat: Readonly<Record<number, number>>;
-  /** Sitze, deren Heimat gefallen ist. Steht hier jemand, ist die Partie aus. */
-  readonly gefallen: readonly number[];
   /** Grauton je Platz, fuer die Zeichnung verdeckter Felder. */
   readonly grau: readonly number[];
   readonly punkte: Readonly<Record<number, number>>;
@@ -97,12 +77,6 @@ export interface EilandSicht {
   readonly wahl: readonly number[];
   /** Was jetzt anwaehlbar waere. Der Client rechnet das nicht selbst aus. */
   readonly waehlbar: readonly number[];
-  /**
-   * Fremde Felder, die sich jetzt angreifen liessen (siehe angreifbare in
-   * partie.ts). Getrennt von `waehlbar`, weil der Client sie anders zeichnet
-   * und weil ein angegriffenes Feld den Zettel nicht verlaengert.
-   */
-  readonly angreifbar: readonly number[];
   readonly runde: number;
   /** Ausgang der letzten Runde, auf das Sichtbare beschnitten. */
   readonly letzte: EilandAusgang | null;
@@ -184,7 +158,6 @@ function beschneide(ausgang: EilandAusgang, sichtbar: readonly boolean[]): Eilan
     // zurueckgehalten hat, sieht man an seinem Kontingent ohnehin.
     reserve: ausgang.reserve,
     genommen: filterKarte(ausgang.genommen),
-    erobert: filterKarte(ausgang.erobert),
     verfallen: filterKarte(ausgang.verfallen),
     /*
      * Die Ornamentzahl bleibt vollstaendig: Sie sagt nur, DASS der Gegner
@@ -201,7 +174,7 @@ function grundsicht(
   ich: number | null,
 ): Omit<
   EilandSicht,
-  'gelaende' | 'ornament' | 'bauwerk' | 'besitzer' | 'stufe' | 'wahl' | 'waehlbar' | 'angreifbar' | 'letzte'
+  'gelaende' | 'ornament' | 'bauwerk' | 'besitzer' | 'wahl' | 'waehlbar' | 'letzte'
 > {
   const kontingente: Record<number, number> = {};
   const bereit: Record<number, boolean> = {};
@@ -215,8 +188,6 @@ function grundsicht(
     zeilen: partie.regeln.zeilen,
     sichtweite: partie.regeln.sichtweite,
     variante: partie.regeln.variante,
-    heimat: heimat(partie),
-    gefallen: gefallene(partie),
     grau: partie.grau,
     punkte: partie.punkte,
     gesammelt: partie.gesammelt,
@@ -245,20 +216,10 @@ export function sichtFuer(partie: EilandPartie, sitz: number): EilandSicht {
     ornament: partie.ornament.map((o, platz) => (sichtbar[platz] ? o : null)),
     bauwerk: partie.bauwerk.map((b, platz) => (sichtbar[platz] ? b : null)),
     besitzer: partie.besitzer.map((b, platz) => (sichtbar[platz] ? b : null)),
-    stufe: stufenFuer(partie, sichtbar),
     wahl: partie.wahl[sitz] ?? [],
     waehlbar: waehlbare(partie, sitz),
-    angreifbar: angreifbare(partie, sitz),
     letzte: partie.letzte ? beschneide(partie.letzte, sichtbar) : null,
   };
-}
-
-/** Die Stufe jedes sichtbaren besetzten Feldes, sonst null. */
-function stufenFuer(partie: EilandPartie, sichtbar: readonly boolean[]): (number | null)[] {
-  const { spalten, zeilen } = partie.regeln;
-  return partie.besitzer.map((_, platz) =>
-    sichtbar[platz] ? stufe(partie.besitzer, platz, spalten, zeilen) : null,
-  );
 }
 
 /**
@@ -282,10 +243,8 @@ export function zuschauerSicht(partie: EilandPartie): EilandSicht {
     ornament: partie.ornament.map((o, platz) => (besetzt[platz] ? o : null)),
     bauwerk: partie.bauwerk.map((b, platz) => (besetzt[platz] ? b : null)),
     besitzer: partie.besitzer,
-    stufe: stufenFuer(partie, besetzt),
     wahl: [],
     waehlbar: [],
-    angreifbar: [],
     letzte: partie.letzte ? beschneide(partie.letzte, besetzt) : null,
   };
 }

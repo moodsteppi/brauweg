@@ -24,16 +24,6 @@ export interface EilandSicht {
   /** Eingesammelte Ornamente, die als Bauwerk stehen geblieben sind. */
   bauwerk: (number | null)[];
   besitzer: (number | null)[];
-  /**
-   * Stufe je Platz, 0 bis 8: wie viele der acht Felder rundherum demselben
-   * Sitz gehoeren. Null fuer freies Land und Nebel. Der Bildschirm rechnet
-   * sie nicht nach — am Rand des Nebels koennte er es gar nicht.
-   */
-  stufe: (number | null)[];
-  /** Die Startecke jedes Sitzes. Faellt sie, ist die Partie aus. */
-  heimat: Record<number, number>;
-  /** Sitze, deren Heimat gefallen ist. */
-  gefallen: number[];
   /** Grauton je Platz — nur Zeichnung, verraet nichts. */
   grau: number[];
   punkte: Record<number, number>;
@@ -42,8 +32,6 @@ export interface EilandSicht {
   bereit: Record<number, boolean>;
   wahl: number[];
   waehlbar: number[];
-  /** Fremde Felder, die sich jetzt angreifen liessen — fertig vom Server. */
-  angreifbar: number[];
   runde: number;
   letzte: {
     runde: number;
@@ -51,8 +39,6 @@ export interface EilandSicht {
     kaempfe: { platz: number; sieger: number; einsatz: number[] }[];
     reserve: Record<number, number>;
     genommen: Record<number, number[]>;
-    /** Dem Gegner abgenommene Felder je Sitz. */
-    erobert: Record<number, number[]>;
     verfallen: Record<number, number[]>;
     ornamente: Record<number, number>;
   } | null;

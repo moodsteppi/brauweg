@@ -19,51 +19,9 @@ Minuten live.
 der Erinnerung):**
 170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
-78 Eiland-Tests (56 bis zum 05.09.), 248 Tafelrunde-Tests, **417 Servertests**
-— zusammen 1369, dazu die Client-Tests (27 Dateien, 342 Tests), alle grün.
-`tsc --noEmit` sauber. `npm test` und `npm run build` im Wurzelverzeichnis
-decken beides ab.
-
-> **Eiland kann seit dem 05.09.2026 angreifen** (Nutzerwunsch): Jedes
-> besetzte Feld hat eine **Stufe** — die Zahl der gleichfarbigen Felder in
-> seinem Umfeld (acht Nachbarn, also 0 bis 8; `stufe` in
-> `packages/game-eiland/src/partie.ts`). Ein fremdes Feld am eigenen Rand
-> (derselbe Radius wie beim Ausbreiten, über die Kante) lässt sich
-> **angreifen, wenn seine Stufe niedriger ist als die des eigenen Feldes
-> daneben** — gleiche Stufe hält, sonst trügen sich zwei glatte Fronten
-> gegenseitig ab. Ein Angriff kostet ein Feld des Kontingents, gelingt
-> sicher (kein Münzwurf, kein Einsatz), ist aber **Ziel und kein Weg**: Von
-> einem eroberten Feld aus geht es in derselben Runde nicht weiter
-> (`pruefeWahl`, `erreichbareFelder`). Alles wird nach dem Stand VOR der
-> Runde gerechnet, beide können einander also zugleich das Feld nehmen, von
-> dem aus der andere angreift. Ein Bauwerk wechselt mit dem Feld den
-> Besitzer — samt dem Feld mehr je Runde. Die Startecke ist die **Heimat**
-> (`heimat`, gold gezeichnet): Fällt sie, ist die Partie aus und der andere
-> hat gewonnen, egal wie viel Land er hält (`platzierungen` sortiert zuerst
-> nach stehender Heimat, dann nach Land; `points` bleibt das Land und trägt
-> weiter die Erfahrungspunkte). Fallen beide in derselben Runde, entscheidet
-> das Land. Ende sonst wie bisher, wenn keiner mehr irgendwohin kann —
-> jetzt einschließlich Angriffen — plus **Stellungswiederholung** wie im
-> Schach (`WIEDERHOLUNGEN_MAX` = 3: dieselbe Besitzverteilung zum dritten
-> Mal, gezählt seit dem letzten neu genommenen freien Feld, Liste
-> `stellungen` im Zustand) und eine zweite Notbremse `KAMPFRUNDEN_MAX` (40
-> Runden ohne neues Land). Beides, weil Angriffe der Karte nichts wegnehmen:
-> A nimmt ein Feld, B holt es zurück, und jeder Zug lohnt sich für den, der
-> ihn macht. **Gemessen** an 30 Bot-Partien: Ohne Gegenmittel endeten 29
-> erst an der Notbremse mit 133 Eroberungen je Partie; mit der Wiederholung
-> und einem Bot, der nur haltbare Felder angreift (`haltbar` in `bot.ts`:
-> kein fremdes Feld an der Kante darf nach dem Verlust seines Nachbarn noch
-> höher stehen als das eroberte), enden alle 30 regulär nach ~20 Runden mit
-> ~5 Eroberungen. Snapshot v5 (`kampfrunden`, `stellungen`, `letzte.erobert`),
-> Protokollfassung bewusst bei 2. Die Sicht trägt `stufe`, `angreifbar`,
-> `heimat`, `gefallen`; der Client zeichnet jede Stufe als eigene Helligkeit
-> der Gebietsfarbe (`stufenfarbe` in `minispiele/eiland/farben.ts`, HSL-Leiter
-> 82 % → 26 %, für beide Sitze dieselbe — gleich tief heißt gleich stark)
-> plus Ziffer in der Ecke, angreifbare Felder mit rotem Innenrand, die
-> Heimat mit Goldrahmen und Goldrechteck. Der Bot greift an, wenn ein
-> Angriff mehr wert ist als das beste freie Feld (Heimat +1000, Bauwerk +40),
-> und hält nie einen Angriff als Einsatz zurück. Banner (bewegt und
-> `scripts/eiland-banner-zeichnen.py`) zeigen Stufen und Heimat mit.
+56 Eiland-Tests, 248 Tafelrunde-Tests, **417 Servertests** — zusammen 1347,
+dazu die Client-Tests (27 Dateien, 336 Tests), alle grün. `tsc --noEmit` sauber.
+`npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
 > Oberfläche. Ein Auto-Battler mit Merge-Mechanik im Fantasy-Gewand
