@@ -39,7 +39,6 @@ import {
 } from './karte';
 import {
   betrag,
-  bruch,
   drehe,
   fnv1a,
   ganzzahl,
@@ -366,22 +365,17 @@ export function starteLoch(
   z.aktuell = { loch, karte: kartenIndex, startTakt, endeTakt: -1, pauseBis: -1 };
   z.baelle = [];
   for (let s = 0; s < z.sitze; s += 1) {
-    const platz = karte.abschlaege[s % karte.abschlaege.length];
     /*
-     * Kleiner Versatz je Sitz, damit sich am Abschlag nicht alle Bälle exakt
-     * decken: In der Immunphase durchdringen sie sich, danach würden sie in
-     * einem einzigen Bild explodieren. Der Versatz wird für JEDEN Sitz gezogen,
-     * auch für ausgestiegene — sonst hinge der Strom davon ab, wer schon weg
-     * ist, und zwei Geräte mit unterschiedlich spätem Ausstiegswissen liefen
-     * auseinander.
+     * Alle starten auf DEMSELBEN Punkt (dem ersten Abschlag der Karte) und
+     * sind bis zu ihrem ersten Schlag Geister: Sie stoßen nichts und werden
+     * nicht gestoßen (siehe `istImmun`). So braucht es weder Versatz noch
+     * eine Immunfrist, und niemand explodiert am Abschlag — auch nicht, wer
+     * lange wartet. Die weiteren Abschlagplätze der Karten bleiben Doku.
      */
-    const vx = bruch(z.zufall, -0.15, 0.15);
-    z.zufall = vx.zustand;
-    const vy = bruch(z.zufall, -0.15, 0.15);
-    z.zufall = vy.zustand;
+    const platz = karte.abschlaege[0];
     const weg = z.ausstiegTakt[s] !== -1 && z.ausstiegTakt[s] < startTakt;
-    const x = platz[0] + vx.wert;
-    const y = platz[1] + vy.wert;
+    const x = platz[0];
+    const y = platz[1];
     z.baelle.push({
       x,
       y,
@@ -492,9 +486,17 @@ export function schlagErlaubt(z: Partiezustand, sitz: number): boolean {
   return b.ruht;
 }
 
-/** Ist dieser Ball noch stoßfest (Abschlagschutz)? */
-export function istImmun(z: Partiezustand, b: Ball): boolean {
-  return !b.geschlagen && z.takt - z.aktuell.startTakt < IMMUN_TAKTE;
+/**
+ * Ist dieser Ball ein Geist (stößt nichts, wird nicht gestoßen)?
+ *
+ * Bis zum ersten Schlag des Lochs — und nach jedem Zurücksetzen (Wasser,
+ * Flug in einen Block) wieder bis zum nächsten Schlag: Zurückgesetzt wird
+ * auf die letzte Ruhelage, und dort kann inzwischen ein anderer liegen.
+ * Ohne Geistphase flöge der dann quer über die Bahn, ohne selbst geschlagen
+ * zu haben. Der Parameter `z` bleibt, weil Zeichner und Tests ihn übergeben.
+ */
+export function istImmun(_z: Partiezustand, b: Ball): boolean {
+  return !b.geschlagen;
 }
 
 function wendeSchlagAn(z: Partiezustand, sitz: number, rx: number, ry: number, kraft: number): void {
@@ -853,6 +855,8 @@ function zonenAmOrt(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengrupp
     b.vx = 0;
     b.vy = 0;
     b.ruht = true;
+    // Zurückgesetzt heißt wieder Geist — dort kann inzwischen jemand liegen.
+    b.geschlagen = false;
     melde(z, { art: 'wasser', sitz, x: b.x, y: b.y });
     return;
   }
@@ -1001,12 +1005,13 @@ function lande(b: Ball, segmente: readonly Segment[]): void {
     }
   }
   // Nichts gefunden (der Sprung ging quer durch einen Block): zurück auf die
-  // letzte Ruhelage, damit die Partie nicht hängt.
+  // letzte Ruhelage, damit die Partie nicht hängt — als Geist, s. `istImmun`.
   b.x = b.letzteRuheX;
   b.y = b.letzteRuheY;
   b.vx = 0;
   b.vy = 0;
   b.ruht = true;
+  b.geschlagen = false;
 }
 
 /* --------------------------------------------------------------------------

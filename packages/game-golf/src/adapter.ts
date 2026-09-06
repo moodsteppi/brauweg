@@ -101,7 +101,14 @@ function istRegelsatz(x: unknown): x is GolfRegeln {
 export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
   meta,
   /** Erste Fassung — noch keine Protokollgeschichte. */
-  protocolVersion: 1,
+  /**
+   * 2 seit dem 06.09.2026 abends: Physikänderung (Geistphase bis zum ersten
+   * Schlag statt Immunfrist, ein gemeinsamer Abschlag). Die Sicht ist gleich
+   * geblieben — aber zwei Geräte mit verschiedener Physik rechnen aus
+   * derselben Zugliste verschiedene Partien, und genau das hält die
+   * Versionsgrenze des Gateways auseinander.
+   */
+  protocolVersion: 2,
 
   defaultConfig: () => DEFAULT_REGELN,
 
