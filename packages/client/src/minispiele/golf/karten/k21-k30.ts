@@ -40,11 +40,22 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       [11, 23],
     ],
     loch: [9, 4],
-    waende: [],
+    waende: [
+      // Trichter: verengt den offenen Abschlag auf die Breite der Eisbahn —
+      // die Ränder daneben bleiben als längerer, hindernisfreier Umweg offen.
+      { ax: 2, ay: 21, bx: 6, by: 14, dicke: 0.8 },
+      { ax: 16, ay: 21, bx: 12, by: 14, dicke: 0.8 },
+      // Zwei Pfeiler flankieren den Bumpergarten und rahmen ihn als eigene
+      // Kammer, ohne die 10 E breite Gasse zwischen den Pilzen zu verengen.
+      { x: 2.5, y: 5.5, w: 1.5, h: 3 },
+      { x: 14, y: 5.5, w: 1.5, h: 3 },
+    ],
     zonen: [
-      { art: 'eis', x: 2, y: 10, w: 14, h: 8 },
+      { art: 'eis', x: 6, y: 9, w: 6, h: 5 },
       { art: 'bumper', x: 6, y: 7, r: 1.0 },
       { art: 'bumper', x: 12, y: 7, r: 1.0 },
+      // Falle im Trichtermund: nur ein zu mittiger erster Schlag rollt hinein.
+      { art: 'sand', x: 8, y: 19, w: 2, h: 1.5 },
     ],
     dekor: 'eis',
   },
@@ -73,7 +84,17 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       [11, 25.5],
     ],
     loch: [10, 4],
-    waende: [],
+    waende: [
+      // Dammkanten: machen aus dem offenen Zwischenraum einen echten,
+      // sichtbaren Steg zwischen den beiden Teichhälften.
+      { x: 6.5, y: 9.5, w: 0.5, h: 11 },
+      { x: 13.0, y: 9.5, w: 0.5, h: 11 },
+      // Riegel vorm Grün, Lücke rechts — der Steg mündet nicht gerade,
+      // sondern über eine kleine Kurve ins Grün.
+      { x: 4, y: 6, w: 7, h: 0.8 },
+      // Rückwand der Grünkammer, beidseitig offen.
+      { x: 4, y: 1.6, w: 12, h: 0.7 },
+    ],
     zonen: [
       { art: 'wasser', x: 0, y: 10, w: 6.5, h: 10 },
       { art: 'wasser', x: 13.5, y: 10, w: 6.5, h: 10 },
@@ -110,6 +131,10 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       { x: 3, y: 12.9, w: 12, h: 0.6 },
       { x: 3, y: 3.1, w: 0.6, h: 9.8 },
       { x: 14.4, y: 3.1, w: 0.6, h: 9.8 },
+      // Trichter vor dem Portal: verengt den offenen Abschlag auf die
+      // Portalbreite, die Ränder daneben bleiben als Umweg begehbar.
+      { ax: 1.5, ay: 24, bx: 5.5, by: 20.5, dicke: 0.8 },
+      { ax: 16.5, ay: 24, bx: 12.5, by: 20.5, dicke: 0.8 },
     ],
     zonen: [
       { art: 'sand', x: 4, y: 8, w: 10, h: 4.5 },
@@ -142,10 +167,20 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       [8, 15],
     ],
     loch: [7, 4],
-    waende: [],
+    waende: [
+      // Zwei gegeneinander versetzte Riegel erzwingen ein Zick-Zack vom
+      // Abschlag zur Kammer vorm Loch.
+      { x: 0, y: 12, w: 9, h: 0.8 },
+      { x: 5, y: 9, w: 9, h: 0.8 },
+      // Zwei Pfeiler rahmen die Kammer, weit genug vom Drehkreuz-Radius weg.
+      { x: 1.3, y: 5, w: 0.7, h: 3 },
+      { x: 12, y: 5, w: 0.7, h: 3 },
+    ],
     zonen: [
       { art: 'sand', x: 4, y: 6, w: 6, h: 3 },
       { art: 'drehkreuz', x: 10, y: 5, laenge: 2.4, gradJeTakt: 4, phase: 0 },
+      // Im Zick-Zack-Hals: eine Eisplatte macht die zweite Kehre rutschig.
+      { art: 'eis', x: 1, y: 9.2, w: 4, h: 2.5 },
     ],
     dekor: 'wueste',
   },
@@ -173,10 +208,23 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       [11, 24],
     ],
     loch: [14, 5],
-    waende: [],
+    waende: [
+      // Teiler zwischen Kurzweg (links, durchs Eis) und Sicherheitsweg
+      // (rechts, schmal aber hindernisfrei).
+      { x: 15, y: 10, w: 0.8, h: 14 },
+      // Kappe über dem Kurzweg — verhindert einen zu geraden Schuss durchs Eis.
+      { x: 0, y: 9, w: 5, h: 0.8 },
+      // Einfädler zum sicheren Weg.
+      { x: 17, y: 24, w: 3, h: 0.8 },
+      // Kleiner Vorsprung am Abschlag, lenkt den ersten Schlag von der
+      // Strudelseite weg.
+      { x: 2, y: 24.5, w: 3, h: 0.6 },
+    ],
     zonen: [
       { art: 'eis', x: 8, y: 16, w: 6, h: 6 },
       { art: 'strudel', x: 5, y: 19, r: 1.8, staerke: 14 },
+      // Falle auf dem direkten Weg in den Kurzweg hinein.
+      { art: 'sand', x: 9, y: 20.5, w: 3, h: 2 },
     ],
     dekor: 'nacht',
   },
@@ -204,10 +252,23 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       [26, 40],
     ],
     loch: [16, 5],
-    waende: [],
+    waende: [
+      // Spange am Ostufer der Wasserzunge: gibt dem sicheren Weg rechts einen
+      // eigenen Kanal, statt ihn im offenen Feld zu verlieren.
+      { x: 16.5, y: 14, w: 0.8, h: 20 },
+      // Kappe oben, Lücke links — zwingt den Kanal in eine leichte Kurve
+      // Richtung Loch statt gerade durch.
+      { x: 8, y: 13.5, w: 8.5, h: 0.8 },
+      // Ausleger unten am Kanal, lenkt den Abschlag von rechts herein.
+      { x: 17.3, y: 33, w: 4, h: 0.8 },
+      // Riegel vorm Loch, verengt die letzte Annäherung.
+      { x: 12, y: 8, w: 5, h: 0.8 },
+    ],
     zonen: [
       { art: 'wasser', x: 0, y: 20, w: 16, h: 8 },
       { art: 'sprungfeld', x: 3, y: 29, w: 3, h: 2.5, rx: 0, ry: -1, weite: 12 },
+      // Falle im sicheren Kanal, weit genug vom Wasser entfernt.
+      { art: 'sand', x: 19, y: 16, w: 5, h: 4 },
     ],
     dekor: 'wiese',
   },
@@ -235,11 +296,20 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       [11, 23],
     ],
     loch: [9, 4],
-    waende: [],
+    waende: [
+      // Trichter aus dem offenen Abschlag auf die Eisbahn hinauf.
+      { ax: 2, ay: 22, bx: 7, by: 16, dicke: 0.8 },
+      { ax: 16, ay: 22, bx: 11, by: 16, dicke: 0.8 },
+      // Zwei Pfeiler rahmen die Lochkammer, klar abgesetzt von beiden Pilzen.
+      { x: 3, y: 4.5, w: 1.4, h: 2.5 },
+      { x: 13, y: 4.5, w: 1.4, h: 2.5 },
+    ],
     zonen: [
       { art: 'eis', x: 2, y: 6, w: 14, h: 12 },
       { art: 'bumper', x: 5, y: 9, r: 1.3 },
       { art: 'bumper', x: 13, y: 9, r: 1.3 },
+      // Falle im Trichtermund.
+      { art: 'sand', x: 8, y: 20, w: 2.5, h: 1.8 },
     ],
     dekor: 'eis',
   },
@@ -267,10 +337,19 @@ export const KARTEN_K21_K30: readonly Karte[] = [
       [8, 17],
     ],
     loch: [7, 4],
-    waende: [],
+    waende: [
+      // Nadelöhr zwischen Abschlag und Kreiselkammer.
+      { x: 0, y: 12, w: 5, h: 0.8 },
+      { x: 9, y: 12, w: 5, h: 0.8 },
+      // Zwei Wände rahmen die Kammer, weit genug von Strudel und Drehkreuz.
+      { x: 0.6, y: 6, w: 0.7, h: 3.5 },
+      { x: 12.3, y: 5, w: 0.7, h: 3.3 },
+    ],
     zonen: [
       { art: 'strudel', x: 3, y: 8, r: 1.4, staerke: 12 },
       { art: 'drehkreuz', x: 11, y: 10, laenge: 2, gradJeTakt: 5, phase: 0 },
+      // Sandbett in der Kammermitte, zwischen beiden Wächtern hindurch.
+      { art: 'sand', x: 5, y: 6.5, w: 3, h: 2.5 },
     ],
     dekor: 'nacht',
   },
@@ -301,10 +380,18 @@ export const KARTEN_K21_K30: readonly Karte[] = [
     waende: [
       { x: 0, y: 14, w: 14.2, h: 16 },
       { x: 15.8, y: 14, w: 14.2, h: 16 },
+      // Rückwand weit hinterm Loch, schliesst die Kammer nach oben ab.
+      { x: 8, y: 1.5, w: 14, h: 0.7 },
+      // Kleiner Ausleger am Schlauchausgang, ausserhalb der Fluchtlinie.
+      { x: 10, y: 11, w: 4, h: 0.7 },
     ],
     zonen: [
       { art: 'beschleuniger', x: 14.2, y: 24, w: 1.6, h: 6, rx: 0, ry: -1, staerke: 35 },
       { art: 'sprungfeld', x: 20, y: 40, w: 3, h: 3, rx: -0.7071, ry: -0.7071, weite: 8 },
+      // Feinschliff in der Lochkammer, nach dem Schlauch.
+      { art: 'sand', x: 12, y: 6.5, w: 6, h: 3 },
+      // Deko-Prallkörper im offenen Abschlagfeld, weit vom Schlauch entfernt.
+      { art: 'bumper', x: 24, y: 38, r: 1.0 },
     ],
     dekor: 'wiese',
   },
@@ -342,6 +429,10 @@ export const KARTEN_K21_K30: readonly Karte[] = [
     zonen: [
       { art: 'portal', x: 16, y: 24, r: 0.6, ziel: { x: 16, y: 15 }, paar: 0 },
       { art: 'portal', x: 16, y: 15, r: 0.6, ziel: { x: 16, y: 24 }, paar: 0 },
+      // Zwei Deko-Elemente im offenen Mittelfeld zwischen den Schleusen,
+      // weit ab von beiden engen Durchgaengen und der Ziellinie.
+      { art: 'sand', x: 22, y: 16, w: 4, h: 3 },
+      { art: 'bumper', x: 6, y: 17, r: 1.0 },
     ],
     dekor: 'nacht',
   },
