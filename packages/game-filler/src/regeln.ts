@@ -57,9 +57,9 @@ export interface FillerRegeln {
  * eigene Rand, aber der Gegner ist sichtbar") dazukommen kann, ohne dass
  * irgendwo ein `!nebel` steht, das dann falsch waere.
  */
-export type FillerVariante = 'nebel' | 'klar' | 'build';
+export type FillerVariante = 'nebel' | 'klar' | 'build' | 'extreme';
 
-export const VARIANTEN: readonly FillerVariante[] = ['nebel', 'klar', 'build'];
+export const VARIANTEN: readonly FillerVariante[] = ['nebel', 'klar', 'build', 'extreme'];
 
 /** Spielarten, in denen das ganze Brett offen liegt. */
 export function liegtOffen(variante: FillerVariante): boolean {
@@ -68,7 +68,20 @@ export function liegtOffen(variante: FillerVariante): boolean {
 
 /** Spielarten, in denen es Barrieren gibt. */
 export function mitBarrieren(variante: FillerVariante): boolean {
-  return variante === 'build';
+  return variante === 'build' || variante === 'extreme';
+}
+
+/**
+ * Spielarten mit Sternfeldern.
+ *
+ * `extreme` (seit dem 06.09.2026) ist Build plus drei Sterne: Felder mit
+ * normaler Farbe, aber einem weissen Stern darauf. Wer eines schluckt,
+ * bekommt dafuer zwei Punkte statt einem und eine Mauer dazu. Gespielt wird
+ * mit sieben Farben statt sechs — die Zahl steht im Regelsatz des Tisches,
+ * nicht hier; hier steht nur, ob es Sterne gibt.
+ */
+export function mitSternen(variante: FillerVariante): boolean {
+  return variante === 'extreme';
 }
 
 export function istVariante(wert: unknown): wert is FillerVariante {

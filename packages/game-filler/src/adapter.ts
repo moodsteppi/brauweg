@@ -43,7 +43,7 @@ import { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 4;
+const SNAPSHOT_VERSION = 5;
 
 type GespeichertePartie = FillerPartie & { readonly v: number };
 
@@ -80,8 +80,13 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
    * Aktion sehen unveraendert aus, das VERHALTEN ist ein anderes: Ein Client
    * der Version 3 erwartet nach dem Mauern den Gegner am Zug und zeigt
    * seinen eigenen Spielzug als fremden an.
+   *
+   * 5 seit dem 6. September 2026: Die Spielart `extreme` und mit ihr die
+   * Sternfelder (`sterne`) in der Sicht. Ein Client der Version 4 zeichnete
+   * keinen Stern und wuesste nicht, warum der Gegner ploetzlich zwei Punkte
+   * und eine Mauer mehr hat.
    */
-  protocolVersion: 4,
+  protocolVersion: 5,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -148,7 +153,7 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 3 && snap.v !== 2 && snap.v !== 1) {
+    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 4 && snap.v !== 3 && snap.v !== 2 && snap.v !== 1) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
@@ -174,6 +179,8 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
        * Die Null ist deshalb die Wahrheit und kein Notbehelf.
        */
       mauerDiesenZug: alt.mauerDiesenZug ?? false,
+      // Fassung 4 kannte keine Sterne; keine dieser Partien hatte welche.
+      sterne: alt.sterne ?? [],
       barrieren: alt.barrieren ?? [],
       barrierenUebrig:
         alt.barrierenUebrig ??

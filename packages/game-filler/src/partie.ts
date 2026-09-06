@@ -16,7 +16,7 @@
  * entsteht ausschliesslich in viewFor, der Client blendet nichts selbst aus.
  */
 
-import { type FillerRegeln, istVariante, mitBarrieren } from './regeln.js';
+import { type FillerRegeln, istVariante, mitBarrieren, mitSternen } from './regeln.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
@@ -114,6 +114,17 @@ export const GRAUTOENE = 5;
  */
 export const LEERZUEGE_MAX = 6;
 
+/**
+ * Sternfelder der Spielart `extreme`: wie viele, was sie bringen.
+ *
+ * Drei auf 56 Feldern: genug, dass sich ein Umweg lohnt, zu wenige, um das
+ * Spiel zu einer Sternjagd zu machen. Ein Stern ist ZWEI Punkte wert (das
+ * Feld selbst plus STERN_BONUS) und bringt STERN_MAUERN Mauern in den Vorrat.
+ */
+export const STERNE_ANZAHL = 3;
+export const STERN_BONUS = 1;
+export const STERN_MAUERN = 1;
+
 export interface FillerPartie {
   readonly regeln: FillerRegeln;
   /**
@@ -173,6 +184,14 @@ export interface FillerPartie {
    * auseinanderlaufen.
    */
   readonly mauerDiesenZug: boolean;
+  /**
+   * Plaetze der Sternfelder. Leer in jeder Spielart ausser `extreme`.
+   *
+   * Der Stern bleibt am Platz, auch nachdem er geschluckt wurde: Er ist eine
+   * Eigenschaft des Feldes, kein Gegenstand, den man aufhebt. Wer ihn hat,
+   * sieht das an seinem Gebiet — und die Punkte dafuer sind laengst verbucht.
+   */
+  readonly sterne: readonly number[];
 }
 
 export type FillerAktion =
@@ -297,6 +316,16 @@ export function erstellePartie(
    */
   const grau = feld.map(() => Math.floor(zufall() * GRAUTOENE));
 
+  /*
+   * Die Sterne NACH den Grautoenen ziehen, damit die anderen Spielarten
+   * denselben Generatorstand behalten wie vorher: Ohne Sterne wird hier
+   * nichts gezogen, und jede gespeicherte Partie sieht nach dem Deploy aus
+   * wie davor.
+   */
+  const sterne = mitSternen(gueltigeRegeln.variante)
+    ? zieheSterne(spalten, zeilen, sitze, zufall)
+    : [];
+
   const besitzer: (number | null)[] = new Array(feld.length).fill(null);
   const farbe: Record<number, number> = {};
   const punkte: Record<number, number> = {};
@@ -355,7 +384,45 @@ export function erstellePartie(
     barrieren: [],
     barrierenUebrig,
     mauerDiesenZug: false,
+    sterne,
   };
+}
+
+/**
+ * Drei Sternfelder aus der Saat ziehen.
+ *
+ * Nicht auf einer Startecke und nicht daneben: Ein Stern am eigenen Anfang
+ * waere ein Geschenk an den, der zufaellig dort sitzt. Und nicht auf einem
+ * Haufen: Zwei Sterne mit Abstand unter drei Schritten holte man mit einem
+ * einzigen Zug. Gezogen wird aus dem, was bleibt — bei 8 x 7 sind das ueber
+ * vierzig Plaetze, die Suche bricht also nie ab.
+ */
+function zieheSterne(
+  spalten: number,
+  zeilen: number,
+  sitze: readonly number[],
+  zufall: () => number,
+): number[] {
+  const verboten = new Set<number>();
+  for (const sitz of sitze) {
+    const ecke = startEcke(sitz, spalten, zeilen);
+    verboten.add(ecke);
+    for (const n of nachbarn(ecke, spalten, zeilen)) verboten.add(n);
+  }
+  const abstand = (a: number, b: number): number =>
+    Math.abs((a % spalten) - (b % spalten)) +
+    Math.abs(Math.floor(a / spalten) - Math.floor(b / spalten));
+
+  const sterne: number[] = [];
+  let kandidaten = Array.from({ length: spalten * zeilen }, (_, p) => p).filter(
+    (p) => !verboten.has(p),
+  );
+  while (sterne.length < STERNE_ANZAHL && kandidaten.length > 0) {
+    const stern = kandidaten[Math.floor(zufall() * kandidaten.length)]!;
+    sterne.push(stern);
+    kandidaten = kandidaten.filter((p) => abstand(p, stern) >= 3);
+  }
+  return sterne.sort((a, b) => a - b);
 }
 
 // ---------------------------------------------------------------------------
@@ -501,7 +568,7 @@ function schlucke(
   partie: FillerPartie,
   sitz: number,
   neueFarbe: number,
-): { besitzer: (number | null)[]; feld: number[]; gewonnen: number } {
+): { besitzer: (number | null)[]; feld: number[]; gewonnen: number; geschluckt: number[] } {
   const { spalten, zeilen } = partie.regeln;
   const sperren = new Set(partie.barrieren);
   const besitzer = [...partie.besitzer];
@@ -513,7 +580,7 @@ function schlucke(
   }
   const eigen = [...rand];
 
-  let gewonnen = 0;
+  const geschluckt: number[] = [];
   while (rand.length > 0) {
     const platz = rand.pop()!;
     for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
@@ -522,7 +589,7 @@ function schlucke(
       besitzer[n] = sitz;
       eigen.push(n);
       rand.push(n);
-      gewonnen++;
+      geschluckt.push(n);
     }
   }
 
@@ -530,7 +597,7 @@ function schlucke(
   // Farben tragen, sonst faende der Vergleich oben auch das eigene Gebiet.
   for (const platz of eigen) feld[platz] = neueFarbe;
 
-  return { besitzer, feld, gewonnen };
+  return { besitzer, feld, gewonnen: geschluckt.length, geschluckt };
 }
 
 export function fuehreAus(
@@ -578,9 +645,28 @@ export function fuehreAus(
   }
   if (gesperrteFarben(partie).includes(farbe)) throw new Error('Farbe ist gesperrt');
 
-  const { besitzer, feld, gewonnen } = schlucke(partie, sitz, farbe);
+  const { besitzer, feld, gewonnen, geschluckt } = schlucke(partie, sitz, farbe);
 
-  const punkte = { ...partie.punkte, [sitz]: (partie.punkte[sitz] ?? 0) + gewonnen };
+  /*
+   * Sterne, die in diesem Zug gefallen sind. Ein Stern ist ein Feld wie jedes
+   * andere (es zaehlt in `gewonnen` schon mit) und bringt OBENDREIN seinen
+   * Bonus und eine Mauer. Punkte und Vorrat aendern sich hier und nirgends
+   * sonst — der Stern selbst bleibt liegen, siehe `sterne` im Zustand.
+   */
+  const sterne = new Set(partie.sterne);
+  const sterneGetroffen = geschluckt.filter((p) => sterne.has(p)).length;
+
+  const punkte = {
+    ...partie.punkte,
+    [sitz]: (partie.punkte[sitz] ?? 0) + gewonnen + sterneGetroffen * STERN_BONUS,
+  };
+  const barrierenUebrig =
+    sterneGetroffen > 0
+      ? {
+          ...partie.barrierenUebrig,
+          [sitz]: (partie.barrierenUebrig[sitz] ?? 0) + sterneGetroffen * STERN_MAUERN,
+        }
+      : partie.barrierenUebrig;
   const frei = besitzer.some((b) => b === null);
   const leerzuege = gewonnen > 0 ? 0 : partie.leerzuege + 1;
 
@@ -590,6 +676,7 @@ export function fuehreAus(
     besitzer,
     farbe: { ...partie.farbe, [sitz]: farbe },
     punkte,
+    barrierenUebrig,
     dran: naechster,
     zug: partie.zug + 1,
     leerzuege,
@@ -608,8 +695,9 @@ export function markiereVerlassen(partie: FillerPartie, sitz: number): FillerPar
  * Platzierungen.
  *
  * Gleichstand ergibt zweimal Platz 1. Bei 56 Feldern und zwei Spielern kann
- * das nicht vorkommen — 56 ist gerade, 28 zu 28 ist also moeglich —, und dann
- * ist es ein echtes Unentschieden und keine Verlegenheitsloesung.
+ * das vorkommen — 56 ist gerade, 28 zu 28 ist also moeglich —, und dann ist
+ * es ein echtes Unentschieden und keine Verlegenheitsloesung. In `extreme`
+ * zaehlen die Sternboni mit: Dort gewinnt, wer mehr PUNKTE hat, nicht Felder.
  */
 export function platzierungen(
   partie: FillerPartie,

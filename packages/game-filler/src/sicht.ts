@@ -83,6 +83,12 @@ export interface FillerSicht {
    * am Zug, solange er noch Barrieren hat.
    */
   readonly barrierenMoeglich?: readonly (readonly [number, number])[];
+  /**
+   * Plaetze der Sternfelder. Oeffentlich in jeder Sicht, auch im Nebel —
+   * dort gibt es nur keine. Der Client malt den Stern auf das Feld; was das
+   * Feld bringt, rechnet das Modul (siehe STERN_BONUS in partie.ts).
+   */
+  readonly sterne: readonly number[];
 }
 
 /**
@@ -133,6 +139,7 @@ function grundsicht(
       return [Number(a), Number(b)] as const;
     }),
     barrierenUebrig: partie.barrierenUebrig,
+    sterne: partie.sterne,
   };
 }
 
