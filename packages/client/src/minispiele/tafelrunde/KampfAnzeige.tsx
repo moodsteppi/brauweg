@@ -107,6 +107,14 @@ export type Kampfereignis =
       readonly schaden: number;
       readonly lebenDanach: number;
     }
+  | {
+      readonly art: 'heilung';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly ziel: number;
+      readonly menge: number;
+      readonly lebenDanach: number;
+    }
   | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
   | { readonly art: 'ende'; readonly zeitMs: number; readonly sieger: Seite | null; readonly grund: Endgrund };
 
@@ -377,6 +385,16 @@ export interface Figur extends Kaempferstand {
   /** Wie oft diese Figur getroffen WURDE — Schluessel fuer den Blitz. */
   readonly treffer: number;
   readonly letzterSchaden: number;
+  /**
+   * Wie oft diese Figur GEHEILT wurde — Schluessel fuer das gruene Aufleuchten.
+   *
+   * Ein eigener Zaehler neben `treffer` und nicht dieselbe Zahl mit einem
+   * Vorzeichen: Ein Treffer und eine Heilung koennen im selben Takt an
+   * derselben Figur passieren, und mit einem gemeinsamen Schluessel loeschte
+   * das eine die Animation des anderen aus.
+   */
+  readonly heilungen: number;
+  readonly letzteHeilung: number;
   /** Wie oft diese Figur selbst zugeschlagen hat — Schluessel fuer den Ausschlag. */
   readonly schlaege: number;
   /** Wohin der letzte Schlag ging (Arenaplatz), fuer die Richtung des Ausschlags. */
@@ -406,6 +424,8 @@ export function anfangsstand(bericht: Kampfbericht): Abspielstand {
       tot: false,
       treffer: 0,
       letzterSchaden: 0,
+      heilungen: 0,
+      letzteHeilung: 0,
       schlaege: 0,
       zielPlatz: null,
       schlagAb: null,
@@ -463,6 +483,21 @@ export function wendeAn(stand: Abspielstand, e: Kampfereignis): Abspielstand {
       });
       return { ...stand, figuren };
     }
+    case 'heilung':
+      /*
+       * Der Heiler bekommt hier KEINEN Schlagausschlag: Er heilt, statt zu
+       * schlagen, und ein Ausschlag in Richtung des Gefaehrten saehe aus wie
+       * ein Angriff auf ihn. Sichtbar ist die Heilung am Geheilten.
+       */
+      return {
+        ...stand,
+        figuren: veraendert(stand.figuren, e.ziel, (f) => ({
+          ...f,
+          leben: e.lebenDanach,
+          heilungen: f.heilungen + 1,
+          letzteHeilung: e.menge,
+        })),
+      };
     case 'tod':
       return {
         ...stand,
@@ -933,6 +968,15 @@ export function KampfAnzeige<E extends Einheitenbild>({
                     <i className={stil.einschlag} />
                   </span>
                 )}
+                {/* Die Heilung liegt in derselben Zelle und mit demselben
+                    Schluessel-Kniff wie der Treffer — aber an einem EIGENEN
+                    Zaehler: Wird eine Figur im selben Takt getroffen und
+                    geheilt, sollen beide Animationen laufen. */}
+                {f.heilungen > 0 && (
+                  <span key={`hl${f.heilungen}`} className={stil.treffer} aria-hidden="true">
+                    <i className={stil.heilschein} />
+                  </span>
+                )}
               </div>
               {/* Was die Einheit im Laden gekostet hat — bis zum 6.9.2026 der
                   Innenrand der Platte, jetzt ein Punkt am Fuss. Kein neuer
@@ -950,6 +994,14 @@ export function KampfAnzeige<E extends Einheitenbild>({
               {f.treffer > 0 && (
                 <em key={`s${f.treffer}`} className={stil.schaden} aria-hidden="true">
                   −{f.letzterSchaden}
+                </em>
+              )}
+              {/* Die Heilzahl steht LINKS, wo die Schadenszahl rechts steht:
+                  Beide koennen gleichzeitig auftreten, und an derselben Ecke
+                  laegen sie uebereinander. */}
+              {f.heilungen > 0 && (
+                <em key={`h${f.heilungen}`} className={stil.heilung} aria-hidden="true">
+                  +{f.letzteHeilung}
                 </em>
               )}
 

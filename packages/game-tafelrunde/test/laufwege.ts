@@ -31,6 +31,18 @@ export const ROLLEN: readonly Rolle[] = ['wache', 'meuchler', 'beistand', 'schue
  * eine Einheit im Median, bevor sie zum ersten Mal schlaegt") und `null`, wenn
  * sie nie geschlagen hat — eine Einheit, die vor ihrem ersten Angriff faellt,
  * darf die Zahl nicht mit einer Null nach unten ziehen.
+ *
+ * FUER DIE ROLLE `beistand` UNTERSCHAETZEN `hatGetroffen` UND
+ * `schritteBisTreffer` SEIT DEM 06.09.2026. Ein Beistand heilt, statt zu
+ * schlagen, solange in seiner Reichweite ein Verwundeter steht
+ * (`HEILUNG_FAKTOR` in kampf.ts) — er kann also einen ganzen Kampf lang
+ * handeln, ohne ein einziges `treffer`-Ereignis zu erzeugen, und sieht in
+ * dieser Auswertung aus wie eine Einheit, die nie zum Zug kam. Bewusst NICHT
+ * mitgeaendert: Diese Datei misst, was gelaufen wird, und die Spalten dazu
+ * (`schritte`, `sofortInReichweite`, `startAbstand`) sind unberuehrt. Wer die
+ * Handlungen zaehlen will, braucht eine eigene Spalte und keine
+ * umdefinierte — sonst heisst "Treffer" in zwei Tabellen zweierlei. Steht als
+ * Karte auf dem Board.
  */
 export interface Einheitslauf {
   readonly wer: number;

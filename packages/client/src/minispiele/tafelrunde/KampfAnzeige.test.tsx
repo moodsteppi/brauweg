@@ -296,6 +296,80 @@ describe('spieleBis', () => {
   });
 });
 
+describe('spieleBis: die Heilung eines Beistands', () => {
+  /**
+   * Derselbe Kampf, aber ein Moosheiler (Kennung 2, Seite 0) gibt der eigenen
+   * Wache zwischen den beiden Treffern Leben zurueck.
+   *
+   * Von Hand geschrieben und nicht aus dem Modul geholt: Der Client kennt die
+   * Spielpakete nicht (Kopf dieser Datei) — geprueft wird, dass die Anzeige
+   * `lebenDanach` woertlich uebernimmt, nicht dass das Modul richtig rechnet.
+   */
+  function mitHeilung(): Kampfbericht {
+    const b = bericht();
+    return {
+      ...b,
+      start: [
+        ...b.start,
+        { id: 2, seite: 0, einheitId: 'moosheiler', stufe: 1, platz: 17, leben: 60, hoechstesLeben: 60 },
+      ],
+      ereignisse: [
+        { art: 'bewegung', zeitMs: 0, wer: 1, von: 7, nach: 8 },
+        { art: 'treffer', zeitMs: 500, wer: 1, ziel: 0, schaden: 40, lebenDanach: 60 },
+        { art: 'heilung', zeitMs: 700, wer: 2, ziel: 0, menge: 25, lebenDanach: 85 },
+        { art: 'ende', zeitMs: 900, sieger: 0, grund: 'ausgeloescht' },
+      ],
+    };
+  }
+
+  it('uebernimmt lebenDanach woertlich, auch wenn es nach oben geht', () => {
+    const b = mitHeilung();
+    const stand = spieleBis(anfangsstand(b), b, 700);
+    const geheilt = stand.figuren.find((f) => f.id === 0)!;
+    expect(geheilt.leben).toBe(85);
+    expect(geheilt.heilungen).toBe(1);
+    expect(geheilt.letzteHeilung).toBe(25);
+  });
+
+  /*
+   * Der Heiler bekommt keinen Schlagausschlag: Er heilt, statt zu schlagen,
+   * und ein Ausschlag in Richtung des Gefaehrten saehe wie ein Angriff auf ihn
+   * aus.
+   */
+  it('laesst den Heiler selbst unberuehrt', () => {
+    const b = mitHeilung();
+    const stand = spieleBis(anfangsstand(b), b, 700);
+    const heiler = stand.figuren.find((f) => f.id === 2)!;
+    expect(heiler.schlaege).toBe(0);
+    expect(heiler.schlagAb).toBeNull();
+    expect(heiler.heilungen).toBe(0);
+    expect(heiler.leben).toBe(60);
+  });
+
+  /*
+   * Zwei Zaehler und nicht einer mit Vorzeichen: Wird eine Figur im selben
+   * Takt getroffen UND geheilt, muessen beide Animationen laufen. Mit einem
+   * gemeinsamen Schluessel loeschte die eine die andere aus.
+   */
+  it('zaehlt Treffer und Heilungen getrennt', () => {
+    const b = mitHeilung();
+    const stand = spieleBis(anfangsstand(b), b, 700);
+    const wache = stand.figuren.find((f) => f.id === 0)!;
+    expect(wache.treffer).toBe(1);
+    expect(wache.letzterSchaden).toBe(40);
+    expect(wache.heilungen).toBe(1);
+    expect(wache.letzteHeilung).toBe(25);
+  });
+
+  it('faengt mit null Heilungen an', () => {
+    const stand = anfangsstand(mitHeilung());
+    for (const f of stand.figuren) {
+      expect(f.heilungen).toBe(0);
+      expect(f.letzteHeilung).toBe(0);
+    }
+  });
+});
+
 describe('das Wabenraster der Arena', () => {
   /**
    * Die Arena ist so hoch, wie die SICHT sagt — nicht doppelt so hoch wie die

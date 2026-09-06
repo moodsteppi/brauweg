@@ -417,6 +417,11 @@ Vorher-Spalte auf 60 — Zahlen, aus denen sich keine Quote ablesen lässt:
   aufgestellt, weil in elf Runden seltener ein ausgebautes Brett steht — und
   gewinnt praktisch nie. Die Ursache ist bekannt und unverändert: Heilen gibt
   es in `kampf.ts` noch gar nicht.
+  *(Nachtrag 06.09.2026: Seitdem gibt es Heilen — `HEILUNG_FAKTOR` in
+  `kampf.ts`. Der Satz beschreibt den Stand dieses Abschnitts und ist als
+  Erklärung für den heutigen Moosheiler überholt; die Zahlen daneben bleiben
+  gültig für ihren Stand. Der neue steht in der neunten Messung in
+  `docs/spiele/auto-battler-konzept.md`.)*
 
 **Nachgerechnet am 06.09.2026** (Karte „TAFELRUNDE-SPIELZEIT.md Abschnitt 5:
 Aufruf und zitierte Zahlen passen nicht zusammen"). Beide Läufe wurden mit

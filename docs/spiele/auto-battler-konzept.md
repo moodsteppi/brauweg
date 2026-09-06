@@ -181,7 +181,159 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 06.09.2026, achte Messung — der gültige Stand)
+## Gemessen: Ausgewogenheit (Stand 06.09.2026, neunte Messung — der gültige Stand)
+
+**Warum es eine neunte gibt, und wieder ohne eine Zeile am Katalog.** Geändert
+wurde die **Kampfregel**: Ein `beistand` heilt jetzt, statt zu schlagen
+(`HEILUNG_FAKTOR` und `sucheWunde` in `packages/game-tafelrunde/src/kampf.ts`),
+und der Bot bewertet diese Heilung als seine Leistung (`leistung` in `bot.ts`).
+Anlass war Punkt 5 der fünften Messung: Moosheiler, Runenpriester und
+Lichtwahrerin gewannen im Monokultur-Turnier **null** ihrer Kämpfe.
+
+**Zur Wahl standen zwei Wege**, und die Karte nannte beide: dem Kampf eine
+Beistand-Wirkung geben, oder den drei Einheiten Werte auf Stufenniveau geben
+und die Rolle zum bloßen Aufstellungshinweis erklären. Genommen wurde der
+erste. Der Grund ist nicht Geschmack: Der Laden **zeigt die Rolle an**, und das
+Konzept führt sie als Kampfart. Eine angezeigte Eigenschaft, die nichts tut,
+ist schlimmer als keine.
+
+### Das Werkzeug ist diesmal mitgeliefert
+
+Das Monokultur-Turnier der fünften Messung war ein **Wegwerf-Lauf**. Es steht
+jetzt als `packages/game-tafelrunde/werkzeug/turnier.mjs` (Kern in
+`test/turnier.ts`, Proben in `test/turnier.test.ts`) im Repo — drei Kopien
+einer Einheit gegen drei einer anderen, alle geordneten Paarungen je
+Kostenstufe. Es beantwortet die eine Frage, die `werkzeug/ausgewogenheit.mjs`
+**nicht** beantworten kann: wie eine Einheit im Kampf dasteht, unabhängig
+davon, ob der Bot sie kauft. Genau das war beim Moosheiler der Punkt — er kam
+in der Ausgewogenheits-Messung auf 74 Antritte und galt als „zu dünn".
+
+Der alte Befund reproduziert sich Ziffer für Ziffer: **0 Siege aus 114
+Kämpfen** für die Rolle, in jeder Kostenstufe die letzte Zeile.
+
+### Wie stark heilt ein Beistand?
+
+Die Heilung ist **Heilfaktor × Angriff**, gedeckelt am fehlenden Leben des
+Ziels. Am Angriff und nicht an einem sechsten Grundwert, weil der Angriff bei
+einem Beistand ohnehin brachlag (26 / 38 / 50 — je der niedrigste seiner Stufe)
+und weil er schon mit Sternstufe und Synergie-Bonus skaliert.
+
+Entschieden hat den Faktor **nicht** die Rollenquote im Turnier, sondern die
+**Beistandsprobe**: zwei Kopien einer Einheit plus ein Beistand gegen drei
+Kopien derselben Einheit — die Frage, die ein Spieler sich stellt. Lohnt der
+Brettplatz? Je 190 Kämpfe:
+
+| Heilfaktor | Platz gut angelegt? |
+|---|---|
+| 0 (der alte Zustand) | 21,1 % |
+| 1,0 | 28,9 % |
+| 1,25 | 37,4 % |
+| **1,5 (gebaut)** | **46,3 %** |
+| 1,6 | 53,7 % |
+| 2,0 | 64,7 % |
+| 3,0 | 74,2 % |
+
+**Warum die Rollenquote dafür untauglich ist:** Drei Heiler gegeneinander
+können gar nicht anders enden als an der Uhr — sie machen kaum Schaden und
+füllen sich gegenseitig auf. Bei Faktor 1,5 sind **alle** Turniersiege des
+Moosheilers Zeitentscheidungen. Ein Beistand ohne jemanden, dem er beisteht,
+ist ein Widerspruch in sich, und eine Zahl daraus ist keine Aussage über die
+Rolle.
+
+**1,5 liegt knapp unter dem Gleichstand, mit Absicht.** Die Probe gibt dem
+Heiler zwei Verbündete, das Spiel gibt ihm bis zu acht. Gegengeprüft mit vier
+und fünf Einheiten je Seite steht sie bei 55,3 % und 42,1 % — kein Trend nach
+oben, aber ein Gleichstand rund um 50 %. Ab 1,6 ist der Heilerplatz die bessere
+Wahl als ein dritter Kämpfer, und dann steht in jedem Heer ein Heiler.
+
+### Was sich im Spiel geändert hat
+
+**5.000 Partien zu viert, Besetzung `normal`, `--mindest 150`, Saatbasis
+`ausgewogenheit-v1`** — dieselbe Saat vorher und nachher, es unterscheidet sie
+nur die Beistand-Wirkung.
+
+| Einheit | Antritte vorher → nachher | Quote vorher → nachher |
+|---|---|---|
+| Moosheiler | 135 → **1.168** | 1,5 % *(zu dünn)* → 8,6 % (×0,22) |
+| Runenpriester | 134 → **945** | 44,0 % *(zu dünn)* → **61,7 % (×1,58)** |
+| Lichtwahrerin | 66 → **536** | 75,8 % *(zu dünn)* → 79,5 % (×2,03) |
+
+**Der Befund steckt in den Antritten, nicht in den Quoten.** Alle drei waren
+vorher unter der Zählschwelle — die Rolle war im Messstand schlicht nicht
+vorhanden. Jetzt kauft der Bot sie, weil `staerke` ihre Heilung als Leistung
+zählt; ohne diese Zeile in `bot.ts` wäre die Rolle repariert und die Reparatur
+nirgends zu sehen.
+
+Marken, gleicher Lauf:
+
+| Marke | zum Schnitt vorher | nachher |
+|---|---|---|
+| Wächter | ×1,49 | ×1,54 |
+| Krieger | ×1,48 | ×1,54 |
+| Untot | ×0,96 | ×0,88 |
+| Elementar | ×0,83 | ×0,87 |
+| Drache | ×0,80 | ×0,84 |
+| Meuchler | ×0,74 | ×0,79 |
+| **Naturwesen** | ×0,71 | **×0,54** |
+
+Die Spanne hält die Schranke der Probe (×0,5 bis ×2), aber **Naturwesen ist die
+neue Wackelzeile**. Die Ursache ist benannt und nicht geraten: Der Moosheiler
+trägt Naturwesen und steht jetzt neunmal so oft auf einem Schlussbrett — mit
+8,6 % Siegquote. Die Marke bekommt Bretter dazu, die sie vorher nicht hatte,
+und die verlieren.
+
+Und die Uhr:
+
+| | vorher | nachher |
+|---|---|---|
+| Spielzeit im Median | 5:56 | 5:58 |
+| davon Kampf | 3:22 | 3:27 |
+| einzelner Kampf im Median | 14,5 s | 14,8 s |
+| Kämpfe an der Höchstdauer abgebrochen | 0,7 % | **1,7 %** |
+| Runden im Median | 10 | 10 |
+
+**Heilung verlängert jeden Kampf doppelt**, weil beide Seiten länger stehen —
+dieselbe Falle wie bei der Rüstung. Die Verdopplung von 0,7 auf 1,7 % ist
+bezahlbar; wie schnell sie das nicht mehr ist, steht im nächsten Abschnitt.
+
+### Zwei Eingriffe, die gemessen und dann NICHT gemacht wurden
+
+**Den Moosheiler stärker machen.** Er bleibt mit ×0,22 die letzte Zeile des
+Katalogs. Der naheliegende Griff — sein Angriff und damit seine Heilkraft
+hoch — wurde gemessen und verworfen:
+
+| Angriff des Moosheilers | Antritte | zum Schnitt | an der Höchstdauer | Spielzeit |
+|---|---|---|---|---|
+| **26 (gebaut)** | 363 | ×0,21 | **1,7 %** | 5:59 |
+| 30 | 1.132 | ×0,31 | 4,0 % | 6:04 |
+| 34 | 2.611 | ×0,66 | **15,7 %** | **6:54** |
+
+(1.500 Partien.) Bei 34 wäre die Probe in `test/spielzeit.test.ts` gefallen —
+sie lässt höchstens 10 % zu. Ein Heiler ist der stärkste einzelne Hebel auf die
+Kampfdauer, den der Katalog hat. Dazu kommt: ×0,22 ist kein Ausreißer, sondern
+das untere Ende des **Preisgrabens** — Astschütze steht bei ×0,25, Gassendieb
+bei ×0,41, Irrlicht bei ×0,44. Eine Ein-Gold-Einheit steht auf dem letzten
+Brett vor allem dann, wenn ihr Besitzer nicht aufgestiegen ist.
+
+**Die Lichtwahrerin schwächer machen.** Sie steht mit ×2,03 an der Spitze des
+Katalogs. Auch das wurde gemessen — und es lässt sich so nicht reparieren:
+
+| Angriff der Lichtwahrerin | Antritte | Quote |
+|---|---|---|
+| **50 (gebaut)** | 159 | 82,4 % (×2,10) |
+| 44 | 99 | 82,8 % *(zu dünn)* |
+| 40 | 52 | 88,5 % *(zu dünn)* |
+
+(1.500 Partien.) **Ihre Siegquote sinkt nicht, wenn man sie schwächt — sie
+steigt.** Der Bot kauft sie nur seltener, und je seltener, desto mehr sind die
+verbleibenden Bretter genau die reichen Bretter, die ohnehin gewinnen. Das ist
+kein Machtproblem, sondern der Auswahleffekt, vor dem die achte Messung schon
+warnte („Nicht an den Quoten … sondern an den Antritten"): Ihre 75,8 % standen
+**vor** dieser Änderung genauso da, nur mit 66 Antritten unter der
+Zählschwelle. Ein Wertabschlag würde die Zahl wieder unsichtbar machen, nicht
+kleiner. Gehört auf das Board, nicht in den Katalog.
+
+## Überholt: die achte Messung (Stand 06.09.2026, Kampf ohne Beistand-Wirkung)
 
 **Warum es eine achte gibt, und diesmal ohne eine Zeile am Katalog.** Geändert
 wurde allein die Bot-Bewertung `staerke` in `packages/game-tafelrunde/src/bot.ts`:
@@ -520,6 +672,9 @@ durchschnittlich höchstens acht Minuten hält mit Abstand.
    Rollen, nur `reichweite`; ein Beistand ist dort schlicht eine schwache
    Einheit ohne Ausgleich. Nicht angefasst, gehört zur offenen Karte über den
    Moosheiler.
+   **ERLEDIGT am 06.09.2026** — der Kampf hat eine Beistand-Wirkung bekommen
+   (Heilen), siehe die neunte Messung ganz oben. Das Turnier, mit dem dieser
+   Punkt gefunden wurde, liegt seitdem als `werkzeug/turnier.mjs` im Repo.
 6. **Die Bot-Bewertung überschätzt Schaden gegenüber Zähigkeit.** `staerke` in
    `bot.ts` multipliziert Aushalten mal Austeilen und behandelt beides als
    austauschbar. Im Monokultur-Turnier sagt diese Zahl die Rangfolge nicht

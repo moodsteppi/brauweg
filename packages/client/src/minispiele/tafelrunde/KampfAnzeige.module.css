@@ -735,6 +735,54 @@
   100% { opacity: 0; transform: translateY(-14px); }
 }
 
+/*
+ * Die Heilung eines Beistands (kampf.ts, Ereignis `heilung`).
+ *
+ * ZWEI TEILE, GENAU WIE BEIM TREFFER, und aus demselben Grund an denselben
+ * zwei Orten: ein Aufleuchten AN DER FIGUR (`.heilschein`, in der Zelle von
+ * `.treffer`) und eine Zahl AM KARTENRAND (`.heilung`). Was an der Figur
+ * passiert, gehoert auf die Figur; was das Feld beschriftet, an den Rand.
+ *
+ * Gruen und aufsteigend gegen weiss und einschlagend: Ein Spieler muss die
+ * beiden auseinanderhalten koennen, ohne die Zahl zu lesen — auf dem Handy ist
+ * sie zehn Pixel hoch.
+ */
+.heilschein {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* Derselbe Verlauf-Kniff wie beim Blitz: Ein Rechteck von der Groesse der
+     Zelle waere ein gruener Kasten dort, wo gar keine Figur ist. */
+  background: radial-gradient(
+    closest-side,
+    rgba(150, 255, 190, 0.85),
+    rgba(120, 240, 170, 0.32) 55%,
+    rgba(120, 240, 170, 0) 78%
+  );
+  opacity: 0;
+  animation: ka-heilschein 620ms ease-out 1 forwards;
+}
+@keyframes ka-heilschein {
+  /* Langsamer und weicher als der Blitz (120 ms, hart): Heilung ist kein
+     Einschlag. Sie steigt an der Figur auf, statt auf ihr aufzuschlagen. */
+  0% { opacity: 0; transform: scale(0.72) translateY(6%); }
+  35% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(1.06) translateY(-8%); }
+}
+
+.heilung {
+  position: absolute;
+  top: 4%;
+  /* LINKS, waehrend `.schaden` rechts steht: Eine Figur kann im selben Takt
+     getroffen und geheilt werden, und an derselben Ecke laegen beide Zahlen
+     uebereinander. */
+  left: 2%;
+  color: #8ff0b4;
+  font: 800 10px/1 system-ui;
+  font-style: normal;
+  animation: ka-schaden 720ms ease-out 1 forwards;
+}
+
 /* -- Das Ergebnis --------------------------------------------------------- */
 
 .ergebnis {
@@ -839,8 +887,10 @@
   .ergebnis { animation: none; }
   .blitz,
   .einschlag,
+  .heilschein,
   .staub,
-  .schaden { display: none; }
+  .schaden,
+  .heilung { display: none; }
   /* Der Schatten BLEIBT — er ist keine Bewegung, sondern die Auskunft, dass
      die Figur auf dem Feld steht. Nur seine Gegenbewegung entfaellt, und die
      braucht er auch nicht mehr: Die Figur atmet ja nicht mehr. */

@@ -6,6 +6,7 @@ import {
   BRETT_FELDER,
   type EinheitId,
   type Ereignis,
+  HEILUNG_FAKTOR,
   HOECHSTDAUER_MS,
   KATALOG,
   type Kaempferstand,
@@ -21,6 +22,8 @@ import {
   TAKT_MS,
   angriffstakt,
   arenaAbstand,
+  einheit,
+  heilkraft,
   nachArena,
   platzNummer,
   protokollText,
@@ -596,6 +599,160 @@ describe('Kampf — der Ausgang', () => {
   });
 });
 
+
+// ---------------------------------------------------------------------------
+// Der Beistand
+// ---------------------------------------------------------------------------
+
+describe('Kampf — der Beistand heilt', () => {
+  /**
+   * Ein Moosheiler hinter einer Dorfwache gegen einen einzelnen Gassendieb.
+   *
+   * Die Aufstellung ist so gewaehlt, dass der Heiler ueberhaupt etwas zu tun
+   * bekommt: Der Dieb muss an die Wache heran und schlaegt sie an, und der
+   * Heiler steht mit Reichweite 2 dicht genug dahinter. Ein Heiler ohne
+   * verwundeten Gefaehrten faellt auf den Angriff zurueck, und dann pruefte
+   * diese Probe gar nichts.
+   */
+  const MIT_HEILER: readonly [Brettseite, Brettseite] = [
+    stelleAuf([
+      ['dorfwache', 1, 2, 0],
+      ['moosheiler', 1, 2, 1],
+    ]),
+    stelleAuf([['gassendieb', 1, 2, 0]]),
+  ];
+
+  it('rechnet die Heilkraft als Vielfaches des Angriffs, gerundet und nie null', () => {
+    assert.equal(heilkraft(26, 1.5), 39);
+    assert.equal(heilkraft(38, 1.5), 57);
+    // Gerundet und nicht abgeschnitten: 51 mal 1,5 sind 76,5.
+    assert.equal(heilkraft(51, 1.5), 77);
+    assert.ok(Number.isInteger(heilkraft(37, HEILUNG_FAKTOR)));
+    // Ein Faktor nahe null macht die Heilung klein, aber nicht wirkungslos.
+    assert.equal(heilkraft(26, 0), 1);
+    assert.equal(heilkraft(26, 0.01), 1);
+  });
+
+  it('gibt einem verwundeten Gefaehrten Leben zurueck', () => {
+    const bericht = simuliereKampf(MIT_HEILER, 'heilen');
+    const heilungen = bericht.ereignisse.filter((e) => e.art === 'heilung');
+    assert.ok(heilungen.length > 0, 'der Heiler sollte geheilt haben');
+
+    const werte = werteFuer('moosheiler', 1);
+    for (const e of heilungen) {
+      assert.ok(e.art === 'heilung');
+      assert.ok(e.menge >= 1, 'eine Heilung um null waere ein Ereignis ohne Wirkung');
+      assert.ok(
+        e.menge <= heilkraft(werte.angriff, STANDARD_REGLER.heilungFaktor),
+        `${e.menge} ist mehr, als der Moosheiler kann`,
+      );
+      // Immer der Gefaehrte, nie ein Gegner und nie er selbst.
+      const zielStand = bericht.start.find((k) => k.id === e.ziel);
+      const wer = bericht.start.find((k) => k.id === e.wer);
+      assert.ok(zielStand && wer);
+      assert.equal(zielStand.seite, wer.seite);
+      assert.notEqual(e.ziel, e.wer);
+    }
+  });
+
+  it('heilt niemals ueber das hoechste Leben hinaus', () => {
+    for (let i = 0; i < 30; i++) {
+      const bericht = simuliereKampf(zufaelligesPaar(`h${i}`), `h${i}`);
+      for (const e of bericht.ereignisse) {
+        if (e.art !== 'heilung') continue;
+        const ziel = bericht.start.find((k) => k.id === e.ziel);
+        assert.ok(ziel);
+        assert.ok(
+          e.lebenDanach <= ziel.hoechstesLeben,
+          `${e.lebenDanach} ueber ${ziel.hoechstesLeben} in Durchgang ${i}`,
+        );
+      }
+    }
+  });
+
+  /**
+   * Die Probe, an der die ganze Aenderung haengt: Der Heiler muss den Ausgang
+   * bewegen. Verglichen wird derselbe Kampf zweimal — gleiche Bretter, gleiche
+   * Saat, nur der Heilfaktor auf null. Damit kann der Unterschied nichts
+   * anderes sein als die Heilung.
+   */
+  it('entscheidet einen Kampf, der ohne ihn verloren geht', () => {
+    /*
+     * Eine Dorfwache mit Heiler gegen ZWEI Dorfwachen. Ohne die Heilung ist
+     * das eine klare Niederlage — zwei gleiche Koerper gegen einen, und der
+     * Moosheiler teilt mit 26 Angriff kaum etwas aus. Mit ihr gewinnt die
+     * Seite mit dem Heiler: Er gibt der Wache mehr Leben zurueck, als die
+     * beiden ihr abnehmen.
+     */
+    const unterlegen: readonly [Brettseite, Brettseite] = [
+      stelleAuf([
+        ['dorfwache', 1, 2, 0],
+        ['moosheiler', 1, 2, 1],
+      ]),
+      stelleAuf([
+        ['dorfwache', 1, 1, 0],
+        ['dorfwache', 1, 3, 0],
+      ]),
+    ];
+    const ohne = { ...STANDARD_REGLER, heilungFaktor: 0 };
+    for (const saat of ['a', 'b', 'c']) {
+      const mitHeilung = simuliereKampf(unterlegen, saat);
+      const ohneHeilung = simuliereKampf(unterlegen, saat, ohne);
+      assert.equal(ohneHeilung.ereignisse.filter((e) => e.art === 'heilung').length, 0);
+      assert.equal(ohneHeilung.sieger, 1, `Saat ${saat}: ohne Heiler unterlegen`);
+      assert.equal(mitHeilung.sieger, 0, `Saat ${saat}: mit Heiler ueberlegen`);
+      // Kennung 0 ist die Dorfwache: erst Seite 0 in Brettordnung (baueStreiter).
+      assert.ok(
+        mitHeilung.ueberlebende.some((k) => k.id === 0),
+        `Saat ${saat}: die geheilte Wache muss stehen bleiben`,
+      );
+    }
+  });
+
+  it('heilt nur, wer die Rolle traegt', () => {
+    for (let i = 0; i < 30; i++) {
+      const bericht = simuliereKampf(zufaelligesPaar(`r${i}`), `r${i}`);
+      for (const e of bericht.ereignisse) {
+        if (e.art !== 'heilung') continue;
+        const wer = bericht.start.find((k) => k.id === e.wer);
+        assert.ok(wer);
+        assert.equal(
+          einheit(wer.einheitId).rolle,
+          'beistand',
+          `${wer.einheitId} ist kein Beistand und heilt trotzdem`,
+        );
+      }
+    }
+  });
+
+  /**
+   * Ein Heiler, der sich selbst heilen darf, koennte allein auf dem Feld
+   * stehen bleiben, bis die Uhr ablaeuft — ohne dem Gegner je etwas anzutun.
+   * Deshalb heilt er sich nicht, und deshalb faellt er auf den Angriff
+   * zurueck, sobald niemand mehr da ist, dem er helfen kann.
+   */
+  it('faellt auf den Angriff zurueck, wenn niemand mehr zu heilen ist', () => {
+    const alleinDagegen: readonly [Brettseite, Brettseite] = [
+      stelleAuf([['moosheiler', 1, 2, 0]]),
+      stelleAuf([['funkenlehrling', 1, 2, 0]]),
+    ];
+    const bericht = simuliereKampf(alleinDagegen, 'allein');
+    assert.equal(bericht.ereignisse.filter((e) => e.art === 'heilung').length, 0);
+    assert.ok(
+      bericht.ereignisse.some((e) => e.art === 'treffer' && e.wer === 0),
+      'ein Beistand ohne Gefaehrten muss zuschlagen',
+    );
+    assert.equal(bericht.grund, 'ausgeloescht', 'der Kampf muss zu Ende gehen');
+  });
+
+  it('schreibt die Heilung mit Vorzeichen ins Protokoll', () => {
+    const text = protokollText(simuliereKampf(MIT_HEILER, 'heilen'));
+    const zeile = text.split('\n').find((z) => z.includes('heilung'));
+    assert.ok(zeile, 'im Protokoll fehlt die Heilung');
+    assert.match(zeile, /heilung\s+\d+ -> \d+ \+\d+ \(\d+\)/);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Die Abbruchgrenze
 // ---------------------------------------------------------------------------
@@ -756,6 +913,12 @@ function spieleNach(bericht: Kampfbericht): Map<number, Nachgespielt> {
       case 'treffer': {
         const ziel = stand.get(e.ziel)!;
         assert.equal(Math.max(0, ziel.leben - e.schaden), e.lebenDanach, `Treffer auf ${e.ziel}`);
+        ziel.leben = e.lebenDanach;
+        break;
+      }
+      case 'heilung': {
+        const ziel = stand.get(e.ziel)!;
+        assert.equal(ziel.leben + e.menge, e.lebenDanach, `Heilung auf ${e.ziel}`);
         ziel.leben = e.lebenDanach;
         break;
       }
