@@ -47,7 +47,7 @@ import { type EilandSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 5;
+const SNAPSHOT_VERSION = 4;
 
 type GespeichertePartie = EilandPartie & { readonly v: number };
 
@@ -80,11 +80,6 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
    * NICHT erhoeht am 2. September fuer die Bauwerke: Die Sicht bekam nur ein
    * Feld dazu, das ein aelterer Client schlicht nicht liest. Eine neue
    * Fassung wuerfe jeden offenen Tab aus der Partie — fuer eine Zeichnung.
-   *
-   * Auch NICHT erhoeht am 5. September fuer die Angriffe: Der Zettel sieht
-   * gleich aus (eine Feldliste), ein aelterer Client kennt `angreifbar` nicht
-   * und bietet eben keine Angriffe an — und einen Zettel, auf dem nur freies
-   * Land steht, nimmt der Server weiterhin an.
    */
   protocolVersion: 2,
 
@@ -186,21 +181,6 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
           reserve: letzte.reserve ?? {},
           kaempfe: letzte.kaempfe.map((k) => ({ ...k, einsatz: k.einsatz ?? [] })),
         },
-      };
-    }
-    /*
-     * Bis Version 4 gab es keine Angriffe: kein Kampfrundenzaehler, keine
-     * Stellungsliste und keine Eroberungen in der Rundenmeldung. Alles
-     * beginnt bei null — eine laufende Partie bekommt die neue Regel ab
-     * ihrer naechsten Runde.
-     */
-    if (v < 5) {
-      const teil = alt as Partial<EilandPartie>;
-      alt = {
-        ...alt,
-        kampfrunden: teil.kampfrunden ?? 0,
-        stellungen: teil.stellungen ?? [],
-        letzte: alt.letzte ? { ...alt.letzte, erobert: alt.letzte.erobert ?? {} } : null,
       };
     }
     return alt;

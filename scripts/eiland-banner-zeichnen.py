@@ -19,20 +19,12 @@ Fall, dass die Simulation je zu teuer wird. Beide zeigen dieselben Farben und
 dieselbe Bauart (dunkler Grund, Karte rechts, Titelzone links).
 """
 
-import colorsys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
 
-# Muss zu GEBIET in packages/client/src/minispiele/eiland/farben.ts passen.
+# Muss zu GEBIET in packages/client/src/screens/Eiland.tsx passen.
 GEBIET = ["#e2603f", "#7b4fd0"]
-# Die Stufenleiter ebendort (stufenfarbe): Helligkeit von Stufe 0 bis 8.
-STUFEN_MAX = 8
-HELL_STUFE_0 = 82
-HELL_STUFE_MAX = 26
-# Das Gold der Heimat, siehe GOLD ebendort und `.ei-feld[data-heimat]`.
-GOLD = "#e4b23c"
-GOLD_HELL = "#f3cf6a"
 # Muss zu GRAUTOENE ebendort passen.
 GRAUTOENE = ["#9a9a9a", "#a6a6a6", "#b1b1b1", "#bcbcbc", "#c6c6c6"]
 # Muss zu `.ei-feld[data-art=…]` in styles.css passen.
@@ -79,33 +71,6 @@ PLAN = [
 def farbe(hexwert: str) -> tuple[int, int, int]:
     h = hexwert.lstrip("#")
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
-
-
-def stufe(z: int, sp: int) -> int:
-    """Die Stufe eines Gebietsfelds: gleichfarbige Felder im Umfeld (bis 8).
-
-    Dieselbe Rechnung wie `stufe` in packages/game-eiland/src/partie.ts —
-    Orange ist "OS", Violett "PR".
-    """
-    gruppe = "OS" if PLAN[z][sp] in "OS" else "PR"
-    zahl = 0
-    for dz in (-1, 0, 1):
-        for dsp in (-1, 0, 1):
-            if dz == 0 and dsp == 0:
-                continue
-            z2, sp2 = z + dz, sp + dsp
-            if 0 <= z2 < ZEILEN and 0 <= sp2 < SPALTEN and PLAN[z2][sp2] in gruppe:
-                zahl += 1
-    return zahl
-
-
-def stufenfarbe(hexwert: str, wert: int) -> tuple[int, int, int]:
-    """Die Gebietsfarbe in der Helligkeit ihrer Stufe — wie `stufenfarbe` in farben.ts."""
-    r, g, b = (k / 255 for k in farbe(hexwert))
-    h, _l, s = colorsys.rgb_to_hls(r, g, b)
-    t = max(0, min(STUFEN_MAX, wert)) / STUFEN_MAX
-    l = (HELL_STUFE_0 + (HELL_STUFE_MAX - HELL_STUFE_0) * t) / 100
-    return tuple(round(k * 255) for k in colorsys.hls_to_rgb(h, l, s))  # type: ignore[return-value]
 
 
 def hintergrund() -> Image.Image:
@@ -264,28 +229,20 @@ def male() -> Image.Image:
                 zeichner.rectangle([x, y, x + KACHEL - 1, y + KACHEL - 1], fill=farbe(grau))
                 continue
             if zeichen in "OS":
-                grund = stufenfarbe(GEBIET[0], stufe(z, sp))
+                grund = GEBIET[0]
             elif zeichen in "PR":
-                grund = stufenfarbe(GEBIET[1], stufe(z, sp))
+                grund = GEBIET[1]
             elif zeichen == "w":
-                grund = farbe(WASSER)
+                grund = WASSER
             elif zeichen == "b":
-                grund = farbe(BERG)
+                grund = BERG
             else:
-                grund = farbe(GRAS)
-            zeichner.rectangle([x, y, x + KACHEL - 1, y + KACHEL - 1], fill=grund)
+                grund = GRAS
+            zeichner.rectangle([x, y, x + KACHEL - 1, y + KACHEL - 1], fill=farbe(grund))
 
             if zeichen in "OSPR":
                 # Der Innenschimmer des Gebiets (`.ei-feld[data-eigen]`).
                 dz.rectangle([x, y, x + KACHEL - 1, y + KACHEL - 1], outline=(255, 255, 255, 128))
-            if (z, sp) in ((ZEILEN - 1, 0), (0, SPALTEN - 1)):
-                # Die Heimat (`.ei-feld[data-heimat]`): goldener Rahmen, goldenes
-                # Rechteck in der Mitte — die Ecke, um die es geht.
-                dz.rectangle([x, y, x + KACHEL - 1, y + KACHEL - 1], outline=farbe(GOLD) + (255,), width=2)
-                dz.rectangle([x + 2, y + 2, x + KACHEL - 3, y + KACHEL - 3], outline=(0, 0, 0, 76))
-                bx0, by0 = x + round(KACHEL * 0.27), y + round(KACHEL * 0.37)
-                bx1, by1 = x + KACHEL - 1 - round(KACHEL * 0.27), y + KACHEL - 1 - round(KACHEL * 0.37)
-                dz.rectangle([bx0, by0, bx1, by1], fill=farbe(GOLD_HELL) + (255,), outline=(0, 0, 0, 72))
             if zeichen == "b":
                 berg(dz, x, y)
             if zeichen == "w":
