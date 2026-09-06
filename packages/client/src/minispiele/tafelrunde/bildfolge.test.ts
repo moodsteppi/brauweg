@@ -15,6 +15,7 @@ import {
   FIGURENKASTEN,
   GLEITEN_MS,
   KAMPF_TEMPO,
+  RUECKFALLKASTEN,
   SACKEN_MS,
   bildstand,
   blattPfad,
@@ -22,6 +23,7 @@ import {
   istRolle3D,
   zellWeite,
 } from './bildfolge';
+import { rastermass } from './zuege';
 
 /*
  * Geprueft wird die AUSWAHL des Bildes und nichts sonst — das Abspielen steht
@@ -285,5 +287,63 @@ describe('FIGURENKASTEN', () => {
     // kleiner geworden, und niemand haette es gesehen.
     const alteZelle = 4.29;
     expect((alteZelle / 1.65) * 100).toBeCloseTo(260, 0);
+  });
+});
+
+describe('RUECKFALLKASTEN', () => {
+  /*
+   * Der Rueckfall ist die Pixelfigur, die einspringt, wenn ein 3D-Blatt nicht
+   * laedt. Bis zum 06.09.2026 war sie 72 % der Koerperhoehe hoch — eine Zahl,
+   * die mit den Figuren daneben nichts zu tun hatte. Als die auf den Massstab
+   * von 1,65 Metern kamen, standen 34 Pixel Ersatz neben 72 Pixeln Figur, und
+   * das sah nach Fehler aus statt nach Ersatz. Diese Proben halten die beiden
+   * zusammen.
+   */
+  it('stellt den Ersatz auf dieselbe Standlinie wie die 3D-Figur', () => {
+    // Die Kachel IST die Figur und steht mit den Fuessen auf ihrer Unterkante:
+    // Der Bodenversatz ist deshalb selbst schon die Standlinie und braucht
+    // keinen Weg bis zum Fusspunkt. Herauskommen muss dieselbe Hoehe, auf der
+    // das Blatt aufsetzt — sonst steht der Ersatz woanders als seine Nachbarn.
+    const standlinieBlatt =
+      FIGURENKASTEN.boden / 100 + (FIGURENKASTEN.hoehe / 100) * (1 - FIGUREN3D_FUSSPUNKT.y);
+    expect(RUECKFALLKASTEN.boden / 100).toBeCloseTo(standlinieBlatt, 3);
+  });
+
+  it('macht den Ersatz so gross wie die Figur, die er ersetzt', () => {
+    /*
+     * Gemessen am Alphakanal, einmal auf beiden Seiten: Eine stehende Figur
+     * belegt im Median 73,4 % ihrer Zelle (Wache 65,6, Meuchler 59,4,
+     * Schuetze 73,4, Magier 73,4, Beistand 87,5), eine Pixelfigur 96,9 % ihrer
+     * Kachel. Was am Ende zu sehen ist, muss deshalb gleich hoch sein — die
+     * KAESTEN sind es nicht, und genau darum sind es zwei.
+     */
+    const sichtbaresBlatt = (FIGURENKASTEN.hoehe / 100) * 0.734;
+    const sichtbarerErsatz = (RUECKFALLKASTEN.hoehe / 100) * 0.969;
+    expect(sichtbarerErsatz).toBeCloseTo(sichtbaresBlatt, 2);
+  });
+
+  it('steht auf 390 px zwischen der kleinsten und der groessten 3D-Figur', () => {
+    /*
+     * Dieselbe Rechnung wie die Messung, die den Befund ausgeloest hat, nur
+     * hier: Arena `min(94vw, 460px)`, zehn Reihen, fuenf Spalten — daraus die
+     * Kartenhoehe, davon 62 % Koerper (`.stellplatz`). Es ist die Zielgroesse
+     * aus Robins Abnahme, und die Zahlen sind die, die man am Geraet sieht.
+     *
+     * Der Ersatz war 34 Pixel hoch, wo die Figuren daneben 64 bis 94 messen.
+     * Die Probe verlangt nicht eine bestimmte Zahl, sondern dass er in dieser
+     * Spanne liegt: Welche Zahl genau, entscheidet der Massstab, aber „halb so
+     * gross wie alle Nachbarn" darf nicht wiederkommen.
+     */
+    const mass = rastermass(10, 5);
+    const brettBreite = Math.min(0.94 * 390, 460);
+    const kartenHoehe = (brettBreite / mass.seitenverhaeltnis) * (mass.wabenHoehe / 100);
+    const koerper = kartenHoehe * 0.62;
+
+    const ersatz = koerper * (RUECKFALLKASTEN.hoehe / 100) * 0.969;
+    const zelle = koerper * (FIGURENKASTEN.hoehe / 100);
+    // Der Meuchler ist die kleinste der fuenf Figuren, der Beistand die
+    // groesste — Anteile ihrer Zelle, am Alphakanal gemessen.
+    expect(ersatz).toBeGreaterThan(zelle * 0.594);
+    expect(ersatz).toBeLessThan(zelle * 0.875);
   });
 });
