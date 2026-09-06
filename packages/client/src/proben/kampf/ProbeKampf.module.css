@@ -1,0 +1,73 @@
+/*
+ * Die Probe der Kampfanzeige (`ProbeKampf.tsx`).
+ *
+ * HIER STEHT NICHTS ZUM KAMPF SELBST. Buehne und Arena bringen ihr Aussehen
+ * mit (`Buehne.module.css`, `KampfAnzeige.module.css`) — genau das ist der
+ * Sinn der Probe. Was hier liegt, ist das Drumherum, das es am Tisch nicht
+ * gibt: Kopfzeile, Uhr, der Knopf „nochmal" und die zwei Saetze darunter.
+ *
+ * Der Grundton kommt von `.tr-seite`/`.tr-tisch` aus styles.css, die das
+ * Element schon traegt. Die Klassen hier legen nur die Abstaende nach, die
+ * dort der Tisch selbst setzt.
+ */
+
+/*
+ * `.tr-seite` ist `position: fixed; inset: 0` und `.tr-tisch` rollt darin.
+ * Genau das ist hier richtig: Der Kampf soll im selben Rahmen stehen wie am
+ * Tisch, und Kopf, Knopf und Fusstext rollen mit, wenn der Schirm zu kurz
+ * ist. Nur die Polsterung kommt dazu — am Tisch fuellen Kopfleiste und Laden
+ * diesen Platz.
+ */
+.seite {
+  padding: max(10px, env(safe-area-inset-top)) 8px max(12px, env(safe-area-inset-bottom));
+  gap: 10px;
+}
+
+.kopf {
+  width: min(96vw, 520px);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.titel {
+  margin: 0;
+  font-size: clamp(0.95rem, 3.4vw, 1.15rem);
+  font-weight: 600;
+}
+
+/* Tabellenziffern, sonst wandert die Zeile im Zehntelsekundentakt hin und
+   her — dieselbe Ueberlegung wie beim Countdown der Mitspielersuche. */
+.uhr {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* 44 px hoch: Was man antippen soll, muss man auch am Handy treffen. */
+.knopf {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0.45rem 1.1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.knopf:hover {
+  border-color: var(--accent);
+}
+
+.fuss {
+  width: min(96vw, 520px);
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}

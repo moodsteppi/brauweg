@@ -1,0 +1,10 @@
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Beispieldateien tragen absichtlich Platzhalter, keine echten Werte."
+paths = [
+  '''packages/server/\.env\.example''',
+]

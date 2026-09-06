@@ -21,6 +21,7 @@ import {
   slotFor,
 } from '../tisch';
 import { useTable } from '../useTable';
+import { fehlenText, waehleZumDruecken } from '../tisch-auswahl';
 
 /** Grenzen der Tischgroesse — dieselben wie am Doppelkopf- und Zaubertisch. */
 const ZOOM_MIN = 0.7;
@@ -256,10 +257,9 @@ export function SkatTable({
   const trickAnzeige = frozenActive && lastTrick ? lastTrick.played : round.trick;
   const trickGewinner = frozenActive && lastTrick ? lastTrick.winner : null;
 
-  const toggleDruecken = (id: number): void =>
-    setGedrueckt((alt) =>
-      alt.includes(id) ? alt.filter((x) => x !== id) : alt.length < 2 ? [...alt, id] : alt,
-    );
+  // Die Regel selbst steht geprueft in tisch-auswahl.ts - hier bleibt nur das
+  // Anstossen des Zustands.
+  const toggleDruecken = (id: number): void => setGedrueckt((alt) => waehleZumDruecken(alt, id));
   const toggleVormerken = (id: number): void =>
     setVorgemerkt((v) => (v === id ? null : id));
 
@@ -599,9 +599,7 @@ function SkatAktionen({
     return (
       <div className="skat-aktionen">
         <span className="skat-hinweis">
-          {gedrueckt.length < 2
-            ? `Noch ${2 - gedrueckt.length} Karte${gedrueckt.length === 1 ? '' : 'n'} wählen`
-            : 'Zwei Karten gewählt'}
+          {fehlenText(gedrueckt.length) ?? 'Zwei Karten gewählt'}
         </span>
         <button
           className="primary"
@@ -635,9 +633,7 @@ function SkatAktionen({
     return (
       <div className="skat-aktionen">
         <span className="skat-hinweis">
-          {gedrueckt.length < 2
-            ? `Noch ${2 - gedrueckt.length} Karte${gedrueckt.length === 1 ? '' : 'n'} wählen`
-            : 'Zwei Karten gewählt'}
+          {fehlenText(gedrueckt.length) ?? 'Zwei Karten gewählt'}
         </span>
         <button
           className="primary"

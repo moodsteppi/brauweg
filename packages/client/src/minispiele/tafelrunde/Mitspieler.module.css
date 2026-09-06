@@ -1,0 +1,293 @@
+/*
+ * Die Mitspielerleiste von Tafelrunde (Mitspieler.tsx).
+ *
+ * Eigenes Modul wie Synergien.module.css und KampfAnzeige.module.css, aus
+ * demselben Grund: ein abgeschlossenes Bauteil, dessen Klassennamen nirgends
+ * sonst greifen sollen. Farben aus den Variablen der Plattform (--panel,
+ * --line, --muted, --text, --gold, --accent, --danger), damit die Leiste wie
+ * ein Teil der Rüstkammer aussieht.
+ *
+ * EIN WAAGERECHTER STREIFEN, keine Liste mehr. Je Sitz eine flache Kachel:
+ * Bild links, Name, Leben und Zustand rechts daneben. Bei acht Sitzen rollt
+ * der Streifen seitlich, statt in die Höhe zu wachsen. Das ist der Grund für
+ * die feste Kachelbreite: Eine Kachel, die sich die Breite teilt, wäre bei
+ * acht Sitzen 44 px schmal, und darin steht kein Name.
+ *
+ * Die Leiste positioniert sich NICHT selbst — sie sitzt in der
+ * festgehefteten Kopfleiste des Tisches (`.tr-oben` in styles.css) und füllt
+ * deren Breite. Bis zum 05.09.2026 hing sie am Desktop fest an der rechten
+ * Kante; das ist entfallen, weil sie jetzt oben steht und dort für jede
+ * Bildschirmbreite dasselbe tut.
+ */
+
+.leiste {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.liste {
+  display: flex;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Acht Kacheln sind breiter als ein Handy. Seitlich rollen und einrasten —
+     und die Rollleiste selbst weg: Sie wäre über einer 70 px hohen Kachel
+     ein Fünftel der Höhe. */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.liste::-webkit-scrollbar { display: none; }
+
+.reihe {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+/* -- Eine Kachel ---------------------------------------------------------- */
+
+/*
+ * BILD LINKS, TEXT RECHTS — seit dem 06.09.2026 und aus einem einzigen Grund:
+ * der Höhe. Die Kachel stand als Spalte da (Bild über Lebenszeile über Name
+ * über Zustand) und war damit 74 px hoch. Die Leiste klebt oben fest, ihre
+ * Höhe fehlt dem Brett und dem Laden auf jedem Bildschirm der Partie — und
+ * auf Robins iPhone (440 x 956, aus dem Homescreen gestartet) kamen zu den
+ * 74 noch die 59 px des Notch-Randes und die Phasenzeile: 160 für eine
+ * Kopfzeile, gemessen auf IMG_1047.
+ *
+ * Nebeneinander sind es 44,5. Der NAME steht dabei ueber beiden Spalten,
+ * Bild und die zwei kurzen Zeilen darunter nebeneinander:
+ *
+ *     Brunhild            <- ueber die ganze Breite, 70 px
+ *     [Bild]  ---- 74     <- Balken und Zahl
+ *             Rang 2      <- Zustand
+ *
+ * Der Name quer und nicht in der rechten Spalte, weil er dort schlechter
+ * dastuende als vorher: neben dem Bild blieben ihm 39 px, in der alten
+ * Kachel hatte er 52. Quer sind es 70 — die Auslassungspunkte greifen also
+ * SPAETER als vor dem Umbau, obwohl die Kachel niedriger ist. Hoehe kostet
+ * die Zeile fast nichts: Das Bild ist ohnehin hoeher als Balken und Zustand
+ * zusammen.
+ *
+ * Der Preis ist die Breite: 82 statt 60 px je Kachel. Bei vier Sitzen passen
+ * sie weiter nebeneinander (4 x 82 + drei Luecken = 343 von 360 px, die
+ * neben dem Zurueck-Knopf auf einem 440er-Schirm bleiben); ab sechs rollt
+ * der Streifen seitlich — was er bei sechs Sitzen vorher auch schon tat.
+ *
+ * Die Zuordnung läuft über `grid-template-areas` und die Klassen der Kinder.
+ * Das Markup bleibt damit unangetastet: Mitspieler.tsx setzt vier Kinder in
+ * den Fluss, und wo sie landen, entscheidet allein diese Datei.
+ */
+.kachel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'name name'
+    'bild leben'
+    'bild zustand';
+  align-items: center;
+  gap: 1px 5px;
+  width: 82px;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  font: 700 10px/1.15 system-ui;
+  /* Links statt zentriert: Die drei Zeilen stehen jetzt als Block neben dem
+     Bild, und ein zentrierter Block neben einem Bild sieht aus wie ein
+     Satzfehler. */
+  text-align: left;
+}
+button.kachel { cursor: pointer; }
+
+/* Der eigene Sitz tritt hervor, ohne zu schreien: eine ruhige Kante, keine
+   Farbfläche — er steht acht Kacheln lang neben den anderen. */
+.kachel[data-ich] { border-color: var(--accent); background: rgba(74, 156, 120, 0.14); }
+
+/* Der Gegner dieser Runde ist die auffälligste Kachel der Leiste. Gold, weil
+   das die Hervorhebungsfarbe der Plattform ist (DESIGN.md) — und zusätzlich
+   das Wort „Gegner" darunter, denn Farbe allein trägt keine Auskunft. */
+.kachel[data-gegner] {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 14px -4px rgba(226, 182, 79, 0.8);
+}
+
+/*
+ * Wessen Brett gerade oben liegt.
+ *
+ * Bis zum 06.09.2026 war das ein Ring von einem Pixel nach innen — sichtbar,
+ * wenn man ihn suchte, und sonst nicht. Damit war das Zusehen zwar gebaut,
+ * aber kein Angebot: Man tippte eine Kachel an, das Brett darunter wechselte,
+ * und nichts sagte einem, dass man das gerade getan hatte. Jetzt sind es zwei
+ * Pixel nach aussen plus die aufgehellte Flaeche — und das Auge in der Ecke
+ * (`.auge`), denn ein Rahmen allein ist wieder nur Farbe.
+ *
+ * Die Gegnerkachel behaelt ihr Gold: Dass jemand mein Gegner ist, sagt die
+ * Partie, dass ich hinsehe, sage ich. Beide Ringe stehen deshalb nebeneinander
+ * — der goldene aussen, der helle innen.
+ */
+.kachel[data-an] {
+  box-shadow: 0 0 0 2px var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+.kachel[data-an][data-gegner] { box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 2px var(--text); }
+
+
+
+/* Ausgeschieden: ausgegraut, aber lesbar. Ganz wegnehmen wäre falsch — man
+   will sehen, wer schon draußen ist. Die Sättigung kommt mit heraus: Ein
+   ausgeschiedener Sitz soll auch aus dem Augenwinkel tot aussehen. */
+.kachel[data-aus] { opacity: 0.42; filter: saturate(0.35); }
+
+/* -- Bild ----------------------------------------------------------------- */
+
+.bild {
+  grid-area: bild;
+  display: grid;
+  place-items: center;
+  /*
+   * 26 statt 28. Zwei Gruende, beide gemessen: Das Bild steht neben Balken
+   * und Zustand und gibt der Kachel damit die HOEHE vor — jeder Pixel hier
+   * ist einer weniger fuer das Brett darunter. Und es nimmt der Spalte
+   * daneben BREITE: Bei 28 blieben ihr 37 px, bei 26 sind es 39 — und
+   * genau so breit ist das Wort „Gegner" darin (siehe `.gegnerMarke`).
+   */
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.bild img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.buchstabe {
+  color: var(--muted);
+  font: 800 14px/1 system-ui;
+}
+.kachel[data-ich] .buchstabe { color: var(--accent); }
+.kachel[data-gegner] .buchstabe { color: var(--gold); }
+
+/* -- Leben ---------------------------------------------------------------- */
+
+.lebenzeile {
+  grid-area: leben;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+}
+
+.balken {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.balken i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--danger);
+  transition: width 0.3s ease;
+}
+.kachel[data-ich] .balken i { background: var(--accent); }
+
+.leben {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1px;
+  color: var(--danger);
+  font: 800 10px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
+.zeichen {
+  width: 9px;
+  height: 9px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* -- Name und Zustand ----------------------------------------------------- */
+
+.name {
+  grid-area: name;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+/*
+ * Das Auge vor dem Namen — es sagt, dass das Brett dieses Sitzes gerade unten
+ * liegt. INLINE und nicht als Ecke: Der Streifen rollt seitlich, alles ueber
+ * der Kachelkante wuerde abgeschnitten. Als Teil der Namenszeile laeuft es
+ * zudem mit den Auslassungspunkten mit, statt einen langen Namen zu ueberdecken.
+ */
+.name svg {
+  width: 9px;
+  height: 9px;
+  margin-right: 3px;
+  vertical-align: -1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Immer da, auch leer — sonst wackelt die Höhe des Streifens bei jedem
+   „bereit". */
+.zustand {
+  grid-area: zustand;
+  display: block;
+  min-height: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marke,
+.gegnerMarke {
+  display: inline-block;
+  /* 2 px Luft und nicht 5: „Gegner" ist das laengste dieser Woerter und
+     braucht mit 5 px genau 44 — die rechte Spalte der Kachel hat 39 (siehe
+     `.bild`), es stand also abgeschnitten da. Mit 2 px sind es 38. */
+  padding: 0 2px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--text);
+  font: 800 8px/1.4 system-ui;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.gegnerMarke { background: var(--gold); color: #1a1408; }
+
+.rang { color: var(--muted); font: 700 9px/1.2 system-ui; }
+.bereit { color: var(--accent); font: 800 9px/1.2 system-ui; }
+.raus { color: var(--danger); font: 800 9px/1.2 system-ui; }
+
+@media (min-width: 40rem) {
+  .kachel { width: 74px; }
+  .bild { width: 36px; height: 36px; }
+  .buchstabe { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .balken i { transition: none; }
+  .liste { scroll-behavior: auto; }
+}

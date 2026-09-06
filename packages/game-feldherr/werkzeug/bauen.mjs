@@ -72,6 +72,26 @@ const anbindungKopf = teil('anbindung-kopf.js');
 const anbindungFuss = teil('anbindung-fuss.js');
 
 // ---------------------------------------------------------------------------
+// ERZEUGT-Banner — die ALLERERSTEN Zeilen beider Artefakte.
+//
+// Der Hinweis stand frueher tief in der Datei (in kern.js erst um Zeile 256,
+// hinter dem kompletten Kartenkatalog) — Menschen, Reviews und Sprachmodelle
+// lasen und aenderten die Artefakte, bevor sie ihn erreichten. Deshalb baut
+// der Bauer den Banner selbst an den Anfang, statt ihn einem Teil zu
+// ueberlassen: Kein Umsortieren der Teile kann ihn je wieder nach hinten
+// schieben. @generated verstehen gaengige Review-Werkzeuge und falten die
+// Datei im Diff zusammen.
+// ---------------------------------------------------------------------------
+const bannerZeilen = [
+  '@generated MASCHINELL ERZEUGT — NICHT LESEN, NICHT VON HAND AENDERN.',
+  'Quelle:  packages/game-feldherr/quelle/teile/',
+  'Bau:     node packages/game-feldherr/werkzeug/bauen.mjs',
+  'Der naechste Bau ueberschreibt diese Datei vollstaendig.',
+];
+const bannerJs = '/**\n' + bannerZeilen.map((z) => ' * ' + z).join('\n') + '\n */\n';
+const bannerHtml = '<!--\n' + bannerZeilen.map((z) => '  ' + z).join('\n') + '\n-->\n';
+
+// ---------------------------------------------------------------------------
 // Waechter 1: Simulation und KI bleiben DOM-frei.
 //
 // Der wertvollste Teil des Codes ist der ueber sechs Live-Fehler gehaertete
@@ -174,10 +194,13 @@ if (oberflaeche.split('requestAnimationFrame(loop);').length - 1 !== 2) {
 }
 
 // ---------------------------------------------------------------------------
-// Artefakt 1: die eigenstaendige Spieldatei.
+// Artefakt 1: die eigenstaendige Spieldatei. Der Banner steht VOR dem
+// Doctype — das ist erlaubt und laesst den Standards-Modus unangetastet
+// (Quirks loesen nur Text oder Elemente vor dem Doctype aus, keine
+// Kommentare).
 // ---------------------------------------------------------------------------
 const standalone =
-  kopf + '<style>\n' + stil + '</style>\n</head>\n<body>\n' + huelle +
+  bannerHtml + kopf + '<style>\n' + stil + '</style>\n</head>\n<body>\n' + huelle +
   '<script>\n' + js + '</' + 'script>\n</body>\n</html>\n';
 const standaloneZiel = pfad('../quelle/feldherr.html');
 writeFileSync(standaloneZiel, standalone, 'utf8');
@@ -192,7 +215,10 @@ const kernKopf = anbindungKopf
   .replace('"<<HUELLE>>"', JSON.stringify('\n' + huelle));
 if (kernKopf.includes('<<')) throw new Error('Platzhalter in anbindung-kopf.js nicht gefuellt');
 const kernSkript = ('\n' + js).split('requestAnimationFrame(loop);').join('');
-const kern = karten + kernKopf + kernSkript + anbindungFuss;
+// Der Banner darf VOR "use strict" stehen: Kommentare gehoeren zum
+// Direktiven-Prolog und heben die Direktive nicht auf (kern.js ist als
+// ES-Modul ohnehin strikt).
+const kern = bannerJs + karten + kernKopf + kernSkript + anbindungFuss;
 const kernZiel = pfad('../../client/src/minispiele/feldherr/kern.js');
 writeFileSync(kernZiel, kern, 'utf8');
 

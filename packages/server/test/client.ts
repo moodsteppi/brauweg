@@ -41,6 +41,7 @@ export class TestClient {
   passive = false;
   private actedAt = -1;
   /** Rundenpause, fuer die schon "Weiter" gesendet wurde (roundIndex). */
+  private vorbehaltFuer: number | null = null;
   private weiterFuer = -1;
 
   private constructor(
@@ -99,6 +100,27 @@ export class TestClient {
       if (this.weiterFuer === pause) return;
       this.weiterFuer = pause;
       this.send(weiter);
+      return;
+    }
+
+    // Vorbehaltsabfrage: Sie laeuft beim Doppelkopf GLEICHZEITIG, also ist
+    // dabei niemand am Zug und die Sperre unten griffe fuer immer. Der Automat
+    // meldet sich gesund, sobald er gefragt ist - wie das "Weiter" oben haengt
+    // das nicht am Zugrecht.
+    const gesund = view.legalActions.find(
+      (candidate) =>
+        (candidate as { type: string; kind?: unknown }).type === 'vorbehalt' &&
+        (candidate as { kind?: unknown }).kind === null,
+    );
+    if (gesund) {
+      // Wie beim "Weiter": hoechstens EINMAL je Runde. Zwischen dem Senden und
+      // der naechsten Sicht koennen Sichten eintreffen, die noch vor der
+      // eigenen Aktion gerechnet wurden - dort steht die Abfrage noch offen,
+      // und ein zweites Mal antworten weist der Server zu Recht ab.
+      const runde = (view.view as { roundIndex?: number }).roundIndex ?? 0;
+      if (this.vorbehaltFuer === runde) return;
+      this.vorbehaltFuer = runde;
+      this.send(gesund);
       return;
     }
 
@@ -188,7 +210,54 @@ export class TestClient {
     return this.seen;
   }
 
-  /** Wartet, bis die Bedingung erfuellt ist, oder scheitert nach timeoutMs. */
+  /**
+   * Wartet, bis sich die Sicht eine Weile nicht mehr ändert.
+   *
+   * Am Tisch sitzen neben den Testkonten auch Bots, und die Testumgebung
+   * lässt sie ohne Verzögerung ziehen (`botDelayMs: 0`). Nach dem Beitritt
+   * trudeln deren Züge deshalb noch ein, während der Test schon misst — wer
+   * in diesem Moment eine Revision festhält und sie später vergleicht,
+   * bekommt einen Unterschied, der mit der eigenen Aktion nichts zu tun hat.
+   *
+   * Erst wenn eine Weile nichts mehr passiert, wartet der Tisch tatsächlich
+   * auf den Menschen, und ab da ist die Revision ein belastbarer Bezugspunkt.
+   */
+  async waitForRuhe(stilleMs = 300, timeoutMs = 20_000): Promise<void> {
+    const until = Date.now() + timeoutMs;
+    let letzte = this.lastView?.revision ?? -1;
+    let seit = Date.now();
+    while (Date.now() - seit < stilleMs) {
+      if (Date.now() > until) {
+        throw new Error(`Zeit abgelaufen beim Warten auf Ruhe am Tisch (Revision ${letzte})`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      const jetzt = this.lastView?.revision ?? -1;
+      if (jetzt !== letzte) {
+        letzte = jetzt;
+        seit = Date.now();
+      }
+    }
+  }
+
+  /**
+   * Wartet, bis die Bedingung erfuellt ist, oder scheitert nach timeoutMs.
+   *
+   * ACHTUNG bei `waitFor(() => lastView !== null)`: Das liest sich wie "warte
+   * auf die ERSTE Sicht", liefert aber die JEWEILS LETZTE. Die Schleife fragt
+   * alle 10 ms nach; bis dahin sind am Bottisch (`botDelayMs: 0`) laengst
+   * mehrere Zuege gelaufen — beim Cambio-Sichttest gemessen: vier Sichten bis
+   * zum Ende des waitFor, 211 in drei Sekunden. Wer danach den ANFANGSZUSTAND
+   * pruefen will, misst unter Last etwas anderes als ohne.
+   *
+   * Wer den Anfangszustand meint, stellt den Tisch still
+   * (`startHarness({ botDelayMs: 60_000 })` und `client.passive = true`) UND
+   * wartet auf einen definierten Zustand, statt auf das blosse Vorhandensein
+   * einer Sicht: Das Stillstellen ist eine Annahme, die unter Last einmal
+   * nicht getragen hat, und dann misst der Test etwas anderes, als er prueft
+   * (Cambio, 05.09.2026 - siehe `rundenanfang` in cambio.test.ts, das ueber
+   * `verlauf` auch genau die Sicht misst, auf die es gewartet hat).
+   * Wer einen Bezugspunkt MITTEN in der Partie braucht, nimmt `waitForRuhe`.
+   */
   async waitFor(
     predicate: () => unknown,
     what: string,

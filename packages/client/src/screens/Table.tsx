@@ -30,8 +30,9 @@ import {
   istSeitlich,
   slotFor,
 } from '../tisch';
+import { aktionenAufteilen, armutKartenwahl } from '../tisch-armut';
 import { useTischklang } from '../tisch/klangtisch';
-import { type ConnectionStatus, useTable } from '../useTable';
+import { type ConnectionStatus, useCountdown, useTable } from '../useTable';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
     dass die Karten nicht aus dem Faecher wachsen. */
@@ -311,6 +312,32 @@ export function Table({
   useEffect(() => {
     if (vorbehaltPhase !== 'vorbehalt') setSoloVorschau(null);
   }, [vorbehaltPhase]);
+
+  /* Die Sicht als Referenz: Der Auflösungs-Effekt unten braucht ihren
+     aktuellen Stand, darf aber NICHT an ihr hängen — sonst liefe er bei jedem
+     Serverfunk neu. */
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
+  /*
+   * Auflösung der gleichzeitigen Abfrage: Jetzt erst darf man sehen, WAS die
+   * anderen gesagt haben — während der Abfrage stand dort nur „Gesagt".
+   *
+   * Der Effekt hängt an der Phase und nicht an der Sicht: An der Sicht liefe
+   * er bei jedem Serverfunk neu und würde die Blasen endlos nachlegen.
+   */
+  const vorherigePhase = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const vorher = vorherigePhase.current;
+    vorherigePhase.current = vorbehaltPhase;
+    if (vorher !== 'vorbehalt' || vorbehaltPhase === 'vorbehalt') return;
+    const vb = viewRef.current?.view.round?.vorbehalte ?? [];
+    if (vb.length === 0) return;
+    setBlasen((prev) => ({
+      ...prev,
+      ...Object.fromEntries(vb.map((e) => [e.seat, vorbehaltRuf(e.kind)])),
+    }));
+  }, [vorbehaltPhase]);
   const [frozenKey, setFrozenKey] = useState<string | null>(null);
   // Nach dem Liegen gleitet der Stich zum Gewinner: kurze Sweep-Phase.
   const [sweeping, setSweeping] = useState(false);
@@ -429,7 +456,7 @@ export function Table({
 
     const neu: Record<number, string> = {};
     for (const e of vb.slice(gesehenVorbehalte.current)) {
-      neu[e.seat] = e.kind === null ? 'Gesund' : vorbehaltRuf(e.kind);
+      neu[e.seat] = vorbehaltRuf(e.kind);
     }
     for (const e of an.slice(gesehenAnsagen.current)) {
       neu[e.seat] = ansageRuf(e.level, rundeJetzt.knownParties?.[e.seat] ?? null);
@@ -631,37 +658,23 @@ export function Table({
     );
   }
 
-  const playable = new Set(
-    view.legalActions
-      .filter((action) => action.type === 'playCard')
-      .map((action) => action.cardId as number),
-  );
-  const otherActions = view.legalActions.filter((action) => action.type !== 'playCard');
+  // Die Aufteilung steht als reine Funktion in `tisch-armut.ts`. Sie ist
+  // keine Kosmetik: Die Vorbehaltsabfrage ist ein eigener Dialog (gesund
+  // ja/nein, dann Auswahl, dann Bestaetigung) und die Armut-Entscheidung ein
+  // eigenes Blatt mit Erklaerung — beides gehoert nicht in die Knopfreihe am
+  // unteren Rand, wo ein Fehltipp eine ganze Runde entscheidet.
+  const {
+    spielbar: playable,
+    vorbehalt: vorbehaltActions,
+    weiter: weiterAction,
+    entscheidung: armutEntscheidung,
+    knoepfe: knopfActions,
+  } = aktionenAufteilen(view.legalActions);
 
   // Vormerken geht nur mitten im Spiel, wenn man gerade NICHT dran ist: Der
   // Tipp legt die Karte bereit, gespielt wird von selbst, sobald der Zug
   // kommt und die Karte dann zulaessig ist.
   const darfVormerken = playable.size === 0 && round?.phase === 'playing';
-
-  // Die Vorbehaltsabfrage ist ein eigener Dialog (gesund ja/nein, dann
-  // Auswahl, dann Bestaetigung) - keine Knopfreihe am unteren Rand, auf der
-  // ein Fehltipp eine ganze Runde entscheidet.
-  const vorbehaltActions = otherActions.filter((action) => action.type === 'vorbehalt');
-  // "Weiter" gehoert aufs Zwischenstand-Blatt, nicht in die Knopfreihe.
-  const weiterAction = otherActions.find((action) => action.type === 'weiter');
-  const rowActions = otherActions.filter(
-    (action) => action.type !== 'vorbehalt' && action.type !== 'weiter',
-  );
-
-  // Die Armut-Entscheidung (annehmen/ablehnen) ist keine beilaeufige Knopfreihe,
-  // sondern eine echte Verpflichtung — sie bekommt ein eigenes Blatt mit
-  // Erklaerung. Die uebrigen Reihen-Aktionen (Ansagen) bleiben unten.
-  const armutAccept = rowActions.find((a) => a.type === 'armutAccept');
-  const armutDecline = rowActions.find((a) => a.type === 'armutDecline');
-  const armutEntscheidung = armutAccept && armutDecline ? { armutAccept, armutDecline } : null;
-  const knopfActions = rowActions.filter(
-    (a) => a.type !== 'armutAccept' && a.type !== 'armutDecline',
-  );
 
   const opponents = Array.from({ length: seatCount }, (_, s) => s).filter(
     (s) => view.seat === null || s !== view.seat,
@@ -697,9 +710,14 @@ export function Table({
   const phaseText = round ? t(`phase.${round.phase}`) : 'Zwischen den Runden';
   const showHands = !dealing;
 
-  // Aufspiel: wer den Stich anspielt. Laeuft ein Stich, ist es, wer die erste
-  // Karte gelegt hat; ist er leer, der, der gerade herauskommt.
-  const leaderSeat = trick.length > 0 ? trick[0]!.seat : view.currentActor;
+  // Aufspiel: wer die Runde herauskommt — die Vorhand, und zwar fest.
+  //
+  // Es haengt bewusst NICHT mehr an `currentActor`. So sprang das Abzeichen
+  // waehrend der Vorbehaltsabfrage reihum mit der Frage „bist du gesund?"
+  // von Sitz zu Sitz, obwohl Aufspiel damit nichts zu tun hat. Gezeigt wird
+  // es nur bis zum Ende der Abfrage; sobald gespielt wird, weiss man am
+  // laufenden Stich ohnehin, wer angespielt hat.
+  const leaderSeat = round?.phase === 'vorbehalt' ? round.turn : null;
   // Der eigene Zuruf, damit der Sender ihn ueber sich selbst aufblitzen sieht.
   const meinEmote = view.seat !== null ? emotes[view.seat] : undefined;
 
@@ -725,10 +743,9 @@ export function Table({
       ? 'Spielart wird noch bestimmt'
       : gameTypeLabel(round.gameType) + (soloName ? ` · ${soloName} solo` : '');
 
-  const needReturn = round?.armut.awaiting === 'return';
-  const needHandover =
-    round?.armut.awaiting === 'handover' &&
-    !otherActions.some((a) => a.type === 'armutHandover');
+  // Welche Armut-Kartenauswahl faellig ist — die Asymmetrie steht in
+  // `tisch-armut.ts`, sie ist der Grund fuer die eigene Datei.
+  const kartenwahl = armutKartenwahl(round?.armut, view.legalActions);
   const roundResult = round?.phase === 'finished' && round.result ? round.result : null;
   const abrechnungOffen = abschlussStep === 'abrechnung' && roundResult !== null;
   const zwischenstandOffen = abschlussStep === 'zwischenstand' && roundResult !== null;
@@ -935,8 +952,8 @@ export function Table({
               ? nameOf(round!.vorbehalte.find((v) => v.kind === 'armut')!.seat)
               : null
           }
-          onAnnehmen={() => send(armutEntscheidung.armutAccept)}
-          onAblehnen={() => send(armutEntscheidung.armutDecline)}
+          onAnnehmen={() => send(armutEntscheidung.annehmen)}
+          onAblehnen={() => send(armutEntscheidung.ablehnen)}
         />
       )}
 
@@ -944,6 +961,7 @@ export function Table({
       {vorbehaltActions.length > 0 && !round?.pendingPflichtansage && !dealing && (
         <VorbehaltDialog
           actions={vorbehaltActions}
+          frist={view.interludeDeadline}
           onSend={send}
           onVorschau={setSoloVorschau}
           pflichtsoloOffen={round?.pflichtsoloOffen}
@@ -1106,7 +1124,7 @@ export function Table({
       )}
 
       {/* Kartenauswahl (Armut) als Overlay */}
-      {round && needReturn && (
+      {round && kartenwahl === 'rueckgabe' && (
         <CardPicker
           title={`Gib ${round.armut.handoverSize} Karten zurück`}
           hand={hand}
@@ -1115,7 +1133,7 @@ export function Table({
           onPick={(cards) => send({ type: 'armutReturn', seat: view.seat!, cards })}
         />
       )}
-      {round && needHandover && (
+      {round && kartenwahl === 'abgabe' && (
         <CardPicker
           title={`Gib ${round.armut.handoverSize} Karten ab`}
           hand={hand}
@@ -1392,6 +1410,7 @@ const NICHT_SOLO: readonly { kind: string; label: string; warum: string }[] = [
 
 function VorbehaltDialog({
   actions,
+  frist,
   onSend,
   onVorschau,
   pflichtsoloOffen,
@@ -1399,6 +1418,12 @@ function VorbehaltDialog({
   nameOf,
 }: {
   actions: Action[];
+  /**
+   * Ende der gemeinsamen Frist. Alle erklaeren gleichzeitig; wer bis dahin
+   * nichts sagt, ist gesund. Ohne sichtbaren Zaehler wuesste niemand, dass
+   * ueberhaupt eine Uhr laeuft — und das Blatt verschwaende dann ploetzlich.
+   */
+  frist: number | null;
   onSend: (action: Action) => void;
   /**
    * Meldet, welches Solo gerade zur Bestaetigung steht — oder null.
@@ -1463,7 +1488,12 @@ function VorbehaltDialog({
       <div className="doko-sheet-card">
         {schritt === 'frage' && gesund && (
           <>
-            <h2>Bist du gesund?</h2>
+            <h2>
+              Bist du gesund? <FristZaehler frist={frist} />
+            </h2>
+            <p className="muted doko-vb-hinweis">
+              Alle erklären gleichzeitig. Sagst du nichts, giltst du als gesund.
+            </p>
             <div className="doko-sheet-row">
               <button className="primary" onClick={() => bestaetigen(gesund)}>
                 ✓ Ja, gesund
@@ -1674,6 +1704,11 @@ function Pflichtansage({
  * mit Erklaerung ist die Tragweite klar, und kein Fehltipp entscheidet sie
  * nebenbei. Absichtlich ohne Klick-daneben-schliesst: Es ist eine Pflichtwahl,
  * und der Zugtimer laeuft ohnehin.
+ *
+ * Das Blatt liegt DURCHSCHEINEND ueber dem Tisch und ueber der Hand, nicht
+ * davor: Ob man eine Armut annimmt, entscheidet sich an den eigenen Karten.
+ * Vorher verdunkelte der Hintergrund den Tisch und das Blatt sass am unteren
+ * Rand — genau auf der Hand, die man dafuer ansehen muss.
  */
 function ArmutEntscheidung({
   ansager,
@@ -1685,15 +1720,14 @@ function ArmutEntscheidung({
   onAblehnen: () => void;
 }): React.JSX.Element {
   return (
-    <div className="doko-sheet">
+    <div className="doko-sheet doko-sheet--armut">
       <div className="doko-sheet-card">
         <h2>Armut</h2>
         <p>
           {ansager ? `${ansager} hat Armut angesagt` : 'Ein Mitspieler hat Armut angesagt'} — er
           hält höchstens drei Trümpfe. Nimmst du an, wirst du sein Partner: Du
-          bekommst seine Trümpfe und gibst dafür gleich viele Karten zurück, dann
-          spielt ihr zu zweit gegen die anderen beiden. Lehnst du ab, wird der
-          Nächste gefragt.
+          bekommst seine Trümpfe und gibst dafür gleich viele Karten zurück.
+          Lehnst du ab, wird der Nächste gefragt.
         </p>
         <div className="doko-sheet-row">
           <button className="primary" onClick={onAnnehmen}>
@@ -1786,8 +1820,23 @@ function ansageRuf(level: number, party: string | null): string {
   return party ? parteiName(party) : 'Ansage';
 }
 
-/** Zuruf eines Vorbehalts. Das Solo nennt seine Art erst bei der Auflösung. */
-function vorbehaltRuf(kind: string): string {
+/** Die verbleibenden Sekunden der gemeinsamen Vorbehaltsfrist. */
+function FristZaehler({ frist }: { frist: number | null }): React.JSX.Element | null {
+  const rest = useCountdown(frist);
+  if (rest === null) return null;
+  return <span className="doko-vb-frist">{rest}s</span>;
+}
+
+/**
+ * Zuruf eines Vorbehalts. Das Solo nennt seine Art erst bei der Auflösung.
+ *
+ * `geheim` ist keine Vorbehaltsart, sondern die Antwort eines fremden Sitzes
+ * während der gleichzeitigen Abfrage: Man sieht, DASS er gesagt hat, nicht
+ * was. Sonst hätte, wer sich Zeit lässt, einen Vorteil.
+ */
+function vorbehaltRuf(kind: string | null): string {
+  if (kind === null) return 'Gesund';
+  if (kind === 'geheim') return 'Gesagt';
   return (
     { solo: 'Solo', schmeiss: 'Ich schmeiße', armut: 'Armut', hochzeit: 'Hochzeit' }[kind] ??
     'Vorbehalt'

@@ -43,6 +43,14 @@ export const FELDHERR_MODULE_VERSION = 2;
 export const MEMEMORY_MODULE_VERSION = 4;
 
 /**
+ * 2 seit dem 27. August 2026: Sicht und Zustand kennen bis zu sechs Sitze
+ * (fremde Karten je Sitz, imSpiel, Nebentoepfe). Wer die 1 meldet, darf noch
+ * beitreten — die neuen Felder sind zusaetzlich, `gegnerKarten` bleibt fuer
+ * den Zweier-Bildschirm stehen.
+ */
+export const EASYPOKER_MODULE_VERSION = 2;
+
+/**
  * 4 seit dem 1. September 2026: Dieser Client kennt die Spielart `build` samt
  * Mauern — und dass eine Mauer den Zug NICHT beendet. Der Sprung von 1 auf 4
  * holt nach, was am Modul laengst stand (2 Spielart, 3 Barrieren, 4 Mauer je
@@ -58,13 +66,23 @@ export const FILLER_MODULE_VERSION = 5;
  */
 export const EILAND_MODULE_VERSION = 2;
 
+/**
+ * 1 seit dem 4. September 2026 — die erste Fassung ueberhaupt. Tafelrunde ist
+ * das neunte Spiel und hat noch keine Protokollgeschichte; die Zeile steht
+ * trotzdem ausgeschrieben da, damit die naechste Aenderung eine Zahl zum
+ * Hochsetzen findet und nicht die stille 1 aus `moduleVersionFor`.
+ */
+export const TAFELRUNDE_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
   feldherr: FELDHERR_MODULE_VERSION,
   mememory: MEMEMORY_MODULE_VERSION,
+  easypoker: EASYPOKER_MODULE_VERSION,
   filler: FILLER_MODULE_VERSION,
   eiland: EILAND_MODULE_VERSION,
+  tafelrunde: TAFELRUNDE_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */
@@ -122,6 +140,10 @@ export interface RoundView {
    * Wer was gesagt hat. Beides öffentlich und am Tisch zu hören — die
    * `announcements` oben halten nur fest, OB Re gefallen ist, nicht von wem.
    * `vorbehalte` führt auch das „gesund" mit `kind: null`.
+   *
+   * Solange die Abfrage läuft, steht bei fremden Sitzen `'geheim'`: Alle
+   * erklären gleichzeitig, also sieht man nur, DASS jemand geantwortet hat.
+   * Mit dem Ende der Phase liegt alles offen.
    */
   vorbehalte: { seat: number; kind: string | null; solo?: string }[];
   ansagen: { seat: number; level: number }[];
@@ -168,6 +190,8 @@ export interface RoundView {
   pflichtsoloOffen?: number[];
   result: RoundResult | null;
   isMyTurn: boolean;
+  /** Dieser Sitz schuldet seine Vorbehaltsantwort noch (gleichzeitige Abfrage). */
+  vorbehaltOffen?: boolean;
   armut: { role: string | null; awaiting: string | null; handoverSize: number };
 }
 
@@ -431,6 +455,15 @@ export interface ViewMessage<V = GameView> {
   legalActions: Action[];
   currentActor: number | null;
   turnDeadline: number | null;
+  /** Frist einer Schaupause (Abrechnung, gleichzeitige Vorbehaltsabfrage). */
+  interludeDeadline: number | null;
+  /**
+   * Frist der laufenden PHASE — anders als die Schaupause laeuft sie, waehrend
+   * noch gehandelt werden darf. Heute setzt sie nur Tafelrunde: Dort ruesten
+   * alle gleichzeitig, und `turnDeadline` faellt bei jeder Aktion irgendeines
+   * Sitzes auf den vollen Wert zurueck.
+   */
+  phaseDeadline: number | null;
   botSeats: number[];
   leftSeats: number[];
   finished: boolean;

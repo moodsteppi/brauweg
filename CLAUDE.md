@@ -1,13 +1,37 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, zwei Spiele laufen (Doppelkopf, Zauberer). Diese Datei
-ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln in
-`docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
+Kartenspiel-Plattform, **zehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr und Tafelrunde.
+Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
+in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
+
+Vier davon halten sich nicht an die üblichen Annahmen, und wer das nicht weiß,
+sucht lange: **Feldherr** ist ein Echtzeitduell ohne Zugfolge (`currentActor`
+ist immer null, `legalActions` immer leer; Trophäen gibt es seit dem
+4.9.2026 wie überall, abgesichert nur durch die Doppelmeldung beider Geräte —
+siehe `docs/FELDHERR-PLAN.md`), bei **Skat** (Drücken, Ansage) sowie beim
+**Doppelkopf** (Armut) baut der Client die Aktion selbst aus der Sicht, weshalb
+`legalActions` dort leer ist, obwohl jemand am Zug ist — und bei **Eiland**
+ziehen beide **gleichzeitig**, obwohl `currentActor` einen Sitz nennt. Der
+Server prüft `currentActor` beim Handeln nämlich gar nicht; das Modul nennt den
+Sitz nur, damit Zugzeit, Bot-Übernahme und die Verlassen-Regel greifen (ohne
+ihn bekäme ein Tisch von der Plattform keinen einzigen Timer). Wer handeln
+darf, entscheidet allein `amZug` in `packages/game-eiland/src/partie.ts`: jeder,
+dessen Zettel noch offen ist. Auch dort ist `legalActions` leer, und aus dem
+Skat-Grund: Eine Aktion ist eine MENGE von Feldern, die sich nicht aufzählen
+lässt — der Bildschirm stellt sie selbst zusammen und schickt sie als einen
+Zettel. **Tafelrunde** (Auto-Battler, seit dem 4.9.2026) macht es wie Eiland —
+alle rüsten gleichzeitig, `currentActor` nennt trotzdem einen Sitz — hat aber
+noch einen eigenen Dreh: `legalActions` ist dort weder leer noch vollständig.
+Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das Verschieben nicht
+(es wäre ein Paar aus 19 Plätzen). Weil man das einer Liste nicht ansieht,
+sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und
 Musik — Herkunft, Lizenzen, Auslagerungsgrenze) ·
-`docs/plattform-plan.md` (das große Ganze) · **`docs/JETZT-AUSFUEHREN.md`
+`docs/plattform-plan.md` (das große Ganze) · `docs/TAFEL.md` (die
+Visual-Building-Tafel: lesen, pflegen, erzeugen) · **`docs/JETZT-AUSFUEHREN.md`
 (Bilder einbauen, Schritt für Schritt — die Werkzeuge stehen auf dem Rechner
 bereit)**.
 
@@ -86,7 +110,8 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 128 Doppelkopf + 117 Zauberer + 259 Server
+npm test          # 1.419 Tests in den Paketen (439 im Server), dazu
+                  # 464 Client-Tests in 41 Dateien (vitest)
 ```
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
@@ -94,9 +119,12 @@ Server, ist die `.d.ts` von `@brauweg/game-api` der alte Stand, und `tsc`
 meldet Felder als fehlend, die im Quelltext längst stehen (`xpBasis`,
 `interludeMs`).
 
-Testdateien liegen unter `packages/server/test/`; nach einem Zweigwechsel
-`rm -rf packages/server/dist`, sonst laufen Tests aus einem alten Übersetzer-
-Stand mit und melden Fehler, die es nicht gibt.
+Testdateien liegen unter `packages/server/test/`. Von Hand aufräumen muss man
+nach einem Zweigwechsel nichts mehr: Jedes `build` räumt sein `dist/` vorher
+selbst (`werkzeug/dist-raeumen.mjs`), und `test` läuft über `build`. Der Grund
+steht im Kopf des Skripts — getestet wird aus `dist/test/*.js`, und eine
+kompilierte Testdatei ohne `.ts` bleibt sonst liegen und färbt den Lauf rot,
+obwohl die Quelle sauber ist.
 
 `gh` ist **nicht** installiert, das Remote läuft über SSH — Pull Requests
 gehen aus einer Sitzung heraus nicht. Gemerged wird direkt.
@@ -117,6 +145,26 @@ gefilterten Sicht und können deshalb bauartbedingt nicht schummeln.
 
 **Der Client bildet keine Regel nach.** Schaltflächen entstehen aus
 `legalActions`, die Kartenreihenfolge kommt als `order` vom Server.
+Wo er es doch tut, weil das Modul die Aktion nicht aufzählen kann (Skat
+Drücken/Schieben, Doppelkopf Armut), steht die Regel als reine Funktion in
+`packages/client/src/tisch-auswahl.ts` bzw. `tisch-armut.ts` — geprüft, weil
+sie sonst niemand abfängt.
+
+**Der Client beschreibt jede Sicht ein zweites Mal** (`protocol.ts`) und
+importiert sonst nichts aus den Spielpaketen. Damit ein umbenanntes Feld
+nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
+Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
+Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
+Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
+Feld auch wirklich liefern). Gedeckt sind alle zehn Spiele. Ein neues Spiel
+bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
+im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
+der aus einer `.tsx` importiert, zieht React in den Test.
+
+**Feldherr: `kern.js` und `feldherr.html` sind gebaut, nicht geschrieben.**
+Quelle ist `packages/game-feldherr/quelle/teile/`, gebaut wird mit
+`node packages/game-feldherr/werkzeug/bauen.mjs` — die Artefakte nie von Hand
+ändern und nie als Quelltext lesen, der nächste Bau überschreibt sie.
 
 **Preise stehen im Katalog, nie in der Datenbank** (`kosmetik.ts`,
 `tischware.ts`). Besitz liegt in `account_cosmetic` mit freier Kennung —
@@ -172,3 +220,53 @@ Wirtschaftsmodell.
   seine Nachbarn, obwohl alle `width: 100%` haben, und die Schrift steht über
   die Platte hinaus. Gemessen wird der Alphakanal auf der Mittelzeile, nicht
   die Dateigröße. Bestellung und Sollmaße: `docs/ASSETS-KNOEPFE.md`.
+- **Vor Server- und Modultests erst die Spielpakete bauen.** `npm test
+  --workspace @brauweg/server` und `--workspace @brauweg/game-tafelrunde`
+  brechen mit `TS2307: Cannot find module '@brauweg/game-…'` oder `TS7006:
+  … implicitly has an 'any' type` ab, solange die Pakete kein `dist` haben:
+  Ihre `exports.types` zeigen auf `dist/src/index.d.ts`, und was nicht da ist,
+  kann `tsc` nicht lesen. Das sieht nach einem kaputten Zweig aus und ist
+  keiner — am 05.09.2026 zweimal genau daran gesucht. `npm run build` im
+  Wurzelverzeichnis genügt: npm läuft die Pakete alphabetisch ab, `game-api`
+  steht vor `game-tafelrunde` und beide vor `server`.
+- **Keine Prüfkopie unter `AppData/Local/Temp`.** Liegt der Arbeitsbaum dort,
+  sammelt Vite eine fremde `vite.config.ts` aus dem Wurzelverzeichnis ein, und
+  der Testlauf stirbt schon beim Laden der Konfiguration. Der Fehler zeigt dann
+  auf eine Datei, die gar nicht zum Repo gehört — gesucht wird er trotzdem im
+  eigenen Zweig. Arbeitskopien bekommen einen eigenen Pfad.
+- **Was das Modul weiß, schreibt der Client nicht ab.** Die Regel selbst steht
+  oben unter „Wie der Code gebaut ist"; hier stehen die Fälle, an denen sie
+  geschärft wurde — drei an einem Tag, dem 05.09.2026, alle drei in
+  Tafelrunde. Der **Regelsatz**: `REGELSATZ` in `Tafelrunde.tsx` war eine
+  wörtliche Kopie von `DEFAULT_REGELN` und ging als `config` an `createTable`.
+  Der Server schreibt eine mitgeschickte `config` als Regelsatz des Tisches
+  fest, die Kopie überstimmte also das Modul, ohne dass irgendwo ein Fehler
+  auffiel; bei der Umstellung der Startleben (100 → 20 → 14) wäre das zweimal
+  an jedem echten Tisch vorbeigelaufen. Die **Platzierung**: `platzTabelle` im
+  Client war eine wortgetreue Abschrift von `platzierungen` aus `partie.ts` —
+  möglich, weil alle Eingaben in jeder Sicht stehen, und trotzdem eine zweite
+  Wahrheit über eine Regel. Wer im Modul das zweite Kriterium ändert, bekommt
+  am Bildschirm eine andere Rangfolge als der Server. Der **Markenchip**: fast
+  abgeschrieben statt herausgelöst. Zwei Fassungen wären beim ersten geänderten
+  Zähler auseinandergelaufen, und der Gegner sähe anders aus als man selbst,
+  obwohl beides dieselbe Zahl aus derselben Sicht ist. **Liefert die Sicht
+  etwas nicht, das der Bildschirm braucht, ist die Antwort ein neues Feld in
+  der Sicht — nicht eine zweite Rechnung im Client.**
+- **`dist/` räumt sich nicht von selbst.** Getestet wird nicht aus den `.ts`,
+  sondern aus `dist/test/*.js` (`tsc && node --test …`). `tsc` löscht nichts,
+  was es nicht selbst neu schreibt, und weil `dist/` in `.gitignore` steht,
+  räumt auch kein Zweigwechsel auf: Eine kompilierte Testdatei, deren Quelle es
+  nicht mehr gibt, läuft weiter mit und färbt den Lauf rot, obwohl an der
+  Quelle nichts falsch ist. Getroffen hat es Tafelrunde (Reste des abgelösten
+  Regelkerns) und den Server (`suche.test.js`). Solange das Räumen nicht im Bau
+  steckt, gehört `dist/` nach einem Zweigwechsel gelöscht — und wer ein Paket
+  neu anlegt, sorgt dafür, dass dessen `dist/` beim Räumen mitkommt.
+
+---
+
+## Übergreifende Arbeitsregeln
+
+Für alle Broweg- und goodFil-Repos gelten zusätzlich die gemeinsamen
+Regeln — Git-Weg, Orchestrator, **Tafel-Pflicht (Visual Building)**:
+
+@ARBEITSREGELN.md

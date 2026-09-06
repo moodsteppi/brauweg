@@ -72,6 +72,7 @@ const GEMALTE_BANNER = new Set([
   'cambio',
   'mememory',
   'prosubway',
+  'easypoker',
   // Filler ist gezeichnet statt gemalt: Sein Motiv IST das Spielraster, und
   // das steht schon als Farbliste im Quelltext (minispiele/filler/farben.ts).
   // Erzeugt von scripts/filler-banner-zeichnen.py; seit 04.09. ist das Bild

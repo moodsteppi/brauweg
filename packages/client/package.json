@@ -7,21 +7,38 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.7.0",
     "@types/three": "^0.185.4",
+    "html2canvas": "^1.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@brauweg/game-cambio": "*",
+    "@brauweg/game-doppelkopf": "*",
+    "@brauweg/game-easypoker": "*",
+    "@brauweg/game-eiland": "*",
+    "@brauweg/game-feldherr": "*",
+    "@brauweg/game-filler": "*",
+    "@brauweg/game-mememory": "*",
+    "@brauweg/game-skat": "*",
+    "@brauweg/game-tafelrunde": "*",
+    "@brauweg/game-wizard": "*",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.0",
+    "jsdom": "^30.0.1",
     "typescript": "^5.5.0",
-    "vite": "^7.2.0"
+    "vite": "^7.2.0",
+    "vitest": "^3.2.7"
   }
 }

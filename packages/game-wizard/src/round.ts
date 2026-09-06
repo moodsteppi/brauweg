@@ -209,6 +209,12 @@ function bid(state: RoundState, seat: number, tricks: number): RoundState {
 function play(state: RoundState, seat: number, cardId: number): RoundState {
   if (state.phase !== 'playing') throw new Error('Es wird gerade nicht gespielt');
   if (state.turn !== seat) throw new Error('Ein anderer Sitz ist am Zug');
+  // Blind wird ueber 'playBlind' gespielt, und nur darueber. Ohne diese Zeile
+  // nimmt die Engine eine Aktion an, die `legalActions` gar nicht anbietet -
+  // und ein Client kann Kartennummern durchprobieren, bis eine nicht mit
+  // "liegt nicht auf der Hand" abgelehnt wird. Damit kennt er seine angeblich
+  // unsichtbare Karte.
+  if (state.blind) throw new Error('Diese Runde wird blind gespielt');
 
   const hand = state.hands[seat] ?? [];
   const card = hand.find((entry) => entry.id === cardId);

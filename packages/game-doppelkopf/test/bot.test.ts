@@ -23,6 +23,7 @@ import {
   currentActor,
   viewFor,
 } from '../src/round.js';
+import { amZug } from './vorbehaltshilfe.js';
 
 const FOUR = [0, 1, 2, 3];
 
@@ -34,7 +35,7 @@ function botParty(party: PartyState, level?: BotLevel): PartyState {
 
     let steps = 0;
     while (party.current && steps++ < 500) {
-      const seat = currentActor(party.current);
+      const seat = amZug(party.current);
       if (seat === null) break;
       const action = botAction(viewFor(party.current, seat), level);
       assert.notEqual(
@@ -186,7 +187,7 @@ test('Bot nimmt eine Armut nie an', () => {
   let announced = false;
   while (party.current && party.current.phase === 'vorbehalt') {
     const st = party.current;
-    const seat = currentActor(st)!;
+    const seat = amZug(st)!;
     const view = viewFor(st, seat);
     const takeArmut = !announced && view.allowedVorbehalte.includes('armut');
     if (takeArmut) announced = true;
@@ -202,7 +203,7 @@ test('Bot nimmt eine Armut nie an', () => {
   // Alle Kandidaten sind Bots: keiner nimmt an, es muss neu gegeben werden.
   let steps = 0;
   while (party.current && steps++ < 10) {
-    const seat = currentActor(party.current)!;
+    const seat = amZug(party.current)!;
     const action = botAction(viewFor(party.current, seat))!;
     assert.notEqual(action.type, 'armutAccept', 'Bot darf keine Armut annehmen');
     party = act(party, action);
@@ -407,7 +408,7 @@ test('Bot verschenkt weniger Augen als reiner Zufall', () => {
 
     let steps = 0;
     while (state.phase !== 'finished' && state.phase !== 'redeal' && steps++ < 200) {
-      const seat = currentActor(state);
+      const seat = amZug(state);
       if (seat === null) break;
       const view = viewFor(state, seat);
 
@@ -505,7 +506,15 @@ test('Partei: eine einzelne Kreuz-Dame verraet nichts ueber die uebrigen Sitze',
 });
 
 test('Vorbehalt: sagt an, was die Hand vorgibt — Solo nur mit starkem Blatt', () => {
-  const base = { seat: 1, isMyTurn: true, phase: 'vorbehalt', forcedSolo: false };
+  // `vorbehaltOffen` statt `isMyTurn`: Die Abfrage laeuft gleichzeitig, dabei
+  // ist niemand einzeln am Zug.
+  const base = {
+    seat: 1,
+    isMyTurn: false,
+    vorbehaltOffen: true,
+    phase: 'vorbehalt',
+    forcedSolo: false,
+  };
 
   const faelle: { erlaubt: string[]; erwartet: string | null }[] = [
     { erlaubt: ['solo', 'schmeiss'], erwartet: 'schmeiss' },

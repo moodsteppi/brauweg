@@ -33,8 +33,18 @@
  * noch aussichtslos (zu stark) ist. `genie` zaehlt Karten und spielt auf
  * groesste Siegwahrscheinlichkeit — die uebrigen kommen ohne Gedaechtnis aus.
  * Nicht jedes Spiel muss alle Stufen unterscheiden; ein Modul, das nur eine
- * Strategie kennt, spielt sie fuer jede Stufe. Bisher wertet nur Doppelkopf
- * die Stufe aus.
+ * Strategie kennt, spielt sie fuer jede Stufe. Nachgezaehlt am 05.09.2026
+ * werten vier von zehn Modulen sie aus: Doppelkopf, Easy Poker und
+ * Tafelrunde im Zug (`botAction`), Mememory dagegen schon beim Aufbau der
+ * Partie (`createParty`) — sein Bot hat ein Gedaechtnis, und wie viel er
+ * sich merkt, steht vor dem ersten Zug fest. Die uebrigen sechs ignorieren
+ * die Stufe.
+ *
+ * Diese Aufzaehlung veraltet, sobald ein Modul nachzieht, und ein Grep nach
+ * `BotLevel` traegt nicht: Eiland und Filler nennen den Typ nur, um zu
+ * begruenden, warum sie ihn NICHT auswerten. Wer es genau wissen will,
+ * sieht in `botAction` und `createParty` des Moduls nach, ob der Parameter
+ * ankommt.
  */
 export type BotLevel = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
@@ -62,6 +72,13 @@ export type GameId =
    */
   | 'mememory'
   /**
+   * Poker: Texas Hold'em zu zweit bis sechst, auf vier Schaltflaechen
+   * eingedampft. Die Zahlen im Regelsatz (Startstapel, Blinds) sind
+   * Partiechips — welche Waehrung das auf der Plattform ist, weiss das
+   * Modul nicht (Grundsatz 4). Die Plattform mappt sie auf BroJetons.
+   */
+  | 'easypoker'
+  /**
    * Filler ist wie Mememory kein Kartenspiel: ein Flaechenduell zu zweit auf
    * einem 8x7-Raster. Jeder startet auf einer Ecke und faerbt sein Gebiet um,
    * bis nichts mehr frei ist. Die Abwandlung gegenueber dem Vorbild steckt
@@ -78,6 +95,16 @@ export type GameId =
    * allein das Modul (siehe amZug in packages/game-eiland/src/partie.ts).
    */
   | 'eiland'
+  /**
+   * Tafelrunde ist ein Auto-Battler und damit das erste Spiel ohne Blatt: Jeder
+   * baut zwischen den Runden aus einem eigenen Laden ein Heer auf, drei
+   * gleiche Einheiten verschmelzen zur naechsten Stufe. Der Kampf laeuft
+   * spaeter automatisch ab — im Regelkern steht bisher nur die Vorbereitung.
+   * Besonderheit: Es gibt keine Zugfolge. Alle Sitze ruesten GLEICHZEITIG,
+   * `currentActor` nennt trotzdem einen Sitz (wie bei Eiland), damit Zugzeit
+   * und Bot-Uebernahme der Plattform ueberhaupt greifen.
+   */
+  | 'tafelrunde'
   | 'skat'
   | 'schafkopf'
   | 'romme'
@@ -129,6 +156,62 @@ export interface GameMeta {
    * zu zaehlen hiesse, die Kartenaufgabe mit jedem Gefecht zu fuellen.
    */
   readonly xpBasisZaehltKarten?: boolean;
+  /**
+   * `legalActions` zaehlt NICHT jeden erlaubten Zug auf. Fehlt das Feld, gilt
+   * nein — die Liste ist dann vollstaendig.
+   *
+   * Es gibt genau zwei Arten, unvollstaendig zu sein, und sie sehen von aussen
+   * verschieden aus:
+   *
+   *   1. GAR NICHTS aufzaehlen. Skat (Druecken, Ansage), Doppelkopf (Armut)
+   *      und Eiland tun das: Der Zug ist eine Menge von Karten oder Feldern,
+   *      der Client baut ihn aus der Sicht. Eine leere Liste sagt das schon,
+   *      dieses Feld braucht es dafuer nicht.
+   *   2. Nur EINEN TEIL aufzaehlen. Tafelrunde tut das: Kaufen, Wuerfeln,
+   *      Aufsteigen und Verkaufen stehen drin, das Verschieben nicht — es
+   *      waere ein Paar aus 19 Plaetzen und damit bis zu 342 Eintraege in
+   *      jeder Sicht, die ueber die Leitung geht.
+   *
+   * Nur der zweite Fall braucht dieses Feld, denn von aussen ist eine
+   * unvollstaendige Liste nicht von einer vollstaendigen zu unterscheiden.
+   * Wer es setzt, nimmt sich damit eine Pruefung weg (siehe
+   * plattform-invarianten.test.ts) — und muss dafuer sicherstellen, dass
+   * `act` jeden unerlaubten Zug abweist. Das tut es ohnehin, aber hier haengt
+   * es allein daran.
+   */
+  readonly legalActionsUnvollstaendig?: boolean;
+  /**
+   * Name des Regelsatz-Felds, das den Chip-Stapel je Sitz angibt.
+   *
+   * Fehlt es, kennt die Partie keine Plattform-Chips. Ist es gesetzt, zieht
+   * die Plattform diesen Betrag in BroJetons ein, sobald die Partie startet,
+   * und zahlt den Reststapel am Ende zurueck. Das Modul rechnet weiter nur
+   * mit Zahlen — welche Waehrung das ist, weiss allein die Plattform
+   * (Grundsatz 4: der Regelsatz enthaelt keinen Geldbeutel).
+   */
+  readonly chipStackField?: string;
+  /**
+   * Obergrenze fuer die Pause der Plattform zwischen zwei Botzuegen.
+   *
+   * Die Plattform wartet zwischen zwei Botzuegen `botDelayMs` (0,8 s), damit
+   * man jede gelegte Karte einzeln wahrnimmt. Das passt fuer ein Kartenspiel,
+   * in dem ein Sitz je Stich EINMAL dran ist. Es passt nicht fuer ein Spiel,
+   * in dem ein Bot je Runde ein Dutzend Handgriffe macht: Bei Tafelrunde
+   * ruesten alle gleichzeitig, `currentActor` nennt aber immer nur einen Sitz
+   * — die Bots arbeiten also NACHEINANDER ihre Kaeufe ab, und wer schon
+   * "Bereit" getippt hat, sitzt so lange davor. Gemessen am 06.09.2026 zu
+   * viert: 16 fremde Handgriffe je Runde im Median, 30 im neunten Zehntel —
+   * mit 0,8 s sind das 12,8 s bzw. 24 s reines Warten je Runde.
+   *
+   * EINE OBERGRENZE UND KEIN WERT: Verrechnet wird `Math.min` mit der
+   * Einstellung der Laufzeit. Ein Modul kann den Takt damit kuerzen, aber
+   * keiner kann ihn verlaengern — sonst saesse ein Test, der die Laufzeit
+   * ausdruecklich auf `botDelayMs: 0` stellt, die Pause dieses Moduls trotzdem
+   * ab.
+   *
+   * Fehlt das Feld, gilt der Takt der Plattform. Das ist der Normalfall.
+   */
+  readonly botTaktHoechstMs?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -267,6 +350,40 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
   /** Beendet die laufende Schaupause nach Ablauf der Zeit. */
   advanceInterlude?(party: TParty): TParty;
 
+  /**
+   * Frist der laufenden PHASE — anders als die Schaupause auch dann, wenn
+   * jemand am Zug ist.
+   *
+   * Liefert die Solldauer der Phase in Millisekunden, sonst null. Das Modul
+   * bleibt uhrlos wie ueberall (Grundsatz 1): Es nennt nur die Dauer, gemessen
+   * wird sie von der Plattform, und nach Ablauf ruft sie advancePhase auf. Die
+   * Frist steht ab Beginn der Phase FEST — eine Aktion irgendeines Sitzes
+   * verschiebt sie nicht.
+   *
+   * WARUM ES DAS NEBEN interludeMs GIBT: Eine Schaupause heisst, dass niemand
+   * handeln darf; die Plattform fragt sie deshalb nur, wenn currentActor null
+   * ist. Ein Spiel, in dem alle GLEICHZEITIG handeln (Tafelrunde, Eiland),
+   * nennt aber trotzdem einen Sitz, damit Zugzeit und Bot-Uebernahme greifen —
+   * und hat damit gar keine Frist mehr: Die Zugzeit wird bei jeder Aktion
+   * irgendeines Sitzes neu gestellt und faellt beim Botsitz ganz weg. Genau
+   * diese Luecke schliesst diese Frist.
+   *
+   * Sie taugt NICHT als zweite Zugzeit: Sie gilt fuer die Phase und damit fuer
+   * alle Sitze, nicht fuer einen einzelnen. Wer nach Ablauf noch nicht
+   * gehandelt hat, bekommt vom Modul das, was seine Regeln dafuer vorsehen.
+   *
+   * Damit die Plattform merkt, dass eine neue Phase begonnen hat, MUSS die
+   * Methode zwischen zwei Fristen einmal null liefern — sonst laeuft die alte
+   * Frist in der neuen Phase weiter. Bei Tafelrunde liegt dazwischen die
+   * Kampfphase.
+   *
+   * Optional: Ein Spiel mit fester Zugfolge laesst beide Methoden weg.
+   */
+  phaseMs?(party: TParty): number | null;
+
+  /** Beendet die laufende Phase nach Ablauf der Frist. */
+  advancePhase?(party: TParty): TParty;
+
   standings(party: TParty): PartyStanding[];
 
   /** Markiert einen Sitz als ausgestiegen. Die Partie laeuft mit Bot weiter. */
@@ -368,3 +485,9 @@ export interface GameRegistry {
   /** Nur spielbare Module. Vorschau-Spiele haben keins. */
   get(id: GameId): AnyGameModule | undefined;
 }
+
+// ---------------------------------------------------------------------------
+// Gemeinsame Adapter-Helfer
+// ---------------------------------------------------------------------------
+
+export { pruefeSnapshotVersion, shapeProblems, snapshotCodec } from './helfer.js';

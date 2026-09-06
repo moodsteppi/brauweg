@@ -13,9 +13,10 @@ import {
   createRound,
   currentActor,
   viewFor,
-  vorbehaltTurn,
+  vorbehaltOffen,
 } from '../src/round.js';
 import type { AbsageLevel } from '../src/scoring.js';
+import { amZug } from './vorbehaltshilfe.js';
 
 const SEATS = [0, 1, 2, 3];
 
@@ -30,7 +31,7 @@ function playRandomRound(state: RoundState, rng: () => number): RoundState {
   while (state.phase !== 'finished' && state.phase !== 'redeal') {
     if (steps++ > 500) throw new Error('Automat terminiert nicht');
 
-    const actor = currentActor(state);
+    const actor = amZug(state);
     assert.notEqual(actor, null, `Kein Akteur in Phase ${state.phase}`);
     const seat = actor as number;
 
@@ -227,7 +228,7 @@ test('Sichtbarkeit: fremde Handkarten tauchen in keiner Sicht auf', () => {
 });
 
 function playOneStep(state: RoundState, rng: () => number): RoundState {
-  const actor = currentActor(state);
+  const actor = amZug(state);
   if (actor === null) return state;
   const seat = actor;
 
@@ -250,9 +251,11 @@ test('Automat weist illegale Aktionen zurueck', () => {
   const rs = makeRuleSet();
   let state = createRound(rs, SEATS, 0, 5);
 
-  // Falscher Sitz in der Vorbehaltsabfrage.
+  // Zweimal erklaeren geht nicht: Alle antworten gleichzeitig, aber jeder
+  // genau einmal. Sonst koennte man seine Erklaerung zuruecknehmen.
+  const doppelt = apply(state, { type: 'vorbehalt', seat: 2, kind: null });
   assert.throws(
-    () => apply(state, { type: 'vorbehalt', seat: 2, kind: null }),
+    () => apply(doppelt, { type: 'vorbehalt', seat: 2, kind: null }),
     RuleViolation,
   );
   // Karte spielen, bevor die Abfrage durch ist.
@@ -321,7 +324,7 @@ function rundeMitSchweinen(patch = {}) {
     let state = createRound(rs, SEATS, 0, seed);
     if (!SEATS.some((s) => state.schweinchen[s])) continue;
     while (state.phase === 'vorbehalt') {
-      const seat = currentActor(state) as number;
+      const seat = amZug(state) as number;
       state = apply(state, { type: 'vorbehalt', seat, kind: null });
     }
     if (state.phase === 'playing') return state;
@@ -341,7 +344,7 @@ test('Pflichtansage: Schweine verpflichten den Halter schon vor dem ersten Stich
     false,
     'Eine Tatsache auf der Hand kennt keine moralische Zwischenstufe',
   );
-  assert.equal(currentActor(state), halter, 'Er ist am Zug, nicht die Vorhand');
+  assert.equal(amZug(state), halter, 'Er ist am Zug, nicht die Vorhand');
 });
 
 test('Pflichtansage: Schweine ohne den Ausloeser verpflichten niemanden', () => {
@@ -387,7 +390,7 @@ function hochzeitMitFremdenSchweinen() {
     if (halter === undefined) continue;
     let braut = -1;
     while (state.phase === 'vorbehalt') {
-      const seat = currentActor(state) as number;
+      const seat = amZug(state) as number;
       if (viewFor(state, seat).allowedVorbehalte.includes('hochzeit')) {
         braut = seat;
         state = apply(state, { type: 'vorbehalt', seat, kind: 'hochzeit' });
@@ -433,7 +436,7 @@ test('Pflichtansage: die Schweine-Pflicht sagt Re oder Kontra an', () => {
 test('Vorbehalt: die Sicht liefert je Solo eine Vorschau-Ordnung', () => {
   const rs = makeRuleSet({ solos: ['suitH', 'queens', 'jacks'] });
   const state = createRound(rs, SEATS, 0, 77);
-  const dran = currentActor(state) as number;
+  const dran = amZug(state) as number;
 
   const sicht = viewFor(state, dran);
   assert.deepEqual(
@@ -451,16 +454,29 @@ test('Vorbehalt: die Sicht liefert je Solo eine Vorschau-Ordnung', () => {
     sicht.soloVorschau.jacks!.trumps,
   );
 
-  // Wer nicht dran ist, braucht keine Vorschau und bekommt keine.
+  // Alle erklaeren gleichzeitig, also braucht auch jeder andere offene Sitz
+  // seine Vorschau. Sie ist kein Kartenblick: Sie ordnet nur die EIGENE Hand
+  // nach der Trumpfordnung des Solos, das man gerade erwaegt.
   const anderer = SEATS.find((s) => s !== dran)!;
-  assert.deepEqual(viewFor(state, anderer).soloVorschau, {});
+  assert.deepEqual(
+    Object.keys(viewFor(state, anderer).soloVorschau).sort(),
+    ['jacks', 'queens', 'suitH'],
+  );
+});
+
+test('Vorbehalt: wer schon erklaert hat, bekommt keine Vorschau mehr', () => {
+  const rs = makeRuleSet({ solos: ['suitH', 'queens', 'jacks'] });
+  let state = createRound(rs, SEATS, 0, 77);
+  const dran = vorbehaltOffen(state)[0]!;
+  state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
+  assert.deepEqual(viewFor(state, dran).soloVorschau, {});
 });
 
 test('Vorbehalt: nach der Abfrage gibt es keine Vorschau mehr', () => {
   const rs = makeRuleSet({ pflichtsolo: false, armut: false, hochzeit: false });
   let state = createRound(rs, SEATS, 0, 77);
   while (state.phase === 'vorbehalt') {
-    const seat = currentActor(state) as number;
+    const seat = amZug(state) as number;
     state = apply(state, { type: 'vorbehalt', seat, kind: null });
   }
   assert.deepEqual(viewFor(state, 0).soloVorschau, {});
@@ -507,7 +523,7 @@ test('eine gespielte Kreuz-Dame deckt die Partei dauerhaft auf', () => {
 
   // Alle gesund, damit ein Normalspiel zustande kommt.
   while (state.phase === 'vorbehalt') {
-    const seat = currentActor(state)!;
+    const seat = amZug(state)!;
     state = apply(state, { type: 'vorbehalt', seat, kind: null });
   }
   if (state.gameType.kind !== 'normal') return; // stille Hochzeit: anderer Fall
@@ -522,7 +538,7 @@ test('eine gespielte Kreuz-Dame deckt die Partei dauerhaft auf', () => {
   let leger: number | null = null;
   let steps = 0;
   while (state.phase === 'playing' && leger === null && steps++ < 200) {
-    const seat = currentActor(state)!;
+    const seat = amZug(state)!;
     const view = viewFor(state, seat);
     const dame = view.legal.find((c) => c.suit === 'C' && c.rank === 'Q');
     const card = dame ?? view.legal[0];
@@ -538,49 +554,57 @@ test('eine gespielte Kreuz-Dame deckt die Partei dauerhaft auf', () => {
   assert.ok(merke(), 'direkt nach dem Legen nicht aufgedeckt');
 
   while (state.phase === 'playing' && steps++ < 400) {
-    const seat = currentActor(state)!;
+    const seat = amZug(state)!;
     const view = viewFor(state, seat);
     state = apply(state, { type: 'playCard', seat, cardId: view.legal[0].id });
     assert.ok(merke(), 'die Kreuz-Dame wurde spaeter wieder vergessen');
   }
 });
 
-test('Sicht: fremde Vorbehalts-Art und Schweine bleiben bis zum Ende der Gesund-Runde verdeckt', () => {
-  // Der Reihe nach sagt einer ein Solo an, waehrend die anderen noch nicht
-  // erklaert haben. Ein Mitspieler, der selbst noch ein Solo erwaegt, darf
-  // daran nicht ablesen, wer was hat - erst wenn alle durch sind.
+test('Sicht: fremde Antworten und Schweine bleiben bis zum Ende der Abfrage verdeckt', () => {
+  // Alle erklaeren gleichzeitig. Wer frueh tippt, darf den anderen nichts
+  // verraten - und wer sich Zeit laesst, darf nichts ablesen. Sichtbar ist
+  // fremd nur, DASS jemand geantwortet hat ('geheim').
   const rs = makeRuleSet({ pflichtansageSchweine: true });
   let state = createRound(rs, SEATS, 0, 42);
   assert.equal(state.phase, 'vorbehalt');
 
-  const erster = vorbehaltTurn(state)!;
+  const erster = vorbehaltOffen(state)[0]!;
   const sichtErster = viewFor(state, erster);
   assert.ok(sichtErster.allowedVorbehalte.includes('solo'), 'Aufbau: Solo muss ansagbar sein');
   const solo = sichtErster.soloOptions[0]!;
   state = apply(state, { type: 'vorbehalt', seat: erster, kind: 'solo', solo });
 
-  // Die Abfrage laeuft noch: der Ansager sieht sein Solo, ein anderer nur,
-  // DASS ein Vorbehalt da ist ('verdeckt'), nicht welcher. Und die Schweine
-  // nennt die Sicht noch niemandem.
   assert.equal(state.phase, 'vorbehalt');
   const anderer = SEATS.find((s) => s !== erster)!;
   const fremd = viewFor(state, anderer).vorbehalte.find((v) => v.seat === erster);
-  assert.equal(fremd?.kind, 'verdeckt', 'die Art bleibt fremden Sitzen verborgen');
+  assert.equal(fremd?.kind, 'geheim', 'fremde Antworten bleiben verborgen');
   const eigen = viewFor(state, erster).vorbehalte.find((v) => v.seat === erster);
   assert.equal(eigen?.kind, 'solo', 'der Ansager sieht seine eigene Wahl');
   assert.deepEqual(viewFor(state, anderer).schweineSeats, [], 'Schweine erst nach der Runde');
 
-  // Die restlichen Sitze sagen gesund - danach ist die Abfrage vorbei.
+  // Auch ein „gesund" bleibt verdeckt: Sonst wuesste der Zoegernde, dass die
+  // Bahn frei ist, und entschiede sich danach.
+  const zweiter = vorbehaltOffen(state)[0]!;
+  state = apply(state, { type: 'vorbehalt', seat: zweiter, kind: null });
+  assert.equal(state.phase, 'vorbehalt');
+  const dritter = vorbehaltOffen(state)[0]!;
+  assert.equal(
+    viewFor(state, dritter).vorbehalte.find((v) => v.seat === zweiter)?.kind,
+    'geheim',
+    'auch „gesund" bleibt waehrend der Abfrage verborgen',
+  );
+
+  // Der Rest erklaert sich gesund - danach ist die Abfrage vorbei.
   while (state.phase === 'vorbehalt') {
-    const dran = vorbehaltTurn(state)!;
+    const dran = vorbehaltOffen(state)[0]!;
     state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
   }
 
-  // Jetzt liegt die Art offen: aus dem Solo ist ein Solo geworden, und ein
-  // Mitspieler sieht das auch.
+  // Jetzt liegt alles offen, auch fuer die Mitspieler.
   assert.notEqual(state.phase, 'vorbehalt');
   const offen = viewFor(state, anderer).vorbehalte.find((v) => v.seat === erster);
-  assert.equal(offen?.kind, 'solo', 'nach der Gesund-Runde ist die Art offen');
+  assert.equal(offen?.kind, 'solo', 'nach der Abfrage ist die Art offen');
 });
 
 // --- Schweine haengen an der tatsaechlich gespielten Spielart ---
@@ -611,10 +635,10 @@ test('Schweine verschwinden im Pik-Solo: dort ist Karo kein Trumpf', () => {
   const { seed, halter } = seedMitSchweinen(rs);
 
   let state = createRound(rs, SEATS, 0, seed);
-  const solist = vorbehaltTurn(state)!;
+  const solist = vorbehaltOffen(state)[0]!;
   state = apply(state, { type: 'vorbehalt', seat: solist, kind: 'solo', solo: 'suitS' });
   while (state.phase === 'vorbehalt') {
-    const dran = vorbehaltTurn(state)!;
+    const dran = vorbehaltOffen(state)[0]!;
     state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
   }
 
@@ -636,10 +660,10 @@ test('Auch im Karo-Solo gibt es keine Schweine', () => {
   const { seed, halter } = seedMitSchweinen(rs);
 
   let state = createRound(rs, SEATS, 0, seed);
-  const solist = vorbehaltTurn(state)!;
+  const solist = vorbehaltOffen(state)[0]!;
   state = apply(state, { type: 'vorbehalt', seat: solist, kind: 'solo', solo: 'suitD' });
   while (state.phase === 'vorbehalt') {
-    const dran = vorbehaltTurn(state)!;
+    const dran = vorbehaltOffen(state)[0]!;
     state = apply(state, { type: 'vorbehalt', seat: dran, kind: null });
   }
 
@@ -665,7 +689,7 @@ test('Armut: nach dem Tausch gelten die Schweine dessen, der sie dann haelt', ()
 
     // Alle erklaeren der Reihe nach; nur der Arme sagt Armut an.
     while (state.phase === 'vorbehalt') {
-      const dran = vorbehaltTurn(state)!;
+      const dran = vorbehaltOffen(state)[0]!;
       state = apply(state, {
         type: 'vorbehalt',
         seat: dran,
@@ -674,7 +698,7 @@ test('Armut: nach dem Tausch gelten die Schweine dessen, der sie dann haelt', ()
     }
     if (state.phase !== 'armutExchange') continue;
 
-    state = apply(state, { type: 'armutAccept', seat: currentActor(state)! });
+    state = apply(state, { type: 'armutAccept', seat: amZug(state)! });
     const poor = state.hands[armer];
     const trumps = poor.filter((c) => isTrump(c, state.order));
     const abgabe = trumps.length > 0 ? trumps : poor.slice(0, 3);

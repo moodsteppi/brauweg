@@ -1,0 +1,16 @@
+# Maschinell erzeugte Artefakte des Feldherr-Baus (Quelle:
+# packages/game-feldherr/quelle/teile/, Bau: node
+# packages/game-feldherr/werkzeug/bauen.mjs). linguist-generated faltet sie
+# in Review-Diffs zusammen — niemand soll 250-kB-Bauprodukte lesen oder
+# kommentieren. kern.d.ts fehlt hier bewusst: Die Typbeschreibung ist von
+# Hand gepflegt, nicht gebaut.
+packages/client/src/minispiele/feldherr/kern.js linguist-generated=true
+packages/game-feldherr/quelle/feldherr.html linguist-generated=true
+
+# Die Tafel des Repos ist seit dem 05.09.2026 ebenfalls ein Erzeugnis
+# (Quelle: werkzeug/gamedesk/boards/_erzeuger-brauweg.mjs). Ein Lauf schreibt
+# rund 3.000 Zeilen JSON neu, auch wenn nur ein Satz anders ist — gelesen
+# wird der Erzeuger, nicht sein Ausdruck. Die Feldherr-Tafel daneben steht
+# bewusst NICHT hier: Sie ist von Hand gewachsen und damit selbst die Quelle
+# (siehe werkzeug/gamedesk/README.md).
+werkzeug/gamedesk/boards/brauweg-funktionsweise.gamedesk.json linguist-generated=true

@@ -357,13 +357,27 @@ Unter `boards/` liegen zwei fertige Tafeln, die mit „Öffnen…" geladen werde
 | Datei | Inhalt |
 |---|---|
 | `feldherr-funktionsweise.gamedesk.json` | Das Echtzeitspiel **Feldherr** aus dem Brauweg-Repo, in **acht Themenflächen**: Ziel des Spieles · Visual Inspiration and Vision Board · Map & Umwelt Design · Charaktere Fähigkeiten und Karten · Menüstruktur & Design · Visual Design Game · Funcional Deep Dive Card Mechanics · Technische Umsetzung. Die Flächen liegen zweidimensional nebeneinander und laufen unten alle in die Technik — 109 Fenster, 30 Rahmen, 40 Pfeile, 8 3D-Modelle |
-| `brauweg-funktionsweise.gamedesk.json` | Die **ganze Plattform** Brauweg: Client, Server, Spielmodule, Daten, Betrieb, Grundsätze und der Weg einer Aktion — mit einer Projekt-Kachel, die nach Feldherr führt |
+| `brauweg-funktionsweise.gamedesk.json` | Die **ganze Plattform** Brauweg: Client, Server, Spielmodule, Daten, Betrieb, Grundsätze, der Weg einer Aktion und die bekannten Widersprüche — mit einer Projekt-Kachel, die nach Feldherr führt. Zugleich die **Visual-Building-Tafel** des Repos, siehe `docs/TAFEL.md` |
 
-> **Die JSON-Datei ist die Quelle**, nicht `boards/_erzeuger-*.mjs`. Die Tafeln
-> sind seit ihrer Erzeugung von Hand weitergewachsen; ein Erzeuger-Lauf würde
-> alles Spätere überschreiben. Umbauten laufen als Skript **auf** der JSON —
-> Vorbild: `boards/_umbau-feldherr-struktur.mjs`. Die 3D-Modelle der
-> Umweltblöcke legt `boards/_umweltbloecke-modelle.mjs` an.
+> **Bei `feldherr-funktionsweise.gamedesk.json` ist die JSON-Datei die
+> Quelle**, nicht `boards/_erzeuger-feldherr.mjs`. Sie ist seit ihrer
+> Erzeugung von Hand weitergewachsen; ein Erzeuger-Lauf würde alles Spätere
+> überschreiben. Umbauten laufen dort als Skript **auf** der JSON — Vorbild:
+> `boards/_umbau-feldherr-struktur.mjs`. Die 3D-Modelle der Umweltblöcke legt
+> `boards/_umweltbloecke-modelle.mjs` an.
+>
+> **Für `brauweg-funktionsweise.gamedesk.json` gilt seit dem 05.09.2026 das
+> Gegenteil: der Erzeuger ist die Quelle** (`boards/_erzeuger-brauweg.mjs`).
+> Grund ist ihre zweite Aufgabe — sie ist die Tafel, die der Orchestrator
+> jedem Auftrag mitgibt, und muss deshalb dem Code hinterherwachsen. Von Hand
+> lässt sich das nicht durchhalten: Am 05.09. nannte sie noch drei spielbare
+> Spiele — es waren zehn. Von Hand hinzugefügt war bis dahin genau eine Kachel, die
+> Projekt-Vorschau auf Feldherr; der Erzeuger baut sie jetzt selbst aus der
+> Nachbardatei. Das Änderungsdatum darin kommt aus dem letzten Commit der
+> Nachbardatei (`git log -1 --format=%ct`), nicht aus ihrer Dateizeit: Die
+> setzen Klonen und Auschecken auf jedem Rechner neu, und die eingecheckte
+> Tafel galt dadurch überall als geändert. Wer im Editor etwas ergänzt, trägt
+> es in den Erzeuger nach — sonst ist es beim nächsten Lauf weg.
 
 Das Muster einer Themenfläche, an dem sich weitere orientieren:
 

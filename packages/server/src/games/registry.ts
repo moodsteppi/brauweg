@@ -19,11 +19,13 @@ import type {
 } from '@brauweg/game-api';
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
-import { feldherr } from '@brauweg/game-feldherr';
+import { easypoker } from '@brauweg/game-easypoker';
 import { eiland } from '@brauweg/game-eiland';
+import { feldherr } from '@brauweg/game-feldherr';
 import { filler } from '@brauweg/game-filler';
 import { mememory } from '@brauweg/game-mememory';
 import { skat } from '@brauweg/game-skat';
+import { tafelrunde } from '@brauweg/game-tafelrunde';
 import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
 
@@ -34,8 +36,10 @@ const MODULES: readonly AnyGameModule[] = [
   feldherr as unknown as AnyGameModule,
   skat as unknown as AnyGameModule,
   mememory as unknown as AnyGameModule,
+  easypoker as unknown as AnyGameModule,
   filler as unknown as AnyGameModule,
   eiland as unknown as AnyGameModule,
+  tafelrunde as unknown as AnyGameModule,
 ];
 
 /**

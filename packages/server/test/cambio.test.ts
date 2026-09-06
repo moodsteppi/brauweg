@@ -11,7 +11,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
-import { cambio } from '@brauweg/game-cambio';
+import {
+  DECK_SIZE,
+  HAND_SIZE,
+  type CambioView,
+  type PlayerView,
+  cambio,
+} from '@brauweg/game-cambio';
 
 import { AppError } from '../src/errors.js';
 import { registry } from '../src/games/registry.js';
@@ -141,42 +147,98 @@ test('Durchstich: zwei Clients beenden eine Cambio-Partie', async (t) => {
   assert.equal(summaries.length, 4);
 });
 
+/**
+ * Die erste eingetroffene Sicht, die den RUNDENANFANG zeigt - nicht die
+ * zuletzt eingetroffene.
+ *
+ * Kennzeichen des Rundenanfangs ist der VOLLE Nachziehstapel. Das ist keine
+ * Faustregel, sondern folgt aus den Regeln: Bekanntes Wissen verliert man nur
+ * durch einen Tausch (Bube, Dame), und der setzt voraus, dass jemand vom
+ * Stapel GEZOGEN hat - vom Ablagestapel nehmen loest keine Aktion aus (siehe
+ * takeDiscard in round.ts). Solange der Stapel voll ist, hat also niemand am
+ * Wissen eines anderen ruehren koennen.
+ *
+ * Phase und Ruf kommen dazu, damit die Runde nicht schon abgerechnet ist:
+ * Danach liegen ALLE Haende offen, und die Sicht sagt ueber Sichtbarkeit
+ * nichts mehr aus.
+ */
+function rundenanfang(client: TestClient, sitze: number): PlayerView | null {
+  const vollerStapel = DECK_SIZE - sitze * HAND_SIZE - 1;
+  for (const nachricht of client.verlauf) {
+    if (nachricht.type !== 'view') continue;
+    const runde = (nachricht.view as CambioView).round;
+    if (!runde) continue;
+    if (runde.phase !== 'turn' || runde.caller !== null) continue;
+    if (runde.stockCount !== vollerStapel) continue;
+    return runde;
+  }
+  return null;
+}
+
 test('Ein Spieler sieht seine bekannten Karten, aber keine fremde', async (t) => {
   // Die wichtigste Eigenschaft des Spiels ueberhaupt. Sie wird in der Engine
   // geprueft; hier zaehlt, dass sie auch ueber die Leitung haelt.
-  const h = await startHarness();
+  //
+  // Der Tisch muss dafuer STEHEN. Mit der Vorgabe des Pruefstands
+  // (botDelayMs: 0) und einem Testclient, der von selbst zieht, laeuft die
+  // Partie waehrend des Messens weiter: Gemessen trafen bis zum Ende des
+  // waitFor schon vier Sichten ein, nach drei Sekunden 211 - und ab etwa der
+  // zwanzigsten kennt Anna nur noch EINE eigene Karte (ein Bot hat eine
+  // bekannte weggetauscht), nach der Rundenabrechnung liegen ausserdem alle
+  // Haende offen. Genau daran ist dieser Test am 31.08.2026 unter Last
+  // gescheitert ("1 !== 2"), waehrend er allein laufend gruen war.
+  //
+  // Deshalb: Bots stillstellen und der Client zieht nicht. Dann bleibt der
+  // Zustand der ausgeteilten Runde stehen, und die Sicht ist das, was hier
+  // gemeint ist.
+  //
+  // Das allein hat nicht gereicht - am 05.09.2026 stand wieder "1 !== 2" im
+  // vollen Lauf, allein und im Wiederholungslauf gruen. Das Stillstellen ist
+  // eine ANNAHME ueber den Tisch; gewartet wurde aber weiter auf
+  // `lastView !== null`, also auf IRGENDEINE Sicht, und gemessen wurde die
+  // JEWEILS LETZTE. Traegt die Annahme unter Last einmal nicht, misst der
+  // Test etwas anderes, als er prueft, und meldet das als Regelfehler.
+  //
+  // Jetzt wartet er auf einen DEFINIERTEN Zustand - den Rundenanfang - und
+  // misst genau die Sicht, die ihn zeigt (siehe rundenanfang oben). Die
+  // Zusicherung bleibt scharf: genau zwei, nicht "hoechstens zwei".
+  //
+  // Nachgestellt: Mit botDelayMs 0 und ziehendem Client - also genau der
+  // Lage, die "1 !== 2" erzeugt hat - laeuft der Test dreimal gruen durch.
+  // Das Stillstellen bleibt trotzdem drin: Es haelt den Tisch ruhig und den
+  // Lauf kurz, nur haengt die Messung nicht mehr daran.
+  const h = await startHarness({ botDelayMs: 60_000 });
   t.after(() => h.close());
 
+  const SITZE = 4;
   const anna = await createVerifiedAccount(h.ctx, 'Anna');
   const table = await createTable(h.ctx.db, {
     accountId: anna.accountId,
     gameId: 'cambio',
     config: CONFIG,
-    seats: 4,
+    seats: SITZE,
     rounds: 4,
     fillWithBots: true,
   });
 
   const spieler = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  spieler.passive = true;
   spieler.join(table.id, 1, 'cambio');
-  await spieler.waitFor(() => spieler.lastView !== null, 'Sicht des Spielers');
+  await spieler.waitFor(
+    () => rundenanfang(spieler, SITZE) !== null,
+    'Sicht auf den Rundenanfang',
+  );
 
-  const runde = (
-    spieler.lastView!.view as {
-      round: {
-        seat: number;
-        hands: Record<number, { index: number; card: unknown }[]>;
-      } | null;
-    }
-  ).round;
-  assert.ok(runde);
+  const runde = rundenanfang(spieler, SITZE)!;
+  assert.notEqual(runde.seat, null, 'Anna sitzt am Tisch, sie schaut nicht zu');
+  const eigenerSitz = runde.seat!;
 
-  const eigene = runde!.hands[runde!.seat]!;
-  const bekannt = eigene.filter((s) => s.card !== null);
+  const eigene = runde.hands[eigenerSitz]!;
+  const bekannt = eigene.filter((platz) => platz.card !== null);
   assert.equal(bekannt.length, 2, 'zu Beginn kennt man genau zwei eigene Karten');
 
-  for (const [seat, plaetze] of Object.entries(runde!.hands)) {
-    if (Number(seat) === runde!.seat) continue;
+  for (const [seat, plaetze] of Object.entries(runde.hands)) {
+    if (Number(seat) === eigenerSitz) continue;
     for (const platz of plaetze) {
       assert.equal(platz.card, null, `fremde Karte bei Sitz ${seat} war sichtbar`);
     }

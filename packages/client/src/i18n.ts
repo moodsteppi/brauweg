@@ -21,11 +21,16 @@ const de: Record<string, string> = {
   // Memory und bleibt deshalb auch im Deutschen stehen — "Meme-Memory" waere
   // die Erklaerung, nicht der Name.
   'game.mememory': 'Mememory',
+  'game.easypoker': 'Poker',
   'game.filler': 'Filler',
   // Landnahme zu zweit auf einer Insel. Der Name ist das Wort fuer eine
   // kleine Insel und bleibt so stehen — "Insel" waere die Erklaerung, nicht
   // der Name.
   'game.eiland': 'Eiland',
+  // Auto-Battler mit Verschmelzen. Der Name ist deutsch und meint die Runde
+  // der Recken, die man sich zusammenkauft — kein Fremdwort und keine
+  // Anspielung auf ein anderes Spiel (Auflage aus dem Konzept).
+  'game.tafelrunde': 'Tafelrunde',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -62,6 +67,8 @@ const de: Record<string, string> = {
   'error.tableNotStartable': 'Dieser Tisch lässt sich nicht mehr starten.',
   'error.tableAlreadyStarted': 'Die Partie läuft bereits.',
   'error.tableUnknown': 'Diesen Tisch gibt es nicht.',
+  'error.joinCodeUnknown': 'Zu diesem Code gibt es keinen offenen Tisch.',
+  'error.joinCodeUnavailable': 'Gerade ließ sich kein Code vergeben. Noch einmal versuchen?',
   'error.seatTaken': 'Der Platz war schneller weg.',
   'error.seatCountUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
   'error.roundsTooFew': 'Das ist weniger als eine volle Geberrunde.',
@@ -69,6 +76,47 @@ const de: Record<string, string> = {
   'error.partyFinished': 'Die Partie ist beendet.',
   'error.partyNotRunning': 'An diesem Tisch läuft gerade keine Partie.',
   'error.partyUnknown': 'Diese Partie gibt es nicht.',
+
+  /*
+   * Meldungen der jüngeren Bereiche: Clans, Chat, Meme-Werkstatt, Sammlung.
+   *
+   * Sie fehlten alle — 32 Stück. Der Server wirft `conflict('clubNameTaken')`
+   * und baut daraus `error.clubNameTaken`; fehlt der Eintrag, gibt `t()` den
+   * Schlüssel zurück, und im Formular steht wörtlich "error.clubNameTaken".
+   * Betroffen war alles, was nach der ersten Übersetzungsrunde dazukam.
+   */
+  'error.alreadyInClub': 'Du bist schon in einem Clan.',
+  'error.clubFull': 'Dieser Clan ist voll.',
+  'error.clubNameTaken': 'Diesen Clannamen gibt es schon.',
+  'error.clubNameLength': 'Der Clanname ist zu kurz oder zu lang.',
+  'error.clubMottoLength': 'Der Wahlspruch ist zu lang.',
+  'error.clubCrestUnknown': 'Dieses Wappen gibt es nicht.',
+  'error.clubTrophiesTooLow': 'Für diesen Clan fehlen dir noch Trophäen.',
+  'error.notClubAdmin': 'Das darf nur die Clanleitung.',
+  'error.memberUnknown': 'Dieses Mitglied gibt es nicht.',
+  'error.joinRequestUnknown': 'Diese Anfrage gibt es nicht mehr.',
+  'error.lastAdmin': 'Der letzte Leiter kann den Clan nicht verlassen — gib die Leitung vorher ab.',
+  'error.cannotChangeOwnRole': 'Die eigene Rolle kannst du nicht ändern.',
+  'error.cannotKickSelf': 'Dich selbst kannst du nicht ausschließen.',
+  'error.warUnknown': 'Diesen Clankampf gibt es nicht.',
+  'error.warRunning': 'Es läuft schon ein Clankampf.',
+  'error.warSelfChallenge': 'Der eigene Clan kann nicht herausgefordert werden.',
+  'error.messageEmpty': 'Die Nachricht ist leer.',
+  'error.messageTooLong': 'Die Nachricht ist zu lang.',
+  'error.messageUnknown': 'Diese Nachricht gibt es nicht.',
+  'error.systemMessage': 'Systemnachrichten lassen sich nicht ändern.',
+  'error.bildUngueltig': 'Dieses Bild lässt sich nicht lesen.',
+  'error.bildZuGross': 'Dieses Bild ist zu groß.',
+  'error.tonUnbekannt': 'Diesen Ton gibt es nicht.',
+  'error.tonUngueltig': 'Diese Tondatei lässt sich nicht lesen.',
+  'error.tonZuGross': 'Diese Tondatei ist zu groß.',
+  'error.motivUnbekannt': 'Dieses Motiv gibt es nicht.',
+  'error.zuVieleVorschlaege': 'Du hast schon genug offene Vorschläge — warte, bis sie geprüft sind.',
+  'error.nichtGesammelt': 'Das hast du noch nicht gesammelt.',
+  'error.gurtZuVoll': 'Am Gürtel ist kein Platz mehr.',
+  'error.botLevelUnknown': 'Diese Spielstärke gibt es nicht.',
+  'error.googleLoginDisabled': 'Die Anmeldung mit Google ist gerade abgeschaltet.',
+  'error.nurAufsicht': 'Das darf nur die Aufsicht.',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',
   'error.ruleSetUnknown': 'Diesen Regelsatz gibt es nicht.',
   'error.accountUnknown': 'Dieses Konto gibt es nicht.',
@@ -94,6 +142,7 @@ const de: Record<string, string> = {
   'error.tooManyMessages': 'Zu viele Anfragen. Lade die Seite neu.',
   'error.tooManyConnections': 'Zu viele offene Verbindungen. Schließe andere Fenster.',
   'error.gameNotPlayable': 'Dieses Spiel gibt es noch nicht.',
+  'error.matchmakingUnavailable': 'Die Mitspielersuche ist gerade nicht verfügbar.',
   'error.avatarInvalid': 'Das ist kein Bild, das wir speichern können.',
   'error.avatarUnknown': 'Dieses Profilbild gibt es nicht.',
   'error.birthdayInvalid': 'Bitte gib ein gültiges Geburtsdatum ein.',
@@ -112,6 +161,7 @@ const de: Record<string, string> = {
   // "Konflikt" hilft niemandem weiter.
   'error.coinsInsufficient': 'Dafür fehlen dir Münzen.',
   'error.gemsInsufficient': 'Dafür fehlen dir Edelsteine.',
+  'error.broJetonsInsufficient': 'Dafür fehlen dir BroJetons.',
   'error.chestUnknown': 'Diese Truhe gibt es nicht.',
   'error.chestAlreadyOpened': 'Diese Truhe hast du schon geöffnet.',
   'error.chestLocked': 'Diese Truhe braucht eine höhere Stufe.',
@@ -130,9 +180,11 @@ const de: Record<string, string> = {
   // --- Waehrungen ---------------------------------------------------------
   'waehrung.coins': 'Münzen',
   'waehrung.gems': 'Edelsteine',
+  'waehrung.broJetons': 'BroJetons',
   // Einzahl fuer Saetze wie "kostet 1 Münze".
   'waehrung.coins.eins': 'Münze',
   'waehrung.gems.eins': 'Edelstein',
+  'waehrung.broJetons.eins': 'BroJeton',
 
   // --- Truhen -------------------------------------------------------------
   'truhe.holz': 'Holztruhe',
@@ -211,6 +263,9 @@ const de: Record<string, string> = {
   'shop.muenzen-klein': 'Handvoll Münzen',
   'shop.muenzen-mittel': 'Beutel Münzen',
   'shop.muenzen-gross': 'Kiste Münzen',
+  'shop.brojetons-klein': 'Beutel BroJetons',
+  'shop.brojetons-mittel': 'Sack BroJetons',
+  'shop.brojetons-gross': 'Kiste BroJetons',
   'shop.edelsteine-klein': 'Handvoll Edelsteine',
   'shop.edelsteine-mittel': 'Beutel Edelsteine',
   'shop.edelsteine-gross': 'Kiste Edelsteine',
@@ -345,14 +400,70 @@ const de: Record<string, string> = {
 
   // Meldungen des Cambio-Regelsatzes.
   'ruleset.noActionCards': 'Ohne Aktionskarten bleibt wenig zu entscheiden.',
-  'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
-  'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
-  'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
 
-  // Meldungen des Skat-Regelsatzes.
-  'ruleset.TABLE_SIZE': 'Skat wird zu dritt gespielt.',
-  'ruleset.ROUNDS_MULTIPLE': 'Die Rundenzahl muss eine volle Geberrunde ergeben.',
-  'ruleset.BOCK_NEEDS_KONTRA': 'Bockrunden brauchen erlaubtes Kontra und Re.',
+  /*
+   * Regelsatz-Meldungen der jüngeren Spiele.
+   *
+   * Sie fehlten: Poker, Filler, Mememory und Feldherr kamen nach der ersten
+   * Übersetzungsrunde dazu, ihre Prüfmeldungen wurden nicht nachgetragen.
+   * `t()` gibt bei einem unbekannten Schlüssel den Schlüssel zurück — im
+   * Regelsatz-Editor stand also wörtlich "ruleset.blindZuKlein" am Feld. Die
+   * Texte nennen die Grenze, statt nur "ungültig" zu sagen: Wer sie liest,
+   * soll wissen, was er eintragen darf.
+   */
+  /*
+   * Denselben Sachverhalt gibt es unter zwei Präfixen: Doppelkopf, Wizard,
+   * Skat und Cambio bilden ihre Meldungen als `ruleset.${code}`, an anderer
+   * Stelle steht derselbe Code als `error.…`. Bis das vereinheitlicht ist
+   * (eigene Karte), braucht es beide Einträge — sonst steht im Editor der
+   * nackte Schlüssel.
+   */
+  'ruleset.roundsNotMultipleOfRotation': 'Die Rundenzahl muss eine volle Geberrunde ergeben.',
+
+  /*
+   * Regelsatz-Widersprüche aus den Validatoren von Doppelkopf und Skat.
+   *
+   * Die Erklärungen gab es längst — sie stehen als zweites Argument in
+   * `err(...)` im jeweiligen Validator. Nur landeten sie nirgends: Der Adapter
+   * baut aus dem Code `ruleset.${code}` und lässt den Text fallen. Im
+   * Regelsatz-Editor stand deshalb wörtlich "ruleset.PFLICHTANSAGE_NEEDS_ANNOUNCEMENTS"
+   * am Feld. Hier sind sie, mit Umlauten.
+   *
+   * Zwei Codes bedeuten in beiden Spielen NICHT dasselbe (TABLE_SIZE,
+   * TRAINING) — ein gemeinsames Wörterbuch kann nur einen Text haben, deshalb
+   * stehen dort bewusst die neutralen Fassungen.
+   */
+  'ruleset.ARMUT_ANNOUNCE': 'Die Ansage der Rückgabe-Trümpfe setzt aktivierte Armut voraus.',
+  'ruleset.BOCK_FACTOR': 'Der Bock-Multiplikator muss mindestens 2 betragen.',
+  'ruleset.BOCK_TRIGGER_ANNOUNCEMENTS': 'Der Auslöser „Re und Kontra" setzt Ansagen voraus.',
+  'ruleset.BOCK_WINDOW': 'Die Länge eines Bock-Fensters muss positiv sein.',
+  'ruleset.FEIGLING_NEEDS_ANNOUNCEMENTS': 'Feigling setzt aktivierte Ansagen voraus.',
+  'ruleset.HIRSCH_NEEDS_KONTRA': 'Hirsch setzt erlaubtes Kontra/Re voraus.',
+  'ruleset.HOCHZEIT_CLARIFY': 'Die Klärungsfrist der Hochzeit muss zwischen 1 und 3 Stichen liegen.',
+  'ruleset.JUNGFRAUEN_NEEDS_RAMSCH': 'Jungfrauen setzen Ramsch voraus.',
+  'ruleset.PFLICHTANSAGE_NEEDS_ANNOUNCEMENTS': 'Pflichtansage setzt aktivierte Ansagen voraus.',
+  'ruleset.PFLICHTANSAGE_THRESHOLDS': 'Die Schwellen der Pflichtansage müssen absteigend sein.',
+  'ruleset.PFLICHTSOLO_ROUNDS': 'Für ein Pflichtsolo je Spieler reichen die Runden nicht.',
+  'ruleset.PFLICHT_ARMUT_NEEDS_ARMUT': 'Der Armut-Auslöser setzt erlaubte Armut voraus.',
+  'ruleset.SCHIEBERAMSCH_NEEDS_RAMSCH': 'Schieberamsch setzt Ramsch voraus.',
+  'ruleset.SCHWEINCHEN_SOLO': 'Schweinchen im Solo setzt aktivierte Schweinchen voraus.',
+  'ruleset.TRAINING': 'Trainingstisch: keine Trophäen, keine Ranglistenwertung.',
+  'ruleset.blindZuKlein': 'Der kleine Blind muss mindestens 1 betragen.',
+  'ruleset.grosserBlindZuKlein': 'Der große Blind muss über dem kleinen liegen.',
+  'ruleset.stapelZuKlein': 'Zu wenig Jetons — es braucht mindestens zehn große Blinds.',
+  'ruleset.stapelZuGross': 'So viele Jetons vergibt der Tisch nicht (höchstens 100.000).',
+  'ruleset.spaltenAusserhalb': 'Zwischen 4 und 12 Spalten.',
+  'ruleset.zeilenAusserhalb': 'Zwischen 4 und 12 Zeilen.',
+  'ruleset.farbzahlAusserhalb': 'Zwischen 4 und 8 Farben.',
+  'ruleset.zuWenigFarben': 'So wenige Farben reichen für dieses Feld nicht.',
+  'ruleset.varianteUnbekannt': 'Diese Spielart gibt es nicht.',
+  'ruleset.barrierenzahlAusserhalb': 'Zwischen 0 und 20 Mauern je Spieler.',
+  'ruleset.ungeradeKartenzahl': 'Das Feld braucht eine gerade Kartenzahl — sonst bleibt eine Karte ohne Paar.',
+  'ruleset.merkzeitAusserhalb': 'Die Merkzeit liegt zwischen 0,3 und 5 Sekunden.',
+  'ruleset.zuWenigMotive': 'Für dieses Feld gibt es zu wenige Motive.',
+  'ruleset.zusatzUngueltig': 'Die Liste eigener Motive ist nicht lesbar.',
+  'ruleset.botStufeUngueltig': 'Diese Spielstärke gibt es nicht.',
+
   // Eiland. Die Zahlen stehen ausgeschrieben statt eingesetzt: Der Regelsatz
   // ist die einzige Stelle, an der sie sich ändern können, und ein Text, der
   // sie selbst ausrechnet, kann nicht falsch werden — er wird nur nie gelesen.
@@ -363,20 +474,29 @@ const de: Record<string, string> = {
   'ruleset.sichtweiteAusserhalb': 'So weit sieht hier niemand — die Sichtweite passt nicht zur Kartengröße.',
   'ruleset.kontingentAusserhalb': 'Zwischen 1 und 20 Feldern je Runde.',
   'ruleset.zuVieleHindernisse': 'So viel Wasser und Fels lässt kein Land mehr übrig.',
-  'ruleset.spaltenAusserhalb': 'Zwischen 4 und 12 Spalten.',
-  'ruleset.zeilenAusserhalb': 'Zwischen 4 und 12 Zeilen.',
-  /*
-   * Filler. `spaltenAusserhalb` und `zeilenAusserhalb` teilt es sich mit
-   * Mememory — dieselbe Aussage, dieselben Grenzen. Die vier hier gehoeren
-   * ihm allein.
-   */
-  'ruleset.farbzahlAusserhalb': 'Zwischen 4 und 8 Farben.',
-  'ruleset.zuWenigFarben': 'So wenige Farben reichen für dieses Feld nicht.',
-  'ruleset.varianteUnbekannt': 'Diese Spielart gibt es nicht.',
-  'ruleset.barrierenzahlAusserhalb': 'Zwischen 0 und 20 Mauern je Spieler.',
+  'feldherr.feldUnbekannt': 'Diese Feldgröße gibt es nicht.',
+  'feldherr.nurZuZweit': 'Feldherr wird zu zweit gespielt.',
+  'feldherr.eineRunde': 'Feldherr kennt keine Runden — ein Gefecht entscheidet.',
+  'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
+  'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
+  'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
+
+  // Meldungen des Skat-Regelsatzes.
+  //
+  // TABLE_SIZE meldet auch der Doppelkopf-Validator — beide Module bilden
+  // ihre Schlüssel als `ruleset.${code}`, und dieselbe Kennung landet damit
+  // im selben Eintrag. Der Text darf deshalb nicht "Skat wird zu dritt
+  // gespielt." lauten: Am Doppelkopf-Tisch wäre er schlicht falsch.
+  'ruleset.TABLE_SIZE': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
+  'ruleset.ROUNDS_MULTIPLE': 'Die Rundenzahl muss eine volle Geberrunde ergeben.',
+  'ruleset.BOCK_NEEDS_KONTRA': 'Bockrunden brauchen erlaubtes Kontra und Re.',
   'ruleset.notAnObject': 'Der Regelsatz fehlt oder ist beschädigt.',
   'ruleset.fieldMissing': 'Dem Regelsatz fehlt ein Feld.',
   'ruleset.fieldWrongType': 'Ein Feld des Regelsatzes hat den falschen Typ.',
+  // Tafelrunde meldet alle sechs Zahlen des Regelsatzes ueber DIESEN einen
+  // Schluessel, deshalb steht hier kein Zahlenbereich: Welches Feld gemeint
+  // ist, sagt der Regelsatz-Editor ueber `path`.
+  'ruleset.wertAusserhalb': 'Dieser Wert liegt außerhalb des erlaubten Bereichs.',
 };
 
 /**

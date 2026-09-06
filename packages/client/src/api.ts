@@ -70,6 +70,17 @@ export interface GameSummary {
   votes: number;
 }
 
+/** Stand der Mitspielersuche. Spiegelt `Suchstand` aus dem Server. */
+export interface Suchstand {
+  sucht: boolean;
+  /** Wie viele gerade in derselben Schlange stehen, man selbst mitgezaehlt. */
+  suchende: number;
+  /** Millisekunden bis zum Ablauf des Fensters. */
+  restMs: number;
+  /** Gesetzt heisst: Die Suche ist vorbei, dorthin geht es ohne Rueckfrage. */
+  tischId: string | null;
+}
+
 export interface ActiveTable {
   tableId: string;
   gameId: string;
@@ -107,6 +118,11 @@ export interface Me {
    * Geschenk, nie aus Truhen: sonst waere jede Truhe eine Geldquelle.
    */
   gems: number;
+  /**
+   * BroJetons — Pokerchips. Gekauft gegen Münzen, eingesetzt am Tisch.
+   * Zurück in Münzen gehen sie nicht.
+   */
+  broJetons: number;
   /** Was der Pinguin gerade traegt, je Platz. */
   avatar: Getragen;
   /**
@@ -175,6 +191,7 @@ export interface RankingEntry {
 // ---------------------------------------------------------------------------
 
 export type Waehrung = 'coins' | 'gems';
+export type Guthaben = Waehrung | 'broJetons';
 
 export type Grad = 'holz' | 'bronze' | 'silber' | 'gold' | 'diamant';
 
@@ -248,11 +265,13 @@ export interface RegalStueck {
 export interface Paket {
   id: string;
   nameKey: string;
-  gibt: { waehrung: Waehrung; betrag: number } | null;
+  gibt: { waehrung: Guthaben; betrag: number } | null;
   /** Anzeigepreis in ganzen Cent, oder null: kostet kein Geld. */
   cents: number | null;
   /** Preis in Edelsteinen, oder null: dafür nicht zu haben. */
   gems: number | null;
+  /** Preis in Münzen, oder null — so kosten die BroJeton-Pakete. */
+  coins: number | null;
   /** Aufschlag gegenüber dem kleinsten Paket, in Prozent. */
   bonus: number | null;
   /** Läuft der Kauf wirklich, oder ist es ein Schaufenster? */
@@ -292,6 +311,7 @@ export interface Shop {
   paesse: Paket[];
   muenzpakete: Paket[];
   edelsteinpakete: Paket[];
+  jetonpakete: Paket[];
   tischware: RegalWare[];
   truhen: Kauftruhe[];
   /** Münzen je Edelstein. Kommt vom Server, damit niemand falsch rechnet. */
@@ -303,8 +323,8 @@ export interface Shop {
 export interface Paketkauf {
   paketId: string;
   bezahlt: number;
-  gibt: { waehrung: Waehrung; betrag: number };
-  stand: { coins: number; gems: number };
+  gibt: { waehrung: Guthaben; betrag: number };
+  stand: { coins: number; gems: number; broJetons: number };
 }
 
 /** Was in einer gekauften Truhe war. */
@@ -314,7 +334,7 @@ export interface Kauffund {
   grad: Grad;
   coins: number;
   bezahlt: number;
-  stand: { coins: number; gems: number };
+  stand: { coins: number; gems: number; broJetons: number };
 }
 
 export interface TableRow {
@@ -328,6 +348,8 @@ export interface TableRow {
   host: string | null;
   /** Wie viele Sonderregeln an sind. 0 heißt Grundspiel. */
   ruleCount: number;
+  /** Buy-in und Blinds, oder null wenn der Tisch keine Chips kennt. */
+  stakes: { startJetons: number; kleinerBlind: number; grosserBlind: number } | null;
   /**
    * Spielart des Tisches, oder null wenn das Spiel keine kennt.
    *
@@ -336,6 +358,17 @@ export interface TableRow {
    * trennt daran seine beiden Match-Toepfe.
    */
   variante: string | null;
+}
+
+/** Was hinter einem Beitrittscode steckt, bevor man ihn benutzt. */
+export interface TischVorschau {
+  tableId: string;
+  gameId: string;
+  seats: number;
+  occupied: number;
+  /** Anzeigename dessen, der den Tisch aufgemacht hat. */
+  host: string | null;
+  visibility: string;
 }
 
 export interface GameDefaults {
@@ -491,9 +524,19 @@ export const api = {
     email: string;
     password: string;
     displayName: string;
-    inviteCode: string;
     birthday: string;
   }) => post<{ ok: true }>('/auth/register', body),
+
+  /** Ob "Mit Google anmelden" auf dieser Ausgabe eingerichtet ist. */
+  googleConfig: () => request<{ clientId: string | null }>('/auth/google/config'),
+  /** Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login. */
+  googleLogin: async (credential: string) => {
+    const antwort = await post<{ ok: true; token?: string }>('/auth/google', {
+      credential,
+    });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>
@@ -658,19 +701,54 @@ export const api = {
    * im Zustand `waiting`.
    */
   aktiveSpieler: (gameId: string) => request<{ aktiv: number }>(`/games/${gameId}/aktiv`),
+  /** Spieler an Tischen ueber alle Spiele — fuer die Kopfzeile des Homescreens. */
+  aktiveGesamt: () => request<{ aktiv: number }>('/aktiv'),
+
+  /**
+   * Mitspieler suchen. Der Server sammelt 30 Sekunden lang alle Suchenden und
+   * setzt sie danach an EINEN Tisch, freie Plaetze mit Bots.
+   *
+   * Abgefragt statt zugestellt: Der WebSocket kennt nur Raeume je Tisch, und
+   * wer sucht, hat noch keinen. Das Nachfragen ist zugleich das Lebenszeichen
+   * — hoert der Client damit auf (Netz weg, Tab zu), faellt er von selbst aus
+   * der Schlange.
+   */
+  sucheStarten: (gameId: string) => post<Suchstand>(`/suche/${gameId}`),
+  sucheStand: (gameId: string) => request<Suchstand>(`/suche/${gameId}`),
+  sucheAbbrechen: (gameId: string) => post<{ ok: true }>(`/suche/${gameId}/abbrechen`),
 
   tables: (gameId: string) => request<TableRow[]>(`/tables?game=${gameId}`),
   createTable: (body: {
     gameId: string;
-    config: unknown;
+    /*
+     * Weglassen heisst: der Regelsatz des Spielmoduls. Wer hier etwas
+     * mitschickt, UEBERSTIMMT das Modul — dieselben Zahlen im Client noch
+     * einmal auszuschreiben ist deshalb nur richtig, solange ein Bildschirm
+     * sie auch wirklich einstellen laesst (Regelsatz-Editor). Ein Bildschirm
+     * ohne Einstellungen laesst das Feld weg.
+     */
+    config?: unknown;
     seats: number;
     rounds: number;
     visibility?: 'public' | 'on_request' | 'club_only';
     clubId?: string;
     fillWithBots?: boolean;
     botLevel?: BotLevel;
-  }) => post<{ id: string }>('/tables', body),
+    /* Die Antwort traegt den Beitrittscode gleich mit — ihn danach ueber
+       `/tables/:id` nachzuholen waere ein zweiter Ruf fuer eine Zeile, die
+       schon vorliegt. */
+  }) => post<{ id: string; joinCode: string | null }>('/tables', body),
   joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
+  /**
+   * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
+   *
+   * Zwei Rufe statt einem, weil ein vertippter Code sonst stumm an
+   * irgendeinen fremden Tisch fuehrte.
+   */
+  tischPerCode: (code: string) =>
+    request<TischVorschau>(`/tables/code/${encodeURIComponent(code)}`),
+  beitretenPerCode: (code: string) =>
+    post<{ tableId: string }>(`/tables/code/${encodeURIComponent(code)}/join`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
   pauseTable: (id: string) => post<{ ok: true }>(`/tables/${id}/pause`),
   resumeTable: (id: string) => post<{ ok: true }>(`/tables/${id}/resume`),
@@ -790,6 +868,10 @@ export const api = {
       '/mememory/vorschlaege',
       { bild, titel, direkt },
     ),
+
+  /** Feedback vom Staging-Widget, siehe FeedbackWidget.tsx. */
+  feedbackSenden: (daten: { beschreibung: string; screenshot?: string; seite: string }) =>
+    post<{ ok: true }>('/feedback', daten),
 
   /** Was im Kasten liegt, plus der freigegebene Bestand. Nur Aufsicht. */
   mememoryVorschlaege: () =>

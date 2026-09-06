@@ -18,6 +18,7 @@ import {
   upcomingMultiplier,
 } from '../src/party.js';
 import { allowedVorbehalte, currentActor, viewFor } from '../src/round.js';
+import { amZug } from './vorbehaltshilfe.js';
 
 const FOUR = [0, 1, 2, 3];
 
@@ -37,7 +38,7 @@ function finishRound(party: PartyState, rng: () => number): PartyState {
   let steps = 0;
   while (party.current && steps++ < 500) {
     const st = party.current;
-    const seat = currentActor(st);
+    const seat = amZug(st);
     if (seat === null) break;
 
     if (st.pendingPflichtansage) {
@@ -233,7 +234,7 @@ test('Neugabe wiederholt dieselbe Runde mit neuem Seed', () => {
   let handled = false;
   for (let i = 0; i < 4 && !handled; i++) {
     const st = party.current!;
-    const seat = currentActor(st)!;
+    const seat = amZug(st)!;
     const options = allowedVorbehalte(st, seat);
     if (options.includes('schmeiss')) {
       party = act(party, { type: 'vorbehalt', seat, kind: 'schmeiss' });

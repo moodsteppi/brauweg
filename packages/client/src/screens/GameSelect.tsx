@@ -63,6 +63,7 @@ import {
 } from '../hub';
 import { EilandBanner } from '../minispiele/eiland/Banner';
 import { FillerBanner } from '../minispiele/filler/Banner';
+import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
 import { Kreuz, Note } from '../zeichen';
@@ -70,7 +71,6 @@ import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Klanghalle } from './Klanghalle';
-import { Avatarwerkstatt } from './Avatarwerkstatt';
 import { LEERE_BEMALUNG } from '../bemalung';
 
 /**
@@ -79,6 +79,18 @@ import { LEERE_BEMALUNG } from '../bemalung';
  * Profil-Tab.
  */
 const Avatar3D = lazy(() => import('../Avatar3D'));
+
+/**
+ * Die Werkstatt wird nachgeladen — genau wie in `main.tsx`, die sie fuer
+ * `?dev=werkstatt` schon per `lazy` holt. Solange sie hier statisch stand,
+ * zog der statische Import gegen den dynamischen: Vite meldete bei jedem Bau
+ * "dynamically imported by main.tsx but also statically imported by
+ * GameSelect.tsx" und liess sie im Hauptbuendel liegen, obwohl die
+ * allermeisten Besucher sie nie oeffnen.
+ */
+const Avatarwerkstatt = lazy(() =>
+  import('./Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
+);
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -153,6 +165,33 @@ export function GameSelect({
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   const [werkstattOffen, setWerkstattOffen] = useState(false);
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
+
+  /**
+   * Wie viele Menschen gerade an irgendeinem Tisch sitzen — die Zahl oben
+   * rechts. null, solange sie nie geladen wurde: Dann bleibt die Pille weg,
+   * eine geratene 0 saehe nach leerer Plattform aus, obwohl nur der Abruf
+   * scheiterte.
+   */
+  const [online, setOnline] = useState<number | null>(null);
+  useEffect(() => {
+    let lebt = true;
+    const hole = (): void => {
+      void api
+        .aktiveGesamt()
+        .then((antwort) => {
+          if (lebt) setOnline(antwort.aktiv);
+        })
+        .catch(() => {
+          /* Beiwerk. Ein Fehlversuch laesst die letzte Zahl stehen. */
+        });
+    };
+    hole();
+    const takt = window.setInterval(hole, 15000);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, []);
 
   /**
    * Zwischen den Tabs wird gezogen, nicht nur getippt.
@@ -406,6 +445,18 @@ export function GameSelect({
               Test
             </span>
           )}
+          {/* Oben rechts zuerst: wie viele gerade an Tischen sitzen. Nur wenn
+              die Zahl je geladen wurde — siehe Kommentar am Zustand. */}
+          {online !== null && (
+            <span
+              className="front-waehrung front-online"
+              aria-label={`${online} Spieler gerade online`}
+              title="Spieler gerade an Tischen"
+            >
+              <span className="front-online-punkt" aria-hidden="true" />
+              {kompakteZahl(online)}
+            </span>
+          )}
           <span className="front-waehrung front-waehrung--cups">
             {/* `pokal-zeile` statt `pokal.png`: derselbe Pokal, aber fuer
                 Zeilenhoehe gemalt — der alte war ein Bild fuer grosse Flaechen
@@ -538,14 +589,25 @@ export function GameSelect({
       )}
       {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
       {werkstattOffen && (
-        <Avatarwerkstatt
-          bemalung={me.figur ?? null}
-          getragen={me.avatar}
-          onClose={() => setWerkstattOffen(false)}
-          // Neu laden, damit die Figur im Profil sofort so aussieht wie
-          // gerade gespeichert.
-          onGespeichert={() => onAvatarChange()}
-        />
+        // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
+        // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
+        // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
+        <Suspense
+          fallback={
+            <div className="doko-sheet doko-sheet--mitte">
+              <Ladekreis text="Werkstatt wird geladen…" />
+            </div>
+          }
+        >
+          <Avatarwerkstatt
+            bemalung={me.figur ?? null}
+            getragen={me.avatar}
+            onClose={() => setWerkstattOffen(false)}
+            // Neu laden, damit die Figur im Profil sofort so aussieht wie
+            // gerade gespeichert.
+            onGespeichert={() => onAvatarChange()}
+          />
+        </Suspense>
       )}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
@@ -660,19 +722,76 @@ function ProfilTab({
       .finally(() => setClaimBusy(false));
   };
 
+  /*
+    Die Geburtstagstafel steht an zwei moeglichen Plaetzen — sie wandert.
+
+    An 364 Tagen im Jahr ist sie eine Ankuendigung ("noch 87 Tage") und stand
+    trotzdem mitten im Profil, oberhalb von Trophaeen und Freunden. Das ist die
+    Rangfolge, die der Kommentar weiter unten selbst aufschreibt, und sie ist
+    genau andersherum: Was man selten braucht, gehoert nach unten.
+
+    An dem einen Tag, an dem es etwas abzuholen gibt, ist es umgekehrt richtig:
+    Dann steht sie ganz oben unter dem Namensschild. Sie hat keinen Punkt am
+    Profil-Reiter, der auf sie zeigt — waere sie an diesem Tag unten, muesste
+    man am Geburtstag durch das ganze Profil rollen, um sein Geschenk zu
+    finden.
+
+    Der Zusatz sagt beim Warten nicht mehr den Countdown: Der steht wortgleich
+    unter dem Namen im Schild darueber, und zweimal derselbe Satz auf einem
+    Bildschirm liest sich wie ein Fehler.
+  */
+  const geburtstagTafel = (
+    <Tafel titel="Geburtstag" zusatz={me.birthdayRewardClaimable ? 'Heute!' : 'Einmal im Jahr'}>
+      <section
+        className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
+      >
+        <div className="hub-geburtstag-art">
+          <img
+            src="/hub/pinguin-geburtstag.png"
+            alt="Geburtstags-Pinguin"
+            draggable={false}
+          />
+        </div>
+        <div className="hub-geburtstag-text">
+          <strong>Geburtstags-Pinguin</strong>
+          {me.birthdayRewardClaimable ? (
+            <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
+          ) : me.hasBirthdayOutfit ? (
+            <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
+          ) : (
+            <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
+          )}
+          {me.birthdayRewardClaimable ? (
+            <button
+              className="hub-knopf hub-knopf--a-gold"
+              disabled={claimBusy}
+              onClick={claimReward}
+            >
+              {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
+            </button>
+          ) : null}
+          {claimError && <p className="error">{claimError}</p>}
+        </div>
+      </section>
+    </Tafel>
+  );
+
   return (
     <HubSzene bg="/hub/bg-profil.webp" className="front-profil front-profil--a">
       <HubBanner />
 
-      {/* Als Erstes im Profil: Wo stehe ich, und wie weit ist es noch bis
-          zur naechsten Stufe? Angetippt oeffnet sich die ganze Leiter. */}
-      <Stufenbalken
-        stufe={me.level.stufe}
-        imLevel={me.level.imLevel}
-        fuerLevel={me.level.fuerLevel}
-        onClick={onStufen}
-      />
+      {/*
+        Als Erstes das Namensschild, dann der Stufenbalken.
 
+        Vorher stand der Balken oben und das Schild darunter. Damit war das
+        Erste im eigenen Profil ein Fortschrittsbalken — und die Zahl, die er
+        erklaert, stand als Stufenplakette erst darunter im Schild. Beides
+        gehoert zusammen, also stehen sie jetzt beieinander: Schild mit Bild,
+        Name und Plakette, direkt darunter der Balken zu genau dieser Plakette.
+
+        Der Fortschritt geht dabei nicht verloren: Die Kopfleiste zeigt ihn auf
+        JEDEM Tab (`front-xp`), das Profil muss ihn nicht als Erstes wiederholen.
+      */}
       <div className="hub-profilkopf hub-profilkopf--a">
         <ProfilBild me={me} onChanged={onAvatarChange} />
         <div className="hub-profilkopf-text">
@@ -687,6 +806,17 @@ function ProfilTab({
         </span>
       </div>
 
+      {/* Angetippt oeffnet sich die ganze Leiter. */}
+      <Stufenbalken
+        stufe={me.level.stufe}
+        imLevel={me.level.imLevel}
+        fuerLevel={me.level.fuerLevel}
+        onClick={onStufen}
+      />
+
+      {/* Nur am Geburtstag, dann aber als Erstes — siehe oben. */}
+      {me.birthdayRewardClaimable && geburtstagTafel}
+
       {/*
         Ab hier: Tafeln, und zwar durchgehend.
 
@@ -698,8 +828,8 @@ function ProfilTab({
 
         Die Tafeln geben zugleich die Rangfolge, die vorher fehlte: erst wer
         ich bin, dann was mir gehoert, dann was ich geleistet habe, dann meine
-        Leute — und ganz zum Schluss die Konto-Sachen, die man ein Mal im Jahr
-        braucht.
+        Leute — und ganz zum Schluss die Sachen, die man ein Mal im Jahr
+        braucht (Geburtstag, Konto).
       */}
       {/*
         Die Figur bekommt eine eigene Tafel ueber die volle Breite.
@@ -757,43 +887,6 @@ function ProfilTab({
         </div>
       </Tafel>
 
-      <Tafel
-        titel="Geburtstag"
-        zusatz={me.birthdayRewardClaimable ? 'Heute!' : geburtstagText}
-      >
-        <section
-          className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
-        >
-          <div className="hub-geburtstag-art">
-            <img
-              src="/hub/pinguin-geburtstag.png"
-              alt="Geburtstags-Pinguin"
-              draggable={false}
-            />
-          </div>
-          <div className="hub-geburtstag-text">
-            <strong>Geburtstags-Pinguin</strong>
-            {me.birthdayRewardClaimable ? (
-              <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
-            ) : me.hasBirthdayOutfit ? (
-              <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
-            ) : (
-              <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
-            )}
-            {me.birthdayRewardClaimable ? (
-              <button
-                className="hub-knopf hub-knopf--a-gold"
-                disabled={claimBusy}
-                onClick={claimReward}
-              >
-                {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
-              </button>
-            ) : null}
-            {claimError && <p className="error">{claimError}</p>}
-          </div>
-        </section>
-      </Tafel>
-
       <Tafel titel="Trophäen" zusatz={`${partien} Partien`}>
         <StatHero wert={trophaeen} />
 
@@ -831,6 +924,9 @@ function ProfilTab({
           Mitgliederliste den Bildschirm, und Freunde sind ohnehin kein
           Clan: Sie gehoeren zum eigenen Konto. */}
       <Freunde onShowProfile={onShowProfile} />
+
+      {/* Der andere Platz der wandernden Tafel: das Jahr ueber hier unten. */}
+      {!me.birthdayRewardClaimable && geburtstagTafel}
 
       {/*
         Konto — alles, was man selten braucht, an einem Ort und als richtige
@@ -1006,6 +1102,21 @@ function euro(cents: number): string {
 }
 
 /**
+ * BroJetons im Shop: ein gemalter Stapel statt eines Bildes, ein / zwei /
+ * drei Jetons je nach Paketgroesse — wie die Muenzgrafik daneben ein Bild ist.
+ */
+function BroJetonStapel({ betrag }: { betrag: number }): React.JSX.Element {
+  const hoehe = betrag >= 5_000 ? 3 : betrag >= 1_500 ? 2 : 1;
+  return (
+    <span className={`hub-angebot-art poker-jeton-stapel is-${hoehe}`} aria-hidden="true">
+      {Array.from({ length: hoehe }, (_, i) => (
+        <span key={i} className="poker-jeton-zeichen" />
+      ))}
+    </span>
+  );
+}
+
+/**
  * Ein Paket im Regal.
  *
  * Zwei Sorten in einer Kachel, weil sie sich nur im Preisschild und im Tipp
@@ -1039,6 +1150,8 @@ function PaketKachel({
       {paket.gibt ? (
         paket.gibt.waehrung === 'coins' ? (
           <img className="hub-angebot-art" src="/hub/muenze.png" alt="" draggable={false} />
+        ) : paket.gibt.waehrung === 'broJetons' ? (
+          <BroJetonStapel betrag={paket.gibt.betrag} />
         ) : (
           <EdelsteinIcon className="hub-angebot-art shop-paket-stein" />
         )
@@ -1072,6 +1185,14 @@ function PaketKachel({
  */
 function preisSchild(paket: Paket): React.JSX.Element | string {
   if (paket.cents !== null) return euro(paket.cents);
+  if (paket.coins !== null) {
+    return (
+      <>
+        {paket.coins}
+        <img className="shop-preis-muenze" src="/hub/muenze.png" alt="" />
+      </>
+    );
+  }
   if (paket.gems === null) return '—';
   return (
     <>
@@ -1151,6 +1272,7 @@ function KaufFrage({
       : frage.art === 'ware'
         ? frage.ware.preis.gems
         : (frage.paket.gems ?? 0);
+  const muenzen = frage.art === 'paket' ? frage.paket.coins : null;
 
   return (
     <div className="doko-sheet" onClick={onAbbrechen} role="presentation">
@@ -1224,7 +1346,15 @@ function KaufFrage({
         ) : (
           <>
             <p className="ks-kauf-preis">
-              {gems} {gems === 1 ? t('waehrung.gems.eins') : t('waehrung.gems')}
+              {muenzen !== null ? (
+                <>
+                  {muenzen} {muenzen === 1 ? t('waehrung.coins.eins') : t('waehrung.coins')}
+                </>
+              ) : (
+                <>
+                  {gems} {gems === 1 ? t('waehrung.gems.eins') : t('waehrung.gems')}
+                </>
+              )}
             </p>
             <div className="hub-knopfreihe hub-knopfreihe--a">
               <button type="button" className="hub-knopf hub-knopf--a" onClick={onAbbrechen}>
@@ -1416,6 +1546,24 @@ function Shop({
         <p className="shop-hinweis muted">
           Münzen gibt es auch fürs Spielen: aus der Tagestruhe, den Stufentruhen und den
           Tagesaufgaben. Gekaufte sind derselbe Stand, nur früher da.
+        </p>
+      </Tafel>
+
+      <Tafel titel="BroJetons" zusatz="Für Poker">
+        <div className="hub-reihe hub-reihe--drei">
+          {(shop?.jetonpakete ?? []).map((paket) => (
+            <PaketKachel
+              key={paket.id}
+              paket={paket}
+              laeuft={laeuft}
+              onBald={onBald}
+              onKaufen={(p) => setFrage({ art: 'paket', paket: p })}
+            />
+          ))}
+        </div>
+        <p className="shop-hinweis muted">
+          BroJetons setzt du am Pokertisch. Zurück in Münzen oder Edelsteine gehen sie nicht —
+          wer gewinnt, hat mehr Chips für die nächste Runde.
         </p>
       </Tafel>
 
@@ -2256,7 +2404,7 @@ function Spielwahl({
 
       <div className="spielwahl-rolle">
         <Tafel titel="Alleine" zusatz="Minispiel">
-          <div className="hub-themenwahl">
+          <div className="hub-themenwahl kachelraster">
             <button
               type="button"
               className="hub-themenspiel"
@@ -2275,7 +2423,7 @@ function Spielwahl({
         </Tafel>
 
         <Tafel titel="Jetzt spielbar" zusatz={`${playable.length} von ${games.length}`}>
-          <div className="hub-themenwahl">
+          <div className="hub-themenwahl kachelraster">
             {playable.map((game) => (
               <button
                 key={game.id}
@@ -2298,6 +2446,13 @@ function Spielwahl({
                     /* Filler ebenso (seit 04.09.): zwei Gebiete faerben sich
                        Feld um Feld ueber das Brett, der Nebel weicht. */
                     <FillerBanner />
+                  ) : game.id === 'tafelrunde' ? (
+                    /* Tafelrunde stellt sich selbst auf: Recken erscheinen
+                       auf den Waben, drei gleiche werden golden zu einem
+                       staerkeren. Fuer dieses Spiel gibt es noch kein
+                       gemaltes Banner — das bewegte ist deshalb auch der
+                       Rueckfall bei "weniger Bewegung". */
+                    <TafelrundeBanner />
                   ) : (
                     <img src={spielBanner(game.id)} alt="" draggable={false} />
                   )}
@@ -2311,8 +2466,10 @@ function Spielwahl({
                     {game.seatCounts.join(', ')} Spieler
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
+                    {game.id === 'easypoker' ? ' · Hold’em' : ''}
                     {game.id === 'filler' ? ' · Flächen im Nebel' : ''}
                     {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
+                    {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>
@@ -2323,7 +2480,7 @@ function Spielwahl({
 
         {preview.length > 0 && (
           <Tafel titel="Kommt bald" zusatz="Stimm ab, was zuerst kommt">
-            <div className="hub-themenwahl">
+            <div className="hub-themenwahl kachelraster">
               {preview.map((game) => (
                 <div key={game.id} className="hub-themenspiel is-bald">
                   <button className="spielwahl-flaeche" onClick={() => onBald(t(game.nameKey))}>
@@ -2362,7 +2519,7 @@ function Spielwahl({
           jemand lesen muss.
         */}
         <Tafel titel="Modus" zusatz="Über mehrere Spiele">
-          <div className="hub-themenwahl">
+          <div className="hub-themenwahl kachelraster">
             <div className="hub-themenspiel is-bald">
               <button
                 className="spielwahl-flaeche"

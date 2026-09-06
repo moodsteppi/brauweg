@@ -31,6 +31,7 @@ import {
   type AuthDeps,
   anonymizeAccount,
   login,
+  loginMitGoogle,
   logout,
   register,
   requestPasswordReset,
@@ -39,6 +40,7 @@ import {
   sessionFromToken,
   verifyEmail,
 } from '../auth/service.js';
+import { pruefeGoogleToken } from '../auth/google.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
@@ -140,8 +142,10 @@ import {
   saveRuleSet,
   tableRules,
   tableWithSeats,
+  tischPerCode,
   verlasseKiTisch,
 } from '../tables/service.js';
+import type { Vermittlung } from '../suche/vermittlung.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
 export const SESSION_COOKIE = 'brauweg_session';
@@ -168,6 +172,12 @@ export interface AppDeps {
   readonly db: Db;
   readonly auth: AuthDeps;
   readonly runtime: PartyRuntime;
+  /**
+   * Die Mitspielersuche. Fehlt sie, antworten die Suchrouten mit 404 — der
+   * Server laeuft trotzdem, und ein Test, der die Suche nicht braucht, muss
+   * sie nicht aufbauen.
+   */
+  readonly vermittlung?: Vermittlung;
   readonly cookieSecure: boolean;
   readonly sessionTtlDays: number;
   /** Verzeichnis des gebauten Clients. Fehlt es, liefert der Server nur die API. */
@@ -185,6 +195,15 @@ export interface AppDeps {
    * eingerichtet ist und man trotzdem an die Daten muss.
    */
   readonly diagnoseSchluessel?: string | null;
+  /**
+   * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Fehlt
+   * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
+   */
+  readonly googleClientId?: string | null;
+  /** Ziel-URL des bro-server-Endpunkts fuers Feedback-Widget, siehe config.ts. */
+  readonly feedbackZielUrl?: string | null;
+  /** Bearer-Schluessel fuer obige URL. */
+  readonly feedbackZielToken?: string | null;
 }
 
 const gameIdSchema = z.enum([
@@ -192,8 +211,10 @@ const gameIdSchema = z.enum([
   'wizard',
   'feldherr',
   'mememory',
+  'easypoker',
   'filler',
   'eiland',
+  'tafelrunde',
   'skat',
   'schafkopf',
   'romme',
@@ -213,7 +234,8 @@ const registerSchema = z.object({
   // Zeichenklassen-Zwang ist die heute empfohlene Vorgabe.
   password: z.string().min(12).max(200),
   displayName: z.string().min(2).max(30),
-  inviteCode: z.string().min(1),
+  /** Seit der Oeffnung optional; ein mitgeschickter Code wird weiter geprueft. */
+  inviteCode: z.string().min(1).optional(),
   /** Kalendertag YYYY-MM-DD — Mindestalter prueft der Auth-Service. */
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -242,7 +264,12 @@ const diagnoseSchema = z.object({
 const createTableSchema = z.object({
   gameId: gameIdSchema,
   name: z.string().min(1).max(60).optional(),
-  config: z.unknown(),
+  /*
+   * Weggelassen heisst: der Regelsatz des Moduls (`defaultConfig()`, siehe
+   * `createTable`). Ausdruecklich `.optional()` und nicht bloss `z.unknown()`,
+   * obwohl beides dasselbe parst — hier liest man die Absicht.
+   */
+  config: z.unknown().optional(),
   seats: z.number().int().min(2).max(8),
   rounds: z.number().int().min(1).max(100),
   visibility: z.enum(['public', 'on_request', 'club_only']).optional(),
@@ -271,6 +298,14 @@ const LIMIT_SCHREIBEN = { max: 60, timeWindow: '1 minute' };
 const LIMIT_ALLGEMEIN = { max: 300, timeWindow: '1 minute' };
 
 /**
+ * Grenze fuer den Feedback-Screenshot (JPEG, im Client komprimiert) — deutlich
+ * groesser als BODY_LIMIT unten, deshalb bekommt die Route ihren eigenen
+ * `bodyLimit`.
+ */
+const FEEDBACK_BILD_MAX_ZEICHEN = 3_000_000;
+const FEEDBACK_BODY_LIMIT = 3_200_000;
+
+/**
  * Rumpfgrenze: Der groesste erlaubte Rumpf ist ein Bild (~60 kB) — das
  * Profilbild oder ein eingereichtes Mememory-Motiv. Beide werden im Browser
  * verkleinert; die Grenze hier ist der Riegel, falls das umgangen wird.
@@ -288,8 +323,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        /**
+         * accounts.google.com ist fuer "Mit Google anmelden" (GIS-Knopf):
+         * Das Skript kommt von dort, der Knopf selbst ist ein iframe
+         * derselben Herkunft, und die Bibliothek funkt dorthin. Ohne die
+         * drei Eintraege laedt der Knopf auf Produktion nicht — auf dem
+         * Entwicklungsserver faellt das nie auf, Vite setzt keine
+         * Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         */
+        scriptSrc: ["'self'", 'https://accounts.google.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
+        frameSrc: ['https://accounts.google.com'],
         /**
          * `blob:` ist fuer die 3D-Figur noetig, und der Fehler war teuer zu
          * finden: Die Texturen stecken als JPEG **im** GLB. Der Lader von
@@ -318,7 +362,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          * Entwicklungsserver faellt das nie auf: Dort liefert Vite aus, und
          * Vite setzt gar keine Inhaltsrichtlinie.
          */
-        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com'],
         /**
          * DER Fehler, der Feldherr auf Produktion strittig gemacht hat —
          * und der in keiner Testfassung auftrat.
@@ -581,6 +625,29 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ ok: true, accountId });
   });
 
+  /**
+   * Ob "Mit Google anmelden" moeglich ist, entscheidet allein der Server —
+   * der Client fragt hier VOR der Anmeldung nach. Bewusst ein eigener kleiner
+   * Endpunkt statt einer Build-Variablen: Die Client-ID haengt an der
+   * Umgebung, nicht am gebauten Buendel.
+   */
+  app.get('/api/auth/google/config', async (_request, reply) => {
+    return reply.send({ clientId: deps.googleClientId ?? null });
+  });
+
+  app.post('/api/auth/google', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    if (!deps.googleClientId) throw badRequest('googleLoginDisabled');
+    const { credential } = z.object({ credential: z.string().min(1) }).parse(request.body);
+    const profil = await pruefeGoogleToken(credential, deps.googleClientId);
+    const { token, accountId } = await loginMitGoogle(deps.auth, profil);
+    setSession(reply, token);
+    // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
+    if (request.headers.origin === APP_ORIGIN) {
+      return reply.send({ ok: true, accountId, token });
+    }
+    return reply.send({ ok: true, accountId });
+  });
+
   app.post('/api/auth/logout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const session = await sessionFromToken(deps.db, sessionToken(request));
     if (session) await logout(deps.db, session.sessionId);
@@ -612,6 +679,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         displayName: s.account.displayName,
         coins: s.account.coins,
         gems: s.account.gems,
+        broJetons: s.account.broJetons,
         xp: s.account.xp,
         premiumUntil: s.account.premiumUntil,
         isStaff: s.account.isStaff,
@@ -690,6 +758,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       ...rest,
       coins: stand.coins,
       gems: stand.gems,
+      broJetons: stand.broJetons,
       avatar: getragen,
       /**
        * Die Bemalung der 3D-Figur, schon geprueft. `null` heisst: nie bemalt,
@@ -1325,6 +1394,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ aktiv: zeile?.anzahl ?? 0 });
   });
 
+  /**
+   * Dasselbe ueber ALLE Spiele — fuer die Kopfzeile des Homescreens.
+   * `distinct` zaehlt jeden Menschen einmal, auch wenn er (Wartetisch plus
+   * laufende Partie) auf zwei Plaetzen sitzt.
+   */
+  app.get('/api/aktiv', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (_request, reply) => {
+    const [zeile] = await deps.db
+      .select({ anzahl: sql<number>`count(distinct ${s.tableSeat.accountId})::int` })
+      .from(s.tableSeat)
+      .innerJoin(s.gameTable, eq(s.tableSeat.tableId, s.gameTable.id))
+      .where(
+        and(
+          sql`${s.gameTable.status} in ('waiting','running')`,
+          sql`${s.tableSeat.accountId} is not null`,
+        ),
+      );
+    return reply.send({ aktiv: zeile?.anzahl ?? 0 });
+  });
+
   /** Vorbelegung fuer den Regelsatz-Editor. Der Inhalt kommt aus dem Modul. */
   app.get('/api/games/:gameId/defaults', async (request, reply) => {
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
@@ -1603,8 +1691,56 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       clubId = clubs[0]?.id;
     }
     const table = await createTable(deps.db, { accountId, ...body, clubId });
+    // Wer einen Tisch aufmacht, sucht nicht mehr: Sonst zieht ihn die
+    // Vermittlung 30 Sekunden spaeter aus dem eigenen Tisch an einen fremden.
+    deps.vermittlung?.verlaesstAlle(accountId);
     return reply.status(201).send(table);
   });
+
+  /**
+   * Der Tisch zu einem Beitrittscode — ohne beizutreten.
+   *
+   * Zwei Wege statt einem, weil man vor dem Beitritt sehen will, WOHIN man
+   * geht: Ein vertippter Code soll nicht stumm an irgendeinen Tisch fuehren.
+   * Die Route steht vor `/api/tables/:tableId` in der Datei, liegt aber
+   * ohnehin auf einer anderen Segmentzahl.
+   */
+  app.get('/api/tables/code/:code', async (request, reply) => {
+    await requireAccount(request);
+    const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
+    const table = await tischPerCode(deps.db, code);
+    const { seats } = await tableWithSeats(deps.db, table.id);
+    const gastgeber = seats.find((seat) => seat.accountId)?.accountId ?? null;
+    const [konto] = gastgeber
+      ? await deps.db
+          .select({ displayName: s.account.displayName })
+          .from(s.account)
+          .where(eq(s.account.id, gastgeber))
+      : [];
+    return reply.send({
+      tableId: table.id,
+      gameId: table.gameId,
+      seats: table.seats,
+      occupied: seats.filter((seat) => seat.accountId).length,
+      host: konto?.displayName ?? null,
+      visibility: table.visibility,
+    });
+  });
+
+  /** Beitreten per Code. Ein Aufruf, damit zwischen Suchen und Setzen nichts passt. */
+  app.post(
+    '/api/tables/code/:code/join',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
+      const table = await tischPerCode(deps.db, code);
+      await joinTable(deps.db, table.id, accountId);
+      deps.vermittlung?.verlaesstAlle(accountId);
+      deps.runtime.notify(table.id);
+      return reply.send({ tableId: table.id });
+    },
+  );
 
   /** Clantisch pausieren — Zugtimer und 24h-Verfall stehen still. */
   app.post('/api/tables/:tableId/pause', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
@@ -1652,6 +1788,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await joinTable(deps.db, tableId, accountId);
+    // Wer sich an einen Tisch setzt, steht nicht mehr in der Schnellsuche.
+    deps.vermittlung?.verlaesstAlle(accountId);
     // Die schon Verbundenen sollen sehen, dass sich der Tisch fuellt - und
     // wenn er damit voll ist, startet die Partie von selbst.
     deps.runtime.notify(tableId);
@@ -1675,6 +1813,50 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await leaveLobby(deps.db, tableId, accountId);
     }
     deps.runtime.notify(tableId);
+    return reply.send({ ok: true });
+  });
+
+  // -------------------------------------------------------------------------
+  // Mitspieler suchen
+  // -------------------------------------------------------------------------
+
+  /**
+   * Die Suche hat keine offene Leitung, sondern wird abgefragt.
+   *
+   * Der WebSocket taugt hier nicht: Er kennt nur Raeume je Tisch, und ein
+   * Suchender hat noch keinen Tisch (`realtime/gateway.ts`). Statt eine
+   * kontobezogene Zweitverbindung zu bauen, fragt der Client im Sekundentakt
+   * nach — dasselbe Nachfragen ist zugleich sein Lebenszeichen, und damit
+   * loest ein Weg beide Aufgaben.
+   */
+  function sucheVermittlung(): Vermittlung {
+    if (!deps.vermittlung) throw notFound('matchmakingUnavailable');
+    return deps.vermittlung;
+  }
+
+  /** Suche beginnen. Antwortet schon mit dem ersten Stand. */
+  app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    return reply.send(await sucheVermittlung().betritt(gameId, accountId));
+  });
+
+  /**
+   * Nachfragen. Der Client ruft das im Sekundentakt — deshalb die
+   * grosszuegige Ratengrenze und nicht die des Schreibens (60/Minute waeren
+   * nach einer Minute Suchen erschoepft).
+   */
+  app.get('/api/suche/:gameId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    return reply.send(await sucheVermittlung().abruf(gameId, accountId));
+  });
+
+  /** Suche abbrechen. */
+  app.post('/api/suche/:gameId/abbrechen', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    sucheVermittlung().verlaesst(gameId, accountId);
     return reply.send({ ok: true });
   });
 
@@ -2123,6 +2305,80 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.get('/api/health', async (_request, reply) => reply.send({ ok: true }));
+
+  /**
+   * Feedback vom Staging-Widget (nur `me.stage === 'staging'` zeigt es im
+   * Client, siehe FeedbackWidget.tsx). Reicht Screenshot und Beschreibung
+   * als Issue an den internen bro-server durch — der Nutzer sieht davon
+   * nichts, nur ob es geklappt hat.
+   */
+  app.post(
+    '/api/feedback',
+    { config: { rateLimit: LIMIT_SCHREIBEN }, bodyLimit: FEEDBACK_BODY_LIMIT },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const body = z
+        .object({
+          beschreibung: z.string().min(1).max(4000),
+          screenshot: z.string().max(FEEDBACK_BILD_MAX_ZEICHEN).optional(),
+          seite: z.string().max(500),
+        })
+        .parse(request.body);
+
+      if (!deps.feedbackZielUrl || !deps.feedbackZielToken) {
+        throw new AppError(503, 'feedbackNichtEingerichtet', 'error.feedbackNichtEingerichtet');
+      }
+
+      const [konto] = await deps.db
+        .select({ displayName: s.account.displayName })
+        .from(s.account)
+        .where(eq(s.account.id, accountId));
+
+      /*
+       * Der Titel kommt aus der Beschreibung, NICHT aus der Seite: Dieser
+       * Client ist eine Einzelseiten-Anwendung ohne Router, `seite` ist
+       * praktisch immer "/". Ein Board voller Karten namens "Feedback: /"
+       * waere unbrauchbar. Die Seite steht weiter im Rumpf.
+       */
+      const ersteZeile = body.beschreibung.split('\n')[0]!.trim();
+      const titel = ersteZeile.length > 80 ? `${ersteZeile.slice(0, 77)}…` : ersteZeile;
+
+      const formular = new FormData();
+      formular.set('titel', titel);
+      formular.set('beschreibung', `${body.beschreibung}\n\nSeite: ${body.seite}`);
+      formular.set('melder', konto?.displayName ?? accountId);
+      // Der Zielserver bedient mehrere Mandanten; ohne Angabe naehme er den
+      // aeltesten. Brauweg gehoert zu Broweg selbst.
+      formular.set('mandant', 'broweg');
+      formular.set('art', 'BUG');
+      if (body.screenshot) {
+        const passung = /^data:(image\/[a-z0-9+.-]+);base64,(.+)$/i.exec(body.screenshot);
+        if (passung) {
+          const [, mimeType, base64] = passung;
+          // Feldname `bilder`: die Gegenstelle nimmt bis zu fuenf Bilder
+          // entgegen (upload.array), auch wenn hier immer genau eines kommt.
+          const endung = mimeType === 'image/png' ? 'png' : 'jpg';
+          formular.set(
+            'bilder',
+            new Blob([Buffer.from(base64, 'base64')], { type: mimeType }),
+            `screenshot.${endung}`,
+          );
+        }
+      }
+
+      const antwort = await fetch(deps.feedbackZielUrl, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${deps.feedbackZielToken}` },
+        body: formular,
+      }).catch(() => null);
+
+      if (!antwort || !antwort.ok) {
+        throw new AppError(502, 'feedbackFehlgeschlagen', 'error.feedbackFehlgeschlagen');
+      }
+
+      return reply.send({ ok: true });
+    },
+  );
 
   // -------------------------------------------------------------------------
   // Client

@@ -8,38 +8,410 @@ der Erinnerung.
 
 ## Wo das Projekt steht
 
-Brauweg läuft unter **www.brauweg-spielen.de**. **Zwei Spiele sind
-spielbar: Doppelkopf und Zauberer**, der Hub steht, Clans funktionieren.
+Brauweg läuft unter **www.brauweg-spielen.de**. **Zehn Spiele sind spielbar:
+Doppelkopf, Zauberer, Skat, Cambio, Poker, Mememory, Filler, Eiland,
+Feldherr und Tafelrunde** (Stand 04.09.2026 — der Absatz nannte bis dahin
+neun), der Hub steht, Clans funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 28. August 2026 auf diesem Zweig, nicht aus der
-Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
-44 Skat-Tests, 15 Feldherr-Tests, 71 Mememory-Tests, **337 Servertests**
-— zusammen 825, alle grün. `tsc --noEmit` sauber.
+**Prüfstand (gezählt am 5. September 2026 aus einem vollen Lauf, nicht aus
+der Erinnerung):**
+170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
+15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
+56 Eiland-Tests, 298 Tafelrunde-Tests, **439 Servertests** — zusammen 1419,
+dazu die Client-Tests (41 Dateien, 464 Tests), alle grün. `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
-> Auf `staging` sind es 904: Dort liegen zusätzlich Easy Poker, die offene
-> Registrierung mit Google-Anmeldung und die gleichzeitige
-> Vorbehaltsabfrage. Dieser Zweig trägt bewusst nur die Mememory-Arbeit.
-
-> **Die Migration `0023_mememory_zufallsgurt` trägt auf `main` einen
-> anderen Zeitstempel als auf `staging`** (1787050000000 statt
-> 1787300000000), und das ist Absicht. Der Drizzle-Migrator vergleicht
-> ausschließlich Zeitstempel (`pg-core/dialect.js`: `created_at <
-> folderMillis`), nicht Hashes. Stünde hier der Wert von `staging`, wäre er
-> nach diesem Deploy der höchste in der Produktionsdatenbank — und
-> `0021_bro_jetons` (1787100000000) sowie `0022_google_login`
-> (1787200000000) würden später **still übersprungen**. Der Deploy sähe grün
-> aus, die Spalten fehlten. Beim großen Merge kommt der staging-Wert nach,
-> und die Migration läuft einmal erneut — sie ist `IF NOT EXISTS` und damit
-> wiederholbar.
+> **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
+> Oberfläche. Ein Auto-Battler mit Merge-Mechanik im Fantasy-Gewand
+> (Konzept: `docs/spiele/auto-battler-konzept.md`, Thema von Robin
+> entschieden). Konzept und Issueboard nennen es „Spiel 9"; gezählt ist es
+> das zehnte spielbare, weil Feldherr in der Reihe mitläuft.
 >
-> **Am 28. August dasselbe noch einmal:** `0024_mememory_ton` steht hier mit
-> `when` 1787060000000 (auf `staging`: 1787400000000), also ebenfalls
-> zwischen 0023 und den beiden Nummern, die diesem Zweig fehlen. Das ist
-> kein Einzelfall, sondern die Regel, solange `main` Lücken im Journal hat:
-> **Jede Einzelübernahme muss den Zeitstempel ihrer Migration anfassen.**
+> **Der Kern** liegt in `@brauweg/game-tafelrunde` (**156 eigene Tests**) und
+> deckt die ganze Vorbereitungsphase ab: 22 Einheiten über drei
+> Kostenstufen mit Klassen-Marken, ein gemeinsamer Vorrat mit 30/25/18
+> Kopien, ein Fünfer-Laden mit levelabhängigen Chancen, Gold
+> (Grundeinkommen, Zins, Serienbonus), Verschmelzen samt Kettenreaktion,
+> Hex-Brett und Reservebank.
+>
+> **Die Oberfläche** ist `packages/client/src/screens/Tafelrunde.tsx`,
+> eingetragen wie Filler und Eiland (eigenes Menü, eigene Match-Suche, kein
+> Kartentisch). Die Rechnerei daraus liegt geprüft in
+> `minispiele/tafelrunde/zuege.ts`; dazu **44 Client-Tests** — die ersten
+> Bildschirm-Tests dieses Pakets überhaupt.
+>
+> **Mitspieler suchen** ist seit dem 05.09.2026 eine Sache des Servers und
+> nicht mehr der Tischliste (`packages/server/src/suche/`). Wer sucht, kommt
+> in eine Schlange je Spiel; **30 Sekunden ab dem ERSTEN Suchenden** (ein
+> später Hinzukommender verlängert nichts, sonst wartet der Erste beliebig
+> lange), dann entsteht **ein** Tisch mit allen Gefundenen und Bots auf den
+> restlichen Plätzen — bei Tafelrunde acht Sitze. Sind vorher schon acht
+> Menschen beisammen, geht es sofort los.
+>
+> Die Schlange liegt **im Arbeitsspeicher**, absichtlich: Eine Suche lebt 30
+> Sekunden und soll einen Deploy nicht überleben. Zugestellt wird nichts —
+> der Client fragt im Sekundentakt nach (`GET /api/suche/:gameId`), und genau
+> dieses Nachfragen ist sein Lebenszeichen: Wer aufhört (Tab zu, Netz weg),
+> fällt nach acht Sekunden von selbst aus der Schlange. Der WebSocket taugte
+> dafür nicht, er kennt nur Räume je Tisch, und ein Suchender hat noch
+> keinen. Zeit kommt als Funktion herein (`jetzt`), deshalb prüfen die sieben
+> Proben in `packages/server/test/suche.test.ts` das Fenster, ohne es
+> abzusitzen. **Achtung beim Schreiben weiterer Proben:** Wer die Uhr um 30
+> Sekunden vorstellt, ohne zwischendurch abzurufen, prüft nicht das Fenster,
+> sondern die Stille-Regel — dafür gibt es dort den Helfer `warte()`.
+>
+> **Der verabredete Tisch** steht seit dem 05.09.2026 daneben: „Tisch
+> erstellen" und „Tisch beitreten" im Tafelrunde-Menü, gebaut auf der
+> vorhandenen Tischschicht (`tables/service.ts`) und nicht auf einem zweiten
+> Weg. Neu ist dort nur der **Beitrittscode**: sechs Zeichen ohne 0/O und
+> 1/I/L, eigene Spalte `table_.join_code` mit Unique-Index (Migration
+> `0025`), dazu `GET /api/tables/code/:code` (ansehen) und
+> `POST /api/tables/code/:code/join` (beitreten). Ein Link
+> `/?tisch=CODE` öffnet die Beitreten-Ansicht mit ausgefülltem Code — er
+> tritt bewusst nicht von selbst bei.
+>
+> Der Gastgeber startet, **wann er will**: Der Tisch entsteht mit
+> `fillWithBots: false`, sonst wäre er in dem Augenblick startklar, in dem
+> der Gastgeber sich hinsetzt (`isReadyToStart`), und die Partie liefe los,
+> bevor der erste Freund den Code eingetippt hat. Beim Druck auf „Partie
+> starten" besetzt der Bildschirm die freien Plätze per `addBot` — oder
+> schrumpft den Tisch per `startNow`, wenn ohne Bots gespielt wird. Beides
+> sind die Zurufe, die der Doppelkopf-Wartebereich schon benutzt.
+>
+> **Suche und Tisch schließen einander aus**, in beide Richtungen: Wer einen
+> Tisch aufmacht oder betritt, fliegt aus jeder Suchschlange
+> (`Vermittlung.verlaesstAlle`); wer die Schnellsuche drückt, gibt seine
+> Warteplätze auf (`leaveOtherWaitingTables` in `Vermittlung.betritt`). Ohne
+> die zweite Richtung setzt die Vermittlung den Gastgeber 30 Sekunden später
+> an einen anderen Tisch, und seine Freunde warten vor einem Tisch, den
+> niemand mehr startet.
+>
+> Seit demselben Tag wertet Tafelrunde die **Bot-Stufe des Tisches** aus:
+> `gangartVon` in `adapter.ts` bildet die vier Plattformstufen auf die drei
+> Gangarten von `bot.ts` ab (`experte` und `genie` fallen beide auf `hart` —
+> eine vierte Gangart, die genauso spielt wie die dritte, wäre eine
+> Beschriftung ohne Unterschied).
+>
+> **Die Kampfsimulation** kam am 04.09.2026 nach (`arena.ts`, `kampf.ts`,
+> `zufall.ts`; übertragen vom Zweig
+> `aufgabe/tafelrunde-die-kampfsimulation-6422b76f`, der noch auf der alten
+> Paketstruktur lag). Eine Runde läuft jetzt vollständig durch: Alle lebenden
+> Sitze werden paarweise angesetzt (bei ungerader Zahl bekommt der Übrige das
+> Brett eines anderen als **Geist**, keine Freirunde), beide Bretthälften
+> werden zu einer Arena zusammengelegt (seit dem 06.09.2026 vier Reihen je
+> Seite und zwei leere dazwischen, also 5 × 10 — vorher 5 × 4), der Kampf wird
+> beim Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
+> als **Ablaufprotokoll** (jede Bewegung, jeder Treffer, jeder Tod mit
+> Zeitpunkt) im Zustand und in der Sicht. Gleiche Saat plus gleiche Bretter
+> ergibt denselben Ablauf **Ereignis für Ereignis** — eine Probe vergleicht
+> zwei Läufe über `protokollText()`. Abbruchgrenze 45 s, danach entscheidet
+> der höhere Anteil am eigenen Gesamtleben. Die Schaupause ist nicht mehr
+> fest, sondern so lang wie der längste Kampf der Runde.
+>
+> **Die ROLLE wirkt seit dem 06.09.2026 — genau eine von fünf.** Bis dahin
+> wertete `kampf.ts` nur `reichweite` aus, und ein `beistand` war damit
+> schlicht eine schwache Einheit ohne Ausgleich: Moosheiler, Runenpriester und
+> Lichtwahrerin gewannen im Monokultur-Turnier zusammen **0 von 114** Kämpfen.
+> Jetzt **heilt** ein Beistand, statt zu schlagen, solange in seiner Reichweite
+> ein Verwundeter steht (`sucheWunde`): `HEILUNG_FAKTOR` (1,5) mal seinem
+> Angriff, gedeckelt am fehlenden Leben, nie an sich selbst. Neues Ereignis
+> `heilung` im Protokoll — die Anzeige zieht es nach (grünes Aufleuchten an
+> der Figur, grüne Zahl am Kartenrand), und der **Client-Vertrag** hat genau
+> das erzwungen: Ein neuer Zweig in der Ereignis-Union bricht `npm run build`,
+> bis er auch im Client steht. Der Bot bewertet die Heilung als Leistung
+> (`leistung` in `bot.ts`) — ohne diese Zeile kauft er keinen Heiler, und die
+> Reparatur wäre nirgends zu sehen. Die vier anderen Rollen unterscheiden sich
+> weiter allein über ihre Werte; das ist Absicht und keine halbe Arbeit
+> (Begründung im Kopf von `kampf.ts` und bei `Rolle` in `katalog.ts`).
+>
+> **Das Monokultur-Turnier ist kein Wegwerf-Werkzeug mehr:**
+> `packages/game-tafelrunde/werkzeug/turnier.mjs` (Kern `test/turnier.ts`).
+> Es beantwortet, was `ausgewogenheit.mjs` nicht kann — wie eine Einheit im
+> Kampf dasteht, unabhängig davon, ob der Bot sie kauft. Dazu die
+> **Beistandsprobe**: zwei Kopien einer Einheit plus ein Beistand gegen drei
+> Kopien derselben. An ihr hängt der Heilfaktor, nicht an der Rollenquote —
+> drei Heiler gegeneinander können gar nicht anders enden als an der Uhr.
+> Zahlen und die beiden gemessenen, aber **nicht** gemachten Eingriffe stehen
+> in der neunten Messung in `docs/spiele/auto-battler-konzept.md`.
+>
+> **Die Synergien** (Phase 3 des Konzepts) kamen am 04.09.2026 dazu:
+> `synergien.ts`. Je Marke zählt das eigene **Brett** (nicht die Bank), mit
+> Schwellen bei 2 / 4 / 6; Kopien zählen, eine Einheit mit zwei Marken
+> zählt für beide. Was eine Marke bekommt, steht als **Tabelle** in
+> `SYNERGIEN` (Krieger Rüstung, Elementar Angriff, Meuchler Tempo, Wächter
+> Leben + Rüstung, Naturwesen Leben, Untot Angriff + Leben, Drache Angriff +
+> Tempo), nicht in Bedingungen. Den Bonus bekommen nur die **Träger** der
+> Marke, angehängt an `werteFuer()` in `katalog.ts` — der Kampf ruft sie in
+> `baueStreiter` einmal je Seite und fasst die Werte danach nicht mehr an.
+> Rüstung ist bei `RUESTUNG_HOECHSTWERT` (75) gedeckelt. Die Sicht trägt je
+> Sitz `synergien` (Marke, Anzahl, erreichte und nächste Schwelle, Bonus)
+> und beim ersten Ausliefern die `synergieTabelle`, wie den Katalog.
+> Am Bildschirm stehen sie seit dem 05.09.2026 als **Zähler** (Zeichen und
+> „2/4"), nicht mehr als Textliste — siehe den Absatz zum Bildschirmaufbau.
+>
+> **Die Dateien kommen seit dem 05.09.2026 vor der ersten Runde**
+> (`minispiele/tafelrunde/vorladen.ts`, `Ladebildschirm.tsx`). Vorher ging
+> jede der 23 Dateien (22 Figuren + Holztextur, zusammen 47 kB) erst los,
+> wenn die Einheit zum ersten Mal auf dem Schirm auftauchte — verteilt über
+> die ersten Runden, mit leeren Plätzen dazwischen. Jetzt startet das
+> Vorladen beim **Betreten des Bildschirms** (also schon während Menü,
+> Mitspielersuche und Tischaufbau), und die Rüstkammer wartet darauf.
+> Solange steht „Dateien werden heruntergeladen" mit Balken und Zähler.
+> Vier Dinge, die man dem Code sonst nicht ansieht: Die Liste leitet sich
+> aus `FIGUREN` ab, damit eine neue Figur nicht an zwei Stellen einzutragen
+> ist. Gewartet wird auf `decode()` und über **denselben** Pfad, den die
+> `<img>` später benutzen — der Browser führt seinen Bildspeicher über die
+> Adresse, ein Umweg über `blob:` wäre umsonst. Der Balken rechnet in
+> **Kilobyte** statt in Dateien (nach Dateien stünde er bei 96 %, während
+> die 35-kB-Textur noch unterwegs ist) — für die 3D-Fassung ist genau das
+> der Punkt. Und die Frist ist eine **Ruhefrist** (15 s ohne jede Antwort)
+> und keine Gesamtzeit: Gemessen gegen Chromes „Slow 3G" braucht der Satz
+> über HTTP/1.1 **9,3 s**, eine Gesamtfrist von 10 s hätte dort auf einer
+> völlig gesunden Leitung zugeschlagen.
+>
+> **Der Bildschirmaufbau folgt seit dem 05.09.2026 einem fertigen
+> Auto-Battler** (Vorlagen von Robin; nachgebaut wurde die ANORDNUNG, keine
+> Grafik — unsere CC0-Figuren bleiben). Von oben nach unten: eine
+> **festgeheftete Kopfleiste** (`.tr-oben` in styles.css) mit der
+> Mitspielerleiste als waagerechtem Kachelstreifen (Bild, Lebensbalken mit
+> Zahl, Name; Gegner der Runde in Gold, Ausgeschiedene ausgegraut) und
+> darunter der **Phasenzeile** — links „Runde 3 / Kampfphase", rechts die
+> Restzeit. Die Mitspielerleiste ist dabei ihre Klappmechanik losgeworden:
+> Zugeklappt war sie die halbe Auskunft der Partie, und zugeklappt wurde
+> sie, weil acht Zeilen den Laden unter den Rand drückten.
+>
+> **Die Restzeit gibt es in beiden Phasen** — im Kampf aus
+> `interludeDeadline`, in der Platzierungsphase aus `phaseDeadline`. Bis zum
+> 06.09.2026 gab es die zweite nicht: Das Modul beendete die Vorbereitung
+> nur, wenn der Letzte bereit war (`beginneKampf` in `partie.ts`), und die
+> Zugzeit der Plattform ist keine Ersatzuhr — `schedule()` stellt sie bei
+> JEDER Aktion irgendeines Sitzes neu und lässt sie ganz weg, sobald
+> `currentActor` ein Bot ist. Statt einer erfundenen Zahl stand dort „2 von
+> 4 bereit"; ohne Frist steht das dort weiterhin.
+>
+> Seitdem hat die Vorbereitung eine **Rundenfrist im Modul**:
+> `vorbereitungMs` im Regelsatz, **45 Sekunden**, danach gelten offene Sitze
+> als bereit (`fristAbgelaufen` in `partie.ts`). Gebucht wird dabei nichts —
+> wer die Frist verstreichen lässt, tritt mit dem Brett an, das er hat.
+> Getragen wird sie von einem neuen Paar in `GameModule`: **`phaseMs` /
+> `advancePhase`**, das Gegenstück zu `interludeMs` / `advanceInterlude` für
+> Spiele, in denen alle GLEICHZEITIG handeln. Das Modul bleibt uhrlos und
+> nennt nur die Dauer; gemessen wird sie in `runtime/party.ts`
+> (`schedulePhase`, ein Timer auf den früheren von Zugzeit und Phasenfrist).
+> Damit die Plattform einen Phasenwechsel bemerkt, **muss `phaseMs`
+> zwischen zwei Fristen einmal null liefern** — bei Tafelrunde liegt dazwischen
+> die Kampfphase. 45 s sind gemessen und nicht gegriffen: Über 7.637 Runden
+> braucht der fleißigste Sitz im Median 15,5 s und höchstens 39,5 s
+> (Zeitmodell in `test/messen.ts`), die Frist liegt also über jeder zügig
+> gespielten Runde.
+>
+> Dazu, alles in `packages/client/src`: **sichtbares Feldraster** (die Wabe
+> trägt die Randfarbe, ihr `::before` liegt 1,5 px innen und trägt die
+> Füllung — ein `border` geht an einem `clip-path` nicht), **Schatten** unter
+> den Figuren (auf dem Brett ein `drop-shadow` am Sprite, in der Arena eine
+> Bodenellipse, die sich gegen das Schweben bewegt), die **Bank als Leiste
+> an der Brettkante**, im Laden die **Kostenmarke in der Ecke** und das
+> **Gold groß daneben** statt oben in der Werteleiste, gedämpfte
+> unbezahlbare Karten — und beim Ziehen leuchtet **das Feld unter dem
+> Finger** (nur, wenn die Einheit dort auch landen darf; geprüft mit
+> derselben Funktion wie das Ablegen).
+>
+> **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
+> **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
+> Startleben gegen rund 5 Punkte Schaden je Niederlage). Seit den 14
+> Startleben und dem Schadensteiler endet keine einzige mehr an der Grenze,
+> zu keiner Sitzzahl (5.000 Partien zu viert, je 500 zu sechst und zu acht).
+> Der Kampf selbst wird seit #35 (04.09.2026) im Client abgespielt
+> (`minispiele/tafelrunde/KampfAnzeige.tsx`).
+>
+> **Eine Partie dauert seit dem 05.09.2026 rund acht Minuten statt
+> dreizehneinhalb.** Gemessen, entschieden und eingebaut am selben Tag; die
+> ganze Auswertung steht in `docs/TAFELRUNDE-SPIELZEIT.md`. Geändert wurden
+> zwei Zahlen: `STANDARD_REGLER.zeitraffer` von 1 auf **2** (`kampf.ts`) und
+> `DEFAULT_REGELN.startLeben` von 20 auf **14** (`regeln.ts`) — dazu die
+> ausgeschriebene Kopie `REGELSATZ` in `screens/Tafelrunde.tsx`, die als
+> `config` an den Tisch ging und die Änderung sonst überstimmt hätte.
+>
+> **Diese Kopie ist seit dem 05.09.2026 weg.** Der Bildschirm schickt beim
+> Tischanlegen keine `config` mehr; fehlt sie, setzt der Server
+> `defaultConfig()` des Moduls ein (`tables/service.ts`). Damit gibt es für
+> Tafelrunde wieder **eine** Quelle für die Regelzahlen, und eine Änderung an
+> `DEFAULT_REGELN` erreicht jeden Tisch von selbst. Der Weg steht allen
+> Bildschirmen offen, die nichts einstellen lassen — Filler, Eiland und
+> Mememory tragen ihre Kopien noch (eigener Punkt auf dem Board).
+>
+> Gemessen vorher → nachher (500 Partien zu viert, `werkzeug/spielzeit.mjs`):
+> Spielzeit **13:31 → 7:25**, Runden **15 → 11**, einzelner Kampf
+> **35,2 s → 17,3 s**, von der Uhr entschiedene Kämpfe **27,7 % → 1,8 %**,
+> Markenspanne ×0,74–1,09 → ×0,71–1,30 (Schranke ist ×0,5 bis ×2, am Katalog
+> wurde deshalb nichts geändert).
+>
+> **Achtung, das ist nicht der heutige Stand.** Am selben Tag kam auf einem
+> zweiten Zweig die Ladenregel dazu (Neu-Würfeln kostenlos, ein Kauf zieht den
+> ganzen Laden neu), und erst beim Zusammenführen waren alle vier Zahlen
+> gleichzeitig aktiv — ein Zustand, den keine der beiden Messungen gesehen
+> hatte. Derselbe Lauf mit allen vieren: Spielzeit **7:34**, Runden **10**,
+> einzelner Kampf **17,6 s**, von der Uhr entschieden **4,6 %**, Markenspanne
+> ×0,85–1,26 (über 5.000 Partien ×0,80–1,32, Krieger oben mit ×1,32). Die
+> Partie bleibt damit unter Robins acht Minuten. Zwei Zeilen sind gewandert:
+> Von der Uhr entschiedene Kämpfe steigen wieder (der neue Laden baut stärkere
+> Bretter), und „zur Halbzeit entschieden" steht bei **43,0 %** — zwischen den
+> 30,6 % des Zeitraffers und den 47,3 % der Ladenregel. Auswertung in
+> `docs/TAFELRUNDE-SPIELZEIT.md` Abschnitt 6 und in
+> `docs/spiele/auto-battler-konzept.md` (fünfte Messung).
+>
+> **Der Zeitraffer ist die Schraube, die keine Runde streicht** — er
+> beschleunigt Angriffstempo und Schrittweite zusammen und ändert damit auch,
+> wie schnell die Figuren am Bildschirm laufen. Er steht bewusst **nicht** in
+> `TafelrundeRegeln`: Der Regelsatz kommt als JSON von außen an den Tisch, ein
+> selbstgebauter Tisch könnte sich sonst eine 10 einstellen. Nur der
+> Standardwert hat sich geändert.
+>
+> Nebenbei hat das den älteren Befund erledigt, der die Änderung ausgelöst
+> hat: Der Kommentar an `HOECHSTDAUER_MS` nannte 17 s Median und 2–4 %
+> Zeitabbrüche, auf Brettern aus **echten** Partien waren es 35,2 s und
+> 27,7 % — jeder dritte Kampf ging an die Uhr statt ans Brett. Die
+> Begründung dort sagt jetzt, woher die Zahl kommt und dass sie am Zeitraffer
+> hängt.
+>
+> **Was dabei kaputtging, ist am 05.09.2026 behoben:** Die Marken-Schwelle 6
+> stand in 187.730 Antritten **kein einziges Mal** mehr, die Schwelle 4 nur
+> noch in 1,2 %. Ursache waren zwei Dinge, und in dieser Reihenfolge sind sie
+> angegangen worden. Erstens spielte der Bot gar nicht auf Marken hin
+> (`MARKEN_GEWICHT` in `bot.ts` war 25 gegen Einheitenstärken von 130 bis
+> 970); er rechnet den Synergie-Zuwachs jetzt aus der Tabelle aus
+> (`heerStaerke`) und stellt danach auch auf. Zweitens standen die Schwellen
+> zu hoch: Ein Brett fasst so viele Einheiten, wie der Sitz Level hat, und auf
+> Level 6 kommt ein Bot in 0,04 % der Antritte — sechs Träger waren
+> arithmetisch unmöglich. Die Schwellen liegen deshalb bei **2/3/5**, die Boni
+> der beiden oberen Stufen um den Trägeranteil gekürzt. Die Probe prüft die
+> höchste Schwelle wieder. Volle Zahlen: sechste Messung in
+> `docs/spiele/auto-battler-konzept.md`.
+>
+> **Was das gekostet hat, ist am selben Abend zurückgeholt worden:** Ein Bot,
+> der auf Synergien spielt, baut stärkere Bretter, und stärkere Bretter
+> kämpfen länger — die Partie war von 7:27 auf 8:25 gewachsen und lag über
+> Robins acht Minuten. Robin hat entschieden, die Marken zu lassen und die
+> Partie über die Startleben zu kürzen: **`startLeben` steht seitdem auf 12**
+> (vorher 14). Gemessen über 5.000 Partien zu viert: **7:23 im Median bei 9
+> Runden**, Schwellen 78,9 % / 35,2 % / 0,3 %.
+>
+> **Neun Runden sind nachgezählt worden**, weil in `kampf.ts` und `regeln.ts`
+> lange stand, vor Runde 10 stehe kein ausgebautes Brett. Über 500 Partien
+> trifft das nicht zu: Wer ausscheidet, hat im Schnitt 3,35 Einheiten auf dem
+> Brett, kein einziges Ausscheiden geschah mit höchstens zweien, und das
+> früheste liegt in Runde 5. Was die Runde kostet, ist das obere Ende — vier
+> Einheiten stehen in 15,2 % statt 21,0 % der Antritte, und daran hängt die
+> höchste Schwelle (0,3 % statt 0,9 %). Die Sätze im Code sagen das jetzt mit
+> Zahlen.
+>
+> **Was offen bleibt:** 9,5 % der Kämpfe laufen in die Höchstdauer von 45 s
+> statt der 4,4 % von vorher. Die Startleben können daran nichts ändern, sie
+> nehmen Runden und nicht Sekunden; das Ziel wäre der Rüstungsbonus. Ebenfalls
+> offen: Krieger steht bei ×1,56, Elementar bei ×0,22 — beide Zeilen stehen
+> auf dem Board.
+>
+> **Beide Zeilen sind am 05.09.2026 erledigt** (siebte Messung, Abschnitt in
+> `docs/spiele/auto-battler-konzept.md`). Die Ursache lag bei Elementar, und
+> zwar nicht im Bonus, sondern in der Zusammensetzung: Alle fünf Träger waren
+> Fernkämpfer, die Marke hatte keine Vorderreihe. Das **Irrlicht** ist jetzt
+> eine Wache mit Reichweite 1 (und hat dafür Naturwesen abgegeben);
+> Funkenlehrling, Frostweberin und Sturmrufer sind auf die Mitte ihrer
+> Kostenstufe gehoben. Elementar steht damit bei **×0,83** (Gegenprobe ×0,92)
+> statt ×0,25, und **Krieger ist von selbst auf ×1,13 gefallen** — an ihm wurde
+> nichts geändert, er stand nur über einem Schnitt, den eine kaputte Zeile nach
+> unten zog. Die Spanne der gezählten Marken ist ×0,83 bis ×1,24. Startleben,
+> Zeitraffer, Schwellen und Synergieboni sind unangetastet, die Spielzeit liegt
+> unverändert bei 7:10 im Median.
+>
+> Der zweite Befund von damals hat sich mit der Ladenregel **von selbst
+> erledigt**: Die Bot-Gangart `hart` lag nach dem Zeitraffer hinter `normal`
+> (77 : 107,7 über 400 Partien zu viert, davor 119 : 94) und schlägt sie jetzt
+> wieder (140 : 86,7, nachgemessen am 05.09.2026). Die Board-Karte dazu ist auf
+> diesem Stand nicht mehr nachstellbar. Die Probe in `bot.test.ts` behauptet
+> die Reihenfolge seitdem wieder: Sie hatte sie aufgegeben, weil sie an einem
+> Tag zweimal gekippt war — inzwischen ist eingekreist, dass beide Male der
+> **Laden** und nicht die Partielänge dahinterstand (Befund 7 in
+> `docs/spiele/auto-battler-konzept.md`, Werkzeug `werkzeug/gangarten.mjs`).
+> Vier Messungen über zwei Saatbasen zeigen in dieselbe Richtung.
+>
+> **Am 06.09.2026 nachgezogen — die Zahl 140 : 86,7 gilt nicht mehr, sie steht
+> jetzt bei 228 : 57,3.** Was `hart` damals trug, war allein die fehlende
+> Patzerquote; die beiden Tempo-Schrauben lagen in der Streuung und blieben
+> deshalb stehen. Über sechs Saatbasen gemessen ist eine der beiden aber kein
+> Nullwert, sondern ein Minus: Ohne die Bedingung „Brett voll" kauft der Bot
+> Feldplätze, auf denen nichts steht. `nurBeiVollemBrett` steht bei `hart`
+> seitdem auf `true`, `polster` auf 2 statt 4; die Reserve bleibt bei 0 und
+> trägt das Tempo. Damit wirkt jede der vier Schrauben messbar, und der
+> Kontrolllauf ist wieder neutral (98,7 statt der 110 bis 116, die über drei
+> Basen gemessen waren). Neu am Werkzeug: `--schraube name=wert` stellt eine
+> einzelne Schraube um, ohne `bot.ts` anzufassen.
+>
+> **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
+>
+> 1. **Kein Reihum.** Alle Sitze rüsten gleichzeitig, wie bei Eiland.
+>    `currentActor` nennt trotzdem den kleinsten noch nicht bereiten Sitz,
+>    sonst bekäme der Tisch von der Plattform keinen Timer. Wer handeln
+>    darf, entscheidet allein `darfHandeln` in `partie.ts`.
+> 2. **Der Zufallsstrom hängt an (Saat, Sitz, Wurfnummer)** und nicht an
+>    einem Generatorzustand im Snapshot — sonst hinge der Ladeninhalt an
+>    der Reihenfolge, in der die Nachrichten gleichzeitig handelnder Sitze
+>    eintreffen.
+> 3. **`legalActions` zählt das Verschieben von Einheiten nicht auf.** Es
+>    wäre ein Paar aus 19 Plätzen, also bis zu 342 Einträge in jeder Sicht.
+>    Damit der Client trotzdem keine Regel nachbaut, steht die einzige
+>    Einschränkung als Zahl in der Sicht (`feldplaetze`/`belegt`). Weil man
+>    einer Liste nicht ansieht, dass sie unvollständig ist, sagt die Meta
+>    des Moduls es ausdrücklich: **`legalActionsUnvollstaendig: true`** —
+>    ein neues, optionales Feld in `GameMeta`, das
+>    `plattform-invarianten.test.ts` auswertet (dort „Falle 5"). Ohne das
+>    Feld scheitert die Invariante zu Recht daran, dass der Bot einen Zug
+>    wählt, den die Liste nicht nennt.
+> 4. **Der Katalog kommt nur einmal.** `viewFor` liefert ihn ausschließlich
+>    bei `seit === 0`, also bei jedem `join` und danach nie wieder
+>    (`SICHT_MARKE`). Der Bildschirm **muss** ihn deshalb festhalten — wer
+>    das vergisst, hat ab dem zweiten Rundruf weder Namen noch Werte und
+>    zeichnet leere Karten.
+> 5. **Ziehen läuft über Pointer-Ereignisse, nicht über HTML5-Drag.**
+>    `dragstart` gibt es auf iOS und Android nicht. Getroffen wird über
+>    `document.elementFromPoint`, weil die Zeigererfassung jedes
+>    `pointerup` an die gezogene Einheit zurückschickt; die entscheidende
+>    CSS-Zeile ist `touch-action: none` auf `.tr-einheit[data-fassbar]`,
+>    ohne sie deutet der Browser die Bewegung als Rollen. Daneben steht
+>    **immer** der zweite Weg: antippen — auswählen — antippen.
+>
+> Die Kampfphase existiert als Naht: `wendeKampfausgang(partie, ausgaenge)`
+> bucht Schaden, Serie und Ausscheiden. Bis es eine Simulation gibt, löst
+> `ohneKampfWeiter` sie schadensfrei auf — ein ausdrücklicher Platzhalter,
+> damit kein Tisch in der Kampfphase hängen bleibt. Endlich bleibt die
+> Partie über `rundenGrenze` (Vorgabe 30).
+>
+> **Zwei Kerne, ein Spiel — was mit dem zweiten Zweig geschah.** Am
+> 04.09.2026 lagen zwei unabhängig gebaute Regelkerne für dasselbe Spiel
+> auf zwei Zweigen: `…-regelkern-als-paket-72f4bf8d` (vollständig, als
+> `game-runenheer`) und `…-9cc7e1e2` (nur Katalog und Verschmelzen, als
+> `game-tafelrunde`). Übernommen ist der **vollständige**, umbenannt auf
+> den entschiedenen Namen `game-tafelrunde`. Der zweite Zweig ist damit
+> gegenstandslos; sein Katalog hat 15 Einheiten statt 22, sonst deckt er
+> sich in der Absicht. Beide Zweige liegen noch auf `origin`.
+
+> **Eine Einzelübernahme nach `main` muss den Zeitstempel ihrer Migration
+> anfassen.** Der Drizzle-Migrator vergleicht ausschließlich Zeitstempel
+> (`pg-core/dialect.js`: `Number(lastDbMigration.created_at) <
+> migration.folderMillis`), nicht Hashes: Er wendet alles an, was NEUER ist
+> als der jüngste Eintrag in der Datenbank. Wer eine Migration mit hoher
+> Nummer vorzieht, macht damit alle übersprungenen Nummern für immer
+> unerreichbar — der Deploy sieht grün aus, die Spalten fehlen. Am
+> 27. August ging `0023_mememory_zufallsgurt` deshalb mit `when`
+> 1787050000000 nach `main` (statt 1787300000000), also VOR
+> `0021_bro_jetons` und `0022_google_login`, die dort noch fehlen. Beim
+> großen Merge holt `main` den staging-Wert nach und die Migration läuft
+> einmal erneut — sie ist `IF NOT EXISTS` und damit wiederholbar. Am
+> 28. August dasselbe mit `0024_mememory_ton`: hier 1787400000000, auf
+> `main` 1787060000000. Es ist kein Einzelfall, sondern die Regel, solange
+> `main` Lücken im Journal hat.
 
 > **Ein bekannter Wackler:** `realtime.test.ts`, „eine regelwidrige Aktion
 > wird abgewiesen, ohne den Tisch zu beschaedigen" fällt unter der Last des
@@ -283,6 +655,115 @@ Erinnerung):** 159 Doppelkopf-Tests, 117 Zauberer-Tests, 82 Cambio-Tests,
 > im Spiel blitzt „Gesammelt" unter dem Namen auf. **Ein Meme je Sekunde**
 > statt vier: Emojis bleiben bei vier, ein Bild quer über das Brett bekommt
 > einen eigenen Deckel (Client und Gateway).
+
+> **Die Tür ist auf (27. August 2026, abends, auf `staging`).** Drei Dinge
+> für die Öffnung von `main`:
+>
+> 1. **Registrierung ohne Einladungscode.** `inviteCode` ist überall optional
+>    (Schema, Service, Client); ein EINGEGEBENER Code wird weiter geprüft und
+>    verbraucht — ein Tippfehler soll ein Fehler bleiben, kein stilles
+>    Ignorieren. Der Beta-Clan-Beitritt gilt weiterhin für jedes neue Konto.
+> 2. **Anmelden mit Google.** Neue Spalte `account.google_sub` (Migration
+>    `0022`), `POST /api/auth/google` prüft das ID-Token über Googles
+>    tokeninfo-Endpunkt (`aud` gegen die eigene Client-ID — DAS ist die
+>    Sicherung, nicht die Signatur allein). Zuordnung: erst `sub`, dann
+>    bestätigte E-Mail (verknüpft), sonst neues Konto ohne Passwort und ohne
+>    Bestätigungsmail. **Der Knopf erscheint nur, wenn der Server über
+>    `GET /api/auth/google/config` eine Client-ID nennt** — sie kommt aus der
+>    Railway-Variablen `GOOGLE_CLIENT_ID` und ist bewusst KEINE
+>    Build-Variable. Achtung CSP: `accounts.google.com` steht jetzt in
+>    `script-src`, `frame-src`, `style-src`, `connect-src` — auf dem
+>    Vite-Entwicklungsserver fällt ein Fehler dort nie auf (keine
+>    Richtlinie), dieselbe Falle wie beim Runner-Worker. **Offen:** Google-
+>    Konten haben keinen Geburtstag (Spalte bleibt null, die 16-Jahre-Frage
+>    stellt sich dort nicht), und die Client-ID muss in der Google Cloud
+>    Console angelegt und auf Railway gesetzt werden, sonst bleibt der Knopf
+>    einfach weg.
+> 3. **Poker: Start ab zwei Spielern.** Neue Nachricht `startNow` →
+>    `schrumpfeAufBesetzte` (tables/service): leere, nicht mit Bots belegte
+>    Plätze fallen weg, die restlichen rücken lückenlos auf 0..n-1 auf, die
+>    Rundenzahl geht aufs nächste Vielfache der Rotationsgröße, danach
+>    startet `ensureStarted` wie immer. Im Wartebereich steht der Knopf
+>    „Jetzt starten" ab zwei Anwesenden. Dazu der Tisch neu sortiert: Gegner
+>    in ZWEI REIHEN (drei oben, zwei darunter an den Kanten) statt auf 38 %
+>    Höhe — dort lagen sie auf den Brettkarten, auf 375 px bleiben neben fünf
+>    Karten keine 96 px je Seite. Einsatz-Pille auf −24 px (bei −8 verdeckte
+>    sie die Jetonzahl), Geber-Marke bricht um statt über die Sitzkante zu
+>    ragen. Geprüft am Gerät 375×812 mit 2, 3 und 6 Sitzen und zwei echten
+>    Konten (Wartebereich → „Jetzt starten" → Partie zu zweit). **Merke beim
+>    Prüfen im Sitzungsbrowser: Ein VERDECKTER Tab pausiert CSS-Animationen —
+>    halb transparente, versetzt hängende Karten sind dann kein Fehler,
+>    sondern die eingefrorene Austeil-Animation.**
+
+> **Poker ist neu auf `staging` (25. August 2026), noch nicht in der
+> Produktion.** Texas Hold'em zu zweit bis sechst, für ein Hochkant-Handy
+> entworfen: zwei Handkarten, fünf Gemeinschaftskarten, vier Setzrunden —
+> und genau **vier Schaltflächen** (Fold · Check · Call · Bet). Anzeigename
+> „Poker“ (interne Kennung bleibt `easypoker`). Neues Paket
+> `@brauweg/game-easypoker`, `EasyPoker.tsx` im Client, ein Eintrag mehr in
+> `MODULES`. Spielauswahl-Banner liegt unter `hub/spielwahl-easypoker.webp`.
+>
+> **Online ist 6-max.** „Online-Tisch suchen" setzt sich an einen wartenden
+> Tisch oder macht einen mit sechs Plätzen auf; wer nicht warten will, füllt
+> die freien Sitze mit Computern. „Sofort spielen" nimmt 2–6 Plätze gegen
+> Bots. Die Engine kennt Nebentoepfe: Wer all-in weniger setzen kann als die
+> anderen, spielt nur um den Topf bis zu seinem Beitrag.
+>
+> **Der Einstieg hat zwei Knöpfe, nicht einen.** „Sofort spielen" macht einen
+> Tisch mit `fillWithBots` auf und ist nach zwei Sekunden im Spiel; „Online-Match
+> suchen" geht den Mememory-Weg über die gewöhnliche Tischliste. Der Bot-Tisch
+> wird mit `visibility: 'on_request'` angelegt — ein öffentlicher stünde in der
+> Lobbyliste, und wer nach einem Menschen sucht, landete mitten in einer
+> Botpartie.
+>
+> **Vier Dinge daran sind für andere Spiele interessant:**
+>
+> 1. **Der Betrag steht IN der erlaubten Aktion.** `legalActions` liefert
+>    `{typ:'mitgehen', betrag:12}` und `{typ:'setzen', betrag:30}` — der
+>    Bildschirm schreibt die Zahl auf den Knopf, ohne zu rechnen, und der
+>    Server prüft sie beim Ausführen gegen seine eigene Rechnung. Damit kommt
+>    ein Setzspiel ohne Schieberegler und ohne Regelwissen im Client aus.
+> 2. **Die Schaupause macht das Zeigen** (`interludeMs`/`advanceInterlude`,
+>    wie bei Mememory): 1,6 s nach einer Aufgabe, 3,4 s nach einem Zeigen,
+>    danach wird von selbst neu gegeben.
+> 3. **Der Zufall JE HAND, nicht je Partie.** Die Handnummer steht dabei
+>    **vorne** in der Hexkette: `worte()` liest nur die ersten 32 Hexzeichen,
+>    eine hinten angehängte Nummer fiele bei einer langen Basis lautlos heraus
+>    — und dann bekäme jede Hand dieselben Karten.
+> 4. **Die Jetons sind Partiepunkte, keine Währung.** `docs/SPIELE-IDEEN.md`
+>    führt Poker unter „Vorsicht geboten", und der Grund steht in `game-api`,
+>    Grundsatz 4: Regelwerk und Währung bleiben getrennt. Es gibt deshalb
+>    keinen Kauf, keinen Umtausch und keine Verbindung zu Münzen oder
+>    Edelsteinen — und die Bildbestellung verbietet ausdrücklich Geld- und
+>    Spielbank-Motive.
+>
+> **Zwei Fallen, die beim Prüfen aufgeflogen sind:**
+>
+> - **`main { padding: 1rem }` trifft auch diesen Vollbild-Bildschirm.**
+>   Gemessen lag der Tisch 16 px vom Rand und war 358 statt 390 px breit. Das
+>   Hauptmenü sah richtig aus, weil es eine eigene Polsterung setzt — der
+>   Tisch nicht. Dieselbe Falle wie bei Mememory, und sie kommt wieder.
+> - **Eine Zahl, die per `requestAnimationFrame` läuft, friert im verdeckten
+>   Tab ein.** Topf und Jetonstand klebten über vier Hände hinweg auf ihrem
+>   ersten Wert. Der Lauf ist jetzt Zierde mit Sicherheitsnetz: keine
+>   Bewegung, wenn `document.visibilityState !== 'visible'`, und eine Uhr, die
+>   nach der Laufzeit in jedem Fall auf den Zielwert setzt.
+>
+> **Geprüft** mit dem gebauten Client auf PGlite, Port 3000, in fünf Formaten
+> (360 × 640 · 360 × 800 · 375 × 812 · 390 × 844 · 412 × 915): nichts rollt,
+> nichts wird abgeschnitten, die Aktionsleiste bleibt überall im Bild. Dazu
+> ganze Partien gegen den Bot — die Summe beider Jetonstände plus Topf blieb
+> in jeder Stichprobe genau 400. **Nicht geprüft: das Aussehen.** Im
+> Sitzungsbrowser lässt sich kein Bildschirmfoto machen; belegt sind Aufbau,
+> Maße, Farben, Kontraste und Verhalten, nicht der Auftritt. Vor `main`
+> gehört das einmal an ein echtes Handy.
+>
+> **BroJetons (27. August 2026).** Poker hat eine eigene Chip-Währung:
+> `account.bro_jetons`, Startstapel 1000, im Shop gegen Münzen (40/100/280
+> für 500/1.500/5.000). Zurück in Münzen gehen sie nicht. Wer den Tisch
+> aufmacht, stellt Mindest-Einsatz und Blinds. Die Plattform zieht den
+> Buy-in beim Partiestart ein und zahlt den Reststapel am Ende aus
+> (`chip_lock`); das Spielmodul sieht weiter nur Zahlen (`chipStackField`).
 
 > **Skat ist neu auf `staging` (10. August 2026), noch nicht in der
 > Produktion.** Das volle Spiel: Reizen nach Reizwert, Skataufnahme oder
@@ -773,11 +1254,76 @@ vorzustellen ist die eigentliche Hürde.
 **Die Ordnung kommt vom Server** (`soloVorschau` in der Sicht, je wählbarem Solo
 eine `CardOrder`), nicht aus dem Client. Ein Client, der Solo-Trumpfordnungen
 selbst nachbaut, wäre die zweite Wahrheit — Grundsatz 6. Gerechnet wird sie nur in
-der Vorbehaltsabfrage und nur für den Sitz, der dran ist.
+der Vorbehaltsabfrage und nur für Sitze, die ihre Antwort noch schulden.
 
 Dazu `pflichtsoloOffen`: welche Sitze ihr Pflichtsolo noch offen haben. Stand
 bisher nirgends, obwohl es mitentscheidet, ob man freiwillig ein Solo wählt oder
 auf die Vorführung wartet.
+
+### Die Vorbehaltsabfrage läuft gleichzeitig (25. August 2026)
+
+Bisher wurde reihum gefragt: „Bist du gesund?" — vier Mal hintereinander, und
+drei Spieler sahen jeweils zu. Jetzt erklären **alle gleichzeitig**, mit einer
+gemeinsamen Frist von **30 Sekunden**; wer bis dahin nichts sagt, gilt als
+gesund.
+
+**Die Gewichtung ändert sich dadurch nicht.** Welcher Vorbehalt gewinnt,
+entscheidet weiterhin `resolveVorbehalte` an Gewicht und Vorhand-Nähe — nicht
+daran, wer zuerst getippt hat. Die Reihenfolge steckt in der Auflösung, nicht
+im Ablauf der Frage.
+
+**Getragen wird die Frist von der Schaupause der Plattform**, nicht von einer
+neuen Mechanik: `interludeMs` liefert die 30 Sekunden, `advanceInterlude` füllt
+die offenen Antworten mit „gesund" und löst auf. Dort steht schon alles, was es
+dafür braucht — eine Frist ab Phasenbeginn, Bots, die ihre Antwort selbst
+geben, und ein Weiterlaufen von selbst. Das Modul bleibt uhrlos.
+
+Neu in der Engine: `vorbehaltOffen(state)` (wer schuldet noch) und
+`vorbehalteAblaufen(state)` (Frist abgelaufen). `vorbehaltTurn` gibt es
+weiterhin, aber **nur noch für die Vorführung** — dort ist genau ein Sitz am
+Zug, sein Solo ist Pflicht, und es gilt der normale Zugtimer samt
+Bot-Übernahme. Eine Frist mit „dann eben gesund" gäbe es dort nicht.
+
+**Fremde Antworten bleiben bis zum Ende der Abfrage verdeckt**, und zwar auch
+das „gesund". Vorher war nur die *Art* eines Vorbehalts verborgen; das reichte,
+solange reihum gefragt wurde. Gleichzeitig gefragt hätte sonst, wer sich Zeit
+lässt, erst die Antworten der anderen gesehen und sich danach entschieden. In
+der Sicht steht deshalb bei fremden Sitzen `'geheim'` — sichtbar bleibt nur,
+DASS jemand geantwortet hat. Mit dem Ende der Phase liegt alles offen, und der
+Client lässt dann erst die Zurufe aufblitzen.
+
+Zweimal antworten weist die Engine ab: Sonst könnte man seine Erklärung
+zurücknehmen, nachdem man an den Zurufen der anderen gehört hat, wie sie
+stehen.
+
+**Neu am Protokoll:** `interludeDeadline` in der Sichtnachricht. Der Zugtimer
+`turnDeadline` gilt einem Sitz, die Schaupause allen — ohne sichtbaren Zähler
+wüsste niemand, dass eine Uhr läuft, und das Blatt verschwände plötzlich.
+
+**Neu am Prüfstand:** `interludeMaxMs` in den Laufzeitoptionen deckelt jede
+Schaupause. Ohne die Grenze säße jeder Test, der auf die Zeit NACH einer Pause
+zielt, je Runde 30 Sekunden ab. Die Harness setzt 250 ms — **nicht kürzer**:
+Darunter lief die Frist ab, während die Antwort eines Testclients noch
+unterwegs war, und der Test scheiterte an einem `actionRejected`, das mit der
+geprüften Sache nichts zu tun hatte. Nur unter Last, also flatterig.
+
+### Armut-Blatt: durchscheinend und über der Hand
+
+Ob man eine Armut annimmt, entscheidet sich an den eigenen Karten. Das Blatt
+saß aber wie jedes andere `doko-sheet` am unteren Rand — genau auf der Hand —
+und verdunkelte den Tisch dazu. `.doko-sheet--armut` lässt den Hintergrund
+frei, setzt das Blatt oberhalb der Handreihe ab (dieselbe Rechnung wie bei
+`.doko-error`) und macht es durchscheinend. `pointer-events` liegen nur auf dem
+Blatt selbst, nicht auf der ganzen Fläche — sonst hinge eine unsichtbare Sperre
+über dem Bildschirm.
+
+### Aufspiel wandert nicht mehr
+
+Das Abzeichen hing an `view.currentActor` und sprang deshalb während der
+Vorbehaltsabfrage reihum mit der Frage „bist du gesund?" von Sitz zu Sitz,
+obwohl Aufspiel damit nichts zu tun hat. Jetzt steht es fest bei der Vorhand
+und nur bis zum Ende der Abfrage; sobald gespielt wird, sieht man am laufenden
+Stich ohnehin, wer angespielt hat.
 
 ### Trophäen: die Untergrenze bei 0 ist gewollt
 
@@ -1033,6 +1579,49 @@ durchzieht. Das Browserwerkzeug erzeugt beim Ziehen nur drei, vier
 Zeigerereignisse; die liegen weiter auseinander als `SPRUNG` und bleiben
 deshalb Tupfer. Ein Finger liefert sechzig je Sekunde. **Sollte ein Strich in
 der Hand zerfallen, ist `SPRUNG` die Zahl, an der man dreht.**
+
+## Am 5. September: die Anordnung im Profil
+
+Der Profil-Tab hatte seit dem 5. August die richtigen Bausteine, aber nicht
+die Reihenfolge, die er sich selbst aufgeschrieben hatte. Im Quelltext stand
+als Rangfolge „erst wer ich bin, dann was mir gehört, dann was ich geleistet
+habe, dann meine Leute — und ganz zum Schluss, was man ein Mal im Jahr
+braucht"; auf dem Bildschirm stand es anders. Drei Dinge sind gerichtet:
+
+**Das Namensschild steht jetzt vor dem Stufenbalken.** Vorher war das Erste
+im eigenen Profil ein Fortschrittsbalken, und die Zahl, die er erklärt, kam
+als Stufenplakette erst darunter im Schild. Jetzt stehen Plakette und Balken
+beieinander. Der Fortschritt geht dabei nirgends verloren: Die Kopfleiste
+zeigt ihn auf **jedem** Tab (`front-xp`) — das Profil muss ihn nicht als
+Erstes wiederholen.
+
+**Die Geburtstagstafel wandert.** An 364 Tagen im Jahr ist sie eine
+Ankündigung („noch 87 Tage") und stand trotzdem mitten im Profil, oberhalb
+von Trophäen und Freunden. Sie sitzt jetzt unten, direkt über dem Konto — bei
+den anderen Sachen, die man ein Mal im Jahr braucht. **An dem einen Tag, an
+dem es etwas abzuholen gibt, springt sie nach ganz oben**, unter das
+Namensschild. Der Grund ist konkret: Auf den Profil-Reiter zeigt kein Punkt,
+der auf ein Geschenk hinwiese — läge die Tafel an diesem Tag unten, müsste
+man am eigenen Geburtstag durch das ganze Profil rollen, um sie zu finden.
+
+**Der Countdown steht nur noch einmal auf dem Bildschirm.** Er stand
+wortgleich zweimal da: unter dem Namen im Schild und noch einmal als Zusatz
+der Geburtstagstafel. Der Zusatz sagt beim Warten jetzt „Einmal im Jahr".
+
+**Die Anordnung ist von jetzt an geprüft** —
+`packages/client/src/screens/Profil.test.tsx`, vier Tests. Sie rendern den
+echten Startbildschirm, wechseln auf den Profil-Tab und vergleichen die
+Reihenfolge der Tafelüberschriften im Baum. Eine Rangfolge, die nur als
+Kommentar existiert, fällt beim nächsten Umbau unbemerkt zurück: Man schiebt
+eine Tafel ein und liest den Kommentar zwanzig Zeilen weiter oben nicht mit.
+Genau das war ja passiert.
+
+> **Nebenbei gebraucht:** `vitest.setup.ts` hat jetzt einen stummen
+> `ResizeObserver`. jsdom kennt keinen, der Trophäenpfad legt beim Aufbau
+> einen an (`Pfad.tsx`) — ohne Ersatz stirbt **jeder** Test, der den
+> Startbildschirm rendert, an einer Stelle, die mit dem Geprüften nichts zu
+> tun hat. Messen muss der Ersatz nichts: In jsdom hat ohnehin alles die
+> Größe null.
 
 ## Am 5. August: Profil-Tab und die Sache mit den Knöpfen
 

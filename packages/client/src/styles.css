@@ -825,6 +825,54 @@ td {
   z-index: 300;
   padding: 1rem;
 }
+/*
+ * Armut-Entscheidung: durchscheinend und ueber der Hand, nicht davor.
+ *
+ * Ob man eine Armut annimmt, entscheidet sich an den eigenen Karten. Das
+ * Blatt sass aber am unteren Rand — genau auf der Hand — und verdunkelte den
+ * Tisch dazu. Jetzt bleibt der Hintergrund frei, das Blatt sitzt oberhalb der
+ * Handreihe, und die Karten scheinen durch.
+ *
+ * Der Abstand nach unten rechnet sich aus der Kartenhoehe (--hw x --pc-ratio)
+ * plus der eigenen Zeile darueber. Dieselbe Rechnung steht bei `.doko-error`;
+ * beide muessen ueber derselben Hand stehenbleiben.
+ */
+.doko-sheet--armut {
+  background: none;
+  align-items: flex-end;
+  padding-bottom: calc(var(--hw) * var(--pc-ratio) + 4.6rem);
+  /* Keine unsichtbare Sperre ueber dem ganzen Bildschirm: Nur das Blatt
+     selbst faengt Tipper ab, alles andere bleibt bedienbar. */
+  pointer-events: none;
+}
+.doko-sheet--armut .doko-sheet-card {
+  pointer-events: auto;
+  max-width: 26rem;
+  opacity: 0.88;
+  /* Das Blatt muss zwischen Kopfzeile und Hand passen. `85dvh` wie sonst
+     waere hier zu hoch: Zusammen mit dem Abstand nach unten schoebe es sich
+     oben aus dem Bild, und der obere Teil des Textes waere nicht erreichbar. */
+  max-height: calc(100dvh - var(--hw) * var(--pc-ratio) - 9rem);
+  /* Der Rahmen kommt als border-image aus dem Menueblatt und traegt seine
+     eigene Flaeche. Durchscheinen laesst ihn nur die Deckkraft des ganzen
+     Blattes, nicht eine Hintergrundfarbe. */
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+.doko-sheet--armut .doko-sheet-card p {
+  font-size: 0.84rem;
+}
+
+/* Hinweis und Zaehler der gleichzeitigen Vorbehaltsabfrage. */
+.doko-vb-hinweis {
+  font-size: 0.8rem;
+  margin: 0 0 0.6rem;
+}
+.doko-vb-frist {
+  float: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
 /* Vorbehalt u. a.: Karte mittig im Bildschirm, nicht am unteren Rand. */
 .doko-sheet--mitte {
   align-items: center;
@@ -3102,6 +3150,33 @@ td {
   border: 1px solid rgba(226, 182, 79, 0.45);
 }
 
+/*
+ * Spieler gerade online — gruener Punkt statt Icon: Die Zeile ist mit vier
+ * Pillen auf einem Hochkant-Handy eng, ein Punkt braucht keine Iconbreite.
+ * Der Punkt pulst leicht, damit "lebt gerade" ablesbar ist, ohne zu blinken.
+ */
+.front-online {
+  color: #9fe8bf;
+  border: 1px solid rgba(120, 210, 165, 0.45);
+  padding-right: 0.55rem;
+}
+.front-online-punkt {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b8f5d3, #4ecb86 70%);
+  box-shadow: 0 0 6px rgba(78, 203, 134, 0.8);
+  animation: front-online-atmen 2.6s ease-in-out infinite;
+  flex: 0 0 auto;
+}
+@keyframes front-online-atmen {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .front-online-punkt { animation: none; }
+}
+
 .front-waehrung--vip {
   color: var(--lila);
   border: 1px solid rgba(166, 120, 242, 0.45);
@@ -4311,9 +4386,17 @@ td {
   .pf-funke, .pf-schnee { opacity: 0.5; }
 }
 
-/* Anmeldung: schmale, mittige Karte - derselbe ruhige Auftritt wie danach. */
+/* Anmeldung: schmale, mittige Karte - derselbe ruhige Auftritt wie danach.
+
+   Die Breite darf hier NICHT begrenzt werden, obwohl das Formular schmal
+   bleiben soll: `.auth` traegt den Hintergrund und liegt als `position:
+   fixed; inset: 0` hinter allem. Ein `max-width` darauf (zusammen mit dem
+   `margin: 0 auto` aus der `main`-Regel) schnitt daraus eine 384 px breite
+   Bildsaeule in der Mitte - links und rechts die nackte body-Farbe. Am Handy
+   fiel es nicht auf, weil 384 px dort breiter als der Bildschirm sind.
+   Schmal bleibt das Formular ueber `.auth .panel` (max-width 22rem). */
 main.auth {
-  max-width: 24rem;
+  max-width: none;
   padding-top: max(3rem, 12vh);
 }
 
@@ -5230,6 +5313,24 @@ main.auth > .muted {
 .rechtliches a {
   color: var(--muted);
   text-decoration: underline;
+  /* Die Zeile ist nur 18 px hoch; empfohlen sind 44 px Antippflaeche.
+     Vergroessert wird sie ueber eine unsichtbare Flaeche, nicht ueber
+     Innenabstand: Innenabstand wuerde die Zeilenhoehe aufblaehen und den
+     Abstand zum Formular darueber veraendern. So bleibt die Optik gleich.
+
+     Nur auf der Anmeldung: Im Profil steht direkt darunter "Konto loeschen"
+     (Abstand 0,1 rem), eine unsichtbare 44-px-Flaeche wuerde genau darauf
+     liegen und dessen Klicks abfangen. */
+  position: relative;
+}
+.auth .rechtliches a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
 .rechtliches a:hover {
   color: var(--text);
@@ -5495,6 +5596,14 @@ main.auth > .muted {
   border-radius: 0;
   padding: 0.4rem 0.6rem 0.7rem;
 }
+/* Der Google-Knopf: Google zeichnet ihn selbst, hier nur die Buehne. Leer
+   (keine Client-ID, Google blockiert) faellt er auf Hoehe null zusammen. */
+.auth-google {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+.auth-google:empty { margin-top: 0; }
 .auth .panel label {
   display: block;
   margin: 0.5rem 0 0;
@@ -7274,6 +7383,18 @@ main.auth > .muted {
   flex: 0 0 auto;
 }
 
+.shop-preis-muenze {
+  width: 0.72rem;
+  height: 0.72rem;
+  flex: 0 0 auto;
+}
+
+span.hub-angebot-art.poker-jeton-stapel {
+  width: 2.6rem;
+  height: 2.6rem;
+  max-width: 2.6rem;
+}
+
 /*
  * Die Truhenkachel im Regal.
  *
@@ -8826,9 +8947,10 @@ main.auth > .muted {
   Der Stufenblock im Profil: eingelassenes Holzfeld statt flachem Kasten.
 
   Er war der letzte Abschnitt im Profil-Tab, der noch aus runden Ecken und
-  einem duennen Strich bestand - und er steht als Erstes auf dem Bildschirm,
-  direkt ueber dem Messingschild. Nur im Profil: In der Stufenleiter steht
-  derselbe Block auf einem Blatt, nicht auf gemaltem Holz.
+  einem duennen Strich bestand - und er steht ganz oben auf dem Bildschirm,
+  direkt unter dem Messingschild (bis zum 05.09.2026 darueber). Nur im Profil:
+  In der Stufenleiter steht derselbe Block auf einem Blatt, nicht auf gemaltem
+  Holz.
 */
 .front-profil--a .stufe-block {
   background: none;
@@ -11405,59 +11527,24 @@ main.auth > .muted {
   color: #a595c4;
 }
 
-/* --- Gegnerzahl beim Online-Match ---------------------------------------- */
+/* --- Countdown der Mitspielersuche ---------------------------------------- */
 
 /*
- * Drei Zeilen untereinander statt drei Knöpfen nebeneinander: Neben dem Namen
- * steht, wie viele Tische in diesem Topf gerade offen sind, und dafür braucht
- * jede Zeile die volle Breite.
- */
-.mm-zahlwahl {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-/*
- * Der Name steht MITTIG im Kasten, die Zahl der offenen Tische sitzt rechts
- * in der Ecke.
+ * Hier stand bis zum 06.09.2026 die Wahl der Gegnerzahl (`mm-zahlwahl`,
+ * `mm-zahl`): drei Toepfe, in denen man einzeln suchte. Seit die Suche ueber
+ * die Schlange des Servers laeuft, gibt es nur noch einen Topf und deshalb
+ * nichts mehr zu waehlen — dafuer eine Zahl, die herunterzaehlt.
  *
- * Vorher teilten sich beide die Zeile (`space-between`), und damit stand der
- * Name links am Rand — in einer Reihe aus drei gleich breiten Kaesten sieht
- * das aus wie eine Liste und nicht wie eine Wahl. Die Zahl kann nicht
- * einfach mit in die Mitte: Sie aendert sich alle paar Sekunden, und ein
- * Name, der dabei hin und her rutscht, liest sich wie ein Fehler. Also
- * hoert sie auf, in der Zeile mitzurechnen.
+ * Tabellenziffern, damit die Zahl beim Herunterzaehlen nicht in der Breite
+ * springt: Bei proportionalen Ziffern wandert die ganze Zeile im Sekundentakt
+ * hin und her.
  */
-.mm-zahl {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border: 0;
-  border-radius: 14px;
-  color: #cbbde8;
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  cursor: pointer;
-  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), color 140ms ease;
+.mm-countdown {
+  margin: 14px 0 2px;
+  color: #ffd873;
+  font: 800 46px/1 system-ui;
+  font-variant-numeric: tabular-nums;
 }
-.mm-zahl-name { font: 800 14px/1 system-ui; }
-.mm-zahl-warten {
-  position: absolute;
-  right: 16px;
-  font: 700 11.5px/1 system-ui;
-  letter-spacing: 0.04em;
-  opacity: 0.65;
-}
-.mm-zahl[data-an] {
-  color: #1a0e05;
-  background: linear-gradient(180deg, #ffd873, #e0a83c);
-  box-shadow: 0 10px 22px -14px rgba(224, 168, 60, 0.9);
-}
-.mm-zahl:active { transform: scale(0.985); }
 
 /* --- Mehrere KI-Gegner ---------------------------------------------------- */
 
@@ -12795,6 +12882,1501 @@ main.auth > .muted {
   .mm-brett { transition-duration: 1ms; }
 }
 
+/* ===========================================================================
+   Easy Poker — Texas Hold'em zu zweit, Hochkant-Handy
+   ---------------------------------------------------------------------------
+   Zwei Flächen: das Hauptmenü (.poker-menue) und der Tisch (.poker-buehne).
+   Beide sind `position: fixed`, weil das Spiel den ganzen Bildschirm einnimmt
+   und nichts rollen soll — sieben Karten, zwei Stapel und vier Knöpfe müssen
+   ohne Wischen erreichbar sein.
+
+   Die Maße hängen an `min(vw, dvh)` und nicht nur an der Breite. Das ist der
+   Unterschied zwischen 360 × 800 und 412 × 915: Auf dem kurzen Gerät ist die
+   Höhe die knappe Größe, auf dem langen die Breite. Wer nur nach `vw` rechnet,
+   schiebt auf dem kurzen Bildschirm die Aktionsleiste aus dem Bild — und genau
+   die darf nie fehlen.
+
+   Die Apple-Notch: Jede Schaltfläche am oberen Rand rechnet mit
+   `env(safe-area-inset-top)`, jede am unteren mit `-bottom`. Ohne das liegt
+   der Zurück-Knopf auf iPhones unter der Statusleiste.
+   =========================================================================== */
+
+.poker-menue,
+.poker-buehne {
+  position: fixed;
+  inset: 0;
+  /* styles.css setzt weiter oben `main { max-width: 60rem; padding: 1rem }`.
+     Beides gilt auch für einen Vollbild-Bildschirm: Die Polsterung schiebt den
+     Inhalt um 16 px ein, und die Höchstbreite kappt die feste Fläche auf einem
+     breiten Schirm bei 960 px. Deshalb hier ausdrücklich zurücknehmen.
+
+     Das `padding: 0` stand beim ersten Anlauf NICHT hier, und genau das ist
+     die Falle, vor der die Doku warnt: Gemessen lag der Tisch dann 16 px vom
+     Rand, war 358 statt 390 px breit, und die untere Polsterung fraß die Luft
+     der Aktionsleiste. `.poker-menue` überschreibt sie mit eigenen 20 px und
+     sah deshalb richtig aus — der Tisch nicht. */
+  padding: 0;
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+  /* Doppeltipp-Zoom aus: Wer zwei Aktionen schnell hintereinander antippt, hat
+     sonst plötzlich einen vergrößerten Ausschnitt vor sich. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+
+  /* Die Karte hat dasselbe Seitenverhältnis wie am Doppelkopftisch, damit
+     Karten überall in Brauweg gleich proportioniert sind. */
+  --poker-ratio: 1.452;
+  --poker-brett-karte: clamp(42px, min(16.5vw, 11.5dvh), 72px);
+  --poker-hand-karte: clamp(62px, min(25vw, 16.5dvh), 106px);
+  --poker-gegner-karte: clamp(34px, min(12.5vw, 8.4dvh), 56px);
+
+  --poker-filz: #14392a;
+  --poker-filz-tief: #0b241a;
+  --poker-holz: #241608;
+  --poker-papier: #f6f1e6;
+  --poker-tinte: #1b2429;
+  --poker-rot: #bf4a3f;
+}
+
+/* --- Hauptmenü ------------------------------------------------------------ */
+
+.poker-menue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: var(--text);
+  background:
+    radial-gradient(120% 62% at 50% 0%, rgba(74, 156, 120, 0.42), rgba(8, 20, 15, 0) 70%),
+    radial-gradient(95% 55% at 50% 100%, rgba(226, 182, 79, 0.18), rgba(8, 20, 15, 0) 70%),
+    #0c1a15;
+}
+
+/* Nicht ganz oben in der Ecke: Dort sitzt auf dem iPhone die Notch. */
+.poker-zurueck {
+  position: fixed;
+  left: 14px;
+  top: calc(env(safe-area-inset-top) + 16px);
+  z-index: 3;
+  padding: 10px 15px;
+  border: 0;
+  border-radius: 12px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.poker-zurueck:active { transform: scale(0.96); }
+
+/*
+ * Info sitzt spiegelbildlich zu Zurück: oben rechts, unter der Notch.
+ * Das Wort steht dabei, nicht nur ein Fragezeichen — sonst sucht man die
+ * Regeln und findet einen runden Knopf, den niemand als Hilfe liest.
+ */
+.poker-info {
+  position: fixed;
+  right: 14px;
+  top: calc(env(safe-area-inset-top) + 16px);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 8px 8px;
+  border: 0;
+  border-radius: 12px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.poker-info b {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #1b1408;
+  font: 800 13px/1 Georgia, 'Times New Roman', serif;
+  font-style: italic;
+}
+.poker-info:active { transform: scale(0.96); }
+.poker-info.is-tisch {
+  position: static;
+  flex: 0 0 auto;
+  padding: 6px 10px 6px 6px;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  color: #eef4f0;
+}
+.poker-info.is-tisch b {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+
+.poker-menue-mitte {
+  width: min(92vw, 420px);
+  text-align: center;
+}
+
+.poker-titel {
+  margin: 0 0 6px;
+  font: 900 clamp(34px, 11.5vw, 54px)/1 system-ui;
+  letter-spacing: -0.045em;
+  color: var(--text);
+}
+.poker-titel span { color: var(--gold); }
+
+.poker-untertitel {
+  margin: 0 0 12px;
+  font: 500 13px/1.5 system-ui;
+  color: var(--muted);
+}
+
+/*
+ * Lobby und Wartebereich brauchen die Hoehe: Titel und Knoepfe bleiben,
+ * die Liste rollt dazwischen. Das Menue selbst bleibt eine Komposition.
+ */
+.poker-menue[data-lage='liste'] {
+  justify-content: flex-start;
+  padding-top: calc(env(safe-area-inset-top) + 64px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+}
+.poker-menue[data-lage='liste'] .poker-menue-mitte {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Schriftgröße 16px ist Pflicht, keine Geschmacksfrage: Safari auf dem iPhone
+ * zoomt beim Antippen jedes Eingabefelds unter 16px in die Seite hinein — und
+ * kommt nicht von selbst wieder heraus.
+ */
+.poker-namensfeld {
+  width: 100%;
+  padding: 13px 16px;
+  border: 0;
+  border-radius: 15px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  font: 600 16px/1 system-ui;
+  text-align: center;
+  outline: none;
+  transition: box-shadow 200ms ease;
+}
+.poker-namensfeld::placeholder { color: #7f9a8d; }
+.poker-namensfeld:focus { box-shadow: inset 0 0 0 2px rgba(74, 156, 120, 0.75); }
+
+.poker-sitze-wahl {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 10px 0 2px;
+}
+.poker-sitze-knopf {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 12px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 800 15px/1 system-ui;
+  cursor: pointer;
+}
+.poker-sitze-knopf[data-an] {
+  color: #08130e;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 3px 0 #2a5f47;
+}
+.poker-sitze-text {
+  margin: 0 0 8px;
+  font: 600 12px/1.3 system-ui;
+  color: #9fbcae;
+}
+
+.poker-guthaben {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 7px 14px 7px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(226, 182, 79, 0.45);
+  font: 800 16px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.poker-guthaben .poker-jeton-zeichen {
+  width: 1.15em;
+  height: 1.15em;
+}
+.poker-guthaben em {
+  font: 600 12px/1 system-ui;
+  color: #cfe3d8;
+  font-style: normal;
+}
+
+/*
+ * Drei Vorgaben statt eines Formulars: Locker / Abend / Hoch. Feineinstellung
+ * liegt im Blatt darunter — sonst laeuft das Menue aus einer Viewport-Hoehe.
+ */
+.poker-einsatzwahl {
+  margin: 8px 0 6px;
+}
+.poker-vorgaben {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.poker-vorgabe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px 9px;
+  border: 0;
+  border-radius: 14px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: inherit;
+  cursor: pointer;
+}
+.poker-vorgabe strong {
+  font: 800 13px/1 system-ui;
+}
+.poker-vorgabe em {
+  font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.poker-vorgabe em span {
+  color: #9fbcae;
+  font-weight: 600;
+}
+.poker-vorgabe[aria-pressed='true'] {
+  color: #08130e;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 3px 0 #2a5f47;
+}
+.poker-vorgabe[aria-pressed='true'] em,
+.poker-vorgabe[aria-pressed='true'] em span {
+  color: #08130e;
+  opacity: 0.78;
+}
+.poker-vorgabe:active { transform: scale(0.97); }
+
+.poker-einsatz-zeile {
+  margin: 8px 0 0;
+  font: 700 12px/1.3 system-ui;
+  color: var(--gold);
+}
+
+.poker-chipreihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 0 0 4px;
+}
+.poker-chip {
+  min-width: 46px;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 12px;
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font: 800 14px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.poker-chip[aria-pressed='true'] {
+  color: #08130e;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 3px 0 #2a5f47;
+}
+.poker-chip:active { transform: scale(0.97); }
+
+.poker-lobby {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.poker-lobby-zeile {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 13px;
+  border-radius: 14px;
+  color: #eef4f0;
+  background: linear-gradient(180deg, rgba(38, 82, 52, 0.95) 0%, rgba(24, 56, 34, 0.96) 100%);
+  border: 1.5px solid rgba(255, 200, 110, 0.5);
+  box-shadow: 0 3px 0 rgba(16, 10, 4, 0.8);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.poker-lobby-zeile:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(16, 10, 4, 0.8);
+}
+.poker-lobby-wer {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 14px/1.2 system-ui;
+}
+.poker-lobby-platz {
+  flex: 0 0 auto;
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #9fbcae;
+}
+.poker-lobby-einsatz {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--gold);
+  font: 800 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.poker-lobby-einsatz .poker-jeton-zeichen {
+  width: 0.85em;
+  height: 0.85em;
+}
+.poker-lobby-einsatz em {
+  font: 600 11px/1 system-ui;
+  font-style: normal;
+  color: #cfe3d8;
+}
+.poker-lobby-bei {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 9px;
+  color: #08130e;
+  font: 800 10.5px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 3px 0 #2a5f47;
+}
+.poker-lobby-zeile:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+.poker-lobby-zeile:disabled .poker-lobby-bei {
+  color: #cfe3d8;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+.poker-warte-sitze {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.poker-warte-sitze li {
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  font: 700 12px/1.2 system-ui;
+  color: #e8f2ec;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.poker-warte-sitze li[data-leer] {
+  color: #7f9a8d;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/*
+ * Druckpunkt: harter Schlagschatten unten, beim Drücken geht der Knopf nach
+ * unten (DESIGN.md, „Bewegung"). Grün heißt „tun" — das ist im ganzen Produkt
+ * so und gilt auch hier.
+ */
+.poker-hauptknopf {
+  width: 100%;
+  margin-top: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: 0;
+  border-radius: 16px;
+  color: #08130e;
+  background: linear-gradient(180deg, #63bd93, #3f8a68);
+  box-shadow: 0 5px 0 #2a5f47, 0 14px 26px -16px rgba(0, 0, 0, 0.9);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 160ms ease;
+}
+.poker-hauptknopf em {
+  font: 600 11px/1 system-ui;
+  font-style: normal;
+  opacity: 0.7;
+}
+.poker-hauptknopf:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #2a5f47, 0 8px 16px -14px rgba(0, 0, 0, 0.9);
+}
+.poker-hauptknopf:disabled { filter: saturate(0.35) brightness(0.75); cursor: default; }
+
+.poker-zweitknopf {
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.13), 0 4px 0 rgba(0, 0, 0, 0.35);
+  font: 700 14px/1 system-ui;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.poker-zweitknopf em {
+  font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: normal;
+  opacity: 0.6;
+}
+.poker-zweitknopf:active { transform: translateY(2px); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.13); }
+.poker-zweitknopf:disabled { filter: brightness(0.7); cursor: default; }
+
+.poker-textknopf {
+  width: 100%;
+  margin-top: 2px;
+  padding: 8px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--muted);
+  background: transparent;
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+}
+.poker-textknopf[data-an] {
+  color: var(--gold);
+}
+
+.poker-fehler {
+  margin: 14px 0 0;
+  font: 600 12px/1.5 system-ui;
+  color: #ff9b90;
+}
+
+.poker-punkte-lauf {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 20px 0;
+}
+.poker-punkte-lauf span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: poker-huepfen 1.1s infinite ease-in-out;
+}
+.poker-punkte-lauf span:nth-child(2) { animation-delay: 0.16s; }
+.poker-punkte-lauf span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes poker-huepfen {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+  40% { transform: translateY(-7px); opacity: 1; }
+}
+
+/* --- Tisch ---------------------------------------------------------------- */
+
+.poker-buehne {
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  background: var(--poker-holz);
+}
+
+/*
+ * Stube und Tischplatte sind gemalt, nicht geladen (DESIGN.md).
+ *
+ * `.poker-filz` ist die dunkle Holzstube ringsum — derselbe Verlauf wie am
+ * Doppelkopftisch, damit beide Spiele im selben Raum stehen.
+ * `.poker-tischflaeche` ist die Platte darauf. Ein Bild wäre hier hundert
+ * Kilobyte für eine Fläche, die für jedes Seitenverhältnis neu beschnitten
+ * werden müsste.
+ */
+.poker-filz {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(120% 55% at 50% -10%, rgba(126, 96, 50, 0.22), rgba(0, 0, 0, 0) 62%),
+    linear-gradient(180deg, #2a1a0e 0%, #1d1208 32%, #140c05 100%);
+}
+
+/*
+ * Die Tischplatte.
+ *
+ * Gegner, Brett und eigene Hand liegen darauf — der Gegner an der oberen
+ * Kante, man selbst an der unteren. Der erste Anlauf hatte den Filz über den
+ * ganzen Bildschirm gelegt und die drei Abschnitte lose daraufgesetzt; auf
+ * einem 375 × 812 großen Gerät blieben dabei 260 px Fläche übrig, die nach
+ * nichts aussahen. Ein Oval, das genau den Platz zwischen Kopfzeile und
+ * Aktionsleiste einnimmt, füllt ihn — und sagt nebenbei, wo der Tisch aufhört.
+ *
+ * `border-radius` mit zwei Werten (waagerecht / senkrecht) macht aus dem
+ * Rechteck ein Oval, das auf jedem Seitenverhältnis dieselbe Form behält —
+ * ein einzelner Prozentwert wäre auf einem kurzen Gerät ein Kreis.
+ */
+.poker-tischflaeche {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 6px 10px;
+}
+.poker-tischflaeche::before {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  border-radius: 44% / 20%;
+  /* Unterste Lage ist seit der Bildbestellung ein gemalter Filz mit echtem
+     Korn (cover, EIN Bild, kein Kachelmuster — keine Naht moeglich). Die
+     Lichtkegel darueber bleiben CSS, und faellt das Bild aus, steht darunter
+     weiter der alte Verlauf. */
+  background:
+    radial-gradient(78% 40% at 50% 28%, rgba(126, 214, 170, 0.2), rgba(0, 0, 0, 0) 70%),
+    radial-gradient(125% 80% at 50% 118%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 62%),
+    url(/poker/filz.webp) center / cover no-repeat,
+    linear-gradient(180deg, #17402f 0%, var(--poker-filz) 46%, var(--poker-filz-tief) 100%);
+  /* Zwei Ringe sind die Holzkante: heller Rand, dunkle Fuge. */
+  box-shadow:
+    0 0 0 7px #3a2712,
+    0 0 0 9px #16100a,
+    0 18px 34px -18px rgba(0, 0, 0, 0.95),
+    inset 0 0 60px rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+}
+
+/* Kopfzeile: zurück, Marke, eigener Stand, Regeln. */
+.poker-kopf {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  padding-top: calc(env(safe-area-inset-top) + 8px);
+  background: linear-gradient(180deg, rgba(6, 14, 10, 0.72), rgba(6, 14, 10, 0));
+}
+
+.poker-rund {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 11px;
+  color: #eef4f0;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+  transition: transform 140ms ease;
+}
+.poker-rund:active { transform: scale(0.93); }
+
+.poker-marke {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.poker-marke strong {
+  font: 900 15px/1 system-ui;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+.poker-marke strong span { color: var(--gold); }
+.poker-marke em {
+  font: 600 10px/1 system-ui;
+  font-style: normal;
+  color: #9fbcae;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.poker-kopfstand {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(226, 182, 79, 0.4);
+  color: var(--gold);
+  font: 900 16px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Der Jeton ist gezeichnet und kein Bild: ein goldener Kreis mit heller
+ * Randmarkierung. Er steht an mehreren Stellen in verschiedenen Groessen,
+ * deshalb haengt alles an `em` und nicht an Pixeln.
+ */
+.poker-jeton-zeichen {
+  width: 0.78em;
+  height: 0.78em;
+  border-radius: 50%;
+  /* Seit der Bildbestellung ein gemalter Jeton; der alte CSS-Verlauf bleibt
+     als Unterlage stehen, bis das Bild geladen ist — so gibt es nie einen
+     leeren Kreis. */
+  background:
+    url(/poker/jeton.webp) center / contain no-repeat,
+    radial-gradient(circle at 35% 30%, #ffe8a8, #d8a63c 62%, #a97d24);
+  flex: 0 0 auto;
+}
+
+/*
+ * Shop-Kachel: ein, zwei oder drei Jetons im Stapel, damit Beutel / Sack /
+ * Kiste sich wie die Muenzpakete auf einen Blick unterscheiden.
+ */
+.poker-jeton-stapel {
+  position: relative;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: block;
+  margin: 0.05rem auto 0;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.poker-jeton-stapel .poker-jeton-zeichen {
+  position: absolute;
+  left: 50%;
+  width: 1.45rem;
+  height: 1.45rem;
+  margin-left: -0.725rem;
+}
+.poker-jeton-stapel.is-1 .poker-jeton-zeichen { top: 0.55rem; }
+.poker-jeton-stapel.is-2 .poker-jeton-zeichen:nth-child(1) { top: 0.78rem; }
+.poker-jeton-stapel.is-2 .poker-jeton-zeichen:nth-child(2) { top: 0.32rem; }
+.poker-jeton-stapel.is-3 .poker-jeton-zeichen:nth-child(1) { top: 0.95rem; }
+.poker-jeton-stapel.is-3 .poker-jeton-zeichen:nth-child(2) { top: 0.52rem; }
+.poker-jeton-stapel.is-3 .poker-jeton-zeichen:nth-child(3) { top: 0.1rem; }
+
+/* --- Sitze ---------------------------------------------------------------- */
+
+.poker-sitz {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+}
+
+.poker-sitz.is-gegner {
+  --poker-kb: var(--poker-gegner-karte);
+  padding: 10px 18px 6px;
+}
+.poker-sitz.is-ich {
+  --poker-kb: var(--poker-hand-karte);
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 18px 8px;
+}
+
+.poker-sitz-karten,
+.poker-hand {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.poker-hand { gap: 10px; }
+
+.poker-sitz-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.poker-sitz.is-ich .poker-sitz-text {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.poker-sitz-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 800 14px/1.2 system-ui;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.poker-sitz-name em {
+  font: 600 11px/1 system-ui;
+  font-style: normal;
+  color: #9fbcae;
+}
+
+/* „Geber" ist eine Information und keine Zierde: Wer den Knopf hat, zahlt den
+   kleinen Blind und handelt vor dem Flop zuerst. */
+.poker-knopfmarke {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(226, 182, 79, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(226, 182, 79, 0.5);
+  color: var(--gold);
+  font: 800 9px/1.4 system-ui;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.poker-sitz-stand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font: 900 17px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: #e8f2ec;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/*
+ * Wer am Zug ist, bekommt einen leuchtenden Rahmen — nicht die Karten, nicht
+ * den Namen, sondern der ganze Sitz. Am Tisch darf nur leuchten, was gerade
+ * wichtig ist (DESIGN-DOKO).
+ */
+.poker-sitz[data-aktiv]::before {
+  content: '';
+  position: absolute;
+  inset: 2px 8px;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1.5px rgba(120, 210, 165, 0.55);
+  background: rgba(120, 210, 165, 0.06);
+  animation: poker-atmen 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes poker-atmen {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+/* Der laufende Einsatz eines Sitzes, als Jetonmarke am Tischrand. */
+.poker-einsatz {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(6, 14, 10, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(226, 182, 79, 0.45);
+  color: var(--gold);
+  font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  animation: poker-marke-rein 260ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.poker-sitz.is-gegner .poker-einsatz { right: 14px; bottom: -9px; }
+.poker-sitz.is-ich .poker-einsatz { left: 14px; top: 0; }
+.poker-sitz.is-fremd .poker-einsatz {
+  left: 50%;
+  /* Deutlich unter den Sitz, nicht an seine Kante: Bei -8px lag die Pille
+     genau auf der Jetonzahl des Sitzes und verdeckte sie. */
+  bottom: -24px;
+  transform: translateX(-50%);
+}
+
+/* Fremde Sitze stehen auf dem Oval, nicht in der Spalte. Man selbst bleibt
+   unten in der Fliessrichtung — dort sind die Karten lesbar. */
+.poker-sitz.is-fremd {
+  --poker-kb: clamp(22px, min(7.4vw, 5.2dvh), 34px);
+  position: absolute;
+  z-index: 2;
+  width: max-content;
+  max-width: 96px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+  align-items: center;
+}
+.poker-sitz.is-fremd .poker-sitz-text { align-items: center; flex: 0 0 auto; }
+/* Umbrechen statt abschneiden: Mit `overflow: hidden` ragte die Geber-Marke
+   als schmaler Splitter ueber die Sitzkante hinaus — Name in die eine Zeile,
+   Marke darunter, beides mittig. */
+.poker-sitz.is-fremd .poker-sitz-name {
+  font-size: 11px;
+  max-width: 92px;
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 2px;
+}
+.poker-sitz.is-fremd .poker-sitz-stand { font-size: 12px; }
+.poker-sitz.is-fremd .poker-sprechblase {
+  left: 50%;
+  bottom: auto;
+  top: -14px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  padding: 3px 7px;
+}
+.poker-sitz.is-fremd[data-raus],
+.poker-sitz.is-fremd[data-pleite] { opacity: 0.42; }
+/*
+ * Zwei Reihen statt eines Ovals: drei Plaetze oben, zwei darunter an den
+ * Kanten. Der erste Anlauf setzte links/rechts auf 38 % Hoehe — genau die
+ * Zeile, in der die Brettkarten liegen. Auf 375 px Breite bleiben neben fuenf
+ * Brettkarten (~244 px) keine 96 px je Seite: Die Sitze lagen AUF dem Brett.
+ * Oberhalb des Topfes ist die Flaeche dagegen frei.
+ */
+.poker-sitz[data-ort='oben'] { top: 4px; left: 50%; transform: translateX(-50%); }
+.poker-sitz[data-ort='links'] { left: 2px; top: 17%; }
+.poker-sitz[data-ort='rechts'] { right: 2px; top: 17%; }
+.poker-sitz[data-ort='oben-links'] { top: 4px; left: 4%; }
+.poker-sitz[data-ort='oben-rechts'] { top: 4px; right: 4%; }
+
+/* Zu zweit bleibt der eine Gegner oben groesser — sonst saehe Kopf-an-Kopf
+   aus wie ein vergessener Sechser-Tisch. */
+.poker-tischflaeche[data-sitze='2'] .poker-sitz[data-ort='oben'] {
+  --poker-kb: var(--poker-gegner-karte);
+  flex-direction: row;
+  max-width: none;
+  padding: 8px 14px 4px;
+  /* Der grosse Kopf-an-Kopf-Sitz ragt bei 4px in die Holzrundung — die
+     Karten standen halb auf der Kante. Platz nach unten ist reichlich da. */
+  top: 24px;
+}
+.poker-tischflaeche[data-sitze='2'] .poker-sitz[data-ort='oben'] .poker-sitz-text {
+  align-items: flex-start;
+}
+.poker-tischflaeche[data-sitze='2'] .poker-sitz[data-ort='oben'] .poker-sitz-name {
+  font-size: 14px;
+  max-width: none;
+}
+.poker-tischflaeche[data-sitze='2'] .poker-sitz[data-ort='oben'] .poker-sitz-stand {
+  font-size: 17px;
+}
+
+.poker-tischflaeche[data-sitze='2'] { padding-top: clamp(78px, 16dvh, 118px); }
+.poker-tischflaeche[data-sitze='3'],
+.poker-tischflaeche[data-sitze='4'],
+.poker-tischflaeche[data-sitze='5'],
+.poker-tischflaeche[data-sitze='6'] {
+  padding-top: clamp(64px, 12dvh, 92px);
+  padding-left: 4px;
+  padding-right: 4px;
+}
+@keyframes poker-marke-rein {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Was der Gegner zuletzt getan hat — dieselben vier Wörter wie auf den
+   Knöpfen, damit man sie nebenbei lernt. */
+.poker-sprechblase {
+  position: absolute;
+  left: 14px;
+  bottom: -10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e8f2ec;
+  color: #10241b;
+  font: 800 11px/1 system-ui;
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.8);
+  animation: poker-blase 300ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes poker-blase {
+  from { transform: translateY(6px) scale(0.85); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* --- Tischmitte ------------------------------------------------------------ */
+
+.poker-mitte {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 12px;
+}
+
+.poker-topf {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(6, 14, 10, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transition: opacity 240ms ease;
+}
+.poker-topf span {
+  font: 700 10px/1 system-ui;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #9fbcae;
+}
+.poker-topf b {
+  font: 900 19px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+/* Ein leerer Topf steht trotzdem da: Verschwände er, sprängen Brett und
+   Karten bei jeder neuen Hand um seine Höhe. */
+.poker-topf[data-leer] { opacity: 0.35; }
+
+.poker-brett {
+  --poker-kb: var(--poker-brett-karte);
+  display: flex;
+  gap: clamp(4px, 1.6vw, 9px);
+  justify-content: center;
+}
+
+.poker-hinweis,
+.poker-band {
+  margin: 0;
+  min-height: 2.4em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+}
+/*
+ * Zwei Zeilen, zwei Fragen: oben „Was habe ich?", darunter „Wer ist dran?".
+ * Die Handstärke steht heller, weil sie sich seltener ändert und deshalb
+ * gelesen wird; der Zughinweis bleibt gedämpft und flackert dafür nicht ins
+ * Auge, wenn er alle paar Sekunden wechselt.
+ */
+.poker-hinweis {
+  font: 700 12px/1.3 system-ui;
+  color: #9fbcae;
+  letter-spacing: 0.02em;
+}
+.poker-hinweis b {
+  font: 800 14px/1.2 system-ui;
+  color: #e8f2ec;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+.poker-hinweis span { font: 600 11px/1.2 system-ui; }
+
+.poker-band {
+  padding: 6px 16px;
+  border-radius: 12px;
+  background: rgba(6, 14, 10, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: poker-band-rein 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.poker-band b { font: 900 15px/1.2 system-ui; }
+.poker-band span { font: 600 11px/1.3 system-ui; color: #9fbcae; }
+.poker-band[data-ton='gut'] b { color: #7fd6a6; }
+.poker-band[data-ton='schlecht'] b { color: #ff9b90; }
+.poker-band[data-ton='geteilt'] b { color: var(--gold); }
+@keyframes poker-band-rein {
+  from { transform: translateY(8px) scale(0.94); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Der Gewinn oder Verlust einer Hand, kurz über dem eigenen Sitz. */
+.poker-flug {
+  position: absolute;
+  right: 16px;
+  top: 0;
+  font: 900 20px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #ff9b90;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  animation: poker-steigen 1.9s ease-out forwards;
+}
+.poker-flug[data-plus] { color: #7fd6a6; }
+@keyframes poker-steigen {
+  0% { transform: translateY(10px) scale(0.8); opacity: 0; }
+  18% { transform: translateY(0) scale(1.1); opacity: 1; }
+  30% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-34px); opacity: 0; }
+}
+
+/* --- Karten ---------------------------------------------------------------- */
+
+.poker-karte {
+  position: relative;
+  width: var(--poker-kb, 60px);
+  height: calc(var(--poker-kb, 60px) * var(--poker-ratio));
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: calc(var(--poker-kb, 60px) * 0.11);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  animation: poker-geben 380ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+  animation-delay: var(--poker-ab, 0ms);
+}
+.poker-karte svg { display: block; width: 100%; height: 100%; }
+
+.poker-karte-grund {
+  fill: var(--poker-papier);
+  stroke: rgba(0, 0, 0, 0.22);
+  stroke-width: 1.5;
+}
+.poker-tinte { fill: var(--poker-tinte); }
+.poker-karte.is-rot .poker-tinte { fill: var(--poker-rot); }
+
+/*
+ * Die Rückseite trägt das Grün des Hauses, nicht das Rot der Spielbank.
+ *
+ * Sie ist damit die einzige Fläche am Tisch, die dieselbe Farbe hat wie der
+ * „Bet"-Knopf — was zusammengehört, sieht auch gleich aus.
+ */
+.poker-karte.is-ruecken img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Dieselbe Rundung wie die Vorderseite — das Bild selbst ist eckig,
+     die Form macht wie bei den Vorderseiten der Container. */
+  border-radius: calc(var(--poker-kb, 60px) * 0.11);
+}
+
+.poker-karte.is-leer {
+  filter: none;
+  animation: none;
+}
+.poker-karte.is-leer rect {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 5;
+}
+
+/* Die eigene Hand liegt leicht gefächert — zwei Karten, zwei Neigungen. */
+.poker-hand .poker-karte:first-child { transform: rotate(-3.5deg); }
+.poker-hand .poker-karte:last-child { transform: rotate(3.5deg); }
+/* Angetippt hebt sich die Karte an und stellt sich gerade: Sie soll in dem
+   Moment die am besten lesbare Fläche des Bildschirms sein. */
+.poker-hand .poker-karte[data-gehoben],
+.poker-hand .poker-karte[data-gehoben]:first-child,
+.poker-hand .poker-karte[data-gehoben]:last-child {
+  transform: translateY(-12px) scale(1.08) rotate(0deg);
+  filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.6));
+  z-index: 2;
+}
+
+/* Teil der gewerteten Kombination: goldener Rand. Gold heißt in Brauweg
+   „wertvoll" — genau das ist hier gemeint. */
+.poker-karte[data-hervor] {
+  filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+  box-shadow: 0 0 0 2.5px var(--gold), 0 6px 14px -6px rgba(0, 0, 0, 0.8);
+  animation: poker-gold 420ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes poker-gold {
+  from { box-shadow: 0 0 0 0 rgba(226, 182, 79, 0); }
+  to { box-shadow: 0 0 0 2.5px var(--gold), 0 6px 14px -6px rgba(0, 0, 0, 0.8); }
+}
+
+@keyframes poker-geben {
+  from {
+    transform: translateY(-42px) scale(0.72) rotate(-8deg);
+    opacity: 0;
+  }
+}
+
+/* --- Aktionsleiste --------------------------------------------------------- */
+
+/*
+ * Vier Knöpfe, immer dieselben vier, immer an derselben Stelle.
+ *
+ * Der Daumen lernt eine Position, keine wechselnde Reihenfolge — deshalb
+ * verschwindet nie einer, auch wenn er gerade nicht geht. Was möglich ist,
+ * leuchtet in seiner Bedeutungsfarbe (DESIGN.md: Grün = tun, Rot = Vorsicht);
+ * der Rest liegt blass daneben.
+ */
+.poker-aktionen {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  padding: 10px 12px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  background: linear-gradient(0deg, rgba(6, 14, 10, 0.9), rgba(6, 14, 10, 0));
+}
+
+/*
+ * Die vier Knoepfe sind gemalte Platten (docs/ASSETS-POKER-TISCH.md), per
+ * border-image auf jede Breite gezogen. Der Rahmen der Platten ist 30 px —
+ * genau das ist das Schnittmass, und es ist bei allen vier gleich, sonst
+ * wird die Reihe eine Treppe (die Lehre aus ASSETS-KNOEPFE.md).
+ */
+.poker-aktion {
+  min-height: 58px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 11px solid transparent;
+  border-image: url(/poker/knopf-check.webp) 30 fill / 11px stretch;
+  border-radius: 0;
+  color: #06120d;
+  background: none;
+  cursor: pointer;
+  transition: transform 110ms ease, filter 180ms ease;
+}
+.poker-aktion[data-art='fold'] { border-image-source: url(/poker/knopf-fold.webp); color: #fff3f1; }
+.poker-aktion[data-art='call'] { border-image-source: url(/poker/knopf-call.webp); color: #eaf2fc; }
+.poker-aktion[data-art='bet'] { border-image-source: url(/poker/knopf-bet.webp); color: #eefaf2; }
+.poker-aktion-wort {
+  font: 800 clamp(12px, 3.7vw, 15px)/1 system-ui;
+  letter-spacing: 0.01em;
+}
+.poker-aktion-zahl {
+  min-height: 0.9em;
+  font: 800 clamp(10px, 3vw, 12px)/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+}
+
+/*
+ * Nicht möglich: die Platte bleibt stehen (der Daumen lernt Orte, keine
+ * wechselnde Reihe), aber sie wird dunkel und farblos. Die Schrift bleibt
+ * hell — auf der abgedunkelten Platte ist das lesbarer als das alte
+ * Graugrün auf Dunkelgrün.
+ */
+.poker-aktion[aria-disabled] {
+  filter: saturate(0.2) brightness(0.5);
+  /* Die Schriftfarbe bleibt die der Platte: Sie dunkelt mit dem filter mit,
+     das Verhaeltnis Schrift zu Grund aendert sich dadurch kaum. */
+  cursor: default;
+}
+
+.poker-aktion[data-moeglich]:active {
+  transform: translateY(3px);
+  filter: brightness(0.92);
+}
+
+/* Wenn ich dran bin, hebt sich die ganze Leiste einmal kurz an. Das ist die
+   Rückmeldung „jetzt du" für den, der aufs Handy schaut, ohne zu lesen. */
+.poker-aktionen[data-an] { animation: poker-leiste 420ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes poker-leiste {
+  from { transform: translateY(9px); opacity: 0.55; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* --- Meldungen ------------------------------------------------------------- */
+
+.poker-fehlerpille,
+.poker-funk {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font: 700 12px/1 system-ui;
+  white-space: nowrap;
+}
+.poker-fehlerpille {
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.9);
+}
+.poker-funk {
+  top: calc(env(safe-area-inset-top) + 52px);
+  background: rgba(6, 14, 10, 0.85);
+  color: #ffd873;
+  box-shadow: inset 0 0 0 1px rgba(255, 216, 115, 0.35);
+}
+
+/* --- Blätter (Regeln, Ende) ------------------------------------------------ */
+
+/*
+ * Alles, was eine Erklärung oder eine Entscheidung ist, kommt als Blatt von
+ * unten (DESIGN-DOKO). Tipp auf den Hintergrund schließt — außer beim
+ * Partieende, dort steht eine Entscheidung an.
+ */
+.poker-blatt,
+.poker-ende {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(4, 10, 8, 0.72);
+  animation: poker-verdunkeln 200ms ease;
+}
+.poker-ende { align-items: center; }
+@keyframes poker-verdunkeln {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.poker-blatt-karte,
+.poker-ende-blatt {
+  width: min(100%, 460px);
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 20px 20px calc(env(safe-area-inset-bottom) + 20px);
+  border-radius: 22px 22px 0 0;
+  background: #16221d;
+  box-shadow: 0 -10px 40px -12px rgba(0, 0, 0, 0.9);
+  animation: poker-hochschieben 300ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.poker-ende-blatt {
+  margin: 0 14px;
+  border-radius: 22px;
+  text-align: center;
+}
+@keyframes poker-hochschieben {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* --- Das Setzblatt: Betrag fuer Bet waehlen ------------------------------- */
+
+.poker-blatt-karte.is-setzen { text-align: center; }
+
+.poker-setzen-betrag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 14px;
+  font-size: 26px;
+}
+.poker-setzen-betrag b {
+  font: 900 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+
+/*
+ * Der Regler. `appearance: none` auf Bahn und Griff, sonst malt jeder
+ * Browser seine eigene Form und der Griff ist am Handy zu klein zum Treffen.
+ * Der Griff ist der gemalte Jeton — man schiebt buchstaeblich einen Chip.
+ */
+.poker-regler {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  touch-action: pan-x;
+}
+.poker-regler::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0c1712 0%, #1d2c25 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.poker-regler::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 34px;
+  height: 34px;
+  margin-top: -12px;
+  border: 0;
+  border-radius: 50%;
+  background: url(/poker/jeton.webp) center / contain no-repeat;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
+  cursor: grab;
+}
+.poker-regler::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0c1712 0%, #1d2c25 100%);
+}
+.poker-regler::-moz-range-thumb {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: url(/poker/jeton.webp) center / contain no-repeat;
+}
+
+.poker-regler-enden {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 2px 12px;
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #9fbcae;
+}
+
+.poker-schnellwahl {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.poker-schnellknopf {
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: #dfe9e2;
+  font: 800 12px/1 system-ui;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.poker-schnellknopf[data-an] {
+  background: rgba(226, 182, 79, 0.18);
+  box-shadow: inset 0 0 0 1.5px rgba(226, 182, 79, 0.6);
+  color: var(--gold);
+}
+
+.poker-blatt-karte h2 { margin: 0 0 14px; font: 900 21px/1.2 system-ui; }
+.poker-blatt-karte h3 {
+  margin: 16px 0 6px;
+  font: 800 11px/1 system-ui;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.poker-blatt-karte p { margin: 0; font: 500 13px/1.55 system-ui; color: #cfe0d7; }
+.poker-blatt-karte b { color: var(--text); }
+
+.poker-blatt-liste,
+.poker-blatt-rang {
+  margin: 0;
+  padding-left: 1.2rem;
+  font: 500 13px/1.6 system-ui;
+  color: #cfe0d7;
+}
+.poker-blatt-rang { font-size: 12px; }
+.poker-blatt-fuss {
+  margin-top: 16px !important;
+  font-size: 11px !important;
+  color: var(--muted) !important;
+}
+.poker-blatt-karte .poker-hauptknopf { margin-top: 18px; }
+.poker-blatt-karte .poker-vorgaben { margin: 4px 0 8px; }
+.poker-blatt-karte .poker-chipreihe { margin: 0; }
+
+.poker-ende-blatt h2 { margin: 0 0 10px; font: 900 26px/1.1 system-ui; }
+.poker-ende-stand {
+  margin: 0 0 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  font: 900 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.poker-ende-stand b { color: #e8f2ec; }
+.poker-ende-stand b[data-mein] { color: var(--gold); }
+.poker-ende-stand span { color: var(--muted); font-size: 20px; }
+.poker-ende-liste {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.poker-ende-liste li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  font: 700 14px/1 system-ui;
+}
+.poker-ende-liste li b {
+  font: 900 16px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.poker-ende-liste li[data-mein] {
+  background: rgba(226, 182, 79, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(226, 182, 79, 0.35);
+  color: var(--gold);
+}
+.poker-ende-text { margin: 0; font: 500 12px/1.5 system-ui; color: var(--muted); }
+
+/* --- Weniger Bewegung ------------------------------------------------------ */
+
+/*
+ * Jede Animation endet hier ersatzlos (DESIGN.md, keine Ausnahme). Was sie
+ * getragen haben, steht überall auch als Zahl oder Farbe da — die
+ * Kartenrücken, der Einsatz, das Ergebnisband sind alle ohne Bewegung
+ * vollständig.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .poker-karte,
+  .poker-einsatz,
+  .poker-sprechblase,
+  .poker-band,
+  .poker-flug,
+  .poker-aktionen[data-an],
+  .poker-blatt,
+  .poker-ende,
+  .poker-blatt-karte,
+  .poker-ende-blatt,
+  .poker-punkte-lauf span,
+  .poker-sitz[data-aktiv]::before {
+    animation: none !important;
+  }
+  .poker-karte,
+  .poker-hand .poker-karte[data-gehoben] {
+    transition: none;
+  }
+}
+
 /* --- Zeichen als Symbol ---------------------------------------------------
    Siehe src/zeichen.tsx: Ein Kreuz als SCHRIFTZEICHEN wird nach seiner
    Vorschubbreite zentriert und nicht nach seiner Tinte — gemessen saß das ✕
@@ -13447,6 +15029,16 @@ main.auth > .muted {
   cursor: pointer;
 }
 
+/* Der Countdown der Mitspielersuche. Tabellenziffern, damit die Zahl beim
+   Herunterzaehlen nicht in der Breite springt — bei proportionalen Ziffern
+   wandert die ganze Zeile im Sekundentakt hin und her. */
+.fl-countdown {
+  margin: 14px 0 2px;
+  color: #2b93d8;
+  font: 800 46px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
 .fl-punkte-lauf { display: flex; justify-content: center; gap: 8px; margin: 18px 0 4px; }
 .fl-punkte-lauf span {
   width: 9px;
@@ -13682,6 +15274,106 @@ main.auth > .muted {
   cursor: pointer;
 }
 
+/* ===========================================================================
+   Breite Bildschirme: Listen dürfen nebeneinander stehen
+   ===========================================================================
+
+   Brauweg ist fürs Handy gebaut, und das ist richtig so — dort ist alles
+   gemessen tadellos (kein waagerechter Überlauf, Bedienelemente 48 Pixel).
+   Am Rechner blieb davon eine schmale Säule übrig: 13.681 Zeilen Stylesheet
+   mit genau zwei Haltepunkten, keiner davon für Listen.
+
+   Diese Regeln greifen AUSSCHLIESSLICH ab 60rem (960px). Darunter ändert sich
+   nichts — das ist Absicht und die Bedingung dafür, dass man sie gefahrlos
+   einschalten kann.
+
+   Die Spieltische bleiben bewusst außen vor: Ein Doppelkopftisch ist kein
+   Raster, er ist eine Anordnung um die eigene Hand herum. Wer ihn
+   auseinanderzieht, macht ihn schlechter, nicht größer.
+
+   `auto-fill` statt fester Spaltenzahl: Die Zahl der Spalten ergibt sich aus
+   der Breite, nicht aus einer Annahme über den Bildschirm. Auf 60rem sind es
+   zwei, auf einem sehr breiten Fenster drei — ohne weitere Haltepunkte. */
+@media (min-width: 60rem) {
+  /*
+     `.kachelraster` ist DAS Muster für diesen Fall — eine Klasse, die man ins
+     Markup schreibt, nicht eine Regel je Bildschirm. Vorher stand hier
+     `.lobby-rolle` direkt; mit der Spielauswahl als zweitem Nutzer wären daraus
+     zwei Einzellösungen geworden, und bei der zwanzigsten weiß niemand mehr,
+     welche Spaltenbreite die verbindliche ist.
+
+     Warum eine Klasse und nicht weiter ein Selektor je Ansicht: `.lobby-rolle`
+     kommt in Lobby.tsx ZWEIMAL vor — einmal als Tischliste und einmal als
+     Formular „Tisch erstellen". Die alte Regel traf beide. Das Formular hat
+     genau ein Kind (eine `.lobby-tafel`), das damit ab 960px in der ersten
+     Spalte von vieren klebte statt die Breite zu nutzen. Eine Klasse im Markup
+     trifft genau das, was gemeint ist.
+
+     Die Maße sind über Custom Properties einstellbar, damit der Nutzer die
+     Spaltenbreite setzen kann, ohne die Regel zu kopieren. */
+  .kachelraster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--kachel-min, 22rem), 1fr));
+    gap: var(--kachel-abstand, 0.5rem);
+    /* Verhindert, dass zwei Kacheln bei viel Platz senkrecht
+       auseinandergezogen werden. */
+    align-content: start;
+  }
+  /* Was keine Kachel ist, läuft über die ganze Breite: Fehlermeldung und der
+     Hinweis auf den leeren Tisch. Sonst stünde „Gerade ist kein Tisch offen"
+     als schmale Spalte neben nichts. */
+  .kachelraster > .error,
+  .kachelraster > .lobby-leer {
+    grid-column: 1 / -1;
+  }
+  /* Der Abstand kommt jetzt aus `gap`; der alte Fußabstand je Kachel würde
+     ihn verdoppeln. */
+  .lobby-tisch {
+    margin-bottom: 0;
+  }
+
+  /*
+     „Tisch erstellen" ist kein Raster, sondern EIN Feld mit Knöpfen — es
+     bekommt die Klasse deshalb nicht. Ohne Deckel liefe es dann aber über die
+     volle Breite: gemessen 1434px auf einem 1440er Fenster, mit einem
+     „Tisch erstellen"-Knopf von 1370px. Ein Formular liest sich nicht besser,
+     weil es breiter ist.
+
+     34rem und mittig statt links: Bis eben klebte es (als Nebenwirkung der
+     alten Raster-Regel) in einer 486px-Spalte am linken Rand, der Rest war
+     leerer Filz. Die Breite bleibt also ungefähr, wie sie war — sie steht
+     jetzt nur da, wo man hinsieht, und weil es so gemeint ist. */
+  .doko--erstellen .lobby-rolle > .lobby-tafel {
+    max-width: 34rem;
+    margin-inline: auto;
+  }
+
+  /*
+     Die Spielauswahl ist ein Vollbild über dem Hub und trägt ihre Szene selbst
+     — deshalb darf sie breiter werden, ohne dass der Hub dahinter mitwachsen
+     muss. Gemessen lag sie bei 1440px auf 480px, also 33% der Fläche; die
+     19 Spiele brauchten dabei 3,2 Bildschirmhöhen Scroll.
+
+     72rem und nicht randlos: Ein Banner, das über 1900px läuft, ist kein
+     Knopf mehr, sondern eine Litfaßsäule. */
+  .spielwahl {
+    max-width: 72rem;
+  }
+  /*
+     20rem statt der 22rem der Lobby: Die Banner haben 4:1, eine Kachel von
+     22rem wäre auf 1440px nur noch zu zweit im Bild. Mit 20rem stehen dort
+     drei nebeneinander und bleiben mit ~89px hoch genug zum Tippen.
+
+     Wichtig ist hier vor allem, DASS das Raster greift: `.hub-themenwahl` ist
+     eine Flex-Spalte mit `width: 100%` je Kachel. Ohne Raster würde die
+     breitere Tafel die Banner einfach mitziehen — die einzelne Kachel unter
+     „Alleine" wäre bei 72rem 1082px breit und damit 270px hoch. */
+  .spielwahl .kachelraster {
+    --kachel-min: 20rem;
+    --kachel-abstand: 0.55rem;
+  }
+}
+
 /* -- Filler: Spielart, Bot-Knopf, Warteband (Nachtrag 31.08.) ------------- */
 
 /* Der Schalter zwischen Nebel und Normal. Zwei Knoepfe in einer Rinne, der
@@ -13724,6 +15416,27 @@ main.auth > .muted {
   font: 600 12px/1.35 system-ui;
   text-align: center;
 }
+
+/* Der Block um Spielartschalter und Bot-Knopf.
+   Er fasst zusammen, was zusammengehoert: Der Schalter wirkt seit dem
+   06.09.2026 nur noch auf den Knopf darunter, weil die Mitspielersuche ihren
+   Tisch serverseitig mit dem Regelsatz des Moduls baut. Die Linie darueber
+   sagt das ohne Worte. */
+.fl-botblock {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.09);
+}
+.fl-blocktitel {
+  margin: 0 0 10px;
+  color: #7a7a7a;
+  font: 800 11.5px/1.3 system-ui;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/* Im Block sitzt der Knopf direkt unter dem Schalter — dessen eigener
+   Abstand nach unten genuegt. */
+.fl-botblock .fl-schalter { margin-bottom: 10px; }
 
 .fl-botknopf {
   width: 100%;
@@ -13923,6 +15636,16 @@ main.auth > .muted {
 .ei-botknopf { font-weight: 800; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); }
 .ei-botknopf:active { transform: scale(0.985); }
 .ei-botknopf:disabled { filter: saturate(0.4) brightness(0.97); cursor: default; }
+
+/* Der Countdown der Mitspielersuche. Tabellenziffern, damit die Zahl beim
+   Herunterzaehlen nicht in der Breite springt — bei proportionalen Ziffern
+   wandert die ganze Zeile im Sekundentakt hin und her. */
+.ei-countdown {
+  margin: 14px 0 2px;
+  color: #3d8a51;
+  font: 800 46px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
 
 .ei-punkte-lauf { display: flex; justify-content: center; gap: 8px; margin: 18px 0 4px; }
 .ei-punkte-lauf span {
@@ -14354,9 +16077,30 @@ main.auth > .muted {
    der gewählte liegt als heller Reiter darin — dieselbe Form, die auf jedem
    Handy „eins von zweien" bedeutet. Wortgleich zum Filler-Schalter, damit
    beide Spiele sich gleich anfühlen. */
+/* Der Block um Spielartschalter und KI-Knopf.
+   Er fasst zusammen, was zusammengehoert: Der Schalter wirkt seit dem
+   06.09.2026 nur noch auf den Knopf darunter, weil die Mitspielersuche ihren
+   Tisch serverseitig mit dem Regelsatz des Moduls baut. Die Linie darueber
+   sagt das ohne Worte. */
+.ei-kiblock {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.09);
+}
+.ei-blocktitel {
+  margin: 0 0 10px;
+  color: #7a7a7a;
+  font: 800 11.5px/1.3 system-ui;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/* Im Block braucht der KI-Knopf keinen eigenen Abstand nach oben mehr: Der
+   Schalter bringt seinen eigenen mit. */
+.ei-kiblock .ei-botknopf { margin-top: 0; }
+
 .ei-schalter {
   width: 100%;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
@@ -14788,4 +16532,1549 @@ main.auth > .muted {
 @media (prefers-reduced-motion: reduce) {
   .fl-vorschau[data-richtung],
   .fl-schalter-text[data-richtung] { animation: none; }
+}
+
+
+/* ==========================================================================
+   Tafelrunde — Auto-Battler mit Verschmelzen (screens/Tafelrunde.tsx)
+
+   Dunkel und golden, nicht hell wie Filler und Eiland. Das ist keine
+   Abweichung von der Plattform, sondern ihre Grundfarbe: `--bg`, `--panel`
+   und `--line` aus dem Kopf dieser Datei, dazu `--gold` fuer Gold und
+   `--danger` fuer Leben (DESIGN.md: Gold = wert, Rot = Vorsicht). Filler und
+   Eiland gehen ins Helle, weil ihre Bretter von kraeftigen Flaechenfarben
+   leben; hier sind die Einheiten die hellen Punkte, und die brauchen einen
+   dunklen Grund.
+
+   Aufbau und Klassennamen sind von Filler abgeschaut: `tr-seite`,
+   `tr-zurueck`, `tr-menue-mitte`, `tr-titel`, `tr-suchen`, `tr-punkte-lauf`,
+   `tr-blatt`. Wer dort etwas aendert, findet es hier wieder.
+   ========================================================================== */
+
+.tr-seite {
+  position: fixed;
+  inset: 0;
+  /* styles.css setzt weiter oben `main { max-width: 60rem; padding: 1rem }`.
+     Beides gilt auch fuer einen Vollbild-Bildschirm und muss hier
+     ausdruecklich zurueckgenommen werden — sonst haengt das Brett auf einem
+     breiten Schirm links in einer 960-px-Spalte. */
+  max-width: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text);
+  background:
+    radial-gradient(120% 80% at 50% 0%, #1d2830 0%, transparent 60%),
+    linear-gradient(180deg, #12181c, #0d1216);
+}
+
+/* Nicht ganz oben in der Ecke: Dort sitzt auf dem iPhone die Notch. */
+.tr-zurueck {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 14px;
+  z-index: 5;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+.tr-zurueck:active { transform: scale(0.96); }
+
+/* -- Menue und Suche ------------------------------------------------------ */
+
+.tr-menue { justify-content: center; padding: 20px; }
+.tr-menue-mitte { width: min(92vw, 420px); text-align: center; }
+
+.tr-titel {
+  margin: 0 0 10px;
+  font: 900 clamp(34px, 11vw, 52px)/1 system-ui;
+  letter-spacing: -0.04em;
+  color: var(--gold);
+}
+
+.tr-untertitel { margin: 0 0 14px; color: var(--muted); font: 600 14px/1.45 system-ui; }
+.tr-klein { margin-top: 18px; font-size: 13px; opacity: 0.8; }
+.tr-fehler { margin: 12px 0 0; color: var(--danger); font: 700 13px/1.4 system-ui; }
+
+/* Die fuenf Rollen als Kostprobe — dieselben Zeichen wie spaeter auf den
+   Einheiten, damit im Menue nichts steht, was es im Spiel nicht gibt. */
+.tr-probe { display: flex; justify-content: center; gap: 10px; margin: 4px 0 22px; }
+.tr-probe span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.tr-probe .tr-rolle { width: 22px; height: 22px; }
+
+.tr-suchen {
+  width: 100%;
+  padding: 18px 16px;
+  border: 0;
+  border-radius: 18px;
+  color: #1a1207;
+  background: linear-gradient(180deg, #f0cd72, #d8a63a);
+  box-shadow: 0 12px 26px -14px rgba(226, 182, 79, 0.9);
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms ease;
+}
+.tr-suchen:active { transform: scale(0.985); }
+.tr-suchen:disabled { filter: saturate(0.4) brightness(0.85); cursor: default; }
+
+/* Ruhiger als der Hauptknopf — dieselbe Staffelung wie bei Filler und
+   Mememory, nur andersherum belegt (siehe Kommentar bei `starteBots`). */
+.tr-nebenknopf {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--panel);
+  font: 700 14px/1 system-ui;
+  cursor: pointer;
+}
+.tr-nebenknopf:active { transform: scale(0.985); }
+.tr-nebenknopf:disabled { opacity: 0.45; cursor: default; }
+
+/* -- Der verabredete Tisch: erstellen, beitreten, warten ------------------- */
+
+/* Zwei Knoepfe nebeneinander statt untereinander: "Tisch erstellen" und
+   "Tisch beitreten" sind zwei Haelften einer Entscheidung, nicht zwei
+   Angebote hintereinander. */
+.tr-menue-paar { display: flex; gap: 10px; }
+.tr-menue-paar .tr-nebenknopf { flex: 1; }
+
+/* Auf den Formularseiten steht der Titel ueber einer ganzen Seite Inhalt und
+   darf deshalb nicht die Haelfte davon einnehmen. */
+.tr-titel-klein { font-size: clamp(26px, 8vw, 36px); margin-bottom: 16px; }
+
+.tr-feldtitel {
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font: 800 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.tr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tr-chip {
+  flex: 1 1 auto;
+  /* 44 px hoch: Fingerkuppen-Mass, dieselbe Untergrenze wie ueberall sonst. */
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel);
+  font: 700 14px/1 system-ui;
+  cursor: pointer;
+}
+.tr-chip.is-an {
+  border-color: var(--gold);
+  color: #1a1207;
+  background: linear-gradient(180deg, #f0cd72, #d8a63a);
+}
+
+/* Der Code wird abgetippt und vorgelesen: gross, weit gesperrt und in
+   Tabellenziffern, damit I und 1 nicht verschmelzen. */
+.tr-codefeld,
+.tr-code {
+  width: 100%;
+  margin: 6px 0 12px;
+  font: 800 30px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.tr-codefeld {
+  box-sizing: border-box;
+  padding: 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+.tr-code { color: var(--gold); }
+
+.tr-sitzliste { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 4px; }
+.tr-sitz {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font: 700 14px/1.2 system-ui;
+  text-align: left;
+}
+.tr-sitz.is-besetzt { color: var(--text); background: var(--panel); }
+.tr-sitzmarke { color: var(--gold); font: 800 11px/1 system-ui; letter-spacing: 0.06em; }
+
+.tr-tischliste { display: flex; flex-direction: column; gap: 6px; }
+.tr-tischzeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel);
+  font: 700 14px/1.2 system-ui;
+  text-align: left;
+  cursor: pointer;
+}
+.tr-tischzeile:disabled { opacity: 0.5; cursor: default; }
+.tr-tischzahl { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Der Countdown der Mitspielersuche. Tabellenziffern, damit die Zahl beim
+   Herunterzaehlen nicht in der Breite springt — bei proportionalen Ziffern
+   wandert die ganze Zeile im Sekundentakt hin und her. */
+.tr-countdown {
+  margin: 14px 0 2px;
+  color: var(--gold, var(--text));
+  font: 800 46px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-punkte-lauf { display: flex; justify-content: center; gap: 8px; margin: 18px 0 4px; }
+.tr-punkte-lauf span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: tr-huepf 1.05s infinite ease-in-out;
+}
+.tr-punkte-lauf span:nth-child(2) { animation-delay: 0.16s; }
+.tr-punkte-lauf span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes tr-huepf {
+  0%, 70%, 100% { transform: translateY(0); opacity: 0.45; }
+  35% { transform: translateY(-7px); opacity: 1; }
+}
+
+/* -- Der Tisch ------------------------------------------------------------ */
+
+.tr-tisch {
+  justify-content: flex-start;
+  /*
+   * Die Luft zwischen den Baendern des Tisches — EINE Zahl, weil sie an zwei
+   * Stellen gebraucht wird: als `gap` hier und als negativer Abstand an der
+   * Bank, die sich ausdruecklich wieder an die Brettkante zieht
+   * (`.tr-bank`). Standen dort zwei Zahlen, ruecke die Bank beim naechsten
+   * Nachjustieren ins Brett hinein oder von ihm weg.
+   *
+   * 6 und nicht 8 am Handy: Fuenf Abstaende auf einem 956 Pixel hohen Schirm
+   * sind 10 Pixel, und die fehlten am 06.09.2026 unten am Laden. Ab Tablet
+   * ist der Platz da, dort bleibt es bei 8.
+   */
+  --tr-luft: 6px;
+  gap: var(--tr-luft);
+  padding: 0 0 max(8px, env(safe-area-inset-bottom));
+  /* Der Bildschirm rollt als Ganzes, wenn er nicht passt. Ohne das faellt der
+     Laden auf einem kurzen Handy unter den Rand — und der Laden ist die
+     einzige Stelle, an der man ueberhaupt etwas kaufen kann. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Am Ende des Rollens nicht an die Seite weiterreichen: Sonst zieht der
+     Daumen unter Android das Neuladen der Seite auf — mitten in der Partie.
+     Dieselbe Zeile aus demselben Grund wie in FeldherrTisch.tsx. */
+  overscroll-behavior: contain;
+}
+
+/* -- Die festgeheftete Kopfleiste ----------------------------------------- */
+
+/*
+ * Mitspielerleiste und Phasenzeile in einem Kasten, der beim Rollen oben
+ * kleben bleibt (Umbau vom 05.09.2026).
+ *
+ * `position: sticky` und nicht `fixed`: Der Tisch (.tr-tisch) ist selbst der
+ * rollende Kasten, und ein `fixed` Element haette weder seine Breite noch
+ * seinen Platz im Fluss — der Laden liefe darunter durch. Sticky bleibt ein
+ * gewoehnliches Kind, nimmt seine Hoehe mit und klebt trotzdem.
+ *
+ * Der Grund ueberhaupt: Vorher war die Mitspielerleiste ein Kasten mitten im
+ * Fluss. Wer zum Laden runterrollte — und dort spielt sich die halbe Runde
+ * ab —, sah weder Leben noch Gegner noch Phase.
+ *
+ * Undurchsichtig hinterlegt, denn darunter rollt das Brett durch. Der
+ * Weichzeichner ist Zierde und darf fehlen; die Farbe darunter ist es nicht.
+ */
+.tr-oben {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  /* So breit wie der Laden darunter (.tr-fuss) und nicht wie der Schirm:
+     Sonst steht der Streifen am Desktop als einziges Band ueber einer
+     zentrierten Spalte. */
+  width: min(96vw, 520px);
+  /* Unten 4 und nicht 5: Auf einem Schirm, dessen Kopfzeile schon 59 px an
+     den Notch verliert, zaehlt jede Zeile. */
+  padding: max(8px, env(safe-area-inset-top)) 8px 4px;
+  background: rgba(13, 18, 22, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 0 var(--line), 0 10px 18px -14px rgba(0, 0, 0, 0.9);
+}
+
+.tr-oben-reihe {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Der Zurueck-Knopf steht jetzt IN der Reihe. 40 px breit statt 44: Er ist
+   das Einzige hier, was man nicht im Spiel braucht, und jeder Pixel gehoert
+   den Spielerkacheln. Die Hoehe kommt aus der Reihe, damit er so hoch ist wie
+   sie — das macht die 44 px wieder wett. */
+.tr-zurueck-oben {
+  flex: 0 0 auto;
+  width: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.09);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+.tr-zurueck-oben:active { transform: scale(0.96); }
+
+/*
+ * Die Statuszeile: eigene Werte und Marken in EINER Reihe.
+ *
+ * Sie ersetzt seit dem 06.09.2026 zwei Baender untereinander. Gemessen am
+ * Geraet (440 x 956, Robins IMG_1047): Werte-Kasten 62 px, Abstand 8, Marken
+ * 18 — 88 Pixel fuer fuenf kurze Angaben. In einer Reihe sind es 21, und die
+ * gesparten 67 gehen an Brett und Laden.
+ *
+ * `align-items: center` und nicht `baseline`: Die Marken bringen ihre eigenen
+ * Zeichen mit und sitzen damit anders auf der Grundlinie als die Ziffern
+ * daneben. Umbrechen darf die Reihe (`flex-wrap`) — bei sieben Marken passt
+ * sie sonst nicht, und ein waagerechtes Rollen saehe an dieser Stelle
+ * niemand.
+ */
+.tr-statuszeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  width: min(94vw, 460px);
+}
+
+.tr-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+
+/*
+ * Ein Wert ist ein Chip wie eine Marke daneben und keine Kachel mehr.
+ *
+ * Die Masse sind bewusst dieselben wie bei `.chip` in Synergien.module.css
+ * (2 px Luft oben, 999er Radius, 10 px Schrift), ABGESCHRIEBEN IST NICHTS:
+ * Beide Bauteile behalten ihr eigenes Stylesheet, und was hier steht, gilt
+ * nur fuer die Werte. Wer den Chip dort aendert, sieht hier den Unterschied
+ * — genau dafuer stehen sie nebeneinander in einer Reihe.
+ */
+.tr-wert {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.tr-wert strong { font: 800 12px/1.4 system-ui; }
+.tr-wert em { font: 700 10px/1.4 system-ui; font-style: normal; color: var(--muted); }
+.tr-wert .tr-icon { width: 12px; height: 12px; }
+/* Kein `.tr-wert-gold` mehr: Das Gold steht seit dem 05.09.2026 gross am
+   Laden (`.tr-goldstand`), die Regel war seither ohne Traeger. */
+.tr-wert-leben { color: var(--danger); }
+.tr-wert-level { color: var(--blau); }
+.tr-wert-feld { color: var(--text); }
+.tr-wert-leben em,
+.tr-wert-level em { color: var(--muted); }
+
+/* Die Zeichen sind Striche, keine Flaechen: So bleiben sie auf jeder Groesse
+   gleich schwer und muessen nicht je Ort neu gefaerbt werden. */
+.tr-icon,
+.tr-rolle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* -- Gegnerleiste --------------------------------------------------------- */
+
+.tr-gegnerleiste {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 0 12px;
+  /* Die Seite selbst rollt nie quer (DESIGN.md) — dieser Streifen schon,
+     denn bei acht Sitzen passt er sonst nicht. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tr-gegnerleiste::-webkit-scrollbar { display: none; }
+.tr-gegner {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--muted);
+  font: 700 11px/1.2 system-ui;
+  cursor: pointer;
+}
+.tr-gegner[data-an] { border-color: var(--gold); color: var(--text); }
+.tr-gegner[data-aus] { opacity: 0.4; }
+.tr-gegner[data-bereit] { box-shadow: inset 0 0 0 1px var(--accent); }
+.tr-gegner-name {
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tr-gegner-leben { display: flex; align-items: center; gap: 3px; color: var(--danger); }
+.tr-gegner-leben .tr-icon { width: 11px; height: 11px; }
+
+/* -- Die beiden Bretthaelften --------------------------------------------- */
+
+.tr-bretter {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: min(94vw, 460px);
+}
+.tr-brettteil { position: relative; }
+/* Die Gegnerhaelfte tritt zurueck: Sie ist Auskunft, nicht Bedienflaeche.
+   Ganz ausblenden waere falsch — man spielt gegen sie. */
+.tr-brettteil-fremd { opacity: 0.72; }
+/*
+ * Die Gegnerhaelfte ist SCHMALER, nicht skaliert — geaendert am 06.09.2026.
+ *
+ * Hier stand `transform: scale(0.86)` mit `transform-origin: bottom center`.
+ * Das sah richtig aus und log beim Platz: Eine Transformation aendert die
+ * Zeichnung, nicht den Fluss. Der Kasten blieb 282 px hoch, gezeichnet wurden
+ * 243 — und die fehlenden 39 px standen als leerer Streifen zwischen
+ * Bretttitel und Brett. Auf Robins Handybild (440 x 956, IMG_1047) ist genau
+ * das der Abstand unter „Brunhild".
+ *
+ * `width: 86%` ergibt dieselbe Zeichnung: Die Wabenlage ist in Prozent
+ * gerechnet (zuege.ts), die Figur haengt an der Wabenhoehe, und `aspect-ratio`
+ * zieht die Hoehe mit. Nur nimmt der Kasten jetzt auch wirklich nur den Platz,
+ * den er braucht. Die Figuren des Gegners bleiben so gross wie zuvor.
+ */
+.tr-brettteil-fremd .tr-brett {
+  width: 86%;
+  margin-inline: auto;
+}
+
+/*
+ * Der Kopf ueber der Gegnerhaelfte: Name und Marken NEBENEINANDER.
+ *
+ * Bis zum 06.09.2026 standen sie untereinander und kosteten zusammen 33 der
+ * 315 Pixel, die die Gegnerhaelfte am Handy hoch war — fuer einen Namen und
+ * drei Chips. In einer Zeile sind es 18.
+ *
+ * Umbrechen darf die Zeile (`flex-wrap`): Bei sieben Marken und einem langen
+ * Namen ist eine Reihe voll, und dann sind zwei Zeilen richtig. Der Name
+ * schrumpft dabei nicht unter seine Auslassungspunkte — er steht mit
+ * `min-width: 0` in der Reihe und kuerzt sich selbst.
+ */
+.tr-brettkopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 6px;
+  margin: 0 0 3px;
+}
+
+.tr-bretttitel {
+  min-width: 0;
+  /* Wegen des Auges davor: Zeichen und Name stehen in einer Zeile auf einer
+     Grundlinie, und der Name kuerzt sich weiterhin selbst. */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 11px/1.2 system-ui;
+  color: var(--muted);
+  text-align: center;
+}
+/* Das Auge vor dem Namen: Es sagt „das hier siehst du dir an" und ist deshalb
+   heller als der Name daneben — dieselbe Farbe wie der Ring an der Kachel
+   oben (`.kachel[data-an]` in Mitspieler.module.css). */
+.tr-bretttitel svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/*
+ * Das Brett steht auf Holz — der Untergrund aus figuren.ts (Wood051,
+ * ambientCG, CC0). Das BILD setzt die Komponente ueber `style`, damit der
+ * Pfad nur an einer Stelle steht; hier steht, wie es liegt.
+ *
+ * 300 px und nicht die vollen 1024 der Textur: Bei Originalgroesse saehe man
+ * auf jedem Schirm einen Ausschnitt EINER Maserung, also gar keine Kachel.
+ * Bei 300 liegt sie auf dem Handy (94vw, rund 340 px) einmal und kachelt am
+ * Desktop sichtbar — so, wie es der Kopf von figuren.ts beschreibt.
+ */
+.tr-brett {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  background-repeat: repeat;
+  background-size: 300px auto;
+}
+/*
+ * Der Schleier ueber dem Holz. Ohne ihn verschwinden die Waben: Sie sind mit
+ * 4,5 % Weiss auf Dunkel gezeichnet, und auf hellem Holz ist das nichts.
+ *
+ * Als `::before` und nicht als zweite Hintergrundebene, weil das Bild per
+ * `style` von aussen kommt — eine `background-image`-Liste hier wuerde es
+ * ueberschreiben. Absolut gesetzt, damit es UNTER den ebenfalls absolut
+ * gesetzten Waben liegt: Bei gleichem z-index entscheidet die Reihenfolge im
+ * Baum, und das Pseudoelement kommt vor ihnen.
+ */
+.tr-brett::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(10, 14, 18, 0.58);
+}
+
+/*
+ * Eine Wabe. `clip-path` statt eines Bildes: Sechsecke als PNG waeren sechs
+ * Dateien (leer, belegt, gewaehlt, …), und jede muesste beim naechsten
+ * Farbwechsel neu geliefert werden.
+ *
+ * DAS RASTER IST SICHTBAR, seit dem Umbau vom 05.09.2026: Die Wabe selbst
+ * traegt die Randfarbe, ihr `::before` liegt 1,5 px innen und traegt die
+ * Fuellung. Zusammen ergibt das eine Umrisslinie — die ein `border` an einem
+ * `clip-path` nicht liefern kann, weil der Beschnitt den Rahmen gleich mit
+ * abschneidet. Vorher war das Feld eine kaum sichtbare Aufhellung auf Holz,
+ * und man sah nicht, wo eine Einheit landen wuerde, bevor sie dort lag.
+ *
+ * Die Zustandsfarben stehen deshalb am `::before` und nicht mehr an der Wabe:
+ * Am aeusseren Element wuerden sie den Umriss ueberschreiben.
+ */
+.tr-wabe {
+  position: absolute;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(255, 255, 255, 0.22);
+  display: grid;
+  place-items: center;
+}
+.tr-wabe::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 140ms ease;
+}
+.tr-wabe[data-leer]::before { background: rgba(10, 14, 18, 0.34); }
+.tr-wabe[data-gewaehlt]::before { background: rgba(226, 182, 79, 0.3); }
+/* Wohin die gewaehlte Einheit darf. Nur waehrend einer Auswahl sichtbar —
+   ein dauerhaft leuchtendes Brett waere Rauschen. Steht das Feld voll,
+   leuchtet nichts, und die Absage erklaert sich von selbst. */
+.tr-wabe[data-zielbar]::before { background: rgba(74, 156, 120, 0.28); }
+/*
+ * Das Feld unter dem Finger: Hier landet die Einheit, wenn jetzt losgelassen
+ * wird. Kraeftiger als „zielbar", denn von zehn erlaubten Feldern ist genau
+ * dieses gemeint — und der Schatten am Finger verdeckt es zur Haelfte.
+ */
+.tr-wabe[data-unterzeiger] { background: var(--gold); }
+.tr-wabe[data-unterzeiger]::before { background: rgba(226, 182, 79, 0.42); }
+
+/*
+ * Ein Kind der Wabe muss NACH dem `::before` gezeichnet werden, sonst liegt
+ * die Fuellung ueber der Figur. Ein absolut gesetztes Pseudoelement zeichnet
+ * spaeter als jedes nicht positionierte Kind — deshalb bekommen die Kinder
+ * hier ausdruecklich eine Position. Ohne diese Zeilen ist das Brett leer.
+ */
+.tr-wabe > .tr-einheit,
+.tr-wabe > .tr-wabe-ziel {
+  position: relative;
+  z-index: 1;
+}
+
+/* Die ganze Wabe ist das Ziel, nicht nur ihre Mitte: Ein Daumen trifft eine
+   Flaeche, keinen Punkt. */
+.tr-wabe-ziel {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.tr-wabe-ziel:disabled { cursor: default; }
+
+/* Der leere Bankplatz ist dasselbe Ziel wie eine leere Wabe, nur eckig.
+   Fuellt den Platz ganz aus: Ein Daumen trifft eine Flaeche, keinen Punkt. */
+.tr-bankplatz-ziel {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.tr-bankplatz-ziel:disabled { cursor: default; }
+
+/* Der Tastaturweg muss sichtbar sein, sonst waehlt man blind. `:focus-visible`
+   und nicht `:focus`: Nach einem Tipp mit dem Finger soll kein Rahmen
+   stehenbleiben. */
+.tr-einheit:focus-visible,
+.tr-wabe-ziel:focus-visible,
+.tr-bankplatz-ziel:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+/* -- Eine Einheit --------------------------------------------------------- */
+
+/*
+ * OHNE PLATTE, seit dem 6.9.2026.
+ *
+ * Hier stand ein dunkler Verlauf mit kostenfarbenem Innenrand — die Kachel,
+ * auf der jede Einheit sass. Robin am 5.9.2026: „Kannst du noch den Rahmen um
+ * die Figuren entfernen, der laesst es mehr 2D wirken." Eine Figur auf einer
+ * Kachel klebt darauf; eine ohne steht auf der Wabe, und die Wabe hat ihren
+ * Umriss ja selbst (`.tr-wabe`).
+ *
+ * Was die Platte nebenbei trug, steht jetzt woanders: die KOSTEN am Punkt
+ * (`.tr-kosten`), das Ziel unter dem Finger an der Wabe bzw. am Bankplatz
+ * (die leuchten ohnehin), das Verschmelzen am Aufleuchten der Figur
+ * (`tr-puls`). Uebrig bleibt ein durchsichtiger Kasten in der Groesse des
+ * Feldes — er ist das Mass, an dem Figur, Name und Sterne haengen.
+ *
+ * Name und Sterne stehen nicht mehr im Fluss unter der Figur, sondern absolut
+ * (siehe unten): Die Figur ist aus dem Fluss heraus, und eine Spalte aus zwei
+ * Woertern zentrierte sich sonst quer ueber ihrem Bauch.
+ */
+.tr-einheit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  color: var(--tr-kosten, var(--muted));
+}
+/*
+ * `touch-action: none` ist die eine Zeile, ohne die das Ziehen am Handy nicht
+ * funktioniert: Sonst deutet der Browser die Fingerbewegung als Rollen, nimmt
+ * sich den Zeiger und schickt `pointercancel` — die Einheit bliebe am Start
+ * kleben, und das Brett waere genau dort unbedienbar, wo es gebraucht wird.
+ */
+.tr-einheit[data-fassbar] { cursor: grab; touch-action: none; }
+.tr-einheit[data-fassbar]:active { cursor: grabbing; }
+
+/* Das Feld unter dem Finger ist auch dann zu sehen, wenn eine Einheit darauf
+   steht — beim Tausch zweier Einheiten ist genau das der Fall.
+   Es leuchtet seit dem 6.9.2026 allein die WABE bzw. der Bankplatz: Der
+   goldene Innenrand, der frueher zusaetzlich um die Einheit lag, waere ohne
+   Platte ein Rechteck um eine frei stehende Figur — also genau der Rahmen,
+   der weg sollte. Beide faerben sich ohnehin kraeftig gold und decken die
+   ganze Flaeche. */
+/* Beim Ziehen bleibt der Platz sichtbar leer, damit man sieht, woher es kommt. */
+.tr-einheit[data-still] { opacity: 0.25; }
+/* Das Ersatzzeichen, wenn zu einer Einheit keine Figur vorliegt. */
+.tr-einheit .tr-rolle { width: 40%; height: 40%; }
+
+/*
+ * Die Figur einer Einheit (figuren.ts, eingehaengt von `Figurbild`).
+ *
+ * Ueber die HOEHE bemessen und die Breite frei: Die Bilder sind quadratisch,
+ * und ein in beide Richtungen gesetztes Mass wuerde sie beim ersten
+ * nicht-quadratischen Nachschub verzerren, statt sie einzupassen.
+ *
+ * `pixelated`: Das Original ist 32 x 32 und liegt vierfach hochgezogen im
+ * Repo. Gezeichnet wird zwischen 30 und 55 px, also unterhalb der
+ * Dateigroesse — die Regel ist deshalb kein Muss, sondern die Absicherung
+ * nach oben: Waechst das Brett je ueber 128 px je Figur, verwischt der
+ * Browser sonst genau die Kanten, wegen derer der Satz gewaehlt wurde
+ * (siehe Kopf von figuren.ts).
+ */
+.tr-figur {
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.tr-einheit .tr-figur { width: auto; height: 52%; max-width: 92%; }
+
+/*
+ * -- Die 3D-Figur auf Wabe und Bankplatz ----------------------------------
+ *
+ * Der Ausschnitt selbst steht in `Figur3D.module.css`; hier steht nur, wo die
+ * Figur steht und wie gross sie ist. Absolut gesetzt, weil eine Zelle des
+ * Blattes ALLE Bewegungen umfasst — auch den weit ausgeholten Schlag — und
+ * darum viel Luft ueber dem Kopf traegt: Im Fluss waere die Zelle so hoch wie
+ * ihr Platz, und die Figur darin halb so gross wie ihr Feld.
+ *
+ * SIE MUSS IN DIE WABE PASSEN, anders als in der Arena. Dort ist die Figur ein
+ * Geschwister der Wabe und darf darueber hinausragen; hier ist sie ihr KIND,
+ * und `clip-path` beschneidet auch den Inhalt. Was ueber das Sechseck
+ * hinausreicht, waere kein Ueberstand, sondern ein abgeschnittener Kopf.
+ *
+ * DIE ZAHLEN, und woher sie kommen: Eine stehende Figur setzt bei 80 % der
+ * Zellhoehe von oben auf (FIGUREN3D_FUSSPUNKT). Bei einer Zelle von 71,8 %
+ * Wabenhoehe, deren Unterkante 23,1 % ueber dem Wabenfuss liegt, steht die
+ * Figur also mit den Fuessen auf 37 % der Wabe und reicht bis rund 93 % —
+ * ueberall dort ist das Sechseck noch breit genug. Darunter bleibt Platz fuer
+ * Namen und Sterne.
+ *
+ * SIE HAENGEN AM GEMESSENEN AUSSCHNITT DER BLAETTER, und das sieht man ihnen
+ * nicht an: Wie gross die Figur wird, ist die Zellhoehe geteilt durch die
+ * Weltmeter, die in einer Zelle stecken (FIGUREN3D_ZELLHOEHE_METER). Als die
+ * Todeszeile am 06.09.2026 ihre eigene, breitere Zelle bekam, wurde der
+ * gemeinsame Ausschnitt von 4,29 auf 3,76 Meter enger — hier standen bis dahin
+ * 82 % und 18,6 %, und dieselben Zahlen haetten jede Figur der Ruestkammer um
+ * 14 % wachsen und hoeher stehen lassen, ohne dass jemand an der Groesse etwas
+ * geaendert haette. Wer die Blaetter neu rendert, rechnet diese vier Zahlen
+ * (hier und am Bankplatz) mit dem Verhaeltnis der beiden Ausschnitte um. In
+ * der Arena erledigt das `FIGURENKASTEN` in bildfolge.ts von selbst; hier ist
+ * es Handarbeit, weil eine Wabe kein Prozentmass mit der Karte teilt.
+ */
+.tr-figur3d {
+  position: absolute;
+  left: 50%;
+  bottom: 23.1%;
+  height: 71.8%;
+  /* `translate` und nicht `transform`: Das Spiegeln steht in `scale`
+     (Figur3D.module.css), das Schweben in `transform` — drei Dinge, drei
+     Eigenschaften. In EINEM `transform` schloesse jedes das andere aus. */
+  translate: -50% 0;
+}
+/*
+ * Auf der Bank ist der Platz ein Rechteck und kein Sechseck: Dort darf die
+ * Figur die volle Hoehe nehmen. `overflow: hidden` am Fach schneidet nur die
+ * leeren Raender der Zelle ab — der hoechste Kopf des Satzes bleibt bei 92,8 %
+ * drin. Und weil kein Name darunter steht, sitzt sie tiefer.
+ *
+ * NACHGEMESSEN am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
+ * 0/0): Der hoechste Punkt liegt 3,1 % unter der Zellenoberkante, und das ist
+ * das GEWEIH DES DRUIDEN — nicht mehr der Spitzhut des Magiers (9,4 %), wie es
+ * hier vorher stand. Mit 92,8 % Zellhoehe ueber einer Unterkante von 2,8 %
+ * steht der Scheitel damit bei 92,8 % des Fachs.
+ */
+.tr-bankplatz .tr-figur3d { bottom: 2.8%; height: 92.8%; }
+
+/*
+ * Das Schweben im Stand. Dieselbe Art Bewegung wie beim Pinguin auf der
+ * Weltkarte (`hub-huepf`) und bei den Figuren in der Arena
+ * (KampfAnzeige.module.css `ka-schweben`): langsam, klein, endlos.
+ *
+ * Nur auf dem BRETT, nicht auf der Bank und nicht im Laden. Auf dem Brett
+ * stehen die Recken, die gleich antreten — dort sieht Stillstand tot aus. Auf
+ * der Bank liegt Ware, und ein wogendes Lager waere Unruhe ohne Aussage.
+ *
+ * Gegeneinander versetzt ueber die Stellung der Wabe, sonst wippt das ganze
+ * Feld im Gleichschritt. Fuenf Gruppen genuegen: Bei 19 Plaetzen erkennt
+ * niemand ein Muster.
+ */
+/*
+ * Und der SCHATTEN, den sie dabei wirft — nur auf dem Brett.
+ *
+ * `drop-shadow` und keine Ellipse darunter: Der Filter folgt dem Alphakanal
+ * der Figur, wirft also den Umriss der Figur und nicht ein allgemeines
+ * Oval. Ohne ihn klebt das Bild auf der Wabe, statt darauf zu stehen — bei
+ * einer Figur, die dazu noch schwebt, sieht das nach Aufkleber aus.
+ *
+ * Auf Bank und Ladenkarte nicht: Dort liegt Ware in einem Fach, es gibt
+ * keinen Boden, auf dem etwas stehen koennte.
+ */
+.tr-brett .tr-einheit .tr-figur,
+.tr-brett .tr-einheit .tr-figur3d,
+.tr-brett .tr-einheit .tr-rolle { filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.75)); }
+.tr-brett .tr-einheit .tr-figur,
+.tr-brett .tr-einheit .tr-figur3d { animation: tr-schwebt 3.8s ease-in-out infinite; }
+.tr-brett .tr-wabe:nth-child(5n + 2) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 2) .tr-figur3d { animation-delay: -0.7s; }
+.tr-brett .tr-wabe:nth-child(5n + 3) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 3) .tr-figur3d { animation-delay: -1.5s; }
+.tr-brett .tr-wabe:nth-child(5n + 4) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 4) .tr-figur3d { animation-delay: -2.2s; }
+.tr-brett .tr-wabe:nth-child(5n + 5) .tr-figur,
+.tr-brett .tr-wabe:nth-child(5n + 5) .tr-figur3d { animation-delay: -3s; }
+@keyframes tr-schwebt {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/*
+ * Name und Sterne stehen UNTER der Figur und UEBER dem Holz.
+ *
+ * Absolut gesetzt, seit die Figur es ist: Im Fluss zentrierte sich die Spalte
+ * aus beiden quer ueber dem Bauch der Figur. Die Prozente beziehen sich bei
+ * `bottom` auf die HOEHE der Wabe — genau das, was hier gebraucht wird, denn
+ * das Sechseck laeuft nach unten spitz zu. Die Sterne stehen auf 14 %, der
+ * Name auf 24 %; darunter ist die Wabe schmaler als das Wort.
+ *
+ * Der Schatten holt beide vom gemusterten Holz ab — dieselbe Ueberlegung wie
+ * bei den Sternen in der Arena, und noetig, seit unter ihnen kein dunkles
+ * Plattchen mehr liegt.
+ */
+.tr-einheit-name,
+.tr-einheit .tr-sterne {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  z-index: 1;
+  /* Beide waren im Fluss Kinder einer Spalte mit `align-items: center` und
+     damit nur so breit wie ihr Inhalt. Absolut gesetzt sind sie so breit wie
+     die Wabe, und ohne diese Zeile stuenden sie linksbuendig an deren Kante —
+     dort, wo das Sechseck schon zulaeuft und sie beschneidet. */
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+}
+.tr-einheit-name { bottom: 24%; }
+.tr-einheit .tr-sterne { bottom: 14%; }
+/*
+ * SIE KOSTEN KEINE HOEHE — nachgemessen am 06.09.2026, weil beim Umbau fuer
+ * das Handy die Vermutung im Raum stand, der Name unter der Figur nehme dem
+ * Brett Platz. Er tut es nicht: Name und Sterne sind absolut gesetzt (siehe
+ * oben), das Brett ist so hoch wie sein `aspect-ratio` und keinen Pixel
+ * mehr. Wer sie wegnimmt, gewinnt am Bildschirm nichts und verliert die
+ * einzige Stelle, an der ohne Antippen steht, welche Einheit dort steht.
+ * Abgeschnittene Namen („Steinschleude…") sind deshalb eine Frage der
+ * Breite — der Ausweg waere die Anklick-Ansicht der Einheit, nicht das
+ * Streichen.
+ */
+
+/*
+ * Was die Einheit gekostet hat — der Traeger von `--tr-kosten`, seit die
+ * Platte keinen Innenrand mehr hat. Ein Punkt und kein Ring: Ein Ring waere
+ * die Platte in duenn.
+ *
+ * MITTIG UNTEN UND NICHT IN DER ECKE. In der Ecke sass er zuerst, und auf dem
+ * Brett war er weg: Das Sechseck laeuft nach unten spitz zu, und `clip-path`
+ * schneidet den Inhalt mit ab — bei 3 px vom Rand lag der Punkt ausserhalb
+ * der Wabe. In der Mitte ist das Sechseck auch ganz unten noch ein
+ * Fingerbreit weit. Er steht damit unter den Sternen, wie ein Sockel unter
+ * der Figur.
+ */
+.tr-kosten {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  z-index: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tr-kosten, var(--line));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8);
+  translate: -50% 0;
+}
+
+.tr-einheit-name {
+  max-width: 92%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font: 700 9px/1.1 system-ui;
+}
+.tr-sterne { color: var(--gold); font: 700 9px/1 system-ui; letter-spacing: -1px; }
+
+/* "noch 1" — die Auskunft, die aus dem naechsten Kauf eine Entscheidung
+   macht. Absolut gesetzt, damit sie die Wabe nicht auseinanderdrueckt. */
+.tr-fehlt {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  color: #1a1207;
+  background: var(--gold);
+  font: 800 8px/1.3 system-ui;
+}
+
+/*
+ * Das Verschmelzen sichtbar machen: ein kurzer goldener Puls auf der neuen
+ * Einheit. Er laeuft genau so lange wie das Band darueber steht.
+ *
+ * Seit dem 6.9.2026 ein SCHEIN und kein Rahmen mehr. Vorher wuchs ein
+ * goldener Innenrand auf der Platte; ohne Platte waere das ein Rechteck um
+ * eine frei stehende Figur. `drop-shadow` folgt dem Alphakanal, leuchtet also
+ * die Figur selbst an — und wirkt auch dann, wenn statt ihrer die Pixelfigur
+ * oder das Rollenzeichen dasteht.
+ */
+.tr-einheit[data-frisch] { animation: tr-puls 2.2s ease-out 1; }
+@keyframes tr-puls {
+  0% { filter: drop-shadow(0 0 3px rgba(226, 182, 79, 0.95)) brightness(1.7); }
+  35% { filter: drop-shadow(0 0 12px rgba(226, 182, 79, 0.8)) brightness(1.25); }
+  100% { filter: drop-shadow(0 0 0 rgba(226, 182, 79, 0)) brightness(1); }
+}
+
+.tr-verschmolzen-band {
+  position: fixed;
+  left: 50%;
+  top: 22%;
+  z-index: 8;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  color: #1a1207;
+  background: linear-gradient(180deg, #f5d888, #dcae43);
+  box-shadow: 0 18px 34px -18px rgba(0, 0, 0, 0.9);
+  font: 800 14px/1 system-ui;
+  pointer-events: none;
+  animation: tr-band 2.2s ease-out 1 forwards;
+}
+.tr-verschmolzen-band .tr-sterne { color: #7a5410; font-size: 14px; }
+@keyframes tr-band {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); }
+  12% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Was am Finger haengt. `pointer-events: none`, sonst faende
+   `elementFromPoint` immer nur diesen Schatten und nie das Ziel darunter.
+
+   Der Wabenbeschnitt ist mit dem 6.9.2026 entfallen: Er gab der PLATTE ihre
+   Sechseckform, und ohne sie schnitte er nur noch der Figur den Kopf ab. Sie
+   ist hoeher als das Feld (siehe `.tr-figur3d`); auf dem Brett faengt das
+   Sechseck der Wabe sie auf, am Finger gibt es nichts, was sie auffangen
+   muesste. */
+.tr-schatten {
+  position: fixed;
+  z-index: 9;
+  width: 68px;
+  height: 78px;
+  margin: -39px 0 0 -34px;
+  pointer-events: none;
+  opacity: 0.92;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.8));
+}
+
+/* -- Reservebank ---------------------------------------------------------- */
+
+/*
+ * Die Bank liegt an der UNTERKANTE des Bretts, nicht als eigener Kasten
+ * darunter (Umbau vom 05.09.2026).
+ *
+ * Sie ist der Rand des Spielfelds: Der Weg von der Bank auf die erste Wabe
+ * ist die Bewegung, die man hundertmal je Partie macht, und je kuerzer er
+ * ist, desto sicherer trifft der Daumen. Deshalb oben eckig und ohne Luft
+ * zum Brett, unten gerundet — eine Leiste am Brett und kein zweites Moebel.
+ *
+ * Der negative Abstand haelt sie auch dann an der Kante, wenn zwischen Brett
+ * und Bank der Abstand von `.tr-tisch` (8 px) steht.
+ */
+.tr-bank {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  width: min(94vw, 460px);
+  margin-top: calc(-1 * var(--tr-luft));
+  padding: 4px 6px 5px;
+  border-radius: 0 0 14px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.tr-bankplatz {
+  position: relative;
+  aspect-ratio: 1;
+  /* Neun Plaetze in einer Reihe sind auf einem 360-px-Handy je 32 px breit —
+     zu wenig zum Greifen UND zum Ablegen. Die Mindesthoehe macht aus dem
+     Quadrat dort ein Hochformat und die Flaeche wieder daumengerecht; auf
+     einem breiteren Schirm greift `aspect-ratio` wie bisher. */
+  min-height: 44px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.tr-bankplatz[data-gewaehlt] { box-shadow: inset 0 0 0 2px var(--gold); }
+/* Wohin die gewaehlte Einheit darf. Nur waehrend einer Auswahl sichtbar —
+   ein dauerhaft leuchtender Rahmen waere Rauschen. */
+.tr-bankplatz[data-zielbar] { box-shadow: inset 0 0 0 2px var(--accent); }
+/* Und hier landet sie, wenn der Finger jetzt loslaesst. */
+.tr-bankplatz[data-unterzeiger] {
+  background: rgba(226, 182, 79, 0.28);
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+/* Zu schmal fuer einen Namen — das Zeichen und die Sterne muessen reichen. */
+.tr-bankplatz .tr-einheit-name { display: none; }
+/* Und weil der Name fehlt, darf die Figur den Platz nehmen: Auf der Bank ist
+   sie das Einzige, woran man eine Einheit erkennt. Der kostenfarbene
+   Innenrand, der hier bis zum 6.9.2026 zusaetzlich um die Einheit lag, ist
+   weg: Das Fach ist der Rahmen, ein zweiter darin waere die Platte. Die
+   Kosten stehen jetzt am Punkt (`.tr-kosten`). */
+.tr-bankplatz .tr-einheit .tr-figur { height: 68%; }
+
+/* -- Auswahlband ---------------------------------------------------------- */
+
+.tr-auswahlband {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(94vw, 460px);
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--gold);
+  font: 700 12px/1.2 system-ui;
+}
+.tr-auswahlband > span { flex: 1; min-width: 0; }
+.tr-verkaufen,
+.tr-abwaehlen {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.tr-verkaufen { color: var(--gold); }
+
+/* -- Laden ---------------------------------------------------------------- */
+
+/*
+ * Dieselbe Rechnung wie am Tisch selbst: 5 statt 8 zwischen Ladenkopf,
+ * Karten, Knoepfen und Hinweis, und zwei Pixel weniger Polsterung oben. Bis
+ * zum Bereit-Knopf liegen zwei dieser Abstaende, macht 8 Pixel — und genau
+ * die entscheiden am Handy, ob er noch ueber der Unterkante steht. Ab Tablet
+ * steht die 8 wieder da (siehe 40rem weiter unten).
+ */
+.tr-fuss {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: min(96vw, 520px);
+  padding: 2px 0 8px;
+}
+
+/* -- Der Ladenkopf: das Wort und das Gold --------------------------------- */
+
+.tr-ladenkopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0 2px;
+}
+.tr-ladenwort {
+  color: var(--muted);
+  font: 800 11px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * Das Gold, gross und unmittelbar ueber den Preisen.
+ *
+ * Es stand bis zum 05.09.2026 als eine von vier gleich grossen Kacheln ganz
+ * oben am Schirm — also am anderen Ende von den Zahlen, gegen die man es
+ * rechnet. Hier ist es die groesste Zahl des Ladens, und das ist richtig so:
+ * Jede Kaufentscheidung ist ein Vergleich mit ihr.
+ */
+.tr-goldstand {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--gold);
+}
+.tr-goldstand strong { font: 900 22px/1 system-ui; font-variant-numeric: tabular-nums; }
+.tr-goldstand em { color: var(--muted); font: 700 11px/1 system-ui; font-style: normal; }
+.tr-goldstand .tr-icon { width: 16px; height: 16px; align-self: center; }
+
+.tr-laden {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  width: 100%;
+}
+.tr-karte {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 84px;
+  padding: 7px 4px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--tr-kosten, var(--muted));
+  background: linear-gradient(180deg, #232f37, #182127);
+  box-shadow: inset 0 0 0 1.5px var(--tr-kosten, var(--line));
+  cursor: pointer;
+}
+.tr-karte:active:not(:disabled) { transform: scale(0.97); }
+/* Nicht kaufbar heisst nicht unsichtbar: Man soll sehen, worauf man spart —
+   und seit die Karte ihren Grund mitschreibt, muss der auch LESBAR bleiben.
+   Von einer kaufbaren unterscheidet sie ohnehin der matte Rahmen und der
+   rote Preis, nicht das letzte Zehntel Deckkraft. */
+.tr-karte:disabled { opacity: 0.6; cursor: default; }
+/*
+ * Zu teuer: zusaetzlich entfaerbt.
+ *
+ * Der Unterschied zur gewoehnlichen Sperre ist Absicht. „Gerade nicht dran"
+ * (Kampfphase, schon bereit) betrifft alle fuenf Karten gleich und ist eine
+ * Frage der Zeit; „zu teuer" betrifft einzelne und ist eine Frage der
+ * Entscheidung. Wer den Laden ueberfliegt, soll die bezahlbaren sofort
+ * herausgreifen, ohne fuenf Preise zu lesen. Farbe ist hier NICHT der
+ * einzige Traeger: Der Preis ist rot, und „Zu wenig Gold" steht als Wort
+ * auf der Karte.
+ */
+.tr-karte[data-teuer]:disabled { opacity: 0.45; filter: saturate(0.25); }
+.tr-karte-leer {
+  min-height: 84px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/*
+ * Der Kopf der Ladenkarte: die Figur, und sonst nichts.
+ *
+ * Er hat seit dem 6.9.2026 eine feste HOEHE, weil die Figur darin absolut
+ * steht (`.tr-figur3d-karte`) und ohne Angabe nichts mehr da waere, das die
+ * Karte auseinanderhaelt. 40 px sind das Mass der stehenden Figur — dass sie
+ * bei den grossen Huetten (Magier) ein, zwei Pixel in die obere Polsterung
+ * ragt, ist Absicht: Die Karte schneidet nicht ab.
+ */
+.tr-karte-kopf {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 40px;
+}
+.tr-karte-kopf .tr-rolle { width: 18px; height: 18px; }
+/*
+ * Die 3D-Figur auf der Ladenkarte — dieselbe, die nach dem Kauf auf der Bank
+ * steht. Feste Pixel und nicht Prozent: Die Karte ist eine Spalte von fuenf
+ * und auf einem 360er-Handy keine 70 px breit; ein Prozentmass waere dort ein
+ * Punkt und am Desktop ein Plakat.
+ *
+ * 51 px Zelle ergeben rund 34 px Figur — etwas mehr als die 32 px des
+ * Pixelbilds, das hier vorher stand. Der Fuss liegt bei 20 % der Zellhoehe
+ * ueber deren Unterkante (FIGUREN3D_FUSSPUNKT), also bei −9 px + 10 px = 1 px
+ * ueber dem unteren Rand des Kopfes. Die KARTE bleibt dabei eine Karte: Ihr
+ * Rahmen ist richtig, weggenommen wurde nur die Platte unter der Figur.
+ *
+ * WER DIE BLAETTER NEU RENDERT, rechnet auch diese beiden Zahlen um: Wie gross
+ * die Figur wird, haengt am gemessenen Ausschnitt (FIGUREN3D_ZELLHOEHE_METER),
+ * nicht an der Zellhoehe allein. Hier standen bis zum 06.09.2026 58 px und
+ * −12 px — mit dem engeren Ausschnitt der eigenen Todeszelle waere die Figur
+ * davon um 14 % gewachsen. Die lange Fassung steht bei `.tr-figur3d`.
+ */
+.tr-figur3d-karte {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  height: 51px;
+  translate: -50% 0;
+}
+/* Die Figur auf der Ladenkarte. Feste Pixel und nicht Prozent: Die Karte ist
+   eine Spalte von fuenf und auf einem 360er-Handy keine 70 px breit — ein
+   Prozentmass waere dort ein Punkt und auf dem Desktop ein Plakat. Und
+   genau 32, weil das die Groesse des Originals ist: Aus der vierfach
+   hochgezogenen Datei wird damit wieder Pixel fuer Pixel das gemalte Bild. */
+.tr-karte-kopf .tr-figur { width: 32px; height: 32px; }
+/*
+ * Die Kostenmarke sitzt in der oberen rechten ECKE der Karte.
+ *
+ * Absolut gesetzt und nicht mehr in einer Zeile neben der Figur: So steht sie
+ * bei allen fuenf Karten an derselben Stelle — man ueberfliegt eine Spalte
+ * Zahlen statt fuenf verschieden hoher Zeilen. Sie klebt an der Kante und
+ * nicht in ihr: Ein Preis, der ueber den Rahmen laeuft, sieht aus wie ein
+ * Fehler.
+ */
+.tr-karte-preis {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px 1px 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--gold);
+  font: 800 12px/1.3 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+.tr-karte-preis .tr-icon { width: 12px; height: 12px; }
+/* Ein Preis, den das Gold nicht deckt. Rot ist hier die Vorsicht aus
+   DESIGN.md und keine neue Farbe: Es sagt "geht gerade nicht", nicht
+   "kaputt". */
+.tr-karte-preis[data-teuer],
+.tr-ladenknopf em[data-teuer] { color: var(--danger); }
+.tr-karte-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font: 800 10px/1.2 system-ui;
+}
+.tr-karte-rolle { color: var(--muted); font: 600 9px/1 system-ui; }
+.tr-karte-marke {
+  margin-top: auto;
+  padding: 1px 5px;
+  border-radius: 6px;
+  color: #1a1207;
+  background: var(--gold);
+  font: 800 9px/1.4 system-ui;
+}
+.tr-karte-marke-leise { color: var(--muted); background: rgba(255, 255, 255, 0.08); }
+/* Warum die Karte gesperrt ist. Sie steht auf einer gedimmten Karte, deshalb
+   der kraeftige Grund — sonst ist ausgerechnet die Erklaerung das Blasseste
+   auf dem Bildschirm. */
+.tr-karte-marke-hindernis {
+  color: #2a0f0c;
+  background: var(--danger);
+}
+/* Der Kauf, der drei voll macht, blinkt einmal — sonst uebersieht man ihn
+   zwischen fuenf gleich aussehenden Karten. */
+.tr-karte[data-verschmilzt] {
+  box-shadow: inset 0 0 0 2px var(--gold);
+  animation: tr-winken 1.4s ease-in-out infinite;
+}
+@keyframes tr-winken {
+  0%, 100% { box-shadow: inset 0 0 0 2px var(--gold); }
+  50% { box-shadow: inset 0 0 0 2px var(--gold), 0 0 12px -2px rgba(226, 182, 79, 0.7); }
+}
+
+.tr-ladenknoepfe { display: flex; gap: 6px; width: 100%; }
+.tr-ladenknopf,
+.tr-bereitknopf {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+}
+.tr-ladenknopf em {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--gold);
+  font: 800 12px/1 system-ui;
+  font-style: normal;
+}
+.tr-ladenknopf em .tr-icon { width: 12px; height: 12px; }
+.tr-ladenknopf:disabled,
+.tr-bereitknopf:disabled { opacity: 0.4; cursor: default; }
+.tr-bereitknopf {
+  color: #10200f;
+  background: linear-gradient(180deg, #6cc48a, #3f8f5d);
+  border-color: transparent;
+  font-weight: 800;
+}
+.tr-bereitknopf[data-bereit] {
+  color: var(--muted);
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+/*
+ * Der Satz, der eine leere Flaeche erklaert — Brett, Bank, Laden.
+ *
+ * Eine leere Flaeche sagt nicht, dass sie zu fuellen ist; sie sieht aus wie
+ * ein Fehler. Ein Satz kostet nichts und beantwortet die einzige Frage, die
+ * ein neuer Spieler an dieser Stelle hat.
+ */
+.tr-leer-satz {
+  margin: 0;
+  padding: 0 14px;
+  max-width: min(94vw, 460px);
+  color: var(--muted);
+  font: 600 12px/1.4 system-ui;
+  text-align: center;
+}
+
+/*
+ * Ueber dem eigenen Brett statt darunter: Dort ist Platz, und der Satz zeigt
+ * auf die Flaeche, von der er redet. `pointer-events: none` ist keine
+ * Feinheit, sondern der Kern — sonst faengt der Satz genau das Ablegen ab,
+ * zu dem er auffordert, und `elementFromPoint` findet ihn statt der Wabe.
+ */
+.tr-leer-brett {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.tr-hinweis { margin: 0; color: var(--muted); font: 600 12px/1.35 system-ui; text-align: center; }
+
+/*
+ * Der Weg zurueck aus einem fremden Kampf.
+ *
+ * Er steht an der Stelle, an der sonst der Laden aufgeht (`.tr-fuss`), und
+ * fuellt sie ganz aus: Wer einem fremden Kampf zusieht, hat dort nichts
+ * anderes zu tun, und ein schmaler Knopf mitten in einer leeren Flaeche waere
+ * schwerer zu treffen als noetig. 44 px hoch — die Mindestgroesse eines
+ * Tippziels (DESIGN.md).
+ */
+.tr-zuschauen-zurueck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: 800 13px/1.2 system-ui;
+  cursor: pointer;
+}
+.tr-zuschauen-zurueck svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tr-zuschauen-zurueck:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: reduce) {
+  .tr-zuschauen-zurueck:active { transform: none; }
+}
+.tr-wartet { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.tr-lauf { display: inline-flex; gap: 4px; }
+.tr-lauf i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: tr-huepf 1.05s infinite ease-in-out;
+}
+.tr-lauf i:nth-child(2) { animation-delay: 0.16s; }
+.tr-lauf i:nth-child(3) { animation-delay: 0.32s; }
+
+.tr-regelzeile {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 12px/1 system-ui;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tr-abschluss { text-align: center; }
+.tr-abschluss h2 { margin: 0 0 4px; font: 900 26px/1 system-ui; color: var(--muted); }
+.tr-abschluss h2[data-sieg] { color: var(--gold); }
+.tr-abschluss p { margin: 0 0 12px; color: var(--muted); font: 700 14px/1 system-ui; }
+.tr-abschluss .tr-suchen { width: min(80vw, 260px); padding: 14px 16px; }
+
+/* -- Regelblatt ----------------------------------------------------------- */
+
+.tr-blatt {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  padding: max(56px, env(safe-area-inset-top)) 20px 40px;
+  color: var(--text);
+  background: var(--bg);
+}
+.tr-blatt h2 {
+  margin: 0 0 18px;
+  font: 800 24px/1.2 system-ui;
+  text-align: center;
+  color: var(--gold);
+}
+.tr-blatt h3 { margin: 22px 0 8px; font: 800 19px/1.2 Georgia, serif; }
+.tr-blatt p,
+.tr-blatt li { font: 400 16px/1.5 Georgia, serif; }
+.tr-blatt ol { margin: 0; padding-left: 22px; }
+.tr-blatt li { margin-bottom: 10px; }
+.tr-blatt-zu {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+
+/* Ab Tablet-Breite steht mehr Platz zur Verfuegung: Brett und Laden duerfen
+   groesser werden, statt in der Mitte eines leeren Schirms zu kleben. */
+@media (min-width: 40rem) {
+  .tr-tisch { --tr-luft: 8px; }
+  .tr-bretter,
+  .tr-bank,
+  .tr-statuszeile,
+  .tr-auswahlband { width: min(70vw, 560px); }
+  .tr-oben,
+  .tr-fuss { width: min(72vw, 600px); }
+  .tr-fuss { gap: 8px; }
+  .tr-karte { min-height: 104px; }
+  .tr-goldstand strong { font-size: 26px; }
+}
+
+/* Wer weniger Bewegung eingestellt hat, bekommt das Ergebnis ohne Zappeln —
+   die Auskunft steckt in Farbe und Text, nicht in der Animation. Die
+   Zustaende bleiben vollstaendig: Das Feld unter dem Finger leuchtet
+   weiterhin, es wechselt nur ohne Uebergang. */
+@media (prefers-reduced-motion: reduce) {
+  .tr-punkte-lauf span,
+  .tr-lauf i,
+  .tr-karte[data-verschmilzt],
+  .tr-einheit[data-frisch],
+  .tr-brett .tr-einheit .tr-figur,
+  .tr-brett .tr-einheit .tr-figur3d,
+  .tr-verschmolzen-band { animation: none; }
+  .tr-wabe::before { transition: none; }
+}
+
+
+/* -- Tafelrunde: das Banner der Spielauswahl (minispiele/tafelrunde) ------
+
+   Dieselbe Bauart wie bei Eiland und Filler, nur ohne gemaltes Gegenstueck:
+   Fuer Tafelrunde gibt es noch kein Bild, deshalb steht das Brett auch bei
+   „weniger Bewegung" da — nur eben still. Die Masse sind Prozente des
+   Banners, damit ein spaeter geliefertes Bild an derselben Stelle sitzt. */
+
+.tr-banner {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 1;
+  overflow: hidden;
+  background: linear-gradient(180deg, #12181c, #0d1216);
+}
+/* Der warme Schein rechts hinter dem Brett — er nimmt dem dunklen Kasten die
+   Leere und traegt die Farbe des Spiels (Gold) ins Banner. */
+.tr-banner-schein {
+  position: absolute;
+  top: -55%;
+  right: -4%;
+  width: 62%;
+  height: 210%;
+  background: radial-gradient(closest-side, rgba(226, 182, 79, 0.32), rgba(226, 182, 79, 0));
+  pointer-events: none;
+}
+.tr-banner-brett {
+  position: absolute;
+  top: 6%;
+  right: 5%;
+  height: 88%;
+  /* Die Breite ergibt sich aus dem Seitenverhaeltnis des Rasters, das die
+     Bauteil-Datei ausrechnet — hier steht deshalb nur die Hoehe. */
+  width: auto;
+}
+.tr-banner-wabe {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: rgba(255, 255, 255, 0.05);
+  transition: background-color 220ms ease;
+}
+.tr-banner-wabe svg {
+  width: 46%;
+  height: 46%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tr-banner-wabe i {
+  color: var(--gold);
+  font: 700 7px/1 system-ui;
+  font-style: normal;
+  letter-spacing: -1px;
+}
+/* Eine frisch verschmolzene Einheit wird kurz gross und golden. Das ist der
+   ganze Zweck dieses Banners: Wer zwei Sekunden hinsieht, hat die Mechanik
+   verstanden, ohne ein Wort gelesen zu haben. */
+.tr-banner-wabe[data-frisch] { animation: tr-banner-frisch 900ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes tr-banner-frisch {
+  0% { transform: scale(0.5); filter: brightness(2.2); background: rgba(226, 182, 79, 0.6); }
+  60% { transform: scale(1.12); background: rgba(226, 182, 79, 0.28); }
+  100% { transform: none; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-banner-wabe[data-frisch] { animation: none; }
 }

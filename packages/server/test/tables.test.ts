@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { easypoker } from '@brauweg/game-easypoker';
+import { tafelrunde } from '@brauweg/game-tafelrunde';
 
 import { AppError } from '../src/errors.js';
 import { registry } from '../src/games/registry.js';
@@ -10,10 +12,13 @@ import {
   MAX_ROUNDS,
   createTable,
   expireStaleTables,
+  isReadyToStart,
   joinTable,
   leaveLobby,
   listTables,
   saveRuleSet,
+  schrumpfeAufBesetzte,
+  tableRules,
   tableWithSeats,
 } from '../src/tables/service.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
@@ -29,14 +34,25 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind acht', () => {
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind zehn', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
 
   assert.deepEqual(
     playable.map((meta) => meta.id),
-    ['doppelkopf', 'wizard', 'cambio', 'feldherr', 'skat', 'mememory', 'filler', 'eiland'],
+    [
+      'doppelkopf',
+      'wizard',
+      'cambio',
+      'feldherr',
+      'skat',
+      'mememory',
+      'easypoker',
+      'filler',
+      'eiland',
+      'tafelrunde',
+    ],
   );
   assert.deepEqual(
     preview.map((meta) => meta.id).sort(),
@@ -348,6 +364,77 @@ test('ein unvollstaendiger Regelsatz wird nicht angenommen', async (t) => {
   );
 });
 
+test('ohne Regelsatz gilt der des Moduls', async (t) => {
+  /*
+   * Der Gegenentwurf zum Test darueber: Ein unvollstaendiger Regelsatz wird
+   * abgewiesen, GAR KEINER heisst "nimm den des Moduls".
+   *
+   * Das ist der Weg fuer jeden Bildschirm, der nichts einstellen laesst.
+   * Ohne ihn muss er die Vorgabezahlen abschreiben — und diese Kopie
+   * ueberstimmt dann das Modul, weil der Server eine mitgeschickte `config`
+   * als Regelsatz des Tisches festschreibt. Bei Tafelrunde waere genau das am
+   * 05.09.2026 zweimal durchgerutscht: erst haetten alle Tische mit 100 statt
+   * 20 Startleben gelaufen, dann mit 20 statt 14.
+   */
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+
+  const table = await createTable(c.db, {
+    accountId,
+    gameId: 'tafelrunde',
+    seats: 4,
+    rounds: 1,
+  });
+
+  assert.deepEqual(await tableRules(c.db, table.id), tafelrunde.defaultConfig());
+
+  // `null` ist etwas anderes als weggelassen: ein gesetzter, falscher Wert.
+  // Er darf NICHT still durch die Vorgabe ersetzt werden, sonst deckt die
+  // Bequemlichkeit einen Fehler im Aufrufer zu.
+  await assert.rejects(
+    () =>
+      createTable(c.db, {
+        accountId,
+        gameId: 'tafelrunde',
+        config: null,
+        seats: 4,
+        rounds: 1,
+      }),
+    (err: AppError) => err.code === 'ruleSetInvalid',
+  );
+});
+
+test('POST /api/tables nimmt einen Rumpf ohne Regelsatz an', async (t) => {
+  // Die Zod-Pruefung ist das eigentliche Tor: Stuende dort weiter
+  // `config: z.unknown()` ohne `.optional()`, kaeme der Bildschirm gar nicht
+  // erst bis zur Vorgabe oben.
+  const c = await ctx();
+  t.after(() => c.close());
+  const anna = await createVerifiedAccount(c, 'Anna');
+
+  const app = await buildApp({
+    db: c.db,
+    runtime: new PartyRuntime(c.db),
+    auth: c.auth,
+    cookieSecure: false,
+    sessionTtlDays: 30,
+  });
+  t.after(() => app.close());
+
+  const token = await createSession(c.auth, anna.accountId);
+  const antwort = await app.inject({
+    method: 'POST',
+    url: '/api/tables',
+    headers: { cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}`, 'content-type': 'application/json' },
+    payload: { gameId: 'tafelrunde', seats: 4, rounds: 1, visibility: 'on_request' },
+  });
+
+  assert.equal(antwort.statusCode, 201, antwort.body);
+  const { id } = antwort.json() as { id: string };
+  assert.deepEqual(await tableRules(c.db, id), tafelrunde.defaultConfig());
+});
+
 test('die Lobby vor Spielstart zu verlassen ist straffrei', async (t) => {
   const c = await ctx();
   t.after(() => c.close());
@@ -552,8 +639,63 @@ test('der Aktiv-Zaehler sieht auch laufende Partien - die Tischliste tut das nic
   const anderes = await app.inject({ method: 'GET', url: '/api/games/mememory/aktiv' });
   assert.equal(anderes.json().aktiv, 0);
 
+  // Der Gesamtzaehler (Homescreen) sieht beide, ohne nach Spiel zu fragen.
+  const gesamt = await app.inject({ method: 'GET', url: '/api/aktiv' });
+  assert.equal(gesamt.statusCode, 200);
+  assert.equal(gesamt.json().aktiv, 2);
+
   // Verlaesst Anna ihren Tisch, faellt der Zaehler auf den Spielenden zurueck.
   await leaveLobby(c.db, wartend.id, anna.accountId);
   const danach = await app.inject({ method: 'GET', url: '/api/games/doppelkopf/aktiv' });
   assert.equal(danach.json().aktiv, 1);
+});
+
+test('ein wartender Tisch schrumpft auf die Besetzten und ist dann startklar', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId: anna } = await createVerifiedAccount(c, 'Anna');
+  const { accountId: bert } = await createVerifiedAccount(c, 'Bert');
+
+  const table = await createTable(c.db, {
+    accountId: anna,
+    gameId: 'easypoker',
+    config: easypoker.defaultConfig(),
+    seats: 6,
+    rounds: 12,
+  });
+  await joinTable(c.db, table.id, bert);
+
+  await schrumpfeAufBesetzte(c.db, table.id, anna);
+
+  const { table: nachher, seats } = await tableWithSeats(c.db, table.id);
+  assert.equal(nachher.seats, 2);
+  assert.equal(seats.length, 2);
+  // Die Sitze ruecken lueckenlos auf 0..n-1 auf — die Module zaehlen so.
+  assert.deepEqual(seats.map((s2) => s2.seatIndex), [0, 1]);
+  assert.ok(seats.every((s2) => s2.accountId), 'kein leerer Platz bleibt uebrig');
+  assert.ok(isReadyToStart(nachher, seats), 'nach dem Schrumpfen ist der Tisch startklar');
+});
+
+test('schrumpfen verlangt zwei Mitspieler und einen eigenen Platz', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId: anna } = await createVerifiedAccount(c, 'Anna');
+  const { accountId: fremd } = await createVerifiedAccount(c, 'Fremd');
+
+  const table = await createTable(c.db, {
+    accountId: anna,
+    gameId: 'easypoker',
+    config: easypoker.defaultConfig(),
+    seats: 6,
+    rounds: 12,
+  });
+
+  await assert.rejects(
+    () => schrumpfeAufBesetzte(c.db, table.id, anna),
+    (err: AppError) => err.code === 'tableNotFull',
+  );
+  await assert.rejects(
+    () => schrumpfeAufBesetzte(c.db, table.id, fremd),
+    (err: AppError) => err.code === 'notSeated',
+  );
 });

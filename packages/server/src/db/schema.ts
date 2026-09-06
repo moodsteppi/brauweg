@@ -147,6 +147,19 @@ export const account = pgTable(
      */
     gems: integer().notNull().default(0),
     /**
+     * BroJetons — Chips fuer Poker.
+     *
+     * Eine dritte Saeule neben Muenzen und Edelsteinen, absichtlich ohne
+     * Rueckweg: BroJetons kauft man im Shop gegen Muenzen, und am Pokertisch
+     * werden sie eingesetzt. Aus BroJetons werden nie wieder Muenzen oder
+     * Edelsteine, sonst waere jede gewonnene Hand ein Weg in den Shop.
+     *
+     * Neue Konten bekommen einen Startstapel (Default 1000), damit die erste
+     * Runde nicht erst einen Kauf erzwingt. Alle Buchungen laufen ueber
+     * src/waehrung.ts, genau wie bei den beiden anderen Guthaben.
+     */
+    broJetons: integer().notNull().default(1000),
+    /**
      * Erfahrungspunkte, spieluebergreifend. Die Stufe wird daraus gerechnet
      * und nicht gespeichert (src/level.ts): Sonst gaebe es zwei Wahrheiten,
      * und eine Aenderung an der Kurve muesste jede Zeile anfassen.
@@ -226,11 +239,19 @@ export const account = pgTable(
     mememoryZufall: boolean().notNull().default(false),
     /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
     birthdayRewardYear: integer(),
+    /**
+     * Google-Kennung (`sub` aus dem ID-Token). Stabil, waehrend die E-Mail
+     * beim selben Google-Konto wechseln kann — deshalb haengt die Verknuepfung
+     * an dieser Spalte und nicht an der Adresse. null: nie mit Google
+     * angemeldet.
+     */
+    googleSub: text(),
     anonymizedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
     uniqueIndex('account_display_name_key').on(t.displayName),
+    uniqueIndex('account_google_sub_key').on(t.googleSub),
   ],
 );
 
@@ -780,6 +801,16 @@ export const gameTable = pgTable(
      * feste Verdrahtung im Server. Deshalb jsonb.
      */
     filters: jsonb().notNull().default(sql`'{}'::jsonb`),
+    /**
+     * Kurzer Beitrittscode, den man weitersagen kann ("KX7M9Q").
+     *
+     * Eine eigene Spalte und nicht die Tisch-Kennung: Eine UUID diktiert
+     * niemand ins Telefon. Und nicht in `filters`, obwohl das eine Migration
+     * gespart haette — der Code muss EINDEUTIG sein, und das kann nur ein
+     * Index. Nullbar, weil Tische von vor diesem Deploy keinen haben; in
+     * Postgres stoeren mehrere NULL einen Unique-Index nicht.
+     */
+    joinCode: text(),
   },
   (t) => [
     foreignKey({
@@ -789,6 +820,7 @@ export const gameTable = pgTable(
     }),
     index('table_lobby_idx').on(t.gameId, t.status, t.visibility),
     index('table_activity_idx').on(t.lastActivityAt),
+    uniqueIndex('table_join_code_idx').on(t.joinCode),
   ],
 );
 
@@ -848,6 +880,33 @@ export const partySnapshot = pgTable('party_snapshot', {
   state: jsonb().notNull(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Einsatz-Schloss fuer Spiele mit BroJetons (heute Poker).
+ *
+ * Beim Partiestart wird der Buy-in abgezogen und hier festgehalten. Am Ende
+ * kommt der Reststapel zurueck, und `settled_at` schliesst die Zeile — ein
+ * zweites Auszahlen trifft dann keine Zeile mehr. Der Tisch, nicht die
+ * Partie, ist der Schluessel: So bleibt die Zeile auch dann findbar, wenn
+ * der Start zwischen Abbuchung und Partie-Insert abbricht.
+ */
+export const chipLock = pgTable(
+  'chip_lock',
+  {
+    tableId: uuid()
+      .notNull()
+      .references(() => gameTable.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    seat: smallint().notNull(),
+    buyIn: integer().notNull(),
+    /** Reststapel, der zurueckging. Null, solange die Partie laeuft. */
+    returned: integer(),
+    settledAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.tableId, t.accountId] })],
+);
 
 /**
  * Speichert bewusst nur jsonb: Die Struktur einer Runde ist spielabhaengig,

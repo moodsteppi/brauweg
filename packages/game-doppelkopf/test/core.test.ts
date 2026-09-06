@@ -16,6 +16,7 @@ import {
   currentActor,
 } from '../src/round.js';
 import { handoverSize } from '../src/armut.js';
+import { amZug } from './vorbehaltshilfe.js';
 
 /** Testhelfer: Karte aus Kurzschreibweise, z.B. c('HT'). */
 let nextId = 1000;
@@ -315,21 +316,21 @@ test('doppelte Karten beim Armut-Tausch werden abgewiesen', () => {
   let state = null;
   for (let seed = 1; seed < 400 && !state; seed++) {
     const kandidat = createRound(rs, seats, 0, seed);
-    const dran = currentActor(kandidat)!;
+    const dran = amZug(kandidat)!;
     if (allowedVorbehalte(kandidat, dran).includes('armut')) state = kandidat;
   }
   assert.ok(state, 'kein Blatt mit Armut gefunden');
 
-  const armer = currentActor(state)!;
+  const armer = amZug(state)!;
   state = apply(state, { type: 'vorbehalt', seat: armer, kind: 'armut' });
   while (state.phase === 'vorbehalt') {
-    state = apply(state, { type: 'vorbehalt', seat: currentActor(state)!, kind: null });
+    state = apply(state, { type: 'vorbehalt', seat: amZug(state)!, kind: null });
   }
   assert.equal(state.phase, 'armutExchange');
 
   // Annehmen, bis jemand die Armut nimmt.
   while (state.armut!.partnerSeat === null && state.phase === 'armutExchange') {
-    state = apply(state, { type: 'armutAccept', seat: currentActor(state)! });
+    state = apply(state, { type: 'armutAccept', seat: amZug(state)! });
   }
   assert.notEqual(state.armut!.partnerSeat, null);
 

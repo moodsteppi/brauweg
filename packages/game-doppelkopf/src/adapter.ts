@@ -15,12 +15,14 @@
  *      indem Hand und alles daraus Abgeleitete weggelassen werden.
  */
 
-import type {
-  ConfigProblem,
-  CreatePartyOptions,
-  GameMeta,
-  GameModule,
-  PartyStanding,
+import {
+  type ConfigProblem,
+  type CreatePartyOptions,
+  type GameMeta,
+  type GameModule,
+  type PartyStanding,
+  pruefeSnapshotVersion,
+  shapeProblems,
 } from '@brauweg/game-api';
 
 import {
@@ -40,6 +42,8 @@ import {
   createParty as engineCreateParty,
   botAction as engineBotAction,
   currentActor as roundCurrentActor,
+  vorbehaltOffen,
+  vorbehalteAblaufen,
   finishParty,
   markLeft as engineMarkLeft,
   pauseSeats,
@@ -122,37 +126,6 @@ function stripHand(view: PlayerView): PlayerView {
   };
 }
 
-/**
- * Prueft, ob ueberhaupt ein Regelsatz vorliegt.
- *
- * Verglichen wird gegen die Felder des Standardregelsatzes: Jedes muss da sein
- * und denselben Typ haben. Das haelt auch eine spaetere neue Option
- * automatisch mit, ohne dass hier eine Liste gepflegt werden muss.
- */
-function shapeProblems(config: unknown): ConfigProblem[] {
-  if (typeof config !== 'object' || config === null) {
-    return [{ path: 'config', messageKey: 'ruleset.notAnObject', severity: 'error' }];
-  }
-
-  const given = config as Record<string, unknown>;
-  const problems: ConfigProblem[] = [];
-
-  for (const [key, standard] of Object.entries(DEFAULT_RULESET)) {
-    const value = given[key];
-    if (value === undefined) {
-      problems.push({ path: key, messageKey: 'ruleset.fieldMissing', severity: 'error' });
-      continue;
-    }
-    const expected = Array.isArray(standard) ? 'array' : typeof standard;
-    const actual = Array.isArray(value) ? 'array' : typeof value;
-    if (expected !== actual) {
-      problems.push({ path: key, messageKey: 'ruleset.fieldWrongType', severity: 'error' });
-    }
-  }
-
-  return problems;
-}
-
 function wrap(party: PartyState, round: PlayerView | null, spectator: boolean): DokoView {
   return {
     round,
@@ -171,6 +144,19 @@ function wrap(party: PartyState, round: PlayerView | null, spectator: boolean): 
 // Modul
 // ---------------------------------------------------------------------------
 
+/**
+ * Laeuft gerade die gleichzeitige Vorbehaltsabfrage und schuldet noch jemand
+ * eine Antwort? Bei der Vorfuehrung nicht: Dort ist genau ein Sitz am Zug,
+ * sein Solo ist Pflicht, und dafuer gilt der normale Zugtimer samt
+ * Bot-Uebernahme — eine Frist mit „dann eben gesund" gaebe es dort nicht.
+ */
+function offeneVorbehalte(party: PartyState): boolean {
+  const st = party.current;
+  if (!st || st.phase !== 'vorbehalt') return false;
+  if (st.forcedSoloSeat !== null) return false;
+  return vorbehaltOffen(st).length > 0;
+}
+
 export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> = {
   meta,
   protocolVersion: 1,
@@ -182,7 +168,7 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
     // fehlt die Haelfte der Felder, findet der Validator darin keinen
     // Widerspruch und winkt ihn durch. Der Tisch flaege dann erst beim
     // Spielstart auseinander, weit weg von der Ursache.
-    const malformed = shapeProblems(config);
+    const malformed = shapeProblems(config, DEFAULT_RULESET);
     if (malformed.length > 0) return malformed;
 
     const ruleSet = config as RuleSet;
@@ -279,9 +265,9 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
       }
     }
 
-    if (!v.isMyTurn) return actions;
-
-    if (v.phase === 'vorbehalt') {
+    // Die Vorbehaltsabfrage laeuft gleichzeitig und haengt deshalb NICHT am
+    // Zugrecht: Jeder, der seine Antwort noch schuldet, darf sie geben.
+    if (v.phase === 'vorbehalt' && v.vorbehaltOffen) {
       for (const kind of v.allowedVorbehalte) {
         if (kind === 'solo') {
           for (const solo of v.soloOptions) {
@@ -296,7 +282,11 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
       if (!v.forcedSolo) {
         actions.push({ type: 'vorbehalt', seat, kind: null });
       }
+      // Solange die Abfrage laeuft, ist sie die einzige Aktion dieses Sitzes.
+      return actions;
     }
+
+    if (!v.isMyTurn) return actions;
 
     if (v.armut.awaiting === 'decide') {
       actions.push({ type: 'armutAccept', seat });
@@ -334,9 +324,20 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
    * und Zwischenstand, kurz genug, dass der Tisch nie an einem AFK-Spieler
    * haengt. Wer frueher weiterspielen will, tippt "Weiter".
    */
-  interludeMs: (party) => (inRundenpause(party) ? 15_000 : null),
+  interludeMs: (party) => {
+    if (inRundenpause(party)) return 15_000;
+    // Gleichzeitige Vorbehaltsabfrage: Alle erklaeren zusammen, und nach
+    // Ablauf der Frist gilt „gesund". Die Frist laeuft ueber die Schaupause
+    // der Plattform, weil dort schon alles steht, was es dafuer braucht:
+    // eine Frist ab Phasenbeginn, Bots die ihre Antwort selbst geben, und ein
+    // Weiterlaufen von selbst. Das Modul bleibt uhrlos.
+    return offeneVorbehalte(party) ? 30_000 : null;
+  },
 
   advanceInterlude(party) {
+    if (offeneVorbehalte(party)) {
+      return { ...party, current: vorbehalteAblaufen(party.current!) };
+    }
     if (!inRundenpause(party)) return party;
     const next = endeRundenpause(party);
     return next.finished ? next : startRound(next);
@@ -411,11 +412,7 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
 
   deserialize(raw) {
     const snap = raw as SerializedParty;
-    if (snap.v !== SNAPSHOT_VERSION) {
-      throw new Error(
-        `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
-      );
-    }
+    pruefeSnapshotVersion(snap.v, SNAPSHOT_VERSION);
     const { v: _v, bock, ...rest } = snap;
     return {
       ...rest,

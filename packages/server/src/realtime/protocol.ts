@@ -83,6 +83,16 @@ export type ClientMessage =
       readonly v: number;
       readonly game: GameId;
       /**
+       * Sofort starten: Der Tisch schrumpft auf die besetzten Plaetze
+       * (mindestens zwei) und die Partie geht los — ohne Bot-Auffuellen.
+       */
+      readonly type: 'startNow';
+      readonly tableId: string;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /**
        * Takt-Herzschlag eines Echtzeitspiels (Feldherr). Bewusst KEINE
        * Aktion: Er aendert keinen Partiestand, wird nicht gespeichert und
        * loest keinen Sicht-Rundruf aus — er wird nur an die anderen am Tisch
@@ -138,6 +148,19 @@ export interface ViewMessage {
   readonly currentActor: number | null;
   /** Zeitpunkt in Millisekunden seit Epoche, null wenn kein Timer laeuft. */
   readonly turnDeadline: number | null;
+  /**
+   * Frist einer laufenden Schaupause, oder null. Getrennt vom Zugtimer, weil
+   * sie fuer ALLE gilt und nicht fuer einen Sitz: die Rundenabrechnung, und
+   * beim Doppelkopf die gleichzeitige Vorbehaltsabfrage.
+   */
+  readonly interludeDeadline: number | null;
+  /**
+   * Frist der laufenden Phase, oder null. Gilt wie die Schaupause fuer ALLE
+   * Sitze — anders als sie aber, waehrend noch gehandelt werden darf: Bei
+   * Tafelrunde ruesten alle gleichzeitig, und die Zugzeit taugt dort als
+   * Restzeit nicht (siehe phaseMs in game-api).
+   */
+  readonly phaseDeadline: number | null;
   readonly botSeats: readonly number[];
   readonly leftSeats: readonly number[];
   readonly finished: boolean;

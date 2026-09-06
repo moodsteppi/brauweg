@@ -7,6 +7,8 @@
  * anbietet, beantwortet immer das Modul.
  */
 
+import { randomInt } from 'node:crypto';
+
 import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { type BotLevel, DEFAULT_BOT_LEVEL, type GameId } from '@brauweg/game-api';
 
@@ -15,6 +17,7 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { RuleSetInvalidError, badRequest, conflict, forbidden, notFound } from '../errors.js';
 import { requireModule } from '../games/registry.js';
+import { einsatzVon, stakesVon, verlangen } from '../brojetons.js';
 
 /**
  * Oeffentliche und private Tische muessen in einer Sitzung durchlaufen, daher
@@ -30,8 +33,14 @@ export interface CreateTableInput {
   readonly accountId: string;
   readonly gameId: GameId;
   readonly name?: string;
-  /** Vollstaendiger Regelsatz. Wird immer als eigene Version festgeschrieben. */
-  readonly config: unknown;
+  /**
+   * Vollstaendiger Regelsatz. Wird immer als eigene Version festgeschrieben.
+   *
+   * WEGLASSEN HEISST: der Regelsatz des Moduls (`defaultConfig()`). Das ist
+   * der Normalfall fuer einen Bildschirm, der gar nichts einstellen laesst —
+   * die Begruendung steht unten in `createTable`.
+   */
+  readonly config?: unknown;
   readonly seats: number;
   readonly rounds: number;
   readonly visibility?: s.TableVisibility;
@@ -127,6 +136,80 @@ export async function listRuleSets(db: Db, accountId: string, gameId: GameId) {
 // Tische
 // ---------------------------------------------------------------------------
 
+/**
+ * Zeichenvorrat des Beitrittscodes.
+ *
+ * Ohne 0/O und 1/I/L: Der Code wird vorgelesen und abgetippt, und genau diese
+ * Paare verwechselt jeder. Kleinbuchstaben fehlen aus demselben Grund —
+ * gelesen wird der Code als Grossbuchstabe, verglichen ebenso
+ * (`codeNormalisieren`).
+ */
+const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+/** Sechs Zeichen aus 31 sind rund 900 Millionen Moeglichkeiten. */
+export const CODE_LAENGE = 6;
+
+/**
+ * Ein eingetippter Code in die Form, in der er in der Datenbank steht.
+ *
+ * Leerzeichen und Bindestriche fliegen raus: Wer "KX7 M9Q" oder "KX7-M9Q"
+ * abschreibt, meint denselben Tisch.
+ */
+export function codeNormalisieren(eingabe: string): string {
+  return eingabe.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function wuerfleCode(): string {
+  let code = '';
+  for (let i = 0; i < CODE_LAENGE; i += 1) {
+    code += CODE_ZEICHEN[randomInt(CODE_ZEICHEN.length)];
+  }
+  return code;
+}
+
+/**
+ * Ein Code, den es noch nicht gibt.
+ *
+ * Vorher nachsehen statt auf den Unique-Index zu laufen: Ein Zusammenstoss ist
+ * bei 900 Millionen Moeglichkeiten und einer Handvoll wartender Tische so
+ * selten, dass die Abfrage praktisch immer beim ersten Versuch durch ist — und
+ * der Index bleibt als letzte Sicherung darunter stehen, falls doch zwei
+ * gleichzeitig denselben ziehen.
+ */
+async function freierCode(db: Db): Promise<string> {
+  for (let versuch = 0; versuch < 5; versuch += 1) {
+    const code = wuerfleCode();
+    const [belegt] = await db
+      .select({ id: s.gameTable.id })
+      .from(s.gameTable)
+      .where(eq(s.gameTable.joinCode, code))
+      .limit(1);
+    if (!belegt) return code;
+  }
+  throw conflict('joinCodeUnavailable');
+}
+
+/**
+ * Der wartende Tisch zu einem Beitrittscode.
+ *
+ * Nur wartende Tische: Ein Code, dessen Partie schon laeuft, soll nicht in
+ * `joinTable` laufen und dort `tableAlreadyStarted` melden — das klaenge, als
+ * haette man sich vertippt. Der eigene Fehlercode sagt, was los ist.
+ */
+export async function tischPerCode(db: Db, eingabe: string) {
+  const code = codeNormalisieren(eingabe);
+  if (code.length === 0) throw notFound('joinCodeUnknown');
+
+  const [table] = await db
+    .select()
+    .from(s.gameTable)
+    .where(eq(s.gameTable.joinCode, code))
+    .limit(1);
+  if (!table) throw notFound('joinCodeUnknown');
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  return table;
+}
+
 export async function createTable(db: Db, input: CreateTableInput) {
   const module = requireModule(input.gameId);
   const visibility = input.visibility ?? 'public';
@@ -144,6 +227,22 @@ export async function createTable(db: Db, input: CreateTableInput) {
     throw badRequest('seatCountUnsupported');
   }
 
+  /*
+   * Ohne `config` gilt der Regelsatz des Moduls.
+   *
+   * Sonst muss jeder Bildschirm, der gar nichts einstellen laesst, die
+   * Vorgabezahlen abschreiben, um ueberhaupt einen Tisch aufmachen zu koennen
+   * — und diese Kopie UEBERSTIMMT dann das Modul, ohne dass irgendwo ein
+   * Fehler auffaellt. Bei Tafelrunde waere das am 05.09.2026 zweimal beinahe
+   * passiert: erst waere jeder Tisch mit 100 statt 20 Startleben gelaufen,
+   * dann mit 20 statt 14. Beide Male haette der Server die veraltete Kopie
+   * brav festgeschrieben.
+   *
+   * `null` zaehlt nicht als weggelassen: Das ist ein gesetzter Wert, und
+   * `validateConfig` soll ihn wie jeden anderen falschen abweisen.
+   */
+  const config = input.config === undefined ? module.defaultConfig() : input.config;
+
   // Die Geberrotation ist spielabhaengig, also fragt der Server das Modul,
   // statt eine Zahl fest zu verdrahten.
   const rotation = module.meta.rotationSize(input.seats);
@@ -155,11 +254,16 @@ export async function createTable(db: Db, input: CreateTableInput) {
     accountId: input.accountId,
     gameId: input.gameId,
     name: input.name ?? 'Tischregeln',
-    config: input.config,
+    config,
     seats: input.seats,
     rounds: input.rounds,
     clubId,
   });
+
+  const chipFeld = module.meta.chipStackField;
+  if (chipFeld) {
+    await verlangen(db, input.accountId, einsatzVon(config, chipFeld));
+  }
 
   // Erst nach allen Pruefungen (auch der des Regelsatzes in saveRuleSet):
   // Ein abgelehnter Tisch soll den alten nicht kosten.
@@ -175,6 +279,14 @@ export async function createTable(db: Db, input: CreateTableInput) {
       clubId,
       seats: input.seats,
       maxRounds: input.rounds,
+      /*
+       * Jeder Tisch bekommt einen Code, nicht nur der private.
+       *
+       * Er kostet sechs Zeichen und macht jeden Tisch weitersagbar — auch den
+       * oeffentlichen, den ein Freund sonst in der Liste suchen muesste. Wer
+       * ihn nicht braucht, sieht ihn nie.
+       */
+      joinCode: await freierCode(db),
       // Nur gültige Stufen in die Filter — tableBotLevel fällt sonst ohnehin auf
       // die Vorgabe zurück, aber ein sauberer Filter erspart Rätselraten.
       filters: {
@@ -277,6 +389,7 @@ export async function listTables(db: Db, filter: LobbyFilter) {
     .from(s.ruleSet)
     .where(inArray(s.ruleSet.id, tables.map((t) => t.ruleSetId)));
   const regelZahl = new Map<string, number>();
+  const stakesZahl = new Map<string, ReturnType<typeof stakesVon>>();
   const varianten = new Map<string, string | null>();
   for (const rs of regelSaetze) {
     const config = rs.config as Record<string, unknown>;
@@ -287,6 +400,7 @@ export async function listTables(db: Db, filter: LobbyFilter) {
     }
     const key = `${rs.id}:${rs.version}`;
     regelZahl.set(key, anders);
+    stakesZahl.set(key, stakesVon(rs.config));
     varianten.set(key, varianteVon(rs.config));
   }
 
@@ -301,6 +415,8 @@ export async function listTables(db: Db, filter: LobbyFilter) {
       host: gastgeber ? (namen.get(gastgeber) ?? null) : null,
       /** Anzahl aktiver Sonderregeln. 0 heisst Grundspiel. */
       ruleCount: regelZahl.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? 0,
+      /** Buy-in und Blinds, oder null wenn der Tisch keine Chips kennt. */
+      stakes: stakesZahl.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? null,
       /** Spielart des Tisches, oder null wenn das Spiel keine kennt. */
       variante: varianten.get(`${table.ruleSetId}:${table.ruleSetVersion}`) ?? null,
     };
@@ -315,7 +431,7 @@ export async function listTables(db: Db, filter: LobbyFilter) {
  * BEDEUTET, weiss allein das Modul. Damit bleibt die Regel aus CLAUDE.md
  * gewahrt ("Der Server kennt kein einzelnes Kartenspiel"), und dieselbe Zeile
  * bedient das naechste Spiel mit zwei Spielarten, ohne dass hier etwas
- * dazukommt.
+ * dazukommt. Dasselbe Muster wie `stakesVon` daneben.
  *
  * Wozu die Lobby sie braucht: Zwei Spielarten sind zwei getrennte Toepfe fuer
  * die Match-Suche. Ohne dieses Feld landet, wer offen spielen will, am
@@ -381,6 +497,15 @@ export async function joinTable(db: Db, tableId: string, accountId: string) {
   if (table.visibility === 'club_only') {
     if (!table.clubId) throw forbidden('notClubMember');
     await requireClubMember(db, table.clubId, accountId);
+  }
+
+  const chipFeld = requireModule(table.gameId).meta.chipStackField;
+  if (chipFeld) {
+    const [rs] = await db
+      .select({ config: s.ruleSet.config })
+      .from(s.ruleSet)
+      .where(and(eq(s.ruleSet.id, table.ruleSetId), eq(s.ruleSet.version, table.ruleSetVersion)));
+    if (rs) await verlangen(db, accountId, einsatzVon(rs.config, chipFeld));
   }
 
   // Niemand wartet an zwei Tischen gleichzeitig.
@@ -549,6 +674,68 @@ export async function setSeatBot(
     .set({ isBot: wantBot })
     .where(and(eq(s.tableSeat.tableId, tableId), eq(s.tableSeat.seatIndex, seatIndex)));
   await touch(db, tableId);
+}
+
+/**
+ * Schrumpft einen wartenden Tisch auf die besetzten Plaetze, damit die Partie
+ * sofort losgehen kann, ohne die Luecken mit Bots zu fuellen.
+ *
+ * Sind zwei Menschen da, muss niemand auf sechs auffuellen: Die leeren, nicht
+ * mit Bots belegten Plaetze fallen weg, die restlichen ruecken auf 0..n-1 auf
+ * (die Spielmodule zaehlen Sitze lueckenlos), und die Rundenzahl wird auf das
+ * naechste Vielfache der Rotationsgroesse gehoben — dieselbe Regel wie beim
+ * Tischbau. Gestartet wird danach ueber den ueblichen Weg (`isReadyToStart`
+ * ist nach dem Schrumpfen wahr, ensureStarted springt an).
+ */
+export async function schrumpfeAufBesetzte(
+  db: Db,
+  tableId: string,
+  byAccountId: string,
+): Promise<void> {
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+
+  const bleiben = seats.filter((seat) => seat.accountId || seat.isBot);
+  if (bleiben.length < 2) throw conflict('tableNotFull');
+  if (bleiben.length === seats.length) return; // nichts zu schrumpfen — Start uebernimmt ensureStarted
+
+  const module = requireModule(table.gameId);
+  const config = await tableRules(db, tableId);
+  const probleme = module
+    .validateConfig(config, bleiben.length, table.maxRounds)
+    .filter((problem) => problem.severity === 'error' && problem.path === 'seats');
+  if (probleme.length > 0) throw conflict('seatCountUnsupported');
+
+  const rotation = Math.max(1, module.meta.rotationSize(bleiben.length));
+  const runden = Math.ceil(table.maxRounds / rotation) * rotation;
+
+  await db.transaction(async (tx) => {
+    // Erst die Luecken loeschen, dann aufruecken: So ist jeder Zielindex frei,
+    // bevor er vergeben wird, und der eindeutige Index (tableId, seatIndex)
+    // schlaegt nicht zu.
+    await tx
+      .delete(s.tableSeat)
+      .where(
+        and(
+          eq(s.tableSeat.tableId, tableId),
+          isNull(s.tableSeat.accountId),
+          eq(s.tableSeat.isBot, false),
+        ),
+      );
+    for (let ziel = 0; ziel < bleiben.length; ziel++) {
+      const alt = bleiben[ziel]!.seatIndex;
+      if (alt === ziel) continue;
+      await tx
+        .update(s.tableSeat)
+        .set({ seatIndex: ziel })
+        .where(and(eq(s.tableSeat.tableId, tableId), eq(s.tableSeat.seatIndex, alt)));
+    }
+    await tx
+      .update(s.gameTable)
+      .set({ seats: bleiben.length, maxRounds: runden, lastActivityAt: new Date() })
+      .where(eq(s.gameTable.id, tableId));
+  });
 }
 
 /** Gültige Bot-Stufen — Wache gegen Fremdwerte aus der Leitung. */

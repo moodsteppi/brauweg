@@ -1,0 +1,251 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { easypoker } from '../src/adapter.js';
+import { DEFAULT_REGELN } from '../src/regeln.js';
+import type { EasyPokerPartie } from '../src/partie.js';
+
+function neu(seed = 4711, rounds = 4): EasyPokerPartie {
+  return easypoker.createParty({ config: DEFAULT_REGELN, seats: 2, rounds, seed });
+}
+
+test('die Beschreibung passt zur Plattform', () => {
+  assert.equal(easypoker.meta.id, 'easypoker');
+  assert.equal(easypoker.meta.availability, 'playable');
+  assert.deepEqual([...easypoker.meta.seatCounts], [2, 3, 4, 5, 6]);
+  // Der Knopf wandert jede Hand: Die Plattform verlangt daraufhin ein
+  // Vielfaches der Sitzzahl, damit jeder gleich oft in Position ist.
+  assert.equal(easypoker.meta.rotationSize(2), 2);
+  assert.equal(easypoker.meta.rotationSize(6), 6);
+  assert.equal(easypoker.meta.xpBasisZaehltKarten, false);
+  assert.equal(easypoker.meta.chipStackField, 'startJetons');
+});
+
+test('der Regelsatz wird gegen Spielerzahl und Unsinn geprueft', () => {
+  assert.deepEqual(easypoker.validateConfig(DEFAULT_REGELN, 2, 4), []);
+  assert.deepEqual(easypoker.validateConfig(DEFAULT_REGELN, 6, 12), []);
+  assert.ok(easypoker.validateConfig(DEFAULT_REGELN, 7, 14).length > 0);
+  assert.ok(easypoker.validateConfig({ startJetons: 5 }, 2, 4).length > 0);
+  assert.ok(easypoker.validateConfig('unsinn', 2, 4).length > 0);
+});
+
+/**
+ * Ist der Botzug erlaubt? Setzen zaehlt, wenn der Betrag in der Spanne des
+ * angebotenen Zugs liegt — seit dem Regler ist jeder Betrag darin gueltig,
+ * nicht nur der Vorschlag.
+ */
+function zugErlaubt(erlaubt: readonly unknown[], zug: unknown): boolean {
+  const z = zug as { typ: string; betrag?: number };
+  return erlaubt.some((eintrag) => {
+    const e = eintrag as { typ: string; betrag?: number; min?: number; max?: number };
+    if (e.typ !== z.typ) return false;
+    if (e.typ === 'setzen') {
+      const min = e.min ?? e.betrag ?? 0;
+      const max = e.max ?? e.betrag ?? 0;
+      return typeof z.betrag === 'number' && z.betrag >= min && z.betrag <= max;
+    }
+    return JSON.stringify(e) === JSON.stringify(z);
+  });
+}
+
+/**
+ * Der Kern des Ganzen: Die Sicht darf die Karten des Gegners nicht enthalten
+ * — auch nicht versteckt in einem Feld, das der Client "eigentlich nicht
+ * anzeigt". Geprueft wird deshalb der ganze serialisierte Text.
+ */
+test('die Sicht enthaelt die Karten des Gegners nicht', () => {
+  const partie = neu();
+  const sicht = easypoker.viewFor(partie, 0);
+  const text = JSON.stringify(sicht);
+
+  assert.equal(sicht.meineKarten.length, 2);
+  assert.equal(sicht.gegnerKarten, null);
+  assert.equal(sicht.gegnerVerdeckt, 2);
+
+  for (const karte of partie.hand[1] ?? []) {
+    assert.ok(
+      !text.includes(`"id":${karte.id}`),
+      `Karte ${karte.farbe}${karte.wert} des Gegners steht in der Sicht`,
+    );
+  }
+});
+
+test('die Sicht verraet weder Saat noch Reststapel', () => {
+  const text = JSON.stringify(easypoker.viewFor(neu(), 0));
+  assert.ok(!text.includes('saat'), 'mit der Saat liesse sich jede kommende Karte berechnen');
+  assert.ok(!text.includes('reststapel'));
+});
+
+test('Zuschauer sehen ueberhaupt keine Hand', () => {
+  const sicht = easypoker.spectatorView(neu());
+  assert.equal(sicht.zuschauer, true);
+  assert.deepEqual([...sicht.meineKarten], []);
+  assert.equal(sicht.gegnerKarten, null);
+  assert.equal(sicht.setzKosten, null);
+});
+
+test('der Bot laeuft nicht auf einer Zuschauersicht', () => {
+  assert.throws(() => easypoker.botAction(easypoker.spectatorView(neu())), /Zuschauersicht/);
+});
+
+test('die eigene Staerke kommt erst mit dem Flop', () => {
+  const partie = neu();
+  assert.equal(easypoker.viewFor(partie, 0).meineStaerke, null, 'zwei Karten sind keine Hand');
+});
+
+/**
+ * Der wichtigste Dauerlauf: Zwei Bots spielen ganze Partien gegeneinander.
+ * Jeder Zug muss erlaubt sein, keine Partie darf haengen bleiben, und die
+ * Summe der Jetons darf sich nie aendern.
+ */
+test('zwei Bots spielen hundert Partien zu Ende, jeder Zug erlaubt', () => {
+  for (let seed = 0; seed < 100; seed++) {
+    let partie = neu(seed, 6);
+    let schritte = 0;
+    while (!easypoker.isFinished(partie) && schritte++ < 4000) {
+      const sitz = easypoker.currentActor(partie);
+      if (sitz === null) {
+        const ms = easypoker.interludeMs!(partie);
+        assert.notEqual(ms, null, `Seed ${seed}: niemand am Zug und keine Pause`);
+        partie = easypoker.advanceInterlude!(partie);
+        continue;
+      }
+      const erlaubt = easypoker.legalActions(partie, sitz);
+      const zug = easypoker.botAction(easypoker.viewFor(partie, sitz), 'standard');
+      assert.ok(
+        zugErlaubt(erlaubt, zug),
+        `Seed ${seed}: Botzug ${JSON.stringify(zug)} steht nicht in ${JSON.stringify(erlaubt)}`,
+      );
+      partie = easypoker.act(partie, sitz, zug);
+    }
+    assert.ok(easypoker.isFinished(partie), `Seed ${seed}: Partie blieb haengen`);
+    const summe = (partie.jetons[0] ?? 0) + (partie.jetons[1] ?? 0);
+    assert.equal(summe, DEFAULT_REGELN.startJetons * 2, `Seed ${seed}: Jetons stimmen nicht`);
+  }
+});
+
+test('sechs Bots spielen Partien zu Ende, jeder Zug erlaubt, Jetons bleiben', () => {
+  for (let seed = 0; seed < 25; seed++) {
+    let partie = easypoker.createParty({
+      config: DEFAULT_REGELN,
+      seats: 6,
+      rounds: 12,
+      seed,
+    });
+    let schritte = 0;
+    while (!easypoker.isFinished(partie) && schritte++ < 8000) {
+      const sitz = easypoker.currentActor(partie);
+      if (sitz === null) {
+        const ms = easypoker.interludeMs!(partie);
+        assert.notEqual(ms, null, `Seed ${seed}: niemand am Zug und keine Pause`);
+        partie = easypoker.advanceInterlude!(partie);
+        continue;
+      }
+      const erlaubt = easypoker.legalActions(partie, sitz);
+      const zug = easypoker.botAction(easypoker.viewFor(partie, sitz), 'standard');
+      assert.ok(
+        zugErlaubt(erlaubt, zug),
+        `Seed ${seed}: Botzug ${JSON.stringify(zug)} steht nicht in ${JSON.stringify(erlaubt)}`,
+      );
+      partie = easypoker.act(partie, sitz, zug);
+    }
+    assert.ok(easypoker.isFinished(partie), `Seed ${seed}: Partie blieb haengen`);
+    const sitze = Object.keys(partie.jetons).map(Number);
+    const summe = sitze.reduce((s, n) => s + (partie.jetons[n] ?? 0), 0);
+    assert.equal(summe, DEFAULT_REGELN.startJetons * 6, `Seed ${seed}: Jetons stimmen nicht`);
+  }
+});
+
+test('zu sechst sieht ein Sitz die Karten der anderen nicht', () => {
+  const partie = easypoker.createParty({
+    config: DEFAULT_REGELN,
+    seats: 6,
+    rounds: 12,
+    seed: 99,
+  });
+  const sicht = easypoker.viewFor(partie, 0);
+  assert.equal(sicht.sitze.length, 6);
+  assert.equal(sicht.meineKarten.length, 2);
+  const sichtbar = new Set([
+    ...sicht.meineKarten.map((karte) => karte.id),
+    ...sicht.brett.map((karte) => karte.id),
+    ...Object.values(sicht.fremdeKarten).flatMap((karten) => karten?.map((karte) => karte.id) ?? []),
+  ]);
+  for (const sitz of [1, 2, 3, 4, 5]) {
+    for (const karte of partie.hand[sitz] ?? []) {
+      assert.ok(!sichtbar.has(karte.id), `Karte ${karte.farbe}${karte.wert} von Sitz ${sitz} steht in der Sicht`);
+    }
+    assert.equal(sicht.fremdeKarten[sitz], null);
+    assert.equal(sicht.fremdeVerdeckt[sitz], 2);
+  }
+});
+
+test('alle vier Spielstaerken spielen gueltig', () => {
+  for (const level of ['anfaenger', 'standard', 'experte', 'genie'] as const) {
+    let partie = neu(2026, 4);
+    let schritte = 0;
+    while (!easypoker.isFinished(partie) && schritte++ < 2000) {
+      const sitz = easypoker.currentActor(partie);
+      if (sitz === null) {
+        partie = easypoker.advanceInterlude!(partie);
+        continue;
+      }
+      const zug = easypoker.botAction(easypoker.viewFor(partie, sitz), level);
+      partie = easypoker.act(partie, sitz, zug);
+    }
+    assert.ok(easypoker.isFinished(partie), level);
+  }
+});
+
+test('Platzierungen und Erfahrungsgrundlage stehen am Ende', () => {
+  let partie = neu(7, 4);
+  while (!easypoker.isFinished(partie)) {
+    const sitz = easypoker.currentActor(partie);
+    if (sitz === null) {
+      partie = easypoker.advanceInterlude!(partie);
+      continue;
+    }
+    partie = easypoker.act(partie, sitz, easypoker.botAction(easypoker.viewFor(partie, sitz)));
+  }
+  const stand = easypoker.standings(partie);
+  assert.equal(stand.length, 2);
+  assert.equal(stand[0]!.place, 1);
+
+  const xp = easypoker.xpBasis!(partie);
+  assert.equal(xp[0], partie.abgeschlossen * 2);
+  assert.equal(xp[1], partie.abgeschlossen * 2);
+});
+
+test('ein verlassener Sitz laesst die Partie weiterlaufen', () => {
+  const partie = easypoker.markLeft(neu(), 1);
+  assert.deepEqual([...partie.leftSeats], [1]);
+  assert.equal(easypoker.standings(partie).find((s) => s.seat === 1)?.left, true);
+});
+
+test('der Snapshot ueberlebt einen Neustart', () => {
+  const partie = neu(1234);
+  const zurueck = easypoker.deserialize(JSON.parse(JSON.stringify(easypoker.serialize(partie))));
+  assert.deepEqual(zurueck, partie);
+});
+
+test('ein Snapshot aus einer fremden Fassung faellt auf', () => {
+  const roh = { ...(easypoker.serialize(neu()) as Record<string, unknown>), v: 99 };
+  assert.throws(() => easypoker.deserialize(roh), /Snapshot-Version/);
+});
+
+test('die Hexkette schlaegt den Zahlenseed', () => {
+  const mitHex = easypoker.createParty({
+    config: DEFAULT_REGELN,
+    seats: 2,
+    rounds: 4,
+    seed: 1,
+    seedHex: 'ffeeddccbbaa99887766554433221100',
+  });
+  const ohneHex = easypoker.createParty({
+    config: DEFAULT_REGELN,
+    seats: 2,
+    rounds: 4,
+    seed: 1,
+  });
+  assert.notDeepEqual(mitHex.hand, ohneHex.hand);
+});

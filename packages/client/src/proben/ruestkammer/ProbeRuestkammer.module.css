@@ -1,0 +1,75 @@
+/*
+ * Die Probe der Ruestkammer (`ProbeRuestkammer.tsx`).
+ *
+ * HIER STEHT NICHTS ZU BRETT, BANK ODER LADEN. Die bringen ihr Aussehen aus
+ * styles.css mit (`.tr-brett`, `.tr-wabe`, `.tr-einheit`, `.tr-bank`,
+ * `.tr-karte`) — genau das ist der Sinn der Probe. Was hier liegt, ist das
+ * Drumherum, das es am Tisch nicht gibt: Kopfzeile, die zwei Schalter und der
+ * Satz darunter.
+ *
+ * Dieselbe Aufteilung wie in `../kampf/ProbeKampf.module.css` und aus
+ * demselben Grund: Eine Probe, die Klassen des Spiels ueberschreibt, zeigt
+ * etwas anderes als das Spiel.
+ */
+
+.kopf {
+  width: min(96vw, 520px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  /* `.tr-seite` ist `position: fixed; inset: 0`, `.tr-tisch` rollt darin. Die
+     Polsterung oben kommt hier dazu — am Tisch fuellt die festgeheftete
+     Kopfleiste diesen Platz. */
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+
+.titel {
+  margin: 0;
+  font-size: clamp(0.95rem, 3.4vw, 1.15rem);
+  font-weight: 600;
+}
+
+.schalter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.schalt {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  /* 44 px hoch: Was man antippen soll, muss man auch am Handy treffen — das
+     Kaestchen allein ist 16 px. */
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.knopf {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0.45rem 1.1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.knopf:hover {
+  border-color: var(--accent);
+}
+
+.fuss {
+  width: min(96vw, 520px);
+  margin: 0 0 max(12px, env(safe-area-inset-bottom));
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}

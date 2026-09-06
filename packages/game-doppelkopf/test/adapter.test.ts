@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { doppelkopf } from '../src/adapter.js';
 import { makeRuleSet } from '../src/ruleset.js';
 import { type PartyState, act } from '../src/party.js';
-import { currentActor } from '../src/round.js';
+import { vorbehaltOffen } from '../src/round.js';
 
 const CONFIG = makeRuleSet({ pflichtansage: true, announcements: true, absagen: true });
 
@@ -32,10 +32,9 @@ function newParty(patch = {}): PartyState {
 
 test('legalActions bietet in der Vorbehaltsabfrage immer auch "gesund" an', () => {
   const party = newParty();
-  const seat = doppelkopf.currentActor(party);
-  assert.notEqual(seat, null);
+  const seat = vorbehaltOffen(party.current!)[0]!;
 
-  const actions = doppelkopf.legalActions(party, seat as number);
+  const actions = doppelkopf.legalActions(party, seat);
   const gesund = actions.filter((a) => a.type === 'vorbehalt' && a.kind === null);
   assert.equal(gesund.length, 1, '"gesund" fehlt, der Sitz koennte nicht passen');
 });
@@ -107,37 +106,63 @@ test('bei einer Vorfuehrung wird nur der Vorgefuehrte gefragt', () => {
   assert.equal(danach.current?.gameType.kind, 'solo');
 });
 
-test('ohne Vorfuehrung wird weiterhin jeder Sitz gefragt', () => {
-  // Gegenprobe: Die Abkuerzung darf nur bei einer Vorfuehrung greifen.
+test('ohne Vorfuehrung wird gleichzeitig gefragt: jeder Sitz darf erklaeren', () => {
+  // Gegenprobe zur Vorfuehrung: Ohne sie ist NIEMAND einzeln am Zug, und
+  // trotzdem hat jeder Sitz seine Vorbehaltsaktionen.
   const party = newParty();
-  const ersterSitz = doppelkopf.currentActor(party) as number;
+  assert.equal(doppelkopf.currentActor(party), null, 'niemand ist einzeln dran');
 
-  const gesund = doppelkopf
-    .legalActions(party, ersterSitz)
-    .find((a) => a.type === 'vorbehalt' && a.kind === null);
-  assert.ok(gesund);
+  for (let seat = 0; seat < 4; seat++) {
+    const gesund = doppelkopf
+      .legalActions(party, seat)
+      .find((a) => a.type === 'vorbehalt' && a.kind === null);
+    assert.ok(gesund, `Sitz ${seat} muss erklaeren duerfen`);
+  }
 
-  const danach = doppelkopf.act(party, ersterSitz, gesund);
-  const naechster = doppelkopf.currentActor(danach);
-  assert.notEqual(naechster, null, 'der naechste Sitz muss gefragt werden');
-  assert.notEqual(naechster, ersterSitz);
+  // Wer erklaert hat, wird nicht noch einmal gefragt; die anderen schon.
+  const gesund0 = doppelkopf
+    .legalActions(party, 0)
+    .find((a) => a.type === 'vorbehalt' && a.kind === null)!;
+  const danach = doppelkopf.act(party, 0, gesund0);
   assert.equal(danach.current?.phase, 'vorbehalt');
+  assert.deepEqual(doppelkopf.legalActions(danach, 0), [], 'Sitz 0 hat gesagt');
+  assert.ok(doppelkopf.legalActions(danach, 1).length > 0, 'Sitz 1 schuldet noch');
 });
 
-test('legalActions liefert fuer fremde Sitze in der Vorbehaltsabfrage nichts', () => {
+test('eine zweite Erklaerung desselben Sitzes weist die Engine ab', () => {
+  // Sonst koennte man seine Erklaerung zuruecknehmen, nachdem man an den
+  // Zurufen der anderen gehoert hat, wie sie stehen.
   const party = newParty();
-  const seat = doppelkopf.currentActor(party) as number;
-  const other = (seat + 1) % 4;
-  assert.deepEqual(doppelkopf.legalActions(party, other), []);
+  const gesund = doppelkopf
+    .legalActions(party, 0)
+    .find((a) => a.type === 'vorbehalt' && a.kind === null)!;
+  const danach = doppelkopf.act(party, 0, gesund);
+  assert.throws(() => doppelkopf.act(danach, 0, gesund));
+});
+
+test('nach Ablauf der Frist gilt jeder ungefragte Sitz als gesund', () => {
+  const party = newParty();
+  assert.equal(doppelkopf.interludeMs?.(party), 30_000, 'die Frist laeuft');
+
+  const danach = doppelkopf.advanceInterlude!(party);
+  assert.equal(danach.current?.phase, 'playing', 'die Abfrage ist aufgeloest');
+  assert.equal(
+    danach.current?.vorbehalte.filter((v) => v.kind === null).length,
+    4,
+    'alle vier gelten als gesund',
+  );
 });
 
 /** Bringt die Partie in die Spielphase, indem alle gesund melden. */
 function toPlaying(start: PartyState): PartyState {
   let party = start;
   for (let i = 0; i < 6 && party.current?.phase === 'vorbehalt'; i++) {
-    const seat = currentActor(party.current);
-    if (seat === null) break;
-    party = act(party, { type: 'vorbehalt', seat, kind: null });
+    const offen = vorbehaltOffen(party.current);
+    if (offen.length === 0) break;
+    for (const seat of offen) {
+      if (party.current?.phase !== 'vorbehalt') break;
+      party = act(party, { type: 'vorbehalt', seat, kind: null });
+    }
   }
   return party;
 }
