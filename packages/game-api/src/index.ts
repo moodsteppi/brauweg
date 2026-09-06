@@ -127,7 +127,18 @@ export type GameId =
    * beschreibt dieselbe Spielfamilie (Contract Rummy mit festen Kombinationen
    * je Runde) ohne den Produktnamen zu verwenden.
    */
-  | 'phase10';
+  | 'phase10'
+  /**
+   * Golf ist wie Feldherr kein Zugspiel, sondern Echtzeit im Gleichschritt
+   * (Weg B, siehe SPEZIFIKATION-GOLF.md): 1 bis 8 Spieler zielen und schiessen
+   * gleichzeitig und live auf derselben Minigolfbahn. Der Server rechnet keine
+   * Physik — er verwahrt nur Saatkorn, Bot-Sitze, die Zugliste der Schlaege
+   * und die Ergebnismeldungen. `currentActor` ist deshalb wie bei Feldherr
+   * immer null; anders als Feldherr braucht Golf aber eine Schaupause
+   * (`interludeMs`/`advanceInterlude`), weil sonst kein Timer je von selbst
+   * weiterliefe, solange niemand ein Ergebnis meldet.
+   */
+  | 'golf';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby

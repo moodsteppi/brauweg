@@ -8,10 +8,11 @@ der Erinnerung.
 
 ## Wo das Projekt steht
 
-Brauweg läuft unter **www.brauweg-spielen.de**. **Zehn Spiele sind spielbar:
+Brauweg läuft unter **www.brauweg-spielen.de**. **Elf Spiele sind spielbar:
 Doppelkopf, Zauberer, Skat, Cambio, Poker, Mememory, Filler, Eiland,
-Feldherr und Tafelrunde** (Stand 04.09.2026 — der Absatz nannte bis dahin
-neun), der Hub steht, Clans funktionieren.
+Feldherr, Tafelrunde und Golf** (Stand 06.09.2026 — Golf ist das zweite
+Echtzeitspiel nach Feldherr, siehe `docs/GOLF-PLAN.md`), der Hub steht, Clans
+funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 

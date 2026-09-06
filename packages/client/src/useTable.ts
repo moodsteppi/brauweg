@@ -75,8 +75,13 @@ export interface TableConnection<V = GameView> {
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
-  /** Sofort mit den Anwesenden starten (mindestens zwei); leere Plätze fallen weg. */
-  startNow(): void;
+  /**
+   * Sofort mit den Anwesenden starten; leere Plätze fallen weg. Mindestens
+   * zwei — oder einer, wenn das Spiel laut `seatCounts` allein spielbar ist
+   * (Golf). `rounds` nur, wenn die Rundenzahl erst beim Start feststeht
+   * (Golf: die Löcher werden in der Lobby gewählt).
+   */
+  startNow(rounds?: number): void;
   /** Spielstärke der Bots dieses Tisches setzen (gilt für alle Bots). */
   setBotLevel(level: BotLevel): void;
   /**
@@ -592,11 +597,22 @@ export function useTable<V = GameView>(
   const removeBot = useCallback((seat: number) => command('removeBot', seat), [command]);
 
   /** Sofort starten: Tisch schrumpft serverseitig auf die besetzten Plaetze. */
-  const startNow = useCallback(() => {
-    const socket = socketRef.current;
-    if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
-    socket.send(JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'startNow', tableId }));
-  }, [tableId, gameId]);
+  const startNow = useCallback(
+    (rounds?: number) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({
+          v: ENVELOPE_VERSION,
+          game: gameId,
+          type: 'startNow',
+          tableId,
+          ...(rounds === undefined ? {} : { rounds }),
+        }),
+      );
+    },
+    [tableId, gameId],
+  );
 
   const setBotLevel = useCallback(
     (level: BotLevel) => {

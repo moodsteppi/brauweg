@@ -168,6 +168,8 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     game: z.string().max(40).optional(),
     type: z.literal('startNow'),
     tableId: z.string().uuid(),
+    /** Rundenzahl, die der Startende erst in der Lobby waehlt (Golf: Loecher). */
+    rounds: z.number().int().min(1).max(100).optional(),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -525,7 +527,7 @@ export class Gateway {
           await this.setBotLevel(connection, message.tableId, message.level);
           break;
         case 'startNow':
-          await this.startNow(connection, message.tableId);
+          await this.startNow(connection, message.tableId, message.rounds);
           break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
@@ -856,8 +858,12 @@ export class Gateway {
    * schrumpft auf die Besetzten, danach startet der uebliche Rundruf die
    * Partie (nach dem Schrumpfen ist kein Platz mehr frei).
    */
-  private async startNow(connection: Connection, tableId: string): Promise<void> {
-    await schrumpfeAufBesetzte(this.db, tableId, connection.accountId);
+  private async startNow(
+    connection: Connection,
+    tableId: string,
+    rounds?: number,
+  ): Promise<void> {
+    await schrumpfeAufBesetzte(this.db, tableId, connection.accountId, rounds);
     await this.broadcast(tableId);
   }
 

@@ -28,6 +28,11 @@ export const PLACEMENT_TROPHIES: Readonly<Record<number, readonly number[]>> = {
   // Sechs Sitze gibt es seit Zauberer. Der Abstand bleibt konstant, damit die
   // Mittelwertbildung bei Gleichstand ganzzahlig bleibt.
   6: [15, 9, 3, -3, -9, -15],
+  // Sieben und acht Sitze seit Golf (06.09.2026). Ohne Eintrag gaebe es dort
+  // nur Erfahrung und keine Trophaeen (Rueckfall in awardTrophies). Abstand
+  // bleibt 6, Nullsumme bleibt, Mittelwerte bei Gleichstand bleiben ganzzahlig.
+  7: [18, 12, 6, 0, -6, -12, -18],
+  8: [21, 15, 9, 3, -3, -9, -15, -21],
 };
 
 export const LEAVE_PENALTY = -10;
