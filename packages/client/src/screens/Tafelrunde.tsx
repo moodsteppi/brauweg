@@ -2428,10 +2428,12 @@ interface Kampfbild {
  * Die Ergebnisliste der Runde — notfalls aus den Kaempfen abgeleitet.
  *
  * Ein Tisch, der vor dieser Sicht aufgemacht wurde, fuehrt `paarungen` nicht.
- * Dann bleibt, was schon vorher da war: Ein Zuschauer hat alle Kaempfe und
- * bekommt daraus dieselbe Liste, ein Spieler nur seinen eigenen — und der
- * faellt in der Anzeige ohnehin heraus, die Ergebniszeilen bleiben also leer
- * wie bisher. Kein Stolpern, nur kein Zugewinn.
+ * Dann tritt die Liste der Kaempfe an ihre Stelle. An einem Tisch von HEUTE
+ * ist das dieselbe Auskunft — seit dem 06.09.2026 bekommt jeder alle Kaempfe
+ * (sicht.ts im Modul). An einem alten Tisch hatte ein Spieler nur seinen
+ * eigenen, und der faellt in der Anzeige ohnehin heraus (`nebenkaempfe`): Die
+ * Ergebniszeilen bleiben dort leer wie bisher. Kein Stolpern, nur kein
+ * Zugewinn.
  */
 function paarungenAus(
   sicht: TafelrundeSicht,
