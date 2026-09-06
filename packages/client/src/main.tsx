@@ -53,9 +53,13 @@ function isDevFlag(name: string): boolean {
  *
  * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
  * - /probe/kampf — die ECHTE Kampfanzeige des Spiels mit einem aufgezeichneten
- *   Kampf aus Runde 10. Die einzige der beiden, die bleiben soll: Sie ist die
+ *   Kampf aus Runde 10. Eine der beiden, die bleiben sollen: Sie ist die
  *   Stelle, an der man Aenderungen an der Kampfanzeige ansieht, ohne eine
  *   Partie zu spielen (siehe Kopf von `proben/kampf/ProbeKampf.tsx`).
+ * - /probe/ruestkammer — dasselbe fuer die andere Haelfte von Tafelrunde:
+ *   Brett, Bank und Laden mit einem aufgezeichneten Vorbereitungsstand. Auch
+ *   sie bleibt, und aus demselben Grund (siehe Kopf von
+ *   `proben/ruestkammer/ProbeRuestkammer.tsx`).
  *
  * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
  * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
@@ -72,6 +76,7 @@ function istProbe(name: string): boolean {
 
 const probeArena2d = istProbe('arena-2d');
 const probeKampf = istProbe('kampf');
+const probeRuestkammer = istProbe('ruestkammer');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -135,11 +140,21 @@ const TruhenOeffnung = lazy(() =>
 const ProbeKampf = lazy(() =>
   import('./proben/kampf/ProbeKampf').then((m) => ({ default: m.ProbeKampf })),
 );
+/* Und noch einmal aus denselben zwei Gruenden: der aufgezeichnete
+   Vorbereitungsstand (rund 12 kB JSON) und die Bauteile des
+   Tafelrunde-Tisches. */
+const ProbeRuestkammer = lazy(() =>
+  import('./proben/ruestkammer/ProbeRuestkammer').then((m) => ({
+    default: m.ProbeRuestkammer,
+  })),
+);
 
 const werkzeug = probeArena2d ? (
   <Arena2D />
 ) : probeKampf ? (
   <ProbeKampf />
+) : probeRuestkammer ? (
+  <ProbeRuestkammer />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (
