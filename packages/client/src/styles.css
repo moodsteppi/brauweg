@@ -15383,22 +15383,22 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 100%;
   margin: 0 0 16px;
   display: grid;
-  /* Drei Spielarten seit dem 1. September. Ausgeschrieben und nicht
-     auto-fit: Bei zwei Knoepfen sollen es zwei gleiche Haelften sein, nicht
-     zwei nach Inhalt bemessene Streifen. */
-  grid-template-columns: repeat(3, 1fr);
+  /* Vier Spielarten seit dem 6. September. Ausgeschrieben und nicht
+     auto-fit: Es sollen gleiche Viertel sein, nicht nach Inhalt bemessene
+     Streifen. */
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.09);
 }
 .fl-schalter button {
-  padding: 11px 8px;
+  padding: 11px 4px;
   border: 0;
   border-radius: 10px;
   background: transparent;
   color: #6d6d6d;
-  font: 800 14px/1 system-ui;
+  font: 800 13px/1 system-ui;
   cursor: pointer;
   transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
@@ -16377,21 +16377,29 @@ span.hub-angebot-art.poker-jeton-stapel {
    sechsundfuenfzig bunte Felder mit den Kanten, die man treffen soll. */
 .fl-brett[data-baut] .fl-feld { filter: saturate(0.55) brightness(1.06); }
 
+/* Seit dem 6. September UEBER der Farbwahl, groesser und mit Ziegelbild:
+   Er ist der Zug VOR dem Faerben und soll als eigener Knopf erkennbar sein,
+   nicht als siebte Farbe. */
 .fl-bauknopf {
   flex: none;
-  min-width: 62px;
-  padding: 12px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 150px;
+  padding: 14px 22px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #2b2b2b;
   background: rgba(0, 0, 0, 0.09);
-  font: 800 13px/1 system-ui;
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.08);
+  font: 800 16px/1 system-ui;
   cursor: pointer;
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
+.fl-bauknopf .fl-mauericon { flex: none; fill: currentColor; opacity: 0.85; }
 .fl-bauknopf em {
-  margin-left: 5px;
-  font: 800 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-left: 2px;
+  font: 800 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   font-style: normal;
   opacity: 0.65;
 }
@@ -16414,8 +16422,63 @@ span.hub-angebot-art.poker-jeton-stapel {
   pointer-events: none;
 }
 
-/* Die Farbwahl steht in einer Reihe mit dem Bau-Knopf. */
-.fl-fuss > .fl-palette + .fl-bauknopf { margin-top: -2px; }
+/* Der Bau-Knopf steht ueber der Farbwahl; der Abstand kommt vom Fuss. */
+.fl-fuss > .fl-bauknopf + .fl-palette { margin-top: 2px; }
+
+/* Sieben Farben (Extreme) muessen auf 360 px passen: 7 x 41 + 6 x 8 = 335. */
+.fl-palette[data-viele] { gap: 8px; }
+.fl-palette[data-viele] .fl-farbe { width: min(11.4vw, 52px); height: min(11.4vw, 52px); }
+
+/* -- Sternfelder (Extreme) ----------------------------------------------- */
+
+.fl-feld { position: relative; }
+/* Ein weisser Stern mitten auf dem Feld. clip-path statt Schriftzeichen:
+   Ein Zeichen sitzt je nach Schrift anders in seiner Zeile, die Form nicht. */
+.fl-stern {
+  position: absolute;
+  inset: 24%;
+  display: block;
+  background: #ffffff;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+}
+
+/* -- Vorschau im Menue ---------------------------------------------------- */
+
+.fl-vorschau {
+  margin: 22px auto 0;
+  width: min(72vw, 264px);
+}
+.fl-vorschau-brett {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  /* Rand statt Innenabstand: Die Waende sitzen absolut in Prozent, und ein
+     Innenabstand verschoebe sie gegenueber dem Raster. */
+  border: 4px solid #2a2a2a;
+  border-radius: 10px;
+  background: #2a2a2a;
+  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.8);
+}
+.fl-vorschau-brett > span {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  transition: background-color 220ms ease;
+}
+.fl-vorschau-brett > span[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); }
+.fl-vorschau-brett > span[data-fremd] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28); }
+.fl-vorschau-brett .fl-wand { width: 5px; height: 5px; margin-left: -2.5px; margin-top: -2.5px; }
+.fl-vorschau-brett .fl-wand:not([data-quer]) { margin-top: 0; }
+.fl-vorschau-brett .fl-wand[data-quer] { margin-left: 0; }
+.fl-vorschau-text {
+  margin: 6px 0 0;
+  color: #8a8a8a;
+  font: 700 11px/1.3 system-ui;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 
 
 /* ==========================================================================

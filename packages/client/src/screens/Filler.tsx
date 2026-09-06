@@ -41,7 +41,7 @@ import { useTable } from '../useTable';
  * Moduls. Wer diese Zahlen anfasst, aendert also den Bot-Tisch und sonst
  * nichts — die Spielart eingeschlossen.
  */
-const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6, barrieren: 10 };
+const REGELSATZ = { spalten: 8, zeilen: 7, barrieren: 10 };
 
 /**
  * Takt, in dem der Stand der Suche abgefragt wird.
@@ -57,12 +57,30 @@ const VARIANTE_NAME: Record<Variante, string> = {
   nebel: 'Nebel',
   klar: 'Normal',
   build: 'Build',
+  extreme: 'Extreme',
 };
+
+/** Spielarten mit Mauern. Muss zu mitBarrieren in regeln.ts passen. */
+function mitMauern(v: Variante): boolean {
+  return v === 'build' || v === 'extreme';
+}
+
+/**
+ * Farbzahl je Spielart: sieben in Extreme, sonst sechs.
+ *
+ * Steht im Regelsatz, den der Client beim Aufmachen des Tisches mitschickt —
+ * die Vorgabe des Moduls kennt nur die sechs. Ein Tisch, der einmal mit
+ * sieben aufgemacht wurde, behaelt sie.
+ */
+function farbenFuer(v: Variante): number {
+  return v === 'extreme' ? 7 : 6;
+}
 
 const VARIANTE_TEXT: Record<Variante, string> = {
   nebel: 'Du siehst nur dein Gebiet und dessen Rand.',
   klar: 'Das ganze Brett liegt offen — wie im Original.',
   build: 'Offenes Brett, dazu zehn Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
+  extreme: 'Build mit sieben Farben und drei Sternfeldern: Ein Stern bringt zwei Punkte und eine Mauer extra.',
 };
 
 /**
@@ -75,7 +93,7 @@ const VARIANTE_TEXT: Record<Variante, string> = {
 const VARIANTE_SCHLUESSEL = 'filler.variante';
 
 function istVariante(wert: unknown): wert is Variante {
-  return wert === 'nebel' || wert === 'klar' || wert === 'build';
+  return wert === 'nebel' || wert === 'klar' || wert === 'build' || wert === 'extreme';
 }
 
 function gelesenevariante(): Variante {
@@ -286,7 +304,7 @@ export function Filler({
     try {
       const { id } = await api.createTable({
         gameId: 'filler',
-        config: { ...REGELSATZ, variante },
+        config: { ...REGELSATZ, farben: farbenFuer(variante), variante },
         seats: 2,
         rounds: 1,
         visibility: 'on_request',
@@ -441,7 +459,7 @@ export function Filler({
             nur deine eigenen Felder und deren Nachbarn — der Rest liegt im Nebel.
           </p>
           <div className="fl-probe" aria-hidden="true">
-            {FARBEN.map((farbe, i) => (
+            {FARBEN.slice(0, farbenFuer(variante)).map((farbe, i) => (
               <span key={i} style={{ background: farbe }} />
             ))}
           </div>
@@ -481,6 +499,7 @@ export function Filler({
           </button>
           {fehler && <p className="fl-fehler">{fehler}</p>}
           <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
+          <Vorschau variante={variante} />
         </div>
         {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </main>
@@ -590,6 +609,7 @@ function Brett({
    * kennt die Regel nicht — er liest ab, ob es Ziele gibt.
    */
   const kannMauern = (sicht.barrierenMoeglich?.length ?? 0) > 0;
+  const sterne = new Set(sicht.sterne ?? []);
   /*
    * Der Bau-Zustand faellt von selbst zurueck, sobald es nichts zu setzen
    * gibt — nach der gesetzten Mauer, am Ende des Zuges, beim leeren Vorrat.
@@ -789,7 +809,10 @@ function Brett({
                     : farbeVon(farbe),
                   boxShadow: schattenFuer(platz),
                 }}
-              />
+              >
+                {/* Der Stern ist Zeichnung: Was er bringt, rechnet das Modul. */}
+                {sterne.has(platz) && <i className="fl-stern" />}
+              </span>
             );
           })}
 
@@ -846,7 +869,32 @@ function Brett({
           />
         ) : binDran ? (
           <>
-            <div className="fl-palette" data-ruht={bautGerade ? '' : undefined}>
+            {/*
+              * Der Bau-Knopf steht seit dem 06.09.2026 UEBER der Farbwahl,
+              * groesser und mit Bild: Er war neben den Farben zu leicht zu
+              * uebersehen, und wer ihn nicht sieht, spielt Build wie Normal.
+              * Er gehoert zum Zug davor — erst bauen, dann faerben —, und in
+              * dieser Reihenfolge steht er jetzt auch da.
+              */}
+            {mitMauern(sicht.variante) && (
+              <button
+                className="fl-bauknopf"
+                type="button"
+                data-an={bautGerade ? '' : undefined}
+                disabled={!kannMauern || getippt !== null}
+                onClick={() => setBaut((an) => !an)}
+                aria-label={`Mauer bauen, noch ${meineBarrieren}`}
+              >
+                <Mauericon />
+                <span>Mauer</span>
+                <em>{meineBarrieren}</em>
+              </button>
+            )}
+            <div
+              className="fl-palette"
+              data-ruht={bautGerade ? '' : undefined}
+              data-viele={sicht.farbzahl > 6 ? '' : undefined}
+            >
               {Array.from({ length: sicht.farbzahl }, (_, nr) => (
                 <button
                   key={nr}
@@ -864,22 +912,6 @@ function Brett({
                 />
               ))}
             </div>
-            {/*
-              * Der Bau-Knopf steht NEBEN der Farbwahl und nicht darueber: Es
-              * sind zwei Zuege, zwischen denen man sich entscheidet, und
-              * nicht zwei Schritte nacheinander.
-              */}
-            {sicht.variante === 'build' && (
-              <button
-                className="fl-bauknopf"
-                type="button"
-                data-an={bautGerade ? '' : undefined}
-                disabled={!kannMauern || getippt !== null}
-                onClick={() => setBaut((an) => !an)}
-              >
-                Mauer <em>{meineBarrieren}</em>
-              </button>
-            )}
             <p className="fl-hinweis">
               {bautGerade ? 'Kante antippen' : 'Farbe wählen'}
             </p>
@@ -962,7 +994,7 @@ function Spielartschalter({
   };
   return (
     <div className="fl-schalter" role="group" aria-label="Spielart">
-      {(['nebel', 'klar', 'build'] as const).map((v) => (
+      {(['nebel', 'klar', 'build', 'extreme'] as const).map((v) => (
         <button
           key={v}
           type="button"
@@ -1044,11 +1076,116 @@ function Abschluss({
     <div className="fl-abschluss">
       <h2 data-sieg={sicht.sieger === eigenerSitz ? '' : undefined}>{wort}</h2>
       <p>
-        {meine} zu {seine} Feldern
+        {meine} zu {seine} {sicht.variante === 'extreme' ? 'Punkten' : 'Feldern'}
       </p>
       <button className="fl-suchen" type="button" onClick={onZurueck}>
         Zurück
       </button>
+    </div>
+  );
+}
+
+
+/** Drei Reihen Ziegel. Fuellt sich aus `currentColor`, passt also zu jedem Zustand des Knopfs. */
+function Mauericon(): React.JSX.Element {
+  return (
+    <svg className="fl-mauericon" viewBox="0 0 24 16" width="22" height="15" aria-hidden="true">
+      <rect x="0" y="0" width="7" height="4.4" rx="0.8" />
+      <rect x="8.5" y="0" width="7" height="4.4" rx="0.8" />
+      <rect x="17" y="0" width="7" height="4.4" rx="0.8" />
+      <rect x="0" y="5.8" width="3" height="4.4" rx="0.8" />
+      <rect x="4.5" y="5.8" width="7" height="4.4" rx="0.8" />
+      <rect x="13" y="5.8" width="7" height="4.4" rx="0.8" />
+      <rect x="21.5" y="5.8" width="2.5" height="4.4" rx="0.8" />
+      <rect x="0" y="11.6" width="7" height="4.4" rx="0.8" />
+      <rect x="8.5" y="11.6" width="7" height="4.4" rx="0.8" />
+      <rect x="17" y="11.6" width="7" height="4.4" rx="0.8" />
+    </svg>
+  );
+}
+
+/**
+ * Die Vorschau im Menue: ein kleines Brett, das die gewaehlte Spielart zeigt.
+ *
+ * Kein Screenshot und keine Simulation, sondern ein festes Muster, das je
+ * Spielart anders gezeichnet wird — Nebel grau bis auf den eigenen Rand,
+ * Build mit zwei Waenden, Extreme mit sieben Farben und drei Sternen. Wer
+ * die Spielarten zum ersten Mal sieht, soll am Bild erkennen, was der
+ * Schalter tut, bevor er einen Tisch aufmacht.
+ */
+const VORSCHAU_SPALTEN = 8;
+const VORSCHAU_ZEILEN = 5;
+/** Farbmuster: kein Feld traegt die Farbe seines linken oder oberen Nachbarn. */
+function vorschauFarbe(platz: number, farbzahl: number): number {
+  const x = platz % VORSCHAU_SPALTEN;
+  const y = Math.floor(platz / VORSCHAU_SPALTEN);
+  return (x * 3 + y * 5 + Math.floor(x / 3)) % farbzahl;
+}
+/** Das eigene Gebiet unten links: drei Felder, wie nach dem ersten Zug. */
+const VORSCHAU_EIGEN = new Set([32, 33, 24]);
+const VORSCHAU_FREMD = new Set([7, 6, 15]);
+const VORSCHAU_STERNE = [12, 27, 21];
+const VORSCHAU_WAENDE: [number, number][] = [
+  [25, 26],
+  [18, 26],
+  [13, 14],
+];
+
+function Vorschau({ variante }: { variante: Variante }): React.JSX.Element {
+  const farbzahl = farbenFuer(variante);
+  const nebel = variante === 'nebel';
+  const mauern = variante === 'build' || variante === 'extreme';
+  const sterne = variante === 'extreme' ? new Set(VORSCHAU_STERNE) : new Set<number>();
+  /* Im Nebel sichtbar: das eigene Gebiet und dessen Nachbarn. */
+  const sichtbar = new Set<number>();
+  for (const p of VORSCHAU_EIGEN) {
+    sichtbar.add(p);
+    const n = nachbarAn(p, 'oben', VORSCHAU_SPALTEN, VORSCHAU_ZEILEN);
+    const r = nachbarAn(p, 'rechts', VORSCHAU_SPALTEN, VORSCHAU_ZEILEN);
+    const l = nachbarAn(p, 'links', VORSCHAU_SPALTEN, VORSCHAU_ZEILEN);
+    const u = nachbarAn(p, 'unten', VORSCHAU_SPALTEN, VORSCHAU_ZEILEN);
+    for (const x of [n, r, l, u]) if (x !== null) sichtbar.add(x);
+  }
+  const breite = 100 / VORSCHAU_SPALTEN;
+  const hoehe = 100 / VORSCHAU_ZEILEN;
+  return (
+    <div className="fl-vorschau" aria-hidden="true" data-variante={variante}>
+      <div
+        className="fl-vorschau-brett"
+        style={{ gridTemplateColumns: `repeat(${VORSCHAU_SPALTEN}, 1fr)` }}
+      >
+        {Array.from({ length: VORSCHAU_SPALTEN * VORSCHAU_ZEILEN }, (_, platz) => {
+          const eigen = VORSCHAU_EIGEN.has(platz);
+          const fremd = VORSCHAU_FREMD.has(platz);
+          const verdeckt = nebel && !sichtbar.has(platz);
+          const farbe = eigen ? 0 : fremd ? 3 : vorschauFarbe(platz, farbzahl);
+          return (
+            <span
+              key={platz}
+              data-eigen={eigen ? '' : undefined}
+              data-fremd={fremd && !verdeckt ? '' : undefined}
+              style={{
+                background: verdeckt
+                  ? (GRAUTOENE[(platz * 7) % GRAUTOENE.length] ?? GRAUTOENE[0])
+                  : farbeVon(farbe),
+              }}
+            >
+              {sterne.has(platz) && <i className="fl-stern" />}
+            </span>
+          );
+        })}
+        {mauern &&
+          VORSCHAU_WAENDE.map(([a, b]) => {
+            const quer = b - a === VORSCHAU_SPALTEN;
+            const links = a % VORSCHAU_SPALTEN;
+            const oben = Math.floor(a / VORSCHAU_SPALTEN);
+            const stil = quer
+              ? { left: `${links * breite}%`, top: `${oben * hoehe + hoehe}%`, width: `${breite}%` }
+              : { left: `${links * breite + breite}%`, top: `${oben * hoehe}%`, height: `${hoehe}%` };
+            return <span key={`${a}:${b}`} className="fl-wand" data-quer={quer ? '' : undefined} style={stil} />;
+          })}
+      </div>
+      <p className="fl-vorschau-text">Vorschau: {VARIANTE_NAME[variante]}</p>
     </div>
   );
 }
@@ -1070,13 +1207,13 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       <ol>
         <li>Jeder Spieler bekommt zu Beginn ein Eckfeld.</li>
         <li>
-          Abwechselnd färbt man sein Gebiet in eine von sechs Farben und nimmt
-          dabei alle angrenzenden Felder dieser Farbe mit.
+          Abwechselnd färbt man sein Gebiet in eine von sechs Farben (sieben in
+          Extreme) und nimmt dabei alle angrenzenden Felder dieser Farbe mit.
         </li>
         <li>Die Farbe des Gegners darf man nicht wählen.</li>
         <li>Die Partie endet, wenn kein Feld mehr frei ist.</li>
       </ol>
-      <h3>Die drei Spielarten</h3>
+      <h3>Die vier Spielarten</h3>
       <p>
         <strong>Normal</strong> ist das Original: Das ganze Brett liegt offen.
       </p>
@@ -1095,8 +1232,14 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         einsperren: Kanten, nach denen er kein freies Feld mehr erreichen
         könnte, lassen sich nicht bebauen.
       </p>
+      <p>
+        <strong>Extreme</strong> ist Build mit sieben Farben und drei
+        Sternfeldern. Ein Stern ist ein normales Feld mit einem weißen Stern
+        darauf: Wer es schluckt, bekommt dafür zwei Punkte statt einem und eine
+        Mauer dazu.
+      </p>
       <h3>Ziel</h3>
-      <p>Wer am Ende die meisten Felder hält, gewinnt.</p>
+      <p>Wer am Ende die meisten Felder hält, gewinnt — in Extreme die meisten Punkte.</p>
     </div>
   );
 }

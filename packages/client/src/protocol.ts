@@ -56,7 +56,7 @@ export const EASYPOKER_MODULE_VERSION = 2;
  * holt nach, was am Modul laengst stand (2 Spielart, 3 Barrieren, 4 Mauer je
  * Zug); gemeldet hatte der Client bis eben die 1.
  */
-export const FILLER_MODULE_VERSION = 4;
+export const FILLER_MODULE_VERSION = 5;
 
 /**
  * 2 seit dem 1. September 2026, wenige Stunden nach der 1. Dieser Client

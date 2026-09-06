@@ -14,7 +14,7 @@
  * Die beiden Spielarten. Muss zu FillerVariante in
  * packages/game-filler/src/regeln.ts passen.
  */
-export type Variante = 'nebel' | 'klar' | 'build';
+export type Variante = 'nebel' | 'klar' | 'build' | 'extreme';
 
 /** Sicht des Moduls, siehe packages/game-filler/src/sicht.ts. */
 export interface FillerSicht {
@@ -49,4 +49,6 @@ export interface FillerSicht {
    * Client baut sie nicht nach (CLAUDE.md).
    */
   barrierenMoeglich?: [number, number][];
+  /** Plaetze der Sternfelder. Leer ausser in der Spielart `extreme`. */
+  sterne: number[];
 }

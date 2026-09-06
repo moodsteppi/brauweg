@@ -67,6 +67,7 @@ const FELDER = [
   'barrieren',
   'barrierenUebrig',
   'barrierenMoeglich',
+  'sterne',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof FillerSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof FillerSicht>>;

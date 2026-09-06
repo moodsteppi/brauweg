@@ -7,7 +7,9 @@
  */
 
 /**
- * Die sechs Farben des Vorbilds, in dieser REIHENFOLGE.
+ * Die sechs Farben des Vorbilds, in dieser REIHENFOLGE — plus eine siebte
+ * (Orange), die nur die Spielart Extreme benutzt. Die anderen Spielarten
+ * zaehlen bis sechs und sehen sie nie.
  *
  * Die Reihenfolge ist Protokoll: Ueber die Leitung geht nur die Nummer. Wer
  * hier etwas einschiebt, faerbt jede laufende Partie um — und zwar auf beiden
@@ -20,6 +22,7 @@ export const FARBEN = [
   '#35b4f0', // 3 Blau
   '#6b4fb5', // 4 Lila
   '#3c3c3c', // 5 Dunkelgrau
+  '#ff8c2a', // 6 Orange — nur in Extreme (sieben Farben)
 ] as const;
 
 /**
