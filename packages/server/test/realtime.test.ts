@@ -71,6 +71,67 @@ test('zwei Clients beenden eine vollstaendige Partie', async (t) => {
   b.close();
 });
 
+test('dieselbe Vorbehaltsantwort ein zweites Mal ist kein Fehler', async (t) => {
+  /**
+   * Das Rennen, an dem der Durchstich unter Last einmal rot war (06.09.2026):
+   * Die Vorbehaltsabfrage laeuft gegen eine Frist, und wer in dem Moment
+   * tippt, in dem sie ablaeuft — oder aus einer Sicht tippt, die noch vor der
+   * eigenen Antwort gerechnet wurde —, schickte dem Server eine Erklaerung,
+   * die er schon eingetragen hatte. Der Client bekam 'actionRejected'.
+   *
+   * Hier steht der Tisch dafuer still (`botDelayMs` hoch, passiver Client) und
+   * der zweite Tipp wird von Hand geschickt: Das Rennen soll IMMER geprueft
+   * werden und nicht nur dann, wenn die Maschine gerade genug zu tun hat.
+   */
+  const h = await startHarness({ botDelayMs: 60_000 });
+  t.after(() => h.close());
+
+  const { anna, table } = await tableWithTwoHumans(h);
+  const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  a.passive = true;
+  a.join(table.id);
+
+  const gesundIn = (view: { legalActions: readonly unknown[] } | null) =>
+    view?.legalActions.find(
+      (candidate) =>
+        (candidate as { type: string; kind?: unknown }).type === 'vorbehalt' &&
+        (candidate as { kind?: unknown }).kind === null,
+    ) ?? null;
+
+  await a.waitFor(() => gesundIn(a.lastView), 'Vorbehaltsabfrage fuer Anna');
+  const gesund = gesundIn(a.lastView)!;
+  const schicken = () =>
+    a.raw({
+      v: a.lastView!.v,
+      game: a.lastView!.game,
+      type: 'action',
+      tableId: table.id,
+      action: gesund,
+    });
+
+  schicken();
+  await a.waitFor(() => gesundIn(a.lastView) === null, 'Annas Antwort ist verbucht');
+
+  const revision = a.lastView!.revision;
+  const sichten = a.messages('view').length;
+
+  schicken();
+  // Kein Ereignis, auf das sich warten liesse - erwartet wird ja, dass nichts
+  // passiert. Eine Antwort haette in dieser Zeit laengst zurueckkommen muessen.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  assert.deepEqual(a.errors, [], 'die zweite Erklaerung ist wirkungslos, nicht falsch');
+  assert.equal(a.lastView!.revision, revision, 'und sie zaehlt keine Revision hoch');
+  assert.equal(
+    a.messages('view').length,
+    sichten,
+    'ohne Wirkung gibt es auch keinen Rundruf - sonst saehe jeder Client denselben '
+      + 'Stand unter neuer Revision noch einmal',
+  );
+
+  a.close();
+});
+
 test('auch ein Tisch mit Bots zaehlt fuer die Rangliste', async (t) => {
   const h = await startHarness();
   t.after(() => h.close());

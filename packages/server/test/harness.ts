@@ -47,10 +47,14 @@ export async function startHarness(
     // 30 Sekunden, und jeder Test, der auf die Zeit DANACH zielt, saesse sie
     // sonst je Runde ab.
     //
-    // Nicht kuerzer als 250 ms: Darunter lief die Frist ab, WAEHREND die
-    // Antwort eines Testclients noch unterwegs war — der Server wies sie dann
-    // zu Recht ab, und der Test scheiterte an einem 'actionRejected', das mit
-    // der geprueften Sache nichts zu tun hatte. Nur unter Last, also flatterig.
+    // 250 ms ist Bequemlichkeit, keine Untergrenze mehr. Frueher stand hier,
+    // die Zahl duerfe nicht kleiner werden, weil sonst die Frist ablief,
+    // WAEHREND die Antwort eines Testclients unterwegs war — der Durchstich
+    // scheiterte dann an einem 'actionRejected', das mit der geprueften Sache
+    // nichts zu tun hatte. Unter der Last des vollen Laufs reichten aber auch
+    // 250 ms nicht (06.09.2026). Seither nimmt die Engine eine verspaetete
+    // Erklaerung an, solange sie dieselbe ist, die die abgelaufene Frist
+    // ohnehin eingetragen hat (applyVorbehalt in game-doppelkopf/src/round.ts).
     interludeMaxMs: 250,
     ...options,
   });
