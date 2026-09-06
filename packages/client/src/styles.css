@@ -16942,6 +16942,29 @@ span.hub-angebot-art.poker-jeton-stapel {
   --tr-abzug: calc(var(--tr-kopfhoehe) + var(--tr-brettluft) + var(--tr-bankhoehe));
 }
 
+/*
+ * ERST HIER wird die Rechnung wirksam — und nur, wenn der Browser
+ * Container-Anfragen kennt (Safari ab 16, Chrome ab 105).
+ *
+ * Der Umweg ist kein Beiwerk: Kennt ein Browser `cqh` nicht, ist die ganze
+ * `min()`-Rechnung "ungueltig zum Rechenzeitpunkt", und `width` faellt damit
+ * nicht auf die Zeile davor zurueck, sondern auf `auto`. Ein `.tr-bretter`
+ * mit `width: auto` in einer zentrierten Spalte ist so breit wie sein
+ * Inhalt, und der Inhalt ist `width: 100%` davon — das Brett waere weg.
+ * Mit `@supports` bleibt es dort bei der alten Breitenrechnung: enger,
+ * aber vollstaendig.
+ */
+@supports (container-type: size) {
+  /* Mit dem Elternteil davor, damit diese Regel gegen die Rueckfall-Breite
+     weiter unten gewinnt: Beide haetten sonst dieselbe Gewichtung, und dann
+     entschiede allein die Reihenfolge in der Datei — eine Falle fuer den
+     Naechsten, der einen der beiden Bloecke verschiebt. */
+  .tr-spielflaeche > .tr-bretter,
+  .tr-spielflaeche > .tr-bank {
+    width: var(--tr-feld);
+  }
+}
+
 /* -- Die festgeheftete Kopfleiste ----------------------------------------- */
 
 /*
@@ -17119,9 +17142,9 @@ span.hub-angebot-art.poker-jeton-stapel {
   display: flex;
   flex-direction: column;
   gap: var(--tr-brettluft);
-  /* Die eine Groesse aus `.tr-spielflaeche` — sie kommt aus der freien Hoehe
-     und ist nach oben durch die Bildschirmbreite gedeckelt. */
-  width: var(--tr-feld);
+  /* Die Grenze aus der Breite als Rueckfall; die eine Groesse aus der HOEHE
+     setzt der `@supports`-Block weiter unten darueber. */
+  width: var(--tr-feld-breit);
 }
 .tr-brettteil { position: relative; }
 /* Die Gegnerhaelfte tritt zurueck: Sie ist Auskunft, nicht Bedienflaeche.
@@ -17690,9 +17713,9 @@ span.hub-angebot-art.poker-jeton-stapel {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
   gap: 4px;
-  /* Dieselbe eine Groesse wie das Brett darueber: Die Bank ist dessen
-     Unterkante und keine eigene Leiste. */
-  width: var(--tr-feld);
+  /* Dieselbe Groesse wie das Brett darueber: Die Bank ist dessen Unterkante
+     und keine eigene Leiste — auch im Rueckfall (siehe `.tr-bretter`). */
+  width: var(--tr-feld-breit);
   padding: 4px 6px 5px;
   border-radius: 0 0 14px 14px;
   background: rgba(255, 255, 255, 0.05);

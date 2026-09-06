@@ -44,11 +44,23 @@
      `gap`. Sie stehen ueber und unter dem Brett und gehoeren nicht zu ihm. */
   --tr-arena-zeilen: 36px;
   --tr-arena-breit: min(94vw, 460px);
-  width: min(
-    var(--tr-arena-breit),
-    calc((100cqh - var(--tr-arena-zeilen)) * var(--tr-arenaverhaeltnis))
-  );
+  /* Rueckfall; die Hoehenrechnung setzt der `@supports`-Block darunter. */
+  width: var(--tr-arena-breit);
   transition: opacity 400ms ease;
+}
+/*
+ * Kennt ein Browser `cqh` nicht, ist die `min()`-Rechnung "ungueltig zum
+ * Rechenzeitpunkt" — und `width` faellt dann nicht auf die Zeile davor
+ * zurueck, sondern auf `auto`. Eine Arena ohne Breite waere keine.
+ * Also: nur anschalten, wenn es Container-Anfragen gibt (Safari ab 16).
+ */
+@supports (container-type: size) {
+  .arena {
+    width: min(
+      var(--tr-arena-breit),
+      calc((100cqh - var(--tr-arena-zeilen)) * var(--tr-arenaverhaeltnis))
+    );
+  }
 }
 /* Der Server hat die Phase gewechselt: weich zurueck zur Ruestkammer. */
 .arena[data-verblasst] {
