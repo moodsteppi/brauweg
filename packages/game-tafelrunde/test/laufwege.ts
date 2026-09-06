@@ -19,7 +19,14 @@
  * liefert nur die Zahlen, mit denen man darueber reden kann.
  */
 
-import { type Kampfbericht, type Rolle, arenaAbstand, einheit } from '../src/index.js';
+import {
+  BRETT_SPALTEN,
+  type Kampfbericht,
+  type Rolle,
+  arenaAbstand,
+  einheit,
+  vonArena,
+} from '../src/index.js';
 
 /** Alle Rollen des Katalogs, in fester Reihenfolge fuer die Ausgabe. */
 export const ROLLEN: readonly Rolle[] = ['wache', 'meuchler', 'beistand', 'schuetze', 'magier'];
@@ -48,6 +55,15 @@ export interface Einheitslauf {
   readonly wer: number;
   readonly rolle: Rolle;
   readonly reichweite: number;
+  /**
+   * Die Reihe der EIGENEN Bretthaelfte, in der die Einheit aufgestellt wurde —
+   * 0 ist vorn an der Luecke, `BRETT_REIHEN - 1` hinten.
+   *
+   * Zurueckgerechnet aus dem Arenaplatz (`vonArena`) und nicht aus dem Brett
+   * mitgeschleppt: Der Bericht ist alles, was diese Datei liest, und die
+   * Umrechnung steht in arena.ts genau einmal.
+   */
+  readonly reihe: number;
   /** Abstand zum naechsten Gegner in der Startaufstellung, in Feldern. */
   readonly startAbstand: number;
   /** Stand sie schon beim ersten Takt in Reichweite? Der Kern der Frage. */
@@ -113,6 +129,7 @@ export function laufbefund(bericht: Kampfbericht): Laufbefund {
       wer: k.id,
       rolle: einheit(k.einheitId).rolle,
       reichweite,
+      reihe: Math.floor(vonArena(k.platz, k.seite) / BRETT_SPALTEN),
       startAbstand: naechster,
       sofortInReichweite: naechster <= reichweite,
       schritte: schritte.get(k.id) ?? 0,
@@ -165,6 +182,8 @@ export interface Rollenzeile {
   /** Anteil, der schon in der Startaufstellung in Reichweite stand. */
   readonly anteilSofortInReichweite: number;
   readonly startAbstandMedian: number | null;
+  /** Anteil dieser Rolle je Brettreihe, Stelle 0 ist die vorderste. */
+  readonly reihenAnteile: readonly number[];
 }
 
 export interface Laufauswertung {
@@ -187,6 +206,17 @@ export interface Laufauswertung {
   readonly letzteBewegungMedianMs: number | null;
   /** Schritte je Einheit und Kampf im Mittel — der Nenner der Anzeigefrage. */
   readonly schritteJeEinheit: number;
+  /**
+   * Wie sich ALLE aufgestellten Einheiten auf die Reihen verteilen, Stelle 0
+   * ist die vorderste.
+   *
+   * ANLASS (06.09.2026): Der Bot kannte nur zwei Wunschreihen und stand damit
+   * ueber 26.395 Einheiten zu 100 % in Reihe 0 oder Reihe 3 — die beiden
+   * mittleren Reihen, fuer die Robin die Tiefe bestellt hat, blieben leer.
+   * An keiner anderen Zahl dieser Tabelle sieht man das: Bewegungen und
+   * Laufanteil aendern sich davon kaum.
+   */
+  readonly reihenAnteile: readonly number[];
   readonly jeRolle: readonly Rollenzeile[];
 }
 
@@ -215,6 +245,7 @@ export function werteLaufAus(befunde: readonly Laufbefund[]): Laufauswertung {
         meine.length,
       ),
       startAbstandMedian: median(meine.map((e) => e.startAbstand)),
+      reihenAnteile: reihenAnteile(meine),
     };
   });
 
@@ -243,8 +274,25 @@ export function werteLaufAus(befunde: readonly Laufbefund[]): Laufauswertung {
       befunde.map((b) => b.letzteBewegungMs).filter((n): n is number => n !== null),
     ),
     schritteJeEinheit: alle.length === 0 ? 0 : summe(alle.map((e) => e.schritte)) / alle.length,
+    reihenAnteile: reihenAnteile(alle),
     jeRolle,
   };
+}
+
+/**
+ * Die Verteilung auf die Reihen als Anteile, eine Stelle je Reihe.
+ *
+ * Die Laenge kommt aus der hoechsten VORGEFUNDENEN Reihe und nicht aus
+ * `BRETT_REIHEN`: Diese Datei liest Berichte und soll auch eine Messvariante
+ * mit anderer Reihenzahl auswerten koennen (werkzeug/laufwege-variante.mjs).
+ */
+function reihenAnteile(laeufe: readonly Einheitslauf[]): number[] {
+  const hoechste = laeufe.reduce((h, e) => Math.max(h, e.reihe), -1);
+  const raus: number[] = [];
+  for (let reihe = 0; reihe <= hoechste; reihe++) {
+    raus.push(anteil(laeufe.filter((e) => e.reihe === reihe).length, laeufe.length));
+  }
+  return raus;
 }
 
 function summe(werte: readonly number[]): number {

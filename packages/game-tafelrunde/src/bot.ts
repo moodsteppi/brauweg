@@ -21,8 +21,9 @@
  *      Paare, die Synergien der Marken und die Staerke. In die geht seit dem
  *      05.09.2026 auch die REICHWEITE ein, aber nur so weit, wie das eigene
  *      Heer eine Vorderreihe hat (`deckungIm`).
- *   2. AUFSTELLEN NACH ROLLE — Wachen und Meuchler nach vorn, Schuetzen,
- *      Magier und Beistand nach hinten, Meuchler zusaetzlich an den Rand.
+ *   2. AUFSTELLEN NACH ROLLE — jede Rolle hat seit dem 06.09.2026 ihre
+ *      eigene Wunschreihe (`wunschreihe`) statt nur "ganz vorn" oder "ganz
+ *      hinten", Meuchler zusaetzlich an den Rand.
  *      WELCHE aufgestellt wird, entscheidet seit dem 05.09.2026 das ganze
  *      Brett und nicht die staerkste Einzelne (siehe `heerStaerke`).
  *   3. AUFSTIEG BEI VOLLEM BRETT — ein Feldplatz nuetzt nur, wenn etwas
@@ -599,28 +600,120 @@ function markenZaehlung(eigene: readonly Kaempfer[]): Map<Marke, number> {
  */
 const VORDERSTE_REIHE = 0;
 
-/** Eine falsche Reihe wiegt schwerer als eine falsche Spalte. */
+/**
+ * Eine Reihe zu weit HINTEN wiegt schwerer als eine falsche Spalte.
+ *
+ * Das Verhaeltnis 10 zu hoechstens 4 (`RAND_GEWICHT` mal zwei) ist Absicht
+ * und beantwortet die Frage, ob eine gute Spalte eine schlechte Reihe
+ * aufwiegen soll, mit NEIN: Die Reihe entscheidet, WAS eine Einheit im Kampf
+ * ueberhaupt tun kann — Treffer schlucken, die Front heilen, aus der Deckung
+ * schiessen. Die Spalte entscheidet nur, wie gut sie es tut (ein Feld in der
+ * Mitte hat sechs Nachbarn, eines am Rand vier). Ein Beistand in der Mitte
+ * der falschen Reihe heilt trotzdem niemanden.
+ *
+ * GEMESSEN am 06.09.2026, 5.000 Partien zu viert: Mit 3 statt 10 — also mit
+ * einer Spaltenstrafe, die eine Reihe aufwiegen kann — verschiebt sich die
+ * Reihenverteilung um weniger als einen Prozentpunkt. Die Reihe bleibt also
+ * ohnehin das entscheidende Merkmal, nur ohne dass man es an einer Zahl
+ * ablesen koennte. Die Zahlen stehen in docs/TAFELRUNDE-LAUFWEGE.md.
+ */
 const REIHEN_GEWICHT = 10;
+
+/**
+ * Eine Reihe zu weit VORN kostet mehr als eine zu weit hinten — aber nur, wer
+ * Reichweite hat.
+ *
+ * `sucheZiel` in kampf.ts nimmt den NAECHSTEN Gegner. Wer weiter vorn steht
+ * als gewollt, wird damit zum Ziel, das eigentlich die Wache sein sollte, und
+ * verliert genau die Deckung, fuer die er hinten steht. Wer weiter hinten
+ * steht als gewollt, verliert nur Zeit: einen Schritt, also `schrittdauer`
+ * (300 ms beim Zeitraffer 2).
+ *
+ * Fuer Reichweite 1 gilt das nicht — Wache und Meuchler muessen ohnehin bis
+ * auf ein Feld heran, vorn stehen ist ihre Aufgabe. Sie rechnen deshalb in
+ * beide Richtungen mit `REIHEN_GEWICHT`, und ein Meuchler, dessen Reihe voll
+ * ist, weicht nach VORN aus statt nach hinten.
+ */
+const VORRUECK_GEWICHT = 15;
 
 /** Und ein Meuchler in der Mitte schwerer als eine Wache neben der Mitte. */
 const RAND_GEWICHT = 2;
 
 /**
+ * In welcher Reihe diese Einheit stehen WILL. Null ist die vorderste.
+ *
+ * BIS ZUM 06.09.2026 GAB ES NUR ZWEI WUENSCHE — ganz vorn (Wache, Meuchler)
+ * oder ganz hinten (alles andere). Auf zwei Reihen war das vollstaendig; seit
+ * das Brett vier hat, blieben die beiden mittleren leer: Ueber 26.395
+ * aufgestellte Einheiten stand der Bot zu 100 % in Reihe 0 oder Reihe 3.
+ * Robin hat die Tiefe bestellt, damit man taktischer aufstellen kann — gegen
+ * einen Gegner, der die Haelfte des Bretts nicht benutzt, bringt sie nichts.
+ *
+ * DIE WUENSCHE FOLGEN DEM, WAS DIE ROLLE IM KAMPF TUT, und der Kampf kennt
+ * von einer Rolle nur zweierlei: die Werte und die REICHWEITE (allein der
+ * `beistand` hat eine eigene Zeile, er heilt statt zu schlagen). Deshalb
+ * steht hier, wo eine Einheit stehen muss, damit sie ueberhaupt HANDELN kann,
+ * sobald die beiden Fronten sich treffen. Ein Gegner, der an unserer
+ * vordersten Reihe steht, ist von Reihe `d` genau `d + 1` Felder entfernt —
+ * treffen kann ihn also, wer `d <= reichweite - 1` steht:
+ *
+ *   - `wache` (Reichweite 1) -> Reihe 0. Sie ist der einzige Fall, in dem die
+ *     Reihe nicht der Reichweite folgt, sondern der Aufgabe: Sie SOLL das
+ *     naechste Ziel sein (meistes Leben, geringster Angriff je Gold).
+ *   - `meuchler` (Reichweite 1) -> Reihe 1. Er muss genauso heran, ist aber
+ *     der Schaden und nicht der Schild: In Reihe 0 waere er neben der Wache
+ *     gleich weit vorn und faenge die Haelfte der Eroeffnung ab. Eine Reihe
+ *     dahinter bleibt die Wache das naechste Ziel, und der Schritt, den er
+ *     mehr laeuft, ist bei seinem Tempo der billigste im Heer. An den RAND
+ *     wie bisher — dort laeuft er an der Front vorbei, statt sich in ihr
+ *     festzubeissen.
+ *   - `beistand` (Reichweite 2) -> Reihe 2, und zwar `reichweite` und nicht
+ *     `reichweite - 1`: Seine Reichweite ist sein HEILRADIUS, gemessen zu den
+ *     eigenen Leuten und nicht zum Gegner. Aus Reihe 2 erreicht er die Wache
+ *     in Reihe 0 (Abstand 2), aus Reihe 3 nicht mehr (Abstand 3). Das ist der
+ *     ganze Unterschied zwischen "heilt die Front" und "heilt niemanden" —
+ *     und die Erklaerung dafuer, dass er bisher, ganz hinten neben den
+ *     Schuetzen, kaum je jemanden zu heilen hatte.
+ *   - `schuetze` und `magier` (Reichweite 3, Sturmrufer 4) -> Reihe 2 bzw. 3.
+ *     Sie sollen nie das naechste Ziel sein und stehen deshalb so weit
+ *     hinten, wie ihre Reichweite es erlaubt, OHNE dass sie den Gegner an
+ *     unserer Front verfehlen. Weiter hinten waere nicht sicherer, sondern
+ *     nur langsamer: Gedeckt ist man, sobald jemand naeher steht.
+ *
+ * Getrennt nach Reichweite und nicht nach Rollennamen, weil der Kampf es auch
+ * so haelt: Der Sturmrufer (Reichweite 4) steht eine Reihe weiter hinten als
+ * die uebrigen Magier, und das ist kein Sonderfall, sondern dieselbe Zeile.
+ *
+ * `reihen` kommt aus der Sicht: Auf einem Brett mit zwei Reihen fallen alle
+ * Wuensche ausser dem der Wache auf die hintere zusammen — genau die
+ * Aufstellung, die der Bot bis zum 06.09.2026 hatte.
+ */
+function wunschreihe(k: Kaempfer, reihen: number): number {
+  const e = einheit(k.id);
+  const letzte = reihen - 1;
+  switch (e.rolle) {
+    case 'wache':
+      return VORDERSTE_REIHE;
+    case 'meuchler':
+      return Math.min(VORDERSTE_REIHE + 1, letzte);
+    case 'beistand':
+      return Math.min(e.reichweite, letzte);
+    default:
+      return Math.min(e.reichweite - 1, letzte);
+  }
+}
+
+/**
  * Wie schlecht dieser Platz fuer diese Einheit ist. Null ist ideal.
  *
- * Die Rolle steht im Katalog, die Vorlieben sind die des Kampfes:
+ * Die Reihe kommt aus `wunschreihe` (dort steht die Begruendung je Rolle),
+ * die Spalte aus dem Sechseckraster:
  *
- *   - `wache` nach vorn und in die Mitte. Sie soll zuerst getroffen werden,
- *     und in der Mitte deckt sie mehr Nachbarfelder (Sechseckraster, sechs
- *     Nachbarn statt vier).
- *   - `schuetze`, `magier`, `beistand` nach hinten und in die Mitte. Alle drei
- *     haben Reichweite 2 bis 4 und wenig Leben; vorn sterben sie, bevor sie
- *     zweimal geschossen haben. Der Beistand steht ausdruecklich dabei,
- *     obwohl die Aufgabe ihn nicht nennt: Mit Reichweite 2 und dem niedrigsten
- *     Angriff des Katalogs gehoert er nirgendwo anders hin.
- *   - `meuchler` nach vorn an den RAND. Er hat Reichweite 1 und das hoechste
- *     Tempo; am Rand laeuft er an der gegnerischen Front vorbei, statt sich in
- *     ihr festzubeissen.
+ *   - `meuchler` an den RAND (`RAND_GEWICHT`), damit er an der gegnerischen
+ *     Front vorbeilaeuft statt hinein.
+ *   - alle anderen in die MITTE: Ein Feld in der Mitte hat sechs Nachbarn,
+ *     eines am Rand vier. Wer auf Nachbarn wirkt oder von ihnen gedeckt wird,
+ *     steht dort besser.
  *
  * `reihen` und `spalten` kommen aus der Sicht und nicht aus brett.ts: Die
  * beiden Zahlen stehen dort, damit niemand sie nachbaut — auch der Bot nicht.
@@ -628,18 +721,17 @@ const RAND_GEWICHT = 2;
 function platzStrafe(k: Kaempfer, platz: number, reihen: number, spalten: number): number {
   const reihe = Math.floor(platz / spalten);
   const spalte = platz % spalten;
-  const nachHinten = reihen - 1 - reihe;
+  const wunsch = wunschreihe(k, reihen);
+  const zuWeitVorn = Math.max(0, wunsch - reihe);
+  const zuWeitHinten = Math.max(0, reihe - wunsch);
   const zurMitte = Math.abs(spalte - (spalten - 1) / 2);
   const zumRand = Math.min(spalte, spalten - 1 - spalte);
 
-  switch (einheit(k.id).rolle) {
-    case 'wache':
-      return REIHEN_GEWICHT * (reihe - VORDERSTE_REIHE) + zurMitte;
-    case 'meuchler':
-      return REIHEN_GEWICHT * (reihe - VORDERSTE_REIHE) + RAND_GEWICHT * zumRand;
-    default:
-      return REIHEN_GEWICHT * nachHinten + zurMitte;
-  }
+  const e = einheit(k.id);
+  const vorwaerts = e.reichweite > 1 ? VORRUECK_GEWICHT : REIHEN_GEWICHT;
+  const spaltenStrafe = e.rolle === 'meuchler' ? RAND_GEWICHT * zumRand : zurMitte;
+
+  return vorwaerts * zuWeitVorn + REIHEN_GEWICHT * zuWeitHinten + spaltenStrafe;
 }
 
 /** Der beste freie Platz fuer diese Einheit; bei Gleichstand der kleinste. */
