@@ -8,6 +8,7 @@ import {
   erreichbareFreie,
   erstellePartie,
   fuehreAus,
+  MAUERFREIE_ZUEGE,
   kante,
   moeglicheBarrieren,
 } from '../src/index.js';
@@ -18,14 +19,14 @@ const SAAT = 'b17e4c9a2f5083d6e1c7a4b90d2f6853';
 const BUILD = { ...DEFAULT_REGELN, variante: 'build', barrieren: 5 } as const;
 
 /**
- * Eine frische Baupartie, aber schon NACH der Eroeffnung: Beide haben einmal
- * gefaerbt, Sitz 0 ist wieder dran. Der allererste Zug der Partie ist
+ * Eine frische Baupartie, aber schon NACH der Eroeffnung: Beide haben zweimal
+ * gefaerbt, Sitz 0 ist wieder dran. Die ersten drei Zuege der Partie sind
  * mauerfrei (siehe den eigenen Test unten), und die Setz-Tests wollen mauern.
  */
 function neu() {
   let partie = erstellePartie(BUILD, [0, 1], SAAT);
-  partie = fuehreAus(partie, 0, farbzugVon(partie, 0));
-  partie = fuehreAus(partie, 1, farbzugVon(partie, 1));
+  for (let i = 0; i < 4; i++) partie = fuehreAus(partie, partie.dran, farbzugVon(partie, partie.dran));
+  assert.equal(partie.dran, 0);
   return partie;
 }
 
@@ -65,24 +66,37 @@ describe('Build: Aufbau', () => {
 });
 
 describe('Build: Eroeffnung', () => {
-  it('laesst den Anfaenger im allerersten Zug nicht mauern, den zweiten schon', () => {
-    const frisch = erstellePartie(BUILD, [0, 1], SAAT);
-    assert.equal(frisch.zug, 0);
-    assert.deepEqual(moeglicheBarrieren(frisch, 0), []);
-    assert.deepEqual(mauern(erlaubteZuege(frisch, 0)), []);
-    assert.equal(sichtFuer(frisch, 0).barrierenMoeglich, undefined);
-    const [von, nach] = [8, 9];
-    assert.throws(() => fuehreAus(frisch, 0, { typ: 'barriere', von, nach }));
+  it('sperrt die ersten drei Zuege, danach darf gebaut werden', () => {
+    let partie = erstellePartie(BUILD, [0, 1], SAAT);
+    assert.equal(MAUERFREIE_ZUEGE, 3);
+    // Zug 0 (Sitz 0), Zug 1 (Sitz 1), Zug 2 (Sitz 0): gesperrt, Zahl faellt.
+    for (const [zug, sitz, rest] of [
+      [0, 0, 3],
+      [1, 1, 2],
+      [2, 0, 1],
+    ] as const) {
+      assert.equal(partie.zug, zug);
+      assert.equal(partie.dran, sitz);
+      assert.deepEqual(moeglicheBarrieren(partie, sitz), []);
+      assert.deepEqual(mauern(erlaubteZuege(partie, sitz)), []);
+      const sicht = sichtFuer(partie, sitz);
+      assert.equal(sicht.barrierenMoeglich, undefined);
+      assert.equal(sicht.mauerSperre, rest);
+      assert.throws(() => fuehreAus(partie, sitz, { typ: 'barriere', von: 8, nach: 9 }));
+      partie = fuehreAus(partie, sitz, farbzugVon(partie, sitz));
+    }
+    // Zug 3: der zweite Zug des zweiten Spielers — frei.
+    assert.equal(partie.zug, 3);
+    assert.equal(partie.dran, 1);
+    assert.ok(moeglicheBarrieren(partie, 1).length > 0);
+    const frei = sichtFuer(partie, 1);
+    assert.ok((frei.barrierenMoeglich?.length ?? 0) > 0);
+    assert.equal(frei.mauerSperre, 0);
+  });
 
-    // Sitz 1 darf in SEINEM ersten Zug direkt bauen.
-    const nachEroeffnung = fuehreAus(frisch, 0, farbzugVon(frisch, 0));
-    assert.equal(nachEroeffnung.dran, 1);
-    assert.ok(moeglicheBarrieren(nachEroeffnung, 1).length > 0);
-    assert.ok((sichtFuer(nachEroeffnung, 1).barrierenMoeglich?.length ?? 0) > 0);
-
-    // Und Sitz 0 ab seinem zweiten Zug ebenfalls.
-    const zweiteRunde = fuehreAus(nachEroeffnung, 1, farbzugVon(nachEroeffnung, 1));
-    assert.ok(moeglicheBarrieren(zweiteRunde, 0).length > 0);
+  it('meldet ohne Mauern keine Sperre', () => {
+    const partie = erstellePartie({ ...DEFAULT_REGELN, variante: 'klar' }, [0, 1], SAAT);
+    assert.equal(sichtFuer(partie, 0).mauerSperre, 0);
   });
 });
 
@@ -197,7 +211,7 @@ describe('Build: Die Wand haelt', () => {
     farbe: { 0: 0, 1: 3 },
     punkte: { 0: 1, 1: 1 },
     dran: 0,
-    zug: 2,
+    zug: 4,
   };
   const basis = () => ({ ...erstellePartie(regeln, [0, 1], 3), ...gelegt });
 
@@ -264,7 +278,7 @@ describe('Build: Einsperren ist verboten', () => {
     farbe: { 0: 0, 1: 3 },
     punkte: { 0: 1, 1: 1 },
     dran: 0,
-    zug: 2,
+    zug: 4,
   });
 
   it('laesst die erste der beiden Kanten zu', () => {
@@ -297,7 +311,7 @@ describe('Build: Einsperren ist verboten', () => {
       )[],
       barrieren: [kante(4, 8)],
       dran: 0,
-      zug: 2,
+      zug: 4,
     };
     const moeglich = moeglicheBarrieren(partie, 0).map(([a, b]) => kante(a, b));
     assert.ok(!moeglich.includes(kante(8, 9)), 'sich selbst zumauern ist verboten');
@@ -318,7 +332,7 @@ describe('Build: Einsperren ist verboten', () => {
       )[],
       punkte: { 0: 3, 1: 1 },
       dran: 0,
-      zug: 2,
+      zug: 4,
     };
     assert.equal(erreichbareFreie(partie, 1, new Set<string>()), 0, 'Sitz 1 sitzt schon fest');
     assert.ok(moeglicheBarrieren(partie, 0).length > 0, 'anderswo darf weiter gebaut werden');
@@ -421,7 +435,7 @@ describe('Build: Der Bot und die Wand', () => {
       farbe: { 0: 0, 1: 3 },
       punkte: { 0: 1, 1: 1 },
       dran: 0,
-      zug: 2,
+      zug: 4,
     };
     const zug = botZug(sichtFuer(gelegt, 0));
     assert.deepEqual(zug, { typ: 'barriere', von: 3, nach: 7 });
@@ -448,7 +462,7 @@ describe('Build: Der Bot und die Wand', () => {
       farbe: { 0: 0, 1: 3 },
       punkte: { 0: 1, 1: 1 },
       dran: 0,
-      zug: 2,
+      zug: 4,
     };
     const sicht = sichtFuer(gelegt, 0);
     assert.ok((sicht.barrierenMoeglich?.length ?? 0) > 0, 'die Sicht bietet Waende an');

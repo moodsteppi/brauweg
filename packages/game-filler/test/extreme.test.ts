@@ -110,7 +110,7 @@ describe('Extreme: Ein Stern faellt', () => {
     punkte: { 0: 1, 1: 1 },
     barrierenUebrig: { 0: 10, 1: 10 },
     dran: 0,
-    zug: 2,
+    zug: 4,
     sterne: [9],
   });
 
