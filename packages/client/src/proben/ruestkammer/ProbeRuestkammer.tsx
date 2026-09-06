@@ -250,28 +250,36 @@ export function ProbeRuestkammer(): React.JSX.Element {
           der Name waere sonst die neunzehnte durchgereichte Eigenschaft
           (Synergien.tsx). */}
       <Markennamen.Provider value={namen}>
-        {/* Leben und Rang wie am Tisch — die zwei Zahlen, gegen die man das
-            Brett liest. Sie stehen fest: Die Probe spielt nicht. */}
-        <header className="tr-kopf">
-          <div className="tr-werte">
+        {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile — Aufbau
+            und Klassen wie am Tisch (`.tr-statuszeile`, screens/Tafelrunde.tsx
+            und styles.css). Die Zahlen stehen fest: Die Probe spielt nicht.
+
+            Der Aufbau ist hier nachgeschrieben und nicht eingehaengt, weil er
+            im Bildschirm noch kein eigenes Bauteil ist. Wer ihn dort aendert,
+            aendert ihn hier mit — sonst zeigt ausgerechnet die Probe eine
+            Zeile, die es am Tisch nicht gibt. */}
+        <div className="tr-statuszeile">
+          <header className="tr-kopf">
             <span className="tr-wert tr-wert-leben">
               <LebenZeichen />
               <strong>{SZENE.eigenes.leben}</strong>
               <em>Leben</em>
             </span>
             <span className="tr-wert tr-wert-level">
+              <em>Rang</em>
               <strong>{SZENE.eigenes.level}</strong>
-              <em>
-                {stellung.belegt}/{SZENE.eigenes.feldplaetze} Feld
-              </em>
             </span>
-          </div>
-        </header>
-
-        <Synergieleiste
-          staende={SZENE.eigenes.synergien}
-          tabelle={SZENE.synergieTabelle}
-        />
+            <span className="tr-wert tr-wert-feld">
+              <strong>
+                {stellung.belegt}/{SZENE.eigenes.feldplaetze} Feld
+              </strong>
+            </span>
+          </header>
+          <Synergieleiste
+            staende={SZENE.eigenes.synergien}
+            tabelle={SZENE.synergieTabelle}
+          />
+        </div>
 
         <div className="tr-bretter">
           {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
@@ -280,12 +288,16 @@ export function ProbeRuestkammer(): React.JSX.Element {
               eigene: Ob die Figuren einander wirklich ansehen, sieht man erst
               hier. */}
           <section className="tr-brettteil tr-brettteil-fremd">
-            <h2 className="tr-bretttitel">{nameVon(SZENE.gegner.sitz)}</h2>
-            <Fremdmarken
-              staende={SZENE.gegner.synergien}
-              tabelle={SZENE.synergieTabelle}
-              beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
-            />
+            {/* Name und Marken nebeneinander, wie am Tisch
+                (`.tr-brettkopf`). */}
+            <div className="tr-brettkopf">
+              <h2 className="tr-bretttitel">{nameVon(SZENE.gegner.sitz)}</h2>
+              <Fremdmarken
+                staende={SZENE.gegner.synergien}
+                tabelle={SZENE.synergieTabelle}
+                beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
+              />
+            </div>
             <Hexbrett
               reihen={SZENE.brettReihen}
               spalten={SZENE.brettSpalten}
