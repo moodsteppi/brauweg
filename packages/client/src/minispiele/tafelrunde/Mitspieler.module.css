@@ -115,10 +115,27 @@ button.kachel { cursor: pointer; }
   box-shadow: 0 0 0 1px var(--gold), 0 0 14px -4px rgba(226, 182, 79, 0.8);
 }
 
-/* Wessen Brett gerade oben liegt. Ein feiner Ring nach innen, damit er nicht
-   mit der Gegnermarkierung verwechselt wird. */
-.kachel[data-an] { box-shadow: inset 0 0 0 1px var(--text); }
-.kachel[data-an][data-gegner] { box-shadow: 0 0 0 1px var(--gold), inset 0 0 0 1px var(--text); }
+/*
+ * Wessen Brett gerade oben liegt.
+ *
+ * Bis zum 06.09.2026 war das ein Ring von einem Pixel nach innen — sichtbar,
+ * wenn man ihn suchte, und sonst nicht. Damit war das Zusehen zwar gebaut,
+ * aber kein Angebot: Man tippte eine Kachel an, das Brett darunter wechselte,
+ * und nichts sagte einem, dass man das gerade getan hatte. Jetzt sind es zwei
+ * Pixel nach aussen plus die aufgehellte Flaeche — und das Auge in der Ecke
+ * (`.auge`), denn ein Rahmen allein ist wieder nur Farbe.
+ *
+ * Die Gegnerkachel behaelt ihr Gold: Dass jemand mein Gegner ist, sagt die
+ * Partie, dass ich hinsehe, sage ich. Beide Ringe stehen deshalb nebeneinander
+ * — der goldene aussen, der helle innen.
+ */
+.kachel[data-an] {
+  box-shadow: 0 0 0 2px var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+.kachel[data-an][data-gegner] { box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 2px var(--text); }
+
+
 
 /* Ausgeschieden: ausgegraut, aber lesbar. Ganz wegnehmen wäre falsch — man
    will sehen, wer schon draußen ist. Die Sättigung kommt mit heraus: Ein
@@ -213,6 +230,23 @@ button.kachel { cursor: pointer; }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 800;
+}
+/*
+ * Das Auge vor dem Namen — es sagt, dass das Brett dieses Sitzes gerade unten
+ * liegt. INLINE und nicht als Ecke: Der Streifen rollt seitlich, alles ueber
+ * der Kachelkante wuerde abgeschnitten. Als Teil der Namenszeile laeuft es
+ * zudem mit den Auslassungspunkten mit, statt einen langen Namen zu ueberdecken.
+ */
+.name svg {
+  width: 9px;
+  height: 9px;
+  margin-right: 3px;
+  vertical-align: -1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Immer da, auch leer — sonst wackelt die Höhe des Streifens bei jedem

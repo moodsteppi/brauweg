@@ -279,22 +279,26 @@ function bildSchieben(el: HTMLImageElement, stand: Bildstand): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Der Kampf, der abgespielt wird.
+ * Der Kampf, der abgespielt wird — der des genannten Sitzes.
  *
- * Fuer einen Spieler sein eigener — derselbe Massstab wie `kampfVon` im
- * Modul: Ich bin `a`, oder ich bin `b` und kein Abbild (ein Geist kaempft
- * anderswo selbst). Ein Zuschauer bekommt alle Kaempfe und sieht den ersten.
+ * Derselbe Massstab wie `kampfVon` im Modul: Der Sitz ist `a`, oder er ist `b`
+ * und kein Abbild (ein Geist kaempft anderswo selbst). Ohne Sitz — als
+ * Zuschauer, der noch niemanden gewaehlt hat — der erste der Liste.
+ *
+ * DER SITZ IST NICHT ZWANGSLAEUFIG MEINER. Seit dem 06.09.2026 stehen alle
+ * Kaempfe der Runde in jeder Sicht (sicht.ts im Modul), und wer oben einen
+ * Mitspieler antippt, sieht dessen Kampf statt seines eigenen. Wessen Kampf
+ * das ist, entscheidet der Bildschirm (`zeigt`), nicht diese Funktion.
  *
  * Die UEBRIGEN Kaempfe der Runde stehen als Ergebniszeile darunter, und die
- * kommen nicht von hier, sondern aus `paarungen` — sonst haette sie nur ein
- * Zuschauer (siehe `Paarungsergebnis`).
+ * kommen nicht von hier, sondern aus `paarungen` (siehe `Paarungsergebnis`).
  */
 export function abzuspielen(
   kaempfe: readonly Kampfpaarung[],
-  ich: number | null,
+  sitz: number | null,
 ): Kampfpaarung | null {
-  if (ich !== null) {
-    return kaempfe.find((k) => k.a === ich || (k.b === ich && !k.geist)) ?? null;
+  if (sitz !== null) {
+    return kaempfe.find((k) => k.a === sitz || (k.b === sitz && !k.geist)) ?? null;
   }
   return kaempfe[0] ?? null;
 }
@@ -346,11 +350,15 @@ export function ergebniszeile(
   return `${gegen} · ${sieger} gewinnt, ${nameVon(k.a)} verliert ${k.schaden} Leben`;
 }
 
-/** Auf welcher Arenaseite ich stehe — null als Zuschauer. */
-export function meineSeite(kampf: Kampfpaarung, ich: number | null): Seite | null {
-  if (ich === null) return null;
-  if (kampf.a === ich) return 0;
-  if (kampf.b === ich && !kampf.geist) return 1;
+/**
+ * Auf welcher Arenaseite ein Sitz steht — null, wenn er in diesem Kampf gar
+ * nicht vorkommt (ein Zuschauer, oder ich beim Zusehen bei einem fremden
+ * Kampf).
+ */
+export function meineSeite(kampf: Kampfpaarung, sitz: number | null): Seite | null {
+  if (sitz === null) return null;
+  if (kampf.a === sitz) return 0;
+  if (kampf.b === sitz && !kampf.geist) return 1;
   return null;
 }
 
@@ -572,12 +580,23 @@ export function ausschlagRichtung(
 interface Anzeige {
   readonly stand: Abspielstand;
   readonly zeitMs: number;
+  /**
+   * Zu WELCHEM Kampf dieser Stand gehoert (der Schluessel weiter unten).
+   *
+   * Noetig, seit man mitten in der Phase auf einen fremden Kampf umschalten
+   * kann: Der Zustand haelt dann noch die Figuren des vorigen, waehrend
+   * `bericht` schon den neuen nennt. Ohne diesen Abgleich zeichnete die Arena
+   * ein Bild lang die alten Figuren unter den neuen Namen — und die Zeile
+   * „2 von 3 stehen" zaehlte sie mit.
+   */
+  readonly fuer: string;
 }
 
 export function KampfAnzeige<E extends Einheitenbild>({
   kaempfe,
   paarungen,
   ich,
+  zeigt = ich,
   brettReihen,
   arenaReihen,
   brettSpalten,
@@ -595,7 +614,18 @@ export function KampfAnzeige<E extends Einheitenbild>({
    * herausgenommen (`nebenkaempfe`).
    */
   paarungen: readonly Paarungsergebnis[];
+  /** Wer zusieht — allein fuer die Beschriftung „Du". */
   ich: number | null;
+  /**
+   * Wessen Kampf abgespielt wird. Ohne Angabe der eigene.
+   *
+   * Zwei Felder und nicht eins, weil sie beim ZUSEHEN auseinanderfallen: Wer
+   * oben einen Mitspieler antippt, sieht dessen Kampf, steht aber selbst in
+   * keiner der beiden Reihen. Dann traegt keine Seite „Du", sondern beide
+   * ihren Namen — mit `ich` allein hiesse die untere Reihe „Du", obwohl dort
+   * fremde Figuren stehen.
+   */
+  zeigt?: number | null;
   /** Reihen der eigenen Bretthaelfte, aus der Sicht (brett.ts). */
   brettReihen: number;
   /**
@@ -625,13 +655,9 @@ export function KampfAnzeige<E extends Einheitenbild>({
   /** Der Server hat die Phase gewechselt: ausblenden, nicht mehr abspielen. */
   verblasst?: boolean;
 }): React.JSX.Element | null {
-  const kampf = abzuspielen(kaempfe, ich);
+  const kampf = abzuspielen(kaempfe, zeigt);
   const bericht = kampf?.bericht ?? null;
   const andere = nebenkaempfe(paarungen, kampf);
-
-  const [anzeige, setAnzeige] = useState<Anzeige | null>(() =>
-    bericht ? { stand: anfangsstand(bericht), zeitMs: 0 } : null,
-  );
 
   /**
    * Weniger Bewegung: einmal beim Aufbau abgefragt und dann festgehalten.
@@ -682,13 +708,45 @@ export function KampfAnzeige<E extends Einheitenbild>({
   quelle.current = { bericht, andere };
   const schluessel = kampf ? `${kampf.a}:${kampf.b}:${kampf.bericht.saat}` : null;
 
+  const [gemeldet, setAnzeige] = useState<Anzeige | null>(null);
+  /*
+   * Der Stand, der gezeichnet wird. Der gemeldete gilt nur fuer den Kampf, zu
+   * dem er gehoert — beim Umschalten auf einen fremden steht bis zum ersten
+   * Takt der Anfangsstand des neuen da und nicht der letzte des alten.
+   */
+  const anzeige =
+    gemeldet && gemeldet.fuer === schluessel
+      ? gemeldet
+      : bericht && schluessel !== null
+        ? { stand: anfangsstand(bericht), zeitMs: 0, fuer: schluessel }
+        : null;
+
+  /**
+   * Der Nullpunkt der RUNDE: der Zeitpunkt, an dem die Kaempfe dieser Runde
+   * losgingen.
+   *
+   * Alle Kaempfe einer Runde beginnen gleichzeitig (setzeAn in partie.ts), und
+   * die Schaupause ist so lang wie der laengste plus Nachlauf. Wer mitten
+   * hinein auf einen fremden Kampf umschaltet, darf ihn deshalb nicht von vorn
+   * sehen, sondern an der Stelle, an der er gerade steht. `startVersatz`
+   * allein taugt dafuer nicht: Es rechnet aus der Frist der PAUSE und liefert
+   * bei jedem Kampf, der kuerzer ist als die verbleibende Zeit, eine Null —
+   * beim ersten Kampf richtig (da faengt die Pause an), beim zweiten Blick
+   * falsch. Deshalb wird der Nullpunkt einmal je Einhaengung festgehalten; die
+   * Arena wird je Runde neu aufgebaut (`kampfSchluessel` in Tafelrunde.tsx).
+   */
+  const nullpunkt = useRef<number | null>(null);
+
   useEffect(() => {
     if (schluessel === null) return;
     const anfang = quelle.current.bericht;
     if (!anfang) return;
     let stand = anfangsstand(anfang);
     const start = Date.now();
-    const versatz = startVersatz(anfang.dauerMs, frist, start);
+    if (nullpunkt.current === null) {
+      nullpunkt.current = start - startVersatz(anfang.dauerMs, frist, start);
+    }
+    const versatz = Math.max(0, Math.min(anfang.dauerMs, start - nullpunkt.current));
     let letzteSekunde = -1;
     let letzteFertige = -1;
     let stillAb: number | null = null;
@@ -707,7 +765,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
         stand = neu;
         letzteSekunde = sekunde;
         letzteFertige = fertige;
-        setAnzeige({ stand: neu, zeitMs });
+        setAnzeige({ stand: neu, zeitMs, fuer: schluessel });
       }
       /* Die Bildfolgen: EIN Durchgang je Takt, ohne Zustandsaenderung. Er
          steht hinter dem Zeichnen, damit er den frisch gesetzten Stand
@@ -743,16 +801,22 @@ export function KampfAnzeige<E extends Einheitenbild>({
 
   if (!kampf || !bericht || !anzeige) return null;
 
-  const seite = meineSeite(kampf, ich);
+  /* Welche Seite nach UNTEN kommt: die des gezeigten Sitzes. Beim eigenen
+     Kampf ist das die eigene, beim Zusehen die des Angetippten — man sieht den
+     fremden Kampf so, wie er dessen Besitzer sieht. */
+  const seite = meineSeite(kampf, zeigt);
+  /* Und wer davon „Du" heisst: ich. Beim Zusehen niemand — dann tragen beide
+     Reihen ihren Namen. */
+  const ichSeite = meineSeite(kampf, ich);
   const gedreht = seite === 1;
   const felder = arenaReihen * brettSpalten;
   const mass = rastermass(arenaReihen, brettSpalten);
-  /** Welche Seite unten steht: die eigene, als Zuschauer Seite 0 (`a`). */
+  /** Welche Seite unten steht: die des Gezeigten, sonst Seite 0 (`a`). */
   const unten: Seite = seite ?? 0;
   const oben: Seite = unten === 0 ? 1 : 0;
   const sitzVon = (s: Seite): number => (s === 0 ? kampf.a : kampf.b);
   const beschriftung = (s: Seite): string => {
-    const name = s === seite ? 'Du' : nameVon(sitzVon(s));
+    const name = s === ichSeite ? 'Du' : nameVon(sitzVon(s));
     return s === 1 && kampf.geist ? `Abbild von ${name}` : name;
   };
   const stehende = (s: Seite): number =>
@@ -1024,7 +1088,10 @@ export function KampfAnzeige<E extends Einheitenbild>({
         })}
 
         {anzeige.stand.ende && (
-          <Ergebnis kampf={kampf} seite={seite} ende={anzeige.stand.ende} nameVon={nameVon} />
+          /* MEINE Seite und nicht die untere: Beim Zusehen bei einem fremden
+             Kampf stehe ich in keiner der beiden Reihen, und dann heisst es
+             „X gewinnt" statt „Gewonnen!". */
+          <Ergebnis kampf={kampf} seite={ichSeite} ende={anzeige.stand.ende} nameVon={nameVon} />
         )}
       </div>
 
@@ -1077,6 +1144,7 @@ function Ergebnis({
   nameVon,
 }: {
   kampf: Kampfpaarung;
+  /** MEINE Seite — null, wenn ich nur zusehe. Dann faellt jedes „Du" weg. */
   seite: Seite | null;
   ende: { sieger: Seite | null; grund: Endgrund };
   nameVon: (sitz: number) => string;

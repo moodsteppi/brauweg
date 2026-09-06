@@ -16909,6 +16909,11 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 .tr-bretttitel {
   min-width: 0;
+  /* Wegen des Auges davor: Zeichen und Name stehen in einer Zeile auf einer
+     Grundlinie, und der Name kuerzt sich weiterhin selbst. */
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -16916,6 +16921,19 @@ span.hub-angebot-art.poker-jeton-stapel {
   font: 700 11px/1.2 system-ui;
   color: var(--muted);
   text-align: center;
+}
+/* Das Auge vor dem Namen: Es sagt „das hier siehst du dir an" und ist deshalb
+   heller als der Name daneben — dieselbe Farbe wie der Ring an der Kachel
+   oben (`.kachel[data-an]` in Mitspieler.module.css). */
+.tr-bretttitel svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /*
@@ -17735,6 +17753,44 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 
 .tr-hinweis { margin: 0; color: var(--muted); font: 600 12px/1.35 system-ui; text-align: center; }
+
+/*
+ * Der Weg zurueck aus einem fremden Kampf.
+ *
+ * Er steht an der Stelle, an der sonst der Laden aufgeht (`.tr-fuss`), und
+ * fuellt sie ganz aus: Wer einem fremden Kampf zusieht, hat dort nichts
+ * anderes zu tun, und ein schmaler Knopf mitten in einer leeren Flaeche waere
+ * schwerer zu treffen als noetig. 44 px hoch — die Mindestgroesse eines
+ * Tippziels (DESIGN.md).
+ */
+.tr-zuschauen-zurueck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: 800 13px/1.2 system-ui;
+  cursor: pointer;
+}
+.tr-zuschauen-zurueck svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tr-zuschauen-zurueck:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: reduce) {
+  .tr-zuschauen-zurueck:active { transform: none; }
+}
 .tr-wartet { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .tr-lauf { display: inline-flex; gap: 4px; }
 .tr-lauf i {
