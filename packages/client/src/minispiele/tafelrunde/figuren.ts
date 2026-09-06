@@ -79,7 +79,17 @@ export const FIGUREN: Readonly<Record<EinheitId, string>> = {
   // --- 1 Gold ---------------------------------------------------------------
   /** vault_guard.png — Wache in grauer Ruestung. */
   dorfwache: `${ORDNER}/dorfwache.webp`,
-  /** deep_elf_soldier.png — Kettenhemd und Loewenschild. */
+  /**
+   * undead/guardian_mummy.png — Waechtermumie mit Schild und Kruemmschwert.
+   * Vorher stand hier deep_elf_soldier.png, ein sichtbar lebender Elf: Seit
+   * dem 05.09.2026 traegt der Schildknappe im Katalog die Marke Untot, und
+   * eine lebende Figur mit Untot-Chip ist eine falsche Auskunft am Tisch.
+   * Nicht skeletal_warrior.png, obwohl das der wortwoertliche Schildtraeger
+   * waere — auf Brettgroesse (rund 56 px) ist es von knochenspaeher
+   * (skeleton_humanoid_small) kaum zu unterscheiden, und beide stehen oft
+   * nebeneinander. Die Mumie ist untot, traegt einen Schild und bleibt
+   * unterscheidbar.
+   */
   schildknappe: `${ORDNER}/schildknappe.webp`,
   /** centaur.png — Zentaur mit Bogen, das Waldwesen unter den Schuetzen. */
   astschuetze: `${ORDNER}/astschuetze.webp`,
