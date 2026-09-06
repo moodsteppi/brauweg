@@ -29,8 +29,9 @@
 > 14 auf **12** zu senken: **7:23 im Median bei 9 Runden**, einzelner Kampf
 > 20,2 s, 9,5 % der Kämpfe von der Uhr entschieden.
 >
-> Zum Weiterlesen in dieser Datei: Abschnitt 7 ist der heutige Stand und
-> handelt vom Warten statt von der Dauer, Abschnitt 6 ist der Stand mit 14
+> Zum Weiterlesen in dieser Datei: Abschnitt 8 ist der heutige Stand (die
+> Bot-Bewertung kennt seitdem die Reichweite), Abschnitt 7 handelt vom Warten
+> statt von der Dauer, Abschnitt 6 ist der Stand mit 14
 > Leben und allen vier Zahlen des Vormittags (7:34 bei 10 Runden, 17,6 s,
 > 4,6 %), Abschnitt 5 der Zwischenschritt davor (7:25 bei 11 Runden, 1,8 %),
 > alles darüber beschreibt den Stand mit 20 Leben.
