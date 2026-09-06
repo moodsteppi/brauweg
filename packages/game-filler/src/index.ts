@@ -13,6 +13,7 @@ export {
 export {
   GRAUTOENE,
   LEERZUEGE_MAX,
+  MAUERFREIE_ZUEGE,
   STERNE_ANZAHL,
   STERN_BONUS,
   STERN_MAUERN,
@@ -23,6 +24,7 @@ export {
   erstellePartie,
   fuehreAus,
   kante,
+  mauerSperre,
   moeglicheBarrieren,
   nachbarn,
   offeneNachbarn,

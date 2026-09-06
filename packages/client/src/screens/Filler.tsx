@@ -55,6 +55,8 @@ interface FillerSicht {
   barrierenMoeglich?: [number, number][];
   /** Plaetze der Sternfelder. Leer ausser in der Spielart `extreme`. */
   sterne: number[];
+  /** Noch mauerfreie Zuege der Eroeffnung; 0, sobald gebaut werden darf. */
+  mauerSperre: number;
 }
 
 /**
@@ -580,6 +582,7 @@ function Brett({
    */
   const kannMauern = (sicht.barrierenMoeglich?.length ?? 0) > 0;
   const sterne = new Set(sicht.sterne ?? []);
+  const mauerSperre = sicht.mauerSperre ?? 0;
   /*
    * Der Bau-Zustand faellt von selbst zurueck, sobald es nichts zu setzen
    * gibt — nach der gesetzten Mauer, am Ende des Zuges, beim leeren Vorrat.
@@ -851,11 +854,21 @@ function Brett({
                 className="fl-bauknopf"
                 type="button"
                 data-an={bautGerade ? '' : undefined}
+                data-gesperrt={mauerSperre > 0 ? '' : undefined}
                 disabled={!kannMauern || getippt !== null}
                 onClick={() => setBaut((an) => !an)}
-                aria-label={`Mauer bauen, noch ${meineBarrieren}`}
+                aria-label={
+                  mauerSperre > 0
+                    ? `Mauern noch ${mauerSperre} ${mauerSperre === 1 ? 'Zug' : 'Züge'} gesperrt`
+                    : `Mauer bauen, noch ${meineBarrieren}`
+                }
               >
-                <Mauericon />
+                {/*
+                  * In der Eroeffnung liegt eine Kette ueber dem Knopf und ein
+                  * Schloss zaehlt die Zuege herunter — die Zahl kommt aus der
+                  * Sicht (`mauerSperre`), der Client rechnet sie nicht nach.
+                  */}
+                {mauerSperre > 0 ? <Schlossicon zahl={mauerSperre} /> : <Mauericon />}
                 <span>Mauer</span>
                 <em>{meineBarrieren}</em>
               </button>
@@ -1056,6 +1069,32 @@ function Abschluss({
 }
 
 
+/**
+ * Kette mit Vorhaengeschloss und Zahl: die Mauer-Sperre der Eroeffnung.
+ *
+ * Die Kettenglieder laufen links und rechts vom Schloss weg und enden am
+ * Knopfrand; das Schloss traegt die Zahl der noch gesperrten Zuege. Alles
+ * aus `currentColor`, wie das Ziegelbild.
+ */
+function Schlossicon({ zahl }: { zahl: number }): React.JSX.Element {
+  const glied = (x: number): React.JSX.Element => (
+    <rect key={x} x={x} y="11" width="9" height="6" rx="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+  );
+  return (
+    <svg className="fl-schlossicon" viewBox="0 0 84 30" width="84" height="30" aria-hidden="true">
+      {[0, 7, 14].map(glied)}
+      {[61, 68, 75].map(glied)}
+      {/* Buegel */}
+      <path d="M32 13 V9 a10 10 0 0 1 20 0 V13" fill="none" stroke="currentColor" strokeWidth="3" />
+      {/* Koerper */}
+      <rect x="27" y="12" width="30" height="18" rx="4" fill="currentColor" />
+      <text x="42" y="26.5" textAnchor="middle" fontSize="15" fontWeight="900" fontFamily="system-ui" className="fl-schlosszahl">
+        {zahl}
+      </text>
+    </svg>
+  );
+}
+
 /** Drei Reihen Ziegel. Fuellt sich aus `currentColor`, passt also zu jedem Zustand des Knopfs. */
 function Mauericon(): React.JSX.Element {
   return (
@@ -1079,7 +1118,7 @@ function Mauericon(): React.JSX.Element {
  *
  * Kein Screenshot und keine Simulation, sondern ein festes Muster, das je
  * Spielart anders gezeichnet wird — Nebel grau bis auf den eigenen Rand,
- * Build mit zwei Waenden, Extreme mit sieben Farben und drei Sternen. Wer
+ * Build voller Waende, Extreme mit sieben Farben und drei Sternen. Wer
  * die Spielarten zum ersten Mal sieht, soll am Bild erkennen, was der
  * Schalter tut, bevor er einen Tisch aufmacht.
  */
@@ -1095,7 +1134,24 @@ function vorschauFarbe(platz: number, farbzahl: number): number {
 const VORSCHAU_EIGEN = new Set([32, 33, 24]);
 const VORSCHAU_FREMD = new Set([7, 6, 15]);
 const VORSCHAU_STERNE = [12, 27, 21];
-const VORSCHAU_WAENDE: [number, number][] = [
+/** Build zeigt VIELE Waende — das ist die Spielart; Extreme nur drei, damit die Sterne zu sehen bleiben. */
+const VORSCHAU_WAENDE_BUILD: [number, number][] = [
+  [1, 2],
+  [9, 10],
+  [10, 18],
+  [18, 19],
+  [26, 27],
+  [4, 12],
+  [12, 13],
+  [13, 21],
+  [21, 29],
+  [29, 30],
+  [30, 31],
+  [25, 33],
+  [5, 6],
+  [14, 22],
+];
+const VORSCHAU_WAENDE_EXTREME: [number, number][] = [
   [25, 26],
   [18, 26],
   [13, 14],
@@ -1145,7 +1201,7 @@ function Vorschau({ variante }: { variante: Variante }): React.JSX.Element {
           );
         })}
         {mauern &&
-          VORSCHAU_WAENDE.map(([a, b]) => {
+          (variante === 'build' ? VORSCHAU_WAENDE_BUILD : VORSCHAU_WAENDE_EXTREME).map(([a, b]) => {
             const quer = b - a === VORSCHAU_SPALTEN;
             const links = a % VORSCHAU_SPALTEN;
             const oben = Math.floor(a / VORSCHAU_SPALTEN);
@@ -1196,9 +1252,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem zehn
         Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
         auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
-        färben; erst das Färben gibt ab. Nur der allererste Zug der Partie ist
-        mauerfrei: Wer anfängt, färbt zuerst einmal, der zweite darf sofort
-        bauen. Und du darfst den Gegner damit nicht
+        färben; erst das Färben gibt ab. Die ersten drei Züge der Partie sind
+        mauerfrei — das Schloss auf dem Knopf zählt sie herunter; ab dem
+        zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst den
+        Gegner damit nicht
         einsperren: Kanten, nach denen er kein freies Feld mehr erreichen
         könnte, lassen sich nicht bebauen.
       </p>

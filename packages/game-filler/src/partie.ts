@@ -115,6 +115,22 @@ export const GRAUTOENE = 5;
 export const LEERZUEGE_MAX = 6;
 
 /**
+ * So viele Zuege zu Beginn sind mauerfrei — ueber beide Sitze gezaehlt.
+ *
+ * Drei: der erste Zug beider und der zweite des Anfaengers. Erst der zweite
+ * Zug des zweiten Spielers darf eine Wand setzen. Bis dahin haben beide je
+ * einmal gefaerbt und der Anfaenger seinen Vorsprung ausgespielt, ohne dass
+ * schon eine Wand steht — sonst haette er den Vorteil des ersten Zugs UND
+ * den der ersten Wand.
+ */
+export const MAUERFREIE_ZUEGE = 3;
+
+/** Wie viele Zuege noch mauerfrei sind. 0, sobald gebaut werden darf. */
+export function mauerSperre(partie: FillerPartie): number {
+  return Math.max(0, MAUERFREIE_ZUEGE - partie.zug);
+}
+
+/**
  * Sternfelder der Spielart `extreme`: wie viele, was sie bringen.
  *
  * Drei auf 56 Feldern: genug, dass sich ein Umweg lohnt, zu wenige, um das
@@ -523,13 +539,8 @@ export function moeglicheBarrieren(
   // Eine je Zug. Wer schon gemauert hat, faerbt jetzt — mehr ist dieser Zug
   // nicht mehr.
   if (partie.mauerDiesenZug && partie.dran === sitz) return [];
-  /*
-   * Der allererste Zug der Partie ist mauerfrei. Wer anfaengt, faerbt nur;
-   * der zweite darf in seinem ersten Zug schon bauen. Sonst stuende die
-   * erste Wand, bevor der Gegner ueberhaupt eine Farbe gewaehlt hat — der
-   * Anfaenger haette den Vorteil des ersten Zugs UND den der ersten Wand.
-   */
-  if (partie.zug === 0) return [];
+  // Die Eroeffnung ist mauerfrei, siehe MAUERFREIE_ZUEGE.
+  if (mauerSperre(partie) > 0) return [];
 
   const { spalten, zeilen } = partie.regeln;
   const gesetzt = new Set(partie.barrieren);
