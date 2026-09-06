@@ -599,7 +599,15 @@ function markenZaehlung(eigene: readonly Kaempfer[]): Map<Marke, number> {
  */
 const VORDERSTE_REIHE = 0;
 
-/** Eine falsche Reihe wiegt schwerer als eine falsche Spalte. */
+/**
+ * Eine falsche Reihe wiegt schwerer als eine falsche Spalte.
+ *
+ * Und zwar so viel schwerer, dass die Spalte die Reihe NIE ueberstimmt: Die
+ * groesste Spaltenstrafe ist 4 (ein Meuchler in der Mitte bei fuenf Spalten),
+ * der kleinste Reihenwechsel kostet 10. `platzStrafe` faellt damit streng
+ * monoton zur Wunschreihe hin — daran haengt, dass der Bot nur ganz vorn und
+ * ganz hinten steht (siehe den Kopf von `platzStrafe`).
+ */
 const REIHEN_GEWICHT = 10;
 
 /** Und ein Meuchler in der Mitte schwerer als eine Wache neben der Mitte. */
@@ -624,6 +632,35 @@ const RAND_GEWICHT = 2;
  *
  * `reihen` und `spalten` kommen aus der Sicht und nicht aus brett.ts: Die
  * beiden Zahlen stehen dort, damit niemand sie nachbaut — auch der Bot nicht.
+ *
+ * WARUM DER BOT NUR IN REIHE 0 UND IN DER HINTERSTEN REIHE STEHT. Gemessen am
+ * 06.09.2026 ueber 26.395 aufgestellte Einheiten (300 Partien zu viert): die
+ * beiden mittleren Reihen kein einziges Mal. Der Grund steht in dieser
+ * Funktion, und er ist kein Zufall aus der Feldreihenfolge:
+ *
+ *   1. Die drei Faelle kennen zusammen nur ZWEI Wunschreihen — `wache` und
+ *      `meuchler` die vorderste, alle uebrigen die hinterste. Eine mittlere
+ *      Reihe ist fuer keine Rolle das Ziel.
+ *   2. `REIHEN_GEWICHT` ueberstimmt jede Spaltenstrafe (siehe dort). Also ist
+ *      JEDES freie Feld der Wunschreihe besser als das beste Feld jeder
+ *      anderen, und `bestesFeld` nimmt es.
+ *   3. Zu einer mittleren Reihe greift `bestesFeld` deshalb erst, wenn die
+ *      Wunschreihe voll ist: fuenf Einheiten derselben Vorliebe, wobei Wache
+ *      und Meuchler sich dieselbe Reihe teilen. Neun Einheiten passen
+ *      ueberhaupt nur bei Level 9 aufs Brett (`feldplaetze`) — der Fall ist
+ *      moeglich, aber selten genug, dass er in der Messung nicht vorkam.
+ *
+ * Auf ZWEI Reihen war die Regel damit vollstaendig: vorn und hinten waren
+ * alles, was es gab. Seit dem 06.09.2026 hat jede Haelfte VIER Reihen
+ * (`BRETT_REIHEN`), und dieselbe unveraenderte Regel laesst die beiden
+ * mittleren leer. Das ist kein Fehler dieser Funktion, sondern ihre
+ * Reichweite.
+ *
+ * Wer die Tiefe nutzen will, braucht je Rolle eine WUNSCHREIHE statt eines
+ * Extrems — etwa Beistand und Magier eine Reihe vor den Schuetzen, damit die
+ * Heilung (Reichweite 2) die Front erreicht. Das aendert jede Aufstellung und
+ * damit jedes Kampfergebnis; es ist eine Messfrage und keine, die sich hier
+ * durch Nachdenken entscheiden laesst.
  */
 function platzStrafe(k: Kaempfer, platz: number, reihen: number, spalten: number): number {
   const reihe = Math.floor(platz / spalten);
