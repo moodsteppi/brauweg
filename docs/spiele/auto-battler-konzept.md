@@ -67,6 +67,21 @@ sich über Mana auflädt.
 Zum Start reichen 15 Einheiten über drei Kostenstufen; für eine
 Veröffentlichung sind 30–40 über fünf Stufen gedacht.
 
+**Die Fähigkeit gibt es bis heute nicht.** Der Kampf rechnet mit Leben,
+Angriff, Tempo, Reichweite und Rüstung, sonst nichts (`kampf.ts`); Mana,
+Aufladen und ein Fähigkeitstext je Einheit stehen im Konzept und nirgends im
+Katalog. Wer eine Anzeige baut, die eine Fähigkeit nennt, erfindet sie.
+
+Seit dem 06.09.2026 schlägt ein Tipp auf eine gesetzte Einheit ihr **Blatt**
+auf — dasselbe Muster wie beim Blatt einer Marke: Bildnis, Name, Rolle, ihre
+Marken mit deren Sätzen, das Leben als Zahl und die vier Kampfwerte, dazu
+Verschieben, Ablegen und Verkaufen mit dem Erlös daneben. Die Werte gelten für
+die **Sternstufe, auf der die Einheit steht**, und werden dafür nicht im
+Bildschirm hochgerechnet: Dass nur Leben und Angriff mit der Stufe wachsen und
+dass ein Verkauf den vollen Preis aller steckenden Karten erstattet, sind
+Regeln des Moduls. Beides kommt deshalb fertig in der Sicht (`stufenwerte`,
+einmalig mit dem Katalog).
+
 ### Synergien
 
 Jede Einheit trägt ein bis zwei Klassen-Marken (etwa Krieger, Elementar,

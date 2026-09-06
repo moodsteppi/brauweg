@@ -1,5 +1,5 @@
 {
-  "saat": "probe-ruestkammer-308",
+  "saat": "probe-ruestkammer-776",
   "gangart": "normal",
   "sitze": [
     0,
@@ -7,11 +7,11 @@
     2,
     3
   ],
-  "zuegeGespielt": 5,
-  "runde": 11,
+  "zuegeGespielt": 6,
+  "runde": 9,
   "rundenGrenze": 30,
   "ich": 0,
-  "brettReihen": 2,
+  "brettReihen": 4,
   "brettSpalten": 5,
   "ladenPlaetze": 5,
   "bankPlaetze": 9,
@@ -19,36 +19,36 @@
   "maxStufe": 3,
   "eigenes": {
     "sitz": 0,
-    "leben": 1,
+    "leben": 12,
     "gold": 2,
     "level": 4,
-    "einkommen": 6,
+    "einkommen": 8,
     "belegt": 4,
     "feldplaetze": 4,
     "neuwuerfelnKosten": 0,
     "aufstiegKosten": 14,
     "laden": [
-      "irrlicht",
-      "klingentaenzerin",
       "runenpriester",
-      "dorfwache",
-      "astschuetze"
+      "drachenkind",
+      "hainwaechterin",
+      "bogenmeisterin",
+      "irrlicht"
     ],
     "bank": [
       {
-        "id": "grimmbart",
-        "stufe": 1
-      },
-      {
-        "id": "gassendieb",
+        "id": "dorfwache",
         "stufe": 2
       },
       {
-        "id": "irrlicht",
+        "id": "frostweberin",
         "stufe": 1
       },
       {
-        "id": "gassendieb",
+        "id": "nachtpfeil",
+        "stufe": 1
+      },
+      {
+        "id": "astschuetze",
         "stufe": 1
       },
       {
@@ -60,64 +60,66 @@
         "stufe": 1
       },
       {
-        "id": "irrlicht",
+        "id": "grimmbart",
         "stufe": 1
       },
+      null,
       {
-        "id": "dorfwache",
-        "stufe": 2
-      },
-      null
+        "id": "hainwaechterin",
+        "stufe": 1
+      }
     ],
     "brett": [
       {
-        "id": "knochenspaeher",
-        "stufe": 2
-      },
-      {
-        "id": "schildknappe",
+        "id": "gassendieb",
         "stufe": 3
       },
+      null,
       {
-        "id": "dorfwache",
-        "stufe": 2
-      },
-      {
-        "id": "hainwaechterin",
-        "stufe": 2
+        "id": "schildknappe",
+        "stufe": 1
       },
       null,
       null,
       null,
       null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "id": "nachtpfeil",
+        "stufe": 2
+      },
+      {
+        "id": "grabfuerstin",
+        "stufe": 2
+      },
       null,
       null
     ],
     "synergien": [
       {
-        "marke": "krieger",
-        "name": "Krieger",
-        "anzahl": 1,
-        "schwelle": null,
-        "naechsteSchwelle": 2,
-        "bonus": null
+        "marke": "meuchler",
+        "name": "Meuchler",
+        "anzahl": 2,
+        "schwelle": 2,
+        "naechsteSchwelle": 3,
+        "bonus": {
+          "lebenProzent": 0,
+          "angriffProzent": 0,
+          "tempoProzent": 15,
+          "ruestung": 0
+        }
       },
       {
         "marke": "waechter",
         "name": "Wächter",
-        "anzahl": 3,
-        "schwelle": 3,
-        "naechsteSchwelle": 5,
-        "bonus": {
-          "lebenProzent": 15,
-          "angriffProzent": 0,
-          "tempoProzent": 0,
-          "ruestung": 8
-        }
-      },
-      {
-        "marke": "naturwesen",
-        "name": "Naturwesen",
         "anzahl": 1,
         "schwelle": null,
         "naechsteSchwelle": 2,
@@ -139,73 +141,70 @@
     ]
   },
   "gegner": {
-    "sitz": 3,
-    "leben": 2,
-    "level": 4,
+    "sitz": 1,
+    "leben": 3,
+    "level": 3,
     "ausRunde": null,
     "brett": [
       null,
+      null,
+      null,
+      null,
       {
-        "id": "schildknappe",
-        "stufe": 2
-      },
-      {
-        "id": "dorfwache",
-        "stufe": 2
-      },
-      {
-        "id": "schildknappe",
+        "id": "gassendieb",
         "stufe": 2
       },
       null,
       null,
       null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
       {
-        "id": "steinschleuderer",
+        "id": "nachtpfeil",
         "stufe": 2
+      },
+      {
+        "id": "funkenlehrling",
+        "stufe": 3
       },
       null,
       null
     ],
     "synergien": [
       {
-        "marke": "krieger",
-        "name": "Krieger",
+        "marke": "elementar",
+        "name": "Elementar",
+        "anzahl": 1,
+        "schwelle": null,
+        "naechsteSchwelle": 2,
+        "bonus": null
+      },
+      {
+        "marke": "meuchler",
+        "name": "Meuchler",
         "anzahl": 2,
         "schwelle": 2,
         "naechsteSchwelle": 3,
         "bonus": {
           "lebenProzent": 0,
           "angriffProzent": 0,
-          "tempoProzent": 0,
-          "ruestung": 10
-        }
-      },
-      {
-        "marke": "waechter",
-        "name": "Wächter",
-        "anzahl": 3,
-        "schwelle": 3,
-        "naechsteSchwelle": 5,
-        "bonus": {
-          "lebenProzent": 15,
-          "angriffProzent": 0,
-          "tempoProzent": 0,
-          "ruestung": 8
-        }
-      },
-      {
-        "marke": "untot",
-        "name": "Untot",
-        "anzahl": 2,
-        "schwelle": 2,
-        "naechsteSchwelle": 3,
-        "bonus": {
-          "lebenProzent": 10,
-          "angriffProzent": 10,
-          "tempoProzent": 0,
+          "tempoProzent": 15,
           "ruestung": 0
         }
+      },
+      {
+        "marke": "drache",
+        "name": "Drache",
+        "anzahl": 1,
+        "schwelle": null,
+        "naechsteSchwelle": 2,
+        "bonus": null
       }
     ]
   },
@@ -233,6 +232,20 @@
       "ruestung": 15
     },
     {
+      "id": "bogenmeisterin",
+      "name": "Bogenmeisterin",
+      "kosten": 2,
+      "rolle": "schuetze",
+      "marken": [
+        "krieger"
+      ],
+      "leben": 620,
+      "angriff": 62,
+      "tempo": 0.85,
+      "reichweite": 3,
+      "ruestung": 20
+    },
+    {
       "id": "dorfwache",
       "name": "Dorfwache",
       "kosten": 1,
@@ -248,6 +261,50 @@
       "ruestung": 40
     },
     {
+      "id": "drachenkind",
+      "name": "Drachenkind",
+      "kosten": 3,
+      "rolle": "schuetze",
+      "marken": [
+        "drache",
+        "elementar"
+      ],
+      "leben": 820,
+      "angriff": 82,
+      "tempo": 0.75,
+      "reichweite": 3,
+      "ruestung": 25
+    },
+    {
+      "id": "frostweberin",
+      "name": "Frostweberin",
+      "kosten": 2,
+      "rolle": "magier",
+      "marken": [
+        "elementar"
+      ],
+      "leben": 600,
+      "angriff": 80,
+      "tempo": 0.65,
+      "reichweite": 3,
+      "ruestung": 20
+    },
+    {
+      "id": "funkenlehrling",
+      "name": "Funkenlehrling",
+      "kosten": 1,
+      "rolle": "magier",
+      "marken": [
+        "elementar",
+        "drache"
+      ],
+      "leben": 470,
+      "angriff": 56,
+      "tempo": 0.65,
+      "reichweite": 3,
+      "ruestung": 15
+    },
+    {
       "id": "gassendieb",
       "name": "Gassendieb",
       "kosten": 1,
@@ -259,6 +316,20 @@
       "angriff": 48,
       "tempo": 0.95,
       "reichweite": 1,
+      "ruestung": 15
+    },
+    {
+      "id": "grabfuerstin",
+      "name": "Grabfürstin",
+      "kosten": 3,
+      "rolle": "magier",
+      "marken": [
+        "untot"
+      ],
+      "leben": 780,
+      "angriff": 88,
+      "tempo": 0.6,
+      "reichweite": 3,
       "ruestung": 15
     },
     {
@@ -305,33 +376,18 @@
       "ruestung": 35
     },
     {
-      "id": "klingentaenzerin",
-      "name": "Klingentänzerin",
-      "kosten": 3,
-      "rolle": "meuchler",
+      "id": "nachtpfeil",
+      "name": "Nachtpfeil",
+      "kosten": 2,
+      "rolle": "schuetze",
       "marken": [
-        "krieger",
         "meuchler"
       ],
-      "leben": 860,
-      "angriff": 86,
-      "tempo": 1.05,
-      "reichweite": 1,
-      "ruestung": 20
-    },
-    {
-      "id": "knochenspaeher",
-      "name": "Knochenspäher",
-      "kosten": 2,
-      "rolle": "meuchler",
-      "marken": [
-        "untot"
-      ],
-      "leben": 700,
-      "angriff": 60,
-      "tempo": 0.9,
-      "reichweite": 1,
-      "ruestung": 20
+      "leben": 600,
+      "angriff": 65,
+      "tempo": 0.8,
+      "reichweite": 3,
+      "ruestung": 15
     },
     {
       "id": "runenpriester",
@@ -361,26 +417,421 @@
       "tempo": 0.6,
       "reichweite": 1,
       "ruestung": 42
-    },
-    {
-      "id": "steinschleuderer",
-      "name": "Steinschleuderer",
-      "kosten": 1,
-      "rolle": "schuetze",
-      "marken": [
-        "krieger"
-      ],
-      "leben": 500,
-      "angriff": 42,
-      "tempo": 0.75,
-      "reichweite": 3,
-      "ruestung": 20
     }
   ],
+  "stufenwerte": {
+    "astschuetze": [
+      {
+        "stufe": 1,
+        "leben": 480,
+        "angriff": 45,
+        "tempo": 0.8,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 1
+      },
+      {
+        "stufe": 2,
+        "leben": 864,
+        "angriff": 81,
+        "tempo": 0.8,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 3
+      },
+      {
+        "stufe": 3,
+        "leben": 1536,
+        "angriff": 144,
+        "tempo": 0.8,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 9
+      }
+    ],
+    "bogenmeisterin": [
+      {
+        "stufe": 1,
+        "leben": 620,
+        "angriff": 62,
+        "tempo": 0.85,
+        "reichweite": 3,
+        "ruestung": 20,
+        "erloes": 2
+      },
+      {
+        "stufe": 2,
+        "leben": 1116,
+        "angriff": 112,
+        "tempo": 0.85,
+        "reichweite": 3,
+        "ruestung": 20,
+        "erloes": 6
+      },
+      {
+        "stufe": 3,
+        "leben": 1984,
+        "angriff": 198,
+        "tempo": 0.85,
+        "reichweite": 3,
+        "ruestung": 20,
+        "erloes": 18
+      }
+    ],
+    "dorfwache": [
+      {
+        "stufe": 1,
+        "leben": 650,
+        "angriff": 30,
+        "tempo": 0.65,
+        "reichweite": 1,
+        "ruestung": 40,
+        "erloes": 1
+      },
+      {
+        "stufe": 2,
+        "leben": 1170,
+        "angriff": 54,
+        "tempo": 0.65,
+        "reichweite": 1,
+        "ruestung": 40,
+        "erloes": 3
+      },
+      {
+        "stufe": 3,
+        "leben": 2080,
+        "angriff": 96,
+        "tempo": 0.65,
+        "reichweite": 1,
+        "ruestung": 40,
+        "erloes": 9
+      }
+    ],
+    "drachenkind": [
+      {
+        "stufe": 1,
+        "leben": 820,
+        "angriff": 82,
+        "tempo": 0.75,
+        "reichweite": 3,
+        "ruestung": 25,
+        "erloes": 3
+      },
+      {
+        "stufe": 2,
+        "leben": 1476,
+        "angriff": 148,
+        "tempo": 0.75,
+        "reichweite": 3,
+        "ruestung": 25,
+        "erloes": 9
+      },
+      {
+        "stufe": 3,
+        "leben": 2624,
+        "angriff": 262,
+        "tempo": 0.75,
+        "reichweite": 3,
+        "ruestung": 25,
+        "erloes": 27
+      }
+    ],
+    "frostweberin": [
+      {
+        "stufe": 1,
+        "leben": 600,
+        "angriff": 80,
+        "tempo": 0.65,
+        "reichweite": 3,
+        "ruestung": 20,
+        "erloes": 2
+      },
+      {
+        "stufe": 2,
+        "leben": 1080,
+        "angriff": 144,
+        "tempo": 0.65,
+        "reichweite": 3,
+        "ruestung": 20,
+        "erloes": 6
+      },
+      {
+        "stufe": 3,
+        "leben": 1920,
+        "angriff": 256,
+        "tempo": 0.65,
+        "reichweite": 3,
+        "ruestung": 20,
+        "erloes": 18
+      }
+    ],
+    "funkenlehrling": [
+      {
+        "stufe": 1,
+        "leben": 470,
+        "angriff": 56,
+        "tempo": 0.65,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 1
+      },
+      {
+        "stufe": 2,
+        "leben": 846,
+        "angriff": 101,
+        "tempo": 0.65,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 3
+      },
+      {
+        "stufe": 3,
+        "leben": 1504,
+        "angriff": 179,
+        "tempo": 0.65,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 9
+      }
+    ],
+    "gassendieb": [
+      {
+        "stufe": 1,
+        "leben": 520,
+        "angriff": 48,
+        "tempo": 0.95,
+        "reichweite": 1,
+        "ruestung": 15,
+        "erloes": 1
+      },
+      {
+        "stufe": 2,
+        "leben": 936,
+        "angriff": 86,
+        "tempo": 0.95,
+        "reichweite": 1,
+        "ruestung": 15,
+        "erloes": 3
+      },
+      {
+        "stufe": 3,
+        "leben": 1664,
+        "angriff": 154,
+        "tempo": 0.95,
+        "reichweite": 1,
+        "ruestung": 15,
+        "erloes": 9
+      }
+    ],
+    "grabfuerstin": [
+      {
+        "stufe": 1,
+        "leben": 780,
+        "angriff": 88,
+        "tempo": 0.6,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 3
+      },
+      {
+        "stufe": 2,
+        "leben": 1404,
+        "angriff": 158,
+        "tempo": 0.6,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 9
+      },
+      {
+        "stufe": 3,
+        "leben": 2496,
+        "angriff": 282,
+        "tempo": 0.6,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 27
+      }
+    ],
+    "grimmbart": [
+      {
+        "stufe": 1,
+        "leben": 900,
+        "angriff": 45,
+        "tempo": 0.6,
+        "reichweite": 1,
+        "ruestung": 40,
+        "erloes": 2
+      },
+      {
+        "stufe": 2,
+        "leben": 1620,
+        "angriff": 81,
+        "tempo": 0.6,
+        "reichweite": 1,
+        "ruestung": 40,
+        "erloes": 6
+      },
+      {
+        "stufe": 3,
+        "leben": 2880,
+        "angriff": 144,
+        "tempo": 0.6,
+        "reichweite": 1,
+        "ruestung": 40,
+        "erloes": 18
+      }
+    ],
+    "hainwaechterin": [
+      {
+        "stufe": 1,
+        "leben": 850,
+        "angriff": 42,
+        "tempo": 0.65,
+        "reichweite": 1,
+        "ruestung": 45,
+        "erloes": 2
+      },
+      {
+        "stufe": 2,
+        "leben": 1530,
+        "angriff": 76,
+        "tempo": 0.65,
+        "reichweite": 1,
+        "ruestung": 45,
+        "erloes": 6
+      },
+      {
+        "stufe": 3,
+        "leben": 2720,
+        "angriff": 134,
+        "tempo": 0.65,
+        "reichweite": 1,
+        "ruestung": 45,
+        "erloes": 18
+      }
+    ],
+    "irrlicht": [
+      {
+        "stufe": 1,
+        "leben": 560,
+        "angriff": 34,
+        "tempo": 0.7,
+        "reichweite": 1,
+        "ruestung": 35,
+        "erloes": 1
+      },
+      {
+        "stufe": 2,
+        "leben": 1008,
+        "angriff": 61,
+        "tempo": 0.7,
+        "reichweite": 1,
+        "ruestung": 35,
+        "erloes": 3
+      },
+      {
+        "stufe": 3,
+        "leben": 1792,
+        "angriff": 109,
+        "tempo": 0.7,
+        "reichweite": 1,
+        "ruestung": 35,
+        "erloes": 9
+      }
+    ],
+    "nachtpfeil": [
+      {
+        "stufe": 1,
+        "leben": 600,
+        "angriff": 65,
+        "tempo": 0.8,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 2
+      },
+      {
+        "stufe": 2,
+        "leben": 1080,
+        "angriff": 117,
+        "tempo": 0.8,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 6
+      },
+      {
+        "stufe": 3,
+        "leben": 1920,
+        "angriff": 208,
+        "tempo": 0.8,
+        "reichweite": 3,
+        "ruestung": 15,
+        "erloes": 18
+      }
+    ],
+    "runenpriester": [
+      {
+        "stufe": 1,
+        "leben": 720,
+        "angriff": 38,
+        "tempo": 0.7,
+        "reichweite": 2,
+        "ruestung": 25,
+        "erloes": 2
+      },
+      {
+        "stufe": 2,
+        "leben": 1296,
+        "angriff": 68,
+        "tempo": 0.7,
+        "reichweite": 2,
+        "ruestung": 25,
+        "erloes": 6
+      },
+      {
+        "stufe": 3,
+        "leben": 2304,
+        "angriff": 122,
+        "tempo": 0.7,
+        "reichweite": 2,
+        "ruestung": 25,
+        "erloes": 18
+      }
+    ],
+    "schildknappe": [
+      {
+        "stufe": 1,
+        "leben": 700,
+        "angriff": 28,
+        "tempo": 0.6,
+        "reichweite": 1,
+        "ruestung": 42,
+        "erloes": 1
+      },
+      {
+        "stufe": 2,
+        "leben": 1260,
+        "angriff": 50,
+        "tempo": 0.6,
+        "reichweite": 1,
+        "ruestung": 42,
+        "erloes": 3
+      },
+      {
+        "stufe": 3,
+        "leben": 2240,
+        "angriff": 90,
+        "tempo": 0.6,
+        "reichweite": 1,
+        "ruestung": 42,
+        "erloes": 9
+      }
+    ]
+  },
   "synergieTabelle": [
     {
       "marke": "krieger",
       "name": "Krieger",
+      "wirkung": "Jeder Krieger auf dem Brett bekommt Rüstung dazu und steckt damit jeden Treffer besser weg.",
       "stufen": [
         {
           "schwelle": 2,
@@ -414,6 +865,7 @@
     {
       "marke": "elementar",
       "name": "Elementar",
+      "wirkung": "Jedes Elementarwesen auf dem Brett schlägt härter zu — der Bonus geht auf den Angriff.",
       "stufen": [
         {
           "schwelle": 2,
@@ -447,6 +899,7 @@
     {
       "marke": "meuchler",
       "name": "Meuchler",
+      "wirkung": "Jeder Meuchler auf dem Brett schlägt öfter zu — der Bonus geht auf das Tempo.",
       "stufen": [
         {
           "schwelle": 2,
@@ -480,6 +933,7 @@
     {
       "marke": "waechter",
       "name": "Wächter",
+      "wirkung": "Jeder Wächter auf dem Brett bekommt Leben und Rüstung dazu und wird zur Mauer davor.",
       "stufen": [
         {
           "schwelle": 2,
@@ -513,6 +967,7 @@
     {
       "marke": "naturwesen",
       "name": "Naturwesen",
+      "wirkung": "Jedes Naturwesen auf dem Brett bekommt Leben dazu und bleibt entsprechend länger stehen.",
       "stufen": [
         {
           "schwelle": 2,
@@ -546,6 +1001,7 @@
     {
       "marke": "untot",
       "name": "Untot",
+      "wirkung": "Jeder Untote auf dem Brett bekommt Angriff und Leben dazu, beides maßvoll.",
       "stufen": [
         {
           "schwelle": 2,
@@ -579,6 +1035,7 @@
     {
       "marke": "drache",
       "name": "Drache",
+      "wirkung": "Jeder Drache auf dem Brett schlägt härter und öfter zu — zwei Träger sind schon die erste Stufe.",
       "stufen": [
         {
           "schwelle": 2,

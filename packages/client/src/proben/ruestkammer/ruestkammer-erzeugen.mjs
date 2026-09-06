@@ -81,8 +81,18 @@ const ICH = 0;
  */
 const ZUEGE_HOECHSTENS = 8;
 
-/** Wie viele Saaten durchgesehen werden, bevor die beste genommen wird. */
-const SAATEN = 400;
+/**
+ * Wie viele Saaten durchgesehen werden, bevor die beste genommen wird.
+ *
+ * 1.200 SEIT DEM 6.9.2026 (vorher 400). Beim ersten Neuerzeugen nach den vier
+ * Brettreihen fiel unter 400 Saaten keine Karte mehr an, deren Kauf sofort
+ * verschmelzen wuerde — die Bewertung will diesen Stand (12 Punkte, siehe
+ * `punkte`), aber wollen genuegt nicht, wenn er in keiner der durchgesehenen
+ * Partien vorkommt. Die Probe in ProbeRuestkammer.test.tsx faengt genau das
+ * ab, und sie hat es getan. Der Lauf kostet damit rund eine halbe Minute
+ * statt zehn Sekunden; er laeuft von Hand und nicht im Bau.
+ */
+const SAATEN = 1200;
 
 /** Reissleine gegen eine Endlosschleife, wie im Messstand (test/messen.ts). */
 const MAX_ZUEGE_JE_SITZ = 200;
@@ -300,9 +310,20 @@ const szene = {
   darfWuerfeln: zuege.some((z) => z.typ === 'neuwuerfeln'),
   darfLevel: zuege.some((z) => z.typ === 'levelAuf'),
   katalog: [...gebraucht].sort().map(katalogeintrag),
+  /* Die Werte je Sternstufe, wie die Sicht sie schickt (sicht.ts im Modul) —
+     nur fuer die Einheiten, die in dieser Szene vorkommen, wie beim Katalog
+     daneben. Die Probe rechnet sie so wenig nach wie der Bildschirm. */
+  stufenwerte: Object.fromEntries(
+    [...gebraucht].sort().map((id) => [id, sicht.stufenwerte[id].map((w) => ({ ...w }))]),
+  ),
   synergieTabelle: SYNERGIEN.map((s) => ({
     marke: s.marke,
     name: s.name,
+    /* `wirkung` hat hier bis zum 6.9.2026 gefehlt, und niemandem ist es
+       aufgefallen: Das Markenblatt liess den Satz dann still weg. Seit ein
+       angetippter Recke sein Blatt aufschlaegt, steht der Satz an zwei
+       Stellen — und eine Szene ohne ihn zeigt beide leer. */
+    wirkung: s.wirkung,
     stufen: s.stufen.map((st) => ({ schwelle: st.schwelle, bonus: { ...st.bonus } })),
   })),
 };

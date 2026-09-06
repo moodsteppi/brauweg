@@ -35,9 +35,13 @@
  * die selbst entscheidet, waere eine zweite Regelfassung — und die faellt beim
  * ersten geaenderten Preis auseinander, ohne dass es jemand merkt.
  *
- * BEWEGEN kann man trotzdem: Antippen — Ziel antippen. Das ist keine Regel,
- * die hier nachgebaut waere, sondern `tippfolge` aus `zuege.ts`, dieselbe
- * reine Funktion, die auch der Tisch benutzt. Das ZIEHEN mit dem Finger fehlt
+ * BEWEGEN kann man trotzdem: Antippen — im Blatt „Aufstellen" — Ziel
+ * antippen. Das ist keine Regel, die hier nachgebaut waere, sondern
+ * `tippfolge` aus `zuege.ts`, dieselbe reine Funktion, die auch der Tisch
+ * benutzt. Dass ein Tipp seit dem 6.9.2026 zuerst das Blatt der Einheit
+ * aufschlaegt, steht ebenso am Tisch (screens/Tafelrunde.tsx) — eine Probe,
+ * die sich anders bedienen liesse als der Bildschirm, waere die Frage wert,
+ * welche der beiden man gerade beurteilt. Das ZIEHEN mit dem Finger fehlt
  * — es haengt an Zeigererfassung und Zugschatten, also an Verdrahtung des
  * Bildschirms und nicht am Aussehen der Wabe.
  *
@@ -50,6 +54,7 @@
 import { useMemo, useState } from 'react';
 
 import { Bankreihe, Hexbrett } from '../../minispiele/tafelrunde/Brett';
+import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
 import { Ladenkarte, kaufhindernis } from '../../minispiele/tafelrunde/Ladenkarte';
 import {
   type Synergie,
@@ -61,7 +66,7 @@ import {
   schwellenPruefer,
 } from '../../minispiele/tafelrunde/Synergien';
 import { GoldZeichen, LebenZeichen } from '../../minispiele/tafelrunde/Zeichen';
-import type { Einheit } from '../../minispiele/tafelrunde/sicht';
+import type { Einheit, Stufenwerte } from '../../minispiele/tafelrunde/sicht';
 import {
   type Kaempfer,
   type Ort,
@@ -116,6 +121,8 @@ interface Szene {
   readonly darfWuerfeln: boolean;
   readonly darfLevel: boolean;
   readonly katalog: readonly Einheit[];
+  /** Werte und Verkaufserloes je Sternstufe, je Einheit — siehe sicht.ts. */
+  readonly stufenwerte: Record<string, Stufenwerte[]>;
   readonly synergieTabelle: Synergie[];
 }
 
@@ -164,6 +171,14 @@ function schiebe(auf: Stand, von: Ort, nach: Ort): Stand {
   return { bank, brett };
 }
 
+/** Verkaufen, soweit die Probe es zeigen kann: Der Platz wird leer. */
+function nimmWeg(auf: Stand, ort: Ort): Stand {
+  const bank = [...auf.bank];
+  const brett = [...auf.brett];
+  (ort.bereich === 'bank' ? bank : brett)[ort.platz] = null;
+  return { bank, brett };
+}
+
 export function ProbeRuestkammer(): React.JSX.Element {
   const [auf, setAuf] = useState<Stand>(START);
   const [gewaehlt, setGewaehlt] = useState<Ort | null>(null);
@@ -175,6 +190,12 @@ export function ProbeRuestkammer(): React.JSX.Element {
    * ausgegraut.
    */
   const [amZug, setAmZug] = useState(true);
+  /*
+   * Welche Einheit ihr Blatt aufgeschlagen hat — wie am Tisch der ORT und
+   * nicht der Kaempfer: Was dort steht, aendert sich unter dem offenen Blatt,
+   * sobald man verschiebt (screens/Tafelrunde.tsx).
+   */
+  const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
 
   /*
    * Die Grenze, die auch der Bildschirm prueft — und die einzige, die er
@@ -203,7 +224,10 @@ export function ProbeRuestkammer(): React.JSX.Element {
   function tippeOrt(ort: Ort): void {
     if (!amZug) return;
     const folge = tippfolge(stellung, gewaehlt, ort);
-    if (folge.art === 'waehlen') setGewaehlt(folge.ort);
+    /* Wie am Tisch: Ein Tipp ohne Auswahl schlaegt das Blatt der Einheit auf;
+       ausgewaehlt wird von dort aus. Stuende hier `setGewaehlt`, verhielte
+       sich die Probe anders als der Bildschirm, den sie zeigen soll. */
+    if (folge.art === 'waehlen') setBlattOrt(folge.ort);
     else if (folge.art === 'abwaehlen') setGewaehlt(null);
     else if (folge.art === 'schieben') {
       setAuf((a) => schiebe(a, folge.von, folge.nach));
@@ -211,10 +235,25 @@ export function ProbeRuestkammer(): React.JSX.Element {
     }
   }
 
+  /** Was auf `blattOrt` steht — frisch aus dem Stand, siehe dort. */
+  const blattKaempfer = blattOrt
+    ? ((blattOrt.bereich === 'bank' ? auf.bank : auf.brett)[blattOrt.platz] ?? null)
+    : null;
+  const blattEinheit = blattKaempfer ? KATALOG[blattKaempfer.id] : undefined;
+  const blattWerte =
+    blattKaempfer && blattEinheit
+      ? SZENE.stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
+      : undefined;
+  /** Der erste freie Bankplatz — das Ziel von „Ablegen", wie am Tisch. */
+  const freierBankplatz = Array.from({ length: SZENE.bankPlaetze }, (_, i) => i).find(
+    (platz) => (auf.bank[platz] ?? null) === null,
+  );
+
   function zuruecksetzen(): void {
     setAuf(START);
     setLaden(SZENE.eigenes.laden);
     setGewaehlt(null);
+    setBlattOrt(null);
   }
 
   const namen = markennamen(SZENE.synergieTabelle);
@@ -250,6 +289,39 @@ export function ProbeRuestkammer(): React.JSX.Element {
           der Name waere sonst die neunzehnte durchgereichte Eigenschaft
           (Synergien.tsx). */}
       <Markennamen.Provider value={namen}>
+        {/* Das Blatt einer angetippten Einheit — dasselbe Bauteil wie am
+            Tisch. VERKAUFEN nimmt sie hier nur vom Feld und zaehlt kein Gold:
+            Die Probe rechnet nichts (siehe Kopf), genau wie beim Klick auf
+            eine Ladenkarte. „zuruecksetzen" holt beides zurueck. */}
+        {blattOrt && blattKaempfer && blattEinheit && (
+          <Einheitenblatt
+            einheit={blattEinheit}
+            kaempfer={blattKaempfer}
+            werte={blattWerte}
+            tabelle={SZENE.synergieTabelle}
+            maxStufe={SZENE.maxStufe}
+            erloes={blattWerte?.erloes}
+            onVerkaufen={() => {
+              setAuf((a) => nimmWeg(a, blattOrt));
+              setBlattOrt(null);
+            }}
+            onAblegen={
+              blattOrt.bereich === 'brett' && freierBankplatz !== undefined
+                ? () => {
+                    setAuf((a) => schiebe(a, blattOrt, { bereich: 'bank', platz: freierBankplatz }));
+                    setBlattOrt(null);
+                  }
+                : undefined
+            }
+            onVerschieben={() => {
+              setGewaehlt(blattOrt);
+              setBlattOrt(null);
+            }}
+            verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            onSchliessen={() => setBlattOrt(null)}
+          />
+        )}
+
         {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile — Aufbau
             und Klassen wie am Tisch (`.tr-statuszeile`, screens/Tafelrunde.tsx
             und styles.css). Die Zahlen stehen fest: Die Probe spielt nicht.
@@ -432,11 +504,13 @@ export function ProbeRuestkammer(): React.JSX.Element {
       <p className={css.fuss}>
         Runde {SZENE.runde} von {SZENE.rundenGrenze} einer Partie zu {SZENE.sitze.length} mit
         Bots (Saat „{SZENE.saat}", Gangart {SZENE.gangart}), angehalten nach{' '}
-        {SZENE.zuegeGespielt} Zügen von {nameVon(SZENE.ich)}. Antippen und Ziel antippen
-        verschiebt — Ziehen mit dem Finger gehört zum Tisch und nicht zur Wabe. Ein Klick auf
-        eine Karte kauft sie nicht, er räumt nur ihren Platz ab: So sieht man den leeren
-        Rahmen. Würfeln, Aufsteigen und Bereit tun nichts — das sind Regeln, und die bringt
-        die Probe absichtlich nicht mit. „zurücksetzen" stellt alles wieder her.
+        {SZENE.zuegeGespielt} Zügen von {nameVon(SZENE.ich)}. Ein Tipp auf eine Einheit
+        schlägt ihr Blatt auf; „Aufstellen" darin wählt sie, und der nächste Tipp setzt sie
+        ab — Ziehen mit dem Finger gehört zum Tisch und nicht zur Wabe. Verkaufen nimmt sie
+        hier nur vom Feld und zählt kein Gold, so wie ein Klick auf eine Karte sie nicht
+        kauft, sondern nur ihren Platz abräumt: So sieht man den leeren Rahmen. Würfeln,
+        Aufsteigen und Bereit tun nichts — das sind Regeln, und die bringt die Probe
+        absichtlich nicht mit. „zurücksetzen" stellt alles wieder her.
       </p>
     </main>
   );

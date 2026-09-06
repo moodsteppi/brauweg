@@ -5,14 +5,18 @@ import {
   BRETT_REIHEN,
   BRETT_SPALTEN,
   DEFAULT_REGELN,
+  type EinheitId,
   type Heer,
   MAX_STUFE,
+  type Stufenwerte,
   type TafelrundePartie,
   KATALOG,
   VERSCHMELZ_ZAHL,
   erstellePartie,
   fuehreAus,
+  gesamtkosten,
   sichtFuer,
+  werteFuer,
   zuschauerSicht,
 } from '../src/index.js';
 
@@ -125,6 +129,64 @@ describe('Katalog in der Sicht', () => {
     assert.equal(sichtFuer(p, 0, 1).katalog, undefined);
     assert.equal(zuschauerSicht(p, 0).katalog?.length, KATALOG.length);
     assert.equal(zuschauerSicht(p, 1).katalog, undefined);
+  });
+});
+
+describe('Werte je Sternstufe in der Sicht', () => {
+  /*
+   * Ein eigener Zugriff statt `assert.ok` je Probe: Eine Zusicherungsfunktion
+   * nimmt `tsc` die Verengung wieder weg, sobald das Ergebnis in eine weitere
+   * Konstante wandert (TS7022) — und die Proben unten lesen aus der Tabelle.
+   */
+  function tabelle(): Readonly<Record<EinheitId, readonly Stufenwerte[]>> {
+    const werte = sichtFuer(neu(), 0, 0).stufenwerte;
+    if (!werte) throw new Error('Die erste Sicht muss die Stufenwerte mitschicken');
+    return werte;
+  }
+
+  it('reisen mit dem Katalog und danach nicht mehr', () => {
+    const p = neu();
+    assert.notEqual(sichtFuer(p, 0, 0).stufenwerte, undefined);
+    assert.equal(sichtFuer(p, 0, 1).stufenwerte, undefined);
+    assert.notEqual(zuschauerSicht(p, 0).stufenwerte, undefined);
+    assert.equal(zuschauerSicht(p, 1).stufenwerte, undefined);
+  });
+
+  it('nennen je Einheit alle Stufen, aufsteigend ab 1', () => {
+    const werte = tabelle();
+    assert.equal(Object.keys(werte).length, KATALOG.length);
+    for (const e of KATALOG) {
+      assert.equal(werte[e.id].length, MAX_STUFE);
+      assert.deepEqual(
+        werte[e.id].map((w) => w.stufe),
+        [1, 2, 3],
+      );
+    }
+  });
+
+  it('rechnen Stufe und Erloes so, wie der Kampf und das Verkaufen es tun', () => {
+    // Der Sinn der Tabelle: Der Bildschirm soll NICHT multiplizieren. Wer die
+    // Rechnung hier aendert, aendert diese Probe mit — und sieht dabei, dass
+    // die Anzeige mitwandert.
+    const werte = tabelle();
+    for (const e of KATALOG) {
+      for (const stand of werte[e.id]) {
+        const { stufe, erloes, ...gemessen } = stand;
+        assert.deepEqual(gemessen, werteFuer(e.id, stufe));
+        assert.equal(erloes, gesamtkosten(e.id, stufe));
+      }
+    }
+  });
+
+  it('laesst Tempo, Reichweite und Ruestung ueber die Stufen stehen', () => {
+    // Genau die Unterscheidung, die der Client nicht kennen soll: Nur Leben
+    // und Angriff wachsen (katalog.ts, STUFEN_FAKTOR).
+    const wache = tabelle().dorfwache;
+    assert.equal(wache[1].tempo, wache[0].tempo);
+    assert.equal(wache[2].reichweite, wache[0].reichweite);
+    assert.equal(wache[2].ruestung, wache[0].ruestung);
+    assert.ok(wache[2].leben > wache[0].leben);
+    assert.ok(wache[2].angriff > wache[0].angriff);
   });
 });
 
