@@ -3,6 +3,14 @@
  * Bretts. Nur die Zuordnung Kennung -> Pfad — was der Bildschirm daraus
  * macht, entscheidet screens/Tafelrunde.tsx.
  *
+ * SEIT DEM 06.09.2026 SIND DIESE FIGUREN DER RUECKFALL. Brett, Bank,
+ * Ladenkarte und Arena zeigen das vorgerenderte 3D-Blatt der ROLLE
+ * (`Figur3D.tsx`, fuenf Blaetter fuer 22 Einheiten, siehe bildfolge.ts); eine
+ * Zeile von hier kommt nur auf den Bildschirm, wenn das Blatt fehlt oder nicht
+ * laedt. Wer hier ein Bild tauscht, aendert also, was man im Fehlerfall sieht
+ * — nicht, was am Tisch steht. Genau das ist beim Schildknappen passiert
+ * (docs/ASSETS-TAFELRUNDE-UNTOT.md).
+ *
  * **Alles hier ist CC0** (Creative Commons Zero, keine Namensnennung
  * noetig). Die Herkunft steht trotzdem an jeder Zeile, aus zwei Gruenden:
  * Ohne Vermerk kommt kein Bild ins Repo (CLAUDE.md, Regel 5), und wer eine
@@ -84,6 +92,11 @@ export const FIGUREN: Readonly<Record<EinheitId, string>> = {
    * Vorher stand hier deep_elf_soldier.png, ein sichtbar lebender Elf: Seit
    * dem 05.09.2026 traegt der Schildknappe im Katalog die Marke Untot, und
    * eine lebende Figur mit Untot-Chip ist eine falsche Auskunft am Tisch.
+   * DEN TISCH ERREICHT DER TAUSCH NICHT: Dort steht das Ritterblatt der Rolle
+   * Wache, dasselbe wie bei der Dorfwache, und die Mumie nur, wenn es nicht
+   * laedt (siehe Kopf). Ein Untoter, der auch am Tisch untot aussieht, ist
+   * ein eigenes Blatt je Rolle und Gestalt — bestellt, nicht gebaut:
+   * docs/ASSETS-TAFELRUNDE-UNTOT.md.
    * Nicht skeletal_warrior.png, obwohl das der wortwoertliche Schildtraeger
    * waere — auf Brettgroesse (rund 56 px) ist es von knochenspaeher
    * (skeleton_humanoid_small) kaum zu unterscheiden, und beide stehen oft

@@ -633,6 +633,12 @@ es notdürftig — ein Knappe, der seinen Posten auch dann nicht verlassen hat,
 als er gefallen war —, improvisiert wurde nichts: Grafik wird bestellt. Es
 liegt als Karte auf dem Board.
 
+*Nachtrag 06.09.2026:* Die Pixelfigur ist inzwischen eine Wächtermumie, aber
+das ist seit demselben Tag nur der Rückfall. Am Tisch steht das 3D-Blatt der
+**Rolle** — der Ritter der Wache, fünf Blätter für 22 Einheiten —, und das
+gilt für alle drei Träger der Marke. Was ein untotes Blatt je Rolle kostet
+und warum keine CSS-Färbung: `docs/ASSETS-TAFELRUNDE-UNTOT.md`.
+
 ### Was geändert wurde
 
 Nur der Katalog, in beiden Fällen. **Nichts** an Startleben, Zeitraffer,
