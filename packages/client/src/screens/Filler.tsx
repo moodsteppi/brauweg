@@ -41,7 +41,7 @@ import { useTable } from '../useTable';
  * Moduls. Wer diese Zahlen anfasst, aendert also den Bot-Tisch und sonst
  * nichts — die Spielart eingeschlossen.
  */
-const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6, barrieren: 5 };
+const REGELSATZ = { spalten: 8, zeilen: 7, farben: 6, barrieren: 10 };
 
 /**
  * Takt, in dem der Stand der Suche abgefragt wird.
@@ -62,7 +62,7 @@ const VARIANTE_NAME: Record<Variante, string> = {
 const VARIANTE_TEXT: Record<Variante, string> = {
   nebel: 'Du siehst nur dein Gebiet und dessen Rand.',
   klar: 'Das ganze Brett liegt offen — wie im Original.',
-  build: 'Offenes Brett, dazu fünf Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
+  build: 'Offenes Brett, dazu zehn Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
 };
 
 /**
@@ -1086,7 +1086,7 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         Wo ein aufgedecktes Feld an sein Gebiet stößt, steht eine weiße Kante.
       </p>
       <p>
-        <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem fünf
+        <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem zehn
         Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
         auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
         färben; erst das Färben gibt ab. Und du darfst den Gegner damit nicht
