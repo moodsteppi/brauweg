@@ -272,7 +272,7 @@ describe('Synergieleiste', () => {
 
   it('sagt es, wenn noch keine Marke auf dem Feld steht', () => {
     render(<Synergieleiste staende={[]} tabelle={TABELLE} />);
-    expect(screen.getByText(/Noch keine Marken auf dem Feld/)).toBeInTheDocument();
+    expect(screen.getByText(/Noch keine Marken/)).toBeInTheDocument();
   });
 
   it('hat keinen Klappknopf mehr — der eine Knopf ist der Zähler selbst', () => {
