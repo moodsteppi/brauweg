@@ -1769,6 +1769,7 @@ function Ruestkammer({
                 <Fremdmarken
                   staende={gegner.synergien ?? OHNE_SYNERGIEN}
                   tabelle={synergieTabelle}
+                  katalog={katalog}
                   beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
                 />
                 <Hexbrett
@@ -1892,7 +1893,10 @@ function Ruestkammer({
           Wer gerade zusieht, plant schon die naechste Runde — und nach dem
           Kampf ist sie ohnehin die erste Frage. Am Desktop haengt sie
           seitlich, das entscheidet allein Synergien.module.css. */}
-      <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} />
+      {/* `katalog` nur fuer die Traegerreihe im Blatt, das ein angetippter
+          Zaehler aufschlaegt — welche Einheiten die Marke ueberhaupt tragen,
+          steht an den Einheiten der Sicht (Synergien.tsx). */}
+      <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} katalog={katalog} />
 
       {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
           gleiche Breite, gleiche Stelle, damit nichts springt. */}
@@ -1916,6 +1920,7 @@ function Ruestkammer({
               <Fremdmarken
                 staende={gegner.synergien ?? OHNE_SYNERGIEN}
                 tabelle={synergieTabelle}
+                katalog={katalog}
                 beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
               />
               <Hexbrett
@@ -2883,7 +2888,9 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           Klasse stärker; ab drei und ab fünf noch einmal deutlicher. Der Bonus
           gilt nur für die Träger selbst und nur auf dem Feld — was auf der Bank
           liegt, zählt nicht mit. Was gerade greift und wie weit es bis zur
-          nächsten Stufe ist, zeigt die Synergie-Leiste.
+          nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler
+          darin an, und du bekommst alle Stufen der Klasse und alle Recken, die
+          sie tragen.
         </li>
         <li>
           Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und
