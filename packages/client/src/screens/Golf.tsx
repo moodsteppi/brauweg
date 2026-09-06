@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Me } from '../api';
 import { FARBEN, farbeVon } from '../minispiele/golf/farben';
-import { schlagAus, trifftBall, vorschau } from '../minispiele/golf/eingabe';
+import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { KARTEN } from '../minispiele/golf/karten';
 import { Golfnetz } from '../minispiele/golf/netz';
@@ -702,9 +702,20 @@ interface Zielstand {
   zeiger: number;
   ballX: number;
   ballY: number;
+  /** Zielpunkt in Welteinheiten, relativ zum Ball — für Pfeil und Vorschau. */
   zuX: number;
   zuY: number;
-  grob: boolean;
+  /** Wo der Finger aufgesetzt hat, in Bildschirmpixeln. */
+  startPx: number;
+  startPy: number;
+  /**
+   * Pixel je Welteinheit im Moment des Antippens. Der Zug wird damit
+   * umgerechnet, NICHT mit dem laufenden Blick: Die Kamera zoomt beim
+   * Ausholen raus, jeder Pixel wäre dann mehr Welt, die Kraft stiege, die
+   * Kamera zoomte weiter — eine Rückkopplung, die zwischen 50 und 100 %
+   * nichts mehr wählbar ließ.
+   */
+  pxJeEinheit: number;
 }
 
 function Partie({
@@ -922,16 +933,26 @@ function Partie({
       if (!schlagErlaubt(z, sitz)) return;
       const ball = z.baelle[sitz];
       const kasten = leinwand.getBoundingClientRect();
-      const welt = zeichner.zuWelt(e.clientX - kasten.left, e.clientY - kasten.top);
-      const grob = e.pointerType !== 'mouse';
-      if (!trifftBall(ball.x, ball.y, welt.x, welt.y, grob)) return;
+      const px = e.clientX - kasten.left;
+      const py = e.clientY - kasten.top;
+      /*
+       * Gezielt wird von ÜBERALL: Der Finger muss den Ball nicht treffen, er
+       * legt nur den Bezugspunkt fest, und die Richtung ist relativ dazu.
+       * Ein Daumen, der auf der Kugel liegt, verdeckt sie sonst genau dann,
+       * wenn man sehen will, wohin sie fliegt.
+       */
+      const a = zeichner.zuWelt(px, py);
+      const b = zeichner.zuWelt(px + 100, py);
+      const pxJeEinheit = 100 / Math.max(1e-6, Math.abs(b.x - a.x));
       zielRef.current = {
         zeiger: e.pointerId,
         ballX: ball.x,
         ballY: ball.y,
-        zuX: welt.x,
-        zuY: welt.y,
-        grob,
+        zuX: ball.x,
+        zuY: ball.y,
+        startPx: px,
+        startPy: py,
+        pxJeEinheit,
       };
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -950,18 +971,20 @@ function Partie({
       const leinwand = leinwandRef.current;
       if (zs === null || zs.zeiger !== e.pointerId || zeichner === null || leinwand === null) return;
       const kasten = leinwand.getBoundingClientRect();
-      const welt = zeichner.zuWelt(e.clientX - kasten.left, e.clientY - kasten.top);
+      // Zug in Pixeln seit dem Aufsetzen, mit dem Maßstab von damals in Welt
+      // umgerechnet — unabhängig davon, wie weit die Kamera inzwischen
+      // rausgezoomt hat (siehe `pxJeEinheit`).
+      const dx = (e.clientX - kasten.left - zs.startPx) / zs.pxJeEinheit;
+      const dy = (e.clientY - kasten.top - zs.startPy) / zs.pxJeEinheit;
       // Der Zug wird auf die Maximallänge gedeckelt: Weiter zu ziehen ändert
       // nichts mehr, und ein Pfeil, der aus dem Bild läuft, sagt das nicht.
-      const dx = welt.x - zs.ballX;
-      const dy = welt.y - zs.ballY;
       const laenge = Math.hypot(dx, dy);
       if (laenge > MAX_ZUG) {
         zs.zuX = zs.ballX + (dx / laenge) * MAX_ZUG;
         zs.zuY = zs.ballY + (dy / laenge) * MAX_ZUG;
       } else {
-        zs.zuX = welt.x;
-        zs.zuY = welt.y;
+        zs.zuX = zs.ballX + dx;
+        zs.zuY = zs.ballY + dy;
       }
       rechneZiel();
     },

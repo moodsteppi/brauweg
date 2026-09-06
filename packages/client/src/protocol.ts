@@ -79,7 +79,7 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * Echtzeit im Gleichschritt (siehe SPEZIFIKATION-GOLF.md): Ueber die Leitung
  * gehen nur Schlaege, die eigentliche Ballphysik rechnet jedes Geraet selbst.
  */
-export const GOLF_MODULE_VERSION = 1;
+export const GOLF_MODULE_VERSION = 2;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
