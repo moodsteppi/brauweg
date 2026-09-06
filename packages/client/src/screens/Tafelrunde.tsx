@@ -1633,6 +1633,7 @@ function Ruestkammer({
                   <Fremdmarken
                     staende={gegner.synergien ?? OHNE_SYNERGIEN}
                     tabelle={synergieTabelle}
+                    katalog={katalog}
                     beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
                   />
                 </div>
@@ -1765,7 +1766,7 @@ function Ruestkammer({
             allein Synergien.module.css, und weil sie sich dort selbst aus dem
             Fluss nimmt (`position: fixed`), bleibt diese Reihe davon
             unberuehrt. */}
-        <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} />
+        <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} katalog={katalog} />
       </div>
 
       {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
@@ -1798,6 +1799,7 @@ function Ruestkammer({
                 <Fremdmarken
                   staende={gegner.synergien ?? OHNE_SYNERGIEN}
                   tabelle={synergieTabelle}
+                  katalog={katalog}
                   beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
                 />
               </div>
@@ -2350,7 +2352,9 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           Klasse stärker; ab drei und ab fünf noch einmal deutlicher. Der Bonus
           gilt nur für die Träger selbst und nur auf dem Feld — was auf der Bank
           liegt, zählt nicht mit. Was gerade greift und wie weit es bis zur
-          nächsten Stufe ist, zeigt die Synergie-Leiste.
+          nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler
+          darin an, und du bekommst alle Stufen der Klasse und alle Recken, die
+          sie tragen.
         </li>
         <li>
           Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und

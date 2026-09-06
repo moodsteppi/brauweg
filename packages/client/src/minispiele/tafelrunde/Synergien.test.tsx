@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 /*
  * Die Synergie-Anzeige.
@@ -15,10 +15,12 @@ import { describe, expect, it } from 'vitest';
  */
 
 import {
+  type Markentraeger,
   type Synergie,
   type Synergiestand,
   type Wertebonus,
   Fremdmarken,
+  Markenblatt,
   Markennamen,
   Markenzeichen,
   Synergieleiste,
@@ -26,6 +28,7 @@ import {
   markennamen,
   schwellenPruefer,
   standSatz,
+  traegerVon,
   trifftSchwelle,
 } from './Synergien';
 
@@ -38,6 +41,7 @@ const TABELLE: Synergie[] = [
   {
     marke: 'krieger',
     name: 'Krieger',
+    wirkung: 'Jeder Krieger bekommt Rüstung dazu.',
     stufen: [
       { schwelle: 2, bonus: bonus({ ruestung: 10 }) },
       { schwelle: 4, bonus: bonus({ ruestung: 20 }) },
@@ -47,6 +51,7 @@ const TABELLE: Synergie[] = [
   {
     marke: 'naturwesen',
     name: 'Naturwesen',
+    wirkung: 'Jedes Naturwesen bekommt Leben dazu.',
     stufen: [
       { schwelle: 2, bonus: bonus({ lebenProzent: 15 }) },
       { schwelle: 4, bonus: bonus({ lebenProzent: 30 }) },
@@ -54,6 +59,17 @@ const TABELLE: Synergie[] = [
     ],
   },
 ];
+
+/**
+ * Der Katalog, wie er mit der ersten Sicht kommt — nur die Felder, die das
+ * Blatt braucht. Zwei Kriegereinheiten, eine davon mit zweiter Marke, und
+ * eine, die die Marke gar nicht traegt.
+ */
+const KATALOG: Record<string, Markentraeger> = {
+  dorfwache: { id: 'dorfwache', name: 'Dorfwache', kosten: 1, marken: ['krieger'] },
+  hauptmann: { id: 'hauptmann', name: 'Hauptmann', kosten: 3, marken: ['krieger', 'waechter'] },
+  wildling: { id: 'wildling', name: 'Wildling', kosten: 2, marken: ['naturwesen'] },
+};
 
 function stand(teil: Partial<Synergiestand> = {}): Synergiestand {
   return {
@@ -124,7 +140,12 @@ describe('trifftSchwelle', () => {
     // Dieselbe Marke, aber eine Tabelle mit verschobenen Stufen: Bei einer
     // ersten Schwelle von 3 macht der zweite Träger sie noch nicht voll.
     const verschoben: Synergie[] = [
-      { marke: 'drache', name: 'Drache', stufen: [{ schwelle: 3, bonus: bonus({ ruestung: 5 }) }] },
+      {
+        marke: 'drache',
+        name: 'Drache',
+        wirkung: 'Jeder Drache schlägt härter zu.',
+        stufen: [{ schwelle: 3, bonus: bonus({ ruestung: 5 }) }],
+      },
     ];
     expect(trifftSchwelle('drache', [], verschoben)).toBe(false);
     expect(
@@ -254,11 +275,228 @@ describe('Synergieleiste', () => {
     expect(screen.getByText(/Noch keine Marken/)).toBeInTheDocument();
   });
 
-  it('laesst sich nicht mehr zuklappen — dafuer ist sie zu flach', () => {
+  it('hat keinen Klappknopf mehr — der eine Knopf ist der Zähler selbst', () => {
     // Vorher eine Liste mit Sätzen und einem Klappknopf, der selbst so hoch
-    // war wie die Zähler heute zusammen.
+    // war wie die Zähler heute zusammen. Heute ist jeder Zähler eine
+    // Schaltfläche: Sie schlägt das Blatt der Marke auf.
     render(<Synergieleiste staende={[stand()]} tabelle={TABELLE} />);
-    expect(screen.queryByRole('button')).toBeNull();
+    const knoepfe = screen.getAllByRole('button');
+    expect(knoepfe).toHaveLength(1);
+    expect(knoepfe[0]!).toHaveAccessibleName(/Krieger: 3 von 4/);
+    expect(knoepfe[0]!).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('traegerVon', () => {
+  it('nennt alle Einheiten der Marke, die Günstigsten zuerst', () => {
+    // ALLE, nicht nur die eigenen: Die Frage des Blattes ist, was man noch
+    // kaufen müsste.
+    expect(traegerVon(KATALOG, 'krieger').map((e) => e.name)).toEqual([
+      'Dorfwache',
+      'Hauptmann',
+    ]);
+  });
+
+  it('zählt eine Einheit für jede ihrer Marken', () => {
+    expect(traegerVon(KATALOG, 'waechter').map((e) => e.name)).toEqual(['Hauptmann']);
+  });
+
+  it('bleibt ohne Katalog leer, statt eine Liste zu erfinden', () => {
+    expect(traegerVon({}, 'krieger')).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('Markenblatt', () => {
+  /*
+   * Das Blatt, das ein angetippter Zähler aufschlägt. Dieselbe Zusage wie für
+   * die Leiste: Es rechnet nichts nach. Die Stufen sind die Tabelle der
+   * Sicht, die Wirkung ist der Satz des Moduls, und welche Stufe gilt, sagt
+   * `schwelle` — deshalb stehen unten wieder Zahlen, die zueinander nicht
+   * passen.
+   */
+  function blatt(teil: Partial<Synergiestand> = {}) {
+    return render(
+      <Markenblatt
+        stand={stand({ anzahl: 3, schwelle: 2, naechsteSchwelle: 4, ...teil })}
+        synergie={TABELLE[0]}
+        katalog={KATALOG}
+        onSchliessen={() => {}}
+      />,
+    );
+  }
+
+  it('nennt Marke, Stand und den Satz aus dem Modul', () => {
+    blatt();
+    const dialog = screen.getByRole('dialog', { name: 'Marke Krieger' });
+    expect(within(dialog).getByRole('heading', { name: 'Krieger' })).toBeInTheDocument();
+    expect(within(dialog).getByText(/3 auf dem Brett/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/noch 1 bis 4/)).toBeInTheDocument();
+    // Der Satz steht in synergien.ts und nicht hier — käme er aus dem Client,
+    // wäre er beim ersten geänderten Bonus eine Lüge.
+    expect(within(dialog).getByText('Jeder Krieger bekommt Rüstung dazu.')).toBeInTheDocument();
+  });
+
+  it('zeigt alle Stufen, auch die noch nicht erreichten', () => {
+    // Wer bei drei von vier steht, soll sehen, was der vierte bringt.
+    blatt();
+    const stufen = screen.getByRole('list', { name: 'Stufen' });
+    expect(within(stufen).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(stufen).getByText('+20 Rüstung')).toBeInTheDocument();
+    expect(within(stufen).getByText('+30 Rüstung')).toBeInTheDocument();
+  });
+
+  it('hebt die Stufe hervor, die die SICHT nennt — nicht die, die es nachrechnen würde', () => {
+    /*
+     * Fünf Träger, laut Tabelle wäre das die Schwelle 4. Die Sicht behauptet
+     * die 2. Wer hier abzählte, hätte die falsche Zeile grün.
+     */
+    const { container } = blatt({ anzahl: 5, schwelle: 2, naechsteSchwelle: 6 });
+    const eintraege = container.querySelectorAll('[aria-label="Stufen"] li');
+    expect(eintraege[0]!.hasAttribute('data-aktiv')).toBe(true);
+    expect(eintraege[1]!.hasAttribute('data-aktiv')).toBe(false);
+    expect(eintraege[2]!.hasAttribute('data-aktiv')).toBe(false);
+  });
+
+  it('nennt eine überschrittene Stufe erfüllt, eine kommende nicht', () => {
+    const { container } = blatt({ anzahl: 5, schwelle: 6, naechsteSchwelle: null });
+    const eintraege = container.querySelectorAll('[aria-label="Stufen"] li');
+    // 2 und 4 liegen unter der erreichten 6 — überschritten, nicht das, was
+    // gerade gilt. Die 6 selbst ist die aktive Zeile und keine überschrittene.
+    expect(eintraege[0]!.hasAttribute('data-erfuellt')).toBe(true);
+    expect(eintraege[1]!.hasAttribute('data-erfuellt')).toBe(true);
+    expect(eintraege[2]!.hasAttribute('data-erfuellt')).toBe(false);
+    expect(eintraege[2]!.hasAttribute('data-aktiv')).toBe(true);
+    expect(screen.getByText(/höchste Stufe/)).toBeInTheDocument();
+  });
+
+  it('zeigt alle Träger der Marke mit ihren Kosten, nicht nur die eigenen', () => {
+    blatt();
+    expect(screen.getByText('Dorfwache')).toBeInTheDocument();
+    expect(screen.getByText('Hauptmann')).toBeInTheDocument();
+    expect(screen.queryByText('Wildling')).toBeNull();
+    // Die Kosten stehen an der Einheit der Sicht.
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('erfindet ohne Tabelle weder Stufe noch Satz, den Kopf zeigt es trotzdem', () => {
+    render(
+      <Markenblatt
+        stand={stand()}
+        synergie={undefined}
+        katalog={KATALOG}
+        onSchliessen={() => {}}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Krieger' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Stufen' })).toBeNull();
+  });
+
+  it('schließt beim Tippen daneben, nicht beim Griff ins Blatt', () => {
+    const schliesse = vi.fn();
+    const { container } = render(
+      <Markenblatt
+        stand={stand()}
+        synergie={TABELLE[0]}
+        katalog={KATALOG}
+        onSchliessen={schliesse}
+      />,
+    );
+    fireEvent.click(screen.getByRole('dialog'));
+    expect(schliesse).not.toHaveBeenCalled();
+
+    fireEvent.click(container.firstElementChild!);
+    expect(schliesse).toHaveBeenCalledTimes(1);
+  });
+
+  it('schließt auf Escape und über den Knopf', () => {
+    const schliesse = vi.fn();
+    render(
+      <Markenblatt
+        stand={stand()}
+        synergie={TABELLE[0]}
+        katalog={KATALOG}
+        onSchliessen={schliesse}
+      />,
+    );
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(schliesse).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Blatt schließen' }));
+    expect(schliesse).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('Ein Zähler, angetippt', () => {
+  it('schlägt das Blatt seiner Marke auf und schließt es beim Tippen daneben', () => {
+    // Der ganze Grund für das Blatt: Ein `title` erscheint am Handy nie, und
+    // auf dem Brett stand damit „3/4" und sonst nichts.
+    render(
+      <Synergieleiste staende={[stand({ anzahl: 3 })]} tabelle={TABELLE} katalog={KATALOG} />,
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Krieger: 3 von 4/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Marke Krieger' });
+    expect(within(dialog).getByText('Jeder Krieger bekommt Rüstung dazu.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Dorfwache')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('geht am fremden Brett genauso auf — es ist derselbe Zähler', () => {
+    render(
+      <Fremdmarken
+        staende={[stand({ anzahl: 3 })]}
+        tabelle={TABELLE}
+        katalog={KATALOG}
+        beschriftung="Marken von Ada"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Krieger: 3 von 4/ }));
+    expect(screen.getByRole('dialog', { name: 'Marke Krieger' })).toBeInTheDocument();
+  });
+
+  it('zeigt im Blatt den Stand der neuesten Sicht, nicht den beim Antippen', () => {
+    // Offen gehalten wird die Marke, nicht ihre Zahlen: Wer während des
+    // Lesens seinen vierten Krieger aufstellt, sieht die Zahl umspringen.
+    const { rerender } = render(
+      <Synergieleiste staende={[stand({ anzahl: 3 })]} tabelle={TABELLE} katalog={KATALOG} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Krieger: 3 von 4/ }));
+    rerender(
+      <Synergieleiste
+        staende={[stand({ anzahl: 4, schwelle: 4, naechsteSchwelle: 6 })]}
+        tabelle={TABELLE}
+        katalog={KATALOG}
+      />,
+    );
+    expect(screen.getByText(/4 auf dem Brett/)).toBeInTheDocument();
+  });
+
+  it('schließt von selbst, wenn die Marke ganz vom Brett verschwindet', () => {
+    // Sonst käme das Blatt beim nächsten Kauf derselben Marke von allein
+    // wieder — ein Fenster, das aufgeht, ohne dass jemand tippt.
+    const { rerender } = render(
+      <Synergieleiste staende={[stand({ anzahl: 1 })]} tabelle={TABELLE} katalog={KATALOG} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Krieger:/ }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    rerender(<Synergieleiste staende={[]} tabelle={TABELLE} katalog={KATALOG} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    rerender(
+      <Synergieleiste staende={[stand({ anzahl: 1 })]} tabelle={TABELLE} katalog={KATALOG} />,
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 
