@@ -7,7 +7,14 @@ import {
   FIGUREN3D_ZEILEN,
   folgeVon,
 } from '../../figuren3d/figuren3d';
-import { type Bildstand, GLEITEN_MS, SACKEN_MS, blattPfad } from './bildfolge';
+import {
+  type Bildstand,
+  FIGURENKASTEN,
+  GLEITEN_MS,
+  RUECKFALLKASTEN,
+  SACKEN_MS,
+  blattPfad,
+} from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import {
   type Kampfbericht,
@@ -639,6 +646,27 @@ describe('KampfAnzeige', () => {
     fireEvent.error(pixel);
     expect(screen.getByTestId('ersatz-dorfwache')).toBeInTheDocument();
     expect(screen.getAllByAltText('Dorfwache')).toHaveLength(1);
+  });
+
+  it('gibt der Figur beide Kastenmasse mit, das des Blattes und das des Rueckfalls', () => {
+    /*
+     * Das Stylesheet bemisst Blatt UND Pixelfigur an Variablen, die von hier
+     * kommen (`.figur3d`, `.koerper > .figurbild`). Fehlt eine, greift still
+     * der Rueckfallwert in der CSS-Zeile — und niemand sieht es, weil dort
+     * etwas Vernuenftiges steht. Bis zum 06.09.2026 stand die Groesse des
+     * Ersatzes ueberhaupt nur im Stylesheet: 72 % der Koerperhoehe, ohne jeden
+     * Bezug zu den Figuren daneben, und damit halb so gross wie sie.
+     */
+    zeige([paarung()], 0);
+    const figur = screen.getByLabelText(/^Dorfwache, Stufe 1/);
+    expect(figur.style.getPropertyValue('--tr-kasten-hoehe')).toBe(`${FIGURENKASTEN.hoehe}%`);
+    expect(figur.style.getPropertyValue('--tr-kasten-boden')).toBe(`${FIGURENKASTEN.boden}%`);
+    expect(figur.style.getPropertyValue('--tr-rueckfall-hoehe')).toBe(
+      `${RUECKFALLKASTEN.hoehe}%`,
+    );
+    expect(figur.style.getPropertyValue('--tr-rueckfall-boden')).toBe(
+      `${RUECKFALLKASTEN.boden}%`,
+    );
   });
 
   it('spielt die Treffer nach der Uhr ab, nicht sofort', () => {

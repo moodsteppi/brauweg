@@ -307,18 +307,25 @@ export function zellWeite(stand: Bildstand): number {
 
 // ---------------------------------------------------------------------------
 // Wie gross der Ausschnitt auf der Karte ist
+//
+// WORAUF SICH ALLE PROZENTE HIER BEZIEHEN: auf den KOERPER, nicht auf die
+// Wabenkarte. Der Koerper ist der Stellplatz der Figur und misst 74 x 62 % der
+// Karte (`.stellplatz` in KampfAnzeige.module.css); die Werte von hier stehen
+// als CSS-Variablen an einer Regel, die in ihm liegt. Der Kuerze halber stand
+// bis zum 06.09.2026 in jeder zweiten Zeile „Kartenhoehe" — wer das woertlich
+// nimmt, rechnet jede Figur um 61 % zu gross (1 / 0,62).
 // ---------------------------------------------------------------------------
 
 /**
- * Wie viele Weltmeter die HOEHE einer Wabenkarte abbildet — der Massstab der
- * Arena.
+ * Wie viele Weltmeter die HOEHE eines Figurenkoerpers abbildet — der Massstab
+ * der Arena.
  *
  * DAS IST DIE ENTSCHEIDUNG, alles andere hier ist Rechnung. Sie ist Robins vom
  * 06.09.2026, gemessen auf /probe/kampf bei 390 px: Eine Wache soll 72 auf 52
  * Pixel gross sein und nicht 50 auf 36 — bei der kleineren Groesse blieb von
  * der vorgerenderten 3D-Figur eine farbige Silhouette ohne Ruestung, Gesicht
- * oder Waffe. Im Stylesheet stand sie als „260 % der Kartenhoehe"; das war
- * dieselbe Aussage, aber nur solange eine Zelle 4,29 Meter Welt trug.
+ * oder Waffe. Im Stylesheet stand sie als „260 %"; das war dieselbe Aussage,
+ * aber nur solange eine Zelle 4,29 Meter Welt trug.
  *
  * IN METERN UND NICHT IN PROZENT, weil sie sonst den naechsten Satz Blaetter
  * nicht ueberlebt: Wie viel Figur in einer Zelle steckt, entscheidet der
@@ -333,21 +340,22 @@ export function zellWeite(stand: Bildstand): number {
 const MASSSTAB_METER = 1.65;
 
 /**
- * Wo die Figur auf der Karte aufsetzt, als Anteil der Kartenhoehe von OBEN.
+ * Wo die Figur aufsetzt, als Anteil der Koerperhoehe von OBEN.
  *
- * 83,6 % heisst: Der Fuss steht 16,4 % ueber der Kartenunterkante, knapp ueber
- * den Sternen und auf der Hoehe des Lebensbalkens. Tiefer, und die Figur steht
- * auf ihrer eigenen Stufenanzeige; hoeher, und sie schwebt ueber dem Feld.
+ * 83,6 % heisst: Der Fuss steht 16,4 % ueber der Unterkante des Koerpers, knapp
+ * ueber den Sternen und auf der Hoehe des Lebensbalkens. Tiefer, und die Figur
+ * steht auf ihrer eigenen Stufenanzeige; hoeher, und sie schwebt ueber dem
+ * Feld.
  */
 const STANDLINIE = 0.836;
 
 /**
- * Hoehe und Bodenversatz des Figurenausschnitts, in Prozent der Kartenhoehe.
+ * Hoehe und Bodenversatz des Figurenausschnitts, in Prozent der Koerperhoehe.
  *
  * GERECHNET UND NICHT PROBIERT, und zwar aus dem Massstab: Eine Zelle traegt
- * `FIGUREN3D_ZELLHOEHE_METER` Meter Welt, eine Kartenhoehe soll `MASSSTAB_METER`
+ * `FIGUREN3D_ZELLHOEHE_METER` Meter Welt, ein Koerper soll `MASSSTAB_METER`
  * zeigen — daraus folgt die Hoehe. Der Fusspunkt sagt, wo in der Zelle die
- * Figur aufsetzt; daraus folgt, wie weit die Zelle unter die Karte reichen
+ * Figur aufsetzt; daraus folgt, wie weit die Zelle unter den Koerper reichen
  * muss, damit sie auf der Standlinie steht.
  *
  * WARUM NICHT ZWEI FESTE PROZENTZAHLEN, wie bis zum 06.09.2026: Die haengen am
@@ -358,15 +366,73 @@ const STANDLINIE = 0.836;
  * selben Tag an einem Bild abgenommen worden waren.
  */
 export const FIGURENKASTEN = {
-  /** Hoehe des Ausschnitts, in Prozent der Kartenhoehe. */
+  /** Hoehe des Ausschnitts, in Prozent der Koerperhoehe. */
   hoehe: runde((FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * 100),
-  /** Unterkante gegen die der Karte, in Prozent — negativ heisst tiefer. */
+  /** Unterkante gegen die des Koerpers, in Prozent — negativ heisst tiefer. */
   boden: runde(
     (1 -
       STANDLINIE -
       (FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * (1 - FIGUREN3D_FUSSPUNKT.y)) *
       100,
   ),
+} as const;
+
+/**
+ * Wie viele Weltmeter die HOEHE einer 32er-Pixelkachel zeigt — der Massstab
+ * des RUECKFALLS.
+ *
+ * Wozu eine Pixelkachel einen Massstab braucht: Faellt ein 3D-Blatt aus, tritt
+ * die Pixelfigur der Einheit an seine Stelle (`figuren.ts`, eingehaengt als
+ * `ersatz` von `Figur3D`). Sie muss dann ungefaehr so gross dastehen wie die
+ * Figuren daneben, sonst sieht der Rueckfall nach Fehler aus statt nach
+ * Ersatz. Bis zum 06.09.2026 stand ihre Groesse als „72 % der Koerperhoehe" im
+ * Stylesheet und hatte mit den 3D-Figuren nichts zu tun: Als die auf den
+ * Massstab von 1,65 Metern kamen, wuchsen sie auf 72 Pixel — die Pixelfigur
+ * blieb bei 34, also halb so gross wie ihre Nachbarn.
+ *
+ * IN METERN UND NICHT IN PROZENT, aus demselben Grund wie bei
+ * `MASSSTAB_METER`: So haengt der Rueckfall an der ENTSCHEIDUNG ueber die
+ * Figurengroesse und nicht am gemessenen Ausschnitt der Blaetter. Wer die
+ * Figuren groesser will, aendert `MASSSTAB_METER` — und die Pixelfigur waechst
+ * mit. Wer die Blaetter neu rendert und damit `FIGUREN3D_ZELLHOEHE_METER`
+ * verschiebt, aendert an ihr nichts, und das ist richtig so: Die 3D-Figur wird
+ * dabei ja auch nicht groesser.
+ *
+ * WOHER DIE 2,845 KOMMEN — einmal gemessen, damit der Rueckfall dort anfaengt,
+ * wo die 3D-Figuren heute stehen. Am Alphakanal der fuenf Blaetter (Zelle 0/0,
+ * das ruhende erste Bild) belegt eine stehende Figur 65,6 % (Wache), 59,4 %
+ * (Meuchler), 73,4 % (Schuetze), 73,4 % (Magier) und 87,5 % (Beistand) der
+ * Zellhoehe; der Median 73,4 % von 3,756 Metern sind 2,757 Meter Figur. Der
+ * Median und nicht die Wache, an der die Groesse abgenommen wurde: Der
+ * Rueckfall vertritt jede der fuenf Rollen, also nimmt er die mittlere.
+ * Gemessen wurden ausserdem die 22 Pixelfiguren — sie fuellen ihre Kachel
+ * fast ganz aus (Median 96,9 % der Hoehe, Fuesse bei 100 %). 2,757 / 0,969
+ * ergibt die 2,845 Meter, die eine ganze Kachel damit zeigt.
+ */
+const PIXELKACHEL_METER = 2.845;
+
+/**
+ * Hoehe und Bodenversatz der PIXELFIGUR auf einer Arenakarte, in Prozent der
+ * Koerperhoehe — dieselben zwei Angaben wie `FIGURENKASTEN`, fuer denselben
+ * Ort, nur eben fuer den Rueckfall.
+ *
+ * ZWEI KAESTEN UND NICHT EINER, weil die beiden Bilder verschieden gebaut
+ * sind: Beim 3D-Blatt ist der sichtbare Kasten eine ZELLE mit viel
+ * durchsichtigem Rand fuer den ausgeholten Schlag, und die Figur setzt darin
+ * bei 80 % auf (`FIGUREN3D_FUSSPUNKT`). Die Pixelkachel dagegen IST die Figur:
+ * Sie fuellt ihre Kachel aus und steht mit den Fuessen auf deren Unterkante.
+ * Deshalb ist der Bodenversatz hier kein negativer Wert, sondern genau die
+ * Standlinie — die Kachelunterkante ist der Fuss.
+ *
+ * Die Standlinie ist dieselbe wie beim Blatt (16,4 % ueber der Unterkante des
+ * Koerpers, knapp ueber den Sternen): Waeren es zwei, staende der Rueckfall
+ * auf einer anderen Hoehe als seine Nachbarn und fiele genau dadurch auf.
+ */
+export const RUECKFALLKASTEN = {
+  /** Hoehe der Kachel, in Prozent der Koerperhoehe. */
+  hoehe: runde((PIXELKACHEL_METER / MASSSTAB_METER) * 100),
+  /** Unterkante gegen die des Koerpers, in Prozent — hier die Standlinie. */
+  boden: runde((1 - STANDLINIE) * 100),
 } as const;
 
 function runde(wert: number): number {

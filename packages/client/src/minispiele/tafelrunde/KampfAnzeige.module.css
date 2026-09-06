@@ -372,7 +372,17 @@
   opacity: 0;
   transition: opacity 260ms ease;
 }
-/* Das Ersatzzeichen (Strichzeichnung der Rolle), wenn es keine Figur gibt. */
+/*
+ * Das Ersatzzeichen (Strichzeichnung der Rolle), wenn es keine Figur gibt —
+ * die dritte und letzte Stufe, hinter Blatt und Pixelfigur.
+ *
+ * ES BLEIBT KLEIN UND IM FLUSS, und das ist eine Entscheidung und kein
+ * Vergessen: Die beiden Stufen darueber sind FIGUREN und werden deshalb an der
+ * Figurengroesse bemessen (`.figur3d`, `.figurbild`). Ein Strichsymbol ist
+ * keine Figur, sondern ein Zeichen dafuer, dass es keine gibt — auf
+ * Figurengroesse aufgeblasen waere es ein riesiges Piktogramm mitten im
+ * Getuemmel. Dieselbe Ueberlegung wie bei `.tr-rolle` auf dem Brett (40 %).
+ */
 .koerper > svg {
   width: 48%;
   height: 48%;
@@ -402,23 +412,53 @@
 }
 
 /*
- * Die Figur darf groesser sein als die Strichzeichnung: Sie IST die Auskunft,
- * nicht ihr Beiwerk. Ueber die Hoehe bemessen und die Breite frei — die
- * Bilder sind quadratisch, und ein in beide Richtungen gesetztes Mass wuerde
- * sie beim ersten nicht-quadratischen Nachschub verzerren.
+ * -- Der Rueckfall: die Pixelfigur, wenn ein Blatt nicht laedt --------------
+ *
+ * SIE STEHT WIE DIE 3D-FIGUR, seit dem 06.09.2026 — absolut gesetzt, auf
+ * derselben Standlinie, ueber den Koerper hinausragend. Vorher war sie ein
+ * Flex-Kind mit `height: 72%` und konnte gar nicht anders, als in ihrem
+ * Kasten zu bleiben: Auf 390 px waren das 34 Pixel neben 72 Pixeln
+ * 3D-Figur — der Ersatz stand halb so gross auf dem Feld wie seine Nachbarn
+ * und sah damit selbst nach Fehler aus. Der Abstand bestand vorher schon
+ * (34 gegen 50) und ist mit der neuen Figurengroesse gewachsen.
+ *
+ * DIE MASSE KOMMEN AUS `RUECKFALLKASTEN` (bildfolge.ts) und stehen hier
+ * bewusst nicht als Zahl — genau wie bei `.figur3d` und aus demselben Grund:
+ * Beide sind aus `MASSSTAB_METER` gerechnet. Wer die Figuren groesser will,
+ * aendert dort eine Zahl, und der Ersatz waechst mit. Stuende die Hoehe hier,
+ * ginge er beim naechsten Mal wieder verloren; genau so ist es entstanden.
+ *
+ * ZWEI KAESTEN UND NICHT DERSELBE, obwohl beide dieselbe Figur an derselben
+ * Stelle zeigen: Die Zelle des Blattes ist zum groessten Teil durchsichtiger
+ * Rand (Luft fuer den ausgeholten Schlag), die Figur setzt darin bei 80 % auf.
+ * Die Pixelkachel dagegen IST die Figur — sie fuellt ihre 32 x 32 fast ganz
+ * aus und steht mit den Fuessen auf der Unterkante. Deshalb ist `bottom` hier
+ * kein negativer Wert, sondern genau die Standlinie.
+ *
+ * `max-width: none` ist kein Beiwerk: Die Kachel ist quadratisch und damit
+ * breiter als der Koerper (74 % der Karte). Mit einer Obergrenze in Prozent
+ * bekaeme das Bild einen zu schmalen Kasten, und `contain` liesse die Figur
+ * darin auf die BREITE schrumpfen — die Hoehe von oben waere wirkungslos.
  *
  * `pixelated`: Das Original ist 32 x 32 und liegt vierfach hochgezogen im
- * Repo (figuren.ts). Gezeichnet wird hier zwischen 30 und 55 px, also
- * unterhalb der Dateigroesse; die Regel ist deshalb kein Muss, sondern die
- * Absicherung nach oben — waechst die Arena je ueber 128 px, verwischt der
- * Browser sonst genau die Kanten, wegen derer der Satz gewaehlt wurde.
+ * Repo (figuren.ts). Gezeichnet wird jetzt zwischen 82 px (390er Schirm) und
+ * 103 px (bei den vollen 460 px Arenabreite), also weiter unterhalb der
+ * Dateigroesse; die Regel ist deshalb kein Muss, sondern die Absicherung nach
+ * oben — waechst die Arena je ueber 128 px je Figur, verwischt der Browser
+ * sonst genau die Kanten, wegen derer der Satz gewaehlt wurde.
  */
 .koerper > .figurbild {
+  position: absolute;
+  left: 50%;
+  bottom: var(--tr-rueckfall-boden, 16.4%);
+  height: var(--tr-rueckfall-hoehe, 172.4%);
   width: auto;
-  height: 72%;
-  max-width: 90%;
+  max-width: none;
   object-fit: contain;
   image-rendering: pixelated;
+  /* `translate` und nicht `transform`: dieselbe Aufteilung wie bei `.figur3d`
+     und `.treffer` — der Koerper braucht `transform` fuer seinen Ausschlag. */
+  translate: -50% 0;
 }
 
 /*

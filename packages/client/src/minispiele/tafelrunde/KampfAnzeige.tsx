@@ -61,6 +61,7 @@ import {
   type Bildstand,
   FIGURENKASTEN,
   GLEITEN_MS,
+  RUECKFALLKASTEN,
   SACKEN_MS,
   bildstand,
   blattPfad,
@@ -865,6 +866,14 @@ export function KampfAnzeige<E extends Einheitenbild>({
                      Rendern stillschweigend mit. */
                   '--tr-kasten-hoehe': `${FIGURENKASTEN.hoehe}%`,
                   '--tr-kasten-boden': `${FIGURENKASTEN.boden}%`,
+                  /* Dasselbe fuer den RUECKFALL — die Pixelfigur, die
+                     einspringt, wenn ein Blatt nicht laedt. Eigene Masse und
+                     nicht dieselben: Die Zelle des Blattes ist zum groessten
+                     Teil durchsichtiger Rand, die Pixelkachel IST die Figur.
+                     Gerechnet werden beide aus demselben Massstab, damit der
+                     Ersatz so gross dasteht wie das, was er ersetzt. */
+                  '--tr-rueckfall-hoehe': `${RUECKFALLKASTEN.hoehe}%`,
+                  '--tr-rueckfall-boden': `${RUECKFALLKASTEN.boden}%`,
                   /*
                    * Die Reihe stapelt die Figuren: Wer weiter vorn steht,
                    * liegt darueber. Noetig, seit eine Figur ihr Feld nach oben
