@@ -80,9 +80,9 @@ export const KOPIEN_HOECHSTZAHL = BRETT_SPALTEN;
 /**
  * Wo die Kopien stehen: Reichweite 1 nach vorn, alles andere nach hinten.
  *
- * Das ist die Regel, nach der auch der Bot stellt (`platzStrafe` in bot.ts:
- * Wache und Meuchler in die vorderste Reihe, Schuetze, Magier und Beistand in
- * die hinterste). Sie wird hier NICHT aus bot.ts geholt, sondern nachgebildet
+ * Das war bis zum 06.09.2026 auch die Regel des Bots; seither hat dort jede
+ * Rolle ihre eigene Wunschreihe (`wunschreihe` in bot.ts). Hier bleibt es bei
+ * den zwei Reihen. Sie wird nicht aus bot.ts geholt, sondern nachgebildet
  * — mit Absicht: Das Turnier soll den KATALOG messen und nicht den Bot, sonst
  * verschoebe jede Aenderung an der Bot-Stellung die Tabelle, ohne dass sich
  * an einer Einheit etwas geaendert haette. Gemessen wird nach `reichweite`
