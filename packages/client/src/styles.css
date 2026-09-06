@@ -16411,6 +16411,16 @@ span.hub-angebot-art.poker-jeton-stapel {
 .fl-bauknopf[data-an] em { opacity: 0.8; }
 .fl-bauknopf:active { transform: scale(0.97); }
 .fl-bauknopf:disabled { opacity: 0.4; cursor: default; }
+/* Gesperrt in der Eroeffnung: nicht blass wie "leer", sondern deutlich
+   verriegelt — Kette und Schloss in voller Farbe, nur der Grund ruhiger. */
+.fl-bauknopf[data-gesperrt]:disabled {
+  opacity: 1;
+  color: #6d6d6d;
+  background: rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.12);
+}
+.fl-bauknopf .fl-schlossicon { flex: none; margin: -6px 0 -6px -10px; }
+.fl-bauknopf .fl-schlosszahl { fill: #ffffff; }
 
 /* Beim Bauen ruht die Farbwahl — sie ist in diesem Moment nicht der Zug, den
    man macht. Sichtbar bleibt sie trotzdem: Der Knopf daneben schaltet

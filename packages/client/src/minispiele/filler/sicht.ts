@@ -51,4 +51,6 @@ export interface FillerSicht {
   barrierenMoeglich?: [number, number][];
   /** Plaetze der Sternfelder. Leer ausser in der Spielart `extreme`. */
   sterne: number[];
+  /** Noch mauerfreie Zuege der Eroeffnung; 0, sobald gebaut werden darf. */
+  mauerSperre: number;
 }
