@@ -7,8 +7,12 @@
  * Das Spiel: Zwei Spieler, eine Karte aus Gras, Seen und Bergen. Jeder startet
  * auf einer Ecke und nimmt je Runde ein Feld ein, das an sein Gebiet grenzt —
  * und ein Feld mehr fuer jedes Ornament, das er eingesammelt hat. Wasser und
- * Berge gehoeren niemandem, gegnerisches Gebiet ist unantastbar. Zu Ende ist
- * es, wenn keiner mehr irgendwo hin kann; es gewinnt, wer mehr Felder haelt.
+ * Berge gehoeren niemandem. Gegnerisches Gebiet ist seit dem 5. September
+ * nicht mehr unantastbar: Ein fremdes Feld am eigenen Rand laesst sich
+ * ANGREIFEN, wenn seine Stufe niedriger ist als die des eigenen Feldes
+ * daneben (siehe stufe und angreifbare). Die Startecke ist die HEIMAT — wer
+ * sie verliert, hat verloren. Sonst ist zu Ende, wenn keiner mehr irgendwo
+ * hin kann; dann gewinnt, wer mehr Felder haelt.
  *
  * Zwei Dinge unterscheiden es von allem anderen im Haus:
  *
@@ -37,6 +41,7 @@ import {
   BERG,
   GRAS,
   ORNAMENTARTEN,
+  STUFEN_MAX,
   type Saat,
   WASSER,
   abstand,
@@ -46,10 +51,11 @@ import {
   nachbarn,
   spiegel,
   startEcke,
+  umfeld,
 } from './karte.js';
 import { type EilandRegeln, istVariante } from './regeln.js';
 
-export { BERG, GRAS, WASSER, nachbarn, startEcke };
+export { BERG, GRAS, STUFEN_MAX, WASSER, nachbarn, startEcke, umfeld };
 
 /**
  * So viele Graustufen gibt es fuer verdeckte Felder.
@@ -73,6 +79,35 @@ export const GRAUTOENE = 5;
  */
 export const LEERRUNDEN_MAX = 4;
 
+/**
+ * Zweite Notbremse, seit es Angriffe gibt: so viele Runden in Folge ohne ein
+ * einziges neu genommenes FREIES Feld.
+ *
+ * Solange Land verteilt wird, endet jede Partie von selbst (siehe oben).
+ * Angriffe aber nehmen der Karte nichts weg — ein Feld wechselt nur die
+ * Farbe, und mit ihm wechseln die Stufen rundherum. Zwei Gegner, die sich
+ * dasselbe Feld immer wieder abnehmen, kaemen so nie zum Ende; mit zwei Bots
+ * am Tisch ist das kein Gedankenspiel, sondern eine Endlosschleife. Vierzig
+ * Runden reinen Kampfes sind mehr, als eine echte Partie je braucht — die
+ * Fronten sind lange vorher glatt, und glatte Fronten kann keiner angreifen.
+ */
+export const KAMPFRUNDEN_MAX = 40;
+
+/**
+ * Stellungswiederholung: Steht dieselbe Besitzverteilung zum dritten Mal auf
+ * dem Brett, ist die Partie aus — wie im Schach, und aus demselben Grund.
+ *
+ * Das ist der eigentliche Schluss fuer den Fall, den KAMPFRUNDEN_MAX nur
+ * deckelt: A nimmt B ein Feld, B nimmt es zurueck, A nimmt es wieder. Jeder
+ * Zug lohnt sich fuer den, der ihn macht (ein Feld hin, ein Feld her), also
+ * hoert keiner von selbst auf. Nach zwei vollen Umlaeufen steht fest, dass
+ * sich nichts mehr bewegt, und das Land entscheidet — statt dass zwei
+ * Menschen vierzig Runden lang Abgeben druecken. Gezaehlt wird nur, seit
+ * zuletzt freies Land genommen wurde: Danach kann sich keine Stellung
+ * wiederholen, ein Feld mehr ist ein Feld mehr.
+ */
+export const WIEDERHOLUNGEN_MAX = 3;
+
 // ---------------------------------------------------------------------------
 // Zustand
 // ---------------------------------------------------------------------------
@@ -94,8 +129,14 @@ export interface EilandAusgang {
   }[];
   /** Zurueckgehaltene Felder je Sitz zu Beginn der Aufloesung — der Einsatz. */
   readonly reserve: Readonly<Record<number, number>>;
-  /** Was jeder Sitz tatsaechlich bekommen hat. */
+  /** Was jeder Sitz an FREIEM Land tatsaechlich bekommen hat. */
   readonly genommen: Readonly<Record<number, readonly number[]>>;
+  /**
+   * Was jeder Sitz dem Gegner abgenommen hat (seit dem 5. September). Getrennt
+   * von `genommen`, weil der Client beides verschieden zeichnet — und weil
+   * die Gegenseite daraus abliest, was sie verloren hat.
+   */
+  readonly erobert: Readonly<Record<number, readonly number[]>>;
   /**
    * Felder, die jemand gewaehlt hatte und doch nicht bekam, weil der Weg
    * dorthin an einem verlorenen Kampf haengt (siehe erreichbare()).
@@ -166,6 +207,16 @@ export interface EilandPartie {
   readonly runde: number;
   /** Runden in Folge, in denen kein einziges Feld den Besitzer wechselte. */
   readonly leerrunden: number;
+  /** Runden in Folge ohne ein neu genommenes freies Feld (siehe KAMPFRUNDEN_MAX). */
+  readonly kampfrunden: number;
+  /**
+   * Die Besitzverteilungen seit dem letzten neu genommenen freien Feld, die
+   * aktuelle zuletzt (siehe WIEDERHOLUNGEN_MAX). Als lesbare Zeichenkette je
+   * Platz (`.`, `0`, `1`) und nicht als Pruefsumme: Man soll im Snapshot
+   * sehen koennen, welche Stellung sich wiederholt hat. Hoechstens
+   * KAMPFRUNDEN_MAX Eintraege, danach ist ohnehin Schluss.
+   */
+  readonly stellungen: readonly string[];
   /** Ausgang der letzten Runde, fuer die Anzeige. */
   readonly letzte: EilandAusgang | null;
   readonly leftSeats: readonly number[];
@@ -272,10 +323,17 @@ export function erstellePartie(
     punkte,
     runde: 1,
     leerrunden: 0,
+    kampfrunden: 0,
+    stellungen: [stellung(besitzer)],
     letzte: null,
     leftSeats: [],
     fertig: false,
   };
+}
+
+/** Die Besitzverteilung als Zeichenkette, fuer die Stellungswiederholung. */
+function stellung(besitzer: readonly (number | null)[]): string {
+  return besitzer.map((b) => (b === null ? '.' : String(b))).join('');
 }
 
 /**
@@ -416,16 +474,97 @@ export function waehlbare(partie: EilandPartie, sitz: number): number[] {
 }
 
 /**
+ * Die Stufe eines Feldes: wie viele der acht Felder in seinem Umfeld
+ * demselben Sitz gehoeren, 0 bis STUFEN_MAX. Freies Land hat keine Stufe.
+ *
+ * Sie sagt, wie fest ein Feld im eigenen Land sitzt — und damit, ob es sich
+ * angreifen laesst (siehe angreifbare). Nur der Besitz zaehlt, nicht das
+ * Gelaende: Ein See neben dem Feld ist kein Schutz, sondern ein Nachbar, der
+ * fehlt. Das ist Absicht — wer sein Land an Wasser und Berge lehnt, hat
+ * weniger Umfeld und muss das wissen.
+ */
+export function stufe(
+  besitzer: readonly (number | null)[],
+  platz: number,
+  spalten: number,
+  zeilen: number,
+): number | null {
+  const wem = besitzer[platz];
+  if (wem === null || wem === undefined) return null;
+  let zahl = 0;
+  for (const n of umfeld(platz, spalten, zeilen)) {
+    if (besitzer[n] === wem) zahl++;
+  }
+  return zahl;
+}
+
+/**
+ * Gegnerische Felder, die dieser Sitz JETZT angreifen kann.
+ *
+ * Angreifbar ist ein fremdes Feld, das an ein eigenes grenzt — derselbe Radius
+ * wie beim Ausbreiten — und dessen Stufe NIEDRIGER ist als die des eigenen
+ * Feldes daneben. Gleiche Stufe reicht nicht: Sonst koennten sich zwei
+ * glatte Fronten gegenseitig abtragen, und nichts stuende je fest. So
+ * traegt die Zahl die ganze Regel: Wer sein Land breit macht, hat hohe
+ * Stufen und greift an; wer einen schmalen Vorstoss treibt, hat an dessen
+ * Spitze eine niedrige und wird angegriffen.
+ *
+ * Gerechnet nach dem Stand der Karte, nicht nach dem laufenden Zettel: Ein
+ * in dieser Runde gewaehltes freies Feld hat noch keine Stufe und dient
+ * deshalb weder als Angriffsbasis noch als Weg dahinter (siehe pruefeWahl).
+ * Und die Wahl des Gegners kennt diese Liste so wenig wie `waehlbare` — er
+ * kann in derselben Runde das Feld angreifen, von dem aus man ihn angreift.
+ */
+export function angreifbare(partie: EilandPartie, sitz: number): number[] {
+  if (partie.fertig) return [];
+  if (partie.bereit[sitz]) return [];
+  const gewaehlt = partie.wahl[sitz] ?? [];
+  if (gewaehlt.length >= kontingent(partie, sitz)) return [];
+  return angriffsziele(partie, sitz).filter((platz) => !gewaehlt.includes(platz));
+}
+
+/** Alle Angriffsziele nach Stand der Karte — ohne Ruecksicht auf Zettel und Kontingent. */
+function angriffsziele(partie: EilandPartie, sitz: number): number[] {
+  const { spalten, zeilen } = partie.regeln;
+  const raus = new Set<number>();
+  for (let platz = 0; platz < partie.besitzer.length; platz++) {
+    if (partie.besitzer[platz] !== sitz) continue;
+    const eigene = stufe(partie.besitzer, platz, spalten, zeilen) ?? 0;
+    for (const n of nachbarn(platz, spalten, zeilen)) {
+      const wem = partie.besitzer[n];
+      if (wem === null || wem === sitz) continue;
+      const fremde = stufe(partie.besitzer, n, spalten, zeilen) ?? 0;
+      if (fremde < eigene) raus.add(n);
+    }
+  }
+  return [...raus].sort((a, b) => a - b);
+}
+
+/** Die Heimat jedes Sitzes: seine Startecke. Faellt sie, ist die Partie aus. */
+export function heimat(partie: EilandPartie): Record<number, number> {
+  const { spalten, zeilen } = partie.regeln;
+  const raus: Record<number, number> = {};
+  for (const sitz of sitzeVon(partie)) raus[sitz] = startEcke(sitz, spalten, zeilen);
+  return raus;
+}
+
+/** Sitze, deren Heimat nicht mehr ihnen gehoert. */
+export function gefallene(partie: EilandPartie): number[] {
+  const ecken = heimat(partie);
+  return sitzeVon(partie).filter((sitz) => partie.besitzer[ecken[sitz]!] !== sitz);
+}
+
+/**
  * Hat dieser Sitz seinen Zettel abgegeben?
  *
  * Zwei Wege fuehren dahin: Er hat abgegeben, oder es gibt fuer ihn nichts
- * mehr zu waehlen. Der zweite ist der wichtige — ohne ihn bliebe ein
- * eingekesselter Spieler ewig "am Zug", und die Partie stuende still, obwohl
- * der andere noch Land vor sich hat.
+ * mehr zu waehlen — kein freies Feld und kein Angriff. Der zweite ist der
+ * wichtige: Ohne ihn bliebe ein eingekesselter Spieler ewig "am Zug", und die
+ * Partie stuende still, obwohl der andere noch Land vor sich hat.
  */
 export function istBereit(partie: EilandPartie, sitz: number): boolean {
   if (partie.bereit[sitz]) return true;
-  return waehlbare(partie, sitz).length === 0;
+  return waehlbare(partie, sitz).length === 0 && angreifbare(partie, sitz).length === 0;
 }
 
 /**
@@ -481,7 +620,9 @@ export function erlaubteZuege(_partie: EilandPartie, _sitz: number): EilandAktio
  */
 function pruefeWahl(partie: EilandPartie, sitz: number, felder: readonly number[]): void {
   if (felder.length > kontingent(partie, sitz)) throw new Error('Zu viele Felder');
+  const ziele = new Set<number>(angriffsziele(partie, sitz));
   const gesehen = new Set<number>();
+  const frei: number[] = [];
   for (const platz of felder) {
     if (!Number.isInteger(platz) || platz < 0 || platz >= partie.gelaende.length) {
       throw new Error('Feld gibt es nicht');
@@ -489,17 +630,29 @@ function pruefeWahl(partie: EilandPartie, sitz: number, felder: readonly number[
     if (gesehen.has(platz)) throw new Error('Feld doppelt gewaehlt');
     gesehen.add(platz);
     if (partie.gelaende[platz] !== GRAS) throw new Error('Kein Grasland');
-    if (partie.besitzer[platz] !== null) throw new Error('Feld gehoert schon jemandem');
+    const wem = partie.besitzer[platz];
+    if (wem === sitz) throw new Error('Feld gehoert schon dir');
+    if (wem !== null) {
+      // Fremdes Land geht nur als Angriff — und nur mit der hoeheren Stufe.
+      if (!ziele.has(platz)) throw new Error('Feld laesst sich nicht angreifen');
+      continue;
+    }
+    frei.push(platz);
   }
 
   /*
-   * Zusammenhang: Jedes gewaehlte Feld muss vom eigenen Gebiet aus ueber
-   * gewaehlte Felder erreichbar sein. Geprueft wird als Ganzes und nicht in
-   * der Tippreihenfolge — sonst waere eine Auswahl je nach Reihenfolge der
+   * Zusammenhang: Jedes gewaehlte FREIE Feld muss vom eigenen Gebiet aus ueber
+   * gewaehlte freie Felder erreichbar sein. Geprueft wird als Ganzes und nicht
+   * in der Tippreihenfolge — sonst waere eine Auswahl je nach Reihenfolge der
    * Tipps mal gueltig und mal nicht, obwohl am Ende dasselbe dasteht.
+   *
+   * Angegriffene Felder zaehlen dabei nicht als Weg: Ein Angriff ist ein Ziel
+   * und kein Sprungbrett. Sonst liesse sich in einer Runde ein fremdes Feld
+   * nehmen UND das freie Land dahinter, und der Angriff waere ein Durchbruch
+   * statt eines Feldes.
    */
   const { spalten, zeilen } = partie.regeln;
-  const offen = new Set<number>(felder);
+  const offen = new Set<number>(frei);
   const rand: number[] = [];
   for (let platz = 0; platz < partie.besitzer.length; platz++) {
     if (partie.besitzer[platz] === sitz) rand.push(platz);
@@ -662,20 +815,47 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
   const punkte = { ...partie.punkte };
   const gesammelt = { ...partie.gesammelt };
   const genommen: Record<number, number[]> = {};
+  const erobert: Record<number, number[]> = {};
   const verfallen: Record<number, number[]> = {};
   const ornamenteRunde: Record<number, number> = {};
   let wechsel = 0;
+  let landGenommen = false;
 
   for (const sitz of sitze) {
     const zugesprochen = zuteilung.get(sitz) ?? [];
+    /*
+     * Erreichbar nach dem Stand VOR der Runde — fuer beide Sitze derselbe.
+     * Nimmt Sitz 0 ein Feld von Sitz 1 und Sitz 1 zugleich das Feld, von dem
+     * aus Sitz 0 angriff, gelingt beides: Angriffe sind gleichzeitig wie alles
+     * andere hier, und wer zuerst gerechnet wird, darf keinen Unterschied
+     * machen.
+     */
     const erreichbar = erreichbareFelder(partie.besitzer, zugesprochen, sitz, spalten, zeilen);
-    genommen[sitz] = erreichbar;
+    genommen[sitz] = erreichbar.filter((p) => partie.besitzer[p] === null);
+    erobert[sitz] = erreichbar.filter((p) => partie.besitzer[p] !== null);
     verfallen[sitz] = zugesprochen.filter((p) => !erreichbar.includes(p));
     ornamenteRunde[sitz] = 0;
     for (const platz of erreichbar) {
+      const vorher = partie.besitzer[platz];
       besitzer[platz] = sitz;
       punkte[sitz] = (punkte[sitz] ?? 0) + 1;
       wechsel++;
+      if (vorher !== null && vorher !== undefined) {
+        punkte[vorher] = (punkte[vorher] ?? 1) - 1;
+        /*
+         * Ein Bauwerk wechselt mit dem Feld den Besitzer — samt dem Feld mehr
+         * je Runde, das es bringt. So bleibt wahr, was man am Brett abzaehlt:
+         * Die Bauwerke auf meinem Land SIND mein Kontingent. Und ein Angriff
+         * hat damit ein lohnendes Ziel, nicht nur ein Feld.
+         */
+        const bau = bauwerk[platz];
+        if (bau !== null && bau !== undefined) {
+          gesammelt[vorher] = Math.max(0, (gesammelt[vorher] ?? 0) - 1);
+          gesammelt[sitz] = (gesammelt[sitz] ?? 0) + 1;
+        }
+        continue;
+      }
+      landGenommen = true;
       const zier = ornament[platz];
       if (zier !== null && zier !== undefined) {
         // Von der einen Liste in die andere: Das Ornament ist eingesammelt
@@ -717,6 +897,10 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
   }
 
   const leerrunden = wechsel > 0 ? 0 : partie.leerrunden + 1;
+  const kampfrunden = landGenommen ? 0 : partie.kampfrunden + 1;
+  const jetzt = stellung(besitzer);
+  const stellungen = landGenommen ? [jetzt] : [...partie.stellungen, jetzt];
+  const wiederholt = stellungen.filter((s) => s === jetzt).length >= WIEDERHOLUNGEN_MAX;
 
   const naechste: EilandPartie = {
     ...partie,
@@ -731,23 +915,39 @@ function loeseAuf(partie: EilandPartie): EilandPartie {
     bereit,
     runde: partie.runde + 1,
     leerrunden,
+    kampfrunden,
+    stellungen,
     letzte: {
       runde: partie.runde,
       kaempfe,
       reserve: reserveVorher,
       genommen,
+      erobert,
       verfallen,
       ornamente: ornamenteRunde,
     },
   };
 
   /*
-   * Zu Ende ist es, wenn niemand mehr irgendwo hin kann. Das ist der
-   * Normalfall und die einzige Bedingung, die man am Brett auch sieht: Was
-   * frei geblieben ist, ist von keinem Gebiet aus zu erreichen.
+   * Zu Ende ist es auf vier Wegen. Der erste ist der Sieg: Eine Heimat ist
+   * gefallen (siehe platzierungen — wer sie noch hat, steht vorn, egal wie
+   * viel Land der andere haelt). Der zweite ist der Normalfall: Niemand kann
+   * mehr irgendwo hin, weder auf freies Land noch auf fremdes. Der dritte
+   * ist die Stellungswiederholung, der vierte sind die beiden Notbremsen.
    */
-  const keinerKann = sitze.every((sitz) => waehlbare(naechste, sitz).length === 0);
-  return { ...naechste, fertig: keinerKann || leerrunden >= LEERRUNDEN_MAX };
+  const heimatGefallen = gefallene(naechste).length > 0;
+  const keinerKann = sitze.every(
+    (sitz) => waehlbare(naechste, sitz).length === 0 && angreifbare(naechste, sitz).length === 0,
+  );
+  return {
+    ...naechste,
+    fertig:
+      heimatGefallen ||
+      keinerKann ||
+      wiederholt ||
+      leerrunden >= LEERRUNDEN_MAX ||
+      kampfrunden >= KAMPFRUNDEN_MAX,
+  };
 }
 
 /**
@@ -778,7 +978,9 @@ function erreichbareFelder(
       if (!offen.has(n)) continue;
       offen.delete(n);
       erreicht.push(n);
-      rand.push(n);
+      // Ein erobertes Feld ist ein Ziel, kein Weg (siehe pruefeWahl): Was
+      // dahinter liegt, muss ueber freie Felder erreichbar sein.
+      if (besitzer[n] === null) rand.push(n);
     }
   }
   return erreicht.sort((a, b) => a - b);
@@ -796,29 +998,38 @@ export function markiereVerlassen(partie: EilandPartie, sitz: number): EilandPar
 /**
  * Platzierungen.
  *
+ * Zuerst zaehlt die Heimat: Wer seine Startecke noch hat, steht vor jedem,
+ * der sie verloren hat — auch mit weniger Land. Das ist die Siegbedingung
+ * seit dem 5. September, und sie steht HIER und nicht als eigener Merker im
+ * Zustand, damit `points` (das Land) unveraendert die Erfahrungspunkte
+ * tragen kann. Erst danach entscheidet das Land.
+ *
  * Gleichstand ergibt zweimal Platz 1. Anders als bei einem Kartenspiel ist das
  * hier ein realistischer Ausgang: Auf einer punktsymmetrischen Karte koennen
- * zwei gleich gute Spieler tatsaechlich gleich viel Land halten.
+ * zwei gleich gute Spieler tatsaechlich gleich viel Land halten — und wenn
+ * beide in derselben Runde die Heimat des anderen nehmen, sind beide gefallen.
  */
 export function platzierungen(
   partie: EilandPartie,
 ): { seat: number; points: number; place: number; left: boolean }[] {
+  const gefallen = new Set(gefallene(partie));
   const reihe = sitzeVon(partie)
     .map((seat) => ({
       seat,
       points: partie.punkte[seat] ?? 0,
       left: partie.leftSeats.includes(seat),
+      steht: !gefallen.has(seat),
     }))
-    .sort((a, b) => b.points - a.points);
+    .sort((a, b) => Number(b.steht) - Number(a.steht) || b.points - a.points);
 
   let platz = 0;
-  let letztePunkte: number | null = null;
+  let vorher: { steht: boolean; points: number } | null = null;
   return reihe.map((eintrag, index) => {
-    if (letztePunkte === null || eintrag.points !== letztePunkte) {
+    if (vorher === null || eintrag.steht !== vorher.steht || eintrag.points !== vorher.points) {
       platz = index + 1;
-      letztePunkte = eintrag.points;
+      vorher = eintrag;
     }
-    return { ...eintrag, place: platz };
+    return { seat: eintrag.seat, points: eintrag.points, left: eintrag.left, place: platz };
   });
 }
 
@@ -827,5 +1038,5 @@ export function sieger(partie: EilandPartie): number | null {
   if (!partie.fertig) return null;
   const [erster, zweiter] = platzierungen(partie);
   if (!erster || !zweiter) return null;
-  return erster.points === zweiter.points ? null : erster.seat;
+  return erster.place === zweiter.place ? null : erster.seat;
 }
