@@ -92,6 +92,43 @@ Magier liefen vorher in 0,10 % bzw. 0,06 % der Fälle, jetzt ausnahmslos. Ihr
 Startabstand ist von 2 auf 6 gestiegen, und **kein einziger Kampf beginnt mehr
 in Kontakt**.
 
+### Nachtrag vom selben Tag: die Aufstellung des Bots
+
+Die Tabelle oben ist mit der damaligen Bot-Aufstellung gemessen — Wachen und
+Meuchler in Reihe 0, alles andere in Reihe 3. **Genau diese Aufstellung ist am
+06.09.2026 ersetzt worden** (`STANDARD_TIEFEN` in `bot.ts`, Werkzeug
+`werkzeug/aufstellung.mjs`): Der Bot stellt jetzt einen geschlossenen Block in
+die beiden **mittleren** Reihen — Wachen in Reihe 1, alles andere in Reihe 2.
+Der Grund steht bei `STANDARD_TIEFEN` und hat mit Laufwegen nichts zu tun;
+das Auseinanderziehen über die ganze Tiefe kostete Kämpfe.
+
+Für diese Untersuchung ist wichtig, dass es **nichts zurücknimmt**. Beide
+Zeilen sind mit derselben Saatbasis und demselben Werkzeug gemessen, je 2.000
+Partien zu viert und rund 35.000 Kämpfe:
+
+| Zahl | alte Aufstellung | **neue Aufstellung** |
+| --- | ---: | ---: |
+| Bewegungen je Kampf, Mittel | 13,00 | **14,17** |
+| Bewegungen je Treffer | 0,135 | **0,149** |
+| Schritte je Einheit und Kampf | 2,47 | **2,70** |
+| Einheiten, die überhaupt einmal laufen | 100,0 % | **100,0 %** |
+| Einheiten, die schon im Start in Reichweite stehen | 0,0 % | **0,0 %** |
+| Kampfdauer, Median | 14,9 s | 14,9 s |
+| von der Uhr entschiedene Kämpfe | 1,8 % | **2,9 %** |
+
+Es wird also eher **mehr** gelaufen als vorher. Der Startabstand der
+Fernkämpfer bleibt bei 6, weil der Block eine Reihe zurückgesetzt steht; die
+Wachen laufen mit Startabstand 5 statt 3 sogar deutlich weiter (Median 3
+Schritte statt 1).
+
+**Eine Zahl geht in die falsche Richtung**, und sie steht hier, damit sie
+nicht verlorengeht: Von der Uhr entschiedene Kämpfe steigen von 1,8 % auf
+2,9 % (mit der Saatbasis der Ausgewogenheitsmessung 1,7 % auf 2,7 % — dieselbe
+Größenordnung). Ein längerer Anmarsch heißt eben auch, dass ein zäher Kampf
+öfter in `HOECHSTDAUER_MS` läuft. Das ist der Preis, und ob er zu hoch ist,
+hängt an einer Entscheidung, die ohnehin offen ist (Board-Karte
+„HOECHSTDAUER_MS von 45 s auf 30 s senken?").
+
 ---
 
 ## 2. Die Beobachtung, die dazu geführt hat

@@ -115,10 +115,14 @@ export function arenaAbstand(a: number, b: number): number {
  *
  * Seite 0 rutscht hinter Haelfte und Luecke nach unten, Seite 1 wird
  * punktgespiegelt. Damit liegt bei BEIDEN die eigene Reihe 0 an der Luecke:
- * Reihe 0 ist die vorderste Reihe, in der man seine Wachen aufstellt, Reihe 3
- * die hinterste fuer Schuetzen und Magier. Das gilt fuer beide Spieler gleich
- * — eine Aufstellung wirkt nicht anders, je nachdem, auf welcher Seite man
- * steht.
+ * Sie ist die vorderste Reihe, Reihe 3 die hinterste. Das gilt fuer beide
+ * Spieler gleich — eine Aufstellung wirkt nicht anders, je nachdem, auf
+ * welcher Seite man steht.
+ *
+ * WELCHE ROLLE WOHIN GEHOERT, steht hier ausdruecklich NICHT: Das ist eine
+ * Frage der Strategie und keine der Geometrie. Der Bot beantwortet sie in
+ * `STANDARD_TIEFEN` (bot.ts), gemessen und mit anderer Antwort als noch am
+ * 06.09.2026; ein Mensch beantwortet sie selbst.
  */
 export function nachArena(brettPlatz: number, seite: Seite): number {
   const reihe = Math.floor(brettPlatz / BRETT_SPALTEN);

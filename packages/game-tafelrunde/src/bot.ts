@@ -21,10 +21,14 @@
  *      Paare, die Synergien der Marken und die Staerke. In die geht seit dem
  *      05.09.2026 auch die REICHWEITE ein, aber nur so weit, wie das eigene
  *      Heer eine Vorderreihe hat (`deckungIm`).
- *   2. AUFSTELLEN NACH ROLLE — Wachen und Meuchler nach vorn, Schuetzen,
- *      Magier und Beistand nach hinten, Meuchler zusaetzlich an den Rand.
- *      WELCHE aufgestellt wird, entscheidet seit dem 05.09.2026 das ganze
- *      Brett und nicht die staerkste Einzelne (siehe `heerStaerke`).
+ *   2. AUFSTELLEN NACH ROLLE — ein geschlossener Block in den mittleren
+ *      Reihen: Wachen voran, alles andere eine Reihe dahinter, Meuchler
+ *      zusaetzlich an den Rand. Bis zum 06.09.2026 stand das Heer stattdessen
+ *      auf vorderster und hinterster Reihe verteilt; warum das die zweit-
+ *      schlechteste von 384 geprueften Tabellen war, steht bei
+ *      STANDARD_TIEFEN. WELCHE Einheit aufgestellt wird, entscheidet seit dem
+ *      05.09.2026 das ganze Brett und nicht die staerkste Einzelne (siehe
+ *      `heerStaerke`).
  *   3. AUFSTIEG BEI VOLLEM BRETT — ein Feldplatz nuetzt nur, wenn etwas
  *      darauf steht.
  *   4. NEU-WUERFELN NUR BEI FREMDEM LADEN — wenn das Brett voll ist, kein
@@ -56,6 +60,7 @@ import type { EigeneSicht, TafelrundeSicht } from './sicht.js';
 import {
   type EinheitId,
   type Marke,
+  type Rolle,
   type Wertebonus,
   KEIN_BONUS,
   einheit,
@@ -78,6 +83,81 @@ import { baueZufall } from './zufall.js';
  * Snapshot und in jedem Konfigurationsformular.
  */
 export type Schwierigkeit = 'sanft' | 'normal' | 'hart';
+
+/**
+ * Wie viele Reihen hinter der vordersten eine Rolle stehen will.
+ *
+ * Die Zahl zaehlt von VORN (Reihe 0 an der Mittellinie) und nicht von hinten,
+ * und das ist kein Geschmack, sondern die Lehre aus dem 06.09.2026: Die Tiefe
+ * einer Bretthaelfte ist an dem Tag von zwei auf vier Reihen gewachsen, und
+ * weil die alte Regel "in die hinterste Reihe" lautete, ist jede Rolle
+ * lautlos mitgewandert — aus einer Reihe Abstand wurden drei, und das hat
+ * gekostet (siehe STANDARD_TIEFEN). Von vorn gezaehlt bleibt eine Tabelle
+ * dort stehen, wo sie gemessen wurde.
+ *
+ * Eine Tiefe, die groesser ist als das Brett, klemmt `wunschReihe` auf die
+ * letzte Reihe ab. Das ist eine Notbremse fuer ein flacheres Brett und keine
+ * zweite Aufstellung: Auf zwei Reihen faellt der Block dieser Tabelle auf
+ * eine einzige zusammen, und wer je wieder ein flacheres Brett baut, misst
+ * neu (`werkzeug/aufstellung.mjs`).
+ */
+export type Tiefen = Readonly<Record<Rolle, number>>;
+
+/**
+ * Wo jede Rolle stehen will: ein GESCHLOSSENER BLOCK in den mittleren Reihen.
+ *
+ * BIS ZUM 06.09.2026 GAB ES NUR VORN UND HINTEN — `wache` und `meuchler` in
+ * Reihe 0, alles andere in die hinterste. Auf zwei Reihen war das die ganze
+ * Wahrheit. Seit vier Reihen je Haelfte war es ein Fehler, und zwar kein
+ * kleiner: Gemessen ueber 4.280 aufgestellte Einheiten standen 100 % der
+ * Wachen und Meuchler in Reihe 0 und 100 % der uebrigen in Reihe 3, die
+ * beiden mittleren Reihen bekamen 0,0 %. Zwischen den Haelften liegen
+ * ausserdem zwei leere Reihen (`ARENA_LUECKE`), das Heer stand also mit drei
+ * Feldern Abstand zwischen seiner eigenen Front und seinem eigenen Rueckraum.
+ *
+ * WAS DAS KOSTET, steht in `werkzeug/aufstellung.mjs`: Dieselben Heere,
+ * einmal so und einmal anders aufgestellt, gegeneinander. Von 384 geprueften
+ * Tabellen war die alte die 377. — sie gewinnt 26,5 % ihrer Kaempfe. Der
+ * Grund ist nicht die fehlende Staffelung, sondern der ABSTAND: Ein Heer, das
+ * ueber die ganze Tiefe auseinandergezogen ist, kaempft als zwei getrennte
+ * Haufen. Die Vorderreihe steht schon im Nahkampf, waehrend die Fernkaempfer
+ * noch drei Schritte hinterherlaufen; ein Beistand mit Reichweite 2 kann aus
+ * Reihe 3 seine eigene Reihe 0 (Abstand 3) ueberhaupt nicht heilen.
+ *
+ * GEMESSEN, WELCHE FORM GEWINNT (je 1.200 Heere, jede Paarung zweimal mit
+ * getauschten Seiten, Anteil gewonnener Kaempfe im Rundenturnier):
+ *
+ *     eng, Block in Reihe 1+2 (diese Tabelle)   64,3 %
+ *     eng, Block in Reihe 0+1                   59,0 %
+ *     eng, Block in Reihe 2+3                   58,6 %
+ *     weit, Front 0, Rest 2                     53,9 %
+ *     flach, alle in einer Reihe                44,1 – 46,7 %
+ *     weit, Front 0, Rest 3 (alter Stand)       33,9 %
+ *
+ * ENG SCHLAEGT WEIT, und die TIEFE des Blocks ist fast gleichgueltig (Reihe
+ * 0+1 gegen Reihe 2+3 steht 50,0 %). Die Mitte gewinnt trotzdem knapp, und
+ * zwar aus einem Grund, den man der Tabelle nicht ansieht: Ist eine Reihe
+ * voll, weicht `bestesFeld` in die Nachbarreihe aus — in der Mitte nach
+ * beiden Seiten, am Rand des Bretts nur nach einer.
+ *
+ * WARUM NICHT REIHE 0+1, obwohl das naeher am alten Stand waere: Dort steht
+ * ein Fernkaempfer 4 Felder vom Gegner entfernt, ein Sturmrufer (Reichweite 4)
+ * also schon zu Beginn im Ziel. Gemessen laufen dann 20 % der Schuetzen und
+ * 23 % der Magier keinen einzigen Schritt mehr — genau der Zustand, den die
+ * Arena-Luecke am 06.09.2026 abgeschafft hat (docs/TAFELRUNDE-LAUFWEGE.md).
+ * Aus Reihe 2 sind es 5 Felder, und es laeuft weiter jede Einheit.
+ *
+ * AM TISCH GEMESSEN (`werkzeug/aufstellung.mjs`, je 3.000 Partien zu viert
+ * gegen den alten Stand, drei Saatbasen): +108, +111 und +74 Siege. Der
+ * Standardfehler liegt bei rund 24 — das ist kein Rauschen.
+ */
+export const STANDARD_TIEFEN: Tiefen = {
+  wache: 1,
+  meuchler: 2,
+  beistand: 2,
+  schuetze: 2,
+  magier: 2,
+};
 
 export interface Gangart {
   /**
@@ -135,6 +215,17 @@ export interface Gangart {
    * Nur der sanfte Gegner darf sie verpassen.
    */
   readonly nimmtVerschmelzungImmer: boolean;
+  /**
+   * Wo jede Rolle auf dem Brett stehen will — siehe STANDARD_TIEFEN.
+   *
+   * Alle drei Gangarten teilen sich dieselbe Tabelle, und das ist Absicht: Ein
+   * sanfter Gegner soll schlechter WAEHLEN und nicht falsch STEHEN (siehe
+   * `patzerQuote`). Die Tabelle steht trotzdem hier und nicht als Konstante in
+   * `platzStrafe`, weil sie sonst nicht messbar waere — `werkzeug/
+   * aufstellung.mjs` setzt genau dieses Feld um und rechnet einen Vorschlag
+   * durch, ohne dass jemand bot.ts anfasst und neu baut.
+   */
+  readonly tiefen: Tiefen;
 }
 
 /**
@@ -275,6 +366,7 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     wuerfeltNeu: false,
     patzerQuote: 0.75,
     nimmtVerschmelzungImmer: false,
+    tiefen: STANDARD_TIEFEN,
   },
   normal: {
     polster: 4,
@@ -283,6 +375,7 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     wuerfeltNeu: true,
     patzerQuote: 0.15,
     nimmtVerschmelzungImmer: true,
+    tiefen: STANDARD_TIEFEN,
   },
   hart: {
     polster: 2,
@@ -291,6 +384,7 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     wuerfeltNeu: true,
     patzerQuote: 0,
     nimmtVerschmelzungImmer: true,
+    tiefen: STANDARD_TIEFEN,
   },
 };
 
@@ -605,41 +699,58 @@ const REIHEN_GEWICHT = 10;
 /** Und ein Meuchler in der Mitte schwerer als eine Wache neben der Mitte. */
 const RAND_GEWICHT = 2;
 
+/** Die Wunschreihe einer Rolle auf einem Brett dieser Tiefe. */
+function wunschReihe(rolle: Rolle, tiefen: Tiefen, reihen: number): number {
+  return Math.min(tiefen[rolle], reihen - 1);
+}
+
 /**
  * Wie schlecht dieser Platz fuer diese Einheit ist. Null ist ideal.
  *
- * Die Rolle steht im Katalog, die Vorlieben sind die des Kampfes:
+ * WELCHE Reihe eine Rolle will, steht in STANDARD_TIEFEN und ist gemessen.
+ * Hier steht nur, wie eine Abweichung davon gewichtet wird — und was die
+ * SPALTE dazu beitraegt:
  *
- *   - `wache` nach vorn und in die Mitte. Sie soll zuerst getroffen werden,
- *     und in der Mitte deckt sie mehr Nachbarfelder (Sechseckraster, sechs
- *     Nachbarn statt vier).
- *   - `schuetze`, `magier`, `beistand` nach hinten und in die Mitte. Alle drei
- *     haben Reichweite 2 bis 4 und wenig Leben; vorn sterben sie, bevor sie
- *     zweimal geschossen haben. Der Beistand steht ausdruecklich dabei,
- *     obwohl die Aufgabe ihn nicht nennt: Mit Reichweite 2 und dem niedrigsten
- *     Angriff des Katalogs gehoert er nirgendwo anders hin.
- *   - `meuchler` nach vorn an den RAND. Er hat Reichweite 1 und das hoechste
- *     Tempo; am Rand laeuft er an der gegnerischen Front vorbei, statt sich in
- *     ihr festzubeissen.
+ *   - `meuchler` an den RAND. Er hat Reichweite 1 und das hoechste Tempo; am
+ *     Rand laeuft er an der gegnerischen Front vorbei, statt sich in ihr
+ *     festzubeissen.
+ *   - alle uebrigen zur MITTE. Ein Sechseckfeld in der Mitte hat sechs
+ *     Nachbarn und am Rand vier — wer mittig steht, deckt mehr und wird von
+ *     mehr gedeckt.
+ *
+ * Gemessen wird der ABSTAND zur Wunschreihe und nicht der Weg zu einem der
+ * beiden Raender. Der Betrag ist nicht schmueckend, sondern noetig, seit eine
+ * Wunschreihe mittendrin liegen darf: Ohne ihn waere Reihe 3 fuer eine Rolle
+ * mit Wunschreihe 2 genauso gut wie Reihe 1.
  *
  * `reihen` und `spalten` kommen aus der Sicht und nicht aus brett.ts: Die
  * beiden Zahlen stehen dort, damit niemand sie nachbaut — auch der Bot nicht.
+ *
+ * EXPORTIERT, OBWOHL SIE NIEMAND IM MODUL BRAUCHT: `werkzeug/aufstellung.mjs`
+ * misst genau diese Regel und muesste sie sonst nachbilden. Eine zweite
+ * Fassung im Messwerkzeug waere der sichere Weg zu zwei Zahlen fuer dieselbe
+ * Frage — und dann glaubt man der, die einem besser gefaellt. In `index.ts`
+ * steht sie deshalb NICHT: Sie ist kein Teil der Modulschnittstelle, sondern
+ * der Stand, gegen den gemessen wird (wie GANGARTEN, siehe gangarten.mjs).
  */
-function platzStrafe(k: Kaempfer, platz: number, reihen: number, spalten: number): number {
+export function platzStrafe(
+  k: Kaempfer,
+  platz: number,
+  reihen: number,
+  spalten: number,
+  tiefen: Tiefen,
+): number {
   const reihe = Math.floor(platz / spalten);
   const spalte = platz % spalten;
-  const nachHinten = reihen - 1 - reihe;
   const zurMitte = Math.abs(spalte - (spalten - 1) / 2);
   const zumRand = Math.min(spalte, spalten - 1 - spalte);
 
-  switch (einheit(k.id).rolle) {
-    case 'wache':
-      return REIHEN_GEWICHT * (reihe - VORDERSTE_REIHE) + zurMitte;
-    case 'meuchler':
-      return REIHEN_GEWICHT * (reihe - VORDERSTE_REIHE) + RAND_GEWICHT * zumRand;
-    default:
-      return REIHEN_GEWICHT * nachHinten + zurMitte;
-  }
+  const rolle = einheit(k.id).rolle;
+  const wunsch = wunschReihe(rolle, tiefen, reihen);
+  const abstand = Math.abs(reihe - VORDERSTE_REIHE - wunsch);
+
+  if (rolle === 'meuchler') return REIHEN_GEWICHT * abstand + RAND_GEWICHT * zumRand;
+  return REIHEN_GEWICHT * abstand + zurMitte;
 }
 
 /** Der beste freie Platz fuer diese Einheit; bei Gleichstand der kleinste. */
@@ -648,11 +759,12 @@ function bestesFeld(
   freie: readonly number[],
   reihen: number,
   spalten: number,
+  tiefen: Tiefen,
 ): number {
   let bester = freie[0]!;
-  let beste = platzStrafe(k, bester, reihen, spalten);
+  let beste = platzStrafe(k, bester, reihen, spalten, tiefen);
   for (const platz of freie) {
-    const strafe = platzStrafe(k, platz, reihen, spalten);
+    const strafe = platzStrafe(k, platz, reihen, spalten, tiefen);
     if (strafe < beste) {
       bester = platz;
       beste = strafe;
@@ -731,9 +843,14 @@ function besterTausch(
  * der Bot zwei gleich gute Einheiten bis zum Zeitablauf hin und her, und die
  * Runde endete nie.
  */
-function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAktion | null {
+function stellungsZug(
+  sicht: TafelrundeSicht,
+  eigen: EigeneSicht,
+  gangart: Gangart,
+): TafelrundeAktion | null {
   const reihen = sicht.brettReihen;
   const spalten = sicht.brettSpalten;
+  const tiefen = gangart.tiefen;
 
   const freie: number[] = [];
   const stehen: Stelle[] = [];
@@ -769,7 +886,7 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
     return {
       typ: 'verschieben',
       von: { bereich: 'bank', platz: beste.platz },
-      nach: { bereich: 'brett', platz: bestesFeld(beste.k, freie, reihen, spalten) },
+      nach: { bereich: 'brett', platz: bestesFeld(beste.k, freie, reihen, spalten, tiefen) },
     };
   }
 
@@ -792,7 +909,7 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
   // c) Umstellen: erst der Umzug auf ein freies Feld, dann der Tausch zweier
   //    Einheiten. Beides bewegt nur, was schon steht — die Belegung bleibt.
   for (const { platz, k } of stehen) {
-    const jetzt = platzStrafe(k, platz, reihen, spalten);
+    const jetzt = platzStrafe(k, platz, reihen, spalten, tiefen);
     if (freie.length === 0) break;
     /*
      * Auf das BESTE freie Feld und nicht auf das erstbeste bessere.
@@ -811,8 +928,8 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
      * 17 statt 23. Der Bot stellt dasselbe auf, nur in einem Zug statt in
      * dreien.
      */
-    const bestes = bestesFeld(k, freie, reihen, spalten);
-    if (platzStrafe(k, bestes, reihen, spalten) < jetzt) {
+    const bestes = bestesFeld(k, freie, reihen, spalten, tiefen);
+    if (platzStrafe(k, bestes, reihen, spalten, tiefen) < jetzt) {
       return {
         typ: 'verschieben',
         von: { bereich: 'brett', platz },
@@ -824,11 +941,11 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
     for (const zwei of stehen) {
       if (zwei.platz <= eins.platz) continue;
       const vorher =
-        platzStrafe(eins.k, eins.platz, reihen, spalten) +
-        platzStrafe(zwei.k, zwei.platz, reihen, spalten);
+        platzStrafe(eins.k, eins.platz, reihen, spalten, tiefen) +
+        platzStrafe(zwei.k, zwei.platz, reihen, spalten, tiefen);
       const nachher =
-        platzStrafe(eins.k, zwei.platz, reihen, spalten) +
-        platzStrafe(zwei.k, eins.platz, reihen, spalten);
+        platzStrafe(eins.k, zwei.platz, reihen, spalten, tiefen) +
+        platzStrafe(zwei.k, eins.platz, reihen, spalten, tiefen);
       if (nachher < vorher) {
         return {
           typ: 'verschieben',
@@ -1199,7 +1316,7 @@ export function botZug(
 
   const gangart = typeof wahl === 'string' ? GANGARTEN[wahl] : wahl;
   return (
-    stellungsZug(sicht, eigen) ??
+    stellungsZug(sicht, eigen, gangart) ??
     aufstiegsZug(eigen, gangart) ??
     wuerfelZug(sicht, eigen, gangart) ??
     kaufZug(sicht, eigen, gangart) ?? { typ: 'bereit' }

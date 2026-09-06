@@ -126,6 +126,23 @@ dazu die Client-Tests (41 Dateien, 464 Tests), alle grün. `tsc --noEmit` sauber
 > weiter allein über ihre Werte; das ist Absicht und keine halbe Arbeit
 > (Begründung im Kopf von `kampf.ts` und bei `Rolle` in `katalog.ts`).
 >
+> **Der Bot stellt seit dem 06.09.2026 einen geschlossenen Block auf**, und
+> zwar in den beiden **mittleren** Reihen: Wachen in Reihe 1, alles andere in
+> Reihe 2, Meuchler dort am Rand (`STANDARD_TIEFEN` in `bot.ts`). Vorher stand
+> er auf Reihe 0 und Reihe 3 — eine Regel vom **zweireihigen** Brett, die den
+> Vieren nicht mehr passte: Zwischen eigener Front und eigenem Rückraum lagen
+> drei Felder, das Heer kämpfte als zwei getrennte Haufen, und ein Beistand
+> mit Reichweite 2 konnte seine eigene Vorderreihe gar nicht heilen. Von 384
+> geprüften Tabellen war die alte die **377.** Neues Werkzeug dafür:
+> `werkzeug/aufstellung.mjs` — Reihenverteilung, Duell derselben Heere auf
+> Kampfebene und Partiemessung mit Kontrolllauf, alles über `--tiefe rolle=n`
+> ohne Eingriff in `bot.ts`. Am Tisch bringt der Wechsel +108 / +111 / +74
+> Siege je 3.000 Partien (drei Saatbasen, Standardfehler rund 24). Die
+> Ausgewogenheit verschiebt er **kaum** (Spanne ×0,54–×1,54 → ×0,57–×1,56),
+> gelaufen wird eher mehr als vorher; die eine Zahl, die steigt, sind Kämpfe
+> an der Höchstdauer (1,7 % → 2,7 %). Zahlen in
+> `docs/spiele/auto-battler-konzept.md` und `docs/TAFELRUNDE-LAUFWEGE.md`.
+>
 > **Das Monokultur-Turnier ist kein Wegwerf-Werkzeug mehr:**
 > `packages/game-tafelrunde/werkzeug/turnier.mjs` (Kern `test/turnier.ts`).
 > Es beantwortet, was `ausgewogenheit.mjs` nicht kann — wie eine Einheit im

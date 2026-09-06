@@ -80,13 +80,14 @@ export const KOPIEN_HOECHSTZAHL = BRETT_SPALTEN;
 /**
  * Wo die Kopien stehen: Reichweite 1 nach vorn, alles andere nach hinten.
  *
- * Das ist die Regel, nach der auch der Bot stellt (`platzStrafe` in bot.ts:
- * Wache und Meuchler in die vorderste Reihe, Schuetze, Magier und Beistand in
- * die hinterste). Sie wird hier NICHT aus bot.ts geholt, sondern nachgebildet
- * — mit Absicht: Das Turnier soll den KATALOG messen und nicht den Bot, sonst
+ * Sie wird NICHT aus bot.ts geholt, sondern eigens hingeschrieben — mit
+ * Absicht: Das Turnier soll den KATALOG messen und nicht den Bot, sonst
  * verschoebe jede Aenderung an der Bot-Stellung die Tabelle, ohne dass sich
- * an einer Einheit etwas geaendert haette. Gemessen wird nach `reichweite`
- * und nicht nach `rolle`, weil die Stellung eine Frage des Abstands ist.
+ * an einer Einheit etwas geaendert haette. Genau das waere am 06.09.2026
+ * passiert, als der Bot von "vorn und hinten" auf einen geschlossenen Block
+ * in den mittleren Reihen umgestellt wurde (`STANDARD_TIEFEN`): Jede Zeile
+ * dieser Tabelle haette sich mitbewegt. Gemessen wird nach `reichweite` und
+ * nicht nach `rolle`, weil die Stellung eine Frage des Abstands ist.
  *
  * Zentriert, weil ein Sechseckfeld in der Mitte sechs Nachbarn hat und am
  * Rand vier: Am Rand haette eine Rolle, die auf Nachbarn wirkt, weniger

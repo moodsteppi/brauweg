@@ -21,7 +21,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { type Schwierigkeit, botZug } from '../src/bot.js';
+import {
+  type Schwierigkeit,
+  GANGARTEN as GANGART_STAND,
+  STANDARD_TIEFEN,
+  botZug,
+} from '../src/bot.js';
 import {
   BRETT_FELDER,
   BRETT_REIHEN,
@@ -240,7 +245,7 @@ describe('Bot: kaufen', () => {
    */
   function bauVerschmelzung(bank: (Kaempfer | null)[]): TafelrundePartie {
     const brett = leeresBrett();
-    brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
+    brett[platzNummer(STANDARD_TIEFEN.wache, 2)] = { id: 'grimmbart', stufe: 1 };
     return mitHeer(neu(), 0, {
       gold: 1,
       level: 1,
@@ -321,7 +326,7 @@ describe('Bot: kaufen', () => {
    */
   it('nimmt sonst die staerkste bezahlbare Einheit', () => {
     const brett = leeresBrett();
-    brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
+    brett[platzNummer(STANDARD_TIEFEN.wache, 2)] = { id: 'grimmbart', stufe: 1 };
     // Level 9: Dort gibt es keinen Aufstieg mehr, und der steht vor dem Kauf.
     const p = mitHeer(neu(), 0, {
       gold: 3,
@@ -347,7 +352,7 @@ describe('Bot: kaufen', () => {
    */
   function reicherSitz(runde: number, gold: number): TafelrundePartie {
     const brett = leeresBrett();
-    brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
+    brett[platzNummer(STANDARD_TIEFEN.wache, 2)] = { id: 'grimmbart', stufe: 1 };
     return mitHeer({ ...neu(), runde }, 0, {
       gold,
       level: 9,
@@ -391,7 +396,14 @@ describe('Bot: aufstellen', () => {
     return hexfeld(platz).reihe;
   }
 
-  it('stellt Wachen nach vorn, Magier nach hinten und Meuchler an den Rand', () => {
+  /**
+   * Der Block statt zweier Haufen: Die Wache fuehrt, alles andere steht EINE
+   * Reihe dahinter — nicht drei. Geprueft wird gegen STANDARD_TIEFEN und
+   * nicht gegen die Zahlen 1 und 2, damit die Probe die Tabelle absichert und
+   * nicht ihre Abschrift; dass die Tabelle einen Block beschreibt, prueft die
+   * naechste Probe.
+   */
+  it('stellt einen geschlossenen Block: Wache voran, der Rest dahinter', () => {
     const p = mitHeer(neu(), 0, {
       gold: 0,
       level: 3,
@@ -413,13 +425,13 @@ describe('Bot: aufstellen', () => {
       if (k === null) return;
       const art = einheit(k.id);
       if (art.rolle === 'wache') {
-        assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
+        assert.equal(reihe(platz), STANDARD_TIEFEN.wache, `${art.name} fuehrt den Block an`);
       }
       if (art.rolle === 'magier') {
-        assert.equal(reihe(platz), BRETT_REIHEN - 1, `${art.name} gehoert nach hinten`);
+        assert.equal(reihe(platz), STANDARD_TIEFEN.magier, `${art.name} steht dahinter`);
       }
       if (art.rolle === 'meuchler') {
-        assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
+        assert.equal(reihe(platz), STANDARD_TIEFEN.meuchler, `${art.name} steht dahinter`);
         const spalte = hexfeld(platz).spalte;
         assert.ok(
           spalte === 0 || spalte === BRETT_SPALTEN - 1,
@@ -427,6 +439,38 @@ describe('Bot: aufstellen', () => {
         );
       }
     });
+  });
+
+  /**
+   * Die Tabelle beschreibt einen BLOCK und keine zwei Haufen: zwischen der
+   * vordersten und der hintersten Wunschreihe liegt genau eine Reihe.
+   *
+   * Das ist die Zusage, an der die Aenderung vom 06.09.2026 haengt (siehe
+   * STANDARD_TIEFEN): Der alte Stand hatte hier einen Abstand von drei, und
+   * genau daran ist das Heer in zwei Haelften zerfallen. Wer die Tabelle
+   * spaeter wieder auseinanderzieht, soll es hier merken und nicht erst in
+   * einer Ausgewogenheits-Messung.
+   */
+  it('haelt die Wunschreihen als Block beieinander', () => {
+    const tiefen = Object.values(STANDARD_TIEFEN);
+    const spanne = Math.max(...tiefen) - Math.min(...tiefen);
+    assert.equal(spanne, 1, 'hoechstens eine Reihe zwischen vorderster und hinterster Rolle');
+    assert.ok(
+      Math.max(...tiefen) < BRETT_REIHEN,
+      'der Block passt auf das Brett, ohne dass eine Rolle abgeklemmt wird',
+    );
+  });
+
+  /**
+   * Und er steht nicht am Brettrand: Eine volle Reihe weicht in die
+   * Nachbarreihe aus, und in der Mitte geht das nach beiden Seiten. Am Rand
+   * ginge es nur nach einer — gemessen ist genau das der Unterschied zwischen
+   * der gewaehlten Tabelle und der gleich engen weiter vorn.
+   */
+  it('laesst vor und hinter dem Block je eine Reihe frei', () => {
+    const tiefen = Object.values(STANDARD_TIEFEN);
+    assert.ok(Math.min(...tiefen) > 0, 'vor dem Block bleibt eine Reihe frei');
+    assert.ok(Math.max(...tiefen) < BRETT_REIHEN - 1, 'hinter dem Block bleibt eine frei');
   });
 
   /**
@@ -447,7 +491,7 @@ describe('Bot: aufstellen', () => {
 
     const { partie, zuege } = ruesteAus(p, 0);
     const steht = partie.heere[0]!.brett.findIndex((k) => k !== null);
-    assert.equal(reihe(steht), BRETT_REIHEN - 1, 'der Magier gehoert in die hinterste Reihe');
+    assert.equal(reihe(steht), STANDARD_TIEFEN.magier, 'der Magier gehoert hinter die Wache');
 
     /*
      * Und zwar in EINEM Zug. Seit dem 06.09.2026 nimmt `stellungsZug` das
@@ -493,7 +537,7 @@ describe('Bot: aufstellen', () => {
    */
   it('tauscht eine schwache Einheit gegen eine starke von der Bank', () => {
     const brett = leeresBrett();
-    brett[platzNummer(0, 2)] = { id: 'schildknappe', stufe: 1 };
+    brett[platzNummer(STANDARD_TIEFEN.wache, 2)] = { id: 'schildknappe', stufe: 1 };
     const p = mitHeer(neu(), 0, {
       gold: 0,
       level: 1,
@@ -523,7 +567,7 @@ describe('Bot: aufstellen', () => {
 describe('Bot: Aufstieg', () => {
   function mitBrett(gold: number, voll: boolean): TafelrundePartie {
     const brett = leeresBrett();
-    if (voll) brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
+    if (voll) brett[platzNummer(STANDARD_TIEFEN.wache, 2)] = { id: 'grimmbart', stufe: 1 };
     return mitHeer(neu(), 0, {
       gold,
       level: 1,
@@ -585,7 +629,7 @@ describe('Bot: neu wuerfeln', () => {
   function fremderLaden(laden: readonly EinheitId[], gold = 20): TafelrundePartie {
     const brett = leeresBrett();
     for (let spalte = 0; spalte < 5; spalte++) {
-      brett[platzNummer(0, spalte)] = { id: 'gassendieb', stufe: 2 };
+      brett[platzNummer(STANDARD_TIEFEN.meuchler, spalte)] = { id: 'gassendieb', stufe: 2 };
     }
     return mitHeer({ ...neu(), runde: 5 }, 0, {
       gold,
@@ -667,23 +711,48 @@ describe('Bot: das fertige Heer', () => {
    * Der Anlass der ganzen Arbeit, als Zahl: Nach Runde vier soll kein Bot mehr
    * mit halb leerem Brett antreten. Geprueft wird ueber vier Saaten, damit ein
    * einzelner guenstiger Laden nichts beweist.
+   *
+   * ES GIBT EINE EINZIGE ERLAUBTE AUSNAHME, und sie steht hier ausgeschrieben,
+   * weil sie sonst als Zufall durchginge: Steigt ein Sitz mit vollem Brett auf
+   * (`aufstiegsReserve` 3 bei `normal`), bekommt er einen Feldplatz dazu — und
+   * kann ihn danach am POLSTER (4 bei `normal`) nicht mehr fuellen, weil das
+   * groesser ist als die Reserve. Gemessen ueber 200 Saaten trifft das 1 von
+   * 787 Sitzen und ist unabhaengig von der Aufstellung (mit dem Stand vor dem
+   * 06.09.2026 dieselbe Groessenordnung). Bis zum 06.09.2026 stand hier die
+   * harte Gleichheit; sie war ueber ihre vier Saaten gruen, nicht ueber die
+   * Regel. Wer die beiden Zahlen angleicht, darf diesen Zweig loeschen.
    */
   it('tritt ab Runde 4 mit vollem Brett an', () => {
     for (const saat of ['a', 'b', 'c', 'd']) {
       let p = neu([0, 1, 2, 3], `${SAAT}-${saat}`);
+      /*
+       * Gemessen wird, WOMIT ein Sitz antritt — also nach der fuenften
+       * Vorbereitung und VOR dem fuenften Kampf. Bis zum 06.09.2026 lief die
+       * Schleife den Kampf noch mit; damit stand hier der Zustand einer Runde
+       * spaeter, samt frisch ausgezahltem Einkommen. Fuer die Gleichheit war
+       * das gleichgueltig, fuer die Ausnahme unten nicht: Sie fragt, ob das
+       * Gold zum Fuellen gereicht HAETTE, und meinte dann das Gold der
+       * naechsten Runde.
+       */
       for (let runde = 0; runde < 5; runde++) {
+        if (runde > 0 && p.phase === 'kampf') p = loeseKampfAuf(p);
         for (const sitz of lebendeSitze(p)) {
           if (darfHandeln(p, sitz)) p = ruesteAus(p, sitz).partie;
         }
-        if (p.phase === 'kampf') p = loeseKampfAuf(p);
       }
       for (const sitz of lebendeSitze(p)) {
         const heer = p.heere[sitz]!;
         const belegt = heer.brett.filter((k) => k !== null).length;
-        assert.equal(
-          belegt,
-          feldplaetze(heer.level),
-          `Saat ${saat}, Sitz ${sitz}: ${belegt} von ${feldplaetze(heer.level)} Feldplaetzen`,
+        const wo = `Saat ${saat}, Sitz ${sitz}: ${belegt} von ${feldplaetze(heer.level)}`;
+        if (belegt === feldplaetze(heer.level)) continue;
+
+        assert.equal(belegt + 1, feldplaetze(heer.level), `${wo} — mehr als ein Platz frei`);
+        const guenstigster = Math.min(
+          ...heer.laden.filter((id) => id !== null).map((id) => einheit(id!).kosten),
+        );
+        assert.ok(
+          heer.gold - guenstigster < GANGART_STAND.normal.polster,
+          `${wo} — der Platz bleibt frei, obwohl ${heer.gold} Gold reichen wuerden`,
         );
       }
     }

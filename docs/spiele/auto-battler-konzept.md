@@ -974,6 +974,42 @@ Schnitt der gezählten Zeilen 21,7 %; die zweite Saatbasis in Klammern.
    zurückliegt, kann über eine Synergie aufholen, und eine kurze Partie gibt
    einem Vorsprung weniger Zeit, sich auszubauen.
 
+### Nachtrag 06.09.2026: die Aufstellung des Bots — und was sie an den Marken tut
+
+Der Bot stellt seit dem 06.09.2026 anders auf: geschlossener Block in den
+beiden mittleren Reihen statt vorderste und hinterste Reihe
+(`STANDARD_TIEFEN` in `bot.ts`, hergeleitet mit `werkzeug/aufstellung.mjs`).
+Weil **jede** Zahl dieses Dokuments an Bot-Brettern gemessen ist, gehört die
+Frage hierher: verschiebt das die Ausgewogenheit?
+
+Gemessen ist sie als Paar — derselbe Stand, dieselbe Saatbasis
+(`ausgewogenheit-v1`), 5.000 Partien zu viert, `--mindest 150`, einziger
+Unterschied die Tabelle:
+
+| Marke | vorher | **nachher** |
+|---|---|---|
+| Wächter | ×1,54 | **×1,56** |
+| Krieger | ×1,54 | ×1,52 |
+| Untot | ×0,88 | **×1,00** |
+| Elementar | ×0,87 | ×0,80 |
+| Meuchler | ×0,79 | ×0,78 |
+| Drache | ×0,84 | ×0,77 |
+| Naturwesen | ×0,54 | **×0,57** |
+
+**Die Antwort ist: kaum.** Die Spanne bleibt, wo sie war (×0,54–×1,54 gegen
+×0,57–×1,56), und die Reihenfolge ändert sich an einer Stelle — Drache und
+Elementar tauschen die Plätze, beide innerhalb von vier Hundertsteln. Die
+einzige Zeile, die sich wirklich bewegt, ist **Untot: ×0,88 → ×1,00**. Das
+passt zur Sache: Untots Träger sind Schildknappe und Knochenspäher, und der
+Knochenspäher ist als Meuchler die Einheit, die am meisten gewinnt
+(×0,66 → ×0,88).
+
+Auch die Spielzeit bleibt: 5:58 → 5:56 im Median, 9,7 Runden in beiden
+Läufen. **Eine Zahl steigt**, dieselbe wie unter Punkt 3: Kämpfe an der
+Höchstdauer, 1,7 % → 2,7 %. Ein Block, der eine Reihe zurückgesetzt steht,
+hat einen längeren Anmarsch. Die Zahlen zur Bewegung stehen in
+`docs/TAFELRUNDE-LAUFWEGE.md`.
+
 ---
 
 ## Überholt: die fünfte Messung (Stand 05.09.2026, Bot ohne Markengewicht, Schwellen 2/4/6)
