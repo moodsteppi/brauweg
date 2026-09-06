@@ -16,9 +16,14 @@
  * `baueStreiter` rechnet sie einmal je Seite aus und gibt sie an `werteFuer`
  * — danach stehen die Werte und werden nicht mehr angefasst.
  *
- * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift in
- * die Zugschleife in `simuliereKampf` ein (dort kaeme das Wirken einer
- * Faehigkeit vor dem Angriff, mit Mana aus Treffern).
+ * DIE ROLLE WIRD SEIT DEM 06.09.2026 AUSGEWERTET, aber nur eine: `beistand`
+ * heilt, statt anzugreifen (siehe `HEIL_ANTEIL` und `sucheHeilziel`). Alle
+ * anderen Rollen sind weiterhin blosse Auskunft fuer Laden und Aufstellung —
+ * was eine Wache von einem Meuchler unterscheidet, sind ihre Werte.
+ *
+ * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift an
+ * derselben Stelle der Zugschleife in `simuliereKampf` ein wie die Heilung
+ * (vor dem Angriff, mit Mana aus Treffern).
  *
  * ZUR ZEIT: Gerechnet wird in ganzen Millisekunden und in festen Takten von
  * `TAKT_MS`. Keine Gleitkommazeit, kein `Date.now()`. Sekundenbruchteile als
@@ -27,7 +32,16 @@
  * genau das darf hier nicht passieren.
  */
 
-import { type EinheitId, type Grundwerte, type Stufe, werteFuer } from './katalog.js';
+import {
+  type EinheitId,
+  type Grundwerte,
+  type Rolle,
+  type Stufe,
+  // Umbenannt, weil `baueStreiter` seine Schleifenvariable `einheit` nennt und
+  // die Katalogfunktion sonst dort verdeckt waere.
+  einheit as katalogEinheit,
+  werteFuer,
+} from './katalog.js';
 import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
 import {
   type Seite,
@@ -210,6 +224,48 @@ export const SCHADEN_GRUNDWERT = 1;
  */
 export const SCHADEN_STUFEN_TEILER = 3;
 
+/**
+ * Wie viel eine Einheit der Rolle `beistand` je Takt heilt, als Anteil ihres
+ * Angriffs.
+ *
+ * WARUM ES DIESE ZAHL UEBERHAUPT GIBT: Bis zum 06.09.2026 wertete der Kampf
+ * die Rolle gar nicht aus — die einzige Fundstelle war `reichweite`. Ein
+ * Beistand war damit schlicht eine schwache Einheit ohne Ausgleich: Moosheiler,
+ * Runenpriester und Lichtwahrerin liegen 30 bis 38 % unter der Mitte ihrer
+ * Kostenstufe, und in einem Monokultur-Turnier (drei Kopien gegen drei Kopien,
+ * alle Paarungen je Kostenstufe) gewannen alle drei NULL Kaempfe — jeweils die
+ * letzte Zeile ihrer Stufe. Die Werte sind der Preis fuer eine Wirkung, die es
+ * nicht gab; jetzt gibt es sie, und die Werte bleiben, wo sie sind.
+ *
+ * DER ANGRIFF IST DER TRAEGER und keine eigene Spalte im Katalog: Ein Beistand
+ * heilt statt anzugreifen, im selben Takt und mit demselben Tempo. Damit
+ * braucht die Balance keine zweite Zahl je Einheit, und wer einen Beistand
+ * staerker machen will, dreht an genau der Zahl, die auch seinen Schaden
+ * bestimmt. Die Stufe zaehlt automatisch mit — `werteFuer` skaliert den
+ * Angriff, also skaliert die Heilung.
+ *
+ * WARUM 1,6 UND NICHT 1,0: Heilung ist schwaecher als derselbe Schaden, und
+ * zwar aus zwei Gruenden. Sie geht nicht durch die Ruestung (ein Treffer von 50
+ * kostet ein Ziel mit 40 Ruestung nur 30 Leben — die Heilung von 50 gibt volle
+ * 50 zurueck, das spricht FUER weniger), sie verpufft aber, sobald niemand
+ * verwundet ist oder das Ziel im selben Takt faellt, und sie toetet niemanden:
+ * Ein Kampf endet erst, wenn eine Seite steht. Gemessen im Monokultur-Turnier
+ * (werkzeug/monokultur.mjs, alle Paarungen je Kostenstufe, drei Kopien je
+ * Seite) gewinnt der Beistand seiner Stufe damit:
+ *
+ *     Anteil 1,0     Moosheiler 24 / Runenpriester 20 / Lichtwahrerin 12
+ *     Anteil 1,6     Moosheiler 62 / Runenpriester 55 / Lichtwahrerin 40
+ *     Anteil 2,4     Moosheiler 92 / Runenpriester 96 / Lichtwahrerin 79
+ *
+ * (Von 168 Kaempfen je Einheit auf den Stufen 1 und 2, 120 auf Stufe 3.) Bei
+ * 2,4 ist der Beistand nicht mehr ausgeglichen, sondern die beste Einheit
+ * seiner Stufe — drei Heiler halten einander gegen alles am Leben, was nicht
+ * schneller austeilt, als sie heilen. 1,6 setzt ihn ins Mittelfeld: Er gewinnt
+ * gegen Bretter, die auf Dauer spielen, und verliert gegen die, die schnell
+ * toeten. Genau das soll eine Rolle tun.
+ */
+export const HEIL_ANTEIL = 1.6;
+
 // ---------------------------------------------------------------------------
 // Die Stellschrauben als Buendel
 // ---------------------------------------------------------------------------
@@ -251,6 +307,8 @@ export interface Kampfregler {
    * am Bildschirm tatsaechlich schneller und nicht nur die Rechnung kuerzer.
    */
   readonly zeitraffer: number;
+  /** Heilung je Takt als Anteil des Angriffs, siehe `HEIL_ANTEIL`. */
+  readonly heilAnteil: number;
 }
 
 /**
@@ -286,6 +344,7 @@ export const STANDARD_REGLER: Kampfregler = {
   hoechstdauerMs: HOECHSTDAUER_MS,
   schadenStufenTeiler: SCHADEN_STUFEN_TEILER,
   zeitraffer: 2,
+  heilAnteil: HEIL_ANTEIL,
 };
 
 // ---------------------------------------------------------------------------
@@ -371,6 +430,21 @@ export type Ereignis =
       readonly schaden: number;
       readonly lebenDanach: number;
     }
+  /**
+   * Ein Beistand hat einen Verbuendeten geheilt.
+   *
+   * Dieselbe Form wie `treffer`, nur mit `menge` statt `schaden` — und genau
+   * deshalb ein eigenes Ereignis und kein negativer Schaden: Die Anzeige soll
+   * beides unterscheiden koennen, ohne auf ein Vorzeichen zu achten.
+   */
+  | {
+      readonly art: 'heilung';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly ziel: number;
+      readonly menge: number;
+      readonly lebenDanach: number;
+    }
   /** Eine Einheit ist gefallen. Kommt immer unmittelbar nach dem toedlichen Treffer. */
   | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
   /** Der Kampf ist vorbei. Immer das letzte Ereignis, genau einmal. */
@@ -423,6 +497,12 @@ interface Streiter {
   readonly seite: Seite;
   readonly einheitId: EinheitId;
   readonly stufe: Stufe;
+  /**
+   * Die Kampfrolle aus dem Katalog. Sie steht hier als Feld und wird nicht bei
+   * jedem Takt nachgeschlagen: Die Zugschleife laeuft bis zu vierhundertmal
+   * ueber achtzehn Einheiten, und `einheit()` ist ein Kartenzugriff je Aufruf.
+   */
+  readonly rolle: Rolle;
   readonly werte: Grundwerte;
   readonly hoechstesLeben: number;
   /** Rang in der Zugreihenfolge. Entscheidet auch den Gleichstand bei der Zielwahl. */
@@ -478,6 +558,50 @@ export function schrittdauer(regler: Kampfregler = STANDARD_REGLER): number {
  */
 export function schadenNach(angriff: number, ruestung: number): number {
   return Math.max(1, Math.round((angriff * (100 - ruestung)) / 100));
+}
+
+/**
+ * Was ein Beistand je Takt heilt.
+ *
+ * Gerundet und mindestens 1, aus demselben Grund wie bei `schadenNach`: Eine
+ * Heilung von 0 waere ein Ereignis ohne Wirkung, das die Anzeige trotzdem
+ * abspielt — ein Heiler, der sichtbar wirkt und nichts tut, sieht nach einem
+ * Fehler aus.
+ */
+export function heilkraft(angriff: number, anteil: number = HEIL_ANTEIL): number {
+  return Math.max(1, Math.round(angriff * anteil));
+}
+
+/**
+ * Der Verbuendete, den dieser Beistand heilt — oder null.
+ *
+ * DAS GROESSTE FEHLENDE LEBEN gewinnt, nicht der geringste Anteil: Wer
+ * absolut am meisten verloren hat, ist die Einheit, an der die Heilung am
+ * wenigsten ueberlaeuft. Bei Gleichstand entscheidet der Rang, wie ueberall in
+ * dieser Datei (siehe `sucheZiel`).
+ *
+ * SICH SELBST HEILT NIEMAND. Ein Beistand ganz ohne verwundete Nachbarn soll
+ * angreifen und nicht sich selbst am Leben halten: Zwei einzelne Heiler
+ * gegeneinander wuerden sonst bis zur Hoechstdauer aneinander herumdoktern,
+ * und die Rolle heisst Beistand und nicht Ausdauer.
+ *
+ * Ausserhalb der Reichweite wird nicht geheilt — die Reichweite ist die
+ * einzige Zahl, die im Kampf ohnehin schon ueber Naehe entscheidet.
+ */
+function sucheHeilziel(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
+  let bestes: Streiter | null = null;
+  let groesstesFehlen = 0;
+  for (const anderer of alle) {
+    if (anderer.seite !== wer.seite || anderer.id === wer.id || anderer.leben <= 0) continue;
+    if (arenaAbstand(wer.platz, anderer.platz) > wer.werte.reichweite) continue;
+    const fehlt = anderer.hoechstesLeben - anderer.leben;
+    if (fehlt <= 0) continue;
+    if (fehlt > groesstesFehlen || (fehlt === groesstesFehlen && bestes !== null && anderer.rang < bestes.rang)) {
+      bestes = anderer;
+      groesstesFehlen = fehlt;
+    }
+  }
+  return bestes;
 }
 
 /**
@@ -541,6 +665,7 @@ function baueStreiter(bretter: readonly [Brettseite, Brettseite]): Streiter[] {
         seite,
         einheitId: einheit.id,
         stufe: einheit.stufe,
+        rolle: katalogEinheit(einheit.id).rolle,
         werte: w,
         hoechstesLeben: w.leben,
         rang: 0, // wird gleich vergeben, sobald der Erstzieher feststeht
@@ -751,6 +876,33 @@ export function simuliereKampf(
       const ziel = sucheZiel(wer, alle);
       if (!ziel) break; // Gegenseite ausgeloescht — der Rest des Taktes entfaellt
 
+      // Der Beistand heilt, statt anzugreifen: im selben Takt, mit demselben
+      // Tempo und derselben Reichweite. Die Pruefung steht VOR der des
+      // Angriffs, sonst heilte er nur dann, wenn er ohnehin schon zuschlagen
+      // koennte — ein Heiler steht aber hinten, und sein Ziel ist der eigene
+      // Nachbar und nicht der Gegner. Findet er niemanden zum Heilen, faellt er
+      // in das normale Verhalten zurueck und kaempft mit.
+      if (wer.rolle === 'beistand' && jetzt >= wer.angriffFreiAb) {
+        const patient = sucheHeilziel(wer, alle);
+        if (patient) {
+          const menge = Math.min(
+            heilkraft(wer.werte.angriff, regler.heilAnteil),
+            patient.hoechstesLeben - patient.leben,
+          );
+          patient.leben += menge;
+          wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
+          ereignisse.push({
+            art: 'heilung',
+            zeitMs: jetzt,
+            wer: wer.id,
+            ziel: patient.id,
+            menge,
+            lebenDanach: patient.leben,
+          });
+          continue;
+        }
+      }
+
       if (arenaAbstand(wer.platz, ziel.platz) <= wer.werte.reichweite) {
         if (jetzt < wer.angriffFreiAb) continue;
         const schaden = schadenNach(wer.werte.angriff, ziel.werte.ruestung);
@@ -841,6 +993,8 @@ export function protokollText(bericht: Kampfbericht): string {
         return `${zeit} bewegung ${e.wer} ${e.von} -> ${e.nach}`;
       case 'treffer':
         return `${zeit} treffer  ${e.wer} -> ${e.ziel} ${e.schaden} (${e.lebenDanach})`;
+      case 'heilung':
+        return `${zeit} heilung  ${e.wer} -> ${e.ziel} ${e.menge} (${e.lebenDanach})`;
       case 'tod':
         return `${zeit} tod      ${e.wer}`;
       case 'ende':
