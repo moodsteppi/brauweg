@@ -251,13 +251,16 @@ test('Automat weist illegale Aktionen zurueck', () => {
   const rs = makeRuleSet();
   let state = createRound(rs, SEATS, 0, 5);
 
-  // Zweimal erklaeren geht nicht: Alle antworten gleichzeitig, aber jeder
-  // genau einmal. Sonst koennte man seine Erklaerung zuruecknehmen.
+  // Seine Erklaerung AENDERN geht nicht: Alle antworten gleichzeitig, aber
+  // jeder genau einmal - sonst koennte man sie zuruecknehmen, nachdem man an
+  // den Zurufen der anderen gehoert hat, wie sie stehen. Dieselbe Erklaerung
+  // zweimal ist dagegen wirkungslos und kein Verstoss (siehe applyVorbehalt).
   const doppelt = apply(state, { type: 'vorbehalt', seat: 2, kind: null });
   assert.throws(
-    () => apply(doppelt, { type: 'vorbehalt', seat: 2, kind: null }),
+    () => apply(doppelt, { type: 'vorbehalt', seat: 2, kind: 'hochzeit' }),
     RuleViolation,
   );
+  assert.equal(apply(doppelt, { type: 'vorbehalt', seat: 2, kind: null }), doppelt);
   // Karte spielen, bevor die Abfrage durch ist.
   assert.throws(
     () => apply(state, { type: 'playCard', seat: 0, cardId: state.hands[0][0].id }),

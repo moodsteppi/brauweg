@@ -115,8 +115,10 @@ export class TestClient {
     if (gesund) {
       // Wie beim "Weiter": hoechstens EINMAL je Runde. Zwischen dem Senden und
       // der naechsten Sicht koennen Sichten eintreffen, die noch vor der
-      // eigenen Aktion gerechnet wurden - dort steht die Abfrage noch offen,
-      // und ein zweites Mal antworten weist der Server zu Recht ab.
+      // eigenen Aktion gerechnet wurden - dort steht die Abfrage noch offen.
+      // Ein zweites "gesund" waere seit dem 06.09.2026 kein Verstoss mehr
+      // (die Engine nimmt dieselbe Erklaerung als wirkungslos an), aber ein
+      // ungeduldiger Spieler tippt eben auch nicht viermal.
       const runde = (view.view as { roundIndex?: number }).roundIndex ?? 0;
       if (this.vorbehaltFuer === runde) return;
       this.vorbehaltFuer = runde;
