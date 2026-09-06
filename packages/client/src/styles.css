@@ -14727,14 +14727,18 @@ main.auth > .muted {
   background: #2a2a2a;
   box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.8);
 }
-.fl-vorschau-brett > span {
+/* Eigene Klasse und nicht `> span`: Die Waende sind ebenfalls Kinder des
+   Rasters, und eine Regel auf alle Kinder machte aus ihrem `absolute` ein
+   `relative` — dann stuenden sie als Rasterzellen am Ende statt auf den
+   Fugen (so gesehen am 06.09.2026 auf dem Handy). */
+.fl-vorschau-feld {
   position: relative;
   aspect-ratio: 1;
   border-radius: 3px;
   transition: background-color 220ms ease;
 }
-.fl-vorschau-brett > span[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); }
-.fl-vorschau-brett > span[data-fremd] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28); }
+.fl-vorschau-feld[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); }
+.fl-vorschau-feld[data-fremd] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28); }
 .fl-vorschau-brett .fl-wand { width: 5px; height: 5px; margin-left: -2.5px; margin-top: -2.5px; }
 .fl-vorschau-brett .fl-wand:not([data-quer]) { margin-top: 0; }
 .fl-vorschau-brett .fl-wand[data-quer] { margin-left: 0; }
