@@ -13,7 +13,9 @@ import {
   SEITEN,
   arenaAbstand,
   arenaNachbarn,
+  arenaNachbarnFuer,
   gegenseite,
+  gespiegelterPlatz,
   haelfteVon,
   hexAbstand,
   hexNachbarn,
@@ -270,5 +272,97 @@ describe('Arena — Seiten', () => {
   it('nimmt jede Seite auch als Zahl entgegen', () => {
     const seite: Seite = 1;
     assert.equal(gegenseite(seite), 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Die Nachbarordnung je Seite
+// ---------------------------------------------------------------------------
+
+describe('Arena — die Nachbarordnung je Seite', () => {
+  /**
+   * Die Spiegelung ist eine Abbildung der Arena auf sich selbst: Sie trifft
+   * jeden Platz genau einmal, und zweimal angewandt landet man wieder da, wo
+   * man losgelaufen ist. Ohne das waere alles Weitere hier bedeutungslos.
+   */
+  it('spiegelt jeden Platz genau einmal und ist ihre eigene Umkehrung', () => {
+    const getroffen = new Set(ALLE.map(gespiegelterPlatz));
+    assert.equal(getroffen.size, ARENA_FELDER);
+    for (const platz of ALLE) {
+      assert.ok(istArenaplatz(gespiegelterPlatz(platz)));
+      assert.equal(gespiegelterPlatz(gespiegelterPlatz(platz)), platz);
+    }
+  });
+
+  /**
+   * Sie ist DIESELBE Abbildung, mit der `nachArena` Seite 1 einlegt — sonst
+   * spiegelte der Kampf um eine andere Achse als das Brett.
+   */
+  it('ist genau die Abbildung, mit der Seite 1 in die Arena kommt', () => {
+    for (let platz = 0; platz < BRETT_FELDER; platz++) {
+      assert.equal(nachArena(platz, 1), gespiegelterPlatz(nachArena(platz, 0)));
+    }
+  });
+
+  /**
+   * Die MENGE der Nachbarn haengt an keiner Seite — nur ihre Reihenfolge.
+   * Waere auch die Menge verschieden, waere es kein Gleichstandsbruch mehr,
+   * sondern ein zweites Brett.
+   */
+  it('liefert fuer beide Seiten dieselben Nachbarn, nur anders sortiert', () => {
+    for (const platz of ALLE) {
+      for (const seite of SEITEN) {
+        assert.deepEqual(
+          new Set(arenaNachbarnFuer(platz, seite)),
+          new Set(arenaNachbarn(platz)),
+          `Platz ${platz}, Seite ${seite}`,
+        );
+      }
+    }
+    assert.deepEqual(arenaNachbarnFuer(0, 0), arenaNachbarn(0));
+  });
+
+  /**
+   * DIE PROBE, UM DIE ES GEHT: Die Ordnung ist unter der Punktspiegelung
+   * invariant. Wer auf Seite 1 auf dem gespiegelten Platz steht, sieht seine
+   * Nachbarn in der gespiegelten Reihenfolge derer, die Seite 0 auf dem
+   * Urbild saehe.
+   *
+   * Daran haengt die Zusicherung im Kopf von arena.ts. Mit `arenaNachbarn`
+   * (ohne Seite) faellt sie sofort: Die Spiegelung wechselt die Paritaet der
+   * Reihe, und `hexNachbarn` sortiert gerade und ungerade Reihen
+   * verschieden. Gemessen liefen deshalb 498 von 500 vertauschten
+   * Aufstellungen auseinander — den ganzen Ablauf prueft
+   * kampf.test.ts, "laeuft mit vertauschten Aufstellungen gespiegelt ab".
+   *
+   * Die Probe ist ausdruecklich nicht auf Seite 1 beschraenkt: Auch von Seite
+   * 0 aus gesehen muss sie gelten, sonst haenge die Ordnung doch an einer
+   * bevorzugten Seite.
+   */
+  it('haelt die Reihenfolge unter der Spiegelung fest', () => {
+    for (const platz of ALLE) {
+      for (const seite of SEITEN) {
+        assert.deepEqual(
+          arenaNachbarnFuer(gespiegelterPlatz(platz), gegenseite(seite)),
+          arenaNachbarnFuer(platz, seite).map(gespiegelterPlatz),
+          `Platz ${platz} von Seite ${seite} aus`,
+        );
+      }
+    }
+  });
+
+  /**
+   * Und die Gegenprobe, damit die Probe darueber nicht bloss zwei gleiche
+   * Listen vergleicht: Die alte, seitenlose Ordnung erfuellt sie NICHT. Faende
+   * sich hier kein einziger Platz, an dem die Reihenfolge auseinanderginge,
+   * waere die ganze Aenderung ohne Gegenstand.
+   */
+  it('waere mit der seitenlosen Ordnung verletzt', () => {
+    const abweichend = ALLE.filter((platz) => {
+      const gedreht = arenaNachbarn(platz).map(gespiegelterPlatz);
+      const direkt = arenaNachbarn(gespiegelterPlatz(platz));
+      return gedreht.join(',') !== direkt.join(',');
+    });
+    assert.ok(abweichend.length > 0, 'die seitenlose Ordnung waere schon spiegeltreu');
   });
 });

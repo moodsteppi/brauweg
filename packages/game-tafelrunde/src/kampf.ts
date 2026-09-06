@@ -51,7 +51,7 @@ import {
   type Seite,
   SEITEN,
   arenaAbstand,
-  arenaNachbarn,
+  arenaNachbarnFuer,
   gegenseite,
   nachArena,
 } from './arena.js';
@@ -828,7 +828,15 @@ function sucheWunde(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
  * Hoechstdauer ab.
  *
  * Bei mehreren gleich guten Feldern gewinnt das erste in der Ordnung von
- * `arenaNachbarn` — fest und damit wiederholbar.
+ * `arenaNachbarnFuer` — fest und damit wiederholbar.
+ *
+ * DIE SEITE GEHOERT IN DIESE ZEILE, sonst waere der Kampf nicht
+ * spiegelaequivariant: Die Nachbarordnung des odd-r-Rasters haengt an der
+ * Paritaet der Reihe, und die Punktspiegelung, mit der Seite 1 in die Arena
+ * kommt, wechselt sie. Mit `arenaNachbarn` (ohne Seite) wich die eine
+ * Haelfte deshalb in eine andere Richtung aus als die andere, und 498 von
+ * 500 getauschten Aufstellungen liefen auseinander. Die ganze Begruendung
+ * steht bei `arenaNachbarnFuer`.
  */
 function schrittZiel(
   wer: Streiter,
@@ -837,7 +845,7 @@ function schrittZiel(
 ): number | null {
   let bestes: number | null = null;
   let besterAbstand = arenaAbstand(wer.platz, zielPlatz);
-  for (const platz of arenaNachbarn(wer.platz)) {
+  for (const platz of arenaNachbarnFuer(wer.platz, wer.seite)) {
     if (belegt.has(platz)) continue;
     const d = arenaAbstand(platz, zielPlatz);
     if (d < besterAbstand) {

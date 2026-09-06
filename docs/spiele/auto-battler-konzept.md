@@ -333,6 +333,59 @@ warnte („Nicht an den Quoten … sondern an den Antritten"): Ihre 75,8 % stand
 Zählschwelle. Ein Wertabschlag würde die Zahl wieder unsichtbar machen, nicht
 kleiner. Gehört auf das Board, nicht in den Katalog.
 
+### Nachtrag 06.09.2026: jede Seite bricht den Gleichstand jetzt in ihrer eigenen Ordnung
+
+**Die Tabellen oben stammen von vor dieser Änderung.** Angefasst wurde keine
+Katalogzeile, sondern eine Zeile Geometrie — die Verschiebung ist trotzdem
+messbar und gehört deshalb hierher.
+
+**Der Anlass war eine Zusicherung, die nicht zutraf.** Der Kopf von `arena.ts`
+versprach: Tauscht man die beiden Aufstellungen, läuft derselbe Kampf
+gespiegelt ab. Gemessen über 500 vertauschte Paare (Erstzieher mitgetauscht)
+liefen **498 auseinander**, und die erste Abweichung war jedes Mal ein
+Ausweichschritt in die andere Richtung. Ursache: `schrittZiel` bricht den
+Gleichstand zwischen zwei gleich guten Zielfeldern über die Reihenfolge von
+`arenaNachbarn`, und die hängt im odd-r-Raster an der **Parität der Reihe** —
+die Punktspiegelung, mit der Seite 1 in die Arena kommt, wechselt sie.
+
+**Geändert wurde die Ordnung, nicht die Regel:** Seite 1 fragt ihre Nachbarn
+jetzt punktgespiegelt ab (`arenaNachbarnFuer(platz, seite)`). Die *Menge* der
+Nachbarn ist unverändert, nur ihre Reihenfolge; danach sind es 500 von 500.
+
+**Was das im Spiel verschiebt** — 5.000 Partien zu viert, `--mindest 150`,
+dieselben Saaten vorher und nachher, beide Basen:
+
+| Marke | v1 vorher → nachher | v2 vorher → nachher |
+|---|---|---|
+| Wächter | ×1,54 → **×1,58** | ×1,51 → **×1,59** |
+| Krieger | ×1,54 → ×1,56 | ×1,48 → ×1,56 |
+| Untot | ×0,88 → ×0,98 | ×0,94 → ×1,02 |
+| Elementar | ×0,87 → ×0,85 | ×0,87 → ×0,82 |
+| Drache | ×0,84 → ×0,84 | ×0,85 → ×0,82 |
+| **Meuchler** | ×0,79 → **×0,67** | ×0,79 → **×0,67** |
+| **Naturwesen** | ×0,54 → **×0,52** | ×0,55 → ×0,52 |
+
+**Beide Basen zeigen dasselbe, es ist also kein Wurf.** Die Richtung hat einen
+Grund: Vorher wichen beide Seiten in dieselbe *absolute* Richtung aus und
+blieben dabei in Deckung. Symmetrisch heißt, dass jede Seite relativ zum
+eigenen Brett ausweicht — und damit in entgegengesetzte absolute Richtungen.
+Die Hälften schieben sich also eher aneinander vorbei, der Anmarsch dauert
+länger. Davon leben Wächter und Krieger, dagegen verliert der Meuchler, dessen
+ganze Rechnung am schnellen Ankommen hängt.
+
+**Die Schranke der Probe (×0,5 bis ×2) hält**, aber die Spanne geht auf beiden
+Seiten leicht auf: ×0,52 bis ×1,59 statt ×0,54 bis ×1,54. **Naturwesen bleibt
+die Wackelzeile** und steht jetzt zwei Hundertstel näher am Boden. Die Uhr
+bewegt sich kaum — Spielzeit im Median 5:58 → 5:52, davon Kampf 3:27 → 3:24,
+Runden im Median 10 → 9.
+
+**Was die Zusicherung NICHT sagt, und heute so wenig wie vorher:** dass im
+Spiegelkampf der Erstzieher gewinnt. Er gewinnt in 280 von 489 entschiedenen
+Spiegelkämpfen (57,3 %); der Rest geht an den Zweitzieher, weil beide Seiten
+sich eine Belegungskarte teilen und wer den Schritt in die Reichweite macht,
+sich dafür den ersten Schlag einfängt. Keine **Seite** ist im Vorteil (234 :
+255) — und nur das ist die Fairness, die zählt.
+
 ## Überholt: die achte Messung (Stand 06.09.2026, Kampf ohne Beistand-Wirkung)
 
 **Warum es eine achte gibt, und diesmal ohne eine Zeile am Katalog.** Geändert

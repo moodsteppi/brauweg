@@ -67,12 +67,26 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
  * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
- * SIEBEN Marken. Krieger 635, Waechter 596, Elementar 506, Meuchler 442,
- * Drache 360, Naturwesen 190, Untot 123. Die Mindestzahl unten verlangt sechs
+ * SIEBEN Marken. Waechter 612, Krieger 583, Elementar 435, Meuchler 428,
+ * Drache 323, Naturwesen 255, Untot 123. Die Mindestzahl unten verlangt sechs
  * und laesst der duennsten Zeile damit genau einen Ausfall Luft. WER DEN
  * KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER HUNDERT FALLEN, SIEHT HIER
  * "nur 5 Marken mit genug Antritten" und nicht den eigentlichen Befund; die
  * Zahl 123 (Untot) ist die knappste der Datei.
+ *
+ * DIESE SIEBEN ZAHLEN VERALTEN VON SELBST, und zwar bei jeder Aenderung, die
+ * beeinflusst, WAS der Bot am Ende auf dem Brett hat — Katalog, Bot-Bewertung,
+ * Geometrie. Sie standen schon einmal daneben, ohne dass es jemandem auffiel;
+ * bemerkt wurde es erst beim Einbau der Nachbarordnung je Seite (arena.ts,
+ * `arenaNachbarnFuer`), die sie erneut verschoben hat. Wer sie braucht, misst
+ * nach, statt sie zu glauben:
+ *
+ *     node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 400
+ *       --sitze 4 --saat ausgewogenheit-probe --mindest 100
+ *
+ * Der ARGUMENTATION schadet das Veralten nicht: Sie haengt an der duennsten
+ * Zeile und nicht an sieben genauen Werten — und die Probe faengt den Fall
+ * ohnehin selbst ab.
  *
  * DREI ZEILEN HABEN IHREN PLATZ HIER ERST NACHTRAEGLICH BEKOMMEN, aus drei
  * verschiedenen Gruenden — und keiner davon ist eine Aenderung an dieser
@@ -84,11 +98,12 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * 85 knapp darunter, bis die Bot-Bewertung die Reichweite bekam (bot.ts,
  * `REICHWEITEN_GEWICHT`): Der Bot kauft seitdem den Astschuetzen deutlich
  * oefter — 1.141 auf 4.761 Antritte ueber 5.000 Partien —, und mit ihm kommt
- * die Marke auf 190. Alles drei steht ausfuehrlich im Konzeptdokument.
+ * die Marke ueber die Zaehlschwelle. Alles drei steht ausfuehrlich im
+ * Konzeptdokument.
  *
- * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (295 auf 123) und ist jetzt
- * die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und der Bot
- * kauft die seitdem seltener. Die Marke haelt die Schwelle noch, aber sie ist
+ * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (von 295 herunter) und ist
+ * jetzt die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und
+ * der Bot kauft die seitdem seltener. Die Marke haelt die Schwelle noch, aber sie ist
  * die naechste, die faellt.
  */
 const MINDEST_ANTRITTE = 100;

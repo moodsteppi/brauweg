@@ -23,6 +23,8 @@ import {
   angriffstakt,
   arenaAbstand,
   einheit,
+  gegenseite,
+  gespiegelterPlatz,
   heilkraft,
   nachArena,
   platzNummer,
@@ -459,6 +461,92 @@ describe('Kampf — Schaden', () => {
 // Ausgang
 // ---------------------------------------------------------------------------
 
+/**
+ * Eine Saat, die den gewuenschten Erstzieher ergibt.
+ *
+ * Der Erstzieher haengt allein an der Saat (`simuliereKampf`: die Saat wird
+ * fuer genau diese eine Frage gebraucht). Fuer die Spiegelprobe braucht man
+ * beide Faelle — mit derselben Saat bekaeme die vertauschte Aufstellung auch
+ * den Vorteil des ersten Schlags, und dann waere es nicht mehr derselbe
+ * Kampf. Gesucht statt fest hingeschrieben, damit die Probe nicht an einer
+ * Zeichenkette haengt, wenn jemand `baueZufall` austauscht.
+ */
+function saatMitErstzieher(erst: Seite): Saat {
+  for (let i = 0; i < 1000; i++) {
+    const saat = `erstzieher-${erst}-${i}`;
+    if (simuliereKampf([leeresBrett(), leeresBrett()], saat).erstZieher === erst) return saat;
+  }
+  throw new Error(`keine Saat mit Erstzieher ${erst} gefunden`);
+}
+
+/**
+ * Das Protokoll eines Kampfes, wahlweise auf die Sicht des Spiegelbildes
+ * umgerechnet.
+ *
+ * `protokollText` taugt fuer den Spiegelvergleich nicht: Es nennt Kennungen
+ * und Plaetze so, wie sie in DIESEM Lauf entstanden sind. Beim Vertauschen der
+ * Bretter bekommt jede Einheit eine andere Kennung (`baueStreiter` nummeriert
+ * Seite 0 zuerst), und jeder Platz liegt punktgespiegelt. Beides rechnet
+ * `spiegel` zurueck — was uebrig bleibt, ist der Ablauf selbst.
+ *
+ * EINE Funktion fuer beide Seiten des Vergleichs, nicht zwei: Zwei Fassungen
+ * derselben Zeilenform waeren beim naechsten neuen Ereignis auseinander
+ * gelaufen, und dann verglichen sie stillschweigend verschiedene Dinge.
+ */
+function ablaufText(bericht: Kampfbericht, spiegel: Spiegelung | null = null): string {
+  const kennung = (id: number): number => {
+    if (!spiegel) return id;
+    const neu = spiegel.kennungen.get(id);
+    assert.notEqual(neu, undefined, `Kennung ${id} hat kein Gegenstueck`);
+    return neu!;
+  };
+  const platz = (p: number): number => (spiegel ? gespiegelterPlatz(p) : p);
+  const seite = (s: Seite): Seite => (spiegel ? gegenseite(s) : s);
+
+  return bericht.ereignisse
+    .map((e) => {
+      const kopf = `${e.zeitMs} ${e.art}`;
+      switch (e.art) {
+        case 'treffer':
+          return `${kopf} ${kennung(e.wer)}->${kennung(e.ziel)} ${e.schaden} ${e.lebenDanach}`;
+        case 'heilung':
+          return `${kopf} ${kennung(e.wer)}->${kennung(e.ziel)} ${e.menge} ${e.lebenDanach}`;
+        case 'tod':
+          return `${kopf} ${kennung(e.wer)}`;
+        case 'bewegung':
+          return `${kopf} ${kennung(e.wer)} ${platz(e.von)}->${platz(e.nach)}`;
+        case 'ende':
+          return `${kopf} ${e.sieger === null ? '-' : seite(e.sieger)} ${e.grund}`;
+      }
+    })
+    .join('\n');
+}
+
+/** Wie ein getauschter Lauf auf den geraden zurueckzurechnen ist. */
+interface Spiegelung {
+  readonly kennungen: ReadonlyMap<number, number>;
+}
+
+/**
+ * Welche Kennung im getauschten Lauf zu welcher im geraden gehoert.
+ *
+ * `baueStreiter` nummeriert je Seite in Brettordnung durch, erst Seite 0, dann
+ * Seite 1. Vertauscht man die Bretter, bleibt die Ordnung INNERHALB einer
+ * Aufstellung dieselbe — es wechselt nur, welcher Block vorn steht. Die
+ * Zuordnung ist deshalb die n-te Einheit der einen Seite auf die n-te der
+ * anderen.
+ */
+function kennungsKarte(gerade: Kampfbericht, getauscht: Kampfbericht): Spiegelung {
+  const karte = new Map<number, number>();
+  for (const seite of SEITEN) {
+    const hier = getauscht.start.filter((k) => k.seite === seite).map((k) => k.id);
+    const dort = gerade.start.filter((k) => k.seite === gegenseite(seite)).map((k) => k.id);
+    assert.equal(hier.length, dort.length, 'die Aufstellungen haben verschieden viele Einheiten');
+    hier.forEach((id, i) => karte.set(id, dort[i]!));
+  }
+  return { kennungen: karte };
+}
+
 describe('Kampf — der Ausgang', () => {
   it('erklaert die Seite zum Sieger, die noch steht', () => {
     for (let i = 0; i < 20; i++) {
@@ -544,10 +632,59 @@ describe('Kampf — der Ausgang', () => {
   });
 
   /**
-   * Im Spiegelkampf ist alles gleich ausser einem: Wer zuerst schlaegt. Also
-   * muss der Erstzieher gewinnen — oder es bleibt beim Unentschieden, wenn
-   * beide Seiten sich im selben Takt gegenseitig erledigen.
+   * DIE ZUSICHERUNG AUS DEM KOPF VON arena.ts, hier zum ersten Mal wirklich
+   * geprueft: Tauscht man die beiden Aufstellungen UND den Erstzieher, laeuft
+   * derselbe Kampf gespiegelt ab — Ereignis fuer Ereignis, nicht nur im
+   * Ausgang.
+   *
+   * Verglichen wird das ganze Protokoll und nicht der Sieger: Ein Sieger, der
+   * zufaellig zweimal derselbe ist, beweist nichts. Zurueckgerechnet werden
+   * dabei genau zwei Dinge, und beide sind Buchhaltung und keine Regel — die
+   * Kennungen (Seite 0 wird zuerst nummeriert) und die Plaetze (Seite 1 liegt
+   * punktgespiegelt in der Arena).
+   *
+   * BIS ZUM 06.09.2026 WAERE DIESE PROBE ROT GEWESEN, und zwar in 498 von 500
+   * Faellen. Der Kampf brach den Gleichstand beim Ziehen ueber die
+   * Nachbarordnung des odd-r-Rasters, und die haengt an der Paritaet der
+   * Reihe, die die Spiegelung wechselt. Seither fragt `schrittZiel` ueber
+   * `arenaNachbarnFuer(platz, seite)` (arena.ts).
+   *
+   * WARUM DER ERSTZIEHER MITGETAUSCHT WIRD: Beide Seiten teilen sich eine
+   * Belegungskarte, und wer im Takt vorn ist, raeumt und besetzt Felder vor
+   * dem anderen. Behielte der SITZ den ersten Schlag statt der AUFSTELLUNG,
+   * praegte man dem gespiegelten Lauf einen anderen Vorteil auf — und die
+   * Probe pruefte etwas, das gar nicht behauptet wird.
    */
+  it('laeuft mit vertauschten Aufstellungen gespiegelt ab', () => {
+    const saatVorn = saatMitErstzieher(0);
+    const saatHinten = saatMitErstzieher(1);
+    let mitBewegung = 0;
+
+    for (let i = 0; i < 60; i++) {
+      const [a, b] = zufaelligesPaar(`spiegelablauf${i}`);
+      // Beide Male zieht die Aufstellung `a` zuerst — einmal von Seite 0 aus,
+      // einmal von Seite 1.
+      const gerade = simuliereKampf([a, b], saatVorn);
+      const getauscht = simuliereKampf([b, a], saatHinten);
+      assert.equal(getauscht.erstZieher, 1, 'die getauschte Saat zieht nicht hinten los');
+
+      assert.equal(
+        ablaufText(getauscht, kennungsKarte(gerade, getauscht)),
+        ablaufText(gerade),
+        `Durchgang ${i}`,
+      );
+      if (gerade.ereignisse.some((e) => e.art === 'bewegung')) mitBewegung++;
+    }
+
+    /*
+     * Ohne einen einzigen Schritt liefe die Probe auch mit der alten,
+     * seitenlosen Ordnung durch — gelaufen wird ja nur, wo der Gleichstand
+     * ueberhaupt gebrochen werden muss. Diese Schranke haelt fest, dass die
+     * Stichprobe den Fall wirklich enthaelt.
+     */
+    assert.ok(mitBewegung > 40, `nur ${mitBewegung} von 60 Kaempfen hatten ueberhaupt Bewegung`);
+  });
+
   /**
    * Der Spiegelkampf: zwei gleiche Bretter, und keine Seite darf bevorzugt
    * sein. Was hier NICHT geprueft wird, ist genauso wichtig wie das, was
@@ -557,14 +694,19 @@ describe('Kampf — der Ausgang', () => {
    * recht" — die Probe lief ueber eine einzige Aufstellung und ging durch.
    * Sie beschrieb aber keine Regel des Kampfes, sondern eine Eigenschaft
    * genau dieser drei Einheiten: Nachgemessen ueber 500 zufaellige
-   * Spiegelkaempfe gewann der Zweitzieher schon in der alten Geometrie in
-   * 108 Faellen (21,6 %), heute in 226 (45,2 %). Sobald gelaufen wird,
-   * entscheidet nicht mehr, wer zuerst zieht: Beide Seiten teilen sich eine
-   * Belegungskarte, der Erstzieher raeumt und besetzt Felder vor dem
-   * anderen, und schon laufen die zwei Haelften auseinander. Wer im Takt
-   * vorn ist, macht ausserdem den Schritt, der die Reichweite schliesst —
-   * und faengt sich dafuer den ersten Schlag ein (siehe "aufeinander
-   * zulaufen").
+   * Spiegelkaempfe gewinnt der Zweitzieher in 209 von 489 entschiedenen
+   * Faellen (42,7 %). Sobald gelaufen wird, entscheidet nicht mehr, wer
+   * zuerst zieht. Wer im Takt vorn ist, macht den Schritt, der die
+   * Reichweite schliesst — und faengt sich dafuer den ersten Schlag ein
+   * (siehe "aufeinander zulaufen"); ausserdem teilen sich beide Seiten eine
+   * Belegungskarte, und der Erstzieher raeumt und besetzt Felder vor dem
+   * anderen.
+   *
+   * WAS HIER NICHT MEHR STEHT: Bis zur Nachbarordnung je Seite (arena.ts,
+   * `arenaNachbarnFuer`) kam ein zweiter Grund hinzu — die beiden Haelften
+   * liefen schlicht auseinander, weil der Gleichstand beim Ziehen auf jeder
+   * Seite anders gebrochen wurde. Der ist weg; die Zahl fiel dadurch von
+   * 45,2 auf 42,7 %, nicht auf null. Die Probe darueber haelt das fest.
    *
    * WAS BLEIBT, ist die Zusicherung, um die es wirklich geht und die
    * `erstZieher` ueberhaupt erst begruendet: Keine SEITE ist im Vorteil.
