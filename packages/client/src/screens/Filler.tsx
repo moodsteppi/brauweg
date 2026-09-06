@@ -106,6 +106,75 @@ function gelesenevariante(): Variante {
   }
 }
 
+/** Die Reihenfolge der Spielarten — dieselbe wie im Schalter, fuers Wischen. */
+const SPIELARTEN: readonly Variante[] = ['nebel', 'klar', 'build', 'extreme'];
+
+type Wischrichtung = 'links' | 'rechts';
+
+/** Die Wahl merken. Im Browser des Spielers, nicht auf dem Server: Bequemlichkeit, kein Besitz. */
+function merkeVariante(v: Variante): void {
+  try {
+    localStorage.setItem(VARIANTE_SCHLUESSEL, v);
+  } catch {
+    /* Gesperrte Seitendaten. Die Wahl gilt trotzdem — nur eben nicht morgen. */
+  }
+}
+
+/**
+ * Wischen nach links oder rechts ueber einer Flaeche, wie im Heim von
+ * Mememory — nur dass hier keine Seite faehrt, sondern die Spielart
+ * wechselt. Eigene Fingerrechnung statt Rollflaeche, weil das Menue
+ * senkrecht rollen koennen muss und die Knoepfe darauf klickbar bleiben.
+ *
+ * Erkannt wird ein Wisch, sobald der Finger 40 px zur Seite gegangen ist und
+ * dabei deutlich mehr zur Seite als nach oben oder unten — sonst faengt
+ * jedes Rollen des Menues eine Spielart mit. Ausgeloest wird EINMAL je
+ * Fingerauflage; der Klick, der am Ende eines Wischs auf einem Knopf
+ * landen wuerde, wird in der Fangphase geschluckt (`onClickCapture`), sonst
+ * oeffnete ein Wisch ueber "Online Match suchen" die Suche.
+ *
+ * `touch-action: pan-y` an der Flaeche (styles.css) sorgt dafuer, dass der
+ * Browser senkrechtes Rollen behaelt und waagerechte Bewegungen als
+ * Zeigerereignisse durchreicht, statt sie mit `pointercancel` abzubrechen.
+ */
+function useWischen(onWisch: (richtung: Wischrichtung) => void): {
+  onPointerDown: (e: React.PointerEvent) => void;
+  onPointerMove: (e: React.PointerEvent) => void;
+  onPointerUp: (e: React.PointerEvent) => void;
+  onPointerCancel: (e: React.PointerEvent) => void;
+  onClickCapture: (e: React.MouseEvent) => void;
+} {
+  const beiWischRef = useRef(onWisch);
+  beiWischRef.current = onWisch;
+  const start = useRef<{ id: number; x: number; y: number } | null>(null);
+  const gewischt = useRef(false);
+
+  const onPointerDown = useCallback((e: React.PointerEvent): void => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    start.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    gewischt.current = false;
+  }, []);
+  const onPointerMove = useCallback((e: React.PointerEvent): void => {
+    const s = start.current;
+    if (!s || s.id !== e.pointerId || gewischt.current) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    gewischt.current = true;
+    beiWischRef.current(dx < 0 ? 'links' : 'rechts');
+  }, []);
+  const ende = useCallback((e: React.PointerEvent): void => {
+    if (start.current?.id === e.pointerId) start.current = null;
+  }, []);
+  const onClickCapture = useCallback((e: React.MouseEvent): void => {
+    if (!gewischt.current) return;
+    gewischt.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+  return { onPointerDown, onPointerMove, onPointerUp: ende, onPointerCancel: ende, onClickCapture };
+}
+
 /*
  * FARBEN, GRAUTOENE und farbeVon liegen seit dem 04.09.2026 in
  * minispiele/filler/farben.ts, weil das bewegte Banner der Spielauswahl
@@ -183,6 +252,29 @@ export function Filler({
    * Beschriftung, die nicht stimmt.
    */
   const [variante, setVariante] = useState<Variante>(gelesenevariante);
+  /**
+   * Aus welcher Richtung die neue Spielart hereinkommt — fuer die kurze
+   * Bewegung von Beschreibung und Vorschau. Null beim ersten Aufbau: Da soll
+   * nichts fahren.
+   */
+  const [wischRichtung, setWischRichtung] = useState<Wischrichtung | null>(null);
+  // Als Ref, damit waehleVariante stabil bleibt und trotzdem den aktuellen
+  // Stand kennt — ohne Nebenwirkungen in einem State-Updater.
+  const varianteRef = useRef(variante);
+  varianteRef.current = variante;
+  const waehleVariante = useCallback((ziel: Variante): void => {
+    const alt = varianteRef.current;
+    if (ziel === alt) return;
+    setWischRichtung(SPIELARTEN.indexOf(ziel) > SPIELARTEN.indexOf(alt) ? 'links' : 'rechts');
+    merkeVariante(ziel);
+    setVariante(ziel);
+  }, []);
+  const wischen = useWischen((richtung) => {
+    const nr = SPIELARTEN.indexOf(variante);
+    // Kein Umlauf: Am Rand bleibt es stehen, wie eine Rollflaeche auch.
+    const ziel = SPIELARTEN[richtung === 'links' ? nr + 1 : nr - 1];
+    if (ziel) waehleVariante(ziel);
+  });
 
   const tisch = useTable<FillerSicht>(tischId, 'filler');
   const sicht = tisch.view?.view ?? null;
@@ -452,7 +544,7 @@ export function Filler({
         <button className="fl-zurueck" type="button" onClick={onBack} aria-label="Zurück">
           ←
         </button>
-        <div className="fl-menue-mitte">
+        <div className="fl-menue-mitte" data-wischbar="" {...wischen}>
           <h1 className="fl-titel">Filler</h1>
           <p className="fl-untertitel">
             Färbe dein Gebiet um und schlucke, was daran grenzt. Nur: Du siehst
@@ -481,7 +573,7 @@ export function Filler({
             */}
           <div className="fl-botblock">
             <p className="fl-blocktitel">Gegen Bot — hier wählst du die Spielart</p>
-            <Spielartschalter wert={variante} onWahl={setVariante} />
+            <Spielartschalter wert={variante} onWahl={waehleVariante} richtung={wischRichtung} />
             {/* Ruhiger gefaerbt als die Match-Suche: Der Mensch bleibt das
                 Angebot, gegen das man zuerst spielt. Dieselbe Staffelung wie
                 bei Mememory. */}
@@ -499,7 +591,7 @@ export function Filler({
           </button>
           {fehler && <p className="fl-fehler">{fehler}</p>}
           <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
-          <Vorschau variante={variante} />
+          <Vorschau variante={variante} richtung={wischRichtung} />
         </div>
         {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </main>
@@ -928,7 +1020,11 @@ function Brett({
             </p>
           </>
         ) : (
-          <Warteband gegenBot={gegenBot} farbzahl={sicht.farbzahl} />
+          <Warteband
+            gegenBot={gegenBot}
+            farbzahl={sicht.farbzahl}
+            mitMauern={mitMauern(sicht.variante)}
+          />
         )}
       </div>
     </main>
@@ -952,13 +1048,34 @@ function Brett({
 function Warteband({
   gegenBot,
   farbzahl,
+  mitMauern,
 }: {
   gegenBot: boolean;
   farbzahl: number;
+  /** Am Tisch gibt es Mauern: Dann steht hier ein unsichtbarer Bau-Knopf. */
+  mitMauern: boolean;
 }): React.JSX.Element {
   return (
     <>
-      <div className="fl-palette fl-palette-ruht" aria-hidden="true">
+      {/*
+        * Derselbe Knopf wie beim eigenen Zug, nur unsichtbar: Er haelt die
+        * Hoehe. Ohne ihn waere der Fuss beim Gegnerzug um eine Knopfhoehe
+        * kuerzer, und das Brett spraenge bei jedem Zugwechsel (Handy, 06.09.).
+        * Ein <button> und kein <div>, weil ein div mit denselben Klassen zwei
+        * Pixel niedriger ausfiel — gemessen, nicht geraten.
+        */}
+      {mitMauern && (
+        <button className="fl-bauknopf" type="button" data-platz="" aria-hidden="true" disabled tabIndex={-1}>
+          <Mauericon />
+          <span>Mauer</span>
+          <em>0</em>
+        </button>
+      )}
+      <div
+        className="fl-palette fl-palette-ruht"
+        data-viele={farbzahl > 6 ? '' : undefined}
+        aria-hidden="true"
+      >
         {Array.from({ length: farbzahl }, (_, nr) => (
           <span key={nr} className="fl-farbe" style={{ background: farbeVon(nr) }} />
         ))}
@@ -991,18 +1108,15 @@ function Warteband({
 function Spielartschalter({
   wert,
   onWahl,
+  richtung,
 }: {
   wert: Variante;
+  /** Merkt sich die Wahl selbst (merkeVariante) — der Schalter nicht. */
   onWahl: (v: Variante) => void;
+  /** Woher die Beschreibung hereinfaehrt; null = ohne Bewegung. */
+  richtung?: Wischrichtung | null;
 }): React.JSX.Element {
-  const waehle = (v: Variante): void => {
-    onWahl(v);
-    try {
-      localStorage.setItem(VARIANTE_SCHLUESSEL, v);
-    } catch {
-      /* Gesperrte Seitendaten. Die Wahl gilt trotzdem — nur eben nicht morgen. */
-    }
-  };
+  const waehle = (v: Variante): void => onWahl(v);
   return (
     <div className="fl-schalter" role="group" aria-label="Spielart">
       {(['nebel', 'klar', 'build', 'extreme'] as const).map((v) => (
@@ -1016,7 +1130,11 @@ function Spielartschalter({
           {VARIANTE_NAME[v]}
         </button>
       ))}
-      <span className="fl-schalter-text">{VARIANTE_TEXT[wert]}</span>
+      {/* `key` erzwingt ein neues Element je Spielart: So laeuft die
+          Einwisch-Bewegung bei jedem Wechsel neu, nicht nur beim ersten. */}
+      <span className="fl-schalter-text" key={wert} data-richtung={richtung ?? undefined}>
+        {VARIANTE_TEXT[wert]}
+      </span>
     </div>
   );
 }
@@ -1185,7 +1303,13 @@ const VORSCHAU_WAENDE_EXTREME: [number, number][] = [
   [13, 14],
 ];
 
-function Vorschau({ variante }: { variante: Variante }): React.JSX.Element {
+function Vorschau({
+  variante,
+  richtung,
+}: {
+  variante: Variante;
+  richtung?: Wischrichtung | null;
+}): React.JSX.Element {
   const farbzahl = farbenFuer(variante);
   const nebel = variante === 'nebel';
   const mauern = variante === 'build' || variante === 'extreme';
@@ -1203,7 +1327,13 @@ function Vorschau({ variante }: { variante: Variante }): React.JSX.Element {
   const breite = 100 / VORSCHAU_SPALTEN;
   const hoehe = 100 / VORSCHAU_ZEILEN;
   return (
-    <div className="fl-vorschau" aria-hidden="true" data-variante={variante}>
+    <div
+      className="fl-vorschau"
+      aria-hidden="true"
+      data-variante={variante}
+      data-richtung={richtung ?? undefined}
+      key={variante}
+    >
       <div
         className="fl-vorschau-brett"
         style={{ gridTemplateColumns: `repeat(${VORSCHAU_SPALTEN}, 1fr)` }}
@@ -1240,7 +1370,11 @@ function Vorschau({ variante }: { variante: Variante }): React.JSX.Element {
             return <span key={`${a}:${b}`} className="fl-wand" data-quer={quer ? '' : undefined} style={stil} />;
           })}
       </div>
-      <p className="fl-vorschau-text">Vorschau: {VARIANTE_NAME[variante]}</p>
+      <p className="fl-vorschau-text">
+        Vorschau: {VARIANTE_NAME[variante]}
+        {/* Nur am Finger sichtbar (styles.css): Mit der Maus wischt niemand. */}
+        <span className="fl-wischhinweis">← wischen zum Wechseln →</span>
+      </p>
     </div>
   );
 }
@@ -1283,10 +1417,10 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
         färben; erst das Färben gibt ab. Die ersten drei Züge der Partie sind
         mauerfrei — das Schloss auf dem Knopf zählt sie herunter; ab dem
-        zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst den
-        Gegner damit nicht
-        einsperren: Kanten, nach denen er kein freies Feld mehr erreichen
-        könnte, lassen sich nicht bebauen.
+        zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst
+        kein Feld einmauern: Eine Kante, nach der ein freies Feld für niemanden
+        mehr erreichbar wäre, lässt sich nicht bebauen — jedes Feld bleibt bis
+        zum Ende zu holen. Auch den Gegner kannst du nicht einsperren.
       </p>
       <p>
         <strong>Extreme</strong> ist Build mit sieben Farben und drei
