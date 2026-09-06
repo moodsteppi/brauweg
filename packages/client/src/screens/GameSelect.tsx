@@ -71,7 +71,6 @@ import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Klanghalle } from './Klanghalle';
-import { Avatarwerkstatt } from './Avatarwerkstatt';
 import { LEERE_BEMALUNG } from '../bemalung';
 
 /**
@@ -80,6 +79,18 @@ import { LEERE_BEMALUNG } from '../bemalung';
  * Profil-Tab.
  */
 const Avatar3D = lazy(() => import('../Avatar3D'));
+
+/**
+ * Die Werkstatt wird nachgeladen — genau wie in `main.tsx`, die sie fuer
+ * `?dev=werkstatt` schon per `lazy` holt. Solange sie hier statisch stand,
+ * zog der statische Import gegen den dynamischen: Vite meldete bei jedem Bau
+ * "dynamically imported by main.tsx but also statically imported by
+ * GameSelect.tsx" und liess sie im Hauptbuendel liegen, obwohl die
+ * allermeisten Besucher sie nie oeffnen.
+ */
+const Avatarwerkstatt = lazy(() =>
+  import('./Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
+);
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -578,14 +589,25 @@ export function GameSelect({
       )}
       {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
       {werkstattOffen && (
-        <Avatarwerkstatt
-          bemalung={me.figur ?? null}
-          getragen={me.avatar}
-          onClose={() => setWerkstattOffen(false)}
-          // Neu laden, damit die Figur im Profil sofort so aussieht wie
-          // gerade gespeichert.
-          onGespeichert={() => onAvatarChange()}
-        />
+        // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
+        // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
+        // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
+        <Suspense
+          fallback={
+            <div className="doko-sheet doko-sheet--mitte">
+              <Ladekreis text="Werkstatt wird geladen…" />
+            </div>
+          }
+        >
+          <Avatarwerkstatt
+            bemalung={me.figur ?? null}
+            getragen={me.avatar}
+            onClose={() => setWerkstattOffen(false)}
+            // Neu laden, damit die Figur im Profil sofort so aussieht wie
+            // gerade gespeichert.
+            onGespeichert={() => onAvatarChange()}
+          />
+        </Suspense>
       )}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
