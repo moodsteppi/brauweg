@@ -14676,6 +14676,8 @@ main.auth > .muted {
   box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.12);
 }
 .fl-bauknopf .fl-schlossicon { flex: none; margin: -6px 0 -6px -10px; }
+/* Der Platzhalter im Wartezustand: nimmt Raum, zeigt nichts, faengt nichts. */
+.fl-bauknopf[data-platz] { visibility: hidden; pointer-events: none; }
 .fl-bauknopf .fl-schlosszahl { fill: #ffffff; }
 
 /* Beim Bauen ruht die Farbwahl — sie ist in diesem Moment nicht der Zug, den
