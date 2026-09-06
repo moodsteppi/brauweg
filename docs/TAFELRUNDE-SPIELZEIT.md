@@ -29,8 +29,9 @@
 > 14 auf **12** zu senken: **7:23 im Median bei 9 Runden**, einzelner Kampf
 > 20,2 s, 9,5 % der Kämpfe von der Uhr entschieden.
 >
-> Zum Weiterlesen in dieser Datei: Abschnitt 7 ist der heutige Stand und
-> handelt vom Warten statt von der Dauer, Abschnitt 6 ist der Stand mit 14
+> Zum Weiterlesen in dieser Datei: Abschnitt 8 ist der heutige Stand (die
+> Bot-Bewertung kennt seitdem die Reichweite), Abschnitt 7 handelt vom Warten
+> statt von der Dauer, Abschnitt 6 ist der Stand mit 14
 > Leben und allen vier Zahlen des Vormittags (7:34 bei 10 Runden, 17,6 s,
 > 4,6 %), Abschnitt 5 der Zwischenschritt davor (7:25 bei 11 Runden, 1,8 %),
 > alles darüber beschreibt den Stand mit 20 Leben.
@@ -766,3 +767,59 @@ dieser Zahl **nicht** auf, denn er ist keine Spielzeit — er ist eine Wartezeit
 der Plattform, und das Zeitmodell weist ihn deshalb getrennt aus
 (`botTaktMs` in `Zeitmodell`). Robins Vorgabe von acht Minuten bleibt
 eingehalten.
+
+---
+
+## 8. Nachgemessen, als die Bot-Bewertung die Reichweite bekam
+
+**Anlass war kein Zeitproblem.** `staerke` in `bot.ts` ließ die Reichweite weg;
+seit dem 06.09.2026 geht sie ein, aber nur so weit, wie das eigene Heer eine
+Vorderreihe hat (`deckungIm`; Begründung, Messreihe und die Wahl des Gewichts
+stehen im Konzeptdokument, achte Messung). Die Regeln sind unberührt — die vier
+Zahlen aus Abschnitt 4 stehen unverändert.
+
+**Gemessen auf dem tiefen Brett** (5 × 4 Felder je Seite, Arena 5 × 10 mit zwei
+leeren Reihen). Das ist für diesen Abschnitt der springende Punkt: Auf dem
+alten Brett stand fast jede Einheit vom ersten Takt an im Ziel, hier wird
+wirklich gelaufen — und deshalb wirkt die Reichweite überhaupt erst.
+
+**Die Spielzeit ist gefallen.** 5.000 Partien zu viert,
+`ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 150`, Saatbasis
+`ausgewogenheit-v1` vorher wie nachher — es unterscheidet die beiden Läufe nur
+der Bot:
+
+| | vorher | nachher |
+|---|---|---|
+| Spielzeit im Median | 6:48 | **6:06** |
+| davon Kampf | 4:02 | **3:22** |
+| davon Vorbereitung (geschätzt) | 2:29 | 2:28 |
+| einzelner Kampf im Median | 17,8 s | **14,5 s** |
+| Kampfphase je Runde im Median | 23,4 s | **18,2 s** |
+| an der Höchstdauer abgebrochen | 4,1 % | **0,7 %** |
+| Runden im Median | 10 | 10 |
+
+**Der Grund steht in der letzten Zeile: Die Runden sind gleich geblieben.**
+Kürzer geworden ist der einzelne Kampf, nicht die Partie. Ein Bot, der
+Fernkämpfer angemessen bewertet, stellt Bretter auf, die in derselben Zeit mehr
+Schaden austeilen — und ein Kampf, der ausgeht, statt in die Höchstdauer zu
+laufen, ist der ganze Unterschied zwischen 4,1 % und 0,7 % Abbrüchen.
+
+**Der einzelne Kampf liegt jetzt knapp unter dem geplanten Fenster** von 15 bis
+20 Sekunden (offene Karte „Kämpfe dauern rund 30 s statt der geplanten
+15-20 s", gemessen bei 30,3 s vor Zeitraffer und Kürzung). Nachgedreht wurde
+deswegen nichts: Eine halbe Sekunde unter einer gerundeten Zielmarke ist kein
+Befund.
+
+**Die Probe in `test/spielzeit.test.ts` verlangt, dass mehr als die Hälfte der
+Spielzeit Kampf ist** — gemessen sind es 3:22 von 6:15, also 54 % (vorher
+58 %). Die Schranke hält, greift aber von unten: Wer die Kämpfe weiter
+verkürzt, ohne die Vorbereitung mitzunehmen, reißt sie. Das ist ihr Sinn — ab
+dort ist die Vorbereitung der größte Posten, und die Empfehlung aus Abschnitt 4
+gilt nicht mehr.
+
+**Was danach zu prüfen wäre, wenn jemand weiter kürzen will:** Die Höchstdauer
+greift jetzt in einem von hundertvierzig Kämpfen. Sie war als Rettungsseil
+gedacht und ist es damit wieder — wer sie senkt, senkt sie gegen fast nichts
+(dazu läuft die eigene Karte „Entscheidung: HOECHSTDAUER_MS von 45 s auf 30 s
+senken?"). Die Schrauben aus Abschnitt 2 sind davon unberührt und gelten
+weiter.

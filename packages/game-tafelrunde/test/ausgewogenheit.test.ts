@@ -65,23 +65,31 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * die das als Ausschlag laese, schluege bei jeder zweiten Katalogaenderung
  * grundlos an.
  *
- * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Ueber 400
- * Partien zu viert faellt nur noch NATURWESEN heraus (91 Antritte, seit es mit
- * dem Irrlicht einen Traeger an Elementar abgegeben hat). Gezaehlt werden
- * sechs Zeilen — Waechter 871, Krieger 681, Meuchler 493, Elementar 315,
- * Untot 272, Drache 184 —, und die Mindestzahl unten verlangt sechs. WER DEN
- * KATALOG SO AENDERT, DASS EINE DIESER ZEILEN UNTER HUNDERT FAELLT, SIEHT HIER
+ * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
+ * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
+ * SIEBEN Marken. Krieger 635, Waechter 596, Elementar 506, Meuchler 442,
+ * Drache 360, Naturwesen 190, Untot 123. Die Mindestzahl unten verlangt sechs
+ * und laesst der duennsten Zeile damit genau einen Ausfall Luft. WER DEN
+ * KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER HUNDERT FALLEN, SIEHT HIER
  * "nur 5 Marken mit genug Antritten" und nicht den eigentlichen Befund; die
- * Zahl 184 (Drache) ist die knappste der Datei, und Naturwesen liegt mit 91
- * knapp unter der Schwelle — es kann also auch nach oben kippen.
+ * Zahl 123 (Untot) ist die knappste der Datei.
  *
- * ZWEI ZEILEN HABEN AM 05.09.2026 IHREN PLATZ HIER ERST BEKOMMEN, aus zwei
- * verschiedenen Gruenden. Untot stand bei einem einzigen Antritt, weil nur
- * Knochenspaeher und Grabfuerstin die Marke trugen — "Untot zu zweit" hiess
- * zwei Kopien derselben Einheit; seit der Schildknappe sie mittraegt, zaehlt
- * die Zeile. Drache und Elementar hingen daran, dass Elementar keinen Traeger
- * in der Vorderreihe hatte; seit das Irrlicht dort steht, zaehlen beide.
- * Beides steht ausfuehrlich im Konzeptdokument.
+ * DREI ZEILEN HABEN IHREN PLATZ HIER ERST NACHTRAEGLICH BEKOMMEN, aus drei
+ * verschiedenen Gruenden — und keiner davon ist eine Aenderung an dieser
+ * Probe. Untot stand bei einem einzigen Antritt, weil nur Knochenspaeher und
+ * Grabfuerstin die Marke trugen ("Untot zu zweit" hiess zwei Kopien derselben
+ * Einheit); seit der Schildknappe sie mittraegt, zaehlt die Zeile. Elementar
+ * und Drache hingen daran, dass Elementar keinen Traeger in der Vorderreihe
+ * hatte; seit das Irrlicht dort steht, zaehlen beide. Und NATURWESEN stand mit
+ * 85 knapp darunter, bis die Bot-Bewertung die Reichweite bekam (bot.ts,
+ * `REICHWEITEN_GEWICHT`): Der Bot kauft seitdem den Astschuetzen deutlich
+ * oefter — 1.141 auf 4.761 Antritte ueber 5.000 Partien —, und mit ihm kommt
+ * die Marke auf 190. Alles drei steht ausfuehrlich im Konzeptdokument.
+ *
+ * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (295 auf 123) und ist jetzt
+ * die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und der Bot
+ * kauft die seitdem seltener. Die Marke haelt die Schwelle noch, aber sie ist
+ * die naechste, die faellt.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -109,17 +117,22 @@ describe('Ausgewogenheit: Marken', () => {
    * sondern DIE Wahl: Wer eine Aufstellung findet, die doppelt so oft gewinnt
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
-   * In dieser Auswahl reicht der weiteste Ausschlag von x1,12 (Krieger) bis
-   * x0,89 (Meuchler) — nach beiden Seiten ist also viel Platz. Das war am
-   * Morgen des 05.09.2026 noch x1,65 bis x0,25; enger wurde es durch die
-   * Elementar-Arbeit und den dritten Untot-Traeger, nicht durch eine
-   * Aenderung an dieser Probe.
+   * In dieser Auswahl reicht der weiteste Ausschlag von x1,49 (Waechter) bis
+   * x0,74 (Drache) — nach beiden Seiten ist also Platz, aber weniger als ohne
+   * den Reichweitenfaktor im Bot (x1,34 bis x0,71 auf demselben Stand).
    *
-   * ABER: Die einzige Zeile, die hier herausfaellt, ist Naturwesen mit 91
-   * Antritten — und sie kann ausschlagen, ohne dass es jemand sieht. Wer den
-   * Katalog anfasst, laesst deshalb das Werkzeug ueber 5.000 Partien laufen
-   * und verlaesst sich nicht auf diese Probe allein; die Auswertung steht im
-   * Konzeptdokument.
+   * DASS DIE SPANNE AUFGEGANGEN IST, hat einen benannten Grund und ist kein
+   * Rueckschritt am Katalog: Die Bot-Bewertung kennt seit dem 06.09.2026 die
+   * Reichweite (bot.ts, `REICHWEITEN_GEWICHT`). Ein Bot, der besser spielt,
+   * trennt staerkere von schwaecheren Marken schaerfer — Krieger und Waechter
+   * gehen hoch, Naturwesen, Elementar, Drache und Meuchler runter, ohne dass
+   * an einer Katalogzeile etwas geaendert wurde. Eine Meta ist gewollt;
+   * angefasst wird, was die Schranke reisst, und die ist x0,5 bis x2.
+   *
+   * Alle sieben Zeilen stehen inzwischen in der Tabelle, es faellt also keine
+   * mehr unbeobachtet aus. Wer den Katalog anfasst, laesst trotzdem das
+   * Werkzeug ueber 5.000 Partien laufen und verlaesst sich nicht auf diese
+   * Probe allein; die Auswertung steht im Konzeptdokument.
    */
   it('haelt jede gezaehlte Marke zwischen der Haelfte und dem Doppelten des Schnitts', () => {
     const schnitt = schnittQuote(AUSWERTUNG.marken, MINDEST_ANTRITTE);

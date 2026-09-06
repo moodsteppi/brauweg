@@ -294,7 +294,9 @@ export const KATALOG: readonly Einheit[] = [
    * Er war zusammen mit dem Irrlicht die schwaechste Einheit seiner
    * Kostenstufe ausserhalb des Beistands — rund ein Viertel unter der Mitte,
    * gemessen mit demselben Mass, das der Bot benutzt (`staerke` in bot.ts:
-   * Leben mal Ruestungsfaktor mal Angriff mal Tempo). Die Ursache war ein
+   * Leben mal Ruestungsfaktor mal Angriff mal Tempo — seit dem 05.09.2026
+   * zusaetzlich mal einem Reichweitenfaktor, der aber nur greift, wenn das
+   * Heer eine Vorderreihe hat). Die Ursache war ein
    * unbezahlter Tausch: Ein Magier bekommt laut Konzept mehr Angriff und
    * weniger Leben als seine Stufe — er hatte zusaetzlich das NIEDRIGSTE Tempo
    * und die NIEDRIGSTE Ruestung des ganzen Katalogs. Mit Tempo 0,6 blieben von

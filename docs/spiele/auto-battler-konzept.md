@@ -173,7 +173,147 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 05.09.2026, siebte Messung — der gültige Stand)
+## Gemessen: Ausgewogenheit (Stand 06.09.2026, achte Messung — der gültige Stand)
+
+**Warum es eine achte gibt, und diesmal ohne eine Zeile am Katalog.** Geändert
+wurde allein die Bot-Bewertung `staerke` in `packages/game-tafelrunde/src/bot.ts`:
+Sie rechnete Leben × Rüstung × (Angriff × Tempo) und ließ die **Reichweite**
+ausdrücklich weg, mit dem Vermerk, die Stellung (Schützen nach hinten) fange
+das ab. Das tut sie nicht — wohin eine Einheit gestellt wird, ändert nichts
+daran, **welche** gekauft wird.
+
+**Gemessen wurde auf einem Brett von 5 × 4 Feldern je Seite** (Arena 5 × 10 mit
+zwei leeren Reihen dazwischen). Das steht vor den Zahlen und nicht hinter
+ihnen. Ein erster Anlauf war gegen das alte Brett gemessen — 5 × 2 je Seite,
+Arena 5 × 4 — und kam auf ein Gewicht von 0,15; dort stand fast jede Einheit
+vom ersten Takt an im Ziel, und Reichweite war entsprechend wenig wert. Auf dem
+tieferen Brett wird wirklich gelaufen, und der Wert steigt.
+
+### Wie viel ein Feld Reichweite wert ist
+
+Gemessen mit `werkzeug/gangarten.mjs --schraube reichweitenGewicht=…`: Alle
+vier Sitze spielen `normal`, nur Sitz 0 rechnet mit dem Faktor. Die Saat hängt
+nicht an der Schraube — zwei Läufe spielen also **dieselben** Partien. Je 400
+Partien über sechs Saatbasen, gezählt werden die eindeutigen Siege von Sitz 0.
+
+| Gewicht | Siege von 2.400 |
+|---|---|
+| 0 (Kontrolllauf) | 645 |
+| 0,15 | 808 |
+| 0,20 | 823 |
+| **0,25 (gebaut)** | **804** |
+| 0,30 | 817 |
+| 0,35 | 805 |
+| 0,50 | 701 |
+| 0,70 | 520 |
+| 1,00 | 373 |
+
+**Von 0,15 bis 0,35 ist das eine Ebene und keine Kurve.** Die fünf Werte liegen
+innerhalb eines Standardfehlers (rund 22 Siege auf 2.400 Partien).
+Unterscheidbar wird es erst darüber: Ab 0,50 fällt der Faktor ab, bei 0,70
+liegt er unter dem Kontrolllauf, bei 1,00 ist er ein Desaster — dort kauft der
+Bot Fernkämpfer, wo er eine Wache bräuchte. **0,25 ist die Mitte der Ebene und
+nicht ihr höchster Punkt**, und zwar absichtlich: Die Ebene ist gemessen, ihr
+Maximum ist Rauschen, und die Mitte hat nach beiden Seiten gleich viel Luft für
+die nächste Änderung an Brett oder Katalog.
+
+### Die Deckung kostet inzwischen eher, als sie bringt
+
+Der Faktor gilt nur so weit, wie das eigene Heer eine Vorderreihe hat
+(`deckungIm`: `min(1, 2 × Nahkämpfer / Fernkämpfer)`). Gemessen wie oben, bei
+Gewicht 0,25:
+
+| Deckkraft | Siege von 2.400 |
+|---|---|
+| 1 (eine Wache deckt einen Fernkämpfer) | 742 |
+| **2 (gebaut)** | **804** |
+| ohne Bremse (Faktor gilt immer voll) | 819 |
+
+Der Abstand zwischen 2 und „ohne Bremse" ist ein Standardfehler, also keine
+Aussage — aber die Richtung war schon bei der Messung gegen das alte Brett
+dieselbe. **Die Bremse bleibt trotzdem, und mit dem höheren Gewicht mehr denn
+je:** Sie verhindert das Brett, an dem Elementar in der siebten Messung mit
+×0,25 gescheitert ist. Dass sie heute nichts abfängt, liegt am Katalog
+derselben Messung — seit Irrlicht und Schildknappe hat jede Marke einen Träger
+in der Vorderreihe. Deckkraft 1 ist dagegen messbar zu streng.
+
+### Siegquote je Marke
+
+**5.000 Partien zu viert, Besetzung `normal`, `--mindest 150`, Saatbasis
+`ausgewogenheit-v1`** — dieselbe Saat vorher und nachher, es unterscheidet sie
+nur der Bot. Schnitt der gezählten Zeilen 30,2 % vorher, 27,5 % nachher.
+
+| Marke | Antritte vorher → nachher | zum Schnitt vorher | nachher |
+|---|---|---|---|
+| Wächter | 11.340 → 7.499 | ×0,85 | **×1,49** |
+| Krieger | 8.960 → 7.730 | ×1,01 | **×1,48** |
+| Untot | 3.400 → 1.509 | ×0,76 | ×0,96 |
+| Elementar | 3.492 → 6.053 | ×0,98 | ×0,83 |
+| Drache | 2.073 → 4.476 | ×1,19 | ×0,80 |
+| Meuchler | 6.442 → 5.441 | ×0,92 | ×0,74 |
+| Naturwesen | 1.103 → 2.605 | ×1,29 | **×0,71** |
+
+**Die Spanne ist von ×0,76…×1,29 auf ×0,71…×1,49 aufgegangen.** Sie hält die
+Schranke der Probe (×0,5 bis ×2) weiter. Nachgedreht wurde nichts: Eine Meta
+ist gewollt, und was hier passiert, ist keine kaputte Zeile, sondern eine
+schärfere Linse — ein Bot, der besser spielt, trennt stärkere von schwächeren
+Marken deutlicher. Die Folgerung gehört auf das Board.
+
+In der kleinen Probe (400 Partien, `test/ausgewogenheit.test.ts`) zählen
+seitdem **alle sieben Marken**: Naturwesen ist mit 85 → 190 Antritten über die
+Schwelle gekommen. Untot ist dafür von 295 auf 123 gefallen und damit die neue
+Wackelzeile — zwei seiner drei Träger sind Nahkämpfer.
+
+### Siegquote je Einheit — woran man den Eingriff wirklich sieht
+
+Nicht an den Quoten (die sind auf dem letzten Brett verzerrt: Eine
+Ein-Gold-Einheit steht dort vor allem dann, wenn ihr Besitzer nicht
+aufgestiegen ist), sondern an den **Antritten**. Sie sagen, was der Bot kauft:
+
+| Einheit | Reichweite | Antritte vorher → nachher |
+|---|---|---|
+| Astschütze | 3 | 1.141 → **4.761** |
+| Steinschleuderer | 3 | 2.259 → **5.457** |
+| Funkenlehrling | 3 | 3.346 → **6.887** |
+| Bogenmeisterin | 3 | 930 → 1.837 |
+| Nachtpfeil | 3 | 916 → 1.644 |
+| Frostweberin | 3 | 706 → 1.414 |
+| Drachenkind | 3 | 435 → 858 |
+| Sturmrufer | 4 | 286 → 738 |
+| Schildknappe | 1 | 8.166 → **3.638** |
+| Dorfwache | 1 | 11.649 → 8.314 |
+| Schattenklinge | 1 | 3.279 → 1.767 |
+| Knochenspäher | 1 | 1.346 → 765 |
+
+**Der Gassendieb bleibt, wo er war** (8.785 → 8.284 Antritte, ×0,57 → ×0,41).
+Er hat Reichweite 1, der Faktor rührt ihn nicht an. Dass der Bot ihn trotzdem
+am zweithäufigsten kauft, ist der **andere** Befund über `staerke`: Aushalten
+mal Austeilen behandelt beides als austauschbar (Karte „die Bot-Bewertung
+`staerke` sagt die Rangfolge im Kampf nicht vorher"). Diese Messung räumt ihn
+nicht ab.
+
+### Was noch mit gekippt ist
+
+| | vorher | nachher |
+|---|---|---|
+| Spielzeit im Median | 6:48 | **6:06** |
+| davon Kampf | 4:02 | **3:22** |
+| einzelner Kampf im Median | 17,8 s | **14,5 s** |
+| Kämpfe an der Höchstdauer abgebrochen | 4,1 % | **0,7 %** |
+| vorzeitig einseitig | 31,9 % | 27,8 % |
+| Runden im Median | 10 | 10 |
+
+Mehr Fernkämpfer heißt mehr Schaden in derselben Zeit: Die Kämpfe laufen aus,
+statt in die Höchstdauer zu laufen. Die Rundenzahl bleibt gleich — kürzer
+geworden ist der einzelne Kampf, nicht die Partie.
+
+Die Gangart-Reihenfolge `hart > normal > sanft` steht in allen vier gemessenen
+Spalten; der Abstand zwischen `hart` und `normal` ist kleiner geworden (228 auf
+183 Siege je 400 Partien), weil ein Bot, der besser einkauft, einen Teil dessen
+aufholt, was `hart` sich über Tempo verschafft. Tabelle und Kontrolllauf stehen
+bei `GANGARTEN` in `bot.ts`.
+
+## Überholt: die siebte Messung (Stand 05.09.2026, Bot ohne Reichweitenfaktor)
 
 **Warum es eine siebte gibt.** Die sechste Messung hinterließ zwei Zeilen, die
 nicht in Ordnung waren. Sie sind unabhängig voneinander gefunden und am selben
