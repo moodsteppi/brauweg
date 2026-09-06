@@ -81,6 +81,20 @@ export interface Synergie {
    * deshalb hier und nicht in der i18n des Clients (siehe katalog.ts).
    */
   readonly name: string;
+  /**
+   * Ein Satz, was die Marke bewirkt — fuer das Blatt, das der Bildschirm
+   * beim Antippen eines Markenzeichens aufschlaegt.
+   *
+   * Er steht HIER und nicht im Client, aus demselben Grund wie der Name:
+   * Was eine Marke tut, ist Inhalt des Spiels. Wer die Boni in der Tabelle
+   * darunter umstellt, aendert den Satz im selben Zug mit — stuende er im
+   * Bildschirm, verspraeche er ab da etwas anderes, als das Modul rechnet.
+   *
+   * Er nennt ausdruecklich die TRAEGER und nicht "alle Verbuendeten": Der
+   * Bonus gilt nur fuer die Einheiten mit dieser Marke (siehe Kopf), und
+   * genau das ist die Verwechslung, die eine Aufstellung kostet.
+   */
+  readonly wirkung: string;
   /** Aufsteigend nach Schwelle, genau eine je Schwelle aus `SCHWELLEN`. */
   readonly stufen: readonly Synergiestufe[];
 }
@@ -123,6 +137,8 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'krieger',
     name: 'Krieger',
+    wirkung:
+      'Jeder Krieger auf dem Brett bekommt Rüstung dazu und steckt damit jeden Treffer besser weg.',
     stufen: [
       { schwelle: 2, bonus: bonus({ ruestung: 10 }) },
       { schwelle: 3, bonus: bonus({ ruestung: 15 }) },
@@ -132,6 +148,8 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'elementar',
     name: 'Elementar',
+    wirkung:
+      'Jedes Elementarwesen auf dem Brett schlägt härter zu — der Bonus geht auf den Angriff.',
     /*
      * DIESE ZAHLEN WAREN NICHT SCHULD, als Elementar am 05.09.2026 bei x0,25
      * stand — wer das nachsehen will, misst es nach: Mit Bonus NULL blieb die
@@ -149,6 +167,8 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'meuchler',
     name: 'Meuchler',
+    wirkung:
+      'Jeder Meuchler auf dem Brett schlägt öfter zu — der Bonus geht auf das Tempo.',
     stufen: [
       { schwelle: 2, bonus: bonus({ tempoProzent: 15 }) },
       { schwelle: 3, bonus: bonus({ tempoProzent: 25 }) },
@@ -158,6 +178,8 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'waechter',
     name: 'Wächter',
+    wirkung:
+      'Jeder Wächter auf dem Brett bekommt Leben und Rüstung dazu und wird zur Mauer davor.',
     stufen: [
       { schwelle: 2, bonus: bonus({ lebenProzent: 10, ruestung: 5 }) },
       { schwelle: 3, bonus: bonus({ lebenProzent: 15, ruestung: 8 }) },
@@ -167,6 +189,8 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'naturwesen',
     name: 'Naturwesen',
+    wirkung:
+      'Jedes Naturwesen auf dem Brett bekommt Leben dazu und bleibt entsprechend länger stehen.',
     stufen: [
       { schwelle: 2, bonus: bonus({ lebenProzent: 15 }) },
       { schwelle: 3, bonus: bonus({ lebenProzent: 25 }) },
@@ -176,6 +200,8 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'untot',
     name: 'Untot',
+    wirkung:
+      'Jeder Untote auf dem Brett bekommt Angriff und Leben dazu, beides maßvoll.',
     stufen: [
       { schwelle: 2, bonus: bonus({ angriffProzent: 10, lebenProzent: 10 }) },
       { schwelle: 3, bonus: bonus({ angriffProzent: 15, lebenProzent: 15 }) },
@@ -185,6 +211,8 @@ export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'drache',
     name: 'Drache',
+    wirkung:
+      'Jeder Drache auf dem Brett schlägt härter und öfter zu — zwei Träger sind schon die erste Stufe.',
     /*
      * Am 05.09.2026 halbiert (vorher 25/10, 50/20 und 80/30) und mit der
      * Schwellenverschiebung noch einmal um den Traegeranteil gekuerzt.

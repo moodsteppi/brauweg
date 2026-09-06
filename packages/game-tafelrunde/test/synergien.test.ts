@@ -59,6 +59,19 @@ describe('Die Tabelle', () => {
     }
   });
 
+  it('sagt zu jeder Marke in einem Satz, was sie bewirkt', () => {
+    /*
+     * Der Satz steht im Blatt, das der Bildschirm beim Antippen eines
+     * Markenzeichens aufschlaegt. Fehlt er fuer eine Marke, bleibt dort eine
+     * Luecke — und der Client darf sie nicht mit einer eigenen Fassung
+     * fuellen, sonst gaebe es zwei Wahrheiten ueber denselben Bonus.
+     */
+    for (const s of SYNERGIEN) {
+      assert.ok(s.wirkung.length > 0, `${s.marke}: Wirkung`);
+      assert.ok(s.wirkung.endsWith('.'), `${s.marke}: ganzer Satz`);
+    }
+  });
+
   it('wird je Schwelle nur staerker, nie schwaecher', () => {
     // Sonst gaebe es einen Punkt, an dem eine WEITERE Einheit der Marke den
     // Bonus mindert — das merkt man erst im Kampf und versteht es nie.
