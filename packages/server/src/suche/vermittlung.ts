@@ -11,6 +11,7 @@
 import type { GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
+import { RuleSetInvalidError } from '../errors.js';
 import { requireModule } from '../games/registry.js';
 import {
   MAX_ROUNDS,
@@ -78,11 +79,26 @@ export class Vermittlung {
     this.beiFehler = optionen.beiFehler ?? (() => {});
   }
 
-  /** Suche beginnen. Die Antwort ist schon der erste Stand. */
-  async betritt(gameId: GameId, accountId: string): Promise<Suchstand> {
+  /**
+   * Suche beginnen. Die Antwort ist schon der erste Stand.
+   *
+   * `config` ist der Regelsatz, mit dem der Suchende spielen will (seit dem
+   * 06.09.2026, fuer die Spielart von Filler). Er wird HIER geprueft und nicht
+   * erst beim Tischbau: Ein Regelsatz, der 30 Sekunden spaeter durchfaellt,
+   * liesse den Spieler ohne Erklaerung mit "Suche beendet" zurueck. Ohne
+   * `config` gilt die Vorgabe des Moduls, wie bisher.
+   */
+  async betritt(gameId: GameId, accountId: string, config: unknown = null): Promise<Suchstand> {
     // Wirft, wenn das Spiel gar nicht spielbar ist — vor dem Eintragen, damit
     // niemand in einer Schlange steht, aus der nie ein Tisch werden kann.
-    requireModule(gameId);
+    const module = requireModule(gameId);
+    if (config !== null && config !== undefined) {
+      const sitze = zielSitze(gameId);
+      const fehler = module
+        .validateConfig(config, sitze, runden(gameId, sitze))
+        .filter((p) => p.severity === 'error');
+      if (fehler.length > 0) throw new RuleSetInvalidError(fehler);
+    }
     /*
      * Suchen und an einem Wartetisch sitzen schliessen einander aus.
      *
@@ -94,7 +110,11 @@ export class Vermittlung {
      * durchsetzen.
      */
     await leaveOtherWaitingTables(this.db, accountId);
-    this.schlange.betritt(gameId, accountId);
+    // Ohne Regelsatz die Vorgabe des Moduls — und zwar HIER ausgeschrieben,
+    // nicht als null: Der Topf haengt an der Spielart des Regelsatzes, und ein
+    // alter Client ohne Rumpf soll bei den Nebel-Suchenden stehen, nicht in
+    // einem eigenen Topf daneben.
+    this.schlange.betritt(gameId, accountId, config ?? module.defaultConfig());
     return this.abruf(gameId, accountId);
   }
 
@@ -126,7 +146,7 @@ export class Vermittlung {
   async reife(): Promise<void> {
     for (const runde of this.schlange.faellig(zielSitze)) {
       try {
-        const beteiligte = await this.tischBauen(runde.gameId, runde.accountIds);
+        const beteiligte = await this.tischBauen(runde.gameId, runde.accountIds, runde.config);
         this.schlange.vermittelt(beteiligte.accountIds, beteiligte.tischId);
         this.runtime.notify(beteiligte.tischId);
       } catch (fehler) {
@@ -138,6 +158,7 @@ export class Vermittlung {
   private async tischBauen(
     gameId: GameId,
     accountIds: readonly string[],
+    config: unknown | null,
   ): Promise<{ tischId: string; accountIds: string[] }> {
     const module = requireModule(gameId);
     const sitze = zielSitze(gameId);
@@ -150,7 +171,9 @@ export class Vermittlung {
     const table = await createTable(this.db, {
       accountId: erster,
       gameId,
-      config: module.defaultConfig(),
+      // Der Regelsatz des Fensters — bei Filler traegt er die Spielart; ohne
+      // einen bleibt es bei der Vorgabe des Moduls.
+      config: config ?? module.defaultConfig(),
       seats: sitze,
       rounds: runden(gameId, sitze),
       // Nicht `public`: Der Tisch ist bereits vergeben. Stuende er in der

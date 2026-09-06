@@ -30,16 +30,16 @@ import { useTable } from '../useTable';
  */
 
 /**
- * Regelsatz, mit dem der BOT-Tisch aufgemacht wird.
+ * Regelsatz, mit dem Bot-Tisch und Mitspielersuche aufgemacht werden.
  *
  * Muss zu DEFAULT_REGELN in packages/game-filler/src/regeln.ts passen. Bewusst
  * ausgeschrieben statt ueber `api.defaults()` geholt: Der Knopf soll nicht auf
  * eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht.
  *
- * Nur noch hier und nicht mehr in der Mitspielersuche: Die baut ihren Tisch
- * seit dem 06.09.2026 serverseitig und nimmt dort `defaultConfig()` des
- * Moduls. Wer diese Zahlen anfasst, aendert also den Bot-Tisch und sonst
- * nichts — die Spielart eingeschlossen.
+ * Die Mitspielersuche schickt ihn seit dem 06.09.2026 abends mit
+ * (`sucheStarten(…, config)`): Der Server fuehrt je Spielart einen eigenen
+ * Topf und baut den Tisch mit diesem Regelsatz — vorher nahm er die Vorgabe
+ * des Moduls, und der Schalter wirkte nur auf den Bot-Tisch.
  */
 const REGELSATZ = { spalten: 8, zeilen: 7, barrieren: 10 };
 
@@ -238,18 +238,16 @@ export function Filler({
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
   /**
-   * Die Spielart des BOT-Tisches.
+   * Die Spielart, mit der gesucht bzw. der Bot-Tisch aufgemacht wird.
    *
    * Sie ist eine Vorwahl fuer den naechsten Tisch und NICHT der Zustand des
    * laufenden: Was am Tisch gilt, steht in `sicht.variante` und kommt vom
    * Server. Wer das verwechselt, baut einen Schalter, der mitten in der Partie
    * den Nebel abzuschalten scheint und nichts tut.
    *
-   * Fuer die Mitspielersuche gilt sie seit dem 06.09.2026 NICHT mehr: Die
-   * Schlange kennt nur die `gameId` und baut ihren Tisch mit `defaultConfig()`
-   * des Moduls. Deshalb steht der Schalter jetzt beim Bot-Knopf und nicht mehr
-   * ueber beiden — einer, der auf den oberen Knopf nicht wirkt, waere eine
-   * Beschriftung, die nicht stimmt.
+   * Seit dem 06.09.2026 abends gilt sie wieder fuer BEIDE Knoepfe: Die
+   * Suchschlange fuehrt je Spielart einen Topf. Deshalb steht der Schalter
+   * wieder ueber beiden.
    */
   const [variante, setVariante] = useState<Variante>(gelesenevariante);
   /**
@@ -306,7 +304,11 @@ export function Filler({
     setFehler(null);
     setSucht(true);
     try {
-      const stand = await api.sucheStarten('filler');
+      const stand = await api.sucheStarten('filler', {
+        ...REGELSATZ,
+        farben: farbenFuer(variante),
+        variante,
+      });
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
@@ -314,7 +316,7 @@ export function Filler({
     } finally {
       setSucht(false);
     }
-  }, []);
+  }, [variante]);
 
   /**
    * Nachfragen, solange gesucht wird.
@@ -555,6 +557,14 @@ export function Filler({
               <span key={i} style={{ background: farbe }} />
             ))}
           </div>
+          {/*
+            * Der Schalter steht ÜBER beiden Knoepfen, weil er entscheidet, WAS
+            * beide aufmachen — seit dem 06.09.2026 abends auch die Suche: Die
+            * Schlange des Servers fuehrt je Spielart einen Topf. Zwischendurch
+            * stand er beim Bot-Knopf, als die Schlange die Spielart noch nicht
+            * kannte.
+            */}
+          <Spielartschalter wert={variante} onWahl={waehleVariante} richtung={wischRichtung} />
           <button
             className="fl-suchen"
             type="button"
@@ -563,17 +573,7 @@ export function Filler({
           >
             Online Match suchen…
           </button>
-          {/*
-            * Der Schalter sass bis zum 06.09.2026 ÜBER beiden Knoepfen, weil er
-            * entschied, WAS beide aufmachen. Seit die Suche ueber die Schlange
-            * des Servers laeuft, entscheidet er nur noch ueber den Bot-Tisch —
-            * die Schlange nimmt den Regelsatz des Moduls. Deshalb steht er
-            * jetzt IN diesem Block: Ein Schalter ueber einem Knopf, auf den er
-            * nicht wirkt, ist schlimmer als gar keiner.
-            */}
           <div className="fl-botblock">
-            <p className="fl-blocktitel">Gegen Bot — hier wählst du die Spielart</p>
-            <Spielartschalter wert={variante} onWahl={waehleVariante} richtung={wischRichtung} />
             {/* Ruhiger gefaerbt als die Match-Suche: Der Mensch bleibt das
                 Angebot, gegen das man zuerst spielt. Dieselbe Staffelung wie
                 bei Mememory. */}

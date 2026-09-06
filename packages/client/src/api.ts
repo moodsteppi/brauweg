@@ -713,7 +713,8 @@ export const api = {
    * — hoert der Client damit auf (Netz weg, Tab zu), faellt er von selbst aus
    * der Schlange.
    */
-  sucheStarten: (gameId: string) => post<Suchstand>(`/suche/${gameId}`),
+  sucheStarten: (gameId: string, config?: unknown) =>
+    post<Suchstand>(`/suche/${gameId}`, config === undefined ? undefined : { config }),
   sucheStand: (gameId: string) => request<Suchstand>(`/suche/${gameId}`),
   sucheAbbrechen: (gameId: string) => post<{ ok: true }>(`/suche/${gameId}/abbrechen`),
 
