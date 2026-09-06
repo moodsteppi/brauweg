@@ -15,9 +15,12 @@ schade.
 > **DIE ZAHLEN IN DEN ABSCHNITTEN 2 BIS 5 SIND AUF DEM ALTEN BRETT GEMESSEN**
 > (5 Spalten × 2 Reihen je Seite, ohne Lücke) und beschreiben **nicht** den
 > gebauten Stand. Sie stehen weiter hier, weil sie die Herleitung sind: Ohne
-> sie ist die Entscheidung eine Geschmacksfrage. Was heute gilt, steht in
-> Abschnitt 1 — nachgemessen mit demselben Werkzeug und derselben Saatbasis,
-> nicht aus dem Umbau-Commit abgeschrieben.
+> sie ist die Entscheidung eine Geschmacksfrage. **Keine Spalte und keine
+> Zeile dort heißt mehr „heute".** Bis zum 06.09.2026 hieß sie so, und wer
+> die Tabelle ohne dieses Vorwort las, hielt das alte Brett für den gebauten
+> Stand. Was gilt, steht in Abschnitt 1 (die Geometrie) und in
+> Abschnitt 8 (der Bot, der sie benutzt) — beides nachgemessen mit demselben
+> Werkzeug und derselben Saatbasis, nicht aus dem Umbau-Commit abgeschrieben.
 >
 > Startleben (12), Zeitraffer (2), Schwellen und Boni sind unangetastet.
 
@@ -37,6 +40,17 @@ node packages/game-tafelrunde/werkzeug/laufwege-variante.mjs alt5x2 --reihen 2 -
 node packages/game-tafelrunde/werkzeug/laufwege.mjs \
      --dist packages/game-tafelrunde/tmp-varianten/alt5x2 --partien 2000
 ```
+
+> **Der zweite Befehl stellt das alte BRETT nach, nicht den alten STAND.**
+> Nachgemessen am 06.09.2026: Er liefert heute 50,0 % laufende Einheiten und
+> 54,3 % sofort in Reichweite, wo Abschnitt 2 noch 46,6 % und 68,4 % nennt.
+> Das ist kein Fehler des Werkzeugs — dazwischen liegt die Wunschreihe je
+> Rolle (Abschnitt 8). Der Meuchler steht auf dem alten Brett jetzt in Reihe 1
+> statt in Reihe 0 und läuft dadurch in 97,8 % statt 68,3 % der Fälle. **Wer
+> die Zahlen der Abschnitte 2 bis 5 Zeile für Zeile nachstellen will, braucht
+> zusätzlich den Bot von vor dem 06.09.2026** (`platzStrafe` in `bot.ts`,
+> Stand vor `db40af4`). Für die Frage, was die Geometrie allein tut, genügt
+> der Befehl oben — nur vergleicht er dann zwei heutige Bretter.
 
 Alle Zahlen stammen aus **2.000 Partien je Zeile, zu viert, Besetzung
 `normal`, Saatbasis `laufwege-v1`** — 34.600 bis 35.300 echte Kämpfe und rund
@@ -102,9 +116,11 @@ in Kontakt**.
 ## 2. Die Beobachtung, die dazu geführt hat
 
 > Ab hier bis Abschnitt 5: gemessen auf dem **alten** Brett (5 Spalten × 2
-> Reihen je Seite, keine Lücke), also auf dem Stand vor dem 06.09.2026.
+> Reihen je Seite, keine Lücke) **und mit dem alten Bot** (zwei Wünsche, ganz
+> vorn oder ganz hinten), also auf dem Stand vor dem 06.09.2026. Beides hat
+> sich seither geändert — siehe die Warnung beim Nachrechnen ganz oben.
 
-| Zahl | heute |
+| Zahl | damals (5×2, Bot vor der Wunschreihe) |
 | --- | --- |
 | Bewegungen je Kampf, Median | **4** |
 | Bewegungen je Kampf, Mittel | 3,52 |
@@ -184,7 +200,7 @@ Kampf ist eben 18 Sekunden lang und ein Schritt drei Zehntel davon.
 
 **Diese Tabelle ist der Grund, aus dem der Umbau so aussieht, wie er
 aussieht.** Sie vergleicht sieben Bretter, die es damals alle noch nicht
-gab; die Ausgangszeile „heute (5×2)" ist der Stand vor dem 06.09.2026, und
+gab; die Ausgangszeile „damals (5×2)" ist der Stand vor dem 06.09.2026, und
 keine Zeile beschreibt den gebauten. Gebaut wurden am Ende die beiden
 untersten Zeilen **zusammen** — siehe Abschnitt 1.
 
@@ -203,7 +219,7 @@ sich nichts.
 
 | Zeile | Beweg. Median | Beweg. Mittel | P90 | ohne Beweg. | läuft je einmal | sofort in RW | Schritte/Einheit | Laufbild-Anteil | Kampf | von der Uhr | Partie | Runden | Markenspanne |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| **heute (5×2)** | 4 | 3,52 | 6 | 3,6 % | 46,6 % | 68,4 % | 0,68 | 1,2 % | 17,0 s | 6,0 % | 6,9 min | 9 | x0,78–x1,31 |
+| **damals (5×2)** | 4 | 3,52 | 6 | 3,6 % | 46,6 % | 68,4 % | 0,68 | 1,2 % | 17,0 s | 6,0 % | 6,9 min | 9 | x0,78–x1,31 |
 | 6 Spalten | 5 | 4,51 | 7 | 3,3 % | 52,1 % | 58,5 % | 0,87 | 1,5 % | 17,3 s | 5,9 % | 7,0 min | 9 | x0,69–x1,27 |
 | 7 Spalten | 5 | 5,02 | 8 | 3,6 % | 52,8 % | 56,6 % | 0,97 | 1,7 % | 17,0 s | 6,0 % | 7,0 min | 9 | x0,82–x1,18 |
 | 3 Reihen je Seite ⚠ | 3 | 3,86 | 8 | 6,5 % | 42,5 % | 72,6 % | 0,74 | 1,3 % | 16,9 s | 4,4 % | 6,9 min | 9 | x0,88–x1,20 |
@@ -254,7 +270,7 @@ der Tabelle, obwohl die Aufgabe sie nicht nennt.
   Bezahlt wird das mit **0,7 s je Kampf** und keiner einzigen Minute Partie
   (6,9 min bei 9 Runden, unverändert). Der Anteil der von der Uhr
   entschiedenen Kämpfe **sinkt** sogar von 6,0 % auf 4,5 %, und die
-  Markenspanne bleibt mit x0,82–x1,25 enger als heute.
+  Markenspanne bleibt mit x0,82–x1,25 enger als auf dem alten Brett.
 
   **Die Lücke muss gerade sein.** Eine Lücke von 1 macht die Spiegelung
   unfair (nachgerechnet, gleiche Rechnung wie bei den drei Reihen); 2 ist die
@@ -298,13 +314,21 @@ Die Vorhersage von hier, daneben das, was PR #93 wirklich anfassen musste:
   Hälfte samt Figuren aus dem Raster fallen. Die Sicht führt seitdem
   `arenaReihen`/`arenaSpalten` selbst (CLAUDE.md: was das Modul weiß,
   schreibt der Client nicht ab).
-- **Übersehen:** `vorbereitungMs` musste von 45 s auf 75 s. Mehr Felder
-  heißen mehr Handgriffe, und der Schwanz der Vorbereitung wurde länger,
-  auch wenn der Median bei sieben Handgriffen blieb.
+- **Erwartet und nicht eingetreten:** `vorbereitungMs` sollte von 45 s auf
+  75 s müssen — mehr Felder, mehr Handgriffe, längerer Schwanz. **Gebaut
+  wurde es nie.** `DEFAULT_REGELN.vorbereitungMs` steht seit PR #79
+  unverändert auf `45_000`, im ganzen Paket kommt keine 75 s vor, und die
+  Frist hat sich als ausreichend erwiesen: Der Median blieb bei sieben
+  Handgriffen. Dieser Punkt stand bis zum 06.09.2026 als „übersehen, musste
+  nachgezogen werden" hier — das war eine Vorhersage, die als Tatsache
+  gelesen wurde.
 
-Offen ist die dritte Vorhersage: Die **Höhe** der Arena ist um mehr als die
-Hälfte gewachsen, und ob das am schmalen Gerät trägt, hat noch niemand
-angesehen — dafür gibt es weiterhin eine eigene Karte.
+Die dritte Vorhersage ist inzwischen eingelöst: Die **Höhe** der Arena war um
+mehr als die Hälfte gewachsen, und ob das am schmalen Gerät trägt, war offen.
+Angesehen und umgebaut wurde es am 06.09.2026 — Gegnerbrett, eigenes Brett und
+Laden passen jetzt gleichzeitig auf 440 × 956 (Commit `355819d`, auf
+`staging`). Was am Handy noch offen ist, steht als eigene Karte auf dem Board
+und nicht mehr hier.
 
 ---
 
