@@ -848,70 +848,91 @@ export function KampfAnzeige<E extends Einheitenbild>({
                   Boden, waehrend die Figur atmet — siehe `.schatten` im
                   Stylesheet. */}
               <i className={stil.schatten} aria-hidden="true" />
-              {/* Der Schluessel wechselt mit jedem Schlag: So faengt die
-                  Ausschlag-Animation jedes Mal von vorn an, statt beim
-                  zweiten Schlag stumm zu bleiben. */}
-              <div
-                key={f.schlaege}
-                className={stil.koerper}
-                data-schlaegt={f.schlaege > 0 ? '' : undefined}
-              >
-                {einheit ? (
-                  <Figur3D
-                    name={einheit.name}
-                    blatt={blattPfad(einheit.rolle)}
-                    klasse={stil.figur3d}
-                    /*
-                     * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT).
-                     * Gespiegelt wird, wer OBEN steht — dann sehen die beiden
-                     * Heere einander an, statt in dieselbe Richtung zu
-                     * blicken. Nach der eigenen Seite und nicht nach der
-                     * Arenaseite: Wer als `b` antritt, bekommt die Arena
-                     * gedreht, und mit `f.seite` haetten sich beim Drehen alle
-                     * Figuren mitgedreht.
-                     */
-                    spiegeln={f.seite !== unten}
-                    gib={(el) => {
-                      if (!el) {
-                        blaetter.current.delete(f.id);
-                        return;
-                      }
-                      blaetter.current.set(f.id, el);
+              {/* Der Stellplatz: die Ebene, an der sich alles bemisst, was zur
+                  FIGUR gehoert und nicht zur Karte. Der Koerper liegt
+                  deckungsgleich darin, die Trefferebene daneben — warum es sie
+                  braucht, steht an `.stellplatz` im Stylesheet. */}
+              <div className={stil.stellplatz}>
+                {/* Der Schluessel wechselt mit jedem Schlag: So faengt die
+                    Ausschlag-Animation jedes Mal von vorn an, statt beim
+                    zweiten Schlag stumm zu bleiben. */}
+                <div
+                  key={f.schlaege}
+                  className={stil.koerper}
+                  data-schlaegt={f.schlaege > 0 ? '' : undefined}
+                >
+                  {einheit ? (
+                    <Figur3D
+                      name={einheit.name}
+                      blatt={blattPfad(einheit.rolle)}
+                      klasse={stil.figur3d}
                       /*
-                       * Gleich hier schieben und nicht erst im naechsten Takt:
-                       * Der Koerper wird bei JEDEM Schlag neu aufgebaut
-                       * (`key={f.schlaege}`), also 155-mal im Kampf der Probe.
-                       * Ohne diese Zeile zeigte das frische Blatt bis zum
-                       * naechsten Bild die linke obere Zelle — ausgerechnet in
-                       * dem Augenblick, in dem die Figur ausholt.
-                       *
-                       * Und zwar den Stand des TAKTES, nicht den dieses
-                       * Zeichnens (siehe `zuletzt`). Nur beim allerersten
-                       * Aufbau gibt es noch keinen — dann steht die Uhr auf
-                       * null, und beides ist dasselbe.
+                       * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT).
+                       * Gespiegelt wird, wer OBEN steht — dann sehen die beiden
+                       * Heere einander an, statt in dieselbe Richtung zu
+                       * blicken. Nach der eigenen Seite und nicht nach der
+                       * Arenaseite: Wer als `b` antritt, bekommt die Arena
+                       * gedreht, und mit `f.seite` haetten sich beim Drehen alle
+                       * Figuren mitgedreht.
                        */
-                      bildSchieben(
-                        el,
-                        zuletzt.current.get(f.id) ?? bildstand(f, anzeige.zeitMs, ruhig),
-                      );
-                    }}
-                    /* Zwei Rueckfaelle, in dieser Reihenfolge: Faellt das Blatt
-                       aus, steht dort die Pixelfigur der Einheit; faellt auch
-                       die aus, das gezeichnete Zeichen. */
-                    ersatz={
-                      <Figurbild
-                        einheit={einheit}
-                        ersatz={ersatzzeichen(einheit)}
-                        klasse={stil.figurbild}
-                      />
-                    }
-                  />
-                ) : (
-                  <span>?</span>
+                      spiegeln={f.seite !== unten}
+                      gib={(el) => {
+                        if (!el) {
+                          blaetter.current.delete(f.id);
+                          return;
+                        }
+                        blaetter.current.set(f.id, el);
+                        /*
+                         * Gleich hier schieben und nicht erst im naechsten Takt:
+                         * Der Koerper wird bei JEDEM Schlag neu aufgebaut
+                         * (`key={f.schlaege}`), also 155-mal im Kampf der Probe.
+                         * Ohne diese Zeile zeigte das frische Blatt bis zum
+                         * naechsten Bild die linke obere Zelle — ausgerechnet in
+                         * dem Augenblick, in dem die Figur ausholt.
+                         *
+                         * Und zwar den Stand des TAKTES, nicht den dieses
+                         * Zeichnens (siehe `zuletzt`). Nur beim allerersten
+                         * Aufbau gibt es noch keinen — dann steht die Uhr auf
+                         * null, und beides ist dasselbe.
+                         */
+                        bildSchieben(
+                          el,
+                          zuletzt.current.get(f.id) ?? bildstand(f, anzeige.zeitMs, ruhig),
+                        );
+                      }}
+                      /* Zwei Rueckfaelle, in dieser Reihenfolge: Faellt das Blatt
+                         aus, steht dort die Pixelfigur der Einheit; faellt auch
+                         die aus, das gezeichnete Zeichen. */
+                      ersatz={
+                        <Figurbild
+                          einheit={einheit}
+                          ersatz={ersatzzeichen(einheit)}
+                          klasse={stil.figurbild}
+                        />
+                      }
+                    />
+                  ) : (
+                    <span>?</span>
+                  )}
+                  <span className={stil.sterne} aria-hidden="true">
+                    {'★'.repeat(f.stufe)}
+                  </span>
+                </div>
+                {/* Blitz und Einschlag liegen in DERSELBEN Zelle wie die Figur
+                    und nicht mehr auf der Wabenkarte: Dort leuchtete der Blitz
+                    ein helles Rechteck unter der Figur auf, und der Ring fuhr
+                    aus der Kartenmitte statt aus dem Getroffenen. Der
+                    Schluessel sitzt an der Ebene und nicht mehr an den beiden
+                    Kindern — ein neu aufgebauter Behaelter faengt beide
+                    Animationen von vorn an, waehrend der Koerper daneben (der
+                    an `f.schlaege` haengt) seinen eigenen Ausschlag
+                    ungestoert zu Ende bringt. */}
+                {f.treffer > 0 && (
+                  <span key={f.treffer} className={stil.treffer} aria-hidden="true">
+                    <i className={stil.blitz} />
+                    <i className={stil.einschlag} />
+                  </span>
                 )}
-                <span className={stil.sterne} aria-hidden="true">
-                  {'★'.repeat(f.stufe)}
-                </span>
               </div>
               {/* Was die Einheit im Laden gekostet hat — bis zum 6.9.2026 der
                   Innenrand der Platte, jetzt ein Punkt am Fuss. Kein neuer
@@ -922,19 +943,14 @@ export function KampfAnzeige<E extends Einheitenbild>({
               <span className={stil.leben} aria-hidden="true">
                 <b style={{ width: `${anteil}%` }} />
               </span>
+              {/* Die Schadenszahl bleibt an der KARTE und wandert nicht mit auf
+                  die Figur: Sie ist keine Bewegung an der Figur, sondern eine
+                  Beschriftung am Feld — am Kartenrand steht sie frei, auf der
+                  Figur laege sie quer ueber deren Bauch. */}
               {f.treffer > 0 && (
-                <>
-                  <i key={`b${f.treffer}`} className={stil.blitz} aria-hidden="true" />
-                  {/* Der Einschlag: ein Ring, der aus dem Getroffenen
-                      herausfaehrt. Er steht NEBEN dem Koerper und nicht darin
-                      — der Koerper haengt am Schluessel `f.schlaege`, und ein
-                      Treffer wuerde von dort aus den Ausschlag des eigenen
-                      Angriffs mitten in der Bewegung neu starten. */}
-                  <i key={`e${f.treffer}`} className={stil.einschlag} aria-hidden="true" />
-                  <em key={`s${f.treffer}`} className={stil.schaden} aria-hidden="true">
-                    −{f.letzterSchaden}
-                  </em>
-                </>
+                <em key={`s${f.treffer}`} className={stil.schaden} aria-hidden="true">
+                  −{f.letzterSchaden}
+                </em>
               )}
 
               {/* Der Tod: Staub und Funken, wo die Figur stand. Sie bleibt im

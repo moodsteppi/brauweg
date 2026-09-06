@@ -1,0 +1,613 @@
+{
+  "saat": "probe-ruestkammer-308",
+  "gangart": "normal",
+  "sitze": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "zuegeGespielt": 5,
+  "runde": 11,
+  "rundenGrenze": 30,
+  "ich": 0,
+  "brettReihen": 2,
+  "brettSpalten": 5,
+  "ladenPlaetze": 5,
+  "bankPlaetze": 9,
+  "verschmelzZahl": 3,
+  "maxStufe": 3,
+  "eigenes": {
+    "sitz": 0,
+    "leben": 1,
+    "gold": 2,
+    "level": 4,
+    "einkommen": 6,
+    "belegt": 4,
+    "feldplaetze": 4,
+    "neuwuerfelnKosten": 0,
+    "aufstiegKosten": 14,
+    "laden": [
+      "irrlicht",
+      "klingentaenzerin",
+      "runenpriester",
+      "dorfwache",
+      "astschuetze"
+    ],
+    "bank": [
+      {
+        "id": "grimmbart",
+        "stufe": 1
+      },
+      {
+        "id": "gassendieb",
+        "stufe": 2
+      },
+      {
+        "id": "irrlicht",
+        "stufe": 1
+      },
+      {
+        "id": "gassendieb",
+        "stufe": 1
+      },
+      {
+        "id": "astschuetze",
+        "stufe": 2
+      },
+      {
+        "id": "hainwaechterin",
+        "stufe": 1
+      },
+      {
+        "id": "irrlicht",
+        "stufe": 1
+      },
+      {
+        "id": "dorfwache",
+        "stufe": 2
+      },
+      null
+    ],
+    "brett": [
+      {
+        "id": "knochenspaeher",
+        "stufe": 2
+      },
+      {
+        "id": "schildknappe",
+        "stufe": 3
+      },
+      {
+        "id": "dorfwache",
+        "stufe": 2
+      },
+      {
+        "id": "hainwaechterin",
+        "stufe": 2
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "synergien": [
+      {
+        "marke": "krieger",
+        "name": "Krieger",
+        "anzahl": 1,
+        "schwelle": null,
+        "naechsteSchwelle": 2,
+        "bonus": null
+      },
+      {
+        "marke": "waechter",
+        "name": "Wächter",
+        "anzahl": 3,
+        "schwelle": 3,
+        "naechsteSchwelle": 5,
+        "bonus": {
+          "lebenProzent": 15,
+          "angriffProzent": 0,
+          "tempoProzent": 0,
+          "ruestung": 8
+        }
+      },
+      {
+        "marke": "naturwesen",
+        "name": "Naturwesen",
+        "anzahl": 1,
+        "schwelle": null,
+        "naechsteSchwelle": 2,
+        "bonus": null
+      },
+      {
+        "marke": "untot",
+        "name": "Untot",
+        "anzahl": 2,
+        "schwelle": 2,
+        "naechsteSchwelle": 3,
+        "bonus": {
+          "lebenProzent": 10,
+          "angriffProzent": 10,
+          "tempoProzent": 0,
+          "ruestung": 0
+        }
+      }
+    ]
+  },
+  "gegner": {
+    "sitz": 3,
+    "leben": 2,
+    "level": 4,
+    "ausRunde": null,
+    "brett": [
+      null,
+      {
+        "id": "schildknappe",
+        "stufe": 2
+      },
+      {
+        "id": "dorfwache",
+        "stufe": 2
+      },
+      {
+        "id": "schildknappe",
+        "stufe": 2
+      },
+      null,
+      null,
+      null,
+      {
+        "id": "steinschleuderer",
+        "stufe": 2
+      },
+      null,
+      null
+    ],
+    "synergien": [
+      {
+        "marke": "krieger",
+        "name": "Krieger",
+        "anzahl": 2,
+        "schwelle": 2,
+        "naechsteSchwelle": 3,
+        "bonus": {
+          "lebenProzent": 0,
+          "angriffProzent": 0,
+          "tempoProzent": 0,
+          "ruestung": 10
+        }
+      },
+      {
+        "marke": "waechter",
+        "name": "Wächter",
+        "anzahl": 3,
+        "schwelle": 3,
+        "naechsteSchwelle": 5,
+        "bonus": {
+          "lebenProzent": 15,
+          "angriffProzent": 0,
+          "tempoProzent": 0,
+          "ruestung": 8
+        }
+      },
+      {
+        "marke": "untot",
+        "name": "Untot",
+        "anzahl": 2,
+        "schwelle": 2,
+        "naechsteSchwelle": 3,
+        "bonus": {
+          "lebenProzent": 10,
+          "angriffProzent": 10,
+          "tempoProzent": 0,
+          "ruestung": 0
+        }
+      }
+    ]
+  },
+  "kaufbar": [
+    0,
+    2,
+    3,
+    4
+  ],
+  "darfWuerfeln": true,
+  "darfLevel": false,
+  "katalog": [
+    {
+      "id": "astschuetze",
+      "name": "Astschütze",
+      "kosten": 1,
+      "rolle": "schuetze",
+      "marken": [
+        "naturwesen"
+      ],
+      "leben": 480,
+      "angriff": 45,
+      "tempo": 0.8,
+      "reichweite": 3,
+      "ruestung": 15
+    },
+    {
+      "id": "dorfwache",
+      "name": "Dorfwache",
+      "kosten": 1,
+      "rolle": "wache",
+      "marken": [
+        "krieger",
+        "waechter"
+      ],
+      "leben": 650,
+      "angriff": 30,
+      "tempo": 0.65,
+      "reichweite": 1,
+      "ruestung": 40
+    },
+    {
+      "id": "gassendieb",
+      "name": "Gassendieb",
+      "kosten": 1,
+      "rolle": "meuchler",
+      "marken": [
+        "meuchler"
+      ],
+      "leben": 520,
+      "angriff": 48,
+      "tempo": 0.95,
+      "reichweite": 1,
+      "ruestung": 15
+    },
+    {
+      "id": "grimmbart",
+      "name": "Grimmbart",
+      "kosten": 2,
+      "rolle": "wache",
+      "marken": [
+        "krieger"
+      ],
+      "leben": 900,
+      "angriff": 45,
+      "tempo": 0.6,
+      "reichweite": 1,
+      "ruestung": 40
+    },
+    {
+      "id": "hainwaechterin",
+      "name": "Hainwächterin",
+      "kosten": 2,
+      "rolle": "wache",
+      "marken": [
+        "waechter",
+        "naturwesen"
+      ],
+      "leben": 850,
+      "angriff": 42,
+      "tempo": 0.65,
+      "reichweite": 1,
+      "ruestung": 45
+    },
+    {
+      "id": "irrlicht",
+      "name": "Irrlicht",
+      "kosten": 1,
+      "rolle": "wache",
+      "marken": [
+        "elementar"
+      ],
+      "leben": 560,
+      "angriff": 34,
+      "tempo": 0.7,
+      "reichweite": 1,
+      "ruestung": 35
+    },
+    {
+      "id": "klingentaenzerin",
+      "name": "Klingentänzerin",
+      "kosten": 3,
+      "rolle": "meuchler",
+      "marken": [
+        "krieger",
+        "meuchler"
+      ],
+      "leben": 860,
+      "angriff": 86,
+      "tempo": 1.05,
+      "reichweite": 1,
+      "ruestung": 20
+    },
+    {
+      "id": "knochenspaeher",
+      "name": "Knochenspäher",
+      "kosten": 2,
+      "rolle": "meuchler",
+      "marken": [
+        "untot"
+      ],
+      "leben": 700,
+      "angriff": 60,
+      "tempo": 0.9,
+      "reichweite": 1,
+      "ruestung": 20
+    },
+    {
+      "id": "runenpriester",
+      "name": "Runenpriester",
+      "kosten": 2,
+      "rolle": "beistand",
+      "marken": [
+        "waechter"
+      ],
+      "leben": 720,
+      "angriff": 38,
+      "tempo": 0.7,
+      "reichweite": 2,
+      "ruestung": 25
+    },
+    {
+      "id": "schildknappe",
+      "name": "Schildknappe",
+      "kosten": 1,
+      "rolle": "wache",
+      "marken": [
+        "waechter",
+        "untot"
+      ],
+      "leben": 700,
+      "angriff": 28,
+      "tempo": 0.6,
+      "reichweite": 1,
+      "ruestung": 42
+    },
+    {
+      "id": "steinschleuderer",
+      "name": "Steinschleuderer",
+      "kosten": 1,
+      "rolle": "schuetze",
+      "marken": [
+        "krieger"
+      ],
+      "leben": 500,
+      "angriff": 42,
+      "tempo": 0.75,
+      "reichweite": 3,
+      "ruestung": 20
+    }
+  ],
+  "synergieTabelle": [
+    {
+      "marke": "krieger",
+      "name": "Krieger",
+      "stufen": [
+        {
+          "schwelle": 2,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 10
+          }
+        },
+        {
+          "schwelle": 3,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 15
+          }
+        },
+        {
+          "schwelle": 5,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 25
+          }
+        }
+      ]
+    },
+    {
+      "marke": "elementar",
+      "name": "Elementar",
+      "stufen": [
+        {
+          "schwelle": 2,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 15,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 3,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 25,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 5,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 40,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        }
+      ]
+    },
+    {
+      "marke": "meuchler",
+      "name": "Meuchler",
+      "stufen": [
+        {
+          "schwelle": 2,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 0,
+            "tempoProzent": 15,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 3,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 0,
+            "tempoProzent": 25,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 5,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 0,
+            "tempoProzent": 40,
+            "ruestung": 0
+          }
+        }
+      ]
+    },
+    {
+      "marke": "waechter",
+      "name": "Wächter",
+      "stufen": [
+        {
+          "schwelle": 2,
+          "bonus": {
+            "lebenProzent": 10,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 5
+          }
+        },
+        {
+          "schwelle": 3,
+          "bonus": {
+            "lebenProzent": 15,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 8
+          }
+        },
+        {
+          "schwelle": 5,
+          "bonus": {
+            "lebenProzent": 25,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 15
+          }
+        }
+      ]
+    },
+    {
+      "marke": "naturwesen",
+      "name": "Naturwesen",
+      "stufen": [
+        {
+          "schwelle": 2,
+          "bonus": {
+            "lebenProzent": 15,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 3,
+          "bonus": {
+            "lebenProzent": 25,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 5,
+          "bonus": {
+            "lebenProzent": 40,
+            "angriffProzent": 0,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        }
+      ]
+    },
+    {
+      "marke": "untot",
+      "name": "Untot",
+      "stufen": [
+        {
+          "schwelle": 2,
+          "bonus": {
+            "lebenProzent": 10,
+            "angriffProzent": 10,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 3,
+          "bonus": {
+            "lebenProzent": 15,
+            "angriffProzent": 15,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 5,
+          "bonus": {
+            "lebenProzent": 30,
+            "angriffProzent": 30,
+            "tempoProzent": 0,
+            "ruestung": 0
+          }
+        }
+      ]
+    },
+    {
+      "marke": "drache",
+      "name": "Drache",
+      "stufen": [
+        {
+          "schwelle": 2,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 10,
+            "tempoProzent": 5,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 3,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 20,
+            "tempoProzent": 8,
+            "ruestung": 0
+          }
+        },
+        {
+          "schwelle": 5,
+          "bonus": {
+            "lebenProzent": 0,
+            "angriffProzent": 35,
+            "tempoProzent": 15,
+            "ruestung": 0
+          }
+        }
+      ]
+    }
+  ]
+}

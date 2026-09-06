@@ -25,6 +25,9 @@ import {
   spieleBis,
   startVersatz,
 } from './KampfAnzeige';
+/* Dieselben Klassennamen wie das Bauteil und keine abgeschriebenen: Der Test
+   unten prueft, in WELCHER Ebene Blitz und Einschlag haengen. */
+import stil from './KampfAnzeige.module.css';
 
 /*
  * Die Kampfanzeige spielt ab, was im Protokoll steht — und nur das. Geprueft
@@ -573,6 +576,36 @@ describe('KampfAnzeige', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('haengt Blitz und Einschlag in die Ebene der Figur, nicht an die Wabenkarte', () => {
+    /*
+     * Bis zum 6.9.2026 lagen beide unmittelbar an der Karte (`.blitz` mit
+     * `inset: 6% 4%` auf `.figur`). Die Figur steht dort seit den 3D-Bildfolgen
+     * nicht mehr drin — ihre Zelle ragt weit darueber hinaus —, also leuchtete
+     * der Blitz ein helles Rechteck UNTER ihr auf und der Einschlagring fuhr
+     * aus der Kartenmitte statt aus dem Getroffenen.
+     *
+     * Geprueft wird die EBENE und nicht das Aussehen: Beide muessen in dem
+     * Kasten haengen, an dem auch die Zelle der Figur bemessen wird
+     * (`.stellplatz`). Solange sie dort sitzen, folgen sie jeder Aenderung des
+     * Massstabs von selbst; haengen sie wieder an der Karte, faellt genau das
+     * am Bildschirm auf und in keinem Test.
+     */
+    zeige([paarung()], 0);
+    lauf(600);
+    const karte = screen.getByLabelText('Dorfwache, Stufe 2, 70 von 100 Leben');
+    const stellplatz = karte.querySelector(`.${stil.stellplatz}`);
+    const ebene = karte.querySelector(`.${stil.treffer}`);
+    expect(ebene?.parentElement).toBe(stellplatz);
+    expect(karte.querySelector(`.${stil.blitz}`)?.parentElement).toBe(ebene);
+    expect(karte.querySelector(`.${stil.einschlag}`)?.parentElement).toBe(ebene);
+    // Der Koerper ist ihr Nachbar und nicht ihr Elternteil: Er wird bei jedem
+    // eigenen Schlag neu aufgebaut (`key={f.schlaege}`) und schnitte eine
+    // laufende Treffer-Animation mitten in der Bewegung ab.
+    const koerper = karte.querySelector(`.${stil.koerper}`);
+    expect(koerper?.parentElement).toBe(stellplatz);
+    expect(koerper?.contains(ebene!)).toBe(false);
+  });
+
   it('zeigt am Ende Sieger und verlorene Leben — und bleibt dann stehen', () => {
     zeige([paarung()], 0);
     lauf(1200);
@@ -664,13 +697,20 @@ describe('KampfAnzeige', () => {
     // Vor dem ersten Treffer (500 ms) haengen an der Figur genau ZWEI <i>:
     // der Schatten unter ihren Fuessen und der Kostenpunkt. Beide sind immer
     // da — sie sagen, dass die Figur auf dem Feld steht und was sie gekostet
-    // hat, nicht dass sie getroffen wurde.
+    // hat, nicht dass sie getroffen wurde. Eine Trefferebene gibt es noch
+    // nicht.
     expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(2);
+    expect(getroffen().querySelector(`.${stil.treffer}`)).toBeNull();
 
     lauf(600);
-    // Dazu zwei weitere: das Aufleuchten und der Einschlagring. Der Staub
-    // kommt erst mit dem Tod und liegt in einem <span>.
-    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(4);
+    // Jetzt steht sie da, und darin die beiden: das Aufleuchten und der
+    // Einschlagring. An der Karte selbst haengen weiter nur die zwei
+    // staendigen <i> — seit dem 6.9.2026 leuchtet der Treffer in der Zelle
+    // der Figur auf und nicht mehr auf der Karte (eigener Test weiter oben).
+    // Der Staub kommt erst mit dem Tod und liegt in einem <span>.
+    expect(getroffen().querySelectorAll(':scope > i')).toHaveLength(2);
+    const ebene = getroffen().querySelector(`.${stil.treffer}`)!;
+    expect(ebene.querySelectorAll(':scope > i')).toHaveLength(2);
   });
 
   it('wirbelt beim Tod Staub auf, und die Gefallene bleibt im Baum', () => {
