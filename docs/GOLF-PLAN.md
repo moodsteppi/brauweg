@@ -48,6 +48,17 @@ Bot-Schläge deterministisch zum selben Takt; über die Leitung geht dafür
 nichts. `currentActor` ist immer null, `legalActions` leer, `botAction` wird
 nie aufgerufen (liefert `nichts`, das `act` unverändert zurückgibt).
 
+**Abschlag und Geister:** Alle Bälle starten auf demselben Punkt und sind
+bis zu ihrem ersten Schlag Geister — sie stoßen nichts und werden nicht
+gestoßen. Nach jedem Zurücksetzen (Wasser, Flug in einen Block) gilt das
+wieder bis zum nächsten Schlag, weil auf der Ruhelage inzwischen ein anderer
+liegen kann. Gezielt wird von überall auf dem Bildschirm: Tippen, ziehen, die
+Richtung ist relativ zum Startpunkt des Fingers. Die Kraft wird in
+Bildschirmpixeln mit dem Maßstab beim Antippen gemessen — nicht in
+Welteinheiten des aktuellen Blicks, denn der Zoom beim Ausholen vergrößerte
+sonst jeden Millimeter Zug und trieb die Kraft in einer Rückkopplung sofort auf
+100 %.
+
 **Uhrabgleich** über das Takt-Relais des Gateways (wie Feldherr, nur ohne
 Prüfsummen): alle 250 ms schickt jedes Gerät seinen Takt, wer einen größeren
 sieht, springt vor — nie zurück. Eigene Schläge werden mit zwei Takten Vorlauf

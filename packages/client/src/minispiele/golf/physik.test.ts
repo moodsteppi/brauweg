@@ -8,6 +8,7 @@ import {
   type Ball,
   type Ereignis,
   IMMUN_TAKTE,
+  istImmun,
   LOCH_VMAX,
   PAUSE_TAKTE,
   type Partiezustand,
@@ -188,10 +189,8 @@ describe('Ball gegen Ball', () => {
     const z = starte(karte, { sitze: 2 });
     lege(z.baelle[0], 6, 12);
     lege(z.baelle[1], 6, 8);
-    // Erst die Immunphase abwarten, sonst durchdringen sich die beiden.
-    laufe(z, IMMUN_TAKTE + 1, karte);
-    lege(z.baelle[0], 6, 12);
-    lege(z.baelle[1], 6, 8);
+    // Der ruhende Ball muss schon geschlagen haben, sonst ist er ein Geist.
+    z.baelle[1].geschlagen = true;
     z.baelle[0].ruht = true;
     z.baelle[1].ruht = true;
     laufe(z, 1, karte, [schlag(z.takt, 0, 1, 0, -1, 0.5)]);
@@ -202,19 +201,35 @@ describe('Ball gegen Ball', () => {
     expect(z.baelle[0].vy).toBeGreaterThan(-14);
   });
 
-  it('haelt die Baelle am Abschlag immun, bis die Immunphase vorbei ist', () => {
-    // Ein einziger Abschlag: beide Sitze starten auf demselben Fleck.
-    const karte = karteMit({ id: 'immun', abschlaege: [[6, 17]] });
-    const z = starte(karte, { sitze: 2 });
-    lege(z.baelle[0], 6, 17);
-    lege(z.baelle[1], 6.1, 17);
-    laufe(z, 10, karte);
-    const nah = betrag(z.baelle[1].x - z.baelle[0].x, z.baelle[1].y - z.baelle[0].y);
-    expect(nah).toBeLessThan(2 * BALL_R);
+  it('laesst alle auf demselben Punkt starten und als Geister liegen, bis sie schlagen', () => {
+    const karte = karteMit({ id: 'immun', abschlaege: [[6, 17], [9, 17]] });
+    const z = starte(karte, { sitze: 3 });
+    for (const b of z.baelle) {
+      expect([b.x, b.y]).toEqual([6, 17]);
+      expect(istImmun(z, b)).toBe(true);
+    }
+    // Auch lange nach dem Lochstart bleiben die Geister übereinander liegen.
+    laufe(z, IMMUN_TAKTE + 40, karte);
+    expect(z.baelle[1].x).toBe(6);
+    expect(istImmun(z, z.baelle[1])).toBe(true);
+  });
 
-    laufe(z, IMMUN_TAKTE + 2, karte);
-    const weit = betrag(z.baelle[1].x - z.baelle[0].x, z.baelle[1].y - z.baelle[0].y);
-    expect(weit).toBeGreaterThanOrEqual(2 * BALL_R - 1e-9);
+  it('laesst einen geschlagenen Ball durch die Geister der anderen hindurch', () => {
+    const karte = karteMit({ id: 'geist', abschlaege: [[6, 17]] });
+    const z = starte(karte, { sitze: 2 });
+    lege(z.baelle[1], 6, 12);
+    laufe(z, 40, karte, [schlag(0, 0, 1, 0, -1, 0.5)]);
+    // Sitz 1 hat nie geschlagen: Er liegt noch genau da, wo er lag.
+    expect([z.baelle[1].x, z.baelle[1].y]).toEqual([6, 12]);
+    expect(istImmun(z, z.baelle[0])).toBe(false);
+  });
+
+  it('macht einen aus dem Wasser zurueckgesetzten Ball wieder zum Geist', () => {
+    const karte = karteMit({ id: 'wassergeist', abschlaege: [[6, 17]], zonen: [{ art: 'wasser', x: 4, y: 9, w: 4, h: 3 }] });
+    const z = starte(karte, { sitze: 1 });
+    laufe(z, 60, karte, [schlag(0, 0, 1, 0, -1, 0.45)]);
+    expect(z.baelle[0].schlaege).toBe(2);
+    expect(istImmun(z, z.baelle[0])).toBe(true);
   });
 });
 
