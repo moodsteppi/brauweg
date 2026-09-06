@@ -1216,6 +1216,7 @@ function Vorschau({ variante }: { variante: Variante }): React.JSX.Element {
           return (
             <span
               key={platz}
+              className="fl-vorschau-feld"
               data-eigen={eigen ? '' : undefined}
               data-fremd={fremd && !verdeckt ? '' : undefined}
               style={{
