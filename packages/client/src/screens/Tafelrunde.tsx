@@ -42,6 +42,7 @@ import {
   neuVerschmolzen,
   ortLesen,
   ortSchluessel,
+  rastermass,
   tippfolge,
 } from '../minispiele/tafelrunde/zuege';
 import { useVorladen } from '../minispiele/tafelrunde/vorladen';
@@ -1164,6 +1165,25 @@ function zielUnter(x: number, y: number): string | null {
   return (unten?.closest('[data-ziel]') as HTMLElement | null)?.dataset.ziel ?? null;
 }
 
+/**
+ * Was die Spielflaeche von der Geometrie des Bretts wissen muss: sein
+ * Seitenverhaeltnis.
+ *
+ * Es ist die eine Zahl, die das Stylesheet nicht selbst kennen kann — aus ihr
+ * rechnet `.tr-spielflaeche` die Brettbreite aus der freien HOEHE
+ * (styles.css). Sie kommt aus `rastermass()`, also aus derselben Funktion,
+ * die auch die Waben legt (`zuege.ts`); waere sie im Stylesheet abgeschrieben,
+ * stuende das Brett beim naechsten geaenderten Rastermass anders da, als der
+ * Kampf es rechnet.
+ *
+ * Reihen und Spalten kommen aus der Sicht und nicht aus einer Konstante: Sie
+ * stehen im Regelsatz und sind je Tisch verstellbar.
+ */
+function brettmass(sicht: TafelrundeSicht): React.CSSProperties {
+  const mass = rastermass(sicht.brettReihen, sicht.brettSpalten);
+  return { '--tr-brettverhaeltnis': mass.seitenverhaeltnis } as React.CSSProperties;
+}
+
 function Ruestkammer({
   sicht,
   katalog,
@@ -1752,34 +1772,40 @@ function Ruestkammer({
         <p className="tr-hinweis">Du schaust zu</p>
         {arena ||
           (gegner && (
-            <div className="tr-bretter">
-              <section className="tr-brettteil">
-                {/* Name und Marken in einer Zeile, wie am Spielertisch
+            /* Dieselbe Spielflaeche wie am Spielertisch — nur ohne Bank und
+               ohne zweite Bretthaelfte, also ohne `data-bank` und ohne
+               `data-gegner`: Der Zuschauer sieht ein Brett in voller
+               Groesse. */
+            <div className="tr-spielflaeche" style={brettmass(sicht)}>
+              <div className="tr-bretter">
+                <section className="tr-brettteil">
+                  {/* Name und Marken in einer Zeile, wie am Spielertisch
                     (`.tr-brettkopf`): Zwei Zeilen Beiwerk ueber einem Brett
                     kosten am Handy 33 Pixel, nebeneinander 18. */}
-                <div className="tr-brettkopf">
-                  <h2 className="tr-bretttitel">
-                    <AugeZeichen />
-                    {spielername(zeile(gegner.sitz), gegner.sitz)}
-                  </h2>
-                  {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
+                  <div className="tr-brettkopf">
+                    <h2 className="tr-bretttitel">
+                      <AugeZeichen />
+                      {spielername(zeile(gegner.sitz), gegner.sitz)}
+                    </h2>
+                    {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
                       Feld `synergien` an jedem Sitz genau wie ein Spieler
                       (sicht.ts) — bis heute stand hier nichts davon. */}
-                  <Fremdmarken
-                    staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                    tabelle={synergieTabelle}
+                    <Fremdmarken
+                      staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                      tabelle={synergieTabelle}
+                      katalog={katalog}
+                      beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                    />
+                  </div>
+                  <Hexbrett
+                    reihen={sicht.brettReihen}
+                    spalten={sicht.brettSpalten}
+                    felder={gegner.brett}
                     katalog={katalog}
-                    beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                    maxStufe={sicht.maxStufe}
                   />
-                </div>
-                <Hexbrett
-                  reihen={sicht.brettReihen}
-                  spalten={sicht.brettSpalten}
-                  felder={gegner.brett}
-                  katalog={katalog}
-                  maxStufe={sicht.maxStufe}
-                />
-              </section>
+                </section>
+              </div>
             </div>
           ))}
       </main>
@@ -1927,100 +1953,119 @@ function Ruestkammer({
       {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
           gleiche Breite, gleiche Stelle, damit nichts springt. */}
       {arena || (
-        <div className="tr-bretter">
-          {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
+        /*
+         * DIE SPIELFLAECHE: Bretter UND Bank in einem Kasten, seit dem
+         * 07.09.2026. Sie bekommt vom Tisch den Platz, den Kopfleiste,
+         * Statuszeile und Laden uebriglassen, und rechnet daraus die eine
+         * Groesse, an der Brett und Bank haengen (styles.css,
+         * `.tr-spielflaeche`). Vorher hing beides allein an der
+         * Bildschirmbreite, und auf einem 1280 x 720 grossen Notebook lag der
+         * Laden unter der Kante.
+         *
+         * Die Bank steht deshalb hier drin und nicht mehr als eigenes Band
+         * darunter: Sie ist die Unterkante des Bretts, sie ist genauso breit,
+         * und die Rechnung muss ihre Hoehe abziehen, bevor sie die Breite
+         * bestimmt.
+         */
+        <div
+          className="tr-spielflaeche"
+          data-gegner={gegner ? '' : undefined}
+          data-bank=""
+          style={brettmass(sicht)}
+        >
+          <div className="tr-bretter">
+            {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
               Heere spaeter aufeinandertreffen. Es ist oeffentlich (sicht.ts),
               also gibt es hier nichts auszublenden. Zusammen mit der eigenen
               Haelfte sind das die vier Reihen aus dem Konzept. */}
-          {gegner && (
-            <section className="tr-brettteil tr-brettteil-fremd">
-              {/* Name und Marken in EINER Zeile, seit dem 06.09.2026 — aus
+            {gegner && (
+              <section className="tr-brettteil tr-brettteil-fremd">
+                {/* Name und Marken in EINER Zeile, seit dem 06.09.2026 — aus
                   demselben Grund wie bei der eigenen Statuszeile darueber:
                   Zwei Zeilen Beiwerk ueber einem Brett kosteten am Handy
                   33 Pixel, nebeneinander sind es 18. Der Gegnerteil ist die
                   Haelfte, die ohnehin schon zurueckgenommen ist; ihm zwei
                   volle Zeilen zu geben und dem Laden darunter keinen Platz
                   waere die falsche Reihenfolge. */}
-              <div className="tr-brettkopf">
-                {/* Das Auge vor dem Namen — dasselbe Zeichen wie an der Kachel
+                <div className="tr-brettkopf">
+                  {/* Das Auge vor dem Namen — dasselbe Zeichen wie an der Kachel
                     oben, die gerade leuchtet. Es beantwortet die Frage, die
                     Robin gestellt hat („was passiert, wenn man oben einen
                     antippt?"): Das hier ist das Brett, das du dir ansiehst. */}
-                <h2 className="tr-bretttitel">
-                  <AugeZeichen />
-                  {spielername(zeile(gegner.sitz), gegner.sitz)}
-                  {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
-                </h2>
-                {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
+                  <h2 className="tr-bretttitel">
+                    <AugeZeichen />
+                    {spielername(zeile(gegner.sitz), gegner.sitz)}
+                    {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
+                  </h2>
+                  {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
                     in der eigenen Leiste. Ohne sie muesste man seine Figuren
                     einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
                     zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
                     auch hier nichts. */}
-                <Fremdmarken
-                  staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                  tabelle={synergieTabelle}
+                  <Fremdmarken
+                    staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                    tabelle={synergieTabelle}
+                    katalog={katalog}
+                    beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                  />
+                </div>
+                <Hexbrett
+                  reihen={sicht.brettReihen}
+                  spalten={sicht.brettSpalten}
+                  felder={gegner.brett}
                   katalog={katalog}
-                  beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                  gespiegelt
+                  maxStufe={sicht.maxStufe}
                 />
-              </div>
-              <Hexbrett
-                reihen={sicht.brettReihen}
-                spalten={sicht.brettSpalten}
-                felder={gegner.brett}
-                katalog={katalog}
-                gespiegelt
-                maxStufe={sicht.maxStufe}
-              />
-            </section>
-          )}
-  
-          <section className="tr-brettteil">
-            {eigenes.belegt === 0 && (
-              /* Eine leere Flaeche sagt nicht, dass sie zu fuellen ist. Der Satz
+              </section>
+            )}
+
+            <section className="tr-brettteil">
+              {eigenes.belegt === 0 && (
+                /* Eine leere Flaeche sagt nicht, dass sie zu fuellen ist. Der Satz
                  liegt UEBER dem Brett und nimmt keine Zeiger an (CSS): Sonst
                  verschluckt ausgerechnet der Hinweis den ersten Zug, zu dem er
                  auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
                  das Brett nicht selbst ab. */
-              <p className="tr-leer-satz tr-leer-brett">
-                Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe
-                oder tipp erst ihn, dann die Wabe an.
-              </p>
-            )}
-            <Hexbrett
-              reihen={sicht.brettReihen}
-              spalten={sicht.brettSpalten}
-              felder={eigenes.brett}
-              katalog={katalog}
-              maxStufe={sicht.maxStufe}
-              eigen
-              gewaehlt={gewaehlt}
-              /* Wohin die gewaehlte Einheit darf — auf dem Brett und nicht nur
+                <p className="tr-leer-satz tr-leer-brett">
+                  Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe oder tipp erst
+                  ihn, dann die Wabe an.
+                </p>
+              )}
+              <Hexbrett
+                reihen={sicht.brettReihen}
+                spalten={sicht.brettSpalten}
+                felder={eigenes.brett}
+                katalog={katalog}
+                maxStufe={sicht.maxStufe}
+                eigen
+                gewaehlt={gewaehlt}
+                /* Wohin die gewaehlte Einheit darf — auf dem Brett und nicht nur
                  auf der Bank. Ohne diese Zeile leuchtet beim Antipp-Weg
                  ausgerechnet die Flaeche nicht, auf die man will; und steht das
                  Feld voll, leuchtet nichts, was die Absage von selbst
                  erklaert. */
-              istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-              onWaehlen={tippeOrt}
-              ziehtVon={zug?.zieht ? zug.von : null}
-              /* Wo die Einheit landet, wenn der Finger jetzt loslaesst. Nur
+                istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+                onWaehlen={tippeOrt}
+                ziehtVon={zug?.zieht ? zug.von : null}
+                /* Wo die Einheit landet, wenn der Finger jetzt loslaesst. Nur
                  waehrend eines Zuges gesetzt — sonst leuchtete das Brett
                  unter jedem Mauszeiger. */
-              unterZeiger={ablegeZiel}
-              fehlendeKopien={fehlen}
-              frischVerschmolzen={verschmolzen}
-              aktiv={darfHandeln}
-              onZeigerStart={beiZeigerStart}
-              onZeigerBewegung={beiZeigerBewegung}
-              onZeigerEnde={beiZeigerEnde}
-              onZeigerAbbruch={beiZeigerAbbruch}
-              onLeeresZiel={tippeOrt}
-            />
-          </section>
-        </div>
-      )}
+                unterZeiger={ablegeZiel}
+                fehlendeKopien={fehlen}
+                frischVerschmolzen={verschmolzen}
+                aktiv={darfHandeln}
+                onZeigerStart={beiZeigerStart}
+                onZeigerBewegung={beiZeigerBewegung}
+                onZeigerEnde={beiZeigerEnde}
+                onZeigerAbbruch={beiZeigerAbbruch}
+                onLeeresZiel={tippeOrt}
+              />
+            </section>
+          </div>
 
-      {/* ---- Reservebank ------------------------------------------------ */}
-      {/* Die Reihe selbst steht in minispiele/tafelrunde/Brett.tsx; hier
+          {/* ---- Reservebank ------------------------------------------------ */}
+          {/* Die Reihe selbst steht in minispiele/tafelrunde/Brett.tsx; hier
           steht nur, dass sie unmittelbar nach dem Brett kommt und WANN sie
           ueberhaupt dasteht.
 
@@ -2029,28 +2074,33 @@ function Ruestkammer({
           zurueck, sie ist in dieser Minute ein Bild. Als Streifen unter dem
           Brett kostet sie auf einem 390-px-Schirm 55 Pixel, und die stehen der
           Arena besser. Der Satz „Deine Bank ist leer" faellt mit ihr weg: Er
-          schickt zum Laden, und der ist im Kampf ebenfalls zu. */}
-      {!kampfLaeuft && (
-        <Bankreihe
-          /* Aus der Sicht und nicht aus dem Stylesheet: `bankPlaetze` steht
+          schickt zum Laden, und der ist im Kampf ebenfalls zu.
+
+          Dass sie im Kampf wegfaellt, steht seit dem 07.09.2026 nicht mehr als
+          eigene Bedingung da: Sie ist ein Kind der Spielflaeche, und die gibt
+          es in der Kampfphase gar nicht — dort steht die Arena an ihrer
+          Stelle. Zwei Bedingungen fuer dieselbe Sache waeren eine zu viel. */}
+          <Bankreihe
+            /* Aus der Sicht und nicht aus dem Stylesheet: `bankPlaetze` steht
              im Regelsatz und ist damit je Tisch verstellbar. */
-          plaetze={sicht.bankPlaetze}
-          bank={eigenes.bank}
-          katalog={katalog}
-          maxStufe={sicht.maxStufe}
-          gewaehlt={gewaehlt}
-          istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-          onWaehlen={tippeOrt}
-          ziehtVon={zug?.zieht ? zug.von : null}
-          unterZeiger={ablegeZiel}
-          fehlendeKopien={fehlen}
-          frischVerschmolzen={verschmolzen}
-          aktiv={darfHandeln}
-          onZeigerStart={beiZeigerStart}
-          onZeigerBewegung={beiZeigerBewegung}
-          onZeigerEnde={beiZeigerEnde}
-          onZeigerAbbruch={beiZeigerAbbruch}
-        />
+            plaetze={sicht.bankPlaetze}
+            bank={eigenes.bank}
+            katalog={katalog}
+            maxStufe={sicht.maxStufe}
+            gewaehlt={gewaehlt}
+            istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+            onWaehlen={tippeOrt}
+            ziehtVon={zug?.zieht ? zug.von : null}
+            unterZeiger={ablegeZiel}
+            fehlendeKopien={fehlen}
+            frischVerschmolzen={verschmolzen}
+            aktiv={darfHandeln}
+            onZeigerStart={beiZeigerStart}
+            onZeigerBewegung={beiZeigerBewegung}
+            onZeigerEnde={beiZeigerEnde}
+            onZeigerAbbruch={beiZeigerAbbruch}
+          />
+        </div>
       )}
 
       {/* ---- Das Blatt einer angetippten Einheit ------------------------ */}
@@ -2187,7 +2237,9 @@ function Ruestkammer({
               className="tr-laden"
               role="group"
               aria-label="Laden"
-              style={{ gridTemplateColumns: `repeat(${sicht.ladenPlaetze}, 1fr)` }}
+              style={{
+                gridTemplateColumns: `repeat(${sicht.ladenPlaetze}, minmax(0, 1fr))`,
+              }}
             >
               {Array.from({ length: sicht.ladenPlaetze }, (_, platz) => {
                 const id = eigenes.laden[platz];
@@ -2577,43 +2629,36 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       <h3>Regeln</h3>
       <ol>
         <li>
-          Jede Runde legt der Laden fünf Recken aus. Kaufen kostet Gold; wer
-          nichts findet, würfelt neu.
+          Jede Runde legt der Laden fünf Recken aus. Kaufen kostet Gold; wer nichts findet, würfelt
+          neu.
         </li>
         <li>
-          Gekaufte Recken landen auf der Reservebank. Aufs Feld kommen sie,
-          indem du sie auf eine Wabe ziehst — oder antippst und dann die Wabe
-          antippst.
+          Gekaufte Recken landen auf der Reservebank. Aufs Feld kommen sie, indem du sie auf eine
+          Wabe ziehst — oder antippst und dann die Wabe antippst.
         </li>
         <li>
-          <strong>Drei gleiche Recken derselben Stufe verschmelzen von selbst</strong>{' '}
-          zu einem stärkeren. Aus drei Einsternigen wird ein Zweisterniger, aus
-          drei davon ein Dreisterniger.
+          <strong>Drei gleiche Recken derselben Stufe verschmelzen von selbst</strong> zu einem
+          stärkeren. Aus drei Einsternigen wird ein Zweisterniger, aus drei davon ein Dreisterniger.
         </li>
         <li>
-          Wie viele Recken gleichzeitig auf dem Feld stehen dürfen, sagt dein
-          Rang. Rang steigern kostet Gold und bringt einen Feldplatz — und
-          bessere Karten im Laden.
+          Wie viele Recken gleichzeitig auf dem Feld stehen dürfen, sagt dein Rang. Rang steigern
+          kostet Gold und bringt einen Feldplatz — und bessere Karten im Laden.
         </li>
         <li>
           Recken gehören Klassen an wie Krieger, Wächter oder Untot. Stehen{' '}
-          <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die
-          Klasse stärker; ab drei und ab fünf noch einmal deutlicher. Der Bonus
-          gilt nur für die Träger selbst und nur auf dem Feld — was auf der Bank
-          liegt, zählt nicht mit. Was gerade greift und wie weit es bis zur
-          nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler
-          darin an, und du bekommst alle Stufen der Klasse und alle Recken, die
-          sie tragen.
+          <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die Klasse stärker; ab
+          drei und ab fünf noch einmal deutlicher. Der Bonus gilt nur für die Träger selbst und nur
+          auf dem Feld — was auf der Bank liegt, zählt nicht mit. Was gerade greift und wie weit es
+          bis zur nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler darin an, und du
+          bekommst alle Stufen der Klasse und alle Recken, die sie tragen.
         </li>
         <li>
-          Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und
-          ein Bonus für Serien. Was die nächste Runde bringt, steht klein neben
-          deinem Gold.
+          Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und ein Bonus für
+          Serien. Was die nächste Runde bringt, steht klein neben deinem Gold.
         </li>
         <li>
-          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers — von
-          selbst, du siehst nur zu. Der Verlierer verliert Leben: je mehr
-          Gegner noch stehen, desto mehr.
+          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers — von selbst, du siehst nur
+          zu. Der Verlierer verliert Leben: je mehr Gegner noch stehen, desto mehr.
         </li>
         <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>
       </ol>

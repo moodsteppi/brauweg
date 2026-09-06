@@ -16776,28 +16776,170 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-tisch {
   justify-content: flex-start;
   /*
-   * Die Luft zwischen den Baendern des Tisches — EINE Zahl, weil sie an zwei
-   * Stellen gebraucht wird: als `gap` hier und als negativer Abstand an der
-   * Bank, die sich ausdruecklich wieder an die Brettkante zieht
-   * (`.tr-bank`). Standen dort zwei Zahlen, ruecke die Bank beim naechsten
-   * Nachjustieren ins Brett hinein oder von ihm weg.
+   * DIE HOEHE IST DAS MASS, NICHT DIE BREITE — Umbau vom 07.09.2026.
+   *
+   * Bis dahin hingen Brett, Bank und Laden allein an der Bildschirmbreite
+   * (`min(94vw, 460px)`), und die Seite rollte, wenn die Summe nicht passte.
+   * Auf einem 1280 x 720 grossen Notebook waren das gemessene 1229 Pixel
+   * Inhalt in 720 Pixel Schirm: Der Laden — die einzige Stelle, an der man
+   * kauft — lag komplett unter der Kante. Robin hat es dreimal gemeldet.
+   *
+   * `100dvh` und nicht `100vh`: Auf dem Handy wandert die Adressleiste, und
+   * `vh` rechnet mit dem GROSSEN Schirm. Wer in vh rechnet, schiebt den
+   * Bereit-Knopf unter die Leiste, solange sie ausgefahren ist. Dieselbe
+   * Umstellung wie an Tafel und Anmeldeseite.
+   *
+   * Die Hoehe steht hier und nicht an `.tr-seite`, weil das Menue derselben
+   * Klasse rollen DARF: Dort ist eine lange Tischliste normal, hier waere sie
+   * ein Fehler. `.tr-seite` ist `position: fixed` mit `inset: 0`; `top` und
+   * `height` gewinnen zusammen gegen `bottom`, der Kasten ist also genau so
+   * hoch wie der sichtbare Schirm.
+   */
+  height: 100dvh;
+  /*
+   * Die Luft zwischen den Baendern des Tisches — Kopfleiste, Statuszeile,
+   * Spielflaeche, Laden.
+   *
+   * Sie zog bis zum 07.09.2026 auch die Bank an die Brettkante zurueck (ein
+   * negativer Abstand an `.tr-bank`, gegen genau diese Luecke gerechnet).
+   * Das ist entfallen: Bank und Bretter stehen jetzt zusammen in
+   * `.tr-spielflaeche`, und dort ist gar keine Luft dazwischen.
    *
    * 6 und nicht 8 am Handy: Fuenf Abstaende auf einem 956 Pixel hohen Schirm
    * sind 10 Pixel, und die fehlten am 06.09.2026 unten am Laden. Ab Tablet
    * ist der Platz da, dort bleibt es bei 8.
    */
   --tr-luft: 6px;
+  /*
+   * Die Obergrenze der Spielflaeche aus der BREITE. Sie steht hier als eigene
+   * Zahl, weil `.tr-spielflaeche` sie mit der Grenze aus der HOEHE
+   * verrechnet — kleiner von beiden gewinnt. Bis zum 07.09.2026 stand dieser
+   * Wert direkt als `width` an `.tr-bretter` und `.tr-bank`.
+   */
+  --tr-feld-breit: min(94vw, 460px);
+  /*
+   * Wie hoch ein Bankfach HOECHSTENS wird.
+   *
+   * Eine Obergrenze und keine feste Hoehe, aber eine, die es geben muss: Die
+   * Spielflaeche zieht das Bankband ab, bevor sie die Brettbreite ausrechnet.
+   * Ein Fach ist quadratisch, also so hoch wie die Bank breit ist — und die
+   * Bankbreite ist genau das, was aus der uebrigen Hoehe erst folgen soll.
+   * Zwei Zahlen, die einander bedingen, ergeben keine Rechnung; mit einer
+   * Obergrenze wird daraus eine sichere Schranke. Faellt das Fach kleiner
+   * aus, bleibt oben Luft — kein Ueberlauf.
+   */
+  --tr-bankplatz: 44px;
+  /* Das ganze Bankband: Fach plus Polsterung (4 oben, 5 unten). */
+  --tr-bankhoehe: calc(var(--tr-bankplatz) + 9px);
+  /*
+   * Was ueber dem Gegnerbrett steht (`.tr-brettkopf`): Name und Marken in
+   * einer Zeile, gemessen 15 bis 18 Pixel, dazu etwas Luft zum Brett.
+   *
+   * Die Zeile ist so hoch wie diese Zahl und nicht umgekehrt: `.tr-brettkopf`
+   * setzt sie als `height`. Nur so stimmt der Abzug — umbrechen darf sie
+   * deshalb nicht mehr (Begruendung dort).
+   */
+  --tr-kopfhoehe: 24px;
+  /* Die Fuge zwischen den beiden Bretthaelften — EINE Zahl, weil sie als
+     `gap` an `.tr-bretter` steht UND von der Rechnung abgezogen werden muss.
+     Stand sie nur am `gap`, lagen die Bretter drei Pixel ueber ihrem Kasten:
+     gemessen am 07.09.2026, sichtbar als ein Pixel Versatz nach oben. */
+  --tr-brettluft: 3px;
   gap: var(--tr-luft);
   padding: 0 0 max(8px, env(safe-area-inset-bottom));
-  /* Der Bildschirm rollt als Ganzes, wenn er nicht passt. Ohne das faellt der
-     Laden auf einem kurzen Handy unter den Rand — und der Laden ist die
-     einzige Stelle, an der man ueberhaupt etwas kaufen kann. */
+  /*
+   * Der Bildschirm rollt nur noch als NOTNAGEL.
+   *
+   * Seit die Spielflaeche ihre Groesse aus der Hoehe zieht, passt der Tisch;
+   * geraet aber doch etwas ausser Mass (ein Satz ueber der leeren Bank, eine
+   * dritte Zeile Marken), soll nichts unerreichbar sein. Wegnehmen darf man
+   * diese Zeile deshalb nicht — sie ist der Unterschied zwischen „eng" und
+   * „der Laden ist weg".
+   */
   overflow-y: auto;
   overflow-x: hidden;
   /* Am Ende des Rollens nicht an die Seite weiterreichen: Sonst zieht der
      Daumen unter Android das Neuladen der Seite auf — mitten in der Partie.
      Dieselbe Zeile aus demselben Grund wie in FeldherrTisch.tsx. */
   overscroll-behavior: contain;
+}
+
+/*
+ * Die Baender des Tisches behalten ihre Hoehe.
+ *
+ * Der Tisch ist jetzt genau einen Schirm hoch, und in einer Flex-Spalte
+ * schrumpft dann per Vorgabe JEDES Kind. Ohne diese Zeile quetscht der Laden
+ * sich zusammen, statt dass die Spielflaeche kleiner wird — und ein
+ * gequetschter Laden schneidet seine Karten an.
+ */
+.tr-oben,
+.tr-statuszeile,
+.tr-auswahlband,
+.tr-fuss {
+  flex: 0 0 auto;
+}
+
+/* -- Die Spielflaeche: Bretter und Bank ------------------------------------ */
+
+/*
+ * DER KASTEN, DER DEN UEBRIGEN PLATZ BEKOMMT — und aus ihm die eine Groesse
+ * rechnet, an der Brett und Bank haengen.
+ *
+ * `flex: 1 1 0` heisst: Was Kopfleiste, Statuszeile und Laden nicht brauchen,
+ * gehoert hierher. Die Hoehe dieses Kastens ist damit gemessen und nicht
+ * geraten — es steht nirgends eine Zahl fuer „so hoch ist die Kopfleiste".
+ *
+ * `container-type: size` macht ihn zum Bezug fuer `cqh` weiter unten. Das
+ * geht nur, weil seine Groesse NICHT vom Inhalt kommt: die Hoehe vom Flex,
+ * die Breite von `width: 100%`. Ohne diese Zeile waere `100cqh` der ganze
+ * Schirm, und die Rechnung waere um Kopfleiste und Laden zu gross.
+ */
+.tr-spielflaeche {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Bleibt Platz uebrig (kurzer Bretttitel, leere Bank), verteilt er sich auf
+     beide Seiten, statt alles nach oben zu ziehen. */
+  justify-content: center;
+  container-type: size;
+  /* Wie breit die Gegnerhaelfte im Verhaeltnis zur eigenen ist. Steht hier
+     und nicht als 86 % an `.tr-brett`, weil die Rechnung darunter sie
+     braucht — zwei Zahlen liefen beim naechsten Nachjustieren auseinander. */
+  --tr-fremd: 0;
+}
+.tr-spielflaeche[data-gegner] { --tr-fremd: 0.86; }
+
+/*
+ * DIE EINE GROESSE, aus der alles andere folgt: die Breite des eigenen
+ * Bretts. Bank und Bretter tragen sie, die Wabe folgt aus ihr (Prozent in
+ * zuege.ts), die Figur aus der Wabe.
+ *
+ * Sie steht an den KINDERN und nicht an `.tr-spielflaeche` selbst: Ein
+ * `cqh` am Container-Element bezieht sich auf dessen eigenen Container, also
+ * auf einen Vorfahren — die Rechnung waere still um die Kopfleiste zu gross.
+ *
+ * Die Rechnung, von rechts nach links gelesen: Von der freien Hoehe gehen
+ * Bretttitel und Bankband ab (`--tr-abzug`). Was bleibt, teilen sich die
+ * beiden Bretthaelften im Verhaeltnis 1 zu `--tr-fremd`. Aus der Hoehe einer
+ * Haelfte wird ihre Breite ueber das Seitenverhaeltnis des Rasters
+ * (`--tr-brettverhaeltnis`), und das kommt aus `rastermass()` in zuege.ts —
+ * derselben Funktion, die auch die Waben legt. Hier steht KEINE zweite
+ * Geometrie.
+ */
+.tr-spielflaeche > * {
+  --tr-abzug: calc(var(--tr-kopfhoehe) + var(--tr-brettluft));
+  --tr-feld: min(
+    var(--tr-feld-breit),
+    calc(
+      (100cqh - var(--tr-abzug)) * var(--tr-brettverhaeltnis) / (1 + var(--tr-fremd))
+    )
+  );
+}
+.tr-spielflaeche[data-bank] > * {
+  --tr-abzug: calc(var(--tr-kopfhoehe) + var(--tr-brettluft) + var(--tr-bankhoehe));
 }
 
 /* -- Die festgeheftete Kopfleiste ----------------------------------------- */
@@ -16976,8 +17118,10 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-bretter {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  width: min(94vw, 460px);
+  gap: var(--tr-brettluft);
+  /* Die eine Groesse aus `.tr-spielflaeche` — sie kommt aus der freien Hoehe
+     und ist nach oben durch die Bildschirmbreite gedeckelt. */
+  width: var(--tr-feld);
 }
 .tr-brettteil { position: relative; }
 /* Die Gegnerhaelfte tritt zurueck: Sie ist Auskunft, nicht Bedienflaeche.
@@ -16997,9 +17141,14 @@ span.hub-angebot-art.poker-jeton-stapel {
  * gerechnet (zuege.ts), die Figur haengt an der Wabenhoehe, und `aspect-ratio`
  * zieht die Hoehe mit. Nur nimmt der Kasten jetzt auch wirklich nur den Platz,
  * den er braucht. Die Figuren des Gegners bleiben so gross wie zuvor.
+ *
+ * Die 86 selbst steht seit dem 07.09.2026 als `--tr-fremd` an
+ * `.tr-spielflaeche`: Die Hoehenrechnung dort teilt den Platz im selben
+ * Verhaeltnis auf beide Haelften auf. Stuende die Zahl zweimal da, waere das
+ * Brett beim naechsten Nachjustieren entweder zu gross oder zu klein.
  */
 .tr-brettteil-fremd .tr-brett {
-  width: 86%;
+  width: calc(var(--tr-fremd) * 100%);
   margin-inline: auto;
 }
 
@@ -17010,19 +17159,36 @@ span.hub-angebot-art.poker-jeton-stapel {
  * 315 Pixel, die die Gegnerhaelfte am Handy hoch war — fuer einen Namen und
  * drei Chips. In einer Zeile sind es 18.
  *
- * Umbrechen darf die Zeile (`flex-wrap`): Bei sieben Marken und einem langen
- * Namen ist eine Reihe voll, und dann sind zwei Zeilen richtig. Der Name
- * schrumpft dabei nicht unter seine Auslassungspunkte — er steht mit
- * `min-width: 0` in der Reihe und kuerzt sich selbst.
+ * EINE ZEILE, DIE SEITLICH ROLLT — geaendert am 07.09.2026. Bis dahin brach
+ * sie um (`flex-wrap: wrap`), und das ging nicht mehr auf: Die Spielflaeche
+ * rechnet die Brettbreite aus der freien Hoehe und muss diese Zeile dafuer
+ * vorher abziehen (`--tr-kopfhoehe`). Eine Zeile, die je nach Zahl der Marken
+ * 15 oder 30 Pixel hoch ist, macht aus dem Abzug eine Schaetzung — gemessen
+ * auf 1280 x 720 waren es 30 statt der veranschlagten 24, und das Brett stand
+ * sechs Pixel zu tief.
+ *
+ * Seitlich rollen darf sie: Dieselbe Ausnahme wie bei der Gegnerleiste
+ * darueber, aus demselben Grund („die Seite selbst rollt nie quer",
+ * DESIGN.md) — bei sieben Marken passt sie sonst nicht, und abschneiden waere
+ * schlechter als schieben. Der Name kuerzt sich weiterhin selbst
+ * (`min-width: 0` an `.tr-bretttitel`).
  */
 .tr-brettkopf {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  /* `safe` ist hier nicht Zierde: Laeuft zentrierter Inhalt ueber, schiebt
+     er sich nach BEIDEN Seiten hinaus, und der linke Teil ist dann durch
+     kein Rollen mehr erreichbar. Mit `safe` faellt die Zentrierung in
+     diesem Fall auf linksbuendig zurueck. */
+  justify-content: safe center;
   gap: 2px 6px;
-  margin: 0 0 3px;
+  height: var(--tr-kopfhoehe);
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.tr-brettkopf::-webkit-scrollbar { display: none; }
 
 .tr-bretttitel {
   min-width: 0;
@@ -17513,15 +17679,20 @@ span.hub-angebot-art.poker-jeton-stapel {
  * ist, desto sicherer trifft der Daumen. Deshalb oben eckig und ohne Luft
  * zum Brett, unten gerundet — eine Leiste am Brett und kein zweites Moebel.
  *
- * Der negative Abstand haelt sie auch dann an der Kante, wenn zwischen Brett
- * und Bank der Abstand von `.tr-tisch` (8 px) steht.
+ * Seit dem 07.09.2026 steht sie mit dem Brett in EINEM Kasten
+ * (`.tr-spielflaeche`, gap 0) — der negative Abstand, der sie vorher gegen
+ * die 8 Pixel Luft des Tisches an die Kante zog, ist damit entfallen. Wer
+ * hier wieder Abstand sieht, sucht ihn dort und nicht hier.
  */
 .tr-bank {
+  /* Traegt den Satz ueber der leeren Bank (`.tr-leer-bank`). */
+  position: relative;
   display: grid;
   grid-template-columns: repeat(9, 1fr);
   gap: 4px;
-  width: min(94vw, 460px);
-  margin-top: calc(-1 * var(--tr-luft));
+  /* Dieselbe eine Groesse wie das Brett darueber: Die Bank ist dessen
+     Unterkante und keine eigene Leiste. */
+  width: var(--tr-feld);
   padding: 4px 6px 5px;
   border-radius: 0 0 14px 14px;
   background: rgba(255, 255, 255, 0.05);
@@ -17532,9 +17703,16 @@ span.hub-angebot-art.poker-jeton-stapel {
   aspect-ratio: 1;
   /* Neun Plaetze in einer Reihe sind auf einem 360-px-Handy je 32 px breit —
      zu wenig zum Greifen UND zum Ablegen. Die Mindesthoehe macht aus dem
-     Quadrat dort ein Hochformat und die Flaeche wieder daumengerecht; auf
-     einem breiteren Schirm greift `aspect-ratio` wie bisher. */
+     Quadrat dort ein Hochformat und die Flaeche wieder daumengerecht. */
   min-height: 44px;
+  /*
+   * NEU seit dem 07.09.2026: eine Obergrenze. Sie ist der Preis dafuer, dass
+   * die Spielflaeche die Bankhoehe kennen muss, BEVOR sie die Brettbreite
+   * ausrechnet (siehe `--tr-bankplatz` in `.tr-tisch`). Sie rechnet mit
+   * diesem Hoechstwert; wird das Fach kleiner, bleibt oben etwas Luft, und
+   * das ist harmlos. Waere es GROESSER, laege die Bank ueber dem Laden.
+   */
+  max-height: var(--tr-bankplatz);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.25);
   overflow: hidden;
@@ -17869,6 +18047,29 @@ span.hub-angebot-art.poker-jeton-stapel {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
+/*
+ * Derselbe Satz ueber der LEEREN BANK, und aus zwei Gruenden absolut gesetzt.
+ *
+ * Erstens die Hoehe: Als eigene Zeile unter der Bank kostete er 17 Pixel, mit
+ * denen die Spielflaeche nicht rechnet — sie zieht genau ein Bankband ab
+ * (`--tr-bankhoehe`), und was darueber hinausgeht, laege ueber dem Laden.
+ * Zweitens das Raster: Die Bank ist ein Gitter mit neun Spalten; ein Absatz
+ * darin waere ein zehntes Fach.
+ *
+ * `pointer-events: none` wie am Brett — der Satz schickt in den Laden, und die
+ * leeren Faecher darunter sind trotzdem Ablegeziele.
+ */
+.tr-leer-bank {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
 .tr-hinweis { margin: 0; color: var(--muted); font: 600 12px/1.35 system-ui; text-align: center; }
 
 /*
@@ -17977,9 +18178,17 @@ span.hub-angebot-art.poker-jeton-stapel {
 /* Ab Tablet-Breite steht mehr Platz zur Verfuegung: Brett und Laden duerfen
    groesser werden, statt in der Mitte eines leeren Schirms zu kleben. */
 @media (min-width: 40rem) {
-  .tr-tisch { --tr-luft: 8px; }
-  .tr-bretter,
-  .tr-bank,
+  .tr-tisch {
+    --tr-luft: 8px;
+    /* Die Obergrenze aus der Breite steigt; ob sie ueberhaupt zum Zug kommt,
+       entscheidet weiterhin die freie Hoehe (`--tr-feld` in
+       `.tr-spielflaeche`). Auf einem 1280 x 720 grossen Notebook gewinnt die
+       Hoehe, auf einem 1512 x 850 grossen MacBook fast auch. */
+    --tr-feld-breit: min(70vw, 560px);
+    /* Ein liegendes Fach von 52 statt 44: Der Platz ist da, und die Figur
+       darin ist das Einzige, woran man eine Einheit auf der Bank erkennt. */
+    --tr-bankplatz: 52px;
+  }
   .tr-statuszeile,
   .tr-auswahlband { width: min(70vw, 560px); }
   .tr-oben,

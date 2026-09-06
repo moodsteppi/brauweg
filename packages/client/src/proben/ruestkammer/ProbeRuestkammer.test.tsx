@@ -274,8 +274,13 @@ describe('ProbeRuestkammer', () => {
     }
   });
 
-  it('nennt Saat, Runde und den Haltepunkt unter dem Bildschirm', () => {
+  it('nennt Saat, Runde und den Haltepunkt, sobald man den Text aufschlaegt', () => {
     render(<ProbeRuestkammer />);
+    /* Der Text steht seit dem 07.09.2026 zugeklappt in der Werkbank ueber dem
+       Tisch statt als Absatz darunter: Als Absatz nahm er dem Brett bis zu
+       142 Pixel Hoehe weg, und die Probe zeigte damit ein kleineres Brett,
+       als am echten Tisch steht (ProbeRuestkammer.module.css, `.werkbank`). */
+    fireEvent.click(screen.getByRole('button', { name: 'Was ist das?' }));
     const fuss = screen.getByText(/Saat/);
     expect(fuss).toHaveTextContent(SZENE.saat);
     expect(fuss).toHaveTextContent(`Runde ${SZENE.runde}`);

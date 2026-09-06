@@ -16,12 +16,13 @@ funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 5. September 2026 aus einem vollen Lauf, nicht aus
+**Prüfstand (gezählt am 7. September 2026 aus einem vollen Lauf, nicht aus
 der Erinnerung):**
-170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
-56 Eiland-Tests, 298 Tafelrunde-Tests, **439 Servertests** — zusammen 1419,
-dazu die Client-Tests (41 Dateien, 464 Tests), alle grün. `tsc --noEmit` sauber.
+172 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
+15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
+56 Eiland-Tests, 310 Tafelrunde-Tests, 20 Golf-Tests, **450 Servertests** —
+zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
+`tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
@@ -218,6 +219,67 @@ dazu die Client-Tests (41 Dateien, 464 Tests), alle grün. `tsc --noEmit` sauber
 > unbezahlbare Karten — und beim Ziehen leuchtet **das Feld unter dem
 > Finger** (nur, wenn die Einheit dort auch landen darf; geprüft mit
 > derselben Funktion wie das Ablegen).
+>
+> **Die Partieansicht passt seit dem 07.09.2026 auf einen Bildschirm — die
+> Höhe ist jetzt das Maß, nicht die Breite.** Robin hatte es dreimal
+> gemeldet; gemessen war es eindeutig: auf einem 1280 × 720 großen Notebook
+> **1229 Pixel Inhalt in 720 Pixel Schirm**, der Laden komplett unter der
+> Kante — und der Laden ist die einzige Stelle, an der man kauft. Die
+> Kampfphase war mit 1220 Pixeln genauso weit daneben: Man sah die obere
+> Hälfte eines Kampfes, der von selbst abläuft, und musste rollen, während
+> die Uhr lief.
+>
+> Ursache war, dass **jede** Größe an der Bildschirmbreite hing
+> (`min(94vw, 460px)`, ab Tablet `min(70vw, 560px)`) und die Seite rollte,
+> wenn die Summe nicht passte. Jetzt gibt es **eine** Größe, und sie folgt aus
+> der freien Höhe: Bretter und Bank stehen zusammen in `.tr-spielflaeche`,
+> einem `flex: 1 1 0`-Kasten, der bekommt, was Kopfleiste, Statuszeile und
+> Laden übriglassen — **gemessen, nicht geschätzt: nirgends steht eine Zahl
+> für „so hoch ist die Kopfleiste"**. Aus dieser Höhe rechnet das Stylesheet
+> über `container-type: size` und `100cqh` die Brettbreite (`--tr-feld`),
+> und Bank und Waben hängen daran. Das Seitenverhältnis des Rasters kommt
+> dabei als CSS-Variable aus `rastermass()` (`zuege.ts`) — derselben
+> Funktion, die die Waben legt; im Stylesheet steht keine zweite Geometrie.
+> Die Arena macht es genauso, mit `.mitte` der Bühne als Bezugskasten
+> (`KampfAnzeige.module.css`).
+>
+> Drei Dinge mussten dafür weichen, alle drei aus demselben Grund — die
+> Rechnung muss ihre Abzüge vorher kennen: Das **Bankfach** ist nicht mehr
+> unbegrenzt quadratisch, sondern bei `--tr-bankplatz` gedeckelt (44 px am
+> Handy, 52 ab Tablet); die **Namenszeile über dem Gegnerbrett** bricht nicht
+> mehr um, sondern rollt seitlich (umgebrochen war sie mal 15 und mal 30 Pixel
+> hoch); und der Satz **„Deine Bank ist leer"** liegt über der Bank statt
+> darunter, wie derselbe Satz über dem leeren Brett. Höhen rechnen in `dvh`
+> statt `vh` — auch die Polsterung der Bühne.
+>
+> Nebenbei gefunden und mitgenommen: Der Laden war auf einem 360 px breiten
+> Handy **breiter als der Schirm**, die fünfte Karte lag halb draußen.
+> `repeat(N, 1fr)` nimmt als Untergrenze einer Spalte deren min-content, und
+> das ist der längste Einheitenname am Stück („Bogenmeisterin", mit
+> `white-space: nowrap`). Jetzt `repeat(N, minmax(0, 1fr))`, an Laden und
+> Bank.
+>
+> **Nachgemessen wird mit `packages/client/werkzeug/hoehenprobe.mjs`** — dem
+> Bildtest zu dieser Sache: Er fährt `/probe/ruestkammer` und `/probe/kampf`
+> in fünf Größen an (1366 × 768, 1280 × 720, 1512 × 850, 390 × 844,
+> 360 × 740), prüft, dass der Tisch nicht rollt, dass Bereit-Knopf,
+> Ladenkarten und Bank vollständig im Bild stehen und dass Bretter samt Bank
+> in ihren Kasten passen — und legt je Größe ein Bild ab. Er braucht einen
+> laufenden Vite und Playwright samt Chromium und ist deshalb **kein
+> Vitest**: Die Rechnung steht im Stylesheet und benutzt Container-Anfragen,
+> und in jsdom ist jedes Element null Pixel groß. Was sich dort prüfen
+> lässt — dass die Verdrahtung überhaupt noch steht —, prüft
+> `src/screens/Tafelrunde.hoehe.test.tsx` (8 Tests). Gemessene Brettbreiten
+> am 07.09.2026: 267 px bei 768, 229 bei 720, 332 bei 850, 334 bei 844,
+> 234 bei 740.
+>
+> **`/probe/ruestkammer` trägt seit demselben Tag die echte Kopfleiste des
+> Tisches.** Vorher hatte sie eine eigene Kopfzeile (64–92 px) und einen
+> Erklärtext im Fluss (95–142 px) — zusammen bis zu 155 Pixel, die es am
+> echten Tisch nicht gibt. Die Probe zeigte damit ein deutlich kleineres
+> Brett, als dort steht, und beantwortete die Frage „passt das auf einen
+> Bildschirm?" für den falschen Bildschirm. Ihre eigene Bedienung liegt jetzt
+> als zuklappbare Werkbank **über** dem Tisch.
 >
 > **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100

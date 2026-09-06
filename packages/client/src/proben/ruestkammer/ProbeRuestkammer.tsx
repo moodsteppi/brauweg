@@ -17,11 +17,21 @@
  * braucht denselben Blick.
  *
  * DESHALB WIRD HIER NICHTS NACHGEBAUT. Es laufen `Hexbrett`, `Bankreihe`,
- * `Einheitenmarke` und `Ladenkarte` aus `minispiele/tafelrunde/` — dieselben
- * Bauteile, die `screens/Tafelrunde.tsx` einhaengt, mit denselben
- * Eigenschaften, im selben Rahmen (`.tr-seite`, `.tr-tisch`, `.tr-bretter`,
- * `.tr-fuss`). Sie standen bis zum 06.09.2026 privat im Bildschirm; sie
- * herauszuziehen war die halbe Aufgabe.
+ * `Einheitenmarke`, `Ladenkarte`, `Mitspielerleiste` und `Phasenzeile` aus
+ * `minispiele/tafelrunde/` — dieselben Bauteile, die `screens/Tafelrunde.tsx`
+ * einhaengt, mit denselben Eigenschaften, im selben Rahmen (`.tr-seite`,
+ * `.tr-tisch`, `.tr-oben`, `.tr-spielflaeche`, `.tr-bretter`, `.tr-fuss`).
+ * Sie standen bis zum 06.09.2026 privat im Bildschirm; sie herauszuziehen war
+ * die halbe Aufgabe.
+ *
+ * SEIT DEM 07.09.2026 BEANTWORTET SIE AUCH DIE HOEHENFRAGE: Passt die
+ * Ruestkammer auf einen Bildschirm? Dafuer musste sie die echte Kopfleiste
+ * bekommen und ihre eigene Bedienung abgeben — die liegt jetzt als
+ * zuklappbare Werkbank UEBER dem Tisch. Vorher standen Kopfzeile und
+ * Erklaertext im Fluss und nahmen bis zu 155 Pixel, die es am echten Tisch
+ * nicht gibt: Die Probe zeigte ein deutlich kleineres Brett, als dort steht.
+ * Nachgemessen wird mit `werkzeug/hoehenprobe.mjs`, das genau diese Seite
+ * anfaehrt.
  *
  * DER STAND kommt aus `ruestkammer-szene.json`: die Vorbereitung einer echten
  * Bot-Partie, angehalten mitten im Zug (`ruestkammer-erzeugen.mjs`, dort steht
@@ -56,7 +66,12 @@ import { useMemo, useState } from 'react';
 import { Bankreihe, Hexbrett } from '../../minispiele/tafelrunde/Brett';
 import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
 import { Ladenkarte, kaufhindernis } from '../../minispiele/tafelrunde/Ladenkarte';
-import { AugeZeichen } from '../../minispiele/tafelrunde/Mitspieler';
+import {
+  AugeZeichen,
+  Mitspielerleiste,
+  type Sitzzeile,
+} from '../../minispiele/tafelrunde/Mitspieler';
+import { Phasenzeile } from '../../minispiele/tafelrunde/Phasenzeile';
 import {
   type Synergie,
   type Synergiestand,
@@ -74,6 +89,7 @@ import {
   bestandVon,
   darfSchieben,
   fehlendeKopien,
+  rastermass,
   tippfolge,
 } from '../../minispiele/tafelrunde/zuege';
 
@@ -142,6 +158,19 @@ function nameVon(sitz: number): string {
 }
 
 /**
+ * Die Sitzzeilen fuer die Mitspielerleiste in der Kopfleiste.
+ *
+ * Dieselben Namen wie ueberall sonst in der Probe (`nameVon`) — kein Bild und
+ * kein erfundener Spielername, denn die Szene fuehrt nur Sitznummern.
+ */
+const SITZZEILEN: readonly Sitzzeile[] = SZENE.sitze.map((sitz) => ({
+  seat: sitz,
+  displayName: nameVon(sitz),
+  avatarUrl: null,
+  isBot: sitz !== SZENE.ich,
+}));
+
+/**
  * Was auf Bank und Brett steht — der einzige Zustand, den die Probe fuehrt.
  *
  * Alles andere (Gold, Rang, Leben, Marken) steht fest in der Szene: Es aendert
@@ -191,6 +220,13 @@ export function ProbeRuestkammer(): React.JSX.Element {
    * ausgegraut.
    */
   const [amZug, setAmZug] = useState(true);
+  /* Der Erklaertext ist zu, bis jemand ihn aufschlaegt: Er beschreibt die
+     Probe und nicht die Ruestkammer — aufgeschlagen legt er sich ueber den
+     Tisch, statt ihm Hoehe zu nehmen. */
+  const [erklaerung, setErklaerung] = useState(false);
+  /* Die Werkbank selbst laesst sich zuklappen: Am Handy liegt sie sonst genau
+     auf der Kopfleiste, und die gehoert zu dem, was man hier ansehen will. */
+  const [werkbank, setWerkbank] = useState(true);
   /*
    * Welche Einheit ihr Blatt aufgeschlagen hat — wie am Tisch der ORT und
    * nicht der Kaempfer: Was dort steht, aendert sich unter dem offenen Blatt,
@@ -268,21 +304,113 @@ export function ProbeRuestkammer(): React.JSX.Element {
      * dann beurteilt man den Rahmen statt die Wabe.
      */
     <main className="tr-seite tr-tisch">
-      <div className={css.kopf}>
-        <h1 className={css.titel}>Probe — die Rüstkammer</h1>
-        <div className={css.schalter}>
-          <label className={css.schalt}>
-            <input
-              type="checkbox"
-              checked={amZug}
-              onChange={(e) => setAmZug(e.target.checked)}
-            />
-            am Zug
-          </label>
-          <button type="button" className={css.knopf} onClick={zuruecksetzen}>
-            zurücksetzen
+      {/*
+        DIE ECHTE KOPFLEISTE DES TISCHES, seit dem 07.09.2026 — Zurueck-Knopf,
+        Mitspielerkacheln und Phasenzeile in `.tr-oben`, genau wie in
+        screens/Tafelrunde.tsx.
+
+        Sie steht hier, weil die Probe seither auch die Frage beantworten
+        soll, OB die Ruestkammer auf einen Bildschirm passt. Das kann sie nur,
+        wenn oben dasselbe steht wie am Tisch: Die eigene Kopfzeile der Probe
+        war 64 bis 92 Pixel hoch und der Erklaertext darunter 95 bis 142 — die
+        Probe war damit um bis zu 155 Pixel enger als der echte Tisch und
+        zeigte ein deutlich kleineres Brett, als dort steht.
+
+        Zwei Kacheln und nicht vier: Die Szene fuehrt den eigenen Sitz und
+        EINEN Gegner mit Werten (`ruestkammer-szene.json`). Fuer die Hoehe
+        macht das keinen Unterschied — die Kacheln stehen in einer Reihe, die
+        seitlich rollt.
+      */}
+      <div className="tr-oben">
+        <div className="tr-oben-reihe">
+          <button className="tr-zurueck-oben" type="button" disabled aria-label="Zurück">
+            ←
+          </button>
+          <Mitspielerleiste
+            eigenes={{
+              sitz: SZENE.eigenes.sitz,
+              leben: SZENE.eigenes.leben,
+              level: SZENE.eigenes.level,
+              ausRunde: null,
+              bereit: false,
+            }}
+            gegner={[
+              {
+                sitz: SZENE.gegner.sitz,
+                leben: SZENE.gegner.leben,
+                level: SZENE.gegner.level,
+                ausRunde: SZENE.gegner.ausRunde,
+                bereit: false,
+              },
+            ]}
+            gegnerJetzt={SZENE.gegner.sitz}
+            gezeigt={SZENE.gegner.sitz}
+            sitze={SITZZEILEN}
+            onWahl={() => undefined}
+          />
+        </div>
+        {/* Ohne Frist: Die Probe hat keine Uhr, und eine ablaufende Zahl in
+            einem angehaltenen Stand waere eine Behauptung. */}
+        <Phasenzeile
+          runde={SZENE.runde}
+          phase="vorbereitung"
+          frist={null}
+          bereit={0}
+          offen={SZENE.sitze.length}
+        />
+      </div>
+
+      {/*
+        Die Bedienung der Probe und ihr Erklaertext liegen UEBER dem Tisch und
+        nicht darin: Was es am echten Tisch nicht gibt, darf dem Brett auch
+        keine Hoehe wegnehmen. Vorher taten sie genau das (siehe oben).
+      */}
+      <div className={css.werkbank}>
+        <div className={css.kopf}>
+          <h1 className={css.titel}>Probe — die Rüstkammer</h1>
+          {/* Zuklappbar, weil die Werkbank am Handy sonst genau die
+              Kopfleiste verdeckt, die sie zeigen soll. */}
+          <button
+            type="button"
+            className={css.knopf}
+            aria-expanded={werkbank}
+            onClick={() => setWerkbank((an) => !an)}
+          >
+            {werkbank ? 'zuklappen' : 'aufklappen'}
           </button>
         </div>
+        {werkbank && (
+          <div className={css.schalter}>
+            <label className={css.schalt}>
+              <input type="checkbox" checked={amZug} onChange={(e) => setAmZug(e.target.checked)} />
+              am Zug
+            </label>
+            <button type="button" className={css.knopf} onClick={zuruecksetzen}>
+              zurücksetzen
+            </button>
+            <button
+              type="button"
+              className={css.knopf}
+              aria-expanded={erklaerung}
+              onClick={() => setErklaerung((an) => !an)}
+            >
+              {erklaerung ? 'Text zu' : 'Was ist das?'}
+            </button>
+          </div>
+        )}
+        {werkbank && erklaerung && (
+          <p className={css.fuss}>
+            Runde {SZENE.runde} von {SZENE.rundenGrenze} einer Partie zu {SZENE.sitze.length} mit
+            Bots (Saat „{SZENE.saat}", Gangart {SZENE.gangart}), angehalten nach{' '}
+            {SZENE.zuegeGespielt} Zügen von {nameVon(SZENE.ich)}. Ein Tipp auf eine Einheit schlägt
+            ihr Blatt auf; „Aufstellen" darin wählt sie, und der nächste Tipp setzt sie ab — Ziehen
+            mit dem Finger gehört zum Tisch und nicht zur Wabe. Verkaufen nimmt sie hier nur vom
+            Feld und zählt kein Gold, so wie ein Klick auf eine Karte sie nicht kauft, sondern nur
+            ihren Platz abräumt: So sieht man den leeren Rahmen. Würfeln, Aufsteigen und Bereit tun
+            nichts — das sind Regeln, und die bringt die Probe absichtlich nicht mit. „zurücksetzen"
+            stellt alles wieder her.
+          </p>
+        )}
       </div>
 
       {/* Die Markennamen liegen als Kontext an, genau wie am Tisch: Die
@@ -309,7 +437,12 @@ export function ProbeRuestkammer(): React.JSX.Element {
             onAblegen={
               blattOrt.bereich === 'brett' && freierBankplatz !== undefined
                 ? () => {
-                    setAuf((a) => schiebe(a, blattOrt, { bereich: 'bank', platz: freierBankplatz }));
+                    setAuf((a) =>
+                      schiebe(a, blattOrt, {
+                        bereich: 'bank',
+                        platz: freierBankplatz,
+                      }),
+                    );
                     setBlattOrt(null);
                   }
                 : undefined
@@ -348,72 +481,87 @@ export function ProbeRuestkammer(): React.JSX.Element {
               </strong>
             </span>
           </header>
-          <Synergieleiste
-            staende={SZENE.eigenes.synergien}
-            tabelle={SZENE.synergieTabelle}
-          />
+          <Synergieleiste staende={SZENE.eigenes.synergien} tabelle={SZENE.synergieTabelle} />
         </div>
 
-        <div className="tr-bretter">
-          {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
+        {/* Die Spielflaeche: Bretter UND Bank in einem Kasten, genau wie am
+            Tisch (screens/Tafelrunde.tsx). Sie bekommt den Platz, den
+            Kopfzeile, Statuszeile und Laden uebriglassen, und rechnet daraus
+            die Brettbreite — deshalb zeigt die Probe seit dem 07.09.2026 auch,
+            OB die Ruestkammer auf einen Bildschirm passt, und nicht nur, wie
+            sie aussieht. */}
+        <div
+          className="tr-spielflaeche"
+          data-gegner=""
+          data-bank=""
+          style={
+            {
+              '--tr-brettverhaeltnis': rastermass(SZENE.brettReihen, SZENE.brettSpalten)
+                .seitenverhaeltnis,
+            } as React.CSSProperties
+          }
+        >
+          <div className="tr-bretter">
+            {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
               Heere spaeter aufeinandertreffen. Genau dieses Paar ist der
               Grund, warum die Probe beide Bretter zeigt und nicht nur das
               eigene: Ob die Figuren einander wirklich ansehen, sieht man erst
               hier. */}
-          <section className="tr-brettteil tr-brettteil-fremd">
-            {/* Name und Marken nebeneinander, wie am Tisch
+            <section className="tr-brettteil tr-brettteil-fremd">
+              {/* Name und Marken nebeneinander, wie am Tisch
                 (`.tr-brettkopf`) — samt dem Auge davor, das seit dem
                 06.09.2026 sagt, wessen Brett man sich gerade ansieht. */}
-            <div className="tr-brettkopf">
-              <h2 className="tr-bretttitel">
-                <AugeZeichen />
-                {nameVon(SZENE.gegner.sitz)}
-              </h2>
-              <Fremdmarken
-                staende={SZENE.gegner.synergien}
-                tabelle={SZENE.synergieTabelle}
-                beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
+              <div className="tr-brettkopf">
+                <h2 className="tr-bretttitel">
+                  <AugeZeichen />
+                  {nameVon(SZENE.gegner.sitz)}
+                </h2>
+                <Fremdmarken
+                  staende={SZENE.gegner.synergien}
+                  tabelle={SZENE.synergieTabelle}
+                  beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
+                />
+              </div>
+              <Hexbrett
+                reihen={SZENE.brettReihen}
+                spalten={SZENE.brettSpalten}
+                felder={SZENE.gegner.brett}
+                katalog={KATALOG}
+                gespiegelt
+                maxStufe={SZENE.maxStufe}
               />
-            </div>
-            <Hexbrett
-              reihen={SZENE.brettReihen}
-              spalten={SZENE.brettSpalten}
-              felder={SZENE.gegner.brett}
-              katalog={KATALOG}
-              gespiegelt
-              maxStufe={SZENE.maxStufe}
-            />
-          </section>
+            </section>
 
-          <section className="tr-brettteil">
-            <Hexbrett
-              reihen={SZENE.brettReihen}
-              spalten={SZENE.brettSpalten}
-              felder={auf.brett}
-              katalog={KATALOG}
-              maxStufe={SZENE.maxStufe}
-              eigen
-              aktiv={amZug}
-              gewaehlt={gewaehlt}
-              istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-              onWaehlen={tippeOrt}
-              onLeeresZiel={tippeOrt}
-              fehlendeKopien={fehlen}
-            />
-          </section>
+            <section className="tr-brettteil">
+              <Hexbrett
+                reihen={SZENE.brettReihen}
+                spalten={SZENE.brettSpalten}
+                felder={auf.brett}
+                katalog={KATALOG}
+                maxStufe={SZENE.maxStufe}
+                eigen
+                aktiv={amZug}
+                gewaehlt={gewaehlt}
+                istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+                onWaehlen={tippeOrt}
+                onLeeresZiel={tippeOrt}
+                fehlendeKopien={fehlen}
+              />
+            </section>
+          </div>
+
+          <Bankreihe
+            plaetze={SZENE.bankPlaetze}
+            bank={auf.bank}
+            katalog={KATALOG}
+            maxStufe={SZENE.maxStufe}
+            aktiv={amZug}
+            gewaehlt={gewaehlt}
+            istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+            onWaehlen={tippeOrt}
+            fehlendeKopien={fehlen}
+          />
         </div>
-
-        <Bankreihe
-          plaetze={SZENE.bankPlaetze}
-          bank={auf.bank}
-          katalog={KATALOG}
-          maxStufe={SZENE.maxStufe}
-          aktiv={amZug}
-          gewaehlt={gewaehlt}
-          istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-          onWaehlen={tippeOrt}
-          fehlendeKopien={fehlen}
-        />
 
         <div className="tr-fuss">
           <div className="tr-ladenkopf">
@@ -428,7 +576,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
             className="tr-laden"
             role="group"
             aria-label="Laden"
-            style={{ gridTemplateColumns: `repeat(${SZENE.ladenPlaetze}, 1fr)` }}
+            style={{ gridTemplateColumns: `repeat(${SZENE.ladenPlaetze}, minmax(0, 1fr))` }}
           >
             {Array.from({ length: SZENE.ladenPlaetze }, (_, platz) => {
               const id = laden[platz] ?? null;
@@ -505,18 +653,6 @@ export function ProbeRuestkammer(): React.JSX.Element {
           </div>
         </div>
       </Markennamen.Provider>
-
-      <p className={css.fuss}>
-        Runde {SZENE.runde} von {SZENE.rundenGrenze} einer Partie zu {SZENE.sitze.length} mit
-        Bots (Saat „{SZENE.saat}", Gangart {SZENE.gangart}), angehalten nach{' '}
-        {SZENE.zuegeGespielt} Zügen von {nameVon(SZENE.ich)}. Ein Tipp auf eine Einheit
-        schlägt ihr Blatt auf; „Aufstellen" darin wählt sie, und der nächste Tipp setzt sie
-        ab — Ziehen mit dem Finger gehört zum Tisch und nicht zur Wabe. Verkaufen nimmt sie
-        hier nur vom Feld und zählt kein Gold, so wie ein Klick auf eine Karte sie nicht
-        kauft, sondern nur ihren Platz abräumt: So sieht man den leeren Rahmen. Würfeln,
-        Aufsteigen und Bereit tun nichts — das sind Regeln, und die bringt die Probe
-        absichtlich nicht mit. „zurücksetzen" stellt alles wieder her.
-      </p>
     </main>
   );
 }
