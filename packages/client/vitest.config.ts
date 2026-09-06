@@ -45,6 +45,7 @@ const pakete = [
   'eiland',
   'feldherr',
   'filler',
+  'golf',
   'mememory',
   'skat',
   'tafelrunde',

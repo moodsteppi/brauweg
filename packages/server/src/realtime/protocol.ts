@@ -88,6 +88,11 @@ export type ClientMessage =
        */
       readonly type: 'startNow';
       readonly tableId: string;
+      /**
+       * Rundenzahl, falls sie erst beim Start feststeht (Golf waehlt die
+       * Loecher in der Lobby). Fehlt sie, gilt die des Tisches.
+       */
+      readonly rounds?: number;
     }
   | {
       readonly v: number;

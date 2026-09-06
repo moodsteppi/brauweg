@@ -391,7 +391,13 @@ describe('Bot: aufstellen', () => {
     return hexfeld(platz).reihe;
   }
 
-  it('stellt Wachen nach vorn, Magier nach hinten und Meuchler an den Rand', () => {
+  /**
+   * Je Rolle eine eigene Wunschreihe, seit dem 06.09.2026 (`wunschreihe` in
+   * bot.ts): Wache in Reihe 0, Meuchler in Reihe 1 (und an den Rand), ein
+   * Magier mit Reichweite 3 in Reihe 2. Vorher kannte der Bot nur "ganz vorn"
+   * und "ganz hinten" und liess die beiden mittleren Reihen leer.
+   */
+  it('gibt jeder Rolle ihre Wunschreihe und stellt den Meuchler an den Rand', () => {
     const p = mitHeer(neu(), 0, {
       gold: 0,
       level: 3,
@@ -416,10 +422,12 @@ describe('Bot: aufstellen', () => {
         assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
       }
       if (art.rolle === 'magier') {
-        assert.equal(reihe(platz), BRETT_REIHEN - 1, `${art.name} gehoert nach hinten`);
+        // Reichweite 3: eine Reihe vor der hintersten, denn von dort trifft
+        // sie den Gegner, der an der eigenen vordersten Reihe steht.
+        assert.equal(reihe(platz), art.reichweite - 1, `${art.name} steht falsch`);
       }
       if (art.rolle === 'meuchler') {
-        assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
+        assert.equal(reihe(platz), 1, `${art.name} gehoert hinter die Wache`);
         const spalte = hexfeld(platz).spalte;
         assert.ok(
           spalte === 0 || spalte === BRETT_SPALTEN - 1,
@@ -433,6 +441,10 @@ describe('Bot: aufstellen', () => {
    * Steht eine Einheit falsch — hier ein Magier in der vordersten Reihe, wie
    * ihn eine Verschmelzung dort hinterlassen kann —, raeumt der Bot das auf,
    * ohne dafuer Gold auszugeben.
+   *
+   * Der Sturmrufer ist mit Reichweite 4 der einzige des Katalogs, dessen
+   * Wunschreihe die hinterste IST (`wunschreihe` in bot.ts) — deshalb steht
+   * hier weiter `BRETT_REIHEN - 1` und nicht die Reihe 2 der uebrigen Magier.
    */
   it('stellt eine falsch stehende Einheit um', () => {
     const brett = leeresBrett();
@@ -581,11 +593,16 @@ describe('Bot: neu wuerfeln', () => {
    * Volles Brett aus Meuchlern (Stufe 2, damit die Kopien nicht als
    * Verschmelzung zaehlen), Bank frei, viel Gold — und ein Laden, in dem keine
    * einzige Marke des eigenen Heeres vorkommt.
+   *
+   * IN REIHE 1, DER WUNSCHREIHE DES MEUCHLERS (`wunschreihe` in bot.ts, seit
+   * dem 06.09.2026). In Reihe 0 stuenden sie eine Reihe zu weit vorn, und der
+   * Bot raeumte erst einmal um — die Probe misst dann das Umstellen und nicht
+   * das Neu-Wuerfeln.
    */
   function fremderLaden(laden: readonly EinheitId[], gold = 20): TafelrundePartie {
     const brett = leeresBrett();
     for (let spalte = 0; spalte < 5; spalte++) {
-      brett[platzNummer(0, spalte)] = { id: 'gassendieb', stufe: 2 };
+      brett[platzNummer(1, spalte)] = { id: 'gassendieb', stufe: 2 };
     }
     return mitHeer({ ...neu(), runde: 5 }, 0, {
       gold,

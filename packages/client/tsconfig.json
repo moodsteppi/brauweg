@@ -42,6 +42,7 @@
       "@brauweg/game-eiland": ["../game-eiland/src/index.ts"],
       "@brauweg/game-feldherr": ["../game-feldherr/src/index.ts"],
       "@brauweg/game-filler": ["../game-filler/src/index.ts"],
+      "@brauweg/game-golf": ["../game-golf/src/index.ts"],
       "@brauweg/game-mememory": ["../game-mememory/src/index.ts"],
       "@brauweg/game-skat": ["../game-skat/src/index.ts"],
       "@brauweg/game-tafelrunde": ["../game-tafelrunde/src/index.ts"],

@@ -27,7 +27,7 @@
  * kampf.ts). Die anderen vier unterscheiden sich weiterhin allein ueber ihre
  * WERTE — vor allem ueber `reichweite`, die einzige Zahl, die der Kampf ausser
  * den Grundwerten liest. Fuer sie ist die Rolle Auskunft: Der Laden zeigt sie
- * an, und der Bot stellt nach ihr auf (`platzStrafe` in bot.ts).
+ * an, und der Bot stellt nach ihr auf (`wunschreihe` in bot.ts).
  *
  * WARUM AUSGERECHNET DER BEISTAND EINE WIRKUNG BEKAM: Bei den anderen vier
  * ergibt sich aus den Werten eine Spielweise — eine Wache haelt aus, ein

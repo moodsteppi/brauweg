@@ -23,6 +23,7 @@ import { easypoker } from '@brauweg/game-easypoker';
 import { eiland } from '@brauweg/game-eiland';
 import { feldherr } from '@brauweg/game-feldherr';
 import { filler } from '@brauweg/game-filler';
+import { golf } from '@brauweg/game-golf';
 import { mememory } from '@brauweg/game-mememory';
 import { skat } from '@brauweg/game-skat';
 import { tafelrunde } from '@brauweg/game-tafelrunde';
@@ -40,6 +41,7 @@ const MODULES: readonly AnyGameModule[] = [
   filler as unknown as AnyGameModule,
   eiland as unknown as AnyGameModule,
   tafelrunde as unknown as AnyGameModule,
+  golf as unknown as AnyGameModule,
 ];
 
 /**

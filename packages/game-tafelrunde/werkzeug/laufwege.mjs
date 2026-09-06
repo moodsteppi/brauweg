@@ -154,6 +154,15 @@ const zeile = {
   letzteBewegungMedianMs: lauf.letzteBewegungMedianMs,
   schritteJeEinheit: runde(lauf.schritteJeEinheit, 3),
   /**
+   * Wie sich die aufgestellten Einheiten auf die Reihen verteilen.
+   *
+   * Steht in dieser Tabelle, weil die Aufstellung der Bots die Laufwege
+   * ERZEUGT: Eine Zeile mit mehr Bewegung, die trotzdem nur zwei der vier
+   * Reihen benutzt, hat nicht die Tiefe genutzt, sondern nur die Wege
+   * verlaengert.
+   */
+  reihenAnteile: lauf.reihenAnteile.map((a) => runde(a, 4)),
+  /**
    * Anteil der Kampfzeit, in dem eine Figur ihr Laufbild zeigt.
    *
    * Ein Schritt dauert `schrittdauer(STANDARD_REGLER)` — beim Zeitraffer 2
@@ -180,6 +189,7 @@ const zeile = {
     bisTrefferMedian: r.bisTrefferMedian,
     sofortInReichweite: runde(r.anteilSofortInReichweite, 4),
     startAbstandMedian: r.startAbstandMedian,
+    reihenAnteile: r.reihenAnteile.map((a) => runde(a, 4)),
   })),
   rechenzeitMs: Date.now() - begonnen,
 };
@@ -224,7 +234,15 @@ if (ALS_JSON) {
       ` (${spanne.zeilen} Marken ab ${MINDEST} Antritten)`,
   );
   console.log('');
-  console.log('Rolle       Einheiten  laeuft je   Schritte  bis 1. Treffer  sofort in RW  Startabstand');
+  console.log(
+    'Reihen (0 = vorn)  ' +
+      lauf.reihenAnteile.map((a, i) => `R${i} ${proz(a)}`).join('  '),
+  );
+  console.log('');
+  console.log(
+    'Rolle       Einheiten  laeuft je   Schritte  bis 1. Treffer  sofort in RW  Startabstand' +
+      '   Reihen 0..' + (lauf.reihenAnteile.length - 1),
+  );
   for (const r of lauf.jeRolle) {
     console.log(
       r.rolle.padEnd(11) +
@@ -233,7 +251,9 @@ if (ALS_JSON) {
         String(r.schritteMedian).padStart(10) +
         String(r.bisTrefferMedian).padStart(16) +
         proz(r.anteilSofortInReichweite).padStart(14) +
-        String(r.startAbstandMedian).padStart(14),
+        String(r.startAbstandMedian).padStart(14) +
+        '   ' +
+        r.reihenAnteile.map((a) => `${(a * 100).toFixed(0)}%`.padStart(4)).join(' '),
     );
   }
   console.log('');

@@ -26,6 +26,7 @@
     "@brauweg/game-eiland": "*",
     "@brauweg/game-feldherr": "*",
     "@brauweg/game-filler": "*",
+    "@brauweg/game-golf": "*",
     "@brauweg/game-mememory": "*",
     "@brauweg/game-skat": "*",
     "@brauweg/game-tafelrunde": "*",

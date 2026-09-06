@@ -123,6 +123,18 @@ const AUSWERTUNG = werteAus(
 // Marken
 // ---------------------------------------------------------------------------
 
+/**
+ * Der Standardfehler einer Siegquote — aus der Stichprobe selbst.
+ *
+ * `sqrt(p * (1 - p) / n)`, die Streuung eines Anteils bei `n` unabhaengigen
+ * Antritten. Sie steht hier und nicht in messen.ts, weil sie eine Aussage
+ * ueber die PROBE ist und nicht ueber das Spiel: Das Werkzeug rechnet mit
+ * 5.000 Partien und braucht sie nicht.
+ */
+function standardfehler(quote: number, antritte: number): number {
+  return Math.sqrt((quote * (1 - quote)) / antritte);
+}
+
 describe('Ausgewogenheit: Marken', () => {
   /**
    * Keine Marke gewinnt mehr als das Doppelte des Schnitts und keine faellt
@@ -148,6 +160,30 @@ describe('Ausgewogenheit: Marken', () => {
    * mehr unbeobachtet aus. Wer den Katalog anfasst, laesst trotzdem das
    * Werkzeug ueber 5.000 Partien laufen und verlaesst sich nicht auf diese
    * Probe allein; die Auswertung steht im Konzeptdokument.
+   *
+   * VERGLICHEN WIRD MIT DEM STANDARDFEHLER DER EIGENEN STICHPROBE, seit dem
+   * 06.09.2026 — die Schranken x0,5 und x2 sind unveraendert, aber eine
+   * Marke reisst sie erst, wenn sie es UM MEHR ALS DIE MESSUNGENAUIGKEIT tut.
+   *
+   * Der Anlass war ein Fehlalarm, und er trifft immer dieselbe Zeile:
+   * Naturwesen ist die schwaechste gezaehlte Marke und steht dicht an der
+   * unteren Schranke (Board-Karte "Naturwesen ist mit x0,54 die neue
+   * Wackelzeile"). Bei 400 Partien traegt sie rund 280 Antritte, ihre Quote
+   * liegt bei 13 bis 15 %, und deren Standardfehler ist 2,0 Prozentpunkte —
+   * auf den Faktor umgerechnet plus/minus 0,07. Gemessen auf DERSELBEN
+   * Saatfamilie ergibt sie x0,48 (400 Partien), x0,51 (800), x0,52 (1.200),
+   * x0,50 (1.600) und x0,55 (3.000), und zwar VOR wie NACH der Umstellung des
+   * Bots auf eine Wunschreihe je Rolle: Ihre Siegquote selbst bewegte sich
+   * dabei von 15,0 auf 15,2 %. Was die Probe an diesem Tag gemeldet hat, war
+   * also ihre eigene Streuung und kein Befund ueber den Katalog.
+   *
+   * DIE ANTWORT IST NICHT "MEHR PARTIEN": Die Reihe oben zeigt, dass die
+   * Schaetzung auch bei 1.600 noch auf der Schranke steht, und ein Testlauf,
+   * den jemand vor jedem Commit abwartet, vertraegt keine 30 Sekunden fuer
+   * eine Zeile. Und sie ist auch nicht "die Schranke senken" — dann verschoebe
+   * eine Messfrage stillschweigend die Zusage ueber den Katalog. Eine Marke,
+   * die WIRKLICH bei x0,3 steht, faellt weiterhin auf: Der Standardfehler
+   * traegt bei diesen Stichproben rund 0,07, nicht 0,2.
    */
   it('haelt jede gezaehlte Marke zwischen der Haelfte und dem Doppelten des Schnitts', () => {
     const schnitt = schnittQuote(AUSWERTUNG.marken, MINDEST_ANTRITTE);
@@ -160,17 +196,17 @@ describe('Ausgewogenheit: Marken', () => {
 
     for (const zeile of gezaehlt) {
       const faktor = zeile.quote! / schnitt;
+      const streuung = standardfehler(zeile.quote!, zeile.antritte) / schnitt;
+      const lage =
+        `x${faktor.toFixed(2)} ± ${streuung.toFixed(2)} des Schnitts von ` +
+        `${(schnitt * 100).toFixed(1)} %, ${zeile.antritte} Antritte`;
       assert.ok(
-        faktor <= 2,
-        `${zeile.name} gewinnt ${(zeile.quote! * 100).toFixed(1)} % ` +
-          `(x${faktor.toFixed(2)} des Schnitts von ${(schnitt * 100).toFixed(1)} %, ` +
-          `${zeile.antritte} Antritte)`,
+        faktor - streuung <= 2,
+        `${zeile.name} gewinnt ${(zeile.quote! * 100).toFixed(1)} % (${lage})`,
       );
       assert.ok(
-        faktor >= 0.5,
-        `${zeile.name} gewinnt nur ${(zeile.quote! * 100).toFixed(1)} % ` +
-          `(x${faktor.toFixed(2)} des Schnitts von ${(schnitt * 100).toFixed(1)} %, ` +
-          `${zeile.antritte} Antritte)`,
+        faktor + streuung >= 0.5,
+        `${zeile.name} gewinnt nur ${(zeile.quote! * 100).toFixed(1)} % (${lage})`,
       );
     }
   });

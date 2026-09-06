@@ -18078,3 +18078,371 @@ span.hub-angebot-art.poker-jeton-stapel {
 @media (prefers-reduced-motion: reduce) {
   .tr-banner-wabe[data-frisch] { animation: none; }
 }
+
+/* ==========================================================================
+   Golf — Minigolf aus der Vogelperspektive (screens/Golf.tsx)
+
+   Dunkelgrün statt dunkelbraun: Der Bildschirm ist zu neun Zehnteln eine
+   Leinwand mit Rasen darauf, und ein Menue in anderer Stimmung davor fuehlt
+   sich an wie ein anderes Spiel. Alles ausserhalb der Leinwand ist bewusst
+   ruhig — die Aufmerksamkeit gehoert dem Ball.
+   ========================================================================== */
+
+.gf-seite {
+  position: fixed;
+  inset: 0;
+  /* styles.css setzt weiter oben `main { max-width: 60rem; padding: 1rem }`.
+     Beides gilt auch fuer einen Vollbild-Bildschirm und muss hier
+     zurueckgenommen werden — sonst haengt die Leinwand auf einem breiten
+     Schirm links in einer 960-px-Spalte. */
+  max-width: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #e8f0e6;
+  background: radial-gradient(120% 80% at 50% 0%, #24513a 0%, #16301f 55%, #101d16 100%);
+}
+
+/* Nicht ganz oben in der Ecke: Dort sitzt auf dem iPhone die Notch. */
+.gf-zurueck {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 14px;
+  z-index: 6;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  color: #eef6ea;
+  background: rgba(0, 0, 0, 0.34);
+  font: 800 17px/1 system-ui;
+  cursor: pointer;
+}
+.gf-zurueck:active { transform: scale(0.96); }
+.gf-zurueck-tisch { position: static; pointer-events: auto; flex: none; }
+
+/* -- Menue, Lobby, Ergebnis ----------------------------------------------- */
+
+.gf-menue { justify-content: center; padding: 20px; overflow-y: auto; }
+.gf-menue-mitte { width: min(92vw, 430px); text-align: center; }
+.gf-breit { width: min(94vw, 620px); }
+
+.gf-titel {
+  margin: 0 0 10px;
+  font: 900 clamp(36px, 12vw, 56px)/1 system-ui;
+  letter-spacing: -0.045em;
+  color: #f4fbf0;
+}
+.gf-untertitel { margin: 0 0 16px; color: #a9c4ad; font: 600 14px/1.5 system-ui; }
+.gf-klein { margin-top: 14px; font-size: 13px; opacity: 0.85; }
+.gf-fehler { margin: 12px 0 0; color: #ff9aa5; font: 700 13px/1.4 system-ui; }
+
+/* Die acht Ballfarben als Kostprobe — sie sagen ohne ein Wort, dass hier bis
+   zu acht Leute gleichzeitig auf derselben Bahn spielen. */
+.gf-probe { display: flex; justify-content: center; gap: 4px; margin: 0 0 22px; flex-wrap: wrap; }
+.gf-ballzeichen { display: block; filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45)); }
+
+.gf-knopf {
+  width: 100%;
+  padding: 17px 16px;
+  border: 0;
+  border-radius: 18px;
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms ease;
+}
+.gf-knopf:active { transform: scale(0.985); }
+.gf-knopf:disabled { filter: saturate(0.35) brightness(0.8); cursor: default; }
+.gf-knopf-haupt {
+  color: #10281a;
+  background: linear-gradient(180deg, #6fdc8c, #34b463);
+  box-shadow: 0 12px 26px -14px rgba(52, 180, 99, 0.95);
+}
+/* Ruhiger als der Hauptknopf: Der Mensch bleibt das Angebot, gegen das man
+   zuerst spielt — dieselbe Staffelung wie bei Filler und Mememory. */
+.gf-knopf-neben {
+  margin-top: 12px;
+  color: #dceadb;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.gf-regler {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.26);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* `label { margin-bottom }` gilt global. In einer Flexzeile schiebt das die
+   Beschriftung aus der Mitte — die Falle aus Mememory. */
+.gf-reglerzeile {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gf-reglertitel { flex: none; width: 62px; text-align: left; font: 700 13px/1 system-ui; color: #b9d2ba; }
+.gf-reglerzeile input[type="range"] { flex: 1; accent-color: #4fd07a; }
+.gf-reglerwert {
+  flex: none;
+  min-width: 34px;
+  text-align: right;
+  font: 800 22px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: #f4fbf0;
+}
+
+.gf-stufen { display: flex; gap: 6px; }
+.gf-stufen button {
+  flex: 1;
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 10px;
+  color: #cadfca;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.gf-stufen button[data-an] { color: #10281a; background: #8ee0a3; }
+
+.gf-gruppe { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gf-gruppenzeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  text-align: left;
+}
+.gf-gruppenzeile[data-eigen] { background: rgba(111, 220, 140, 0.18); }
+.gf-gruppenzeile[data-leer] { opacity: 0.42; }
+.gf-gruppenname { flex: 1; font: 700 15px/1.2 system-ui; }
+.gf-du {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font: 800 11px/1 system-ui;
+  font-style: normal;
+}
+
+/* Die laufenden Punkte sind keine Zierde, sondern die Auskunft "es lebt" —
+   dieselbe Begruendung wie im Warteband von Filler. */
+.gf-warten { display: flex; align-items: center; justify-content: center; gap: 8px; color: #a9c4ad; font: 600 14px/1 system-ui; }
+.gf-lauf { display: inline-flex; gap: 4px; }
+.gf-lauf i { width: 6px; height: 6px; border-radius: 50%; background: #86ab8b; animation: gf-huepf 1.05s infinite ease-in-out; }
+.gf-lauf i:nth-child(2) { animation-delay: 0.16s; }
+.gf-lauf i:nth-child(3) { animation-delay: 0.32s; }
+@keyframes gf-huepf {
+  0%, 70%, 100% { transform: translateY(0); opacity: 0.45; }
+  35% { transform: translateY(-5px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-lauf i { animation-name: gf-blink; }
+  @keyframes gf-blink { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+}
+
+/* -- Rangliste ------------------------------------------------------------ */
+
+.gf-rangliste { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gf-rangliste li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  text-align: left;
+}
+.gf-rangliste li[data-sieger] {
+  background: linear-gradient(90deg, rgba(244, 180, 0, 0.3), rgba(255, 255, 255, 0.07));
+  box-shadow: inset 0 0 0 1px rgba(244, 180, 0, 0.5);
+}
+.gf-rangliste li[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45); }
+.gf-rangplatz { flex: none; width: 22px; font: 900 17px/1 system-ui; color: #f4b400; }
+.gf-rangname { flex: 1; min-width: 0; font: 700 14px/1.2 system-ui; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Die Loecher als kleine Zahlenreihe: Wer wissen will, wo er verloren hat,
+   liest sie ab — ohne dass dafuer eine zweite Ansicht noetig waere. */
+.gf-rangloecher { flex: none; display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; max-width: 46%; }
+.gf-rangloecher i {
+  min-width: 16px;
+  padding: 2px 0;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  text-align: center;
+  font: 700 11px/1 system-ui;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: #bcd6bd;
+}
+.gf-rangsumme { flex: none; min-width: 28px; text-align: right; font: 900 18px/1 system-ui; font-variant-numeric: tabular-nums; }
+
+/* -- Partie --------------------------------------------------------------- */
+
+.gf-partie { padding: 0; overflow: hidden; }
+
+.gf-leinwand {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Ohne das faengt der Browser das Ziehen als Rollen ab und bricht den
+     Zeiger mit `pointercancel` — man zoege den Ball und die Seite scrollte. */
+  touch-action: none;
+}
+
+/* Der HUD liegt UEBER der Leinwand und faengt keine Zeiger: Ein Tipp neben
+   einem Chip soll den Ball treffen, nicht ins Leere gehen. */
+.gf-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  padding: max(10px, env(safe-area-inset-top)) 10px 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.gf-hudkopf {
+  width: min(96vw, 620px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gf-bahnzeile {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.42);
+  font: 700 13px/1 system-ui;
+}
+.gf-zeit {
+  flex: none;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.42);
+  font: 800 14px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+.gf-zeit[data-knapp] { color: #ff9aa5; }
+
+.gf-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+/* Ein Chip ist der Golfball des Spielers mit der Schlagzahl DIESES Lochs in
+   der Mitte — die Zahl, um die es gerade geht. Gesamt und Kuerzel darunter
+   klein: Sie beantworten die zweite Frage, nicht die erste. */
+.gf-chip {
+  width: 46px;
+  padding: 4px 2px 3px;
+  border-radius: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #10281a;
+  box-shadow: 0 4px 10px -5px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+.gf-chip[data-eigen] { box-shadow: 0 4px 10px -5px rgba(0, 0, 0, 0.9), inset 0 0 0 2px #ffffff; }
+.gf-chip[data-weg] { filter: grayscale(0.85) brightness(0.7); }
+.gf-chip strong { font: 900 18px/1 system-ui; font-variant-numeric: tabular-nums; }
+.gf-chip em { font: 800 10px/1.3 system-ui; font-style: normal; opacity: 0.8; }
+.gf-chip i { font: 700 9px/1 system-ui; font-style: normal; opacity: 0.7; }
+
+.gf-troedel {
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(214, 62, 76, 0.86);
+  font: 800 14px/1 system-ui;
+  color: #ffffff;
+}
+.gf-hinweis {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  font: 700 12px/1 system-ui;
+  color: #ffd9a0;
+}
+
+/* Die Zwischenstand-Tafel der Pause. Sie faengt Zeiger bewusst NICHT ab:
+   Waehrend der Pause laesst sich ohnehin nicht schlagen, und wer sie
+   wegtippen will, soll nicht ins Leere greifen. */
+.gf-pause {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(88vw, 380px);
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(10, 24, 16, 0.9);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  text-align: center;
+}
+.gf-pause h2 { margin: 0 0 10px; font: 800 17px/1.2 system-ui; }
+.gf-tafel { width: 100%; border-collapse: collapse; font: 600 13px/1 system-ui; }
+.gf-tafel th { padding: 4px; color: #8fae94; font: 700 11px/1 system-ui; text-align: right; }
+.gf-tafel th:first-child { text-align: left; }
+.gf-tafel td { padding: 5px 4px; text-align: right; font-variant-numeric: tabular-nums; }
+.gf-tafel td:first-child { display: flex; align-items: center; gap: 7px; text-align: left; }
+.gf-tafel tr[data-eigen] td { color: #8ee0a3; font-weight: 800; }
+.gf-pausezeit { margin: 10px 0 0; color: #a9c4ad; font: 700 13px/1 system-ui; }
+
+.gf-uebersicht {
+  position: absolute;
+  z-index: 5;
+  right: 14px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  color: #e8f0e6;
+  background: rgba(0, 0, 0, 0.48);
+  cursor: pointer;
+}
+.gf-uebersicht[data-an] { color: #10281a; background: #8ee0a3; }
+.gf-uebersichthinweis {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  font: 700 12px/1 system-ui;
+  pointer-events: none;
+}
+
+/* -- Banner der Spielauswahl ---------------------------------------------- */
+
+/* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300) und wie die
+   bewegten von Eiland und Tafelrunde. Ohne feste Form haette die Leinwand
+   gar keine Hoehe — ein <canvas> mit height:100% in einem Kasten ohne Hoehe
+   ist null Pixel hoch, und das Banner waere unsichtbar. */
+.gf-banner {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 1;
+  background: #101d16;
+}
