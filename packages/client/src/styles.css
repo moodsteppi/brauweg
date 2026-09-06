@@ -16658,7 +16658,19 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 .tr-tisch {
   justify-content: flex-start;
-  gap: 8px;
+  /*
+   * Die Luft zwischen den Baendern des Tisches — EINE Zahl, weil sie an zwei
+   * Stellen gebraucht wird: als `gap` hier und als negativer Abstand an der
+   * Bank, die sich ausdruecklich wieder an die Brettkante zieht
+   * (`.tr-bank`). Standen dort zwei Zahlen, ruecke die Bank beim naechsten
+   * Nachjustieren ins Brett hinein oder von ihm weg.
+   *
+   * 6 und nicht 8 am Handy: Fuenf Abstaende auf einem 956 Pixel hohen Schirm
+   * sind 10 Pixel, und die fehlten am 06.09.2026 unten am Laden. Ab Tablet
+   * ist der Platz da, dort bleibt es bei 8.
+   */
+  --tr-luft: 6px;
+  gap: var(--tr-luft);
   padding: 0 0 max(8px, env(safe-area-inset-bottom));
   /* Der Bildschirm rollt als Ganzes, wenn er nicht passt. Ohne das faellt der
      Laden auf einem kurzen Handy unter den Rand — und der Laden ist die
@@ -16697,7 +16709,9 @@ span.hub-angebot-art.poker-jeton-stapel {
      Sonst steht der Streifen am Desktop als einziges Band ueber einer
      zentrierten Spalte. */
   width: min(96vw, 520px);
-  padding: max(8px, env(safe-area-inset-top)) 8px 5px;
+  /* Unten 4 und nicht 5: Auf einem Schirm, dessen Kopfzeile schon 59 px an
+     den Notch verliert, zaehlt jede Zeile. */
+  padding: max(8px, env(safe-area-inset-top)) 8px 4px;
   background: rgba(13, 18, 22, 0.94);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -16728,41 +16742,66 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .tr-zurueck-oben:active { transform: scale(0.96); }
 
-.tr-kopf {
-  position: relative;
-  width: 100%;
-  padding: 6px 12px 0;
+/*
+ * Die Statuszeile: eigene Werte und Marken in EINER Reihe.
+ *
+ * Sie ersetzt seit dem 06.09.2026 zwei Baender untereinander. Gemessen am
+ * Geraet (440 x 956, Robins IMG_1047): Werte-Kasten 62 px, Abstand 8, Marken
+ * 18 — 88 Pixel fuer fuenf kurze Angaben. In einer Reihe sind es 21, und die
+ * gesparten 67 gehen an Brett und Laden.
+ *
+ * `align-items: center` und nicht `baseline`: Die Marken bringen ihre eigenen
+ * Zeichen mit und sitzen damit anders auf der Grundlinie als die Ziffern
+ * daneben. Umbrechen darf die Reihe (`flex-wrap`) — bei sieben Marken passt
+ * sie sonst nicht, und ein waagerechtes Rollen saehe an dieser Stelle
+ * niemand.
+ */
+.tr-statuszeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  width: min(94vw, 460px);
 }
 
-/* Zwei Kacheln, und die duerfen sich nicht ueber einen breiten Schirm
-   ziehen: Sie sind ein Anzeigefeld, kein Band. */
-.tr-werte {
+.tr-kopf {
   display: flex;
-  justify-content: center;
-  gap: 6px;
-  max-width: 320px;
-  margin: 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
 }
+
+/*
+ * Ein Wert ist ein Chip wie eine Marke daneben und keine Kachel mehr.
+ *
+ * Die Masse sind bewusst dieselben wie bei `.chip` in Synergien.module.css
+ * (2 px Luft oben, 999er Radius, 10 px Schrift), ABGESCHRIEBEN IST NICHTS:
+ * Beide Bauteile behalten ihr eigenes Stylesheet, und was hier steht, gilt
+ * nur fuer die Werte. Wer den Chip dort aendert, sieht hier den Unterschied
+ * — genau dafuer stehen sie nebeneinander in einer Reihe.
+ */
 .tr-wert {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1px;
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 6px 6px;
-  border-radius: 12px;
-  background: var(--panel);
+  gap: 3px;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
   box-shadow: inset 0 0 0 1px var(--line);
+  font-variant-numeric: tabular-nums;
 }
-.tr-wert strong { font: 800 18px/1 system-ui; }
-.tr-wert em { font: 600 10px/1 system-ui; font-style: normal; color: var(--muted); }
-.tr-wert .tr-icon { width: 14px; height: 14px; }
+.tr-wert strong { font: 800 12px/1.4 system-ui; }
+.tr-wert em { font: 700 10px/1.4 system-ui; font-style: normal; color: var(--muted); }
+.tr-wert .tr-icon { width: 12px; height: 12px; }
+/* Kein `.tr-wert-gold` mehr: Das Gold steht seit dem 05.09.2026 gross am
+   Laden (`.tr-goldstand`), die Regel war seither ohne Traeger. */
 .tr-wert-leben { color: var(--danger); }
-.tr-wert-gold { color: var(--gold); }
 .tr-wert-level { color: var(--blau); }
+.tr-wert-feld { color: var(--text); }
 .tr-wert-leben em,
-.tr-wert-gold em,
 .tr-wert-level em { color: var(--muted); }
 
 /* Die Zeichen sind Striche, keine Flaechen: So bleiben sie auf jeder Groesse
@@ -16820,17 +16859,60 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-bretter {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   width: min(94vw, 460px);
 }
 .tr-brettteil { position: relative; }
 /* Die Gegnerhaelfte tritt zurueck: Sie ist Auskunft, nicht Bedienflaeche.
    Ganz ausblenden waere falsch — man spielt gegen sie. */
 .tr-brettteil-fremd { opacity: 0.72; }
-.tr-brettteil-fremd .tr-brett { transform: scale(0.86); transform-origin: bottom center; }
+/*
+ * Die Gegnerhaelfte ist SCHMALER, nicht skaliert — geaendert am 06.09.2026.
+ *
+ * Hier stand `transform: scale(0.86)` mit `transform-origin: bottom center`.
+ * Das sah richtig aus und log beim Platz: Eine Transformation aendert die
+ * Zeichnung, nicht den Fluss. Der Kasten blieb 282 px hoch, gezeichnet wurden
+ * 243 — und die fehlenden 39 px standen als leerer Streifen zwischen
+ * Bretttitel und Brett. Auf Robins Handybild (440 x 956, IMG_1047) ist genau
+ * das der Abstand unter „Brunhild".
+ *
+ * `width: 86%` ergibt dieselbe Zeichnung: Die Wabenlage ist in Prozent
+ * gerechnet (zuege.ts), die Figur haengt an der Wabenhoehe, und `aspect-ratio`
+ * zieht die Hoehe mit. Nur nimmt der Kasten jetzt auch wirklich nur den Platz,
+ * den er braucht. Die Figuren des Gegners bleiben so gross wie zuvor.
+ */
+.tr-brettteil-fremd .tr-brett {
+  width: 86%;
+  margin-inline: auto;
+}
+
+/*
+ * Der Kopf ueber der Gegnerhaelfte: Name und Marken NEBENEINANDER.
+ *
+ * Bis zum 06.09.2026 standen sie untereinander und kosteten zusammen 33 der
+ * 315 Pixel, die die Gegnerhaelfte am Handy hoch war — fuer einen Namen und
+ * drei Chips. In einer Zeile sind es 18.
+ *
+ * Umbrechen darf die Zeile (`flex-wrap`): Bei sieben Marken und einem langen
+ * Namen ist eine Reihe voll, und dann sind zwei Zeilen richtig. Der Name
+ * schrumpft dabei nicht unter seine Auslassungspunkte — er steht mit
+ * `min-width: 0` in der Reihe und kuerzt sich selbst.
+ */
+.tr-brettkopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 6px;
+  margin: 0 0 3px;
+}
 
 .tr-bretttitel {
-  margin: 0 0 2px;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font: 700 11px/1.2 system-ui;
   color: var(--muted);
   text-align: center;
@@ -17163,6 +17245,17 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .tr-einheit-name { bottom: 24%; }
 .tr-einheit .tr-sterne { bottom: 14%; }
+/*
+ * SIE KOSTEN KEINE HOEHE — nachgemessen am 06.09.2026, weil beim Umbau fuer
+ * das Handy die Vermutung im Raum stand, der Name unter der Figur nehme dem
+ * Brett Platz. Er tut es nicht: Name und Sterne sind absolut gesetzt (siehe
+ * oben), das Brett ist so hoch wie sein `aspect-ratio` und keinen Pixel
+ * mehr. Wer sie wegnimmt, gewinnt am Bildschirm nichts und verliert die
+ * einzige Stelle, an der ohne Antippen steht, welche Einheit dort steht.
+ * Abgeschnittene Namen („Steinschleude…") sind deshalb eine Frage der
+ * Breite — der Ausweg waere die Anklick-Ansicht der Einheit, nicht das
+ * Streichen.
+ */
 
 /*
  * Was die Einheit gekostet hat — der Traeger von `--tr-kosten`, seit die
@@ -17293,8 +17386,8 @@ span.hub-angebot-art.poker-jeton-stapel {
   grid-template-columns: repeat(9, 1fr);
   gap: 4px;
   width: min(94vw, 460px);
-  margin-top: -8px;
-  padding: 5px 6px 6px;
+  margin-top: calc(-1 * var(--tr-luft));
+  padding: 4px 6px 5px;
   border-radius: 0 0 14px 14px;
   background: rgba(255, 255, 255, 0.05);
   box-shadow: inset 0 0 0 1px var(--line);
@@ -17358,13 +17451,20 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* -- Laden ---------------------------------------------------------------- */
 
+/*
+ * Dieselbe Rechnung wie am Tisch selbst: 5 statt 8 zwischen Ladenkopf,
+ * Karten, Knoepfen und Hinweis, und zwei Pixel weniger Polsterung oben. Bis
+ * zum Bereit-Knopf liegen zwei dieser Abstaende, macht 8 Pixel — und genau
+ * die entscheiden am Handy, ob er noch ueber der Unterkante steht. Ab Tablet
+ * steht die 8 wieder da (siehe 40rem weiter unten).
+ */
 .tr-fuss {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   width: min(96vw, 520px);
-  padding: 4px 0 10px;
+  padding: 2px 0 8px;
 }
 
 /* -- Der Ladenkopf: das Wort und das Gold --------------------------------- */
@@ -17704,11 +17804,14 @@ span.hub-angebot-art.poker-jeton-stapel {
 /* Ab Tablet-Breite steht mehr Platz zur Verfuegung: Brett und Laden duerfen
    groesser werden, statt in der Mitte eines leeren Schirms zu kleben. */
 @media (min-width: 40rem) {
+  .tr-tisch { --tr-luft: 8px; }
   .tr-bretter,
   .tr-bank,
+  .tr-statuszeile,
   .tr-auswahlband { width: min(70vw, 560px); }
   .tr-oben,
   .tr-fuss { width: min(72vw, 600px); }
+  .tr-fuss { gap: 8px; }
   .tr-karte { min-height: 104px; }
   .tr-goldstand strong { font-size: 26px; }
 }

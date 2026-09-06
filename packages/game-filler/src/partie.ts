@@ -456,6 +456,13 @@ export function moeglicheBarrieren(
   // Eine je Zug. Wer schon gemauert hat, faerbt jetzt — mehr ist dieser Zug
   // nicht mehr.
   if (partie.mauerDiesenZug && partie.dran === sitz) return [];
+  /*
+   * Der allererste Zug der Partie ist mauerfrei. Wer anfaengt, faerbt nur;
+   * der zweite darf in seinem ersten Zug schon bauen. Sonst stuende die
+   * erste Wand, bevor der Gegner ueberhaupt eine Farbe gewaehlt hat — der
+   * Anfaenger haette den Vorteil des ersten Zugs UND den der ersten Wand.
+   */
+  if (partie.zug === 0) return [];
 
   const { spalten, zeilen } = partie.regeln;
   const gesetzt = new Set(partie.barrieren);

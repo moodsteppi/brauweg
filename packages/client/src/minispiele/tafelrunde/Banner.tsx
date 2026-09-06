@@ -41,9 +41,11 @@ const SCHEIN_MS = 1300;
 
 /**
  * Die fuenf Rollen als Strichzeichnung — wortgleich zu `RollenZeichen` in
- * screens/Tafelrunde.tsx. Eine gemeinsame Datei waere hier zu viel Umstand
- * fuer fuenf Pfade; wichtiger ist, dass im Banner nichts steht, was es im
- * Spiel nicht gibt.
+ * Zeichen.tsx (bis zum 06.09.2026 stand es in screens/Tafelrunde.tsx). Die
+ * gemeinsame Datei gibt es seither, geholt wird von dort trotzdem nichts:
+ * Das Banner kennt keine Rollen, sondern Nummern — es verspricht ein Bild
+ * und keine Simulation (siehe Kopf), und eine Rollenliste, die aus dem Spiel
+ * kaeme, waere genau das Versprechen, das es nicht halten will.
  */
 const PFADE: readonly string[] = [
   'M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3Z',
@@ -53,7 +55,7 @@ const PFADE: readonly string[] = [
   'M12 4v16M4 12h16',
 ];
 
-/** Dieselben drei Kostenfarben wie im Spiel (screens/Tafelrunde.tsx). */
+/** Dieselben drei Kostenfarben wie im Spiel (Zeichen.tsx, KOSTEN_FARBE). */
 const KOSTEN_FARBE: readonly string[] = ['#8fa3ad', '#5aa86a', '#5ea0f0'];
 
 interface Recke {

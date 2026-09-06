@@ -277,6 +277,61 @@ describe('Kopfzeile', () => {
     expect(screen.getByText('0/3 Feld')).toBeInTheDocument();
   });
 
+  it('stellt Werte und Marken in EINE Zeile', () => {
+    /*
+     * Nicht Zierde, sondern der Platz am Handy: Bis zum 06.09.2026 standen
+     * Werte-Kasten und Markenleiste untereinander und kosteten auf Robins
+     * iPhone (440 x 956, IMG_1047) zusammen 88 Pixel — fuer fuenf kurze
+     * Angaben. Die fehlten unten am Laden.
+     *
+     * Geprueft wird die einzige Aussage, die ein Test ohne Layout treffen
+     * kann und die das Ganze traegt: Beide haengen am SELBEN Elternteil. Die
+     * Hoehe entscheidet danach das Stylesheet; wer sie wieder trennt, faellt
+     * hier auf.
+     */
+    zeige();
+    const werte = screen.getByText('0/3 Feld').closest('header')!;
+    const marken = screen.getByLabelText('Synergien');
+    expect(werte.parentElement).toBe(marken.parentElement);
+    expect(werte.parentElement).toHaveClass('tr-statuszeile');
+  });
+
+  it('stellt Name und Marken des Gegners in EINE Zeile', () => {
+    // Dieselbe Rechnung ueber dem gegnerischen Brett: zwei Zeilen Beiwerk
+    // kosteten dort 33 Pixel, nebeneinander sind es 18.
+    stelle(
+      sicht({
+        gegner: [
+          {
+            sitz: 1,
+            leben: 84,
+            level: 2,
+            serie: { art: null, laenge: 0 },
+            brett: Array.from({ length: 10 }, () => null),
+            bereit: false,
+            ausRunde: null,
+            verlassen: false,
+            synergien: [
+              {
+                marke: 'krieger',
+                name: 'Krieger',
+                anzahl: 2,
+                schwelle: 2,
+                naechsteSchwelle: 4,
+                bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 10 },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const { container } = render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
+    const kopf = container.querySelector('.tr-brettkopf')!;
+    expect(kopf).not.toBeNull();
+    expect(kopf.querySelector('.tr-bretttitel')).not.toBeNull();
+    expect(kopf.querySelector('ul')).not.toBeNull();
+  });
+
   it('nennt Runde und Phase im Klartext', () => {
     // Eine 3 allein sagt niemandem, dass er gerade aufstellen darf.
     zeige();
@@ -1123,7 +1178,7 @@ describe('Synergien', () => {
     // Laden zeigt keine Hervorhebung — und nichts stolpert.
     stelle(sicht({ synergieTabelle: undefined, eigenes: { synergien: undefined } }));
     zeige();
-    expect(screen.getByText(/Noch keine Marken auf dem Feld/)).toBeInTheDocument();
+    expect(screen.getByText(/Noch keine Marken/)).toBeInTheDocument();
     const laden = screen.getByRole('group', { name: 'Laden' });
     expect(within(laden).getByText('Dorfwache').closest('button')!.className).not.toContain(
       KARTE_TRIFFT,

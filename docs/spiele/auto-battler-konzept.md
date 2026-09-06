@@ -76,6 +76,14 @@ Konzept nannte 2/4/6; warum daraus 2/3/5 wurde, steht unter „Gemessen:
 Ausgewogenheit“, sechste Messung). Die
 aktiven Boni gehören **sichtbar** in die Oberfläche.
 
+Seit dem 06.09.2026 reicht dafür nicht mehr der Zähler allein: Ein Tipp auf ihn
+schlägt das **Blatt der Marke** auf — was sie bewirkt (ein Satz je Marke, er
+steht im Modul neben den Boni), alle drei Stufen mit ihren Werten (die
+erreichte hervorgehoben, die kommenden blass) und alle Einheiten des Katalogs,
+die die Marke tragen, mit ihren Kosten. Letzteres ist der eigentliche Zweck:
+Die Frage am Zähler lautet nicht „was habe ich", sondern „was müsste ich noch
+kaufen".
+
 ### Wirtschaft
 
 Gold je Runde: Grundeinkommen, Zins (1 Gold je 10 auf der Hand, höchstens 5),

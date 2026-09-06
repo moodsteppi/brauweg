@@ -93,12 +93,12 @@ export const DEFAULT_REGELN: FillerRegeln = {
    */
   variante: 'nebel',
   /*
-   * Fuenf je Spieler — die Zahl aus dem Auftrag. Sie ist auch die Grenze, an
-   * der die Spielart kippt: Bei acht Spalten reichen sieben Barrieren, um
-   * eine Brettbreite quer zuzumauern, und dann waere es kein Filler mehr,
-   * sondern zwei getrennte Spiele nebeneinander.
+   * Zehn je Spieler — seit dem 06.09.2026 auf Wunsch verdoppelt (vorher
+   * fuenf). Damit reicht der Vorrat bei acht Spalten, um eine Brettbreite
+   * quer zuzumauern; die Einsperr-Regel in partie.ts verhindert aber
+   * weiterhin, dass der Gegner dadurch komplett abgeschnitten wird.
    */
-  barrieren: 5,
+  barrieren: 10,
 };
 
 /**
