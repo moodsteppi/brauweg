@@ -88,7 +88,7 @@ export interface Synergiestand {
 /**
  * Die Farbe einer Marke. Reine Zeichnung und kein Bedeutungstraeger der
  * Plattform — deshalb hier und nicht als CSS-Variable in styles.css, genau
- * wie `KOSTEN_FARBE` im Bildschirm (DESIGN.md: die Variablen sind fuer
+ * wie `KOSTEN_FARBE` in Zeichen.tsx (DESIGN.md: die Variablen sind fuer
  * Gruen/Gold/Lila/Rot reserviert, und eine Klassen-Marke ist keins davon).
  *
  * Die Farbe steht NIE allein: Jede Marke hat zusaetzlich ihr eigenes
@@ -112,7 +112,7 @@ const ERSATZFARBE = '#8fa3ad';
 /**
  * Das Zeichen einer Marke — gezeichnet, nicht geladen.
  *
- * Dieselbe Bauart wie `RollenZeichen` im Bildschirm: Striche auf 24 x 24,
+ * Dieselbe Bauart wie `RollenZeichen` in Zeichen.tsx: Striche auf 24 x 24,
  * `currentColor`. Ein `<img>` auf eine Datei, die es nicht gibt, waere ein
  * weisser Kasten (CLAUDE.md), und sieben winzige Bilder je Einheit auf
  * neunzehn Feldern waeren ausserdem neunzehn Ladevorgaenge fuer nichts.
@@ -306,8 +306,8 @@ export function Markenzeichen({
  * Der Klassenname fuer eine Ladenkarte, deren Kauf eine Schwelle trifft.
  *
  * Als Konstante hinaus und nicht als eigenes Bauteil: Die Karte selbst steht
- * im Bildschirm (Tafelrunde.tsx) und traegt ihre eigenen Klassen; hier kommt
- * nur die eine dazu, deren Aussehen in dieses Modul gehoert.
+ * nebenan (Ladenkarte.tsx) und traegt ihre eigenen Klassen; hier kommt nur
+ * die eine dazu, deren Aussehen in dieses Modul gehoert.
  */
 export const KARTE_TRIFFT: string = stil.karteTrifft;
 

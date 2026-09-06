@@ -39,6 +39,7 @@
 import { useEffect, useState } from 'react';
 
 import { Buehne } from '../../minispiele/tafelrunde/Buehne';
+import { kostenFarbe } from '../../minispiele/tafelrunde/Zeichen';
 import {
   type Einheitenbild,
   type Kampfpaarung,
@@ -89,21 +90,6 @@ const BERICHT = SZENE.kampf.bericht;
 const KATALOG: Record<string, Katalogeintrag> = Object.fromEntries(
   SZENE.katalog.map((e) => [e.id, e]),
 );
-
-/**
- * Farbe je Kostenstufe — Abschrift der drei Werte aus `screens/Tafelrunde.tsx`.
- *
- * Ein Export von dort zoege den ganzen Spielschirm samt Tischverbindung in
- * dieses Stueck (ein Buendel packt ganze Module ein, nicht einzelne
- * Konstanten) — und die Paketaufteilung, an der gerade gearbeitet wird, nimmt
- * genau solche Verbindungen auseinander. Drei Farbwerte sind der kleinere
- * Preis.
- */
-const KOSTEN_FARBE: Record<number, string> = {
-  1: '#8fa3ad',
-  2: '#5aa86a',
-  3: '#5ea0f0',
-};
 
 /**
  * Wie lange nach dem letzten Ereignis die Uhr noch laeuft.
@@ -248,7 +234,13 @@ export function ProbeKampf(): React.JSX.Element {
            * Zeichen erscheint also nur, wenn eine Datei fehlschlaegt.
            */
           ersatzzeichen={(einheit) => <span aria-hidden="true">{einheit.name.slice(0, 1)}</span>}
-          farbeVon={(einheit) => KOSTEN_FARBE[einheit.kosten] ?? KOSTEN_FARBE[1]!}
+          /* Die Kostenfarbe kommt seit dem 06.09.2026 aus
+             `minispiele/tafelrunde/Zeichen.tsx` und steht hier nicht mehr
+             als Abschrift. Der Grund fuer die Abschrift war, dass ein Export
+             aus `screens/Tafelrunde.tsx` den ganzen Spielschirm samt
+             Tischverbindung in dieses Stueck gezogen haette — mit der eigenen
+             Datei gilt er nicht mehr. */
+          farbeVon={(einheit) => kostenFarbe(einheit.kosten)}
           /*
            * Keine Frist: Die Probe faengt den Kampf immer von vorn an. Am
            * Tisch springt die Anzeige damit in einen laufenden Kampf, wenn
