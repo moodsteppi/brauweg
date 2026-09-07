@@ -43,20 +43,24 @@ export const STANDARD_ANREICHERUNG: Partial<Record<GameId, Anreicherung>> = {
    * Mememory-Bildschirm frueher selbst geholt hat, und genau das Feld, das
    * er dabei gesetzt hat.
    *
-   * Ein vorhandenes `zusatz` wird ueberschrieben und nicht ergaenzt: Aus der
-   * Schlange kommt der Regelsatz eines Suchenden, und welche Motive
-   * freigegeben sind, entscheidet die Aufsicht — nicht der, der zuerst auf
-   * "Suchen" getippt hat.
+   * Was hier herauskommt, ist die GANZE Wahrheit ueber `zusatz`: Ein
+   * mitgeschicktes Feld wird ersetzt, und gibt es keine freigegebenen
+   * Uploads, faellt es weg. Welche Motive im Spiel sind, entscheidet die
+   * Aufsicht — nicht der, der zuerst auf "Suchen" getippt hat. Der
+   * Mememory-Bildschirm schickt beim Suchen zwar gar keine `config`; ein
+   * Haken, der je nach Bestand mal ueberschreibt und mal durchlaesst, waere
+   * aber genau die Sorte Regel, die man spaeter nicht mehr herleitet.
    *
-   * Gibt es keine, bleibt die `config` unangetastet. Ein leeres `zusatz` in
-   * jedem Tisch waere dasselbe Spiel mit einem Feld mehr in der Datenbank.
+   * Leer heisst weglassen und nicht `zusatz: []`. Ein Feld, das in jedem
+   * Tisch steht, sagt nichts mehr aus — und stuende ab dann in jeder Zeile
+   * der Tischtabelle.
    */
   mememory: async (db, config) => {
     // Kein Objekt heisst: Das Modul weist die `config` ohnehin gleich ab.
     // Dann ist ein aufgesetztes Feld nur eine zweite Fehlerquelle.
     if (typeof config !== 'object' || config === null) return config;
+    const { zusatz: _mitgeschickt, ...rest } = config as Record<string, unknown>;
     const zusatz = await freieKennungen(db);
-    if (zusatz.length === 0) return config;
-    return { ...(config as Record<string, unknown>), zusatz };
+    return zusatz.length > 0 ? { ...rest, zusatz } : rest;
   },
 };

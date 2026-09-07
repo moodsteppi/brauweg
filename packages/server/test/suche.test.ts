@@ -472,3 +472,34 @@ test('Mememory: ohne freigegebene Uploads bleibt die config die Vorgabe des Modu
   assert.equal('zusatz' in regeln, false);
   assert.equal(regeln['spalten'], 4);
 });
+
+test('Mememory: ein mitgeschicktes zusatz ueberstimmt die Freigabe nicht', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  const frei = await einreichen(s.ctx.db, {
+    accountId: anna,
+    bild: PNG_1X1,
+    direkt: true,
+    istStaff: true,
+  });
+
+  // Ein Client, der der Suche einen eigenen Motivtopf mitgibt. Der Haken
+  // ersetzt ihn: Welche Motive im Spiel sind, entscheidet die Aufsicht.
+  await s.vermittlung.betritt('mememory', anna, {
+    spalten: 4,
+    zeilen: 6,
+    merkzeitMs: 1100,
+    zusatz: ['hoch-aaaaaaaaaa'],
+  });
+  for (let offen = FENSTER_MS; offen > 0; offen -= 2_000) {
+    s.vor(2_000);
+    await s.vermittlung.abruf('mememory', anna);
+  }
+  const tischId = (await s.vermittlung.abruf('mememory', anna)).tischId;
+  assert.ok(tischId);
+
+  const regeln = await tableRules(s.ctx.db, tischId);
+  assert.deepEqual(regeln['zusatz'], [frei.kennung]);
+});
