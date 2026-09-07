@@ -16,10 +16,11 @@
  *   Zaehler zeigt statt Saetze, ist sie eine Zeile hoch — der Klappknopf war
  *   selbst so hoch wie sie.
  *
- *   Ab 75rem haengt sie FEST an der linken Kante neben dem Brett, dann als
- *   Spalte. Fest und nicht im Fluss, weil der Tisch (.tr-tisch in styles.css)
- *   eine zentrierte Spalte fester Breite ist: Ein Element im Fluss haette
- *   entweder die Spalte aufgerissen oder das Brett aus der Mitte geschoben.
+ *   Ab 64rem steht sie links NEBEN dem Brett, dann als Spalte. Dass sie dort
+ *   hinkommt, ist seit dem 07.09.2026 nicht mehr ihre Sache: Der Tisch ist
+ *   dort ein Raster mit drei Spalten (.tr-tisch in styles.css), und die
+ *   Statuszeile mit ihr darin IST die linke. Diese Datei dreht nur noch die
+ *   Liste hochkant.
  */
 
 /* -- Die Leiste: eine Reihe kleiner Zaehler ------------------------------- */
@@ -518,36 +519,26 @@
 /* -- Seitlich ab dem breiten Schirm --------------------------------------- */
 
 /*
- * Erst ab 75rem (1200 px), und die Zahl ist gerechnet und nicht geraten:
- * Der breiteste Teil des Tisches ist der Laden mit `min(72vw, 600px)`
- * (.tr-fuss in styles.css), zentriert — seine linke Kante liegt also bei
- * `50% - 300px`. Daneben muessen die Leiste plus zweimal 12 px Luft passen;
- * bei 1200 px Fensterbreite stehen 300 zur Verfuegung. Bei 64rem waeren es
- * 212 gewesen, und die Leiste haette den Laden ueberdeckt — genau so ist es
- * beim ersten Bau passiert.
+ * Ab 64rem steht die Leiste nicht mehr ueber dem Brett, sondern links daneben
+ * — untereinander statt nebeneinander, weil seitlich Hoehe da ist und Breite
+ * knapp; am Handy ist es genau andersherum.
+ *
+ * BIS ZUM 07.09.2026 GESCHAH DAS MIT `position: fixed`: Die Leiste nahm sich
+ * aus dem Fluss und stellte sich mit `left: max(12px, calc(50% - 520px))`
+ * neben die zentrierte Spalte, 96 Pixel von oben — eine abgezaehlte Hoehe der
+ * Kopfleiste. Seither ist die Spalte selbst da: Statuszeile und Laden stehen
+ * als Spalten eines Rasters neben der Mitte (`.tr-tisch` ab 64rem in
+ * styles.css), und die Leiste sitzt einfach in der linken. Sie misst nichts
+ * mehr ab, und die 96 kann nicht mehr veralten.
+ *
+ * Die Breitengrenze bleibt: Ein Markenname wie „Naturwesen" mit Zaehler
+ * dahinter braucht 180 Pixel, mehr soll die Spalte nicht wegen eines Wortes
+ * bekommen.
  */
-@media (min-width: 75rem) {
-  .leiste {
-    position: fixed;
-    /* Immer 12 px links vom Laden, bis zum linken Rand des Fensters. */
-    left: max(12px, calc(50% - 520px));
-    /* Knapp unter der festgehefteten Kopfleiste. 96 und nicht mehr 108: Seit
-       dem 06.09.2026 sind die Mitspielerkacheln flach (Bild neben Text), die
-       Leiste endet am breiten Schirm bei 89 px. */
-    top: 96px;
-    width: auto;
-    max-height: calc(100dvh - 128px);
-    overflow-y: auto;
-    /* Am Ende des Rollens nicht an die Seite weiterreichen — dieselbe Zeile
-       aus demselben Grund wie an .tr-tisch: Sonst zieht der Daumen unter
-       Android das Neuladen der Seite auf. */
-    overscroll-behavior: contain;
-  }
-  /* Untereinander statt nebeneinander: Seitlich ist Hoehe da und Breite
-     knapp, am Handy genau andersherum. */
+@media (min-width: 64rem) {
   .liste {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
   }
   .leer { max-width: 180px; }
 }

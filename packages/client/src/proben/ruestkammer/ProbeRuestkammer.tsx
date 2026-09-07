@@ -484,83 +484,91 @@ export function ProbeRuestkammer(): React.JSX.Element {
           <Synergieleiste staende={SZENE.eigenes.synergien} tabelle={SZENE.synergieTabelle} />
         </div>
 
-        {/* Die Spielflaeche: Bretter UND Bank in einem Kasten, genau wie am
-            Tisch (screens/Tafelrunde.tsx). Sie bekommt den Platz, den
-            Kopfzeile, Statuszeile und Laden uebriglassen, und rechnet daraus
-            die Brettbreite — deshalb zeigt die Probe seit dem 07.09.2026 auch,
-            OB die Ruestkammer auf einen Bildschirm passt, und nicht nur, wie
-            sie aussieht. */}
-        <div
-          className="tr-spielflaeche"
-          data-gegner=""
-          data-bank=""
-          style={
-            {
-              '--tr-brettverhaeltnis': rastermass(SZENE.brettReihen, SZENE.brettSpalten)
-                .seitenverhaeltnis,
-            } as React.CSSProperties
-          }
-        >
-          <div className="tr-bretter">
-            {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
-              Heere spaeter aufeinandertreffen. Genau dieses Paar ist der
-              Grund, warum die Probe beide Bretter zeigt und nicht nur das
-              eigene: Ob die Figuren einander wirklich ansehen, sieht man erst
-              hier. */}
-            <section className="tr-brettteil tr-brettteil-fremd">
-              {/* Name und Marken nebeneinander, wie am Tisch
-                (`.tr-brettkopf`) — samt dem Auge davor, das seit dem
-                06.09.2026 sagt, wessen Brett man sich gerade ansieht. */}
-              <div className="tr-brettkopf">
-                <h2 className="tr-bretttitel">
-                  <AugeZeichen />
-                  {nameVon(SZENE.gegner.sitz)}
-                </h2>
-                <Fremdmarken
-                  staende={SZENE.gegner.synergien}
-                  tabelle={SZENE.synergieTabelle}
-                  beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
+        {/* Derselbe Kasten wie am Tisch (`.tr-mitte`, screens/Tafelrunde.tsx):
+            Er haelt alles zwischen Statuszeile und Laden zusammen, damit das
+            Raster am breiten Schirm die beiden neben die Spielflaeche legen
+            kann. Ohne ihn zeigte die Probe am Notebook einen anderen Aufbau
+            als der Tisch — und sie ist das Werkzeug, mit dem der Aufbau
+            gemessen wird (werkzeug/hoehenprobe.mjs). */}
+        <div className="tr-mitte">
+          {/* Die Spielflaeche: Bretter UND Bank in einem Kasten, genau wie am
+              Tisch (screens/Tafelrunde.tsx). Sie bekommt den Platz, den
+              Kopfzeile, Statuszeile und Laden uebriglassen, und rechnet daraus
+              die Brettbreite — deshalb zeigt die Probe seit dem 07.09.2026 auch,
+              OB die Ruestkammer auf einen Bildschirm passt, und nicht nur, wie
+              sie aussieht. */}
+          <div
+            className="tr-spielflaeche"
+            data-gegner=""
+            data-bank=""
+            style={
+              {
+                '--tr-brettverhaeltnis': rastermass(SZENE.brettReihen, SZENE.brettSpalten)
+                  .seitenverhaeltnis,
+              } as React.CSSProperties
+            }
+          >
+            <div className="tr-bretter">
+              {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
+                Heere spaeter aufeinandertreffen. Genau dieses Paar ist der
+                Grund, warum die Probe beide Bretter zeigt und nicht nur das
+                eigene: Ob die Figuren einander wirklich ansehen, sieht man erst
+                hier. */}
+              <section className="tr-brettteil tr-brettteil-fremd">
+                {/* Name und Marken nebeneinander, wie am Tisch
+                  (`.tr-brettkopf`) — samt dem Auge davor, das seit dem
+                  06.09.2026 sagt, wessen Brett man sich gerade ansieht. */}
+                <div className="tr-brettkopf">
+                  <h2 className="tr-bretttitel">
+                    <AugeZeichen />
+                    {nameVon(SZENE.gegner.sitz)}
+                  </h2>
+                  <Fremdmarken
+                    staende={SZENE.gegner.synergien}
+                    tabelle={SZENE.synergieTabelle}
+                    beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
+                  />
+                </div>
+                <Hexbrett
+                  reihen={SZENE.brettReihen}
+                  spalten={SZENE.brettSpalten}
+                  felder={SZENE.gegner.brett}
+                  katalog={KATALOG}
+                  gespiegelt
+                  maxStufe={SZENE.maxStufe}
                 />
-              </div>
-              <Hexbrett
-                reihen={SZENE.brettReihen}
-                spalten={SZENE.brettSpalten}
-                felder={SZENE.gegner.brett}
-                katalog={KATALOG}
-                gespiegelt
-                maxStufe={SZENE.maxStufe}
-              />
-            </section>
+              </section>
 
-            <section className="tr-brettteil">
-              <Hexbrett
-                reihen={SZENE.brettReihen}
-                spalten={SZENE.brettSpalten}
-                felder={auf.brett}
-                katalog={KATALOG}
-                maxStufe={SZENE.maxStufe}
-                eigen
-                aktiv={amZug}
-                gewaehlt={gewaehlt}
-                istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-                onWaehlen={tippeOrt}
-                onLeeresZiel={tippeOrt}
-                fehlendeKopien={fehlen}
-              />
-            </section>
+              <section className="tr-brettteil">
+                <Hexbrett
+                  reihen={SZENE.brettReihen}
+                  spalten={SZENE.brettSpalten}
+                  felder={auf.brett}
+                  katalog={KATALOG}
+                  maxStufe={SZENE.maxStufe}
+                  eigen
+                  aktiv={amZug}
+                  gewaehlt={gewaehlt}
+                  istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+                  onWaehlen={tippeOrt}
+                  onLeeresZiel={tippeOrt}
+                  fehlendeKopien={fehlen}
+                />
+              </section>
+            </div>
+
+            <Bankreihe
+              plaetze={SZENE.bankPlaetze}
+              bank={auf.bank}
+              katalog={KATALOG}
+              maxStufe={SZENE.maxStufe}
+              aktiv={amZug}
+              gewaehlt={gewaehlt}
+              istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+              onWaehlen={tippeOrt}
+              fehlendeKopien={fehlen}
+            />
           </div>
-
-          <Bankreihe
-            plaetze={SZENE.bankPlaetze}
-            bank={auf.bank}
-            katalog={KATALOG}
-            maxStufe={SZENE.maxStufe}
-            aktiv={amZug}
-            gewaehlt={gewaehlt}
-            istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-            onWaehlen={tippeOrt}
-            fehlendeKopien={fehlen}
-          />
         </div>
 
         <div className="tr-fuss">
@@ -576,7 +584,9 @@ export function ProbeRuestkammer(): React.JSX.Element {
             className="tr-laden"
             role="group"
             aria-label="Laden"
-            style={{ gridTemplateColumns: `repeat(${SZENE.ladenPlaetze}, minmax(0, 1fr))` }}
+            /* Nur die Zahl der Plaetze, das Raster baut das Stylesheet —
+               Begruendung am Tisch (screens/Tafelrunde.tsx). */
+            style={{ '--tr-ladenplaetze': SZENE.ladenPlaetze } as React.CSSProperties}
           >
             {Array.from({ length: SZENE.ladenPlaetze }, (_, platz) => {
               const id = laden[platz] ?? null;

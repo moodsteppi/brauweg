@@ -58,6 +58,11 @@
   .arena {
     width: min(
       var(--tr-arena-breit),
+      /* Und nie breiter als die Buehne selbst — seit der Laden am breiten
+         Schirm neben der Mitte steht (styles.css, Block ab 64rem), ist das
+         nicht mehr dasselbe wie die Grenze in vw darueber. Dieselbe Zeile aus
+         demselben Grund an `--tr-feld` in styles.css. */
+      100cqw,
       calc((100cqh - var(--tr-arena-zeilen)) * var(--tr-arenaverhaeltnis))
     );
   }
@@ -940,6 +945,14 @@
   .arena { --tr-arena-breit: min(70vw, 560px); }
   .sterne { font-size: 10px; }
   .schaden { font-size: 12px; }
+}
+
+/* Ab 64rem steht der Laden neben der Mitte statt darunter (styles.css): Die
+   Buehne bekommt die ganze Hoehe unter der Kopfleiste, und die Arena darf
+   deshalb auch aus der Breite mehr duerfen. Ueber ihre Spalte hinaus kann sie
+   dabei nicht wachsen — dafuer steht das `100cqw` in der Rechnung oben. */
+@media (min-width: 64rem) {
+  .arena { --tr-arena-breit: min(52vw, 700px); }
 }
 
 /* Weniger Bewegung: Sprung von Zustand zu Zustand. Lebensbalken, Platz und
