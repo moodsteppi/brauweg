@@ -12,17 +12,46 @@
  * etwas anderes als das Spiel.
  */
 
+/*
+ * Die Werkbank der Probe: Titel, die zwei Schalter und der Erklaertext.
+ *
+ * SIE LIEGT UEBER DEM TISCH UND NICHT DARIN — seit dem 07.09.2026. Vorher
+ * standen Kopfzeile und Erklaertext als gewoehnliche Kinder im Fluss und
+ * nahmen zusammen 159 (Desktop) bis 234 (Handy) Pixel Hoehe. Seit die
+ * Ruestkammer ihre Groesse aus der freien HOEHE rechnet (`.tr-spielflaeche` in
+ * styles.css), ist das kein Schoenheitsfehler mehr, sondern ein Messfehler:
+ * Die Probe zeigte ein deutlich kleineres Brett, als am echten Tisch steht,
+ * und beantwortete die Frage „passt das auf einen Bildschirm?" fuer den
+ * falschen Bildschirm.
+ *
+ * Darueber statt daneben, weil daneben am Handy keinen Platz hat. Der
+ * Erklaertext ist deshalb zugeklappt, bis jemand ihn aufschlaegt.
+ */
+.werkbank {
+  position: fixed;
+  top: max(4px, env(safe-area-inset-top));
+  right: 8px;
+  z-index: 6;
+  /* Zugeklappt nur so breit wie Titel und Knopf, aufgeklappt bis 520 — sonst
+     stuende ein leerer Balken quer ueber dem Brett. */
+  width: fit-content;
+  max-width: min(94vw, 520px);
+  max-height: 80dvh;
+  overflow-y: auto;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(13, 18, 22, 0.92);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
 .kopf {
-  width: min(96vw, 520px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.6rem;
-  /* `.tr-seite` ist `position: fixed; inset: 0`, `.tr-tisch` rollt darin. Die
-     Polsterung oben kommt hier dazu — am Tisch fuellt die festgeheftete
-     Kopfleiste diesen Platz. */
-  padding-top: max(8px, env(safe-area-inset-top));
 }
 
 .titel {
@@ -33,8 +62,10 @@
 
 .schalter {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+  margin-top: 0.35rem;
 }
 
 .schalt {
@@ -67,8 +98,7 @@
 }
 
 .fuss {
-  width: min(96vw, 520px);
-  margin: 0 0 max(12px, env(safe-area-inset-bottom));
+  margin: 0.5rem 0 0;
   color: var(--muted);
   font-size: 0.68rem;
   line-height: 1.45;

@@ -13,13 +13,54 @@
  * ohne die Wege dazwischen.
  */
 
+/*
+ * DIE BREITE FOLGT AUS DER HOEHE, seit dem 07.09.2026 — nicht mehr allein aus
+ * der Bildschirmbreite.
+ *
+ * Hier stand `width: min(94vw, 460px)` (ab Tablet 70vw/560). Die Arena hat
+ * aber acht bis zehn Reihen statt vier, ist also fast doppelt so hoch wie ein
+ * Brett der Ruestkammer: Auf einem 1280 x 720 grossen Notebook wurden daraus
+ * gemessene 1220 Pixel Inhalt in 720 Pixel Schirm. Man sah die obere Haelfte
+ * eines Kampfes, der von selbst ablaeuft, und musste rollen — waehrend die Uhr
+ * lief.
+ *
+ * `100cqh` ist die Hoehe, die die Buehne freilaesst (`.mitte` in
+ * Buehne.module.css ist der Bezugskasten). Davon gehen die beiden
+ * Seitenzeilen ab; der Rest mal dem Seitenverhaeltnis des Rasters ergibt die
+ * Breite. Das Verhaeltnis kommt als `--tr-arenaverhaeltnis` aus
+ * `rastermass()` (zuege.ts) — dieselbe Funktion, die die Waben legt, und
+ * keine zweite Geometrie im Stylesheet.
+ *
+ * Gibt es keinen Bezugskasten (die Arena haengt woanders), sind `cqh` und
+ * `cqw` der Schirm selbst; dann gewinnt die Breite, und es bleibt beim alten
+ * Verhalten.
+ */
 .arena {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: min(94vw, 460px);
+  /* Die beiden Seitenzeilen samt ihren Fugen: 2 x 14 Pixel Text, 2 x 4 Pixel
+     `gap`. Sie stehen ueber und unter dem Brett und gehoeren nicht zu ihm. */
+  --tr-arena-zeilen: 36px;
+  --tr-arena-breit: min(94vw, 460px);
+  /* Rueckfall; die Hoehenrechnung setzt der `@supports`-Block darunter. */
+  width: var(--tr-arena-breit);
   transition: opacity 400ms ease;
+}
+/*
+ * Kennt ein Browser `cqh` nicht, ist die `min()`-Rechnung "ungueltig zum
+ * Rechenzeitpunkt" — und `width` faellt dann nicht auf die Zeile davor
+ * zurueck, sondern auf `auto`. Eine Arena ohne Breite waere keine.
+ * Also: nur anschalten, wenn es Container-Anfragen gibt (Safari ab 16).
+ */
+@supports (container-type: size) {
+  .arena {
+    width: min(
+      var(--tr-arena-breit),
+      calc((100cqh - var(--tr-arena-zeilen)) * var(--tr-arenaverhaeltnis))
+    );
+  }
 }
 /* Der Server hat die Phase gewechselt: weich zurueck zur Ruestkammer. */
 .arena[data-verblasst] {
@@ -894,7 +935,9 @@
 /* Ab Tablet-Breite darf die Arena breiter werden — dieselbe Stufe wie die
    Bretter der Ruestkammer (styles.css). */
 @media (min-width: 40rem) {
-  .arena { width: min(70vw, 560px); }
+  /* Nur die Obergrenze aus der Breite steigt; ob sie zum Zug kommt,
+     entscheidet weiterhin die freie Hoehe (siehe `.arena` oben). */
+  .arena { --tr-arena-breit: min(70vw, 560px); }
   .sterne { font-size: 10px; }
   .schaden { font-size: 12px; }
 }
