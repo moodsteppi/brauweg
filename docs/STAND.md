@@ -90,6 +90,19 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > an einen anderen Tisch, und seine Freunde warten vor einem Tisch, den
 > niemand mehr startet.
 >
+> **Während der Tisch entsteht, „sucht" man noch** (seit dem 07.09.2026).
+> `faellig()` nimmt eine reife Runde sofort aus dem Fenster, der Tisch wird
+> danach in einem Dutzend Datenbankschritten gebaut — in der Produktion gut
+> eine Sekunde, länger als der Abruftakt des Clients. Wer in dieser Lücke
+> nachfragte, hörte „sucht nicht, kein Tisch", der Client meldete „Die Suche
+> wurde beendet" und fragte nie wieder, saß aber längst am neuen Tisch: Der
+> Gegner spielte gegen einen leeren Sitz, die Partie lief aus, und wer noch
+> einmal suchte, bekam einen Bot. Deshalb führt die Schlange die Konten einer
+> herausgenommenen Runde in `imBau`, bis `vermittelt`/`bauBeendet` sie
+> abräumen; `stand()` antwortet für sie `sucht: true, restMs: 0`. Die Probe
+> dazu wartet den Bau bewusst ab, bevor sie urteilt — bricht eine Probe
+> mitten im Tischbau ab, hängt PGlite beim Schließen.
+>
 > Seit demselben Tag wertet Tafelrunde die **Bot-Stufe des Tisches** aus:
 > `gangartVon` in `adapter.ts` bildet die vier Plattformstufen auf die drei
 > Gangarten von `bot.ts` ab (`experte` und `genie` fallen beide auf `hart` —
