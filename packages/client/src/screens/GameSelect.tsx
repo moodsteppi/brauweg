@@ -567,12 +567,19 @@ export function GameSelect({
           onClick={() => setTab('blatt')}
           iconSrc="/hub/tab-blatt.webp"
         />
+        {/* Der Punkt am Profil ist derselbe Gedanke wie der an der Truhe: Die
+            Geburtstagsbelohnung gibt es einmal im Jahr, und wer den Tab an
+            diesem Tag nicht von sich aus oeffnet, erfaehrt nie davon. Dass die
+            Tafel drinnen nach oben rutscht, hilft erst, wenn man schon drin
+            ist. */}
         <TabButton
           label="Profil"
           farbe="profil"
           active={tab === 'profil'}
           onClick={() => setTab('profil')}
           iconSrc="/hub/tab-profil.webp"
+          punkt={me.birthdayRewardClaimable}
+          punktLabel="Geburtstagsbelohnung liegt bereit"
         />
       </nav>
 
@@ -1860,6 +1867,8 @@ function TabButton({
   haupt = false,
   farbe,
   onClick,
+  punkt = false,
+  punktLabel,
 }: {
   label: string;
   iconSrc: string;
@@ -1868,11 +1877,18 @@ function TabButton({
   /** Jeder Bereich hat seine eigene Leuchtfarbe, wenn er gewaehlt ist. */
   farbe: string;
   onClick: () => void;
+  /** Bereitschaftspunkt wie an der Truhe: hier liegt etwas, sieh nach. */
+  punkt?: boolean;
+  punktLabel?: string;
 }): React.JSX.Element {
   return (
     <button
       className={`front-tab front-tab--${farbe}${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
+      // Der Punkt selbst ist stumm (aria-hidden); die Ansage haengt am Knopf.
+      // Ein sprechendes Zeichen INNERHALB des Knopfes wuerde den Namen nur
+      // anhaengen und dabei die Reihenfolge dem Baum ueberlassen.
+      aria-label={punkt && punktLabel ? `${label}, ${punktLabel}` : undefined}
       // Der Klang haengt an der Leiste und nicht an jedem einzelnen Knopf im
       // Haus: Das hier ist die Bewegung, die man hundertmal am Abend macht.
       // Wer jeden Knopf verklanglicht, baut eine Klapperkiste.
@@ -1883,6 +1899,7 @@ function TabButton({
     >
       <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
       <span>{label}</span>
+      {punkt && <span className="hub-punkt" aria-hidden="true" />}
     </button>
   );
 }

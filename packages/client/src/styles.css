@@ -3001,6 +3001,9 @@ td {
 }
 
 .front-tab {
+  /* Traeger fuer den Bereitschaftspunkt — ohne ihn haengt der Punkt am
+     naechsten positionierten Vorfahren, also an der ganzen Leiste. */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3019,6 +3022,13 @@ td {
   width: 1.5rem;
   height: 1.5rem;
   object-fit: contain;
+}
+
+/* Der Punkt sitzt INNEN, nicht ueberstehend wie an der Truhe: Der Profil-Tab
+   ist der aeusserste rechts, ein negativer Versatz liefe aus dem Bildschirm. */
+.front-tab .hub-punkt {
+  top: 0.2rem;
+  right: 0.55rem;
 }
 
 .front-tab:hover:not(:disabled) {

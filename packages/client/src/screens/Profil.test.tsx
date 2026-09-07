@@ -30,6 +30,16 @@ vi.mock('../api', async () => {
   };
 });
 
+/*
+ * Die 3D-Figur bleibt draussen. Sie laedt ihr Blatt ueber den GLTFLoader, und
+ * dessen fetch stirbt in jsdom an "Expected signal to be an instance of
+ * AbortSignal" — asynchron und damit im NAECHSTEN Test. Mit vier Faellen fiel
+ * das nie auf, weil der Lauf vorher zu Ende war; ab dem fuenften faerbt es
+ * fremde Tests rot. Der Profil-Tab wird hier ueber seine Anordnung geprueft,
+ * nicht ueber die Figur.
+ */
+vi.mock('../Avatar3D', () => ({ default: () => null }));
+
 import type { Me } from '../api';
 import { GameSelect } from './GameSelect';
 
@@ -88,7 +98,9 @@ async function zeigeProfil(me: Me): Promise<void> {
       onDeleted={vi.fn()}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Profil' }));
+  // Nicht auf den genauen Namen festgenagelt: Liegt die Geburtstagsbelohnung
+  // bereit, traegt der Knopf zusaetzlich die Ansage des Punktes.
+  fireEvent.click(screen.getByRole('button', { name: /^Profil/ }));
   await act(async () => {});
 }
 
@@ -150,6 +162,32 @@ describe('Profil-Tab: Anordnung', () => {
     ]);
     // Sie steht oben, damit genau dieser Knopf ohne Rollen zu sehen ist.
     expect(screen.getByRole('button', { name: 'Belohnung holen' })).toBeInTheDocument();
+  });
+
+  /*
+   * Der Punkt am Tab ist der einzige Hinweis fuer jemanden, der den Profil-Tab
+   * an seinem Geburtstag gar nicht erst oeffnet — und die Belohnung gibt es
+   * nur einmal im Jahr. Geprueft wird beides: dass er kommt, wenn etwas
+   * bereitliegt, und dass er sonst wegbleibt (ein Dauerpunkt sagt nichts mehr).
+   */
+  it('setzt einen Punkt an den Profil-Tab, sobald die Geburtstagsbelohnung bereitliegt', async () => {
+    await zeigeProfil(
+      konto({
+        daysUntilBirthday: 0,
+        birthdayToday: true,
+        birthdayRewardClaimable: true,
+      }),
+    );
+
+    const tab = screen.getByRole('button', { name: 'Profil, Geburtstagsbelohnung liegt bereit' });
+    expect(tab.querySelector('.hub-punkt')).not.toBeNull();
+  });
+
+  it('laesst den Punkt weg, solange nichts abzuholen ist', async () => {
+    await zeigeProfil(konto());
+
+    const tab = screen.getByRole('button', { name: 'Profil' });
+    expect(tab.querySelector('.hub-punkt')).toBeNull();
   });
 
   it('sagt den Countdown nur einmal — nicht noch einmal als Tafel-Zusatz', async () => {
