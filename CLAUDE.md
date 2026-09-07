@@ -37,9 +37,10 @@ sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`.
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und
 Musik — Herkunft, Lizenzen, Auslagerungsgrenze) ·
 `docs/plattform-plan.md` (das große Ganze) · `docs/TAFEL.md` (die
-Visual-Building-Tafel: lesen, pflegen, erzeugen) · **`docs/JETZT-AUSFUEHREN.md`
-(Bilder einbauen, Schritt für Schritt — die Werkzeuge stehen auf dem Rechner
-bereit)**.
+Visual-Building-Tafel: lesen, pflegen, erzeugen) · `docs/TRIPO.md` (3D-Modelle
+erzeugen: wohin der API-Schlüssel gehört, was für Tafelrunde geht) ·
+**`docs/JETZT-AUSFUEHREN.md` (Bilder einbauen, Schritt für Schritt — die
+Werkzeuge stehen auf dem Rechner bereit)**.
 
 ---
 
