@@ -6,6 +6,10 @@
  * werden, beantwortet das Modul (`requireModule`) — genau wie in
  * `tables/service.ts`. Gebaut wird mit den vorhandenen Bausteinen `createTable`
  * und `joinTable`; die Suche legt keine eigene Tischsorte an.
+ *
+ * Auch die Anreicherung der `config` (seit dem 07.09.2026) bricht das nicht:
+ * In dieser Datei steht kein Spielname, nur ein Nachschlagen in der Tabelle
+ * aus `anreicherung.ts`. Wozu es sie gibt, steht dort.
  */
 
 import type { GameId } from '@brauweg/game-api';
@@ -19,6 +23,7 @@ import {
   joinTable,
   leaveOtherWaitingTables,
 } from '../tables/service.js';
+import { type Anreicherung, STANDARD_ANREICHERUNG } from './anreicherung.js';
 import { type SchlangeOptionen, Suchschlange, type Suchstand } from './schlange.js';
 
 /**
@@ -38,6 +43,13 @@ export interface VermittlungOptionen extends SchlangeOptionen {
    * Grund darf aber nicht still verschwinden.
    */
   readonly beiFehler?: (gameId: GameId, fehler: unknown) => void;
+  /**
+   * Haken je Spiel, die der `config` vor dem Tischbau etwas mitgeben duerfen,
+   * das nur der Server weiss (siehe `anreicherung.ts`). Ohne Angabe gilt die
+   * Standardtabelle — auch in den Proben, damit dort dieselben Tische
+   * entstehen wie im Betrieb.
+   */
+  readonly anreicherung?: Partial<Record<GameId, Anreicherung>>;
 }
 
 /**
@@ -69,6 +81,7 @@ function runden(gameId: GameId, sitze: number): number {
 export class Vermittlung {
   private readonly schlange: Suchschlange;
   private readonly beiFehler: (gameId: GameId, fehler: unknown) => void;
+  private readonly anreicherung: Partial<Record<GameId, Anreicherung>>;
 
   constructor(
     private readonly db: Db,
@@ -77,6 +90,7 @@ export class Vermittlung {
   ) {
     this.schlange = new Suchschlange(optionen);
     this.beiFehler = optionen.beiFehler ?? (() => {});
+    this.anreicherung = optionen.anreicherung ?? STANDARD_ANREICHERUNG;
   }
 
   /**
@@ -168,12 +182,20 @@ export class Vermittlung {
     // trotzdem hier, weil der Rest dieser Funktion sonst still Unsinn baut.
     if (!erster) throw new Error('leere Suchrunde');
 
+    // Der Regelsatz des Fensters — bei Filler traegt er die Spielart; ohne
+    // einen bleibt es bei der Vorgabe des Moduls. Danach darf der Haken des
+    // Spiels noch etwas dazulegen, das nur der Server weiss (bei Mememory
+    // die freigegebenen Uploads). Kein eigener Auffangzweig darum: Der
+    // Haken liest aus derselben Datenbank, die `createTable` gleich braucht
+    // — faellt sie aus, faellt der Tisch ohnehin aus.
+    const grundConfig = config ?? module.defaultConfig();
+    const haken = this.anreicherung[gameId];
+    const tischConfig = haken ? await haken(this.db, grundConfig) : grundConfig;
+
     const table = await createTable(this.db, {
       accountId: erster,
       gameId,
-      // Der Regelsatz des Fensters — bei Filler traegt er die Spielart; ohne
-      // einen bleibt es bei der Vorgabe des Moduls.
-      config: config ?? module.defaultConfig(),
+      config: tischConfig,
       seats: sitze,
       rounds: runden(gameId, sitze),
       // Nicht `public`: Der Tisch ist bereits vergeben. Stuende er in der

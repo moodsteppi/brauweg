@@ -56,10 +56,10 @@ import { useTable } from '../useTable';
  *
  * Nur noch hier und nicht mehr in der Mitspielersuche: Die baut ihren Tisch
  * seit dem 06.09.2026 serverseitig und nimmt dort `defaultConfig()` des
- * Moduls. Was dabei WEGFAELLT, ist `zusatz` — die hochgeladenen Motive kommen
- * an einem Tisch aus der Schlange nicht vor. Das steht als Karte auf dem
- * Issueboard und laesst sich hier nicht heilen: Der Client hat gar keine
- * Gelegenheit mehr, dem Tisch etwas mitzugeben.
+ * Moduls. `zusatz` — die freigegebenen Uploads — fiel dabei zunaechst weg;
+ * seit dem 07.09.2026 legt der Server sie beim Tischbau selbst dazu
+ * (`suche/anreicherung.ts`). Der Bildschirm holt sie also nur noch fuer
+ * SEINEN Tisch, den gegen die KI.
  */
 const REGELSATZ = { spalten: 4, zeilen: 6, merkzeitMs: 1100 };
 
