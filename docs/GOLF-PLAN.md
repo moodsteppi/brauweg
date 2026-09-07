@@ -107,6 +107,23 @@ alle Anwesenden mit Name, Farbe und Ball; Sitz 0 wählt die Löcher und startet
 mit den Anwesenden. „Gegen Bots" legt einen Tisch mit 1 + n Sitzen und
 `fillWithBots` an. Die Mitspielersuche (`suche/`) nutzt Golf bewusst nicht.
 
+**Farbwahl (seit 07.09.2026).** Ein Tipp auf den eigenen Namen schaltet die
+Ballfarbe weiter — sechzehn Farben stehen bereit (`minispiele/golf/farben.ts`),
+doppelt so viele wie Sitze, sonst wäre jede Wahl nur ein Tausch. Der Weg ist
+plattformweit und nicht Golf-eigen: Der Client schickt `setSeatColor` mit einer
+ZAHL, der Server legt sie als Wunsch je KONTO in `gameTable.filters.sitzfarben`
+ab (kein Migrationsbedarf, wie die Bot-Stufe) und liefert sie als
+`SeatInfo.farbe` aus. Am Konto und nicht am Sitzindex, weil
+`schrumpfeAufBesetzte` beim Sofortstart umnummeriert.
+
+**Doppelfrei wird es erst im Client.** Der Server prüft einen Wunsch bewusst
+NICHT gegen die anderen Sitze: Zwei Tipps im selben Moment wären ein Wettlauf,
+und der Verlierer stünde ohne Rückmeldung da. Stattdessen rechnet `farbtafel`
+(rein, geprüft in `farben.test.ts`) aus allen Wünschen dieselbe Verteilung —
+auf jedem Gerät gleich, weil jedes dieselben Wünsche in derselben
+Sitzreihenfolge sieht. Das Menü zeigt weiterhin acht Bälle, zieht sie aber je
+Aufbau zufällig aus allen sechzehn (`zieheFarben`).
+
 ## Woran man sich stößt
 
 - **`zustand()` und `vorher()` des Gleichschritts sind lebende Objekte.** Der

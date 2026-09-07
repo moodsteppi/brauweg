@@ -486,6 +486,15 @@ export interface SeatInfo {
   isBot: boolean;
   /** Profilbild-URL oder null. */
   avatarUrl: string | null;
+  /**
+   * Farbwunsch dieses Sitzes (Platz in der Farbtabelle des Spiels) oder null.
+   *
+   * Nur ein WUNSCH: Der Server prüft ihn nicht gegen die anderen Sitze.
+   * Doppelfrei wird er erst im Spiel — bei Golf durch `farbtafel`, dieselbe
+   * reine Funktion auf jedem Gerät. Ältere Server schicken das Feld nicht,
+   * deshalb optional.
+   */
+  farbe?: number | null;
 }
 
 /** Spielstärke der Bots eines Tisches. Spiegelbild von game-api BotLevel. */

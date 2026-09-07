@@ -795,6 +795,76 @@ export async function setTableBotLevel(
   await touch(db, tableId);
 }
 
+/**
+ * Groesste Farbnummer, die ueber die Leitung darf.
+ *
+ * Grosszuegig wie beim Zeichenvorrat der Reaktionen: Welche Farben es gibt,
+ * entscheidet der Bildschirm; ein spaeterer, groesserer Vorrat soll keine
+ * Serveraenderung kosten. Eine Zahl kann kein Schimpfwort sein.
+ */
+export const MAX_SITZFARBE = 63;
+
+/**
+ * Farbwuensche eines Tisches — Konto-Kennung auf Farbnummer.
+ *
+ * Sie liegen wie die Bot-Stufe im `filters`-jsonb: eine Tischeinstellung,
+ * keine feste Verdrahtung im Server, und damit ohne Migration.
+ *
+ * **Am Konto und nicht am Sitzindex.** `schrumpfeAufBesetzte` nummeriert die
+ * Sitze beim Sofortstart um; ein Wunsch am Sitzindex haenge danach am
+ * falschen Menschen. Bots waehlen nicht.
+ */
+export function sitzfarbWuensche(filters: unknown): Record<string, number> {
+  const roh = (filters as { sitzfarben?: unknown } | null)?.sitzfarben;
+  if (roh === null || typeof roh !== 'object') return {};
+  const raus: Record<string, number> = {};
+  for (const [konto, wert] of Object.entries(roh as Record<string, unknown>)) {
+    if (typeof wert === 'number' && Number.isInteger(wert) && wert >= 0 && wert <= MAX_SITZFARBE) {
+      raus[konto] = wert;
+    }
+  }
+  return raus;
+}
+
+/**
+ * Farbwunsch des eigenen Sitzes setzen.
+ *
+ * Wie beim Bot-Setzen: nur wer selbst am Tisch sitzt, und nur solange noch
+ * keine Partie laeuft — waehrend der Partie faerbte sich sonst mitten im
+ * Schlag ein Ball um, und die Geraete rechnen ihre Baelle unabhaengig.
+ *
+ * KEINE Doppelpruefung gegen die anderen Sitze: Sie waere ein Wettlauf (zwei
+ * Tipps im selben Moment) und liesse den Verlierer ohne Rueckmeldung stehen.
+ * Doppelfrei macht es der Bildschirm aus der vollen Wunschliste — dieselbe
+ * reine Funktion auf jedem Geraet.
+ */
+export async function setSeatColor(
+  db: Db,
+  tableId: string,
+  farbe: number,
+  byAccountId: string,
+): Promise<void> {
+  if (!Number.isInteger(farbe) || farbe < 0 || farbe > MAX_SITZFARBE) {
+    throw badRequest('seatColorUnknown');
+  }
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+
+  // Nur Wuensche von Leuten behalten, die noch sitzen: Sonst haelt ein
+  // Weggegangener seine Farbe fuer immer im Tisch fest.
+  const sitzend = new Set(seats.map((seat) => seat.accountId).filter((id): id is string => !!id));
+  const alt = sitzfarbWuensche(table.filters);
+  const sitzfarben: Record<string, number> = { [byAccountId]: farbe };
+  for (const [konto, wert] of Object.entries(alt)) {
+    if (konto !== byAccountId && sitzend.has(konto)) sitzfarben[konto] = wert;
+  }
+
+  const filters = { ...(table.filters as Record<string, unknown> | null), sitzfarben };
+  await db.update(s.gameTable).set({ filters }).where(eq(s.gameTable.id, tableId));
+  await touch(db, tableId);
+}
+
 /** Alle Plaetze besetzt, entweder durch Menschen oder durch gesetzte Bots. */
 export function isReadyToStart(
   table: { seats: number; filters: unknown },

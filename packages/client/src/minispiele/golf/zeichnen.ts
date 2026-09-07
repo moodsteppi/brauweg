@@ -190,7 +190,13 @@ export class Zeichner {
   private statischHoehe = 0;
 
   /** Ballbilder je Sitz, einmal gemalt. */
-  private readonly ballBilder: (HTMLCanvasElement | null)[] = [];
+  private ballBilder: (HTMLCanvasElement | null)[] = [];
+  /**
+   * Farbe je Sitz, falls in der Lobby gewaehlt. Leer heisst: die Vorgabe des
+   * Sitzes. Der Zeichner rechnet die doppelfreie Verteilung NICHT selbst aus
+   * — er bekommt sie fertig (siehe farben.ts, `farbtafel`).
+   */
+  private farbwahl: readonly string[] = [];
   /** Rauschkachel für den Rasen. */
   private rauschen: HTMLCanvasElement | null = null;
 
@@ -208,6 +214,29 @@ export class Zeichner {
   constructor(leinwand: HTMLCanvasElement) {
     this.leinwand = leinwand;
     this.ctx = leinwand.getContext('2d');
+  }
+
+  /**
+   * Die Ballfarben setzen — je Sitz eine, in Sitzreihenfolge.
+   *
+   * Die gemalten Ballbilder haengen an der Farbe und werden deshalb
+   * weggeworfen; ohne das behielte ein Umgefaerbter seinen alten Ball, bis
+   * die Seite neu laedt.
+   */
+  setzeFarben(farben: readonly string[]): void {
+    if (
+      farben.length === this.farbwahl.length &&
+      farben.every((f, i) => f === this.farbwahl[i])
+    ) {
+      return;
+    }
+    this.farbwahl = [...farben];
+    this.ballBilder = [];
+  }
+
+  /** Farbe eines Sitzes: die gewaehlte, sonst die des Sitzes. */
+  private farbe(sitz: number): string {
+    return this.farbwahl[sitz] ?? farbeVon(sitz);
   }
 
   /** Ohne 2D-Kontext (jsdom, sehr alte Browser) wird gar nicht gemalt. */
@@ -270,7 +299,7 @@ export class Zeichner {
         const n = e.staerke > 12 ? 7 : 4;
         for (let k = 0; k < n; k += 1) this.funke(e.x, e.y, '#fff6d0', 260, 3.2);
       } else if (e.art === 'balltreffer') {
-        for (let k = 0; k < 5; k += 1) this.funke(e.x, e.y, farbeVon(e.sitz), 300, 3.6);
+        for (let k = 0; k < 5; k += 1) this.funke(e.x, e.y, this.farbe(e.sitz), 300, 3.6);
       } else if (e.art === 'bumper') {
         this.ringstoss(e.x, e.y, '#ffd166', 340);
         for (let k = 0; k < 8; k += 1) this.funke(e.x, e.y, '#ffe08a', 340, 5);
@@ -279,8 +308,8 @@ export class Zeichner {
         for (let k = 0; k < 8; k += 1) this.funke(e.x, e.y, '#cfeaff', 420, 3);
       } else if (e.art === 'eingelocht') {
         // Konfetti in der Spielerfarbe — der einzige Effekt, der lange steht.
-        for (let k = 0; k < 22; k += 1) this.funke(e.x, e.y, farbeVon(e.sitz), 900, 6);
-        this.ringstoss(e.x, e.y, farbeVon(e.sitz), 700);
+        for (let k = 0; k < 22; k += 1) this.funke(e.x, e.y, this.farbe(e.sitz), 900, 6);
+        this.ringstoss(e.x, e.y, this.farbe(e.sitz), 700);
       } else if (e.art === 'portal') {
         this.ringstoss(e.x, e.y, '#c9a7ff', 400);
         this.ringstoss(e.zielX, e.zielY, '#c9a7ff', 400);
@@ -915,7 +944,7 @@ export class Zeichner {
         // Sichtbare Schonzeit: Der Ring pulsiert und läuft mit ihr aus.
         const rest = 1 - (z.takt - z.aktuell.startTakt) / IMMUN_TAKTE;
         ctx.globalAlpha = 0.35 + 0.35 * Math.sin(a.uhrMs / 130);
-        ctx.strokeStyle = farbeVon(s);
+        ctx.strokeStyle = this.farbe(s);
         ctx.lineWidth = 0.09;
         ctx.beginPath();
         ctx.arc(x, y, r * (1.6 + 0.5 * rest), 0, Math.PI * 2);
@@ -954,7 +983,7 @@ export class Zeichner {
       this.ballBilder[sitz] = null;
       return null;
     }
-    const farbe = farbeVon(sitz);
+    const farbe = this.farbe(sitz);
     const m = groesse / 2;
     const v = c.createRadialGradient(m - m * 0.35, m - m * 0.4, m * 0.05, m, m, m * 0.98);
     v.addColorStop(0, heller(farbe, 0.75));
