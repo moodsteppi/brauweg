@@ -120,6 +120,64 @@ describe('Adapter', () => {
     assert.equal(xp[0], tafel.find((t) => t.seat === 0)!.points);
   });
 
+  it('nennt eine Rundenfrist und die Runde als ihr Merkmal', () => {
+    const p = partie();
+    assert.equal(eiland.phaseMs!(p), DEFAULT_REGELN.rundenMs);
+    /*
+     * Das Merkmal ist der ganze Grund, warum es hier eine Frist geben kann:
+     * `phaseMs` liefert zwischen zwei Runden NIE null (bis auf das Partieende),
+     * an dem die Plattform sonst eine neue Phase erkennt. Sie vergleicht
+     * stattdessen `phaseKey` (siehe schedulePhase in runtime/party.ts).
+     */
+    assert.equal(eiland.phaseKey!(p), p.runde);
+    const weiter = eiland.advancePhase!(p);
+    assert.equal(weiter.runde, p.runde + 1);
+    assert.notEqual(eiland.phaseKey!(weiter), eiland.phaseKey!(p));
+  });
+
+  it('verbucht eine abgelaufene Runde als leeren Zettel', () => {
+    // Wer nicht abgegeben hat, nimmt nichts: Eine halbe Auswahl gibt es nicht,
+    // sie entsteht erst mit der Abgabe (siehe fristAbgelaufen in partie.ts).
+    const p = partie();
+    const weiter = eiland.advancePhase!(p);
+    assert.deepEqual(weiter.punkte, p.punkte);
+    assert.deepEqual(weiter.letzte?.genommen, { 0: [], 1: [] });
+    // Und eine Runde ohne Feldwechsel ist eine Leerrunde — zwei davon beenden
+    // die Partie, ein toter Tisch laeuft also nicht endlos weiter.
+    assert.equal(weiter.leerrunden, p.leerrunden + 1);
+  });
+
+  it('liefert am Partieende keine Frist mehr', () => {
+    let p = partie();
+    let schritte = 0;
+    while (!eiland.isFinished(p) && schritte < 1000) {
+      p = eiland.advancePhase!(p);
+      schritte++;
+    }
+    assert.ok(eiland.isFinished(p), 'die Partie endete nicht durch Leerrunden');
+    assert.equal(eiland.phaseMs!(p), null);
+    // Und ein zweiter Ablauf an einer fertigen Partie ruehrt nichts mehr an.
+    assert.equal(eiland.advancePhase!(p), p);
+  });
+
+  it('traegt einem Snapshot ohne Rundenfrist die Vorgabe nach', () => {
+    // Tische von VOR dem 07.09.2026 haben `rundenMs` nicht im Regelsatz. Ohne
+    // Nachtrag stuende die Partie bis zum Ende ohne Deckel da.
+    const roh = JSON.parse(JSON.stringify(eiland.serialize(partie()))) as Record<string, unknown>;
+    const regeln = { ...(roh['regeln'] as Record<string, unknown>) };
+    delete regeln['rundenMs'];
+    const alt = eiland.deserialize({ ...roh, regeln });
+    assert.equal(alt.regeln.rundenMs, DEFAULT_REGELN.rundenMs);
+    assert.equal(eiland.phaseMs!(alt), DEFAULT_REGELN.rundenMs);
+  });
+
+  it('nimmt einen Regelsatz ohne Rundenfrist an und weist eine unsinnige ab', () => {
+    const { rundenMs: _weg, ...ohne } = DEFAULT_REGELN;
+    assert.deepEqual(eiland.validateConfig(ohne, 2, 1), []);
+    assert.ok(eiland.validateConfig({ ...DEFAULT_REGELN, rundenMs: 500 }, 2, 1).length > 0);
+    assert.ok(eiland.validateConfig({ ...DEFAULT_REGELN, rundenMs: 999_999 }, 2, 1).length > 0);
+  });
+
   it('merkt sich einen ausgestiegenen Sitz', () => {
     const p = eiland.markLeft(partie(), 1);
     assert.ok(eiland.standings(p).find((s) => s.seat === 1)!.left);

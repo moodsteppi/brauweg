@@ -383,14 +383,34 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * alle Sitze, nicht fuer einen einzelnen. Wer nach Ablauf noch nicht
    * gehandelt hat, bekommt vom Modul das, was seine Regeln dafuer vorsehen.
    *
-   * Damit die Plattform merkt, dass eine neue Phase begonnen hat, MUSS die
-   * Methode zwischen zwei Fristen einmal null liefern — sonst laeuft die alte
-   * Frist in der neuen Phase weiter. Bei Tafelrunde liegt dazwischen die
-   * Kampfphase.
+   * Woran die Plattform eine NEUE Phase erkennt, gibt es in zwei Fassungen —
+   * ein Modul braucht genau eine davon:
+   *
+   *   1. Diese Methode liefert zwischen zwei Fristen einmal null. Das ist der
+   *      einfache Weg und der von Tafelrunde: Dazwischen liegt die Kampfphase.
+   *   2. Das Modul nennt zusaetzlich `phaseKey`. Den braucht, wessen Phasen
+   *      OHNE Zwischenschritt aufeinanderfolgen — bei Eiland loest die letzte
+   *      Abgabe einer Runde die naechste unmittelbar aus, ein null-Durchgang
+   *      kommt dort nie vor, und ohne Merkmal liefe die Frist der ersten Runde
+   *      bis zum Partieende weiter.
    *
    * Optional: Ein Spiel mit fester Zugfolge laesst beide Methoden weg.
    */
   phaseMs?(party: TParty): number | null;
+
+  /**
+   * Merkmal der laufenden Phase — wechselt es, ist die alte Frist verfallen
+   * und die Plattform stellt eine neue.
+   *
+   * Gedacht ist eine Zahl, die das Modul ohnehin fuehrt (bei Eiland die
+   * Rundennummer); erfunden werden muss nichts. Zwei aufeinanderfolgende
+   * Phasen duerfen dasselbe Merkmal nicht zweimal tragen, sonst erbt die
+   * zweite die Restzeit der ersten.
+   *
+   * Optional und nur zusammen mit `phaseMs` sinnvoll: Ein Modul, dessen
+   * Fristen ohnehin durch ein null getrennt sind, laesst es weg.
+   */
+  phaseKey?(party: TParty): string | number | null;
 
   /** Beendet die laufende Phase nach Ablauf der Frist. */
   advancePhase?(party: TParty): TParty;

@@ -11,6 +11,12 @@
  * mit einer laengst abgelaufenen Frist rechnen. Die Aufloesung zeigt der
  * Client aus `sicht.letzte` — sie ist Zeichnung und kein Zustand, genau wie
  * bei Filler das Wandern der Flaeche.
+ *
+ * Eine RUNDENFRIST gibt es dagegen seit dem 07.09.2026 (`phaseMs`), und sie
+ * loest dasselbe Problem, das der Schaupause im Weg stand, auf dem dafuer
+ * gebauten Weg: Weil hier keine Phase zwischen zwei Runden liegt, nennt das
+ * Modul zusaetzlich `phaseKey` — die Rundennummer. An deren Wechsel erkennt
+ * die Plattform die neue Runde, statt am null-Durchgang, den es hier nie gibt.
  */
 
 import type {
@@ -28,6 +34,7 @@ import {
   amZug,
   erlaubteZuege,
   erstellePartie,
+  fristAbgelaufen,
   fuehreAus,
   markiereVerlassen,
   platzierungen,
@@ -36,6 +43,7 @@ import {
   DEFAULT_REGELN,
   type EilandRegeln,
   SEAT_COUNTS,
+  mitFrist,
   pruefeRegeln,
   rotationSize,
   suggestedRounds,
@@ -103,7 +111,13 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
      * nachrechnen — jeder See, jeder Berg, jedes Ornament —, und dann ist vom
      * Nebel nichts mehr uebrig (siehe baueZufall in karte.ts).
      */
-    return erstellePartie(config, sitze, seedHex ?? seed);
+    /*
+     * `mitFrist`: Ein Tisch, der VOR dem 07.09.2026 aufgemacht wurde, hat
+     * seinen Regelsatz ohne `rundenMs` in der Datenbank stehen. Er startet
+     * trotzdem — nur eben ohne Deckel auf der Runde, und das faellt niemandem
+     * auf, solange beide Spieler abgeben.
+     */
+    return erstellePartie(mitFrist(config), sitze, seedHex ?? seed);
   },
 
   act: (partie, sitz, aktion) => fuehreAus(partie, sitz, aktion),
@@ -113,6 +127,33 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
   legalActions: (partie, sitz) => erlaubteZuege(partie, sitz),
 
   isFinished: (partie) => partie.fertig,
+
+  /**
+   * Der Deckel auf die Runde.
+   *
+   * Anders als die Schaupause laeuft diese Frist, WAEHREND gewaehlt wird —
+   * dafuer gibt es sie (siehe `phaseMs` in game-api). Die Plattform misst,
+   * dieses Paket nennt nur die Dauer.
+   *
+   * Sie hoert nie auf: Bis auf das Partieende ist hier IMMER Rundenphase. Das
+   * ist der Unterschied zu Tafelrunde, wo die Kampfphase zwischen zwei
+   * Vorbereitungen null liefert — und der Grund, warum das Modul zusaetzlich
+   * `phaseKey` nennt.
+   */
+  phaseMs: (partie) => (partie.fertig ? null : partie.regeln.rundenMs),
+
+  /**
+   * Die Rundennummer als Merkmal der Phase.
+   *
+   * Ohne sie erkennt die Plattform hier keine neue Runde: Die letzte Abgabe
+   * loest Aufloesung und naechste Runde in EINEM Schritt aus, `phaseMs` liefert
+   * dazwischen nie null, und die Frist der ersten Runde liefe bis zum
+   * Partieende weiter (siehe `phaseKey` in game-api und `schedulePhase` in
+   * runtime/party.ts).
+   */
+  phaseKey: (partie) => partie.runde,
+
+  advancePhase: (partie) => fristAbgelaufen(partie),
 
   standings: (partie): PartyStanding[] => platzierungen(partie),
 
@@ -183,6 +224,13 @@ export const eiland: GameModule<EilandPartie, EilandAktion, EilandSicht, EilandR
         },
       };
     }
-    return alt;
+    /*
+     * Und die Rundenfrist (seit dem 07.09.2026): Eine Partie, die den Deploy
+     * im Snapshot ueberlebt, soll ihren Deckel bekommen und nicht bis zum Ende
+     * ohne Frist weiterlaufen. Ohne Versionssprung, weil ein fehlendes Feld
+     * hier keine andere Partie ist, sondern dieselbe ohne Deckel (siehe
+     * `mitFrist`).
+     */
+    return { ...alt, regeln: mitFrist(alt.regeln) };
   },
 };

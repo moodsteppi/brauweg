@@ -477,6 +477,7 @@ const de: Record<string, string> = {
   'ruleset.sichtweiteAusserhalb': 'So weit sieht hier niemand — die Sichtweite passt nicht zur Kartengröße.',
   'ruleset.kontingentAusserhalb': 'Zwischen 1 und 20 Feldern je Runde.',
   'ruleset.zuVieleHindernisse': 'So viel Wasser und Fels lässt kein Land mehr übrig.',
+  'ruleset.rundenfristAusserhalb': 'Eine Runde dauert zwischen 10 Sekunden und 5 Minuten.',
   'feldherr.feldUnbekannt': 'Diese Feldgröße gibt es nicht.',
   'feldherr.nurZuZweit': 'Feldherr wird zu zweit gespielt.',
   'feldherr.eineRunde': 'Feldherr kennt keine Runden — ein Gefecht entscheidet.',
