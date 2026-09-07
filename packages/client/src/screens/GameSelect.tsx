@@ -67,7 +67,8 @@ import { GolfBanner } from '../minispiele/golf/Banner';
 import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
-import { Kreuz, Note } from '../zeichen';
+import { Kreuz, Note, Spieler } from '../zeichen';
+import { sitzSpanne } from '../sitzspanne';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
@@ -2472,7 +2473,14 @@ function Spielwahl({
                       Spiele keine Kartenspiele sind, steht in keiner
                       Modulbeschreibung, gehoert aber aufs Banner. */}
                   <span className="muted">
-                    {game.seatCounts.join(', ')} Spieler
+                    {/* Sitzzahlen als Spanne und das Wort durch das Zeichen
+                        ersetzt (07.09.2026): Bei Golf standen hier acht Zahlen
+                        mit Kommas, die ganze Zeile war Laerm. Das Zeichen traegt
+                        seine Beschriftung selbst. */}
+                    <span className="hub-themenspiel-sitze">
+                      <Spieler />
+                      {sitzSpanne(game.seatCounts)}
+                    </span>
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
                     {game.id === 'easypoker' ? ' · Hold’em' : ''}
