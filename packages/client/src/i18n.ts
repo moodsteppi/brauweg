@@ -118,6 +118,7 @@ const de: Record<string, string> = {
   'error.nichtGesammelt': 'Das hast du noch nicht gesammelt.',
   'error.gurtZuVoll': 'Am Gürtel ist kein Platz mehr.',
   'error.botLevelUnknown': 'Diese Spielstärke gibt es nicht.',
+  'error.seatColorUnknown': 'Diese Farbe gibt es nicht.',
   'error.googleLoginDisabled': 'Die Anmeldung mit Google ist gerade abgeschaltet.',
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',

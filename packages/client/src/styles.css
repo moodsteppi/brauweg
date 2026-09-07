@@ -18669,6 +18669,27 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gf-gruppenzeile[data-eigen] { background: rgba(111, 220, 140, 0.18); }
 .gf-gruppenzeile[data-leer] { opacity: 0.42; }
 .gf-gruppenname { flex: 1; font: 700 15px/1.2 system-ui; }
+/* Die eigene Zeile ist ein Knopf: ein Tipp schaltet die Ballfarbe weiter.
+   Er fuellt die ganze Zeile — bei 44 px Mindesthoehe trifft ihn auch ein
+   Daumen, und die Zeile sieht dabei aus wie die daneben. */
+.gf-farbwahl {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: -9px -12px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gf-farbwahl:disabled { cursor: default; opacity: 0.6; }
+.gf-farbwahl:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); }
+.gf-farbwahl:focus-visible { outline: 2px solid #f2f2f2; outline-offset: -2px; }
 .gf-du {
   flex: none;
   padding: 3px 8px;

@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Me } from '../api';
-import { FARBEN, farbeVon } from '../minispiele/golf/farben';
+import {
+  MENUE_FARBEN,
+  farbeAus,
+  farbtafel,
+  naechsteFarbe,
+  zieheFarben,
+} from '../minispiele/golf/farben';
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { KARTEN } from '../minispiele/golf/karten';
@@ -133,6 +139,28 @@ function Golfball({ farbe, groesse = 28 }: { farbe: string; groesse?: number }):
 }
 
 /* --------------------------------------------------------------------------
+ * Farben der Runde
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Die Ballfarben dieser Runde, je Sitz eine.
+ *
+ * Der Server liefert nur den WUNSCH je Sitz (`SeatInfo.farbe`, in der Lobby
+ * durchgetippt) und prueft ihn nicht gegen die anderen. Doppelfrei wird es
+ * hier — mit `farbtafel`, einer reinen Funktion, die auf jedem Geraet
+ * dieselbe Antwort gibt. Zweimal dieselbe Farbe am Tisch waere sonst nicht
+ * nur haesslich, sondern unspielbar: Man findet seinen Ball nur an der Farbe.
+ */
+function farbenDerSitze(sitze: readonly SeatInfo[], plaetze: number): number[] {
+  const anzahl = Math.max(plaetze, sitze.length, 1);
+  const wuensche: (number | null)[] = new Array(anzahl).fill(null);
+  for (const platz of sitze) {
+    if (platz.seat >= 0 && platz.seat < anzahl) wuensche[platz.seat] = platz.farbe ?? null;
+  }
+  return farbtafel(wuensche);
+}
+
+/* --------------------------------------------------------------------------
  * Der Bildschirm
  * ----------------------------------------------------------------------- */
 
@@ -161,6 +189,12 @@ export function Golf({
   const [ich, setIch] = useState<Me | null>(null);
   const [abschluss, setAbschluss] = useState<Abschlussdaten | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
+  /*
+   * Die Baelle im Menue: acht Stueck wie eh und je, aber aus dem ganzen
+   * Vorrat von sechzehn gezogen. Einmal je Aufbau und nicht je Bild — sonst
+   * flackerte die Reihe bei jedem Serverfunk in neuen Farben.
+   */
+  const [menueFarben] = useState<string[]>(() => zieheFarben(MENUE_FARBEN));
 
   /*
    * Die Brücke zum Gleichschritt lebt länger als jeder Render und darf
@@ -213,6 +247,9 @@ export function Golf({
 
   const sicht = tisch.view?.view ?? null;
   const eigenerSitz = tisch.view?.seat ?? -1;
+  const tischSitze = tisch.table?.seats ?? tisch.party?.seats ?? [];
+  const farbnummern = farbenDerSitze(tischSitze, sicht?.sitze ?? tischSitze.length);
+  const farben = farbnummern.map(farbeAus);
 
   /* Beim Tischwechsel fängt alles von vorn an — auch der Kern. */
   useEffect(() => {
@@ -366,7 +403,7 @@ export function Golf({
             Löchern die wenigsten Schläge hat, gewinnt.
           </p>
           <div className="gf-probe" aria-hidden="true">
-            {FARBEN.map((farbe, i) => (
+            {menueFarben.map((farbe, i) => (
               <Golfball key={i} farbe={farbe} groesse={30} />
             ))}
           </div>
@@ -460,7 +497,8 @@ export function Golf({
         daten={abschluss}
         sicht={sicht}
         eigenerSitz={eigenerSitz}
-        sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
+        sitze={tischSitze}
+        farben={farben}
         onZurueck={verlasseUndZurueck}
       />
     );
@@ -475,6 +513,8 @@ export function Golf({
       <Lobby
         sitze={tisch.table?.seats ?? []}
         plaetze={tisch.table?.seats.length ?? 8}
+        farben={farben}
+        onFarbe={(sitz) => tisch.setSeatColor(naechsteFarbe(farbnummern, sitz))}
         meineKennung={ich?.id ?? null}
         verbunden={tisch.status === 'open'}
         loecher={loecher}
@@ -514,7 +554,8 @@ export function Golf({
       netz={holeNetz()}
       sicht={sicht}
       eigenerSitz={eigenerSitz}
-      sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
+      sitze={tischSitze}
+      farben={farben}
       hinweis={hinweis}
       onFertig={(zustand) => setAbschluss(meldeErgebnis(zustand))}
       onZurueck={verlasseUndZurueck}
@@ -569,6 +610,8 @@ function Regler({
 function Lobby({
   sitze,
   plaetze,
+  farben,
+  onFarbe,
   meineKennung,
   verbunden,
   loecher,
@@ -578,6 +621,10 @@ function Lobby({
 }: {
   sitze: readonly SeatInfo[];
   plaetze: number;
+  /** Ballfarbe je Sitz, schon doppelfrei (siehe farbenDerSitze). */
+  farben: readonly string[];
+  /** Weiterschalten auf die nächste freie Farbe — nur für den eigenen Sitz. */
+  onFarbe: (sitz: number) => void;
   meineKennung: string | null;
   verbunden: boolean;
   loecher: number;
@@ -610,6 +657,8 @@ function Lobby({
           {sitze.map((platz) => {
             const eigen = meineKennung !== null && platz.accountId === meineKennung;
             const leer = platz.accountId === null && !platz.isBot;
+            const name = leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'));
+            const ball = <Golfball farbe={leer ? '#5b6b5f' : (farben[platz.seat] ?? '#5b6b5f')} groesse={26} />;
             return (
               <li
                 key={platz.seat}
@@ -618,11 +667,33 @@ function Lobby({
                 data-leer={leer ? '' : undefined}
                 data-eigen={eigen ? '' : undefined}
               >
-                <Golfball farbe={leer ? '#5b6b5f' : farbeVon(platz.seat)} groesse={26} />
-                <span className="gf-gruppenname">
-                  {leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'))}
-                </span>
-                {eigen && <em className="gf-du">du</em>}
+                {/*
+                  Nur die eigene Zeile ist ein Knopf. Ein <button> und kein
+                  onClick auf dem <li>: Sonst erreicht die Farbwahl niemanden,
+                  der mit der Tastatur oder einem Vorleseprogramm spielt — und
+                  ein anklickbares Listenelement sagt nirgends, dass es eines
+                  ist.
+                */}
+                {eigen && !leer ? (
+                  <button
+                    className="gf-farbwahl"
+                    type="button"
+                    data-golf-farbe={platz.seat}
+                    onClick={() => onFarbe(platz.seat)}
+                    disabled={!verbunden}
+                    title="Farbe wechseln"
+                  >
+                    {ball}
+                    <span className="gf-gruppenname">{name}</span>
+                    <em className="gf-du">du</em>
+                  </button>
+                ) : (
+                  <>
+                    {ball}
+                    <span className="gf-gruppenname">{name}</span>
+                    {eigen && <em className="gf-du">du</em>}
+                  </>
+                )}
               </li>
             );
           })}
@@ -723,6 +794,7 @@ function Partie({
   sicht,
   eigenerSitz,
   sitze,
+  farben,
   hinweis,
   onFertig,
   onZurueck,
@@ -731,6 +803,8 @@ function Partie({
   sicht: GolfSicht;
   eigenerSitz: number;
   sitze: readonly SeatInfo[];
+  /** Ballfarbe je Sitz, schon doppelfrei (siehe farbenDerSitze). */
+  farben: readonly string[];
   hinweis: string | null;
   onFertig: (zustand: Partiezustand) => void;
   onZurueck: () => void;
@@ -751,6 +825,15 @@ function Partie({
   onFertigRef.current = onFertig;
   const sitzRef = useRef(eigenerSitz);
   sitzRef.current = eigenerSitz;
+  /*
+   * Die Farben liegen zusaetzlich in einer Ref: Die Bildschleife wird EINMAL
+   * aufgebaut (an einem Schluessel, nicht am Objekt — die Regel aus
+   * CLAUDE.md), und ein neuer Zeichner muss die aktuelle Faerbung finden,
+   * ohne dass die Schleife neu startet.
+   */
+  const farbenRef = useRef<readonly string[]>(farben);
+  farbenRef.current = farben;
+  const farbSchluessel = farben.join('|');
 
   /* -------------------------------------------------------------- */
   /* Bildschleife                                                    */
@@ -760,6 +843,7 @@ function Partie({
     const leinwand = leinwandRef.current;
     if (leinwand === null) return;
     const zeichner = new Zeichner(leinwand);
+    zeichner.setzeFarben(farbenRef.current);
     zeichnerRef.current = zeichner;
     let laeuft = true;
     let bild = 0;
@@ -885,6 +969,18 @@ function Partie({
       zeichnerRef.current = null;
     };
   }, [netz]);
+
+  /*
+   * Umfaerben ohne die Bildschleife anzufassen. Der Effekt haengt an einem
+   * SCHLUESSEL und nicht an der Liste: Ein Feld mit dem Farb-Array in der
+   * Abhaengigkeit liefe bei jedem Serverfunk neu (CLAUDE.md). Waehrend der
+   * Partie aendert sich nichts mehr — der Server weist eine Farbwahl an
+   * einem laufenden Tisch ab —, aber der Sofortstart nummeriert die Sitze um,
+   * und danach gehoert eine andere Farbe an denselben Platz.
+   */
+  useEffect(() => {
+    zeichnerRef.current?.setzeFarben(farbenRef.current);
+  }, [farbSchluessel]);
 
   /* -------------------------------------------------------------- */
   /* Zielen                                                          */
@@ -1056,7 +1152,7 @@ function Partie({
               className="gf-chip"
               data-eigen={sitz === eigenerSitz ? '' : undefined}
               data-weg={hud.dabei[sitz] ? undefined : ''}
-              style={{ background: farbeVon(sitz) }}
+              style={{ background: farben[sitz] ?? farbeAus(sitz) }}
               title={name(sitz)}
             >
               <strong>{schlaege}</strong>
@@ -1092,7 +1188,7 @@ function Partie({
               {hud.schlaege.map((schlaege, sitz) => (
                 <tr key={sitz} data-eigen={sitz === eigenerSitz ? '' : undefined}>
                   <td>
-                    <Golfball farbe={farbeVon(sitz)} groesse={20} />
+                    <Golfball farbe={farben[sitz] ?? farbeAus(sitz)} groesse={20} />
                     <span>{name(sitz)}</span>
                   </td>
                   <td>{schlaege}</td>
@@ -1270,12 +1366,15 @@ function Abschluss({
   sicht,
   eigenerSitz,
   sitze,
+  farben,
   onZurueck,
 }: {
   daten: Abschlussdaten;
   sicht: GolfSicht | null;
   eigenerSitz: number;
   sitze: readonly SeatInfo[];
+  /** Ballfarbe je Sitz, schon doppelfrei (siehe farbenDerSitze). */
+  farben: readonly string[];
   onZurueck: () => void;
 }): React.JSX.Element {
   const ausgang = sicht?.ausgang ?? null;
@@ -1296,7 +1395,7 @@ function Abschluss({
               data-eigen={zeile.sitz === eigenerSitz ? '' : undefined}
             >
               <span className="gf-rangplatz">{zeile.platz}</span>
-              <Golfball farbe={farbeVon(zeile.sitz)} groesse={26} />
+              <Golfball farbe={farben[zeile.sitz] ?? farbeAus(zeile.sitz)} groesse={26} />
               <span className="gf-rangname">{name(zeile.sitz)}</span>
               <span className="gf-rangloecher">
                 {daten.ergebnis.map((reihe, loch) => (
