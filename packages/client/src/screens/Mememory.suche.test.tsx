@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * genau das steht hier unter Pruefung.
  */
 
-const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables, leaveTable } =
+const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables, leaveTable, defaults } =
   vi.hoisted(() => ({
     sucheStarten: vi.fn(),
     sucheStand: vi.fn(),
@@ -21,6 +21,7 @@ const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables
     joinTable: vi.fn(),
     tables: vi.fn(),
     leaveTable: vi.fn(),
+    defaults: vi.fn(),
   }));
 
 vi.mock('../api', () => ({
@@ -32,6 +33,7 @@ vi.mock('../api', () => ({
     joinTable,
     tables,
     leaveTable,
+    defaults,
     aktiveSpieler: () => Promise.resolve({ aktiv: 5 }),
     // Die Nebensachen des Menues: Sammlung, Motive, Vorschlaege. Sie duerfen
     // nicht ins Netz greifen, sind aber fuer die Suche ohne Belang.
@@ -82,6 +84,9 @@ async function einTakt(): Promise<void> {
   await durchatmen();
 }
 
+/** Was `GET /games/<spiel>/defaults` liefert — die Vorgabe des Moduls. */
+const VORGABE = { spalten: 4, zeilen: 6, merkzeitMs: 1100 };
+
 describe('Mememory: Mitspieler suchen', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -92,6 +97,18 @@ describe('Mememory: Mitspieler suchen', () => {
     joinTable.mockReset();
     tables.mockReset().mockResolvedValue([]);
     leaveTable.mockReset().mockResolvedValue({ ok: true });
+    /*
+     * Der Bildschirm holt den Regelsatz seit dem 07.09.2026 beim Server,
+     * statt ihn abzuschreiben (src/spiel-vorgabe.ts). Hier steht deshalb die
+     * ANTWORT DES SERVERS und nicht eine zweite Abschrift: Was das Modul
+     * wirklich vorgibt, prueft der Vertrag in src/vertrag/.
+     */
+    defaults.mockReset().mockResolvedValue({
+      config: VORGABE,
+      protocolVersion: 1,
+      seatCounts: [2],
+      rounds: {},
+    });
   });
 
   afterEach(() => {
