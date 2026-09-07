@@ -547,6 +547,30 @@ export function fuehreAus(
 }
 
 /**
+ * Die Rundenfrist ist um: Wer nicht abgegeben hat, hat abgegeben, was er hat.
+ *
+ * Aufgerufen von der Plattform nach `regeln.rundenMs` (siehe `phaseMs` in
+ * game-api); dieses Paket misst die Zeit nicht.
+ *
+ * Ein offener Zettel ist LEER, denn eine Auswahl entsteht hier erst mit der
+ * Abgabe — angetippte Felder stehen nur im Bildschirm des Spielers. Das ist
+ * die richtige Verbuchung und nicht die halbe: Ein halber Zettel liesse sich
+ * gar nicht bilden, und "nichts genommen" ist genau das, was ein Sitz getan
+ * hat, der nicht mehr hinsieht.
+ *
+ * Zwei Runden ohne Feldwechsel beenden die Partie ohnehin (LEERRUNDEN_MAX in
+ * `loeseAuf`). Ein Tisch, an dem niemand mehr da ist, laeuft damit nicht
+ * endlos weiter, sondern kommt von selbst zum Ende — was die Verlassen-Regel
+ * der Plattform ergaenzt und nicht ersetzt.
+ */
+export function fristAbgelaufen(partie: EilandPartie): EilandPartie {
+  if (partie.fertig) return partie;
+  const bereit: Record<number, boolean> = { ...partie.bereit };
+  for (const sitz of sitzeVon(partie)) bereit[sitz] = true;
+  return loeseAuf({ ...partie, bereit });
+}
+
+/**
  * Die Runde aufloesen: verteilen, kaempfen, einsammeln, nachlegen.
  *
  * Die Reihenfolge ist nicht beliebig. Erst wird jedes umstrittene Feld

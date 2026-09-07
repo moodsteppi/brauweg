@@ -6,6 +6,7 @@ export {
   type EilandRegeln,
   type EilandVariante,
   istVariante,
+  mitFrist,
   pruefeRegeln,
 } from './regeln.js';
 export {
@@ -30,6 +31,7 @@ export {
   amZug,
   erlaubteZuege,
   erstellePartie,
+  fristAbgelaufen,
   fuehreAus,
   istBereit,
   kontingent,
