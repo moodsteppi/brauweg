@@ -24,6 +24,7 @@ import {
   type Partiezustand,
 } from '../minispiele/golf/physik';
 import type { GolfSicht } from '../minispiele/golf/sicht';
+import { anzeigeVerdeckt, kastenAus, type Kasten } from '../minispiele/golf/verdeckung';
 import { Zeichner, type Zielbild } from '../minispiele/golf/zeichnen';
 import type { BotLevel, SeatInfo, TaktMessage, ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
@@ -768,6 +769,21 @@ const HUD_LEER: Hudstand = {
   binTroedler: false,
 };
 
+/*
+ * Verdeckungsprüfung der Punkteanzeige.
+ *
+ * `HUD_RAND` weitet die gemessenen Kästen auf: Ein Ball, der die Chipreihe um
+ * zwei Pixel verfehlt, ist trotzdem nicht abzulesen — die Kacheln werfen
+ * einen Schatten, und der steht nicht in ihrem Kasten.
+ *
+ * `HUD_HALT_MS` ist das Gegenmittel gegen Geflacker: Ohne die Nachhaltezeit
+ * schaltet die Anzeige im Bildtakt hin und her, sobald der Ball genau an der
+ * Kante entlangrollt — und ein blinkender HUD ist schlimmer als ein
+ * verdeckender.
+ */
+const HUD_RAND = 12;
+const HUD_HALT_MS = 350;
+
 /** Der Zustand des Zielens — liegt in einer Ref, nicht im State. */
 interface Zielstand {
   zeiger: number;
@@ -818,6 +834,19 @@ function Partie({
   const zielbildRef = useRef<Zielbild | null>(null);
   const uebersichtRef = useRef(false);
   const [uebersicht, setUebersicht] = useState(false);
+  /*
+   * Die Punkteanzeige und ihre gemessenen Kästen. Gemessen wird beim
+   * Nachziehen des HUD und bei jeder Fenstergröße, NICHT je Bild: Ein
+   * `getBoundingClientRect` im Bildtakt erzwingt sechzigmal je Sekunde einen
+   * Umbruch, und die Kästen stehen ohnehin still, solange sich nichts an der
+   * Anzeige ändert.
+   */
+  const hudRef = useRef<HTMLDivElement | null>(null);
+  const kopfRef = useRef<HTMLDivElement | null>(null);
+  const chipsRef = useRef<HTMLDivElement | null>(null);
+  const kaestenRef = useRef<readonly Kasten[]>([]);
+  /** Bis wann die Anzeige mindestens blass bleibt (siehe HUD_HALT_MS). */
+  const haltBisRef = useRef(0);
   const [hud, setHud] = useState<Hudstand>(HUD_LEER);
   const hudKeyRef = useRef('');
   const fertigRef = useRef(false);
@@ -834,6 +863,59 @@ function Partie({
   const farbenRef = useRef<readonly string[]>(farben);
   farbenRef.current = farben;
   const farbSchluessel = farben.join('|');
+
+  /* -------------------------------------------------------------- */
+  /* Punkteanzeige: wo steht sie im Bild?                            */
+  /* -------------------------------------------------------------- */
+
+  /*
+   * Gemessen werden Kopfzeile und Chipreihe EINZELN, nicht der HUD-Kasten:
+   * Der spannt über die ganze Breite, seine Kinder stehen mittig. Über den
+   * ganzen Kasten zu prüfen hieße am breiten Schirm, dass ein Ball am linken
+   * Rand die Anzeige blass macht, obwohl neben ihr alles frei ist.
+   *
+   * Hinweiszeile und Trödelwarnung bleiben absichtlich draußen — sie treten
+   * auch nicht zurück: Wer gerade gewarnt wird, soll die Warnung lesen.
+   */
+  const messeAnzeige = useCallback((): void => {
+    const leinwand = leinwandRef.current;
+    if (leinwand === null) {
+      kaestenRef.current = [];
+      return;
+    }
+    const basis = leinwand.getBoundingClientRect();
+    const liste: Kasten[] = [];
+    for (const el of [kopfRef.current, chipsRef.current]) {
+      if (el === null) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      liste.push(kastenAus(r.left - basis.left, r.top - basis.top, r.width, r.height, HUD_RAND));
+    }
+    kaestenRef.current = liste;
+  }, []);
+
+  /*
+   * Neu gemessen wird an einem SCHLÜSSEL, nicht am HUD-Objekt (CLAUDE.md):
+   * Der Stand wird jede Sekunde neu gebaut, die Kästen wandern davon aber
+   * nicht. Was sie verschiebt, ist allein die Zahl der Chips — die Kopfzeile
+   * hat eine feste Breite, und ihr Text bricht nicht um. Alles Übrige (ein
+   * gedrehtes Telefon, eine umbrechende Chipreihe) kommt über die
+   * Fenstergröße.
+   */
+  const chipZahl = hud.schlaege.length;
+  useEffect(() => {
+    messeAnzeige();
+  }, [messeAnzeige, chipZahl]);
+
+  useEffect(() => {
+    const beiGroesse = (): void => messeAnzeige();
+    window.addEventListener('resize', beiGroesse);
+    window.addEventListener('orientationchange', beiGroesse);
+    return () => {
+      window.removeEventListener('resize', beiGroesse);
+      window.removeEventListener('orientationchange', beiGroesse);
+    };
+  }, [messeAnzeige]);
 
   /* -------------------------------------------------------------- */
   /* Bildschleife                                                    */
@@ -948,6 +1030,24 @@ function Partie({
       });
 
       schreibeMarken(leinwand, zeichner, z, sitz);
+
+      /*
+       * Tritt die Punkteanzeige zurück? Die Frage stellt sich erst NACH dem
+       * Zeichnen: Der Zeichner setzt seine Abbildung Welt → Bild in
+       * `zeichne`, vorher zeigte sie noch auf den Blick des letzten Bildes.
+       */
+      const kaesten = kaestenRef.current;
+      if (kaesten.length > 0) {
+        const verdeckt = anzeigeVerdeckt(kaesten, zeichner, {
+          ball: eigen !== undefined && eigen.dabei && !eigen.eingelocht ? eigen : null,
+          loch: karte.loch,
+          // In der Übersicht wird nicht gezielt; ein Pfeil von eben gehört
+          // dort nicht mehr zum Bild und soll auch nichts blass machen.
+          ziel: uebersichtRef.current ? null : zielbildRef.current,
+        });
+        if (verdeckt) haltBisRef.current = jetzt + HUD_HALT_MS;
+        setzeVerdeckt(hudRef.current, verdeckt || jetzt < haltBisRef.current);
+      }
     };
 
     /*
@@ -1132,8 +1232,8 @@ function Partie({
         onPointerCancel={beiZeigerWeg}
       />
 
-      <div className="gf-hud">
-        <div className="gf-hudkopf">
+      <div className="gf-hud" ref={hudRef}>
+        <div className="gf-hudkopf" ref={kopfRef}>
           <button className="gf-zurueck gf-zurueck-tisch" type="button" onClick={onZurueck} aria-label="Zurück">
             ←
           </button>
@@ -1145,7 +1245,7 @@ function Partie({
           </span>
         </div>
 
-        <div className="gf-chips">
+        <div className="gf-chips" ref={chipsRef}>
           {hud.schlaege.map((schlaege, sitz) => (
             <span
               key={sitz}
@@ -1326,6 +1426,23 @@ function zeitText(sekunden: number): string {
   const m = Math.floor(sekunden / 60);
   const s = sekunden % 60;
   return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+/**
+ * Die Punkteanzeige blass schalten — als Attribut, nicht als React-Zustand.
+ *
+ * Der Wert entsteht im Bildtakt. Ihn durch `useState` zu schicken hieße, den
+ * ganzen Partie-Baum mitten im Bild neu zu bauen, sobald der Ball unter die
+ * Chips rollt; das Attribut fasst nur den einen Knoten an. Dieselbe
+ * Überlegung steht schon hinter `schreibeMarken`.
+ */
+function setzeVerdeckt(hud: HTMLElement | null, blass: boolean): void {
+  if (hud === null) return;
+  if (blass) {
+    if (hud.dataset.verdeckt === undefined) hud.dataset.verdeckt = '';
+  } else if (hud.dataset.verdeckt !== undefined) {
+    delete hud.dataset.verdeckt;
+  }
 }
 
 /**

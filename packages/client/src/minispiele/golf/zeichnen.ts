@@ -119,6 +119,11 @@ function stimmungVon(karte: Karte): Stimmung {
  * Aufträge
  * ----------------------------------------------------------------------- */
 
+/** Höhe der Fahnenstange über dem Loch, in Welteinheiten. */
+export const FAHNEN_HOEHE = 2.5;
+/** Wie weit das Tuch neben der Stange steht, in Welteinheiten. */
+export const FAHNEN_BREITE = 1.25;
+
 /** Was der Zielpfeil zeigen soll. */
 export interface Zielbild {
   /** Ballmitte in Weltkoordinaten. */
@@ -257,12 +262,25 @@ export class Zeichner {
     };
   }
 
+  /**
+   * Weltkoordinate → Bildschirmpunkt, je Achse einzeln.
+   *
+   * Die beiden gibt es neben `zuBild`, weil die Verdeckungsprüfung je Bild
+   * über zwei Dutzend Punkte läuft: Ein `{px, py}` je Punkt wären 1.500
+   * weggeworfene Objekte je Sekunde, und der Zeichenpfad legt bewusst nichts
+   * an. Die Formel steht nur hier — `zuBild` benutzt sie mit.
+   */
+  zuBildX(x: number): number {
+    return (x - this.mx) * this.skala + this.breitePx / 2;
+  }
+
+  zuBildY(y: number): number {
+    return (y - this.my) * this.skala + this.hoehePx / 2;
+  }
+
   /** Weltkoordinaten → Bildschirmpunkt (CSS-Pixel relativ zur Leinwand). */
   zuBild(x: number, y: number): { px: number; py: number } {
-    return {
-      px: (x - this.mx) * this.skala + this.breitePx / 2,
-      py: (y - this.my) * this.skala + this.hoehePx / 2,
-    };
+    return { px: this.zuBildX(x), py: this.zuBildY(y) };
   }
 
   /**
@@ -1017,7 +1035,7 @@ export class Zeichner {
   /** Fahnenmast und Tuch — bewusst ÜBER den Bällen, damit man das Loch findet. */
   private zeichneFahne(ctx: CanvasRenderingContext2D, a: Bildauftrag): void {
     const [lx, ly] = a.karte.loch;
-    const hoehe = 2.5;
+    const hoehe = FAHNEN_HOEHE;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.lineWidth = 0.1;
     ctx.beginPath();
@@ -1034,7 +1052,7 @@ export class Zeichner {
     ctx.fillStyle = '#e63946';
     ctx.beginPath();
     ctx.moveTo(lx, ly - hoehe);
-    ctx.quadraticCurveTo(lx + 0.65, ly - hoehe + 0.12 + wehen, lx + 1.25, ly - hoehe + 0.42);
+    ctx.quadraticCurveTo(lx + 0.65, ly - hoehe + 0.12 + wehen, lx + FAHNEN_BREITE, ly - hoehe + 0.42);
     ctx.quadraticCurveTo(lx + 0.6, ly - hoehe + 0.62 - wehen, lx, ly - hoehe + 0.92);
     ctx.closePath();
     ctx.fill();
