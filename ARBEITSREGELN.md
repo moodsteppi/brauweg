@@ -80,6 +80,42 @@ node <pfad>/tafel.mjs lesen mystery-web    # Tafel eines Repos
 node <pfad>/tafel.mjs landkarte            # systemübergreifende Sicht
 ```
 
+### Gibt es zu dem Repo noch keine Tafel: anlegen
+
+`lesen` antwortet dann „Keine Tafel passt zu <repo>". Das ist kein Grund,
+ohne Tafel weiterzuarbeiten — die **erste** Tafel eines Systems darf jede
+Sitzung selbst anlegen (vorher ging das nur im Browser, also nicht auf einem
+Worker-PC):
+
+```bash
+node <pfad>/tafel.mjs anlegen <repo> <datei> [name]
+```
+
+`<datei>` ist ein Tafeldokument (`*.gamedesk.json`) — dieselbe Datei, die der
+Import im Dashboard annimmt: ein JSON-Objekt mit `windows` (die Kacheln) und
+`connections` (die Verknüpfungen). `-` liest von der Standardeingabe. Ohne
+`[name]` gilt der Name aus dem Tafeldokument, falls es einen trägt — Dateien
+aus dem Editor tragen ihn —, und nur wenn dort keiner steht, heißt die Tafel
+wie das Repo. Wer aus dem Dashboard exportiert, gibt `[name]` deshalb besser
+ausdrücklich an oder sieht vorher im Feld `name` der Datei nach.
+
+Zwei Regeln weist der Server ab, und beide schützen den Leseweg:
+
+- **Der Name MUSS den Repo-Namen enthalten.** Eine Tafel wird ausschließlich
+  darüber gefunden, dass ihr Name den Repo-Namen enthält. Eine Tafel
+  „Systemwissen Orchestrator" zu `bro-server` wäre angelegt und für jeden
+  künftigen Auftrag unsichtbar: Der Anleger liest „angelegt", den Inhalt
+  liest niemand.
+- **Zu einem Repo darf es nur EINE Tafel geben.** Passen zwei, liefert der
+  Leseweg beide aneinandergehängt — der Auftrag wird länger, das Destillat
+  läuft in den Zeichen-Deckel, und abgeschnitten werden die neuesten
+  Änderungsmeldungen. Der zweite Anlauf ist deshalb ein Fehler, der den Namen
+  der vorhandenen Tafel nennt. Dann die vorhandene pflegen (`eintragen`) oder
+  sie im Dashboard umbenennen.
+
+Auch eine Tafel **ohne Kacheln** wird abgewiesen: Sie beantwortet „gibt es
+Wissen zu diesem Repo?" mit ja und sperrt die echte aus.
+
 ### Nach der Arbeit: Tafel pflegen
 
 Ändert deine Arbeit Systemwissen — neuer Baustein, neue oder geänderte
