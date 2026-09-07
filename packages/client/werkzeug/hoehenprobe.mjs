@@ -32,6 +32,10 @@
  *   2. Nichts liegt unter der Unterkante: Bereit-Knopf, Ladenkarten und Bank
  *      stehen vollstaendig im Bild.
  *   3. Nichts liegt seitlich draussen.
+ *   4. Ab 1024 Pixeln Breite steht der Laden NEBEN der Mitte und nicht
+ *      darunter (seit dem 07.09.2026). Dazu druckt es, wie breit der Tisch vom
+ *      Schirm wirklich belegt — die Zahl, die diesen Umbau ausgeloest hat: Auf
+ *      1366 Pixeln waren es 600, der Rest blieb leer.
  * Und es legt je Groesse ein Bild ab, damit man auch hinsieht.
  *
  * DIE GROESSEN sind die aus der Aufgabe vom 06.09.2026: zwei kleine
@@ -139,6 +143,42 @@ async function messen(seite) {
       }
     }
 
+    /*
+     * UND DIE ZWEITE FRAGE, seit dem 07.09.2026: Wird die BREITE benutzt?
+     *
+     * Der Umbau davor hat den Tisch auf einen Bildschirm gebracht, indem alles
+     * schrumpfte — auf 1366 x 768 stand er in einer 600 Pixel breiten Spalte,
+     * links und rechts blieben je 380 Pixel leer. Ab 64rem stehen Statuszeile
+     * und Laden deshalb NEBEN der Mitte. Geprueft wird das an der Frage, die
+     * es beantwortet: Steht der Laden neben der Mitte (beide ueberlappen sich
+     * senkrecht) oder wieder darunter?
+     */
+    const laden = document.querySelector('.tr-fuss');
+    const mitte = document.querySelector('.tr-mitte');
+    let nebeneinander = null;
+    if (laden && mitte && schirm.breite >= 1024) {
+      const l = laden.getBoundingClientRect();
+      const m = mitte.getBoundingClientRect();
+      nebeneinander = l.top < m.bottom - 1 && m.top < l.bottom - 1;
+      if (!nebeneinander) draussen.push('Der Laden steht wieder unter der Mitte statt daneben');
+    }
+
+    /*
+     * Und wie viel von der Breite des Schirms der Tisch ueberhaupt belegt —
+     * damit der leere Rand eine Zahl in der Ausgabe ist und nicht nur ein
+     * Eindruck im Bild.
+     */
+    const kaesten = ['.tr-oben', '.tr-statuszeile', '.tr-mitte', '.tr-fuss']
+      .map((wahl) => document.querySelector(wahl))
+      .filter(Boolean)
+      .map((el) => el.getBoundingClientRect())
+      .filter((k) => k.width > 0);
+    const benutzt = kaesten.length
+      ? Math.round(
+          Math.max(...kaesten.map((k) => k.right)) - Math.min(...kaesten.map((k) => k.left)),
+        )
+      : null;
+
     const brett = document.querySelector('.tr-bretter') ?? document.querySelector('.tr-brett');
     return {
       schirm,
@@ -146,6 +186,8 @@ async function messen(seite) {
       inhalt: tisch.scrollHeight,
       klient: tisch.clientHeight,
       feld: brett ? Math.round(brett.getBoundingClientRect().width) : null,
+      benutzt,
+      nebeneinander,
       draussen,
     };
   });
@@ -182,7 +224,9 @@ for (const seite of SEITEN) {
     if (!heil) schlecht++;
     console.log(
       `  ${g.name.padEnd(9)} ${heil ? '✓' : '✗'} Inhalt ${mass.inhalt} von ${mass.klient}` +
-        (mass.feld === null ? '' : `, Spielflaeche ${mass.feld} px breit`),
+        (mass.feld === null ? '' : `, Spielflaeche ${mass.feld} px breit`) +
+        (mass.benutzt === null ? '' : `, Tisch ${mass.benutzt} von ${mass.schirm.breite} breit`) +
+        (mass.nebeneinander === null ? '' : `, Laden ${mass.nebeneinander ? 'daneben' : 'darunter'}`),
     );
     for (const satz of mass.draussen) console.log(`              ↳ ${satz}`);
   }

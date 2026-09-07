@@ -295,17 +295,103 @@ describe('Was der Kachelgroesse sonst die Hoehe nimmt', () => {
     expect(kopf!.querySelector('.tr-bretttitel')).not.toBeNull();
   });
 
-  it('laesst die Ladenkarten schrumpfen, statt die Reihe breiter zu machen', () => {
+  it('gibt dem Laden die Zahl seiner Plaetze mit — und nicht das fertige Raster', () => {
     const container = zeige();
     const laden = container.querySelector<HTMLElement>('.tr-laden')!;
     /*
-     * `minmax(0, 1fr)` und nicht `1fr`: Bei `1fr` ist die Untergrenze einer
-     * Spalte ihr min-content — und das ist der laengste Einheitenname am
-     * Stueck ("Bogenmeisterin"), denn er steht mit `white-space: nowrap` da.
-     * Auf einem 360 Pixel breiten Handy war der Laden dadurch breiter als der
-     * Schirm, und die fuenfte Karte lag halb ausserhalb. Gemessen am
-     * 07.09.2026, und schon vorher so.
+     * Bis zum 07.09.2026 stand hier das ganze `grid-template-columns` als
+     * Inline-Stil. Es ist zur Zahl geschrumpft, weil ein Inline-Stil JEDE
+     * Regel des Stylesheets schlaegt: Am breiten Schirm steht der Laden als
+     * schmale Spalte neben dem Brett, und dort muessen die Karten umbrechen
+     * duerfen (`.tr-laden` in styles.css). Die Zahl kann nur von hier kommen —
+     * sie steht im Regelsatz und ist je Tisch verstellbar.
+     *
+     * Das `minmax(0, 1fr)`, das den Laden am 360-Pixel-Handy in den Schirm
+     * zwingt (bei `1fr` ist die Untergrenze einer Spalte der laengste
+     * Einheitenname am Stueck), steht seither im Stylesheet und ist in jsdom
+     * nicht zu messen — dort ist jedes Element null Pixel gross. Gemessen wird
+     * es am Geraet, mit `werkzeug/hoehenprobe.mjs`.
      */
-    expect(laden.style.gridTemplateColumns).toBe('repeat(5, minmax(0, 1fr))');
+    expect(laden.style.getPropertyValue('--tr-ladenplaetze')).toBe('5');
+    expect(laden.style.gridTemplateColumns).toBe('');
+  });
+});
+
+/*
+ * DER BREITE SCHIRM: WAS KEINE HOEHE BRAUCHT, GEHT ZUR SEITE.
+ *
+ * Der Umbau davor hat den Tisch auf einen Bildschirm gebracht, indem alles
+ * schrumpfte: Auf einem 1366 x 768 grossen Notebook standen vier Baender in
+ * einer 600 Pixel breiten Spalte, das Brett war 267 Pixel breit, und links wie
+ * rechts blieben je 380 Pixel leer. Seit dem 07.09.2026 stehen Statuszeile und
+ * Laden ab 64rem NEBEN der Mitte; gemessen waechst das Brett dort auf 453.
+ *
+ * Das Raster selbst steht in styles.css und ist in jsdom nicht zu messen. Was
+ * hier steht, ist wieder nur die Verdrahtung — und die ist diesmal eine
+ * Bedingung: Das Raster greift ueber `:has(> .tr-mitte)`. Verschwindet der
+ * Kasten, oder rutscht ein Band hinein, das daneben gehoert, faellt der Tisch
+ * stillschweigend auf die eine Spalte zurueck.
+ */
+describe('Der breite Schirm: die vier Baender des Tisches', () => {
+  it('haelt die Spielflaeche in der Mitte — Statuszeile und Laden daneben', () => {
+    const container = zeige();
+    const tisch = container.querySelector('.tr-tisch')!;
+    const mitte = tisch.querySelector(':scope > .tr-mitte');
+    expect(mitte).not.toBeNull();
+    /* Die Spielflaeche gehoert IN die Mitte: Aus ihrer Hoehe faellt die
+       Brettbreite, und die Mitte ist der Kasten, der am breiten Schirm die
+       ganze Hoehe unter der Kopfleiste bekommt. */
+    expect(mitte!.querySelector(':scope > .tr-spielflaeche')).not.toBeNull();
+    /* Statuszeile und Laden sind die beiden Seitenspalten — sie muessen
+       direkte Kinder des Tisches bleiben, sonst haben sie keine Zelle. */
+    expect(tisch.querySelector(':scope > .tr-statuszeile')).not.toBeNull();
+    expect(tisch.querySelector(':scope > .tr-fuss')).not.toBeNull();
+    expect(tisch.querySelector(':scope > .tr-oben')).not.toBeNull();
+  });
+
+  it('stellt auch die Arena in die Mitte', () => {
+    /* Die Arena steht an der Stelle der Spielflaeche, also im selben Kasten.
+       Stuende sie daneben, waere sie am breiten Schirm eine vierte Spalte. */
+    stelle(
+      sicht({
+        phase: 'kampf',
+        kaempfe: [
+          {
+            a: 0,
+            b: 1,
+            geist: false,
+            bericht: {
+              saat: 'probe',
+              erstZieher: 0,
+              start: [],
+              ereignisse: [{ art: 'ende', zeitMs: 100, sieger: 0, grund: 'ausgeloescht' }],
+              sieger: 0,
+              grund: 'ausgeloescht',
+              dauerMs: 100,
+              ueberlebende: [],
+              schaden: 3,
+            },
+          },
+        ],
+      }),
+    );
+    const container = zeige();
+    const mitte = container.querySelector('.tr-tisch > .tr-mitte')!;
+    expect(mitte.querySelector('[aria-label="Kampf"]')).not.toBeNull();
+  });
+
+  it('gibt auch dem Zuschauer eine Mitte — seine Seitenspalten bleiben leer', () => {
+    /* Ein Zuschauer hat weder Statuszeile noch Laden (sicht.ts). Ohne die
+       Mitte griffe das Raster bei ihm gar nicht; mit ihr fallen die beiden
+       leeren Spalten in sich zusammen, und sein Brett steht in der Mitte des
+       Schirms statt links daneben. */
+    stelle(sicht({ eigenes: null, zuschauer: true }));
+    const container = zeige();
+    const tisch = container.querySelector('.tr-tisch')!;
+    const mitte = tisch.querySelector(':scope > .tr-mitte');
+    expect(mitte).not.toBeNull();
+    expect(mitte!.querySelector('.tr-spielflaeche')).not.toBeNull();
+    expect(tisch.querySelector(':scope > .tr-statuszeile')).toBeNull();
+    expect(tisch.querySelector(':scope > .tr-fuss')).toBeNull();
   });
 });

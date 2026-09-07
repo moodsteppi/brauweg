@@ -148,6 +148,28 @@ describe('ProbeRuestkammer', () => {
     }
   });
 
+  it('steht im selben Aufbau wie der Tisch — vier Baender, Spielflaeche in der Mitte', () => {
+    /*
+     * Die Probe ist das Werkzeug, mit dem der Aufbau gemessen wird
+     * (werkzeug/hoehenprobe.mjs). Weicht ihr Geruest vom Tisch ab, misst sie
+     * einen Bildschirm, den es nicht gibt — genau das war sie bis zum
+     * 07.09.2026, als sie ihre eigene Kopfzeile im Fluss hatte.
+     *
+     * Seit dem breiten Schirm haengt daran mehr als eine Hoehe: Das Raster ab
+     * 64rem greift nur an einem Tisch mit `.tr-mitte` (styles.css,
+     * `:has(> .tr-mitte)`). Ohne den Kasten zeigte die Probe am Notebook eine
+     * Spalte, waehrend der Tisch drei hat.
+     */
+    const { container } = render(<ProbeRuestkammer />);
+    const tisch = container.querySelector('.tr-tisch')!;
+    const mitte = tisch.querySelector(':scope > .tr-mitte');
+    expect(mitte).not.toBeNull();
+    expect(mitte!.querySelector(':scope > .tr-spielflaeche')).not.toBeNull();
+    for (const band of ['.tr-oben', '.tr-statuszeile', '.tr-fuss']) {
+      expect(tisch.querySelector(`:scope > ${band}`)).not.toBeNull();
+    }
+  });
+
   it('stellt das Brett des Gegners auf den Kopf', () => {
     const { container } = render(<ProbeRuestkammer />);
     const [fremd] = container.querySelectorAll('.tr-brett');

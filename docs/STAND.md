@@ -281,6 +281,59 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > Bildschirm?" für den falschen Bildschirm. Ihre eigene Bedienung liegt jetzt
 > als zuklappbare Werkbank **über** dem Tisch.
 >
+> **Und seit dem 07.09.2026 benutzt sie auch die Breite: ab 64rem stehen
+> Statuszeile und Laden neben der Mitte statt darunter.** Robin, unmittelbar
+> nach dem Höhen-Umbau: „Das Layout wird nicht optimal genutzt, es gibt viel
+> Platz, welcher nicht genutzt wird — vor allem in der Platzierungsphase." Er
+> hatte recht, und es folgte aus dem Umbau davor: Die Brettgröße fällt aus der
+> freien **Höhe**, und die Höhe teilten sich vier Bänder untereinander — ein
+> breiterer Schirm gab dem Brett keinen einzigen Pixel dazu. Auf 1366 × 768
+> standen alle vier in einer 600 Pixel breiten Spalte, das Brett war 267 breit,
+> links und rechts blieben je 380 Pixel leer.
+>
+> Jetzt ist der Tisch dort ein Raster aus drei Spalten: links die Statuszeile
+> (Leben, Rang, Feld und die Marken, untereinander), in der Mitte Bretter,
+> Bank und Arena, rechts der Laden. Der neue Kasten `.tr-mitte` hält zusammen,
+> was in die Mitte gehört — ohne ihn bräuchte jedes Kind eine eigene Zelle,
+> und das nächste, das jemand dazwischenschreibt, landete stumm in der
+> Ladenspalte. **Beide Seitenspalten sind gleich breit**
+> (`--tr-seitenspalte`, `clamp(272px, 24vw, 380px)`): Nur so liegt die Mitte
+> in der Mitte des Schirms, und Kopfleiste, Brett und Bank stehen auf einer
+> Achse — mit einer nur chipbreiten linken Spalte stand das Brett gemessene
+> 121 Pixel neben seiner eigenen Kopfleiste. Die Spalten selbst stehen
+> trotzdem auf `auto`: Ein Zuschauer hat weder Laden noch Statuszeile, bei ihm
+> fallen beide in sich zusammen und sein Brett steht mittig.
+>
+> Gemessene Brettbreiten vorher → nachher: **267 → 453** (1366 × 768),
+> 229 → 415 (1280 × 720), 332 → 518 (1512 × 850), 267 → 448 (1024 × 768),
+> 513 → 699 (1920 × 1080); die Arena wächst auf 1366 × 768 von 262 auf 348.
+> Am Handy ändert sich nichts (334 px bei 390 × 844, 234 bei 360 × 740) — der
+> Block greift erst ab 1024.
+>
+> Drei Dinge hängen daran und stehen deshalb hier:
+>
+> - **Das Raster greift nur an einem Tisch mit `.tr-mitte`**
+>   (`.tr-tisch:has(> .tr-mitte)`). `.tr-tisch` trägt nämlich nicht nur der
+>   Tisch: `/probe/kampf` benutzt dieselbe Klasse als Rahmen und hängt eigene
+>   Kinder hinein. Ein blankes `.tr-tisch { display: grid }` hat die auf zwei
+>   Spalten verteilt — die Bühne stand oben rechts und war 97 Pixel hoch.
+> - **`--tr-feld` kennt jetzt auch `100cqw`.** Solange der Tisch eine Spalte
+>   war, war die Breitengrenze in `vw` dasselbe wie die Breite des Kastens;
+>   mit dem Laden daneben ist sie es nicht mehr. Dieselbe Zeile aus demselben
+>   Grund an der Arena.
+> - **Das Ladenraster steht im Stylesheet, nur die Zahl der Plätze kommt aus
+>   der Sicht** (`--tr-ladenplaetze`). Vorher kam beides zusammen als
+>   Inline-Stil aus dem Bildschirm — und ein Inline-Stil schlägt jede Regel:
+>   In der schmalen Spalte müssen die Karten umbrechen dürfen
+>   (`repeat(auto-fill, minmax(96px, 1fr))`, drei nebeneinander statt fünf),
+>   und das wäre sonst nur mit `!important` zu haben.
+>
+> **Die Marken-Leiste hängt seither nicht mehr fest.** Sie stand ab 75rem als
+> `position: fixed` neben der zentrierten Spalte, mit einer abgezählten 96 für
+> die Höhe der Kopfleiste (`Synergien.module.css`). Diese Zahl ist weg: Die
+> Statuszeile mit ihr darin **ist** die linke Spalte, und das Modul dreht nur
+> noch die Liste hochkant.
+>
 > **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
 > Startleben gegen rund 5 Punkte Schaden je Niederlage). Seit den 14

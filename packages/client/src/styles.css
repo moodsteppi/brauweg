@@ -16879,6 +16879,32 @@ span.hub-angebot-art.poker-jeton-stapel {
   flex: 0 0 auto;
 }
 
+/*
+ * DIE MITTE: der Kasten um alles zwischen Statuszeile und Laden.
+ *
+ * Er ist am Handy nicht zu sehen und aendert dort auch nichts: Er reicht den
+ * freien Platz durch (`flex: 1 1 0`), und die Spielflaeche darin misst
+ * weiterhin selbst, was ihr davon bleibt. Da zu sein hat er allein wegen des
+ * breiten Schirms — dort legt das Raster ab 64rem Statuszeile und Laden links
+ * und rechts NEBEN ihn (siehe unten). Ohne ihn braeuchte jedes einzelne Kind
+ * eine eigene Zelle.
+ *
+ * `min-height: 0` ist der Kern und keine Zierde: Ohne ihn ist die
+ * Mindesthoehe eines Flex-Kindes sein Inhalt, und die Spielflaeche darin
+ * bekaeme nicht den ueberzaehligen, sondern den ANGEFORDERTEN Platz — die
+ * ganze Hoehenrechnung liefe ins Leere.
+ */
+.tr-mitte {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tr-luft);
+}
+
 /* -- Die Spielflaeche: Bretter und Bank ------------------------------------ */
 
 /*
@@ -16933,6 +16959,11 @@ span.hub-angebot-art.poker-jeton-stapel {
   --tr-abzug: calc(var(--tr-kopfhoehe) + var(--tr-brettluft));
   --tr-feld: min(
     var(--tr-feld-breit),
+    /* Und nie breiter als der Kasten selbst. Solange der Tisch eine Spalte
+       war, war das dasselbe wie `--tr-feld-breit` in vw; seit der Laden am
+       breiten Schirm daneben steht (Block ab 64rem), ist es das nicht mehr —
+       ohne diese Zeile haengt das Brett dort ueber die Ladenspalte. */
+    100cqw,
     calc(
       (100cqh - var(--tr-abzug)) * var(--tr-brettverhaeltnis) / (1 + var(--tr-fremd))
     )
@@ -17838,9 +17869,26 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-goldstand em { color: var(--muted); font: 700 11px/1 system-ui; font-style: normal; }
 .tr-goldstand .tr-icon { width: 16px; height: 16px; align-self: center; }
 
+/*
+ * Der Laden: so viele Spalten, wie der Tisch Ladenplaetze hat.
+ *
+ * Die ZAHL kommt als `--tr-ladenplaetze` aus der Sicht (sie steht im
+ * Regelsatz und ist je Tisch verstellbar), das RASTER steht hier — bis zum
+ * 07.09.2026 kam beides zusammen als Inline-Stil aus dem Bildschirm. Der Umbau
+ * war noetig, weil ein Inline-Stil jede Regel dieses Stylesheets schlaegt: Am
+ * breiten Schirm steht der Laden als schmale Spalte neben dem Brett und laesst
+ * die Karten umbrechen (siehe der Block ab 64rem), und das waere sonst nur mit
+ * `!important` zu haben.
+ *
+ * `minmax(0, 1fr)` und nicht `1fr`: Bei `1fr` ist die Untergrenze einer Spalte
+ * ihr min-content — und das ist der laengste Einheitenname am Stueck
+ * ("Bogenmeisterin", mit `white-space: nowrap`). Auf einem 360 Pixel breiten
+ * Handy war der Laden dadurch breiter als der Schirm, und die fuenfte Karte
+ * lag halb ausserhalb.
+ */
 .tr-laden {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--tr-ladenplaetze, 5), minmax(0, 1fr));
   gap: 5px;
   width: 100%;
 }
@@ -18219,6 +18267,172 @@ span.hub-angebot-art.poker-jeton-stapel {
   .tr-fuss { gap: 8px; }
   .tr-karte { min-height: 104px; }
   .tr-goldstand strong { font-size: 26px; }
+}
+
+/* -- Der breite Schirm: drei Spalten statt vier Baender -------------------- */
+
+/*
+ * WARUM ES DIESEN BLOCK GIBT. Seit dem 07.09.2026 passt der Tisch auf einen
+ * Bildschirm — aber er passte, indem er schrumpfte. Auf einem 1366 x 768
+ * grossen Notebook standen alle vier Baender in einer 600 Pixel breiten
+ * Spalte, das Brett war 267 Pixel breit, und links wie rechts blieben je
+ * 380 Pixel schlicht leer. Robin: „Das Layout wird nicht optimal genutzt, es
+ * gibt viel Platz, welcher nicht genutzt wird — vor allem in der
+ * Platzierungsphase."
+ *
+ * Die Ursache ist dieselbe wie beim Umbau davor, nur andersherum: Die Groesse
+ * des Bretts folgt aus der freien HOEHE, und die Hoehe teilen sich vier
+ * Baender untereinander. Ein breiterer Schirm gab dem Brett deshalb keinen
+ * einzigen Pixel dazu.
+ *
+ * DIE ANTWORT: Was keine Hoehe braucht, geht zur Seite. Statuszeile und Laden
+ * stehen ab 64rem links und rechts NEBEN der Mitte, und die Mitte bekommt die
+ * ganze Hoehe unter der Kopfleiste. Gemessen am 07.09.2026 waechst das Brett
+ * auf 1366 x 768 von 267 auf 453 Pixel, die Arena von 262 auf 348.
+ *
+ * DIE BEIDEN SEITENSPALTEN SIND GLEICH BREIT — Statuszeile und Laden tragen
+ * dieselbe Breite (`--tr-seitenspalte`). Das ist keine Symmetrie um ihrer
+ * selbst willen: Nur so liegt die Mitte in der Mitte des SCHIRMS, und Brett,
+ * Bank und Arena stehen unter der Kopfleiste auf einer Achse. Gemessen mit
+ * einer schmalen linken Spalte (nur so breit wie die Chips): Das Brett stand
+ * 121 Pixel links neben seiner Kopfleiste.
+ *
+ * Die Spalten selbst stehen trotzdem auf `auto` und nicht auf der Zahl: Ein
+ * Zuschauer hat weder Laden noch Statuszeile (sicht.ts). Bei `auto` fallen
+ * die leeren Spalten in sich zusammen, und sein Brett steht mittig statt links
+ * daneben.
+ *
+ * WARUM JEDE REGEL `:has(> .tr-mitte)` DAVOR HAT. `.tr-tisch` traegt nicht nur
+ * der Tisch: `/probe/kampf` benutzt dieselbe Klasse fuer den Rahmen und haengt
+ * eigene Kinder hinein (Kopfzeile, Buehne, Fusstext). Ein blankes
+ * `.tr-tisch { display: grid }` hat die am 07.09.2026 auf zwei Spalten
+ * verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die Bedingung
+ * liest sich als das, was sie meint: Zum Raster wird ein Tisch, der aus diesen
+ * Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der einen
+ * Spalte von heute.
+ */
+@media (min-width: 64rem) {
+  .tr-tisch:has(> .tr-mitte) {
+    /* Die Wunschbreite der beiden Seitenspalten, gemessen am 07.09.2026 an
+       ihren beiden Enden: Bei 272 (das ist der Wert am Anfang des Blocks, wo
+       24vw erst 245 waeren) stehen im Laden zwei Karten je Reihe, er wird 480
+       Pixel hoch und passt damit noch auf einen 600 Pixel hohen Schirm. Bei
+       380 sind es drei je Reihe und 354 Pixel. Mehr braucht der Laden nicht —
+       was darueber liegt, gehoert dem Brett. */
+    --tr-seitenspalte: clamp(272px, 24vw, 380px);
+    /* Die Obergrenze aus der Breite darf steigen, weil die Rechnung darunter
+       zusaetzlich die SPALTE kennt (`100cqw` in `--tr-feld`): Das Brett wird
+       nie breiter als die Mitte, egal was hier steht. Auf einem 1920 x 1080
+       grossen Schirm kommt die Zahl zum Zug — dort reicht die Hoehe fuer 699
+       Pixel Brett. */
+    --tr-feld-breit: min(52vw, 700px);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    /* Kopfleiste so hoch wie noetig, der Rest gehoert der Mitte.
+       `minmax(0, 1fr)` und nicht `1fr`: Sonst ist die Untergrenze der Zeile ihr
+       Inhalt, und ein Laden, der einmal nicht passt, macht die Zeile hoeher
+       als den Schirm — statt selbst zu rollen. */
+    grid-template-rows: auto minmax(0, 1fr);
+    /* Waagerecht mehr Luft als senkrecht: Zwischen zwei Spalten liest sich 8
+       wie ein Versehen, senkrecht ist jeder Pixel Brett. */
+    column-gap: 16px;
+    /*
+     * `.tr-seite` darueber setzt `align-items: center` — fuer die Flex-Spalte
+     * am Handy richtig, hier verheerend: Ein zentriertes Rasterkind ist so
+     * hoch wie sein INHALT, und die Spielflaeche darin bekaeme aus
+     * `flex: 1 1 0` genau null. Gemessen am 07.09.2026, bevor diese Zeile
+     * dastand: Brett 0 Pixel breit, Zeile leer.
+     */
+    align-items: stretch;
+  }
+  /* Die Kopfleiste steht ueber der MITTE und nicht ueber dem ganzen Schirm:
+     Sie gehoert zum Brett darunter, und quer ueber alle drei Spalten waere sie
+     ein Band, an dem sich nichts ausrichtet. */
+  .tr-tisch:has(> .tr-mitte) > .tr-oben {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    max-width: 600px;
+    justify-self: center;
+  }
+  /*
+   * Links: die eigenen Werte und die Marken, untereinander statt
+   * nebeneinander (die Liste selbst dreht Synergien.module.css).
+   *
+   * Sie stand bis zum 07.09.2026 ab 75rem als `position: fixed` neben der
+   * Spalte, mit einer abgezaehlten 96 fuer die Hoehe der Kopfleiste. Das ist
+   * entfallen: Hier ist sie eine Spalte des Rasters und misst nichts ab.
+   */
+  .tr-tisch:has(> .tr-mitte) > .tr-statuszeile {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: nowrap;
+    /* So breit wie der Laden gegenueber — davon haengt ab, ob das Brett unter
+       seiner Kopfleiste steht (siehe oben). Die Chips selbst ruecken an die
+       rechte Kante, also an das Brett heran: Was zusammengehoert, steht
+       beieinander, statt sich am Fensterrand zu verlieren. */
+    width: var(--tr-seitenspalte);
+    padding-left: 12px;
+    /* Sieben Marken und drei Werte sind laenger als ein 720 Pixel hoher
+       Schirm — dann rollt die Spalte, statt den Tisch zu verschieben. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .tr-tisch:has(> .tr-mitte) > .tr-statuszeile > .tr-kopf {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .tr-tisch:has(> .tr-mitte) > .tr-mitte {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  /* Das Auswahlband bringt eine Breite aus dem Schirm mit (min(70vw, 560px)).
+     In der Mitte ist die Spalte das Mass und nicht das Fenster: Auf einem
+     1024er Schirm ist die Spalte 448 Pixel breit, das Band waere 560 — und
+     ragte links und rechts unter Marken und Laden. */
+  .tr-tisch:has(> .tr-mitte) > .tr-mitte > .tr-auswahlband {
+    max-width: 100%;
+  }
+  /*
+   * Rechts: der Laden. Er behaelt seine Hoehe (`flex: 0 0 auto` weiter oben)
+   * und steht in der Mitte der Spalte — an der Oberkante klebend saehe er wie
+   * abgeschnitten aus, wenn er kurz ist (Kampfphase: ein Satz).
+   */
+  .tr-tisch:has(> .tr-mitte) > .tr-fuss {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: center;
+    width: var(--tr-seitenspalte);
+    padding-right: 12px;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /*
+   * Und die Karten brechen um, statt schmaler zu werden.
+   *
+   * `auto-fill` und nicht die Zahl aus der Sicht: Wie viele Karten
+   * nebeneinander passen, weiss nur die Spalte — bei 272 Pixeln sind es zwei,
+   * ab 320 drei. Ein Laden mit fuenf Spalten in einer 272 Pixel breiten Spalte
+   * gaebe 50 Pixel je Karte, und darauf steht nichts mehr lesbar.
+   *
+   * 96 und nicht 104 (die Hoehe einer Karte ab Tablet): Mit 104 blieben es auf
+   * einem 1366er Schirm zwei Spalten, also DREI Reihen, und der Laden wurde
+   * 467 Pixel hoch statt 354. Auf einem kurzen Fenster (1366 x 540 gemessen)
+   * rutschte der Bereit-Knopf damit unter die Kante seiner Spalte. Am Handy
+   * ist eine Karte 71 Pixel breit — 96 ist keine Notgroesse.
+   */
+  .tr-tisch:has(> .tr-mitte) > .tr-fuss .tr-laden {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+  /* Drei Knoepfe nebeneinander sind in dieser Spalte je 85 Pixel — „Rang
+     steigern" bricht dort mitten im Wort. Zwei oben, „Bereit" als breiter
+     Riegel darunter: Er ist der Knopf, der die Runde abschliesst. */
+  .tr-tisch:has(> .tr-mitte) .tr-ladenknoepfe { flex-wrap: wrap; }
+  .tr-tisch:has(> .tr-mitte) .tr-ladenknoepfe .tr-bereitknopf { flex: 1 0 100%; }
 }
 
 /* Wer weniger Bewegung eingestellt hat, bekommt das Ergebnis ohne Zappeln —
