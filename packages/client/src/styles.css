@@ -6000,6 +6000,19 @@ main.auth > .muted {
   font-size: 0.76rem;
   color: #dbe3ec;
 }
+/* Zeichen und Sitzzahl als ein Stueck: inline-flex haelt das Zeichen auf der
+   Schriftmitte, statt es wie ein Bild auf die Grundlinie zu setzen — dort
+   haengt es sonst sichtbar zu tief neben der Zahl. */
+.hub-themenspiel-sitze {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
+  vertical-align: -0.1em;
+}
+.hub-themenspiel-sitze .zeichen {
+  width: 1.05em;
+  height: 1.05em;
+}
 .hub-themenspiel .front-bald-tag {
   position: absolute;
   top: 0.5rem;
