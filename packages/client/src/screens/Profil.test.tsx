@@ -13,6 +13,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *
  * Geprueft wird die Reihenfolge im Baum, nicht das Aussehen: Welche Tafel
  * steht vor welcher, und was steht ueber dem Stufenbalken.
+ *
+ * Der Punkt am Profil-Reiter steht in `GameSelect.tabpunkt.test.tsx` und
+ * nicht hier: Dieser Bildschirm laedt sein Profilstueck nach, und dessen
+ * 3D-Vorladen scheitert unter jsdom (siehe `zeigeProfil`) — der Fehlschlag
+ * faellt dann dem naechsten Testfall in derselben Datei zur Last.
  */
 
 vi.mock('../api', async () => {
@@ -32,38 +37,18 @@ vi.mock('../api', async () => {
 
 import type { Me } from '../api';
 import { GameSelect } from './GameSelect';
+import { probeKonto as konto } from './probe-konto';
 
-/** Ein Konto, wie `/api/me` es liefert; die Abweichung je Test kommt oben drauf. */
-function konto(abweichung: Partial<Me> = {}): Me {
-  return {
-    id: 'a1',
-    displayName: 'Robin',
-    coins: 120,
-    gems: 3,
-    broJetons: 0,
-    avatar: {},
-    figur: null,
-    bereit: { truhen: 0, aufgaben: 0 },
-    level: { stufe: 4, xp: 300, imLevel: 40, fuerLevel: 100 },
-    themes: {},
-    avatarUrl: null,
-    birthday: '1990-12-24',
-    daysUntilBirthday: 87,
-    birthdayToday: false,
-    birthdayRewardClaimable: false,
-    hasBirthdayOutfit: false,
-    stats: [],
-    clubs: [],
-    activeTable: null,
-    entitlements: {
-      premium: false,
-      unlimitedCoins: false,
-      ownsEverything: false,
-      staff: false,
-    },
-    stage: 'development',
-    ...abweichung,
-  };
+/**
+ * Der Reiter der Tab-Leiste, der ins Profil fuehrt.
+ *
+ * Gesucht wird mit dem Anfang des Namens und nicht wortgleich: Liegt ein
+ * Geschenk bereit, haengt der Punkt seinen Vorlesetext an den Namen des
+ * Knopfes an — und dann traf ein `name: 'Profil'` genau in dem Fall nicht
+ * mehr, um den es hier geht.
+ */
+function profilReiter(): HTMLElement {
+  return screen.getByRole('button', { name: /^Profil/ });
 }
 
 /**
@@ -73,6 +58,13 @@ function konto(abweichung: Partial<Me> = {}): Me {
  * Aufbau, und ohne dieses Abwarten kommen ihre Antworten erst NACH dem Test
  * an — React meldet das als "not wrapped in act", und die Warnung steht dann
  * zwischen den Ergebnissen jedes kuenftigen Bildschirmtests.
+ *
+ * Getippt wird dagegen OHNE vorheriges Leerlaufen, und das ist keine
+ * Schlamperei: Wartet man erst den Aufbau ab und tippt dann, faellt das
+ * nachgeladene Profilstueck mitten in den Test — und mit ihm der
+ * Vorlade-Fehlschlag von `Avatar3D` (three liest `/3d/…glb` mit `fetch`, und
+ * Node nimmt keine Adresse ohne Wurzel). Der Fehler landet dann an einem
+ * fremden Testfall, der mit 3D nichts zu tun hat.
  */
 async function zeigeProfil(me: Me): Promise<void> {
   render(
@@ -88,7 +80,7 @@ async function zeigeProfil(me: Me): Promise<void> {
       onDeleted={vi.fn()}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Profil' }));
+  fireEvent.click(profilReiter());
   await act(async () => {});
 }
 
