@@ -221,6 +221,51 @@ test('Nach Ablauf entsteht genau EIN Tisch mit allen Suchenden, der Rest sind Bo
   assert.equal(isReadyToStart(table, seats), true, 'der Tisch startet ohne weiteres Warten');
 });
 
+/**
+ * Der Fehler vom 07.09.2026 in der Produktion: `faellig` nimmt die Runde
+ * sofort aus dem Fenster, der Tisch entsteht danach in einem Dutzend
+ * Datenbankschritten (dort gut eine Sekunde, laenger als der Abruftakt des
+ * Clients). Wer in dieser Luecke nachfragte, hoerte "sucht nicht, kein
+ * Tisch" — der Client meldete "Die Suche wurde beendet" und fragte nie
+ * wieder, sass aber laengst am neuen Tisch. Der Gegner spielte gegen einen
+ * leeren Sitz, und wer noch einmal suchte, bekam einen Bot.
+ *
+ * Nachgestellt ohne Zeitmessung: Annas Abruf baut den Tisch und wird NICHT
+ * abgewartet; Berts und Annas naechste Abrufe kommen mittendrin.
+ */
+test('Wer nachfragt, waehrend sein Tisch gerade entsteht, sucht noch — und bekommt danach diesen Tisch', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  const bert = await s.konto('Bert');
+  for (const konto of [anna, bert]) await s.vermittlung.betritt(SPIEL, konto);
+  // Bis kurz vor den Ablauf nachfragen — der letzte Abruf in `warte` baute
+  // sonst schon selbst den Tisch, und die Luecke waere nie zu sehen.
+  await warte(s, FENSTER_MS - 2_000, [anna, bert]);
+  s.vor(2_000);
+
+  // Das Fenster ist abgelaufen. Annas Abruf nimmt die Runde heraus und baut
+  // — bis zum ersten await der Datenbank laeuft das synchron, danach liegt
+  // der Bau in der Schwebe.
+  const annasBau = s.vermittlung.abruf(SPIEL, anna);
+  const bertMittendrin = await s.vermittlung.abruf(SPIEL, bert);
+  const annaMittendrin = await s.vermittlung.abruf(SPIEL, anna);
+  // Erst den Bau zu Ende kommen lassen, dann urteilen: Eine Probe, die
+  // mitten im Bau abbricht, laesst die Datenbank mit offener Arbeit zurueck
+  // und haengt beim Schliessen.
+  const annasStand = await annasBau;
+
+  assert.equal(bertMittendrin.sucht, true, 'Bert sucht aus seiner Sicht weiter — kein "Suche beendet"');
+  assert.equal(bertMittendrin.suchende, 2);
+  assert.equal(bertMittendrin.tischId, null);
+  assert.equal(annaMittendrin.sucht, true, 'auch Annas eigener naechster Takt bricht nichts ab');
+  assert.ok(annasStand.tischId, 'der Bau ist fertig, Anna kennt den Tisch');
+  const bertDanach = await s.vermittlung.abruf(SPIEL, bert);
+  assert.equal(bertDanach.tischId, annasStand.tischId, 'Bert landet am selben Tisch');
+  assert.deepEqual(s.angestupst, [annasStand.tischId], 'genau ein Tisch');
+});
+
 test('Acht Menschen starten sofort, ohne die 30 Sekunden abzusitzen', async (t) => {
   const s = await stand();
   t.after(() => s.close());

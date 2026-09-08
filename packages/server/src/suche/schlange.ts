@@ -113,6 +113,15 @@ const ERGEBNIS_FRIST_MS = 60_000;
 const FENSTER_MS = 30_000;
 const STILLE_MS = 8_000;
 
+/**
+ * Wie lange ein Konto hoechstens als "im Bau" gilt.
+ *
+ * Die Vermittlung meldet das Ende jedes Tischbaus selbst (`bauBeendet`);
+ * die Frist ist nur das Netz darunter, damit ein Eintrag, den niemand mehr
+ * abraeumt, nicht fuer immer "sucht noch" antwortet.
+ */
+const BAU_FRIST_MS = 60_000;
+
 export class Suchschlange {
   private readonly fensterMs: number;
   private readonly stilleMs: number;
@@ -122,6 +131,21 @@ export class Suchschlange {
   private readonly fenster = new Map<string, Fenster>();
   /** Fertig vermittelt: Konto -> Tisch, bis der Spieler es abgeholt hat. */
   private readonly ergebnisse = new Map<string, { tischId: string; seit: number }>();
+  /**
+   * Konten, deren Runde gerade zu einem Tisch wird (seit dem 07.09.2026).
+   *
+   * `faellig` nimmt eine Runde SOFORT aus dem Fenster; der Tisch entsteht
+   * danach in einem Dutzend Datenbankschritten — in der Produktion gut eine
+   * Sekunde, also laenger als ein Abruftakt des Clients. Wer in dieser
+   * Luecke nachfragte (der Mitspieler, oder man selbst mit dem naechsten
+   * Takt), stand in keinem Fenster und hatte noch kein Ergebnis: Die Antwort
+   * war "sucht nicht, kein Tisch", der Client meldete "Die Suche wurde
+   * beendet" und fragte nie wieder — sass aber laengst am neuen Tisch. Der
+   * Gegner spielte gegen einen leeren Sitz, die Partie lief nach der
+   * Abwesenheitsfrist aus, und wer noch einmal suchte, bekam einen Bot.
+   * Solange ein Konto hier steht, lautet die Antwort deshalb "sucht noch".
+   */
+  private readonly imBau = new Map<string, { gameId: GameId; suchende: number; seit: number }>();
 
   constructor(optionen: SchlangeOptionen = {}) {
     this.fensterMs = optionen.fensterMs ?? FENSTER_MS;
@@ -138,6 +162,7 @@ export class Suchschlange {
     // Ein altes Ergebnis waere sonst die Antwort auf die NEUE Suche und
     // schickte den Spieler an den Tisch von vorhin.
     this.ergebnisse.delete(accountId);
+    this.imBau.delete(accountId);
 
     const ziel = schluessel(gameId, config);
     // Wer mit einer ANDEREN Spielart schon in diesem Spiel steht, wechselt
@@ -168,6 +193,8 @@ export class Suchschlange {
 
   /** Lebenszeichen. Gibt `false` zurueck, wenn das Konto gar nicht sucht. */
   lebenszeichen(gameId: GameId, accountId: string): boolean {
+    // Im Bau: Der Tisch kommt, ein Lebenszeichen hat nichts mehr zu bewegen.
+    if (this.imBau.get(accountId)?.gameId === gameId) return true;
     const eintrag = this.fensterVon(gameId, accountId);
     if (!eintrag) return false;
     eintrag.fenster.suchende.set(accountId, this.jetzt());
@@ -182,6 +209,10 @@ export class Suchschlange {
    * erbt nicht die abgelaufene Wartezeit eines Fremden.
    */
   verlaesst(gameId: GameId, accountId: string): void {
+    // Wer mitten im Tischbau abbricht, sitzt gleich trotzdem am Tisch — das
+    // laesst sich hier nicht mehr verhindern. Aber er soll nicht weiter
+    // "sucht noch" hoeren, wenn er doch noch einmal nachfragt.
+    if (this.imBau.get(accountId)?.gameId === gameId) this.imBau.delete(accountId);
     const eintrag = this.fensterVon(gameId, accountId);
     if (!eintrag) return;
     eintrag.fenster.suchende.delete(accountId);
@@ -207,12 +238,19 @@ export class Suchschlange {
     // Auch ein schon vermitteltes Ergebnis: Es wuerde den Spieler beim
     // naechsten Abruf an den Tisch von vorhin schicken.
     this.ergebnisse.delete(accountId);
+    this.imBau.delete(accountId);
   }
 
   stand(gameId: GameId, accountId: string): Suchstand {
     const ergebnis = this.ergebnisse.get(accountId);
     if (ergebnis) {
       return { sucht: false, suchende: 0, restMs: 0, tischId: ergebnis.tischId };
+    }
+    // Der Tisch entsteht gerade: Aus Sicht des Suchenden laeuft die Suche
+    // weiter, nur ohne Restzeit — der naechste Abruf nennt den Tisch.
+    const bau = this.imBau.get(accountId);
+    if (bau && bau.gameId === gameId) {
+      return { sucht: true, suchende: bau.suchende, restMs: 0, tischId: null };
     }
     const fenster = this.fensterVon(gameId, accountId)?.fenster;
     if (!fenster) {
@@ -259,13 +297,21 @@ export class Suchschlange {
       const voll = fenster.suchende.size >= vollAb(gameId);
       if (!abgelaufen && !voll) continue;
 
-      runden.push({ gameId, accountIds: [...fenster.suchende.keys()], config: fenster.config });
+      const accountIds = [...fenster.suchende.keys()];
+      runden.push({ gameId, accountIds, config: fenster.config });
       this.fenster.delete(schluessel);
+      // Ab jetzt bis `vermittelt`/`bauBeendet` gilt fuer sie: sucht noch.
+      for (const accountId of accountIds) {
+        this.imBau.set(accountId, { gameId, suchende: accountIds.length, seit: jetzt });
+      }
     }
 
     // Aufgelaufene, nie abgeholte Ergebnisse vergessen.
     for (const [accountId, ergebnis] of this.ergebnisse) {
       if (jetzt - ergebnis.seit > ERGEBNIS_FRIST_MS) this.ergebnisse.delete(accountId);
+    }
+    for (const [accountId, bau] of this.imBau) {
+      if (jetzt - bau.seit > BAU_FRIST_MS) this.imBau.delete(accountId);
     }
 
     return runden;
@@ -275,7 +321,20 @@ export class Suchschlange {
   vermittelt(accountIds: readonly string[], tischId: string): void {
     const jetzt = this.jetzt();
     for (const accountId of accountIds) {
+      this.imBau.delete(accountId);
       this.ergebnisse.set(accountId, { tischId, seit: jetzt });
     }
+  }
+
+  /**
+   * Der Tischbau dieser Runde ist vorbei — gut oder schlecht.
+   *
+   * Wer dabei keinen Tisch bekommen hat (der Bau ist gescheitert, oder sein
+   * Beitritt wurde abgewiesen), soll beim naechsten Abruf "sucht nicht"
+   * hoeren und von vorn anfangen, statt endlos "sucht noch". Fuer die
+   * Vermittelten ist der Eintrag schon durch `vermittelt` weg.
+   */
+  bauBeendet(accountIds: readonly string[]): void {
+    for (const accountId of accountIds) this.imBau.delete(accountId);
   }
 }
