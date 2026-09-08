@@ -25,7 +25,7 @@
  * Kein Pixel dieser Datei fließt je in einen Spielzustand zurück.
  */
 
-import { dunkler, farbeVon, heller } from './farben';
+import { dunkler, farbeVon, heller, mische } from './farben';
 import type { Blick } from './kamera';
 import type {
   Karte,
@@ -1122,7 +1122,8 @@ export class Zeichner {
     ctx.fill();
 
     // Die beiden Marken auch dann sichtbar, wenn der Pfeil sie noch nicht
-    // erreicht hat: Sonst weiß man erst hinterher, wo die Stufen liegen.
+    // erreicht hat: Sonst weiß man erst hinterher, wo die Drittel liegen —
+    // und seit die Farbe stufenlos läuft, sind sie die einzige Marke.
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
     ctx.lineWidth = 0.06;
     for (let i = 1; i <= 2; i += 1) {
@@ -1232,15 +1233,46 @@ export class Zeichner {
 }
 
 /**
- * Grün → Gelb → Orange → Rot.
+ * Die vier Farben des Kraftpfeils und die Kraft, bei der sie rein stehen.
  *
- * Als Stufen und nicht als Verlauf: Der Pfeil ist ein Anzeigeinstrument, und
- * ein stufenloser Verlauf sagt bei 40 % dasselbe wie bei 45 %. Die drei
- * Abschnitte des Schafts teilen sich dieselben Grenzen.
+ * Die Zahlen sind die alten Stufengrenzen: Bei 0, 34, 67 und 90 Prozent
+ * kommt aus `kraftfarbe` Zeichen für Zeichen derselbe Wert wie aus der
+ * Stufenfassung von früher. Wer eine Farbe tauscht, tauscht sie hier — der
+ * Pfeil, seine Spitze und die Prozentzahl lesen alle dieselbe Tabelle.
+ */
+const KRAFT_STUETZEN: readonly (readonly [number, string])[] = [
+  [0, '#3ddc84'],
+  [0.34, '#ffd23f'],
+  [0.67, '#ff9124'],
+  [0.9, '#ff4d4d'],
+];
+
+/**
+ * Grün → Gelb → Orange → Rot, stufenlos.
+ *
+ * Bis zum 08.09.2026 waren es vier Stufen. Das sprang: Ein Prozent mehr
+ * Kraft färbte den ganzen Pfeil um, die neunzehn davor änderten nichts —
+ * beim Ziehen sieht das nach einem Zustandswechsel aus, den es im Schlag
+ * gar nicht gibt. Jetzt hat jedes Prozent seinen eigenen Zwischenton, und
+ * die Farbe bewegt sich mit der Hand statt gegen sie.
+ *
+ * Im wievielten Drittel man zieht, sagen weiterhin die zwei Marken auf dem
+ * Schaft und die Prozentzahl an der Spitze — die Farbe musste das nie
+ * allein tragen.
+ *
+ * Ab 90 % bleibt es reines Rot: Das letzte Zehntel ist der Bereich, in dem
+ * ohnehin fast alles gleich weit fliegt; dort soll die Warnfarbe stehen und
+ * nicht weiterwandern.
  */
 export function kraftfarbe(kraft: number): string {
-  if (kraft < 0.34) return '#3ddc84';
-  if (kraft < 0.67) return '#ffd23f';
-  if (kraft < 0.9) return '#ff9124';
-  return '#ff4d4d';
+  // Kein `undefined` ins fillStyle: Ein nicht endlicher Wert (NaN aus einer
+  // Division durch null) malt die schwächste Farbe statt still schwarz —
+  // dieselbe Vorsicht wie in `farbeAus`.
+  if (!(kraft > 0)) return KRAFT_STUETZEN[0][1];
+  for (let i = 1; i < KRAFT_STUETZEN.length; i += 1) {
+    const [von, vorher] = KRAFT_STUETZEN[i - 1];
+    const [bis, farbe] = KRAFT_STUETZEN[i];
+    if (kraft < bis) return mische(vorher, farbe, (kraft - von) / (bis - von));
+  }
+  return KRAFT_STUETZEN[KRAFT_STUETZEN.length - 1][1];
 }
