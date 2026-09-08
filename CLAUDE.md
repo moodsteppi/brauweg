@@ -52,7 +52,11 @@ in der Sitzung anweist, gibt ihn frei — frag vorher einmal kurz zur Sicherheit
 nach (ein Prod-Deploy ist schwer rückholbar, siehe Regel 7), aber warte auf
 niemand anderen. Vor jedem Push `git pull --no-rebase origin staging` — an
 diesem Repo arbeiten mehrere Sitzungen gleichzeitig, auch Cursor. Merges sind
-der Normalfall, kein Fehler.
+der Normalfall, kein Fehler. Nach einem Release muss `main` wieder Vorfahre
+von `staging` sein (Rückfluss als echter Merge, kein Squash); der Job
+„Rückfluss" in `.github/workflows/ci.yml` wird bei jedem Push auf einen der
+beiden Zweige rot, solange das nicht stimmt — am 06.09.2026 fiel es sonst
+erst Tage später am Release-Konflikt auf.
 
 **2. Alles auf Deutsch.** Bezeichner, Kommentare, Commit-Nachrichten,
 Oberflächentexte. Kommentare erklären das **Warum**, nicht das Was — und
