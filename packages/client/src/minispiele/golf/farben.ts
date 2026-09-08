@@ -159,3 +159,27 @@ export function heller(farbe: string, anteil = 0.45): string {
   const b = Math.round((zahl & 255) + (255 - (zahl & 255)) * anteil);
   return `rgb(${r}, ${g}, ${b})`;
 }
+
+/**
+ * Zwei Farben mischen — `anteil` 0 gibt die erste, 1 die zweite.
+ *
+ * Rückgabe als Hexwert und nicht als `rgb(…)` wie bei `dunkler` und
+ * `heller`: An den Enden kommt so wieder genau die Zeichenkette heraus, die
+ * hineingegeben wurde. Ein Verlauf lässt sich damit Stützstelle für
+ * Stützstelle gegen seine Ausgangsfarben halten, und wer den Verlauf ändert,
+ * sieht in der Probe sofort, ob die Ecken noch stimmen.
+ */
+export function mische(a: string, b: string, anteil: number): string {
+  const t = Math.min(1, Math.max(0, anteil));
+  const za = Number.parseInt(a.slice(1), 16);
+  const zb = Number.parseInt(b.slice(1), 16);
+  let aus = '#';
+  for (const schub of [16, 8, 0]) {
+    const ka = (za >> schub) & 255;
+    const kb = (zb >> schub) & 255;
+    aus += Math.round(ka + (kb - ka) * t)
+      .toString(16)
+      .padStart(2, '0');
+  }
+  return aus;
+}
