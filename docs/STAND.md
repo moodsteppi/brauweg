@@ -20,8 +20,8 @@ Minuten live.
 der Erinnerung):**
 172 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
-56 Eiland-Tests, 310 Tafelrunde-Tests, 20 Golf-Tests, **450 Servertests** —
-zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
+56 Eiland-Tests, 310 Tafelrunde-Tests, 20 Golf-Tests, **451 Servertests** —
+zusammen 1479, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
@@ -89,6 +89,19 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > die zweite Richtung setzt die Vermittlung den Gastgeber 30 Sekunden später
 > an einen anderen Tisch, und seine Freunde warten vor einem Tisch, den
 > niemand mehr startet.
+>
+> **Während der Tisch entsteht, „sucht" man noch** (seit dem 07.09.2026).
+> `faellig()` nimmt eine reife Runde sofort aus dem Fenster, der Tisch wird
+> danach in einem Dutzend Datenbankschritten gebaut — in der Produktion gut
+> eine Sekunde, länger als der Abruftakt des Clients. Wer in dieser Lücke
+> nachfragte, hörte „sucht nicht, kein Tisch", der Client meldete „Die Suche
+> wurde beendet" und fragte nie wieder, saß aber längst am neuen Tisch: Der
+> Gegner spielte gegen einen leeren Sitz, die Partie lief aus, und wer noch
+> einmal suchte, bekam einen Bot. Deshalb führt die Schlange die Konten einer
+> herausgenommenen Runde in `imBau`, bis `vermittelt`/`bauBeendet` sie
+> abräumen; `stand()` antwortet für sie `sucht: true, restMs: 0`. Die Probe
+> dazu wartet den Bau bewusst ab, bevor sie urteilt — bricht eine Probe
+> mitten im Tischbau ab, hängt PGlite beim Schließen.
 >
 > Seit demselben Tag wertet Tafelrunde die **Bot-Stufe des Tisches** aus:
 > `gangartVon` in `adapter.ts` bildet die vier Plattformstufen auf die drei

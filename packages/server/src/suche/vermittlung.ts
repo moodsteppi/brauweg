@@ -165,6 +165,11 @@ export class Vermittlung {
         this.runtime.notify(beteiligte.tischId);
       } catch (fehler) {
         this.beiFehler(runde.gameId, fehler);
+      } finally {
+        // Waehrend `tischBauen` lief, galten alle aus der Runde als "im Bau"
+        // (siehe Suchschlange.imBau). Wer jetzt kein Ergebnis hat, faengt
+        // beim naechsten Abruf von vorn an.
+        this.schlange.bauBeendet(runde.accountIds);
       }
     }
   }
