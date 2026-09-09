@@ -16,7 +16,7 @@
  * WOZU DAS GANZE: Die Figuren sollen wie 3D aussehen, aber nicht live gerendert
  * werden. Die Probe mit Three.js (`proben/arena-3d/`) lief auf dem Handy mit 20
  * Bildern je Sekunde und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es
- * 204 kB, und das Abspielen kostet so viel wie ein `background-position`.
+ * 225 kB, und das Abspielen kostet so viel wie ein `background-position`.
  *
  * LIZENZ ALLER FUENF BLAETTER: KayKit "Character Pack : Adventurers" 1.0 von
  * Kay Lousberg (kaylousberg.com), CC0 1.0 Universal — freie Verwendung auch
@@ -87,7 +87,11 @@ export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.7729 } as const;
  * sein muss: keine Schrift, keine Zahl, kein Wappen.
  *
  * Zeigt eine Figur den Hinterkopf statt des Gesichts, ist im Renderskript das
- * Vorzeichen der Drehung gekippt — nicht dieses Spiegeln.
+ * Vorzeichen der Drehung gekippt — nicht dieses Spiegeln. Genau das ist am
+ * 09.09.2026 passiert und hat einen ganzen Satz Blaetter gekostet: Die Figuren
+ * standen 17 Grad von der Kamera WEG statt zu ihr hin, und weil der KayKit-Kopf
+ * eine glatte Kugel ist, sah das nach einem zu steilen Blickwinkel aus statt
+ * nach einer verdrehten Figur.
  */
 export const FIGUREN3D_BLICKT = 'rechts' as const;
 
