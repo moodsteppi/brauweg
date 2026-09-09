@@ -1,6 +1,6 @@
 # Tafelrunde: wie lange eine Partie dauert
 
-**Stand: 06.09.2026.** Robins Vorgabe: Das Vorbild (Merge Tactics) dauert 5 bis
+**Stand: 09.09.2026.** Robins Vorgabe: Das Vorbild (Merge Tactics) dauert 5 bis
 6 Minuten, unser Ziel ist „durchschnittlich 8 Minuten maximum".
 
 > **ABSCHNITT 7 BEANTWORTET EINE ANDERE FRAGE ALS DER REST** und ist deshalb
@@ -29,7 +29,9 @@
 > 14 auf **12** zu senken: **7:23 im Median bei 9 Runden**, einzelner Kampf
 > 20,2 s, 9,5 % der Kämpfe von der Uhr entschieden.
 >
-> Zum Weiterlesen in dieser Datei: Abschnitt 8 ist der heutige Stand (die
+> Zum Weiterlesen in dieser Datei: Abschnitt 9 ist der heutige Stand und
+> erklärt, warum die Probe zum Kampfanteil jetzt auf der Rangfolge steht und
+> nicht mehr auf der halben Spielzeit; Abschnitt 8 ist der Stand davor (die
 > Bot-Bewertung kennt seitdem die Reichweite), Abschnitt 7 handelt vom Warten
 > statt von der Dauer, Abschnitt 6 ist der Stand mit 14
 > Leben und allen vier Zahlen des Vormittags (7:34 bei 10 Runden, 17,6 s,
@@ -815,12 +817,19 @@ laufen, ist der ganze Unterschied zwischen 4,1 % und 0,7 % Abbrüchen.
 deswegen nichts: Eine halbe Sekunde unter einer gerundeten Zielmarke ist kein
 Befund.
 
-**Die Probe in `test/spielzeit.test.ts` verlangt, dass mehr als die Hälfte der
-Spielzeit Kampf ist** — gemessen sind es 3:22 von 6:15, also 54 % (vorher
+**Die Probe in `test/spielzeit.test.ts` verlangte, dass mehr als die Hälfte der
+Spielzeit Kampf ist** (seit dem 09.09.2026 nicht mehr — sie steht jetzt auf der
+Rangfolge, siehe Abschnitt 9) — gemessen sind es 3:22 von 6:15, also 54 % (vorher
 58 %). Die Schranke hält, greift aber von unten: Wer die Kämpfe weiter
 verkürzt, ohne die Vorbereitung mitzunehmen, reißt sie. Das ist ihr Sinn — ab
 dort ist die Vorbereitung der größte Posten, und die Empfehlung aus Abschnitt 4
 gilt nicht mehr.
+
+> **Der letzte Satz stimmt so nicht, und das ist am 09.09.2026 aufgefallen:**
+> Unter die Hälfte zu fallen und von der Vorbereitung überholt zu werden sind
+> zwei verschiedene Dinge, und zwischen ihnen liegt ein ganzer Streifen. Die
+> Schranke stand auf dem ersten, begründet war sie mit dem zweiten. Sie steht
+> seitdem auf dem zweiten — Abschnitt 9 hat die Zahlen dazu.
 
 **Was danach zu prüfen wäre, wenn jemand weiter kürzen will:** Die Höchstdauer
 greift jetzt in einem von hundertvierzig Kämpfen. Sie war als Rettungsseil
@@ -828,3 +837,121 @@ gedacht und ist es damit wieder — wer sie senkt, senkt sie gegen fast nichts
 (dazu läuft die eigene Karte „Entscheidung: HOECHSTDAUER_MS von 45 s auf 30 s
 senken?"). Die Schrauben aus Abschnitt 2 sind davon unberührt und gelten
 weiter.
+
+---
+
+## 9. Die Schranke „mehr als die Hälfte ist Kampf" (09.09.2026)
+
+**Anlass war keine Messung, sondern eine offene Karte.** Abschnitt 8 hielt
+fest, dass die Probe `steckt seine Zeit vor allem in die Kaempfe` in
+`test/spielzeit.test.ts` nur noch knapp hält (54 %, vorher 58 %) und „von
+unten" greift: Wer die Kämpfe weiter verkürzt, ohne die Vorbereitung
+mitzunehmen, reißt sie. Zu klären war, **ob die Vorbereitung mitgezogen werden
+muss oder ob die Schranke auf eine andere Aussage gehört**.
+
+Nachrechnen (400 Partien zu viert, Saatbasis `spielzeit-v1`; jede Zeile dreht
+genau eine Schraube und rechnet dieselben Saaten):
+
+```bash
+npm run build --workspace @brauweg/game-tafelrunde
+node packages/game-tafelrunde/werkzeug/spielzeit.mjs --partien 400 --saat spielzeit-v1
+```
+
+Zwei Dinge sind für diese Frage am Werkzeug dazugekommen: die Spalte **Kampf%**
+(bis dahin stand die Zerlegung nur für die Zeile „wie gebaut" da, und die Frage
+„bewegt meine Schraube den Anteil?" brauchte einen zweiten Lauf) und die
+**Zeitraffer-Zeilen über x2**. Die alte Auswahl (1,25 / 1,5 / 2) endete beim
+gebauten Stand — sie sagte also nur noch, wie viel *länger* eine Partie mit
+weniger Raffer wäre.
+
+### Die Vorbereitung zieht mit — aber nur bei der halben Auswahl der Schrauben
+
+Es gibt zwei Sorten Zeitschraube, und der Unterschied entscheidet alles:
+
+| | Kampf | Vorbereitung | Runden | Anteil |
+| --- | --- | --- | --- | --- |
+| wie gebaut | 3:27 | 2:25 | 9 | 56,6 % |
+| **Kampfschrauben** | | | | |
+| Zeitraffer x3 | 2:31 | 2:24 | 9 | **48,9 %** |
+| Höchstdauer 20 s | 2:43 | 2:24 | 9 | **50,7 %** |
+| **Rundenschrauben** | | | | |
+| Schadensteiler 2 | 3:05 | 2:13 | 9 | 55,9 % |
+| Schadensteiler 1 | 2:21 | 1:46 | 7 | 54,8 % |
+| Startleben 10 | 2:54 | 2:08 | 8 | 55,4 % |
+
+Eine **Kampfschraube** (Zeitraffer, Höchstdauer, Takt) macht den einzelnen
+Kampf kürzer und lässt die Zahl der Runden stehen. Die Vorbereitung hängt an
+den Runden — sie rührt sich über alle Zeitraffer-Zeilen hinweg nicht (2:22 bis
+2:26), und der Anteil fällt voll durch.
+
+Eine **Rundenschraube** (Schadensteiler, Startleben) lässt Leben schneller
+fallen und streicht damit Runden. Sie kürzt beides im selben Zug: Schadensteiler 1
+lässt vom Kampf 68 % und von der Vorbereitung 73 % übrig, und der Anteil bewegt
+sich um weniger als zwei Punkte. **Die Vorbereitung muss dort also nicht
+„mitgezogen" werden — sie zieht von selbst mit.**
+
+Das ist derselbe Unterschied, den Abschnitt 4 schon in anderen Worten nennt
+(„der Zeitraffer ist die Schraube, an der man zuerst drehen sollte, weil er als
+einziger **keine Runde streicht**") — nur ist er dort ein Vorteil und hier der
+Grund, aus dem die Schranke von unten greift.
+
+**Von Hand kürzen ließe sich die Vorbereitung ohnehin kaum.** Ihre beiden
+Zahlen (5 s Grundzeit, 1,5 s je Handgriff) beschreiben einen *Menschen*, den
+das Paket nie zu sehen bekommt; sie sind Annahme, nicht Regel. Der einzige
+Hebel, den das Modul wirklich hat, ist die Rundenfrist `vorbereitungMs` — und
+die ist ein Deckel über der längsten Runde und keine Zeitschraube (Abschnitt 4,
+Nachtrag). Ein Deckel von 15 s brächte 16 s je Partie und schnitte dafür genau
+die Hälfte aller Runden ab (gemessen über 3.847 Runden: 50,0 % liegen über
+15 s, 8,9 % über 20 s, 0,8 % über 25 s — der Median einer Vorbereitung liegt
+bei 14 s). Ein Deckel, der die Hälfte der Runden trifft, ist keine
+Zeitschraube mehr, sondern eine Regeländerung.
+
+### Die Schranke prüfte etwas anderes, als ihre Begründung sagte
+
+`kampf > gesamt/2` heißt ausgeschrieben `kampf > vorbereitung + nachlauf`, also
+*„der Kampf trägt mehr als alles andere zusammen"*. Begründet war die Zahl
+im Test aber mit *„fällt er darunter, ist die Vorbereitung der größte Posten"* —
+und das ist der andere Satz `vorbereitung > kampf`. Zwischen beiden liegt ein
+Streifen, in dem die Probe rot wird, obwohl die Empfehlung aus Abschnitt 4
+unverändert gilt:
+
+| Zeitraffer | Kampf | Vorb. | Anteil | halbe Zeit | Rangfolge |
+| --- | --- | --- | --- | --- | --- |
+| x2 (gebaut) | 3:27 | 2:25 | 56,6 % | hält | hält |
+| x2,5 | 2:56 | 2:26 | 52,3 % | hält | hält |
+| x2,75 | 2:35 | 2:24 | 49,6 % | **reißt** | hält |
+| x3 | 2:31 | 2:24 | 48,9 % | **reißt** | hält |
+| x3,5 | 2:15 | 2:25 | 45,7 % | **reißt** | **reißt** |
+
+**Entschieden: die Schranke steht jetzt auf der Rangfolge** (`kampfMs >
+vorbereitungMs`), nicht mehr auf der halben Spielzeit. Sie reißt damit genau
+dann, wenn die Vorbereitung den Kampf überholt — der Zeitpunkt, ab dem
+„dreh am Kampf, nicht an der Vorbereitung" falsch wird und jemand neu messen
+muss. Der Anteil steht weiterhin in der Fehlermeldung, weil man ihn dann lesen
+will; eine Schranke ist er nicht mehr. Auf eine niedrigere feste Prozentzahl
+(40 %, 45 %) ist bewusst **nicht** umgestellt worden: Das wäre derselbe falsche
+Satz mit einem Sicherheitsabstand davor, und er verschiebt sich mit jeder
+Stichprobe (die 150 Partien der Probe selbst liegen rund zwei Punkte unter den
+400 hier).
+
+Dazugekommen ist eine zweite Probe, `zieht die Vorbereitung nur mit, wenn eine
+Schraube RUNDEN streicht`. Sie hält den Zusammenhang aus der ersten Tabelle
+fest: Zeitraffer x3 lässt vom Kampf 75 % und von der Vorbereitung 101 % übrig,
+Schadensteiler 1 lässt 68 % und 73 % übrig. Ohne sie könnte die Anleitung
+darüber still veralten — etwa dadurch, dass jemand `vorbereitungsdauer` an die
+Kampfdauer hängt —, und die nächste Kürzung griffe zur falschen Schraube.
+
+### Der heutige Stand, nebenbei gemessen
+
+| Saatbasis | Partien | Kampf | Vorbereitung | Nachlauf | Median |
+| --- | --- | --- | --- | --- | --- |
+| `spielzeit-probe` (die Probe selbst) | 150 | 54,5 % | 41,4 % | 4,1 % | 5:34 |
+| `spielzeit-v1` | 500 | 56,3 % | 39,7 % | 4,0 % | 5:54 |
+| `ausgewogenheit-v1` | 1.000 | 55,8 % | 40,2 % | 4,0 % | 5:51 |
+| `wartezeit-v1` | 1.000 | 56,0 % | 40,0 % | 4,0 % | 5:48 |
+
+Gegenüber Abschnitt 8 (6:15 bei 54 % Kampf) hat sich nichts Nennenswertes
+bewegt; die Streuung zwischen den Saatbasen ist mit zwei Punkten größer als der
+Unterschied zu damals. Die Partie liegt weiterhin deutlich unter Robins acht
+Minuten, und der Anteil der an der Höchstdauer abgeschnittenen Kämpfe steht bei
+1,7 bis 2,1 %.
