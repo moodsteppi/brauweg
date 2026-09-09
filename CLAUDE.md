@@ -117,8 +117,8 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.479 Tests in den Paketen (451 im Server), dazu
-                  # 725 Client-Tests in 56 Dateien (vitest)
+npm test          # 1.501 Tests in den Paketen (468 im Server), dazu
+                  # 784 Client-Tests in 61 Dateien (vitest)
 ```
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
