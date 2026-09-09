@@ -147,6 +147,23 @@ const QUELLE_SAMMLUNG_TEXT =
  * liegen Auge, Wange und Kinn frei. 12 Grad zeigt kaum mehr Gesicht, nimmt aber
  * die letzte Andeutung von oben und laesst die Figur auf dem Brett schweben.
  *
+ * NACHGEMESSEN am 09.09.2026 mit `messeKopf`, weil "sieht man das Gesicht?"
+ * zwischen 12 und 16 Grad kein Augenmass mehr ist. Anteil der sichtbaren
+ * Kopffflaeche, Wache / Meuchler:
+ *
+ *   38,6°  Scheitel 24,3 / 20,8 %   Gesicht 25,8 / 27,8 %
+ *     22°  Scheitel 18,3 / 19,5 %   Gesicht 29,7 / 28,5 %
+ *     16°  Scheitel 16,7 / 18,7 %   Gesicht 30,6 / 28,8 %
+ *     12°  Scheitel 15,8 / 18,3 %   Gesicht 31,3 / 29,0 %
+ *
+ * Der Winkel bewegt beim KayKit-Kopf also wenig: Zwischen 16 und 12 Grad liegt
+ * noch nicht einmal ein Prozentpunkt, und den sieht niemand. Er ist auch nicht
+ * der Hebel — die DREHUNG ist es (siehe DREHUNG_GRAD). Bei 16 Grad bleibt
+ * gegenueber 12 die Andeutung von oben erhalten, ohne die eine Figur auf einem
+ * schraeg gesehenen Brett schwebt; deshalb bleibt es dabei. Zu jedem der drei
+ * zur Wahl stehenden Winkel liegt zusaetzlich ein eigenes Bild in voller
+ * Aufloesung unter `docs/bilder/tafelrunde-kamera-<winkel>grad.webp`.
+ *
  * Wer den Winkel spaeter noch einmal aendert, laesst das Skript OHNE
  * `--vergleich` laufen und traegt die ausgegebenen Zahlen in figuren3d.ts nach —
  * vor allem den Fusspunkt, der sich mit dem Winkel verschiebt.
@@ -164,10 +181,28 @@ const KAMERA_GRAD = 16;
  * 17 Grad ist der Wert der steilen Kamera. Die Vermutung war, dass eine
  * flachere Kamera mehr Drehung vertraegt. GEPRUEFT am 05.09.2026 (unterer Block
  * des Vergleichsbildes, 17 / 26 / 34 Grad bei 16 Grad Kamera): Sie vertraegt
- * sie, aber sie gewinnt fast nichts. Der KayKit-Kopf ist eine glatte Kugel ohne
- * Nase; ob er 17 oder 34 Grad steht, aendert am Gesicht kaum etwas, waehrend
- * ab etwa 30 Grad der zweite Dolch hinter dem Koerper verschwindet. Das Gesicht
- * kommt vom KAMERAWINKEL, nicht von der Drehung — deshalb bleibt es bei 17.
+ * sie, und am Auge sah es nach wenig aus.
+ *
+ * NACHGEMESSEN am 09.09.2026 mit `messeKopf`, Meuchler bei 16 Grad Kamera
+ * (unterer Block der Vergleichs-Uebersicht):
+ *
+ *   17°  Scheitel 18,7 %   Gesicht 28,9 %
+ *   26°  Scheitel 19,1 %   Gesicht 35,6 %
+ *   34°  Scheitel 19,4 %   Gesicht 42,3 %
+ *
+ * DAMIT IST DIE ALTE BEGRUENDUNG WIDERLEGT: Die DREHUNG ist der Hebel, nicht
+ * der Kamerawinkel. 9 Grad mehr Drehung bringen 6,7 Prozentpunkte Gesicht,
+ * waehrend 4 Grad flachere Kamera 0,2 bringen. Trotzdem bleibt es bei 17, und
+ * das ist eine Abwaegung und kein Messergebnis: Je weiter die Figur zur Kamera
+ * steht, desto schlechter liest man, WOHIN sie schaut — und genau das muss man
+ * hier lesen koennen, weil die Gegenseite dasselbe Bild gespiegelt bekommt. Bei
+ * 34 Grad wird die Silhouette gedrungen und die beiden Dolche legen sich vor
+ * den Koerper. Wer mehr Gesicht will, geht auf 26; darueber kippt die
+ * Blickrichtung.
+ *
+ * DIESE REIHE IST AUCH DIE PROBE AUFS VORZEICHEN (siehe dreheFigur): Der
+ * Gesichtsanteil STEIGT mit der Drehung. Faellt er, steht die Figur von der
+ * Kamera weg gedreht und zeigt den Hinterkopf.
  */
 const DREHUNG_GRAD = 17;
 
@@ -916,6 +951,63 @@ async function ladeModell(url) {
   return modelle.get(url);
 }
 
+/**
+ * Stellt die Figur in ihre Blickrichtung: nach RECHTS, um "drehungGrad" zur
+ * Kamera herausgedreht.
+ *
+ * DAS IST DIE EINZIGE STELLE, an der die Drehung gesetzt wird — seit es neben
+ * dem Renderweg mit "messeKopf" eine zweite Betrachtung derselben Pose gibt.
+ * Zwei Fassungen derselben Zeile sind hier schon einmal auseinandergelaufen:
+ * Die Messung beschrieb dann eine andere Pose als das Bild daneben, und die
+ * Zahlen widersprachen dem Augenschein, ohne dass jemand sagen konnte, welche
+ * von beiden luegt.
+ *
+ * PLUS 90 Grad, MINUS die Drehung — und beide Vorzeichen haengen daran, dass
+ * das KayKit-Modell nach +Z schaut. Das ist nicht geraten, sondern an der
+ * Rogue.glb abgelesen: Rogue_ArmRight liegt bei x -0,97..-0,09 (der rechte
+ * Arm einer nach +Z schauenden Figur liegt links), Rogue_Cape ganz bei
+ * z -0,39..-0,04 (ein Umhang haengt hinten), die Zehen ragen nach +Z.
+ *
+ * Ry(a) bildet +Z auf (sin a, 0, cos a) ab. Die Kamera steht auf +Z und hat
+ * Weltachse +X rechts im Bild (baueKamera). Also:
+ *   +90° - d  ->  (cos d, 0, sin d)   rechts, d Grad ZUR Kamera   <- gewollt
+ *   +90° + d  ->  (cos d, 0, -sin d)  rechts, d Grad von ihr WEG
+ *   -90° - d  ->  (-cos d, 0, -sin d) links,  d Grad von ihr weg
+ *   -90° + d  ->  (-cos d, 0, sin d)  links,  d Grad zur Kamera
+ *
+ * WORAN MAN ES MERKT, WENN ES KIPPT — zwei verschiedene Fehler, und genau
+ * deshalb kommt man mit "einmal das Vorzeichen umdrehen" nicht hin:
+ *
+ * 1. VORNE/HINTEN falsch (das Vorzeichen VOR der Drehung d): Die Figur zeigt
+ *    den HINTERKOPF. Kein Auge, kein Ohr auf der Kameraseite, dafuer der
+ *    Umhang vorn und die Waffe hinter dem Koerper.
+ * 2. LINKS/RECHTS falsch (das Vorzeichen vor den 90 Grad): Die Figur zeigt
+ *    ihr Gesicht, aber nach LINKS — Waffe links vor dem Koerper, Umhang
+ *    rechts dahinter. figuren3d.ts verspricht der Oberflaeche rechts, und
+ *    gespiegelt wird dort nur die Gegenseite; ein linksblickendes Blatt
+ *    dreht damit BEIDE Seiten falsch herum.
+ *
+ * Beides ist hier schon passiert. Die erste Fassung stand auf +90° + d
+ * (Fehler 1). Wer den dann "umdreht", landet auf -90° - d — und das ist
+ * Fehler 1 UND 2 zugleich, nur faellt Fehler 1 dabei weniger auf. Genau so
+ * ging der zweite Satz Blaetter am 05.09.2026 raus. Am 09.09.2026 wurde ein
+ * dritter Anlauf auf -90° + d vorgeschlagen: Der behebt Fehler 1 und laesst
+ * Fehler 2 stehen — die Figur schaut dann zur Kamera, aber nach links.
+ *
+ * WIE MAN ES ENTSCHEIDET, statt es herzuleiten: "--vergleich" misst mit
+ * "messeKopf" und legt die Zahlen unter jede Zeile. Steht das Vorzeichen vor
+ * der Drehung richtig, STEIGT der Gesichtsanteil mit der Drehung; steht es
+ * falsch, faellt er.
+ *
+ * UND HIER IST DIE FALLE: Bei STEILER Kamera faellt Fehler 1 gar nicht auf.
+ * Von 38,6 Grad sieht man ohnehin nur den Scheitel, und der ist von vorn wie
+ * von hinten derselbe runde Kopf. Wer am Vorzeichen zweifelt, rendert
+ * deshalb NICHT bei 38,6 gegen, sondern flach.
+ */
+function dreheFigur(figur, drehungGrad) {
+  figur.rotation.y = Math.PI / 2 - (drehungGrad * Math.PI) / 180;
+}
+
 /** Der Knochen, an dem die Figur "haengt" — an ihm wird der Ort gemessen. */
 const ANKERKNOCHEN = 'hips';
 
@@ -930,41 +1022,7 @@ const ANKERKNOCHEN = 'hips';
 async function durchlaufen(url, bewegungen, raster, kameraKonfig, jeBild) {
   const gltf = await ladeModell(url);
   const figur = gltf.scene;
-  // PLUS 90 Grad, MINUS die Drehung — und beide Vorzeichen haengen daran, dass
-  // das KayKit-Modell nach +Z schaut. Das ist nicht geraten, sondern an der
-  // Rogue.glb abgelesen: Rogue_ArmRight liegt bei x -0,97..-0,09 (der rechte
-  // Arm einer nach +Z schauenden Figur liegt links), Rogue_Cape ganz bei
-  // z -0,39..-0,04 (ein Umhang haengt hinten), die Zehen ragen nach +Z.
-  //
-  // Ry(a) bildet +Z auf (sin a, 0, cos a) ab. Die Kamera steht auf +Z und hat
-  // Weltachse +X rechts im Bild (baueKamera). Also:
-  //   +90° - d  ->  (cos d, 0, sin d)   rechts, d Grad ZUR Kamera   <- gewollt
-  //   +90° + d  ->  (cos d, 0, -sin d)  rechts, d Grad von ihr WEG
-  //   -90° - d  ->  (-cos d, 0, -sin d) links,  d Grad von ihr weg
-  //   -90° + d  ->  (-cos d, 0, sin d)  links,  d Grad zur Kamera
-  //
-  // WORAN MAN ES MERKT, WENN ES KIPPT — zwei verschiedene Fehler, und genau
-  // deshalb kommt man mit "einmal das Vorzeichen umdrehen" nicht hin:
-  //
-  // 1. VORNE/HINTEN falsch (das Vorzeichen VOR der Drehung d): Die Figur zeigt
-  //    den HINTERKOPF. Kein Auge, kein Ohr auf der Kameraseite, dafuer der
-  //    Umhang vorn und die Waffe hinter dem Koerper.
-  // 2. LINKS/RECHTS falsch (das Vorzeichen vor den 90 Grad): Die Figur zeigt
-  //    ihr Gesicht, aber nach LINKS — Waffe links vor dem Koerper, Umhang
-  //    rechts dahinter. figuren3d.ts verspricht der Oberflaeche rechts, und
-  //    gespiegelt wird dort nur die Gegenseite; ein linksblickendes Blatt
-  //    dreht damit BEIDE Seiten falsch herum.
-  //
-  // Beides ist hier schon passiert. Die erste Fassung stand auf +90° + d
-  // (Fehler 1). Wer den dann "umdreht", landet auf -90° - d — und das ist
-  // Fehler 1 UND 2 zugleich, nur faellt Fehler 1 dabei weniger auf. Genau so
-  // ging der zweite Satz Blaetter am 05.09.2026 raus.
-  //
-  // UND HIER IST DIE FALLE: Bei STEILER Kamera faellt Fehler 1 gar nicht auf.
-  // Von 38,6 Grad sieht man ohnehin nur den Scheitel, und der ist von vorn wie
-  // von hinten derselbe runde Kopf. Wer am Vorzeichen zweifelt, rendert
-  // deshalb NICHT bei 38,6 gegen, sondern flach.
-  figur.rotation.y = Math.PI / 2 - (kameraKonfig.drehungGrad * Math.PI) / 180;
+  dreheFigur(figur, kameraKonfig.drehungGrad);
   // Die Figur haengt in einem Halter, der sie in jedem Bild zurueckschiebt
   // (siehe anStelleHalten weiter unten). Deshalb ein Halter und nicht die
   // Figur selbst: Die traegt schon die Drehung, und zwei Dinge an einem
@@ -1161,6 +1219,110 @@ window.rendereRolle = async (url, bewegungen, raster, kameraKonfig) => {
   return { bild: blatt.toDataURL('image/png'), laengen, fusspunkt };
 };
 
+/**
+ * Misst, wieviel vom Kopf SCHEITEL ist und wieviel GESICHT.
+ *
+ * Das ist die Frage, die man einem Bild sonst nur ansieht, und "sieht man das
+ * Gesicht?" ist als Augenmass zwischen 12 und 16 Grad nicht mehr zu trennen.
+ * Gemessen wird deshalb die sichtbare FLAECHE nach ihrer Ausrichtung:
+ *
+ * - Es wird nur der Kopf gezeichnet (alle anderen Teile unsichtbar), damit
+ *   Schulter, Umhang und Waffe die Zahlen nicht verduennen. Beim Rogue gehoert
+ *   das Haar zum Kopfnetz — richtig so: Ein Topfschnitt, den man von oben
+ *   sieht, IST der Scheitel.
+ * - Gezeichnet wird mit MeshNormalMaterial, das die Normale je Pixel ausgibt.
+ *   Sie steht dort im BLICKRAUM; mit der Drehung der Kamera wird sie in den
+ *   Weltraum zurueckgerechnet, denn "oben" und "nach vorn" sind Richtungen der
+ *   Welt und nicht des Bildes.
+ * - scheitel: Normale zeigt nach oben (n·oben >= 0,5, also flacher als 60 Grad
+ *   zur Waagerechten). gesicht: Normale zeigt dorthin, wohin die Figur schaut.
+ *
+ * DAMIT HAENGT AUCH DAS VORZEICHEN DER DREHUNG AN EINER ZAHL statt am Auge:
+ * Steht es richtig, waechst "gesicht" mit der Drehung (siehe dreheFigur).
+ *
+ * Was NICHT gemessen wird: ob das Auge im Bild zu erkennen ist. Das ist eine
+ * Frage der Textur, nicht der Flaeche — deshalb liegen die Bilder daneben.
+ */
+window.messeKopf = async (url, kameraKonfig) => {
+  const gltf = await ladeModell(url);
+  const figur = gltf.scene;
+  dreheFigur(figur, kameraKonfig.drehungGrad);
+  const halter = new THREE.Group();
+  halter.add(figur);
+  szene.add(halter);
+  halter.updateMatrixWorld(true);
+
+  // Die Ruhepose (Zeit 0 von "stand"), nicht irgendein Bild: Im Schlag dreht
+  // der Kopf mit, und dann misst man die Animation statt der Kamera.
+  const mischer = new THREE.AnimationMixer(figur);
+  const stand = gltf.animations.find((c) => c.name === 'stand');
+  if (stand) {
+    const aktion = mischer.clipAction(stand);
+    aktion.reset();
+    aktion.play();
+    mischer.setTime(0);
+  }
+
+  const merker = [];
+  figur.traverse((teil) => {
+    if (!teil.isMesh) return;
+    merker.push([teil, teil.visible, teil.material]);
+    const istKopf = /_Head(_[A-Za-z]+)?$/.test(teil.name);
+    teil.visible = istKopf;
+    if (istKopf) teil.material = new THREE.MeshNormalMaterial();
+  });
+
+  // Wohin die Figur schaut: ihre eigene +Z-Achse, durch die Weltmatrix
+  // geschickt. Aus der Drehung zurueckzurechnen waere dieselbe Zahl zweimal.
+  const vorn = new THREE.Vector3(0, 0, 1)
+    .transformDirection(figur.matrixWorld)
+    .normalize();
+  const oben = new THREE.Vector3(0, 1, 0);
+
+  // Quadratisch messen, egal was der letzte Durchlauf an der Leinwand stehen
+  // liess: Eine breite Zelle (Todeszeile) wuerde sonst die Zaehlung verzerren.
+  renderer.setSize(KANTE, KANTE, false);
+  const kamera = baueKamera(kameraKonfig);
+  // Die Normalen kommen im Blickraum heraus; diese Matrix dreht sie zurueck.
+  const zurueck = new THREE.Matrix3().setFromMatrix4(kamera.matrixWorld);
+
+  renderer.render(szene, kamera);
+  messblatt.width = KANTE;
+  messblatt.height = KANTE;
+  messstift.clearRect(0, 0, KANTE, KANTE);
+  messstift.drawImage(renderer.domElement, 0, 0);
+  const daten = messstift.getImageData(0, 0, KANTE, KANTE).data;
+
+  let kopf = 0;
+  let scheitel = 0;
+  let gesicht = 0;
+  const n = new THREE.Vector3();
+  for (let i = 0; i < KANTE * KANTE; i++) {
+    if (daten[i * 4 + 3] <= 8) continue;
+    kopf++;
+    n.set(
+      (daten[i * 4] / 255) * 2 - 1,
+      (daten[i * 4 + 1] / 255) * 2 - 1,
+      (daten[i * 4 + 2] / 255) * 2 - 1,
+    )
+      .applyMatrix3(zurueck)
+      .normalize();
+    if (n.dot(oben) >= 0.5) scheitel++;
+    if (n.dot(vorn) >= 0.5) gesicht++;
+  }
+
+  for (const [teil, sichtbar, stoff] of merker) {
+    teil.visible = sichtbar;
+    teil.material = stoff;
+  }
+  mischer.stopAllAction();
+  mischer.uncacheRoot(figur);
+  szene.remove(halter);
+
+  if (!kopf) throw new Error('Kein Kopf im Bild: ' + url);
+  return { kopf, scheitel, gesicht };
+};
+
 window.bereit = true;
 </script>
 </body></html>`;
@@ -1237,8 +1399,15 @@ async function messeAusschnitt(seite, rollen, { grad: winkel, drehungGrad }) {
   return { grad: winkel, drehungGrad, halbeHoehe, mitteY, halbBreiten };
 }
 
-/** Rendert ein Blatt und gibt es als PNG-Puffer in Zielgroesse zurueck. */
-async function rendereBlatt(seite, sharp, rolle, kameraKonfig) {
+/**
+ * Rendert ein Blatt und gibt es als PNG-Puffer zurueck.
+ *
+ * `kante` ist die Zellgroesse des Ergebnisses. Die Blaetter fuers Spiel
+ * bekommen KANTE (128); die Winkelbilder bleiben auf der vollen
+ * Renderaufloesung, weil ein Gesicht, um das es dort geht, in 128 Pixeln Hoehe
+ * nicht mehr zu beurteilen ist.
+ */
+async function rendereBlatt(seite, sharp, rolle, kameraKonfig, kante = KANTE) {
   const raster = rasterVon(BEWEGUNGEN);
   const { bild, laengen, fusspunkt } = await seite.evaluate(
     ([url, bewegungen, r, konfig]) => window.rendereRolle(url, bewegungen, r, konfig),
@@ -1246,10 +1415,23 @@ async function rendereBlatt(seite, sharp, rolle, kameraKonfig) {
   );
   const roh = Buffer.from(bild.slice('data:image/png;base64,'.length), 'base64');
   const png = await sharp(roh)
-    .resize(raster.spalten * KANTE, raster.zeilen * KANTE, { kernel: 'lanczos3' })
+    .resize(raster.spalten * kante, raster.zeilen * kante, { kernel: 'lanczos3' })
     .png()
     .toBuffer();
-  return { png, raster, laengen, fusspunkt };
+  return { png, raster, laengen, fusspunkt, kante };
+}
+
+/** Fragt die Kopfmessung fuer eine Rolle ab und rechnet sie in Prozent um. */
+async function messeKopf(seite, rolle, kameraKonfig) {
+  const roh = await seite.evaluate(
+    ([url, konfig]) => window.messeKopf(url, konfig),
+    [`/modelle/${rolle}.glb`, kameraKonfig],
+  );
+  return {
+    rolle,
+    scheitel: (roh.scheitel / roh.kopf) * 100,
+    gesicht: (roh.gesicht / roh.kopf) * 100,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1426,6 +1608,117 @@ function beschriftung(text, unterzeile, x, y) {
 }
 
 /**
+ * Fuer diese Winkel entsteht zusaetzlich EIN EIGENES Bild je Winkel.
+ *
+ * Die Uebersicht mit allen vier Winkeln untereinander beantwortet "welcher ist
+ * anders"; sie beantwortet nicht "sieht man hier das Gesicht", weil eine Zelle
+ * darin 128 Pixel hoch ist und ein Kopf davon dreissig. Die Brettkamera bekommt
+ * kein eigenes Bild — sie steht nicht zur Wahl.
+ */
+const EIGENES_BILD_FUER = [22, 16, 12];
+
+/**
+ * Ein Bild fuer EINEN Winkel: beide Rollen, vier Posen, volle Aufloesung.
+ *
+ * Dateiname mit dem Winkel darin (`…-16grad.webp`), damit man die drei nicht
+ * verwechselt, wenn sie einzeln herumgereicht werden. Unter jeder Zeile stehen
+ * die gemessenen Kopfanteile — die Zahl gehoert neben das Bild, zu dem sie
+ * gehoert, sonst glaubt man sie oder eben nicht.
+ */
+async function baueWinkelbild(winkel, ausschnitt, koepfe) {
+  const kante = KANTE * UEBERABTASTUNG;
+  const blattRaster = rasterVon(BEWEGUNGEN);
+  const auswahl = VERGLEICH_ZELLEN.map((wahl) => {
+    const nr = BEWEGUNGEN.findIndex((b) => b.name === wahl.bewegung);
+    const { zeile, weite, proZeile } = blattRaster.je[nr];
+    return {
+      ...wahl,
+      breite: Math.round(kante * weite),
+      links: Math.round((wahl.bild % proZeile) * weite * kante),
+      oben: (zeile + Math.floor(wahl.bild / proZeile)) * kante,
+    };
+  });
+
+  const reihen = [];
+  for (const rolle of VERGLEICH_ROLLEN) {
+    const { png } = await rendereBlatt(seite, sharp, rolle, ausschnitt, kante);
+    const zellen = [];
+    for (const wahl of auswahl) {
+      zellen.push(
+        await sharp(png)
+          .extract({ left: wahl.links, top: wahl.oben, width: wahl.breite, height: kante })
+          .png()
+          .toBuffer(),
+      );
+    }
+    reihen.push({ rolle, zellen });
+  }
+
+  const spalte = 210;
+  const kopf = 118;
+  const spaltenX = [];
+  let lauf = spalte;
+  for (const zelle of auswahl) {
+    spaltenX.push(lauf);
+    lauf += zelle.breite;
+  }
+  const breite = lauf;
+  const hoehe = kopf + reihen.length * kante + 12;
+
+  const teile = [];
+  const texte = [
+    beschriftung(
+      `Kamerawinkel ${grad(winkel)}`,
+      `Drehung ${DREHUNG_GRAD}° · Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)} (gemessen) · Zelle ${kante} px`,
+      16,
+      34,
+    ),
+    `<text x="16" y="82" fill="#e8c98a" font-family="sans-serif" font-size="15">Scheitel / Gesicht: Anteil der sichtbaren Kopffläche, an den Normalen gemessen</text>`,
+  ];
+  auswahl.forEach((wahl, i) => {
+    texte.push(
+      `<text x="${spaltenX[i] + wahl.breite / 2}" y="${kopf - 14}" fill="#9c8d7c" font-family="sans-serif" font-size="16" text-anchor="middle">${wahl.bewegung}</text>`,
+    );
+  });
+
+  reihen.forEach((reihe, i) => {
+    const oben = kopf + i * kante;
+    const mass = koepfe.find((k) => k.rolle === reihe.rolle);
+    texte.push(
+      beschriftung(
+        reihe.rolle,
+        `Scheitel ${mass.scheitel.toFixed(1)} % · Gesicht ${mass.gesicht.toFixed(1)} %`,
+        16,
+        oben + 46,
+      ),
+    );
+    reihe.zellen.forEach((zelle, s) => {
+      teile.push({ input: zelle, left: spaltenX[s], top: oben });
+    });
+  });
+
+  const raster = reihen
+    .map(
+      (_, i) =>
+        `<rect x="0" y="${kopf + i * kante}" width="${breite}" height="${kante}" fill="${i % 2 ? '#2b231d' : '#241d18'}"/>`,
+    )
+    .join('');
+  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">${raster}${texte.join('')}</svg>`;
+
+  const ziel = join(
+    dirname(VERGLEICHSBILD),
+    `tafelrunde-kamera-${String(winkel).replace('.', ',')}grad.webp`,
+  );
+  await mkdir(dirname(ziel), { recursive: true });
+  await sharp({ create: { width: breite, height: hoehe, channels: 4, background: V_GRUND } })
+    .composite([{ input: Buffer.from(svg), left: 0, top: 0 }, ...teile])
+    .webp({ quality: 82, effort: 6 })
+    .toFile(ziel);
+  const groesse = (await readFile(ziel)).byteLength;
+  console.log(`  -> ${ziel} (${breite}x${hoehe}, ${kb(groesse)})`);
+}
+
+/**
  * Rendert die Vergleichswinkel nebeneinander und legt sie als EIN Bild ab.
  *
  * Ein Bild und nicht zwoelf Dateien: Robin soll die Winkel nebeneinander sehen
@@ -1445,6 +1738,15 @@ async function baueVergleich() {
     console.log(
       `Kamera ${grad(winkel)}: halbe Hoehe ${ausschnitt.halbeHoehe.toFixed(3)}  Mitte y ${ausschnitt.mitteY.toFixed(3)}`,
     );
+    const koepfe = [];
+    for (const rolle of VERGLEICH_ROLLEN) {
+      const mass = await messeKopf(seite, rolle, ausschnitt);
+      koepfe.push(mass);
+      console.log(
+        `  Kopf ${rolle.padEnd(9)} Scheitel ${mass.scheitel.toFixed(1)} %  Gesicht ${mass.gesicht.toFixed(1)} %`,
+      );
+    }
+    if (EIGENES_BILD_FUER.includes(winkel)) await baueWinkelbild(winkel, ausschnitt, koepfe);
     for (const rolle of VERGLEICH_ROLLEN) {
       const { png } = await rendereBlatt(seite, sharp, rolle, ausschnitt);
       zeilen.push({
@@ -1469,10 +1771,17 @@ async function baueVergleich() {
       drehungGrad: drehung,
     });
     const { png } = await rendereBlatt(seite, sharp, 'meuchler', ausschnitt);
+    // Die Zahl gehoert an DIESE Zeile: An ihr, und nur an ihr, sieht man das
+    // Vorzeichen der Drehung — steigt der Gesichtsanteil mit der Drehung,
+    // steht es richtig (siehe dreheFigur).
+    const mass = await messeKopf(seite, 'meuchler', ausschnitt);
+    console.log(
+      `Drehung ${drehung}°: Scheitel ${mass.scheitel.toFixed(1)} %  Gesicht ${mass.gesicht.toFixed(1)} %`,
+    );
     zeilen.push({
       png,
       titel: `Drehung ${drehung}°`,
-      unter: `bei ${grad(VERGLEICH_DREHUNG_GRAD)} · meuchler`,
+      unter: `bei ${grad(VERGLEICH_DREHUNG_GRAD)} · Scheitel ${mass.scheitel.toFixed(1)} % · Gesicht ${mass.gesicht.toFixed(1)} %`,
     });
   }
 
