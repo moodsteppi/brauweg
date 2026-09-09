@@ -568,7 +568,32 @@ export class PartyRuntime {
    */
   async act(tableId: string, accountId: string, action: unknown): Promise<void> {
     const party = this.requireLive(tableId);
-    if (party.finished) throw conflict('partyFinished');
+    if (party.finished) {
+      /**
+       * Beendete Partie: erst das Modul fragen, dann urteilen.
+       *
+       * Die Rundenpause endet, sobald der letzte anwesende Mensch "Weiter"
+       * tippt oder die Frist ablaeuft — bei der letzten Runde endet damit die
+       * ganze Partie. Wer in genau diesem Moment tippt, findet den Tisch da,
+       * wo er ihn haben wollte, und die Engine nennt seinen Tipp deshalb
+       * wirkungslos statt falsch (weiter() in game-doppelkopf/src/party.ts).
+       * Nur kam sie nie dran: Diese Zeile hat vorher jede Aktion auf einer
+       * beendeten Partie abgewiesen, und der Durchstich (realtime.test.ts)
+       * war unter Last daran rot, obwohl beide Clients alles richtig gemacht
+       * hatten. Dasselbe Rennen wie bei der verspaeteten Vorbehaltsantwort
+       * (applyVorbehalt in game-doppelkopf/src/round.ts, 06.09.2026), nur
+       * eine Ebene hoeher.
+       *
+       * Das Ergebnis wird weggeworfen: Ein Spielmodul ist eine reine
+       * Logikbibliothek, der Probelauf kostet nichts und aendert nichts. Und
+       * er entscheidet ALLEIN ueber das Nichts — alles andere bleibt
+       * 'partyFinished'. Eine gespielte Karte auf einer abgerechneten Partie
+       * ist kein Rennen, sondern ein Fehler, und sie soll auch so heissen.
+       */
+      const sitz = this.seatOf(party, accountId);
+      if (sitz !== null && this.wirkungslos(party, sitz, action)) return;
+      throw conflict('partyFinished');
+    }
     if (party.paused) throw conflict('partyPaused');
 
     const seat = this.seatOf(party, accountId);
@@ -592,6 +617,22 @@ export class PartyRuntime {
     party.state = next;
 
     await this.afterAction(party);
+  }
+
+  /**
+   * Laesst die Aktion den Zustand unveraendert?
+   *
+   * Dieselbe Frage wie das `next === party.state` in `act` — hier nur fuer
+   * einen Zustand, auf dem gar nicht mehr gehandelt werden darf. Ein Wurf des
+   * Moduls heisst dabei "nicht wirkungslos": Der Aufrufer soll dann seine
+   * eigene, genauere Ablehnung melden.
+   */
+  private wirkungslos(party: LiveParty, seat: number, action: unknown): boolean {
+    try {
+      return party.module.act(party.state, seat, action) === party.state;
+    } catch {
+      return false;
+    }
   }
 
   private async afterAction(party: LiveParty): Promise<void> {
