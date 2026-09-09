@@ -165,7 +165,13 @@ Vorhandenes wiederverwenden statt neu erfinden:
   `docs/ASSETS-PINGUIN.md`.
 - **Bereitschaftspunkt** (`hub-punkt`): roter Punkt an einem Knopf, wenn dahinter
   etwas zu holen ist. Nie eine Zahl — auf einem 3,5-rem-Knopf ist sie nicht
-  lesbar. Die Zahl steht drinnen.
+  lesbar. Die Zahl steht drinnen. Er sitzt an der Truhe, an den Profilkacheln
+  und am Profil-Reiter der Tab-Leiste (dort für die Geburtstagsbelohnung, die
+  es nur einen Tag im Jahr gibt). Am Reiter ist er kleiner und rückt an die
+  Ecke des Symbols: In einem Raster mit 0,2-rem-Fuge hängt ein Punkt an der
+  Knopfkante zur Hälfte im Nachbarreiter. Und er trägt dort einen
+  Vorlesetext: Er zeigt auf etwas, das man sonst gar nicht findet, und ohne
+  Text wäre der Hinweis nur für Sehende da.
 
 ## Bilder und Icons
 

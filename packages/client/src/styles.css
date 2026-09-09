@@ -3001,6 +3001,8 @@ td {
 }
 
 .front-tab {
+  /* Traegt den Bereitschaftspunkt (siehe unten). */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3013,6 +3015,27 @@ td {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+/*
+  Der Punkt sitzt an der Ecke des SYMBOLS, nicht an der des Knopfes.
+
+  Die Leiste ist ein Raster mit 0,2rem Fuge; ein Punkt an der Knopfkante
+  haengt zur Haelfte im Nachbarreiter und sieht aus, als gehoere er dorthin.
+  Kleiner als an der Truhe ist er auch: Dort hat er einen 3,5rem-Knopf fuer
+  sich, hier teilt er sich einen Fuenftel der Bildschirmbreite mit Symbol
+  und Wort.
+*/
+.front-tab .hub-punkt {
+  top: 0.15rem;
+  right: auto;
+  left: 50%;
+  margin-left: 0.3rem;
+  /* Mit `box-sizing: border-box` zaehlt der 2px-Ring mit: unter 0,7rem
+     bleibt vom roten Kern weniger als die Fassung, und der Punkt sieht
+     grau aus statt rot. */
+  width: 0.7rem;
+  height: 0.7rem;
 }
 
 .front-tab-icon {
