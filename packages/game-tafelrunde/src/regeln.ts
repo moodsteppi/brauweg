@@ -22,10 +22,34 @@ export interface TafelrundeRegeln {
   readonly ladenPlaetze: number;
   /** Plaetze auf der Reservebank. Das Konzept nennt 5 bis 9. */
   readonly bankPlaetze: number;
-  /** Was ein Neu-Wuerfeln kostet. */
+  /**
+   * Was ein Neu-Wuerfeln kostet. Vorgabe 0 — siehe DEFAULT_REGELN.
+   *
+   * Das Feld bleibt bestehen, obwohl die Vorgabe nichts mehr verlangt: Ein
+   * selbstgebauter Tisch soll den Preis wieder setzen koennen, ohne dass
+   * dafuer eine Regel zurueckgebaut werden muss.
+   */
   readonly neuwuerfelnKosten: number;
   /** Grundeinkommen je Runde, vor Zins und Serienbonus. */
   readonly grundeinkommen: number;
+  /**
+   * Wie lange eine Vorbereitung hoechstens dauert. Danach gelten alle offenen
+   * Sitze als bereit und der Kampf beginnt (`fristAbgelaufen` in partie.ts).
+   *
+   * DAS MODUL MISST DIE ZEIT NICHT. Es nennt nur die Dauer; gemessen wird sie
+   * von der Plattform, die nach Ablauf `advancePhase` ruft (game-api,
+   * Grundsatz 1 und `phaseMs`). Deshalb steht hier eine Dauer und kein
+   * Zeitpunkt — einen Zeitpunkt koennte dieses Paket gar nicht bilden.
+   *
+   * WARUM ES SIE UEBERHAUPT GIBT: Bis zum 06.09.2026 endete die Vorbereitung
+   * ausschliesslich, wenn der LETZTE Sitz "bereit" meldete. Einen Deckel
+   * darauf gab es nur mittelbar ueber die Zugzeit der Plattform, und die taugt
+   * hier nicht: Sie wird bei JEDER Aktion IRGENDEINES Sitzes neu gestellt
+   * (alle ruesten gleichzeitig) und faellt ganz weg, sobald der genannte Sitz
+   * ein Bot ist. Am Bildschirm stand deshalb keine Restzeit, sondern
+   * "2 von 4 bereit".
+   */
+  readonly vorbereitungMs: number;
   /**
    * Nach so vielen Runden ist Schluss, auch wenn noch mehrere leben.
    *
@@ -36,43 +60,99 @@ export interface TafelrundeRegeln {
    * BIS ZUM 05.09.2026 WAR ER MEHR ALS DAS: Mit 100 Startleben endeten zu
    * viert 18 % und zu acht 73 % aller Partien hier, ohne dass jemand gewonnen
    * hatte. Behoben wurde das nicht an dieser Zahl, sondern am Lebensvorrat
-   * (20 statt 100) und am Schaden je Niederlage (SCHADEN_STUFEN_TEILER in
-   * kampf.ts) — eine Runde dauert bis zu anderthalb Minuten, mehr Runden waeren
-   * die falsche Antwort gewesen. Gemessen ueber 5.000 Partien zu viert und je
-   * 500 zu sechst und zu acht endet seitdem KEINE einzige hier; die laengste
-   * lief 25 Runden. Dreissig sind damit wieder das, was sie sein sollen: ein
-   * Rettungsseil.
+   * (heute 14 statt 100) und am Schaden je Niederlage (SCHADEN_STUFEN_TEILER
+   * in kampf.ts) — mehr Runden waeren die falsche Antwort gewesen. Gemessen
+   * ueber 5.000 Partien zu viert und je 500 zu sechst und zu acht endet
+   * seitdem KEINE einzige hier; die laengste von allen lief 19 Runden (zu
+   * acht), zu viert waren es 16. Dreissig sind damit wieder das, was sie sein
+   * sollen: ein Rettungsseil.
    */
   readonly rundenGrenze: number;
 }
 
 /**
- * 20 Leben, 2 Gold zum Start.
+ * 12 Leben, 2 Gold zum Start.
  *
- * ZWANZIG UND NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja
- * ein kurzes Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit
- * 100 Leben und dem damaligen Schaden brauchte ein Ausscheiden rund zwanzig
- * verlorene Kaempfe, und die Partie lief in die Rundengrenze statt zu Ende.
- * Zwanzig Leben sind ausserdem eine Zahl, die man am Handy noch als Balken
+ * NICHT HUNDERT (seit dem 05.09.2026, Robins Vorgabe: "es soll ja ein kurzes
+ * Handyspiel sein"). Der Lebensbalken ist die Uhr der Partie: Mit 100 Leben
+ * und dem damaligen Schaden brauchte ein Ausscheiden rund zwanzig verlorene
+ * Kaempfe, und die Partie lief in die Rundengrenze statt zu Ende. Eine
+ * zweistellige Zahl ist ausserdem eine, die man am Handy noch als Balken
  * lesen kann — bei 100 zaehlt niemand mit.
  *
- * Der Schaden je Niederlage wurde MIT geaendert und gehoert dazu: 20 Leben bei
- * altem Schaden waeren nach acht Runden vorbei gewesen (gemessen). Wer hier
- * dreht, dreht auch an SCHADEN_STUFEN_TEILER in kampf.ts und misst danach mit
+ * VON 20 AUF 14 (05.09.2026 vormittags, nach der Messung in
+ * docs/TAFELRUNDE-SPIELZEIT.md). Mit 20 dauerte eine Partie 13:31 im Median
+ * bei 15 Runden, das Ziel sind acht Minuten. Die Startleben kaufen Zeit ueber
+ * die Rundenzahl. Die zweite Haelfte jener Aenderung ist `zeitraffer: 2` in
+ * STANDARD_REGLER (kampf.ts) — die beiden Zahlen wurden zusammen gemessen und
+ * gehoeren zusammen.
+ *
+ * UND VON 14 AUF 12 (05.09.2026 abends, Robins Entscheidung). Anlass war
+ * nicht die Zeit an sich, sondern was sie gekostet hat: Seit der Bot auf
+ * Marken spielt (bot.ts, `heerStaerke`), baut er staerkere Bretter, die
+ * laenger kaempfen — die Partie war von 7:27 auf 8:25 gewachsen und lag damit
+ * ueber den acht Minuten. Zur Wahl standen die Marken zurueckzudrehen oder
+ * die Startleben; entschieden wurden die Startleben, weil die Marken gerade
+ * erst repariert worden sind. Gemessen ueber 5.000 Partien zu viert:
+ * 7:23 im Median bei 9 Runden, Gegenprobe 7:24.
+ *
+ * NEUN RUNDEN SIND WENIG, und die Zahl ist mit Absicht nachgemessen worden:
+ * In dieser Datei stand lange, vor Runde 10 stehe kein ausgebautes Brett, wer
+ * da ausscheide, habe nicht verloren, sondern nicht gespielt. Ueber 500
+ * Partien nachgezaehlt trifft das NICHT zu — wer ausscheidet, hat im Schnitt
+ * 3,35 Einheiten auf dem Brett (bei 14 Leben waren es 3,67), KEIN einziges
+ * Ausscheiden geschah mit hoechstens zwei Einheiten, und das frueheste liegt
+ * in Runde 5. Was die Runde wirklich kostet, ist die Brettgroesse am oberen
+ * Ende: Vier Einheiten stehen in 15,2 % der Antritte statt in 21,0 %, fuenf
+ * in 0,9 % statt 2,7 %. Daran haengt die hoechste Synergieschwelle, die
+ * fuenf Traeger braucht — sie faellt von 0,9 % auf 0,3 % der Antritte. Die
+ * mittlere haelt sich bei 35,2 % (vorher 42,4 %).
+ *
+ * WER NOCH EINMAL KUERZT, streicht das ausgebaute Brett wirklich: Bei 10
+ * Leben sind es 8 Runden, und dort steht die obere Haelfte der Schwellen
+ * nicht mehr. Zehn ist ausserdem die untere Schranke aus `pruefeRegeln`.
+ *
+ * Der Schaden je Niederlage gehoert mit dazu: 20 Leben bei altem Schaden
+ * waeren nach acht Runden vorbei gewesen (gemessen). Wer hier dreht, dreht
+ * auch an SCHADEN_STUFEN_TEILER in kampf.ts und misst danach mit
  * werkzeug/ausgewogenheit.mjs.
  *
  * Zwei Gold und nicht fuenf: In der ersten Vorbereitung soll man EINE Einheit
  * kaufen und danach leer sein. Wer mit fuenf anfinge, kaufte den halben Laden
  * leer, und die ersten drei Runden waeren entschieden, bevor jemand eine
  * Entscheidung getroffen hat.
+ *
+ * NEU-WUERFELN KOSTET NICHTS (seit dem 05.09.2026, Robins Vorgabe: "wir wollen
+ * nicht mehr, dass man fuers Rollen Geld ausgeben soll"). Zusammen mit dem
+ * Nachfuellen nach dem Kauf (partie.ts, `fuelleNach`) heisst das: Gold wird nur
+ * noch fuer Einheiten und Aufstiege ausgegeben. Was das Nachziehen begrenzt,
+ * ist allein der Vorrat — wer ihn leerkauft, sieht leere Ladenplaetze, und das
+ * ist die einzige Bremse, die es hier noch gibt.
+ *
+ * FUENFUNDVIERZIG SEKUNDEN VORBEREITUNG (seit dem 06.09.2026) sind gemessen
+ * und nicht gegriffen. Ueber 7.637 Runden aus 800 Partien zu viert
+ * (`werkzeug/spielzeit.mjs`, Saatbasis frist-v1) macht der fleissigste Sitz
+ * einer Runde im Median 7 Handgriffe, im 99. Hundertstel 17 und hoechstens 23.
+ * Ueber das Zeitmodell des Messstands (5 s Grundzeit + 1,5 s je Handgriff,
+ * `Zeitmodell` in test/messen.ts) sind das 15,5 s, 30,5 s und 39,5 s. Die
+ * Frist liegt damit UEBER der laengsten gemessenen Runde: Sie schneidet keine
+ * zuegige Vorbereitung ab, sondern beendet die Phase fuer jemanden, der nicht
+ * mehr hinsieht. Nach unten begrenzt sie die Partie trotzdem hart — neun
+ * Runden mal 45 s sind 6:45 im schlimmsten Fall, und darunter passen die
+ * Kaempfe noch in Robins acht Minuten.
+ *
+ * KUERZER MACHEN heisst, jemandem den Kauf wegzunehmen, den er gerade tippt.
+ * Wer es trotzdem tut, misst vorher nach: Die drei Zahlen oben stehen als
+ * Probe in test/spielzeit.ts.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
-  startLeben: 20,
+  startLeben: 12,
   startGold: 2,
   ladenPlaetze: 5,
   bankPlaetze: 9,
-  neuwuerfelnKosten: 2,
+  neuwuerfelnKosten: 0,
   grundeinkommen: 5,
+  vorbereitungMs: 45_000,
   rundenGrenze: 30,
 };
 
@@ -89,9 +169,9 @@ export const DEFAULT_REGELN: TafelrundeRegeln = {
  * (SITZE in Tafelrunde.tsx), die Lobby steht auf vier, und gemessen wird zu
  * viert. Die uebrigen Groessen bleiben trotzdem in der Liste: Sie sind seit dem
  * kuerzeren Lebensbalken nachweislich in Ordnung — je 500 Partien zu sechst
- * (Median 16 Runden) und zu acht (18), keine einzige an der Rundengrenze. Eine
- * Zahl aus dieser Liste zu streichen, die funktioniert, verbietet nur den
- * selbstgebauten Tisch und gewinnt nichts.
+ * (Median 12 Runden, 9:22) und zu acht (13,5 Runden, 10:39), keine einzige an
+ * der Rundengrenze. Eine Zahl aus dieser Liste zu streichen, die funktioniert,
+ * verbietet nur den selbstgebauten Tisch und gewinnt nichts.
  */
 export const SEAT_COUNTS: readonly number[] = [2, 3, 4, 5, 6, 7, 8];
 
@@ -232,6 +312,9 @@ const SCHRANKEN: Readonly<Record<keyof TafelrundeRegeln, readonly [number, numbe
   bankPlaetze: [MAX_LEVEL, 12],
   neuwuerfelnKosten: [0, 10],
   grundeinkommen: [1, 20],
+  // Unter zehn Sekunden ist keine Vorbereitung, sondern ein Reflextest; ueber
+  // fuenf Minuten je Runde waere der Deckel keiner mehr.
+  vorbereitungMs: [10_000, 300_000],
   rundenGrenze: [5, 100],
 };
 
@@ -264,4 +347,20 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   }
 
   return probleme;
+}
+
+/**
+ * Fehlende Frist aus der Vorgabe ergaenzen.
+ *
+ * `vorbereitungMs` kam am 06.09.2026 dazu. Ein Regelsatz, der VORHER
+ * gespeichert wurde — in einem Partie-Snapshot oder an einem wartenden Tisch —
+ * hat das Feld nicht, und `undefined` waere hier keine harmlose Luecke: Das
+ * Modul nennte der Plattform keine Frist mehr, und die Platzierungsphase
+ * stuende wieder ohne Deckel da. Genau derselbe Griff wie bei `wuerfeRunde`
+ * in adapter.ts.
+ */
+export function mitFrist(regeln: TafelrundeRegeln): TafelrundeRegeln {
+  return regeln.vorbereitungMs === undefined
+    ? { ...regeln, vorbereitungMs: DEFAULT_REGELN.vorbereitungMs }
+    : regeln;
 }

@@ -1,0 +1,37 @@
+{
+  "name": "@brauweg/game-golf",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Regel-Engine fuer Golf - Echtzeit-Minigolf im Gleichschritt",
+  "main": "dist/src/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "node ../../werkzeug/dist-raeumen.mjs && tsc",
+    "test": "npm run build && node --test \"dist/test/**/*.test.js\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "@brauweg/game-api": "*"
+  }
+}

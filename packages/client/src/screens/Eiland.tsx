@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api, type TableRow } from '../api';
+import { api, type Suchstand } from '../api';
 import { GRAUTOENE, auswahlton, gebietsfarbe, kampffarbe } from '../minispiele/eiland/farben';
 import {
   type Modus,
@@ -13,6 +13,8 @@ import {
   zelleVon,
 } from '../minispiele/eiland/gesten';
 import { Ornamentbild } from '../minispiele/eiland/Ornament';
+import type { EilandSicht, EilandVariante } from '../minispiele/eiland/sicht';
+import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 
 /**
@@ -20,9 +22,9 @@ import { useTable } from '../useTable';
  *
  * Ein Bildschirm mit zwei Gesichtern, wie bei Filler und Mememory: ohne Tisch
  * das Hauptmenue mit der Match-Suche, mit Tisch die Karte. Der Tisch wird HIER
- * gehalten und nicht ueber App.tsx geroutet — die Match-Suche muss den Tisch
- * unter Umstaenden wechseln (siehe die Wettrennen-Regel unten), und ein
- * Wechsel ueber zwei Bildschirmzustaende hinweg waere ein Flackern.
+ * gehalten und nicht ueber App.tsx geroutet — die Suche reicht ihre
+ * Tischkennung mitten im Bildschirm nach, und ein Wechsel ueber zwei
+ * Bildschirmzustaende hinweg waere ein Flackern.
  *
  * Arbeitsteilung mit dem Spielmodul: Der Bildschirm bildet KEINE Regel nach.
  * Welche Felder anwaehlbar sind, rechnet er nicht aus — sie stehen als
@@ -30,64 +32,37 @@ import { useTable } from '../useTable';
  * nicht: Dort steht `null`, und ein `null` wird grau gezeichnet.
  */
 
-/** Sicht des Moduls, siehe packages/game-eiland/src/sicht.ts. */
-interface EilandSicht {
-  ich: number | null;
-  spalten: number;
-  zeilen: number;
-  sichtweite: number;
-  /** 'nebel' oder 'klar' — siehe packages/game-eiland/src/regeln.ts. */
-  variante: EilandVariante;
-  /** 0 Gras, 1 Wasser, 2 Berg — oder null, solange das Feld im Nebel liegt. */
-  gelaende: (number | null)[];
-  ornament: (number | null)[];
-  /** Eingesammelte Ornamente, die als Bauwerk stehen geblieben sind. */
-  bauwerk: (number | null)[];
-  besitzer: (number | null)[];
-  /** Grauton je Platz — nur Zeichnung, verraet nichts. */
-  grau: number[];
-  punkte: Record<number, number>;
-  gesammelt: Record<number, number>;
-  kontingent: Record<number, number>;
-  bereit: Record<number, boolean>;
-  wahl: number[];
-  waehlbar: number[];
-  runde: number;
-  letzte: {
-    runde: number;
-    /** In Entscheidungsreihenfolge; `einsatz` = Sitze, die ein Feld darauf gesetzt haben. */
-    kaempfe: { platz: number; sieger: number; einsatz: number[] }[];
-    reserve: Record<number, number>;
-    genommen: Record<number, number[]>;
-    verfallen: Record<number, number[]>;
-    ornamente: Record<number, number>;
-  } | null;
-  fertig: boolean;
-  sieger: number | null;
-  leftSeats: number[];
-  zuschauer: boolean;
-}
-
-/** Die beiden Spielarten, siehe packages/game-eiland/src/regeln.ts. */
-type EilandVariante = 'nebel' | 'klar';
+/*
+ * Die Sicht des Moduls steht seit dem 06.09.2026 in
+ * minispiele/eiland/sicht.ts. Grund: Der Vertrag unter src/vertrag/ haelt
+ * sie gegen die echte Modulsicht, und ein Import aus DIESEM Bildschirm
+ * zoege React samt aller Bauteile in einen Test, der nur Typen vergleicht.
+ */
 
 /**
- * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
+ * Takt, in dem der Stand der Suche abgefragt wird.
  *
- * Muss zu DEFAULT_REGELN in packages/game-eiland/src/regeln.ts passen. Bewusst
- * ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll nicht auf
- * eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht. Die Spielart
- * kommt beim Aufmachen dazu.
+ * Eine Sekunde, weil daneben ein Countdown laeuft: Bei einem traegeren Takt
+ * springt die Zahl. Der Abruf ist zugleich das Lebenszeichen an den Server —
+ * hoert er auf, faellt man von selbst aus der Schlange (siehe
+ * packages/server/src/suche/schlange.ts).
  */
-const REGELSATZ = {
-  spalten: 10,
-  zeilen: 10,
-  seen: 2,
-  berge: 4,
-  ornamente: 4,
-  sichtweite: 3,
-  kontingentMax: 6,
-};
+const SUCH_TAKT_MS = 1000;
+
+/*
+ * HIER STAND BIS ZUM 07.09.2026 EIN REGELSATZ, wortgleich abgeschrieben von
+ * DEFAULT_REGELN aus packages/game-eiland/src/regeln.ts. Er ging als `config`
+ * an `createTable`, und weil der Server eine mitgeschickte `config`
+ * unveraendert als Regelsatz des Tisches festschreibt, UEBERSTIMMTE die
+ * Abschrift das Modul: Wer dort eine Zahl umstellt, aendert am KI-Tisch
+ * nichts, und rot wird dabei auch nichts.
+ *
+ * Weglassen geht hier nicht — anders als bei Tafelrunde legt Eiland die
+ * gewaehlte Spielart obendrauf und braucht deshalb den Rest des Regelsatzes.
+ * Der kommt jetzt ueber `useSpielVorgabe('eiland')` vom Server, vorab geholt
+ * beim Aufbau des Menues. Warum vorab und warum ohne Ersatzzahl: siehe
+ * src/spiel-vorgabe.ts.
+ */
 
 /**
  * Wie lange die Auswahl gesperrt bleibt, wenn der Server auf einen
@@ -139,22 +114,36 @@ export function Eiland({
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
-  /** Tisch, den ich selbst aufgemacht habe — nur dann wird gewechselt. */
-  const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
+  /** Stand der Mitspielersuche. `null` heisst: es wird nicht gesucht. */
+  const [suchstand, setSuchstand] = useState<Suchstand | null>(null);
+  /** Ein Knopf ist gedrueckt, die Antwort steht noch aus. */
   const [sucht, setSucht] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
   /**
-   * Spielart fuer den naechsten Tisch. Nur eine Vorauswahl fuers Menue — am
-   * Tisch gilt, was in dessen Regelsatz steht (siehe regeln.ts).
+   * Spielart des KI-Tisches. Nur eine Vorauswahl fuers Menue — am Tisch gilt,
+   * was in dessen Regelsatz steht (siehe regeln.ts).
    *
    * Vorgabe ist seit dem 04.09.2026 die offene Karte (Nutzerwunsch): Sie ist
    * die Spielart, die man ohne Erklaerung versteht, der Nebel die fuer den
-   * zweiten Abend. Der Regelsatz im Modul behaelt seine eigene Vorgabe —
-   * dieser Bildschirm schickt die Spielart ohnehin immer mit.
+   * zweiten Abend.
+   *
+   * ACHTUNG, seit dem 06.09.2026 gilt sie nur noch fuer den KI-Knopf: Die
+   * Mitspielersuche laeuft ueber die Schlange des Servers, und die baut ihren
+   * Tisch mit `defaultConfig()` des Moduls — dort steht `variante: 'nebel'`.
+   * Das Online-Match spielt also im Nebel, egal was hier gewaehlt ist. Der
+   * Widerspruch zum Nutzerwunsch steht als Karte auf dem Issueboard; er laesst
+   * sich nur an einer von zwei Stellen aufloesen (Schlange mit Regelsatz oder
+   * DEFAULT_REGELN umstellen), und beides ist keine Sache dieses Bildschirms.
    */
   const [variante, setVariante] = useState<EilandVariante>('klar');
+
+  /*
+   * Der Regelsatz des Moduls, vorab beim Server geholt. Die gewaehlte
+   * Spielart legt sich darauf; abgeschrieben wird nichts mehr.
+   */
+  const { holen: holeVorgabe } = useSpielVorgabe('eiland');
 
   const tisch = useTable<EilandSicht>(tischId, 'eiland');
   const sicht = tisch.view?.view ?? null;
@@ -171,50 +160,96 @@ export function Eiland({
   // -------------------------------------------------------------------------
 
   /**
-   * Einen Gegner finden: an einem offenen Tisch Platz nehmen, sonst selbst
-   * einen aufmachen.
+   * Einen Gegner finden — seit dem 06.09.2026 ueber die Suchschlange des
+   * Servers und nicht mehr ueber die Tischliste.
    *
-   * Wortgleich zu Filler und Mememory, und das ist Absicht — die Plattform hat
-   * keine Warteschlange, gesucht wird ueber die gewoehnliche Tischliste. Das
-   * reicht, weil `joinTable` serverseitig absichert, dass zwei gleichzeitige
-   * Beitritte nicht denselben Platz bekommen: Der Verlierer des Rennens
-   * bekommt einen Fehler und sucht weiter.
+   * Der alte Weg (offenen Tisch suchen, sonst selbst einen aufmachen, und ein
+   * Wettrennen zweier gleichzeitig aufgemachter Tische per Kennungsvergleich
+   * im 2,5-Sekunden-Takt aufloesen) ist damit weg. Er konnte zwei Menschen in
+   * zwei getrennten Tischen festsetzen, und vor allem hatte er kein Ende: Wer
+   * als Einziger suchte, wartete bis zum Verfall seines Tisches. Jetzt sammelt
+   * der Server 30 Sekunden lang, setzt danach alle Gefundenen an EINEN Tisch
+   * und fuellt den Rest mit Bots — bei zwei Sitzen also hoechstens einen.
    */
-  const suche = useCallback(async (): Promise<void> => {
+  const starteSuche = useCallback(async (): Promise<void> => {
     setFehler(null);
     setSucht(true);
     try {
-      const zeilen = await api.tables('eiland');
-      const offen = zeilen
-        .filter((zeile) => zeile.seats === 2 && zeile.occupied < zeile.seats)
-        /*
-         * Nur Tische derselben Spielart. Der Server reicht sie in der
-         * Tischliste durch (`varianteVon` in tables/service.ts); ein Tisch von
-         * vor dem Umbau hat dort `null` und gilt als Nebel — so wie es
-         * `pruefeRegeln` auch tut.
-         */
-        .filter((zeile) => (zeile.variante ?? 'nebel') === variante)
-        .sort((a, b) => a.id.localeCompare(b.id));
-      const ziel = offen[0];
-      if (ziel) {
-        await api.joinTable(ziel.id);
-        setEigenerTisch(null);
-        setTischId(ziel.id);
-        return;
-      }
-      const { id } = await api.createTable({
-        gameId: 'eiland',
-        config: { ...REGELSATZ, variante },
-        seats: 2,
-        rounds: 1,
-      });
-      setEigenerTisch(id);
-      setTischId(id);
+      const stand = await api.sucheStarten('eiland');
+      if (stand.tischId) setTischId(stand.tischId);
+      else setSuchstand(stand);
     } catch {
-      setSucht(false);
       setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+    } finally {
+      setSucht(false);
     }
-  }, [variante]);
+  }, []);
+
+  /**
+   * Nachfragen, solange gesucht wird.
+   *
+   * Abhaengig ist der Effekt vom SCHLUESSEL `suchstand !== null` und nicht vom
+   * Objekt: Er setzt bei jedem Takt einen neuen Stand, und mit dem Objekt in
+   * der Liste raeumte er dabei jedes Mal seinen eigenen Zeitgeber ab (siehe
+   * CLAUDE.md).
+   */
+  const suchtGerade = suchstand !== null;
+  useEffect(() => {
+    if (!suchtGerade) return;
+    let lebt = true;
+    const frage = (): void => {
+      void api
+        .sucheStand('eiland')
+        .then((stand) => {
+          if (!lebt) return;
+          if (stand.tischId) {
+            // Ohne Rueckfrage hinueber: Wer 30 Sekunden gewartet hat, will
+            // spielen und keinen zweiten Knopf.
+            setSuchstand(null);
+            setTischId(stand.tischId);
+            return;
+          }
+          if (!stand.sucht) {
+            // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart des
+            // Servers. Lieber ehrlich melden als stumm weiterdrehen.
+            setSuchstand(null);
+            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            return;
+          }
+          setSuchstand(stand);
+        })
+        .catch(() => {
+          /* Ein einzelner Fehlversuch ist kein Abbruch: Der Server wirft uns
+             erst nach mehreren stillen Sekunden aus der Schlange. */
+        });
+    };
+    const takt = window.setInterval(frage, SUCH_TAKT_MS);
+    return () => {
+      lebt = false;
+      window.clearInterval(takt);
+    };
+  }, [suchtGerade]);
+
+  /**
+   * Den Bildschirm verlassen heisst die Suche verlassen.
+   *
+   * Ohne das stuende man nach dem Weggehen noch bis zu acht Sekunden in der
+   * Schlange und wuerde womoeglich an einen Tisch gesetzt, den niemand mehr
+   * ansieht.
+   */
+  const suchtRef = useRef(false);
+  suchtRef.current = suchtGerade;
+  useEffect(
+    () => () => {
+      if (suchtRef.current) void api.sucheAbbrechen('eiland').catch(() => {});
+    },
+    [],
+  );
+
+  const brichSucheAb = useCallback((): void => {
+    setSuchstand(null);
+    void api.sucheAbbrechen('eiland').catch(() => {});
+  }, []);
 
   /**
    * Sofort gegen die KI. Ein eigener Tisch auf Anfrage, den der Server mit
@@ -227,77 +262,24 @@ export function Eiland({
     try {
       const { id } = await api.createTable({
         gameId: 'eiland',
-        config: { ...REGELSATZ, variante },
+        config: { ...(await holeVorgabe()), variante },
         seats: 2,
         rounds: 1,
         visibility: 'on_request',
         fillWithBots: true,
       });
-      setEigenerTisch(null);
       setTischId(id);
     } catch {
-      setSucht(false);
       setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+    } finally {
+      setSucht(false);
     }
-  }, [variante]);
-
-  /**
-   * Das Wettrennen aufloesen.
-   *
-   * Tippen zwei Leute gleichzeitig auf "Suchen", sieht keiner den Tisch des
-   * anderen und beide machen einen auf. Wechselten danach BEIDE zum jeweils
-   * anderen, taeten sie das fuer immer. Deshalb bewegt sich nur einer: der mit
-   * der groesseren Tischkennung. Die Kennungen sind auf beiden Geraeten
-   * dieselben, also braucht die Regel keine Absprache.
-   */
-  const wechseltGerade = useRef(false);
-  useEffect(() => {
-    if (!tischId || !eigenerTisch || tischId !== eigenerTisch) return;
-    if (tisch.table && tisch.table.status !== 'waiting') return;
-    let lebt = true;
-    const pruefe = (): void => {
-      void api
-        .tables('eiland')
-        .then(async (zeilen: TableRow[]) => {
-          if (!lebt || wechseltGerade.current) return;
-          const kleiner = zeilen
-            .filter(
-              (z) =>
-                z.seats === 2 &&
-                z.occupied < z.seats &&
-                z.id < tischId &&
-                (z.variante ?? 'nebel') === variante,
-            )
-            .sort((a, b) => a.id.localeCompare(b.id))[0];
-          if (!kleiner) return;
-          wechseltGerade.current = true;
-          try {
-            // Kein leaveTable davor: joinTable raeumt serverseitig alle
-            // anderen Warteplaetze desselben Kontos ab.
-            await api.joinTable(kleiner.id);
-            if (!lebt) return;
-            setEigenerTisch(null);
-            setTischId(kleiner.id);
-          } catch {
-            /* Der Tisch war schneller voll. Beim naechsten Takt weiter. */
-          } finally {
-            wechseltGerade.current = false;
-          }
-        })
-        .catch(() => {});
-    };
-    const takt = window.setInterval(pruefe, 2500);
-    return () => {
-      lebt = false;
-      window.clearInterval(takt);
-    };
-  }, [tischId, eigenerTisch, tisch.table?.status, variante]);
+  }, [holeVorgabe, variante]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
     setSucht(false);
     setTischId(null);
-    setEigenerTisch(null);
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
@@ -385,6 +367,41 @@ export function Eiland({
   );
 
   // -------------------------------------------------------------------------
+  // Mitspieler suchen
+  // -------------------------------------------------------------------------
+
+  if (!tischId && suchstand) {
+    const sekunden = Math.ceil(suchstand.restMs / 1000);
+    const gefunden = suchstand.suchende;
+    return (
+      <main className="ei-seite ei-menue">
+        <button className="ei-zurueck" type="button" onClick={brichSucheAb}>
+          ← Abbrechen
+        </button>
+        <div className="ei-menue-mitte">
+          <h1 className="ei-titel">Gegner suchen</h1>
+          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
+              beantwortet damit die einzige Frage, die man hier hat. */}
+          <p className="ei-countdown" aria-live="polite">
+            {sekunden}
+          </p>
+          <p className="ei-untertitel">
+            {gefunden === 1
+              ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen die KI.'
+              : `${gefunden} Spieler gefunden`}
+          </p>
+          <div className="ei-punkte-lauf" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p className="ei-untertitel ei-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Menue
   // -------------------------------------------------------------------------
 
@@ -409,46 +426,59 @@ export function Eiland({
             <span data-art="berg" />
             {variante === 'nebel' && <span data-art="nebel" />}
           </div>
-          {/*
-            Der Schalter zwischen den beiden Spielarten. Er gehoert HIERHER und
-            nicht an den Tisch: Die Spielart steht im Regelsatz und damit seit
-            dem Aufmachen fest — mitten in der Partie den Nebel abzuschalten
-            waere kein Knopf, sondern ein Schummelzettel.
-          */}
-          <div className="ei-schalter">
-            {/* Die offene Karte links, weil sie die Vorgabe ist — der Reiter
-                sitzt beim Oeffnen dort, wo der Blick zuerst hinfaellt. */}
-            <button
-              type="button"
-              data-an={variante === 'klar' ? '' : undefined}
-              onClick={() => setVariante('klar')}
-            >
-              Offene Karte
-            </button>
-            <button
-              type="button"
-              data-an={variante === 'nebel' ? '' : undefined}
-              onClick={() => setVariante('nebel')}
-            >
-              Im Nebel
-            </button>
-            <p className="ei-schalter-text">
-              {variante === 'nebel'
-                ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
-                : 'Die ganze Insel liegt offen — für euch beide.'}
-            </p>
-          </div>
-          <button className="ei-suchen" type="button" onClick={() => void suche()} disabled={sucht}>
-            Online Match suchen…
-          </button>
           <button
-            className="ei-botknopf"
+            className="ei-suchen"
             type="button"
-            onClick={() => void gegenKi()}
+            onClick={() => void starteSuche()}
             disabled={sucht}
           >
-            Gegen die KI spielen
+            Online Match suchen…
           </button>
+          {/*
+            Der Schalter zwischen den beiden Spielarten. Er gehoert ins Menue
+            und nicht an den Tisch: Die Spielart steht im Regelsatz und damit
+            seit dem Aufmachen fest — mitten in der Partie den Nebel
+            abzuschalten waere kein Knopf, sondern ein Schummelzettel.
+
+            Seit dem 06.09.2026 sitzt er UNTER der Suche, im Block des
+            KI-Knopfes: Die Suchschlange nimmt den Regelsatz des Moduls, der
+            Schalter wirkt also nur noch auf den Knopf darunter. Ueber beiden
+            stehend waere er eine Beschriftung, die nicht stimmt.
+          */}
+          <div className="ei-kiblock">
+            <p className="ei-blocktitel">Gegen die KI — hier wählst du die Spielart</p>
+            <div className="ei-schalter">
+              {/* Die offene Karte links, weil sie die Vorgabe ist — der Reiter
+                  sitzt beim Oeffnen dort, wo der Blick zuerst hinfaellt. */}
+              <button
+                type="button"
+                data-an={variante === 'klar' ? '' : undefined}
+                onClick={() => setVariante('klar')}
+              >
+                Offene Karte
+              </button>
+              <button
+                type="button"
+                data-an={variante === 'nebel' ? '' : undefined}
+                onClick={() => setVariante('nebel')}
+              >
+                Im Nebel
+              </button>
+              <p className="ei-schalter-text">
+                {variante === 'nebel'
+                  ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
+                  : 'Die ganze Insel liegt offen — für euch beide.'}
+              </p>
+            </div>
+            <button
+              className="ei-botknopf"
+              type="button"
+              onClick={() => void gegenKi()}
+              disabled={sucht}
+            >
+              Gegen die KI spielen
+            </button>
+          </div>
           <button className="ei-regelknopf" type="button" onClick={() => setRegelnOffen(true)}>
             So spielt man Eiland
           </button>
@@ -461,7 +491,7 @@ export function Eiland({
   }
 
   // -------------------------------------------------------------------------
-  // Suche laeuft
+  // Tisch wird aufgebaut
   // -------------------------------------------------------------------------
 
   if (!sicht) {
@@ -472,7 +502,7 @@ export function Eiland({
           ← Abbrechen
         </button>
         <div className="ei-menue-mitte">
-          <h1 className="ei-titel">Suche läuft</h1>
+          <h1 className="ei-titel">Tisch wird aufgebaut</h1>
           <p className="ei-untertitel">
             {tisch.status === 'open'
               ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`

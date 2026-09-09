@@ -54,6 +54,12 @@ export interface RuntimeOptions {
    */
   readonly interludeMaxMs?: number;
   /**
+   * Obergrenze fuer jede Phasenfrist des Moduls (`phaseMs`). Aus demselben
+   * Grund wie `interludeMaxMs` und aus demselben Grund hier und nicht im
+   * Modul: Die Platzierungsphase von Tafelrunde dauert echte 45 Sekunden.
+   */
+  readonly phaseMaxMs?: number;
+  /**
    * Ab wann ein Sitz als verlassen gilt: so lange weg, ohne wiederzukommen.
    *
    * Gemessen an der Uhr und nicht in verpassten Zuegen. Ein Sitz kommt je
@@ -119,6 +125,23 @@ export interface LiveParty {
    * sonst schoebe jeder Tipp die Frist wieder auf.
    */
   interludeDeadline: number | null;
+  /**
+   * Ende der laufenden Phase (phaseMs des Moduls), z.B. der Platzierungsphase
+   * von Tafelrunde. Anders als die Zugzeit gilt sie fuer den ganzen Tisch und
+   * bleibt ueber Aktionen hinweg stehen — sonst faellt sie bei einem Spiel, in
+   * dem alle gleichzeitig handeln, bei jedem Kauf auf den vollen Wert zurueck.
+   */
+  phaseDeadline: number | null;
+  /**
+   * Merkmal der Phase, zu der `phaseDeadline` gehoert (`phaseKey` des Moduls).
+   *
+   * Nur fuer Module, deren Phasen ohne Zwischenschritt aufeinanderfolgen: Dort
+   * gibt es kein null zwischen zwei Fristen, an dem eine neue Phase zu erkennen
+   * waere (Eiland — siehe `phaseKey` in game-api). Module ohne `phaseKey`
+   * lassen das Feld auf null; fuer sie bleibt das null von `phaseMs` das
+   * Merkmal.
+   */
+  phaseMarke: string | number | null;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   /** Gesetzt, solange der Clantisch pausiert ist. */
@@ -145,12 +168,32 @@ export interface LiveParty {
  */
 export type RuntimeListener = (tableId: string, nurSicht: boolean) => void;
 
+/**
+ * Wie lange vor dem naechsten Botzug gewartet wird: der Takt der Laufzeit,
+ * gedeckelt durch den des Moduls (`meta.botTaktHoechstMs`, game-api).
+ *
+ * NUR NACH UNTEN. Ein Modul, dessen Bot je Runde ein Dutzend Handgriffe macht
+ * (Tafelrunde), kuerzt den Takt damit; verlaengern kann ihn keines. Sonst
+ * saesse ein Test, der die Laufzeit ausdruecklich auf `botDelayMs: 0` stellt,
+ * die Pause dieses Moduls trotzdem ab — und zwar in jedem Zug jeder Partie.
+ *
+ * Eigene Funktion und nicht drei Zeichen an der Aufrufstelle, weil es zwei
+ * Aufrufstellen sind (Zug und Schaupause) und weil die Richtung des `min` das
+ * Einzige ist, was man hier falsch machen kann.
+ */
+export function botTaktMs(plattform: number, modul: number | undefined): number {
+  return modul === undefined ? plattform : Math.min(plattform, modul);
+}
+
 const DEFAULTS = {
   turnTimeoutMs: 60_000,
   // 0,8 s zwischen den Botzuegen: schnell genug, dass der Tisch fliesst,
-  // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt.
+  // langsam genug, dass man jede gelegte Karte einzeln wahrnimmt. Ein Spiel,
+  // in dem ein Bot je Runde ein Dutzend Handgriffe macht statt einen Stich zu
+  // bedienen, kuerzt das ueber `meta.botTaktHoechstMs` — siehe `botTaktMs`.
   botDelayMs: 800,
   interludeMaxMs: Number.POSITIVE_INFINITY,
+  phaseMaxMs: Number.POSITIVE_INFINITY,
   absenceMs: 5 * 60_000,
   finishedRetentionMs: 10 * 60_000,
 };
@@ -340,6 +383,8 @@ export class PartyRuntime {
       endAfterRound: false,
       turnDeadline: null,
       interludeDeadline: null,
+      phaseDeadline: null,
+      phaseMarke: null,
       timer: null,
       offlineTimer: null,
       paused: false,
@@ -414,6 +459,8 @@ export class PartyRuntime {
       endAfterRound: false,
       turnDeadline: null,
       interludeDeadline: null,
+      phaseDeadline: null,
+      phaseMarke: null,
       timer: null,
       offlineTimer: null,
       paused: table.pausedAt !== null,
@@ -492,6 +539,7 @@ export class PartyRuntime {
       currentActor: party.module.currentActor(party.state),
       turnDeadline: party.turnDeadline,
       interludeDeadline: party.interludeDeadline,
+      phaseDeadline: party.phaseDeadline,
       botSeats: [...party.botControlled],
       leftSeats: [...party.leftSeats],
       finished: party.finished,
@@ -520,7 +568,32 @@ export class PartyRuntime {
    */
   async act(tableId: string, accountId: string, action: unknown): Promise<void> {
     const party = this.requireLive(tableId);
-    if (party.finished) throw conflict('partyFinished');
+    if (party.finished) {
+      /**
+       * Beendete Partie: erst das Modul fragen, dann urteilen.
+       *
+       * Die Rundenpause endet, sobald der letzte anwesende Mensch "Weiter"
+       * tippt oder die Frist ablaeuft — bei der letzten Runde endet damit die
+       * ganze Partie. Wer in genau diesem Moment tippt, findet den Tisch da,
+       * wo er ihn haben wollte, und die Engine nennt seinen Tipp deshalb
+       * wirkungslos statt falsch (weiter() in game-doppelkopf/src/party.ts).
+       * Nur kam sie nie dran: Diese Zeile hat vorher jede Aktion auf einer
+       * beendeten Partie abgewiesen, und der Durchstich (realtime.test.ts)
+       * war unter Last daran rot, obwohl beide Clients alles richtig gemacht
+       * hatten. Dasselbe Rennen wie bei der verspaeteten Vorbehaltsantwort
+       * (applyVorbehalt in game-doppelkopf/src/round.ts, 06.09.2026), nur
+       * eine Ebene hoeher.
+       *
+       * Das Ergebnis wird weggeworfen: Ein Spielmodul ist eine reine
+       * Logikbibliothek, der Probelauf kostet nichts und aendert nichts. Und
+       * er entscheidet ALLEIN ueber das Nichts — alles andere bleibt
+       * 'partyFinished'. Eine gespielte Karte auf einer abgerechneten Partie
+       * ist kein Rennen, sondern ein Fehler, und sie soll auch so heissen.
+       */
+      const sitz = this.seatOf(party, accountId);
+      if (sitz !== null && this.wirkungslos(party, sitz, action)) return;
+      throw conflict('partyFinished');
+    }
     if (party.paused) throw conflict('partyPaused');
 
     const seat = this.seatOf(party, accountId);
@@ -544,6 +617,22 @@ export class PartyRuntime {
     party.state = next;
 
     await this.afterAction(party);
+  }
+
+  /**
+   * Laesst die Aktion den Zustand unveraendert?
+   *
+   * Dieselbe Frage wie das `next === party.state` in `act` — hier nur fuer
+   * einen Zustand, auf dem gar nicht mehr gehandelt werden darf. Ein Wurf des
+   * Moduls heisst dabei "nicht wirkungslos": Der Aufrufer soll dann seine
+   * eigene, genauere Ablehnung melden.
+   */
+  private wirkungslos(party: LiveParty, seat: number, action: unknown): boolean {
+    try {
+      return party.module.act(party.state, seat, action) === party.state;
+    } catch {
+      return false;
+    }
   }
 
   private async afterAction(party: LiveParty): Promise<void> {
@@ -577,12 +666,18 @@ export class PartyRuntime {
   // Timer und Bot
   // -------------------------------------------------------------------------
 
+  /** Siehe `botTaktMs`: Takt der Laufzeit, gedeckelt durch den des Moduls. */
+  private botTakt(party: LiveParty): number {
+    return botTaktMs(this.opts.botDelayMs, party.module.meta.botTaktHoechstMs);
+  }
+
   private schedule(party: LiveParty): void {
     if (party.paused || party.finished) {
       if (party.timer) clearTimeout(party.timer);
       party.timer = null;
       party.turnDeadline = null;
       party.interludeDeadline = null;
+      party.phaseDeadline = null;
       return;
     }
     if (party.timer) clearTimeout(party.timer);
@@ -591,10 +686,15 @@ export class PartyRuntime {
 
     const actor = party.module.currentActor(party.state);
     if (actor === null) {
+      // Niemand am Zug heisst Schaupause, und die hat ihre eigene Frist. Zwei
+      // Uhren nebeneinander waeren zwei Antworten auf dieselbe Frage.
+      party.phaseDeadline = null;
+      party.phaseMarke = null;
       this.scheduleInterlude(party);
       return;
     }
     party.interludeDeadline = null;
+    this.schedulePhase(party);
 
     const seat = party.seats.find((candidate) => candidate.index === actor);
 
@@ -605,10 +705,32 @@ export class PartyRuntime {
     // eine Anzeige, kein Steuerflag.
     const isBot = !seat || !seat.accountId || party.leftSeats.has(actor);
 
+    /*
+     * Ein Timer fuer zwei Fristen: Der naechste Weckruf ist der fruehere von
+     * Zugzeit (bzw. Botpause) und Phasenfrist. Zwei Timeouts nebeneinander
+     * waeren zwei Stellen, an denen `party.timer` haengt — und die zweite
+     * ueberschriebe die erste.
+     */
+    const bisPhase =
+      party.phaseDeadline === null ? null : Math.max(0, party.phaseDeadline - Date.now());
+    // `botTakt` und nicht `opts.botDelayMs`: Ein Modul darf den Takt kuerzen
+    // (`meta.botTaktHoechstMs`), und der Vergleich muss dieselbe Zahl benutzen
+    // wie der Timer darunter. Sonst haelt die Phasenfrist einen Botzug fuer
+    // weiter entfernt, als er ist, und uebernimmt eine Runde, die der Bot noch
+    // rechtzeitig zu Ende gebracht haette.
+    const bisZug = isBot ? this.botTakt(party) : this.opts.turnTimeoutMs;
+
+    if (bisPhase !== null && bisPhase < bisZug) {
+      party.timer = setTimeout(() => {
+        void this.advancePhase(party, actor);
+      }, bisPhase);
+      return;
+    }
+
     if (isBot) {
       party.timer = setTimeout(() => {
         void this.playBot(party, actor);
-      }, this.opts.botDelayMs);
+      }, this.botTakt(party));
       return;
     }
 
@@ -616,6 +738,79 @@ export class PartyRuntime {
     party.timer = setTimeout(() => {
       void this.onTimeout(party, actor);
     }, this.opts.turnTimeoutMs);
+  }
+
+  /**
+   * Frist der laufenden Phase (phaseMs des Moduls), obwohl jemand am Zug ist.
+   *
+   * Sie wird je Phase nur EINMAL gestellt und danach nicht mehr angefasst —
+   * genau das unterscheidet sie von der Zugzeit, die bei jeder Aktion
+   * irgendeines Sitzes neu anlaeuft.
+   *
+   * Woran eine neue Phase zu erkennen ist, haengt am Modul (siehe phaseMs und
+   * phaseKey in game-api):
+   *
+   *   - Tafelrunde nennt zwischen zwei Vorbereitungen keine Frist (Kampfphase).
+   *     Das null setzt die Frist zurueck, die naechste stellt sie neu.
+   *   - Eiland hat nichts dazwischen: Die letzte Abgabe loest die Aufloesung
+   *     aus und die naechste Runde in einem Schritt. Dort wechselt stattdessen
+   *     `phaseKey` (die Rundennummer) — ohne diesen Vergleich liefe die Frist
+   *     der ersten Runde bis zum Partieende weiter und jede spaetere Runde
+   *     endete sofort.
+   */
+  private schedulePhase(party: LiveParty): void {
+    const ms = party.module.phaseMs?.(party.state) ?? null;
+    if (ms === null) {
+      party.phaseDeadline = null;
+      party.phaseMarke = null;
+      return;
+    }
+    const marke = party.module.phaseKey?.(party.state) ?? null;
+    if (party.phaseDeadline === null || (marke !== null && marke !== party.phaseMarke)) {
+      party.phaseDeadline = Date.now() + Math.min(ms, this.opts.phaseMaxMs);
+    }
+    party.phaseMarke = marke;
+  }
+
+  /**
+   * Die Phasenfrist ist um: Das Modul entscheidet, was mit den Sitzen
+   * geschieht, die nicht gehandelt haben.
+   *
+   * `actor` ist der Sitz, den das Modul zuletzt genannt hat — bei einem Spiel
+   * ohne Zugfolge der, auf den der Tisch wartet. Fuer ihn zaehlt die Frist wie
+   * ein verpasster Zug, sonst liefe die Verlassen-Regel bei Tafelrunde ins
+   * Leere: Die Phasenfrist ist kuerzer als die Zugzeit, `onTimeout` kaeme also
+   * nie mehr dran (siehe amZug in packages/game-tafelrunde/src/partie.ts).
+   */
+  private async advancePhase(party: LiveParty, actor: number): Promise<void> {
+    if (party.finished || party.paused || !this.live.has(party.tableId)) return;
+    const advance = party.module.advancePhase;
+    // Zwischen Timerstellung und -ablauf kann die Phase schon vorbei sein.
+    if (!advance || party.module.phaseMs?.(party.state) === null) return;
+    party.phaseDeadline = null;
+    party.phaseMarke = null;
+
+    /*
+     * KEIN `botControlled`: Anders als beim Zug-Timeout spielt hier niemand
+     * fuer den Sitz weiter — das Modul verbucht ihn nur so, wie seine Regeln
+     * eine versaeumte Phase verbuchen. Ein Bot-Zeichen an einem Sitz, den kein
+     * Bot spielt, waere eine Auskunft, die nicht stimmt.
+     */
+    const seat = party.seats.find((candidate) => candidate.index === actor);
+    if (seat?.accountId && !party.leftSeats.has(actor)) {
+      if (!party.absentSince.has(actor)) party.absentSince.set(actor, Date.now());
+      const wegSeit = party.absentSince.get(actor)!;
+      if (Date.now() - wegSeit >= this.opts.absenceMs) this.markLeft(party, actor);
+    }
+
+    try {
+      party.state = advance.call(party.module, party.state);
+      await this.afterAction(party);
+    } catch (err) {
+      // Wie beim Bot: Ein Fehler hier darf den Tisch nicht einfrieren.
+      // eslint-disable-next-line no-console
+      console.error(`Phasenfrist an Tisch ${party.tableId}:`, err);
+    }
   }
 
   /**
@@ -646,7 +841,7 @@ export class PartyRuntime {
     if (botSeat) {
       party.timer = setTimeout(() => {
         void this.playBot(party, botSeat.index);
-      }, this.opts.botDelayMs);
+      }, this.botTakt(party));
       return;
     }
 
@@ -760,6 +955,7 @@ export class PartyRuntime {
     party.timer = null;
     party.offlineTimer = null;
     party.turnDeadline = null;
+    party.phaseDeadline = null;
     this.live.delete(tableId);
 
     await this.db
@@ -870,6 +1066,7 @@ export class PartyRuntime {
     party.timer = null;
     party.offlineTimer = null;
     party.turnDeadline = null;
+    party.phaseDeadline = null;
 
     const standings = party.module.standings(party.state);
     await this.persist(party);

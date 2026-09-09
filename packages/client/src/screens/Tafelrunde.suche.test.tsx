@@ -156,6 +156,26 @@ describe('Tafelrunde: Mitspieler suchen', () => {
     expect(sucheStand.mock.calls.length).toBe(bisher);
   });
 
+  it('macht den Bot-Tisch ohne eigenen Regelsatz auf', async () => {
+    createTable.mockResolvedValue({ id: 'tisch-9', joinCode: null });
+    render(<Tafelrunde onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots spielen' }));
+    await durchatmen();
+
+    /*
+     * Der wichtigste Wert dieser Probe ist der, der NICHT mitgeht: `config`.
+     * Bis zum 05.09.2026 stand hier eine abgeschriebene Kopie von
+     * DEFAULT_REGELN, und der Server schreibt eine mitgeschickte `config` als
+     * Regelsatz des Tisches fest — die Kopie ueberstimmte also das Modul,
+     * ohne dass irgendwo ein Fehler auffiel. Ohne das Feld nimmt der Server
+     * `defaultConfig()` (packages/server/test/tables.test.ts).
+     */
+    expect(createTable).toHaveBeenCalledTimes(1);
+    const auftrag = createTable.mock.calls[0]?.[0];
+    expect(auftrag).not.toHaveProperty('config');
+    expect(auftrag).toMatchObject({ gameId: 'tafelrunde', fillWithBots: true });
+  });
+
   it('sagt es, wenn der Server die Suche nicht mehr kennt', async () => {
     // Passiert nach einem Neustart des Servers: Die Schlange liegt im
     // Arbeitsspeicher und ist dann weg. Stumm weiterdrehen waere das

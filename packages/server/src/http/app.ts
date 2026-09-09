@@ -226,6 +226,7 @@ const gameIdSchema = z.enum([
   'cambio',
   'phase10',
   'drecksau',
+  'golf',
 ]);
 
 const registerSchema = z.object({
@@ -264,7 +265,12 @@ const diagnoseSchema = z.object({
 const createTableSchema = z.object({
   gameId: gameIdSchema,
   name: z.string().min(1).max(60).optional(),
-  config: z.unknown(),
+  /*
+   * Weggelassen heisst: der Regelsatz des Moduls (`defaultConfig()`, siehe
+   * `createTable`). Ausdruecklich `.optional()` und nicht bloss `z.unknown()`,
+   * obwohl beides dasselbe parst — hier liest man die Absicht.
+   */
+  config: z.unknown().optional(),
   seats: z.number().int().min(2).max(8),
   rounds: z.number().int().min(1).max(100),
   visibility: z.enum(['public', 'on_request', 'club_only']).optional(),
@@ -1833,7 +1839,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
-    return reply.send(await sucheVermittlung().betritt(gameId, accountId));
+    // Optionaler Regelsatz (Spielart); ohne Rumpf gilt die Vorgabe des Moduls.
+    const { config } = z
+      .object({ config: z.unknown().optional() })
+      .parse(request.body ?? {});
+    return reply.send(await sucheVermittlung().betritt(gameId, accountId, config ?? null));
   });
 
   /**

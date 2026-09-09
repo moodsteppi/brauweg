@@ -52,7 +52,20 @@ function isDevFlag(name: string): boolean {
  * der Entwicklung von selbst.
  *
  * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
- * - /probe/arena-3d — DIESELBE Szene in 3D mit Three.js (Probe B)
+ * - /probe/kampf — die ECHTE Kampfanzeige des Spiels mit einem aufgezeichneten
+ *   Kampf aus Runde 10. Eine der beiden, die bleiben sollen: Sie ist die
+ *   Stelle, an der man Aenderungen an der Kampfanzeige ansieht, ohne eine
+ *   Partie zu spielen (siehe Kopf von `proben/kampf/ProbeKampf.tsx`).
+ * - /probe/ruestkammer — dasselbe fuer die andere Haelfte von Tafelrunde:
+ *   Brett, Bank und Laden mit einem aufgezeichneten Vorbereitungsstand. Auch
+ *   sie bleibt, und aus demselben Grund (siehe Kopf von
+ *   `proben/ruestkammer/ProbeRuestkammer.tsx`).
+ *
+ * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
+ * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
+ * wie 3D aussehen, aber nicht live gerendert werden — sie sind jetzt
+ * vorgerenderte Bildfolgen (`src/figuren3d/`). Damit war die Probe erledigt und
+ * ist samt ihrer Modelle geloescht.
  */
 function istProbe(name: string): boolean {
   const { pathname, hash, search } = window.location;
@@ -62,7 +75,8 @@ function istProbe(name: string): boolean {
 }
 
 const probeArena2d = istProbe('arena-2d');
-const probeArena3d = istProbe('arena-3d');
+const probeKampf = istProbe('kampf');
+const probeRuestkammer = istProbe('ruestkammer');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -118,17 +132,29 @@ const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ de
 const TruhenOeffnung = lazy(() =>
   import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
 );
-/* Aus demselben Grund `lazy`, hier aber mit deutlich mehr Gewicht dahinter:
-   Probe B zieht `three` und `@react-three/fiber` nach. Was davon schon im
-   Hauptbuendel steckt, ist eine andere Baustelle (Avatarwerkstatt wird von
-   GameSelect statisch importiert und landet deshalb dort) — die Probe selbst
-   soll jedenfalls nichts dazulegen. */
-const Arena3D = lazy(() => import('./proben/arena-3d/Arena3D').then((m) => ({ default: m.Arena3D })));
+/* Aus demselben Grund `lazy` wie die Probe darueber, hier aber mit einem
+   zweiten dazu: Die Probe zieht den aufgezeichneten Kampf (rund 30 kB JSON)
+   UND die Bauteile des Tafelrunde-Tisches nach. Beides gehoert nicht in das
+   Stueck, das jeder Spieler beim Anmelden laedt — und am Client wird gerade
+   ohnehin daran gearbeitet, die Spielschirme einzeln nachzuladen. */
+const ProbeKampf = lazy(() =>
+  import('./proben/kampf/ProbeKampf').then((m) => ({ default: m.ProbeKampf })),
+);
+/* Und noch einmal aus denselben zwei Gruenden: der aufgezeichnete
+   Vorbereitungsstand (rund 12 kB JSON) und die Bauteile des
+   Tafelrunde-Tisches. */
+const ProbeRuestkammer = lazy(() =>
+  import('./proben/ruestkammer/ProbeRuestkammer').then((m) => ({
+    default: m.ProbeRuestkammer,
+  })),
+);
 
 const werkzeug = probeArena2d ? (
   <Arena2D />
-) : probeArena3d ? (
-  <Arena3D />
+) : probeKampf ? (
+  <ProbeKampf />
+) : probeRuestkammer ? (
+  <ProbeRuestkammer />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (

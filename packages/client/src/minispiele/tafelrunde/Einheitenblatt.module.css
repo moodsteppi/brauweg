@@ -1,0 +1,401 @@
+/*
+ * Das Blatt einer angetippten Einheit (Einheitenblatt.tsx).
+ *
+ * Ein eigenes Modul und kein Abschnitt in styles.css — dieselbe Ueberlegung
+ * wie bei Synergien.module.css: Das Blatt ist ein abgeschlossenes Bauteil,
+ * und seine Klassennamen sollen nirgends sonst greifen.
+ *
+ * DER MASSSTAB IST EIN HANDY MIT 440 CSS-PIXELN, dasselbe Geraet, an dem der
+ * Umbau vom 06.09.2026 gemessen wurde. Dort wird das Blatt 360 px breit (92vw
+ * waeren 405, die 360 greifen), es bleibt also ein dunkler Rand — es ist eine
+ * Auskunft, kein Ortswechsel. Innen bleiben 336 px: Bildnis 96, Kopfzeile
+ * daneben, vier Werte zu je 79, drei Knoepfe zu je 106. Wird es trotzdem zu
+ * hoch (grosse Schrift, Querformat), rollt DAS BLATT in sich und nicht die
+ * Seite darunter — sonst waere das Brett weggerutscht, wenn man wieder
+ * zumacht.
+ *
+ * Farben und Masse aus den Variablen der Plattform (--panel, --line, --muted,
+ * --text, --gold), damit das Blatt wie ein Teil der Ruestkammer aussieht.
+ * `--tr-kosten` bringt der Aufrufer mit: die Farbe der Kostenstufe, dieselbe
+ * wie am Punkt auf der Wabe und am Rand der Ladenkarte.
+ */
+
+/* -- Ueberblender und Blatt ----------------------------------------------- */
+
+/*
+ * Wortgleich zum Markenblatt (Synergien.module.css) — die beiden sollen sich
+ * gleich anfuehlen, und zwei Blaetter mit verschiedener Verdunkelung saehen
+ * nach zwei Spielen aus.
+ */
+.ueberblender {
+  position: fixed;
+  inset: 0;
+  /* Ueber allem, was die Ruestkammer stapelt (bis 20), und auf derselben
+     Ebene wie das Markenblatt (35) — beide koennen nie gleichzeitig offen
+     sein. Unter dem Endbild (40): Faellt waehrend des Lesens die Partie fuer
+     diesen Sitz aus, gehoert das Schlussbild nach vorn. */
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: rgba(10, 14, 17, 0.78);
+}
+
+.blatt {
+  width: min(92vw, 360px);
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  /* Sonst rollt beim Ende der Liste die Seite darunter weiter — und die ist
+     das Brett, das man gerade nicht verlieren will. */
+  overscroll-behavior: contain;
+  padding: 12px 12px 14px;
+  border: 1px solid var(--tr-kosten, var(--line));
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* -- Kopfzeile: Bildnis, Name, Rolle, Marken ------------------------------ */
+
+.kopf {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/*
+ * Das Bildnis. Ein Kasten mit fester Hoehe, damit die Figur absolut darin
+ * stehen kann (`Figur3D.module.css` setzt bewusst keine Position) — und mit
+ * `overflow: hidden`, weil eine Zelle des Blattes Luft ueber dem Kopf traegt
+ * und die Figur sonst in den Namen daneben ragte.
+ */
+.bildnis {
+  position: relative;
+  flex: 0 0 auto;
+  width: 96px;
+  height: 104px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  /* Erst eine Fuellung fuer alle, dann der Hauch Kostenfarbe fuer die
+     Browser mit `color-mix` — dieselbe Vorsichtsmassnahme wie am
+     Markenzeichen. */
+  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--tr-kosten, #8fa3ad) 12%, transparent);
+  overflow: hidden;
+}
+
+/* Die 3D-Figur: Der Ausschnitt bringt seine Form mit, die Masse stehen hier
+   (so, wie `.tr-figur3d` sie in styles.css fuer die Wabe setzt). */
+.figur {
+  position: absolute;
+  left: 50%;
+  /* Ueber der Sternzeile und nicht darauf: Sie liegt bei 2 px und ist 11 px
+     hoch, die Fuesse gehoeren darueber. */
+  bottom: 16px;
+  height: 82%;
+  translate: -50% 0;
+}
+
+/*
+ * Die beiden Rueckfaelle — das Pixelbild und die Strichzeichnung der Rolle.
+ * Sie tragen ihre alten globalen Klassen (`tr-figur`, `tr-rolle`), und die
+ * sind nur INNERHALB einer Wabe bemessen. Als DIREKTE Kinder gezielt: Das
+ * Figurenblatt selbst ist ein Enkel und behaelt seine eigene Groesse.
+ */
+.bildnis > img,
+.bildnis > svg {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  width: 60px;
+  height: 60px;
+  translate: -50% 0;
+}
+
+/* Die Kosten oben links, wie im Vorbild. Derselbe Inhalt wie der Punkt an der
+   Wabe, nur hier mit Zahl: Auf einer Wabe ist dafuer kein Platz. */
+.preis {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px 1px 3px;
+  border-radius: 8px;
+  background: rgba(10, 14, 17, 0.72);
+  color: var(--gold);
+  font: 800 11px/1.4 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+.preis svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Die Sternstufe unten, wie auf der Wabe — dort sucht der Blick sie. */
+.sterne {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  left: 0;
+  z-index: 1;
+  text-align: center;
+  color: var(--gold);
+  font: 700 11px/1 system-ui;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(10, 14, 17, 0.9);
+}
+/* Die noch offenen Sterne stehen blass daneben und nicht gar nicht da: So
+   sieht man auf einen Blick, ob hier noch etwas geht. */
+.sterneOffen {
+  opacity: 0.3;
+}
+
+.titel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/*
+ * Der Name darf hier UMBRECHEN. Auf der Wabe wird er abgeschnitten
+ * („Steinschleu…") — genau das war der Anlass fuer dieses Blatt, und ihn hier
+ * noch einmal zu kappen waere die Antwort schuldig geblieben.
+ */
+.name {
+  margin: 1px 0 0;
+  font: 800 17px/1.2 system-ui;
+}
+
+.rolle {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font: 600 12px/1.3 system-ui;
+}
+
+.marken {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.markenname {
+  color: var(--muted);
+  font: 600 11px/1.2 system-ui;
+}
+
+.zu {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font: 700 17px/1 system-ui;
+  cursor: pointer;
+}
+.zu:hover {
+  color: var(--text);
+}
+
+/* -- Leben ---------------------------------------------------------------- */
+
+.lebenzeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.lebenkopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font: 700 11px/1 system-ui;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.lebenkopf svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lebenzahl {
+  color: var(--text);
+  font: 800 17px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Der Balken ist in der Vorbereitung IMMER voll — dort nimmt niemand Schaden
+ * (siehe Einheitenblatt.tsx). Er misst also nichts, er traegt die Zahl
+ * darueber: Ein Balken macht aus „2240" auf einen Blick „viel".
+ */
+.lebenbalken {
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.lebenbalken b {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #4f9d5b, #7fd08c);
+}
+
+/* -- Die vier Kampfwerte -------------------------------------------------- */
+
+/*
+ * Vier Spalten und nicht zwei mal zwei: Bei 336 px innen sind das 79 px je
+ * Spalte, und das laengste Wort („Reichweite") passt bei 9 px. Zwei Reihen
+ * haetten das Blatt hoeher gemacht als das Brett, das darunter liegt.
+ */
+.werte {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wert {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.wertglyphe {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wertzahl {
+  color: var(--text);
+  font: 800 14px/1.1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+/* Die Masseinheit klein und blass am Wert: „2,1 /s" und „3 Felder" sind zwei
+   verschiedene Dinge, und ohne sie liest man sie als vergleichbare Zahlen. */
+.werteinheit {
+  /* Der Abstand steht hier und nicht als Leerzeichen im Text: Ein fuehrendes
+     Leerzeichen faellt beim Vorlesen und in jeder Textsuche wieder weg. */
+  margin-left: 2px;
+  color: var(--muted);
+  font: 600 9px/1 system-ui;
+}
+
+.werttitel {
+  color: var(--muted);
+  font: 600 9px/1.1 system-ui;
+}
+
+/* -- Was die Marken bewirken ---------------------------------------------- */
+
+.wirkungen {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.wirkung {
+  margin: 0;
+  color: var(--text);
+  font: 500 12px/1.45 system-ui;
+}
+.wirkung + .wirkung {
+  margin-top: 7px;
+}
+
+/* -- Die Knoepfe ---------------------------------------------------------- */
+
+/*
+ * Eine Reihe, die umbrechen darf. `flex: 1 1 96px` heisst: drei nebeneinander,
+ * solange sie hineinpassen, sonst untereinander — bei 336 px innen sind es
+ * drei zu je 106.
+ *
+ * 44 px hoch, nicht kleiner: Das ist die Mindestgroesse fuer ein Tippziel,
+ * und diese Reihe wird mit dem Daumen bedient.
+ */
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.knopf {
+  flex: 1 1 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: 700 12px/1.15 system-ui;
+  cursor: pointer;
+}
+.knopf:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* Verkaufen ist der einzige Knopf, der etwas WEGNIMMT — er sieht deshalb
+   anders aus als die beiden, die nur etwas verschieben. */
+.verkaufen {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.erloes {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.erloes svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Nur fuer Vorlesegeraete. Nicht `display: none` und nicht `visibility:
+   hidden` — beides nimmt den Text auch dem Vorleser weg. */
+.nurVorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

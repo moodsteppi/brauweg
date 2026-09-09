@@ -291,15 +291,38 @@ describe('Partie mit Kampf', () => {
 // ---------------------------------------------------------------------------
 
 describe('Kaempfe in der Sicht', () => {
-  it('zeigt einem Spieler genau seinen eigenen Kampf', () => {
+  /*
+   * Seit dem 06.09.2026 bekommt JEDER alle Kaempfe, nicht mehr nur seinen
+   * eigenen: Ohne die fremden Protokolle kann die Arena einen fremden Kampf
+   * nicht abspielen, und genau das ist das Zusehen (siehe `kaempfe` in
+   * sicht.ts). Der eigene muss trotzdem dabei sein — er ist der, den die
+   * Anzeige ohne Zutun spielt.
+   */
+  it('zeigt jedem Spieler alle Kaempfe der Runde, seinen eigenen inbegriffen', () => {
     const p = alleBereit(neu([0, 1, 2, 3]));
     for (const sitz of [0, 1, 2, 3]) {
       const sicht = sichtFuer(p, sitz);
-      assert.equal(sicht.kaempfe.length, 1, `Sitz ${sitz}`);
-      const kampf = sicht.kaempfe[0]!;
-      assert.ok(kampf.a === sitz || kampf.b === sitz);
-      assert.ok(kampf.bericht.ereignisse.length > 0);
+      assert.equal(sicht.kaempfe.length, 2, `Sitz ${sitz}`);
+      const eigener = sicht.kaempfe.find((k) => k.a === sitz || k.b === sitz);
+      assert.ok(eigener, `Sitz ${sitz} findet seinen eigenen Kampf nicht`);
+      for (const kampf of sicht.kaempfe) assert.ok(kampf.bericht.ereignisse.length > 0);
     }
+  });
+
+  /*
+   * Ein Ausgeschiedener kaempft nicht mehr — bekommt die Kaempfe der anderen
+   * aber trotzdem. Vorher war seine Liste leer, und die Kampfphase bestand
+   * fuer ihn aus einer Zeile Text.
+   */
+  it('gibt auch einem Ausgeschiedenen die Kaempfe der anderen', () => {
+    const raus = mitHeer(neu([0, 1, 2, 3, 4]), 4, { leben: 0, ausRunde: 1 });
+    const p = alleBereit(raus);
+    const sicht = sichtFuer(p, 4);
+    assert.ok(
+      !sicht.kaempfe.some((k) => k.a === 4 || k.b === 4),
+      'ein Ausgeschiedener tritt nicht mehr an',
+    );
+    assert.equal(sicht.kaempfe.length, 2, 'sehen darf er die uebrigen trotzdem');
   });
 
   it('zeigt einem Zuschauer alle Kaempfe', () => {
@@ -311,5 +334,48 @@ describe('Kaempfe in der Sicht', () => {
     const p = neu();
     assert.deepEqual(sichtFuer(p, 0).kaempfe, []);
     assert.deepEqual(zuschauerSicht(p).kaempfe, []);
+    assert.deepEqual(sichtFuer(p, 0).paarungen, []);
+    assert.deepEqual(zuschauerSicht(p).paarungen, []);
+  });
+
+  /*
+   * Der Kampf ist einer, das ERGEBNIS der Runde gehoert allen: Wer wen
+   * schlaegt, sieht man eine Sekunde spaeter ohnehin an den Lebensbalken.
+   */
+  it('gibt jedem Sitz alle Paarungen der Runde als Ergebnis', () => {
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    const erwartet = zuschauerSicht(p).paarungen;
+    assert.equal(erwartet.length, 2);
+    for (const sitz of [0, 1, 2, 3]) {
+      assert.deepEqual(sichtFuer(p, sitz).paarungen, erwartet, `Sitz ${sitz}`);
+    }
+  });
+
+  it('liefert die Paarungen ohne Protokoll — genau das ist ihr Zweck', () => {
+    // Ein Bericht sind ein paar hundert Ereignisse; sieben fremde davon
+    // mitzuschicken waere ein Vielfaches dessen, was jemand ansehen kann.
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    const roh = JSON.stringify(sichtFuer(p, 0).paarungen);
+    assert.ok(!roh.includes('ereignisse'));
+    assert.ok(!roh.includes('bericht'));
+  });
+
+  it('sagt an jeder Paarung, wer gewinnt, was es kostet und wie lange es dauert', () => {
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    for (const paarung of sichtFuer(p, 0).paarungen) {
+      const kampf = p.kaempfe.find((k) => k.a === paarung.a && k.b === paarung.b)!;
+      assert.equal(paarung.geist, kampf.geist);
+      assert.equal(paarung.sieger, kampf.bericht.sieger);
+      assert.equal(paarung.dauerMs, kampf.bericht.dauerMs);
+      // Beim Unentschieden nimmt niemand Schaden (ausgaengeAus in partie.ts).
+      assert.equal(paarung.schaden, kampf.bericht.sieger === null ? 0 : kampf.bericht.schaden);
+    }
+  });
+
+  it('enthaelt auch den eigenen Kampf — die Liste ist fuer alle dieselbe', () => {
+    const p = alleBereit(neu([0, 1, 2, 3]));
+    const eigener = kampfVon(p, 0)!;
+    const sicht = sichtFuer(p, 0);
+    assert.ok(sicht.paarungen.some((x) => x.a === eigener.a && x.b === eigener.b));
   });
 });

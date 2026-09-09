@@ -24,14 +24,18 @@ import { describe, it } from 'node:test';
 import { type Schwierigkeit, botZug } from '../src/bot.js';
 import {
   BRETT_FELDER,
+  BRETT_REIHEN,
   BRETT_SPALTEN,
   DEFAULT_REGELN,
   type EinheitId,
   type Heer,
   type Kaempfer,
+  type Kampfregler,
   type Stufe,
   type TafelrundeAktion,
   type TafelrundePartie,
+  type TafelrundeRegeln,
+  STANDARD_REGLER,
   darfHandeln,
   einheit,
   erlaubteZuege,
@@ -41,10 +45,10 @@ import {
   hexfeld,
   lebendeSitze,
   loeseKampfAuf,
-  platzierungen,
   platzNummer,
   sichtFuer,
 } from '../src/index.js';
+import { spieleParte } from './messen.js';
 
 const SAAT = '0123456789abcdef0123456789abcdef';
 
@@ -387,7 +391,13 @@ describe('Bot: aufstellen', () => {
     return hexfeld(platz).reihe;
   }
 
-  it('stellt Wachen nach vorn, Magier nach hinten und Meuchler an den Rand', () => {
+  /**
+   * Je Rolle eine eigene Wunschreihe, seit dem 06.09.2026 (`wunschreihe` in
+   * bot.ts): Wache in Reihe 0, Meuchler in Reihe 1 (und an den Rand), ein
+   * Magier mit Reichweite 3 in Reihe 2. Vorher kannte der Bot nur "ganz vorn"
+   * und "ganz hinten" und liess die beiden mittleren Reihen leer.
+   */
+  it('gibt jeder Rolle ihre Wunschreihe und stellt den Meuchler an den Rand', () => {
     const p = mitHeer(neu(), 0, {
       gold: 0,
       level: 3,
@@ -412,10 +422,12 @@ describe('Bot: aufstellen', () => {
         assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
       }
       if (art.rolle === 'magier') {
-        assert.equal(reihe(platz), 1, `${art.name} gehoert nach hinten`);
+        // Reichweite 3: eine Reihe vor der hintersten, denn von dort trifft
+        // sie den Gegner, der an der eigenen vordersten Reihe steht.
+        assert.equal(reihe(platz), art.reichweite - 1, `${art.name} steht falsch`);
       }
       if (art.rolle === 'meuchler') {
-        assert.equal(reihe(platz), 0, `${art.name} gehoert nach vorn`);
+        assert.equal(reihe(platz), 1, `${art.name} gehoert hinter die Wache`);
         const spalte = hexfeld(platz).spalte;
         assert.ok(
           spalte === 0 || spalte === BRETT_SPALTEN - 1,
@@ -429,6 +441,10 @@ describe('Bot: aufstellen', () => {
    * Steht eine Einheit falsch — hier ein Magier in der vordersten Reihe, wie
    * ihn eine Verschmelzung dort hinterlassen kann —, raeumt der Bot das auf,
    * ohne dafuer Gold auszugeben.
+   *
+   * Der Sturmrufer ist mit Reichweite 4 der einzige des Katalogs, dessen
+   * Wunschreihe die hinterste IST (`wunschreihe` in bot.ts) — deshalb steht
+   * hier weiter `BRETT_REIHEN - 1` und nicht die Reihe 2 der uebrigen Magier.
    */
   it('stellt eine falsch stehende Einheit um', () => {
     const brett = leeresBrett();
@@ -441,9 +457,20 @@ describe('Bot: aufstellen', () => {
       laden: ladenMit([]),
     });
 
-    const { partie } = ruesteAus(p, 0);
+    const { partie, zuege } = ruesteAus(p, 0);
     const steht = partie.heere[0]!.brett.findIndex((k) => k !== null);
-    assert.equal(reihe(steht), 1, 'der Magier gehoert in die hintere Reihe');
+    assert.equal(reihe(steht), BRETT_REIHEN - 1, 'der Magier gehoert in die hinterste Reihe');
+
+    /*
+     * Und zwar in EINEM Zug. Seit dem 06.09.2026 nimmt `stellungsZug` das
+     * beste freie Feld statt des erstbesten besseren — vorher wanderte ein
+     * Magier von Reihe 0 aus Zug um Zug eine Reihe weiter nach hinten, was
+     * auf vier Reihen bis zu drei Handgriffe kostete (siehe bot.ts).
+     */
+    const umzuege = zuege.filter(
+      (z) => z.typ === 'verschieben' && z.von.bereich === 'brett' && z.nach.bereich === 'brett',
+    );
+    assert.equal(umzuege.length, 1, 'ein Umzug genuegt');
   });
 
   /**
@@ -533,14 +560,21 @@ describe('Bot: Aufstieg', () => {
   });
 
   /**
-   * Der harte Gegner laesst beide Bedingungen weg und steigt auf, sobald es
-   * geht. Das sieht nach Leichtsinn aus und ist gemessen die staerkere Wahl:
-   * Ein Feldplatz mehr wiegt schwerer als ein Brett, das eine Runde frueher
-   * voll ist (siehe GANGARTEN in bot.ts).
+   * Der harte Gegner haelt sich an das volle Brett wie `normal`, legt aber
+   * KEINE Reserve obendrauf: volles Brett und das Gold reicht genau — er
+   * steigt auf.
+   *
+   * Bis zum 06.09.2026 liess er beide Bedingungen weg, und die Probe hier
+   * pruefte das ausdruecklich nur als VERHALTEN, weil der frueh Aufstieg
+   * "weder Vorteil noch Nachteil" sei. Nachgemessen war er beides nicht mehr,
+   * sondern ein Nachteil: Allein das volle Brett wieder einzufordern brachte
+   * `hart` von 133 auf 190 Siege je 400 Partien. Zahlen und Zerlegung stehen
+   * bei GANGARTEN in bot.ts.
    */
-  it('steigt als harter Gegner auch mit leerem Brett auf', () => {
-    assert.deepEqual(zug(mitBrett(20, false), 'hart'), { typ: 'levelAuf' });
+  it('steigt als harter Gegner ohne Reserve auf, aber nicht mit leerem Brett', () => {
+    // Level 1 kostet 2 — genau so viel hat er, und `hart` will nichts uebrig.
     assert.deepEqual(zug(mitBrett(2, true), 'hart'), { typ: 'levelAuf' });
+    assert.notEqual(zug(mitBrett(20, false), 'hart').typ, 'levelAuf');
   });
 
   /** Und der sanfte wartet am laengsten: volles Brett und sechs Gold obendrauf. */
@@ -559,11 +593,16 @@ describe('Bot: neu wuerfeln', () => {
    * Volles Brett aus Meuchlern (Stufe 2, damit die Kopien nicht als
    * Verschmelzung zaehlen), Bank frei, viel Gold — und ein Laden, in dem keine
    * einzige Marke des eigenen Heeres vorkommt.
+   *
+   * IN REIHE 1, DER WUNSCHREIHE DES MEUCHLERS (`wunschreihe` in bot.ts, seit
+   * dem 06.09.2026). In Reihe 0 stuenden sie eine Reihe zu weit vorn, und der
+   * Bot raeumte erst einmal um — die Probe misst dann das Umstellen und nicht
+   * das Neu-Wuerfeln.
    */
   function fremderLaden(laden: readonly EinheitId[], gold = 20): TafelrundePartie {
     const brett = leeresBrett();
     for (let spalte = 0; spalte < 5; spalte++) {
-      brett[platzNummer(0, spalte)] = { id: 'gassendieb', stufe: 2 };
+      brett[platzNummer(1, spalte)] = { id: 'gassendieb', stufe: 2 };
     }
     return mitHeer({ ...neu(), runde: 5 }, 0, {
       gold,
@@ -592,10 +631,27 @@ describe('Bot: neu wuerfeln', () => {
     assert.notEqual(zug(fremderLaden(passend), 'normal').typ, 'neuwuerfeln');
   });
 
-  it('wuerfelt nicht, wenn danach kein Kauf mehr drin waere', () => {
-    // 8 Gold: nach dem Wurf blieben 6, das Polster von normal ist 4, und drei
-    // Gold Ruecklage passen nicht mehr daneben.
-    assert.notEqual(zug(fremderLaden(FREMD, 8), 'normal').typ, 'neuwuerfeln');
+  it('wuerfelt auch ohne Gold, solange der Wurf nichts kostet', () => {
+    // Seit der Vorgabe 0 nimmt ein Wurf nichts weg — die Ruecklage, die frueher
+    // 8 Gold zur Sperre machte, gilt nur noch bei einem Tisch mit Preis.
+    assert.deepEqual(zug(fremderLaden(FREMD, 0), 'normal'), { typ: 'neuwuerfeln' });
+  });
+
+  it('wuerfelt nicht, wenn ein Preis gesetzt ist und danach kein Kauf drin waere', () => {
+    // 8 Gold, Wurf kostet 2: danach blieben 6, das Polster von normal ist 4,
+    // und drei Gold Ruecklage passen nicht mehr daneben.
+    const teuer = {
+      ...fremderLaden(FREMD, 8),
+      regeln: { ...DEFAULT_REGELN, neuwuerfelnKosten: 2 },
+    };
+    assert.notEqual(zug(teuer, 'normal').typ, 'neuwuerfeln');
+  });
+
+  it('hoert nach vier Wuerfen in derselben Runde auf', () => {
+    // DER ABBRUCH: Ohne ihn wuerfelte der Bot in dieser Lage endlos, weil ihn
+    // seit dem kostenlosen Wurf kein Gold mehr bremst.
+    const satt = mitHeer(fremderLaden(FREMD), 0, { wuerfeRunde: 4 });
+    assert.notEqual(zug(satt, 'normal').typ, 'neuwuerfeln');
   });
 
   it('wuerfelt als sanfter Gegner nie', () => {
@@ -670,38 +726,67 @@ describe('Bot: das fertige Heer', () => {
   /**
    * Die Gangarten sind kein Zierrat.
    *
-   * GEMESSEN WIRD IM FELD ZU VIERT und nicht mehr im Duell zu zweit — aus
-   * einem Grund, der am 05.09.2026 aufgefallen ist: Seit der Lebensvorrat 20
-   * statt 100 betraegt, dauert ein Duell 11 statt 21 Runden, und in dieser
-   * Zeit verdient sich der aggressive Ausbau von `hart` nicht mehr. Ueber 200
-   * Duelle stand es 96:104 fuer `normal` (vorher 125:75 fuer `hart`). Zu viert
-   * — der Besetzung, auf die das Spiel eingestellt ist — bleibt die
-   * Reihenfolge dagegen deutlich stehen: ueber 400 Partien 119 Siege fuer den
-   * harten Sitz gegen durchschnittlich 94 der drei normalen, und 241 : 53 fuer
-   * hart gegen sanft.
+   * GEMESSEN WIRD IM FELD ZU VIERT und nicht im Duell zu zweit, weil das die
+   * Besetzung ist, auf die das Spiel eingestellt ist. Frueher stand hier ein
+   * zweiter Grund: Beim Wechsel von 100 auf 20 Startleben fiel `hart` im Duell
+   * durch (96 : 104 statt 125 : 75), weil sich sein Ausbau in der kurzen
+   * Partie nicht mehr verdiente. Der Grund ist seit dem 06.09.2026 weg — im
+   * Duell steht es 315 : 84,5 je 400 Partien —, die Besetzung bleibt.
    *
-   * Hundert Partien und nicht zwanzig, weil die Laeden mitentscheiden: Ueber
-   * drei Saatbasen lag `hart` bei 30 zu 23 gegen den Schnitt der drei anderen
-   * Sitze — der Abstand ist stabil, aber nicht gross. Eine Probe an zwanzig
-   * Partien faellt beim naechsten Balancing grundlos um.
+   * DIE PARTIESCHLEIFE KOMMT AUS messen.ts und ist hier nicht noch einmal
+   * hingeschrieben. Sie stand frueher als eigene Fassung an dieser Stelle, und
+   * genau daran haengt eine Zahl, die man sonst nicht nachrechnen kann:
+   * Dieselbe Paarung ueber `werkzeug/gangarten.mjs` ergibt dieselben Siege wie
+   * diese Probe (am 05.09.2026 Ziffer fuer Ziffer geprueft).
+   *
+   * HUNDERT PARTIEN und nicht zwanzig, weil die Laeden mitentscheiden: Eine
+   * Probe an zwanzig Partien faellt beim naechsten Balancing grundlos um. Die
+   * Saat jeder Partie ist `SAAT-feld-<stark>-<schwach>-<i>`; wer die Zahlen von
+   * Hand nachstellen will, gibt dem Werkzeug
+   * `--saat 0123456789abcdef0123456789abcdef-feld` mit.
+   *
+   * FUER `hart` GEGEN `normal` STEHEN HIER TROTZDEM 400 PARTIEN, obwohl auch
+   * hundert reichten (50 : 16,7 auf der Basis dieser Probe). Der Grund ist die
+   * Geschichte dieser Paarung: Sie war am 05.09.2026 die knappste im Feld, lag
+   * bei 137 : 87,7 und stand ueber hundert Partien auf 25 : 25 — rot, obwohl
+   * die Aussage stimmte. Seit dem 06.09.2026 ist der Abstand ein Vielfaches
+   * davon (212 : 62,7 ueber 400 Partien), weil `hart` beim Aufstieg wieder ein
+   * volles Brett verlangt; die Zahlen stehen bei GANGARTEN in bot.ts. Die
+   * grosse Partienzahl bleibt als Vorsprung fuer den naechsten Eingriff am
+   * Laden — der hat diese Paarung schon zweimal gedreht, und vier Sekunden
+   * Rechenzeit sind dafuer ein guter Preis.
    */
-  function imFeld(stark: Schwierigkeit, schwach: Schwierigkeit): [number, number] {
+  const PARTIEN_JE_PAARUNG = 100;
+
+  /** Wo der Abstand schon einmal klein war, bleibt die Aussage gross. Siehe oben. */
+  const PARTIEN_KNAPPE_PAARUNG = 400;
+
+  function imFeld(
+    stark: Schwierigkeit,
+    schwach: Schwierigkeit,
+    regeln: TafelrundeRegeln = DEFAULT_REGELN,
+    regler: Kampfregler = STANDARD_REGLER,
+    partien: number = PARTIEN_JE_PAARUNG,
+  ): [number, number] {
+    const sitze = [0, 1, 2, 3];
+    // Sitz 0 spielt stark, die drei uebrigen schwach.
+    const besetzung = sitze.map((sitz) => (sitz === 0 ? stark : schwach));
     const siege = [0, 0, 0, 0];
-    for (let i = 0; i < 100; i++) {
-      let p = neu([0, 1, 2, 3], `${SAAT}-feld-${stark}-${schwach}-${i}`);
-      for (let runde = 0; runde < 300 && !p.fertig; runde++) {
-        for (const sitz of lebendeSitze(p)) {
-          if (darfHandeln(p, sitz)) p = ruesteAus(p, sitz, sitz === 0 ? stark : schwach).partie;
-        }
-        if (p.phase === 'kampf') p = loeseKampfAuf(p);
-      }
-      // Nur der EINDEUTIGE erste Platz zaehlt; ein geteilter Sieg sagt ueber
-      // die Gangart nichts.
-      const beste = platzierungen(p).filter((z) => z.place === 1);
-      if (beste.length === 1) siege[beste[0]!.seat]!++;
+    for (let i = 0; i < partien; i++) {
+      // `sieger` ist der EINDEUTIGE erste Platz; ein geteilter Sieg sagt ueber
+      // die Gangart nichts und steht in messen.ts deshalb als null.
+      const befund = spieleParte(
+        `${SAAT}-feld-${stark}-${schwach}-${i}`,
+        sitze,
+        besetzung,
+        regeln,
+        regler,
+      );
+      if (befund.sieger !== null) siege[befund.sieger]! += 1;
     }
-    const schnittDerAnderen = (siege[1]! + siege[2]! + siege[3]!) / 3;
-    return [siege[0]!, schnittDerAnderen];
+    // Der SCHNITT der drei anderen und nicht ihre Summe: Sonst traete die
+    // starke Gangart gegen drei Spieler an, und die Zahl hiesse nichts.
+    return [siege[0]!, (siege[1]! + siege[2]! + siege[3]!) / 3];
   }
 
   it('gewinnt als harter Gegner oefter als drei sanfte', () => {
@@ -714,8 +799,92 @@ describe('Bot: das fertige Heer', () => {
     assert.ok(normal > sanft, `normal ${normal} : ${sanft} sanft`);
   });
 
+  /**
+   * Die dritte Sprosse — und die, um die es hier geht.
+   *
+   * SIE HAT ZWEI TAGE LANG KEINE REIHENFOLGE BEHAUPTET, weil sie an einem
+   * einzigen Tag zweimal gekippt war: Mit 20 Leben schlug `hart` drei normale
+   * Gegner 119 : 94, mit 14 Leben und Zeitraffer x2 nur noch 77 : 107,7 — und
+   * seit ein Kauf den ganzen Laden neu zieht, wieder 140 : 86,7 (je 400
+   * Partien). Die Vorsicht war richtig, solange niemand wusste, WARUM.
+   *
+   * ES LAG AN DER ALTEN LADENREGEL, und das ist seit dem 05.09.2026 bekannt.
+   * Nicht an der kurzen Partie (der Zeitraffer allein bewegt die Zahl bei 20
+   * Leben von 110 auf 114) und nicht am Wuerfelpreis (mit wieder
+   * eingeschaltetem Preis gewinnt `hart` sogar deutlicher, 174 : 75,3):
+   * Solange ein Kauf nur seinen Platz leerte, bekam `hart` die Feldplaetze,
+   * die es sich frueh erkauft, in einer kurzen Partie nicht mehr voll.
+   *
+   * SEIT DEM 06.09.2026 IST SIE NICHT MEHR KNAPP, und das ist die eigentliche
+   * Neuigkeit an dieser Probe. `hart` verlangt beim Aufstieg wieder ein volles
+   * Brett und haelt dafuer nur noch zwei Gold zurueck; damit steht die Paarung
+   * nicht mehr bei 130, sondern bei gut 210 Siegen je 400 Partien. Die
+   * Zerlegung — welche Schraube welchen Anteil traegt — steht bei GANGARTEN in
+   * bot.ts und ist mit `werkzeug/gangarten.mjs --schraube …` nachzustellen,
+   * ohne bot.ts anzufassen.
+   *
+   * WORAUF DIE AUSSAGE HEUTE RUHT — vier Messungen zu je 400 Partien ueber
+   * zwei unabhaengige Saatbasen (`…-feld` und `gegenprobe-b`), alle in
+   * dieselbe Richtung (aufgenommen am 06.09.2026):
+   *
+   *     gebauter Stand (12 Leben, x2)   212 : 62,7   215 : 61,7
+   *     langer Stand (20 Leben, x1)     176 : 74,7   182 : 72,7
+   *
+   * Dazu der Kontrolllauf, und der ist wieder neutral: Alle vier Sitze mit
+   * `normal` besetzt ergibt fuer Sitz 0 ueber sechs Basen 98,7 Siege je 400.
+   * Am 05.09.2026 standen dort noch 110 bis 116 — ueber nur drei Basen
+   * gemessen, und das war eine Stichprobe. Die Ursache (gemeinsamer Vorrat,
+   * Sitze ruesten der Reihe nach) besteht fort und kann wiederkommen; die
+   * Begruendung steht bei GANGARTEN in bot.ts.
+   *
+   * WANN SIE WIEDER FALLEN DARF: bei der naechsten Aenderung am LADEN. Genau
+   * die hat sie beide Male gekippt, und die Zahlen dazu fallen in Sekunden an
+   * (`werkzeug/gangarten.mjs`). Eine Aenderung an Leben oder Zeitraffer
+   * dagegen faengt die Probe darunter ab.
+   *
+   * SIE MASS EINEN TAG LANG UEBER DREI SAATBASEN und tut es nicht mehr. Das
+   * war kein Zierrat: Die Elementar-Reparatur vom 05.09.2026 (katalog.ts,
+   * Irrlicht) hatte sie auf der EINEN alten Basis auf 100 : 100 gestellt,
+   * waehrend `hart` auf fuenf anderen Basen vorne blieb. Der Grund dafuer war
+   * die Duenne der Gangart — rund 20 bis 35 Siege ueber dem Kontrolllauf, also
+   * die Groessenordnung des Rauschens. Der ist weg; drei Basen kosteten nur
+   * noch Rechenzeit. WER DEN ABSTAND WIEDER KLEIN MACHT, HOLT SIE ZURUECK.
+   */
   it('gewinnt als harter Gegner oefter als drei normale', () => {
-    const [hart, normal] = imFeld('hart', 'normal');
+    const [hart, normal] = imFeld(
+      'hart',
+      'normal',
+      DEFAULT_REGELN,
+      STANDARD_REGLER,
+      PARTIEN_KNAPPE_PAARUNG,
+    );
     assert.ok(hart > normal, `hart ${hart} : ${normal} normal`);
+  });
+
+  /**
+   * DIESELBE AUSSAGE NOCH EINMAL, ABER BEI EINER ANDEREN PARTIELAENGE.
+   *
+   * Der gebaute Stand ist seit dem 05.09.2026 der kurze (12 Leben, Zeitraffer
+   * x2, rund neun Runden); die drei Proben darueber messen ihn. Diese hier
+   * misst den LANGEN Stand von gestern — 20 Leben, kein Zeitraffer, rund
+   * fuenfzehn Runden — und behauptet dort dasselbe.
+   *
+   * Sie steht da, weil die Rundenzahl genau die Zahl ist, an der Robin dreht:
+   * 100 Leben, dann 20, dann 14. Eine Gangart, die nur bei der Laenge von
+   * heute vorne liegt, ist auf eine Zahl geeicht statt auf das Spiel — und das
+   * faellt sonst erst der uebernaechsten Umstellung auf. Ueber die 400 Partien
+   * dieser Probe steht es 176 : 74,7, auf der zweiten Saatbasis 182 : 72,7.
+   */
+  it('gewinnt als harter Gegner auch in der langen Partie oefter', () => {
+    const lang: TafelrundeRegeln = { ...DEFAULT_REGELN, startLeben: 20 };
+    const gemaechlich: Kampfregler = { ...STANDARD_REGLER, zeitraffer: 1 };
+    const [hart, normal] = imFeld(
+      'hart',
+      'normal',
+      lang,
+      gemaechlich,
+      PARTIEN_KNAPPE_PAARUNG,
+    );
+    assert.ok(hart > normal, `hart ${hart} : ${normal} normal (20 Leben, x1)`);
   });
 });

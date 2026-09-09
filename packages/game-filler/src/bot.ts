@@ -35,7 +35,7 @@
  * ist kein Anfaenger, sondern ein kaputter Experte.
  */
 
-import type { FillerAktion } from './partie.js';
+import { type FillerAktion, STERN_BONUS } from './partie.js';
 import type { FillerSicht } from './sicht.js';
 
 /** Orthogonale Nachbarn — dieselbe Rechnung wie im Zustand, nur auf der Sicht. */
@@ -77,6 +77,10 @@ export function botZug(sicht: FillerSicht): FillerAktion {
   const sperren = new Set(sicht.barrieren.map(([a, b]) => kante(a, b)));
   const erreichbarMit = (platz: number, mauern: ReadonlySet<string>): number[] =>
     nachbarn(platz, spalten, zeilen).filter((n) => !mauern.has(kante(platz, n)));
+
+  // Ein Stern ist mehr wert als ein Feld — genau um seinen Bonus. Die Mauer
+  // dazu bewertet der Bot nicht eigens; er baut ohnehin nur, wo es sich lohnt.
+  const sterne = new Set(sicht.sterne ?? []);
 
   const gesperrt = new Set(Object.values(farbe));
   const erlaubt: number[] = [];
@@ -124,7 +128,7 @@ export function botZug(sicht: FillerSicht): FillerAktion {
         if (feld[n] !== f) continue;
         genommen.add(n);
         rand.push(n);
-        mass++;
+        mass += sterne.has(n) ? 1 + STERN_BONUS : 1;
       }
     }
     let tiefe = 0;

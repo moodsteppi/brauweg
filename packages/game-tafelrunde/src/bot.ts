@@ -18,9 +18,14 @@
  * eigenen Ueberschrift weiter unten:
  *
  *   1. KAUFEN NACH WERT — eine Verschmelzung schlaegt alles, danach zaehlen
- *      Paare, vertretene Marken und die reine Staerke.
- *   2. AUFSTELLEN NACH ROLLE — Wachen und Meuchler nach vorn, Schuetzen,
- *      Magier und Beistand nach hinten, Meuchler zusaetzlich an den Rand.
+ *      Paare, die Synergien der Marken und die Staerke. In die geht seit dem
+ *      05.09.2026 auch die REICHWEITE ein, aber nur so weit, wie das eigene
+ *      Heer eine Vorderreihe hat (`deckungIm`).
+ *   2. AUFSTELLEN NACH ROLLE — jede Rolle hat seit dem 06.09.2026 ihre
+ *      eigene Wunschreihe (`wunschreihe`) statt nur "ganz vorn" oder "ganz
+ *      hinten", Meuchler zusaetzlich an den Rand.
+ *      WELCHE aufgestellt wird, entscheidet seit dem 05.09.2026 das ganze
+ *      Brett und nicht die staerkste Einzelne (siehe `heerStaerke`).
  *   3. AUFSTIEG BEI VOLLEM BRETT — ein Feldplatz nuetzt nur, wenn etwas
  *      darauf steht.
  *   4. NEU-WUERFELN NUR BEI FREMDEM LADEN — wenn das Brett voll ist, kein
@@ -37,7 +42,9 @@
  *   - Die drei Stellungszuege verkleinern das Tripel (freie Feldplaetze,
  *     -Brettstaerke, Stellungskosten) der Reihe nach: Aufstellen den ersten
  *     Wert, Austauschen den zweiten, Umstellen den dritten. Jeder von ihnen
- *     laesst die davorstehenden unberuehrt.
+ *     laesst die davorstehenden unberuehrt. "Brettstaerke" ist dabei
+ *     `heerStaerke` ueber das Brett — auch sie faellt nie und ist nach oben
+ *     beschraenkt, der Beweis traegt also weiter.
  *
  * KEIN Math.random. Wo der Bot wuerfelt — und das tut er nur bei der
  * Patzerregel der leichten Gangarten —, kommt die Zahl aus `baueZufall` ueber
@@ -47,7 +54,16 @@
 
 import type { Kaempfer, TafelrundeAktion } from './partie.js';
 import type { EigeneSicht, TafelrundeSicht } from './sicht.js';
-import { type EinheitId, type Marke, einheit, werteFuer } from './katalog.js';
+import {
+  type EinheitId,
+  type Marke,
+  type Wertebonus,
+  KEIN_BONUS,
+  einheit,
+  werteFuer,
+} from './katalog.js';
+import { HEILUNG_FAKTOR } from './kampf.js';
+import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
 import { baueZufall } from './zufall.js';
 
 // ---------------------------------------------------------------------------
@@ -64,7 +80,7 @@ import { baueZufall } from './zufall.js';
  */
 export type Schwierigkeit = 'sanft' | 'normal' | 'hart';
 
-interface Gangart {
+export interface Gangart {
   /**
    * Gold, das ab `POLSTER_AB_RUNDE` liegen bleibt.
    *
@@ -74,11 +90,31 @@ interface Gangart {
    * zurueckgehaltenes Gold weniger ein, als eine Einheit auf dem Brett wert
    * ist. Deshalb haelt hier der SANFTE Gegner am meisten zurueck, nicht der
    * harte — Horten ist die Schwaeche, die Robin an einem Menschen wiedererkennt.
+   *
+   * GAR NICHTS ZURUECKZUHALTEN IST TROTZDEM SCHLECHTER als ein kleines
+   * Polster, und das ist keine Feinheit, sondern ein Vorzeichenwechsel: Auf 0
+   * gestellt faellt `hart` unter seinen Wert bei 2 zurueck. Wer bis auf den
+   * letzten Goldtaler kauft, fuellt die Bank mit Kleinkram — und eine volle
+   * Bank laesst nur noch Verschmelzungskaeufe zu. Die Kurve steht bei
+   * GANGARTEN; wer sie neu aufnehmen will, braucht dafuer keinen Eingriff hier
+   * (`gangarten.mjs --schraube polster=…`).
    */
   readonly polster: number;
-  /** Was nach einem Aufstieg uebrig bleiben soll, um das neue Feld zu fuellen. */
+  /**
+   * Was nach einem Aufstieg uebrig bleiben soll, um das neue Feld zu fuellen.
+   *
+   * Die schaerfste Schraube im Feld: zwischen 0 und 5 liegt bei `hart` der
+   * Unterschied zwischen 221 und 32 Siegen je 400 Partien. Wer sie anfasst,
+   * misst — die Zahlen stehen bei GANGARTEN.
+   */
   readonly aufstiegsReserve: number;
-  /** Steigt er nur auf, wenn das Brett voll ist? Siehe AUFSTIEG BEI VOLLEM BRETT. */
+  /**
+   * Steigt er nur auf, wenn das Brett voll ist? Siehe AUFSTIEG BEI VOLLEM BRETT.
+   *
+   * Seit dem 06.09.2026 sagen ALLE DREI Gangarten hier ja. `hart` sagte bis
+   * dahin nein, und das kostete es rund 57 Siege je 400 Partien: Ein Feldplatz
+   * ohne Einheit darauf ist bezahlter Leerstand.
+   */
   readonly nurBeiVollemBrett: boolean;
   /** Wuerfelt er einen Laden neu, der nicht zu ihm passt? */
   readonly wuerfeltNeu: boolean;
@@ -106,34 +142,133 @@ interface Gangart {
  * Die drei Gangarten.
  *
  * `normal` ist die Vorgabe und zugleich die Fassung, die nach Lehrbuch spielt:
- * ab Runde 4 ein kleines Polster, Aufstieg nur bei vollem Brett, selten ein
- * Fehlgriff. `hart` spielt auf TEMPO — kein Zoegern beim Aufstieg, keine
- * Reserve, kein Fehlgriff. `sanft` sitzt auf seinem Gold, steigt spaet auf,
- * greift meist blind zu und verpasst Verschmelzungen.
+ * ab Runde 4 ein Polster von vier Gold, Aufstieg nur bei vollem Brett und erst
+ * mit drei Gold Reserve darauf, selten ein Fehlgriff. `hart` spielt auf TEMPO —
+ * halb so grosses Polster, keine Reserve nach dem Aufstieg, kein Fehlgriff.
+ * `sanft` sitzt auf seinem Gold, steigt spaet auf, greift meist blind zu und
+ * verpasst Verschmelzungen.
  *
- * DASS DIESE REIHENFOLGE STIMMT, IST GEMESSEN und nicht geschaetzt — je 400
+ * TEMPO HEISST SEIT DEM 06.09.2026 ETWAS ANDERES, und das ist die Aenderung,
+ * um die es in diesem Absatz geht. Vorher liess `hart` beim Aufstieg BEIDE
+ * Bedingungen von `normal` weg — keine Reserve UND kein volles Brett —, und
+ * das hiess zusammen "kein Zoegern". Von den beiden traegt nur die erste: Ein
+ * Bot ohne die Bedingung "Brett voll" kauft Feldplaetze, auf denen nichts
+ * steht, und in einer Partie ueber neun Runden holt er das nicht mehr ein.
+ * Sie war also nicht wirkungslos, wie es einen Tag lang aussah, sondern ein
+ * Nachteil. Beide Haelften einzeln gemessen (sechs unabhaengige Saatbasen zu
+ * je 400 Partien zu viert, Schnitt der Siege von Sitz 0 je 400 — 100 waere
+ * unentschieden):
+ *
+ *     wie vorher: Polster 4, ohne volles Brett          133
+ *     nur das volle Brett wieder gefordert              190
+ *     nur das Polster auf 2                             156
+ *     beides zusammen — der heutige Stand               221
+ *
+ * Die Reserve bleibt bei 0, und sie ist die Schraube, die das Tempo heute
+ * traegt: `hart` steigt auf, sobald das Brett voll ist und das Gold GENAU
+ * reicht, waehrend `normal` noch drei Gold obendrauf sehen will. Auf drei
+ * gesetzt faellt er von 221 auf 166, auf fuenf auf 32 — die Reserve ist die
+ * schaerfste Schraube im Feld, und der sanfte Gegner ist mit seinen sechs
+ * genau deshalb schwach.
+ *
+ * DAS POLSTER HAT EIN OPTIMUM UND KEINE RICHTUNG. Von 4 auf 2 gewinnt `hart`
+ * (190 → 221), von 2 auf 0 verliert es wieder (175). Wer daraus "weniger
+ * sparen ist immer besser" liest, hat die Kurve nicht gemessen: Wer bis auf
+ * den letzten Goldtaler kauft, fuellt seine Bank mit Kleinkram, und eine volle
+ * Bank laesst nur noch Verschmelzungskaeufe zu (`passeBankAn` in partie.ts).
+ * Gemessen wurde 0/1/2/3/4 — 175 / 193 / 221 / 208 / 190.
+ *
+ * DASS DIE REIHENFOLGE STIMMT, IST GEMESSEN und nicht geschaetzt — je 400
  * Partien zu viert, ein Sitz mit der starken Gangart gegen drei mit der
- * schwachen, gezaehlt werden eindeutige Siege (Stand 05.09.2026):
+ * schwachen, gezaehlt werden eindeutige Siege. Rechts steht der SCHNITT der
+ * drei schwachen Sitze, und ueber zwei unabhaengige Saatbasen, weil eine
+ * einzelne nichts beweist (`werkzeug/gangarten.mjs`, Stand 06.09.2026):
  *
- *     hart : sanft   241 : 53     (rechts der Schnitt der drei schwachen Sitze)
- *     hart : normal  119 : 94
- *     normal : sanft 274 : 42
+ *                    gebaut (12 Leben, x2)     langer Stand (20 Leben, x1)
+ *     hart : normal   183 : 72,3  173 : 75,7    157 : 81,0  159 : 80,3
+ *     hart : sanft    394 :  2,0  378 :  7,3    365 : 11,7  352 : 16,0
+ *     normal : sanft  363 : 12,3  355 : 15,0    326 : 24,7  333 : 22,3
  *
- * ZU VIERT UND NICHT MEHR ZU ZWEIT, und das ist selbst ein Befund: Solange die
- * Partie 100 Startleben hatte, schlug `hart` den normalen Gegner im Duell mit
- * 125:75. Seit dem kuerzeren Lebensbalken (20 Leben, 05.09.2026) dauert ein
- * Duell 11 statt 21 Runden, und in dieser Zeit verdient sich der aggressive
- * Ausbau nicht mehr: Ueber 200 Duelle steht es 96:104 fuer `normal`. Am Tisch
- * zu viert — der Besetzung, auf die das Spiel eingestellt ist — bleibt der
- * Abstand stehen. Wer die Gangarten fuer das Duell zurechtruecken will, misst
- * bitte beide Besetzungen; die Zahlen fallen in Sekunden an.
+ * NEU AUFGENOMMEN AM 06.09.2026, nachdem die Bewertung die Reichweite bekam
+ * (`REICHWEITEN_GEWICHT`). Die Reihenfolge steht unveraendert in allen vier
+ * Spalten, der Abstand zwischen `hart` und `normal` ist kleiner geworden (228
+ * auf 183): Ein Bot, der besser einkauft, holt einen Teil dessen auf, was
+ * `hart` sich ueber Tempo verschafft. Die Zahlen davor lauteten 228 : 57,3 ·
+ * 231 : 56,3 · 190 : 70,0 · 201 : 66,3.
+ *
+ * DASS BEIDE SPALTEN DASSELBE SAGEN, IST DER PUNKT: Die Reihenfolge haengt
+ * nicht an der Partielaenge. Die zweite Spalte ist der lange Stand (20 Leben,
+ * kein Zeitraffer, rund fuenfzehn Runden) und wird von der letzten Probe in
+ * bot.test.ts mitgeprueft — die Rundenzahl ist die Zahl, an der Robin dreht,
+ * und eine darauf geeichte Gangart faellt sonst erst der uebernaechsten
+ * Umstellung auf. Auch das DUELL zu zweit traegt sie inzwischen (315 : 84,5 je
+ * 400 Partien, sechs Basen); dort lag `hart` nach der Kuerzung des
+ * Lebensbalkens einmal hinten — 96 : 104 —, und das war der Grund, aus dem zu
+ * viert gemessen wird. Der Grund ist damit weg, die Besetzung bleibt: Zu viert
+ * ist die Besetzung, auf die das Spiel eingestellt ist.
+ *
+ * WAS `HART` TRAEGT, traegt es aus vier Schrauben und nicht aus einer. Je eine
+ * davon auf den Wert einer schwaecheren Gangart zurueckgedreht (die drei
+ * Zahlen auf `normal`, das Neu-Wuerfeln auf `sanft`), sechs Saatbasen zu je
+ * 400 Partien, Schnitt je 400:
+ *
+ *     `hart` wie gebaut                          221
+ *     mit dem Polster von `normal` (4)           190
+ *     ohne die Patzerfreiheit (0,15)             177
+ *     ohne das Neu-Wuerfeln                      172
+ *     mit der Reserve von `normal` (3)           166
+ *     alle drei Zahlen zugleich auf `normal`     110
+ *
+ * Jede einzelne liegt weit ausserhalb des Standardfehlers (rund 10 Siege bei
+ * 400 Partien). Bis zum 06.09.2026 stand hier das Gegenteil: Damals trug allein
+ * die fehlende Patzerquote, und die Tempo-Schrauben lagen innerhalb der
+ * Streuung. Das war richtig gemessen und ist der Anlass dieser Aenderung
+ * gewesen — eine Charakterisierung ohne Wirkung ist keine.
+ *
+ * DIE VERGLEICHE OBEN SIND GEPAART, und deshalb zaehlen dort auch kleine
+ * Unterschiede: `werkzeug/gangarten.mjs` baut die Saat jeder Partie aus der
+ * Saatbasis und den NAMEN der beiden Gangarten, nicht aus ihren Werten. Zwei
+ * Laeufe mit `--schraube` sehen also dieselben Laeden, dieselben Gegner und
+ * dieselben Kaempfe; verglichen wird die Entscheidung und nicht die
+ * Stichprobe. Nur der Sprung nach `--stark normal` zieht eine andere
+ * Stichprobe — daher steht in der letzten Zeile 110 und nicht die 98,7 des
+ * Kontrolllaufs. Diese Differenz ist Streuung und kein Sitzvorteil.
+ *
+ * DER KONTROLLLAUF IST WIEDER NEUTRAL, und das gehoert vor jede dieser Zahlen:
+ * Besetzt man ALLE VIER Sitze gleich, gewinnt Sitz 0 ueber sechs Saatbasen zu
+ * je 400 Partien 94,0 mal mit `normal`, 101,5 mit `hart` und 100,7 mit `sanft`
+ * — gegen 100 im Schnitt (nachgemessen am 06.09.2026 mit dem Reichweitenfaktor;
+ * ohne ihn standen dort 98,7 · 100,2 · 107,5). Am 05.09.2026 stand hier noch ein Sitzvorteil von
+ * 110 bis 116 mit `normal`, gemessen ueber drei Basen; ueber sechs sind es
+ * 101,7 (bei 14 Leben) und 98,7 (bei 12). Der Vorteil war eine Stichprobe.
+ * DIE URSACHE IST TROTZDEM NICHT WEG und kann jederzeit wiederkommen: Der
+ * VORRAT ist gemeinsam (partie.ts, `vorrat`), Bots auf Marken wollen alle
+ * dieselben Einheiten, und der Messstand laesst die Sitze der Reihe nach
+ * ruesten — wer zuerst kauft, bekommt sie. Am echten Tisch ruesten alle
+ * gleichzeitig; der Druck auf den Vorrat ist aber derselbe. Vor dem
+ * Reichweitenfaktor lag ausgerechnet `sanft` mit 107,5 vorn, was dazu passte —
+ * wer hortet, kauft spaeter; heute liegen alle drei innerhalb von sechs
+ * Siegen um 100, und keine Deutung traegt mehr als die Streuung. Wer eine
+ * Gangart misst, misst den Kontrolllauf mit.
+ *
+ * WAS DIE ZAHLEN SCHON ZWEIMAL GEKIPPT HAT, WAR DER LADEN. Am 05.09.2026
+ * verlor `hart` gegen `normal` (77 : 107,7) — nicht wegen der kurzen Partie
+ * und schon gar nicht wegen des Zeitraffers (bei 20 Leben bewegt er die Zahl
+ * von 110 auf 114), sondern weil ein Kauf damals nur SEINEN Ladenplatz leerte:
+ * Ein frueh vergroessertes Brett bekam man nicht mehr voll. Seit ein Kauf den
+ * ganzen Laden neu zieht, traegt sich der Ausbau wieder. Der Wurfpreis war es
+ * dagegen nie — mit wieder eingeschaltetem Preis von 2 Gold gewinnt `hart`
+ * sogar deutlicher. WER DEN LADEN ANFASST, MISST DIE GANGARTEN MIT.
  *
  * Der erste Anlauf hatte die Schrauben andersherum gesetzt — der harte Gegner
  * sparte am meisten und stieg am vorsichtigsten auf — und lag danach ueber 40
  * Partien mit 19:21 GLEICHAUF mit dem sanften. Wer hier etwas verstellt, misst
- * bitte nach; die Probe dazu steht in test/bot.test.ts (imFeld).
+ * bitte nach, und zwar ohne diese Datei anzufassen:
+ * `node packages/game-tafelrunde/werkzeug/gangarten.mjs --schraube polster=0`
+ * stellt eine einzelne Schraube um. Die Probe steht in test/bot.test.ts
+ * (imFeld).
  */
-const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
+export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
   sanft: {
     polster: 8,
     aufstiegsReserve: 6,
@@ -151,9 +286,9 @@ const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     nimmtVerschmelzungImmer: true,
   },
   hart: {
-    polster: 4,
+    polster: 2,
     aufstiegsReserve: 0,
-    nurBeiVollemBrett: false,
+    nurBeiVollemBrett: true,
     wuerfeltNeu: true,
     patzerQuote: 0,
     nimmtVerschmelzungImmer: true,
@@ -180,8 +315,136 @@ const POLSTER_AB_RUNDE = 4;
 const STAERKE_TEILER = 100;
 
 /**
+ * Was ein Feld Reichweite ueber den Nahkampf hinaus wert ist — bei voller
+ * Deckung, und je Feld.
+ *
+ * Ein Schuetze hinter der eigenen Linie schiesst vom ersten Takt an und wird
+ * erst getroffen, wenn die Linie faellt; ein Nahkaempfer laeuft erst einmal
+ * los (`schrittZiel` in kampf.ts) und kassiert dabei, ohne zurueckzuschlagen.
+ * Mit 0,25 ist eine gedeckte Bogenmeisterin (Reichweite 3) das 1,50-fache
+ * wert und der Sturmrufer (Reichweite 4) das 1,75-fache.
+ *
+ * GEMESSEN AUF EINEM BRETT VON 5 x 4 FELDERN JE SEITE (`brett.ts`), also einer
+ * Arena von 5 x 10 mit zwei leeren Reihen dazwischen (`arena.ts`). Das steht
+ * VOR den Zahlen und nicht hinter ihnen: Was Reichweite wert ist, haengt
+ * daran, wie weit gelaufen werden muss. Auf dem alten Brett (5 x 2 je Seite,
+ * Arena 5 x 4) stand fast jede Einheit vom ersten Takt an im Ziel, und dort
+ * lag dieselbe Messung bei 0,15. Mit dem tieferen Brett ist der Wert
+ * gestiegen — wer die Arena wieder anfasst, misst diese Zahl neu.
+ *
+ * DIE ZAHL IST GEMESSEN, nicht geschaetzt. Gemessen wird mit
+ * `werkzeug/gangarten.mjs --schraube reichweitenGewicht=…`: Alle vier Sitze
+ * spielen `normal`, nur Sitz 0 rechnet mit dem Faktor. Die Saat haengt nicht
+ * an der Schraube, zwei Laeufe spielen also DIESELBEN Partien. Je 400 Partien
+ * ueber sechs Saatbasen, gezaehlt werden die eindeutigen Siege von Sitz 0:
+ *
+ *     ohne Faktor (Kontrolllauf)   645 von 2.400
+ *     mit 0,15                     808
+ *     mit 0,20                     823
+ *     mit 0,25                     804   <- gebaut
+ *     mit 0,30                     817
+ *     mit 0,35                     805
+ *     mit 0,50                     701
+ *     mit 0,70                     520
+ *     mit 1,00                     373
+ *
+ * VON 0,15 BIS 0,35 IST DAS EINE EBENE UND KEINE KURVE: Die vier Werte liegen
+ * innerhalb eines Standardfehlers (rund 22 Siege auf 2.400 Partien),
+ * unterscheidbar sind sie nicht. Erst ab 0,50 faellt der Faktor ab, bei 0,70
+ * ist er unter dem Kontrolllauf und bei 1,00 ein Desaster — dort kauft der Bot
+ * Fernkaempfer, wo er eine Wache braeuchte.
+ *
+ * 0,25 IST DIE MITTE DIESER EBENE und nicht ihr hoechster Punkt. Absichtlich:
+ * Die Ebene ist gemessen, ihr Maximum ist Rauschen. Wer die Mitte nimmt,
+ * verliert nichts und faellt bei der naechsten Aenderung an Brett oder Katalog
+ * nicht sofort ueber eine Kante — in BEIDE Richtungen ist gleich viel Luft.
+ */
+const REICHWEITEN_GEWICHT = 0.25;
+
+/**
+ * Wie viele Fernkaempfer eine Einheit der Vorderreihe deckt.
+ *
+ * DIESE ZAHL KOSTET HEUTE EHER, ALS SIE BRINGT, und das gehoert offen
+ * hierhin. Gemessen wie oben, Gewicht 0,25, sechs Basen zu je 400 Partien,
+ * Kontrolllauf 645:
+ *
+ *     Deckkraft 1     742      jede Wache deckt genau einen Fernkaempfer
+ *     Deckkraft 2     804      der gebaute Stand
+ *     ohne Bremse     819      der Faktor gilt immer voll
+ *
+ * Der Abstand zwischen 2 und "ohne Bremse" ist ein Standardfehler, also keine
+ * Aussage — die Richtung war es beim letzten Mal aber auch schon, und sie ist
+ * seitdem nicht besser geworden. Deckkraft 1 dagegen ist zu streng und kostet
+ * messbar.
+ *
+ * DIE BREMSE BLEIBT TROTZDEM, und mit dem hoeheren Gewicht mehr denn je: Sie
+ * verhindert das Brett, an dem die Marke Elementar am 05.09.2026 gescheitert
+ * ist — fuenf Traeger, alle mit Reichweite 3 oder 4, niemand haelt die Linie,
+ * Siegquote x0,25 (siehe Irrlicht in katalog.ts). Dass sie heute nichts
+ * abfaengt, liegt am Katalog desselben Tages: Seit dem Irrlicht und dem
+ * Schildknappen hat JEDE Marke einen Traeger in der Vorderreihe, ein Brett
+ * ganz ohne Nahkaempfer kommt gar nicht mehr zustande. Wer eine Marke aus
+ * lauter Fernkaempfern nachlegt, bekommt die Sperre geschenkt — und je
+ * hoeher `REICHWEITEN_GEWICHT`, desto teurer waere ihr Fehlen.
+ *
+ * ZWEI UND NICHT EINS: Sachlich heisst die Zwei "eine Wache haelt zwei
+ * Fernkaempfern den Ruecken frei", und das ist die Zahl, die man an einem
+ * Brett von fuenf Spalten je Reihe auch abzaehlt. Die Eins ist gemessen zu
+ * streng.
+ *
+ * KEIN HARTER SCHALTER bei "gar keine Wache": Ein Brett mit einer Wache und
+ * sechs Schuetzen ist nicht gedeckt, und ein Umschalten bei genau einer Wache
+ * waere eine Kante, hinter der der Bot ploetzlich anders einkauft. Das
+ * Verhaeltnis sagt dasselbe stetig.
+ */
+const DECKKRAFT = 2;
+
+/** Kein Rueckhalt: Reichweite bringt der Einheit dann gar nichts. */
+const KEINE_DECKUNG = 0;
+
+/** Voller Rueckhalt: Reichweite zaehlt mit `REICHWEITEN_GEWICHT` je Feld. */
+const VOLLE_DECKUNG = 1;
+
+/**
+ * Wie gut die Vorderreihe dieses Heeres seine Fernkaempfer deckt — 0 bis 1.
+ *
+ * WARUM DIE REICHWEITE NICHT FUER SICH ALLEIN ZAEHLT: Reichweite ist nichts
+ * wert, solange niemand die Linie haelt. Genau daran ist die Marke Elementar
+ * am 05.09.2026 gescheitert (siehe Irrlicht in katalog.ts) — fuenf Traeger,
+ * alle mit Reichweite 3 oder 4, und eine Siegquote von x0,25. Ein Bot, der
+ * Reichweite pauschal aufwertet, baut genau dieses Brett.
+ *
+ * AUF DEM HEUTIGEN KATALOG IST DAS NICHT MEHR MESSBAR, und die Zahlen dazu
+ * stehen bei `DECKKRAFT`: Weil jede Marke inzwischen einen Traeger in der
+ * Vorderreihe hat, kommt ein Brett ohne Nahkaempfer nicht mehr zustande, und
+ * ein pauschaler Faktor spielt einen Standardfehler besser. Die Funktion
+ * bleibt als SPERRE gegen den naechsten Katalog, nicht als gemessener Gewinn.
+ *
+ * Ein Verhaeltnis und kein feiner ausgedachtes Mass: so viele Fernkaempfer,
+ * wie die Vorderreihe traegt (`DECKKRAFT`), sind gedeckt, der Rest drueckt den
+ * Anteil. Ueber 1 wird gekappt — zwei Wachen je Schuetze decken nicht doppelt.
+ *
+ * Gezaehlt wird nach `reichweite` und nicht nach `rolle`: Die Rolle steuert
+ * die Stellung (`platzStrafe`), und das Irrlicht ist seit dem 05.09.2026 der
+ * Fall, an dem beides auseinandergeht — Rolle `wache`, aber im Katalog steht
+ * eine Reichweite, und die entscheidet hier.
+ */
+function deckungIm(einheiten: readonly Kaempfer[]): number {
+  let nah = 0;
+  let fern = 0;
+  for (const k of einheiten) {
+    if (einheit(k.id).reichweite <= 1) nah += 1;
+    else fern += 1;
+  }
+  // Ohne Fernkaempfer geht die Zahl niemanden etwas an; sie darf nur nicht
+  // durch null teilen.
+  if (fern === 0) return VOLLE_DECKUNG;
+  return Math.min(VOLLE_DECKUNG, (nah * DECKKRAFT) / fern);
+}
+
+/**
  * Wie viel eine Einheit dem Bot wert ist: was sie aushaelt MAL dem, was sie
- * austeilt.
+ * austeilt — mal dem, was ihre Reichweite in DIESEM Heer wert ist.
  *
  * Das Produkt und nicht die Summe, und das ist der Kern der Bewertung: Eine
  * Einheit teilt so lange aus, wie sie steht, ihr Beitrag ist also beides
@@ -194,20 +457,115 @@ const STAERKE_TEILER = 100;
  * mindert jeden Treffer um ihren Prozentsatz (`schadenNach` in kampf.ts), 50
  * Ruestung verdoppeln also das, was eine Einheit aushaelt.
  *
- * Was hier NICHT eingeht, ist die Reichweite — ein Schuetze mit denselben
- * Werten ist mehr wert als ein Nahkaempfer. Der Bot faengt das ueber die
- * Stellung ab (Schuetzen nach hinten) und nicht ueber einen weiteren
- * geschaetzten Faktor.
+ * DIE REICHWEITE STAND BIS ZUM 05.09.2026 NICHT DRIN, mit dem Vermerk, die
+ * Stellung (Schuetzen nach hinten) fange das ab. Sie tut es nicht: Wohin eine
+ * Einheit gestellt wird, aendert nichts daran, WELCHE gekauft wird, und genau
+ * das entscheidet `staerke`. Sie geht deshalb jetzt ein — aber nur so weit,
+ * wie das Heer eine Vorderreihe hat (`deckungIm`). Die Vorgabe ist
+ * `KEINE_DECKUNG`: Wer eine Einheit ohne ihr Heer bewertet, weiss nichts ueber
+ * ihren Rueckhalt und soll ihr keinen andichten.
  *
  * Den Kampf wirklich durchrechnen zu lassen waere verlockend und falsch: Der
  * Bot entscheidet mehrmals je Runde, und `simuliereKampf` ist die teuerste
  * Rechnung des Moduls.
+ *
+ * Der `bonus` ist der Synergie-Aufschlag, den die Einheit in IHRER Umgebung
+ * bekommt (siehe `heerStaerke`). Ohne ihn misst die Funktion die nackte
+ * Einheit — das ist der richtige Wert ueberall dort, wo zwei Einheiten
+ * unabhaengig von ihren Nachbarn verglichen werden.
+ *
+ * GERUNDET WIRD ZUM SCHLUSS, und das ist kein Schoenheitsfehler: Der Beweis,
+ * dass die Zugschleife endet (Dateikopf), haengt daran, dass jeder Tausch
+ * `heerStaerke` um mindestens einen ganzen Punkt hebt. Ein Faktor, der eine
+ * Kommazahl stehen laesst, macht aus dem Schritt eine beliebig kleine Zahl.
  */
-function staerke(k: Kaempfer): number {
-  const w = werteFuer(k.id, k.stufe);
+function staerke(
+  k: Kaempfer,
+  bonus: Wertebonus = KEIN_BONUS,
+  deckung: number = KEINE_DECKUNG,
+): number {
+  const w = werteFuer(k.id, k.stufe, bonus);
   const haelt = (w.leben * 100) / Math.max(1, 100 - w.ruestung);
-  const teiltAus = w.angriff * w.tempo;
-  return Math.round((haelt * teiltAus) / STAERKE_TEILER);
+  const teiltAus = leistung(k.id, w.angriff) * w.tempo;
+  const ausDerFerne = 1 + (w.reichweite - 1) * REICHWEITEN_GEWICHT * deckung;
+  return Math.round((haelt * teiltAus * ausDerFerne) / STAERKE_TEILER);
+}
+
+/**
+ * Was der Angriffswert einer Einheit je Handgriff wirklich bewegt.
+ *
+ * Bei vier der fuenf Rollen ist das der Angriff selbst. Bei einem `beistand`
+ * ist es die Heilung, die er stattdessen wirkt: Er schlaegt im Kampf gar
+ * nicht, solange in seiner Reichweite ein Verwundeter steht (`sucheWunde` in
+ * kampf.ts), und gibt dafuer `HEILUNG_FAKTOR` mal seinen Angriff an Leben
+ * zurueck.
+ *
+ * OHNE DIESE ZEILE WAERE DIE BEISTAND-WIRKUNG IM SPIEL UNSICHTBAR. Der Bot
+ * bewertet mit `staerke`, was er kauft und aufstellt; ein Heiler, dessen
+ * Beitrag mit seinen 26 bis 50 Angriff gemessen wird, ist in jedem Vergleich
+ * die schwaechste Einheit seiner Stufe und wird nie gekauft. Gemessen war
+ * genau das der Grund, aus dem der Moosheiler am 05.09.2026 auf 74 Antritte in
+ * 5.000 Partien fiel und damit unter jede Zaehlschwelle — die Rolle waere
+ * repariert und die Reparatur nirgends zu sehen.
+ *
+ * WARUM DERSELBE FAKTOR WIE IM KAMPF und nicht ein eigenes Bot-Gewicht: Ein
+ * geheilter Lebenspunkt und ein verhinderter Schadenspunkt sind fuer die
+ * Standzeit eines Heeres dasselbe. Ein zweiter Faktor waere eine zweite
+ * Wahrheit ueber dieselbe Zahl und liefe beim ersten Nachjustieren auseinander
+ * (CLAUDE.md, "Was das Modul weiss, schreibt der Client nicht ab" — hier
+ * dieselbe Regel innerhalb des Moduls).
+ *
+ * WAS DIE ZAHL NICHT WEISS: dass eine Heilung Verbuendete braucht. Ein
+ * einzelner Beistand auf leerem Brett bekommt dieselbe Staerke wie einer
+ * hinter vier Wachen. Dieselbe Vereinfachung steckt in `ausDerFerne` und wird
+ * dort ueber `deckungIm` gemildert; fuer die Heilung waere das Gegenstueck ein
+ * eigener Faktor auf die ZAHL der Nachbarn — noch nicht gebaut, weil dieses
+ * Heer beim Kauf oft aus einer einzigen Einheit besteht und ein Heiler dann
+ * grundsaetzlich nichts wert waere. Gemessen ist der Beistand mit dieser
+ * Vereinfachung dort, wo er sein soll (docs/spiele/auto-battler-konzept.md).
+ */
+function leistung(id: EinheitId, angriff: number): number {
+  return einheit(id).rolle === 'beistand' ? angriff * HEILUNG_FAKTOR : angriff;
+}
+
+/**
+ * Was eine ZUSAMMENSTELLUNG wert ist: die Summe der Staerken, jede mit dem
+ * Bonus, den ihre Marken bei genau dieser Zusammenstellung geben.
+ *
+ * Damit sieht der Bot die Synergien ueberhaupt erst. Bis zum 05.09.2026 tat er
+ * das nicht: Sein einziger Markenbegriff war ein Aufschlag von 25 Punkten je
+ * schon vertretenem Gefaehrten (`MARKEN_GEWICHT`), gegen Einheitenstaerken von
+ * 130 bis 970. Gemessen ueber 2.000 Partien zu viert hielt eine Marke die
+ * Schwelle 4 in 1,2 % der Antritte und die Schwelle 6 in KEINEM einzigen —
+ * die halbe Synergietabelle war damit tot, und ob sie zu hoch angesetzt ist,
+ * war gar nicht entscheidbar, solange niemand auf sie hinspielte.
+ *
+ * Der Aufschlag ist eine STUFENFUNKTION und keine Gerade — genau das konnte
+ * die alte Zahl nicht abbilden. Der vierte Krieger ist ein Sprung fuer alle
+ * vier, der fuenfte bringt bis zur naechsten Schwelle nichts. Wer diesen
+ * Unterschied nicht sieht, sammelt breit statt tief und kommt nie an.
+ *
+ * Gezaehlt wird ueber die uebergebene Liste, und WELCHE das ist, entscheidet
+ * die Aufrufstelle: Beim Aufstellen ist es das Brett (nur dort zaehlen die
+ * Marken, siehe synergien.ts), beim Kaufen das ganze Heer samt Bank (die
+ * vierte Einheit einer Marke liegt zuerst auf der Bank — wer nur das Brett
+ * zaehlte, kaufte sie nie).
+ *
+ * SEIT DEM 05.09.2026 ENTSTEHT HIER AUCH DIE DECKUNG (`deckungIm`), und aus
+ * demselben Grund wie der Markenbonus: Was eine Reichweite wert ist, haengt
+ * nicht an der Einheit, sondern daran, wer vor ihr steht. Nur die Liste weiss
+ * das — die einzelne Einheit weiss es nie.
+ *
+ * Der Preis ist eine Zaehlung und eine Bonusrechnung je Einheit, bei
+ * hoechstens 18 Einheiten. Das ist etwas anderes als `simuliereKampf`, vor dem
+ * der Kommentar oben warnt: Hier wird nichts iteriert, nur addiert.
+ */
+function heerStaerke(einheiten: readonly Kaempfer[]): number {
+  const zaehlung = zaehleMarken(einheiten);
+  const deckung = deckungIm(einheiten);
+  let summe = 0;
+  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung), deckung);
+  return summe;
 }
 
 /** Alle eigenen Einheiten, Brett und Bank zusammen. */
@@ -242,47 +600,174 @@ function markenZaehlung(eigene: readonly Kaempfer[]): Map<Marke, number> {
  */
 const VORDERSTE_REIHE = 0;
 
-/** Eine falsche Reihe wiegt schwerer als eine falsche Spalte. */
+/**
+ * Eine Reihe zu weit HINTEN wiegt schwerer als eine falsche Spalte.
+ *
+ * Das Verhaeltnis 10 zu hoechstens 4 (`RAND_GEWICHT` mal zwei) ist Absicht
+ * und beantwortet die Frage, ob eine gute Spalte eine schlechte Reihe
+ * aufwiegen soll, mit NEIN: Die Reihe entscheidet, WAS eine Einheit im Kampf
+ * ueberhaupt tun kann — Treffer schlucken, die Front heilen, aus der Deckung
+ * schiessen. Die Spalte entscheidet nur, wie gut sie es tut (ein Feld in der
+ * Mitte hat sechs Nachbarn, eines am Rand vier). Ein Beistand in der Mitte
+ * der falschen Reihe heilt trotzdem niemanden.
+ *
+ * GEMESSEN am 06.09.2026 (2.000 Partien zu viert, Saatbasis laufwege-v1,
+ * je 34.853 Kaempfe): Mit 3 statt 10 kommt Zeile fuer Zeile DIESELBE Tabelle
+ * heraus — Reihen 36,8 / 24,9 / 37,8 / 0,4 %, 11,07 Bewegungen je Kampf,
+ * Markenspanne x0,542 bis x1,600. Erst bei 1 (dort wiegt die Mitte eine
+ * Reihe wirklich auf) bewegt sich ueberhaupt etwas, und zwar um einen halben
+ * Prozentpunkt: 2 % der Meuchler stehen dann eine Reihe zu weit vorn.
+ *
+ * DER GRUND IST DIE BELEGUNG: Auf 20 Feldern je Haelfte stehen im Mittel
+ * 2,6 Einheiten. Die Wunschreihe ist also fast immer frei, und dann kommt es
+ * auf das Verhaeltnis gar nicht an — es entscheidet nur den vollen Fall, und
+ * dort soll die Reihe entscheiden. Die Zahlen stehen in
+ * docs/TAFELRUNDE-LAUFWEGE.md, Abschnitt 8.
+ */
 const REIHEN_GEWICHT = 10;
+
+/**
+ * Eine Reihe zu weit VORN kostet mehr als eine zu weit hinten — aber nur, wer
+ * Reichweite hat.
+ *
+ * `sucheZiel` in kampf.ts nimmt den NAECHSTEN Gegner. Wer weiter vorn steht
+ * als gewollt, wird damit zum Ziel, das eigentlich die Wache sein sollte, und
+ * verliert genau die Deckung, fuer die er hinten steht. Wer weiter hinten
+ * steht als gewollt, verliert nur Zeit: einen Schritt, also `schrittdauer`
+ * (300 ms beim Zeitraffer 2).
+ *
+ * Fuer Reichweite 1 gilt das nicht — Wache und Meuchler muessen ohnehin bis
+ * auf ein Feld heran, vorn stehen ist ihre Aufgabe. Sie rechnen deshalb in
+ * beide Richtungen mit `REIHEN_GEWICHT`, und ein Meuchler, dessen Reihe voll
+ * ist, weicht nach VORN aus statt nach hinten.
+ */
+const VORRUECK_GEWICHT = 15;
 
 /** Und ein Meuchler in der Mitte schwerer als eine Wache neben der Mitte. */
 const RAND_GEWICHT = 2;
 
 /**
+ * In welcher Reihe diese Einheit stehen WILL. Null ist die vorderste.
+ *
+ * BIS ZUM 06.09.2026 GAB ES NUR ZWEI WUENSCHE — ganz vorn (Wache, Meuchler)
+ * oder ganz hinten (alles andere). Auf zwei Reihen war das vollstaendig; seit
+ * das Brett vier hat, blieben die beiden mittleren leer: Ueber 26.395
+ * aufgestellte Einheiten stand der Bot zu 100 % in Reihe 0 oder Reihe 3.
+ * Robin hat die Tiefe bestellt, damit man taktischer aufstellen kann — gegen
+ * einen Gegner, der die Haelfte des Bretts nicht benutzt, bringt sie nichts.
+ *
+ * DIE WUENSCHE FOLGEN DEM, WAS DIE ROLLE IM KAMPF TUT, und der Kampf kennt
+ * von einer Rolle nur zweierlei: die Werte und die REICHWEITE (allein der
+ * `beistand` hat eine eigene Zeile, er heilt statt zu schlagen). Deshalb
+ * steht hier, wo eine Einheit stehen muss, damit sie ueberhaupt HANDELN kann,
+ * sobald die beiden Fronten sich treffen. Ein Gegner, der an unserer
+ * vordersten Reihe steht, ist von Reihe `d` genau `d + 1` Felder entfernt —
+ * treffen kann ihn also, wer `d <= reichweite - 1` steht:
+ *
+ *   - `wache` (Reichweite 1) -> Reihe 0. Sie ist der einzige Fall, in dem die
+ *     Reihe nicht der Reichweite folgt, sondern der Aufgabe: Sie SOLL das
+ *     naechste Ziel sein (meistes Leben, geringster Angriff je Gold).
+ *   - `meuchler` (Reichweite 1) -> Reihe 1. Er muss genauso heran, ist aber
+ *     der Schaden und nicht der Schild: In Reihe 0 waere er neben der Wache
+ *     gleich weit vorn und faenge die Haelfte der Eroeffnung ab. Eine Reihe
+ *     dahinter bleibt die Wache das naechste Ziel, und der Schritt, den er
+ *     mehr laeuft, ist bei seinem Tempo der billigste im Heer. An den RAND
+ *     wie bisher — dort laeuft er an der Front vorbei, statt sich in ihr
+ *     festzubeissen.
+ *   - `beistand` (Reichweite 2) -> Reihe 2, und zwar `reichweite` und nicht
+ *     `reichweite - 1`: Seine Reichweite ist sein HEILRADIUS, gemessen zu den
+ *     eigenen Leuten und nicht zum Gegner. Aus Reihe 2 erreicht er die Wache
+ *     in Reihe 0 (Abstand 2), aus Reihe 3 nicht mehr (Abstand 3). Das ist der
+ *     ganze Unterschied zwischen "heilt die Front" und "heilt niemanden" —
+ *     und die Erklaerung dafuer, dass er bisher, ganz hinten neben den
+ *     Schuetzen, kaum je jemanden zu heilen hatte.
+ *   - `schuetze` und `magier` (Reichweite 3, Sturmrufer 4) -> Reihe 2 bzw. 3.
+ *     Sie sollen nie das naechste Ziel sein und stehen deshalb so weit
+ *     hinten, wie ihre Reichweite es erlaubt, OHNE dass sie den Gegner an
+ *     unserer Front verfehlen. Weiter hinten waere nicht sicherer, sondern
+ *     nur langsamer: Gedeckt ist man, sobald jemand naeher steht.
+ *
+ * Getrennt nach Reichweite und nicht nach Rollennamen, weil der Kampf es auch
+ * so haelt: Der Sturmrufer (Reichweite 4) steht eine Reihe weiter hinten als
+ * die uebrigen Magier, und das ist kein Sonderfall, sondern dieselbe Zeile.
+ *
+ * `reihen` kommt aus der Sicht: Auf einem Brett mit zwei Reihen fallen alle
+ * Wuensche ausser dem der Wache auf die hintere zusammen — genau die
+ * Aufstellung, die der Bot bis zum 06.09.2026 hatte.
+ */
+function wunschreihe(k: Kaempfer, reihen: number): number {
+  const e = einheit(k.id);
+  const letzte = reihen - 1;
+  switch (e.rolle) {
+    case 'wache':
+      return VORDERSTE_REIHE;
+    case 'meuchler':
+      return Math.min(VORDERSTE_REIHE + 1, letzte);
+    case 'beistand':
+      return Math.min(e.reichweite, letzte);
+    default:
+      return Math.min(e.reichweite - 1, letzte);
+  }
+}
+
+/**
  * Wie schlecht dieser Platz fuer diese Einheit ist. Null ist ideal.
  *
- * Die Rolle steht im Katalog, die Vorlieben sind die des Kampfes:
+ * Die Reihe kommt aus `wunschreihe` (dort steht die Begruendung je Rolle),
+ * die Spalte aus dem Sechseckraster:
  *
- *   - `wache` nach vorn und in die Mitte. Sie soll zuerst getroffen werden,
- *     und in der Mitte deckt sie mehr Nachbarfelder (Sechseckraster, sechs
- *     Nachbarn statt vier).
- *   - `schuetze`, `magier`, `beistand` nach hinten und in die Mitte. Alle drei
- *     haben Reichweite 2 bis 4 und wenig Leben; vorn sterben sie, bevor sie
- *     zweimal geschossen haben. Der Beistand steht ausdruecklich dabei,
- *     obwohl die Aufgabe ihn nicht nennt: Mit Reichweite 2 und dem niedrigsten
- *     Angriff des Katalogs gehoert er nirgendwo anders hin.
- *   - `meuchler` nach vorn an den RAND. Er hat Reichweite 1 und das hoechste
- *     Tempo; am Rand laeuft er an der gegnerischen Front vorbei, statt sich in
- *     ihr festzubeissen.
+ *   - `meuchler` an den RAND (`RAND_GEWICHT`), damit er an der gegnerischen
+ *     Front vorbeilaeuft statt hinein.
+ *   - alle anderen in die MITTE: Ein Feld in der Mitte hat sechs Nachbarn,
+ *     eines am Rand vier. Wer auf Nachbarn wirkt oder von ihnen gedeckt wird,
+ *     steht dort besser.
  *
  * `reihen` und `spalten` kommen aus der Sicht und nicht aus brett.ts: Die
  * beiden Zahlen stehen dort, damit niemand sie nachbaut — auch der Bot nicht.
+ *
+ * WARUM DER BOT NUR IN REIHE 0 UND IN DER HINTERSTEN REIHE STEHT. Gemessen am
+ * 06.09.2026 ueber 26.395 aufgestellte Einheiten (300 Partien zu viert): die
+ * beiden mittleren Reihen kein einziges Mal. Der Grund steht in dieser
+ * Funktion, und er ist kein Zufall aus der Feldreihenfolge:
+ *
+ *   1. Die drei Faelle kennen zusammen nur ZWEI Wunschreihen — `wache` und
+ *      `meuchler` die vorderste, alle uebrigen die hinterste. Eine mittlere
+ *      Reihe ist fuer keine Rolle das Ziel.
+ *   2. `REIHEN_GEWICHT` ueberstimmt jede Spaltenstrafe (siehe dort). Also ist
+ *      JEDES freie Feld der Wunschreihe besser als das beste Feld jeder
+ *      anderen, und `bestesFeld` nimmt es.
+ *   3. Zu einer mittleren Reihe greift `bestesFeld` deshalb erst, wenn die
+ *      Wunschreihe voll ist: fuenf Einheiten derselben Vorliebe, wobei Wache
+ *      und Meuchler sich dieselbe Reihe teilen. Neun Einheiten passen
+ *      ueberhaupt nur bei Level 9 aufs Brett (`feldplaetze`) — der Fall ist
+ *      moeglich, aber selten genug, dass er in der Messung nicht vorkam.
+ *
+ * Auf ZWEI Reihen war die Regel damit vollstaendig: vorn und hinten waren
+ * alles, was es gab. Seit dem 06.09.2026 hat jede Haelfte VIER Reihen
+ * (`BRETT_REIHEN`), und dieselbe unveraenderte Regel laesst die beiden
+ * mittleren leer. Das ist kein Fehler dieser Funktion, sondern ihre
+ * Reichweite.
+ *
+ * Wer die Tiefe nutzen will, braucht je Rolle eine WUNSCHREIHE statt eines
+ * Extrems — etwa Beistand und Magier eine Reihe vor den Schuetzen, damit die
+ * Heilung (Reichweite 2) die Front erreicht. Das aendert jede Aufstellung und
+ * damit jedes Kampfergebnis; es ist eine Messfrage und keine, die sich hier
+ * durch Nachdenken entscheiden laesst.
  */
 function platzStrafe(k: Kaempfer, platz: number, reihen: number, spalten: number): number {
   const reihe = Math.floor(platz / spalten);
   const spalte = platz % spalten;
-  const nachHinten = reihen - 1 - reihe;
+  const wunsch = wunschreihe(k, reihen);
+  const zuWeitVorn = Math.max(0, wunsch - reihe);
+  const zuWeitHinten = Math.max(0, reihe - wunsch);
   const zurMitte = Math.abs(spalte - (spalten - 1) / 2);
   const zumRand = Math.min(spalte, spalten - 1 - spalte);
 
-  switch (einheit(k.id).rolle) {
-    case 'wache':
-      return REIHEN_GEWICHT * (reihe - VORDERSTE_REIHE) + zurMitte;
-    case 'meuchler':
-      return REIHEN_GEWICHT * (reihe - VORDERSTE_REIHE) + RAND_GEWICHT * zumRand;
-    default:
-      return REIHEN_GEWICHT * nachHinten + zurMitte;
-  }
+  const e = einheit(k.id);
+  const vorwaerts = e.reichweite > 1 ? VORRUECK_GEWICHT : REIHEN_GEWICHT;
+  const spaltenStrafe = e.rolle === 'meuchler' ? RAND_GEWICHT * zumRand : zurMitte;
+
+  return vorwaerts * zuWeitVorn + REIHEN_GEWICHT * zuWeitHinten + spaltenStrafe;
 }
 
 /** Der beste freie Platz fuer diese Einheit; bei Gleichstand der kleinste. */
@@ -307,6 +792,56 @@ function bestesFeld(
 interface Stelle {
   readonly platz: number;
   readonly k: Kaempfer;
+}
+
+/**
+ * Welche Einheit der Bank das Brett am meisten hebt. Bei Gleichstand die am
+ * weitesten links — die feste Reihenfolge ist dieselbe Zusage wie bei
+ * `kandidaten`: dieselbe Lage, derselbe Zug (Grundsatz 1).
+ */
+function besteZugabe(brett: readonly Kaempfer[], bank: readonly Stelle[]): Stelle {
+  let beste = bank[0]!;
+  let bester = heerStaerke([...brett, beste.k]);
+  for (const stelle of bank.slice(1)) {
+    const wert = heerStaerke([...brett, stelle.k]);
+    if (wert > bester) {
+      beste = stelle;
+      bester = wert;
+    }
+  }
+  return beste;
+}
+
+/**
+ * Der beste Tausch Bank gegen Brett, oder null, wenn keiner das Brett ECHT
+ * staerker macht.
+ *
+ * Das "echt" ist kein Feinschliff, sondern der Abbruch: Ohne es schoebe der
+ * Bot zwei gleichwertige Einheiten bis zum Zeitablauf hin und her (siehe
+ * `stellungsZug`). Jeder Tausch hebt `heerStaerke` des Bretts um mindestens
+ * einen Punkt, und die Zahl ist nach oben beschraenkt — damit endet die
+ * Aufrufschleife.
+ */
+function besterTausch(
+  brett: readonly Kaempfer[],
+  stehen: readonly Stelle[],
+  bank: readonly Stelle[],
+): { readonly vonBank: number; readonly aufsBrett: number } | null {
+  let bester = heerStaerke(brett);
+  let gefunden: { vonBank: number; aufsBrett: number } | null = null;
+
+  for (const vonBank of bank) {
+    for (let i = 0; i < stehen.length; i += 1) {
+      const danach = brett.slice();
+      danach[i] = vonBank.k;
+      const wert = heerStaerke(danach);
+      if (wert > bester) {
+        bester = wert;
+        gefunden = { vonBank: vonBank.platz, aufsBrett: stehen[i]!.platz };
+      }
+    }
+  }
+  return gefunden;
 }
 
 /**
@@ -340,49 +875,77 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
     if (k !== null) bank.push({ platz, k });
   });
 
-  // Die staerkste Einheit der Bank, bei Gleichstand die am weitesten links.
-  const vonBank: Stelle | null = bank.reduce<Stelle | null>(
-    (bisher, jetzt) => (bisher === null || staerke(jetzt.k) > staerke(bisher.k) ? jetzt : bisher),
-    null,
-  );
+  /*
+   * Gemessen wird das BRETT und nicht das Heer: Die Synergien zaehlen nur, was
+   * aufgestellt ist (synergien.ts). Deshalb steht hier `heerStaerke` ueber
+   * `aufDemBrett` und nicht ueber `eigeneEinheiten` — sonst bekaeme eine
+   * Einheit den Bonus von Gefaehrten angerechnet, die auf der Bank zusehen.
+   */
+  const aufDemBrett = stehen.map((s) => s.k);
 
   // a) Aufstellen. Ein freies Brettfeld allein genuegt nicht — die Grenze ist
   //    `feldplaetze`, und darueber hinaus weist `fuehreAus` den Zug ab.
-  if (eigen.belegt < eigen.feldplaetze && freie.length > 0 && vonBank !== null) {
+  //
+  //    Welche der Bank hinaufkommt, entscheidet seit dem 05.09.2026 das ganze
+  //    Brett und nicht mehr die nackte Staerke der Einzelnen: Der vierte
+  //    Krieger kann schwaecher sein als der zweite Meuchler und trotzdem der
+  //    richtige Zug, weil er drei andere mit hebt. Wer hier nach Einzelstaerke
+  //    aufstellt, kauft zwar auf Marken hin (siehe KAUFEN NACH WERT), stellt
+  //    sie aber nie auf — und die Schwelle bleibt so leer wie vorher.
+  if (eigen.belegt < eigen.feldplaetze && freie.length > 0 && bank.length > 0) {
+    const beste = besteZugabe(aufDemBrett, bank);
     return {
       typ: 'verschieben',
-      von: { bereich: 'bank', platz: vonBank.platz },
-      nach: { bereich: 'brett', platz: bestesFeld(vonBank.k, freie, reihen, spalten) },
+      von: { bereich: 'bank', platz: beste.platz },
+      nach: { bereich: 'brett', platz: bestesFeld(beste.k, freie, reihen, spalten) },
     };
   }
 
   // b) Austauschen. Ein Tausch aendert die Belegung nicht und ist deshalb auch
   //    bei vollem Brett erlaubt (siehe `verschieben` in fuehreAus).
-  if (vonBank !== null && stehen.length > 0) {
-    const schwaechste = stehen.reduce((bisher, jetzt) =>
-      staerke(jetzt.k) < staerke(bisher.k) ? jetzt : bisher,
-    );
-    if (staerke(vonBank.k) > staerke(schwaechste.k)) {
-      return {
-        typ: 'verschieben',
-        von: { bereich: 'bank', platz: vonBank.platz },
-        nach: { bereich: 'brett', platz: schwaechste.platz },
-      };
-    }
+  //
+  //    Gesucht wird das beste PAAR aus Bank und Brett und nicht mehr die
+  //    staerkste gegen die schwaechste: Ein Tausch kann die Marke des
+  //    Abgeloesten unter eine Schwelle druecken und damit trotz staerkerer
+  //    Einzeleinheit ein schwaecheres Brett hinterlassen.
+  const tausch = besterTausch(aufDemBrett, stehen, bank);
+  if (tausch !== null) {
+    return {
+      typ: 'verschieben',
+      von: { bereich: 'bank', platz: tausch.vonBank },
+      nach: { bereich: 'brett', platz: tausch.aufsBrett },
+    };
   }
 
   // c) Umstellen: erst der Umzug auf ein freies Feld, dann der Tausch zweier
   //    Einheiten. Beides bewegt nur, was schon steht — die Belegung bleibt.
   for (const { platz, k } of stehen) {
     const jetzt = platzStrafe(k, platz, reihen, spalten);
-    for (const frei of freie) {
-      if (platzStrafe(k, frei, reihen, spalten) < jetzt) {
-        return {
-          typ: 'verschieben',
-          von: { bereich: 'brett', platz },
-          nach: { bereich: 'brett', platz: frei },
-        };
-      }
+    if (freie.length === 0) break;
+    /*
+     * Auf das BESTE freie Feld und nicht auf das erstbeste bessere.
+     *
+     * Bis zum 06.09.2026 nahm diese Schleife das erste Feld aus `freie`, das
+     * ueberhaupt eine Verbesserung war. `freie` laeuft aufsteigend, also von
+     * Reihe 0 nach hinten — fuer eine Wache ist das gerade richtig, fuer
+     * Schuetze, Magier und Beistand aber genau verkehrt herum: Sie bekamen
+     * zuerst ein etwas besseres Feld in derselben Reihe, im naechsten Aufruf
+     * eine Reihe weiter, und so fort. Ein Umzug wurde so zu bis zu drei.
+     *
+     * Auf zwei Reihen fiel das kaum auf, auf vieren schon: Der fleissigste
+     * Sitz einer Runde kam damit auf 43 Handgriffe statt 23 und riss in
+     * 0,72 % der Runden die Rundenfrist von 45 s (spielzeit.test.ts). Mit dem
+     * besten Feld sind es 18 — weniger als die 23 von vorher, auf zwei Reihen
+     * 17 statt 23. Der Bot stellt dasselbe auf, nur in einem Zug statt in
+     * dreien.
+     */
+    const bestes = bestesFeld(k, freie, reihen, spalten);
+    if (platzStrafe(k, bestes, reihen, spalten) < jetzt) {
+      return {
+        typ: 'verschieben',
+        von: { bereich: 'brett', platz },
+        nach: { bereich: 'brett', platz: bestes },
+      };
     }
   }
   for (const eins of stehen) {
@@ -425,15 +988,40 @@ const VERSCHMELZ_FAKTOR = 3;
 const PAAR_FAKTOR = 1.5;
 
 /**
- * Was jede schon vertretene Einheit derselben Marke zusaetzlich wert ist.
+ * Was dieser Kauf dem Heer UEBER DIE EINHEIT HINAUS bringt — der Zuwachs, den
+ * das ganze Heer hat, wenn sie dazukommt.
  *
- * Fuenfundzwanzig gegen eine Einheitenstaerke von 130 (billigste) bis 970
- * (teuerste): Vier Gefaehrten derselben Marke wiegen etwa eine halbe
- * Ein-Gold-Einheit auf. Mehr waere falsch, solange es die Synergie-Boni noch
- * nicht gibt (sie sind eine eigene Aufgabe) — der Bot soll auf die Marken
- * hinspielen, nicht blind sammeln.
+ * Er enthaelt drei Dinge: was die Neue von den schon vertretenen Marken
+ * bekommt, was sie allen anderen Traegern ihrer Marken gibt — und seit dem
+ * 05.09.2026, was sich an der DECKUNG aendert (`deckungIm`). Eine Wache hebt
+ * damit auch die Schuetzen, die schon dastehen, und ein sechster Schuetze
+ * drueckt sie. Abgezogen wird die nackte Staerke der Neuen, denn die steht in
+ * `kandidaten` schon in der Rechnung; was uebrig bleibt, ist genau das
+ * Umfeld.
+ *
+ * Die Funktion hiess bis dahin `markenGewinn`. Der Name stimmte nicht mehr,
+ * sobald die Deckung mitkam — und ein Name, der die Haelfte verschweigt, ist
+ * schlimmer als keiner: Wer die Zeile in `kandidaten` liest, haelt den
+ * Deckungsanteil sonst fuer verloren.
+ *
+ * BIS ZUM 05.09.2026 STAND HIER EINE ZAHL: `MARKEN_GEWICHT = 25` je schon
+ * vertretenem Gefaehrten, gegen Einheitenstaerken von 130 bis 970 — und linear
+ * obendrein, wo die Synergietabelle Stufen kennt. Der Bot spielte damit
+ * messbar gar nicht auf Marken hin. Die Zahl ist ersatzlos weg: Was eine Marke
+ * wert ist, steht in synergien.ts und wird hier ausgerechnet, nicht geschaetzt.
+ * Wer dort einen Bonus aendert, aendert das Kaufverhalten mit — vorher musste
+ * er daran denken, hier eine zweite Zahl nachzuziehen.
+ *
+ * Die Verschmelzung ist hier NICHT abgebildet: Drei Kopien werden zu einer,
+ * die Marke faellt also von drei Traegern auf einen zurueck. Diese Einbusse
+ * sieht der Bot nicht — sie waere eine zweite Fassung der Verschmelzregel im
+ * Haus (siehe `kandidaten`), und der Aufstieg auf die naechste Sternstufe
+ * ueberwiegt sie ohnehin deutlich.
  */
-const MARKEN_GEWICHT = 25;
+function umfeldGewinn(eigene: readonly Kaempfer[], id: EinheitId): number {
+  const neu: Kaempfer = { id, stufe: 1 };
+  return heerStaerke([...eigene, neu]) - heerStaerke(eigene) - staerke(neu);
+}
 
 interface Kandidat {
   readonly platz: number;
@@ -450,10 +1038,20 @@ interface Kandidat {
  * Die feste Reihenfolge ist kein Schoenheitsfehler: Derselbe Laden muss
  * denselben Kauf ergeben, sonst haengt die Partie an der Sortierung der
  * Laufzeit (Grundsatz 1).
+ *
+ * DASS `staerke` HIER OHNE DECKUNG GERUFEN WIRD, IST DIE WICHTIGSTE ZEILE DER
+ * GANZEN REICHWEITEN-RECHNUNG. Der Reichweitenwert kommt ueber `umfeldGewinn`
+ * herein und wird damit NICHT von `VERSCHMELZ_FAKTOR` und `PAAR_FAKTOR`
+ * mitmultipliziert. Reicht man ihn stattdessen hier durch, verdreifacht sich
+ * der Reichweitenvorteil an jedem Verschmelzungskauf, und der Bot jagt
+ * Schuetzenpaare statt Verschmelzungen: gemessen 487 Siege statt 702, je 400
+ * Partien ueber sechs Saatbasen gegen einen Kontrolllauf von 605
+ * (`werkzeug/gangarten.mjs`, 05.09.2026). Das ist ein groesserer Ausschlag als
+ * der Faktor selbst — wer hier eine Deckung einsetzt, macht den Bot schlechter
+ * als ganz ohne Reichweite.
  */
 function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number): Kandidat[] {
   const eigene = eigeneEinheiten(eigen);
-  const marken = markenZaehlung(eigene);
   const bankFrei = eigen.bank.includes(null);
   const noetig = sicht.verschmelzZahl - 1;
 
@@ -485,7 +1083,7 @@ function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number)
     let wert = staerke({ id, stufe: 1 });
     if (verschmilzt) wert *= VERSCHMELZ_FAKTOR;
     else if (kopien > 0) wert *= PAAR_FAKTOR;
-    for (const marke of art.marken) wert += MARKEN_GEWICHT * (marken.get(marke) ?? 0);
+    wert += umfeldGewinn(eigene, id);
 
     gefunden.push({ platz, id, verschmilzt, wert });
   });
@@ -520,6 +1118,17 @@ function wurf(sicht: TafelrundeSicht, eigen: EigeneSicht, zweck: string): number
   return baueZufall(saat)();
 }
 
+/**
+ * GENAU EIN Kauf, danach ist Schluss.
+ *
+ * `kandidaten` liefert zwar eine sortierte Liste, aber sie darf nie als
+ * Einkaufszettel abgearbeitet werden: Seit dem 05.09.2026 zieht ein Kauf den
+ * GANZEN Laden neu (partie.ts, Fall 'kaufen'). Der zweitbeste Platz von eben
+ * liegt danach nicht mehr aus — wer hier zwei Aktionen hintereinander baute,
+ * kaufte den Platz einer Karte, die inzwischen eine andere ist. Der Bot wird
+ * ohnehin so lange gerufen, bis er "bereit" meldet, und sieht bei jedem Ruf
+ * den frischen Laden.
+ */
 function kaufZug(
   sicht: TafelrundeSicht,
   eigen: EigeneSicht,
@@ -569,12 +1178,25 @@ function kaufZug(
  * Ohne die Reserve steigt er auf, sobald er es gerade eben kann, und steht mit
  * einem groesseren Brett und leerem Beutel da.
  *
- * Das ist die Regel, nach der `normal` spielt. Die beiden anderen Gangarten
- * weichen in verschiedene Richtungen ab, und zwar gemessen (siehe GANGARTEN):
- * `hart` laesst BEIDE Haelften weg und steigt auf, sobald es geht — Tempo ist
- * in diesem Spiel mehr wert als ein gefuelltes Brett eine Runde frueher.
- * `sanft` haelt sich an die Regel und legt sechs Gold obendrauf, steigt also
- * spaeter auf als beide.
+ * An "Brett voll" halten sich seit dem 06.09.2026 alle drei Gangarten; sie
+ * weichen nur noch in der RESERVE voneinander ab. `hart` legt nichts obendrauf
+ * und steigt auf, sobald das volle Brett und das blanke Aufstiegsgeld da sind;
+ * `normal` will drei Gold uebrig sehen, `sanft` sechs.
+ *
+ * DIE ERSTE HAELFTE WEGZULASSEN WAR EIN FEHLER, und er hat zwei Tage
+ * ueberlebt, weil er sich als Charakterzug las. `hart` liess bis zum
+ * 06.09.2026 beide Haelften weg — "kein Zoegern beim Aufstieg" —, und weil
+ * eine Messung vom Vortag das fuer folgenlos hielt, blieb es stehen. Auf dem
+ * heutigen Stand ist es das nicht: Allein die Bedingung "Brett voll"
+ * zurueckzuholen bringt `hart` von 133 auf 190 Siege je 400 Partien. Ein
+ * Feldplatz, den niemand besetzt, ist in einer Partie ueber neun Runden
+ * bezahlter Leerstand.
+ *
+ * DASS DAS TEMPO SICH LOHNT, HAENGT AM LADEN und ist nicht fuer alle Zeiten
+ * gemessen: Solange ein Kauf nur seinen Ladenplatz leerte, blieben die frueh
+ * gekauften Feldplaetze in einer kurzen Partie leer, und `hart` verlor daran
+ * gegen `normal` (77 : 107,7). Die Zahlen und der Nachweis stehen bei
+ * GANGARTEN.
  */
 function aufstiegsZug(eigen: EigeneSicht, gangart: Gangart): TafelrundeAktion | null {
   if (eigen.aufstiegKosten === null) return null;
@@ -596,6 +1218,16 @@ function aufstiegsZug(eigen: EigeneSicht, gangart: Gangart): TafelrundeAktion | 
 const KAUF_RUECKLAGE = 3;
 
 /**
+ * Wie oft ein Bot in EINER Runde hoechstens neu wuerfelt.
+ *
+ * Die Zahl ist kein Feintuning, sondern der Abbruch: Ohne sie hat der Bot seit
+ * dem kostenlosen Wuerfeln keinen Grund mehr aufzuhoeren (siehe wuerfelZug).
+ * Vier reichen — er wuerfelt nur in der Lage "Brett voll, nichts passt", und
+ * die loest sich in aller Regel beim ersten oder zweiten Wurf.
+ */
+const WUERFE_JE_RUNDE = 4;
+
+/**
  * Neu wuerfeln, wenn das Brett voll ist und KEIN Ladenplatz zum eigenen Heer
  * passt.
  *
@@ -614,8 +1246,13 @@ const KAUF_RUECKLAGE = 3;
  * Deshalb steht diese Regel auch VOR dem Kauf: Sie greift nur in der Lage, in
  * der ein Kauf ohnehin nur die Bank fuellte, und danach kaeme sie nie zum Zug.
  *
- * Dass der Bot sich nicht festwuerfelt, garantiert das Gold: Jeder Wurf
- * kostet, und in der Vorbereitung kommt keines nach.
+ * DASS ER SICH NICHT FESTWUERFELT, GARANTIERT SEIT DEM 05.09.2026 DER DECKEL
+ * und nicht mehr das Gold. Vorher kostete jeder Wurf, und in der Vorbereitung
+ * kam keines nach — das war die Bremse. Seit die Vorgabe 0 Gold lautet, gibt
+ * es sie nicht mehr: Passt im Laden nichts, wuerfelte der Bot ohne
+ * WUERFE_JE_RUNDE endlos weiter, denn die Plattform ruft ihn so lange, bis er
+ * "bereit" meldet. Die Goldregel bleibt trotzdem stehen, weil ein Tisch den
+ * Preis wieder setzen darf.
  */
 function wuerfelZug(
   sicht: TafelrundeSicht,
@@ -625,9 +1262,17 @@ function wuerfelZug(
   if (!gangart.wuerfeltNeu) return null;
   if (eigen.belegt < eigen.feldplaetze) return null;
   if (!eigen.bank.includes(null)) return null;
+  if (eigen.wuerfeRunde >= WUERFE_JE_RUNDE) return null;
 
-  const polster = sicht.runde >= POLSTER_AB_RUNDE ? gangart.polster : 0;
-  if (eigen.gold - eigen.neuwuerfelnKosten < polster + KAUF_RUECKLAGE) return null;
+  /*
+   * Die Ruecklage nur, wenn das Wuerfeln ueberhaupt etwas kostet. Ein
+   * kostenloser Wurf ist auch dann richtig, wenn danach kein Gold mehr da
+   * ist: Er nimmt nichts weg.
+   */
+  if (eigen.neuwuerfelnKosten > 0) {
+    const polster = sicht.runde >= POLSTER_AB_RUNDE ? gangart.polster : 0;
+    if (eigen.gold - eigen.neuwuerfelnKosten < polster + KAUF_RUECKLAGE) return null;
+  }
 
   const eigene = eigeneEinheiten(eigen);
   const marken = markenZaehlung(eigene);
@@ -661,10 +1306,18 @@ function wuerfelZug(
  *   3. Dann das NEU-WUERFELN. Auch das steht vor dem Kauf, und dort steht es
  *      begruendet: Nach dem Kauf kaeme es nie zum Zug.
  *   4. Und erst dann KAUFEN — oder bereit melden.
+ *
+ * STATT DES NAMENS DARF AUCH EINE GANGART SELBST UEBERGEBEN WERDEN. Der Tisch
+ * tut das nie — er kennt nur `sanft`, `normal`, `hart` (siehe `gangartVon` im
+ * Adapter). Die Oeffnung ist fuer den Messstand da: `werkzeug/gangarten.mjs`
+ * kann damit EINE Schraube verstellen und den Vorschlag messen, ohne ihn
+ * einzubauen (`--schraube polster=0`). Vorher ging das nur ueber eine Aenderung
+ * an dieser Datei samt Neubau, und genau daran ist die Frage "was traegt `hart`
+ * eigentlich?" zweimal liegengeblieben.
  */
 export function botZug(
   sicht: TafelrundeSicht,
-  schwierigkeit: Schwierigkeit = 'normal',
+  wahl: Schwierigkeit | Gangart = 'normal',
 ): TafelrundeAktion {
   const eigen = sicht.eigenes;
   // Ohne eigenes Heer gibt es nichts zu entscheiden. Bereit zu melden ist die
@@ -672,7 +1325,7 @@ export function botZug(
   // wirft — und der Adapter faengt den Zuschauerfall ohnehin vorher ab.
   if (!eigen) return { typ: 'bereit' };
 
-  const gangart = GANGARTEN[schwierigkeit];
+  const gangart = typeof wahl === 'string' ? GANGARTEN[wahl] : wahl;
   return (
     stellungsZug(sicht, eigen) ??
     aufstiegsZug(eigen, gangart) ??

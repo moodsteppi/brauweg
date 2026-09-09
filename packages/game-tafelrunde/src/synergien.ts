@@ -3,14 +3,14 @@
  *
  * Jede Einheit traegt ein bis zwei Marken (katalog.ts). Je mehr Einheiten
  * einer Marke auf dem eigenen BRETT stehen, desto staerker der Bonus, mit
- * Schwellen bei 2, 4 und 6. Die Bank zaehlt nicht: Was dort liegt, kaempft
+ * Schwellen bei 2, 3 und 5. Die Bank zaehlt nicht: Was dort liegt, kaempft
  * nicht, und ein Bonus fuer Einheiten, die zusehen, waere ein Anreiz, die
  * Bank vollzustopfen statt aufzustellen.
  *
  * Was jede Marke bekommt, steht als DATEN in `SYNERGIEN` und nicht in
  * Bedingungen: Wer balanciert, aendert eine Zahl in der Tabelle und keine
  * Verzweigung. Der Bildschirm bekommt dieselbe Tabelle einmal mit der Sicht
- * (sicht.ts), damit er "bei 4: +30 % Angriff" anzeigen kann, ohne die Zahlen
+ * (sicht.ts), damit er "bei 3: +25 % Angriff" anzeigen kann, ohne die Zahlen
  * selbst zu kennen — sonst gaebe es zwei Wahrheiten ueber jeden Bonus.
  *
  * Der Bonus gilt nur fuer die TRAEGER der Marke, nicht fuer das ganze Brett:
@@ -21,8 +21,8 @@
  *
  * Gezaehlt werden EINHEITEN, nicht verschiedene Einheiten: Zwei Dorfwachen
  * sind zwei Krieger. Andere Spiele zaehlen nur Verschiedene; hier ginge das
- * nicht auf, weil der Katalog fuer Untot und Drache nur je zwei
- * Einheiten kennt — die Schwellen 4 und 6 waeren dort unerreichbar, die Marke
+ * nicht auf, weil der Katalog fuer Drache nur zwei und fuer Untot nur drei
+ * Einheiten kennt — die oberen Schwellen waeren dort unerreichbar, die Marke
  * tot. Kopien zaehlen zu lassen hat ausserdem einen Preis, den der Spieler
  * abwaegen muss: Drei Kopien verschmelzen zu einer, und die zaehlt einfach.
  *
@@ -38,10 +38,35 @@ import {
   einheit,
 } from './katalog.js';
 
-/** Die drei Schwellen aus dem Konzept. */
-export type Schwelle = 2 | 4 | 6;
+/**
+ * Die drei Schwellen.
+ *
+ * ZWEI, DREI UND FUENF SEIT DEM 05.09.2026 — das Konzept nannte 2/4/6, und
+ * die beiden oberen Zahlen waren praktisch unerreichbar. Der Grund ist
+ * arithmetisch und nicht eine Frage des Spielstils: Ein Brett fasst so viele
+ * Einheiten, wie der Sitz Level hat (`LEVEL_TABELLE` in regeln.ts), und ueber
+ * 400 gemessene Partien zu viert steht ein Bot in 21 % der Antritte auf Level
+ * 4, in 2,5 % auf Level 5 und in 0,04 % auf Level 6. Sechs Traeger einer Marke
+ * verlangen mindestens Level 6 — die Schwelle 6 war damit in 5.000 Partien
+ * KEIN EINZIGES MAL zu halten, und die Schwelle 4 in 1,2 % der Antritte.
+ *
+ * ZUERST WURDE DER BOT GEPRUEFT und nicht die Tabelle geaendert, denn eine
+ * Schwelle, auf die niemand hinspielt, sagt ueber ihre Hoehe nichts. Mit einem
+ * echten Markengewicht (bot.ts, `heerStaerke`) stieg die Schwelle 4 von 1,2 %
+ * auf 11,2 % — die Sechs blieb bei 6 von 75.096 Antritten. Erst DANACH war
+ * entscheidbar, dass die Zahlen selbst zu hoch stehen.
+ *
+ * Heute: 80,0 % / 42,4 % / 0,9 % (5.000 Partien zu viert), auf der zweiten
+ * Saatbasis 79,9 % / 42,1 % / 1,0 %. Die hoechste Schwelle bleibt selten, und
+ * das soll sie auch sein — aber sie kommt vor, und die Probe in
+ * test/ausgewogenheit.test.ts prueft sie wieder.
+ *
+ * WER SIE WIEDER VERSCHIEBT, misst vorher die Levelverteilung: Solange ein
+ * Brett drei bis fuenf Felder hat, ist jede Schwelle darueber Zierde.
+ */
+export type Schwelle = 2 | 3 | 5;
 
-export const SCHWELLEN: readonly Schwelle[] = [2, 4, 6];
+export const SCHWELLEN: readonly Schwelle[] = [2, 3, 5];
 
 /** Eine Stufe einer Synergie: ab wie vielen Traegern welcher Bonus gilt. */
 export interface Synergiestufe {
@@ -56,6 +81,20 @@ export interface Synergie {
    * deshalb hier und nicht in der i18n des Clients (siehe katalog.ts).
    */
   readonly name: string;
+  /**
+   * Ein Satz, was die Marke bewirkt — fuer das Blatt, das der Bildschirm
+   * beim Antippen eines Markenzeichens aufschlaegt.
+   *
+   * Er steht HIER und nicht im Client, aus demselben Grund wie der Name:
+   * Was eine Marke tut, ist Inhalt des Spiels. Wer die Boni in der Tabelle
+   * darunter umstellt, aendert den Satz im selben Zug mit — stuende er im
+   * Bildschirm, verspraeche er ab da etwas anderes, als das Modul rechnet.
+   *
+   * Er nennt ausdruecklich die TRAEGER und nicht "alle Verbuendeten": Der
+   * Bonus gilt nur fuer die Einheiten mit dieser Marke (siehe Kopf), und
+   * genau das ist die Verwechslung, die eine Aufstellung kostet.
+   */
+  readonly wirkung: string;
   /** Aufsteigend nach Schwelle, genau eine je Schwelle aus `SCHWELLEN`. */
   readonly stufen: readonly Synergiestufe[];
 }
@@ -73,7 +112,10 @@ function bonus(teil: Partial<Wertebonus>): Wertebonus {
  *   Meuchler   — Tempo: schneller als der Gegner reagieren kann.
  *   Waechter   — Leben und etwas Ruestung: die Mauer.
  *   Naturwesen — Leben: der Wald waechst nach.
- *   Untot      — Angriff und Leben, beides massvoll: zaeh und unerbittlich.
+ *   Untot      — Angriff und Leben, beides massvoll: zaeh und unerbittlich
+ *                (Traeger sind Knochenspaeher, Grabfuerstin und seit dem
+ *                05.09.2026 der Schildknappe — mit ihm ist die Marke zum
+ *                ersten Mal ohne zwei Kopien derselben Einheit zu haben).
  *   Drache     — Angriff und Tempo, massvoll: selten und deshalb teuer erkauft
  *                (Traeger sind Drachenkind und Funkenlehrling; zwei Einheiten
  *                sind schon die erste Schwelle).
@@ -81,67 +123,99 @@ function bonus(teil: Partial<Wertebonus>): Wertebonus {
  * Die Zahlen sind ein erster Wurf und zum Nachjustieren gedacht, wie die
  * Grundwerte im Katalog. Prozent bei Leben, Angriff und Tempo, feste Punkte
  * bei Ruestung — warum, steht bei `Wertebonus` in katalog.ts.
+ *
+ * AM 05.09.2026 MIT DEN SCHWELLEN MITGEZOGEN, und zwar so, dass der Bonus JE
+ * TRAEGER ungefaehr gleich bleibt: Wo vier Krieger +20 Ruestung gaben, geben
+ * jetzt drei +15, und wo sechs +30 gaben, geben fuenf +25. Haette man die
+ * alten Zahlen auf die neuen Schwellen gesetzt, waere jede Synergie um ein
+ * Drittel billiger geworden — gemessen stieg damit die Spielzeit von 8:24 auf
+ * 8:55 im Median, und jeder sechste Kampf lief in die Hoechstdauer statt jeder
+ * elfte (16,5 % gegen 9,6 %). Die Ruestungsboni sind daran schuld: Sie
+ * verlaengern jeden Kampf doppelt, weil beide Seiten laenger stehen.
  */
 export const SYNERGIEN: readonly Synergie[] = [
   {
     marke: 'krieger',
     name: 'Krieger',
+    wirkung:
+      'Jeder Krieger auf dem Brett bekommt Rüstung dazu und steckt damit jeden Treffer besser weg.',
     stufen: [
       { schwelle: 2, bonus: bonus({ ruestung: 10 }) },
-      { schwelle: 4, bonus: bonus({ ruestung: 20 }) },
-      { schwelle: 6, bonus: bonus({ ruestung: 30 }) },
+      { schwelle: 3, bonus: bonus({ ruestung: 15 }) },
+      { schwelle: 5, bonus: bonus({ ruestung: 25 }) },
     ],
   },
   {
     marke: 'elementar',
     name: 'Elementar',
+    wirkung:
+      'Jedes Elementarwesen auf dem Brett schlägt härter zu — der Bonus geht auf den Angriff.',
+    /*
+     * DIESE ZAHLEN WAREN NICHT SCHULD, als Elementar am 05.09.2026 bei x0,25
+     * stand — wer das nachsehen will, misst es nach: Mit Bonus NULL blieb die
+     * Siegquote bei 6,1 % statt 6,0 %. Ein Angriffsbonus traegt nur, wenn
+     * seine Traeger lange genug stehen, um ihn auszuspielen, und genau das
+     * konnten sie nicht. Repariert wurde deshalb der Katalog (Irrlicht,
+     * Funkenlehrling, Frostweberin, Sturmrufer), nicht diese Tabelle.
+     */
     stufen: [
       { schwelle: 2, bonus: bonus({ angriffProzent: 15 }) },
-      { schwelle: 4, bonus: bonus({ angriffProzent: 30 }) },
-      { schwelle: 6, bonus: bonus({ angriffProzent: 50 }) },
+      { schwelle: 3, bonus: bonus({ angriffProzent: 25 }) },
+      { schwelle: 5, bonus: bonus({ angriffProzent: 40 }) },
     ],
   },
   {
     marke: 'meuchler',
     name: 'Meuchler',
+    wirkung:
+      'Jeder Meuchler auf dem Brett schlägt öfter zu — der Bonus geht auf das Tempo.',
     stufen: [
       { schwelle: 2, bonus: bonus({ tempoProzent: 15 }) },
-      { schwelle: 4, bonus: bonus({ tempoProzent: 30 }) },
-      { schwelle: 6, bonus: bonus({ tempoProzent: 50 }) },
+      { schwelle: 3, bonus: bonus({ tempoProzent: 25 }) },
+      { schwelle: 5, bonus: bonus({ tempoProzent: 40 }) },
     ],
   },
   {
     marke: 'waechter',
     name: 'Wächter',
+    wirkung:
+      'Jeder Wächter auf dem Brett bekommt Leben und Rüstung dazu und wird zur Mauer davor.',
     stufen: [
       { schwelle: 2, bonus: bonus({ lebenProzent: 10, ruestung: 5 }) },
-      { schwelle: 4, bonus: bonus({ lebenProzent: 20, ruestung: 10 }) },
-      { schwelle: 6, bonus: bonus({ lebenProzent: 30, ruestung: 20 }) },
+      { schwelle: 3, bonus: bonus({ lebenProzent: 15, ruestung: 8 }) },
+      { schwelle: 5, bonus: bonus({ lebenProzent: 25, ruestung: 15 }) },
     ],
   },
   {
     marke: 'naturwesen',
     name: 'Naturwesen',
+    wirkung:
+      'Jedes Naturwesen auf dem Brett bekommt Leben dazu und bleibt entsprechend länger stehen.',
     stufen: [
       { schwelle: 2, bonus: bonus({ lebenProzent: 15 }) },
-      { schwelle: 4, bonus: bonus({ lebenProzent: 30 }) },
-      { schwelle: 6, bonus: bonus({ lebenProzent: 50 }) },
+      { schwelle: 3, bonus: bonus({ lebenProzent: 25 }) },
+      { schwelle: 5, bonus: bonus({ lebenProzent: 40 }) },
     ],
   },
   {
     marke: 'untot',
     name: 'Untot',
+    wirkung:
+      'Jeder Untote auf dem Brett bekommt Angriff und Leben dazu, beides maßvoll.',
     stufen: [
       { schwelle: 2, bonus: bonus({ angriffProzent: 10, lebenProzent: 10 }) },
-      { schwelle: 4, bonus: bonus({ angriffProzent: 20, lebenProzent: 20 }) },
-      { schwelle: 6, bonus: bonus({ angriffProzent: 35, lebenProzent: 35 }) },
+      { schwelle: 3, bonus: bonus({ angriffProzent: 15, lebenProzent: 15 }) },
+      { schwelle: 5, bonus: bonus({ angriffProzent: 30, lebenProzent: 30 }) },
     ],
   },
   {
     marke: 'drache',
     name: 'Drache',
+    wirkung:
+      'Jeder Drache auf dem Brett schlägt härter und öfter zu — zwei Träger sind schon die erste Stufe.',
     /*
-     * Am 05.09.2026 halbiert (vorher 25/10, 50/20 und 80/30).
+     * Am 05.09.2026 halbiert (vorher 25/10, 50/20 und 80/30) und mit der
+     * Schwellenverschiebung noch einmal um den Traegeranteil gekuerzt.
      *
      * Drache war mit 34,1 % Siegquote der Ausreisser des Katalogs (x1,86 des
      * Schnitts). Der Bonus allein erklaerte das nicht — mit Bonus null stand
@@ -152,8 +226,8 @@ export const SYNERGIEN: readonly Synergie[] = [
      */
     stufen: [
       { schwelle: 2, bonus: bonus({ angriffProzent: 10, tempoProzent: 5 }) },
-      { schwelle: 4, bonus: bonus({ angriffProzent: 25, tempoProzent: 10 }) },
-      { schwelle: 6, bonus: bonus({ angriffProzent: 45, tempoProzent: 20 }) },
+      { schwelle: 3, bonus: bonus({ angriffProzent: 20, tempoProzent: 8 }) },
+      { schwelle: 5, bonus: bonus({ angriffProzent: 35, tempoProzent: 15 }) },
     ],
   },
 ];

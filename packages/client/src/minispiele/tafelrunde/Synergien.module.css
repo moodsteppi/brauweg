@@ -10,151 +10,396 @@
  *
  * WO DIE LEISTE STEHT, entscheidet allein diese Datei:
  *
- *   Am Handy liegt sie IM FLUSS ueber dem Brett und laesst sich zuklappen —
- *   ein hoher Kasten wuerde den Laden sonst unter den Rand druecken, und der
- *   ist die einzige Stelle, an der man kaufen kann.
+ *   Am Handy liegt sie IM FLUSS ueber dem Brett, als eine Reihe von Chips —
+ *   seit dem 06.09.2026 in derselben Zeile wie Leben, Rang und Feldplaetze
+ *   (`.tr-statuszeile` in styles.css). Zuklappen gibt es nicht mehr: Seit sie
+ *   Zaehler zeigt statt Saetze, ist sie eine Zeile hoch — der Klappknopf war
+ *   selbst so hoch wie sie.
  *
- *   Ab 64rem haengt sie FEST an der linken Kante neben dem Brett. Fest und
- *   nicht im Fluss, weil der Tisch (.tr-tisch in styles.css) eine zentrierte
- *   Spalte fester Breite ist: Ein Element im Fluss haette entweder die Spalte
- *   aufgerissen oder das Brett aus der Mitte geschoben — und styles.css
- *   gehoert nicht zu dieser Aufgabe. Die 480 px sind die halbe Spaltenbreite
- *   bei 40rem-Aufwaerts-Mass (min(70vw, 560px)) plus Luft; unter 64rem
- *   Fensterbreite bliebe daneben kein Platz, deshalb greift die Regel erst
- *   dort.
+ *   Ab 64rem steht sie links NEBEN dem Brett, dann als Spalte. Dass sie dort
+ *   hinkommt, ist seit dem 07.09.2026 nicht mehr ihre Sache: Der Tisch ist
+ *   dort ein Raster mit drei Spalten (.tr-tisch in styles.css), und die
+ *   Statuszeile mit ihr darin IST die linke. Diese Datei dreht nur noch die
+ *   Liste hochkant.
  */
 
-/* -- Die Leiste ----------------------------------------------------------- */
+/* -- Die Leiste: eine Reihe kleiner Zaehler ------------------------------- */
 
+/*
+ * Kein Kasten mehr, sondern eine Reihe Chips: Sie soll neben dem Brett
+ * liegen wie eine Zeile Beiwerk und nicht wie ein zweites Bedienfeld. Kein
+ * eigener Hintergrund und keine Kante — den Rahmen gibt jeder Chip selbst.
+ *
+ * KEINE EIGENE BREITE MEHR, seit dem 06.09.2026: Die Leiste steht am Handy
+ * in derselben Reihe wie Leben, Rang und Feldplaetze (`.tr-statuszeile` in
+ * styles.css), und die Reihe bringt die Breite mit. Stuende hier weiter
+ * `min(94vw, 460px)`, fuellte die Leiste die Zeile allein und draengte die
+ * drei Werte in eine zweite — genau die 88 Pixel, die der Umbau loswerden
+ * wollte.
+ */
 .leiste {
-  width: min(94vw, 460px);
-  border-radius: 12px;
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--line);
-  overflow: hidden;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
-
-.kopf {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 7px 10px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font: 800 11px/1.2 system-ui;
-  text-align: left;
-  cursor: pointer;
-}
-.kopf > span:first-child { flex: 1; }
-.kopfzahl {
-  padding: 0 5px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  font: 800 10px/1.5 system-ui;
-}
-/* Ein Winkel aus zwei Strichen statt eines Zeichens: Ein Schriftzeichen faellt
-   je nach Geraet anders aus, dieser Winkel nicht. */
-.pfeil {
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 160ms ease;
-}
-.leiste[data-offen] .pfeil { transform: rotate(45deg); }
 
 .liste {
-  display: none;
-  flex-direction: column;
+  display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin: 0;
-  padding: 0 8px 8px;
+  padding: 0;
   list-style: none;
 }
-.leiste[data-offen] .liste { display: flex; }
 
 .leer {
-  padding: 4px 2px;
-  color: var(--muted);
-  font: 600 11px/1.35 system-ui;
-}
-
-/* -- Ein Eintrag ---------------------------------------------------------- */
-
-.eintrag {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 2px 6px;
-  padding: 5px 7px;
-  border-radius: 9px;
-  border-left: 3px solid transparent;
-  background: rgba(255, 255, 255, 0.03);
-}
-/* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Der Balken traegt
-   die Farbe der Marke — dieselbe wie das Zeichen daneben und wie die Zeichen
-   an den Einheiten auf dem Brett. */
-.eintrag[data-aktiv] {
-  border-left-color: var(--marke);
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.zeile {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-  font: 800 11px/1.2 system-ui;
-}
-.eintrag[data-aktiv] .name { color: var(--text); }
-.anzahl {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font: 700 10px/1.2 system-ui;
-}
-.eintrag[data-aktiv] .anzahl { color: var(--gold); }
-
-/* Die Schwellen als Punkte: einer je Stufe der Tabelle. Voll = erreicht, mit
-   Ring = die naechste. Wer mehr wissen will, liest den Satz darunter. */
-.punkte {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 5px;
-  padding: 1px 0 0 1px;
-  color: var(--marke);
-}
-.punkt {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px currentColor;
-  opacity: 0.45;
-}
-.punkt[data-voll] {
-  background: currentColor;
-  opacity: 1;
-}
-.punkt[data-naechste] {
-  opacity: 1;
-  box-shadow: inset 0 0 0 1px currentColor, 0 0 0 2px rgba(255, 255, 255, 0.14);
-}
-
-.satz {
-  grid-column: 1 / -1;
+  padding: 1px 2px;
   color: var(--muted);
   font: 600 10px/1.35 system-ui;
 }
-.eintrag[data-aktiv] .satz { color: rgba(255, 255, 255, 0.78); }
+
+/* -- Ein Zaehler ---------------------------------------------------------- */
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  font: 800 10px/1.4 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+/*
+ * Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Der Chip nimmt dann
+ * die Farbe SEINER Marke an — dieselbe wie das Zeichen darin und wie die
+ * Zeichen an den Einheiten auf dem Brett. Farbe und Ring zusammen, weil ein
+ * halbdurchsichtiger Farbton allein auf dem dunklen Grund kaum auffaellt.
+ */
+.chip[data-aktiv] {
+  background: color-mix(in srgb, var(--marke) 18%, transparent);
+  box-shadow: inset 0 0 0 1px var(--marke);
+  color: var(--text);
+}
+
+.zahl { letter-spacing: -0.01em; }
+.chip[data-aktiv] .zahl { color: var(--text); }
+
+/*
+ * Der Chip ist eine Schaltflaeche: Ein Tipp schlaegt das Blatt der Marke auf.
+ * Der Knopf bringt kein eigenes Aussehen mit — Rahmen, Farbe und Fuellung
+ * gehoeren weiter dem Chip, sonst haette der Zaehler auf einmal zwei Rahmen.
+ */
+.knopf {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  /* Fuer die vergroesserte Trefferflaeche darunter. */
+  position: relative;
+}
+/*
+ * Der Chip ist 22 px hoch — als Tippziel zu klein. Statt ihn aufzublasen
+ * (dann nimmt die Leiste dem Brett Hoehe weg, genau das war ihr Umbau),
+ * waechst nur die TREFFERFLAECHE: senkrecht um 8 px je Seite, waagerecht nur
+ * um 2 — die Chips stehen mit 4 px Abstand nebeneinander, und ein breiterer
+ * Griff laege ueber dem Nachbarn.
+ */
+.knopf::after {
+  content: '';
+  position: absolute;
+  inset: -8px -2px;
+}
+.knopf:focus-visible {
+  outline: 2px solid var(--marke, var(--line));
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+.fremd .knopf { gap: 2px; }
+
+/* -- Das Blatt einer Marke ------------------------------------------------ */
+
+/*
+ * Was ein angetippter Zaehler aufschlaegt (Markenblatt in Synergien.tsx).
+ *
+ * Ein Ueberblender wie beim Endbild und kein Aufklapp am Chip: Am Handy liegt
+ * die Leiste ueber dem Brett, und ein Kasten unter ihr schoebe genau das
+ * Brett weg, das man dabei ansieht.
+ *
+ * Der Massstab ist ein Handy mit 440 CSS-Pixeln: Das Blatt wird dort
+ * 360 px breit (92vw waeren 405, die 360 greifen), der Rest bleibt als
+ * dunkler Rand sichtbar — es ist eine Auskunft, kein Ortswechsel. Die Hoehe
+ * in dvh und nicht vh, sonst liegt der Schliessen-Knopf unter der
+ * Adressleiste (derselbe Grund wie beim Endbild).
+ */
+.ueberblender {
+  position: fixed;
+  inset: 0;
+  /* Ueber allem, was die Ruestkammer selbst stapelt (bis 20), aber UNTER dem
+     Endbild (40): Faellt waehrend des Lesens die Partie fuer diesen Sitz aus,
+     gehoert das Schlussbild nach vorn und nicht eine Marken-Auskunft. */
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: rgba(10, 14, 17, 0.78);
+}
+
+.blatt {
+  width: min(92vw, 360px);
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 12px 14px;
+  border: 1px solid var(--marke, var(--line));
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* -- Kopfzeile: Zeichen, Name, Stand, Schliessen -------------------------- */
+
+.blattkopf {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.blattzeichen {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  /* Erst ein Weiss fuer alle, dann die Markenfarbe fuer die Browser mit
+     `color-mix` — dieselbe Vorsichtsmassnahme wie am leuchtenden Zeichen. */
+  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, currentColor 20%, transparent);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.blattzeichen .glyphe {
+  width: 20px;
+  height: 20px;
+}
+
+.blatttitel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.blattname {
+  margin: 1px 0 0;
+  font: 800 15px/1.2 system-ui;
+}
+
+.blattstand {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font: 600 11px/1.3 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Der Weg hinaus fuer alle, die nicht tippen koennen. Daneben tippen und
+ * Escape schliessen ebenso (Synergien.tsx) — der Knopf ist der sichtbare
+ * davon und deshalb 32 px gross statt so klein wie sein Zeichen.
+ */
+.blattzu {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font: 700 17px/1 system-ui;
+  cursor: pointer;
+}
+.blattzu:hover { color: var(--text); }
+
+/* -- Der Satz, was die Marke tut ------------------------------------------ */
+
+/*
+ * Er kommt aus dem Modul (`wirkung` in synergien.ts) und ist die eigentliche
+ * Antwort auf die Frage, wegen der jemand hier tippt. Deshalb steht er ueber
+ * den Zahlen und nicht darunter.
+ */
+.wirkung {
+  margin: 10px 0 0;
+  color: var(--text);
+  font: 500 12px/1.45 system-ui;
+}
+
+/* -- Die Stufen ----------------------------------------------------------- */
+
+.stufen {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Alle Stufen untereinander, auch die unerreichten: Wer bei drei von fuenf
+ * steht, soll sehen, was die fuenfte braechte. Blass, aber lesbar — 0,55
+ * Deckkraft auf var(--text), nicht var(--muted) auf var(--muted).
+ */
+.stufe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  opacity: 0.55;
+}
+
+/* Die erreichte Stufe: gruen, wie ueberall auf der Plattform "gilt gerade". */
+.stufe[data-aktiv] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  opacity: 1;
+}
+/* Schon ueberschritten: sichtbar erfuellt, aber nicht das, was gerade gilt. */
+.stufe[data-erfuellt] { opacity: 0.8; }
+
+.stufenzahl {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  font: 800 12px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+.stufe[data-aktiv] .stufenzahl {
+  background: var(--accent);
+  color: #0d1512;
+}
+
+.stufenbonus {
+  font: 600 12px/1.3 system-ui;
+}
+
+/* -- Wer die Marke traegt ------------------------------------------------- */
+
+/*
+ * ALLE Traeger des Katalogs, nicht nur die eigenen: Die Frage lautet, was man
+ * noch kaufen muesste. Umbrechende Reihe und keine Spalte — bei 440 px passen
+ * zwei Namen nebeneinander, und sieben Zeilen untereinander waeren die halbe
+ * Hoehe des Blattes.
+ */
+.traeger {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.traegertitel {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font: 700 10px/1.2 system-ui;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.traegerliste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.traegereintrag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px 3px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.traegername {
+  font: 600 11px/1.3 system-ui;
+}
+
+/* Der Preis als Muenze: Gold heisst auf diesem Bildschirm "kostet etwas". */
+.traegerpreis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  box-shadow: inset 0 0 0 1px var(--gold);
+  color: var(--gold);
+  font: 800 10px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- Die Marken eines fremden Bretts -------------------------------------- */
+
+/*
+ * Die Zeile unter dem Bretttitel des gezeigten Gegners (Fremdmarken in
+ * Synergien.tsx). Sie liegt IM FLUSS zwischen Titel und Brett und bleibt es
+ * auch am breiten Schirm — anders als die eigene Leiste, die dort seitlich
+ * haengt: Diese Zeile gehoert zu genau einem Brett und muesste mitwandern,
+ * sobald man den gezeigten Gegner wechselt.
+ *
+ * Zentriert wie der Titel daneben, und umbrechend: Sieben Marken passen auf
+ * 340 px nicht in eine Reihe, und ein waagerechtes Rollen an dieser Stelle
+ * saehe niemand.
+ *
+ * DANEBEN, nicht darunter — seit dem 06.09.2026 steht sie mit dem Bretttitel
+ * in einer Reihe (`.tr-brettkopf` in styles.css). Der eigene Abstand nach
+ * unten ist deshalb weg: Ihn setzt jetzt die Reihe fuer beide.
+ */
+.fremdzeile {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Kleiner als in der eigenen Leiste. Der Gegner ist Auskunft, das eigene
+ * Brett ist Arbeitsflaeche — und die Zeile sitzt ueber einem Brett, dem jede
+ * Zeile Hoehe nimmt. Alles andere (Farbe, Ring bei erreichter Schwelle,
+ * Zeichen) kommt unveraendert von `.chip`.
+ */
+.fremd {
+  gap: 2px;
+  padding: 1px 5px 1px 4px;
+  font-size: 9px;
+}
+.fremd .zeichen .glyphe {
+  width: 11px;
+  height: 11px;
+}
 
 /* -- Die Zeichen ---------------------------------------------------------- */
 
@@ -267,48 +512,33 @@
     inset 0 0 0 3px rgba(255, 255, 255, 0.22);
 }
 
-/* Zwischen Handy und breitem Schirm liegt sie weiter im Fluss, nur so breit
-   wie Brett und Bank daneben (.tr-bretter, .tr-bank in styles.css) — sonst
-   steht sie als einziger Teil des Tisches eingerueckt da. */
-@media (min-width: 40rem) {
-  .leiste { width: min(70vw, 560px); }
-}
+/* Zwischen Handy und breitem Schirm liegt sie weiter im Fluss — die Breite
+   der Reihe bringt `.tr-statuszeile` in styles.css mit, dort steht die
+   Tablet-Stufe. Hier bleibt nichts zu tun. */
 
 /* -- Seitlich ab dem breiten Schirm --------------------------------------- */
 
 /*
- * Erst ab 75rem (1200 px), und die Zahl ist gerechnet und nicht geraten:
- * Der breiteste Teil des Tisches ist der Laden mit `min(72vw, 600px)`
- * (.tr-fuss in styles.css), zentriert — seine linke Kante liegt also bei
- * `50% - 300px`. Daneben muessen 208 px Leiste plus zweimal 12 px Luft
- * passen, das sind 232; bei 1200 px Fensterbreite stehen 300 zur Verfuegung.
- * Bei 64rem waeren es 212 gewesen, und die Leiste haette den Laden um
- * 20 px ueberdeckt — genau so ist es beim ersten Bau passiert.
+ * Ab 64rem steht die Leiste nicht mehr ueber dem Brett, sondern links daneben
+ * — untereinander statt nebeneinander, weil seitlich Hoehe da ist und Breite
+ * knapp; am Handy ist es genau andersherum.
+ *
+ * BIS ZUM 07.09.2026 GESCHAH DAS MIT `position: fixed`: Die Leiste nahm sich
+ * aus dem Fluss und stellte sich mit `left: max(12px, calc(50% - 520px))`
+ * neben die zentrierte Spalte, 96 Pixel von oben — eine abgezaehlte Hoehe der
+ * Kopfleiste. Seither ist die Spalte selbst da: Statuszeile und Laden stehen
+ * als Spalten eines Rasters neben der Mitte (`.tr-tisch` ab 64rem in
+ * styles.css), und die Leiste sitzt einfach in der linken. Sie misst nichts
+ * mehr ab, und die 96 kann nicht mehr veralten.
+ *
+ * Die Breitengrenze bleibt: Ein Markenname wie „Naturwesen" mit Zaehler
+ * dahinter braucht 180 Pixel, mehr soll die Spalte nicht wegen eines Wortes
+ * bekommen.
  */
-@media (min-width: 75rem) {
-  .leiste {
-    position: fixed;
-    /* Immer 12 px links vom Laden, bis zum linken Rand des Fensters. */
-    left: max(12px, calc(50% - 520px));
-    top: 96px;
-    width: 208px;
-    max-height: calc(100dvh - 128px);
-    overflow-y: auto;
-    /* Am Ende des Rollens nicht an die Seite weiterreichen — dieselbe Zeile
-       aus demselben Grund wie an .tr-tisch: Sonst zieht der Daumen unter
-       Android das Neuladen der Seite auf. */
-    overscroll-behavior: contain;
+@media (min-width: 64rem) {
+  .liste {
+    flex-direction: column;
+    align-items: flex-end;
   }
-  /* Seitlich gibt es keinen Grund zuzuklappen, und ein Klappknopf, der am
-     Handy zugeklappt wurde, duerfte die Leiste hier nicht leeren. Deshalb ist
-     der Knopf weg UND die Liste immer offen. */
-  .kopf { display: none; }
-  .liste,
-  .leiste[data-offen] .liste { display: flex; padding: 8px; }
-}
-
-/* Wer weniger Bewegung eingestellt hat, bekommt denselben Zustand ohne den
-   Weg dorthin — wie im Rest des Spiels. */
-@media (prefers-reduced-motion: reduce) {
-  .pfeil { transition: none; }
+  .leer { max-width: 180px; }
 }

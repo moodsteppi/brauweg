@@ -238,3 +238,37 @@ export function Wuerfel({ className }: { className?: string }): React.JSX.Elemen
     </svg>
   );
 }
+
+/**
+ * Spieler — zwei Koepfe mit Schultern, der vordere ganz, der hintere blass.
+ *
+ * Steht auf der Spielkarte vor der Sitzzahl, wo bis zum 07.09.2026 das Wort
+ * „Spieler" stand. Anders als die uebrigen Zeichen hier traegt es eine
+ * Beschriftung statt `aria-hidden`: Es ersetzt ein Wort und ist deshalb
+ * selbst der Text, den ein Vorleser braucht („Spieler 1–8").
+ *
+ * Aufbau: der vordere Kopf auf x 9,2, der hintere nach rechts oben
+ * versetzt und halb durchsichtig — so bleibt der vordere auch dort lesbar,
+ * wo beide sich ueberlappen, ohne eine Aussparung, die auf jedem Untergrund
+ * eine andere Farbe braeuchte. Die Zeichnung reicht von y 5,7 bis 20,6,
+ * ihre Mitte liegt also auf 13,1; die Verschiebung um −1,1 holt sie auf 12.
+ */
+export function Spieler({ className }: { className?: string }): React.JSX.Element {
+  return (
+    <svg
+      className={`zeichen zeichen-spieler${className ? ` ${className}` : ''}`}
+      viewBox="0 0 24 24"
+      role="img"
+      aria-label="Spieler"
+    >
+      <g fill="currentColor" transform="translate(0 -1.1)">
+        <g opacity="0.55">
+          <circle cx="16.4" cy="8.6" r="2.9" />
+          <path d="M11.2 19.6a5.4 5.2 0 0 1 10.8 0z" />
+        </g>
+        <circle cx="9.2" cy="10.4" r="3.6" />
+        <path d="M2.6 20.6a6.6 6.2 0 0 1 13.2 0z" />
+      </g>
+    </svg>
+  );
+}

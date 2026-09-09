@@ -21,8 +21,8 @@
  */
 
 import type { FillerPartie } from './partie.js';
-import { moeglicheBarrieren, nachbarn, sieger } from './partie.js';
-import { type FillerVariante, liegtOffen } from './regeln.js';
+import { mauerSperre, moeglicheBarrieren, nachbarn, sieger } from './partie.js';
+import { type FillerVariante, liegtOffen, mitBarrieren } from './regeln.js';
 
 export interface FillerSicht {
   /**
@@ -83,6 +83,20 @@ export interface FillerSicht {
    * am Zug, solange er noch Barrieren hat.
    */
   readonly barrierenMoeglich?: readonly (readonly [number, number])[];
+  /**
+   * Plaetze der Sternfelder. Oeffentlich in jeder Sicht, auch im Nebel —
+   * dort gibt es nur keine. Der Client malt den Stern auf das Feld; was das
+   * Feld bringt, rechnet das Modul (siehe STERN_BONUS in partie.ts).
+   */
+  readonly sterne: readonly number[];
+  /**
+   * Wie viele Zuege der Eroeffnung noch mauerfrei sind, ueber beide Sitze
+   * gezaehlt. 0, sobald gebaut werden darf — und immer 0 ohne Mauern.
+   *
+   * Steht in der Sicht, damit der Client die Zahl auf das Schloss schreibt,
+   * statt sie aus `zug` nachzurechnen: Die Drei ist eine Regel des Moduls.
+   */
+  readonly mauerSperre: number;
 }
 
 /**
@@ -133,6 +147,8 @@ function grundsicht(
       return [Number(a), Number(b)] as const;
     }),
     barrierenUebrig: partie.barrierenUebrig,
+    sterne: partie.sterne,
+    mauerSperre: mitBarrieren(partie.regeln.variante) ? mauerSperre(partie) : 0,
   };
 }
 

@@ -44,7 +44,7 @@ function mitHeer(partie: TafelrundePartie, sitz: number, teil: Partial<Heer>): T
 }
 
 describe('Die Tabelle', () => {
-  it('kennt jede Marke des Katalogs genau einmal, mit genau den Schwellen 2, 4 und 6', () => {
+  it('kennt jede Marke des Katalogs genau einmal, mit genau den Schwellen 2, 3 und 5', () => {
     assert.deepEqual(
       SYNERGIEN.map((s) => s.marke),
       MARKEN,
@@ -56,6 +56,19 @@ describe('Die Tabelle', () => {
         `${s.marke}: Schwellen`,
       );
       assert.ok(s.name.length > 0, `${s.marke}: Name`);
+    }
+  });
+
+  it('sagt zu jeder Marke in einem Satz, was sie bewirkt', () => {
+    /*
+     * Der Satz steht im Blatt, das der Bildschirm beim Antippen eines
+     * Markenzeichens aufschlaegt. Fehlt er fuer eine Marke, bleibt dort eine
+     * Luecke — und der Client darf sie nicht mit einer eigenen Fassung
+     * fuellen, sonst gaebe es zwei Wahrheiten ueber denselben Bonus.
+     */
+    for (const s of SYNERGIEN) {
+      assert.ok(s.wirkung.length > 0, `${s.marke}: Wirkung`);
+      assert.ok(s.wirkung.endsWith('.'), `${s.marke}: ganzer Satz`);
     }
   });
 
@@ -85,15 +98,15 @@ describe('Die Tabelle', () => {
 });
 
 describe('Schwellen', () => {
-  it('greifen genau bei 2, 4 und 6', () => {
-    const erwartet: (2 | 4 | 6 | null)[] = [null, null, 2, 2, 4, 4, 6, 6, 6, 6];
+  it('greifen genau bei 2, 3 und 5', () => {
+    const erwartet: (2 | 3 | 5 | null)[] = [null, null, 2, 3, 3, 5, 5, 5, 5, 5];
     erwartet.forEach((schwelle, anzahl) => {
       assert.equal(aktiveSchwelle(anzahl), schwelle, `aktiv bei ${anzahl}`);
     });
   });
 
   it('nennen die naechste, und ab der hoechsten keine mehr', () => {
-    const erwartet: (2 | 4 | 6 | null)[] = [2, 2, 4, 4, 6, 6, null, null];
+    const erwartet: (2 | 3 | 5 | null)[] = [2, 2, 3, 5, 5, null, null, null];
     erwartet.forEach((schwelle, anzahl) => {
       assert.equal(naechsteSchwelle(anzahl), schwelle, `naechste bei ${anzahl}`);
     });
@@ -102,7 +115,7 @@ describe('Schwellen', () => {
   it('geben unter der ersten keinen Bonus und ab der ersten den der Tabelle', () => {
     assert.equal(bonusDerMarke('krieger', 1), null);
     assert.deepEqual(bonusDerMarke('krieger', 2), synergie('krieger').stufen[0]!.bonus);
-    assert.deepEqual(bonusDerMarke('krieger', 3), synergie('krieger').stufen[0]!.bonus);
+    assert.deepEqual(bonusDerMarke('krieger', 3), synergie('krieger').stufen[1]!.bonus);
     assert.deepEqual(bonusDerMarke('krieger', 4), synergie('krieger').stufen[1]!.bonus);
     assert.deepEqual(bonusDerMarke('krieger', 9), synergie('krieger').stufen[2]!.bonus);
   });
@@ -222,7 +235,7 @@ describe('In der Sicht', () => {
     const synergien = sichtFuer(mit, 0).eigenes!.synergien;
     assert.deepEqual(
       synergien.map((s) => [s.marke, s.anzahl, s.schwelle, s.naechsteSchwelle]),
-      [['meuchler', 2, 2, 4]],
+      [['meuchler', 2, 2, 3]],
     );
     assert.deepEqual(synergien[0]!.bonus, synergie('meuchler').stufen[0]!.bonus);
     assert.equal(synergien[0]!.name, 'Meuchler');
@@ -251,9 +264,11 @@ describe('In der Sicht', () => {
       gegner.synergien.map((s) => [s.marke, s.anzahl, s.schwelle]),
       [
         ['elementar', 2, 2],
-        ['naturwesen', 1, null],
         // Der Funkenlehrling traegt seit dem 05.09.2026 die Marke Drache mit
         // (siehe katalog.ts) — allein, also unter der ersten Schwelle.
+        // Naturwesen stand hier bis zur Elementar-Reparatur desselben Tages
+        // ebenfalls: Das Irrlicht hat die Marke abgegeben, als es die
+        // Vorderreihe von Elementar wurde.
         ['drache', 1, null],
       ],
     );
@@ -270,7 +285,7 @@ describe('synergienVon', () => {
     const b = brett(['dorfwache', 'schildknappe', 'hainwaechterin', 'runenpriester', 'wurzelriese', 'lichtwahrerin']);
     const stand = synergienVon(b).find((s) => s.marke === 'waechter')!;
     assert.equal(stand.anzahl, 6);
-    assert.equal(stand.schwelle, 6);
+    assert.equal(stand.schwelle, 5);
     assert.equal(stand.naechsteSchwelle, null);
     assert.deepEqual(stand.bonus, synergie('waechter').stufen[2]!.bonus);
   });

@@ -2,16 +2,29 @@
  * Probe A: die aufgezeichnete Arena-Szene in 2D, mit animierten Sprites.
  *
  * Erreichbar unter `/probe/arena-2d` und sonst nirgends — die Seite ist im
- * Spiel nicht verlinkt und haengt nicht an der Anmeldung. Sie dient genau einem
- * Zweck: neben Probe B (3D) dieselbe Szene zu zeigen, damit die Entscheidung
- * zwischen den beiden am Bildschirm faellt und nicht auf dem Papier.
+ * Spiel nicht verlinkt und haengt nicht an der Anmeldung. Angelegt wurde sie
+ * fuer genau einen Zweck: neben Probe B (3D, Three.js) dieselbe Szene zu
+ * zeigen, damit die Entscheidung zwischen den beiden am Bildschirm faellt und
+ * nicht auf dem Papier.
+ *
+ * DIE ENTSCHEIDUNG IST GEFALLEN, und zwar fuer das Abspielen von Bildern statt
+ * fuer Live-3D: Robin am 05.09.2026 — die Figuren sollen wie 3D aussehen, aber
+ * nicht live gerendert werden. Probe B ist deshalb am 06.09.2026 geloescht
+ * worden. Was hier steht, ist die Machart des Gewinners in ihrer ersten
+ * Fassung; im Spiel laufen inzwischen VORGERENDERTE 3D-Bildfolgen statt der
+ * Pixelfiguren von unten (`src/figuren3d/`, abgespielt von
+ * `minispiele/tafelrunde/KampfAnzeige.tsx`).
+ *
+ * WER AENDERUNGEN AN DER ECHTEN KAMPFANZEIGE ANSEHEN WILL, nimmt nicht diese
+ * Seite, sondern `/probe/kampf`: Dort laeuft das Gebaute, hier ein Entwurf, der
+ * nichts vom Spiel importiert.
  *
  * Am laufenden Spiel aendert sie NICHTS. Weder `screens/Tafelrunde.tsx` noch
  * `minispiele/tafelrunde/` werden angefasst; die Probe hat ihre eigenen
  * Figuren, ihr eigenes CSS und ihre eigene Abspiellogik.
  *
- * Die Szene kommt aus `../arena-szene.json` — EIN aufgezeichneter Kampf, den
- * beide Proben teilen (erzeugt von `../szene-erzeugen.mjs`).
+ * Die Szene kommt aus `../arena-szene.json` — EIN aufgezeichneter Kampf,
+ * erzeugt von `../szene-erzeugen.mjs`; solange diese Probe steht, bleibt er.
  *
  * WARUM `?raw` UND `JSON.parse` STATT EINES JSON-IMPORTS: Der Client uebersetzt
  * ohne `resolveJsonModule`. Das anzuschalten waere eine Aenderung an der
@@ -148,7 +161,7 @@ export function Arena2D() {
       </button>
 
       <p className={css.fuss}>
-        Dieselbe aufgezeichnete Szene wie Probe B (3D): {SZENE.ereignisse.length} Ereignisse,{' '}
+        Aufgezeichnete Szene: {SZENE.ereignisse.length} Ereignisse,{' '}
         {sekunden(SZENE.dauerMs)}, Saat „{SZENE.saat}". Figuren: UnitForge (unitforge.net),
         frei fuer jede Nutzung ohne Namensnennung; Boden: ambientCG Wood051, CC0 1.0. Herkunft
         und Aufbau je Figur stehen in <code>figuren2d.ts</code>.

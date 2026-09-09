@@ -75,10 +75,23 @@ export interface TableConnection<V = GameView> {
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
-  /** Sofort mit den Anwesenden starten (mindestens zwei); leere Plätze fallen weg. */
-  startNow(): void;
+  /**
+   * Sofort mit den Anwesenden starten; leere Plätze fallen weg. Mindestens
+   * zwei — oder einer, wenn das Spiel laut `seatCounts` allein spielbar ist
+   * (Golf). `rounds` nur, wenn die Rundenzahl erst beim Start feststeht
+   * (Golf: die Löcher werden in der Lobby gewählt).
+   */
+  startNow(rounds?: number): void;
   /** Spielstärke der Bots dieses Tisches setzen (gilt für alle Bots). */
   setBotLevel(level: BotLevel): void;
+  /**
+   * Farbwunsch des eigenen Sitzes setzen (Golf: Tipp auf den eigenen Namen in
+   * der Lobby). Nur eine Zahl — welcher Farbton das ist, weiß der Server nie.
+   * Ohne Warteschlange: Wer beim Wiederverbinden noch dieselbe Farbe will,
+   * tippt noch einmal; der Wunsch von vorhin beschriebe womöglich einen Tisch,
+   * an dem inzwischen jemand anderes sitzt.
+   */
+  setSeatColor(farbe: number): void;
   /**
    * Takt-Herzschlag eines Echtzeitspiels absetzen. Ohne Warteschlange: Ein
    * Puls, der erst nach dem Wiederverbinden ankaeme, beschriebe einen Stand,
@@ -592,11 +605,33 @@ export function useTable<V = GameView>(
   const removeBot = useCallback((seat: number) => command('removeBot', seat), [command]);
 
   /** Sofort starten: Tisch schrumpft serverseitig auf die besetzten Plaetze. */
-  const startNow = useCallback(() => {
-    const socket = socketRef.current;
-    if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
-    socket.send(JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'startNow', tableId }));
-  }, [tableId, gameId]);
+  const startNow = useCallback(
+    (rounds?: number) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({
+          v: ENVELOPE_VERSION,
+          game: gameId,
+          type: 'startNow',
+          tableId,
+          ...(rounds === undefined ? {} : { rounds }),
+        }),
+      );
+    },
+    [tableId, gameId],
+  );
+
+  const setSeatColor = useCallback(
+    (farbe: number) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'setSeatColor', tableId, farbe }),
+      );
+    },
+    [tableId, gameId],
+  );
 
   const setBotLevel = useCallback(
     (level: BotLevel) => {
@@ -623,6 +658,7 @@ export function useTable<V = GameView>(
     removeBot,
     startNow,
     setBotLevel,
+    setSeatColor,
     sendTakt,
     sendeReaktion,
     reconnect,

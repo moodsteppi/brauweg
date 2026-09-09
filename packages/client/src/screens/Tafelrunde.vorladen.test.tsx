@@ -13,6 +13,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * `useTable` ist ersetzt wie im Nachbartest; das Vorladen ist es NICHT — es
  * laeuft echt, nur mit einer Bild-Attrappe, weil jsdom keine Bilder laedt und
  * `decode()` dort gar nicht kennt.
+ *
+ * Der Posten „Spielpaket" ist seit dem 6.9.2026 ebenfalls ersetzt. Echt waere
+ * er hier ein `import()` auf den Schirm, den dieser Test gerade selbst
+ * geladen hat: Er ginge also sofort durch, und der Zaehler spraenge mitten in
+ * den Erwartungen. Die Attrappe laesst den Test entscheiden, wann das Paket
+ * da ist — genau wie bei den Bildern.
  */
 
 const gesendet = vi.fn();
@@ -22,8 +28,52 @@ vi.mock('../useTable', () => ({
   useTable: () => tischStand,
 }));
 
-import { vorratZuruecksetzen } from '../minispiele/tafelrunde/vorladen';
+/** Das Spielpaket als Posten, dessen Ankunft der Test bestimmt. */
+const paket = vi.hoisted(() => {
+  let loesen: () => void = () => {};
+  return {
+    fertig: (): void => loesen(),
+    modul: {
+      PAKET_KB: 28,
+      PAKET_KENNUNG: 'paket:tafelrunde',
+      /* Wie das echte: EIN Posten, aber fuenf Dateien (siehe paket.ts). Ohne
+         die Stueckzahl pruefte dieser Test eine Zaehlweise, die es nicht
+         gibt — und der Zaehler am Bildschirm untertriebe wieder um vier. */
+      PAKET_STUECK: 5,
+      PAKET: {
+        pfad: 'paket:tafelrunde',
+        kb: 28,
+        stueck: 5,
+        holen: (): Promise<void> =>
+          new Promise<void>((gut) => {
+            loesen = () => gut();
+          }),
+      },
+    },
+  };
+});
+
+vi.mock('../minispiele/tafelrunde/paket', () => paket.modul);
+
+import { VORZULADEN, vorratZuruecksetzen } from '../minispiele/tafelrunde/vorladen';
 import { Tafelrunde } from './Tafelrunde';
+
+/*
+ * Beide Zahlen kommen aus der Liste und stehen nicht daneben. Sie haben sich
+ * seit dem ersten Bau schon dreimal geaendert (Spielpaket, dann die fuenf
+ * Blaetter der Bildfolgen, dann die Stueckzahl des Pakets), und jedes Mal war
+ * es dieser Test, der rot wurde — ohne dass an dem, was er prueft, etwas
+ * falsch war.
+ */
+/** Die Posten, die ueber ein `<img>` kommen: alles ausser dem Spielpaket. */
+const BILDER = VORZULADEN.filter((p) => !p.holen).length;
+/**
+ * Die Zahl am Bildschirm zaehlt DATEIEN und nicht Posten: Das Spielpaket ist
+ * ein Posten und fuenf Dateien (`Posten.stueck`). `VORZULADEN.length` waere
+ * hier also die falsche Zahl — und zwar dieselbe falsche, die bis zum
+ * 6.9.2026 am Bildschirm stand.
+ */
+const GESAMT = VORZULADEN.reduce((summe, p) => summe + (p.stueck ?? 1), 0);
 
 /**
  * Ein Bild, das erst laedt, wenn der Test es sagt.
@@ -52,19 +102,20 @@ class BildAttrappe {
 
 /**
  * Einen Umlauf der Mikroaufgaben abwarten und React dabei die Zustaende setzen
- * lassen. Ohne `act` warnt React bei jedem der 23 Zwischenstaende.
+ * lassen. Ohne `act` warnt React bei jedem Zwischenstand.
  */
 const umlauf = (): Promise<void> =>
   act(async () => {
     await new Promise((f) => setTimeout(f, 0));
   });
 
-/** Alles, was aussteht, laden lassen. */
+/** Alles, was aussteht, laden lassen — Bilder UND Spielpaket. */
 async function alleLaden(): Promise<void> {
   const offen = [...wartende];
   wartende.length = 0;
   await act(async () => {
     for (const bild of offen) bild.fertig();
+    paket.fertig();
   });
   await umlauf();
 }
@@ -81,6 +132,8 @@ const SICHT = {
   bankPlaetze: 9,
   brettFelder: 10,
   brettReihen: 2,
+  // Kleine Probearena ohne Luecke; am Tisch sind es 4 und 10 (arena.ts).
+  arenaReihen: 4,
   brettSpalten: 5,
   verschmelzZahl: 3,
   maxStufe: 3,
@@ -163,22 +216,59 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
 
   it('fragt jede Figur und den Untergrund an, nicht erst bei Bedarf', () => {
     render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
-    // 22 Figuren plus Untergrund — und zwar bevor irgendetwas gezeichnet ist.
-    expect(wartende).toHaveLength(23);
+    // 22 Figuren, fuenf Blaetter der Bildfolgen und der Untergrund — und zwar
+    // bevor irgendetwas gezeichnet ist. Das Spielpaket ist kein Bild und
+    // taucht hier deshalb nicht auf; es zaehlt trotzdem im selben Lauf mit
+    // (siehe der Test darunter).
+    expect(wartende).toHaveLength(BILDER);
     expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/untergrund-holz.webp');
     expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/dorfwache.webp');
+    expect(wartende.map((b) => b.pfad)).toContain('/tafelrunde/figuren3d/wache.webp');
   });
 
   it('zaehlt sichtbar mit, waehrend die Dateien eintreffen', async () => {
     render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
-    expect(screen.getByText('0 von 23 Dateien')).toBeInTheDocument();
+    // Fuenf mehr als Bilder: Das Spielpaket haengt im selben Lauf und ist
+    // fuenf Dateien, obwohl es als ein Posten geholt wird.
+    expect(GESAMT).toBe(BILDER + 5);
+    expect(screen.getByText(`0 von ${GESAMT} Dateien`)).toBeInTheDocument();
 
     const erste = wartende.splice(0, 3);
     await act(async () => {
       for (const bild of erste) bild.fertig();
     });
 
-    expect(screen.getByText('3 von 23 Dateien')).toBeInTheDocument();
+    expect(screen.getByText(`3 von ${GESAMT} Dateien`)).toBeInTheDocument();
+  });
+
+  /*
+   * Der Punkt der ganzen Aufgabe: EIN Balken ueber Paket und Bilder. Zaehlte
+   * er nur die Bilder, staende er schon bei 100 %, waehrend der Spieler noch
+   * auf den Schirm wartet — die Haelfte der Wartezeit ohne jede Anzeige.
+   */
+  it('haelt den Vorhang, bis auch das Spielpaket da ist', async () => {
+    render(<Tafelrunde startTisch="tisch-1" onBack={() => {}} />);
+
+    const bilder = [...wartende];
+    wartende.length = 0;
+    await act(async () => {
+      for (const bild of bilder) bild.fertig();
+    });
+    await umlauf();
+
+    // Alle Bilder da, das Paket fehlt: Der Vorhang bleibt, und der Balken
+    // steht nicht bei 100 %.
+    expect(screen.getByText(`${BILDER} von ${GESAMT} Dateien`)).toBeInTheDocument();
+    expect(Number(screen.getByRole('progressbar').getAttribute('aria-valuenow'))).toBeLessThan(
+      100,
+    );
+    expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      paket.fertig();
+    });
+    await umlauf();
+    expect(screen.getByRole('group', { name: 'Laden' })).toBeInTheDocument();
   });
 
   it('gibt die Ruestkammer frei, sobald alles da ist', async () => {
@@ -211,6 +301,7 @@ describe('Tafelrunde: Dateien vor der ersten Runde', () => {
     await act(async () => {
       erstes.kaputt();
       for (const bild of rest) bild.fertig();
+      paket.fertig();
     });
     await umlauf();
 

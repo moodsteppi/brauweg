@@ -63,15 +63,16 @@ import {
 } from '../hub';
 import { EilandBanner } from '../minispiele/eiland/Banner';
 import { FillerBanner } from '../minispiele/filler/Banner';
+import { GolfBanner } from '../minispiele/golf/Banner';
 import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
-import { Kreuz, Note } from '../zeichen';
+import { Kreuz, Note, Spieler } from '../zeichen';
+import { sitzSpanne } from '../sitzspanne';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { Klanghalle } from './Klanghalle';
-import { Avatarwerkstatt } from './Avatarwerkstatt';
 import { LEERE_BEMALUNG } from '../bemalung';
 
 /**
@@ -80,6 +81,18 @@ import { LEERE_BEMALUNG } from '../bemalung';
  * Profil-Tab.
  */
 const Avatar3D = lazy(() => import('../Avatar3D'));
+
+/**
+ * Die Werkstatt wird nachgeladen — genau wie in `main.tsx`, die sie fuer
+ * `?dev=werkstatt` schon per `lazy` holt. Solange sie hier statisch stand,
+ * zog der statische Import gegen den dynamischen: Vite meldete bei jedem Bau
+ * "dynamically imported by main.tsx but also statically imported by
+ * GameSelect.tsx" und liess sie im Hauptbuendel liegen, obwohl die
+ * allermeisten Besucher sie nie oeffnen.
+ */
+const Avatarwerkstatt = lazy(() =>
+  import('./Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
+);
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -555,12 +568,22 @@ export function GameSelect({
           onClick={() => setTab('blatt')}
           iconSrc="/hub/tab-blatt.webp"
         />
+        {/*
+          Der Punkt am Profil-Reiter zeigt auf das Geburtstagsgeschenk.
+
+          Das Geschenk gibt es an genau einem Tag im Jahr, und es liegt
+          hinter einem Reiter, den an diesem Tag niemand von sich aus
+          aufmacht: Wer nicht hineinsieht, erfaehrt nie davon und hat die
+          naechste Gelegenheit ein Jahr spaeter. Deshalb dieselbe Bauform wie
+          an der Truhe — ein Punkt, keine Zahl.
+        */}
         <TabButton
           label="Profil"
           farbe="profil"
           active={tab === 'profil'}
           onClick={() => setTab('profil')}
           iconSrc="/hub/tab-profil.webp"
+          punkt={me.birthdayRewardClaimable ? 'Geschenk liegt bereit' : null}
         />
       </nav>
 
@@ -578,14 +601,25 @@ export function GameSelect({
       )}
       {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
       {werkstattOffen && (
-        <Avatarwerkstatt
-          bemalung={me.figur ?? null}
-          getragen={me.avatar}
-          onClose={() => setWerkstattOffen(false)}
-          // Neu laden, damit die Figur im Profil sofort so aussieht wie
-          // gerade gespeichert.
-          onGespeichert={() => onAvatarChange()}
-        />
+        // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
+        // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
+        // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
+        <Suspense
+          fallback={
+            <div className="doko-sheet doko-sheet--mitte">
+              <Ladekreis text="Werkstatt wird geladen…" />
+            </div>
+          }
+        >
+          <Avatarwerkstatt
+            bemalung={me.figur ?? null}
+            getragen={me.avatar}
+            onClose={() => setWerkstattOffen(false)}
+            // Neu laden, damit die Figur im Profil sofort so aussieht wie
+            // gerade gespeichert.
+            onGespeichert={() => onAvatarChange()}
+          />
+        </Suspense>
       )}
       {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
       {ranglisteOffen && (
@@ -709,10 +743,12 @@ function ProfilTab({
     genau andersherum: Was man selten braucht, gehoert nach unten.
 
     An dem einen Tag, an dem es etwas abzuholen gibt, ist es umgekehrt richtig:
-    Dann steht sie ganz oben unter dem Namensschild. Sie hat keinen Punkt am
-    Profil-Reiter, der auf sie zeigt — waere sie an diesem Tag unten, muesste
-    man am Geburtstag durch das ganze Profil rollen, um sein Geschenk zu
-    finden.
+    Dann steht sie ganz oben unter dem Namensschild — waere sie an diesem Tag
+    unten, muesste man am Geburtstag durch das ganze Profil rollen, um sein
+    Geschenk zu finden. Hergeschickt wird man inzwischen vom Punkt am
+    Profil-Reiter (`TabButton` in der Tab-Leiste); die Wanderung bleibt
+    trotzdem, denn der Punkt bringt einen nur bis zum Tab, nicht bis zur
+    Tafel.
 
     Der Zusatz sagt beim Warten nicht mehr den Countdown: Der steht wortgleich
     unter dem Namen im Schild darueber, und zweimal derselbe Satz auf einem
@@ -1836,6 +1872,7 @@ function TabButton({
   active,
   haupt = false,
   farbe,
+  punkt = null,
   onClick,
 }: {
   label: string;
@@ -1844,6 +1881,14 @@ function TabButton({
   haupt?: boolean;
   /** Jeder Bereich hat seine eigene Leuchtfarbe, wenn er gewaehlt ist. */
   farbe: string;
+  /**
+   * Roter Punkt am Reiter: hinter diesem Bereich liegt etwas bereit. Der Text
+   * ist das, was ein Vorlesegeraet daraus macht — ohne ihn waere der Hinweis
+   * nur fuer Sehende da, und er zeigt auf etwas, das man sonst gar nicht
+   * findet. Nie eine Zahl, aus demselben Grund wie an der Truhe: Eine Ziffer
+   * auf einem Reiter dieser Groesse ist am Handy nicht lesbar.
+   */
+  punkt?: string | null;
   onClick: () => void;
 }): React.JSX.Element {
   return (
@@ -1860,6 +1905,7 @@ function TabButton({
     >
       <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
       <span>{label}</span>
+      {punkt !== null && <span className="hub-punkt" aria-label={punkt} />}
     </button>
   );
 }
@@ -2424,6 +2470,14 @@ function Spielwahl({
                     /* Filler ebenso (seit 04.09.): zwei Gebiete faerben sich
                        Feld um Feld ueber das Brett, der Nebel weicht. */
                     <FillerBanner />
+                  ) : game.id === 'golf' ? (
+                    /* Golf spielt sich im Banner selbst — und zwar mit dem
+                       echten Kern: Physik, Bots und Zeichner liegen im
+                       Client, das Banner darf sie also einfach benutzen.
+                       Auch hier gibt es noch kein gemaltes Bild, das
+                       bewegte ist deshalb der Rueckfall bei "weniger
+                       Bewegung" (dann steht es still). */
+                    <GolfBanner />
                   ) : game.id === 'tafelrunde' ? (
                     /* Tafelrunde stellt sich selbst auf: Recken erscheinen
                        auf den Waben, drei gleiche werden golden zu einem
@@ -2441,12 +2495,20 @@ function Spielwahl({
                       Spiele keine Kartenspiele sind, steht in keiner
                       Modulbeschreibung, gehoert aber aufs Banner. */}
                   <span className="muted">
-                    {game.seatCounts.join(', ')} Spieler
+                    {/* Sitzzahlen als Spanne und das Wort durch das Zeichen
+                        ersetzt (07.09.2026): Bei Golf standen hier acht Zahlen
+                        mit Kommas, die ganze Zeile war Laerm. Das Zeichen traegt
+                        seine Beschriftung selbst. */}
+                    <span className="hub-themenspiel-sitze">
+                      <Spieler />
+                      {sitzSpanne(game.seatCounts)}
+                    </span>
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
                     {game.id === 'easypoker' ? ' · Hold’em' : ''}
                     {game.id === 'filler' ? ' · Flächen im Nebel' : ''}
                     {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
+                    {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
                   </span>
                 </span>

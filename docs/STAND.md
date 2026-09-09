@@ -8,18 +8,21 @@ der Erinnerung.
 
 ## Wo das Projekt steht
 
-Brauweg läuft unter **www.brauweg-spielen.de**. **Zehn Spiele sind spielbar:
+Brauweg läuft unter **www.brauweg-spielen.de**. **Elf Spiele sind spielbar:
 Doppelkopf, Zauberer, Skat, Cambio, Poker, Mememory, Filler, Eiland,
-Feldherr und Tafelrunde** (Stand 04.09.2026 — der Absatz nannte bis dahin
-neun), der Hub steht, Clans funktionieren.
+Feldherr, Tafelrunde und Golf** (Stand 06.09.2026 — Golf ist das zweite
+Echtzeitspiel nach Feldherr, siehe `docs/GOLF-PLAN.md`), der Hub steht, Clans
+funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 5. September 2026, nicht aus der Erinnerung):**
-170 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 55 Filler-Tests,
-56 Eiland-Tests, 216 Tafelrunde-Tests, **402 Servertests** — zusammen 1300,
-dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
+**Prüfstand (gezählt am 7. September 2026 aus einem vollen Lauf, nicht aus
+der Erinnerung):**
+172 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
+15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
+61 Eiland-Tests, 310 Tafelrunde-Tests, 20 Golf-Tests, **468 Servertests** —
+zusammen 1501, dazu die Client-Tests (61 Dateien, 784 Tests), alle grün.
+`tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
 > **Tafelrunde ist seit dem 04.09.2026 spielbar** — Regelkern **und**
@@ -87,6 +90,29 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > an einen anderen Tisch, und seine Freunde warten vor einem Tisch, den
 > niemand mehr startet.
 >
+> **Während der Tisch entsteht, „sucht" man noch** (seit dem 07.09.2026).
+> `faellig()` nimmt eine reife Runde sofort aus dem Fenster, der Tisch wird
+> danach in einem Dutzend Datenbankschritten gebaut — in der Produktion gut
+> eine Sekunde, länger als der Abruftakt des Clients. Wer in dieser Lücke
+> nachfragte, hörte „sucht nicht, kein Tisch", der Client meldete „Die Suche
+> wurde beendet" und fragte nie wieder, saß aber längst am neuen Tisch: Der
+> Gegner spielte gegen einen leeren Sitz, die Partie lief aus, und wer noch
+> einmal suchte, bekam einen Bot. Deshalb führt die Schlange die Konten einer
+> herausgenommenen Runde in `imBau`, bis `vermittelt`/`bauBeendet` sie
+> abräumen; `stand()` antwortet für sie `sucht: true, restMs: 0`. Die Probe
+> dazu wartet den Bau bewusst ab, bevor sie urteilt — bricht eine Probe
+> mitten im Tischbau ab, hängt PGlite beim Schließen.
+>
+> **`imBau` ist nach Spiel UND Konto geschlüsselt** (`kontoSchluessel`, seit
+> dem 09.09.2026), nicht nur nach Konto. Ein Konto kann mit zwei Reitern oder
+> zwei Geräten in zwei Spielen zugleich suchen — die Fenster sind je Spiel
+> getrennt, `betritt` räumt nur im eigenen Spiel auf. Reifte danach Spiel B,
+> überschrieb es den Bau-Eintrag von Spiel A (eine neue Suche in B löschte
+> ihn ebenso), und `bauBeendet` der einen Runde nahm den Eintrag der anderen
+> mit: Im Reiter von Spiel A hieß es wieder „sucht nicht". `vermittelt` und
+> `bauBeendet` bekommen deshalb das Spiel mit. `ergebnisse` hängt weiter am
+> Konto allein (Bestand). Probe ohne Datenbank: `test/schlange.test.ts`.
+>
 > Seit demselben Tag wertet Tafelrunde die **Bot-Stufe des Tisches** aus:
 > `gangartVon` in `adapter.ts` bildet die vier Plattformstufen auf die drei
 > Gangarten von `bot.ts` ab (`experte` und `genie` fallen beide auf `hart` —
@@ -99,14 +125,41 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > Paketstruktur lag). Eine Runde läuft jetzt vollständig durch: Alle lebenden
 > Sitze werden paarweise angesetzt (bei ungerader Zahl bekommt der Übrige das
 > Brett eines anderen als **Geist**, keine Freirunde), beide Bretthälften
-> werden zu einer Arena mit vier Reihen zusammengelegt, der Kampf wird beim
-> Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
+> werden zu einer Arena zusammengelegt (seit dem 06.09.2026 vier Reihen je
+> Seite und zwei leere dazwischen, also 5 × 10 — vorher 5 × 4), der Kampf wird
+> beim Übergang in die Phase **in einem Rutsch** durchgerechnet und liegt danach
 > als **Ablaufprotokoll** (jede Bewegung, jeder Treffer, jeder Tod mit
 > Zeitpunkt) im Zustand und in der Sicht. Gleiche Saat plus gleiche Bretter
 > ergibt denselben Ablauf **Ereignis für Ereignis** — eine Probe vergleicht
 > zwei Läufe über `protokollText()`. Abbruchgrenze 45 s, danach entscheidet
 > der höhere Anteil am eigenen Gesamtleben. Die Schaupause ist nicht mehr
 > fest, sondern so lang wie der längste Kampf der Runde.
+>
+> **Die ROLLE wirkt seit dem 06.09.2026 — genau eine von fünf.** Bis dahin
+> wertete `kampf.ts` nur `reichweite` aus, und ein `beistand` war damit
+> schlicht eine schwache Einheit ohne Ausgleich: Moosheiler, Runenpriester und
+> Lichtwahrerin gewannen im Monokultur-Turnier zusammen **0 von 114** Kämpfen.
+> Jetzt **heilt** ein Beistand, statt zu schlagen, solange in seiner Reichweite
+> ein Verwundeter steht (`sucheWunde`): `HEILUNG_FAKTOR` (1,5) mal seinem
+> Angriff, gedeckelt am fehlenden Leben, nie an sich selbst. Neues Ereignis
+> `heilung` im Protokoll — die Anzeige zieht es nach (grünes Aufleuchten an
+> der Figur, grüne Zahl am Kartenrand), und der **Client-Vertrag** hat genau
+> das erzwungen: Ein neuer Zweig in der Ereignis-Union bricht `npm run build`,
+> bis er auch im Client steht. Der Bot bewertet die Heilung als Leistung
+> (`leistung` in `bot.ts`) — ohne diese Zeile kauft er keinen Heiler, und die
+> Reparatur wäre nirgends zu sehen. Die vier anderen Rollen unterscheiden sich
+> weiter allein über ihre Werte; das ist Absicht und keine halbe Arbeit
+> (Begründung im Kopf von `kampf.ts` und bei `Rolle` in `katalog.ts`).
+>
+> **Das Monokultur-Turnier ist kein Wegwerf-Werkzeug mehr:**
+> `packages/game-tafelrunde/werkzeug/turnier.mjs` (Kern `test/turnier.ts`).
+> Es beantwortet, was `ausgewogenheit.mjs` nicht kann — wie eine Einheit im
+> Kampf dasteht, unabhängig davon, ob der Bot sie kauft. Dazu die
+> **Beistandsprobe**: zwei Kopien einer Einheit plus ein Beistand gegen drei
+> Kopien derselben. An ihr hängt der Heilfaktor, nicht an der Rollenquote —
+> drei Heiler gegeneinander können gar nicht anders enden als an der Uhr.
+> Zahlen und die beiden gemessenen, aber **nicht** gemachten Eingriffe stehen
+> in der neunten Messung in `docs/spiele/auto-battler-konzept.md`.
 >
 > **Die Synergien** (Phase 3 des Konzepts) kamen am 04.09.2026 dazu:
 > `synergien.ts`. Je Marke zählt das eigene **Brett** (nicht die Bank), mit
@@ -120,7 +173,8 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > Rüstung ist bei `RUESTUNG_HOECHSTWERT` (75) gedeckelt. Die Sicht trägt je
 > Sitz `synergien` (Marke, Anzahl, erreichte und nächste Schwelle, Bonus)
 > und beim ersten Ausliefern die `synergieTabelle`, wie den Katalog.
-> **Die Anzeige im Client fehlt noch** — die Zahlen sind ein erster Wurf.
+> Am Bildschirm stehen sie seit dem 05.09.2026 als **Zähler** (Zeichen und
+> „2/4"), nicht mehr als Textliste — siehe den Absatz zum Bildschirmaufbau.
 >
 > **Die Dateien kommen seit dem 05.09.2026 vor der ersten Runde**
 > (`minispiele/tafelrunde/vorladen.ts`, `Ladebildschirm.tsx`). Vorher ging
@@ -142,11 +196,297 @@ dazu die Client-Tests (9 Dateien, 168 Tests), alle grün. `tsc --noEmit` sauber.
 > über HTTP/1.1 **9,3 s**, eine Gesamtfrist von 10 s hätte dort auf einer
 > völlig gesunden Leitung zugeschlagen.
 >
-> **Was noch fehlt:** Die Werte tragen die Partie noch nicht: Zu acht läuft
+> **Der Bildschirmaufbau folgt seit dem 05.09.2026 einem fertigen
+> Auto-Battler** (Vorlagen von Robin; nachgebaut wurde die ANORDNUNG, keine
+> Grafik — unsere CC0-Figuren bleiben). Von oben nach unten: eine
+> **festgeheftete Kopfleiste** (`.tr-oben` in styles.css) mit der
+> Mitspielerleiste als waagerechtem Kachelstreifen (Bild, Lebensbalken mit
+> Zahl, Name; Gegner der Runde in Gold, Ausgeschiedene ausgegraut) und
+> darunter der **Phasenzeile** — links „Runde 3 / Kampfphase", rechts die
+> Restzeit. Die Mitspielerleiste ist dabei ihre Klappmechanik losgeworden:
+> Zugeklappt war sie die halbe Auskunft der Partie, und zugeklappt wurde
+> sie, weil acht Zeilen den Laden unter den Rand drückten.
+>
+> **Die Restzeit gibt es in beiden Phasen** — im Kampf aus
+> `interludeDeadline`, in der Platzierungsphase aus `phaseDeadline`. Bis zum
+> 06.09.2026 gab es die zweite nicht: Das Modul beendete die Vorbereitung
+> nur, wenn der Letzte bereit war (`beginneKampf` in `partie.ts`), und die
+> Zugzeit der Plattform ist keine Ersatzuhr — `schedule()` stellt sie bei
+> JEDER Aktion irgendeines Sitzes neu und lässt sie ganz weg, sobald
+> `currentActor` ein Bot ist. Statt einer erfundenen Zahl stand dort „2 von
+> 4 bereit"; ohne Frist steht das dort weiterhin.
+>
+> Seitdem hat die Vorbereitung eine **Rundenfrist im Modul**:
+> `vorbereitungMs` im Regelsatz, **45 Sekunden**, danach gelten offene Sitze
+> als bereit (`fristAbgelaufen` in `partie.ts`). Gebucht wird dabei nichts —
+> wer die Frist verstreichen lässt, tritt mit dem Brett an, das er hat.
+> Getragen wird sie von einem neuen Paar in `GameModule`: **`phaseMs` /
+> `advancePhase`**, das Gegenstück zu `interludeMs` / `advanceInterlude` für
+> Spiele, in denen alle GLEICHZEITIG handeln. Das Modul bleibt uhrlos und
+> nennt nur die Dauer; gemessen wird sie in `runtime/party.ts`
+> (`schedulePhase`, ein Timer auf den früheren von Zugzeit und Phasenfrist).
+> Damit die Plattform einen Phasenwechsel bemerkt, **muss `phaseMs`
+> zwischen zwei Fristen einmal null liefern** — bei Tafelrunde liegt dazwischen
+> die Kampfphase. 45 s sind gemessen und nicht gegriffen: Über 7.637 Runden
+> braucht der fleißigste Sitz im Median 15,5 s und höchstens 39,5 s
+> (Zeitmodell in `test/messen.ts`), die Frist liegt also über jeder zügig
+> gespielten Runde.
+>
+> Dazu, alles in `packages/client/src`: **sichtbares Feldraster** (die Wabe
+> trägt die Randfarbe, ihr `::before` liegt 1,5 px innen und trägt die
+> Füllung — ein `border` geht an einem `clip-path` nicht), **Schatten** unter
+> den Figuren (auf dem Brett ein `drop-shadow` am Sprite, in der Arena eine
+> Bodenellipse, die sich gegen das Schweben bewegt), die **Bank als Leiste
+> an der Brettkante**, im Laden die **Kostenmarke in der Ecke** und das
+> **Gold groß daneben** statt oben in der Werteleiste, gedämpfte
+> unbezahlbare Karten — und beim Ziehen leuchtet **das Feld unter dem
+> Finger** (nur, wenn die Einheit dort auch landen darf; geprüft mit
+> derselben Funktion wie das Ablegen).
+>
+> **Die Partieansicht passt seit dem 07.09.2026 auf einen Bildschirm — die
+> Höhe ist jetzt das Maß, nicht die Breite.** Robin hatte es dreimal
+> gemeldet; gemessen war es eindeutig: auf einem 1280 × 720 großen Notebook
+> **1229 Pixel Inhalt in 720 Pixel Schirm**, der Laden komplett unter der
+> Kante — und der Laden ist die einzige Stelle, an der man kauft. Die
+> Kampfphase war mit 1220 Pixeln genauso weit daneben: Man sah die obere
+> Hälfte eines Kampfes, der von selbst abläuft, und musste rollen, während
+> die Uhr lief.
+>
+> Ursache war, dass **jede** Größe an der Bildschirmbreite hing
+> (`min(94vw, 460px)`, ab Tablet `min(70vw, 560px)`) und die Seite rollte,
+> wenn die Summe nicht passte. Jetzt gibt es **eine** Größe, und sie folgt aus
+> der freien Höhe: Bretter und Bank stehen zusammen in `.tr-spielflaeche`,
+> einem `flex: 1 1 0`-Kasten, der bekommt, was Kopfleiste, Statuszeile und
+> Laden übriglassen — **gemessen, nicht geschätzt: nirgends steht eine Zahl
+> für „so hoch ist die Kopfleiste"**. Aus dieser Höhe rechnet das Stylesheet
+> über `container-type: size` und `100cqh` die Brettbreite (`--tr-feld`),
+> und Bank und Waben hängen daran. Das Seitenverhältnis des Rasters kommt
+> dabei als CSS-Variable aus `rastermass()` (`zuege.ts`) — derselben
+> Funktion, die die Waben legt; im Stylesheet steht keine zweite Geometrie.
+> Die Arena macht es genauso, mit `.mitte` der Bühne als Bezugskasten
+> (`KampfAnzeige.module.css`).
+>
+> Drei Dinge mussten dafür weichen, alle drei aus demselben Grund — die
+> Rechnung muss ihre Abzüge vorher kennen: Das **Bankfach** ist nicht mehr
+> unbegrenzt quadratisch, sondern bei `--tr-bankplatz` gedeckelt (44 px am
+> Handy, 52 ab Tablet); die **Namenszeile über dem Gegnerbrett** bricht nicht
+> mehr um, sondern rollt seitlich (umgebrochen war sie mal 15 und mal 30 Pixel
+> hoch); und der Satz **„Deine Bank ist leer"** liegt über der Bank statt
+> darunter, wie derselbe Satz über dem leeren Brett. Höhen rechnen in `dvh`
+> statt `vh` — auch die Polsterung der Bühne.
+>
+> Nebenbei gefunden und mitgenommen: Der Laden war auf einem 360 px breiten
+> Handy **breiter als der Schirm**, die fünfte Karte lag halb draußen.
+> `repeat(N, 1fr)` nimmt als Untergrenze einer Spalte deren min-content, und
+> das ist der längste Einheitenname am Stück („Bogenmeisterin", mit
+> `white-space: nowrap`). Jetzt `repeat(N, minmax(0, 1fr))`, an Laden und
+> Bank.
+>
+> **Nachgemessen wird mit `packages/client/werkzeug/hoehenprobe.mjs`** — dem
+> Bildtest zu dieser Sache: Er fährt `/probe/ruestkammer` und `/probe/kampf`
+> in fünf Größen an (1366 × 768, 1280 × 720, 1512 × 850, 390 × 844,
+> 360 × 740), prüft, dass der Tisch nicht rollt, dass Bereit-Knopf,
+> Ladenkarten und Bank vollständig im Bild stehen und dass Bretter samt Bank
+> in ihren Kasten passen — und legt je Größe ein Bild ab. Er braucht einen
+> laufenden Vite und Playwright samt Chromium und ist deshalb **kein
+> Vitest**: Die Rechnung steht im Stylesheet und benutzt Container-Anfragen,
+> und in jsdom ist jedes Element null Pixel groß. Was sich dort prüfen
+> lässt — dass die Verdrahtung überhaupt noch steht —, prüft
+> `src/screens/Tafelrunde.hoehe.test.tsx` (8 Tests). Gemessene Brettbreiten
+> am 07.09.2026: 267 px bei 768, 229 bei 720, 332 bei 850, 334 bei 844,
+> 234 bei 740.
+>
+> **`/probe/ruestkammer` trägt seit demselben Tag die echte Kopfleiste des
+> Tisches.** Vorher hatte sie eine eigene Kopfzeile (64–92 px) und einen
+> Erklärtext im Fluss (95–142 px) — zusammen bis zu 155 Pixel, die es am
+> echten Tisch nicht gibt. Die Probe zeigte damit ein deutlich kleineres
+> Brett, als dort steht, und beantwortete die Frage „passt das auf einen
+> Bildschirm?" für den falschen Bildschirm. Ihre eigene Bedienung liegt jetzt
+> als zuklappbare Werkbank **über** dem Tisch.
+>
+> **Und seit dem 07.09.2026 benutzt sie auch die Breite: ab 64rem stehen
+> Statuszeile und Laden neben der Mitte statt darunter.** Robin, unmittelbar
+> nach dem Höhen-Umbau: „Das Layout wird nicht optimal genutzt, es gibt viel
+> Platz, welcher nicht genutzt wird — vor allem in der Platzierungsphase." Er
+> hatte recht, und es folgte aus dem Umbau davor: Die Brettgröße fällt aus der
+> freien **Höhe**, und die Höhe teilten sich vier Bänder untereinander — ein
+> breiterer Schirm gab dem Brett keinen einzigen Pixel dazu. Auf 1366 × 768
+> standen alle vier in einer 600 Pixel breiten Spalte, das Brett war 267 breit,
+> links und rechts blieben je 380 Pixel leer.
+>
+> Jetzt ist der Tisch dort ein Raster aus drei Spalten: links die Statuszeile
+> (Leben, Rang, Feld und die Marken, untereinander), in der Mitte Bretter,
+> Bank und Arena, rechts der Laden. Der neue Kasten `.tr-mitte` hält zusammen,
+> was in die Mitte gehört — ohne ihn bräuchte jedes Kind eine eigene Zelle,
+> und das nächste, das jemand dazwischenschreibt, landete stumm in der
+> Ladenspalte. **Beide Seitenspalten sind gleich breit**
+> (`--tr-seitenspalte`, `clamp(272px, 24vw, 380px)`): Nur so liegt die Mitte
+> in der Mitte des Schirms, und Kopfleiste, Brett und Bank stehen auf einer
+> Achse — mit einer nur chipbreiten linken Spalte stand das Brett gemessene
+> 121 Pixel neben seiner eigenen Kopfleiste. Die Spalten selbst stehen
+> trotzdem auf `auto`: Ein Zuschauer hat weder Laden noch Statuszeile, bei ihm
+> fallen beide in sich zusammen und sein Brett steht mittig.
+>
+> Gemessene Brettbreiten vorher → nachher: **267 → 453** (1366 × 768),
+> 229 → 415 (1280 × 720), 332 → 518 (1512 × 850), 267 → 448 (1024 × 768),
+> 513 → 699 (1920 × 1080); die Arena wächst auf 1366 × 768 von 262 auf 348.
+> Am Handy ändert sich nichts (334 px bei 390 × 844, 234 bei 360 × 740) — der
+> Block greift erst ab 1024.
+>
+> Drei Dinge hängen daran und stehen deshalb hier:
+>
+> - **Das Raster greift nur an einem Tisch mit `.tr-mitte`**
+>   (`.tr-tisch:has(> .tr-mitte)`). `.tr-tisch` trägt nämlich nicht nur der
+>   Tisch: `/probe/kampf` benutzt dieselbe Klasse als Rahmen und hängt eigene
+>   Kinder hinein. Ein blankes `.tr-tisch { display: grid }` hat die auf zwei
+>   Spalten verteilt — die Bühne stand oben rechts und war 97 Pixel hoch.
+> - **`--tr-feld` kennt jetzt auch `100cqw`.** Solange der Tisch eine Spalte
+>   war, war die Breitengrenze in `vw` dasselbe wie die Breite des Kastens;
+>   mit dem Laden daneben ist sie es nicht mehr. Dieselbe Zeile aus demselben
+>   Grund an der Arena.
+> - **Das Ladenraster steht im Stylesheet, nur die Zahl der Plätze kommt aus
+>   der Sicht** (`--tr-ladenplaetze`). Vorher kam beides zusammen als
+>   Inline-Stil aus dem Bildschirm — und ein Inline-Stil schlägt jede Regel:
+>   In der schmalen Spalte müssen die Karten umbrechen dürfen
+>   (`repeat(auto-fill, minmax(96px, 1fr))`, drei nebeneinander statt fünf),
+>   und das wäre sonst nur mit `!important` zu haben.
+>
+> **Die Marken-Leiste hängt seither nicht mehr fest.** Sie stand ab 75rem als
+> `position: fixed` neben der zentrierten Spalte, mit einer abgezählten 96 für
+> die Höhe der Kopfleiste (`Synergien.module.css`). Diese Zahl ist weg: Die
+> Statuszeile mit ihr darin **ist** die linke Spalte, und das Modul dreht nur
+> noch die Liste hochkant.
+>
+> **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
-> Startleben gegen rund 5 Punkte Schaden je Niederlage). Steht als eigener
-> Punkt auf dem Board. Der Kampf selbst wird seit #35 (04.09.2026) im
-> Client abgespielt (`minispiele/tafelrunde/KampfAnzeige.tsx`).
+> Startleben gegen rund 5 Punkte Schaden je Niederlage). Seit den 14
+> Startleben und dem Schadensteiler endet keine einzige mehr an der Grenze,
+> zu keiner Sitzzahl (5.000 Partien zu viert, je 500 zu sechst und zu acht).
+> Der Kampf selbst wird seit #35 (04.09.2026) im Client abgespielt
+> (`minispiele/tafelrunde/KampfAnzeige.tsx`).
+>
+> **Eine Partie dauert seit dem 05.09.2026 rund acht Minuten statt
+> dreizehneinhalb.** Gemessen, entschieden und eingebaut am selben Tag; die
+> ganze Auswertung steht in `docs/TAFELRUNDE-SPIELZEIT.md`. Geändert wurden
+> zwei Zahlen: `STANDARD_REGLER.zeitraffer` von 1 auf **2** (`kampf.ts`) und
+> `DEFAULT_REGELN.startLeben` von 20 auf **14** (`regeln.ts`) — dazu die
+> ausgeschriebene Kopie `REGELSATZ` in `screens/Tafelrunde.tsx`, die als
+> `config` an den Tisch ging und die Änderung sonst überstimmt hätte.
+>
+> **Diese Kopie ist seit dem 05.09.2026 weg.** Der Bildschirm schickt beim
+> Tischanlegen keine `config` mehr; fehlt sie, setzt der Server
+> `defaultConfig()` des Moduls ein (`tables/service.ts`). Damit gibt es für
+> Tafelrunde wieder **eine** Quelle für die Regelzahlen, und eine Änderung an
+> `DEFAULT_REGELN` erreicht jeden Tisch von selbst. Der Weg steht allen
+> Bildschirmen offen, die nichts einstellen lassen — Filler, Eiland und
+> Mememory tragen ihre Kopien noch (eigener Punkt auf dem Board).
+>
+> Gemessen vorher → nachher (500 Partien zu viert, `werkzeug/spielzeit.mjs`):
+> Spielzeit **13:31 → 7:25**, Runden **15 → 11**, einzelner Kampf
+> **35,2 s → 17,3 s**, von der Uhr entschiedene Kämpfe **27,7 % → 1,8 %**,
+> Markenspanne ×0,74–1,09 → ×0,71–1,30 (Schranke ist ×0,5 bis ×2, am Katalog
+> wurde deshalb nichts geändert).
+>
+> **Achtung, das ist nicht der heutige Stand.** Am selben Tag kam auf einem
+> zweiten Zweig die Ladenregel dazu (Neu-Würfeln kostenlos, ein Kauf zieht den
+> ganzen Laden neu), und erst beim Zusammenführen waren alle vier Zahlen
+> gleichzeitig aktiv — ein Zustand, den keine der beiden Messungen gesehen
+> hatte. Derselbe Lauf mit allen vieren: Spielzeit **7:34**, Runden **10**,
+> einzelner Kampf **17,6 s**, von der Uhr entschieden **4,6 %**, Markenspanne
+> ×0,85–1,26 (über 5.000 Partien ×0,80–1,32, Krieger oben mit ×1,32). Die
+> Partie bleibt damit unter Robins acht Minuten. Zwei Zeilen sind gewandert:
+> Von der Uhr entschiedene Kämpfe steigen wieder (der neue Laden baut stärkere
+> Bretter), und „zur Halbzeit entschieden" steht bei **43,0 %** — zwischen den
+> 30,6 % des Zeitraffers und den 47,3 % der Ladenregel. Auswertung in
+> `docs/TAFELRUNDE-SPIELZEIT.md` Abschnitt 6 und in
+> `docs/spiele/auto-battler-konzept.md` (fünfte Messung).
+>
+> **Der Zeitraffer ist die Schraube, die keine Runde streicht** — er
+> beschleunigt Angriffstempo und Schrittweite zusammen und ändert damit auch,
+> wie schnell die Figuren am Bildschirm laufen. Er steht bewusst **nicht** in
+> `TafelrundeRegeln`: Der Regelsatz kommt als JSON von außen an den Tisch, ein
+> selbstgebauter Tisch könnte sich sonst eine 10 einstellen. Nur der
+> Standardwert hat sich geändert.
+>
+> Nebenbei hat das den älteren Befund erledigt, der die Änderung ausgelöst
+> hat: Der Kommentar an `HOECHSTDAUER_MS` nannte 17 s Median und 2–4 %
+> Zeitabbrüche, auf Brettern aus **echten** Partien waren es 35,2 s und
+> 27,7 % — jeder dritte Kampf ging an die Uhr statt ans Brett. Die
+> Begründung dort sagt jetzt, woher die Zahl kommt und dass sie am Zeitraffer
+> hängt.
+>
+> **Was dabei kaputtging, ist am 05.09.2026 behoben:** Die Marken-Schwelle 6
+> stand in 187.730 Antritten **kein einziges Mal** mehr, die Schwelle 4 nur
+> noch in 1,2 %. Ursache waren zwei Dinge, und in dieser Reihenfolge sind sie
+> angegangen worden. Erstens spielte der Bot gar nicht auf Marken hin
+> (`MARKEN_GEWICHT` in `bot.ts` war 25 gegen Einheitenstärken von 130 bis
+> 970); er rechnet den Synergie-Zuwachs jetzt aus der Tabelle aus
+> (`heerStaerke`) und stellt danach auch auf. Zweitens standen die Schwellen
+> zu hoch: Ein Brett fasst so viele Einheiten, wie der Sitz Level hat, und auf
+> Level 6 kommt ein Bot in 0,04 % der Antritte — sechs Träger waren
+> arithmetisch unmöglich. Die Schwellen liegen deshalb bei **2/3/5**, die Boni
+> der beiden oberen Stufen um den Trägeranteil gekürzt. Die Probe prüft die
+> höchste Schwelle wieder. Volle Zahlen: sechste Messung in
+> `docs/spiele/auto-battler-konzept.md`.
+>
+> **Was das gekostet hat, ist am selben Abend zurückgeholt worden:** Ein Bot,
+> der auf Synergien spielt, baut stärkere Bretter, und stärkere Bretter
+> kämpfen länger — die Partie war von 7:27 auf 8:25 gewachsen und lag über
+> Robins acht Minuten. Robin hat entschieden, die Marken zu lassen und die
+> Partie über die Startleben zu kürzen: **`startLeben` steht seitdem auf 12**
+> (vorher 14). Gemessen über 5.000 Partien zu viert: **7:23 im Median bei 9
+> Runden**, Schwellen 78,9 % / 35,2 % / 0,3 %.
+>
+> **Neun Runden sind nachgezählt worden**, weil in `kampf.ts` und `regeln.ts`
+> lange stand, vor Runde 10 stehe kein ausgebautes Brett. Über 500 Partien
+> trifft das nicht zu: Wer ausscheidet, hat im Schnitt 3,35 Einheiten auf dem
+> Brett, kein einziges Ausscheiden geschah mit höchstens zweien, und das
+> früheste liegt in Runde 5. Was die Runde kostet, ist das obere Ende — vier
+> Einheiten stehen in 15,2 % statt 21,0 % der Antritte, und daran hängt die
+> höchste Schwelle (0,3 % statt 0,9 %). Die Sätze im Code sagen das jetzt mit
+> Zahlen.
+>
+> **Was offen bleibt:** 9,5 % der Kämpfe laufen in die Höchstdauer von 45 s
+> statt der 4,4 % von vorher. Die Startleben können daran nichts ändern, sie
+> nehmen Runden und nicht Sekunden; das Ziel wäre der Rüstungsbonus. Ebenfalls
+> offen: Krieger steht bei ×1,56, Elementar bei ×0,22 — beide Zeilen stehen
+> auf dem Board.
+>
+> **Beide Zeilen sind am 05.09.2026 erledigt** (siebte Messung, Abschnitt in
+> `docs/spiele/auto-battler-konzept.md`). Die Ursache lag bei Elementar, und
+> zwar nicht im Bonus, sondern in der Zusammensetzung: Alle fünf Träger waren
+> Fernkämpfer, die Marke hatte keine Vorderreihe. Das **Irrlicht** ist jetzt
+> eine Wache mit Reichweite 1 (und hat dafür Naturwesen abgegeben);
+> Funkenlehrling, Frostweberin und Sturmrufer sind auf die Mitte ihrer
+> Kostenstufe gehoben. Elementar steht damit bei **×0,83** (Gegenprobe ×0,92)
+> statt ×0,25, und **Krieger ist von selbst auf ×1,13 gefallen** — an ihm wurde
+> nichts geändert, er stand nur über einem Schnitt, den eine kaputte Zeile nach
+> unten zog. Die Spanne der gezählten Marken ist ×0,83 bis ×1,24. Startleben,
+> Zeitraffer, Schwellen und Synergieboni sind unangetastet, die Spielzeit liegt
+> unverändert bei 7:10 im Median.
+>
+> Der zweite Befund von damals hat sich mit der Ladenregel **von selbst
+> erledigt**: Die Bot-Gangart `hart` lag nach dem Zeitraffer hinter `normal`
+> (77 : 107,7 über 400 Partien zu viert, davor 119 : 94) und schlägt sie jetzt
+> wieder (140 : 86,7, nachgemessen am 05.09.2026). Die Board-Karte dazu ist auf
+> diesem Stand nicht mehr nachstellbar. Die Probe in `bot.test.ts` behauptet
+> die Reihenfolge seitdem wieder: Sie hatte sie aufgegeben, weil sie an einem
+> Tag zweimal gekippt war — inzwischen ist eingekreist, dass beide Male der
+> **Laden** und nicht die Partielänge dahinterstand (Befund 7 in
+> `docs/spiele/auto-battler-konzept.md`, Werkzeug `werkzeug/gangarten.mjs`).
+> Vier Messungen über zwei Saatbasen zeigen in dieselbe Richtung.
+>
+> **Am 06.09.2026 nachgezogen — die Zahl 140 : 86,7 gilt nicht mehr, sie steht
+> jetzt bei 228 : 57,3.** Was `hart` damals trug, war allein die fehlende
+> Patzerquote; die beiden Tempo-Schrauben lagen in der Streuung und blieben
+> deshalb stehen. Über sechs Saatbasen gemessen ist eine der beiden aber kein
+> Nullwert, sondern ein Minus: Ohne die Bedingung „Brett voll" kauft der Bot
+> Feldplätze, auf denen nichts steht. `nurBeiVollemBrett` steht bei `hart`
+> seitdem auf `true`, `polster` auf 2 statt 4; die Reserve bleibt bei 0 und
+> trägt das Tempo. Damit wirkt jede der vier Schrauben messbar, und der
+> Kontrolllauf ist wieder neutral (98,7 statt der 110 bis 116, die über drei
+> Basen gemessen waren). Neu am Werkzeug: `--schraube name=wert` stellt eine
+> einzelne Schraube um, ohne `bot.ts` anzufassen.
 >
 > **Fünf Entscheidungen, die man sonst nachrecherchieren müsste:**
 >

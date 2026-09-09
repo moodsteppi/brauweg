@@ -56,7 +56,7 @@ export const EASYPOKER_MODULE_VERSION = 2;
  * holt nach, was am Modul laengst stand (2 Spielart, 3 Barrieren, 4 Mauer je
  * Zug); gemeldet hatte der Client bis eben die 1.
  */
-export const FILLER_MODULE_VERSION = 4;
+export const FILLER_MODULE_VERSION = 5;
 
 /**
  * 2 seit dem 1. September 2026, wenige Stunden nach der 1. Dieser Client
@@ -74,6 +74,13 @@ export const EILAND_MODULE_VERSION = 2;
  */
 export const TAFELRUNDE_MODULE_VERSION = 1;
 
+/**
+ * 1 seit dem 6. September 2026 — die erste Fassung. Golf ist wie Feldherr
+ * Echtzeit im Gleichschritt (siehe SPEZIFIKATION-GOLF.md): Ueber die Leitung
+ * gehen nur Schlaege, die eigentliche Ballphysik rechnet jedes Geraet selbst.
+ */
+export const GOLF_MODULE_VERSION = 2;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
@@ -83,6 +90,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   filler: FILLER_MODULE_VERSION,
   eiland: EILAND_MODULE_VERSION,
   tafelrunde: TAFELRUNDE_MODULE_VERSION,
+  golf: GOLF_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */
@@ -457,6 +465,13 @@ export interface ViewMessage<V = GameView> {
   turnDeadline: number | null;
   /** Frist einer Schaupause (Abrechnung, gleichzeitige Vorbehaltsabfrage). */
   interludeDeadline: number | null;
+  /**
+   * Frist der laufenden PHASE — anders als die Schaupause laeuft sie, waehrend
+   * noch gehandelt werden darf. Heute setzt sie nur Tafelrunde: Dort ruesten
+   * alle gleichzeitig, und `turnDeadline` faellt bei jeder Aktion irgendeines
+   * Sitzes auf den vollen Wert zurueck.
+   */
+  phaseDeadline: number | null;
   botSeats: number[];
   leftSeats: number[];
   finished: boolean;
@@ -471,6 +486,15 @@ export interface SeatInfo {
   isBot: boolean;
   /** Profilbild-URL oder null. */
   avatarUrl: string | null;
+  /**
+   * Farbwunsch dieses Sitzes (Platz in der Farbtabelle des Spiels) oder null.
+   *
+   * Nur ein WUNSCH: Der Server prüft ihn nicht gegen die anderen Sitze.
+   * Doppelfrei wird er erst im Spiel — bei Golf durch `farbtafel`, dieselbe
+   * reine Funktion auf jedem Gerät. Ältere Server schicken das Feld nicht,
+   * deshalb optional.
+   */
+  farbe?: number | null;
 }
 
 /** Spielstärke der Bots eines Tisches. Spiegelbild von game-api BotLevel. */

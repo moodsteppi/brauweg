@@ -33,8 +33,14 @@ export interface CreateTableInput {
   readonly accountId: string;
   readonly gameId: GameId;
   readonly name?: string;
-  /** Vollstaendiger Regelsatz. Wird immer als eigene Version festgeschrieben. */
-  readonly config: unknown;
+  /**
+   * Vollstaendiger Regelsatz. Wird immer als eigene Version festgeschrieben.
+   *
+   * WEGLASSEN HEISST: der Regelsatz des Moduls (`defaultConfig()`). Das ist
+   * der Normalfall fuer einen Bildschirm, der gar nichts einstellen laesst —
+   * die Begruendung steht unten in `createTable`.
+   */
+  readonly config?: unknown;
   readonly seats: number;
   readonly rounds: number;
   readonly visibility?: s.TableVisibility;
@@ -221,6 +227,22 @@ export async function createTable(db: Db, input: CreateTableInput) {
     throw badRequest('seatCountUnsupported');
   }
 
+  /*
+   * Ohne `config` gilt der Regelsatz des Moduls.
+   *
+   * Sonst muss jeder Bildschirm, der gar nichts einstellen laesst, die
+   * Vorgabezahlen abschreiben, um ueberhaupt einen Tisch aufmachen zu koennen
+   * — und diese Kopie UEBERSTIMMT dann das Modul, ohne dass irgendwo ein
+   * Fehler auffaellt. Bei Tafelrunde waere das am 05.09.2026 zweimal beinahe
+   * passiert: erst waere jeder Tisch mit 100 statt 20 Startleben gelaufen,
+   * dann mit 20 statt 14. Beide Male haette der Server die veraltete Kopie
+   * brav festgeschrieben.
+   *
+   * `null` zaehlt nicht als weggelassen: Das ist ein gesetzter Wert, und
+   * `validateConfig` soll ihn wie jeden anderen falschen abweisen.
+   */
+  const config = input.config === undefined ? module.defaultConfig() : input.config;
+
   // Die Geberrotation ist spielabhaengig, also fragt der Server das Modul,
   // statt eine Zahl fest zu verdrahten.
   const rotation = module.meta.rotationSize(input.seats);
@@ -232,7 +254,7 @@ export async function createTable(db: Db, input: CreateTableInput) {
     accountId: input.accountId,
     gameId: input.gameId,
     name: input.name ?? 'Tischregeln',
-    config: input.config,
+    config,
     seats: input.seats,
     rounds: input.rounds,
     clubId,
@@ -240,7 +262,7 @@ export async function createTable(db: Db, input: CreateTableInput) {
 
   const chipFeld = module.meta.chipStackField;
   if (chipFeld) {
-    await verlangen(db, input.accountId, einsatzVon(input.config, chipFeld));
+    await verlangen(db, input.accountId, einsatzVon(config, chipFeld));
   }
 
   // Erst nach allen Pruefungen (auch der des Regelsatzes in saveRuleSet):
@@ -669,24 +691,41 @@ export async function schrumpfeAufBesetzte(
   db: Db,
   tableId: string,
   byAccountId: string,
+  /**
+   * Gewuenschte Rundenzahl, falls der Startende sie erst in der Lobby waehlt
+   * (Golf: Loecher per Regler). Fehlt sie, bleibt die Rundenzahl des Tisches.
+   */
+  rundenWunsch?: number,
 ): Promise<void> {
   const { table, seats } = await tableWithSeats(db, tableId);
   if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
   if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
 
-  const bleiben = seats.filter((seat) => seat.accountId || seat.isBot);
-  if (bleiben.length < 2) throw conflict('tableNotFull');
-  if (bleiben.length === seats.length) return; // nichts zu schrumpfen — Start uebernimmt ensureStarted
-
   const module = requireModule(table.gameId);
+  const bleiben = seats.filter((seat) => seat.accountId || seat.isBot);
+  /**
+   * Zwei ist die Untergrenze der Kartenspiele; ein Modul, das laut
+   * `seatCounts` auch allein spielbar ist (Golf), darf mit einem einzigen
+   * Besetzten losgehen — ein Tisch laesst sich nur mit >= 2 Plaetzen anlegen,
+   * also fuehrt fuer den Alleinspieler nur dieser Weg zur Partie.
+   */
+  const mindestens = module.meta.seatCounts.includes(1) ? 1 : 2;
+  if (bleiben.length < mindestens) throw conflict('tableNotFull');
+
   const config = await tableRules(db, tableId);
   const probleme = module
-    .validateConfig(config, bleiben.length, table.maxRounds)
-    .filter((problem) => problem.severity === 'error' && problem.path === 'seats');
+    .validateConfig(config, bleiben.length, rundenWunsch ?? table.maxRounds)
+    .filter(
+      (problem) =>
+        problem.severity === 'error' &&
+        (problem.path === 'seats' || (rundenWunsch !== undefined && problem.path === 'rounds')),
+    );
   if (probleme.length > 0) throw conflict('seatCountUnsupported');
 
   const rotation = Math.max(1, module.meta.rotationSize(bleiben.length));
-  const runden = Math.ceil(table.maxRounds / rotation) * rotation;
+  const runden = Math.ceil((rundenWunsch ?? table.maxRounds) / rotation) * rotation;
+  // nichts zu schrumpfen und keine neue Rundenzahl — Start uebernimmt ensureStarted
+  if (bleiben.length === seats.length && runden === table.maxRounds) return;
 
   await db.transaction(async (tx) => {
     // Erst die Luecken loeschen, dann aufruecken: So ist jeder Zielindex frei,
@@ -752,6 +791,76 @@ export async function setTableBotLevel(
   // Filter zusammenfuehren, nicht ersetzen: `fillWithBots` und alles andere
   // bleiben stehen.
   const filters = { ...(table.filters as Record<string, unknown> | null), botLevel: level };
+  await db.update(s.gameTable).set({ filters }).where(eq(s.gameTable.id, tableId));
+  await touch(db, tableId);
+}
+
+/**
+ * Groesste Farbnummer, die ueber die Leitung darf.
+ *
+ * Grosszuegig wie beim Zeichenvorrat der Reaktionen: Welche Farben es gibt,
+ * entscheidet der Bildschirm; ein spaeterer, groesserer Vorrat soll keine
+ * Serveraenderung kosten. Eine Zahl kann kein Schimpfwort sein.
+ */
+export const MAX_SITZFARBE = 63;
+
+/**
+ * Farbwuensche eines Tisches — Konto-Kennung auf Farbnummer.
+ *
+ * Sie liegen wie die Bot-Stufe im `filters`-jsonb: eine Tischeinstellung,
+ * keine feste Verdrahtung im Server, und damit ohne Migration.
+ *
+ * **Am Konto und nicht am Sitzindex.** `schrumpfeAufBesetzte` nummeriert die
+ * Sitze beim Sofortstart um; ein Wunsch am Sitzindex haenge danach am
+ * falschen Menschen. Bots waehlen nicht.
+ */
+export function sitzfarbWuensche(filters: unknown): Record<string, number> {
+  const roh = (filters as { sitzfarben?: unknown } | null)?.sitzfarben;
+  if (roh === null || typeof roh !== 'object') return {};
+  const raus: Record<string, number> = {};
+  for (const [konto, wert] of Object.entries(roh as Record<string, unknown>)) {
+    if (typeof wert === 'number' && Number.isInteger(wert) && wert >= 0 && wert <= MAX_SITZFARBE) {
+      raus[konto] = wert;
+    }
+  }
+  return raus;
+}
+
+/**
+ * Farbwunsch des eigenen Sitzes setzen.
+ *
+ * Wie beim Bot-Setzen: nur wer selbst am Tisch sitzt, und nur solange noch
+ * keine Partie laeuft — waehrend der Partie faerbte sich sonst mitten im
+ * Schlag ein Ball um, und die Geraete rechnen ihre Baelle unabhaengig.
+ *
+ * KEINE Doppelpruefung gegen die anderen Sitze: Sie waere ein Wettlauf (zwei
+ * Tipps im selben Moment) und liesse den Verlierer ohne Rueckmeldung stehen.
+ * Doppelfrei macht es der Bildschirm aus der vollen Wunschliste — dieselbe
+ * reine Funktion auf jedem Geraet.
+ */
+export async function setSeatColor(
+  db: Db,
+  tableId: string,
+  farbe: number,
+  byAccountId: string,
+): Promise<void> {
+  if (!Number.isInteger(farbe) || farbe < 0 || farbe > MAX_SITZFARBE) {
+    throw badRequest('seatColorUnknown');
+  }
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+
+  // Nur Wuensche von Leuten behalten, die noch sitzen: Sonst haelt ein
+  // Weggegangener seine Farbe fuer immer im Tisch fest.
+  const sitzend = new Set(seats.map((seat) => seat.accountId).filter((id): id is string => !!id));
+  const alt = sitzfarbWuensche(table.filters);
+  const sitzfarben: Record<string, number> = { [byAccountId]: farbe };
+  for (const [konto, wert] of Object.entries(alt)) {
+    if (konto !== byAccountId && sitzend.has(konto)) sitzfarben[konto] = wert;
+  }
+
+  const filters = { ...(table.filters as Record<string, unknown> | null), sitzfarben };
   await db.update(s.gameTable).set({ filters }).where(eq(s.gameTable.id, tableId));
   await touch(db, tableId);
 }

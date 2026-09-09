@@ -5,14 +5,18 @@ import {
   BRETT_REIHEN,
   BRETT_SPALTEN,
   DEFAULT_REGELN,
+  type EinheitId,
   type Heer,
   MAX_STUFE,
+  type Stufenwerte,
   type TafelrundePartie,
   KATALOG,
   VERSCHMELZ_ZAHL,
   erstellePartie,
   fuehreAus,
+  gesamtkosten,
   sichtFuer,
+  werteFuer,
   zuschauerSicht,
 } from '../src/index.js';
 
@@ -128,6 +132,64 @@ describe('Katalog in der Sicht', () => {
   });
 });
 
+describe('Werte je Sternstufe in der Sicht', () => {
+  /*
+   * Ein eigener Zugriff statt `assert.ok` je Probe: Eine Zusicherungsfunktion
+   * nimmt `tsc` die Verengung wieder weg, sobald das Ergebnis in eine weitere
+   * Konstante wandert (TS7022) — und die Proben unten lesen aus der Tabelle.
+   */
+  function tabelle(): Readonly<Record<EinheitId, readonly Stufenwerte[]>> {
+    const werte = sichtFuer(neu(), 0, 0).stufenwerte;
+    if (!werte) throw new Error('Die erste Sicht muss die Stufenwerte mitschicken');
+    return werte;
+  }
+
+  it('reisen mit dem Katalog und danach nicht mehr', () => {
+    const p = neu();
+    assert.notEqual(sichtFuer(p, 0, 0).stufenwerte, undefined);
+    assert.equal(sichtFuer(p, 0, 1).stufenwerte, undefined);
+    assert.notEqual(zuschauerSicht(p, 0).stufenwerte, undefined);
+    assert.equal(zuschauerSicht(p, 1).stufenwerte, undefined);
+  });
+
+  it('nennen je Einheit alle Stufen, aufsteigend ab 1', () => {
+    const werte = tabelle();
+    assert.equal(Object.keys(werte).length, KATALOG.length);
+    for (const e of KATALOG) {
+      assert.equal(werte[e.id].length, MAX_STUFE);
+      assert.deepEqual(
+        werte[e.id].map((w) => w.stufe),
+        [1, 2, 3],
+      );
+    }
+  });
+
+  it('rechnen Stufe und Erloes so, wie der Kampf und das Verkaufen es tun', () => {
+    // Der Sinn der Tabelle: Der Bildschirm soll NICHT multiplizieren. Wer die
+    // Rechnung hier aendert, aendert diese Probe mit — und sieht dabei, dass
+    // die Anzeige mitwandert.
+    const werte = tabelle();
+    for (const e of KATALOG) {
+      for (const stand of werte[e.id]) {
+        const { stufe, erloes, ...gemessen } = stand;
+        assert.deepEqual(gemessen, werteFuer(e.id, stufe));
+        assert.equal(erloes, gesamtkosten(e.id, stufe));
+      }
+    }
+  });
+
+  it('laesst Tempo, Reichweite und Ruestung ueber die Stufen stehen', () => {
+    // Genau die Unterscheidung, die der Client nicht kennen soll: Nur Leben
+    // und Angriff wachsen (katalog.ts, STUFEN_FAKTOR).
+    const wache = tabelle().dorfwache;
+    assert.equal(wache[1].tempo, wache[0].tempo);
+    assert.equal(wache[2].reichweite, wache[0].reichweite);
+    assert.equal(wache[2].ruestung, wache[0].ruestung);
+    assert.ok(wache[2].leben > wache[0].leben);
+    assert.ok(wache[2].angriff > wache[0].angriff);
+  });
+});
+
 describe('Oeffentliches', () => {
   it('zeigt den Vorrat, aber nicht, wer die Karten haelt', () => {
     // Mitzaehlen ist eine Faehigkeit und kein Leck: Der Vorrat sagt, wie
@@ -138,6 +200,65 @@ describe('Oeffentliches', () => {
     assert.equal(typeof sicht.vorrat[gekauft.id], 'number');
     // Auf der Bank des Gegners steht sie trotzdem nirgends.
     assert.ok(!JSON.stringify(sicht.gegner).includes('bank'));
+  });
+});
+
+describe('Rangliste in der Sicht', () => {
+  // Bis zum 6.9.2026 lieferte die Sicht nur `sieger` — einen Sitz oder null.
+  // Der Bildschirm rechnete die Platzierung deshalb selbst nach, wortgetreu
+  // abgeschrieben aus partie.ts. Diese Faelle standen vorher im Client
+  // (platzierung.test.ts) und pruefen jetzt die einzige verbliebene Fassung.
+
+  it('setzt die Lebenden vor die Ausgeschiedenen und zaehlt die laufende Runde mit', () => {
+    const p = mitHeer(mitHeer({ ...neu([0, 1, 2]), runde: 9 }, 0, { ausRunde: 3, leben: 0 }), 2, {
+      ausRunde: 7,
+      leben: 0,
+    });
+    const rang = sichtFuer(p, 1).platzierung;
+    assert.deepEqual(
+      rang.map((r) => r.sitz),
+      [1, 2, 0],
+    );
+    assert.deepEqual(
+      rang.map((r) => r.platz),
+      [1, 2, 3],
+    );
+    // Wer noch steht, hat die laufende Runde voll mitgespielt.
+    assert.equal(rang.find((r) => r.sitz === 1)!.runden, 9);
+    assert.equal(rang.find((r) => r.sitz === 0)!.runden, 3);
+  });
+
+  it('entscheidet bei gleichen Runden ueber das Leben', () => {
+    const p = mitHeer(mitHeer(neu([0, 1]), 0, { leben: 12 }), 1, { leben: 44 });
+    assert.deepEqual(
+      sichtFuer(p, 0).platzierung.map((r) => r.sitz),
+      [1, 0],
+    );
+  });
+
+  it('teilt einen Platz nur bei Gleichstand in Runden UND Leben', () => {
+    // Zwei erste Plaetze, und der Dritte ist dann der DRITTE, nicht der
+    // zweite. Bei voelligem Gleichstand entscheidet der Sitz die Reihenfolge:
+    // Ohne ihn spraenge die Anzeige bei jedem Rundruf.
+    const p = mitHeer(neu([0, 1, 2]), 2, { leben: 10 });
+    const rang = sichtFuer(p, 0).platzierung;
+    assert.deepEqual(
+      rang.map((r) => r.platz),
+      [1, 1, 3],
+    );
+    assert.deepEqual(
+      rang.map((r) => r.sitz),
+      [0, 1, 2],
+    );
+  });
+
+  it('steht auch dem Zuschauer und schon vor dem Ende zur Verfuegung', () => {
+    // Wer in Runde vier ausscheidet, bekommt sein Endbild, waehrend die
+    // Partie weiterlaeuft — "Platz 5 von 8" muss dann schon stimmen.
+    const p = neu([0, 1, 2]);
+    assert.equal(p.fertig, false);
+    assert.equal(zuschauerSicht(p).platzierung.length, 3);
+    assert.equal(sichtFuer(p, 0).platzierung.length, 3);
   });
 });
 

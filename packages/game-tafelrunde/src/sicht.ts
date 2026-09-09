@@ -22,8 +22,15 @@
  * ist eine Faehigkeit und kein Leck.
  */
 
-import type { Einheit, EinheitId } from './katalog.js';
-import { KATALOG, MAX_STUFE, VERSCHMELZ_ZAHL } from './katalog.js';
+import { type Seite, ARENA_REIHEN } from './arena.js';
+import type { Einheit, EinheitId, Grundwerte, Stufe } from './katalog.js';
+import {
+  KATALOG,
+  MAX_STUFE,
+  VERSCHMELZ_ZAHL,
+  gesamtkosten,
+  werteFuer,
+} from './katalog.js';
 import { type Synergie, type Synergiestand, SYNERGIEN, synergienVon } from './synergien.js';
 import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN } from './brett.js';
 import type {
@@ -39,7 +46,7 @@ import {
   darfHandeln,
   einkommen,
   heerVon,
-  kampfVon,
+  platzierungen,
   sieger,
   sitzeVon,
 } from './partie.js';
@@ -73,6 +80,14 @@ export interface EigeneSicht {
   /** Was die naechste Runde einbringt — Grundeinkommen, Zins und Serie. */
   readonly einkommen: number;
   readonly neuwuerfelnKosten: number;
+  /**
+   * Wie oft dieser Sitz in DIESER Runde schon neu gewuerfelt hat.
+   *
+   * Steht in der Sicht, weil der Bot auf derselben gefilterten Sicht laeuft wie
+   * ein Mensch und seit dem kostenlosen Wuerfeln eine eigene Bremse braucht
+   * (bot.ts, WUERFE_JE_RUNDE). Fuer den Bildschirm ist die Zahl ohne Belang.
+   */
+  readonly wuerfeRunde: number;
   /** Gold fuer den naechsten Level, null beim hoechsten. */
   readonly aufstiegKosten: number | null;
   /** Darf dieser Sitz gerade ueberhaupt handeln? */
@@ -105,6 +120,128 @@ export interface FremdeSicht {
   readonly synergien: readonly Synergiestand[];
 }
 
+/**
+ * Ein Kampf der laufenden Runde als blosses ERGEBNIS — ohne Ablaufprotokoll.
+ *
+ * Das ist die Auskunft "wer gegen wen, wer gewinnt" fuer alle uebrigen Tische
+ * der Runde. Sie geht an JEDEN, Spieler wie Zuschauer, und zwar aus demselben
+ * Grund, aus dem die Bretter oeffentlich sind (siehe Kopf dieser Datei): Wer
+ * wen schlaegt, sieht man eine Sekunde spaeter ohnehin an den Lebensbalken der
+ * Mitspielerleiste. Es zu verschweigen hiesse nur, dass der eigene Bildschirm
+ * die Runde schlechter erklaert als das Ergebnis, das er danach zeigt.
+ *
+ * OHNE PROTOKOLL, und das ist der ganze Witz dieser Liste: Ein Kampfbericht
+ * sind schnell ein paar hundert Ereignisse. Sie fuer sieben fremde Kaempfe
+ * mitzuschicken hiesse, jedem Spieler je Runde ein Vielfaches dessen zu
+ * senden, was er ansehen kann — er spielt genau einen Kampf ab. Ein Ergebnis
+ * dagegen sind sechs Zahlen.
+ *
+ * `dauerMs` steht dabei nicht zum Anzeigen drin, sondern zum Zurueckhalten:
+ * Alle Kaempfe der Runde laufen gleichzeitig, und die Anzeige darf ein
+ * Ergebnis erst nennen, wenn der fremde Kampf auch abgelaufen WAERE. Ohne die
+ * Dauer stuende der Ausgang aller Tische schon in der ersten Sekunde da.
+ */
+export interface Paarungsergebnis {
+  readonly a: number;
+  /** Beim Geist: der Sitz, dessen Brett als Abbild antritt. Sonst der Gegner. */
+  readonly b: number;
+  readonly geist: boolean;
+  /** Arenaseite des Siegers (0 = `a`, 1 = `b`), null bei Unentschieden. */
+  readonly sieger: Seite | null;
+  /** Leben, die der Verlierer abgibt. Beim Unentschieden 0. */
+  readonly schaden: number;
+  readonly dauerMs: number;
+}
+
+/** Aus einer Paarung wird ihr Ergebnis: alles ausser dem Protokoll. */
+function ergebnis(kampf: Kampfpaarung): Paarungsergebnis {
+  return {
+    a: kampf.a,
+    b: kampf.b,
+    geist: kampf.geist,
+    sieger: kampf.bericht.sieger,
+    schaden: kampf.bericht.sieger === null ? 0 : kampf.bericht.schaden,
+    dauerMs: kampf.bericht.dauerMs,
+  };
+}
+
+/**
+ * Ein Sitz in der Rangliste.
+ *
+ * Das ist `platzierungen` aus partie.ts, in der Benennung der Sicht. Es steht
+ * hier, weil `sieger` (ein Sitz oder null) fuer eine Anzeige nicht reicht:
+ * Daraus laesst sich weder "Platz 1 von 8" noch "Platz 5 von 8" bilden.
+ *
+ * Und es steht hier, damit es NUR hier steht. Bis zum 6.9.2026 rechnete der
+ * Bildschirm die Platzierung selbst nach — eine wortgetreue Abschrift der
+ * Formel, moeglich, weil alle Eingaben (`ausRunde`, `leben`, `runde`) in
+ * jeder Sicht stehen. Wer im Modul das zweite Kriterium aendert (etwa Leben
+ * durch gehaltenes Gold ersetzt), haette dort eine Platzierung bekommen, die
+ * der Server anders sieht (CLAUDE.md: der Client bildet keine Regel nach).
+ */
+export interface Platzstand {
+  readonly sitz: number;
+  /** 1 ist der beste. Bei Gleichstand teilen sich zwei Sitze eine Zahl. */
+  readonly platz: number;
+  /**
+   * Ueberstandene Runden — die Zahl, nach der sortiert wird. Wer noch lebt,
+   * zaehlt die laufende Runde mit (siehe `platzierungen` in partie.ts).
+   */
+  readonly runden: number;
+}
+
+/**
+ * Was eine Einheit auf einer Sternstufe WIRKLICH mitbringt — und was sie beim
+ * Verkaufen einbringt.
+ *
+ * Der Katalog nennt nur die Werte der ersten Stufe. Eine verschmolzene
+ * Dorfwache hat aber das 3,2-fache Leben (`STUFEN_FAKTOR`), und zwar nur im
+ * Leben und im Angriff: Tempo, Reichweite und Ruestung bleiben, wie sie sind.
+ * Genau diese Unterscheidung ist eine REGEL, und deshalb steht das Ergebnis
+ * hier fertig gerechnet, statt dass der Bildschirm einen Faktor bekommt und
+ * selbst multipliziert (CLAUDE.md: was das Modul weiss, schreibt der Client
+ * nicht ab). Wer den Faktor aendert oder ihn eines Tages auch auf die
+ * Ruestung legt, aendert damit die Anzeige mit.
+ *
+ * `erloes` aus demselben Grund: Dass eine Stufe-2-Einheit das Dreifache
+ * zurueckgibt, ist keine Multiplikation, sondern die Entscheidung, beim
+ * Verkaufen den vollen Preis aller steckenden Karten zu erstatten
+ * (`gesamtkosten` in katalog.ts). Ein Client, der `kosten * 3` rechnet, zeigt
+ * am Tag der ersten Verkaufsgebuehr eine Zahl, die es nicht gibt.
+ */
+export interface Stufenwerte extends Grundwerte {
+  readonly stufe: Stufe;
+  /** Gold, das ein Verkauf auf dieser Stufe einbringt. */
+  readonly erloes: number;
+}
+
+/**
+ * Die Tabelle dazu: je Einheit ihre Stufen, aufsteigend ab Stufe 1.
+ *
+ * EINMAL gerechnet und nicht je Sicht: Sie haengt an nichts als am Katalog,
+ * ist also ueber die ganze Laufzeit dieselbe. Sie geht mit dem Katalog
+ * zusammen heraus (nur bei `seit === 0`) und faellt damit unter dessen
+ * Zusage — sonst laegen 22 Einheiten mal drei Stufen in jedem Rundruf.
+ *
+ * OHNE SYNERGIE-BONUS, mit Absicht: Der Bonus haengt am Brett und wechselt
+ * mit jeder Einheit, die dazukommt. Was er tut, sagt das Blatt der Marke
+ * (`wirkung` in synergien.ts); diese Tabelle sagt, was die Einheit selbst
+ * mitbringt.
+ */
+const STUFENWERTE: Readonly<Record<EinheitId, readonly Stufenwerte[]>> = (() => {
+  // Dieselbe Bauart wie `vollerVorrat` in partie.ts: Ein leerer Datensatz mit
+  // der Kennung als Schluessel laesst sich nicht anders anlegen, ohne alle 22
+  // Namen ein zweites Mal auszuschreiben.
+  const tabelle = {} as Record<EinheitId, readonly Stufenwerte[]>;
+  for (const e of KATALOG) {
+    tabelle[e.id] = Array.from({ length: MAX_STUFE }, (_, i) => {
+      const stufe = (i + 1) as Stufe;
+      return { stufe, ...werteFuer(e.id, stufe), erloes: gesamtkosten(e.id, stufe) };
+    });
+  }
+  return tabelle;
+})();
+
 export interface TafelrundeSicht {
   /**
    * Der eigene Sitz, oder null fuer Zuschauer. Steht in der Sicht und nicht
@@ -117,6 +254,14 @@ export interface TafelrundeSicht {
   readonly phase: Phase;
   readonly fertig: boolean;
   readonly sieger: number | null;
+  /**
+   * Die Rangliste aller Sitze, der beste zuerst (siehe `Platzstand`).
+   *
+   * Sie steht in JEDER Sicht und nicht erst am Ende: Wer in Runde vier
+   * ausscheidet, bekommt sein Endbild, waehrend die Partie weiterlaeuft — und
+   * "Platz 5 von 8" ist dann schon die richtige Auskunft.
+   */
+  readonly platzierung: readonly Platzstand[];
   readonly zuschauer: boolean;
   readonly ladenPlaetze: number;
   readonly bankPlaetze: number;
@@ -124,6 +269,18 @@ export interface TafelrundeSicht {
   /** Reihen und Spalten der eigenen Bretthaelfte, siehe brett.ts. */
   readonly brettReihen: number;
   readonly brettSpalten: number;
+  /**
+   * Reihen der KAMPFARENA, siehe arena.ts. Breit ist sie wie das Brett.
+   *
+   * Sie steht ausdruecklich in der Sicht, obwohl sie aus `brettReihen`
+   * herzuleiten waere: `brettReihen * 2` stimmt seit der leeren Luecke
+   * zwischen den Haelften nicht mehr, und genau diese Rechnung stand im
+   * Client (KampfAnzeige.tsx). Eine Geometrie, die der Bildschirm nachrechnet,
+   * ist eine zweite Wahrheit ueber eine Regel des Moduls — CLAUDE.md, "was das
+   * Modul weiss, schreibt der Client nicht ab". Wie viele Reihen leer in der
+   * Mitte liegen, ergibt sich als `arenaReihen - brettReihen * 2`.
+   */
+  readonly arenaReihen: number;
   /**
    * Wie viele gleiche Einheiten verschmelzen und wie hoch es geht.
    *
@@ -144,22 +301,41 @@ export interface TafelrundeSicht {
   readonly gegner: readonly FremdeSicht[];
   readonly leftSeats: readonly number[];
   /**
-   * Die Kaempfe, denen dieser Empfaenger zusehen darf — mit vollem
-   * Ablaufprotokoll (siehe kampf.ts).
+   * ALLE Kaempfe der laufenden Runde — mit vollem Ablaufprotokoll (kampf.ts).
    *
-   * Ein Spieler bekommt genau seinen eigenen, ein Zuschauer alle. Der eigene
-   * Kampf ist KEIN Geheimnis: Beide Bretter sind ohnehin oeffentlich (siehe
-   * Kopf dieser Datei), und ohne das Protokoll koennte die Anzeige den Kampf
-   * nicht abspielen, sondern nur das Ergebnis nennen.
+   * Jeder bekommt jeden, Spieler wie Zuschauer. Bis zum 06.09.2026 bekam ein
+   * Spieler genau seinen eigenen, und damit war das ZUSEHEN unmoeglich: Ein
+   * Tipp auf einen Mitspieler legt dessen Brett nach oben, aber in der
+   * Kampfphase steht an der Stelle der Bretter die Arena — und die konnte nur
+   * den eigenen Kampf abspielen, weil kein anderer in der Sicht stand. Wer
+   * ausgeschieden war, sah gar keinen mehr.
    *
-   * Ausserhalb der Kampfphase ist die Liste leer. Dass sie gross werden kann
-   * — ein Kampf sind schnell ein paar hundert Ereignisse — faellt nicht ins
-   * Gewicht: Waehrend der Kampfphase kann niemand handeln, es gibt also
-   * nichts, was einen Rundruf ausloest. Die Sicht geht beim Uebergang in den
-   * Kampf einmal heraus und beim Uebergang zurueck in die Vorbereitung wieder
-   * ohne sie.
+   * ES IST KEIN LECK. Alle Bretter sind ohnehin oeffentlich (siehe Kopf dieser
+   * Datei), der Kampf ist beim Phasenwechsel fertig gerechnet, und sein
+   * AUSGANG steht fuer jede Paarung schon in `paarungen` — Sieger und Schaden
+   * inbegriffen. Das Protokoll sagt also nichts, was der Empfaenger nicht
+   * schon haette; es sagt nur, wie es dazu kam. (Dass die Anzeige ein fremdes
+   * Ergebnis nicht vor seiner Zeit verraet, ist eine Frage des Anstands und
+   * steht im Client, `ergebniszeile` in KampfAnzeige.tsx.)
+   *
+   * WAS ES KOSTET, gemessen an einer Bot-Partie zu acht (Saat 7, die groesste
+   * Runde): die Sicht beim Eintritt in den Kampf 29,5 kB statt 69,1 kB. Das
+   * faellt genau einmal je Runde an — waehrend der Kampfphase kann niemand
+   * handeln, es gibt also nichts, was einen zweiten Rundruf ausloest. Ausserhalb
+   * der Kampfphase ist die Liste leer.
    */
   readonly kaempfe: readonly Kampfpaarung[];
+  /**
+   * ALLE Kaempfe der laufenden Runde als Ergebnis, ohne Protokoll — auch die,
+   * denen dieser Empfaenger nicht zusieht (siehe `Paarungsergebnis`).
+   *
+   * Der eigene Kampf steht mit drin. Ihn wegzulassen hiesse, die Liste je
+   * Empfaenger anders zu schneiden, obwohl sie fuer alle dieselbe ist; welchen
+   * Eintrag die Anzeige gerade abspielt, weiss sie ohnehin selbst.
+   *
+   * Ausserhalb der Kampfphase leer, wie `kaempfe`.
+   */
+  readonly paarungen: readonly Paarungsergebnis[];
   /**
    * Der Einheiten-Katalog — nur beim ersten Ausliefern (`seit === 0`).
    *
@@ -180,6 +356,11 @@ export interface TafelrundeSicht {
    * Angriff" anzeigen koennen, ohne die Zahlen selbst zu kennen.
    */
   readonly synergieTabelle?: readonly Synergie[];
+  /**
+   * Werte und Verkaufserloes je Sternstufe — wie der Katalog nur beim ersten
+   * Ausliefern, aus demselben Grund (siehe `Stufenwerte`).
+   */
+  readonly stufenwerte?: Readonly<Record<EinheitId, readonly Stufenwerte[]>>;
 }
 
 /**
@@ -217,18 +398,31 @@ function grundsicht(
     phase: partie.phase,
     fertig: partie.fertig,
     sieger: sieger(partie),
+    // Umbenannt und nicht durchgereicht: `platzierungen` liefert die Form von
+    // `PartyStanding` (game-api, fuer die Plattform-Wertung), die Sicht
+    // spricht Deutsch. `left` faellt dabei weg — dass ein Sitz den Tisch
+    // verlassen hat, steht schon an `FremdeSicht.verlassen`.
+    platzierung: platzierungen(partie).map((p) => ({
+      sitz: p.seat,
+      platz: p.place,
+      runden: p.points,
+    })),
     zuschauer: ich === null,
     ladenPlaetze: partie.regeln.ladenPlaetze,
     bankPlaetze: partie.regeln.bankPlaetze,
     brettFelder: BRETT_FELDER,
     brettReihen: BRETT_REIHEN,
     brettSpalten: BRETT_SPALTEN,
+    arenaReihen: ARENA_REIHEN,
     verschmelzZahl: VERSCHMELZ_ZAHL,
     maxStufe: MAX_STUFE,
     vorrat: partie.vorrat,
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
-    kaempfe: ich === null ? partie.kaempfe : [kampfVon(partie, ich)].filter((k) => k !== null),
-    ...(seit === 0 ? { katalog: KATALOG, synergieTabelle: SYNERGIEN } : {}),
+    kaempfe: partie.kaempfe,
+    paarungen: partie.kaempfe.map(ergebnis),
+    ...(seit === 0
+      ? { katalog: KATALOG, synergieTabelle: SYNERGIEN, stufenwerte: STUFENWERTE }
+      : {}),
   };
 }
 
@@ -253,6 +447,7 @@ export function sichtFuer(
     belegt: brettBelegung(heer),
     einkommen: einkommen(heer, partie.regeln),
     neuwuerfelnKosten: partie.regeln.neuwuerfelnKosten,
+    wuerfeRunde: heer.wuerfeRunde,
     aufstiegKosten: aufstiegKosten(heer.level),
     darfHandeln: darfHandeln(partie, sitz),
     synergien: synergienVon(heer.brett),

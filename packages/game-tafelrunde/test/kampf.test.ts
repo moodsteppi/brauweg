@@ -6,6 +6,7 @@ import {
   BRETT_FELDER,
   type EinheitId,
   type Ereignis,
+  HEILUNG_FAKTOR,
   HOECHSTDAUER_MS,
   KATALOG,
   type Kaempferstand,
@@ -15,16 +16,22 @@ import {
   SCHRITT_MS,
   type Saat,
   SEITEN,
+  STANDARD_REGLER,
   type Seite,
   type Stufe,
   TAKT_MS,
   angriffstakt,
   arenaAbstand,
+  einheit,
+  gegenseite,
+  gespiegelterPlatz,
+  heilkraft,
   nachArena,
   platzNummer,
   protokollText,
   schadenFuerVerlierer,
   schadenNach,
+  schrittdauer,
   simuliereKampf,
   ueberlebendeVon,
   werteFuer,
@@ -71,6 +78,16 @@ const DREI_GEGEN_DREI: readonly [Brettseite, Brettseite] = [
     ['astschuetze', 1, 2, 1],
   ]),
 ];
+
+/**
+ * Der Regler OHNE Zeitraffer.
+ *
+ * Der Standard steht seit dem 05.09.2026 auf x2 (siehe STANDARD_REGLER). Wo
+ * eine Probe eine ABSOLUTE Zeit nachrechnet oder den Zeitablauf ueberhaupt
+ * erst braucht, rechnet sie mit diesem hier — sonst pruefte sie nicht mehr,
+ * was sie zu pruefen vorgibt, sondern nur noch die Voreinstellung.
+ */
+const UNGERAFFT = { ...STANDARD_REGLER, zeitraffer: 1 };
 
 /**
  * Baut ein Bretterpaar aus einer Saat — zwei bis neun Einheiten je Seite.
@@ -277,7 +294,9 @@ describe('Kampf — das Ablaufprotokoll', () => {
       assert.equal(arenaAbstand(e.von, e.nach), 1, 'ein Schritt ist ein Feld');
       const vorher = zuletzt.get(e.wer);
       if (vorher !== undefined) {
-        assert.ok(e.zeitMs - vorher >= SCHRITT_MS, `Kennung ${e.wer} zieht zu schnell`);
+        // `schrittdauer()` und nicht SCHRITT_MS: Der Standardregler rafft die
+        // Schrittweite mit (Zeitraffer 2), die rohe Konstante waere zu gross.
+        assert.ok(e.zeitMs - vorher >= schrittdauer(), `Kennung ${e.wer} zieht zu schnell`);
       }
       zuletzt.set(e.wer, e.zeitMs);
     }
@@ -322,21 +341,43 @@ describe('Kampf — Bewegung und Reichweite', () => {
     const bewegungen = bericht.ereignisse.filter((e) => e.art === 'bewegung');
     assert.ok(bewegungen.length > 0, 'ohne Bewegung kaeme niemand in Reichweite');
 
-    // Beide ziehen im Gleichschritt, treffen sich in der Mitte und schlagen
-    // erst dann zu.
+    /*
+     * Beide ziehen im Gleichschritt, treffen sich in der Mitte und schlagen
+     * erst dann zu: Kein Treffer faellt, bevor gelaufen wurde, und keine
+     * Bewegung nach dem ersten Treffer.
+     *
+     * DER LETZTE SCHRITT UND DER ERSTE TREFFER LIEGEN AUF DEMSELBEN TAKT, und
+     * das ist keine Schlamperei, sondern die Zugschleife: Wer im Takt vorn
+     * dran ist, macht den Schritt, der die Reichweite schliesst — und der
+     * andere steht danach im selben Takt im Ziel und schlaegt zu. Vor dem
+     * 06.09.2026 stand hier `<` statt `<=`; das ging nur durch, weil die
+     * Bretter Kopf an Kopf standen und der Startabstand ungerade war. Bei
+     * geradem Abstand (hier 6) laufen beide gleich weit, und der letzte
+     * Schritt faellt mit dem ersten Schlag zusammen.
+     */
     const ersterTreffer = bericht.ereignisse.find((e) => e.art === 'treffer');
     assert.ok(ersterTreffer, 'sie sollten sich erreichen');
-    for (const b of bewegungen) assert.ok(b.zeitMs < ersterTreffer.zeitMs);
+    for (const b of bewegungen) assert.ok(b.zeitMs <= ersterTreffer.zeitMs);
+    assert.ok(bewegungen[0]!.zeitMs < ersterTreffer.zeitMs, 'erst laufen, dann schlagen');
     assert.equal(bericht.grund, 'ausgeloescht');
   });
 
   it('laesst einen Schuetzen aus der Ferne treffen, ohne einen Schritt zu tun', () => {
-    // Sturmrufer hat Reichweite 4. Aus der eigenen hinteren Reihe quer ueber
-    // die Mittellinie in die hintere Reihe des Gegners sind es drei Felder —
-    // das reicht ihm, einem Nahkaempfer nicht.
-    const schuetze = stelleAuf([['sturmrufer', 1, 2, 1]]);
+    /*
+     * Sturmrufer hat Reichweite 4. Aus der eigenen VORDERSTEN Reihe ueber die
+     * zwei leeren Reihen der Arena hinweg in die vorderste Reihe des Gegners
+     * sind es drei Felder — das reicht ihm, einem Nahkaempfer nicht.
+     *
+     * BIS ZUM 06.09.2026 STAND HIER DIE HINTERE REIHE: Ohne die Luecke waren
+     * es von dort ebenfalls drei Felder. Genau das war der gemessene Grund,
+     * aus dem im Kampf kaum gelaufen wurde (docs/TAFELRUNDE-LAUFWEGE.md) —
+     * jede Reichweite ab 2 stand vom ersten Takt an im Ziel, egal wo sie
+     * stand. Heute muss auch ein Sturmrufer aus der hintersten Reihe laufen;
+     * dass er es aus der vordersten nicht muss, ist die Probe hier.
+     */
+    const schuetze = stelleAuf([['sturmrufer', 1, 2, 0]]);
     const bericht = simuliereKampf([schuetze, schuetze], 'fernkampf');
-    assert.equal(arenaAbstand(nachArena(platzNummer(1, 2), 0), nachArena(platzNummer(1, 2), 1)), 3);
+    assert.equal(arenaAbstand(nachArena(platzNummer(0, 2), 0), nachArena(platzNummer(0, 2), 1)), 3);
     assert.equal(bericht.ereignisse.filter((e) => e.art === 'bewegung').length, 0);
     assert.equal(bericht.ereignisse[0]!.art, 'treffer');
     assert.equal(bericht.ereignisse[0]!.zeitMs, 0);
@@ -393,14 +434,25 @@ describe('Kampf — Schaden', () => {
     assert.equal(bericht.sieger, 1, 'Stufe 3 sollte Stufe 1 schlagen');
   });
 
+  /**
+   * Geprueft wird die AUFRUNDUNG, nicht der Zeitraffer — deshalb rechnen die
+   * beiden festen Zahlen ausdruecklich mit `UNGERAFFT`. Mit dem Standardregler
+   * (Zeitraffer 2) waeren sie halb so gross, und die Probe saehe wie eine
+   * Aussage ueber die Rundung aus, waere aber eine ueber die Voreinstellung.
+   */
   it('rechnet den Angriffstakt in ganze Takte und nie auf null', () => {
     assert.equal(angriffstakt(1) % TAKT_MS, 0);
-    assert.equal(angriffstakt(0.5), 2000);
-    assert.equal(angriffstakt(1), 1000);
+    assert.equal(angriffstakt(0.5, UNGERAFFT), 2000);
+    assert.equal(angriffstakt(1, UNGERAFFT), 1000);
     assert.ok(angriffstakt(1000) >= TAKT_MS);
     for (const tempo of new Set(KATALOG.map((e) => e.tempo))) {
       assert.equal(angriffstakt(tempo) % TAKT_MS, 0, `Tempo ${tempo}`);
-      assert.ok(angriffstakt(tempo) >= 1000 / tempo, `Tempo ${tempo} darf nicht schneller werden`);
+      // Die Aufrundung darf nur langsamer machen, nie schneller. Bezugsgroesse
+      // ist deshalb das GERAFFTE Tempo und nicht das des Katalogs.
+      assert.ok(
+        angriffstakt(tempo) >= 1000 / (tempo * STANDARD_REGLER.zeitraffer),
+        `Tempo ${tempo} darf nicht schneller werden`,
+      );
     }
   });
 });
@@ -408,6 +460,92 @@ describe('Kampf — Schaden', () => {
 // ---------------------------------------------------------------------------
 // Ausgang
 // ---------------------------------------------------------------------------
+
+/**
+ * Eine Saat, die den gewuenschten Erstzieher ergibt.
+ *
+ * Der Erstzieher haengt allein an der Saat (`simuliereKampf`: die Saat wird
+ * fuer genau diese eine Frage gebraucht). Fuer die Spiegelprobe braucht man
+ * beide Faelle — mit derselben Saat bekaeme die vertauschte Aufstellung auch
+ * den Vorteil des ersten Schlags, und dann waere es nicht mehr derselbe
+ * Kampf. Gesucht statt fest hingeschrieben, damit die Probe nicht an einer
+ * Zeichenkette haengt, wenn jemand `baueZufall` austauscht.
+ */
+function saatMitErstzieher(erst: Seite): Saat {
+  for (let i = 0; i < 1000; i++) {
+    const saat = `erstzieher-${erst}-${i}`;
+    if (simuliereKampf([leeresBrett(), leeresBrett()], saat).erstZieher === erst) return saat;
+  }
+  throw new Error(`keine Saat mit Erstzieher ${erst} gefunden`);
+}
+
+/**
+ * Das Protokoll eines Kampfes, wahlweise auf die Sicht des Spiegelbildes
+ * umgerechnet.
+ *
+ * `protokollText` taugt fuer den Spiegelvergleich nicht: Es nennt Kennungen
+ * und Plaetze so, wie sie in DIESEM Lauf entstanden sind. Beim Vertauschen der
+ * Bretter bekommt jede Einheit eine andere Kennung (`baueStreiter` nummeriert
+ * Seite 0 zuerst), und jeder Platz liegt punktgespiegelt. Beides rechnet
+ * `spiegel` zurueck — was uebrig bleibt, ist der Ablauf selbst.
+ *
+ * EINE Funktion fuer beide Seiten des Vergleichs, nicht zwei: Zwei Fassungen
+ * derselben Zeilenform waeren beim naechsten neuen Ereignis auseinander
+ * gelaufen, und dann verglichen sie stillschweigend verschiedene Dinge.
+ */
+function ablaufText(bericht: Kampfbericht, spiegel: Spiegelung | null = null): string {
+  const kennung = (id: number): number => {
+    if (!spiegel) return id;
+    const neu = spiegel.kennungen.get(id);
+    assert.notEqual(neu, undefined, `Kennung ${id} hat kein Gegenstueck`);
+    return neu!;
+  };
+  const platz = (p: number): number => (spiegel ? gespiegelterPlatz(p) : p);
+  const seite = (s: Seite): Seite => (spiegel ? gegenseite(s) : s);
+
+  return bericht.ereignisse
+    .map((e) => {
+      const kopf = `${e.zeitMs} ${e.art}`;
+      switch (e.art) {
+        case 'treffer':
+          return `${kopf} ${kennung(e.wer)}->${kennung(e.ziel)} ${e.schaden} ${e.lebenDanach}`;
+        case 'heilung':
+          return `${kopf} ${kennung(e.wer)}->${kennung(e.ziel)} ${e.menge} ${e.lebenDanach}`;
+        case 'tod':
+          return `${kopf} ${kennung(e.wer)}`;
+        case 'bewegung':
+          return `${kopf} ${kennung(e.wer)} ${platz(e.von)}->${platz(e.nach)}`;
+        case 'ende':
+          return `${kopf} ${e.sieger === null ? '-' : seite(e.sieger)} ${e.grund}`;
+      }
+    })
+    .join('\n');
+}
+
+/** Wie ein getauschter Lauf auf den geraden zurueckzurechnen ist. */
+interface Spiegelung {
+  readonly kennungen: ReadonlyMap<number, number>;
+}
+
+/**
+ * Welche Kennung im getauschten Lauf zu welcher im geraden gehoert.
+ *
+ * `baueStreiter` nummeriert je Seite in Brettordnung durch, erst Seite 0, dann
+ * Seite 1. Vertauscht man die Bretter, bleibt die Ordnung INNERHALB einer
+ * Aufstellung dieselbe — es wechselt nur, welcher Block vorn steht. Die
+ * Zuordnung ist deshalb die n-te Einheit der einen Seite auf die n-te der
+ * anderen.
+ */
+function kennungsKarte(gerade: Kampfbericht, getauscht: Kampfbericht): Spiegelung {
+  const karte = new Map<number, number>();
+  for (const seite of SEITEN) {
+    const hier = getauscht.start.filter((k) => k.seite === seite).map((k) => k.id);
+    const dort = gerade.start.filter((k) => k.seite === gegenseite(seite)).map((k) => k.id);
+    assert.equal(hier.length, dort.length, 'die Aufstellungen haben verschieden viele Einheiten');
+    hier.forEach((id, i) => karte.set(id, dort[i]!));
+  }
+  return { kennungen: karte };
+}
 
 describe('Kampf — der Ausgang', () => {
   it('erklaert die Seite zum Sieger, die noch steht', () => {
@@ -494,18 +632,266 @@ describe('Kampf — der Ausgang', () => {
   });
 
   /**
-   * Im Spiegelkampf ist alles gleich ausser einem: Wer zuerst schlaegt. Also
-   * muss der Erstzieher gewinnen — oder es bleibt beim Unentschieden, wenn
-   * beide Seiten sich im selben Takt gegenseitig erledigen.
+   * DIE ZUSICHERUNG AUS DEM KOPF VON arena.ts, hier zum ersten Mal wirklich
+   * geprueft: Tauscht man die beiden Aufstellungen UND den Erstzieher, laeuft
+   * derselbe Kampf gespiegelt ab — Ereignis fuer Ereignis, nicht nur im
+   * Ausgang.
+   *
+   * Verglichen wird das ganze Protokoll und nicht der Sieger: Ein Sieger, der
+   * zufaellig zweimal derselbe ist, beweist nichts. Zurueckgerechnet werden
+   * dabei genau zwei Dinge, und beide sind Buchhaltung und keine Regel — die
+   * Kennungen (Seite 0 wird zuerst nummeriert) und die Plaetze (Seite 1 liegt
+   * punktgespiegelt in der Arena).
+   *
+   * BIS ZUM 06.09.2026 WAERE DIESE PROBE ROT GEWESEN, und zwar in 498 von 500
+   * Faellen. Der Kampf brach den Gleichstand beim Ziehen ueber die
+   * Nachbarordnung des odd-r-Rasters, und die haengt an der Paritaet der
+   * Reihe, die die Spiegelung wechselt. Seither fragt `schrittZiel` ueber
+   * `arenaNachbarnFuer(platz, seite)` (arena.ts).
+   *
+   * WARUM DER ERSTZIEHER MITGETAUSCHT WIRD: Beide Seiten teilen sich eine
+   * Belegungskarte, und wer im Takt vorn ist, raeumt und besetzt Felder vor
+   * dem anderen. Behielte der SITZ den ersten Schlag statt der AUFSTELLUNG,
+   * praegte man dem gespiegelten Lauf einen anderen Vorteil auf — und die
+   * Probe pruefte etwas, das gar nicht behauptet wird.
    */
-  it('gibt im Spiegelkampf dem Erstzieher recht', () => {
-    for (let i = 0; i < 25; i++) {
-      const bericht = simuliereKampf([DREI_GEGEN_DREI[0], DREI_GEGEN_DREI[0]], `spiegel${i}`);
+  it('laeuft mit vertauschten Aufstellungen gespiegelt ab', () => {
+    const saatVorn = saatMitErstzieher(0);
+    const saatHinten = saatMitErstzieher(1);
+    let mitBewegung = 0;
+
+    for (let i = 0; i < 60; i++) {
+      const [a, b] = zufaelligesPaar(`spiegelablauf${i}`);
+      // Beide Male zieht die Aufstellung `a` zuerst — einmal von Seite 0 aus,
+      // einmal von Seite 1.
+      const gerade = simuliereKampf([a, b], saatVorn);
+      const getauscht = simuliereKampf([b, a], saatHinten);
+      assert.equal(getauscht.erstZieher, 1, 'die getauschte Saat zieht nicht hinten los');
+
+      assert.equal(
+        ablaufText(getauscht, kennungsKarte(gerade, getauscht)),
+        ablaufText(gerade),
+        `Durchgang ${i}`,
+      );
+      if (gerade.ereignisse.some((e) => e.art === 'bewegung')) mitBewegung++;
+    }
+
+    /*
+     * Ohne einen einzigen Schritt liefe die Probe auch mit der alten,
+     * seitenlosen Ordnung durch — gelaufen wird ja nur, wo der Gleichstand
+     * ueberhaupt gebrochen werden muss. Diese Schranke haelt fest, dass die
+     * Stichprobe den Fall wirklich enthaelt.
+     */
+    assert.ok(mitBewegung > 40, `nur ${mitBewegung} von 60 Kaempfen hatten ueberhaupt Bewegung`);
+  });
+
+  /**
+   * Der Spiegelkampf: zwei gleiche Bretter, und keine Seite darf bevorzugt
+   * sein. Was hier NICHT geprueft wird, ist genauso wichtig wie das, was
+   * geprueft wird.
+   *
+   * BIS ZUM 06.09.2026 STAND HIER "gibt im Spiegelkampf dem Erstzieher
+   * recht" — die Probe lief ueber eine einzige Aufstellung und ging durch.
+   * Sie beschrieb aber keine Regel des Kampfes, sondern eine Eigenschaft
+   * genau dieser drei Einheiten: Nachgemessen ueber 500 zufaellige
+   * Spiegelkaempfe gewinnt der Zweitzieher in 209 von 489 entschiedenen
+   * Faellen (42,7 %). Sobald gelaufen wird, entscheidet nicht mehr, wer
+   * zuerst zieht. Wer im Takt vorn ist, macht den Schritt, der die
+   * Reichweite schliesst — und faengt sich dafuer den ersten Schlag ein
+   * (siehe "aufeinander zulaufen"); ausserdem teilen sich beide Seiten eine
+   * Belegungskarte, und der Erstzieher raeumt und besetzt Felder vor dem
+   * anderen.
+   *
+   * WAS HIER NICHT MEHR STEHT: Bis zur Nachbarordnung je Seite (arena.ts,
+   * `arenaNachbarnFuer`) kam ein zweiter Grund hinzu — die beiden Haelften
+   * liefen schlicht auseinander, weil der Gleichstand beim Ziehen auf jeder
+   * Seite anders gebrochen wurde. Der ist weg; die Zahl fiel dadurch von
+   * 45,2 auf 42,7 %, nicht auf null. Die Probe darueber haelt das fest.
+   *
+   * WAS BLEIBT, ist die Zusicherung, um die es wirklich geht und die
+   * `erstZieher` ueberhaupt erst begruendet: Keine SEITE ist im Vorteil.
+   * Waere sie es, haette in jeder Runde derselbe Sitz recht, je nachdem, wen
+   * die Paarung auf Seite 0 setzt.
+   */
+  it('bevorzugt im Spiegelkampf keine der beiden Seiten', () => {
+    const N = 300;
+    let seite0 = 0;
+    let seite1 = 0;
+    for (let i = 0; i < N; i++) {
+      // Zufaellige, aber feste Aufstellungen — eine einzelne beweist nichts
+      // (siehe oben). Beide Seiten bekommen DASSELBE Brett; genommen wird
+      // deshalb nur die erste Haelfte des Paares.
+      const brett = zufaelligesPaar(`spiegelaufstellung${i}`)[0];
+      const bericht = simuliereKampf([brett, brett], `spiegel${i}`);
+      if (bericht.sieger === 0) seite0++;
+      if (bericht.sieger === 1) seite1++;
+    }
+    /*
+     * Die Schranke ist grosszuegig und trotzdem scharf: Bei einer echten
+     * Muenze liegt die Standardabweichung ueber 300 Kaempfe bei knapp 9
+     * Siegen, 60 % waeren also mehr als drei davon daneben. Ein Lauf, der
+     * hier anschlaegt, hat eine Seitenschieflage und kein Pech — der Kampf
+     * ist deterministisch, die Saaten stehen fest.
+     */
+    const anteil = seite0 / (seite0 + seite1);
+    assert.ok(
+      anteil > 0.4 && anteil < 0.6,
+      `Seite 0 gewinnt ${seite0} von ${seite0 + seite1} Spiegelkaempfen`,
+    );
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Der Beistand
+// ---------------------------------------------------------------------------
+
+describe('Kampf — der Beistand heilt', () => {
+  /**
+   * Ein Moosheiler hinter einer Dorfwache gegen einen einzelnen Gassendieb.
+   *
+   * Die Aufstellung ist so gewaehlt, dass der Heiler ueberhaupt etwas zu tun
+   * bekommt: Der Dieb muss an die Wache heran und schlaegt sie an, und der
+   * Heiler steht mit Reichweite 2 dicht genug dahinter. Ein Heiler ohne
+   * verwundeten Gefaehrten faellt auf den Angriff zurueck, und dann pruefte
+   * diese Probe gar nichts.
+   */
+  const MIT_HEILER: readonly [Brettseite, Brettseite] = [
+    stelleAuf([
+      ['dorfwache', 1, 2, 0],
+      ['moosheiler', 1, 2, 1],
+    ]),
+    stelleAuf([['gassendieb', 1, 2, 0]]),
+  ];
+
+  it('rechnet die Heilkraft als Vielfaches des Angriffs, gerundet und nie null', () => {
+    assert.equal(heilkraft(26, 1.5), 39);
+    assert.equal(heilkraft(38, 1.5), 57);
+    // Gerundet und nicht abgeschnitten: 51 mal 1,5 sind 76,5.
+    assert.equal(heilkraft(51, 1.5), 77);
+    assert.ok(Number.isInteger(heilkraft(37, HEILUNG_FAKTOR)));
+    // Ein Faktor nahe null macht die Heilung klein, aber nicht wirkungslos.
+    assert.equal(heilkraft(26, 0), 1);
+    assert.equal(heilkraft(26, 0.01), 1);
+  });
+
+  it('gibt einem verwundeten Gefaehrten Leben zurueck', () => {
+    const bericht = simuliereKampf(MIT_HEILER, 'heilen');
+    const heilungen = bericht.ereignisse.filter((e) => e.art === 'heilung');
+    assert.ok(heilungen.length > 0, 'der Heiler sollte geheilt haben');
+
+    const werte = werteFuer('moosheiler', 1);
+    for (const e of heilungen) {
+      assert.ok(e.art === 'heilung');
+      assert.ok(e.menge >= 1, 'eine Heilung um null waere ein Ereignis ohne Wirkung');
       assert.ok(
-        bericht.sieger === bericht.erstZieher || bericht.sieger === null,
-        `Saat spiegel${i}: Seite ${bericht.sieger} gewinnt, obwohl ${bericht.erstZieher} zuerst zieht`,
+        e.menge <= heilkraft(werte.angriff, STANDARD_REGLER.heilungFaktor),
+        `${e.menge} ist mehr, als der Moosheiler kann`,
+      );
+      // Immer der Gefaehrte, nie ein Gegner und nie er selbst.
+      const zielStand = bericht.start.find((k) => k.id === e.ziel);
+      const wer = bericht.start.find((k) => k.id === e.wer);
+      assert.ok(zielStand && wer);
+      assert.equal(zielStand.seite, wer.seite);
+      assert.notEqual(e.ziel, e.wer);
+    }
+  });
+
+  it('heilt niemals ueber das hoechste Leben hinaus', () => {
+    for (let i = 0; i < 30; i++) {
+      const bericht = simuliereKampf(zufaelligesPaar(`h${i}`), `h${i}`);
+      for (const e of bericht.ereignisse) {
+        if (e.art !== 'heilung') continue;
+        const ziel = bericht.start.find((k) => k.id === e.ziel);
+        assert.ok(ziel);
+        assert.ok(
+          e.lebenDanach <= ziel.hoechstesLeben,
+          `${e.lebenDanach} ueber ${ziel.hoechstesLeben} in Durchgang ${i}`,
+        );
+      }
+    }
+  });
+
+  /**
+   * Die Probe, an der die ganze Aenderung haengt: Der Heiler muss den Ausgang
+   * bewegen. Verglichen wird derselbe Kampf zweimal — gleiche Bretter, gleiche
+   * Saat, nur der Heilfaktor auf null. Damit kann der Unterschied nichts
+   * anderes sein als die Heilung.
+   */
+  it('entscheidet einen Kampf, der ohne ihn verloren geht', () => {
+    /*
+     * Eine Dorfwache mit Heiler gegen ZWEI Dorfwachen. Ohne die Heilung ist
+     * das eine klare Niederlage — zwei gleiche Koerper gegen einen, und der
+     * Moosheiler teilt mit 26 Angriff kaum etwas aus. Mit ihr gewinnt die
+     * Seite mit dem Heiler: Er gibt der Wache mehr Leben zurueck, als die
+     * beiden ihr abnehmen.
+     */
+    const unterlegen: readonly [Brettseite, Brettseite] = [
+      stelleAuf([
+        ['dorfwache', 1, 2, 0],
+        ['moosheiler', 1, 2, 1],
+      ]),
+      stelleAuf([
+        ['dorfwache', 1, 1, 0],
+        ['dorfwache', 1, 3, 0],
+      ]),
+    ];
+    const ohne = { ...STANDARD_REGLER, heilungFaktor: 0 };
+    for (const saat of ['a', 'b', 'c']) {
+      const mitHeilung = simuliereKampf(unterlegen, saat);
+      const ohneHeilung = simuliereKampf(unterlegen, saat, ohne);
+      assert.equal(ohneHeilung.ereignisse.filter((e) => e.art === 'heilung').length, 0);
+      assert.equal(ohneHeilung.sieger, 1, `Saat ${saat}: ohne Heiler unterlegen`);
+      assert.equal(mitHeilung.sieger, 0, `Saat ${saat}: mit Heiler ueberlegen`);
+      // Kennung 0 ist die Dorfwache: erst Seite 0 in Brettordnung (baueStreiter).
+      assert.ok(
+        mitHeilung.ueberlebende.some((k) => k.id === 0),
+        `Saat ${saat}: die geheilte Wache muss stehen bleiben`,
       );
     }
+  });
+
+  it('heilt nur, wer die Rolle traegt', () => {
+    for (let i = 0; i < 30; i++) {
+      const bericht = simuliereKampf(zufaelligesPaar(`r${i}`), `r${i}`);
+      for (const e of bericht.ereignisse) {
+        if (e.art !== 'heilung') continue;
+        const wer = bericht.start.find((k) => k.id === e.wer);
+        assert.ok(wer);
+        assert.equal(
+          einheit(wer.einheitId).rolle,
+          'beistand',
+          `${wer.einheitId} ist kein Beistand und heilt trotzdem`,
+        );
+      }
+    }
+  });
+
+  /**
+   * Ein Heiler, der sich selbst heilen darf, koennte allein auf dem Feld
+   * stehen bleiben, bis die Uhr ablaeuft — ohne dem Gegner je etwas anzutun.
+   * Deshalb heilt er sich nicht, und deshalb faellt er auf den Angriff
+   * zurueck, sobald niemand mehr da ist, dem er helfen kann.
+   */
+  it('faellt auf den Angriff zurueck, wenn niemand mehr zu heilen ist', () => {
+    const alleinDagegen: readonly [Brettseite, Brettseite] = [
+      stelleAuf([['moosheiler', 1, 2, 0]]),
+      stelleAuf([['funkenlehrling', 1, 2, 0]]),
+    ];
+    const bericht = simuliereKampf(alleinDagegen, 'allein');
+    assert.equal(bericht.ereignisse.filter((e) => e.art === 'heilung').length, 0);
+    assert.ok(
+      bericht.ereignisse.some((e) => e.art === 'treffer' && e.wer === 0),
+      'ein Beistand ohne Gefaehrten muss zuschlagen',
+    );
+    assert.equal(bericht.grund, 'ausgeloescht', 'der Kampf muss zu Ende gehen');
+  });
+
+  it('schreibt die Heilung mit Vorzeichen ins Protokoll', () => {
+    const text = protokollText(simuliereKampf(MIT_HEILER, 'heilen'));
+    const zeile = text.split('\n').find((z) => z.includes('heilung'));
+    assert.ok(zeile, 'im Protokoll fehlt die Heilung');
+    assert.match(zeile, /heilung\s+\d+ -> \d+ \+\d+ \(\d+\)/);
   });
 });
 
@@ -544,11 +930,25 @@ describe('Kampf — die Abbruchgrenze', () => {
    *
    * Eine Abbruchgrenze taugt nur etwas, wenn sie die Ausnahme bleibt: Sobald
    * ein nennenswerter Teil der Kaempfe durch die Zeit entschieden wird,
-   * entscheidet nicht mehr der Kampf, sondern `entscheideNachZeit`. Gemessen
-   * lag der Anteil bei 2 bis 4 Prozent; die Schranke hier liegt bewusst hoeher,
-   * damit ein bisschen Balancing die Probe nicht sofort rot faerbt — ein
-   * Katalog, der jeden zehnten Kampf in die Zeit laufen laesst, ist aber ein
-   * Befund und keine Schwankung.
+   * entscheidet nicht mehr der Kampf, sondern `entscheideNachZeit`. Die
+   * Schranken hier liegen bewusst hoeher als der gemessene Stand, damit ein
+   * bisschen Balancing die Probe nicht sofort rot faerbt — ein Katalog, der
+   * jeden zehnten Kampf in die Zeit laufen laesst, ist aber ein Befund und
+   * keine Schwankung.
+   *
+   * SIE RECHNET MIT DEM STANDARDREGLER, also seit dem 05.09.2026 mit
+   * Zeitraffer x2. Das ist Absicht: Gemessen werden soll der Kampf, wie er im
+   * Spiel ablaeuft, und nicht ein Ablauf, den es nicht mehr gibt.
+   *
+   * WAS SIE NICHT SAGT, und das ist wichtig: Die Bretter hier sind ZUFAELLIG
+   * besetzt (`zufaelligesPaar`) — gleichverteilt aus dem Katalog, fast alles
+   * Stufe 1, keine Marken, die zusammenpassen. So sieht kein Brett aus, das
+   * jemand gespielt hat. Bretter aus echten Partien halten laenger durch, und
+   * ihr Zeitanteil liegt hoeher; gemessen wird das in test/spielzeit.test.ts.
+   * Diese Probe ist eine Aussage ueber den KATALOG, jene eine ueber das SPIEL.
+   * Man braucht beide. Vor dem Zeitraffer lagen die beiden Zahlen bei 2 bis 4
+   * Prozent hier und 27,7 Prozent dort — genau dieser Abstand war der Anlass,
+   * beide Proben nebeneinander zu stellen.
    */
   it('laesst den Zeitablauf die Ausnahme bleiben', () => {
     const dauern: number[] = [];
@@ -578,7 +978,10 @@ describe('Kampf — die Abbruchgrenze', () => {
   it('entscheidet nach dem hoeheren Lebensanteil', () => {
     let geprueft = 0;
     for (let i = 0; i < 200; i++) {
-      const bericht = simuliereKampf(zufaelligesPaar(`z${i}`), `z${i}`);
+      // UNGERAFFT und nicht der Standardregler: Mit Zeitraffer x2 laeuft von
+      // diesen 200 zufaelligen Brettern kein einziges in die Grenze — die
+      // Probe haette dann nichts mehr zu pruefen und meldete genau das.
+      const bericht = simuliereKampf(zufaelligesPaar(`z${i}`), `z${i}`, UNGERAFFT);
       if (bericht.grund !== 'zeit') continue;
       geprueft++;
 
@@ -652,6 +1055,12 @@ function spieleNach(bericht: Kampfbericht): Map<number, Nachgespielt> {
       case 'treffer': {
         const ziel = stand.get(e.ziel)!;
         assert.equal(Math.max(0, ziel.leben - e.schaden), e.lebenDanach, `Treffer auf ${e.ziel}`);
+        ziel.leben = e.lebenDanach;
+        break;
+      }
+      case 'heilung': {
+        const ziel = stand.get(e.ziel)!;
+        assert.equal(ziel.leben + e.menge, e.lebenDanach, `Heilung auf ${e.ziel}`);
         ziel.leben = e.lebenDanach;
         break;
       }

@@ -83,11 +83,28 @@ export type ClientMessage =
       readonly v: number;
       readonly game: GameId;
       /**
+       * Farbwunsch des eigenen Sitzes setzen (Golf: Tipp auf den eigenen
+       * Namen in der Lobby). Wie die Reaktion traegt sie nur eine Zahl: Was
+       * die Farbe ist, weiss der Server nicht und braucht es nicht.
+       */
+      readonly type: 'setSeatColor';
+      readonly tableId: string;
+      readonly farbe: number;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /**
        * Sofort starten: Der Tisch schrumpft auf die besetzten Plaetze
        * (mindestens zwei) und die Partie geht los — ohne Bot-Auffuellen.
        */
       readonly type: 'startNow';
       readonly tableId: string;
+      /**
+       * Rundenzahl, falls sie erst beim Start feststeht (Golf waehlt die
+       * Loecher in der Lobby). Fehlt sie, gilt die des Tisches.
+       */
+      readonly rounds?: number;
     }
   | {
       readonly v: number;
@@ -154,6 +171,13 @@ export interface ViewMessage {
    * beim Doppelkopf die gleichzeitige Vorbehaltsabfrage.
    */
   readonly interludeDeadline: number | null;
+  /**
+   * Frist der laufenden Phase, oder null. Gilt wie die Schaupause fuer ALLE
+   * Sitze — anders als sie aber, waehrend noch gehandelt werden darf: Bei
+   * Tafelrunde ruesten alle gleichzeitig, und die Zugzeit taugt dort als
+   * Restzeit nicht (siehe phaseMs in game-api).
+   */
+  readonly phaseDeadline: number | null;
   readonly botSeats: readonly number[];
   readonly leftSeats: readonly number[];
   readonly finished: boolean;
@@ -180,6 +204,17 @@ export interface SeatInfo {
   readonly isBot: boolean;
   /** Profilbild-URL oder null. Nur eine kurze URL, nie die Bytes. */
   readonly avatarUrl: string | null;
+  /**
+   * Farbwunsch dieses Sitzes (Platz in der Farbtabelle des Spiels), oder null.
+   *
+   * Reine Anzeige: Der Server kennt keine Farbe, nur eine Zahl, und prueft sie
+   * NICHT gegen die anderen Sitze — zwei Leute duerfen im selben Moment
+   * dasselbe wuenschen. Doppelfrei macht es der Bildschirm mit einer reinen
+   * Funktion, die auf jedem Geraet dieselbe Antwort gibt (Golf: `farbtafel`).
+   * Der Wunsch haengt am Konto und nicht am Sitzindex, damit er das
+   * Umnummerieren beim Sofortstart ueberlebt.
+   */
+  readonly farbe: number | null;
 }
 
 export interface TableMessage {

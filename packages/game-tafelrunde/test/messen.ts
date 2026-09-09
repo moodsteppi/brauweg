@@ -7,8 +7,12 @@
  *
  *   - `test/ausgewogenheit.test.ts` mit einer kleinen, festen Auswahl. Sie
  *     laeuft bei jedem Testlauf mit und schlaegt an, wenn das Balancing kippt.
+ *   - `test/spielzeit.test.ts` ebenso, aber fuer die Uhr statt fuer die
+ *     Siegquoten.
  *   - `werkzeug/ausgewogenheit.mjs` mit der grossen Zahl. Das ist das
  *     Werkzeug, das man von Hand startet, wenn man am Katalog dreht.
+ *   - `werkzeug/spielzeit.mjs`, das denselben Lauf mit jeweils EINER
+ *     geaenderten Stellschraube wiederholt und die Zeiten nebeneinanderstellt.
  *
  * Zwei Fassungen desselben Messverfahrens waeren der sichere Weg zu zwei
  * Zahlen fuer dieselbe Frage — und dann glaubt man der, die einem besser
@@ -19,6 +23,11 @@
  * Saatbasis und laufender Nummer. Derselbe Aufruf liefert deshalb dieselbe
  * Tabelle — auf jedem Rechner und in jeder Reihenfolge (game-api, Grundsatz 1).
  *
+ * SEIT DEM 05.09.2026 MISST ER AUCH DIE ZEIT und nicht nur die Runden. Eine
+ * Runde ist keine Laenge — Robins Vorgabe lautet auf Minuten, und ohne die
+ * Zerlegung in Vorbereitung, Kampf und Nachlauf dreht man an der falschen
+ * Schraube (siehe `Zeitmodell` unten und docs/TAFELRUNDE-SPIELZEIT.md).
+ *
  * WAS HIER NICHT GEMESSEN WIRD: die Staerke eines MENSCHEN. Gemessen wird das
  * Spiel, wie die Bots es spielen. Alles, was der Bot nicht anfasst — gezieltes
  * Hinspielen auf eine Schwelle, Umbauen zwischen zwei Runden, das Mitzaehlen
@@ -26,15 +35,19 @@
  * sie als Aussage ueber das SPIELFELD, nicht ueber die beste Strategie darauf.
  */
 
-import { type Schwierigkeit, botZug } from '../src/bot.js';
+import { type Gangart, type Schwierigkeit, botZug } from '../src/bot.js';
+import { type Laufbefund, laufbefund } from './laufwege.js';
 import {
   type EinheitId,
   type Kaempfer,
+  type Kampfregler,
   type Marke,
   type Schwelle,
   type TafelrundePartie,
   type TafelrundeRegeln,
+  BOT_TAKT_MS,
   DEFAULT_REGELN,
+  KAMPF_NACHLAUF_MS,
   KATALOG,
   MARKEN,
   SCHWELLEN,
@@ -42,6 +55,8 @@ import {
   darfHandeln,
   erstellePartie,
   fuehreAus,
+  kampfVon,
+  kampfdauer,
   lebendeSitze,
   loeseKampfAuf,
   platzierungen,
@@ -76,14 +91,176 @@ export const VIER_SITZE: readonly number[] = ACHT_SITZE.slice(0, 4);
  * Katalog. Die gemischte Besetzung ist die Gegenprobe dazu — wenn eine Marke
  * nur bei lauter gleich starken Gegnern gut aussieht, ist das eine eigene
  * Auskunft.
+ *
+ * EINE LISTE besetzt Sitz fuer Sitz und ist der Fall, in dem man die Gangarten
+ * WIRKLICH messen will: ein Sitz mit der starken, der Rest mit der schwachen
+ * (`werkzeug/gangarten.mjs`, `imFeld` in test/bot.test.ts). Ohne sie muesste
+ * jeder Aufrufer die Partieschleife noch einmal schreiben — und maesse dann
+ * seine eigene Kopie.
+ *
+ * In dieser Liste darf statt des Namens auch eine GANGART selbst stehen — ein
+ * Stand, den es im Spiel (noch) nicht gibt. Damit misst `werkzeug/gangarten.mjs`
+ * einen Vorschlag, ohne ihn einzubauen; siehe botZug in src/bot.ts.
  */
-export type Besetzung = Schwierigkeit | 'gemischt';
+export type Besetzung = Schwierigkeit | 'gemischt' | readonly (Schwierigkeit | Gangart)[];
 
 const GEMISCHT: readonly Schwierigkeit[] = ['sanft', 'normal', 'hart'];
 
-export function gangartFuer(besetzung: Besetzung, sitz: number): Schwierigkeit {
+export function gangartFuer(besetzung: Besetzung, sitz: number): Schwierigkeit | Gangart {
+  // Reihum und nicht abgeschnitten: Eine Liste, die kuerzer ist als der Tisch,
+  // soll eine Besetzung ergeben und keinen Absturz an Sitz 5.
+  // Ueber `instanceof Array` statt `Array.isArray`: Letzteres verengt eine
+  // `readonly`-Liste nicht, seit die Liste auch Gangart-Objekte tragen darf.
+  if (besetzung instanceof Array) return besetzung[sitz % besetzung.length]!;
   if (besetzung !== 'gemischt') return besetzung;
   return GEMISCHT[sitz % GEMISCHT.length]!;
+}
+
+// ---------------------------------------------------------------------------
+// Die Uhr: woraus die Spielzeit besteht
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie aus einer Partie MINUTEN werden.
+ *
+ * Eine Runde besteht aus drei Stuecken, und nur zwei davon kann dieses Paket
+ * ausrechnen:
+ *
+ *   1. VORBEREITUNG — geschaetzt. Sie dauert genau so lange, wie der langsamste
+ *      Sitz braucht, bis er "Bereit" tippt. Ein Bot ist sofort fertig; im
+ *      Messstand sitzen nur Bots. Was ein MENSCH braucht, steht in keinem
+ *      Zustand und laesst sich hier nicht messen, sondern nur modellieren —
+ *      deshalb die beiden Zahlen unten, und deshalb steht in jeder Ausgabe
+ *      dabei, mit welchen gerechnet wurde.
+ *   2. KAMPF — exakt. `kampfdauer` ist der laengste Kampf der Runde, und genau
+ *      so lange laeuft die Schaupause der Plattform (`interludeMs` im Adapter).
+ *      Keine Schaetzung: Die Zahl steht im Kampfbericht.
+ *   3. NACHLAUF — exakt. `KAMPF_NACHLAUF_MS` aus adapter.ts.
+ *
+ * SEIT DEM 06.09.2026 KOMMEN ZWEI ZAHLEN DAZU, die keine Stuecke der Spielzeit
+ * sind, sondern des WARTENS — und das ist nicht dasselbe. Wer nach dem eigenen
+ * "Bereit" den Bots zusieht (`fremdZuegeJeRunde`) oder nach dem eigenen Kampf
+ * den fremden (`wartenNachKampfMs`), verbringt Zeit in der Partie, in der er
+ * nichts zu tun und nichts zu entscheiden hat. Die Spielzeit misst, wie lange
+ * eine Partie dauert; diese beiden messen, wie lange sie sich zieht.
+ *
+ * WARUM DAS MODELL UEBERHAUPT GEBRAUCHT WIRD: Ohne die Aufteilung dreht man
+ * an der falschen Schraube. Ein Spiel, dessen Zeit zu neun Zehnteln in den
+ * Kaempfen steckt, wird nicht dadurch kuerzer, dass man die Vorbereitung
+ * strafft — und umgekehrt.
+ */
+export interface Zeitmodell {
+  /**
+   * Grundzeit je Vorbereitung: der Laden geht auf, man sieht hin, man
+   * entscheidet. Faellt auch dann an, wenn man gar nichts tut.
+   */
+  readonly vorbereitungGrundMs: number;
+  /** Zusatz je Handgriff — kaufen, wuerfeln, aufsteigen, verschieben, verkaufen. */
+  readonly vorbereitungJeZugMs: number;
+  /**
+   * Deckel auf die Vorbereitung.
+   *
+   * SEIT DEM 06.09.2026 IST DAS EINE ZAHL AUS DIESEM MODUL: `vorbereitungMs`
+   * im Regelsatz. Nach ihrem Ablauf gelten offene Sitze als bereit
+   * (`fristAbgelaufen` in partie.ts), laenger kann eine Vorbereitung also gar
+   * nicht dauern.
+   *
+   * Bis dahin stand hier die Zugzeit der Plattform (`turnTimeoutMs`,
+   * 60 Sekunden): Sie war der einzige Deckel, den es gab, und sie war ein
+   * schlechter — sie laeuft je Sitz, wird bei jeder Aktion irgendeines Sitzes
+   * neu gestellt und faellt am Botsitz ganz weg.
+   */
+  readonly vorbereitungHoechstMs: number;
+  /** Was nach dem letzten Kampfereignis stehen bleibt (`KAMPF_NACHLAUF_MS`). */
+  readonly kampfNachlaufMs: number;
+  /**
+   * Was die Plattform zwischen zwei Botzuegen wartet (`BOT_TAKT_MS`).
+   *
+   * Steht hier, weil er im Messstand die einzige Groesse ist, die aus einer
+   * ZAHL VON HANDGRIFFEN eine WARTEZEIT macht — und die Handgriffe der Bots
+   * sind gemessen, nicht geschaetzt. Er geht ausdruecklich NICHT in
+   * `vorbereitungsdauer` ein: Wie stark sich Bot-Takt und menschliches
+   * Ueberlegen ueberlappen, haengt am Sitzplatz (siehe `botWartezeit`), und
+   * eine Spielzeit, die das mitraet, waere schlechter als eine, die es
+   * getrennt ausweist.
+   */
+  readonly botTaktMs: number;
+}
+
+/**
+ * Die Vorgabe.
+ *
+ * FUENF SEKUNDEN GRUNDZEIT UND ANDERTHALB JE HANDGRIFF sind gesetzt und nicht
+ * gemessen — sie beschreiben einen Menschen, den dieses Paket nie zu sehen
+ * bekommt. Gewaehlt wurden sie so, dass sie eine ZUEGIGE Vorbereitung
+ * abbilden: Wer laenger ueberlegt, verlaengert seine Partie zusaetzlich. Ueber
+ * die 6 Handgriffe, die der fleissigste Sitz im Median macht, ergibt das rund
+ * 14 Sekunden.
+ *
+ * Wer die Zahlen fuer falsch haelt, aendert sie hier und misst neu — das ist
+ * genau die dritte Stellschraube aus der Aufgabe ("kuerzere Vorbereitung").
+ * Die uebrigen zwei Zeilen sind dagegen keine Meinung, sondern stehen so im
+ * Server bzw. im Adapter.
+ */
+export const STANDARD_ZEITMODELL: Zeitmodell = {
+  vorbereitungGrundMs: 5_000,
+  vorbereitungJeZugMs: 1_500,
+  vorbereitungHoechstMs: DEFAULT_REGELN.vorbereitungMs,
+  kampfNachlaufMs: KAMPF_NACHLAUF_MS,
+  botTaktMs: BOT_TAKT_MS,
+};
+
+/**
+ * Wie lange eine Vorbereitung dauert, in der der fleissigste Sitz `zuege`
+ * Handgriffe gemacht hat.
+ *
+ * DER FLEISSIGSTE und nicht der Durchschnitt: Alle ruesten gleichzeitig, die
+ * Phase endet erst, wenn der LETZTE bereit ist. Mit dem Durchschnitt zu
+ * rechnen hiesse, eine Phase kuerzer zu machen, indem drei von vier Spielern
+ * nichts tun.
+ */
+export function vorbereitungsdauer(zuege: number, modell: Zeitmodell): number {
+  return Math.min(
+    modell.vorbereitungHoechstMs,
+    modell.vorbereitungGrundMs + zuege * modell.vorbereitungJeZugMs,
+  );
+}
+
+/**
+ * Wie lange ein Sitz nach seinem eigenen "Bereit" noch auf die Bots wartet.
+ *
+ * DAS IST KEIN MODELL, sondern eine Multiplikation: `zuege` sind die
+ * gemessenen Handgriffe der uebrigen Sitze in dieser Runde, `botTaktMs` ist
+ * die Pause, die die Plattform vor JEDEN einzelnen davon legt (`schedule` in
+ * packages/server/src/runtime/party.ts). Dass sie sich addieren, liegt an
+ * `amZug`: Es nennt immer nur den KLEINSTEN Sitz, der noch nicht bereit ist,
+ * also arbeitet die Plattform die Bots nacheinander ab statt nebeneinander.
+ *
+ * EINE OBERGRENZE, und zwar eine, die fuer Sitz 0 scharf ist: Vor ihm ist
+ * niemand dran, also faengt kein Bot an, bevor er bereit gemeldet hat. Wer
+ * weiter hinten sitzt, hat einen Teil der Zuege schon waehrend des eigenen
+ * Ueberlegens abgearbeitet bekommen.
+ */
+export function botWartezeit(zuege: number, modell: Zeitmodell): number {
+  return zuege * modell.botTaktMs;
+}
+
+/** Die Spielzeit einer Partie, in ihre drei Stuecke zerlegt. */
+export interface Zeitbilanz {
+  readonly vorbereitungMs: number;
+  readonly kampfMs: number;
+  readonly nachlaufMs: number;
+  readonly gesamtMs: number;
+}
+
+export function zeitbilanz(befund: Partiebefund, modell: Zeitmodell): Zeitbilanz {
+  const vorbereitungMs = befund.zuegeJeRunde.reduce(
+    (summe, zuege) => summe + vorbereitungsdauer(zuege, modell),
+    0,
+  );
+  const kampfMs = befund.kampfphasen.reduce((summe, ms) => summe + ms, 0);
+  const nachlaufMs = befund.kampfphasen.length * modell.kampfNachlaufMs;
+  return { vorbereitungMs, kampfMs, nachlaufMs, gesamtMs: vorbereitungMs + kampfMs + nachlaufMs };
 }
 
 export interface Messauftrag {
@@ -98,6 +275,23 @@ export interface Messauftrag {
    */
   readonly saatBasis: string;
   readonly regeln?: TafelrundeRegeln;
+  /**
+   * Andere Stellschrauben der Kampfsimulation als die gebauten.
+   *
+   * Das ist der Weg, eine einzelne Schraube zu drehen und dieselben Partien
+   * noch einmal zu rechnen (`werkzeug/spielzeit.mjs`). Ohne ihn muesste der
+   * Messstand den Kampf nachbauen — und maesse dann seine eigene Kopie.
+   */
+  readonly regler?: Kampfregler;
+  /**
+   * Auch aufzeichnen, wie viel in den Kaempfen GELAUFEN wird (laufwege.ts).
+   *
+   * Ausgeschaltet, solange niemand danach fragt, und zwar wegen des
+   * Speichers: Ein Laufbefund haelt je Kampf einen Eintrag pro Einheit, und
+   * die Ausgewogenheitsmessung rechnet 5.000 Partien. Das waeren ueber eine
+   * Million Objekte fuer eine Zahl, die dort niemand liest.
+   */
+  readonly laufwege?: boolean;
 }
 
 /** Was eine einzelne Partie hergibt. */
@@ -128,10 +322,56 @@ export interface Partiebefund {
   readonly letzteBretter: Readonly<Record<number, readonly (Kaempfer | null)[]>>;
   /** Antritte insgesamt: je Runde ein Eintrag fuer jeden lebenden Sitz. */
   readonly antritte: number;
+  /**
+   * Je Runde die Dauer der KAMPFPHASE in Millisekunden — der laengste Kampf
+   * der Runde, denn so lange laeuft die Schaupause (`kampfdauer`).
+   */
+  readonly kampfphasen: readonly number[];
+  /** Jeder einzelne Kampf mit seiner Dauer. Nenner: alle Kaempfe der Partie. */
+  readonly kampfDauern: readonly number[];
+  /**
+   * Kaempfe, die an `HOECHSTDAUER_MS` abgeschnitten wurden.
+   *
+   * Steht hier, weil eine kuerzere Partie nichts wert ist, wenn sie durch
+   * abgebrochene Kaempfe zustande kommt: Dann entscheidet `entscheideNachZeit`
+   * und nicht mehr das Brett.
+   */
+  readonly zeitAbbrueche: number;
+  /**
+   * Je Runde die Zahl der Handgriffe des FLEISSIGSTEN Sitzes — die Grundlage
+   * der geschaetzten Vorbereitungszeit, siehe `vorbereitungsdauer`.
+   */
+  readonly zuegeJeRunde: readonly number[];
+  /**
+   * Je (Runde, Sitz): die Handgriffe der UEBRIGEN Sitze in dieser Runde.
+   *
+   * Mal `botTaktMs` ergibt das die Zeit, die ein Sitz nach seinem "Bereit"
+   * noch vor dem Bildschirm sitzt — siehe `botWartezeit`. Das abschliessende
+   * "Bereit" der anderen zaehlt hier MIT, anders als bei `zuegeJeRunde`: Es
+   * ist zwar kein Ueberlegen, aber es ist ein Zug, vor den die Plattform
+   * ihren Takt legt.
+   */
+  readonly fremdZuegeJeRunde: readonly number[];
+  /**
+   * Je (Runde, Sitz): wie lange die Kampfphase nach dem EIGENEN Kampf noch
+   * laeuft, ohne den Nachlauf.
+   *
+   * Die Phase dauert so lange wie der laengste Kampf der Runde; wessen
+   * eigener frueher entschieden ist, sieht ab da nur noch den Ergebniszeilen
+   * der anderen beim Einlaufen zu (`paarungen` in sicht.ts). Genau diese
+   * Zeitspanne war Robins Beschwerde am 05.09.2026, und ohne sie misst man
+   * die Phase statt das Warten.
+   */
+  readonly wartenNachKampfMs: readonly number[];
   /** Wie oft eine Marke bei einem Antritt welche Schwelle erreicht hatte. */
   readonly schwellenTreffer: Readonly<Record<Marke, Readonly<Record<Schwelle, number>>>>;
   /** Wie oft jede Einheit ueberhaupt auf einem antretenden Brett stand. */
   readonly einheitAntritte: Readonly<Record<EinheitId, number>>;
+  /**
+   * Je Kampf die Auswertung auf Bewegung. Leer, solange `laufwege` im Auftrag
+   * nicht gesetzt ist — siehe dort, warum.
+   */
+  readonly laufbefunde: readonly Laufbefund[];
 }
 
 // ---------------------------------------------------------------------------
@@ -171,10 +411,19 @@ export function spieleParte(
   sitze: readonly number[],
   besetzung: Besetzung,
   regeln: TafelrundeRegeln = DEFAULT_REGELN,
+  regler?: Kampfregler,
+  laufwege = false,
 ): Partiebefund {
-  let p: TafelrundePartie = erstellePartie(regeln, sitze, saat);
+  let p: TafelrundePartie = erstellePartie(regeln, sitze, saat, regler);
 
   const letzteBretter: Record<number, readonly (Kaempfer | null)[]> = {};
+  const kampfphasen: number[] = [];
+  const kampfDauern: number[] = [];
+  const laufbefunde: Laufbefund[] = [];
+  const zuegeJeRunde: number[] = [];
+  const fremdZuegeJeRunde: number[] = [];
+  const wartenNachKampfMs: number[] = [];
+  let zeitAbbrueche = 0;
   const lebenVerlauf: { runde: number; leben: Record<number, number> }[] = [];
   const schwellenTreffer = leereSchwellen();
   const einheitAntritte = leerZaehlung(KATALOG.map((e) => e.id));
@@ -183,15 +432,58 @@ export function spieleParte(
   let antritte = 0;
 
   for (let schleife = 0; schleife < MAX_SCHLEIFEN && !p.fertig; schleife++) {
+    let fleissigster = 0;
+    const zuegeJeSitz: Record<number, number> = {};
     for (const sitz of lebendeSitze(p)) {
+      let zuege = 0;
       for (let i = 0; i < MAX_ZUEGE_JE_SITZ && darfHandeln(p, sitz); i++) {
         p = fuehreAus(p, sitz, botZug(sichtFuer(p, sitz), gangartFuer(besetzung, sitz)));
+        zuege++;
       }
       if (darfHandeln(p, sitz)) {
         throw new Error(`Sitz ${sitz} meldet sich in Partie ${saat} nicht bereit`);
       }
+      zuegeJeSitz[sitz] = zuege;
+      /*
+       * Das abschliessende "Bereit" zaehlt nicht als Handgriff: Es ist kein
+       * Ueberlegen, sondern das Ende davon. Zaehlte es mit, bekaeme eine Runde,
+       * in der niemand etwas tut, trotzdem anderthalb Sekunden je Sitz.
+       */
+      fleissigster = Math.max(fleissigster, Math.max(0, zuege - 1));
     }
     if (p.phase !== 'kampf') break;
+    zuegeJeRunde.push(fleissigster);
+    const phase = kampfdauer(p);
+    kampfphasen.push(phase);
+    for (const kampf of p.kaempfe) {
+      kampfDauern.push(kampf.bericht.dauerMs);
+      if (kampf.bericht.grund === 'zeit') zeitAbbrueche++;
+      if (laufwege) laufbefunde.push(laufbefund(kampf.bericht));
+    }
+    /*
+     * Die beiden Wartezeiten, aus der Sicht JEDES Sitzes und in EINER
+     * Schleife: Sie gehoeren paarweise zusammen (dieselbe Runde, derselbe
+     * Sitz), und nur deshalb darf `werteAus` sie spaeter addieren. Zwei
+     * getrennte Schleifen waeren der Weg, das eines Tages zu verlieren.
+     */
+    for (const sitz of lebendeSitze(p)) {
+      // Was die Plattform nach dem "Bereit" dieses Sitzes noch abarbeitet.
+      // Das "Bereit" der anderen zaehlt mit, siehe `fremdZuegeJeRunde`.
+      fremdZuegeJeRunde.push(
+        lebendeSitze(p)
+          .filter((s) => s !== sitz)
+          .reduce((summe, s) => summe + (zuegeJeSitz[s] ?? 0), 0),
+      );
+      /*
+       * Warten nach dem EIGENEN Kampf. Wessen Kampf der laengste der Runde
+       * war, wartet null — und das ist zu viert die Haelfte aller Sitze, denn
+       * zwei Kaempfe haben genau einen laengsten. Jeder lebende Sitz hat
+       * genau einen eigenen Kampf (`setzeAn`); die null ist der Ausweg fuer
+       * den Fall, den es nicht geben darf, damit die Paarung nicht verrutscht.
+       */
+      const eigener = kampfVon(p, sitz);
+      wartenNachKampfMs.push(eigener ? phase - eigener.bericht.dauerMs : 0);
+    }
 
     /*
      * Jetzt steht alles fest, was diese Runde passiert (`beginneKampf` hat
@@ -247,8 +539,15 @@ export function spieleParte(
     vorentscheidung: sieger === null ? null : findeVorentscheidung(lebenVerlauf, sieger),
     letzteBretter,
     antritte,
+    kampfphasen,
+    kampfDauern,
+    zeitAbbrueche,
+    zuegeJeRunde,
+    fremdZuegeJeRunde,
+    wartenNachKampfMs,
     schwellenTreffer,
     einheitAntritte,
+    laufbefunde,
   };
 }
 
@@ -294,6 +593,8 @@ export function messe(auftrag: Messauftrag): Partiebefund[] {
         auftrag.sitze,
         auftrag.besetzung,
         auftrag.regeln ?? DEFAULT_REGELN,
+        auftrag.regler,
+        auftrag.laufwege ?? false,
       ),
     );
   }
@@ -329,6 +630,72 @@ export interface Auswertung {
   readonly rundenMedian: number;
   readonly rundenMin: number;
   readonly rundenMax: number;
+  /**
+   * Die SPIELZEIT — die Zahl, um die es Robin geht ("durchschnittlich 8
+   * Minuten maximum"). Millisekunden, nach `zeitbilanz`.
+   *
+   * Der MEDIAN ist der Massstab und nicht das Mittel: Die Verteilung hat
+   * einen langen Schwanz nach oben (eine Partie, in der lange niemand
+   * ausscheidet), und ein Mittel liest sich dadurch schlechter, als die
+   * meisten Partien sich anfuehlen.
+   */
+  readonly spielzeitMedianMs: number;
+  readonly spielzeitSchnittMs: number;
+  readonly spielzeitMinMs: number;
+  readonly spielzeitMaxMs: number;
+  /** Die drei Stuecke im Mittel je Partie — woraus die Spielzeit besteht. */
+  readonly vorbereitungMs: number;
+  readonly kampfMs: number;
+  readonly nachlaufMs: number;
+  /** Median der KAMPFPHASE je Runde (laengster Kampf der Runde). */
+  readonly kampfphaseMedianMs: number;
+  /** Median eines EINZELNEN Kampfes — das, was ein Spieler seinem zusieht. */
+  readonly kampfMedianMs: number;
+  /**
+   * Kampf und Kampfphase im NEUNTEN ZEHNTEL, und ohne sie fehlt die halbe
+   * Auskunft.
+   *
+   * Robins Beschwerde vom 05.09.2026 ("die Wartezeiten sollten deutlich
+   * kuerzer") traf nicht den Median — der lag bei 3,0 s — sondern den
+   * Schwanz: In jeder zehnten Runde steht man eine knappe halbe Minute vor
+   * einem Bildschirm, auf dem nichts mehr passiert, was einen angeht. Ein
+   * Median allein haette diese Aufgabe fuer erledigt erklaert.
+   */
+  readonly kampfP90Ms: number;
+  readonly kampfphaseP90Ms: number;
+  /** Warten nach dem eigenen Kampf, OHNE Nachlauf (`wartenNachKampfMs`). */
+  readonly wartenMedianMs: number;
+  readonly wartenP90Ms: number;
+  /**
+   * Warten auf die Bots nach dem eigenen "Bereit" (`botWartezeit`).
+   *
+   * Obergrenze, scharf fuer Sitz 0 — die Begruendung steht bei
+   * `fremdZuegeJeRunde`.
+   */
+  readonly botWartenMedianMs: number;
+  readonly botWartenP90Ms: number;
+  /**
+   * BEIDE Wartezeiten einer Runde zusammen, plus Nachlauf — die Zahl, die ein
+   * Spieler tatsaechlich absitzt.
+   *
+   * Gebildet wird die Summe JE (Runde, Sitz) und erst danach das Perzentil.
+   * Zwei Perzentile zu addieren waere bequemer und falsch: Die schlimmste
+   * Vorbereitung und der laengste fremde Kampf treffen nicht in derselben
+   * Runde zusammen, die Summe der neunten Zehntel liegt also ueber dem
+   * neunten Zehntel der Summe.
+   */
+  readonly wartenGesamtMedianMs: number;
+  readonly wartenGesamtP90Ms: number;
+  /**
+   * Anteil der Kaempfe, die an `HOECHSTDAUER_MS` abgeschnitten wurden.
+   *
+   * Ueber dieser Zahl steht und faellt die Aussagekraft aller anderen: Wo
+   * jeder dritte Kampf in die Zeit laeuft, entscheidet nicht mehr das Brett,
+   * sondern `entscheideNachZeit`.
+   */
+  readonly zeitAbbruchAnteil: number;
+  /** Mit welchem Modell die Vorbereitungszeit geschaetzt wurde. */
+  readonly zeitmodell: Zeitmodell;
   /** Partien, die an der Rundengrenze endeten statt an einem Ueberlebenden. */
   readonly anDerGrenze: number;
   /** Partien, die vor Runde fuenf zu Ende waren. */
@@ -376,6 +743,21 @@ function median(zahlen: readonly number[]): number {
     : (sortiert[mitte - 1]! + sortiert[mitte]!) / 2;
 }
 
+/**
+ * Der Wert, unter dem `anteil` der Messwerte liegen — 0,9 ist das neunte
+ * Zehntel.
+ *
+ * Der naechstgelegene Rang, nicht interpoliert: Alle Werte hier sind Zeiten
+ * aus einem Takt von 100 ms oder ganze Handgriffe, und ein Zwischenwert waere
+ * eine Zahl, die so nie vorgekommen ist.
+ */
+export function perzentil(zahlen: readonly number[], anteil: number): number {
+  if (zahlen.length === 0) return 0;
+  const sortiert = [...zahlen].sort((a, b) => a - b);
+  const rang = Math.ceil(anteil * sortiert.length) - 1;
+  return sortiert[Math.min(sortiert.length - 1, Math.max(0, rang))]!;
+}
+
 function quote(name: string, antritte: number, siege: number): Quote {
   return { name, antritte, siege, quote: antritte > 0 ? siege / antritte : null };
 }
@@ -388,7 +770,10 @@ function nachQuote(a: Quote, b: Quote): number {
   return b.quote - a.quote || b.antritte - a.antritte || a.name.localeCompare(b.name);
 }
 
-export function werteAus(befunde: readonly Partiebefund[]): Auswertung {
+export function werteAus(
+  befunde: readonly Partiebefund[],
+  zeitmodell: Zeitmodell = STANDARD_ZEITMODELL,
+): Auswertung {
   const markenAntritte = leerZaehlung(MARKEN);
   const markenSiege = leerZaehlung(MARKEN);
   const einheitLetzte = leerZaehlung(KATALOG.map((e) => e.id));
@@ -400,12 +785,39 @@ export function werteAus(befunde: readonly Partiebefund[]): Auswertung {
   let antritte = 0;
   let mitSieger = 0;
   let einseitig = 0;
+  let zeitAbbrueche = 0;
+  let kaempfeGesamt = 0;
   const rundenListe: number[] = [];
   const erstesAusscheiden: number[] = [];
+  const spielzeiten: number[] = [];
+  const kampfphasen: number[] = [];
+  const einzelkaempfe: number[] = [];
+  const warten: number[] = [];
+  const botWarten: number[] = [];
+  const wartenGesamt: number[] = [];
+  const bilanzen: Zeitbilanz[] = [];
 
   for (const b of befunde) {
     rundenListe.push(b.runden);
     antritte += b.antritte;
+    const bilanz = zeitbilanz(b, zeitmodell);
+    bilanzen.push(bilanz);
+    spielzeiten.push(bilanz.gesamtMs);
+    kampfphasen.push(...b.kampfphasen);
+    einzelkaempfe.push(...b.kampfDauern);
+    /*
+     * Die beiden Listen stehen Eintrag fuer Eintrag fuer dasselbe (Runde,
+     * Sitz)-Paar — `spieleParte` fuellt sie in EINER Schleife. Nur deshalb
+     * darf hier je Eintrag addiert werden.
+     */
+    for (const [i, ms] of b.wartenNachKampfMs.entries()) {
+      const bot = botWartezeit(b.fremdZuegeJeRunde[i] ?? 0, zeitmodell);
+      warten.push(ms);
+      botWarten.push(bot);
+      wartenGesamt.push(ms + zeitmodell.kampfNachlaufMs + bot);
+    }
+    zeitAbbrueche += b.zeitAbbrueche;
+    kaempfeGesamt += b.kampfDauern.length;
     if (b.ausRunden.length > 0) erstesAusscheiden.push(b.ausRunden[0]!);
     if (b.sieger !== null) mitSieger++;
     if (b.vorentscheidung !== null && b.vorentscheidung * 2 <= b.runden) einseitig++;
@@ -449,6 +861,25 @@ export function werteAus(befunde: readonly Partiebefund[]): Auswertung {
     rundenMedian: median(rundenListe),
     rundenMin: Math.min(...rundenListe),
     rundenMax: Math.max(...rundenListe),
+    spielzeitMedianMs: median(spielzeiten),
+    spielzeitSchnittMs: mittel(spielzeiten),
+    spielzeitMinMs: Math.min(...spielzeiten),
+    spielzeitMaxMs: Math.max(...spielzeiten),
+    vorbereitungMs: mittel(bilanzen.map((b) => b.vorbereitungMs)),
+    kampfMs: mittel(bilanzen.map((b) => b.kampfMs)),
+    nachlaufMs: mittel(bilanzen.map((b) => b.nachlaufMs)),
+    kampfphaseMedianMs: median(kampfphasen),
+    kampfMedianMs: median(einzelkaempfe),
+    kampfP90Ms: perzentil(einzelkaempfe, 0.9),
+    kampfphaseP90Ms: perzentil(kampfphasen, 0.9),
+    wartenMedianMs: median(warten),
+    wartenP90Ms: perzentil(warten, 0.9),
+    botWartenMedianMs: median(botWarten),
+    botWartenP90Ms: perzentil(botWarten, 0.9),
+    wartenGesamtMedianMs: median(wartenGesamt),
+    wartenGesamtP90Ms: perzentil(wartenGesamt, 0.9),
+    zeitAbbruchAnteil: kaempfeGesamt > 0 ? zeitAbbrueche / kaempfeGesamt : 0,
+    zeitmodell,
     anDerGrenze: befunde.filter((b) => b.grenzeErreicht).length,
     vorRundeFuenf: befunde.filter((b) => b.runden < 5).length,
     erstesAusscheidenSchnitt: erstesAusscheiden.length > 0 ? mittel(erstesAusscheiden) : null,

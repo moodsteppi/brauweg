@@ -31,6 +31,9 @@ const de: Record<string, string> = {
   // der Recken, die man sich zusammenkauft — kein Fremdwort und keine
   // Anspielung auf ein anderes Spiel (Auflage aus dem Konzept).
   'game.tafelrunde': 'Tafelrunde',
+  // Minigolf aus der Vogelperspektive, 1-8 Spieler gleichzeitig auf derselben
+  // Bahn — siehe SPEZIFIKATION-GOLF.md.
+  'game.golf': 'Golf',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -115,6 +118,7 @@ const de: Record<string, string> = {
   'error.nichtGesammelt': 'Das hast du noch nicht gesammelt.',
   'error.gurtZuVoll': 'Am Gürtel ist kein Platz mehr.',
   'error.botLevelUnknown': 'Diese Spielstärke gibt es nicht.',
+  'error.seatColorUnknown': 'Diese Farbe gibt es nicht.',
   'error.googleLoginDisabled': 'Die Anmeldung mit Google ist gerade abgeschaltet.',
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',
@@ -474,9 +478,13 @@ const de: Record<string, string> = {
   'ruleset.sichtweiteAusserhalb': 'So weit sieht hier niemand — die Sichtweite passt nicht zur Kartengröße.',
   'ruleset.kontingentAusserhalb': 'Zwischen 1 und 20 Feldern je Runde.',
   'ruleset.zuVieleHindernisse': 'So viel Wasser und Fels lässt kein Land mehr übrig.',
+  'ruleset.rundenfristAusserhalb': 'Eine Runde dauert zwischen 10 Sekunden und 5 Minuten.',
   'feldherr.feldUnbekannt': 'Diese Feldgröße gibt es nicht.',
   'feldherr.nurZuZweit': 'Feldherr wird zu zweit gespielt.',
   'feldherr.eineRunde': 'Feldherr kennt keine Runden — ein Gefecht entscheidet.',
+  'golf.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
+  'golf.sitzzahl': 'Golf spielt zwischen einem und acht Bällen.',
+  'golf.loecher': 'Zwischen 2 und 15 Löchern je Match.',
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',

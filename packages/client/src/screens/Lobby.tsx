@@ -178,8 +178,10 @@ export function Lobby({
         seats,
         rounds,
         visibility,
-        // Bot-Stärke gilt für alle Bots des Tisches; nur Doppelkopf wertet sie
-        // aus, für andere Spiele schadet das Mitschicken nicht.
+        // Bot-Stärke gilt für alle Bots des Tisches. Welche Module sie
+        // auswerten, steht bei `BotLevel` in game-api und wird hier bewusst
+        // nicht zweitgezählt: Mitschicken schadet keinem Spiel, ein Modul
+        // ohne Auswertung ignoriert das Feld.
         botLevel,
       });
       // Erst nach dem Erfolg merken: Ein abgelehnter Regelsatz soll nicht

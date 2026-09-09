@@ -16,7 +16,7 @@
  * entsteht ausschliesslich in viewFor, der Client blendet nichts selbst aus.
  */
 
-import { type FillerRegeln, istVariante, mitBarrieren } from './regeln.js';
+import { type FillerRegeln, istVariante, mitBarrieren, mitSternen } from './regeln.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
@@ -114,6 +114,33 @@ export const GRAUTOENE = 5;
  */
 export const LEERZUEGE_MAX = 6;
 
+/**
+ * So viele Zuege zu Beginn sind mauerfrei — ueber beide Sitze gezaehlt.
+ *
+ * Drei: der erste Zug beider und der zweite des Anfaengers. Erst der zweite
+ * Zug des zweiten Spielers darf eine Wand setzen. Bis dahin haben beide je
+ * einmal gefaerbt und der Anfaenger seinen Vorsprung ausgespielt, ohne dass
+ * schon eine Wand steht — sonst haette er den Vorteil des ersten Zugs UND
+ * den der ersten Wand.
+ */
+export const MAUERFREIE_ZUEGE = 3;
+
+/** Wie viele Zuege noch mauerfrei sind. 0, sobald gebaut werden darf. */
+export function mauerSperre(partie: FillerPartie): number {
+  return Math.max(0, MAUERFREIE_ZUEGE - partie.zug);
+}
+
+/**
+ * Sternfelder der Spielart `extreme`: wie viele, was sie bringen.
+ *
+ * Drei auf 56 Feldern: genug, dass sich ein Umweg lohnt, zu wenige, um das
+ * Spiel zu einer Sternjagd zu machen. Ein Stern ist ZWEI Punkte wert (das
+ * Feld selbst plus STERN_BONUS) und bringt STERN_MAUERN Mauern in den Vorrat.
+ */
+export const STERNE_ANZAHL = 3;
+export const STERN_BONUS = 1;
+export const STERN_MAUERN = 1;
+
 export interface FillerPartie {
   readonly regeln: FillerRegeln;
   /**
@@ -173,6 +200,14 @@ export interface FillerPartie {
    * auseinanderlaufen.
    */
   readonly mauerDiesenZug: boolean;
+  /**
+   * Plaetze der Sternfelder. Leer in jeder Spielart ausser `extreme`.
+   *
+   * Der Stern bleibt am Platz, auch nachdem er geschluckt wurde: Er ist eine
+   * Eigenschaft des Feldes, kein Gegenstand, den man aufhebt. Wer ihn hat,
+   * sieht das an seinem Gebiet — und die Punkte dafuer sind laengst verbucht.
+   */
+  readonly sterne: readonly number[];
 }
 
 export type FillerAktion =
@@ -297,6 +332,16 @@ export function erstellePartie(
    */
   const grau = feld.map(() => Math.floor(zufall() * GRAUTOENE));
 
+  /*
+   * Die Sterne NACH den Grautoenen ziehen, damit die anderen Spielarten
+   * denselben Generatorstand behalten wie vorher: Ohne Sterne wird hier
+   * nichts gezogen, und jede gespeicherte Partie sieht nach dem Deploy aus
+   * wie davor.
+   */
+  const sterne = mitSternen(gueltigeRegeln.variante)
+    ? zieheSterne(spalten, zeilen, sitze, zufall)
+    : [];
+
   const besitzer: (number | null)[] = new Array(feld.length).fill(null);
   const farbe: Record<number, number> = {};
   const punkte: Record<number, number> = {};
@@ -355,7 +400,45 @@ export function erstellePartie(
     barrieren: [],
     barrierenUebrig,
     mauerDiesenZug: false,
+    sterne,
   };
+}
+
+/**
+ * Drei Sternfelder aus der Saat ziehen.
+ *
+ * Nicht auf einer Startecke und nicht daneben: Ein Stern am eigenen Anfang
+ * waere ein Geschenk an den, der zufaellig dort sitzt. Und nicht auf einem
+ * Haufen: Zwei Sterne mit Abstand unter drei Schritten holte man mit einem
+ * einzigen Zug. Gezogen wird aus dem, was bleibt — bei 8 x 7 sind das ueber
+ * vierzig Plaetze, die Suche bricht also nie ab.
+ */
+function zieheSterne(
+  spalten: number,
+  zeilen: number,
+  sitze: readonly number[],
+  zufall: () => number,
+): number[] {
+  const verboten = new Set<number>();
+  for (const sitz of sitze) {
+    const ecke = startEcke(sitz, spalten, zeilen);
+    verboten.add(ecke);
+    for (const n of nachbarn(ecke, spalten, zeilen)) verboten.add(n);
+  }
+  const abstand = (a: number, b: number): number =>
+    Math.abs((a % spalten) - (b % spalten)) +
+    Math.abs(Math.floor(a / spalten) - Math.floor(b / spalten));
+
+  const sterne: number[] = [];
+  let kandidaten = Array.from({ length: spalten * zeilen }, (_, p) => p).filter(
+    (p) => !verboten.has(p),
+  );
+  while (sterne.length < STERNE_ANZAHL && kandidaten.length > 0) {
+    const stern = kandidaten[Math.floor(zufall() * kandidaten.length)]!;
+    sterne.push(stern);
+    kandidaten = kandidaten.filter((p) => abstand(p, stern) >= 3);
+  }
+  return sterne.sort((a, b) => a - b);
 }
 
 // ---------------------------------------------------------------------------
@@ -432,12 +515,52 @@ export function erreichbareFreie(
 }
 
 /**
+ * Freie Felder, die IRGENDEIN Sitz noch erreichen kann.
+ *
+ * Gelaufen wird von allen Gebieten zugleich ueber freie Felder, nicht durch
+ * Barrieren. Was dabei nicht erreicht wird, ist eingemauert: Ein Feld, das
+ * niemand mehr holen kann und das die Partie bis zum Ende als Loch traegt.
+ */
+export function vonIrgendwemErreichbareFreie(
+  partie: FillerPartie,
+  sperren: ReadonlySet<string>,
+): number {
+  const { spalten, zeilen } = partie.regeln;
+  const gesehen = new Set<number>();
+  const rand: number[] = [];
+  for (let platz = 0; platz < partie.besitzer.length; platz++) {
+    if (partie.besitzer[platz] !== null) rand.push(platz);
+  }
+  let zahl = 0;
+  while (rand.length > 0) {
+    const platz = rand.pop()!;
+    for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
+      if (gesehen.has(n)) continue;
+      if (partie.besitzer[n] !== null) continue;
+      gesehen.add(n);
+      zahl++;
+      rand.push(n);
+    }
+  }
+  return zahl;
+}
+
+/**
  * Die Barrieren, die dieser Sitz gerade setzen darf.
  *
- * **Die Einsperr-Regel.** Eine Wand ist verboten, wenn danach ein Sitz kein
- * einziges freies Feld mehr erreichen kann, der vorher noch eines erreichte.
- * Ohne sie waere die Spielart in zwei Zuegen entschieden: Wer den Gegner auf
- * seiner Ecke zumauert, gewinnt mit 55 zu 1.
+ * **Die Einmauer-Regel (seit dem 06.09.2026).** Eine Wand ist verboten, wenn
+ * danach ein freies Feld fuer NIEMANDEN mehr erreichbar waere. Jedes Feld
+ * muss bis zum Ende zu holen sein — ein eingemauertes Loch gehoert niemandem,
+ * zaehlt fuer niemanden und laesst die Partie nur noch ueber LEERZUEGE_MAX
+ * enden. Gezaehlt wird gegen den Stand VORHER: Eine Wand darf die Zahl der
+ * erreichbaren freien Felder nicht verkleinern.
+ *
+ * **Die Einsperr-Regel** bleibt daneben bestehen: Eine Wand ist auch
+ * verboten, wenn danach ein Sitz kein einziges freies Feld mehr erreichen
+ * kann, der vorher noch eines erreichte. Ohne sie waere die Spielart in zwei
+ * Zuegen entschieden: Wer den Gegner auf seiner Ecke zumauert, gewinnt mit
+ * 55 zu 1. Sie folgt NICHT aus der ersten — die Felder hinter dem Gegner
+ * bleiben ja fuer mich erreichbar.
  *
  * Geprueft wird fuer JEDEN Sitz, auch den eigenen — nicht aus Fuersorge,
  * sondern weil ein Brett, auf dem niemand mehr etwas holen kann, nur noch
@@ -456,11 +579,14 @@ export function moeglicheBarrieren(
   // Eine je Zug. Wer schon gemauert hat, faerbt jetzt — mehr ist dieser Zug
   // nicht mehr.
   if (partie.mauerDiesenZug && partie.dran === sitz) return [];
+  // Die Eroeffnung ist mauerfrei, siehe MAUERFREIE_ZUEGE.
+  if (mauerSperre(partie) > 0) return [];
 
   const { spalten, zeilen } = partie.regeln;
   const gesetzt = new Set(partie.barrieren);
   const sitze = sitzeVon(partie);
   const vorher = new Map(sitze.map((s) => [s, erreichbareFreie(partie, s, gesetzt)]));
+  const erreichbarVorher = vonIrgendwemErreichbareFreie(partie, gesetzt);
 
   const aus: [number, number][] = [];
   for (let platz = 0; platz < partie.feld.length; platz++) {
@@ -472,6 +598,9 @@ export function moeglicheBarrieren(
       if (gesetzt.has(schluessel)) continue;
       const probe = new Set(gesetzt);
       probe.add(schluessel);
+      // Erst die billige Frage: Mauert die Wand ein Feld ein? Dann sind die
+      // Sitze gar nicht mehr dran.
+      if (vonIrgendwemErreichbareFreie(partie, probe) < erreichbarVorher) continue;
       const sperrtJemanden = sitze.some(
         (s) => (vorher.get(s) ?? 0) > 0 && erreichbareFreie(partie, s, probe) === 0,
       );
@@ -494,7 +623,7 @@ function schlucke(
   partie: FillerPartie,
   sitz: number,
   neueFarbe: number,
-): { besitzer: (number | null)[]; feld: number[]; gewonnen: number } {
+): { besitzer: (number | null)[]; feld: number[]; gewonnen: number; geschluckt: number[] } {
   const { spalten, zeilen } = partie.regeln;
   const sperren = new Set(partie.barrieren);
   const besitzer = [...partie.besitzer];
@@ -506,7 +635,7 @@ function schlucke(
   }
   const eigen = [...rand];
 
-  let gewonnen = 0;
+  const geschluckt: number[] = [];
   while (rand.length > 0) {
     const platz = rand.pop()!;
     for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
@@ -515,7 +644,7 @@ function schlucke(
       besitzer[n] = sitz;
       eigen.push(n);
       rand.push(n);
-      gewonnen++;
+      geschluckt.push(n);
     }
   }
 
@@ -523,7 +652,7 @@ function schlucke(
   // Farben tragen, sonst faende der Vergleich oben auch das eigene Gebiet.
   for (const platz of eigen) feld[platz] = neueFarbe;
 
-  return { besitzer, feld, gewonnen };
+  return { besitzer, feld, gewonnen: geschluckt.length, geschluckt };
 }
 
 export function fuehreAus(
@@ -571,9 +700,28 @@ export function fuehreAus(
   }
   if (gesperrteFarben(partie).includes(farbe)) throw new Error('Farbe ist gesperrt');
 
-  const { besitzer, feld, gewonnen } = schlucke(partie, sitz, farbe);
+  const { besitzer, feld, gewonnen, geschluckt } = schlucke(partie, sitz, farbe);
 
-  const punkte = { ...partie.punkte, [sitz]: (partie.punkte[sitz] ?? 0) + gewonnen };
+  /*
+   * Sterne, die in diesem Zug gefallen sind. Ein Stern ist ein Feld wie jedes
+   * andere (es zaehlt in `gewonnen` schon mit) und bringt OBENDREIN seinen
+   * Bonus und eine Mauer. Punkte und Vorrat aendern sich hier und nirgends
+   * sonst — der Stern selbst bleibt liegen, siehe `sterne` im Zustand.
+   */
+  const sterne = new Set(partie.sterne);
+  const sterneGetroffen = geschluckt.filter((p) => sterne.has(p)).length;
+
+  const punkte = {
+    ...partie.punkte,
+    [sitz]: (partie.punkte[sitz] ?? 0) + gewonnen + sterneGetroffen * STERN_BONUS,
+  };
+  const barrierenUebrig =
+    sterneGetroffen > 0
+      ? {
+          ...partie.barrierenUebrig,
+          [sitz]: (partie.barrierenUebrig[sitz] ?? 0) + sterneGetroffen * STERN_MAUERN,
+        }
+      : partie.barrierenUebrig;
   const frei = besitzer.some((b) => b === null);
   const leerzuege = gewonnen > 0 ? 0 : partie.leerzuege + 1;
 
@@ -583,6 +731,7 @@ export function fuehreAus(
     besitzer,
     farbe: { ...partie.farbe, [sitz]: farbe },
     punkte,
+    barrierenUebrig,
     dran: naechster,
     zug: partie.zug + 1,
     leerzuege,
@@ -601,8 +750,9 @@ export function markiereVerlassen(partie: FillerPartie, sitz: number): FillerPar
  * Platzierungen.
  *
  * Gleichstand ergibt zweimal Platz 1. Bei 56 Feldern und zwei Spielern kann
- * das nicht vorkommen — 56 ist gerade, 28 zu 28 ist also moeglich —, und dann
- * ist es ein echtes Unentschieden und keine Verlegenheitsloesung.
+ * das vorkommen — 56 ist gerade, 28 zu 28 ist also moeglich —, und dann ist
+ * es ein echtes Unentschieden und keine Verlegenheitsloesung. In `extreme`
+ * zaehlen die Sternboni mit: Dort gewinnt, wer mehr PUNKTE hat, nicht Felder.
  */
 export function platzierungen(
   partie: FillerPartie,

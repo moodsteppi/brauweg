@@ -6,11 +6,16 @@
  * werden, beantwortet das Modul (`requireModule`) — genau wie in
  * `tables/service.ts`. Gebaut wird mit den vorhandenen Bausteinen `createTable`
  * und `joinTable`; die Suche legt keine eigene Tischsorte an.
+ *
+ * Auch die Anreicherung der `config` (seit dem 07.09.2026) bricht das nicht:
+ * In dieser Datei steht kein Spielname, nur ein Nachschlagen in der Tabelle
+ * aus `anreicherung.ts`. Wozu es sie gibt, steht dort.
  */
 
 import type { GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
+import { RuleSetInvalidError } from '../errors.js';
 import { requireModule } from '../games/registry.js';
 import {
   MAX_ROUNDS,
@@ -18,6 +23,7 @@ import {
   joinTable,
   leaveOtherWaitingTables,
 } from '../tables/service.js';
+import { type Anreicherung, STANDARD_ANREICHERUNG } from './anreicherung.js';
 import { type SchlangeOptionen, Suchschlange, type Suchstand } from './schlange.js';
 
 /**
@@ -37,6 +43,13 @@ export interface VermittlungOptionen extends SchlangeOptionen {
    * Grund darf aber nicht still verschwinden.
    */
   readonly beiFehler?: (gameId: GameId, fehler: unknown) => void;
+  /**
+   * Haken je Spiel, die der `config` vor dem Tischbau etwas mitgeben duerfen,
+   * das nur der Server weiss (siehe `anreicherung.ts`). Ohne Angabe gilt die
+   * Standardtabelle — auch in den Proben, damit dort dieselben Tische
+   * entstehen wie im Betrieb.
+   */
+  readonly anreicherung?: Partial<Record<GameId, Anreicherung>>;
 }
 
 /**
@@ -68,6 +81,7 @@ function runden(gameId: GameId, sitze: number): number {
 export class Vermittlung {
   private readonly schlange: Suchschlange;
   private readonly beiFehler: (gameId: GameId, fehler: unknown) => void;
+  private readonly anreicherung: Partial<Record<GameId, Anreicherung>>;
 
   constructor(
     private readonly db: Db,
@@ -76,13 +90,29 @@ export class Vermittlung {
   ) {
     this.schlange = new Suchschlange(optionen);
     this.beiFehler = optionen.beiFehler ?? (() => {});
+    this.anreicherung = optionen.anreicherung ?? STANDARD_ANREICHERUNG;
   }
 
-  /** Suche beginnen. Die Antwort ist schon der erste Stand. */
-  async betritt(gameId: GameId, accountId: string): Promise<Suchstand> {
+  /**
+   * Suche beginnen. Die Antwort ist schon der erste Stand.
+   *
+   * `config` ist der Regelsatz, mit dem der Suchende spielen will (seit dem
+   * 06.09.2026, fuer die Spielart von Filler). Er wird HIER geprueft und nicht
+   * erst beim Tischbau: Ein Regelsatz, der 30 Sekunden spaeter durchfaellt,
+   * liesse den Spieler ohne Erklaerung mit "Suche beendet" zurueck. Ohne
+   * `config` gilt die Vorgabe des Moduls, wie bisher.
+   */
+  async betritt(gameId: GameId, accountId: string, config: unknown = null): Promise<Suchstand> {
     // Wirft, wenn das Spiel gar nicht spielbar ist — vor dem Eintragen, damit
     // niemand in einer Schlange steht, aus der nie ein Tisch werden kann.
-    requireModule(gameId);
+    const module = requireModule(gameId);
+    if (config !== null && config !== undefined) {
+      const sitze = zielSitze(gameId);
+      const fehler = module
+        .validateConfig(config, sitze, runden(gameId, sitze))
+        .filter((p) => p.severity === 'error');
+      if (fehler.length > 0) throw new RuleSetInvalidError(fehler);
+    }
     /*
      * Suchen und an einem Wartetisch sitzen schliessen einander aus.
      *
@@ -94,7 +124,11 @@ export class Vermittlung {
      * durchsetzen.
      */
     await leaveOtherWaitingTables(this.db, accountId);
-    this.schlange.betritt(gameId, accountId);
+    // Ohne Regelsatz die Vorgabe des Moduls — und zwar HIER ausgeschrieben,
+    // nicht als null: Der Topf haengt an der Spielart des Regelsatzes, und ein
+    // alter Client ohne Rumpf soll bei den Nebel-Suchenden stehen, nicht in
+    // einem eigenen Topf daneben.
+    this.schlange.betritt(gameId, accountId, config ?? module.defaultConfig());
     return this.abruf(gameId, accountId);
   }
 
@@ -126,11 +160,16 @@ export class Vermittlung {
   async reife(): Promise<void> {
     for (const runde of this.schlange.faellig(zielSitze)) {
       try {
-        const beteiligte = await this.tischBauen(runde.gameId, runde.accountIds);
-        this.schlange.vermittelt(beteiligte.accountIds, beteiligte.tischId);
+        const beteiligte = await this.tischBauen(runde.gameId, runde.accountIds, runde.config);
+        this.schlange.vermittelt(runde.gameId, beteiligte.accountIds, beteiligte.tischId);
         this.runtime.notify(beteiligte.tischId);
       } catch (fehler) {
         this.beiFehler(runde.gameId, fehler);
+      } finally {
+        // Waehrend `tischBauen` lief, galten alle aus der Runde als "im Bau"
+        // (siehe Suchschlange.imBau). Wer jetzt kein Ergebnis hat, faengt
+        // beim naechsten Abruf von vorn an.
+        this.schlange.bauBeendet(runde.gameId, runde.accountIds);
       }
     }
   }
@@ -138,6 +177,7 @@ export class Vermittlung {
   private async tischBauen(
     gameId: GameId,
     accountIds: readonly string[],
+    config: unknown | null,
   ): Promise<{ tischId: string; accountIds: string[] }> {
     const module = requireModule(gameId);
     const sitze = zielSitze(gameId);
@@ -147,10 +187,20 @@ export class Vermittlung {
     // trotzdem hier, weil der Rest dieser Funktion sonst still Unsinn baut.
     if (!erster) throw new Error('leere Suchrunde');
 
+    // Der Regelsatz des Fensters — bei Filler traegt er die Spielart; ohne
+    // einen bleibt es bei der Vorgabe des Moduls. Danach darf der Haken des
+    // Spiels noch etwas dazulegen, das nur der Server weiss (bei Mememory
+    // die freigegebenen Uploads). Kein eigener Auffangzweig darum: Der
+    // Haken liest aus derselben Datenbank, die `createTable` gleich braucht
+    // — faellt sie aus, faellt der Tisch ohnehin aus.
+    const grundConfig = config ?? module.defaultConfig();
+    const haken = this.anreicherung[gameId];
+    const tischConfig = haken ? await haken(this.db, grundConfig) : grundConfig;
+
     const table = await createTable(this.db, {
       accountId: erster,
       gameId,
-      config: module.defaultConfig(),
+      config: tischConfig,
       seats: sitze,
       rounds: runden(gameId, sitze),
       // Nicht `public`: Der Tisch ist bereits vergeben. Stuende er in der

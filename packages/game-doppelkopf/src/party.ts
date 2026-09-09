@@ -198,6 +198,12 @@ export function act(party: PartyState, action: PartyAction): PartyState {
     throw new Error('Rundenpause: Es geht erst mit Weiter voran');
   }
   const next = applyRound(party.current, action);
+  // Wirkungslos heisst unveraendert - und zwar bis auf die Identitaet: Die
+  // Plattform erkennt eine Aktion ohne Wirkung genau daran und verbucht dann
+  // weder Snapshot noch Rundruf (siehe act() in server/src/runtime/party.ts).
+  // Ein frisches Objekt drumherum saehe fuer sie nach einer Aenderung aus, und
+  // jeder Client bekaeme denselben Stand unter neuer Revision noch einmal.
+  if (next === party.current) return party;
   const updated = { ...party, current: next };
 
   if (next.phase === 'redeal') return finalizeRedeal(updated);

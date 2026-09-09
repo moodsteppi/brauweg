@@ -713,14 +713,22 @@ export const api = {
    * — hoert der Client damit auf (Netz weg, Tab zu), faellt er von selbst aus
    * der Schlange.
    */
-  sucheStarten: (gameId: string) => post<Suchstand>(`/suche/${gameId}`),
+  sucheStarten: (gameId: string, config?: unknown) =>
+    post<Suchstand>(`/suche/${gameId}`, config === undefined ? undefined : { config }),
   sucheStand: (gameId: string) => request<Suchstand>(`/suche/${gameId}`),
   sucheAbbrechen: (gameId: string) => post<{ ok: true }>(`/suche/${gameId}/abbrechen`),
 
   tables: (gameId: string) => request<TableRow[]>(`/tables?game=${gameId}`),
   createTable: (body: {
     gameId: string;
-    config: unknown;
+    /*
+     * Weglassen heisst: der Regelsatz des Spielmoduls. Wer hier etwas
+     * mitschickt, UEBERSTIMMT das Modul — dieselben Zahlen im Client noch
+     * einmal auszuschreiben ist deshalb nur richtig, solange ein Bildschirm
+     * sie auch wirklich einstellen laesst (Regelsatz-Editor). Ein Bildschirm
+     * ohne Einstellungen laesst das Feld weg.
+     */
+    config?: unknown;
     seats: number;
     rounds: number;
     visibility?: 'public' | 'on_request' | 'club_only';

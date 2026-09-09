@@ -17,20 +17,29 @@
  * aus `naechsteSchwelle - anzahl`, "dieser Kauf trifft" aus `anzahl + 1 >=
  * naechsteSchwelle`).
  *
- * Drei Orte zeigen dieselbe Sache, deshalb stehen sie in einer Datei:
+ * Fuenf Orte zeigen dieselbe Sache, deshalb stehen sie in einer Datei:
  *   - die LEISTE mit einem Eintrag je Marke (Anzahl, Schwellen als Punkte,
  *     Bonus als Satz),
+ *   - dieselben Eintraege, nur kleiner, als ZEILE UNTER DEM BRETTTITEL DES
+ *     GEGNERS — sein Brett ist oeffentlich, also sind es seine Marken,
  *   - die MARKEN AN EINER EINHEIT auf Bank und Brett (nur Zeichen, kein
  *     Text — dort ist kein Platz),
  *   - dieselben Zeichen auf der LADENKARTE, wo eins hervortritt, wenn der
- *     Kauf eine Schwelle erreicht.
- * Zeichen und Farbe kommen fuer alle drei aus `MARKEN_ZEICHEN` und
+ *     Kauf eine Schwelle erreicht,
+ *   - und seit dem 6.9.2026 das BLATT, das ein angetippter Zaehler
+ *     aufschlaegt: Wirkung, alle Stufen, alle Traeger der Marke.
+ *
+ * DAS BLATT gibt es, weil ein `title` am Zeichen am Handy nichts ist: Dort
+ * gibt es kein Darauffahren, und auf dem Brett stand damit "4/5" und sonst
+ * nichts. Wer nicht auswendig weiss, was die Marke tut, kann nicht danach
+ * kaufen — und der Kauf ist die Entscheidung, um die es im Laden geht.
+ * Zeichen und Farbe kommen fuer alle vier aus `MARKEN_ZEICHEN` und
  * `MARKEN_FARBE` — sonst haette die Leiste einen gruenen Punkt fuer eine
  * Marke, die an der Einheit blau ist, und niemand brauchte lange, um beides
  * fuer zwei verschiedene Dinge zu halten.
  */
 
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import stil from './Synergien.module.css';
 
@@ -63,7 +72,48 @@ export interface Synergiestufe {
 export interface Synergie {
   marke: string;
   name: string;
+  /**
+   * Der Satz, was die Marke bewirkt. Er kommt aus dem Modul (`Synergie.wirkung`
+   * in synergien.ts) und steht ausdruecklich NICHT hier als Textliste: Wer die
+   * Boni dort umstellt, aendert den Satz im selben Zug mit.
+   */
+  wirkung: string;
   stufen: Synergiestufe[];
+}
+
+/**
+ * So viel von einer Katalog-Einheit, wie das Blatt braucht.
+ *
+ * Strukturell und nicht als Import von `./sicht` — der beschreibt die Sicht
+ * mit HILFE dieser Datei, ein Import zurueck waere ein Kreis. Der Bildschirm
+ * reicht seinen Katalog aus der Sicht herein; er passt darauf.
+ */
+export interface Markentraeger {
+  id: string;
+  name: string;
+  kosten: number;
+  marken: string[];
+}
+
+/** Der Katalog, wie der Bildschirm ihn haelt: je Kennung eine Einheit. */
+export type Markenkatalog = Record<string, Markentraeger>;
+
+/** Leer, solange der Katalog noch nicht da ist — als Konstante, nicht als `{}` je Bild. */
+const OHNE_KATALOG: Markenkatalog = {};
+
+/**
+ * Alle Einheiten des Katalogs, die diese Marke tragen — die Guenstigsten
+ * zuerst.
+ *
+ * ALLE und nicht nur die eigenen: Das Blatt beantwortet die Frage, was man
+ * noch kaufen muesste. Die Zugehoerigkeit ist keine Rechnung, sondern steht
+ * an jeder Einheit der Sicht (`marken`); sortiert wird nach `kosten` und
+ * sonst nach Katalogreihenfolge, damit die Reihe wie der Laden liest.
+ */
+export function traegerVon(katalog: Markenkatalog, marke: string): Markentraeger[] {
+  return Object.values(katalog)
+    .filter((e) => e.marken.includes(marke))
+    .sort((a, b) => a.kosten - b.kosten);
 }
 
 /** Der Stand einer Marke auf einem Brett — kommt in jeder Sicht. */
@@ -86,7 +136,7 @@ export interface Synergiestand {
 /**
  * Die Farbe einer Marke. Reine Zeichnung und kein Bedeutungstraeger der
  * Plattform — deshalb hier und nicht als CSS-Variable in styles.css, genau
- * wie `KOSTEN_FARBE` im Bildschirm (DESIGN.md: die Variablen sind fuer
+ * wie `KOSTEN_FARBE` in Zeichen.tsx (DESIGN.md: die Variablen sind fuer
  * Gruen/Gold/Lila/Rot reserviert, und eine Klassen-Marke ist keins davon).
  *
  * Die Farbe steht NIE allein: Jede Marke hat zusaetzlich ihr eigenes
@@ -110,7 +160,7 @@ const ERSATZFARBE = '#8fa3ad';
 /**
  * Das Zeichen einer Marke — gezeichnet, nicht geladen.
  *
- * Dieselbe Bauart wie `RollenZeichen` im Bildschirm: Striche auf 24 x 24,
+ * Dieselbe Bauart wie `RollenZeichen` in Zeichen.tsx: Striche auf 24 x 24,
  * `currentColor`. Ein `<img>` auf eine Datei, die es nicht gibt, waere ein
  * weisser Kasten (CLAUDE.md), und sieben winzige Bilder je Einheit auf
  * neunzehn Feldern waeren ausserdem neunzehn Ladevorgaenge fuer nichts.
@@ -304,112 +354,426 @@ export function Markenzeichen({
  * Der Klassenname fuer eine Ladenkarte, deren Kauf eine Schwelle trifft.
  *
  * Als Konstante hinaus und nicht als eigenes Bauteil: Die Karte selbst steht
- * im Bildschirm (Tafelrunde.tsx) und traegt ihre eigenen Klassen; hier kommt
- * nur die eine dazu, deren Aussehen in dieses Modul gehoert.
+ * nebenan (Ladenkarte.tsx) und traegt ihre eigenen Klassen; hier kommt nur
+ * die eine dazu, deren Aussehen in dieses Modul gehoert.
  */
 export const KARTE_TRIFFT: string = stil.karteTrifft;
+
+// ---------------------------------------------------------------------------
+// Das Blatt einer Marke
+// ---------------------------------------------------------------------------
+
+/**
+ * Was ein angetippter Markenzaehler aufschlaegt: Wirkung, Stufen, Traeger.
+ *
+ * Jede Zahl darin kommt aus der Sicht. Die STUFEN sind die Tabelle des Moduls
+ * (`synergieTabelle`), die TRAEGER sind der Katalog aus derselben Sicht, und
+ * welche Stufe gilt, sagt `stand.schwelle` — nicht ein Vergleich mit einer 2
+ * im Client. Fehlt die Tabelle (sie kommt erst mit der ersten Sicht), bleibt
+ * der Kopf stehen und der Rest weg: Eine erfundene Stufe waere schlimmer als
+ * eine fehlende.
+ *
+ * Es liegt als Ueberblender ueber dem ganzen Tisch und nicht als Aufklapp am
+ * Zaehler: Am Handy ist die Leiste eine Reihe 22 px hoher Chips ueber dem
+ * Brett — ein Kasten darunter schoebe genau das Brett weg, das man dabei
+ * ansieht.
+ */
+export function Markenblatt({
+  stand,
+  synergie,
+  katalog,
+  onSchliessen,
+}: {
+  stand: Synergiestand;
+  /** Die Stufen dieser Marke aus der Tabelle der Sicht; fehlt bis zur ersten Sicht. */
+  synergie: Synergie | undefined;
+  katalog: Markenkatalog;
+  onSchliessen: () => void;
+}): React.JSX.Element {
+  const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
+  const traeger = traegerVon(katalog, stand.marke);
+
+  /*
+   * Escape schliesst. Am Handy tippt man daneben (der Ueberblender selbst
+   * nimmt den Tipp), an der Tastatur erwartet man diese Taste — und ohne sie
+   * waere der einzige Weg hinaus der kleine Knopf oben rechts.
+   */
+  useEffect(() => {
+    const beiTaste = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onSchliessen();
+    };
+    window.addEventListener('keydown', beiTaste);
+    return () => window.removeEventListener('keydown', beiTaste);
+  }, [onSchliessen]);
+
+  return (
+    /* Der Ueberblender ist die Flaeche "daneben": ein Tipp darauf schliesst.
+       Das Blatt selbst haelt den Tipp auf, sonst schluesse jeder Griff ins
+       Blatt es wieder. */
+    <div className={stil.ueberblender} onClick={onSchliessen}>
+      <div
+        className={stil.blatt}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Marke ${stand.name}`}
+        style={{ '--marke': farbe } as React.CSSProperties}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className={stil.blattkopf}>
+          <span className={stil.blattzeichen} style={{ color: farbe }} aria-hidden="true">
+            <svg className={stil.glyphe} viewBox="0 0 24 24">
+              {MARKEN_ZEICHEN[stand.marke] ?? <circle cx="12" cy="12" r="7" />}
+            </svg>
+          </span>
+          <span className={stil.blatttitel}>
+            <h2 className={stil.blattname}>{stand.name}</h2>
+            {/* Der Stand in Worten. Die Subtraktion ist die aus der Leiste:
+                zwei Zahlen der Sicht, keine Schwelle aus dem Client. */}
+            <p className={stil.blattstand}>
+              {stand.anzahl} auf dem Brett
+              {stand.naechsteSchwelle !== null
+                ? ` · noch ${stand.naechsteSchwelle - stand.anzahl} bis ${stand.naechsteSchwelle}`
+                : ' · höchste Stufe'}
+            </p>
+          </span>
+          <button
+            type="button"
+            className={stil.blattzu}
+            onClick={onSchliessen}
+            aria-label="Blatt schließen"
+          >
+            ×
+          </button>
+        </header>
+
+        {synergie && <p className={stil.wirkung}>{synergie.wirkung}</p>}
+
+        {synergie && (
+          <ul className={stil.stufen} aria-label="Stufen">
+            {synergie.stufen.map((stufe) => (
+              <li
+                key={stufe.schwelle}
+                className={stil.stufe}
+                /* Genau die Stufe, die die Sicht als erreicht nennt. */
+                data-aktiv={stand.schwelle === stufe.schwelle ? '' : undefined}
+                /* Und die schon ueberschrittenen: blass, aber nicht als
+                   Ziel. Verglichen werden zwei Zahlen der Sicht. */
+                data-erfuellt={
+                  stand.schwelle !== null && stufe.schwelle < stand.schwelle ? '' : undefined
+                }
+              >
+                <span className={stil.stufenzahl}>{stufe.schwelle}</span>
+                <span className={stil.stufenbonus}>{bonusSatz(stufe.bonus)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Wer die Marke traegt — die Antwort auf "was muesste ich noch
+            kaufen". Ohne Katalog (erste Sicht) bleibt der Abschnitt weg. */}
+        {traeger.length > 0 && (
+          <section className={stil.traeger}>
+            <h3 className={stil.traegertitel}>Trägt diese Marke</h3>
+            <ul className={stil.traegerliste}>
+              {traeger.map((e) => (
+                <li key={e.id} className={stil.traegereintrag}>
+                  <span className={stil.traegername}>{e.name}</span>
+                  <span className={stil.traegerpreis}>
+                    {e.kosten}
+                    <span className={stil.nurVorlesen}> Gold</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Ein Zaehler — einmal, fuer beide Orte
+// ---------------------------------------------------------------------------
+
+/**
+ * Der Chip einer Marke: Zeichen, Zaehler, und die ganze Auskunft am Zeiger
+ * und fuer das Vorlesegeraet.
+ *
+ * Er steht in der eigenen Leiste UND unter dem Bretttitel des gezeigten
+ * Gegners. Zwei Abschriften waeren zwei Wahrheiten: Beim ersten Mal, dass
+ * jemand den Zaehler von "3/4" auf "3 von 4" umstellt, saehe der Gegner
+ * anders aus als man selbst, obwohl beides dieselbe Zahl aus derselben Sicht
+ * ist. Unterschiedlich ist allein die GROESSE, und die entscheidet `klasse`.
+ */
+function Markenchip({
+  stand,
+  synergie,
+  klasse,
+  offen,
+  onOeffnen,
+}: {
+  stand: Synergiestand;
+  synergie: Synergie | undefined;
+  klasse: string;
+  /** Steht das Blatt dieser Marke gerade offen? Nur fuer das Vorlesegeraet. */
+  offen: boolean;
+  onOeffnen: () => void;
+}): React.JSX.Element {
+  const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
+  const satz = standSatz(stand, synergie);
+  /*
+   * „2/4“, solange es eine naechste Schwelle gibt, sonst nur die Zahl:
+   * Auf der hoechsten Stufe waere jeder Nenner erfunden.
+   */
+  const zaehler =
+    stand.naechsteSchwelle !== null
+      ? `${stand.anzahl}/${stand.naechsteSchwelle}`
+      : `${stand.anzahl}`;
+  return (
+    <li
+      className={klasse}
+      /* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Nicht
+         "anzahl >= 2" — die 2 stuende dann im Client. */
+      data-aktiv={stand.schwelle !== null ? '' : undefined}
+      style={{ '--marke': farbe } as React.CSSProperties}
+      /* Am Zeiger die ganze Auskunft. Am Handy gibt es keinen Zeiger;
+         dort ist der Vorlese-Text unten dieselbe Auskunft. */
+      title={satz ? `${stand.name} · ${satz}` : stand.name}
+    >
+      {/* Der Chip IST die Schaltflaeche, die das Blatt aufschlaegt — der
+          `title` bleibt daneben stehen, ersetzt es aber nicht: Am Handy gibt
+          es kein Darauffahren. Die Trefferflaeche reicht ueber den Chip
+          hinaus (CSS), sonst waere sie 22 px hoch. */}
+      <button
+        type="button"
+        className={stil.knopf}
+        aria-haspopup="dialog"
+        aria-expanded={offen}
+        onClick={onOeffnen}
+      >
+        <span className={stil.zeichen} style={{ color: farbe }}>
+          <svg className={stil.glyphe} viewBox="0 0 24 24" aria-hidden="true">
+            {MARKEN_ZEICHEN[stand.marke] ?? <circle cx="12" cy="12" r="7" />}
+          </svg>
+        </span>
+        <span className={stil.zahl} aria-hidden="true">
+          {zaehler}
+        </span>
+        {/* Der ganze Satz fuer das Vorlesegeraet. Sichtbar waere er
+            genau die Textliste, die diese Leiste losgeworden ist. */}
+        <span className={stil.nurVorlesen}>
+          {stand.name}: {stand.anzahl}
+          {stand.naechsteSchwelle !== null ? ` von ${stand.naechsteSchwelle}` : ''}
+          {satz ? ` · ${satz}` : ''}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+/**
+ * Eine Reihe Chips samt dem Blatt, das einer davon aufschlaegt.
+ *
+ * Beide Orte (eigene Leiste, fremde Zeile) bekommen dasselbe Verhalten aus
+ * derselben Stelle — sonst haette der Gegnerzaehler beim ersten Umbau kein
+ * Blatt mehr, obwohl er derselbe Chip ist. Verschieden sind nur die
+ * Klassennamen und die Beschriftung.
+ */
+function Chipreihe({
+  staende,
+  tabelle,
+  katalog,
+  listenKlasse,
+  chipKlasse,
+  beschriftung,
+  leerzeile,
+}: {
+  staende: readonly Synergiestand[];
+  tabelle: readonly Synergie[];
+  katalog: Markenkatalog;
+  listenKlasse: string;
+  chipKlasse: string;
+  beschriftung?: string;
+  leerzeile?: React.ReactNode;
+}): React.JSX.Element {
+  const nachMarke = useMemo(() => new Map(tabelle.map((s) => [s.marke, s])), [tabelle]);
+  const [offeneMarke, setOffeneMarke] = useState<string | null>(null);
+  const schliesse = useCallback(() => setOffeneMarke(null), []);
+
+  /*
+   * Das Blatt zeigt IMMER den Stand aus der neuesten Sicht — offen gehalten
+   * wird nur die Marke, nicht ihre Zahlen. Wer waehrend des Lesens seinen
+   * dritten Krieger aufstellt, sieht die Stufe im Blatt umspringen.
+   */
+  const offen = staende.find((s) => s.marke === offeneMarke) ?? null;
+
+  /*
+   * Verschwindet die Marke ganz vom Brett (verkauft, verschmolzen), gilt sie
+   * als geschlossen. Ohne dieses Aufraeumen kaeme das Blatt beim naechsten
+   * Kauf derselben Marke von selbst wieder — ein Fenster, das aufgeht, ohne
+   * dass jemand tippt. Kein Timer daran, deshalb ist die Liste in der
+   * Abhaengigkeit unbedenklich (CLAUDE.md).
+   */
+  useEffect(() => {
+    if (offeneMarke !== null && !staende.some((s) => s.marke === offeneMarke)) {
+      setOffeneMarke(null);
+    }
+  }, [staende, offeneMarke]);
+
+  return (
+    <>
+      <ul className={listenKlasse} aria-label={beschriftung}>
+        {leerzeile}
+        {staende.map((stand) => (
+          <Markenchip
+            key={stand.marke}
+            stand={stand}
+            synergie={nachMarke.get(stand.marke)}
+            klasse={chipKlasse}
+            offen={offen?.marke === stand.marke}
+            onOeffnen={() => setOffeneMarke(stand.marke)}
+          />
+        ))}
+      </ul>
+      {offen && (
+        <Markenblatt
+          stand={offen}
+          synergie={nachMarke.get(offen.marke)}
+          katalog={katalog}
+          onSchliessen={schliesse}
+        />
+      )}
+    </>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Die Leiste
 // ---------------------------------------------------------------------------
 
 /**
- * Die Synergie-Leiste.
+ * Die Synergie-Leiste — kleine Zähler, keine Textliste.
  *
- * Am Handy liegt sie ueber dem Brett und laesst sich zuklappen, am Desktop
- * steht sie seitlich daneben — WO, entscheidet allein das Stylesheet
- * (Synergien.module.css). Deshalb wird die Liste hier nie aus dem Baum
- * genommen, sondern nur `data-offen` gesetzt: Ein `{offen && …}` haette am
- * Desktop, wo es gar keinen Klappknopf gibt, die Leiste fuer immer
- * verschwinden lassen, sobald jemand sie einmal am Handy zugeklappt hat.
+ * Je Marke ein Chip: das Zeichen, dann die Anzahl gegen die nächste Schwelle
+ * („2/4"). Bis zum 05.09.2026 stand hier eine Liste mit Name, Punktreihe und
+ * ganzem Bonussatz je Marke — bei sieben Marken über 200 px Höhe, und die
+ * gingen dem Brett ab. Der Satz ist nicht verloren: Er steht als Vorlese-Text
+ * im Chip und als `title` am Zeiger.
  *
- * `staende` kommt aus der Sicht und ist die einzige Wahrheit ueber Anzahl
- * und Schwelle. Die Tabelle steuert nur die PUNKTE bei — wie viele Stufen es
- * gibt und wo sie liegen; fehlt sie noch, bleiben die Punkte weg und der
- * Rest steht trotzdem da.
+ * WO SIE STEHT, entscheidet weiterhin allein das Stylesheet
+ * (Synergien.module.css): am Handy als Reihe über dem Brett, ab 75rem als
+ * Spalte an der linken Kante. Zugeklappt wird nichts mehr — eine Reihe aus
+ * 22 px hohen Chips ist nichts, was man wegräumen müsste, und der Klappknopf
+ * war selbst so hoch wie sie.
+ *
+ * `staende` kommt aus der Sicht und ist die einzige Wahrheit über Anzahl und
+ * Schwelle. Die Tabelle steuert nur den Bonus-Satz bei; fehlt sie noch,
+ * bleibt der Satz kürzer und der Zähler steht trotzdem da.
  */
 export function Synergieleiste({
   staende,
   tabelle,
+  katalog = OHNE_KATALOG,
 }: {
   staende: readonly Synergiestand[];
   tabelle: readonly Synergie[];
+  /**
+   * Der Katalog aus der Sicht — nur fuer die Traegerreihe im Blatt. Wahlfrei,
+   * weil die Leiste vor der ersten Sicht schon steht; dann bleibt die Reihe
+   * weg, der Rest des Blattes nicht.
+   */
+  katalog?: Markenkatalog;
 }): React.JSX.Element {
-  const [offen, setOffen] = useState(true);
-  const nachMarke = useMemo(
-    () => new Map(tabelle.map((s) => [s.marke, s])),
-    [tabelle],
+  return (
+    <section className={stil.leiste} aria-label="Synergien">
+      {/*
+        Die Reihe ist seit #100 dieselbe wie bei den Fremdmarken: Jedes Zeichen
+        ist eine Schaltflaeche und schlaegt das Blatt zu seiner Marke auf.
+        `katalog` braucht nur die Traegerreihe darin.
+      */}
+      <Chipreihe
+        staende={staende}
+        tabelle={tabelle}
+        katalog={katalog}
+        listenKlasse={stil.liste}
+        chipKlasse={stil.chip}
+        leerzeile={
+          staende.length === 0 ? (
+            /*
+              KURZ, seit dem 06.09.2026. Hier stand "Noch keine Marken auf dem
+              Feld - jeder Recke bringt ein bis zwei mit." Der Satz war richtig
+              und stand am falschen Ort: Die Leiste teilt sich am Handy jetzt
+              eine Zeile mit Leben, Rang und Feldplaetzen (`.tr-statuszeile` in
+              styles.css), und ein Satz dieser Laenge sprengte sie in eine
+              zweite - 20 Pixel, ausgerechnet in Runde 1, wo man den Laden
+              darunter braucht. Dazu stand er dort als DRITTE Lehrzeile neben
+              "Dein Feld ist leer ..." auf dem Brett und "Deine Bank ist leer -
+              kauf dir unten im Laden einen Recken." Was eine Marke ist, sagen
+              die Ladenkarten selbst, das Regelblatt und seit #100 das Blatt,
+              das ein angetipptes Zeichen aufschlaegt; hier genuegt, dass noch
+              keine da ist.
+            */
+            <li className={stil.leer}>Noch keine Marken</li>
+          ) : undefined
+        }
+      />
+
+    </section>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Die Marken eines fremden Bretts
+// ---------------------------------------------------------------------------
+
+/**
+ * Die schmale Markenzeile unter dem Bretttitel des gezeigten Gegners.
+ *
+ * Warum es sie gibt: Das gegnerische Brett ist oeffentlich, und `sicht.ts`
+ * legt an JEDEN Gegner dasselbe Feld `synergien`, das auch der eigene Sitz
+ * bekommt. Am Bildschirm kam davon bis zum 05.09.2026 nichts an — wer wissen
+ * wollte, ob der Gegner auf sechs Waechter zugeht, musste dessen Figuren
+ * einzeln abzaehlen. Genau diese Frage beantwortet die Zeile in einem Blick.
+ *
+ * Dieselben Chips wie in der eigenen Leiste, nur kleiner: Das Brett darueber
+ * ist schmal, und die Zeile soll ihm keine Hoehe nehmen. Ein zweites Aussehen
+ * fuer dieselbe Sache waere zudem eine zweite Zeichensprache — die Farben und
+ * Zeichen sind ja bereits die von den Figuren auf dem Brett darunter.
+ *
+ * Steht keine Marke auf dem fremden Brett (erste Runde, oder ein Tisch aus
+ * der Zeit vor den Synergien — dort fehlt das Feld ganz), kommt gar nichts:
+ * Ein „Noch keine Marken" ist eine Aufforderung, und aufzustellen hat man auf
+ * dem Brett des Gegners nichts.
+ */
+export function Fremdmarken({
+  staende,
+  tabelle,
+  beschriftung,
+  katalog = OHNE_KATALOG,
+}: {
+  staende: readonly Synergiestand[];
+  tabelle: readonly Synergie[];
+  /** Wie bei der eigenen Leiste: nur fuer die Traegerreihe im Blatt. */
+  katalog?: Markenkatalog;
+  /**
+   * Wessen Marken das sind, fuer das Vorlesegeraet — z. B. „Marken von Ada".
+   * Sichtbar steht der Name schon im Bretttitel direkt darueber; ein Vorleser
+   * springt aber in Listen hinein, ohne die Ueberschrift davor gehoert zu
+   * haben.
+   */
+  beschriftung: string;
+}): React.JSX.Element | null {
+  if (staende.length === 0) return null;
 
   return (
-    <section className={stil.leiste} data-offen={offen ? '' : undefined} aria-label="Synergien">
-      <button
-        type="button"
-        className={stil.kopf}
-        aria-expanded={offen}
-        onClick={() => setOffen((a) => !a)}
-      >
-        <span>Synergien</span>
-        {/* Die Zahl steht auch im zugeklappten Zustand da — sonst muesste man
-            aufklappen, um zu sehen, ob es ueberhaupt etwas zu sehen gibt. */}
-        <span className={stil.kopfzahl}>{staende.length}</span>
-        <span className={stil.pfeil} aria-hidden="true" />
-      </button>
-
-      <ul className={stil.liste}>
-        {staende.length === 0 && (
-          <li className={stil.leer}>
-            Noch keine Marken auf dem Feld — jeder Recke bringt ein bis zwei mit.
-          </li>
-        )}
-        {staende.map((stand) => {
-          const synergie = nachMarke.get(stand.marke);
-          const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
-          return (
-            <li
-              key={stand.marke}
-              className={stil.eintrag}
-              /* Aktiv heisst: Die Sicht nennt eine erreichte Schwelle. Nicht
-                 "anzahl >= 2" — die 2 stuende dann im Client. */
-              data-aktiv={stand.schwelle !== null ? '' : undefined}
-              style={{ '--marke': farbe } as React.CSSProperties}
-            >
-              <span className={stil.zeile}>
-                <span className={stil.zeichen} style={{ color: farbe }}>
-                  <svg className={stil.glyphe} viewBox="0 0 24 24" aria-hidden="true">
-                    {MARKEN_ZEICHEN[stand.marke] ?? <circle cx="12" cy="12" r="7" />}
-                  </svg>
-                </span>
-                <span className={stil.name}>{stand.name}</span>
-                <span className={stil.anzahl}>
-                  {stand.anzahl}
-                  {stand.naechsteSchwelle !== null ? ` von ${stand.naechsteSchwelle}` : ''}
-                </span>
-              </span>
-
-              {/* Die Punkte sind die Schwellen der Tabelle, nicht die
-                  Einheiten: drei Punkte, einer je Stufe. Voll ist, was die
-                  Anzahl aus der Sicht erreicht; der naechste traegt einen
-                  Ring. Vorgelesen wird davon nichts — der Satz darunter sagt
-                  dasselbe in Worten. */}
-              {synergie && (
-                <span className={stil.punkte} aria-hidden="true">
-                  {synergie.stufen.map((stufe) => (
-                    <i
-                      key={stufe.schwelle}
-                      className={stil.punkt}
-                      data-voll={stand.anzahl >= stufe.schwelle ? '' : undefined}
-                      data-naechste={stand.naechsteSchwelle === stufe.schwelle ? '' : undefined}
-                    />
-                  ))}
-                </span>
-              )}
-
-              <span className={stil.satz}>{standSatz(stand, synergie)}</span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <Chipreihe
+      staende={staende}
+      tabelle={tabelle}
+      katalog={katalog}
+      listenKlasse={stil.fremdzeile}
+      chipKlasse={`${stil.chip} ${stil.fremd}`}
+      beschriftung={beschriftung}
+    />
   );
 }

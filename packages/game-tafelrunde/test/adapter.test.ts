@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { tafelrunde } from '../src/adapter.js';
+import { BOT_TAKT_MS, KAMPF_NACHLAUF_MS, tafelrunde } from '../src/adapter.js';
 import { DEFAULT_REGELN, SEAT_COUNTS } from '../src/regeln.js';
 import { type TafelrundePartie, vollerVorrat } from '../src/partie.js';
 import { kartenZahl } from '../src/katalog.js';
@@ -52,6 +52,10 @@ describe('Adapter', () => {
     assert.ok(
       tafelrunde.validateConfig({ ...DEFAULT_REGELN, ladenPlaetze: 1.5 }, 2, 1).length > 0,
     );
+    // Eine halbe Sekunde Vorbereitung ist keine, sondern ein Reflextest.
+    assert.ok(
+      tafelrunde.validateConfig({ ...DEFAULT_REGELN, vorbereitungMs: 500 }, 2, 1).length > 0,
+    );
     // Neun Sitze passen an keinen Tisch dieser Plattform.
     assert.ok(tafelrunde.validateConfig(DEFAULT_REGELN, 9, 1).length > 0);
   });
@@ -85,6 +89,45 @@ describe('Adapter', () => {
     assert.equal(tafelrunde.interludeMs!(weiter), null);
   });
 
+  /**
+   * Der Nachlauf hat einen BODEN, und der steht nicht in diesem Paket: Nach
+   * dem letzten Ereignis laeuft die Todesfolge noch 500 ms (NACHSPIEL_MS in
+   * KampfAnzeige.tsx minus einem Takt), und das Ergebnisschild braucht 420 ms
+   * zum Auffahren (ka-auftritt im Stylesheet). Wer darunter geht, kuerzt nicht
+   * das Zusehen, sondern schneidet die Anzeige mitten in der Bewegung ab.
+   *
+   * Die Zahlen stehen hier als Konstanten und nicht als Import: Der Client
+   * darf aus einem Spielpaket importieren, umgekehrt nicht. Dass die Probe
+   * dann zwei Abschriften prueft, ist genau ihr Zweck — sie schlaegt an, wenn
+   * jemand den Nachlauf senkt, ohne im Client nachzusehen.
+   */
+  it('laesst nach dem letzten Ereignis Zeit fuer Todesfolge und Ergebnisschild', () => {
+    const nachspielUeberstandMs = 500;
+    const schildAuftrittMs = 420;
+    assert.ok(
+      KAMPF_NACHLAUF_MS >= nachspielUeberstandMs + schildAuftrittMs,
+      'Der Nachlauf schneidet in die laufende Anzeige',
+    );
+    // Und danach muss noch etwas STEHEN bleiben, sonst hat man es nicht
+    // gelesen, sondern nur aufblitzen sehen.
+    assert.ok(KAMPF_NACHLAUF_MS - nachspielUeberstandMs >= 800);
+  });
+
+  /**
+   * Der Takt der Plattform (0,8 s) ist auf ein Kartenspiel gemuenzt. Hier
+   * macht ein Bot je Runde ein Dutzend Handgriffe, und weil `amZug` immer nur
+   * den kleinsten offenen Sitz nennt, arbeitet die Plattform sie NACHEINANDER
+   * ab — wer schon bereit ist, sieht zu. Gemessen: 16 fremde Handgriffe je
+   * Runde im Median, mit 0,8 s also 12,8 s reines Warten.
+   */
+  it('kuerzt der Plattform den Takt zwischen zwei Botzuegen', () => {
+    assert.equal(tafelrunde.meta.botTaktHoechstMs, BOT_TAKT_MS);
+    assert.ok(BOT_TAKT_MS < 800, 'sonst waere die Angabe wirkungslos');
+    // Nicht null: Die Bretter der Gegner sind oeffentlich, ein Bot soll sich
+    // aufbauen und nicht erscheinen.
+    assert.ok(BOT_TAKT_MS > 0);
+  });
+
   it('ueberlebt Speichern und Laden', () => {
     const p = tafelrunde.act(partie(), 0, { typ: 'kaufen', platz: 0 });
     const roh = JSON.parse(JSON.stringify(tafelrunde.serialize(p)));
@@ -116,6 +159,79 @@ describe('Adapter', () => {
     let p = tafelrunde.act(geladen, 0, { typ: 'bereit' });
     p = tafelrunde.act(p, 1, { typ: 'bereit' });
     assert.equal(tafelrunde.advanceInterlude!(p).runde, 2);
+  });
+
+  /**
+   * Die Frist der Platzierungsphase (Karte 6a9d03d4, 06.09.2026).
+   *
+   * Sie ist das Gegenstueck zur Schaupause: Diese laeuft, wenn NIEMAND
+   * handeln darf, jene, waehrend alle gleichzeitig ruesten. Die Plattform
+   * unterscheidet beide daran, dass `phaseMs` ausserhalb der Vorbereitung
+   * null liefert — ohne dieses null stellte sie die Frist der vorigen Runde
+   * nie neu (siehe phaseMs in game-api).
+   */
+  it('nennt die Rundenfrist nur waehrend der Vorbereitung', () => {
+    const p = partie(2);
+    assert.equal(tafelrunde.phaseMs!(p), DEFAULT_REGELN.vorbereitungMs);
+
+    const imKampf = tafelrunde.act(
+      tafelrunde.act(p, 0, { typ: 'bereit' }),
+      1,
+      { typ: 'bereit' },
+    );
+    assert.equal(imKampf.phase, 'kampf');
+    assert.equal(tafelrunde.phaseMs!(imKampf), null);
+  });
+
+  it('macht mit der Frist alle offenen Sitze bereit und beginnt den Kampf', () => {
+    // Ein Sitz meldet sich, der andere sieht nicht mehr hin. Ohne die Frist
+    // stuende der Tisch bis zum Verfall in der Vorbereitung.
+    const p = tafelrunde.act(partie(2), 0, { typ: 'bereit' });
+    assert.equal(p.phase, 'vorbereitung');
+
+    const weiter = tafelrunde.advancePhase!(p);
+    assert.equal(weiter.phase, 'kampf');
+    assert.ok(weiter.kaempfe.length > 0, 'die Kaempfe stehen nicht');
+    // Gebucht wird nichts: Der Truedler tritt mit dem Brett an, das er hat.
+    assert.deepEqual(weiter.heere[1]!.brett, p.heere[1]!.brett);
+    assert.equal(weiter.heere[1]!.gold, p.heere[1]!.gold);
+  });
+
+  it('laesst die abgelaufene Frist ausserhalb der Vorbereitung unberuehrt', () => {
+    // Die Plattform kann knapp zu spaet melden: Im selben Augenblick hat der
+    // letzte Sitz "bereit" getippt.
+    let p = tafelrunde.act(partie(2), 0, { typ: 'bereit' });
+    p = tafelrunde.act(p, 1, { typ: 'bereit' });
+    assert.equal(tafelrunde.advancePhase!(p), p);
+  });
+
+  /**
+   * Ein Snapshot aus der Zeit vor der Frist.
+   *
+   * Ohne das Nachziehen liefe die Partie nach dem Deploy bis zum Ende ohne
+   * Deckel weiter — und zwar unauffaellig, denn die Phase endet ja weiterhin,
+   * sobald alle bereit sind.
+   */
+  it('ergaenzt einem alten Snapshot die fehlende Rundenfrist', () => {
+    const roh = tafelrunde.serialize(partie(2)) as Record<string, unknown>;
+    const regeln = { ...(roh['regeln'] as Record<string, unknown>) };
+    delete regeln['vorbereitungMs'];
+    roh['regeln'] = regeln;
+
+    const geladen = tafelrunde.deserialize(roh);
+    assert.equal(geladen.regeln.vorbereitungMs, DEFAULT_REGELN.vorbereitungMs);
+    assert.equal(tafelrunde.phaseMs!(geladen), DEFAULT_REGELN.vorbereitungMs);
+  });
+
+  it('ergaenzt einem alten Tisch die fehlende Rundenfrist beim Anlegen', () => {
+    const { vorbereitungMs, ...ohne } = DEFAULT_REGELN;
+    const p = tafelrunde.createParty({
+      config: ohne as typeof DEFAULT_REGELN,
+      seats: 2,
+      rounds: 1,
+      seed: 42,
+    });
+    assert.equal(p.regeln.vorbereitungMs, vorbereitungMs);
   });
 
   it('liefert Platzierungen und Erfahrungsgrundlage fuer jeden Sitz', () => {

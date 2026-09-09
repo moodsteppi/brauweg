@@ -36,9 +36,18 @@
  * JSON, und was am anderen Ende ankommt, ist ohnehin eine frische Kopie.
  * Ohne diese Umschrift bestünde der ganze Vertrag aus `readonly`-Meldungen
  * und niemand sähe die echten Abweichungen darin.
+ *
+ * Tupel behalten ihre Stellenzahl. Das ist keine Feinheit: Fillers Barrieren
+ * sind `readonly (readonly [number, number])[]`, und ein pauschal zu
+ * `number[][]` verflachtes Tupel passt auf keinen Client-Typ, der `[number,
+ * number]` schreibt. Der Vertrag wäre dann rot, obwohl Modul und Client
+ * dasselbe meinen — und die einzige Abhilfe wäre, den Client-Typ zu
+ * verwässern.
  */
 export type Beweglich<T> = T extends readonly (infer E)[]
-  ? Beweglich<E>[]
+  ? number extends T['length']
+    ? Beweglich<E>[]
+    : { -readonly [K in keyof T]: Beweglich<T[K]> }
   : T extends object
     ? { -readonly [K in keyof T]: Beweglich<T[K]> }
     : T;
@@ -98,6 +107,11 @@ export interface GeseheneFelder {
   oben: Set<string>;
   /** Felder der Rundensicht. Leer, wenn `round` nie gefüllt war. */
   runde: Set<string>;
+  /**
+   * Felder der angeforderten Unterobjekte, je Feldname (siehe die Option
+   * `unterobjekte`). Ein nicht angefordertes Feld steht nicht drin.
+   */
+  unter: Record<string, Set<string>>;
   /** Wie viele Aktionen die Bots ausgeführt haben. */
   schritte: number;
 }
@@ -118,12 +132,41 @@ export interface GeseheneFelder {
  */
 export function felderEinerPartie(
   modul: Spielmodul,
-  { sitze, runden, seed = 4711 }: { sitze: number; runden: number; seed?: number },
+  {
+    sitze,
+    runden,
+    seed = 4711,
+    config,
+    unterobjekte = [],
+  }: {
+    sitze: number;
+    runden: number;
+    seed?: number;
+    config?: unknown;
+    /**
+     * Felder, in die zusätzlich hineingesehen wird — ein Objekt oder eine
+     * Liste von Objekten. Die Kartenspiele brauchen das nicht, ihre einzige
+     * zweite Ebene ist `round`. Bei Tafelrunde hängt aber die halbe
+     * Rüstkammer an `eigenes` und die Mitspielerleiste an `gegner`; ohne
+     * diesen Durchgriff bliebe ungeprüft, was der Bildschirm am meisten
+     * liest.
+     */
+    unterobjekte?: readonly string[];
+  },
 ): GeseheneFelder {
   const oben = new Set<string>();
   const runde = new Set<string>();
+  const unter: Record<string, Set<string>> = {};
+  for (const name of unterobjekte) unter[name] = new Set<string>();
   let party = modul.createParty({
-    config: modul.defaultConfig(),
+    /*
+     * `config` ueberschreibt den Vorgabe-Regelsatz. Gebraucht wird das nur
+     * dort, wo ein Feld der Sicht an einer SPIELART haengt: Filler liefert
+     * `barrierenMoeglich` ausschliesslich in der Spielart `build`. Ohne diesen
+     * Weg muesste der Vertrag das Feld ungeprueft lassen — und genau die
+     * ungeprueften Felder sind der Grund, aus dem es diese Dateien gibt.
+     */
+    config: config ?? modul.defaultConfig(),
     seats: sitze,
     rounds: runden,
     seed,
@@ -136,6 +179,15 @@ export function felderEinerPartie(
       for (const feld of Object.keys(sicht)) oben.add(feld);
       const r = sicht.round as Record<string, unknown> | null | undefined;
       if (r) for (const feld of Object.keys(r)) runde.add(feld);
+      for (const name of unterobjekte) {
+        const wert = sicht[name];
+        // Liste oder Einzelobjekt, beides kommt vor: `gegner` ist eine Liste,
+        // `eigenes` ist eines oder null (bei einem Zuschauer).
+        for (const stueck of Array.isArray(wert) ? wert : [wert]) {
+          if (stueck === null || typeof stueck !== 'object') continue;
+          for (const feld of Object.keys(stueck)) unter[name]?.add(feld);
+        }
+      }
     }
   };
 
@@ -154,7 +206,7 @@ export function felderEinerPartie(
     sammle();
   }
 
-  return { oben, runde, schritte };
+  return { oben, runde, unter, schritte };
 }
 
 /**

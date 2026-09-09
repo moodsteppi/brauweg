@@ -3,30 +3,38 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
+import { Bankreihe, Einheitenmarke, Hexbrett } from '../minispiele/tafelrunde/Brett';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
+import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
-import { UNTERGRUND } from '../minispiele/tafelrunde/figuren';
+import { type Kaufhindernis, Ladenkarte, kaufhindernis } from '../minispiele/tafelrunde/Ladenkarte';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
-import { Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
-import { gegnerDieseRunde } from '../minispiele/tafelrunde/platzierung';
+import { AugeZeichen, Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
+import { Phasenzeile } from '../minispiele/tafelrunde/Phasenzeile';
 import {
-  Figurbild,
+  type Platz,
+  gegnerDieseRunde,
+  leistenplaetze,
+} from '../minispiele/tafelrunde/platzierung';
+import type { Einheit, Stufenwerte, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
+import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
+import { GoldZeichen, KOSTEN_FARBE, LebenZeichen, RollenZeichen } from '../minispiele/tafelrunde/Zeichen';
+import {
   KampfAnzeige,
   type Kampfpaarung,
+  type Paarungsergebnis,
   abzuspielen,
 } from '../minispiele/tafelrunde/KampfAnzeige';
 import {
   type Synergie,
   type Synergiestand,
-  KARTE_TRIFFT,
+  Fremdmarken,
   Markennamen,
-  Markenzeichen,
   Synergieleiste,
   markennamen,
   schwellenPruefer,
 } from '../minispiele/tafelrunde/Synergien';
 import {
-  type Kaempfer,
   type Ort,
   bestandVon,
   darfSchieben,
@@ -34,10 +42,8 @@ import {
   neuVerschmolzen,
   ortLesen,
   ortSchluessel,
-  platzVon,
   rastermass,
   tippfolge,
-  wabenLage,
 } from '../minispiele/tafelrunde/zuege';
 import { useVorladen } from '../minispiele/tafelrunde/vorladen';
 import { useTable } from '../useTable';
@@ -70,123 +76,12 @@ import { useTable } from '../useTable';
 // Die Sicht des Moduls
 // ---------------------------------------------------------------------------
 
-/** Kampfrolle. Siehe packages/game-tafelrunde/src/katalog.ts. */
-type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
-
-interface Einheit {
-  id: string;
-  name: string;
-  kosten: number;
-  rolle: Rolle;
-  marken: string[];
-  leben: number;
-  angriff: number;
-  tempo: number;
-  reichweite: number;
-  ruestung: number;
-}
-
 /*
- * `Kaempfer` und `Ort` stehen in minispiele/tafelrunde/zuege.ts — zusammen
- * mit der Rechnerei, die sie benutzt. Ein zweiter Satz hier liefe beim ersten
- * neuen Feld auseinander.
+ * Sie steht seit dem 06.09.2026 in minispiele/tafelrunde/sicht.ts und nicht
+ * mehr hier. Grund: Der Vertrag unter src/vertrag/ haelt diese Typen gegen
+ * die echte Modulsicht, und ein Import aus DIESEM Bildschirm zoege React
+ * samt aller Bauteile in einen Test, der nur Typen vergleichen will.
  */
-
-interface Serie {
-  art: 'sieg' | 'niederlage' | null;
-  laenge: number;
-}
-
-/** Alles, was nur dem eigenen Sitz gehoert. */
-interface EigeneSicht {
-  sitz: number;
-  leben: number;
-  gold: number;
-  level: number;
-  laden: (string | null)[];
-  bank: (Kaempfer | null)[];
-  brett: (Kaempfer | null)[];
-  serie: Serie;
-  bereit: boolean;
-  ausRunde: number | null;
-  feldplaetze: number;
-  belegt: number;
-  einkommen: number;
-  neuwuerfelnKosten: number;
-  aufstiegKosten: number | null;
-  darfHandeln: boolean;
-  /**
-   * Die Marken auf dem eigenen BRETT mit Anzahl, erreichter und naechster
-   * Schwelle (sicht.ts). Nur Marken mit mindestens einem Traeger stehen
-   * drin — das Modul laesst die uebrigen weg.
-   *
-   * Wahlfrei gefuehrt wie `kaempfe`: Ein Tisch, der vor den Synergien
-   * aufgemacht wurde, hat das Feld nicht. Dann bleibt die Leiste leer,
-   * statt dass der Bildschirm stolpert.
-   */
-  synergien?: Synergiestand[];
-}
-
-interface FremdeSicht {
-  sitz: number;
-  leben: number;
-  level: number;
-  serie: Serie;
-  brett: (Kaempfer | null)[];
-  bereit: boolean;
-  ausRunde: number | null;
-  verlassen: boolean;
-  /** Auch beim Gegner: Das Brett ist oeffentlich, also sind es seine Marken. */
-  synergien?: Synergiestand[];
-}
-
-interface TafelrundeSicht {
-  ich: number | null;
-  runde: number;
-  rundenGrenze: number;
-  phase: 'vorbereitung' | 'kampf' | 'ende';
-  fertig: boolean;
-  sieger: number | null;
-  zuschauer: boolean;
-  ladenPlaetze: number;
-  bankPlaetze: number;
-  brettFelder: number;
-  brettReihen: number;
-  brettSpalten: number;
-  verschmelzZahl: number;
-  maxStufe: number;
-  vorrat: Record<string, number>;
-  eigenes: EigeneSicht | null;
-  gegner: FremdeSicht[];
-  leftSeats: number[];
-  /**
-   * Die Kaempfe der laufenden Kampfphase mit vollem Ablaufprotokoll — ein
-   * Spieler bekommt seinen eigenen, ein Zuschauer alle; ausserhalb der
-   * Kampfphase leer (sicht.ts). Als wahlfrei gefuehrt, weil eine Sicht aus
-   * der Zeit vor der Kampfsimulation das Feld nicht hat — der Bildschirm
-   * zeigt dann die Wartezeile statt zu stolpern.
-   */
-  kaempfe?: Kampfpaarung[];
-  /** Kommt NUR in der ersten Sicht nach dem Beitritt, siehe sicht.ts. */
-  katalog?: Einheit[];
-  /**
-   * Die Synergie-Tabelle mit allen Stufen — wie der Katalog nur in der ersten
-   * Sicht und aus demselben Grund: Sie aendert sich nie. Wer sie nicht
-   * festhaelt, hat ab dem zweiten Rundruf keine Schwellen mehr.
-   */
-  synergieTabelle?: Synergie[];
-}
-
-/**
- * Warum ein Kauf gerade nicht geht — die AUSKUNFT, nicht die Entscheidung.
- *
- * Ob gekauft werden darf, sagt allein `legalActions`. Dieser Wert wird erst
- * gebildet, wenn dort nichts steht, und beschriftet nur noch die schon
- * gefallene Absage. Andersherum waere es der Fehler, vor dem der Kopf dieser
- * Datei warnt: Ein Client, der selbst entscheidet, zeigt frueher oder spaeter
- * einen Knopf, den der Server abweist.
- */
-type Kaufhindernis = 'gold' | 'bank' | null;
 
 /** Aktion des Moduls, siehe partie.ts. */
 type Aktion =
@@ -201,30 +96,20 @@ type Aktion =
 // Feste Werte
 // ---------------------------------------------------------------------------
 
-/**
- * Regelsatz, mit dem die Match-Suche einen Tisch aufmacht.
+/*
+ * HIER STAND BIS ZUM 05.09.2026 DER REGELSATZ, wortgleich abgeschrieben von
+ * DEFAULT_REGELN (packages/game-tafelrunde/src/regeln.ts): sieben Zahlen, die
+ * `createTable` als `config` mitbekam. Der Server schreibt eine mitgeschickte
+ * `config` als Regelsatz des Tisches fest — die Kopie UEBERSTIMMTE also das
+ * Modul, ohne dass irgendwo ein Fehler auffiel. Zweimal an einem Tag waere
+ * genau das durchgerutscht: bei der Umstellung auf 20 Startleben und noch
+ * einmal bei der auf 14.
  *
- * Muss zu DEFAULT_REGELN in packages/game-tafelrunde/src/regeln.ts passen.
- * Bewusst ausgeschrieben statt ueber `api.defaults()` geholt: Die Suche soll
- * nicht auf eine zusaetzliche Antwort warten, bevor sie den Tisch aufmacht —
- * dieselbe Ueberlegung wie bei Filler.
- *
- * ACHTUNG, DIESE KOPIE WIRD MITGESCHICKT und nicht nur angezeigt: `config`
- * geht an `createTable`, der Server nimmt sie als Regelsatz des Tisches. Eine
- * veraltete Zahl hier ueberstimmt also DEFAULT_REGELN, ohne dass irgendwo ein
- * Fehler auffaellt. Genau das waere am 05.09.2026 bei der Umstellung auf 20
- * Leben passiert. Dass diese Liste ueberhaupt doppelt steht, ist ein eigener
- * Punkt auf dem Board.
+ * Heute laesst dieser Bildschirm `config` weg. Der Server nimmt dann
+ * `defaultConfig()` des Moduls (tables/service.ts) — dieselbe Quelle, aus der
+ * auch die serverseitige Mitspielersuche ihren Tisch baut. Wer wieder etwas
+ * mitschickt, holt die Doppelung zurueck.
  */
-const REGELSATZ = {
-  startLeben: 20,
-  startGold: 2,
-  ladenPlaetze: 5,
-  bankPlaetze: 9,
-  neuwuerfelnKosten: 2,
-  grundeinkommen: 5,
-  rundenGrenze: 30,
-};
 
 /**
  * Sitze am Bot-Tisch: vier.
@@ -234,8 +119,12 @@ const REGELSATZ = {
  * Menschen, die freien Plaetze fuellt der Server nach 30 Sekunden mit Bots.
  * Hier gegen die KI sind vier genug: Acht Bots rechnen laenger, ohne dass es
  * sich anders spielt.
+ *
+ * Exportiert wie SITZ_WAHL nur fuer den Vertrag: Eine Sitzzahl, die das Modul
+ * nicht kennt, weist der Server ab (`seatCountUnsupported`), und der Knopf
+ * fuehrt dann ins Leere.
  */
-const SITZE = 4;
+export const SITZE = 4;
 
 /**
  * Takt, in dem der Stand der Suche abgefragt wird.
@@ -247,14 +136,18 @@ const SITZE = 4;
 const SUCH_TAKT_MS = 1000;
 
 /**
- * Sitzzahlen des geplanten Tisches. Muss zu SEAT_COUNTS in
- * packages/game-tafelrunde/src/regeln.ts passen; der Server weist ab, was
- * das Modul nicht kennt (`seatCountUnsupported`).
+ * Sitzzahlen des geplanten Tisches.
  *
  * Zwei bis acht, aber nicht alles als Knopf: Sieben Knoepfe nebeneinander
  * liest niemand. Angeboten wird, was man sich verabredet.
+ *
+ * Das ist bewusst eine AUSWAHL und keine Kopie — anders als der Regelsatz,
+ * der hier bis zum 05.09.2026 abgeschrieben stand. Der Server weist ab, was
+ * das Modul nicht kennt (`seatCountUnsupported`), und dass jede Zahl von hier
+ * in SEAT_COUNTS steht, haelt `src/vertrag/tafelrunde-tisch.test.ts` fest.
+ * Exportiert allein dafuer.
  */
-const SITZ_WAHL = [2, 3, 4, 6, 8] as const;
+export const SITZ_WAHL = [2, 3, 4, 6, 8] as const;
 
 /**
  * Die Bot-Stufen, wie sie hier heissen.
@@ -271,21 +164,6 @@ const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
 ];
 
 /**
- * Der Name des Suchparameters im geteilten Link.
- *
- * `/?tisch=KX7M9Q` fuehrt direkt in die Beitreten-Ansicht mit ausgefuelltem
- * Code (App.tsx springt dafuer beim Start auf diesen Bildschirm). Beigetreten
- * wird trotzdem erst auf Knopfdruck: Ein Link, der einen ungefragt an einen
- * Tisch setzt, ist ein Link, den man nicht mehr anklicken mag.
- */
-export const TISCH_PARAMETER = 'tisch';
-
-/** Der Link, den der Gastgeber weitergibt. */
-function beitrittsLink(code: string): string {
-  return `${window.location.origin}/?${TISCH_PARAMETER}=${code}`;
-}
-
-/**
  * Wie viele Runden ein Tisch gehen soll.
  *
  * Tafelrunde ist ein Turnier bis zum letzten Ueberlebenden, es gibt nichts zu
@@ -295,75 +173,12 @@ function beitrittsLink(code: string): string {
 const RUNDEN = 1;
 
 /**
- * Farbe je Kostenstufe. Reine Zeichnung, kein Bedeutungstraeger der
- * Plattform — deshalb steht sie hier und nicht als CSS-Variable in
- * styles.css (DESIGN.md: Variablen sind fuer Gruen/Gold/Lila/Rot reserviert,
- * und eine Kostenstufe ist keins davon).
- */
-const KOSTEN_FARBE: Record<number, string> = {
-  1: '#8fa3ad',
-  2: '#5aa86a',
-  3: '#5ea0f0',
-};
-
-/**
  * Ein Tisch aus der Zeit vor den Synergien schickt das Feld nicht mit. Die
  * leere Liste steht als KONSTANTE hier und nicht als `?? []` an der
  * Verwendung: Ein frisches Array bei jedem Rundruf waere eine neue
  * Abhaengigkeit und wuerde den Pruefer darunter jedes Mal neu bauen.
  */
 const OHNE_SYNERGIEN: Synergiestand[] = [];
-
-const ROLLE_NAME: Record<Rolle, string> = {
-  wache: 'Wache',
-  schuetze: 'Schütze',
-  magier: 'Magier',
-  meuchler: 'Meuchler',
-  beistand: 'Beistand',
-};
-
-/**
- * Das Zeichen einer Rolle — gezeichnet, nicht geladen.
- *
- * Seit es Figuren gibt (figuren.ts), ist das hier der RUECKFALL: Jede Einheit
- * zeigt ihr Bild, und nur wenn dazu keins vorliegt oder es nicht laedt, tritt
- * diese Strichzeichnung an seine Stelle (`Figurbild`). Fuer die fuenf Rollen
- * selbst gibt es weiterhin keine Bilder, und ein `<img>` auf eine Datei, die
- * es nicht gibt, ist ein weisser Kasten (CLAUDE.md und DESIGN.md) — deshalb
- * bleiben es fuenf schlichte Pfade.
- */
-function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
-  const pfade: Record<Rolle, React.JSX.Element> = {
-    wache: <path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3Z" />,
-    schuetze: <path d="M5 19 19 5M19 5h-6M19 5v6M5 19c4-1 7-4 8-8" />,
-    magier: <path d="M12 3v5M12 16v5M3 12h5M16 12h5M6.5 6.5l3 3M14.5 14.5l3 3M17.5 6.5l-3 3M9.5 14.5l-3 3" />,
-    meuchler: <path d="M6 18 18 6l1 4-9 9-4-1ZM6 18l-2 2" />,
-    beistand: <path d="M12 4v16M4 12h16" />,
-  };
-  return (
-    <svg className="tr-rolle" viewBox="0 0 24 24" aria-hidden="true">
-      {pfade[rolle]}
-    </svg>
-  );
-}
-
-/** Muenze und Herz stehen als Zeichen daneben, damit die Zahl nicht nackt ist. */
-function GoldZeichen(): React.JSX.Element {
-  return (
-    <svg className="tr-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 7.5v9M9.5 9.8h4a1.9 1.9 0 0 1 0 3.8h-3a1.9 1.9 0 0 0 0 3.8h4" />
-    </svg>
-  );
-}
-
-function LebenZeichen(): React.JSX.Element {
-  return (
-    <svg className="tr-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 20s-7-4.3-7-9.2A4 4 0 0 1 12 8a4 4 0 0 1 7-.8c0 .3.0.4 0 .6C19 15.7 12 20 12 20Z" />
-    </svg>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Der Bildschirm
@@ -446,6 +261,18 @@ export function Tafelrunde({
     if (!sicht?.synergieTabelle) return;
     setSynergieTabelle(sicht.synergieTabelle);
   }, [sicht?.synergieTabelle]);
+
+  /**
+   * Und die Werte je Sternstufe — dritter Fall derselben Sache: Sie reisen
+   * mit dem Katalog in der ersten Sicht und danach nie wieder. Ohne sie
+   * bliebe das Blatt einer angetippten Einheit ohne Zahlen; nachgerechnet
+   * wird nichts (siehe Kopf von Einheitenblatt.tsx).
+   */
+  const [stufenwerte, setStufenwerte] = useState<Record<string, Stufenwerte[]>>({});
+  useEffect(() => {
+    if (!sicht?.stufenwerte) return;
+    setStufenwerte(sicht.stufenwerte);
+  }, [sicht?.stufenwerte]);
 
   // -------------------------------------------------------------------------
   // Match-Suche
@@ -558,7 +385,6 @@ export function Tafelrunde({
     try {
       const { id } = await api.createTable({
         gameId: 'tafelrunde',
-        config: REGELSATZ,
         seats: SITZE,
         rounds: 1,
         visibility: 'on_request',
@@ -605,7 +431,6 @@ export function Tafelrunde({
     try {
       const antwort = await api.createTable({
         gameId: 'tafelrunde',
-        config: REGELSATZ,
         seats: sitze,
         rounds: RUNDEN,
         visibility: oeffentlich ? 'public' : 'on_request',
@@ -1126,6 +951,7 @@ export function Tafelrunde({
         sicht={sicht}
         katalog={katalog}
         synergieTabelle={synergieTabelle}
+        stufenwerte={stufenwerte}
         /* `legalActions` ist im Protokoll als Kartenspiel-Aktion typisiert
            ({type, seat}); dieses Modul schickt seine eigene Form. Der Server
            reicht die Liste unveraendert durch (runtime/party.ts), deshalb ist
@@ -1133,6 +959,7 @@ export function Tafelrunde({
         legaleZuege={(tisch.view?.legalActions ?? []) as unknown as Aktion[]}
         revision={tisch.view?.revision ?? -1}
         frist={tisch.view?.interludeDeadline ?? null}
+        rundenfrist={tisch.view?.phaseDeadline ?? null}
         sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
         onAktion={(aktion) => tisch.send(aktion)}
         onZurueck={verlasseUndZurueck}
@@ -1319,13 +1146,53 @@ interface SitzZeile {
   isBot: boolean;
 }
 
+/**
+ * Der Ablegeplatz unter einem Bildschirmpunkt — als Schluessel, oder null.
+ *
+ * Die Trefferpruefung laeuft ueber `document.elementFromPoint`, weil das Ziel
+ * unter dem FINGER liegt und nicht unter dem Ereignis (das gehoert wegen der
+ * Zeigererfassung immer noch der gezogenen Einheit). Beide Aufrufer — die
+ * Vorschau waehrend des Ziehens und das Ablegen am Ende — gehen durch diese
+ * eine Funktion: Was leuchtet, ist damit garantiert dasselbe Feld, auf dem
+ * die Einheit gleich landet.
+ *
+ * `elementFromPoint` gibt es in jsdom nicht. Ohne die Pruefung waere jeder
+ * Test, der zieht, ein Absturz statt einer Aussage.
+ */
+function zielUnter(x: number, y: number): string | null {
+  if (typeof document.elementFromPoint !== 'function') return null;
+  const unten = document.elementFromPoint(x, y);
+  return (unten?.closest('[data-ziel]') as HTMLElement | null)?.dataset.ziel ?? null;
+}
+
+/**
+ * Was die Spielflaeche von der Geometrie des Bretts wissen muss: sein
+ * Seitenverhaeltnis.
+ *
+ * Es ist die eine Zahl, die das Stylesheet nicht selbst kennen kann — aus ihr
+ * rechnet `.tr-spielflaeche` die Brettbreite aus der freien HOEHE
+ * (styles.css). Sie kommt aus `rastermass()`, also aus derselben Funktion,
+ * die auch die Waben legt (`zuege.ts`); waere sie im Stylesheet abgeschrieben,
+ * stuende das Brett beim naechsten geaenderten Rastermass anders da, als der
+ * Kampf es rechnet.
+ *
+ * Reihen und Spalten kommen aus der Sicht und nicht aus einer Konstante: Sie
+ * stehen im Regelsatz und sind je Tisch verstellbar.
+ */
+function brettmass(sicht: TafelrundeSicht): React.CSSProperties {
+  const mass = rastermass(sicht.brettReihen, sicht.brettSpalten);
+  return { '--tr-brettverhaeltnis': mass.seitenverhaeltnis } as React.CSSProperties;
+}
+
 function Ruestkammer({
   sicht,
   katalog,
   synergieTabelle,
+  stufenwerte,
   legaleZuege,
   revision,
   frist,
+  rundenfrist,
   sitze,
   onAktion,
   onZurueck,
@@ -1334,17 +1201,32 @@ function Ruestkammer({
   katalog: Record<string, Einheit>;
   /** Alle Stufen aller Marken — einmal beim Beitritt geholt und festgehalten. */
   synergieTabelle: Synergie[];
+  stufenwerte: Record<string, Stufenwerte[]>;
   legaleZuege: Aktion[];
   revision: number;
   /** Frist der Schaupause (`interludeDeadline`), waehrend des Kampfes gesetzt. */
   frist: number | null;
+  /**
+   * Frist der Platzierungsphase (`phaseDeadline`), waehrend der Vorbereitung
+   * gesetzt. Zwei Felder und nicht eins, weil sie zwei verschiedene Dinge
+   * meinen: Die Schaupause laeuft, waehrend NIEMAND handeln darf, und die
+   * Kampfanzeige rechnet ihr Aufholen daraus aus (`startVersatz`). Ihr die
+   * Frist der Ruestphase unterzuschieben hiesse, den Kampf mitten im Getuemmel
+   * beginnen zu lassen.
+   */
+  rundenfrist: number | null;
   sitze: readonly SitzZeile[];
   onAktion: (aktion: Aktion) => void;
   onZurueck: () => void;
 }): React.JSX.Element {
   const eigenes = sicht.eigenes;
   const kampfbild = useKampfbild(sicht);
-  /** Gegner, dessen Brett oben liegt. Null = niemand ausgewaehlt. */
+  /**
+   * Wem ich gerade zusehe — der Sitz, dessen Brett oben liegt bzw. dessen
+   * Kampf die Arena abspielt. Null heisst: nichts gewaehlt, es gilt die
+   * Vorgabe (in der Ruestphase der erste lebende Gegner, im Kampf mein
+   * eigener).
+   */
   const [gezeigterGegner, setGezeigterGegner] = useState<number | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
 
@@ -1367,6 +1249,23 @@ function Ruestkammer({
    * Vorlesegeraet ueberhaupt funktioniert.
    */
   const [gewaehlt, setGewaehlt] = useState<Ort | null>(null);
+
+  /**
+   * Welche Einheit gerade ihr Blatt aufgeschlagen hat — der Ort, nicht die
+   * Einheit: Was dort steht, kann sich unter dem offenen Blatt aendern (ein
+   * Kauf verschmilzt still), und ein festgehaltener Kaempfer zeigte dann
+   * Werte einer Einheit, die es nicht mehr gibt.
+   *
+   * SEIT DEM 6.9.2026 IST DAS DIE ANTWORT AUF EINEN TIPP. Vorher waehlte ein
+   * Tipp die Einheit nur aus und sagte nichts ueber sie — was ein Recke kann,
+   * stand nirgends (Robin: „ein Spieler muss raten, wofuer er drei Muenzen
+   * ausgibt"). Der Auswahl-Weg geht darueber weiter: Im Blatt steht ein Knopf,
+   * der es schliesst und die Einheit gewaehlt LAESST, und danach ist alles wie
+   * bisher — Ziele leuchten, der naechste Tipp setzt ab. Ohne diesen Weg waere
+   * Antippen—Ziel-antippen zu Ende, und das ist der einzige Bedienweg, der mit
+   * einem Vorlesegeraet funktioniert (siehe `Einheitenmarke` in Brett.tsx).
+   */
+  const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
 
   /**
    * Eine abgesetzte Aktion sperrt die Bedienung, bis der Server geantwortet
@@ -1398,6 +1297,10 @@ function Ruestkammer({
       if (wartet) return;
       setGesendet(revision);
       setGewaehlt(null);
+      // Und das Blatt zu: Es beschreibt eine Einheit an einem Ort, und genau
+      // der aendert sich gleich. Ein stehenbleibendes Blatt zeigte nach dem
+      // Verkaufen die Werte von jemandem, der nicht mehr da ist.
+      setBlattOrt(null);
       onAktion(aktion);
     },
     [wartet, revision, onAktion],
@@ -1454,6 +1357,31 @@ function Ruestkammer({
   /** Was gerade am Finger haengt, samt Bildschirmkoordinate fuer den Schatten. */
   const [zug, setZug] = useState<{ von: Ort; x: number; y: number; zieht: boolean } | null>(null);
   const startPunkt = useRef<{ x: number; y: number } | null>(null);
+  /*
+   * Ob gerade wirklich gezogen wird — dieselbe Auskunft wie `zug.zieht`, nur
+   * synchron lesbar. Der Bewegungs-Behandler hat keine Abhaengigkeiten (er
+   * soll bei jedem Zeigerereignis derselbe bleiben) und sieht den Zustand
+   * deshalb nicht. Ohne diese Merkzelle bliebe die Vorschau auf dem letzten
+   * Feld stehen, sobald der Finger in die Naehe seines Ausgangspunkts
+   * zurueckkehrt: Dort ist die Strecke wieder kurz, `weit` also falsch.
+   */
+  const zieht = useRef(false);
+
+  /**
+   * Welches Feld gerade UNTER dem Finger liegt — als Schluessel, nicht als Ort.
+   *
+   * Ohne diese Anzeige laesst man eine Einheit blind los: Der Schatten haengt
+   * am Finger und verdeckt genau die Wabe, auf die man zielt. Gesucht wird
+   * mit demselben Griff wie beim Ablegen (`elementFromPoint` auf
+   * `[data-ziel]`), damit Vorschau und Ergebnis nicht auseinanderlaufen
+   * koennen: Was hier leuchtet, ist buchstaeblich dasselbe Element, das
+   * `beiZeigerEnde` gleich findet.
+   *
+   * Als Zeichenkette gehalten und nur bei WECHSEL gesetzt: Ein neuer Ort bei
+   * jedem Zeigerereignis waere ein neues Objekt und damit ein Neuzeichnen des
+   * ganzen Bretts sechzigmal je Sekunde.
+   */
+  const [ueberZiel, setUeberZiel] = useState<string | null>(null);
 
   const darfHandeln = eigenes?.darfHandeln === true && !wartet;
 
@@ -1488,7 +1416,15 @@ function Ruestkammer({
     (ort: Ort): void => {
       if (!darfHandeln || !eigenes) return;
       const folge = tippfolge(eigenes, gewaehlt, ort);
-      if (folge.art === 'waehlen') setGewaehlt(folge.ort);
+      /*
+       * `waehlen` heisst: Der Tipp gilt der Einheit selbst und keinem Ziel —
+       * es ist ja noch nichts ausgewaehlt. Seit dem 6.9.2026 antwortet der
+       * Bildschirm darauf mit ihrem Blatt statt mit einer stummen Auswahl
+       * (siehe `blattOrt` oben). Die Auswahl setzt danach das Blatt selbst,
+       * ueber seinen Verschieben-Knopf; die drei anderen Faelle sind
+       * unveraendert, damit der Weg zum Ziel derselbe bleibt.
+       */
+      if (folge.art === 'waehlen') setBlattOrt(folge.ort);
       else if (folge.art === 'abwaehlen') setGewaehlt(null);
       else if (folge.art === 'schieben') schiebe(folge.von, folge.nach);
     },
@@ -1509,6 +1445,7 @@ function Ruestkammer({
     (ort: Ort, ereignis: React.PointerEvent): void => {
       if (!darfHandeln) return;
       startPunkt.current = { x: ereignis.clientX, y: ereignis.clientY };
+      zieht.current = false;
       setZug({ von: ort, x: ereignis.clientX, y: ereignis.clientY, zieht: false });
       // Ohne Zeigererfassung verliert das Element die Bewegung, sobald der
       // Finger es verlaesst — und das tut er sofort.
@@ -1522,9 +1459,11 @@ function Ruestkammer({
     if (!start) return;
     const weit =
       Math.abs(ereignis.clientX - start.x) > 8 || Math.abs(ereignis.clientY - start.y) > 8;
+    if (weit) zieht.current = true;
     setZug((alt) =>
       alt ? { ...alt, x: ereignis.clientX, y: ereignis.clientY, zieht: alt.zieht || weit } : alt,
     );
+    if (zieht.current) setUeberZiel(zielUnter(ereignis.clientX, ereignis.clientY));
   }, []);
 
   /**
@@ -1534,27 +1473,43 @@ function Ruestkammer({
    */
   const beiZeigerAbbruch = useCallback((): void => {
     startPunkt.current = null;
+    zieht.current = false;
     setZug(null);
+    setUeberZiel(null);
   }, []);
 
   const beiZeigerEnde = useCallback(
     (ort: Ort, ereignis: React.PointerEvent): void => {
       const gezogen = zug?.zieht === true;
       startPunkt.current = null;
+      zieht.current = false;
       setZug(null);
+      setUeberZiel(null);
       if (!gezogen) {
         // Ein Tipp, keine Bewegung: Auswahl statt Ziehen.
         tippeOrt(ort);
         return;
       }
-      const unten = document.elementFromPoint(ereignis.clientX, ereignis.clientY);
-      const ziel = ortLesen(
-        (unten?.closest('[data-ziel]') as HTMLElement | null)?.dataset.ziel,
-      );
+      const ziel = ortLesen(zielUnter(ereignis.clientX, ereignis.clientY));
       if (ziel) schiebe(ort, ziel);
     },
     [zug?.zieht, tippeOrt, schiebe],
   );
+
+  /**
+   * Das Feld unter dem Finger — aber nur, wenn die gezogene Einheit dort auch
+   * landen DARF.
+   *
+   * Die Vorschau soll nicht mehr versprechen, als das Ablegen einloest: Ueber
+   * einem vollen Brett leuchtet nichts, und genau das ist die Auskunft.
+   * Geprueft wird mit derselben Funktion wie beim Ablegen (`zielbar`), also
+   * mit den zwei Zahlen aus der Sicht — hier wird keine Regel nachgebaut.
+   */
+  const ablegeZiel = useMemo(() => {
+    if (zug?.zieht !== true || ueberZiel === null) return null;
+    const ort = ortLesen(ueberZiel);
+    return ort && zielbar(zug.von, ort) ? ueberZiel : null;
+  }, [zug?.zieht, zug?.von, ueberZiel, zielbar]);
 
   // -------------------------------------------------------------------------
   // Ableitungen aus legalActions
@@ -1568,6 +1523,39 @@ function Ruestkammer({
   }, [legaleZuege]);
   const darfWuerfeln = legaleZuege.some((z) => z.typ === 'neuwuerfeln');
   const darfLevel = legaleZuege.some((z) => z.typ === 'levelAuf');
+
+  /**
+   * Welche Plaetze der Server gerade zum Verkauf freigibt, als Schluessel.
+   *
+   * Auch das kommt aus `legalActions` und nicht aus einer Bedingung hier:
+   * Verkaufen geht heute immer, wenn jemand handeln darf — aber „heute immer"
+   * ist keine Zusage, und ein Knopf, den der Server abweist, ist genau der
+   * Fehler, vor dem der Kopf dieser Datei warnt.
+   */
+  const verkaufbar = useMemo(() => {
+    const raus = new Set<string>();
+    for (const zug of legaleZuege) {
+      if (zug.typ === 'verkaufen') raus.add(ortSchluessel(zug.ort));
+    }
+    return raus;
+  }, [legaleZuege]);
+
+  /**
+   * Der erste freie Bankplatz — das Ziel des Ablegen-Knopfes im Blatt.
+   *
+   * Dieselbe Wahl, die auch das Modul beim Kauf trifft (`bank.indexOf(null)`
+   * in partie.ts): der erste freie. Ist keiner frei, gibt es den Knopf nicht,
+   * statt dass Ablegen still zu einem Tausch mit einem Nachbarn wird — das
+   * waere etwas anderes, als auf dem Knopf steht. `bankPlaetze` kommt aus der
+   * Sicht, weil die Zahl im Regelsatz steht.
+   */
+  const freierBankplatz = useMemo<number | null>(() => {
+    if (!eigenes) return null;
+    for (let platz = 0; platz < sicht.bankPlaetze; platz += 1) {
+      if (!(eigenes.bank[platz] ?? null)) return platz;
+    }
+    return null;
+  }, [eigenes, sicht.bankPlaetze]);
 
   const bestand = useMemo<Map<string, number>>(
     () => (eigenes ? bestandVon(eigenes) : new Map()),
@@ -1587,28 +1575,14 @@ function Ruestkammer({
   );
 
   /**
-   * Warum ein Ladenplatz gesperrt ist.
-   *
-   * Beide Groessen stehen in der Sicht — das Gold und die Bank —, es wird
-   * also keine Regel nachgerechnet, sondern eine Absage beschriftet, die
-   * `legalActions` schon ausgesprochen hat (siehe `Kaufhindernis`). Die
-   * Reihenfolge ist Absicht: Fehlt beides, nennt der Bildschirm das Gold,
-   * denn daran laesst sich in derselben Runde noch etwas aendern.
-   *
-   * Gibt bewusst `null` zurueck, wenn die Zahlen die Sperre NICHT erklaeren.
-   * Dann steht der Grund woanders (Kampfphase, schon bereit, ausgeschieden),
-   * und eine geratene Beschriftung waere schlimmer als keine.
+   * Warum ein Ladenplatz gesperrt ist — die Auskunft steht bei der Karte
+   * selbst (`kaufhindernis` in Ladenkarte.tsx), damit die Probe
+   * `/probe/ruestkammer` dieselbe bekommt. Hier haengen nur die beiden Zahlen
+   * der Sicht davor.
    */
   const hindernis = useCallback(
-    (angeboten: Einheit | undefined): Kaufhindernis => {
-      if (!angeboten || !eigenes) return null;
-      if (eigenes.gold < angeboten.kosten) return 'gold';
-      // Eine volle Bank verbietet den Kauf nur, wenn er nicht sofort
-      // verschmilzt — genau dann steht er aber in `legalActions`, und diese
-      // Funktion laeuft gar nicht erst.
-      if (!eigenes.bank.includes(null)) return 'bank';
-      return null;
-    },
+    (angeboten: Einheit | undefined): Kaufhindernis =>
+      eigenes ? kaufhindernis(eigenes.gold, !eigenes.bank.includes(null), angeboten) : null,
     [eigenes],
   );
 
@@ -1645,9 +1619,67 @@ function Ruestkammer({
    */
   const gegnerJetzt = gegnerDieseRunde(sicht.kaempfe, sicht.ich);
 
+  /**
+   * Wie viele Sitze noch dabei und davon schon bereit sind.
+   *
+   * Das ist die Auskunft, die in der Platzierungsphase an der Stelle der
+   * Restzeit steht — und die einzige, die dort ehrlich ist: Die Phase endet
+   * nicht nach Zeit, sondern wenn der Letzte bereit ist (siehe Kopf von
+   * Phasenzeile.tsx). Gezaehlt wird ueber dieselbe Reihe, aus der auch die
+   * Mitspielerleiste entsteht, damit beide nie unterschiedlich zaehlen.
+   */
+  const sitzreihe = leistenplaetze(eigenes, sicht.gegner, gegnerJetzt);
+  const offeneSitze = sitzreihe.filter((p) => p.ausRunde === null).length;
+  const bereitZahl = sitzreihe.filter((p) => p.ausRunde === null && p.bereit).length;
+
   const lebendeGegner = sicht.gegner.filter((g) => g.ausRunde === null);
   const gegner =
     sicht.gegner.find((g) => g.sitz === gezeigterGegner) ?? lebendeGegner[0] ?? sicht.gegner[0];
+
+  /*
+   * DIE WAHL GILT BIS ZUM PHASENWECHSEL, dann faellt sie zurueck.
+   *
+   * Ohne dieses Zuruecksetzen haette ein Tipp aus der Ruestphase eine Folge,
+   * die niemand erwartet: Wer sich dort das Brett eines Mitspielers ansieht —
+   * der Normalfall, dafuer ist die Leiste da —, saehe gleich darauf DESSEN
+   * Kampf statt seines eigenen. Ein Blick aufs Nachbarbrett darf einen den
+   * eigenen Kampf nicht kosten.
+   *
+   * An der PHASE und nicht am Sichtobjekt: Ein Effekt mit `sicht` in der
+   * Abhaengigkeitsliste liefe bei jedem Rundruf des Servers (CLAUDE.md) und
+   * setzte die Wahl mitten im Zusehen zurueck.
+   */
+  useEffect(() => {
+    setGezeigterGegner(null);
+  }, [sicht.phase]);
+
+  /**
+   * Wessen Kampf die Arena abspielt — in dieser Reihenfolge:
+   *
+   *   1. der Angetippte, WENN er diese Runde ueberhaupt antritt. Ein
+   *      ausgeschiedener Sitz hat keinen Kampf mehr; seine Kachel ist aber
+   *      weiter eine Schaltflaeche, und ohne diese Pruefung stuende nach einem
+   *      Tipp darauf eine leere Buehne da.
+   *   2. mein eigener, solange ich einen habe.
+   *   3. irgendeiner. Das trifft, wer selbst ausgeschieden ist oder nur
+   *      zusieht: Bis zum 06.09.2026 sah genau diese Person als Einzige gar
+   *      keinen Kampf, weil ihre Sicht keinen enthielt.
+   *
+   * Gefragt wird `kampfbild` und nicht `sicht.kaempfe`: Nach dem
+   * Phasenwechsel steht die Arena noch einen Wimpernschlag zum Verblassen da
+   * (`useKampfbild`), und in der Sicht sind die Kaempfe dann schon weg — der
+   * gezeigte Kampf duerfte im Ausklang nicht noch einmal wechseln.
+   */
+  const schauKaempfe = kampfbild?.kaempfe ?? [];
+  const eigenerKampf = eigenes !== null && eigenes.ausRunde === null;
+  const kampfSitz =
+    gezeigterGegner !== null && abzuspielen(schauKaempfe, gezeigterGegner) !== null
+      ? gezeigterGegner
+      : eigenerKampf
+        ? sicht.ich
+        : (schauKaempfe[0]?.a ?? null);
+  /** Ich sehe einem fremden Kampf zu und kann zu meinem zurueck. */
+  const zuschauendImKampf = eigenerKampf && kampfSitz !== sicht.ich;
 
   /**
    * Die Arena an der Stelle der beiden Bretter, solange ein Kampf zu zeigen
@@ -1665,10 +1697,16 @@ function Ruestkammer({
      */
     <Buehne runde={sicht.runde} verblasst={kampfbild.verblasst}>
       <KampfAnzeige
-        key={kampfSchluessel(kampfbild.kaempfe, sicht.ich)}
+        key={kampfSchluessel(kampfbild.kaempfe)}
         kaempfe={kampfbild.kaempfe}
+        paarungen={kampfbild.paarungen}
         ich={sicht.ich}
+        /* Wessen Kampf: meiner, oder der des Angetippten. Die Anzeige rechnet
+           daraus auch, welche Reihe unten steht — man sieht einen fremden
+           Kampf so, wie sein Besitzer ihn sieht. */
+        zeigt={kampfSitz}
         brettReihen={sicht.brettReihen}
+        arenaReihen={sicht.arenaReihen}
         brettSpalten={sicht.brettSpalten}
         katalog={katalog}
         nameVon={(sitz) => spielername(zeile(sitz), sitz)}
@@ -1684,47 +1722,99 @@ function Ruestkammer({
     </Buehne>
   );
 
+  /**
+   * Laeuft gerade ein Kampf auf dem Schirm?
+   *
+   * An `kampfbild` und nicht an `sicht.phase === 'kampf'`: Die Arena bleibt
+   * nach dem Phasenwechsel noch einen Wimpernschlag stehen, um zu verblassen
+   * (`useKampfbild`). Ginge das Eingeklappte schon beim Wechsel wieder auf,
+   * spraenge die halbe Seite unter der verblassenden Buehne hervor.
+   */
+  const kampfLaeuft = kampfbild !== null;
+
   if (!eigenes) {
     // Zuschauer: kein Laden, keine Bank, kein Gold (sicht.ts). Es bleibt das
     // Brett — und das ist oeffentlich.
     return (
       <main className="tr-seite tr-tisch">
-        <header className="tr-kopf">
-          <button
-            className="tr-zurueck tr-zurueck-tisch"
-            type="button"
-            onClick={onZurueck}
-            aria-label="Zurück"
-          >
-            ←
-          </button>
-          <p className="tr-hinweis">Du schaust zu · Runde {sicht.runde}</p>
-        </header>
-        {/* Ein Zuschauer bekommt alle Sitze als `gegner` (sicht.ts) und hat
-            selbst keinen — deshalb `eigenes={null}` und keine Gegnermarke. */}
-        <Mitspielerleiste
-          eigenes={null}
-          gegner={sicht.gegner}
-          gegnerJetzt={null}
-          gezeigt={gegner?.sitz ?? null}
-          sitze={sitze}
-          onWahl={setGezeigterGegner}
-        />
-        {arena ||
-          (gegner && (
-            <div className="tr-bretter">
-              <section className="tr-brettteil">
-                <h2 className="tr-bretttitel">{spielername(zeile(gegner.sitz), gegner.sitz)}</h2>
-                <Hexbrett
-                  reihen={sicht.brettReihen}
-                  spalten={sicht.brettSpalten}
-                  felder={gegner.brett}
-                  katalog={katalog}
-                  maxStufe={sicht.maxStufe}
-                />
-              </section>
-            </div>
-          ))}
+        {/* Dieselbe Kopfleiste wie am Spielertisch — sie ist die Auskunft
+            ueber das Turnier, und die gilt fuer Zuschauer genauso. */}
+        <div className="tr-oben">
+          <div className="tr-oben-reihe">
+            <button
+              className="tr-zurueck-oben"
+              type="button"
+              onClick={onZurueck}
+              aria-label="Zurück"
+            >
+              ←
+            </button>
+            {/* Ein Zuschauer bekommt alle Sitze als `gegner` (sicht.ts) und
+                hat selbst keinen — deshalb `eigenes={null}` und keine
+                Gegnermarke. */}
+            <Mitspielerleiste
+              eigenes={null}
+              gegner={sicht.gegner}
+              gegnerJetzt={null}
+              gezeigt={gegner?.sitz ?? null}
+              sitze={sitze}
+              onWahl={setGezeigterGegner}
+            />
+          </div>
+          <Phasenzeile
+            runde={sicht.runde}
+            phase={sicht.phase}
+            frist={frist ?? rundenfrist}
+            bereit={bereitZahl}
+            offen={offeneSitze}
+          />
+        </div>
+        {/* Dieselben drei Baender wie am Spielertisch, nur ohne Laden: Was
+            zwischen Kopfleiste und Ladenspalte steht, liegt auch hier in
+            `.tr-mitte`. Am breiten Schirm bleibt die Ladenspalte dann leer und
+            faellt in sich zusammen (`auto` in styles.css) — das Brett steht in
+            der Mitte des Schirms und nicht daneben. */}
+        <div className="tr-mitte">
+          <p className="tr-hinweis">Du schaust zu</p>
+          {arena ||
+            (gegner && (
+              /* Dieselbe Spielflaeche wie am Spielertisch — nur ohne Bank und
+                 ohne zweite Bretthaelfte, also ohne `data-bank` und ohne
+                 `data-gegner`: Der Zuschauer sieht ein Brett in voller
+                 Groesse. */
+              <div className="tr-spielflaeche" style={brettmass(sicht)}>
+                <div className="tr-bretter">
+                  <section className="tr-brettteil">
+                    {/* Name und Marken in einer Zeile, wie am Spielertisch
+                      (`.tr-brettkopf`): Zwei Zeilen Beiwerk ueber einem Brett
+                      kosten am Handy 33 Pixel, nebeneinander 18. */}
+                    <div className="tr-brettkopf">
+                      <h2 className="tr-bretttitel">
+                        <AugeZeichen />
+                        {spielername(zeile(gegner.sitz), gegner.sitz)}
+                      </h2>
+                      {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
+                        Feld `synergien` an jedem Sitz genau wie ein Spieler
+                        (sicht.ts) — bis heute stand hier nichts davon. */}
+                      <Fremdmarken
+                        staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                        tabelle={synergieTabelle}
+                        katalog={katalog}
+                        beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                      />
+                    </div>
+                    <Hexbrett
+                      reihen={sicht.brettReihen}
+                      spalten={sicht.brettSpalten}
+                      felder={gegner.brett}
+                      katalog={katalog}
+                      maxStufe={sicht.maxStufe}
+                    />
+                  </section>
+                </div>
+              </div>
+            ))}
+        </div>
       </main>
     );
   }
@@ -1751,6 +1841,26 @@ function Ruestkammer({
     : null;
   const gewaehlteEinheit = gewaehlterKaempfer ? katalog[gewaehlterKaempfer.id] : undefined;
 
+  /**
+   * Die Einheit, deren Blatt offen ist — frisch aus der Sicht geholt und
+   * nicht beim Antippen festgehalten: Unter dem offenen Blatt kann ein Zug
+   * des Servers den Platz raeumen (eine Runde endet, ein Kauf verschmilzt),
+   * und dann ist `null` die richtige Antwort und nicht ein altes Abbild.
+   */
+  const blattKaempfer =
+    blattOrt && darfHandeln
+      ? blattOrt.bereich === 'bank'
+        ? (eigenes.bank[blattOrt.platz] ?? null)
+        : (eigenes.brett[blattOrt.platz] ?? null)
+      : null;
+  const blattEinheit = blattKaempfer ? katalog[blattKaempfer.id] : undefined;
+  /* Die Werte GENAU dieser Sternstufe — die Tabelle zaehlt ab 1, das Feld ab
+     0. Fehlt sie (Tisch aus der Zeit davor), bleibt der Wertekasten weg. */
+  const blattWerte =
+    blattKaempfer && blattEinheit
+      ? stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
+      : undefined;
+
   const gezogeneEinheit =
     zug?.zieht === true
       ? zug.von.bereich === 'bank'
@@ -1760,112 +1870,254 @@ function Ruestkammer({
 
   return (
     <main className="tr-seite tr-tisch">
-      {/* ---- Kopfzeile: Leben, Gold, Runde, Level ---------------------- */}
-      <header className="tr-kopf">
-        <button
-          className="tr-zurueck tr-zurueck-tisch"
-          type="button"
-          onClick={onZurueck}
-          aria-label="Zurück"
-        >
-          ←
-        </button>
-        <div className="tr-werte">
-          <span className="tr-wert tr-wert-leben">
-            <LebenZeichen />
-            <strong>{eigenes.leben}</strong>
-            <em>Leben</em>
-          </span>
-          <span className="tr-wert tr-wert-gold">
-            <GoldZeichen />
-            <strong>{eigenes.gold}</strong>
-            {/* Was die naechste Runde einbringt, steht klein daneben: Zins und
-                Serienbonus sind sonst unsichtbar und wirken wie Zufall. */}
-            <em>+{eigenes.einkommen}</em>
-          </span>
-          <span className="tr-wert">
-            <strong>{sicht.runde}</strong>
-            <em>Runde</em>
-          </span>
-          <span className="tr-wert tr-wert-level">
-            <strong>{eigenes.level}</strong>
-            <em>
-              {eigenes.belegt}/{eigenes.feldplaetze} Feld
-            </em>
-          </span>
+      {/* ---- Ganz oben und festgeheftet: das Turnier --------------------- */}
+      {/*
+        Mitspielerleiste und Phasenzeile stehen zusammen in EINEM Kasten, und
+        der klebt beim Rollen oben fest (`.tr-oben` in styles.css). Das ist
+        der Kern des Umbaus vom 05.09.2026: Vorher war die Leiste eine
+        zuklappbare Liste mitten im Fluss — wer zum Laden runterrollte, sah
+        weder, wie viel Leben die anderen haben, noch in welcher Phase er
+        gerade ist.
+
+        Der Zurueck-Knopf steht IN dieser Reihe und nicht mehr als eigene
+        Ebene darueber: An seinem alten Platz (oben links, absolut) laege er
+        jetzt auf der ersten Spielerkachel.
+      */}
+      <div className="tr-oben">
+        <div className="tr-oben-reihe">
+          <button
+            className="tr-zurueck-oben"
+            type="button"
+            onClick={onZurueck}
+            aria-label="Zurück"
+          >
+            ←
+          </button>
+          <Mitspielerleiste
+            eigenes={eigenes}
+            gegner={sicht.gegner}
+            gegnerJetzt={gegnerJetzt}
+            gezeigt={gegner?.sitz ?? null}
+            sitze={sitze}
+            onWahl={setGezeigterGegner}
+          />
         </div>
-      </header>
+        <Phasenzeile
+          runde={sicht.runde}
+          phase={sicht.phase}
+          frist={frist ?? rundenfrist}
+          bereit={bereitZahl}
+          offen={offeneSitze}
+        />
+      </div>
 
-      {/* ---- Mitspieler: wer lebt, wie viel Leben, gegen wen ich spiele -- */}
-      <Mitspielerleiste
-        eigenes={eigenes}
-        gegner={sicht.gegner}
-        gegnerJetzt={gegnerJetzt}
-        gezeigt={gegner?.sitz ?? null}
-        sitze={sitze}
-        onWahl={setGezeigterGegner}
-      />
+      {/* ---- Die Statuszeile: eigene Werte und Marken in EINER Reihe ----- */}
+      {/*
+        Bis zum 06.09.2026 waren das zwei Baender untereinander: ein Kasten
+        mit zwei grossen Kacheln (Leben, Rang/Feld) und darunter die
+        Markenleiste. Auf Robins Handybild (440 x 956, IMG_1047) kosteten
+        fuenf kleine Angaben zusammen 88 Pixel — Platz, der dem Brett und dem
+        Laden fehlte. Nebeneinander in einer Reihe sind es 22.
 
-      {/* ---- Die Marken auf dem eigenen Brett ---------------------------- */}
-      {/* Sie steht ueber dem Brett und damit auch waehrend des Kampfes da:
-          Wer gerade zusieht, plant schon die naechste Runde — und nach dem
-          Kampf ist sie ohnehin die erste Frage. Am Desktop haengt sie
-          seitlich, das entscheidet allein Synergien.module.css. */}
-      <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} />
+        Die Werte sehen jetzt aus wie die Markenchips daneben, weil sie
+        dasselbe sind: kurze Auskunft, kein Bedienfeld. Ihre Masse stehen in
+        styles.css (`.tr-wert`), die der Marken in Synergien.module.css — der
+        Chip des Nachbarn wird NICHT abgeschrieben, beide Bauteile behalten
+        ihr eigenes Stylesheet.
 
-      {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
-          gleiche Breite, gleiche Stelle, damit nichts springt. */}
-      {arena || (
-        <div className="tr-bretter">
-          {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
-              Heere spaeter aufeinandertreffen. Es ist oeffentlich (sicht.ts),
-              also gibt es hier nichts auszublenden. Zusammen mit der eigenen
-              Haelfte sind das die vier Reihen aus dem Konzept. */}
-          {gegner && (
-            <section className="tr-brettteil tr-brettteil-fremd">
-              <h2 className="tr-bretttitel">
-                {spielername(zeile(gegner.sitz), gegner.sitz)}
-                {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
-              </h2>
-              <Hexbrett
-                reihen={sicht.brettReihen}
-                spalten={sicht.brettSpalten}
-                felder={gegner.brett}
-                katalog={katalog}
-                gespiegelt
-                maxStufe={sicht.maxStufe}
-              />
-            </section>
-          )}
-  
-          <section className="tr-brettteil">
-            {eigenes.belegt === 0 && (
-              /* Eine leere Flaeche sagt nicht, dass sie zu fuellen ist. Der Satz
-                 liegt UEBER dem Brett und nimmt keine Zeiger an (CSS): Sonst
-                 verschluckt ausgerechnet der Hinweis den ersten Zug, zu dem er
-                 auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
-                 das Brett nicht selbst ab. */
-              <p className="tr-leer-satz tr-leer-brett">
-                Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe
-                oder tipp erst ihn, dann die Wabe an.
-              </p>
-            )}
-            <Hexbrett
-              reihen={sicht.brettReihen}
-              spalten={sicht.brettSpalten}
-              felder={eigenes.brett}
+        WAEHREND DES KAMPFES STEHEN NUR DIE MARKEN DA. Leben und Rang sind
+        dort entbehrlich: Das eigene Leben steht ohnehin auf der eigenen
+        Kachel in der Mitspielerleiste darueber, und Rang wie Feldplaetze kann
+        man im Kampf weder aendern noch brauchen. Die Marken bleiben, denn wer
+        zusieht, plant schon die naechste Runde.
+      */}
+      <div className="tr-statuszeile">
+        {!kampfLaeuft && (
+          <header className="tr-kopf">
+            <span className="tr-wert tr-wert-leben">
+              <LebenZeichen />
+              <strong>{eigenes.leben}</strong>
+              <em>Leben</em>
+            </span>
+            <span className="tr-wert tr-wert-level">
+              <em>Rang</em>
+              <strong>{eigenes.level}</strong>
+            </span>
+            <span className="tr-wert tr-wert-feld">
+              <strong>
+                {eigenes.belegt}/{eigenes.feldplaetze} Feld
+              </strong>
+            </span>
+          </header>
+        )}
+        {/* Am Desktop haengt die Leiste seitlich statt hier — das entscheidet
+            allein Synergien.module.css, und weil sie sich dort selbst aus dem
+            Fluss nimmt (`position: fixed`), bleibt diese Reihe davon
+            unberuehrt. */}
+        <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} katalog={katalog} />
+      </div>
+
+      {/* ---- Die Mitte: Spielflaeche und Auswahlband -------------------- */}
+      {/*
+        EIN KASTEN UM ALLES, WAS ZWISCHEN STATUSZEILE UND LADEN STEHT — seit
+        dem 07.09.2026, und nur dafuer da, dass Statuszeile und Laden am
+        breiten Schirm NEBEN die Spielflaeche ruecken koennen (styles.css,
+        `.tr-mitte` und der Block ab 64rem).
+
+        Der Tisch hat damit genau vier Baender im Fluss: Kopfleiste,
+        Statuszeile, Mitte, Laden. Am Handy stehen sie untereinander wie
+        bisher; am breiten Schirm legt ein Raster Statuszeile und Laden links
+        und rechts neben die Mitte. Ohne diesen Kasten braeuchte jedes
+        einzelne Kind eine eigene Zelle — und das naechste, das jemand
+        dazwischenschreibt, landete stillschweigend in der Ladenspalte.
+
+        An der Hoehenrechnung aendert er nichts: Er reicht den freien Platz
+        durch (`flex: 1 1 0`), die Spielflaeche misst weiterhin selbst, was
+        ihr davon bleibt.
+      */}
+      <div className="tr-mitte">
+        {/* Waehrend des Kampfes steht hier die Arena statt der beiden Bretter —
+            gleiche Breite, gleiche Stelle, damit nichts springt. */}
+        {arena || (
+          /*
+           * DIE SPIELFLAECHE: Bretter UND Bank in einem Kasten, seit dem
+           * 07.09.2026. Sie bekommt vom Tisch den Platz, den Kopfleiste,
+           * Statuszeile und Laden uebriglassen, und rechnet daraus die eine
+           * Groesse, an der Brett und Bank haengen (styles.css,
+           * `.tr-spielflaeche`). Vorher hing beides allein an der
+           * Bildschirmbreite, und auf einem 1280 x 720 grossen Notebook lag der
+           * Laden unter der Kante.
+           *
+           * Die Bank steht deshalb hier drin und nicht mehr als eigenes Band
+           * darunter: Sie ist die Unterkante des Bretts, sie ist genauso breit,
+           * und die Rechnung muss ihre Hoehe abziehen, bevor sie die Breite
+           * bestimmt.
+           */
+          <div
+            className="tr-spielflaeche"
+            data-gegner={gegner ? '' : undefined}
+            data-bank=""
+            style={brettmass(sicht)}
+          >
+            <div className="tr-bretter">
+              {/* Das gegnerische Brett liegt oben und GESPIEGELT — so, wie die
+                Heere spaeter aufeinandertreffen. Es ist oeffentlich (sicht.ts),
+                also gibt es hier nichts auszublenden. Zusammen mit der eigenen
+                Haelfte sind das die vier Reihen aus dem Konzept. */}
+              {gegner && (
+                <section className="tr-brettteil tr-brettteil-fremd">
+                  {/* Name und Marken in EINER Zeile, seit dem 06.09.2026 — aus
+                    demselben Grund wie bei der eigenen Statuszeile darueber:
+                    Zwei Zeilen Beiwerk ueber einem Brett kosteten am Handy
+                    33 Pixel, nebeneinander sind es 18. Der Gegnerteil ist die
+                    Haelfte, die ohnehin schon zurueckgenommen ist; ihm zwei
+                    volle Zeilen zu geben und dem Laden darunter keinen Platz
+                    waere die falsche Reihenfolge. */}
+                  <div className="tr-brettkopf">
+                    {/* Das Auge vor dem Namen — dasselbe Zeichen wie an der Kachel
+                      oben, die gerade leuchtet. Es beantwortet die Frage, die
+                      Robin gestellt hat („was passiert, wenn man oben einen
+                      antippt?"): Das hier ist das Brett, das du dir ansiehst. */}
+                    <h2 className="tr-bretttitel">
+                      <AugeZeichen />
+                      {spielername(zeile(gegner.sitz), gegner.sitz)}
+                      {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
+                    </h2>
+                    {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
+                      in der eigenen Leiste. Ohne sie muesste man seine Figuren
+                      einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
+                      zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
+                      auch hier nichts. */}
+                    <Fremdmarken
+                      staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                      tabelle={synergieTabelle}
+                      katalog={katalog}
+                      beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
+                    />
+                  </div>
+                  <Hexbrett
+                    reihen={sicht.brettReihen}
+                    spalten={sicht.brettSpalten}
+                    felder={gegner.brett}
+                    katalog={katalog}
+                    gespiegelt
+                    maxStufe={sicht.maxStufe}
+                  />
+                </section>
+              )}
+
+              <section className="tr-brettteil">
+                {eigenes.belegt === 0 && (
+                  /* Eine leere Flaeche sagt nicht, dass sie zu fuellen ist. Der Satz
+                   liegt UEBER dem Brett und nimmt keine Zeiger an (CSS): Sonst
+                   verschluckt ausgerechnet der Hinweis den ersten Zug, zu dem er
+                   auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
+                   das Brett nicht selbst ab. */
+                  <p className="tr-leer-satz tr-leer-brett">
+                    Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe oder tipp erst
+                    ihn, dann die Wabe an.
+                  </p>
+                )}
+                <Hexbrett
+                  reihen={sicht.brettReihen}
+                  spalten={sicht.brettSpalten}
+                  felder={eigenes.brett}
+                  katalog={katalog}
+                  maxStufe={sicht.maxStufe}
+                  eigen
+                  gewaehlt={gewaehlt}
+                  /* Wohin die gewaehlte Einheit darf — auf dem Brett und nicht nur
+                   auf der Bank. Ohne diese Zeile leuchtet beim Antipp-Weg
+                   ausgerechnet die Flaeche nicht, auf die man will; und steht das
+                   Feld voll, leuchtet nichts, was die Absage von selbst
+                   erklaert. */
+                  istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+                  onWaehlen={tippeOrt}
+                  ziehtVon={zug?.zieht ? zug.von : null}
+                  /* Wo die Einheit landet, wenn der Finger jetzt loslaesst. Nur
+                   waehrend eines Zuges gesetzt — sonst leuchtete das Brett
+                   unter jedem Mauszeiger. */
+                  unterZeiger={ablegeZiel}
+                  fehlendeKopien={fehlen}
+                  frischVerschmolzen={verschmolzen}
+                  aktiv={darfHandeln}
+                  onZeigerStart={beiZeigerStart}
+                  onZeigerBewegung={beiZeigerBewegung}
+                  onZeigerEnde={beiZeigerEnde}
+                  onZeigerAbbruch={beiZeigerAbbruch}
+                  onLeeresZiel={tippeOrt}
+                />
+              </section>
+            </div>
+
+            {/* ---- Reservebank ------------------------------------------------ */}
+            {/* Die Reihe selbst steht in minispiele/tafelrunde/Brett.tsx; hier
+            steht nur, dass sie unmittelbar nach dem Brett kommt und WANN sie
+            ueberhaupt dasteht.
+
+            WAEHREND DES KAMPFES IST SIE ZU — aus demselben Grund, aus dem der
+            Laden darunter zu ist: Es geht nichts von ihr aufs Feld und nichts
+            zurueck, sie ist in dieser Minute ein Bild. Als Streifen unter dem
+            Brett kostet sie auf einem 390-px-Schirm 55 Pixel, und die stehen der
+            Arena besser. Der Satz „Deine Bank ist leer" faellt mit ihr weg: Er
+            schickt zum Laden, und der ist im Kampf ebenfalls zu.
+
+            Dass sie im Kampf wegfaellt, steht seit dem 07.09.2026 nicht mehr als
+            eigene Bedingung da: Sie ist ein Kind der Spielflaeche, und die gibt
+            es in der Kampfphase gar nicht — dort steht die Arena an ihrer
+            Stelle. Zwei Bedingungen fuer dieselbe Sache waeren eine zu viel. */}
+            <Bankreihe
+              /* Aus der Sicht und nicht aus dem Stylesheet: `bankPlaetze` steht
+               im Regelsatz und ist damit je Tisch verstellbar. */
+              plaetze={sicht.bankPlaetze}
+              bank={eigenes.bank}
               katalog={katalog}
               maxStufe={sicht.maxStufe}
-              eigen
               gewaehlt={gewaehlt}
-              /* Wohin die gewaehlte Einheit darf — auf dem Brett und nicht nur
-                 auf der Bank. Ohne diese Zeile leuchtet beim Antipp-Weg
-                 ausgerechnet die Flaeche nicht, auf die man will; und steht das
-                 Feld voll, leuchtet nichts, was die Absage von selbst
-                 erklaert. */
               istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
               onWaehlen={tippeOrt}
               ziehtVon={zug?.zieht ? zug.von : null}
+              unterZeiger={ablegeZiel}
               fehlendeKopien={fehlen}
               frischVerschmolzen={verschmolzen}
               aktiv={darfHandeln}
@@ -1873,89 +2125,76 @@ function Ruestkammer({
               onZeigerBewegung={beiZeigerBewegung}
               onZeigerEnde={beiZeigerEnde}
               onZeigerAbbruch={beiZeigerAbbruch}
-              onLeeresZiel={tippeOrt}
             />
-          </section>
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* ---- Reservebank ------------------------------------------------ */}
-      {/* Die Spaltenzahl kommt aus der Sicht und nicht aus dem Stylesheet:
-          `bankPlaetze` steht im Regelsatz und ist damit je Tisch verstellbar. */}
-      <div
-        className="tr-bank"
-        role="group"
-        aria-label="Reservebank"
-        style={{ gridTemplateColumns: `repeat(${sicht.bankPlaetze}, 1fr)` }}
-      >
-        {Array.from({ length: sicht.bankPlaetze }, (_, platz) => {
-          const ort: Ort = { bereich: 'bank', platz };
-          const k = eigenes.bank[platz] ?? null;
-          return (
-            <div
-              key={platz}
-              className="tr-bankplatz"
-              data-ziel={ortSchluessel(ort)}
-              data-leer={k ? undefined : ''}
-              data-gewaehlt={
-                gewaehlt?.bereich === 'bank' && gewaehlt.platz === platz ? '' : undefined
-              }
-              data-zielbar={gewaehlt && zielbar(gewaehlt, ort) ? '' : undefined}
-            >
-              {k ? (
-                <Einheitenmarke
-                  kaempfer={k}
-                  katalog={katalog}
-                  maxStufe={sicht.maxStufe}
-                  fehlt={fehlen(k.id, k.stufe)}
-                  frisch={verschmolzen?.id === k.id && verschmolzen.stufe === k.stufe}
-                  aktiv={darfHandeln}
-                  versteckt={zug?.zieht === true && zug.von.bereich === 'bank' && zug.von.platz === platz}
-                  onZeigerStart={(e) => beiZeigerStart(ort, e)}
-                  onZeigerBewegung={beiZeigerBewegung}
-                  onZeigerEnde={(e) => beiZeigerEnde(ort, e)}
-                  onZeigerAbbruch={beiZeigerAbbruch}
-                  onWaehlen={() => tippeOrt(ort)}
-                />
-              ) : (
-                /* Dieselbe echte Schaltflaeche wie das leere Brettfeld, und
-                   aus demselben Grund: Ein `onClick` am Kasten hat weder
-                   Namen noch Tastaturweg — der Rueckweg auf die Bank waere
-                   mit einem Vorlesegeraet gar nicht vorhanden. */
-                <button
-                  type="button"
-                  className="tr-bankplatz-ziel"
-                  disabled={!darfHandeln}
-                  aria-label={`Bankplatz ${platz + 1}`}
-                  onClick={() => tippeOrt(ort)}
-                />
-              )}
-            </div>
-          );
-        })}
+        {/* ---- Das Blatt einer angetippten Einheit ------------------------ */}
+        {/*
+          Es liegt als Ueberblender ueber allem (Einheitenblatt.module.css) und
+          steht deshalb im Baum, wo es will — hier, weil es zu Brett und Bank
+          darueber gehoert. Ein Tipp daneben, die Escape-Taste und der Knopf
+          oben rechts schliessen es; das steht im Bauteil, damit es sich wie das
+          Markenblatt anfuehlt und nicht wie ein zweites Fenster.
+        */}
+        {blattOrt && blattKaempfer && blattEinheit && (
+          <Einheitenblatt
+            einheit={blattEinheit}
+            kaempfer={blattKaempfer}
+            werte={blattWerte}
+            tabelle={synergieTabelle}
+            maxStufe={sicht.maxStufe}
+            erloes={blattWerte?.erloes}
+            /* Verkaufen nur, wenn der Server es anbietet — nicht, wenn der
+               Bildschirm meint, es muesste gehen. */
+            onVerkaufen={
+              verkaufbar.has(ortSchluessel(blattOrt))
+                ? () => schicke({ typ: 'verkaufen', ort: blattOrt })
+                : undefined
+            }
+            /* Ablegen gibt es nur vom Brett und nur auf einen freien Platz.
+               Abgesetzt wird es ueber `schiebe`, also denselben Weg wie ein
+               Zug mit dem Finger — samt dessen Pruefung mit den zwei Zahlen der
+               Sicht (`zielbar`). Hier wird keine Regel nachgebaut. */
+            onAblegen={
+              blattOrt.bereich === 'brett' && freierBankplatz !== null
+                ? () => schiebe(blattOrt, { bereich: 'bank', platz: freierBankplatz })
+                : undefined
+            }
+            /* Und der Weg zurueck in den Antipp-Bedienweg: Blatt zu, Einheit
+               bleibt gewaehlt, die Ziele leuchten. */
+            onVerschieben={() => {
+              setGewaehlt(blattOrt);
+              setBlattOrt(null);
+            }}
+            verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            onSchliessen={() => setBlattOrt(null)}
+          />
+        )}
+
+        {/* ---- Was mit der Auswahl geschehen kann ------------------------- */}
+        {gewaehlt && darfHandeln && (
+          <div className="tr-auswahlband">
+            <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt — Ziel antippen</span>
+            {/* Derselbe Riegel wie im Blatt: Verkauft wird, was `legalActions`
+                anbietet. Zwei Verkaufen-Knoepfe auf einem Bildschirm, von denen
+                der eine fragt und der andere nicht, waeren zwei Antworten auf
+                dieselbe Frage. */}
+            {verkaufbar.has(ortSchluessel(gewaehlt)) && (
+              <button
+                type="button"
+                className="tr-verkaufen"
+                onClick={() => schicke({ typ: 'verkaufen', ort: gewaehlt })}
+              >
+                Verkaufen
+              </button>
+            )}
+            <button type="button" className="tr-abwaehlen" onClick={() => setGewaehlt(null)}>
+              Abbrechen
+            </button>
+          </div>
+        )}
       </div>
-      {eigenes.bank.every((k) => k === null) && (
-        <p className="tr-leer-satz">
-          Deine Bank ist leer — kauf dir unten im Laden einen Recken.
-        </p>
-      )}
-
-      {/* ---- Was mit der Auswahl geschehen kann ------------------------- */}
-      {gewaehlt && darfHandeln && (
-        <div className="tr-auswahlband">
-          <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt — Ziel antippen</span>
-          <button
-            type="button"
-            className="tr-verkaufen"
-            onClick={() => schicke({ typ: 'verkaufen', ort: gewaehlt })}
-          >
-            Verkaufen
-          </button>
-          <button type="button" className="tr-abwaehlen" onClick={() => setGewaehlt(null)}>
-            Abbrechen
-          </button>
-        </div>
-      )}
 
       {/* ---- Laden ------------------------------------------------------ */}
       <div className="tr-fuss">
@@ -1963,12 +2202,40 @@ function Ruestkammer({
           <Abschluss sicht={sicht} onZurueck={onZurueck} />
         ) : sicht.phase === 'kampf' ? (
           arena ? (
-            /* Der Kampf laeuft oben in der Arena. Hier nur der Satz, der
-               erklaert, warum der Laden zu ist — und dass er von selbst
-               wieder aufgeht, denn die Dauer bestimmt der Server. */
-            <p className="tr-hinweis">
-              Der Kampf läuft von selbst — danach geht der Laden wieder auf.
-            </p>
+            zuschauendImKampf ? (
+              /* DER WEG ZURUECK. Er steht nur hier: In der Ruestphase liegt
+                 das eigene Brett samt Laden ohnehin unter dem fremden, es gibt
+                 also nichts, wohin man zurueckkehren muesste. Im Kampf ist die
+                 Arena die ganze Anzeige — wer dort einen fremden Kampf
+                 aufgeschlagen hat, sieht seinen eigenen nicht mehr, und ohne
+                 diesen Knopf muesste er raten, wie er hinkommt. Breit und mit
+                 demselben Auge wie die Kachel oben, damit man beide als ein
+                 Angebot liest. */
+              <button
+                type="button"
+                className="tr-zuschauen-zurueck"
+                onClick={() => setGezeigterGegner(null)}
+              >
+                <AugeZeichen />
+                Zurück zu deinem Kampf
+              </button>
+            ) : eigenerKampf ? (
+              /* Der Kampf laeuft oben in der Arena. Hier nur der Satz, der
+                 erklaert, warum der Laden zu ist — und dass er von selbst
+                 wieder aufgeht, denn die Dauer bestimmt der Server. */
+              <p className="tr-hinweis">
+                Der Kampf läuft von selbst — danach geht der Laden wieder auf.
+              </p>
+            ) : (
+              /* Ausgeschieden: Fuer ihn geht kein Laden mehr auf, der Satz
+                 darueber waere also eine Luege. Er sieht seit dem 06.09.2026
+                 einen echten Kampf statt einer Textzeile — und hier steht,
+                 wessen. Ein Zurueck gibt es nicht, weil es nichts gibt, wohin. */
+              <p className="tr-hinweis">
+                Du siehst {spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0)} zu — tippe oben
+                einen anderen Sitz an, um dessen Kampf zu sehen.
+              </p>
+            )
           ) : (
             <Kampfband />
           )
@@ -1978,11 +2245,39 @@ function Ruestkammer({
           </p>
         ) : (
           <>
+            {/* Der Ladenkopf: links das Wort, rechts das Gold — gross, weil
+                es die Zahl ist, gegen die man jeden Preis darunter rechnet.
+                Es stand bis zum 05.09.2026 als eine von vier gleich grossen
+                Kacheln ganz oben, also weit weg von den Preisen. */}
+            <div className="tr-ladenkopf">
+              <span className="tr-ladenwort">Laden</span>
+              <span className="tr-goldstand">
+                <GoldZeichen />
+                <strong>{eigenes.gold}</strong>
+                {/* Was die naechste Runde einbringt, steht klein daneben:
+                    Zins und Serienbonus sind sonst unsichtbar und wirken
+                    wie Zufall. */}
+                <em>+{eigenes.einkommen}</em>
+              </span>
+            </div>
             <div
               className="tr-laden"
               role="group"
               aria-label="Laden"
-              style={{ gridTemplateColumns: `repeat(${sicht.ladenPlaetze}, 1fr)` }}
+              /*
+               * Nur die ZAHL der Plaetze, nicht das ganze Raster — seit dem
+               * 07.09.2026. Sie steht im Regelsatz und ist je Tisch
+               * verstellbar, das Stylesheet kann sie nicht wissen; wie daraus
+               * Spalten werden, weiss umgekehrt nur das Stylesheet. Am breiten
+               * Schirm steht der Laden naemlich als schmale Spalte neben dem
+               * Brett, und dort brechen die Karten um, statt auf 60 Pixel zu
+               * schrumpfen (`.tr-laden` in styles.css).
+               *
+               * Ein `grid-template-columns` von hier wuerde als Inline-Stil
+               * jede Regel des Stylesheets schlagen — der Umbruch waere nur
+               * noch mit `!important` zu haben.
+               */
+              style={{ '--tr-ladenplaetze': sicht.ladenPlaetze } as React.CSSProperties}
             >
               {Array.from({ length: sicht.ladenPlaetze }, (_, platz) => {
                 const id = eigenes.laden[platz];
@@ -2014,10 +2309,15 @@ function Ruestkammer({
                 );
               })}
             </div>
+            {/* Seit das Nachbesetzen greift, steht hier kein Platz mehr leer,
+                weil jemand gekauft hat — nur noch, wenn der Vorrat nichts mehr
+                hergibt. Der alte Satz ("würfle neu für frische Recken")
+                schickte den Spieler dann auf einen Knopf, der nichts mehr
+                ändern kann. */}
             {eigenes.laden.every((id) => id === null) && (
               <p className="tr-leer-satz">
-                Der Laden ist leergekauft — würfle neu für frische Recken oder
-                mach dich bereit.
+                Der Vorrat gibt nichts mehr her — alle Recken sind im Umlauf.
+                Mach dich bereit.
               </p>
             )}
             <div className="tr-ladenknoepfe">
@@ -2028,22 +2328,30 @@ function Ruestkammer({
                 onClick={() => schicke({ typ: 'neuwuerfeln' })}
               >
                 Neu würfeln
-                {/* Der Preis wird rot, wenn das Gold nicht reicht — sonst
+                {/* Kostet das Wuerfeln nichts (Vorgabe seit dem 05.09.2026),
+                    faellt die Preisangabe ganz weg. "0 Gold" waere schlechter
+                    als nichts: Es liest sich wie ein Preis, den man erst
+                    nachrechnen muss. Ein Tisch darf den Preis weiterhin
+                    setzen, dann steht er wieder da.
+
+                    Der Preis wird rot, wenn das Gold nicht reicht — sonst
                     sieht ein gesperrter Knopf aus wie ein kaputter. Beide
                     Bedingungen muessen zutreffen: `legalActions` hat den Zug
                     abgelehnt UND die Zahlen der Sicht erklaeren es auch.
                     Erklaeren sie es nicht, bleibt der Preis ruhig statt zu
                     raten. */}
-                <em
-                  data-teuer={
-                    darfHandeln && !darfWuerfeln && eigenes.gold < eigenes.neuwuerfelnKosten
-                      ? ''
-                      : undefined
-                  }
-                >
-                  <GoldZeichen />
-                  {eigenes.neuwuerfelnKosten}
-                </em>
+                {eigenes.neuwuerfelnKosten > 0 && (
+                  <em
+                    data-teuer={
+                      darfHandeln && !darfWuerfeln && eigenes.gold < eigenes.neuwuerfelnKosten
+                        ? ''
+                        : undefined
+                    }
+                  >
+                    <GoldZeichen />
+                    {eigenes.neuwuerfelnKosten}
+                  </em>
+                )}
               </button>
               <button
                 type="button"
@@ -2125,9 +2433,8 @@ function Ruestkammer({
           sitz={eigenes.sitz}
           brett={eigenes.brett}
           katalog={katalog}
-          eigenes={eigenes}
-          gegner={sicht.gegner}
-          runde={sicht.runde}
+          platzierung={sicht.platzierung}
+          ausRunde={eigenes.ausRunde}
           fertig={sicht.fertig}
           sitze={sitze}
           onZurueck={onZurueck}
@@ -2175,14 +2482,13 @@ const AUSKLANG_MS = 400;
  * An die PHASE gehaengt und nicht an das Sichtobjekt: Sonst liefe der Effekt
  * bei jedem Rundruf neu und raeumte seinen Timer ab (CLAUDE.md).
  */
-function useKampfbild(
-  sicht: TafelrundeSicht,
-): { kaempfe: Kampfpaarung[]; verblasst: boolean } | null {
+function useKampfbild(sicht: TafelrundeSicht): (Kampfbild & { verblasst: boolean }) | null {
   const kaempfe = sicht.phase === 'kampf' ? (sicht.kaempfe ?? []) : [];
   const laeuft = kaempfe.length > 0;
-  const zuletzt = useRef<Kampfpaarung[]>([]);
-  const [ausklang, setAusklang] = useState<Kampfpaarung[] | null>(null);
-  if (laeuft) zuletzt.current = kaempfe;
+  const bild: Kampfbild = { kaempfe, paarungen: paarungenAus(sicht, kaempfe) };
+  const zuletzt = useRef<Kampfbild | null>(null);
+  const [ausklang, setAusklang] = useState<Kampfbild | null>(null);
+  if (laeuft) zuletzt.current = bild;
 
   useEffect(() => {
     if (sicht.phase === 'kampf') {
@@ -2190,26 +2496,68 @@ function useKampfbild(
       return;
     }
     const alte = zuletzt.current;
-    if (alte.length === 0) return;
-    zuletzt.current = [];
+    if (!alte) return;
+    zuletzt.current = null;
     setAusklang(alte);
     const uhr = window.setTimeout(() => setAusklang(null), AUSKLANG_MS);
     return () => window.clearTimeout(uhr);
   }, [sicht.phase]);
 
-  if (laeuft) return { kaempfe, verblasst: false };
-  if (ausklang) return { kaempfe: ausklang, verblasst: true };
+  if (laeuft) return { ...bild, verblasst: false };
+  if (ausklang) return { ...ausklang, verblasst: true };
   return null;
 }
 
+/** Was die Arena zeigt: der abzuspielende Kampf und die Ergebnisse daneben. */
+interface Kampfbild {
+  kaempfe: Kampfpaarung[];
+  paarungen: Paarungsergebnis[];
+}
+
 /**
- * Der Schluessel eines Kampfes fuer React: die Saat des abgespielten
- * Kampfes. Sie ist je Runde und Paarung eindeutig (kampfSaat in partie.ts),
- * und derselbe Kampf ueber mehrere Rundrufe behaelt so seine laufende Uhr.
+ * Die Ergebnisliste der Runde — notfalls aus den Kaempfen abgeleitet.
+ *
+ * Ein Tisch, der vor dieser Sicht aufgemacht wurde, fuehrt `paarungen` nicht.
+ * Dann tritt die Liste der Kaempfe an ihre Stelle. An einem Tisch von HEUTE
+ * ist das dieselbe Auskunft — seit dem 06.09.2026 bekommt jeder alle Kaempfe
+ * (sicht.ts im Modul). An einem alten Tisch hatte ein Spieler nur seinen
+ * eigenen, und der faellt in der Anzeige ohnehin heraus (`nebenkaempfe`): Die
+ * Ergebniszeilen bleiben dort leer wie bisher. Kein Stolpern, nur kein
+ * Zugewinn.
  */
-function kampfSchluessel(kaempfe: readonly Kampfpaarung[], ich: number | null): string {
-  const kampf = abzuspielen(kaempfe, ich);
-  return kampf ? `${kampf.a}:${kampf.b}:${kampf.bericht.saat}` : 'keiner';
+function paarungenAus(
+  sicht: TafelrundeSicht,
+  kaempfe: readonly Kampfpaarung[],
+): Paarungsergebnis[] {
+  if (sicht.paarungen) return sicht.paarungen;
+  return kaempfe.map((k) => ({
+    a: k.a,
+    b: k.b,
+    geist: k.geist,
+    sieger: k.bericht.sieger,
+    schaden: k.bericht.sieger === null ? 0 : k.bericht.schaden,
+    dauerMs: k.bericht.dauerMs,
+  }));
+}
+
+/**
+ * Der Schluessel der RUNDE fuer React: die Saaten aller Kaempfe zusammen. Sie
+ * sind je Runde und Paarung eindeutig (kampfSaat in partie.ts), derselbe
+ * Kampfsatz ueber mehrere Rundrufe behaelt also seine laufende Uhr.
+ *
+ * BEWUSST NICHT der abgespielte Kampf, obwohl es bis zum 06.09.2026 der war.
+ * Seit man mitten in der Phase auf einen fremden Kampf umschalten kann, waere
+ * das ein Schluesselwechsel — die Arena wuerde neu aufgebaut, und mit ihr der
+ * Nullpunkt der Runde, an dem sie ablesen muss, wie weit die Kaempfe schon
+ * sind (`nullpunkt` in KampfAnzeige.tsx). Der fremde Kampf finge dann von vorn
+ * an, obwohl er seit zehn Sekunden laeuft. Der zweite Grund ist der
+ * Ausgeschiedene: Er hat gar keinen eigenen Kampf, sein Schluessel hiess also
+ * jede Runde „keiner" — die Arena blieb ueber den Rundenwechsel hinweg
+ * dieselbe Komponente.
+ */
+function kampfSchluessel(kaempfe: readonly Kampfpaarung[]): string {
+  if (kaempfe.length === 0) return 'keiner';
+  return kaempfe.map((k) => k.bericht.saat).join('|');
 }
 
 /*
@@ -2221,369 +2569,17 @@ function kampfSchluessel(kaempfe: readonly Kampfpaarung[], ich: number | null): 
  * verwaist (styles.css gehoert nicht zu dieser Aufgabe).
  */
 
-// ---------------------------------------------------------------------------
-// Das Hexbrett
-// ---------------------------------------------------------------------------
-
-/**
- * Ein versetztes Sechseckraster ("odd-r", siehe brett.ts).
- *
- * Die Lage jedes Feldes wird in PROZENT gerechnet und nicht in Pixeln: Das
- * Brett skaliert mit der Bildschirmbreite, und eine in Pixeln gesetzte Wabe
- * saesse auf einem schmalen Handy neben ihrem Platz — dieselbe Ueberlegung wie
- * bei den Mauern in Filler.tsx.
- *
- * Die Zahlen stehen hier und nicht im Stylesheet, weil Reihen und Spalten aus
- * der Sicht kommen: Ein festes Raster in CSS waere beim ersten groesseren
- * Brett falsch, und das kommt mit der Kampfarena (Phase 2).
+/*
+ * Brett, Bank, Einheitenmarke und Ladenkarte standen bis zum 06.09.2026 HIER
+ * — zusammen rund 500 Zeilen mitten in diesem Bildschirm und alle vier
+ * privat. Sie liegen jetzt in minispiele/tafelrunde/Brett.tsx und
+ * Ladenkarte.tsx, damit die Probe `/probe/ruestkammer` sie EINHAENGEN kann,
+ * statt `.tr-wabe`, `.tr-einheit` und `.tr-karte` nachzubauen; die
+ * Kleinteile (Rollenname, Kostenfarbe, die vier Zeichen) stehen in
+ * Zeichen.tsx. Dieselbe Bewegung wie bei der Mitspielerleiste darueber und
+ * aus demselben Grund: Was ausserhalb des Tisches gezeigt werden soll, darf
+ * nicht im Tisch eingeschlossen sein.
  */
-function Hexbrett({
-  reihen,
-  spalten,
-  felder,
-  katalog,
-  maxStufe,
-  gespiegelt,
-  eigen,
-  gewaehlt,
-  istZiel,
-  onWaehlen,
-  ziehtVon,
-  fehlendeKopien,
-  frischVerschmolzen,
-  aktiv,
-  onZeigerStart,
-  onZeigerBewegung,
-  onZeigerEnde,
-  onZeigerAbbruch,
-  onLeeresZiel,
-}: {
-  reihen: number;
-  spalten: number;
-  felder: (Kaempfer | null)[];
-  katalog: Record<string, Einheit>;
-  maxStufe: number;
-  /** Das gegnerische Brett steht auf dem Kopf — so treffen die Heere sich. */
-  gespiegelt?: boolean;
-  eigen?: boolean;
-  gewaehlt?: Ort | null;
-  /** Darf die gerade gewaehlte Einheit hierhin? Ohne Auswahl nicht gesetzt. */
-  istZiel?: (ort: Ort) => boolean;
-  /** Auswahl ueber Tastatur oder Vorlesegeraet, siehe Einheitenmarke. */
-  onWaehlen?: (ort: Ort) => void;
-  ziehtVon?: Ort | null;
-  fehlendeKopien?: (id: string, stufe?: number) => number;
-  frischVerschmolzen?: { id: string; stufe: number } | null;
-  aktiv?: boolean;
-  onZeigerStart?: (ort: Ort, e: React.PointerEvent) => void;
-  onZeigerBewegung?: (e: React.PointerEvent) => void;
-  onZeigerEnde?: (ort: Ort, e: React.PointerEvent) => void;
-  onZeigerAbbruch?: () => void;
-  /** Ein leeres Feld ist angetippt worden (nicht gezogen). */
-  onLeeresZiel?: (ort: Ort) => void;
-}): React.JSX.Element {
-  const mass = rastermass(reihen, spalten);
-
-  return (
-    /* Der Holz-Untergrund kommt als Pfad aus figuren.ts und nicht als zweite
-       Abschrift im Stylesheet: Wer die Textur tauscht, aendert eine Zeile und
-       nicht zwei. Wie er kachelt und wie dunkel der Schleier darueber liegt,
-       steht in styles.css. */
-    <div
-      className="tr-brett"
-      style={{
-        aspectRatio: `${mass.seitenverhaeltnis}`,
-        backgroundImage: `url(${UNTERGRUND})`,
-      }}
-    >
-      {Array.from({ length: reihen * spalten }, (_, i) => {
-        const platz = platzVon(i, reihen, spalten, gespiegelt === true);
-        const reihe = Math.floor(i / spalten);
-        const spalte = i % spalten;
-        const lage = wabenLage(mass, reihe, spalte);
-        const k = felder[platz] ?? null;
-        const ort: Ort = { bereich: 'brett', platz };
-        const stil: React.CSSProperties = {
-          left: `${lage.links}%`,
-          top: `${lage.oben}%`,
-          width: `${mass.wabenBreite}%`,
-          height: `${mass.wabenHoehe}%`,
-        };
-        return (
-          <div
-            key={platz}
-            className="tr-wabe"
-            style={stil}
-            data-ziel={eigen ? ortSchluessel(ort) : undefined}
-            data-leer={k ? undefined : ''}
-            data-gewaehlt={
-              gewaehlt?.bereich === 'brett' && gewaehlt.platz === platz ? '' : undefined
-            }
-            data-zielbar={istZiel?.(ort) ? '' : undefined}
-          >
-            {k ? (
-              <Einheitenmarke
-                kaempfer={k}
-                katalog={katalog}
-                maxStufe={maxStufe}
-                fehlt={fehlendeKopien?.(k.id, k.stufe) ?? 0}
-                frisch={
-                  frischVerschmolzen?.id === k.id && frischVerschmolzen.stufe === k.stufe
-                }
-                aktiv={eigen === true && aktiv === true}
-                versteckt={ziehtVon?.bereich === 'brett' && ziehtVon.platz === platz}
-                onZeigerStart={eigen && onZeigerStart ? (e) => onZeigerStart(ort, e) : undefined}
-                onZeigerBewegung={eigen ? onZeigerBewegung : undefined}
-                onZeigerEnde={eigen && onZeigerEnde ? (e) => onZeigerEnde(ort, e) : undefined}
-                onZeigerAbbruch={eigen ? onZeigerAbbruch : undefined}
-                onWaehlen={eigen && onWaehlen ? () => onWaehlen(ort) : undefined}
-              />
-            ) : (
-              eigen && (
-                /* Ein leeres Feld ist ein Ziel und deshalb eine Schaltflaeche:
-                   Wer eine Einheit gewaehlt hat, tippt hier hin. Ohne Knopf
-                   waere der Antipp-Weg auf halbem Weg zu Ende. */
-                <button
-                  type="button"
-                  className="tr-wabe-ziel"
-                  disabled={!aktiv}
-                  /* Der Name sagt beim Vorlesen mit, ob dieses Feld gerade
-                     ein Ziel ist — sichtbar leuchtet es, hoerbar bisher
-                     nicht. */
-                  aria-label={`Feld ${platz + 1}${istZiel?.(ort) ? ' · Ziel' : ''}`}
-                  /* Klick und nicht Zeiger-Loslassen: Ein abgelegtes Ziehen
-                     endet dank Zeigererfassung IMMER an der gezogenen
-                     Einheit, nie hier — und erzeugt deshalb auch keinen
-                     Klick. Der Klick gehoert also allein dem Antipp-Weg. */
-                  onClick={() => onLeeresZiel?.(ort)}
-                />
-              )
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Eine Einheit
-// ---------------------------------------------------------------------------
-
-function Einheitenmarke({
-  kaempfer,
-  katalog,
-  maxStufe,
-  fehlt,
-  frisch,
-  aktiv,
-  versteckt,
-  onZeigerStart,
-  onZeigerBewegung,
-  onZeigerEnde,
-  onZeigerAbbruch,
-  onWaehlen,
-}: {
-  kaempfer: Kaempfer;
-  katalog: Record<string, Einheit>;
-  maxStufe: number;
-  /** Wie viele Kopien noch fehlen, bis diese Stufe verschmilzt. */
-  fehlt: number;
-  frisch?: boolean;
-  aktiv: boolean;
-  versteckt?: boolean;
-  onZeigerStart?: (e: React.PointerEvent) => void;
-  onZeigerBewegung?: (e: React.PointerEvent) => void;
-  onZeigerEnde?: (e: React.PointerEvent) => void;
-  onZeigerAbbruch?: () => void;
-  /**
-   * Auswaehlen ohne Zeiger — Tastatur oder Vorlesegeraet.
-   *
-   * Der Antipp-Weg lief bisher allein ueber `pointerup`, und genau das
-   * erreicht ein Vorlesegeraet nicht: VoiceOver und TalkBack loesen beim
-   * Doppeltippen einen KLICK aus, keine Zeigerfolge. Ohne diesen Weg war die
-   * Zusage aus dem Kopf dieser Datei — Antippen sei der Weg, der mit einem
-   * Vorlesegeraet funktioniert — schlicht nicht eingeloest.
-   */
-  onWaehlen?: () => void;
-}): React.JSX.Element {
-  const einheit = katalog[kaempfer.id];
-  const farbe = KOSTEN_FARBE[einheit?.kosten ?? 1] ?? KOSTEN_FARBE[1];
-  const greifbar = aktiv && onWaehlen !== undefined;
-  return (
-    <div
-      className="tr-einheit"
-      data-frisch={frisch ? '' : undefined}
-      data-still={versteckt ? '' : undefined}
-      data-fassbar={aktiv ? '' : undefined}
-      style={{ '--tr-kosten': farbe } as React.CSSProperties}
-      role={greifbar ? 'button' : undefined}
-      tabIndex={greifbar ? 0 : undefined}
-      aria-label={
-        einheit
-          ? `${einheit.name}, ${ROLLE_NAME[einheit.rolle]}, Stufe ${kaempfer.stufe}`
-          : kaempfer.id
-      }
-      onPointerDown={aktiv ? onZeigerStart : undefined}
-      onPointerMove={aktiv ? onZeigerBewegung : undefined}
-      onPointerUp={aktiv ? onZeigerEnde : undefined}
-      onPointerCancel={aktiv ? onZeigerAbbruch : undefined}
-      /*
-       * `detail === 0` trennt den erzeugten Klick vom echten: Tastatur und
-       * Vorlesegeraet melden 0, Maus und Finger melden mindestens 1. Ohne
-       * diese Pruefung liefe jeder Tipp doppelt — einmal ueber `pointerup`
-       * und gleich darauf ueber den Klick, den der Browser hinterherschickt.
-       * Das Ergebnis waere waehlen und im selben Moment wieder abwaehlen.
-       */
-      onClick={
-        greifbar
-          ? (e) => {
-              if (e.detail === 0) onWaehlen?.();
-            }
-          : undefined
-      }
-      onKeyDown={
-        greifbar
-          ? (e) => {
-              if (e.key !== 'Enter' && e.key !== ' ') return;
-              // Sonst rollt die Leertaste den Bildschirm unter dem Brett weg.
-              e.preventDefault();
-              onWaehlen?.();
-            }
-          : undefined
-      }
-      title={einheit ? `${einheit.name} · ${ROLLE_NAME[einheit.rolle]}` : kaempfer.id}
-    >
-      {einheit ? (
-        <Figurbild
-          einheit={einheit}
-          klasse="tr-figur"
-          ersatz={<RollenZeichen rolle={einheit.rolle} />}
-        />
-      ) : (
-        /* Der Katalog kommt erst mit der ersten Sicht. Ein Fragezeichen ist
-           hier ehrlicher als ein Bild, dessen Namen wir noch nicht kennen. */
-        <span>?</span>
-      )}
-      {/* Die Marken als Zeichen in der Ecke — dieselben Zeichen und Farben wie
-          in der Leiste, damit man eine Aufstellung im Vorbeisehen zaehlen
-          kann. Kein Text: Auf einer Wabe ist dafuer kein Platz, und vorgelesen
-          wird ohnehin das `aria-label` oben. */}
-      {einheit && <Markenzeichen marken={einheit.marken} ort="einheit" />}
-      <span className="tr-einheit-name">{einheit?.name ?? kaempfer.id}</span>
-      {/* Der Name der Marke nennt die Stufe schon; hier waere sie doppelt. */}
-      <span className="tr-sterne" aria-hidden="true">
-        {'★'.repeat(kaempfer.stufe)}
-      </span>
-      {/*
-        * "Noch eine" statt einer stillen Ueberraschung: Wer zwei von drei
-        * haelt, soll es sehen, bevor er den Laden neu wuerfelt. Nur unterhalb
-        * der Hoechststufe — dort verschmilzt nichts mehr.
-        */}
-      {fehlt === 1 && kaempfer.stufe < maxStufe && (
-        <span className="tr-fehlt" aria-hidden="true">
-          noch 1
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Der Laden
-// ---------------------------------------------------------------------------
-
-function Ladenkarte({
-  einheit,
-  kaufbar,
-  verschmilzt,
-  fehlt,
-  verschmelzZahl,
-  marken,
-  trifftSchwelle,
-  grund,
-  onKauf,
-}: {
-  einheit: Einheit | undefined;
-  kaufbar: boolean;
-  verschmilzt: boolean;
-  fehlt: number;
-  /** Wie viele Kopien verschmelzen — aus der Sicht, nie als 3 im Client. */
-  verschmelzZahl: number;
-  /** Die Klassen-Marken dieser Einheit (Katalog). Leer, solange er fehlt. */
-  marken: string[];
-  /** Wuerde ein Traeger dieser Marke eine Schwelle erreichen? Siehe Synergien.tsx. */
-  trifftSchwelle: (marke: string) => boolean;
-  /** Warum nicht kaufbar, falls die Zahlen der Sicht es erklaeren. */
-  grund: Kaufhindernis;
-  onKauf: () => void;
-}): React.JSX.Element {
-  if (!einheit) {
-    // Gekauft oder Vorrat erschoepft. Ein leerer Rahmen statt einer Luecke:
-    // Sonst rutscht der Laden bei jedem Kauf zusammen, und der Daumen trifft
-    // die Karte daneben.
-    return <div className="tr-karte tr-karte-leer" aria-hidden="true" />;
-  }
-  const farbe = KOSTEN_FARBE[einheit.kosten] ?? KOSTEN_FARBE[1];
-  /* Der Rahmen sagt "hier wird eine Schwelle voll", das leuchtende Zeichen
-     darunter sagt welche. Genug fuer den Rahmen ist EINE Marke — eine Einheit
-     traegt bis zu zwei. */
-  const trifft = marken.some(trifftSchwelle);
-  return (
-    <button
-      type="button"
-      className={trifft ? `tr-karte ${KARTE_TRIFFT}` : 'tr-karte'}
-      disabled={!kaufbar}
-      data-verschmilzt={verschmilzt ? '' : undefined}
-      style={{ '--tr-kosten': farbe } as React.CSSProperties}
-      onClick={onKauf}
-    >
-      <span className="tr-karte-kopf">
-        {/* Die Figur steht an der Stelle, an der bisher das Rollenzeichen
-            stand — die Rolle selbst steht als Wort darunter und geht damit
-            nicht verloren. */}
-        <Figurbild
-          einheit={einheit}
-          klasse="tr-figur"
-          ersatz={<RollenZeichen rolle={einheit.rolle} />}
-        />
-        {/* Der Preis wird rot, wenn das Gold nicht reicht: Eine Karte, die
-            man sich nicht leisten kann, soll anders aussehen als eine, die
-            man gerade nicht kaufen kann, weil man schon bereit ist. */}
-        <span className="tr-karte-preis" data-teuer={grund === 'gold' ? '' : undefined}>
-          <GoldZeichen />
-          {einheit.kosten}
-        </span>
-      </span>
-      <strong className="tr-karte-name">{einheit.name}</strong>
-      <span className="tr-karte-rolle">{ROLLE_NAME[einheit.rolle]}</span>
-      {/* Beschriftet, weil die Karte eine Schaltflaeche ist und ihren Namen
-          aus dem Inhalt bezieht: "Dorfwache, Wache, Krieger" ist genau die
-          Auskunft, die ein Vorlesegeraet fuer den Kauf braucht. */}
-      <Markenzeichen marken={einheit.marken} trifft={trifftSchwelle} beschriftet ort="laden" />
-      {/* Der Hinweis, der aus einem Kauf eine Entscheidung macht — und, wenn
-          nichts zu entscheiden ist, der Grund dafuer. Der Grund steht vorn:
-          Wer nicht kaufen kann, will zuerst wissen warum, und erst danach,
-          dass es verschmolzen waere.
-
-          Der Zaehler nennt `verschmelzZahl` und nicht "von 3". Hier stand
-          die 3 einmal ausgeschrieben — wer sie im Modul auf vier stellte,
-          bekam eine Karte, die "1 von 3" behauptet und bei drei Kopien nicht
-          verschmilzt. */}
-      {grund !== null ? (
-        <span className="tr-karte-marke tr-karte-marke-hindernis">
-          {grund === 'gold' ? 'Zu wenig Gold' : 'Bank voll'}
-        </span>
-      ) : verschmilzt ? (
-        <span className="tr-karte-marke">verschmilzt!</span>
-      ) : fehlt < verschmelzZahl ? (
-        <span className="tr-karte-marke tr-karte-marke-leise">
-          {verschmelzZahl - fehlt} von {verschmelzZahl}
-        </span>
-      ) : null}
-    </button>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Kleinteile
@@ -2600,8 +2596,8 @@ function Ladenkarte({
  * dieselbe Ueberlegung wie beim Warteband in Filler.
  *
  * Die Pause ist so lang wie der laengste Kampf der Runde (`interludeMs` im
- * Adapter, bis zu 47 Sekunden). Wer hier etwas einbaut, das eine feste Dauer
- * annimmt, liegt daneben.
+ * Adapter, bis zu 46,5 Sekunden). Wer hier etwas einbaut, das eine feste
+ * Dauer annimmt, liegt daneben.
  */
 function Kampfband(): React.JSX.Element {
   return (
@@ -2643,9 +2639,23 @@ function Abschluss({
 /**
  * Das Regelblatt.
  *
- * Wortlaut nach dem Muster von Filler und Eiland. Der letzte Absatz nennt
- * ausdruecklich, was noch FEHLT — sonst haelt der erste Spieler die
- * uebersprungene Kampfphase fuer einen Fehler.
+ * Wortlaut nach dem Muster von Filler und Eiland.
+ *
+ * BIS ZUM 05.09.2026 STAND HIER EIN ABSCHNITT "Noch nicht dabei": Solange die
+ * Kampfphase uebersprungen wurde und die Marken-Boni fehlten, nannte das Blatt
+ * beides ausdruecklich, damit der erste Spieler die folgenlose Runde nicht fuer
+ * einen Fehler haelt. Beide Gruende sind weg — die Kaempfe laufen ab
+ * (`loeseKampfAuf`) und die Synergien greifen im Modul (synergien.ts, Schwellen
+ * 2/3/5) —, also ist der Abschnitt weg und die Synergie steht als Regel bei den
+ * anderen. Ein Regelblatt, das ein vorhandenes Spielelement als fehlend
+ * ankuendigt, ist schlimmer als keins: Wer die Leiste sieht, glaubt dann eher
+ * dem Text als dem Bildschirm.
+ *
+ * Die Schwellen stehen hier als Zahlen im Fliesstext, weil ein Regeltext sie
+ * nennen muss, um verstaendlich zu sein. Gerechnet wird mit ihnen NICHT — das
+ * tut allein das Modul, und die Leiste zeichnet nur, was in der Sicht steht
+ * (siehe Synergien.tsx). Wer die Schwellen im Modul verschiebt, zieht diesen
+ * Satz mit.
  */
 function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
@@ -2657,41 +2667,39 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       <h3>Regeln</h3>
       <ol>
         <li>
-          Jede Runde legt der Laden fünf Recken aus. Kaufen kostet Gold; wer
-          nichts findet, würfelt neu.
+          Jede Runde legt der Laden fünf Recken aus. Kaufen kostet Gold; wer nichts findet, würfelt
+          neu.
         </li>
         <li>
-          Gekaufte Recken landen auf der Reservebank. Aufs Feld kommen sie,
-          indem du sie auf eine Wabe ziehst — oder antippst und dann die Wabe
-          antippst.
+          Gekaufte Recken landen auf der Reservebank. Aufs Feld kommen sie, indem du sie auf eine
+          Wabe ziehst — oder antippst und dann die Wabe antippst.
         </li>
         <li>
-          <strong>Drei gleiche Recken derselben Stufe verschmelzen von selbst</strong>{' '}
-          zu einem stärkeren. Aus drei Einsternigen wird ein Zweisterniger, aus
-          drei davon ein Dreisterniger.
+          <strong>Drei gleiche Recken derselben Stufe verschmelzen von selbst</strong> zu einem
+          stärkeren. Aus drei Einsternigen wird ein Zweisterniger, aus drei davon ein Dreisterniger.
         </li>
         <li>
-          Wie viele Recken gleichzeitig auf dem Feld stehen dürfen, sagt dein
-          Rang. Rang steigern kostet Gold und bringt einen Feldplatz — und
-          bessere Karten im Laden.
+          Wie viele Recken gleichzeitig auf dem Feld stehen dürfen, sagt dein Rang. Rang steigern
+          kostet Gold und bringt einen Feldplatz — und bessere Karten im Laden.
         </li>
         <li>
-          Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und
-          ein Bonus für Serien. Was die nächste Runde bringt, steht klein neben
-          deinem Gold.
+          Recken gehören Klassen an wie Krieger, Wächter oder Untot. Stehen{' '}
+          <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die Klasse stärker; ab
+          drei und ab fünf noch einmal deutlicher. Der Bonus gilt nur für die Träger selbst und nur
+          auf dem Feld — was auf der Bank liegt, zählt nicht mit. Was gerade greift und wie weit es
+          bis zur nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler darin an, und du
+          bekommst alle Stufen der Klasse und alle Recken, die sie tragen.
         </li>
         <li>
-          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers — von
-          selbst, du siehst nur zu. Der Verlierer verliert Leben: je mehr
-          Gegner noch stehen, desto mehr.
+          Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und ein Bonus für
+          Serien. Was die nächste Runde bringt, steht klein neben deinem Gold.
+        </li>
+        <li>
+          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers — von selbst, du siehst nur
+          zu. Der Verlierer verliert Leben: je mehr Gegner noch stehen, desto mehr.
         </li>
         <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>
       </ol>
-      <h3>Noch nicht dabei</h3>
-      <p>
-        Die Boni für gleiche Klassen fehlen noch; sie kommen als eigener Ausbau.
-        Aufrüsten, verschmelzen, aufstellen und kämpfen ist vollständig da.
-      </p>
       <h3>Ziel</h3>
       <p>Als Letzter am Tisch stehen bleiben.</p>
     </div>

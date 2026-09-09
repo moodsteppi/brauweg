@@ -385,11 +385,34 @@ function applyVorbehalt(
   state: RoundState,
   a: Extract<RoundAction, { type: 'vorbehalt' }>,
 ): RoundState {
+  /**
+   * Dieselbe Erklaerung ein zweites Mal ist wirkungslos, nicht falsch.
+   *
+   * Die Abfrage laeuft gegen eine Frist, und wer in dem Moment tippt, in dem
+   * sie ablaeuft, findet den Tisch genau dort, wo er ihn haben wollte:
+   * `vorbehalteAblaufen` traegt fuer jeden Offenen „gesund" nach. Genauso
+   * harmlos ist ein zweiter Tipp aus einer Sicht, die noch vor der eigenen
+   * Antwort gerechnet wurde — sie bietet die Abfrage weiter an. Beides ist
+   * dieselbe Sorte Rennen wie beim „Weiter" der Rundenpause, und dort ist die
+   * Antwort seit jeher ein Nichts statt eines Verstosses (siehe weiter() in
+   * party.ts). Ohne diese Zeilen kam der Testclient unter Last mit einem
+   * 'actionRejected' zurueck, das mit der geprueften Sache nichts zu tun hatte.
+   *
+   * Eine ABWEICHENDE zweite Erklaerung bleibt ein Verstoss: Sonst koennte man
+   * sie zuruecknehmen, nachdem man an den Zurufen der anderen gehoert hat, wie
+   * sie stehen.
+   */
+  const schonErklaert = state.vorbehalte.find((v) => v.seat === a.seat);
+  if (schonErklaert) {
+    if (schonErklaert.kind === a.kind && (schonErklaert.solo ?? null) === (a.solo ?? null)) {
+      return state;
+    }
+    fail('Sitz hat schon erklaert');
+  }
+
   if (state.phase !== 'vorbehalt') fail('Keine Vorbehaltsabfrage aktiv');
   // Gleichzeitige Abfrage: Es zaehlt nicht, wer dran ist, sondern ob dieser
-  // Sitz seine Antwort noch schuldet. Ein zweites Mal antworten geht nicht —
-  // sonst koennte man seine Erklaerung zuruecknehmen, nachdem man an den
-  // Zurufen der anderen gehoert hat, wie sie stehen.
+  // Sitz seine Antwort noch schuldet.
   if (!vorbehaltOffen(state).includes(a.seat)) fail('Sitz ist nicht an der Reihe');
 
   if (state.forcedSoloSeat === a.seat && a.kind !== 'solo') {

@@ -33,8 +33,18 @@
  * noch aussichtslos (zu stark) ist. `genie` zaehlt Karten und spielt auf
  * groesste Siegwahrscheinlichkeit — die uebrigen kommen ohne Gedaechtnis aus.
  * Nicht jedes Spiel muss alle Stufen unterscheiden; ein Modul, das nur eine
- * Strategie kennt, spielt sie fuer jede Stufe. Bisher wertet nur Doppelkopf
- * die Stufe aus.
+ * Strategie kennt, spielt sie fuer jede Stufe. Nachgezaehlt am 05.09.2026
+ * werten vier von zehn Modulen sie aus: Doppelkopf, Easy Poker und
+ * Tafelrunde im Zug (`botAction`), Mememory dagegen schon beim Aufbau der
+ * Partie (`createParty`) — sein Bot hat ein Gedaechtnis, und wie viel er
+ * sich merkt, steht vor dem ersten Zug fest. Die uebrigen sechs ignorieren
+ * die Stufe.
+ *
+ * Diese Aufzaehlung veraltet, sobald ein Modul nachzieht, und ein Grep nach
+ * `BotLevel` traegt nicht: Eiland und Filler nennen den Typ nur, um zu
+ * begruenden, warum sie ihn NICHT auswerten. Wer es genau wissen will,
+ * sieht in `botAction` und `createParty` des Moduls nach, ob der Parameter
+ * ankommt.
  */
 export type BotLevel = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
@@ -117,7 +127,18 @@ export type GameId =
    * beschreibt dieselbe Spielfamilie (Contract Rummy mit festen Kombinationen
    * je Runde) ohne den Produktnamen zu verwenden.
    */
-  | 'phase10';
+  | 'phase10'
+  /**
+   * Golf ist wie Feldherr kein Zugspiel, sondern Echtzeit im Gleichschritt
+   * (Weg B, siehe SPEZIFIKATION-GOLF.md): 1 bis 8 Spieler zielen und schiessen
+   * gleichzeitig und live auf derselben Minigolfbahn. Der Server rechnet keine
+   * Physik — er verwahrt nur Saatkorn, Bot-Sitze, die Zugliste der Schlaege
+   * und die Ergebnismeldungen. `currentActor` ist deshalb wie bei Feldherr
+   * immer null; anders als Feldherr braucht Golf aber eine Schaupause
+   * (`interludeMs`/`advanceInterlude`), weil sonst kein Timer je von selbst
+   * weiterliefe, solange niemand ein Ergebnis meldet.
+   */
+  | 'golf';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby
@@ -180,6 +201,28 @@ export interface GameMeta {
    * (Grundsatz 4: der Regelsatz enthaelt keinen Geldbeutel).
    */
   readonly chipStackField?: string;
+  /**
+   * Obergrenze fuer die Pause der Plattform zwischen zwei Botzuegen.
+   *
+   * Die Plattform wartet zwischen zwei Botzuegen `botDelayMs` (0,8 s), damit
+   * man jede gelegte Karte einzeln wahrnimmt. Das passt fuer ein Kartenspiel,
+   * in dem ein Sitz je Stich EINMAL dran ist. Es passt nicht fuer ein Spiel,
+   * in dem ein Bot je Runde ein Dutzend Handgriffe macht: Bei Tafelrunde
+   * ruesten alle gleichzeitig, `currentActor` nennt aber immer nur einen Sitz
+   * — die Bots arbeiten also NACHEINANDER ihre Kaeufe ab, und wer schon
+   * "Bereit" getippt hat, sitzt so lange davor. Gemessen am 06.09.2026 zu
+   * viert: 16 fremde Handgriffe je Runde im Median, 30 im neunten Zehntel —
+   * mit 0,8 s sind das 12,8 s bzw. 24 s reines Warten je Runde.
+   *
+   * EINE OBERGRENZE UND KEIN WERT: Verrechnet wird `Math.min` mit der
+   * Einstellung der Laufzeit. Ein Modul kann den Takt damit kuerzen, aber
+   * keiner kann ihn verlaengern — sonst saesse ein Test, der die Laufzeit
+   * ausdruecklich auf `botDelayMs: 0` stellt, die Pause dieses Moduls trotzdem
+   * ab.
+   *
+   * Fehlt das Feld, gilt der Takt der Plattform. Das ist der Normalfall.
+   */
+  readonly botTaktHoechstMs?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -317,6 +360,60 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
 
   /** Beendet die laufende Schaupause nach Ablauf der Zeit. */
   advanceInterlude?(party: TParty): TParty;
+
+  /**
+   * Frist der laufenden PHASE — anders als die Schaupause auch dann, wenn
+   * jemand am Zug ist.
+   *
+   * Liefert die Solldauer der Phase in Millisekunden, sonst null. Das Modul
+   * bleibt uhrlos wie ueberall (Grundsatz 1): Es nennt nur die Dauer, gemessen
+   * wird sie von der Plattform, und nach Ablauf ruft sie advancePhase auf. Die
+   * Frist steht ab Beginn der Phase FEST — eine Aktion irgendeines Sitzes
+   * verschiebt sie nicht.
+   *
+   * WARUM ES DAS NEBEN interludeMs GIBT: Eine Schaupause heisst, dass niemand
+   * handeln darf; die Plattform fragt sie deshalb nur, wenn currentActor null
+   * ist. Ein Spiel, in dem alle GLEICHZEITIG handeln (Tafelrunde, Eiland),
+   * nennt aber trotzdem einen Sitz, damit Zugzeit und Bot-Uebernahme greifen —
+   * und hat damit gar keine Frist mehr: Die Zugzeit wird bei jeder Aktion
+   * irgendeines Sitzes neu gestellt und faellt beim Botsitz ganz weg. Genau
+   * diese Luecke schliesst diese Frist.
+   *
+   * Sie taugt NICHT als zweite Zugzeit: Sie gilt fuer die Phase und damit fuer
+   * alle Sitze, nicht fuer einen einzelnen. Wer nach Ablauf noch nicht
+   * gehandelt hat, bekommt vom Modul das, was seine Regeln dafuer vorsehen.
+   *
+   * Woran die Plattform eine NEUE Phase erkennt, gibt es in zwei Fassungen —
+   * ein Modul braucht genau eine davon:
+   *
+   *   1. Diese Methode liefert zwischen zwei Fristen einmal null. Das ist der
+   *      einfache Weg und der von Tafelrunde: Dazwischen liegt die Kampfphase.
+   *   2. Das Modul nennt zusaetzlich `phaseKey`. Den braucht, wessen Phasen
+   *      OHNE Zwischenschritt aufeinanderfolgen — bei Eiland loest die letzte
+   *      Abgabe einer Runde die naechste unmittelbar aus, ein null-Durchgang
+   *      kommt dort nie vor, und ohne Merkmal liefe die Frist der ersten Runde
+   *      bis zum Partieende weiter.
+   *
+   * Optional: Ein Spiel mit fester Zugfolge laesst beide Methoden weg.
+   */
+  phaseMs?(party: TParty): number | null;
+
+  /**
+   * Merkmal der laufenden Phase — wechselt es, ist die alte Frist verfallen
+   * und die Plattform stellt eine neue.
+   *
+   * Gedacht ist eine Zahl, die das Modul ohnehin fuehrt (bei Eiland die
+   * Rundennummer); erfunden werden muss nichts. Zwei aufeinanderfolgende
+   * Phasen duerfen dasselbe Merkmal nicht zweimal tragen, sonst erbt die
+   * zweite die Restzeit der ersten.
+   *
+   * Optional und nur zusammen mit `phaseMs` sinnvoll: Ein Modul, dessen
+   * Fristen ohnehin durch ein null getrennt sind, laesst es weg.
+   */
+  phaseKey?(party: TParty): string | number | null;
+
+  /** Beendet die laufende Phase nach Ablauf der Frist. */
+  advancePhase?(party: TParty): TParty;
 
   standings(party: TParty): PartyStanding[];
 

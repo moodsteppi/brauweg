@@ -71,6 +71,118 @@ test('zwei Clients beenden eine vollstaendige Partie', async (t) => {
   b.close();
 });
 
+test('ein spaetes "Weiter" auf der beendeten Partie ist kein Fehler', async (t) => {
+  /**
+   * Das zweite Rennen derselben Sorte, an dem der Durchstich unter Last rot
+   * war: Die Rundenpause endet, sobald der LETZTE anwesende Mensch "Weiter"
+   * tippt (oder die Frist ablaeuft) - und bei der letzten Runde endet damit
+   * die ganze Partie. Wer in genau diesem Moment tippt, findet den Tisch da,
+   * wo er ihn haben wollte.
+   *
+   * Die Engine sieht das seit jeher so (weiter() in game-doppelkopf/src/
+   * party.ts: "Zu spaet getippt ... ist kein Verstoss"), die Plattform kam
+   * aber gar nicht mehr dorthin: Sie hat vor dem Modul geurteilt und mit
+   * 'partyFinished' geantwortet. Dasselbe Muster wie bei der verspaeteten
+   * Vorbehaltsantwort eine Zeile weiter unten, nur eine Ebene hoeher.
+   *
+   * Der zweite Tipp geht von Hand raus, damit das Rennen IMMER geprueft wird
+   * und nicht nur dann, wenn die Maschine gerade genug zu tun hat. Eine
+   * kuerzere Partie gibt es dafuer nicht: Die Rundenzahl muss ein Vielfaches
+   * der Rotation sein (roundsNotMultipleOfRotation in tables/service.ts).
+   */
+  const h = await startHarness();
+  t.after(() => h.close());
+
+  const { anna, bert, table } = await tableWithTwoHumans(h);
+  const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  const b = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Bert');
+
+  a.join(table.id);
+  await a.waitFor(() => a.lastView !== null, 'erste Sicht fuer Anna');
+  b.join(table.id);
+  await b.waitFor(() => b.lastView !== null, 'erste Sicht fuer Bert');
+
+  await b.waitFor(() => b.lastView?.finished === true, 'Partie-Ende bei Bert', 60_000);
+  assert.deepEqual(b.errors, [], 'die Partie selbst laeuft fehlerfrei durch');
+
+  b.raw({
+    v: b.lastView!.v,
+    game: b.lastView!.game,
+    type: 'action',
+    tableId: table.id,
+    action: { type: 'weiter', seat: b.lastView!.seat },
+  });
+  // Kein Ereignis, auf das sich warten liesse - erwartet wird ja, dass nichts
+  // passiert. Eine Antwort haette in dieser Zeit laengst zurueckkommen muessen.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  assert.deepEqual(b.errors, [], 'der zu spaete Tipp ist wirkungslos, nicht falsch');
+
+  a.close();
+  b.close();
+});
+
+test('dieselbe Vorbehaltsantwort ein zweites Mal ist kein Fehler', async (t) => {
+  /**
+   * Das Rennen, an dem der Durchstich unter Last einmal rot war (06.09.2026):
+   * Die Vorbehaltsabfrage laeuft gegen eine Frist, und wer in dem Moment
+   * tippt, in dem sie ablaeuft — oder aus einer Sicht tippt, die noch vor der
+   * eigenen Antwort gerechnet wurde —, schickte dem Server eine Erklaerung,
+   * die er schon eingetragen hatte. Der Client bekam 'actionRejected'.
+   *
+   * Hier steht der Tisch dafuer still (`botDelayMs` hoch, passiver Client) und
+   * der zweite Tipp wird von Hand geschickt: Das Rennen soll IMMER geprueft
+   * werden und nicht nur dann, wenn die Maschine gerade genug zu tun hat.
+   */
+  const h = await startHarness({ botDelayMs: 60_000 });
+  t.after(() => h.close());
+
+  const { anna, table } = await tableWithTwoHumans(h);
+  const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  a.passive = true;
+  a.join(table.id);
+
+  const gesundIn = (view: { legalActions: readonly unknown[] } | null) =>
+    view?.legalActions.find(
+      (candidate) =>
+        (candidate as { type: string; kind?: unknown }).type === 'vorbehalt' &&
+        (candidate as { kind?: unknown }).kind === null,
+    ) ?? null;
+
+  await a.waitFor(() => gesundIn(a.lastView), 'Vorbehaltsabfrage fuer Anna');
+  const gesund = gesundIn(a.lastView)!;
+  const schicken = () =>
+    a.raw({
+      v: a.lastView!.v,
+      game: a.lastView!.game,
+      type: 'action',
+      tableId: table.id,
+      action: gesund,
+    });
+
+  schicken();
+  await a.waitFor(() => gesundIn(a.lastView) === null, 'Annas Antwort ist verbucht');
+
+  const revision = a.lastView!.revision;
+  const sichten = a.messages('view').length;
+
+  schicken();
+  // Kein Ereignis, auf das sich warten liesse - erwartet wird ja, dass nichts
+  // passiert. Eine Antwort haette in dieser Zeit laengst zurueckkommen muessen.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  assert.deepEqual(a.errors, [], 'die zweite Erklaerung ist wirkungslos, nicht falsch');
+  assert.equal(a.lastView!.revision, revision, 'und sie zaehlt keine Revision hoch');
+  assert.equal(
+    a.messages('view').length,
+    sichten,
+    'ohne Wirkung gibt es auch keinen Rundruf - sonst saehe jeder Client denselben '
+      + 'Stand unter neuer Revision noch einmal',
+  );
+
+  a.close();
+});
+
 test('auch ein Tisch mit Bots zaehlt fuer die Rangliste', async (t) => {
   const h = await startHarness();
   t.after(() => h.close());

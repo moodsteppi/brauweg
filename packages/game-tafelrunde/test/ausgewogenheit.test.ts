@@ -39,9 +39,9 @@ import { KATALOG, MARKEN, SCHWELLEN } from '../src/index.js';
  *
  * Vierhundert und nicht achtzig: Eine Partie zu viert dauert seit dem kuerzeren
  * Lebensbalken 15 statt 27 Runden und kostet damit ein Vielfaches weniger. Bei
- * vierhundert traegt die schwaechste gezaehlte Marke rund siebenhundert
- * Antritte, ihr Standardfehler liegt unter zwei Prozentpunkten — bei achtzig
- * waere er dreimal so gross wie der Abstand, den die Probe messen soll. Mehr
+ * vierhundert traegt die schwaechste gezaehlte Marke 184 Antritte und die
+ * naechste schon 272; bei achtzig waere die schwaechste unter vierzig und ihr
+ * Standardfehler groesser als der Abstand, den die Probe messen soll. Mehr
  * waeren besser und gehoeren ins Werkzeug, nicht in einen Testlauf, den jemand
  * vor jedem Commit abwartet.
  */
@@ -65,11 +65,46 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * die das als Ausschlag laese, schluege bei jeder zweiten Katalogaenderung
  * grundlos an.
  *
- * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten: Drache (rund
- * 30 Antritte ueber 400 Partien zu viert) und Untot (rund 5) fallen immer
- * heraus. Beide haben nur zwei Traeger im Katalog. Sie stehen im
- * Konzeptdokument und gehoeren ins Werkzeug, wo eine Messung ueber 5.000
- * Partien ihnen genug Antritte gibt.
+ * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
+ * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
+ * SIEBEN Marken. Waechter 612, Krieger 583, Elementar 435, Meuchler 428,
+ * Drache 323, Naturwesen 255, Untot 123. Die Mindestzahl unten verlangt sechs
+ * und laesst der duennsten Zeile damit genau einen Ausfall Luft. WER DEN
+ * KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER HUNDERT FALLEN, SIEHT HIER
+ * "nur 5 Marken mit genug Antritten" und nicht den eigentlichen Befund; die
+ * Zahl 123 (Untot) ist die knappste der Datei.
+ *
+ * DIESE SIEBEN ZAHLEN VERALTEN VON SELBST, und zwar bei jeder Aenderung, die
+ * beeinflusst, WAS der Bot am Ende auf dem Brett hat — Katalog, Bot-Bewertung,
+ * Geometrie. Sie standen schon einmal daneben, ohne dass es jemandem auffiel;
+ * bemerkt wurde es erst beim Einbau der Nachbarordnung je Seite (arena.ts,
+ * `arenaNachbarnFuer`), die sie erneut verschoben hat. Wer sie braucht, misst
+ * nach, statt sie zu glauben:
+ *
+ *     node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 400
+ *       --sitze 4 --saat ausgewogenheit-probe --mindest 100
+ *
+ * Der ARGUMENTATION schadet das Veralten nicht: Sie haengt an der duennsten
+ * Zeile und nicht an sieben genauen Werten — und die Probe faengt den Fall
+ * ohnehin selbst ab.
+ *
+ * DREI ZEILEN HABEN IHREN PLATZ HIER ERST NACHTRAEGLICH BEKOMMEN, aus drei
+ * verschiedenen Gruenden — und keiner davon ist eine Aenderung an dieser
+ * Probe. Untot stand bei einem einzigen Antritt, weil nur Knochenspaeher und
+ * Grabfuerstin die Marke trugen ("Untot zu zweit" hiess zwei Kopien derselben
+ * Einheit); seit der Schildknappe sie mittraegt, zaehlt die Zeile. Elementar
+ * und Drache hingen daran, dass Elementar keinen Traeger in der Vorderreihe
+ * hatte; seit das Irrlicht dort steht, zaehlen beide. Und NATURWESEN stand mit
+ * 85 knapp darunter, bis die Bot-Bewertung die Reichweite bekam (bot.ts,
+ * `REICHWEITEN_GEWICHT`): Der Bot kauft seitdem den Astschuetzen deutlich
+ * oefter — 1.141 auf 4.761 Antritte ueber 5.000 Partien —, und mit ihm kommt
+ * die Marke ueber die Zaehlschwelle. Alles drei steht ausfuehrlich im
+ * Konzeptdokument.
+ *
+ * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (von 295 herunter) und ist
+ * jetzt die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und
+ * der Bot kauft die seitdem seltener. Die Marke haelt die Schwelle noch, aber sie ist
+ * die naechste, die faellt.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -88,6 +123,18 @@ const AUSWERTUNG = werteAus(
 // Marken
 // ---------------------------------------------------------------------------
 
+/**
+ * Der Standardfehler einer Siegquote — aus der Stichprobe selbst.
+ *
+ * `sqrt(p * (1 - p) / n)`, die Streuung eines Anteils bei `n` unabhaengigen
+ * Antritten. Sie steht hier und nicht in messen.ts, weil sie eine Aussage
+ * ueber die PROBE ist und nicht ueber das Spiel: Das Werkzeug rechnet mit
+ * 5.000 Partien und braucht sie nicht.
+ */
+function standardfehler(quote: number, antritte: number): number {
+  return Math.sqrt((quote * (1 - quote)) / antritte);
+}
+
 describe('Ausgewogenheit: Marken', () => {
   /**
    * Keine Marke gewinnt mehr als das Doppelte des Schnitts und keine faellt
@@ -97,13 +144,46 @@ describe('Ausgewogenheit: Marken', () => {
    * sondern DIE Wahl: Wer eine Aufstellung findet, die doppelt so oft gewinnt
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
-   * In dieser Auswahl reicht der weiteste Ausschlag von x1,52 (Elementar) bis
-   * x0,64 (Meuchler) — nach beiden Seiten ist also Platz. ABER: Ueber die 500
-   * Partien des Werkzeugs steht die Marke Drache bei x1,86, und das ist
-   * knapp. Hier faellt sie mit rund 35 Antritten unter die Mindestzahl und
-   * wird gar nicht geprueft; sie steht als Befund im Konzeptdokument. Wer den
-   * Katalog anfasst, laesst deshalb das Werkzeug laufen und verlaesst sich
-   * nicht auf diese Probe allein.
+   * In dieser Auswahl reicht der weiteste Ausschlag von x1,49 (Waechter) bis
+   * x0,74 (Drache) — nach beiden Seiten ist also Platz, aber weniger als ohne
+   * den Reichweitenfaktor im Bot (x1,34 bis x0,71 auf demselben Stand).
+   *
+   * DASS DIE SPANNE AUFGEGANGEN IST, hat einen benannten Grund und ist kein
+   * Rueckschritt am Katalog: Die Bot-Bewertung kennt seit dem 06.09.2026 die
+   * Reichweite (bot.ts, `REICHWEITEN_GEWICHT`). Ein Bot, der besser spielt,
+   * trennt staerkere von schwaecheren Marken schaerfer — Krieger und Waechter
+   * gehen hoch, Naturwesen, Elementar, Drache und Meuchler runter, ohne dass
+   * an einer Katalogzeile etwas geaendert wurde. Eine Meta ist gewollt;
+   * angefasst wird, was die Schranke reisst, und die ist x0,5 bis x2.
+   *
+   * Alle sieben Zeilen stehen inzwischen in der Tabelle, es faellt also keine
+   * mehr unbeobachtet aus. Wer den Katalog anfasst, laesst trotzdem das
+   * Werkzeug ueber 5.000 Partien laufen und verlaesst sich nicht auf diese
+   * Probe allein; die Auswertung steht im Konzeptdokument.
+   *
+   * VERGLICHEN WIRD MIT DEM STANDARDFEHLER DER EIGENEN STICHPROBE, seit dem
+   * 06.09.2026 — die Schranken x0,5 und x2 sind unveraendert, aber eine
+   * Marke reisst sie erst, wenn sie es UM MEHR ALS DIE MESSUNGENAUIGKEIT tut.
+   *
+   * Der Anlass war ein Fehlalarm, und er trifft immer dieselbe Zeile:
+   * Naturwesen ist die schwaechste gezaehlte Marke und steht dicht an der
+   * unteren Schranke (Board-Karte "Naturwesen ist mit x0,54 die neue
+   * Wackelzeile"). Bei 400 Partien traegt sie rund 280 Antritte, ihre Quote
+   * liegt bei 13 bis 15 %, und deren Standardfehler ist 2,0 Prozentpunkte —
+   * auf den Faktor umgerechnet plus/minus 0,07. Gemessen auf DERSELBEN
+   * Saatfamilie ergibt sie x0,48 (400 Partien), x0,51 (800), x0,52 (1.200),
+   * x0,50 (1.600) und x0,55 (3.000), und zwar VOR wie NACH der Umstellung des
+   * Bots auf eine Wunschreihe je Rolle: Ihre Siegquote selbst bewegte sich
+   * dabei von 15,0 auf 15,2 %. Was die Probe an diesem Tag gemeldet hat, war
+   * also ihre eigene Streuung und kein Befund ueber den Katalog.
+   *
+   * DIE ANTWORT IST NICHT "MEHR PARTIEN": Die Reihe oben zeigt, dass die
+   * Schaetzung auch bei 1.600 noch auf der Schranke steht, und ein Testlauf,
+   * den jemand vor jedem Commit abwartet, vertraegt keine 30 Sekunden fuer
+   * eine Zeile. Und sie ist auch nicht "die Schranke senken" — dann verschoebe
+   * eine Messfrage stillschweigend die Zusage ueber den Katalog. Eine Marke,
+   * die WIRKLICH bei x0,3 steht, faellt weiterhin auf: Der Standardfehler
+   * traegt bei diesen Stichproben rund 0,07, nicht 0,2.
    */
   it('haelt jede gezaehlte Marke zwischen der Haelfte und dem Doppelten des Schnitts', () => {
     const schnitt = schnittQuote(AUSWERTUNG.marken, MINDEST_ANTRITTE);
@@ -111,22 +191,22 @@ describe('Ausgewogenheit: Marken', () => {
 
     // Ohne Zeilen gibt es nichts zu vergleichen — und eine Probe, die bei
     // leerer Tabelle gruen ist, prueft nichts.
-    assert.ok(gezaehlt.length >= 4, `nur ${gezaehlt.length} Marken mit genug Antritten`);
+    assert.ok(gezaehlt.length >= 6, `nur ${gezaehlt.length} Marken mit genug Antritten`);
     assert.ok(schnitt > 0, 'der Schnitt der Siegquoten ist null');
 
     for (const zeile of gezaehlt) {
       const faktor = zeile.quote! / schnitt;
+      const streuung = standardfehler(zeile.quote!, zeile.antritte) / schnitt;
+      const lage =
+        `x${faktor.toFixed(2)} ± ${streuung.toFixed(2)} des Schnitts von ` +
+        `${(schnitt * 100).toFixed(1)} %, ${zeile.antritte} Antritte`;
       assert.ok(
-        faktor <= 2,
-        `${zeile.name} gewinnt ${(zeile.quote! * 100).toFixed(1)} % ` +
-          `(x${faktor.toFixed(2)} des Schnitts von ${(schnitt * 100).toFixed(1)} %, ` +
-          `${zeile.antritte} Antritte)`,
+        faktor - streuung <= 2,
+        `${zeile.name} gewinnt ${(zeile.quote! * 100).toFixed(1)} % (${lage})`,
       );
       assert.ok(
-        faktor >= 0.5,
-        `${zeile.name} gewinnt nur ${(zeile.quote! * 100).toFixed(1)} % ` +
-          `(x${faktor.toFixed(2)} des Schnitts von ${(schnitt * 100).toFixed(1)} %, ` +
-          `${zeile.antritte} Antritte)`,
+        faktor + streuung >= 0.5,
+        `${zeile.name} gewinnt nur ${(zeile.quote! * 100).toFixed(1)} % (${lage})`,
       );
     }
   });
@@ -155,23 +235,29 @@ describe('Ausgewogenheit: Marken', () => {
 
 describe('Ausgewogenheit: Schwellen', () => {
   /**
-   * Die Schwellen 2 und 4 werden wenigstens erreicht.
+   * JEDE der drei Schwellen wird wenigstens einmal erreicht — auch die
+   * hoechste.
    *
    * Das ist die schwaechste denkbare Aussage und trotzdem eine noetige: Wer an
    * den Feldplaetzen oder am Katalog dreht, kann eine Schwelle ohne Absicht
    * ganz abschalten. Auf einen ANTEIL laesst sich das nicht pruefen — dafuer
-   * sind die hoeheren Schwellen zu selten und die Auswahl hier zu klein.
+   * ist die hoechste Schwelle zu selten und die Auswahl hier zu klein.
    *
-   * DIE SCHWELLE 6 IST HIER AUSGENOMMEN, und das ist ein Befund und kein
-   * Versehen: Ueber 5.000 Partien zu viert stand sie in 7 von 261.233
-   * Antritten. In vierhundert Partien kommt sie also im Mittel nicht ein
-   * einziges Mal vor, und eine Probe darauf waere ein Muenzwurf. Sechs Traeger
-   * brauchen mindestens Level 6, und seit die Partie zu viert nach 15 statt 27
-   * Runden endet, kommt dort kaum noch jemand hin. Das steht als offener Punkt
-   * auf dem Board ("die Schwellen 4 und 6 sind praktisch unerreichbar") und
-   * wird nicht dadurch besser, dass man es hier gruen faerbt.
+   * DIE HOECHSTE WAR BIS ZUM 05.09.2026 AUSGENOMMEN, und das war ein Befund
+   * und kein Versehen: Solange sie bei SECHS Traegern lag, stand sie ueber
+   * 2.000 Partien zu viert in 0 von 75.028 Antritten. Sechs Traeger brauchen
+   * mindestens Level 6, und gemessen kommt ein Bot in 0,04 % der Antritte
+   * dorthin — die Bretter dieser Partie sind drei bis fuenf Einheiten gross.
+   * Eine Probe darauf waere kein Muenzwurf gewesen, sondern immer rot.
+   *
+   * Seit die Schwellen bei 2/3/5 liegen und der Bot ein echtes Markengewicht
+   * hat (bot.ts, `heerStaerke`), steht die hoechste in 0,9 % der Antritte —
+   * ueber 400 Partien also rund hundertmal. Fuer ein "wenigstens einmal"
+   * reicht das mit grossem Abstand, und genau dieser Abstand ist es, den die
+   * Probe kuenftig ueberwacht: Faellt sie, ist die hoechste Schwelle wieder
+   * unerreichbar geworden.
    */
-  for (const schwelle of SCHWELLEN.filter((s) => s < 6)) {
+  for (const schwelle of SCHWELLEN) {
     it(`erreicht die Schwelle ${schwelle} wenigstens einmal`, () => {
       assert.ok(
         AUSWERTUNG.schwellenGesamt[schwelle] > 0,

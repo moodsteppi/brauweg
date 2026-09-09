@@ -129,15 +129,59 @@ test('ohne Vorfuehrung wird gleichzeitig gefragt: jeder Sitz darf erklaeren', ()
   assert.ok(doppelkopf.legalActions(danach, 1).length > 0, 'Sitz 1 schuldet noch');
 });
 
-test('eine zweite Erklaerung desselben Sitzes weist die Engine ab', () => {
+test('eine ABWEICHENDE zweite Erklaerung weist die Engine ab', () => {
   // Sonst koennte man seine Erklaerung zuruecknehmen, nachdem man an den
   // Zurufen der anderen gehoert hat, wie sie stehen.
   const party = newParty();
   const gesund = doppelkopf
     .legalActions(party, 0)
     .find((a) => a.type === 'vorbehalt' && a.kind === null)!;
+  const solo = doppelkopf
+    .legalActions(party, 0)
+    .find((a) => a.type === 'vorbehalt' && a.kind === 'solo')!;
   const danach = doppelkopf.act(party, 0, gesund);
-  assert.throws(() => doppelkopf.act(danach, 0, gesund));
+  assert.throws(() => doppelkopf.act(danach, 0, solo));
+});
+
+test('dieselbe Erklaerung ein zweites Mal aendert nichts, statt abgewiesen zu werden', () => {
+  // Der Tisch ist da, wo der Erklaerende hinwollte. Die Sicht, aus der der
+  // zweite Tipp kam, war nur noch nicht auf dem Stand der eigenen Antwort.
+  const party = newParty();
+  const gesund = doppelkopf
+    .legalActions(party, 0)
+    .find((a) => a.type === 'vorbehalt' && a.kind === null)!;
+  const danach = doppelkopf.act(party, 0, gesund);
+
+  const nochmal = doppelkopf.act(danach, 0, gesund);
+  assert.equal(
+    nochmal,
+    danach,
+    'unveraendert BIS AUF DIE IDENTITAET - daran erkennt die Plattform die Wirkungslosigkeit',
+  );
+});
+
+test('eine Erklaerung nach Ablauf der Frist aendert nichts, wenn sie dieselbe ist', () => {
+  /**
+   * Das Rennen, das den Durchstich unter Last rot gefaerbt hat: Die Antwort
+   * ist unterwegs, waehrend die Frist ablaeuft. `advanceInterlude` traegt fuer
+   * jeden Offenen "gesund" nach - wer genau das getippt hat, bekommt danach
+   * kein 'actionRejected' mehr, sondern ein Nichts.
+   */
+  const party = newParty();
+  const gesund = doppelkopf
+    .legalActions(party, 0)
+    .find((a) => a.type === 'vorbehalt' && a.kind === null)!;
+  const solo = doppelkopf
+    .legalActions(party, 0)
+    .find((a) => a.type === 'vorbehalt' && a.kind === 'solo')!;
+
+  const abgelaufen = doppelkopf.advanceInterlude!(party);
+  assert.notEqual(abgelaufen.current?.phase, 'vorbehalt', 'die Abfrage ist vorbei');
+
+  assert.equal(doppelkopf.act(abgelaufen, 0, gesund), abgelaufen);
+  // Ein Solo dagegen wollte etwas anderes, als jetzt auf dem Tisch liegt -
+  // das darf nicht stumm untergehen.
+  assert.throws(() => doppelkopf.act(abgelaufen, 0, solo));
 });
 
 test('nach Ablauf der Frist gilt jeder ungefragte Sitz als gesund', () => {

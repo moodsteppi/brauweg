@@ -43,7 +43,7 @@ import {
   serienBonus,
   zins,
 } from './regeln.js';
-import { type Kampfbericht, simuliereKampf } from './kampf.js';
+import { type Kampfbericht, type Kampfregler, simuliereKampf } from './kampf.js';
 import { type Saat, baueZufall, kampfSaat, ladenSaat, paarungsSaat } from './zufall.js';
 
 // ---------------------------------------------------------------------------
@@ -96,8 +96,23 @@ export interface Heer {
   readonly serie: Serie;
   /** Hat der Sitz seine Vorbereitung beendet? */
   readonly bereit: boolean;
-  /** Wie oft der Laden fuer diesen Sitz schon gefuellt wurde. Siehe ladenSaat. */
+  /**
+   * Wie oft aus dem Ladenstrom dieses Sitzes schon gezogen wurde — Rundenanfang,
+   * Neu-Wuerfeln UND jedes Nachbesetzen nach einem Kauf. Die Zahl ist die
+   * Wurfnummer in ladenSaat und muss deshalb bei JEDER Ziehung steigen, sonst
+   * liefert derselbe Strom zweimal dieselbe Karte.
+   */
   readonly wuerfe: number;
+  /**
+   * Wie oft dieser Sitz IN DIESER RUNDE neu gewuerfelt hat. Nachbesetzen zaehlt
+   * nicht mit, nur das ausdrueckliche Neu-Wuerfeln.
+   *
+   * Gebraucht wird die Zahl vom Bot: Seit das Wuerfeln nichts mehr kostet,
+   * begrenzt ihn kein Gold mehr, und ohne einen Deckel wuerfelte er in einer
+   * Lage, in der ihm nichts passt, bis in alle Ewigkeit — die Plattform ruft
+   * ihn so lange, bis er "bereit" meldet.
+   */
+  readonly wuerfeRunde: number;
   /** Runde des Ausscheidens, sonst null. */
   readonly ausRunde: number | null;
   readonly verlassen: boolean;
@@ -145,6 +160,23 @@ export interface TafelrundePartie {
    */
   readonly kaempfe: readonly Kampfpaarung[];
   readonly fertig: boolean;
+  /**
+   * Die Stellschrauben der Kampfsimulation, wenn dieser Tisch von den
+   * gebauten abweicht — sonst gar nicht gesetzt.
+   *
+   * Kein Tisch der Plattform setzt das Feld: `createParty` im Adapter gibt
+   * nichts mit, also fehlt es in jedem echten Snapshot und `simuliereKampf`
+   * nimmt `STANDARD_REGLER`. Es steht hier fuer den Messstand, der dieselbe
+   * Partie mit anderem Zeitraffer oder anderem Schadensteiler durchrechnen
+   * muss, um zu beantworten, welche Schraube wie viel bringt
+   * (docs/TAFELRUNDE-SPIELZEIT.md).
+   *
+   * IM ZUSTAND UND NICHT ALS PARAMETER, weil der Kampf tief drin beginnt:
+   * `loeseKampfAuf` -> `naechsteRunde` -> `pruefePhase` -> `beginneKampf`.
+   * Ihn durch diese Kette zu reichen hiesse, vier Signaturen um ein Argument
+   * zu erweitern, das im Betrieb nie jemand setzt.
+   */
+  readonly regler?: Kampfregler;
 }
 
 /**
@@ -300,9 +332,15 @@ function gibZurueck(
 /**
  * Den Laden eines Sitzes neu fuellen: alte Karten zurueck, neue ziehen.
  *
- * Eine Funktion fuer beides — Rundenanfang und Neu-Wuerfeln —, weil ein
- * zweiter Weg unweigerlich das Zurueckgeben vergessen wuerde. Genau daran
- * laeuft ein Vorrat leer, und zwar erst nach zwanzig Runden.
+ * Eine Funktion fuer ALLE DREI Anlaesse — Rundenanfang, Neu-Wuerfeln und Kauf
+ * —, weil ein zweiter Weg unweigerlich das Zurueckgeben vergessen wuerde.
+ * Genau daran laeuft ein Vorrat leer, und zwar erst nach zwanzig Runden. Der
+ * Kauf legt die gekaufte Karte vorher auf null, damit sie eben NICHT
+ * zurueckgeht (siehe fuehreAus, Fall 'kaufen').
+ *
+ * Die Wurfnummer steigt bei jedem Aufruf. Daran haengt die Bestimmtheit:
+ * dieselbe Saat und dieselbe Folge von Kaeufen ergeben denselben Laden, und
+ * zwei Aufrufe hintereinander ziehen trotzdem Verschiedenes.
  */
 function fuelleLaden(
   partie: TafelrundePartie,
@@ -417,6 +455,7 @@ function neuesHeer(regeln: TafelrundeRegeln): Heer {
     serie: KEINE_SERIE,
     bereit: false,
     wuerfe: 0,
+    wuerfeRunde: 0,
     ausRunde: null,
     verlassen: false,
   };
@@ -426,6 +465,7 @@ export function erstellePartie(
   regeln: TafelrundeRegeln,
   sitze: readonly number[],
   saat: Saat,
+  regler?: Kampfregler,
 ): TafelrundePartie {
   const heere: Record<number, Heer> = {};
   for (const sitz of sitze) heere[sitz] = neuesHeer(regeln);
@@ -439,6 +479,9 @@ export function erstellePartie(
     heere,
     kaempfe: [],
     fertig: false,
+    // Nur setzen, wenn wirklich einer mitkam: Ein Feld mit `undefined` steht
+    // sonst in jedem Snapshot und in jedem `deepEqual` einer Probe.
+    ...(regler ? { regler } : {}),
   };
 
   /*
@@ -673,11 +716,27 @@ export function fuehreAus(
       const gekauft = rechneKauf(heer, regeln.bankPlaetze, id);
       if (!gekauft) throw new Error('Kein Gold oder kein Platz');
       /*
-       * Die Karte bleibt aus dem Vorrat heraus — sie war es schon, seit sie
-       * im Laden lag. Zurueck geht sie erst beim Verkaufen.
+       * DER GANZE LADEN WIRD NEU GEZOGEN, nicht nur der gekaufte Platz (Robin,
+       * 05.09.2026: "Nicht nur der gekaufte, dein ganzer Shop aktualisiert
+       * sich wenn du etwas kaufst, du musst dich also immer entscheiden"). Ein
+       * Kauf nimmt die uebrigen Angebote mit — zwei Einheiten aus demselben
+       * Laden zu holen geht nicht mehr, und genau das macht die Wahl teuer.
+       *
+       * Die gekaufte Karte bleibt aus dem Vorrat heraus: Sie war es schon,
+       * seit sie im Laden lag, und zurueck geht sie erst beim Verkaufen.
+       * Deshalb steht ihr Platz VOR dem Fuellen auf null — fuelleLaden gibt
+       * alles zurueck, was noch ausliegt, und ueberspringt dabei jedes null.
+       *
+       * Reicht der Vorrat nicht fuer alle Plaetze, bleibt der Laden kleiner.
+       * Das ist ausdruecklich so gewollt und seit dem Wegfall der
+       * Wuerfelkosten die einzige Bremse am Nachziehen.
        */
-      const laden = heer.laden.map((k, i) => (i === platz ? null : k));
-      return setzeHeer(partie, sitz, { ...gekauft, laden });
+      const ohneGekaufte = setzeHeer(partie, sitz, {
+        ...gekauft,
+        laden: gekauft.laden.map((k, i) => (i === platz ? null : k)),
+      });
+      const { heer: gefuellt, vorrat } = fuelleLaden(ohneGekaufte, sitz);
+      return { ...ohneGekaufte, vorrat, heere: { ...ohneGekaufte.heere, [sitz]: gefuellt } };
     }
 
     case 'neuwuerfeln': {
@@ -687,7 +746,14 @@ export function fuehreAus(
         gold: heer.gold - regeln.neuwuerfelnKosten,
       });
       const { heer: gefuellt, vorrat } = fuelleLaden(bezahlt, sitz);
-      return { ...bezahlt, vorrat, heere: { ...bezahlt.heere, [sitz]: gefuellt } };
+      return {
+        ...bezahlt,
+        vorrat,
+        heere: {
+          ...bezahlt.heere,
+          [sitz]: { ...gefuellt, wuerfeRunde: heer.wuerfeRunde + 1 },
+        },
+      };
     }
 
     case 'levelAuf': {
@@ -772,6 +838,34 @@ function pruefePhase(partie: TafelrundePartie): TafelrundePartie {
   return beginneKampf(partie);
 }
 
+/**
+ * Die Vorbereitungsfrist ist um: Wer noch offen ist, gilt jetzt als bereit.
+ *
+ * Das ist der Deckel auf die Platzierungsphase (`vorbereitungMs` im
+ * Regelsatz). Gemessen hat die Zeit die Plattform — dieses Paket hat keine Uhr
+ * (game-api, Grundsatz 1) und erfaehrt vom Ablauf nur dadurch, dass jemand
+ * diese Funktion ruft.
+ *
+ * Gebucht wird NICHTS: kein Zwangskauf, kein Aufstellen, keine Strafe. Wer die
+ * Frist verstreichen laesst, tritt mit dem Brett an, das er hat — dieselbe
+ * Antwort, die das Spiel schon fuer einen verlassenen Sitz kennt. Alles andere
+ * hiesse, fuer jemanden zu entscheiden, der gerade nicht da ist.
+ *
+ * Ausserhalb der Vorbereitung ist es ein Nulldurchgang: Die Plattform kann die
+ * Frist knapp zu spaet melden, wenn im selben Augenblick der letzte Sitz
+ * "bereit" getippt hat.
+ */
+export function fristAbgelaufen(partie: TafelrundePartie): TafelrundePartie {
+  if (partie.fertig || partie.phase !== 'vorbereitung') return partie;
+
+  const heere: Record<number, Heer> = { ...partie.heere };
+  for (const sitz of lebendeSitze(partie)) {
+    const heer = heere[sitz]!;
+    if (!heer.bereit) heere[sitz] = { ...heer, bereit: true };
+  }
+  return pruefePhase({ ...partie, heere });
+}
+
 // ---------------------------------------------------------------------------
 // Der Kampf
 // ---------------------------------------------------------------------------
@@ -847,6 +941,7 @@ function beginneKampf(partie: TafelrundePartie): TafelrundePartie {
     bericht: simuliereKampf(
       [heerVon(partie, satz.a).brett, heerVon(partie, satz.b).brett],
       kampfSaat(partie.saat, partie.runde, satz.a, satz.b),
+      partie.regler,
     ),
   }));
   return { ...partie, phase: 'kampf', kaempfe };
@@ -1034,7 +1129,13 @@ function naechsteRunde(partie: TafelrundePartie): TafelrundePartie {
       heere[sitz] = { ...heer, bereit: true };
       continue;
     }
-    heere[sitz] = { ...heer, gold: heer.gold + einkommen(heer, partie.regeln), bereit: false };
+    heere[sitz] = {
+      ...heer,
+      gold: heer.gold + einkommen(heer, partie.regeln),
+      bereit: false,
+      // Der Wuerfel-Deckel des Bots gilt je Runde, nicht je Partie.
+      wuerfeRunde: 0,
+    };
   }
 
   const naechste: TafelrundePartie = {
@@ -1094,7 +1195,12 @@ export function platzierungen(
         left: heer.verlassen,
       };
     })
-    .sort((a, b) => b.points - a.points || b.leben - a.leben);
+    // Der Sitz als letztes Kriterium ist keine Wertung, sondern eine Zusage:
+    // Die Reihenfolge geht seit dem 6.9.2026 als `platzierung` in die Sicht
+    // (sicht.ts) und damit auf den Bildschirm. Ohne ihn haengt sie bei
+    // voelligem Gleichstand an der Stabilitaet von `sort` — und die Anzeige
+    // spraenge, sobald jemand daran etwas aendert.
+    .sort((a, b) => b.points - a.points || b.leben - a.leben || a.seat - b.seat);
 
   let platz = 0;
   let letzter: string | null = null;

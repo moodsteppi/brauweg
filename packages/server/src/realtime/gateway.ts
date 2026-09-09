@@ -23,7 +23,9 @@ import {
   isReadyToStart,
   schrumpfeAufBesetzte,
   setSeatBot,
+  setSeatColor,
   setTableBotLevel,
+  sitzfarbWuensche,
   tableBotLevel,
   tableWithSeats,
 } from '../tables/service.js';
@@ -166,8 +168,22 @@ const clientMessageSchema = z.discriminatedUnion('type', [
   z.object({
     v: z.literal(ENVELOPE_VERSION),
     game: z.string().max(40).optional(),
+    type: z.literal('setSeatColor'),
+    tableId: z.string().uuid(),
+    /*
+     * Platz in der Farbtabelle des Bildschirms, kein Farbwert. Die Obergrenze
+     * ist grosszuegig (siehe MAX_SITZFARBE): Ein groesserer Farbvorrat soll
+     * keine Serveraenderung kosten.
+     */
+    farbe: z.number().int().min(0).max(63),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
     type: z.literal('startNow'),
     tableId: z.string().uuid(),
+    /** Rundenzahl, die der Startende erst in der Lobby waehlt (Golf: Loecher). */
+    rounds: z.number().int().min(1).max(100).optional(),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -524,8 +540,11 @@ export class Gateway {
         case 'setBotLevel':
           await this.setBotLevel(connection, message.tableId, message.level);
           break;
+        case 'setSeatColor':
+          await this.setSeatColor(connection, message.tableId, message.farbe);
+          break;
         case 'startNow':
-          await this.startNow(connection, message.tableId);
+          await this.startNow(connection, message.tableId, message.rounds);
           break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
@@ -852,12 +871,30 @@ export class Gateway {
   }
 
   /**
+   * Farbwunsch des eigenen Sitzes setzen. Der Rundruf danach traegt ihn an
+   * alle im Wartebereich — jedes Geraet rechnet daraus dieselbe doppelfreie
+   * Farbverteilung.
+   */
+  private async setSeatColor(
+    connection: Connection,
+    tableId: string,
+    farbe: number,
+  ): Promise<void> {
+    await setSeatColor(this.db, tableId, farbe, connection.accountId);
+    await this.broadcast(tableId);
+  }
+
+  /**
    * Sofort losspielen, ohne die leeren Plaetze mit Bots zu fuellen: Der Tisch
    * schrumpft auf die Besetzten, danach startet der uebliche Rundruf die
    * Partie (nach dem Schrumpfen ist kein Platz mehr frei).
    */
-  private async startNow(connection: Connection, tableId: string): Promise<void> {
-    await schrumpfeAufBesetzte(this.db, tableId, connection.accountId);
+  private async startNow(
+    connection: Connection,
+    tableId: string,
+    rounds?: number,
+  ): Promise<void> {
+    await schrumpfeAufBesetzte(this.db, tableId, connection.accountId, rounds);
     await this.broadcast(tableId);
   }
 
@@ -964,6 +1001,10 @@ export class Gateway {
 
     const party = this.runtime.get(tableId);
 
+    // Farbwuensche haengen am Konto, nicht am Sitzindex — sie ueberleben so
+    // das Umnummerieren beim Sofortstart (siehe setSeatColor).
+    const farbwuensche = sitzfarbWuensche(table.filters);
+
     const seats = seatRows.map((row) => ({
       seat: row.seatIndex,
       displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
@@ -975,6 +1016,7 @@ export class Gateway {
         row.accountId && avatarOf.get(row.accountId)
           ? `/api/avatars/${row.accountId}`
           : null,
+      farbe: row.accountId ? (farbwuensche[row.accountId] ?? null) : null,
     }));
 
     // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da

@@ -8,8 +8,10 @@ import {
   erreichbareFreie,
   erstellePartie,
   fuehreAus,
+  MAUERFREIE_ZUEGE,
   kante,
   moeglicheBarrieren,
+  vonIrgendwemErreichbareFreie,
 } from '../src/index.js';
 import { botZug } from '../src/bot.js';
 import { sichtFuer } from '../src/sicht.js';
@@ -17,8 +19,16 @@ import { sichtFuer } from '../src/sicht.js';
 const SAAT = 'b17e4c9a2f5083d6e1c7a4b90d2f6853';
 const BUILD = { ...DEFAULT_REGELN, variante: 'build', barrieren: 5 } as const;
 
+/**
+ * Eine frische Baupartie, aber schon NACH der Eroeffnung: Beide haben zweimal
+ * gefaerbt, Sitz 0 ist wieder dran. Die ersten drei Zuege der Partie sind
+ * mauerfrei (siehe den eigenen Test unten), und die Setz-Tests wollen mauern.
+ */
 function neu() {
-  return erstellePartie(BUILD, [0, 1], SAAT);
+  let partie = erstellePartie(BUILD, [0, 1], SAAT);
+  for (let i = 0; i < 4; i++) partie = fuehreAus(partie, partie.dran, farbzugVon(partie, partie.dran));
+  assert.equal(partie.dran, 0);
+  return partie;
 }
 
 /** Der erste erlaubte Faerbe-Zug eines Sitzes. */
@@ -53,6 +63,41 @@ describe('Build: Aufbau', () => {
       assert.deepEqual(moeglicheBarrieren(partie, 0), []);
       assert.deepEqual(mauern(erlaubteZuege(partie, 0)), []);
     }
+  });
+});
+
+describe('Build: Eroeffnung', () => {
+  it('sperrt die ersten drei Zuege, danach darf gebaut werden', () => {
+    let partie = erstellePartie(BUILD, [0, 1], SAAT);
+    assert.equal(MAUERFREIE_ZUEGE, 3);
+    // Zug 0 (Sitz 0), Zug 1 (Sitz 1), Zug 2 (Sitz 0): gesperrt, Zahl faellt.
+    for (const [zug, sitz, rest] of [
+      [0, 0, 3],
+      [1, 1, 2],
+      [2, 0, 1],
+    ] as const) {
+      assert.equal(partie.zug, zug);
+      assert.equal(partie.dran, sitz);
+      assert.deepEqual(moeglicheBarrieren(partie, sitz), []);
+      assert.deepEqual(mauern(erlaubteZuege(partie, sitz)), []);
+      const sicht = sichtFuer(partie, sitz);
+      assert.equal(sicht.barrierenMoeglich, undefined);
+      assert.equal(sicht.mauerSperre, rest);
+      assert.throws(() => fuehreAus(partie, sitz, { typ: 'barriere', von: 8, nach: 9 }));
+      partie = fuehreAus(partie, sitz, farbzugVon(partie, sitz));
+    }
+    // Zug 3: der zweite Zug des zweiten Spielers — frei.
+    assert.equal(partie.zug, 3);
+    assert.equal(partie.dran, 1);
+    assert.ok(moeglicheBarrieren(partie, 1).length > 0);
+    const frei = sichtFuer(partie, 1);
+    assert.ok((frei.barrierenMoeglich?.length ?? 0) > 0);
+    assert.equal(frei.mauerSperre, 0);
+  });
+
+  it('meldet ohne Mauern keine Sperre', () => {
+    const partie = erstellePartie({ ...DEFAULT_REGELN, variante: 'klar' }, [0, 1], SAAT);
+    assert.equal(sichtFuer(partie, 0).mauerSperre, 0);
   });
 });
 
@@ -167,6 +212,7 @@ describe('Build: Die Wand haelt', () => {
     farbe: { 0: 0, 1: 3 },
     punkte: { 0: 1, 1: 1 },
     dran: 0,
+    zug: 4,
   };
   const basis = () => ({ ...erstellePartie(regeln, [0, 1], 3), ...gelegt });
 
@@ -233,6 +279,7 @@ describe('Build: Einsperren ist verboten', () => {
     farbe: { 0: 0, 1: 3 },
     punkte: { 0: 1, 1: 1 },
     dran: 0,
+    zug: 4,
   });
 
   it('laesst die erste der beiden Kanten zu', () => {
@@ -265,6 +312,7 @@ describe('Build: Einsperren ist verboten', () => {
       )[],
       barrieren: [kante(4, 8)],
       dran: 0,
+      zug: 4,
     };
     const moeglich = moeglicheBarrieren(partie, 0).map(([a, b]) => kante(a, b));
     assert.ok(!moeglich.includes(kante(8, 9)), 'sich selbst zumauern ist verboten');
@@ -285,9 +333,68 @@ describe('Build: Einsperren ist verboten', () => {
       )[],
       punkte: { 0: 3, 1: 1 },
       dran: 0,
+      zug: 4,
     };
     assert.equal(erreichbareFreie(partie, 1, new Set<string>()), 0, 'Sitz 1 sitzt schon fest');
     assert.ok(moeglicheBarrieren(partie, 0).length > 0, 'anderswo darf weiter gebaut werden');
+  });
+});
+
+describe('Build: Einmauern ist verboten', () => {
+  /*
+   * 4x3-Brett, Platz 3 (oben rechts) ist FREI und haengt an zwei Kanten:
+   * nach links (Platz 2) und nach unten (Platz 7). Sitz 0 unten links,
+   * Sitz 1 unten rechts (Platz 11). Beide erreichen Platz 3 ueber freie
+   * Felder — solange nicht beide Kanten zu sind.
+   */
+  const regeln = { spalten: 4, zeilen: 3, farben: 6, variante: 'build', barrieren: 5 } as const;
+  const frei3 = () => ({
+    ...erstellePartie(regeln, [0, 1], 3),
+    feld: [2, 3, 2, 3, 2, 3, 2, 3, 0, 1, 1, 5],
+    besitzer: [null, null, null, null, null, null, null, null, 0, null, null, 1] as (
+      | number
+      | null
+    )[],
+    farbe: { 0: 0, 1: 5 },
+    punkte: { 0: 1, 1: 1 },
+    dran: 0,
+    zug: 4,
+  });
+
+  it('laesst die erste Kante an einem freien Eckfeld zu, die zweite nicht', () => {
+    const eine = new Set(moeglicheBarrieren(frei3(), 0).map(([a, b]) => kante(a, b)));
+    assert.ok(eine.has(kante(2, 3)));
+    assert.ok(eine.has(kante(3, 7)));
+
+    const zu = { ...frei3(), barrieren: [kante(2, 3)] };
+    const danach = new Set(moeglicheBarrieren(zu, 0).map(([a, b]) => kante(a, b)));
+    assert.ok(!danach.has(kante(3, 7)), 'Platz 3 waere fuer niemanden mehr erreichbar');
+    assert.throws(() => fuehreAus(zu, 0, { typ: 'barriere', von: 3, nach: 7 }));
+    // Anderswo darf weiter gebaut werden.
+    assert.ok(danach.size > 0);
+  });
+
+  it('haelt in jeder Saat jedes freie Feld erreichbar, auch wenn Bots alles verbauen', () => {
+    for (let saat = 1; saat <= 30; saat++) {
+      let partie = erstellePartie({ ...DEFAULT_REGELN, variante: 'build', barrieren: 10 }, [0, 1], saat);
+      let schutz = 0;
+      while (!partie.fertig && schutz++ < 400) {
+        const sitz = partie.dran;
+        // Greedy: immer die erste erlaubte Wand, dann die beste Farbe.
+        const [wand] = moeglicheBarrieren(partie, sitz);
+        if (wand) partie = fuehreAus(partie, sitz, { typ: 'barriere', von: wand[0], nach: wand[1] });
+        const frei = partie.besitzer.filter((b) => b === null).length;
+        assert.equal(
+          vonIrgendwemErreichbareFreie(partie, new Set(partie.barrieren)),
+          frei,
+          `Saat ${saat}: ein Feld ist eingemauert`,
+        );
+        partie = fuehreAus(partie, sitz, botZug(sichtFuer(partie, sitz)));
+      }
+      assert.ok(partie.fertig, `Saat ${saat}: Partie endet`);
+      // Am Ende gehoert jedes Feld jemandem — kein Loch.
+      assert.equal(partie.besitzer.filter((b) => b === null).length, 0, `Saat ${saat}: Loch`);
+    }
   });
 });
 
@@ -387,6 +494,7 @@ describe('Build: Der Bot und die Wand', () => {
       farbe: { 0: 0, 1: 3 },
       punkte: { 0: 1, 1: 1 },
       dran: 0,
+      zug: 4,
     };
     const zug = botZug(sichtFuer(gelegt, 0));
     assert.deepEqual(zug, { typ: 'barriere', von: 3, nach: 7 });
@@ -413,6 +521,7 @@ describe('Build: Der Bot und die Wand', () => {
       farbe: { 0: 0, 1: 3 },
       punkte: { 0: 1, 1: 1 },
       dran: 0,
+      zug: 4,
     };
     const sicht = sichtFuer(gelegt, 0);
     assert.ok((sicht.barrierenMoeglich?.length ?? 0) > 0, 'die Sicht bietet Waende an');

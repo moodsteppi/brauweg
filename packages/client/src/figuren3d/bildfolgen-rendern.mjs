@@ -28,42 +28,100 @@
  * Renderer beleuchten als die 3D-Probe, an der die Optik abgenommen wurde —
  * Licht, Tone Mapping und Materialauslegung muessten von Hand nachgebaut
  * werden. Hier laeuft stattdessen dasselbe three.js mit denselben Lichtwerten
- * wie in `proben/arena-3d/Buehne.tsx`, nur in einem Chromium ohne Fenster.
- * Was herauskommt, sieht deshalb aus wie die Probe, und es haengt an keiner
- * zusaetzlichen Installation.
+ * wie in der 3D-Probe, nur in einem Chromium ohne Fenster. Was herauskommt,
+ * sieht deshalb aus wie die Probe, und es haengt an keiner zusaetzlichen
+ * Installation.
+ *
+ * DIE 3D-PROBE GIBT ES NICHT MEHR. `packages/client/src/proben/arena-3d/`
+ * (Route `/probe/arena-3d`, Buehne.tsx, modelle-bauen.mjs) war der Entwurf, an
+ * dem Robin die Optik abgenommen und gegen das LIVE-Rendern entschieden hat;
+ * mit dieser Entscheidung ist sie am 06.09.2026 geloescht worden. Alles, was
+ * dieses Skript von ihr uebernommen hat — Lichtwerte, Tone Mapping, die
+ * Zuordnung Rolle→Figur, der Bretterwinkel von 38,6 Grad — steht hier
+ * ausgeschrieben und braucht sie nicht. Wer den Entwurf trotzdem sehen will,
+ * findet ihn in der Historie vor diesem Datum.
  *
  * QUELLE UND LIZENZ: KayKit "Character Pack : Adventurers" 1.0 von Kay
  * Lousberg (kaylousberg.com), CC0 1.0 Universal. Die LICENSE.txt des Pakets
  * wird als LIZENZ.txt neben die Bilder gelegt.
+ *
+ * ZWEITE QUELLE SEIT DEM 06.09.2026: der Beistand kommt aus "Adventurers 2.0"
+ * und "Character Animations 1.1" desselben Urhebers, ebenfalls CC0. Warum ein
+ * zweites Paket noetig war und warum es aus einem Spiegel geholt wird, steht
+ * bei `QUELLE_SAMMLUNG` weiter unten.
  */
 
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { prune } from '@gltf-transform/functions';
+import { dedup, mergeDocuments, prune, unpartition } from '@gltf-transform/functions';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const WURZEL = resolve(HIER, '..', '..', '..', '..');
 const ZIEL = join(WURZEL, 'packages', 'client', 'public', 'tafelrunde', 'figuren3d');
 const VERGLEICHSBILD = join(WURZEL, 'docs', 'bilder', 'tafelrunde-kamerawinkel.webp');
-const LIZENZ_QUELLE = join(
-  WURZEL,
-  'packages',
-  'client',
-  'public',
-  'proben',
-  'arena-3d',
-  'LIZENZ.txt',
-);
+/**
+ * Der Lizenztext, den `schreibeLizenz()` unter die eigene Kopfzeile setzt.
+ *
+ * ER LIEGT NEBEN DIESEM SKRIPT, nicht unter `public/`: Bis zum 06.09.2026 kam
+ * er aus `public/proben/arena-3d/LIZENZ.txt` — dem Ordner der Three.js-Probe,
+ * die mit Robins Entscheidung geloescht wurde. Ein Werkzeug, dessen Eingabe im
+ * Ordner einer Wegwerf-Probe liegt, faellt beim naechsten Aufraeumen um; das
+ * hier ist dieselbe Datei, nur an einem Platz, der ihr gehoert.
+ */
+const LIZENZ_QUELLE = join(HIER, 'kaykit-adventurers-1.0-lizenz.txt');
 
 const QUELLE =
   'https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures';
+
+/**
+ * Die zweite Quelle: "The Complete KayKit Collection v6.1".
+ *
+ * WARUM SIE SEIN MUSS: Vier der fuenf Rollen kommen aus dem Paket oben, der
+ * Beistand nicht. Er ist ein Heiler (Moosheiler, Runenpriester, Lichtwahrerin),
+ * und "Adventurers 1.0" hat genau fuenf Figuren — Knight, Mage, Rogue,
+ * Rogue_Hooded, Barbarian. Keine davon ist ein Heiler. Bis zum 06.09.2026 trug
+ * der Beistand deshalb den BARBAREN mit Axt und Schild; fuer die Probe war das
+ * tragbar, im fertigen Spiel sieht ein Axtkaempfer als Heiler falsch aus.
+ * "Adventurers 2.0" hat vier Figuren mehr, darunter den DRUIDEN.
+ *
+ * WARUM EIN SPIEGEL UND NICHT DAS ORIGINAL: Kay Lousberg legt nur die
+ * 1.0-Pakete als Repository unter `KayKit-Game-Assets` ab (nachgesehen am
+ * 06.09.2026: dort liegen Adventures 1.0, Skeletons 1.0, Dungeon, Hexagon und
+ * die Bits-Pakete — 2.0 ist nicht dabei). Alles Neuere gibt es auf itch.io und
+ * Patreon, beides hinter einem Formular und damit nicht abrufbar. Der Spiegel
+ * `SY227/kaykit-complete-v6-1-assets` traegt die Sammlung samt ihrer
+ * `License.txt` — dieselbe CC0-Erklaerung wie im 1.0-Paket, woertlich
+ * nachgelesen: "free to use in personal, educational and commercial projects",
+ * Namensnennung ausdruecklich nicht verlangt.
+ *
+ * WAS ZU TUN IST, WENN DER SPIEGEL VERSCHWINDET: Nichts Dringendes — die
+ * fertigen Blaetter liegen im Repo und haengen an keinem Netz. Wer neu rendern
+ * will, holt sich die Sammlung von kaylousberg.com (itch.io, CC0) und legt die
+ * fuenf Dateien aus `TEILE_BEISTAND` von Hand in den Zwischenordner; `hole()`
+ * ueberspringt, was schon da ist.
+ */
+const QUELLE_SAMMLUNG =
+  'https://media.githubusercontent.com/media/SY227/kaykit-complete-v6-1-assets/main';
+
+/**
+ * Dieselbe Sammlung ueber `raw.` statt `media.`.
+ *
+ * DER UNTERSCHIED IST KEINE GESCHMACKSFRAGE: Das Repository liegt in Git LFS.
+ * Binaerdateien (.glb, .bin, .png) sind dort nur Zeiger, und erst
+ * `media.githubusercontent.com` loest sie auf. Textdateien (.gltf) liegen
+ * NICHT in LFS — fuer sie antwortet `media.` mit 0 Bytes und Status 200. Genau
+ * das ist beim Bau passiert: eine leere .gltf, und der Fehler stand dann in
+ * `JSON.parse` statt beim Holen. Deshalb prueft `hole()` auf Laenge null.
+ */
+const QUELLE_SAMMLUNG_TEXT =
+  'https://raw.githubusercontent.com/SY227/kaykit-complete-v6-1-assets/main';
 
 // ---------------------------------------------------------------------------
 // Kamera
@@ -78,28 +136,16 @@ const QUELLE =
  *
  * 16 GRAD, ENTSCHIEDEN VON ROBIN AM 05.09.2026. Der erste Anlauf hatte hier
  * 38,6 Grad — die Kamera der 3D-Probe, die von oben auf ein BRETT schaut
- * (`proben/arena-3d/Arena3D.tsx`: Kamera (0, 7.4, 8.2) auf (0, 0.85, 0)). Fuer
+ * (dort stand sie auf (0, 7.4, 8.2) und blickte auf (0, 0.85, 0)). Fuer
  * Figurenbilder ist dieser Winkel falsch: Man sieht den Scheitel statt des
  * Gesichts, und beim Meuchler mit dem grossen KayKit-Kopf verschwindet das
  * Gesicht ganz. Die Vorbilder (Merge Tactics) zeigen Gesicht, Brust und Waffe.
  *
- * Entschieden wurde an den Vergleichsbildern unter `docs/bilder/`
- * (`--vergleich` rendert sie neu): eines je Winkel, dazu eine Uebersicht.
- *
- * NACHGEMESSEN am 09.09.2026 mit `messeKopf`, weil "sieht man das Gesicht?"
- * zwischen 12 und 16 Grad kein Augenmass mehr ist. Anteil der sichtbaren
- * Kopffflaeche, Meuchler / Wache:
- *
- *   38,6°  Scheitel 22,7 / 21,1 %   Gesicht 25,5 / 27,4 %
- *     22°  Scheitel 21,0 / 19,4 %   Gesicht 26,2 / 30,1 %
- *     16°  Scheitel 19,5 / 18,2 %   Gesicht 27,0 / 31,3 %
- *     12°  Scheitel 18,6 / 17,8 %   Gesicht 27,4 / 32,0 %
- *
- * Der Winkel bewegt beim KayKit-Kopf also wenig: Zwischen 16 und 12 Grad liegt
- * noch knapp ein Prozentpunkt, und den sieht niemand. Er ist auch nicht der
- * Hebel — die DREHUNG ist es (siehe DREHUNG_GRAD). Bei 16 Grad bleibt gegenueber
- * 12 die Andeutung von oben erhalten, ohne die eine Figur auf einem schraeg
- * gesehenen Brett schwebt; deshalb bleibt es dabei.
+ * Entschieden wurde am Vergleichsbild `docs/bilder/tafelrunde-kamerawinkel.webp`
+ * (`--vergleich` rendert es neu). Das Mass war das Auge des Meuchlers: Bei
+ * 38,6 Grad ist es gar nicht zu sehen, bei 22 Grad taucht es auf, ab 16 Grad
+ * liegen Auge, Wange und Kinn frei. 12 Grad zeigt kaum mehr Gesicht, nimmt aber
+ * die letzte Andeutung von oben und laesst die Figur auf dem Brett schweben.
  *
  * Wer den Winkel spaeter noch einmal aendert, laesst das Skript OHNE
  * `--vergleich` laufen und traegt die ausgegebenen Zahlen in figuren3d.ts nach —
@@ -115,21 +161,13 @@ const KAMERA_GRAD = 16;
  * (0 Grad) waere flach; die Drehung zur Kamera hin macht daraus eine
  * Dreiviertelansicht, in der man Gesicht und Waffe sieht.
  *
- * NACHGEMESSEN am 09.09.2026 mit `messeKopf`, Meuchler bei 16 Grad Kamera
- * (unterer Block der Vergleichs-Uebersicht):
- *
- *   17°  Scheitel 19,5 %   Gesicht 26,8 %
- *   26°  Scheitel 19,8 %   Gesicht 33,6 %
- *   34°  Scheitel 20,1 %   Gesicht 41,0 %
- *
- * DIE DREHUNG IST DER HEBEL, nicht der Kamerawinkel: 9 Grad mehr Drehung
- * bringen 6,8 Prozentpunkte Gesicht, waehrend 4 Grad flachere Kamera 0,4
- * bringen. Trotzdem bleibt es bei 17, und das ist eine Abwaegung und kein
- * Messergebnis: Je weiter die Figur zur Kamera steht, desto schlechter liest
- * man, WOHIN sie schaut — und genau das muss man hier lesen koennen, weil die
- * Gegenseite dasselbe Bild gespiegelt bekommt. Bei 34 Grad wird die Silhouette
- * gedrungen und die beiden Dolche legen sich vor den Koerper. Wer mehr Gesicht
- * will, geht auf 26; darueber kippt die Blickrichtung.
+ * 17 Grad ist der Wert der steilen Kamera. Die Vermutung war, dass eine
+ * flachere Kamera mehr Drehung vertraegt. GEPRUEFT am 05.09.2026 (unterer Block
+ * des Vergleichsbildes, 17 / 26 / 34 Grad bei 16 Grad Kamera): Sie vertraegt
+ * sie, aber sie gewinnt fast nichts. Der KayKit-Kopf ist eine glatte Kugel ohne
+ * Nase; ob er 17 oder 34 Grad steht, aendert am Gesicht kaum etwas, waehrend
+ * ab etwa 30 Grad der zweite Dolch hinter dem Koerper verschwindet. Das Gesicht
+ * kommt vom KAMERAWINKEL, nicht von der Drehung — deshalb bleibt es bei 17.
  */
 const DREHUNG_GRAD = 17;
 
@@ -156,15 +194,13 @@ const LUFT = 1.06;
  * stehen laesst, bekommt entweder eine geschrumpfte Figur oder einen
  * abgeschnittenen Stab.
  *
- * GEMESSEN am 09.09.2026. Ueber Wache und Meuchler kommen bei 12, 16 und 38,6
- * Grad 2,03 heraus und bei 22 Grad 2,05 — der Winkel bewegt den Ausschnitt also
- * so gut wie nicht. Das ist kein Zufall: Ihn bestimmt nicht die Hoehe, sondern
- * die WAAGERECHTE Reichweite beim Schlag (die Dolche des Meuchlers, das Schwert
- * der Wache), und die steht quer zur Blickachse. Ueber alle FUENF Rollen sind es
- * 2,12 — den Ausschlag gibt der Stab des Magiers.
- *
- * Die alte feste 1,5 war damit zu klein: Sie hat diese Reichweite abgeschnitten,
- * und was aus dem Bild ragt, sieht man erst in der Bewegung.
+ * GEMESSEN am 05.09.2026 ueber Wache und Meuchler: 1,94 — und zwar bei 12, 16,
+ * 22 UND 38,6 Grad derselbe Wert. Der Ausschnitt haengt also gar nicht am
+ * Winkel, weil ihn nicht die Hoehe bestimmt, sondern die WAAGERECHTE Reichweite
+ * beim Schlag (die Dolche des Meuchlers, das Schwert der Wache) — und die
+ * steht quer zur Blickachse und aendert sich mit dem Winkel nicht. Die alte
+ * 1,5 war zu klein: Sie hat diese Reichweite abgeschnitten, und was aus dem
+ * Bild ragt, sieht man erst in der Bewegung.
  */
 const PROBE_HALBE_HOEHE = 2.8;
 const PROBE_MITTE_Y = 1.0;
@@ -176,10 +212,14 @@ const PROBE_MITTE_Y = 1.0;
 /**
  * Je Rolle eine Figur, eine Garnitur und fuenf Animationen.
  *
- * Zuordnung und Ausruestung sind aus `proben/arena-3d/modelle-bauen.mjs`
- * uebernommen — dort steht auch, warum der Beistand (ein Heiler) den Barbaren
- * bekommt: Das Paket hat keinen Heiler. NEU ist hier nur `getroffen`; die
- * Probe kam ohne aus, eine Kampfanzeige nicht.
+ * Zuordnung und Ausruestung der ersten vier sind aus dem `modelle-bauen.mjs`
+ * der 3D-Probe uebernommen. NEU ist dort gegenueber nur `getroffen`; die Probe
+ * kam ohne aus, eine Kampfanzeige nicht.
+ *
+ * DER BEISTAND FAELLT AUS DER REIHE und traegt deshalb `sammlung: true`. Er
+ * kommt aus einem zweiten Paket (siehe `QUELLE_SAMMLUNG`) und ist dort auf drei
+ * Dateien verteilt statt auf eine: Figur, Animationen und Ausruestung. Was das
+ * fuers Bauen heisst, steht bei `baueAusTeilen`.
  *
  * GERENDERT WIRD AUS DEM ORIGINAL, nicht aus den GLB-Dateien der Probe: Die
  * tragen nur vier Animationen, `Hit_A` ist beim Eindampfen weggefallen. Und
@@ -237,17 +277,80 @@ const ROLLEN = [
   },
   {
     rolle: 'beistand',
-    figur: 'Barbarian',
-    behalten: ['1H_Axe', 'Barbarian_Round_Shield', 'Barbarian_Hat', 'Barbarian_Cape'],
+    figur: 'Druid',
+    sammlung: true,
+    // Der Rucksack ist das einzige Beiwerk, das die 2.0-Figur mitbringt; alles
+    // andere (Stab, Trank, Beutel) liegt dort als eigene Datei. Er bleibt drin,
+    // weil er die Silhouette gegen den Magier abgrenzt: Der hat Spitzhut und
+    // Umhang, der Druide Kapuze und Rucksack.
+    behalten: ['Druid_Backpack'],
+    ausruestung: [{ teil: 'druid_staff', knochen: 'handslot.r' }],
     animationen: {
-      stand: 'Idle',
+      // `Idle_A` statt `Idle`: In 2.0 heisst die Ruhepose so, und es gibt
+      // dazu ein `Idle_B`. Fuer die vier 1.0-Figuren heisst sie weiter `Idle`.
+      stand: 'Idle_A',
       lauf: 'Walking_A',
-      schlag: '1H_Melee_Attack_Chop',
+      // KEIN Nahkampfschlag. Ein Heiler haut nicht zu, er hebt die Hand — und
+      // `Ranged_Magic_Raise` ist genau das: Stab hoch, Handflaeche nach vorn.
+      // Der Magier nimmt daneben `Spellcast_Shoot`, ein Stoss nach vorn; die
+      // beiden sind damit auch in der Bewegung auseinanderzuhalten und nicht
+      // nur an der Figur.
+      schlag: 'Ranged_Magic_Raise',
       getroffen: 'Hit_A',
       tod: 'Death_A',
     },
   },
 ];
+
+/**
+ * Die Dateien, aus denen der Beistand zusammengesetzt wird.
+ *
+ * Drei Sorten, und die Aufteilung ist nicht unsere: KayKit hat mit 2.0 die
+ * Animationen aus den Figuren herausgeloest. Eine Figur aus 2.0 traegt gar
+ * keine Animation mehr (nachgezaehlt: `Druid.glb` hat null), dafuer passen die
+ * Bewegungen des Animationspakets auf JEDE Figur mit demselben Rig.
+ *
+ * DASS DAS AUFGEHT, HAENGT AN EINER EINZIGEN TATSACHE: Die 23 Knochen des
+ * Druiden heissen genau wie die 23 Ziele der Animationen — geprueft, nicht
+ * gehofft (`baueAusTeilen` bricht ab, wenn ein Name fehlt).
+ */
+const TEILE_BEISTAND = {
+  /** Die Figur selbst: Koerper, Kapuze, Rucksack — ohne Animation, ohne Waffe. */
+  figur: 'KayKit%20Adventurers%202.0/Characters/gltf',
+  /**
+   * Die Bewegungen, drei Dateien fuer fuenf Animationen.
+   *
+   * Genommen wird das Paket "Character Animations 1.1" und NICHT der
+   * Animationsordner, der in Adventurers 2.0 mitliegt: Der hat nur `General`
+   * und `MovementBasic`, und `Ranged_Magic_Raise` steckt in `CombatRanged`.
+   * Alle drei aus einer Quelle zu holen ist billiger zu erklaeren als zwei.
+   */
+  bewegungen: 'KayKit%20Character%20Animations%201.1/Animations/gltf/Rig_Medium',
+  bewegungsdateien: [
+    'Rig_Medium_General.glb', // Idle_A, Hit_A, Death_A
+    'Rig_Medium_MovementBasic.glb', // Walking_A
+    'Rig_Medium_CombatRanged.glb', // Ranged_Magic_Raise
+  ],
+  /** Die Ausruestung, je Teil drei Dateien: .gltf (Text), .bin und die Textur. */
+  ausruestung: 'KayKit%20Adventurers%202.0/Assets/gltf',
+  textur: 'druid_texture.png',
+};
+
+/**
+ * Wie ein Ausruestungsteil in der Hand sitzt.
+ *
+ * NICHT GERATEN, SONDERN ABGELESEN: In den 1.0-Figuren haengen Schwert, Stab
+ * und Axt als Kinder von `handslot.r` und tragen alle dieselbe Drehung — eine
+ * halbe Umdrehung um die Y-Achse (Quaternion 0,1,0,0), Verschiebung praktisch
+ * null. Nachgesehen an `Mage.glb` (2H_Staff, 1H_Wand) und `Knight.glb`
+ * (1H_Sword). Der Griffpunkt steckt also im Modell des Teils, nicht in einer
+ * Zahl, die jemand suchen muesste; die 2.0-Teile folgen derselben Konvention.
+ *
+ * WORAN MAN SIEHT, DASS ES STIMMT: Der Stab liegt IN der Faust, nicht daneben
+ * und nicht verkehrt herum (Krone oben). Steht er auf dem Kopf, ist es diese
+ * Drehung; schwebt er neben der Hand, ist es der falsche Knochen.
+ */
+const GRIFF_DREHUNG = [0, 1, 0, 0];
 
 /**
  * Die fuenf Bewegungen, ihre Bildzahl und der Ausschnitt der Animation.
@@ -268,21 +371,78 @@ const ROLLEN = [
  * - `getroffen`: `Hit_A` faengt in der Ruhepose an und endet auch dort. Zwei
  *   Bilder ueber die ganze Laenge waeren zweimal "steht da". Genommen wird das
  *   mittlere Drittel, in dem das Zurueckzucken sitzt.
- * - `tod`: nur die erste Haelfte, also das Zusammensacken — nicht das Liegen.
- *   Die liegende Figur ist gut dreimal so breit wie die stehende hoch ist
- *   (gemessen: bis 2,1 Einheiten neben der Mitte, vor allem der Hut des
- *   Magiers). Sie wuerde in den Ausschnitt passen, aber nur wenn man ihn so
- *   weit aufzieht, dass die stehende Figur auf halbe Groesse schrumpft — und
- *   die sieht man die ganze Partie, die liegende eine halbe Sekunde. Teil 2
- *   blendet die Figur nach dem letzten Todesbild aus.
+ * - `tod`: lief bis zum 06.09.2026 nur bis zur Haelfte — das Zusammensacken,
+ *   nicht das Liegen. Grund war der GEMEINSAME Ausschnitt: Die liegende Figur
+ *   greift viel weiter zur Seite als die stehende, und alle Zellen waren
+ *   gleich breit. Seit `weite` gibt es das nicht mehr, siehe dort.
+ *
+ * `weite` ist die Breite der Zelle als Vielfaches ihrer HOEHE. Nur die
+ * Todeszeile braucht mehr als 1: Sie bekommt einen eigenen, breiteren
+ * Ausschnitt, waehrend alle anderen Zeilen quadratisch bleiben.
+ *
+ * `proZeile` sagt, wie viele Bilder in einer Blattzeile stehen; der Rest
+ * rutscht in die naechste. Sonst waere das Blatt so breit wie die laengste
+ * Zeile mal ihrer Weite (8 * 1,5 = 12 Zellen), und die vier oberen Zeilen
+ * liessen zwei Drittel davon leer. Mit 4 * 1,5 = 6 passt die Todeszeile auf
+ * genau die Breite der anderen und das Blatt bleibt 768 px breit.
+ *
+ * GEMESSEN am 06.09.2026 ueber alle fuenf Rollen, als halber Platzbedarf in
+ * der Waagerechten, in Weltmetern: ohne Todeszeile 1,717 — mit der halben
+ * 2,023 — mit der vollen 2,483. Die alte Loesung hat den gemeinsamen
+ * Ausschnitt damit von 1,878 auf 2,145 aufgezogen, also um 14 %, ohne dass die
+ * Figur je zu Ende fiel. Jetzt bestimmt ihn wieder die SENKRECHTE (1,878), und
+ * die Todeszelle hat mit 1,5 * 1,878 = 2,817 mehr Platz, als sie braucht.
+ *
+ * DIE FIGUREN WERDEN DADURCH NICHT GROESSER. Ein engerer Ausschnitt bei
+ * gleicher Zellhoehe hiesse 14 % mehr Figur auf dem Brett — das waere eine
+ * Entscheidung ueber die Optik und keine ueber den Tod. Die Anzeige rechnet
+ * deshalb in Metern gegen (`FIGURENKASTEN` in
+ * `minispiele/tafelrunde/bildfolge.ts`), und dort steht auch, an welcher Zahl
+ * man drehen wuerde, wenn man sie doch groesser will.
  */
 const BEWEGUNGEN = [
   { name: 'stand', bilder: 4, schleife: true, spanne: [0, 1] },
   { name: 'lauf', bilder: 6, schleife: true, spanne: [0, 1] },
   { name: 'schlag', bilder: 6, schleife: false, spanne: [0, 1] },
   { name: 'getroffen', bilder: 2, schleife: false, spanne: [0.22, 0.5] },
-  { name: 'tod', bilder: 6, schleife: false, spanne: [0, 0.5] },
+  { name: 'tod', bilder: 8, schleife: false, spanne: [0, 1], weite: 1.5, proZeile: 4 },
 ];
+
+/**
+ * Zellweite und Zeilenumbruch einer Bewegung, mit den Vorgaben.
+ *
+ * Steht als eigene Funktion da, weil beide Seiten sie brauchen: Node rechnet
+ * daraus das Raster, die Seite im Browser stellt Kamera und Leinwand danach
+ * ein. Die Vorgabe (quadratisch, alles in einer Zeile) ist der Normalfall —
+ * nur die Todeszeile weicht ab.
+ */
+function masseVon(bewegung) {
+  const weite = bewegung.weite ?? 1;
+  return { weite, proZeile: bewegung.proZeile ?? bewegung.bilder };
+}
+
+/**
+ * Das Raster eines Blattes: welche Bewegung wo anfaengt, wie gross es wird.
+ *
+ * Gerechnet wird es in NODE und als Angabe an die Seite gereicht — nicht dort
+ * ein zweites Mal. Zwei Fassungen liefen beim ersten Umsortieren der Zeilen
+ * auseinander, und das Ergebnis waere ein Blatt, dessen Zellen woanders liegen
+ * als figuren3d.ts glaubt: lauter falsche Bilder, kein einziger Fehler.
+ */
+function rasterVon(bewegungen) {
+  let zeile = 0;
+  const je = bewegungen.map((bewegung) => {
+    const { weite, proZeile } = masseVon(bewegung);
+    const eintrag = { zeile, weite, proZeile };
+    zeile += Math.ceil(bewegung.bilder / proZeile);
+    return eintrag;
+  });
+  const spalten = Math.max(...bewegungen.map((b) => {
+    const { weite, proZeile } = masseVon(b);
+    return Math.min(b.bilder, proZeile) * weite;
+  }));
+  return { je, spalten, zeilen: zeile };
+}
 
 /** Kantenlaenge eines Einzelbildes im fertigen Sheet. */
 const KANTE = 128;
@@ -308,7 +468,7 @@ const KOERPER = /(_Body|_Head|_Head_Hooded|_ArmLeft|_ArmRight|_LegLeft|_LegRight
 // ---------------------------------------------------------------------------
 
 /**
- * Der Winkel der Bretterkamera aus `proben/arena-3d/`. Er wird nicht mehr
+ * Der Winkel der Bretterkamera aus der 3D-Probe. Er wird nicht mehr
  * gerendert, steht im Vergleichsbild aber als Vergleichsmass mit — ohne ihn
  * sieht man nicht, wie viel die flacheren Winkel wirklich gewinnen.
  */
@@ -382,7 +542,13 @@ async function hole(url, ziel) {
   if (await existiert(ziel)) return;
   const antwort = await fetch(url);
   if (!antwort.ok) throw new Error(`${url} antwortet ${antwort.status}`);
-  await writeFile(ziel, Buffer.from(await antwort.arrayBuffer()));
+  const inhalt = Buffer.from(await antwort.arrayBuffer());
+  // Null Bytes mit Status 200 ist der Normalfall, wenn man eine NICHT in LFS
+  // liegende Datei ueber `media.githubusercontent.com` anfragt (siehe
+  // QUELLE_SAMMLUNG_TEXT). Ohne diese Zeile landet der Fehler erst im Parser
+  // und zeigt dann auf die Datei statt auf die Adresse.
+  if (inhalt.byteLength === 0) throw new Error(`${url} antwortet mit 0 Bytes`);
+  await writeFile(ziel, inhalt);
 }
 
 const kb = (n) => `${(n / 1024).toFixed(1)} kB`;
@@ -404,51 +570,213 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
  * wird (CLAUDE.md, Regel 7: ein `git add` auf einen ignorierten Pfad hat hier
  * schon 932 Dateien gekostet).
  */
-async function baueModelle(zwischen, nurRollen) {
-  const pfade = new Map();
-  for (const eintrag of ROLLEN) {
-    if (nurRollen && !nurRollen.includes(eintrag.rolle)) continue;
-    const roh = join(zwischen, `${eintrag.figur}.glb`);
-    await hole(`${QUELLE}/Characters/gltf/${eintrag.figur}.glb`, roh);
+/** Wirft alle Mesh-Knoten weg, die weder Koerper noch gewuenschte Garnitur sind. */
+function beschneideMeshes(root, behalten) {
+  const erlaubt = new Set(behalten);
+  for (const knoten of root.listNodes()) {
+    if (!knoten.getMesh()) continue;
+    const name = knoten.getName();
+    if (KOERPER.test(name) || erlaubt.has(name)) continue;
+    knoten.dispose();
+  }
+}
 
-    const doc = await io.read(roh);
-    const root = doc.getRoot();
+/**
+ * Wirft eine Animation samt ihrer Kanaele und Abtaster weg.
+ *
+ * Kanaele und Abtaster einzeln — ein blosses `anim.dispose()` laesst sie im
+ * Graphen stehen, und dann haelt eine geloeschte Animation ihre Daten am Leben
+ * (der Befund steht ausfuehrlich in modelle-bauen.mjs).
+ */
+function wirfAnimationWeg(anim) {
+  for (const kanal of anim.listChannels()) kanal.dispose();
+  for (const abtaster of anim.listSamplers()) abtaster.dispose();
+  anim.dispose();
+}
 
-    const erlaubt = new Set(eintrag.behalten);
-    for (const knoten of root.listNodes()) {
-      if (!knoten.getMesh()) continue;
-      const name = knoten.getName();
-      if (KOERPER.test(name) || erlaubt.has(name)) continue;
-      knoten.dispose();
+/**
+ * Behaelt aus `animationen` genau die fuenf gewuenschten und benennt sie
+ * deutsch. Was fehlt, ist ein Abbruch und keine leere Zeile im Blatt.
+ */
+function benenneAnimationen(animationen, wunsch, figur) {
+  const gewuenscht = new Map(Object.entries(wunsch).map(([neu, alt]) => [alt, neu]));
+  const gefunden = new Set();
+  for (const anim of animationen) {
+    const neu = gewuenscht.get(anim.getName());
+    if (!neu) {
+      wirfAnimationWeg(anim);
+      continue;
     }
+    gefunden.add(anim.getName());
+    anim.setName(neu);
+  }
+  return { gewuenscht, gefunden, figur };
+}
 
-    // Animationen eindampfen und deutsch benennen. Kanaele und Abtaster
-    // einzeln wegwerfen — ein blosses `anim.dispose()` laesst sie im Graphen
-    // stehen, und dann haelt eine geloeschte Animation ihre Daten am Leben
-    // (der Befund steht ausfuehrlich in modelle-bauen.mjs).
-    const gewuenscht = new Map(
-      Object.entries(eintrag.animationen).map(([neu, alt]) => [alt, neu]),
-    );
-    const gefunden = new Set();
+/** Bricht ab, wenn eine der fuenf Animationen nicht aufgetaucht ist. */
+function pruefeVollstaendig({ gewuenscht, gefunden, figur }) {
+  for (const alt of gewuenscht.keys()) {
+    if (!gefunden.has(alt)) throw new Error(`${figur}: Animation ${alt} fehlt`);
+  }
+}
+
+/**
+ * Der Normalfall: eine Figur aus "Adventurers 1.0".
+ *
+ * Dort steckt alles in EINER Datei — Koerper, jede Waffe des Pakets und 76
+ * Animationen. Zu tun ist deshalb nur Wegwerfen und Umbenennen.
+ */
+async function baueAusEinemStueck(eintrag, zwischen) {
+  const roh = join(zwischen, `${eintrag.figur}.glb`);
+  await hole(`${QUELLE}/Characters/gltf/${eintrag.figur}.glb`, roh);
+
+  const doc = await io.read(roh);
+  const root = doc.getRoot();
+
+  beschneideMeshes(root, eintrag.behalten);
+  pruefeVollstaendig(
+    benenneAnimationen(root.listAnimations(), eintrag.animationen, eintrag.figur),
+  );
+  return doc;
+}
+
+/**
+ * Der Sonderfall: eine Figur aus "Adventurers 2.0" plus Animationspaket.
+ *
+ * DREI DINGE SIND HIER ANDERS ALS OBEN, und alle drei kommen daher, dass
+ * KayKit mit 2.0 auseinandergezogen hat, was in 1.0 in einer Datei lag:
+ *
+ * 1. DIE FIGUR HAT KEINE ANIMATION. Sie kommen aus eigenen Dateien und werden
+ *    hier hineinkopiert. `mergeDocuments` bringt dabei die Knochen der Quelle
+ *    mit, und die Kanaele zeigen danach auf DIESE Kopie statt auf das Skelett
+ *    der Figur. Ohne das Umhaengen weiter unten steht die Figur still, waehrend
+ *    ein unsichtbares zweites Skelett daneben laeuft — und zwar ohne Fehler.
+ * 2. DIE FIGUR HAT KEINE WAFFE. Der Stab ist eine eigene Datei und wird an
+ *    `handslot.r` gehaengt (siehe GRIFF_DREHUNG).
+ * 3. JEDE ZUSAMMENFUEHRUNG BRINGT EINEN EIGENEN BUFFER MIT. Ein GLB darf
+ *    hoechstens einen haben, deshalb `unpartition()` am Ende. Ohne das bricht
+ *    erst `io.write` ab, mit einer Meldung, die nichts mit dem Grund zu tun hat.
+ */
+async function baueAusTeilen(eintrag, zwischen) {
+  const ordner = join(zwischen, eintrag.rolle);
+  await mkdir(ordner, { recursive: true });
+
+  const figurDatei = join(ordner, `${eintrag.figur}.glb`);
+  await hole(`${QUELLE_SAMMLUNG}/${TEILE_BEISTAND.figur}/${eintrag.figur}.glb`, figurDatei);
+
+  const doc = await io.read(figurDatei);
+  const root = doc.getRoot();
+  beschneideMeshes(root, eintrag.behalten);
+
+  // Die Knochen der FIGUR, nach Namen. Sie sind das Ziel, auf das gleich jeder
+  // Animationskanal umgehaengt wird.
+  const knochen = new Map(root.listNodes().map((n) => [n.getName(), n]));
+
+  const gewuenscht = new Map(
+    Object.entries(eintrag.animationen).map(([neu, alt]) => [alt, neu]),
+  );
+  const gefunden = new Set();
+
+  for (const datei of TEILE_BEISTAND.bewegungsdateien) {
+    const pfad = join(ordner, datei);
+    await hole(`${QUELLE_SAMMLUNG}/${TEILE_BEISTAND.bewegungen}/${datei}`, pfad);
+    const quelle = await io.read(pfad);
+
+    // Vorher merken, was schon da war: `mergeDocuments` gibt zwar eine Karte
+    // zurueck, aber der Weg ueber "alles Neue" liest sich hier kuerzer als
+    // der ueber die Karte, und die Datei enthaelt bis zu 20 Animationen.
+    const vorher = new Set(root.listAnimations());
+    mergeDocuments(doc, quelle);
+
     for (const anim of root.listAnimations()) {
+      if (vorher.has(anim)) continue;
       const neu = gewuenscht.get(anim.getName());
       if (!neu) {
-        for (const kanal of anim.listChannels()) kanal.dispose();
-        for (const abtaster of anim.listSamplers()) abtaster.dispose();
-        anim.dispose();
+        wirfAnimationWeg(anim);
         continue;
       }
       gefunden.add(anim.getName());
       anim.setName(neu);
+      for (const kanal of anim.listChannels()) {
+        const name = kanal.getTargetNode().getName();
+        const ziel = knochen.get(name);
+        // Kein stilles Ueberspringen: Passt ein Knochenname nicht, ist das
+        // Animationspaket nicht fuer dieses Rig — und das Ergebnis waere eine
+        // Figur, die halb steht und halb zuckt.
+        if (!ziel) throw new Error(`${eintrag.figur}: Knochen ${name} fehlt`);
+        kanal.setTargetNode(ziel);
+      }
     }
-    for (const alt of gewuenscht.keys()) {
-      if (!gefunden.has(alt)) throw new Error(`${eintrag.figur}: Animation ${alt} fehlt`);
+    wirfNebenszenenWeg(root);
+  }
+  pruefeVollstaendig({ gewuenscht, gefunden, figur: eintrag.figur });
+
+  for (const { teil, knochen: knochenName } of eintrag.ausruestung ?? []) {
+    // Drei Dateien je Teil, und die .gltf MUSS ueber `raw.` kommen (siehe
+    // QUELLE_SAMMLUNG_TEXT). Die Textur liegt daneben, weil die .gltf sie ueber
+    // einen relativen Pfad sucht — `io.read` loest ihn im selben Ordner auf.
+    const basis = `${QUELLE_SAMMLUNG}/${TEILE_BEISTAND.ausruestung}`;
+    await hole(
+      `${QUELLE_SAMMLUNG_TEXT}/${TEILE_BEISTAND.ausruestung}/${teil}.gltf`,
+      join(ordner, `${teil}.gltf`),
+    );
+    await hole(`${basis}/${teil}.bin`, join(ordner, `${teil}.bin`));
+    await hole(
+      `${basis}/${TEILE_BEISTAND.textur}`,
+      join(ordner, TEILE_BEISTAND.textur),
+    );
+
+    const teilDoc = await io.read(join(ordner, `${teil}.gltf`));
+    const karte = mergeDocuments(doc, teilDoc);
+    const knoten = karte.get(teilDoc.getRoot().getDefaultScene().listChildren()[0]);
+    knoten.setRotation(GRIFF_DREHUNG);
+
+    const hand = knochen.get(knochenName);
+    if (!hand) throw new Error(`${eintrag.figur}: Knochen ${knochenName} fehlt`);
+    hand.addChild(knoten);
+    wirfNebenszenenWeg(root, knoten);
+  }
+
+  // `dedup()` nur hier: Der Stab benutzt dieselbe Textur wie die Figur, und
+  // ohne das Zusammenlegen liegt sie zweimal im Modell.
+  await doc.transform(dedup());
+  return doc;
+}
+
+/**
+ * Wirft alle Szenen ausser der ersten weg, samt ihrem Inhalt.
+ *
+ * Jede Zusammenfuehrung bringt die Szene ihrer Quelle mit: beim Animationspaket
+ * ein zweites Skelett, beim Stab dessen Ursprungsszene. Beides ist nach dem
+ * Umhaengen ueberfluessig — aber es haengt noch an den Daten, und `prune()`
+ * raeumt nur weg, was NIRGENDS mehr haengt. Was `behalten` nennt, wird
+ * uebersprungen: Der Stab sitzt zu diesem Zeitpunkt schon in der Hand und ist
+ * nur noch zufaellig auch Kind seiner alten Szene.
+ */
+function wirfNebenszenenWeg(root, behalten) {
+  const haupt = root.getDefaultScene();
+  for (const szene of root.listScenes()) {
+    if (szene === haupt) continue;
+    for (const kind of szene.listChildren()) {
+      if (kind !== behalten) kind.dispose();
     }
+    szene.dispose();
+  }
+}
+
+async function baueModelle(zwischen, nurRollen) {
+  const pfade = new Map();
+  for (const eintrag of ROLLEN) {
+    if (nurRollen && !nurRollen.includes(eintrag.rolle)) continue;
+
+    const doc = eintrag.sammlung
+      ? await baueAusTeilen(eintrag, zwischen)
+      : await baueAusEinemStueck(eintrag, zwischen);
 
     // Kein `quantize()` und kein `textureCompress()`: Das Modell wird hier
     // nicht ausgeliefert, sondern nur angesehen. Beides wuerde die Bildqualitaet
     // kosten, ohne irgendetwas zu sparen, was jemand je herunterlaedt.
-    await doc.transform(prune({ keepLeaves: false }));
+    await doc.transform(prune({ keepLeaves: false }), unpartition());
 
     const ausgabe = join(zwischen, `${eintrag.rolle}.glb`);
     await io.write(ausgabe, doc);
@@ -543,8 +871,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserv
 renderer.setPixelRatio(1);
 renderer.setSize(KANTE, KANTE, false);
 renderer.setClearColor(0x000000, 0);
-// Dieselben zwei Zeilen wie in Arena3D.tsx — ohne sie sind die Figuren
-// merklich blasser als in der Probe, an der die Optik abgenommen wurde.
+// Dieselben zwei Zeilen wie in der 3D-Probe — ohne sie sind die Figuren
+// merklich blasser als dort, und abgenommen wurde die Optik an ihr.
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);
@@ -561,11 +889,18 @@ szene.add(sonne);
 /**
  * Baut die Kamera aus dem WINKEL, nicht aus einem rohen Vektor.
  * Blickrichtung bei g Grad ueber der Waagerechten: (0, sin g, cos g).
+ *
+ * "weite" zieht den Ausschnitt NUR ZUR SEITE auf und laesst die Hoehe stehen.
+ * Genau deshalb schrumpft die Figur in einer breiten Zelle nicht: Ein
+ * Weltmeter ist dort so viele Pixel wie ueberall sonst, die Zelle traegt nur
+ * mehr davon. Und weil der Ausschnitt symmetrisch aufgeht, steht der Fusspunkt
+ * weiter in ihrer Mitte — die Anzeige muss nichts nachrechnen.
  */
-function baueKamera({ grad, halbeHoehe, mitteY }) {
+function baueKamera({ grad, halbeHoehe, mitteY }, weite = 1) {
   const rad = (grad * Math.PI) / 180;
   const blick = new THREE.Vector3(0, Math.sin(rad), Math.cos(rad));
-  const kamera = new THREE.OrthographicCamera(-halbeHoehe, halbeHoehe, halbeHoehe, -halbeHoehe, 0.1, 60);
+  const halbeBreite = halbeHoehe * weite;
+  const kamera = new THREE.OrthographicCamera(-halbeBreite, halbeBreite, halbeHoehe, -halbeHoehe, 0.1, 60);
   kamera.position.copy(blick).multiplyScalar(12).add(new THREE.Vector3(0, mitteY, 0));
   kamera.lookAt(0, mitteY, 0);
   return kamera;
@@ -581,36 +916,6 @@ async function ladeModell(url) {
   return modelle.get(url);
 }
 
-/**
- * Stellt die Figur in ihre Blickrichtung: nach rechts, um "drehungGrad" zur
- * Kamera herausgedreht.
- *
- * DAS IST DIE EINZIGE STELLE, an der die Drehung gesetzt wird. Sie stand
- * frueher zweimal da — einmal im Renderweg, einmal in der Messung — und die
- * beiden sind auseinandergelaufen: Die Messung beschrieb eine andere Pose als
- * das Bild, das danebenlag, und die Zahlen widersprachen dem Augenschein, ohne
- * dass jemand sagen konnte, welche von beiden luegt.
- *
- * PLUS, nicht minus. Das war zweimal falsch herum, deshalb steht hier, WIE man
- * es entscheidet, statt es herzuleiten: "--vergleich" mit VERGLEICH_DREHUNGEN
- * auf [-40, 0, 40] zeigt es im unteren Block in einem Bild. Bei -40 sieht man
- * den Ruecken, bei +40 das Gesicht.
- *
- * WORAN MAN ES SIEHT, WENN ES KIPPT: Die Figur zeigt den HINTERKOPF — kein
- * Auge, kein Ohr auf der Kameraseite, dafuer den Umhang zur Kamera hin und die
- * Waffe hinter dem Koerper. In Zahlen sagt es "messeKopf": Der Gesichtsanteil
- * faellt dann mit STEIGENDER Drehung, statt zu steigen.
- *
- * UND HIER IST DIE FALLE, die es zweimal hat durchrutschen lassen: Bei STEILER
- * Kamera faellt es kaum auf. Von 38,6 Grad sieht man vor allem den runden
- * Scheitel, und der ist von vorn wie von hinten derselbe. Wer am Vorzeichen
- * zweifelt, prueft deshalb NICHT bei 38,6 Grad gegen, sondern flach — und nicht
- * an einem Standbild, sondern an drei Drehungen nebeneinander.
- */
-function dreheFigur(figur, drehungGrad) {
-  figur.rotation.y = -Math.PI / 2 + (drehungGrad * Math.PI) / 180;
-}
-
 /** Der Knochen, an dem die Figur "haengt" — an ihm wird der Ort gemessen. */
 const ANKERKNOCHEN = 'hips';
 
@@ -622,10 +927,44 @@ const ANKERKNOCHEN = 'hips';
  * Durchlauf, passte der gemessene Ausschnitt nicht zu den Bildern, die
  * hinterher entstehen.
  */
-async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
+async function durchlaufen(url, bewegungen, raster, kameraKonfig, jeBild) {
   const gltf = await ladeModell(url);
   const figur = gltf.scene;
-  dreheFigur(figur, kameraKonfig.drehungGrad);
+  // PLUS 90 Grad, MINUS die Drehung — und beide Vorzeichen haengen daran, dass
+  // das KayKit-Modell nach +Z schaut. Das ist nicht geraten, sondern an der
+  // Rogue.glb abgelesen: Rogue_ArmRight liegt bei x -0,97..-0,09 (der rechte
+  // Arm einer nach +Z schauenden Figur liegt links), Rogue_Cape ganz bei
+  // z -0,39..-0,04 (ein Umhang haengt hinten), die Zehen ragen nach +Z.
+  //
+  // Ry(a) bildet +Z auf (sin a, 0, cos a) ab. Die Kamera steht auf +Z und hat
+  // Weltachse +X rechts im Bild (baueKamera). Also:
+  //   +90° - d  ->  (cos d, 0, sin d)   rechts, d Grad ZUR Kamera   <- gewollt
+  //   +90° + d  ->  (cos d, 0, -sin d)  rechts, d Grad von ihr WEG
+  //   -90° - d  ->  (-cos d, 0, -sin d) links,  d Grad von ihr weg
+  //   -90° + d  ->  (-cos d, 0, sin d)  links,  d Grad zur Kamera
+  //
+  // WORAN MAN ES MERKT, WENN ES KIPPT — zwei verschiedene Fehler, und genau
+  // deshalb kommt man mit "einmal das Vorzeichen umdrehen" nicht hin:
+  //
+  // 1. VORNE/HINTEN falsch (das Vorzeichen VOR der Drehung d): Die Figur zeigt
+  //    den HINTERKOPF. Kein Auge, kein Ohr auf der Kameraseite, dafuer der
+  //    Umhang vorn und die Waffe hinter dem Koerper.
+  // 2. LINKS/RECHTS falsch (das Vorzeichen vor den 90 Grad): Die Figur zeigt
+  //    ihr Gesicht, aber nach LINKS — Waffe links vor dem Koerper, Umhang
+  //    rechts dahinter. figuren3d.ts verspricht der Oberflaeche rechts, und
+  //    gespiegelt wird dort nur die Gegenseite; ein linksblickendes Blatt
+  //    dreht damit BEIDE Seiten falsch herum.
+  //
+  // Beides ist hier schon passiert. Die erste Fassung stand auf +90° + d
+  // (Fehler 1). Wer den dann "umdreht", landet auf -90° - d — und das ist
+  // Fehler 1 UND 2 zugleich, nur faellt Fehler 1 dabei weniger auf. Genau so
+  // ging der zweite Satz Blaetter am 05.09.2026 raus.
+  //
+  // UND HIER IST DIE FALLE: Bei STEILER Kamera faellt Fehler 1 gar nicht auf.
+  // Von 38,6 Grad sieht man ohnehin nur den Scheitel, und der ist von vorn wie
+  // von hinten derselbe runde Kopf. Wer am Vorzeichen zweifelt, rendert
+  // deshalb NICHT bei 38,6 gegen, sondern flach.
+  figur.rotation.y = Math.PI / 2 - (kameraKonfig.drehungGrad * Math.PI) / 180;
   // Die Figur haengt in einem Halter, der sie in jedem Bild zurueckschiebt
   // (siehe anStelleHalten weiter unten). Deshalb ein Halter und nicht die
   // Figur selbst: Die traegt schon die Drehung, und zwei Dinge an einem
@@ -634,6 +973,9 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   halter.add(figur);
   szene.add(halter);
 
+  // Die SCHMALE Kamera. Sie ist es, aus der spaeter der Fusspunkt gerechnet
+  // wird, und sie rendert jede Zeile mit weite 1. Breite Zeilen bekommen ihre
+  // eigene, gleich unten in der Schleife.
   const kamera = baueKamera(kameraKonfig);
 
   let anker = null;
@@ -680,11 +1022,19 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   const clips = new Map(gltf.animations.map((c) => [c.name, c]));
   const laengen = {};
 
-  for (let zeile = 0; zeile < bewegungen.length; zeile++) {
-    const bewegung = bewegungen[zeile];
+  for (let nr = 0; nr < bewegungen.length; nr++) {
+    const bewegung = bewegungen[nr];
     const clip = clips.get(bewegung.name);
     if (!clip) throw new Error('Animation fehlt: ' + bewegung.name);
     laengen[bewegung.name] = clip.duration;
+
+    // Leinwand und Kamera je Bewegung: Eine breite Zelle ist eine breitere
+    // Leinwand bei GLEICHER Hoehe. Beides muss zusammen umgestellt werden —
+    // eine breitere Leinwand mit quadratischer Kamera zoege die Figur in die
+    // Laenge, eine breitere Kamera auf quadratischer Leinwand staucht sie.
+    const weite = raster.je[nr].weite;
+    const zeilenKamera = weite === 1 ? kamera : baueKamera(kameraKonfig, weite);
+    renderer.setSize(Math.round(KANTE * weite), KANTE, false);
 
     mischer.stopAllAction();
     const aktion = mischer.clipAction(clip);
@@ -712,9 +1062,9 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
       // Der Bezugspunkt kommt aus dem allerersten Bild (stand, Zeit 0) und
       // gilt fuer ALLE Bewegungen. Naehme jede Bewegung ihren eigenen, spraenge
       // die Figur beim Wechsel von stand auf lauf um die Differenz.
-      anStelleHalten(zeile === 0 && i === 0);
-      renderer.render(szene, kamera);
-      jeBild(zeile, i);
+      anStelleHalten(nr === 0 && i === 0);
+      renderer.render(szene, zeilenKamera);
+      jeBild(nr, i, weite);
     }
   }
 
@@ -727,65 +1077,77 @@ async function durchlaufen(url, bewegungen, kameraKonfig, jeBild) {
   return { laengen, kamera };
 }
 
-/** Ein Abtast-Blatt fuer die Messung, so gross wie ein Einzelbild. */
+/** Ein Abtast-Blatt fuer die Messung, so gross wie das breiteste Einzelbild. */
 const messblatt = document.createElement('canvas');
-messblatt.width = KANTE;
-messblatt.height = KANTE;
 const messstift = messblatt.getContext('2d', { willReadFrequently: true });
 
 /**
- * Misst, wie weit die Figur ueber ALLE Bilder aus der Bildmitte ragt.
+ * Misst JE BEWEGUNG, wie weit die Figur aus der Bildmitte ragt.
  *
  * Gemessen wird der ALPHAKANAL des fertig gerenderten Bildes, nicht die
  * Geometrie: Was zaehlt, ist was man sieht. Ein Umhang, der durch den Koerper
  * faellt, macht die Geometrie breiter als das Bild; ein Stab, der aus dem
  * Ausschnitt ragt, faellt in der Geometrie gar nicht auf.
  *
- * Rueckgabe in Weltmetern, bezogen auf den Kameramittelpunkt: "halbBreite" die
- * groesste Ausdehnung nach links oder rechts, "unten"/"oben" die senkrechten
- * Kanten (negativ ist unterhalb der Mitte).
+ * JE BEWEGUNG und nicht in einer Summe, seit es breite Zellen gibt: Die
+ * Todeszeile darf breiter sein als alle anderen, also darf ihre Breite den
+ * gemeinsamen Ausschnitt auch nicht mehr mitbestimmen. In einer Summe waere
+ * sie nicht mehr herauszurechnen.
+ *
+ * Rueckgabe je Bewegung, in Weltmetern und bezogen auf den Kameramittelpunkt:
+ * "halbBreite" die groesste Ausdehnung nach links oder rechts, "unten"/"oben"
+ * die senkrechten Kanten (negativ ist unterhalb der Mitte).
  */
-window.messeRolle = async (url, bewegungen, kameraKonfig) => {
-  let halbBreite = 0;
-  let unten = Infinity;
-  let oben = -Infinity;
+window.messeRolle = async (url, bewegungen, raster, kameraKonfig) => {
+  const je = bewegungen.map(() => ({ halbBreite: 0, unten: Infinity, oben: -Infinity }));
   const h = kameraKonfig.halbeHoehe;
 
-  await durchlaufen(url, bewegungen, kameraKonfig, () => {
-    messstift.clearRect(0, 0, KANTE, KANTE);
+  await durchlaufen(url, bewegungen, raster, kameraKonfig, (nr, i, weite) => {
+    const mass = je[nr];
+    const breite = Math.round(KANTE * weite);
+    messblatt.width = breite;
+    messblatt.height = KANTE;
+    messstift.clearRect(0, 0, breite, KANTE);
     messstift.drawImage(renderer.domElement, 0, 0);
-    const daten = messstift.getImageData(0, 0, KANTE, KANTE).data;
+    const daten = messstift.getImageData(0, 0, breite, KANTE).data;
     for (let y = 0; y < KANTE; y++) {
-      for (let x = 0; x < KANTE; x++) {
+      for (let x = 0; x < breite; x++) {
         // Schwelle 8 statt 0: Die Kantenglaettung legt einen Saum aus fast
         // durchsichtigen Pixeln um die Figur. Bei 0 misst man den Saum mit und
         // zieht den Ausschnitt bei jedem Lauf ein Stueck weiter auf.
-        if (daten[(y * KANTE + x) * 4 + 3] <= 8) continue;
-        const nx = ((x + 0.5) / KANTE) * 2 - 1;
+        if (daten[(y * breite + x) * 4 + 3] <= 8) continue;
+        const nx = ((x + 0.5) / breite) * 2 - 1;
         const ny = 1 - ((y + 0.5) / KANTE) * 2;
-        const bx = Math.abs(nx) * h;
-        if (bx > halbBreite) halbBreite = bx;
+        // Waagerecht mal der halben BREITE des Ausschnitts, nicht der Hoehe:
+        // In einer breiten Zelle sind das zwei verschiedene Zahlen.
+        const bx = Math.abs(nx) * h * weite;
+        if (bx > mass.halbBreite) mass.halbBreite = bx;
         const by = ny * h;
-        if (by < unten) unten = by;
-        if (by > oben) oben = by;
+        if (by < mass.unten) mass.unten = by;
+        if (by > mass.oben) mass.oben = by;
       }
     }
   });
 
-  if (unten === Infinity) throw new Error('Nichts im Bild: ' + url);
-  return { halbBreite, unten, oben };
+  const leer = je.findIndex((m) => m.unten === Infinity);
+  if (leer >= 0) throw new Error('Nichts im Bild: ' + url + ' / ' + bewegungen[leer].name);
+  return je;
 };
 
 /** Rendert ein Blatt (eine Zeile je Bewegung) und gibt es als PNG zurueck. */
-window.rendereRolle = async (url, bewegungen, kameraKonfig) => {
-  const spalten = Math.max(...bewegungen.map((b) => b.bilder));
+window.rendereRolle = async (url, bewegungen, raster, kameraKonfig) => {
   const blatt = document.createElement('canvas');
-  blatt.width = spalten * KANTE;
-  blatt.height = bewegungen.length * KANTE;
+  blatt.width = raster.spalten * KANTE;
+  blatt.height = raster.zeilen * KANTE;
   const stift = blatt.getContext('2d');
 
-  const { laengen, kamera } = await durchlaufen(url, bewegungen, kameraKonfig, (zeile, i) => {
-    stift.drawImage(renderer.domElement, i * KANTE, zeile * KANTE);
+  const { laengen, kamera } = await durchlaufen(url, bewegungen, raster, kameraKonfig, (nr, i) => {
+    // Wo im Blatt das Bild landet, sagt das Raster: Eine Bewegung faengt in
+    // ihrer Zeile an, laeuft "proZeile" Bilder weit und bricht dann um.
+    const { zeile, weite, proZeile } = raster.je[nr];
+    const x = (i % proZeile) * weite * KANTE;
+    const y = (zeile + Math.floor(i / proZeile)) * KANTE;
+    stift.drawImage(renderer.domElement, x, y);
   });
 
   // Wo in der Zelle steht die Figur auf dem Boden? Der Punkt (0,0,0) der Szene
@@ -796,103 +1158,7 @@ window.rendereRolle = async (url, bewegungen, kameraKonfig) => {
   const fuss = new THREE.Vector3(0, 0, 0).project(kamera);
   const fusspunkt = { x: (fuss.x + 1) / 2, y: (1 - fuss.y) / 2 };
 
-  return { bild: blatt.toDataURL('image/png'), spalten, laengen, fusspunkt };
-};
-
-/**
- * Misst, wieviel vom Kopf SCHEITEL ist und wieviel GESICHT.
- *
- * Das ist die Frage, die man einem Bild sonst nur ansieht, und "sieht man das
- * Gesicht?" ist als Augenmass zwischen 12 und 16 Grad nicht mehr zu trennen.
- * Gemessen wird deshalb die sichtbare FLAECHE nach ihrer Ausrichtung:
- *
- * - Es wird nur der Kopf gezeichnet (alle anderen Teile unsichtbar), damit
- *   Schulter, Umhang und Waffe die Zahlen nicht verduennen. Beim Rogue gehoert
- *   das Haar zum Kopfnetz — richtig so: Ein Topfschnitt, den man von oben
- *   sieht, IST der Scheitel.
- * - Gezeichnet wird mit MeshNormalMaterial, das die Normale je Pixel ausgibt.
- *   Sie steht dort im BLICKRAUM; mit der Drehung der Kamera wird sie in den
- *   Weltraum zurueckgerechnet, denn "oben" und "nach vorn" sind Richtungen der
- *   Welt und nicht des Bildes.
- * - scheitel: Normale zeigt nach oben (n·oben >= 0,5, also flacher als 60 Grad
- *   zur Waagerechten). gesicht: Normale zeigt dorthin, wohin die Figur schaut.
- *
- * Was NICHT gemessen wird: ob das Auge im Bild zu erkennen ist. Das ist eine
- * Frage der Textur, nicht der Flaeche — deshalb liegen die Bilder daneben.
- */
-window.messeKopf = async (url, kameraKonfig) => {
-  const gltf = await ladeModell(url);
-  const figur = gltf.scene;
-  dreheFigur(figur, kameraKonfig.drehungGrad);
-  const halter = new THREE.Group();
-  halter.add(figur);
-  szene.add(halter);
-  halter.updateMatrixWorld(true);
-
-  // Die Ruhepose (Zeit 0 von "stand"), nicht irgendein Bild: Im Schlag dreht
-  // der Kopf mit, und dann misst man die Animation statt der Kamera.
-  const mischer = new THREE.AnimationMixer(figur);
-  const stand = gltf.animations.find((c) => c.name === 'stand');
-  if (stand) {
-    const aktion = mischer.clipAction(stand);
-    aktion.reset();
-    aktion.play();
-    mischer.setTime(0);
-  }
-
-  const merker = [];
-  figur.traverse((teil) => {
-    if (!teil.isMesh) return;
-    merker.push([teil, teil.visible, teil.material]);
-    const istKopf = /_Head(_Hooded)?$/.test(teil.name);
-    teil.visible = istKopf;
-    if (istKopf) teil.material = new THREE.MeshNormalMaterial();
-  });
-
-  // Wohin die Figur schaut: ihre eigene +Z-Achse, durch die Weltmatrix
-  // geschickt. Aus der Drehung zurueckzurechnen waere dieselbe Zahl zweimal.
-  const vorn = new THREE.Vector3(0, 0, 1)
-    .transformDirection(figur.matrixWorld)
-    .normalize();
-  const oben = new THREE.Vector3(0, 1, 0);
-
-  const kamera = baueKamera(kameraKonfig);
-  // Die Normalen kommen im Blickraum heraus; diese Matrix dreht sie zurueck.
-  const zurueck = new THREE.Matrix3().setFromMatrix4(kamera.matrixWorld);
-
-  renderer.render(szene, kamera);
-  messstift.clearRect(0, 0, KANTE, KANTE);
-  messstift.drawImage(renderer.domElement, 0, 0);
-  const daten = messstift.getImageData(0, 0, KANTE, KANTE).data;
-
-  let kopf = 0;
-  let scheitel = 0;
-  let gesicht = 0;
-  const n = new THREE.Vector3();
-  for (let i = 0; i < KANTE * KANTE; i++) {
-    if (daten[i * 4 + 3] <= 8) continue;
-    kopf++;
-    n.set(
-      (daten[i * 4] / 255) * 2 - 1,
-      (daten[i * 4 + 1] / 255) * 2 - 1,
-      (daten[i * 4 + 2] / 255) * 2 - 1,
-    )
-      .applyMatrix3(zurueck)
-      .normalize();
-    if (n.dot(oben) >= 0.5) scheitel++;
-    if (n.dot(vorn) >= 0.5) gesicht++;
-  }
-
-  for (const [teil, sichtbar, stoff] of merker) {
-    teil.visible = sichtbar;
-    teil.material = stoff;
-  }
-  mischer.stopAllAction();
-  mischer.uncacheRoot(figur);
-  szene.remove(halter);
-
-  if (!kopf) throw new Error('Kein Kopf im Bild: ' + url);
-  return { kopf, scheitel, gesicht };
+  return { bild: blatt.toDataURL('image/png'), laengen, fusspunkt };
 };
 
 window.bereit = true;
@@ -917,61 +1183,73 @@ async function messeAusschnitt(seite, rollen, { grad: winkel, drehungGrad }) {
     halbeHoehe: PROBE_HALBE_HOEHE,
     mitteY: PROBE_MITTE_Y,
   };
-  let halbBreite = 0;
+  const raster = rasterVon(BEWEGUNGEN);
+  // Je Bewegung der groesste Bedarf ueber alle Rollen. Die Waagerechte bleibt
+  // getrennt, weil breite Zeilen ihre eigene bekommen; die Senkrechte laeuft
+  // gleich zusammen, denn die Zellhoehe ist fuer ALLE Zeilen dieselbe.
+  const halbBreiten = BEWEGUNGEN.map(() => 0);
   let unten = Infinity;
   let oben = -Infinity;
   for (const rolle of rollen) {
     const mass = await seite.evaluate(
-      ([url, bewegungen, konfig]) => window.messeRolle(url, bewegungen, konfig),
-      [`/modelle/${rolle}.glb`, BEWEGUNGEN, probe],
+      ([url, bewegungen, r, konfig]) => window.messeRolle(url, bewegungen, r, konfig),
+      [`/modelle/${rolle}.glb`, BEWEGUNGEN, raster, probe],
     );
-    halbBreite = Math.max(halbBreite, mass.halbBreite);
-    unten = Math.min(unten, mass.unten);
-    oben = Math.max(oben, mass.oben);
+    for (let nr = 0; nr < BEWEGUNGEN.length; nr++) {
+      halbBreiten[nr] = Math.max(halbBreiten[nr], mass[nr].halbBreite);
+      unten = Math.min(unten, mass[nr].unten);
+      oben = Math.max(oben, mass[nr].oben);
+    }
   }
   // Senkrecht wird die Figur MITTIG in die Zelle gelegt, waagerecht bleibt sie
   // um ihren Fusspunkt zentriert: Die Figur soll ueber ihrem Feld stehen und
   // nicht daneben, auch wenn sie beim Ausholen weit nach links greift.
   const mitte = (unten + oben) / 2;
-  const halbeHoehe = Math.max(halbBreite, (oben - unten) / 2) * LUFT;
+  // NUR die quadratischen Zeilen bestimmen die gemeinsame Breite. Genau das ist
+  // der Gewinn der breiten Zelle: Die liegende Figur zieht den Ausschnitt aller
+  // anderen Bilder nicht mehr mit auf.
+  const schmalste = Math.max(
+    ...halbBreiten.filter((_, nr) => raster.je[nr].weite === 1),
+  );
+  const halbeHoehe = Math.max(schmalste, (oben - unten) / 2) * LUFT;
   // Die Kamera zielt auf (0, mitteY, 0); sie um dy anzuheben verschiebt das
   // Bild senkrecht um dy * cos(Winkel). Deshalb die Division.
   const mitteY = PROBE_MITTE_Y + mitte / Math.cos((winkel * Math.PI) / 180);
-  return { grad: winkel, drehungGrad, halbeHoehe, mitteY };
+
+  // Und jetzt die Gegenprobe fuer die breiten Zeilen. Sie ist der Grund, warum
+  // `weite` eine feste Zahl ist und keine gemessene: Ein festes Raster laesst
+  // sich in figuren3d.ts aufschreiben, ein gemessenes waere nach jedem Lauf ein
+  // anderes. Passt eine Figur eines Tages nicht mehr hinein, soll das Skript
+  // ABBRECHEN und nicht stillschweigend abschneiden — ein halb aus der Zelle
+  // ragender Arm faellt am Bildschirm niemandem auf, der ihn nicht sucht.
+  for (let nr = 0; nr < BEWEGUNGEN.length; nr++) {
+    const { weite } = raster.je[nr];
+    if (weite === 1) continue;
+    const bedarf = halbBreiten[nr] * LUFT;
+    const platz = halbeHoehe * weite;
+    if (bedarf > platz) {
+      throw new Error(
+        `Zelle zu schmal fuer "${BEWEGUNGEN[nr].name}": braucht ${bedarf.toFixed(3)}, ` +
+          `hat ${platz.toFixed(3)} (weite ${weite}). weite in BEWEGUNGEN erhoehen.`,
+      );
+    }
+  }
+  return { grad: winkel, drehungGrad, halbeHoehe, mitteY, halbBreiten };
 }
 
-/**
- * Rendert ein Blatt und gibt es als PNG-Puffer zurueck.
- *
- * `kante` ist die Zellgroesse des Ergebnisses. Die Blaetter fuers Spiel
- * bekommen KANTE (128); die Vergleichsbilder bleiben auf der vollen
- * Renderaufloesung, weil ein Gesicht, um das es dort geht, in 128 Pixeln
- * hoehe nicht mehr zu beurteilen ist.
- */
-async function rendereBlatt(seite, sharp, rolle, kameraKonfig, kante = KANTE) {
-  const { bild, spalten, laengen, fusspunkt } = await seite.evaluate(
-    ([url, bewegungen, konfig]) => window.rendereRolle(url, bewegungen, konfig),
-    [`/modelle/${rolle}.glb`, BEWEGUNGEN, kameraKonfig],
+/** Rendert ein Blatt und gibt es als PNG-Puffer in Zielgroesse zurueck. */
+async function rendereBlatt(seite, sharp, rolle, kameraKonfig) {
+  const raster = rasterVon(BEWEGUNGEN);
+  const { bild, laengen, fusspunkt } = await seite.evaluate(
+    ([url, bewegungen, r, konfig]) => window.rendereRolle(url, bewegungen, r, konfig),
+    [`/modelle/${rolle}.glb`, BEWEGUNGEN, raster, kameraKonfig],
   );
   const roh = Buffer.from(bild.slice('data:image/png;base64,'.length), 'base64');
   const png = await sharp(roh)
-    .resize(spalten * kante, BEWEGUNGEN.length * kante, { kernel: 'lanczos3' })
+    .resize(raster.spalten * KANTE, raster.zeilen * KANTE, { kernel: 'lanczos3' })
     .png()
     .toBuffer();
-  return { png, spalten, laengen, fusspunkt, kante };
-}
-
-/** Fragt die Kopfmessung fuer eine Rolle ab und rechnet sie in Prozent um. */
-async function messeKopf(seite, rolle, kameraKonfig) {
-  const roh = await seite.evaluate(
-    ([url, konfig]) => window.messeKopf(url, konfig),
-    [`/modelle/${rolle}.glb`, kameraKonfig],
-  );
-  return {
-    rolle,
-    scheitel: (roh.scheitel / roh.kopf) * 100,
-    gesicht: (roh.gesicht / roh.kopf) * 100,
-  };
+  return { png, raster, laengen, fusspunkt };
 }
 
 // ---------------------------------------------------------------------------
@@ -994,7 +1272,16 @@ const { server, port } = await starteServer(SEITE, zwischen);
 const { chromium } = await ladePaket('playwright');
 const { default: sharp } = await ladePaket('sharp');
 
-const browser = await chromium.launch();
+// `channel: 'chromium'` ist der VOLLE Browser, nicht die Standard-Auslieferung
+// von Playwright. Die heisst seit 1.49 "chromium-headless-shell" und bringt
+// unter Windows GAR KEINEN WebGL-Kontext mit: `getContext('webgl2')` gibt null
+// zurueck, three.js meldet "Error creating WebGL context", und der Lauf stirbt
+// dreissig Sekunden spaeter in `waitForFunction` — an einer Stelle, die nach
+// einem haengenden Skript aussieht und nicht nach fehlender Grafik. Auf dem Mac
+// fiel das nie auf, dort hat die Shell einen Kontext. Nachgemessen am
+// 06.09.2026: Der volle Browser rendert hier ueber ANGLE/D3D11, die Shell auch
+// mit `--use-angle=swiftshader` nicht.
+const browser = await chromium.launch({ channel: 'chromium' });
 const seite = await browser.newPage();
 seite.on('pageerror', (fehler) => console.error('Seite:', fehler.message));
 await seite.goto(`http://127.0.0.1:${port}/seite.html`);
@@ -1008,9 +1295,43 @@ await seite.waitForFunction('window.bereit === true', null, { timeout: 30_000 })
 // Betriebsart A: die fuenf Blaetter fuers Spiel
 // ---------------------------------------------------------------------------
 
+/**
+ * Legt die LIZENZ.txt neben die Bilder.
+ *
+ * FRUEHER WAR DAS EIN `copyFile` der LICENSE.txt aus Adventurers 1.0. Seit der
+ * Beistand ein Druide ist, deckt die aber nur noch vier der fuenf Blaetter —
+ * und eine Lizenzdatei, die das fuenfte nicht nennt, ist schlechter als keine:
+ * Sie sieht vollstaendig aus. Deshalb steht davor jetzt eine deutsche Zeile je
+ * Blatt, die sagt, welche Figur aus welchem Paket kommt.
+ *
+ * Beide Pakete sind CC0 vom selben Urheber; der zweite Lizenztext steht
+ * wortgleich in der `License.txt` der Sammlung (siehe QUELLE_SAMMLUNG) und
+ * wird deshalb nicht ein zweites Mal abgedruckt, sondern benannt.
+ */
+async function schreibeLizenz() {
+  const kopf = [
+    'Die Figuren der Tafelrunde — Herkunft und Lizenz',
+    '',
+    'Alles hier ist CC0 1.0 Universal von Kay Lousberg (www.kaylousberg.com):',
+    'frei verwendbar, auch kommerziell, Namensnennung nicht verlangt.',
+    '',
+    'Aus "KayKit Character Pack : Adventurers" 1.0 — Lizenztext siehe unten:',
+    ...ROLLEN.filter((r) => !r.sammlung).map((r) => `  ${r.rolle.padEnd(10)} ${r.figur}`),
+    '',
+    'Aus "KayKit Adventurers 2.0" (Figur und Stab) und "KayKit Character',
+    'Animations 1.1" (die Bewegungen) — beide CC0, Lizenztext wortgleich zum',
+    'unten stehenden, nachzulesen als License.txt der Complete Collection:',
+    ...ROLLEN.filter((r) => r.sammlung).map((r) => `  ${r.rolle.padEnd(10)} ${r.figur}`),
+    '',
+    '------------------------------------------------------------------',
+    '',
+  ].join('\n');
+  await writeFile(join(ZIEL, 'LIZENZ.txt'), kopf + (await readFile(LIZENZ_QUELLE, 'utf8')));
+}
+
 async function baueBlaetter() {
   await mkdir(ZIEL, { recursive: true });
-  await copyFile(LIZENZ_QUELLE, join(ZIEL, 'LIZENZ.txt'));
+  await schreibeLizenz();
 
   const alle = ROLLEN.map((r) => r.rolle);
   const ausschnitt = await messeAusschnitt(seite, alle, {
@@ -1026,7 +1347,7 @@ async function baueBlaetter() {
 
   const bericht = [];
   for (const eintrag of ROLLEN) {
-    const { png, spalten, laengen, fusspunkt } = await rendereBlatt(
+    const { png, laengen, fusspunkt } = await rendereBlatt(
       seite,
       sharp,
       eintrag.rolle,
@@ -1040,7 +1361,7 @@ async function baueBlaetter() {
       .webp({ quality: 70, alphaQuality: 100, effort: 6 })
       .toFile(ziel);
     const groesse = (await readFile(ziel)).byteLength;
-    bericht.push({ rolle: eintrag.rolle, groesse, laengen, fusspunkt, spalten });
+    bericht.push({ rolle: eintrag.rolle, groesse, laengen, fusspunkt });
   }
 
   let summe = 0;
@@ -1052,12 +1373,35 @@ async function baueBlaetter() {
     console.log(`${z.rolle.padEnd(10)} ${kb(z.groesse).padStart(9)}   ${dauern}`);
   }
   console.log(`${'zusammen'.padEnd(10)} ${kb(summe).padStart(9)}`);
+
+  // Alles ab hier gehoert nach figuren3d.ts. Es steht als Zahl da, damit es
+  // niemand aus dem Bild abmisst: Wer den Fusspunkt um zwei Pixel danebensetzt,
+  // sucht spaeter, warum die Figuren im Getuemmel nicht auf einer Linie stehen,
+  // und wer eine Zeile falsch abzaehlt, bekommt lauter richtige Bilder an der
+  // falschen Stelle.
+  const raster = rasterVon(BEWEGUNGEN);
   console.log(
-    `Raster je Blatt: ${Math.max(...BEWEGUNGEN.map((b) => b.bilder))} x ${BEWEGUNGEN.length} Zellen zu ${KANTE} px`,
+    `Raster je Blatt: ${raster.spalten} x ${raster.zeilen} Zellen zu ${KANTE} px` +
+      ` (${raster.spalten * KANTE} x ${raster.zeilen * KANTE} px)`,
   );
-  // Der Fusspunkt gehoert in figuren3d.ts. Er steht hier als Zahl, damit ihn
-  // niemand aus dem Bild abmisst: Wer ihn um zwei Pixel danebensetzt, sucht
-  // spaeter, warum die Figuren im Getuemmel nicht auf einer Linie stehen.
+  for (let nr = 0; nr < BEWEGUNGEN.length; nr++) {
+    const b = BEWEGUNGEN[nr];
+    const { zeile, weite, proZeile } = raster.je[nr];
+    const dauer = bericht[0].laengen[b.name];
+    const [von, bis] = b.spanne;
+    // Die MODELLRATE: so viele Bilder je Sekunde waeren es, liefe die Bewegung
+    // so schnell ab wie im Modell. Sie ist ein Anhalt und keine Vorschrift —
+    // `bildrate` in figuren3d.ts weicht bewusst davon ab, wo die Anzeige es
+    // besser weiss (die Zuckung ist dort schneller, der Schlag laenger; die
+    // Gruende stehen an Ort und Stelle).
+    const teiler = b.schleife ? b.bilder : Math.max(1, b.bilder - 1);
+    const modellrate = teiler / ((bis - von) * dauer);
+    console.log(
+      `  ${b.name.padEnd(10)} zeile ${zeile}  bilder ${String(b.bilder).padStart(2)}` +
+        `  weite ${weite}  proZeile ${proZeile}  Modellrate ${modellrate.toFixed(1)}` +
+        `  Bedarf ${ausschnitt.halbBreiten[nr].toFixed(3)} von ${(ausschnitt.halbeHoehe * weite).toFixed(3)}`,
+    );
+  }
   const f = bericht[0].fusspunkt;
   console.log(
     `Fusspunkt in der Zelle: x ${f.x.toFixed(4)}  y ${f.y.toFixed(4)} (Anteil der Kante)`,
@@ -1067,16 +1411,6 @@ async function baueBlaetter() {
 // ---------------------------------------------------------------------------
 // Betriebsart B: das Vergleichsbild
 // ---------------------------------------------------------------------------
-
-/**
- * Fuer diese Winkel entsteht zusaetzlich EIN EIGENES Bild je Winkel.
- *
- * Die Uebersicht mit allen vier Winkeln untereinander beantwortet "welcher ist
- * anders"; sie beantwortet nicht "sieht man hier das Gesicht", weil eine Zelle
- * darin 128 Pixel hoch ist und ein Kopf davon dreissig. Die Brettkamera bekommt
- * kein eigenes Bild — sie steht nicht zur Wahl.
- */
-const EIGENES_BILD_FUER = [22, 16, 12];
 
 /** Zeilenhoehe, Beschriftungsspalte und Kopfzeilen des Vergleichsbildes. */
 const V_SPALTE = 172;
@@ -1089,90 +1423,6 @@ function beschriftung(text, unterzeile, x, y) {
     ? `<text x="${x}" y="${y + 22}" fill="#c8b9a6" font-family="sans-serif" font-size="15">${unterzeile}</text>`
     : '';
   return `<text x="${x}" y="${y}" fill="#f4ece0" font-family="sans-serif" font-size="19" font-weight="600">${text}</text>${zweite}`;
-}
-
-/**
- * Ein Bild fuer EINEN Winkel: zwei Rollen, vier Posen, volle Aufloesung.
- *
- * Dateiname mit dem Winkel darin (`…-16grad.webp`), damit man die drei nicht
- * verwechselt, wenn sie einzeln herumgereicht werden. Unter jeder Zeile stehen
- * die gemessenen Kopfanteile — die Zahl gehoert neben das Bild, zu dem sie
- * gehoert, sonst glaubt man sie oder eben nicht.
- */
-async function baueWinkelbild(winkel, ausschnitt, koepfe) {
-  const kante = KANTE * UEBERABTASTUNG;
-  const reihen = [];
-  for (const rolle of VERGLEICH_ROLLEN) {
-    const { png } = await rendereBlatt(seite, sharp, rolle, ausschnitt, kante);
-    const zellen = [];
-    for (const wahl of VERGLEICH_ZELLEN) {
-      const y = BEWEGUNGEN.findIndex((b) => b.name === wahl.bewegung);
-      zellen.push(
-        await sharp(png)
-          .extract({ left: wahl.bild * kante, top: y * kante, width: kante, height: kante })
-          .png()
-          .toBuffer(),
-      );
-    }
-    reihen.push({ rolle, zellen });
-  }
-
-  const spalte = 210;
-  const kopf = 118;
-  const breite = spalte + VERGLEICH_ZELLEN.length * kante;
-  const hoehe = kopf + reihen.length * kante + 12;
-
-  const teile = [];
-  const texte = [
-    beschriftung(
-      `Kamerawinkel ${grad(winkel)}`,
-      `Drehung ${DREHUNG_GRAD}° · Ausschnitt ${ausschnitt.halbeHoehe.toFixed(2)} (gemessen) · Zelle ${kante} px`,
-      16,
-      34,
-    ),
-    `<text x="16" y="82" fill="#e8c98a" font-family="sans-serif" font-size="15">Scheitel / Gesicht: Anteil der sichtbaren Kopffläche, an den Normalen gemessen</text>`,
-  ];
-  VERGLEICH_ZELLEN.forEach((wahl, i) => {
-    texte.push(
-      `<text x="${spalte + i * kante + kante / 2}" y="${kopf - 14}" fill="#9c8d7c" font-family="sans-serif" font-size="16" text-anchor="middle">${wahl.bewegung}</text>`,
-    );
-  });
-
-  reihen.forEach((reihe, i) => {
-    const oben = kopf + i * kante;
-    const mass = koepfe.find((k) => k.rolle === reihe.rolle);
-    texte.push(
-      beschriftung(
-        reihe.rolle,
-        `Scheitel ${mass.scheitel.toFixed(1)} % · Gesicht ${mass.gesicht.toFixed(1)} %`,
-        16,
-        oben + 46,
-      ),
-    );
-    reihe.zellen.forEach((zelle, s) => {
-      teile.push({ input: zelle, left: spalte + s * kante, top: oben });
-    });
-  });
-
-  const raster = reihen
-    .map(
-      (_, i) =>
-        `<rect x="0" y="${kopf + i * kante}" width="${breite}" height="${kante}" fill="${i % 2 ? '#2b231d' : '#241d18'}"/>`,
-    )
-    .join('');
-  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">${raster}${texte.join('')}</svg>`;
-
-  const ziel = join(
-    dirname(VERGLEICHSBILD),
-    `tafelrunde-kamera-${String(winkel).replace('.', ',')}grad.webp`,
-  );
-  await mkdir(dirname(ziel), { recursive: true });
-  await sharp({ create: { width: breite, height: hoehe, channels: 4, background: V_GRUND } })
-    .composite([{ input: Buffer.from(svg), left: 0, top: 0 }, ...teile])
-    .webp({ quality: 82, effort: 6 })
-    .toFile(ziel);
-  const groesse = (await readFile(ziel)).byteLength;
-  console.log(`  -> ${ziel} (${breite}x${hoehe}, ${kb(groesse)})`);
 }
 
 /**
@@ -1192,27 +1442,9 @@ async function baueVergleich() {
       grad: winkel,
       drehungGrad: DREHUNG_GRAD,
     });
-    const koepfe = [];
-    for (const rolle of VERGLEICH_ROLLEN) {
-      koepfe.push(await messeKopf(seite, rolle, ausschnitt));
-    }
     console.log(
-      `Kamera ${grad(winkel).padStart(6)}: Ausschnitt ${ausschnitt.halbeHoehe.toFixed(3)}  Mitte y ${ausschnitt.mitteY.toFixed(3)}   ` +
-        koepfe
-          .map(
-            (k) =>
-              `${k.rolle} Scheitel ${k.scheitel.toFixed(1)} % Gesicht ${k.gesicht.toFixed(1)} %`,
-          )
-          .join('  ·  '),
+      `Kamera ${grad(winkel)}: halbe Hoehe ${ausschnitt.halbeHoehe.toFixed(3)}  Mitte y ${ausschnitt.mitteY.toFixed(3)}`,
     );
-
-    // Je Winkel EIN eigenes Bild, mit dem Winkel im Dateinamen und in voller
-    // Renderaufloesung: Der Auftraggeber sieht die drei Winkel einzeln an, und
-    // in 128 Pixeln Zellhoehe ist ein Gesicht nicht zu beurteilen.
-    if (EIGENES_BILD_FUER.includes(winkel)) {
-      await baueWinkelbild(winkel, ausschnitt, koepfe);
-    }
-
     for (const rolle of VERGLEICH_ROLLEN) {
       const { png } = await rendereBlatt(seite, sharp, rolle, ausschnitt);
       zeilen.push({
@@ -1236,11 +1468,6 @@ async function baueVergleich() {
       grad: VERGLEICH_DREHUNG_GRAD,
       drehungGrad: drehung,
     });
-    const kopf = await messeKopf(seite, 'meuchler', ausschnitt);
-    console.log(
-      `Drehung ${String(drehung).padStart(2)}° bei ${grad(VERGLEICH_DREHUNG_GRAD)}: ` +
-        `Scheitel ${kopf.scheitel.toFixed(1)} %  Gesicht ${kopf.gesicht.toFixed(1)} %`,
-    );
     const { png } = await rendereBlatt(seite, sharp, 'meuchler', ausschnitt);
     zeilen.push({
       png,
@@ -1249,15 +1476,36 @@ async function baueVergleich() {
     });
   }
 
-  // Aus jedem Blatt die vier ausgewaehlten Zellen schneiden.
+  // Aus jedem Blatt die vier ausgewaehlten Zellen schneiden. Wo sie liegen und
+  // wie breit sie sind, sagt das Raster — seit der Todeszeile ist beides nicht
+  // mehr "Bild mal Kante".
+  const blattRaster = rasterVon(BEWEGUNGEN);
+  const auswahl = VERGLEICH_ZELLEN.map((wahl) => {
+    const nr = BEWEGUNGEN.findIndex((b) => b.name === wahl.bewegung);
+    const { zeile, weite, proZeile } = blattRaster.je[nr];
+    return {
+      ...wahl,
+      breite: Math.round(KANTE * weite),
+      links: Math.round((wahl.bild % proZeile) * weite * KANTE),
+      oben: (zeile + Math.floor(wahl.bild / proZeile)) * KANTE,
+    };
+  });
+  // Wo jede Spalte des Vergleichsbildes anfaengt — aufaddiert, weil die
+  // Spalten seit der breiten Todeszelle nicht mehr gleich breit sind.
+  const spaltenX = [];
+  let lauf = V_SPALTE;
+  for (const zelle of auswahl) {
+    spaltenX.push(lauf);
+    lauf += zelle.breite;
+  }
+
   const reihen = [];
   for (const zeile of zeilen) {
     const zellen = [];
-    for (const wahl of VERGLEICH_ZELLEN) {
-      const y = BEWEGUNGEN.findIndex((b) => b.name === wahl.bewegung);
+    for (const wahl of auswahl) {
       zellen.push(
         await sharp(zeile.png)
-          .extract({ left: wahl.bild * KANTE, top: y * KANTE, width: KANTE, height: KANTE })
+          .extract({ left: wahl.links, top: wahl.oben, width: wahl.breite, height: KANTE })
           .png()
           .toBuffer(),
       );
@@ -1265,7 +1513,7 @@ async function baueVergleich() {
     reihen.push({ ...zeile, zellen });
   }
 
-  const breite = V_SPALTE + VERGLEICH_ZELLEN.length * KANTE;
+  const breite = lauf;
   const hoehe =
     V_KOPF + trenner * KANTE + V_LUECKE + V_KOPF + (reihen.length - trenner) * KANTE + 12;
 
@@ -1287,9 +1535,9 @@ async function baueVergleich() {
   texte.push(
     `<text x="14" y="${V_KOPF - 22}" fill="#e8c98a" font-family="sans-serif" font-size="15" font-weight="600">Entschieden am 05.09.2026 von Robin: ${grad(KAMERA_GRAD)} — so sind die Blaetter gerendert.</text>`,
   );
-  VERGLEICH_ZELLEN.forEach((wahl, i) => {
+  auswahl.forEach((wahl, i) => {
     texte.push(
-      `<text x="${V_SPALTE + i * KANTE + KANTE / 2}" y="${V_KOPF - 8}" fill="#9c8d7c" font-family="sans-serif" font-size="14" text-anchor="middle">${wahl.bewegung}</text>`,
+      `<text x="${spaltenX[i] + wahl.breite / 2}" y="${V_KOPF - 8}" fill="#9c8d7c" font-family="sans-serif" font-size="14" text-anchor="middle">${wahl.bewegung}</text>`,
     );
   });
 
@@ -1298,7 +1546,7 @@ async function baueVergleich() {
     const zeileOben = versatz + (i < trenner ? i : i - trenner) * KANTE;
     texte.push(beschriftung(reihe.titel, reihe.unter, 14, zeileOben + 52));
     reihe.zellen.forEach((zelle, s) => {
-      teile.push({ input: zelle, left: V_SPALTE + s * KANTE, top: zeileOben });
+      teile.push({ input: zelle, left: spaltenX[s], top: zeileOben });
     });
   });
 
@@ -1313,8 +1561,8 @@ async function baueVergleich() {
     ),
   );
 
-  // Trennlinie und Zeilenraster als eine SVG-Ebene ueber dem Hintergrund.
-  const raster = reihen
+  // Trennlinie und Zeilenstreifen als eine SVG-Ebene ueber dem Hintergrund.
+  const streifen = reihen
     .map((_, i) => {
       const versatz = i < trenner ? V_KOPF : untenOben + V_KOPF;
       const y = versatz + (i < trenner ? i : i - trenner) * KANTE;
@@ -1322,7 +1570,7 @@ async function baueVergleich() {
     })
     .join('');
 
-  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">${raster}<line x1="0" y1="${untenOben + 14}" x2="${breite}" y2="${untenOben + 14}" stroke="#4a3b2e" stroke-width="2"/>${texte.join('')}</svg>`;
+  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">${streifen}<line x1="0" y1="${untenOben + 14}" x2="${breite}" y2="${untenOben + 14}" stroke="#4a3b2e" stroke-width="2"/>${texte.join('')}</svg>`;
 
   await mkdir(dirname(VERGLEICHSBILD), { recursive: true });
   await sharp({

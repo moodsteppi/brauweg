@@ -14,6 +14,15 @@
  *     --mindest 100        Ab wie vielen Antritten eine Zeile mitgerechnet wird.
  *     --json               Statt der Tabellen die rohe Auswertung als JSON.
  *
+ * Und die vier Stellschrauben der Spielzeit, damit man die Ausgewogenheit
+ * eines VORGESCHLAGENEN Standes ansehen kann, ohne ihn vorher einzubauen
+ * (siehe werkzeug/spielzeit.mjs und docs/TAFELRUNDE-SPIELZEIT.md):
+ *
+ *     --leben 20           Startleben je Sitz.
+ *     --teiler 3           SCHADEN_STUFEN_TEILER: kleiner = mehr Schaden.
+ *     --zeitraffer 1       Wie viel schneller der Kampf ablaeuft.
+ *     --takt 100           Taktlaenge der Simulation in Millisekunden.
+ *
  * WOZU ES DA IST: Wer am Katalog dreht — an Werten, Kosten, Marken oder den
  * Schwellen in synergien.ts —, laesst das hier vorher und nachher laufen und
  * vergleicht. Die Probe in test/ausgewogenheit.test.ts faengt nur ab, was
@@ -50,10 +59,9 @@ if (!existsSync(MESSSTAND)) {
  */
 const laden = (pfad) => import(pathToFileURL(pfad).href);
 
-const { ACHT_SITZE, messe, schnittQuote, werteAus } = await laden(MESSSTAND);
-const { KATALOG, MARKEN, SCHWELLEN, einheit, synergie } = await laden(
-  resolve(HIER, '../dist/src/index.js'),
-);
+const { ACHT_SITZE, STANDARD_ZEITMODELL, messe, schnittQuote, werteAus } = await laden(MESSSTAND);
+const { DEFAULT_REGELN, KATALOG, MARKEN, SCHWELLEN, STANDARD_REGLER, einheit, synergie } =
+  await laden(resolve(HIER, '../dist/src/index.js'));
 
 // ---------------------------------------------------------------------------
 // Schalter
@@ -87,11 +95,55 @@ if (!['normal', 'sanft', 'hart', 'gemischt'].includes(BESETZUNG)) {
 
 const SITZE = ACHT_SITZE.slice(0, SITZZAHL);
 
+/*
+ * Die Stellschrauben. Wer keine angibt, misst genau den gebauten Stand — die
+ * Vorgaben sind DEFAULT_REGELN und STANDARD_REGLER selbst und keine
+ * abgeschriebenen Zahlen, damit die Vorgabe hier nicht veraltet, sobald jemand
+ * eine Konstante aendert.
+ */
+const REGELN = { ...DEFAULT_REGELN, startLeben: Number(schalter('leben', DEFAULT_REGELN.startLeben)) };
+const REGLER = {
+  ...STANDARD_REGLER,
+  schadenStufenTeiler: Number(schalter('teiler', STANDARD_REGLER.schadenStufenTeiler)),
+  zeitraffer: Number(schalter('zeitraffer', STANDARD_REGLER.zeitraffer)),
+  taktMs: Number(schalter('takt', STANDARD_REGLER.taktMs)),
+};
+/*
+ * Geprueft wird hier und nicht in kampf.ts: Der Regler ist Werkzeug und kein
+ * Regelsatz, aber ueber die Kommandozeile kommt trotzdem Freitext herein. Eine
+ * Null im Takt waere kein falsches Ergebnis, sondern eine Endlosschleife
+ * (`jetzt += 0`), und eine Null im Teiler ergaebe unendlich viel Schaden.
+ */
+for (const [name, wert] of [
+  ['leben', REGELN.startLeben],
+  ['teiler', REGLER.schadenStufenTeiler],
+  ['zeitraffer', REGLER.zeitraffer],
+  ['takt', REGLER.taktMs],
+]) {
+  if (!Number.isFinite(wert) || wert <= 0) {
+    console.error(`--${name} braucht eine Zahl groesser als null`);
+    process.exit(1);
+  }
+}
+
+const ABWEICHUNGEN = [
+  REGELN.startLeben === DEFAULT_REGELN.startLeben ? null : `Startleben ${REGELN.startLeben}`,
+  REGLER.schadenStufenTeiler === STANDARD_REGLER.schadenStufenTeiler
+    ? null
+    : `Schadensteiler ${REGLER.schadenStufenTeiler}`,
+  REGLER.zeitraffer === STANDARD_REGLER.zeitraffer ? null : `Zeitraffer x${REGLER.zeitraffer}`,
+  REGLER.taktMs === STANDARD_REGLER.taktMs ? null : `Takt ${REGLER.taktMs} ms`,
+].filter(Boolean);
+
 // ---------------------------------------------------------------------------
 // Ausgabe
 // ---------------------------------------------------------------------------
 
 const p1 = (zahl) => `${(zahl * 100).toFixed(1)} %`;
+const mmss = (ms) => {
+  const s = Math.round(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
 
 /** Eine Tabelle mit fester Spaltenbreite — links Text, rechts Zahlen. */
 function tabelle(kopf, zeilen) {
@@ -135,6 +187,8 @@ const befunde = messe({
   sitze: SITZE,
   besetzung: BESETZUNG,
   saatBasis: SAAT_BASIS,
+  regeln: REGELN,
+  regler: REGLER,
 });
 const a = werteAus(befunde);
 const dauer = Date.now() - beginn;
@@ -149,6 +203,13 @@ console.log('Tafelrunde — Ausgewogenheit');
 console.log(
   `${a.partien} Partien zu ${SITZE.length}, Besetzung ${BESETZUNG}, ` +
     `Saatbasis "${SAAT_BASIS}", ${(dauer / 1000).toFixed(1)} s`,
+);
+// Eine Tabelle, die nicht den gebauten Stand zeigt, muss das in der ersten
+// Zeile sagen — sonst wandert sie als "die Zahlen von heute" weiter.
+console.log(
+  ABWEICHUNGEN.length === 0
+    ? 'Stand wie gebaut'
+    : `ABWEICHENDER STAND: ${ABWEICHUNGEN.join(', ')}`,
 );
 
 console.log('');
@@ -173,6 +234,37 @@ tabelle(
 console.log('');
 console.log('  "vorzeitig einseitig": der Sieger lag spaetestens zur Halbzeit vorne');
 console.log('  und blieb es bis zum Schluss.');
+
+/*
+ * Die SPIELZEIT steht hier und nicht nur im Spielzeit-Werkzeug, weil sie an
+ * jeder Katalogaenderung haengt: Wer eine Einheit zaeher macht, verlaengert
+ * jeden Kampf und damit die Partie. Wer das nicht neben den Siegquoten sieht,
+ * balanciert das Spiel laenger, ohne es zu merken.
+ */
+console.log('');
+console.log('SPIELZEIT');
+tabelle(
+  ['', 'Wert'],
+  [
+    ['Spielzeit im Median', mmss(a.spielzeitMedianMs)],
+    ['Spielzeit im Mittel', mmss(a.spielzeitSchnittMs)],
+    ['kuerzeste / laengste', `${mmss(a.spielzeitMinMs)} / ${mmss(a.spielzeitMaxMs)}`],
+    ['davon Vorbereitung (geschaetzt)', mmss(a.vorbereitungMs)],
+    ['davon Kampf (gemessen)', mmss(a.kampfMs)],
+    ['davon Nachlauf (gemessen)', mmss(a.nachlaufMs)],
+    ['einzelner Kampf im Median', `${(a.kampfMedianMs / 1000).toFixed(1)} s`],
+    ['Kampfphase je Runde im Median', `${(a.kampfphaseMedianMs / 1000).toFixed(1)} s`],
+    ['Kaempfe an der Hoechstdauer abgebrochen', p1(a.zeitAbbruchAnteil)],
+  ],
+);
+console.log('');
+console.log(
+  `  Vorbereitung ist GESCHAETZT (${STANDARD_ZEITMODELL.vorbereitungGrundMs / 1000} s Grundzeit ` +
+    `+ ${STANDARD_ZEITMODELL.vorbereitungJeZugMs / 1000} s je Handgriff, Deckel ` +
+    `${STANDARD_ZEITMODELL.vorbereitungHoechstMs / 1000} s) — im Messstand sitzen nur`,
+);
+console.log('  Bots, und die sind sofort bereit. Kampf und Nachlauf sind gemessen.');
+console.log('  Welche Stellschraube wie viel bringt: werkzeug/spielzeit.mjs.');
 
 const markenSchnitt = schnittQuote(a.marken, MINDEST);
 console.log('');

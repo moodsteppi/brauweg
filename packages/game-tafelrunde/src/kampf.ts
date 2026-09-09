@@ -16,9 +16,20 @@
  * `baueStreiter` rechnet sie einmal je Seite aus und gibt sie an `werteFuer`
  * — danach stehen die Werte und werden nicht mehr angefasst.
  *
- * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift in
- * die Zugschleife in `simuliereKampf` ein (dort kaeme das Wirken einer
- * Faehigkeit vor dem Angriff, mit Mana aus Treffern).
+ * DIE ROLLE WIRKT SEIT DEM 06.09.2026 — genau EINE von fuenf. Ein `beistand`
+ * heilt, statt zu schlagen (`HEILUNG_FAKTOR`, `sucheWunde`); Wache, Schuetze,
+ * Magier und Meuchler unterscheiden sich weiterhin allein ueber ihre Werte
+ * und ihre `reichweite`. Das ist Absicht und keine halbe Arbeit: Die vier
+ * kaempfen alle dadurch, dass sie zuschlagen, und ein Meuchler, der doppelten
+ * Schaden gegen die hinterste Reihe macht, waere eine neue Regel und keine
+ * Reparatur. Der Beistand war der einzige, dessen Rolle ohne Wirkung
+ * bedeutungslos war — er teilte am wenigsten aus UND hielt am wenigsten aus.
+ *
+ * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift an
+ * derselben Stelle in die Zugschleife ein, an der jetzt die Heilung steht
+ * (dort kaeme das Wirken einer Faehigkeit vor dem Angriff, mit Mana aus
+ * Treffern). Die Heilung ist NICHT die Faehigkeit des Beistands, sondern das,
+ * was seine Rolle im Grundkampf ausmacht — eine Faehigkeit kommt zusaetzlich.
  *
  * ZUR ZEIT: Gerechnet wird in ganzen Millisekunden und in festen Takten von
  * `TAKT_MS`. Keine Gleitkommazeit, kein `Date.now()`. Sekundenbruchteile als
@@ -27,13 +38,20 @@
  * genau das darf hier nicht passieren.
  */
 
-import { type EinheitId, type Grundwerte, type Stufe, werteFuer } from './katalog.js';
+import {
+  type EinheitId,
+  type Grundwerte,
+  type Rolle,
+  type Stufe,
+  einheit,
+  werteFuer,
+} from './katalog.js';
 import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
 import {
   type Seite,
   SEITEN,
   arenaAbstand,
-  arenaNachbarn,
+  arenaNachbarnFuer,
   gegenseite,
   nachArena,
 } from './arena.js';
@@ -67,25 +85,100 @@ export const SCHRITT_MS = 500;
  *
  * WARUM AUSGERECHNET 45 SEKUNDEN: Eine Abbruchgrenze taugt nur etwas, wenn sie
  * die Ausnahme bleibt — sonst entscheidet nicht mehr der Kampf, sondern
- * `entscheideNachZeit`. Die Zahl ist am heutigen Katalog gemessen und nicht
- * geraten. Ueber 800 zufaellig besetzte Bretterpaare je Groesse (2 bis 4, 6
- * und 9 Einheiten, Werte aus dem heutigen Katalog) und OHNE Deckel gerechnet:
- * Median 17 s, Mittel 20 s, das neunte Zehntel bei 35 s, das 95. bei 40 s, das
- * 99. bei 50 s, der laengste 78 s. Bei 45 s werden also rund 2 bis 4 Prozent
- * abgeschnitten; bei 30 s waere es jeder sechste gewesen und bei 20 s zwei von
- * fuenf.
+ * `entscheideNachZeit`. Auf Brettern aus ECHTEN Partien dauert ein Kampf heute
+ * 17,0 s im Median, und 6,1 % laufen in die Grenze (500 Partien zu viert,
+ * werkzeug/spielzeit.mjs, nachgemessen am 06.09.2026). Das ist die
+ * Groessenordnung, fuer die die 45 s gedacht sind: ein Rettungsseil. Die Zahl
+ * ist an zwei Tagen von 1,8 auf 4,6 und dann auf 9,9 Prozent gestiegen und
+ * seither wieder auf 6,1 gefallen — dazwischen liegen die beiden
+ * Katalogeingriffe vom 05.09. abends (Elementar bekam eine Vorderreihe, der
+ * Schildknappe die Marke Untot). Unten steht, woran jeder Schritt lag; hier
+ * steht der Grund, aus dem die Zahl ueberhaupt beobachtet wird.
  *
- * Der Median liegt mit 17 s genau in den 15 bis 20 Sekunden des Konzepts —
- * lang sind nicht die Kaempfe, sondern ihr Schwanz: zwei Bretter aus lauter
- * Wachen (40 bis 50 Punkte Ruestung gegen 28 bis 45 Angriff) brauchen
- * einander sehr lange. Das ist eine Sache des Katalogs und nicht dieser Zahl;
- * kuerzer werden diese Kaempfe erst, wenn Faehigkeiten und Synergien Schaden
- * dazulegen — nicht dadurch, dass man sie hier abschneidet. Bis dahin ist die
- * Grenze ein Rettungsseil und keine Regel.
+ * DIESE 17 SEKUNDEN HAENGEN AM ZEITRAFFER, und das ist der Satz, um den es
+ * hier geht. Die Zahl stand schon einmal an dieser Stelle — damals aus einer
+ * anderen Messung: 800 zufaellig besetzte Bretterpaare OHNE Deckel, Median
+ * 17 s, das neunte Zehntel bei 35 s, rund 2 bis 4 Prozent abgeschnitten. Auf
+ * echten Brettern stimmte sie nie: Ein Bot kauft nicht zufaellig, er nimmt das
+ * Beste, verschmilzt auf Stufe 2 und 3 und sammelt Marken, deren Boni Leben
+ * und Ruestung dazulegen. Solche Kaempfe dauerten 35,2 s, und abgeschnitten
+ * wurden 27,7 % — jeder dritte Kampf ging an die Uhr statt ans Brett
+ * (gefunden am 05.09.2026 beim Zerlegen der Spielzeit).
  *
- * Dass die Messung nicht mit dem naechsten Balancing veraltet, sichert eine
- * Probe in test/kampf.test.ts: Sie laeuft bei jedem Testlauf mit und schlaegt
- * an, sobald der Zeitablauf vom Ausnahmefall zum Normalfall wird.
+ * Repariert hat das nicht die Grenze, sondern `STANDARD_REGLER.zeitraffer`:
+ * Er steht seit demselben Tag auf 2, und damit sind aus 35,2 s wieder 17,3 s
+ * geworden und aus 27,7 % noch 1,8 %. WER IHN AUF 1 ZURUECKSTELLT, HOLT DEN
+ * ALTEN ZUSTAND MIT ZURUECK — die Begruendung dieser Konstante gilt dann nicht
+ * mehr.
+ *
+ * DIE ZWEITE SCHRAUBE IST DER LADEN, und sie zieht in die Gegenrichtung: Seit
+ * ein Kauf den ganzen Laden neu zieht (partie.ts, `fuelleLaden`), stehen sich
+ * bessere Bretter gegenueber, und aus den 1,8 % sind 4,6 % geworden. Das ist
+ * weiterhin ein Rettungsseil, aber es ist die Zahl, die ein Eingriff am
+ * Katalog oder am Laden zuerst bewegt. Die volle Auswertung steht in
+ * docs/TAFELRUNDE-SPIELZEIT.md, Abschnitt 6.
+ *
+ * DIE DRITTE IST DER BOT, und sie zieht am staerksten: Seit er auf Marken
+ * spielt (bot.ts, `heerStaerke`), stellt er Synergien auf, die Leben und
+ * Ruestung dazulegen — aus 4,6 % sind 9,9 % geworden. Es ist DIESELBE Ursache
+ * wie oben, nur eine Stufe weiter: ein besser besetztes Brett. Die kuerzere
+ * Partie (12 statt 14 Startleben) hat daran nichts geaendert, sie nimmt die
+ * Rundenzahl und nicht die Kampfdauer (9,5 % gegen 9,7 %). WENN DIESE ZAHL
+ * WEITER STEIGT, ist es Zeit fuer die Frage, die hier bisher immer mit "nein"
+ * beantwortet wurde: nicht die Grenze senken, sondern den Katalog
+ * entschaerfen — Ruestung ist der Wert, der jeden Kampf doppelt verlaengert.
+ *
+ * DIE ZAHL 45_000 SELBST BLEIBT UNVERAENDERT, weil sie das falsche Ende war:
+ * Wer sie senkt, laesst mehr Kaempfe von der Uhr entscheiden statt weniger.
+ * Kuerzer werden Kaempfe ueber den Ablauf (den Zeitraffer) oder ueber den
+ * Katalog.
+ *
+ * AM 06.09.2026 IST DIESER SATZ NACHGERECHNET WORDEN, weil Robin nach
+ * kuerzeren Wartezeiten gefragt hat und die Grenze der einzige Hebel ist, der
+ * den SCHWANZ der Kampfdauer trifft (der Median liegt bei 17 s, das neunte
+ * Zehntel bei 40 s). Gemessen wurde mit ZWEI Werkzeugen, und die Trennung ist
+ * kein Zufall — die eine Frage laesst sich mit dem anderen Verfahren gar
+ * nicht beantworten:
+ *
+ *   werkzeug/hoechstdauer.mjs (300 Partien zu viert, 5.125 Kaempfe): Jede
+ *   Paarung wird nach dem gebauten Lauf NOCH EINMAL gerechnet — dieselben
+ *   Bretter, dieselbe Kampfsaat, nur die Grenze anders. Nur so laesst sich
+ *   sagen, ob derselbe Kampf ANDERS ausgeht; sobald einer das tut, laufen die
+ *   Partien auseinander.
+ *
+ *              Kampf (Mittel)   von der Uhr   anderer Sieger   unentschieden
+ *     45 s          20,1 s          6,0 %           —                0,1 %
+ *     30 s          18,3 s         19,7 %         1,3 %              0,6 %
+ *     25 s          17,1 s         26,6 %         3,0 %              1,4 %
+ *     20 s          15,5 s         38,8 %         4,5 %              1,5 %
+ *
+ *   werkzeug/spielzeit.mjs --nur hoechstdauer (dieselben 300 Partien, aber
+ *   jede Zeile mit ihren EIGENEN Partien): Spielzeit im Median 6:32 heute,
+ *   6:11 bei 30 s, 6:00 bei 25 s. Die Markenspanne bewegt sich dabei gar
+ *   nicht (x0,74-1,34 gegen x0,75-1,33), und ein eindeutiger Sieger kommt
+ *   weiterhin in jeder Partie zustande.
+ *
+ * Zwei Auskuenfte stecken darin, und sie zeigen in verschiedene Richtungen.
+ * Die eine: Die Uhr urteilt fast immer wie das Brett — bei 30 s bekommt nur
+ * jeder 77. Kampf einen anderen Sieger. Die Ausgewogenheit haelt also. Die
+ * andere: Der ANTEIL verdreifacht sich. Bei 30 s endet jeder fuenfte Kampf
+ * mit "Zeit abgelaufen", waehrend auf beiden Seiten noch Einheiten stehen —
+ * das ist keine Ausnahme mehr, sondern eine Spielart, und "Rettungsseil"
+ * waere das falsche Wort dafuer. Dafuer wird die Partie um 5 % kuerzer.
+ *
+ * DIE ZAHL BLEIBT DESHALB BEI 45_000, und die Entscheidung liegt bei Robin
+ * (Karte im Issueboard). Die Wartezeit, um die es ihm ging, kam ohnehin
+ * ueberwiegend woanders her: aus dem Takt der Botzuege (`BOT_TAKT_MS` in
+ * adapter.ts, 12,8 s im Median je Runde) und aus dem Nachlauf
+ * (`KAMPF_NACHLAUF_MS`, 2,5 s je Runde). Beide sind am 06.09.2026 gefallen,
+ * ohne eine einzige Regel anzufassen.
+ *
+ * Zwei Proben halten das fest: die in test/kampf.test.ts auf zufaelligen
+ * Brettern (sie sagt etwas ueber den Katalog — dort sind es mit dem
+ * Standardregler 10,5 s und 0,3 %) und die in test/spielzeit.test.ts auf
+ * Brettern aus echten Partien (sie sagt etwas ueber das Spiel). Die beiden
+ * Zahlenpaare liegen auseinander, und zwar immer; wer nur eines liest, zieht
+ * den falschen Schluss.
  *
  * WER GEWINNT DANN: siehe `entscheideNachZeit`.
  */
@@ -106,21 +199,223 @@ export const SCHADEN_GRUNDWERT = 1;
  * Der Teiler kam am 05.09.2026 mit den 20 Startleben (vorher 100, siehe
  * regeln.ts). Ohne ihn kostet eine Niederlage im spaeten Spiel acht bis zehn
  * Punkte, und eine Partie zu viert war nach acht Runden vorbei — gemessen ueber
- * 300 Partien, nicht geschaetzt. Die Reihe, jeweils Median der Runden zu viert:
- * ohne Teiler 8, mit Teiler 2 dann 13, mit Teiler 3 dann 15.
+ * 300 Partien, nicht geschaetzt. Die Reihe, jeweils Median der Runden zu viert
+ * und noch bei 20 Startleben: ohne Teiler 8, mit Teiler 2 dann 13, mit Teiler 3
+ * dann 15.
  *
- * DREI, WEIL DIE ZIELSPANNE 14 BIS 20 RUNDEN IST. Nach unten begrenzt sie das
- * Spiel selbst: Vor Runde 10 steht kein ausgebautes Brett, wer da ausscheidet,
- * hat nicht verloren, sondern nicht gespielt. Nach oben begrenzt sie das Handy
- * — eine Runde dauert Vorbereitung plus Kampf, also bis zu anderthalb Minuten.
- * Gemessen liegt der Median bei 15 Runden, die laengste von 5.000 Partien bei
- * 22.
+ * DREI, WEIL DIE RUNDE NICHT DIE SCHRAUBE IST, an der gekuerzt wurde. Nach
+ * unten begrenzt die Rundenzahl das Spiel selbst: Wer ausscheidet, bevor sein
+ * Brett steht, hat nicht verloren, sondern nicht gespielt. Genau deshalb ging
+ * die Kuerzung der Partie auf acht Minuten ueberwiegend ueber den Zeitraffer
+ * und nur zum kleineren Teil ueber die Startleben (20 auf 14, spaeter auf
+ * 12): Der Teiler blieb, wo er ist.
+ *
+ * HEUTE LIEGT DER MEDIAN BEI 9 RUNDEN (12 Startleben seit dem 05.09.2026
+ * abends; 10 waren es bei 14). Die Grenze, ab der die Runde zu kurz wird,
+ * steht damit nicht mehr im Gefuehl, sondern gemessen in regeln.ts: Wer
+ * ausscheidet, hat im Schnitt 3,35 Einheiten auf dem Brett, und kein
+ * einziges Ausscheiden ueber 500 Partien geschah mit hoechstens zweien. Was
+ * die Runde kostet, ist das obere Ende — vier Einheiten stehen in 15,2 %
+ * statt 21,0 % der Antritte, und die hoechste Synergieschwelle faellt von
+ * 0,9 % auf 0,3 %.
+ *
+ * Wer den Teiler doch anfasst, misst danach mit werkzeug/spielzeit.mjs: Von 3
+ * auf 2 sind es heute 8 Runden und 6:42 statt 9 und 7:27.
  *
  * `ceil` und nicht `round`: Eine Niederlage gegen einen einzelnen Ueberlebenden
  * der Stufe 1 soll die vollen zwei Punkte kosten (Grundwert plus eins) und
  * nicht durch die Rundung zum halben Preis werden.
  */
 export const SCHADEN_STUFEN_TEILER = 3;
+
+/**
+ * Wie viel Leben ein Beistand je Handgriff zurueckgibt — als Vielfaches
+ * seines eigenen Angriffs.
+ *
+ * WARUM DIE HEILUNG AM ANGRIFF HAENGT und nicht als sechster Grundwert im
+ * Katalog steht: Der Angriff ist der Wert, der bei einem Beistand sonst
+ * brachliegt (Moosheiler 26, Runenpriester 38, Lichtwahrerin 50 — jeweils der
+ * niedrigste seiner Kostenstufe). Er skaliert schon mit der Sternstufe und mit
+ * dem Synergie-Bonus auf Angriff (`werteFuer` in katalog.ts), und beides soll
+ * fuer eine Heilung genauso gelten wie fuer einen Schlag. Ein eigener
+ * Grundwert waere ein zweiter Weg, dasselbe zu sagen — und der erste, den
+ * jemand beim Balancieren vergisst.
+ *
+ * WARUM ES UEBERHAUPT EINE WIRKUNG GIBT. Bis zum 06.09.2026 wertete diese
+ * Datei die Rolle gar nicht aus, nur `reichweite`. Damit war ein Beistand eine
+ * schwache Einheit ohne jeden Ausgleich: Im Monokultur-Turnier (drei Kopien
+ * gegen drei, `werkzeug/turnier.mjs`) gewannen Moosheiler, Runenpriester und
+ * Lichtwahrerin ZUSAMMEN 0 von 114 Kaempfen — in jeder Kostenstufe die letzte
+ * Zeile. Zur Wahl stand auch, ihnen einfach Werte auf Stufenniveau zu geben
+ * und die Rolle zum blossen Aufstellungshinweis zu erklaeren; dagegen sprach,
+ * dass der Laden die Rolle anzeigt und das Konzept sie als Kampfart fuehrt
+ * (docs/spiele/auto-battler-konzept.md, "Einheiten und Verschmelzen"). Eine
+ * angezeigte Eigenschaft, die nichts tut, ist schlimmer als keine.
+ *
+ * DIE ZAHL IST GEMESSEN, nicht geschaetzt. Entschieden hat sie die
+ * Beistandsprobe in `werkzeug/turnier.mjs` — nicht die Rollenquote im
+ * Monokultur-Turnier, und der Unterschied ist wichtig: Drei Heiler
+ * gegeneinander koennen nur an der Uhr gewinnen (ausfuehrlich bei
+ * `beistandsprobe` in test/turnier.ts). Die Probe fragt stattdessen, was ein
+ * Spieler fragt — lohnt ein Brettplatz fuer einen Heiler? Zwei Kopien einer
+ * Einheit plus ein Beistand gegen drei Kopien derselben Einheit, je 190
+ * Kaempfe:
+ *
+ *     Faktor    Platz gut angelegt?
+ *       0,0           21,1 %            (der alte Zustand)
+ *       1,0           28,9 %
+ *       1,25          37,4 %
+ *       1,5           46,3 %
+ *       1,6           53,7 %
+ *       2,0           64,7 %
+ *       3,0           74,2 %
+ *
+ * Die 21,1 % in der ersten Zeile sind kein Widerspruch zu den null Siegen im
+ * Monokultur-Turnier: Zwei Dorfwachen mit einem nutzlosen Dritten daneben
+ * gewinnen manchmal trotzdem. Sie sind die Messlatte — so viel gewinnt die
+ * Seite, die den Platz WEGGIBT.
+ *
+ * 1,5 liegt knapp UNTER dem Gleichstand, und das mit Absicht: Die Probe gibt
+ * dem Heiler zwei Verbuendete, das Spiel gibt ihm bis zu acht — der Wert einer
+ * Rolle, die auf andere wirkt, waechst mit der Zahl der anderen. Gegengeprueft
+ * mit vier und fuenf Einheiten je Seite (`--kopien`) steht die Probe bei 55,3
+ * und 42,1 %; ein klarer Trend nach oben ist das nicht, ein Gleichstand rund
+ * um 50 % schon. Wer auf 1,6 geht, macht den Heilerplatz zur besseren Wahl als
+ * einen dritten Kaempfer, und dann steht in jedem Heer ein Heiler.
+ *
+ * DIE ZWEITE SCHRANKE IST DIE UHR, und sie ist der Grund, aus dem hier nicht
+ * hoeher gedreht wurde. Heilung verlaengert jeden Kampf doppelt, weil beide
+ * Seiten laenger stehen — dieselbe Falle wie bei der Ruestung (siehe
+ * `RUESTUNG_HOECHSTWERT` in katalog.ts und `HOECHSTDAUER_MS` oben). Ueber 1.500
+ * echte Partien zu viert sind aus 0,6 % an der Hoechstdauer 1,7 % geworden und
+ * aus 14,5 s Kampf 14,8 s; die Spielzeit blieb bei 6:00 im Median. Das ist
+ * bezahlbar. Wie schnell es das nicht mehr ist, zeigt der Gegenversuch, den
+ * Angriff des Moosheilers von 26 auf 34 zu heben: 15,7 % an der Uhr und 6:54
+ * Spielzeit — die Probe in test/spielzeit.test.ts (Schranke 10 %) waere
+ * gefallen. Der Katalog ist deshalb unangetastet geblieben.
+ *
+ * WER HIER DREHT, MISST BEIDES: `werkzeug/turnier.mjs --heilung <faktor>`
+ * fuer die Rolle und `werkzeug/ausgewogenheit.mjs` fuer die Partie. Die Probe
+ * in test/spielzeit.test.ts faengt den Rueckschlag ab, die in
+ * test/turnier.test.ts die Rolle.
+ */
+export const HEILUNG_FAKTOR = 1.5;
+
+/**
+ * Was ein Handgriff eines Beistands an Leben zurueckgibt.
+ *
+ * Gerundet und mindestens 1, aus denselben zwei Gruenden wie bei
+ * `schadenNach`: Ganze Zahlen, weil sie angezeigt werden und weil zwei Laeufe
+ * derselben Saat sonst auseinanderlaufen koennten — und ein Boden, damit ein
+ * kleiner Angriffswert nicht aus der Heilung eine Handlung ohne Wirkung macht.
+ * Eine Heilung um 0 waere kein kleiner Effekt, sondern ein Ereignis im
+ * Protokoll, das die Anzeige zeichnet und an dem nichts passiert.
+ *
+ * DER BODEN GILT NICHT FUER DEN FAKTOR 0 — dort heilt gar niemand, und die
+ * Entscheidung darueber faellt beim Aufrufer (`simuliereKampf`). Der Grund
+ * steht dort: Mit Boden waere ein Faktor von 0 nicht "die Rolle ohne Wirkung",
+ * sondern "ein Beistand, der seine Zuege verschenkt".
+ *
+ * Ueberheilt wird nicht — das begrenzt der Aufrufer am fehlenden Leben des
+ * Ziels, weil nur er es kennt.
+ */
+export function heilkraft(angriff: number, faktor: number = HEILUNG_FAKTOR): number {
+  return Math.max(1, Math.round(angriff * faktor));
+}
+
+// ---------------------------------------------------------------------------
+// Die Stellschrauben als Buendel
+// ---------------------------------------------------------------------------
+
+/**
+ * Dieselben fuenf Zahlen, aber einstellbar.
+ *
+ * WOZU: Um zu beantworten, welche Stellschraube eine Partie wie viel kuerzer
+ * macht, muss man jede EINZELN drehen und dieselben 500 Partien noch einmal
+ * rechnen (docs/TAFELRUNDE-SPIELZEIT.md). Mit vier `const` im Modul ginge das
+ * nur, indem der Messstand den Kampf ein zweites Mal nachbaut — und dann misst
+ * er seine eigene Kopie und nicht das Spiel.
+ *
+ * WAS ES NICHT IST: eine Regel des Tisches. Der Regler steht bewusst NICHT in
+ * `TafelrundeRegeln` (regeln.ts), denn der Regelsatz kommt als JSON von aussen
+ * — ein selbstgebauter Tisch koennte sich sonst einen Zeitraffer von 10
+ * einstellen. Wer den Standard aendern will, aendert die Konstanten oben; der
+ * Regler ist der Weg, das vorher zu messen.
+ */
+export interface Kampfregler {
+  /** Taktlaenge der Simulation, siehe `TAKT_MS`. */
+  readonly taktMs: number;
+  /** Abbruchgrenze, siehe `HOECHSTDAUER_MS`. */
+  readonly hoechstdauerMs: number;
+  /** Teiler der Stufensumme beim Schaden, siehe `SCHADEN_STUFEN_TEILER`. */
+  readonly schadenStufenTeiler: number;
+  /**
+   * Wie viel schneller alles ablaeuft: Angriffstempo UND Schrittweite.
+   *
+   * 1 ist der ungeraffte Ablauf, 1,5 macht denselben Kampf in zwei Dritteln
+   * der Zeit; der Standard steht auf 2, siehe `STANDARD_REGLER`. Ein Faktor
+   * und keine zwei Zahlen, weil beides zusammengehoert: Wer
+   * nur schneller schlagen, aber gleich langsam laufen laesst, verschiebt das
+   * Kraefteverhaeltnis zwischen Nah- und Fernkampf, statt den Kampf zu
+   * raffen.
+   *
+   * ACHTUNG, DAS AENDERT DIE ANZEIGE MIT. Die Oberflaeche spielt das
+   * Ablaufprotokoll in Echtzeit ab (`zeitMs`); ein Zeitraffer macht den Kampf
+   * am Bildschirm tatsaechlich schneller und nicht nur die Rechnung kuerzer.
+   */
+  readonly zeitraffer: number;
+  /**
+   * Heilkraft eines Beistands als Vielfaches seines Angriffs, siehe
+   * `HEILUNG_FAKTOR`. Eine 0 nimmt der Rolle ihre Wirkung und stellt damit
+   * genau den Stand vor dem 06.09.2026 her — der Vergleichslauf, mit dem der
+   * Faktor gewaehlt wurde.
+   *
+   * ACHTUNG, DIESER REGLER WIRKT NUR AUF DEN KAMPF. Der Bot bewertet einen
+   * Beistand mit `HEILUNG_FAKTOR` selbst (`leistung` in bot.ts) und kennt
+   * keinen Regler — er simuliert ja keinen Kampf. In `werkzeug/turnier.mjs`
+   * ist das genau richtig, dort spielt kein Bot mit. Wer dagegen GANZE
+   * PARTIEN mit einem anderen Faktor messen will, aendert die Konstante und
+   * baut neu; sonst heilt der Kampf anders, als der Bot einkauft, und die
+   * Tabelle beantwortet keine Frage.
+   */
+  readonly heilungFaktor: number;
+}
+
+/**
+ * Der gebaute Ablauf: drei Konstanten dieser Datei und der Zeitraffer.
+ *
+ * DER ZEITRAFFER STEHT AUF 2 (seit dem 05.09.2026, Robins Entscheidung nach
+ * der Messung in docs/TAFELRUNDE-SPIELZEIT.md). Er ist die einzige Schraube,
+ * die die Partie kuerzt, ohne eine Runde zu streichen: Der Kampf fiel von
+ * 35,2 s auf 17,3 s im Median, die Partie von 13:31 auf 7:25 — bei
+ * gleichzeitig 14 Startleben, siehe `DEFAULT_REGELN` in regeln.ts. Die beiden
+ * Zahlen gehoeren zusammen und wurden zusammen gemessen; wer eine davon
+ * anfasst, misst mit werkzeug/spielzeit.mjs neu.
+ *
+ * SEIT DIE LADENREGEL DAZUKAM (kostenloses Wuerfeln, ein Kauf zieht den ganzen
+ * Laden neu) stehen die Zahlen bei 17,6 s und 7:34 im Median bei 10 Runden.
+ * Beide Aenderungen sind am 05.09.2026 auf getrennten Zweigen entstanden und
+ * erst beim Zusammenfuehren gemeinsam wirksam geworden — die Messung dazu ist
+ * Abschnitt 6 in docs/TAFELRUNDE-SPIELZEIT.md.
+ *
+ * HEUTE — 12 Startleben und ein Bot, der auf Marken spielt — sind es 17,0 s
+ * im Median und 7:04 bei 9 Runden (nachgemessen am 06.09.2026, 500 Partien zu
+ * viert; die 20,2 s und 7:23, die hier bis dahin standen, stammen von vor den
+ * Katalogeingriffen des 05.09. abends). Der Kampf ist gegenueber dem Stand vor
+ * dem Zeitraffer laenger geworden und nicht kuerzer: Staerkere Bretter halten
+ * laenger durch. Die Partie ist trotzdem kuerzer, weil sie weniger Runden hat.
+ *
+ * ACHTUNG: Er wirkt auch am Bildschirm. Die Oberflaeche spielt das
+ * Ablaufprotokoll in Echtzeit ab, die Figuren laufen und schlagen also
+ * tatsaechlich doppelt so schnell.
+ */
+export const STANDARD_REGLER: Kampfregler = {
+  taktMs: TAKT_MS,
+  hoechstdauerMs: HOECHSTDAUER_MS,
+  schadenStufenTeiler: SCHADEN_STUFEN_TEILER,
+  zeitraffer: 2,
+  heilungFaktor: HEILUNG_FAKTOR,
+};
 
 // ---------------------------------------------------------------------------
 // Was hinein geht
@@ -205,6 +500,26 @@ export type Ereignis =
       readonly schaden: number;
       readonly lebenDanach: number;
     }
+  /**
+   * Ein Beistand hat einen Verbuendeten geheilt (`sucheWunde`).
+   *
+   * Gleiche Form wie `treffer`, nur mit `menge` statt `schaden` — und
+   * absichtlich ein EIGENES Ereignis und kein Treffer mit negativer Zahl: Die
+   * Anzeige zeichnet beides verschieden, und ein Vorzeichen, das die Bedeutung
+   * umdreht, ist die Art Falle, bei der ein vergessenes `Math.abs` einen
+   * Heilblitz zum Schadensblitz macht.
+   *
+   * `menge` ist immer mindestens 1 und nie mehr, als dem Ziel fehlte:
+   * Ueberheilen gibt es nicht, `lebenDanach` ist hoechstens `hoechstesLeben`.
+   */
+  | {
+      readonly art: 'heilung';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly ziel: number;
+      readonly menge: number;
+      readonly lebenDanach: number;
+    }
   /** Eine Einheit ist gefallen. Kommt immer unmittelbar nach dem toedlichen Treffer. */
   | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
   /** Der Kampf ist vorbei. Immer das letzte Ereignis, genau einmal. */
@@ -257,6 +572,15 @@ interface Streiter {
   readonly seite: Seite;
   readonly einheitId: EinheitId;
   readonly stufe: Stufe;
+  /**
+   * Die Kampfrolle, einmal beim Aufbau aus dem Katalog gelesen.
+   *
+   * Sie steht hier und wird nicht je Takt nachgeschlagen: Die Zugschleife
+   * fragt fuer JEDE Einheit in JEDEM Takt danach, und `einheit()` ist eine
+   * Kartensuche. Nach aussen dringt sie nicht — ein `Kaempferstand` traegt
+   * `einheitId`, und wer die Rolle braucht, holt sie sich aus dem Katalog.
+   */
+  readonly rolle: Rolle;
   readonly werte: Grundwerte;
   readonly hoechstesLeben: number;
   /** Rang in der Zugreihenfolge. Entscheidet auch den Gleichstand bei der Zielwahl. */
@@ -281,9 +605,21 @@ interface Streiter {
  * Mindestens ein Takt: Ein Tempo ueber 10 gibt es heute nicht, aber eine
  * Wartezeit von 0 waere eine Endlosschleife im Takt.
  */
-export function angriffstakt(tempo: number): number {
-  const roh = Math.round(1000 / tempo);
-  return Math.max(TAKT_MS, Math.ceil(roh / TAKT_MS) * TAKT_MS);
+export function angriffstakt(tempo: number, regler: Kampfregler = STANDARD_REGLER): number {
+  const roh = Math.round(1000 / (tempo * regler.zeitraffer));
+  return Math.max(regler.taktMs, Math.ceil(roh / regler.taktMs) * regler.taktMs);
+}
+
+/**
+ * Wie lange ein Feld weit ziehen dauert, in ganzen Takten.
+ *
+ * Dieselbe Aufrundung wie beim Angriff und aus demselben Grund: Ein Schritt,
+ * der zwischen zwei Takten faellig wird, wartet sonst auf den naechsten und
+ * dauert damit effektiv laenger, als `SCHRITT_MS` sagt.
+ */
+export function schrittdauer(regler: Kampfregler = STANDARD_REGLER): number {
+  const roh = Math.round(SCHRITT_MS / regler.zeitraffer);
+  return Math.max(regler.taktMs, Math.ceil(roh / regler.taktMs) * regler.taktMs);
 }
 
 /**
@@ -314,9 +650,12 @@ export function schadenNach(angriff: number, ruestung: number): number {
  *
  * Warum ueberhaupt geteilt wird, steht bei `SCHADEN_STUFEN_TEILER`.
  */
-export function schadenFuerVerlierer(ueberlebende: readonly Kaempferstand[]): number {
+export function schadenFuerVerlierer(
+  ueberlebende: readonly Kaempferstand[],
+  teiler: number = SCHADEN_STUFEN_TEILER,
+): number {
   const stufen = ueberlebende.reduce((summe, k) => summe + k.stufe, 0);
-  return SCHADEN_GRUNDWERT + Math.ceil(stufen / SCHADEN_STUFEN_TEILER);
+  return SCHADEN_GRUNDWERT + Math.ceil(stufen / teiler);
 }
 
 // ---------------------------------------------------------------------------
@@ -352,14 +691,21 @@ function baueStreiter(bretter: readonly [Brettseite, Brettseite]): Streiter[] {
   const streiter: Streiter[] = [];
   for (const seite of SEITEN) {
     const zaehlung = zaehleMarken(bretter[seite]);
-    bretter[seite].forEach((einheit, brettPlatz) => {
-      if (!einheit) return;
-      const w = werteFuer(einheit.id, einheit.stufe, bonusFuerEinheit(einheit.id, zaehlung));
+    // `aufgestellt` und nicht `einheit`: Der Name wuerde die gleichnamige
+    // Katalogfunktion verdecken, aus der die Rolle kommt.
+    bretter[seite].forEach((aufgestellt, brettPlatz) => {
+      if (!aufgestellt) return;
+      const w = werteFuer(
+        aufgestellt.id,
+        aufgestellt.stufe,
+        bonusFuerEinheit(aufgestellt.id, zaehlung),
+      );
       streiter.push({
         id: streiter.length,
         seite,
-        einheitId: einheit.id,
-        stufe: einheit.stufe,
+        einheitId: aufgestellt.id,
+        stufe: aufgestellt.stufe,
+        rolle: einheit(aufgestellt.id).rolle,
         werte: w,
         hoechstesLeben: w.leben,
         rang: 0, // wird gleich vergeben, sobald der Erstzieher feststeht
@@ -424,6 +770,54 @@ function sucheZiel(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
 }
 
 /**
+ * Der verwundete Verbuendete in Reichweite, der dem Tod am naechsten ist —
+ * oder null.
+ *
+ * DER ANTEIL ENTSCHEIDET, nicht das fehlende Leben. Wer nach dem groessten
+ * Loch heilt, versorgt immer den zaehsten Koerper: Ein Wurzelriese mit 1150
+ * Leben hat bei halber Fuellung 575 fehlend, ein Funkenlehrling mit 470 kann
+ * gar nicht so viel verlieren — der Lehrling stuerbe mit 30 Leben daneben,
+ * waehrend der Riese aufgefuellt wird. Der Anteil misst dagegen, wen der
+ * naechste Treffer umbringt, und das ist die Frage, auf die eine Heilung
+ * antwortet.
+ *
+ * Verglichen wird mit Kreuzmultiplikation statt mit einer Division, aus
+ * demselben Grund wie in `entscheideNachZeit`: Zwei gleiche Anteile koennen
+ * als Gleitkommazahl um ein Bit auseinanderliegen, und dann haengt das
+ * Heilziel an einem Rundungsrest. Bei Gleichstand gewinnt der niedrigere
+ * Rang — dieselbe feste Ordnung wie bei der Zielwahl.
+ *
+ * SICH SELBST HEILT EIN BEISTAND NICHT, und das ist die wichtigste Zeile hier.
+ * Zum einen ist es die Rolle: Ein Beistand steht anderen bei. Zum anderen
+ * endet der Kampf sonst womoeglich nie — ein einzeln uebrig gebliebener
+ * Heiler, dessen Heilkraft ueber dem eingehenden Schaden liegt, koennte sich
+ * bis `HOECHSTDAUER_MS` selbst am Leben halten, ohne dem Gegner je etwas
+ * anzutun. So faellt er auf den Angriff zurueck, sobald niemand mehr da ist,
+ * dem er helfen kann, und der Kampf geht zu Ende.
+ *
+ * Ein Ziel mit vollem Leben kommt nicht in Frage: Sonst waere die Handlung
+ * eine Heilung um 0, und der Beistand haette einen Takt lang nichts getan,
+ * statt anzugreifen.
+ */
+function sucheWunde(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
+  let bestes: Streiter | null = null;
+  for (const anderer of alle) {
+    if (anderer.id === wer.id) continue;
+    if (anderer.seite !== wer.seite || anderer.leben <= 0) continue;
+    if (anderer.leben >= anderer.hoechstesLeben) continue;
+    if (arenaAbstand(wer.platz, anderer.platz) > wer.werte.reichweite) continue;
+    if (bestes === null) {
+      bestes = anderer;
+      continue;
+    }
+    const links = anderer.leben * bestes.hoechstesLeben;
+    const rechts = bestes.leben * anderer.hoechstesLeben;
+    if (links < rechts || (links === rechts && anderer.rang < bestes.rang)) bestes = anderer;
+  }
+  return bestes;
+}
+
+/**
  * Der Nachbarplatz, der dem Ziel naeher liegt und frei ist — oder null.
  *
  * Ausschliesslich STRIKT naeher. Ein Zug auf ein gleich weit entferntes Feld
@@ -434,7 +828,15 @@ function sucheZiel(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
  * Hoechstdauer ab.
  *
  * Bei mehreren gleich guten Feldern gewinnt das erste in der Ordnung von
- * `arenaNachbarn` — fest und damit wiederholbar.
+ * `arenaNachbarnFuer` — fest und damit wiederholbar.
+ *
+ * DIE SEITE GEHOERT IN DIESE ZEILE, sonst waere der Kampf nicht
+ * spiegelaequivariant: Die Nachbarordnung des odd-r-Rasters haengt an der
+ * Paritaet der Reihe, und die Punktspiegelung, mit der Seite 1 in die Arena
+ * kommt, wechselt sie. Mit `arenaNachbarn` (ohne Seite) wich die eine
+ * Haelfte deshalb in eine andere Richtung aus als die andere, und 498 von
+ * 500 getauschten Aufstellungen liefen auseinander. Die ganze Begruendung
+ * steht bei `arenaNachbarnFuer`.
  */
 function schrittZiel(
   wer: Streiter,
@@ -443,7 +845,7 @@ function schrittZiel(
 ): number | null {
   let bestes: number | null = null;
   let besterAbstand = arenaAbstand(wer.platz, zielPlatz);
-  for (const platz of arenaNachbarn(wer.platz)) {
+  for (const platz of arenaNachbarnFuer(wer.platz, wer.seite)) {
     if (belegt.has(platz)) continue;
     const d = arenaAbstand(platz, zielPlatz);
     if (d < besterAbstand) {
@@ -530,8 +932,10 @@ function entscheideNachZeit(alle: readonly Streiter[]): Seite | null {
 export function simuliereKampf(
   bretter: readonly [Brettseite, Brettseite],
   saat: Saat,
+  regler: Kampfregler = STANDARD_REGLER,
 ): Kampfbericht {
   const alsText = String(saat);
+  const schritt = schrittdauer(regler);
   const zufall = baueZufall(alsText);
   const erstZieher: Seite = zufall() < 0.5 ? 0 : 1;
 
@@ -557,7 +961,7 @@ export function simuliereKampf(
       grund = 'ausgeloescht';
       break;
     }
-    if (jetzt >= HOECHSTDAUER_MS) {
+    if (jetzt >= regler.hoechstdauerMs) {
       grund = 'zeit';
       break;
     }
@@ -568,11 +972,56 @@ export function simuliereKampf(
       const ziel = sucheZiel(wer, alle);
       if (!ziel) break; // Gegenseite ausgeloescht — der Rest des Taktes entfaellt
 
+      /*
+       * DIE EINZIGE STELLE, AN DER DIE ROLLE ZAEHLT: Ein Beistand heilt,
+       * solange es in seiner Reichweite einen Verwundeten gibt — auch dann,
+       * wenn er selbst gerade einen Gegner treffen koennte. Heilen GEHT VOR
+       * schlagen, sonst waere die Wirkung auf die Faelle beschraenkt, in denen
+       * der Heiler ohnehin nichts zu tun hat, und das ist im Nahkampf nie.
+       *
+       * Nach der Zielsuche und nicht davor: Ist die Gegenseite schon
+       * ausgeloescht, ist der Kampf entschieden, und dann soll niemand mehr
+       * ein Ereignis erzeugen (siehe die Pruefung am Kopf der Schleife).
+       *
+       * Findet er niemanden, faellt er auf Angriff und Bewegung zurueck — ein
+       * Beistand ist keine wehrlose Einheit, sein Angriff ist nur der
+       * niedrigste seiner Stufe.
+       *
+       * `heilungFaktor > 0` gehoert in DIESE Bedingung und nicht nach innen:
+       * `heilkraft` hat einen Boden von 1, damit ein kleiner Angriffswert
+       * keine Heilung um null erzeugt. Bei einem Faktor von 0 wuerde derselbe
+       * Boden dafuer sorgen, dass ein Beistand jeden Takt einen einzigen
+       * Lebenspunkt verschenkt, statt anzugreifen — und dann waere der
+       * Vergleichslauf mit 0 nicht der Stand VOR der Rolle, sondern ein
+       * schlechterer.
+       */
+      if (wer.rolle === 'beistand' && regler.heilungFaktor > 0) {
+        const wunde = sucheWunde(wer, alle);
+        if (wunde) {
+          if (jetzt < wer.angriffFreiAb) continue;
+          const menge = Math.min(
+            heilkraft(wer.werte.angriff, regler.heilungFaktor),
+            wunde.hoechstesLeben - wunde.leben,
+          );
+          wunde.leben += menge;
+          wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
+          ereignisse.push({
+            art: 'heilung',
+            zeitMs: jetzt,
+            wer: wer.id,
+            ziel: wunde.id,
+            menge,
+            lebenDanach: wunde.leben,
+          });
+          continue;
+        }
+      }
+
       if (arenaAbstand(wer.platz, ziel.platz) <= wer.werte.reichweite) {
         if (jetzt < wer.angriffFreiAb) continue;
         const schaden = schadenNach(wer.werte.angriff, ziel.werte.ruestung);
         ziel.leben = Math.max(0, ziel.leben - schaden);
-        wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo);
+        wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
         ereignisse.push({
           art: 'treffer',
           zeitMs: jetzt,
@@ -595,11 +1044,11 @@ export function simuliereKampf(
       belegt.delete(von);
       belegt.set(nach, wer.id);
       wer.platz = nach;
-      wer.schrittFreiAb = jetzt + SCHRITT_MS;
+      wer.schrittFreiAb = jetzt + schritt;
       ereignisse.push({ art: 'bewegung', zeitMs: jetzt, wer: wer.id, von, nach });
     }
 
-    jetzt += TAKT_MS;
+    jetzt += regler.taktMs;
   }
 
   // `dauerMs` liegt damit einen Takt hinter dem letzten Ereignis: Der Takt, in
@@ -621,7 +1070,12 @@ export function simuliereKampf(
 
   const ueberlebende = alle.filter((s) => s.leben > 0).map(standVon);
   const schaden =
-    sieger === null ? 0 : schadenFuerVerlierer(ueberlebende.filter((k) => k.seite === sieger));
+    sieger === null
+      ? 0
+      : schadenFuerVerlierer(
+          ueberlebende.filter((k) => k.seite === sieger),
+          regler.schadenStufenTeiler,
+        );
 
   return {
     saat: alsText,
@@ -653,6 +1107,8 @@ export function protokollText(bericht: Kampfbericht): string {
         return `${zeit} bewegung ${e.wer} ${e.von} -> ${e.nach}`;
       case 'treffer':
         return `${zeit} treffer  ${e.wer} -> ${e.ziel} ${e.schaden} (${e.lebenDanach})`;
+      case 'heilung':
+        return `${zeit} heilung  ${e.wer} -> ${e.ziel} +${e.menge} (${e.lebenDanach})`;
       case 'tod':
         return `${zeit} tod      ${e.wer}`;
       case 'ende':
