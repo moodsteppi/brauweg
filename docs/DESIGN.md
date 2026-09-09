@@ -101,7 +101,12 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
   Wisch die Auswahl, nicht den Tab.
 - **Clan** ist spielübergreifend (nicht nur Doppelkopf): Clan-Halle mit
   Banner und Raum-Kacheln (Chat, Clankrieg, Rangliste, Truhe …) als
-  „Bald"-Attrappen. Freunde hängen am Clan-Tab. Intern: `club_*`.
+  „Bald"-Attrappen. Intern: `club_*`.
+- **Freunde stehen im Profil, nicht am Clan.** Die Freundesliste ist eine
+  Tafel im Profil-Tab, unterhalb der Trophäen und über dem Konto
+  (`GameSelect.tsx`, Bauteil `Freunde`). Sie hing früher am Clan-Tab; dort
+  füllt inzwischen die Mitgliederliste den Bildschirm, und Freunde gehören
+  ohnehin zum eigenen Konto und nicht zum Clan.
 - **Shop / Clan / Blatt / Profil** (Entwurf B): wie die Startseite mit
   **gemaltem Vollbild-Hintergrund** (`public/hub/bg-*.png`) und Holztafeln
   darüber. Shop: **Season Pass** als Sonderangebot oben, dann VIP/Vitrinen.
@@ -124,8 +129,12 @@ Vorhandenes wiederverwenden statt neu erfinden:
 - **Holztafel** (`hub-tafel` + `hub-tafel-kopf`/`-inhalt`): der Baustein aller
   Hub-Tabs. Kleine Versalien-Überschrift links, optionaler Hinweis rechts
   (`hub-tafel-zusatz`), Inhalt darunter. `is-weit` lässt die Tafel den Rest
-  der Höhe füllen und innen rollen (Freundesliste, Blattauswahl). Neue
-  Hub-Inhalte gehören in eine Tafel, nicht in einen eigenen Kasten.
+  der Höhe füllen und innen rollen (Blattauswahl, Spielwahl) — das stimmt
+  aber nur, solange die Tafel den Bildschirm allein hat. In einer Spalte
+  mehrerer Tafeln, die selbst rollt, heißt dasselbe „darfst auf null
+  schrumpfen": Die Freundesliste stand nach dem Umzug ins Profil deshalb
+  36 px hoch da, Liste und Suchfeld unsichtbar. Neue Hub-Inhalte gehören in
+  eine Tafel, nicht in einen eigenen Kasten.
 - **Logo-Schild** (`hub-banner`): steht über jedem Tab-Inhalt und hält die
   vier Bereiche als ein Stück zusammen.
 - **Reihen** (`hub-reihe--drei` / `--vier`): gleich große Kacheln
