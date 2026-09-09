@@ -103,6 +103,16 @@ zusammen 1479, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > dazu wartet den Bau bewusst ab, bevor sie urteilt — bricht eine Probe
 > mitten im Tischbau ab, hängt PGlite beim Schließen.
 >
+> **`imBau` ist nach Spiel UND Konto geschlüsselt** (`kontoSchluessel`, seit
+> dem 09.09.2026), nicht nur nach Konto. Ein Konto kann mit zwei Reitern oder
+> zwei Geräten in zwei Spielen zugleich suchen — die Fenster sind je Spiel
+> getrennt, `betritt` räumt nur im eigenen Spiel auf. Reifte danach Spiel B,
+> überschrieb es den Bau-Eintrag von Spiel A (eine neue Suche in B löschte
+> ihn ebenso), und `bauBeendet` der einen Runde nahm den Eintrag der anderen
+> mit: Im Reiter von Spiel A hieß es wieder „sucht nicht". `vermittelt` und
+> `bauBeendet` bekommen deshalb das Spiel mit. `ergebnisse` hängt weiter am
+> Konto allein (Bestand). Probe ohne Datenbank: `test/schlange.test.ts`.
+>
 > Seit demselben Tag wertet Tafelrunde die **Bot-Stufe des Tisches** aus:
 > `gangartVon` in `adapter.ts` bildet die vier Plattformstufen auf die drei
 > Gangarten von `bot.ts` ab (`experte` und `genie` fallen beide auf `hart` —

@@ -147,7 +147,7 @@ export class Vermittlung {
     for (const runde of this.schlange.faellig(zielSitze)) {
       try {
         const beteiligte = await this.tischBauen(runde.gameId, runde.accountIds, runde.config);
-        this.schlange.vermittelt(beteiligte.accountIds, beteiligte.tischId);
+        this.schlange.vermittelt(runde.gameId, beteiligte.accountIds, beteiligte.tischId);
         this.runtime.notify(beteiligte.tischId);
       } catch (fehler) {
         this.beiFehler(runde.gameId, fehler);
@@ -155,7 +155,7 @@ export class Vermittlung {
         // Waehrend `tischBauen` lief, galten alle aus der Runde als "im Bau"
         // (siehe Suchschlange.imBau). Wer jetzt kein Ergebnis hat, faengt
         // beim naechsten Abruf von vorn an.
-        this.schlange.bauBeendet(runde.accountIds);
+        this.schlange.bauBeendet(runde.gameId, runde.accountIds);
       }
     }
   }

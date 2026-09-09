@@ -102,6 +102,25 @@ function schluessel(gameId: GameId, config: unknown): string {
 }
 
 /**
+ * Schluessel der Karte `imBau`: Spiel UND Konto (seit dem 09.09.2026).
+ *
+ * Ein Konto kann in zwei Fenstern fuer zwei verschiedene Spiele zugleich
+ * stehen — zwei Reiter oder zwei Geraete am selben Konto; die Fenster sind
+ * je Spiel getrennt, und `betritt` raeumt nur innerhalb eines Spiels auf.
+ * Nur nach Konto geschluesselt ueberschrieb die reifende Runde von Spiel B
+ * den Bau-Eintrag von Spiel A (und eine neue Suche in B loeschte ihn), und
+ * `bauBeendet` der einen Runde nahm den Eintrag der anderen mit: Fuer Spiel
+ * A hiess es wieder "sucht nicht" — genau die Antwort, gegen die `imBau`
+ * gebaut ist, nur im Randfall.
+ *
+ * `ergebnisse` haengt weiter am Konto allein — Bestand seit der ersten
+ * Fassung der Schlange und bewusst nicht mit umgestellt.
+ */
+function kontoSchluessel(gameId: GameId, accountId: string): string {
+  return `${gameId}#${accountId}`;
+}
+
+/**
  * Wie lange ein vermitteltes Ergebnis zum Abholen bereitliegt.
  *
  * Der Spieler wird beim naechsten Abruf abgeholt, also nach Bruchteilen einer
@@ -144,8 +163,15 @@ export class Suchschlange {
    * Gegner spielte gegen einen leeren Sitz, die Partie lief nach der
    * Abwesenheitsfrist aus, und wer noch einmal suchte, bekam einen Bot.
    * Solange ein Konto hier steht, lautet die Antwort deshalb "sucht noch".
+   *
+   * Schluessel: `kontoSchluessel` — je Spiel ein Eintrag, anders als bei
+   * `ergebnisse`; das Konto steht auch im Wert, damit `verlaesstUeberall`
+   * es ohne Spiel wiederfindet.
    */
-  private readonly imBau = new Map<string, { gameId: GameId; suchende: number; seit: number }>();
+  private readonly imBau = new Map<
+    string,
+    { accountId: string; suchende: number; seit: number }
+  >();
 
   constructor(optionen: SchlangeOptionen = {}) {
     this.fensterMs = optionen.fensterMs ?? FENSTER_MS;
@@ -162,7 +188,10 @@ export class Suchschlange {
     // Ein altes Ergebnis waere sonst die Antwort auf die NEUE Suche und
     // schickte den Spieler an den Tisch von vorhin.
     this.ergebnisse.delete(accountId);
-    this.imBau.delete(accountId);
+    // Den Bau-Eintrag nur fuer DIESES Spiel: Was das Konto in einem anderen
+    // Spiel gerade gebaut bekommt, geht diese Suche nichts an — dort steht es
+    // in einem eigenen Fenster, und der andere Reiter fragt weiter nach.
+    this.imBau.delete(kontoSchluessel(gameId, accountId));
 
     const ziel = schluessel(gameId, config);
     // Wer mit einer ANDEREN Spielart schon in diesem Spiel steht, wechselt
@@ -194,7 +223,7 @@ export class Suchschlange {
   /** Lebenszeichen. Gibt `false` zurueck, wenn das Konto gar nicht sucht. */
   lebenszeichen(gameId: GameId, accountId: string): boolean {
     // Im Bau: Der Tisch kommt, ein Lebenszeichen hat nichts mehr zu bewegen.
-    if (this.imBau.get(accountId)?.gameId === gameId) return true;
+    if (this.imBau.has(kontoSchluessel(gameId, accountId))) return true;
     const eintrag = this.fensterVon(gameId, accountId);
     if (!eintrag) return false;
     eintrag.fenster.suchende.set(accountId, this.jetzt());
@@ -212,7 +241,7 @@ export class Suchschlange {
     // Wer mitten im Tischbau abbricht, sitzt gleich trotzdem am Tisch — das
     // laesst sich hier nicht mehr verhindern. Aber er soll nicht weiter
     // "sucht noch" hoeren, wenn er doch noch einmal nachfragt.
-    if (this.imBau.get(accountId)?.gameId === gameId) this.imBau.delete(accountId);
+    this.imBau.delete(kontoSchluessel(gameId, accountId));
     const eintrag = this.fensterVon(gameId, accountId);
     if (!eintrag) return;
     eintrag.fenster.suchende.delete(accountId);
@@ -238,7 +267,11 @@ export class Suchschlange {
     // Auch ein schon vermitteltes Ergebnis: Es wuerde den Spieler beim
     // naechsten Abruf an den Tisch von vorhin schicken.
     this.ergebnisse.delete(accountId);
-    this.imBau.delete(accountId);
+    // Und jeder Bau-Eintrag, in welchem Spiel auch immer — die Karte ist nach
+    // Spiel+Konto geschluesselt, also ueber die Werte.
+    for (const [schluessel, bau] of this.imBau) {
+      if (bau.accountId === accountId) this.imBau.delete(schluessel);
+    }
   }
 
   stand(gameId: GameId, accountId: string): Suchstand {
@@ -248,8 +281,8 @@ export class Suchschlange {
     }
     // Der Tisch entsteht gerade: Aus Sicht des Suchenden laeuft die Suche
     // weiter, nur ohne Restzeit — der naechste Abruf nennt den Tisch.
-    const bau = this.imBau.get(accountId);
-    if (bau && bau.gameId === gameId) {
+    const bau = this.imBau.get(kontoSchluessel(gameId, accountId));
+    if (bau) {
       return { sucht: true, suchende: bau.suchende, restMs: 0, tischId: null };
     }
     const fenster = this.fensterVon(gameId, accountId)?.fenster;
@@ -302,7 +335,11 @@ export class Suchschlange {
       this.fenster.delete(schluessel);
       // Ab jetzt bis `vermittelt`/`bauBeendet` gilt fuer sie: sucht noch.
       for (const accountId of accountIds) {
-        this.imBau.set(accountId, { gameId, suchende: accountIds.length, seit: jetzt });
+        this.imBau.set(kontoSchluessel(gameId, accountId), {
+          accountId,
+          suchende: accountIds.length,
+          seit: jetzt,
+        });
       }
     }
 
@@ -310,18 +347,22 @@ export class Suchschlange {
     for (const [accountId, ergebnis] of this.ergebnisse) {
       if (jetzt - ergebnis.seit > ERGEBNIS_FRIST_MS) this.ergebnisse.delete(accountId);
     }
-    for (const [accountId, bau] of this.imBau) {
-      if (jetzt - bau.seit > BAU_FRIST_MS) this.imBau.delete(accountId);
+    for (const [schluessel, bau] of this.imBau) {
+      if (jetzt - bau.seit > BAU_FRIST_MS) this.imBau.delete(schluessel);
     }
 
     return runden;
   }
 
-  /** Der Tisch steht: Der naechste Abruf dieser Konten nennt ihn. */
-  vermittelt(accountIds: readonly string[], tischId: string): void {
+  /**
+   * Der Tisch steht: Der naechste Abruf dieser Konten nennt ihn.
+   *
+   * Das Spiel braucht nur der Bau-Eintrag; das Ergebnis haengt am Konto.
+   */
+  vermittelt(gameId: GameId, accountIds: readonly string[], tischId: string): void {
     const jetzt = this.jetzt();
     for (const accountId of accountIds) {
-      this.imBau.delete(accountId);
+      this.imBau.delete(kontoSchluessel(gameId, accountId));
       this.ergebnisse.set(accountId, { tischId, seit: jetzt });
     }
   }
@@ -334,7 +375,7 @@ export class Suchschlange {
    * hoeren und von vorn anfangen, statt endlos "sucht noch". Fuer die
    * Vermittelten ist der Eintrag schon durch `vermittelt` weg.
    */
-  bauBeendet(accountIds: readonly string[]): void {
-    for (const accountId of accountIds) this.imBau.delete(accountId);
+  bauBeendet(gameId: GameId, accountIds: readonly string[]): void {
+    for (const accountId of accountIds) this.imBau.delete(kontoSchluessel(gameId, accountId));
   }
 }
