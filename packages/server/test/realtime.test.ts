@@ -71,6 +71,57 @@ test('zwei Clients beenden eine vollstaendige Partie', async (t) => {
   b.close();
 });
 
+test('ein spaetes "Weiter" auf der beendeten Partie ist kein Fehler', async (t) => {
+  /**
+   * Das zweite Rennen derselben Sorte, an dem der Durchstich unter Last rot
+   * war: Die Rundenpause endet, sobald der LETZTE anwesende Mensch "Weiter"
+   * tippt (oder die Frist ablaeuft) - und bei der letzten Runde endet damit
+   * die ganze Partie. Wer in genau diesem Moment tippt, findet den Tisch da,
+   * wo er ihn haben wollte.
+   *
+   * Die Engine sieht das seit jeher so (weiter() in game-doppelkopf/src/
+   * party.ts: "Zu spaet getippt ... ist kein Verstoss"), die Plattform kam
+   * aber gar nicht mehr dorthin: Sie hat vor dem Modul geurteilt und mit
+   * 'partyFinished' geantwortet. Dasselbe Muster wie bei der verspaeteten
+   * Vorbehaltsantwort eine Zeile weiter unten, nur eine Ebene hoeher.
+   *
+   * Der zweite Tipp geht von Hand raus, damit das Rennen IMMER geprueft wird
+   * und nicht nur dann, wenn die Maschine gerade genug zu tun hat. Eine
+   * kuerzere Partie gibt es dafuer nicht: Die Rundenzahl muss ein Vielfaches
+   * der Rotation sein (roundsNotMultipleOfRotation in tables/service.ts).
+   */
+  const h = await startHarness();
+  t.after(() => h.close());
+
+  const { anna, bert, table } = await tableWithTwoHumans(h);
+  const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
+  const b = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId), 'Bert');
+
+  a.join(table.id);
+  await a.waitFor(() => a.lastView !== null, 'erste Sicht fuer Anna');
+  b.join(table.id);
+  await b.waitFor(() => b.lastView !== null, 'erste Sicht fuer Bert');
+
+  await b.waitFor(() => b.lastView?.finished === true, 'Partie-Ende bei Bert', 60_000);
+  assert.deepEqual(b.errors, [], 'die Partie selbst laeuft fehlerfrei durch');
+
+  b.raw({
+    v: b.lastView!.v,
+    game: b.lastView!.game,
+    type: 'action',
+    tableId: table.id,
+    action: { type: 'weiter', seat: b.lastView!.seat },
+  });
+  // Kein Ereignis, auf das sich warten liesse - erwartet wird ja, dass nichts
+  // passiert. Eine Antwort haette in dieser Zeit laengst zurueckkommen muessen.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  assert.deepEqual(b.errors, [], 'der zu spaete Tipp ist wirkungslos, nicht falsch');
+
+  a.close();
+  b.close();
+});
+
 test('dieselbe Vorbehaltsantwort ein zweites Mal ist kein Fehler', async (t) => {
   /**
    * Das Rennen, an dem der Durchstich unter Last einmal rot war (06.09.2026):
