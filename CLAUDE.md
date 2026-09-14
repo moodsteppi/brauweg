@@ -121,9 +121,24 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.501 Tests in den Paketen (468 im Server), dazu
-                  # 784 Client-Tests in 61 Dateien (vitest)
+npm test          # 1.503 Tests in den Paketen (469 im Server), dazu
+                  # 788 Client-Tests in 62 Dateien (vitest)
 ```
+
+**Erst committen, dann messen.** Der volle Lauf dauert auf einem
+Windows-Rechner rund eine Viertelstunde und baut den Client mit; wer Commit
+und Push dahinter legt, verliert die ganze Arbeit, wenn die Sitzung im Lauf
+endet. Am 09.09.2026 ist genau das zweimal hintereinander passiert — der Code
+war beide Male fertig und lag im Arbeitsverzeichnis, auf dem Aufgabenzweig
+stand trotzdem kein einziger Commit. Also: **zuerst die Änderung committen und
+pushen, dann den vollen Lauf**, und die gemessenen Zahlen als zweiten Commit
+nachtragen (hier und in `docs/STAND.md`).
+
+**Kommt der Lauf nicht mehr zustande, bleiben die alten Zahlen stehen** — und
+die Fertigmeldung sagt ausdrücklich, dass nicht gemessen wurde. Eine geratene
+Zahl ist schlimmer als eine veraltete: Sie steht hier als Sollwert und wird
+von der nächsten Aufgabe fortgeschrieben. Am 09.09.2026 hat ein Lauf so
+„450 → 451" fortgezählt, gemessen waren es 468.
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
 Server, ist die `.d.ts` von `@brauweg/game-api` der alte Stand, und `tsc`
@@ -239,7 +254,10 @@ Wirtschaftsmodell.
   kann `tsc` nicht lesen. Das sieht nach einem kaputten Zweig aus und ist
   keiner — am 05.09.2026 zweimal genau daran gesucht. `npm run build` im
   Wurzelverzeichnis genügt: npm läuft die Pakete alphabetisch ab, `game-api`
-  steht vor `game-tafelrunde` und beide vor `server`.
+  steht vor `game-tafelrunde` und beide vor `server`. Wann dieser Lauf
+  drankommt — nämlich nach Commit und Push —, steht oben unter „Bauen und
+  prüfen"; diese Stelle hier sagt nur, warum er nicht durch einen
+  Einzelpaket-Lauf zu ersetzen ist.
 - **Keine Prüfkopie unter `AppData/Local/Temp`.** Liegt der Arbeitsbaum dort,
   sammelt Vite eine fremde `vite.config.ts` aus dem Wurzelverzeichnis ein, und
   der Testlauf stirbt schon beim Laden der Konfiguration. Der Fehler zeigt dann
