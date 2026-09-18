@@ -1,8 +1,8 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **elf Spiele laufen**: Doppelkopf, Zauberer, Skat,
-Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde und
-Golf.
+Kartenspiel-Plattform, **zwölf Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
+Golf und Partykiste.
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -121,8 +121,8 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.503 Tests in den Paketen (469 im Server), dazu
-                  # 788 Client-Tests in 62 Dateien (vitest)
+npm test          # 1.536 Tests in den Paketen (475 im Server), dazu
+                  # 790 Client-Tests in 63 Dateien (vitest)
 ```
 
 **Erst committen, dann messen.** Der volle Lauf dauert auf einem
@@ -182,7 +182,7 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle elf Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind alle zwoelf Spiele. Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.

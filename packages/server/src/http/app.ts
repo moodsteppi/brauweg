@@ -257,7 +257,7 @@ const diagnoseSchema = z.object({
   kopf: z.object({
     tisch: z.string().max(64).optional(),
     /** -1 ist der Zuschauer; er zeichnet mit, sitzt aber nicht. */
-    sitz: z.number().int().min(-1).max(7),
+    sitz: z.number().int().min(-1).max(11),
   }),
   ereignisse: z.array(z.unknown()).max(4000).optional(),
 });
@@ -271,7 +271,15 @@ const createTableSchema = z.object({
    * obwohl beides dasselbe parst — hier liest man die Absicht.
    */
   config: z.unknown().optional(),
-  seats: z.number().int().min(2).max(8),
+  /*
+   * Zwoelf seit der Partykiste. Die Grenze ist die der PLATTFORM, nicht die
+   * eines Spiels: Was ein einzelnes Spiel vertraegt, sagt sein `seatCounts`,
+   * und `createTable` prueft die Sitzzahl ohnehin noch einmal gegen das Modul.
+   * Diese Zahl ist nur der grobe Riegel gegen Unsinn von aussen — sie stand
+   * auf 8, weil es kein Spiel mit mehr Sitzen gab, nicht weil die 8 irgendwo
+   * eine Bedeutung haette.
+   */
+  seats: z.number().int().min(2).max(12),
   rounds: z.number().int().min(1).max(100),
   visibility: z.enum(['public', 'on_request', 'club_only']).optional(),
   clubId: z.string().uuid().optional(),

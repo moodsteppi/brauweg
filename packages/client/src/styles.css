@@ -18974,3 +18974,367 @@ span.hub-angebot-art.poker-jeton-stapel {
   aspect-ratio: 4 / 1;
   background: #101d16;
 }
+
+/* ==========================================================================
+ * Partykiste
+ *
+ * Ein Turnier aus sechs Partyminispielen. Das Aussehen folgt dem, was die
+ * Bildschirme tun: EINE Sache in der Mitte, darunter grosse Schaltflaechen,
+ * sonst nichts. Alle Masse sind fuers Handy gedacht und wachsen mit `clamp`
+ * mit — gespielt wird das im Stehen, mit einer Hand, im Halbdunkeln.
+ * ========================================================================== */
+
+.pk-seite {
+  min-height: 100dvh;
+  padding: max(14px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  background: radial-gradient(120% 90% at 50% 0%, #2a1f3d 0%, #151021 62%, #0f0b18 100%);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pk-zurueck {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+.pk-zurueck.is-klein {
+  position: static;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+}
+
+/* -- Menue ---------------------------------------------------------------- */
+
+.pk-menue { position: relative; justify-content: center; }
+.pk-menue-mitte {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.pk-titel {
+  margin: 0;
+  font: 800 clamp(30px, 9vw, 46px)/1.05 system-ui;
+  letter-spacing: 0.01em;
+}
+.pk-untertitel { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+.pk-spielliste {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+.pk-spielliste li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+}
+.pk-spielliste strong { font-size: 14px; }
+.pk-spielliste .muted { color: var(--muted); }
+
+.pk-botblock { display: flex; flex-direction: column; gap: 10px; }
+.pk-regler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.pk-reglerzeile { display: flex; align-items: center; gap: 10px; margin: 0; }
+/* Global steht ein margin-bottom auf jedem Label — in einer Flexzeile schoebe
+   das die Beschriftung aus der Mitte (die Falle aus Mememory). */
+.pk-reglerzeile > span { margin: 0; }
+.pk-reglertitel { width: 68px; text-align: left; font-size: 13px; color: var(--muted); }
+.pk-reglerzeile input { flex: 1; }
+.pk-reglerwert { min-width: 92px; text-align: right; font-size: 13px; }
+
+.pk-stufen { display: flex; gap: 6px; }
+.pk-stufen button {
+  flex: 1;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.pk-stufen button[data-an] { background: var(--lila); color: #180f28; }
+
+.pk-gruppe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.pk-gruppe li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-gruppe li[data-leer] { opacity: 0.45; }
+.pk-gruppe li[data-eigen] { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-gruppenname { flex: 1; font-weight: 600; }
+.pk-du {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--lila);
+  text-transform: uppercase;
+}
+.pk-warten { margin: 0; color: var(--muted); font-size: 13px; }
+.pk-fehler { margin: 0; color: var(--danger); font-size: 14px; }
+
+/* -- Schaltflaechen ------------------------------------------------------- */
+
+.pk-knopf {
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text);
+  font: 700 16px/1.2 system-ui;
+  cursor: pointer;
+  transition: transform 90ms ease, background 120ms ease;
+}
+.pk-knopf:active:not(:disabled) { transform: scale(0.97); }
+.pk-knopf:disabled { opacity: 0.5; cursor: default; }
+.pk-knopf.is-haupt { background: var(--lila); color: #180f28; }
+.pk-knopf.is-neben { background: rgba(255, 255, 255, 0.12); }
+.pk-knopf.is-gross { flex: 1; padding: 20px 14px; font-size: 18px; }
+.pk-knopf.is-gut { flex: 1; background: #2f6b4d; }
+.pk-knopf.is-weg { flex: 1; background: #6b3a34; }
+.pk-knopf[data-gewaehlt] { box-shadow: inset 0 0 0 3px var(--gold); }
+
+.pk-wahl { display: flex; gap: 10px; }
+.pk-wahl[data-weit] { flex-direction: column; }
+.pk-wahl > .pk-knopf { flex: 1; }
+
+.pk-knopf.is-antwort { text-align: left; background: rgba(255, 255, 255, 0.08); }
+.pk-knopf.is-antwort[data-richtig] { background: #2f6b4d; color: #eafff2; }
+.pk-knopf.is-antwort[data-daneben] { background: #6b3a34; color: #ffeceb; }
+
+.pk-leute {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px;
+}
+.pk-person {
+  padding: 14px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: 700 15px/1.2 system-ui;
+  cursor: pointer;
+}
+.pk-person[data-gewaehlt] { background: var(--lila); color: #180f28; }
+.pk-person:disabled { opacity: 0.45; cursor: default; }
+
+/* -- Tisch ---------------------------------------------------------------- */
+
+.pk-tisch { align-items: stretch; }
+.pk-kopf { display: flex; align-items: center; gap: 10px; }
+.pk-rundenzahl {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+}
+.pk-spielname { flex: 1; font-size: 16px; }
+.pk-tafelknopf {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.pk-tafelknopf[aria-pressed="true"] { background: var(--lila); color: #180f28; }
+.pk-ansage { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.pk-endtitel { margin: 6px 0 0; font: 800 26px/1.1 system-ui; text-align: center; }
+
+/* Die Buehne: was die Runde gerade ist, gross und allein. */
+.pk-buehne {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: clamp(150px, 30vh, 230px);
+  padding: 20px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  text-align: center;
+}
+.pk-buehne[data-ton="geheim"] {
+  background: linear-gradient(160deg, rgba(166, 120, 242, 0.24), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 2px rgba(166, 120, 242, 0.5);
+}
+.pk-buehne[data-ton="gut"] { box-shadow: inset 0 0 0 2px #3f8f66; }
+.pk-buehne[data-ton="schlecht"] { box-shadow: inset 0 0 0 2px #a1524a; }
+.pk-buehne-oben {
+  margin: 0;
+  font: 700 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-buehne-gross { display: flex; align-items: center; justify-content: center; }
+.pk-buehne-unten { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.pk-buehne-unten [data-gut] { color: #8ee0a3; }
+
+/* Ein Wort, so gross wie der Platz es zulaesst — das ganze Imposter-Spiel. */
+.pk-wort { font: 800 clamp(30px, 11vw, 54px)/1.05 system-ui; letter-spacing: -0.01em; }
+.pk-wort.is-klein { font-size: clamp(22px, 7vw, 34px); }
+.pk-frage { font: 700 clamp(18px, 5.2vw, 26px)/1.3 system-ui; }
+.pk-busfrage { margin: 0; text-align: center; font: 700 16px/1 system-ui; }
+.pk-wartet { margin: 0; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* -- Listen und Tabellen -------------------------------------------------- */
+
+.pk-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pk-liste.is-schmal { gap: 3px; }
+.pk-liste li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+}
+.pk-liste li[data-gut] { background: rgba(63, 143, 102, 0.22); }
+.pk-liste .muted { color: var(--muted); font-size: 13px; text-align: right; }
+
+.pk-tabelle { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.pk-tabelle li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.pk-tabelle li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-tabelle li[data-weg] { opacity: 0.45; }
+.pk-platz { width: 24px; font: 800 15px/1 system-ui; color: var(--gold); }
+.pk-tabellenname { flex: 1; font-weight: 600; }
+.pk-punkte { min-width: 34px; text-align: right; font: 800 18px/1 system-ui; }
+.pk-schluck { color: var(--gold); font: 700 13px/1 system-ui; }
+
+.pk-abrechnung { display: flex; flex-direction: column; gap: 10px; }
+.pk-ausbeute {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 0;
+  font: 700 16px/1 system-ui;
+}
+.pk-ausbeute [data-gut] { color: #8ee0a3; }
+
+/* -- Wer bin ich ---------------------------------------------------------- */
+
+.pk-stirnen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+.pk-stirn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-stirn[data-ich] { background: rgba(166, 120, 242, 0.18); }
+.pk-stirn[data-dran] { box-shadow: inset 0 0 0 2px var(--gold); }
+.pk-stirn[data-fertig="gut"] { background: rgba(63, 143, 102, 0.22); }
+.pk-stirn[data-fertig="weg"] { opacity: 0.5; }
+.pk-stirn-name { font: 700 15px/1.2 system-ui; }
+.pk-stirn-wer { font-size: 12px; color: var(--muted); }
+
+/* -- Wer wuerde eher ------------------------------------------------------ */
+
+.pk-balken { display: grid; gap: 6px; }
+.pk-balken-zeile { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.pk-balken-name {
+  width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-balken-spur {
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.pk-balken-fuellung { display: block; height: 100%; border-radius: 999px; background: var(--lila); }
+.pk-balken-zahl { width: 18px; text-align: right; font-weight: 700; }
+
+/* -- Bus fahren ----------------------------------------------------------- */
+
+.pk-kartenreihe { display: flex; gap: 10px; }
+.pk-karte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: clamp(52px, 17vw, 74px);
+  aspect-ratio: 5 / 7;
+  border-radius: 9px;
+  background: #f6f1e6;
+  color: #1a1a1a;
+  font-family: system-ui, sans-serif;
+}
+.pk-karte[data-rot] { color: #b3352c; }
+.pk-karte-rang { font: 800 clamp(20px, 6vw, 26px)/1 system-ui; }
+.pk-karte-farbe { font-size: clamp(16px, 5vw, 22px); line-height: 1; }
+/* Die verdeckte Karte ist ein Muster und kein leeres Feld: Ein Kasten ohne
+   Inhalt sieht auf dem Handy aus wie ein Bild, das nicht geladen hat. */
+.pk-karte.is-zu {
+  background: repeating-linear-gradient(45deg, #3a2c56 0 6px, #2a1f3d 6px 12px);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+/* -- Banner der Spielauswahl ---------------------------------------------- */
+
+/* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300). Ohne feste Form
+   haette das SVG in der Kachel keine Hoehe. */
+.pk-banner { display: block; width: 100%; aspect-ratio: 4 / 1; background: #151021; }
