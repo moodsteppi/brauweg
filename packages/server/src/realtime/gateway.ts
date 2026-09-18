@@ -156,7 +156,7 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     game: z.string().max(40).optional(),
     type: z.enum(['addBot', 'removeBot']),
     tableId: z.string().uuid(),
-    seat: z.number().int().min(0).max(7),
+    seat: z.number().int().min(0).max(11),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -962,18 +962,21 @@ export class Gateway {
               id: s.account.id,
               displayName: s.account.displayName,
               hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
+              istGast: sql<boolean>`${s.account.gastSeit} is not null`,
             })
             .from(s.account)
             .where(inArray(s.account.id, accountIds))
         : [];
     const nameOf = new Map(names.map((row) => [row.id, row.displayName]));
     const avatarOf = new Map(names.map((row) => [row.id, row.hasAvatar]));
+    const gastOf = new Map(names.map((row) => [row.id, row.istGast]));
 
     const daten: TischDaten = {
       table,
       seatRows: seatRows.slice().sort((a, b) => a.seatIndex - b.seatIndex),
       nameOf,
       avatarOf,
+      gastOf,
     };
     this.tischDaten.set(tableId, daten);
     return daten;
@@ -997,7 +1000,7 @@ export class Gateway {
   ): Promise<void> {
     const daten = await this.ladeTischDaten(tableId);
     if (!daten) return;
-    const { table, seatRows, nameOf, avatarOf } = daten;
+    const { table, seatRows, nameOf, avatarOf, gastOf } = daten;
 
     const party = this.runtime.get(tableId);
 
@@ -1010,6 +1013,9 @@ export class Gateway {
       displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
       accountId: row.accountId,
       isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+      // Ein Bot ist kein Gast, ein leerer Platz auch nicht — nur ein Konto
+      // ohne Mail (siehe SeatInfo.gast im Protokoll).
+      gast: row.accountId ? (gastOf.get(row.accountId) ?? false) : false,
       // Nur eine kurze URL ueber die Leitung; die Bytes holt der Browser
       // einmal und behaelt sie im Cache.
       avatarUrl:
@@ -1113,6 +1119,8 @@ interface TischDaten {
   }[];
   readonly nameOf: ReadonlyMap<string, string>;
   readonly avatarOf: ReadonlyMap<string, boolean>;
+  /** Konto → ist Gast. Aus derselben Abfrage wie Name und Avatar. */
+  readonly gastOf: ReadonlyMap<string, boolean>;
 }
 
 function send(socket: WebSocket, message: ServerMessage): void {

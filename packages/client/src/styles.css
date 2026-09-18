@@ -19338,3 +19338,39 @@ span.hub-angebot-art.poker-jeton-stapel {
 /* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300). Ohne feste Form
    haette das SVG in der Kachel keine Hoehe. */
 .pk-banner { display: block; width: 100%; aspect-ratio: 4 / 1; background: #151021; }
+
+/* =========================================================================
+   Gast-Einstieg auf der Anmeldeseite (Auth.tsx)
+   -------------------------------------------------------------------------
+   Der dritte Weg "Ohne Konto spielen" bekommt bewusst keinen dritten
+   geschnitzten Holzknopf: Er soll auffindbar sein, aber nicht wie eine
+   gleichwertige Alternative zu Anmelden/Registrieren wirken - wer ihn
+   nimmt, verzichtet auf etwas (Rangliste, Wiederkehr), und das darf die
+   Gestaltung nicht verschweigen, indem sie ihn genauso praesentiert.
+   Deshalb ein schlichter, unterstrichener Textlink statt eines Knopfes aus
+   `.auth button`. Die Selektoren brauchen die zusaetzliche Elementstufe
+   `button`, weil `.auth button:active`/`:disabled` sonst wegen der
+   gleichen Klassenzahl, aber einer Elementstufe mehr, den Vorrang haetten.
+   ========================================================================= */
+.auth button.auth-gast-taste {
+  display: block;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.2rem 0;
+  border: none;
+  border-image: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 400;
+  text-decoration: underline;
+  text-align: center;
+}
+.auth button.auth-gast-taste:active {
+  transform: none;
+  color: var(--lila);
+}
+.auth button.auth-gast-taste:disabled {
+  filter: none;
+  opacity: 0.6;
+}

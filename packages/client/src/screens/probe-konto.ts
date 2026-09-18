@@ -12,6 +12,7 @@ export function probeKonto(abweichung: Partial<Me> = {}): Me {
   return {
     id: 'a1',
     displayName: 'Robin',
+    gast: false,
     coins: 120,
     gems: 3,
     broJetons: 0,

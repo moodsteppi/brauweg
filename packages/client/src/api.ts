@@ -107,6 +107,12 @@ export type Getragen = Partial<Record<Slot, string>>;
 export interface Me {
   id: string;
   /**
+   * Gastkonto: keine Mail, kein Passwort. Nach dem Abmelden kommt niemand
+   * mehr heran, und Runden mit einem Gast am Tisch zaehlen nicht fuer die
+   * Rangliste — beides muss die Oberflaeche daran erkennen koennen.
+   */
+  gast: boolean;
+  /**
    * Bemalung der 3D-Figur. `null` heißt: nie bemalt, es gilt die
    * Standardoptik. Der Server hat sie schon geprüft.
    */
@@ -553,6 +559,31 @@ export const api = {
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
+
+  /**
+   * Ohne Konto spielen: Ein Gastkonto entsteht auf der Stelle, nur mit
+   * einem Anzeigenamen. Cookie und Token laufen wie bei `login` — die App
+   * braucht das Token, weil sie kein Cookie ueber die Herkunftsgrenze
+   * bekommt.
+   */
+  gastLogin: async (name: string) => {
+    const antwort = await post<{
+      ok: true;
+      accountId: string;
+      displayName: string;
+      token?: string;
+    }>('/auth/gast', { name });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+
+  /**
+   * Ein Gastkonto nachtraeglich sichern: Mail, Passwort und Geburtstag
+   * nachtragen, ohne die laufende Sitzung zu verlieren. Braucht eine
+   * bestehende Gast-Sitzung — dafuer sorgt der Server, nicht dieser Aufruf.
+   */
+  gastSichern: (email: string, password: string, birthday: string) =>
+    post<{ ok: true }>('/auth/gast/sichern', { email, password, birthday }),
 
   /**
    * Abmelden. Das Token faellt hier auch dann, wenn der Server nicht
