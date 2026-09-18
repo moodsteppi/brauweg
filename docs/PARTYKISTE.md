@@ -1,6 +1,6 @@
 # Partykiste
 
-Ein Turnier aus sechs Partyminispielen für **4 bis 12 Leute**, die im selben
+Ein Turnier aus neun Partyminispielen für **4 bis 12 Leute**, die im selben
 Raum sitzen. Geredet wird am Tisch, der Bildschirm nimmt nur die Entscheidung
 entgegen — deshalb braucht die Kiste, anders als Werwolf, keinen freien Text
 zwischen den Sitzen und ist heute schon spielbar.
@@ -22,7 +22,7 @@ Die Minispiele kommen reihum in der Reihenfolge, die im Regelsatz steht
 (`minispiele`). Bewusst berechnet und nicht gewürfelt — „dreimal Quiz
 hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 
-## Die sechs Minispiele
+## Die neun Minispiele
 
 | Minispiel | Ablauf | Punkte | Schlücke |
 | --- | --- | --- | --- |
@@ -32,6 +32,9 @@ hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 | **Ich hab noch nie** | Zwei Knöpfe: „Hab ich“ oder „Noch nie“. | sauber geblieben +1 | gestanden 1 |
 | **Wer würde eher** | Alle stimmen gleichzeitig für einen Mitspieler. | keine Stimme bekommen +1 | je Stimme 1 |
 | **Bus fahren** | Reihum drei Tipps: Rot/Schwarz, höher/tiefer, innen/außen. Gleichstand zählt gegen den Fahrer. | je richtiger Tipp +1 | erster Fehlgriff 1, dann ist der Nächste dran |
+| **Schätzen** | Eine Zahlenfrage, alle tippen eine Zahl. Wer nicht tippt, gilt als unendlich weit weg. | am nächsten dran +3 | am weitesten weg 2 |
+| **Entweder – oder** | A oder B, alle gleichzeitig. | Mehrheit +1 | Minderheit 1; Gleichstand: alle 1 |
+| **Wahrheit oder Pflicht** | Reihum: wählen, Aufgabe erscheint für alle, dann „Gemacht" oder „Gekniffen". | gemacht +2 | gekniffen 2 |
 
 Der **Härtegrad** (`schluckFaktor`, 1 bis 3) nimmt alle Schlücke einer Runde
 mal. Punkte bleiben unberührt: Die Rangliste darf nicht davon abhängen, wie
@@ -95,8 +98,12 @@ Sprüche. Neue Einträge kommen **hinten** dazu und bekommen die nächste freie
 Kennung; bestehende Kennungen ändern sich nie — sie stehen in abgelegten
 Rundenprotokollen.
 
-Stand 18.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
-je 100 Sprüche für „Ich hab noch nie“ und „Wer würde eher“.
+Stand 19.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
+110 Sprüche für „Ich hab noch nie”, 108 für „Wer würde eher”, 80 Schätzfragen,
+100 Entweder-oder-Paare, 120 Aufgaben für Wahrheit oder Pflicht (60/60).
+
+Die Sätze zum Kiffen (n101–n110, w101–w108) liegen im normalen Vorrat, es
+gibt keinen Schalter, der sie ausblendet.
 
 ## Ein weiteres Minispiel einbauen
 

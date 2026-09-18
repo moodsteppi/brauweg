@@ -42,3 +42,25 @@ export interface Spruch {
   readonly id: string;
   readonly text: string;
 }
+
+/** Eine Schaetzfrage mit Zahlantwort. `einheit` nur zur Anzeige. */
+export interface SchaetzFrage {
+  readonly id: string;
+  readonly frage: string;
+  readonly antwort: number;
+  readonly einheit: string;
+}
+
+/** Zwei Moeglichkeiten fuer "Entweder-oder" — die Minderheit trinkt. */
+export interface EntwederOder {
+  readonly id: string;
+  readonly a: string;
+  readonly b: string;
+}
+
+/** Eine Aufgabe fuer "Wahrheit oder Pflicht". */
+export interface Aufgabe {
+  readonly id: string;
+  readonly art: 'wahrheit' | 'pflicht';
+  readonly text: string;
+}

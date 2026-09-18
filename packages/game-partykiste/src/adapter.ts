@@ -3,7 +3,7 @@
  *
  * Einzige Stelle, an der Plattform und Spiel einander kennen. Zwei Dinge
  * weichen vom Kartenspiel-Normalfall ab, beide aus demselben Grund — in vier
- * der sechs Minispiele handeln ALLE gleichzeitig:
+ * der neun Minispiele handeln ALLE gleichzeitig:
  *
  *   1. `currentActor` nennt trotzdem immer einen Sitz, naemlich den naechsten,
  *      der noch nicht gehandelt hat. Ohne einen benannten Sitz griffen weder
@@ -33,6 +33,7 @@ import { snapshotCodec } from '@brauweg/game-api';
 
 import { botZug } from './bot.js';
 import {
+  OFFEN,
   ausstieg,
   amZug as amZugVon,
   erzeugePartie,
@@ -213,6 +214,28 @@ export const partykiste: GameModule<
           { art: 'tipp', wahl: 0 },
           { art: 'tipp', wahl: 1 },
         ];
+      /*
+       * Leer, obwohl der Sitz handeln muss (Falle 1 der Invarianten): Eine
+       * Schaetzung ist irgendeine Zahl, die laesst sich nicht aufzaehlen. Der
+       * Client baut die Aktion aus dem Zahlenfeld, `act` prueft sie.
+       */
+      case 'schaetzen':
+        return [];
+      case 'entweder':
+        return [
+          { art: 'seite', wahl: 0 },
+          { art: 'seite', wahl: 1 },
+        ];
+      case 'wahrheitpflicht':
+        return runde.gewaehlt[sitz] === OFFEN
+          ? [
+              { art: 'wahl', pflicht: false },
+              { art: 'wahl', pflicht: true },
+            ]
+          : [
+              { art: 'erledigt', ja: true },
+              { art: 'erledigt', ja: false },
+            ];
     }
   },
 

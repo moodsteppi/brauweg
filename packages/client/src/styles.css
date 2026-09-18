@@ -19374,3 +19374,27 @@ span.hub-angebot-art.poker-jeton-stapel {
   filter: none;
   opacity: 0.6;
 }
+
+/* -- Partykiste: Schaetzen und Entweder-oder ------------------------------ */
+
+/* Das Zahlenfeld so gross wie die Knoepfe daneben — auf dem Handy tippt man
+   es mit dem Daumen, und `inputMode=decimal` holt die Zifferntastatur. */
+.pk-zahl {
+  flex: 1;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text);
+  font: 700 20px/1.2 system-ui;
+  text-align: center;
+}
+.pk-zahl::placeholder { color: var(--muted); font-weight: 600; }
+.pk-zaehler {
+  display: block;
+  margin-top: 4px;
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+}
+.pk-knopf.is-gross[data-richtig] { background: #2f6b4d; color: #eafff2; }

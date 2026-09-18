@@ -38,7 +38,13 @@ export type MinispielId =
   /** "Wer wuerde eher ...?" — jede Stimme ein Schluck. */
   | 'wereher'
   /** Bus fahren: Farbe, hoeher/tiefer, innen/aussen. */
-  | 'busfahrer';
+  | 'busfahrer'
+  /** Schaetzen: eine Zahl, der Naechste gewinnt, der Weiteste trinkt. */
+  | 'schaetzen'
+  /** Entweder-oder: A oder B, die Minderheit trinkt. */
+  | 'entweder'
+  /** Wahrheit oder Pflicht: reihum, gemacht oder gekniffen. */
+  | 'wahrheitpflicht';
 
 export const MINISPIELE: readonly MinispielId[] = [
   'imposter',
@@ -47,6 +53,9 @@ export const MINISPIELE: readonly MinispielId[] = [
   'niemals',
   'wereher',
   'busfahrer',
+  'schaetzen',
+  'entweder',
+  'wahrheitpflicht',
 ];
 
 function istMinispiel(x: unknown): x is MinispielId {
@@ -138,7 +147,15 @@ export type PartykisteAktion =
   /** "Wer bin ich": selbst gemeldet, die Runde hat zugesehen. */
   | { readonly art: 'geraten'; readonly erfolg: boolean }
   /** Bus fahren: 0 oder 1 — Rot/Schwarz, hoeher/tiefer, innen/aussen. */
-  | { readonly art: 'tipp'; readonly wahl: number };
+  | { readonly art: 'tipp'; readonly wahl: number }
+  /** Schaetzen: die eigene Zahl. Nicht aufzaehlbar — `legalActions` bleibt leer. */
+  | { readonly art: 'schaetzung'; readonly wert: number }
+  /** Entweder-oder: 0 = A, 1 = B. */
+  | { readonly art: 'seite'; readonly wahl: number }
+  /** Wahrheit oder Pflicht, Schritt 1: was soll es sein? */
+  | { readonly art: 'wahl'; readonly pflicht: boolean }
+  /** Wahrheit oder Pflicht, Schritt 2: gemacht (true) oder gekniffen. */
+  | { readonly art: 'erledigt'; readonly ja: boolean };
 
 // ---------------------------------------------------------------------------
 // Punkte und Schluecke
@@ -165,6 +182,12 @@ export const PUNKTE = {
   busProTipp: 1,
   /** Trinkrunden: wer ohne Schluck durchkommt. Klein — man kann luegen. */
   sauber: 1,
+  /** Schaetzen: am naechsten dran. */
+  schaetzenBester: 3,
+  /** Entweder-oder: auf der Seite der Mehrheit. */
+  entwederMehrheit: 1,
+  /** Wahrheit oder Pflicht: durchgezogen. */
+  wahrheitpflichtGemacht: 2,
 } as const;
 
 export const SCHLUECKE = {
@@ -184,6 +207,12 @@ export const SCHLUECKE = {
   wereherJeStimme: 1,
   /** Bus fahren: je falschem Tipp. */
   busFalsch: 1,
+  /** Schaetzen: am weitesten daneben. */
+  schaetzenSchlechtester: 2,
+  /** Entweder-oder: in der Minderheit — oder alle bei Gleichstand. */
+  entwederMinderheit: 1,
+  /** Wahrheit oder Pflicht: gekniffen. */
+  wahrheitpflichtGekniffen: 2,
 } as const;
 
 // ---------------------------------------------------------------------------
