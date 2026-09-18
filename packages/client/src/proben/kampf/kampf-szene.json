@@ -10,6 +10,7 @@
   "runde": 10,
   "rundenGrenze": 30,
   "zeitraffer": 2,
+  "schrittMs": 300,
   "ich": 3,
   "brettReihen": 4,
   "arenaReihen": 10,

@@ -89,6 +89,8 @@ const FELDER = [
   'eigenes',
   'gegner',
   'leftSeats',
+  'zeitraffer',
+  'schrittMs',
   'kaempfe',
   'paarungen',
   'katalog',

@@ -29,6 +29,7 @@ interface Szene {
   saat: string;
   runde: number;
   zeitraffer: number;
+  schrittMs: number;
   ich: number;
   kampf: {
     a: number;
@@ -95,6 +96,13 @@ describe('die Szene aus kampf-erzeugen.mjs', () => {
 
   it('laeuft mit dem Zeitraffer, der beurteilt werden soll', () => {
     expect(SZENE.zeitraffer).toBe(2);
+    /*
+     * Und die Szene traegt die Schrittdauer dieses Reglers mit: Die Anzeige
+     * bekommt sie am Tisch aus der Sicht (`schrittMs`), hier aus der
+     * Aufzeichnung. Ohne sie liefe die Probe mit einem anderen Takt als dem
+     * aufgezeichneten Kampf. Aufgerundet auf ganze Takte — 300 und nicht 250.
+     */
+    expect(SZENE.schrittMs).toBe(300);
     // Unter x2 liegt der Median bei 14,8 s (5.000 Partien zu viert, neunte
     // Messung in docs/spiele/auto-battler-konzept.md; bis zum 06.09.2026 stand
     // hier 18,3 s). Ein Kampf ausserhalb dieser Spanne ist kein Massstab fuer
