@@ -196,7 +196,149 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 06.09.2026, neunte Messung — der gültige Stand)
+## Gemessen: Ausgewogenheit (Stand 18.09.2026, zehnte Messung — der gültige Stand)
+
+**Warum es eine zehnte gibt.** Die neunte hinterließ eine Wackelzeile:
+**Naturwesen** fiel mit der Beistand-Wirkung von ×0,71 auf ×0,54 und nach der
+Nachbarordnung je Seite auf ×0,52 — die unterste Zeile des Katalogs, zwei
+Hundertstel über der Schranke ×0,5, die `test/ausgewogenheit.test.ts` zieht.
+Die Karte auf dem Board nannte zwei Wege: **ein fünfter Träger, der die Marke
+nicht nach unten zieht** (das Muster des Schildknappen für Untot), oder **ein
+stärkerer Naturwesen-Bonus**. Beide sind gemessen worden; gebaut ist der erste.
+
+Geändert ist **eine Zeile**: Die Bogenmeisterin (2 Gold, Schützin) trägt neben
+Krieger jetzt auch Naturwesen. Kein Wert, keine Kosten, keine Rolle.
+
+### Warum nicht der Bonus
+
+Dieselbe Frage wie bei Elementar am 05.09.2026 — und dieselbe Antwort. Der
+Naturwesen-Bonus (Leben 15/25/40) wurde angehoben und gemessen, je 1.500
+Partien zu viert auf der Saatbasis `ausgewogenheit-v1`:
+
+| Naturwesen-Bonus | Antritte | zum Schnitt | an der Höchstdauer | Spielzeit | Untot |
+|---|---|---|---|---|---|
+| **15/25/40 (gebaut)** | 977 | ×0,57 | 1,7 % | 5:50 | 422 |
+| 25/40/65 | 1.734 | ×0,62 | 2,1 % | 5:55 | 378 |
+| 45/70/110 | 2.590 | ×0,87 | **3,4 %** | **6:15** | **295** |
+
+**Ein Lebensbonus macht die Marke häufiger, nicht besser.** Fast das Doppelte
+an Bonus bringt fünf Hundertstel; erst das Dreifache holt sie aus der
+Wackelzone — und verdoppelt dabei die an der Höchstdauer abgebrochenen Kämpfe
+(dieselbe Falle wie bei Rüstung und Heilung: Leben verlängert jeden Kampf
+doppelt, weil beide Seiten länger stehen). Die letzte Spalte ist der zweite
+Grund: Untot verliert Anteile, weil der Bot statt seiner auf Naturwesen
+hinspielt, und fällt über 400 Partien unter die Zählschwelle der Probe.
+
+### Warum die Bogenmeisterin
+
+**Die Ursache lag nicht im Bonus, sondern in der Trägerliste.** Von vier
+Trägern waren zwei die beiden letzten Zeilen des ganzen Katalogs — Astschütze
+(×0,23) und Moosheiler (×0,24), beide für ein Gold. Wer Naturwesen zu zweit
+haben wollte, kam praktisch immer über sie, und eine Ein-Gold-Einheit steht auf
+dem letzten Brett vor allem dann, wenn ihr Besitzer nicht aufgestiegen ist
+(der Preisgraben, neunte Messung). Die Marke maß also nicht ihren Bonus,
+sondern die Armut ihrer Bretter.
+
+Vier Kandidaten, je 1.500 Partien zu viert, gleiche Saat — vorher steht
+Naturwesen bei ×0,57, die oberste Zeile bei ×1,56, die Höchstdauer bei 1,7 %:
+
+| fünfter Träger | Naturwesen | oberste Zeile | an der Höchstdauer | Untot |
+|---|---|---|---|---|
+| **Bogenmeisterin (2 Gold, Schützin)** | **×0,84** | ×1,53 | **1,5 %** | 401 |
+| Runenpriester (2 Gold, Beistand) | ×0,81 | ×1,55 | 2,1 % | 394 |
+| Steinschleuderer (1 Gold, Schütze) | ×0,90 | **×1,70** | 1,2 % | **272** |
+| Grimmbart (2 Gold, Wache) | ×0,68 | ×1,50 | 1,8 % | 405 |
+
+- Der **Steinschleuderer** hebt die Marke am weitesten und reißt dafür die
+  Spanne oben auf (Wächter ×1,70): Er ist die dritte billige Einheit und
+  verstärkt damit genau das, was hier das Problem war.
+- Der **Runenpriester** ist ein zweiter Heiler, und Heilung kostet Kampfdauer
+  (1,7 → 2,1 %) — bei der Marke mit der längsten Uhr der schlechteste Tausch.
+- **Grimmbart** lässt Naturwesen die unterste Zeile bleiben.
+- Die **Bogenmeisterin** hebt die Marke aus der Wackelzone, ohne die Uhr oder
+  die obere Kante zu bewegen. Sie passt auch ins Bild: Die Figur ist eine Elfe
+  in Grün, und die Marke bekommt mit ihr einen Schützen, der etwas aushält.
+
+### Was sich im Spiel geändert hat
+
+**5.000 Partien zu viert, Besetzung `normal`, `--mindest 150`**, dieselben
+Saaten vorher und nachher, beide Basen — es unterscheidet sie nur die eine
+Zeile im Katalog:
+
+| Marke | v1 vorher → nachher | v2 vorher → nachher |
+|---|---|---|
+| Wächter | ×1,57 → ×1,54 | ×1,59 → ×1,55 |
+| Krieger | ×1,52 → ×1,48 | ×1,55 → ×1,50 |
+| Untot | ×1,05 → ×1,03 | ×1,02 → ×0,98 |
+| **Naturwesen** | ×0,53 → **×0,80** | ×0,56 → **×0,81** |
+| Elementar | ×0,83 → ×0,77 | ×0,80 → ×0,75 |
+| Drache | ×0,81 → ×0,75 | ×0,77 → ×0,73 |
+| Meuchler | ×0,68 → ×0,64 | ×0,71 → ×0,67 |
+
+**Beide Basen zeigen dasselbe, es ist also kein Wurf.** Die Spanne reicht jetzt
+von ×1,54 bis ×0,64 statt von ×1,57 bis ×0,53: Sie ist an **beiden** Enden
+enger geworden, obwohl nur unten etwas angefasst wurde — die anderen Marken
+geben den Anteil ab, den Naturwesen dazugewinnt.
+
+**Die neue unterste Zeile ist Meuchler** (×0,64 / ×0,67) und steht damit rund
+ein Siebtel über der Schranke, wo Naturwesen ein Zwanzigstel darüber stand. Sie
+ist die nächste, die anzusehen ist; ihre Ursache ist schon benannt — die
+Nachbarordnung je Seite kostete sie ×0,79 → ×0,67, weil ihre ganze Rechnung am
+schnellen Ankommen hängt (Nachtrag der neunten Messung).
+
+Die Einheiten dahinter:
+
+| Einheit | Antritte vorher → nachher | zum Schnitt vorher → nachher |
+|---|---|---|
+| Bogenmeisterin | 1.589 → **2.525** | ×1,19 → ×1,16 |
+| Hainwächterin | 1.614 → 1.717 | ×1,07 → ×1,15 |
+| Astschütze | 5.282 → 5.675 | ×0,23 → ×0,25 |
+| Moosheiler | 1.214 → 1.168 | ×0,24 → ×0,24 |
+
+**Der Befund steckt wieder in den Antritten.** Die Bogenmeisterin wird
+anderthalbmal so oft gekauft, weil sie für zwei Marken zählt — und das ist der
+ganze Hebel: Naturwesen kommt auf 4.643 statt 3.487 Antritte, und die
+dazugekommenen Bretter sind die, auf denen jemand aufgestiegen ist. Ihre eigene
+Quote sinkt dabei leicht (×1,19 → ×1,16), weil sie jetzt auch auf ärmeren
+Brettern steht; die Hainwächterin steigt aus dem umgekehrten Grund.
+
+Die höchste Schwelle erreicht Naturwesen jetzt siebenmal statt dreimal in 5.000
+Partien — selten, aber nicht mehr ein Zufall.
+
+Und die Uhr:
+
+| | vorher | nachher |
+|---|---|---|
+| Spielzeit im Median | 5:49 | 5:48 |
+| einzelner Kampf im Median | 14,5 s | 14,5 s |
+| Kämpfe an der Höchstdauer abgebrochen | 1,8 % | **1,6 %** |
+| Runden im Median | 9 | 9 |
+
+**Die Uhr bewegt sich nicht**, und das ist der Unterschied zu beiden
+Bonus-Varianten: Eine zweite Marke auf einer vorhandenen Einheit verschiebt,
+**wer** gekauft wird, und nicht, wie lange jemand steht.
+
+### Auf der Saatbasis der Probe
+
+`test/ausgewogenheit.test.ts` misst 400 Partien auf `ausgewogenheit-probe`.
+Dort steht Naturwesen bei ×0,69 (376 Antritte) und Meuchler ebenfalls bei
+×0,69; alle sieben Marken zählen weiter. Die knappste Zeile ist **Untot mit
+105 Antritten** — sie hat achtzehn abgegeben, weil die Bogenmeisterin öfter
+gekauft wird, und ist die Zeile, die als nächste unter die Zählschwelle fällt.
+Die Probe verlangt sechs von sieben und hält das noch aus; wer den Katalog
+anfasst, sieht dort nach.
+
+---
+
+## Überholt: die neunte Messung (Stand 06.09.2026, Naturwesen noch mit vier Trägern)
+
+> Der gültige Stand steht darüber unter „Gemessen: Ausgewogenheit (zehnte
+> Messung)". **Überholt sind allein die Marken-Tabellen**: Naturwesen stand
+> hier bei ×0,52 und ist seit der Bogenmeisterin bei ×0,80. Alles über die
+> **Beistand-Wirkung** — der Heilfaktor 1,5, die Beistandsprobe, die zwei
+> gemessenen und verworfenen Eingriffe an Moosheiler und Lichtwahrerin —
+> beschreibt weiter den gebauten Stand und ist der Grund, warum es diesen
+> Abschnitt noch gibt.
 
 **Warum es eine neunte gibt, und wieder ohne eine Zeile am Katalog.** Geändert
 wurde die **Kampfregel**: Ein `beistand` heilt jetzt, statt zu schlagen

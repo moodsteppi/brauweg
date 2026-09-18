@@ -161,6 +161,21 @@ zusammen 1503, dazu die Client-Tests (62 Dateien, 788 Tests), alle grün.
 > Zahlen und die beiden gemessenen, aber **nicht** gemachten Eingriffe stehen
 > in der neunten Messung in `docs/spiele/auto-battler-konzept.md`.
 >
+> **Naturwesen ist seit dem 18.09.2026 keine Wackelzeile mehr.** Die Marke war
+> mit der Beistand-Wirkung auf ×0,52 gefallen — die unterste Zeile des
+> Katalogs, zwei Hundertstel über der Schranke ×0,5 der Probe. Ursache waren
+> nicht die Boni, sondern die Trägerliste: Zwei ihrer vier Träger waren die
+> beiden **letzten** Zeilen des Katalogs (Astschütze ×0,23, Moosheiler ×0,24,
+> beide 1 Gold), die Marke maß also die Armut ihrer Bretter. Die
+> **Bogenmeisterin** trägt jetzt neben Krieger auch Naturwesen — eine Zeile im
+> Katalog, kein Wert geändert —, und die Marke steht bei **×0,80** (zweite
+> Saatbasis ×0,81), die Spanne bei ×1,54 bis ×0,64. Der andere Weg, ein
+> stärkerer Bonus, ist gemessen und verworfen: Er kauft der Marke Bretter statt
+> Siege und kostet Kampfdauer (Zahlen, drei weitere Kandidaten und die Probe
+> auf beiden Saatbasen in der **zehnten Messung** des Konzepts). Neue unterste
+> Zeile ist **Meuchler** mit ×0,64 — mit deutlich mehr Luft, als Naturwesen
+> hatte.
+>
 > **Die Synergien** (Phase 3 des Konzepts) kamen am 04.09.2026 dazu:
 > `synergien.ts`. Je Marke zählt das eigene **Brett** (nicht die Bank), mit
 > Schwellen bei 2 / 4 / 6; Kopien zählen, eine Einheit mit zwei Marken
