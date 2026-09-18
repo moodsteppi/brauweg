@@ -34,6 +34,10 @@ const de: Record<string, string> = {
   // Minigolf aus der Vogelperspektive, 1-8 Spieler gleichzeitig auf derselben
   // Bahn — siehe SPEZIFIKATION-GOLF.md.
   'game.golf': 'Golf',
+  // Turnier aus Partyminispielen fuer 4 bis 12 Leute. Der Name sagt, was es
+  // ist — eine Kiste, aus der der Abend zieht — und bindet sich absichtlich
+  // an kein einzelnes Minispiel: Es kommen weitere dazu.
+  'game.partykiste': 'Partykiste',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -118,6 +122,7 @@ const de: Record<string, string> = {
   'error.nichtGesammelt': 'Das hast du noch nicht gesammelt.',
   'error.gurtZuVoll': 'Am Gürtel ist kein Platz mehr.',
   'error.botLevelUnknown': 'Diese Spielstärke gibt es nicht.',
+  'error.seatColorUnknown': 'Diese Farbe gibt es nicht.',
   'error.googleLoginDisabled': 'Die Anmeldung mit Google ist gerade abgeschaltet.',
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',
@@ -477,12 +482,21 @@ const de: Record<string, string> = {
   'ruleset.sichtweiteAusserhalb': 'So weit sieht hier niemand — die Sichtweite passt nicht zur Kartengröße.',
   'ruleset.kontingentAusserhalb': 'Zwischen 1 und 20 Feldern je Runde.',
   'ruleset.zuVieleHindernisse': 'So viel Wasser und Fels lässt kein Land mehr übrig.',
+  'ruleset.rundenfristAusserhalb': 'Eine Runde dauert zwischen 10 Sekunden und 5 Minuten.',
   'feldherr.feldUnbekannt': 'Diese Feldgröße gibt es nicht.',
   'feldherr.nurZuZweit': 'Feldherr wird zu zweit gespielt.',
   'feldherr.eineRunde': 'Feldherr kennt keine Runden — ein Gefecht entscheidet.',
   'golf.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'golf.sitzzahl': 'Golf spielt zwischen einem und acht Bällen.',
   'golf.loecher': 'Zwischen 2 und 15 Löchern je Match.',
+  // Meldungen des Partykisten-Regelsatzes.
+  'partykiste.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
+  'partykiste.minispieleLeer': 'Mindestens ein Minispiel muss dabei sein.',
+  'partykiste.minispielUnbekannt': 'Dieses Minispiel gibt es nicht.',
+  'partykiste.trinkmodus': 'Trinkmodus geht nur an oder aus.',
+  'partykiste.schluckFaktor': 'Der Härtegrad liegt zwischen 1 und 3.',
+  'partykiste.sitzzahl': 'Die Partykiste spielt zu viert bis zu zwölft.',
+  'partykiste.rundenzahl': 'Zwischen 3 und 15 Minispielen je Turnier.',
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',

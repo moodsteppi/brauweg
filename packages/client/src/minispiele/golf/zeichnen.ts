@@ -25,7 +25,7 @@
  * Kein Pixel dieser Datei fließt je in einen Spielzustand zurück.
  */
 
-import { dunkler, farbeVon, heller } from './farben';
+import { dunkler, farbeVon, heller, mische } from './farben';
 import type { Blick } from './kamera';
 import type {
   Karte,
@@ -119,6 +119,11 @@ function stimmungVon(karte: Karte): Stimmung {
  * Aufträge
  * ----------------------------------------------------------------------- */
 
+/** Höhe der Fahnenstange über dem Loch, in Welteinheiten. */
+export const FAHNEN_HOEHE = 2.5;
+/** Wie weit das Tuch neben der Stange steht, in Welteinheiten. */
+export const FAHNEN_BREITE = 1.25;
+
 /** Was der Zielpfeil zeigen soll. */
 export interface Zielbild {
   /** Ballmitte in Weltkoordinaten. */
@@ -190,7 +195,13 @@ export class Zeichner {
   private statischHoehe = 0;
 
   /** Ballbilder je Sitz, einmal gemalt. */
-  private readonly ballBilder: (HTMLCanvasElement | null)[] = [];
+  private ballBilder: (HTMLCanvasElement | null)[] = [];
+  /**
+   * Farbe je Sitz, falls in der Lobby gewaehlt. Leer heisst: die Vorgabe des
+   * Sitzes. Der Zeichner rechnet die doppelfreie Verteilung NICHT selbst aus
+   * — er bekommt sie fertig (siehe farben.ts, `farbtafel`).
+   */
+  private farbwahl: readonly string[] = [];
   /** Rauschkachel für den Rasen. */
   private rauschen: HTMLCanvasElement | null = null;
 
@@ -208,6 +219,29 @@ export class Zeichner {
   constructor(leinwand: HTMLCanvasElement) {
     this.leinwand = leinwand;
     this.ctx = leinwand.getContext('2d');
+  }
+
+  /**
+   * Die Ballfarben setzen — je Sitz eine, in Sitzreihenfolge.
+   *
+   * Die gemalten Ballbilder haengen an der Farbe und werden deshalb
+   * weggeworfen; ohne das behielte ein Umgefaerbter seinen alten Ball, bis
+   * die Seite neu laedt.
+   */
+  setzeFarben(farben: readonly string[]): void {
+    if (
+      farben.length === this.farbwahl.length &&
+      farben.every((f, i) => f === this.farbwahl[i])
+    ) {
+      return;
+    }
+    this.farbwahl = [...farben];
+    this.ballBilder = [];
+  }
+
+  /** Farbe eines Sitzes: die gewaehlte, sonst die des Sitzes. */
+  private farbe(sitz: number): string {
+    return this.farbwahl[sitz] ?? farbeVon(sitz);
   }
 
   /** Ohne 2D-Kontext (jsdom, sehr alte Browser) wird gar nicht gemalt. */
@@ -228,12 +262,25 @@ export class Zeichner {
     };
   }
 
+  /**
+   * Weltkoordinate → Bildschirmpunkt, je Achse einzeln.
+   *
+   * Die beiden gibt es neben `zuBild`, weil die Verdeckungsprüfung je Bild
+   * über zwei Dutzend Punkte läuft: Ein `{px, py}` je Punkt wären 1.500
+   * weggeworfene Objekte je Sekunde, und der Zeichenpfad legt bewusst nichts
+   * an. Die Formel steht nur hier — `zuBild` benutzt sie mit.
+   */
+  zuBildX(x: number): number {
+    return (x - this.mx) * this.skala + this.breitePx / 2;
+  }
+
+  zuBildY(y: number): number {
+    return (y - this.my) * this.skala + this.hoehePx / 2;
+  }
+
   /** Weltkoordinaten → Bildschirmpunkt (CSS-Pixel relativ zur Leinwand). */
   zuBild(x: number, y: number): { px: number; py: number } {
-    return {
-      px: (x - this.mx) * this.skala + this.breitePx / 2,
-      py: (y - this.my) * this.skala + this.hoehePx / 2,
-    };
+    return { px: this.zuBildX(x), py: this.zuBildY(y) };
   }
 
   /**
@@ -270,7 +317,7 @@ export class Zeichner {
         const n = e.staerke > 12 ? 7 : 4;
         for (let k = 0; k < n; k += 1) this.funke(e.x, e.y, '#fff6d0', 260, 3.2);
       } else if (e.art === 'balltreffer') {
-        for (let k = 0; k < 5; k += 1) this.funke(e.x, e.y, farbeVon(e.sitz), 300, 3.6);
+        for (let k = 0; k < 5; k += 1) this.funke(e.x, e.y, this.farbe(e.sitz), 300, 3.6);
       } else if (e.art === 'bumper') {
         this.ringstoss(e.x, e.y, '#ffd166', 340);
         for (let k = 0; k < 8; k += 1) this.funke(e.x, e.y, '#ffe08a', 340, 5);
@@ -279,8 +326,8 @@ export class Zeichner {
         for (let k = 0; k < 8; k += 1) this.funke(e.x, e.y, '#cfeaff', 420, 3);
       } else if (e.art === 'eingelocht') {
         // Konfetti in der Spielerfarbe — der einzige Effekt, der lange steht.
-        for (let k = 0; k < 22; k += 1) this.funke(e.x, e.y, farbeVon(e.sitz), 900, 6);
-        this.ringstoss(e.x, e.y, farbeVon(e.sitz), 700);
+        for (let k = 0; k < 22; k += 1) this.funke(e.x, e.y, this.farbe(e.sitz), 900, 6);
+        this.ringstoss(e.x, e.y, this.farbe(e.sitz), 700);
       } else if (e.art === 'portal') {
         this.ringstoss(e.x, e.y, '#c9a7ff', 400);
         this.ringstoss(e.zielX, e.zielY, '#c9a7ff', 400);
@@ -915,7 +962,7 @@ export class Zeichner {
         // Sichtbare Schonzeit: Der Ring pulsiert und läuft mit ihr aus.
         const rest = 1 - (z.takt - z.aktuell.startTakt) / IMMUN_TAKTE;
         ctx.globalAlpha = 0.35 + 0.35 * Math.sin(a.uhrMs / 130);
-        ctx.strokeStyle = farbeVon(s);
+        ctx.strokeStyle = this.farbe(s);
         ctx.lineWidth = 0.09;
         ctx.beginPath();
         ctx.arc(x, y, r * (1.6 + 0.5 * rest), 0, Math.PI * 2);
@@ -954,7 +1001,7 @@ export class Zeichner {
       this.ballBilder[sitz] = null;
       return null;
     }
-    const farbe = farbeVon(sitz);
+    const farbe = this.farbe(sitz);
     const m = groesse / 2;
     const v = c.createRadialGradient(m - m * 0.35, m - m * 0.4, m * 0.05, m, m, m * 0.98);
     v.addColorStop(0, heller(farbe, 0.75));
@@ -988,7 +1035,7 @@ export class Zeichner {
   /** Fahnenmast und Tuch — bewusst ÜBER den Bällen, damit man das Loch findet. */
   private zeichneFahne(ctx: CanvasRenderingContext2D, a: Bildauftrag): void {
     const [lx, ly] = a.karte.loch;
-    const hoehe = 2.5;
+    const hoehe = FAHNEN_HOEHE;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.lineWidth = 0.1;
     ctx.beginPath();
@@ -1005,7 +1052,7 @@ export class Zeichner {
     ctx.fillStyle = '#e63946';
     ctx.beginPath();
     ctx.moveTo(lx, ly - hoehe);
-    ctx.quadraticCurveTo(lx + 0.65, ly - hoehe + 0.12 + wehen, lx + 1.25, ly - hoehe + 0.42);
+    ctx.quadraticCurveTo(lx + 0.65, ly - hoehe + 0.12 + wehen, lx + FAHNEN_BREITE, ly - hoehe + 0.42);
     ctx.quadraticCurveTo(lx + 0.6, ly - hoehe + 0.62 - wehen, lx, ly - hoehe + 0.92);
     ctx.closePath();
     ctx.fill();
@@ -1075,7 +1122,8 @@ export class Zeichner {
     ctx.fill();
 
     // Die beiden Marken auch dann sichtbar, wenn der Pfeil sie noch nicht
-    // erreicht hat: Sonst weiß man erst hinterher, wo die Stufen liegen.
+    // erreicht hat: Sonst weiß man erst hinterher, wo die Drittel liegen —
+    // und seit die Farbe stufenlos läuft, sind sie die einzige Marke.
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
     ctx.lineWidth = 0.06;
     for (let i = 1; i <= 2; i += 1) {
@@ -1185,15 +1233,46 @@ export class Zeichner {
 }
 
 /**
- * Grün → Gelb → Orange → Rot.
+ * Die vier Farben des Kraftpfeils und die Kraft, bei der sie rein stehen.
  *
- * Als Stufen und nicht als Verlauf: Der Pfeil ist ein Anzeigeinstrument, und
- * ein stufenloser Verlauf sagt bei 40 % dasselbe wie bei 45 %. Die drei
- * Abschnitte des Schafts teilen sich dieselben Grenzen.
+ * Die Zahlen sind die alten Stufengrenzen: Bei 0, 34, 67 und 90 Prozent
+ * kommt aus `kraftfarbe` Zeichen für Zeichen derselbe Wert wie aus der
+ * Stufenfassung von früher. Wer eine Farbe tauscht, tauscht sie hier — der
+ * Pfeil, seine Spitze und die Prozentzahl lesen alle dieselbe Tabelle.
+ */
+const KRAFT_STUETZEN: readonly (readonly [number, string])[] = [
+  [0, '#3ddc84'],
+  [0.34, '#ffd23f'],
+  [0.67, '#ff9124'],
+  [0.9, '#ff4d4d'],
+];
+
+/**
+ * Grün → Gelb → Orange → Rot, stufenlos.
+ *
+ * Bis zum 08.09.2026 waren es vier Stufen. Das sprang: Ein Prozent mehr
+ * Kraft färbte den ganzen Pfeil um, die neunzehn davor änderten nichts —
+ * beim Ziehen sieht das nach einem Zustandswechsel aus, den es im Schlag
+ * gar nicht gibt. Jetzt hat jedes Prozent seinen eigenen Zwischenton, und
+ * die Farbe bewegt sich mit der Hand statt gegen sie.
+ *
+ * Im wievielten Drittel man zieht, sagen weiterhin die zwei Marken auf dem
+ * Schaft und die Prozentzahl an der Spitze — die Farbe musste das nie
+ * allein tragen.
+ *
+ * Ab 90 % bleibt es reines Rot: Das letzte Zehntel ist der Bereich, in dem
+ * ohnehin fast alles gleich weit fliegt; dort soll die Warnfarbe stehen und
+ * nicht weiterwandern.
  */
 export function kraftfarbe(kraft: number): string {
-  if (kraft < 0.34) return '#3ddc84';
-  if (kraft < 0.67) return '#ffd23f';
-  if (kraft < 0.9) return '#ff9124';
-  return '#ff4d4d';
+  // Kein `undefined` ins fillStyle: Ein nicht endlicher Wert (NaN aus einer
+  // Division durch null) malt die schwächste Farbe statt still schwarz —
+  // dieselbe Vorsicht wie in `farbeAus`.
+  if (!(kraft > 0)) return KRAFT_STUETZEN[0][1];
+  for (let i = 1; i < KRAFT_STUETZEN.length; i += 1) {
+    const [von, vorher] = KRAFT_STUETZEN[i - 1];
+    const [bis, farbe] = KRAFT_STUETZEN[i];
+    if (kraft < bis) return mische(vorher, farbe, (kraft - von) / (bis - von));
+  }
+  return KRAFT_STUETZEN[KRAFT_STUETZEN.length - 1][1];
 }

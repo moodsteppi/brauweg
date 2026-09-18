@@ -132,6 +132,16 @@ export interface LiveParty {
    * dem alle gleichzeitig handeln, bei jedem Kauf auf den vollen Wert zurueck.
    */
   phaseDeadline: number | null;
+  /**
+   * Merkmal der Phase, zu der `phaseDeadline` gehoert (`phaseKey` des Moduls).
+   *
+   * Nur fuer Module, deren Phasen ohne Zwischenschritt aufeinanderfolgen: Dort
+   * gibt es kein null zwischen zwei Fristen, an dem eine neue Phase zu erkennen
+   * waere (Eiland — siehe `phaseKey` in game-api). Module ohne `phaseKey`
+   * lassen das Feld auf null; fuer sie bleibt das null von `phaseMs` das
+   * Merkmal.
+   */
+  phaseMarke: string | number | null;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   /** Gesetzt, solange der Clantisch pausiert ist. */
@@ -374,6 +384,7 @@ export class PartyRuntime {
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
+      phaseMarke: null,
       timer: null,
       offlineTimer: null,
       paused: false,
@@ -449,6 +460,7 @@ export class PartyRuntime {
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
+      phaseMarke: null,
       timer: null,
       offlineTimer: null,
       paused: table.pausedAt !== null,
@@ -556,7 +568,32 @@ export class PartyRuntime {
    */
   async act(tableId: string, accountId: string, action: unknown): Promise<void> {
     const party = this.requireLive(tableId);
-    if (party.finished) throw conflict('partyFinished');
+    if (party.finished) {
+      /**
+       * Beendete Partie: erst das Modul fragen, dann urteilen.
+       *
+       * Die Rundenpause endet, sobald der letzte anwesende Mensch "Weiter"
+       * tippt oder die Frist ablaeuft — bei der letzten Runde endet damit die
+       * ganze Partie. Wer in genau diesem Moment tippt, findet den Tisch da,
+       * wo er ihn haben wollte, und die Engine nennt seinen Tipp deshalb
+       * wirkungslos statt falsch (weiter() in game-doppelkopf/src/party.ts).
+       * Nur kam sie nie dran: Diese Zeile hat vorher jede Aktion auf einer
+       * beendeten Partie abgewiesen, und der Durchstich (realtime.test.ts)
+       * war unter Last daran rot, obwohl beide Clients alles richtig gemacht
+       * hatten. Dasselbe Rennen wie bei der verspaeteten Vorbehaltsantwort
+       * (applyVorbehalt in game-doppelkopf/src/round.ts, 06.09.2026), nur
+       * eine Ebene hoeher.
+       *
+       * Das Ergebnis wird weggeworfen: Ein Spielmodul ist eine reine
+       * Logikbibliothek, der Probelauf kostet nichts und aendert nichts. Und
+       * er entscheidet ALLEIN ueber das Nichts — alles andere bleibt
+       * 'partyFinished'. Eine gespielte Karte auf einer abgerechneten Partie
+       * ist kein Rennen, sondern ein Fehler, und sie soll auch so heissen.
+       */
+      const sitz = this.seatOf(party, accountId);
+      if (sitz !== null && this.wirkungslos(party, sitz, action)) return;
+      throw conflict('partyFinished');
+    }
     if (party.paused) throw conflict('partyPaused');
 
     const seat = this.seatOf(party, accountId);
@@ -580,6 +617,22 @@ export class PartyRuntime {
     party.state = next;
 
     await this.afterAction(party);
+  }
+
+  /**
+   * Laesst die Aktion den Zustand unveraendert?
+   *
+   * Dieselbe Frage wie das `next === party.state` in `act` — hier nur fuer
+   * einen Zustand, auf dem gar nicht mehr gehandelt werden darf. Ein Wurf des
+   * Moduls heisst dabei "nicht wirkungslos": Der Aufrufer soll dann seine
+   * eigene, genauere Ablehnung melden.
+   */
+  private wirkungslos(party: LiveParty, seat: number, action: unknown): boolean {
+    try {
+      return party.module.act(party.state, seat, action) === party.state;
+    } catch {
+      return false;
+    }
   }
 
   private async afterAction(party: LiveParty): Promise<void> {
@@ -636,6 +689,7 @@ export class PartyRuntime {
       // Niemand am Zug heisst Schaupause, und die hat ihre eigene Frist. Zwei
       // Uhren nebeneinander waeren zwei Antworten auf dieselbe Frage.
       party.phaseDeadline = null;
+      party.phaseMarke = null;
       this.scheduleInterlude(party);
       return;
     }
@@ -689,21 +743,33 @@ export class PartyRuntime {
   /**
    * Frist der laufenden Phase (phaseMs des Moduls), obwohl jemand am Zug ist.
    *
-   * Sie wird nur EINMAL gestellt und danach nicht mehr angefasst — genau das
-   * unterscheidet sie von der Zugzeit, die bei jeder Aktion irgendeines Sitzes
-   * neu anlaeuft. Zurueckgesetzt wird sie, wenn das Modul keine Frist mehr
-   * nennt; bei Tafelrunde ist das die Kampfphase zwischen zwei Vorbereitungen
-   * (siehe phaseMs in game-api).
+   * Sie wird je Phase nur EINMAL gestellt und danach nicht mehr angefasst —
+   * genau das unterscheidet sie von der Zugzeit, die bei jeder Aktion
+   * irgendeines Sitzes neu anlaeuft.
+   *
+   * Woran eine neue Phase zu erkennen ist, haengt am Modul (siehe phaseMs und
+   * phaseKey in game-api):
+   *
+   *   - Tafelrunde nennt zwischen zwei Vorbereitungen keine Frist (Kampfphase).
+   *     Das null setzt die Frist zurueck, die naechste stellt sie neu.
+   *   - Eiland hat nichts dazwischen: Die letzte Abgabe loest die Aufloesung
+   *     aus und die naechste Runde in einem Schritt. Dort wechselt stattdessen
+   *     `phaseKey` (die Rundennummer) — ohne diesen Vergleich liefe die Frist
+   *     der ersten Runde bis zum Partieende weiter und jede spaetere Runde
+   *     endete sofort.
    */
   private schedulePhase(party: LiveParty): void {
     const ms = party.module.phaseMs?.(party.state) ?? null;
     if (ms === null) {
       party.phaseDeadline = null;
+      party.phaseMarke = null;
       return;
     }
-    if (party.phaseDeadline === null) {
+    const marke = party.module.phaseKey?.(party.state) ?? null;
+    if (party.phaseDeadline === null || (marke !== null && marke !== party.phaseMarke)) {
       party.phaseDeadline = Date.now() + Math.min(ms, this.opts.phaseMaxMs);
     }
+    party.phaseMarke = marke;
   }
 
   /**
@@ -722,6 +788,7 @@ export class PartyRuntime {
     // Zwischen Timerstellung und -ablauf kann die Phase schon vorbei sein.
     if (!advance || party.module.phaseMs?.(party.state) === null) return;
     party.phaseDeadline = null;
+    party.phaseMarke = null;
 
     /*
      * KEIN `botControlled`: Anders als beim Zug-Timeout spielt hier niemand

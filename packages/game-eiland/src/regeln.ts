@@ -66,6 +66,24 @@ export interface EilandRegeln {
    * lesbares Wort mehr wert als ein Ja/Nein, das man erst deuten muss.
    */
   readonly variante: EilandVariante;
+  /**
+   * Wie lange eine Runde hoechstens dauert. Danach gilt der Zettel jedes noch
+   * offenen Sitzes als abgegeben — leer, wenn nichts angetippt war — und die
+   * Runde wird aufgeloest (`fristAbgelaufen` in partie.ts).
+   *
+   * DAS MODUL MISST DIE ZEIT NICHT. Es nennt nur die Dauer; gemessen wird sie
+   * von der Plattform, die nach Ablauf `advancePhase` ruft (game-api,
+   * Grundsatz 1 und `phaseMs`). Deshalb steht hier eine Dauer und kein
+   * Zeitpunkt — einen Zeitpunkt koennte dieses Paket gar nicht bilden.
+   *
+   * WARUM ES SIE GIBT: Bis zum 07.09.2026 endete eine Runde ausschliesslich,
+   * wenn der LETZTE Sitz abgegeben hatte. Einen Deckel gab es nur mittelbar
+   * ueber die Zugzeit der Plattform, und die taugt hier so wenig wie bei
+   * Tafelrunde: Beide Sitze waehlen gleichzeitig, `currentActor` nennt nur den
+   * kleinsten offenen — die Zugzeit wird also bei jeder Aktion irgendeines
+   * Sitzes neu gestellt und faellt am Botsitz ganz weg.
+   */
+  readonly rundenMs: number;
 }
 
 /**
@@ -101,6 +119,15 @@ export const DEFAULT_REGELN: EilandRegeln = {
    * dieses Modul ueberhaupt gibt; wer die offene Karte will, schaltet um.
    */
   variante: 'nebel',
+  /*
+   * 60 Sekunden je Runde: dieselbe Zahl wie die Zugzeit der Plattform
+   * (`turnTimeoutMs`), und aus demselben Gefuehl heraus — ein Zettel sind
+   * hoechstens `kontingentMax` bedaechtige Tipps auf ein Feld, das man im
+   * Nebel erst suchen muss. Kuerzer heisst, jemandem den Zettel wegzunehmen,
+   * den er gerade zusammenstellt; sie ist als Deckel gegen den gedacht, der
+   * nicht mehr hinsieht, nicht als Zeitdruck.
+   */
+  rundenMs: 60_000,
 };
 
 /**
@@ -220,5 +247,38 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
     probleme.push({ path: 'variante', messageKey: 'ruleset.varianteUnbekannt', severity: 'error' });
   }
 
+  /*
+   * Die Rundenfrist darf fehlen, aus demselben Grund wie die Spielart: Tische
+   * und Snapshots von VOR dem 07.09.2026 kennen sie nicht, und ein abgelehnter
+   * Regelsatz waere ein Tisch, der nach einem Deploy nicht mehr aufgeht.
+   * Ergaenzt wird sie in `mitFrist`. Steht sie da, muss sie stimmen — unter
+   * zehn Sekunden waere die Runde vorbei, bevor jemand das zweite Feld
+   * antippt, ueber fuenf Minuten ist es kein Deckel mehr.
+   */
+  const rundenMs = gegeben['rundenMs'];
+  if (rundenMs !== undefined && rundenMs !== null) {
+    if (typeof rundenMs !== 'number' || !Number.isInteger(rundenMs)) {
+      probleme.push({ path: 'rundenMs', messageKey: 'ruleset.fieldWrongType', severity: 'error' });
+    } else if (rundenMs < 10_000 || rundenMs > 300_000) {
+      probleme.push({ path: 'rundenMs', messageKey: 'ruleset.rundenfristAusserhalb', severity: 'error' });
+    }
+  }
+
   return probleme;
+}
+
+/**
+ * Fehlende Rundenfrist aus der Vorgabe ergaenzen.
+ *
+ * `rundenMs` kam am 07.09.2026 dazu. Ein Regelsatz, der VORHER gespeichert
+ * wurde — an einem wartenden Tisch oder in einem Partie-Snapshot —, hat das
+ * Feld nicht, und `undefined` waere hier keine harmlose Luecke: `phaseMs`
+ * gaebe der Plattform dann `undefined` statt einer Dauer, und die Runde
+ * stuende wieder ohne Deckel da. Derselbe Griff wie `mitFrist` in
+ * game-tafelrunde.
+ */
+export function mitFrist(regeln: EilandRegeln): EilandRegeln {
+  return regeln.rundenMs === undefined
+    ? { ...regeln, rundenMs: DEFAULT_REGELN.rundenMs }
+    : regeln;
 }

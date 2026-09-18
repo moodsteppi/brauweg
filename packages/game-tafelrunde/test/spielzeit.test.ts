@@ -22,6 +22,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  type Auswertung,
   STANDARD_ZEITMODELL,
   VIER_SITZE,
   messe,
@@ -173,9 +174,25 @@ describe('Spielzeit: das Zeitmodell', () => {
  * geht es um einen Median ueber Partien und nicht um Siegquoten je Marke, die
  * einen Nenner in den Hunderten brauchen.
  */
-const AUSWERTUNG = werteAus(
-  messe({ partien: 150, sitze: VIER_SITZE, besetzung: 'normal', saatBasis: 'spielzeit-probe' }),
-);
+const PROBE = {
+  partien: 150,
+  sitze: VIER_SITZE,
+  besetzung: 'normal' as const,
+  saatBasis: 'spielzeit-probe',
+};
+
+const AUSWERTUNG = werteAus(messe(PROBE));
+
+/**
+ * Der Anteil des Kampfes an der geschaetzten Spielzeit.
+ *
+ * Als Funktion und nicht als Zeile in der Auswertung: Es ist die Zahl, die
+ * man LIEST, wenn eine Schranke reisst, und keine, auf die eine Schranke
+ * steht — welche das ist und warum, steht am naechsten Test.
+ */
+function kampfAnteil(a: Auswertung): number {
+  return a.kampfMs / (a.vorbereitungMs + a.kampfMs + a.nachlaufMs);
+}
 
 describe('Spielzeit: der heutige Stand', () => {
   /**
@@ -203,32 +220,124 @@ describe('Spielzeit: der heutige Stand', () => {
   });
 
   /**
-   * Der Kampf ist der groesste Posten — mit Abstand.
+   * Der Kampf ist der groesste Posten — und daran, und nur daran, haengt die
+   * Empfehlung aus Abschnitt 4 von docs/TAFELRUNDE-SPIELZEIT.md: "dreh am
+   * Kampf, nicht an der Vorbereitung".
    *
-   * Das ist die Antwort auf die eigentliche Frage der Aufgabe ("miss, woraus
+   * Das war die Antwort auf die eigentliche Frage der Aufgabe ("miss, woraus
    * die elf Minuten bestehen"): rund 60 % Kampf, 35 % Vorbereitung, 5 %
-   * Nachlauf. Wer an der Vorbereitung dreht, dreht am kleineren Posten. Diese
-   * Probe haelt die Rangfolge fest, damit die Empfehlung nicht still veraltet.
-   * Gemessen am 05.09.2026 abends: 59,8 / 34,9 / 5,3 (vormittags 57,4 / 36,7 /
-   * 6,0 — der Kampf hat zugelegt, weil der Bot seitdem staerkere Bretter
-   * baut). Am 06.09.2026 sind es 57,3 / 39,2 / 3,6: Der Nachlauf ist von 2,5
-   * auf 1,5 s gefallen, und damit verschiebt sich der Rest anteilig nach oben,
-   * ohne dass jemand an ihm gedreht haette.
+   * Nachlauf. Gemessen am 05.09.2026 abends: 59,8 / 34,9 / 5,3 (vormittags
+   * 57,4 / 36,7 / 6,0 — der Kampf hat zugelegt, weil der Bot seitdem
+   * staerkere Bretter baut). Am 06.09.2026 sind es 57,3 / 39,2 / 3,6: Der
+   * Nachlauf ist von 2,5 auf 1,5 s gefallen, und damit verschiebt sich der
+   * Rest anteilig nach oben, ohne dass jemand an ihm gedreht haette. Am
+   * 09.09.2026 sind es 54,5 / 41,4 / 4,1 — der Kampf ist das 1,3-fache der
+   * Vorbereitung. Vor dem Zeitraffer waren es 70 / 25 / 5.
    *
-   * VOR DEM ZEITRAFFER waren es 70 / 25 / 5. Dass der Kampf nur noch knapp
-   * ueber der Haelfte liegt, ist die Wirkung von x2 und kein neuer Befund —
-   * der Anteil, den man wegnehmen wollte, ist weg. Die Schranke bleibt bei
-   * der Haelfte: Faellt der Kampf DARUNTER, ist die Vorbereitung der groesste
-   * Posten geworden, und dann gilt die Empfehlung von damals nicht mehr.
+   * BIS ZUM 09.09.2026 STAND HIER EINE ANDERE SCHRANKE ("mehr als die Haelfte
+   * der Spielzeit ist Kampf"), und sie hat etwas anderes geprueft als das,
+   * womit sie begruendet war. `kampf > gesamt/2` heisst `kampf > vorbereitung
+   * + nachlauf` — "der Kampf traegt mehr als alles andere zusammen".
+   * Begruendet war sie mit "faellt er darunter, ist die Vorbereitung der
+   * groesste Posten", und das ist ein anderer Satz: `vorbereitung > kampf`.
+   * Zwischen beiden liegt ein Streifen, in dem die Probe rot wird, obwohl die
+   * Empfehlung unveraendert gilt (400 Partien zu viert, Saatbasis
+   * `spielzeit-v1`):
+   *
+   *     Zeitraffer     Kampf   Vorb.   Anteil   halbe Zeit   Rangfolge
+   *     x2 (gebaut)     3:27    2:25   56,6 %     haelt        haelt
+   *     x2,5            2:56    2:26   52,3 %     haelt        haelt
+   *     x2,75           2:35    2:24   49,6 %    REISST        haelt
+   *     x3              2:31    2:24   48,9 %    REISST        haelt
+   *     x3,5            2:15    2:25   45,7 %    REISST       REISST
+   *
+   * Die kleinere Stichprobe dieser Datei (150 Partien, `spielzeit-probe`)
+   * liegt rund zwei Punkte tiefer; dort reisst die Rangfolge schon bei x3.
+   * Die Spanne zwischen den beiden Schranken bleibt dieselbe — sie
+   * verschiebt sich nur mit, und das ist der Grund, keine der beiden auf eine
+   * feste Prozentzahl zu stellen.
+   *
+   * Geprueft wird deshalb die Rangfolge selbst. Sie reisst, wenn die
+   * Vorbereitung den Kampf UEBERHOLT — und das ist genau der Zeitpunkt, ab
+   * dem die Empfehlung von damals nicht mehr gilt und jemand neu messen muss,
+   * bevor er weiter kuerzt. Der Anteil steht in der Fehlermeldung, weil man
+   * ihn dann lesen will; eine Schranke ist er nicht mehr.
    */
   it('steckt seine Zeit vor allem in die Kaempfe', () => {
-    const gesamt = AUSWERTUNG.vorbereitungMs + AUSWERTUNG.kampfMs + AUSWERTUNG.nachlaufMs;
+    const anteil = `${(kampfAnteil(AUSWERTUNG) * 100).toFixed(1)} % der Spielzeit sind Kampf`;
     assert.ok(
-      AUSWERTUNG.kampfMs / gesamt > 0.5,
-      `nur ${((AUSWERTUNG.kampfMs / gesamt) * 100).toFixed(1)} % der Spielzeit sind Kampf`,
+      AUSWERTUNG.kampfMs > AUSWERTUNG.vorbereitungMs,
+      `die Vorbereitung hat den Kampf ueberholt (${anteil}) — Abschnitt 4 von ` +
+        `docs/TAFELRUNDE-SPIELZEIT.md gilt nicht mehr, es ist neu zu messen`,
     );
-    assert.ok(AUSWERTUNG.kampfMs > AUSWERTUNG.vorbereitungMs);
-    assert.ok(AUSWERTUNG.vorbereitungMs > AUSWERTUNG.nachlaufMs);
+    assert.ok(AUSWERTUNG.vorbereitungMs > AUSWERTUNG.nachlaufMs, anteil);
+  });
+
+  /**
+   * WARUM DIE SCHRANKE UEBERHAUPT VON UNTEN GREIFEN KANN — und wann nicht.
+   *
+   * Es gibt zwei Sorten von Zeitschrauben, und nur eine davon nimmt die
+   * Vorbereitung mit. Der Unterschied ist keine Feinheit: Er entscheidet, ob
+   * eine Kuerzung den Kampfanteil ueberhaupt bewegt.
+   *
+   *   - Eine KAMPFSCHRAUBE macht den einzelnen Kampf kuerzer und laesst die
+   *     Zahl der Runden stehen (Zeitraffer, Hoechstdauer, Takt). Die
+   *     Vorbereitung haengt an den Runden und ruehrt sich nicht — der Anteil
+   *     faellt voll durch.
+   *   - Eine RUNDENSCHRAUBE laesst Leben schneller fallen und streicht damit
+   *     Runden (Schadensteiler, Startleben). Sie kuerzt Kampf UND Vorbereitung
+   *     im selben Zug; der Anteil bleibt fast stehen.
+   *
+   * Gemessen an derselben Stichprobe wie oben: Zeitraffer x3 laesst vom Kampf
+   * 75 % und von der Vorbereitung 101 % uebrig (Anteil 54,5 -> 46,9 %),
+   * Schadensteiler 1 laesst 68 % und 73 % uebrig (54,5 -> 52,7 %). Beide
+   * Schrauben stehen hier bewusst weit aufgedreht — die Kampfschraube sogar
+   * ueber den Punkt hinaus, an dem die Rangfolge kippt. Gemessen wird der
+   * ZUSAMMENHANG und kein Vorschlag; welcher Wert gut waere, entscheidet
+   * niemand hier.
+   *
+   * WAS DIESE PROBE FAENGT: dass dieser Zusammenhang still kippt — etwa
+   * dadurch, dass jemand `vorbereitungsdauer` an die Kampfdauer haengt oder
+   * die Rundenzahl aus der Vorbereitungsrechnung nimmt. Dann stimmt die
+   * Anleitung darueber nicht mehr, und die naechste Kuerzung waehlt die
+   * falsche Schraube.
+   */
+  it('zieht die Vorbereitung nur mit, wenn eine Schraube RUNDEN streicht', () => {
+    const kampfschraube = werteAus(
+      messe({ ...PROBE, regler: { ...STANDARD_REGLER, zeitraffer: 3 } }),
+    );
+    const rundenschraube = werteAus(
+      messe({ ...PROBE, regler: { ...STANDARD_REGLER, schadenStufenTeiler: 1 } }),
+    );
+    const teil = (a: Auswertung, b: Auswertung) => `${((a.kampfMs / b.kampfMs) * 100).toFixed(0)} %`;
+
+    // Beide kuerzen den Kampf spuerbar — sonst misst der Rest nichts.
+    assert.ok(kampfschraube.kampfMs < AUSWERTUNG.kampfMs * 0.9, teil(kampfschraube, AUSWERTUNG));
+    assert.ok(rundenschraube.kampfMs < AUSWERTUNG.kampfMs * 0.9, teil(rundenschraube, AUSWERTUNG));
+
+    // Nur die zweite nimmt die Vorbereitung mit.
+    assert.ok(
+      kampfschraube.vorbereitungMs > AUSWERTUNG.vorbereitungMs * 0.95,
+      `der Zeitraffer hat die Vorbereitung gekuerzt (${kampfschraube.vorbereitungMs} ms ` +
+        `gegen ${AUSWERTUNG.vorbereitungMs} ms) — dann haengt sie an der Kampfdauer`,
+    );
+    assert.ok(
+      rundenschraube.vorbereitungMs < AUSWERTUNG.vorbereitungMs * 0.85,
+      `der Schadensteiler hat die Vorbereitung nicht gekuerzt (${rundenschraube.vorbereitungMs} ms ` +
+        `gegen ${AUSWERTUNG.vorbereitungMs} ms) — dann streicht er keine Runden mehr`,
+    );
+
+    // Und deshalb bewegt nur die eine den Anteil, um den es der Schranke geht.
+    const gebaut = kampfAnteil(AUSWERTUNG);
+    const punkte = (a: Auswertung) => `${((gebaut - kampfAnteil(a)) * 100).toFixed(1)} Punkte`;
+    assert.ok(
+      gebaut - kampfAnteil(kampfschraube) > 0.04,
+      `der Zeitraffer bewegt den Kampfanteil nur um ${punkte(kampfschraube)}`,
+    );
+    assert.ok(
+      Math.abs(gebaut - kampfAnteil(rundenschraube)) < 0.04,
+      `der Schadensteiler bewegt den Kampfanteil um ${punkte(rundenschraube)}`,
+    );
   });
 
   /**

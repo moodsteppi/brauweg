@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // `vi.hoisted`, weil `vi.mock` an den Dateianfang wandert: Ohne das stehen die
 // Attrappen zum Zeitpunkt des Ersetzens noch nicht.
-const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables, leaveTable } =
+const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables, leaveTable, defaults } =
   vi.hoisted(() => ({
     sucheStarten: vi.fn(),
     sucheStand: vi.fn(),
@@ -26,6 +26,7 @@ const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables
     joinTable: vi.fn(),
     tables: vi.fn(),
     leaveTable: vi.fn(),
+    defaults: vi.fn(),
   }));
 
 vi.mock('../api', () => ({
@@ -37,6 +38,7 @@ vi.mock('../api', () => ({
     joinTable,
     tables,
     leaveTable,
+    defaults,
     aktiveSpieler: () => Promise.resolve({ aktiv: 3 }),
   },
 }));
@@ -72,6 +74,9 @@ async function einTakt(): Promise<void> {
   await durchatmen();
 }
 
+/** Was `GET /games/<spiel>/defaults` liefert — die Vorgabe des Moduls. */
+const VORGABE = { spalten: 8, zeilen: 7, farben: 6, variante: 'nebel', barrieren: 10 };
+
 describe('Filler: Mitspieler suchen', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -82,6 +87,18 @@ describe('Filler: Mitspieler suchen', () => {
     joinTable.mockReset();
     tables.mockReset().mockResolvedValue([]);
     leaveTable.mockReset().mockResolvedValue({ ok: true });
+    /*
+     * Der Bildschirm holt den Regelsatz seit dem 07.09.2026 beim Server,
+     * statt ihn abzuschreiben (src/spiel-vorgabe.ts). Hier steht deshalb die
+     * ANTWORT DES SERVERS und nicht eine zweite Abschrift: Was das Modul
+     * wirklich vorgibt, prueft der Vertrag in src/vertrag/.
+     */
+    defaults.mockReset().mockResolvedValue({
+      config: VORGABE,
+      protocolVersion: 1,
+      seatCounts: [2],
+      rounds: {},
+    });
   });
 
   afterEach(() => {
@@ -206,6 +223,45 @@ describe('Filler: Mitspieler suchen', () => {
       seats: 2,
       fillWithBots: true,
       config: { variante: 'build' },
+    });
+  });
+
+  it('legt die Spielart auf den Regelsatz des Servers, statt ihn abzuschreiben', async () => {
+    /*
+     * Bis zum 07.09.2026 stand der Regelsatz als Konstante im Bildschirm. Der
+     * Server schreibt eine mitgeschickte `config` unveraendert als Regelsatz
+     * des Tisches fest — die Abschrift UEBERSTIMMTE also das Modul, und beim
+     * Auseinanderlaufen wurde nichts rot. Diese Probe haelt beides fest: dass
+     * gefragt wird, und dass die Antwort ungekuerzt mitgeht.
+     */
+    createTable.mockResolvedValue({ id: 'tisch-10', joinCode: null });
+    render(<Filler onBack={() => {}} />);
+    await durchatmen();
+    // Ausdruecklich, weil die zuletzt gewaehlte Spielart im localStorage
+    // ueberlebt — auch zwischen zwei Proben derselben Datei.
+    fireEvent.click(screen.getByRole('button', { name: 'Nebel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bot spielen' }));
+    await durchatmen();
+
+    expect(defaults).toHaveBeenCalledWith('filler');
+    expect(createTable.mock.calls[0]?.[0]).toMatchObject({
+      config: { ...VORGABE, variante: 'nebel' },
+    });
+  });
+
+  it('setzt in Extreme sieben Farben, sonst die des Moduls', async () => {
+    // Die Sieben ist die einzige Zahl, die der Bildschirm noch selbst setzt —
+    // das Modul kennt nur EINE Farbzahl fuer alle Spielarten. Ueberall sonst
+    // gilt seine Vorgabe, auch wenn sie sich aendert.
+    createTable.mockResolvedValue({ id: 'tisch-11', joinCode: null });
+    render(<Filler onBack={() => {}} />);
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Extreme' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bot spielen' }));
+    await durchatmen();
+
+    expect(createTable.mock.calls[0]?.[0]).toMatchObject({
+      config: { farben: 7, variante: 'extreme' },
     });
   });
 });

@@ -3001,6 +3001,8 @@ td {
 }
 
 .front-tab {
+  /* Traegt den Bereitschaftspunkt (siehe unten). */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3013,6 +3015,27 @@ td {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+/*
+  Der Punkt sitzt an der Ecke des SYMBOLS, nicht an der des Knopfes.
+
+  Die Leiste ist ein Raster mit 0,2rem Fuge; ein Punkt an der Knopfkante
+  haengt zur Haelfte im Nachbarreiter und sieht aus, als gehoere er dorthin.
+  Kleiner als an der Truhe ist er auch: Dort hat er einen 3,5rem-Knopf fuer
+  sich, hier teilt er sich einen Fuenftel der Bildschirmbreite mit Symbol
+  und Wort.
+*/
+.front-tab .hub-punkt {
+  top: 0.15rem;
+  right: auto;
+  left: 50%;
+  margin-left: 0.3rem;
+  /* Mit `box-sizing: border-box` zaehlt der 2px-Ring mit: unter 0,7rem
+     bleibt vom roten Kern weniger als die Fassung, und der Punkt sieht
+     grau aus statt rot. */
+  width: 0.7rem;
+  height: 0.7rem;
 }
 
 .front-tab-icon {
@@ -5999,6 +6022,19 @@ main.auth > .muted {
 .hub-themenspiel .muted {
   font-size: 0.76rem;
   color: #dbe3ec;
+}
+/* Zeichen und Sitzzahl als ein Stueck: inline-flex haelt das Zeichen auf der
+   Schriftmitte, statt es wie ein Bild auf die Grundlinie zu setzen — dort
+   haengt es sonst sichtbar zu tief neben der Zahl. */
+.hub-themenspiel-sitze {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
+  vertical-align: -0.1em;
+}
+.hub-themenspiel-sitze .zeichen {
+  width: 1.05em;
+  height: 1.05em;
 }
 .hub-themenspiel .front-bald-tag {
   position: absolute;
@@ -16776,28 +16812,224 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-tisch {
   justify-content: flex-start;
   /*
-   * Die Luft zwischen den Baendern des Tisches — EINE Zahl, weil sie an zwei
-   * Stellen gebraucht wird: als `gap` hier und als negativer Abstand an der
-   * Bank, die sich ausdruecklich wieder an die Brettkante zieht
-   * (`.tr-bank`). Standen dort zwei Zahlen, ruecke die Bank beim naechsten
-   * Nachjustieren ins Brett hinein oder von ihm weg.
+   * DIE HOEHE IST DAS MASS, NICHT DIE BREITE — Umbau vom 07.09.2026.
+   *
+   * Bis dahin hingen Brett, Bank und Laden allein an der Bildschirmbreite
+   * (`min(94vw, 460px)`), und die Seite rollte, wenn die Summe nicht passte.
+   * Auf einem 1280 x 720 grossen Notebook waren das gemessene 1229 Pixel
+   * Inhalt in 720 Pixel Schirm: Der Laden — die einzige Stelle, an der man
+   * kauft — lag komplett unter der Kante. Robin hat es dreimal gemeldet.
+   *
+   * `100dvh` und nicht `100vh`: Auf dem Handy wandert die Adressleiste, und
+   * `vh` rechnet mit dem GROSSEN Schirm. Wer in vh rechnet, schiebt den
+   * Bereit-Knopf unter die Leiste, solange sie ausgefahren ist. Dieselbe
+   * Umstellung wie an Tafel und Anmeldeseite.
+   *
+   * Die Hoehe steht hier und nicht an `.tr-seite`, weil das Menue derselben
+   * Klasse rollen DARF: Dort ist eine lange Tischliste normal, hier waere sie
+   * ein Fehler. `.tr-seite` ist `position: fixed` mit `inset: 0`; `top` und
+   * `height` gewinnen zusammen gegen `bottom`, der Kasten ist also genau so
+   * hoch wie der sichtbare Schirm.
+   */
+  height: 100dvh;
+  /*
+   * Die Luft zwischen den Baendern des Tisches — Kopfleiste, Statuszeile,
+   * Spielflaeche, Laden.
+   *
+   * Sie zog bis zum 07.09.2026 auch die Bank an die Brettkante zurueck (ein
+   * negativer Abstand an `.tr-bank`, gegen genau diese Luecke gerechnet).
+   * Das ist entfallen: Bank und Bretter stehen jetzt zusammen in
+   * `.tr-spielflaeche`, und dort ist gar keine Luft dazwischen.
    *
    * 6 und nicht 8 am Handy: Fuenf Abstaende auf einem 956 Pixel hohen Schirm
    * sind 10 Pixel, und die fehlten am 06.09.2026 unten am Laden. Ab Tablet
    * ist der Platz da, dort bleibt es bei 8.
    */
   --tr-luft: 6px;
+  /*
+   * Die Obergrenze der Spielflaeche aus der BREITE. Sie steht hier als eigene
+   * Zahl, weil `.tr-spielflaeche` sie mit der Grenze aus der HOEHE
+   * verrechnet — kleiner von beiden gewinnt. Bis zum 07.09.2026 stand dieser
+   * Wert direkt als `width` an `.tr-bretter` und `.tr-bank`.
+   */
+  --tr-feld-breit: min(94vw, 460px);
+  /*
+   * Wie hoch ein Bankfach HOECHSTENS wird.
+   *
+   * Eine Obergrenze und keine feste Hoehe, aber eine, die es geben muss: Die
+   * Spielflaeche zieht das Bankband ab, bevor sie die Brettbreite ausrechnet.
+   * Ein Fach ist quadratisch, also so hoch wie die Bank breit ist — und die
+   * Bankbreite ist genau das, was aus der uebrigen Hoehe erst folgen soll.
+   * Zwei Zahlen, die einander bedingen, ergeben keine Rechnung; mit einer
+   * Obergrenze wird daraus eine sichere Schranke. Faellt das Fach kleiner
+   * aus, bleibt oben Luft — kein Ueberlauf.
+   */
+  --tr-bankplatz: 44px;
+  /* Das ganze Bankband: Fach plus Polsterung (4 oben, 5 unten). */
+  --tr-bankhoehe: calc(var(--tr-bankplatz) + 9px);
+  /*
+   * Was ueber dem Gegnerbrett steht (`.tr-brettkopf`): Name und Marken in
+   * einer Zeile, gemessen 15 bis 18 Pixel, dazu etwas Luft zum Brett.
+   *
+   * Die Zeile ist so hoch wie diese Zahl und nicht umgekehrt: `.tr-brettkopf`
+   * setzt sie als `height`. Nur so stimmt der Abzug — umbrechen darf sie
+   * deshalb nicht mehr (Begruendung dort).
+   */
+  --tr-kopfhoehe: 24px;
+  /* Die Fuge zwischen den beiden Bretthaelften — EINE Zahl, weil sie als
+     `gap` an `.tr-bretter` steht UND von der Rechnung abgezogen werden muss.
+     Stand sie nur am `gap`, lagen die Bretter drei Pixel ueber ihrem Kasten:
+     gemessen am 07.09.2026, sichtbar als ein Pixel Versatz nach oben. */
+  --tr-brettluft: 3px;
   gap: var(--tr-luft);
   padding: 0 0 max(8px, env(safe-area-inset-bottom));
-  /* Der Bildschirm rollt als Ganzes, wenn er nicht passt. Ohne das faellt der
-     Laden auf einem kurzen Handy unter den Rand — und der Laden ist die
-     einzige Stelle, an der man ueberhaupt etwas kaufen kann. */
+  /*
+   * Der Bildschirm rollt nur noch als NOTNAGEL.
+   *
+   * Seit die Spielflaeche ihre Groesse aus der Hoehe zieht, passt der Tisch;
+   * geraet aber doch etwas ausser Mass (ein Satz ueber der leeren Bank, eine
+   * dritte Zeile Marken), soll nichts unerreichbar sein. Wegnehmen darf man
+   * diese Zeile deshalb nicht — sie ist der Unterschied zwischen „eng" und
+   * „der Laden ist weg".
+   */
   overflow-y: auto;
   overflow-x: hidden;
   /* Am Ende des Rollens nicht an die Seite weiterreichen: Sonst zieht der
      Daumen unter Android das Neuladen der Seite auf — mitten in der Partie.
      Dieselbe Zeile aus demselben Grund wie in FeldherrTisch.tsx. */
   overscroll-behavior: contain;
+}
+
+/*
+ * Die Baender des Tisches behalten ihre Hoehe.
+ *
+ * Der Tisch ist jetzt genau einen Schirm hoch, und in einer Flex-Spalte
+ * schrumpft dann per Vorgabe JEDES Kind. Ohne diese Zeile quetscht der Laden
+ * sich zusammen, statt dass die Spielflaeche kleiner wird — und ein
+ * gequetschter Laden schneidet seine Karten an.
+ */
+.tr-oben,
+.tr-statuszeile,
+.tr-auswahlband,
+.tr-fuss {
+  flex: 0 0 auto;
+}
+
+/*
+ * DIE MITTE: der Kasten um alles zwischen Statuszeile und Laden.
+ *
+ * Er ist am Handy nicht zu sehen und aendert dort auch nichts: Er reicht den
+ * freien Platz durch (`flex: 1 1 0`), und die Spielflaeche darin misst
+ * weiterhin selbst, was ihr davon bleibt. Da zu sein hat er allein wegen des
+ * breiten Schirms — dort legt das Raster ab 64rem Statuszeile und Laden links
+ * und rechts NEBEN ihn (siehe unten). Ohne ihn braeuchte jedes einzelne Kind
+ * eine eigene Zelle.
+ *
+ * `min-height: 0` ist der Kern und keine Zierde: Ohne ihn ist die
+ * Mindesthoehe eines Flex-Kindes sein Inhalt, und die Spielflaeche darin
+ * bekaeme nicht den ueberzaehligen, sondern den ANGEFORDERTEN Platz — die
+ * ganze Hoehenrechnung liefe ins Leere.
+ */
+.tr-mitte {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tr-luft);
+}
+
+/* -- Die Spielflaeche: Bretter und Bank ------------------------------------ */
+
+/*
+ * DER KASTEN, DER DEN UEBRIGEN PLATZ BEKOMMT — und aus ihm die eine Groesse
+ * rechnet, an der Brett und Bank haengen.
+ *
+ * `flex: 1 1 0` heisst: Was Kopfleiste, Statuszeile und Laden nicht brauchen,
+ * gehoert hierher. Die Hoehe dieses Kastens ist damit gemessen und nicht
+ * geraten — es steht nirgends eine Zahl fuer „so hoch ist die Kopfleiste".
+ *
+ * `container-type: size` macht ihn zum Bezug fuer `cqh` weiter unten. Das
+ * geht nur, weil seine Groesse NICHT vom Inhalt kommt: die Hoehe vom Flex,
+ * die Breite von `width: 100%`. Ohne diese Zeile waere `100cqh` der ganze
+ * Schirm, und die Rechnung waere um Kopfleiste und Laden zu gross.
+ */
+.tr-spielflaeche {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Bleibt Platz uebrig (kurzer Bretttitel, leere Bank), verteilt er sich auf
+     beide Seiten, statt alles nach oben zu ziehen. */
+  justify-content: center;
+  container-type: size;
+  /* Wie breit die Gegnerhaelfte im Verhaeltnis zur eigenen ist. Steht hier
+     und nicht als 86 % an `.tr-brett`, weil die Rechnung darunter sie
+     braucht — zwei Zahlen liefen beim naechsten Nachjustieren auseinander. */
+  --tr-fremd: 0;
+}
+.tr-spielflaeche[data-gegner] { --tr-fremd: 0.86; }
+
+/*
+ * DIE EINE GROESSE, aus der alles andere folgt: die Breite des eigenen
+ * Bretts. Bank und Bretter tragen sie, die Wabe folgt aus ihr (Prozent in
+ * zuege.ts), die Figur aus der Wabe.
+ *
+ * Sie steht an den KINDERN und nicht an `.tr-spielflaeche` selbst: Ein
+ * `cqh` am Container-Element bezieht sich auf dessen eigenen Container, also
+ * auf einen Vorfahren — die Rechnung waere still um die Kopfleiste zu gross.
+ *
+ * Die Rechnung, von rechts nach links gelesen: Von der freien Hoehe gehen
+ * Bretttitel und Bankband ab (`--tr-abzug`). Was bleibt, teilen sich die
+ * beiden Bretthaelften im Verhaeltnis 1 zu `--tr-fremd`. Aus der Hoehe einer
+ * Haelfte wird ihre Breite ueber das Seitenverhaeltnis des Rasters
+ * (`--tr-brettverhaeltnis`), und das kommt aus `rastermass()` in zuege.ts —
+ * derselben Funktion, die auch die Waben legt. Hier steht KEINE zweite
+ * Geometrie.
+ */
+.tr-spielflaeche > * {
+  --tr-abzug: calc(var(--tr-kopfhoehe) + var(--tr-brettluft));
+  --tr-feld: min(
+    var(--tr-feld-breit),
+    /* Und nie breiter als der Kasten selbst. Solange der Tisch eine Spalte
+       war, war das dasselbe wie `--tr-feld-breit` in vw; seit der Laden am
+       breiten Schirm daneben steht (Block ab 64rem), ist es das nicht mehr —
+       ohne diese Zeile haengt das Brett dort ueber die Ladenspalte. */
+    100cqw,
+    calc(
+      (100cqh - var(--tr-abzug)) * var(--tr-brettverhaeltnis) / (1 + var(--tr-fremd))
+    )
+  );
+}
+.tr-spielflaeche[data-bank] > * {
+  --tr-abzug: calc(var(--tr-kopfhoehe) + var(--tr-brettluft) + var(--tr-bankhoehe));
+}
+
+/*
+ * ERST HIER wird die Rechnung wirksam — und nur, wenn der Browser
+ * Container-Anfragen kennt (Safari ab 16, Chrome ab 105).
+ *
+ * Der Umweg ist kein Beiwerk: Kennt ein Browser `cqh` nicht, ist die ganze
+ * `min()`-Rechnung "ungueltig zum Rechenzeitpunkt", und `width` faellt damit
+ * nicht auf die Zeile davor zurueck, sondern auf `auto`. Ein `.tr-bretter`
+ * mit `width: auto` in einer zentrierten Spalte ist so breit wie sein
+ * Inhalt, und der Inhalt ist `width: 100%` davon — das Brett waere weg.
+ * Mit `@supports` bleibt es dort bei der alten Breitenrechnung: enger,
+ * aber vollstaendig.
+ */
+@supports (container-type: size) {
+  /* Mit dem Elternteil davor, damit diese Regel gegen die Rueckfall-Breite
+     weiter unten gewinnt: Beide haetten sonst dieselbe Gewichtung, und dann
+     entschiede allein die Reihenfolge in der Datei — eine Falle fuer den
+     Naechsten, der einen der beiden Bloecke verschiebt. */
+  .tr-spielflaeche > .tr-bretter,
+  .tr-spielflaeche > .tr-bank {
+    width: var(--tr-feld);
+  }
 }
 
 /* -- Die festgeheftete Kopfleiste ----------------------------------------- */
@@ -16976,8 +17208,10 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-bretter {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  width: min(94vw, 460px);
+  gap: var(--tr-brettluft);
+  /* Die Grenze aus der Breite als Rueckfall; die eine Groesse aus der HOEHE
+     setzt der `@supports`-Block weiter unten darueber. */
+  width: var(--tr-feld-breit);
 }
 .tr-brettteil { position: relative; }
 /* Die Gegnerhaelfte tritt zurueck: Sie ist Auskunft, nicht Bedienflaeche.
@@ -16997,9 +17231,14 @@ span.hub-angebot-art.poker-jeton-stapel {
  * gerechnet (zuege.ts), die Figur haengt an der Wabenhoehe, und `aspect-ratio`
  * zieht die Hoehe mit. Nur nimmt der Kasten jetzt auch wirklich nur den Platz,
  * den er braucht. Die Figuren des Gegners bleiben so gross wie zuvor.
+ *
+ * Die 86 selbst steht seit dem 07.09.2026 als `--tr-fremd` an
+ * `.tr-spielflaeche`: Die Hoehenrechnung dort teilt den Platz im selben
+ * Verhaeltnis auf beide Haelften auf. Stuende die Zahl zweimal da, waere das
+ * Brett beim naechsten Nachjustieren entweder zu gross oder zu klein.
  */
 .tr-brettteil-fremd .tr-brett {
-  width: 86%;
+  width: calc(var(--tr-fremd) * 100%);
   margin-inline: auto;
 }
 
@@ -17010,19 +17249,36 @@ span.hub-angebot-art.poker-jeton-stapel {
  * 315 Pixel, die die Gegnerhaelfte am Handy hoch war — fuer einen Namen und
  * drei Chips. In einer Zeile sind es 18.
  *
- * Umbrechen darf die Zeile (`flex-wrap`): Bei sieben Marken und einem langen
- * Namen ist eine Reihe voll, und dann sind zwei Zeilen richtig. Der Name
- * schrumpft dabei nicht unter seine Auslassungspunkte — er steht mit
- * `min-width: 0` in der Reihe und kuerzt sich selbst.
+ * EINE ZEILE, DIE SEITLICH ROLLT — geaendert am 07.09.2026. Bis dahin brach
+ * sie um (`flex-wrap: wrap`), und das ging nicht mehr auf: Die Spielflaeche
+ * rechnet die Brettbreite aus der freien Hoehe und muss diese Zeile dafuer
+ * vorher abziehen (`--tr-kopfhoehe`). Eine Zeile, die je nach Zahl der Marken
+ * 15 oder 30 Pixel hoch ist, macht aus dem Abzug eine Schaetzung — gemessen
+ * auf 1280 x 720 waren es 30 statt der veranschlagten 24, und das Brett stand
+ * sechs Pixel zu tief.
+ *
+ * Seitlich rollen darf sie: Dieselbe Ausnahme wie bei der Gegnerleiste
+ * darueber, aus demselben Grund („die Seite selbst rollt nie quer",
+ * DESIGN.md) — bei sieben Marken passt sie sonst nicht, und abschneiden waere
+ * schlechter als schieben. Der Name kuerzt sich weiterhin selbst
+ * (`min-width: 0` an `.tr-bretttitel`).
  */
 .tr-brettkopf {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  /* `safe` ist hier nicht Zierde: Laeuft zentrierter Inhalt ueber, schiebt
+     er sich nach BEIDEN Seiten hinaus, und der linke Teil ist dann durch
+     kein Rollen mehr erreichbar. Mit `safe` faellt die Zentrierung in
+     diesem Fall auf linksbuendig zurueck. */
+  justify-content: safe center;
   gap: 2px 6px;
-  margin: 0 0 3px;
+  height: var(--tr-kopfhoehe);
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.tr-brettkopf::-webkit-scrollbar { display: none; }
 
 .tr-bretttitel {
   min-width: 0;
@@ -17513,15 +17769,20 @@ span.hub-angebot-art.poker-jeton-stapel {
  * ist, desto sicherer trifft der Daumen. Deshalb oben eckig und ohne Luft
  * zum Brett, unten gerundet — eine Leiste am Brett und kein zweites Moebel.
  *
- * Der negative Abstand haelt sie auch dann an der Kante, wenn zwischen Brett
- * und Bank der Abstand von `.tr-tisch` (8 px) steht.
+ * Seit dem 07.09.2026 steht sie mit dem Brett in EINEM Kasten
+ * (`.tr-spielflaeche`, gap 0) — der negative Abstand, der sie vorher gegen
+ * die 8 Pixel Luft des Tisches an die Kante zog, ist damit entfallen. Wer
+ * hier wieder Abstand sieht, sucht ihn dort und nicht hier.
  */
 .tr-bank {
+  /* Traegt den Satz ueber der leeren Bank (`.tr-leer-bank`). */
+  position: relative;
   display: grid;
   grid-template-columns: repeat(9, 1fr);
   gap: 4px;
-  width: min(94vw, 460px);
-  margin-top: calc(-1 * var(--tr-luft));
+  /* Dieselbe Groesse wie das Brett darueber: Die Bank ist dessen Unterkante
+     und keine eigene Leiste — auch im Rueckfall (siehe `.tr-bretter`). */
+  width: var(--tr-feld-breit);
   padding: 4px 6px 5px;
   border-radius: 0 0 14px 14px;
   background: rgba(255, 255, 255, 0.05);
@@ -17532,9 +17793,16 @@ span.hub-angebot-art.poker-jeton-stapel {
   aspect-ratio: 1;
   /* Neun Plaetze in einer Reihe sind auf einem 360-px-Handy je 32 px breit —
      zu wenig zum Greifen UND zum Ablegen. Die Mindesthoehe macht aus dem
-     Quadrat dort ein Hochformat und die Flaeche wieder daumengerecht; auf
-     einem breiteren Schirm greift `aspect-ratio` wie bisher. */
+     Quadrat dort ein Hochformat und die Flaeche wieder daumengerecht. */
   min-height: 44px;
+  /*
+   * NEU seit dem 07.09.2026: eine Obergrenze. Sie ist der Preis dafuer, dass
+   * die Spielflaeche die Bankhoehe kennen muss, BEVOR sie die Brettbreite
+   * ausrechnet (siehe `--tr-bankplatz` in `.tr-tisch`). Sie rechnet mit
+   * diesem Hoechstwert; wird das Fach kleiner, bleibt oben etwas Luft, und
+   * das ist harmlos. Waere es GROESSER, laege die Bank ueber dem Laden.
+   */
+  max-height: var(--tr-bankplatz);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.25);
   overflow: hidden;
@@ -17637,9 +17905,26 @@ span.hub-angebot-art.poker-jeton-stapel {
 .tr-goldstand em { color: var(--muted); font: 700 11px/1 system-ui; font-style: normal; }
 .tr-goldstand .tr-icon { width: 16px; height: 16px; align-self: center; }
 
+/*
+ * Der Laden: so viele Spalten, wie der Tisch Ladenplaetze hat.
+ *
+ * Die ZAHL kommt als `--tr-ladenplaetze` aus der Sicht (sie steht im
+ * Regelsatz und ist je Tisch verstellbar), das RASTER steht hier — bis zum
+ * 07.09.2026 kam beides zusammen als Inline-Stil aus dem Bildschirm. Der Umbau
+ * war noetig, weil ein Inline-Stil jede Regel dieses Stylesheets schlaegt: Am
+ * breiten Schirm steht der Laden als schmale Spalte neben dem Brett und laesst
+ * die Karten umbrechen (siehe der Block ab 64rem), und das waere sonst nur mit
+ * `!important` zu haben.
+ *
+ * `minmax(0, 1fr)` und nicht `1fr`: Bei `1fr` ist die Untergrenze einer Spalte
+ * ihr min-content — und das ist der laengste Einheitenname am Stueck
+ * ("Bogenmeisterin", mit `white-space: nowrap`). Auf einem 360 Pixel breiten
+ * Handy war der Laden dadurch breiter als der Schirm, und die fuenfte Karte
+ * lag halb ausserhalb.
+ */
 .tr-laden {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--tr-ladenplaetze, 5), minmax(0, 1fr));
   gap: 5px;
   width: 100%;
 }
@@ -17869,6 +18154,29 @@ span.hub-angebot-art.poker-jeton-stapel {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
+/*
+ * Derselbe Satz ueber der LEEREN BANK, und aus zwei Gruenden absolut gesetzt.
+ *
+ * Erstens die Hoehe: Als eigene Zeile unter der Bank kostete er 17 Pixel, mit
+ * denen die Spielflaeche nicht rechnet — sie zieht genau ein Bankband ab
+ * (`--tr-bankhoehe`), und was darueber hinausgeht, laege ueber dem Laden.
+ * Zweitens das Raster: Die Bank ist ein Gitter mit neun Spalten; ein Absatz
+ * darin waere ein zehntes Fach.
+ *
+ * `pointer-events: none` wie am Brett — der Satz schickt in den Laden, und die
+ * leeren Faecher darunter sind trotzdem Ablegeziele.
+ */
+.tr-leer-bank {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
 .tr-hinweis { margin: 0; color: var(--muted); font: 600 12px/1.35 system-ui; text-align: center; }
 
 /*
@@ -17977,9 +18285,17 @@ span.hub-angebot-art.poker-jeton-stapel {
 /* Ab Tablet-Breite steht mehr Platz zur Verfuegung: Brett und Laden duerfen
    groesser werden, statt in der Mitte eines leeren Schirms zu kleben. */
 @media (min-width: 40rem) {
-  .tr-tisch { --tr-luft: 8px; }
-  .tr-bretter,
-  .tr-bank,
+  .tr-tisch {
+    --tr-luft: 8px;
+    /* Die Obergrenze aus der Breite steigt; ob sie ueberhaupt zum Zug kommt,
+       entscheidet weiterhin die freie Hoehe (`--tr-feld` in
+       `.tr-spielflaeche`). Auf einem 1280 x 720 grossen Notebook gewinnt die
+       Hoehe, auf einem 1512 x 850 grossen MacBook fast auch. */
+    --tr-feld-breit: min(70vw, 560px);
+    /* Ein liegendes Fach von 52 statt 44: Der Platz ist da, und die Figur
+       darin ist das Einzige, woran man eine Einheit auf der Bank erkennt. */
+    --tr-bankplatz: 52px;
+  }
   .tr-statuszeile,
   .tr-auswahlband { width: min(70vw, 560px); }
   .tr-oben,
@@ -17987,6 +18303,172 @@ span.hub-angebot-art.poker-jeton-stapel {
   .tr-fuss { gap: 8px; }
   .tr-karte { min-height: 104px; }
   .tr-goldstand strong { font-size: 26px; }
+}
+
+/* -- Der breite Schirm: drei Spalten statt vier Baender -------------------- */
+
+/*
+ * WARUM ES DIESEN BLOCK GIBT. Seit dem 07.09.2026 passt der Tisch auf einen
+ * Bildschirm — aber er passte, indem er schrumpfte. Auf einem 1366 x 768
+ * grossen Notebook standen alle vier Baender in einer 600 Pixel breiten
+ * Spalte, das Brett war 267 Pixel breit, und links wie rechts blieben je
+ * 380 Pixel schlicht leer. Robin: „Das Layout wird nicht optimal genutzt, es
+ * gibt viel Platz, welcher nicht genutzt wird — vor allem in der
+ * Platzierungsphase."
+ *
+ * Die Ursache ist dieselbe wie beim Umbau davor, nur andersherum: Die Groesse
+ * des Bretts folgt aus der freien HOEHE, und die Hoehe teilen sich vier
+ * Baender untereinander. Ein breiterer Schirm gab dem Brett deshalb keinen
+ * einzigen Pixel dazu.
+ *
+ * DIE ANTWORT: Was keine Hoehe braucht, geht zur Seite. Statuszeile und Laden
+ * stehen ab 64rem links und rechts NEBEN der Mitte, und die Mitte bekommt die
+ * ganze Hoehe unter der Kopfleiste. Gemessen am 07.09.2026 waechst das Brett
+ * auf 1366 x 768 von 267 auf 453 Pixel, die Arena von 262 auf 348.
+ *
+ * DIE BEIDEN SEITENSPALTEN SIND GLEICH BREIT — Statuszeile und Laden tragen
+ * dieselbe Breite (`--tr-seitenspalte`). Das ist keine Symmetrie um ihrer
+ * selbst willen: Nur so liegt die Mitte in der Mitte des SCHIRMS, und Brett,
+ * Bank und Arena stehen unter der Kopfleiste auf einer Achse. Gemessen mit
+ * einer schmalen linken Spalte (nur so breit wie die Chips): Das Brett stand
+ * 121 Pixel links neben seiner Kopfleiste.
+ *
+ * Die Spalten selbst stehen trotzdem auf `auto` und nicht auf der Zahl: Ein
+ * Zuschauer hat weder Laden noch Statuszeile (sicht.ts). Bei `auto` fallen
+ * die leeren Spalten in sich zusammen, und sein Brett steht mittig statt links
+ * daneben.
+ *
+ * WARUM JEDE REGEL `:has(> .tr-mitte)` DAVOR HAT. `.tr-tisch` traegt nicht nur
+ * der Tisch: `/probe/kampf` benutzt dieselbe Klasse fuer den Rahmen und haengt
+ * eigene Kinder hinein (Kopfzeile, Buehne, Fusstext). Ein blankes
+ * `.tr-tisch { display: grid }` hat die am 07.09.2026 auf zwei Spalten
+ * verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die Bedingung
+ * liest sich als das, was sie meint: Zum Raster wird ein Tisch, der aus diesen
+ * Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der einen
+ * Spalte von heute.
+ */
+@media (min-width: 64rem) {
+  .tr-tisch:has(> .tr-mitte) {
+    /* Die Wunschbreite der beiden Seitenspalten, gemessen am 07.09.2026 an
+       ihren beiden Enden: Bei 272 (das ist der Wert am Anfang des Blocks, wo
+       24vw erst 245 waeren) stehen im Laden zwei Karten je Reihe, er wird 480
+       Pixel hoch und passt damit noch auf einen 600 Pixel hohen Schirm. Bei
+       380 sind es drei je Reihe und 354 Pixel. Mehr braucht der Laden nicht —
+       was darueber liegt, gehoert dem Brett. */
+    --tr-seitenspalte: clamp(272px, 24vw, 380px);
+    /* Die Obergrenze aus der Breite darf steigen, weil die Rechnung darunter
+       zusaetzlich die SPALTE kennt (`100cqw` in `--tr-feld`): Das Brett wird
+       nie breiter als die Mitte, egal was hier steht. Auf einem 1920 x 1080
+       grossen Schirm kommt die Zahl zum Zug — dort reicht die Hoehe fuer 699
+       Pixel Brett. */
+    --tr-feld-breit: min(52vw, 700px);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    /* Kopfleiste so hoch wie noetig, der Rest gehoert der Mitte.
+       `minmax(0, 1fr)` und nicht `1fr`: Sonst ist die Untergrenze der Zeile ihr
+       Inhalt, und ein Laden, der einmal nicht passt, macht die Zeile hoeher
+       als den Schirm — statt selbst zu rollen. */
+    grid-template-rows: auto minmax(0, 1fr);
+    /* Waagerecht mehr Luft als senkrecht: Zwischen zwei Spalten liest sich 8
+       wie ein Versehen, senkrecht ist jeder Pixel Brett. */
+    column-gap: 16px;
+    /*
+     * `.tr-seite` darueber setzt `align-items: center` — fuer die Flex-Spalte
+     * am Handy richtig, hier verheerend: Ein zentriertes Rasterkind ist so
+     * hoch wie sein INHALT, und die Spielflaeche darin bekaeme aus
+     * `flex: 1 1 0` genau null. Gemessen am 07.09.2026, bevor diese Zeile
+     * dastand: Brett 0 Pixel breit, Zeile leer.
+     */
+    align-items: stretch;
+  }
+  /* Die Kopfleiste steht ueber der MITTE und nicht ueber dem ganzen Schirm:
+     Sie gehoert zum Brett darunter, und quer ueber alle drei Spalten waere sie
+     ein Band, an dem sich nichts ausrichtet. */
+  .tr-tisch:has(> .tr-mitte) > .tr-oben {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    max-width: 600px;
+    justify-self: center;
+  }
+  /*
+   * Links: die eigenen Werte und die Marken, untereinander statt
+   * nebeneinander (die Liste selbst dreht Synergien.module.css).
+   *
+   * Sie stand bis zum 07.09.2026 ab 75rem als `position: fixed` neben der
+   * Spalte, mit einer abgezaehlten 96 fuer die Hoehe der Kopfleiste. Das ist
+   * entfallen: Hier ist sie eine Spalte des Rasters und misst nichts ab.
+   */
+  .tr-tisch:has(> .tr-mitte) > .tr-statuszeile {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: nowrap;
+    /* So breit wie der Laden gegenueber — davon haengt ab, ob das Brett unter
+       seiner Kopfleiste steht (siehe oben). Die Chips selbst ruecken an die
+       rechte Kante, also an das Brett heran: Was zusammengehoert, steht
+       beieinander, statt sich am Fensterrand zu verlieren. */
+    width: var(--tr-seitenspalte);
+    padding-left: 12px;
+    /* Sieben Marken und drei Werte sind laenger als ein 720 Pixel hoher
+       Schirm — dann rollt die Spalte, statt den Tisch zu verschieben. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .tr-tisch:has(> .tr-mitte) > .tr-statuszeile > .tr-kopf {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .tr-tisch:has(> .tr-mitte) > .tr-mitte {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  /* Das Auswahlband bringt eine Breite aus dem Schirm mit (min(70vw, 560px)).
+     In der Mitte ist die Spalte das Mass und nicht das Fenster: Auf einem
+     1024er Schirm ist die Spalte 448 Pixel breit, das Band waere 560 — und
+     ragte links und rechts unter Marken und Laden. */
+  .tr-tisch:has(> .tr-mitte) > .tr-mitte > .tr-auswahlband {
+    max-width: 100%;
+  }
+  /*
+   * Rechts: der Laden. Er behaelt seine Hoehe (`flex: 0 0 auto` weiter oben)
+   * und steht in der Mitte der Spalte — an der Oberkante klebend saehe er wie
+   * abgeschnitten aus, wenn er kurz ist (Kampfphase: ein Satz).
+   */
+  .tr-tisch:has(> .tr-mitte) > .tr-fuss {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: center;
+    width: var(--tr-seitenspalte);
+    padding-right: 12px;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /*
+   * Und die Karten brechen um, statt schmaler zu werden.
+   *
+   * `auto-fill` und nicht die Zahl aus der Sicht: Wie viele Karten
+   * nebeneinander passen, weiss nur die Spalte — bei 272 Pixeln sind es zwei,
+   * ab 320 drei. Ein Laden mit fuenf Spalten in einer 272 Pixel breiten Spalte
+   * gaebe 50 Pixel je Karte, und darauf steht nichts mehr lesbar.
+   *
+   * 96 und nicht 104 (die Hoehe einer Karte ab Tablet): Mit 104 blieben es auf
+   * einem 1366er Schirm zwei Spalten, also DREI Reihen, und der Laden wurde
+   * 467 Pixel hoch statt 354. Auf einem kurzen Fenster (1366 x 540 gemessen)
+   * rutschte der Bereit-Knopf damit unter die Kante seiner Spalte. Am Handy
+   * ist eine Karte 71 Pixel breit — 96 ist keine Notgroesse.
+   */
+  .tr-tisch:has(> .tr-mitte) > .tr-fuss .tr-laden {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+  /* Drei Knoepfe nebeneinander sind in dieser Spalte je 85 Pixel — „Rang
+     steigern" bricht dort mitten im Wort. Zwei oben, „Bereit" als breiter
+     Riegel darunter: Er ist der Knopf, der die Runde abschliesst. */
+  .tr-tisch:has(> .tr-mitte) .tr-ladenknoepfe { flex-wrap: wrap; }
+  .tr-tisch:has(> .tr-mitte) .tr-ladenknoepfe .tr-bereitknopf { flex: 1 0 100%; }
 }
 
 /* Wer weniger Bewegung eingestellt hat, bekommt das Ergebnis ohne Zappeln —
@@ -18223,6 +18705,27 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gf-gruppenzeile[data-eigen] { background: rgba(111, 220, 140, 0.18); }
 .gf-gruppenzeile[data-leer] { opacity: 0.42; }
 .gf-gruppenname { flex: 1; font: 700 15px/1.2 system-ui; }
+/* Die eigene Zeile ist ein Knopf: ein Tipp schaltet die Ballfarbe weiter.
+   Er fuellt die ganze Zeile — bei 44 px Mindesthoehe trifft ihn auch ein
+   Daumen, und die Zeile sieht dabei aus wie die daneben. */
+.gf-farbwahl {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: -9px -12px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gf-farbwahl:disabled { cursor: default; opacity: 0.6; }
+.gf-farbwahl:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); }
+.gf-farbwahl:focus-visible { outline: 2px solid #f2f2f2; outline-offset: -2px; }
 .gf-du {
   flex: none;
   padding: 3px 8px;
@@ -18361,6 +18864,31 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gf-chip em { font: 800 10px/1.3 system-ui; font-style: normal; opacity: 0.8; }
 .gf-chip i { font: 700 9px/1 system-ui; font-style: normal; opacity: 0.7; }
 
+/* Die Punkteanzeige tritt zurueck, sobald sie ueber dem eigenen Ball, seiner
+   Flugkurve, dem Zielpfeil oder der Fahne liegt; wann das der Fall ist,
+   rechnet verdeckung.ts. Stark transparent statt ausgeblendet: Der
+   Zwischenstand bleibt an seinem Fleck, man kann ihn noch erahnen und sucht
+   ihn nach dem Schlag nicht neu.
+
+   Was NICHT blass wird, und warum:
+   - der Zurueck-Knopf. Er ist als einziges Stueck des HUD anklickbar
+     (`pointer-events: auto`), und ein Knopf, den man nicht sieht, aber
+     trifft, ist schlimmer als einer, der im Weg steht.
+   - Troedel- und Hinweiszeile. Eine Warnung, die verblasst, sobald sie
+     wichtig wird, ist keine. */
+.gf-bahnzeile,
+.gf-zeit,
+.gf-chips { transition: opacity 180ms ease-out; }
+.gf-hud[data-verdeckt] .gf-bahnzeile,
+.gf-hud[data-verdeckt] .gf-zeit,
+.gf-hud[data-verdeckt] .gf-chips { opacity: 0.14; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gf-bahnzeile,
+  .gf-zeit,
+  .gf-chips { transition: none; }
+}
+
 .gf-troedel {
   margin: 0;
   padding: 7px 12px;
@@ -18446,3 +18974,367 @@ span.hub-angebot-art.poker-jeton-stapel {
   aspect-ratio: 4 / 1;
   background: #101d16;
 }
+
+/* ==========================================================================
+ * Partykiste
+ *
+ * Ein Turnier aus sechs Partyminispielen. Das Aussehen folgt dem, was die
+ * Bildschirme tun: EINE Sache in der Mitte, darunter grosse Schaltflaechen,
+ * sonst nichts. Alle Masse sind fuers Handy gedacht und wachsen mit `clamp`
+ * mit — gespielt wird das im Stehen, mit einer Hand, im Halbdunkeln.
+ * ========================================================================== */
+
+.pk-seite {
+  min-height: 100dvh;
+  padding: max(14px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  background: radial-gradient(120% 90% at 50% 0%, #2a1f3d 0%, #151021 62%, #0f0b18 100%);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pk-zurueck {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+.pk-zurueck.is-klein {
+  position: static;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+}
+
+/* -- Menue ---------------------------------------------------------------- */
+
+.pk-menue { position: relative; justify-content: center; }
+.pk-menue-mitte {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.pk-titel {
+  margin: 0;
+  font: 800 clamp(30px, 9vw, 46px)/1.05 system-ui;
+  letter-spacing: 0.01em;
+}
+.pk-untertitel { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+.pk-spielliste {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+.pk-spielliste li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+}
+.pk-spielliste strong { font-size: 14px; }
+.pk-spielliste .muted { color: var(--muted); }
+
+.pk-botblock { display: flex; flex-direction: column; gap: 10px; }
+.pk-regler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.pk-reglerzeile { display: flex; align-items: center; gap: 10px; margin: 0; }
+/* Global steht ein margin-bottom auf jedem Label — in einer Flexzeile schoebe
+   das die Beschriftung aus der Mitte (die Falle aus Mememory). */
+.pk-reglerzeile > span { margin: 0; }
+.pk-reglertitel { width: 68px; text-align: left; font-size: 13px; color: var(--muted); }
+.pk-reglerzeile input { flex: 1; }
+.pk-reglerwert { min-width: 92px; text-align: right; font-size: 13px; }
+
+.pk-stufen { display: flex; gap: 6px; }
+.pk-stufen button {
+  flex: 1;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.pk-stufen button[data-an] { background: var(--lila); color: #180f28; }
+
+.pk-gruppe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.pk-gruppe li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-gruppe li[data-leer] { opacity: 0.45; }
+.pk-gruppe li[data-eigen] { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-gruppenname { flex: 1; font-weight: 600; }
+.pk-du {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--lila);
+  text-transform: uppercase;
+}
+.pk-warten { margin: 0; color: var(--muted); font-size: 13px; }
+.pk-fehler { margin: 0; color: var(--danger); font-size: 14px; }
+
+/* -- Schaltflaechen ------------------------------------------------------- */
+
+.pk-knopf {
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text);
+  font: 700 16px/1.2 system-ui;
+  cursor: pointer;
+  transition: transform 90ms ease, background 120ms ease;
+}
+.pk-knopf:active:not(:disabled) { transform: scale(0.97); }
+.pk-knopf:disabled { opacity: 0.5; cursor: default; }
+.pk-knopf.is-haupt { background: var(--lila); color: #180f28; }
+.pk-knopf.is-neben { background: rgba(255, 255, 255, 0.12); }
+.pk-knopf.is-gross { flex: 1; padding: 20px 14px; font-size: 18px; }
+.pk-knopf.is-gut { flex: 1; background: #2f6b4d; }
+.pk-knopf.is-weg { flex: 1; background: #6b3a34; }
+.pk-knopf[data-gewaehlt] { box-shadow: inset 0 0 0 3px var(--gold); }
+
+.pk-wahl { display: flex; gap: 10px; }
+.pk-wahl[data-weit] { flex-direction: column; }
+.pk-wahl > .pk-knopf { flex: 1; }
+
+.pk-knopf.is-antwort { text-align: left; background: rgba(255, 255, 255, 0.08); }
+.pk-knopf.is-antwort[data-richtig] { background: #2f6b4d; color: #eafff2; }
+.pk-knopf.is-antwort[data-daneben] { background: #6b3a34; color: #ffeceb; }
+
+.pk-leute {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px;
+}
+.pk-person {
+  padding: 14px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: 700 15px/1.2 system-ui;
+  cursor: pointer;
+}
+.pk-person[data-gewaehlt] { background: var(--lila); color: #180f28; }
+.pk-person:disabled { opacity: 0.45; cursor: default; }
+
+/* -- Tisch ---------------------------------------------------------------- */
+
+.pk-tisch { align-items: stretch; }
+.pk-kopf { display: flex; align-items: center; gap: 10px; }
+.pk-rundenzahl {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+}
+.pk-spielname { flex: 1; font-size: 16px; }
+.pk-tafelknopf {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.pk-tafelknopf[aria-pressed="true"] { background: var(--lila); color: #180f28; }
+.pk-ansage { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.pk-endtitel { margin: 6px 0 0; font: 800 26px/1.1 system-ui; text-align: center; }
+
+/* Die Buehne: was die Runde gerade ist, gross und allein. */
+.pk-buehne {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: clamp(150px, 30vh, 230px);
+  padding: 20px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  text-align: center;
+}
+.pk-buehne[data-ton="geheim"] {
+  background: linear-gradient(160deg, rgba(166, 120, 242, 0.24), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 2px rgba(166, 120, 242, 0.5);
+}
+.pk-buehne[data-ton="gut"] { box-shadow: inset 0 0 0 2px #3f8f66; }
+.pk-buehne[data-ton="schlecht"] { box-shadow: inset 0 0 0 2px #a1524a; }
+.pk-buehne-oben {
+  margin: 0;
+  font: 700 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-buehne-gross { display: flex; align-items: center; justify-content: center; }
+.pk-buehne-unten { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.pk-buehne-unten [data-gut] { color: #8ee0a3; }
+
+/* Ein Wort, so gross wie der Platz es zulaesst — das ganze Imposter-Spiel. */
+.pk-wort { font: 800 clamp(30px, 11vw, 54px)/1.05 system-ui; letter-spacing: -0.01em; }
+.pk-wort.is-klein { font-size: clamp(22px, 7vw, 34px); }
+.pk-frage { font: 700 clamp(18px, 5.2vw, 26px)/1.3 system-ui; }
+.pk-busfrage { margin: 0; text-align: center; font: 700 16px/1 system-ui; }
+.pk-wartet { margin: 0; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* -- Listen und Tabellen -------------------------------------------------- */
+
+.pk-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pk-liste.is-schmal { gap: 3px; }
+.pk-liste li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+}
+.pk-liste li[data-gut] { background: rgba(63, 143, 102, 0.22); }
+.pk-liste .muted { color: var(--muted); font-size: 13px; text-align: right; }
+
+.pk-tabelle { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.pk-tabelle li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.pk-tabelle li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-tabelle li[data-weg] { opacity: 0.45; }
+.pk-platz { width: 24px; font: 800 15px/1 system-ui; color: var(--gold); }
+.pk-tabellenname { flex: 1; font-weight: 600; }
+.pk-punkte { min-width: 34px; text-align: right; font: 800 18px/1 system-ui; }
+.pk-schluck { color: var(--gold); font: 700 13px/1 system-ui; }
+
+.pk-abrechnung { display: flex; flex-direction: column; gap: 10px; }
+.pk-ausbeute {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 0;
+  font: 700 16px/1 system-ui;
+}
+.pk-ausbeute [data-gut] { color: #8ee0a3; }
+
+/* -- Wer bin ich ---------------------------------------------------------- */
+
+.pk-stirnen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+.pk-stirn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-stirn[data-ich] { background: rgba(166, 120, 242, 0.18); }
+.pk-stirn[data-dran] { box-shadow: inset 0 0 0 2px var(--gold); }
+.pk-stirn[data-fertig="gut"] { background: rgba(63, 143, 102, 0.22); }
+.pk-stirn[data-fertig="weg"] { opacity: 0.5; }
+.pk-stirn-name { font: 700 15px/1.2 system-ui; }
+.pk-stirn-wer { font-size: 12px; color: var(--muted); }
+
+/* -- Wer wuerde eher ------------------------------------------------------ */
+
+.pk-balken { display: grid; gap: 6px; }
+.pk-balken-zeile { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.pk-balken-name {
+  width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-balken-spur {
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.pk-balken-fuellung { display: block; height: 100%; border-radius: 999px; background: var(--lila); }
+.pk-balken-zahl { width: 18px; text-align: right; font-weight: 700; }
+
+/* -- Bus fahren ----------------------------------------------------------- */
+
+.pk-kartenreihe { display: flex; gap: 10px; }
+.pk-karte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: clamp(52px, 17vw, 74px);
+  aspect-ratio: 5 / 7;
+  border-radius: 9px;
+  background: #f6f1e6;
+  color: #1a1a1a;
+  font-family: system-ui, sans-serif;
+}
+.pk-karte[data-rot] { color: #b3352c; }
+.pk-karte-rang { font: 800 clamp(20px, 6vw, 26px)/1 system-ui; }
+.pk-karte-farbe { font-size: clamp(16px, 5vw, 22px); line-height: 1; }
+/* Die verdeckte Karte ist ein Muster und kein leeres Feld: Ein Kasten ohne
+   Inhalt sieht auf dem Handy aus wie ein Bild, das nicht geladen hat. */
+.pk-karte.is-zu {
+  background: repeating-linear-gradient(45deg, #3a2c56 0 6px, #2a1f3d 6px 12px);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+/* -- Banner der Spielauswahl ---------------------------------------------- */
+
+/* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300). Ohne feste Form
+   haette das SVG in der Kachel keine Hoehe. */
+.pk-banner { display: block; width: 100%; aspect-ratio: 4 / 1; background: #151021; }

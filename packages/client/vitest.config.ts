@@ -47,6 +47,7 @@ const pakete = [
   'filler',
   'golf',
   'mememory',
+  'partykiste',
   'skat',
   'tafelrunde',
   'wizard',

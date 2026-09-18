@@ -64,10 +64,12 @@ import {
 import { EilandBanner } from '../minispiele/eiland/Banner';
 import { FillerBanner } from '../minispiele/filler/Banner';
 import { GolfBanner } from '../minispiele/golf/Banner';
+import { PartykisteBanner } from '../minispiele/partykiste/Banner';
 import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
-import { Kreuz, Note } from '../zeichen';
+import { Kreuz, Note, Spieler } from '../zeichen';
+import { sitzSpanne } from '../sitzspanne';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
@@ -567,12 +569,22 @@ export function GameSelect({
           onClick={() => setTab('blatt')}
           iconSrc="/hub/tab-blatt.webp"
         />
+        {/*
+          Der Punkt am Profil-Reiter zeigt auf das Geburtstagsgeschenk.
+
+          Das Geschenk gibt es an genau einem Tag im Jahr, und es liegt
+          hinter einem Reiter, den an diesem Tag niemand von sich aus
+          aufmacht: Wer nicht hineinsieht, erfaehrt nie davon und hat die
+          naechste Gelegenheit ein Jahr spaeter. Deshalb dieselbe Bauform wie
+          an der Truhe — ein Punkt, keine Zahl.
+        */}
         <TabButton
           label="Profil"
           farbe="profil"
           active={tab === 'profil'}
           onClick={() => setTab('profil')}
           iconSrc="/hub/tab-profil.webp"
+          punkt={me.birthdayRewardClaimable ? 'Geschenk liegt bereit' : null}
         />
       </nav>
 
@@ -732,10 +744,12 @@ function ProfilTab({
     genau andersherum: Was man selten braucht, gehoert nach unten.
 
     An dem einen Tag, an dem es etwas abzuholen gibt, ist es umgekehrt richtig:
-    Dann steht sie ganz oben unter dem Namensschild. Sie hat keinen Punkt am
-    Profil-Reiter, der auf sie zeigt — waere sie an diesem Tag unten, muesste
-    man am Geburtstag durch das ganze Profil rollen, um sein Geschenk zu
-    finden.
+    Dann steht sie ganz oben unter dem Namensschild — waere sie an diesem Tag
+    unten, muesste man am Geburtstag durch das ganze Profil rollen, um sein
+    Geschenk zu finden. Hergeschickt wird man inzwischen vom Punkt am
+    Profil-Reiter (`TabButton` in der Tab-Leiste); die Wanderung bleibt
+    trotzdem, denn der Punkt bringt einen nur bis zum Tab, nicht bis zur
+    Tafel.
 
     Der Zusatz sagt beim Warten nicht mehr den Countdown: Der steht wortgleich
     unter dem Namen im Schild darueber, und zweimal derselbe Satz auf einem
@@ -1859,6 +1873,7 @@ function TabButton({
   active,
   haupt = false,
   farbe,
+  punkt = null,
   onClick,
 }: {
   label: string;
@@ -1867,6 +1882,14 @@ function TabButton({
   haupt?: boolean;
   /** Jeder Bereich hat seine eigene Leuchtfarbe, wenn er gewaehlt ist. */
   farbe: string;
+  /**
+   * Roter Punkt am Reiter: hinter diesem Bereich liegt etwas bereit. Der Text
+   * ist das, was ein Vorlesegeraet daraus macht — ohne ihn waere der Hinweis
+   * nur fuer Sehende da, und er zeigt auf etwas, das man sonst gar nicht
+   * findet. Nie eine Zahl, aus demselben Grund wie an der Truhe: Eine Ziffer
+   * auf einem Reiter dieser Groesse ist am Handy nicht lesbar.
+   */
+  punkt?: string | null;
   onClick: () => void;
 }): React.JSX.Element {
   return (
@@ -1883,6 +1906,7 @@ function TabButton({
     >
       <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
       <span>{label}</span>
+      {punkt !== null && <span className="hub-punkt" aria-label={punkt} />}
     </button>
   );
 }
@@ -2462,6 +2486,11 @@ function Spielwahl({
                        gemaltes Banner — das bewegte ist deshalb auch der
                        Rueckfall bei "weniger Bewegung". */
                     <TafelrundeBanner />
+                  ) : game.id === 'partykiste' ? (
+                    /* Partykiste hat noch kein gemaltes Banner. Ohne eigenes
+                       fiele `spielBanner` auf "kommt bald" zurueck — genau das
+                       Bild, das sagt, man koenne es noch nicht spielen. */
+                    <PartykisteBanner />
                   ) : (
                     <img src={spielBanner(game.id)} alt="" draggable={false} />
                   )}
@@ -2472,7 +2501,14 @@ function Spielwahl({
                       Spiele keine Kartenspiele sind, steht in keiner
                       Modulbeschreibung, gehoert aber aufs Banner. */}
                   <span className="muted">
-                    {game.seatCounts.join(', ')} Spieler
+                    {/* Sitzzahlen als Spanne und das Wort durch das Zeichen
+                        ersetzt (07.09.2026): Bei Golf standen hier acht Zahlen
+                        mit Kommas, die ganze Zeile war Laerm. Das Zeichen traegt
+                        seine Beschriftung selbst. */}
+                    <span className="hub-themenspiel-sitze">
+                      <Spieler />
+                      {sitzSpanne(game.seatCounts)}
+                    </span>
                     {game.id === 'feldherr' ? ' · Echtzeit' : ''}
                     {game.id === 'mememory' ? ' · Meme-Memory' : ''}
                     {game.id === 'easypoker' ? ' · Hold’em' : ''}
@@ -2480,6 +2516,7 @@ function Spielwahl({
                     {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
                     {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
+                    {game.id === 'partykiste' ? ' · 6 Minispiele, ein Turnier' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

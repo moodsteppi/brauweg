@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Partykiste — Schaukasten</title>
+    <!--
+      Eine eigene Seite neben der App, nur fuer die Entwicklung: Die Ansichten
+      der Partykiste haengen an Zustaenden, die man am echten Tisch nur mit
+      vier bis zwoelf Leuten gleichzeitig herstellt. Aufruf ueber
+      `npm run dev:client` -> http://localhost:5173/schaukasten.html
+
+      Sie wird beim `vite build` NICHT mitgebaut (die Rollup-Eingabe ist
+      index.html), geht also nicht mit ins Betriebspaket.
+    -->
+    <style>
+      body {
+        margin: 0;
+        background: #0c0812;
+        color: #e8eef1;
+        font-family: system-ui, sans-serif;
+      }
+      .sk-seite {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+      }
+      .sk-seite > h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+      }
+      .sk-vorwort {
+        margin: 0 0 24px;
+        color: #8fa3ad;
+      }
+      .sk-kasten {
+        margin: 0 0 26px;
+        display: grid;
+        grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      .sk-kasten figcaption {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-top: 10px;
+      }
+      .sk-kasten figcaption strong {
+        font-size: 17px;
+      }
+      .sk-kasten figcaption span {
+        color: #8fa3ad;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      /* Handybreite, damit man sieht, was am Abend wirklich auf dem Schirm steht. */
+      .sk-rahmen {
+        width: 390px;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+      .sk-rahmen .pk-seite {
+        min-height: 0;
+      }
+      .sk-rahmen-banner {
+        width: 480px;
+      }
+      @media (max-width: 860px) {
+        .sk-kasten {
+          grid-template-columns: 1fr;
+        }
+        .sk-rahmen,
+        .sk-rahmen-banner {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="wurzel"></div>
+    <script type="module" src="/src/proben/partykiste/Schaukasten.tsx"></script>
+  </body>
+</html>

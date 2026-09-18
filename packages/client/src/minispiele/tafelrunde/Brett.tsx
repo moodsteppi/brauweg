@@ -387,70 +387,75 @@ export function Bankreihe({
     (k) => k === null,
   );
   return (
-    <>
-      <div
-        className="tr-bank"
-        role="group"
-        aria-label="Reservebank"
-        style={{ gridTemplateColumns: `repeat(${plaetze}, 1fr)` }}
-      >
-        {Array.from({ length: plaetze }, (_, platz) => {
-          const ort: Ort = { bereich: 'bank', platz };
-          const schluessel = ortSchluessel(ort);
-          const k = bank[platz] ?? null;
-          return (
-            <div
-              key={platz}
-              className="tr-bankplatz"
-              data-ziel={schluessel}
-              data-leer={k ? undefined : ''}
-              data-gewaehlt={
-                gewaehlt?.bereich === 'bank' && gewaehlt.platz === platz ? '' : undefined
-              }
-              data-zielbar={istZiel?.(ort) ? '' : undefined}
-              data-unterzeiger={unterZeiger === schluessel ? '' : undefined}
-            >
-              {k ? (
-                <Einheitenmarke
-                  kaempfer={k}
-                  katalog={katalog}
-                  maxStufe={maxStufe}
-                  fehlt={fehlendeKopien?.(k.id, k.stufe) ?? 0}
-                  frisch={
-                    frischVerschmolzen?.id === k.id && frischVerschmolzen.stufe === k.stufe
-                  }
-                  aktiv={aktiv === true}
-                  versteckt={ziehtVon?.bereich === 'bank' && ziehtVon.platz === platz}
-                  onZeigerStart={onZeigerStart ? (e) => onZeigerStart(ort, e) : undefined}
-                  onZeigerBewegung={onZeigerBewegung}
-                  onZeigerEnde={onZeigerEnde ? (e) => onZeigerEnde(ort, e) : undefined}
-                  onZeigerAbbruch={onZeigerAbbruch}
-                  onWaehlen={onWaehlen ? () => onWaehlen(ort) : undefined}
-                />
-              ) : (
-                /* Dieselbe echte Schaltflaeche wie das leere Brettfeld, und
+    <div
+      className="tr-bank"
+      role="group"
+      aria-label="Reservebank"
+      style={{ gridTemplateColumns: `repeat(${plaetze}, minmax(0, 1fr))` }}
+    >
+      {Array.from({ length: plaetze }, (_, platz) => {
+        const ort: Ort = { bereich: 'bank', platz };
+        const schluessel = ortSchluessel(ort);
+        const k = bank[platz] ?? null;
+        return (
+          <div
+            key={platz}
+            className="tr-bankplatz"
+            data-ziel={schluessel}
+            data-leer={k ? undefined : ''}
+            data-gewaehlt={
+              gewaehlt?.bereich === 'bank' && gewaehlt.platz === platz ? '' : undefined
+            }
+            data-zielbar={istZiel?.(ort) ? '' : undefined}
+            data-unterzeiger={unterZeiger === schluessel ? '' : undefined}
+          >
+            {k ? (
+              <Einheitenmarke
+                kaempfer={k}
+                katalog={katalog}
+                maxStufe={maxStufe}
+                fehlt={fehlendeKopien?.(k.id, k.stufe) ?? 0}
+                frisch={frischVerschmolzen?.id === k.id && frischVerschmolzen.stufe === k.stufe}
+                aktiv={aktiv === true}
+                versteckt={ziehtVon?.bereich === 'bank' && ziehtVon.platz === platz}
+                onZeigerStart={onZeigerStart ? (e) => onZeigerStart(ort, e) : undefined}
+                onZeigerBewegung={onZeigerBewegung}
+                onZeigerEnde={onZeigerEnde ? (e) => onZeigerEnde(ort, e) : undefined}
+                onZeigerAbbruch={onZeigerAbbruch}
+                onWaehlen={onWaehlen ? () => onWaehlen(ort) : undefined}
+              />
+            ) : (
+              /* Dieselbe echte Schaltflaeche wie das leere Brettfeld, und
                    aus demselben Grund: Ein `onClick` am Kasten hat weder
                    Namen noch Tastaturweg — der Rueckweg auf die Bank waere
                    mit einem Vorlesegeraet gar nicht vorhanden. */
-                <button
-                  type="button"
-                  className="tr-bankplatz-ziel"
-                  disabled={aktiv !== true}
-                  aria-label={`Bankplatz ${platz + 1}`}
-                  onClick={() => onWaehlen?.(ort)}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
+              <button
+                type="button"
+                className="tr-bankplatz-ziel"
+                disabled={aktiv !== true}
+                aria-label={`Bankplatz ${platz + 1}`}
+                onClick={() => onWaehlen?.(ort)}
+              />
+            )}
+          </div>
+        );
+      })}
       {/* Der Satz gehoert zur Bank und steht deshalb hier: Wer ihn im
           Bildschirm liesse, haette die eine Bedingung, unter der er faellt,
           an zwei Stellen. Er schickt in den Laden — und laeuft der Kampf, ist
-          die Bank ohnehin nicht eingehaengt. */}
+          die Bank ohnehin nicht eingehaengt.
+
+          Er liegt seit dem 07.09.2026 UEBER der leeren Reihe statt darunter,
+          genau wie derselbe Satz ueber dem leeren Brett (`.tr-leer-brett`).
+          Als eigene Zeile kostete er 17 Pixel, mit denen die Spielflaeche
+          nicht rechnet: Sie zieht fuer die Bank genau ein Bankband ab
+          (`--tr-bankhoehe` in styles.css), und was darueber hinausgeht, laege
+          ueber dem Laden. */}
       {leerAlle && (
-        <p className="tr-leer-satz">Deine Bank ist leer — kauf dir unten im Laden einen Recken.</p>
+        <p className="tr-leer-satz tr-leer-bank">
+          Deine Bank ist leer — kauf dir unten im Laden einen Recken.
+        </p>
       )}
-    </>
+    </div>
   );
 }

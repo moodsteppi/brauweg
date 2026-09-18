@@ -34,7 +34,7 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind elf', () => {
+test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind zwoelf', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
@@ -53,6 +53,7 @@ test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind elf', () => {
       'eiland',
       'tafelrunde',
       'golf',
+      'partykiste',
     ],
   );
   assert.deepEqual(

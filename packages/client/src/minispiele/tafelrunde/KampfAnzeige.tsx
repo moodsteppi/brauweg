@@ -828,6 +828,11 @@ export function KampfAnzeige<E extends Einheitenbild>({
     <section
       className={stil.arena}
       data-verblasst={verblasst ? '' : undefined}
+      /* Das Seitenverhaeltnis des Rasters, damit das Stylesheet die Breite aus
+         der freien Hoehe rechnen kann (`.arena` in KampfAnzeige.module.css).
+         Es kommt aus derselben `rastermass()`-Rechnung, die gleich darunter
+         die Waben legt — im Stylesheet steht keine zweite Geometrie. */
+      style={{ '--tr-arenaverhaeltnis': mass.seitenverhaeltnis } as React.CSSProperties}
       role="group"
       aria-label="Kampf"
     >

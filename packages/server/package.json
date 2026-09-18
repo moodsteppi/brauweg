@@ -22,6 +22,7 @@
     "@brauweg/game-filler": "*",
     "@brauweg/game-golf": "*",
     "@brauweg/game-mememory": "*",
+    "@brauweg/game-partykiste": "*",
     "@brauweg/game-skat": "*",
     "@brauweg/game-tafelrunde": "*",
     "@brauweg/game-wizard": "*",

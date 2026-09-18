@@ -1,8 +1,8 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **elf Spiele laufen**: Doppelkopf, Zauberer, Skat,
-Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde und
-Golf.
+Kartenspiel-Plattform, **zwölf Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
+Golf und Partykiste.
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -37,9 +37,10 @@ sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`.
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und
 Musik — Herkunft, Lizenzen, Auslagerungsgrenze) ·
 `docs/plattform-plan.md` (das große Ganze) · `docs/TAFEL.md` (die
-Visual-Building-Tafel: lesen, pflegen, erzeugen) · **`docs/JETZT-AUSFUEHREN.md`
-(Bilder einbauen, Schritt für Schritt — die Werkzeuge stehen auf dem Rechner
-bereit)**.
+Visual-Building-Tafel: lesen, pflegen, erzeugen) · `docs/TRIPO.md` (3D-Modelle
+erzeugen: wohin der API-Schlüssel gehört, was für Tafelrunde geht) ·
+**`docs/JETZT-AUSFUEHREN.md` (Bilder einbauen, Schritt für Schritt — die
+Werkzeuge stehen auf dem Rechner bereit)**.
 
 ---
 
@@ -51,7 +52,11 @@ in der Sitzung anweist, gibt ihn frei — frag vorher einmal kurz zur Sicherheit
 nach (ein Prod-Deploy ist schwer rückholbar, siehe Regel 7), aber warte auf
 niemand anderen. Vor jedem Push `git pull --no-rebase origin staging` — an
 diesem Repo arbeiten mehrere Sitzungen gleichzeitig, auch Cursor. Merges sind
-der Normalfall, kein Fehler.
+der Normalfall, kein Fehler. Nach einem Release muss `main` wieder Vorfahre
+von `staging` sein (Rückfluss als echter Merge, kein Squash); der Job
+„Rückfluss" in `.github/workflows/ci.yml` wird bei jedem Push auf einen der
+beiden Zweige rot, solange das nicht stimmt — am 06.09.2026 fiel es sonst
+erst Tage später am Release-Konflikt auf.
 
 **2. Alles auf Deutsch.** Bezeichner, Kommentare, Commit-Nachrichten,
 Oberflächentexte. Kommentare erklären das **Warum**, nicht das Was — und
@@ -116,9 +121,24 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.419 Tests in den Paketen (439 im Server), dazu
-                  # 464 Client-Tests in 41 Dateien (vitest)
+npm test          # 1.536 Tests in den Paketen (475 im Server), dazu
+                  # 790 Client-Tests in 63 Dateien (vitest)
 ```
+
+**Erst committen, dann messen.** Der volle Lauf dauert auf einem
+Windows-Rechner rund eine Viertelstunde und baut den Client mit; wer Commit
+und Push dahinter legt, verliert die ganze Arbeit, wenn die Sitzung im Lauf
+endet. Am 09.09.2026 ist genau das zweimal hintereinander passiert — der Code
+war beide Male fertig und lag im Arbeitsverzeichnis, auf dem Aufgabenzweig
+stand trotzdem kein einziger Commit. Also: **zuerst die Änderung committen und
+pushen, dann den vollen Lauf**, und die gemessenen Zahlen als zweiten Commit
+nachtragen (hier und in `docs/STAND.md`).
+
+**Kommt der Lauf nicht mehr zustande, bleiben die alten Zahlen stehen** — und
+die Fertigmeldung sagt ausdrücklich, dass nicht gemessen wurde. Eine geratene
+Zahl ist schlimmer als eine veraltete: Sie steht hier als Sollwert und wird
+von der nächsten Aufgabe fortgeschrieben. Am 09.09.2026 hat ein Lauf so
+„450 → 451" fortgezählt, gemessen waren es 468.
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
 Server, ist die `.d.ts` von `@brauweg/game-api` der alte Stand, und `tsc`
@@ -162,7 +182,7 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle elf Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind alle zwoelf Spiele. Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.
@@ -234,7 +254,10 @@ Wirtschaftsmodell.
   kann `tsc` nicht lesen. Das sieht nach einem kaputten Zweig aus und ist
   keiner — am 05.09.2026 zweimal genau daran gesucht. `npm run build` im
   Wurzelverzeichnis genügt: npm läuft die Pakete alphabetisch ab, `game-api`
-  steht vor `game-tafelrunde` und beide vor `server`.
+  steht vor `game-tafelrunde` und beide vor `server`. Wann dieser Lauf
+  drankommt — nämlich nach Commit und Push —, steht oben unter „Bauen und
+  prüfen"; diese Stelle hier sagt nur, warum er nicht durch einen
+  Einzelpaket-Lauf zu ersetzen ist.
 - **Keine Prüfkopie unter `AppData/Local/Temp`.** Liegt der Arbeitsbaum dort,
   sammelt Vite eine fremde `vite.config.ts` aus dem Wurzelverzeichnis ein, und
   der Testlauf stirbt schon beim Laden der Konfiguration. Der Fehler zeigt dann

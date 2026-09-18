@@ -37,20 +37,23 @@
    * Genau so sah es aus, bevor das hier stand — im Bild links auf
    * `docs/bilder/tafelrunde-arena-groesse.webp`.
    *
-   * Also waechst die Buehne in den Platz hinein. Das Brett selbst wird davon
-   * nicht groesser — es haengt an der Breite (KampfAnzeige.module.css) —, aber
-   * der Raum darum wird es: mehr Halle ueber dem Horizont, viel mehr Boden
-   * davor. Wie sich der Zuwachs auf beides verteilt, entscheidet die
-   * Polsterung gleich darunter.
+   * Also waechst die Buehne in den Platz hinein. Wie sich der Zuwachs auf
+   * Himmel und Boden verteilt, entscheidet die Polsterung gleich darunter.
    *
-   * WACHSEN JA, SCHRUMPFEN NEIN — daher die 0 in der Mitte. Die Buehne
-   * schneidet ab, was ueber sie hinausgeht (`overflow: hidden` weiter unten),
-   * und ein Flex-Kind, das unter seine Inhaltsgroesse schrumpfen darf, wuerde
-   * auf einem kurzen Schirm genau das tun: die Arena unten abschneiden. Passt
-   * es nicht, rollt lieber der Tisch — `.tr-tisch` in styles.css kann das, und
-   * bis heute hat er es in der Kampfphase getan, ohne dass etwas fehlte.
+   * SCHRUMPFEN DARF SIE SEIT DEM 07.09.2026 AUCH — hier stand `flex: 1 0 auto`
+   * mit der Begruendung, ein schrumpfendes Flex-Kind schneide auf einem kurzen
+   * Schirm die Arena unten ab; lieber rolle der Tisch. Der Grund ist entfallen:
+   * Die Arena haengt nicht mehr an der Breite allein, sondern nimmt sich die
+   * Hoehe, die `.mitte` ihr laesst (KampfAnzeige.module.css, `--tr-arenaraum`).
+   * Weniger Platz heisst jetzt kleineres Brett und nicht abgeschnittenes.
+   *
+   * Und das musste es heissen: Auf 1280 x 720 stand die Kampfphase mit
+   * gemessenen 1220 Pixeln Inhalt in einem 720 Pixel hohen Schirm — man sah
+   * die obere Haelfte eines Kampfes und musste rollen, um den Ausgang zu
+   * sehen. Waehrend eine Uhr laeuft.
    */
-  flex: 1 0 auto;
+  flex: 1 1 0;
+  min-height: 0;
   /*
    * Die Polsterung ist der ganze Trick am Handy. Das Brett ist dort
    * min(94vw, 460px) breit — links und rechts bleiben elf Pixel, und in elf
@@ -72,8 +75,13 @@
    * 180 Pixel leerer Verlauf — das sah nicht nach Halle aus, sondern nach
    * vergessenem Rand. So sind es 90, und davor liegt ein Boden, auf dem man
    * die Tiefe sieht.
+   *
+   * `dvh` und nicht `vh` (07.09.2026): `vh` rechnet mit dem Schirm OHNE
+   * Adressleiste. Solange sie ausgefahren ist, waere die Polsterung oben also
+   * zu gross und schoebe die Arena nach unten aus dem Bild. Dieselbe
+   * Umstellung wie am Tisch (`.tr-tisch` in styles.css).
    */
-  padding: clamp(16px, 9vh, 90px) 0 clamp(12px, 4vw, 24px);
+  padding: clamp(16px, 9dvh, 90px) 0 clamp(12px, 4vw, 24px);
   /* Boden und Dunst greifen ueber den Rand hinaus, damit an den Seiten keine
      Kante steht. Was drueber ist, wird hier abgeschnitten. */
   overflow: hidden;
@@ -305,13 +313,27 @@
  * Dieselbe Kurve wie die Weltkarte des Startbildschirms
  * (`cubic-bezier(0.22, 1, 0.36, 1)`, styles.css `.hub-karte-welt`).
  */
+/*
+ * Der Platz, in dem die Arena steht — und ihr Bezugsmass.
+ *
+ * `container-type: size` macht diesen Kasten zum Bezug fuer `100cqh` in
+ * KampfAnzeige.module.css: Die Arena rechnet daraus ihre Breite, so wie die
+ * Ruestkammer es aus `.tr-spielflaeche` tut (styles.css). Das geht nur, weil
+ * seine Groesse nicht vom Inhalt kommt — die Hoehe vom Flex, die Breite von
+ * `width: 100%`. Ohne `flex: 1 1 0` waere `100cqh` die Hoehe der Arena
+ * selbst, und die Rechnung liefe im Kreis.
+ */
 .mitte {
   position: relative;
   z-index: 1;
   width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  container-type: size;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   animation: tr-auffahrt 620ms cubic-bezier(0.22, 1, 0.36, 1) 560ms both;
 }
 @keyframes tr-auffahrt {
@@ -409,7 +431,7 @@
        mit hoeherem Boden. Stuende hier wieder ein fester Wert, faenge die
        Buehne den Platz, den `flex: 1` ihr holt, ausschliesslich unter dem
        Brett auf, und ueber ihm klebte das Brett an der Phasenzeile. */
-    padding: clamp(40px, 9vh, 110px) 0 28px;
+    padding: clamp(40px, 9dvh, 110px) 0 28px;
   }
   .horizont {
     height: 34%;

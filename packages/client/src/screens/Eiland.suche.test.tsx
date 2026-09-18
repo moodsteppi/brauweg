@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * (packages/server/test/suche.test.ts).
  */
 
-const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables, leaveTable } =
+const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables, leaveTable, defaults } =
   vi.hoisted(() => ({
     sucheStarten: vi.fn(),
     sucheStand: vi.fn(),
@@ -19,6 +19,7 @@ const { sucheStarten, sucheStand, sucheAbbrechen, createTable, joinTable, tables
     joinTable: vi.fn(),
     tables: vi.fn(),
     leaveTable: vi.fn(),
+    defaults: vi.fn(),
   }));
 
 vi.mock('../api', () => ({
@@ -30,6 +31,7 @@ vi.mock('../api', () => ({
     joinTable,
     tables,
     leaveTable,
+    defaults,
     aktiveSpieler: () => Promise.resolve({ aktiv: 4 }),
   },
 }));
@@ -63,6 +65,18 @@ async function einTakt(): Promise<void> {
   await durchatmen();
 }
 
+/** Was `GET /games/<spiel>/defaults` liefert — die Vorgabe des Moduls. */
+const VORGABE = {
+  spalten: 10,
+  zeilen: 10,
+  seen: 2,
+  berge: 4,
+  ornamente: 4,
+  sichtweite: 3,
+  kontingentMax: 6,
+  variante: 'nebel',
+};
+
 describe('Eiland: Mitspieler suchen', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -73,6 +87,18 @@ describe('Eiland: Mitspieler suchen', () => {
     joinTable.mockReset();
     tables.mockReset().mockResolvedValue([]);
     leaveTable.mockReset().mockResolvedValue({ ok: true });
+    /*
+     * Der Bildschirm holt den Regelsatz seit dem 07.09.2026 beim Server,
+     * statt ihn abzuschreiben (src/spiel-vorgabe.ts). Hier steht deshalb die
+     * ANTWORT DES SERVERS und nicht eine zweite Abschrift: Was das Modul
+     * wirklich vorgibt, prueft der Vertrag in src/vertrag/.
+     */
+    defaults.mockReset().mockResolvedValue({
+      config: VORGABE,
+      protocolVersion: 1,
+      seatCounts: [2],
+      rounds: {},
+    });
   });
 
   afterEach(() => {
@@ -176,6 +202,27 @@ describe('Eiland: Mitspieler suchen', () => {
       seats: 2,
       fillWithBots: true,
       config: { variante: 'klar' },
+    });
+  });
+
+  it('legt die Spielart auf den Regelsatz des Servers, statt ihn abzuschreiben', async () => {
+    /*
+     * Bis zum 07.09.2026 stand der Regelsatz als Konstante im Bildschirm. Der
+     * Server schreibt eine mitgeschickte `config` unveraendert als Regelsatz
+     * des Tisches fest — die Abschrift UEBERSTIMMTE also das Modul, und beim
+     * Auseinanderlaufen wurde nichts rot. Diese Probe haelt beides fest: dass
+     * gefragt wird, und dass die Antwort ungekuerzt mitgeht.
+     */
+    createTable.mockResolvedValue({ id: 'tisch-10', joinCode: null });
+    render(<Eiland onBack={() => {}} />);
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen die KI spielen' }));
+    await durchatmen();
+
+    expect(defaults).toHaveBeenCalledWith('eiland');
+    expect(createTable.mock.calls[0]?.[0]).toMatchObject({
+      // `variante` ueberschreibt die des Moduls — das ist die Wahl des Nutzers.
+      config: { ...VORGABE, variante: 'klar' },
     });
   });
 });

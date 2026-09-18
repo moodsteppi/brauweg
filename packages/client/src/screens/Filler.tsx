@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type Suchstand } from '../api';
 import { FARBEN, GRAUTOENE, farbeVon } from '../minispiele/filler/farben';
 import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
+import { useSpielVorgabe, zahlAus } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 
 /**
@@ -29,19 +30,21 @@ import { useTable } from '../useTable';
  * Typen vergleicht.
  */
 
-/**
- * Regelsatz, mit dem Bot-Tisch und Mitspielersuche aufgemacht werden.
+/*
+ * HIER STAND BIS ZUM 07.09.2026 EIN REGELSATZ, wortgleich abgeschrieben von
+ * DEFAULT_REGELN aus packages/game-filler/src/regeln.ts. Er ging als `config`
+ * an `createTable` und an `sucheStarten` — und weil der Server eine
+ * mitgeschickte `config` unveraendert als Regelsatz des Tisches festschreibt,
+ * UEBERSTIMMTE die Abschrift das Modul. Als die Barrieren am 06.09.2026 von
+ * fuenf auf zehn gingen, haette eine vergessene Zeile hier jeden echten Tisch
+ * still mit fuenf laufen lassen; rot geworden waere nichts.
  *
- * Muss zu DEFAULT_REGELN in packages/game-filler/src/regeln.ts passen. Bewusst
- * ausgeschrieben statt ueber `api.defaults()` geholt: Der Knopf soll nicht auf
- * eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht.
- *
- * Die Mitspielersuche schickt ihn seit dem 06.09.2026 abends mit
- * (`sucheStarten(…, config)`): Der Server fuehrt je Spielart einen eigenen
- * Topf und baut den Tisch mit diesem Regelsatz — vorher nahm er die Vorgabe
- * des Moduls, und der Schalter wirkte nur auf den Bot-Tisch.
+ * Weg ist die Abschrift trotzdem nicht einfach so: Filler legt die gewaehlte
+ * Spielart obendrauf und braucht deshalb den Rest des Regelsatzes. Der kommt
+ * jetzt ueber `useSpielVorgabe('filler')` vom Server, vorab geholt beim
+ * Aufbau des Menues. Warum vorab und warum ohne Ersatzzahl: siehe
+ * src/spiel-vorgabe.ts.
  */
-const REGELSATZ = { spalten: 8, zeilen: 7, barrieren: 10 };
 
 /**
  * Takt, in dem der Stand der Suche abgefragt wird.
@@ -66,14 +69,29 @@ function mitMauern(v: Variante): boolean {
 }
 
 /**
- * Farbzahl je Spielart: sieben in Extreme, sonst sechs.
+ * Was der Bildschirm an der Farbzahl UEBERSTIMMT: sieben in Extreme.
  *
- * Steht im Regelsatz, den der Client beim Aufmachen des Tisches mitschickt —
- * die Vorgabe des Moduls kennt nur die sechs. Ein Tisch, der einmal mit
- * sieben aufgemacht wurde, behaelt sie.
+ * Ueberall sonst ein leeres Objekt und nicht die Sechs — die kennt das Modul,
+ * und sie soll sich dort aendern duerfen, ohne dass hier jemand nachzieht.
+ * Die Sieben dagegen ist eine Eigenheit dieser einen Spielart, die die
+ * Vorgabe des Moduls gar nicht ausdruecken kann: Sie fuehrt EINE Farbzahl
+ * fuer alle Spielarten. Ein Tisch, der einmal mit sieben aufgemacht wurde,
+ * behaelt sie.
  */
-function farbenFuer(v: Variante): number {
-  return v === 'extreme' ? 7 : 6;
+function farbenFuer(v: Variante): { farben?: number } {
+  return v === 'extreme' ? { farben: 7 } : {};
+}
+
+/**
+ * Dieselbe Zahl als Zahl — fuer die Farbtupfer und das Vorschaubrett im
+ * Menue.
+ *
+ * `FARBEN.length - 1` ist der Notnagel, solange die Antwort des Servers noch
+ * unterwegs ist: sechs von sieben Tupfern, also alles ausser dem Orange, das
+ * nur Extreme kennt. Sobald die Vorgabe da ist, gilt sie.
+ */
+function farbzahlFuer(v: Variante, vorgabe: Record<string, unknown> | null): number {
+  return farbenFuer(v).farben ?? zahlAus(vorgabe, 'farben', FARBEN.length - 1);
 }
 
 const VARIANTE_TEXT: Record<Variante, string> = {
@@ -274,6 +292,12 @@ export function Filler({
     if (ziel) waehleVariante(ziel);
   });
 
+  /*
+   * Der Regelsatz des Moduls, vorab beim Server geholt. Die gewaehlte
+   * Spielart legt sich darauf; abgeschrieben wird nichts mehr.
+   */
+  const { holen: holeVorgabe, vorgabe } = useSpielVorgabe('filler');
+
   const tisch = useTable<FillerSicht>(tischId, 'filler');
   const sicht = tisch.view?.view ?? null;
   /**
@@ -305,8 +329,8 @@ export function Filler({
     setSucht(true);
     try {
       const stand = await api.sucheStarten('filler', {
-        ...REGELSATZ,
-        farben: farbenFuer(variante),
+        ...(await holeVorgabe()),
+        ...farbenFuer(variante),
         variante,
       });
       if (stand.tischId) setTischId(stand.tischId);
@@ -316,7 +340,7 @@ export function Filler({
     } finally {
       setSucht(false);
     }
-  }, [variante]);
+  }, [holeVorgabe, variante]);
 
   /**
    * Nachfragen, solange gesucht wird.
@@ -398,7 +422,7 @@ export function Filler({
     try {
       const { id } = await api.createTable({
         gameId: 'filler',
-        config: { ...REGELSATZ, farben: farbenFuer(variante), variante },
+        config: { ...(await holeVorgabe()), ...farbenFuer(variante), variante },
         seats: 2,
         rounds: 1,
         visibility: 'on_request',
@@ -410,7 +434,7 @@ export function Filler({
     } finally {
       setSucht(false);
     }
-  }, [variante]);
+  }, [holeVorgabe, variante]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
@@ -553,7 +577,7 @@ export function Filler({
             nur deine eigenen Felder und deren Nachbarn — der Rest liegt im Nebel.
           </p>
           <div className="fl-probe" aria-hidden="true">
-            {FARBEN.slice(0, farbenFuer(variante)).map((farbe, i) => (
+            {FARBEN.slice(0, farbzahlFuer(variante, vorgabe)).map((farbe, i) => (
               <span key={i} style={{ background: farbe }} />
             ))}
           </div>
@@ -591,7 +615,7 @@ export function Filler({
           </button>
           {fehler && <p className="fl-fehler">{fehler}</p>}
           <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
-          <Vorschau variante={variante} richtung={wischRichtung} />
+          <Vorschau variante={variante} richtung={wischRichtung} vorgabe={vorgabe} />
         </div>
         {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </main>
@@ -1306,11 +1330,14 @@ const VORSCHAU_WAENDE_EXTREME: [number, number][] = [
 function Vorschau({
   variante,
   richtung,
+  vorgabe,
 }: {
   variante: Variante;
   richtung?: Wischrichtung | null;
+  /** Regelsatz des Moduls, sobald er da ist — fuer die Farbzahl. */
+  vorgabe: Record<string, unknown> | null;
 }): React.JSX.Element {
-  const farbzahl = farbenFuer(variante);
+  const farbzahl = farbzahlFuer(variante, vorgabe);
   const nebel = variante === 'nebel';
   const mauern = variante === 'build' || variante === 'extreme';
   const sterne = variante === 'extreme' ? new Set(VORSCHAU_STERNE) : new Set<number>();
