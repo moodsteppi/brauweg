@@ -33,12 +33,13 @@ import { amZug, platzierungen, type Platzierung } from './partie.js';
 
 export interface ImposterSicht {
   readonly art: 'imposter';
-  /** Das eigene Wort — beim Imposter das abweichende. Zuschauer: null. */
+  /** Das Wort der Runde. Imposter und Zuschauer: null. */
   readonly meinWort: string | null;
-  /**
-   * Weiss ich, dass ich der Imposter bin? Bewusst mitgeschickt statt vom
-   * Client erraten: Er kennt das Wort der anderen nicht und koennte es nicht.
-   */
+  /** Nur der Imposter hat einen: die grobe Kategorie des Wortes. */
+  readonly hinweis: string | null;
+  /** Wer wann redet — fuer alle gleich, damit niemand durcheinanderredet. */
+  readonly reihenfolge: readonly number[];
+  /** Weiss ich, dass ich der Imposter bin? Seit dem 19.09.2026 ja: Er sieht es. */
   readonly binImposter: boolean;
   /** Wer schon abgestimmt hat — nicht, fuer wen. */
   readonly abgestimmt: readonly number[];
@@ -190,7 +191,11 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
       const binImposter = !zuschauer && sitz === runde.imposter;
       return {
         art: 'imposter',
-        meinWort: zuschauer ? null : binImposter ? runde.falsch : runde.wort,
+        /* Der Imposter bekommt KEIN Wort — er weiss, dass er es ist, und hat
+           nur den Hinweis. Beides steht in keiner anderen Sicht. */
+        meinWort: zuschauer || binImposter ? null : runde.wort,
+        hinweis: binImposter ? runde.hinweis : null,
+        reihenfolge: runde.reihenfolge,
         binImposter,
         abgestimmt: runde.phase === 'spiel' ? runde.fertig : [],
         stimmen: auf ? runde.stimmen : null,

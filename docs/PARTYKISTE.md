@@ -86,10 +86,19 @@ Allgemeinwissen aus dem Buchregal. Wie oft er das Gewusste auch antwortet,
 hängt an der eingestellten Spielstärke; ein Anfänger-Bot weiß es und tippt
 trotzdem daneben.
 
-**Die Ergebnisphase ist eine Schaupause** (`interludeMs`, 12 s). „Weiter“ ist
-eine Abkürzung, keine Pflicht: Tippen alle Anwesenden, geht es sofort weiter.
-Auf Bots wird dabei nicht gewartet — sie tippen nie, weil die Plattform sie
-nur fragt, wenn jemand am Zug ist.
+**Die Ergebnisphase wartet auf jeden Menschen — es gibt keine Uhr.** Bis zum
+19.09.2026 war sie eine Schaupause von zwölf Sekunden; zu zwölft war die
+vorbei, bevor die Hälfte gelesen hatte. Jetzt nennt `currentActor` den
+nächsten Menschen, der noch nicht „Weiter“ getippt hat; Bots zählen als fertig.
+Sicherheitsnetz ist die Zugzeit der Plattform, die das Modul auf **fünf
+Minuten** hebt (`meta.zugzeitMs`, neu in game-api, nur verlängernd, gedeckelt
+bei zehn) — danach tippt der Bot für den, der weg ist. Dieselben fünf Minuten
+gelten für jeden Zug: Bei Imposter redet erst die Runde, dann wird gestimmt.
+
+**Imposter seit dem 19.09.2026:** Der Imposter sieht **„IMPOSTER“ und einen
+Hinweis** (grobe Kategorie, `inhalte/imposter.ts`), kein Nachbarwort mehr. Die
+Runde bekommt eine **feste Redereihenfolge** (`reihenfolge`, je Runde
+gemischt), die auf jedem Schirm steht.
 
 ## Neue Inhalte ergänzen
 

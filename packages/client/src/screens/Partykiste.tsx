@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { api, type Me } from '../api';
 import { MINISPIEL_ANSAGE, MINISPIEL_NAME, type PartyAktion, type PartykisteSicht } from '../minispiele/partykiste/sicht';
-import { Runde, namenFuer } from '../minispiele/partykiste/Runden';
+import { Runde, Wartet, namenFuer } from '../minispiele/partykiste/Runden';
 import type { BotLevel, SeatInfo } from '../protocol';
 import { useTable } from '../useTable';
 
@@ -394,10 +394,11 @@ export function Partykiste({
 /**
  * Was diese Runde gebracht hat — und der Weiter-Knopf.
  *
- * Er ist eine Abkürzung, keine Pflicht: Tippen ihn alle Anwesenden, geht es
- * sofort weiter; tippt ihn niemand, läuft die Schaupause des Moduls ab. Genau
- * deshalb steht hier keine eigene Uhr — eine zweite Frist im Client liefe der
- * echten davon.
+ * Er ist Pflicht, keine Abkürzung: Es geht erst weiter, wenn JEDER Anwesende
+ * getippt hat. Bis zum 19.09.2026 lief daneben eine Schaupause von zwölf
+ * Sekunden — zu zwölft war sie vorbei, bevor die Hälfte gelesen hatte, wer
+ * trinkt. Wer wegbleibt, fällt nach der Zugzeit (fünf Minuten) an den Bot,
+ * der für ihn tippt. Keine eigene Uhr im Client — sie liefe der echten davon.
  */
 function Abrechnung({
   sicht,
@@ -449,6 +450,9 @@ function Abrechnung({
           {binFertig ? 'Warten auf die anderen …' : 'Weiter'}
         </button>
       </div>
+      {/* Es geht erst weiter, wenn ALLE getippt haben — keine Uhr mehr.
+          Die Zahl sagt, auf wen die Runde wartet. */}
+      {binFertig ? <Wartet sicht={sicht} /> : null}
     </div>
   );
 }

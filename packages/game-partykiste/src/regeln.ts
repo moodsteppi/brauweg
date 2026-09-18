@@ -115,11 +115,15 @@ export const RUNDEN_MAX = 15;
 export const RUNDEN_VORGABE = 6;
 
 /**
- * Wie lange das Ergebnisbild einer Runde stehen bleibt, bevor die Plattform
- * von selbst weitergeht. Lang genug zum Lesen UND zum Trinken; wer schneller
- * ist, tippt "Weiter" und ueberspringt den Rest.
+ * Zugzeit eines Menschen: fuenf Minuten statt der 60 Sekunden der Plattform.
+ *
+ * Der Zug findet hier im RAUM statt — erst redet die Runde, dann wird
+ * getippt. Am 19.09.2026 zu zwoelft liefen die 60 Sekunden mitten in der
+ * Imposter-Diskussion ab, und der Bot stimmte fuer Leute, die noch redeten.
+ * Fuenf Minuten sind lang genug fuer eine Rederunde zu zwoelft und kurz
+ * genug, dass ein verlassener Tisch nicht den Abend blockiert.
  */
-export const ERGEBNIS_MS = 12_000;
+export const ZUGZEIT_MS = 5 * 60_000;
 
 /**
  * Obergrenze fuer die Botpause der Plattform.
