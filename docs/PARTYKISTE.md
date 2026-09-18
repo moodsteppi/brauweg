@@ -1,0 +1,116 @@
+# Partykiste
+
+Ein Turnier aus sechs Partyminispielen für **4 bis 12 Leute**, die im selben
+Raum sitzen. Geredet wird am Tisch, der Bildschirm nimmt nur die Entscheidung
+entgegen — deshalb braucht die Kiste, anders als Werwolf, keinen freien Text
+zwischen den Sitzen und ist heute schon spielbar.
+
+- Paket: `packages/game-partykiste`
+- Bildschirm: `packages/client/src/screens/Partykiste.tsx`
+- Ansichten: `packages/client/src/minispiele/partykiste/`
+- Schaukasten (Entwicklung): `npm run dev:client` →
+  <http://localhost:5173/schaukasten.html>
+
+## Warum ein Modul und nicht sechs
+
+Sechs Spiele wären sechs Einträge in der Spielauswahl, sechs Wartezimmer und
+sechs Ranglisten. Auf einer Party heißt das sechsmal „Tisch suchen“, während
+alle danebenstehen. Die Kiste ist deshalb **ein** Spiel: Man setzt sich
+einmal hin, spielt 3 bis 15 Runden, und am Ende steht eine Tabelle.
+
+Die Minispiele kommen reihum in der Reihenfolge, die im Regelsatz steht
+(`minispiele`). Bewusst berechnet und nicht gewürfelt — „dreimal Quiz
+hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
+
+## Die sechs Minispiele
+
+| Minispiel | Ablauf | Punkte | Schlücke |
+| --- | --- | --- | --- |
+| **Imposter** | Alle sehen dasselbe Wort, einer ein ähnliches. Reihum ein Satz, dann Abstimmung. | Ehrliche mit richtiger Stimme +2; Imposter, der durchkommt, +4 | Enttarnter Imposter 3; kommt er durch, trinkt jeder Ehrliche 1 |
+| **Allgemeinwissen** | Eine Frage, vier Antworten, alle tippen gleichzeitig. | richtig +2 | falsch 1 |
+| **Wer bin ich** | Jeder sieht alle Namen außer dem eigenen. Reihum fragt einer die Runde aus. | erraten +3 | erraten → alle anderen 1; aufgegeben → selbst 2 |
+| **Ich hab noch nie** | Zwei Knöpfe: „Hab ich“ oder „Noch nie“. | sauber geblieben +1 | gestanden 1 |
+| **Wer würde eher** | Alle stimmen gleichzeitig für einen Mitspieler. | keine Stimme bekommen +1 | je Stimme 1 |
+| **Bus fahren** | Reihum drei Tipps: Rot/Schwarz, höher/tiefer, innen/außen. Gleichstand zählt gegen den Fahrer. | je richtiger Tipp +1 | erster Fehlgriff 1, dann ist der Nächste dran |
+
+Der **Härtegrad** (`schluckFaktor`, 1 bis 3) nimmt alle Schlücke einer Runde
+mal. Punkte bleiben unberührt: Die Rangliste darf nicht davon abhängen, wie
+hart der Abend eingestellt ist.
+
+Der **Trinkmodus** (`trinkmodus`) blendet Gläser und Schluckzahlen aus; der
+Ablauf ändert sich nicht. Ein zweiter Ablauf für „ohne Alkohol“ wäre ein
+zweites Regelwerk, das nie jemand testet.
+
+## Wertung
+
+Gewertet wird das **ganze Turnier**: `standings` liefert die aufaddierten
+Punkte, die Plattform rechnet daraus Trophäen (mehr Punkte = besserer Platz).
+Die Schlücke stehen daneben und zählen **nicht** mit.
+
+Die reinen Trinkrunden („Ich hab noch nie“, „Wer würde eher“) geben bewusst
+nur einen Punkt. Bei „Ich hab noch nie“ kann man lügen und den Punkt
+mitnehmen — deshalb darf er das Turnier nicht entscheiden.
+
+## Was die Plattform dafür lernen musste
+
+Die Partykiste ist das erste Spiel mit **mehr als acht Sitzen**. Daran hingen
+drei Stellen außerhalb des Pakets:
+
+- `packages/server/src/http/app.ts` — die Sitzgrenze beim Tisch-Anlegen stand
+  auf 8, weil es kein Spiel mit mehr gab. Jetzt 12. Die eigentliche Prüfung
+  macht ohnehin `validateConfig` des Moduls.
+- `packages/server/src/trophies.ts` — `PLACEMENT_TROPHIES` kannte 2 bis 8
+  Sitze und **wirft** ohne Eintrag. Jetzt bis 12, Abstand 6, Nullsumme und
+  ganzzahlige Mittelwerte bei Gleichstand wie gehabt.
+- Die Mitschnitt-Kennung in `diagnoseSchema` ließ Sitz 0 bis 7 zu.
+
+## Besonderheiten für die nächste Änderung
+
+**Sichtbarkeit ist das Spiel.** Das fremde Imposter-Wort und der eigene Name
+aus „Wer bin ich“ werden nicht ausgeblendet, sondern gar nicht erst
+verschickt (`src/sicht.ts`). Der Test `das Imposter-Wort steht in keiner
+fremden Sicht` prüft das am JSON der Sicht, nicht an einzelnen Feldern — wer
+ein Feld ergänzt, das das Wort mitführt, bricht ihn.
+
+**Zwei Bauarten von Minispiel.** Vier laufen gleichzeitig (jeder Sitz handelt
+einmal, `currentActor` nennt trotzdem den nächsten Offenen — der Kniff von
+Eiland und Tafelrunde), zwei reihum. Alles, was von selbst weitergeht, steht
+in `weiter()`; eine zweite Stelle, die den Ablauf schiebt, gibt es nicht.
+
+**Der Bot kennt die Quizfragen.** Er schlägt sie über den Fragetext im
+eigenen Katalog nach — das ist kein Blick in den Zustand, sondern
+Allgemeinwissen aus dem Buchregal. Wie oft er das Gewusste auch antwortet,
+hängt an der eingestellten Spielstärke; ein Anfänger-Bot weiß es und tippt
+trotzdem daneben.
+
+**Die Ergebnisphase ist eine Schaupause** (`interludeMs`, 12 s). „Weiter“ ist
+eine Abkürzung, keine Pflicht: Tippen alle Anwesenden, geht es sofort weiter.
+Auf Bots wird dabei nicht gewartet — sie tippen nie, weil die Plattform sie
+nur fragt, wenn jemand am Zug ist.
+
+## Neue Inhalte ergänzen
+
+Die Kataloge unter `src/inhalte/` sind reine Daten: Fragen, Wortpaare, Namen,
+Sprüche. Neue Einträge kommen **hinten** dazu und bekommen die nächste freie
+Kennung; bestehende Kennungen ändern sich nie — sie stehen in abgelegten
+Rundenprotokollen.
+
+Stand 18.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
+je 100 Sprüche für „Ich hab noch nie“ und „Wer würde eher“.
+
+## Ein weiteres Minispiel einbauen
+
+1. `MinispielId` in `src/regeln.ts` erweitern, Kennung in `MINISPIELE`.
+2. Rundentyp in `src/partie.ts` ergänzen (`Runde`-Union, `baueRunde`,
+   `werteAus`) und, falls es reihum läuft, in `istReihum`.
+3. Sicht in `src/sicht.ts` — und dabei zuerst entscheiden, was **nicht**
+   mitfährt.
+4. Bot in `src/bot.ts`, Ansicht in
+   `packages/client/src/minispiele/partykiste/Runden.tsx`, Spiegelbild der
+   Sicht in dessen `sicht.ts`.
+5. Punkte und Schlücke in `PUNKTE`/`SCHLUECKE` eintragen — sie stehen
+   absichtlich an einer Stelle, damit man das Turnier dort austariert.
+
+Der Vertrag (`packages/client/src/vertrag/partykiste.test.ts`) bricht den
+Client-Bau, wenn Sicht und Beschreibung auseinanderlaufen. Der Schaukasten
+bekommt einen neuen Eintrag, sonst sieht den neuen Zustand nie jemand.

@@ -138,7 +138,20 @@ export type GameId =
    * (`interludeMs`/`advanceInterlude`), weil sonst kein Timer je von selbst
    * weiterliefe, solange niemand ein Ergebnis meldet.
    */
-  | 'golf';
+  | 'golf'
+  /**
+   * Partykiste: ein Turnier aus Partyminispielen fuer 4 bis 12 Leute —
+   * Imposter, Allgemeinwissen, Wer bin ich, Ich hab noch nie, Wer wuerde eher,
+   * Bus fahren. EIN Modul und nicht sechs, weil sechs Spiele auf einer Party
+   * sechsmal "Tisch suchen" hiessen; gewertet wird ueber alle Runden zusammen.
+   *
+   * Zwei Dinge sind neu daran: Es ist das erste Spiel mit mehr als acht Sitzen
+   * — deshalb steht die Sitzgrenze der Plattform jetzt bei zwoelf — und das
+   * erste, dessen Runde im RAUM stattfindet. Geredet wird am Tisch, getippt
+   * wird nur die Entscheidung; genau deshalb braucht es, anders als Werwolf,
+   * keinen freien Text zwischen den Sitzen.
+   */
+  | 'partykiste';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby

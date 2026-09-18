@@ -25,6 +25,7 @@ import { feldherr } from '@brauweg/game-feldherr';
 import { filler } from '@brauweg/game-filler';
 import { golf } from '@brauweg/game-golf';
 import { mememory } from '@brauweg/game-mememory';
+import { partykiste } from '@brauweg/game-partykiste';
 import { skat } from '@brauweg/game-skat';
 import { tafelrunde } from '@brauweg/game-tafelrunde';
 import { wizard } from '@brauweg/game-wizard';
@@ -42,6 +43,7 @@ const MODULES: readonly AnyGameModule[] = [
   eiland as unknown as AnyGameModule,
   tafelrunde as unknown as AnyGameModule,
   golf as unknown as AnyGameModule,
+  partykiste as unknown as AnyGameModule,
 ];
 
 /**
