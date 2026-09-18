@@ -563,6 +563,13 @@ function Lobby({
           })}
         </ul>
 
+        {sitze.some((platz) => platz.gast) ? (
+          /* Vor dem Start, nicht erst an der Abrechnung: Ein Tisch mit Gast
+             zaehlt fuer niemanden (countsForRanking) — wer das nicht will,
+             geht jetzt, nicht nach sechs Runden. */
+          <p className="pk-warten">Ein Gast spielt mit — diese Runde zählt nicht für die Rangliste.</p>
+        ) : null}
+
         {binHost ? (
           <>
             <button
