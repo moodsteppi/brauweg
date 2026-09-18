@@ -16,12 +16,12 @@ funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 14. September 2026 aus einem vollen Lauf, nicht aus
+**Prüfstand (gezählt am 18. September 2026 aus einem vollen Lauf, nicht aus
 der Erinnerung):**
 172 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
 61 Eiland-Tests, 311 Tafelrunde-Tests, 20 Golf-Tests, **469 Servertests** —
-zusammen 1503, dazu die Client-Tests (62 Dateien, 788 Tests), alle grün.
+zusammen 1503, dazu die Client-Tests (63 Dateien, 801 Tests), alle grün.
 `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
@@ -356,6 +356,21 @@ zusammen 1503, dazu die Client-Tests (62 Dateien, 788 Tests), alle grün.
 > die Höhe der Kopfleiste (`Synergien.module.css`). Diese Zahl ist weg: Die
 > Statuszeile mit ihr darin **ist** die linke Spalte, und das Modul dreht nur
 > noch die Liste hochkant.
+>
+> **Das Blatt einer Marke geht seit dem 18.09.2026 auch im Laden auf.** Es
+> hing bis dahin nur an den Zählern der Leiste und an der Markenzeile des
+> Gegners; die kleinen Zeichen an einer Einheit und auf der Ladenkarte trugen
+> weiter ein `title`, das am Handy nie erscheint. Der Weg führt jetzt über ein
+> **Blatt** und nicht über die 11-px-Zeichen: An der Einheit bleiben sie stumm
+> (`pointer-events: none`, sonst fängt der Griff darin den Finger von der Wabe
+> ab), dafür sind die Marken im Einheitenblatt tippbar. Die Ladenkarte ist
+> selbst eine Schaltfläche — sie bekommt daneben einen Griff in der linken
+> oberen Ecke (plus langen Druck auf die Karte), der dasselbe Einheitenblatt
+> für das **Angebot** aufschlägt, mit Werten, Marken und Kaufen-Knopf. Das
+> Markenblatt hängt dafür an einem gemeinsamen Haken (`useMarkenblatt`); wessen
+> Stände es zeigt, entscheidet der Aufrufer, damit die Zeile des Gegners weiter
+> seine zeigt. Neu daneben: `standFuer` — eine Marke ohne Träger fehlt in
+> `synergien` ganz, und im Laden ist „0 auf dem Brett" die häufigste Antwort.
 >
 > **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
