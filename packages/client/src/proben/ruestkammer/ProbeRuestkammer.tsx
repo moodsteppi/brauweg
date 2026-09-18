@@ -80,6 +80,7 @@ import {
   Synergieleiste,
   markennamen,
   schwellenPruefer,
+  useMarkenblatt,
 } from '../../minispiele/tafelrunde/Synergien';
 import { GoldZeichen, LebenZeichen } from '../../minispiele/tafelrunde/Zeichen';
 import type { Einheit, Stufenwerte } from '../../minispiele/tafelrunde/sicht';
@@ -235,6 +236,13 @@ export function ProbeRuestkammer(): React.JSX.Element {
   const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
 
   /*
+   * Und welche LADENKARTE ihr Blatt offen hat — der Platz, aus demselben
+   * Grund wie oben der Ort. Die Karte selbst ist eine Schaltflaeche; der Griff
+   * dazu sitzt daneben (Ladenkarte.tsx).
+   */
+  const [ladenBlatt, setLadenBlatt] = useState<number | null>(null);
+
+  /*
    * Die Grenze, die auch der Bildschirm prueft — und die einzige, die er
    * selbst prueft (siehe Kopf von screens/Tafelrunde.tsx): Von der Bank auf
    * ein FREIES Brettfeld nur, solange `belegt` unter `feldplaetze` liegt.
@@ -291,10 +299,21 @@ export function ProbeRuestkammer(): React.JSX.Element {
     setLaden(SZENE.eigenes.laden);
     setGewaehlt(null);
     setBlattOrt(null);
+    setLadenBlatt(null);
   }
+
+  /** Was die offene Ladenkarte anbietet — die Werte der ersten Stufe. */
+  const ladenEinheit = ladenBlatt !== null ? KATALOG[laden[ladenBlatt] ?? ''] : undefined;
 
   const namen = markennamen(SZENE.synergieTabelle);
   const trifftSchwelle = schwellenPruefer(SZENE.eigenes.synergien, SZENE.synergieTabelle);
+  /* Derselbe Griff wie am Tisch: Beide Blaetter fuehren zum Blatt einer
+     Marke, und die Zaehler der Leiste bringen ihren eigenen mit. */
+  const markengriff = useMarkenblatt(
+    SZENE.eigenes.synergien,
+    SZENE.synergieTabelle,
+    KATALOG,
+  );
 
   return (
     /*
@@ -452,9 +471,44 @@ export function ProbeRuestkammer(): React.JSX.Element {
               setBlattOrt(null);
             }}
             verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
             onSchliessen={() => setBlattOrt(null)}
           />
         )}
+
+        {/* Das Blatt einer Ladenkarte — dasselbe Bauteil ohne Ort: Die Einheit
+            steht noch nirgends, angeboten wird der Kauf. Die Probe kauft
+            genauso wie der Knopf auf der Karte selbst. */}
+        {ladenBlatt !== null && ladenEinheit && (
+          <Einheitenblatt
+            einheit={ladenEinheit}
+            kaempfer={{ id: ladenEinheit.id, stufe: 1 }}
+            werte={SZENE.stufenwerte[ladenEinheit.id]?.[0]}
+            tabelle={SZENE.synergieTabelle}
+            maxStufe={SZENE.maxStufe}
+            erloes={undefined}
+            /* Wie der Klick auf die Karte selbst: Er raeumt den Platz ab und
+               kauft nichts — die Probe rechnet kein Gold (siehe `onKauf`
+               unten). */
+            onKaufen={
+              amZug && KAUFBAR.has(ladenBlatt)
+                ? () => {
+                    setLaden((l) =>
+                      l.map((eintrag, i) => (i === ladenBlatt ? null : eintrag)),
+                    );
+                    setLadenBlatt(null);
+                  }
+                : undefined
+            }
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
+            onSchliessen={() => setLadenBlatt(null)}
+          />
+        )}
+
+        {/* Das Blatt einer Marke liegt ueber beiden — wie am Tisch. */}
+        {markengriff.blatt}
 
         {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile — Aufbau
             und Klassen wie am Tisch (`.tr-statuszeile`, screens/Tafelrunde.tsx
@@ -634,6 +688,9 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   onKauf={() =>
                     setLaden((l) => l.map((eintrag, i) => (i === platz ? null : eintrag)))
                   }
+                  /* Der Griff zur Auskunft — echt wie alles hier: Er schlaegt
+                     dasselbe Einheitenblatt auf wie am Tisch. */
+                  onBlatt={angeboten ? () => setLadenBlatt(platz) : undefined}
                 />
               );
             })}
