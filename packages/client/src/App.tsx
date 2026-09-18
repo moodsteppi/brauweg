@@ -402,7 +402,7 @@ export function App(): React.JSX.Element {
     }
 
     /**
-     * Partykiste: sechs Minispiele als Turnier, 4 bis 12 Leute im selben
+     * Partykiste: neun Minispiele als Turnier, 4 bis 12 Leute im selben
      * Raum. Wie bei Golf fuehren alle drei Wege — Spielauswahl, Lobby,
      * Weiterspielen — auf denselben Bildschirm.
      */

@@ -272,6 +272,101 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
     }),
   },
   {
+    titel: 'Schätzen',
+    text: 'Eine Zahl eintippen. Der Nächste holt drei Punkte, der Weiteste trinkt zwei.',
+    sicht: sicht({
+      art: 'schaetzen',
+      phase: 'spiel',
+      daten: {
+        art: 'schaetzen',
+        frage: 'Wie hoch ist der Eiffelturm (mit Antenne)?',
+        einheit: 'Meter',
+        meine: null,
+        gewaehlt: [1, 3],
+        antwort: null,
+        schaetzung: null,
+      },
+    }),
+  },
+  {
+    titel: 'Schätzen — aufgelöst',
+    text: 'Sortiert nach Abstand. Wer nicht getippt hat, steht ganz unten.',
+    sicht: sicht({
+      art: 'schaetzen',
+      phase: 'ergebnis',
+      rundenPunkte: [0, 3, 0, 0, 0, 0],
+      rundenSchlucke: [0, 0, 0, 0, 2, 0],
+      daten: {
+        art: 'schaetzen',
+        frage: 'Wie hoch ist der Eiffelturm (mit Antenne)?',
+        einheit: 'Meter',
+        meine: 300,
+        gewaehlt: [0, 1, 2, 3, 4, 5],
+        antwort: 330,
+        schaetzung: [300, 325, 400, 280, null, 350],
+      },
+    }),
+  },
+  {
+    titel: 'Entweder – oder',
+    text: 'Zwei Knöpfe, sonst nichts. Die Minderheit trinkt.',
+    sicht: sicht({
+      art: 'entweder',
+      phase: 'spiel',
+      daten: { art: 'entweder', a: 'Meer', b: 'Berge', meine: -1, gewaehlt: [1, 2], seite: null },
+    }),
+  },
+  {
+    titel: 'Entweder – oder — aufgelöst',
+    text: 'Die Mehrheit leuchtet grün und nimmt einen Punkt mit.',
+    sicht: sicht({
+      art: 'entweder',
+      phase: 'ergebnis',
+      rundenPunkte: [1, 0, 1, 1, 0, 1],
+      rundenSchlucke: [0, 1, 0, 0, 1, 0],
+      daten: {
+        art: 'entweder',
+        a: 'Meer',
+        b: 'Berge',
+        meine: 0,
+        gewaehlt: [0, 1, 2, 3, 4, 5],
+        seite: [0, 1, 0, 0, 1, 0],
+      },
+    }),
+  },
+  {
+    titel: 'Wahrheit oder Pflicht — wählen',
+    text: 'Erst die Wahl, dann die Aufgabe. Vorher sieht niemand beide.',
+    sicht: sicht({
+      art: 'wahrheitpflicht',
+      phase: 'spiel',
+      amZug: 0,
+      daten: {
+        art: 'wahrheitpflicht',
+        amZug: 0,
+        gewaehlt: [-1, -1, -1, -1, -1, -1],
+        text: ['', '', '', '', '', ''],
+        erfolg: [-1, -1, -1, -1, -1, -1],
+      },
+    }),
+  },
+  {
+    titel: 'Wahrheit oder Pflicht — Aufgabe',
+    text: 'Die Runde sieht die Aufgabe mit — sonst könnte man „gemacht" behaupten.',
+    sicht: sicht({
+      art: 'wahrheitpflicht',
+      phase: 'spiel',
+      amZug: 2,
+      daten: {
+        art: 'wahrheitpflicht',
+        amZug: 2,
+        gewaehlt: [1, 0, 1, -1, -1, -1],
+        text: ['Sing den Refrain deines Lieblingssongs — laut.', 'Was war dein peinlichster Moment auf einer Party?', 'Mach 20 Sekunden den Akzent deiner Wahl, bis alle geraten haben, welcher es ist.', '', '', ''],
+        erfolg: [1, 0, -1, -1, -1, -1],
+      },
+    }),
+  },
+  {
     titel: 'Bus fahren — daneben',
     text: 'Innen getippt, außen gekommen: ein Schluck, der Nächste steigt ein.',
     sicht: sicht({
