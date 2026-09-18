@@ -44,8 +44,12 @@ export interface PartyBusTipp {
 
 export interface ImposterSicht {
   art: 'imposter';
-  /** Das eigene Wort. Der Imposter bekommt ein anderes und merkt es nicht. */
+  /** Das Wort der Runde. Der Imposter bekommt keins — nur den Hinweis. */
   meinWort: string | null;
+  /** Nur beim Imposter gesetzt: die grobe Kategorie des Wortes. */
+  hinweis: string | null;
+  /** Feste Redereihenfolge, fuer alle gleich. */
+  reihenfolge: number[];
   binImposter: boolean;
   /** Wer schon abgestimmt hat — nicht, fuer wen. */
   abgestimmt: number[];

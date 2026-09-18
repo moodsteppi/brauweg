@@ -69,7 +69,7 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
 const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
   {
     titel: 'Imposter — dein Wort',
-    text: 'Ein Wort, sonst nichts. Einer am Tisch hat ein anderes und weiß es nicht.',
+    text: 'Ein Wort, sonst nichts — und die Redereihenfolge. Einer am Tisch hat statt des Wortes nur einen Hinweis.',
     sicht: sicht({
       art: 'imposter',
       phase: 'sehen',
@@ -77,7 +77,30 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
       daten: {
         art: 'imposter',
         meinWort: 'Schwimmbad',
+        hinweis: null,
+        reihenfolge: [2, 0, 5, 3, 1, 4],
         binImposter: false,
+        abgestimmt: [],
+        stimmen: null,
+        imposter: null,
+        echtesWort: null,
+        ertappt: null,
+      },
+    }),
+  },
+  {
+    titel: 'Imposter — du bist es',
+    text: 'Der Imposter sieht, dass er es ist, und bekommt nur einen Hinweis. Mitreden muss er trotzdem.',
+    sicht: sicht({
+      art: 'imposter',
+      phase: 'sehen',
+      gehandelt: [1, 3, 4],
+      daten: {
+        art: 'imposter',
+        meinWort: null,
+        hinweis: 'Ein Ort mit Wasser',
+        reihenfolge: [2, 0, 5, 3, 1, 4],
+        binImposter: true,
         abgestimmt: [],
         stimmen: null,
         imposter: null,
@@ -96,6 +119,8 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
       daten: {
         art: 'imposter',
         meinWort: 'Schwimmbad',
+        hinweis: null,
+        reihenfolge: [2, 0, 5, 3, 1, 4],
         binImposter: false,
         abgestimmt: [1, 3],
         stimmen: null,
@@ -117,6 +142,8 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
       daten: {
         art: 'imposter',
         meinWort: 'Schwimmbad',
+        hinweis: null,
+        reihenfolge: [2, 0, 5, 3, 1, 4],
         binImposter: false,
         abgestimmt: [],
         stimmen: [1, 2, 3, 2, 0, 3],

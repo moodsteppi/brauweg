@@ -89,8 +89,11 @@ function Wahl({
 }
 
 /** Warten auf die anderen — mit Zahl, damit man weiss, ob es hakt. */
-function Wartet({ sicht }: { sicht: PartykisteSicht }): React.JSX.Element {
-  const offen = sicht.sitze - sicht.ausgestiegen.length - sicht.gehandelt.length;
+export function Wartet({ sicht }: { sicht: PartykisteSicht }): React.JSX.Element {
+  /* In der Abrechnung tippen Bots kein "Weiter" — sie zaehlen als fertig,
+     sonst stuende hier "Noch 3 Leute", die es nie gibt. */
+  const bots = sicht.phase === 'ergebnis' ? sicht.botSitze.filter((b) => !sicht.gehandelt.includes(b)).length : 0;
+  const offen = sicht.sitze - sicht.ausgestiegen.length - sicht.gehandelt.length - bots;
   return (
     <p className="pk-wartet">
       {offen > 0 ? `Noch ${offen} ${offen === 1 ? 'Person' : 'Leute'} …` : 'Gleich geht es weiter …'}
@@ -153,15 +156,40 @@ function Leute({
 function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
   const daten = sicht.daten as ImposterSicht;
 
+  /*
+   * Der Imposter sieht, dass er es ist, und bekommt statt des Wortes nur den
+   * Hinweis. Bis zum 19.09.2026 bekam er ein Nachbarwort und merkte es erst
+   * spaet — das war fuer die Ehrlichen lustig und fuer ihn nur verwirrend.
+   */
+  const karte = daten.binImposter ? (
+    <>
+      <span className="pk-wort">IMPOSTER</span>
+      <span className="pk-hinweis">Hinweis: {daten.hinweis ?? '—'}</span>
+    </>
+  ) : (
+    <span className="pk-wort">{daten.meinWort ?? '—'}</span>
+  );
+  const reihe = (
+    <ol className="pk-reihe" aria-label="Redereihenfolge">
+      {daten.reihenfolge.map((s) => (
+        <li key={s} data-ich={s === sicht.sitz ? '' : undefined}>
+          {namenFuer(sitze, s)}
+        </li>
+      ))}
+    </ol>
+  );
+
   if (sicht.phase === 'sehen') {
     const gesehen = sicht.gehandelt.includes(sicht.sitz);
     return (
       <>
         <Buehne
-          oben="Dein Wort — zeig es niemandem"
-          gross={<span className="pk-wort">{daten.meinWort ?? '—'}</span>}
-          ton="geheim"
+          oben={daten.binImposter ? 'Du bist es — zeig es niemandem' : 'Dein Wort — zeig es niemandem'}
+          gross={<span className="pk-karte-inhalt">{karte}</span>}
+          ton={daten.binImposter ? 'schlecht' : 'geheim'}
         />
+        <p className="pk-ansage">Redereihenfolge — jeder sagt einen Satz zum Wort:</p>
+        {reihe}
         {gesehen ? (
           <Wartet sicht={sicht} />
         ) : (
@@ -180,10 +208,15 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
     return (
       <>
         <Buehne
-          oben="Dein Wort"
-          gross={<span className="pk-wort is-klein">{daten.meinWort ?? '—'}</span>}
-          unten={<span>Reihum ein Satz dazu. Dann: Wer passt nicht?</span>}
+          oben={daten.binImposter ? 'Du bist der Imposter' : 'Dein Wort'}
+          gross={
+            <span className="pk-wort is-klein">
+              {daten.binImposter ? `Hinweis: ${daten.hinweis ?? '—'}` : (daten.meinWort ?? '—')}
+            </span>
+          }
+          unten={<span>Reihum ein Satz — in dieser Reihenfolge. Dann: Wer passt nicht?</span>}
         />
+        {reihe}
         <Leute
           sicht={sicht}
           sitze={sitze}
