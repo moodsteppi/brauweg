@@ -112,4 +112,12 @@ export const WER_EHER_SPRUECHE: readonly Spruch[] = [
   { id: 'w098', text: 'Wer würde eher als Erster die Kerzen auf einem fremden Kuchen ausblasen wollen?' },
   { id: 'w099', text: 'Wer würde eher ein Projekt noch in der letzten Nacht vor der Deadline retten?' },
   { id: 'w100', text: 'Wer würde eher beim Fotoshooting am längsten nach der perfekten Pose suchen?' },
+  { id: 'w101', text: 'Wer würde eher bekifft die Pizza bestellen und die Adresse falsch angeben?' },
+  { id: 'w102', text: 'Wer würde eher bekifft eine halbe Stunde über eine Wolke reden?' },
+  { id: 'w103', text: 'Wer würde eher beim Drehen so lange brauchen, dass alle anderen schon fertig sind?' },
+  { id: 'w104', text: 'Wer würde eher bekifft behaupten, er sei überhaupt nicht bekifft?' },
+  { id: 'w105', text: 'Wer würde eher bekifft den ganzen Snackvorrat der Gruppe allein wegessen?' },
+  { id: 'w106', text: 'Wer würde eher bekifft eine Diskussion anfangen, an die sich am nächsten Tag niemand erinnert?' },
+  { id: 'w107', text: 'Wer würde eher bekifft die Musik aussuchen und dabei nie über den ersten Song hinauskommen?' },
+  { id: 'w108', text: 'Wer würde eher bekifft mitten im Satz vergessen, was er sagen wollte?' },
 ];
