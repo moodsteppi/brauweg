@@ -14,7 +14,7 @@
  },
  "windows": [
   {
-   "id": "win_bw_1n",
+   "id": "win_bw_1o",
    "type": "frame",
    "title": "Bekannte Widersprüche",
    "x": -1606,
@@ -33,7 +33,7 @@
    }
   },
   {
-   "id": "win_bw_1e",
+   "id": "win_bw_1f",
    "type": "frame",
    "title": "Ablauf einer Aktion",
    "x": -1606,
@@ -52,7 +52,7 @@
    }
   },
   {
-   "id": "win_bw_16",
+   "id": "win_bw_17",
    "type": "frame",
    "title": "Betrieb & Auslieferung",
    "x": 2054,
@@ -71,7 +71,7 @@
    }
   },
   {
-   "id": "win_bw_12",
+   "id": "win_bw_13",
    "type": "frame",
    "title": "Daten",
    "x": 94,
@@ -90,7 +90,7 @@
    }
   },
   {
-   "id": "win_bw_y",
+   "id": "win_bw_z",
    "type": "frame",
    "title": "Grundsätze",
    "x": -1606,
@@ -109,12 +109,12 @@
    }
   },
   {
-   "id": "win_bw_t",
+   "id": "win_bw_u",
    "type": "frame",
    "title": "Spielmodule",
    "x": 2054,
    "y": -1040,
-   "w": 2982,
+   "w": 3002,
    "h": 1046,
    "z": 1,
    "accent": "#b78cf7",
@@ -697,7 +697,7 @@
    "collapsed": false,
    "state": {
     "path": "packages/server/src/games/registry.ts",
-    "code": "/**\n * DIESE DATEI IST DIE EINZIGE STELLE IM SERVER,\n * DIE EIN KONKRETES SPIEL KENNT.\n *\n * Alles andere - Lobby, Tische, WebSocket, Ranglisten -\n * arbeitet ausschliesslich gegen GameModule.\n */\nconst MODULES: readonly AnyGameModule[] = [\n  doppelkopf, wizard, cambio, feldherr, skat,\n  mememory, easypoker, filler, eiland, tafelrunde,\n];\n\n/** Spiele ohne Modul: sichtbar, nicht startbar, abstimmbar. */\nconst PREVIEW = ['schafkopf','romme','maumau','schwimmen',\n  'backgammon','bauernskat','werwolf','phase10','drecksau'];",
+    "code": "/**\n * DIESE DATEI IST DIE EINZIGE STELLE IM SERVER,\n * DIE EIN KONKRETES SPIEL KENNT.\n *\n * Alles andere - Lobby, Tische, WebSocket, Ranglisten -\n * arbeitet ausschliesslich gegen GameModule.\n */\nconst MODULES: readonly AnyGameModule[] = [\n  doppelkopf, wizard, cambio, feldherr, skat,\n  mememory, easypoker, filler, eiland, tafelrunde,\n  golf, partykiste,\n];\n\n/** Spiele ohne Modul: sichtbar, nicht startbar, abstimmbar. */\nconst PREVIEW = ['schafkopf','romme','maumau','schwimmen',\n  'backgammon','bauernskat','werwolf','phase10','drecksau'];",
     "firstLine": 1,
     "size": 11,
     "wrap": false,
@@ -817,7 +817,7 @@
   {
    "id": "win_bw_i",
    "type": "notes",
-   "title": "Zehn Module, eine Schnittstelle",
+   "title": "Zwölf Module, eine Schnittstelle",
    "x": 3180,
    "y": -960,
    "w": 420,
@@ -826,7 +826,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<p>Stand 05.09.2026 — alle zehn spielbar:</p>\n<ul>\n<li><b>Doppelkopf</b> 4–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>\n<li><b>Cambio</b> 2–6 · <b>Easy Poker</b> 2–6 · <b>Mememory</b> 2–4</li>\n<li><b>Filler</b> 2 · <b>Eiland</b> 2 · <b>Feldherr</b> 2</li>\n<li><b>Tafelrunde</b> 2–8</li>\n</ul>\n<p>Dazu neun Vorschau-Spiele: in der Lobby sichtbar, nicht startbar,\nabstimmbar.</p>\n<p><b>Fünf der zehn sind keine Kartenspiele</b> (Feldherr, Mememory, Filler,\nEiland, Tafelrunde) — die Schnittstelle trägt sie trotzdem.</p>",
+    "html": "\n<p>Stand 18.09.2026 — alle zwölf spielbar:</p>\n<ul>\n<li><b>Doppelkopf</b> 4–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>\n<li><b>Cambio</b> 2–6 · <b>Easy Poker</b> 2–6 · <b>Mememory</b> 2–4</li>\n<li><b>Filler</b> 2 · <b>Eiland</b> 2 · <b>Feldherr</b> 2</li>\n<li><b>Tafelrunde</b> 2–8 · <b>Golf</b> 1–8 · <b>Partykiste</b> 4–12</li>\n</ul>\n<p>Dazu neun Vorschau-Spiele: in der Lobby sichtbar, nicht startbar,\nabstimmbar.</p>\n<p><b>Sieben der zwölf sind keine Kartenspiele</b> — die Schnittstelle trägt\nsie trotzdem.</p>\n<p><b>Die Sitzgrenze der Plattform ist 12</b> (seit der Partykiste), nicht 8.\n<code>PLACEMENT_TROPHIES</code> musste im selben Zug mit: Es <i>wirft</i>\nohne Eintrag für die Sitzzahl.</p>",
     "fontSize": 13
    }
   },
@@ -929,12 +929,28 @@
   {
    "id": "win_bw_p",
    "type": "notes",
+   "title": "Partykiste — sechs Minispiele, ein Turnier",
+   "x": 4590,
+   "y": -630,
+   "w": 420,
+   "h": 340,
+   "z": 34,
+   "accent": "#b78cf7",
+   "collapsed": false,
+   "state": {
+    "html": "\n<h3>packages/game-partykiste</h3>\n<p><b>4–12 Sitze</b>, seit 18.09.2026 — erstes Spiel mit mehr als acht.\nSechs Minispiele reihum als <b>ein</b> Turnier; sechs Module wären sechs\nWartezimmer und sechs Ranglisten.</p>\n<p>Vier der sechs laufen <b>gleichzeitig</b> — wie Eiland nennt\n<code>currentActor</code> trotzdem einen Sitz. Was von selbst weitergeht,\nsteht allein in <code>weiter()</code>.</p>\n<p><b>Sichtbarkeit IST das Spiel:</b> Das fremde Imposter-Wort und der eigene\nName aus „Wer bin ich“ werden nicht ausgeblendet, sondern gar nicht erst\nverschickt — auch nicht an Zuschauer.</p>\n<p><b>Schlücke zählen nicht in die Rangliste.</b> Sonst spielte, wer den\nTrinkmodus ausschaltet, ein anderes Spiel.</p>",
+    "fontSize": 13
+   }
+  },
+  {
+   "id": "win_bw_q",
+   "type": "notes",
    "title": "Mememory · Filler · Easy Poker",
    "x": 4120,
    "y": -280,
    "w": 420,
    "h": 240,
-   "z": 34,
+   "z": 35,
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
@@ -943,14 +959,14 @@
    }
   },
   {
-   "id": "win_bw_q",
+   "id": "win_bw_r",
    "type": "notes",
    "title": "Feldherr — Echtzeit im Gleichschritt",
    "x": 3650,
    "y": -960,
    "w": 420,
    "h": 320,
-   "z": 35,
+   "z": 36,
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
@@ -964,14 +980,14 @@
    }
   },
   {
-   "id": "win_bw_r",
+   "id": "win_bw_s",
    "type": "project",
    "title": "Feldherr — Funktionsweise",
    "x": 4590,
    "y": -960,
    "w": 400,
    "h": 340,
-   "z": 36,
+   "z": 37,
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
@@ -1815,14 +1831,14 @@
    }
   },
   {
-   "id": "win_bw_s",
+   "id": "win_bw_t",
    "type": "code",
    "title": "adapter.ts — die einzige Brücke je Spiel",
    "x": 2100,
    "y": -290,
    "w": 520,
    "h": 250,
-   "z": 37,
+   "z": 38,
    "accent": "#8fa4c4",
    "collapsed": false,
    "state": {
@@ -1836,14 +1852,14 @@
    }
   },
   {
-   "id": "win_bw_u",
+   "id": "win_bw_v",
    "type": "notes",
    "title": "Grundsätze, die nicht aufgeweicht werden",
    "x": -1560,
    "y": 260,
    "w": 460,
    "h": 430,
-   "z": 39,
+   "z": 40,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -1852,14 +1868,14 @@
    }
   },
   {
-   "id": "win_bw_v",
+   "id": "win_bw_w",
    "type": "notes",
    "title": "Warum Zuschauer keine Hand sehen",
    "x": -1050,
    "y": 260,
    "w": 420,
    "h": 200,
-   "z": 40,
+   "z": 41,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -1868,14 +1884,14 @@
    }
   },
   {
-   "id": "win_bw_w",
+   "id": "win_bw_x",
    "type": "notes",
    "title": "Warum der Bot nicht schummeln kann",
    "x": -1050,
    "y": 490,
    "w": 420,
    "h": 200,
-   "z": 41,
+   "z": 42,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -1884,14 +1900,14 @@
    }
   },
   {
-   "id": "win_bw_x",
+   "id": "win_bw_y",
    "type": "notes",
    "title": "Trophäen hängen am Platz, nie an den Punkten",
    "x": -580,
    "y": 260,
    "w": 440,
    "h": 430,
-   "z": 42,
+   "z": 43,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -1900,14 +1916,14 @@
    }
   },
   {
-   "id": "win_bw_z",
+   "id": "win_bw_10",
    "type": "notes",
    "title": "PostgreSQL — 36 Tabellen",
    "x": 140,
    "y": 260,
    "w": 440,
    "h": 430,
-   "z": 44,
+   "z": 45,
    "accent": "#4fd1c5",
    "collapsed": false,
    "state": {
@@ -1916,14 +1932,14 @@
    }
   },
   {
-   "id": "win_bw_10",
+   "id": "win_bw_11",
    "type": "notes",
    "title": "Der Schnappschuss",
    "x": 620,
    "y": 260,
    "w": 440,
    "h": 210,
-   "z": 45,
+   "z": 46,
    "accent": "#4fd1c5",
    "collapsed": false,
    "state": {
@@ -1932,14 +1948,14 @@
    }
   },
   {
-   "id": "win_bw_11",
+   "id": "win_bw_12",
    "type": "notes",
    "title": "Migrationen von Hand",
    "x": 620,
    "y": 500,
    "w": 440,
    "h": 190,
-   "z": 46,
+   "z": 47,
    "accent": "#4fd1c5",
    "collapsed": false,
    "state": {
@@ -1948,14 +1964,14 @@
    }
   },
   {
-   "id": "win_bw_13",
+   "id": "win_bw_14",
    "type": "notes",
    "title": "Ein Dienst, eine Domain",
    "x": 2100,
    "y": 260,
    "w": 460,
    "h": 300,
-   "z": 48,
+   "z": 49,
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
@@ -1964,14 +1980,14 @@
    }
   },
   {
-   "id": "win_bw_14",
+   "id": "win_bw_15",
    "type": "notes",
    "title": "iOS-App — die eine Ausnahme",
    "x": 2100,
    "y": 600,
    "w": 460,
    "h": 250,
-   "z": 49,
+   "z": 50,
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
@@ -1980,14 +1996,14 @@
    }
   },
   {
-   "id": "win_bw_15",
+   "id": "win_bw_16",
    "type": "notes",
    "title": "Fallen, die Zeit gekostet haben",
    "x": 2610,
    "y": 260,
    "w": 460,
    "h": 590,
-   "z": 50,
+   "z": 51,
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
@@ -1996,14 +2012,14 @@
    }
   },
   {
-   "id": "win_bw_17",
+   "id": "win_bw_18",
    "type": "notes",
    "title": "1. Karte antippen",
    "x": -1560,
    "y": 1120,
    "w": 400,
    "h": 230,
-   "z": 52,
+   "z": 53,
    "accent": "#9aa4b6",
    "collapsed": false,
    "state": {
@@ -2012,14 +2028,14 @@
    }
   },
   {
-   "id": "win_bw_18",
+   "id": "win_bw_19",
    "type": "notes",
    "title": "2. action über die Leitung",
    "x": -1090,
    "y": 1120,
    "w": 400,
    "h": 230,
-   "z": 53,
+   "z": 54,
    "accent": "#9aa4b6",
    "collapsed": false,
    "state": {
@@ -2028,14 +2044,14 @@
    }
   },
   {
-   "id": "win_bw_19",
+   "id": "win_bw_1a",
    "type": "notes",
    "title": "3. Gateway prüft",
    "x": -620,
    "y": 1120,
    "w": 400,
    "h": 230,
-   "z": 54,
+   "z": 55,
    "accent": "#9aa4b6",
    "collapsed": false,
    "state": {
@@ -2044,14 +2060,14 @@
    }
   },
   {
-   "id": "win_bw_1a",
+   "id": "win_bw_1b",
    "type": "notes",
    "title": "4. module.act(...)",
    "x": -150,
    "y": 1120,
    "w": 400,
    "h": 230,
-   "z": 55,
+   "z": 56,
    "accent": "#9aa4b6",
    "collapsed": false,
    "state": {
@@ -2060,14 +2076,14 @@
    }
   },
   {
-   "id": "win_bw_1b",
+   "id": "win_bw_1c",
    "type": "notes",
    "title": "5. Schnappschuss",
    "x": 320,
    "y": 1120,
    "w": 400,
    "h": 230,
-   "z": 56,
+   "z": 57,
    "accent": "#9aa4b6",
    "collapsed": false,
    "state": {
@@ -2076,14 +2092,14 @@
    }
   },
   {
-   "id": "win_bw_1c",
+   "id": "win_bw_1d",
    "type": "notes",
    "title": "6. viewFor je Sitz",
    "x": 790,
    "y": 1120,
    "w": 400,
    "h": 230,
-   "z": 57,
+   "z": 58,
    "accent": "#9aa4b6",
    "collapsed": false,
    "state": {
@@ -2092,14 +2108,14 @@
    }
   },
   {
-   "id": "win_bw_1d",
+   "id": "win_bw_1e",
    "type": "notes",
    "title": "7. Client zeichnet neu",
    "x": 1260,
    "y": 1120,
    "w": 400,
    "h": 230,
-   "z": 58,
+   "z": 59,
    "accent": "#9aa4b6",
    "collapsed": false,
    "state": {
@@ -2108,14 +2124,14 @@
    }
   },
   {
-   "id": "win_bw_1f",
+   "id": "win_bw_1g",
    "type": "notes",
    "title": "⚠ legalActions ist leer, obwohl jemand am Zug ist",
    "x": -1560,
    "y": 1900,
    "w": 460,
    "h": 320,
-   "z": 60,
+   "z": 61,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2124,14 +2140,14 @@
    }
   },
   {
-   "id": "win_bw_1g",
+   "id": "win_bw_1h",
    "type": "notes",
    "title": "⚠ legalActions kann auch nur halb gefüllt sein",
    "x": -1060,
    "y": 1900,
    "w": 460,
    "h": 320,
-   "z": 61,
+   "z": 62,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2140,14 +2156,14 @@
    }
   },
   {
-   "id": "win_bw_1h",
+   "id": "win_bw_1i",
    "type": "notes",
    "title": "⚠ currentActor nennt einen Sitz, obwohl alle gleichzeitig ziehen",
    "x": -560,
    "y": 1900,
    "w": 460,
    "h": 320,
-   "z": 62,
+   "z": 63,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2156,14 +2172,14 @@
    }
   },
   {
-   "id": "win_bw_1i",
+   "id": "win_bw_1j",
    "type": "notes",
    "title": "⚠ Feldherr: der Server glaubt dem gemeldeten Ausgang",
    "x": -60,
    "y": 1900,
    "w": 460,
    "h": 320,
-   "z": 63,
+   "z": 64,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2172,14 +2188,14 @@
    }
   },
   {
-   "id": "win_bw_1j",
+   "id": "win_bw_1k",
    "type": "notes",
    "title": "⚠ Punkte sagen nichts über den Platz",
    "x": -1560,
    "y": 2260,
    "w": 460,
    "h": 320,
-   "z": 64,
+   "z": 65,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2188,14 +2204,14 @@
    }
   },
   {
-   "id": "win_bw_1k",
+   "id": "win_bw_1l",
    "type": "notes",
    "title": "⚠ Karten-IDs werden je Runde neu vergeben",
    "x": -1060,
    "y": 2260,
    "w": 460,
    "h": 320,
-   "z": 65,
+   "z": 66,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2204,14 +2220,14 @@
    }
   },
   {
-   "id": "win_bw_1l",
+   "id": "win_bw_1m",
    "type": "notes",
    "title": "⚠ Der Client baut die Sichten nach, fast ohne Test",
    "x": -560,
    "y": 2260,
    "w": 460,
    "h": 320,
-   "z": 66,
+   "z": 67,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2220,14 +2236,14 @@
    }
   },
   {
-   "id": "win_bw_1m",
+   "id": "win_bw_1n",
    "type": "notes",
    "title": "⚠ Feldherrs kern.js und feldherr.html sind gebaut, nicht geschrieben",
    "x": -60,
    "y": 2260,
    "w": 460,
    "h": 320,
-   "z": 67,
+   "z": 68,
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
@@ -2236,14 +2252,14 @@
    }
   },
   {
-   "id": "win_bw_1o",
+   "id": "win_bw_1p",
    "type": "notes",
    "title": "Brauweg",
    "x": -1560,
    "y": -1420,
    "w": 900,
    "h": 300,
-   "z": 69,
+   "z": 70,
    "accent": "#6ea8fe",
    "collapsed": false,
    "state": {
@@ -2254,7 +2270,7 @@
  ],
  "connections": [
   {
-   "id": "con_bw_1p",
+   "id": "con_bw_1q",
    "from": {
     "win": "win_bw_1",
     "side": "r"
@@ -2273,7 +2289,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1q",
+   "id": "con_bw_1r",
    "from": {
     "win": "win_bw_2",
     "side": "r"
@@ -2292,7 +2308,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1r",
+   "id": "con_bw_1s",
    "from": {
     "win": "win_bw_8",
     "side": "b"
@@ -2311,7 +2327,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1s",
+   "id": "con_bw_1t",
    "from": {
     "win": "win_bw_8",
     "side": "b"
@@ -2330,7 +2346,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1t",
+   "id": "con_bw_1u",
    "from": {
     "win": "win_bw_9",
     "side": "t"
@@ -2349,7 +2365,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1u",
+   "id": "con_bw_1v",
    "from": {
     "win": "win_bw_c",
     "side": "r"
@@ -2368,7 +2384,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1v",
+   "id": "con_bw_1w",
    "from": {
     "win": "win_bw_a",
     "side": "r"
@@ -2387,7 +2403,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1w",
+   "id": "con_bw_1x",
    "from": {
     "win": "win_bw_b",
     "side": "r"
@@ -2406,7 +2422,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1x",
+   "id": "con_bw_1y",
    "from": {
     "win": "win_bw_j",
     "side": "l"
@@ -2425,7 +2441,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1y",
+   "id": "con_bw_1z",
    "from": {
     "win": "win_bw_k",
     "side": "l"
@@ -2444,7 +2460,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_1z",
+   "id": "con_bw_20",
    "from": {
     "win": "win_bw_l",
     "side": "l"
@@ -2463,7 +2479,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_20",
+   "id": "con_bw_21",
    "from": {
     "win": "win_bw_m",
     "side": "l"
@@ -2482,9 +2498,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_21",
+   "id": "con_bw_22",
    "from": {
-    "win": "win_bw_q",
+    "win": "win_bw_r",
     "side": "l"
    },
    "to": {
@@ -2501,7 +2517,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_22",
+   "id": "con_bw_23",
    "from": {
     "win": "win_bw_n",
     "side": "l"
@@ -2520,7 +2536,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_23",
+   "id": "con_bw_24",
    "from": {
     "win": "win_bw_o",
     "side": "l"
@@ -2539,9 +2555,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_24",
+   "id": "con_bw_25",
    "from": {
-    "win": "win_bw_p",
+    "win": "win_bw_q",
     "side": "l"
    },
    "to": {
@@ -2558,7 +2574,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_25",
+   "id": "con_bw_26",
    "from": {
     "win": "win_bw_h",
     "side": "t"
@@ -2577,9 +2593,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_26",
+   "id": "con_bw_27",
    "from": {
-    "win": "win_bw_s",
+    "win": "win_bw_t",
     "side": "r"
    },
    "to": {
@@ -2596,13 +2612,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_27",
+   "id": "con_bw_28",
    "from": {
-    "win": "win_bw_q",
+    "win": "win_bw_r",
     "side": "r"
    },
    "to": {
-    "win": "win_bw_r",
+    "win": "win_bw_s",
     "side": "l"
    },
    "label": "eigene Tafel",
@@ -2615,13 +2631,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_28",
+   "id": "con_bw_29",
    "from": {
     "win": "win_bw_c",
     "side": "b"
    },
    "to": {
-    "win": "win_bw_10",
+    "win": "win_bw_11",
     "side": "t"
    },
    "label": "Snapshot nach jeder Aktion",
@@ -2634,13 +2650,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_29",
+   "id": "con_bw_2a",
    "from": {
     "win": "win_bw_7",
     "side": "b"
    },
    "to": {
-    "win": "win_bw_z",
+    "win": "win_bw_10",
     "side": "t"
    },
    "label": "Drizzle",
@@ -2653,13 +2669,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2a",
+   "id": "con_bw_2b",
    "from": {
     "win": "win_bw_d",
     "side": "b"
    },
    "to": {
-    "win": "win_bw_z",
+    "win": "win_bw_10",
     "side": "r"
    },
    "label": "Trophäen, Münzen, Truhen",
@@ -2672,13 +2688,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2b",
+   "id": "con_bw_2c",
    "from": {
-    "win": "win_bw_11",
+    "win": "win_bw_12",
     "side": "l"
    },
    "to": {
-    "win": "win_bw_z",
+    "win": "win_bw_10",
     "side": "r"
    },
    "label": "von Hand",
@@ -2691,9 +2707,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2c",
+   "id": "con_bw_2d",
    "from": {
-    "win": "win_bw_13",
+    "win": "win_bw_14",
     "side": "l"
    },
    "to": {
@@ -2710,9 +2726,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2d",
+   "id": "con_bw_2e",
    "from": {
-    "win": "win_bw_14",
+    "win": "win_bw_15",
     "side": "l"
    },
    "to": {
@@ -2729,9 +2745,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2e",
+   "id": "con_bw_2f",
    "from": {
-    "win": "win_bw_u",
+    "win": "win_bw_v",
     "side": "r"
    },
    "to": {
@@ -2748,9 +2764,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2f",
+   "id": "con_bw_2g",
    "from": {
-    "win": "win_bw_w",
+    "win": "win_bw_x",
     "side": "r"
    },
    "to": {
@@ -2767,13 +2783,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2g",
+   "id": "con_bw_2h",
    "from": {
     "win": "win_bw_5",
     "side": "b"
    },
    "to": {
-    "win": "win_bw_v",
+    "win": "win_bw_w",
     "side": "l"
    },
    "label": "Grundsatz 2 zum Anfassen",
@@ -2786,7 +2802,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2h",
+   "id": "con_bw_2i",
    "from": {
     "win": "win_bw_4",
     "side": "l"
@@ -2805,7 +2821,7 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2i",
+   "id": "con_bw_2j",
    "from": {
     "win": "win_bw_3",
     "side": "t"
@@ -2821,25 +2837,6 @@
    "width": 2,
    "dash": "dotted",
    "curve": "bezier",
-   "heads": "end"
-  },
-  {
-   "id": "con_bw_2j",
-   "from": {
-    "win": "win_bw_17",
-    "side": "r"
-   },
-   "to": {
-    "win": "win_bw_18",
-    "side": "l"
-   },
-   "label": "",
-   "labelSize": 12,
-   "t": 0.5,
-   "color": "#9aa4b6",
-   "width": 2.5,
-   "dash": "solid",
-   "curve": "straight",
    "heads": "end"
   },
   {
@@ -2941,10 +2938,29 @@
    "id": "con_bw_2p",
    "from": {
     "win": "win_bw_1d",
+    "side": "r"
+   },
+   "to": {
+    "win": "win_bw_1e",
+    "side": "l"
+   },
+   "label": "",
+   "labelSize": 12,
+   "t": 0.5,
+   "color": "#9aa4b6",
+   "width": 2.5,
+   "dash": "solid",
+   "curve": "straight",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_2q",
+   "from": {
+    "win": "win_bw_1e",
     "side": "b"
    },
    "to": {
-    "win": "win_bw_17",
+    "win": "win_bw_18",
     "side": "b"
    },
    "label": "nächster Zug",
@@ -2957,13 +2973,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2q",
+   "id": "con_bw_2r",
    "from": {
-    "win": "win_bw_1f",
+    "win": "win_bw_1g",
     "side": "t"
    },
    "to": {
-    "win": "win_bw_17",
+    "win": "win_bw_18",
     "side": "b"
    },
    "label": "hier greift die Ausnahme: der Client baut die Aktion selbst",
@@ -2976,9 +2992,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2r",
+   "id": "con_bw_2s",
    "from": {
-    "win": "win_bw_1g",
+    "win": "win_bw_1h",
     "side": "r"
    },
    "to": {
@@ -2995,9 +3011,9 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2s",
+   "id": "con_bw_2t",
    "from": {
-    "win": "win_bw_1h",
+    "win": "win_bw_1i",
     "side": "t"
    },
    "to": {
@@ -3014,35 +3030,16 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2t",
-   "from": {
-    "win": "win_bw_1i",
-    "side": "r"
-   },
-   "to": {
-    "win": "win_bw_q",
-    "side": "b"
-   },
-   "label": "Weg B: kein Spielstand im Server, nur die Doppelmeldung",
-   "labelSize": 11,
-   "t": 0.5,
-   "color": "#ef6b6b",
-   "width": 2,
-   "dash": "dashed",
-   "curve": "bezier",
-   "heads": "end"
-  },
-  {
    "id": "con_bw_2u",
    "from": {
     "win": "win_bw_1j",
-    "side": "t"
+    "side": "r"
    },
    "to": {
-    "win": "win_bw_x",
+    "win": "win_bw_r",
     "side": "b"
    },
-   "label": "genau deshalb rechnet die Plattform mit place",
+   "label": "Weg B: kein Spielstand im Server, nur die Doppelmeldung",
    "labelSize": 11,
    "t": 0.5,
    "color": "#ef6b6b",
@@ -3058,10 +3055,10 @@
     "side": "t"
    },
    "to": {
-    "win": "win_bw_1",
+    "win": "win_bw_y",
     "side": "b"
    },
-   "label": "trifft den Client: IDs taugen nicht als Schlüssel über Runden hinweg",
+   "label": "genau deshalb rechnet die Plattform mit place",
    "labelSize": 11,
    "t": 0.5,
    "color": "#ef6b6b",
@@ -3080,6 +3077,25 @@
     "win": "win_bw_1",
     "side": "b"
    },
+   "label": "trifft den Client: IDs taugen nicht als Schlüssel über Runden hinweg",
+   "labelSize": 11,
+   "t": 0.5,
+   "color": "#ef6b6b",
+   "width": 2,
+   "dash": "dashed",
+   "curve": "bezier",
+   "heads": "end"
+  },
+  {
+   "id": "con_bw_2x",
+   "from": {
+    "win": "win_bw_1m",
+    "side": "t"
+   },
+   "to": {
+    "win": "win_bw_1",
+    "side": "b"
+   },
    "label": "ungeprüfte Fläche",
    "labelSize": 11,
    "t": 0.5,
@@ -3090,13 +3106,13 @@
    "heads": "end"
   },
   {
-   "id": "con_bw_2x",
+   "id": "con_bw_2y",
    "from": {
-    "win": "win_bw_1m",
+    "win": "win_bw_1n",
     "side": "r"
    },
    "to": {
-    "win": "win_bw_q",
+    "win": "win_bw_r",
     "side": "b"
    },
    "label": "kern.js ist ein Erzeugnis, keine Quelle",
@@ -3110,5 +3126,5 @@
   }
  ],
  "models": [],
- "nextZ": 70
+ "nextZ": 71
 }
