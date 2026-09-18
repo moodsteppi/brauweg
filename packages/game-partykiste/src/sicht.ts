@@ -101,13 +101,51 @@ export interface BusSicht {
   readonly letzter: BusTipp | null;
 }
 
+export interface SchaetzSicht {
+  readonly art: 'schaetzen';
+  readonly frage: string;
+  readonly einheit: string;
+  /** Die eigene Schaetzung, null solange keine. */
+  readonly meine: number | null;
+  readonly gewaehlt: readonly number[];
+  /** Erst im Ergebnis: die Antwort und alle Schaetzungen. */
+  readonly antwort: number | null;
+  readonly schaetzung: readonly (number | null)[] | null;
+}
+
+export interface EntwederSicht {
+  readonly art: 'entweder';
+  readonly a: string;
+  readonly b: string;
+  readonly meine: number;
+  readonly gewaehlt: readonly number[];
+  /** Erst im Ergebnis — vorher saehe man, wohin die Mehrheit kippt. */
+  readonly seite: readonly number[] | null;
+}
+
+export interface WahrheitPflichtSicht {
+  readonly art: 'wahrheitpflicht';
+  readonly amZug: number;
+  /** Je Sitz: 0 Wahrheit, 1 Pflicht, -1 noch nicht gewaehlt. */
+  readonly gewaehlt: readonly number[];
+  /**
+   * Der Aufgabentext je Sitz — fuer ALLE sichtbar, sobald gewaehlt: Die Runde
+   * muss ja sehen, was verlangt war, um "gemacht" zu glauben.
+   */
+  readonly text: readonly string[];
+  readonly erfolg: readonly number[];
+}
+
 export type MinispielSicht =
   | ImposterSicht
   | QuizSicht
   | WerBinIchSicht
   | NiemalsSicht
   | WerEherSicht
-  | BusSicht;
+  | BusSicht
+  | SchaetzSicht
+  | EntwederSicht
+  | WahrheitPflichtSicht;
 
 // ---------------------------------------------------------------------------
 // Die ganze Sicht
@@ -206,6 +244,33 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
         offen: runde.offen,
         treffer: runde.treffer,
         letzter: runde.letzter,
+      };
+    case 'schaetzen':
+      return {
+        art: 'schaetzen',
+        frage: runde.frage,
+        einheit: runde.einheit,
+        meine: zuschauer ? null : (runde.schaetzung[sitz] ?? null),
+        gewaehlt: runde.fertig,
+        antwort: auf ? runde.antwort : null,
+        schaetzung: auf ? runde.schaetzung : null,
+      };
+    case 'entweder':
+      return {
+        art: 'entweder',
+        a: runde.a,
+        b: runde.b,
+        meine: zuschauer ? -1 : (runde.seite[sitz] ?? -1),
+        gewaehlt: runde.fertig,
+        seite: auf ? runde.seite : null,
+      };
+    case 'wahrheitpflicht':
+      return {
+        art: 'wahrheitpflicht',
+        amZug: runde.amZug,
+        gewaehlt: runde.gewaehlt,
+        text: runde.text,
+        erfolg: runde.erfolg,
       };
   }
 }

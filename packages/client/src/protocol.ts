@@ -83,7 +83,8 @@ export const GOLF_MODULE_VERSION = 2;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
- * zwoelfte Spiel: sechs Partyminispiele als ein Turnier, 4 bis 12 Sitze.
+ * zwoelfte Spiel: Partyminispiele als ein Turnier (sechs zum Start, neun seit
+ * dem 19.09.2026), 4 bis 12 Sitze.
  * Steht ausgeschrieben da, damit die naechste Aenderung eine Zahl zum
  * Hochsetzen findet und nicht die stille 1 aus `moduleVersionFor`.
  */

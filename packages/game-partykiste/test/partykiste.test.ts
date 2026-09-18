@@ -386,7 +386,13 @@ test('legalActions nennt nur Aktionen, die act auch annimmt', () => {
       continue;
     }
     const erlaubt = partykiste.legalActions(partie, sitz);
-    assert.ok(erlaubt.length > 0, `Sitz ${sitz} ist am Zug, darf aber nichts`);
+    if (erlaubt.length === 0) {
+      /* Falle 1 der Invarianten: Schaetzen kann seine Aktion nicht aufzaehlen
+         — der Bot muss trotzdem eine liefern, die `act` annimmt. */
+      assert.equal(partie.runde.art, 'schaetzen', `Sitz ${sitz} ist am Zug, darf aber nichts`);
+      partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
+      continue;
+    }
     for (const aktion of erlaubt) {
       assert.doesNotThrow(() => verarbeite(partie, sitz, aktion), `${JSON.stringify(aktion)}`);
     }
@@ -409,7 +415,7 @@ test('der Bot liefert immer eine Aktion, die in legalActions steht', () => {
       const erlaubt = partykiste.legalActions(partie, sitz);
       const aktion = partykiste.botAction(sichtFuer(partie, sitz), 'genie');
       assert.ok(
-        erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(aktion)),
+        erlaubt.length === 0 || erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(aktion)),
         `${spiel}: Bot spielt ${JSON.stringify(aktion)}, erlaubt sind ${JSON.stringify(erlaubt)}`,
       );
       partie = verarbeite(partie, sitz, aktion);

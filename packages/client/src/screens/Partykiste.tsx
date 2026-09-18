@@ -211,9 +211,8 @@ export function Partykiste({
         <div className="pk-menue-mitte">
           <h1 className="pk-titel">Partykiste</h1>
           <p className="pk-untertitel">
-            Sechs Minispiele, ein Turnier. Imposter, Allgemeinwissen, Wer bin ich, Ich
-            hab noch nie, Wer würde eher und Bus fahren — für 4 bis 12 Leute, die im
-            selben Raum sitzen. Wer verliert, trinkt; wer gewinnt, steht oben.
+            Neun Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
+            sitzen. Wer verliert, trinkt; wer gewinnt, steht oben.
           </p>
           <ul className="pk-spielliste" aria-label="Enthaltene Minispiele">
             {(Object.keys(MINISPIEL_NAME) as (keyof typeof MINISPIEL_NAME)[]).map((id) => (

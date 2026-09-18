@@ -21,8 +21,23 @@
 import type { BotLevel } from '@brauweg/game-api';
 
 import { QUIZ_FRAGEN } from './inhalte/quiz.js';
+import { SCHAETZ_FRAGEN } from './inhalte/schaetzen.js';
 import type { PartykisteAktion } from './regeln.js';
 import { quizTrefferquote } from './regeln.js';
+
+/** Wie weit ein Bot beim Schaetzen hoechstens danebengreift (Anteil der Antwort). */
+function schaetzStreuung(stufe: BotLevel | undefined): number {
+  switch (stufe) {
+    case 'anfaenger':
+      return 0.6;
+    case 'experte':
+      return 0.15;
+    case 'genie':
+      return 0.05;
+    default:
+      return 0.35;
+  }
+}
 import type { PartykisteSicht } from './sicht.js';
 import { baueZufall, ganzzahl } from './zufall.js';
 
@@ -110,6 +125,33 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
       /* Innen nur, wenn die Spanne breiter ist als der Rest des Blatts. */
       const spanne = Math.abs(a.rang - b.rang) - 1;
       return { art: 'tipp', wahl: spanne > 6 ? 0 : 1 };
+    }
+    case 'schaetzen': {
+      /*
+       * Wie beim Quiz: Die Antwort steht im eigenen Katalog, gefunden ueber den
+       * Fragetext. Die Spielstaerke bestimmt, wie weit der Bot danebengreift —
+       * ein Anfaenger um bis zu 60 Prozent, ein Genie um bis zu 5.
+       */
+      const frage = sicht.daten.frage;
+      const bekannt = SCHAETZ_FRAGEN.find((f) => f.frage === frage);
+      const zufall = strom(sicht, 'schaetzen');
+      if (!bekannt) return { art: 'schaetzung', wert: Math.round(zufall() * 1000) };
+      const streuung = schaetzStreuung(stufe);
+      const faktor = 1 + (zufall() * 2 - 1) * streuung;
+      const wert = bekannt.antwort * faktor;
+      /* Ganzzahlig, wenn die Antwort es ist — sonst eine Nachkommastelle. */
+      return { art: 'schaetzung', wert: Number.isInteger(bekannt.antwort) ? Math.round(wert) : Math.round(wert * 10) / 10 };
+    }
+    case 'entweder': {
+      return { art: 'seite', wahl: strom(sicht, 'entweder')() < 0.5 ? 0 : 1 };
+    }
+    case 'wahrheitpflicht': {
+      const daten = sicht.daten;
+      if (daten.gewaehlt[sicht.sitz] === -1) {
+        return { art: 'wahl', pflicht: strom(sicht, 'wp-wahl')() < 0.5 };
+      }
+      /* Vier von fuenf Bots ziehen durch. Der fuenfte kneift — Bots sind auch nur Menschen. */
+      return { art: 'erledigt', ja: strom(sicht, 'wp-erledigt')() < 0.8 };
     }
   }
 }

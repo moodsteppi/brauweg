@@ -29,8 +29,11 @@
 
 import type { BotLevel } from '@brauweg/game-api';
 
+import { ENTWEDER_ODER } from './inhalte/entweder.js';
 import { IDENTITAETEN } from './inhalte/identitaeten.js';
 import { IMPOSTER_WOERTER } from './inhalte/imposter.js';
+import { SCHAETZ_FRAGEN } from './inhalte/schaetzen.js';
+import { AUFGABEN } from './inhalte/wahrheitpflicht.js';
 import { NIEMALS_SPRUECHE } from './inhalte/niemals.js';
 import { QUIZ_FRAGEN } from './inhalte/quiz.js';
 import { WER_EHER_SPRUECHE } from './inhalte/wereher.js';
@@ -156,13 +159,52 @@ export interface BusRunde extends RundenBasis {
   readonly letzter: BusTipp | null;
 }
 
+export interface SchaetzRunde extends RundenBasis {
+  readonly art: 'schaetzen';
+  readonly frageId: string;
+  readonly frage: string;
+  readonly antwort: number;
+  readonly einheit: string;
+  /** Je Sitz die Schaetzung, null = keine. Kein -1: Eine Schaetzung darf jede Zahl sein. */
+  readonly schaetzung: readonly (number | null)[];
+}
+
+export interface EntwederRunde extends RundenBasis {
+  readonly art: 'entweder';
+  readonly paarId: string;
+  readonly a: string;
+  readonly b: string;
+  /** Je Sitz 0 (A) oder 1 (B), -1 = keine Wahl. */
+  readonly seite: readonly number[];
+}
+
+/**
+ * Wahrheit oder Pflicht laeuft reihum und in ZWEI Schritten je Sitz: erst die
+ * Wahl, dann die Meldung. Die Aufgabe wird erst mit der Wahl gezogen — sonst
+ * saehe man beide Texte vorher und suchte sich die leichtere aus.
+ */
+export interface WahrheitPflichtRunde extends RundenBasis {
+  readonly art: 'wahrheitpflicht';
+  readonly amZug: number;
+  /** Je Sitz: 0 Wahrheit, 1 Pflicht, -1 noch nicht gewaehlt. */
+  readonly gewaehlt: readonly number[];
+  /** Je Sitz die gezogene Aufgabe — Kennung und Text, leer bis zur Wahl. */
+  readonly aufgabeId: readonly string[];
+  readonly text: readonly string[];
+  /** Je Sitz: 1 gemacht, 0 gekniffen, -1 noch nicht dran gewesen. */
+  readonly erfolg: readonly number[];
+}
+
 export type Runde =
   | ImposterRunde
   | QuizRunde
   | WerBinIchRunde
   | NiemalsRunde
   | WerEherRunde
-  | BusRunde;
+  | BusRunde
+  | SchaetzRunde
+  | EntwederRunde
+  | WahrheitPflichtRunde;
 
 /** Was nach der Runde im Partieprotokoll landet (completedSegments). */
 export interface Rundenprotokoll {
@@ -363,7 +405,63 @@ export function baueRunde(
         letzter: null,
       };
     }
+    case 'schaetzen': {
+      const frage = gemischt(SCHAETZ_FRAGEN, baueZufall(rundenSaat(saat, 0, 'schaetzen')))[
+        wievielte % SCHAETZ_FRAGEN.length
+      ]!;
+      return {
+        ...basis,
+        art: 'schaetzen',
+        phase: 'spiel',
+        frageId: frage.id,
+        frage: frage.frage,
+        antwort: frage.antwort,
+        einheit: frage.einheit,
+        schaetzung: Array.from({ length: sitze }, () => null),
+      };
+    }
+    case 'entweder': {
+      const paar = gemischt(ENTWEDER_ODER, baueZufall(rundenSaat(saat, 0, 'entweder')))[
+        wievielte % ENTWEDER_ODER.length
+      ]!;
+      return {
+        ...basis,
+        art: 'entweder',
+        phase: 'spiel',
+        paarId: paar.id,
+        a: paar.a,
+        b: paar.b,
+        seite: offene(sitze),
+      };
+    }
+    case 'wahrheitpflicht': {
+      return {
+        ...basis,
+        art: 'wahrheitpflicht',
+        phase: 'spiel',
+        amZug: ersterLebender(sitze, ausgestiegen),
+        gewaehlt: offene(sitze),
+        aufgabeId: Array.from({ length: sitze }, () => ''),
+        text: Array.from({ length: sitze }, () => ''),
+        erfolg: offene(sitze),
+      };
+    }
   }
+}
+
+/**
+ * Die Aufgabe fuer einen Sitz, gezogen erst bei seiner Wahl.
+ *
+ * Haengt an Saat, Runde und Sitz — nicht am Verlauf, damit ein Snapshot
+ * dieselbe Aufgabe ergibt. Und an der ART: Wer Pflicht waehlt, bekommt eine
+ * Pflicht. Waere die Aufgabe schon beim Rundenaufbau festgelegt, staende sie
+ * im Snapshot, bevor jemand gewaehlt hat — und der Zustand wuesste etwas,
+ * das der Sitz noch nicht wissen darf.
+ */
+function zieheAufgabe(saat: string, nr: number, sitz: number, pflicht: boolean) {
+  const passende = AUFGABEN.filter((a) => a.art === (pflicht ? 'pflicht' : 'wahrheit'));
+  const zufall = baueZufall(rundenSaat(saat, nr, `wp-${sitz}-${pflicht ? 'p' : 'w'}`));
+  return passende[ganzzahl(zufall, passende.length)]!;
 }
 
 export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
@@ -392,18 +490,21 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
 
 /** Handelt dieses Minispiel reihum statt gleichzeitig? */
 export function istReihum(art: MinispielId): boolean {
-  return art === 'werbinich' || art === 'busfahrer';
+  return art === 'werbinich' || art === 'busfahrer' || art === 'wahrheitpflicht';
 }
 
 /** Der Sitz, der bei einem Reihum-Minispiel gerade faehrt. */
 function reihumSitz(runde: Runde): number {
-  return runde.art === 'werbinich' || runde.art === 'busfahrer' ? runde.amZug : 0;
+  return runde.art === 'werbinich' || runde.art === 'busfahrer' || runde.art === 'wahrheitpflicht'
+    ? runde.amZug
+    : 0;
 }
 
 /** Hat dieser Sitz seinen Reihum-Zug schon hinter sich? */
 function reihumGespielt(runde: Runde, sitz: number): boolean {
   if (runde.art === 'werbinich') return runde.erfolg[sitz] !== OFFEN;
   if (runde.art === 'busfahrer') return runde.treffer[sitz] !== OFFEN;
+  if (runde.art === 'wahrheitpflicht') return runde.erfolg[sitz] !== OFFEN;
   return true;
 }
 
@@ -574,6 +675,50 @@ function werteAus(partie: PartykistePartie): PartykistePartie {
       neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
       break;
     }
+    case 'schaetzen': {
+      /*
+       * Wer nicht geschaetzt hat, gilt als unendlich weit weg: Er trinkt mit
+       * den Weitesten, aber er kann nie "der Naechste" sein. Ohne diese Regel
+       * waere Nichtstun bei einer schweren Frage die sichere Wahl.
+       */
+      const abstand = dabei.map((s) => {
+        const wert = runde.schaetzung[s];
+        return wert === null || wert === undefined ? Number.POSITIVE_INFINITY : Math.abs(wert - runde.antwort);
+      });
+      const bester = Math.min(...abstand);
+      const schlechtester = Math.max(...abstand);
+      dabei.forEach((s, i) => {
+        if (abstand[i] === bester && Number.isFinite(bester)) punkte[s] = PUNKTE.schaetzenBester;
+        else if (abstand[i] === schlechtester) {
+          schlucke[s] = mitSchluck(faktor, SCHLUECKE.schaetzenSchlechtester);
+        }
+      });
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
+    case 'entweder': {
+      const seiteA = dabei.filter((s) => runde.seite[s] === 0);
+      const seiteB = dabei.filter((s) => runde.seite[s] === 1);
+      /* Gleichstand: alle trinken — die Kneipenregel, und die einzige ohne
+         Sonderfall. Wer nicht gewaehlt hat, trinkt in jedem Fall. */
+      const gleich = seiteA.length === seiteB.length;
+      const mehrheit = seiteA.length > seiteB.length ? 0 : 1;
+      for (const s of dabei) {
+        const wahl = runde.seite[s] ?? OFFEN;
+        if (!gleich && wahl === mehrheit) punkte[s] = PUNKTE.entwederMehrheit;
+        else schlucke[s] = mitSchluck(faktor, SCHLUECKE.entwederMinderheit);
+      }
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
+    case 'wahrheitpflicht': {
+      for (const s of dabei) {
+        if (runde.erfolg[s] === 1) punkte[s] = PUNKTE.wahrheitpflichtGemacht;
+        else schlucke[s] = mitSchluck(faktor, SCHLUECKE.wahrheitpflichtGekniffen);
+      }
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
   }
 
   return {
@@ -680,6 +825,7 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
 function aufSitz(runde: Runde, sitz: number): Runde {
   if (runde.art === 'werbinich') return { ...runde, amZug: sitz };
   if (runde.art === 'busfahrer') return { ...runde, amZug: sitz, stufe: 0, offen: [] };
+  if (runde.art === 'wahrheitpflicht') return { ...runde, amZug: sitz };
   return runde;
 }
 
@@ -785,6 +931,46 @@ export function verarbeite(
       if (sitz !== runde.amZug) verstoss('ein anderer Sitz ist dran');
       if (aktion.wahl !== 0 && aktion.wahl !== 1) verstoss('nur zwei Tipps zur Wahl');
       return weiter(busTipp(partie, runde, sitz, aktion.wahl));
+    }
+    case 'schaetzen': {
+      if (aktion.art !== 'schaetzung') verstoss('jetzt wird geschaetzt');
+      if (runde.fertig.includes(sitz)) return partie;
+      if (typeof aktion.wert !== 'number' || !Number.isFinite(aktion.wert)) {
+        verstoss('eine Schaetzung ist eine Zahl');
+      }
+      const schaetzung = [...runde.schaetzung];
+      schaetzung[sitz] = aktion.wert;
+      return weiter({ ...partie, runde: { ...runde, schaetzung, fertig: [...runde.fertig, sitz] } });
+    }
+    case 'entweder': {
+      if (aktion.art !== 'seite') verstoss('jetzt wird eine Seite gewaehlt');
+      if (runde.fertig.includes(sitz)) return partie;
+      if (aktion.wahl !== 0 && aktion.wahl !== 1) verstoss('A oder B');
+      const seite = [...runde.seite];
+      seite[sitz] = aktion.wahl;
+      return weiter({ ...partie, runde: { ...runde, seite, fertig: [...runde.fertig, sitz] } });
+    }
+    case 'wahrheitpflicht': {
+      if (sitz !== runde.amZug) verstoss('ein anderer Sitz ist dran');
+      if (runde.gewaehlt[sitz] === OFFEN) {
+        if (aktion.art !== 'wahl') verstoss('erst Wahrheit oder Pflicht waehlen');
+        if (typeof aktion.pflicht !== 'boolean') verstoss('Wahrheit oder Pflicht');
+        const aufgabe = zieheAufgabe(partie.saat, partie.rundeNr, sitz, aktion.pflicht);
+        const gewaehlt = [...runde.gewaehlt];
+        const aufgabeId = [...runde.aufgabeId];
+        const text = [...runde.text];
+        gewaehlt[sitz] = aktion.pflicht ? 1 : 0;
+        aufgabeId[sitz] = aufgabe.id;
+        text[sitz] = aufgabe.text;
+        return weiter({ ...partie, runde: { ...runde, gewaehlt, aufgabeId, text } });
+      }
+      if (aktion.art !== 'erledigt') verstoss('jetzt wird gemeldet: gemacht oder gekniffen');
+      if (typeof aktion.ja !== 'boolean') verstoss('gemacht oder gekniffen');
+      const erfolg = [...runde.erfolg];
+      erfolg[sitz] = aktion.ja ? 1 : 0;
+      const neue: WahrheitPflichtRunde = { ...runde, erfolg };
+      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz);
+      return weiter({ ...partie, runde: { ...neue, amZug: naechster ?? sitz } });
     }
   }
 }
