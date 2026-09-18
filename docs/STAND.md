@@ -196,6 +196,31 @@ zusammen 1503, dazu die Client-Tests (62 Dateien, 788 Tests), alle grün.
 > über HTTP/1.1 **9,3 s**, eine Gesamtfrist von 10 s hätte dort auf einer
 > völlig gesunden Leitung zugeschlagen.
 >
+> **Das Spielpaket zählt im selben Balken mit** (seit dem 06.09.2026,
+> `paket.ts` und `Ladevorhang.tsx`). Der Grund ist die Beschwerde, mit der
+> das Ganze anfing: Robin sah den Ladebildschirm gar nicht. App.tsx
+> importierte alle vierzehn Schirme statisch, das Hauptpaket wog **1.952 kB**
+> (gzip 574 kB), und nichts davon konnte gezeichnet werden, bevor es
+> vollständig da war — zum Zeitpunkt des Wartens gab es den Vorhang noch
+> nicht. Jetzt hängt jeder Schirm an `React.lazy` (`App.pakete.test.ts` wacht
+> darüber), und der Rückfall von `<Suspense>` ist derselbe Ladebildschirm,
+> den der Schirm danach weiterbenutzt — deshalb liegt er als `Ladevorhang`
+> bewusst im Hauptpaket.
+>
+> **Nachgemessen am 18.09.2026** (`npm run build`, Größen wie Vite sie
+> meldet): Hauptpaket **452,7 kB** (gzip 126,2) plus **react 192,4 kB**
+> (gzip 60,3) — React steht getrennt, weil es einen Deploy überlebt, der
+> Plattformteil nicht. Wer Tafelrunde antippt, holt dafür **32,4 kB**
+> (gzip 10,1); mit allem, was nur an ihm hängt (Phasenzeile, Zeichen, Bühne,
+> `useTable`, deren CSS), sind es **105 kB** (gzip 34,3) und danach die
+> 47 kB Bilder. Gegen Chromes „Slow 3G" steht das erste Bild nach **5,3 s**,
+> mit Pinguin und Schriftzug nach **7,0 s**; über die Leitung gingen bis
+> dahin 242 kB. Die Vorher-Zeit ist NICHT gemessen — aus den damaligen
+> Größen gerechnet wären es 628 kB gewesen, also gut das Zweieinhalbfache.
+> Die 500-kB-Warnung von Vite bleibt: Sie gilt `react-three-fiber`
+> (896 kB), und das lädt nur, wer eine 3D-Figur oder eine Truhe zu sehen
+> bekommt.
+>
 > **Der Bildschirmaufbau folgt seit dem 05.09.2026 einem fertigen
 > Auto-Battler** (Vorlagen von Robin; nachgebaut wurde die ANORDNUNG, keine
 > Grafik — unsere CC0-Figuren bleiben). Von oben nach unten: eine
