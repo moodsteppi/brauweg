@@ -68,6 +68,9 @@ const de: Record<string, string> = {
   'error.inviteCodeInvalid': 'Dieser Einladungscode gilt nicht.',
   'error.emailTaken': 'Diese Adresse ist schon vergeben.',
   'error.displayNameTaken': 'Dieser Name ist schon vergeben.',
+  'error.displayNameTooShort': 'Der Name braucht mindestens zwei Zeichen.',
+  // Gastkonto sichern, obwohl es keins (mehr) ist — etwa doppelt getippt.
+  'error.keinGastkonto': 'Dieses Konto ist schon gesichert.',
   'error.tokenInvalid': 'Dieser Link ist abgelaufen oder wurde schon benutzt.',
   'error.tableFull': 'Der Tisch ist voll.',
   'error.tableNotFull': 'Es fehlen noch Mitspieler.',

@@ -504,6 +504,12 @@ export interface SeatInfo {
    * deshalb optional.
    */
   farbe?: number | null;
+  /**
+   * Ob dieser Sitz ein Gastkonto ist — kein Ergebnis daraus zaehlt fuer die
+   * Rangliste, und die Anzeige darf ihn dezent kennzeichnen. Aeltere Server
+   * schicken das Feld nicht, deshalb optional wie `farbe`.
+   */
+  gast?: boolean;
 }
 
 /** Spielstärke der Bots eines Tisches. Spiegelbild von game-api BotLevel. */
