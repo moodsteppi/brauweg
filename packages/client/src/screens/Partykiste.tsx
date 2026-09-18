@@ -131,9 +131,16 @@ export function Partykiste({
         setTischId(offen.id);
         return;
       }
+      /*
+       * Zwoelf Plaetze, die Obergrenze des Moduls — nicht acht. Der Tisch
+       * schrumpft beim Start ohnehin auf die Anwesenden (`startNow`), ein
+       * grosser Tisch kostet also nichts; ein zu kleiner sperrt die Leute
+       * neun bis zwoelf aus, obwohl das Spiel sie traegt. Die 8 stand hier,
+       * weil sie von Golf abgeschrieben war, wo acht wirklich das Ende ist.
+       */
       const { id } = await api.createTable({
         gameId: 'partykiste',
-        seats: 8,
+        seats: 12,
         rounds: runden,
         visibility: 'public',
       });
