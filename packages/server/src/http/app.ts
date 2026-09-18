@@ -206,28 +206,27 @@ export interface AppDeps {
   readonly feedbackZielToken?: string | null;
 }
 
-const gameIdSchema = z.enum([
-  'doppelkopf',
-  'wizard',
-  'feldherr',
-  'mememory',
-  'easypoker',
-  'filler',
-  'eiland',
-  'tafelrunde',
-  'skat',
-  'schafkopf',
-  'romme',
-  'maumau',
-  'schwimmen',
-  'backgammon',
-  'bauernskat',
-  'werwolf',
-  'cambio',
-  'phase10',
-  'drecksau',
-  'golf',
-]);
+/**
+ * Zulaessige Spielkennungen an der HTTP-Grenze — aus der Registrierung
+ * abgeleitet, nicht abgeschrieben.
+ *
+ * Bis zum 18.09.2026 stand hier eine von Hand gepflegte Liste. Sie war die
+ * ZWEITE Stelle im Server, die konkrete Spiele kannte (registry.ts sagt von
+ * sich, die einzige zu sein), und genau das ist passiert, was bei zwei Listen
+ * passiert: Die Partykiste stand in der Registrierung, hier nicht — und in
+ * der Produktion antworteten `GET /api/tables` und `POST /api/tables` fuer
+ * das neue Spiel mit 400. Alle 1.536 Tests waren gruen, weil keiner die
+ * HTTP-Grenze fuer JEDES registrierte Spiel abklopft. Das tut jetzt
+ * `spielkennungen.test.ts`; die Ableitung hier macht den Fehler ohnehin
+ * unmoeglich.
+ *
+ * Auch die Vorschau-Spiele stehen drin: Man kann fuer sie abstimmen und ihre
+ * Tischliste abfragen (leer), nur starten geht nicht — das prueft
+ * `requireModule`, nicht dieses Schema.
+ */
+const SPIELKENNUNGEN = registry.all().map((meta) => meta.id);
+const gameIdSchema = z.enum(SPIELKENNUNGEN as [GameId, ...GameId[]]);
+export { gameIdSchema };
 
 const registerSchema = z.object({
   email: z.string().email(),
