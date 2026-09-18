@@ -38,20 +38,19 @@ import {
   amZug as amZugVon,
   erzeugePartie,
   platzierungen,
-  schaupauseVorbei,
   verarbeite,
   type PartykistePartie,
 } from './partie.js';
 import {
   BOT_TAKT_MS,
   DEFAULT_REGELN,
-  ERGEBNIS_MS,
   MINISPIELE,
   RUNDEN_MAX,
   RUNDEN_MIN,
   SCHLUCK_FAKTOR_MAX,
   SCHLUCK_FAKTOR_MIN,
   SITZE,
+  ZUGZEIT_MS,
   istMinispiel,
   type PartykisteAktion,
   type PartykisteRegeln,
@@ -76,6 +75,7 @@ const meta: GameMeta = {
    */
   xpBasisZaehltKarten: false,
   botTaktHoechstMs: BOT_TAKT_MS,
+  zugzeitMs: ZUGZEIT_MS,
 };
 
 function istRegelsatz(x: unknown): x is PartykisteRegeln {
@@ -241,11 +241,14 @@ export const partykiste: GameModule<
 
   isFinished: (partie) => partie.fertig,
 
-  /** Die Ergebnisphase jeder Runde — Zeit zum Lesen und, je nach Modus, zum Trinken. */
-  interludeMs: (partie) =>
-    !partie.fertig && partie.runde.phase === 'ergebnis' ? ERGEBNIS_MS : null,
-
-  advanceInterlude: (partie) => schaupauseVorbei(partie),
+  /*
+   * KEINE Schaupause mehr (bis 19.09.2026 stand hier `interludeMs` mit zwoelf
+   * Sekunden). Die Abrechnung ist jetzt eine Phase wie jede andere: Der
+   * naechste Mensch, der noch nicht "Weiter" getippt hat, ist am Zug, und die
+   * Runde geht weiter, wenn der letzte durch ist. Wer weg ist, faellt nach
+   * der Zugzeit an den Bot, der fuer ihn tippt — mehr Sicherheitsnetz braucht
+   * es nicht.
+   */
 
   standings(partie): PartyStanding[] {
     const raus = new Set(partie.ausgestiegen);

@@ -18,17 +18,18 @@ export interface QuizFrage {
 }
 
 /**
- * Ein Wortpaar fuer Imposter.
+ * Ein Wort fuer Imposter.
  *
- * Alle Mitspieler bekommen `wort`, der Imposter das aehnliche `falsch`. Ein
- * aehnliches Wort statt gar keinem ist Absicht: Wer nichts hat, schweigt oder
- * redet ins Blaue und ist in der ersten Runde ueberfuehrt. Wer ein Nachbarwort
- * hat, kann mitreden und merkt selbst erst spaet, dass er der Falsche ist.
+ * Alle Mitspieler bekommen `wort`, der Imposter nur den `hinweis` — eine
+ * grobe Kategorie statt eines Nachbarworts. Der Imposter soll WISSEN, dass
+ * er es ist, und trotzdem mitreden koennen: Der Hinweis ist so allgemein,
+ * dass er das Wort nicht verraet, aber konkret genug fuer einen
+ * glaubwuerdigen Satz in der Runde.
  */
 export interface ImposterWort {
   readonly id: string;
   readonly wort: string;
-  readonly falsch: string;
+  readonly hinweis: string;
 }
 
 /** Eine Person oder Figur fuer "Wer bin ich". */

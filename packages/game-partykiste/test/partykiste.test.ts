@@ -29,7 +29,6 @@ import {
   minispielFuer,
   partykiste,
   platzierungen,
-  schaupauseVorbei,
   sichtFuer,
   verarbeite,
   type MinispielId,
@@ -53,12 +52,10 @@ function spieleDurch(partie: PartykistePartie, grenze = 5000): { partie: Partyki
   while (!stand.fertig) {
     assert.ok(++zuege <= grenze, `kommt nach ${grenze} Zuegen nicht zum Ende`);
     const sitz = amZug(stand);
-    if (sitz === null) {
-      const vorher = stand;
-      stand = schaupauseVorbei(stand);
-      assert.notEqual(stand, vorher, 'Schaupause ohne Wirkung — der Tisch haengt');
-      continue;
-    }
+    /* Seit dem 19.09.2026 gibt es keine Schaupause mehr: Solange die Partie
+       laeuft, ist immer jemand am Zug — sonst haengt der Tisch. */
+    assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig — der Tisch haengt');
+    if (sitz === null) break;
     stand = verarbeite(stand, sitz, partykiste.botAction(sichtFuer(stand, sitz), stand.botStufe));
   }
   return { partie: stand, zuege };
@@ -133,17 +130,19 @@ test('das Imposter-Wort steht in keiner fremden Sicht', () => {
 
     const binImposter: boolean = sitz === runde.imposter;
     assert.equal(sicht.daten.binImposter, binImposter, `Sitz ${sitz}`);
-    assert.equal(sicht.daten.meinWort, binImposter ? runde.falsch : runde.wort);
+    assert.equal(sicht.daten.meinWort, binImposter ? null : runde.wort, 'der Imposter hat kein Wort');
+    assert.equal(sicht.daten.hinweis, binImposter ? runde.hinweis : null, 'den Hinweis hat nur der Imposter');
+    assert.deepEqual([...sicht.daten.reihenfolge].sort(), [0, 1, 2, 3, 4, 5], 'die Reihenfolge nennt jeden einmal');
     /* Wer der Imposter ist, steht vor der Abrechnung nirgends in der Sicht. */
     assert.equal(sicht.daten.imposter, null);
     const roh = JSON.stringify(sicht);
-    assert.equal(roh.includes(binImposter ? runde.wort : runde.falsch), false, `Sitz ${sitz}: das fremde Wort reist mit`);
+    assert.equal(roh.includes(binImposter ? runde.wort : runde.hinweis), false, `Sitz ${sitz}: das fremde Geheimnis reist mit`);
   }
 
   /* Der Zuschauer bekommt gar kein Wort. */
   const zuschauer = sichtFuer(partie, -1);
   assert.equal(JSON.stringify(zuschauer).includes(runde.wort), false);
-  assert.equal(JSON.stringify(zuschauer).includes(runde.falsch), false);
+  assert.equal(JSON.stringify(zuschauer).includes(runde.hinweis), false);
 });
 
 test('bei "Wer bin ich" fehlt genau der eigene Name', () => {
@@ -297,11 +296,8 @@ test('ein Ausstieg bringt das Turnier nicht zum Stehen', () => {
       while (!partie.fertig && zuege < 3000) {
         if (zuege === wann) partie = ausstieg(partie, zuege % 5);
         const sitz = amZug(partie);
-        if (sitz === null) {
-          partie = schaupauseVorbei(partie);
-          zuege++;
-          continue;
-        }
+        assert.notEqual(sitz, null, `${spiel}: niemand am Zug, aber nicht fertig`);
+        if (sitz === null) break;
         partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
         zuege++;
       }
@@ -366,10 +362,8 @@ test('der Snapshot ueberlebt den Rundlauf', () => {
   let partie = neuePartie(6, 6);
   for (let i = 0; i < 20 && !partie.fertig; i++) {
     const sitz = amZug(partie);
-    if (sitz === null) {
-      partie = schaupauseVorbei(partie);
-      continue;
-    }
+    assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig');
+    if (sitz === null) break;
     partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
     const wieder = partykiste.deserialize(partykiste.serialize(partie));
     assert.equal(JSON.stringify(partykiste.serialize(wieder)), JSON.stringify(partykiste.serialize(partie)));
@@ -381,10 +375,8 @@ test('legalActions nennt nur Aktionen, die act auch annimmt', () => {
   let zuege = 0;
   while (!partie.fertig && zuege++ < 2000) {
     const sitz = amZug(partie);
-    if (sitz === null) {
-      partie = schaupauseVorbei(partie);
-      continue;
-    }
+    assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig');
+    if (sitz === null) break;
     const erlaubt = partykiste.legalActions(partie, sitz);
     if (erlaubt.length === 0) {
       /* Falle 1 der Invarianten: Schaetzen kann seine Aktion nicht aufzaehlen
@@ -408,10 +400,8 @@ test('der Bot liefert immer eine Aktion, die in legalActions steht', () => {
     let zuege = 0;
     while (!partie.fertig && zuege++ < 2000) {
       const sitz = amZug(partie);
-      if (sitz === null) {
-        partie = schaupauseVorbei(partie);
-        continue;
-      }
+      assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig');
+      if (sitz === null) break;
       const erlaubt = partykiste.legalActions(partie, sitz);
       const aktion = partykiste.botAction(sichtFuer(partie, sitz), 'genie');
       assert.ok(
@@ -444,13 +434,17 @@ test('ein starker Bot weiss im Quiz mehr als ein schwacher', () => {
   assert.ok(stark > schwach + 0.2, `Genie ${stark}, Anfaenger ${schwach} — die Stufe wirkt nicht`);
 });
 
-test('die Schaupause hat einen Weg heraus', () => {
+test('die Abrechnung wartet auf jeden Menschen und hat keine Uhr', () => {
   let partie = neuePartie(4, 2, { ...DEFAULT_REGELN, minispiele: ['niemals'] });
   for (let sitz = 0; sitz < 4; sitz++) partie = verarbeite(partie, sitz, { art: 'gestehen', ja: false });
   assert.equal(partie.runde.phase, 'ergebnis');
-  assert.notEqual(partykiste.interludeMs?.(partie), null);
-  const weiter = partykiste.advanceInterlude!(partie);
-  assert.equal(weiter.rundeNr, 1, 'die Pause geht nicht von selbst zu Ende');
+  assert.equal(partykiste.interludeMs, undefined, 'eine Schaupause ginge von selbst weiter — genau das soll nicht sein');
+  assert.equal(amZug(partie), 0, 'der erste Mensch, der noch nicht Weiter getippt hat, ist am Zug');
+  for (const sitz of [0, 1, 2]) partie = verarbeite(partie, sitz, { art: 'bereit' });
+  assert.equal(partie.rundeNr, 0, 'drei von vier reichen nicht');
+  assert.equal(amZug(partie), 3);
+  partie = verarbeite(partie, 3, { art: 'bereit' });
+  assert.equal(partie.rundeNr, 1, 'der letzte Tipp schaltet weiter');
 });
 
 test('tippen alle Anwesenden Weiter, endet die Pause sofort', () => {

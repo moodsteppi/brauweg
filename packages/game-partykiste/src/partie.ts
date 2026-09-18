@@ -92,8 +92,11 @@ export interface ImposterRunde extends RundenBasis {
   readonly art: 'imposter';
   readonly wortId: string;
   readonly wort: string;
-  readonly falsch: string;
+  /** Was der Imposter statt des Wortes bekommt: eine grobe Kategorie. */
+  readonly hinweis: string;
   readonly imposter: number;
+  /** Feste Redereihenfolge der Anwesenden, gemischt beim Rundenaufbau. */
+  readonly reihenfolge: readonly number[];
   /** Je Sitz der Verdaechtigte, -1 = keine Stimme abgegeben. */
   readonly stimmen: readonly number[];
   /** Erst im Ergebnis gesetzt. */
@@ -316,14 +319,22 @@ export function baueRunde(
       const anwesend = lebende(sitze, ausgestiegen);
       const gezogen = baueZufall(rundenSaat(saat, nr, 'imposter-sitz'));
       const imposter = anwesend.length > 0 ? anwesend[ganzzahl(gezogen, anwesend.length)]! : 0;
+      /*
+       * Eine feste Redereihenfolge, gemischt und fuer alle sichtbar. Ohne sie
+       * redeten am 19.09.2026 zu zwoelft alle durcheinander oder keiner —
+       * und wer anfaengt, ist beim Imposter nicht egal: Der Erste hat noch
+       * nichts gehoert, woran er sich haengen koennte.
+       */
+      const reihenfolge = gemischt(anwesend, baueZufall(rundenSaat(saat, nr, 'imposter-reihe')));
       return {
         ...basis,
         art: 'imposter',
         phase: 'sehen',
         wortId: wort.id,
         wort: wort.wort,
-        falsch: wort.falsch,
+        hinweis: wort.hinweis,
         imposter,
+        reihenfolge,
         stimmen: offene(sitze),
         ertappt: false,
       };
@@ -517,7 +528,23 @@ function reihumGespielt(runde: Runde, sitz: number): boolean {
 export function amZug(partie: PartykistePartie): number | null {
   if (partie.fertig) return null;
   const runde = partie.runde;
-  if (runde.phase === 'ergebnis') return null;
+  if (runde.phase === 'ergebnis') {
+    /*
+     * Die Abrechnung wartet auf JEDEN anwesenden Menschen — nicht auf eine
+     * Uhr. Am 19.09.2026 zu zwoelft gespielt: Zwoelf Sekunden Schaupause waren
+     * vorbei, bevor die Haelfte gelesen hatte, wer getrunken hat. Deshalb
+     * nennt `currentActor` hier den naechsten, der noch nicht "Weiter"
+     * getippt hat; Bots zaehlen als fertig (siehe wartetNochJemand). Die
+     * Zugzeit der Plattform bleibt das Sicherheitsnetz gegen den, der zum
+     * Rauchen gegangen ist.
+     */
+    const fertig = new Set(runde.fertig);
+    const bots = new Set(partie.botSitze);
+    for (const sitz of lebende(partie.sitze, partie.ausgestiegen)) {
+      if (!bots.has(sitz) && !fertig.has(sitz)) return sitz;
+    }
+    return null;
+  }
   if (istReihum(runde.art)) {
     const sitz = reihumSitz(runde);
     return partie.ausgestiegen.includes(sitz) || reihumGespielt(runde, sitz) ? null : sitz;
@@ -1048,12 +1075,6 @@ export function ausstieg(partie: PartykistePartie, sitz: number): PartykistePart
    */
   if (lebende(stand.sitze, stand.ausgestiegen).length === 0) return { ...stand, fertig: true };
   return weiter(stand);
-}
-
-/** Beendet die Ergebnis-Schaupause nach Ablauf der Zeit. */
-export function schaupauseVorbei(partie: PartykistePartie): PartykistePartie {
-  if (partie.fertig || partie.runde.phase !== 'ergebnis') return partie;
-  return weiter(naechsteRunde(partie));
 }
 
 export interface Platzierung {

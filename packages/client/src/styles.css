@@ -19398,3 +19398,33 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: var(--muted);
 }
 .pk-knopf.is-gross[data-richtig] { background: #2f6b4d; color: #eafff2; }
+
+/* -- Partykiste: Imposter-Karte und Redereihenfolge ----------------------- */
+
+.pk-karte-inhalt { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pk-hinweis { font: 600 clamp(15px, 4.2vw, 19px)/1.3 system-ui; color: var(--text); opacity: 0.85; }
+.pk-reihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: reihe;
+}
+.pk-reihe li {
+  counter-increment: reihe;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  font: 600 13px/1 system-ui;
+}
+.pk-reihe li::before {
+  content: counter(reihe);
+  font-weight: 800;
+  color: var(--gold);
+}
+.pk-reihe li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
