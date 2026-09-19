@@ -102,9 +102,26 @@ Je Rolle:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Wache | 98.532 | 100,0 % | 1 | 1 | 0,0 % | 3 |
 | Meuchler | 54.138 | 100,0 % | 2 | 1 | 0,0 % | 3 |
-| Beistand | 866 | 100,0 % | 3 | 2 | 0,0 % | 6 |
+| Beistand | 866 | 100,0 % | 3 | 2 ⚠ | 0,0 % | 6 |
 | **Schütze** | 15.428 | **100,0 %** | 2 | 2 | 0,0 % | 6 |
 | **Magier** | 15.992 | **100,0 %** | 2 | 2 | 0,0 % | 6 |
+
+⚠ **„bis 1. Treffer" ist beim Beistand ein Mindestwert und keine Aussage
+darüber, wann er zum ersten Mal gehandelt hat.** Gezählt werden nur
+`treffer`-Ereignisse (`schritteBisTreffer` und `hatGetroffen` in
+`test/laufwege.ts`). Seit dem 06.09.2026 heilt ein Beistand, statt zu
+schlagen, solange in seiner Reichweite ein Verwundeter steht
+(`HEILUNG_FAKTOR` in `kampf.ts`) — er kann also einen ganzen Kampf lang
+handeln, ohne ein einziges `treffer`-Ereignis zu erzeugen. Ein Beistand, der
+nur geheilt hat, fällt ganz aus dem Median (er zählt als „nie getroffen") und
+zieht ihn damit auf die schlagenden Beistände zusammen. Die anderen vier
+Rollen sind nicht betroffen, sie kämpfen ausschließlich durch Zuschlagen.
+
+Bewusst **nicht** umdefiniert: Die Spalten `läuft je einmal`, `Schritte,
+Median`, `sofort in RW` und `Startabstand` messen Bewegung und sind
+unberührt — das Dokument misst, was gelaufen wird. Wer die **Handlungen**
+zählen will (Treffer plus Heilungen), braucht eine eigene Spalte und keine
+umgewidmete, sonst hieße „Treffer" in zwei Tabellen zweierlei.
 
 Der eigentliche Befund der ganzen Untersuchung ist damit erledigt: Schütze und
 Magier liefen vorher in 0,10 % bzw. 0,06 % der Fälle, jetzt ausnahmslos. Ihr
