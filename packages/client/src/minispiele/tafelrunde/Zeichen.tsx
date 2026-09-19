@@ -14,7 +14,7 @@
  * ist.
  */
 
-import { blattPfad } from './bildfolge';
+import { BANKKASTEN, LADENKASTEN, WABENKASTEN, blattPfad } from './bildfolge';
 import { Figur3D } from './Figur3D';
 import { Figurbild } from './KampfAnzeige';
 import type { Einheit, Rolle } from './sicht';
@@ -70,6 +70,39 @@ export function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
 }
 
 /**
+ * Die Masse der drei Orte der Ruestkammer, als CSS-Variablen.
+ *
+ * SIE STEHEN NICHT IM STYLESHEET, seit dem 19.09.2026 und aus demselben Grund
+ * wie in der Arena: Hoehe und Bodenversatz sind aus dem gemessenen Ausschnitt
+ * der Blaetter gerechnet (`WABENKASTEN` und Nachbarn in bildfolge.ts). Als
+ * feste Prozent- und Pixelzahlen haengen sie genauso daran, sagen es aber
+ * nicht — wer die Blaetter neu rendert, laesst dann alle Figuren der
+ * Ruestkammer stillschweigend mitwachsen. Am 06.09.2026 passiert und von Hand
+ * umgerechnet (82 % -> 71,8 %, 106 % -> 92,8 %, 58 px -> 51 px).
+ *
+ * ALLE DREI AN JEDER FIGUR, und nicht je Ort eine Auswahl: Wabe und Bankplatz
+ * tragen dieselbe Klasse `tr-figur3d` und unterscheiden sich allein am
+ * Vorfahren (`.tr-bankplatz .tr-figur3d`). Die Komponente weiss also gar
+ * nicht, wo sie steht — das Stylesheet weiss es, und es greift sich die
+ * Variable, die zu seiner Regel gehoert. Eine Variable, die keine Regel liest,
+ * kostet nichts.
+ *
+ * Ein Objekt und keine Neuberechnung je Figur: Bei 19 Waben, neun Bankplaetzen
+ * und fuenf Ladenkarten waere das ein neues Stilobjekt je Zeichnen, und React
+ * schriebe die Angaben jedes Mal neu ans Element.
+ */
+const FIGURENMASSE = {
+  '--tr-wabenkasten-hoehe': `${WABENKASTEN.hoehe}%`,
+  '--tr-wabenkasten-boden': `${WABENKASTEN.boden}%`,
+  '--tr-bankkasten-hoehe': `${BANKKASTEN.hoehe}%`,
+  '--tr-bankkasten-boden': `${BANKKASTEN.boden}%`,
+  /* Der Laden rechnet in Pixeln und nicht in Prozent: Die Karte ist eine
+     Spalte von fuenf und auf einem 360er-Handy keine 70 px breit. */
+  '--tr-ladenkasten-hoehe': `${LADENKASTEN.hoehe}px`,
+  '--tr-ladenkasten-boden': `${LADENKASTEN.boden}px`,
+} as React.CSSProperties;
+
+/**
  * Die Figur einer Einheit — dieselbe wie in der Arena, nur stehend.
  *
  * DREI STUFEN, in dieser Reihenfolge: das vorgerenderte 3D-Blatt ihrer ROLLE
@@ -102,6 +135,7 @@ export function EinheitenFigur({
       name={einheit.name}
       blatt={blattPfad(einheit.rolle)}
       klasse={klasse}
+      masse={FIGURENMASSE}
       spiegeln={spiegeln}
       ersatz={
         <Figurbild

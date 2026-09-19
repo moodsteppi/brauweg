@@ -17523,30 +17523,34 @@ span.hub-angebot-art.poker-jeton-stapel {
  * und `clip-path` beschneidet auch den Inhalt. Was ueber das Sechseck
  * hinausreicht, waere kein Ueberstand, sondern ein abgeschnittener Kopf.
  *
- * DIE ZAHLEN, und woher sie kommen: Eine stehende Figur setzt bei 80 % der
+ * WAS DIE ZAHLEN AUSDRUECKEN: Eine stehende Figur setzt bei 80 % der
  * Zellhoehe von oben auf (FIGUREN3D_FUSSPUNKT). Bei einer Zelle von 71,8 %
  * Wabenhoehe, deren Unterkante 23,1 % ueber dem Wabenfuss liegt, steht die
- * Figur also mit den Fuessen auf 37 % der Wabe und reicht bis rund 93 % —
+ * Figur also mit den Fuessen auf 37,5 % der Wabe und reicht bis rund 93 % —
  * ueberall dort ist das Sechseck noch breit genug. Darunter bleibt Platz fuer
  * Namen und Sterne.
  *
- * SIE HAENGEN AM GEMESSENEN AUSSCHNITT DER BLAETTER, und das sieht man ihnen
- * nicht an: Wie gross die Figur wird, ist die Zellhoehe geteilt durch die
- * Weltmeter, die in einer Zelle stecken (FIGUREN3D_ZELLHOEHE_METER). Als die
- * Todeszeile am 06.09.2026 ihre eigene, breitere Zelle bekam, wurde der
- * gemeinsame Ausschnitt von 4,29 auf 3,76 Meter enger — hier standen bis dahin
+ * SIE STEHEN DESHALB NICHT MEHR HIER, seit dem 19.09.2026, sondern kommen aus
+ * `WABENKASTEN` in bildfolge.ts (gesetzt von `EinheitenFigur`). Der Grund ist
+ * derselbe wie in der Arena: Wie gross die Figur wird, ist die Zellhoehe
+ * geteilt durch die Weltmeter, die in einer Zelle stecken
+ * (FIGUREN3D_ZELLHOEHE_METER) — das sieht man einer Prozentzahl nicht an. Als
+ * die Todeszeile am 06.09.2026 ihre eigene, breitere Zelle bekam, wurde der
+ * gemeinsame Ausschnitt von 4,29 auf 3,76 Meter enger; hier standen bis dahin
  * 82 % und 18,6 %, und dieselben Zahlen haetten jede Figur der Ruestkammer um
  * 14 % wachsen und hoeher stehen lassen, ohne dass jemand an der Groesse etwas
- * geaendert haette. Wer die Blaetter neu rendert, rechnet diese vier Zahlen
- * (hier und am Bankplatz) mit dem Verhaeltnis der beiden Ausschnitte um. In
- * der Arena erledigt das `FIGURENKASTEN` in bildfolge.ts von selbst; hier ist
- * es Handarbeit, weil eine Wabe kein Prozentmass mit der Karte teilt.
+ * geaendert haette. Umgerechnet wurden sie damals von Hand — jetzt faellt die
+ * Rechnung beim naechsten Satz Blaetter von selbst richtig aus.
+ *
+ * Die Rueckfallwerte sind die von staging: Wer die Regel ohne die Komponente
+ * ansieht (Werkzeugkasten, Probe ohne Katalog), bekommt etwas Vernuenftiges
+ * statt einer Figur der Hoehe null.
  */
 .tr-figur3d {
   position: absolute;
   left: 50%;
-  bottom: 23.1%;
-  height: 71.8%;
+  bottom: var(--tr-wabenkasten-boden, 23.1%);
+  height: var(--tr-wabenkasten-hoehe, 71.8%);
   /* `translate` und nicht `transform`: Das Spiegeln steht in `scale`
      (Figur3D.module.css), das Schweben in `transform` — drei Dinge, drei
      Eigenschaften. In EINEM `transform` schloesse jedes das andere aus. */
@@ -17563,8 +17567,16 @@ span.hub-angebot-art.poker-jeton-stapel {
  * das GEWEIH DES DRUIDEN — nicht mehr der Spitzhut des Magiers (9,4 %), wie es
  * hier vorher stand. Mit 92,8 % Zellhoehe ueber einer Unterkante von 2,8 %
  * steht der Scheitel damit bei 92,8 % des Fachs.
+ *
+ * Auch diese beiden Zahlen sind gerechnet und stehen in bildfolge.ts
+ * (`BANKKASTEN`) — ein eigener Massstab, weil das Fach groesser ist als das
+ * Sechseck und die Figur darin tiefer sitzt. Warum ueberhaupt gerechnet:
+ * siehe `.tr-figur3d` oben.
  */
-.tr-bankplatz .tr-figur3d { bottom: 2.8%; height: 92.8%; }
+.tr-bankplatz .tr-figur3d {
+  bottom: var(--tr-bankkasten-boden, 2.8%);
+  height: var(--tr-bankkasten-hoehe, 92.8%);
+}
 
 /*
  * Das Schweben im Stand. Dieselbe Art Bewegung wie beim Pinguin auf der
@@ -17975,6 +17987,11 @@ span.hub-angebot-art.poker-jeton-stapel {
  * Karte auseinanderhaelt. 40 px sind das Mass der stehenden Figur — dass sie
  * bei den grossen Huetten (Magier) ein, zwei Pixel in die obere Polsterung
  * ragt, ist Absicht: Die Karte schneidet nicht ab.
+ *
+ * DIESE 40 STEHEN NOCH EINMAL IN bildfolge.ts (`KARTENKOPF_PX`), weil die
+ * Figur darin in Pixeln bemessen ist und ihre Hoehe aus dem Massstab gerechnet
+ * wird. Wer sie hier aendert, aendert sie dort mit — sonst bleibt die Figur
+ * stehen, wo sie war, waehrend der Kopf um sie herum waechst oder schrumpft.
  */
 .tr-karte-kopf {
   position: relative;
@@ -17998,17 +18015,23 @@ span.hub-angebot-art.poker-jeton-stapel {
  * ueber dem unteren Rand des Kopfes. Die KARTE bleibt dabei eine Karte: Ihr
  * Rahmen ist richtig, weggenommen wurde nur die Platte unter der Figur.
  *
- * WER DIE BLAETTER NEU RENDERT, rechnet auch diese beiden Zahlen um: Wie gross
- * die Figur wird, haengt am gemessenen Ausschnitt (FIGUREN3D_ZELLHOEHE_METER),
- * nicht an der Zellhoehe allein. Hier standen bis zum 06.09.2026 58 px und
- * −12 px — mit dem engeren Ausschnitt der eigenen Todeszelle waere die Figur
- * davon um 14 % gewachsen. Die lange Fassung steht bei `.tr-figur3d`.
+ * DIE BEIDEN ZAHLEN STEHEN SEIT DEM 19.09.2026 NICHT MEHR HIER, sondern als
+ * `LADENKASTEN` in bildfolge.ts. Sie haengen am gemessenen Ausschnitt
+ * (FIGUREN3D_ZELLHOEHE_METER) und nicht an der Zellhoehe allein: Hier standen
+ * bis zum 06.09.2026 58 px und −12 px — mit dem engeren Ausschnitt der eigenen
+ * Todeszelle waere die Figur davon um 14 % gewachsen, und umgerechnet wurde
+ * von Hand. Die lange Fassung steht bei `.tr-figur3d`.
+ *
+ * PIXEL UND NICHT PROZENT, auch in der Rechnung: `LADENKASTEN` nimmt dieselben
+ * Anteile wie Wabe und Bank und multipliziert sie mit der Kopfhoehe. Die 40 px
+ * von `.tr-karte-kopf` stehen dafuer als `KARTENKOPF_PX` dort noch einmal —
+ * wer sie hier aendert, aendert sie auch dort.
  */
 .tr-figur3d-karte {
   position: absolute;
   left: 50%;
-  bottom: -9px;
-  height: 51px;
+  bottom: var(--tr-ladenkasten-boden, -9px);
+  height: var(--tr-ladenkasten-hoehe, 51px);
   translate: -50% 0;
 }
 /* Die Figur auf der Ladenkarte. Feste Pixel und nicht Prozent: Die Karte ist

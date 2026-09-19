@@ -25,8 +25,9 @@
  * zusammen, nicht ueber den Inhalt) — mit einem Ja/Nein bliebe der Rueckfall
  * der ersten Einheit an der zweiten kleben, deren Blatt in Ordnung ist.
  *
- * DIE MASSE STEHEN NICHT HIER, sondern beim Aufrufer (`klasse`). Warum, steht
- * im Kopf von `Figur3D.module.css`.
+ * DIE MASSE STEHEN NICHT HIER, sondern beim Aufrufer — als Klasse (`klasse`)
+ * und, wo sie gerechnet sind, als Variablen dazu (`masse`). Warum, steht im
+ * Kopf von `Figur3D.module.css`.
  */
 
 import { type ReactNode, useState } from 'react';
@@ -41,6 +42,7 @@ export function Figur3D({
   spiegeln,
   ersatz,
   klasse,
+  masse,
   gib,
 }: {
   /**
@@ -58,6 +60,22 @@ export function Figur3D({
   /** Wo die Figur steht und wie gross sie ist — je Ort eine eigene Klasse. */
   klasse?: string;
   /**
+   * Die MASSE dieser Klasse, als CSS-Variablen.
+   *
+   * Sie stehen hier und nicht im Stylesheet, weil sie gerechnet sind: Wie
+   * gross eine Figur wird, haengt am gemessenen Ausschnitt der Blaetter
+   * (`FIGUREN3D_ZELLHOEHE_METER`), und eine Zahl im Stylesheet laesst beim
+   * naechsten Rendern alle Figuren stillschweigend mitwachsen. Die Arena macht
+   * es seit dem 06.09.2026 so (`FIGURENKASTEN` an `.figur`), die Ruestkammer
+   * seit dem 19.09.2026 (`WABENKASTEN` und Nachbarn, gesetzt von
+   * `EinheitenFigur`).
+   *
+   * Die Regel im Stylesheet entscheidet, WELCHE der Variablen sie liest —
+   * Wabe und Bankplatz tragen dieselbe Klasse und unterscheiden sich nur am
+   * Vorfahren.
+   */
+  masse?: React.CSSProperties;
+  /**
    * Meldet das Bild an einen Takt, der es schieben will (nur die Arena).
    * Ohne diese Angabe steht die Figur still, und zwar auf Bild 0 der
    * Ruhefolge.
@@ -69,6 +87,7 @@ export function Figur3D({
   return (
     <span
       className={klasse ? `${stil.ausschnitt} ${klasse}` : stil.ausschnitt}
+      style={masse}
       data-spiegel={spiegeln ? '' : undefined}
     >
       <img

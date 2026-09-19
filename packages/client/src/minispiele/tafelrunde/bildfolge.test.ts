@@ -11,12 +11,15 @@ import {
 } from '../../figuren3d/figuren3d';
 import {
   type Bewegungsspur,
+  BANKKASTEN,
   BLATT_PFADE,
   FIGURENKASTEN,
   GLEITEN_MS,
   KAMPF_TEMPO,
+  LADENKASTEN,
   RUECKFALLKASTEN,
   SACKEN_MS,
+  WABENKASTEN,
   bildstand,
   blattPfad,
   blattVersatz,
@@ -345,5 +348,73 @@ describe('RUECKFALLKASTEN', () => {
     // groesste — Anteile ihrer Zelle, am Alphakanal gemessen.
     expect(ersatz).toBeGreaterThan(zelle * 0.594);
     expect(ersatz).toBeLessThan(zelle * 0.875);
+  });
+});
+
+describe('die drei Kaesten der Ruestkammer', () => {
+  /*
+   * Wabe, Bankfach und Ladenkarte rechnen seit dem 19.09.2026 dieselbe
+   * Rechnung wie die Arena. Der Anlass steht am 06.09.2026: Als die Todeszeile
+   * ihre eigene, breitere Zelle bekam, wurde der gemeinsame Ausschnitt von
+   * 4,29 auf 3,76 Meter enger, und die sechs festen Zahlen im Stylesheet
+   * mussten von Hand umgerechnet werden (82 % -> 71,8 %, 106 % -> 92,8 %,
+   * 58 px -> 51 px). Wer das vergisst, laesst jede Figur der Ruestkammer um
+   * 14 % wachsen, ohne es zu sehen.
+   */
+
+  it('setzt die Figur auf der Wabe mit dem Fuss auf 37,5 Prozent der Wabenhoehe', () => {
+    // Tiefer laeuft das Sechseck spitz zu und die Figur staende auf ihrem
+    // eigenen Namen (24 %) und ihren Sternen (14 %).
+    const fuss = WABENKASTEN.boden / 100 + (WABENKASTEN.hoehe / 100) * (1 - FIGUREN3D_FUSSPUNKT.y);
+    expect(fuss).toBeCloseTo(0.375, 3);
+  });
+
+  it('haelt die Wabenfigur innerhalb des Sechsecks', () => {
+    /*
+     * Anders als in der Arena ist die Figur hier ein KIND der Wabe, und
+     * `clip-path` beschneidet auch den Inhalt: Was oben hinausragt, ist kein
+     * Ueberstand, sondern ein abgeschnittener Kopf. Die Oberkante der Zelle
+     * darf deshalb die Wabe nicht verlassen.
+     */
+    expect(WABENKASTEN.boden).toBeGreaterThan(0);
+    expect(WABENKASTEN.boden + WABENKASTEN.hoehe).toBeLessThanOrEqual(100);
+  });
+
+  it('laesst auf der Bank den hoechsten Kopf des Satzes im Fach', () => {
+    /*
+     * Nachgemessen am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
+     * 0/0): Der hoechste Punkt liegt 3,1 % unter der Zellenoberkante — das
+     * Geweih des Druiden. `overflow: hidden` am Fach schneidet ab, was
+     * darueber hinausreicht.
+     */
+    const scheitel = BANKKASTEN.boden + BANKKASTEN.hoehe * 0.969;
+    expect(BANKKASTEN.boden).toBeGreaterThanOrEqual(0);
+    expect(scheitel).toBeLessThanOrEqual(100);
+  });
+
+  it('stellt die Figur der Ladenkarte einen Pixel ueber den Rand des Kopfes', () => {
+    // In Pixeln und nicht in Prozent: Die Karte ist eine Spalte von fuenf und
+    // auf einem 360er-Handy keine 70 px breit.
+    const fuss = LADENKASTEN.boden + LADENKASTEN.hoehe * (1 - FIGUREN3D_FUSSPUNKT.y);
+    expect(fuss).toBeCloseTo(1.2, 1);
+    expect(LADENKASTEN.hoehe).toBeCloseTo(51, 1);
+  });
+
+  it('kommt bei der Zelle von damals wieder auf die abgenommenen Zahlen', () => {
+    /*
+     * DIE GEGENPROBE ZUR UMSTELLUNG, dieselbe wie bei `FIGURENKASTEN`: Mit dem
+     * ALTEN Ausschnitt (4,29 m je Zelle) muessen die drei Massstaebe genau die
+     * Zahlen ergeben, die vor dem 06.09.2026 im Stylesheet standen — 82 %,
+     * 106 % und 58 px. Stimmt das, ist beim Herausziehen keine Figur groesser
+     * oder kleiner geworden, und niemand haette es gesehen.
+     */
+    const alteZelle = 4.29;
+    const massstab = (kasten: { hoehe: number }) => FIGUREN3D_ZELLHOEHE_METER / (kasten.hoehe / 100);
+    expect((alteZelle / massstab(WABENKASTEN)) * 100).toBeCloseTo(82, 0);
+    expect((alteZelle / massstab(BANKKASTEN)) * 100).toBeCloseTo(106, 0);
+    // Der Laden rechnet in Pixeln: sein Massstab bezieht sich auf die 40 px
+    // des Kartenkopfes (`KARTENKOPF_PX`), nicht auf 100 %.
+    const ladenMassstab = FIGUREN3D_ZELLHOEHE_METER / (LADENKASTEN.hoehe / 40);
+    expect((alteZelle / ladenMassstab) * 40).toBeCloseTo(58, 0);
   });
 });

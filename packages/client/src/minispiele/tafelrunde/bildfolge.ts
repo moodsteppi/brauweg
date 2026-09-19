@@ -340,6 +340,38 @@ export function zellWeite(stand: Bildstand): number {
 const MASSSTAB_METER = 1.65;
 
 /**
+ * Die eine Rechnung hinter jedem Figurenkasten — je Ort einmal ausgefuehrt.
+ *
+ * SIE STEHT GENAU EINMAL, weil sie sonst an fuenf Stellen stuende: Arena,
+ * Wabe, Bankplatz, Ladenkarte und Rueckfall. Vier davon waren bis zum
+ * 19.09.2026 Handarbeit im Stylesheet, und beim engeren Ausschnitt vom
+ * 06.09.2026 musste jede einzeln umgerechnet werden (82 % -> 71,8 %,
+ * 106 % -> 92,8 %, 58 px -> 51 px). Wer die Blaetter neu rendert, aendert
+ * seitdem nur noch `FIGUREN3D_ZELLHOEHE_METER`.
+ *
+ * `massstabMeter` ist, wie viele Weltmeter das BEZUGSMASS des Ortes zeigt —
+ * die Kartenhoehe in der Arena, die Wabenhoehe auf dem Brett, die Hoehe des
+ * Fachs auf der Bank, der Kartenkopf im Laden. `standlinie` ist der Anteil
+ * dieses Masses von OBEN, auf dem die Figur aufsetzt.
+ *
+ * Beides Anteile und nicht Prozent der Karte: So haengt der Ort an der
+ * ENTSCHEIDUNG ueber die Figurengroesse und nicht am gemessenen Ausschnitt
+ * der Blaetter.
+ */
+function kastenAus(
+  massstabMeter: number,
+  standlinie: number,
+): { readonly hoehe: number; readonly boden: number } {
+  const hoehe = FIGUREN3D_ZELLHOEHE_METER / massstabMeter;
+  return {
+    hoehe: runde(hoehe * 100),
+    // Vom Fuss aus nach unten: Der Fusspunkt liegt bei 80 % der Zellhoehe,
+    // die restlichen 20 % der Zelle reichen unter die Standlinie.
+    boden: runde((1 - standlinie - hoehe * (1 - FIGUREN3D_FUSSPUNKT.y)) * 100),
+  };
+}
+
+/**
  * Wo die Figur aufsetzt, als Anteil der Koerperhoehe von OBEN.
  *
  * 83,6 % heisst: Der Fuss steht 16,4 % ueber der Unterkante des Koerpers, knapp
@@ -365,17 +397,7 @@ const STANDLINIE = 0.836;
  * an der Groesse etwas geaendert haette. Und zwar genau die 260 %, die am
  * selben Tag an einem Bild abgenommen worden waren.
  */
-export const FIGURENKASTEN = {
-  /** Hoehe des Ausschnitts, in Prozent der Koerperhoehe. */
-  hoehe: runde((FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * 100),
-  /** Unterkante gegen die des Koerpers, in Prozent — negativ heisst tiefer. */
-  boden: runde(
-    (1 -
-      STANDLINIE -
-      (FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * (1 - FIGUREN3D_FUSSPUNKT.y)) *
-      100,
-  ),
-} as const;
+export const FIGURENKASTEN = kastenAus(MASSSTAB_METER, STANDLINIE);
 
 /**
  * Wie viele Weltmeter die HOEHE einer 32er-Pixelkachel zeigt — der Massstab
@@ -434,6 +456,136 @@ export const RUECKFALLKASTEN = {
   /** Unterkante gegen die des Koerpers, in Prozent — hier die Standlinie. */
   boden: runde((1 - STANDLINIE) * 100),
 } as const;
+
+// ---------------------------------------------------------------------------
+// Wie gross der Ausschnitt in der RUESTKAMMER ist
+//
+// DREI ORTE, DREI KAESTEN: die Wabe auf dem Brett, das Fach auf der Bank, der
+// Kopf der Ladenkarte. Bis zum 19.09.2026 standen ihre Masse als feste Zahlen
+// in styles.css (82 %, 106 %, 58 px und die drei Bodenversaetze dazu). Sie
+// haengen aber genauso am gemessenen Ausschnitt der Blaetter wie die Arena,
+// nur sagten sie es nicht: Als die Todeszeile am 06.09.2026 ihre eigene,
+// breitere Zelle bekam und der Ausschnitt von 4,29 auf 3,76 Meter enger wurde,
+// musste jede der sechs Zahlen von Hand umgerechnet werden (82 % -> 71,8 %,
+// 106 % -> 92,8 %, 58 px -> 51 px). Wer das vergisst, laesst alle Figuren der
+// Ruestkammer stillschweigend um 14 % wachsen.
+//
+// WARUM JE ORT EIN EIGENER MASSSTAB und nicht der der Arena: Die Bezugsmasse
+// sind verschieden gross und verschieden geschnitten. Eine Wabe ist ein
+// Sechseck, in das die Figur hineinpassen MUSS (`clip-path` schneidet den
+// Kopf ab); ein Bankfach ist ein Rechteck ohne Namen darunter, dort darf sie
+// die volle Hoehe nehmen; der Kartenkopf ist 40 Pixel hoch, egal wie breit der
+// Schirm ist. Gemeinsam ist ihnen nur die Rechnung (`kastenAus`).
+//
+// DIE ZAHLEN SIND KEINE NEUE ENTSCHEIDUNG. Jeder Massstab ist die Groesse vom
+// 06.09.2026, umgerechnet in Meter: Massstab = Zellhoehe in Metern geteilt
+// durch den damaligen Hoehenanteil. Am Bildschirm aendert sich nichts.
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie viele Weltmeter die Hoehe einer WABE zeigt.
+ *
+ * 3,756 m Zelle / 0,718 Wabenhoehe = 5,231. Die 71,8 % sind die Groesse, mit
+ * der die Figur in das Sechseck passt: Sie setzt bei 37,5 % der Wabenhoehe auf
+ * und reicht bis rund 93 % — ueberall dort ist das Sechseck noch breit genug,
+ * und darunter bleibt Platz fuer Namen und Sterne.
+ *
+ * Groessere Zahl heisst kleinere Figur. Wer sie anfasst, sieht auf dem Brett
+ * nach, ob der Kopf noch drin ist — anders als in der Arena beschneidet die
+ * Wabe ihr Kind.
+ */
+const WABE_MASSSTAB_METER = 5.231;
+
+/**
+ * Wo die Figur auf der Wabe aufsetzt, als Anteil der Wabenhoehe von OBEN.
+ *
+ * 62,5 % heisst: Der Fuss steht auf 37,5 % der Wabe. Tiefer laeuft das
+ * Sechseck spitz zu und die Figur staende auf dem Namen (`.tr-einheit-name`
+ * auf 24 %, die Sterne auf 14 %); hoeher schwebte sie ueber ihrem Feld.
+ */
+const WABE_STANDLINIE = 0.625;
+
+/**
+ * Wie viele Weltmeter die Hoehe eines BANKFACHS zeigt.
+ *
+ * 3,756 m / 0,928 = 4,047 — die Figur ist auf der Bank also groesser als auf
+ * dem Brett. Sie darf es sein: Das Fach ist ein Rechteck, es steht kein Name
+ * darunter, und `overflow: hidden` schneidet nur die leeren Raender der Zelle
+ * ab. Nachgemessen am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
+ * 0/0) liegt der hoechste Punkt 3,1 % unter der Zellenoberkante — das Geweih
+ * des Druiden —, also bleibt der Scheitel bei 92,8 % Zellhoehe gerade im Fach.
+ *
+ * Wer hier kleinere Meter einsetzt, schiebt genau dieses Geweih oben heraus.
+ */
+const BANK_MASSSTAB_METER = 4.047;
+
+/**
+ * Wo die Figur im Bankfach aufsetzt, als Anteil der Fachhoehe von OBEN.
+ *
+ * 78,6 % heisst: Der Fuss steht auf 21,4 % des Fachs. Tiefer als auf der Wabe,
+ * weil kein Name und keine Sterne darunter stehen — die Bank zeigt Ware, und
+ * die liegt im Fach.
+ */
+const BANK_STANDLINIE = 0.786;
+
+/**
+ * Die Hoehe des Ladenkarten-Kopfes in Pixeln — das Bezugsmass des dritten
+ * Ortes.
+ *
+ * ES IST EINE ABSCHRIFT aus `.tr-karte-kopf` in styles.css, und das geht nicht
+ * anders herum: Die Ladenkarte rechnet in Pixeln und nicht in Prozent (eine
+ * Spalte von fuenf ist auf einem 360er-Handy keine 70 px breit — ein
+ * Prozentmass waere dort ein Punkt und am Desktop ein Plakat). Wer die 40
+ * Pixel dort aendert, aendert sie hier mit; die Figur schrumpfte sonst mit dem
+ * Kopf nicht mit, sondern bliebe stehen, wo sie war.
+ */
+const KARTENKOPF_PX = 40;
+
+/**
+ * Wie viele Weltmeter die Hoehe des Ladenkarten-Kopfes zeigt.
+ *
+ * 3,756 m / 1,275 = 2,946; 1,275 Kopfhoehen sind die 51 Pixel Zelle vom
+ * 06.09.2026 auf 40 Pixel Kopf. Daraus werden rund 34 Pixel sichtbare Figur —
+ * etwas mehr als die 32 Pixel des Pixelbilds, das dort vorher stand.
+ */
+const LADEN_MASSSTAB_METER = 2.946;
+
+/**
+ * Wo die Figur im Kartenkopf aufsetzt, als Anteil der Kopfhoehe von OBEN.
+ *
+ * 97 % heisst: Der Fuss steht gut einen Pixel ueber der Unterkante des Kopfes.
+ * Die Zelle ragt dabei oben aus dem Kopf heraus, und das ist Absicht — die
+ * Karte schneidet nicht ab, und die obere Polsterung faengt die grossen Huete
+ * (Magier) auf.
+ */
+const LADEN_STANDLINIE = 0.97;
+
+/** Hoehe und Bodenversatz auf einer WABE, in Prozent der Wabenhoehe. */
+export const WABENKASTEN = kastenAus(WABE_MASSSTAB_METER, WABE_STANDLINIE);
+
+/** Dasselbe fuer ein BANKFACH, in Prozent der Fachhoehe. */
+export const BANKKASTEN = kastenAus(BANK_MASSSTAB_METER, BANK_STANDLINIE);
+
+/**
+ * Und fuer den Kopf der LADENKARTE — in Pixeln, nicht in Prozent.
+ *
+ * Die eigene Ableitung ist der Preis dafuer, dass die Karte in Pixeln rechnet:
+ * Dieselben Anteile wie ueberall, nur am Ende mit der Kopfhoehe malgenommen.
+ */
+export const LADENKASTEN = pixelKasten(
+  kastenAus(LADEN_MASSSTAB_METER, LADEN_STANDLINIE),
+  KARTENKOPF_PX,
+);
+
+function pixelKasten(
+  anteile: { readonly hoehe: number; readonly boden: number },
+  bezugPx: number,
+): { readonly hoehe: number; readonly boden: number } {
+  return {
+    hoehe: runde((anteile.hoehe / 100) * bezugPx),
+    boden: runde((anteile.boden / 100) * bezugPx),
+  };
+}
 
 function runde(wert: number): number {
   return Math.round(wert * 1000) / 1000;
