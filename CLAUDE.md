@@ -258,6 +258,20 @@ Wirtschaftsmodell.
   drankommt — nämlich nach Commit und Push —, steht oben unter „Bauen und
   prüfen"; diese Stelle hier sagt nur, warum er nicht durch einen
   Einzelpaket-Lauf zu ersetzen ist.
+- **Dieselbe Meldung, andere Ursache: `npm install` statt `npm run build`.**
+  Sagt `tsc` ein Spielpaket nicht ansprechen zu können, obwohl dessen
+  `packages/game-<spiel>/dist/src/index.d.ts` **existiert**, dann fehlt in
+  `node_modules/@brauweg/` der Symlink auf das Paket — npm verlinkt einen neu
+  hinzugekommenen Workspace erst beim nächsten `npm install`, und wer seit
+  dessen Einzug keins gelaufen hat, sieht wortgleich `TS2307: Cannot find
+  module '@brauweg/game-…'`. Bauen hilft dann nicht, egal wie oft. Erst
+  nachsehen (`ls node_modules/@brauweg/`), dann `npm install` im
+  Wurzelverzeichnis — `package-lock.json` bleibt unberührt; ändert npm dort
+  doch etwas (peer-Flags), gehört es nicht in den Commit. Getroffen hat es
+  `game-golf` (kam am 06.09.2026 dazu) am 07.09. auf zwei Rechnern und am
+  08.09. noch einmal auf einem dritten. **Warum ausgerechnet ein einzelner
+  Link fehlt, ist offen** — die Regel gilt darum für jedes frisch angelegte
+  Paket.
 - **Keine Prüfkopie unter `AppData/Local/Temp`.** Liegt der Arbeitsbaum dort,
   sammelt Vite eine fremde `vite.config.ts` aus dem Wurzelverzeichnis ein, und
   der Testlauf stirbt schon beim Laden der Konfiguration. Der Fehler zeigt dann
