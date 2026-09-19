@@ -39,6 +39,7 @@ import { QUIZ_FRAGEN } from './inhalte/quiz.js';
 import { WER_EHER_SPRUECHE } from './inhalte/wereher.js';
 import {
   DEFAULT_REGELN,
+  MAX_REDERUNDEN,
   MINISPIELE,
   PUNKTE,
   SCHLUECKE,
@@ -95,8 +96,16 @@ export interface ImposterRunde extends RundenBasis {
   /** Was der Imposter statt des Wortes bekommt: eine grobe Kategorie. */
   readonly hinweis: string;
   readonly imposter: number;
-  /** Feste Redereihenfolge der Anwesenden, gemischt beim Rundenaufbau. */
+  /**
+   * Feste Redereihenfolge der Anwesenden, gemischt beim Rundenaufbau. Bei
+   * jeder weiteren Rederunde rueckt sie um einen Platz — wer eben anfing,
+   * redet zuletzt.
+   */
   readonly reihenfolge: readonly number[];
+  /** Die wievielte Rederunde laeuft (1-basiert, hoechstens MAX_REDERUNDEN). */
+  readonly redeRunde: number;
+  /** Sitze, die in dieser Abstimmung "noch eine Runde reden" verlangt haben. */
+  readonly nochmal: readonly number[];
   /** Je Sitz der Verdaechtigte, -1 = keine Stimme abgegeben. */
   readonly stimmen: readonly number[];
   /** Erst im Ergebnis gesetzt. */
@@ -335,6 +344,8 @@ export function baueRunde(
         hinweis: wort.hinweis,
         imposter,
         reihenfolge,
+        redeRunde: 1,
+        nochmal: [],
         stimmen: offene(sitze),
         ertappt: false,
       };
@@ -906,8 +917,35 @@ export function verarbeite(
 
   switch (runde.art) {
     case 'imposter': {
-      if (aktion.art !== 'stimme') verstoss('jetzt wird abgestimmt');
       if (runde.fertig.includes(sitz)) return partie;
+      if (aktion.art === 'nochmal') {
+        /*
+         * "Noch eine Runde reden" statt einer Stimme. Verlangt es MEHR als die
+         * Haelfte der Anwesenden, faengt die Rederunde sofort neu an — alle
+         * bisherigen Stimmen fallen, die Reihenfolge rueckt um einen Platz.
+         * Kommt die Mehrheit nicht zusammen, zaehlt der Tipp als Enthaltung,
+         * und die Runde wird abgerechnet, sobald alle gehandelt haben.
+         */
+        if (runde.redeRunde >= MAX_REDERUNDEN) verstoss('genug geredet — jetzt wird abgestimmt');
+        const nochmal = [...runde.nochmal, sitz];
+        const anwesend = lebende(partie.sitze, partie.ausgestiegen);
+        if (nochmal.length * 2 > anwesend.length) {
+          const [erster, ...rest] = runde.reihenfolge;
+          return weiter({
+            ...partie,
+            runde: {
+              ...runde,
+              redeRunde: runde.redeRunde + 1,
+              reihenfolge: erster === undefined ? runde.reihenfolge : [...rest, erster],
+              nochmal: [],
+              stimmen: offene(partie.sitze),
+              fertig: [],
+            },
+          });
+        }
+        return weiter({ ...partie, runde: { ...runde, nochmal, fertig: [...runde.fertig, sitz] } });
+      }
+      if (aktion.art !== 'stimme') verstoss('jetzt wird abgestimmt');
       pruefeZiel(partie, sitz, aktion.ziel);
       const stimmen = [...runde.stimmen];
       stimmen[sitz] = aktion.ziel;
