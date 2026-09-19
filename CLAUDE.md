@@ -121,8 +121,9 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.545 Tests in den Paketen (483 im Server), dazu
-                  # 795 Client-Tests in 64 Dateien (vitest)
+npm test          # alle Pakete (node --test) und der Client (vitest)
+
+npm test | node werkzeug/pruefstand.mjs   # dieselbe Zählung wie in der CI
 ```
 
 **Erst committen, dann messen.** Der volle Lauf dauert auf einem
@@ -131,13 +132,26 @@ und Push dahinter legt, verliert die ganze Arbeit, wenn die Sitzung im Lauf
 endet. Am 09.09.2026 ist genau das zweimal hintereinander passiert — der Code
 war beide Male fertig und lag im Arbeitsverzeichnis, auf dem Aufgabenzweig
 stand trotzdem kein einziger Commit. Also: **zuerst die Änderung committen und
-pushen, dann den vollen Lauf**, und die gemessenen Zahlen als zweiten Commit
-nachtragen (hier und in `docs/STAND.md`).
+pushen, dann den vollen Lauf.**
 
-**Kommt der Lauf nicht mehr zustande, bleiben die alten Zahlen stehen** — und
-die Fertigmeldung sagt ausdrücklich, dass nicht gemessen wurde. Eine geratene
-Zahl ist schlimmer als eine veraltete: Sie steht hier als Sollwert und wird
-von der nächsten Aufgabe fortgeschrieben. Am 09.09.2026 hat ein Lauf so
+**Die Zahlen trägt niemand mehr von Hand nach** — weder hier noch in
+`docs/STAND.md`. Bis zum 19.09.2026 lautete die Regel andersherum, und mit
+einem Worker ging das auf. An dem Tag liefen zehn gleichzeitig los: Sechs
+Pull Requests kollidierten, alle in denselben drei Zeilen, keiner im Code.
+Das ist kein Unglück, sondern die Regel selbst. Eine Zahl gilt nur für den
+Zweig, in dem sie gemessen wurde, also **müssen** sich zehn ehrliche Messungen
+widersprechen — und wer den Konflikt von Hand auflöst, trägt eine Zahl ein,
+die der nächste Merge wieder falsch macht.
+
+Gezählt wird trotzdem, nur woanders: Der CI-Job „Bauen und prüfen" wertet
+seinen eigenen Lauf aus und schreibt die Aufschlüsselung in die Zusammenfassung
+(`werkzeug/pruefstand.mjs`). Sie gehört damit zu genau einem Commit, statt in
+einer Datei auf den nächsten Merge zu warten. Örtlich liefert
+`npm test | node werkzeug/pruefstand.mjs` dieselbe Zeile.
+
+**Was in die Fertigmeldung gehört, bleibt:** was der eigene Lauf ergeben hat —
+und wenn er nicht mehr zustande kam, ausdrücklich, dass nicht gemessen wurde.
+Eine geratene Zahl ist schlimmer als gar keine: Am 09.09.2026 hat ein Lauf so
 „450 → 451" fortgezählt, gemessen waren es 468.
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
