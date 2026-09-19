@@ -4,7 +4,8 @@
  * HIER STEHT NICHTS ZUM KAMPF SELBST. Buehne und Arena bringen ihr Aussehen
  * mit (`Buehne.module.css`, `KampfAnzeige.module.css`) — genau das ist der
  * Sinn der Probe. Was hier liegt, ist das Drumherum, das es am Tisch nicht
- * gibt: Kopfzeile, Uhr, der Knopf „nochmal" und die zwei Saetze darunter.
+ * gibt: Kopfzeile, Uhr, die Schalterzeile („nochmal" und die zwei Kaestchen
+ * fuer die Rueckfallstufen) und die Saetze darunter.
  *
  * Der Grundton kommt von `.tr-seite`/`.tr-tisch` aus styles.css, die das
  * Element schon traegt. Die Klassen hier legen nur die Abstaende nach, die
@@ -62,6 +63,53 @@
 
 .knopf:hover {
   border-color: var(--accent);
+}
+
+/* Knopf und Kaestchen in einer Zeile, am Handy umbrechend. Zentriert, weil
+   die Buehne darueber es auch ist. */
+.schalter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.9rem;
+  width: min(96vw, 520px);
+}
+
+/* Das ganze Label ist die Trefferflaeche und 44 px hoch — ein 13-px-Kaestchen
+   trifft am Handy niemand. */
+.kaestchen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.kaestchen:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kaestchen input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: inherit;
+}
+
+/* Etwas dunkler als der Fusstext und darueber: Es erklaert die Kaestchen und
+   nicht die Szene. */
+.hinweis {
+  width: min(96vw, 520px);
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+  opacity: 0.85;
 }
 
 .fuss {

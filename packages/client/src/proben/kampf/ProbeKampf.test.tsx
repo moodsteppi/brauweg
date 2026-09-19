@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { blattPfad } from '../../minispiele/tafelrunde/bildfolge';
+import { figurPfad } from '../../minispiele/tafelrunde/KampfAnzeige';
+
 import rohszene from './kampf-szene.json?raw';
 import { ProbeKampf } from './ProbeKampf';
 
@@ -17,8 +20,10 @@ import { ProbeKampf } from './ProbeKampf';
  *      dem die Messung in `test/kampf.test.ts` vorbeigelaufen ist
  *      (docs/TAFELRUNDE-SPIELZEIT.md).
  *   2. DIE SEITE BEDIENT SICH. Der Kampf laeuft bis zum Schlussbild, und
- *      „nochmal" faengt ihn wirklich von vorn an. Der Knopf ist die einzige
- *      Bedienung der Seite.
+ *      „nochmal" faengt ihn wirklich von vorn an. Dazu die zwei Kaestchen,
+ *      die Blatt und Pixelfigur ausfallen lassen — sie sind der einzige Weg,
+ *      die beiden Rueckfallstufen ueberhaupt zu sehen, und wenn sie still
+ *      nichts mehr bewirken, faellt es sonst niemandem auf.
  *
  * Was die Kampfanzeige selbst tut, steht in ihrer eigenen Probe
  * (`minispiele/tafelrunde/KampfAnzeige.test.tsx`) und wird hier nicht noch
@@ -43,7 +48,7 @@ interface Szene {
       grund: string;
     };
   };
-  katalog: { id: string; name: string }[];
+  katalog: { id: string; name: string; rolle: string }[];
 }
 
 const SZENE = JSON.parse(rohszene) as Szene;
@@ -189,6 +194,83 @@ describe('ProbeKampf', () => {
     expect(screen.getByText(`0.0 s / ${(BERICHT.dauerMs / 1000).toFixed(1)} s`)).toBeInTheDocument();
     // Auch die Buehne faengt von vorn an — die Ansage gehoert zum Kampfbeginn.
     expect(screen.getByText(`Runde ${SZENE.runde}`)).toBeInTheDocument();
+  });
+
+  /*
+   * Die drei Rueckfallstufen.
+   *
+   * Der erste Kaempfer der Szene steht stellvertretend fuer alle — was die
+   * Kaestchen tun, tun sie am ganzen Katalog. Gesucht wird ueber das `alt`,
+   * das Blatt und Pixelfigur sich teilen (beides der Name der Einheit);
+   * unterschieden wird am `src`, denn genau der ist die Stufe.
+   */
+  const ersterKaempfer = (): { name: string; rolle: string; id: string } => {
+    const eintrag = SZENE.katalog.find((e) => e.id === BERICHT.start[0]!.einheitId)!;
+    return { name: eintrag.name, rolle: eintrag.rolle, id: eintrag.id };
+  };
+
+  const quellen = (name: string): string[] =>
+    screen.getAllByAltText(name).map((el) => el.getAttribute('src') ?? '');
+
+  const haken = (beschriftung: string): HTMLInputElement =>
+    screen.getByRole('checkbox', { name: beschriftung }) as HTMLInputElement;
+
+  it('zeigt ohne Kaestchen das 3D-Blatt der Rolle', () => {
+    render(<ProbeKampf />);
+    const { name, rolle } = ersterKaempfer();
+    expect(quellen(name)).toContain(blattPfad(rolle));
+  });
+
+  it('faellt mit "Blätter ausfallen lassen" auf die Pixelfigur zurueck', () => {
+    render(<ProbeKampf />);
+    const { name, rolle, id } = ersterKaempfer();
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+
+    const src = quellen(name);
+    expect(src).toContain(figurPfad(id));
+    expect(src).not.toContain(blattPfad(rolle));
+  });
+
+  it('faellt mit beiden Kaestchen auf das Strichzeichen der Rolle zurueck', () => {
+    const { container } = render(<ProbeKampf />);
+    const { name, id } = ersterKaempfer();
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+    fireEvent.click(haken('Pixelfiguren auch'));
+
+    // Kein Bild mehr zu dieser Einheit — nur noch gezeichnete Rollenzeichen.
+    expect(screen.queryAllByAltText(name)).toHaveLength(0);
+    // Und das nicht, weil es zu dieser Einheit ohnehin keine Figur gaebe.
+    expect(figurPfad(id)).not.toBeNull();
+    /*
+     * `RollenZeichen` aus Zeichen.tsx und nicht der erste Buchstabe des
+     * Namens: Dieselbe Klasse traegt das Zeichen am Tisch.
+     */
+    expect(container.querySelectorAll('svg.tr-rolle').length).toBeGreaterThan(0);
+  });
+
+  it('sperrt das zweite Kaestchen, solange die Blaetter laden', () => {
+    render(<ProbeKampf />);
+    // Ohne ausgefallenes Blatt kommt die Pixelfigur gar nicht an die Reihe —
+    // ein Haken, der nichts tut, saehe aus wie ein Fehler der Probe.
+    expect(haken('Pixelfiguren auch').disabled).toBe(true);
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+    expect(haken('Pixelfiguren auch').disabled).toBe(false);
+  });
+
+  it('tauscht die Stufe mitten im Kampf, ohne ihn neu zu starten', () => {
+    render(<ProbeKampf />);
+    lauf(5_000);
+    const vorher = uhrstand();
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+
+    // Die Uhr laeuft weiter, statt bei 0.0 wieder anzufangen: Nur so
+    // vergleicht man Groesse und Stellung im SELBEN Augenblick.
+    expect(uhrstand()).toBe(vorher);
+    expect(screen.getByRole('group', { name: 'Kampf' })).toBeInTheDocument();
   });
 
   it('nennt Saat, Rundenstand und Zeitraffer unter dem Kampf', () => {
