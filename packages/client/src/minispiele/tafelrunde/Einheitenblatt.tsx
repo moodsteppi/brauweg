@@ -29,6 +29,21 @@
  * Es liegt als Ueberblender ueber dem Brett und nicht daneben — dieselbe
  * Bauart wie das Markenblatt in Synergien.tsx, und aus demselben Grund: Am
  * Handy ist neben dem Brett nichts.
+ *
+ * ES IST SEIT DEM 18.09.2026 DER WEG ZUR MARKE. Die Zeichen an einer Einheit
+ * auf Bank und Brett bleiben stumm — sie stehen auf `pointer-events: none`,
+ * damit sie den Finger nicht von der Wabe abfangen (die ganze Wabe ist Greif-
+ * und Ablegeflaeche). Hier ist Platz, hier stehen die Marken ohnehin mit
+ * Namen, und hier sind sie tippbar: Ein Tipp schlaegt das Markenblatt mit
+ * Wirkung, Stufen und Traegern auf (`onMarke`).
+ *
+ * UND ES STEHT AUCH IM LADEN. Eine Ladenkarte ist selbst eine Schaltflaeche,
+ * in die kein zweiter Knopf hineindarf; ihr Griff daneben schlaegt dieses
+ * Blatt fuer die ANGEBOTENE Einheit auf — Werte, Marken und von dort die
+ * Marke selbst. Erkennbar ist die Vorschau an dem, was sie anbietet: `onKaufen`
+ * statt Verschieben, Ablegen und Verkaufen. Ein eigenes Bauteil dafuer waere
+ * eine zweite Fassung derselben Auskunft gewesen; beim ersten neuen Kampfwert
+ * haette der Laden etwas anderes gezeigt als das Brett.
  */
 
 import { useEffect } from 'react';
@@ -117,9 +132,12 @@ export function Einheitenblatt({
   maxStufe,
   erloes,
   onVerkaufen,
+  onKaufen,
   onAblegen,
+  onMarke,
   onVerschieben,
   verschiebenTitel,
+  escapeAus,
   onSchliessen,
 }: {
   einheit: Einheit;
@@ -140,8 +158,24 @@ export function Einheitenblatt({
   erloes: number | undefined;
   /** Fehlt, wenn der Server den Verkauf gerade nicht anbietet (`legalActions`). */
   onVerkaufen?: () => void;
+  /**
+   * Kaufen — es gibt ihn NUR in der Ladenvorschau (die Einheit steht noch
+   * nirgends). Fehlt er dort, ist der Kauf gerade nicht erlaubt; ob er es ist,
+   * sagt `legalActions` und nicht dieses Blatt.
+   */
+  onKaufen?: () => void;
   /** Zurueck auf die Bank. Fehlt, wenn dort kein Platz frei ist. */
   onAblegen?: () => void;
+  /**
+   * Eine Marke antippen — schlaegt ihr Blatt auf (Wirkung, Stufen, Traeger).
+   *
+   * Der Weg zu dieser Auskunft fuehrt bewusst HIER durch und nicht ueber die
+   * Zeichen an der Wabe: Die stehen auf `pointer-events: none`, damit sie den
+   * Finger nicht von der Wabe abfangen (die ganze Wabe ist Greif- und
+   * Ablegeflaeche). Fehlt der Haken, bleiben die Marken Text — das Blatt ist
+   * dann kein Knopf, der nichts tut.
+   */
+  onMarke?: (marke: string) => void;
   /**
    * Das Blatt schliessen und die Einheit ausgewaehlt lassen — danach leuchten
    * die Ziele, und der naechste Tipp setzt sie ab.
@@ -153,7 +187,17 @@ export function Einheitenblatt({
    */
   onVerschieben?: () => void;
   /** „Aufstellen" von der Bank, „Verschieben" auf dem Brett. */
-  verschiebenTitel: string;
+  verschiebenTitel?: string;
+  /**
+   * Liegt gerade ein Markenblatt DARUEBER? Dann gehoert Escape ihm.
+   *
+   * Beide Blaetter horchen am Fenster, und beide wuerden auf denselben
+   * Tastendruck schliessen: Wer im Laden eine Marke nachschlaegt und Escape
+   * drueckt, staende sonst mit einem Schlag wieder vor dem Brett, statt zur
+   * Einheit zurueckzukommen. `stopPropagation` hilft dabei nicht — zwei
+   * Horcher am selben Ziel sehen dasselbe Ereignis.
+   */
+  escapeAus?: boolean;
   onSchliessen: () => void;
 }): React.JSX.Element {
   /*
@@ -162,12 +206,13 @@ export function Einheitenblatt({
    * und ohne sie waere der einzige Weg hinaus der kleine Knopf oben rechts.
    */
   useEffect(() => {
+    if (escapeAus) return;
     const beiTaste = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onSchliessen();
     };
     window.addEventListener('keydown', beiTaste);
     return () => window.removeEventListener('keydown', beiTaste);
-  }, [onSchliessen]);
+  }, [onSchliessen, escapeAus]);
 
   const farbe = kostenFarbe(einheit.kosten);
   /* Name und Wirkungssatz einer Marke stehen beide in derselben Zeile der
@@ -223,12 +268,34 @@ export function Einheitenblatt({
                 halbe Auskunft. */}
             {einheit.marken.length > 0 && (
               <ul className={stil.marken}>
-                {einheit.marken.map((marke) => (
-                  <li key={marke} className={stil.marke}>
-                    <Markenzeichen marken={[marke]} />
-                    <span className={stil.markenname}>{markeZu(marke)?.name ?? marke}</span>
-                  </li>
-                ))}
+                {einheit.marken.map((marke) => {
+                  const name = markeZu(marke)?.name ?? marke;
+                  return (
+                    <li key={marke} className={stil.marke}>
+                      {/* Mit Haken ein Knopf, ohne Haken Text. Die Marke traegt
+                          dann das Zeichen nach aussen weiter: „Krieger
+                          nachschlagen" ist die ganze Auskunft, die ein
+                          Vorlesegeraet hier braucht. */}
+                      {onMarke ? (
+                        <button
+                          type="button"
+                          className={stil.markenknopf}
+                          aria-haspopup="dialog"
+                          aria-label={`${name} nachschlagen`}
+                          onClick={() => onMarke(marke)}
+                        >
+                          <Markenzeichen marken={[marke]} />
+                          <span className={stil.markenname}>{name}</span>
+                        </button>
+                      ) : (
+                        <>
+                          <Markenzeichen marken={[marke]} />
+                          <span className={stil.markenname}>{name}</span>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </span>
@@ -309,6 +376,19 @@ export function Einheitenblatt({
         )}
 
         <div className={stil.knoepfe}>
+          {/* Kaufen steht VORN und nur in der Ladenvorschau: Wer die Karte
+              aufgeschlagen hat, um sich zu entscheiden, soll die Entscheidung
+              hier treffen koennen und nicht erst das Blatt zumachen muessen.
+              Der Preis steht am Knopf wie der Erloes am Verkaufen. */}
+          {onKaufen && (
+            <button type="button" className={stil.knopf} onClick={onKaufen}>
+              Kaufen
+              <span className={stil.erloes}>
+                <GoldZeichen />
+                {einheit.kosten}
+              </span>
+            </button>
+          )}
           {onVerschieben && (
             <button type="button" className={stil.knopf} onClick={onVerschieben}>
               {verschiebenTitel}

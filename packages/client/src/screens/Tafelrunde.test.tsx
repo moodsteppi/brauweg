@@ -688,6 +688,61 @@ describe('Das Blatt einer angetippten Einheit', () => {
   });
 });
 
+describe('Das Blatt einer Ladenkarte', () => {
+  /*
+   * Der Anlass (18.09.2026): Die Marken-Auskunft hing nur an den Zaehlern der
+   * Leiste. Auf der Ladenkarte trugen die Zeichen ein `title`, das am Handy
+   * nie erscheint — ausgerechnet dort, wo die Auskunft am meisten wert ist:
+   * Der Kauf ist die Entscheidung, um die es im Laden geht.
+   *
+   * Der Griff sitzt NEBEN der Karte, weil die Karte selbst eine Schaltflaeche
+   * ist; ein Knopf darin waere ungueltiges HTML und stuerbe den Kauf-Tipp.
+   */
+  it('schlaegt ueber den Griff das Blatt des Angebots auf', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    const blatt = screen.getByRole('dialog', { name: /Astschütze/ });
+    // Die Werte der ERSTEN Stufe — gekauft wird ein einzelner Recke.
+    expect(blatt).toHaveTextContent('480');
+    expect(blatt).not.toHaveTextContent('864');
+    expect(within(blatt).getByText('Naturwesen')).toBeInTheDocument();
+  });
+
+  it('fuehrt von dort zum Blatt einer Marke, die noch auf keiner Wabe steht', () => {
+    // „0 auf dem Brett" ist im Laden die haeufigste und wichtigste Antwort:
+    // Naturwesen fehlt in `synergien` ganz (das Modul schickt nur Marken mit
+    // mindestens einem Traeger). Die erste Schwelle kommt trotzdem nicht aus
+    // dem Client, sondern aus der Tabelle der Sicht.
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Naturwesen nachschlagen' }));
+    const marke = screen.getByRole('dialog', { name: 'Marke Naturwesen' });
+    expect(marke).toHaveTextContent('0 auf dem Brett');
+    expect(marke).toHaveTextContent('noch 2 bis 2');
+    // Und das Einheitenblatt liegt weiter darunter: Escape gehoert dem
+    // Markenblatt, sonst staende man mit einem Schlag wieder vor dem Brett.
+    expect(screen.getByRole('dialog', { name: /Astschütze/ })).toBeInTheDocument();
+  });
+
+  it('kauft aus dem Blatt heraus den Platz, an dem der Griff haengt', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    fireEvent.click(screen.getByRole('button', { name: /Kaufen/ }));
+    expect(gesendet).toHaveBeenCalledWith({ typ: 'kaufen', platz: 1 });
+  });
+
+  it('bietet den Kauf nicht an, wenn legalActions ihn nicht nennt', () => {
+    // Dieselbe Regel wie an der Karte: Was kaufbar ist, sagt der Server. Ein
+    // zweiter Weg zum Kauf, der nicht fragt, waere eine zweite Antwort auf
+    // dieselbe Frage — nachlesen darf man trotzdem.
+    stelle(sicht(), [{ typ: 'bereit' }]);
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    expect(screen.getByRole('dialog', { name: /Astschütze/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Kaufen/ })).toBeNull();
+  });
+});
+
 describe('Setzen per Antippen', () => {
   it('wählt eine Einheit auf der Bank und setzt sie auf ein Feld', () => {
     zeige();

@@ -394,6 +394,21 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > Statuszeile mit ihr darin **ist** die linke Spalte, und das Modul dreht nur
 > noch die Liste hochkant.
 >
+> **Das Blatt einer Marke geht seit dem 18.09.2026 auch im Laden auf.** Es
+> hing bis dahin nur an den Zählern der Leiste und an der Markenzeile des
+> Gegners; die kleinen Zeichen an einer Einheit und auf der Ladenkarte trugen
+> weiter ein `title`, das am Handy nie erscheint. Der Weg führt jetzt über ein
+> **Blatt** und nicht über die 11-px-Zeichen: An der Einheit bleiben sie stumm
+> (`pointer-events: none`, sonst fängt der Griff darin den Finger von der Wabe
+> ab), dafür sind die Marken im Einheitenblatt tippbar. Die Ladenkarte ist
+> selbst eine Schaltfläche — sie bekommt daneben einen Griff in der linken
+> oberen Ecke (plus langen Druck auf die Karte), der dasselbe Einheitenblatt
+> für das **Angebot** aufschlägt, mit Werten, Marken und Kaufen-Knopf. Das
+> Markenblatt hängt dafür an einem gemeinsamen Haken (`useMarkenblatt`); wessen
+> Stände es zeigt, entscheidet der Aufrufer, damit die Zeile des Gegners weiter
+> seine zeigt. Neu daneben: `standFuer` — eine Marke ohne Träger fehlt in
+> `synergien` ganz, und im Laden ist „0 auf dem Brett" die häufigste Antwort.
+>
 > **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
 > Startleben gegen rund 5 Punkte Schaden je Niederlage). Seit den 14
