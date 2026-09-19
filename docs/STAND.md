@@ -20,9 +20,9 @@ Minuten live.
 der Erinnerung):**
 172 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
-61 Eiland-Tests, 323 Tafelrunde-Tests, 20 Golf-Tests, 28 Partykiste-Tests,
-**483 Servertests** — zusammen 1557, dazu die Client-Tests (63 Dateien,
-790 Tests), alle grün.
+61 Eiland-Tests, 311 Tafelrunde-Tests, 20 Golf-Tests, 28 Partykiste-Tests,
+**483 Servertests** — zusammen 1545, dazu die Client-Tests (64 Dateien,
+795 Tests), alle grün.
 `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
