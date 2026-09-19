@@ -1,0 +1,249 @@
+name: Rückfluss
+
+# Warum es diesen Lauf gibt — der Ablauf, den er abstellt:
+#
+# Commits entstehen manchmal direkt auf main (plausibel: main löst den
+# Prod-Deploy aus, und wer das Ergebnis live sehen will, drückt dort). Damit
+# ist main voraus. Der Rückfluss von Hand fühlt sich nach Arbeit an, also wird
+# dieselbe Änderung stattdessen auf staging NACHGETIPPT — erkennbar an
+# Nachrichten der Form „Uebernahme von main <hash>" (etwa c9df12d zu 7eba161
+# am 06.09.2026). Git sieht danach zwei unabhängige Änderungen an denselben
+# Zeilen; daher die Konflikte in Filler.tsx und styles.css und der ganze Tag,
+# den Release-PR #106 festhing. Alle SECHS Filler-Commits auf main hatten an
+# dem Tag einen Zwilling auf staging: gleicher Autor, gleiche Minute, gleicher
+# Titel, anderer Hash. Gekostet hat das zwei Worker-Läufe und einen
+# blockierten Release.
+#
+# Dieser Lauf schließt das Zeitfenster, in dem eine Handübernahme überhaupt
+# attraktiv ist: Binnen Minuten nach einem Push auf main liegt der Rückfluss
+# als fertiger Pull Request bereit, und Abtippen ist offensichtlich mehr
+# Arbeit als Freigeben.
+#
+# ER ERSETZT NICHT den Job „Rückfluss — main muss Vorfahre von staging sein"
+# in ci.yml. Der meldet den Zustand und bleibt das Netz für alles, was hier
+# schiefgeht (abgeschaltete Aktionen, Konflikt, niemand merged den PR).
+#
+# Zwei Eigenheiten von GitHub, die man sonst für Fehler hält:
+#   1. An einem Pull Request, den GITHUB_TOKEN anlegt, laufen KEINE weiteren
+#      Workflows — die Prüfliste bleibt leer. Das ist Absicht von GitHub
+#      (Schutz vor Endlosschleifen) und kein kaputter Lauf. Geprüft ist der
+#      Inhalt ohnehin schon: Er kommt unverändert von main.
+#   2. `gh pr create` scheitert mit „GitHub Actions is not permitted to create
+#      pull requests", solange in den Repo-Einstellungen (Settings → Actions →
+#      General) „Allow GitHub Actions to create and approve pull requests"
+#      aus ist. Der Zweig ist dann trotzdem geschoben und lässt sich von Hand
+#      als PR öffnen; die Fehlermeldung des Laufs sagt das auch.
+#
+# WICHTIG: Der Lauf muss auch dann etwas tun, wenn der Merge NICHTS am Inhalt
+# ändert — genau das war am 06.09.2026 der Fall. Der Wert liegt allein in der
+# Abstammung: Erst wenn der Merge-Commit auf staging liegt, ist main wieder
+# Vorfahre und der nächste Release-PR konfliktfrei.
+
+on:
+  push:
+    branches: [main]
+  # Von Hand auslösbar, weil der Rückfluss auch dann fällig sein kann, wenn
+  # der push-Lauf einmal ausgefallen ist (abgeschaltete Aktionen, roter Lauf).
+  workflow_dispatch:
+
+# Zwei Läufe gleichzeitig würden denselben Zweig gegeneinander schreiben (der
+# Zweig wird bei jedem Lauf aus staging neu gebaut und zwangsgeschoben).
+# Nicht abbrechen, sondern anstellen: Der spätere Lauf hat den neueren Stand
+# von main und soll ihn auch wirklich zu Ende bringen.
+concurrency:
+  group: rueckfluss-main-nach-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  rueckfluss:
+    name: main nach staging zurückführen
+    runs-on: ubuntu-latest
+
+    env:
+      ZWEIG: rueckfluss/main-nach-staging
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Der Merge braucht die gemeinsame Geschichte beider Zweige. Mit
+          # flacher Historie findet git keine merge-base und erklärt die
+          # Zweige für „unrelated histories".
+          fetch-depth: 0
+
+      - name: Merge bauen und Pull Request anlegen
+        run: |
+          set -uo pipefail
+
+          scheitern() {
+            {
+              echo "## ⚠️ Der Rückfluss ist nicht gelaufen"
+              echo
+              echo "**Das ist keine Aussage über die Zweige.** Der Lauf kam nicht bis zum Ergebnis:"
+              echo
+              echo "> $1"
+              echo
+              echo "Solange das so bleibt, greift das Netz: Der Job „Rückfluss — main muss"
+              echo "Vorfahre von staging sein\" in ci.yml wird bei jedem Push rot, bis der"
+              echo "Rückfluss von Hand gemacht ist."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Rückfluss nicht gelaufen::$1"
+            exit 1
+          }
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Beide Zweige ausdrücklich frisch vom Remote: Ausgelöst hat der
+          # Push auf main, gearbeitet wird aber gegen den aktuellen Stand von
+          # staging — der kann sich seit dem Auschecken bewegt haben.
+          git fetch --no-tags origin \
+            +refs/heads/main:refs/remotes/origin/main \
+            +refs/heads/staging:refs/remotes/origin/staging \
+            || scheitern "git fetch für main und staging ist fehlgeschlagen."
+
+          # Nichts zu tun ist der Normalfall — jeder gemergte Release-PR löst
+          # diesen Lauf aus, und danach ist main ohnehin Vorfahre.
+          if git merge-base --is-ancestor origin/main origin/staging; then
+            echo "## ✅ Kein Rückfluss nötig" >> "$GITHUB_STEP_SUMMARY"
+            echo "main ist bereits Vorfahre von staging." >> "$GITHUB_STEP_SUMMARY"
+            # Einen liegengebliebenen Zweig aus einem früheren Lauf wegräumen;
+            # der zugehörige PR schließt sich damit von selbst. Ohne das bliebe
+            # ein PR offen, den jemand später ansieht und nicht mehr einordnen
+            # kann.
+            if git ls-remote --exit-code --heads origin "$ZWEIG" >/dev/null 2>&1; then
+              git push origin --delete "$ZWEIG" || true
+              echo "Der Zweig \`$ZWEIG\` aus einem früheren Lauf wurde entfernt." >> "$GITHUB_STEP_SUMMARY"
+            fi
+            exit 0
+          fi
+
+          voraus="$(git rev-list --count origin/staging..origin/main)"
+
+          # Immer neu aus staging bauen statt den alten Zweig fortzuschreiben:
+          # Sonst schleppt ein Lauf die Konfliktmarker des vorigen mit, und bei
+          # zwischenzeitlich bewegtem staging wäre der PR veraltet.
+          git checkout -B "$ZWEIG" origin/staging || scheitern "Der Zweig ließ sich nicht aus origin/staging anlegen."
+
+          # --no-ff ist der Kern der Sache: ein ECHTER Merge-Commit, kein
+          # Squash, kein Rebase. Ein Squash legt neue Commits an, main bliebe
+          # kein Vorfahre, und der nächste Release-PR konfligierte wieder —
+          # genau der Fehler, den dieser Lauf verhindern soll.
+          konflikt=nein
+          git merge --no-ff --no-edit \
+            -m "Rückfluss: main nach staging (automatisch, echter Merge)" \
+            origin/main || konflikt=ja
+
+          if [ "$konflikt" = ja ]; then
+            # Die Konfliktmarker werden bewusst mitgeschoben, statt den Lauf
+            # abzubrechen: Ein PR, den man ansehen kann, ist mehr wert als eine
+            # rote Meldung ohne Artefakt — die Auflösung steht dann da, wo sie
+            # hingehört. Der PR ist Entwurf, damit ihn niemand versehentlich
+            # zusammenführt.
+            git add -A || scheitern "Der Konfliktstand ließ sich nicht aufnehmen."
+            git commit --no-verify -m "Rückfluss: main nach staging — KONFLIKT, Marker enthalten" \
+              || scheitern "Der Konfliktstand ließ sich nicht committen."
+          fi
+
+          # Auch wenn der Merge inhaltlich nichts ändert, ist jetzt ein
+          # Merge-Commit da, und der Zweig unterscheidet sich von staging.
+          # Genau darum geht es; ein Vergleich auf „Dateien geändert" wäre hier
+          # die falsche Frage und würde den 06.09.2026 wieder durchrutschen
+          # lassen.
+          git push --force origin "HEAD:refs/heads/$ZWEIG" \
+            || scheitern "Der Zweig $ZWEIG ließ sich nicht schieben."
+
+          liste="$(git log --oneline origin/staging..origin/main)"
+
+          if [ "$konflikt" = ja ]; then
+            titel="⚠️ Rückfluss: main nach staging — KONFLIKT, bitte ansehen"
+          else
+            titel="Rückfluss: main nach staging (automatisch, echter Merge)"
+          fi
+
+          {
+            echo "Automatisch erzeugt nach einem Push auf \`main\`."
+            echo
+            echo "main hat $voraus Commit(s), die staging nicht kennt:"
+            echo
+            echo '```'
+            echo "$liste"
+            echo '```'
+            echo
+            if [ "$konflikt" = ja ]; then
+              echo "## ⚠️ Der Merge hat konfligiert"
+              echo
+              echo "Dieser Pull Request ist ein **Entwurf** und enthält **Konfliktmarker**."
+              echo "So zusammenführen wäre ein Fehler. Auflösen:"
+              echo
+              echo '```'
+              echo "git fetch origin"
+              echo "git checkout $ZWEIG"
+              echo "# Konflikte auflösen, committen, pushen"
+              echo '```'
+              echo
+            else
+              echo "Der Merge lief konfliktfrei durch."
+              echo
+            fi
+            echo "**Als Merge-Commit zusammenführen — kein Squash, kein Rebase.**"
+            echo "Ein Squash legt neue Commits an; main wäre danach kein Vorfahre von"
+            echo "staging mehr, und der nächste Release-PR konfligiert. Am 06.09.2026 hat"
+            echo "genau das PR #106 einen Tag lang blockiert."
+            echo
+            echo "Ändert dieser Merge inhaltlich nichts, ist er trotzdem nötig: Der Wert"
+            echo "liegt in der Abstammung, nicht im Diff."
+          } > pr-text.md
+
+          vorhanden="$(gh pr list --head "$ZWEIG" --base staging --state open --json number --jq '.[0].number')" \
+            || scheitern "gh pr list ist fehlgeschlagen."
+
+          if [ -n "$vorhanden" ]; then
+            gh pr edit "$vorhanden" --title "$titel" --body-file pr-text.md \
+              || scheitern "Der bestehende Pull Request #$vorhanden ließ sich nicht aktualisieren."
+            nummer="$vorhanden"
+            was="aktualisiert"
+          else
+            # Bewusst zwei ausgeschriebene Aufrufe statt eines Aufrufs mit
+            # Optionsliste: Eine leere Bash-Liste ist unter `set -u` selbst ein
+            # Fehler („entwurf[@]: unbound variable"), und der träfe genau den
+            # konfliktfreien Normalfall.
+            nichtanlegbar="Der Pull Request ließ sich nicht anlegen. Steht in den Repo-Einstellungen „Allow GitHub Actions to create and approve pull requests\" aus? Der Zweig $ZWEIG ist geschoben und lässt sich von Hand als PR öffnen."
+            if [ "$konflikt" = ja ]; then
+              gh pr create --base staging --head "$ZWEIG" \
+                --title "$titel" --body-file pr-text.md --draft || scheitern "$nichtanlegbar"
+            else
+              gh pr create --base staging --head "$ZWEIG" \
+                --title "$titel" --body-file pr-text.md || scheitern "$nichtanlegbar"
+            fi
+            nummer="$(gh pr list --head "$ZWEIG" --base staging --state open --json number --jq '.[0].number')"
+            was="angelegt"
+          fi
+
+          {
+            if [ "$konflikt" = ja ]; then
+              echo "## ⚠️ Rückfluss mit Konflikt — PR #$nummer $was (Entwurf)"
+              echo
+              echo "Der Merge konfligiert. Der Pull Request enthält die Konfliktmarker und"
+              echo "wartet auf einen Menschen."
+            else
+              echo "## ✅ Rückfluss bereit — PR #$nummer $was"
+              echo
+              echo "Der Merge lief konfliktfrei. Zusammenführen **als Merge-Commit**, nicht als Squash."
+            fi
+            echo
+            echo "main war $voraus Commit(s) voraus:"
+            echo
+            echo '```'
+            echo "$liste"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Der Konfliktfall ist kein Fehler dieses Laufs — er hat genau das
+          # getan, was er soll. Rot wäre hier irreführend; sichtbar bleibt der
+          # Zustand über den PR und über den ci.yml-Wächter.
+          exit 0
