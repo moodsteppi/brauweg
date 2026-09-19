@@ -161,6 +161,21 @@ genau diesen Zeilen, keiner im Code (die Begründung steht in `CLAUDE.md` unter
 > Zahlen und die beiden gemessenen, aber **nicht** gemachten Eingriffe stehen
 > in der neunten Messung in `docs/spiele/auto-battler-konzept.md`.
 >
+> **Das Aufstellungsduell (19.09.2026):**
+> `packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs` (Kern
+> `test/aufstellungsduell.ts`). Es beantwortet die Frage „spielt der neue Bot
+> stärker?", die `ausgewogenheit.mjs`, `laufwege.mjs` und `gangarten.mjs`
+> bauartbedingt offen lassen — dort benutzt **jeder** Bot am Tisch dieselbe
+> Regel, der Unterschied hebt sich heraus, ehe der erste Takt läuft. Hier wird
+> dasselbe Heer zweimal aufgestellt (Regel A gegen Regel B), beide Seiten
+> tauschen; gebaut nach dem Muster der Beistandsprobe. Gemessen: **71,7 %**
+> für die Wunschreihe je Rolle gegen die zwei Extreme davor, über 11.874
+> Kämpfe aus 2.000 Heeren — Herleitung in `docs/TAFELRUNDE-LAUFWEGE.md`,
+> Abschnitt 9. Beide Regeln laufen durch **`stelleHeerAuf` aus `bot.ts`**
+> (neu exportiert, samt `Platzstrafe` und `BOT_PLATZSTRAFE`): nachgebildet ist
+> nur die abgelöste Regel, nicht die Aufstellungs-Maschine — sonst misst man
+> den Unterschied zweier Maschinen statt den der Regeln.
+>
 > **Die Synergien** (Phase 3 des Konzepts) kamen am 04.09.2026 dazu:
 > `synergien.ts`. Je Marke zählt das eigene **Brett** (nicht die Bank), mit
 > Schwellen bei 2 / 4 / 6; Kopien zählen, eine Einheit mit zwei Marken
