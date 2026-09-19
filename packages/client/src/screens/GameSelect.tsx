@@ -64,6 +64,7 @@ import {
 import { EilandBanner } from '../minispiele/eiland/Banner';
 import { FillerBanner } from '../minispiele/filler/Banner';
 import { GolfBanner } from '../minispiele/golf/Banner';
+import { PartykisteBanner } from '../minispiele/partykiste/Banner';
 import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
@@ -2485,6 +2486,11 @@ function Spielwahl({
                        gemaltes Banner — das bewegte ist deshalb auch der
                        Rueckfall bei "weniger Bewegung". */
                     <TafelrundeBanner />
+                  ) : game.id === 'partykiste' ? (
+                    /* Partykiste hat noch kein gemaltes Banner. Ohne eigenes
+                       fiele `spielBanner` auf "kommt bald" zurueck — genau das
+                       Bild, das sagt, man koenne es noch nicht spielen. */
+                    <PartykisteBanner />
                   ) : (
                     <img src={spielBanner(game.id)} alt="" draggable={false} />
                   )}
@@ -2510,6 +2516,7 @@ function Spielwahl({
                     {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
                     {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
+                    {game.id === 'partykiste' ? ' · 9 Minispiele, ein Turnier' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

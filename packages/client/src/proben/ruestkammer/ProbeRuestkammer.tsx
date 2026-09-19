@@ -17,12 +17,16 @@
  * braucht denselben Blick.
  *
  * DESHALB WIRD HIER NICHTS NACHGEBAUT. Es laufen `Hexbrett`, `Bankreihe`,
- * `Einheitenmarke`, `Ladenkarte`, `Mitspielerleiste` und `Phasenzeile` aus
- * `minispiele/tafelrunde/` — dieselben Bauteile, die `screens/Tafelrunde.tsx`
- * einhaengt, mit denselben Eigenschaften, im selben Rahmen (`.tr-seite`,
- * `.tr-tisch`, `.tr-oben`, `.tr-spielflaeche`, `.tr-bretter`, `.tr-fuss`).
- * Sie standen bis zum 06.09.2026 privat im Bildschirm; sie herauszuziehen war
- * die halbe Aufgabe.
+ * `Einheitenmarke`, `Ladenkarte`, `Mitspielerleiste`, `Phasenzeile`,
+ * `Statuszeile` und `Brettkopf` aus `minispiele/tafelrunde/` — dieselben
+ * Bauteile, die `screens/Tafelrunde.tsx` einhaengt, mit denselben
+ * Eigenschaften, im selben Rahmen (`.tr-seite`, `.tr-tisch`, `.tr-oben`,
+ * `.tr-spielflaeche`, `.tr-bretter`, `.tr-fuss`). Sie standen bis zum
+ * 06.09.2026 privat im Bildschirm; sie herauszuziehen war die halbe Aufgabe.
+ * Die beiden Kopfzeilen kamen als letzte nach (19.09.2026) — sie waren bis
+ * dahin hier von Hand aufgebaut, und beim Handy-Umbau am 06.09.2026 bekam
+ * nur der Tisch die neue Reihe: Die Probe zeigte einen Bildschirm, den es
+ * nicht gab.
  *
  * SEIT DEM 07.09.2026 BEANTWORTET SIE AUCH DIE HOEHENFRAGE: Passt die
  * Ruestkammer auf einen Bildschirm? Dafuer musste sie die echte Kopfleiste
@@ -65,24 +69,19 @@ import { useMemo, useState } from 'react';
 
 import { Bankreihe, Hexbrett } from '../../minispiele/tafelrunde/Brett';
 import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
+import { Brettkopf, Statuszeile } from '../../minispiele/tafelrunde/Kopfzeilen';
 import { Ladenkarte, kaufhindernis } from '../../minispiele/tafelrunde/Ladenkarte';
-import {
-  AugeZeichen,
-  Mitspielerleiste,
-  type Sitzzeile,
-} from '../../minispiele/tafelrunde/Mitspieler';
+import { Mitspielerleiste, type Sitzzeile } from '../../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../../minispiele/tafelrunde/Phasenzeile';
 import {
   type Synergie,
   type Synergiestand,
-  Fremdmarken,
   Markennamen,
-  Synergieleiste,
   markennamen,
   schwellenPruefer,
   useMarkenblatt,
 } from '../../minispiele/tafelrunde/Synergien';
-import { GoldZeichen, LebenZeichen } from '../../minispiele/tafelrunde/Zeichen';
+import { GoldZeichen } from '../../minispiele/tafelrunde/Zeichen';
 import type { Einheit, Stufenwerte } from '../../minispiele/tafelrunde/sicht';
 import {
   type Kaempfer,
@@ -510,33 +509,26 @@ export function ProbeRuestkammer(): React.JSX.Element {
         {/* Das Blatt einer Marke liegt ueber beiden — wie am Tisch. */}
         {markengriff.blatt}
 
-        {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile — Aufbau
-            und Klassen wie am Tisch (`.tr-statuszeile`, screens/Tafelrunde.tsx
-            und styles.css). Die Zahlen stehen fest: Die Probe spielt nicht.
+        {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile —
+            dasselbe Bauteil wie am Tisch (Kopfzeilen.tsx), seit dem
+            19.09.2026 eingehaengt statt nachgeschrieben. Vorher stand der
+            Aufbau hier ein zweites Mal, und beim Handy-Umbau am 06.09.2026
+            bekam ihn nur der Tisch: Die Probe zeigte eine Zeile, die es
+            nirgends gab.
 
-            Der Aufbau ist hier nachgeschrieben und nicht eingehaengt, weil er
-            im Bildschirm noch kein eigenes Bauteil ist. Wer ihn dort aendert,
-            aendert ihn hier mit — sonst zeigt ausgerechnet die Probe eine
-            Zeile, die es am Tisch nicht gibt. */}
-        <div className="tr-statuszeile">
-          <header className="tr-kopf">
-            <span className="tr-wert tr-wert-leben">
-              <LebenZeichen />
-              <strong>{SZENE.eigenes.leben}</strong>
-              <em>Leben</em>
-            </span>
-            <span className="tr-wert tr-wert-level">
-              <em>Rang</em>
-              <strong>{SZENE.eigenes.level}</strong>
-            </span>
-            <span className="tr-wert tr-wert-feld">
-              <strong>
-                {stellung.belegt}/{SZENE.eigenes.feldplaetze} Feld
-              </strong>
-            </span>
-          </header>
-          <Synergieleiste staende={SZENE.eigenes.synergien} tabelle={SZENE.synergieTabelle} />
-        </div>
+            Die Zahlen stehen fest — die Probe spielt nicht. Nur `belegt`
+            kommt aus der laufenden Aufstellung, sonst zaehlte sie eine
+            Einheit weiter mit, die man gerade heruntergenommen hat. */}
+        <Statuszeile
+          werte={{
+            leben: SZENE.eigenes.leben,
+            level: SZENE.eigenes.level,
+            belegt: stellung.belegt,
+            feldplaetze: SZENE.eigenes.feldplaetze,
+          }}
+          staende={SZENE.eigenes.synergien}
+          tabelle={SZENE.synergieTabelle}
+        />
 
         {/* Derselbe Kasten wie am Tisch (`.tr-mitte`, screens/Tafelrunde.tsx):
             Er haelt alles zwischen Statuszeile und Laden zusammen, damit das
@@ -569,20 +561,17 @@ export function ProbeRuestkammer(): React.JSX.Element {
                 eigene: Ob die Figuren einander wirklich ansehen, sieht man erst
                 hier. */}
               <section className="tr-brettteil tr-brettteil-fremd">
-                {/* Name und Marken nebeneinander, wie am Tisch
-                  (`.tr-brettkopf`) — samt dem Auge davor, das seit dem
-                  06.09.2026 sagt, wessen Brett man sich gerade ansieht. */}
-                <div className="tr-brettkopf">
-                  <h2 className="tr-bretttitel">
-                    <AugeZeichen />
-                    {nameVon(SZENE.gegner.sitz)}
-                  </h2>
-                  <Fremdmarken
-                    staende={SZENE.gegner.synergien}
-                    tabelle={SZENE.synergieTabelle}
-                    beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
-                  />
-                </div>
+                {/* Name und Marken nebeneinander — dasselbe Bauteil wie am
+                  Tisch (Kopfzeilen.tsx), samt dem Auge davor, das seit dem
+                  06.09.2026 sagt, wessen Brett man sich gerade ansieht. Der
+                  Gegner der Szene lebt; einen Ausgeschieden-Vermerk gibt es
+                  hier deshalb nicht. */}
+                <Brettkopf
+                  name={nameVon(SZENE.gegner.sitz)}
+                  ausRunde={SZENE.gegner.ausRunde}
+                  staende={SZENE.gegner.synergien}
+                  tabelle={SZENE.synergieTabelle}
+                />
                 <Hexbrett
                   reihen={SZENE.brettReihen}
                   spalten={SZENE.brettSpalten}

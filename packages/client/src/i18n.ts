@@ -34,6 +34,10 @@ const de: Record<string, string> = {
   // Minigolf aus der Vogelperspektive, 1-8 Spieler gleichzeitig auf derselben
   // Bahn — siehe SPEZIFIKATION-GOLF.md.
   'game.golf': 'Golf',
+  // Turnier aus Partyminispielen fuer 4 bis 12 Leute. Der Name sagt, was es
+  // ist — eine Kiste, aus der der Abend zieht — und bindet sich absichtlich
+  // an kein einzelnes Minispiel: Es kommen weitere dazu.
+  'game.partykiste': 'Partykiste',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -64,6 +68,9 @@ const de: Record<string, string> = {
   'error.inviteCodeInvalid': 'Dieser Einladungscode gilt nicht.',
   'error.emailTaken': 'Diese Adresse ist schon vergeben.',
   'error.displayNameTaken': 'Dieser Name ist schon vergeben.',
+  'error.displayNameTooShort': 'Der Name braucht mindestens zwei Zeichen.',
+  // Gastkonto sichern, obwohl es keins (mehr) ist — etwa doppelt getippt.
+  'error.keinGastkonto': 'Dieses Konto ist schon gesichert.',
   'error.tokenInvalid': 'Dieser Link ist abgelaufen oder wurde schon benutzt.',
   'error.tableFull': 'Der Tisch ist voll.',
   'error.tableNotFull': 'Es fehlen noch Mitspieler.',
@@ -485,6 +492,14 @@ const de: Record<string, string> = {
   'golf.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'golf.sitzzahl': 'Golf spielt zwischen einem und acht Bällen.',
   'golf.loecher': 'Zwischen 2 und 15 Löchern je Match.',
+  // Meldungen des Partykisten-Regelsatzes.
+  'partykiste.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
+  'partykiste.minispieleLeer': 'Mindestens ein Minispiel muss dabei sein.',
+  'partykiste.minispielUnbekannt': 'Dieses Minispiel gibt es nicht.',
+  'partykiste.trinkmodus': 'Trinkmodus geht nur an oder aus.',
+  'partykiste.schluckFaktor': 'Der Härtegrad liegt zwischen 1 und 3.',
+  'partykiste.sitzzahl': 'Die Partykiste spielt zu viert bis zu zwölft.',
+  'partykiste.rundenzahl': 'Zwischen 3 und 15 Minispielen je Turnier.',
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',

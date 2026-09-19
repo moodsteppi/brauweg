@@ -7,6 +7,7 @@ import { Bankreihe, Einheitenmarke, Hexbrett } from '../minispiele/tafelrunde/Br
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
+import { Brettkopf, Statuszeile } from '../minispiele/tafelrunde/Kopfzeilen';
 import { type Kaufhindernis, Ladenkarte, kaufhindernis } from '../minispiele/tafelrunde/Ladenkarte';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { AugeZeichen, Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
@@ -18,7 +19,7 @@ import {
 } from '../minispiele/tafelrunde/platzierung';
 import type { Einheit, Stufenwerte, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
 import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
-import { GoldZeichen, KOSTEN_FARBE, LebenZeichen, RollenZeichen } from '../minispiele/tafelrunde/Zeichen';
+import { GoldZeichen, KOSTEN_FARBE, RollenZeichen } from '../minispiele/tafelrunde/Zeichen';
 import {
   KampfAnzeige,
   type Kampfpaarung,
@@ -28,9 +29,7 @@ import {
 import {
   type Synergie,
   type Synergiestand,
-  Fremdmarken,
   Markennamen,
-  Synergieleiste,
   markennamen,
   schwellenPruefer,
   useMarkenblatt,
@@ -1810,24 +1809,17 @@ function Ruestkammer({
               <div className="tr-spielflaeche" style={brettmass(sicht)}>
                 <div className="tr-bretter">
                   <section className="tr-brettteil">
-                    {/* Name und Marken in einer Zeile, wie am Spielertisch
-                      (`.tr-brettkopf`): Zwei Zeilen Beiwerk ueber einem Brett
-                      kosten am Handy 33 Pixel, nebeneinander 18. */}
-                    <div className="tr-brettkopf">
-                      <h2 className="tr-bretttitel">
-                        <AugeZeichen />
-                        {spielername(zeile(gegner.sitz), gegner.sitz)}
-                      </h2>
-                      {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
-                        Feld `synergien` an jedem Sitz genau wie ein Spieler
-                        (sicht.ts) — bis heute stand hier nichts davon. */}
-                      <Fremdmarken
-                        staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                        tabelle={synergieTabelle}
-                        katalog={katalog}
-                        beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
-                      />
-                    </div>
+                    {/* Name und Marken in einer Zeile, wie am Spielertisch —
+                      dasselbe Bauteil (Kopfzeilen.tsx). Die Marken des
+                      gezeigten Bretts gehoeren dazu: Ein Zuschauer bekommt das
+                      Feld `synergien` an jedem Sitz genau wie ein Spieler
+                      (sicht.ts). Ohne Ausgeschieden-Vermerk, wie bisher. */}
+                    <Brettkopf
+                      name={spielername(zeile(gegner.sitz), gegner.sitz)}
+                      staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                      tabelle={synergieTabelle}
+                      katalog={katalog}
+                    />
                     <Hexbrett
                       reihen={sicht.brettReihen}
                       spalten={sicht.brettSpalten}
@@ -1951,49 +1943,16 @@ function Ruestkammer({
 
       {/* ---- Die Statuszeile: eigene Werte und Marken in EINER Reihe ----- */}
       {/*
-        Bis zum 06.09.2026 waren das zwei Baender untereinander: ein Kasten
-        mit zwei grossen Kacheln (Leben, Rang/Feld) und darunter die
-        Markenleiste. Auf Robins Handybild (440 x 956, IMG_1047) kosteten
-        fuenf kleine Angaben zusammen 88 Pixel — Platz, der dem Brett und dem
-        Laden fehlte. Nebeneinander in einer Reihe sind es 22.
-
-        Die Werte sehen jetzt aus wie die Markenchips daneben, weil sie
-        dasselbe sind: kurze Auskunft, kein Bedienfeld. Ihre Masse stehen in
-        styles.css (`.tr-wert`), die der Marken in Synergien.module.css — der
-        Chip des Nachbarn wird NICHT abgeschrieben, beide Bauteile behalten
-        ihr eigenes Stylesheet.
-
-        WAEHREND DES KAMPFES STEHEN NUR DIE MARKEN DA. Leben und Rang sind
-        dort entbehrlich: Das eigene Leben steht ohnehin auf der eigenen
-        Kachel in der Mitspielerleiste darueber, und Rang wie Feldplaetze kann
-        man im Kampf weder aendern noch brauchen. Die Marken bleiben, denn wer
-        zusieht, plant schon die naechste Runde.
+        Warum die Reihe so aussieht, steht bei ihrem Bauteil (Kopfzeilen.tsx)
+        — dort auch, warum im Kampf nur die Marken bleiben. Hier entscheidet
+        der Bildschirm nur das eine, was er weiss: ob gerade gekaempft wird.
       */}
-      <div className="tr-statuszeile">
-        {!kampfLaeuft && (
-          <header className="tr-kopf">
-            <span className="tr-wert tr-wert-leben">
-              <LebenZeichen />
-              <strong>{eigenes.leben}</strong>
-              <em>Leben</em>
-            </span>
-            <span className="tr-wert tr-wert-level">
-              <em>Rang</em>
-              <strong>{eigenes.level}</strong>
-            </span>
-            <span className="tr-wert tr-wert-feld">
-              <strong>
-                {eigenes.belegt}/{eigenes.feldplaetze} Feld
-              </strong>
-            </span>
-          </header>
-        )}
-        {/* Am Desktop haengt die Leiste seitlich statt hier — das entscheidet
-            allein Synergien.module.css, und weil sie sich dort selbst aus dem
-            Fluss nimmt (`position: fixed`), bleibt diese Reihe davon
-            unberuehrt. */}
-        <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} katalog={katalog} />
-      </div>
+      <Statuszeile
+        werte={kampfLaeuft ? null : eigenes}
+        staende={eigeneSynergien}
+        tabelle={synergieTabelle}
+        katalog={katalog}
+      />
 
       {/* ---- Die Mitte: Spielflaeche und Auswahlband -------------------- */}
       {/*
@@ -2051,28 +2010,13 @@ function Ruestkammer({
                     Haelfte, die ohnehin schon zurueckgenommen ist; ihm zwei
                     volle Zeilen zu geben und dem Laden darunter keinen Platz
                     waere die falsche Reihenfolge. */}
-                  <div className="tr-brettkopf">
-                    {/* Das Auge vor dem Namen — dasselbe Zeichen wie an der Kachel
-                      oben, die gerade leuchtet. Es beantwortet die Frage, die
-                      Robin gestellt hat („was passiert, wenn man oben einen
-                      antippt?"): Das hier ist das Brett, das du dir ansiehst. */}
-                    <h2 className="tr-bretttitel">
-                      <AugeZeichen />
-                      {spielername(zeile(gegner.sitz), gegner.sitz)}
-                      {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
-                    </h2>
-                    {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
-                      in der eigenen Leiste. Ohne sie muesste man seine Figuren
-                      einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
-                      zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
-                      auch hier nichts. */}
-                    <Fremdmarken
-                      staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                      tabelle={synergieTabelle}
-                      katalog={katalog}
-                      beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
-                    />
-                  </div>
+                  <Brettkopf
+                    name={spielername(zeile(gegner.sitz), gegner.sitz)}
+                    ausRunde={gegner.ausRunde}
+                    staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                    tabelle={synergieTabelle}
+                    katalog={katalog}
+                  />
                   <Hexbrett
                     reihen={sicht.brettReihen}
                     spalten={sicht.brettSpalten}

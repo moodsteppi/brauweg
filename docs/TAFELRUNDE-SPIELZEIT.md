@@ -283,6 +283,48 @@ Volle Ausgewogenheits-Tabelle für die Empfehlung, 1500 Partien zu viert
 | Elementar | x0,87 | x0,76 |
 | Drache / Untot | zu dünn | zu dünn |
 
+> **DIESE TABELLE IST NICHT NACHSTELLBAR (19.09.2026).** Der Aufruf darüber
+> wirft auf keinem Stand, der in Frage kommt, diese Zahlen aus — auch nicht
+> auf dem Commit, in dem die Tabelle zum ersten Mal steht. Der Zweig zu PR #55
+> liegt als **einzelner** Commit direkt auf der damaligen `staging`-Spitze
+> (`refs/pull/55/head` ist `fc9b84c`, Elternteil `99d886b`), eine ältere
+> Grundlage gab es also gar nicht: Die letzte Katalog- und Bot-Änderung davor
+> war `2e6c852`, und zwischen ihr und `fcae0fd` hat an `game-tafelrunde` nur
+> `adapter.ts` gewechselt — die Datei, die der Messstand nicht anfasst.
+> Gemessen ergibt `--partien 1500 --sitze 4` auf `99d886b` und auf `fcae0fd`
+> Zeile für Zeile dasselbe (Krieger ×1,12, Wächter ×1,07, Naturwesen ×1,09,
+> Meuchler ×0,78, Elementar ×0,78, Drache ×1,16 bei 111 Antritten); der
+> Kampfregler ist also wirklich ereignisgleich, wie seine Probe behauptet. Auf
+> dem Stand vor `2e6c852` (noch 100 Startleben) kommt etwas ganz anderes
+> heraus — Krieger ×0,85, Drache ×1,68.
+>
+> **Der Baum war demnach der richtige.** Jede Zeitzahl der Abschnitte 1 bis 5
+> lässt sich auf `fcae0fd` auf die Sekunde nachstellen: 13:31 bei 15 Runden,
+> 35,2 s, 27,7 %, ×0,74–1,09 für den gebauten Stand und 7:25 bei 11 Runden,
+> 17,3 s, 1,8 %, ×0,71–1,30 für die Empfehlung. Nur diese eine Tabelle nicht.
+>
+> **Sie widerspricht sogar sich selbst.** Der Faktor einer Marke ist ihre
+> Quote geteilt durch den Schnitt der **gezählten** Zeilen — die Faktoren
+> aller gezählten Marken ergeben zusammen also genau deren Anzahl. Beide
+> Tabellen in Abschnitt 5 tun das (×1,12 + ×1,07 + ×1,09 + ×0,78 + ×0,78 +
+> ×1,16 = 6,00 bei sechs gezählten Zeilen, die zweite 5,00 bei fünf), und die
+> Spalte „mit der Empfehlung" auch: 5,00. Die Spalte „heute" kommt auf 4,91.
+> Dort muss eine **sechste** Zeile mitgezählt worden sein, rund ×1,09 —
+> obwohl die letzte Zeile „Drache / Untot: zu dünn" sagt. Und beides zugleich
+> geht nicht: Der Drache kommt zu viert erst ab etwa 1.400 Partien über die
+> 100 Antritte, ein Elementar von ×0,87 gibt es auf diesem Stand nur in
+> Stichproben um 500 bis 700 Partien.
+>
+> Gesucht wurde breit: jede Stichprobenlänge von 50 bis 2.000 Partien (jede
+> ist ein echter Lauf, denn die Saat heißt `<basis>-<nummer>`, und ein Anfang
+> davon ist derselbe Lauf mit weniger Partien), zwei bis acht Sitze, die
+> Saatbasen `ausgewogenheit-v2`, `spielzeit-v1` und `basis`, alle vier
+> Gangarten, dazu 5.000 Partien. Am nächsten kommt „heute" bei rund 500
+> Partien (dort steht der Wächter auf ×1,06 statt ×1,02) und „mit der
+> Empfehlung" bei rund 700 (Krieger ×1,28 statt ×1,34). **Die Tabelle bleibt
+> als Zeitdokument stehen, taugt aber nicht als Zahl** — was die Empfehlung am
+> Katalog wirklich verschoben hat, steht gemessen in Abschnitt 5.
+
 Alles bleibt innerhalb der Schranken, aber der **Krieger zieht an**, und das ist
 kein Zufall: Wenn 27 % der Kämpfe nicht mehr von der Uhr entschieden werden,
 gewinnt das Brett, das sonst auf Zeit gespielt hätte, jetzt richtig. Die
@@ -391,17 +433,18 @@ deshalb wurde am Katalog nichts geändert.** Der Krieger zieht wie vorhergesagt
 an, und aus dem vorhergesagten Grund: Wo vorher jeder dritte Kampf an der Uhr
 entschieden wurde, gewinnt jetzt das Brett, das sonst auf Zeit gespielt hätte.
 Die Vorhersage aus Abschnitt 4 lautete ×1,34 für den Krieger, gemessen sind es
-×1,30; sie stammte aus einem Lauf mit anderer Grundlage und liegt entsprechend
-leicht daneben.
+×1,30.
 
-> **Welche Grundlage das war, steht hier nicht mehr richtig (06.09.2026).**
-> Bis heute stand an dieser Stelle „vor dem kostenlosen Neu-Würfeln". Das kann
-> es nicht sein: Die Ladenregel kam mit `625f626` und damit **nach** beiden
-> Läufen — die Vorhersage steht schon in `fcae0fd`, und die ×1,30 dieser
-> Tabelle sind auf genau demselben `fcae0fd` Zeile für Zeile nachgestellt
-> worden. Beide Zahlen sind also vor der Ladenregel gemessen. Woran die vier
-> Hundertstel wirklich liegen, ist offen und steht als Karte auf dem Board;
-> geraten wird es hier nicht.
+> **Die vier Hundertstel sind kein Unterschied zwischen zwei Ständen
+> (19.09.2026).** Bis zum 06.09.2026 stand hier „vor dem kostenlosen
+> Neu-Würfeln" — das konnte nicht stimmen, weil die Ladenregel erst mit
+> `625f626` und damit nach beiden Läufen kam. Seitdem stand die Stelle offen.
+> Nachgerechnet ist sie jetzt, und die Antwort ist eine andere als vermutet:
+> **Der Baum war derselbe. Nachstellen lässt sich die Vorhersagetabelle
+> trotzdem nicht** — auch nicht auf dem Commit, in dem sie steht. Warum, steht
+> im Kasten unter jener Tabelle in Abschnitt 4. Für diese Tabelle hier ändert
+> das nichts: Ihre Zahlen sind nachgestellt und stimmen. Die Zeile daneben in
+> Abschnitt 4 ist kein zweiter Messwert, gegen den man sie halten könnte.
 
 Zwei Nebenbefunde, beide **nicht** durch diese Änderung verursacht, aber durch
 sie sichtbar geworden. Sie stammen aus dem **zweiten, größeren Lauf** —

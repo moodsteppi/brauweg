@@ -138,7 +138,20 @@ export type GameId =
    * (`interludeMs`/`advanceInterlude`), weil sonst kein Timer je von selbst
    * weiterliefe, solange niemand ein Ergebnis meldet.
    */
-  | 'golf';
+  | 'golf'
+  /**
+   * Partykiste: ein Turnier aus Partyminispielen fuer 4 bis 12 Leute —
+   * Imposter, Allgemeinwissen, Wer bin ich, Ich hab noch nie, Wer wuerde eher,
+   * Bus fahren. EIN Modul und nicht sechs, weil sechs Spiele auf einer Party
+   * sechsmal "Tisch suchen" hiessen; gewertet wird ueber alle Runden zusammen.
+   *
+   * Zwei Dinge sind neu daran: Es ist das erste Spiel mit mehr als acht Sitzen
+   * — deshalb steht die Sitzgrenze der Plattform jetzt bei zwoelf — und das
+   * erste, dessen Runde im RAUM stattfindet. Geredet wird am Tisch, getippt
+   * wird nur die Entscheidung; genau deshalb braucht es, anders als Werwolf,
+   * keinen freien Text zwischen den Sitzen.
+   */
+  | 'partykiste';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby
@@ -223,7 +236,30 @@ export interface GameMeta {
    * Fehlt das Feld, gilt der Takt der Plattform. Das ist der Normalfall.
    */
   readonly botTaktHoechstMs?: number;
+  /**
+   * Zugzeit eines MENSCHEN in diesem Spiel, in Millisekunden.
+   *
+   * Die Plattform gibt 60 Sekunden je Zug vor (`turnTimeoutMs`), danach zieht
+   * der Bot fuer den Sitz. Fuer ein Kartenspiel reicht das: Eine Karte legt
+   * man in Sekunden. Es reicht nicht fuer ein Spiel, dessen Zug im RAUM
+   * stattfindet — bei der Partykiste redet die Runde erst, dann wird
+   * abgestimmt, und bei "Wer bin ich" fragt einer die Runde aus. Am
+   * 19.09.2026 zu zwoelft gemessen: Die 60 Sekunden liefen mitten in der
+   * Diskussion ab, und der Bot stimmte fuer Leute, die noch redeten.
+   *
+   * Nur VERLAENGERN, nie kuerzen: Verrechnet wird `Math.max` mit der
+   * Einstellung der Laufzeit, damit ein Test mit kurzer Zugzeit nicht durch
+   * ein Modul ausgehebelt wird, das sie noch kuerzer haette. Gedeckelt bei
+   * zehn Minuten (`ZUGZEIT_HOECHST_MS`) — laenger hiesse, ein verlassener
+   * Tisch bliebe eine Viertelstunde stehen.
+   *
+   * Fehlt das Feld, gilt die Zugzeit der Plattform. Das ist der Normalfall.
+   */
+  readonly zugzeitMs?: number;
 }
+
+/** Obergrenze fuer `GameMeta.zugzeitMs`. */
+export const ZUGZEIT_HOECHST_MS = 10 * 60_000;
 
 // ---------------------------------------------------------------------------
 // Regelsatz

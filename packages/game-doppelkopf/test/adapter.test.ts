@@ -375,3 +375,39 @@ test('xpBasis zaehlt die gelegten Karten je Sitz', () => {
   const zwei = doppelkopf.xpBasis!(mitRunde);
   assert.deepEqual(Object.values(zwei), [24, 24, 24, 24], 'zwei Runden zu je zwoelf');
 });
+
+test('nach einem Schmeiss nennt die Sicht denselben roundIndex, aber einen neuen attempt', () => {
+  // Der Schmeiss gibt DIESELBE Runde neu. Wer die Vorbehaltsabfrage nur ueber
+  // roundIndex benennt (so machte es der Testclient des Servers), haelt die
+  // zweite Abfrage fuer die schon beantwortete und antwortet nicht mehr - die
+  // Phase haengt bis zum Fristablauf. Deshalb steht `attempt` in der Sicht.
+  let party = doppelkopf.createParty({
+    config: makeRuleSet({ ...CONFIG, schmeiss5Luschen: true, schmeiss7Volle: true }),
+    seats: 4,
+    rounds: 8,
+    // Seed 1 ist gesucht, nicht geraten: Er ist der erste, dessen Verteilung
+    // ueberhaupt einen Schmeiss anbietet (Sitz 3).
+    seed: 1,
+  });
+
+  const vorher = doppelkopf.viewFor(party, 0);
+  assert.equal(vorher.attempt, 0);
+
+  // Die Abfrage laeuft gleichzeitig; die Neugabe kommt erst, wenn jeder Sitz
+  // geantwortet hat. Also alle durchgehen: schmeissen, wer darf, sonst gesund.
+  let geschmissen = false;
+  for (let i = 0; i < 4 && party.current !== null; i++) {
+    const seat = vorbehaltOffen(party.current)[0];
+    if (seat === undefined) break;
+    const schmeiss = doppelkopf
+      .legalActions(party, seat)
+      .find((a) => a.type === 'vorbehalt' && a.kind === 'schmeiss');
+    geschmissen ||= schmeiss !== undefined;
+    party = doppelkopf.act(party, seat, schmeiss ?? { type: 'vorbehalt', seat, kind: null });
+  }
+  assert.ok(geschmissen, 'diese Verteilung bietet keinen Schmeiss an');
+
+  const nachher = doppelkopf.viewFor(party, 0);
+  assert.equal(nachher.roundIndex, vorher.roundIndex, 'Neugabe zaehlt die Runde nicht weiter');
+  assert.equal(nachher.attempt, 1, 'der neue Anlauf muss unterscheidbar sein');
+});
