@@ -21,8 +21,8 @@ der Erinnerung):**
 172 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
 15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
 61 Eiland-Tests, 311 Tafelrunde-Tests, 20 Golf-Tests, 28 Partykiste-Tests,
-**484 Servertests** — zusammen 1546, dazu die Client-Tests (63 Dateien, 790
-Tests), alle grün.
+**483 Servertests** — zusammen 1545, dazu die Client-Tests (64 Dateien,
+795 Tests), alle grün.
 `packages/server/test/stats.test.ts` („eine gewertete Partie bucht Trophäen")
 war in einem von zwei Läufen rot (`0 !== 4`) und allein wiederholt sofort
 grün — ein Wackler, der nichts mit der Kompression zu tun hat, aber beim
