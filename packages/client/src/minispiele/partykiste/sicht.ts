@@ -50,6 +50,10 @@ export interface ImposterSicht {
   hinweis: string | null;
   /** Feste Redereihenfolge, fuer alle gleich. */
   reihenfolge: number[];
+  redeRunde: number;
+  /** Wer "noch eine Runde reden" verlangt hat. */
+  nochmal: number[];
+  nochmalMoeglich: boolean;
   binImposter: boolean;
   /** Wer schon abgestimmt hat — nicht, fuer wen. */
   abgestimmt: number[];
@@ -174,6 +178,7 @@ export interface PartykisteSicht {
 export type PartyAktion =
   | { art: 'bereit' }
   | { art: 'stimme'; ziel: number }
+  | { art: 'nochmal' }
   | { art: 'antwort'; wahl: number }
   | { art: 'gestehen'; ja: boolean }
   | { art: 'geraten'; erfolg: boolean }

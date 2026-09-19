@@ -214,7 +214,12 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
               {daten.binImposter ? `Hinweis: ${daten.hinweis ?? '—'}` : (daten.meinWort ?? '—')}
             </span>
           }
-          unten={<span>Reihum ein Satz — in dieser Reihenfolge. Dann: Wer passt nicht?</span>}
+          unten={
+            <span>
+              {daten.redeRunde > 1 ? `${daten.redeRunde}. Rederunde — ` : ''}
+              Reihum ein Satz, in dieser Reihenfolge. Dann: Wer passt nicht?
+            </span>
+          }
         />
         {reihe}
         <Leute
@@ -224,6 +229,26 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
           gesperrt={abgestimmt}
           beiWahl={(ziel) => sende({ art: 'stimme', ziel })}
         />
+        {/*
+          Statt zu stimmen: noch eine Rederunde verlangen. Mehr als die Haelfte
+          der Anwesenden muss das wollen, dann faellt jede bisherige Stimme und
+          die Reihenfolge rueckt um einen Platz. Der Zaehler zeigt, wie nah es
+          ist — sonst tippt einer und wundert sich, dass nichts passiert.
+        */}
+        {daten.nochmalMoeglich ? (
+          <button
+            type="button"
+            className="pk-knopf is-neben"
+            disabled={abgestimmt}
+            data-gewaehlt={daten.nochmal.includes(sicht.sitz) ? '' : undefined}
+            onClick={() => sende({ art: 'nochmal' })}
+          >
+            Noch eine Runde reden
+            <small className="pk-zaehler">
+              {daten.nochmal.length} von {Math.floor((sicht.sitze - sicht.ausgestiegen.length) / 2) + 1} nötig
+            </small>
+          </button>
+        ) : null}
         {abgestimmt ? <Wartet sicht={sicht} /> : null}
       </>
     );

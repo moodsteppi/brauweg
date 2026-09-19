@@ -18,7 +18,7 @@
  *      Spieler; ein Zuschauer mit Imposter-Wissen waere der perfekte Komplize.
  */
 
-import type { MinispielId } from './regeln.js';
+import { MAX_REDERUNDEN, type MinispielId } from './regeln.js';
 import type {
   BusTipp,
   Karte,
@@ -39,6 +39,12 @@ export interface ImposterSicht {
   readonly hinweis: string | null;
   /** Wer wann redet — fuer alle gleich, damit niemand durcheinanderredet. */
   readonly reihenfolge: readonly number[];
+  /** Die wievielte Rederunde laeuft. */
+  readonly redeRunde: number;
+  /** Wer in dieser Abstimmung "noch eine Runde reden" verlangt hat. */
+  readonly nochmal: readonly number[];
+  /** Darf noch eine Rederunde verlangt werden? Nein ab MAX_REDERUNDEN. */
+  readonly nochmalMoeglich: boolean;
   /** Weiss ich, dass ich der Imposter bin? Seit dem 19.09.2026 ja: Er sieht es. */
   readonly binImposter: boolean;
   /** Wer schon abgestimmt hat — nicht, fuer wen. */
@@ -196,6 +202,9 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
         meinWort: zuschauer || binImposter ? null : runde.wort,
         hinweis: binImposter ? runde.hinweis : null,
         reihenfolge: runde.reihenfolge,
+        redeRunde: runde.redeRunde,
+        nochmal: runde.nochmal,
+        nochmalMoeglich: runde.redeRunde < MAX_REDERUNDEN,
         binImposter,
         abgestimmt: runde.phase === 'spiel' ? runde.fertig : [],
         stimmen: auf ? runde.stimmen : null,
