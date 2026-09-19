@@ -121,7 +121,7 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.536 Tests in den Paketen (475 im Server), dazu
+npm test          # 1.546 Tests in den Paketen (484 im Server), dazu
                   # 790 Client-Tests in 63 Dateien (vitest)
 ```
 
