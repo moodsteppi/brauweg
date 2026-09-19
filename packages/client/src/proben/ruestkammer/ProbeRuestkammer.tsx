@@ -55,6 +55,13 @@
  * — es haengt an Zeigererfassung und Zugschatten, also an Verdrahtung des
  * Bildschirms und nicht am Aussehen der Wabe.
  *
+ * ANSEHEN OHNE ANFASSEN geht seit dem 19.9.2026 ebenfalls wie am Tisch: Ein
+ * Tipp auf eine Einheit des Gegners oder — „am Zug" abgeschaltet — auf eine
+ * eigene schlaegt das Blatt ohne Knoepfe auf (`onNachsehen` in Brett.tsx).
+ * Weil eine Sichtprobe nicht klicken kann, laesst sich dieser Zustand auch
+ * ueber die Adresse herstellen: `?blatt=gegner/brett:4` oder `?bereit&blatt=
+ * bank:0` (`blattAusAdresse` unten). Sonst hat die Adresse keine Wirkung.
+ *
  * WARUM `?raw` UND `JSON.parse` STATT EINES JSON-IMPORTS: Der Client
  * uebersetzt ohne `resolveJsonModule`; das anzuschalten waere eine Aenderung
  * an der gemeinsamen tsconfig wegen einer Probe. Dieselbe Zeile aus demselben
@@ -89,6 +96,7 @@ import {
   bestandVon,
   darfSchieben,
   fehlendeKopien,
+  ortLesen,
   rastermass,
   tippfolge,
 } from '../../minispiele/tafelrunde/zuege';
@@ -209,6 +217,26 @@ function nimmWeg(auf: Stand, ort: Ort): Stand {
   return { bank, brett };
 }
 
+/** Welche Einheit ihr Blatt offen hat — Sitz und Ort, wie am Tisch. */
+interface Blattlage {
+  /** null ist das eigene Brett, sonst der Sitz des Gegners. */
+  readonly sitz: number | null;
+  readonly ort: Ort;
+}
+
+/**
+ * Ein Blatt gleich beim Oeffnen, aus der Adresse: `?blatt=brett:4`,
+ * `?blatt=bank:0` oder `?blatt=gegner/brett:4`. Nur fuer die Sichtprobe, die
+ * nicht klicken kann; ohne den Parameter bleibt das Blatt zu.
+ */
+function blattAusAdresse(): Blattlage | null {
+  const wert = new URLSearchParams(window.location.search).get('blatt');
+  if (!wert) return null;
+  const fremd = wert.startsWith('gegner/');
+  const ort = ortLesen(fremd ? wert.slice('gegner/'.length) : wert);
+  return ort ? { sitz: fremd ? SZENE.gegner.sitz : null, ort } : null;
+}
+
 export function ProbeRuestkammer(): React.JSX.Element {
   const [auf, setAuf] = useState<Stand>(START);
   const [gewaehlt, setGewaehlt] = useState<Ort | null>(null);
@@ -219,7 +247,11 @@ export function ProbeRuestkammer(): React.JSX.Element {
    * laeuft: Einheiten sind nicht fassbar, Ziele sind gesperrt, Karten
    * ausgegraut.
    */
-  const [amZug, setAmZug] = useState(true);
+  const [amZug, setAmZug] = useState(
+    /* `?bereit` in der Adresse stellt den zweiten Zustand her, ohne dass
+       jemand die Werkbank bedienen muss — fuer die Sichtprobe. */
+    !new URLSearchParams(window.location.search).has('bereit'),
+  );
   /* Der Erklaertext ist zu, bis jemand ihn aufschlaegt: Er beschreibt die
      Probe und nicht die Ruestkammer — aufgeschlagen legt er sich ueber den
      Tisch, statt ihm Hoehe zu nehmen. */
@@ -230,9 +262,10 @@ export function ProbeRuestkammer(): React.JSX.Element {
   /*
    * Welche Einheit ihr Blatt aufgeschlagen hat — wie am Tisch der ORT und
    * nicht der Kaempfer: Was dort steht, aendert sich unter dem offenen Blatt,
-   * sobald man verschiebt (screens/Tafelrunde.tsx).
+   * sobald man verschiebt (screens/Tafelrunde.tsx). Mit Sitz, weil das Blatt
+   * seit dem 19.9.2026 auch am Brett des Gegners aufgeht — dann ohne Knoepfe.
    */
-  const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
+  const [blatt, setBlatt] = useState<Blattlage | null>(blattAusAdresse);
 
   /*
    * Die Grenze, die auch der Bildschirm prueft — und die einzige, die er
@@ -264,7 +297,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
     /* Wie am Tisch: Ein Tipp ohne Auswahl schlaegt das Blatt der Einheit auf;
        ausgewaehlt wird von dort aus. Stuende hier `setGewaehlt`, verhielte
        sich die Probe anders als der Bildschirm, den sie zeigen soll. */
-    if (folge.art === 'waehlen') setBlattOrt(folge.ort);
+    if (folge.art === 'waehlen') setBlatt({ sitz: null, ort: folge.ort });
     else if (folge.art === 'abwaehlen') setGewaehlt(null);
     else if (folge.art === 'schieben') {
       setAuf((a) => schiebe(a, folge.von, folge.nach));
@@ -272,15 +305,23 @@ export function ProbeRuestkammer(): React.JSX.Element {
     }
   }
 
-  /** Was auf `blattOrt` steht — frisch aus dem Stand, siehe dort. */
-  const blattKaempfer = blattOrt
-    ? ((blattOrt.bereich === 'bank' ? auf.bank : auf.brett)[blattOrt.platz] ?? null)
+  /** Was auf `blatt` steht — frisch aus dem Stand, siehe dort. Am fremden
+      Brett aus der Szene: Der Gegner bewegt sich in der Probe nicht. */
+  const blattKaempfer = blatt
+    ? blatt.sitz === null
+      ? ((blatt.ort.bereich === 'bank' ? auf.bank : auf.brett)[blatt.ort.platz] ?? null)
+      : blatt.ort.bereich === 'brett'
+        ? (SZENE.gegner.brett[blatt.ort.platz] ?? null)
+        : null
     : null;
   const blattEinheit = blattKaempfer ? KATALOG[blattKaempfer.id] : undefined;
   const blattWerte =
     blattKaempfer && blattEinheit
       ? SZENE.stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
       : undefined;
+  /* Nur lesen: am fremden Brett immer, am eigenen ohne „am Zug" — dieselbe
+     Bedingung wie `blattNurLesen` am Tisch. */
+  const blattNurLesen = blatt !== null && (blatt.sitz !== null || !amZug);
   /** Der erste freie Bankplatz — das Ziel von „Ablegen", wie am Tisch. */
   const freierBankplatz = Array.from({ length: SZENE.bankPlaetze }, (_, i) => i).find(
     (platz) => (auf.bank[platz] ?? null) === null,
@@ -290,7 +331,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
     setAuf(START);
     setLaden(SZENE.eigenes.laden);
     setGewaehlt(null);
-    setBlattOrt(null);
+    setBlatt(null);
   }
 
   const namen = markennamen(SZENE.synergieTabelle);
@@ -422,7 +463,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
             Tisch. VERKAUFEN nimmt sie hier nur vom Feld und zaehlt kein Gold:
             Die Probe rechnet nichts (siehe Kopf), genau wie beim Klick auf
             eine Ladenkarte. „zuruecksetzen" holt beides zurueck. */}
-        {blattOrt && blattKaempfer && blattEinheit && (
+        {blatt && blattKaempfer && blattEinheit && (
           <Einheitenblatt
             einheit={blattEinheit}
             kaempfer={blattKaempfer}
@@ -430,29 +471,38 @@ export function ProbeRuestkammer(): React.JSX.Element {
             tabelle={SZENE.synergieTabelle}
             maxStufe={SZENE.maxStufe}
             erloes={blattWerte?.erloes}
-            onVerkaufen={() => {
-              setAuf((a) => nimmWeg(a, blattOrt));
-              setBlattOrt(null);
-            }}
+            /* Ohne Knoepfe, sobald nur gelesen wird — wie am Tisch. */
+            onVerkaufen={
+              blattNurLesen
+                ? undefined
+                : () => {
+                    setAuf((a) => nimmWeg(a, blatt.ort));
+                    setBlatt(null);
+                  }
+            }
             onAblegen={
-              blattOrt.bereich === 'brett' && freierBankplatz !== undefined
+              !blattNurLesen && blatt.ort.bereich === 'brett' && freierBankplatz !== undefined
                 ? () => {
                     setAuf((a) =>
-                      schiebe(a, blattOrt, {
+                      schiebe(a, blatt.ort, {
                         bereich: 'bank',
                         platz: freierBankplatz,
                       }),
                     );
-                    setBlattOrt(null);
+                    setBlatt(null);
                   }
                 : undefined
             }
-            onVerschieben={() => {
-              setGewaehlt(blattOrt);
-              setBlattOrt(null);
-            }}
-            verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
-            onSchliessen={() => setBlattOrt(null)}
+            onVerschieben={
+              blattNurLesen
+                ? undefined
+                : () => {
+                    setGewaehlt(blatt.ort);
+                    setBlatt(null);
+                  }
+            }
+            verschiebenTitel={blatt.ort.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            onSchliessen={() => setBlatt(null)}
           />
         )}
 
@@ -536,6 +586,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   katalog={KATALOG}
                   gespiegelt
                   maxStufe={SZENE.maxStufe}
+                  onNachsehen={(ort) => setBlatt({ sitz: SZENE.gegner.sitz, ort })}
                 />
               </section>
 
@@ -552,6 +603,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
                   onWaehlen={tippeOrt}
                   onLeeresZiel={tippeOrt}
+                  onNachsehen={(ort) => setBlatt({ sitz: null, ort })}
                   fehlendeKopien={fehlen}
                 />
               </section>
@@ -566,6 +618,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
               gewaehlt={gewaehlt}
               istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
               onWaehlen={tippeOrt}
+              onNachsehen={(ort) => setBlatt({ sitz: null, ort })}
               fehlendeKopien={fehlen}
             />
           </div>

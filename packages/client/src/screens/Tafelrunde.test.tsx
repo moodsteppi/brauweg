@@ -1492,3 +1492,71 @@ describe('Zuschauer', () => {
     expect(screen.queryByRole('group', { name: 'Reservebank' })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Das Blatt zum LESEN — seit dem 19.9.2026.
+ *
+ * Bis dahin hing das Blatt an `darfHandeln`: Wer „Bereit" gedrueckt hatte oder
+ * zusah, kam an keine Werte mehr, und am Brett des Gegners gab es ohnehin
+ * keinen Weg. Bewusst, weil zwei der drei Knoepfe dann tot waeren — und genau
+ * das wird hier mitgeprueft: Das Blatt geht auf, aber ohne einen einzigen
+ * Handlungsknopf. Die Werte kommen weiterhin aus `stufenwerte`, auch fuer den
+ * Recken des Gegners.
+ */
+describe('Das Blatt zum Lesen', () => {
+  const ASTSCHUETZE_BRETT = [
+    { id: 'astschuetze', stufe: 2 },
+    ...Array.from({ length: 9 }, () => null),
+  ];
+  const HANDLUNGSKNOPF = /Verkaufen|Aufstellen|Verschieben|Ablegen/;
+
+  it('geht nach „Bereit" noch auf — nur ohne Knoepfe', () => {
+    stelle(sicht({ eigenes: { bereit: true, darfHandeln: false } }), []);
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    const marke = within(bank).getByTitle(/Dorfwache/);
+    // Antippbar, aber nicht mehr fassbar: Es gibt nichts mehr zu ziehen.
+    expect(marke).not.toHaveAttribute('data-fassbar');
+    fireEvent.click(marke);
+    const blatt = screen.getByRole('dialog');
+    expect(blatt).toHaveTextContent('650');
+    expect(within(blatt).queryByRole('button', { name: HANDLUNGSKNOPF })).toBeNull();
+  });
+
+  it('geht am Brett des Gegners auf — mit den Werten SEINER Sternstufe', () => {
+    // Der Laden ist leer gestellt, damit die einzige Astschuetze-Schaltflaeche
+    // auf dem Schirm die auf dem fremden Brett ist.
+    stelle(
+      sicht({
+        eigenes: { laden: [null, null, null, null, null] },
+        gegner: [gegnerMitMarken({ brett: ASTSCHUETZE_BRETT })],
+      }),
+    );
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /Astschütze/ }));
+    const blatt = screen.getByRole('dialog');
+    // Stufe 2: 864 aus `stufenwerte`, nicht die 480 des Katalogs.
+    expect(blatt).toHaveTextContent('864');
+    expect(blatt).not.toHaveTextContent('480');
+    expect(within(blatt).queryByRole('button', { name: HANDLUNGSKNOPF })).toBeNull();
+  });
+
+  it('steht auch dem Zuschauer offen', () => {
+    stelle(
+      sicht({
+        zuschauer: true,
+        ich: null,
+        eigenes: null,
+        gegner: [gegnerMitMarken({ brett: ASTSCHUETZE_BRETT })],
+      }),
+    );
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /Astschütze/ }));
+    const blatt = screen.getByRole('dialog');
+    expect(blatt).toHaveTextContent('864');
+    expect(within(blatt).queryByRole('button', { name: HANDLUNGSKNOPF })).toBeNull();
+    // Und wieder zu, wie am Spielertisch.
+    fireEvent.click(within(blatt).getByRole('button', { name: 'Blatt schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
