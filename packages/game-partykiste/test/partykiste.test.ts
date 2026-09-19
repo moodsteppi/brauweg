@@ -247,6 +247,46 @@ test('der ungeschorene Imposter holt Punkte, die Runde trinkt', () => {
   }
 });
 
+test('"Noch eine Runde reden" braucht die Mehrheit, wirft die Stimmen weg und rueckt die Reihenfolge', () => {
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['imposter'] as MinispielId[] };
+  let partie = neuePartie(4, 1, regeln);
+  for (let sitz = 0; sitz < 4; sitz++) partie = verarbeite(partie, sitz, { art: 'bereit' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  const reiheVorher = [...partie.runde.reihenfolge];
+
+  partie = verarbeite(partie, 0, { art: 'stimme', ziel: 1 });
+  partie = verarbeite(partie, 1, { art: 'nochmal' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(partie.runde.redeRunde, 1, 'einer von vier ist keine Mehrheit');
+  assert.equal(partie.runde.stimmen[0], 1, 'die Stimme bleibt stehen');
+
+  /* Zwei von vier sind nicht MEHR als die Haelfte — erst der dritte kippt es. */
+  partie = verarbeite(partie, 2, { art: 'nochmal' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(partie.runde.redeRunde, 1);
+  partie = verarbeite(partie, 3, { art: 'nochmal' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(partie.runde.redeRunde, 2, 'drei von vier: neue Rederunde');
+  assert.equal(partie.runde.phase, 'spiel', 'und noch nicht abgerechnet');
+  assert.deepEqual([...partie.runde.stimmen], [-1, -1, -1, -1], 'alle Stimmen fallen');
+  assert.deepEqual(partie.runde.fertig, [], 'jeder darf neu');
+  assert.deepEqual([...partie.runde.reihenfolge], [...reiheVorher.slice(1), reiheVorher[0]], 'die Reihenfolge rueckt');
+
+  /* Ohne Mehrheit zaehlt "nochmal" als Enthaltung, und die Runde wird abgerechnet. */
+  partie = verarbeite(partie, 0, { art: 'nochmal' });
+  for (const sitz of [1, 2, 3]) partie = verarbeite(partie, sitz, { art: 'stimme', ziel: (sitz + 1) % 4 || 1 });
+  assert.equal(partie.runde.phase, 'ergebnis');
+
+  /* Nach der dritten Rederunde ist Schluss. */
+  let dritte = neuePartie(4, 1, regeln);
+  for (let sitz = 0; sitz < 4; sitz++) dritte = verarbeite(dritte, sitz, { art: 'bereit' });
+  for (let runde = 0; runde < 2; runde++) for (const sitz of [0, 1, 2]) dritte = verarbeite(dritte, sitz, { art: 'nochmal' });
+  if (dritte.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(dritte.runde.redeRunde, 3);
+  assert.throws(() => verarbeite(dritte, 0, { art: 'nochmal' }), /genug geredet/);
+  assert.equal(partykiste.legalActions(dritte, 0).some((a) => a.art === 'nochmal'), false);
+});
+
 test('der Haertegrad vervielfacht die Schluecke, nicht die Punkte', () => {
   const sanft = spieleDurch(neuePartie(6, 6, { ...DEFAULT_REGELN, schluckFaktor: 1 })).partie;
   const hart = spieleDurch(neuePartie(6, 6, { ...DEFAULT_REGELN, schluckFaktor: 3 })).partie;
