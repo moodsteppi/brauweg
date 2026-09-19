@@ -337,9 +337,27 @@ zusammen 1503, dazu die Client-Tests (62 Dateien, 788 Tests), alle grün.
 >
 > - **Das Raster greift nur an einem Tisch mit `.tr-mitte`**
 >   (`.tr-tisch:has(> .tr-mitte)`). `.tr-tisch` trägt nämlich nicht nur der
->   Tisch: `/probe/kampf` benutzt dieselbe Klasse als Rahmen und hängt eigene
+>   Tisch: `/probe/kampf` benutzt dieselbe Klasse als Rahmen und hängte eigene
 >   Kinder hinein. Ein blankes `.tr-tisch { display: grid }` hat die auf zwei
 >   Spalten verteilt — die Bühne stand oben rechts und war 97 Pixel hoch.
+>   **Nachgezogen am 19.09.2026:** Die Bedingung war richtig, die Probe war
+>   es nicht. Sie stand damit außerhalb des Rasters und maß eine Arena, die
+>   es am Tisch nicht gibt (262 statt 348 Pixel auf 1366 × 768) — und die
+>   Prüfung „Laden steht neben der Mitte" lief dort ins Leere, weil die Seite
+>   weder `.tr-mitte` noch `.tr-fuss` hatte: ohne die beiden Kästen meldet
+>   sie nichts statt einen Fehler. Jetzt hat `/probe/kampf` dieselben vier
+>   Bänder wie der Tisch — `.tr-oben` (Titel, Uhr und die **echte**
+>   Phasenzeile), `.tr-statuszeile` (die Angaben zur Aufzeichnung),
+>   `.tr-mitte` (Bühne und Kampfanzeige), `.tr-fuss` (die Bedienung, der
+>   Erklärtext zugeklappt) —, und die Arena misst gemessene 345 × 596 auf
+>   1366 × 768; 318 × 552 bei 1280 × 720, 391 × 671 bei 1512 × 850,
+>   333 × 576 bei 390 × 844, 276 × 483 bei 360 × 740. Die drei Pixel Rest
+>   sind die **Mitspielerkacheln**, die der Probe weiter fehlen: Sie brauchen
+>   Leben und Rang je Sitz, und die stehen nicht in `kampf-szene.json`.
+>   Nachtragen ließe sich das nur, indem `kampf-erzeugen.mjs` noch einmal
+>   läuft — und das bricht derzeit mit „Kampf 3:2 gibt es in Runde 10 nicht
+>   (3:1)" ab, die Saat findet ihre eigene Paarung nicht mehr. Erfunden wird
+>   nichts.
 > - **`--tr-feld` kennt jetzt auch `100cqw`.** Solange der Tisch eine Spalte
 >   war, war die Breitengrenze in `vw` dasselbe wie die Breite des Kastens;
 >   mit dem Laden daneben ist sie es nicht mehr. Dieselbe Zeile aus demselben

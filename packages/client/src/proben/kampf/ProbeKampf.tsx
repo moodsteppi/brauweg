@@ -51,10 +51,15 @@
  * „AM 06.09.2026 ZUM ZWEITEN MAL NEU GESUCHT"; am 19.09.2026 bricht der Lauf
  * mit „Kampf 3:2 gibt es in Runde 10 nicht (3:1)" ab). Erfunden wird hier
  * nichts: Eine ausgedachte Lebenszahl waere genau die zweite Wahrheit, gegen
- * die der Rest dieser Datei geschrieben ist. Die Kopfleiste der Probe ist
- * damit um die Hoehe einer Kachelreihe NIEDRIGER als die des Tisches — die
- * gemessene Arena ist also eher zu gross als zu klein, und wer die Szene neu
- * erzeugen kann, haengt die Kacheln hier nach.
+ * die der Rest dieser Datei geschrieben ist. Wer die Szene neu erzeugen kann,
+ * haengt die Kacheln hier nach.
+ *
+ * WIE GROSS DER REST-UNTERSCHIED IST, steht als Zahl da und nicht als
+ * Einschaetzung: Auf 1366 x 768 misst die Arena auf dieser Seite 345 x 596
+ * Pixel (Kopfleiste 57), am Tisch sind es 348 (STAND.md, Messung vom
+ * 07.09.2026) — drei Pixel oder 0,9 %. Vorher waren es 262. Die weiteren
+ * Groessen: 318 x 552 (1280 x 720), 391 x 671 (1512 x 850), 333 x 576
+ * (390 x 844), 276 x 483 (360 x 740).
  *
  * DER KAMPF kommt aus `kampf-szene.json`: Runde 10 einer echten Bot-Partie,
  * gerechnet vom Spielpaket selbst (`kampf-erzeugen.mjs`, dort steht auch,
