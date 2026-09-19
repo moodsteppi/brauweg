@@ -18339,13 +18339,20 @@ span.hub-angebot-art.poker-jeton-stapel {
  * daneben.
  *
  * WARUM JEDE REGEL `:has(> .tr-mitte)` DAVOR HAT. `.tr-tisch` traegt nicht nur
- * der Tisch: `/probe/kampf` benutzt dieselbe Klasse fuer den Rahmen und haengt
- * eigene Kinder hinein (Kopfzeile, Buehne, Fusstext). Ein blankes
- * `.tr-tisch { display: grid }` hat die am 07.09.2026 auf zwei Spalten
- * verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die Bedingung
- * liest sich als das, was sie meint: Zum Raster wird ein Tisch, der aus diesen
- * Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der einen
- * Spalte von heute.
+ * der Tisch, sondern jede Seite, die seinen Rahmen will. `/probe/kampf` hat
+ * dort am 07.09.2026 drei lose Kinder hineingehaengt (Kopfzeile, Buehne,
+ * Fusstext); ein blankes `.tr-tisch { display: grid }` hat die auf zwei
+ * Spalten verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die
+ * Bedingung liest sich als das, was sie meint: Zum Raster wird ein Tisch, der
+ * aus diesen Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der
+ * einen Spalte von heute.
+ *
+ * DIE BEDINGUNG IST DAMIT AUCH DIE ANSAGE AN JEDE PROBE: Wer die Kampfphase
+ * oder die Ruestkammer an diesem Rahmen MESSEN will, baut die vier Baender
+ * nach — sonst misst er einen Bildschirm, den es am Tisch nicht gibt. Beide
+ * Proben tun das inzwischen (`/probe/ruestkammer` seit dem 07.09.2026,
+ * `/probe/kampf` seit dem 19.09.2026, wo die Arena sonst 262 statt 348 Pixel
+ * breit gemessen wurde).
  */
 @media (min-width: 64rem) {
   .tr-tisch:has(> .tr-mitte) {

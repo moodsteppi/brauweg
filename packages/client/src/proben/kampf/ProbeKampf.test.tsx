@@ -142,6 +142,17 @@ describe('ProbeKampf', () => {
   const uhrstand = (): number =>
     Number.parseFloat(screen.getByText(/ s \/ .* s$/).textContent ?? '');
 
+  /**
+   * Die Rundenansage der Buehne — ueber ihren zweiten Satz gesucht.
+   *
+   * Nicht ueber „Runde 10": Seit die Probe die echte Phasenzeile des Tisches
+   * traegt (19.09.2026), steht diese Zeichenkette zweimal auf der Seite, und
+   * `getByText` findet dann zwei Treffer statt keinem — ein Test, der an
+   * einer Zahl haengt, die woanders herkommt.
+   */
+  const rundenansage = (): HTMLElement | null =>
+    screen.queryByText('Zum Kampf')?.parentElement ?? null;
+
   it('spielt den Kampf in der ECHTEN Kampfanzeige ab', () => {
     render(<ProbeKampf />);
     // Die Arena der Kampfanzeige, nicht ein Nachbau: Rolle und Beschriftung
@@ -155,7 +166,7 @@ describe('ProbeKampf', () => {
     }
 
     // Und die Buehne darum herum, mit der Rundenansage.
-    expect(screen.getByText(`Runde ${SZENE.runde}`)).toBeInTheDocument();
+    expect(rundenansage()).toHaveTextContent(`Runde ${SZENE.runde}`);
   });
 
   it('zeigt die verstrichene und die gesamte Zeit', () => {
@@ -188,14 +199,55 @@ describe('ProbeKampf', () => {
     expect(screen.queryByText('Gewonnen!')).not.toBeInTheDocument();
     expect(screen.getByText(`0.0 s / ${(BERICHT.dauerMs / 1000).toFixed(1)} s`)).toBeInTheDocument();
     // Auch die Buehne faengt von vorn an — die Ansage gehoert zum Kampfbeginn.
-    expect(screen.getByText(`Runde ${SZENE.runde}`)).toBeInTheDocument();
+    expect(rundenansage()).toHaveTextContent(`Runde ${SZENE.runde}`);
   });
 
-  it('nennt Saat, Rundenstand und Zeitraffer unter dem Kampf', () => {
+  it('nennt Saat, Rundenstand und Zeitraffer, wenn man den Text aufschlaegt', () => {
     render(<ProbeKampf />);
+    // Zugeklappt, damit die fuenf Zeilen am Handy der Arena keine Hoehe
+    // wegnehmen — genau die wird auf dieser Seite gemessen.
+    expect(screen.queryByText(/Saat/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Was ist das?' }));
     const fuss = screen.getByText(/Saat/);
     expect(fuss).toHaveTextContent(SZENE.saat);
     expect(fuss).toHaveTextContent(`Runde ${SZENE.runde}`);
     expect(fuss).toHaveTextContent(`Zeitraffer x${SZENE.zeitraffer}`);
+  });
+
+  /*
+   * DER AUFBAU DES TISCHES, seit dem 19.09.2026 — und der Grund, warum dieser
+   * Test hier steht und nicht bei der Kampfanzeige: Er prueft keine Anzeige,
+   * sondern die Voraussetzung der MESSUNG. Ohne `.tr-mitte` greift das Raster
+   * ab 64rem gar nicht (`.tr-tisch:has(> .tr-mitte)` in styles.css), und ohne
+   * `.tr-fuss` laeuft die Pruefung „Laden steht neben der Mitte" in
+   * `werkzeug/hoehenprobe.mjs` ins Leere — beides still, also unbemerkt.
+   *
+   * Die HOEHEN misst das hier nicht: In jsdom ist jedes Element null Pixel
+   * gross (Begruendung im Kopf von hoehenprobe.mjs). Geprueft wird die
+   * Verdrahtung, so wie `screens/Tafelrunde.hoehe.test.tsx` es fuer den Tisch
+   * tut.
+   */
+  it('haengt die Buehne in dieselben vier Baender wie der Tisch', () => {
+    const { container } = render(<ProbeKampf />);
+    const tisch = container.querySelector('.tr-tisch')!;
+    expect(tisch).not.toBeNull();
+
+    // In dieser Reihenfolge — am Handy stehen sie untereinander, am breiten
+    // Schirm legt das Raster Band 2 und 4 neben Band 3.
+    const baender = [...tisch.children].map((el) => el.className);
+    expect(baender).toEqual(['tr-oben', 'tr-statuszeile', 'tr-mitte', 'tr-fuss']);
+
+    // Und die Buehne steht IN der Mitte: Nur dort bekommt sie die Hoehe, die
+    // sie am Tisch hat.
+    const mitte = tisch.querySelector(':scope > .tr-mitte')!;
+    expect(mitte.querySelector('[aria-label="Kampf"]')).not.toBeNull();
+  });
+
+  it('zeigt die echte Phasenzeile des Tisches', () => {
+    render(<ProbeKampf />);
+    // „Kampfphase" kommt aus `phasenName` in Phasenzeile.tsx und ist hier
+    // nicht abgeschrieben — dasselbe Wort steht am Tisch.
+    expect(screen.getByText('Kampfphase')).toBeInTheDocument();
   });
 });
