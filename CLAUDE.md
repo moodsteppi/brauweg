@@ -53,10 +53,17 @@ nach (ein Prod-Deploy ist schwer rückholbar, siehe Regel 7), aber warte auf
 niemand anderen. Vor jedem Push `git pull --no-rebase origin staging` — an
 diesem Repo arbeiten mehrere Sitzungen gleichzeitig, auch Cursor. Merges sind
 der Normalfall, kein Fehler. Nach einem Release muss `main` wieder Vorfahre
-von `staging` sein (Rückfluss als echter Merge, kein Squash); der Job
-„Rückfluss" in `.github/workflows/ci.yml` wird bei jedem Push auf einen der
-beiden Zweige rot, solange das nicht stimmt — am 06.09.2026 fiel es sonst
-erst Tage später am Release-Konflikt auf.
+von `staging` sein (Rückfluss als echter Merge, kein Squash). Von Hand machen
+muss ihn in der Regel niemand mehr: `.github/workflows/rueckfluss.yml` legt
+nach jedem Push auf `main` den fertigen Rückfluss-PR nach `staging` an — es
+bleibt das Freigeben, **als Merge-Commit, nicht als Squash**. Das Netz
+darunter bleibt der Job „Rückfluss" in `.github/workflows/ci.yml`: Er wird bei
+jedem Push auf einen der beiden Zweige rot, solange `main` kein Vorfahre ist —
+am 06.09.2026 fiel es sonst erst Tage später am Release-Konflikt auf. Der
+Grund für die Automatik steht im Kopf von `rueckfluss.yml`: Solange der
+Rückfluss Arbeit war, wurde die Änderung stattdessen auf `staging`
+nachgetippt („Uebernahme von main <hash>"), und genau daraus entstanden die
+Konflikte.
 
 **2. Alles auf Deutsch.** Bezeichner, Kommentare, Commit-Nachrichten,
 Oberflächentexte. Kommentare erklären das **Warum**, nicht das Was — und
