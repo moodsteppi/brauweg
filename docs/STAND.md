@@ -16,13 +16,12 @@ funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 19. September 2026 aus einem vollen Lauf, nicht aus
-der Erinnerung):**
-173 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
-61 Eiland-Tests, 311 Tafelrunde-Tests, 20 Golf-Tests, 28 Partykiste-Tests,
-**483 Servertests** — zusammen 1545, dazu die Client-Tests (64 Dateien,
-795 Tests), alle grün.
+**Prüfstand: steht in der Zusammenfassung jedes CI-Laufs** (Job „Bauen und
+prüfen"), aufgeschlüsselt nach Paketen und gemessen an genau dem Commit, zu
+dem sie gehört. Bis zum 19.09.2026 stand die Zählung hier und wurde von jeder
+Aufgabe fortgeschrieben — an dem Tag kollidierten sechs Pull Requests in
+genau diesen Zeilen, keiner im Code (die Begründung steht in `CLAUDE.md` unter
+„Bauen und prüfen"). Örtlich: `npm test | node werkzeug/pruefstand.mjs`.
 `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
