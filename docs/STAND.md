@@ -948,6 +948,49 @@ zusammen 1503, dazu die Client-Tests (62 Dateien, 788 Tests), alle grün.
 Doppelkopf hat außerdem seit dem 10. August **keinen Dreiertisch mehr in der
 Lobby** (er war ohnehin vier mit Dauerbot); die Engine kann drei weiterhin.
 
+## Am 19. September: Die Sichten gehen komprimiert über die Leitung
+
+Nachgeprüft wurde, was das Zusehen bei **Tafelrunde** kostet: Seit dem
+06.09.2026 bekommt jeder Spieler **alle** Kämpfe der Runde mit vollem
+Ablaufprotokoll (`packages/game-tafelrunde/src/sicht.ts`), und die Frage war,
+ob das am Handy und im Mobilfunk vertretbar ist.
+
+**Gemessen** wird das ab jetzt mit
+`node packages/game-tafelrunde/werkzeug/sichtgroesse.mjs [--sitze 8]`. Es
+spielt eine Bot-Partie und legt drei Schnitte nebeneinander — die Sicht wie
+heute (`voll`), nur mit dem eigenen Kampf (`eigen`, der Stand vor dem
+06.09.2026) und ganz ohne Protokoll (`ohne`) —, jeden roh und gepackt.
+Bot-Partie zu acht, Saat 7:
+
+| | größte Sicht | ganze Partie je Spieler |
+|---|---|---|
+| voll | 60,0 kB roh / **6,6 kB gepackt** | 595 kB roh / **69 kB gepackt** |
+| eigen | 23,0 kB / 3,0 kB | 207 kB / 30 kB |
+| ohne | 6,8 kB / 1,2 kB | 77 kB / 15 kB |
+
+**Der billigste Schnitt war nicht in der Sicht, sondern im Gateway.** `ws`
+lässt `permessage-deflate` (RFC 7692) ab Werk aus, also ging bis zum
+19.09.2026 jede Sicht **jedes** Spiels als roher JSON-Text heraus. Jetzt wird
+alles über einem Kilobyte gepackt
+(`packages/server/src/realtime/gateway.ts`). Ein Ablaufprotokoll ist
+tausendfach dasselbe Dutzend Feldnamen und schrumpft deshalb auf ein Neuntel.
+6,6 kB einmal je Runde sind auch im Mobilfunk keine Sekunde, und die
+Kampfphase dauert länger als das.
+
+Eingestellt ist **kein Kontextübertrag** (`serverNoContextTakeover`), damit
+ZLIB nicht je offener Verbindung ein Fenster hält — bei vielen Tischen sind
+das sonst Hunderte Kilobyte, die niemand zurückgibt. Die Zahlen oben sind
+genau so gemessen, also je Nachricht für sich. Dass die Erweiterung wirklich
+ausgehandelt wird, hält `packages/server/test/ws-kompression.test.ts` fest:
+Fällt sie weg, steht die Verbindung weiter und die Sichten kommen an — sie
+sind nur wieder neunmal so groß, und das merkt niemand, der nicht misst.
+
+**Nachliefern auf Anforderung ist damit vom Tisch.** Es stand als billigerer
+Schnitt im Raum, bräuchte einen neuen Weg im Protokoll (die Sicht geht als
+Ganzes heraus) und spart nach der Kompression 3,6 kB je Runde — bezahlt mit
+einer Rückfrage samt Laufzeit bei jedem Blick auf einen fremden Kampf und mit
+einem Zuschauer, der seinen Kampf erst nach einem Umweg sieht.
+
 ## Am 11. August: Bot-Spielstärken (Doppelkopf)
 
 **Der Bot hat drei Stufen: Anfänger, Standard, Experte** — eine
