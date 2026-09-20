@@ -111,7 +111,10 @@ function bonus(teil: Partial<Wertebonus>): Wertebonus {
  *   Elementar  — Angriff: Magie trifft haerter.
  *   Meuchler   — Tempo: schneller als der Gegner reagieren kann.
  *   Waechter   — Leben und etwas Ruestung: die Mauer.
- *   Naturwesen — Leben: der Wald waechst nach.
+ *   Naturwesen — Leben: der Wald waechst nach (Traeger sind Astschuetze,
+ *                Moosheiler, Hainwaechterin, Wurzelriese und seit dem
+ *                18.09.2026 die Bogenmeisterin — sie kam dazu, WEIL an diesen
+ *                Zahlen zu drehen gemessen nichts brachte, siehe dort).
  *   Untot      — Angriff und Leben, beides massvoll: zaeh und unerbittlich
  *                (Traeger sind Knochenspaeher, Grabfuerstin und seit dem
  *                05.09.2026 der Schildknappe — mit ihm ist die Marke zum
@@ -191,6 +194,16 @@ export const SYNERGIEN: readonly Synergie[] = [
     name: 'Naturwesen',
     wirkung:
       'Jedes Naturwesen auf dem Brett bekommt Leben dazu und bleibt entsprechend länger stehen.',
+    /*
+     * AUCH DIESE ZAHLEN WAREN NICHT SCHULD, als Naturwesen am 18.09.2026 mit
+     * x0,52 die unterste Zeile des Katalogs war — dieselbe Geschichte wie bei
+     * Elementar darueber, und wieder nachgemessen: Auf 25/40/65 gehoben kam die
+     * Marke auf x0,62, auf 45/70/110 auf x0,87 — um den Preis, dass sich die an
+     * der Hoechstdauer abgebrochenen Kaempfe verdoppelten (1,7 auf 3,4 %) und
+     * Untot unter die Zaehlschwelle der Probe rutschte. Ein Lebensbonus macht
+     * die Marke haeufiger, nicht besser. Repariert wurde deshalb der Katalog
+     * (Bogenmeisterin als fuenfte Traegerin), nicht diese Tabelle.
+     */
     stufen: [
       { schwelle: 2, bonus: bonus({ lebenProzent: 15 }) },
       { schwelle: 3, bonus: bonus({ lebenProzent: 25 }) },
